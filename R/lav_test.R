@@ -57,6 +57,12 @@ lav_model_test <- function(lavmodel       = NULL,
                               pvalue     = as.numeric(NA))
         }
 
+        attr(TEST, "info") <-
+        list(ngroups = lavdata@ngroups, group.label = lavdata@group.label,
+             information = lavoptions$information,
+             h1.information = lavoptions$h1.information,
+             observed.information = lavoptions$observed.information)
+
         return(TEST)
     }
 
@@ -189,6 +195,11 @@ lav_model_test <- function(lavmodel       = NULL,
 
     if(length(test) == 1L && test == "standard") {
         # we are done
+        attr(TEST, "info") <-
+        list(ngroups = lavdata@ngroups, group.label = lavdata@group.label,
+             information = lavoptions$information,
+             h1.information = lavoptions$h1.information,
+             observed.information = lavoptions$observed.information)
         return(TEST)
     } else {
         # strip 'standard' from test list
@@ -315,6 +326,14 @@ lav_model_test <- function(lavmodel       = NULL,
         }
 
     } # additional tests
+
+    # add additional information as an attribute, needed for independent
+    # printing
+    attr(TEST, "info") <-
+        list(ngroups = lavdata@ngroups, group.label = lavdata@group.label,
+             information = lavoptions$information,
+             h1.information = lavoptions$h1.information,
+             observed.information = lavoptions$observed.information)
 
     TEST
 }

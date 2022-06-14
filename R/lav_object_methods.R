@@ -22,7 +22,11 @@
 setMethod("show", "lavaan",
 function(object) {
     # show only basic information
-    lav_object_print_short_summary(object)
+    res <- lav_object_summary(object, fit.measures = FALSE,
+                                      estimates    = FALSE,
+                                      modindices   = FALSE)
+    print(res)
+    invisible(res)
 })
 
 setMethod("summary", "lavaan",
@@ -40,65 +44,16 @@ function(object, header       = TRUE,
                  modindices   = FALSE,
                  nd = 3L) {
 
-    # return object
-    res <- list()
+    res <- lav_object_summary(object = object, header = header,
+               fit.measures = fit.measures, estimates = estimates,
+               ci = ci, fmi = fmi, std = std, standardized = standardized,
+               remove.step1 = remove.step1, cov.std = cov.std,
+               rsquare = rsquare, std.nox = std.nox, modindices = modindices)
 
-    # this is to avoid partial matching of 'std' with std.nox
-    standardized <- std || standardized
+    # what about nd? only used if we actually print; save as attribute
+    attr(res, "nd") <- nd
 
-    if(std.nox) {
-        standardized <- TRUE
-    }
-
-    # print the 'short' summary
-    if(header) {
-        lav_object_print_short_summary(object, nd = nd)
-    }
-
-    # only if requested, the fit measures
-    if(fit.measures) {
-        if(length(object@Options$test) == 1L && object@Options$test == "none") {
-            warning("lavaan WARNING: fit measures not available if test = \"none\"\n\n")
-        } else if(object@optim$npar > 0L && !object@optim$converged) {
-            warning("lavaan WARNING: fit measures not available if model did not converge\n\n")
-        } else {
-            FIT <- fitMeasures(object, fit.measures="default")
-            res$FIT = FIT
-            print.lavaan.fitMeasures( FIT, nd = nd, add.h0 = FALSE )
-        }
-    }
-
-    if(estimates) {
-        PE <- parameterEstimates(object, ci = ci, standardized = standardized,
-                                 rsquare = rsquare, fmi = fmi,
-                                 cov.std = cov.std,
-                                 remove.eq = FALSE, remove.system.eq = TRUE,
-                                 remove.ineq = FALSE, remove.def = FALSE,
-                                 remove.nonfree = FALSE,
-                                 remove.step1 = remove.step1,
-                                 #remove.nonfree.scales = TRUE,
-                                 output = "text",
-                                 header = TRUE)
-        if(standardized && std.nox) {
-            #PE$std.all <- PE$std.nox
-            PE$std.all <- NULL
-        }
-        print(PE, nd = nd)
-        res$PE <- as.data.frame(PE)
-    }
-
-    # modification indices?
-    if(modindices) {
-        cat("Modification Indices:\n\n")
-        MI <- modificationIndices(object, standardized=TRUE, cov.std = cov.std)
-        print( MI )
-        res$MI <- MI
-    }
-
-    # return something invisibly, just for those who want this...
-    # new in 0.6-4
-    invisible(res)
-
+    res
 })
 
 

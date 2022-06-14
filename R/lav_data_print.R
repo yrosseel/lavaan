@@ -4,13 +4,13 @@
 setMethod("show", "lavData",
 function(object) {
     # print 'lavData' object
-    lav_data_print_short(object)
+    res <- lav_data_summary_short(object)
+    lav_data_print_short(res, nd = 3L)
 })
 
-lav_data_print_short <- function(object, nd = 3L) {
+lav_data_summary_short <- function(object) {
 
     lavdata <- object
-    num.format  <- paste("%", max(8L, nd + 5L), ".", nd, "f", sep = "")
 
     # listwise deletion?
     listwise <- twocolumn <- FALSE
@@ -147,16 +147,28 @@ lav_data_print_short <- function(object, nd = 3L) {
         c3 <- c(c3, "")
     }
 
-    # empty row
-    c1 <- c(c1, ""); c2 <- c(c2, ""); c3 <- c(c3, "")
+    list(c1 = c1, c2 = c2, c3 = c3)
+}
+
+lav_data_print_short <- function(res, nd = 3L) {
+
+    c1 <- res$c1
+    c2 <- res$c2
+    c3 <- res$c3
+    threecolumn <- FALSE
+    if(any(nchar(c3) > 0L)) {
+        threecolumn <- TRUE
+    }
 
     # format c1/c2
     c1 <- format(c1, width = 43L)
     c2 <- format(c2, width = 8L + max(0, (nd - 3L)) * 4L, justify = "right")
-    c3 <- format(c3, width = 8L + nd, justify = "right")
+    if(threecolumn) {
+        c3 <- format(c3, width = 8L + nd, justify = "right")
+    }
 
     # create character matrix
-    if(twocolumn) {
+    if(threecolumn) {
         M <- cbind(c1, c2, c3, deparse.level = 0)
     } else {
         M <- cbind(c1, c2, deparse.level = 0)

@@ -777,7 +777,8 @@ print.lavaan.fsr <- function(x, ..., nd = 3L, mm = FALSE, struc = FALSE) {
         cat("\n")
         #print.lavaan.parameterEstimates(y$PE, ..., nd = nd)
 
-        lav_object_print_short_summary(y$STRUC.FIT)
+        print(summary(y$STRUC.FIT, fit.measures = FALSE, estimates = FALSE,
+                                    modindices = FALSE))
         FIT <- fitMeasures(y$STRUC.FIT, fit.measures="default")
         if(FIT["df"] > 0) {
             print.lavaan.fitMeasures( FIT, add.h0 = FALSE )
@@ -849,3 +850,165 @@ lav_txt2message <- function(txt, header = "lavaan WARNING:",
     out
 }
 
+# new in 0.6-12
+print.lavaan.summary <- function(x, ..., nd = 3L) {
+
+    y <- unclass(x) # change to ordinary list
+
+    # get nd, if it is stored as an attribute
+    ND <- attr(y, "nd")
+    if(!is.null(ND) && is.numeric(ND)) {
+        nd <- as.integer(ND)
+    }
+
+    # header
+    if(!is.null(y$header)) {
+        cat(paste(y$header, collapse = "\n"))
+    }
+
+    # optim
+    if(!is.null(y$optim)) {
+        cat("\n")
+        c1 <- y$optim$c1
+        c2 <- y$optim$c2
+
+        # format
+        c1 <- format(c1, width = 40L)
+        c2 <- format(c2, width = 11L + max(0, (nd - 3L)) * 4L,
+                     justify = "right")
+
+        # character matrix
+        M <- cbind(c1, c2, deparse.level = 0)
+        colnames(M) <- rep("",  ncol(M))
+        rownames(M) <- rep(" ", nrow(M))
+
+        # print
+        write.table(M, row.names = TRUE, col.names = FALSE, quote = FALSE)
+    }
+
+    # sam header
+    if(!is.null(y$sam.header)) {
+        cat("\n")
+        c1 <- y$sam.header$c1
+        c2 <- y$sam.header$c2
+
+        # format
+        c1 <- format(c1, width = 40L)
+        c2 <- format(c2, width = 11L + max(0, (nd - 3L)) * 4L,
+                     justify = "right")
+
+        # character matrix
+        M <- cbind(c1, c2, deparse.level = 0)
+        colnames(M) <- rep("",  ncol(M))
+        rownames(M) <- rep(" ", nrow(M))
+
+        # print
+        write.table(M, row.names = TRUE, col.names = FALSE, quote = FALSE)
+    }
+
+    # efa/rotation
+    if(!is.null(y$efa)) {
+        cat("\n")
+        #cat("Rotation information:\n\n")
+        c1 <- y$efa$c1
+        c2 <- y$efa$c2
+
+        # format c1/c2
+        c1 <- format(c1, width = 33L)
+        c2 <- format(c2, width = 18L + max(0, (nd - 3L)) * 4L,
+                     justify = "right")
+
+        # create character matrix
+        M <- cbind(c1, c2, deparse.level = 0)
+        colnames(M) <- rep("",  ncol(M))
+        rownames(M) <- rep(" ", nrow(M))
+
+        # print
+        write.table(M, row.names = TRUE, col.names = FALSE, quote = FALSE)
+    }
+
+    # data object
+    if(!is.null(y$data)) {
+        cat("\n")
+        lav_data_print_short(y$data, nd = nd)
+    }
+
+    # sam local stats: measurement blocks + structural part
+    if(!is.null(y$sam)) {
+        cat("\n")
+
+        sam.method    <- y$sam$sam.method
+        sam.mm.table  <- y$sam$sam.mm.table
+        sam.mm.rel    <- y$sam$sam.mm.rel
+        sam.struc.fit <- y$sam$sam.struc.fit
+        ngroups       <- y$sam$ngroups
+        group.label   <- y$sam$group.label
+
+        # measurement
+        tmp <- sam.mm.table
+        if(sam.method == "global") {
+            cat("Summary Information Measurement Part:\n\n")
+        } else {
+            cat("Summary Information Measurement + Structural:\n\n")
+        }
+        print(tmp, row.names = rep(" ", nrow(tmp)), nd = nd)
+
+        if(sam.method == "local") {
+            # reliability information
+            c1 <- c2 <- character(0L)
+            if(ngroups == 1L) {
+                cat("\n")
+                cat("  Model-based reliability latent variables:\n\n")
+                tmp <- data.frame(as.list(sam.mm.rel[[1]]))
+                class(tmp) <- c("lavaan.data.frame", "data.frame")
+                print(tmp, row.names = rep(" ", nrow(tmp)), nd = nd)
+            } else {
+                cat("\n")
+                cat("  Model-based reliability latent variables (per group):\n")
+                for(g in 1:ngroups) {
+                    cat("\n")
+                    cat("  Group ", g, " [", group.label[g], "]:\n\n",
+                        sep = "")
+                    tmp <- data.frame(as.list(sam.mm.rel[[g]]))
+                    class(tmp) <- c("lavaan.data.frame", "data.frame")
+                    print(tmp, row.names = rep(" ", nrow(tmp)), nd = nd)
+                }
+            }
+
+            cat("\n")
+            cat("  Summary Information Structural part:\n\n")
+            tmp <- data.frame(as.list(sam.struc.fit))
+            class(tmp) <- c("lavaan.data.frame", "data.frame")
+            print(tmp, row.names = rep(" ", nrow(tmp)), nd = nd)
+        }
+    }
+
+    # test statistics
+    if(!is.null(y$test)) {
+        cat("\n")
+        lav_test_print(y$test, nd = nd)
+    }
+
+    # extra fit measures (if present)
+    if(!is.null(y$fit)) {
+        print.lavaan.fitMeasures(y$fit, nd = nd, add.h0 = FALSE )
+    }
+
+    # parameter table
+    if(!is.null(y$pe)) {
+        PE <- y$pe
+        class(PE) <- c("lavaan.parameterEstimates", "lavaan.data.frame",
+                       "data.frame")
+        print(PE, nd = nd)
+    }
+
+    # modification indices
+    if(!is.null(y$mi)) {
+        cat("Modification Indices:\n\n")
+        MI <- y$mi
+        rownames(MI) <- NULL
+        print(MI, nd = nd)
+    }
+
+    invisible(y)
+}
