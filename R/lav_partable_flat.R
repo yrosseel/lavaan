@@ -25,6 +25,7 @@ lav_partable_flat <- function(FLAT = NULL,
                               group.equal      = NULL,
                               group.w.free     = FALSE,
                               ngroups          = 1L,
+                              nthresholds      = NULL,
                               ov.names.x.block = NULL) {
 
     categorical <- FALSE
@@ -59,8 +60,10 @@ lav_partable_flat <- function(FLAT = NULL,
         }
     }
 
+    # check data
     if(!is.null(varTable)) {
-        ov.names.ord2 <- as.character(varTable$name[ varTable$type == "ordered" ])
+        ov.names.ord2 <-
+            as.character(varTable$name[ varTable$type == "ordered" ])
         # remove fixed.x variables
         idx <- which(ov.names.ord2 %in% ov.names.x)
         if(length(idx) > 0L) {
@@ -73,10 +76,35 @@ lav_partable_flat <- function(FLAT = NULL,
             ov.names.ord2 <- ov.names.ord2[-idx]
         }
     } else {
-        ov.names.ord2 <- character(0)
+        ov.names.ord2 <- character(0L)
     }
-    #### FIXME!!!!! ORDER!
-    ov.names.ord <- unique(c(ov.names.ord1, ov.names.ord2))
+
+    # check nthresholds, if it is a named vector
+    ov.names.ord3 <- character(0L)
+    if(!is.null(nthresholds)) {
+        if(!is.null(varTable)) {
+            stop("lavaan ERROR: the varTable and nthresholds arguments should not be used together.")
+        }
+        if(!is.numeric(nthresholds)) {
+            stop("lavaan ERROR: nthresholds should be a named vector of integers.")
+        }
+        nth.names <- names(nthresholds)
+        if(!is.null(nth.names)) {
+            ov.names.ord3 <- nth.names
+        } else {
+            # if nthresholds is just a number, all is good; otherwise it
+            # should be a names vector
+            if(length(nthresholds) > 1L) {
+                warning("lavaan ERROR: nthresholds must be a named vector of integers.")
+            }
+            # just a single number -> assume ALL y variables are ordered
+            ov.names.ord3 <- ov.names.nox
+        }
+    }
+
+    # final ov.names.ord
+    tmp <- unique(c(ov.names.ord1, ov.names.ord2, ov.names.ord3))
+    ov.names.ord <- ov.names[ ov.names %in% tmp ]
 
     # if we have the "|" in the model syntax, check the number of thresholds
     #if(!is.null(varTable) && length(ov.names.ord1) > 0L) {
@@ -91,8 +119,9 @@ lav_partable_flat <- function(FLAT = NULL,
     #    }
     #}
 
-    if(length(ov.names.ord) > 0L)
+    if(length(ov.names.ord) > 0L) {
         categorical <- TRUE
+    }
 
     # std.lv = TRUE, group.equal includes "loadings"
     #if(ngroups > 1L && std.lv && "loadings" %in% group.equal) {
@@ -140,7 +169,19 @@ lav_partable_flat <- function(FLAT = NULL,
     if(length(ov.names.ord) > 0L) {
         #for(o in ov.names.ord2) {
         for(o in ov.names.ord) {
-            nth  <- varTable$nlev[ varTable$name == o ] - 1L
+            if(!is.null(varTable)) {
+                nth  <- varTable$nlev[ varTable$name == o ] - 1L
+            } else if(!is.null(nthresholds)) {
+                if(length(nthresholds) == 1L && is.null(nth.names)) {
+                    nth <- nthresholds
+                } else {
+                    # we can assume nthresholds is a named vector
+                    nth <- unname(nthresholds[o])
+                    if(is.na(nth)) {
+                        stop("lavaan ERROR: ordered variable ", o, " not found in the named vector nthresholds.")
+                    }
+                }
+            }
             if(nth < 1L) next
             lhs <- c(lhs, rep(o, nth))
             rhs <- c(rhs, paste("t", seq_len(nth), sep=""))

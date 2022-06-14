@@ -46,6 +46,7 @@ lavaanify <- lavParTable <- function(
 
                       varTable         = NULL,
                       ngroups          = 1L,
+                      nthresholds      = NULL,
                       group.equal      = NULL,
                       group.partial    = NULL,
                       group.w.free     = FALSE,
@@ -103,6 +104,9 @@ lavaanify <- lavParTable <- function(
 
     # bogus varTable? (if data.type == "none")
     if(!is.null(varTable)) {
+        if(!is.list(varTable) || is.null(varTable$name)) {
+            stop("lavaan ERROR: varTable is not a list or does not contain variable names.")
+        }
         if(all(varTable$nobs == 0)) {
             varTable <- NULL
         }
@@ -299,6 +303,7 @@ lavaanify <- lavParTable <- function(
                 auto.delta = auto.delta, auto.efa = auto.efa,
                 varTable = varTable, group.equal = NULL,
                 group.w.free = group.w.free, ngroups = 1L,
+                nthresholds = nthresholds,
                 ov.names.x.block = ov.names.x.block)
             LIST.block <- as.data.frame(LIST.block, stringsAsFactors = FALSE)
 
@@ -344,7 +349,7 @@ lavaanify <- lavParTable <- function(
             auto.delta = auto.delta, auto.efa = auto.efa,
             varTable = varTable, group.equal = group.equal,
             group.w.free = group.w.free,
-            ngroups = ngroups)
+            ngroups = ngroups, nthresholds = nthresholds)
     }
     if(debug) {
         cat("[lavaan DEBUG]: parameter LIST without MODIFIERS:\n")
