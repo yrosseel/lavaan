@@ -156,13 +156,26 @@ lavaanify <- lavParTable <- function(
 
     # check for block identifiers in the syntax (op = ":")
     n.block.flat <- length(which(FLAT$op == ":"))
+    # this is NOT the number of blocks (eg group 1: level 1: -> 1 block)
 
     # for each non-empty `block' in n.block.flat, produce a USER
     if(n.block.flat > 0L) {
 
+        # make sure FLAT is a data.frame
+        FLAT <- as.data.frame(FLAT, stringsAsFactors = FALSE)
+
         # what are the block lhs labels?
-        BLOCKS <- tolower(FLAT$lhs[FLAT$op == ":"])
-        BLOCK.lhs <- unique(BLOCKS)
+        BLOCKS.lhs.all <- tolower(FLAT$lhs[FLAT$op == ":"])
+        BLOCK.lhs <- unique(BLOCKS.lhs.all)
+
+        # if we have group and level, check that group comes first!
+        if("group" %in% BLOCK.lhs && "level" %in% BLOCK.lhs) {
+            group.idx <- which(BLOCK.lhs == "group")
+            level.idx <- which(BLOCK.lhs == "level")
+            if(group.idx > level.idx) {
+                stop("lavaan ERROR: levels must be nested within groups (not the other way around).")
+            }
+        }
 
         # block op == ":" indices
         BLOCK.op.idx <- which(FLAT$op == ":")
@@ -182,7 +195,7 @@ lavaanify <- lavParTable <- function(
                  "missing numbers/labels:\n\t\t", txt)
         }
 
-        # check for 'group' (needed?)
+        # check for ngroups (ngroups is based on the data!)
         if("group" %in% BLOCK.lhs) {
             # how many group blocks?
             group.block.idx <- FLAT$op == ":" & FLAT$lhs == "group"
@@ -194,28 +207,65 @@ lavaanify <- lavParTable <- function(
             }
         }
 
-        # split the FLAT data.frame per `block', create LIST
-        # for each `block', and rbind them together, adding block columns
-        FLAT <- as.data.frame(FLAT, stringsAsFactors = FALSE)
-        BLOCK.op.idx <- c(BLOCK.op.idx, nrow(FLAT) + 1L)
+        # figure out how many 'blocks' we have, and store indices/block.labels
         BLOCK.rhs <- rep("0", length(BLOCK.lhs))
         block.id <- 0L
+        BLOCK.INFO <- vector("list", length = n.block.flat) # too large
+        BLOCK.op.idx1 <- c(BLOCK.op.idx, nrow(FLAT) + 1L) # add addition row
+        for(block.op in seq_len(n.block.flat)) {
 
-        for(block in seq_len(n.block.flat)) {
-
-            # fill BLOC.rhs value
-            block.lhs <- FLAT$lhs[BLOCK.op.idx[block]]
-            block.rhs <- FLAT$rhs[BLOCK.op.idx[block]]
+            # fill BLOCK.rhs value(s)
+            block.lhs <- FLAT$lhs[BLOCK.op.idx1[block.op]]
+            block.rhs <- FLAT$rhs[BLOCK.op.idx1[block.op]]
             BLOCK.rhs[ which(block.lhs == BLOCK.lhs) ] <- block.rhs
 
             # another block identifier?
-            if(BLOCK.op.idx[block+1] - BLOCK.op.idx[block] == 1L) {
+            if(BLOCK.op.idx1[block.op + 1L] - BLOCK.op.idx1[block.op] == 1L) {
                 next
             }
+
+            # we have a 'block'
             block.id <- block.id + 1L
 
+            # select FLAT rows for this block
+            IDX <- (BLOCK.op.idx1[block.op]+1L):(BLOCK.op.idx1[block.op+1L]-1L)
 
-            FLAT.block <- FLAT[(BLOCK.op.idx[block]+1L):(BLOCK.op.idx[block+1]-1L),]
+            # store info in BLOCK.INFO
+            BLOCK.INFO[[block.id]] <- list(lhs = BLOCK.lhs, # always the same
+                                           rhs = BLOCK.rhs, # for this block
+                                           idx = IDX)
+        }
+        BLOCK.INFO <- BLOCK.INFO[seq_len(block.id)]
+
+        # new in 0.6-12
+        # check for blocks with the same BLOCK.rhs combination
+        # (perhaps added later?)
+        # - merge the indices
+        # - remove the duplicated blocks
+        block.labels <- sapply(lapply(BLOCK.INFO, "[[", "rhs"),
+                               paste, collapse = ".")
+        nblocks <- length(unique(block.labels))
+        if(nblocks < length(block.labels)) {
+            # it would appear we have duplicated block.labels -> merge
+            dup.idx <- which(duplicated(block.labels))
+            for(i in 1:length(dup.idx)) {
+                this.dup.idx <- dup.idx[i]
+                orig.idx <- which(block.labels == block.labels[this.dup.idx])[1]
+                BLOCK.INFO[[orig.idx]]$idx <- c(BLOCK.INFO[[orig.idx    ]]$idx,
+                                                BLOCK.INFO[[this.dup.idx]]$idx)
+            }
+            BLOCK.INFO <- BLOCK.INFO[-dup.idx]
+        }
+
+        # split the FLAT data.frame per `block', create LIST
+        # for each `block', and rbind them together, adding block columns
+        for(block in seq_len(nblocks)) {
+
+            BLOCK.rhs <- BLOCK.INFO[[block]]$rhs
+            block.lhs <- BLOCK.INFO[[block]]$lhs[ length(BLOCK.lhs) ] # last one
+            block.idx <- BLOCK.INFO[[block]]$idx
+
+            FLAT.block <- FLAT[block.idx, ]
             # rm 'block' column (if any) in FLAT.block
             FLAT.block$block <- NULL
 
@@ -268,7 +318,7 @@ lavaanify <- lavParTable <- function(
             if(conditional.x && block.lhs == "level") {
                 if(ngroups == 1L) {
                     OTHER.BLOCK.NAMES <- lav_partable_vnames(FLAT, "ov",
-                                        block = seq_len(n.block.flat)[-block])
+                                        block = seq_len(nblocks)[-block])
                 } else {
                     # TEST ME
                     this.group <- ceiling(block / nlevels)
@@ -288,7 +338,7 @@ lavaanify <- lavParTable <- function(
             }
 
             LIST.block <- lav_partable_flat(FLAT.block, blocks = BLOCK.lhs,
-                block.id = block.id,
+                block.id = block,
                 meanstructure = meanstructure,
                 int.ov.free = int.ov.free, int.lv.free = int.lv.free,
                 orthogonal = orthogonal, orthogonal.y = orthogonal.y,
