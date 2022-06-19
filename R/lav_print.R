@@ -863,14 +863,94 @@ print.lavaan.summary <- function(x, ..., nd = 3L) {
 
     # header
     if(!is.null(y$header)) {
-        cat(paste(y$header, collapse = "\n"))
+        lavaan.version   <- y$header$lavaan.version
+        sam.approach     <- y$header$sam.approach
+        optim.method     <- y$header$optim.method
+        optim.iterations <- y$header$optim.iterations
+        optim.converged  <- y$header$optim.converged
+
+        # sam or sem?
+        if(sam.approach) {
+            cat("This is ",
+                sprintf("lavaan %s", lavaan.version),
+                " -- using the SAM approach to SEM\n", sep = "")
+        } else {
+            cat(sprintf("lavaan %s ", lavaan.version))
+
+            # Convergence or not?
+            if(optim.method == "none") {
+                cat("-- DRY RUN with 0 iterations --\n")
+            } else if(optim.iterations > 0) {
+                if(optim.converged) {
+                    cat(sprintf("ended normally after %i iterations\n",
+                        optim.iterations))
+                } else {
+                    cat(sprintf("did NOT end normally after %i iterations\n",
+                        optim.iterations))
+                    cat("** WARNING ** Estimates below are most likely unreliable\n")
+                }
+            } else {
+                cat("did not run (perhaps do.fit = FALSE)?\n")
+                cat("** WARNING ** Estimates below are simply the starting values\n")
+            }
+        }
     }
 
     # optim
     if(!is.null(y$optim)) {
+        estimator      <- y$optim$estimator
+        estimator.args <- y$optim$estimator.args
+        optim.method   <- y$optim$optim.method
+        npar           <- y$optim$npar
+        eq.constraints <- y$optim$eq.constraints
+        nrow.ceq.jac   <- y$optim$nrow.ceq.jac
+        nrow.cin.jac   <- y$optim$nrow.cin.jac
+        nrow.con.jac   <- y$optim$nrow.con.jac
+        con.jac.rank   <- y$optim$con.jac.rank
+
         cat("\n")
-        c1 <- y$optim$c1
-        c2 <- y$optim$c2
+        # cat("Optimization information:\n\n")
+
+        c1 <- c("Estimator")
+        # second column
+        tmp.est <- toupper(estimator)
+        if(tmp.est == "DLS") {
+            dls.first.letter <- substr(estimator.args$dls.GammaNT,
+                                       1L, 1L)
+            tmp.est <- paste("DLS-", toupper(dls.first.letter), sep = "")
+        }
+        c2 <- tmp.est
+
+        # additional estimator args
+        if(!is.null(estimator.args) &&
+           length(estimator.args) > 0L) {
+            if(estimator == "DLS") {
+                c1 <- c(c1, "Estimator DLS value for a")
+                c2 <- c(c2, estimator.args$dls.a)
+            }
+        }
+
+        # optimization method + npar
+        c1 <- c(c1, "Optimization method", "Number of model parameters")
+        c2 <- c(c2, toupper(optim.method), npar)
+
+        # optional output
+        if(eq.constraints) {
+            c1 <- c(c1, "Number of equality constraints")
+            c2 <- c(c2, nrow.ceq.jac)
+        }
+        if(nrow.cin.jac > 0L) {
+            c1 <- c(c1, "Number of inequality constraints")
+            c2 <- c(c2, nrow.cin.jac)
+        }
+        if(nrow.con.jac > 0L) {
+            if(con.jac.rank == (nrow.ceq.jac + nrow.cin.jac)) {
+            # nothing to do (don't print, as this is redundant information)
+            } else {
+                c1 <- c(c1, "Row rank of the constraints matrix")
+                c2 <- c(c2, con.jac.rank)
+            }
+        }
 
         # format
         c1 <- format(c1, width = 40L)
@@ -889,8 +969,34 @@ print.lavaan.summary <- function(x, ..., nd = 3L) {
     # sam header
     if(!is.null(y$sam.header)) {
         cat("\n")
-        c1 <- y$sam.header$c1
-        c2 <- y$sam.header$c2
+        sam.method          <- y$sam.header$sam.method
+        sam.local.options   <- y$sam.header$sam.local.options
+        sam.mm.list         <- y$sam.header$sam.mm.list
+        sam.mm.estimator    <- y$sam.header$sam.mm.estimator
+        sam.struc.estimator <- y$sam.header$sam.struc.estimator
+
+        # sam method
+        c1 <- c("SAM method")
+        c2 <- toupper(sam.method)
+
+        # options
+        if(sam.method == "local") {
+            c1 <- c(c1, "Mapping matrix M method")
+            c2 <- c(c2, sam.local.options$M.method)
+            # TODo: more!
+        }
+
+        # number of measurement blocks
+        c1 <- c(c1, "Number of measurement blocks")
+        c2 <- c(c2, length(sam.mm.list))
+
+        # estimator measurement blocks
+        c1 <- c(c1, "Estimator measurement part")
+        c2 <- c(c2, sam.mm.estimator)
+
+        # estimator structural part
+        c1 <- c(c1, "Estimator  structural part")
+        c2 <- c(c2, sam.struc.estimator)
 
         # format
         c1 <- format(c1, width = 40L)
@@ -907,11 +1013,65 @@ print.lavaan.summary <- function(x, ..., nd = 3L) {
     }
 
     # efa/rotation
-    if(!is.null(y$efa)) {
+    if(!is.null(y$rotation)) {
         cat("\n")
+        rotation      <- y$rotation
+        rotation.args <- y$rotation.args
+
         #cat("Rotation information:\n\n")
-        c1 <- y$efa$c1
-        c2 <- y$efa$c2
+        # container
+        c1 <- c2 <- character(0L)
+
+        # rotation method
+        c1 <- c(c1, "Rotation method")
+        if(rotation$rotation == "none") {
+            MM <- toupper(rotation$rotation)
+        } else if(rotation$rotation.args$orthogonal) {
+            MM <- paste(toupper(rotation$rotation), " ", "ORTHOGONAL",
+                    sep = "")
+        } else {
+            MM <- paste(toupper(rotation$rotation), " ", "OBLIQUE",
+                        sep = "")
+        }
+        c2 <- c(c2, MM)
+
+        if(rotation$rotation != "none") {
+
+            # method options
+            if(rotation$rotation == "geomin") {
+                c1 <- c(c1, "Geomin epsilon")
+                c2 <- c(c2, rotation$rotation.args$geomin.epsilon)
+            } else if(rotation$rotation == "orthomax") {
+                c1 <- c(c1, "Orthomax gamma")
+                c2 <- c(c2, rotation$rotation.args$orthomax.gamma)
+            } else if(rotation$rotation == "cf") {
+                c1 <- c(c1, "Crawford-Ferguson gamma")
+                c2 <- c(c2, rotation$rotation.args$cf.gamma)
+            } else if(rotation$rotation == "oblimin") {
+                c1 <- c(c1, "Oblimin gamma")
+                c2 <- c(c2, rotation$rotation.args$oblimin.gamma)
+            }
+
+            # rotation algorithm
+            c1 <- c(c1, "Rotation algorithm (rstarts)")
+            tmp <- paste(toupper(rotation$rotation.args$algorithm),
+                         " (", rotation$rotation.args$rstarts, ")", sep = "")
+            c2 <- c(c2, tmp)
+
+            # Standardized metric (or not)
+            c1 <- c(c1, "Standardized metric")
+            if(rotation$rotation.args$std.ov) {
+                c2 <- c(c2, "TRUE")
+            } else {
+                c2 <- c(c2, "FALSE")
+            }
+
+            # Row weights
+            c1 <- c(c1, "Row weights")
+            tmp.txt <- rotation$rotation.args$row.weights
+            c2 <- c(c2, paste(toupper(substring(tmp.txt, 1, 1)),
+                              substring(tmp.txt, 2), sep = ""))
+        }
 
         # format c1/c2
         c1 <- format(c1, width = 33L)
@@ -936,7 +1096,6 @@ print.lavaan.summary <- function(x, ..., nd = 3L) {
     # sam local stats: measurement blocks + structural part
     if(!is.null(y$sam)) {
         cat("\n")
-
         sam.method    <- y$sam$sam.method
         sam.mm.table  <- y$sam$sam.mm.table
         sam.mm.rel    <- y$sam$sam.mm.rel
