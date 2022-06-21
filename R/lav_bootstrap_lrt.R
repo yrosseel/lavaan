@@ -31,7 +31,7 @@ bootstrapLRT <- function (h0 = NULL, h1 = NULL, R = 1000L,
             "h0 should not be better!\n")
         return(NULL)
     }
-    LRT.original <- abs(anova(h0, h1)$`Chisq diff`[2L])
+    LRT.original <- abs(anova(h1, h0)$`Chisq diff`[2L])
     # abs only needed because df may be the same for both models!
 
 
