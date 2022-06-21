@@ -563,8 +563,8 @@ lav_model_h1_information_firstorder <- function(lavobject      = NULL,
 
     # clustered?
     if(!is.null(lavoptions) &&
-       !is.null(lavoptions$clustered) &&
-       lavoptions$clustered) {
+       !is.null(lavoptions$.clustered) &&
+       lavoptions$.clustered) {
         clustered <- TRUE
         if(is.null(lavdata@Lp[[1]])) {
             stop("lavaan ERROR: lavdata@Lp is empty, while clustered = TRUE")

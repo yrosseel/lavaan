@@ -325,11 +325,11 @@ lavParseModelString <- function(model.syntax = '', as.data.frame. = FALSE,
             if(any(ncolon > 1L)) {
                 idx <- which(ncolon > 1L)
 				txt <- "Three-way or higher-order interaction terms (using
-multiple colons) are not supported in the lavaan sytax; please manually
+multiple colons) are not supported in the lavaan syntax; please manually
 construct the product terms yourself in the data.frame, give them an
 appropriate name, and then you can use these interaction variables as any
 other (observed) variable in the model syntax."
-                txt <- c(txt, "Problematic term is: ",
+                txt <- c(txt, " Problematic term is: ",
                          RHS.names[ idx[1] ])
                 stop(lav_txt2message(txt, header = "lavaan ERROR:"))
             }

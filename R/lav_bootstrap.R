@@ -201,10 +201,9 @@ lav_bootstrap_internal <- function(object          = NULL,
             # transformed data
             dataX[[g]] <- X
         }
-    }
 
     # if yuan, transform data here
-    if(type == "yuan") {
+    } else if(type == "yuan") {
         # page numbers refer to Yuan et al, 2007
         # Define a function to find appropriate value of a
         # (p. 272); code supplied 16 jun 2016 by Cheng & Wu
@@ -412,8 +411,4 @@ lav_bootstrap_internal <- function(object          = NULL,
 
     t.star
 }
-
-
-
-
 

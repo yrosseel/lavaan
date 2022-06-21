@@ -46,7 +46,9 @@ free parameters in the model.}
 \item{parallel}{The type of parallel operation to be used (if any).  If
 missing, the default is \code{"no"}.  }
 \item{ncpus}{Integer: number of processes to be used in parallel operation:
-typically one would chose this to the number of available CPUs.  }
+typically one would chose this to the number of available CPUs. By default
+this is the number of cores (as detected by \code{parallel::detectCores()})
+minus one.} 
 \item{cl}{An optional \pkg{parallel} or \pkg{snow} cluster for use if
 \code{parallel = "snow"}.  If not supplied, a cluster on the local machine is
 created for the duration of the \code{bootstrapLavaan} or \code{bootstrapLRT}

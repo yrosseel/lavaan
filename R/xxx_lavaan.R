@@ -54,10 +54,19 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     start.time0 <- start.time <- proc.time()[3]; timing <- list()
 
     # 0a. store call
-    mc  <- match.call(expand.dots = TRUE)
+    SYSCALL <- sys.call() # to get main arguments without partial matching
+    mc  <- match.call(expand.dots = TRUE) # sys.call to avoid partial matching
 
     # handle dotdotdot
     dotdotdot <- list(...)
+
+    # catch partial matching of 'cl' (expanded to cluster)
+    if(!is.null(SYSCALL[["cl"]]) && is.null(SYSCALL[["cluster"]]) &&
+       !is.null(mc[["cluster"]])) {
+        mc[["cl"]] <- mc[["cluster"]]
+        mc[["cluster"]] <- cluster <- NULL
+        dotdotdot$cl <- SYSCALL[["cl"]]
+    }
 
     # check data
     if(!is.null(data)) {
@@ -408,6 +417,20 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     if(!is.null(slotOptions)) {
         lavoptions <- slotOptions
 
+        # backwards compatibility
+        if(!is.null(lavoptions$categorical)) {
+            lavoptions$.categorical <- lavoptions$categorical
+            lavoptions$categorical <- NULL
+        }
+        if(!is.null(lavoptions$clustered)) {
+            lavoptions$.clustered <- lavoptions$clustered
+            lavoptions$clustered <- NULL
+        }
+        if(!is.null(lavoptions$multilevel)) {
+            lavoptions$.multilevel <- lavoptions$multilevel
+            lavoptions$multilevel <- NULL
+        }
+
         # but what if other 'options' are given anyway (eg 'start = ')?
         # give a warning!
         if(length(dotdotdot) > 0L) {
@@ -444,13 +467,13 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
         }
 
         # categorical mode?
-        opt$categorical <- FALSE
+        opt$.categorical <- FALSE
         if(any(FLAT$op == "|")) {
-            opt$categorical <- TRUE
+            opt$.categorical <- TRUE
         } else if(!is.null(data) && length(ordered) > 0L) {
-            opt$categorical <- TRUE
+            opt$.categorical <- TRUE
         } else if(!is.null(sample.th)) {
-            opt$categorical <- TRUE
+            opt$.categorical <- TRUE
         } else if(is.data.frame(data)) {
             # first check if we can find ov.names.y in Data
             OV.names.y <- unique(unlist(ov.names.y))
@@ -460,26 +483,26 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                     paste(OV.names.y[idx.missing], collapse=" "))
             }
             if(any(sapply(data[, OV.names.y], inherits, "ordered")) ) {
-                opt$categorical <- TRUE
+                opt$.categorical <- TRUE
             }
         }
 
         # clustered?
         if(length(cluster) > 0L) {
-            opt$clustered <- TRUE
+            opt$.clustered <- TRUE
         } else {
-            opt$clustered <- FALSE
+            opt$.clustered <- FALSE
         }
 
         # multilevel?
         if(length(ov.names.l) > 0L && length(ov.names.l[[1]]) > 1L) {
-            opt$multilevel <- TRUE
+            opt$.multilevel <- TRUE
         } else {
-            opt$multilevel <- FALSE
+            opt$.multilevel <- FALSE
         }
 
         # sampling weights? force MLR
-        if(!is.null(sampling.weights) && !opt$categorical &&
+        if(!is.null(sampling.weights) && !opt$.categorical &&
            opt$estimator %in% c("default", "ML")) {
             opt$estimator <- "MLR"
         }
@@ -718,7 +741,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     # was used, but the user has forgotten some variances/intercepts...
     if(is.null(slotParTable)) {
         junk <- lav_partable_check(lavpartable,
-                                   categorical = lavoptions$categorical,
+                                   categorical = lavoptions$.categorical,
                                    warn = TRUE)
     }
 
@@ -1952,7 +1975,15 @@ cfa <- sem <- function(# user-specified model: can be syntax, parameter Table
                        # options (dotdotdot)
                        ...) {
 
+    SYSCALL <- sys.call() # no partial matching
     mc <- match.call(expand.dots = TRUE)
+
+    # catch partial matching of 'cl' (expanded to cluster)
+    if(!is.null(SYSCALL[["cl"]]) && is.null(SYSCALL[["cluster"]]) &&
+       !is.null(mc[["cluster"]])) {
+        mc[["cl"]] <- mc[["cluster"]]
+        mc[["cluster"]] <- NULL
+    }
 
     # set model.type
     mc$model.type      = as.character( mc[[1L]] )
@@ -2019,7 +2050,15 @@ growth <- function(# user-specified model: can be syntax, parameter Table
                    # options (dotdotdot)
                    ...) {
 
+    SYSCALL <- sys.call() # no partial matching
     mc <- match.call(expand.dots = TRUE)
+
+    # catch partial matching of 'cl' (expanded to cluster)
+    if(!is.null(SYSCALL[["cl"]]) && is.null(SYSCALL[["cluster"]]) &&
+       !is.null(mc[["cluster"]])) {
+        mc[["cl"]] <- mc[["cluster"]]
+        mc[["cluster"]] <- NULL
+    }
 
     # set model.type
     mc$model.type      = as.character( mc[[1L]] )

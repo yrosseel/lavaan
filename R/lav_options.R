@@ -177,7 +177,7 @@ lav_options_default <- function(mimic = "lavaan") {
 
                 # parallel
                 parallel               = "no",
-                ncpus                  = 1L,
+                ncpus                  = parallel::detectCores() - 1L,
                 cl                     = NULL,
                 iseed                  = NULL,
 
@@ -266,7 +266,7 @@ lav_options_set <- function(opt = NULL) {
         opt$group.equal <- character(0)
     } else if(is.null(opt$group.equal) || all(nchar(opt$group.equal) == 0L)) {
         if(opt$mimic == "Mplus") {
-            if(opt$categorical) {
+            if(opt$.categorical) {
                 opt$group.equal <- c("loadings", "thresholds")
             } else {
                 if(is.logical(opt$meanstructure) && !opt$meanstructure) {
@@ -306,10 +306,10 @@ lav_options_set <- function(opt = NULL) {
 
     # if categorical, and group.equal contains "intercepts", also add
     # thresholds (and vice versa)
-    if(opt$categorical && "intercepts" %in% opt$group.equal) {
+    if(opt$.categorical && "intercepts" %in% opt$group.equal) {
         opt$group.equal <- unique(c(opt$group.equal, "thresholds"))
     }
-    if(opt$categorical && "thresholds" %in% opt$group.equal) {
+    if(opt$.categorical && "thresholds" %in% opt$group.equal) {
         opt$group.equal <- unique(c(opt$group.equal, "intercepts"))
     }
 
@@ -334,7 +334,7 @@ lav_options_set <- function(opt = NULL) {
 
     # clustered
     # brute-force override (for now)
-    if(opt$clustered && !opt$multilevel) {
+    if(opt$.clustered && !opt$.multilevel) {
         opt$meanstructure <- TRUE
         #opt$missing <- "listwise"
         #if(opt$missing == "ml") {
@@ -395,7 +395,7 @@ lav_options_set <- function(opt = NULL) {
 
     # multilevel
     # brute-force override (for now)
-    if(opt$multilevel) {
+    if(opt$.multilevel) {
         opt$meanstructure <- TRUE
 
         # test
@@ -430,7 +430,7 @@ lav_options_set <- function(opt = NULL) {
 
     # missing
     if(opt$missing == "default") {
-        if(opt$mimic == "Mplus" && !opt$categorical &&
+        if(opt$mimic == "Mplus" && !opt$.categorical &&
            opt$estimator %in% c("default", "ml", "mlr")) {
             # since version 5?
             opt$missing <- "ml"
@@ -439,8 +439,8 @@ lav_options_set <- function(opt = NULL) {
             opt$missing <- "listwise"
         }
     } else if(opt$missing %in% c("ml", "direct", "fiml")) {
-        #if(opt$categorical && opt$estimator != "mml") {
-        if(opt$categorical) {
+        #if(opt$.categorical && opt$estimator != "mml") {
+        if(opt$.categorical) {
             stop("lavaan ERROR: missing = ", dQuote(opt$missing),
                  " not available in the categorical setting")
         }
@@ -451,8 +451,8 @@ lav_options_set <- function(opt = NULL) {
                  dQuote(opt$estimator))
         }
     } else if(opt$missing %in% c("ml.x", "direct.x", "fiml.x")) {
-        #if(opt$categorical && opt$estimator != "mml") {
-        if(opt$categorical) {
+        #if(opt$.categorical && opt$estimator != "mml") {
+        if(opt$.categorical) {
             stop("lavaan ERROR: missing = ", dQuote(opt$missing),
                  " not available in the categorical setting")
         }
@@ -465,7 +465,7 @@ lav_options_set <- function(opt = NULL) {
     } else if(opt$missing %in% c("two.stage", "twostage", "two-stage",
                                  "two.step",  "twostep",  "two-step")) {
         opt$missing <- "two.stage"
-        if(opt$categorical) {
+        if(opt$.categorical) {
             stop("lavaan ERROR: missing=\"two.stage\" not available in the categorical setting")
         }
         if(opt$estimator %in% c("mlm", "mlmv", "gls", "wls", "wlsm", "wlsmv",
@@ -477,7 +477,7 @@ lav_options_set <- function(opt = NULL) {
                                  "robust.two.step",  "robust.twostep",
                                  "robust-two-step")) {
         opt$missing <- "robust.two.stage"
-        if(opt$categorical) {
+        if(opt$.categorical) {
             stop("lavaan ERROR: missing=\"robust.two.stage\" not available in the categorical setting")
         }
         if(opt$estimator %in% c("mlm", "mlmv", "gls", "wls", "wlsm", "wlsmv",
@@ -668,7 +668,7 @@ lav_options_set <- function(opt = NULL) {
 
     # default estimator
     if(opt$estimator == "default") {
-        if(opt$categorical) {
+        if(opt$.categorical) {
             opt$estimator <- "wlsmv"
         } else {
             opt$estimator <- "ml"
@@ -1157,7 +1157,7 @@ lav_options_set <- function(opt = NULL) {
 
 
     # special stuff for categorical
-    if(opt$categorical) {
+    if(opt$.categorical) {
         opt$meanstructure <- TRUE # Mplus style
         if(opt$estimator == "ML") {
             stop("lavaan ERROR: estimator ML for ordered data is not supported yet. Use WLSMV instead.")
@@ -1398,7 +1398,7 @@ lav_options_set <- function(opt = NULL) {
         if(opt$estimator == "ML" && (opt$mimic == "Mplus" ||
                                      opt$mimic == "lavaan")) {
             opt$conditional.x <- FALSE
-        } else if(opt$categorical) {
+        } else if(opt$.categorical) {
             opt$conditional.x <- TRUE
         } else {
             opt$conditional.x <- FALSE
@@ -1414,7 +1414,7 @@ lav_options_set <- function(opt = NULL) {
 
     # fixed.x
     if(is.logical(opt$fixed.x)) {
-        #if(opt$conditional.x && opt$fixed.x == FALSE && !opt$multilevel) {
+        #if(opt$conditional.x && opt$fixed.x == FALSE && !opt$.multilevel) {
         if(opt$conditional.x && opt$fixed.x == FALSE) {
             stop("lavaan ERROR: fixed.x = FALSE is not supported when conditional.x = TRUE.")
         }
@@ -1727,7 +1727,7 @@ lav_options_set <- function(opt = NULL) {
 
 
     # group.w.free
-    #if(opt$group.w.free && opt$categorical) {
+    #if(opt$group.w.free && opt$.categorical) {
     #    stop("lavaan ERROR: group.w.free = TRUE is not supported (yet) in the categorical setting.")
     #}
 
