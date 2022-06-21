@@ -468,7 +468,7 @@ Check options:
       they should be (the tolerance used is 0.001).}
     \item{\code{check.post}:}{Logical. If \code{TRUE}, and the model
       converged, a check is performed after (post) fitting, to verify if 
-      the solution is admissable. This implies that all variances are
+      the solution is admissible. This implies that all variances are
       non-negative, and all the model-implied covariance matrices are 
       positive (semi-)definite. For the latter test, we tolerate a tiny 
       negative eigenvalue that is smaller than .Machine$double.eps^(3/4), 

@@ -9,7 +9,7 @@
 # Notes: - faulty runs are simply ignored (with a warning)
 #        - default R=1000
 #
-# Updates: - now we have a separate @data slot, we only need to transform once
+# Updates: - now we have a separate @Data slot, we only need to transform once
 #            for the bollen.stine bootstrap (13 dec 2011)
 #          - bug fix: we need to 'update' the fixed.x variances/covariances
 #            for each bootstrap draw!!
@@ -24,7 +24,7 @@ bootstrapLavaan <- function(object,
                             type        = "ordinary",
                             verbose     = FALSE,
                             FUN         = "coef",
-                            warn        = -1L,
+                            #warn        = -1L,
                             return.boot = FALSE,
                             parallel    = c("no", "multicore", "snow"),
                             ncpus       = 1L,
@@ -63,7 +63,7 @@ bootstrapLavaan <- function(object,
     lavoptions. <- list(parallel = parallel, ncpus = ncpus, cl = cl,
                         iseed = iseed)
 
-    lav_bootstrap_internal(object          = object,
+    out <- lav_bootstrap_internal(object          = object,
                            lavdata.        = NULL,
                            lavmodel.       = NULL,
                            lavsamplestats. = NULL,
@@ -73,10 +73,24 @@ bootstrapLavaan <- function(object,
                            type            = type.,
                            verbose         = verbose,
                            FUN             = FUN,
-                           warn            = warn,
+                           #warn            = warn, # not used!
                            return.boot     = return.boot,
                            h0.rmsea        = h0.rmsea,
                            ...)
+
+    # new in 0.6-12: always warn for failed and nonadmissible
+    nfailed <- length(attr(out, "error.idx"))
+    if(!is.null(nfailed) && nfailed > 0L && object@Options$warn) {
+        warning("lavaan WARNING: ", nfailed,
+                " bootstrap runs failed or did not converge.")
+    }
+
+    notok <- attr(out, "nonadmissible")
+    if(!is.null(notok) && notok > 0L && object@Options$warn) {
+        warning("lavaan WARNING: ", notok, " bootstrap runs resulted in nonadmissible solutions.")
+    }
+
+    out
 }
 
 # we need an internal version to be called from VCOV and lav_model_test
@@ -91,7 +105,8 @@ lav_bootstrap_internal <- function(object          = NULL,
                                    type            = "ordinary",
                                    verbose         = FALSE,
                                    FUN             = "coef",
-                                   warn            = 0L,
+                                   #warn            = -1L, # not used anymore!
+                                   check.post      = TRUE,
                                    return.boot     = FALSE,
                                    h0.rmsea        = NULL,
                                    ...) {
@@ -100,7 +115,6 @@ lav_bootstrap_internal <- function(object          = NULL,
     # below...
     # options -> opt
     # sample -> samp
-
 
     # object slots
     if(!is.null(object)) {
@@ -131,23 +145,28 @@ lav_bootstrap_internal <- function(object          = NULL,
         if(FUN == "coef") {
             t.star <- matrix(as.numeric(NA), R, lavmodel@nx.free)
             lavoptions$test <- "none"
-            lavoptions$baseline <- FALSE; lavoptions$h1 <- FALSE
+            lavoptions$baseline <- FALSE
+            lavoptions$h1 <- FALSE
+            lavoptions$loglik <- FALSE
         } else if(FUN == "test") {
             t.star <- matrix(as.numeric(NA), R, 1L)
-            lavoptions$baseline <- FALSE; lavoptions$h1 <- FALSE
+            lavoptions$baseline <- FALSE
+            lavoptions$h1 <- FALSE
+            lavoptions$loglik <- FALSE
         } else if(FUN == "coeftest") {
             t.star <- matrix(as.numeric(NA), R, lavmodel@nx.free + 1L)
-            lavoptions$baseline <- FALSE; lavoptions$h1 <- FALSE
+            lavoptions$baseline <- FALSE
+            lavoptions$h1 <- FALSE
+            lavoptions$loglik <- FALSE
         }
     }
 
+    # get parallelization options
     parallel <- lavoptions$parallel[1]
     ncpus    <- lavoptions$ncpus
     cl       <- lavoptions[["cl"]]    # often NULL
     iseed    <- lavoptions[["iseed"]] # often NULL
 
-    # prepare
-    old_options <- options(); options(warn = warn)
     # the next 10 lines are borrowed from the boot package
     have_mc <- have_snow <- FALSE
     if (parallel != "no" && ncpus > 1L) {
@@ -314,7 +333,6 @@ lav_bootstrap_internal <- function(object          = NULL,
                 cat("     FAILED: creating sample statistics\n")
                 cat(bootSampleStats[1])
             }
-            options(old_options)
             return(NULL)
         }
 
@@ -325,14 +343,13 @@ lav_bootstrap_internal <- function(object          = NULL,
         }
 
         # fit model on bootstrap sample
-        fit.boot <- lavaan(slotOptions     = lavoptions,
-                           slotParTable    = lavpartable,
-                           slotModel       = model.boot,
-                           slotSampleStats = bootSampleStats,
-                           slotData        = lavdata)
+        fit.boot <- suppressWarnings(lavaan(slotOptions     = lavoptions,
+                                            slotParTable    = lavpartable,
+                                            slotModel       = model.boot,
+                                            slotSampleStats = bootSampleStats,
+                                            slotData        = lavdata))
         if(!fit.boot@optim$converged) {
             if(verbose) cat("     FAILED: no convergence\n")
-            options(old_options)
             return(NULL)
         }
 
@@ -346,16 +363,21 @@ lav_bootstrap_internal <- function(object          = NULL,
                 out <- c(fit.boot@optim$x, fit.boot@test[[1L]]$stat)
             }
         } else { # general use
-            out <- try(FUN(fit.boot, ...), silent=TRUE)
+            out <- try(FUN(fit.boot, ...), silent = TRUE)
         }
         if(inherits(out, "try-error")) {
             if(verbose) cat("     FAILED: applying FUN to fit.boot\n")
-            options(old_options)
             return(NULL)
         }
+
         if(verbose) cat("   OK -- niter = ",
                         sprintf("%3d", fit.boot@optim$iterations), " fx = ",
                         sprintf("%13.9f", fit.boot@optim$fx), "\n")
+
+        # check if the solution is admissible
+        admissible.flag <- suppressWarnings(lavInspect(fit.boot, "post.check"))
+        attr(out, "nonadmissible.flag") <- !admissible.flag
+
         out
     }
 
@@ -380,34 +402,44 @@ lav_bootstrap_internal <- function(object          = NULL,
         }
     } else lapply(seq_len(RR), fn)
 
-    # handle errors and fill in container
-    error.idx <- integer(0)
-    for(b in seq_len(RR)) {
-        if(!is.null(res[[b]]) && length(res[[b]]) > 0L) {
-            t.star[b, ] <- res[[b]]
-        } else {
-            error.idx <- c(error.idx, b)
-        }
-    }
+    # failed runs:
+    error.idx <- which(sapply(res, is.null))
 
+    # fill in container
+    t.star <- do.call("rbind", res)
+
+    # handle errors and fill in container
+    #error.idx <- integer(0)
+    #for(b in seq_len(RR)) {
+    #    if(!is.null(res[[b]]) && length(res[[b]]) > 0L) {
+    #        t.star[b, ] <- res[[b]]
+    #    } else {
+    #        error.idx <- c(error.idx, b)
+    #    }
+    #}
 
     # handle errors
     if(length(error.idx) > 0L) {
-        warning("lavaan WARNING: only ", (R-length(error.idx)), " bootstrap draws were successful")
-        t.star <- t.star[-error.idx,,drop=FALSE]
+        #warning("lavaan WARNING: only ", (R-length(error.idx)), " bootstrap draws were successful")
         attr(t.star, "error.idx") <- error.idx
     } else {
         if(verbose) cat("Number of successful bootstrap draws:",
                         (R - length(error.idx)), "\n")
     }
 
+    if(check.post) {
+        if(length(error.idx) > 0L) {
+            notok <- sum(sapply(res[-error.idx], attr, "nonadmissible.flag"))
+        } else {
+            notok <- sum(sapply(res, attr, "nonadmissible.flag"))
+        }
+        attr(t.star, "nonadmissible") <- notok
+    }
+
     # NOT DONE YET
     if(return.boot) {
         # mimic output boot function
     }
-
-    # restore options
-    options(old_options)
 
     t.star
 }

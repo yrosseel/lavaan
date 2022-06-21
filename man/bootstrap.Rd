@@ -6,14 +6,14 @@
 of statistics) you can extract from a fitted lavaan object.}
 \usage{
 bootstrapLavaan(object, R = 1000L, type = "ordinary", verbose = FALSE, 
-                FUN = "coef", warn = -1L, return.boot = FALSE,
+                FUN = "coef", return.boot = FALSE,
                 parallel = c("no", "multicore", "snow"),
                 ncpus = 1L, cl = NULL, iseed = NULL, h0.rmsea = NULL, ...)
 
 bootstrapLRT(h0 = NULL, h1 = NULL, R = 1000L, type="bollen.stine", 
              verbose = FALSE, return.LRT = FALSE, double.bootstrap = "no", 
              double.bootstrap.R = 500L, double.bootstrap.alpha = 0.05, 
-             warn = -1L, parallel = c("no", "multicore", "snow"),
+             parallel = c("no", "multicore", "snow"),
              ncpus = 1L, cl = NULL, iseed = NULL)
 }
 \arguments{
@@ -40,7 +40,6 @@ free parameters in the model.}
 \item{\dots}{Other named arguments for \code{FUN} which are passed
     unchanged each time it is called.}
 \item{verbose}{If \code{TRUE}, show information for each bootstrap draw.}
-\item{warn}{Sets the handling of warning messages. See \code{\link{options}}.}
 \item{return.boot}{Not used for now.}
 \item{return.LRT}{If \code{TRUE}, return the LRT values as an attribute to the pvalue.}
 \item{parallel}{The type of parallel operation to be used (if any).  If
