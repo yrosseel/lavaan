@@ -81,13 +81,24 @@ bootstrapLavaan <- function(object,
     # new in 0.6-12: always warn for failed and nonadmissible
     nfailed <- length(attr(out, "error.idx"))
     if(!is.null(nfailed) && nfailed > 0L && object@Options$warn) {
-        warning("lavaan WARNING: ", nfailed,
-                " bootstrap runs failed or did not converge.")
+        if(nfailed == 1L) {
+            warning("lavaan WARNING: ",
+                    "1 bootstrap run failed or did not converge.")
+        } else {
+            warning("lavaan WARNING: ", nfailed,
+                    " bootstrap runs failed or did not converge.")
+        }
     }
 
     notok <- attr(out, "nonadmissible")
     if(!is.null(notok) && notok > 0L && object@Options$warn) {
-        warning("lavaan WARNING: ", notok, " bootstrap runs resulted in nonadmissible solutions.")
+        if(notok == 1L) {
+            warning("lavaan WARNING: ",
+                    "1 bootstrap run resulted in a nonadmissible solution.")
+        } else {
+            warning("lavaan WARNING: ", notok,
+                    " bootstrap runs resulted in nonadmissible solutions.")
+        }
     }
 
     out
@@ -115,6 +126,8 @@ lav_bootstrap_internal <- function(object          = NULL,
     # below...
     # options -> opt
     # sample -> samp
+
+    mc <- match.call()
 
     # object slots
     if(!is.null(object)) {
@@ -160,25 +173,6 @@ lav_bootstrap_internal <- function(object          = NULL,
             lavoptions$loglik <- FALSE
         }
     }
-
-    # get parallelization options
-    parallel <- lavoptions$parallel[1]
-    ncpus    <- lavoptions$ncpus
-    cl       <- lavoptions[["cl"]]    # often NULL
-    iseed    <- lavoptions[["iseed"]] # often NULL
-
-    # the next 10 lines are borrowed from the boot package
-    have_mc <- have_snow <- FALSE
-    if (parallel != "no" && ncpus > 1L) {
-        if (parallel == "multicore") have_mc <- .Platform$OS.type != "windows"
-        else if (parallel == "snow") have_snow <- TRUE
-        if (!have_mc && !have_snow) ncpus <- 1L
-        loadNamespace("parallel")
-    }
-
-    # only if we return the seed
-    #if (!exists(".Random.seed", envir = .GlobalEnv, inherits = FALSE)) runif(1)
-    #seed <- get(".Random.seed", envir = .GlobalEnv, inherits = FALSE)
 
     # bollen.stine, yuan, or parametric: we need the Sigma.hat values
     if(type == "bollen.stine" || type == "parametric" || type == "yuan") {
@@ -304,10 +298,9 @@ lav_bootstrap_internal <- function(object          = NULL,
             BOOT.idx <- vector("list", length = lavdata@ngroups)
             for(g in 1:lavdata@ngroups) {
                 stopifnot(lavdata@nobs[[g]] > 1L)
-                boot.idx <- sample(x=lavdata@nobs[[g]],
-                                   size=lavdata@nobs[[g]], replace=TRUE)
+                boot.idx <- sample.int(lavdata@nobs[[g]], replace = TRUE)
                 BOOT.idx[[g]] <- boot.idx
-                dataX[[g]] <- dataX[[g]][boot.idx,,drop=FALSE]
+                dataX[[g]] <- dataX[[g]][boot.idx,,drop = FALSE]
             }
             newData <- lav_data_update(lavdata = lavdata, newX = dataX,
                                        BOOT.idx = BOOT.idx,
@@ -379,6 +372,39 @@ lav_bootstrap_internal <- function(object          = NULL,
         attr(out, "nonadmissible.flag") <- !admissible.flag
 
         out
+
+    } # end-of-fn
+
+    # get parallelization options
+    parallel <- lavoptions$parallel[1]
+    ncpus    <- lavoptions$ncpus
+    cl       <- lavoptions[["cl"]]    # often NULL
+    iseed    <- lavoptions[["iseed"]] # often NULL
+
+    # the next 10 lines are borrowed from the boot package
+    have_mc <- have_snow <- FALSE
+    if (parallel != "no" && ncpus > 1L) {
+        if (parallel == "multicore") have_mc <- .Platform$OS.type != "windows"
+        else if (parallel == "snow") have_snow <- TRUE
+        if (!have_mc && !have_snow) ncpus <- 1L
+        loadNamespace("parallel") # before recording seed!
+    }
+
+    # handle iseed
+    if(is.null(iseed)) {
+        if(!exists(".Random.seed", envir = .GlobalEnv, inherits = FALSE)) {
+            runif(1)
+        }
+        iseed <- get(".Random.seed", envir = .GlobalEnv, inherits = FALSE)
+    } else {
+        # set seed
+        if(exists(".Random.seed", envir=.GlobalEnv, inherits = FALSE)) {
+            temp.seed <-
+                get(".Random.seed", envir = .GlobalEnv, inherits = FALSE)
+        } else {
+            temp.seed <- NULL
+        }
+        assign(".Random.seed",  iseed, envir = .GlobalEnv)
     }
 
     # this is from the boot function in package boot
@@ -436,9 +462,62 @@ lav_bootstrap_internal <- function(object          = NULL,
         attr(t.star, "nonadmissible") <- notok
     }
 
+    # store iseed
+    attr(t.star, "seed") <- iseed
+
+    # handle seed (see boot.array)
+    if(is.null(iseed) && !is.null(temp.seed)) {
+        assign(".Random.seed", temp.seed, envir = .GlobalEnv)
+    } else {
+        rm(.Random.seed, pos = 1)
+    }
+
     # NOT DONE YET
     if(return.boot) {
         # mimic output boot function
+
+        if(is.null(object)) {
+            stop("lavaan ERROR: return.boot = TRUE requires a full lavaan object")
+        }
+
+        # we start with ordinary only for now
+        stopifnot(type == "ordinary")
+
+        if(! type %in% c("ordinary", "parametric")) {
+            stop("lavaan ERROR: only ordinary and parametric bootstrap are supported if return.boot = TRUE")
+        } else {
+            sim <- type
+        }
+
+        statistic. <- function(data, idx) {
+                         data.boot <- data[idx,]
+                         fit.boot <- update(object, data = data.boot)
+                         out <- try(FUN(fit.boot, ...), silent = TRUE)
+                         if(inherits(out, "try-error")) {
+                             out <- rep(as.numeric(NA), length(t0))
+                         }
+                         out
+                     }
+        attr(t.star, "seed") <- NULL
+        attr(t.star, "nonadmissible") <- NULL
+        out <- list(t0 = t0, t = t.star, R = RR,
+                    data = lavInspect(object, "data"),
+                    seed = iseed, statistic = statistic.,
+                    sim = sim, call = mc)
+
+        #if(sim == "parametric") {
+        #    ran.gen. <- function() {} # TODO
+        #    out <- c(out, list(ran.gen = ran.gen, mle = mle))
+        #} else if(sim == "ordinary") {
+            stype <- "i"
+            strata <- rep(1, nobs(object))
+            weights <- 1/tabulate(strata)[strata]
+            out <- c(out, list(stype = stype, strata = strata,
+                                weights = weights))
+        #}
+
+        class(out) <- "boot"
+        return(out)
     }
 
     t.star
