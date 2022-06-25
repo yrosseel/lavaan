@@ -296,6 +296,8 @@ lav_bootstrap_internal <- function(object          = NULL,
         if(type == "bollen.stine" || type == "ordinary" || type == "yuan") {
             # take a bootstrap sample for each group
             BOOT.idx <- vector("list", length = lavdata@ngroups)
+            # Note: we generate the bootstrap indices separately for each
+            #       group, in order to ensure the group sizes do not change!
             for(g in 1:lavdata@ngroups) {
                 stopifnot(lavdata@nobs[[g]] > 1L)
                 boot.idx <- sample.int(lavdata@nobs[[g]], replace = TRUE)

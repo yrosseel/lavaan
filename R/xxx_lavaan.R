@@ -296,6 +296,17 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
         }
     }
 
+    # sanity check: we do not support latent interaction yet (using the :)
+    lv.int.idx <- which(grepl(":", LV.names))
+    if(length(lv.int.idx) > 0L) {
+        txt <- c("Interaction terms involving latent variables (",
+                 LV.names[lv.int.idx[1]], ") are not supported.",
+                 " You may consider creating product indicators to define ",
+                 "the latent interaction term. See the indProd() function ",
+                 "in the semTools package.")
+        stop(lav_txt2message(txt, header = "lavaan ERROR:"))
+    }   
+
     # handle ov.names.l
     if(any(FLAT$op == ":" & tolower(FLAT$lhs) == "level")) {
 
