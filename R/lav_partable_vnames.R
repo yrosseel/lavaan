@@ -331,6 +331,22 @@ lav_partable_vnames <- function(partable, type = NULL, ...,
             } else {
                 ov.x <- eqs.x[ !eqs.x %in% c(lv.names2, ov.ind, ov.y) ]
             }
+            # new in 0.6-12: if we have interaction terms in ov.x, check
+            # if some terms are in eqs.y; if so, remove the interaction term
+            # from ov.x
+            int.idx <- which(grepl(":", ov.x))
+            bad.idx <- integer(0L)
+            for(iv in int.idx) {
+                NAMES <- strsplit(ov.x[iv], ":", fixed = TRUE)[[1L]]
+                if(any(NAMES %in% eqs.y)) {
+                    bad.idx <- c(bad.idx, iv)
+                }
+            }
+            if(length(bad.idx) > 0L) {
+                ov.y <- unique(c(ov.y, ov.x[bad.idx]))
+                # it may be removed later, but needed to construct ov.names
+                ov.x <- ov.x[-bad.idx]
+            }
         }
 
         # observed variables

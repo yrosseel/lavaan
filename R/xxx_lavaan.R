@@ -305,7 +305,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                  "the latent interaction term. See the indProd() function ",
                  "in the semTools package.")
         stop(lav_txt2message(txt, header = "lavaan ERROR:"))
-    }   
+    }
 
     # handle ov.names.l
     if(any(FLAT$op == ":" & tolower(FLAT$lhs) == "level")) {
@@ -488,6 +488,11 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
         } else if(is.data.frame(data)) {
             # first check if we can find ov.names.y in Data
             OV.names.y <- unique(unlist(ov.names.y))
+            # remove possible interaction terms involving an y term
+            int.idx <- which(grepl(":", OV.names.y))
+            if(length(int.idx) > 0L) {
+                OV.names.y <- OV.names.y[-int.idx]
+            }
             idx.missing <- which(!(OV.names.y %in% names(data)))
             if(length(idx.missing)) {
                 stop("lavaan ERROR: missing observed variables in dataset: ",
