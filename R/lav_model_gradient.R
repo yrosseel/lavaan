@@ -320,7 +320,8 @@ lav_model_gradient <- function(lavmodel       = NULL,
 
     } # WLS
 
-    else if(estimator == "ML" && lavmodel@conditional.x) {
+    else if(estimator == "ML" && lavmodel@conditional.x
+                              && lavdata@nlevels == 1L) {
         if(type != "free") {
             if(is.null(Delta))
                 stop("FIXME: Delta should be given if type != free")
@@ -423,7 +424,19 @@ lav_model_gradient <- function(lavmodel       = NULL,
         # for each upper-level group....
         for(g in 1:lavmodel@ngroups) {
             if(!lavsamplestats@missing.flag) { # complete data
-                DX <- lav_mvnorm_cluster_dlogl_2l_samplestats(
+                if(lavmodel@conditional.x) {
+                    DX <- lav_mvreg_cluster_dlogl_2l_samplestats(
+                           YLp = lavsamplestats@YLp[[g]],
+                           Lp  = lavdata@Lp[[g]],
+                           Res.Sigma.W = Sigma.hat[[(g-1)*2 + 1]],
+                           Res.Int.W   =    Mu.hat[[(g-1)*2 + 1]],
+                           Res.Pi.W    =        PI[[(g-1)*2 + 1]],
+                           Res.Sigma.B = Sigma.hat[[(g-1)*2 + 2]],
+                           Res.Int.B   =    Mu.hat[[(g-1)*2 + 2]],
+                           Res.Pi.B    =        PI[[(g-1)*2 + 2]],
+                           Sinv.method = "eigen")
+                } else {
+                    DX <- lav_mvnorm_cluster_dlogl_2l_samplestats(
                            YLp = lavsamplestats@YLp[[g]],
                            Lp  = lavdata@Lp[[g]],
                            Mu.W    = Mu.hat[[(g-1)*2 + 1]],
@@ -431,9 +444,13 @@ lav_model_gradient <- function(lavmodel       = NULL,
                            Mu.B    = Mu.hat[[(g-1)*2 + 2]],
                            Sigma.B = Sigma.hat[[(g-1)*2 + 2]],
                            Sinv.method  = "eigen")
+                }
             } else {
                 # missing data
-                DX <- lav_mvnorm_cluster_missing_dlogl_2l_samplestats(
+                if(lavmodel@conditional.x) {
+                    stop("lavaan ERROR: gradient for twolevel + conditional.x + fiml is not ready; use optim.gradient = \"numerical\"")
+                } else {
+                    DX <- lav_mvnorm_cluster_missing_dlogl_2l_samplestats(
                            Y1 = lavdata@X[[g]],
                            Y2 = lavsamplestats@YLp[[g]][[2]]$Y2,
                            Lp  = lavdata@Lp[[g]],
@@ -443,6 +460,7 @@ lav_model_gradient <- function(lavmodel       = NULL,
                            Mu.B    = Mu.hat[[(g-1)*2 + 2]],
                            Sigma.B = Sigma.hat[[(g-1)*2 + 2]],
                            Sinv.method  = "eigen")
+                }
             }
 
             group.dx <- as.numeric( DX %*% Delta[[g]] )
@@ -620,7 +638,8 @@ lav_model_gradient <- function(lavmodel       = NULL,
 ###        - handle equality constraints? (yes, for now)
 computeDelta <- function(lavmodel = NULL, GLIST. = NULL,
                          m.el.idx. = NULL, x.el.idx. = NULL,
-                         ceq.simple = FALSE) {
+                         ceq.simple = FALSE,
+                         force.conditional.x.false = FALSE) {
 
     representation   <- lavmodel@representation
     categorical      <- lavmodel@categorical
@@ -778,28 +797,40 @@ computeDelta <- function(lavmodel = NULL, GLIST. = NULL,
                 }
 
                 if(!categorical) {
-                    if(conditional.x && lavmodel@nexo[g] > 0L) {
-                        # ATTENTION: we need to change the order here
-                        # lav_mvreg_scores_* uses 'Beta' where the
-                        # the intercepts are just the first row
-                        # using the col-major approach, we need to
-                        # interweave the intercepts with the slopes!
+                    if(conditional.x) {
+                        # means/intercepts
                         DELTA.mu <- derivative.mu.LISREL(m=mname,
                                idx=m.el.idx[[mm]], MLIST=GLIST[ mm.in.group ])
-                        DELTA.pi <- derivative.pi.LISREL(m=mname,
-                             idx=m.el.idx[[mm]], MLIST=GLIST[ mm.in.group ])
 
-                        nEls <- NROW(DELTA.mu) + NROW(DELTA.pi)
-                        # = (nexo + 1 int) * nvar
+                        # slopes
+                        if(lavmodel@nexo[g] > 0L) {
+                            DELTA.pi <- derivative.pi.LISREL(m=mname,
+                                 idx=m.el.idx[[mm]], MLIST=GLIST[ mm.in.group ])
 
-                        # intercepts on top
-                        tmp <- rbind(DELTA.mu, DELTA.pi)
-                        # change row index
-                        row.idx <- lav_matrix_vec(matrix(seq.int(nEls),
-                            nrow = lavmodel@nexo[g] + 1L,
-                            ncol = lavmodel@nvar[g], byrow = TRUE))
-                        DELTA.beta <- tmp[row.idx,,drop = FALSE]
-                        DELTA <- rbind(DELTA.beta, DELTA)
+                            if(lavmodel@multilevel) {
+                                DELTA <- rbind(DELTA.mu, DELTA.pi, DELTA)
+                            } else {
+                                # ATTENTION: we need to change the order here
+                                # lav_mvreg_scores_* uses 'Beta' where the
+                                # the intercepts are just the first row
+                                # using the col-major approach, we need to
+                                # interweave the intercepts with the slopes!
+
+                                nEls <- NROW(DELTA.mu) + NROW(DELTA.pi)
+                                # = (nexo + 1 int) * nvar
+
+                                # intercepts on top
+                                tmp <- rbind(DELTA.mu, DELTA.pi)
+                                # change row index
+                                row.idx <- lav_matrix_vec(matrix(seq.int(nEls),
+                                   nrow = lavmodel@nexo[g] + 1L,
+                                   ncol = lavmodel@nvar[g], byrow = TRUE))
+                                DELTA.beta <- tmp[row.idx,,drop = FALSE]
+                                DELTA <- rbind(DELTA.beta, DELTA)
+                            }
+                        } else {
+                           DELTA <- rbind(DELTA.mu, DELTA)
+                        }
                     } else if(!conditional.x && lavmodel@meanstructure) {
                             DELTA.mu <- derivative.mu.LISREL(m=mname,
                                idx=m.el.idx[[mm]], MLIST=GLIST[ mm.in.group ])

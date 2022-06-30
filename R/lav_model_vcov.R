@@ -29,10 +29,25 @@ lav_model_nvcov_bootstrap <- function(lavmodel       = NULL,
                                    lavdata.        = lavdata,
                                    R               = R,
                                    verbose         = lavoptions$verbose,
+                                   check.post      = lavoptions$check.post,
                                    type            = boot.type,
                                    FUN  = ifelse(boot.type == "bollen.stine",
-                                              "coeftest", "coef"),
-                                   warn            = -1L)
+                                              "coeftest", "coef"))
+                                   #warn            = -1L)
+
+    # new in 0.6-12: always warn for failed and nonadmissible
+    nfailed <- length(attr(COEF, "error.idx"))
+    if(!is.null(nfailed) && nfailed > 0L && lavoptions$warn) {
+        warning("lavaan WARNING: ", nfailed,
+                " bootstrap runs failed or did not converge.")
+    }
+
+    notok <- attr(COEF, "nonadmissible")
+    if(!is.null(notok) && notok > 0L && lavoptions$warn) {
+        warning("lavaan WARNING: ", notok,
+                " bootstrap runs resulted in nonadmissible solutions.")
+    }
+
     if(boot.type == "bollen.stine") {
         nc <- ncol(COEF)
         TEST <- COEF[,nc]

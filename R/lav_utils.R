@@ -9,6 +9,46 @@ lav_utils_logsumexp <- function(x) {
     a + log(sum(exp(x - a)))
 }
 
+# create matrix with indices to reconstruct the bootstrap samples
+# (needed for BCa confidence intervals)
+#
+# rows are the (R) bootstrap runs
+# columns are the (N) observations
+#
+# simple version: no strata, no weights
+#
+lav_utils_bootstrap_indices <- function(R = 0L, N = 0L, seed,
+                                        return.freq = FALSE) {
+    # set seed
+    if(exists(".Random.seed", envir = .GlobalEnv, inherits = FALSE)) {
+        temp.seed <- get(".Random.seed", envir = .GlobalEnv, inherits = FALSE)
+    } else {
+        temp.seed <- NULL
+    }
+    assign(".Random.seed",  seed, envir = .GlobalEnv)
+
+    # create index matrix
+    out <- sample.int(N, N * R, replace = TRUE)
+    dim(out) <- c(N, R)
+    out <- t(out) # this is different from the boot package!
+                  # we fill in the matrix 'row-wise'!!
+                  # this also explains why we get different results even if we
+                  # use the same seed
+
+    # return frequencies instead?
+    if(return.freq) {
+        out <- t(apply(out, 1L, tabulate, N))
+    }
+
+    if(is.null(seed) && !is.null(temp.seed)) {
+        assign(".Random.seed", temp.seed, envir = .GlobalEnv)
+    } else {
+        rm(.Random.seed, pos = 1)
+    }
+
+    out
+}
+
 
 # invert positive definite symmetric matrix (eg cov matrix)
 # using choleski decomposition

@@ -58,7 +58,7 @@ Model features (always available):
       \code{FALSE}, the metric of each latent variable is determined by fixing 
       the factor loading of the first indicator to 1.0. If there are multiple
       groups, \code{std.lv = TRUE} and \code{"loadings"} is included in 
-      the \code{group.label} argument, then only the latent variances i
+      the \code{group.label} argument, then only the latent variances
       of the first group will be fixed to 1.0, while the latent
       variances of other groups are set free.}
     \item{\code{effect.coding}:}{Can be logical or character string. If
@@ -74,8 +74,9 @@ Model features (always available):
      equals zero.
      As a result, the latent mean will be freely estimated and usually 
      equal the average of the means of the involved indicators.}
-    \item{code{ceq.simple}:}{Logical. If \code{TRUE}, and no other 
-     general constraints are used in the model, simple equality constraints
+    \item{\code{ceq.simple}:}{Logical. If \code{TRUE}, and no other 
+     general (equality or inequality) constraints are used in the model, 
+     simple equality constraints
      are represented in the parameter table as duplicated free parameters 
      (instead of extra rows with \code{op = "=="}).}
     \item{\code{parameterization}:}{Currently only used if data is 
@@ -390,6 +391,26 @@ Optimization options:
       (default is 0.0).}
 }
 
+Parallelization options (currently only used for bootstrapping):
+
+\describe{
+    \item{parallel}{The type of parallel operation to be used (if any).  If
+      missing, the default is \code{"no"}.  }
+    \item{ncpus}{Integer: number of processes to be used in parallel operation:
+      typically one would chose this to the number of available CPUs. By
+      By default this is the number of cores (as detected by 
+      \code{parallel::detectCores()}) minus one.}
+    \item{cl}{An optional \pkg{parallel} or \pkg{snow} cluster for use if
+      \code{parallel = "snow"}. If not supplied, a cluster on the local 
+      machine is created for the duration of the \code{bootstrapLavaan} 
+      or \code{bootstrapLRT} call.}
+    \item{iseed}{An integer to set the seed. Or NULL if no reproducible seeds 
+     are needed. To make this work, make sure the first
+     RNGkind() element is \code{"L'Ecuyer-CMRG"}. You can check this by
+     typing \code{RNGkind()} in the console. You can set it by typing
+     \code{RNGkind("L'Ecuyer-CMRG")}, before the boostrap functions are called.}
+}
+
 Categorical estimation options:
 
 \describe{
@@ -447,7 +468,7 @@ Check options:
       they should be (the tolerance used is 0.001).}
     \item{\code{check.post}:}{Logical. If \code{TRUE}, and the model
       converged, a check is performed after (post) fitting, to verify if 
-      the solution is admissable. This implies that all variances are
+      the solution is admissible. This implies that all variances are
       non-negative, and all the model-implied covariance matrices are 
       positive (semi-)definite. For the latter test, we tolerate a tiny 
       negative eigenvalue that is smaller than .Machine$double.eps^(3/4), 

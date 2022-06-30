@@ -9,7 +9,7 @@
 # Notes: - faulty runs are simply ignored (with a warning)
 #        - default R=1000
 #
-# Updates: - now we have a separate @data slot, we only need to transform once
+# Updates: - now we have a separate @Data slot, we only need to transform once
 #            for the bollen.stine bootstrap (13 dec 2011)
 #          - bug fix: we need to 'update' the fixed.x variances/covariances
 #            for each bootstrap draw!!
@@ -24,7 +24,7 @@ bootstrapLavaan <- function(object,
                             type        = "ordinary",
                             verbose     = FALSE,
                             FUN         = "coef",
-                            warn        = -1L,
+                            #warn        = -1L,
                             return.boot = FALSE,
                             parallel    = c("no", "multicore", "snow"),
                             ncpus       = 1L,
@@ -63,7 +63,7 @@ bootstrapLavaan <- function(object,
     lavoptions. <- list(parallel = parallel, ncpus = ncpus, cl = cl,
                         iseed = iseed)
 
-    lav_bootstrap_internal(object          = object,
+    out <- lav_bootstrap_internal(object          = object,
                            lavdata.        = NULL,
                            lavmodel.       = NULL,
                            lavsamplestats. = NULL,
@@ -73,10 +73,35 @@ bootstrapLavaan <- function(object,
                            type            = type.,
                            verbose         = verbose,
                            FUN             = FUN,
-                           warn            = warn,
+                           #warn            = warn, # not used!
                            return.boot     = return.boot,
                            h0.rmsea        = h0.rmsea,
                            ...)
+
+    # new in 0.6-12: always warn for failed and nonadmissible
+    nfailed <- length(attr(out, "error.idx"))
+    if(!is.null(nfailed) && nfailed > 0L && object@Options$warn) {
+        if(nfailed == 1L) {
+            warning("lavaan WARNING: ",
+                    "1 bootstrap run failed or did not converge.")
+        } else {
+            warning("lavaan WARNING: ", nfailed,
+                    " bootstrap runs failed or did not converge.")
+        }
+    }
+
+    notok <- attr(out, "nonadmissible")
+    if(!is.null(notok) && notok > 0L && object@Options$warn) {
+        if(notok == 1L) {
+            warning("lavaan WARNING: ",
+                    "1 bootstrap run resulted in a nonadmissible solution.")
+        } else {
+            warning("lavaan WARNING: ", notok,
+                    " bootstrap runs resulted in nonadmissible solutions.")
+        }
+    }
+
+    out
 }
 
 # we need an internal version to be called from VCOV and lav_model_test
@@ -91,7 +116,8 @@ lav_bootstrap_internal <- function(object          = NULL,
                                    type            = "ordinary",
                                    verbose         = FALSE,
                                    FUN             = "coef",
-                                   warn            = 0L,
+                                   #warn            = -1L, # not used anymore!
+                                   check.post      = TRUE,
                                    return.boot     = FALSE,
                                    h0.rmsea        = NULL,
                                    ...) {
@@ -101,6 +127,7 @@ lav_bootstrap_internal <- function(object          = NULL,
     # options -> opt
     # sample -> samp
 
+    mc <- match.call()
 
     # object slots
     if(!is.null(object)) {
@@ -131,35 +158,21 @@ lav_bootstrap_internal <- function(object          = NULL,
         if(FUN == "coef") {
             t.star <- matrix(as.numeric(NA), R, lavmodel@nx.free)
             lavoptions$test <- "none"
-            lavoptions$baseline <- FALSE; lavoptions$h1 <- FALSE
+            lavoptions$baseline <- FALSE
+            lavoptions$h1 <- FALSE
+            lavoptions$loglik <- FALSE
         } else if(FUN == "test") {
             t.star <- matrix(as.numeric(NA), R, 1L)
-            lavoptions$baseline <- FALSE; lavoptions$h1 <- FALSE
+            lavoptions$baseline <- FALSE
+            lavoptions$h1 <- FALSE
+            lavoptions$loglik <- FALSE
         } else if(FUN == "coeftest") {
             t.star <- matrix(as.numeric(NA), R, lavmodel@nx.free + 1L)
-            lavoptions$baseline <- FALSE; lavoptions$h1 <- FALSE
+            lavoptions$baseline <- FALSE
+            lavoptions$h1 <- FALSE
+            lavoptions$loglik <- FALSE
         }
     }
-
-    parallel <- lavoptions$parallel[1]
-    ncpus    <- lavoptions$ncpus
-    cl       <- lavoptions[["cl"]]    # often NULL
-    iseed    <- lavoptions[["iseed"]] # often NULL
-
-    # prepare
-    old_options <- options(); options(warn = warn)
-    # the next 10 lines are borrowed from the boot package
-    have_mc <- have_snow <- FALSE
-    if (parallel != "no" && ncpus > 1L) {
-        if (parallel == "multicore") have_mc <- .Platform$OS.type != "windows"
-        else if (parallel == "snow") have_snow <- TRUE
-        if (!have_mc && !have_snow) ncpus <- 1L
-        loadNamespace("parallel")
-    }
-
-    # only if we return the seed
-    #if (!exists(".Random.seed", envir = .GlobalEnv, inherits = FALSE)) runif(1)
-    #seed <- get(".Random.seed", envir = .GlobalEnv, inherits = FALSE)
 
     # bollen.stine, yuan, or parametric: we need the Sigma.hat values
     if(type == "bollen.stine" || type == "parametric" || type == "yuan") {
@@ -201,10 +214,9 @@ lav_bootstrap_internal <- function(object          = NULL,
             # transformed data
             dataX[[g]] <- X
         }
-    }
 
     # if yuan, transform data here
-    if(type == "yuan") {
+    } else if(type == "yuan") {
         # page numbers refer to Yuan et al, 2007
         # Define a function to find appropriate value of a
         # (p. 272); code supplied 16 jun 2016 by Cheng & Wu
@@ -284,12 +296,13 @@ lav_bootstrap_internal <- function(object          = NULL,
         if(type == "bollen.stine" || type == "ordinary" || type == "yuan") {
             # take a bootstrap sample for each group
             BOOT.idx <- vector("list", length = lavdata@ngroups)
+            # Note: we generate the bootstrap indices separately for each
+            #       group, in order to ensure the group sizes do not change!
             for(g in 1:lavdata@ngroups) {
                 stopifnot(lavdata@nobs[[g]] > 1L)
-                boot.idx <- sample(x=lavdata@nobs[[g]],
-                                   size=lavdata@nobs[[g]], replace=TRUE)
+                boot.idx <- sample.int(lavdata@nobs[[g]], replace = TRUE)
                 BOOT.idx[[g]] <- boot.idx
-                dataX[[g]] <- dataX[[g]][boot.idx,,drop=FALSE]
+                dataX[[g]] <- dataX[[g]][boot.idx,,drop = FALSE]
             }
             newData <- lav_data_update(lavdata = lavdata, newX = dataX,
                                        BOOT.idx = BOOT.idx,
@@ -315,7 +328,6 @@ lav_bootstrap_internal <- function(object          = NULL,
                 cat("     FAILED: creating sample statistics\n")
                 cat(bootSampleStats[1])
             }
-            options(old_options)
             return(NULL)
         }
 
@@ -326,14 +338,13 @@ lav_bootstrap_internal <- function(object          = NULL,
         }
 
         # fit model on bootstrap sample
-        fit.boot <- lavaan(slotOptions     = lavoptions,
-                           slotParTable    = lavpartable,
-                           slotModel       = model.boot,
-                           slotSampleStats = bootSampleStats,
-                           slotData        = lavdata)
+        fit.boot <- suppressWarnings(lavaan(slotOptions     = lavoptions,
+                                            slotParTable    = lavpartable,
+                                            slotModel       = model.boot,
+                                            slotSampleStats = bootSampleStats,
+                                            slotData        = lavdata))
         if(!fit.boot@optim$converged) {
             if(verbose) cat("     FAILED: no convergence\n")
-            options(old_options)
             return(NULL)
         }
 
@@ -347,17 +358,55 @@ lav_bootstrap_internal <- function(object          = NULL,
                 out <- c(fit.boot@optim$x, fit.boot@test[[1L]]$stat)
             }
         } else { # general use
-            out <- try(FUN(fit.boot, ...), silent=TRUE)
+            out <- try(FUN(fit.boot, ...), silent = TRUE)
         }
         if(inherits(out, "try-error")) {
             if(verbose) cat("     FAILED: applying FUN to fit.boot\n")
-            options(old_options)
             return(NULL)
         }
+
         if(verbose) cat("   OK -- niter = ",
                         sprintf("%3d", fit.boot@optim$iterations), " fx = ",
                         sprintf("%13.9f", fit.boot@optim$fx), "\n")
+
+        # check if the solution is admissible
+        admissible.flag <- suppressWarnings(lavInspect(fit.boot, "post.check"))
+        attr(out, "nonadmissible.flag") <- !admissible.flag
+
         out
+
+    } # end-of-fn
+
+    # get parallelization options
+    parallel <- lavoptions$parallel[1]
+    ncpus    <- lavoptions$ncpus
+    cl       <- lavoptions[["cl"]]    # often NULL
+    iseed    <- lavoptions[["iseed"]] # often NULL
+
+    # the next 10 lines are borrowed from the boot package
+    have_mc <- have_snow <- FALSE
+    if (parallel != "no" && ncpus > 1L) {
+        if (parallel == "multicore") have_mc <- .Platform$OS.type != "windows"
+        else if (parallel == "snow") have_snow <- TRUE
+        if (!have_mc && !have_snow) ncpus <- 1L
+        loadNamespace("parallel") # before recording seed!
+    }
+
+    # handle iseed
+    if(is.null(iseed)) {
+        if(!exists(".Random.seed", envir = .GlobalEnv, inherits = FALSE)) {
+            runif(1)
+        }
+        iseed <- get(".Random.seed", envir = .GlobalEnv, inherits = FALSE)
+    } else {
+        # set seed
+        if(exists(".Random.seed", envir=.GlobalEnv, inherits = FALSE)) {
+            temp.seed <-
+                get(".Random.seed", envir = .GlobalEnv, inherits = FALSE)
+        } else {
+            temp.seed <- NULL
+        }
+        assign(".Random.seed",  iseed, envir = .GlobalEnv)
     }
 
     # this is from the boot function in package boot
@@ -381,39 +430,98 @@ lav_bootstrap_internal <- function(object          = NULL,
         }
     } else lapply(seq_len(RR), fn)
 
-    # handle errors and fill in container
-    error.idx <- integer(0)
-    for(b in seq_len(RR)) {
-        if(!is.null(res[[b]]) && length(res[[b]]) > 0L) {
-            t.star[b, ] <- res[[b]]
-        } else {
-            error.idx <- c(error.idx, b)
-        }
-    }
+    # failed runs:
+    error.idx <- which(sapply(res, is.null))
 
+    # fill in container
+    t.star <- do.call("rbind", res)
+
+    # handle errors and fill in container
+    #error.idx <- integer(0)
+    #for(b in seq_len(RR)) {
+    #    if(!is.null(res[[b]]) && length(res[[b]]) > 0L) {
+    #        t.star[b, ] <- res[[b]]
+    #    } else {
+    #        error.idx <- c(error.idx, b)
+    #    }
+    #}
 
     # handle errors
     if(length(error.idx) > 0L) {
-        warning("lavaan WARNING: only ", (R-length(error.idx)), " bootstrap draws were successful")
-        t.star <- t.star[-error.idx,,drop=FALSE]
+        #warning("lavaan WARNING: only ", (R-length(error.idx)), " bootstrap draws were successful")
         attr(t.star, "error.idx") <- error.idx
     } else {
         if(verbose) cat("Number of successful bootstrap draws:",
                         (R - length(error.idx)), "\n")
     }
 
+    if(check.post) {
+        if(length(error.idx) > 0L) {
+            notok <- sum(sapply(res[-error.idx], attr, "nonadmissible.flag"))
+        } else {
+            notok <- sum(sapply(res, attr, "nonadmissible.flag"))
+        }
+        attr(t.star, "nonadmissible") <- notok
+    }
+
+    # store iseed
+    attr(t.star, "seed") <- iseed
+
+    # handle seed (see boot.array)
+    if(is.null(iseed) && !is.null(temp.seed)) {
+        assign(".Random.seed", temp.seed, envir = .GlobalEnv)
+    } else {
+        rm(.Random.seed, pos = 1)
+    }
+
     # NOT DONE YET
     if(return.boot) {
         # mimic output boot function
-    }
 
-    # restore options
-    options(old_options)
+        if(is.null(object)) {
+            stop("lavaan ERROR: return.boot = TRUE requires a full lavaan object")
+        }
+
+        # we start with ordinary only for now
+        stopifnot(type == "ordinary")
+
+        if(! type %in% c("ordinary", "parametric")) {
+            stop("lavaan ERROR: only ordinary and parametric bootstrap are supported if return.boot = TRUE")
+        } else {
+            sim <- type
+        }
+
+        statistic. <- function(data, idx) {
+                         data.boot <- data[idx,]
+                         fit.boot <- update(object, data = data.boot)
+                         out <- try(FUN(fit.boot, ...), silent = TRUE)
+                         if(inherits(out, "try-error")) {
+                             out <- rep(as.numeric(NA), length(t0))
+                         }
+                         out
+                     }
+        attr(t.star, "seed") <- NULL
+        attr(t.star, "nonadmissible") <- NULL
+        out <- list(t0 = t0, t = t.star, R = RR,
+                    data = lavInspect(object, "data"),
+                    seed = iseed, statistic = statistic.,
+                    sim = sim, call = mc)
+
+        #if(sim == "parametric") {
+        #    ran.gen. <- function() {} # TODO
+        #    out <- c(out, list(ran.gen = ran.gen, mle = mle))
+        #} else if(sim == "ordinary") {
+            stype <- "i"
+            strata <- rep(1, nobs(object))
+            weights <- 1/tabulate(strata)[strata]
+            out <- c(out, list(stype = stype, strata = strata,
+                                weights = weights))
+        #}
+
+        class(out) <- "boot"
+        return(out)
+    }
 
     t.star
 }
-
-
-
-
 

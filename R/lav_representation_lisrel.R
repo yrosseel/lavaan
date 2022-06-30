@@ -85,7 +85,7 @@ lav_lisrel <- function(lavpartable = NULL,
                 } else {
                     # TEST ME
                     this.group <- ceiling(g / nlevels)
-                    blocks.within.group <- (this.group - 1L) * nlevels + seq_len(nlevels)     
+                    blocks.within.group <- (this.group - 1L) * nlevels + seq_len(nlevels)
                     OTHER.BLOCK.NAMES <- lav_partable_vnames(lavpartable,
                               "ov", block = blocks.within.group[-g])
                 }

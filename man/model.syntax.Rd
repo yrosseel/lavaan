@@ -21,8 +21,8 @@ lavaanify(model = NULL, meanstructure = FALSE, int.ov.free = FALSE,
     auto.fix.first = FALSE, auto.fix.single = FALSE, auto.var = FALSE, 
     auto.cov.lv.x = FALSE, auto.cov.y = FALSE, auto.th = FALSE, 
     auto.delta = FALSE, auto.efa = FALSE, 
-    varTable = NULL, ngroups = 1L, group.equal = NULL, 
-    group.partial = NULL, group.w.free = FALSE,
+    varTable = NULL, ngroups = 1L, nthresholds = NULL, 
+    group.equal = NULL, group.partial = NULL, group.w.free = FALSE,
     debug = FALSE, warn = TRUE, as.data.frame. = TRUE)
 
 lavParTable(model = NULL, meanstructure = FALSE, int.ov.free = FALSE,
@@ -34,8 +34,8 @@ lavParTable(model = NULL, meanstructure = FALSE, int.ov.free = FALSE,
     auto.fix.first = FALSE, auto.fix.single = FALSE, auto.var = FALSE,
     auto.cov.lv.x = FALSE, auto.cov.y = FALSE, auto.th = FALSE,
     auto.delta = FALSE, auto.efa = FALSE,
-    varTable = NULL, ngroups = 1L, group.equal = NULL,
-    group.partial = NULL, group.w.free = FALSE,
+    varTable = NULL, ngroups = 1L, nthresholds = NULL,
+    group.equal = NULL, group.partial = NULL, group.w.free = FALSE,
     debug = FALSE, warn = TRUE, as.data.frame. = TRUE)
 
 lavParseModelString(model.syntax = '', as.data.frame. = FALSE, 
@@ -129,6 +129,13 @@ the model both for both observed and latent variables.}
 \item{varTable}{The variable table containing information about the
     observed variables in the model.}
 \item{ngroups}{The number of (independent) groups.}
+\item{nthresholds}{Either a single integer or a named vector of integers.
+    If \code{nthresholds} is a single integer, all endogenous
+    variables are assumed to be ordered with \code{nthresholds} indicating 
+    the number of thresholds needed in the model. If \code{nthresholds} is a 
+    named vector, it indicates the number of thresholds for these ordered
+    variables only. This argument should not be used in combination with 
+    varTable.}
 \item{group.equal}{A vector of character strings. Only used in
     a multiple group analysis. Can be one or more of the following:
     \code{"loadings"}, \code{"intercepts"},

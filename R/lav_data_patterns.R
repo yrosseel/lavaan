@@ -184,11 +184,7 @@ lav_data_cluster_patterns <- function(Y =         NULL,
         nclusters[[1]] <- NROW(Y)
     }
 
-    if(multilevel) {
-        ov.idx[[1]]   <- match(ov.names.l[[1]], ov.names)
-    }
-
-    # for the remaining levels...
+    # higher levels:
     for(l in 2:nlevels) {
         if(haveData) {
             CLUS <- clus[,(l-1L)]
@@ -217,25 +213,42 @@ lav_data_cluster_patterns <- function(Y =         NULL,
             ncluster.sizes[[l]]  <- integer(0L)
             cluster.size.ns[[l]] <- integer(0L)
         }
+    }
 
-        if(multilevel) {
+    # for all levels:
+    if(multilevel) {
+        for(l in 1:nlevels) {
+
             # index of ov.names for this level
-            ov.idx[[l]]         <- match(ov.names.l[[l]], ov.names)
+            ov.idx[[l]] <- match(ov.names.l[[l]], ov.names)
 
-            both.idx[[l]]       <- which( ov.names %in% ov.names.l[[1]] &
-                                          ov.names %in% ov.names.l[[2]])
-            within.idx[[l]]     <- which( ov.names %in% ov.names.l[[1]] &
-                                         !ov.names %in% ov.names.l[[2]])
-            between.idx[[l]]    <- which(!ov.names %in% ov.names.l[[1]] &
-                                          ov.names %in% ov.names.l[[2]])
+            # new in 0.6-12: always preserve the order of ov.idx[[l]]
+            idx <- which( ov.names %in% ov.names.l[[1]] &
+                          ov.names %in% ov.names.l[[2]])
+            both.idx[[l]] <- ov.idx[[l]][ov.idx[[l]] %in% idx]
+
+            idx <- which( ov.names %in% ov.names.l[[1]] &
+                         !ov.names %in% ov.names.l[[2]])
+            within.idx[[l]] <- ov.idx[[l]][ov.idx[[l]] %in% idx]
+            # backwards compatibility: also store in within.idx[[2]]
+            if(l == 2) {
+                within.idx[[l]] <- within.idx[[1]]
+            }
+
+            idx <- which(!ov.names %in% ov.names.l[[1]] &
+                          ov.names %in% ov.names.l[[2]])
+            between.idx[[l]] <- ov.idx[[l]][ov.idx[[l]] %in% idx]
 
             # names
-            both.names[[l]]     <- ov.names[ ov.names %in% ov.names.l[[1]] &
-                                             ov.names %in% ov.names.l[[2]] ]
-            within.names[[l]]   <- ov.names[ ov.names %in% ov.names.l[[1]] &
-                                            !ov.names %in% ov.names.l[[2]] ]
-            between.names[[l]]  <- ov.names[!ov.names %in% ov.names.l[[1]] &
-                                             ov.names %in% ov.names.l[[2]] ]
+            #both.names[[l]]     <- ov.names[ ov.names %in% ov.names.l[[1]] &
+            #                                 ov.names %in% ov.names.l[[2]] ]
+            #within.names[[l]]   <- ov.names[ ov.names %in% ov.names.l[[1]] &
+            #                                !ov.names %in% ov.names.l[[2]] ]
+            #between.names[[l]]  <- ov.names[!ov.names %in% ov.names.l[[1]] &
+            #                                 ov.names %in% ov.names.l[[2]] ]
+            both.names[[l]]    <- ov.names[ both.idx[[l]] ]
+            within.names[[l]]  <- ov.names[ within.idx[[l]] ]
+            between.names[[l]] <- ov.names[ between.idx[[l]] ]
         }
     }
 
@@ -244,58 +257,76 @@ lav_data_cluster_patterns <- function(Y =         NULL,
         for(l in 1:nlevels) {
             # some ov.names.x could be 'splitted', and end up in both.names
             # they should NOT be part ov.x.idx (as they become latent variables)
-            ov.x.idx[[l]] <- which( ov.names %in% ov.names.x &
-                                    ov.names %in% ov.names.l[[l]] &
-                                   !ov.names %in% unlist(both.names) )
+            idx <- which( ov.names %in% ov.names.x &
+                          ov.names %in% ov.names.l[[l]] &
+                         !ov.names %in% unlist(both.names) )
+            ov.x.idx[[l]] <- ov.idx[[l]][ov.idx[[l]] %in% idx]
 
             # not any longer, we split them, but still treat them as 'fixed'
-            # new in 0.6-12
             #ov.x.idx[[l]] <- which( ov.names %in% ov.names.x &
             #                        ov.names %in% ov.names.l[[l]] )
 
             # if some ov.names.x have been 'splitted', and end up in both.names,
             # they should become part of ov.y.idx (despite being exogenous)
             # as they are now latent variables
-            ov.y.idx[[l]] <- which( ov.names %in% ov.names.l[[l]] &
-                                   !ov.names %in% ov.names.x[!ov.names.x %in% unlist(both.names)] )
+            idx <- which( ov.names %in% ov.names.l[[l]] &
+                         !ov.names %in% ov.names.x[!ov.names.x %in% unlist(both.names)] )
+            ov.y.idx[[l]] <- ov.idx[[l]][ov.idx[[l]] %in% idx]
 
             # not any longer, ov.x stays ov.x (even if we split)
-            # new in 0.6-12
             #ov.y.idx[[l]] <- which( ov.names %in% ov.names.l[[l]] &
             #                       !ov.names %in% ov.names.x )
 
 
-            if(l == 1L) {
-                next
-            }
+            #if(l == 1L) {
+            #    next
+            #}
             # below, we only fill in the [[2]] element (and higher)
 
-            within.x.idx[[l]]  <- which( ov.names %in% ov.names.l[[1]] &
-                                        !ov.names %in% ov.names.l[[2]] &
-                                         ov.names %in% ov.names.x)
-            within.y.idx[[l]]  <- which( ov.names %in% ov.names.l[[1]] &
-                                        !ov.names %in% ov.names.l[[2]] &
-                                        !ov.names %in% ov.names.x)
-            between.x.idx[[l]] <- which(!ov.names %in% ov.names.l[[1]] &
-                                         ov.names %in% ov.names.l[[2]] &
-                                         ov.names %in% ov.names.x)
-            between.y.idx[[l]] <- which(!ov.names %in% ov.names.l[[1]] &
-                                         ov.names %in% ov.names.l[[2]] &
-                                        !ov.names %in% ov.names.x)
+            idx <- which( ov.names %in% ov.names.l[[1]] &
+                         !ov.names %in% ov.names.l[[2]] &
+                          ov.names %in% ov.names.x)
+            within.x.idx[[l]] <- ov.idx[[l]][ov.idx[[l]] %in% idx]
+            # backwards compatibility: also store in within.x.idx[[2]]
+            if(l == 2) {
+                within.x.idx[[l]] <- within.x.idx[[1]]
+            }
 
-            within.x.names[[l]]   <- ov.names[ ov.names %in% ov.names.l[[1]] &
-                                               ov.names %in% ov.names.x &
-                                              !ov.names %in% ov.names.l[[2]] ]
-            within.y.names[[l]]   <- ov.names[ ov.names %in% ov.names.l[[1]] &
-                                              !ov.names %in% ov.names.x &
-                                              !ov.names %in% ov.names.l[[2]] ]
-            between.x.names[[l]]  <- ov.names[!ov.names %in% ov.names.l[[1]] &
-                                               ov.names %in% ov.names.x &
-                                               ov.names %in% ov.names.l[[2]] ]
-            between.y.names[[l]]  <- ov.names[!ov.names %in% ov.names.l[[1]] &
-                                              !ov.names %in% ov.names.x &
-                                               ov.names %in% ov.names.l[[2]] ]
+            idx <- which( ov.names %in% ov.names.l[[1]] &
+                         !ov.names %in% ov.names.l[[2]] &
+                         !ov.names %in% ov.names.x)
+            within.y.idx[[l]] <- ov.idx[[l]][ov.idx[[l]] %in% idx]
+            # backwards compatibility: also store in within.y.idx[[2]]
+            if(l == 2) {
+                within.y.idx[[l]] <- within.y.idx[[1]]
+            }
 
+            idx <- which(!ov.names %in% ov.names.l[[1]] &
+                          ov.names %in% ov.names.l[[2]] &
+                          ov.names %in% ov.names.x)
+            between.x.idx[[l]] <- ov.idx[[l]][ov.idx[[l]] %in% idx]
+
+            idx <- which(!ov.names %in% ov.names.l[[1]] &
+                          ov.names %in% ov.names.l[[2]] &
+                         !ov.names %in% ov.names.x)
+            between.y.idx[[l]] <- ov.idx[[l]][ov.idx[[l]] %in% idx]
+
+            #within.x.names[[l]]   <- ov.names[ ov.names %in% ov.names.l[[1]] &
+            #                                   ov.names %in% ov.names.x &
+            #                                  !ov.names %in% ov.names.l[[2]] ]
+            #within.y.names[[l]]   <- ov.names[ ov.names %in% ov.names.l[[1]] &
+            #                                  !ov.names %in% ov.names.x &
+            #                                  !ov.names %in% ov.names.l[[2]] ]
+            #between.x.names[[l]]  <- ov.names[!ov.names %in% ov.names.l[[1]] &
+            #                                   ov.names %in% ov.names.x &
+            #                                   ov.names %in% ov.names.l[[2]] ]
+            #between.y.names[[l]]  <- ov.names[!ov.names %in% ov.names.l[[1]] &
+            #                                  !ov.names %in% ov.names.x &
+            #                                   ov.names %in% ov.names.l[[2]] ]
+            within.x.names[[l]]  <- ov.names[  within.x.idx[[l]] ]
+            within.y.names[[l]]  <- ov.names[  within.y.idx[[l]] ]
+            between.x.names[[l]] <- ov.names[ between.x.idx[[l]] ]
+            between.y.names[[l]] <- ov.names[ between.y.idx[[l]] ]
         }
     } else {
         ov.y.idx <- ov.idx

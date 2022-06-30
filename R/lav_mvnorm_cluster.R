@@ -315,7 +315,7 @@ lav_mvnorm_cluster_loglik_samplestats_2l <- function(YLp          = NULL,
 }
 
 
-# first derivate -2*logl wrt Mu.W, Mu.B, Sigma.W, Sigma.B
+# first derivative -2*logl wrt Mu.W, Mu.B, Sigma.W, Sigma.B
 lav_mvnorm_cluster_dlogl_2l_samplestats <- function(YLp          = NULL,
                                                     Lp           = NULL,
                                                     Mu.W         = NULL,

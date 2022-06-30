@@ -346,21 +346,68 @@ lav_samplestats_from_data <- function(lavdata           = NULL,
 
             # level-based sample statistics
             YLp[[g]] <- lav_samplestats_cluster_patterns(Y  = X[[g]],
+                            Lp = lavdata@Lp[[g]],
+                            conditional.x = lavoptions$conditional.x)
+
+
+            if(conditional.x) {
+                # for starting values only
+                # no handling of missing data yet....
+                if(missing %in% c("ml", "ml.x",
+                                  "two.stage", "robust.two.stage")) {
+                    stop("lavaan ERROR: missing = ", missing, " + conditional.x + two.level not supported yet")
+                }
+
+                # residual covariances!
+                Y <- X[[g]] # contains eXo
+                 COV <- unname( stats::cov(Y, use="pairwise"))
+                MEAN <- unname( colMeans(Y, na.rm=TRUE) )
+                var[[g]] <- diag(COV)
+                cov[[g]] <- COV
+                # rescale cov by (N-1)/N? (only COV!)
+                if(rescale) {
+                    # we 'transform' the sample cov (divided by n-1)
+                    # to a sample cov divided by 'n'
+                    COV <- (nobs[[g]]-1)/nobs[[g]] * COV
+                }
+                cov[[g]] <- COV
+                if(ridge) {
+                    diag(cov[[g]]) <- diag(cov[[g]]) + ridge.eps
+                    var[[g]] <- diag(cov[[g]])
+                }
+                mean[[g]] <- MEAN
+
+                A <- COV[-x.idx[[g]], -x.idx[[g]], drop=FALSE]
+                B <- COV[-x.idx[[g]],  x.idx[[g]], drop=FALSE]
+                C <- COV[ x.idx[[g]],  x.idx[[g]], drop=FALSE]
+                # FIXME: make robust against singular C!!!
+                res.cov[[g]] <- A - B %*% solve(C) %*% t(B)
+                res.var[[g]] <- diag( cov[[g]] )
+
+                MY <- MEAN[-x.idx[[g]]]; MX <- MEAN[x.idx[[g]]]
+                C3 <- rbind(c(1,MX),
+                            cbind(MX, C + tcrossprod(MX)))
+                B3 <- cbind(MY, B + tcrossprod(MY,MX))
+                COEF <- unname(solve(C3, t(B3)))
+
+                res.int[[g]]    <- COEF[1,]                  # intercepts
+                res.slopes[[g]] <- t(COEF[-1,,drop = FALSE]) # slopes
+
+            } else {
+               # FIXME: needed?
+                cov[[g]] <- unname( stats::cov(X[[g]], use="pairwise"))
+                mean[[g]] <- unname( colMeans(X[[g]], na.rm=TRUE) )
+                var[[g]] <- diag(cov[[g]])
+
+                # missing patterns
+                if(missing %in% c("ml", "ml.x")) {
+                    missing.flag. <- TRUE
+                    missing.[[g]] <-
+                        lav_samplestats_missing_patterns(Y  = X[[g]],
+                                                         Mp = Mp[[g]],
+                                                         wt = WT[[g]],
                                                          Lp = lavdata@Lp[[g]])
-
-            # FIXME: needed?
-            cov[[g]] <- unname( stats::cov(X[[g]], use="pairwise"))
-            mean[[g]] <- unname( colMeans(X[[g]], na.rm=TRUE) )
-            var[[g]] <- diag(cov[[g]])
-
-            # missing patterns
-            if(missing %in% c("ml", "ml.x")) {
-                missing.flag. <- TRUE
-                missing.[[g]] <-
-                    lav_samplestats_missing_patterns(Y  = X[[g]],
-                                                     Mp = Mp[[g]],
-                                                     wt = WT[[g]],
-                                                     Lp = lavdata@Lp[[g]])
+                }
             }
 
         } else { # continuous, single-level case
@@ -1502,7 +1549,8 @@ lav_samplestats_missing_patterns <- function(Y = NULL, Mp = NULL, wt = NULL,
 }
 
 # compute sample statistics, per cluster
-lav_samplestats_cluster_patterns <- function(Y = NULL, Lp = NULL) {
+lav_samplestats_cluster_patterns <- function(Y = NULL, Lp = NULL,
+                                             conditional.x = FALSE) {
 
     # coerce Y to matrix
     Y1 <- as.matrix(Y); N <- NROW(Y1); P <- NCOL(Y1)
@@ -1526,8 +1574,6 @@ lav_samplestats_cluster_patterns <- function(Y = NULL, Lp = NULL) {
         between.idx     <- Lp$between.idx[[l]]
         cluster.idx     <- Lp$cluster.idx[[l]]
         cluster.size.ns <- Lp$cluster.size.ns[[l]]
-        ov.idx.1        <- sort.int(c(both.idx, within.idx))
-        ov.idx.2        <- sort.int(c(both.idx, between.idx))
 
         #s <- (N^2 - sum(cluster.size^2)) / (N*(nclusters - 1L))
         # same as
@@ -1538,9 +1584,12 @@ lav_samplestats_cluster_patterns <- function(Y = NULL, Lp = NULL) {
         Y1.means <- colMeans(Y1, na.rm = TRUE)
         Y1Y1 <- lav_matrix_crossprod(Y1)
         both.idx <- all.idx <- seq_len(P)
+
         if(length(within.idx) > 0L ||
            length(between.idx) > 0L) {
             both.idx <- all.idx[-c(within.idx, between.idx)]
+            # hm, this assumes the 'order' is the
+            # same at both levels...
         }
 
         # cluster-means
@@ -1650,10 +1699,12 @@ lav_samplestats_cluster_patterns <- function(Y = NULL, Lp = NULL) {
         Mu.B.start <- Mu.B
         #Mu.B.start[both.idx] <- Mu.B.start[both.idx] - colMeans(Y2c[,both.idx])
 
-        # per cluster-size
+        # sample statistics PER CLUSTER-SIZE
+
+        # summary statistics for complete data, conditional.x = FALSE
+        # also needed for h1 (even if conditional.x = TRUE)
         cov.d  <- vector("list", length = ncluster.sizes)
         mean.d <- vector("list", length = ncluster.sizes)
-
         for(clz in seq_len(ncluster.sizes)) {
             nj <- cluster.sizes[clz]
             # select clusters with this size
@@ -1685,7 +1736,130 @@ lav_samplestats_cluster_patterns <- function(Y = NULL, Lp = NULL) {
             } else {
                 cov.d[[clz]] <- 0
             }
-        }
+        } # clz
+
+        # new in 0.6-12:
+        # summary statistics for complete data, conditional.x = TRUE
+        # ONLY for twolevel
+        if(conditional.x) {
+            within.x.idx  <- Lp$within.x.idx[[1]]
+            between.y.idx <- Lp$between.y.idx[[2]]
+            between.x.idx <- Lp$between.x.idx[[2]]
+            y1.idx <- Lp$ov.y.idx[[1]]
+            x1.idx <- c(within.x.idx, between.x.idx) # in that order
+
+            # data
+            Y1.wb <- Y1[, y1.idx, drop = FALSE]
+            Y2.wb <- Y2[, y1.idx, drop = FALSE]
+            if(length(between.y.idx) > 0L) {
+                Y2.z  <- Y2[, between.y.idx, drop = FALSE]
+            }
+            if(length(x1.idx) > 0L) {
+                EXO.wb1 <- cbind(1, Y1[, x1.idx, drop = FALSE])
+                EXO.wb2 <- cbind(1, Y2[, x1.idx, drop = FALSE])
+            } else {
+                EXO.wb1 <- matrix(1, nrow(Y1), 1L)
+                EXO.wb2 <- matrix(1, nrow(Y2), 1L)
+            }
+
+            # sample beta.wb (level 1)
+            sample.wb <- solve(crossprod(EXO.wb1), crossprod(EXO.wb1, Y1.wb))
+            sample.yhat.wb1 <- EXO.wb1 %*% sample.wb
+            sample.yres.wb1 <- Y1.wb - sample.yhat.wb1
+            sample.YYres.wb1 <- crossprod(sample.yres.wb1)
+            sample.XX.wb1 <- crossprod(EXO.wb1)
+
+            # sample beta.wb (level 2)
+            XX.wb2 <- crossprod(EXO.wb2)
+            sample.wb2 <- try(solve(XX.wb2, crossprod(EXO.wb2, Y2.wb)),
+                              silent = TRUE)
+            if(inherits(sample.wb2, "try-error")) {
+                # this may happen if the covariate is cluster-centered
+                # using the observed cluster means; then the 'means' will
+                # be all (near) zero, and there is no variance
+                sample.wb2 <- MASS::ginv(XX.wb2) %*% crossprod(EXO.wb2, Y2.wb)
+            }
+            sample.yhat.wb2 <- EXO.wb2 %*% sample.wb2
+            sample.yres.wb2 <- Y2.wb - sample.yhat.wb2
+
+            # weighted by cluster.size
+            sample.YYres.wb2 <- crossprod(sample.yres.wb2,
+                                          sample.yres.wb2 * cluster.size)
+            sample.YresX.wb2 <- crossprod(sample.yres.wb2,
+                                          EXO.wb2         * cluster.size)
+            sample.XX.wb2    <- crossprod(EXO.wb2,
+                                          EXO.wb2         * cluster.size)
+
+
+            sample.clz.Y2.res <- vector("list", ncluster.sizes)
+            sample.clz.Y2.XX  <- vector("list", ncluster.sizes)
+            sample.clz.Y2.B   <- vector("list", ncluster.sizes)
+
+            if(length(between.y.idx) > 0L) {
+                sample.clz.ZZ.res <- vector("list", ncluster.sizes)
+                sample.clz.ZZ.XX  <- vector("list", ncluster.sizes)
+                sample.clz.ZZ.B   <- vector("list", ncluster.sizes)
+
+                sample.clz.YZ.res <- vector("list", ncluster.sizes)
+                sample.clz.YZ.XX  <- vector("list", ncluster.sizes)
+                sample.clz.YresXZ <- vector("list", ncluster.sizes)
+                sample.clz.XWZres <- vector("list", ncluster.sizes)
+            }
+            for(clz in seq_len(ncluster.sizes)) {
+                # cluster size
+                nj <- cluster.sizes[clz]
+                nj.idx <- which(cluster.size == nj)
+
+                # Y2
+                Y2.clz <- Y2[nj.idx, y1.idx, drop = FALSE]
+                if(length(x1.idx) > 0L) {
+                    EXO2.clz <- cbind(1, Y2[nj.idx, x1.idx, drop = FALSE])
+                } else {
+                    EXO2.clz <- matrix(1, nrow(Y2.clz), 1L)
+                }
+                XX.clz <- crossprod(EXO2.clz)
+                clz.Y2.B <- try(solve(XX.clz, crossprod(EXO2.clz, Y2.clz)),
+                                silent = TRUE)
+                if(inherits(clz.Y2.B, "try-error")) {
+                    clz.Y2.B <-
+                        MASS::ginv(XX.clz) %*% crossprod(EXO2.clz, Y2.clz)
+                }
+                clz.Y2.hat <- EXO2.clz %*% clz.Y2.B
+                clz.Y2.res <- Y2.clz - clz.Y2.hat
+                sample.clz.Y2.B[[clz]] <- clz.Y2.B
+                sample.clz.Y2.res[[clz]] <- crossprod(clz.Y2.res)
+                sample.clz.Y2.XX[[clz]]  <- crossprod(EXO2.clz)
+
+                # Z
+                if(length(between.y.idx) > 0L) {
+                    Z.clz.z <- Y2[nj.idx, between.y.idx, drop = FALSE]
+                    if(length(between.x.idx) > 0L) {
+                        EXO.clz.z <- cbind(1,
+                                       Y2[nj.idx, between.x.idx, drop = FALSE])
+                    } else {
+                        EXO.clz.z <- matrix(1, nrow(Z.clz.z), 1L)
+                    }
+                    ZZ.clz <- crossprod(EXO.clz.z)
+                    clz.ZZ.B <- try(solve(ZZ.clz,
+                                          crossprod(EXO.clz.z, Z.clz.z)),
+                                    silent = TRUE)
+                    if(inherits(clz.ZZ.B, "try-error")) {
+                        clz.ZZ.B <-
+                            MASS::ginv(ZZ.clz) %*% crossprod(EXO.clz.z,Z.clz.z)
+                    }
+                    clz.Z.hat <- EXO.clz.z %*% clz.ZZ.B
+                    clz.Z.res <- Z.clz.z - clz.Z.hat
+                    sample.clz.ZZ.B[[clz]] <- clz.ZZ.B
+                    sample.clz.ZZ.res[[clz]] <- crossprod(clz.Z.res)
+                    sample.clz.ZZ.XX[[clz]]  <- crossprod(EXO.clz.z)
+
+                    sample.clz.YZ.res[[clz]] <- crossprod(clz.Y2.res, clz.Z.res)
+                    sample.clz.YZ.XX[[clz]]  <- crossprod(EXO2.clz,   EXO.clz.z)
+                    sample.clz.YresXZ[[clz]] <- crossprod(clz.Y2.res, EXO.clz.z)
+                    sample.clz.XWZres[[clz]] <- crossprod(EXO2.clz,   clz.Z.res)
+                }
+            } # clz
+        } # conditional.x
 
         YLp[[l]] <- list(Y1Y1 = Y1Y1,
                          Y2 = Y2, s = s, S.b = S.b, S.PW.start = S.PW.start,
@@ -1693,6 +1867,43 @@ lav_samplestats_cluster_patterns <- function(Y = NULL, Lp = NULL) {
                          Sigma.B = Sigma.B, Mu.B = Mu.B,
                          Mu.B.start = Mu.B.start, loglik.x = loglik.x,
                          mean.d = mean.d, cov.d = cov.d)
+
+        # if conditional, add more stuff
+        if(conditional.x) {
+            if(length(between.y.idx) > 0L) {
+                extra <- list(sample.wb         = sample.wb,
+                              sample.YYres.wb1  = sample.YYres.wb1,
+                              sample.XX.wb1     = sample.XX.wb1,
+                              sample.wb2        = sample.wb2,
+                              sample.YYres.wb2  = sample.YYres.wb2,
+                              sample.YresX.wb2  = sample.YresX.wb2,
+                              sample.XX.wb2     = sample.XX.wb2,
+
+                              sample.clz.Y2.res = sample.clz.Y2.res,
+                              sample.clz.Y2.XX  = sample.clz.Y2.XX,
+                              sample.clz.Y2.B   = sample.clz.Y2.B,
+                              sample.clz.ZZ.res = sample.clz.ZZ.res,
+                              sample.clz.ZZ.XX  = sample.clz.ZZ.XX,
+                              sample.clz.ZZ.B   = sample.clz.ZZ.B,
+                              sample.clz.YZ.res = sample.clz.YZ.res,
+                              sample.clz.YZ.XX  = sample.clz.YZ.XX,
+                              sample.clz.YresXZ = sample.clz.YresXZ, # zero?
+                              sample.clz.XWZres = sample.clz.XWZres)
+            } else {
+                extra <- list(sample.wb         = sample.wb,
+                              sample.YYres.wb1  = sample.YYres.wb1,
+                              sample.XX.wb1     = sample.XX.wb1,
+                              sample.wb2        = sample.wb2,
+                              sample.YYres.wb2  = sample.YYres.wb2,
+                              sample.YresX.wb2  = sample.YresX.wb2,
+                              sample.XX.wb2     = sample.XX.wb2,
+
+                              sample.clz.Y2.res = sample.clz.Y2.res,
+                              sample.clz.Y2.XX  = sample.clz.Y2.XX,
+                              sample.clz.Y2.B   = sample.clz.Y2.B)
+            }
+            YLp[[l]] <- c(YLp[[l]], extra)
+        }
     } # l
 
     YLp

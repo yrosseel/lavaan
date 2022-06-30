@@ -43,6 +43,11 @@ lav_object_independence <- function(object         = NULL,
         }
     }
 
+    # if two-level, force conditional.x = FALSE (for now)
+    if(lavdata@nlevels > 1L && lavoptions$conditional.x) {
+        lavoptions$conditional.x <- FALSE
+    }
+
     # construct parameter table for independence model
     lavpartable <- lav_partable_indep_or_unrestricted(lavobject = NULL,
         lavdata = lavdata, lavpta = lavpta, lavoptions = lavoptions,

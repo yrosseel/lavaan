@@ -4,7 +4,6 @@ bootstrapLRT <- function (h0 = NULL, h1 = NULL, R = 1000L,
                           double.bootstrap = "no",
                           double.bootstrap.R = 500L,
                           double.bootstrap.alpha = 0.05,
-                          warn = -1L,
                           parallel = c("no", "multicore", "snow"),
                           ncpus = 1L,
                           cl = NULL,
@@ -24,18 +23,15 @@ bootstrapLRT <- function (h0 = NULL, h1 = NULL, R = 1000L,
         stop("lavaan ERROR: this function is not (yet) available if conditional.x = TRUE")
     }
 
-    old_options <- options(); options(warn = warn)
-
     # prepare
     LRT <- rep(as.numeric(NA), R)
     if((h1@optim$fx - h0@optim$fx) > sqrt(.Machine$double.eps)) {
         # restricted fit should not be better!
         cat(" ... h0@optim$fx = ", h0@optim$fx, "h1@optim$fx = ", h1@optim$fx,
             "h0 should not be better!\n")
-        options(old_options)
         return(NULL)
     }
-    LRT.original <- abs(anova(h0, h1)$`Chisq diff`[2L])
+    LRT.original <- abs(anova(h1, h0)$`Chisq diff`[2L])
     # abs only needed because df may be the same for both models!
 
 
@@ -100,10 +96,9 @@ bootstrapLRT <- function (h0 = NULL, h1 = NULL, R = 1000L,
             # transformed data
             dataX[[g]] <- X
         }
-    }
 
     # Yuan et al data transformation
-    if(type == "yuan") {
+    } else if((type == "yuan")) {
         # page numbers refer to Yuan et al, 2007
         # Define a function to find appropriate value of a
         # (p. 272)
@@ -192,7 +187,6 @@ bootstrapLRT <- function (h0 = NULL, h1 = NULL, R = 1000L,
                                lavoptions    = lavoptions), silent = TRUE)
         if (inherits(bootSampleStats, "try-error")) {
             if (verbose) cat("     FAILED: creating h0@SampleStats statistics\n")
-            options(old_options)
             return(NULL)
         }
 
@@ -204,13 +198,12 @@ bootstrapLRT <- function (h0 = NULL, h1 = NULL, R = 1000L,
         h0@Options$h1 <- FALSE
 
         #Fit h0 model
-        fit.h0 <- lavaan(slotOptions     = h0@Options,
-                         slotParTable    = h0@ParTable,
-                         slotSampleStats = bootSampleStats,
-                         slotData        = data)
+        fit.h0 <- suppressWarnings(lavaan(slotOptions     = h0@Options,
+                                          slotParTable    = h0@ParTable,
+                                          slotSampleStats = bootSampleStats,
+                                          slotData        = data))
         if (!fit.h0@optim$converged) {
             if (verbose) cat("     FAILED: no convergence\n")
-            options(old_options)
             return(NULL)
         }
         if (verbose)
@@ -225,16 +218,15 @@ bootstrapLRT <- function (h0 = NULL, h1 = NULL, R = 1000L,
         h1@Options$h1 <- FALSE
 
         #Fit h1 model
-        fit.h1 <- lavaan(slotOptions     = h1@Options,
-                         slotParTable    = h1@ParTable,
-                         slotSampleStats = bootSampleStats,
-                         slotData        = data)
+        fit.h1 <- suppressWarnings(lavaan(slotOptions     = h1@Options,
+                                          slotParTable    = h1@ParTable,
+                                          slotSampleStats = bootSampleStats,
+                                          slotData        = data))
 
         if (!fit.h1@optim$converged) {
             if (verbose)
                 cat("     FAILED: no convergence -- niter = ", fit.h1@optim$iterations,
                     " fx = ", fit.h1@optim$fx,"\n")
-            options(old_options)
             return(NULL)
         }
         if (verbose)
@@ -246,7 +238,6 @@ bootstrapLRT <- function (h0 = NULL, h1 = NULL, R = 1000L,
             #if((fit.h1@optim$fx - fit.h0@optim$fx) > 0.0) {
             if (verbose)
                 cat("  ... ... LRT  = <NA> h0 > h1, delta = ", fit.h1@optim$fx - fit.h0@optim$fx, "\n")
-            options(old_options)
             return(NULL)
         } else {
             lrt.boot <- abs(anova(fit.h1, fit.h0)$`Chisq diff`[2L])
@@ -263,7 +254,6 @@ bootstrapLRT <- function (h0 = NULL, h1 = NULL, R = 1000L,
                                           type = type,
                                           verbose = FALSE,
                                           return.LRT = FALSE, #FALSE
-                                          warn = warn,
                                           parallel = parallel,
                                           ncpus = ncpus, cl = cl,
                                           double.bootstrap = "no")
@@ -275,7 +265,6 @@ bootstrapLRT <- function (h0 = NULL, h1 = NULL, R = 1000L,
                                           R = 1L,
                                           type = type,
                                           verbose = FALSE,
-                                          warn = warn,
                                           return.LRT = TRUE, #TRUE
                                           parallel = parallel,
                                           ncpus = ncpus, cl = cl,
@@ -297,11 +286,11 @@ bootstrapLRT <- function (h0 = NULL, h1 = NULL, R = 1000L,
         }
         else if (have_snow) {
             if (is.null(cl)) {
-                cl <- parallel::makePSOCKcluster(rep("localhost", ncpus)) #
+                cl <- parallel::makePSOCKcluster(rep("localhost", ncpus))
                 if (RNGkind()[1L] == "L'Ecuyer-CMRG")
-                    parallel::clusterSetRNGStream(cl, iseed = iseed) #
-                res <- parallel::parLapply(cl, seq_len(RR), fn) #
-                parallel::stopCluster(cl) #
+                    parallel::clusterSetRNGStream(cl, iseed = iseed)
+                res <- parallel::parLapply(cl, seq_len(RR), fn)
+                parallel::stopCluster(cl)
                 res
             }
             else parallel::parLapply(cl, seq_len(RR), fn)
@@ -322,11 +311,10 @@ bootstrapLRT <- function (h0 = NULL, h1 = NULL, R = 1000L,
         }
     }
 
-
     #Error handling
     if (length(error.idx) > 0L) {
-        warning("lavaan WARNING: only ", (R - length(error.idx)),
-                " bootstrap draws were successful")
+        #warning("lavaan WARNING: only ", (R - length(error.idx)),
+        #        " bootstrap draws were successful")
         LRT <- LRT[-error.idx]
         if(length(LRT) == 0) LRT <- as.numeric(NA)
 
@@ -371,9 +359,6 @@ bootstrapLRT <- function (h0 = NULL, h1 = NULL, R = 1000L,
         attr(pvalue, "plugin.pvalues") <- plugin.pvalues
         attr(pvalue, "adj.pvalue") <- adj.pvalue
     }
-
-    # restore options
-    options(old_options)
 
     pvalue
 }

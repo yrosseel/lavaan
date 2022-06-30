@@ -318,6 +318,23 @@ lavParseModelString <- function(model.syntax = '', as.data.frame. = FALSE,
                  "\n    Please use a variable name that is not a reserved word in R",
                  "\n    and use only characters, digits, or the dot symbol.")
         }
+        # new in 0.6-12: check for three-way interaction terms (which we do
+        # NOT support)
+        if(any(grepl(":", RHS.names))) {
+            ncolon <- sapply(gregexpr(":", RHS.names), length)
+            if(any(ncolon > 1L)) {
+                idx <- which(ncolon > 1L)
+				txt <- "Three-way or higher-order interaction terms (using
+multiple colons) are not supported in the lavaan syntax; please manually
+construct the product terms yourself in the data.frame, give them an
+appropriate name, and then you can use these interaction variables as any
+other (observed) variable in the model syntax."
+                txt <- c(txt, " Problematic term is: ",
+                         RHS.names[ idx[1] ])
+                stop(lav_txt2message(txt, header = "lavaan ERROR:"))
+            }
+        }
+
 
         rhs.formula <- as.formula(paste("~",rhs))
         out <- lav_syntax_parse_rhs(rhs = rhs.formula[[2L]], op = op)

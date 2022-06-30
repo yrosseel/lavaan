@@ -22,7 +22,11 @@
 setMethod("show", "lavaan",
 function(object) {
     # show only basic information
-    lav_object_print_short_summary(object)
+    res <- lav_object_summary(object, fit.measures = FALSE,
+                                      estimates    = FALSE,
+                                      modindices   = FALSE)
+    print(res)
+    invisible(res)
 })
 
 setMethod("summary", "lavaan",
@@ -40,65 +44,16 @@ function(object, header       = TRUE,
                  modindices   = FALSE,
                  nd = 3L) {
 
-    # return object
-    res <- list()
+    res <- lav_object_summary(object = object, header = header,
+               fit.measures = fit.measures, estimates = estimates,
+               ci = ci, fmi = fmi, std = std, standardized = standardized,
+               remove.step1 = remove.step1, cov.std = cov.std,
+               rsquare = rsquare, std.nox = std.nox, modindices = modindices)
 
-    # this is to avoid partial matching of 'std' with std.nox
-    standardized <- std || standardized
+    # what about nd? only used if we actually print; save as attribute
+    attr(res, "nd") <- nd
 
-    if(std.nox) {
-        standardized <- TRUE
-    }
-
-    # print the 'short' summary
-    if(header) {
-        lav_object_print_short_summary(object, nd = nd)
-    }
-
-    # only if requested, the fit measures
-    if(fit.measures) {
-        if(length(object@Options$test) == 1L && object@Options$test == "none") {
-            warning("lavaan WARNING: fit measures not available if test = \"none\"\n\n")
-        } else if(object@optim$npar > 0L && !object@optim$converged) {
-            warning("lavaan WARNING: fit measures not available if model did not converge\n\n")
-        } else {
-            FIT <- fitMeasures(object, fit.measures="default")
-            res$FIT = FIT
-            print.lavaan.fitMeasures( FIT, nd = nd, add.h0 = FALSE )
-        }
-    }
-
-    if(estimates) {
-        PE <- parameterEstimates(object, ci = ci, standardized = standardized,
-                                 rsquare = rsquare, fmi = fmi,
-                                 cov.std = cov.std,
-                                 remove.eq = FALSE, remove.system.eq = TRUE,
-                                 remove.ineq = FALSE, remove.def = FALSE,
-                                 remove.nonfree = FALSE,
-                                 remove.step1 = remove.step1,
-                                 #remove.nonfree.scales = TRUE,
-                                 output = "text",
-                                 header = TRUE)
-        if(standardized && std.nox) {
-            #PE$std.all <- PE$std.nox
-            PE$std.all <- NULL
-        }
-        print(PE, nd = nd)
-        res$PE <- as.data.frame(PE)
-    }
-
-    # modification indices?
-    if(modindices) {
-        cat("Modification Indices:\n\n")
-        MI <- modificationIndices(object, standardized=TRUE, cov.std = cov.std)
-        print( MI )
-        res$MI <- MI
-    }
-
-    # return something invisibly, just for those who want this...
-    # new in 0.6-4
-    invisible(res)
-
+    res
 })
 
 
@@ -507,7 +462,8 @@ parameterestimates <- function(object,
             }
 
             stopifnot(!is.null(BOOT))
-            stopifnot(boot.ci.type %in% c("norm","basic","perc","bca.simple"))
+            stopifnot(boot.ci.type %in% c("norm","basic","perc",
+                                          "bca.simple", "bca"))
             if(boot.ci.type == "norm") {
                 fac <- qnorm(a)
                 boot.x <- colMeans(BOOT)
@@ -606,6 +562,113 @@ parameterestimates <- function(object,
                        t <- BOOT.def[,i]; t <- t[is.finite(t)]; t0 <- x.def[i]
                        w <- qnorm(sum(t < t0)/length(t))
                        a <- 0.0 #### !!! ####
+                       adj.alpha <- pnorm(w + (w + zalpha)/(1 - a*(w + zalpha)))
+                       qq <- norm.inter(t, adj.alpha)
+                       ci[def.idx[i],] <- qq[,2]
+                   }
+               }
+
+               # TODO:
+               # - add cin/ceq
+            } else if(boot.ci.type == "bca") { # new in 0.6-12
+               # we assume that the 'ordinary' (nonparametric)
+               # was used
+
+               if(object@Data@ngroups > 1L) {
+                   stop("lavaan ERROR: BCa confidence intervals not available (yet) for multiple groups.")
+               }
+
+               ntotal <- object@SampleStats@ntotal
+               if(nrow(BOOT) < ntotal) {
+                   txt <- paste("BCa confidence intervals require more ",
+                                "(successful) bootstrap runs (", nrow(BOOT),
+                                ") than the number of observations (",
+                                ntotal, ").", sep = "")
+                   stop(lav_txt2message(txt, header = "lavaan ERROR:"))
+               }
+
+               # does not work with sampling weights (yet)
+               if(!is.null(object@Data@weights[[1]])) {
+                   stop("lavaan ERROR: BCa confidence intervals not available in the presence of sampling weights.")
+               }
+
+               # check if we have a seed
+               bootstrap.seed <- attr(BOOT, "seed")
+               if(is.null(bootstrap.seed)) {
+                   stop("lavaan ERROR: seed not available in BOOT object.")
+               }
+
+               # compute 'X' matrix with frequency indices (to compute
+               # the empirical influence values using regression)
+               # NOTE: does not work (yet) for multiple groups, as they
+               #       are currently treated separately in
+               #       lav_bootstrap_internal, leading to interweaved indices
+               FREQ <- lav_utils_bootstrap_indices(R = object@Options$bootstrap,
+                   N = ntotal, seed = bootstrap.seed, return.freq = TRUE)
+               error.idx <- attr(BOOT, "error.idx")
+               if(length(error.idx) > 0L) {
+                   FREQ <- FREQ[-error.idx, , drop = FALSE]
+               }
+               stopifnot(nrow(FREQ) == nrow(BOOT))
+
+               # compute empirical influence values (using regression)
+               LM <- lm.fit(x = cbind(1, FREQ[,-1]), y = BOOT)
+               BETA <- unname(LM$coefficients)[-1,,drop = FALSE]
+               LL <- rbind(0, BETA)
+
+               # compute 'a' for all parameters
+               AA <- apply(LL, 2L, function(x) {
+                           L <- x - mean(x); sum(L^3)/(6*sum(L^2)^1.5) })
+
+               # adjustment for both bias AND scale
+               alpha <- (1 + c(-level, level))/2
+               zalpha <- qnorm(alpha)
+               ci <- cbind(LIST$est, LIST$est)
+
+               # free.idx only
+               free.idx <- which(object@ParTable$free &
+                                 !duplicated(object@ParTable$free))
+               stopifnot(length(free.idx) == ncol(BOOT))
+               x <- LIST$est[free.idx]
+               for(i in 1:length(free.idx)) {
+                   t <- BOOT[,i]; t <- t[is.finite(t)]; t0 <- x[i]
+                   # check if we have variance (perhaps constrained to 0?)
+                   # new in 0.6-3
+                   if(var(t) == 0) {
+                       next
+                   }
+                   w <- qnorm(sum(t < t0)/length(t))
+                   a <- AA[i]
+                   adj.alpha <- pnorm(w + (w + zalpha)/(1 - a*(w + zalpha)))
+                   qq <- norm.inter(t, adj.alpha)
+                   ci[free.idx[i],] <- qq[,2]
+               }
+
+               # def.idx
+               def.idx <- which(object@ParTable$op == ":=")
+               if(length(def.idx) > 0L) {
+                   x.def <- object@Model@def.function(x)
+                   BOOT.def <- apply(BOOT, 1, object@Model@def.function)
+                   if(length(def.idx) == 1L) {
+                       BOOT.def <- as.matrix(BOOT.def)
+                   } else {
+                       BOOT.def <- t(BOOT.def)
+                   }
+
+                   # recompute empirical influence values
+                   LM <- lm.fit(x = cbind(1, FREQ[,-1]), y = BOOT.def)
+                   BETA <- unname(LM$coefficients)[-1,,drop = FALSE]
+                   LL <- rbind(0, BETA)
+
+                   # compute 'a' values for all def.idx parameters
+                   AA <- apply(LL, 2L, function(x) {
+                       L <- x - mean(x); sum(L^3)/(6*sum(L^2)^1.5) })
+
+                   # compute bca ci
+                   for(i in 1:length(def.idx)) {
+                       t <- BOOT.def[,i]; t <- t[is.finite(t)]; t0 <- x.def[i]
+                       w <- qnorm(sum(t < t0)/length(t))
+                       a <- AA[i]
                        adj.alpha <- pnorm(w + (w + zalpha)/(1 - a*(w + zalpha)))
                        qq <- norm.inter(t, adj.alpha)
                        ci[def.idx[i],] <- qq[,2]

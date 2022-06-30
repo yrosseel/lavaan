@@ -57,6 +57,12 @@ lav_model_test <- function(lavmodel       = NULL,
                               pvalue     = as.numeric(NA))
         }
 
+        attr(TEST, "info") <-
+        list(ngroups = lavdata@ngroups, group.label = lavdata@group.label,
+             information = lavoptions$information,
+             h1.information = lavoptions$h1.information,
+             observed.information = lavoptions$observed.information)
+
         return(TEST)
     }
 
@@ -189,6 +195,11 @@ lav_model_test <- function(lavmodel       = NULL,
 
     if(length(test) == 1L && test == "standard") {
         # we are done
+        attr(TEST, "info") <-
+        list(ngroups = lavdata@ngroups, group.label = lavdata@group.label,
+             information = lavoptions$information,
+             h1.information = lavoptions$h1.information,
+             observed.information = lavoptions$observed.information)
         return(TEST)
     } else {
         # strip 'standard' from test list
@@ -293,8 +304,22 @@ lav_model_test <- function(lavmodel       = NULL,
                                            R               = R,
                                            verbose         = lavoptions$verbose,
                                            type            = boot.type,
-                                           FUN             = "test",
-                                           warn            = -1L)
+                                           FUN             = "test")
+                                           #warn            = -1L)
+
+                # new in 0.6-12: always warn for failed and nonadmissible
+                nfailed <- length(attr(BOOT.TEST, "error.idx"))
+                if(!is.null(nfailed) && nfailed > 0L && lavoptions$warn) {
+                    warning("lavaan WARNING: ", nfailed,
+                            " bootstrap runs failed or did not converge.")
+                }
+
+                notok <- attr(BOOT.TEST, "nonadmissible")
+                if(!is.null(notok) && notok > 0L && lavoptions$warn) {
+                    warning("lavaan WARNING: ", notok,
+                        " bootstrap runs resulted in nonadmissible solutions.")
+                }
+
                 BOOT.TEST <- drop(BOOT.TEST)
             }
 
@@ -315,6 +340,14 @@ lav_model_test <- function(lavmodel       = NULL,
         }
 
     } # additional tests
+
+    # add additional information as an attribute, needed for independent
+    # printing
+    attr(TEST, "info") <-
+        list(ngroups = lavdata@ngroups, group.label = lavdata@group.label,
+             information = lavoptions$information,
+             h1.information = lavoptions$h1.information,
+             observed.information = lavoptions$observed.information)
 
     TEST
 }

@@ -37,6 +37,8 @@ lav_model <- function(lavpartable      = NULL,
         if(nlevels > 1L) {
             multilevel <- TRUE
         }
+    } else {
+        nlevels <- 1L
     }
 
     nefa <- lav_partable_nefa(lavpartable)
@@ -122,7 +124,6 @@ lav_model <- function(lavpartable      = NULL,
         ov.names <-     lav_partable_vnames(lavpartable, "ov",     block = g)
         ov.names.nox <- lav_partable_vnames(lavpartable, "ov.nox", block = g)
         ov.names.x <-   lav_partable_vnames(lavpartable, "ov.x",   block = g)
-        nexo[g] <- length(ov.names.x)
         ov.num <-       lav_partable_vnames(lavpartable, "ov.num", block = g)
         if(lavoptions$conditional.x) {
             if(nlevels > 1L) {
@@ -133,7 +134,7 @@ lav_model <- function(lavpartable      = NULL,
                     # TEST ME!
                     # which group is this?
                     this.group <- ceiling(g / nlevels)
-                    blocks.within.group <- (this.groups - 1L) * nlevels + seq_len(nlevels)
+                    blocks.within.group <- (this.group - 1L) * nlevels + seq_len(nlevels)
                     OTHER.BLOCK.NAMES <- lav_partable_vnames(lavpartable, "ov",
                                                 block = blocks.within.group[-g])
                 }
@@ -154,6 +155,8 @@ lav_model <- function(lavpartable      = NULL,
             nvar[g] <- length(ov.names)
             num.idx[[g]] <- which(ov.names %in% ov.num)
         }
+        nexo[g] <- length(ov.names.x)
+
         if(nefa > 0L) {
             lv.names <- lav_partable_vnames(lavpartable, "lv",     block = g)
         }

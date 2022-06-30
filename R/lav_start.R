@@ -151,7 +151,7 @@ lav_start <- function(start.method    = "default",
         group.values <- lav_partable_group_values(lavpartable)
 
         # info from user model for this group
-        if(conditional.x && nlevels == 1L) {
+        if(conditional.x) {
             ov.names     <- vnames(lavpartable, "ov.nox", group = group.values[g])
         } else {
             ov.names     <- vnames(lavpartable, "ov", group = group.values[g])
@@ -336,7 +336,7 @@ lav_start <- function(start.method    = "default",
                             COV <- lavsamplestats@missing.h1[[g]]$sigma[ov.idx,
                                                       ov.idx, drop = FALSE]
                         } else {
-                            if(conditional.x && nlevels == 1L) {
+                            if(conditional.x) {
                                 COV <- lavsamplestats@res.cov[[g]][ov.idx,
                                                           ov.idx, drop = FALSE]
                             } else {
@@ -628,7 +628,7 @@ lav_start <- function(start.method    = "default",
                     block <- (g - 1L)*nlevels + l
 
                     this.block.x <- lav_partable_vnames(lavpartable, "ov.x",
-                                                  block = block) 
+                                                  block = block)
                     this.block.ov <- lav_partable_vnames(lavpartable, "ov",
                                                          block = block)
                     if(length(this.block.x) == 0L) {
@@ -682,7 +682,7 @@ lav_start <- function(start.method    = "default",
                     start[ov.int.idx] <- INT[idx]
 
                     # new in 0.6-12
-                    # very special case: conditional.x with a combination of 
+                    # very special case: conditional.x with a combination of
                     # splitted-x and regular-x
                     # here, we must:
                     # 1) replace var/cov of splitted-x by *residual* varcov
@@ -747,8 +747,8 @@ lav_start <- function(start.method    = "default",
                             row.idx <- match(lavpartable$lhs[reg.idx],ov.names.x1)
                             col.idx <- match(lavpartable$rhs[reg.idx],ov.names.x2)
                             start[reg.idx] <- t(COV.XinvYX)[ cbind(row.idx, col.idx) ]
-                        } # special case 
-                        
+                        } # special case
+
                     } # conditional.x
                 } # levels
             } # fixed.x

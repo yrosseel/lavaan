@@ -737,22 +737,29 @@ estimator.2L <- function(lavmodel       = NULL,
                          lavsamplestats = NULL,
                          group          = 1L) {
 
-    # DEBUG ONLY
-    if(lavmodel@conditional.x) {
-        return(-1000)
-    }
-
     # compute model-implied statistics for all blocks
     implied <- lav_model_implied(lavmodel, GLIST = GLIST)
 
     # here, we assume only 2!!! levels, at [[1]] and [[2]]
-    Sigma.W <- implied$cov[[  (group-1)*2 + 1]]
-    Mu.W    <- implied$mean[[ (group-1)*2 + 1]]
-    Sigma.B <- implied$cov[[  (group-1)*2 + 2]]
-    Mu.B    <- implied$mean[[ (group-1)*2 + 2]]
+    if(lavmodel@conditional.x) {
+        Res.Sigma.W <- implied$res.cov[[    (group-1)*2 + 1]]
+        Res.Int.W   <- implied$res.int[[    (group-1)*2 + 1]]
+        Res.Pi.W    <- implied$res.slopes[[ (group-1)*2 + 1]]
+
+        Res.Sigma.B <- implied$res.cov[[    (group-1)*2 + 2]]
+        Res.Int.B   <- implied$res.int[[    (group-1)*2 + 2]]
+        Res.Pi.B    <- implied$res.slopes[[ (group-1)*2 + 2]]
+    } else {
+        Sigma.W <- implied$cov[[  (group-1)*2 + 1]]
+        Mu.W    <- implied$mean[[ (group-1)*2 + 1]]
+        Sigma.B <- implied$cov[[  (group-1)*2 + 2]]
+        Mu.B    <- implied$mean[[ (group-1)*2 + 2]]
+    }
 
     if(lavsamplestats@missing.flag) {
-
+        if(lavmodel@conditional.x) {
+            stop("lavaan ERROR: multilevel + conditional.x is not ready yet for fiml; rerun with conditional.x = FALSE\n")
+        }
         #SIGMA.B <- Sigma.B[Lp$both.idx[[2]], Lp$both.idx[[2]], drop = FALSE]
         #if(any(diag(SIGMA.B) < 0)) {
         #    return(+Inf)
@@ -771,10 +778,21 @@ estimator.2L <- function(lavmodel       = NULL,
                   log2pi = FALSE, minus.two = TRUE)
     } else {
         YLp <- lavsamplestats@YLp[[group]]
-        loglik <- lav_mvnorm_cluster_loglik_samplestats_2l(YLp = YLp, Lp = Lp,
-                  Mu.W = Mu.W, Sigma.W = Sigma.W,
-                  Mu.B = Mu.B, Sigma.B = Sigma.B,
-                  log2pi = FALSE, minus.two = TRUE)
+        if(lavmodel@conditional.x) {
+            loglik <- lav_mvreg_cluster_loglik_samplestats_2l(
+                          YLp = YLp, Lp = Lp,
+                          Res.Sigma.W = Res.Sigma.W,
+                          Res.Int.W = Res.Int.W, Res.Pi.W = Res.Pi.W,
+                          Res.Sigma.B = Res.Sigma.B,
+                          Res.Int.B = Res.Int.B, Res.Pi.B = Res.Pi.B,
+                          log2pi = FALSE, minus.two = TRUE)
+        } else {
+            loglik <- lav_mvnorm_cluster_loglik_samplestats_2l(
+                          YLp = YLp, Lp = Lp,
+                          Mu.W = Mu.W, Sigma.W = Sigma.W,
+                          Mu.B = Mu.B, Sigma.B = Sigma.B,
+                          log2pi = FALSE, minus.two = TRUE)
+        }
     }
 
     # minimize

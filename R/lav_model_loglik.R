@@ -40,40 +40,70 @@ lav_model_loglik <- function(lavdata        = NULL,
     if(logl.ok) {
         for(g in seq_len(ngroups) ) {
             if(lavdata@nlevels > 1L) {
-                # here, we assume only 2 levels, at [[1]] and [[2]]
-                Sigma.W <- lavimplied$cov[[  (g-1)*2 + 1]]
-                Mu.W    <- lavimplied$mean[[ (g-1)*2 + 1]]
-                Sigma.B <- lavimplied$cov[[  (g-1)*2 + 2]]
-                Mu.B    <- lavimplied$mean[[ (g-1)*2 + 2]]
 
-                # DEBUG ONLY
+                # here, we assume only 2 levels, at [[1]] and [[2]]
                 if(lavmodel@conditional.x) {
-                    logl.group[g] <- -1000
+                    Res.Sigma.W <- lavimplied$res.cov[[    (g-1)*2 + 1]]
+                    Res.Int.W   <- lavimplied$res.int[[    (g-1)*2 + 1]]
+                    Res.Pi.W    <- lavimplied$res.slopes[[ (g-1)*2 + 1]]
+
+                    Res.Sigma.B <- lavimplied$res.cov[[    (g-1)*2 + 2]]
+                    Res.Int.B   <- lavimplied$res.int[[    (g-1)*2 + 2]]
+                    Res.Pi.B    <- lavimplied$res.slopes[[ (g-1)*2 + 2]]
+                } else {
+                    Sigma.W <- lavimplied$cov[[  (g-1)*2 + 1]]
+                    Mu.W    <- lavimplied$mean[[ (g-1)*2 + 1]]
+                    Sigma.B <- lavimplied$cov[[  (g-1)*2 + 2]]
+                    Mu.B    <- lavimplied$mean[[ (g-1)*2 + 2]]
                 }
 
                 if(lavsamplestats@missing.flag) {
-                    logl.group[g] <-
-                        lav_mvnorm_cluster_missing_loglik_samplestats_2l(
-                            Y1 = lavdata@X[[g]],
-                            Y2 = lavsamplestats@YLp[[g]][[2]]$Y2,
-                            Lp = lavdata@Lp[[g]],
-                            Mp = lavdata@Mp[[g]],
-                            Mu.W = Mu.W, Sigma.W = Sigma.W,
-                            Mu.B = Mu.B, Sigma.B = Sigma.B,
-                            loglik.x = lavsamplestats@YLp[[g]][[2]]$loglik.x,
-                            log2pi = TRUE, minus.two = FALSE)
+                    if(lavmodel@conditional.x) {
+                        # TODO
+                        logl.group[g] <- as.numeric(NA)
+                    } else {
+                        logl.group[g] <-
+                            lav_mvnorm_cluster_missing_loglik_samplestats_2l(
+                                Y1 = lavdata@X[[g]],
+                                Y2 = lavsamplestats@YLp[[g]][[2]]$Y2,
+                                Lp = lavdata@Lp[[g]],
+                                Mp = lavdata@Mp[[g]],
+                                Mu.W = Mu.W, Sigma.W = Sigma.W,
+                                Mu.B = Mu.B, Sigma.B = Sigma.B,
+                              loglik.x = lavsamplestats@YLp[[g]][[2]]$loglik.x,
+                                log2pi = TRUE, minus.two = FALSE)
+                    }
                 } else {
-                    logl.group[g] <- lav_mvnorm_cluster_loglik_samplestats_2l(
-                        YLp          = lavsamplestats@YLp[[g]],
-                        Lp           = lavdata@Lp[[g]],
-                        Mu.W         = Mu.W,
-                        Sigma.W      = Sigma.W,
-                        Mu.B         = Mu.B,
-                        Sigma.B      = Sigma.B,
-                        Sinv.method  = "eigen",
-                        log2pi       = TRUE,
-                        minus.two    = FALSE)
-                }
+                    # complete case
+                    if(lavmodel@conditional.x) {
+                        logl.group[g] <-
+                            lav_mvreg_cluster_loglik_samplestats_2l(
+                                YLp          = lavsamplestats@YLp[[g]],
+                                Lp           = lavdata@Lp[[g]],
+                                Res.Sigma.W  = Res.Sigma.W,
+                                Res.Int.W    = Res.Int.W,
+                                Res.Pi.W     = Res.Pi.W,
+                                Res.Sigma.B  = Res.Sigma.B,
+                                Res.Int.B    = Res.Int.B,
+                                Res.Pi.B     = Res.Pi.B,
+                                Sinv.method  = "eigen",
+                                log2pi       = TRUE,
+                                minus.two    = FALSE)
+                    } else {
+                        logl.group[g] <-
+                            lav_mvnorm_cluster_loglik_samplestats_2l(
+                                YLp          = lavsamplestats@YLp[[g]],
+                                Lp           = lavdata@Lp[[g]],
+                                Mu.W         = Mu.W,
+                                Sigma.W      = Sigma.W,
+                                Mu.B         = Mu.B,
+                                Sigma.B      = Sigma.B,
+                                Sinv.method  = "eigen",
+                                log2pi       = TRUE,
+                                minus.two    = FALSE)
+                    }
+                } # complete
+            # end multilevel
 
             } else if(lavsamplestats@missing.flag) {
                 x.idx <- lavsamplestats@x.idx[[g]]

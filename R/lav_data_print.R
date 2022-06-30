@@ -4,22 +4,113 @@
 setMethod("show", "lavData",
 function(object) {
     # print 'lavData' object
-    lav_data_print_short(object)
+    res <- lav_data_summary_short(object)
+    lav_data_print_short(res, nd = 3L)
 })
+
+# create summary information for @lavdata slot
+lav_data_summary_short <- function(object) {
+
+    # which object?
+    if(inherits(object, "lavaan")) {
+        lavdata <- object@Data
+    } else if(inherits(object, "lavData")) {
+        lavdata <- object
+    } else {
+        stop("lavaan ERROR: object must be lavaan or lavData object")
+    }
+
+    # two or three columns (depends on nobs/norig)
+    threecolumn <- FALSE
+    for(g in 1:lavdata@ngroups) {
+        if(lavdata@nobs[[g]] != lavdata@norig[[g]]) {
+            threecolumn <- TRUE
+            break
+        }
+    }
+
+    # clustered data?
+    clustered <- FALSE
+    if( .hasSlot(lavdata, "cluster") && # in case we have an old obj
+        length(lavdata@cluster) > 0L ) {
+        clustered <- TRUE
+    }
+
+    # multilevel data?
+    multilevel <- FALSE
+    if( .hasSlot(lavdata, "nlevels") && # in case we have an old obj
+        lavdata@nlevels > 1L ) {
+        multilevel <- TRUE
+    }
+
+    # extract summary information
+    datasummary <- list(ngroups  = lavdata@ngroups,
+                        nobs     = unlist(lavdata@nobs))
+
+    # norig?
+    if(threecolumn) {
+        datasummary$norig <- unlist(lavdata@norig)
+    }
+
+    # multiple groups?
+    if(lavdata@ngroups > 1L) {
+        datasummary$group.label <- lavdata@group.label
+    }
+
+    # sampling weights?
+    if( (.hasSlot(lavdata, "weights")) && # in case we have an old object
+        (!is.null(lavdata@weights[[1L]])) ) {
+        datasummary$sampling.weights <- lavdata@sampling.weights
+    }
+
+    # clustered/multilevel data?
+    if(clustered) {
+        if(multilevel) {
+            datasummary$nlevels   <- lavdata@nlevels
+        }
+        datasummary$cluster   <- lavdata@cluster
+
+        if(lavdata@ngroups == 1L) {
+            datasummary$nclusters <- unlist(lavdata@Lp[[1]]$nclusters)
+        } else {
+            tmp <- vector("list", length = lavdata@ngroups)
+            for(g in seq_len(lavdata@ngroups)) {
+                tmp[[g]] <- unlist(lavdata@Lp[[g]]$nclusters)
+            }
+            datasummary$nclusters <- tmp
+        }
+    }
+
+    # missing data?
+    if(!is.null(lavdata@Mp[[1L]])) {
+        datasummary$npatterns <- sapply(lavdata@Mp, "[[", "npatterns")
+        if(multilevel && !is.null(lavdata@Mp[[1L]]$Zp)) {
+            datasummary$npatterns2 <- sapply(lapply(lavdata@Mp,
+                                            "[[", "Zp"), "[[", "npatterns")
+        }
+    }
+
+    datasummary
+}
 
 lav_data_print_short <- function(object, nd = 3L) {
 
-    lavdata <- object
+    # object should data summary
+    if(inherits(object, "lavaan")) {
+        object <- lav_data_summary_short(object)
+    }
+    datasummary <- object
+
     num.format  <- paste("%", max(8L, nd + 5L), ".", nd, "f", sep = "")
 
-    # listwise deletion?
-    listwise <- twocolumn <- FALSE
-    for(g in 1:lavdata@ngroups) {
-       if(lavdata@nobs[[1L]] != lavdata@norig[[1L]]) {
-           listwise <- twocolumn <- TRUE
-           break
-       }
-    }
+    # threecolumn
+    threecolumn <- !is.null(datasummary$norig)
+
+    # multilevel?
+    multilevel <- !is.null(datasummary$nlevels)
+
+    # clustered?
+    clustered <- !is.null(datasummary$cluster) && is.null(datasummary$nlevels)
 
     # header? no, for historical reasons only
     #cat("Data information:\n\n")
@@ -27,112 +118,109 @@ lav_data_print_short <- function(object, nd = 3L) {
     c1 <- c2 <- c3 <- character(0L)
 
     # number of observations
-    if(lavdata@ngroups == 1L) {
-        if(listwise) {
+    if(datasummary$ngroups == 1L) {
+        if(threecolumn) {
             c1 <- c(c1, ""); c2 <- c(c2, "Used"); c3 <- c(c3, "Total")
         }
         c1 <- c(c1, "Number of observations")
-        c2 <- c(c2, lavdata@nobs[[1L]])
-        c3 <- c(c3, ifelse(listwise, lavdata@norig[[1L]], ""))
+        c2 <- c(c2, datasummary$nobs)
+        c3 <- c(c3, ifelse(threecolumn, datasummary$norig, ""))
     } else {
         c1 <- c(c1, "Number of observations per group:");
-        if(listwise) {
+        if(threecolumn) {
             c2 <- c(c2, "Used"); c3 <- c(c3, "Total")
         } else {
             c2 <- c(c2, ""); c3 <- c(c3, "")
         }
-        for(g in 1:lavdata@ngroups) {
-            c1 <- c(c1, sprintf("  %-40s", lavdata@group.label[[g]]))
-            c2 <- c(c2, lavdata@nobs[[g]])
-            c3 <- c(c3, ifelse(listwise, lavdata@norig[[g]], ""))
+        for(g in 1:datasummary$ngroups) {
+            c1 <- c(c1, sprintf("  %-40s", datasummary$group.label[g]))
+            c2 <- c(c2, datasummary$nobs[g])
+            c3 <- c(c3, ifelse(threecolumn, datasummary$norig[g], ""))
         } # g
     }
 
     # number of clusters
-    if(lavdata@ngroups == 1L) {
-        if( (.hasSlot(lavdata, "nlevels")) && # in case we have an old obj
-            (lavdata@nlevels > 1L) ) {
-            for(l in 2:lavdata@nlevels) {
+    if(datasummary$ngroups == 1L) {
+        if(multilevel) {
+            for(l in 2:datasummary$nlevels) {
                 c1 <- c(c1,
-                        paste("Number of clusters [", lavdata@cluster[l-1], "]",
-                        sep = ""))
-                c2 <- c(c2, lavdata@Lp[[1]]$nclusters[[l]])
+                        paste("Number of clusters [",
+                              datasummary$cluster[l-1], "]", sep = ""))
+                c2 <- c(c2, datasummary$nclusters[l])
                 c3 <- c(c3, "")
             }
-        } else if( (.hasSlot(lavdata, "cluster")) &&
-                   (length(lavdata@cluster) > 0L) ) {
-            c1 <- c(c1, paste("Number of clusters [", lavdata@cluster, "]",
+        } else if(clustered) {
+            c1 <- c(c1, paste("Number of clusters [", datasummary$cluster, "]",
                               sep = ""))
-            c2 <- c(c2, lavdata@Lp[[1]]$nclusters[[2]])
+            c2 <- c(c2, datasummary$nclusters[2])
             c3 <- c(c3, "")
         }
     } else {
-        if( (.hasSlot(lavdata, "nlevels")) && (lavdata@nlevels > 1L) ) {
-            for(l in 2:lavdata@nlevels) {
+        if(multilevel) {
+            for(l in 2:datasummary$nlevels) {
                 c1 <- c(c1,
-                  paste("Number of clusters [", lavdata@cluster[l-1], "]:",
+                  paste("Number of clusters [", datasummary$cluster[l-1], "]:",
                         sep = ""))
                 c2 <- c(c2, ""); c3 <- c(c3, "")
-                for(g in 1:lavdata@ngroups) {
-                    c1 <- c(c1, sprintf("  %-40s", lavdata@group.label[[g]]))
-                    c2 <- c(c2, lavdata@Lp[[g]]$nclusters[[l]])
+                for(g in 1:datasummary$ngroups) {
+                    c1 <- c(c1, sprintf("  %-40s", datasummary$group.label[g]))
+                    c2 <- c(c2, datasummary$nclusters[[g]][l])
                     c3 <- c(c3, "")
                 }
             }
-        } else if( (.hasSlot(lavdata, "cluster")) &&
-               (length(lavdata@cluster) > 0L) ) {
+        } else if(clustered) {
             c1 <- c(c1,
-             paste("Number of clusters [", lavdata@cluster, "]:", sep = ""))
+             paste("Number of clusters [", datasummary$cluster, "]:", sep = ""))
             c2 <- c(c2, ""); c3 <- c(c3, "")
-            for(g in 1:lavdata@ngroups) {
-                c1 <- c(c1, sprintf("  %-40s", lavdata@group.label[[g]]))
-                c2 <- c(c2, lavdata@Lp[[g]]$nclusters[[2]])
+            for(g in 1:datasummary$ngroups) {
+                c1 <- c(c1, sprintf("  %-40s", datasummary$group.label[g]))
+                c2 <- c(c2, datasummary$nclusters[[g]][2])
                 c3 <- c(c3, "")
             }
         }
     }
 
     # missing patterns?
-    if(!is.null(lavdata@Mp[[1L]])) {
-        if(lavdata@ngroups == 1L) {
-            if( (.hasSlot(lavdata, "nlevels")) && (lavdata@nlevels > 1L) ) {
+    if(!is.null(datasummary$npatterns)) {
+        if(datasummary$ngroups == 1L) {
+            if(multilevel) {
                 c1 <- c(c1, "Number of missing patterns -- level 1")
-                c2 <- c(c2, lavdata@Mp[[1L]]$npatterns)
+                c2 <- c(c2, datasummary$npatterns)
                 c3 <- c(c3, "")
-                if(!is.null(lavdata@Mp[[1L]]$Zp)) {
+                if(!is.null(datasummary$npatterns2)) {
                     c1 <- c(c1, "Number of missing patterns -- level 2")
-                    c2 <- c(c2, lavdata@Mp[[1L]]$Zp$npatterns)
+                    c2 <- c(c2, datasummary$npatterns2)
                     c3 <- c(c3, "")
                 }
             } else {
                 c1 <- c(c1, "Number of missing patterns")
-                c2 <- c(c2, lavdata@Mp[[1L]]$npatterns)
+                c2 <- c(c2, datasummary$npatterns)
                 c3 <- c(c3, "")
             }
         } else {
-            if( (.hasSlot(lavdata, "nlevels")) && (lavdata@nlevels > 1L) ) {
+            if(multilevel) {
                 c1 <- c(c1, "Number of missing patterns per group:")
                 c2 <- c(c2, ""); c3 <- c(c3, "")
-                for(g in 1:lavdata@ngroups) {
+                for(g in 1:datasummary$ngroups) {
                     c1 <- c(c1,
-                            paste(sprintf("  %-40s", lavdata@group.label[[g]]),
-                                  "-- level 1"))
-                    c2 <- c(c2, lavdata@Mp[[g]]$npatterns)
+                            paste(sprintf("  %-40s",
+                                  datasummary$group.label[g]), "-- level 1"))
+                    c2 <- c(c2, datasummary$npatterns[g])
                     c3 <- c(c3, "")
-                    if(!is.null(lavdata@Mp[[1L]]$Zp)) {
+                    if(!is.null(datasummary$npatterns2)) {
                         c1 <- c(c1,
-                            paste(sprintf("  %-40s", lavdata@group.label[[g]]),
-                                  "-- level 2"))
-                        c2 <- c(c2, lavdata@Mp[[g]]$Zp$npatterns)
+                            paste(sprintf("  %-40s",
+                                  datasummary$group.label[g]), "-- level 2"))
+                        c2 <- c(c2, datasummary$npatterns2[g])
                         c3 <- c(c3, "")
                     }
                 }
             } else {
                 c1 <- c(c1, "Number of missing patterns per group:")
                 c2 <- c(c2, ""); c3 <- c(c3, "")
-                for(g in 1:lavdata@ngroups) {
-                    c1 <- c(c1, sprintf("  %-40s", lavdata@group.label[[g]]))
-                    c2 <- c(c2, lavdata@Mp[[g]]$npatterns)
+                for(g in 1:datasummary$ngroups) {
+                    c1 <- c(c1, sprintf("  %-40s", datasummary$group.label[g]))
+                    c2 <- c(c2, datasummary$npatterns[g])
                     c3 <- c(c3, "")
                 }
             }
@@ -140,15 +228,11 @@ lav_data_print_short <- function(object, nd = 3L) {
     }
 
     # sampling weights?
-    if( (.hasSlot(lavdata, "weights")) && # in case we have an old object
-        (!is.null(lavdata@weights[[1L]])) ) {
+    if(!is.null(datasummary$sampling.weights)) {
         c1 <- c(c1, "Sampling weights variable")
-        c2 <- c(c2, lavdata@sampling.weights)
+        c2 <- c(c2, datasummary$sampling.weights)
         c3 <- c(c3, "")
     }
-
-    # empty row
-    c1 <- c(c1, ""); c2 <- c(c2, ""); c3 <- c(c3, "")
 
     # format c1/c2
     c1 <- format(c1, width = 43L)
@@ -156,7 +240,7 @@ lav_data_print_short <- function(object, nd = 3L) {
     c3 <- format(c3, width = 8L + nd, justify = "right")
 
     # create character matrix
-    if(twocolumn) {
+    if(threecolumn) {
         M <- cbind(c1, c2, c3, deparse.level = 0)
     } else {
         M <- cbind(c1, c2, deparse.level = 0)

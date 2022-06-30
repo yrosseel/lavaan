@@ -50,7 +50,13 @@ lav_model_estimate <- function(lavmodel       = NULL,
         if(length(var.idx) > 0L) {
             START[var.idx] <- 1
         }
-        x.unpack <- START[ lavpartable$free > 0L ]
+
+        if(lavmodel@ceq.simple.only) {
+            x.unpack <- START[ lavpartable$free > 0L &
+                               !duplicated(lavpartable$free) ]
+        } else {
+            x.unpack <- START[ lavpartable$free > 0L ]
+        }
     }
 
 
@@ -135,7 +141,13 @@ lav_model_estimate <- function(lavmodel       = NULL,
         if(length(var.idx) > 0L) {
             parscale[var.idx] <- sqrt(abs(parscale[var.idx]))
         }
-        parscale <- parscale[ lavpartable$free > 0 ]
+
+        if(lavmodel@ceq.simple.only) {
+            parscale <- parscale[ lavpartable$free > 0 &
+                                  !duplicated(lavpartable$free) ]
+        } else {
+            parscale <- parscale[ lavpartable$free > 0 ]
+        }
     }
     # parscale should obey the equality constraints
     if(lavmodel@eq.constraints && lavoptions$optim.parscale != "none") {
@@ -226,7 +238,8 @@ lav_model_estimate <- function(lavmodel       = NULL,
     }
 
     # function to be minimized
-    objective_function <- function(x, verbose = FALSE, infToMax = FALSE) {
+    objective_function <- function(x, verbose = FALSE, infToMax = FALSE,
+                                   debug = FALSE) {
 
         # 3. standard deviations to variances
         # WARNING: x is still packed here!
@@ -290,7 +303,8 @@ lav_model_estimate <- function(lavmodel       = NULL,
         fx
     }
 
-    gradient_function <- function(x, verbose = FALSE, infToMax = FALSE) {
+    gradient_function <- function(x, verbose = FALSE, infToMax = FALSE,
+                                  debug = FALSE) {
 
         # transform variances back
         #if(lavoptions$optim.var.transform == "sqrt" &&
@@ -358,7 +372,7 @@ lav_model_estimate <- function(lavmodel       = NULL,
         dx
     }
 
-    gradient_function_numerical <- function(x, verbose=FALSE) {
+    gradient_function_numerical <- function(x, verbose=FALSE, debug = FALSE) {
 
         # NOTE: no need to 'tranform' anything here (var/eq)
         # this is done anyway in objective_function
@@ -373,10 +387,10 @@ lav_model_estimate <- function(lavmodel       = NULL,
             x.left <- x.left2 <- x.right <- x.right2 <- x
             x.left[i]  <- x[i] - h; x.left2[i]  <- x[i] - 2*h
             x.right[i] <- x[i] + h; x.right2[i] <- x[i] + 2*h
-            fx.left   <- objective_function(x.left)
-            fx.left2  <- objective_function(x.left2)
-            fx.right  <- objective_function(x.right)
-            fx.right2 <- objective_function(x.right2)
+            fx.left   <- objective_function(x.left,   verbose = FALSE, debug = FALSE)
+            fx.left2  <- objective_function(x.left2,  verbose = FALSE, debug = FALSE)
+            fx.right  <- objective_function(x.right,  verbose = FALSE, debug = FALSE)
+            fx.right2 <- objective_function(x.right2, verbose = FALSE, debug = FALSE)
             dx[i] <- (fx.left2 - 8*fx.left + 8*fx.right - fx.right2)/(12*h)
         }
 
@@ -390,7 +404,7 @@ lav_model_estimate <- function(lavmodel       = NULL,
         dx
     }
 
-    gradient_function_numerical_complex <- function(x, verbose=FALSE) {
+    gradient_function_numerical_complex <- function(x, verbose=FALSE, debug = FALSE) {
 
         dx <- Re(lav_func_gradient_complex(func = objective_function, x = x,
                                         h = sqrt(.Machine$double.eps)))
@@ -445,7 +459,7 @@ lav_model_estimate <- function(lavmodel       = NULL,
 
 
     # first try: check if starting values return a finite value
-    fx <- objective_function(start.x)
+    fx <- objective_function(start.x, verbose = verbose, debug = debug)
     if(!is.finite(fx)) {
         # emergency change of start.x
         start.x <- start.x / 10
@@ -518,7 +532,7 @@ lav_model_estimate <- function(lavmodel       = NULL,
                            #             parscale=SCALE,
                            #             trace=trace),
                            hessian=FALSE,
-                           verbose=verbose)
+                           verbose=verbose, debug=debug)
         cat("\n")
         start.x <- optim.out$par
     }
@@ -551,7 +565,7 @@ lav_model_estimate <- function(lavmodel       = NULL,
                             upper=upper,
                             control=control,
                             scale=SCALE,
-                            verbose=verbose)
+                            verbose=verbose, debug=debug)
         if(verbose) {
             cat("  convergence status (0=ok): ", optim.out$convergence, "\n")
             cat("  nlminb message says: ", optim.out$message, "\n")
@@ -569,7 +583,7 @@ lav_model_estimate <- function(lavmodel       = NULL,
                             upper=upper,
                             control=control,
                             scale=SCALE,
-                            verbose=verbose)
+                            verbose=verbose, debug=debug)
         }
 
         iterations <- optim.out$iterations
@@ -606,7 +620,7 @@ lav_model_estimate <- function(lavmodel       = NULL,
                             upper=upper,
                             control=control,
                             scale=SCALE,
-                            verbose=verbose)
+                            verbose=verbose, debug=debug)
         if(verbose) {
             cat("  convergence status (0=ok): ", optim.out$convergence, "\n")
             cat("  nlminb message says: ", optim.out$message, "\n")
@@ -646,7 +660,7 @@ lav_model_estimate <- function(lavmodel       = NULL,
                            method="BFGS",
                            control=control,
                            hessian=FALSE,
-                           verbose=verbose)
+                           verbose=verbose, debug=debug)
         if(verbose) {
             cat("  convergence status (0=ok): ", optim.out$convergence, "\n")
             cat("  optim BFGS message says: ", optim.out$message, "\n")
@@ -687,7 +701,7 @@ lav_model_estimate <- function(lavmodel       = NULL,
                            upper=upper,
                            control=control,
                            hessian=FALSE,
-                           verbose=verbose,
+                           verbose=verbose, debug=debug,
                            infToMax=TRUE)
         if(verbose) {
             cat("  convergence status (0=ok): ", optim.out$convergence, "\n")
@@ -731,7 +745,7 @@ lav_model_estimate <- function(lavmodel       = NULL,
                                    gradient=GRADIENT,
                                    control=control,
                                    scale=SCALE,
-                                   verbose=verbose,
+                                   verbose=verbose, debug=debug,
                                    lower=lower,
                                    upper=upper,
                                    cin = cin, cin.jac = cin.jac,
