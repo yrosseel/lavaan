@@ -336,10 +336,6 @@ lav_options_set <- function(opt = NULL) {
     # brute-force override (for now)
     if(opt$.clustered && !opt$.multilevel) {
         opt$meanstructure <- TRUE
-        #opt$missing <- "listwise"
-        #if(opt$missing == "ml") {
-        #    opt$optim.gradient = "numerical"
-        #}
 
         if(opt$estimator == "mlr") {
             opt$estimator <- "ml"
@@ -347,6 +343,9 @@ lav_options_set <- function(opt = NULL) {
             opt$se <- "robust.cluster"
         } else if(opt$estimator == "mlm") {
             opt$estimator <- "ml"
+            opt$test <- "satorra.bentler"
+            opt$se <- "robust.cluster.sem"
+        } else if(opt$.categorical) {
             opt$test <- "satorra.bentler"
             opt$se <- "robust.cluster.sem"
         }
@@ -378,7 +377,7 @@ lav_options_set <- function(opt = NULL) {
 
         # information
         if(opt$information[1] == "default") {
-            if(opt$se == "robust.cluster") {
+            if(opt$se == "robust.cluster" && opt$estimator == "ml") {
                 opt$information[1] <- "observed"
             } else {
                 opt$information[1] <- "expected"
@@ -1730,6 +1729,9 @@ lav_options_set <- function(opt = NULL) {
     #if(opt$group.w.free && opt$.categorical) {
     #    stop("lavaan ERROR: group.w.free = TRUE is not supported (yet) in the categorical setting.")
     #}
+
+    # in order not to break semTools and blavaan, we restore categorical:
+    opt$categorical <- opt$.categorical
 
     if(opt$debug) { cat("lavaan DEBUG: lavaanOptions OUT\n"); str(opt) }
 

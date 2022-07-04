@@ -744,8 +744,9 @@ lav_data_full <- function(data          = NULL,          # data.frame
     for(g in 1:ngroups) {
 
         # extract variables in correct order
-        if(!is.null(cluster) && length(cluster) > 0L) {
+        if(nlevels > 1L) {
             # keep 'joint' (Y,X) matrix in @X if multilevel (or always?)
+            # yes for multilevel (for now); no for clustered only
             OV.NAMES <- unique(c(ov.names[[g]], ov.names.x[[g]]))
             ov.idx  <- ov$idx[match(OV.NAMES,   ov$name)]
         } else {

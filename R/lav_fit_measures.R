@@ -19,9 +19,22 @@ function(object, fit.measures = "all", baseline.model = NULL,
 lav_fit_measures <- function(object, fit.measures = "all",
                              baseline.model = NULL, output = "vector") {
 
+    # do we have data?
+    if(object@Data@data.type == "none") {
+        stop("lavaan ERROR: fit measures not available if there is no data.")
+    }
+
     # has the model converged?
     if(object@optim$npar > 0L && !object@optim$converged) {
         stop("lavaan ERROR: fit measures not available if model did not converge")
+    }
+
+    # do we have test statistics?
+    TEST <- lavInspect(object, "test")
+
+    # do we have a test statistic?
+    if(TEST[[1]]$test == "none") {
+        stop("lavaan ERROR: please refit the model with test=\"standard\"")
     }
 
     # check output argument
@@ -34,19 +47,6 @@ lav_fit_measures <- function(object, fit.measures = "all",
     } else {
         stop("lavaan ERROR: output should be ", sQuote("vector"),
              ", ", sQuote("matrix"), " or ", sQuote("text"))
-    }
-
-    TEST <- lavInspect(object, "test")
-
-    # do we have a test statistic?
-    if(TEST[[1]]$test == "none") {
-
-        # to deal with semTools 0.4-9, we need to check the @Fit@test slot
-        #if(object@Fit@test[[1]]$test != "none") {
-        #    TEST <- object@Fit@test
-        #} else {
-            stop("lavaan ERROR: please refit the model with test=\"standard\"")
-        #}
     }
 
     if("all" %in% fit.measures) {
