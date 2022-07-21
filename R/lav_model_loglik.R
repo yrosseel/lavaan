@@ -169,6 +169,9 @@ lav_model_loglik <- function(lavdata        = NULL,
             neq <- qr(lavmodel@con.jac[ceq.idx,,drop=FALSE])$rank
             npar <- npar - neq
         }
+    } else if(.hasSlot(lavmodel, "ceq.simple.only") &&
+              lavmodel@ceq.simple.only) {
+        npar <- lavmodel@nx.free
     }
 
     # logl
@@ -176,14 +179,14 @@ lav_model_loglik <- function(lavdata        = NULL,
 
     if(logl.ok) {
         # AIC
-        AIC <- (-2 * logl) + (2 * npar)
+        AIC <- lav_fit_aic(logl = logl, npar = npar)
 
         # BIC
-        BIC <- (-2 * logl) + (npar * log(lavsamplestats@ntotal))
+        BIC <- lav_fit_bic(logl = logl, npar = npar, N = lavsamplestats@ntotal)
 
         # BIC2
-        N.star <- (lavsamplestats@ntotal + 2) / 24
-        BIC2 <- (-2 * logl) + (npar * log(N.star))
+        BIC2 <- lav_fit_sabic(logl = logl, npar = npar,
+                              N = lavsamplestats@ntotal)
     } else {
         AIC <- BIC <- BIC2 <- as.numeric(NA)
     }

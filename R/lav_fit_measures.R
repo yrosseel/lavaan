@@ -1,7 +1,19 @@
-# TDJ: add "..." to make the method generic, so lavaan.mi can add arguments to
-#      pass to lavTestLRT() and lavTestLRT.mi() about how to pool chi-squared.
-#      NOT sure this is necessary for the lavaan-method, perhaps only the
-#      generic needs "..."?
+# user-visible function to extract the fit measures
+# output can be 1) vector (default), 2) list, 3) matrix, or 4) text
+# in the latter case, the result will be of class "lavaan.fitMeasures"
+# for which the printing is done by print.lavaan.fitMeasures()
+
+# new in 0.6-13:
+# the big families are computed in dedicated functions:
+# - lav_fit_rmsea_lavobject
+# - lav_fit_cfi_lavobject
+# - lav_fit_aic_lavojbect
+# - lav_residuals_summary
+
+# NOTe: fitMeasures/fitmeasures are generic functions; they include a "..."
+#       so lavaan.mi can add arguments to pass to lavTestLRT() and
+#       lavTestLRT.mi() about how to pool chi-squared.
+
 setMethod("fitMeasures", signature(object = "lavaan"),
 function(object, fit.measures = "all", baseline.model = NULL,
          output = "vector", ...) {
@@ -40,19 +52,16 @@ lav_fit_measures <- function(object, fit.measures = "all",
     # check output argument
     if(output %in% c("vector", "horizontal")) {
         output <- "vector"
+    } else if(output %in% c("list")) {
+        output <- "list"
     } else if(output %in% c("matrix", "vertical")) {
         output <- "matrix"
     } else if(output %in% c("text", "pretty")) {
         output <- "text"
     } else {
         stop("lavaan ERROR: output should be ", sQuote("vector"),
+             ", ", sQuote("list"),
              ", ", sQuote("matrix"), " or ", sQuote("text"))
-    }
-
-    if("all" %in% fit.measures) {
-       class.flag <- TRUE
-    } else {
-       class.flag <- FALSE
     }
 
     # N versus N-1
@@ -66,8 +75,6 @@ lav_fit_measures <- function(object, fit.measures = "all",
     }
 
     # Change 0.5-13: take into account explicit equality constraints!!
-    # reported by Mark L. Taper (affects AIC and BIC)
-    #npar <- object@optim$npar
     npar <- lav_partable_npar(object@ParTable)
     if(nrow(object@Model@con.jac) > 0L) {
         ceq.idx <- attr(object@Model@con.jac, "ceq.idx")
@@ -77,12 +84,9 @@ lav_fit_measures <- function(object, fit.measures = "all",
         }
     } else if(.hasSlot(object@Model, "ceq.simple.only") &&
               object@Model@ceq.simple.only) {
-        npar <- max(object@ParTable$free)
+        npar <- object@Model@nx.free
     }
 
-    fx <- object@optim$fx
-    fx.group <- object@optim$fx.group
-    meanstructure <- object@Model@meanstructure
     categorical   <- object@Model@categorical
     estimator     <- object@Options$estimator
     # 0.6.5: for now, we make sure that 'test' is a single element
@@ -91,14 +95,6 @@ lav_fit_measures <- function(object, fit.measures = "all",
     G <- object@Data@ngroups  # number of groups
     X2 <- TEST[[1]]$stat
     df <- TEST[[1]]$df
-
-    # fit stat and df are NA (perhaps test="none"?), try again:
-    if(is.na(df)) {
-        df <- lav_partable_df(object@ParTable)
-        if(nrow(object@Model@con.jac) > 0L) {
-            df <- ( df + length(attr(object@Model@con.jac, "ceq.idx")) )
-        }
-    }
 
     # robust/scaled test statistic?
     scaled <- lav_utils_get_scaled(lavobject = object)
@@ -184,17 +180,6 @@ lav_fit_measures <- function(object, fit.measures = "all",
         }
     }
 
-    # table
-    #if(categorical) {
-    #    # FIXME: Cp: no exo, all ordinal!
-    #    fit.table <- c("c_p", "c_p.df", "c_p.p.value",
-    #                   "c_f", "c_f.df", "c_f.p.value",
-    #                   "rpat.observed", "rpat.total", "rpat.empty",
-    #                   "c_m", "c_m.df", "c_m.p.value")
-    #} else {
-        fit.table <- character(0L)
-    #}
-
     # various
     if(object@Data@nlevels > 1L) {
         fit.other <- ""
@@ -226,7 +211,7 @@ lav_fit_measures <- function(object, fit.measures = "all",
             } else {
                 fit.measures <- c(fit.always,
                                   fit.chisq, fit.baseline, fit.cfi.tli,
-                                  fit.rmsea, fit.srmr, fit.table)
+                                  fit.rmsea, fit.srmr)
                 if(object@Options$mimic == "Mplus") {
                     fit.measures <- c(fit.measures, "wrmr")
                 }
@@ -239,41 +224,34 @@ lav_fit_measures <- function(object, fit.measures = "all",
             } else {
                 fit.measures <- c(fit.always, fit.chisq,
                                   fit.baseline, fit.cfi.tli, fit.cfi.other,
-                                  fit.rmsea, fit.srmr2, fit.other, fit.table)
+                                  fit.rmsea, fit.srmr2, fit.other)
             }
         }
     }
 
+    # catch empty list
+    if(length(fit.measures) == 0L) {
+        return(list())
+    }
+
     # main container
     indices <- list()
+    indices["npar"]   <- npar
+    indices["ntotal"] <- object@SampleStats@ntotal
+    indices["fmin"]   <- object@optim$fx # note = 0.5 * fmin if ML
 
-    if("npar" %in% fit.measures) {
-        indices["npar"] <- npar
-    }
-
-    # Chi-square value estimated model (H0)
-    if(any(c("fmin", "chisq", "chisq.scaled",
-             "chisq.scaling.factor") %in% fit.measures)) {
-    indices["fmin"] <- fx
-	indices["chisq"] <- X2
-        if(scaled) {
-            indices["chisq.scaled"] <- X2.scaled
-            indices["chisq.scaling.factor"] <- TEST[[2]]$scaling.factor
-        }
-    }
-    if(any(c("df", "df.scaled") %in% fit.measures)) {
+    # CHI-SQUARE TEST
+    if(any(fit.chisq %in% fit.measures)) {
+	    indices["chisq"] <- X2
         indices["df"] <- df
-        if(scaled) {
-            indices["df.scaled"] <- df.scaled
-        }
-    }
-    if(any(c("pvalue", "pvalue.scaled") %in% fit.measures)) {
         indices["pvalue"] <- TEST[[1]]$pvalue
         if(scaled) {
+            indices["chisq.scaled"] <- X2.scaled
+            indices["df.scaled"] <- df.scaled
+            indices["chisq.scaling.factor"] <- TEST[[2]]$scaling.factor
             indices["pvalue.scaled"] <- TEST[[2]]$pvalue
         }
     }
-
 
     # BASELINE FAMILY
     if(any(fit.cfi %in% fit.measures)) {
@@ -284,94 +262,14 @@ lav_fit_measures <- function(object, fit.measures = "all",
                                            test         = test))
     }
 
-
     # INFORMATION CRITERIA
-    if("logl" %in% fit.measures ||
-       "unrestricted.logl" %in% fit.measures ||
-       "aic" %in% fit.measures ||
-       "bic" %in% fit.measures ||
-       "bic2" %in% fit.measures) {
-
-        if(estimator == "ML" || estimator == "MML") {
-
-            # do we have a @h1 slot?
-            if(.hasSlot(object, "h1") && length(object@h1) > 0L) {
-                logl.H1.group <- object@h1$loglik.group
-                logl.H1       <- object@h1$loglik
-            } else {
-                out <- lav_h1_logl(lavdata = object@Data,
-                                   lavsamplestats = object@SampleStats,
-                                   lavoptions = object@Options)
-
-                logl.H1.group <- out$loglik.group
-                logl.H1       <- out$loglik
-            }
-
-            if("unrestricted.logl" %in% fit.measures) {
-                indices["unrestricted.logl"] <- logl.H1
-            }
-
-            # logl H0
-            if(.hasSlot(object, "loglik")) {
-                logl.H0.group <- object@loglik$loglik.group
-                logl.H0       <- object@loglik$loglik
-                AIC           <- object@loglik$AIC
-                BIC           <- object@loglik$BIC
-                BIC2          <- object@loglik$BIC2
-            } else {
-                out <- lav_model_loglik(lavdata        = object@Data,
-                                        lavsamplestats = object@SampleStats,
-                                        lavimplied     = object@implied,
-                                        lavmodel       = object@Model,
-                                        lavoptions     = object@Options)
-                logl.H0.group <- out$loglik.group
-                logl.H0       <- out$loglik
-                AIC           <- out$AIC
-                BIC           <- out$BIC
-                BIC2          <- out$BIC2
-            }
-
-            if("logl" %in% fit.measures) {
-                indices["logl"] <- logl.H0
-            }
-
-            # AIC
-            if("aic" %in% fit.measures) {
-                indices["aic"] <- AIC
-            }
-
-            # BIC
-            if("bic" %in% fit.measures ||
-               "bic2" %in% fit.measures) {
-                indices["bic"] <- BIC
-                indices["bic2"] <- BIC2
-            }
-
-            # scaling factor for MLR
-            if(test %in% c("yuan.bentler", "yuan.bentler.mplus")) {
-                indices["scaling.factor.h1"] <-
-                    TEST[[2]]$scaling.factor.h1
-                indices["scaling.factor.h0"] <-
-                    TEST[[2]]$scaling.factor.h0
-            }
-        } # ML
-        else { # no ML!
-            if("logl" %in% fit.measures) {
-                indices["logl"] <- as.numeric(NA)
-            }
-            if("unrestricted.logl" %in% fit.measures) {
-                indices["unrestricted.logl"] <- as.numeric(NA)
-            }
-            if("aic" %in% fit.measures) {
-                indices["aic"] <- as.numeric(NA)
-            }
-            if("bic" %in% fit.measures) {
-                indices["bic"] <- as.numeric(NA)
-            }
-            if("bic2" %in% fit.measures) {
-                indices["bic2"] <- as.numeric(NA)
-            }
-        }
+    if(any(fit.logl %in% fit.measures)) {
+        indices <- c(indices,
+                     lav_fit_aic_lavobject(lavobject    = object,
+                                           fit.measures = fit.measures,
+                                           scaled       = scaled,
+                                           test         = test,
+                                           estimator    = estimator))
     }
 
     # RMSEA and friends
@@ -383,8 +281,7 @@ lav_fit_measures <- function(object, fit.measures = "all",
                                              test         = test))
     }
 
-
-    # RESIDUALS!
+    # SRMR and friends
     if(any(c("rmr","srmr") %in% fit.measures) &&  object@Data@nlevels == 1L) {
         # RMR and SRMR
         rmr.group <- numeric(G)
@@ -435,7 +332,7 @@ lav_fit_measures <- function(object, fit.measures = "all",
             Sigma.cor <- cov2cor(Sigma.hat)
             R.cor <- (S.cor - Sigma.cor)
 
-            if(meanstructure) {
+            if(object@Model@meanstructure) {
                 # standardized residual mean vector
                 R.mean <- D %*% (M - Mu.hat) # EQS approach!
                 RR.mean <- (M - Mu.hat) # not standardized
@@ -622,156 +519,58 @@ lav_fit_measures <- function(object, fit.measures = "all",
         indices["srmr_between"] <- SRMR_BETWEEN
     }
 
+    # GFI and friends
+    fit.cfi <- c("gfi", "agfi", "pgfi")
+    if(any(fit.cfi %in% fit.measures)) {
+        indices <- c(indices,
+                     lav_fit_gfi_lavobject(lavobject    = object,
+                                           fit.measures = fit.measures))
+    }
 
+    # various: Hoelter Critical N (CN)
     if(any(c("cn_05", "cn_01") %in% fit.measures)) {
-        # catch df=0, X2=0
-        if(df == 0 && X2 < .Machine$double.eps) {
-            CN_05 <- as.numeric(NA)
-            CN_01 <- as.numeric(NA)
-        } else {
-            CN_05 <- qchisq(p=0.95, df=df)/(X2/N) + 1
-            CN_01 <- qchisq(p=0.99, df=df)/(X2/N) + 1
-        }
-        indices["cn_05"] <- CN_05
-        indices["cn_01"] <- CN_01
+        indices["cn_05"] <- lav_fit_cn(X2 = X2, df = df, N = N, alpha = 0.05)
+        indices["cn_01"] <- lav_fit_cn(X2 = X2, df = df, N = N, alpha = 0.01)
     }
 
+    # various: WRMR
     if("wrmr" %in% fit.measures) {
-        # we use the definition: wrmr = sqrt ( 2*N*F / e )
-        e <- length(object@SampleStats@WLS.obs[[1]]) ### only first group???
-        WRMR <- sqrt( X2 / e )
-        indices["wrmr"] <- WRMR
+        nel <- unlist(object@SampleStats@WLS.obs[[1]]) ### only first group???
+        indices["wrmr"] <- lav_fit_wrmr(X2 = X2, nel = nel)
     }
 
-    if(any(c("gfi","agfi","pgfi") %in% fit.measures)) {
-        gfi.group <- numeric(G)
-        WLS.obs <- object@SampleStats@WLS.obs
-        #WLS.V   <- lav_model_wls_v(lavmodel       = object@Model,
-        #                           lavsamplestats = object@SampleStats,
-        #                           structured     = TRUE,
-        #                           lavdata        = object@Data)
-        # WLS.V == h1 expected information
-        #WLS.V   <- lav_model_h1_information(lavobject = object)
-        WLS.V   <- lav_object_inspect_wls_v(object)
-        WLS.est <- lav_object_inspect_wls_est(object)
-        for(g in 1:G) {
-            wls.obs <- WLS.obs[[g]]
-            wls.est <- WLS.est[[g]]
-            wls.v   <- WLS.V[[g]]
-
-            if(is.null(wls.v)) {
-                gfi.group[g] <- as.numeric(NA)
-            } else {
-                wls.diff <- wls.obs - wls.est
-                if(is.matrix(wls.v)) {
-                    # full weight matrix
-                    t1 <- crossprod(wls.diff, wls.v) %*% wls.diff
-                    t2 <- crossprod(wls.obs, wls.v) %*% wls.obs
-                } else {
-                    # diagonal weight matrix
-                    t1 <- as.numeric(crossprod(wls.diff^2, wls.v))
-                    t2 <- as.numeric(crossprod(wls.obs^2, wls.v))
-                }
-                gfi.group[g] <- 1 - t1/t2
-            }
-        }
-        if(G > 1) {
-            ## FIXME: get the scaling right
-            GFI <- as.numeric( (unlist(object@SampleStats@nobs) %*% gfi.group) / object@SampleStats@ntotal )
-        } else {
-            GFI <- gfi.group[1L]
-        }
-        indices["gfi"] <- GFI
-        nel <- length(unlist(WLS.obs)) # total number of modeled sample stats
-        if(is.na(df)) {
-            indices["agfi"] <- as.numeric(NA)
-        } else if(df > 0) {
-            indices["agfi"] <- 1 - (nel/df) * (1 - GFI)
-        } else {
-            indices["agfi"] <- 1
-        }
-        # LISREL formula (Simplis book 2002, p. 126)
-        indices["pgfi"] <- (df/nel)*GFI
-    }
-
-    # MFI - McDonald Fit Index (McDonald, 1989)
+    # various: MFI
     if("mfi" %in% fit.measures) {
-        #MFI <- exp(-0.5 * (X2 - df)/(N-1)) # Hu & Bentler 1998 Table 1
-        MFI <- exp(-0.5 * (X2 - df)/N)
-        indices["mfi"] <- MFI
+        indices["mfi"] <- lav_fit_mfi(X2 = X2, df = df, N = N)
     }
 
-    # ECVI - cross-validation index (Brown & Cudeck, 1989)
-    # not defined for multiple groups and/or models with meanstructures
-    # TDJ: According to Dudgeon (2004, p. 317), "ECVI requires no adjustment
-    #      when a model is fitted simultaneously in multiple samples."
-    #      And I think the lack of mean structure in Brown & Cudeck (1989)
-    #      was a matter of habitual simplification back then, not necessity.
+    # various: ECVI
     if("ecvi" %in% fit.measures) {
-        ECVI <- X2/N + (2*npar)/N
-        indices["ecvi"] <- ECVI
+        indices["ecvi"] <- lav_fit_ecvi(X2 = X2, npar = npar, N = N)
     }
 
 
-    # C_p
-    if("c_p" %in% fit.measures) {
-        out <- lavTablesFitCp(object)
-        CpMax <- attr(out, "CpMax")
-        indices["c_p"] <- CpMax$LR
-        indices["c_p.df"] <- CpMax$df
-        indices["c_p.p.value"] <- CpMax$p.value.Bonferroni
+    # keep only what we need
+    out <- indices[fit.measures]
+
+    if(all(is.na(names(out)))) { # perhaps, fit.measures = ""
+        # nothing left
+        return(numeric(0L))
     }
 
-    # C_F
-    if("c_f" %in% fit.measures) {
-        CF <- lavTablesFitCf(object)
-        DF <- attr(CF, "DF")
-        attributes(CF) <- NULL
-        indices["c_f"] <- CF
-        indices["c_f.df"] <- DF
-        indices["c_f.p.value"] <- pchisq(CF, DF, lower.tail=FALSE)
-        indices["rpat.observed"] <- object@Data@Rp[[1L]]$npatterns
-        indices["rpat.total"] <- object@Data@Rp[[1L]]$total.patterns
-        indices["rpat.empty"] <- object@Data@Rp[[1L]]$empty.patterns
-    }
-
-
-    # C_M
-    if("c_m" %in% fit.measures) {
-        CM <- lavTablesFitCm(object)
-        DF <- attr(CM, "DF")
-        attributes(CM) <- NULL
-        indices["c_m"] <- CM
-        indices["c_m.df"] <- DF
-        indices["c_m.p.value"] <- pchisq(CM, DF, lower.tail=FALSE)
-    }
-
-    if("ntotal" %in% fit.measures) {
-        indices["ntotal"] <- object@SampleStats@ntotal
-    }
-
-    # do we have everything that we requested?
-    #idx.missing <- which(is.na(match(fit.measures, names(indices))))
-    #if(length(idx.missing) > 0L) {
-    #    cat("lavaan WARNING: some requested fit measure(s) are not available for this model:\n")
-    #    print( fit.measures[ idx.missing ] )
-    #    cat("\n")
-    #}
-
-    out <- unlist(indices[fit.measures])
-
-    if(length(out) > 0L) {
-        if(output == "vector") {
-            class(out) <- c("lavaan.vector", "numeric")
-        } else if(output == "matrix") {
-            out <- as.matrix(out)
-            colnames(out) <- ""
-            class(out) <- c("lavaan.matrix", "matrix")
-        } else if(output == "text") {
-            class(out) <- c("lavaan.fitMeasures", "lavaan.vector", "numeric")
-        }
-    } else {
-        return( invisible(numeric(0)) )
+    # select output type
+    if(output == "list") {
+        # nothing to do
+    } else if(output == "vector") {
+        out <- unlist(out)
+        class(out) <- c("lavaan.vector", "numeric")
+    } else if(output == "matrix") {
+        out <- as.matrix(unlist(out))
+        colnames(out) <- ""
+        class(out) <- c("lavaan.matrix", "matrix")
+    } else if(output == "text") {
+        out <- unlist(out)
+        class(out) <- c("lavaan.fitMeasures", "lavaan.vector", "numeric")
     }
 
     out
@@ -1017,7 +816,7 @@ print.lavaan.fitMeasures <- function(x, ..., nd = 3L, add.h0 = TRUE) {
         c2 <- c(c2, sprintf(num.format, x["bic"]))
         c3 <- c(c3, ifelse(scaled, sprintf(num.format, x["bic"]), ""))
         if(!is.na(x["bic2"])) {
-            c1 <- c(c1, "Sample-size adjusted Bayesian (BIC)")
+            c1 <- c(c1, "Sample-size adjusted Bayesian (SABIC)")
             c2 <- c(c2, sprintf(num.format, x["bic2"]))
             c3 <- c(c3, ifelse(scaled, sprintf(num.format, x["bic2"]), ""))
         }

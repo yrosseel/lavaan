@@ -20,7 +20,7 @@ lav_fit_cfi <- function(X2 = NULL, df = NULL, X2.null = NULL, df.null = NULL,
                         c.hat = 1, c.hat.null = 1) {
 
     # robust?
-    if(!missing(c.hat) && !missing(c.hat.null) &&
+    if(df > 0 && !missing(c.hat) && !missing(c.hat.null) &&
        c.hat != 1 && c.hat.null != 1) {
         # what to do if X2 = 0 and df = 0? in this case,
         # the scaling factor (ch) will be NA, and we get NA
@@ -50,7 +50,7 @@ lav_fit_rni <- function(X2 = NULL, df = NULL, X2.null = NULL, df.null = NULL,
                         c.hat = 1, c.hat.null = 1) {
 
     # robust?
-    if(!missing(c.hat) && !missing(c.hat.null) &&
+    if(df > 0 && !missing(c.hat) && !missing(c.hat.null) &&
        c.hat != 1 && c.hat.null != 1) {
         # what to do if X2 = 0 and df = 0? in this case,
         # the scaling factor (ch) will be NA, and we get NA
@@ -101,7 +101,7 @@ lav_fit_tli <- function(X2 = NULL, df = NULL, X2.null = NULL, df.null = NULL,
                         c.hat = 1, c.hat.null = 1) {
 
     # robust?
-    if(!missing(c.hat) && !missing(c.hat.null) &&
+    if(df > 0 && !missing(c.hat) && !missing(c.hat.null) &&
        c.hat != 1 && c.hat.null != 1) {
         # what to do if X2 = 0 and df = 0? in this case,
         # the scaling factor (ch) will be NA, and we get NA
