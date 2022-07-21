@@ -2,6 +2,37 @@
 #
 # initial version: YR 25/03/2009
 
+# get 'test'
+# make sure we return a single element
+lav_utils_get_test <- function(lavobject) {
+    test <- lavobject@Options$test
+    # 0.6.5: for now, we make sure that 'test' is a single element
+    if(length(test) > 1L) {
+        standard.idx <- which(test == "standard")
+        if(length(standard.idx) > 0L) {
+            test <- test[-standard.idx]
+        }
+        if(length(test) > 1L) {
+            # only retain the first one
+            test <- test[1]
+        }
+    }
+
+    test
+}
+
+# check if we use a robust/scaled test statistic
+lav_utils_get_scaled <- function(lavobject) {
+    test <- lav_utils_get_test(lavobject)
+    scaled <- FALSE
+    if(test %in% c("satorra.bentler", "yuan.bentler", "yuan.bentler.mplus",
+                   "mean.var.adjusted", "scaled.shifted")) {
+        scaled <- TRUE
+    }
+
+    scaled
+}
+
 # compute log(sum(exp(x))) avoiding under/overflow
 # using the identity: log(sum(exp(x)) = a + log(sum(exp(x - a)))
 lav_utils_logsumexp <- function(x) {
