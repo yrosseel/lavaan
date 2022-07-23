@@ -9,6 +9,8 @@
 #     method = "Satorra.Bentler.2001"
 #     method = "Satorra.Bentler.2010"
 #     method = "mean.var.adjusted.PLRT"
+#
+# - 0.6-13: RMSEA.D (also known as 'RDR') is added to the table
 
 lavTestLRT <- function(object, ..., method = "default", A.method = "delta",
                        scaled.shifted = TRUE,
@@ -183,8 +185,12 @@ lavTestLRT <- function(object, ..., method = "default", A.method = "delta",
 
 
     # difference statistics
-    STAT.delta  <- c(NA, diff(STAT))
+    STAT.delta   <- c(NA, diff(STAT))
     Df.delta     <- c(NA, diff(Df))
+    # new in 0.6-13
+    RMSEA.delta  <- c(NA, lav_fit_rmsea(X2 = STAT.delta[-1],
+                                        df = Df.delta[-1],
+                                        N = ntotal, G = ngroups))
 
     # check for negative values in STAT.delta
     # but with a tolerance (0.6-12)!
@@ -258,6 +264,7 @@ lavTestLRT <- function(object, ..., method = "default", A.method = "delta",
                           PL_BIC = bic,
                           Chisq = STAT,
                           "Chisq diff" = STAT.delta,
+                          "RMSEA.D" = RMSEA.delta,
                           "Df diff" = Df.delta,
                           "Pr(>Chisq)" = Pvalue.delta,
                           row.names = names(mods),
@@ -268,6 +275,7 @@ lavTestLRT <- function(object, ..., method = "default", A.method = "delta",
                           BIC = bic,
                           Chisq = STAT,
                           "Chisq diff" = STAT.delta,
+                          "RMSEA.D" = RMSEA.delta,
                           "Df diff" = Df.delta,
                           "Pr(>Chisq)" = Pvalue.delta,
                           row.names = names(mods),

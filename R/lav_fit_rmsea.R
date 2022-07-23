@@ -47,6 +47,7 @@
 
 
 # always using N (if a user needs N-1, just replace N by N-1)
+# vectorized!
 lav_fit_rmsea <- function(X2 = NULL, df = NULL, N = NULL,
                           F.val = NULL, G = 1L, c.hat = 1.0) {
 
@@ -55,19 +56,14 @@ lav_fit_rmsea <- function(X2 = NULL, df = NULL, N = NULL,
         # population version
         RMSEA <- sqrt( F.val/df )
     } else {
-        if(!is.finite(X2) || !is.finite(df) || !is.finite(N)) {
+        nel <- length(X2)
+        if(nel == 0) {
             return(as.numeric(NA))
-        } else if(df > 0) {
-            # 'standard' way to compute RMSEA
-            RMSEA <- sqrt( max( c((X2/N)/df - c.hat/N, 0) ) )
-        } else {
-            return(0)
         }
-    }
-
-    # multiple groups? -> correction
-    if(G > 1L) {
-        RMSEA <- RMSEA * sqrt(G)
+        ifelse(df > 0,
+               # 'standard' way to compute RMSEA
+               RMSEA <- sqrt(pmax((X2/N)/df - c.hat/N, rep(0, nel))) * sqrt(G),
+               0) # if df == 0
     }
 
     RMSEA
