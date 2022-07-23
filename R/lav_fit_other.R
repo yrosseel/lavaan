@@ -41,12 +41,20 @@ lav_fit_mfi <- function(X2 = NULL, df = NULL, N = NULL) {
     MFI
 }
 
-# ECVI - cross-validation index (Brown & Cudeck, 1989)
+# ECVI - cross-validation index (Brown & Cudeck, 1989, eq 5)
+# "In the special case where F = F_ML, Equation 5 [=ECVI] is the
+# rescaled AIC employed by Cudeck and Browne (1983, Equation 5.1). This
+# result is concordant with a finding of Stone (1977). He showed under general
+# conditions that if the "leaving one out at a time" method of cross-validation
+# (Stone, 1974; Geisser, 1975) is employed, a log-likelihood measure of
+# predictive validity is asymptotically equivalent to the AIC." (p. 448)
+
 # not defined for multiple groups and/or models with meanstructures
 # TDJ: According to Dudgeon (2004, p. 317), "ECVI requires no adjustment
 #      when a model is fitted simultaneously in multiple samples."
 #      And I think the lack of mean structure in Brown & Cudeck (1989)
 #      was a matter of habitual simplification back then, not necessity.
+# YR: - why does Dudgeon eq 22 use (df + 2*npar) instead of (2*npar)??
 lav_fit_ecvi <- function(X2 = NULL, npar = npar, N = N) {
     ECVI <- X2/N + (2 * npar)/N
     ECVI

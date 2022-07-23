@@ -267,21 +267,12 @@ lav_fit_cfi_lavobject <- function(lavobject = NULL, fit.measures = "cfi",
         robust.flag <- TRUE
     }
 
-    # N versus N-1
-    if(lavobject@Options$estimator %in% c("ML","PML","FML") &&
-       lavobject@Options$likelihood == "normal") {
-        N <- lavobject@SampleStats@ntotal
-    } else {
-        N <- lavobject@SampleStats@ntotal - lavobject@SampleStats@ngroups
-    }
-
     # basic test statistics
     TEST <- lavobject@test
     X2 <- TEST[[1]]$stat
     df <- TEST[[1]]$df
-
-    # ngroups
     G <- lavobject@Data@ngroups  # number of groups
+    N <- lav_utils_get_ntotal(lavobject = lavobject) # N vs N-1
 
     # scaled X2
     if(scaled) {

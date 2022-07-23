@@ -21,6 +21,8 @@
 # - change 0.6-6: we enforce observed.information = "h1" to ensure 'Q' is a
 #                 projection matrix (see lav_residuals_acov)
 
+# - change 0.6-13: fixed.x = TRUE is ignored (to conform with 'tradition')
+
 setMethod("residuals", "lavaan",
 function(object, type = "raw", labels = TRUE) {
 
@@ -683,6 +685,10 @@ lav_residuals_summary <- function(object, type = c("rmr", "srmr", "crmr"),
     lavdata        <- object@Data
     lavmodel       <- object@Model
 
+    # fixed.x/conditional.x
+    fixed.x <- lavmodel@fixed.x
+    conditional.x <- lavmodel@conditional.x
+
 
     rmrFlag <- srmrFlag <- crmrFlag <- FALSE
     if("rmr" %in% type || "raw" %in% type) {
@@ -724,16 +730,18 @@ lav_residuals_summary <- function(object, type = c("rmr", "srmr", "crmr"),
         # categorical single level
         if(lavdata@nlevels == 1L && lavmodel@categorical) {
 
-            if(lavmodel@conditional.x ||
-               length(unlist(lavmodel@num.idx)) > 0L) {
+            if((se || unbiased) && (conditional.x ||
+               length(unlist(lavmodel@num.idx)) > 0L)) {
                 stop("not ready yet")
             } else {
 
-                #nvar.x <- pstar.x <- 0L
-                #if(lavmodel@fixed.x) {
-                #    nvar.x <- lavmodel@nexo[g]
-                #    pstar.x <- nvar.x * (nvar.x - 1) / 2 # note '-'
-                #}
+                # remove fixed.x elements:
+                # seems like a good idea, but nobody likes it
+                # nvar.x <- pstar.x <- 0L
+                # if(lavmodel@fixed.x) {
+                #     nvar.x <- lavmodel@nexo[g]
+                #     pstar.x <- nvar.x * (nvar.x - 1) / 2 # note '-'
+                # }
 
                 OUT <- vector("list", length(type))
                 names(OUT) <- type
@@ -759,14 +767,17 @@ lav_residuals_summary <- function(object, type = c("rmr", "srmr", "crmr"),
 
                     # COR
                     nth <- length(lavmodel@th.idx[[g]])
-                    STATS <- lav_matrix_vech(rmsList.g[["cov"]],
-                                             diagonal = FALSE)
-                    # pstar <- ( length(STATS) - pstar.x )
-
+                    if(conditional.x) {
+                        STATS <- lav_matrix_vech(rmsList.g[["res.cov"]],
+                                                 diagonal = FALSE)
+                    } else {
+                        STATS <- lav_matrix_vech(rmsList.g[["cov"]],
+                                                 diagonal = FALSE)
+                    }
 
                     # should pstar be p*(p+1)/2 or p*(p-1)/2
                     # we use the first for SRMR and the latter for CRMR
-                    if(type == "crmr") {
+                    if(type[typ] == "crmr") {
                         pstar <- length(STATS)
                     } else {
                         pstar <- length(STATS) + nvar
@@ -788,7 +799,11 @@ lav_residuals_summary <- function(object, type = c("rmr", "srmr", "crmr"),
 
 
                     # THRESHOLDS
-                    STATS <- rmsList.g[["th"]]
+                    if(conditional.x) {
+                        STATS <- rmsList.g[["res.th"]]
+                    } else {
+                        STATS <- rmsList.g[["th"]]
+                    }
                     pstar <- length(STATS)
                     ACOV <- NULL
                     if(se || unbiased) {
@@ -841,16 +856,31 @@ lav_residuals_summary <- function(object, type = c("rmr", "srmr", "crmr"),
                         unbiased.pvalue = unbiased.pvalue,
                         pstar = pstar, type = type[typ])
 
-                    # TOTAL
-                    STATS <- c(lav_matrix_vech(rmsList.g[["cov"]],
-                                             diagonal = FALSE),
-                               rmsList.g[["th"]])
-                               #rmsList.g[["mean"]],
+                    # TOTAL -- FIXME: for conditional.x ....
+                    if(conditional.x) {
+                        STATS <- c(lav_matrix_vech(rmsList.g[["res.cov"]],
+                                                   diagonal = FALSE),
+                                   rmsList.g[["res.th"]])
+                    } else {
+                        STATS <- c(lav_matrix_vech(rmsList.g[["cov"]],
+                                                   diagonal = FALSE),
+                                   rmsList.g[["th"]])
+                                   #rmsList.g[["mean"]],
                                #diag(rmsList.g[["cov"]])[lavmodel@num.idx[[g]]])
-                    pstar <- length(STATS)
+                    }
+
+                    # should pstar be p*(p+1)/2 or p*(p-1)/2 for COV/COR?
+                    # we use the first for SRMR and the latter for CRMR
+                    if(type[typ] == "crmr") {
+                        pstar <- length(STATS)
+                    } else {
+                        pstar <- length(STATS) + nvar
+                    }
+
                     #if(lavmodel@fixed.x) {
                     #    pstar <- pstar - pstar.x
                     #}
+
                     ACOV <- NULL
                     if(se || unbiased) {
                         ACOV <- rmsList.se.g
@@ -884,15 +914,15 @@ lav_residuals_summary <- function(object, type = c("rmr", "srmr", "crmr"),
 
         # continuous -- single level
         } else if(lavdata@nlevels == 1L) {
-            if(lavmodel@conditional.x) {
+            if((se || unbiased) && conditional.x) {
                 stop("not ready yet")
             } else {
 
-                nvar.x <- pstar.x <- 0L
-                if(lavmodel@fixed.x) {
-                    nvar.x <- lavmodel@nexo[g]
-                    pstar.x <- nvar.x * (nvar.x + 1) / 2
-                }
+                #nvar.x <- pstar.x <- 0L
+                #if(lavmodel@fixed.x) {
+                #    nvar.x <- lavmodel@nexo[g]
+                #    pstar.x <- nvar.x * (nvar.x + 1) / 2
+                #}
 
                 OUT <- vector("list", length(type))
                 names(OUT) <- type
@@ -917,10 +947,16 @@ lav_residuals_summary <- function(object, type = c("rmr", "srmr", "crmr"),
                     }
 
                     # COV
-                    STATS <- lav_matrix_vech(rmsList.g[["cov"]])
-                    pstar <- ( length(STATS) - pstar.x )
+                    if(conditional.x) {
+                        STATS <- lav_matrix_vech(rmsList.g[["res.cov"]])
+                    } else {
+                        STATS <- lav_matrix_vech(rmsList.g[["cov"]])
+                    }
+                    #pstar <- ( length(STATS) - pstar.x )
+                    pstar <- length(STATS)
                     if(type[typ] == "crmr") {
-                        pstar <- pstar - ( nvar - nvar.x )
+                        # pstar <- pstar - ( nvar - nvar.x )
+                        pstar <- pstar - nvar
                     }
 
                     ACOV <- NULL
@@ -942,8 +978,13 @@ lav_residuals_summary <- function(object, type = c("rmr", "srmr", "crmr"),
 
                     # MEAN
                     if(lavmodel@meanstructure) {
-                        STATS <- rmsList.g[["mean"]]
-                        pstar <- ( length(STATS) - nvar.x )
+                        if(conditional.x) {
+                            STATS <- rmsList.g[["res.int"]]
+                        } else {
+                            STATS <- rmsList.g[["mean"]]
+                        }
+                        # pstar <- ( length(STATS) - nvar.x )
+                        pstar <- length(STATS)
                         ACOV  <- NULL
                         if(se || unbiased) {
                             ACOV <- rmsList.se.g[seq_len(nvar),
@@ -963,11 +1004,18 @@ lav_residuals_summary <- function(object, type = c("rmr", "srmr", "crmr"),
 
                     # TOTAL
                     if(lavmodel@meanstructure) {
-                        STATS <- c(rmsList.g[["mean"]],
-                                   lav_matrix_vech(rmsList.g[["cov"]]))
-                        pstar <- ( length(STATS) - ( pstar.x + nvar.x) )
+                        if(conditional.x) {
+                            STATS <- c(rmsList.g[["res.int"]],
+                                       lav_matrix_vech(rmsList.g[["res.cov"]]))
+                        } else {
+                            STATS <- c(rmsList.g[["mean"]],
+                                       lav_matrix_vech(rmsList.g[["cov"]]))
+                        }
+                        # pstar <- ( length(STATS) - ( pstar.x + nvar.x) )
+                        pstar <- length(STATS)
                         if(type[typ] == "crmr") {
-                            pstar <- pstar - ( nvar - nvar.x )
+                            # pstar <- pstar - ( nvar - nvar.x )
+                            pstar <- pstar - nvar
                         }
                         ACOV  <- NULL
                         if(se || unbiased) {

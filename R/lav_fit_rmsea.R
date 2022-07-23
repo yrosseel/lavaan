@@ -121,7 +121,7 @@ lav_fit_rmsea_ci <- function(X2 = NULL, df = NULL, N = NULL,
     } else {
         lambda.u <- try(uniroot(f = upper.lambda, lower = 0,
                                                   upper = N.RMSEA)$root,
-                        silent=TRUE)
+                        silent = TRUE)
         if(inherits(lambda.u, "try-error")) {
             lambda.u <- NA
         }
@@ -138,6 +138,7 @@ lav_fit_rmsea_ci <- function(X2 = NULL, df = NULL, N = NULL,
          rmsea.ci.upper = rmsea.ci.upper)
 }
 
+# H_0: RMSEA <= rmsea.h0
 lav_fit_rmsea_closefit <- function(X2 = NULL, df = NULL, N = NULL,
                                    G = 1L, c.hat = 1, rmsea.h0 = 0.05) {
 
@@ -146,19 +147,36 @@ lav_fit_rmsea_closefit <- function(X2 = NULL, df = NULL, N = NULL,
         return(as.numeric(NA))
     }
 
-    # not defined for 'robust' RMSEA
-    if(!missing(c.hat) && !c.hat == 1) {
-        return(as.numeric(NA))
-    }
-
     rmsea.pvalue <- as.numeric(NA)
     if(df > 0) {
-        ncp <- (N * df * rmsea.h0^2) / G
+        # see Dudgeon 2004, eq 16 for the 'G' correction
+        ncp <- (N * df * 1/c.hat * rmsea.h0^2) / G
         rmsea.pvalue <- 1 - pchisq(X2, df = df, ncp = ncp)
     }
 
     rmsea.pvalue
 }
+
+# MacCallum, R. C., Browne, M. W., & Sugawara, H. M. (1996).
+# H_0: RMSEA >= rmsea.h0
+lav_fit_rmsea_notclosefit <- function(X2 = NULL, df = NULL, N = NULL,
+                                   G = 1L, c.hat = 1, rmsea.h0 = 0.05) {
+
+    if(missing(N) || missing(X2) || missing(df) ||
+       !is.finite(X2) || !is.finite(df) || !is.finite(N)) {
+        return(as.numeric(NA))
+    }
+
+    rmsea.pvalue <- as.numeric(NA)
+    if(df > 0) {
+        # see Dudgeon 2004, eq 16 for the 'G' correction
+        ncp <- (N * df * 1/c.hat * rmsea.h0^2) / G
+        rmsea.pvalue <- pchisq(X2, df = df, ncp = ncp)
+    }
+
+    rmsea.pvalue
+}
+
 
 lav_fit_rmsea_lavobject <- function(lavobject = NULL, fit.measures = "rmsea",
                                     scaled = FALSE, test = "standard") {
@@ -211,22 +229,12 @@ lav_fit_rmsea_lavobject <- function(lavobject = NULL, fit.measures = "rmsea",
         robust.flag <- TRUE
     }
 
-    # N versus N-1
-    if(lavobject@Options$estimator %in% c("ML","PML","FML") &&
-       lavobject@Options$likelihood == "normal") {
-        N <- lavobject@SampleStats@ntotal
-    } else {
-        N <- lavobject@SampleStats@ntotal - lavobject@SampleStats@ngroups
-    }
-
     # basic test statistics
     TEST <- lavobject@test
     X2 <- TEST[[1]]$stat
     df <- TEST[[1]]$df
-
-    # ngroups
     G <- lavobject@Data@ngroups  # number of groups
-
+    N <- lav_utils_get_ntotal(lavobject = lavobject) # N vs N-1
 
     # scaled X2/df values
     if(scaled) {
@@ -311,6 +319,11 @@ lav_fit_rmsea_lavobject <- function(lavobject = NULL, fit.measures = "rmsea",
             indices["rmsea.pvalue.scaled"] <-
                 lav_fit_rmsea_closefit(X2 = XX2, df = df2, N = N, G = G)
             indices["rmsea.pvalue.robust"] <- as.numeric(NA)
+            if(robust.flag) {
+                indices["rmsea.pvalue.robust"] <-  # new in 0.6-13
+                    lav_fit_rmsea_closefit(X2 = TEST[[2]]$stat, df = df3,
+                                           N = N, G = G, c.hat = c.hat)
+            }
         }
     }
 

@@ -10,7 +10,7 @@
 # - lav_fit_aic_lavojbect
 # - lav_residuals_summary
 
-# NOTe: fitMeasures/fitmeasures are generic functions; they include a "..."
+# Note: fitMeasures/fitmeasures are generic functions; they include a "..."
 #       so lavaan.mi can add arguments to pass to lavTestLRT() and
 #       lavTestLRT.mi() about how to pool chi-squared.
 
@@ -31,7 +31,7 @@ function(object, fit.measures = "all", baseline.model = NULL,
 lav_fit_measures <- function(object, fit.measures = "all",
                              baseline.model = NULL, output = "vector") {
 
-    # do we have data?
+    # do we have data? (yep, we had to include this check)
     if(object@Data@data.type == "none") {
         stop("lavaan ERROR: fit measures not available if there is no data.")
     }
@@ -41,12 +41,10 @@ lav_fit_measures <- function(object, fit.measures = "all",
         stop("lavaan ERROR: fit measures not available if model did not converge")
     }
 
-    # do we have test statistics?
-    TEST <- lavInspect(object, "test")
-
     # do we have a test statistic?
+    TEST <- lavInspect(object, "test")
     if(TEST[[1]]$test == "none") {
-        stop("lavaan ERROR: please refit the model with test=\"standard\"")
+        stop("lavaan ERROR: fit measures not available if test = \"none\".")
     }
 
     # check output argument
@@ -56,7 +54,7 @@ lav_fit_measures <- function(object, fit.measures = "all",
         output <- "list"
     } else if(output %in% c("matrix", "vertical")) {
         output <- "matrix"
-    } else if(output %in% c("text", "pretty")) {
+    } else if(output %in% c("text", "pretty", "summary")) {
         output <- "text"
     } else {
         stop("lavaan ERROR: output should be ", sQuote("vector"),
@@ -64,46 +62,23 @@ lav_fit_measures <- function(object, fit.measures = "all",
              ", ", sQuote("matrix"), " or ", sQuote("text"))
     }
 
-    # N versus N-1
-    # this affects BIC, RMSEA, cn_01/05, MFI and ECVI
-    # Changed 0.5-15: suggestion by Mark Seeto
-    if(object@Options$estimator %in% c("ML","PML","FML") &&
-       object@Options$likelihood == "normal") {
-        N <- object@SampleStats@ntotal
-    } else {
-        N <- object@SampleStats@ntotal - object@SampleStats@ngroups
-    }
+    # options
+    categorical <- object@Model@categorical
+    estimator   <- object@Options$estimator
+    test        <- lav_utils_get_test(lavobject = object) # single element!
+    scaled      <- lav_utils_get_scaled(lavobject = object) # robust/scaled?
 
-    # Change 0.5-13: take into account explicit equality constraints!!
-    npar <- lav_partable_npar(object@ParTable)
-    if(nrow(object@Model@con.jac) > 0L) {
-        ceq.idx <- attr(object@Model@con.jac, "ceq.idx")
-        if(length(ceq.idx) > 0L) {
-            neq <- qr(object@Model@con.jac[ceq.idx,,drop=FALSE])$rank
-            npar <- npar - neq
-        }
-    } else if(.hasSlot(object@Model, "ceq.simple.only") &&
-              object@Model@ceq.simple.only) {
-        npar <- object@Model@nx.free
-    }
-
-    categorical   <- object@Model@categorical
-    estimator     <- object@Options$estimator
-    # 0.6.5: for now, we make sure that 'test' is a single element
-    test          <- lav_utils_get_test(lavobject = object)
-
-    G <- object@Data@ngroups  # number of groups
+    # basic ingredients
+    G <- object@Data@ngroups
     X2 <- TEST[[1]]$stat
     df <- TEST[[1]]$df
-
-    # robust/scaled test statistic?
-    scaled <- lav_utils_get_scaled(lavobject = object)
-
-    # scaled X2
     if(scaled) {
         X2.scaled <- TEST[[2]]$stat
         df.scaled <- TEST[[2]]$df
     }
+    npar <- lav_utils_get_npar(lavobject = object)
+    N    <- lav_utils_get_ntotal(lavobject = object) # N vs N-1
+
 
     # define 'sets' of fit measures:
     fit.always <- c("npar")
@@ -185,16 +160,17 @@ lav_fit_measures <- function(object, fit.measures = "all",
         fit.other <- ""
     } else if(estimator == "PML") {
         fit.other <- c("cn_05","cn_01","mfi")
-        if(!categorical && G == 1) {
+        if(!categorical) { # really needed?
             fit.other <- c(fit.other, "ecvi")
         }
     } else {
         fit.other <- c("cn_05","cn_01","gfi","agfi","pgfi","mfi")
-        if(!categorical && G == 1) {
+        if(!categorical) { # really needed?
             fit.other <- c(fit.other, "ecvi")
+        } else {
+            fit.other <- c(fit.other, "wrmr")
         }
     }
-
 
     # lower case
     fit.measures <- tolower(fit.measures)
@@ -212,9 +188,6 @@ lav_fit_measures <- function(object, fit.measures = "all",
                 fit.measures <- c(fit.always,
                                   fit.chisq, fit.baseline, fit.cfi.tli,
                                   fit.rmsea, fit.srmr)
-                if(object@Options$mimic == "Mplus") {
-                    fit.measures <- c(fit.measures, "wrmr")
-                }
             }
         } else if(fit.measures == "all") {
             if(estimator == "ML") {
@@ -282,246 +255,15 @@ lav_fit_measures <- function(object, fit.measures = "all",
     }
 
     # SRMR and friends
-    if(any(c("rmr","srmr") %in% fit.measures) &&  object@Data@nlevels == 1L) {
-        # RMR and SRMR
-        rmr.group <- numeric(G)
-        rmr_nomean.group <- numeric(G)
-        srmr_bentler.group <- numeric(G)
-        srmr_bentler_nomean.group <- numeric(G)
-        crmr.group <- numeric(G)
-        crmr_nomean.group <- numeric(G)
-        srmr_mplus.group <- numeric(G)
-        srmr_mplus_nomean.group <- numeric(G)
-
-        for(g in 1:G) {
-            # observed
-            if(!object@SampleStats@missing.flag) {
-                if(object@Model@conditional.x) {
-                    S <- object@SampleStats@res.cov[[g]]
-                    M <- object@SampleStats@res.int[[g]]
-                } else {
-                    S <- object@SampleStats@cov[[g]]
-                    M <- object@SampleStats@mean[[g]]
-                }
-            } else {
-                # EM estimates
-                S <- object@SampleStats@missing.h1[[g]]$sigma
-                M <- object@SampleStats@missing.h1[[g]]$mu
-            }
-            nvar <- ncol(S)
-
-            # estimated
-            implied <- object@implied
-            lavmodel <- object@Model
-            Sigma.hat <- if(lavmodel@conditional.x) implied$res.cov[[g]] else implied$cov[[g]]
-            Mu.hat    <- if(lavmodel@conditional.x) implied$res.int[[g]] else implied$mean[[g]]
-
-            # unstandardized residuals
-            RR <- (S - Sigma.hat)
-
-            # standardized residual covariance matrix
-            # this is the Hu and Bentler definition, not the Bollen one!
-            # this one is used by EQS
-            # and Mplus, but only if information=expected (god knows why)
-            sqrt.d <- 1/sqrt(diag(S))
-            D <- diag(sqrt.d, ncol=length(sqrt.d))
-            R <- D %*% (S - Sigma.hat) %*% D
-
-            # Bollen approach: simply using cov2cor ('residual correlations')
-            S.cor <- cov2cor(S)
-            Sigma.cor <- cov2cor(Sigma.hat)
-            R.cor <- (S.cor - Sigma.cor)
-
-            if(object@Model@meanstructure) {
-                # standardized residual mean vector
-                R.mean <- D %*% (M - Mu.hat) # EQS approach!
-                RR.mean <- (M - Mu.hat) # not standardized
-                R.cor.mean <- M/sqrt(diag(S)) - Mu.hat/sqrt(diag(Sigma.hat))
-
-                e <- nvar*(nvar+1)/2 + nvar
-                srmr_bentler.group[g] <-
-                    sqrt( (sum(R[lower.tri(R, diag=TRUE)]^2) +
-                           sum(R.mean^2))/ e )
-                rmr.group[g] <- sqrt( (sum(RR[lower.tri(RR, diag=TRUE)]^2) +
-                                       sum(RR.mean^2))/ e )
-                crmr.group[g] <-
-                    sqrt( (sum(R.cor[lower.tri(R.cor, diag=TRUE)]^2)  +
-                           sum(R.cor.mean^2)) / (e - nvar) )
-                # see http://www.statmodel.com/download/SRMR.pdf
-                srmr_mplus.group[g] <-
-                    sqrt( (sum(R.cor[lower.tri(R.cor, diag=FALSE)]^2)  +
-                           sum(R.cor.mean^2) +
-                           sum(((diag(S) - diag(Sigma.hat))/diag(S))^2)) / e )
-
-                e <- nvar*(nvar+1)/2
-                srmr_bentler_nomean.group[g] <-
-                    sqrt(  sum( R[lower.tri( R, diag=TRUE)]^2) / e )
-                rmr_nomean.group[g] <-
-                    sqrt(  sum(RR[lower.tri(RR, diag=TRUE)]^2) / e )
-                if((e - nvar) > 0) {
-                    crmr_nomean.group[g] <-
-                    sqrt(  sum(R.cor[lower.tri(R.cor, diag=TRUE)]^2) / (e - nvar) )
-                } else {
-                    crmr_nomean.group[g] <- as.numeric(NA)
-                }
-                srmr_mplus_nomean.group[g] <-
-                    sqrt( (sum(R.cor[lower.tri(R.cor, diag=FALSE)]^2)  +
-                           sum(((diag(S) - diag(Sigma.hat))/diag(S))^2)) / e )
-            } else {
-                e <- nvar*(nvar+1)/2
-                srmr_bentler_nomean.group[g] <- srmr_bentler.group[g] <-
-                    sqrt( sum(R[lower.tri(R, diag=TRUE)]^2) / e )
-                rmr_nomean.group[g] <- rmr.group[g] <-
-                    sqrt( sum(RR[lower.tri(RR, diag=TRUE)]^2) / e )
-                crmr_nomean.group[g] <- crmr.group[g] <-
-                    sqrt(  sum(R.cor[lower.tri(R.cor, diag=TRUE)]^2) / (e - nvar) )
-                srmr_mplus_nomean.group[g] <- srmr_mplus.group[g] <-
-                    sqrt( (sum(R.cor[lower.tri(R.cor, diag=FALSE)]^2)  +
-                           sum(((diag(S) - diag(Sigma.hat))/diag(S))^2)) / e )
-            }
-        }
-
-        if(G > 1) {
-            ## FIXME: get the scaling right
-            SRMR_BENTLER <- as.numeric( (unlist(object@SampleStats@nobs) %*% srmr_bentler.group) / object@SampleStats@ntotal )
-            SRMR_BENTLER_NOMEAN <- as.numeric( (unlist(object@SampleStats@nobs) %*% srmr_bentler_nomean.group) / object@SampleStats@ntotal )
-            CRMR <- as.numeric( (unlist(object@SampleStats@nobs) %*% crmr.group) / object@SampleStats@ntotal )
-            CRMR_NOMEAN <- as.numeric( (unlist(object@SampleStats@nobs) %*% crmr_nomean.group) / object@SampleStats@ntotal )
-            SRMR_MPLUS <- as.numeric( (unlist(object@SampleStats@nobs) %*% srmr_mplus.group) / object@SampleStats@ntotal )
-            SRMR_MPLUS_NOMEAN <- as.numeric( (unlist(object@SampleStats@nobs) %*% srmr_mplus_nomean.group) / object@SampleStats@ntotal )
-            RMR <- as.numeric( (unlist(object@SampleStats@nobs) %*% rmr.group) / object@SampleStats@ntotal )
-            RMR_NOMEAN <- as.numeric( (unlist(object@SampleStats@nobs) %*% rmr_nomean.group) / object@SampleStats@ntotal )
-        } else {
-            SRMR_BENTLER <- srmr_bentler.group[1]
-            SRMR_BENTLER_NOMEAN <- srmr_bentler_nomean.group[1]
-            CRMR <- crmr.group[1]
-            CRMR_NOMEAN <- crmr_nomean.group[1]
-            SRMR_MPLUS <- srmr_mplus.group[1]
-            SRMR_MPLUS_NOMEAN <- srmr_mplus_nomean.group[1]
-            RMR <- rmr.group[1]
-            RMR_NOMEAN <- rmr_nomean.group[1]
-        }
-
-        # the default!
-        if(object@Options$mimic %in% c("lavaan", "EQS")) {
-            if(categorical) {
-                indices["srmr"] <- SRMR_BENTLER_NOMEAN
-            } else {
-                indices["srmr"] <- SRMR_BENTLER
-            }
-        } else if(object@Options$mimic == "Mplus") {
-            if(object@Options$information[1] == "expected") {
-                if(categorical) {
-                    indices["srmr"] <- SRMR_BENTLER_NOMEAN
-                } else {
-                    indices["srmr"] <- SRMR_BENTLER
-                }
-            } else {
-                if(categorical) {
-                    indices["srmr"] <- SRMR_MPLUS_NOMEAN
-                } else {
-                    indices["srmr"] <- SRMR_MPLUS
-                }
-            }
-        }
-
-        # the others
-        indices["srmr_bentler"]        <- SRMR_BENTLER
-        indices["srmr_bentler_nomean"] <- SRMR_BENTLER_NOMEAN
-        indices["crmr"]                <- CRMR
-        indices["crmr_nomean"]         <- CRMR_NOMEAN
-
-        # only correct for non-categorical:
-        if(object@Model@categorical) {
-            # FIXME! Compute Mplus 8.1 way to compute SRMR in the
-            #        categorical setting
-            #        See 'SRMR in Mplus (2018)' document on Mplus website
-            indices["srmr_mplus"]          <- as.numeric(NA)
-            indices["srmr_mplus_nomean"]   <- as.numeric(NA)
-        } else {
-            indices["srmr_mplus"]          <- SRMR_MPLUS
-            indices["srmr_mplus_nomean"]   <- SRMR_MPLUS_NOMEAN
-        }
-        #if(categorical) {
-            indices["rmr"]             <- RMR
-        #} else {
-        #    indices["rmr"]             <- RMR_NOMEAN
-        #}
-        indices["rmr_nomean"]          <- RMR_NOMEAN
-    }
-
-    # multilevel version
-    if(any(c("srmr_within", "srmr_between", "srmr") %in% fit.measures) &&
-       object@Data@nlevels > 1L) {
-        nlevels <-  object@Data@nlevels > 1L
-        SRMR.within  <- numeric(G)
-        SRMR.between <- numeric(G)
-        for(g in 1:G) {
-
-            b.within  <- (g - 1L) * nlevels + 1L
-            b.between <- (g - 1L) * nlevels + 2L
-
-            # observed
-            S.within  <- object@h1$implied$cov[[  b.within  ]]
-            M.within  <- object@h1$implied$mean[[ b.within  ]]
-            S.between <- object@h1$implied$cov[[  b.between ]]
-            M.between <- object@h1$implied$mean[[ b.between ]]
-
-            # estimated
-            implied <- lav_model_implied_cond2uncond(object@implied)
-            Sigma.within  <- implied$cov[[  b.within  ]]
-            Mu.within     <- implied$mean[[ b.within  ]]
-            Sigma.between <- implied$cov[[  b.between ]]
-            Mu.between    <- implied$mean[[ b.between ]]
-
-            # force pd for between
-            #    S.between <- lav_matrix_symmetric_force_pd(S.between)
-            Sigma.between <- lav_matrix_symmetric_force_pd(Sigma.between)
-
-            # Bollen approach: simply using cov2cor ('residual correlations')
-            S.within.cor  <- cov2cor(S.within)
-            S.between.cor <- cov2cor(S.between)
-            Sigma.within.cor <- cov2cor(Sigma.within)
-            if(all(diag(Sigma.between) > 0)) {
-                Sigma.between.cor <- cov2cor(Sigma.between)
-            } else {
-                Sigma.between.cor <- matrix(as.numeric(NA),
-                                         nrow = nrow(Sigma.between),
-                                         ncol = ncol(Sigma.between))
-            }
-            R.within.cor <- (S.within.cor - Sigma.within.cor)
-            R.between.cor <- (S.between.cor - Sigma.between.cor)
-
-            nvar.within <- NCOL(S.within)
-            nvar.between <- NCOL(S.between)
-            pstar.within <- nvar.within*(nvar.within+1)/2
-            pstar.between <- nvar.between*(nvar.between+1)/2
-
-            # SRMR
-            SRMR.within[g] <-  sqrt( sum(lav_matrix_vech(R.within.cor)^2) /
-                                     pstar.within )
-            SRMR.between[g] <- sqrt( sum(lav_matrix_vech(R.between.cor)^2) /
-                                     pstar.between )
-        }
-
-        if(G > 1) {
-            SRMR_WITHIN  <- as.numeric( (unlist(object@SampleStats@nobs) %*%
-                              SRMR.within)  / object@SampleStats@ntotal )
-            SRMR_BETWEEN <- as.numeric( (unlist(object@SampleStats@nobs) %*%
-                              SRMR.between) / object@SampleStats@ntotal )
-        } else {
-            SRMR_WITHIN  <- SRMR.within[1]
-            SRMR_BETWEEN <- SRMR.between[1]
-        }
-
-        indices["srmr"] <- SRMR_WITHIN + SRMR_BETWEEN
-        indices["srmr_within"]  <- SRMR_WITHIN
-        indices["srmr_between"] <- SRMR_BETWEEN
+    if(any(fit.srmr2 %in% fit.measures)) {
+        indices <- c(indices,
+                     lav_fit_srmr_lavobject(lavobject    = object,
+                                            fit.measures = fit.measures))
     }
 
     # GFI and friends
-    fit.cfi <- c("gfi", "agfi", "pgfi")
-    if(any(fit.cfi %in% fit.measures)) {
+    fit.gfi <- c("gfi", "agfi", "pgfi")
+    if(any(fit.gfi %in% fit.measures)) {
         indices <- c(indices,
                      lav_fit_gfi_lavobject(lavobject    = object,
                                            fit.measures = fit.measures))
@@ -535,7 +277,7 @@ lav_fit_measures <- function(object, fit.measures = "all",
 
     # various: WRMR
     if("wrmr" %in% fit.measures) {
-        nel <- unlist(object@SampleStats@WLS.obs[[1]]) ### only first group???
+        nel <- length(object@SampleStats@WLS.obs[[1]])
         indices["wrmr"] <- lav_fit_wrmr(X2 = X2, nel = nel)
     }
 
@@ -859,7 +601,7 @@ print.lavaan.fitMeasures <- function(x, ..., nd = 3L, add.h0 = TRUE) {
                         sprintf(num.format, x["rmsea.ci.upper.scaled"]), ""))
         }
         if("rmsea.pvalue" %in% names.x) {
-            c1 <- c(c1, "P-value RMSEA <= 0.05")
+            c1 <- c(c1, "P-value H_0: RMSEA <= 0.05")
             c2 <- c(c2, sprintf(num.format, x["rmsea.pvalue"]))
             c3 <- c(c3, ifelse(scaled,
                   sprintf(num.format, x["rmsea.pvalue.scaled"]), ""))
@@ -880,6 +622,12 @@ print.lavaan.fitMeasures <- function(x, ..., nd = 3L, add.h0 = TRUE) {
             c1 <- c(c1, "90 Percent confidence interval - upper")
             c2 <- c(c2, "")
             c3 <- c(c3, sprintf(num.format, x["rmsea.ci.upper.robust"]))
+        }
+        if("rmsea.pvalue.robust" %in% names.x) {
+            c1 <- c(c1, "P-value H_0: Robust RMSEA <= 0.05")
+            c2 <- c(c2, "")
+            c3 <- c(c3, ifelse(scaled,
+                            sprintf(num.format, x["rmsea.pvalue.robust"]), ""))
         }
 
         # format c1/c2/c3
