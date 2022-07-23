@@ -960,29 +960,22 @@ sam <- function(model          = NULL,
             #pvalue = sapply(MM.FIT, function(x) {x@test[[1]]$pvalue}) )
         class(sam.mm.table) <- c("lavaan.data.frame", "data.frame")
 
-        # only for the local method: fit measures of structural part
-        if(sam.method == "local") {
-            sam.struc.fit <- fitMeasures(FIT.PA, c("chisq", "df", "pvalue",
-                                                   "cfi", "rmsea", "srmr"))
-            sam.mm.rel <- REL
-        } else {
-            sam.struc.fit <- numeric(0L)
-            sam.mm.rel <- numeric(0L)
-        }
-
 
         # extra info for @internal slot
         if(sam.method == "local") {
             sam.struc.fit <- try(fitMeasures(FIT.PA,
-                                               c("chisq", "df", "pvalue",
+                                               c("chisq", "df", # "pvalue",
                                                  "cfi", "rmsea", "srmr")),
                                  silent = TRUE)
             if(inherits(sam.struc.fit, "try-error")) {
                 sam.struc.fit <- "(unable to obtain fit measures)"
             }
+            sam.mm.rel <- REL
         } else {
             sam.struc.fit <- "no local fit measures available for structural part if sam.method is global"
+            sam.mm.rel <- numeric(0L)
         }
+ 
 
         SAM <- list(sam.method          = sam.method,
                     sam.local.options   = local.options,

@@ -60,7 +60,7 @@ lav_fit_rmsea <- function(X2 = NULL, df = NULL, N = NULL,
         if(nel == 0) {
             return(as.numeric(NA))
         }
-        ifelse(df > 0,
+        RMSEA <- ifelse(df > 0,
                # 'standard' way to compute RMSEA
                RMSEA <- sqrt(pmax((X2/N)/df - c.hat/N, rep(0, nel))) * sqrt(G),
                0) # if df == 0
