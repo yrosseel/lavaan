@@ -714,6 +714,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                       conditional.x    = lavoptions$conditional.x,
                       fixed.x          = lavoptions$fixed.x,
                       std.lv           = lavoptions$std.lv,
+                      correlation      = lavoptions$correlation,
                       effect.coding    = lavoptions$effect.coding,
                       ceq.simple       = lavoptions$ceq.simple,
                       parameterization = lavoptions$parameterization,

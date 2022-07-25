@@ -18,6 +18,12 @@
 #   often resulting in NAs due to negative var(resid) estimates
 #   (this was "standardized" in lavaan < 0.6.3
 
+# WARNING: only partial support for conditional.x = TRUE!!
+# - in categorical case: we only compute summary statistics, using cor + th
+#   (no var, slopes, ...)
+# - twolevel not supported here; see lav_fit_srmr.R, where we convert to
+#   the unconditional setting
+
 # - change 0.6-6: we enforce observed.information = "h1" to ensure 'Q' is a
 #                 projection matrix (see lav_residuals_acov)
 

@@ -114,6 +114,7 @@ lav_partable_ndat <- function(partable) {
     fixed.x <- any(partable$exo > 0L & partable$free == 0L)
     conditional.x <- any(partable$exo > 0L & partable$op == "~")
     categorical <- any(partable$op == "|")
+    correlation <- any(partable$op == "~*~")
     if(categorical) {
         meanstructure <- TRUE
     }
@@ -201,6 +202,11 @@ lav_partable_ndat <- function(partable) {
                 nexo     <- length(ov.names.x)
                 ndat[b] <- ndat[b] + (nvar * nexo)
             }
+        }
+
+        # correction for correlation not categorical
+        if(correlation && !categorical) {
+            ndat[b] <- ndat[b] - nvar
         }
 
         # correction for conditional.x not categorical

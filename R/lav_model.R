@@ -20,6 +20,7 @@ lav_model <- function(lavpartable      = NULL,
     nblocks <- lav_partable_nblocks(lavpartable)
     ngroups <- lav_partable_ngroups(lavpartable)
     meanstructure <- any(lavpartable$op == "~1")
+    correlation <- lavoptions$correlation
     categorical <- any(lavpartable$op == "|")
     if(categorical) {
         meanstructure <- TRUE
@@ -150,10 +151,18 @@ lav_model <- function(lavpartable      = NULL,
                 }
             }
             nvar[g] <- length(ov.names.nox)
-            num.idx[[g]] <- which(ov.names.nox %in% ov.num)
+            if(correlation) {
+                num.idx[[g]] <- integer(0L)
+            } else {
+                num.idx[[g]] <- which(ov.names.nox %in% ov.num)
+            }
         } else {
             nvar[g] <- length(ov.names)
-            num.idx[[g]] <- which(ov.names %in% ov.num)
+            if(correlation) {
+                num.idx[[g]] <- integer(0L)
+            } else {
+                num.idx[[g]] <- which(ov.names %in% ov.num)
+            }
         }
         nexo[g] <- length(ov.names.x)
 
@@ -392,6 +401,7 @@ lav_model <- function(lavpartable      = NULL,
                  representation=lavoptions$representation,
                  modprop=modprop,
                  meanstructure=meanstructure,
+                 correlation=correlation,
                  categorical=categorical,
                  multilevel=multilevel,
                  link=lavoptions$link,

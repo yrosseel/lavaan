@@ -67,14 +67,14 @@ lav_model_set_parameters <- function(lavmodel = NULL, x = NULL) {
     }
 
     # categorical? set categorical theta elements (if any)
-    if(lavmodel@categorical) {
+    if(lavmodel@categorical || lavmodel@correlation) {
         nmat <- lavmodel@nmat
         if(lavmodel@representation == "LISREL") {
             for(g in 1:lavmodel@nblocks) {
                 # which mm belong to group g?
                 mm.in.group <- 1:nmat[g] + cumsum(c(0L,nmat))[g]
 
-                if(lavmodel@estimator %in% c("WLS","DWLS","ULS","PML")) {
+                if(lavmodel@estimator %in% c("ML", "WLS","DWLS","ULS","PML")) {
                     if(lavmodel@parameterization == "delta") {
                         tmp[mm.in.group] <-
                         setResidualElements.LISREL(MLIST = tmp[mm.in.group],
@@ -96,7 +96,7 @@ lav_model_set_parameters <- function(lavmodel = NULL, x = NULL) {
                 }
             }
         } else {
-            cat("FIXME: deal with theta elements in the categorical case")
+            cat("FIXME: deal with theta elements in the categorical case (RAM)")
         }
     }
 
@@ -147,16 +147,41 @@ lav_model_x2GLIST <- function(lavmodel = NULL, x = NULL,
         }
     }
 
-    # theta parameterization: delta must be reset!
-    if(lavmodel@categorical && setDelta &&
-       lavmodel@parameterization == "theta") {
+#    # theta parameterization: delta must be reset!
+#    if((lavmodel@categorical || lavmodel@correlation) && setDelta &&
+#       lavmodel@parameterization == "theta") {
+#        nmat <- lavmodel@nmat
+#        for(g in 1:lavmodel@nblocks) {
+#            # which mm belong to group g?
+#            mm.in.group <- 1:nmat[g] + cumsum(c(0L,nmat))[g]
+#            GLIST[mm.in.group] <-
+#                setDeltaElements.LISREL(MLIST = GLIST[mm.in.group],
+#                    num.idx = lavmodel@num.idx[[g]])
+#        }
+#    }
+
+    # in 0.6-13: we always set theta/delta
+    if((lavmodel@categorical || lavmodel@correlation) && setDelta) {
         nmat <- lavmodel@nmat
-        for(g in 1:lavmodel@nblocks) {
-            # which mm belong to group g?
-            mm.in.group <- 1:nmat[g] + cumsum(c(0L,nmat))[g]
-            GLIST[mm.in.group] <-
-                setDeltaElements.LISREL(MLIST = GLIST[mm.in.group],
-                    num.idx = lavmodel@num.idx[[g]])
+        if(lavmodel@representation == "LISREL") {
+            for(g in 1:lavmodel@nblocks) {
+                # which mm belong to group g?
+                mm.in.group <- 1:nmat[g] + cumsum(c(0L,nmat))[g]
+
+                if(lavmodel@parameterization == "delta") {
+                    GLIST[mm.in.group] <-
+                        setResidualElements.LISREL(MLIST = GLIST[mm.in.group],
+                            num.idx = lavmodel@num.idx[[g]],
+                            ov.y.dummy.ov.idx = lavmodel@ov.y.dummy.ov.idx[[g]],
+                            ov.y.dummy.lv.idx = lavmodel@ov.y.dummy.lv.idx[[g]])
+                } else if(lavmodel@parameterization == "theta") {
+                    GLIST[mm.in.group] <-
+                        setDeltaElements.LISREL(MLIST = GLIST[mm.in.group],
+                            num.idx = lavmodel@num.idx[[g]])
+                }
+            } # blocks
+        } else {
+            cat("FIXME: deal with theta elements in the categorical case (RAM)")
         }
     }
 

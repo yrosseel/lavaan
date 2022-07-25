@@ -387,6 +387,14 @@ lav_matrix_vech_match_idx <- function(n = 1L, diagonal = TRUE,
 # default dup:
 lav_matrix_duplication <- .dup3
 
+# duplication matrix for correlation matrices:
+# - it returns a matrix of size p^2 * (p*(p-1))/2
+# - the columns corresponding to the diagonal elements have been removed
+lav_matrix_duplication_cor <- function(n = 1L) {
+    out <- lav_matrix_duplication(n = n)
+    diag.idx <- lav_matrix_diagh_idx(n = n)
+    out[,-diag.idx,drop = FALSE]
+}
 
 # compute t(D) %*% A (without explicitly computing D)
 # sqrt(nrow(A)) is an integer
@@ -432,6 +440,30 @@ lav_matrix_duplication_dup_pre2 <- function(A = matrix(0,0,0)) {
     OUT
 }
 
+# compute t(D) %*% A (without explicitly computing D)
+# sqrt(nrow(A)) is an integer
+# A is not symmetric, and not even square, only n^2 ROWS
+# correlation version: ignoring diagonal elements
+lav_matrix_duplication_cor_pre <- function(A = matrix(0,0,0)) {
+
+    # number of rows
+    n2 <- NROW(A)
+
+    # square nrow(A) only, n2 = n^2
+    stopifnot(sqrt(n2) == round(sqrt(n2)))
+
+    # dimension
+    n <- sqrt(n2)
+
+    # dup idx
+    idx1 <- lav_matrix_vech_idx(n,   diagonal = FALSE)
+    idx2 <- lav_matrix_vechru_idx(n, diagonal = FALSE)
+
+    OUT <- A[idx1, , drop = FALSE] + A[idx2 , , drop = FALSE]
+    u <- which(idx1 %in% idx2); OUT[u,] <- OUT[u,] / 2.0
+
+    OUT
+}
 
 # compute A %*% D (without explicitly computing D)
 # sqrt(ncol(A)) must be an integer
@@ -456,6 +488,32 @@ lav_matrix_duplication_post <- function(A = matrix(0,0,0)) {
     OUT
 }
 
+# compute A %*% D (without explicitly computing D)
+# sqrt(ncol(A)) must be an integer
+# A is not symmetric, and not even square, only n^2 COLUMNS
+# correlation version: ignoring the diagonal elements
+lav_matrix_duplication_cor_post <- function(A = matrix(0,0,0)) {
+
+    # number of columns
+    n2 <- NCOL(A)
+
+    # square A only, n2 = n^2
+    stopifnot(sqrt(n2) == round(sqrt(n2)))
+
+    # dimension
+    n <- sqrt(n2)
+
+    # dup idx
+    idx1 <- lav_matrix_vech_idx(n,   diagonal = FALSE)
+    idx2 <- lav_matrix_vechru_idx(n, diagonal = FALSE)
+
+    OUT <- A[, idx1, drop = FALSE] + A[, idx2, drop = FALSE]
+    u <- which(idx1 %in% idx2); OUT[,u] <- OUT[,u] / 2.0
+
+    OUT
+}
+
+
 # compute t(D) %*% A %*% D (without explicitly computing D)
 # A must be a square matrix and sqrt(ncol) an integer
 lav_matrix_duplication_pre_post <- function(A = matrix(0,0,0)) {
@@ -471,6 +529,32 @@ lav_matrix_duplication_pre_post <- function(A = matrix(0,0,0)) {
 
     # dup idx
     idx1 <- lav_matrix_vech_idx(n); idx2 <- lav_matrix_vechru_idx(n)
+
+    OUT <- A[idx1, , drop = FALSE] + A[idx2, , drop = FALSE]
+    u <- which(idx1 %in% idx2); OUT[u,] <- OUT[u,] / 2.0
+    OUT <- OUT[, idx1, drop = FALSE] + OUT[, idx2, drop = FALSE]
+    OUT[,u] <- OUT[,u] / 2.0
+
+    OUT
+}
+
+# compute t(D) %*% A %*% D (without explicitly computing D)
+# A must be a square matrix and sqrt(ncol) an integer
+# correlation version: ignoring diagonal elements
+lav_matrix_duplication_cor_pre_post <- function(A = matrix(0,0,0)) {
+
+    # number of columns
+    n2 <- NCOL(A)
+
+    # square A only, n2 = n^2
+    stopifnot(NROW(A) == n2, sqrt(n2) == round(sqrt(n2)))
+
+    # dimension
+    n <- sqrt(n2)
+
+    # dup idx
+    idx1 <- lav_matrix_vech_idx(n,   diagonal = FALSE)
+    idx2 <- lav_matrix_vechru_idx(n, diagonal = FALSE)
 
     OUT <- A[idx1, , drop = FALSE] + A[idx2, , drop = FALSE]
     u <- which(idx1 %in% idx2); OUT[u,] <- OUT[u,] / 2.0

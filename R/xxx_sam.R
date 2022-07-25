@@ -975,7 +975,7 @@ sam <- function(model          = NULL,
             sam.struc.fit <- "no local fit measures available for structural part if sam.method is global"
             sam.mm.rel <- numeric(0L)
         }
- 
+
 
         SAM <- list(sam.method          = sam.method,
                     sam.local.options   = local.options,

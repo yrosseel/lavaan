@@ -14,10 +14,10 @@ model as specified by the user. We refer to this table as the parameter table.}
 \usage{
 lavaanify(model = NULL, meanstructure = FALSE, int.ov.free = FALSE, 
     int.lv.free = FALSE, orthogonal = FALSE, orthogonal.y = FALSE,
-    orthogonal.x = FALSE, orthogonal.efa = FALSE, std.lv = FALSE, 
-    effect.coding = "", conditional.x = FALSE, fixed.x = FALSE, 
-    parameterization = "delta", constraints = NULL, ceq.simple = FALSE,
-    auto = FALSE, model.type = "sem", 
+    orthogonal.x = FALSE, orthogonal.efa = FALSE, std.lv = FALSE,
+    correlation = FALSE, effect.coding = "", conditional.x = FALSE, 
+    fixed.x = FALSE, parameterization = "delta", constraints = NULL, 
+    ceq.simple = FALSE, auto = FALSE, model.type = "sem", 
     auto.fix.first = FALSE, auto.fix.single = FALSE, auto.var = FALSE, 
     auto.cov.lv.x = FALSE, auto.cov.y = FALSE, auto.th = FALSE, 
     auto.delta = FALSE, auto.efa = FALSE, 
@@ -28,9 +28,9 @@ lavaanify(model = NULL, meanstructure = FALSE, int.ov.free = FALSE,
 lavParTable(model = NULL, meanstructure = FALSE, int.ov.free = FALSE,
     int.lv.free = FALSE, orthogonal = FALSE, orthogonal.y = FALSE, 
     orthogonal.x = FALSE, orthogonal.efa = FALSE, std.lv = FALSE,
-    effect.coding = "", conditional.x = FALSE, fixed.x = FALSE, 
-    parameterization = "delta", constraints = NULL, ceq.simple = FALSE,
-    auto = FALSE, model.type = "sem",
+    correlation = FALSE, effect.coding = "", conditional.x = FALSE, 
+    fixed.x = FALSE, parameterization = "delta", constraints = NULL, 
+    ceq.simple = FALSE, auto = FALSE, model.type = "sem",
     auto.fix.first = FALSE, auto.fix.single = FALSE, auto.var = FALSE,
     auto.cov.lv.x = FALSE, auto.cov.y = FALSE, auto.th = FALSE,
     auto.delta = FALSE, auto.efa = FALSE,
@@ -71,6 +71,9 @@ the model both for both observed and latent variables.}
       the \code{group.label} argument, then only the latent variances i
       of the first group will be fixed to 1.0, while the latent
       variances of other groups are set free.}
+\item{correlation}{If \code{TRUE}, a correlation structure is fitted. For
+    continuous data, this implies that the (residual) variances are no
+    longer parameters of the model.}
 \item{effect.coding}{Can be logical or character string. If
      logical and \code{TRUE}, this implies     
      \code{effect.coding = c("loadings", "intercepts")}. If logical and 

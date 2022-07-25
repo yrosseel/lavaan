@@ -56,6 +56,7 @@ lav_options_default <- function(mimic = "lavaan") {
                 orthogonal.x       = FALSE,
                 orthogonal.y       = FALSE,
                 std.lv             = FALSE,
+                correlation        = FALSE,     # correlation structure
                 effect.coding      = FALSE,     # TRUE implies
                                                 # c("loadings", "intercepts")
                 ceq.simple         = FALSE,      # treat simple eq cons special?
@@ -1721,6 +1722,26 @@ lav_options_set <- function(opt = NULL) {
     } else {
         stop("lavaan ERROR: rotation.args$order.lv.by should be \"none\",",
              " \"index\" or \"sumofsquares\".")
+    }
+
+    # correlation
+    if(opt$correlation) {
+        if(opt$missing == "ml") {
+            stop("lavaan ERROR: correlation structures only work for complete data (for now).")
+        }
+        if(opt$.multilevel) {
+            stop("lavaan ERROR: correlation structures only work for single-level data.")
+        }
+        if(opt$conditional.x) {
+            stop("lavaan ERROR: correlation structures only work for conditional.x = FALSE (for now).")
+        }
+        if(opt$representation == "RAM") {
+            stop("lavaan ERROR: correlation structures only work for representation = \"LISREL\".")
+        }
+        if(opt$fixed.x) {
+            # first fix eliminate.pstar.idx in lav_mvnorm_information_expected()
+            stop("lavaan ERROR: correlation structures only work for fixed.x = FALSE (for now).")
+        }
     }
 
 

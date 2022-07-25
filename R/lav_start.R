@@ -47,7 +47,7 @@ lav_start <- function(start.method    = "default",
     } else if(mimic == "Mplus") {
         start.initial <- "mplus"
     } else {
-        # FIXME: use LISREL/EQS/AMOS/.... schems
+        # FIXME: use LISREL/EQS/AMOS/.... schemes
         start.initial <- "lavaan"
     }
 

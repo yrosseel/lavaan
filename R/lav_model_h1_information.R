@@ -234,13 +234,15 @@ lav_model_h1_information_expected <- function(lavobject      = NULL,
                                   Sigma         = lavimplied$cov[[g]],
                                   #wt = WT, # not needed
                                   x.idx         = lavsamplestats@x.idx[[g]],
-                                  meanstructure = lavmodel@meanstructure)
+                                  meanstructure = lavmodel@meanstructure,
+                                  correlation   = lavmodel@correlation)
                     } else {
                         A1[[g]] <- lav_mvnorm_h1_information_expected(
                                   sample.cov.inv = lavsamplestats@icov[[g]],
                                   #wt = WT, not needed
                                   x.idx          = lavsamplestats@x.idx[[g]],
-                                  meanstructure  = lavmodel@meanstructure)
+                                  meanstructure  = lavmodel@meanstructure,
+                                  correlation    = lavmodel@correlation)
                     }
                 } # conditional.x
             } # missing
