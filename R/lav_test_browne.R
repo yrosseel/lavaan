@@ -11,23 +11,36 @@
 #                           t(Delta) %*% Gamma.inv) %*% RES
 
 
+# YR 26 July 2022: add alternative slots, if lavobject = NULL
+
 # TODo: - allow for 'structured' (model-based) version of Gamma
 #       - allow for unbiased version of Gamma
 #       - allow for non-linear equality constraints
 #         (see Browne, 1982, eq 1.7.19)
 
-lav_test_browne <- function(lavobject = NULL, n.minus.one = "default",
-                            ADF = TRUE) {
+lav_test_browne <- function(lavobject      = NULL,
+                            # or
+                            lavdata        = NULL,
+                            lavsamplestats = NULL,
+                            lavmodel       = NULL,
+                            lavoptions     = NULL,
+                            # further options:
+                            n.minus.one    = "default",
+                            ADF            = TRUE) {
 
-    # slots
-    lavdata <- lavobject@Data
-    lavsamplestats <- lavobject@SampleStats
-    lavmodel <- lavobject@Model
+    if(!is.null(lavobject)) {
+        # check input
+        if(!inherits(lavobject, "lavaan")) {
+            stop("lavaan ERROR: object is not a lavaan object.")
+        }
 
-    # check input
-    if(!inherits(lavobject, "lavaan")) {
-        stop("lavaan ERROR: object is not a lavaan object.")
+        # slots
+        lavdata        <- lavobject@Data
+        lavsamplestats <- lavobject@SampleStats
+        lavmodel       <- lavobject@Model
+        lavoptions     <- lavobject@Options
     }
+
     if(!ADF && lavmodel@categorical) {
         stop("lavaan ERROR: normal theory version not available in the categorical setting.")
     }
@@ -39,7 +52,7 @@ lav_test_browne <- function(lavobject = NULL, n.minus.one = "default",
     }
 
     if(!is.logical(n.minus.one)) {
-        if(lavobject@Options$estimator == "ML") {
+        if(lavoptions$estimator == "ML") {
             n.minus.one <- FALSE
         } else {
             n.minus.one <- TRUE
@@ -62,12 +75,31 @@ lav_test_browne <- function(lavobject = NULL, n.minus.one = "default",
         if(!is.null(lavsamplestats@NACOV[[1]])) {
             Gamma <- lavsamplestats@NACOV
         } else {
-            Gamma <- lavGamma(lavobject)
+            if(!is.null(lavobject)) {
+                Gamma <- lavGamma(lavobject)
+            } else {
+                Gamma <- lavGamma(lavdata,
+                    missing = lavoptions$missing,
+                    fixed.x = lavoptions$fixed.x,
+                    conditional.x = lavoptions$conditional.x,
+                    meanstructure = lavoptions$meanstructure,
+                    gamma.n.minus.one = lavoptions$gamma.n.minus.one,
+                    gamma.unbiased = lavoptions$gamma.unbiased)
+            }
         }
     } else {
         # NT version
-        Gamma <- lavGamma(lavobject, ADF = FALSE,
-                          NT.rescale = lavobject@Options$estimator == "ML")
+        if(!is.null(lavobject)) {
+            Gamma <- lavGamma(lavobject, ADF = FALSE,
+                          NT.rescale = lavoptions$estimator == "ML")
+        } else {
+            Gamma <- lavGamma(lavdata, ADF = FALSE,
+                          missing = lavoptions$missing,
+                          fixed.x = lavoptions$fixed.x,
+                          conditional.x = lavoptions$conditional.x,
+                          meanstructure = lavoptions$meanstructure,
+                          NT.rescale = lavoptions$estimator == "ML")
+        }
     }
     WLS.obs <- lavsamplestats@WLS.obs
     WLS.est <- lav_model_wls_est(lavmodel)
@@ -130,8 +162,24 @@ lav_test_browne <- function(lavobject = NULL, n.minus.one = "default",
         # TODO
     }
 
+    # DF
+    if(!is.null(lavobject)) {
+        DF <- lavobject@test[[1]]$df
+    } else {
+        ndat <- length(unlist(lavsamplestats@WLS.obs))
+        nfree <- lavmodel@nx.free
+        DF <- ndat - nfree
+        if(nrow(lavmodel@con.jac) > 0L) {
+            ceq.idx <- attr(lavmodel@con.jac, "ceq.idx")
+            if(length(ceq.idx) > 0L) {
+                neq <- qr(lavmodel@con.jac[ceq.idx,,drop=FALSE])$rank
+                DF <- DF + neq
+            } else {
 
-    DF <- lavobject@test[[1]]$df
+            }
+        }
+    }
+
     if(ADF) {
         NAME <- "browne.residual.adf"
     } else {

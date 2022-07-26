@@ -120,8 +120,17 @@ lav_test_satorra_bentler <- function(lavobject      = NULL,
         Gamma <- lavsamplestats@NACOV
         # still NULL? (perhaps estimator = ML)
         if(is.null(Gamma[[1]])) {
-            # FIXME: what if we have no lavobject?
-            Gamma <- lavGamma(lavobject)
+            if(!is.null(lavobject)) {
+                Gamma <- lavGamma(lavobject)
+            } else {
+                Gamma <- lavGamma(lavdata,
+                    missing = lavoptions$missing,
+                    fixed.x = lavoptions$fixed.x,
+                    conditional.x = lavoptions$conditional.x,
+                    meanstructure = lavoptions$meanstructure,
+                    gamma.n.minus.one = lavoptions$gamma.n.minus.one,
+                    gamma.unbiased = lavoptions$gamma.unbiased)
+            }
         }
     }
 

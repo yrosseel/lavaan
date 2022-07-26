@@ -17,7 +17,8 @@
 lavGamma <- function(object, group = NULL, missing = "listwise",
                      ov.names.x = NULL, fixed.x = FALSE, conditional.x = FALSE,
                      meanstructure = FALSE, slopestructure = FALSE,
-                     gamma.n.minus.one = FALSE, ADF = TRUE, NT.rescale = FALSE,
+                     gamma.n.minus.one = FALSE, gamma.unbiased = FALSE,
+                     ADF = TRUE, NT.rescale = FALSE,
                      Mplus.WLS = FALSE, add.labels) {
 
     if(inherits(object, "lavaan")) {
@@ -40,6 +41,9 @@ lavGamma <- function(object, group = NULL, missing = "listwise",
         }
         if(missing(gamma.n.minus.one)) {
             gamma.n.minus.one <- object@Options$gamma.n.minus.one
+        }
+        if(missing(gamma.unbiased)) {
+            gamma.unbiased <- object@Options$gamma.unbiased
         }
     } else if(inherits(object, "lavData")) {
         lavdata <- object
@@ -82,6 +86,7 @@ lavGamma <- function(object, group = NULL, missing = "listwise",
                                      meanstructure  = meanstructure,
                                      slopestructure = conditional.x,
                                      gamma.n.minus.one = gamma.n.minus.one,
+                                     unbiased       = gamma.unbiased,
                                      Mplus.WLS      = Mplus.WLS)
         } else {
             out <- lav_samplestats_Gamma_NT(Y       = Y[[g]],
@@ -268,12 +273,15 @@ lav_samplestats_Gamma <- function(Y,
     Y <- unname(as.matrix(Y)); N <- nrow(Y); p <- ncol(Y)
 
     # unbiased?
-    if(conditional.x || fixed.x || !is.null(Sigma) || !is.null(cluster.idx)) {
-        stop("lavaan ERROR: unbiased Gamma only available for the simple (not conditional.x or fixed.x or model-based or clustered) setting.")
-    } else {
-        COV <- COV.unbiased <- cov(Y)
-        COV <- COV * (N-1)/N
-        cov.vech <- lav_matrix_vech(COV)
+    if(unbiased) {
+        if(conditional.x || fixed.x || !is.null(Sigma) ||
+           !is.null(cluster.idx)) {
+            stop("lavaan ERROR: unbiased Gamma only available for the simple (not conditional.x or fixed.x or model-based or clustered) setting.")
+        } else {
+            COV <- COV.unbiased <- cov(Y)
+            COV <- COV * (N-1)/N
+            cov.vech <- lav_matrix_vech(COV)
+        }
     }
 
     # model-based?
