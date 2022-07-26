@@ -16,20 +16,32 @@
 
 setMethod("fitMeasures", signature(object = "lavaan"),
 function(object, fit.measures = "all", baseline.model = NULL,
+         fit.args = list(rmsea.ci.level    = 0.90,
+                         rmsea.close.h0    = 0.05,
+                         rmsea.notclose.h0 = 0.08),
          output = "vector", ...) {
     lav_fit_measures(object = object, fit.measures = fit.measures,
-                     baseline.model = baseline.model, output = output)
+                     baseline.model = baseline.model, fit.args = fit.args,
+                     output = output)
 })
 
 setMethod("fitmeasures", signature(object = "lavaan"),
 function(object, fit.measures = "all", baseline.model = NULL,
+         fit.args = list(rmsea.ci.level    = 0.90,
+                         rmsea.close.h0    = 0.05,
+                         rmsea.notclose.h0 = 0.08),
          output = "vector",  ...) {
     lav_fit_measures(object = object, fit.measures = fit.measures,
-                     baseline.model = baseline.model, output = output)
+                     baseline.model = baseline.model, fit.args = fit.args,
+                     output = output)
 })
 
 lav_fit_measures <- function(object, fit.measures = "all",
-                             baseline.model = NULL, output = "vector") {
+                             baseline.model = NULL,
+                             fit.args = list(rmsea.ci.level    = 0.90,
+                                             rmsea.close.h0    = 0.05,
+                                             rmsea.notclose.h0 = 0.08),
+                             output = "vector") {
 
     # do we have data? (yep, we had to include this check)
     if(object@Data@data.type == "none") {
@@ -125,12 +137,17 @@ lav_fit_measures <- function(object, fit.measures = "all",
     }
 
     # rmsea
-    fit.rmsea <- c("rmsea", "rmsea.ci.lower", "rmsea.ci.upper", "rmsea.pvalue")
+    fit.rmsea <- c("rmsea",
+                   "rmsea.ci.lower", "rmsea.ci.upper", "rmsea.ci.level",
+                   "rmsea.pvalue", "rmsea.close.h0",
+                   "rmsea.notclose.pvalue", "rmsea.notclose.h0")
     if(scaled) {
         fit.rmsea <- c(fit.rmsea, "rmsea.scaled", "rmsea.ci.lower.scaled",
                        "rmsea.ci.upper.scaled", "rmsea.pvalue.scaled",
+                       "rmsea.notclose.pvalue.scaled",
                        "rmsea.robust", "rmsea.ci.lower.robust",
-                       "rmsea.ci.upper.robust", "rmsea.pvalue.robust")
+                       "rmsea.ci.upper.robust", "rmsea.pvalue.robust",
+                       "rmsea.notclose.pvalue.robust")
     }
 
     # srmr
@@ -247,11 +264,41 @@ lav_fit_measures <- function(object, fit.measures = "all",
 
     # RMSEA and friends
     if(any(fit.rmsea %in% fit.measures)) {
+        # check rmsea options
+        rmsea.ci.level       <- 0.90
+        rmsea.close.h0    <- 0.05
+        rmsea.notclose.h0 <- 0.08
+        if(!is.null(fit.args$rmsea.ci.level) &&
+           is.finite(fit.args$rmsea.ci.level)) {
+            rmsea.ci.level <- fit.args$rmsea.ci.level
+            if(rmsea.ci.level < 0 || rmsea.ci.level > 1.0) {
+                warning("lavaan WARNING: invalid rmsea.ci.level value [",
+                        rmsea.ci.level, "] set to default 0.90.")
+                rmsea.ci.level <- 0.90
+            }
+        }
+        if(!is.null(fit.args$rmsea.close.h0) &&
+           is.finite(fit.args$rmsea.close.h0)) {
+            rmsea.close.h0 <- fit.args$rmsea.close.h0
+            if(rmsea.close.h0 < 0) {
+                rmsea.close.h0 <- 0
+            }
+        }
+        if(!is.null(fit.args$rmsea.notclose.h0) &&
+           is.finite(fit.args$rmsea.notclose.h0)) {
+            rmsea.notclose.h0 <- fit.args$rmsea.notclose.h0
+            if(rmsea.notclose.h0 < 0) {
+                rmsea.notclose.h0 <- 0
+            }
+        }
         indices <- c(indices,
-                     lav_fit_rmsea_lavobject(lavobject    = object,
-                                             fit.measures = fit.measures,
-                                             scaled       = scaled,
-                                             test         = test))
+                     lav_fit_rmsea_lavobject(lavobject = object,
+                                     fit.measures      = fit.measures,
+                                     scaled            = scaled,
+                                     test              = test,
+                                     ci.level          = rmsea.ci.level,
+                                     close.h0          = rmsea.close.h0,
+                                     notclose.h0       = rmsea.notclose.h0))
     }
 
     # SRMR and friends
@@ -590,21 +637,61 @@ print.lavaan.fitMeasures <- function(x, ..., nd = 3L, add.h0 = TRUE) {
         c1 <- c(c1, "RMSEA")
         c2 <- c(c2, sprintf(num.format, x["rmsea"]))
         c3 <- c(c3, ifelse(scaled, sprintf(num.format, x["rmsea.scaled"]), ""))
+
+        ci.level <- NULL
+        if("rmsea.ci.level" %in% names.x) {
+            ci.level <- x["rmsea.ci.level"]
+        }
         if("rmsea.ci.lower" %in% names.x) {
-            c1 <- c(c1, "90 Percent confidence interval - lower")
+            if(is.null(ci.level)) {
+                c1 <- c(c1, "Confidence interval - lower")
+            } else {
+                c1 <- c(c1, paste0(sprintf("%2d", round(ci.level * 100)),
+                            " Percent confidence interval - lower"))
+            }
             c2 <- c(c2, sprintf(num.format, x["rmsea.ci.lower"]))
             c3 <- c(c3, ifelse(scaled,
                         sprintf(num.format, x["rmsea.ci.lower.scaled"]), ""))
-            c1 <- c(c1, "90 Percent confidence interval - upper")
+            if(is.null(ci.level)) {
+                c1 <- c(c1, "Confidence interval - upper")
+            } else {
+                c1 <- c(c1, paste0(sprintf("%2d", round(ci.level * 100)),
+                            " Percent confidence interval - upper"))
+            }
             c2 <- c(c2, sprintf(num.format, x["rmsea.ci.upper"]))
             c3 <- c(c3, ifelse(scaled,
                         sprintf(num.format, x["rmsea.ci.upper.scaled"]), ""))
         }
+
+        rmsea.close.h0 <- NULL
+        if("rmsea.close.h0" %in% names.x) {
+            rmsea.close.h0 <- x["rmsea.close.h0"]
+        }
+        rmsea.notclose.h0 <- NULL
+        if("rmsea.notclose.h0" %in% names.x) {
+            rmsea.notclose.h0 <- x["rmsea.notclose.h0"]
+        }
         if("rmsea.pvalue" %in% names.x) {
-            c1 <- c(c1, "P-value H_0: RMSEA <= 0.05")
+            if(is.null(rmsea.close.h0)) {
+                c1 <- c(c1, "P-value H_0: RMSEA <= 0.05")
+            } else {
+                c1 <- c(c1, paste0("P-value H_0: RMSEA <= ",
+                                   sprintf("%4.3f", rmsea.close.h0)))
+            }
             c2 <- c(c2, sprintf(num.format, x["rmsea.pvalue"]))
             c3 <- c(c3, ifelse(scaled,
                   sprintf(num.format, x["rmsea.pvalue.scaled"]), ""))
+        }
+        if("rmsea.notclose.pvalue" %in% names.x) {
+            if(is.null(rmsea.notclose.h0)) {
+                c1 <- c(c1, "P-value H_0: RMSEA >= 0.080")
+            } else {
+                c1 <- c(c1, paste0("P-value H_0: RMSEA >= ",
+                                   sprintf("%4.3f", rmsea.notclose.h0)))
+            }
+            c2 <- c(c2, sprintf(num.format, x["rmsea.notclose.pvalue"]))
+            c3 <- c(c3, ifelse(scaled,
+                  sprintf(num.format, x["rmsea.notclose.pvalue.scaled"]), ""))
         }
 
         # robust
@@ -616,18 +703,44 @@ print.lavaan.fitMeasures <- function(x, ..., nd = 3L, add.h0 = TRUE) {
                         sprintf(num.format, x["rmsea.robust"]), ""))
         }
         if("rmsea.ci.lower.robust" %in% names.x) {
-            c1 <- c(c1, "90 Percent confidence interval - lower")
+            if(is.null(ci.level)) {
+                c1 <- c(c1, "Confidence interval - lower")
+            } else {
+                c1 <- c(c1, paste0(sprintf("%2d", round(ci.level * 100)),
+                            " Percent confidence interval - lower"))
+            }
             c2 <- c(c2, "")
             c3 <- c(c3, sprintf(num.format, x["rmsea.ci.lower.robust"]))
-            c1 <- c(c1, "90 Percent confidence interval - upper")
+            if(is.null(ci.level)) {
+                c1 <- c(c1, "Confidence interval - upper")
+            } else {
+                c1 <- c(c1, paste0(sprintf("%2d", round(ci.level * 100)),
+                            " Percent confidence interval - upper"))
+            }
             c2 <- c(c2, "")
             c3 <- c(c3, sprintf(num.format, x["rmsea.ci.upper.robust"]))
         }
         if("rmsea.pvalue.robust" %in% names.x) {
-            c1 <- c(c1, "P-value H_0: Robust RMSEA <= 0.05")
+            if(is.null(rmsea.close.h0)) {
+                c1 <- c(c1, "P-value H_0: Robust RMSEA <= 0.05")
+            } else {
+                c1 <- c(c1, paste0("P-value H_0: Robust RMSEA <= ",
+                                   sprintf("%4.3f", rmsea.close.h0)))
+            }
             c2 <- c(c2, "")
             c3 <- c(c3, ifelse(scaled,
                             sprintf(num.format, x["rmsea.pvalue.robust"]), ""))
+        }
+        if("rmsea.notclose.pvalue.robust" %in% names.x) {
+            if(is.null(rmsea.notclose.h0)) {
+                c1 <- c(c1, "P-value H_0: Robust RMSEA >= 0.080")
+            } else {
+                c1 <- c(c1, paste0("P-value H_0: Robust RMSEA >= ",
+                                   sprintf("%4.3f", rmsea.notclose.h0)))
+            }
+            c2 <- c(c2, "")
+            c3 <- c(c3, ifelse(scaled,
+                            sprintf(num.format, x["rmsea.notclose.pvalue.robust"]), ""))
         }
 
         # format c1/c2/c3

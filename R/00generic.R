@@ -2,10 +2,16 @@
 # TDJ: add "..." to make the generic actually generic, for lavaan.mi objects
 setGeneric("fitMeasures",
     function(object, fit.measures = "all", baseline.model = NULL,
+             fit.args = list(rmsea.ci.level    = 0.90,
+                             rmsea.close.h0    = 0.05,
+                             rmsea.notclose.h0 = 0.08),
              output = "vector", ...)
     standardGeneric("fitMeasures"))
 setGeneric("fitmeasures",
     function(object, fit.measures = "all", baseline.model = NULL,
+             fit.args = list(rmsea.ci.level    = 0.90,
+                             rmsea.close.h0    = 0.05,
+                             rmsea.notclose.h0 = 0.08),
              output = "vector", ...)
     standardGeneric("fitmeasures"))
 

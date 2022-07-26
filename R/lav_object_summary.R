@@ -6,6 +6,7 @@
 #   a list
 # - the result is a S3 class lavaan.summary
 # - the actual printing is done by print.lavaan.summary (see lav_print.R)
+# YR 26 July 2022: add fit.args= argument to set h0.closefit and h0.notclosefit
 
 # create summary of a lavaan object
 lav_object_summary <- function(object, header       = TRUE,
@@ -19,6 +20,10 @@ lav_object_summary <- function(object, header       = TRUE,
                                        cov.std      = TRUE,
                                        rsquare      = FALSE,
                                        std.nox      = FALSE,
+                                       fit.args     =
+                                           list(rmsea.ci.level       = 0.90,
+                                                rmsea.h0.closefit    = 0.05,
+                                                rmsea.h0.notclosefit = 0.08),
                                        modindices   = FALSE) {
 
     # return a list with the main ingredients
@@ -130,7 +135,8 @@ lav_object_summary <- function(object, header       = TRUE,
         } else if(object@optim$npar > 0L && !object@optim$converged) {
             warning("lavaan WARNING: fit measures not available if model did not converge\n\n")
         } else {
-            FIT <- fitMeasures(object, fit.measures="default")
+            FIT <- lav_fit_measures(object, fit.measures = "default",
+                                    fit.args = fit.args)
             res$fit = FIT
         }
     }
