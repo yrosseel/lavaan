@@ -552,7 +552,7 @@ lav_samplestats_Gamma <- function(Y,
 
         } else {
             Gamma <- Gamma.u
-        } 
+        }
     } # unbiased
 
     Gamma

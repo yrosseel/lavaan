@@ -319,6 +319,12 @@ Estimation options:
      of the test statistic. If \code{"default"}, the value depends on the
      values of other arguments. From version 0.6-5 onwards, the test argument
      accepts a vector, and therefore multiple tests can be requested.}
+   \item{\code{gamma.n.minus.one}}{Logical. If \code{TRUE}, we divide the
+     Gamma matrix by N-1 (instead of the default N).}
+   \item{\code{gamma.unbiased}}{Logical. If \code{TRUE}, we compute an
+     unbiased version for the Gamma matrix. Only available when data is
+     complete and when \code{conditional.x = FALSE} and \code{fixed.x = FALSE}
+     (for now).}
    \item{\code{bootstrap}:}{Number of bootstrap draws, if bootstrapping is 
      used.}
    \item{\code{do.fit}:}{If \code{FALSE}, the model is not fit, and the 

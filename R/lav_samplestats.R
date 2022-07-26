@@ -22,7 +22,6 @@ lav_samplestats_from_data <- function(lavdata           = NULL,
     conditional.x     <- lavoptions$conditional.x
     fixed.x           <- lavoptions$fixed.x
     group.w.free      <- lavoptions$group.w.free
-    gamma.n.minus.one <- lavoptions$gamma.n.minus.one
     se                <- lavoptions$se
     test              <- lavoptions$test
     ridge             <- lavoptions$ridge
@@ -659,7 +658,9 @@ lav_samplestats_from_data <- function(lavdata           = NULL,
                                           conditional.x  = conditional.x,
                                           meanstructure  = meanstructure,
                                           slopestructure = conditional.x,
-                                          gamma.n.minus.one = gamma.n.minus.one,
+                                          gamma.n.minus.one =
+                                              lavoptions$gamma.n.minus.one,
+                                          unbiased = lavoptions$gamma.unbiased,
                                           Mplus.WLS      = FALSE)
             } else if(estimator %in% c("WLS","DWLS","ULS","DLS")) {
                 if(!categorical) {
@@ -702,11 +703,14 @@ lav_samplestats_from_data <- function(lavdata           = NULL,
                                               conditional.x = conditional.x,
                                               meanstructure = meanstructure,
                                               slopestructure = conditional.x,
-                                              gamma.n.minus.one = gamma.n.minus.one,
+                                              gamma.n.minus.one =
+                                                  lavoptions$gamma.n.minus.one,
+                                              unbiased =
+                                                  lavoptions$gamma.unbiased,
                                               Mplus.WLS = (mimic=="Mplus"))
                 } else { # categorical case
                     NACOV[[g]]  <- CAT$WLS.W  * nobs[[g]]
-                    if(gamma.n.minus.one) {
+                    if(lavoptions$gamma.n.minus.one) {
                         NACOV[[g]] <- NACOV[[g]] * nobs[[g]] / (nobs[[g]] - 1L)
                     }
                 }

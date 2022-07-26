@@ -336,6 +336,7 @@ lav_mvnorm_h1_information_firstorder <- function(Y              = NULL,
     # calling lav_mvnorm_information_firstorder()?
 
     # Gamma
+    # FIXME: what about the 'unbiased = TRUE' option?
     if(is.null(Gamma)) {
         if(!is.null(x.idx) && length(x.idx) > 0L) {
             Gamma <- lav_samplestats_Gamma(Y, x.idx = x.idx, fixed.x = TRUE,
@@ -419,6 +420,7 @@ lav_mvnorm_h1_inverted_information_firstorder <- function(Y          = NULL,
     }
 
     # Gamma
+    # what about the 'unbiased = TRUE' option?
     if(is.null(Gamma)) {
         if(!is.null(x.idx) && length(x.idx) > 0L) {
             Gamma <- lav_samplestats_Gamma(Y, x.idx = x.idx, fixed.x = TRUE,

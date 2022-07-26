@@ -148,7 +148,7 @@ lav_options_default <- function(mimic = "lavaan") {
 
                 bootstrap              = 1000L,
                 gamma.n.minus.one      = FALSE,
-                #gamma.unbiased         = FALSE,
+                gamma.unbiased         = FALSE,
 
                 # optimization
                 control                = list(),
