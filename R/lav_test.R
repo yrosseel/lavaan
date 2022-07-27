@@ -9,48 +9,60 @@ lavTest <- function(lavobject, test = "standard", output = "list",
         stop("lavaan ERROR: output should be list or text")
     }
 
+    TEST.NAMES <- c("standard",
+                    "satorra.bentler", "yuan.bentler","yuan.bentler.mplus",
+                    "mean.var.adjusted", "scaled.shifted",
+                    "browne.residual.adf", "browne.residual.nt")
+
     # extract 'test' slot
     TEST <- lavobject@test
 
     # which test?
     if(!missing(test)) {
         # check 'test'
-        if(!is.character(test) || length(test) > 1L) {
-            stop("lavaan ERROR: test should be a single character string.")
-        }
-        test <- tolower(test)
-        if(test == "none") {
-            return(list())
-        } else if(test %in% c("bootstrap", "bollen.stine")) {
-            stop("lavaan ERROR: please use bootstrapLavaan() to obtain a bootstrap based test statistic.")
-        }
-        if(!test %in% c("none", "standard",
-                        "satorra.bentler", "yuan.bentler","yuan.bentler.mplus",
-                        "mean.var.adjusted", "scaled.shifted",
-                        "browne.residual.adf", "browne.residual.nt")) {
-            stop("lavaan ERROR: invalid value for test: ", test)
+        if(!is.character(test)) {
+            stop("lavaan ERROR: test should be a character string.")
+        } else {
+            test <- lav_test_rename(test)
         }
 
-        # check if already have it:
+        if(test[1] == "none") {
+            return(list())
+        } else if(any(test %in% c("bootstrap", "bollen.stine"))) {
+            stop("lavaan ERROR: please use bootstrapLavaan() to obtain a bootstrap based test statistic.")
+        }
+        if(!all(test %in% TEST.NAMES)) {
+            bad.idx <- which(!test %in% TEST.NAMES)
+            txt <- c("invalid name for test statistic: [", test[bad.idx[1]],
+                     "]. Valid names are:\n",
+                     paste(TEST.NAMES, collapse = " "))
+            stop(lav_txt2message(txt, header = "lavaan ERROR:"))
+        }
+
+        # check if we already have it:
         if(all(test %in% names(TEST))) {
             test.idx <- which(names(TEST) %in% test)
             TEST <- TEST[test.idx]
         } else {
+            # redo ALL of them, even if already have some in TEST
+            # later, we will allow to also change the options (like information)
+            # and this should be reflected in the 'info'attribute
+
             # fill in test in Options slot
             lavobject@Options$test <- test
 
             # get requested test statistics
             TEST <- lav_model_test(lavobject = lavobject)
-
-            # only the ones requested
-            test.idx <- which(names(TEST) %in% test)
-            TEST <- TEST[test.idx]
         }
     }
 
     if(output == "list") {
         # remove 'info' attribute
         attr(TEST, "info") <- NULL
+
+        # select only those that were requested (eg remove standard)
+        test.idx <- which(names(TEST) %in% test)
+        TEST <- TEST[test.idx]
 
         # if only 1 test, drop outer list
         if(length(TEST) == 1L && drop.list.single) {
@@ -65,6 +77,52 @@ lavTest <- function(lavobject, test = "standard", output = "list",
     invisible(TEST)
 }
 
+# allow for 'flexible' names for the test statistics
+lav_test_rename <- function(test) {
+
+    test <- tolower(test)
+
+    if(length(target.idx <- which(test %in%
+        c("satorra", "sb", "satorra.bentler", "satorra-bentler",
+          "m.adjusted", "m", "mean.adjusted", "mean-adjusted"))) > 0L) {
+        test[target.idx] <- "satorra.bentler"
+    }
+    if(length(target.idx <- which(test %in%
+        c("yuan", "yb", "yuan.bentler", "yuan-bentler"))) > 0L) {
+        test[target.idx] <- "yuan.bentler"
+    }
+    if(length(target.idx <- which(test %in%
+        c("yuan.bentler.mplus", "yuan-bentler.mplus",
+          "yuan-bentler-mplus"))) > 0L) {
+        test[target.idx] <- "yuan.bentler.mplus"
+    }
+    if(length(target.idx <- which(test %in%
+        c("mean.var.adjusted", "mean-var-adjusted", "mv", "second.order",
+          "satterthwaite", "mv.adjusted"))) > 0L) {
+        test[target.idx] <- "mean.var.adjusted"
+    }
+    if(length(target.idx <- which(test %in%
+        c("mplus6", "scale.shift", "scaled.shifted",
+          "scaled-shifted"))) > 0L) {
+        test[target.idx] <- "scaled.shifted"
+    }
+    if(length(target.idx <- which(test %in%
+        c("bootstrap", "boot", "bollen.stine", "bollen-stine"))) > 0L) {
+        test[target.idx] <- "bollen.stine"
+    }
+    if(length(target.idx <- which(test %in%
+        c("browne", "residual", "residuals", "browne.residual",
+          "browne.residuals", "residual-based", "residual.based",
+          "browne.residuals.adf", "browne.residual.adf"))) > 0L) {
+        test[target.idx] <- "browne.residual.adf"
+    }
+    if(length(target.idx <- which(test %in%
+        c("browne.residuals.nt", "browne.residual.nt"))) > 0L) {
+        test[target.idx] <- "browne.residual.nt"
+    }
+
+    test
+}
 
 lav_model_test <- function(lavobject      = NULL,
                            lavmodel       = NULL,

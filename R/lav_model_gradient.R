@@ -643,7 +643,11 @@ computeDelta <- function(lavmodel = NULL, GLIST. = NULL,
 
     representation   <- lavmodel@representation
     categorical      <- lavmodel@categorical
-    correlation      <- lavmodel@correlation
+    if(.hasSlot(lavmodel, "correlation")) {
+        correlation   <- lavmodel@correlation
+    } else {
+        correlation   <- FALSE
+    }
     conditional.x    <- lavmodel@conditional.x
     group.w.free     <- lavmodel@group.w.free
     nmat             <- lavmodel@nmat

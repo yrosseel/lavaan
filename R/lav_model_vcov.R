@@ -202,7 +202,7 @@ lav_model_nvcov_robust_sandwich <- function(lavmodel       = NULL,
 
     # new in 0.6-6, check for h1.information.meat
     lavoptions2 <- lavoptions
-    if(!is.null(lavoptions$h1.information.meat)) {
+    if(!is.null(lavoptions$information.meat)) {
         lavoptions2$information <- lavoptions$information.meat
     }
     if(!is.null(lavoptions$h1.information.meat)) {

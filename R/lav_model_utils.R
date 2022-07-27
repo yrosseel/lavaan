@@ -66,8 +66,14 @@ lav_model_set_parameters <- function(lavmodel = NULL, x = NULL) {
         tmp[[mm]][m.free.idx] <- x[x.free.idx]
     }
 
+    if(.hasSlot(lavmodel, "correlation")) {
+        correlation   <- lavmodel@correlation
+    } else {
+        correlation   <- FALSE
+    }
+
     # categorical? set categorical theta elements (if any)
-    if(lavmodel@categorical || lavmodel@correlation) {
+    if(lavmodel@categorical || correlation) {
         nmat <- lavmodel@nmat
         if(lavmodel@representation == "LISREL") {
             for(g in 1:lavmodel@nblocks) {
@@ -111,6 +117,12 @@ lav_model_x2GLIST <- function(lavmodel = NULL, x = NULL,
                               type = "free", setDelta = TRUE,
                               m.el.idx = NULL, x.el.idx = NULL) {
 
+    if(.hasSlot(lavmodel, "correlation")) {
+        correlation   <- lavmodel@correlation
+    } else {
+        correlation   <- FALSE
+    }
+
     GLIST <- lavmodel@GLIST
     for(mm in 1:length(GLIST)) {
         # skip empty matrix
@@ -148,7 +160,7 @@ lav_model_x2GLIST <- function(lavmodel = NULL, x = NULL,
     }
 
 #    # theta parameterization: delta must be reset!
-#    if((lavmodel@categorical || lavmodel@correlation) && setDelta &&
+#    if((lavmodel@categorical || correlation) && setDelta &&
 #       lavmodel@parameterization == "theta") {
 #        nmat <- lavmodel@nmat
 #        for(g in 1:lavmodel@nblocks) {
@@ -161,7 +173,7 @@ lav_model_x2GLIST <- function(lavmodel = NULL, x = NULL,
 #    }
 
     # in 0.6-13: we always set theta/delta
-    if((lavmodel@categorical || lavmodel@correlation) && setDelta) {
+    if((lavmodel@categorical || correlation) && setDelta) {
         nmat <- lavmodel@nmat
         if(lavmodel@representation == "LISREL") {
             for(g in 1:lavmodel@nblocks) {

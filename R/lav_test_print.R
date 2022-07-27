@@ -1,6 +1,10 @@
 # print 'blocks' of test statistics
-# blocks with 'scaling.factors' come first
-#
+# - blocks with 'scaling.factors' come first (in 'two columns')
+# - then come the 'single-column' test statistics (eg browne.residual.adf)
+# - print additional informatiation (eg information matrix, h1.information, ...)
+#   if they deviate from what is used for the standard errors
+
+# this is used by the summary() function and lavTest(, output = "text")
 
 lav_test_print <- function(object, nd = 3L) {
 
@@ -54,13 +58,20 @@ lav_test_print <- function(object, nd = 3L) {
         }
 
         if(!twocolumn) {
+            # print label
+            c1 <- c2 <- c3 <- character(0L)
+            if(!is.null(TEST[[block]]$label)) {
+                c1 <- c(c1, TEST[[block]]$label)
+                c2 <- c(c2, "")
+                c3 <- c(c3, "")
+            }
             if(is.na(TEST[[block]]$df) || TEST[[block]]$df == 0L) {
-                c1 <- c("Test statistic", "Degrees of freedom")
-                c2 <- c(sprintf(num.format, TEST[[block]]$stat),
+                c1 <- c(c1, c("Test statistic", "Degrees of freedom"))
+                c2 <- c(c1, c(sprintf(num.format, TEST[[block]]$stat),
                         ifelse(TEST[[block]]$df %% 1 == 0, # integer
                                TEST[[block]]$df,
-                               sprintf(num.format, TEST[[block]]$df)))
-                c3 <- c("", "")
+                               sprintf(num.format, TEST[[block]]$df))))
+                c3 <- c(3, c("", ""))
             } else {
                 PLABEL <- "P-value"
                 if(!is.null(TEST[[block]]$refdistr)) {
@@ -72,14 +83,15 @@ lav_test_print <- function(object, nd = 3L) {
                         PLABEL <- "P-value (Bollen-Stine bootstrap)"
                     }
                 }
-                c1 <- c("Test statistic", "Degrees of freedom", PLABEL)
-                c2 <- c(sprintf(num.format, TEST[[block]]$stat),
+                c1 <- c(c1, c("Test statistic", "Degrees of freedom", PLABEL))
+                c2 <- c(c2, c(sprintf(num.format, TEST[[block]]$stat),
                         ifelse(TEST[[block]]$df %% 1 == 0, # integer
                                TEST[[block]]$df,
                                sprintf(num.format, TEST[[block]]$df)),
-                        sprintf(num.format, TEST[[block]]$pvalue))
-                c3 <- c("", "", "")
+                        sprintf(num.format, TEST[[block]]$pvalue)))
+                c3 <- c(c3, c("", "", ""))
             }
+
         } else {
             if(is.na(TEST[[block]]$df) || TEST[[block]]$df == 0L) {
                 c1 <- c("Test Statistic", "Degrees of freedom")

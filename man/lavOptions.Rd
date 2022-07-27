@@ -304,27 +304,18 @@ Estimation options:
       is requested for the test statistic; in this case bootstrap standard
       errors are computed using model-based bootstrapping).
       If \code{"none"}, no standard errors are computed.}
-   \item{\code{test}:}{If \code{"standard"}, a conventional chi-square test 
-     is computed. If \code{"Satorra.Bentler"}, a Satorra-Bentler scaled test 
-     statistic is computed. If \code{"Yuan.Bentler"}, a Yuan-Bentler scaled 
-     test statistic is computed. If \code{"Yuan.Bentler.Mplus"}, a 
-     test statistic is computed that is asymptotically equal to the
-     Yuan-Bentler scaled
-     test statistic. If \code{"mean.var.adjusted"} or 
-     \code{"Satterthwaite"}, a mean and variance adjusted test statistic is 
-     compute. If \code{"scaled.shifted"}, an alternative mean and variance 
-     adjusted test statistic is computed (as in Mplus version 6 or higher).
-     If \code{"boot"} or \code{"bootstrap"} or \code{"Bollen.Stine"}, the 
-     Bollen-Stine bootstrap is used to compute the bootstrap probability value 
-     of the test statistic. If \code{"default"}, the value depends on the
-     values of other arguments. From version 0.6-5 onwards, the test argument
-     accepts a vector, and therefore multiple tests can be requested.}
+   \item{\code{test}:}{Character vector. See the documentation of
+      the \code{\link{lavTest}} function for a full list. Multiple names
+      of test statistics can be provided. If \code{"default"}, the value 
+      depends on the values of other arguments. See also the 
+      \code{\link{lavTest}} function to extract (alternative)     
+      test statistics from a fitted lavaan object.}
    \item{\code{gamma.n.minus.one}}{Logical. If \code{TRUE}, we divide the
      Gamma matrix by N-1 (instead of the default N).}
    \item{\code{gamma.unbiased}}{Logical. If \code{TRUE}, we compute an
-     unbiased version for the Gamma matrix. Only available when data is
-     complete and when \code{conditional.x = FALSE} and \code{fixed.x = FALSE}
-     (for now).}
+     unbiased version for the Gamma matrix. Only available for single-level
+     complete data and when \code{conditional.x = FALSE} and 
+     \code{fixed.x = FALSE} (for now).}
    \item{\code{bootstrap}:}{Number of bootstrap draws, if bootstrapping is 
      used.}
    \item{\code{do.fit}:}{If \code{FALSE}, the model is not fit, and the 

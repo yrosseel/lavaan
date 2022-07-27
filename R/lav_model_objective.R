@@ -21,7 +21,11 @@ lav_model_objective <- function(lavmodel       = NULL,
     meanstructure  <- lavmodel@meanstructure
     estimator      <- lavmodel@estimator
     categorical    <- lavmodel@categorical
-    correlation    <- lavmodel@correlation
+    if(.hasSlot(lavmodel, "correlation")) {
+        correlation    <- lavmodel@correlation
+    } else {
+        correlation    <- FALSE
+    }
     group.w.free   <- lavmodel@group.w.free
     fixed.x        <- lavmodel@fixed.x
     conditional.x  <- lavmodel@conditional.x

@@ -21,6 +21,9 @@ lav_model <- function(lavpartable      = NULL,
     ngroups <- lav_partable_ngroups(lavpartable)
     meanstructure <- any(lavpartable$op == "~1")
     correlation <- lavoptions$correlation
+    if(is.null(correlation)) {
+        correlation <- FALSE
+    }
     categorical <- any(lavpartable$op == "|")
     if(categorical) {
         meanstructure <- TRUE

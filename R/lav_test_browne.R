@@ -14,7 +14,6 @@
 # YR 26 July 2022: add alternative slots, if lavobject = NULL
 
 # TODo: - allow for 'structured' (model-based) version of Gamma
-#       - allow for unbiased version of Gamma
 #       - allow for non-linear equality constraints
 #         (see Browne, 1982, eq 1.7.19)
 
@@ -182,13 +181,16 @@ lav_test_browne <- function(lavobject      = NULL,
 
     if(ADF) {
         NAME <- "browne.residual.adf"
+        LABEL <- "Browne's residual-based (ADF) test"
     } else {
         NAME <- "browne.residual.nt"
+        LABEL <- "Browne's residual-based (NT) test"
     }
     out <- list(test       = NAME,
                 stat       = STAT,
                 stat.group = stat.group,
                 df         = DF,
-                pvalue     = 1 - pchisq(STAT, DF))
+                pvalue     = 1 - pchisq(STAT, DF),
+                label      = LABEL)
     out
 }
