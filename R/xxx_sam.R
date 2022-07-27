@@ -661,6 +661,8 @@ sam <- function(model          = NULL,
     #lavoptions.PA$fixed.x <- TRUE # may be false if indicator is predictor
     lavoptions.PA$fixed.x <- FALSE # until we fix this...
     lavoptions.PA$verbose <- FALSE # must be in struc.args
+    lavoptions.PA$categorical <- FALSE
+    lavoptions.PA$.caegorical <- FALSE
     lavoptions.PA <- modifyList(lavoptions.PA, struc.args)
 
     # override, no matter what
@@ -869,7 +871,7 @@ sam <- function(model          = NULL,
         if(lavoptions$verbose) {
             cat("Computing ", lavoptions$se, " standard errors ... ", sep = "")
         }
-        JOINT@Model@estimator <- "ML"  # FIXME!
+        JOINT@Model@estimator <- FIT@Options$estimator # could be DWLS!
         JOINT@Options$se <- lavoptions$se # always set to standard?
         if(JOINT@Model@ceq.simple.only) {
             VCOV.ALL <-  matrix(0, JOINT@Model@nx.unco,

@@ -67,11 +67,11 @@ lav_test_print <- function(object, nd = 3L) {
             }
             if(is.na(TEST[[block]]$df) || TEST[[block]]$df == 0L) {
                 c1 <- c(c1, c("Test statistic", "Degrees of freedom"))
-                c2 <- c(c1, c(sprintf(num.format, TEST[[block]]$stat),
+                c2 <- c(c2, c(sprintf(num.format, TEST[[block]]$stat),
                         ifelse(TEST[[block]]$df %% 1 == 0, # integer
                                TEST[[block]]$df,
                                sprintf(num.format, TEST[[block]]$df))))
-                c3 <- c(3, c("", ""))
+                c3 <- c(c3, c("", ""))
             } else {
                 PLABEL <- "P-value"
                 if(!is.null(TEST[[block]]$refdistr)) {
