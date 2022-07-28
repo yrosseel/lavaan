@@ -1,4 +1,131 @@
-lav_model_test <- function(lavmodel       = NULL,
+# chi-square test statistic:
+# comparing the current model versus the saturated/unrestricted model
+
+lavTest <- function(lavobject, test = "standard", output = "list",
+                    drop.list.single = TRUE) {
+
+    # check output
+    if(!output %in% c("list", "text")) {
+        stop("lavaan ERROR: output should be list or text")
+    }
+
+    TEST.NAMES <- c("standard",
+                    "satorra.bentler", "yuan.bentler","yuan.bentler.mplus",
+                    "mean.var.adjusted", "scaled.shifted",
+                    "browne.residual.adf", "browne.residual.nt")
+
+    # extract 'test' slot
+    TEST <- lavobject@test
+
+    # which test?
+    if(!missing(test)) {
+        # check 'test'
+        if(!is.character(test)) {
+            stop("lavaan ERROR: test should be a character string.")
+        } else {
+            test <- lav_test_rename(test)
+        }
+
+        if(test[1] == "none") {
+            return(list())
+        } else if(any(test %in% c("bootstrap", "bollen.stine"))) {
+            stop("lavaan ERROR: please use bootstrapLavaan() to obtain a bootstrap based test statistic.")
+        }
+        if(!all(test %in% TEST.NAMES)) {
+            bad.idx <- which(!test %in% TEST.NAMES)
+            txt <- c("invalid name for test statistic: [", test[bad.idx[1]],
+                     "]. Valid names are:\n",
+                     paste(TEST.NAMES, collapse = " "))
+            stop(lav_txt2message(txt, header = "lavaan ERROR:"))
+        }
+
+        # check if we already have it:
+        if(all(test %in% names(TEST))) {
+            test.idx <- which(names(TEST) %in% test)
+            TEST <- TEST[test.idx]
+        } else {
+            # redo ALL of them, even if already have some in TEST
+            # later, we will allow to also change the options (like information)
+            # and this should be reflected in the 'info'attribute
+
+            # fill in test in Options slot
+            lavobject@Options$test <- test
+
+            # get requested test statistics
+            TEST <- lav_model_test(lavobject = lavobject)
+        }
+    }
+
+    if(output == "list") {
+        # remove 'info' attribute
+        attr(TEST, "info") <- NULL
+
+        # select only those that were requested (eg remove standard)
+        test.idx <- which(names(TEST) %in% test)
+        TEST <- TEST[test.idx]
+
+        # if only 1 test, drop outer list
+        if(length(TEST) == 1L && drop.list.single) {
+            TEST <- TEST[[1]]
+        }
+
+        return(TEST)
+    } else {
+        lav_test_print(TEST)
+    }
+
+    invisible(TEST)
+}
+
+# allow for 'flexible' names for the test statistics
+lav_test_rename <- function(test) {
+
+    test <- tolower(test)
+
+    if(length(target.idx <- which(test %in%
+        c("satorra", "sb", "satorra.bentler", "satorra-bentler",
+          "m.adjusted", "m", "mean.adjusted", "mean-adjusted"))) > 0L) {
+        test[target.idx] <- "satorra.bentler"
+    }
+    if(length(target.idx <- which(test %in%
+        c("yuan", "yb", "yuan.bentler", "yuan-bentler"))) > 0L) {
+        test[target.idx] <- "yuan.bentler"
+    }
+    if(length(target.idx <- which(test %in%
+        c("yuan.bentler.mplus", "yuan-bentler.mplus",
+          "yuan-bentler-mplus"))) > 0L) {
+        test[target.idx] <- "yuan.bentler.mplus"
+    }
+    if(length(target.idx <- which(test %in%
+        c("mean.var.adjusted", "mean-var-adjusted", "mv", "second.order",
+          "satterthwaite", "mv.adjusted"))) > 0L) {
+        test[target.idx] <- "mean.var.adjusted"
+    }
+    if(length(target.idx <- which(test %in%
+        c("mplus6", "scale.shift", "scaled.shifted",
+          "scaled-shifted"))) > 0L) {
+        test[target.idx] <- "scaled.shifted"
+    }
+    if(length(target.idx <- which(test %in%
+        c("bootstrap", "boot", "bollen.stine", "bollen-stine"))) > 0L) {
+        test[target.idx] <- "bollen.stine"
+    }
+    if(length(target.idx <- which(test %in%
+        c("browne", "residual", "residuals", "browne.residual",
+          "browne.residuals", "residual-based", "residual.based",
+          "browne.residuals.adf", "browne.residual.adf"))) > 0L) {
+        test[target.idx] <- "browne.residual.adf"
+    }
+    if(length(target.idx <- which(test %in%
+        c("browne.residuals.nt", "browne.residual.nt"))) > 0L) {
+        test[target.idx] <- "browne.residual.nt"
+    }
+
+    test
+}
+
+lav_model_test <- function(lavobject      = NULL,
+                           lavmodel       = NULL,
                            lavpartable    = NULL,
                            lavpta         = NULL,
                            lavsamplestats = NULL,
@@ -12,6 +139,25 @@ lav_model_test <- function(lavmodel       = NULL,
                            lavloglik      = NULL,
                            test.UGamma.eigvals = FALSE) {
 
+    # lavobject?
+    if(!is.null(lavobject)) {
+        lavmodel       <- lavobject@Model
+        lavpartable    <- lavobject@ParTable
+        lavpta         <- lavobject@pta
+        lavsamplestats <- lavobject@SampleStats
+        lavimplied     <- lavobject@implied
+        lavh1          <- lavobject@h1
+        lavoptions     <- lavobject@Options
+        x              <- lavobject@optim$x
+            fx                   <- lavobject@optim[["fx"]]
+            fx.group             <- lavobject@optim[["fx.group"]]
+            attr(fx, "fx.group") <- fx.group
+            attr(x, "fx")        <- fx
+        VCOV           <- lavobject@vcov$vcov
+        lavcache       <- lavobject@Cache
+        lavdata        <- lavobject@Data
+        lavloglik      <- lavobject@loglik
+    }
 
     test <- lavoptions$test
 
@@ -30,6 +176,7 @@ lav_model_test <- function(lavmodel       = NULL,
             df <- df + neq
         }
     } else if(lavmodel@ceq.simple.only) {
+        # needed??
         ndat <- lav_partable_ndat(lavpartable)
         npar <- max(lavpartable$free)
         df <- ndat - npar
@@ -263,6 +410,21 @@ lav_model_test <- function(lavmodel       = NULL,
                              method         = "ABA",
                              return.ugamma  = FALSE)
             TEST[[this.test]] <- out[[this.test]]
+
+        } else if(this.test %in% c("browne.residual.adf",
+                                   "browne.residual.nt")) {
+
+            ADF <- TRUE
+            if(this.test == "browne.residual.nt") {
+                ADF <- FALSE
+            }
+            out <- lav_test_browne(lavobject      = NULL,
+                                   lavdata        = lavdata,
+                                   lavsamplestats = lavsamplestats,
+                                   lavmodel       = lavmodel,
+                                   lavoptions     = lavoptions,
+                                   ADF            = ADF)
+            TEST[[this.test]] <- out
 
         } else if(this.test %in% c("yuan.bentler",
                                    "yuan.bentler.mplus")) {

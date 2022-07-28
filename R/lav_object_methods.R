@@ -41,6 +41,9 @@ function(object, header       = TRUE,
                  cov.std      = TRUE,
                  rsquare      = FALSE,
                  std.nox      = FALSE,
+                 fit.args     = list(rmsea.ci.level       = 0.90,
+                                     rmsea.h0.closefit    = 0.05,
+                                     rmsea.h0.notclosefit = 0.08),
                  modindices   = FALSE,
                  nd = 3L) {
 
@@ -48,7 +51,8 @@ function(object, header       = TRUE,
                fit.measures = fit.measures, estimates = estimates,
                ci = ci, fmi = fmi, std = std, standardized = standardized,
                remove.step1 = remove.step1, cov.std = cov.std,
-               rsquare = rsquare, std.nox = std.nox, modindices = modindices)
+               rsquare = rsquare, std.nox = std.nox,
+               fit.args = fit.args, modindices = modindices)
 
     # what about nd? only used if we actually print; save as attribute
     attr(res, "nd") <- nd

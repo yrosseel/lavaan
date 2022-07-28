@@ -10,6 +10,7 @@ lav_partable_flat <- function(FLAT = NULL,
                               orthogonal.x     = FALSE,
                               orthogonal.efa   = FALSE,
                               std.lv           = FALSE,
+                              correlation      = FALSE,
                               conditional.x    = FALSE,
                               fixed.x          = TRUE,
                               parameterization = "delta",
@@ -272,6 +273,13 @@ lav_partable_flat <- function(FLAT = NULL,
         lhs <- c(lhs, ov.names.ord)
         rhs <- c(rhs, ov.names.ord)
          op <- c(op,  rep("~*~", length(ov.names.ord)))
+    }
+
+    # same for correlation structures, but now for ALL variables
+    if(correlation) {
+        lhs <- c(lhs, ov.names)
+        rhs <- c(rhs, ov.names)
+         op <- c(op,  rep("~*~", length(ov.names)))
     }
 
     # 3. INTERCEPTS
@@ -615,6 +623,21 @@ lav_partable_flat <- function(FLAT = NULL,
     if(length(ov.names.ord) > 0L) {
         delta.idx <- which(op == "~*~" &
                            user == 0L) ## New in 0.6-1
+        ustart[delta.idx] <- 1.0
+          free[delta.idx] <- 0L
+    }
+
+    # correlation structure (new in 0.6-13)
+    if(correlation) {
+        var.idx <- which(lhs %in% ov.names &
+                         op == "~~" &
+                         user == 0L &
+                         lhs == rhs)
+        ustart[var.idx] <- 1L
+          free[var.idx] <- 0L
+
+        delta.idx <- which(op == "~*~" &
+                           user == 0L)
         ustart[delta.idx] <- 1.0
           free[delta.idx] <- 0L
     }

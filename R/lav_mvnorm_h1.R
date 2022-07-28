@@ -21,6 +21,7 @@
 # YR 25 Mar 2016: first version
 # YR 19 Jan 2017: added 6) + 7)
 # YR 04 Jan 2020: adjust for sum(wt) != N
+# YR 22 Jul 2022: adding correlation= argument for information_expected
 
 # 1. log-likelihood h1
 
@@ -212,7 +213,8 @@ lav_mvnorm_h1_information_expected <- function(Y              = NULL,
                                                x.idx          = NULL,
                                                Sinv.method    = "eigen",
                                                sample.cov.inv = NULL,
-                                               meanstructure  = TRUE) {
+                                               meanstructure  = TRUE,
+                                               correlation    = FALSE) {
     if(is.null(sample.cov.inv)) {
 
         if(is.null(sample.cov)) {
@@ -231,8 +233,13 @@ lav_mvnorm_h1_information_expected <- function(Y              = NULL,
     }
 
     I11 <- sample.cov.inv
-    I22 <- 0.5 * lav_matrix_duplication_pre_post(sample.cov.inv %x%
-                                                 sample.cov.inv)
+    if(correlation) {
+        I22 <- 0.5 * lav_matrix_duplication_cor_pre_post(sample.cov.inv %x%
+                                                         sample.cov.inv)
+    } else {
+        I22 <- 0.5 * lav_matrix_duplication_pre_post(sample.cov.inv %x%
+                                                     sample.cov.inv)
+    }
 
     if(meanstructure) {
         out <- lav_matrix_bdiag(I11, I22)
@@ -329,6 +336,7 @@ lav_mvnorm_h1_information_firstorder <- function(Y              = NULL,
     # calling lav_mvnorm_information_firstorder()?
 
     # Gamma
+    # FIXME: what about the 'unbiased = TRUE' option?
     if(is.null(Gamma)) {
         if(!is.null(x.idx) && length(x.idx) > 0L) {
             Gamma <- lav_samplestats_Gamma(Y, x.idx = x.idx, fixed.x = TRUE,
@@ -412,6 +420,7 @@ lav_mvnorm_h1_inverted_information_firstorder <- function(Y          = NULL,
     }
 
     # Gamma
+    # what about the 'unbiased = TRUE' option?
     if(is.null(Gamma)) {
         if(!is.null(x.idx) && length(x.idx) > 0L) {
             Gamma <- lav_samplestats_Gamma(Y, x.idx = x.idx, fixed.x = TRUE,

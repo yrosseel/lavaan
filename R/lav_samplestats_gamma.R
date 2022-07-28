@@ -8,14 +8,17 @@
 #
 # - one single function for mean + cov
 # - handle 'fixed.x' exogenous covariates
+
+
 # - YR 3 Dec 2015: allow for conditional.x = TRUE
 
-# generic public function
+# generic public function (not exported yet)
 # input for lavGamma can be lavobject, lavdata, data.frame, or matrix
 lavGamma <- function(object, group = NULL, missing = "listwise",
                      ov.names.x = NULL, fixed.x = FALSE, conditional.x = FALSE,
                      meanstructure = FALSE, slopestructure = FALSE,
-                     gamma.n.minus.one = FALSE, ADF = TRUE, NT.rescale = FALSE,
+                     gamma.n.minus.one = FALSE, gamma.unbiased = FALSE,
+                     ADF = TRUE, NT.rescale = FALSE,
                      Mplus.WLS = FALSE, add.labels) {
 
     if(inherits(object, "lavaan")) {
@@ -38,6 +41,9 @@ lavGamma <- function(object, group = NULL, missing = "listwise",
         }
         if(missing(gamma.n.minus.one)) {
             gamma.n.minus.one <- object@Options$gamma.n.minus.one
+        }
+        if(missing(gamma.unbiased)) {
+            gamma.unbiased <- object@Options$gamma.unbiased
         }
     } else if(inherits(object, "lavData")) {
         lavdata <- object
@@ -80,6 +86,7 @@ lavGamma <- function(object, group = NULL, missing = "listwise",
                                      meanstructure  = meanstructure,
                                      slopestructure = conditional.x,
                                      gamma.n.minus.one = gamma.n.minus.one,
+                                     unbiased       = gamma.unbiased,
                                      Mplus.WLS      = Mplus.WLS)
         } else {
             out <- lav_samplestats_Gamma_NT(Y       = Y[[g]],
@@ -247,6 +254,7 @@ lav_samplestats_Gamma_NT <- function(Y              = NULL, # should include
 #  - new in 0.6-1: if Mu/Sigma is provided, compute 'model-based' Gamma
 #                  (only if conditional.x = FALSE, for now)
 #  - new in 0.6-2: if cluster.idx is not NULL, correct for clustering
+#  - new in 0.6-13: add unbiased = TRUE (for the 'plain' setting only)
 
 # ADF THEORY
 lav_samplestats_Gamma <- function(Y,
@@ -259,9 +267,22 @@ lav_samplestats_Gamma <- function(Y,
                                   meanstructure      = FALSE,
                                   slopestructure     = FALSE,
                                   gamma.n.minus.one  = FALSE,
+                                  unbiased           = FALSE,
                                   Mplus.WLS          = FALSE) {
     # coerce to matrix
     Y <- unname(as.matrix(Y)); N <- nrow(Y); p <- ncol(Y)
+
+    # unbiased?
+    if(unbiased) {
+        if(conditional.x || fixed.x || !is.null(Sigma) ||
+           !is.null(cluster.idx)) {
+            stop("lavaan ERROR: unbiased Gamma only available for the simple (not conditional.x or fixed.x or model-based or clustered) setting.")
+        } else {
+            COV <- COV.unbiased <- cov(Y)
+            COV <- COV * (N-1)/N
+            cov.vech <- lav_matrix_vech(COV)
+        }
+    }
 
     # model-based?
     if(!is.null(Sigma)) {
@@ -513,6 +534,34 @@ lav_samplestats_Gamma <- function(Y,
         nC <- nrow(Zc)
         Gamma <- Gamma * nC / (nC - 1)
     }
+
+    # unbiased?
+    if(unbiased) {
+        # normal-theory Gamma (cov only)
+        GammaNT.cov <- 2 * lav_matrix_duplication_ginv_pre_post(COV %x% COV)
+
+        if(meanstructure) {
+            Gamma.cov      <- Gamma[-(1:p), -(1:p), drop = FALSE]
+            Gamma.mean.cov <- Gamma[1:p,    -(1:p), drop = FALSE]
+        } else {
+            Gamma.cov <- Gamma
+        }
+
+        # Browne's unbiased DF estimator (COV part)
+        Gamma.u <- ( N*(N-1)/(N-2)/(N-3) * Gamma.cov -
+                     N/(N-2)/(N-3) * ( GammaNT.cov -
+                                       2/(N-1) * tcrossprod(cov.vech) )  )
+        if(meanstructure) {
+            Gamma <- lav_matrix_bdiag(COV.unbiased,  Gamma.u)
+
+            # 3-rd order:
+            Gamma[1:p,(p+1):ncol(Gamma)] <- Gamma.mean.cov * N/(N-2)
+            Gamma[(p+1):ncol(Gamma),1:p] <- t( Gamma.mean.cov * N/(N-2) )
+
+        } else {
+            Gamma <- Gamma.u
+        }
+    } # unbiased
 
     Gamma
 }

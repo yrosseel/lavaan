@@ -643,6 +643,11 @@ computeDelta <- function(lavmodel = NULL, GLIST. = NULL,
 
     representation   <- lavmodel@representation
     categorical      <- lavmodel@categorical
+    if(.hasSlot(lavmodel, "correlation")) {
+        correlation   <- lavmodel@correlation
+    } else {
+        correlation   <- FALSE
+    }
     conditional.x    <- lavmodel@conditional.x
     group.w.free     <- lavmodel@group.w.free
     nmat             <- lavmodel@nmat
@@ -682,6 +687,8 @@ computeDelta <- function(lavmodel = NULL, GLIST. = NULL,
             pstar[g] <- pstar[g] + nth[g]  # add thresholds
             pstar[g] <- pstar[g] + length(num.idx[[g]]) # add num means
             pstar[g] <- pstar[g] + length(num.idx[[g]]) # add num vars
+        } else if(correlation) {
+            pstar[g] <- pstar[g] - nvar[g] # remove variances
         }
         if(conditional.x && nexo[g] > 0L) {
                 pstar[g] <- pstar[g] + (nvar[g] * nexo[g]) # add slopes
@@ -794,6 +801,12 @@ computeDelta <- function(lavmodel = NULL, GLIST. = NULL,
 
                     DELTA <- rbind(DELTA[var.idx,,drop=FALSE],
                                    DELTA[cor.idx,,drop=FALSE])
+                }
+
+                # correlation structure?
+                if(!categorical && correlation) {
+                    rm.idx <- lav_matrix_diagh_idx(nvar[g])
+                    DELTA <- DELTA[-rm.idx, , drop = FALSE]
                 }
 
                 if(!categorical) {

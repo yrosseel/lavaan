@@ -56,6 +56,7 @@ lav_options_default <- function(mimic = "lavaan") {
                 orthogonal.x       = FALSE,
                 orthogonal.y       = FALSE,
                 std.lv             = FALSE,
+                correlation        = FALSE,     # correlation structure
                 effect.coding      = FALSE,     # TRUE implies
                                                 # c("loadings", "intercepts")
                 ceq.simple         = FALSE,      # treat simple eq cons special?
@@ -147,7 +148,7 @@ lav_options_default <- function(mimic = "lavaan") {
 
                 bootstrap              = 1000L,
                 gamma.n.minus.one      = FALSE,
-                #gamma.unbiased         = FALSE,
+                gamma.unbiased         = FALSE,
 
                 # optimization
                 control                = list(),
@@ -336,10 +337,6 @@ lav_options_set <- function(opt = NULL) {
     # brute-force override (for now)
     if(opt$.clustered && !opt$.multilevel) {
         opt$meanstructure <- TRUE
-        #opt$missing <- "listwise"
-        #if(opt$missing == "ml") {
-        #    opt$optim.gradient = "numerical"
-        #}
 
         if(opt$estimator == "mlr") {
             opt$estimator <- "ml"
@@ -347,6 +344,9 @@ lav_options_set <- function(opt = NULL) {
             opt$se <- "robust.cluster"
         } else if(opt$estimator == "mlm") {
             opt$estimator <- "ml"
+            opt$test <- "satorra.bentler"
+            opt$se <- "robust.cluster.sem"
+        } else if(opt$.categorical) {
             opt$test <- "satorra.bentler"
             opt$se <- "robust.cluster.sem"
         }
@@ -378,7 +378,7 @@ lav_options_set <- function(opt = NULL) {
 
         # information
         if(opt$information[1] == "default") {
-            if(opt$se == "robust.cluster") {
+            if(opt$se == "robust.cluster" && opt$estimator == "ml") {
                 opt$information[1] <- "observed"
             } else {
                 opt$information[1] <- "expected"
@@ -517,35 +517,8 @@ lav_options_set <- function(opt = NULL) {
         }
     }
 
-    # rename if needed
-    if(length(target.idx <- which(opt$test %in%
-        c("satorra", "sb", "satorra.bentler", "satorra-bentler",
-          "m.adjusted", "m", "mean.adjusted", "mean-adjusted"))) > 0L) {
-        opt$test[target.idx] <- "satorra.bentler"
-    }
-    if(length(target.idx <- which(opt$test %in%
-        c("yuan", "yb", "yuan.bentler", "yuan-bentler"))) > 0L) {
-        opt$test[target.idx] <- "yuan.bentler"
-    }
-    if(length(target.idx <- which(opt$test %in%
-        c("yuan.bentler.mplus", "yuan-bentler.mplus",
-          "yuan-bentler-mplus"))) > 0L) {
-        opt$test[target.idx] <- "yuan.bentler.mplus"
-    }
-    if(length(target.idx <- which(opt$test %in%
-        c("mean.var.adjusted", "mean-var-adjusted", "mv", "second.order",
-          "satterthwaite", "mv.adjusted"))) > 0L) {
-        opt$test[target.idx] <- "mean.var.adjusted"
-    }
-    if(length(target.idx <- which(opt$test %in%
-        c("mplus6", "scale.shift", "scaled.shifted",
-          "scaled-shifted"))) > 0L) {
-        opt$test[target.idx] <- "scaled.shifted"
-    }
-    if(length(target.idx <- which(opt$test %in%
-        c("bootstrap", "boot", "bollen.stine", "bollen-stine"))) > 0L) {
-        opt$test[target.idx] <- "bollen.stine"
-    }
+    # rename names of test statistics if needed
+    opt$test <- lav_test_rename(opt$test)
 
     # check missing
     if(opt$missing %in% c("ml", "ml.x") && opt$se == "robust.sem") {
@@ -870,7 +843,7 @@ lav_options_set <- function(opt = NULL) {
                  opt$se, "\n")
         }
 
-        if(opt$test == "default") {
+        if(opt$test[1] == "default") {
             opt$test <- "satorra.bentler"
         } else if(!all(opt$test %in% c("standard","none","satorra.bentler",
                             "mean.adjusted",
@@ -1075,8 +1048,15 @@ lav_options_set <- function(opt = NULL) {
                opt$information[2] == "default") {
             opt$information[2] <- "observed"
         }
+        if(length(opt$observed.information) > 1L &&
+               opt$observed.information[2] == "default") {
+            opt$observed.information[2] <- "hessian"
+        }
         if(opt$se == "default") {
             opt$se <- "robust.huber.white"
+        }
+        if(length(opt$test) > 1L) {
+            stop("lavaan ERROR: only a single test statistic is allow when estimator is PML,")
         }
         if(! (length(opt$test) == 1L && opt$test == "none") ) {
             opt$test <- "mean.var.adjusted"
@@ -1257,11 +1237,11 @@ lav_options_set <- function(opt = NULL) {
 
     # first.order information can not be used with robust
     if(opt$information[2] == "first.order" &&
-       opt$test %in% c("satorra.bentler",
+       any(opt$test %in% c("satorra.bentler",
                        "yuan.bentler",
                        "yuan.bentler.mplus",
                        "mean.var.adjusted",
-                       "scaled.shifted")) {
+                       "scaled.shifted"))) {
         stop("lavaan ERROR: information must be either \"expected\" or \"observed\" if robust test statistics are requested.")
     }
 
@@ -1292,15 +1272,23 @@ lav_options_set <- function(opt = NULL) {
        opt$observed.information[2] == "h1") {
         # do nothing
     } else if(opt$observed.information[2] == "default") {
-        if(opt$test %in% c("satorra.bentler",
+        if(any(opt$test %in% c("satorra.bentler",
                            "yuan.bentler",
                            "yuan.bentler.mplus",
                            "mean.var.adjusted",
-                           "scaled.shifted")) {
-            if(opt$estimator == "PML" || opt$test == "yuan.bentler.mplus") {
-                opt$observed.information[2] <- "hessian"
-            } else {
+                           "scaled.shifted"))) {
+            if(length(opt$test) > 1L) {
                 opt$observed.information[2] <- "h1" # CHANGED in 0.6-6!
+                if(any(opt$test == "yuan.bentler.mplus")) {
+                    warning("observed.information for ALL test statistic is set to h1.")
+                }
+            } else {
+                if(opt$estimator == "PML" ||
+                   opt$test[1] == "yuan.bentler.mplus") {
+                    opt$observed.information[2] <- "hessian"
+                } else {
+                    opt$observed.information[2] <- "h1" # CHANGED in 0.6-6!
+                }
             }
         } else {
             # default is "hessian"
@@ -1555,14 +1543,17 @@ lav_options_set <- function(opt = NULL) {
     wrong.idx <- which(! opt$test %in% c("none", "standard", "satorra.bentler",
                             "yuan.bentler", "yuan.bentler.mplus",
                             "mean.var.adjusted", "scaled.shifted",
+                            "browne.residual.adf", "browne.residual.nt",
                             "bollen.stine"))
     if(length(wrong.idx) > 0L) {
-        stop("lavaan ERROR: invalid option(s) for test argument: ",
-             paste(dQuote(opt$test[wrong.idx]), collapse = " "),
-             "\n\t\t",
-             "Possible options are: \"none\", \"standard\",
-             \"satorra.bentler\", \"yuan.bentler\", \"yuan.bentler.mplus\",
-             \"mean.var.adjusted\", \"scaled.shifted\", or \"bollen.stine\"")
+        txt <- c("invalid option(s) for test argument: ",
+                 paste(dQuote(opt$test[wrong.idx]), collapse = " "), ". ",
+                 "Possible options are: \"none\", \"standard\",
+                 \"browne.residual.adf\", \"browne.residual.nt\",
+                 \"satorra.bentler\", \"yuan.bentler\", \"yuan.bentler.mplus\",
+                 \"mean.var.adjusted\",
+                 \"scaled.shifted\", or \"bollen.stine\"")
+        stop(lav_txt2message(txt, header = "lavaan ERROR:"))
     }
 
 
@@ -1724,12 +1715,35 @@ lav_options_set <- function(opt = NULL) {
              " \"index\" or \"sumofsquares\".")
     }
 
+    # correlation
+    if(opt$correlation) {
+        if(opt$missing == "ml") {
+            stop("lavaan ERROR: correlation structures only work for complete data (for now).")
+        }
+        if(opt$.multilevel) {
+            stop("lavaan ERROR: correlation structures only work for single-level data.")
+        }
+        if(opt$conditional.x) {
+            stop("lavaan ERROR: correlation structures only work for conditional.x = FALSE (for now).")
+        }
+        if(opt$representation == "RAM") {
+            stop("lavaan ERROR: correlation structures only work for representation = \"LISREL\".")
+        }
+        if(opt$fixed.x) {
+            # first fix eliminate.pstar.idx in lav_mvnorm_information_expected()
+            stop("lavaan ERROR: correlation structures only work for fixed.x = FALSE (for now).")
+        }
+    }
+
 
 
     # group.w.free
     #if(opt$group.w.free && opt$.categorical) {
     #    stop("lavaan ERROR: group.w.free = TRUE is not supported (yet) in the categorical setting.")
     #}
+
+    # in order not to break semTools and blavaan, we restore categorical:
+    opt$categorical <- opt$.categorical
 
     if(opt$debug) { cat("lavaan DEBUG: lavaanOptions OUT\n"); str(opt) }
 

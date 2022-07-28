@@ -1,4 +1,5 @@
 \name{lavTablesFitCp}
+\alias{lavTablesFit}
 \alias{lavTablesFitCp}
 \alias{lavTablesFitCf}
 \alias{lavTablesFitCm}

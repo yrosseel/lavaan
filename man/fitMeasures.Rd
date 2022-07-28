@@ -10,8 +10,14 @@ This function computes a variety of fit measures to assess the global
 fit of a latent variable model.}
 \usage{
 fitMeasures(object, fit.measures = "all", baseline.model = NULL, 
+            fit.args = list(rmsea.ci.level    = 0.90,
+                            rmsea.close.h0    = 0.05,
+                            rmsea.notclose.h0 = 0.08),
             output = "vector", ...)
 fitmeasures(object, fit.measures = "all", baseline.model = NULL, 
+            fit.args = list(rmsea.ci.level    = 0.90,
+                            rmsea.close.h0    = 0.05,
+                            rmsea.notclose.h0 = 0.08),
             output = "vector", ...)
 }
 \arguments{
@@ -24,12 +30,17 @@ only those are computed and returned.}
 If a baseline model is provided, all fit indices relying on a
 baseline model (eg. CFI or TLI) will use the test statistics from
 this user-specified baseline model, instead of the default baseline model.}
+\item{fit.args}{List. Additional options for certain fit measures.}
 \item{output}{Character. If \code{"vector"} (the default), display the
 output as a named (lavaan-formatted) vector. If \code{"matrix"}, display
 the output as a 1-column matrix. If \code{"text"}, display the
 output using subsections and verbose descriptions. The latter is used
 in the summary output, and does not print the chi-square test by default.
-See the examples how to add the chi-square test in the output.}
+In addition, \code{fit.measures} should contain the main ingredient
+(for example \code{"rmsea"}) if related fit measures are requested
+(for example \code{"rmsea.ci.lower"}). Otherwise, nothing will be 
+printed in that section.
+See the examples how to add the chi-square test in the text output.}
 \item{...}{Further arguments passed to or from other methods. Not currently
 used for \code{lavaan} objects.}
 }

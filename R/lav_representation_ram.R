@@ -11,8 +11,16 @@ lav_ram <- function(partable = NULL,
     if(is.null(target)) target <- partable
 
     stopifnot(!is.null(target$block))
+
+    # not for categorical data (yet)
     if(any(partable$op == "|")) {
         stop("lavaan ERROR: RAM representation is not (yet) supported for categorical endogenous variables.")
+    }
+
+    # not for conditional.x = TRUE yet
+    conditional.x <- any(partable$exo > 0L & partable$op == "~")
+    if(conditional.x) {
+        stop("lavaan ERROR: RAM representation is not (yet) supported if conditional.x = TRUE")
     }
 
     # prepare output
@@ -184,7 +192,7 @@ lav_ram_sigmahat <- function(MLIST = NULL, delta = NULL) {
     VY <- VYeta[ov.idx, ov.idx, drop = FALSE]
 
     # if delta, scale
-    if(delta && !is.null(MLIST$delta)) {
+    if(!is.null(MLIST$delta) && delta) {
         nvar <- ncol(VY)
         DELTA <- diag(MLIST$delta[,1L], nrow = nvar, ncol = nvar)
         VY <- DELTA %*% VY %*% DELTA

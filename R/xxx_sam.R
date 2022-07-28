@@ -661,6 +661,8 @@ sam <- function(model          = NULL,
     #lavoptions.PA$fixed.x <- TRUE # may be false if indicator is predictor
     lavoptions.PA$fixed.x <- FALSE # until we fix this...
     lavoptions.PA$verbose <- FALSE # must be in struc.args
+    lavoptions.PA$categorical <- FALSE
+    lavoptions.PA$.caegorical <- FALSE
     lavoptions.PA <- modifyList(lavoptions.PA, struc.args)
 
     # override, no matter what
@@ -869,7 +871,7 @@ sam <- function(model          = NULL,
         if(lavoptions$verbose) {
             cat("Computing ", lavoptions$se, " standard errors ... ", sep = "")
         }
-        JOINT@Model@estimator <- "ML"  # FIXME!
+        JOINT@Model@estimator <- FIT@Options$estimator # could be DWLS!
         JOINT@Options$se <- lavoptions$se # always set to standard?
         if(JOINT@Model@ceq.simple.only) {
             VCOV.ALL <-  matrix(0, JOINT@Model@nx.unco,
@@ -960,29 +962,22 @@ sam <- function(model          = NULL,
             #pvalue = sapply(MM.FIT, function(x) {x@test[[1]]$pvalue}) )
         class(sam.mm.table) <- c("lavaan.data.frame", "data.frame")
 
-        # only for the local method: fit measures of structural part
-        if(sam.method == "local") {
-            sam.struc.fit <- fitMeasures(FIT.PA, c("chisq", "df", "pvalue",
-                                                   "cfi", "rmsea", "srmr"))
-            sam.mm.rel <- REL
-        } else {
-            sam.struc.fit <- numeric(0L)
-            sam.mm.rel <- numeric(0L)
-        }
-
 
         # extra info for @internal slot
         if(sam.method == "local") {
             sam.struc.fit <- try(fitMeasures(FIT.PA,
-                                               c("chisq", "df", "pvalue",
+                                               c("chisq", "df", # "pvalue",
                                                  "cfi", "rmsea", "srmr")),
                                  silent = TRUE)
             if(inherits(sam.struc.fit, "try-error")) {
                 sam.struc.fit <- "(unable to obtain fit measures)"
             }
+            sam.mm.rel <- REL
         } else {
             sam.struc.fit <- "no local fit measures available for structural part if sam.method is global"
+            sam.mm.rel <- numeric(0L)
         }
+
 
         SAM <- list(sam.method          = sam.method,
                     sam.local.options   = local.options,

@@ -23,6 +23,7 @@
 # YR 19 Jan 2017: added lav_mvnorm_inverted_information_expected
 # YR 04 Okt 2018: adding wt= argument, and missing meanstructure=
 # YR 27 Jun 2018: adding cluster.idx= argument for information_firstorder
+# YR 24 Jul 2022: adding correlation= argument for information_expected
 
 # 0. densities
 lav_mvnorm_dmvnorm <- function(Y             = NULL,
@@ -686,7 +687,8 @@ lav_mvnorm_information_expected <- function(Y             = NULL, # unused!
                                             x.idx         = NULL,
                                             Sinv.method   = "eigen",
                                             Sigma.inv     = NULL,
-                                            meanstructure = TRUE) {
+                                            meanstructure = TRUE,
+                                            correlation   = FALSE) {
 
     if(is.null(Sigma.inv)) {
         # invert Sigma
@@ -694,7 +696,12 @@ lav_mvnorm_information_expected <- function(Y             = NULL, # unused!
                                                   Sinv.method = Sinv.method)
     }
 
-    I22 <- 0.5 * lav_matrix_duplication_pre_post(Sigma.inv %x% Sigma.inv)
+    if(correlation) {
+        I22 <- 0.5 * lav_matrix_duplication_cor_pre_post(Sigma.inv %x%
+                                                         Sigma.inv)
+    } else {
+        I22 <- 0.5 * lav_matrix_duplication_pre_post(Sigma.inv %x% Sigma.inv)
+    }
 
     if(meanstructure) {
         I11 <- Sigma.inv

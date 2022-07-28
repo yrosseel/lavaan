@@ -346,8 +346,14 @@ computeVY <- function(lavmodel = NULL, GLIST = NULL, diagonal.only = FALSE) {
 
         if(representation == "LISREL") {
             VY.g <- computeVY.LISREL(MLIST = MLIST)
+        } else if(representation == "RAM") {
+            # does not work for categorical setting yet
+            stopifnot(!lavmodel@categorical)
+            # does not work if conditional.x = TRUE
+            stopifnot(!lavmodel@conditional.x)
+            VY.g <- lav_ram_sigmahat(MLIST = MLIST)
         } else {
-            stop("only representation LISREL has been implemented for now")
+            stop("only RAM and LISREL representation has been implemented for now")
         }
 
         if(diagonal.only) {

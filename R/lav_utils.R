@@ -2,6 +2,68 @@
 #
 # initial version: YR 25/03/2009
 
+# get 'test'
+# make sure we return a single element
+lav_utils_get_test <- function(lavobject) {
+    test <- lavobject@Options$test
+    # 0.6.5: for now, we make sure that 'test' is a single element
+    if(length(test) > 1L) {
+        standard.idx <- which(test == "standard")
+        if(length(standard.idx) > 0L) {
+            test <- test[-standard.idx]
+        }
+        if(length(test) > 1L) {
+            # only retain the first one
+            test <- test[1]
+        }
+    }
+
+    test
+}
+
+# check if we use a robust/scaled test statistic
+lav_utils_get_scaled <- function(lavobject) {
+    test <- lav_utils_get_test(lavobject)
+    scaled <- FALSE
+    if(test %in% c("satorra.bentler", "yuan.bentler", "yuan.bentler.mplus",
+                   "mean.var.adjusted", "scaled.shifted")) {
+        scaled <- TRUE
+    }
+
+    scaled
+}
+
+# get npar (taking into account explicit equality constraints)
+# (changed in 0.5-13)
+lav_utils_get_npar <- function(lavobject) {
+    npar <- lav_partable_npar(lavobject@ParTable)
+    if(nrow(lavobject@Model@con.jac) > 0L) {
+        ceq.idx <- attr(lavobject@Model@con.jac, "ceq.idx")
+        if(length(ceq.idx) > 0L) {
+            neq <- qr(lavobject@Model@con.jac[ceq.idx,,drop=FALSE])$rank
+            npar <- npar - neq
+        }
+    } else if(.hasSlot(lavobject@Model, "ceq.simple.only") &&
+              lavobject@Model@ceq.simple.only) {
+        npar <- lavobject@Model@nx.free
+    }
+
+    npar
+}
+
+# N versus N-1 (or N versus N-G in the multiple group setting)
+# Changed 0.5-15: suggestion by Mark Seeto
+lav_utils_get_ntotal <- function(lavobject) {
+    if(lavobject@Options$estimator %in% c("ML","PML","FML") &&
+       lavobject@Options$likelihood == "normal") {
+        N <- lavobject@SampleStats@ntotal
+    } else {
+        N <- lavobject@SampleStats@ntotal - lavobject@SampleStats@ngroups
+    }
+
+    N
+}
+
 # compute log(sum(exp(x))) avoiding under/overflow
 # using the identity: log(sum(exp(x)) = a + log(sum(exp(x - a)))
 lav_utils_logsumexp <- function(x) {
