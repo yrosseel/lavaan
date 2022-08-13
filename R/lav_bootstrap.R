@@ -394,19 +394,30 @@ lav_bootstrap_internal <- function(object          = NULL,
 
     # handle iseed
     if(is.null(iseed)) {
-        if(!exists(".Random.seed", envir = .GlobalEnv, inherits = FALSE)) {
-            runif(1)
-        }
-        iseed <- get(".Random.seed", envir = .GlobalEnv, inherits = FALSE)
+      if(!exists(".Random.seed", envir = .GlobalEnv, inherits = FALSE)) {
+          runif(1)
+      }
+      # identical(temp.seed, NA): Will not change .Random.seed in GlobalEnv
+      temp.seed <- NA
+      iseed <- runif(1, 0, 999999999)
     } else {
-        # set seed
-        if(exists(".Random.seed", envir=.GlobalEnv, inherits = FALSE)) {
-            temp.seed <-
-                get(".Random.seed", envir = .GlobalEnv, inherits = FALSE)
-        } else {
-            temp.seed <- NULL
+      if(exists(".Random.seed", envir=.GlobalEnv, inherits = FALSE)) {
+          temp.seed <-
+              get(".Random.seed", envir = .GlobalEnv, inherits = FALSE)
+      } else {
+          # is.null(temp.seed): Will remove .Random.seed in GlobalEnv
+          #                     if serial.
+          #                     If parallel, .Random.seed will not be touched.
+          temp.seed <- NULL
+      }
+      if (!(ncpus > 1L && (have_mc || have_snow))) {
+          # Only for serial
+          # set seed
+          set.seed(iseed)
+          # More reliable to always use set.seed() to set RNG.
+          # Use the following only when the stored state is .Random.seed
+          # assign(".Random.seed",  iseed, envir = .GlobalEnv)
         }
-        assign(".Random.seed",  iseed, envir = .GlobalEnv)
     }
 
     # this is from the boot function in package boot
@@ -421,8 +432,10 @@ lav_bootstrap_internal <- function(object          = NULL,
             list(...) # evaluate any promises
             if (is.null(cl)) {
                 cl <- parallel::makePSOCKcluster(rep("localhost", ncpus))
-                if(RNGkind()[1L] == "L'Ecuyer-CMRG")
-                    parallel::clusterSetRNGStream(cl, iseed = iseed)
+                # # No need for
+                # if(RNGkind()[1L] == "L'Ecuyer-CMRG")
+                # # parallel::clusterSetRNGStream() always calls `RNGkind("L'Ecuyer-CMRG")`
+                parallel::clusterSetRNGStream(cl, iseed = iseed)
                 res <- parallel::parLapply(cl, seq_len(RR), fn)
                 parallel::stopCluster(cl)
                 res
@@ -468,9 +481,10 @@ lav_bootstrap_internal <- function(object          = NULL,
     attr(t.star, "seed") <- iseed
 
     # handle seed (see boot.array)
-    if(is.null(iseed) && !is.null(temp.seed)) {
+    # iseed is always not NULL
+    if(!is.null(temp.seed) && !identical(temp.seed, NA)) {
         assign(".Random.seed", temp.seed, envir = .GlobalEnv)
-    } else {
+    } else if (is.null(temp.seed) && !(ncpus > 1L && (have_mc || have_snow))) {
         rm(.Random.seed, pos = 1)
     }
 
