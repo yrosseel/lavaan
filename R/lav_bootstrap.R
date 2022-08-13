@@ -410,15 +410,15 @@ lav_bootstrap_internal <- function(object          = NULL,
           #                     If parallel, .Random.seed will not be touched.
           temp.seed <- NULL
       }
-      if (!(ncpus > 1L && (have_mc || have_snow))) {
-          # Only for serial
-          # set seed
-          set.seed(iseed)
-          # More reliable to always use set.seed() to set RNG.
-          # Use the following only when the stored state is .Random.seed
-          # assign(".Random.seed",  iseed, envir = .GlobalEnv)
-        }
     }
+    if (!(ncpus > 1L && (have_mc || have_snow))) {
+        # Only for serial
+        # set seed
+        set.seed(iseed)
+        # More reliable to always use set.seed() to set RNG.
+        # Use the following only when the stored state is .Random.seed
+        # assign(".Random.seed",  iseed, envir = .GlobalEnv)
+      }
 
     # this is from the boot function in package boot
     RR <- R
