@@ -730,7 +730,11 @@ lav_model_estimate <- function(lavmodel       = NULL,
                                trace=0L,
                                #abs.tol=1e-20,
                                abs.tol=(.Machine$double.eps * 10),
-                               rel.tol=1e-9) # 1e-10 seems 'too strict'
+                               rel.tol=1e-9, # 1e-10 seems 'too strict'
+                               step.min=1.0, # 1.0 in < 0.5-21
+                               step.max=1.0,
+                               x.tol=1.5e-8,
+                               xf.tol=2.2e-14)
         control.nlminb <- modifyList(control.nlminb, lavoptions$control)
         control <- control.nlminb[c("eval.max", "iter.max", "trace",
                                     "abs.tol", "rel.tol")]
