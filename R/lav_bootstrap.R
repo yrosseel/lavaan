@@ -369,6 +369,9 @@ lav_bootstrap_internal <- function(object          = NULL,
                         sprintf("%3d", fit.boot@optim$iterations), " fx = ",
                         sprintf("%13.9f", fit.boot@optim$fx), "\n")
 
+        # add BOOT.idx (for all groups)
+        attr(out, "BOOT.idx") <- BOOT.idx
+
         # check if the solution is admissible
         admissible.flag <- suppressWarnings(lavInspect(fit.boot, "post.check"))
         attr(out, "nonadmissible.flag") <- !admissible.flag
@@ -392,41 +395,47 @@ lav_bootstrap_internal <- function(object          = NULL,
         loadNamespace("parallel") # before recording seed!
     }
 
-    # handle iseed
+    # iseed:
+    # this follows a proposal of Shu Fai Cheung (see github issue #240)
+    # - iseed is used for both serial and parallel
+    # - if iseed is not set, iseed is generated + .Random.seed created/updated
+    #     -> tmp.seed <- NA
+    # - if iseed is set: don't touch .Random.seed (if it exists)
+    #     -> tmp.seed <- .Random.seed (if it exists)
+    #     -> tmp.seed <- NULL (if it does not exist)
     if(is.null(iseed)) {
-      if(!exists(".Random.seed", envir = .GlobalEnv, inherits = FALSE)) {
-          runif(1)
-      }
-      # identical(temp.seed, NA): Will not change .Random.seed in GlobalEnv
-      temp.seed <- NA
-      iseed <- runif(1, 0, 999999999)
+        if(!exists(".Random.seed", envir = .GlobalEnv, inherits = FALSE)) {
+            runif(1)
+        }
+        # identical(temp.seed, NA): Will not change .Random.seed in GlobalEnv
+        temp.seed <- NA
+        iseed <- runif(1, 0, 999999999)
     } else {
-      if(exists(".Random.seed", envir=.GlobalEnv, inherits = FALSE)) {
-          temp.seed <-
-              get(".Random.seed", envir = .GlobalEnv, inherits = FALSE)
-      } else {
-          # is.null(temp.seed): Will remove .Random.seed in GlobalEnv
-          #                     if serial.
-          #                     If parallel, .Random.seed will not be touched.
-          temp.seed <- NULL
-      }
+        if(exists(".Random.seed", envir = .GlobalEnv, inherits = FALSE)) {
+            temp.seed <-
+                get(".Random.seed", envir = .GlobalEnv, inherits = FALSE)
+        } else {
+            # is.null(temp.seed): Will remove .Random.seed in GlobalEnv
+            #                     if serial.
+            #                     If parallel, .Random.seed will not be touched.
+            temp.seed <- NULL
+        }
     }
-    if (!(ncpus > 1L && (have_mc || have_snow))) {
-        # Only for serial
-        # set seed
+    if (!(ncpus > 1L && (have_mc || have_snow))) { # Only for serial
         set.seed(iseed)
-        # More reliable to always use set.seed() to set RNG.
-        # Use the following only when the stored state is .Random.seed
-        # assign(".Random.seed",  iseed, envir = .GlobalEnv)
-      }
+    }
 
-    # this is from the boot function in package boot
+
+    # this is adapted from the boot function in package boot
     RR <- R
     if(verbose) {
         cat("\n")
     }
     res <- if (ncpus > 1L && (have_mc || have_snow)) {
         if (have_mc) {
+            RNGkind_old <- RNGkind() # store current kind
+            RNGkind("L'Ecuyer-CMRG") # to allow for reproducible results
+            set.seed(iseed)
             parallel::mclapply(seq_len(RR), fn, mc.cores = ncpus)
         } else if (have_snow) {
             list(...) # evaluate any promises
@@ -434,7 +443,7 @@ lav_bootstrap_internal <- function(object          = NULL,
                 cl <- parallel::makePSOCKcluster(rep("localhost", ncpus))
                 # # No need for
                 # if(RNGkind()[1L] == "L'Ecuyer-CMRG")
-                # # parallel::clusterSetRNGStream() always calls `RNGkind("L'Ecuyer-CMRG")`
+                # clusterSetRNGStream() always calls `RNGkind("L'Ecuyer-CMRG")`
                 parallel::clusterSetRNGStream(cl, iseed = iseed)
                 res <- parallel::parLapply(cl, seq_len(RR), fn)
                 parallel::stopCluster(cl)
@@ -443,31 +452,24 @@ lav_bootstrap_internal <- function(object          = NULL,
         }
     } else lapply(seq_len(RR), fn)
 
-    # failed runs:
-    error.idx <- which(sapply(res, is.null))
+    # restore old RNGkind()
+    if(ncpus > 1L && have_mc) {
+        RNGkind(RNGkind_old[1], RNGkind_old[2], RNGkind_old[3])
+    }
 
     # fill in container
     t.star <- do.call("rbind", res)
 
-    # handle errors and fill in container
-    #error.idx <- integer(0)
-    #for(b in seq_len(RR)) {
-    #    if(!is.null(res[[b]]) && length(res[[b]]) > 0L) {
-    #        t.star[b, ] <- res[[b]]
-    #    } else {
-    #        error.idx <- c(error.idx, b)
-    #    }
-    #}
-
     # handle errors
+    error.idx <- which(sapply(res, is.null))
     if(length(error.idx) > 0L) {
-        #warning("lavaan WARNING: only ", (R-length(error.idx)), " bootstrap draws were successful")
         attr(t.star, "error.idx") <- error.idx
     } else {
         if(verbose) cat("Number of successful bootstrap draws:",
                         (R - length(error.idx)), "\n")
     }
 
+    # handle nonadmissible solutions
     if(check.post) {
         if(length(error.idx) > 0L) {
             notok <- sum(sapply(res[-error.idx], attr, "nonadmissible.flag"))
@@ -480,13 +482,25 @@ lav_bootstrap_internal <- function(object          = NULL,
     # store iseed
     attr(t.star, "seed") <- iseed
 
-    # handle seed (see boot.array)
-    # iseed is always not NULL
+    # handle temp.seed
     if(!is.null(temp.seed) && !identical(temp.seed, NA)) {
         assign(".Random.seed", temp.seed, envir = .GlobalEnv)
-    } else if (is.null(temp.seed) && !(ncpus > 1L && (have_mc || have_snow))) {
+    } else if(is.null(temp.seed) && !(ncpus > 1L && (have_mc || have_snow))) {
+        # serial
         rm(.Random.seed, pos = 1)
+    } else if(is.null(temp.seed) && (ncpus > 1L && have_mc)) {
+        # parallel/multicore only
+        rm(.Random.seed, pos = 1) # because set used set.seed()
     }
+
+    # store BOOT.idx per group
+    BOOT.idx <- vector("list", length = lavsamplestats@ngroups)
+    for(g in 1:lavsamplestats@ngroups) {
+        # note that failed runs (NULL) are removed (for now)
+        BOOT.idx[[g]] <- do.call("rbind",
+                 lapply(res, function(x) attr(x, "BOOT.idx")[[g]]))
+    }
+    attr(t.star, "boot.idx") <- BOOT.idx
 
     # NOT DONE YET
     if(return.boot) {

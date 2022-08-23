@@ -1,3 +1,7 @@
+
+## YR this files needs updating! should be merged with
+## lav_bootstrap.R
+
 bootstrapLRT <- function (h0 = NULL, h1 = NULL, R = 1000L,
                           type = "bollen.stine", verbose = FALSE,
                           return.LRT = FALSE,

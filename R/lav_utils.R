@@ -72,7 +72,10 @@ lav_utils_logsumexp <- function(x) {
 }
 
 # create matrix with indices to reconstruct the bootstrap samples
-# (needed for BCa confidence intervals)
+# (originally needed for BCa confidence intervals)
+#
+# WARNING: only works when parallel = "no" when creating the bootstraps
+# otherwise, the seed will not work!
 #
 # rows are the (R) bootstrap runs
 # columns are the (N) observations
@@ -81,13 +84,19 @@ lav_utils_logsumexp <- function(x) {
 #
 lav_utils_bootstrap_indices <- function(R = 0L, N = 0L, seed,
                                         return.freq = FALSE) {
-    # set seed
+
+    # there must be an (integer) seed
+    stopifnot(!is.null(seed), length(seed) == 1L)
+
+    # store state
     if(exists(".Random.seed", envir = .GlobalEnv, inherits = FALSE)) {
         temp.seed <- get(".Random.seed", envir = .GlobalEnv, inherits = FALSE)
     } else {
         temp.seed <- NULL
     }
-    assign(".Random.seed",  seed, envir = .GlobalEnv)
+
+    # set seed -- assuming RNGkind() did not change...
+    set.seed(seed)
 
     # create index matrix
     out <- sample.int(N, N * R, replace = TRUE)
@@ -102,7 +111,8 @@ lav_utils_bootstrap_indices <- function(R = 0L, N = 0L, seed,
         out <- t(apply(out, 1L, tabulate, N))
     }
 
-    if(is.null(seed) && !is.null(temp.seed)) {
+    # restore state
+    if(!is.null(temp.seed)) {
         assign(".Random.seed", temp.seed, envir = .GlobalEnv)
     } else {
         rm(.Random.seed, pos = 1)
