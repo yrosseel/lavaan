@@ -467,19 +467,25 @@ lav_model_test <- function(lavobject      = NULL,
                                            verbose         = lavoptions$verbose,
                                            type            = boot.type,
                                            FUN             = "test")
-                                           #warn            = -1L)
 
                 # new in 0.6-12: always warn for failed and nonadmissible
-                nfailed <- length(attr(BOOT.TEST, "error.idx"))
-                if(!is.null(nfailed) && nfailed > 0L && lavoptions$warn) {
+                error.idx <- attr(BOOT.TEST, "error.idx")
+                nfailed <- length(attr(BOOT.TEST, "error.idx")) # zero if NULL
+                if(nfailed > 0L && lavoptions$warn) {
                     warning("lavaan WARNING: ", nfailed,
                             " bootstrap runs failed or did not converge.")
                 }
 
-                notok <- attr(BOOT.TEST, "nonadmissible")
-                if(!is.null(notok) && notok > 0L && lavoptions$warn) {
+                notok <- length(attr(BOOT.TEST, "nonadmissible")) # zero if NULL
+                if(notok > 0L && lavoptions$warn) {
                     warning("lavaan WARNING: ", notok,
                         " bootstrap runs resulted in nonadmissible solutions.")
+                }
+
+                if(length(error.idx) > 0L) {
+                    # new in 0.6-13: we must still remove them!
+                    BOOT.TEST <- BOOT.TEST[-error.idx,,drop = FALSE]
+                    # this also drops the attributes
                 }
 
                 BOOT.TEST <- drop(BOOT.TEST)

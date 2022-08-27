@@ -167,8 +167,10 @@ lav_bootstrap_internal <- function(object          = NULL,
             lavoptions$test <- "none"
         } else if(FUN == "test") {
             t.star <- matrix(as.numeric(NA), R, 1L)
+            lavoptions$test <- "standard"
         } else if(FUN == "coeftest") {
             t.star <- matrix(as.numeric(NA), R, lavmodel@nx.free + 1L)
+            lavoptions$test <- "standard"
         }
     }
 
@@ -498,14 +500,7 @@ lav_bootstrap_internal <- function(object          = NULL,
 
     # handle errors
     error.idx <- which(sapply(res, function(x) is.na(x[1L])))
-    if(length(error.idx) > 0L) {
-        # old behavior: delete error.idx
-        # t.star <- t.star[-error.idx, , drop = FALSE]
-        attr(t.star, "error.idx") <- error.idx
-    } else {
-        if(verbose) cat("Number of successful bootstrap draws:",
-                        (R - length(error.idx)), "\n")
-    }
+    attr(t.star, "error.idx") <- error.idx # could be integer(0L)
 
     # handle nonadmissible solutions
     if(check.post) {
