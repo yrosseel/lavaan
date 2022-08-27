@@ -427,6 +427,11 @@ parameterestimates <- function(object,
        "bootstrap" %in%  object@Options$test ||
        "bollen.stine" %in% object@Options$test) {
         BOOT <- lav_object_inspect_boot(object)
+        bootstrap.seed <- attr(BOOT, "seed") # for bca
+        error.idx <- attr(BOOT, "error.idx")
+        if(length(error.idx) > 0L) {
+            BOOT <- BOOT[-error.idx,,drop = FALSE] # drops attributes
+        }
     } else {
         BOOT <- NULL
     }
@@ -470,7 +475,7 @@ parameterestimates <- function(object,
                                           "bca.simple", "bca"))
             if(boot.ci.type == "norm") {
                 fac <- qnorm(a)
-                boot.x <- colMeans(BOOT)
+                boot.x <- colMeans(BOOT, na.rm = TRUE)
                 boot.est <-
                     lav_model_get_parameters(object@Model,
                                        GLIST=lav_model_x2GLIST(object@Model, boot.x),
@@ -575,14 +580,14 @@ parameterestimates <- function(object,
                # TODO:
                # - add cin/ceq
             } else if(boot.ci.type == "bca") { # new in 0.6-12
-               # we assume that the 'ordinary' (nonparametric)
-               # was used
+               # we assume that the 'ordinary' (nonparametric) was used
 
-               if(object@Data@ngroups > 1L) {
-                   stop("lavaan ERROR: BCa confidence intervals not available (yet) for multiple groups.")
-               }
-
+               lavoptions <- object@Options
+               ngroups <- object@Data@ngroups
+               nobs <- object@SampleStats@nobs
                ntotal <- object@SampleStats@ntotal
+
+               # we need enough bootstrap runs
                if(nrow(BOOT) < ntotal) {
                    txt <- paste("BCa confidence intervals require more ",
                                 "(successful) bootstrap runs (", nrow(BOOT),
@@ -597,30 +602,30 @@ parameterestimates <- function(object,
                }
 
                # check if we have a seed
-               bootstrap.seed <- attr(BOOT, "seed")
                if(is.null(bootstrap.seed)) {
                    stop("lavaan ERROR: seed not available in BOOT object.")
                }
 
                # compute 'X' matrix with frequency indices (to compute
                # the empirical influence values using regression)
-               # NOTE: does not work (yet) for multiple groups, as they
-               #       are currently treated separately in
-               #       lav_bootstrap_internal, leading to interweaved indices
-               FREQ <- lav_utils_bootstrap_indices(R = object@Options$bootstrap,
-                   N = ntotal, seed = bootstrap.seed, return.freq = TRUE)
-               error.idx <- attr(BOOT, "error.idx")
+               FREQ <- lav_utils_bootstrap_indices(R = lavoptions$bootstrap,
+                   nobs = nobs, parallel = lavoptions$parallel[1],
+                   ncpus = lavoptions$ncpus, cl = lavoptions[["cl"]],
+                   iseed = bootstrap.seed, return.freq = TRUE,
+                   merge.groups = TRUE)
                if(length(error.idx) > 0L) {
                    FREQ <- FREQ[-error.idx, , drop = FALSE]
                }
                stopifnot(nrow(FREQ) == nrow(BOOT))
 
                # compute empirical influence values (using regression)
-               LM <- lm.fit(x = cbind(1, FREQ[,-1]), y = BOOT)
+               # remove first column per group
+               first.idx <- sapply(object@Data@case.idx, "[[", 1L)
+               LM <- lm.fit(x = cbind(1, FREQ[,-first.idx]), y = BOOT)
                BETA <- unname(LM$coefficients)[-1,,drop = FALSE]
                LL <- rbind(0, BETA)
 
-               # compute 'a' for all parameters
+               # compute 'a' for all parameters at once
                AA <- apply(LL, 2L, function(x) {
                            L <- x - mean(x); sum(L^3)/(6*sum(L^2)^1.5) })
 

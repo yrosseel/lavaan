@@ -668,7 +668,7 @@ lav_object_inspect_boot <- function(object, add.labels = FALSE,
     }
 
     # from 0.5-19. they are in a separate slot
-    tmp <- try(slot(object,"boot"), silent = TRUE)
+    tmp <- try(slot(object, "boot"), silent = TRUE)
     if(inherits(tmp, "try-error")) {
         # older version of object?
         est <- lav_object_inspect_est(object)

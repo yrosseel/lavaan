@@ -401,11 +401,15 @@ Parallelization options (currently only used for bootstrapping):
       \code{parallel = "snow"}. If not supplied, a cluster on the local 
       machine is created for the duration of the \code{bootstrapLavaan} 
       or \code{bootstrapLRT} call.}
-    \item{iseed}{An integer to set the seed. Or NULL if no reproducible seeds 
-     are needed. To make this work, make sure the first
-     RNGkind() element is \code{"L'Ecuyer-CMRG"}. You can check this by
-     typing \code{RNGkind()} in the console. You can set it by typing
-     \code{RNGkind("L'Ecuyer-CMRG")}, before the boostrap functions are called.}
+    \item{iseed}{An integer to set the seed. Or NULL if no reproducible 
+      results are needed. This works for both serial (non-parallel) and 
+      parallel settings. Internally, \code{RNGkind()} is set to 
+      \code{"L'Ecuyer-CMRG"} if \code{parallel = "multicore"}. If 
+      \code{parallel = "snow"} (under windows), 
+      \code{parallel::clusterSetRNGStream()} is called which automatically 
+      switches to \code{"L'Ecuyer-CMRG"}. When \code{iseed} is not
+      NULL, \code{.Random.seed} (if it exists) in the global environment is
+      left untouched.}
 }
 
 Categorical estimation options:
