@@ -552,7 +552,7 @@ lav_samplestats_Gamma <- function(Y,
                      N/(N-2)/(N-3) * ( GammaNT.cov -
                                        2/(N-1) * tcrossprod(cov.vech) )  )
         if(meanstructure) {
-            Gamma <- lav_matrix_bdiag(COV.unbiased,  Gamma.u)
+            Gamma <- lav_matrix_bdiag(COV,  Gamma.u)
 
             # 3-rd order:
             Gamma[1:p,(p+1):ncol(Gamma)] <- Gamma.mean.cov * N/(N-2)
