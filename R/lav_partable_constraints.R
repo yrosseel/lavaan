@@ -376,6 +376,9 @@ lav_partable_constraints_ciq <- function(partable, con = NULL, debug = FALSE,
     cin.function
 }
 
+# return a named vector of the 'free' indices, for the labels that
+# are used in a constrained (or optionally a definition)
+# (always 0 for definitions)
 lav_partable_constraints_label_id <- function(partable, con = NULL,
                                               def = TRUE,
                                               warn = TRUE) {

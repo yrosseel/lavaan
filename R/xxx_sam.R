@@ -391,22 +391,6 @@ sam <- function(model          = NULL,
     out <- list()
     out$MM.FIT <- MM.FIT
 
-    # do we have any parameters left?
-    if(length(unique(step1.idx)) >= npar) {
-        warning("lavaan WARNING: ",
-                "no free parameters left for structural part.\n",
-                "        Returning measurement part only.")
-        if(output == "list") {
-            return(out)
-        } else {
-            if(nMMblocks == 1L) {
-                return(MM.FIT[[1]])
-            } else {
-                return(MM.FIT)
-            }
-        }
-    }
-
     if(sam.method == "local") {
         if(lavoptions$verbose) {
             cat("Constructing the mapping matrix using the ",
@@ -649,6 +633,22 @@ sam <- function(model          = NULL,
 
     } # local
 
+
+    # do we have any parameters left?
+    if(length(unique(step1.idx)) >= npar) {
+        warning("lavaan WARNING: ",
+                "no free parameters left for structural part.\n",
+                "        Returning measurement part only.")
+        if(output == "list") {
+            return(out)
+        } else {
+            if(nMMblocks == 1L) {
+                return(MM.FIT[[1]])
+            } else {
+                return(MM.FIT)
+            }
+        }
+    }
 
 
 

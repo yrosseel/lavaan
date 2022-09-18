@@ -627,7 +627,7 @@ lav_data_full <- function(data          = NULL,          # data.frame
         idx.missing <- which(!(ov.all %in% names(data)))
 
         if(length(idx.missing)) {
-            stop("lavaan ERROR: missing observed variables in dataset: ",
+            stop("lavaan ERROR: some (observed) variables specified in the model are not found in the dataset: ",
                  paste(ov.all[idx.missing], collapse=" "))
         }
     }
