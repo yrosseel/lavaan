@@ -120,7 +120,7 @@ lav_cfa_1fac_3ind <- function(sample.cov, std.lv = FALSE,
 # FABIN (Hagglund, 1982)
 # 1-factor only
 lav_cfa_1fac_fabin <- function(S, lambda.only = FALSE, method = "fabin3",
-                               std.lv = FALSE, extra = NULL, bounds = TRUE) {
+                               std.lv = FALSE, bounds = TRUE) {
 
     # check arguments
     if(std.lv) {

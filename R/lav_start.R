@@ -262,7 +262,11 @@ lav_start <- function(start.method    = "default",
 
                     # check for negative triad if nvar=3L (new in 0.6-8)
                     if(!is.null(fabin$neg.triad) && fabin$neg.triad) {
-                        tmp <- rep(1.0, length(tmp))
+                        if(std.lv) {
+                            tmp <- rep(0.7, length(tmp))
+                        } else {
+                            tmp <- rep(1.0, length(tmp))
+                        }
                     }
                     start[lambda.idx] <- tmp
 

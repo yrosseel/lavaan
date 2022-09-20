@@ -347,10 +347,12 @@ sam <- function(model          = NULL,
             }
         }
 
-        # fill in point estimates measurement block
+        # fill in point estimates measurement block (including slack values)
         PTM <- MM.FIT[[mm]]@ParTable
-        PT$est[ seq_len(length(PT$lhs)) %in% mm.idx & PT$free > 0L ] <-
-            PTM$est[ PTM$free > 0L & PTM$user != 3L]
+        PT$est[ seq_len(length(PT$lhs)) %in% mm.idx &
+               (PT$free > 0L | PT$op %in% c(":=", ">", "<")) ] <-
+            PTM$est[ (PTM$free > 0L | PTM$op %in% c(":=", "<", ">")) &
+                     PTM$user != 3L ]
 
         # fill in standard errors measurement block
         if(lavoptions$se != "none") {
@@ -587,11 +589,11 @@ sam <- function(model          = NULL,
                 VETA[[b]] <- MSM - MTM
             }
 
-            # standardize?
-            #if(FIT@Options$std.lv) {
-            #    VETA[[b]] <- stats::cov2cor(VETA[[b]])
-            #}
-
+            # standardize? not really needed, but we may have 1.0000001
+            # as variances, and this may lead to false convergence
+            if(FIT@Options$std.lv) {
+                VETA[[b]] <- stats::cov2cor(VETA[[b]])
+            }
 
             # names
             psi.idx <- which(names(FIT@Model@GLIST) == "psi")[b]
@@ -790,14 +792,14 @@ sam <- function(model          = NULL,
     # fill in point estimates structural part
     PTS <- FIT.PA@ParTable
     p2def.idx <- seq_len(length(PT$lhs)) %in% reg.idx &
-                 (PT$free > 0 | PT$op == ":=")
+                 (PT$free > 0 | PT$op %in% c(":=", "<", ">"))
 
     # which parameters from PTS do we wish to fill in:
     # - all 'free' parameters
-    # - := (if any)
+    # - :=, <, > (if any)
     # - but NOT elements in extra.int.idx
     # - and NOT element with user=3 (add.exo.cov = TRUE)
-    pts.idx <- which( (PTS$free > 0L | PTS$op == ":=") &
+    pts.idx <- which( (PTS$free > 0L | (PTS$op %in% c(":=", "<", ">"))) &
                       !PTS$user == 3L &
                       !seq_len(length(PTS$lhs)) %in% extra.int.idx )
 
@@ -971,10 +973,12 @@ sam <- function(model          = NULL,
                                  silent = TRUE)
             if(inherits(sam.struc.fit, "try-error")) {
                 sam.struc.fit <- "(unable to obtain fit measures)"
+                names(sam.struc.fit) <- "warning"
             }
             sam.mm.rel <- REL
         } else {
             sam.struc.fit <- "no local fit measures available for structural part if sam.method is global"
+            names(sam.struc.fit) <- "warning"
             sam.mm.rel <- numeric(0L)
         }
 

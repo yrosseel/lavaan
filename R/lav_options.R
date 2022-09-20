@@ -1119,6 +1119,23 @@ lav_options_set <- function(opt = NULL) {
         } else {
             stop("lavaan WARNING: parameterization argument is ignored if estimator = MML")
         }
+    } else if(opt$estimator %in% c("fabin", "fabin2", "fabin3")) {
+        # experimental, for cfa or sam only
+        if(opt$estimator == "fabin") {
+            opt$estimator <- "FABIN2"
+        } else {
+            opt$estimator <- toupper(opt$estimator)
+        }
+        if(opt$se == "default" || opt$se == "none") {
+            opt$se <- "none"
+        } else {
+            stop("lavaan ERROR: no standard errors available (yet) if estimator is FABIN")
+        }
+        # brute-force override
+        opt$optim.method <- "noniter"
+        opt$start <- "simple"
+        opt$missing <- "listwise" # for now (until we have two-stage working)
+        opt$test <- "none" # for now
     } else if(opt$estimator == "none") {
         if(opt$se == "default") {
             opt$se <- "none"
@@ -1586,17 +1603,21 @@ lav_options_set <- function(opt = NULL) {
         # nothing to do
     } else if(opt$bounds == "default" ||
               opt$bounds == "wide") {
-        opt$optim.bounds <- list(lower = c("ov.var", "lv.var", "loadings"),
-                                 upper = c("ov.var", "lv.var", "loadings"),
-                                 lower.factor = c(1.05, 1.0, 1.1),
-                                 upper.factor = c(1.20, 1.3, 1.1),
+        opt$optim.bounds <- list(lower = c("ov.var", "lv.var", "loadings",
+                                           "covariances"),
+                                 upper = c("ov.var", "lv.var", "loadings",
+                                           "covariances"),
+                                 lower.factor = c(1.05, 1.0, 1.1, 1.0),
+                                 upper.factor = c(1.20, 1.3, 1.1, 1.0),
                                  min.reliability.marker = 0.1,
                                  min.var.lv.endo = 0.005)
     } else if(opt$bounds == "standard") {
-        opt$optim.bounds <- list(lower = c("ov.var", "lv.var", "loadings"),
-                                 upper = c("ov.var", "lv.var", "loadings"),
-                                 lower.factor = c(1.0, 1.0, 1.0),
-                                 upper.factor = c(1.0, 1.0, 1.0),
+        opt$optim.bounds <- list(lower = c("ov.var", "lv.var", "loadings",
+                                           "covariances"),
+                                 upper = c("ov.var", "lv.var", "loadings",
+                                           "covariances"),
+                                 lower.factor = c(1.0, 1.0, 1.0, 0.999),
+                                 upper.factor = c(1.0, 1.0, 1.0, 0.999),
                                  min.reliability.marker = 0.1,
                                  min.var.lv.endo = 0.005)
     } else if(opt$bounds == "pos.var") {

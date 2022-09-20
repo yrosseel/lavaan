@@ -882,11 +882,19 @@ print.lavaan.summary <- function(x, ..., nd = 3L) {
                 cat("-- DRY RUN with 0 iterations --\n")
             } else if(optim.iterations > 0) {
                 if(optim.converged) {
-                    cat(sprintf("ended normally after %i iterations\n",
-                        optim.iterations))
+                    if(optim.iterations == 1L) {
+                        cat("ended normally after 1 iteration\n")
+                    } else {
+                        cat(sprintf("ended normally after %i iterations\n",
+                            optim.iterations))
+                    }
                 } else {
-                    cat(sprintf("did NOT end normally after %i iterations\n",
-                        optim.iterations))
+                    if(optim.iterations == 1L) {
+                        cat("did NOT end normally after 1 iteration\n")
+                    } else {
+                      cat(sprintf("did NOT end normally after %i iterations\n",
+                            optim.iterations))
+                    }
                     cat("** WARNING ** Estimates below are most likely unreliable\n")
                 }
             } else {

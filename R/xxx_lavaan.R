@@ -1317,8 +1317,17 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
             cat("lavoptim           ... start:\n")
         }
 
+        # non-iterative methods (fabin, ...)
+        if(lavoptions$optim.method == "noniter") {
+            x <- try(lav_optim_noniter(lavmodel       = lavmodel,
+                                       lavsamplestats = lavsamplestats,
+                                       lavdata        = lavdata,
+                                       lavpartable    = lavpartable,
+                                       lavpta         = lavpta,
+                                       lavoptions     = lavoptions),
+                     silent = TRUE)
         # EM for multilevel models
-        if(lavoptions$optim.method == "em") {
+        } else if(lavoptions$optim.method == "em") {
             # multilevel only for now
             stopifnot(lavdata@nlevels > 1L)
             x <- try(lav_mvnorm_cluster_em_h0(lavsamplestats = lavsamplestats,
@@ -1335,11 +1344,6 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
         # Gauss-Newton
         } else if(lavoptions$optim.method == "gn") {
             # only tested for DLS (for now)
-            #if(lavoptions$estimator != "DLS") {
-            #    stop("lavaan ERROR: optim.method = ", dQuote("gn"),
-            #         " is only available for estimator = ", dQuote("DLS"),
-            #         " (for now).")
-            #}
             x <- try(lav_optim_gn(lavmodel       = lavmodel,
                                   lavsamplestats = lavsamplestats,
                                   lavdata        = lavdata,

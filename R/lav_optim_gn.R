@@ -126,7 +126,7 @@ lav_optim_gn <- function(lavmodel = NULL, lavsamplestats = NULL,
         stop("lavaan ERROR: nonlinear constraints not supported (yet) with optim.method = \"GN\".")
     }
 
-    # no suport (yet) for inequality constraints
+    # no support (yet) for inequality constraints
     if(!is.null(body(lavmodel@cin.function))) {
         stop("lavaan ERROR: inequality constraints not supported (yet) with optim.method = \"GN\".")
     }
