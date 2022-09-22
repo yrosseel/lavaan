@@ -1179,3 +1179,43 @@ print.lavaan.summary <- function(x, ..., nd = 3L) {
 
     invisible(y)
 }
+
+# helper function to print the loading matrix, masking small loadings
+lav_print_loadings <- function(x, nd = 3L, cutoff = 0.3, dot.cutoff = 0.1,
+                               resvar = NULL) {
+
+    # unclass
+    y <- unclass(x)
+
+    # round, and create a character matriy
+    y <- format(round(y, nd), width = 3L + nd, justify = "right")
+
+    # right-align column names
+    colnames(y)  <- format(colnames(y), width = 3L + nd, justify = "right")
+
+    # create dot/empty string
+    dot.string   <- format(".", width = 3L + nd, justify = "right")
+    empty.string <- format(" ", width = 3L + nd)
+
+    # print a 'dot' if dot.cutoff < |loading| < cutoff
+    if(dot.cutoff < cutoff) {
+        y[abs(x) < cutoff & abs(x) > dot.cutoff] <- dot.string
+    }
+
+    # print nothing if |loading| < dot.cutoff
+    y[abs(x) < dot.cutoff] <- empty.string
+
+    # add resvar
+    if(!is.null(resvar)) {
+        NAMES <- colnames(y)
+        y <- cbind(y, format(round(resvar, nd),
+                             width = 12L + nd, justify = "right"))
+        resvar.names <- format("unique.res.var",
+                               width = 12L + nd, justify = "right")
+        colnames(y) <- c(NAMES, resvar.names)
+    }
+
+    # print
+    print(y, quote = FALSE)
+}
+
