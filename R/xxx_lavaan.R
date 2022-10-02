@@ -1943,7 +1943,18 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                   external     = list()               # empty list
                  )
 
-
+    # if model.type = "efa", add standardized solution to partable
+    if( (.hasSlot(lavmodel, "nefa")) && (lavmodel@nefa > 0L)) {
+        if(lavoptions$verbose) {
+            cat("computing standardized solution ... ")
+        }
+        STD <- standardizedSolution(lavaan)
+        if(lavoptions$verbose) {
+            cat(" done.\n")
+        }
+        lavaan@ParTable$est.std <- STD$est.std
+        lavaan@ParTable$se.std  <- STD$se
+    }
 
     # post-fitting check of parameters
     if(!is.null(lavoptions$check.post) && lavoptions$check.post &&

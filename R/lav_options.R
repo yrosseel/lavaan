@@ -1664,7 +1664,7 @@ lav_options_set <- function(opt = NULL) {
         "oblimin, quartimin, geomin, entropy, mccammon, infomax,",
         "tandem1, tandem2, oblimax, bentler, simplimax, target, pst, ",
         "crawford-ferguson,  cf-quartimax,  cf-varimax, cf-equamax, ",
-        "cf-parsimax, cf-facparsim")
+        "cf-parsimax, cf-facparsim", "biquartimin", "bigeomin")
         stop(lav_txt2message(txt, header = "lavaan ERROR:"))
     }
 

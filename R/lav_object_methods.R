@@ -21,11 +21,22 @@
 
 setMethod("show", "lavaan",
 function(object) {
+    # efa?
+    efa.flag <- object@Options$model.type == "efa"
+
     # show only basic information
     res <- lav_object_summary(object, fit.measures = FALSE,
                                       estimates    = FALSE,
-                                      modindices   = FALSE)
-    print(res)
+                                      modindices   = FALSE,
+                                      efa          = efa.flag)
+    if(efa.flag) {
+        # print (standardized) loadings only
+        class(res) <- c("lavaan.efa", "list")
+        print(res)
+    } else {
+        # print lavaan header
+        print(res)
+    }
     invisible(res)
 })
 
@@ -45,17 +56,27 @@ function(object, header       = TRUE,
                                      rmsea.h0.closefit    = 0.05,
                                      rmsea.h0.notclosefit = 0.08),
                  modindices   = FALSE,
-                 nd = 3L) {
+                 nd = 3L, cutoff = 0.3, dot.cutoff = 0.1) {
+
+    # efa?
+    efa.flag <- object@Options$model.type == "efa"
 
     res <- lav_object_summary(object = object, header = header,
                fit.measures = fit.measures, estimates = estimates,
                ci = ci, fmi = fmi, std = std, standardized = standardized,
                remove.step1 = remove.step1, cov.std = cov.std,
-               rsquare = rsquare, std.nox = std.nox,
+               rsquare = rsquare, std.nox = std.nox, efa = efa.flag,
                fit.args = fit.args, modindices = modindices)
 
     # what about nd? only used if we actually print; save as attribute
     attr(res, "nd") <- nd
+
+    # if efa, add cutoff and dot.cutoff, and change class
+    if(efa.flag) {
+        #class(res) <- c("lavaan.summary.efa", "list")
+        attr(res, "cutoff") <- cutoff
+        attr(res, "dot.cutoff") <- dot.cutoff
+    }
 
     res
 })

@@ -6,7 +6,9 @@
 #   a list
 # - the result is a S3 class lavaan.summary
 # - the actual printing is done by print.lavaan.summary (see lav_print.R)
+
 # YR 26 July 2022: add fit.args= argument to set h0.closefit and h0.notclosefit
+# YR 24 Sept 2022: add efa= argument
 
 # create summary of a lavaan object
 lav_object_summary <- function(object, header       = TRUE,
@@ -20,6 +22,7 @@ lav_object_summary <- function(object, header       = TRUE,
                                        cov.std      = TRUE,
                                        rsquare      = FALSE,
                                        std.nox      = FALSE,
+                                       efa          = FALSE,
                                        fit.args     =
                                            list(rmsea.ci.level       = 0.90,
                                                 rmsea.h0.closefit    = 0.05,
@@ -123,6 +126,11 @@ lav_object_summary <- function(object, header       = TRUE,
 
         } # regular sem
     } # header
+
+    # efa-related info
+    if(efa) {
+        res$efa <- lav_summary_efa(object)
+    } # efa
 
     # only if requested, add the additional fit measures
     if(fit.measures) {

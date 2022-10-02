@@ -1,9 +1,10 @@
 # generate a parameter table for an EFA model
 #
 # YR 20 Sept 2022: initial verion
-lav_partable_generate_efa <- function(ov.names = NULL,
-                                      nfactors = 1L,
-                                      ordered = NULL) {
+lav_partable_generate_efa <- function(ov.names      = NULL,
+                                      nfactors      = 1L,
+                                      meanstructure = FALSE,
+                                      varTable      = NULL) {
 
     # currently, we support only a single block (but we plan for more)
     nblocks <- 1L
@@ -26,6 +27,22 @@ lav_partable_generate_efa <- function(ov.names = NULL,
         OV.NAMES <- ov.names[[b]]
         nvar <- length(OV.NAMES)
         nel <- nvar * nfactors
+
+        # get 'ordered' variables from varTable
+        categorical <- FALSE
+        if(!is.null(varTable)) {
+            ov.names.ord <-
+                as.character(varTable$name[ varTable$type == "ordered" ])
+            # remove those that do appear in the model syntax
+            idx <- which(!ov.names.ord %in% OV.NAMES)
+            if(length(idx) > 0L) {
+                ov.names.ord <- ov.names.ord[-idx]
+            }
+            if(length(ov.names.ord) > 0L) {
+                ov.names.ord <- OV.NAMES[ OV.NAMES %in% ov.names.ord ]
+                categorical <- TRUE
+            }
+        }
 
         # a) factor loadings
         lhs    <- c(lhs,    rep(lv.names, each = nvar))
@@ -70,6 +87,29 @@ lav_partable_generate_efa <- function(ov.names = NULL,
             free    <- c(free,   rep(1L,   pstar)) # to be changed...
             ustart  <- c(ustart, rep(as.numeric(NA), pstar))
         }
+
+        if(meanstructure) {
+            # e) ov means/intercepts
+            lhs    <- c(lhs,    OV.NAMES)
+            op     <- c(op,     rep("~1", nvar))
+            rhs    <- c(rhs,    rep("",   nvar))
+            block  <- c(block,  rep(b,    nvar))
+            #group <- c(group,  rep(1L,   nvar))
+            #level <- c(level,  rep(1L,   nvar))
+            free   <- c(free,   rep(1L,   nvar))
+            ustart <- c(ustart, rep(as.numeric(NA), nvar))
+
+            # f) lv means/intercepts
+            lhs    <- c(lhs,    lv.names)
+            op     <- c(op,     rep("~1", nfactors))
+            rhs    <- c(rhs,    rep("",   nfactors))
+            block  <- c(block,  rep(b,    nfactors))
+            #group <- c(group,  rep(1L,   nfactors))
+            #level <- c(level,  rep(1L,   nfactors))
+            free   <- c(free,   rep(0L,   nfactors))
+            ustart <- c(ustart, rep(0,    nfactors))
+        } # meanstructure
+
     } # blocks
 
     # create LIST

@@ -1161,8 +1161,68 @@ print.lavaan.summary <- function(x, ..., nd = 3L) {
         print.lavaan.fitMeasures(y$fit, nd = nd, add.h0 = FALSE )
     }
 
+    # efa output
+    if(!is.null(y$efa)) {
+        # get cutoff, if it is stored as an attribute
+        CT <- attr(y, "cutoff")
+        if(!is.null(CT) && is.numeric(CT)) {
+            cutoff <- CT
+        }
+        # get dot.cutoff, if it is stored as an attribute
+        DC <- attr(y, "dot.cutoff")
+        if(!is.null(DC) && is.numeric(DC)) {
+            dot.cutoff <- DC
+        }
+
+        for(b in seq_len(y$efa$nblocks)) {
+            cat("\n")
+            if(length(y$efa$block.names) > 0L) {
+                cat(y$efa$block.names[[b]], ":\n\n", sep = "")
+            }
+            if(!is.null(y$efa$lambda.se[[b]])) {
+                cat("Standardized loadings: (* = significant at 1% level)\n\n")
+            } else {
+                cat("Standardized loadings:\n\n")
+            }
+            LAMBDA <- unclass(y$efa$lambda[[b]])
+            THETA <- unname(unclass(y$efa$theta[[b]]))
+            lav_print_loadings(LAMBDA, nd = nd, cutoff = cutoff,
+                               dot.cutoff = dot.cutoff,
+                               resvar = diag(THETA),
+                               x.se = y$efa$lambda.se[[b]])
+
+            cat("\n")
+            if(y$efa$std.ov) {
+                cat("Eigenvalues correlation matrix:\n\n")
+            } else {
+                cat("Eigenvalues covariance matrix:\n\n")
+            }
+            print(y$efa$eigvals[[b]], nd = nd)
+
+            cat("\n")
+            print(y$efa$sumsq.table[[b]], nd = nd)
+            cat("\n")
+
+            # factor correlations:
+            if(ncol(LAMBDA) > 1L && !y$efa$orthogonal) {
+                cat("Factor correlations:\n\n")
+                print(y$efa$psi[[b]], nd = nd)
+                cat("\n")
+            }
+
+            # standard errors lambda
+            #if(!is.null(y$efa$lambda.se)) {
+            #    cat("Standard errors standardized loadings:\n\n")
+            #    print(y$efa$lambda.se, nd = nd)
+            #}
+
+            # print theta.se and psi.se?
+
+        } # blocks
+    } # efa
+
     # parameter table
-    if(!is.null(y$pe)) {
+    if(!is.null(y$pe) && is.null(y$efa)) {
         PE <- y$pe
         class(PE) <- c("lavaan.parameterEstimates", "lavaan.data.frame",
                        "data.frame")
@@ -1182,7 +1242,7 @@ print.lavaan.summary <- function(x, ..., nd = 3L) {
 
 # helper function to print the loading matrix, masking small loadings
 lav_print_loadings <- function(x, nd = 3L, cutoff = 0.3, dot.cutoff = 0.1,
-                               resvar = NULL) {
+                               resvar = NULL, x.se = NULL) {
 
     # unclass
     y <- unclass(x)
@@ -1203,7 +1263,20 @@ lav_print_loadings <- function(x, nd = 3L, cutoff = 0.3, dot.cutoff = 0.1,
     }
 
     # print nothing if |loading| < dot.cutoff
-    y[abs(x) < dot.cutoff] <- empty.string
+    y[abs(x) < min(dot.cutoff, cutoff)] <- empty.string
+
+    # add 'star' for significant loadings (if provided) using alpha = 0.01
+    if(!is.null(x.se)) {
+        colNAMES <- colnames(y)
+        rowNAMES <- rownames(y)
+        x.se[ x.se < sqrt(.Machine$double.eps)] <- 0
+        zstat <- x/x.se
+        z.cutoff <- qnorm(1 - (0.05/2)) # alpha = 0.01
+        zstat.string <- ifelse(abs(zstat) > z.cutoff, "*", " ")
+        y <- matrix(paste(y, zstat.string, sep = ""), nrow(y), ncol(y))
+        colnames(y) <- colNAMES
+        rownames(y) <- rowNAMES
+    }
 
     # add resvar
     if(!is.null(resvar)) {

@@ -64,6 +64,12 @@ lavInspect.lavaan <- function(object,
             add.labels = add.labels, add.class = add.class,
             list.by.group = list.by.group,
             drop.list.single.group = drop.list.single.group)
+    } else if(what == "se.std" ||
+              what == "std.se") {
+        lav_object_inspect_modelmatrices(object, what = "std.se",
+            add.labels = add.labels, add.class = add.class,
+            list.by.group = list.by.group,
+            drop.list.single.group = drop.list.single.group)
     } else if(what == "start" || what == "starting.values") {
         lav_object_inspect_modelmatrices(object, what = "start",
             add.labels = add.labels, add.class = add.class,
@@ -90,7 +96,9 @@ lavInspect.lavaan <- function(object,
             add.labels = add.labels, add.class = add.class,
             list.by.group = list.by.group,
             drop.list.single.group = drop.list.single.group)
-    } else if(what == "std" || what == "std.all" || what == "standardized") {
+    } else if(what == "std" || what == "std.all" ||
+              what == "est.std" || what == "std.est" ||
+              what == "standardized") {
         lav_object_inspect_modelmatrices(object, what = "std.all",
            add.labels = add.labels, add.class = add.class,
            list.by.group = list.by.group,
@@ -646,6 +654,18 @@ lav_object_inspect_se <- function(object) {
     OUT
 }
 
+lav_object_inspect_std_se <- function(object) {
+
+    if(!is.null(object@ParTable$se.std)) {
+        OUT <- object@ParTable$se.std
+    } else {
+        STD <- standardizedSolution(object)
+        OUT <- STD$se
+    }
+
+    OUT
+}
+
 lav_object_inspect_start <- function(object) {
 
     # from 0.5-19, they are in the partable
@@ -730,6 +750,8 @@ lav_object_inspect_modelmatrices <- function(object, what = "free",
         STD <- lav_standardize_all_nox(object)
     } else if(what == "se") {
         SE <- lav_object_inspect_se(object)
+    } else if(what == "std.se") {
+        SE <- lav_object_inspect_std_se(object)
     } else if (what == "start") {
         START <- lav_object_inspect_start(object)
     } else if (what == "est") {
@@ -766,7 +788,7 @@ lav_object_inspect_modelmatrices <- function(object, what = "free",
             # erase everything
             GLIST[[mm]][,] <- 0.0
             GLIST[[mm]][m.el.idx] <- x.el.idx
-        } else if(what == "se") {
+        } else if(what == "se" || what == "std.se") {
             # fill in standard errors
             m.user.idx <- object@Model@m.user.idx[[mm]]
             x.user.idx <- object@Model@x.user.idx[[mm]]

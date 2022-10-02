@@ -407,7 +407,7 @@ lav_model_test <- function(lavobject      = NULL,
                              Gamma          = attr(VCOV, "Gamma"),
                              test           = this.test,
                              mimic          = lavoptions$mimic,
-                             method         = "ABA",
+                             method         = "original", # since 0.6-13
                              return.ugamma  = FALSE)
             TEST[[this.test]] <- out[[this.test]]
 

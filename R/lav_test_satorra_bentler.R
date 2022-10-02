@@ -11,7 +11,7 @@ lav_test_satorra_bentler <- function(lavobject      = NULL,
                                      Gamma          = NULL,
                                      test           = "satorra.bentler",
                                      mimic          = "lavaan",
-                                     method         = "default",
+                                     method         = "original",
                                      return.u       = FALSE,
                                      return.ugamma  = FALSE) {
 
@@ -34,10 +34,12 @@ lav_test_satorra_bentler <- function(lavobject      = NULL,
         length(lavoptions$h1.information) == 1L &&
         length(lavoptions$observed.information) == 1L) {
         E.inv.recompute <- FALSE
-    } else if( (lavoptions$information[1] == lavoptions$information[2]) &&
+    } else if(
+        (lavoptions$information[1]    == lavoptions$information[2]) &&
         (lavoptions$h1.information[1] == lavoptions$h1.information[2]) &&
-        (lavoptions$observed.information[1] ==
-         lavoptions$observed.information[2]) ) {
+        (lavoptions$information[2] == "expected" ||
+         (lavoptions$observed.information[1] ==
+          lavoptions$observed.information[2])) ) {
         E.inv.recompute <- FALSE
     } else {
         E.inv.recompute <- TRUE
@@ -63,12 +65,9 @@ lav_test_satorra_bentler <- function(lavobject      = NULL,
     }
 
     # check method
-    if(method == "default") {
-        method <- "ABA"
-    } else if(!all(method %in% c("original", "orthogonal.complement",
-                                 "ABA"))) {
+    if(!all(method %in% c("original", "orthogonal.complement", "ABA"))) {
         warning("lavaan WARNING: method must be one of `original', `ABA', `orthogonal.complement'; will use `ABA'")
-        method <- "ABA"
+        method <- "original"
     }
 
     # do we have E.inv, Delta, WLS.V?
