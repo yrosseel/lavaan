@@ -45,36 +45,60 @@ print.lavaan.list <- function(x, ...) {
 
 
 # prints only lower triangle of a symmetric matrix
-print.lavaan.matrix.symmetric <- function(x, ..., nd = 3L) {
+print.lavaan.matrix.symmetric <- function(x, ..., nd = 3L, shift = 0L) {
     # print only lower triangle of a symmetric matrix
     # this function was inspired by the `print.correlation' function
     # in package nlme
     y <- x; y <- unclass(y)
-    ll <- lower.tri(x, diag=TRUE)
-    y[ll] <- format(round(x[ll], digits=nd)); y[!ll] <- ""
-    if (!is.null(colnames(x))) {
+    ll <- lower.tri(x, diag = TRUE)
+    y[ ll] <- format(round(x[ll], digits = nd))
+    y[!ll] <- ""
+    if(!is.null(colnames(x))) {
       colnames(y) <- abbreviate(colnames(x), minlength = nd + 3L)
     }
-    print(y, ..., quote = FALSE)
+    if(shift > 0L) {
+        empty.string <- rep(strrep(x = " ", times = shift), times = nrow(x))
+        if(!is.null(rownames(x))) {
+            rownames(y) <- paste(empty.string, rownames(x), sep = "")
+        } else {
+            rownames(y) <- empty.string
+        }
+    }
+    print(y, ..., quote = FALSE, right = TRUE)
     invisible(x)
 }
 
 
-print.lavaan.matrix <- function(x, ..., nd = 3L) {
+print.lavaan.matrix <- function(x, ..., nd = 3L, shift = 0L) {
     y <- unclass(x)
-    if (!is.null(colnames(x))) {
+    if(!is.null(colnames(x))) {
       colnames(y) <- abbreviate(colnames(x), minlength = nd + 3L)
     }
-    print( round(y, nd), ... )
+    if(shift > 0L) {
+        empty.string <- rep(strrep(x = " ", times = shift), times = nrow(x))
+        if(!is.null(rownames(x))) {
+            rownames(y) <- paste(empty.string, rownames(x), sep = "")
+        } else {
+            rownames(y) <- empty.string
+        }
+    }
+    print( round(y, nd), right = TRUE, ... )
     invisible(x)
 }
 
-print.lavaan.vector <- function(x, ..., nd = 3L) {
+print.lavaan.vector <- function(x, ..., nd = 3L, shift = 0L) {
     y <- unclass(x)
     #if(!is.null(names(x))) {
     #    names(y) <- abbreviate(names(x), minlength = nd + 3)
     #}
-    print( round(y, nd), ... )
+    if(shift > 0L) {
+        empty.string <- strrep(x = " ", times = shift)
+        tmp <- format(y, digits = nd, width = 2L + nd)
+        tmp[1] <- paste(empty.string, tmp[1], sep = "")
+        print(tmp, quote = FALSE, ...)
+    } else {
+        print( round(y, nd), right = TRUE, ... )
+    }
     invisible(x)
 }
 
@@ -1191,23 +1215,22 @@ print.lavaan.summary <- function(x, ..., nd = 3L) {
                                resvar = diag(THETA),
                                x.se = y$efa$lambda.se[[b]])
 
-            cat("\n")
-            if(y$efa$std.ov) {
-                cat("Eigenvalues correlation matrix:\n\n")
-            } else {
-                cat("Eigenvalues covariance matrix:\n\n")
-            }
-            print(y$efa$eigvals[[b]], nd = nd)
+            #cat("\n")
+            #if(y$efa$std.ov) {
+            #    cat("Eigenvalues correlation matrix:\n\n")
+            #} else {
+            #    cat("Eigenvalues covariance matrix:\n\n")
+            #}
+            #print(y$efa$eigvals[[b]], nd = nd)
 
             cat("\n")
             print(y$efa$sumsq.table[[b]], nd = nd)
-            cat("\n")
 
             # factor correlations:
             if(ncol(LAMBDA) > 1L && !y$efa$orthogonal) {
+                cat("\n")
                 cat("Factor correlations:\n\n")
                 print(y$efa$psi[[b]], nd = nd)
-                cat("\n")
             }
 
             # standard errors lambda
@@ -1219,6 +1242,7 @@ print.lavaan.summary <- function(x, ..., nd = 3L) {
             # print theta.se and psi.se?
 
         } # blocks
+        cat("\n")
     } # efa
 
     # parameter table
@@ -1266,10 +1290,10 @@ lav_print_loadings <- function(x, nd = 3L, cutoff = 0.3, dot.cutoff = 0.1,
     y[abs(x) < min(dot.cutoff, cutoff)] <- empty.string
 
     # add 'star' for significant loadings (if provided) using alpha = 0.01
-    if(!is.null(x.se)) {
+    if(!is.null(x.se) && !any(is.na(x.se))) {
         colNAMES <- colnames(y)
         rowNAMES <- rownames(y)
-        x.se[ x.se < sqrt(.Machine$double.eps)] <- 0
+        x.se[ x.se < sqrt(.Machine$double.eps)] <- 1 # to avoid NA
         zstat <- x/x.se
         z.cutoff <- qnorm(1 - (0.05/2)) # alpha = 0.01
         zstat.string <- ifelse(abs(zstat) > z.cutoff, "*", " ")

@@ -1731,6 +1731,9 @@ lav_options_set <- function(opt = NULL) {
     opt$rotation.args$order.lv.by <- tolower(opt$rotation.args$order.lv.by)
     if(opt$rotation.args$order.lv.by %in% c("sumofsquares", "index", "none")) {
         # nothing to do
+    } else if(opt$rotation %in% c("bi-geomin", "bigeomin",
+                                  "bi-quartimin", "biquartimin")) {
+        opt$rotation.args$order.lv.by <- "none"
     } else {
         stop("lavaan ERROR: rotation.args$order.lv.by should be \"none\",",
              " \"index\" or \"sumofsquares\".")
