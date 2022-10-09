@@ -7,7 +7,7 @@ Fit one or more Exploratory Factor Analysis (EFA) model(s).}
 \usage{
 efa(data = NULL, nfactors = 1L, sample.cov = NULL, sample.nobs = NULL,
     rotation = "geomin", rotation.args = list(), ov.names = names(data),
-    ..., output = "efa")
+    bounds = "pos.var", baseline = FALSE, ..., output = "efa")
 }
 \arguments{
 \item{data}{A data frame containing the observed variables we need for the
@@ -45,6 +45,12 @@ efa(data = NULL, nfactors = 1L, sample.cov = NULL, sample.nobs = NULL,
 \item{ov.names}{Character vector. The variables names that are needed for
    the EFA. Should be a subset of the variables names in the data.frame.
    By default, all the variables in the data are used.}
+\item{bounds}{Per default, \code{bounds = "pos.var"} forces all variances
+   of both observed and latent variables to be strictly nonnegative. See
+   the entry in \code{\link{lavOptions}} for more options.}
+\item{baseline}{Logical. The default is \code{FALSE}. This implies that
+   fit measures that rely on the baseline model (such as CFI and TLI) cannot
+   be computed.}
 \item{...}{Aditional options to be passed to lavaan, using 'name = value'.
     See \code{\link{lavOptions}} for a complete list.}
 \item{output}{Character. If \code{"efa"} (the default), the output mimics
