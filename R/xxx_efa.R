@@ -16,6 +16,8 @@ efa <- function(data           = NULL,
                 rotation       = "geomin",
                 rotation.args  = list(),
                 ov.names       = names(data),
+                bounds         = "pos.var",
+                baseline       = FALSE,
                 ...,
                 output         = "efa") {
 
@@ -90,7 +92,9 @@ efa <- function(data           = NULL,
                                      sample.cov    = sample.cov,
                                      sample.nobs   = sample.nobs,
                                      rotation      = rotation,
-                                     rotation.args = rotation.args),
+                                     rotation.args = rotation.args,
+                                     bounds        = bounds,
+                                     baseline      = baseline),
                                 dotdotdot))
 
         if(output == "efa") {
