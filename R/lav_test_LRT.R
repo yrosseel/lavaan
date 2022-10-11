@@ -10,7 +10,10 @@
 #     method = "Satorra.Bentler.2010"
 #     method = "mean.var.adjusted.PLRT"
 #
-# - 0.6-13: RMSEA.D (also known as 'RDR') is added to the table
+# - 0.6-13: RMSEA.D (also known as 'RDR') is added to the table (unless scaled)
+# - 0.6-13: fix multiple-group UG^2 bug in Satorra.2000 (reported by
+#           Gronneberg, Foldnes and Moss)
+
 
 lavTestLRT <- function(object, ..., method = "default", A.method = "delta",
                        scaled.shifted = TRUE,
@@ -188,9 +191,11 @@ lavTestLRT <- function(object, ..., method = "default", A.method = "delta",
     STAT.delta   <- c(NA, diff(STAT))
     Df.delta     <- c(NA, diff(Df))
     # new in 0.6-13
-    RMSEA.delta  <- c(NA, lav_fit_rmsea(X2 = STAT.delta[-1],
-                                        df = Df.delta[-1],
-                                        N = ntotal, G = ngroups))
+    if(!scaled) {
+        RMSEA.delta  <- c(NA, lav_fit_rmsea(X2 = STAT.delta[-1],
+                                            df = Df.delta[-1],
+                                            N = ntotal, G = ngroups))
+    }
 
     # check for negative values in STAT.delta
     # but with a tolerance (0.6-12)!
@@ -264,22 +269,33 @@ lavTestLRT <- function(object, ..., method = "default", A.method = "delta",
                           PL_BIC = bic,
                           Chisq = STAT,
                           "Chisq diff" = STAT.delta,
-                          "RMSEA" = RMSEA.delta,
                           "Df diff" = Df.delta,
                           "Pr(>Chisq)" = Pvalue.delta,
                           row.names = names(mods),
                           check.names = FALSE)
     } else {
-        val <- data.frame(Df = Df,
-                          AIC = aic,
-                          BIC = bic,
-                          Chisq = STAT,
-                          "Chisq diff" = STAT.delta,
-                          "RMSEA" = RMSEA.delta,
-                          "Df diff" = Df.delta,
-                          "Pr(>Chisq)" = Pvalue.delta,
-                          row.names = names(mods),
-                          check.names = FALSE)
+        if(scaled) {
+            val <- data.frame(Df = Df,
+                              AIC = aic,
+                              BIC = bic,
+                              Chisq = STAT,
+                              "Chisq diff" = STAT.delta,
+                              "Df diff" = Df.delta,
+                              "Pr(>Chisq)" = Pvalue.delta,
+                              row.names = names(mods),
+                              check.names = FALSE)
+        } else {
+            val <- data.frame(Df = Df,
+                              AIC = aic,
+                              BIC = bic,
+                              Chisq = STAT,
+                              "Chisq diff" = STAT.delta,
+                              "RMSEA" = RMSEA.delta,
+                              "Df diff" = Df.delta,
+                              "Pr(>Chisq)" = Pvalue.delta,
+                              row.names = names(mods),
+                              check.names = FALSE)
+        }
     }
 
     # catch Df.delta == 0 cases (reported by Florian Zsok in Zurich)

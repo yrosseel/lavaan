@@ -1,9 +1,14 @@
 # various ways to compute a (scaled) difference chi-square test statistic
 
+# - 0.6-13: fix multiple-group UG^2 bug in Satorra.2000 (reported by
+#           Gronneberg, Foldnes and Moss) when Satterthwaite = TRUE and
+#           ngroups > 1L (use old.approach = TRUE to get the old result)
+
 lav_test_diff_Satorra2000 <- function(m1, m0, H1 = TRUE, A.method = "delta",
                                       A = NULL,
                                       Satterthwaite = FALSE,
                                       scaled.shifted = FALSE,
+                                      old.approach = FALSE,
                                       debug = FALSE) {
 
     if(scaled.shifted) {
@@ -114,23 +119,54 @@ lav_test_diff_Satorra2000 <- function(m1, m0, H1 = TRUE, A.method = "delta",
     # PAAPAAP
     PAAPAAP <- P.inv %*% t(A) %*% MASS::ginv(A %*% P.inv %*% t(A)) %*% A %*% P.inv
 
-    trace.UGamma  <- numeric(ngroups)
-    trace.UGamma2 <- numeric(ngroups)
-    for(g in 1:ngroups) {
-        UG.group <- WLS.V[[g]] %*% Gamma[[g]] %*% WLS.V[[g]] %*%
-                    PI[[g]] %*% PAAPAAP %*% t(PI[[g]])
-        trace.UGamma[g]  <- sum(diag(UG.group))
-        if(Satterthwaite) {
-            trace.UGamma2[g] <- sum(diag(UG.group %*% UG.group))
-        }
-    }
-
     # compute scaling factor
     fg <- unlist(m1@SampleStats@nobs)/m1@SampleStats@ntotal
 
-    trace.UGamma <- sum(fg * trace.UGamma)
-    if(Satterthwaite) {
-        trace.UGamma2 <- sum(fg * trace.UGamma2)
+
+    # this is what we did <0.6-13
+    if(old.approach) {
+        trace.UGamma  <- numeric(ngroups)
+        trace.UGamma2 <- numeric(ngroups)
+        for(g in 1:ngroups) {
+            UG.group <- WLS.V[[g]] %*% Gamma[[g]] %*% WLS.V[[g]] %*%
+                        PI[[g]] %*% PAAPAAP %*% t(PI[[g]])
+            trace.UGamma[g]  <- sum(diag(UG.group))
+            if(Satterthwaite) {
+                trace.UGamma2[g] <- sum(diag(UG.group %*% UG.group))
+            }
+        }
+
+        trace.UGamma <- sum(fg * trace.UGamma)
+        if(Satterthwaite) {
+            trace.UGamma2 <- sum(fg * trace.UGamma2)
+        }
+    } else {
+        # for trace.UGamma, we can compute the trace per group
+        # as in Satorra (2000) eq. 23
+        trace.UGamma  <- numeric(ngroups)
+        for(g in 1:ngroups) {
+            UG.group <- WLS.V[[g]] %*% Gamma[[g]] %*% WLS.V[[g]] %*%
+                        PI[[g]] %*% PAAPAAP %*% t(PI[[g]])
+            trace.UGamma[g]  <- sum(diag(UG.group))
+        }
+        trace.UGamma <- sum(fg * trace.UGamma)
+
+        # but for trace.UGamma2, we can no longer compute the trace per group
+        trace.UGamma2 <- as.numeric(NA)
+        if(Satterthwaite) {
+            # global approach (not group-specific)
+            Gamma.f <- Gamma
+            for (g in seq_along(Gamma)) {
+                Gamma.f[[g]] <- fg[g] * Gamma[[g]]
+            }
+            Gamma.all  <- lav_matrix_bdiag(Gamma.f)
+            V.all      <- lav_matrix_bdiag(WLS.V)
+            PI.all     <- do.call(rbind, PI)
+            U.all      <- V.all %*% PI.all %*% PAAPAAP %*% t(PI.all) %*% V.all
+            UG.all <- U.all %*% Gamma.all
+            UG.all2 <- UG.all %*% UG.all
+            trace.UGamma2 <- sum(diag(UG.all2))
+        }
     }
 
     if(Satterthwaite && !scaled.shifted) {
@@ -153,6 +189,7 @@ lav_test_diff_Satorra2000 <- function(m1, m0, H1 = TRUE, A.method = "delta",
     }
 
     list(T.delta = T.delta, scaling.factor = cd, df.delta = df.delta,
+         trace.UGamma = trace.UGamma, trace.UGamma2 = trace.UGamma2,
          a = a, b = b)
 }
 
