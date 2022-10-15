@@ -145,8 +145,13 @@ lav_options_default <- function(mimic = "lavaan") {
                 omega.information.meat    = "default",
                 omega.h1.information.meat = "default",
 
+                # old approach trace.UGamma2
+                ug2.old.approach       = FALSE,
 
+                # bootstrap
                 bootstrap              = 1000L,
+
+                # gamma
                 gamma.n.minus.one      = FALSE,
                 gamma.unbiased         = FALSE,
 

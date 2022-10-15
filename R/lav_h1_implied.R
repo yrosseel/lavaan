@@ -89,6 +89,7 @@ lav_h1_implied_logl <- function(lavdata        = NULL,
                 lavoptions2 <- lavoptions
                 lavoptions2$se <- "none"
                 lavoptions2$test <- "none"
+                lavoptions2$do.fit <- TRUE
                 #lavoptions2$verbose <- FALSE
                 lavoptions2$h1 <- FALSE
                 lavoptions2$baseline <- FALSE

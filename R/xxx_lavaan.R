@@ -1948,7 +1948,8 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
         if(lavoptions$verbose) {
             cat("computing standardized solution ... ")
         }
-        STD <- standardizedSolution(lavaan)
+        STD <- standardizedSolution(lavaan, remove.eq = FALSE,
+                                    remove.ineq = FALSE, remove.def = FALSE)
         if(lavoptions$verbose) {
             cat(" done.\n")
         }

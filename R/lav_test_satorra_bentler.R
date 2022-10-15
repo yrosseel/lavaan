@@ -1,19 +1,24 @@
-lav_test_satorra_bentler <- function(lavobject      = NULL,
-                                     lavsamplestats = NULL,
-                                     lavmodel       = NULL,
-                                     lavimplied     = NULL,
-                                     lavoptions     = NULL,
-                                     lavdata        = NULL,
-                                     TEST.unscaled  = NULL,
-                                     E.inv          = NULL,
-                                     Delta          = NULL,
-                                     WLS.V          = NULL,
-                                     Gamma          = NULL,
-                                     test           = "satorra.bentler",
-                                     mimic          = "lavaan",
-                                     method         = "original",
-                                     return.u       = FALSE,
-                                     return.ugamma  = FALSE) {
+# - 0.6-13: fix multiple-group UG^2 bug (reported by Gronneberg, Foldnes and
+#           Moss) when Satterthwaite = TRUE, ngroups > 1, and eq constraints.
+#           Use ug2.old.approach = TRUE to get the old result
+
+lav_test_satorra_bentler <- function(lavobject        = NULL,
+                                     lavsamplestats   = NULL,
+                                     lavmodel         = NULL,
+                                     lavimplied       = NULL,
+                                     lavoptions       = NULL,
+                                     lavdata          = NULL,
+                                     TEST.unscaled    = NULL,
+                                     E.inv            = NULL,
+                                     Delta            = NULL,
+                                     WLS.V            = NULL,
+                                     Gamma            = NULL,
+                                     test             = "satorra.bentler",
+                                     mimic            = "lavaan",
+                                     method           = "original",
+                                     ug2.old.approach = FALSE,
+                                     return.u         = FALSE,
+                                     return.ugamma    = FALSE) {
 
     TEST <- list()
 
@@ -27,6 +32,15 @@ lav_test_satorra_bentler <- function(lavobject      = NULL,
         TEST$standard  <- lavobject@test[[1]]
     } else {
         TEST$standard  <- TEST.unscaled
+    }
+
+    # ug2.old.approach
+    if(missing(ug2.old.approach)) {
+        if(!is.null(lavoptions$ug2.old.approach)) {
+            ug2.old.approach <- lavoptions$ug2.old.approach
+        } else {
+            ug2.old.approach <- FALSE
+        }
     }
 
     # E.inv ok?
@@ -155,6 +169,7 @@ lav_test_satorra_bentler <- function(lavobject      = NULL,
                    ngroups = ngroups, nobs = lavsamplestats@nobs,
                    ntotal = lavsamplestats@ntotal, return.u = return.u,
                    return.ugamma = return.ugamma,
+                   ug2.old.approach = ug2.old.approach,
                    Satterthwaite = Satterthwaite)
     } else if(method == "orthogonal.complement") {
         out <- lav_test_satorra_bentler_trace_complement(Gamma = Gamma,
@@ -162,6 +177,7 @@ lav_test_satorra_bentler <- function(lavobject      = NULL,
                    ngroups = ngroups, nobs = lavsamplestats@nobs,
                    ntotal = lavsamplestats@ntotal,
                    return.ugamma = return.ugamma,
+                   ug2.old.approach = ug2.old.approach,
                    Satterthwaite = Satterthwaite)
     } else if(method == "ABA") {
         out <- lav_test_satorra_bentler_trace_ABA(Gamma = Gamma,
@@ -169,6 +185,7 @@ lav_test_satorra_bentler <- function(lavobject      = NULL,
                    ngroups = ngroups, nobs = lavsamplestats@nobs,
                    ntotal = lavsamplestats@ntotal,
                    return.ugamma = return.ugamma,
+                   ug2.old.approach = ug2.old.approach,
                    Satterthwaite = Satterthwaite)
     } else {
         stop("lavaan ERROR: method `", method, "' not supported")
@@ -229,11 +246,19 @@ lav_test_satorra_bentler <- function(lavobject      = NULL,
         scaling.factor <- trace.UGamma/df.scaled
         if(scaling.factor < 0) scaling.factor <- as.numeric(NA)
 
-        # scaled test statistic per group
-        stat.group <- TEST$standard$stat.group / scaling.factor
+        if(ug2.old.approach) {
+            # scaled test statistic per group
+            stat.group <- TEST$standard$stat.group / scaling.factor
 
-        # scaled test statistic global
-        stat <- sum(stat.group)
+            # scaled test statistic global
+            stat <- sum(stat.group)
+        } else {
+            # scaled test statistic per group
+            stat.group <- TEST$standard$stat.group / scaling.factor
+
+            # scaled test statistic global
+            stat <- TEST$standard$stat / scaling.factor
+        }
 
         # label
         if(mimic == "Mplus") {
@@ -268,27 +293,27 @@ lav_test_satorra_bentler <- function(lavobject      = NULL,
         # see 'Simple Second Order Chi-Square Correction' 2010
         # www.statmodel.com
 
-        # however, for multiple groups, Mplus reports something else
-        # YR. 30 Aug 2012 -- after much trial and error, it turns out
-        # that the shift-parameter (b) is weighted (while a is not)??
-        # however, the chisq.square per group are different; only
-        # the sum seems ok??
-
         # same df
         df.scaled <- TEST$standard$df
 
         # scaling factor
         fg <- unlist(lavsamplestats@nobs)/lavsamplestats@ntotal
         a <- sqrt(df.scaled/trace.UGamma2)
-        shift.parameter <- fg * (df.scaled - a*trace.UGamma)
         scaling.factor  <- 1/a
         if(scaling.factor < 0) scaling.factor <- as.numeric(NA)
 
-        # # scaled test statistic per group
-        stat.group <- (TEST$standard$stat.group * a + shift.parameter)
-
-        # scaled test statistic global
-        stat <- sum(stat.group)
+        if(ug2.old.approach) {
+            # scaling factor
+            shift.parameter <- fg * (df.scaled - a*trace.UGamma)
+            # scaled test statistic per group
+            stat.group <- (TEST$standard$stat.group * a + shift.parameter)
+            # scaled test statistic global
+            stat <- sum(stat.group)
+        } else {
+            shift.parameter <- df.scaled - a*trace.UGamma
+            stat <- TEST$standard$stat * a + shift.parameter
+            stat.group <- TEST$standard$stat.group * a + fg*shift.parameter
+        }
 
         # label
         if(mimic == "Mplus") {
@@ -332,112 +357,197 @@ lav_test_satorra_bentler <- function(lavobject      = NULL,
 
 # using the `classical' formula
 # UG = Gamma * [V - V Delta E.inv Delta' V']
-lav_test_satorra_bentler_trace_original <- function(Gamma         = NULL,
-                                                    Delta         = NULL,
-                                                    WLS.V         = NULL,
-                                                    E.inv         = NULL,
-                                                    ngroups       = NULL,
-                                                    nobs          = NULL,
-                                                    ntotal        = NULL,
-                                                    return.u      = FALSE,
-                                                    return.ugamma = FALSE,
-                                                    Satterthwaite = FALSE) {
+lav_test_satorra_bentler_trace_original <- function(Gamma            = NULL,
+                                                    Delta            = NULL,
+                                                    WLS.V            = NULL,
+                                                    E.inv            = NULL,
+                                                    ngroups          = NULL,
+                                                    nobs             = NULL,
+                                                    ntotal           = NULL,
+                                                    return.u         = FALSE,
+                                                    return.ugamma    = FALSE,
+                                                    ug2.old.approach = FALSE,
+                                                    Satterthwaite    = FALSE) {
 
-    # trace of UGamma per group
-    trace.UGamma  <- trace.UGamma2 <- rep(as.numeric(NA), ngroups)
+    # this is what we did <0.6-13: everything per group
+    if(ug2.old.approach) {
+        UfromUGamma <- UG <- vector("list", ngroups)
+        trace.UGamma <- trace.UGamma2 <- rep(as.numeric(NA), ngroups)
+        for(g in 1:ngroups) {
+            fg <- nobs[[g]]/ntotal
+            Gamma.g <- Gamma[[g]] / fg  ## ?? check this
+            Delta.g <- Delta[[g]]
+            if(is.matrix(WLS.V[[g]])) {
+                WLS.Vg <- WLS.V[[g]] * fg
+            } else {
+                WLS.Vg <- diag(WLS.V[[g]]) * fg
+            }
 
-    # U
-    UfromUGamma <- vector("list", ngroups)
+            U <- (WLS.Vg - WLS.Vg %*% Delta[[g]] %*% E.inv %*%
+                                    t(Delta[[g]]) %*% WLS.Vg)
+            trace.UGamma[g] <- sum(U * Gamma.g)
 
-    # per group
-    for(g in 1:ngroups) {
-        fg <- nobs[[g]]/ntotal
-        Gamma.g <- Gamma[[g]] / fg  ## ?? check this
-        Delta.g <- Delta[[g]]
-        WLS.Vg  <- WLS.V[[g]] * fg
+            if(return.u) {
+                UfromUGamma[[g]] <- U
+            }
 
-        # check if WLS.Vg is a matrix
-        if(!is.matrix(WLS.Vg)) {
-            # create matrix
-            WLS.Vg <- diag(WLS.Vg)
-        }
+            UG <- NULL
+            if(Satterthwaite || return.ugamma) {
+                UG.group <- U %*% Gamma.g
+                trace.UGamma2[g] <- sum(UG.group * t(UG.group))
+                UG[[g]] <- UG.group
+            }
+        } # g
+        # sum over groups
+        trace.UGamma  <- sum(trace.UGamma)
+        trace.UGamma2 <- sum(trace.UGamma2)
+        U.all <- UfromUGamma # group-specific
 
-        U <- (WLS.Vg - WLS.Vg %*% Delta[[g]] %*% E.inv %*%
-                                t(Delta[[g]]) %*% WLS.Vg)
-        trace.UGamma[g] <- sum(U * Gamma.g)
+    } else {
+        trace.UGamma <- trace.UGamma2 <- U.all <- UG <- as.numeric(NA)
+        fg <- unlist(nobs)/ntotal
+        if(Satterthwaite || return.ugamma || return.u) {
+            # for trace.UGamma2, we can no longer compute the trace per group
+            V.g <- WLS.V
+            for(g in 1:ngroups) {
+                if(is.matrix(WLS.V[[g]])) {
+                    V.g[[g]] <- fg[g] * WLS.V[[g]]
+                } else {
+                    V.g[[g]] <- fg[g] * diag(WLS.V[[g]])
+                }
+            }
+            V.all <- lav_matrix_bdiag(V.g)
+            Gamma.f <- Gamma
+            for(g in 1:ngroups) {
+                Gamma.f[[g]] <- 1/fg[g] * Gamma[[g]]
+            }
+            Gamma.all <- lav_matrix_bdiag(Gamma.f)
+            Delta.all <- do.call("rbind", Delta)
+            U.all <- V.all - V.all %*% Delta.all %*% E.inv %*% t(Delta.all) %*% V.all
+            UG <- U.all %*% Gamma.all
 
-        if(return.u) {
-            UfromUGamma[[g]] <- U
-        }
+            trace.UGamma  <- sum(U.all * Gamma.all)
+            trace.UGamma2 <- sum(UG * t(UG))
+        } else {
+            # we only need trace.UGamma - this can be done group-specific
+            trace.UGamma.group <- numeric(ngroups)
+            for(g in 1:ngroups) {
+                Gamma.g <- Gamma[[g]] / fg[g]
+                Delta.g <- Delta[[g]]
+                if(is.matrix(WLS.V[[g]])) {
+                    WLS.Vg  <- WLS.V[[g]] * fg[g]
+                } else {
+                    WLS.Vg  <- diag(WLS.V[[g]]) * fg[g]
+                }
 
-        UG <- NULL
-        if(Satterthwaite || return.ugamma) {
-            UG <- U %*% Gamma.g
-            trace.UGamma2[g] <- sum(UG * t(UG))
+                U <- (WLS.Vg - WLS.Vg %*% Delta[[g]] %*% E.inv %*%
+                                        t(Delta[[g]]) %*% WLS.Vg)
+                trace.UGamma.group[g] <- sum(U * Gamma.g)
+            }
+            trace.UGamma <- sum(trace.UGamma.group)
         }
     }
 
-    # sum over groups
-    trace.UGamma <- sum(trace.UGamma)
-    trace.UGamma2 <- sum(trace.UGamma2)
-
     list(trace.UGamma = trace.UGamma, trace.UGamma2 = trace.UGamma2,
-         UGamma = UG, UfromUGamma = UfromUGamma)
+         UGamma = UG, UfromUGamma = U.all)
 }
 
 # using the orthogonal complement of Delta: Delta.c
 # UG = [ (Delta.c' W Delta.c)^{-1} (Delta.c' Gamma Delta.c)
-lav_test_satorra_bentler_trace_complement <- function(Gamma         = NULL,
-                                                      Delta         = NULL,
-                                                      WLS.V         = NULL,
-                                                      lavmodel      = NULL,
-                                                      ngroups       = NULL,
-                                                      nobs          = NULL,
-                                                      ntotal        = NULL,
-                                                      return.ugamma = FALSE,
-                                                      Satterthwaite = FALSE) {
+lav_test_satorra_bentler_trace_complement <- function(Gamma            = NULL,
+                                                      Delta            = NULL,
+                                                      WLS.V            = NULL,
+                                                      lavmodel         = NULL,
+                                                      ngroups          = NULL,
+                                                      nobs             = NULL,
+                                                      ntotal           = NULL,
+                                                      return.ugamma    = FALSE,
+                                                      ug2.old.approach = FALSE,
+                                                      Satterthwaite    = FALSE) {
 
-    # trace of UGamma per group
-    trace.UGamma  <- trace.UGamma2 <- rep(as.numeric(NA), ngroups)
+    # this is what we did <0.6-13: everything per group
+    # does not work when ngroups > 1 + equality constraints
+    if(ug2.old.approach) {
+        UG <- vector("list", ngroups)
+        trace.UGamma <- trace.UGamma2 <- rep(as.numeric(NA), ngroups)
+        for(g in 1:ngroups) {
+            fg <- nobs[[g]]/ntotal
+            Gamma.g <- Gamma[[g]] / fg  ## ?? check this
+            Delta.g <- Delta[[g]]
+            if(is.matrix(WLS.V[[g]])) {
+                WLS.Vg <- WLS.V[[g]] * fg
+            } else {
+                WLS.Vg <- diag(WLS.V[[g]]) * fg
+            }
 
-    # per group
-    for(g in 1:ngroups) {
-        fg <- nobs[[g]]/ntotal
-        Gamma.g <- Gamma[[g]] / fg  ## ?? check this
-        Delta.g <- Delta[[g]]
-        WLS.Vg  <- WLS.V[[g]] * fg
+            # handle equality constraints
+            # FIXME: inequality constraints are ignored!
+            if(lavmodel@eq.constraints) {
+                Delta.g <- Delta.g %*% lavmodel@eq.constraints.K
+            } else if(.hasSlot(lavmodel, "ceq.simple.only") &&
+                      lavmodel@ceq.simple.only) {
+                Delta.g <- Delta.g %*% lavmodel@ceq.simple.K
+            }
 
-        # check if WLS.Vg is a matrix
-        if(!is.matrix(WLS.Vg)) {
-            # create matrix
-            WLS.Vg <- diag(WLS.Vg)
+            # orthogonal complement of Delta.g
+            Delta.c <- lav_matrix_orthogonal_complement(Delta.g)
+
+            ### FIXME: compute WLS.W directly, instead of using solve(WLS.V)
+
+            tmp1 <- solve(t(Delta.c) %*% solve(WLS.Vg) %*% Delta.c)
+            tmp2 <- t(Delta.c) %*% Gamma.g %*% Delta.c
+
+            trace.UGamma[g] <- sum(tmp1 * tmp2)
+            UG <- NULL
+            if(Satterthwaite || return.ugamma) {
+                UG.group <- tmp1 %*% tmp2
+                trace.UGamma2[g] <- sum(UG.group * t(UG.group))
+                UG[[g]] <- UG.group
+            }
         }
+        # sum over groups
+        trace.UGamma  <- sum(trace.UGamma)
+        trace.UGamma2 <- sum(trace.UGamma2)
+    } else {
+        trace.UGamma <- trace.UGamma2 <- UG <- as.numeric(NA)
+        fg <- unlist(nobs)/ntotal
+
+        V.g <- WLS.V
+        for(g in 1:ngroups) {
+            if(is.matrix(WLS.V[[g]])) {
+                V.g[[g]] <- fg[g] * WLS.V[[g]]
+            } else {
+                V.g[[g]] <- fg[g] * diag(WLS.V[[g]])
+            }
+        }
+        V.all <- lav_matrix_bdiag(V.g)
+        Gamma.f <- Gamma
+        for(g in 1:ngroups) {
+            Gamma.f[[g]] <- 1/fg[g] * Gamma[[g]]
+        }
+        Gamma.all <- lav_matrix_bdiag(Gamma.f)
+        Delta.all <- do.call("rbind", Delta)
 
         # handle equality constraints
         # FIXME: inequality constraints are ignored!
         if(lavmodel@eq.constraints) {
-            Delta.g <- Delta.g %*% lavmodel@eq.constraints.K
+            Delta.all <- Delta.all %*% lavmodel@eq.constraints.K
+        } else if(.hasSlot(lavmodel, "ceq.simple.only") &&
+                  lavmodel@ceq.simple.only) {
+            Delta.all <- Delta.all %*% lavmodel@ceq.simple.K
         }
 
         # orthogonal complement of Delta.g
-        Delta.c <- lav_matrix_orthogonal_complement(Delta.g)
+        Delta.c <- lav_matrix_orthogonal_complement(Delta.all)
 
-        ### FIXME: compute WLS.W directly, instead of using solve(WLS.V)
+        tmp1 <- solve(t(Delta.c) %*% solve(V.all) %*% Delta.c)
+        tmp2 <- t(Delta.c) %*% Gamma.all %*% Delta.c
 
-        tmp1 <- solve(t(Delta.c) %*% solve(WLS.Vg) %*% Delta.c)
-        tmp2 <- t(Delta.c) %*% Gamma.g %*% Delta.c
+        UG <- tmp1 %*% tmp2
 
-        trace.UGamma[g] <- sum(tmp1 * tmp2)
-        UG <- NULL
-        if(Satterthwaite || return.ugamma) {
-            UG <- tmp1 %*% tmp2
-            trace.UGamma2[g] <- sum(UG * t(UG))
-        }
+        trace.UGamma  <- sum(tmp1 * tmp2)
+        trace.UGamma2 <- sum(UG * t(UG))
     }
-
-    # sum over groups
-    trace.UGamma <- sum(trace.UGamma)
-    trace.UGamma2 <- sum(trace.UGamma2)
 
     list(trace.UGamma = trace.UGamma, trace.UGamma2 = trace.UGamma2,
          UGamma = UG)
@@ -461,55 +571,118 @@ lav_test_satorra_bentler_trace_complement <- function(Gamma         = NULL,
 
 # we write it like this to highlight the connection with MLR
 #
-lav_test_satorra_bentler_trace_ABA <- function(Gamma         = NULL,
-                                               Delta         = NULL,
-                                               WLS.V         = NULL,
-                                               E.inv         = NULL,
-                                               ngroups       = NULL,
-                                               nobs          = NULL,
-                                               ntotal        = NULL,
-                                               return.ugamma = FALSE,
-                                               Satterthwaite = FALSE) {
+lav_test_satorra_bentler_trace_ABA <- function(Gamma            = NULL,
+                                               Delta            = NULL,
+                                               WLS.V            = NULL,
+                                               E.inv            = NULL,
+                                               ngroups          = NULL,
+                                               nobs             = NULL,
+                                               ntotal           = NULL,
+                                               return.ugamma    = FALSE,
+                                               ug2.old.approach = FALSE,
+                                               Satterthwaite    = FALSE) {
 
-    # trace of UGamma per group
-    trace.UGamma  <- trace.UGamma2 <- rep(as.numeric(NA), ngroups)
+    # this is what we did <0.6-13: everything per group
+    if(ug2.old.approach) {
+        UfromUGamma <- UG <- vector("list", ngroups)
+        trace.UGamma <- trace.UGamma2 <- rep(as.numeric(NA), ngroups)
 
-    # per group
-    for(g in 1:ngroups) {
-        fg <- nobs[[g]]/ntotal
-        Gamma.g <- Gamma[[g]] / fg  ## ?? check this
-        Delta.g <- Delta[[g]]
+        for(g in 1:ngroups) {
+            fg <- nobs[[g]]/ntotal
+            Gamma.g <- Gamma[[g]] / fg  ## ?? check this
+            Delta.g <- Delta[[g]]
 
-        # diagonal WLS.V? we check for this since 0.5-17
-        diagonal <- FALSE
-        if(is.matrix(WLS.V[[g]])) {
-            A1 <- WLS.V[[g]] * fg
-            AGA1 <- A1 %*% Gamma.g %*% A1
-        } else {
-            diagonal <- TRUE
-            a1 <- WLS.V[[g]] * fg # numeric vector!
-            AGA1 <- Gamma.g * tcrossprod(a1)
+            # diagonal WLS.V? we check for this since 0.5-17
+            diagonal <- FALSE
+            if(is.matrix(WLS.V[[g]])) {
+                A1 <- WLS.V[[g]] * fg
+                AGA1 <- A1 %*% Gamma.g %*% A1
+            } else {
+                diagonal <- TRUE
+                a1 <- WLS.V[[g]] * fg # numeric vector!
+                AGA1 <- Gamma.g * tcrossprod(a1)
+            }
+
+            # note: we have AGA1 at the end, to avoid ending up with
+            # a transposed matrix (both parts are non-symmetric)
+            if(diagonal) {
+                UG <- t(Gamma.g * a1) -
+                      (Delta.g %*% tcrossprod(E.inv, Delta.g) %*% AGA1)
+            } else {
+                UG <- (Gamma.g %*% A1) -
+                      (Delta.g %*% tcrossprod(E.inv, Delta.g) %*% AGA1)
+            }
+
+            trace.UGamma[g] <- sum(diag(UG))
+            if(Satterthwaite) {
+                trace.UGamma2[g] <- sum(UG * t(UG))
+            }
         }
+        # sum over groups
+        trace.UGamma <- sum(trace.UGamma)
+        trace.UGamma2 <- sum(trace.UGamma2)
+    } else {
 
-        # note: we have AGA1 at the end, to avoid ending up with
-        # a transposed matrix (both parts are non-symmetric)
-        if(diagonal) {
-            UG <- t(Gamma.g * a1) -
-                  (Delta.g %*% tcrossprod(E.inv, Delta.g) %*% AGA1)
+        trace.UGamma <- trace.UGamma2 <- UG <- as.numeric(NA)
+        fg <- unlist(nobs)/ntotal
+        if(Satterthwaite || return.ugamma) {
+            # for trace.UGamma2, we can no longer compute the trace per group
+            V.g <- WLS.V
+            for(g in 1:ngroups) {
+                if(is.matrix(WLS.V[[g]])) {
+                    V.g[[g]] <- fg[g] * WLS.V[[g]]
+                } else {
+                    V.g[[g]] <- fg[g] * diag(WLS.V[[g]])
+                }
+            }
+            V.all <- lav_matrix_bdiag(V.g)
+            Gamma.f <- Gamma
+            for(g in 1:ngroups) {
+                Gamma.f[[g]] <- 1/fg[g] * Gamma[[g]]
+            }
+            Gamma.all <- lav_matrix_bdiag(Gamma.f)
+            Delta.all <- do.call("rbind", Delta)
+
+            AGA1 <- V.all %*% Gamma.all %*% V.all
+
+            UG <- (Gamma.all %*% V.all) -
+                  (Delta.all %*% tcrossprod(E.inv, Delta.all) %*% AGA1)
+
+            trace.UGamma  <- sum(diag(UG))
+            trace.UGamma2 <- sum(UG * t(UG))
         } else {
-            UG <- (Gamma.g %*% A1) -
-                  (Delta.g %*% tcrossprod(E.inv, Delta.g) %*% AGA1)
-        }
+            trace.UGamma.group <- numeric(ngroups)
+            for(g in 1:ngroups) {
+                fg <- nobs[[g]]/ntotal
+                Gamma.g <- Gamma[[g]] / fg  ## ?? check this
+                Delta.g <- Delta[[g]]
 
-        trace.UGamma[g] <- sum(diag(UG))
-        if(Satterthwaite) {
-            trace.UGamma2[g] <- sum(UG * t(UG))
+                # diagonal WLS.V? we check for this since 0.5-17
+                diagonal <- FALSE
+                if(is.matrix(WLS.V[[g]])) {
+                    A1 <- WLS.V[[g]] * fg
+                    AGA1 <- A1 %*% Gamma.g %*% A1
+                } else {
+                    diagonal <- TRUE
+                    a1 <- WLS.V[[g]] * fg # numeric vector!
+                    AGA1 <- Gamma.g * tcrossprod(a1)
+                }
+
+                # note: we have AGA1 at the end, to avoid ending up with
+                # a transposed matrix (both parts are non-symmetric)
+                if(diagonal) {
+                    UG <- t(Gamma.g * a1) -
+                          (Delta.g %*% tcrossprod(E.inv, Delta.g) %*% AGA1)
+                } else {
+                    UG <- (Gamma.g %*% A1) -
+                          (Delta.g %*% tcrossprod(E.inv, Delta.g) %*% AGA1)
+                }
+
+                trace.UGamma.group[g] <- sum(diag(UG))
+            } # g
+            trace.UGamma <- sum(trace.UGamma.group)
         }
     }
-
-    # sum over groups
-    trace.UGamma <- sum(trace.UGamma)
-    trace.UGamma2 <- sum(trace.UGamma2)
 
     if(!return.ugamma) {
         UG <- NULL

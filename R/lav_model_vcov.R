@@ -167,7 +167,8 @@ lav_model_nvcov_robust_sem <- function(lavmodel       = NULL,
 
     if( (lavoptions$information[1] == lavoptions$information[2]) &&
         (lavoptions$h1.information[1] == lavoptions$h1.information[2]) &&
-        (lavoptions$observed.information[1] ==
+        (lavoptions$information[2] == "expected" ||
+         lavoptions$observed.information[1] ==
          lavoptions$observed.information[2]) ) {
         # only when same type of information is used # new in 0.6-6
         attr(NVarCov, "E.inv") <- E.inv
@@ -239,7 +240,8 @@ lav_model_nvcov_robust_sandwich <- function(lavmodel       = NULL,
 
     if( (lavoptions$information[1] == lavoptions$information[2]) &&
         (lavoptions$h1.information[1] == lavoptions$h1.information[2]) &&
-        (lavoptions$observed.information[1] ==
+        (lavoptions$information[2] == "expected" ||
+         lavoptions$observed.information[1] ==
          lavoptions$observed.information[2]) ) {
         # only when same type of information is used # new in 0.6-6
         attr(NVarCov, "E.inv") <- E.inv
@@ -393,7 +395,8 @@ lav_model_nvcov_two_stage <- function(lavmodel       = NULL,
     attr(NVarCov, "Gamma") <- Gamma
     if( (lavoptions$information[1] == lavoptions$information[2]) &&
         (lavoptions$h1.information[1] == lavoptions$h1.information[2]) &&
-        (lavoptions$observed.information[1] ==
+        (lavoptions$information[2] == "expected" ||
+         lavoptions$observed.information[1] ==
          lavoptions$observed.information[2]) ) {
         # only when same type of information is used # new in 0.6-6
         attr(NVarCov, "E.inv") <- E.inv

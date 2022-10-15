@@ -1639,7 +1639,8 @@ lav_samplestats_cluster_patterns <- function(Y = NULL, Lp = NULL,
         if(length(both.idx) > 0L) {
             zero.idx <- which(diag(S.b)[both.idx] < 0.0001)
             if(length(zero.idx) > 0L) {
-                warning("lavaan WARNING: (near) zero variance at between level for splitted variable:\n\t\t", Lp$both.names[[l]][zero.idx])
+                warning("lavaan WARNING: (near) zero variance at between level for splitted variable:\n\t\t",
+                    paste(Lp$both.names[[l]][zero.idx], collapse = " "))
             }
         }
 

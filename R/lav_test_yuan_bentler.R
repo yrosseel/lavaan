@@ -1,17 +1,24 @@
-lav_test_yuan_bentler <- function(lavobject      = NULL,
-                                  lavsamplestats = NULL,
-                                  lavmodel       = NULL,
-                                  lavimplied     = NULL,
-                                  lavh1          = NULL,
-                                  lavoptions     = NULL,
-                                  lavdata        = NULL,
-                                  TEST.unscaled  = NULL,
-                                  E.inv          = NULL,
-                                  B0.group       = NULL,
-                                  test           = "yuan.bentler",
-                                  mimic          = "lavaan",
-                                  #method         = "default",
-                                  return.ugamma  = FALSE) {
+# - 0.6-13: fix multiple-group UG^2 bug (reported by Gronneberg, Foldnes and
+#           Moss) when Satterthwaite = TRUE, ngroups > 1, and eq constraints.
+#
+#           Note however that Satterthwaite = FALSE always (for now), so
+#           the fix has no (visible) effect
+
+lav_test_yuan_bentler <- function(lavobject        = NULL,
+                                  lavsamplestats   = NULL,
+                                  lavmodel         = NULL,
+                                  lavimplied       = NULL,
+                                  lavh1            = NULL,
+                                  lavoptions       = NULL,
+                                  lavdata          = NULL,
+                                  TEST.unscaled    = NULL,
+                                  E.inv            = NULL,
+                                  B0.group         = NULL,
+                                  test             = "yuan.bentler",
+                                  mimic            = "lavaan",
+                                  #method          = "default",
+                                  ug2.old.approach = FALSE,
+                                  return.ugamma    = FALSE) {
 
     TEST <- list()
 
@@ -28,6 +35,15 @@ lav_test_yuan_bentler <- function(lavobject      = NULL,
         TEST$standard  <- TEST.unscaled
     }
 
+    # ug2.old.approach
+    if(missing(ug2.old.approach)) {
+        if(!is.null(lavoptions$ug2.old.approach)) {
+            ug2.old.approach <- lavoptions$ug2.old.approach
+        } else {
+            ug2.old.approach <- FALSE
+        }
+    }
+
     # E.inv ok?
     if( length(lavoptions$information) == 1L &&
         length(lavoptions$h1.information) == 1L &&
@@ -35,7 +51,8 @@ lav_test_yuan_bentler <- function(lavobject      = NULL,
         E.inv.recompute <- FALSE
     } else if( (lavoptions$information[1] == lavoptions$information[2]) &&
         (lavoptions$h1.information[1] == lavoptions$h1.information[2]) &&
-        (lavoptions$observed.information[1] ==
+        (lavoptions$information[2] == "expected" ||
+         lavoptions$observed.information[1] ==
          lavoptions$observed.information[2]) ) {
         E.inv.recompute <- FALSE
     } else {
@@ -75,10 +92,16 @@ lav_test_yuan_bentler <- function(lavobject      = NULL,
                                            inverted       = TRUE),
                       silent = TRUE)
         if(inherits(E.inv, "try-error")) {
-            TEST[[test[1]]] <- c(TEST$standard, scaling.factor = as.numeric(NA),
-                                 label = character(0))
-            warning("lavaan WARNING: could not invert information matrix needed for robust test statistic\n")
-            return(TEST)
+            if(return.ugamma) {
+                warning("lavaan WARNING: could not invert information matrix needed for UGamma\n")
+                return(NULL)
+            } else {
+                TEST[[test[1]]] <- c(TEST$standard,
+                                     scaling.factor = as.numeric(NA),
+                                     label = character(0))
+                warning("lavaan WARNING: could not invert information matrix needed for robust test statistic\n")
+                return(TEST)
+            }
         }
     }
 
@@ -99,7 +122,7 @@ lav_test_yuan_bentler <- function(lavobject      = NULL,
     # FIXME: should we not always use 'unstructured' here?
     # if the model is, say, the independence model, the
     # 'structured' information (A1) will be so far away from B1
-    # that we will end with 'NA'
+    # that we will end up with 'NA'
     h1.options <- lavoptions
     if(test == "yuan.bentler.mplus") {
         # always 'unstructured' H1 information
@@ -156,23 +179,23 @@ lav_test_yuan_bentler <- function(lavobject      = NULL,
 
         # compute trace 'U %*% Gamma' (or 'U %*% Omega')
         trace.UGamma <- lav_test_yuan_bentler_trace(
-            lavsamplestats = lavsamplestats,
-            meanstructure  = lavmodel@meanstructure,
-            A1.group       = A1.group,
-            B1.group       = B1.group,
-            Delta          = Delta,
-            Omega          = Omega,
-            E.inv          = E.inv,
-            Satterthwaite  = TRUE) # for now
+            lavsamplestats   = lavsamplestats,
+            meanstructure    = lavmodel@meanstructure,
+            A1.group         = A1.group,
+            B1.group         = B1.group,
+            Delta            = Delta,
+            Omega            = Omega,
+            E.inv            = E.inv,
+            ug2.old.approach = ug2.old.approach,
+            Satterthwaite    = FALSE) # for now
     }
 
     # unscaled test
     df <- TEST$standard$df
-    chisq.group <- TEST$standard$stat.group
 
-    scaling.factor       <- sum(trace.UGamma) / df
+    scaling.factor       <- trace.UGamma / df
     if(scaling.factor < 0) scaling.factor <- as.numeric(NA)
-    chisq.scaled         <- sum(chisq.group / scaling.factor)
+    chisq.scaled         <- TEST$standard$stat / scaling.factor
     pvalue.scaled        <- 1 - pchisq(chisq.scaled, df)
 
     ndat <- sum(attr(trace.UGamma, "h1.ndat"))
@@ -187,7 +210,8 @@ lav_test_yuan_bentler <- function(lavobject      = NULL,
         TEST$yuan.bentler <-
             list(test                 = test,
                  stat                 = chisq.scaled,
-                 stat.group           = (chisq.group / scaling.factor),
+                 stat.group           = (TEST$standard$stat.group /
+                                         scaling.factor),
                  df                   = df,
                  pvalue               = pvalue.scaled,
                  scaling.factor       = scaling.factor,
@@ -201,7 +225,8 @@ lav_test_yuan_bentler <- function(lavobject      = NULL,
         TEST$yuan.bentler.mplus <-
             list(test                 = test,
                  stat                 = chisq.scaled,
-                 stat.group           = (chisq.group / scaling.factor),
+                 stat.group           = (TEST$standard$stat.group /
+                                         scaling.factor),
                  df                   = df,
                  pvalue               = pvalue.scaled,
                  scaling.factor       = scaling.factor,
@@ -217,58 +242,100 @@ lav_test_yuan_bentler <- function(lavobject      = NULL,
 }
 
 
-lav_test_yuan_bentler_trace <- function(lavsamplestats =lavsamplestats,
-                                        meanstructure  = TRUE,
-                                        A1.group       = NULL,
-                                        B1.group       = NULL,
-                                        Delta          = NULL,
-                                        Omega          = NULL,
-                                        E.inv          = NULL,
-                                        Satterthwaite  = FALSE) {
+lav_test_yuan_bentler_trace <- function(lavsamplestats   = lavsamplestats,
+                                        meanstructure    = TRUE,
+                                        A1.group         = NULL,
+                                        B1.group         = NULL,
+                                        Delta            = NULL,
+                                        Omega            = NULL,
+                                        E.inv            = NULL,
+                                        ug2.old.approach = FALSE,
+                                        Satterthwaite    = FALSE) {
 
     # we always assume a meanstructure (nope, not any longer, since 0.6)
     #meanstructure <- TRUE
 
-    trace.UGamma  <- numeric( lavsamplestats@ngroups )
-    trace.UGamma2 <- numeric( lavsamplestats@ngroups )
-    trace.h0      <- numeric( lavsamplestats@ngroups )
+    ngroups <- lavsamplestats@ngroups
 
     trace.h1      <- attr(Omega, "trace.h1")
     h1.ndat       <- attr(Omega, "h1.ndat")
 
-    for(g in 1:lavsamplestats@ngroups) {
+    if(ug2.old.approach || !Satterthwaite) {
+        trace.UGamma  <- numeric( ngroups )
+        trace.UGamma2 <- numeric( ngroups )
+        trace.h0      <- numeric( ngroups )
 
-        # group weight
-        fg <- lavsamplestats@nobs[[g]]/lavsamplestats@ntotal
+        for(g in 1:ngroups) {
+            fg <- lavsamplestats@nobs[[g]]/lavsamplestats@ntotal
 
-        A1 <- A1.group[[g]] * fg
-        B1 <- B1.group[[g]] * fg
-        DELTA <- Delta[[g]]
-        Gamma.g <- Omega[[g]] / fg
+            A1 <- A1.group[[g]] * fg
+            B1 <- B1.group[[g]] * fg
+            DELTA <- Delta[[g]]
+            Gamma.g <- Omega[[g]] / fg
 
-        D.Einv.tD <- DELTA %*% tcrossprod(E.inv, DELTA)
+            D.Einv.tD <- DELTA %*% tcrossprod(E.inv, DELTA)
 
-        #trace.h1[g] <- sum( B1 * t( A1.inv ) )
-        # fg cancels out: trace.h1[g] <- sum( fg*B1 * t( 1/fg*A1.inv ) )
-        trace.h0[g] <- sum( B1 * D.Einv.tD )
-        #trace.UGamma[g] <- trace.h1[g] - trace.h0[g]
-        U <- A1 - A1 %*% D.Einv.tD %*% A1
-        trace.UGamma[g] <- sum(U * Gamma.g)
+            #trace.h1[g] <- sum( B1 * t( A1.inv ) )
+            # fg cancels out: trace.h1[g] <- sum( fg*B1 * t( 1/fg*A1.inv ) )
+            trace.h0[g] <- sum( B1 * D.Einv.tD )
+            #trace.UGamma[g] <- trace.h1[g] - trace.h0[g]
+            U <- A1 - A1 %*% D.Einv.tD %*% A1
+            trace.UGamma[g] <- sum(U * Gamma.g)
 
+            if(Satterthwaite) {
+                UG <- U %*% Gamma.g
+                trace.UGamma2[g] <- sum(UG * t(UG))
+            }
+        } # g
+        trace.UGamma <- sum(trace.UGamma)
+        attr(trace.UGamma, "h1") <- trace.h1
+        attr(trace.UGamma, "h0") <- trace.h0
+        attr(trace.UGamma, "h1.ndat") <- h1.ndat
         if(Satterthwaite) {
-            UG <- U %*% Gamma.g
-            trace.UGamma2[g] <- sum(UG * t(UG))
+            attr(trace.UGamma, "trace.UGamma2") <- sum(trace.UGamma2)
         }
-    }
 
-    # traces
-    trace.UGamma <- sum(trace.UGamma)
-    attr(trace.UGamma, "h1") <- trace.h1
-    attr(trace.UGamma, "h0") <- trace.h0
-    attr(trace.UGamma, "h1.ndat") <- h1.ndat
+    } else {
 
-    if(Satterthwaite) {
-        attr(trace.UGamma, "trace.UGamma2") <- sum(trace.UGamma2)
+        trace.UGamma <- trace.UGamma2 <- UG <- as.numeric(NA)
+        fg <- unlist(lavsamplestats@nobs)/lavsamplestats@ntotal
+        #if(Satterthwaite) {
+
+        A1.f <- A1.group
+        for(g in 1:ngroups) {
+            A1.f[[g]] <- A1.group[[g]] * fg[g]
+        }
+        A1.all <- lav_matrix_bdiag(A1.f)
+
+        B1.f <- B1.group
+        for(g in 1:ngroups) {
+            B1.f[[g]] <- B1.group[[g]] * fg[g]
+        }
+        B1.all <- lav_matrix_bdiag(B1.f)
+
+        Gamma.f <- Omega
+        for(g in 1:ngroups) {
+            Gamma.f[[g]] <- 1/fg[g] * Omega[[g]]
+        }
+        Gamma.all <- lav_matrix_bdiag(Gamma.f)
+        Delta.all <- do.call("rbind", Delta)
+
+        D.Einv.tD <- Delta.all %*% tcrossprod(E.inv, Delta.all)
+
+        trace.h0 <- sum( B1.all * D.Einv.tD )
+        U.all <- A1.all - A1.all %*% D.Einv.tD %*% A1.all
+        trace.UGamma <- sum(U.all * Gamma.all)
+
+        attr(trace.UGamma, "h1") <- sum(trace.h1)
+        attr(trace.UGamma, "h0") <- trace.h0
+        attr(trace.UGamma, "h1.ndat") <- sum(h1.ndat)
+        if(Satterthwaite) {
+            UG <- U.all %*% Gamma.all
+            trace.UGamma2 <- sum(UG * t(UG))
+            attr(trace.UGamma, "trace.UGamma2") <- trace.UGamma2
+        }
+
+       # } else {
     }
 
     trace.UGamma

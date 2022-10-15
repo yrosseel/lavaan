@@ -127,7 +127,8 @@ lav_test_print <- function(object, nd = 3L) {
                         sprintf(num.format, TEST[[block]]$pvalue),
                         sprintf(num.format, TEST[[block]]$scaling.factor))
                 if(TEST[[block]]$test == "scaled.shifted") {
-                   if(ngroups == 1L) {
+                   if(ngroups == 1L ||
+                      length(TEST[[block]]$shift.parameter) == 1L) {
                         c1 <- c(c1, "Shift parameter")
                         c2 <- c(c2, "")
                         c3 <- c(c3,
