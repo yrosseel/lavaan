@@ -86,8 +86,12 @@ lav_cfa_fabin3 <- function(S, marker.idx = NULL, lambda.nonzero.idx = NULL) {
 # - THETA is diagonal
 # - PSI is unrestricted
 # - we assume W = S^{-1}
+#
+# YR 17 oct 2022: - add lower/upper bounds for theta
+#                 - use 'lambda' correction to ensure PSI is positive definite
+#
 lav_cfa_lambda2thetapsi <- function(lambda = NULL, S = NULL, S.inv = NULL,
-                                    GLS = FALSE) {
+                                    GLS = FALSE, bounds = TRUE) {
     LAMBDA <- as.matrix(lambda)
     nvar <- nrow(LAMBDA); nfac <- ncol(LAMBDA)
 
@@ -111,10 +115,38 @@ lav_cfa_lambda2thetapsi <- function(lambda = NULL, S = NULL, S.inv = NULL,
         theta <-  solve(diag(nvar) - D*D, diag(S - (D %*% S %*% D)))
     }
 
+    # check bounds for theta
+    if(bounds) {
+        diagS <- diag(S)
+
+        # nonnegative
+        too.small.idx <- which(theta < 0)
+        theta[too.small.idx] <- 0
+
+        # not larger than diag(S)
+        too.large.idx <- which(theta > diagS)
+        if(length(too.large.idx) > 0L) {
+            theta[too.large.idx] <- diagS[too.large.idx] * 0.99
+        }
+    }
+
     # psi
-    SminTheta <- S
-    diag.idx <- lav_matrix_diag_idx(nvar)
-    SminTheta[diag.idx] <- SminTheta[diag.idx] - theta
+    diag.theta <- diag(theta)
+    lambda <- try(lav_matrix_symmetric_diff_smallest_root(S, diag.theta),
+                  silent = TRUE)
+    if(inherits(lambda, "try-error")) {
+        warning("lavaan WARNING: failed to compute lambda")
+        SminTheta <- S - diag.theta # and hope for the best
+    } else {
+        N <- 20L # conservative lower bound
+        cutoff <- 1 + 1/(N-1) # 1.052632
+        if(lambda < cutoff) {
+            lambda.star <- lambda - 1/(N - 1)
+            SminTheta <- S - lambda.star * diag.theta
+        } else {
+            SminTheta <- S - diag.theta
+        }
+    }
     PSI <- M %*% SminTheta %*% t(M)
 
     list(lambda = LAMBDA, theta = theta, psi = PSI)
