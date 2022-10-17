@@ -1305,9 +1305,9 @@ lav_print_loadings <- function(x, nd = 3L, cutoff = 0.3, dot.cutoff = 0.1,
     # add resvar
     if(!is.null(resvar)) {
         NAMES <- colnames(y)
-        y <- cbind(y, format(round(resvar, nd),
+        y <- cbind(y, format(round(cbind(resvar, 1 - resvar), nd),
                              width = 12L + nd, justify = "right"))
-        resvar.names <- format("unique.res.var",
+        resvar.names <- format(c("unique.res.var", "communalities"),
                                width = 12L + nd, justify = "right")
         colnames(y) <- c(NAMES, resvar.names)
     }

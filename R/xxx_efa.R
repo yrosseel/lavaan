@@ -161,7 +161,7 @@ lav_summary_efa <- function(object) {
 
     # sum-of-squares table
     sumsq.table <- lapply(seq_len(nblocks), function(b) {
-                              sumsq <- colSums(LAMBDA[[b]] * LAMBDA[[b]])
+                              sumsq <- diag(PSI[[b]] %*% crossprod(LAMBDA[[b]]))
                               propvar <- sumsq/nrow(LAMBDA[[b]])
                               cumvar <- cumsum(propvar)
                               tmp <- rbind(sumsq, propvar, cumvar)

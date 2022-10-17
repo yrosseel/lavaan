@@ -138,7 +138,7 @@ lav_cfa_lambda2thetapsi <- function(lambda = NULL, S = NULL, S.inv = NULL,
         warning("lavaan WARNING: failed to compute lambda")
         SminTheta <- S - diag.theta # and hope for the best
     } else {
-        N <- 20L # conservative lower bound
+        N <- 20L # conservative lower bound, no need to change
         cutoff <- 1 + 1/(N-1) # 1.052632
         if(lambda < cutoff) {
             lambda.star <- lambda - 1/(N - 1)
