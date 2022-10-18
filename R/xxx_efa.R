@@ -132,10 +132,13 @@ lav_syntax_efa <- function(ov.names = NULL, nfactors = 1L, twolevel = FALSE) {
     model
 }
 
+# summary information for a single (lavaan) model
 lav_summary_efa <- function(object) {
 
-    nblocks <- object@Model@nblocks
+    stopifnot(inherits(object, "lavaan"))
 
+    nblocks <- object@Model@nblocks
+    orthogonal.flag <- object@Options$rotation.args$orthogonal
 
     STD <- lavTech(object, "std", add.class = TRUE, add.labels = TRUE,
                    list.by.group = FALSE)
@@ -161,16 +164,66 @@ lav_summary_efa <- function(object) {
 
     # sum-of-squares table
     sumsq.table <- lapply(seq_len(nblocks), function(b) {
-                              sumsq <- diag(PSI[[b]] %*% crossprod(LAMBDA[[b]]))
-                              propvar <- sumsq/nrow(LAMBDA[[b]])
-                              cumvar <- cumsum(propvar)
-                              tmp <- rbind(sumsq, propvar, cumvar)
-                              rownames(tmp) <- c("Sum of squared loadings",
-                                                 "Proportion Var",
-                                                 "Cumulative Var")
-                              class(tmp) <- c("lavaan.matrix", "matrix")
-                              tmp
-                          })
+        nvar <- nrow(LAMBDA[[b]])
+        nfactor <- ncol(LAMBDA[[b]])
+
+        # sum of squares:
+        # - if orthogonal, this is really the sum of the squared factor loadings
+        # - if oblique, we need to take the correlation into account
+        sumsq <- diag(PSI[[b]] %*% crossprod(LAMBDA[[b]]))
+
+        # reorder
+        if(nfactor > 1L) {
+            # determine order
+            order.idx <- sort.int(sumsq, decreasing = TRUE,                                                       index.return = TRUE)$ix
+            # re-order from large to small
+            sumsq <- sumsq[order.idx]
+        }
+
+        # Proportion var (= sumsq/nvar)
+        propvar <- sumsq/nrow(LAMBDA[[b]])
+
+        # Cumulative var
+        cumvar <- cumsum(propvar)
+
+        # Proportion 'explained' (= proportion of total sumsq)
+        #   note: sum(sumsq) == sum(communalities)
+        propexpl <- sumsq/sum(sumsq)
+
+        # construct table
+        tmp <- rbind(sumsq, propvar, cumvar, propexpl)
+
+        # total + colnames
+        if(nfactor > 1L) {
+            # add total column
+            tmp <- cbind(tmp, rowSums(tmp))
+            tmp[3, ncol(tmp)] <- tmp[2, ncol(tmp)]
+            colnames(tmp) <-
+                c(colnames(LAMBDA[[b]])[order.idx],
+                  "total")
+        } else {
+            colnames(tmp) <-
+                colnames(LAMBDA[[b]])[1]
+        }
+
+        # rownames
+        if(nfactor == 1L) {
+            ssq.label <- "Sum of squared loadings"
+        } else if(orthogonal.flag) {
+          ssq.label <- "Sum of sq (ortho) loadings"
+        } else {
+          ssq.label <- "Sum of sq (obliq) loadings"
+        }
+        rownames(tmp) <- c(ssq.label,
+                           "Proportion var",
+                           "Cumulative var",
+                           "Proportion of total")
+
+        # class
+        class(tmp) <- c("lavaan.matrix", "matrix")
+
+        tmp
+    })
 
     # (factor) structure coefficients
     lambda.structure <- lapply(seq_len(nblocks), function(b) {
@@ -251,16 +304,17 @@ print.efaList <- function(x, nd = 3L, cutoff = 0.3,
     y <- unclass(x)
 
     nfits <- length(y)
-    for(f in seq_len(nfits)) {
-        res <-  lav_object_summary(y[[f]], fit.measures = FALSE,
-                                           estimates    = FALSE,
-                                           modindices   = FALSE,
-                                           efa          = TRUE)
-        print.lavaan.efa(res, nd = nd, cutoff = cutoff,
-                         dot.cutoff = dot.cutoff, ...)
+    RES <- vector("list", nfits)
+    for(ff in seq_len(nfits)) {
+        res <-  lav_object_summary(y[[ff]], fit.measures = FALSE,
+                                            estimates    = FALSE,
+                                            modindices   = FALSE,
+                                            efa          = TRUE)
+        RES[[ff]] <- print.lavaan.efa(res, nd = nd, cutoff = cutoff,
+                                      dot.cutoff = dot.cutoff, ...)
     }
 
-    invisible(y)
+    invisible(RES)
 }
 
 # summary efaList
@@ -284,17 +338,28 @@ summary.efaList <- function(object, ...) {
     # extract useful info from first model
     out <- lav_object_summary(y[[1]], header = TRUE, estimates = FALSE,
                               efa = FALSE)
-    lavaan.version <- out$header$lavaan.version
-    estimator      <- out$optim$estimator
-    cat("This is ",
-        sprintf("lavaan %s", lavaan.version),
-        " -- running exploratory factor analysis\n", sep = "")
 
-    # everything converged?
-    if(!all(sapply(y, lavInspect, "converged"))) {
-        cat("lavaan WARNING: not all models did converge!\n")
-    }
-    cat("\n")
+    # header information
+    lavaan.version <- out$header$lavaan.version
+    converged.flag <- all(sapply(y, lavInspect, "converged"))
+
+    # estimator
+    estimator      <- out$optim$estimator
+    estimator.args <- out$optim$estimator.args
+
+    # rotation
+    rotation       <- out$rotation$rotation
+    rotation.args  <- out$rotation$rotation.args
+
+    # data
+    lavdata <- out$data
+
+    # main part: lav_object_summary information per model
+    RES <- lapply(y, lav_object_summary, header = FALSE,
+               fit.measures = FALSE, estimates = TRUE, efa = TRUE)
+
+    # number of factors
+    nfactors <- sapply(RES, function(x) ncol(x$efa$lambda[[1]]))
 
     # robust test statistics?
     robust.flag <- FALSE
@@ -324,108 +389,169 @@ summary.efaList <- function(object, ...) {
     }
     fit.names <- c("chisq", "df", "pvalue", "rmsea")
 
-    # estimator
-    estimator      <- out$optim$estimator
-    estimator.args <- out$optim$estimator.args
-    rotation       <- out$rotation
-    rotation.args  <- out$rotation.args
+    # table with fitmeasures
+    Table <- do.call("rbind", (lapply(y, fitMeasures, fit.measures)))
+    colnames(Table) <- fit.names
+    rownames(Table) <- paste("nfactors = ", nfactors, sep = "")
+    class(Table) <- c("lavaan.matrix", "matrix")
 
-        c1 <- c("Estimator")
-        # second column
-        tmp.est <- toupper(estimator)
-        if(tmp.est == "DLS") {
-            dls.first.letter <- substr(estimator.args$dls.GammaNT,
-                                       1L, 1L)
-            tmp.est <- paste("DLS-", toupper(dls.first.letter), sep = "")
-        }
-        c2 <- tmp.est
+    # create return object
+    out <- list(lavaan.version = lavaan.version,
+                converged.flag = converged.flag,
+                estimator      = estimator,
+                estimator.args = estimator.args,
+                rotation       = rotation,
+                rotation.args  = rotation.args,
+                lavdata        = lavdata,
+                fit.table      = Table,
+                model.list     = RES)
 
-        # additional estimator args
-        if(!is.null(estimator.args) &&
-           length(estimator.args) > 0L) {
-            if(estimator == "DLS") {
-                c1 <- c(c1, "Estimator DLS value for a")
-                c2 <- c(c2, estimator.args$dls.a)
-            }
-        }
+    # add nd, cutoff and dot.cutoff as attributes
+    attr(out, "nd")         <- nd
+    attr(out, "cutoff")     <- cutoff
+    attr(out, "dot.cutoff") <- dot.cutoff
 
-# rotation method
-        c1 <- c(c1, "Rotation method")
-        if(rotation$rotation == "none") {
-            MM <- toupper(rotation$rotation)
-        } else if(rotation$rotation.args$orthogonal) {
-            MM <- paste(toupper(rotation$rotation), " ", "ORTHOGONAL",
-                    sep = "")
-        } else {
-            MM <- paste(toupper(rotation$rotation), " ", "OBLIQUE",
-                        sep = "")
-        }
-        c2 <- c(c2, MM)
+    # create class
+    class(out) <- c("efaList.summary", "list")
 
-        if(rotation$rotation != "none") {
+    out
+}
 
-            # method options
-            if(rotation$rotation == "geomin") {
-                c1 <- c(c1, "Geomin epsilon")
-                c2 <- c(c2, rotation$rotation.args$geomin.epsilon)
-            } else if(rotation$rotation == "orthomax") {
-                c1 <- c(c1, "Orthomax gamma")
-                c2 <- c(c2, rotation$rotation.args$orthomax.gamma)
-            } else if(rotation$rotation == "cf") {
-                c1 <- c(c1, "Crawford-Ferguson gamma")
-                c2 <- c(c2, rotation$rotation.args$cf.gamma)
-            } else if(rotation$rotation == "oblimin") {
-                c1 <- c(c1, "Oblimin gamma")
-                c2 <- c(c2, rotation$rotation.args$oblimin.gamma)
-            }
 
-            # rotation algorithm
-            c1 <- c(c1, "Rotation algorithm (rstarts)")
-            tmp <- paste(toupper(rotation$rotation.args$algorithm),
-                         " (", rotation$rotation.args$rstarts, ")", sep = "")
-            c2 <- c(c2, tmp)
+# print summary efaList
+print.efaList.summary <- function(x, ..., nd = 3L, cutoff = 0.3,
+                                  dot.cutoff = 0.1) {
 
-            # Standardized metric (or not)
-           c1 <- c(c1, "Standardized metric")
-            if(rotation$rotation.args$std.ov) {
-                c2 <- c(c2, "TRUE")
-            } else {
-                c2 <- c(c2, "FALSE")
-            }
+    # unclass
+    y <- unclass(x)
 
-            # Row weights
-            c1 <- c(c1, "Row weights")
-            tmp.txt <- rotation$rotation.args$row.weights
-            c2 <- c(c2, paste(toupper(substring(tmp.txt, 1, 1)),
-                              substring(tmp.txt, 2), sep = ""))
-        }
+    # get nd, if it is stored as an attribute
+    ND <- attr(y, "nd")
+    if(!is.null(ND) && is.numeric(ND)) {
+        nd <- as.integer(ND)
+    }
+    # get cutoff, if it is stored as an attribute
+    CT <- attr(y, "cutoff")
+    if(!is.null(CT) && is.numeric(CT)) {
+        cutoff <- CT
+    } else {
+        cutoff <- 0.3
+    }
+    # get dot.cutoff, if it is stored as an attribute
+    DC <- attr(y, "dot.cutoff")
+    if(!is.null(DC) && is.numeric(DC)) {
+        dot.cutoff <- DC
+    } else {
+        dot.cutoff <- 0.1
+    }
 
-        # format c1/c2
-        c1 <- format(c1, width = 33L)
-        c2 <- format(c2, width = 18L + max(0, (nd - 3L)) * 4L,
-                     justify = "right")
+    cat("This is ",
+        sprintf("lavaan %s", x$lavaan.version),
+        " -- running exploratory factor analysis\n", sep = "")
 
-        # create character matrix
-        M <- cbind(c1, c2, deparse.level = 0)
-        colnames(M) <- rep("",  ncol(M))
-        rownames(M) <- rep(" ", nrow(M))
-
-        # print
-        write.table(M, row.names = TRUE, col.names = FALSE, quote = FALSE)
-
-    # data
-    if(!is.null(out$data)) {
-        cat("\n")
-        lav_data_print_short(out$data, nd = nd)
+    # everything converged?
+    if(!x$converged.flag) {
+        cat("lavaan WARNING: not all models did converge!\n")
     }
     cat("\n")
 
-    nfits <- length(y)
-    RES <- lapply(y, lav_object_summary, header = FALSE,
-               fit.measures = FALSE, estimates = TRUE, efa = TRUE)
+
+    # estimator
+    c1 <- c("Estimator")
+    # second column
+    tmp.est <- toupper(x$estimator)
+    if(tmp.est == "DLS") {
+        dls.first.letter <- substr(x$estimator.args$dls.GammaNT,
+                                   1L, 1L)
+        tmp.est <- paste("DLS-", toupper(dls.first.letter), sep = "")
+    }
+    c2 <- tmp.est
+
+    # additional estimator args
+    if(!is.null(x$estimator.args) &&
+       length(x$estimator.args) > 0L) {
+        if(x$estimator == "DLS") {
+            c1 <- c(c1, "Estimator DLS value for a")
+            c2 <- c(c2, x$estimator.args$dls.a)
+        }
+    }
+
+    # rotation method
+    c1 <- c(c1, "Rotation method")
+    if(x$rotation == "none") {
+        MM <- toupper(x$rotation)
+    } else if(x$rotation.args$orthogonal) {
+        MM <- paste(toupper(x$rotation), " ", "ORTHOGONAL",
+                sep = "")
+    } else {
+       MM <- paste(toupper(x$rotation), " ", "OBLIQUE",
+                    sep = "")
+    }
+    c2 <- c(c2, MM)
+
+    if(x$rotation != "none") {
+
+        # method options
+        if(x$rotation == "geomin") {
+            c1 <- c(c1, "Geomin epsilon")
+            c2 <- c(c2, x$rotation.args$geomin.epsilon)
+        } else if(x$rotation == "orthomax") {
+            c1 <- c(c1, "Orthomax gamma")
+            c2 <- c(c2, x$rotation.args$orthomax.gamma)
+        } else if(x$rotation == "cf") {
+            c1 <- c(c1, "Crawford-Ferguson gamma")
+            c2 <- c(c2, x$rotation.args$cf.gamma)
+        } else if(x$rotation == "oblimin") {
+            c1 <- c(c1, "Oblimin gamma")
+            c2 <- c(c2, x$rotation.args$oblimin.gamma)
+        }
+
+        # rotation algorithm
+        c1 <- c(c1, "Rotation algorithm (rstarts)")
+        tmp <- paste(toupper(x$rotation.args$algorithm),
+                     " (", x$rotation.args$rstarts, ")", sep = "")
+        c2 <- c(c2, tmp)
+
+        # Standardized metric (or not)
+       c1 <- c(c1, "Standardized metric")
+        if(x$rotation.args$std.ov) {
+            c2 <- c(c2, "TRUE")
+        } else {
+            c2 <- c(c2, "FALSE")
+        }
+
+        # Row weights
+        c1 <- c(c1, "Row weights")
+        tmp.txt <- x$rotation.args$row.weights
+        c2 <- c(c2, paste(toupper(substring(tmp.txt, 1, 1)),
+                          substring(tmp.txt, 2), sep = ""))
+    }
+
+    # format c1/c2
+    c1 <- format(c1, width = 33L)
+    c2 <- format(c2, width = 18L + max(0, (nd - 3L)) * 4L,
+                 justify = "right")
+
+    # create character matrix
+    M <- cbind(c1, c2, deparse.level = 0)
+    colnames(M) <- rep("",  ncol(M))
+    rownames(M) <- rep(" ", nrow(M))
+
+    # print
+    write.table(M, row.names = TRUE, col.names = FALSE, quote = FALSE)
+
+    # data
+    if(!is.null(x$lavdata)) {
+        cat("\n")
+        lav_data_print_short(x$lavdata, nd = nd)
+    }
+    cat("\n")
+
+    # number of models
+    nfits <- length(x$model.list)
 
     # number of factors
-    nfactors <- sapply(RES, function(x) ncol(x$efa$lambda[[1]]))
+    nfactors <- sapply(x$model.list, function(xx) ncol(xx$efa$lambda[[1]]))
 
     # fit measures
     if(nfits > 1L) {
@@ -433,31 +559,27 @@ summary.efaList <- function(object, ...) {
     } else {
         cat("Fit measures:\n")
     }
-    Table <- do.call("rbind", (lapply(y, fitMeasures, fit.measures)))
-    colnames(Table) <- fit.names
-    rownames(Table) <- paste("nfactors = ", nfactors, sep = "")
-    class(Table) <- c("lavaan.matrix", "matrix")
-    print(Table, nd = nd, shift = 2L)
+    print(x$fit.table, nd = nd, shift = 2L)
 
     # eigenvalues
     cat("\n")
-    if(RES[[1]]$efa$std.ov) {
+    if(x$model.list[[1]]$efa$std.ov) {
         cat("Eigenvalues correlation matrix:\n")
     } else {
         cat("Eigenvalues covariance matrix:\n")
     }
-    for(b in seq_len(RES[[1]]$efa$nblocks)) {
+    for(b in seq_len(x$model.list[[1]]$efa$nblocks)) {
         cat("\n")
-        if(length(RES[[1]]$efa$block.names) > 0L) {
-            cat(RES[[1]]$efa$block.names[[b]], ":\n\n", sep = "")
+        if(length(x$model.list[[1]]$efa$block.names) > 0L) {
+            cat(x$model.list[[1]]$efa$block.names[[b]], ":\n\n", sep = "")
         }
-        print(RES[[1]]$efa$eigvals[[b]], nd = nd, shift = 2L)
+        print(x$model.list[[1]]$efa$eigvals[[b]], nd = nd, shift = 2L)
     } # blocks
     cat("\n")
 
     # print summary for each model
     for(f in seq_len(nfits)) {
-        res <- RES[[f]]
+        res <- x$model.list[[f]]
         attr(res, "nd") <- nd
         attr(res, "cutoff") <- cutoff
         attr(res, "dot.cutoff") <- dot.cutoff

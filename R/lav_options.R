@@ -1683,6 +1683,12 @@ lav_options_set <- function(opt = NULL) {
         stop("lavaan ERROR: rotation.args should be be list.")
     }
 
+    # force orthogonal for some rotation algorithms
+    if(opt$rotation %in% c("varimax", "entropy", "mccammon",
+                           "tandem1", "tandem2") ) {
+        opt$rotation.args$orthogonal <- TRUE
+    }
+
     # if target, check target matrix
     if(opt$rotation == "target" || opt$rotation == "pst") {
         target <- opt$rotation.args$target

@@ -1191,11 +1191,15 @@ print.lavaan.summary <- function(x, ..., nd = 3L) {
         CT <- attr(y, "cutoff")
         if(!is.null(CT) && is.numeric(CT)) {
             cutoff <- CT
+        } else {
+            cutoff <- 0.3
         }
         # get dot.cutoff, if it is stored as an attribute
         DC <- attr(y, "dot.cutoff")
         if(!is.null(DC) && is.numeric(DC)) {
             dot.cutoff <- DC
+        } else {
+            dot.cutoff <- 0.1
         }
 
         for(b in seq_len(y$efa$nblocks)) {
@@ -1307,7 +1311,7 @@ lav_print_loadings <- function(x, nd = 3L, cutoff = 0.3, dot.cutoff = 0.1,
         NAMES <- colnames(y)
         y <- cbind(y, format(round(cbind(resvar, 1 - resvar), nd),
                              width = 12L + nd, justify = "right"))
-        resvar.names <- format(c("unique.res.var", "communalities"),
+        resvar.names <- format(c("unique.var", "communalities"),
                                width = 12L + nd, justify = "right")
         colnames(y) <- c(NAMES, resvar.names)
     }

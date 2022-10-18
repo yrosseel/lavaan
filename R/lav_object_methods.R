@@ -67,6 +67,7 @@ function(object, header       = TRUE,
                remove.step1 = remove.step1, cov.std = cov.std,
                rsquare = rsquare, std.nox = std.nox, efa = efa.flag,
                fit.args = fit.args, modindices = modindices)
+    # res has class c("lavaan.summary", "list")
 
     # what about nd? only used if we actually print; save as attribute
     attr(res, "nd") <- nd
