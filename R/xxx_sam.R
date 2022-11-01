@@ -31,6 +31,8 @@
 #                  without measurement error in the second step
 #                  (ie, set THETA element to zero)
 
+# YR 22 okt 2022 - add function lav_sam_local_get_veta()
+
 
 # twostep = wrapper for global sam
 twostep <- function(model = NULL, data = NULL, cmd = "sem",
@@ -77,11 +79,11 @@ sam <- function(model          = NULL,
         local.M.method <- toupper(local.options[["M.method"]])
     }
     if(!local.M.method %in% c("GLS", "ML", "ULS")) {
-        stop("lavaan ERROR: local.M.method should be one of GLS, ML or ULS.")
+        stop("lavaan ERROR: local option M.method should be one of GLS, ML or ULS.")
     }
     local.twolevel.method <- tolower(local.options[["twolevel.method"]])
     if(!local.twolevel.method %in% c("h1", "anova", "mean")) {
-        stop("lavaan ERROR: local.twolevel.method should be one of h1, anova or mean.")
+        stop("lavaan ERROR: local option twolevel.method should be one of h1, anova or mean.")
     }
 
     # output
@@ -89,7 +91,7 @@ sam <- function(model          = NULL,
     if(output == "list" || output == "lavaan") {
         # nothing to do
     } else {
-        stop("lavaan ERROR: output should be one list or lavaan.")
+        stop("lavaan ERROR: output should be \"list\" or \"lavaan.\"")
     }
 
     # handle dot dot dot
@@ -1036,5 +1038,6 @@ sam <- function(model          = NULL,
     res
 }
 
-
-
+# local SAM: compute EETA/VETA for each block
+lav_sam_local_get_veta <- function() {
+}

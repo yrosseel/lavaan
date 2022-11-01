@@ -1158,7 +1158,7 @@ lav_matrix_symmetric_inverse <- function(S, logdet   = FALSE,
         if(zero.warn) {
             warning("lavaan WARNING: matrix to be inverted contains zero cols/rows")
         }
-        S <- S[-zero.idx, -zero.idx]
+        S <- S[-zero.idx, -zero.idx, drop = FALSE]
     }
 
     P <- NCOL(S)

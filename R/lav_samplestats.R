@@ -371,7 +371,7 @@ lav_samplestats_from_data <- function(lavdata           = NULL,
                 if(rescale) {
                     # we 'transform' the sample cov (divided by n-1)
                     # to a sample cov divided by 'n'
-                    COV <- (nobs[[g]]-1)/nobs[[g]] * COV
+                    COV <- ((nobs[[g]]-1)/nobs[[g]]) * COV
                 }
                 cov[[g]] <- COV
                 if(ridge) {
@@ -442,7 +442,7 @@ lav_samplestats_from_data <- function(lavdata           = NULL,
                 if(rescale) {
                     # we 'transform' the sample cov (divided by n-1)
                     # to a sample cov divided by 'n'
-                    COV <- (nobs[[g]]-1)/nobs[[g]] * COV
+                    COV <- ((nobs[[g]]-1)/nobs[[g]]) * COV
                 }
                 cov[[g]] <- COV
                 var[[g]] <- diag(COV)
@@ -528,7 +528,7 @@ lav_samplestats_from_data <- function(lavdata           = NULL,
                     if(rescale) {
                         # we 'transform' the sample cov (divided by n-1)
                         # to a sample cov divided by 'n'
-                        cov[[g]] <- (nobs[[g]]-1)/nobs[[g]] * cov[[g]]
+                        cov[[g]] <- ((nobs[[g]]-1)/nobs[[g]]) * cov[[g]]
                     }
                     if(ridge) {
                         diag(cov[[g]]) <- diag(cov[[g]]) + ridge.eps
@@ -553,7 +553,7 @@ lav_samplestats_from_data <- function(lavdata           = NULL,
                     if(rescale) {
                         # we 'transform' the sample cov (divided by n-1)
                         # to a sample cov divided by 'n'
-                        cov[[g]] <- (nobs[[g]]-1)/nobs[[g]] * cov[[g]]
+                        cov[[g]] <- ((nobs[[g]]-1)/nobs[[g]]) * cov[[g]]
                     }
                     if(ridge) {
                         diag(cov[[g]]) <- diag(cov[[g]]) + ridge.eps
@@ -629,7 +629,7 @@ lav_samplestats_from_data <- function(lavdata           = NULL,
                 if(rescale) {
                     # we 'transform' the sample cov (divided by n-1)
                     # to a sample cov divided by 'n'
-                    cov.x[[g]] <- (nobs[[g]]-1)/nobs[[g]] * cov.x[[g]]
+                    cov.x[[g]] <- ((nobs[[g]]-1)/nobs[[g]]) * cov.x[[g]]
                 }
                 mean.x[[g]] <- colMeans(eXo[[g]])
             }
@@ -711,7 +711,7 @@ lav_samplestats_from_data <- function(lavdata           = NULL,
                 } else { # categorical case
                     NACOV[[g]]  <- CAT$WLS.W  * nobs[[g]]
                     if(lavoptions$gamma.n.minus.one) {
-                        NACOV[[g]] <- NACOV[[g]] * nobs[[g]] / (nobs[[g]] - 1L)
+                        NACOV[[g]] <- NACOV[[g]] * (nobs[[g]]/(nobs[[g]] - 1L))
                     }
                 }
             } else if(estimator == "PML") {
@@ -761,8 +761,9 @@ lav_samplestats_from_data <- function(lavdata           = NULL,
                 if(mimic == "Mplus" && !conditional.x && meanstructure) {
                     # bug in Mplus? V11 rescaled by nobs[[g]]/(nobs[[g]]-1)
                     nvar <- NCOL(cov[[g]])
-                    WLS.V[[g]][1:nvar, 1:nvar] <- WLS.V[[g]][1:nvar, 1:nvar,
-                                        drop = FALSE] * nobs[[g]]/(nobs[[g]]-1)
+                    WLS.V[[g]][1:nvar, 1:nvar] <- 
+                          WLS.V[[g]][1:nvar, 1:nvar,
+                                     drop = FALSE] * (nobs[[g]]/(nobs[[g]]-1))
                 }
 
 
@@ -1356,7 +1357,7 @@ lav_samplestats_from_moments <- function(sample.cov    = NULL,
                 if(rescale) {
                     # we 'transform' the sample cov (divided by n-1)
                     # to a sample cov divided by 'n'
-                    cov[[g]] <- (nobs[[g]]-1)/nobs[[g]] * cov[[g]]
+                    cov[[g]] <- ((nobs[[g]]-1)/nobs[[g]]) * cov[[g]]
                 }
                 if(ridge) {
                     diag(cov[[g]]) <- diag(cov[[g]]) + ridge.eps
