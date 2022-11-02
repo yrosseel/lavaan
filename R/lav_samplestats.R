@@ -761,7 +761,7 @@ lav_samplestats_from_data <- function(lavdata           = NULL,
                 if(mimic == "Mplus" && !conditional.x && meanstructure) {
                     # bug in Mplus? V11 rescaled by nobs[[g]]/(nobs[[g]]-1)
                     nvar <- NCOL(cov[[g]])
-                    WLS.V[[g]][1:nvar, 1:nvar] <- 
+                    WLS.V[[g]][1:nvar, 1:nvar] <-
                           WLS.V[[g]][1:nvar, 1:nvar,
                                      drop = FALSE] * (nobs[[g]]/(nobs[[g]]-1))
                 }
