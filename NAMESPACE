@@ -83,6 +83,7 @@ export("lavaan", "cfa", "sem", "growth",
        "mplus2lavaan.modelSyntax",
        #"lavData",
        "lavPredict",
+       "lavPredictY",
        "lavCor",
 
        # API functions

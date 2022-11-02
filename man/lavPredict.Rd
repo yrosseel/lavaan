@@ -7,7 +7,7 @@ The main purpose of the \code{lavPredict()} function is to compute (or
 `predict') estimated values for the latent variables in the model
 (`factor scores'). NOTE: the goal of this
 function is NOT to predict future values of dependent variables as in the
-regression framework!}
+regression framework! (But see function \code{lavPredictY()}}
 \usage{
 lavPredict(object, newdata = NULL, type = "lv", method = "EBM",
            se = "none", acov = "none", label = TRUE, fsm = FALSE, 
@@ -39,15 +39,16 @@ data.}
 \item{acov}{Similar to the \code{"se"} argument, but optionally returns the full
 sampling covariance matrix of factor scores as an attribute. Currently 
 only available for complete continuous data.}
-\item{label}{Logical. If TRUE, the columns are labeled.}
+\item{label}{Logical. If TRUE, the columns in the output are labeled.}
 \item{fsm}{Logical. If TRUE, return the factor score matrix as an attribute.
            Only for numeric data.}
 \item{append.data}{Logical. Only used when \code{type = "lv"}. If TRUE, 
 the original data (or the data provided
 in the newdata argument) is appended to the factor scores.}
 \item{assemble}{Logical. If TRUE, 
-the separate multiple groups as reassembled again to form a single data.frame
-with a group column, having the same dimensions are the original dataset.}
+the separate multiple groups are reassembled again to form a single data.frame
+with a group column, having the same dimensions are the original (or
+newdata) dataset.}
 \item{level}{Integer. Only used in a multilevel SEM.
 If \code{level = 1}, only factor scores for latent variable
 defined at the first (within) level are computed; if \code{level = 2},
@@ -71,7 +72,7 @@ values of independent values (in the regression sense). In other words,
 the structural component is completely ignored (for now).
 }
 \seealso{
-\code{\link{lavaan}}
+\code{\link{lavPredictY}} to predict y-variables given x-variables.
 }
 \examples{
 data(HolzingerSwineford1939)

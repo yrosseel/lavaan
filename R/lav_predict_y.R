@@ -1,10 +1,10 @@
-# This function will (eventually) contain functions that can be used to
+# This file will (eventually) contain functions that can be used to
 # 'predict' the values of outcome variables (y), given the values of
 # input variables (x).
 
 # first version YR 2 Nov 2022
 
-# method = "predictive.distribution" is based on the following article:
+# method = "conditional.mean" is based on the following article:
 
 # Mark de Rooij, Julian D. Karch, Marjolein Fokkema, Zsuzsa Bakk, Bunga Citra
 # Pratiwi & Henk Kelderman (2022) SEM-Based Out-of-Sample Predictions,
@@ -13,12 +13,13 @@
 
 # main function
 lavPredictY <- function(object,
-                        newdata  = NULL,
-                        ynames   = lavNames(object, "ov.y"),
-                        xnames   = lavNames(object, "ov.x"),
-                        method   = "predictive.distribution",
-                        label    = TRUE,
-                        assemble = TRUE) {
+                        newdata         = NULL,
+                        ynames          = lavNames(object, "ov.y"),
+                        xnames          = lavNames(object, "ov.x"),
+                        method          = "conditional.mean",
+                        label           = TRUE,
+                        assemble        = TRUE,
+                        force.zero.mean = FALSE) {
 
     stopifnot(inherits(object, "lavaan"))
     lavmodel       <- object@Model
@@ -71,14 +72,14 @@ lavPredictY <- function(object,
 
     # check ynames
     if(length(ynames) == 0L) {
-        stop("lavaan ERROR: please specifify the y-variables in the ynames= argument")
+        stop("lavaan ERROR: please specify the y-variables in the ynames= argument")
     } else if(!is.list(ynames)) {
         ynames <- rep(list(ynames), lavdata@ngroups)
     }
 
     # check xnames
     if(length(xnames) == 0L) {
-        stop("lavaan ERROR: please specifify the x-variables in the xnames= argument")
+        stop("lavaan ERROR: please specify the x-variables in the xnames= argument")
     } else if(!is.list(xnames)) {
         xnames <- rep(list(xnames), lavdata@ngroups)
     }
@@ -97,19 +98,22 @@ lavPredictY <- function(object,
         # xnames in ov.names for this group?
         missing.idx <- which(!xnames[[g]] %in% ov.names[[g]])
         if(length(missing.idx) > 0L) {
-            stop("lavaan ERROR: some variable names in xnames do not appear in the dataset:\n", paste(xnames[[g]][missing.idx], collapse = " "))
+            stop("lavaan ERROR: some variable names in xnames do not appear in the dataset:\n\t\t", paste(xnames[[g]][missing.idx], collapse = " "))
         } else {
             x.idx[[g]] <- which(ov.names[[g]] %in% xnames[[g]])
         }
     }
 
     # prediction method
-    if(method == "predictive.distribution") {
-        out <- lav_predict_y_conditional(lavobject = NULL, lavmodel = lavmodel,
-                   lavdata = lavdata, lavimplied = lavimplied,
-                   data.obs = data.obs, y.idx = y.idx, x.idx = x.idx)
+    method <- tolower(method)
+    if(method == "conditional.mean") {
+        out <- lav_predict_y_conditional_mean(lavobject = NULL,
+                   lavmodel = lavmodel, lavdata = lavdata,
+                   lavimplied = lavimplied,
+                   data.obs = data.obs, y.idx = y.idx, x.idx = x.idx,
+                   force.zero.mean = force.zero.mean)
     } else {
-        stop("lavaan ERROR: method must be \"predictive.distribution\" (for now).")
+        stop("lavaan ERROR: method must be \"conditional.mean\" (for now).")
     }
 
     # label?
@@ -170,18 +174,20 @@ lavPredictY <- function(object,
 
 
 # method = "predictive.distribution"
-lav_predict_y_conditional <- function(lavobject      = NULL,  # for convenience
-                                      # object ingredients
-                                      lavmodel       = NULL,
-                                      lavdata        = NULL,
-                                      lavimplied     = NULL,
-                                      # new data
-                                      data.obs       = NULL,
-                                      # y and x
-                                      y.idx          = NULL,
-                                      x.idx          = NULL,
-                                      # options
-                                      level          = 1L) { # not used for now
+lav_predict_y_conditional_mean <-
+    function(lavobject       = NULL,  # for convenience
+             # object ingredients
+             lavmodel        = NULL,
+             lavdata         = NULL,
+             lavimplied      = NULL,
+             # new data
+             data.obs        = NULL,
+             # y and x
+             y.idx           = NULL,
+             x.idx           = NULL,
+             # options
+             force.zero.mean = FALSE,
+             level           = 1L) { # not used for now
 
     # full object?
     if(inherits(lavobject, "lavaan")) {
@@ -201,18 +207,23 @@ lav_predict_y_conditional <- function(lavobject      = NULL,  # for convenience
     }
 
     # checks
-    if(lavmodel@conditional.x) {
-        stop("lavaan ERROR: no support for contidional.x = TRUE (yet).")
-    }
     if(lavmodel@categorical) {
         stop("lavaan ERROR: no support for categorical data (yet).")
     }
     if(lavdata@nlevels > 1L) {
         stop("lavaan ERROR: no support for multilevel data (yet).")
     }
-    #if(lavdata@missing %in% c("ml", "ml.x")) {
-    #    stop("lavaan ERROR: no support for missing = \"ml\" (yet).")
-    #}
+
+    # conditional.x?
+    if(lavmodel@conditional.x) {
+        SigmaHat <- computeSigmaHatJoint(lavmodel)
+        if(lavmodel@meanstructure) {
+            MuHat <- computeMuHatJoint(lavmodel)
+        }
+    } else {
+        SigmaHat <- lavimplied$cov
+        MuHat <- lavimplied$mean
+    }
 
     # output container
     YPRED <- vector("list", length = lavdata@ngroups)
@@ -227,18 +238,22 @@ lav_predict_y_conditional <- function(lavobject      = NULL,  # for convenience
         } else {
             data.obs.g <- data.obs[[g]]
 
-            # we assume conditional.x = FALSE (for now)
-            cov.g   <- lavimplied$cov[[g]]
+            # model-implied variance-covariance matrix for this group
+            cov.g   <- SigmaHat[[g]]
 
+            # model-implied mean vector for this group
             if(lavmodel@meanstructure) {
-                mean.g <- lavimplied$mean[[g]]
+                mean.g <- MuHat[[g]]
             } else {
-                # use unrestricted mean vector
-                mean.g <- colMeans(data.obs.g, na.rm = TRUE)
-                # or zero vector?
-                # mean.g <- rep(0, ncol(data.obs.g))
+                if(force.zero.mean) {
+                    mean.g <- rep(0, ncol(data.obs.g))
+                } else {
+                    # use unrestricted mean vector
+                    mean.g <- colMeans(data.obs.g, na.rm = TRUE)
+                }
             }
 
+            # indices (in ov.names)
             y.idx.g <- y.idx[[g]]
             x.idx.g <- x.idx[[g]]
 
