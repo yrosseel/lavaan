@@ -173,7 +173,7 @@ lavPredictY <- function(object,
 }
 
 
-# method = "predictive.distribution"
+# method = "conditional.mean"
 lav_predict_y_conditional_mean <-
     function(lavobject       = NULL,  # for convenience
              # object ingredients
