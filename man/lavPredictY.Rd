@@ -28,9 +28,9 @@ for a separate set of variable names per group (or block).}
 \item{assemble}{Logical. If TRUE, 
 the predictions of the separate multiple groups in the output are 
 reassembled again to form a single data.frame
-with a group column, having the same dimensions are the original 
+with a group column, having the same dimensions as the original 
 (or newdata) dataset.}
-\item{force.zero.mean}{Logical. Only relevant if there is no meanstructure.
+\item{force.zero.mean}{Logical. Only relevant if there is no mean structure.
 If \code{TRUE}, the (model-implied) mean vector is set to the zero vector.
 If \code{FALSE}, the (model-implied) mean vector is set to the (unrestricted)
 sample mean vector.}

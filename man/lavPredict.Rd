@@ -7,7 +7,7 @@ The main purpose of the \code{lavPredict()} function is to compute (or
 `predict') estimated values for the latent variables in the model
 (`factor scores'). NOTE: the goal of this
 function is NOT to predict future values of dependent variables as in the
-regression framework! (But see function \code{lavPredictY()}}
+regression framework! (For models with only continuous observed variables, the function \code{lavPredictY()} supports this.}
 \usage{
 lavPredict(object, newdata = NULL, type = "lv", method = "EBM",
            se = "none", acov = "none", label = TRUE, fsm = FALSE, 
