@@ -72,8 +72,12 @@ efa(data = NULL, nfactors = 1L, sample.cov = NULL, sample.nobs = NULL,
 \value{
   If \code{output = "lavaan"}, an object of class 
   \code{\linkS4class{lavaan}}. If \code{output = "efa"},
-  a list of class \code{efaList} for which a \code{print()} and a 
-  \code{summary()} method are available.
+  a list of class \code{efaList} for which a \code{print()},  
+  \code{summary()} and \code{fitMeasures()} method are available.
+}
+\seealso{
+    \code{\link{summary.efaList}} for a summary method if the output is
+    of class \code{efaList}.  
 }
 \examples{
 ## The famous Holzinger and Swineford (1939) example
@@ -83,4 +87,5 @@ fit <- efa(data = HolzingerSwineford1939,
            rotation = "geomin",
            rotation.args = list(geomin.epsilon = 0.01, rstarts = 1))
 summary(fit, nd = 3L, cutoff = 0.2, dot.cutoff = 0.05)
+fitMeasures(fit, fit.measures = "all")
 }

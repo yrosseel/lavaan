@@ -27,6 +27,16 @@ lav_object_summary <- function(object, header       = TRUE,
                                            list(rmsea.ci.level       = 0.90,
                                                 rmsea.h0.closefit    = 0.05,
                                                 rmsea.h0.notclosefit = 0.08),
+                                       efa.args     =
+                                           list(lambda           = TRUE,
+                                                theta            = TRUE,
+                                                psi              = TRUE,
+                                                eigenvalues      = TRUE,
+                                                sumsq.table      = TRUE,
+                                                lambda.structure = FALSE,
+                                                se               = FALSE,
+                                                zstat            = FALSE,
+                                                pvalue           = FALSE),
                                        modindices   = FALSE) {
 
     # return a list with the main ingredients
@@ -129,7 +139,7 @@ lav_object_summary <- function(object, header       = TRUE,
 
     # efa-related info
     if(efa) {
-        res$efa <- lav_summary_efa(object)
+        res$efa <- lav_summary_efa(object, efa.args = efa.args)
     } # efa
 
     # only if requested, add the additional fit measures

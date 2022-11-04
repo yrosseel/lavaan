@@ -36,6 +36,33 @@ function(object, fit.measures = "all", baseline.model = NULL,
                      output = output)
 })
 
+# S3 method for efaList
+fitMeasures.efaList <- fitmeasures.efaList <- function(object,
+    fit.measures = "all",
+    baseline.model = NULL,
+    fit.args = list(rmsea.ci.level    = 0.90,
+                    rmsea.close.h0    = 0.05,
+                    rmsea.notclose.h0 = 0.08),
+    vector = "list", ...) {
+
+    # get fit measures for each model
+    res <- simplify2array(lapply(object,
+             function(x) lav_fit_measures(object = x,
+                     fit.measures = fit.measures,
+                     baseline.model = baseline.model, fit.args = fit.args,
+                     output = "vector")))
+
+    # rownames
+    nfactors <- sapply(object, function(x) x@pta$nfac[[1]])
+    colnames(res) <- paste0("nfactors = ", nfactors)
+
+    # class
+    class(res) <- c("lavaan.matrix", "matrix")
+
+    res
+}
+
+
 lav_fit_measures <- function(object, fit.measures = "all",
                              baseline.model = NULL,
                              fit.args = list(rmsea.ci.level    = 0.90,
