@@ -597,8 +597,9 @@ summary.efaList <- function(object, nd = 3L, cutoff = 0.3, dot.cutoff = 0.1,
 
 
 # print summary efaList
-print.efaList.summary <- function(x, ..., nd = 3L, cutoff = 0.3,
-                                  dot.cutoff = 0.1, alpha.level = 0.01) {
+print.efaList.summary <- function(x, nd = 3L, cutoff = 0.3,
+                                  dot.cutoff = 0.1, alpha.level = 0.01,
+                                  ...) {
 
     # unclass
     y <- unclass(x)

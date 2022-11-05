@@ -1,19 +1,19 @@
 \name{summary.efaList}
+\alias{summary.efaList}
 \alias{efaList}
 \alias{print.efaList.summary}
 \title{Summarizing EFA Fits}
 \description{
 S3 summary and print methods for class \code{efaList}.}
 \usage{
-## S3 method for class 'efaList'
-summary(object, 
+\method{summary}{efaList}(object,
         nd = 3L, cutoff = 0.3, dot.cutoff = 0.1, alpha.level = 0.01,
         lambda = TRUE, theta = TRUE, psi = TRUE, fit.table = TRUE,
-        eigenvalues = TRUE, sumsq.table = TRUE, lambda.structure = TRUE, 
-        se = TRUE, zstat = TRUE, pvalue = TRUE, ...)
+        eigenvalues = TRUE, sumsq.table = TRUE, lambda.structure = FALSE,
+        se = FALSE, zstat = FALSE, pvalue = FALSE, \dots)
 
-## S3 method for class 'summary.efaList'
-print(x, nd = 3L, cutoff = 0.3, dot.cutoff = 0.1, alpha.level = 0.01, ...)
+\method{print}{efaList.summary}(x, nd = 3L, cutoff = 0.3, dot.cutoff = 0.1,
+               alpha.level = 0.01, \dots)
 }
 \arguments{
 \item{object}{An object of class \code{efaList}, usually, a result of a call
@@ -47,17 +47,17 @@ print(x, nd = 3L, cutoff = 0.3, dot.cutoff = 0.1, alpha.level = 0.01, ...)
 \item{sumsq.table}{Logical. If \code{TRUE}, include a table including sums
     of squares of factor loadings (and related measures) in the summary.
     The sums of squares are computed as the
-    diagonal elements of \code{diag(PSI %*% crossprod(LAMBDA))}.
-    If orthogonal rotation was used, \code{PSI} is diagonal and the sums of 
+    diagonal elements of Lambda times Psi (where Psi is the matrix of
+    factor correlations.).
+    If orthogonal rotation was used, Psi is diagonal and the sums of 
     squares are identical to the sums of the squared column elements of the 
-    lambda matrix (i.e., the factor loadings). This is no longer the case
+    Lambda matrix (i.e., the factor loadings). This is no longer the case
     when obique rotation has been used. But in both cases (orthgonal or
     oblique), the (total) sum of the sums of squares equals the sum of the
     communalities. In the second row of the table (Proportion of total), 
     the sums of squares are divided by the total. In the third row of the 
     table (Proportion var), the sums of squares are divided by the 
     number of items.}
-}
 \item{lambda.structure}{Logical. If \code{TRUE}, show the structure matrix
     (i.e., the factor loadings multiplied by the factor correlations).}
 \item{se}{Logical. If \code{TRUE}, include the standard errors of the 
