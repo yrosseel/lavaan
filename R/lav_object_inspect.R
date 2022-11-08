@@ -2063,13 +2063,17 @@ lav_object_inspect_wls_est <- function(object,
 
     OUT <- lav_model_wls_est(object@Model)
 
+    if(add.labels) {
+        NAMES <- lav_object_inspect_delta_rownames(object,
+                     drop.list.single.group = FALSE)
+    }
+
     # nblocks
     nblocks <- length(OUT)
 
     for(b in seq_len(nblocks)) {
-        if(add.labels && length(OUT[[b]]) > 0L) {
-            #FIXME!!!!
-            #names(OUT[[b]]) <- ??
+        if(add.labels && length(OUT[[b]]) > 0L && object@Data@nlevels == 1L) {
+            names(OUT[[b]]) <- NAMES[[b]]
         }
 
         if(add.class) {
@@ -2097,13 +2101,17 @@ lav_object_inspect_wls_obs <- function(object,
 
     OUT <- object@SampleStats@WLS.obs ### FIXME: should be in @h1??
 
+    if(add.labels) {
+        NAMES <- lav_object_inspect_delta_rownames(object,
+                     drop.list.single.group = FALSE)
+    }
+
     # nblocks
     nblocks <- length(OUT)
 
     for(b in seq_len(nblocks)) {
-        if(add.labels && length(OUT[[b]]) > 0L) {
-            #FIXME!!!!
-            #names(OUT[[b]]) <- ??
+        if(add.labels && length(OUT[[b]]) > 0L && object@Data@nlevels == 1L) {
+            names(OUT[[b]]) <- NAMES[[b]]
         }
 
         if(add.class) {
@@ -2148,13 +2156,20 @@ lav_object_inspect_wls_v <- function(object,
             function(x) { nr = NROW(x); diag(x, nrow=nr, ncol=nr) })
     }
 
+    if(add.labels) {
+        NAMES <- lav_object_inspect_delta_rownames(object,
+                     drop.list.single.group = FALSE)
+    }
+
     # label + class
     for(b in seq_len(nblocks)) {
-        if(add.labels && nrow(OUT[[b]]) > 0L) {
-            #FIXME!!!!
-            #names(OUT[[b]]) <- ??
+
+        # labels
+        if(add.labels && nrow(OUT[[b]]) > 0L && object@Data@nlevels == 1L) {
+            colnames(OUT[[b]]) <- rownames(OUT[[b]]) <- NAMES[[b]]
         }
 
+        # class
         if(add.class) {
             class(OUT[[b]]) <- c("lavaan.matrix", "matrix")
         }
@@ -2185,17 +2200,38 @@ lav_object_inspect_sampstat_gamma <- function(object,
         OUT <- lavGamma(object)
     }
 
+    if(add.labels) {
+        NAMES <- lav_object_inspect_delta_rownames(object,
+                     drop.list.single.group = FALSE)
+    }
+
     # nblocks
     nblocks <- length(OUT)
 
     if(nblocks == 1L && drop.list.single.group) {
         OUT <- OUT[[1]]
+
+        # labels
+        if(add.labels) {
+            colnames(OUT) <- rownames(OUT) <- NAMES[[1]]
+        }
+
+        # class
         if(add.class) {
             class(OUT) <- c("lavaan.matrix.symmetric", "matrix")
         }
     } else {
         if(object@Data@nlevels == 1L && length(object@Data@group.label) > 0L) {
             names(OUT) <- unlist(object@Data@group.label)
+
+            # labels
+            if(add.labels) {
+                for(g in seq_len(object@Data@ngroups)) {
+                    colnames(OUT[[g]]) <- rownames(OUT[[g]]) <- NAMES[[g]]
+                }
+            }
+
+            # class
             if(add.class) {
                 for(g in seq_len(object@Data@ngroups)) {
                     class(OUT[[g]]) <- c("lavaan.matrix.symmetric", "matrix")
