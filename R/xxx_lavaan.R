@@ -73,7 +73,46 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
         if(inherits(data, "data.frame")) {
             # just in case it is not a traditional data.frame
             data <- as.data.frame(data)
+            
+        } else if (inherits(data, "lavMoments")) {
+          # This object must contain summary statistics
+          # e.g., created by lavaan.mi::poolSat
+          
+          # set required-data arguments
+          if ("sample.cov" %in% names(data)) {
+            sample.cov  <- data$sample.cov
+          } else stop("When data= is of class lavMoments, it must contain sample.cov")
+          
+          if ("sample.nobs" %in% names(data)) {
+            sample.nobs <- data$sample.nobs
+          } else stop("When data= is of class lavMoments, it must contain sample.nobs")
+          
+          # check for optional-data arguments
+          if ("sample.mean" %in% names(data)) sample.mean <- data$sample.mean
+          if ("sample.th"   %in% names(data)) sample.th   <- data$sample.th
+          if ("NACOV"       %in% names(data)) NACOV       <- data$NACOV
+          if ("WLS.V"       %in% names(data)) WLS.V       <- data$WLS.V
+          
+          # set other args not included in dotdotdot
+          if (length(data$lavOptions)) {
+            newdots <- setdiff(names(data$lavOptions), names(dotdotdot))
+            if (length(newdots)) {
+              for (dd in newdots) dotdotdot[[dd]] <- data$lavOptions[[dd]]
+            }
+          }
+          
+          # set WLS.V to I(dentity) when ULS is requested
+          if (!is.null(dotdotdot$estimator)) {
+            if (grepl(pattern = "ULS", x = toupper(dotdotdot$estimator[1L]) )) {
+              diag(data$WLS.V) <- 1
+              dotdotdot$WLS.V <- data$WLS.V
+            }
+          }
+          
+          # get rid of data= argument
+          data <- NULL
         }
+      
         if(is.function(data)) {
             stop("lavaan ERROR: data is a function; it should be a data.frame")
         }
