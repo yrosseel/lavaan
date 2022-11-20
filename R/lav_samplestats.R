@@ -153,9 +153,11 @@ lav_samplestats_from_data <- function(lavdata           = NULL,
     if(is.null(NACOV)) {
         NACOV      <- vector("list", length = ngroups)
         NACOV.user <- FALSE
-        if(se == "robust.sem" || test %in% c("satorra.bentler",
-                                             "mean.var.adjusted",
-                                             "scaled.shifted")) {
+        if(se == "robust.sem" ||
+           # note: test can be a vector...
+           any(test %in% c("satorra.bentler",
+                           "mean.var.adjusted",
+                           "scaled.shifted"))) {
             NACOV.compute <- TRUE
         }
     } else if(is.logical(NACOV)) {
@@ -240,8 +242,8 @@ lav_samplestats_from_data <- function(lavdata           = NULL,
             if(estimator %in% c("ML","REML","PML","FML","MML","none","ULS")) {
                 WLS.W <- FALSE
                 if(estimator == "ULS" && se == "robust.sem") { #||
-                        #test %in% c("satorra.bentler", "scaled.shifted",
-                        #            "mean.var.adjusted"))) {
+                        #any(test %in% c("satorra.bentler", "scaled.shifted",
+                        #            "mean.var.adjusted")))) {
                     WLS.W <- TRUE
                 }
             } else {

@@ -9,11 +9,6 @@ lavTest <- function(lavobject, test = "standard", output = "list",
         stop("lavaan ERROR: output should be list or text")
     }
 
-    TEST.NAMES <- c("standard",
-                    "satorra.bentler", "yuan.bentler","yuan.bentler.mplus",
-                    "mean.var.adjusted", "scaled.shifted",
-                    "browne.residual.adf", "browne.residual.nt")
-
     # extract 'test' slot
     TEST <- lavobject@test
 
@@ -23,20 +18,13 @@ lavTest <- function(lavobject, test = "standard", output = "list",
         if(!is.character(test)) {
             stop("lavaan ERROR: test should be a character string.")
         } else {
-            test <- lav_test_rename(test)
+            test <- lav_test_rename(test, check = TRUE)
         }
 
         if(test[1] == "none") {
             return(list())
         } else if(any(test %in% c("bootstrap", "bollen.stine"))) {
             stop("lavaan ERROR: please use bootstrapLavaan() to obtain a bootstrap based test statistic.")
-        }
-        if(!all(test %in% TEST.NAMES)) {
-            bad.idx <- which(!test %in% TEST.NAMES)
-            txt <- c("invalid name for test statistic: [", test[bad.idx[1]],
-                     "]. Valid names are:\n",
-                     paste(TEST.NAMES, collapse = " "))
-            stop(lav_txt2message(txt, header = "lavaan ERROR:"))
         }
 
         # check if we already have it:
@@ -46,9 +34,9 @@ lavTest <- function(lavobject, test = "standard", output = "list",
         } else {
             # redo ALL of them, even if already have some in TEST
             # later, we will allow to also change the options (like information)
-            # and this should be reflected in the 'info'attribute
+            # and this should be reflected in the 'info' attribute
 
-            # fill in test in Options slot
+            # fill-in test in Options slot
             lavobject@Options$test <- test
 
             # get requested test statistics
@@ -78,7 +66,7 @@ lavTest <- function(lavobject, test = "standard", output = "list",
 }
 
 # allow for 'flexible' names for the test statistics
-lav_test_rename <- function(test) {
+lav_test_rename <- function(test, check = FALSE) {
 
     test <- tolower(test)
 
@@ -119,6 +107,37 @@ lav_test_rename <- function(test) {
     if(length(target.idx <- which(test %in%
         c("browne.residuals.nt", "browne.residual.nt"))) > 0L) {
         test[target.idx] <- "browne.residual.nt"
+    }
+
+    # check?
+    if(check) {
+
+        # report unknown values
+        bad.idx <- which(!test %in% c("standard", "none", "default",
+                                      "satorra.bentler",
+                                      "yuan.bentler",
+                                      "yuan.bentler.mplus",
+                                      "mean.adjusted",
+                                      "mean.var.adjusted",
+                                      "scaled.shifted",
+                                      "bollen.stine",
+                                      "browne.residual.nt",
+                                      "browne.residual.adf"))
+        if(length(bad.idx) > 0L) {
+            stop("lavaan ERROR: invalid value(s) in test= argument:\n\t\t",
+                 paste(test[bad.idx], collapse = " "), "\n")
+        }
+
+        # if 'default' is included, length(test) must be 1
+        if(length(test) > 1L && "default" %in% test) {
+            stop("lavaan ERROR: if test= argument contains \"default\", it cannot contain additional elements")
+        }
+
+        # if 'none' is included, length(test) must be 1
+        if(length(test) > 1L && "none" %in% test) {
+            stop("lavaan ERROR: if test= argument contains \"none\", it cannot contain additional elements")
+        }
+
     }
 
     test

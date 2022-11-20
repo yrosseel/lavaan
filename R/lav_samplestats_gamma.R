@@ -21,6 +21,12 @@ lavGamma <- function(object, group = NULL, missing = "listwise",
                      ADF = TRUE, NT.rescale = FALSE,
                      Mplus.WLS = FALSE, add.labels) {
 
+    # no support for missing = "ml" (and model-based Gamma) yet
+    if(missing != "listwise") {
+        ### FIXME!!!!!
+        return(NULL) # for now!
+    }
+
     if(inherits(object, "lavaan")) {
         lavdata <- object@Data
         if(missing(missing)) {

@@ -43,6 +43,9 @@ lav_test_browne <- function(lavobject      = NULL,
     if(!ADF && lavmodel@categorical) {
         stop("lavaan ERROR: normal theory version not available in the categorical setting.")
     }
+    if(lavdata@missing != "listwise") {
+        stop("lavaan ERROR: Browne's test is not available when data is missing")
+    }
     if(lavdata@nlevels > 1L) {
         stop("lavaan ERROR: Browne's test is not available when data is multilevel.")
     }
