@@ -731,15 +731,32 @@ parameterestimates <- function(object,
             warning("lavaan WARNING: rsquare = TRUE, but there are no dependent variables")
         } else {
             if(lav_partable_nlevels(LIST) == 1L) {
-            R2 <- data.frame( lhs = NAMES, op = rep("r2", nel), rhs = NAMES,
-                              block = rep(1:length(r2), sapply(r2, length)),
-                              est = unlist(r2), stringsAsFactors = FALSE )
+                block <- rep(1:length(r2), sapply(r2, length))
+                first.block.idx <- which(!duplicated(LIST$block) &
+                                         LIST$block > 0L)
+                GVAL <- LIST$group[first.block.idx]
+                if(length(GVAL) > 0L) {
+                    group <- rep(GVAL, sapply(r2, length))
+                } else {
+                    # single block, single group
+                    group <- rep(1L, length(block))
+                }
+                R2 <- data.frame( lhs = NAMES, op = rep("r2", nel), rhs = NAMES,
+                                  block = block, group = group,
+                                  est = unlist(r2), stringsAsFactors = FALSE )
             } else {
-            # add level column
-            R2 <- data.frame( lhs = NAMES, op = rep("r2", nel), rhs = NAMES,
-                              block = rep(1:length(r2), sapply(r2, length)),
-                              level = rep(lav_partable_level_values(LIST),
-                                          sapply(r2, length)),
+                # add level column
+                block <- rep(1:length(r2), sapply(r2, length))
+                first.block.idx <- which(!duplicated(LIST$block) &
+                                         LIST$block > 0L)
+                # always at least two blocks
+                GVAL <- LIST$group[first.block.idx]
+                group <- rep(GVAL, sapply(r2, length))
+                LVAL <- LIST$level[first.block.idx]
+                level <- rep(LVAL, sapply(r2, length))
+                R2 <- data.frame( lhs = NAMES, op = rep("r2", nel), rhs = NAMES,
+                              block = block, group = group,
+                              level = level,
                               est = unlist(r2), stringsAsFactors = FALSE )
             }
             LIST <- lav_partable_merge(pt1 = LIST, pt2 = R2, warn = FALSE)
