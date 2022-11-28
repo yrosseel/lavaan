@@ -95,6 +95,8 @@ lavGamma <- function(object, group = NULL, missing = "listwise",
                                      unbiased       = gamma.unbiased,
                                      Mplus.WLS      = Mplus.WLS)
         } else {
+            # FIXME: allow for moments only
+            # and provide COV/MEAN/...
             out <- lav_samplestats_Gamma_NT(Y       = Y[[g]],
                                      wt             = NULL, # for now
                                      rescale        = NT.rescale,

@@ -78,8 +78,14 @@ lav_test_browne <- function(lavobject      = NULL,
             Gamma <- lavsamplestats@NACOV
         } else {
             if(!is.null(lavobject)) {
+                if(lavobject@Data@data.type != "full") {
+                    stop("lavaan ERROR: ADF version not available without full data or user-provided Gamma/NACOV matrix")
+                }
                 Gamma <- lavGamma(lavobject)
             } else {
+                if(lavdata@data.type != "full") {
+                    stop("lavaan ERROR: ADF version not available without full data or user-provided Gamma/NACOV matrix")
+                }
                 Gamma <- lavGamma(lavdata,
                     missing = lavoptions$missing,
                     fixed.x = lavoptions$fixed.x,
