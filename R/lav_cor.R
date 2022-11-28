@@ -80,7 +80,7 @@ lavCor <- function(object,
     if(!is.null(dots$meanstructure)) {
         meanstructure <- dots$meanstructure
     }
-    if(categorical || tolower(missing) %in% c("ml", "fiml", "direct")) {
+    if(lav.data@ngroups > 1L || categorical || tolower(missing) %in% c("ml", "fiml", "direct")) {
         meanstructure <- TRUE
     }
     if(!is.null(dots$fixed.x)) {
