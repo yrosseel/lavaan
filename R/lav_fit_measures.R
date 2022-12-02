@@ -275,6 +275,7 @@ lav_fit_measures <- function(object, fit.measures = "all",
         indices <- c(indices,
                      lav_fit_cfi_lavobject(lavobject    = object,
                                            fit.measures = fit.measures,
+                                           baseline.model = baseline.model,
                                            scaled       = scaled,
                                            test         = test))
     }
