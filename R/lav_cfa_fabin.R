@@ -147,7 +147,7 @@ lav_cfa_lambda2thetapsi <- function(lambda = NULL, S = NULL, S.inv = NULL,
             SminTheta <- S - diag.theta
         }
     }
-    PSI <- M %*% SminTheta %*% t(M)
+    PSI <- M %*% SminTheta %*% t(M) # Just like local SAM
 
     list(lambda = LAMBDA, theta = theta, psi = PSI)
 }

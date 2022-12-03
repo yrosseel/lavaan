@@ -21,7 +21,7 @@
 # YR 22 May 2019 - merge sam/twostep (call it 'local' vs 'global' sam)
 
 # YR 27 June 2021 - prepare for `public' release
-#                 - add Fuller (1987) correction if (MSM - MTM) is not
+#                 - add Fuller (1987) 'lambda' correction if (MSM - MTM) is not
 #                   positive definite
 #                 - se = "none" now works
 #                 - store 'local' information in @internal slot (for printing)
@@ -31,7 +31,8 @@
 #                  without measurement error in the second step
 #                  (ie, set THETA element to zero)
 
-# YR 22 okt 2022 - add function lav_sam_local_get_veta()
+# YR 03 Dec 2022 - allow for sam.method = "fsr" and se = "naive"
+#                - add alpha.correction= argument (for small sample correction)
 
 
 # twostep = wrapper for global sam
@@ -51,22 +52,24 @@ twostep <- function(model = NULL, data = NULL, cmd = "sem",
 # TODO
 
 
-sam <- function(model          = NULL,
-                data           = NULL,
-                cmd            = "sem",
-                se             = "twostep",
-                mm.list        = NULL,
-                mm.args        = list(bounds = "standard", se = "standard"),
-                struc.args     = list(estimator = "ML",
-                                      #fixed.x = TRUE,
-                                      se = "standard"),
-                sam.method     = "local", # or global
+sam <- function(model            = NULL,
+                data             = NULL,
+                cmd              = "sem",
+                se               = "twostep",
+                mm.list          = NULL,
+                mm.args          = list(bounds = "standard", se = "standard"),
+                struc.args       = list(estimator = "ML",
+                                        #fixed.x = TRUE,
+                                        se = "standard"),
+                sam.method       = "local", # or "global", or "fsr"
+                alpha.correction = 0L,
                 ...,           # global options
-                local.options  = list(M.method = "ML",
-                                      veta.force.pd = TRUE,
-                                      twolevel.method = "h1"), # h1, anova, mean
-                global.options = list(), # not used for now
-                output         = "lavaan") {
+                local.options    = list(M.method = "ML",
+                                        veta.force.pd = TRUE,
+                                        twolevel.method = "h1"),
+                                        # h1, anova, mean
+                global.options   = list(), # not used for now
+                output           = "lavaan") {
 
     # default local.options
     local.opt <- list(M.method = "ML",
@@ -100,7 +103,7 @@ sam <- function(model          = NULL,
     # STEP 0: process full model, without fitting
     dotdotdot0 <- dotdotdot
     dotdotdot0$do.fit <- NULL
-    if(sam.method == "local") {
+    if(sam.method %in% c("local", "fsr")) {
         dotdotdot0$sample.icov <- FALSE # if N < nvar
     }
     dotdotdot0$se     <- "none"
@@ -117,7 +120,7 @@ sam <- function(model          = NULL,
 
     # restore options
     lavoptions$do.fit <- TRUE
-    if(sam.method == "local") {
+    if(sam.method %in% c("local", "fsr")) {
         lavoptions$sample.icov <- TRUE
     }
     # se
@@ -147,7 +150,7 @@ sam <- function(model          = NULL,
 
 
     # local only
-    if(sam.method == "local") {
+    if(sam.method %in% c("local", "fsr")) {
         # if missing = "listwise", make data complete, to avoid different
         # datasets per measurement block
         if(lavoptions$missing == "listwise") {
@@ -268,7 +271,7 @@ sam <- function(model          = NULL,
     MM.FIT <- vector("list", nMMblocks)         # fitted object
 
     # local only
-    if(sam.method == "local") {
+    if(sam.method %in% c("local", "fsr")) {
         LAMBDA.list <- vector("list", nMMblocks)
         THETA.list  <- vector("list", nMMblocks)
         NU.list     <- vector("list", nMMblocks)
@@ -299,7 +302,7 @@ sam <- function(model          = NULL,
                 paste(mm.list[[mm]], collapse = " "), "]\n")
         }
 
-        if(sam.method == "local") {
+        if(sam.method %in% c("local", "fsr")) {
             #s LV.idx.list/OV.idx.list: list per block
             LV.idx.list[[mm]] <- vector("list", nblocks)
             OV.idx.list[[mm]] <- vector("list", nblocks)
@@ -329,7 +332,7 @@ sam <- function(model          = NULL,
         # store fitted measurement model
         MM.FIT[[mm]] <- fit.mm.block
 
-        if(sam.method == "local") {
+        if(sam.method %in% c("local", "fsr")) {
             # store LAMBDA/THETA
             LAMBDA.list[[mm]] <- computeLAMBDA(fit.mm.block@Model )
              THETA.list[[mm]] <- computeTHETA( fit.mm.block@Model )
@@ -395,7 +398,7 @@ sam <- function(model          = NULL,
     out <- list()
     out$MM.FIT <- MM.FIT
 
-    if(sam.method == "local") {
+    if(sam.method %in% c("local", "fsr")) {
         if(lavoptions$verbose) {
             cat("Constructing the mapping matrix using the ",
                 local.M.method, " method ... ", sep = "")
@@ -452,9 +455,11 @@ sam <- function(model          = NULL,
 
     ## STEP 1b: compute Var(eta) and E(eta) per block
     ##          only needed for local approach!
-    if(sam.method == "local") {
-        VETA <- vector("list", nblocks)
-        REL  <- vector("list", nblocks)
+    if(sam.method %in% c("local", "fsr")) {
+        VETA   <- vector("list", nblocks)
+        REL    <- vector("list", nblocks)
+        alpha  <- vector("list", nblocks)
+        lambda <- vector("list", nblocks)
         if(lavoptions$meanstructure) {
             EETA <- vector("list", nblocks)
         } else {
@@ -542,6 +547,9 @@ sam <- function(model          = NULL,
                             t(LAMBDA[[b]]) %*% ICOV )
             } else if(local.M.method == "ML") {
                 zero.theta.idx <- which(abs(diag(THETA[[b]])) < 1e-6) # nearzero
+                # if this happens, the ML mapping matrix 'M' will be
+                # different from the 'fsm' matrix we get from
+                # lavPredict() + Bartlett
                 if(length(zero.theta.idx) > 0L) {
                     tmp <- THETA[[b]][-zero.theta.idx, -zero.theta.idx,
                                       drop = FALSE]
@@ -556,7 +564,7 @@ sam <- function(model          = NULL,
                 Mg <- ( solve(t(LAMBDA[[b]]) %*% THETA.inv %*% LAMBDA[[b]]) %*%
                             t(LAMBDA[[b]]) %*% THETA.inv )
             } else if(local.M.method == "ULS") {
-                Mg <- solve(t(LAMBDA[[b]]) %*%  LAMBDA[[b]]) %*% t(LAMBDA[[b]])
+                Mg <- solve(LAMBDA[[b]] %*%  LAMBDA[[b]]) %*% t(LAMBDA[[b]])
             }
 
             # handle observed-only variables
@@ -568,27 +576,53 @@ sam <- function(model          = NULL,
             }
 
             MSM <- Mg %*% COV %*% t(Mg)
-            MTM <- Mg %*% THETA[[b]] %*% t(Mg)
+            if(sam.method == "local") {
+                MTM <- Mg %*% THETA[[b]] %*% t(Mg)
+                N <- nobs(FIT)
 
-            if(local.options[["veta.force.pd"]]) {
-                # use Fuller (1987) approach to ensure VETA is positive
-                lambda <- try(lav_matrix_symmetric_diff_smallest_root(MSM, MTM),
-                              silent = TRUE)
-                if(inherits(lambda, "try-error")) {
-                    warning("lavaan WARNING: failed to compute lambda")
-                    VETA[[b]] <- MSM - MTM # and hope for the best
-                } else {
-                    N <- nobs(FIT)
-                    cutoff <- 1 + 1/(N-1)
-                    if(lambda < cutoff) {
-                        lambda.star <- lambda - 1/(N - 1)
-                        VETA[[b]] <- MSM - lambda.star * MTM
-                    } else {
-                        VETA[[b]] <- MSM - MTM
+                # apply small sample correction (if requested)
+                # if alpha.correction == 0     -> same as local SAM (or MOC)
+                # if alpha.correction == (N-1) -> same as FSR+Bartlett
+                if(alpha.correction > 0) {
+                    alpha.N1 <- alpha.correction / (N - 1)
+                    if(alpha.N1 > 1.0) {
+                        alpha.N1 <- 1.0
+                    } else if (alpha.N1 < 0.0) {
+                        alpha.N1 <- 0.0
                     }
+                    MTM <- (1 - alpha.N1) * MTM
+                    alpha[[b]] <- alpha.correction
+                } else {
+                    alpha[[b]] <- alpha.correction
                 }
+
+                lambda[[b]] <- as.numeric(NA)
+                if(local.options[["veta.force.pd"]]) {
+                    # use Fuller (1987) approach to ensure VETA is positive
+                    lambda.b <-
+                        try(lav_matrix_symmetric_diff_smallest_root(MSM, MTM),
+                            silent = TRUE)
+                    if(inherits(lambda, "try-error")) {
+                        warning("lavaan WARNING: failed to compute lambda")
+                        VETA[[b]] <- MSM - MTM # and hope for the best
+                    } else {
+                        cutoff <- 1 + 1/(N-1)
+                        if(lambda.b < cutoff) {
+                            lambda.star <- lambda.b - 1/(N - 1)
+                            VETA[[b]] <- MSM - lambda.star * MTM
+                        } else {
+                            VETA[[b]] <- MSM - MTM
+                        }
+                        lambda[[b]] <- lambda.b
+                    }
+                } else {
+                    VETA[[b]] <- MSM - MTM
+                }
+            # end local SAM
+
             } else {
-                VETA[[b]] <- MSM - MTM
+                # FSR
+                VETA[[b]] <- MSM
             }
 
             # standardize? not really needed, but we may have 1.0000001
@@ -631,6 +665,10 @@ sam <- function(model          = NULL,
         # store M
         out$M <- M
 
+        # store alpha and lambda (if used)
+        out$lambda <- lambda
+        out$alpha  <- alpha
+
         if(lavoptions$verbose) {
             cat("done.\n")
         }
@@ -672,9 +710,11 @@ sam <- function(model          = NULL,
     # override, no matter what
     lavoptions.PA$do.fit <- TRUE
 
-    if(sam.method == "local") {
+    if(sam.method %in% c("local", "fsr")) {
         lavoptions.PA$missing <- "listwise"
-        lavoptions.PA$se <- "none" # sample statistics input
+        if(lavoptions$se != "naive") {
+            lavoptions.PA$se <- "none" # sample statistics input
+        }
         lavoptions.PA$sample.cov.rescale <- FALSE
         #lavoptions.PA$baseline <- FALSE
         lavoptions.PA$h1 <- FALSE
@@ -688,7 +728,7 @@ sam <- function(model          = NULL,
     }
 
     # construct PTS
-    if(sam.method == "local") {
+    if(sam.method %in% c("local", "fsr")) {
         # extract structural part
         PTS <- lav_partable_subset_structural_model(PT, lavpta = lavpta,
                    add.idx = TRUE,
@@ -772,7 +812,7 @@ sam <- function(model          = NULL,
     if(lavoptions$verbose) {
         cat("Fitting the structural part ... \n")
     }
-    if(sam.method == "local") {
+    if(sam.method %in% c("local", "fsr")) {
         FIT.PA <- lavaan::lavaan(PTS,
                                  sample.cov = VETA,
                                  sample.mean = EETA, # NULL if no meanstructure
@@ -836,7 +876,7 @@ sam <- function(model          = NULL,
     lavoptions.joint$check.gradient <- FALSE
     lavoptions.joint$check.start <- FALSE
     lavoptions.joint$check.post <- FALSE
-    if(sam.method == "local") {
+    if(sam.method %in% c("local", "fsr")) {
         lavoptions.joint$baseline <- FALSE
         lavoptions.joint$sample.icov <- FALSE
         lavoptions.joint$h1 <- FALSE
@@ -885,7 +925,7 @@ sam <- function(model          = NULL,
                                    JOINT@Model@nx.free)
         }
         VCOV.ALL[step1.idx, step1.idx] <- Sigma.11
-        JOINT@vcov <- list(se = "twostep",
+        JOINT@vcov <- list(se = lavoptions$se,
                            information = lavoptions$information,
                            vcov = VCOV.ALL)
 
@@ -924,17 +964,30 @@ sam <- function(model          = NULL,
         if(lavoptions$se == "standard") {
             VCOV <- 1/N * I.22.inv
             out$VCOV <- VCOV
+        } else if(lavoptions$se == "naive") {
+            VCOV <- FIT.PA@vcov$vcov
+            out$VCOV <- VCOV
         } else {
 
             # FIXME:
-            V2 <- 1/N * I.22.inv
+            V2 <- 1/N * I.22.inv # not the same as FIT.PA@vcov$vcov!!
             #V2 <- JOINT@vcov$vcov[ step2.idx,  step2.idx]
 
             # V1
             V1 <- I.22.inv %*% I.21 %*% Sigma.11 %*% I.12 %*% I.22.inv
 
             # V for second step
-            VCOV <- V2 + V1
+            if(alpha.correction > 0) {
+                alpha.N1 <- alpha.correction / (N - 1)
+                if(alpha.N1 > 1.0) {
+                    alpha.N1 <- 1.0
+                } else if (alpha.N1 < 0.0) {
+                    alpha.N1 <- 0.0
+                }
+                VCOV <- V2 + (1 - alpha.N1)^2 * V1
+            } else {
+                VCOV <- V2 + V1
+            }
 
             # store in out
             out$V2 <- V2
@@ -968,7 +1021,7 @@ sam <- function(model          = NULL,
 
 
         # extra info for @internal slot
-        if(sam.method == "local") {
+        if(sam.method %in% c("local", "fsr")) {
             sam.struc.fit <- try(fitMeasures(FIT.PA,
                                                c("chisq", "df", # "pvalue",
                                                  "cfi", "rmsea", "srmr")),
@@ -1003,10 +1056,8 @@ sam <- function(model          = NULL,
 
         # fill in twostep standard errors
         if(JOINT@Options$se != "none") {
-            if(lavoptions$se == "twostep") {
-                JOINT@Options$se <- "twostep"
-                JOINT@vcov$se    <- "twostep"
-            }
+            JOINT@Options$se <- lavoptions$se
+            JOINT@vcov$se    <- lavoptions$se
             JOINT@vcov$vcov[step2.idx, step2.idx] <- VCOV
             PT$se <- lav_model_vcov_se(lavmodel = JOINT@Model,
                                        lavpartable = PT,
@@ -1016,7 +1067,7 @@ sam <- function(model          = NULL,
 
         # fill information from FIT.PA
         JOINT@Options$optim.method <- FIT.PA@Options$optim.method
-        if(sam.method == "local") {
+        if(sam.method %in% c("local", "fsr")) {
             JOINT@optim <- FIT.PA@optim
             JOINT@test  <- FIT.PA@test
         }
@@ -1038,6 +1089,3 @@ sam <- function(model          = NULL,
     res
 }
 
-# local SAM: compute EETA/VETA for each block
-lav_sam_local_get_veta <- function() {
-}
