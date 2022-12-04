@@ -153,7 +153,16 @@ lav_test_browne <- function(lavobject      = NULL,
             } else {
                 Ng <- nobs[[g]]
             }
-            Gamma.inv.weighted[[g]] <- solve(Gamma[[g]]) * Ng/ntotal
+            Gamma.inv.temp <- try(solve(Gamma[[g]]), silent = TRUE)
+            if (inherits(Gamma.inv.temp, "try-error")) {
+                # TDJ: This will happen whenever an (otherwise) unrestricted
+                #      covariance matrix has a structure to it, such as equal
+                #      variances (and certain covariances) for 2 members of an
+                #      indistinguishable dyad (represented as 2 columns).  In
+                #      such cases, their (N)ACOV elements are also identical.
+                Gamma.inv.temp <- MASS::ginv(Gamma[[g]])
+            }
+            Gamma.inv.weighted[[g]] <- Gamma.inv.temp * Ng/ntotal
         }
         GI <- lav_matrix_bdiag(Gamma.inv.weighted)
         q1 <- drop( t(RES.all) %*% GI %*% RES.all)
