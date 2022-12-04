@@ -712,9 +712,9 @@ sam <- function(model            = NULL,
 
     if(sam.method %in% c("local", "fsr")) {
         lavoptions.PA$missing <- "listwise"
-        if(lavoptions$se != "naive") {
-            lavoptions.PA$se <- "none" # sample statistics input
-        }
+        #if(lavoptions$se != "naive") {
+        #    lavoptions.PA$se <- "none" # sample statistics input
+        #}
         lavoptions.PA$sample.cov.rescale <- FALSE
         #lavoptions.PA$baseline <- FALSE
         lavoptions.PA$h1 <- FALSE
@@ -972,9 +972,29 @@ sam <- function(model            = NULL,
             # FIXME:
             V2 <- 1/N * I.22.inv # not the same as FIT.PA@vcov$vcov!!
             #V2 <- JOINT@vcov$vcov[ step2.idx,  step2.idx]
+            #V2 <- FIT.PA@vcov$vcov
 
             # V1
+            #V1 <- I.22.inv %*% I.21 %*% Sigma.11 %*% I.12 %*% I.22.inv
+
+
+#            theta1totheta2 <- function(x) {
+#
+#
+#                lavoptions.PA$se <- "none"
+#                FIT.PA <- lavaan::lavaan(PTS,
+#                                 sample.cov = VETA,
+#                                 sample.mean = EETA, # NULL if no meanstructure
+#                                 sample.nobs = NOBS,
+#                                 slotOptions = lavoptions.PA)
+#                out <- coef(FIT.PA)
+#                out
+#            }
+#
+
             V1 <- I.22.inv %*% I.21 %*% Sigma.11 %*% I.12 %*% I.22.inv
+
+
 
             # V for second step
             if(alpha.correction > 0) {
