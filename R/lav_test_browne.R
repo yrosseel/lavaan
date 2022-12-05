@@ -170,11 +170,11 @@ lav_test_browne <- function(lavobject      = NULL,
             Gamma.inv.weighted[[g]] <- Gamma.inv.temp * Ng/ntotal
         }
         GI <- lav_matrix_bdiag(Gamma.inv.weighted)
+        tDGiD <- t(Delta.g) %*% GI %*% Delta.g
+        tDGiD.inv <- MASS::ginv(tDGiD) # GI may be rank-deficient
         q1 <- drop( t(RES.all) %*% GI %*% RES.all)
         q2 <- drop( t(RES.all) %*%
-                    GI %*% Delta.g %*%
-                    solve( t(Delta.g) %*% GI %*% Delta.g) %*%
-                    t(Delta.g) %*% GI %*%
+                    GI %*% Delta.g %*% tDGiD.inv %*% t(Delta.g) %*% GI %*%
                     RES.all )
         STAT <- ntotal * (q1 - q2)
         stat.group <- STAT * unlist(nobs) / ntotal # proxy only
