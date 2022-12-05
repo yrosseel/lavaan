@@ -441,6 +441,7 @@ lav_model_test <- function(lavobject      = NULL,
                                    lavdata        = lavdata,
                                    lavsamplestats = lavsamplestats,
                                    lavmodel       = lavmodel,
+                                   lavpartable    = lavpartable,
                                    lavoptions     = lavoptions,
                                    ADF            = ADF)
             TEST[[this.test]] <- out

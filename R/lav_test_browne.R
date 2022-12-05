@@ -22,6 +22,7 @@ lav_test_browne <- function(lavobject      = NULL,
                             lavdata        = NULL,
                             lavsamplestats = NULL,
                             lavmodel       = NULL,
+                            lavpartable    = NULL,
                             lavoptions     = NULL,
                             # further options:
                             n.minus.one    = "default",
@@ -37,6 +38,7 @@ lav_test_browne <- function(lavobject      = NULL,
         lavdata        <- lavobject@Data
         lavsamplestats <- lavobject@SampleStats
         lavmodel       <- lavobject@Model
+        lavpartable    <- lavobject@ParTable
         lavoptions     <- lavobject@Options
     }
 
@@ -125,14 +127,17 @@ lav_test_browne <- function(lavobject      = NULL,
             RES <- WLS.obs[[g]] - WLS.est[[g]]
             Delta.g <- Delta[[g]]
             Delta.c <- lav_matrix_orthogonal_complement(Delta.g)
-            tDGD <- solve(crossprod(Delta.c, Gamma[[g]]) %*% Delta.c)
+            tDGD <- crossprod(Delta.c, Gamma[[g]]) %*% Delta.c
+            # if fixed.x = TRUE, Gamma[[g]] may contain zero col/rows
+            tDGD.inv <- lav_matrix_symmetric_inverse(tDGD)
             if(n.minus.one) {
                 Ng <- nobs[[g]] - 1L
             } else {
                 Ng <- nobs[[g]]
             }
             tResDelta.c <- crossprod(RES, Delta.c)
-            stat.group[g] <- Ng * drop(tResDelta.c %*% tDGD %*% t(tResDelta.c))
+            stat.group[g] <-
+                Ng * drop(tResDelta.c %*% tDGD.inv %*% t(tResDelta.c))
         }
         STAT <- sum(stat.group)
 
@@ -183,18 +188,21 @@ lav_test_browne <- function(lavobject      = NULL,
     if(!is.null(lavobject)) {
         DF <- lavobject@test[[1]]$df
     } else {
-        ndat <- length(unlist(lavsamplestats@WLS.obs))
-        nfree <- lavmodel@nx.free
-        DF <- ndat - nfree
+        # same approach as in lav_test.R
+        df <- lav_partable_df(lavpartable)
         if(nrow(lavmodel@con.jac) > 0L) {
             ceq.idx <- attr(lavmodel@con.jac, "ceq.idx")
             if(length(ceq.idx) > 0L) {
                 neq <- qr(lavmodel@con.jac[ceq.idx,,drop=FALSE])$rank
-                DF <- DF + neq
-            } else {
-
+                df <- df + neq
             }
+        } else if(lavmodel@ceq.simple.only) {
+            # needed??
+            ndat <- lav_partable_ndat(lavpartable)
+            npar <- max(lavpartable$free)
+            df <- ndat - npar
         }
+        DF <- df
     }
 
     if(ADF) {
