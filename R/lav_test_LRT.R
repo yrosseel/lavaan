@@ -21,6 +21,15 @@ lavTestLRT <- function(object, ..., method = "default", A.method = "delta",
 
     type <- tolower(type)
     method <- tolower( gsub("[-_\\.]", "", method ) )
+    if(type %in% c("browne", "browne.residual.adf", "browne.residual.nt")) {
+        if(type == "browne") {
+            type <- "browne.residual.adf"
+        }
+        if(!method %in% c("default", "standard")) {
+            stop("lavaan ERROR: method cannot be used if type is browne.residual.adf or browne.residual.nt")
+        }
+        method <- "default"
+    }
 
     # NOTE: if we add additional arguments, it is not the same generic
     # anova() function anymore, and match.call will be screwed up
@@ -118,6 +127,9 @@ lavTestLRT <- function(object, ..., method = "default", A.method = "delta",
     } else {
         stop("lavaan ERROR: some models (but not all) have scaled test statistics")
     }
+    if(type %in% c("browne.residual.adf", "browne.residual.nt")) {
+        scaled <- FALSE
+    }
 
     # select method
     if(method == "default") {
@@ -158,7 +170,7 @@ lavTestLRT <- function(object, ..., method = "default", A.method = "delta",
                     "\n\t but no robust test statistics were used;",
                     "\n\t switching to the standard chi-square difference test")
 
-        method = "default"
+        method <- "default"
     }
 
 
@@ -178,6 +190,16 @@ lavTestLRT <- function(object, ..., method = "default", A.method = "delta",
     if(type == "chisq") {
         Df <- sapply(mods, function(x) slot(x, "test")[[1]]$df)
         STAT <- sapply(mods, function(x) slot(x, "test")[[1]]$stat)
+    } else if(type == "browne.residual.nt") {
+        TESTlist <- lapply(mods,
+                           function(x) lavTest(x, test = "browne.residual.nt"))
+        Df <- sapply(TESTlist, function(x) x$df)
+        STAT <- sapply(TESTlist, function(x) x$stat)
+    } else if(type == "browne.residual.adf") {
+        TESTlist <- lapply(mods,
+                           function(x) lavTest(x, test = "browne.residual.adf"))
+        Df <- sapply(TESTlist, function(x) x$df)
+        STAT <- sapply(TESTlist, function(x) x$stat)
     } else if(type == "cf") {
         tmp <- lapply(mods, lavTablesFitCf)
         STAT <- unlist(tmp)
@@ -323,16 +345,20 @@ lavTestLRT <- function(object, ..., method = "default", A.method = "delta",
                       "function of two standard (not robust) statistics.",
                       sep = "")
             attr(val, "heading") <-
-                paste("Scaled Chi-Squared Difference Test (method = ",
+                paste("\nScaled Chi-Squared Difference Test (method = ",
                       dQuote(method), ")\n\n",
                       lav_txt2message(txt, header = "lavaan NOTE:",
                                            footer = " "), sep = "")
         } else {
-            attr(val, "heading") <- "Chi-Squared Difference Test\n"
+            attr(val, "heading") <- "\nChi-Squared Difference Test\n"
         }
+    } else if(type  == "browne.residual.adf") {
+        attr(val, "heading") <- "\nChi-Squared Difference Test based on Browne's residual (ADF) Test\n"
+    } else if(type == "browne.residual.nt") {
+        attr(val, "heading") <- "\nChi-Squared Difference Test based on Browne's residual (NT) Test\n"
     } else if(type == "cf") {
         colnames(val)[c(3,4)] <- c("Cf", "Cf diff")
-        attr(val, "heading") <- "Cf Difference Test\n"
+        attr(val, "heading") <- "\nCf Difference Test\n"
     }
     class(val) <- c("anova", class(val))
 
