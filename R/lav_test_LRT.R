@@ -41,7 +41,7 @@ lavTestLRT <- function(object, ..., method = "default", A.method = "delta",
     } else {
          logical(0L)
     }
-
+    
     # some general properties (taken from the first model)
     estimator <- object@Options$estimator
     likelihood <- object@Options$likelihood
@@ -66,6 +66,13 @@ lavTestLRT <- function(object, ..., method = "default", A.method = "delta",
                               function(x) deparse(x))
     }
 
+    # TDJ: Add user-supplied h1 model, if it exists
+    if( !is.null(object@external$h1) ) {
+        if(inherits(object@external$h1, "lavaan")) {
+            mods$h1 <- object@external$h1
+        }
+    }
+    
     ## put them in order (using number of free parameters)
     #nfreepar <- sapply(mods, function(x) x@optim$npar)
     #if(any(duplicated(nfreepar))) { ## FIXME: what to do here?
