@@ -29,8 +29,10 @@ lavTest <- function(lavobject, test = "standard", output = "list",
 
         # check if we already have it:
         if(all(test %in% names(TEST))) {
+            info.attr <- attr(TEST, "info")          
             test.idx <- which(names(TEST) %in% test)
             TEST <- TEST[test.idx]
+            attr(TEST, "info") <- info.attr
         } else {
             # redo ALL of them, even if already have some in TEST
             # later, we will allow to also change the options (like information)
