@@ -101,13 +101,17 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
             }
           }
 
-          # set WLS.V to I(dentity) when ULS is requested
-          if (!is.null(dotdotdot$estimator)) {
-            if (grepl(pattern = "ULS", x = toupper(dotdotdot$estimator[1L]) )) {
-              diag(data$WLS.V) <- 1
-              dotdotdot$WLS.V <- data$WLS.V
-            }
-          }
+          #FIXME: Should WLS.V be an I(dentity) matrix when ULS is requested?
+          #       Unused for point estimates, but still used to scale/shift test
+          # if (!is.null(dotdotdot$estimator)) {
+          #   if (grepl(pattern = "ULS", x = toupper(dotdotdot$estimator[1L]) ) &&
+          #       !is.null(WLS.V)) {
+          #     ## set to diagonal
+          #     if (is.list(WLS.V)) {
+          #       WLS.V <- lapply(WLS.V, function(w) {diag(w) <- 1 ; return(w) } )
+          #     } else diag(WLS.V) <- 1
+          #   }
+          # }
 
           # get rid of data= argument
           data <- NULL
