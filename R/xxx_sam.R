@@ -1004,7 +1004,9 @@ sam <- function(model            = NULL,
                 } else if (alpha.N1 < 0.0) {
                     alpha.N1 <- 0.0
                 }
-                VCOV <- V2 + (1 - alpha.N1)^2 * V1
+                VCOV.naive <- FIT.PA@vcov$vcov
+                VCOV.corrected <- V2 + V1
+                VCOV <- alpha.N1 * VCOV.naive + (1 - alpha.N1) * VCOV.corrected
             } else {
                 VCOV <- V2 + V1
             }

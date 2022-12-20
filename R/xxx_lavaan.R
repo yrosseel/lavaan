@@ -689,6 +689,12 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
         }
         # more needed?
     }
+    # sanity check
+    if(!is.null(slotParTable) || inherits(model, "lavaan")) {
+        if(ngroups != lavdata@ngroups) {
+            stop("lavaan ERROR: mismatch between number of groups in data, and number of groups in model.")
+        }
+    }
     timing$Data <- (proc.time()[3] - start.time)
     start.time <- proc.time()[3]
     if(lavoptions$verbose) {
