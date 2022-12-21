@@ -41,7 +41,7 @@ lavTestLRT <- function(object, ..., method = "default", A.method = "delta",
     } else {
          logical(0L)
     }
-    
+
     # some general properties (taken from the first model)
     estimator <- object@Options$estimator
     likelihood <- object@Options$likelihood
@@ -72,15 +72,6 @@ lavTestLRT <- function(object, ..., method = "default", A.method = "delta",
             mods$h1 <- object@external$h1
         }
     }
-    
-    ## put them in order (using number of free parameters)
-    #nfreepar <- sapply(mods, function(x) x@optim$npar)
-    #if(any(duplicated(nfreepar))) { ## FIXME: what to do here?
-    #    # what, same number of free parameters?
-    #    # maybe, we need to count number of constraints
-    #    ncon <- sapply(mods, function(x) { nrow(x@Model@con.jac) })
-    #    nfreepar <- nfreepar - ncon
-    #}
 
     # put them in order (using degrees of freedom)
     ndf <- sapply(mods, function(x) x@test[[1]]$df)
@@ -219,6 +210,9 @@ lavTestLRT <- function(object, ..., method = "default", A.method = "delta",
     # difference statistics
     STAT.delta   <- c(NA, diff(STAT))
     Df.delta     <- c(NA, diff(Df))
+    if(method == "satorra.2000" && scaled.shifted) {
+        a.delta <- b.delta <- rep(as.numeric(NA), length(STAT))
+    }
     # new in 0.6-13
     if(!scaled) {
         RMSEA.delta  <- c(NA, lav_fit_rmsea(X2 = STAT.delta[-1],
@@ -275,6 +269,10 @@ lavTestLRT <- function(object, ..., method = "default", A.method = "delta",
                                                  A.method = A.method)
                 STAT.delta[m+1] <- out$T.delta
                   Df.delta[m+1] <- out$df.delta
+                if(scaled.shifted) {
+                    a.delta[m+1] <- out$a
+                    b.delta[m+1] <- out$b
+                }
             }
         }
     }
@@ -356,6 +354,10 @@ lavTestLRT <- function(object, ..., method = "default", A.method = "delta",
                       dQuote(method), ")\n\n",
                       lav_txt2message(txt, header = "lavaan NOTE:",
                                            footer = " "), sep = "")
+            if(method == "satorra.2000" && scaled.shifted) {
+                attr(val, "scale") <- a.delta
+                attr(val, "shift") <- b.delta
+            }
         } else {
             attr(val, "heading") <- "\nChi-Squared Difference Test\n"
         }
