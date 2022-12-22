@@ -52,7 +52,7 @@ function(object, header       = TRUE,
                  cov.std      = TRUE,
                  rsquare      = FALSE,
                  std.nox      = FALSE,
-                 fit.args     = list(rmsea.ci.level       = 0.90,
+                 fm.args      = list(rmsea.ci.level       = 0.90,
                                      rmsea.h0.closefit    = 0.05,
                                      rmsea.h0.notclosefit = 0.08),
                  modindices   = FALSE,
@@ -66,7 +66,7 @@ function(object, header       = TRUE,
                ci = ci, fmi = fmi, std = std, standardized = standardized,
                remove.step1 = remove.step1, cov.std = cov.std,
                rsquare = rsquare, std.nox = std.nox, efa = efa.flag,
-               fit.args = fit.args, modindices = modindices)
+               fm.args = fm.args, modindices = modindices)
     # res has class c("lavaan.summary", "list")
 
     # what about nd? only used if we actually print; save as attribute

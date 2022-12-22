@@ -6,8 +6,8 @@
 Compute a variety of test statistics evaluating the global fit of
 the model.}
 \usage{
-    lavTest(lavobject, test = "standard", output = "list", 
-            drop.list.single = TRUE)
+    lavTest(lavobject, test = "standard", scaled.test = "standard",
+            output = "list", drop.list.single = TRUE)
 }
 \arguments{
 \item{lavobject}{An object of class \code{\linkS4class{lavaan}}.}
@@ -31,6 +31,10 @@ the model.}
     included, the
     Bollen-Stine bootstrap is used to compute the bootstrap probability value
     of the (regular) test statistic.}
+\item{scaled.test}{Character. Choose the test statistic 
+    that will be scaled (if a scaled test statistic is requested). 
+    The default is \code{"standard"}, but it could also be (for example)
+    \code{"Browne.residual.nt"}.}
 \item{output}{Character. If \code{"list"} (the default), return a list with
     all test statistics. If \code{"text"}, display the output as text with 
     verbose descriptions (as in the summary output). If any scaled

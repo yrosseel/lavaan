@@ -216,6 +216,7 @@ lav_test_browne <- function(lavobject      = NULL,
                 stat       = STAT,
                 stat.group = stat.group,
                 df         = DF,
+                refdistr   = "chisq",
                 pvalue     = 1 - pchisq(STAT, DF),
                 label      = LABEL)
     out

@@ -130,6 +130,7 @@ lav_options_default <- function(mimic = "lavaan") {
                 se                     = "default",
                 test                   = "default",
 
+
                 # information (se + test)
                 information            = c("default",    "default"),
                 h1.information         = c("structured", "structured"),
@@ -144,6 +145,9 @@ lav_options_default <- function(mimic = "lavaan") {
                 omega.h1.information      = "default",
                 omega.information.meat    = "default",
                 omega.h1.information.meat = "default",
+
+                # default test statistic for scaling
+                scaled.test            = "standard",
 
                 # old approach trace.UGamma2
                 ug2.old.approach       = FALSE,
@@ -252,9 +256,11 @@ lav_options_set <- function(opt = NULL) {
     # store lower-case estimator name
     orig.estimator <- opt$estimator
 
-
     # rename names of test statistics if needed, and check for invalid values
     opt$test <- lav_test_rename(opt$test, check = TRUE)
+
+    # same for scaled.test
+    opt$scaled.test <- lav_test_rename(opt$scaled.test, check = TRUE)
 
     # rename names of se values, and check for invalid values
     # pass-through function: may change value of information
@@ -1613,6 +1619,22 @@ lav_options_set <- function(opt = NULL) {
     #    opt$test <- c("standard", opt$test)
     #    opt$test <- unique(opt$test)
     #}
+
+    # add scaled.test to test (if not already there)
+    if(opt$scaled.test != "standard") {
+        if(length(opt$test) == 1L && opt$test[1] == "standard") {
+            opt$test <- unique(c(opt$test, opt$scaled.test))
+        } else {
+            opt$test <- unique(c(opt$scaled.test, opt$test))
+        }
+
+        # make sure "standard" comes first
+        standard.idx <- which(opt$test == "standard")[1]
+        if(length(standard.idx) > 0L && standard.idx != 1L) {
+            opt$test <- c("standard", opt$test[-standard.idx])
+        }
+    }
+
 
     # final check
     wrong.idx <- which(! opt$test %in% c("none", "standard", "satorra.bentler",

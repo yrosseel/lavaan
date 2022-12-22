@@ -16,23 +16,23 @@
 
 setMethod("fitMeasures", signature(object = "lavaan"),
 function(object, fit.measures = "all", baseline.model = NULL,
-         fit.args = list(rmsea.ci.level    = 0.90,
-                         rmsea.close.h0    = 0.05,
-                         rmsea.notclose.h0 = 0.08),
+         fm.args = list(rmsea.ci.level    = 0.90,
+                        rmsea.close.h0    = 0.05,
+                        rmsea.notclose.h0 = 0.08),
          output = "vector", ...) {
     lav_fit_measures(object = object, fit.measures = fit.measures,
-                     baseline.model = baseline.model, fit.args = fit.args,
+                     baseline.model = baseline.model, fm.args = fm.args,
                      output = output)
 })
 
 setMethod("fitmeasures", signature(object = "lavaan"),
 function(object, fit.measures = "all", baseline.model = NULL,
-         fit.args = list(rmsea.ci.level    = 0.90,
-                         rmsea.close.h0    = 0.05,
-                         rmsea.notclose.h0 = 0.08),
+         fm.args = list(rmsea.ci.level    = 0.90,
+                        rmsea.close.h0    = 0.05,
+                        rmsea.notclose.h0 = 0.08),
          output = "vector",  ...) {
     lav_fit_measures(object = object, fit.measures = fit.measures,
-                     baseline.model = baseline.model, fit.args = fit.args,
+                     baseline.model = baseline.model, fm.args = fm.args,
                      output = output)
 })
 
@@ -40,16 +40,16 @@ function(object, fit.measures = "all", baseline.model = NULL,
 fitMeasures.efaList <- fitmeasures.efaList <- function(object,
     fit.measures = "all",
     baseline.model = NULL,
-    fit.args = list(rmsea.ci.level    = 0.90,
-                    rmsea.close.h0    = 0.05,
-                    rmsea.notclose.h0 = 0.08),
+    fm.args = list(rmsea.ci.level    = 0.90,
+                   rmsea.close.h0    = 0.05,
+                   rmsea.notclose.h0 = 0.08),
     vector = "list", ...) {
 
     # get fit measures for each model
     res <- simplify2array(lapply(object,
              function(x) lav_fit_measures(object = x,
                      fit.measures = fit.measures,
-                     baseline.model = baseline.model, fit.args = fit.args,
+                     baseline.model = baseline.model, fm.args = fm.args,
                      output = "vector")))
 
     # rownames
@@ -65,9 +65,9 @@ fitMeasures.efaList <- fitmeasures.efaList <- function(object,
 
 lav_fit_measures <- function(object, fit.measures = "all",
                              baseline.model = NULL,
-                             fit.args = list(rmsea.ci.level    = 0.90,
-                                             rmsea.close.h0    = 0.05,
-                                             rmsea.notclose.h0 = 0.08),
+                             fm.args = list(rmsea.ci.level    = 0.90,
+                                            rmsea.close.h0    = 0.05,
+                                            rmsea.notclose.h0 = 0.08),
                              output = "vector") {
 
     # do we have data? (yep, we had to include this check)
@@ -296,25 +296,25 @@ lav_fit_measures <- function(object, fit.measures = "all",
         rmsea.ci.level       <- 0.90
         rmsea.close.h0    <- 0.05
         rmsea.notclose.h0 <- 0.08
-        if(!is.null(fit.args$rmsea.ci.level) &&
-           is.finite(fit.args$rmsea.ci.level)) {
-            rmsea.ci.level <- fit.args$rmsea.ci.level
+        if(!is.null(fm.args$rmsea.ci.level) &&
+           is.finite(fm.args$rmsea.ci.level)) {
+            rmsea.ci.level <- fm.args$rmsea.ci.level
             if(rmsea.ci.level < 0 || rmsea.ci.level > 1.0) {
                 warning("lavaan WARNING: invalid rmsea.ci.level value [",
                         rmsea.ci.level, "] set to default 0.90.")
                 rmsea.ci.level <- 0.90
             }
         }
-        if(!is.null(fit.args$rmsea.close.h0) &&
-           is.finite(fit.args$rmsea.close.h0)) {
-            rmsea.close.h0 <- fit.args$rmsea.close.h0
+        if(!is.null(fm.args$rmsea.close.h0) &&
+           is.finite(fm.args$rmsea.close.h0)) {
+            rmsea.close.h0 <- fm.args$rmsea.close.h0
             if(rmsea.close.h0 < 0) {
                 rmsea.close.h0 <- 0
             }
         }
-        if(!is.null(fit.args$rmsea.notclose.h0) &&
-           is.finite(fit.args$rmsea.notclose.h0)) {
-            rmsea.notclose.h0 <- fit.args$rmsea.notclose.h0
+        if(!is.null(fm.args$rmsea.notclose.h0) &&
+           is.finite(fm.args$rmsea.notclose.h0)) {
+            rmsea.notclose.h0 <- fm.args$rmsea.notclose.h0
             if(rmsea.notclose.h0 < 0) {
                 rmsea.notclose.h0 <- 0
             }

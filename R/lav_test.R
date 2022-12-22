@@ -1,8 +1,9 @@
 # chi-square test statistic:
 # comparing the current model versus the saturated/unrestricted model
 
-lavTest <- function(lavobject, test = "standard", output = "list",
-                    drop.list.single = TRUE) {
+lavTest <- function(lavobject, test = "standard",
+                    scaled.test = "standard",
+                    output = "list", drop.list.single = TRUE) {
 
     # check output
     if(!output %in% c("list", "text")) {
@@ -14,11 +15,30 @@ lavTest <- function(lavobject, test = "standard", output = "list",
 
     # which test?
     if(!missing(test)) {
+
         # check 'test'
         if(!is.character(test)) {
             stop("lavaan ERROR: test should be a character string.")
         } else {
             test <- lav_test_rename(test, check = TRUE)
+        }
+
+        # check scaled.test
+        if(!missing(scaled.test)) {
+            if(!is.character(scaled.test)) {
+                stop("lavaan ERROR: scaled.test should be a character string.")
+            } else {
+                scaled.test <- lav_test_rename(scaled.test, check = TRUE)
+            }
+
+            # merge
+            test <- unique(c(test, scaled.test))
+
+            # but "standard" must always be first
+            standard.idx <- which(test == "standard")
+            if(length(standard.idx) > 0L && standard.idx != 1L) {
+                test <- c("standard", test[-standard.idx])
+            }
         }
 
         if(test[1] == "none") {
@@ -40,6 +60,9 @@ lavTest <- function(lavobject, test = "standard", output = "list",
 
             # fill-in test in Options slot
             lavobject@Options$test <- test
+
+            # fill-in scaled.test in Options slot
+            lavobject@Options$scaled.test <- scaled.test
 
             # get requested test statistics
             TEST <- lav_model_test(lavobject = lavobject)
@@ -68,6 +91,8 @@ lavTest <- function(lavobject, test = "standard", output = "list",
 }
 
 # allow for 'flexible' names for the test statistics
+# 0.6-13: if multiple names, order them in such a way
+#         that the 'scaled' variants appear after the others
 lav_test_rename <- function(test, check = FALSE) {
 
     test <- tolower(test)
@@ -142,6 +167,19 @@ lav_test_rename <- function(test, check = FALSE) {
 
     }
 
+    # reorder: first nonscaled, then scaled
+    nonscaled.idx <- which(test %in% c("standard", "none", "default",
+                                    "bollen.stine",
+                                    "browne.residual.nt",
+                                    "browne.residual.adf"))
+    scaled.idx <- which(test %in% c("satorra.bentler",
+                                    "yuan.bentler",
+                                    "yuan.bentler.mplus",
+                                    "mean.adjusted",
+                                    "mean.var.adjusted",
+                                    "scaled.shifted"))
+    test <- c(test[nonscaled.idx], test[scaled.idx])
+
     test
 }
 
@@ -180,7 +218,7 @@ lav_model_test <- function(lavobject      = NULL,
         lavloglik      <- lavobject@loglik
     }
 
-    test <- lavoptions$test
+    test <- test.orig <- lavoptions$test
 
     TEST <- list()
 
@@ -409,29 +447,6 @@ lav_model_test <- function(lavobject      = NULL,
                         " not available for estimator PML")
             }
 
-
-
-        } else if(this.test %in% c("satorra.bentler",
-                                   "mean.var.adjusted",
-                                   "scaled.shifted")) {
-
-            out <- lav_test_satorra_bentler(lavobject = NULL,
-                             lavsamplestats = lavsamplestats,
-                             lavmodel       = lavmodel,
-                             lavimplied     = lavimplied,
-                             lavdata        = lavdata,
-                             lavoptions     = lavoptions,
-                             TEST.unscaled  = TEST[[1]],
-                             E.inv          = attr(VCOV, "E.inv"),
-                             Delta          = attr(VCOV, "Delta"),
-                             WLS.V          = attr(VCOV, "WLS.V"),
-                             Gamma          = attr(VCOV, "Gamma"),
-                             test           = this.test,
-                             mimic          = lavoptions$mimic,
-                             method         = "original", # since 0.6-13
-                             return.ugamma  = FALSE)
-            TEST[[this.test]] <- out[[this.test]]
-
         } else if(this.test %in% c("browne.residual.adf",
                                    "browne.residual.nt")) {
 
@@ -448,8 +463,61 @@ lav_model_test <- function(lavobject      = NULL,
                                    ADF            = ADF)
             TEST[[this.test]] <- out
 
+
+        } else if(this.test %in% c("satorra.bentler",
+                                   "mean.var.adjusted",
+                                   "scaled.shifted")) {
+
+            # which test statistic shall we scale?
+            unscaled.TEST <- TEST[[1]]
+            if(lavoptions$scaled.test != "standard") {
+                idx <- which(test.orig == lavoptions$scaled.test)
+                if(length(idx) > 0L) {
+                    unscaled.TEST <- TEST[[idx[1]]]
+                } else {
+                    warning("lavaan WARNING: scaled.test [",
+                            lavoptions$scaled.test,
+                            "] not found among available (non scaled) tests: ",
+                            paste(test, collapse = " "), "\n\t\t",
+                            "Using standard test instead.")
+                }
+            }
+
+            out <- lav_test_satorra_bentler(lavobject = NULL,
+                             lavsamplestats = lavsamplestats,
+                             lavmodel       = lavmodel,
+                             lavimplied     = lavimplied,
+                             lavdata        = lavdata,
+                             lavoptions     = lavoptions,
+                             TEST.unscaled  = unscaled.TEST,
+                             E.inv          = attr(VCOV, "E.inv"),
+                             Delta          = attr(VCOV, "Delta"),
+                             WLS.V          = attr(VCOV, "WLS.V"),
+                             Gamma          = attr(VCOV, "Gamma"),
+                             test           = this.test,
+                             mimic          = lavoptions$mimic,
+                             method         = "original", # since 0.6-13
+                             return.ugamma  = FALSE)
+            TEST[[this.test]] <- out[[this.test]]
+
         } else if(this.test %in% c("yuan.bentler",
                                    "yuan.bentler.mplus")) {
+
+            # which test statistic shall we scale?
+            unscaled.TEST <- TEST[[1]]
+            if(lavoptions$scaled.test != "standard") {
+                idx <- which(test.orig == lavoptions$scaled.test)
+                if(length(idx) > 0L) {
+                    unscaled.TEST <- TEST[[idx[1]]]
+                } else {
+                    warning("lavaan WARNING: scaled.test [",
+                            lavoptions$scaled.test,
+                            "] not found among available (non scaled) tests: ",
+                            paste(test, collapse = " "), "\n\t\t",
+                            "Using standard test instead.")
+                }
+            }
+
 
             out <- lav_test_yuan_bentler(lavobject = NULL,
                              lavsamplestats = lavsamplestats,
@@ -458,7 +526,7 @@ lav_model_test <- function(lavobject      = NULL,
                              lavimplied     = lavimplied,
                              lavh1          = lavh1,
                              lavoptions     = lavoptions,
-                             TEST.unscaled  = TEST[[1]],
+                             TEST.unscaled  = unscaled.TEST,
                              E.inv          = attr(VCOV, "E.inv"),
                              B0.group       = attr(VCOV, "B0.group"),
                              test           = this.test,

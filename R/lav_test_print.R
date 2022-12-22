@@ -40,9 +40,14 @@ lav_test_print <- function(object, nd = 3L) {
                              is.null))
     robust.idx     <- which(!has.no.scaling)
     non.robust.idx <- which(has.no.scaling)
+    scaled.idx <- 1L
     if(length(robust.idx) > 0L) {
-        non.robust.idx <- non.robust.idx[-1] # remove 'standard', because it
-                                             # is shown together with robust
+        scaled.idx <- which(names(TEST) == TEST[[robust.idx[1]]]$scaled.test)
+        if(length(scaled.idx) == 0L) {
+            scaled.idx <- 1L
+        }
+        # remove 'scaled.test', because it is shown together with robust
+        non.robust.idx <- non.robust.idx[-scaled.idx]
     }
     BLOCKS <- c(robust.idx, non.robust.idx)
     nBlocks <- length(BLOCKS)
@@ -92,40 +97,53 @@ lav_test_print <- function(object, nd = 3L) {
                 c3 <- c(c3, c("", "", ""))
             }
 
+        # two-column
         } else {
+            # print label
+            c1 <- c2 <- c3 <- character(0L)
+            if(!is.null(TEST[[scaled.idx]]$label)) {
+                c1 <- c(c1, TEST[[scaled.idx]]$label)
+                c2 <- c(c2, "")
+                c3 <- c(c3, "")
+            }
             if(is.na(TEST[[block]]$df) || TEST[[block]]$df == 0L) {
-                c1 <- c("Test Statistic", "Degrees of freedom")
-                c2 <- c(sprintf(num.format, TEST[[1L]]$stat),
-                        ifelse(TEST[[1L]]$df %% 1 == 0, # integer
-                               TEST[[1L]]$df,
-                               sprintf(num.format, TEST[[1L]]$df)))
-                c3 <- c(sprintf(num.format, TEST[[block]]$stat),
+                c1 <- c(c1, c("Test Statistic", "Degrees of freedom"))
+                c2 <- c(c2,
+                        c(sprintf(num.format, TEST[[scaled.idx]]$stat),
+                        ifelse(TEST[[scaled.idx]]$df %% 1 == 0, # integer
+                               TEST[[scaled.idx]]$df,
+                               sprintf(num.format, TEST[[scaled.idx]]$df))))
+                c3 <- c(c2,
+                        c(sprintf(num.format, TEST[[block]]$stat),
                         ifelse(TEST[[block]]$df %% 1 == 0, # integer
                                TEST[[block]]$df,
-                               sprintf(num.format, TEST[[block]]$df)))
+                               sprintf(num.format, TEST[[block]]$df))))
             } else {
-                if(!is.null(TEST[[1L]]$refdistr)) {
-                    if(TEST[[1L]]$refdistr == "chisq") {
+                if(!is.null(TEST[[scaled.idx]]$refdistr)) {
+                    if(TEST[[scaled.idx]]$refdistr == "chisq") {
                         PLABEL <- "P-value (Chi-square)"
-                    } else if(TEST[[1L]]$refdistr == "unknown") {
+                    } else if(TEST[[scaled.idx]]$refdistr == "unknown") {
                         PLABEL <- "P-value (Unknown)"
                     } else {
                         PLABEL <- "P-value"
                     }
                 }
-                c1 <- c("Test Statistic", "Degrees of freedom", PLABEL,
-                        "Scaling correction factor")
-                c2 <- c(sprintf(num.format, TEST[[1L]]$stat),
-                        ifelse(TEST[[1L]]$df %% 1 == 0, # integer
-                               TEST[[1L]]$df,
-                               sprintf(num.format, TEST[[1L]]$df)),
-                        sprintf(num.format, TEST[[1L]]$pvalue), "")
-                c3 <- c(sprintf(num.format, TEST[[block]]$stat),
+                c1 <- c(c1,c("Test Statistic", "Degrees of freedom", PLABEL,
+                        "Scaling correction factor"))
+                c2 <- c(c2,
+                        c(sprintf(num.format, TEST[[scaled.idx]]$stat),
+                        ifelse(TEST[[scaled.idx]]$df %% 1 == 0, # integer
+                               TEST[[scaled.idx]]$df,
+                               sprintf(num.format, TEST[[scaled.idx]]$df)),
+                        sprintf(num.format, TEST[[scaled.idx]]$pvalue), ""))
+                c3 <- c(c3,
+                        c(sprintf(num.format, TEST[[block]]$stat),
                         ifelse(TEST[[block]]$df %% 1 == 0, # integer
                                TEST[[block]]$df,
                                sprintf(num.format, TEST[[block]]$df)),
                         sprintf(num.format, TEST[[block]]$pvalue),
-                        sprintf(num.format, TEST[[block]]$scaling.factor))
+                        sprintf(num.format, TEST[[block]]$scaling.factor)))
+
                 if(TEST[[block]]$test == "scaled.shifted") {
                    if(ngroups == 1L ||
                       length(TEST[[block]]$shift.parameter) == 1L) {
@@ -221,7 +239,7 @@ lav_test_print <- function(object, nd = 3L) {
                     c2[g] <- format(tmp, width = 8L + max(0, (nd - 3L)) * 4L,
                                     justify = "right")
                 } else {
-                    tmp <- sprintf(num.format, TEST[[1]]$stat.group[g])
+                    tmp <- sprintf(num.format, TEST[[scaled.idx]]$stat.group[g])
                     c2[g] <- format(tmp, width = 8L + max(0, (nd - 3L)) * 4L,
                                     justify = "right")
                     tmp <- sprintf(num.format, TEST[[block]]$stat.group[g])

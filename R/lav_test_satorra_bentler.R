@@ -231,6 +231,8 @@ lav_test_satorra_bentler <- function(lavobject        = NULL,
                  pvalue               = 1 - pchisq(stat, df.scaled),
                  trace.UGamma         = trace.UGamma,
                  scaling.factor       = scaling.factor,
+                 scaled.test.stat     = TEST$standard$stat,
+                 scaled.test          = TEST$standard$test,
                  label = label)
     }
 
@@ -285,7 +287,9 @@ lav_test_satorra_bentler <- function(lavobject        = NULL,
                  trace.UGamma         = trace.UGamma,
                  trace.UGamma2        = trace.UGamma2,
                  scaling.factor       = scaling.factor,
-                 label = label)
+                 scaled.test.stat     = TEST$standard$stat,
+                 scaled.test          = TEST$standard$test,
+                 label                = label)
     }
 
     if("scaled.shifted" %in% test) {
@@ -340,8 +344,10 @@ lav_test_satorra_bentler <- function(lavobject        = NULL,
                  trace.UGamma         = trace.UGamma,
                  trace.UGamma2        = trace.UGamma2,
                  scaling.factor       = scaling.factor,
-                 label                = label,
-                 shift.parameter      = shift.parameter)
+                 shift.parameter      = shift.parameter,
+                 scaled.test.stat     = TEST$standard$stat,
+                 scaled.test          = TEST$standard$test,
+                 label                = label)
     }
 
     if(return.ugamma) {

@@ -3,16 +3,16 @@
 
 # S3 generic for S3 dispatch
 fitMeasures <- function(object, fit.measures = "all", baseline.model = NULL,
-                        fit.args = list(rmsea.ci.level    = 0.90,
-                                        rmsea.close.h0    = 0.05,
-                                        rmsea.notclose.h0 = 0.08),
+                        fm.args = list(rmsea.ci.level    = 0.90,
+                                       rmsea.close.h0    = 0.05,
+                                       rmsea.notclose.h0 = 0.08),
                         output = "vector", ...) {
     UseMethod("fitMeasures", object)
 }
 fitmeasures <- function(object, fit.measures = "all", baseline.model = NULL,
-                        fit.args = list(rmsea.ci.level    = 0.90,
-                                        rmsea.close.h0    = 0.05,
-                                        rmsea.notclose.h0 = 0.08),
+                        fm.args = list(rmsea.ci.level    = 0.90,
+                                       rmsea.close.h0    = 0.05,
+                                       rmsea.notclose.h0 = 0.08),
                         output = "vector", ...) {
     UseMethod("fitmeasures", object)
 }
@@ -21,16 +21,16 @@ fitmeasures <- function(object, fit.measures = "all", baseline.model = NULL,
 # S4 generic for S4 dispatch
 setGeneric("fitMeasures",
     function(object, fit.measures = "all", baseline.model = NULL,
-             fit.args = list(rmsea.ci.level    = 0.90,
-                             rmsea.close.h0    = 0.05,
-                             rmsea.notclose.h0 = 0.08),
+             fm.args = list(rmsea.ci.level    = 0.90,
+                            rmsea.close.h0    = 0.05,
+                            rmsea.notclose.h0 = 0.08),
              output = "vector", ...)
     standardGeneric("fitMeasures"))
 setGeneric("fitmeasures",
     function(object, fit.measures = "all", baseline.model = NULL,
-             fit.args = list(rmsea.ci.level    = 0.90,
-                             rmsea.close.h0    = 0.05,
-                             rmsea.notclose.h0 = 0.08),
+             fm.args = list(rmsea.ci.level    = 0.90,
+                            rmsea.close.h0    = 0.05,
+                            rmsea.notclose.h0 = 0.08),
              output = "vector", ...)
     standardGeneric("fitmeasures"))
 
