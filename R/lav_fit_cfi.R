@@ -203,42 +203,51 @@ lav_fit_ifi <- function(X2 = NULL, df = NULL, X2.null = NULL, df.null = NULL) {
 # higher-level function
 lav_fit_cfi_lavobject <- function(lavobject = NULL, fit.measures = "cfi",
                                   baseline.model = NULL,
-                                  scaled = FALSE, test = "standard") {
+                                  standard.test = "standard",
+                                  scaled.test   = "none") {
 
     # check lavobject
     stopifnot(inherits(lavobject, "lavaan"))
 
-    # test
-    if(missing(test)) {
-        test <- lav_utils_get_test(lavobject = lavobject)
-        if(test[1] == "none") {
-            return(list())
+    # tests
+    TEST <- lavobject@test
+    test.names <- sapply(lavobject@test, "[[", "test")
+    if(test.names[1] == "none" || standard.test == "none") {
+        return(list())
+    }
+    test.idx <- which(test.names == standard.test)
+    if(length(test.idx) == 0L) {
+        return(list())
+    }
+
+    scaled.flag <- FALSE
+    if(!scaled.test %in% c("none", "standard", "default")) {
+        scaled.idx <- which(test.names == scaled.test)
+        if(length(scaled.idx) > 0L) {
+            scaled.idx <- scaled.idx[1] # only the first one
+            scaled.flag <- TRUE
         }
     }
 
-    # scaled?
-    if(missing(scaled)) {
-        scaled <- lav_utils_get_scaled(lavobject = lavobject)
-    }
 
     # supported fit measures in this function
     # baseline model
     fit.baseline <- c("baseline.chisq", "baseline.df", "baseline.pvalue")
-    if(scaled) {
+    if(scaled.flag) {
         fit.baseline <- c(fit.baseline, "baseline.chisq.scaled",
                           "baseline.df.scaled", "baseline.pvalue.scaled",
                           "baseline.chisq.scaling.factor")
     }
 
     fit.cfi.tli <- c("cfi", "tli")
-    if(scaled) {
+    if(scaled.flag) {
         fit.cfi.tli <- c(fit.cfi.tli, "cfi.scaled", "tli.scaled",
                                       "cfi.robust", "tli.robust")
     }
 
     # other incremental fit indices
     fit.cfi.other <- c("nnfi", "rfi", "nfi", "pnfi", "ifi", "rni")
-    if(scaled) {
+    if(scaled.flag) {
         fit.cfi.other <- c(fit.cfi.other, "nnfi.scaled", "rfi.scaled",
                        "nfi.scaled", "pnfi.scaled", "ifi.scaled", "rni.scaled",
                        "nnfi.robust", "rni.robust")
@@ -262,24 +271,24 @@ lav_fit_cfi_lavobject <- function(lavobject = NULL, fit.measures = "cfi",
 
     # robust?
     robust.flag <- FALSE
-    if(scaled && test %in% c("satorra.bentler", "yuan.bentler.mplus",
-                             "yuan.bentler")) {
+    if(scaled.flag &&
+       scaled.test %in% c("satorra.bentler", "yuan.bentler.mplus",
+                          "yuan.bentler")) {
         robust.flag <- TRUE
     }
 
     # basic test statistics
-    TEST <- lavobject@test
-    X2 <- TEST[[1]]$stat
-    df <- TEST[[1]]$df
+    X2 <- TEST[[test.idx]]$stat
+    df <- TEST[[test.idx]]$df
     G <- lavobject@Data@ngroups  # number of groups
     N <- lav_utils_get_ntotal(lavobject = lavobject) # N vs N-1
 
     # scaled X2
-    if(scaled) {
-        X2.scaled <- TEST[[2]]$stat
-        df.scaled <- TEST[[2]]$df
+    if(scaled.flag) {
+        X2.scaled <- TEST[[scaled.idx]]$stat
+        df.scaled <- TEST[[scaled.idx]]$df
         if(robust.flag) {
-            c.hat <- TEST[[2]]$scaling.factor
+            c.hat <- TEST[[scaled.idx]]$scaling.factor
         }
     }
 
@@ -331,14 +340,21 @@ lav_fit_cfi_lavobject <- function(lavobject = NULL, fit.measures = "cfi",
                                             object    = lavobject)
     }
 
+    # baseline.test.idx
+    baseline.test.idx <- which(names(baseline.test) == standard.test)
+    if(scaled.flag) {
+        baseline.scaled.idx <- which(names(baseline.test) == scaled.test)
+    }
+
     if(!is.null(baseline.test)) {
-        X2.null <- baseline.test[[1]]$stat
-        df.null <- baseline.test[[1]]$df
-        if(scaled) {
-            X2.null.scaled <- baseline.test[[2]]$stat
-            df.null.scaled <- baseline.test[[2]]$df
+        X2.null <- baseline.test[[baseline.test.idx]]$stat
+        df.null <- baseline.test[[baseline.test.idx]]$df
+        if(scaled.flag) {
+            X2.null.scaled <- baseline.test[[baseline.scaled.idx]]$stat
+            df.null.scaled <- baseline.test[[baseline.scaled.idx]]$df
             if(robust.flag) {
-                c.hat.null <- baseline.test[[2]]$scaling.factor
+                c.hat.null <-
+                    baseline.test[[baseline.scaled.idx]]$scaling.factor
             }
         }
     } else {
@@ -358,13 +374,14 @@ lav_fit_cfi_lavobject <- function(lavobject = NULL, fit.measures = "cfi",
     if(cfi.baseline.flag) {
         indices["baseline.chisq"]  <- X2.null
         indices["baseline.df"]     <- df.null
-        indices["baseline.pvalue"] <- baseline.test[[1]]$pvalue
-        if(scaled) {
+        indices["baseline.pvalue"] <- baseline.test[[baseline.test.idx]]$pvalue
+        if(scaled.flag) {
             indices["baseline.chisq.scaled"]  <- X2.null.scaled
             indices["baseline.df.scaled"]     <- df.null.scaled
-            indices["baseline.pvalue.scaled"] <- baseline.test[[2]]$pvalue
+            indices["baseline.pvalue.scaled"] <-
+                baseline.test[[baseline.scaled.idx]]$pvalue
             indices["baseline.chisq.scaling.factor"] <-
-                        baseline.test[[2]]$scaling.factor
+                baseline.test[[baseline.scaled.idx]]$scaling.factor
         }
     }
 
@@ -374,7 +391,7 @@ lav_fit_cfi_lavobject <- function(lavobject = NULL, fit.measures = "cfi",
                                       X2.null = X2.null, df.null = df.null)
         indices["tli"] <- lav_fit_tli(X2 = X2, df = df,
                                       X2.null = X2.null, df.null = df.null)
-        if(scaled) {
+        if(scaled.flag) {
             indices["cfi.scaled"] <-
                 lav_fit_cfi(X2 = X2.scaled, df = df.scaled,
                             X2.null = X2.null.scaled, df.null = df.null.scaled)
@@ -412,7 +429,7 @@ lav_fit_cfi_lavobject <- function(lavobject = NULL, fit.measures = "cfi",
         indices["rni"] <-
             lav_fit_rni( X2 = X2, df = df, X2.null = X2.null, df.null = df.null)
 
-        if(scaled) {
+        if(scaled.flag) {
             indices["nnfi.scaled"] <-
                 lav_fit_nnfi(X2 = X2.scaled, df = df.scaled,
                              X2.null = X2.null.scaled, df.null = df.null.scaled)

@@ -10,14 +10,18 @@ This function computes a variety of fit measures to assess the global
 fit of a latent variable model.}
 \usage{
 fitMeasures(object, fit.measures = "all", baseline.model = NULL, 
-            fit.args = list(rmsea.ci.level    = 0.90,
-                            rmsea.close.h0    = 0.05,
-                            rmsea.notclose.h0 = 0.08),
+            fm.args = list(standard.test     = "default",
+                           scaled.test       = "default",
+                           rmsea.ci.level    = 0.90,
+                           rmsea.close.h0    = 0.05,
+                           rmsea.notclose.h0 = 0.08),
             output = "vector", ...)
 fitmeasures(object, fit.measures = "all", baseline.model = NULL, 
-            fit.args = list(rmsea.ci.level    = 0.90,
-                            rmsea.close.h0    = 0.05,
-                            rmsea.notclose.h0 = 0.08),
+            fm.args = list(standard.test     = "default",
+                           scaled.test       = "default",
+                           rmsea.ci.level    = 0.90,
+                           rmsea.close.h0    = 0.05,
+                           rmsea.notclose.h0 = 0.08),
             output = "vector", ...)
 }
 \arguments{
@@ -30,7 +34,18 @@ only those are computed and returned.}
 If a baseline model is provided, all fit indices relying on a
 baseline model (eg. CFI or TLI) will use the test statistics from
 this user-specified baseline model, instead of the default baseline model.}
-\item{fit.args}{List. Additional options for certain fit measures.}
+\item{fm.args}{List. Additional options for certain fit measures. The
+\code{standard.test} element determines the main test statistic (chi-square
+value) that will be used to compute all the fit measures that depend on this
+test statistic. Usually this is \code{"standard"}. The \code{scaled.test}
+element determines which scaling method is to be used for the scaled fit
+measures (in case multiple scaling methods were requested). The
+\code{rmsea.ci.level} element determines the level of the confidence
+interval for the rmsea value. The \code{rmsea.close.h0} element
+is the rmsea value
+that is used under the null hypothesis that \code{rmsea <= rmsea.close.h0}.
+The \code{rmsea.notclose.h0} element is the rmsea value that is used under the
+null hypothesis that \code{rsmsea >= rmsea.notclose.h0}.}
 \item{output}{Character. If \code{"vector"} (the default), display the
 output as a named (lavaan-formatted) vector. If \code{"matrix"}, display
 the output as a 1-column matrix. If \code{"text"}, display the

@@ -16,10 +16,13 @@
 
 setMethod("fitMeasures", signature(object = "lavaan"),
 function(object, fit.measures = "all", baseline.model = NULL,
-         fm.args = list(rmsea.ci.level    = 0.90,
+         fm.args = list(standard.test     = "default",
+                        scaled.test       = "default",
+                        rmsea.ci.level    = 0.90,
                         rmsea.close.h0    = 0.05,
                         rmsea.notclose.h0 = 0.08),
          output = "vector", ...) {
+    # note: the ... is not used by lavaan
     lav_fit_measures(object = object, fit.measures = fit.measures,
                      baseline.model = baseline.model, fm.args = fm.args,
                      output = output)
@@ -27,10 +30,13 @@ function(object, fit.measures = "all", baseline.model = NULL,
 
 setMethod("fitmeasures", signature(object = "lavaan"),
 function(object, fit.measures = "all", baseline.model = NULL,
-         fm.args = list(rmsea.ci.level    = 0.90,
+         fm.args = list(standard.test     = "default",
+                        scaled.test       = "default",
+                        rmsea.ci.level    = 0.90,
                         rmsea.close.h0    = 0.05,
                         rmsea.notclose.h0 = 0.08),
          output = "vector",  ...) {
+    # note: the ... is not used by lavaan
     lav_fit_measures(object = object, fit.measures = fit.measures,
                      baseline.model = baseline.model, fm.args = fm.args,
                      output = output)
@@ -40,7 +46,9 @@ function(object, fit.measures = "all", baseline.model = NULL,
 fitMeasures.efaList <- fitmeasures.efaList <- function(object,
     fit.measures = "all",
     baseline.model = NULL,
-    fm.args = list(rmsea.ci.level    = 0.90,
+    fm.args = list(standard.test     = "default",
+                   scaled.test       = "default",
+                   rmsea.ci.level    = 0.90,
                    rmsea.close.h0    = 0.05,
                    rmsea.notclose.h0 = 0.08),
     vector = "list", ...) {
@@ -65,10 +73,31 @@ fitMeasures.efaList <- fitmeasures.efaList <- function(object,
 
 lav_fit_measures <- function(object, fit.measures = "all",
                              baseline.model = NULL,
-                             fm.args = list(rmsea.ci.level    = 0.90,
+                             fm.args = list(standard.test     = "default",
+                                            scaled.test       = "default",
+                                            rmsea.ci.level    = 0.90,
                                             rmsea.close.h0    = 0.05,
                                             rmsea.notclose.h0 = 0.08),
                              output = "vector") {
+
+    # default fm.args
+    default.fm.args <- list(standard.test     = "default",
+                            scaled.test       = "default",
+                            rmsea.ci.level    = 0.90,
+                            rmsea.close.h0    = 0.05,
+                            rmsea.notclose.h0 = 0.08)
+    if(!missing(fm.args)) {
+        fm.args <- modifyList(default.fm.args, fm.args)
+    } else {
+        fm.args <- default.fm.args
+    }
+
+    # standard test
+    if(fm.args$standard.test == "default") {
+        fm.args$standard.test <- object@Options$scaled.test
+        # usually "standard", but could have been changed
+        # the 'scaled' version will be based on the scaled.test!
+    }
 
     # do we have data? (yep, we had to include this check)
     if(object@Data@data.type == "none") {
@@ -82,8 +111,66 @@ lav_fit_measures <- function(object, fit.measures = "all",
 
     # do we have a test statistic?
     TEST <- lavInspect(object, "test")
-    if(TEST[[1]]$test == "none") {
+    test.names <-  unname(sapply(TEST, "[[", "test"))
+    if(test.names[1] == "none") {
         stop("lavaan ERROR: fit measures not available if test = \"none\".")
+    }
+
+    standard.test <- fm.args$standard.test
+    scaled.test   <- fm.args$scaled.test
+
+    # check standard.test
+    standard.test <- lav_test_rename(standard.test, check = TRUE)[1] # only 1
+
+    # check scaled.test
+    if(!scaled.test %in% c("none", "default", "standard")) {
+        scaled.test <- lav_test_rename(scaled.test, check = TRUE)[1] # only 1
+    }
+
+    # which test statistic do we need?
+    rerun.lavtest.flag <- FALSE
+    if(!standard.test %in% test.names) {
+        rerun.lavtest.flag <- TRUE
+    }
+    if(!scaled.test %in% c("none", "default", "standard") &&
+       !scaled.test %in% test.names) {
+        rerun.lavtest.flag <- TRUE
+    }
+
+    # do we have a scaled test statistic? if so, which one?
+    scaled.flag <- FALSE
+    if(scaled.test != "none" &&
+       any(test.names %in% c("satorra.bentler",
+                             "yuan.bentler", "yuan.bentler.mplus",
+                             "mean.var.adjusted", "scaled.shifted"))) {
+        scaled.flag <- TRUE
+        if(scaled.test %in% c("standard", "default")) {
+            tmp.idx <- which(test.names %in% c("satorra.bentler",
+                             "yuan.bentler", "yuan.bentler.mplus",
+                             "mean.var.adjusted", "scaled.shifted"))
+            scaled.test <- test.names[tmp.idx[1]]
+        }
+    }
+
+    # rerun lavTest?
+    if(rerun.lavtest.flag) {
+        this.test <- standard.test
+        if(scaled.flag) {
+            this.test <- unique(this.test, scaled.test)
+        }
+        TEST <- lavTest(object, test = this.test, scaled.test = standard.test,
+                        drop.list.single = FALSE)
+        # replace in object, if we pass it to lav_fit_* functions
+        object@test <- TEST
+        test.names <-  unname(sapply(TEST, "[[", "test"))
+    }
+
+    # get index of standard.test in TEST
+    test.idx <- which(test.names == standard.test)[1]
+
+    # get index of scaled test (if any) in TEST
+    if(scaled.flag) {
+        scaled.idx <- which(test.names == scaled.test)[1]
     }
 
     # check output argument
@@ -104,16 +191,14 @@ lav_fit_measures <- function(object, fit.measures = "all",
     # options
     categorical <- object@Model@categorical
     estimator   <- object@Options$estimator
-    test        <- lav_utils_get_test(lavobject = object) # single element!
-    scaled      <- lav_utils_get_scaled(lavobject = object) # robust/scaled?
 
     # basic ingredients
     G <- object@Data@ngroups
-    X2 <- TEST[[1]]$stat
-    df <- TEST[[1]]$df
-    if(scaled) {
-        X2.scaled <- TEST[[2]]$stat
-        df.scaled <- TEST[[2]]$df
+    X2 <- TEST[[test.idx]]$stat
+    df <- TEST[[test.idx]]$df
+    if(scaled.flag) {
+        X2.scaled <- TEST[[scaled.idx]]$stat
+        df.scaled <- TEST[[scaled.idx]]$df
     }
     npar <- lav_utils_get_npar(lavobject = object)
     N    <- lav_utils_get_ntotal(lavobject = object) # N vs N-1
@@ -124,28 +209,28 @@ lav_fit_measures <- function(object, fit.measures = "all",
 
     # basic chi-square test
     fit.chisq <- c("fmin", "chisq", "df", "pvalue")
-    if(scaled) {
+    if(scaled.flag) {
         fit.chisq <- c(fit.chisq, "chisq.scaled", "df.scaled", "pvalue.scaled",
                        "chisq.scaling.factor")
     }
 
     # baseline model
     fit.baseline <- c("baseline.chisq", "baseline.df", "baseline.pvalue")
-    if(scaled) {
+    if(scaled.flag) {
         fit.baseline <- c(fit.baseline, "baseline.chisq.scaled",
                           "baseline.df.scaled", "baseline.pvalue.scaled",
                           "baseline.chisq.scaling.factor")
     }
 
     fit.cfi.tli <- c("cfi", "tli")
-    if(scaled) {
+    if(scaled.flag) {
         fit.cfi.tli <- c(fit.cfi.tli, "cfi.scaled", "tli.scaled",
                                       "cfi.robust", "tli.robust")
     }
 
     # other incremental fit indices
     fit.cfi.other <- c("nnfi", "rfi", "nfi", "pnfi", "ifi", "rni")
-    if(scaled) {
+    if(scaled.flag) {
         fit.cfi.other <- c(fit.cfi.other, "nnfi.scaled", "rfi.scaled",
                        "nfi.scaled", "pnfi.scaled", "ifi.scaled", "rni.scaled",
                        "nnfi.robust", "rni.robust")
@@ -159,7 +244,8 @@ lav_fit_measures <- function(object, fit.measures = "all",
         fit.logl <- c("logl", "unrestricted.logl", "aic", "bic",
                       "ntotal", "bic2")
     }
-    if(scaled && test %in% c("yuan.bentler", "yuan.bentler.mplus")) {
+    if(scaled.flag &&
+       scaled.test %in% c("yuan.bentler", "yuan.bentler.mplus")) {
         fit.logl <- c(fit.logl, "scaling.factor.h1", "scaling.factor.h0")
     }
 
@@ -168,7 +254,7 @@ lav_fit_measures <- function(object, fit.measures = "all",
                    "rmsea.ci.lower", "rmsea.ci.upper", "rmsea.ci.level",
                    "rmsea.pvalue", "rmsea.close.h0",
                    "rmsea.notclose.pvalue", "rmsea.notclose.h0")
-    if(scaled) {
+    if(scaled.flag) {
         fit.rmsea <- c(fit.rmsea, "rmsea.scaled", "rmsea.ci.lower.scaled",
                        "rmsea.ci.upper.scaled", "rmsea.pvalue.scaled",
                        "rmsea.notclose.pvalue.scaled",
@@ -261,39 +347,48 @@ lav_fit_measures <- function(object, fit.measures = "all",
     if(any(fit.chisq %in% fit.measures)) {
 	    indices["chisq"] <- X2
         indices["df"] <- df
-        indices["pvalue"] <- TEST[[1]]$pvalue
-        if(scaled) {
+        indices["pvalue"] <- TEST[[test.idx]]$pvalue
+        if(scaled.flag) {
             indices["chisq.scaled"] <- X2.scaled
             indices["df.scaled"] <- df.scaled
-            indices["chisq.scaling.factor"] <- TEST[[2]]$scaling.factor
-            indices["pvalue.scaled"] <- TEST[[2]]$pvalue
+            indices["chisq.scaling.factor"] <- TEST[[scaled.idx]]$scaling.factor
+            indices["pvalue.scaled"] <- TEST[[scaled.idx]]$pvalue
         }
     }
 
     # BASELINE FAMILY
     if(any(fit.cfi %in% fit.measures)) {
+
+        # rerun baseline?
+        if(rerun.lavtest.flag) {
+            object@Options$test <- this.test
+            fit.indep <- try(lav_object_independence(object), silent = TRUE)
+            # override object
+            object@baseline$test <- fit.indep@test
+        }
+
         indices <- c(indices,
-                     lav_fit_cfi_lavobject(lavobject    = object,
-                                           fit.measures = fit.measures,
+                     lav_fit_cfi_lavobject(lavobject      = object,
+                                           fit.measures   = fit.measures,
                                            baseline.model = baseline.model,
-                                           scaled       = scaled,
-                                           test         = test))
+                                           standard.test  = standard.test,
+                                           scaled.test    = scaled.test))
     }
 
     # INFORMATION CRITERIA
     if(any(fit.logl %in% fit.measures)) {
         indices <- c(indices,
-                     lav_fit_aic_lavobject(lavobject    = object,
-                                           fit.measures = fit.measures,
-                                           scaled       = scaled,
-                                           test         = test,
-                                           estimator    = estimator))
+                     lav_fit_aic_lavobject(lavobject      = object,
+                                           fit.measures   = fit.measures,
+                                           standard.test  = standard.test,
+                                           scaled.test    = scaled.test,
+                                           estimator      = estimator))
     }
 
     # RMSEA and friends
     if(any(fit.rmsea %in% fit.measures)) {
         # check rmsea options
-        rmsea.ci.level       <- 0.90
+        rmsea.ci.level    <- 0.90
         rmsea.close.h0    <- 0.05
         rmsea.notclose.h0 <- 0.08
         if(!is.null(fm.args$rmsea.ci.level) &&
@@ -322,8 +417,8 @@ lav_fit_measures <- function(object, fit.measures = "all",
         indices <- c(indices,
                      lav_fit_rmsea_lavobject(lavobject = object,
                                      fit.measures      = fit.measures,
-                                     scaled            = scaled,
-                                     test              = test,
+                                     standard.test     = standard.test,
+                                     scaled.test       = scaled.test,
                                      ci.level          = rmsea.ci.level,
                                      close.h0          = rmsea.close.h0,
                                      notclose.h0       = rmsea.notclose.h0))

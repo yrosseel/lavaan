@@ -23,10 +23,11 @@ lav_utils_get_test <- function(lavobject) {
 
 # check if we use a robust/scaled test statistic
 lav_utils_get_scaled <- function(lavobject) {
-    test <- lav_utils_get_test(lavobject)
+    test.names <- unname(sapply(lavobject@test, "[[", "test"))
     scaled <- FALSE
-    if(test %in% c("satorra.bentler", "yuan.bentler", "yuan.bentler.mplus",
-                   "mean.var.adjusted", "scaled.shifted")) {
+    if(any(test.names %in% c("satorra.bentler",
+                             "yuan.bentler", "yuan.bentler.mplus",
+                             "mean.var.adjusted", "scaled.shifted"))) {
         scaled <- TRUE
     }
 

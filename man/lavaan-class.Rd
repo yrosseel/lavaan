@@ -86,8 +86,8 @@ the independence model) (if available).}
       If \code{type="normalized"}, the residuals are divided by the square 
       root of the asymptotic variance of the corresponding summary statistic 
       (the variance estimate depends on the choice for the \code{se} argument).
-      Unfortunately, the corresponding standard errors are too large, and this 
-      option is only available for historical interest.  
+      Unfortunately, the corresponding normalized residuals are not entirely
+      correct, and this option is only available for historical interest.
       If \code{type="standardized"}, the residuals are divided by the square 
       root of the asymptotic variance of these residuals. The resulting 
       standardized residuals elements can be interpreted as z-scores.  
@@ -138,7 +138,9 @@ the independence model) (if available).}
       If \code{header = TRUE}, the header section (including fit measures) is
       printed.
       If \code{fit.measures = TRUE}, additional fit measures are added to the
-      header section.
+      header section. The related \code{fm.args} list allows to set options
+      related to the fit measures. See \code{\link{fitMeasures}} 
+      for more details.
       If \code{estimates = TRUE}, print the parameter estimates section.
       If \code{ci = TRUE}, add confidence intervals to the parameter estimates
       section.
@@ -155,14 +157,16 @@ the independence model) (if available).}
       in the model are printed.
       If \code{std.nox = TRUE}, the \code{std.all} column contains the
       the \code{std.nox} column from the parameterEstimates() output.
+      If \code{efa = TRUE}, EFA related information is printed. The related
+      \code{efa.args} list allows to set options related to the EFA output.
+      See \code{\link{summary.efaList}} for more details.
       If \code{modindices=TRUE}, modification indices
       are printed for all fixed parameters.
       The argument \code{nd} determines the number of digits after the
       decimal point to be printed (currently only in the parameter estimates
-      section.)
-      Nothing is returned (use
-      \code{lavInspect} or another extractor function
-      to extract information from a fitted model).}
+      section.) Historically, nothing was returned, but since 0.6-12, a
+      list is returned of class \code{lavaan.summary} for which is print
+      function is available.}
   }
 }
 \references{
@@ -171,10 +175,10 @@ Modeling. Journal of Statistical Software, 48(2), 1-36.
 \doi{https://doi.org/10.18637/jss.v048.i02}
 
 Standardized Residuals in Mplus. Document retrieved from URL
-http://www.statmodel.com/download/StandardizedResiduals.pdf
+https://www.statmodel.com/download/StandardizedResiduals.pdf
 }
 \seealso{
-\code{\link{cfa}}, \code{\link{sem}}, \code{\link{growth}},
+\code{\link{cfa}}, \code{\link{sem}},
 \code{\link{fitMeasures}}, \code{\link{standardizedSolution}},
 \code{\link{parameterEstimates}}, \code{\link{lavInspect}},
 \code{\link{modindices}}
@@ -184,10 +188,10 @@ HS.model <- ' visual  =~ x1 + x2 + x3
               textual =~ x4 + x5 + x6
               speed   =~ x7 + x8 + x9 '
 
-fit <- cfa(HS.model, data=HolzingerSwineford1939)
+fit <- cfa(HS.model, data = HolzingerSwineford1939)
 
-summary(fit, standardized=TRUE, fit.measures=TRUE, rsquare=TRUE)
+summary(fit, standardized = TRUE, fit.measures = TRUE, rsquare = TRUE)
 fitted(fit)
 coef(fit)
-resid(fit, type="normalized")
+resid(fit, type = "normalized")
 }

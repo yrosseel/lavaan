@@ -98,6 +98,10 @@ lav_test_rename <- function(test, check = FALSE) {
     test <- tolower(test)
 
     if(length(target.idx <- which(test %in%
+        c("standard", "chisq", "chi", "chi-square", "chi.square"))) > 0L) {
+        test[target.idx] <- "standard"
+    }
+    if(length(target.idx <- which(test %in%
         c("satorra", "sb", "satorra.bentler", "satorra-bentler",
           "m.adjusted", "m", "mean.adjusted", "mean-adjusted"))) > 0L) {
         test[target.idx] <- "satorra.bentler"

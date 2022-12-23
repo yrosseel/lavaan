@@ -27,20 +27,31 @@ lav_fit_sabic <- function(logl = NULL, npar = NULL, N = NULL) {
 }
 
 lav_fit_aic_lavobject <- function(lavobject = NULL, fit.measures = "aic",
-                                  scaled = FALSE, test = "standard",
+                                  standard.test = "standard",
+                                  scaled.test   = "none",
                                   estimator = "ML") {
 
     # check lavobject
     stopifnot(inherits(lavobject, "lavaan"))
 
-    # scaled?
-    if(missing(scaled)) {
-        scaled <- lav_utils_get_scaled(lavobject = lavobject)
+    # tests
+    TEST <- lavobject@test
+    test.names <- sapply(lavobject@test, "[[", "test")
+    if(test.names[1] == "none" || standard.test == "none") {
+        return(list())
+    }
+    test.idx <- which(test.names == standard.test)
+    if(length(test.idx) == 0L) {
+        return(list())
     }
 
-    # test?
-    if(missing(test)) {
-        test <- lav_utils_get_test(lavobject = lavobject)
+    scaled.flag <- FALSE
+    if(!scaled.test %in% c("none", "standard", "default")) {
+        scaled.idx <- which(test.names == scaled.test)
+        if(length(scaled.idx) > 0L) {
+            scaled.idx <- scaled.idx[1] # only the first one
+            scaled.flag <- TRUE
+        }
     }
 
     # estimator?
@@ -55,7 +66,8 @@ lav_fit_aic_lavobject <- function(lavobject = NULL, fit.measures = "aic",
         fit.logl <- c("logl", "unrestricted.logl", "aic", "bic",
                       "ntotal", "bic2")
     }
-    if(scaled && test %in% c("yuan.bentler", "yuan.bentler.mplus")) {
+    if(scaled.flag &&
+       scaled.test %in% c("yuan.bentler", "yuan.bentler.mplus")) {
         fit.logl <- c(fit.logl, "scaling.factor.h1", "scaling.factor.h0")
     }
 
@@ -73,9 +85,6 @@ lav_fit_aic_lavobject <- function(lavobject = NULL, fit.measures = "aic",
             return(list())
         }
     }
-
-    # basic test statistics
-    TEST <- lavobject@test
 
     # output container
     indices <- list()
@@ -116,9 +125,9 @@ lav_fit_aic_lavobject <- function(lavobject = NULL, fit.measures = "aic",
         indices["bic2"]   <- loglik$BIC2
 
         # scaling factor for MLR
-        if(test %in% c("yuan.bentler", "yuan.bentler.mplus")) {
-            indices["scaling.factor.h1"] <- TEST[[2]]$scaling.factor.h1
-            indices["scaling.factor.h0"] <- TEST[[2]]$scaling.factor.h0
+        if(scaled.test %in% c("yuan.bentler", "yuan.bentler.mplus")) {
+            indices["scaling.factor.h1"] <- TEST[[scaled.idx]]$scaling.factor.h1
+            indices["scaling.factor.h0"] <- TEST[[scaled.idx]]$scaling.factor.h0
         }
     } # ML
 

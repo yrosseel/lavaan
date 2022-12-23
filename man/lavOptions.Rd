@@ -310,6 +310,10 @@ Estimation options:
       depends on the values of other arguments. See also the 
       \code{\link{lavTest}} function to extract (alternative)     
       test statistics from a fitted lavaan object.}
+   \item{code{scaled.test}:}{Character. Choose the test statistic
+    that will be scaled (if a scaled test statistic is requested).
+    The default is \code{"standard"}, but it could also be (for example)
+    \code{"Browne.residual.nt"}.}
    \item{\code{gamma.n.minus.one}}{Logical. If \code{TRUE}, we divide the
      Gamma matrix by N-1 (instead of the default N).}
    \item{\code{gamma.unbiased}}{Logical. If \code{TRUE}, we compute an

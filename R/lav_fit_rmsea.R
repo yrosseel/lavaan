@@ -181,24 +181,32 @@ lav_fit_rmsea_notclosefit <- function(X2 = NULL, df = NULL, N = NULL,
 
 
 lav_fit_rmsea_lavobject <- function(lavobject = NULL, fit.measures = "rmsea",
-                                    scaled = FALSE, test = "standard",
+                                    standard.test = "standard",
+                                    scaled.test   = "none",
                                     ci.level = 0.90,
                                     close.h0 = 0.05, notclose.h0 = 0.08) {
 
     # check lavobject
     stopifnot(inherits(lavobject, "lavaan"))
 
-    # test
-    if(missing(test)) {
-        test <- lav_utils_get_test(lavobject = lavobject)
-        if(test[1] == "none") {
-            return(list())
-        }
+    # tests
+    TEST <- lavobject@test
+    test.names <- sapply(lavobject@test, "[[", "test")
+    if(test.names[1] == "none" || standard.test == "none") {
+        return(list())
+    }
+    test.idx <- which(test.names == standard.test)
+    if(length(test.idx) == 0L) {
+        return(list())
     }
 
-    # scaled?
-    if(missing(scaled)) {
-        scaled <- lav_utils_get_scaled(lavobject = lavobject)
+    scaled.flag <- FALSE
+    if(!scaled.test %in% c("none", "standard", "default")) {
+        scaled.idx <- which(test.names == scaled.test)
+        if(length(scaled.idx) > 0L) {
+            scaled.idx <- scaled.idx[1] # only the first one
+            scaled.flag <- TRUE
+        }
     }
 
     # supported fit measures in this function
@@ -207,7 +215,7 @@ lav_fit_rmsea_lavobject <- function(lavobject = NULL, fit.measures = "rmsea",
                    "rmsea.pvalue", "rmsea.close.h0",
                    "rmsea.notclose.pvalue", "rmsea.notclose.h0")
 
-    if(scaled) {
+    if(scaled.flag) {
         fit.rmsea <- c(fit.rmsea, "rmsea.scaled", "rmsea.ci.lower.scaled",
                        "rmsea.ci.upper.scaled", "rmsea.pvalue.scaled",
                        "rmsea.notclose.pvalue.scaled",
@@ -233,26 +241,26 @@ lav_fit_rmsea_lavobject <- function(lavobject = NULL, fit.measures = "rmsea",
 
     # robust?
     robust.flag <- FALSE
-    if(scaled && test %in% c("satorra.bentler", "yuan.bentler.mplus",
-                             "yuan.bentler")) {
+    if(scaled.flag &&
+       scaled.test %in% c("satorra.bentler", "yuan.bentler.mplus",
+                          "yuan.bentler")) {
         robust.flag <- TRUE
     }
 
     # basic test statistics
-    TEST <- lavobject@test
-    X2 <- TEST[[1]]$stat
-    df <- TEST[[1]]$df
+    X2 <- TEST[[test.idx]]$stat
+    df <- TEST[[test.idx]]$df
     G <- lavobject@Data@ngroups  # number of groups
     N <- lav_utils_get_ntotal(lavobject = lavobject) # N vs N-1
 
     # scaled X2/df values
-    if(scaled) {
-        if(test == "scaled.shifted") {
-            XX2 <- TEST[[2]]$stat
+    if(scaled.flag) {
+        if(scaled.test == "scaled.shifted") {
+            XX2 <- TEST[[scaled.idx]]$stat
             df2 <- df
         } else {
             XX2 <- X2
-            df2 <- sum(TEST[[2]]$trace.UGamma)
+            df2 <- sum(TEST[[scaled.idx]]$trace.UGamma)
             if(!is.finite(df2) || df2 == 0) {
                 df2 <- as.numeric(NA)
             }
@@ -260,7 +268,7 @@ lav_fit_rmsea_lavobject <- function(lavobject = NULL, fit.measures = "rmsea",
         if(robust.flag) {
             XX3 <- X2
             df3 <- df
-            c.hat <- TEST[[2]]$scaling.factor
+            c.hat <- TEST[[scaled.idx]]$scaling.factor
         }
     }
 
@@ -290,7 +298,7 @@ lav_fit_rmsea_lavobject <- function(lavobject = NULL, fit.measures = "rmsea",
     # 1. RMSEA
     if(rmsea.val.flag) {
         indices["rmsea"] <- lav_fit_rmsea(X2 = X2, df = df, N = N, G = G)
-        if(scaled) {
+        if(scaled.flag) {
             indices["rmsea.scaled"] <- lav_fit_rmsea(X2 = XX2, df = df2,
                                                      N = N, G = G)
             indices["rmsea.robust"] <- as.numeric(NA)
@@ -308,7 +316,7 @@ lav_fit_rmsea_lavobject <- function(lavobject = NULL, fit.measures = "rmsea",
         indices["rmsea.ci.lower"] <- ci$rmsea.ci.lower
         indices["rmsea.ci.upper"] <- ci$rmsea.ci.upper
 
-        if(scaled) {
+        if(scaled.flag) {
             ci.scaled <- lav_fit_rmsea_ci(X2 = XX2, df = df2, N = N, G = G,
                                           level = ci.level)
             indices["rmsea.ci.lower.scaled"] <- ci.scaled$rmsea.ci.lower
@@ -317,8 +325,8 @@ lav_fit_rmsea_lavobject <- function(lavobject = NULL, fit.measures = "rmsea",
             indices["rmsea.ci.upper.robust"] <- as.numeric(NA)
             if(robust.flag) {
                 # note: input is scaled test statistic!
-                ci.robust <- lav_fit_rmsea_ci(X2 = TEST[[2]]$stat, df = df3,
-                                 N = N, G = G, c.hat = c.hat,
+                ci.robust <- lav_fit_rmsea_ci(X2 = TEST[[scaled.idx]]$stat,
+                                 df = df3, N = N, G = G, c.hat = c.hat,
                                  level = ci.level)
                 indices["rmsea.ci.lower.robust"] <- ci.robust$rmsea.ci.lower
                 indices["rmsea.ci.upper.robust"] <- ci.robust$rmsea.ci.upper
@@ -336,7 +344,7 @@ lav_fit_rmsea_lavobject <- function(lavobject = NULL, fit.measures = "rmsea",
         indices["rmsea.notclose.pvalue"] <-
             lav_fit_rmsea_notclosefit(X2 = X2, df = df, N = N, G = G,
                                       rmsea.h0 = notclose.h0)
-        if(scaled) {
+        if(scaled.flag) {
             indices["rmsea.pvalue.scaled"] <-
                 lav_fit_rmsea_closefit(X2 = XX2, df = df2, N = N, G = G,
                                        rmsea.h0 = close.h0)
@@ -347,11 +355,13 @@ lav_fit_rmsea_lavobject <- function(lavobject = NULL, fit.measures = "rmsea",
             indices["rmsea.notclose.pvalue.robust"] <- as.numeric(NA)
             if(robust.flag) {
                 indices["rmsea.pvalue.robust"] <-  # new in 0.6-13
-                    lav_fit_rmsea_closefit(X2 = TEST[[2]]$stat, df = df3,
+                    lav_fit_rmsea_closefit(X2 = TEST[[scaled.idx]]$stat,
+                                           df = df3,
                                            N = N, G = G, c.hat = c.hat,
                                            rmsea.h0 = close.h0)
                 indices["rmsea.notclose.pvalue.robust"] <-  # new in 0.6-13
-                    lav_fit_rmsea_notclosefit(X2 = TEST[[2]]$stat, df = df3,
+                    lav_fit_rmsea_notclosefit(X2 = TEST[[scaled.idx]]$stat,
+                                              df = df3,
                                               N = N, G = G, c.hat = c.hat,
                                               rmsea.h0 = notclose.h0)
             }
