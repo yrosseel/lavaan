@@ -16,6 +16,15 @@
 
 # CFI - comparative fit index (Bentler, 1990)
 # robust version: Brosseau-Liard & Savalei MBR 2014, equation 15
+
+# robust version MLMV (scaled.shifted)
+# Savalei, V. (2018). On the computation of the RMSEA and CFI from the
+# mean-and-variance corrected test statistic with nonnormal data in SEM.
+# Multivariate behavioral research, 53(3), 419-429. eq 9
+
+# note: robust MLM == robust MLMV
+
+
 lav_fit_cfi <- function(X2 = NULL, df = NULL, X2.null = NULL, df.null = NULL,
                         c.hat = 1, c.hat.null = 1) {
 
@@ -272,8 +281,9 @@ lav_fit_cfi_lavobject <- function(lavobject = NULL, fit.measures = "cfi",
     # robust?
     robust.flag <- FALSE
     if(scaled.flag &&
+       !lavobject@Model@categorical &&
        scaled.test %in% c("satorra.bentler", "yuan.bentler.mplus",
-                          "yuan.bentler")) {
+                          "yuan.bentler", "scaled.shifted")) {
         robust.flag <- TRUE
     }
 
@@ -288,7 +298,14 @@ lav_fit_cfi_lavobject <- function(lavobject = NULL, fit.measures = "cfi",
         X2.scaled <- TEST[[scaled.idx]]$stat
         df.scaled <- TEST[[scaled.idx]]$df
         if(robust.flag) {
-            c.hat <- TEST[[scaled.idx]]$scaling.factor
+            if(scaled.test == "scaled.shifted") {
+                # compute c.hat from a and b
+                a <- TEST[[scaled.idx]]$scaling.factor
+                b <- TEST[[scaled.idx]]$shift.parameter
+                c.hat <- a * (df - b) / df
+            } else {
+                c.hat <- TEST[[scaled.idx]]$scaling.factor
+            }
         }
     }
 
@@ -353,8 +370,17 @@ lav_fit_cfi_lavobject <- function(lavobject = NULL, fit.measures = "cfi",
             X2.null.scaled <- baseline.test[[baseline.scaled.idx]]$stat
             df.null.scaled <- baseline.test[[baseline.scaled.idx]]$df
             if(robust.flag) {
-                c.hat.null <-
-                    baseline.test[[baseline.scaled.idx]]$scaling.factor
+                if(scaled.test == "scaled.shifted") {
+                    # compute c.hat from a and b
+                    a.null <-
+                        baseline.test[[baseline.scaled.idx]]$scaling.factor
+                    b.null <-
+                        baseline.test[[baseline.scaled.idx]]$shift.parameter
+                    c.hat.null <- a.null * (df.null - b.null) / df.null
+                } else {
+                    c.hat.null <-
+                        baseline.test[[baseline.scaled.idx]]$scaling.factor
+                }
             }
         }
     } else {

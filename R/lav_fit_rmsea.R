@@ -21,8 +21,19 @@
 #      = sqrt( F.val/df - 1/N )
 #      = sqrt( (X2/N)/df - 1/N )
 
-# robust RMSEA: sqrt( (X2/N)/df - c.hat/N )
 
+# 'scaled' RMSEA: X2 is replaced by X2-SB (or any other 'scaled' statistic)
+
+# robust RMSEA: sqrt( (X2/N)/df - c.hat/N )
+# note:
+# - robust RMSEA == scaled RMSEA * sqrt(c.hat)
+# - robust RMSEA CI == scaled RMSEA CI * sqrt(c.hat)
+
+# robust RMSEA for MLMV (ie. scaled.shifted):
+# - c == a * (df - b) / df
+# - robust RMSEA MLM == robust RMSEA MLMV
+# - robust RMSEA MLMV == scaled RMSEA MLMV * sqrt(a)
+# - robust RMSEA CI MLMV == scaled RMSEA CI MLMV * sqrt(a)
 
 # References:
 # Steiger, J. H., & Lind, J. C. (1980, May). Statistically based tests for the
@@ -39,11 +50,16 @@
 # in models with small degrees of freedom.  Sociological Methods & Research, 44,
 # 486-507.
 
-# robust version
+# robust version MLM
 # Patricia E. Brosseau-Liard , Victoria Savalei & Libo Li (2012) An
 # Investigation of the Sample Performance of Two Nonnormality Corrections for
 # RMSEA, Multivariate Behavioral Research, 47:6, 904-930, DOI:
 # 10.1080/00273171.2012.715252
+
+# robust version MLMV (scaled.shifted)
+# Savalei, V. (2018). On the computation of the RMSEA and CFI from the
+# mean-and-variance corrected test statistic with nonnormal data in SEM.
+# Multivariate behavioral research, 53(3), 419-429.
 
 
 # always using N (if a user needs N-1, just replace N by N-1)
@@ -242,8 +258,9 @@ lav_fit_rmsea_lavobject <- function(lavobject = NULL, fit.measures = "rmsea",
     # robust?
     robust.flag <- FALSE
     if(scaled.flag &&
+       !lavobject@Model@categorical &&
        scaled.test %in% c("satorra.bentler", "yuan.bentler.mplus",
-                          "yuan.bentler")) {
+                          "yuan.bentler", "scaled.shifted")) {
         robust.flag <- TRUE
     }
 
@@ -268,7 +285,15 @@ lav_fit_rmsea_lavobject <- function(lavobject = NULL, fit.measures = "rmsea",
         if(robust.flag) {
             XX3 <- X2
             df3 <- df
-            c.hat <- TEST[[scaled.idx]]$scaling.factor
+            c.hat <- TEST[[scaled.idx]]$scaling.factor #
+            if(scaled.test == "scaled.shifted") {
+                # compute c.hat from a and b
+                a <- TEST[[scaled.idx]]$scaling.factor
+                b <- TEST[[scaled.idx]]$shift.parameter
+                c.hat3 <- a * (df - b) / df
+            } else {
+                c.hat3 <- c.hat
+            }
         }
     }
 
@@ -304,7 +329,8 @@ lav_fit_rmsea_lavobject <- function(lavobject = NULL, fit.measures = "rmsea",
             indices["rmsea.robust"] <- as.numeric(NA)
             if(robust.flag) {
                 indices["rmsea.robust"] <-
-                    lav_fit_rmsea(X2 = X2, df = df, N = N, c.hat = c.hat, G = G)
+                    lav_fit_rmsea(X2 = X2, df = df, N = N, c.hat = c.hat3,
+                                  G = G)
             }
         }
     }

@@ -97,6 +97,9 @@ lav_fit_measures <- function(object, fit.measures = "all",
         fm.args$standard.test <- object@Options$scaled.test
         # usually "standard", but could have been changed
         # the 'scaled' version will be based on the scaled.test!
+        if(is.null(fm.args$standard.test)) { # <older objects
+            fm.args$standard.test <- "standard"
+        }
     }
 
     # do we have data? (yep, we had to include this check)

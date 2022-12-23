@@ -933,7 +933,7 @@ lav_options_set <- function(opt = NULL) {
             orig.estimator %in% c("wlsm", "wlsmv", "wlsmvs")) {
             stop("lavaan ERROR: use (D)WLS estimator for bootstrap")
         } else if(opt$se == "default") {
-            if(orig.estimator == "dlws") {
+            if(orig.estimator == "dwls") {
                 opt$se <- "standard"
             } else {
                 opt$se <- "robust.sem"

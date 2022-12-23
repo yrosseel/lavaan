@@ -173,7 +173,7 @@ lav_test_print <- function(object, nd = 3L) {
 
         # if twocolumn, label first row
         if(twocolumn && block == BLOCKS[1]) {
-            c1 <- c("", c1); c2 <- c("Standard", c2); c3 <- c("Robust", c3)
+            c1 <- c("", c1); c2 <- c("Standard", c2); c3 <- c("Scaled", c3)
         } else {
             # empty row
             c1 <- c("", c1); c2 <- c("", c2); c3 <- c("", c3)

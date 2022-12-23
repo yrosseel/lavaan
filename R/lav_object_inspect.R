@@ -2919,7 +2919,7 @@ lav_object_inspect_delta_rownames <- function(object,
     } # blocks
 
     # multilevel?
-    if(lavmodel@multilevel) {
+    if(.hasSlot(lavmodel, "multilevel") && lavmodel@multilevel) {
         for(g in 1:lavmodel@ngroups) {
                 OUT[[g]] <- c(NAMES[[(g-1)*2 + 1]],
                               NAMES[[(g-1)*2 + 2]] )
