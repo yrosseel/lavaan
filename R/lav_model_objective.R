@@ -69,7 +69,7 @@ lav_model_objective <- function(lavmodel       = NULL,
             Mu.hat <- computeMuHat(lavmodel = lavmodel, GLIST = GLIST)
         }
         if(debug) print(WLS.est)
-    } else if(estimator %in% c("ML", "GLS", "PML", "FML", "REML") &&
+    } else if(estimator %in% c("ML", "GLS", "PML", "FML", "REML", "catML") &&
               lavdata@nlevels == 1L) {
         # compute moments for all groups
         #if(conditional.x) {
@@ -78,7 +78,8 @@ lav_model_objective <- function(lavmodel       = NULL,
         #                     extra = (estimator %in% c("ML", "REML","NTRLS")))
         #} else {
             Sigma.hat <- computeSigmaHat(lavmodel = lavmodel, GLIST = GLIST,
-                             extra = (estimator %in% c("ML", "REML","NTRLS")))
+                             extra = (estimator %in% c("ML", "REML",
+                                                       "NTRLS", "catML")))
         #}
 
         if(estimator == "REML") {
@@ -148,10 +149,14 @@ lav_model_objective <- function(lavmodel       = NULL,
                 stop("this estimator: `", estimator,
                      "' can not be used with incomplete data and the missing=\"ml\" option")
             }
-        } else if(estimator == "ML" || estimator == "Bayes") {
+        } else if(estimator == "ML" || estimator == "Bayes" ||
+                  estimator == "catML") {
         # complete data
             # ML and friends
             if(lavdata@nlevels > 1L) {
+                if(estimator %in% c("catML", "Bayes")) {
+                    stop("lavaan ERROR: multilevel data not supported for estimator ", estimator)
+                }
                 group.fx <- estimator.2L(lavmodel       = lavmodel,
                                          GLIST          = GLIST,
                                          Lp             = lavdata@Lp[[g]],
@@ -355,7 +360,8 @@ lav_model_objective <- function(lavmodel       = NULL,
     }
 
     # penalty for group.w + ML
-    if(group.w.free && estimator %in% c("ML","MML","FML","PML", "REML")) {
+    if(group.w.free && estimator %in% c("ML","MML","FML","PML",
+                                        "REML", "catML")) {
         #obs.prop <- unlist(lavsamplestats@group.w)
         #est.prop <- unlist(GW)
         # if(estimator %in% c("WLS", "GLS", ...) {

@@ -26,13 +26,13 @@ lav_test_satorra_bentler <- function(lavobject        = NULL,
         lavsamplestats <- lavobject@SampleStats
         lavmodel       <- lavobject@Model
         lavoptions     <- lavobject@Options
-        lavpartable    <- lavobject@ParTable
         lavimplied     <- lavobject@implied
         lavdata        <- lavobject@Data
         TEST$standard  <- lavobject@test[[1]]
     } else {
         TEST$standard  <- TEST.unscaled
     }
+    npar <- lavmodel@nx.free
 
     # ug2.old.approach
     if(missing(ug2.old.approach)) {
@@ -85,7 +85,8 @@ lav_test_satorra_bentler <- function(lavobject        = NULL,
     }
 
     # do we have E.inv, Delta, WLS.V?
-    if(is.null(E.inv) || is.null(Delta) || is.null(WLS.V) || E.inv.recompute) {
+    if(npar > 0L &&
+      (is.null(E.inv) || is.null(Delta) || is.null(WLS.V) || E.inv.recompute)) {
         if(mimic == "Mplus" && lavoptions$estimator == "ML") {
             E <- lav_model_information_expected_MLM(lavmodel = lavmodel,
                      augmented = FALSE, inverted = FALSE,
@@ -163,7 +164,21 @@ lav_test_satorra_bentler <- function(lavobject        = NULL,
         Satterthwaite <- TRUE
     }
 
-    if(method == "original") {
+    if(npar == 0) {
+        # catch npar == 0 (eg baseline model if correlation structure)
+        trace.UGamma <- trace.UGamma2 <- U.all <- UG <- as.numeric(NA)
+        fg <- unlist(lavsamplestats@nobs)/lavsamplestats@ntotal
+        Gamma.f <- Gamma
+        for(g in 1:ngroups) {
+            Gamma.f[[g]] <- 1/fg[g] * Gamma[[g]]
+        }
+        Gamma.all <- lav_matrix_bdiag(Gamma.f)
+        UG <- Gamma.all
+        trace.UGamma  <- sum(diag(Gamma.all))
+        trace.UGamma2 <- sum(UG * t(UG))
+        out <- list(trace.UGamma = trace.UGamma, trace.UGamma2 = trace.UGamma2,
+                    UGamma = UG, UfromUGamma = U.all)
+    } else if(method == "original") {
         out <- lav_test_satorra_bentler_trace_original(Gamma = Gamma,
                    Delta = Delta, WLS.V = WLS.V, E.inv = E.inv,
                    ngroups = ngroups, nobs = lavsamplestats@nobs,

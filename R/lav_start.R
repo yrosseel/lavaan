@@ -23,6 +23,9 @@ lav_start <- function(start.method    = "default",
     # categorical?
     categorical <- any(lavpartable$op == "|")
 
+    # correlation structure?
+    correlation <- any(lavpartable$op == "~*~")
+
     # conditional.x?
     conditional.x <- any(lavpartable$exo == 1L &
                          lavpartable$op %in% c("~", "<~"))
@@ -59,7 +62,11 @@ lav_start <- function(start.method    = "default",
             # nothing to do
         } else if(start.method == "simple") {
             start <- numeric( length(lavpartable$ustart) )
-            start[ which(lavpartable$op == "=~") ] <- 1.0
+            if(categorical || correlation) {
+                start[ which(lavpartable$op == "=~") ] <- 0.7
+            } else {
+                start[ which(lavpartable$op == "=~") ] <- 1.0
+            }
             start[ which(lavpartable$op == "~*~") ] <- 1.0
             ov.names.ord <- vnames(lavpartable, "ov.ord")
             var.idx <- which(lavpartable$op == "~~" &
@@ -114,7 +121,7 @@ lav_start <- function(start.method    = "default",
     start <- numeric( length(lavpartable$ustart) )
 
     # 1. =~ factor loadings:
-    if(categorical) {
+    if(categorical || correlation) {
         # if std.lv=TRUE, 0.8 is too large
         start[ which(lavpartable$op == "=~") ] <- 0.7
     } else {
@@ -807,6 +814,13 @@ lav_start <- function(start.method    = "default",
     }
 
 
+    # override if the model syntax contains explicit starting values (free only)
+    #user.idx <- which(!is.na(lavpartable$ustart) &
+    #                  lavpartable$user != 7L) # new in 0.6-7, if rotation and
+    #                                          # and we change the order of lv's
+    user.idx <- which(!is.na(lavpartable$ustart) & lavpartable$free > 0L)
+    start[user.idx] <- lavpartable$ustart[user.idx]
+
     # override if a user list with starting values is provided
     # we only look at the 'est' column for now
     if(!is.null(start.user)) {
@@ -837,11 +851,8 @@ lav_start <- function(start.method    = "default",
         }
     }
 
-    # override if the model syntax contains explicit starting values
-    #user.idx <- which(!is.na(lavpartable$ustart) &
-    #                  lavpartable$user != 7L) # new in 0.6-7, if rotation and
-    #                                          # and we change the order of lv's
-    user.idx <- which(!is.na(lavpartable$ustart))
+    # override fixed values with ustart values
+    user.idx <- which(!is.na(lavpartable$ustart) & lavpartable$free == 0L)
     start[user.idx] <- lavpartable$ustart[user.idx]
 
     # final check: no NaN or other non-finite values

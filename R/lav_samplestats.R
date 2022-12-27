@@ -185,6 +185,8 @@ lav_samplestats_from_data <- function(lavdata           = NULL,
         # FIXME: check dimension of NACOV!!
     }
 
+
+
     # compute some sample statistics per group
     for(g in 1:ngroups) {
 
@@ -239,6 +241,8 @@ lav_samplestats_from_data <- function(lavdata           = NULL,
         }
 
         if(categorical) {
+            # compute CAT
+
             if(estimator %in% c("ML","REML","PML","FML","MML","none","ULS")) {
                 WLS.W <- FALSE
                 if(estimator == "ULS" && se == "robust.sem") { #||
@@ -344,6 +348,29 @@ lav_samplestats_from_data <- function(lavdata           = NULL,
 
             }
 
+            # only for catML
+            if(estimator == "catML") {
+                COV <- cov2cor(lav_matrix_symmetric_force_pd(cov[[g]],
+                                                             tol = 1e-06))
+                out <- lav_samplestats_icov(COV = COV, ridge = 1e-05,
+                           x.idx = x.idx[[g]],
+                           ngroups = ngroups, g = g, warn = TRUE)
+                icov[[g]] <- out$icov
+                cov.log.det[[g]] <- out$cov.log.det
+
+                # the same for res.cov if conditional.x = TRUE
+                if(conditional.x) {
+                    RES.COV <-
+                        cov2cor(lav_matrix_symmetric_force_pd(res.cov[[g]],
+                                                              tol = 1e-06))
+                    out <- lav_samplestats_icov(COV = RES.COV,
+                               ridge = 1e-05,
+                               x.idx = x.idx[[g]],
+                               ngroups = ngroups, g = g, warn = TRUE)
+                    res.icov[[g]] <- out$icov
+                    res.cov.log.det[[g]] <- out$cov.log.det
+                }
+            }
         } # categorical
 
         # continuous -- multilevel
@@ -664,7 +691,7 @@ lav_samplestats_from_data <- function(lavdata           = NULL,
                                               lavoptions$gamma.n.minus.one,
                                           unbiased = lavoptions$gamma.unbiased,
                                           Mplus.WLS      = FALSE)
-            } else if(estimator %in% c("WLS","DWLS","ULS","DLS")) {
+            } else if(estimator %in% c("WLS","DWLS","ULS","DLS","catML")) {
                 if(!categorical) {
                     # sample size large enough?
                     nvar <- ncol(X[[g]])
@@ -714,6 +741,16 @@ lav_samplestats_from_data <- function(lavdata           = NULL,
                     NACOV[[g]]  <- CAT$WLS.W  * nobs[[g]]
                     if(lavoptions$gamma.n.minus.one) {
                         NACOV[[g]] <- NACOV[[g]] * (nobs[[g]]/(nobs[[g]] - 1L))
+                    }
+                    if(estimator == "catML") {
+                        # remove all but the correlation part
+                        ntotal <- nrow(NACOV[[g]])
+                        pstar <- nrow(CAT$A22)
+                        nocor <- ntotal - pstar
+                        if(length(nocor) > 0L) {
+                            NACOV[[g]] <- NACOV[[g]][-seq_len(nocor),
+                                                     -seq_len(nocor)]
+                        }
                     }
                 }
             } else if(estimator == "PML") {

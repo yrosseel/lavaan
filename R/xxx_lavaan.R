@@ -545,6 +545,9 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                 opt$.categorical <- TRUE
             }
         }
+        if(tolower(opt$estimator) == "catml") {
+            opt$.categorical <- FALSE
+        }
 
         # clustered?
         if(length(cluster) > 0L) {
@@ -747,10 +750,18 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
         #    tmp <- vnames(FLAT, type = "ov.x", ov.x.fatal = TRUE)
         #}
 
+        if(lavoptions$estimator == "catML") {
+            lavoptions$meanstructure <- FALSE
+            DataOV <- lavdata@ov
+            DataOV$type <- rep("numeric", length(DataOV$type))
+        } else {
+            DataOV <- lavdata@ov
+        }
+
         lavpartable <-
             lavaanify(model            = FLAT,
                       constraints      = constraints,
-                      varTable         = lavdata@ov,
+                      varTable         = DataOV,
                       ngroups          = lavdata@ngroups,
 
                       meanstructure    = lavoptions$meanstructure,

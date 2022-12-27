@@ -2,6 +2,7 @@
 # 1. the independence model
 # 2. the unrestricted model
 # 3. model + extra parameters (for modindices/lavTestScore)
+# 4. catML fit based on DWLS fit (for robust RMSEA/CFI)
 
 
 # 1. fit an 'independence' model
@@ -108,9 +109,16 @@ lav_object_independence <- function(object         = NULL,
     lavoptions$check.vcov <- FALSE
     lavoptions$optim.bounds <- list() # we already have the bounds
 
-    # ALWAYS do.fit and set optim.method = "nlminb"
-    lavoptions$do.fit  <- TRUE
-    lavoptions$optim.method <- "nlminb"
+    # ALWAYS do.fit and set optim.method = "nlminb" (if npar > 0)
+    npar <- lav_partable_npar(lavpartable)
+    if(npar > 0L) {
+        lavoptions$do.fit  <- TRUE
+        lavoptions$optim.method <- "nlminb"
+    } else {
+        # perhaps a correlation structure?
+        lavoptions$optim.method = "none"
+        lavoptions$optim.force.converged <- TRUE
+    }
 
     # verbose?
     lavoptions$verbose <- verbose
@@ -365,6 +373,69 @@ lav_object_extended <- function(object, add = NULL,
                   slotData        = object@Data,
                   slotCache       = object@Cache,
                   sloth1          = lavh1)
+
+    FIT
+}
+
+# 4. catml model
+lav_object_catml <- function(lavobject = NULL) {
+
+    stopifnot(inherits(lavobject, "lavaan"))
+    stopifnot(lavobject@Model@categorical)
+
+    # extract slots
+    lavdata <- lavobject@Data
+    lavsamplestats <- lavobject@SampleStats
+    lavoptions <- lavobject@Options
+
+    # adapt partable: remove thresholds and intercepts
+    partable.catml <- parTable(lavobject)
+    rm.idx <- which(partable.catml$op %in% c("|", "~1"))
+    partable.catml <- as.list(partable.catml[-rm.idx,])
+
+    # adapt lavsamplestats
+    for(g in seq_len(lavdata@ngroups)) {
+        lavsamplestats@WLS.V[[g]] <- NULL
+        lavsamplestats@WLS.VD[[g]] <- NULL
+        COV <- cov2cor(lav_matrix_symmetric_force_pd(lavsamplestats@cov[[g]],
+                                                     tol = 1e-06))
+        out <- lav_samplestats_icov(COV = COV, ridge = 1e-05,
+                                    x.idx = x.idx[[g]],
+                                    ngroups = lavdata@ngroups, g = g,
+                                    warn = FALSE)
+        lavsamplestats@icov[[g]] <- out$icov
+        lavsamplestats@cov.log.det[[g]] <- out$cov.log.det
+
+        NACOV <- lavsamplestats@NACOV[[g]]
+        nvar   <- nrow(COV)
+        ntotal <- nrow(NACOV)
+        pstar <- nvar*(nvar-1)/2
+        nocor <- ntotal - pstar
+        if(length(nocor) > 0L) {
+            lavsamplestats@NACOV[[g]] <- NACOV[-seq_len(nocor),
+                                               -seq_len(nocor)]
+        }
+    }
+
+    # adapt lavoptions
+    lavoptions$estimator <- "catML"
+    lavoptions$.categorical <- FALSE
+    lavoptions$categorical <- FALSE
+    lavoptions$correlation <- TRUE
+    lavoptions$meanstructure <- FALSE
+    lavoptions$conditional.x <- FALSE # fixme
+    lavoptions$information <- c("expected", "expected")
+    lavoptions$h1.information <- c("structured", "structured") # unlike DWLS
+    lavoptions$se <- "none"
+    lavoptions$test <- "satorra.bentler" # always for now
+    lavoptions$optim.method <- "none"
+    lavoptions$optim.force.converged <- TRUE
+
+    # dummy fit
+    FIT <- lavaan(slotParTable = partable.catml,
+                  slotSampleStats = lavsamplestats,
+                  slotData = lavdata,
+                  slotOptions = lavoptions)
 
     FIT
 }

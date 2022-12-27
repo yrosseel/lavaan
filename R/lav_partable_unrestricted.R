@@ -155,6 +155,10 @@ lav_partable_indep_or_unrestricted <- function(lavobject      = NULL,
     categorical   <- any(ov$type == "ordered")
     ngroups       <- lavdata@ngroups
     nlevels       <- lavdata@nlevels
+    if(lavoptions$estimator == "catML") {
+        categorical <- FALSE
+    }
+    correlation  <- lavoptions$correlation
 
     # what with fixed.x?
     # - does not really matter; fit will be saturated anyway
@@ -269,11 +273,17 @@ lav_partable_indep_or_unrestricted <- function(lavobject      = NULL,
             block <- c(block, rep(b,  nvar))
             group <- c(group, rep(g,  nvar))
             level <- c(level, rep(l,  nvar))
-            free  <- c(free,  rep(1L, nvar))
+            if(correlation) {
+                free <- c(free,  rep(0L, nvar))
+            } else {
+                free <- c(free,  rep(1L, nvar))
+            }
             exo   <- c(exo,   rep(0L, nvar))
 
             # starting values -- variances
-            if(!is.null(sample.cov)) {
+            if(correlation) {
+                c(ustart, rep(1, nvar))
+            } else if(!is.null(sample.cov)) {
                 ustart <- c(ustart, diag(sample.cov))
             } else {
                 ustart <- c(ustart, rep(as.numeric(NA), nvar))
@@ -369,6 +379,19 @@ lav_partable_indep_or_unrestricted <- function(lavobject      = NULL,
                 }
             } # categorical
 
+            # correlation structure?
+            if(!categorical && correlation) {
+                nel <- nvar
+                lhs   <- c(lhs, ov.names)
+                 op   <- c(op, rep("~*~", nel))
+                rhs   <- c(rhs, ov.names)
+                block <- c(block, rep(b,  nel))
+                group <- c(group, rep(g,  nel))
+                level <- c(level, rep(l,  nel))
+                free  <- c(free,  rep(0L, nel))
+                exo   <- c(exo,   rep(0L, nel))
+               ustart <- c(ustart, rep(1, nel))
+            }
 
             # meanstructure?
             if(meanstructure) {

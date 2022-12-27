@@ -276,7 +276,7 @@ lav_partable_flat <- function(FLAT = NULL,
     }
 
     # same for correlation structures, but now for ALL variables
-    if(correlation) {
+    if(!categorical && correlation) {
         lhs <- c(lhs, ov.names)
         rhs <- c(rhs, ov.names)
          op <- c(op,  rep("~*~", length(ov.names)))

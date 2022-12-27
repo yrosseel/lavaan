@@ -796,6 +796,40 @@ lav_options_set <- function(opt = NULL) {
         # missing
         opt$missing <- "listwise"
 
+    ##################################################################
+    # catML (experimental)                                           #
+    ##################################################################
+    } else if(opt$estimator == "catml") {
+
+        # optim.gradient
+        opt$optim.gradient <- "numerical" # for now
+
+        # estimator
+        opt$estimator <- "catML"
+
+        # force correlation = TRUE, and categorical = FALSE
+        opt$correlation <- TRUE
+        opt$.categorical <- FALSE # we 'pretend' to have continuous data!
+
+        # se
+        if(opt$se == "default") {
+            opt$se <- "robust.sem" # for now
+        }
+
+        # test
+        if(opt$test[1] == "default") {
+            opt$test <- "satorra.bentler"
+        }
+
+        # missing
+        if(opt$missing %in% c("listwise", "pairwise")) {
+            # nothing to do
+        } else if(opt$missing == "default") {
+            opt$missing <- "listwise"
+        } else {
+            stop("lavaan ERROR: missing argument should be listwise or pairwise if estimator is catML")
+        }
+
 
     ##################################################################
     # WLS                                                            #

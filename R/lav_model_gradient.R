@@ -38,7 +38,7 @@ lav_model_gradient <- function(lavmodel       = NULL,
     # group.weight
     # FIXME --> block.weight
     if(group.weight) {
-        if(estimator %in% c("ML","PML","FML","MML","REML","NTRLS")) {
+        if(estimator %in% c("ML","PML","FML","MML","REML","NTRLS","catML")) {
             group.w <- (unlist(lavsamplestats@nobs)/lavsamplestats@ntotal)
         } else if(estimator == "DLS") {
             if(estimator.args$dls.FtimesNminus1) {
@@ -62,7 +62,7 @@ lav_model_gradient <- function(lavmodel       = NULL,
                                      # cov.x = lavsamplestats@cov.x)
     }
 
-    if(estimator %in% c("ML", "PML", "FML", "REML", "NTRLS")) {
+    if(estimator %in% c("ML", "PML", "FML", "REML", "NTRLS", "catML")) {
         # compute moments for all groups
         #if(conditional.x) {
         #    Sigma.hat <- computeSigmaHatJoint(lavmodel = lavmodel,
@@ -70,7 +70,8 @@ lav_model_gradient <- function(lavmodel       = NULL,
         #                     extra = (estimator %in% c("ML", "REML","NTRLS")))
         #} else {
             Sigma.hat <- computeSigmaHat(lavmodel = lavmodel, GLIST = GLIST,
-                             extra = (estimator %in% c("ML", "REML", "NTRLS")))
+                             extra = (estimator %in% c("ML", "REML",
+                                                       "NTRLS", "catML")))
         #}
 
         if(meanstructure) {
@@ -113,7 +114,7 @@ lav_model_gradient <- function(lavmodel       = NULL,
     # - PML/FML/MML: custom
 
     # 1. ML approach
-    if( (estimator == "ML" || estimator == "REML") &&
+    if( (estimator == "ML" || estimator == "REML" || estimator == "catML") &&
         lavdata@nlevels == 1L &&
         !lavmodel@conditional.x ) {
 
@@ -320,7 +321,8 @@ lav_model_gradient <- function(lavmodel       = NULL,
 
     } # WLS
 
-    else if(estimator == "ML" && lavmodel@conditional.x
+    # ML + conditional.x
+    else if(estimator %in% c("ML", "catML") && lavmodel@conditional.x
                               && lavdata@nlevels == 1L) {
         if(type != "free") {
             if(is.null(Delta))
@@ -577,7 +579,7 @@ lav_model_gradient <- function(lavmodel       = NULL,
 
     # group.w.free for ML
     if(lavmodel@group.w.free &&
-       estimator %in% c("ML","MML","FML","PML","REML")) {
+       estimator %in% c("ML","MML","FML","PML","REML","catML")) {
         #est.prop <- unlist( computeGW(lavmodel = lavmodel, GLIST = GLIST) )
         #obs.prop <- unlist(lavsamplestats@group.w)
         # FIXME: G2 based -- ML and friends only!!
@@ -1072,7 +1074,7 @@ computeOmega <- function(Sigma.hat=NULL, Mu.hat=NULL,
     for(g in 1:nblocks) {
 
         # ML
-        if(estimator == "ML" || estimator == "REML") {
+        if(estimator %in% c("ML", "REML", "catML")) {
 
             if(attr(Sigma.hat[[g]], "po") == FALSE) {
                 # FIXME: WHAT IS THE BEST THING TO DO HERE??

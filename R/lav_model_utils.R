@@ -80,7 +80,8 @@ lav_model_set_parameters <- function(lavmodel = NULL, x = NULL) {
                 # which mm belong to group g?
                 mm.in.group <- 1:nmat[g] + cumsum(c(0L,nmat))[g]
 
-                if(lavmodel@estimator %in% c("ML", "WLS","DWLS","ULS","PML")) {
+                if(lavmodel@estimator %in% c("ML", "WLS","DWLS","ULS","PML",
+                                             "catML")) {
                     if(lavmodel@parameterization == "delta") {
                         tmp[mm.in.group] <-
                         setResidualElements.LISREL(MLIST = tmp[mm.in.group],

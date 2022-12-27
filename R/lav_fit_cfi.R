@@ -218,6 +218,19 @@ lav_fit_cfi_lavobject <- function(lavobject = NULL, fit.measures = "cfi",
     # check lavobject
     stopifnot(inherits(lavobject, "lavaan"))
 
+    # check for categorical
+    categorical <- lavobject@Model@categorical
+    if(lavobject@Model@categorical) {
+        # 'refit' using estimator = "catML"
+        partable.catml <- parTable(lavobject)
+        rm.idx <- which(partable.catml$op %in% c("|", "~1"))
+        partable.catml <- as.list(partable.catml[-rm.idx,])
+        fit.catml <- sem(slotParTable = partable.catml,
+                         slotData = lavobject@Data, start = lavobject,
+                         estimator = "catML",
+                         optim.method = "none", optim.force.converged = TRUE)
+    }
+
     # tests
     TEST <- lavobject@test
     test.names <- sapply(lavobject@test, "[[", "test")
@@ -281,7 +294,6 @@ lav_fit_cfi_lavobject <- function(lavobject = NULL, fit.measures = "cfi",
     # robust?
     robust.flag <- FALSE
     if(scaled.flag &&
-       !lavobject@Model@categorical &&
        scaled.test %in% c("satorra.bentler", "yuan.bentler.mplus",
                           "yuan.bentler", "scaled.shifted")) {
         robust.flag <- TRUE
@@ -298,7 +310,11 @@ lav_fit_cfi_lavobject <- function(lavobject = NULL, fit.measures = "cfi",
         X2.scaled <- TEST[[scaled.idx]]$stat
         df.scaled <- TEST[[scaled.idx]]$df
         if(robust.flag) {
-            if(scaled.test == "scaled.shifted") {
+            XX3 <- X2
+            if(categorical) {
+                XX3 <- fit.catml@test[[1]]$stat
+                c.hat <- fit.catml@test[[2]]$scaling.factor
+            } else if(scaled.test == "scaled.shifted") {
                 # compute c.hat from a and b
                 a <- TEST[[scaled.idx]]$scaling.factor
                 b <- TEST[[scaled.idx]]$shift.parameter
@@ -370,7 +386,11 @@ lav_fit_cfi_lavobject <- function(lavobject = NULL, fit.measures = "cfi",
             X2.null.scaled <- baseline.test[[baseline.scaled.idx]]$stat
             df.null.scaled <- baseline.test[[baseline.scaled.idx]]$df
             if(robust.flag) {
-                if(scaled.test == "scaled.shifted") {
+                XX3.null <- X2.null
+                if(categorical) {
+                    XX3.null   <- fit.catml@baseline$test[[1]]$stat
+                    c.hat.null <- fit.catml@baseline$test[[2]]$scaling.factor
+                } else if(scaled.test == "scaled.shifted") {
                     # compute c.hat from a and b
                     a.null <-
                         baseline.test[[baseline.scaled.idx]]$scaling.factor
@@ -428,12 +448,12 @@ lav_fit_cfi_lavobject <- function(lavobject = NULL, fit.measures = "cfi",
             indices["tli.robust"] <- as.numeric(NA)
             if(robust.flag) {
                 indices["cfi.robust"] <-
-                    lav_fit_cfi(X2 = X2, df = df,
-                                X2.null = X2.null, df.null = df.null,
+                    lav_fit_cfi(X2 = XX3, df = df,
+                                X2.null = XX3.null, df.null = df.null,
                                 c.hat = c.hat, c.hat.null = c.hat.null)
                 indices["tli.robust"] <-
-                    lav_fit_tli(X2 = X2, df = df,
-                                X2.null = X2.null, df.null = df.null,
+                    lav_fit_tli(X2 = XX3, df = df,
+                                X2.null = XX3.null, df.null = df.null,
                                 c.hat = c.hat, c.hat.null = c.hat.null)
             }
         }

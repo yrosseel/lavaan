@@ -2824,6 +2824,7 @@ lav_object_inspect_delta_rownames <- function(object,
     }
 
     categorical    <- lavmodel@categorical
+    correlation    <- lavmodel@correlation
     conditional.x  <- lavmodel@conditional.x
     group.w.free   <- lavmodel@group.w.free
     nvar           <- lavmodel@nvar
@@ -2877,6 +2878,8 @@ lav_object_inspect_delta_rownames <- function(object,
         if(categorical) {
             names.cor <- lav_matrix_vechru(tmp, diagonal = FALSE)
             names.var <- diag(tmp)[num.idx[[g]]]
+        } else if(correlation) {
+            names.cor <- lav_matrix_vechru(tmp, diagonal = FALSE)
         } else {
             names.cov <- lav_matrix_vechru(tmp, diagonal = TRUE)
         }

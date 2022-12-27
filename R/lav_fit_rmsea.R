@@ -205,6 +205,13 @@ lav_fit_rmsea_lavobject <- function(lavobject = NULL, fit.measures = "rmsea",
     # check lavobject
     stopifnot(inherits(lavobject, "lavaan"))
 
+    # check for categorical
+    categorical <- lavobject@Model@categorical
+    if(lavobject@Model@categorical) {
+        # 'refit' using estimator = "catML"
+        fit.catml <- lav_object_catml(lavobject)
+    }
+
     # tests
     TEST <- lavobject@test
     test.names <- sapply(lavobject@test, "[[", "test")
@@ -258,7 +265,6 @@ lav_fit_rmsea_lavobject <- function(lavobject = NULL, fit.measures = "rmsea",
     # robust?
     robust.flag <- FALSE
     if(scaled.flag &&
-       !lavobject@Model@categorical &&
        scaled.test %in% c("satorra.bentler", "yuan.bentler.mplus",
                           "yuan.bentler", "scaled.shifted")) {
         robust.flag <- TRUE
@@ -283,16 +289,24 @@ lav_fit_rmsea_lavobject <- function(lavobject = NULL, fit.measures = "rmsea",
             }
         }
         if(robust.flag) {
-            XX3 <- X2
-            df3 <- df
-            c.hat <- TEST[[scaled.idx]]$scaling.factor #
-            if(scaled.test == "scaled.shifted") {
-                # compute c.hat from a and b
-                a <- TEST[[scaled.idx]]$scaling.factor
-                b <- TEST[[scaled.idx]]$shift.parameter
-                c.hat3 <- a * (df - b) / df
+            if(categorical) {
+                XX3 <- fit.catml@test[[1]]$stat
+                df3 <- fit.catml@test[[1]]$df
+                c.hat3 <- c.hat <- fit.catml@test[[2]]$scaling.factor
+                XX3.scaled <- fit.catml@test[[2]]$stat
             } else {
-                c.hat3 <- c.hat
+                XX3 <- X2
+                df3 <- df
+                c.hat <- TEST[[scaled.idx]]$scaling.factor
+                if(scaled.test == "scaled.shifted") {
+                   # compute c.hat from a and b
+                    a <- TEST[[scaled.idx]]$scaling.factor
+                    b <- TEST[[scaled.idx]]$shift.parameter
+                    c.hat3 <- a * (df - b) / df
+                } else {
+                    c.hat3 <- c.hat
+                }
+                XX3.scaled <- TEST[[scaled.idx]]$stat
             }
         }
     }
@@ -329,7 +343,7 @@ lav_fit_rmsea_lavobject <- function(lavobject = NULL, fit.measures = "rmsea",
             indices["rmsea.robust"] <- as.numeric(NA)
             if(robust.flag) {
                 indices["rmsea.robust"] <-
-                    lav_fit_rmsea(X2 = X2, df = df, N = N, c.hat = c.hat3,
+                    lav_fit_rmsea(X2 = XX3, df = df3, N = N, c.hat = c.hat3,
                                   G = G)
             }
         }
@@ -351,7 +365,7 @@ lav_fit_rmsea_lavobject <- function(lavobject = NULL, fit.measures = "rmsea",
             indices["rmsea.ci.upper.robust"] <- as.numeric(NA)
             if(robust.flag) {
                 # note: input is scaled test statistic!
-                ci.robust <- lav_fit_rmsea_ci(X2 = TEST[[scaled.idx]]$stat,
+                ci.robust <- lav_fit_rmsea_ci(X2 = XX3.scaled,
                                  df = df3, N = N, G = G, c.hat = c.hat,
                                  level = ci.level)
                 indices["rmsea.ci.lower.robust"] <- ci.robust$rmsea.ci.lower
@@ -381,12 +395,12 @@ lav_fit_rmsea_lavobject <- function(lavobject = NULL, fit.measures = "rmsea",
             indices["rmsea.notclose.pvalue.robust"] <- as.numeric(NA)
             if(robust.flag) {
                 indices["rmsea.pvalue.robust"] <-  # new in 0.6-13
-                    lav_fit_rmsea_closefit(X2 = TEST[[scaled.idx]]$stat,
+                    lav_fit_rmsea_closefit(X2 = XX3.scaled,
                                            df = df3,
                                            N = N, G = G, c.hat = c.hat,
                                            rmsea.h0 = close.h0)
                 indices["rmsea.notclose.pvalue.robust"] <-  # new in 0.6-13
-                    lav_fit_rmsea_notclosefit(X2 = TEST[[scaled.idx]]$stat,
+                    lav_fit_rmsea_notclosefit(X2 = XX3.scaled,
                                               df = df3,
                                               N = N, G = G, c.hat = c.hat,
                                               rmsea.h0 = notclose.h0)

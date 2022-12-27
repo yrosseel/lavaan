@@ -139,7 +139,7 @@ lav_model_h1_information_expected <- function(lavobject      = NULL,
     }
 
     # 3a. ML single level
-    else if( lavmodel@estimator %in% c("ML", "NTRLS", "DLS")
+    else if( lavmodel@estimator %in% c("ML", "NTRLS", "DLS", "catML")
              && lavdata@nlevels == 1L ) {
         A1 <- vector("list", length=lavsamplestats@ngroups)
 
