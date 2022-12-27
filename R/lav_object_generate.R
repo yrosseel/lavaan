@@ -387,11 +387,32 @@ lav_object_catml <- function(lavobject = NULL) {
     lavdata <- lavobject@Data
     lavsamplestats <- lavobject@SampleStats
     lavoptions <- lavobject@Options
+    lavpta <- lavobject@pta
 
-    # adapt partable: remove thresholds and intercepts
-    partable.catml <- parTable(lavobject)
-    rm.idx <- which(partable.catml$op %in% c("|", "~1"))
-    partable.catml <- as.list(partable.catml[-rm.idx,])
+    # if only categorical variables: remove thresholds and intercepts
+    refit <- FALSE
+    if(all(lavdata@ov$type == "ordered")) {
+        partable.catml <- parTable(lavobject)
+        rm.idx <- which(partable.catml$op %in% c("|", "~1"))
+        partable.catml <- partable.catml[-rm.idx,]
+        partable.catml <- lav_partable_complete(partable.catml)
+    } else {
+        refit <- TRUE
+        partable.catml <- parTable(lavobject)
+        partable.catml$start <- partable.catml$est
+        partable.catml$se <- NULL
+        rm.idx <- which(partable.catml$op %in% c("|", "~1"))
+        partable.catml <- partable.catml[-rm.idx,]
+        partable.catml$ustart <- partable.catml$est
+        for(b in seq_len(lavpta$nblocks)) {
+            ov.names.num <- lavpta$vnames$ov.num[[b]]
+            ov.var.idx <- which(partable.catml$op == "~~" &
+                                partable.catml$lhs %in% ov.names.num &
+                                partable.catml$lhs == partable.catml$rhs)
+            partable.catml$free[ov.var.idx] <- 0L
+        }
+        partable.catml <- lav_partable_complete(partable.catml)
+    }
 
     # adapt lavsamplestats
     for(g in seq_len(lavdata@ngroups)) {
@@ -399,8 +420,11 @@ lav_object_catml <- function(lavobject = NULL) {
         lavsamplestats@WLS.VD[[g]] <- NULL
         COV <- cov2cor(lav_matrix_symmetric_force_pd(lavsamplestats@cov[[g]],
                                                      tol = 1e-06))
+        lavsamplestats@cov[[g]] <- COV
+        lavsamplestats@var[[g]] <- diag(COV)
+
         out <- lav_samplestats_icov(COV = COV, ridge = 1e-05,
-                                    x.idx = x.idx[[g]],
+                                    x.idx = lavsamplestats@x.idx[[g]],
                                     ngroups = lavdata@ngroups, g = g,
                                     warn = FALSE)
         lavsamplestats@icov[[g]] <- out$icov
@@ -428,8 +452,12 @@ lav_object_catml <- function(lavobject = NULL) {
     lavoptions$h1.information <- c("structured", "structured") # unlike DWLS
     lavoptions$se <- "none"
     lavoptions$test <- "satorra.bentler" # always for now
-    lavoptions$optim.method <- "none"
-    lavoptions$optim.force.converged <- TRUE
+    if(!refit) {
+        lavoptions$optim.method <- "none"
+        lavoptions$optim.force.converged <- TRUE
+    } else {
+        lavoptions$optim.gradient <- "numerical"
+    }
 
     # dummy fit
     FIT <- lavaan(slotParTable = partable.catml,

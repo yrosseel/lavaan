@@ -220,15 +220,9 @@ lav_fit_cfi_lavobject <- function(lavobject = NULL, fit.measures = "cfi",
 
     # check for categorical
     categorical <- lavobject@Model@categorical
-    if(lavobject@Model@categorical) {
+    if(lavobject@Model@categorical && !lavobject@Options$conditional.x) {
         # 'refit' using estimator = "catML"
-        partable.catml <- parTable(lavobject)
-        rm.idx <- which(partable.catml$op %in% c("|", "~1"))
-        partable.catml <- as.list(partable.catml[-rm.idx,])
-        fit.catml <- sem(slotParTable = partable.catml,
-                         slotData = lavobject@Data, start = lavobject,
-                         estimator = "catML",
-                         optim.method = "none", optim.force.converged = TRUE)
+        fit.catml <- try(lav_object_catml(lavobject), silent = TRUE)
     }
 
     # tests
@@ -297,6 +291,12 @@ lav_fit_cfi_lavobject <- function(lavobject = NULL, fit.measures = "cfi",
        scaled.test %in% c("satorra.bentler", "yuan.bentler.mplus",
                           "yuan.bentler", "scaled.shifted")) {
         robust.flag <- TRUE
+    }
+    if(lavobject@Model@categorical &&
+       (lavobject@Options$conditional.x || inherits(fit.catml, "try-error"))) {
+        # no support yet for categorical + conditional.x = TRUE
+        # or equality constraints involving threshods, or ...
+        robust.flag <- FALSE
     }
 
     # basic test statistics
@@ -496,12 +496,12 @@ lav_fit_cfi_lavobject <- function(lavobject = NULL, fit.measures = "cfi",
                              X2.null = X2.null.scaled, df.null = df.null.scaled)
             if(robust.flag) {
                 indices["nnfi.robust"] <-
-                    lav_fit_nnfi(X2 = X2, df = df,
-                                 X2.null = X2.null, df.null = df.null,
+                    lav_fit_nnfi(X2 = XX3, df = df,
+                                 X2.null = XX3.null, df.null = df.null,
                                  c.hat = c.hat, c.hat.null = c.hat.null)
                 indices["rni.robust"] <-
-                    lav_fit_rni(X2 = X2, df = df,
-                                X2.null = X2.null, df.null = df.null,
+                    lav_fit_rni(X2 = XX3, df = df,
+                                X2.null = XX3.null, df.null = df.null,
                                 c.hat = c.hat, c.hat.null = c.hat.null)
             }
         }

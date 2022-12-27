@@ -207,9 +207,9 @@ lav_fit_rmsea_lavobject <- function(lavobject = NULL, fit.measures = "rmsea",
 
     # check for categorical
     categorical <- lavobject@Model@categorical
-    if(lavobject@Model@categorical) {
+    if(lavobject@Model@categorical && !lavobject@Options$conditional.x) {
         # 'refit' using estimator = "catML"
-        fit.catml <- lav_object_catml(lavobject)
+        fit.catml <- try(lav_object_catml(lavobject), silent = TRUE)
     }
 
     # tests
@@ -268,6 +268,11 @@ lav_fit_rmsea_lavobject <- function(lavobject = NULL, fit.measures = "rmsea",
        scaled.test %in% c("satorra.bentler", "yuan.bentler.mplus",
                           "yuan.bentler", "scaled.shifted")) {
         robust.flag <- TRUE
+    }
+    if(lavobject@Model@categorical &&
+       (lavobject@Options$conditional.x || inherits(fit.catml, "try-error"))) {
+        # no support yet for categorical + conditional.x = TRUE
+        robust.flag <- FALSE
     }
 
     # basic test statistics

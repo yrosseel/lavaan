@@ -1531,7 +1531,7 @@ lav_object_inspect_implied <- function(object,
 
             # mean.x
             if(lavmodel@nexo[b] > 0L) {
-                OUT[[b]]$mean.x  <- lavimplied$mean.x[[b]]
+                OUT[[b]]$mean.x  <- as.numeric(lavimplied$mean.x[[b]])
                 if(add.labels) {
                     names(OUT[[b]]$mean.x) <- ov.names.x[[b]]
                 }
@@ -2824,7 +2824,10 @@ lav_object_inspect_delta_rownames <- function(object,
     }
 
     categorical    <- lavmodel@categorical
-    correlation    <- lavmodel@correlation
+    correlation    <- FALSE
+    if(.hasSlot(lavmodel, "correlation")) {
+        correlation    <- lavmodel@correlation
+    }
     conditional.x  <- lavmodel@conditional.x
     group.w.free   <- lavmodel@group.w.free
     nvar           <- lavmodel@nvar

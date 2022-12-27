@@ -158,7 +158,10 @@ lav_partable_indep_or_unrestricted <- function(lavobject      = NULL,
     if(lavoptions$estimator == "catML") {
         categorical <- FALSE
     }
-    correlation  <- lavoptions$correlation
+    correlation <- FALSE
+    if(!is.null(lavoptions$correlation)) {
+        correlation  <- lavoptions$correlation
+    }
 
     # what with fixed.x?
     # - does not really matter; fit will be saturated anyway
@@ -282,7 +285,7 @@ lav_partable_indep_or_unrestricted <- function(lavobject      = NULL,
 
             # starting values -- variances
             if(correlation) {
-                c(ustart, rep(1, nvar))
+                ustart <- c(ustart, rep(1, nvar))
             } else if(!is.null(sample.cov)) {
                 ustart <- c(ustart, diag(sample.cov))
             } else {
