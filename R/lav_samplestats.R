@@ -627,14 +627,22 @@ lav_samplestats_from_data <- function(lavdata           = NULL,
 
         # WLS.obs
         if(nlevels == 1L) {
+            if(estimator == "catML") {
+                # correlations only (for now)
+                tmp.categorical <- FALSE
+                tmp.meanstructure <- FALSE
+            } else {
+                tmp.categorical <- categorical
+                tmp.meanstructure <- meanstructure
+            }
             WLS.obs[[g]] <- lav_samplestats_wls_obs(mean.g = mean[[g]],
                 cov.g = cov[[g]], var.g = var[[g]], th.g = th[[g]],
                 th.idx.g = th.idx[[g]], res.int.g = res.int[[g]],
                 res.cov.g = res.cov[[g]], res.var.g = res.var[[g]],
                 res.th.g = res.th[[g]],  res.slopes.g = res.slopes[[g]],
                 group.w.g = log(nobs[[g]]),
-                categorical = categorical, conditional.x = conditional.x,
-                meanstructure = meanstructure, correlation = correlation,
+                categorical = tmp.categorical, conditional.x = conditional.x,
+                meanstructure = tmp.meanstructure, correlation = correlation,
                 slopestructure = conditional.x,
                 group.w.free = group.w.free)
         }

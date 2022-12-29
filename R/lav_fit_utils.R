@@ -110,6 +110,7 @@ lav_fit_fiml_corrected <- function(lavobject, version = "V3") {
     # limitations
     if( lavobject@Options$conditional.x ||
         lavobject@Data@nlevels > 1L ||
+        !.hasSlot(lavobject, "h1") ||
         is.null(lavobject@h1$implied$cov[[1]]) ) {
         return(empty.list)
     } else {
@@ -152,7 +153,7 @@ lav_fit_fiml_corrected <- function(lavobject, version = "V3") {
     Jm <-         lav_model_h1_information_firstorder(lavobject)
     Wc <- Wc.g <- lav_model_h1_information_observed(fit.tilde)
     if(version == "V3") {
-        Gamma <- Gamma.f <- lavTech(lavobject, "gamma")
+        Gamma.f <- vector("list", length = lavdata@ngroups)
     }
     Delta  <- lavTech(lavobject, "delta")
     E.inv  <- lavTech(lavobject, "inverted.information")
