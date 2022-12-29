@@ -84,6 +84,10 @@ lav_partable_indep_or_unrestricted <- function(lavobject      = NULL,
         lavh1 <- lavobject@h1
     }
 
+    if(lavdata@data.type == "none") {
+        lavsamplestats <- NULL
+    }
+
     # conditional.x ? check res.cov[[1]] slot
     conditional.x <- FALSE
     if(!is.null(lavsamplestats) && !is.null(lavsamplestats@res.cov[[1]])) {

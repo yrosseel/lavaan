@@ -229,7 +229,7 @@ lav_fit_cfi_lavobject <- function(lavobject = NULL, fit.measures = "cfi",
     stopifnot(inherits(lavobject, "lavaan"))
 
     # check for categorical
-    categorical <- lavobject@Model@categorical
+    categorical.flag <- lavobject@Model@categorical
 
     # tests
     TEST <- lavobject@test
@@ -251,6 +251,30 @@ lav_fit_cfi_lavobject <- function(lavobject = NULL, fit.measures = "cfi",
         }
     }
 
+    # robust?
+    robust.flag <- FALSE
+    if(scaled.flag &&
+       scaled.test %in% c("satorra.bentler", "yuan.bentler.mplus",
+                          "yuan.bentler", "scaled.shifted")) {
+        robust.flag <- TRUE
+    }
+
+    # FIML?
+    fiml.flag <- FALSE
+    if(lavobject@Options$missing %in% c("ml", "ml.x")) {
+        # check if we can compute corrected values
+        if(scaled.flag) {
+            version <- "V3"
+        } else {
+            version <- "V6"
+        }
+        fiml <- lav_fit_fiml_corrected(lavobject, version = version)
+        if(!anyNA(c(fiml$XX3, fiml$df3, fiml$c.hat3, fiml$XX3.scaled,
+                    fiml$XX3.null, fiml$df3.null, fiml$c.hat3.null))) {
+            robust.flag <- TRUE
+            fiml.flag <- TRUE
+        }
+    }
 
     # supported fit measures in this function
     # baseline model
@@ -263,16 +287,20 @@ lav_fit_cfi_lavobject <- function(lavobject = NULL, fit.measures = "cfi",
 
     fit.cfi.tli <- c("cfi", "tli")
     if(scaled.flag) {
-        fit.cfi.tli <- c(fit.cfi.tli, "cfi.scaled", "tli.scaled",
-                                      "cfi.robust", "tli.robust")
+        fit.cfi.tli <- c(fit.cfi.tli, "cfi.scaled", "tli.scaled")
+    }
+    if(robust.flag) {
+        fit.cfi.tli <- c(fit.cfi.tli, "cfi.robust", "tli.robust")
     }
 
     # other incremental fit indices
     fit.cfi.other <- c("nnfi", "rfi", "nfi", "pnfi", "ifi", "rni")
     if(scaled.flag) {
         fit.cfi.other <- c(fit.cfi.other, "nnfi.scaled", "rfi.scaled",
-                       "nfi.scaled", "pnfi.scaled", "ifi.scaled", "rni.scaled",
-                       "nnfi.robust", "rni.robust")
+                       "nfi.scaled", "pnfi.scaled", "ifi.scaled", "rni.scaled")
+    }
+    if(robust.flag) {
+        fit.cfi.other <- c(fit.cfi.other, "nnfi.robust", "rni.robust")
     }
 
     # which one do we need?
@@ -291,13 +319,6 @@ lav_fit_cfi_lavobject <- function(lavobject = NULL, fit.measures = "cfi",
         }
     }
 
-    # robust?
-    robust.flag <- FALSE
-    if(scaled.flag &&
-       scaled.test %in% c("satorra.bentler", "yuan.bentler.mplus",
-                          "yuan.bentler", "scaled.shifted")) {
-        robust.flag <- TRUE
-    }
 
     # basic test statistics
     X2 <- TEST[[test.idx]]$stat
@@ -309,21 +330,26 @@ lav_fit_cfi_lavobject <- function(lavobject = NULL, fit.measures = "cfi",
     if(scaled.flag) {
         X2.scaled <- TEST[[scaled.idx]]$stat
         df.scaled <- TEST[[scaled.idx]]$df
-        if(robust.flag) {
-            XX3 <- X2
-            if(categorical) {
-                out <- lav_fit_catml_dwls(lavobject)
-                XX3 <- out$XX3
-                df3 <- out$df3
-                c.hat3 <- c.hat <- out$c.hat3
-            } else if(scaled.test == "scaled.shifted") {
-                # compute c.hat from a and b
-                a <- TEST[[scaled.idx]]$scaling.factor
-                b <- TEST[[scaled.idx]]$shift.parameter
-                c.hat <- a * (df - b) / df
-            } else {
-                c.hat <- TEST[[scaled.idx]]$scaling.factor
-            }
+    }
+    if(robust.flag) {
+        XX3 <- X2
+        if(categorical.flag) {
+            out <- lav_fit_catml_dwls(lavobject)
+            XX3 <- out$XX3
+            df3 <- out$df3
+            c.hat3 <- c.hat <- out$c.hat3
+        } else if(fiml.flag) {
+            XX3 <- fiml$XX3
+            df3 <- fiml$df3
+            c.hat3 <- c.hat <- fiml$c.hat3
+            XX3.scaled <- fiml$XX3.scaled
+        } else if(scaled.test == "scaled.shifted") {
+            # compute c.hat from a and b
+            a <- TEST[[scaled.idx]]$scaling.factor
+            b <- TEST[[scaled.idx]]$shift.parameter
+            c.hat <- a * (df - b) / df
+        } else {
+            c.hat <- TEST[[scaled.idx]]$scaling.factor
         }
     }
 
@@ -387,22 +413,25 @@ lav_fit_cfi_lavobject <- function(lavobject = NULL, fit.measures = "cfi",
         if(scaled.flag) {
             X2.null.scaled <- baseline.test[[baseline.scaled.idx]]$stat
             df.null.scaled <- baseline.test[[baseline.scaled.idx]]$df
-            if(robust.flag) {
-                XX3.null <- X2.null
-                if(categorical) {
-                    XX3.null   <- out$XX3.null
-                    c.hat.null <- out$c.hat3.null
-                } else if(scaled.test == "scaled.shifted") {
-                    # compute c.hat from a and b
-                    a.null <-
-                        baseline.test[[baseline.scaled.idx]]$scaling.factor
-                    b.null <-
-                        baseline.test[[baseline.scaled.idx]]$shift.parameter
-                    c.hat.null <- a.null * (df.null - b.null) / df.null
-                } else {
-                    c.hat.null <-
-                        baseline.test[[baseline.scaled.idx]]$scaling.factor
-                }
+        }
+        if(robust.flag) {
+            XX3.null <- X2.null
+            if(categorical.flag) {
+                XX3.null   <- out$XX3.null
+                c.hat.null <- out$c.hat3.null
+            } else if(fiml.flag) {
+                XX3.null   <- fiml$XX3.null
+                c.hat.null <- fiml$c.hat3.null
+            } else if(scaled.test == "scaled.shifted") {
+                # compute c.hat from a and b
+                a.null <-
+                    baseline.test[[baseline.scaled.idx]]$scaling.factor
+                b.null <-
+                    baseline.test[[baseline.scaled.idx]]$shift.parameter
+                c.hat.null <- a.null * (df.null - b.null) / df.null
+            } else {
+                c.hat.null <-
+                    baseline.test[[baseline.scaled.idx]]$scaling.factor
             }
         }
     } else {
@@ -446,18 +475,16 @@ lav_fit_cfi_lavobject <- function(lavobject = NULL, fit.measures = "cfi",
             indices["tli.scaled"] <-
                 lav_fit_tli(X2 = X2.scaled, df = df.scaled,
                             X2.null = X2.null.scaled, df.null = df.null.scaled)
-            indices["cfi.robust"] <- as.numeric(NA)
-            indices["tli.robust"] <- as.numeric(NA)
-            if(robust.flag) {
-                indices["cfi.robust"] <-
-                    lav_fit_cfi(X2 = XX3, df = df,
-                                X2.null = XX3.null, df.null = df.null,
-                                c.hat = c.hat, c.hat.null = c.hat.null)
-                indices["tli.robust"] <-
-                    lav_fit_tli(X2 = XX3, df = df,
-                                X2.null = XX3.null, df.null = df.null,
-                                c.hat = c.hat, c.hat.null = c.hat.null)
-            }
+        }
+        if(robust.flag) {
+            indices["cfi.robust"] <-
+                lav_fit_cfi(X2 = XX3, df = df,
+                            X2.null = XX3.null, df.null = df.null,
+                            c.hat = c.hat, c.hat.null = c.hat.null)
+            indices["tli.robust"] <-
+                lav_fit_tli(X2 = XX3, df = df,
+                            X2.null = XX3.null, df.null = df.null,
+                            c.hat = c.hat, c.hat.null = c.hat.null)
         }
     }
 
@@ -496,16 +523,16 @@ lav_fit_cfi_lavobject <- function(lavobject = NULL, fit.measures = "cfi",
             indices["rni.scaled"] <-
                 lav_fit_rni( X2 = X2.scaled, df = df.scaled,
                              X2.null = X2.null.scaled, df.null = df.null.scaled)
-            if(robust.flag) {
-                indices["nnfi.robust"] <-
-                    lav_fit_nnfi(X2 = XX3, df = df,
-                                 X2.null = XX3.null, df.null = df.null,
-                                 c.hat = c.hat, c.hat.null = c.hat.null)
-                indices["rni.robust"] <-
-                    lav_fit_rni(X2 = XX3, df = df,
-                                X2.null = XX3.null, df.null = df.null,
-                                c.hat = c.hat, c.hat.null = c.hat.null)
-            }
+        }
+        if(robust.flag) {
+            indices["nnfi.robust"] <-
+                lav_fit_nnfi(X2 = XX3, df = df,
+                             X2.null = XX3.null, df.null = df.null,
+                             c.hat = c.hat, c.hat.null = c.hat.null)
+            indices["rni.robust"] <-
+                lav_fit_rni(X2 = XX3, df = df,
+                            X2.null = XX3.null, df.null = df.null,
+                            c.hat = c.hat, c.hat.null = c.hat.null)
         }
     }
 

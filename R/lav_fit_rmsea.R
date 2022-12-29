@@ -206,7 +206,7 @@ lav_fit_rmsea_lavobject <- function(lavobject = NULL, fit.measures = "rmsea",
     stopifnot(inherits(lavobject, "lavaan"))
 
     # check for categorical
-    categorical <- lavobject@Model@categorical
+    categorical.flag <- lavobject@Model@categorical
 
     # tests
     TEST <- lavobject@test
@@ -228,17 +228,42 @@ lav_fit_rmsea_lavobject <- function(lavobject = NULL, fit.measures = "rmsea",
         }
     }
 
+    # robust?
+    robust.flag <- FALSE
+    if(scaled.flag &&
+       scaled.test %in% c("satorra.bentler", "yuan.bentler.mplus",
+                          "yuan.bentler", "scaled.shifted")) {
+        robust.flag <- TRUE
+    }
+
+    # FIML?
+    fiml.flag <- FALSE
+    if(lavobject@Options$missing %in% c("ml", "ml.x")) {
+        # check if we can compute corrected values
+        if(scaled.flag) {
+            version <- "V3"
+        } else {
+            version <- "V6"
+        }
+        fiml <- lav_fit_fiml_corrected(lavobject, version = version)
+        if(!anyNA(c(fiml$XX3, fiml$df3, fiml$c.hat3, fiml$XX3.scaled))) {
+            robust.flag <- TRUE
+            fiml.flag <- TRUE
+        }
+    }
+
     # supported fit measures in this function
     fit.rmsea <- c("rmsea",
                    "rmsea.ci.lower", "rmsea.ci.upper", "rmsea.ci.level",
                    "rmsea.pvalue", "rmsea.close.h0",
                    "rmsea.notclose.pvalue", "rmsea.notclose.h0")
-
     if(scaled.flag) {
         fit.rmsea <- c(fit.rmsea, "rmsea.scaled", "rmsea.ci.lower.scaled",
                        "rmsea.ci.upper.scaled", "rmsea.pvalue.scaled",
-                       "rmsea.notclose.pvalue.scaled",
-                       "rmsea.robust", "rmsea.ci.lower.robust",
+                       "rmsea.notclose.pvalue.scaled")
+    }
+    if(robust.flag) {
+        fit.rmsea <- c(fit.rmsea, "rmsea.robust", "rmsea.ci.lower.robust",
                        "rmsea.ci.upper.robust", "rmsea.pvalue.robust",
                        "rmsea.notclose.pvalue.robust")
     }
@@ -258,13 +283,6 @@ lav_fit_rmsea_lavobject <- function(lavobject = NULL, fit.measures = "rmsea",
         }
     }
 
-    # robust?
-    robust.flag <- FALSE
-    if(scaled.flag &&
-       scaled.test %in% c("satorra.bentler", "yuan.bentler.mplus",
-                          "yuan.bentler", "scaled.shifted")) {
-        robust.flag <- TRUE
-    }
 
     # basic test statistics
     X2 <- TEST[[test.idx]]$stat
@@ -284,28 +302,35 @@ lav_fit_rmsea_lavobject <- function(lavobject = NULL, fit.measures = "rmsea",
                 df2 <- as.numeric(NA)
             }
         }
-        if(robust.flag) {
-            if(categorical) {
-                out <- lav_fit_catml_dwls(lavobject)
-                XX3 <- out$XX3
-                df3 <- out$df3
-                c.hat3 <- c.hat <- out$c.hat3
-                XX3.scaled <- out$XX3.scaled
+    }
+
+    # robust ingredients
+    if(robust.flag) {
+        if(categorical.flag) {
+            out <- lav_fit_catml_dwls(lavobject)
+            XX3 <- out$XX3
+            df3 <- out$df3
+            c.hat3 <- c.hat <- out$c.hat3
+            XX3.scaled <- out$XX3.scaled
+        } else if(fiml.flag) {
+            XX3 <- fiml$XX3
+            df3 <- fiml$df3
+            c.hat3 <- c.hat <- fiml$c.hat3
+            XX3.scaled <- fiml$XX3.scaled
+        } else {
+            XX3 <- X2
+            df3 <- df
+            c.hat <- TEST[[scaled.idx]]$scaling.factor
+            if(scaled.test == "scaled.shifted") {
+                # compute c.hat from a and b
+                a <- TEST[[scaled.idx]]$scaling.factor
+                b <- TEST[[scaled.idx]]$shift.parameter
+                c.hat3 <- a * (df - b) / df
             } else {
-                XX3 <- X2
-                df3 <- df
-                c.hat <- TEST[[scaled.idx]]$scaling.factor
-                if(scaled.test == "scaled.shifted") {
-                   # compute c.hat from a and b
-                    a <- TEST[[scaled.idx]]$scaling.factor
-                    b <- TEST[[scaled.idx]]$shift.parameter
-                    c.hat3 <- a * (df - b) / df
-                } else {
-                    c.hat3 <- c.hat
-                }
-                XX3.scaled <- TEST[[scaled.idx]]$stat
+                c.hat3 <- c.hat
             }
-        }
+            XX3.scaled <- TEST[[scaled.idx]]$stat
+       }
     }
 
     # output container
@@ -337,12 +362,10 @@ lav_fit_rmsea_lavobject <- function(lavobject = NULL, fit.measures = "rmsea",
         if(scaled.flag) {
             indices["rmsea.scaled"] <- lav_fit_rmsea(X2 = XX2, df = df2,
                                                      N = N, G = G)
-            indices["rmsea.robust"] <- as.numeric(NA)
-            if(robust.flag) {
-                indices["rmsea.robust"] <-
-                    lav_fit_rmsea(X2 = XX3, df = df3, N = N, c.hat = c.hat3,
-                                  G = G)
-            }
+        }
+        if(robust.flag) {
+            indices["rmsea.robust"] <-
+                lav_fit_rmsea(X2 = XX3, df = df3, N = N, c.hat = c.hat3, G = G)
         }
     }
 
@@ -358,16 +381,14 @@ lav_fit_rmsea_lavobject <- function(lavobject = NULL, fit.measures = "rmsea",
                                           level = ci.level)
             indices["rmsea.ci.lower.scaled"] <- ci.scaled$rmsea.ci.lower
             indices["rmsea.ci.upper.scaled"] <- ci.scaled$rmsea.ci.upper
-            indices["rmsea.ci.lower.robust"] <- as.numeric(NA)
-            indices["rmsea.ci.upper.robust"] <- as.numeric(NA)
-            if(robust.flag) {
-                # note: input is scaled test statistic!
-                ci.robust <- lav_fit_rmsea_ci(X2 = XX3.scaled,
-                                 df = df3, N = N, G = G, c.hat = c.hat,
-                                 level = ci.level)
-                indices["rmsea.ci.lower.robust"] <- ci.robust$rmsea.ci.lower
-                indices["rmsea.ci.upper.robust"] <- ci.robust$rmsea.ci.upper
-            }
+        }
+        if(robust.flag) {
+            # note: input is scaled test statistic!
+            ci.robust <- lav_fit_rmsea_ci(X2 = XX3.scaled,
+                             df = df3, N = N, G = G, c.hat = c.hat,
+                             level = ci.level)
+            indices["rmsea.ci.lower.robust"] <- ci.robust$rmsea.ci.lower
+            indices["rmsea.ci.upper.robust"] <- ci.robust$rmsea.ci.upper
         }
     }
 
@@ -388,20 +409,18 @@ lav_fit_rmsea_lavobject <- function(lavobject = NULL, fit.measures = "rmsea",
             indices["rmsea.notclose.pvalue.scaled"] <-
                 lav_fit_rmsea_notclosefit(X2 = XX2, df = df2, N = N, G = G,
                                           rmsea.h0 = notclose.h0)
-            indices["rmsea.pvalue.robust"] <- as.numeric(NA)
-            indices["rmsea.notclose.pvalue.robust"] <- as.numeric(NA)
-            if(robust.flag) {
-                indices["rmsea.pvalue.robust"] <-  # new in 0.6-13
-                    lav_fit_rmsea_closefit(X2 = XX3.scaled,
-                                           df = df3,
-                                           N = N, G = G, c.hat = c.hat,
-                                           rmsea.h0 = close.h0)
-                indices["rmsea.notclose.pvalue.robust"] <-  # new in 0.6-13
-                    lav_fit_rmsea_notclosefit(X2 = XX3.scaled,
-                                              df = df3,
-                                              N = N, G = G, c.hat = c.hat,
-                                              rmsea.h0 = notclose.h0)
-            }
+        }
+        if(robust.flag) {
+            indices["rmsea.pvalue.robust"] <-  # new in 0.6-13
+                lav_fit_rmsea_closefit(X2 = XX3.scaled,
+                                       df = df3,
+                                       N = N, G = G, c.hat = c.hat,
+                                       rmsea.h0 = close.h0)
+            indices["rmsea.notclose.pvalue.robust"] <-  # new in 0.6-13
+                lav_fit_rmsea_notclosefit(X2 = XX3.scaled,
+                                          df = df3,
+                                          N = N, G = G, c.hat = c.hat,
+                                          rmsea.h0 = notclose.h0)
         }
     }
 
