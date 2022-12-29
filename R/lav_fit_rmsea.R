@@ -207,10 +207,6 @@ lav_fit_rmsea_lavobject <- function(lavobject = NULL, fit.measures = "rmsea",
 
     # check for categorical
     categorical <- lavobject@Model@categorical
-    if(lavobject@Model@categorical && !lavobject@Options$conditional.x) {
-        # 'refit' using estimator = "catML"
-        fit.catml <- try(lav_object_catml(lavobject), silent = TRUE)
-    }
 
     # tests
     TEST <- lavobject@test
@@ -269,11 +265,6 @@ lav_fit_rmsea_lavobject <- function(lavobject = NULL, fit.measures = "rmsea",
                           "yuan.bentler", "scaled.shifted")) {
         robust.flag <- TRUE
     }
-    if(lavobject@Model@categorical &&
-       (lavobject@Options$conditional.x || inherits(fit.catml, "try-error"))) {
-        # no support yet for categorical + conditional.x = TRUE
-        robust.flag <- FALSE
-    }
 
     # basic test statistics
     X2 <- TEST[[test.idx]]$stat
@@ -295,10 +286,11 @@ lav_fit_rmsea_lavobject <- function(lavobject = NULL, fit.measures = "rmsea",
         }
         if(robust.flag) {
             if(categorical) {
-                XX3 <- fit.catml@test[[1]]$stat
-                df3 <- fit.catml@test[[1]]$df
-                c.hat3 <- c.hat <- fit.catml@test[[2]]$scaling.factor
-                XX3.scaled <- fit.catml@test[[2]]$stat
+                out <- lav_fit_catml_dwls(lavobject)
+                XX3 <- out$XX3
+                df3 <- out$df3
+                c.hat3 <- c.hat <- out$c.hat3
+                XX3.scaled <- out$XX3.scaled
             } else {
                 XX3 <- X2
                 df3 <- df

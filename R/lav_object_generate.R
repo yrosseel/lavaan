@@ -430,15 +430,15 @@ lav_object_catml <- function(lavobject = NULL) {
         lavsamplestats@icov[[g]] <- out$icov
         lavsamplestats@cov.log.det[[g]] <- out$cov.log.det
 
-        NACOV <- lavsamplestats@NACOV[[g]]
-        nvar   <- nrow(COV)
-        ntotal <- nrow(NACOV)
-        pstar <- nvar*(nvar-1)/2
-        nocor <- ntotal - pstar
-        if(length(nocor) > 0L) {
-            lavsamplestats@NACOV[[g]] <- NACOV[-seq_len(nocor),
-                                               -seq_len(nocor)]
-        }
+        #NACOV <- lavsamplestats@NACOV[[g]]
+        #nvar   <- nrow(COV)
+        #ntotal <- nrow(NACOV)
+        #pstar <- nvar*(nvar-1)/2
+        #nocor <- ntotal - pstar
+        #if(length(nocor) > 0L) {
+        #    lavsamplestats@NACOV[[g]] <- NACOV[-seq_len(nocor),
+        #                                       -seq_len(nocor)]
+        #}
     }
 
     # adapt lavoptions
@@ -451,7 +451,7 @@ lav_object_catml <- function(lavobject = NULL) {
     lavoptions$information <- c("expected", "expected")
     lavoptions$h1.information <- c("structured", "structured") # unlike DWLS
     lavoptions$se <- "none"
-    lavoptions$test <- "satorra.bentler" # always for now
+    lavoptions$test <- "standard" # always for now
     if(!refit) {
         lavoptions$optim.method <- "none"
         lavoptions$optim.force.converged <- TRUE

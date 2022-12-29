@@ -499,7 +499,11 @@ lav_options_set <- function(opt = NULL) {
     } else if(opt$missing %in% c("robust.two.stage", "robust.twostage",
                                  "robust.two-stage", "robust-two-stage",
                                  "robust.two.step",  "robust.twostep",
-                                 "robust-two-step")) {
+                                 "robust-two-step",
+                                 "two.stage.robust", "twostage.robust",
+                                 "two-stage.robust", "two-stage-robust",
+                                 "two.step.robust",  "twostep.robust",
+                                 "two-step-robust")) {
         opt$missing <- "robust.two.stage"
         if(opt$.categorical) {
             stop("lavaan ERROR: missing=\"robust.two.stage\" not available in the categorical setting")

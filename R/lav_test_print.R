@@ -113,7 +113,7 @@ lav_test_print <- function(object, nd = 3L) {
                         ifelse(TEST[[scaled.idx]]$df %% 1 == 0, # integer
                                TEST[[scaled.idx]]$df,
                                sprintf(num.format, TEST[[scaled.idx]]$df))))
-                c3 <- c(c2,
+                c3 <- c(c3,
                         c(sprintf(num.format, TEST[[block]]$stat),
                         ifelse(TEST[[block]]$df %% 1 == 0, # integer
                                TEST[[block]]$df,

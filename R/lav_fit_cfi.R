@@ -28,15 +28,13 @@
 lav_fit_cfi <- function(X2 = NULL, df = NULL, X2.null = NULL, df.null = NULL,
                         c.hat = 1, c.hat.null = 1) {
 
+    if(anyNA(c(X2, df, X2.null, df.null, c.hat, c.hat.null))) {
+        return(as.numeric(NA))
+    }
+
     # robust?
     if(df > 0 && !missing(c.hat) && !missing(c.hat.null) &&
        c.hat != 1 && c.hat.null != 1) {
-        # what to do if X2 = 0 and df = 0? in this case,
-        # the scaling factor (ch) will be NA, and we get NA
-        # (instead of 1)
-        if(X2 < .Machine$double.eps && df == 0) {
-            c.hat <- 0
-        }
         t1 <- max( c(X2 - (c.hat * df), 0) )
         t2 <- max( c(X2 - (c.hat * df), X2.null - (c.hat.null * df.null), 0) )
     } else {
@@ -58,15 +56,13 @@ lav_fit_cfi <- function(X2 = NULL, df = NULL, X2.null = NULL, df.null = NULL,
 lav_fit_rni <- function(X2 = NULL, df = NULL, X2.null = NULL, df.null = NULL,
                         c.hat = 1, c.hat.null = 1) {
 
+    if(anyNA(c(X2, df, X2.null, df.null, c.hat, c.hat.null))) {
+        return(as.numeric(NA))
+    }
+
     # robust?
     if(df > 0 && !missing(c.hat) && !missing(c.hat.null) &&
        c.hat != 1 && c.hat.null != 1) {
-        # what to do if X2 = 0 and df = 0? in this case,
-        # the scaling factor (ch) will be NA, and we get NA
-        # (instead of 1)
-        if(X2 < .Machine$double.eps && df == 0) {
-            c.hat <- 0
-        }
         t1 <- X2 - (c.hat * df)
         t2 <- X2.null - (c.hat.null * df.null)
     } else {
@@ -109,15 +105,13 @@ lav_fit_rni <- function(X2 = NULL, df = NULL, X2.null = NULL, df.null = NULL,
 lav_fit_tli <- function(X2 = NULL, df = NULL, X2.null = NULL, df.null = NULL,
                         c.hat = 1, c.hat.null = 1) {
 
+    if(anyNA(c(X2, df, X2.null, df.null, c.hat, c.hat.null))) {
+        return(as.numeric(NA))
+    }
+
     # robust?
     if(df > 0 && !missing(c.hat) && !missing(c.hat.null) &&
        c.hat != 1 && c.hat.null != 1) {
-        # what to do if X2 = 0 and df = 0? in this case,
-        # the scaling factor (ch) will be NA, and we get NA
-        # (instead of 1)
-        if(X2 < .Machine$double.eps && df == 0) {
-            c.hat <- 0
-        }
         t1 <- (X2 - c.hat * df) * df.null
         t2 <- (X2.null - c.hat.null * df.null) * df
     } else {
@@ -142,6 +136,10 @@ lav_fit_nnfi <- lav_fit_tli
 # RFI - relative fit index (Bollen, 1986; Joreskog & Sorbom 1993)
 lav_fit_rfi <- function(X2 = NULL, df = NULL, X2.null = NULL, df.null = NULL) {
 
+    if(anyNA(c(X2, df, X2.null, df.null))) {
+        return(as.numeric(NA))
+    }
+
     if(df > df.null) {
         RLI <- as.numeric(NA)
     } else if(df > 0 && df.null > 0) {
@@ -164,6 +162,10 @@ lav_fit_rfi <- function(X2 = NULL, df = NULL, X2.null = NULL, df.null = NULL) {
 # NFI - normed fit index (Bentler & Bonett, 1980)
 lav_fit_nfi <- function(X2 = NULL, df = NULL, X2.null = NULL, df.null = NULL) {
 
+    if(anyNA(c(X2, df, X2.null, df.null))) {
+        return(as.numeric(NA))
+    }
+
     if(df > df.null || isTRUE(all.equal(X2.null,0))) {
         NFI <- as.numeric(NA)
     } else if(df > 0) {
@@ -180,6 +182,10 @@ lav_fit_nfi <- function(X2 = NULL, df = NULL, X2.null = NULL, df.null = NULL) {
 # PNFI - Parsimony normed fit index (James, Mulaik & Brett, 1982)
 lav_fit_pnfi <- function(X2 = NULL, df = NULL, X2.null = NULL, df.null = NULL) {
 
+    if(anyNA(c(X2, df, X2.null, df.null))) {
+        return(as.numeric(NA))
+    }
+
     if(df.null > 0 && X2.null > 0) {
         t1 <- X2.null - X2
         t2 <- X2.null
@@ -193,6 +199,10 @@ lav_fit_pnfi <- function(X2 = NULL, df = NULL, X2.null = NULL, df.null = NULL) {
 
 # IFI - incremental fit index (Bollen, 1989; Joreskog & Sorbom, 1993)
 lav_fit_ifi <- function(X2 = NULL, df = NULL, X2.null = NULL, df.null = NULL) {
+
+    if(anyNA(c(X2, df, X2.null, df.null))) {
+        return(as.numeric(NA))
+    }
 
     t1 <- X2.null - X2
     t2 <- X2.null - df
@@ -220,10 +230,6 @@ lav_fit_cfi_lavobject <- function(lavobject = NULL, fit.measures = "cfi",
 
     # check for categorical
     categorical <- lavobject@Model@categorical
-    if(lavobject@Model@categorical && !lavobject@Options$conditional.x) {
-        # 'refit' using estimator = "catML"
-        fit.catml <- try(lav_object_catml(lavobject), silent = TRUE)
-    }
 
     # tests
     TEST <- lavobject@test
@@ -292,12 +298,6 @@ lav_fit_cfi_lavobject <- function(lavobject = NULL, fit.measures = "cfi",
                           "yuan.bentler", "scaled.shifted")) {
         robust.flag <- TRUE
     }
-    if(lavobject@Model@categorical &&
-       (lavobject@Options$conditional.x || inherits(fit.catml, "try-error"))) {
-        # no support yet for categorical + conditional.x = TRUE
-        # or equality constraints involving threshods, or ...
-        robust.flag <- FALSE
-    }
 
     # basic test statistics
     X2 <- TEST[[test.idx]]$stat
@@ -312,8 +312,10 @@ lav_fit_cfi_lavobject <- function(lavobject = NULL, fit.measures = "cfi",
         if(robust.flag) {
             XX3 <- X2
             if(categorical) {
-                XX3 <- fit.catml@test[[1]]$stat
-                c.hat <- fit.catml@test[[2]]$scaling.factor
+                out <- lav_fit_catml_dwls(lavobject)
+                XX3 <- out$XX3
+                df3 <- out$df3
+                c.hat3 <- c.hat <- out$c.hat3
             } else if(scaled.test == "scaled.shifted") {
                 # compute c.hat from a and b
                 a <- TEST[[scaled.idx]]$scaling.factor
@@ -388,8 +390,8 @@ lav_fit_cfi_lavobject <- function(lavobject = NULL, fit.measures = "cfi",
             if(robust.flag) {
                 XX3.null <- X2.null
                 if(categorical) {
-                    XX3.null   <- fit.catml@baseline$test[[1]]$stat
-                    c.hat.null <- fit.catml@baseline$test[[2]]$scaling.factor
+                    XX3.null   <- out$XX3.null
+                    c.hat.null <- out$c.hat3.null
                 } else if(scaled.test == "scaled.shifted") {
                     # compute c.hat from a and b
                     a.null <-
