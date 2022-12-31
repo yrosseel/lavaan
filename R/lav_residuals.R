@@ -160,6 +160,12 @@ lav_residuals <- function(object, type = "raw", h1 = TRUE, custom.rmr = NULL,
     lavdata  <- object@Data
     lavmodel <- object@Model
 
+    # change options if multilevel (for now)
+    if(lavdata@nlevels > 1L) {
+        zstat <- se <- FALSE
+        summary <- FALSE
+    }
+
     # change options if categorical (for now)
     if(lavmodel@categorical) {
 

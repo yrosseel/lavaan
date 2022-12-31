@@ -224,7 +224,7 @@ lavTestLRT <- function(object, ..., method = "default", A.method = "delta",
     # but with a tolerance (0.6-12)!
     if(any(STAT.delta[-1] < -1*.Machine$double.eps^(1/3))) {
         txt <- c("Some restricted models fit better than less ",
-                 "restricted models; either these models are not nested, or",
+                 "restricted models; either these models are not nested, or ",
                  "the less restricted model failed to reach a global optimum.")
         txt <- c(txt, " Smallest difference = ", min(STAT.delta[-1]))
         warning(lav_txt2message(txt))

@@ -229,20 +229,24 @@ lav_model_h1_information_expected <- function(lavobject      = NULL,
                         MEAN <- lavsamplestats@mean[[g]]
                     }
 
+                    correlation.flag <- FALSE
+                    if(.hasSlot(lavmodel, "correlation")) {
+                        correlation.flag <- lavmodel@correlation
+                    }
                     if(structured) {
                         A1[[g]] <- lav_mvnorm_information_expected(
                                   Sigma         = lavimplied$cov[[g]],
                                   #wt = WT, # not needed
                                   x.idx         = lavsamplestats@x.idx[[g]],
                                   meanstructure = lavmodel@meanstructure,
-                                  correlation   = lavmodel@correlation)
+                                  correlation   = correlation.flag)
                     } else {
                         A1[[g]] <- lav_mvnorm_h1_information_expected(
                                   sample.cov.inv = lavsamplestats@icov[[g]],
                                   #wt = WT, not needed
                                   x.idx          = lavsamplestats@x.idx[[g]],
                                   meanstructure  = lavmodel@meanstructure,
-                                  correlation    = lavmodel@correlation)
+                                  correlation    = correlation.flag)
                     }
                 } # conditional.x
             } # missing

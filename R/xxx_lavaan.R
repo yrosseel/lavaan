@@ -516,8 +516,15 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
         opt <- modifyList(opt, dotdotdot)
 
         # no data?
-        if(is.null(data) && is.null(sample.cov)) {
+        if(is.null(slotData) && is.null(data) && is.null(sample.cov)) {
             opt$bounds <- FALSE
+        }
+
+        # only sample moments?
+        if(!is.null(slotData) && !slotData@data.type == "full") {
+            opt$missing <- "listwise"
+        } else if(is.null(slotData) && is.null(data)) {
+            opt$missing <- "listwise"
         }
 
         # categorical mode?

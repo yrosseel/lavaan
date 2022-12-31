@@ -222,6 +222,11 @@ lav_model_test <- function(lavobject      = NULL,
         lavloglik      <- lavobject@loglik
     }
 
+    # backwards compatibility
+    if(is.null(lavoptions$scaled.test)) {
+        lavoptions$scaled.test <- "standard"
+    }
+
     test <- test.orig <- lavoptions$test
 
     TEST <- list()

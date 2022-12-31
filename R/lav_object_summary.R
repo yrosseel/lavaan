@@ -56,8 +56,12 @@ lav_object_summary <- function(object, header       = TRUE,
     if(header) {
 
         # 1. collect header information
-        res$header <- list(lavaan.version   =
-                               packageDescription("lavaan", fields="Version"),
+        if(.hasSlot(object, "version")) {
+            VERSION <- object@version
+        } else {
+            VERSION <- "pre 0.6"
+        }
+        res$header <- list(lavaan.version   = VERSION,
                            sam.approach     = (.hasSlot(object, "internal") &&
                                        !is.null(object@internal$sam.method)),
                            optim.method     = object@Options$optim.method,
