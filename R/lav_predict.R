@@ -17,12 +17,37 @@ function(object, newdata = NULL) {
                fsm = FALSE, optim.method = "bfgs")
 })
 
+# efaList version
+predict.efaList <- function(object, ...) {
+
+    if(length(object) == 1L) {
+        # unlist
+        object <- object[[1]]
+    } else {
+        # use the 'last' one per default
+        object <- object[[ length(object) ]]
+    }
+
+    predict(object, ...)
+}
+
 # main function
 lavPredict <- function(object, newdata = NULL, # keep order of predict(), 0.6-7
                        type = "lv", method = "EBM",
                        se = "none", acov = "none", label = TRUE, fsm = FALSE,
                        append.data = FALSE, assemble = FALSE, # or TRUE?
                        level = 1L, optim.method = "bfgs", ETA = NULL) {
+
+    # catch efaList objects
+    if(inherits(object, "efaList")) {
+        if(length(object) == 1L) {
+            # unlist
+            object <- object[[1]]
+        } else {
+            # use the 'last' one per default
+            object <- object[[ length(object) ]]
+        }
+    }
 
     stopifnot(inherits(object, "lavaan"))
     lavmodel       <- object@Model

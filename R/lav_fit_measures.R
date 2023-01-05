@@ -60,6 +60,19 @@ fitMeasures.efaList <- fitmeasures.efaList <- function(object,
                      baseline.model = baseline.model, fm.args = fm.args,
                      output = "vector")))
 
+    # check if res is a matrix
+    if(!is.matrix(res)) {
+        if(is.numeric(res)) {
+            # fit.measures is just 1 element, or only one was correct
+            NAME <- names(res)[1]
+            res <- matrix(res, nrow = 1L)
+            rownames(res) <- NAME
+        } else { # wrong fit measures?
+            # create empty matrix
+            res <- matrix(0, nrow = 0L, ncol = length(object))
+        }
+    }
+
     # rownames
     nfactors <- sapply(object, function(x) x@pta$nfac[[1]])
     colnames(res) <- paste0("nfactors = ", nfactors)

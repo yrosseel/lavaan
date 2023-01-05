@@ -7,7 +7,7 @@ Fit one or more Exploratory Factor Analysis (EFA) model(s).}
 \usage{
 efa(data = NULL, nfactors = 1L, sample.cov = NULL, sample.nobs = NULL,
     rotation = "geomin", rotation.args = list(), ov.names = names(data),
-    bounds = "pos.var", baseline = FALSE, ..., output = "efa")
+    bounds = "pos.var", ..., output = "efa")
 }
 \arguments{
 \item{data}{A data frame containing the observed variables we need for the
@@ -48,9 +48,6 @@ efa(data = NULL, nfactors = 1L, sample.cov = NULL, sample.nobs = NULL,
 \item{bounds}{Per default, \code{bounds = "pos.var"} forces all variances
    of both observed and latent variables to be strictly nonnegative. See
    the entry in \code{\link{lavOptions}} for more options.}
-\item{baseline}{Logical. The default is \code{FALSE}. This implies that
-   fit measures that rely on the baseline model (such as CFI and TLI) cannot
-   be computed.}
 \item{...}{Aditional options to be passed to lavaan, using 'name = value'.
     See \code{\link{lavOptions}} for a complete list.}
 \item{output}{Character. If \code{"efa"} (the default), the output mimics
@@ -73,7 +70,10 @@ efa(data = NULL, nfactors = 1L, sample.cov = NULL, sample.nobs = NULL,
   If \code{output = "lavaan"}, an object of class 
   \code{\linkS4class{lavaan}}. If \code{output = "efa"},
   a list of class \code{efaList} for which a \code{print()},  
-  \code{summary()} and \code{fitMeasures()} method are available.
+  \code{summary()} and \code{fitMeasures()} method are available. Because
+  we added the (standardized) loadings as an extra element, the \code{loadings}
+  function (which is not a generic function) from the stats package will
+  also work on \code{efaList} objects.
 }
 \seealso{
     \code{\link{summary.efaList}} for a summary method if the output is

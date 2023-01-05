@@ -650,11 +650,10 @@ sam <- function(model            = NULL,
 
         } # blocks
 
-        # label groups (if not multilevel)
-        # FIXME: we need block.names after all...
-        if(ngroups > 1L && nblocks == ngroups)  {
-            names(VETA) <- FIT@Data@group.label
-            names(REL)  <- FIT@Data@group.label
+        # label blocks
+        if(nblocks > 1L) {
+            names(VETA) <- FIT@Data@block.label
+            names(REL)  <- FIT@Data@block.label
         }
 
         # store EETA/VETA

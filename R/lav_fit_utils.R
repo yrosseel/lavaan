@@ -78,10 +78,16 @@ lav_fit_catml_dwls <- function(lavobject) {
 
     # baseline model
     XX3.null <- fit.catml@baseline$test[[1]]$stat
-    df3.null <- fit.catml@baseline$test[[1]]$df
-
-    kbs <- sum(diag(Gamma.all))
-    c.hat3.null <- kbs/df3.null
+    if(is.null(XX3.null)) {
+        XX3.null <- as.numeric(NA)
+        df3.null <- as.numeric(NA)
+        kbs <- as.numeric(NA)
+        c.hat3.null <- as.numeric(NA)
+    } else {
+        df3.null <- fit.catml@baseline$test[[1]]$df
+        kbs <- sum(diag(Gamma.all))
+        c.hat3.null <- kbs/df3.null
+    }
 
     # return values
     list(XX3 = XX3, df3 = df3, c.hat3 = c.hat3, XX3.scaled = XX3.scaled,

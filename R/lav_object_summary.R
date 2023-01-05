@@ -146,7 +146,7 @@ lav_object_summary <- function(object, header       = TRUE,
 
     # efa-related info
     if(efa) {
-        res$efa <- lav_summary_efa(object, efa.args = efa.args)
+        res$efa <- lav_efa_summary(object, efa.args = efa.args)
     } # efa
 
     # only if requested, add the additional fit measures

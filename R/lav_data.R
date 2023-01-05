@@ -126,6 +126,7 @@ lavData <- function(data              = NULL,          # data.frame
                                  cluster           = cluster,
                                  group.label       = group.label,
                                  level.label       = level.label,
+                                 block.label       = block.label,
                                  ov.names          = ov.names,
                                  ordered           = ordered,
                                  sampling.weights  = sampling.weights,
@@ -263,6 +264,18 @@ lavData <- function(data              = NULL,          # data.frame
             }
         }
 
+        # block.labels
+        block.label <- character(0L)
+        if(length(group.label) > 0L) {
+            block.label <- group.label
+        } else if(length(level.label) > 0L) {
+            block.label <- level.label
+        } else if(length(group.label) > 0L &&
+                  length(level.label) > 0L) {
+            block.label <- paste(group.label,
+                                 level.label, sep = ".")
+        }
+
         # construct lavData object
         lavData <- new("lavData",
                        data.type   = "moment",
@@ -272,6 +285,7 @@ lavData <- function(data              = NULL,          # data.frame
                        cluster     = character(0L),
                        group.label = group.label,
                        level.label = character(0L),
+                       block.label = block.label,
                        nobs        = as.list(sample.nobs),
                        norig       = as.list(sample.nobs),
                        ov.names    = ov.names,
@@ -400,6 +414,18 @@ lavData <- function(data              = NULL,          # data.frame
             }
         } # g
 
+        # block.labels
+        block.label <- character(0L)
+        if(length(group.label) > 0L) {
+            block.label <- group.label
+        } else if(length(level.label) > 0L) {
+            block.label <- level.label
+        } else if(length(group.label) > 0L &&
+                  length(level.label) > 0L) {
+            block.label <- paste(group.label,
+                                 level.label, sep = ".")
+        }
+
         # construct lavData object
         lavData <- new("lavData",
                        data.type   = "none",
@@ -409,6 +435,7 @@ lavData <- function(data              = NULL,          # data.frame
                        cluster     = cluster,
                        group.label = group.label,
                        level.label = level.label,
+                       block.label = block.label,
                        nobs        = sample.nobs,
                        norig       = sample.nobs,
                        ov.names    = ov.names,
@@ -438,6 +465,7 @@ lav_data_full <- function(data          = NULL,          # data.frame
                           cluster       = NULL,          # clustered?
                           group.label   = NULL,          # custom group labels?
                           level.label   = NULL,
+                          block.label   = NULL,
                           ov.names      = NULL,          # variables needed
                                                          # in model
                           ordered       = NULL,          # ordered variables
@@ -1084,6 +1112,18 @@ lav_data_full <- function(data          = NULL,          # data.frame
         }
     }
 
+    # block.labels
+    block.label <- character(0L)
+    if(length(group.label) > 0L) {
+        block.label <- group.label
+    } else if(length(level.label) > 0L) {
+        block.label <- level.label
+    } else if(length(group.label) > 0L &&
+              length(level.label) > 0L) {
+        block.label <- paste(group.label,
+                             level.label, sep = ".")
+    }
+
 
     lavData <- new("lavData",
                    data.type       = "full",
@@ -1093,6 +1133,7 @@ lav_data_full <- function(data          = NULL,          # data.frame
                    cluster         = cluster,
                    group.label     = group.label,
                    level.label     = level.label,
+                   block.label     = block.label,
                    std.ov          = std.ov,
                    nobs            = nobs,
                    norig           = norig,

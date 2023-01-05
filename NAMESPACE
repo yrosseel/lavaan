@@ -61,7 +61,6 @@ export("lavaan", "cfa", "sem", "growth",
        "lavResiduals",
        # utilities
        "getCov", "char2num", "cor2cov",
-       # options,
        "lavOptions",
 
        "modindices", "modificationIndices", "modificationindices",
@@ -203,7 +202,8 @@ S3method(print, lavaan.tables.fit.Cp)
 S3method(print, lavaan.tables.fit.Cm)
 S3method(print, lavaan.efa)
 S3method(print, efaList.summary)
-S3method(print, efaList)
+S3method(print,    efaList)
+S3method(predict,  efaList)
 S3method(summary, lavaan.fsr)
 S3method(summary, efaList)
 S3method(fitMeasures, efaList)

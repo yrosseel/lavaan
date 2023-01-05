@@ -63,3 +63,4 @@ lavTech <- function(object, what                   = "free",
                             drop.list.single.group = FALSE) {
     UseMethod("lavTech", object)
 }
+

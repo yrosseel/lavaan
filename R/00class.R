@@ -10,6 +10,7 @@ setClass("lavData",
         group="character",         # group variable
         ngroups="integer",         # number of groups
         group.label="character",   # group labels
+        block.label="character",   # block labels
         cluster="character",       # cluster variable(s)
         nlevels="integer",         # number of levels
         level.label="character",   # level labels

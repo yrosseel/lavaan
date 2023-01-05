@@ -443,6 +443,8 @@ lav_object_catml <- function(lavobject = NULL) {
 
     # adapt lavoptions
     lavoptions$estimator <- "catML"
+    lavoptions$verbose <- FALSE
+    lavoptions$debug <- FALSE
     lavoptions$.categorical <- FALSE
     lavoptions$categorical <- FALSE
     lavoptions$correlation <- TRUE
@@ -452,6 +454,7 @@ lav_object_catml <- function(lavobject = NULL) {
     lavoptions$h1.information <- c("structured", "structured") # unlike DWLS
     lavoptions$se <- "none"
     lavoptions$test <- "standard" # always for now
+    lavoptions$baseline <- TRUE
     if(!refit) {
         lavoptions$optim.method <- "none"
         lavoptions$optim.force.converged <- TRUE
