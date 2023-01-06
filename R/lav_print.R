@@ -1250,8 +1250,29 @@ print.lavaan.summary <- function(x, ..., nd = 3L) {
             if( !y$efa$orthogonal && !is.null(y$efa$psi[[b]]) &&
                 ncol(y$efa$psi[[b]]) > 1L ) {
                 cat("\n")
-                cat("Factor correlations:\n\n")
-                print(y$efa$psi[[b]], nd = nd)
+                if(!is.null(y$efa$psi.se[[b]]) && alpha.level > 0) {
+                    cat("Factor correlations: (* = significant at ",
+                        round(alpha.level * 100),
+                        "% level)\n\n", sep = "")
+                } else {
+                    cat("Factor correlations:\n\n")
+                }
+                lav_print_psi(y$efa$psi[[b]], nd = nd,
+                              alpha.level = alpha.level,
+                              x.se = y$efa$psi.se[[b]])
+            }
+
+            # factor score determinacy (for regression scores only!)
+            if( !is.null(y$efa$fs.determinacy[[b]]) ) {
+                cat("\n")
+                cat("Correlation regression factor scores and factors (determinacy):\n\n")
+                print(y$efa$fs.determinacy[[b]], nd = nd)
+                cat("\n")
+                cat("R2 regression factor scores (= squared correlations):\n\n")
+                tmp <- y$efa$fs.determinacy[[b]]
+                tmp2 <- tmp * tmp
+                class(tmp2) <- c("lavaan.vector", "numeric")
+                print(tmp2, nd = nd)
             }
 
             # lambda.structure
@@ -1305,7 +1326,8 @@ print.lavaan.summary <- function(x, ..., nd = 3L) {
             }
 
             # standard errors psi
-            if(!is.null(y$efa$psi.se[[b]])) {
+            if(!is.null(y$efa$theta.se[[b]])) { # we check for theta.se
+                                                # as psi.se is needed for '*'
                 cat("\n")
                 cat("Standard errors factor correlations:\n\n")
                 print(y$efa$psi.se[[b]], nd = nd)
@@ -1395,6 +1417,39 @@ lav_print_loadings <- function(x, nd = 3L, cutoff = 0.3, dot.cutoff = 0.1,
                                width = 12L + nd, justify = "right")
         colnames(y) <- c(NAMES, resvar.names)
     }
+
+    # print
+    print(y, quote = FALSE)
+}
+
+# helper function to print the psi matrix, showing signif stars
+lav_print_psi <- function(x, nd = 3L, alpha.level = 0.01, x.se = NULL) {
+
+    # unclass
+    y <- unclass(x)
+
+    # round, and create a character matriy
+    y <- format(round(y, nd), width = 3L + nd, justify = "right")
+
+    # right-align column names
+    colnames(y)  <- format(colnames(y), width = 3L + nd, justify = "right")
+
+    # add 'star' for significant loadings (if provided) using alpha = 0.01
+    if(!is.null(x.se) && !any(is.na(x.se))) {
+        colNAMES <- colnames(y)
+        rowNAMES <- rownames(y)
+        x.se[ x.se < sqrt(.Machine$double.eps)] <- 1 # to avoid NA
+        zstat <- x/x.se
+        z.cutoff <- qnorm(1 - (alpha.level/2))
+        zstat.string <- ifelse(abs(zstat) > z.cutoff, "*", " ")
+        y <- matrix(paste(y, zstat.string, sep = ""), nrow(y), ncol(y))
+        colnames(y) <- colNAMES
+        rownames(y) <- rowNAMES
+    }
+
+    # remove upper part
+    ll <- upper.tri(x, diag = FALSE)
+    y[ll] <- ""
 
     # print
     print(y, quote = FALSE)

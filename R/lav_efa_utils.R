@@ -21,7 +21,7 @@ lav_syntax_efa <- function(ov.names = NULL, nfactors = 1L, twolevel = FALSE) {
 # extract *standardized* loadings from efaList
 lav_efa_get_loadings <- function(object, ...) {
 
-    # kill ojbect$loadings if present
+    # kill object$loadings if present
     object[["loadings"]] <- NULL
 
     out <- lapply(object, function(x) {

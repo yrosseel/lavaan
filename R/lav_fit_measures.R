@@ -53,6 +53,9 @@ fitMeasures.efaList <- fitmeasures.efaList <- function(object,
                    rmsea.notclose.h0 = 0.08),
     vector = "list", ...) {
 
+    # kill object$loadings if present
+    object[["loadings"]] <- NULL
+
     # get fit measures for each model
     res <- simplify2array(lapply(object,
              function(x) lav_fit_measures(object = x,

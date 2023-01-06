@@ -9,8 +9,9 @@ S3 summary and print methods for class \code{efaList}.}
 \method{summary}{efaList}(object,
         nd = 3L, cutoff = 0.3, dot.cutoff = 0.1, alpha.level = 0.01,
         lambda = TRUE, theta = TRUE, psi = TRUE, fit.table = TRUE,
-        eigenvalues = TRUE, sumsq.table = TRUE, lambda.structure = FALSE,
-        se = FALSE, zstat = FALSE, pvalue = FALSE, \dots)
+        fs.determinacy = FALSE, eigenvalues = TRUE, sumsq.table = TRUE, 
+        lambda.structure = FALSE, se = FALSE, zstat = FALSE,
+        pvalue = FALSE, \dots)
 
 \method{print}{efaList.summary}(x, nd = 3L, cutoff = 0.3, dot.cutoff = 0.1,
                alpha.level = 0.01, \dots)
@@ -42,6 +43,9 @@ S3 summary and print methods for class \code{efaList}.}
     summary. Ignored if only a single factor is used.}
 \item{fit.table}{Logical. If \code{TRUE}, show fit information for each
     model.}
+\item{fs.determinacy}{Logical. If \code{TRUE}, show the factor score
+    determinacy values per factor (assuming regression factor scores are used)
+    and their squared values.}
 \item{eigenvalues}{Logical. If \code{TRUE}, include the eigenvalues of the
     sample variance-covariance matrix in the summary.}
 \item{sumsq.table}{Logical. If \code{TRUE}, include a table including sums

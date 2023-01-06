@@ -16,6 +16,7 @@ lav_efa_summary <- function(object,
                                             eigenvalues      = TRUE,
                                             sumsq.table      = TRUE,
                                             lambda.structure = FALSE,
+                                            fs.determinacy   = FALSE,
                                             se               = FALSE,
                                             zstat            = FALSE,
                                             pvalue           = FALSE)) {
@@ -64,6 +65,24 @@ lav_efa_summary <- function(object,
                         class(tmp) <- c("lavaan.vector", "numeric")
                         tmp
                       })
+    }
+
+    fs.determinacy <- NULL
+    # Note: these 'determinacy' values are only properly defined for the
+    #       'regression' factor scores! (If we would apply the same formulas
+    #       for Bartlett factor scores, we would obtain 1's!
+    if(efa.args$fs.determinacy) {
+        fs.determinacy <- lapply(seq_len(nblocks), function(b) {
+                              COR <- cov2cor(COV[[b]]) # just in case
+                              COR.inv <- try(solve(COR), silent = TRUE)
+                              if(inherits(COR.inv, "try-error")) {
+                                  return(rep(as.numeric(NA), nrow(PSI[[b]])))
+                              }
+                              fs <- LAMBDA[[b]] %*% PSI[[b]] # factor structure
+                              out <- sqrt(diag( t(fs) %*% COR.inv %*% fs ))
+                              class(out) <- c("lavaan.vector", "numeric")
+                              out
+                          })
     }
 
     # sum-of-squares table
@@ -170,8 +189,8 @@ lav_efa_summary <- function(object,
                         })
         }
 
-        # psi.se
-        if(se.flag && efa.args$psi) {
+        # ALWAYS use psi.se
+        if(efa.args$psi) {
             psi.se    <- SE[psi.idx]
             names(psi.se)   <- NULL
         }
@@ -252,8 +271,8 @@ lav_efa_summary <- function(object,
         PSI <- NULL
     }
     if(!efa.args$se) {
-        # always keep lambda.se (for the signif stars)
-        theta.se <- psi.se <- NULL
+        # always keep lambda.se and psi.se (for the signif stars)
+        theta.se <- NULL
     }
     if(!efa.args$zstat) {
         lambda.zstat <- theta.zstat <- psi.zstat <- NULL
@@ -266,6 +285,7 @@ lav_efa_summary <- function(object,
                 sumsq.table      = sumsq.table,
                 orthogonal       = object@Options$rotation.args$orthogonal,
                 lambda.structure = lambda.structure,
+                fs.determinacy   = fs.determinacy,
                 lambda           = LAMBDA,
                 theta            = THETA,
                 psi              = PSI,
@@ -287,12 +307,12 @@ lav_efa_summary <- function(object,
 summary.efaList <- function(object, nd = 3L, cutoff = 0.3, dot.cutoff = 0.1,
                             alpha.level = 0.01,
                             lambda = TRUE, theta = TRUE, psi = TRUE,
-                            fit.table = TRUE,
+                            fit.table = TRUE, fs.determinacy = FALSE,
                             eigenvalues = TRUE, sumsq.table = TRUE,
                             lambda.structure = FALSE, se = FALSE,
                             zstat = FALSE, pvalue = FALSE, ...) {
 
-    # kill ojbect$loadings if present
+    # kill object$loadings if present
     object[["loadings"]] <- NULL
 
     # unclass the object
@@ -302,6 +322,7 @@ summary.efaList <- function(object, nd = 3L, cutoff = 0.3, dot.cutoff = 0.1,
     efa.args <- list(lambda = lambda, theta = theta, psi = psi,
                      eigenvalues = eigenvalues, sumsq.table = sumsq.table,
                      lambda.structure = lambda.structure,
+                     fs.determinacy = fs.determinacy,
                      se = se, zstat = zstat, pvalue = pvalue)
 
     # extract useful info from first model

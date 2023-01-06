@@ -20,6 +20,9 @@ function(object, newdata = NULL) {
 # efaList version
 predict.efaList <- function(object, ...) {
 
+    # kill object$loadings if present
+    object[["loadings"]] <- NULL
+
     if(length(object) == 1L) {
         # unlist
         object <- object[[1]]
@@ -40,6 +43,8 @@ lavPredict <- function(object, newdata = NULL, # keep order of predict(), 0.6-7
 
     # catch efaList objects
     if(inherits(object, "efaList")) {
+        # kill object$loadings if present
+        object[["loadings"]] <- NULL
         if(length(object) == 1L) {
             # unlist
             object <- object[[1]]

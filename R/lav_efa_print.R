@@ -49,6 +49,7 @@ print.efaList <- function(x, nd = 3L, cutoff = 0.3,
                                                 eigenvalues      = FALSE,
                                                 sumsq.table      = FALSE,
                                                 lambda.structure = FALSE,
+                                                fs.determinacy   = FALSE,
                                                 se               = FALSE,
                                                 zstat            = FALSE,
                                                 pvalue           = FALSE))
@@ -239,6 +240,7 @@ print.efaList.summary <- function(x, nd = 3L, cutoff = 0.3,
             }
             cat("Number of factors: ", nfactors[f], "\n")
         }
+        # print.lavaan.summary() prints the $efa element (only) or res
         print(res)
     }
 
