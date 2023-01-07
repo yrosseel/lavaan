@@ -150,6 +150,9 @@ print.efaList.summary <- function(x, nd = 3L, cutoff = 0.3,
         } else if(x$rotation == "oblimin") {
             c1 <- c(c1, "Oblimin gamma")
             c2 <- c(c2, x$rotation.args$oblimin.gamma)
+        } else if(x$rotation == "promax") {
+            c1 <- c(c1, "Promax kappa")
+            c2 <- c(c2, x$rotation.args$promax.kappa)
         }
 
         # rotation algorithm

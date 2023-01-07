@@ -1,5 +1,6 @@
 # collection of functions that deal with rotation matrices
 # YR  3 April 2019 -- initial version
+# YR  6 Jan 2023: add promax
 
 # generate random orthogonal rotation matrix
 lav_matrix_rotate_gen <- function(M = 10L, orthogonal = TRUE) {
@@ -97,4 +98,28 @@ lav_matrix_rotate_cm_weights <- function(A = NULL) {
     cm * Kaiser.weights
 }
 
+# taken from the stats package, but skipping varimax (already done):
+lav_matrix_rotate_promax <- function(x, m = 4, varimax.ROT = NULL) {
 
+    # this is based on promax() from factanal.R in /src/library/stats/R
+
+    # 1. create 'ideal' pattern matrix
+    Q <- x * abs(x)^(m-1)
+
+    # 2. regress x on Q to obtain 'rotation matrix' (same as 'procrustes')
+    U <- lm.fit(x, Q)$coefficients
+
+    # 3. rescale so that solve(crossprod(U)) has 1 on the diagonal
+
+    d <- diag(solve(t(U) %*% U))
+    U <- U %*% diag(sqrt(d))
+    dimnames(U) <- NULL
+
+    # 4. create rotated factor matrix
+    z <- x %*% U
+
+    # 5. update rotation amtrix
+    U <- varimax.ROT %*% U  # here we plugin the rotation matrix from varimax
+
+    list(loadings = z, rotmat = U)
+}

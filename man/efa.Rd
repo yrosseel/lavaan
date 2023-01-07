@@ -23,14 +23,15 @@ efa(data = NULL, nfactors = 1L, sample.cov = NULL, sample.nobs = NULL,
 \item{sample.nobs}{Number of observations if the full data frame is missing
     and only the sample variance-covariance matrix is given.}
 \item{rotation}{Character. The rotation method to be used. Possible options
-    are varimax, quartimax, orthomax, oblimin, quartimin, geomin, 
+    are varimax, quartimax, orthomax, oblimin, quartimin, geomin, promax,
     entropy, mccammon, infomax, tandem1, tandem2, oblimax, bentler, simplimax, 
     target, pst (=partially specified target), cf, crawford-ferguson,
     cf-quartimax,  cf-varimax, cf-equamax,
     cf-parsimax, cf-facparsim, biquartimin, bigeomin. The latter two are
-    for bifactor rotation only. The rotation algorithms are similar to
-    those from the GPArotation package, but have been reimplemented for
-    efficiency.}
+    for bifactor rotation only. The rotation algorithms (except promax) 
+    are similar to those from the GPArotation package, but have been 
+    reimplemented for better control. The promax method is taken from the
+    stats package.}
 \item{rotation.args}{List. Options related to the rotation algorithm. The
    default options (and their alternatives) are \code{orthogonal = FALSE},
    \code{row.weights = "default"} (or \code{"kaiser"},
@@ -41,6 +42,7 @@ efa(data = NULL, nfactors = 1L, sample.cov = NULL, sample.nobs = NULL,
    \code{order.lv.by = "index"} (or \code{"sumofsquares"} or \code{"none"}).
    Other options are specific for a particular rotation criterion: 
    \code{geomin.epsilon = 0.001}, \code{orthomax.gamma = 1},
+   \code{promax.kappa = 4},
    \code{cf.gamma = 0}, and \code{oblimin.gamma = 0}.}
 \item{ov.names}{Character vector. The variables names that are needed for
    the EFA. Should be a subset of the variables names in the data.frame.
@@ -55,16 +57,21 @@ efa(data = NULL, nfactors = 1L, sample.cov = NULL, sample.nobs = NULL,
     The latter is only possible if nfactors contains a single (integer) number.}
 }
 \details{
-    The \code{efa} function is essentially a wrapper around the 
+    The \code{efa} function is essentially a wrapper around the
     \code{lavaan} function. It generates the model syntax (for a given number
     of factors) and then calls \code{lavaan()} treating the factors as 
     a single block that should be rotated. The function only supports
     a single group. Categorical data is handled as usual by first computing
     an appropriate (e.g., tetrachoric or polychoric) correlation matrix,
-    and use this correlation matrix as input for the EFA. 
-    There is also support for
+    which is then used as input for the EFA. 
+    There is also (limited) support for
     twolevel data. The same number of factors is then extracted at the
     within and the between level.
+    The promax rotation method (taken from the stats package) is only 
+    provided for convenience. Because promax is a two-step algorithm (first 
+    varimax, then oblique rotation to get simple structure), it does not 
+    use the gpa or pairwise rotation algorithms, and as a result, no
+    standard errors are provided.
 }
 \value{
   If \code{output = "lavaan"}, an object of class 

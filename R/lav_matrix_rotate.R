@@ -13,6 +13,7 @@ lav_matrix_rotate <- function(A           = NULL,      # original matrix
                                                   orthomax.gamma = 1,
                                                   cf.gamma       = 0,
                                                   oblimin.gamma  = 0,
+                                                  promax.kappa   = 4,
                                                   target      = matrix(0,0,0),
                                                   target.mask = matrix(0,0,0) ),
                               init.ROT    = NULL,      # initial rotation matrix
@@ -23,7 +24,7 @@ lav_matrix_rotate <- function(A           = NULL,      # original matrix
                               ov.var      = NULL,      # ov variances
                               warn        = TRUE,      # show warnings?
                               verbose     = FALSE,     # show iterations
-                              algorithm   = "gpa",     # not used for now
+                              algorithm   = "gpa",     # rotation algorithm
                               reflect     = TRUE,      # refect sign
                               order.lv.by = "index",   # how to order the lv's
                               gpa.tol     = 0.00001,   # stopping tol gpa
@@ -44,6 +45,20 @@ lav_matrix_rotate <- function(A           = NULL,      # original matrix
                 algorithm = "none", iter = 0L, converged = TRUE,
                 method.value = 0)
         return(res)
+    }
+
+    # method
+    method <- tolower(method)
+
+    # if promax, skip everything, then call promax() later
+    if(method == "promax") {
+        #orig.algorithm <- algorithm
+        #orig.rstarts <- rstarts
+
+        algorithm <- "none"
+        rstarts <- 0L
+        init.ROT <- NULL
+        ROT <- diag(M)
     }
 
     # check init.ROT
@@ -67,7 +82,6 @@ lav_matrix_rotate <- function(A           = NULL,      # original matrix
     }
 
     # determine method function name
-    method <- tolower(method)
     if(method %in% c("cf-quartimax", "cf-varimax", "cf-equamax",
                      "cf-parsimax", "cf-facparsim")) {
         method.fname <- "lav_matrix_rotate_cf"
@@ -124,7 +138,7 @@ lav_matrix_rotate <- function(A           = NULL,      # original matrix
 
     # set orthogonal option
     if(missing(orthogonal)) {
-        # the default is oblique, except for varimax, entropy and mccammon
+        # the default is oblique, except for varimax, entropy and a few others
         if(method %in% c("varimax", "entropy", "mccammon",
                          "tandem1", "tandem2") ) {
             orthogonal <- TRUE
@@ -143,7 +157,7 @@ lav_matrix_rotate <- function(A           = NULL,      # original matrix
     row.weights <- tolower(row.weights)
     if(row.weights == "default") {
         # the default is "none", except for varimax
-        if(method %in% c("varimax")) {
+        if(method %in% c("varimax", "promax")) {
             row.weights <- "kaiser"
         } else {
             row.weights <- "none"
@@ -152,7 +166,7 @@ lav_matrix_rotate <- function(A           = NULL,      # original matrix
 
     # check algorithm
     algorithm <- tolower(algorithm)
-    if(algorithm %in% c("gpa", "pairwise")) {
+    if(algorithm %in% c("gpa", "pairwise", "none")) {
         # nothing to do
     } else {
         stop("lavaan ERROR: algorithm must be gpa or pairwise")
@@ -234,7 +248,7 @@ lav_matrix_rotate <- function(A           = NULL,      # original matrix
         } else {
             info <- list(method.value = REP[1, best.idx])
         }
-    } else {
+    } else if(algorithm != "none") {
         # initial rotation matrix
         if(is.null(init.ROT)) {
             init.ROT <- diag(M)
@@ -270,11 +284,37 @@ lav_matrix_rotate <- function(A           = NULL,      # original matrix
         PHI    <- diag(ncol(LAMBDA)) # correlation matrix == I
     } else {
         LAMBDA <- t(solve(ROT, t(A)))
-        PHI    <- crossprod(ROT)     # correction matrix
+        PHI    <- crossprod(ROT)     # correlation matrix
     }
 
     # 3. undo row weighting
     LAMBDA <- LAMBDA / weights
+
+    # here, after re-weighted, we run promax if needed
+    if(method == "promax") {
+        LAMBDA.orig <- LAMBDA
+
+        # first, run 'classic' varimax using varimax() from the stats package
+        # we split varimax from promax, so we can control the normalize flag
+        normalize.flag <- row.weights == "kaiser"
+        xx <- stats::varimax(x = LAMBDA, normalize = normalize.flag)
+
+        # promax
+        kappa <- method.args$promax.kappa
+        out <- lav_matrix_rotate_promax(x = xx$loadings, m = kappa,
+                                        varimax.ROT = xx$rotmat)
+        LAMBDA <- out$loadings
+        PHI <- solve(crossprod(out$rotmat))
+
+        # compute 'ROT' to be compatible with GPa
+        ROTt.inv <- solve(crossprod(LAMBDA.orig),
+                          crossprod(LAMBDA.orig, LAMBDA))
+        ROT <- solve(t(ROTt.inv))
+
+        info <- list(algorithm = "promax", iter = 0L, converged = TRUE,
+                     method.value = as.numeric(NA))
+    }
+
     # 3.b undo cov -> cor
     if(std.ov) {
         LAMBDA <- LAMBDA * sqrt(ov.var)

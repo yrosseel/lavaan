@@ -1091,6 +1091,9 @@ print.lavaan.summary <- function(x, ..., nd = 3L) {
             } else if(rotation$rotation == "oblimin") {
                 c1 <- c(c1, "Oblimin gamma")
                 c2 <- c(c2, rotation$rotation.args$oblimin.gamma)
+            } else if(rotation$rotation == "promax") {
+                c1 <- c(c1, "Promax kappa")
+                c2 <- c(c2, rotation$rotation.args$promax.kappa)
             }
 
             # rotation algorithm

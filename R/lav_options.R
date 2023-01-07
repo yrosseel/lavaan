@@ -83,6 +83,7 @@ lav_options_default <- function(mimic = "lavaan") {
                                           orthomax.gamma = 1,
                                           cf.gamma       = 0,
                                           oblimin.gamma  = 0,
+                                          promax.kappa   = 4,
                                           target         = matrix(0,0,0),
                                           target.mask    = matrix(0,0,0),
                                           rstarts        = 30L,
@@ -1766,7 +1767,7 @@ lav_options_set <- function(opt = NULL) {
     }
     if(opt$rotation %in% c("varimax", "quartimax", "orthomax", "cf", "oblimin",
                      "quartimin", "geomin", "entropy", "mccammon", "infomax",
-                     "tandem1", "tandem2", "none",
+                     "tandem1", "tandem2", "none", "promax",
                      "oblimax", "bentler", "simplimax", "target", "pst")) {
         # nothing to do
     } else if(opt$rotation %in% c("cf-quartimax", "cf-varimax", "cf-equamax",
@@ -1779,7 +1780,7 @@ lav_options_set <- function(opt = NULL) {
     } else {
         txt <- c("Rotation method ", dQuote(opt$rotation), " not supported. ",
         "Supported rotation methods are: varimax, quartimax, orthomax, cf, ",
-        "oblimin, quartimin, geomin, entropy, mccammon, infomax,",
+        "oblimin, quartimin, geomin, entropy, mccammon, infomax,", "promax",
         "tandem1, tandem2, oblimax, bentler, simplimax, target, pst, ",
         "crawford-ferguson,  cf-quartimax,  cf-varimax, cf-equamax, ",
         "cf-parsimax, cf-facparsim", "biquartimin", "bigeomin")
@@ -1828,8 +1829,8 @@ lav_options_set <- function(opt = NULL) {
     # set row.weights
     opt$rotation.args$row.weights <- tolower(opt$rotation.args$row.weights)
     if(opt$rotation.args$row.weights == "default") {
-        # the default is "none", except for varimax
-        if(opt$rotation == "varimax") {
+        # the default is "none", except for varimax and promax
+        if(opt$rotation %in% c("varimax", "promax")) {
             opt$rotation.args$row.weights <- "kaiser"
         } else {
             opt$rotation.args$row.weights <- "none"
@@ -1862,6 +1863,16 @@ lav_options_set <- function(opt = NULL) {
         stop("lavaan ERROR: rotation.args$order.lv.by should be \"none\",",
              " \"index\" or \"sumofsquares\".")
     }
+
+    # no standard errors for promax (for now)...
+    if(tolower(opt$rotation) == "promax") {
+        opt$se <- "none"
+        opt$rotation.args$algorithm <- "promax"
+        opt$rotation.args$rstarts <- 0L
+    }
+
+
+
 
     # correlation
     if(opt$correlation) {
