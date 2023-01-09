@@ -24,7 +24,7 @@ estfun.lavaan <- lavScores <- function(object, scaling = FALSE,
   # what if estimator != ML?
   # avoid hard error (using stop); throw a warning, and return an empty matrix
   if(object@Options$estimator != "ML") {
-      warning("lavaan WARNING: scores only availalbe if estimator is ML")
+      warning("lavaan WARNING: scores only available if estimator is ML")
       return(matrix(0,0,0))
   }
 
