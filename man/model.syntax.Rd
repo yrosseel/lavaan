@@ -258,7 +258,7 @@ There can be seven types of formula-like expressions in the model syntax:
 
     \item Formative factors: The \code{"<~"} operator can be used to define
       a formative factor (on the right hand side of the operator), in a
-      similar why as a reflexive factor is defined (using the \code{"=~"}
+      similar way to how a reflexive factor is defined (using the \code{"=~"}
       operator). This is just syntax sugar to define a phantom latent
       variable (equivalent to using \code{"f =~ 0"}). And in addition, the
       (residual) variance of the formative factor is fixed to zero.
