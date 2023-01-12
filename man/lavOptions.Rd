@@ -58,7 +58,7 @@ Model features (always available):
       \code{FALSE}, the metric of each latent variable is determined by fixing 
       the factor loading of the first indicator to 1.0. If there are multiple
       groups, \code{std.lv = TRUE} and \code{"loadings"} is included in 
-      the \code{group.label} argument, then only the latent variances
+      the \code{group.equal} argument, then only the latent variances
       of the first group will be fixed to 1.0, while the latent
       variances of other groups are set free.}
     \item{\code{effect.coding}:}{Can be logical or character string. If
