@@ -734,8 +734,9 @@ lav_tables_pairwise_freq_cell <- function(lavdata = NULL,
     X        <- lavdata@X
     ov.names <- lavdata@ov.names
     ngroups  <- lavdata@ngroups
-    wt       <- lavdata@sampling.weights
-    if (length(wt == 0)) wt <- NULL
+    wt       <- lavdata@weights
+    # if (length(wt) == 0) wt <- NULL
+    print(wt)
 
     # identify 'categorical' variables
     cat.idx <- which(vartable$type %in% c("ordered","factor"))
@@ -768,7 +769,7 @@ lav_tables_pairwise_freq_cell <- function(lavdata = NULL,
                 Y1 <- X[[g]][,idx1]
                 Y2 <- X[[g]][,idx2]
                 # FREQ <- table(Y1, Y2) # we loose missings; useNA is ugly
-                FREQ <- lav_bvord_freq(Y1, Y2, wt)
+                FREQ <- lav_bvord_freq(Y1, Y2, wt[[g]])
 
                 list(   id = rep.int(id, ncell),
                        lhs = rep.int(x[1], ncell),
