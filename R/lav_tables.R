@@ -735,8 +735,6 @@ lav_tables_pairwise_freq_cell <- function(lavdata = NULL,
     ov.names <- lavdata@ov.names
     ngroups  <- lavdata@ngroups
     wt       <- lavdata@weights
-    # if (length(wt) == 0) wt <- NULL
-    print(wt)
 
     # identify 'categorical' variables
     cat.idx <- which(vartable$type %in% c("ordered","factor"))

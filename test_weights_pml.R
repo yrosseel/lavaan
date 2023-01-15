@@ -16,8 +16,9 @@ Data <-
   simulateData(pop.model, sample.nobs = 1000) %>%
   as_tibble() %>%
   mutate(across(everything(), ordered)) %>%
-  mutate(wt = 1)  # abs(rnorm(1000, mean = 1, sd = 2))
-                  # wt = wt / sum(wt) * 1000\
+  mutate(score = apply(., 1, function(x) sum(as.numeric(x))),
+         wt = score + rchisq(1000, 1),
+         wt = wt / sum(wt) * 1000)
 
 # Fit model
 mod <- '
