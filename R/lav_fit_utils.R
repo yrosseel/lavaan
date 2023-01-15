@@ -163,7 +163,12 @@ lav_fit_fiml_corrected <- function(lavobject, version = "V3") {
     }
     Delta  <- lavTech(lavobject, "delta")
     E.inv  <- lavTech(lavobject, "inverted.information")
-    Wmi <- Wmi.g <- lapply(Wm, solve)
+    #Wmi <- Wmi.g <- lapply(Wm, solve) ## <- how wrote this? (I did)
+    Wmi <- Wmi.g <- try(lapply(Wm, lav_matrix_symmetric_inverse),
+                        silent = TRUE)
+    if(inherits(Wmi, "try-error")) {
+        return(empty.list)
+    }
 
     fg <- unlist(lavsamplestats@nobs)/lavsamplestats@ntotal
     # Fixme: as we only need the trace, perhaps we could do this

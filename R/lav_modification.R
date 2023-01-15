@@ -98,7 +98,7 @@ modindices <- function(object,
     V.diag <- diag(V)
     # dirty hack: catch very small or negative values in diag(V)
     # this is needed eg when parameters are not identified if freed-up;
-    idx <- which(V.diag < sqrt(.Machine$double.eps))
+    idx <- which(V.diag < .Machine$double.eps^(1/3)) # was 1/2 <0.6-14
     if(length(idx) > 0L) {
         V.diag[idx] <- as.numeric(NA)
     }

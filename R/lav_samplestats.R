@@ -351,8 +351,10 @@ lav_samplestats_from_data <- function(lavdata           = NULL,
             # only for catML
             if(estimator == "catML") {
                 COV <- cov2cor(lav_matrix_symmetric_force_pd(cov[[g]],
-                                                             tol = 1e-06))
-                out <- lav_samplestats_icov(COV = COV, ridge = 1e-05,
+                                                             tol = 1e-04))
+                # overwrite
+                cov[[g]] <- COV
+                out <- lav_samplestats_icov(COV = COV,
                            x.idx = x.idx[[g]],
                            ngroups = ngroups, g = g, warn = TRUE)
                 icov[[g]] <- out$icov
@@ -362,7 +364,9 @@ lav_samplestats_from_data <- function(lavdata           = NULL,
                 if(conditional.x) {
                     RES.COV <-
                         cov2cor(lav_matrix_symmetric_force_pd(res.cov[[g]],
-                                                              tol = 1e-06))
+                                                              tol = 1e-04))
+                    # overwrite
+                    res.cov[[g]] <- RES.COV
                     out <- lav_samplestats_icov(COV = RES.COV,
                                ridge = 1e-05,
                                x.idx = x.idx[[g]],
