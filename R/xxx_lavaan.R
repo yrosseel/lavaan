@@ -571,10 +571,11 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
         }
 
         # sampling weights? force MLR
-        if(!is.null(sampling.weights) && !opt$.categorical &&
-           opt$estimator %in% c("default", "ML")) {
-            opt$estimator <- "MLR"
-        }
+        # if(!is.null(sampling.weights) && !opt$.categorical &&
+        #    opt$estimator %in% c("default", "ML")) {
+        #     opt$estimator <- "MLR"
+        # }
+        # HJ 15/1/23: I want this to go to PML, so comment this out for now
 
         # constraints
         if(any(nchar(constraints) > 0L) && opt$estimator %in% c("ML")) {
