@@ -47,10 +47,37 @@ lavCor <- function(object,
     # check object class
     if(inherits(object, "lavData")) {
         lav.data <- object
-    } else if(inherits(object, "data.frame")) {
+    } else if(inherits(object, "data.frame") ||
+              inherits(object, "matrix")) {
+        object <- as.data.frame(object)
         NAMES <- names(object)
         if(!is.null(group)) {
             NAMES <- NAMES[- match(group, NAMES)]
+        }
+        if(is.logical(ordered)) {
+            ordered.flag <- ordered
+            if(ordered.flag) {
+                ordered <- NAMES
+                if(length(ov.names.x) > 0L) {
+                    ordered <- ordered[- which(ordered %in% ov.names.x) ]
+                }
+            } else {
+                ordered <- character(0L)
+            }
+        } else if(is.null(ordered)) {
+            ordered <- character(0L)
+        } else if(!is.character(ordered)) {
+            stop("lavaan ERROR: ordered argument must be a character vector")
+        } else if(length(ordered) == 1L && nchar(ordered) == 0L) {
+            ordered <- character(0L)
+        } else {
+            # check if all names in "ordered" occur in the dataset?
+            missing.idx <- which(!ordered %in% NAMES)
+            if(length(missing.idx) > 0L) { # FIXme: warn = FALSE has no eff
+                warning("lavaan WARNING: ordered variable(s): ",
+                     paste(ordered[missing.idx], collapse = " "),
+                     "\n  could not be found in the data and will be ignored")
+            }
         }
         lav.data <- lavData(data = object, group = group,
                             ov.names = NAMES, ordered = ordered,
