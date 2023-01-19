@@ -239,16 +239,21 @@ lav_fit_rmsea_lavobject <- function(lavobject = NULL, fit.measures = "rmsea",
     # FIML?
     fiml.flag <- FALSE
     if(lavobject@Options$missing %in% c("ml", "ml.x")) {
+        fiml.flag <- robust.flag <- TRUE
         # check if we can compute corrected values
         if(scaled.flag) {
             version <- "V3"
         } else {
             version <- "V6"
         }
-        fiml <- lav_fit_fiml_corrected(lavobject, version = version)
-        if(!anyNA(c(fiml$XX3, fiml$df3, fiml$c.hat3, fiml$XX3.scaled))) {
-            robust.flag <- TRUE
-            fiml.flag <- TRUE
+        fiml <- try(lav_fit_fiml_corrected(lavobject, version = version),
+                    silent = TRUE)
+        if(inherits(fiml, "try-error")) {
+            warning("lavaan WARNING: computation of robust RMSEA failed.")
+            fiml <- list(XX3 = as.numeric(NA), df3 = as.numeric(NA),
+                         c.hat3= as.numeric(NA), XX3.scaled = as.numeric(NA))
+        } else if(anyNA(c(fiml$XX3, fiml$df3, fiml$c.hat3, fiml$XX3.scaled))) {
+             warning("lavaan WARNING: computation of robust RMSEA resulted in NA values.")
         }
     }
 
@@ -307,11 +312,15 @@ lav_fit_rmsea_lavobject <- function(lavobject = NULL, fit.measures = "rmsea",
     # robust ingredients
     if(robust.flag) {
         if(categorical.flag) {
-            out <- lav_fit_catml_dwls(lavobject)
-            XX3 <- out$XX3
-            df3 <- out$df3
-            c.hat3 <- c.hat <- out$c.hat3
-            XX3.scaled <- out$XX3.scaled
+            out <- try(lav_fit_catml_dwls(lavobject), silent = TRUE)
+            if(inherits(out, "try-error")) {
+                XX3 <- df3 <- c.hat3 <- XX3.scaled <- as.numeric(NA)
+            } else {
+                XX3 <- out$XX3
+                df3 <- out$df3
+                c.hat3 <- c.hat <- out$c.hat3
+                XX3.scaled <- out$XX3.scaled
+            }
         } else if(fiml.flag) {
             XX3 <- fiml$XX3
             df3 <- fiml$df3
