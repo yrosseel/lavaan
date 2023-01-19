@@ -50,6 +50,7 @@ modindices <- function(object,
     FIT <- lav_object_extended(object, add = FULL, all.free = TRUE)
     LIST <- FIT@ParTable
 
+
     # compute information matrix 'extended model'
     # ALWAYS use *expected* information (for now)
     Information <- lavTech(FIT, paste("information", information, sep = "."))
@@ -238,6 +239,7 @@ modindices <- function(object,
     # remove some columns
     LIST$id <- LIST$ustart <- LIST$exo <- LIST$label <- LIST$plabel <- NULL
     LIST$start <- LIST$free <- LIST$est <- LIST$se <- LIST$prior <- NULL
+    LIST$upper <- LIST$lower <- NULL
 
     if(power) {
         LIST$sepc.lv <- LIST$sepc.nox <- NULL

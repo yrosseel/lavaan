@@ -103,6 +103,21 @@ lav_partable_full <- function(partable = NULL,
             ov.rhs <- rep(OV, times = nx)[idx]
             ov.op  <- rep("~~", length(ov.lhs))
 
+            # remove dummy indicators that correlate with 'proper'
+            # indicators; new in 0.6-14
+            ov.other <- ov.names[!ov.names %in% ov.names.ind]
+            if(length(ov.other) > 0L) {
+                bad.idx <- which( (ov.lhs %in% ov.names &
+                                   ov.rhs %in% ov.other) |
+                                  (ov.lhs %in% ov.other &
+                                   ov.rhs %in% ov.names) )
+                if(length(bad.idx) > 0L) {
+                    ov.lhs <- ov.lhs[-bad.idx]
+                    ov.rhs <- ov.rhs[-bad.idx]
+                    ov.op  <- ov.op[ -bad.idx]
+                }
+            }
+
             # exo ~~
             if(!strict.exo && length(ov.names.x) > 0L) {
                 OV <- ov.names.x
