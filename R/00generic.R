@@ -7,7 +7,8 @@ fitMeasures <- function(object, fit.measures = "all", baseline.model = NULL,
                                        scaled.test       = "default",
                                        rmsea.ci.level    = 0.90,
                                        rmsea.close.h0    = 0.05,
-                                       rmsea.notclose.h0 = 0.08),
+                                       rmsea.notclose.h0 = 0.08,
+                                       cat.check.pd      = TRUE),
                         output = "vector", ...) {
     UseMethod("fitMeasures", object)
 }
@@ -16,7 +17,8 @@ fitmeasures <- function(object, fit.measures = "all", baseline.model = NULL,
                                        scaled.test       = "default",
                                        rmsea.ci.level    = 0.90,
                                        rmsea.close.h0    = 0.05,
-                                       rmsea.notclose.h0 = 0.08),
+                                       rmsea.notclose.h0 = 0.08,
+                                       cat.check.pd      = TRUE),
                         output = "vector", ...) {
     UseMethod("fitmeasures", object)
 }
@@ -29,7 +31,8 @@ setGeneric("fitMeasures",
                             scaled.test       = "default",
                             rmsea.ci.level    = 0.90,
                             rmsea.close.h0    = 0.05,
-                            rmsea.notclose.h0 = 0.08),
+                            rmsea.notclose.h0 = 0.08,
+                            cat.check.pd      = TRUE),
              output = "vector", ...)
     standardGeneric("fitMeasures"))
 setGeneric("fitmeasures",
@@ -38,7 +41,8 @@ setGeneric("fitmeasures",
                             scaled.test       = "default",
                             rmsea.ci.level    = 0.90,
                             rmsea.close.h0    = 0.05,
-                            rmsea.notclose.h0 = 0.08),
+                            rmsea.notclose.h0 = 0.08,
+                            cat.check.pd      = TRUE),
              output = "vector", ...)
     standardGeneric("fitmeasures"))
 

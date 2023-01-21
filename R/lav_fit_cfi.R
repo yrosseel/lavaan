@@ -223,7 +223,8 @@ lav_fit_ifi <- function(X2 = NULL, df = NULL, X2.null = NULL, df.null = NULL) {
 lav_fit_cfi_lavobject <- function(lavobject = NULL, fit.measures = "cfi",
                                   baseline.model = NULL,
                                   standard.test = "standard",
-                                  scaled.test   = "none") {
+                                  scaled.test   = "none",
+                                  cat.check.pd  = TRUE) {
 
     # check lavobject
     stopifnot(inherits(lavobject, "lavaan"))
@@ -341,7 +342,8 @@ lav_fit_cfi_lavobject <- function(lavobject = NULL, fit.measures = "cfi",
     if(robust.flag) {
         XX3 <- X2
         if(categorical.flag) {
-            out <- try(lav_fit_catml_dwls(lavobject), silent = TRUE)
+            out <- try(lav_fit_catml_dwls(lavobject, check.pd = cat.check.pd),
+                       silent = TRUE)
             if(inherits(out, "try-error")) {
                 XX3 <- df3 <- c.hat3 <- XX3.scaled <- as.numeric(NA)
             } else {

@@ -20,7 +20,8 @@ function(object, fit.measures = "all", baseline.model = NULL,
                         scaled.test       = "default",
                         rmsea.ci.level    = 0.90,
                         rmsea.close.h0    = 0.05,
-                        rmsea.notclose.h0 = 0.08),
+                        rmsea.notclose.h0 = 0.08,
+                        cat.check.pd      = TRUE),
          output = "vector", ...) {
     # note: the ... is not used by lavaan
     lav_fit_measures(object = object, fit.measures = fit.measures,
@@ -34,7 +35,8 @@ function(object, fit.measures = "all", baseline.model = NULL,
                         scaled.test       = "default",
                         rmsea.ci.level    = 0.90,
                         rmsea.close.h0    = 0.05,
-                        rmsea.notclose.h0 = 0.08),
+                        rmsea.notclose.h0 = 0.08,
+                        cat.check.pd      = TRUE),
          output = "vector",  ...) {
     # note: the ... is not used by lavaan
     lav_fit_measures(object = object, fit.measures = fit.measures,
@@ -50,7 +52,8 @@ fitMeasures.efaList <- fitmeasures.efaList <- function(object,
                    scaled.test       = "default",
                    rmsea.ci.level    = 0.90,
                    rmsea.close.h0    = 0.05,
-                   rmsea.notclose.h0 = 0.08),
+                   rmsea.notclose.h0 = 0.08,
+                   cat.check.pd      = TRUE),
     vector = "list", ...) {
 
     # kill object$loadings if present
@@ -93,7 +96,8 @@ lav_fit_measures <- function(object, fit.measures = "all",
                                             scaled.test       = "default",
                                             rmsea.ci.level    = 0.90,
                                             rmsea.close.h0    = 0.05,
-                                            rmsea.notclose.h0 = 0.08),
+                                            rmsea.notclose.h0 = 0.08,
+                                            cat.check.pd      = TRUE),
                              output = "vector") {
 
     # default fm.args
@@ -101,7 +105,8 @@ lav_fit_measures <- function(object, fit.measures = "all",
                             scaled.test       = "default",
                             rmsea.ci.level    = 0.90,
                             rmsea.close.h0    = 0.05,
-                            rmsea.notclose.h0 = 0.08)
+                            rmsea.notclose.h0 = 0.08,
+                            cat.check.pd      = TRUE)
     if(!missing(fm.args)) {
         fm.args <- modifyList(default.fm.args, fm.args)
     } else {
@@ -398,7 +403,8 @@ lav_fit_measures <- function(object, fit.measures = "all",
                                            fit.measures   = fit.measures,
                                            baseline.model = baseline.model,
                                            standard.test  = standard.test,
-                                           scaled.test    = scaled.test))
+                                           scaled.test    = scaled.test,
+                                           cat.check.pd   = fm.args$cat.check.pd))
     }
 
     # INFORMATION CRITERIA
@@ -447,7 +453,8 @@ lav_fit_measures <- function(object, fit.measures = "all",
                                      scaled.test       = scaled.test,
                                      ci.level          = rmsea.ci.level,
                                      close.h0          = rmsea.close.h0,
-                                     notclose.h0       = rmsea.notclose.h0))
+                                     notclose.h0       = rmsea.notclose.h0,
+                                     cat.check.pd      = fm.args$cat.check.pd))
     }
 
     # SRMR and friends

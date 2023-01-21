@@ -200,7 +200,8 @@ lav_fit_rmsea_lavobject <- function(lavobject = NULL, fit.measures = "rmsea",
                                     standard.test = "standard",
                                     scaled.test   = "none",
                                     ci.level = 0.90,
-                                    close.h0 = 0.05, notclose.h0 = 0.08) {
+                                    close.h0 = 0.05, notclose.h0 = 0.08,
+                                    cat.check.pd = TRUE) {
 
     # check lavobject
     stopifnot(inherits(lavobject, "lavaan"))
@@ -312,7 +313,8 @@ lav_fit_rmsea_lavobject <- function(lavobject = NULL, fit.measures = "rmsea",
     # robust ingredients
     if(robust.flag) {
         if(categorical.flag) {
-            out <- try(lav_fit_catml_dwls(lavobject), silent = TRUE)
+            out <- try(lav_fit_catml_dwls(lavobject, check.pd = cat.check.pd),
+                       silent = TRUE)
             if(inherits(out, "try-error")) {
                 XX3 <- df3 <- c.hat3 <- XX3.scaled <- as.numeric(NA)
             } else {

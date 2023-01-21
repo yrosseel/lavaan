@@ -14,14 +14,16 @@ fitMeasures(object, fit.measures = "all", baseline.model = NULL,
                            scaled.test       = "default",
                            rmsea.ci.level    = 0.90,
                            rmsea.close.h0    = 0.05,
-                           rmsea.notclose.h0 = 0.08),
+                           rmsea.notclose.h0 = 0.08,
+                           cat.check.pd      = TRUE),
             output = "vector", ...)
 fitmeasures(object, fit.measures = "all", baseline.model = NULL, 
             fm.args = list(standard.test     = "default",
                            scaled.test       = "default",
                            rmsea.ci.level    = 0.90,
                            rmsea.close.h0    = 0.05,
-                           rmsea.notclose.h0 = 0.08),
+                           rmsea.notclose.h0 = 0.08,
+                           cat.check.pd      = TRUE),
             output = "vector", ...)
 }
 \arguments{
@@ -45,7 +47,10 @@ interval for the rmsea value. The \code{rmsea.close.h0} element
 is the rmsea value
 that is used under the null hypothesis that \code{rmsea <= rmsea.close.h0}.
 The \code{rmsea.notclose.h0} element is the rmsea value that is used under the
-null hypothesis that \code{rsmsea >= rmsea.notclose.h0}.}
+null hypothesis that \code{rsmsea >= rmsea.notclose.h0}. 
+The \code{cat.check.pd} element is only used when data is categorical. If
+\code{TRUE}, robust values for RMSEA and CFI are only computed if the input
+correlation matrix is positive-definite (for all groups).}
 \item{output}{Character. If \code{"vector"} (the default), display the
 output as a named (lavaan-formatted) vector. If \code{"matrix"}, display
 the output as a 1-column matrix. If \code{"text"}, display the

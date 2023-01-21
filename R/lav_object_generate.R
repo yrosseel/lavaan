@@ -418,10 +418,18 @@ lav_object_catml <- function(lavobject = NULL) {
     for(g in seq_len(lavdata@ngroups)) {
         lavsamplestats@WLS.V[[g]] <- NULL
         lavsamplestats@WLS.VD[[g]] <- NULL
-        COV <- cov2cor(lav_matrix_symmetric_force_pd(lavsamplestats@cov[[g]],
-                                                     tol = 1e-06))
-        lavsamplestats@cov[[g]] <- COV
-        lavsamplestats@var[[g]] <- diag(COV)
+        COR <- lavsamplestats@cov[[g]]
+        # check if COV is pd or not
+        ev <- eigen(COR, symmetric = TRUE, only.values = TRUE)$values
+        if(any(ev < .Machine$double.eps^(1/2))) {
+            # not PD!
+            COV <- cov2cor(lav_matrix_symmetric_force_pd(COR, tol = 1e-04))
+            lavsamplestats@cov[[g]] <- COV
+            lavsamplestats@var[[g]] <- diag(COV)
+            refit <- TRUE
+        } else {
+            COV <- COR
+        }
 
         out <- lav_samplestats_icov(COV = COV, ridge = 1e-05,
                                     x.idx = lavsamplestats@x.idx[[g]],
