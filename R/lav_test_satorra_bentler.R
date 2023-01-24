@@ -135,15 +135,16 @@ lav_test_satorra_bentler <- function(lavobject        = NULL,
         # still NULL? (perhaps estimator = ML)
         if(is.null(Gamma[[1]])) {
             if(!is.null(lavobject)) {
-                Gamma <- lavGamma(lavobject)
+                Gamma <- lav_object_gamma(lavobject, model.based = FALSE)
             } else {
-                Gamma <- lavGamma(lavdata,
-                    missing = lavoptions$missing,
-                    fixed.x = lavoptions$fixed.x,
-                    conditional.x = lavoptions$conditional.x,
-                    meanstructure = lavoptions$meanstructure,
-                    gamma.n.minus.one = lavoptions$gamma.n.minus.one,
-                    gamma.unbiased = lavoptions$gamma.unbiased)
+                Gamma <- lav_object_gamma(lavobject = NULL,
+                                          lavdata        = lavdata,
+                                          lavoptions     = lavoptions,
+                                          lavsamplestats = lavsamplestats,
+                                          lavh1          = NULL,
+                                          lavimplied     = NULL,
+                                          ADF            = TRUE,
+                                          model.based    = FALSE)
             }
         }
     }

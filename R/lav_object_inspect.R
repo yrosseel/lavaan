@@ -2197,7 +2197,7 @@ lav_object_inspect_sampstat_gamma <- function(object,
     if(!is.null(object@SampleStats@NACOV[[1]])) {
         OUT <- object@SampleStats@NACOV
     } else {
-        OUT <- lavGamma(object)
+        OUT <- lav_object_gamma(object)
     }
 
     if(add.labels) {
@@ -2743,9 +2743,9 @@ lav_object_inspect_UGamma <- function(object,
     OUT <- out$UGamma
 
     # labels
-    if(add.labels) {
+    #if(add.labels) {
        # colnames(OUT) <- rownames(OUT) <-
-    }
+    #}
 
     # class
     if(add.class) {
@@ -2768,24 +2768,9 @@ lav_object_inspect_UfromUGamma <- function(object,
        # colnames(OUT) <- rownames(OUT) <-
     #}
 
-    lavmodel <- object@Model
-    lavdata  <- object@Data
-
-    if(lavmodel@ngroups == 1L && drop.list.single.group) {
-        OUT <- OUT[[1]]
-        # class
-        if(add.class) {
-            class(OUT) <- c("lavaan.matrix.symmetric", "matrix")
-        }
-    } else {
-        if(length(lavdata@group.label) > 0L) {
-            names(OUT) <- unlist(lavdata@group.label)
-        }
-        if(add.class) {
-            for(g in seq_len(lavmodel@ngroups)) {
-                class(OUT[[g]]) <- c("lavaan.matrix.symmetric", "matrix")
-            }
-        }
+    # class
+    if(add.class) {
+        class(OUT) <- c("lavaan.matrix.symmetric", "matrix")
     }
 
     OUT

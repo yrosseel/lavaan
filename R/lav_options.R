@@ -760,7 +760,9 @@ lav_options_set <- function(opt = NULL) {
         }
         bad.idx <- which(!opt$test %in% c("standard", "none",
                                           "browne.residual.nt", # == standard
-                                          "browne.residual.adf"))
+                                          "browne.residual.nt.model",
+                                          "browne.residual.adf",
+                                          "browne.residual.adf.model"))
         if(length(bad.idx) > 0L) {
             stop("lavaan ERROR: invalid value(s) in test= argument when estimator is GLS:\n\t\t",
                  paste(opt$test[bad.idx], collapse = " "), "\n")
@@ -792,7 +794,9 @@ lav_options_set <- function(opt = NULL) {
         }
         bad.idx <- which(!opt$test %in% c("standard", "none",
                                           "browne.residual.nt",
-                                          "browne.residual.adf"))
+                                          "browne.residual.nt.model",
+                                          "browne.residual.adf",
+                                          "browne.residual.adf.model"))
         if(length(bad.idx) > 0L) {
             stop("lavaan ERROR: invalid value(s) in test= argument when estimator is NTRLS:\n\t\t",
                  paste(opt$test[bad.idx], collapse = " "), "\n")
@@ -855,7 +859,9 @@ lav_options_set <- function(opt = NULL) {
         }
         bad.idx <- which(!opt$test %in% c("standard", "none",
                                           "browne.residual.nt",
-                                          "browne.residual.adf")) # == standard
+                                          "browne.residual.nt.model",
+                                          "browne.residual.adf", # == standard
+                                          "browne.residual.adf.model"))
         if(length(bad.idx) > 0L) {
             stop("lavaan ERROR: invalid value(s) in test= argument when estimator is WLS:\n\t\t",
                  paste(opt$test[bad.idx], collapse = " "), "\n")
@@ -894,14 +900,18 @@ lav_options_set <- function(opt = NULL) {
         bad.idx <- which(!opt$test %in% c("standard", "none",
                                           "satorra.bentler",
                                           "browne.residual.nt", # == standard
-                                          "browne.residual.adf"))
+                                          "browne.residual.nt.model",
+                                          "browne.residual.adf",
+                                          "browne.residual.adf.model"))
         if(length(bad.idx) > 0L) {
             stop("lavaan ERROR: invalid value(s) in test= argument when estimator is DLS:\n\t\t",
                  paste(opt$test[bad.idx], collapse = " "), "\n")
         }
 
         # always include "satorra.bentler"
-        if(opt$test[1] %in% c("browne.residual.nt", "browne.residual.adf")) {
+        if(opt$test[1] %in% c("browne.residual.nt", "browne.residual.adf",
+                              "browne.residual.nt.model",
+                              "browne.residual.adf.model")) {
             opt$test <- union("satorra.bentler", opt$test)
         }
 
@@ -1680,12 +1690,15 @@ lav_options_set <- function(opt = NULL) {
                             "yuan.bentler", "yuan.bentler.mplus",
                             "mean.var.adjusted", "scaled.shifted",
                             "browne.residual.adf", "browne.residual.nt",
+                            "browne.residual.nt.model",
+                            "browne.residual.adf.model",
                             "bollen.stine"))
     if(length(wrong.idx) > 0L) {
         txt <- c("invalid option(s) for test argument: ",
                  paste(dQuote(opt$test[wrong.idx]), collapse = " "), ". ",
                  "Possible options are: \"none\", \"standard\",
                  \"browne.residual.adf\", \"browne.residual.nt\",
+                 \"browne.residual.adf.model\", \"browne.residual.nt.model\",
                  \"satorra.bentler\", \"yuan.bentler\", \"yuan.bentler.mplus\",
                  \"mean.var.adjusted\",
                  \"scaled.shifted\", or \"bollen.stine\"")

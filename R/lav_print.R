@@ -50,6 +50,7 @@ print.lavaan.matrix.symmetric <- function(x, ..., nd = 3L, shift = 0L,
     # print only lower triangle of a symmetric matrix
     # this function was inspired by the `print.correlation' function
     # in package nlme
+    x <- as.matrix(x) # just in case
     y <- x; y <- unclass(y)
     ll <- lower.tri(x, diag = TRUE)
     y[ ll] <- format(round(x[ll], digits = nd))
@@ -79,6 +80,7 @@ print.lavaan.matrix.symmetric <- function(x, ..., nd = 3L, shift = 0L,
 
 
 print.lavaan.matrix <- function(x, ..., nd = 3L, shift = 0L) {
+    x <- as.matrix(x) # just in case
     y <- unclass(x)
     if(!is.null(colnames(x))) {
       colnames(y) <- abbreviate(colnames(x), minlength = nd + 3L)

@@ -13,18 +13,24 @@ lav_h1_implied_logl <- function(lavdata        = NULL,
                 implied <- list(cov  = lapply(lavsamplestats@missing.h1,
                                               "[[", "sigma"),
                                 mean = lapply(lavsamplestats@missing.h1,
-                                              "[[", "mu"))
+                                              "[[", "mu"),
+                                th      = lavsamplestats@th,
+                                group.w = lavsamplestats@group.w)
             }
         } else {
             if(lavoptions$conditional.x) {
                 implied <- list(res.cov    = lavsamplestats@res.cov,
                                 res.int    = lavsamplestats@res.int,
                                 res.slopes = lavsamplestats@res.slopes,
-                                res.th     = lavsamplestats@res.th)
+                                cov.x      = lavsamplestats@cov.x,
+                                mean.x     = lavsamplestats@mean.x,
+                                res.th     = lavsamplestats@res.th,
+                                group.w    = lavsamplestats@group.w)
             } else {
-                implied <- list(cov    = lavsamplestats@cov,
-                                mean   = lavsamplestats@mean,
-                                th     = lavsamplestats@th)
+                implied <- list(cov     = lavsamplestats@cov,
+                                mean    = lavsamplestats@mean,
+                                th      = lavsamplestats@th,
+                                group.w = lavsamplestats@group.w)
             }
         } # complete data
 

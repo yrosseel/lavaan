@@ -10,7 +10,8 @@
 # - handle 'fixed.x' exogenous covariates
 
 
-# - YR 3 Dec 2015: allow for conditional.x = TRUE
+# - YR  3 Dec 2015: allow for conditional.x = TRUE
+# - YR 22 Jan 2023: add model.based= argument (if object is lavaan object)
 
 # generic public function (not exported yet)
 # input for lavGamma can be lavobject, lavdata, data.frame, or matrix
@@ -18,43 +19,22 @@ lavGamma <- function(object, group = NULL, missing = "listwise",
                      ov.names.x = NULL, fixed.x = FALSE, conditional.x = FALSE,
                      meanstructure = FALSE, slopestructure = FALSE,
                      gamma.n.minus.one = FALSE, gamma.unbiased = FALSE,
-                     ADF = TRUE, NT.rescale = FALSE,
-                     Mplus.WLS = FALSE, add.labels) {
+                     ADF = TRUE, model.based = FALSE, NT.rescale = FALSE,
+                     Mplus.WLS = FALSE, add.labels = FALSE) {
 
-    # no support for missing = "ml" (and model-based Gamma) yet
-    if(missing != "listwise") {
-        ### FIXME!!!!!
-        return(NULL) # for now!
-    }
+    # check object
 
+    # 1. object is lavaan object
     if(inherits(object, "lavaan")) {
-        lavdata <- object@Data
-        if(missing(missing)) {
-            missing <- object@Options$missing
-            if(missing != "listwise") {
-                ### FIXME!!!!!
-                return(NULL) # for now!
-            }
-        }
-        if(missing(fixed.x)) {
-            fixed.x <- object@Options$fixed.x
-        }
-        if(missing(conditional.x)) {
-            conditional.x <- object@Options$conditional.x
-        }
-        if(missing(meanstructure)) {
-            meanstructure <- object@Options$meanstructure
-        }
-        if(missing(gamma.n.minus.one)) {
-            gamma.n.minus.one <- object@Options$gamma.n.minus.one
-        }
-        if(missing(gamma.unbiased)) {
-            gamma.unbiased <- object@Options$gamma.unbiased
-        }
-    } else if(inherits(object, "lavData")) {
+        lav_object_gamma(lavobject = object, ADF = ADF,
+                         model.based = model.based, Mplus.WLS = Mplus.WLS)
+    }
+    else if(inherits(object, "lavData")) {
         lavdata <- object
+        model.based <- FALSE
     } else if(inherits(object, "data.frame") ||
               inherits(object, "matrix")) {
+        model.based <- FALSE
         NAMES <- names(object)
         if(!is.null(NAMES) && !is.null(group)) {
             NAMES <- NAMES[- match(group, NAMES)]
@@ -71,8 +51,14 @@ lavGamma <- function(object, group = NULL, missing = "listwise",
 
     # extract data
     Y <- lavdata@X
+    if(conditional.x) {
+        eXo <- lavdata@eXo
+        for(g in seq_len(lavdata@ngroups)) {
+            Y[[g]] <- cbind(Y[[g]], eXo[[g]])
+        }
+    }
 
-    # x-covariates?
+    # x.idx
     x.idx <- lapply(seq_len(lavdata@ngroups),
                     function(g) match(lavdata@ov.names.x[[g]],
                                       lavdata@ov.names[[g]]) )
@@ -84,7 +70,9 @@ lavGamma <- function(object, group = NULL, missing = "listwise",
             cluster.idx <- NULL
         }
         if(ADF) {
-            out <- lav_samplestats_Gamma(Y              = Y[[g]],
+            out <- lav_samplestats_Gamma(Y          = Y[[g]],
+                                     Mu             = NULL,
+                                     Sigma          = NULL,
                                      x.idx          = x.idx[[g]],
                                      cluster.idx    = cluster.idx,
                                      fixed.x        = fixed.x,
@@ -95,21 +83,133 @@ lavGamma <- function(object, group = NULL, missing = "listwise",
                                      unbiased       = gamma.unbiased,
                                      Mplus.WLS      = Mplus.WLS)
         } else {
-            # FIXME: allow for moments only
-            # and provide COV/MEAN/...
-            out <- lav_samplestats_Gamma_NT(Y       = Y[[g]],
-                                     wt             = NULL, # for now
-                                     rescale        = NT.rescale,
-                                     x.idx          = x.idx[[g]],
-                                     fixed.x        = fixed.x,
-                                     conditional.x  = conditional.x,
-                                     meanstructure  = meanstructure,
-                                     slopestructure = conditional.x)
+            out <- lav_samplestats_Gamma_NT(Y   = Y[[g]],
+                                 wt             = NULL, # for now
+                                 rescale        = NT.rescale,
+                                 x.idx          = x.idx[[g]],
+                                 fixed.x        = fixed.x,
+                                 conditional.x  = conditional.x,
+                                 meanstructure  = meanstructure,
+                                 slopestructure = conditional.x)
         }
         out})
 
+    # todo: labels
+
     OUT
 }
+
+
+
+# for internal use -- lavobject or internal slots
+lav_object_gamma <- function(lavobject = NULL,
+                             # or individual slots
+                             lavdata        = NULL,
+                             lavoptions     = NULL,
+                             lavsamplestats = NULL,
+                             lavh1          = NULL,
+                             lavimplied     = NULL,
+                             # other options
+                             ADF = TRUE, model.based = FALSE,
+                             Mplus.WLS = FALSE) {
+
+    # extract slots
+    if(!is.null(lavobject)) {
+        lavdata        <- lavobject@Data
+        lavoptions     <- lavobject@Options
+        lavsamplestats <- lavobject@SampleStats
+        lavh1          <- lavobject@h1
+        lavimplied     <- lavobject@implied
+    }
+
+    missing <- lavoptions$missing
+    if(!missing %in% c("listwise", "pairwise")) {
+            model.based <- TRUE
+    }
+    fixed.x           <- lavoptions$fixed.x
+    conditional.x     <- lavoptions$conditional.x
+    meanstructure     <- lavoptions$meanstructure
+    gamma.n.minus.one <- lavoptions$gamma.n.minus.one
+    gamma.unbiased    <- lavoptions$gamma.unbiased
+
+    if(ADF && model.based && conditional.x) {
+        stop("lavaan ERROR: ADF + model.based + conditional.x is not supported yet.")
+    }
+
+    # output container
+    OUT <- vector("list", length = lavdata@ngroups)
+
+    # compute Gamma matrix for each group
+    for(g in seq_len(lavdata@ngroups)) {
+        x.idx <- lavsamplestats@x.idx[[g]]
+        COV <- MEAN <- NULL
+        if(!ADF || model.based) {
+            implied <- lavh1$implied   # saturated/unstructured
+            if(model.based) {
+                implied <- lavimplied   # model-based/structured
+            }
+            if(conditional.x) {
+                # convert to joint COV/MEAN
+                res.S      <- implied$res.cov[[g]]
+                res.slopes <- implied$res.slopes[[g]]
+                res.int    <- implied$res.int[[g]]
+                S.xx       <- implied$cov.x[[g]]
+                M.x        <- implied$mean.x[[g]]
+
+                S.yy <- res.S + res.slopes %*% S.xx %*% t(res.slopes)
+                S.yx <- res.slopes %*% S.xx
+                S.xy <- S.xx %*% t(res.slopes)
+                M.y <- res.int + res.slopes %*% M.x
+
+                COV <- rbind( cbind(S.yy, S.yx), cbind(S.xy, S.xx) )
+                MEAN <- c(M.y, M.x)
+            } else {
+                # not conditional.x
+                COV  <- implied$cov[[g]]
+                MEAN <- implied$mean[[g]]
+            }
+        } # COV/MEAN
+
+        if(ADF) {
+            if(conditional.x) {
+                Y <- cbind(lavdata@X[[g]], lavdata@eXo[[g]])
+            } else {
+                Y <- lavdata@X[[g]]
+            }
+            if(length(lavdata@cluster) > 0L) {
+                cluster.idx <- lavdata@Lp[[g]]$cluster.idx[[2]]
+            } else {
+                cluster.idx <- NULL
+            }
+            OUT[[g]] <- lav_samplestats_Gamma(Y = Y,
+                                 Mu             = MEAN,
+                                 Sigma          = COV,
+                                 x.idx          = x.idx,
+                                 cluster.idx    = cluster.idx,
+                                 fixed.x        = fixed.x,
+                                 conditional.x  = conditional.x,
+                                 meanstructure  = meanstructure,
+                                 slopestructure = conditional.x,
+                                 gamma.n.minus.one = gamma.n.minus.one,
+                                 unbiased       = gamma.unbiased,
+                                 Mplus.WLS      = Mplus.WLS)
+        } else {
+            OUT[[g]] <- lav_samplestats_Gamma_NT(COV = COV,  # joint!
+                                      MEAN           = MEAN, # joint!
+                                      x.idx          = x.idx,
+                                      fixed.x        = fixed.x,
+                                      conditional.x  = conditional.x,
+                                      meanstructure  = meanstructure,
+                                      slopestructure = conditional.x)
+        }
+    } # g
+
+    OUT
+}
+
+
+
+
 
 # NOTE:
 #  - three types:
@@ -138,6 +238,7 @@ lav_samplestats_Gamma_NT <- function(Y              = NULL, # should include
         fixed.x       <- FALSE
     }
 
+    # compute COV from Y
     if(is.null(COV)) {
         stopifnot(!is.null(Y))
 
@@ -145,16 +246,23 @@ lav_samplestats_Gamma_NT <- function(Y              = NULL, # should include
         Y <- unname(as.matrix(Y)); N <- nrow(Y)
         if(is.null(wt)) {
             COV <- cov(Y)
+            if(rescale) {
+                COV <- COV * (N-1) / N # (normal) ML version
+            }
         } else {
             out <- stats::cov.wt(Y, wt = wt, method = "ML")
             COV <- out$cov
         }
+    } else {
+        if(!missing(rescale)) {
+            warning("lavaan WARNING: rescale= argument has no effect if COV is given")
+        }
+        if(!missing(wt)) {
+            warning("lavaan WARNING: wt= argument has no effect if COV is given")
+        }
     }
 
-    if(rescale && is.null(wt)) {
-        COV <- COV * (N-1) / N # ML version
-    }
-
+    # if needed, compute MEAN from Y
     if(conditional.x && length(x.idx) > 0L && is.null(MEAN) &&
        (meanstructure || slopestructure)) {
        stopifnot(!is.null(Y))
@@ -265,7 +373,7 @@ lav_samplestats_Gamma_NT <- function(Y              = NULL, # should include
 #  - new in 0.6-13: add unbiased = TRUE (for the 'plain' setting only)
 
 # ADF THEORY
-lav_samplestats_Gamma <- function(Y,
+lav_samplestats_Gamma <- function(Y,                          # Y+X if cond!
                                   Mu                 = NULL,
                                   Sigma              = NULL,
                                   x.idx              = integer(0L),
@@ -300,6 +408,7 @@ lav_samplestats_Gamma <- function(Y,
             stopifnot(!is.null(Mu))
             sigma <- c(as.numeric(Mu), lav_matrix_vech(Sigma))
         } else {
+            Mu <- colMeans(Y, na.rm = TRUE) # for centering!
             sigma <- lav_matrix_vech(Sigma)
         }
     } else {
@@ -366,6 +475,7 @@ lav_samplestats_Gamma <- function(Y,
     } else if(!conditional.x && fixed.x) {
 
         if(model.based) {
+            Yc <- t( t(Y) - as.numeric(Mu) )
             Y.bar <- colMeans(Y, na.rm = TRUE)
             res.cov <- ( Sigma[-x.idx, -x.idx, drop = FALSE] -
                          Sigma[-x.idx, x.idx, drop = FALSE] %*%
@@ -387,6 +497,8 @@ lav_samplestats_Gamma <- function(Y,
             yhat <- cbind(1, Y[,x.idx]) %*% rbind(res.int, res.slopes)
             YHAT <- cbind(yhat, Y[,x.idx])
             YHATc <- t( t(YHAT) - YHAT.bar )
+            idx1 <- lav_matrix_vech_col_idx(p)
+            idx2 <- lav_matrix_vech_row_idx(p)
             if(meanstructure) {
                 Z <- ( cbind(Y, Yc[,idx1, drop = FALSE] *
                                 Yc[,idx2, drop = FALSE] ) -
