@@ -55,8 +55,8 @@ lav_utils_get_npar <- function(lavobject) {
 # N versus N-1 (or N versus N-G in the multiple group setting)
 # Changed 0.5-15: suggestion by Mark Seeto
 lav_utils_get_ntotal <- function(lavobject) {
-    if(lavobject@Options$estimator %in% c("ML","PML","FML") &&
-       lavobject@Options$likelihood == "normal") {
+    if(lavobject@Options$estimator %in% c("ML","PML","FML","catML") &&
+       lavobject@Options$likelihood %in% c("default", "normal")) {
         N <- lavobject@SampleStats@ntotal
     } else {
         N <- lavobject@SampleStats@ntotal - lavobject@SampleStats@ngroups

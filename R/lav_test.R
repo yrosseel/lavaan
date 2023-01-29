@@ -145,7 +145,7 @@ lav_test_rename <- function(test, check = FALSE) {
     }
     if(length(target.idx <- which(test %in%
         c("browne.residuals.nt.model", "browne.residual.nt.model",
-          "rls", "browne.rls", "ntrls"))) > 0L) {
+          "rls", "browne.rls", "nt.rls", "nt-rls", "ntrls"))) > 0L) {
         test[target.idx] <- "browne.residual.nt.model"
     }
 

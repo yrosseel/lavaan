@@ -20,7 +20,7 @@ lavCor <- function(object,
                    # other options (for lavaan)
                    ...,
                    cor.smooth = FALSE,
-                   cor.smooth.tol = 1e-06,
+                   cor.smooth.tol = 1e-04, # was 1e-06 in <0.6-14
                    output = "cor") {
 
     # shortcut if object = lavaan object
