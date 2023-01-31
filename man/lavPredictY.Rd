@@ -14,7 +14,12 @@ lavPredictY(object, newdata = NULL,
 \arguments{
 \item{object}{An object of class \code{\linkS4class{lavaan}}.}
 \item{newdata}{An optional data.frame, containing the same variables as
-the data.frame used when fitting the model in object.}
+the data.frame that was used when fitting the model in \code{object}. 
+This data.frame should also include
+the y-variables (although their values will be ignored).
+Note that if no meanstructure was used in the original fit, we will
+use the saturated sample means of the original fit as substitutes for the
+model-implied means. Alternatively, refit the model using \code{meanstructure = TRUE}.}
 \item{ynames}{The names of the observed variables that should be treated as the
 y-variables. It is for these variables that the function will predict 
 the (model-based) values for each observation. Can also be a list to allow 

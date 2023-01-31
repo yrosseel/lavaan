@@ -8,7 +8,7 @@ correlations.}
 lavCor(object, ordered = NULL, group = NULL, missing = "listwise", 
        ov.names.x = NULL, se = "none", test = "none", 
        estimator = "two.step", baseline = FALSE, ..., 
-       cor.smooth = FALSE, cor.smooth.tol = 1e-06, output = "cor")
+       cor.smooth = FALSE, cor.smooth.tol = 1e-04, output = "cor")
 }
 \arguments{
 \item{object}{Either a \code{data.frame}, or an object of class
