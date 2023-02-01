@@ -1228,6 +1228,27 @@ lav_options_set <- function(opt = NULL) {
         # missing
         opt$missing <- "listwise" # for now (until we have two-stage working)
 
+        # options
+        if(is.null(opt$estimator.args)) {
+            opt$estimator.args <- list(thetapsi.method = "ULS",
+                                       lambda.cutoff = 1.05)
+        } else {
+            if(is.null(opt$estimator.args$thetapsi.method)) {
+                opt$estimator.args$thetapsi.method <- "GLS"
+            } else {
+                opt$estimator.args$thetapsi.method <-
+                    toupper(opt$estimator.args$thetapsi.method)
+                if(opt$estimator.args$thetapsi.method %in% c("ULS",
+                                                             "GLS", "WLS")) {
+                    if(opt$estimator.args$thetapsi.method == "WLS") {
+                        opt$estimator.args$thetapsi.method <- "GLS"
+                    }
+                } else {
+                    stop("lavaan ERROR: unknown value for estimator.args$thetapsi.method option: ", opt$estimator.args$thetapsi.method)
+                }
+            }
+        }
+
         # brute-force override
         opt$optim.method <- "noniter"
         opt$start <- "simple"

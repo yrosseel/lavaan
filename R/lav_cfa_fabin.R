@@ -89,9 +89,8 @@ lav_cfa_fabin3 <- function(S, marker.idx = NULL, lambda.nonzero.idx = NULL) {
 #
 # YR 17 oct 2022: - add lower/upper bounds for theta
 #                 - use 'lambda' correction to ensure PSI is positive definite
-#
 lav_cfa_lambda2thetapsi <- function(lambda = NULL, S = NULL, S.inv = NULL,
-                                    GLS = FALSE, bounds = TRUE) {
+                                    GLS = FALSE, nobs = 20L) {
     LAMBDA <- as.matrix(lambda)
     nvar <- nrow(LAMBDA); nfac <- ncol(LAMBDA)
 
@@ -107,27 +106,33 @@ lav_cfa_lambda2thetapsi <- function(lambda = NULL, S = NULL, S.inv = NULL,
         #D <- W %*% LAMBDA %*% M # symmmetric
         D <- crossprod(M, tLW)
         #theta <- solve(W*W - D*D, diag(W %*% S %*% W - D %*% S %*% D))
-        theta <- solve(W*W - D*D, diag(W - D)) # because W == S^{-1}
+        theta  <- try(solve(W*W - D*D, diag(W - D)), # because W == S^{-1}
+                      silent = TRUE)
+        if(inherits(theta, "try-error")) {
+            # what to do?
+            warning("lavaan WARNING: problem computing THETA values; trying pace algorithm")
+            theta <- lav_efa_pace(S = S, nfactor = nfac, theta.only = TRUE)
+		}
     } else {
         # see Hagglund 1982, section 4
         M <- solve(crossprod(LAMBDA), t(LAMBDA)) # ULS mapping function
         D <- LAMBDA %*% M
-        theta <-  solve(diag(nvar) - D*D, diag(S - (D %*% S %*% D)))
-    }
-
-    # check bounds for theta
-    if(bounds) {
-        diagS <- diag(S)
-
-        # nonnegative
-        too.small.idx <- which(theta < 0)
-        theta[too.small.idx] <- 0
-
-        # not larger than diag(S)
-        too.large.idx <- which(theta > diagS)
-        if(length(too.large.idx) > 0L) {
-            theta[too.large.idx] <- diagS[too.large.idx] * 0.99
+        theta <-  try(solve(diag(nvar) - D*D, diag(S - (D %*% S %*% D))),
+                      silent = TRUE)
+        if(inherits(theta, "try-error")) {
+            # what to do?
+            warning("lavaan WARNING: problem computing THETA values; trying pace algorithm")
+            theta <- lav_efa_pace(S = S, nfactor = nfac, theta.only = TRUE)
         }
+    }
+    theta.nobounds <- theta
+
+    # ALWAYS check bounds for theta (only to to compute PSI)!
+    diagS <- diag(S)
+    theta[which(theta < 0)] <- 0 # nonnegative
+    too.large.idx <- which(theta > diagS)
+    if(length(too.large.idx) > 0L) {
+        theta[too.large.idx] <- diagS[too.large.idx] * 0.99
     }
 
     # psi
@@ -138,10 +143,9 @@ lav_cfa_lambda2thetapsi <- function(lambda = NULL, S = NULL, S.inv = NULL,
         warning("lavaan WARNING: failed to compute lambda")
         SminTheta <- S - diag.theta # and hope for the best
     } else {
-        N <- 20L # conservative lower bound, no need to change
-        cutoff <- 1 + 1/(N-1) # 1.052632
+        cutoff <- 1 + 1/(nobs - 1)
         if(lambda < cutoff) {
-            lambda.star <- lambda - 1/(N - 1)
+            lambda.star <- lambda - 1/(nobs - 1)
             SminTheta <- S - lambda.star * diag.theta
         } else {
             SminTheta <- S - diag.theta
@@ -149,7 +153,8 @@ lav_cfa_lambda2thetapsi <- function(lambda = NULL, S = NULL, S.inv = NULL,
     }
     PSI <- M %*% SminTheta %*% t(M) # Just like local SAM
 
-    list(lambda = LAMBDA, theta = theta, psi = PSI)
+    # we take care of the bounds later!
+    list(lambda = LAMBDA, theta = theta.nobounds, psi = PSI)
 }
 
 # internal function to be used inside lav_optim_noniter
@@ -201,9 +206,14 @@ lav_cfa_fabin_internal <- function(lavmodel = NULL, lavsamplestats = NULL,
     }
 
     # 2. simple ULS method to get THETA and PSI (for now)
+    GLS.flag <- FALSE
+    if(!is.null(lavoptions$estimator.args$thetapsi.method) &&
+       lavoptions$estimator.args$thetapsi.method == "GLS") {
+        GLS.flag <- TRUE
+    }
     out <- lav_cfa_lambda2thetapsi(lambda = LAMBDA, S = sample.cov,
                                    S.inv = lavsamplestats@icov[[b]],
-                                   GLS = FALSE)
+                                   GLS = GLS.flag, nobs = lavsamplestats@ntotal)
     THETA <- diag(out$theta)
     PSI <- out$psi
 
@@ -221,6 +231,23 @@ lav_cfa_fabin_internal <- function(lavmodel = NULL, lavsamplestats = NULL,
 
     # extract free parameters only
     x <- lav_model_get_parameters(lavmodel)
+
+    # apply bounds (if any)
+    if(!is.null(lavpartable$lower)) {
+        lower.x <- lavpartable$lower[lavpartable$free > 0]
+        too.small.idx <- which(x < lower.x)
+        if(length(too.small.idx) > 0L) {
+            x[ too.small.idx ] <- lower.x[ too.small.idx ]
+        }
+    }
+    if(!is.null(lavpartable$upper)) {
+        upper.x <- lavpartable$upper[lavpartable$free > 0]
+        too.large.idx <- which(x > upper.x)
+        if(length(too.large.idx) > 0L) {
+            x[ too.large.idx ] <- upper.x[ too.large.idx ]
+        }
+    }
+
     x
 }
 
