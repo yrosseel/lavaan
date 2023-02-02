@@ -1205,14 +1205,20 @@ lav_options_set <- function(opt = NULL) {
 
 
     ##################################################################
-    # FABIN                                                          #
+    # FABIN, GUTTMAN1952, BENTLER, ...                               #
     ##################################################################
-    } else if(opt$estimator %in% c("fabin", "fabin2", "fabin3")) {
+    } else if(opt$estimator %in% c("fabin", "fabin2", "fabin3",
+                                    "guttman", "gutman", "guttman1952",
+                                    "bentler", "bentler1982")) {
         # experimental, for cfa or sam only
 
         # estimator
         if(opt$estimator == "fabin") {
             opt$estimator <- "FABIN2"
+        } else if(opt$estimator %in% c("guttman", "gutman", "guttmann")) {
+            opt$estimator <- "GUTTMAN1952"
+        } else if(opt$estimator %in% c("bentler", "bentler1982")) {
+            opt$estimator <- "BENTLER1982"
         } else {
             opt$estimator <- toupper(opt$estimator)
         }
@@ -1228,23 +1234,38 @@ lav_options_set <- function(opt = NULL) {
         # missing
         opt$missing <- "listwise" # for now (until we have two-stage working)
 
-        # options
-        if(is.null(opt$estimator.args)) {
-            opt$estimator.args <- list(thetapsi.method = "ULS",
-                                       lambda.cutoff = 1.05)
-        } else {
-            if(is.null(opt$estimator.args$thetapsi.method)) {
-                opt$estimator.args$thetapsi.method <- "GLS"
+        # options for fabin
+        if(opt$estimator %in% c("FABIN2", "FABIN3")) {
+            if(is.null(opt$estimator.args)) {
+                opt$estimator.args <- list(thetapsi.method = "GLS")
             } else {
-                opt$estimator.args$thetapsi.method <-
-                    toupper(opt$estimator.args$thetapsi.method)
-                if(opt$estimator.args$thetapsi.method %in% c("ULS",
-                                                             "GLS", "WLS")) {
-                    if(opt$estimator.args$thetapsi.method == "WLS") {
-                        opt$estimator.args$thetapsi.method <- "GLS"
-                    }
+                if(is.null(opt$estimator.args$thetapsi.method)) {
+                    opt$estimator.args$thetapsi.method <- "GLS"
                 } else {
-                    stop("lavaan ERROR: unknown value for estimator.args$thetapsi.method option: ", opt$estimator.args$thetapsi.method)
+                    opt$estimator.args$thetapsi.method <-
+                        toupper(opt$estimator.args$thetapsi.method)
+                    if(opt$estimator.args$thetapsi.method %in% c("ULS",
+                                 "GLS", "WLS", "ULS.ML", "GLS.ML", "WLS.ML")) {
+                        if(opt$estimator.args$thetapsi.method == "WLS") {
+                            opt$estimator.args$thetapsi.method <- "GLS"
+                        }
+                        if(opt$estimator.args$thetapsi.method == "WLS.ML") {
+                            opt$estimator.args$thetapsi.method <- "GLS.ML"
+                        }
+                    } else {
+                        stop("lavaan ERROR: unknown value for estimator.args$thetapsi.method option: ", opt$estimator.args$thetapsi.method)
+                   }
+                }
+            }
+        }
+
+        # options for guttman1952
+        if(opt$estimator == "GUTTMAN1952") {
+            if(is.null(opt$estimator.args)) {
+                opt$estimator.args <- list(psi.mapping = FALSE)
+            } else {
+                if(is.null(opt$estimator.args$psi.mapping)) {
+                    opt$estimator.args$psi.mapping <- FALSE
                 }
             }
         }
@@ -2046,8 +2067,9 @@ lav_options_check_se <- function(opt = NULL) {
                                  "robust.huber.white")
     }
 
-    # FABIN
-    else if(orig.estimator %in% c("fabin", "fabin2", "fabin3")) {
+    # FABIN, GUTTMAN1952, BENTLER1982, ...
+    else if(orig.estimator %in% c("fabin", "fabin2", "fabin3", "guttman",
+                                  "guttman1952")) {
         ok.flag <- opt$se %in% c("default", "none", "bootstrap", "external")
     }
 

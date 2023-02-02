@@ -50,17 +50,20 @@ lav_optim_noniter <- function(lavmodel = NULL, lavsamplestats = NULL,
         x <- try(lav_cfa_fabin_internal(lavmodel = lavmodel,
                  lavsamplestats = lavsamplestats, lavpartable = lavpartable,
                  lavpta = lavpta, lavoptions = lavoptions), silent = TRUE)
-        if(inherits(x, "try-error")) {
-            x <- x.old
-        } else {
-            ok.flag <- TRUE
-        }
+    } else if(lavoptions$estimator == "GUTTMAN1952") {
+        x <- try(lav_cfa_guttman1952_internal(lavmodel = lavmodel,
+                 lavsamplestats = lavsamplestats, lavpartable = lavpartable,
+                 lavpta = lavpta, lavoptions = lavoptions), silent = TRUE)
     } else {
         warning("lavaan WARNING: unknown (noniterative) estimator: ",
                 lavoptions$estimator, " (returning starting values)")
 
     }
-
+    if(inherits(x, "try-error")) {
+        x <- x.old
+    } else {
+        ok.flag <- TRUE
+    }
 
     # closing
     fx <- 0
