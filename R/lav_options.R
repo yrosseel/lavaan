@@ -1214,7 +1214,7 @@ lav_options_set <- function(opt = NULL) {
 
         # sample.cov.rescale
         if(is.logical(opt$sample.cov.rescale)) {
-            # nothing to do        
+            # nothing to do
         } else if(opt$sample.cov.rescale == "default") {
             opt$sample.cov.rescale <- TRUE
         } else {
@@ -1264,6 +1264,17 @@ lav_options_set <- function(opt = NULL) {
                     } else {
                         stop("lavaan ERROR: unknown value for estimator.args$thetapsi.method option: ", opt$estimator.args$thetapsi.method)
                    }
+                }
+            }
+        }
+
+        # options for Bentler
+        if(opt$estimator == "BENTLER1982") {
+            if(is.null(opt$estimator.args)) {
+                opt$estimator.args <- list(GLS = FALSE)
+            } else {
+                if(is.null(opt$estimator.args$GLS)) {
+                    opt$estimator.args$GLS <- FALSE
                 }
             }
         }

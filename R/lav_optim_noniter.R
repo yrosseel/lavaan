@@ -55,7 +55,7 @@ lav_optim_noniter <- function(lavmodel = NULL, lavsamplestats = NULL,
                  lavsamplestats = lavsamplestats, lavpartable = lavpartable,
                  lavpta = lavpta, lavoptions = lavoptions), silent = TRUE)
     } else if(lavoptions$estimator == "BENTLER1982") {
-        x <- try(lav_cfa_guttman1952_internal(lavmodel = lavmodel,
+        x <- try(lav_cfa_bentler1982_internal(lavmodel = lavmodel,
                  lavsamplestats = lavsamplestats, lavpartable = lavpartable,
                  lavpta = lavpta, lavoptions = lavoptions), silent = TRUE)
     } else {
