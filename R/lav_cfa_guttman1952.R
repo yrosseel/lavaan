@@ -147,7 +147,7 @@ lav_cfa_guttman1952 <- function(S,
         }
 
         # ML mapping function
-        M <- solve(t(LAMBDA) %*% diag(Ti, nvar) %*% LAMBDA) %*% t(LAMBDA) %*% diag(Ti, nvar)
+        M <- solve(t(Lambda) %*% diag(Ti, nvar) %*% Lambda) %*% t(Lambda) %*% diag(Ti, nvar)
         Psi <- M %*% SminTheta %*% t(M)
     }
 

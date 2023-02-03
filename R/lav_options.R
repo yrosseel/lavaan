@@ -1212,6 +1212,15 @@ lav_options_set <- function(opt = NULL) {
                                     "bentler", "bentler1982")) {
         # experimental, for cfa or sam only
 
+        # sample.cov.rescale
+        if(is.logical(opt$sample.cov.rescale)) {
+            # nothing to do        
+        } else if(opt$sample.cov.rescale == "default") {
+            opt$sample.cov.rescale <- TRUE
+        } else {
+            stop("lavaan ERROR: sample.cov.rescale value must be logical.")
+        }
+
         # estimator
         if(opt$estimator == "fabin") {
             opt$estimator <- "FABIN2"
