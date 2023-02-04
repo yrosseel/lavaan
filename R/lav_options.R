@@ -1237,8 +1237,15 @@ lav_options_set <- function(opt = NULL) {
             opt$se <- "none"
         }
 
+        # bounds
+        if(opt$bounds == "default") {
+            opt$bounds <- "standard"
+        }
+
         # test
-        opt$test <- "none" # for now
+        if(opt$test == "default") {
+            opt$test <- "none" # for now
+        }
 
         # missing
         opt$missing <- "listwise" # for now (until we have two-stage working)
