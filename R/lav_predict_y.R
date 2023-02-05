@@ -101,7 +101,7 @@ lavPredictY <- function(object,
         if(length(missing.idx) > 0L) {
             stop("lavaan ERROR: some variable names in ynames do not appear in the dataset:\n\t\t", paste(ynames[[g]][missing.idx], collapse = " "))
         } else {
-            y.idx[[g]] <- which(ov.names[[g]] %in% ynames[[g]])
+            y.idx[[g]] <- match(ynames[[g]], ov.names[[g]])
         }
 
         # xnames in ov.names for this group?
@@ -109,7 +109,7 @@ lavPredictY <- function(object,
         if(length(missing.idx) > 0L) {
             stop("lavaan ERROR: some variable names in xnames do not appear in the dataset:\n\t\t", paste(xnames[[g]][missing.idx], collapse = " "))
         } else {
-            x.idx[[g]] <- which(ov.names[[g]] %in% xnames[[g]])
+            x.idx[[g]] <- match(xnames[[g]], ov.names[[g]])
         }
     }
 
