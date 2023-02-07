@@ -335,6 +335,15 @@ lav_partable_flat <- function(FLAT = NULL,
     rhs     <- FLAT$rhs
     mod.idx <- FLAT$mod.idx
 
+    # remove any 'da' entries here (we put them back at the end later)
+    if(any(op == "da")) {
+        da.idx <- which(op == "da")
+        lhs     <- lhs[-da.idx]
+         op     <-  op[-da.idx]
+        rhs     <- rhs[-da.idx]
+        mod.idx <- mod.idx[-da.idx]
+    }
+
     lv.names     <- lav_partable_vnames(FLAT, type="lv")     # latent variables
     ov.names     <- lav_partable_vnames(FLAT, type="ov")     # observed variables
     USER <- data.frame(lhs=lhs, op=op, rhs=rhs, mod.idx=mod.idx,

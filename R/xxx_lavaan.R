@@ -7,6 +7,7 @@
 # YR 25/02/2012: changed data slot (from list() to S4); data@X contains data
 
 # YR 26 Jan 2017: use '...' to capture the never-ending list of options
+# YR 07 Feb 2023: add ov.order= argument
 
 lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                    model              = NULL,
@@ -37,6 +38,9 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                    # user-specified variance matrices
                    WLS.V              = NULL,
                    NACOV              = NULL,
+
+                   # internal order of ov.names
+                   ov.order           = "model",
 
                    # full slots from previous fits
                    slotOptions        = NULL,
@@ -120,6 +124,14 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
         if(is.function(data)) {
             stop("lavaan ERROR: data is a function; it should be a data.frame")
         }
+    }
+
+    # new in 0.6-14: if NACOV and/or WLS.V are provided, we force
+    # ov.order="data" for now
+    # until we have reliable code to re-arrange/select col/rows for
+    # of NACOV/WLS.V based on the model-based ov.names
+    if(!is.null(NACOV) || !is.null(WLS.V)) {
+        ov.order <- "data"
     }
 
     # backwards compatibility, control= argument (<0.5-23)
@@ -226,6 +238,22 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
         }
     } else if(is.null(model)) {
         stop("lavaan ERROR: model is NULL!")
+    }
+
+    # Ok, we got a flattened model; usually this a FLAT object, but it could
+    # also be an already lavaanified parTable, or a bare-minimum list with
+    # lhs/op/rhs/free elements
+
+    # new in 0.6-14
+    # if ov.order = "data", it would seem we need to intervene here;
+    # we do this by 'injecting' dummy lhs da rhs statement in FLAT, to
+    # 'trick' lav_partable_vnames() (which only sees the model!)
+    ov.order <- tolower(ov.order)
+    if(ov.order == "data") {
+        FLAT <- lav_partable_ov_from_data(FLAT, data = data,
+                                          sample.cov = sample.cov)
+    } else if(ov.order != "model") {
+        stop("lavaan ERROR: ov.order= argument should be \"model\" (default) or \"data\"")
     }
 
     # group blocks?
@@ -2072,6 +2100,9 @@ cfa <- sem <- function(# user-specified model: can be syntax, parameter Table
                        WLS.V              = NULL,
                        NACOV              = NULL,
 
+                       # internal order of ov.names
+                       ov.order           = "model",
+
                        # options (dotdotdot)
                        ...) {
 
@@ -2146,6 +2177,9 @@ growth <- function(# user-specified model: can be syntax, parameter Table
                    # user-specified variance matrices
                    WLS.V              = NULL,
                    NACOV              = NULL,
+
+                   # internal order of ov.names
+                   ov.order           = "model",
 
                    # options (dotdotdot)
                    ...) {

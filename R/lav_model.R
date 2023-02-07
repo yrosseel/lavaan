@@ -88,7 +88,7 @@ lav_model <- function(lavpartable      = NULL,
 
     # FIXME: check for non-existing parameters
     bad.idx <- which(REP$mat == "" &
-                     !lavpartable$op %in% c("==","<",">",":="))
+                     !lavpartable$op %in% c("==","<",">",":=", "da"))
 
     if(length(bad.idx) > 0L) {
         label <- paste(lavpartable$lhs[bad.idx[1]],

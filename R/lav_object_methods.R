@@ -248,6 +248,14 @@ standardizedSolution <-
         }
     }
 
+    # always remove 'da' rows (if any)
+    if(any(LIST$op == "da")) {
+        da.idx <- which(LIST$op == "da")
+        LIST <- LIST[-da.idx,,drop = FALSE]
+    }
+
+
+
     if(output == "text") {
         class(LIST) <- c("lavaan.parameterEstimates", "lavaan.data.frame",
                          "data.frame")
@@ -892,6 +900,14 @@ parameterestimates <- function(object,
         # remove step column
         LIST$step <- NULL
     }
+
+    # always remove 'da' entries (if any)
+    if(any(LIST$op == "da")) {
+        da.idx <- which(LIST$op == "da")
+        LIST <- LIST[-da.idx,,drop = FALSE]
+    }
+
+
 
     # remove LIST$user
     LIST$user <- NULL

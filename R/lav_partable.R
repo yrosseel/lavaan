@@ -75,6 +75,13 @@ lavaanify <- lavParTable <- function(
     # user-specified *constraints* are returned as an attribute
     CON  <- attr(FLAT, "constraints"); attr(FLAT, "constraints") <- NULL
 
+    # ov.names.data?
+    ov.names.data <- NULL
+    if(any(FLAT$op == "da")) {
+        da.idx <- which(FLAT$op == "da")
+        ov.names.data <- FLAT$lhs[da.idx]
+    }
+
     # extra constraints?
     if(!is.null(constraints) && any(nchar(constraints) > 0L)) {
         FLAT2 <- lavParseModelString(model.syntax=constraints, warn=warn)
@@ -1047,11 +1054,30 @@ lavaanify <- lavParTable <- function(
     idx.free <- which(LIST$free > 0L)
     LIST$free[idx.free] <- seq_along(idx.free)
 
-    # new in 0.6-11 - add free counter to this element (as in < 0.5-18)
+    # new in 0.6-11: add free counter to this element (as in < 0.5-18)
     # unless we have other constraints
     if(ceq.simple) {
         idx.equal <- which(eq.id > 0)
         LIST$free[idx.equal] <- LIST$free[ eq.id[idx.equal] ]
+    }
+
+    # new in 0.6-14: add 'da' entries to reflect data-based order of ov's
+    if(!is.null(ov.names.data)) {
+        TMP <- list(lhs = ov.names.data,
+                     op = rep("da", length(ov.names.data)),
+                    rhs = ov.names.data,
+                    user  = rep(0L, length(ov.names.data)),
+                    block = rep(0L, length(ov.names.data)))
+        if(!is.null(LIST$group)) {
+            TMP$group <- rep(0L, length(ov.names.data))
+        }
+        if(!is.null(LIST$level)) {
+            TMP$level <- rep(0L, length(ov.names.data))
+        }
+        if(!is.null(LIST$class)) {
+            TMP$class <- rep(0L, length(ov.names.data))
+        }
+        LIST <- lav_partable_merge(LIST, TMP)
     }
 
     # backwards compatibility...
