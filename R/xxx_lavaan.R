@@ -250,8 +250,15 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     # 'trick' lav_partable_vnames() (which only sees the model!)
     ov.order <- tolower(ov.order)
     if(ov.order == "data") {
-        FLAT <- lav_partable_ov_from_data(FLAT, data = data,
-                                          sample.cov = sample.cov)
+        FLAT.orig <- FLAT
+        try(FLAT <- lav_partable_ov_from_data(FLAT, data = data,
+                                              sample.cov = sample.cov,
+                                              slotData   = slotData),
+            silent = TRUE)
+        if(inherits(FLAT, "try-error")) {
+            warning("lavaan WARNING: ov.order = \"data\" setting failed; switching back to ov.order = \"model\"")
+            FLAT <- FLAT.orig
+        }
     } else if(ov.order != "model") {
         stop("lavaan ERROR: ov.order= argument should be \"model\" (default) or \"data\"")
     }

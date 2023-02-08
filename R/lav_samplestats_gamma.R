@@ -118,8 +118,26 @@ lav_object_gamma <- function(lavobject = NULL,
         lavdata        <- lavobject@Data
         lavoptions     <- lavobject@Options
         lavsamplestats <- lavobject@SampleStats
-        lavh1          <- lavobject@h1
+        if(.hasSlot(lavobject, "h1")) {
+            lavh1          <- lavobject@h1
+        } else {
+            # only for <0.6
+            out <- lav_h1_implied_logl(lavdata        = lavdata,
+                                       lavsamplestats = lavsamplestats,
+                                       lavpta         = lavobject@pta,
+                                       lavoptions     = lavoptions)
+            h1.implied      <- out$implied
+            h1.loglik       <- out$logl$loglik
+            h1.loglik.group <- out$logl$loglik.group
+            lavh1 <- list(implied      = h1.implied,
+                          loglik       = h1.loglik,
+                          loglik.group = h1.loglik.group)
+            lavoptions$gamma.n.minus.one <- FALSE
+            lavoptions$gamma.unbiased <- FALSE
+        }
         lavimplied     <- lavobject@implied
+
+
     }
 
     missing <- lavoptions$missing
@@ -495,7 +513,8 @@ lav_samplestats_Gamma <- function(Y,                          # Y+X if cond!
 
 
             yhat <- cbind(1, Y[,x.idx]) %*% rbind(res.int, res.slopes)
-            YHAT <- cbind(yhat, Y[,x.idx])
+            YHAT <- Y; YHAT[,-x.idx] <- yhat
+            #YHAT <- cbind(yhat, Y[,x.idx])
             YHATc <- t( t(YHAT) - YHAT.bar )
             idx1 <- lav_matrix_vech_col_idx(p)
             idx2 <- lav_matrix_vech_row_idx(p)
@@ -518,7 +537,8 @@ lav_samplestats_Gamma <- function(Y,                          # Y+X if cond!
         } else {
             QR <- qr(cbind(1, Y[, x.idx, drop = FALSE]))
             yhat <- qr.fitted(QR, Y[, -x.idx, drop = FALSE])
-            YHAT <- cbind(yhat, Y[,x.idx])
+            # YHAT <- cbind(yhat, Y[,x.idx])
+            YHAT <- Y; YHAT[,-x.idx] <- yhat
 
             Yc <- t( t(Y) - colMeans(Y, na.rm = TRUE) )
             YHATc <- t( t(YHAT) - colMeans(YHAT, na.rm = TRUE) )

@@ -673,7 +673,7 @@ lav_partable_vnames <- function(partable, type = NULL, ...,
 
     } # b
 
-    # if 'da' operator, change order!
+    # new in 0.6-14: if 'da' operator, change order! (for ov.order = "data")
     if(any(partable$op == "da")) {
         da.idx <- which(partable$op == "da")
         ov.names.data <- partable$lhs[da.idx]
@@ -682,7 +682,12 @@ lav_partable_vnames <- function(partable, type = NULL, ...,
                               target.idx <- which(x[[b]] %in% ov.names.data)
                               if(length(target.idx) > 0L) {
                                   new.ov <-
-                                      ov.names.data[ ov.names.data %in% x[[b]] ]
+                                    ov.names.data[match(x[[b]], ov.names.data)]
+                                  # rm NA's (eg lv's in eqs.y)
+                                  na.idx <- which(is.na(new.ov))
+                                  if(length(na.idx) > 0L) {
+                                      new.ov <- new.ov[-na.idx]
+                                  }
                                   x[[b]][target.idx] <- new.ov
                               }
                           }

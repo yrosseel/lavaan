@@ -1,7 +1,7 @@
 
 # handle ov.order = "data" by add dummy rhs/op/lhs entries to trick lavNames()
 lav_partable_ov_from_data <- function(FLAT = NULL, data = NULL,
-                                      sample.cov = NULL) {
+                                      sample.cov = NULL, slotData = NULL) {
 
     # store original FLAT
     FLAT.orig <- FLAT
@@ -29,7 +29,10 @@ lav_partable_ov_from_data <- function(FLAT = NULL, data = NULL,
                 DATA.NAMES <- rownames(sample.cov)
             }
         }
+    } else if(!is.null(slotData)) {
+        DATA.NAMES <- unique(unlist(slotData@ov.names))
     }
+
     if(is.null(DATA.NAMES) || length(DATA.NAMES) == 0L) {
         stop("lavaan ERROR: could not find variable names in data/sample.cov")
     }
