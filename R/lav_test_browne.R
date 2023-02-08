@@ -10,27 +10,39 @@
 #                                  solve(t(Delta) %*% Gamma.inv %*% Delta) %*%
 #                           t(Delta) %*% Gamma.inv) %*% RES
 
+# Note: if Gamma == solve(Weight matrix), then:
+# t(Delta) %*% solve(Gamma) %*% RES == 0-vector!
+#
+# Therefore:
+# - if estimator = "WLS", X2 == Browne's residual ADF statistic
+# - if estimator = "GLS", X2 == Browne's residual NT statistic
+#
+# - if estimator = "NTRLS", X2 == Browne's residual NT statistic (model-based)
+#   also known as the RLS test statistic
+#   ... except in multigroup + equality constraints, where
+#   t(Delta) %*% solve(Gamma) %*% RES not zero everywhere!
 
 # YR 26 July 2022: add alternative slots, if lavobject = NULL
 # YR 22 Jan  2023: allow for model-based 'structured' Sigma
+# YR 08 Feb  2023: add via.objective= argument
 
-# TODo: - allow for 'structured' (model-based) version of Gamma
-#       - allow for non-linear equality constraints
-#         (see Browne, 1982, eq 1.7.19)
+# TODo: - allow for non-linear equality constraints
+#         (see Browne, 1982, eq 1.7.19; although we may face singular matrices)
 
-lav_test_browne <- function(lavobject      = NULL,
+lav_test_browne <- function(lavobject        = NULL,
                             # or
-                            lavdata        = NULL,
-                            lavsamplestats = NULL, # WLS.obs, NACOV
-                            lavmodel       = NULL,
-                            lavpartable    = NULL,  # DF
-                            lavoptions     = NULL,
-                            lavh1          = NULL,
-                            lavimplied     = NULL,
+                            lavdata          = NULL,
+                            lavsamplestats   = NULL, # WLS.obs, NACOV
+                            lavmodel         = NULL,
+                            lavpartable      = NULL,  # DF
+                            lavoptions       = NULL,
+                            lavh1            = NULL,
+                            lavimplied       = NULL,
                             # further options:
-                            n.minus.one    = "default",
-                            ADF            = TRUE,
-                            model.based    = FALSE) {
+                            via.objective    = FALSE, # for now
+                            n.minus.one      = "default",
+                            ADF              = TRUE,
+                            model.based      = FALSE) {
 
     if(!is.null(lavobject)) {
         # check input
@@ -61,13 +73,167 @@ lav_test_browne <- function(lavobject      = NULL,
         stop("lavaan ERROR: Browne's test is not available (yet) when nonlinear equality constraints are involved.")
     }
 
-    if(!is.logical(n.minus.one)) {
-        if(lavoptions$estimator == "ML" && lavoptions$likelihood == "normal") {
-            n.minus.one <- FALSE
+    if(model.based) {
+        # see note at the top to see why
+        via.objective <- FALSE
+    }
+
+    if(via.objective) {
+        lavmodel2 <- lavmodel
+
+        # change estimator
+        if(ADF) {
+            lavmodel2@estimator <- "WLS"
         } else {
-            n.minus.one <- TRUE
+            lavmodel2@estimator <- "GLS"
+        }
+
+        # evaluate objective function
+        fx <- lav_model_objective(lavmodel = lavmodel2, lavdata = lavdata,
+                                  lavsamplestats = lavsamplestats)
+        fx.group <- attr(fx, "fx.group")
+
+        # create test statistic
+        STAT <- fx[1] * 2 * lavsamplestats@ntotal
+
+        # per group
+        stat.group <- fx.group * 2 * unlist(lavsamplestats@nobs)
+
+    } else {
+        # usual manual computation
+
+        if(!is.logical(n.minus.one)) {
+            if(lavoptions$estimator == "ML" &&
+               lavoptions$likelihood == "normal") {
+                n.minus.one <- FALSE
+            } else {
+                n.minus.one <- TRUE
+            }
+        }
+
+        # ingredients
+        Delta <- computeDelta(lavmodel)
+        if(ADF) {
+            # ADF version
+            if(!is.null(lavsamplestats@NACOV[[1]])) {
+                Gamma <- lavsamplestats@NACOV
+            } else {
+                if(!is.null(lavobject)) {
+                    if(lavobject@Data@data.type != "full") {
+                        stop("lavaan ERROR: ADF version not available without full data or user-provided Gamma/NACOV matrix")
+                    }
+                    Gamma <- lav_object_gamma(lavobject, ADF = TRUE,
+                                              model.based = model.based)
+                } else {
+                   if(lavdata@data.type != "full") {
+                        stop("lavaan ERROR: ADF version not available without full data or user-provided Gamma/NACOV matrix")
+                    }
+                    Gamma <- lav_object_gamma(lavobject      = NULL,
+                                              lavdata        = lavdata,
+                                              lavoptions     = lavoptions,
+                                              lavsamplestats = lavsamplestats,
+                                              lavh1          = lavh1,
+                                              lavimplied     = lavimplied,
+                                              ADF            = TRUE,
+                                              model.based    = model.based)
+                }
+            }
+        } else {
+            # NT version
+            if(!is.null(lavobject)) {
+                Gamma <- lav_object_gamma(lavobject, ADF = FALSE,
+                                          model.based = model.based)
+            } else {
+                Gamma <- lav_object_gamma(lavobject      = NULL,
+                                          lavdata        = lavdata,
+                                          lavoptions     = lavoptions,
+                                          lavsamplestats = lavsamplestats,
+                                          lavh1          = lavh1,
+                                          lavimplied     = lavimplied,
+                                          ADF            = FALSE,
+                                          model.based    = model.based)
+            }
+        }
+        WLS.obs <- lavsamplestats@WLS.obs
+        WLS.est <- lav_model_wls_est(lavmodel)
+        nobs    <- lavsamplestats@nobs
+        ntotal  <- lavsamplestats@ntotal
+
+        res <- lav_test_browne_internal(lavmodel    = lavmodel,
+                                        WLS.obs     = WLS.obs,
+                                        WLS.est     = WLS.est,
+                                        Delta       = Delta,
+                                        Gamma       = Gamma,
+                                        nobs        = nobs,
+                                        ntotal      = notal,
+                                        n.minus.one = n.minus.one)
+
+        STAT <- res$STAT
+        stat.group <- res$stat.group
+    }
+
+    # DF
+    if(!is.null(lavobject)) {
+        DF <- lavobject@test[[1]]$df
+    } else {
+        # same approach as in lav_test.R
+        df <- lav_partable_df(lavpartable)
+        if(nrow(lavmodel@con.jac) > 0L) {
+            ceq.idx <- attr(lavmodel@con.jac, "ceq.idx")
+            if(length(ceq.idx) > 0L) {
+                neq <- qr(lavmodel@con.jac[ceq.idx,,drop=FALSE])$rank
+                df <- df + neq
+            }
+        } else if(lavmodel@ceq.simple.only) {
+            # needed??
+            ndat <- lav_partable_ndat(lavpartable)
+            npar <- max(lavpartable$free)
+            df <- ndat - npar
+        }
+        DF <- df
+    }
+
+    if(ADF) {
+        if(model.based) {
+            # using model-based Gamma
+            NAME <- "browne.residual.adf.model"
+            LABEL <- "Browne's residual (ADF model-based) test"
+        } else {
+            # regular one
+            NAME <- "browne.residual.adf"
+            LABEL <- "Browne's residual-based (ADF) test"
+        }
+    } else {
+        if(model.based) {
+            # using model-implied Sigma (instead of S)
+            # also called the 'reweighted least-squares (RLS)' version
+            NAME <- "browne.residual.nt.model"
+            LABEL <- "Browne's residual (NT model-based) test"
+        } else {
+            # regular one
+            NAME <- "browne.residual.nt"
+            LABEL <- "Browne's residual-based (NT) test"
         }
     }
+    out <- list(test       = NAME,
+                stat       = STAT,
+                stat.group = stat.group,
+                df         = DF,
+                refdistr   = "chisq",
+                pvalue     = 1 - pchisq(STAT, DF),
+                label      = LABEL)
+    out
+}
+
+
+lav_test_browne_internal <- function(lavmodel    = NULL,
+                                     WLS.obs     = NULL,
+                                     WLS.est     = NULL,
+                                     Delta       = NULL,
+                                     Gamma       = NULL,
+                                     nobs        = NULL,
+                                     ntotal      = NULL,
+                                     n.minus.one = FALSE) {
 
     # linear equality constraints?
     lineq.flag <- FALSE
@@ -78,58 +244,9 @@ lav_test_browne <- function(lavobject      = NULL,
         lineq.flag <- TRUE
     }
 
-    # ingredients
-    Delta <- computeDelta(lavmodel)
-    if(ADF) {
-        # ADF version
-        if(!is.null(lavsamplestats@NACOV[[1]])) {
-            Gamma <- lavsamplestats@NACOV
-        } else {
-            if(!is.null(lavobject)) {
-                if(lavobject@Data@data.type != "full") {
-                    stop("lavaan ERROR: ADF version not available without full data or user-provided Gamma/NACOV matrix")
-                }
-                Gamma <- lav_object_gamma(lavobject, ADF = TRUE,
-                                          model.based = model.based)
-            } else {
-                if(lavdata@data.type != "full") {
-                    stop("lavaan ERROR: ADF version not available without full data or user-provided Gamma/NACOV matrix")
-                }
-                Gamma <- lav_object_gamma(lavobject      = NULL,
-                                          lavdata        = lavdata,
-                                          lavoptions     = lavoptions,
-                                          lavsamplestats = lavsamplestats,
-                                          lavh1          = lavh1,
-                                          lavimplied     = lavimplied,
-                                          ADF            = TRUE,
-                                          model.based    = model.based)
-            }
-        }
-    } else {
-        # NT version
-        if(!is.null(lavobject)) {
-            Gamma <- lav_object_gamma(lavobject, ADF = FALSE,
-                                      model.based = model.based)
-        } else {
-            Gamma <- lav_object_gamma(lavobject      = NULL,
-                                          lavdata        = lavdata,
-                                          lavoptions     = lavoptions,
-                                          lavsamplestats = lavsamplestats,
-                                          lavh1          = lavh1,
-                                          lavimplied     = lavimplied,
-                                          ADF            = FALSE,
-                                          model.based    = model.based)
-        }
-    }
-    WLS.obs <- lavsamplestats@WLS.obs
-    WLS.est <- lav_model_wls_est(lavmodel)
-    nobs <-  lavsamplestats@nobs
-    ntotal <- lavsamplestats@ntotal
-
     # compute T.B per group
-    ngroups <- lavdata@ngroups
+    ngroups <- length(WLS.obs)
     stat.group <- numeric(ngroups)
-
 
     # 1. standard setting: no equality constraints
     if(!lineq.flag) {
@@ -194,55 +311,6 @@ lav_test_browne <- function(lavobject      = NULL,
         # TODO
     }
 
-    # DF
-    if(!is.null(lavobject)) {
-        DF <- lavobject@test[[1]]$df
-    } else {
-        # same approach as in lav_test.R
-        df <- lav_partable_df(lavpartable)
-        if(nrow(lavmodel@con.jac) > 0L) {
-            ceq.idx <- attr(lavmodel@con.jac, "ceq.idx")
-            if(length(ceq.idx) > 0L) {
-                neq <- qr(lavmodel@con.jac[ceq.idx,,drop=FALSE])$rank
-                df <- df + neq
-            }
-        } else if(lavmodel@ceq.simple.only) {
-            # needed??
-            ndat <- lav_partable_ndat(lavpartable)
-            npar <- max(lavpartable$free)
-            df <- ndat - npar
-        }
-        DF <- df
-    }
-
-    if(ADF) {
-        if(model.based) {
-            # using model-based Gamma
-            NAME <- "browne.residual.adf.model"
-            LABEL <- "Browne's residual (ADF model-based) test"
-        } else {
-            # regular one
-            NAME <- "browne.residual.adf"
-            LABEL <- "Browne's residual-based (ADF) test"
-        }
-    } else {
-        if(model.based) {
-            # using model-implied Sigma (instead of S)
-            # also called the 'reweighted least-squares (RLS)' version
-            NAME <- "browne.residual.nt.model"
-            LABEL <- "Browne's residual (NT model-based) test"
-        } else {
-            # regular one
-            NAME <- "browne.residual.nt"
-            LABEL <- "Browne's residual-based (NT) test"
-        }
-    }
-    out <- list(test       = NAME,
-                stat       = STAT,
-                stat.group = stat.group,
-                df         = DF,
-                refdistr   = "chisq",
-                pvalue     = 1 - pchisq(STAT, DF),
-                label      = LABEL)
-    out
+    res <- list(STAT = STAT, stat.group = stat.group)
+    res
 }
