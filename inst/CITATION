@@ -1,6 +1,7 @@
 citHeader("To cite lavaan in publications use:")
 
-citEntry(entry = "Article",
+bibentry(
+  bibtype      = "Article",
   title        = "{lavaan}: An {R} Package for Structural Equation Modeling",
   author       = as.person("Yves Rosseel"),
   journal      = "Journal of Statistical Software",
