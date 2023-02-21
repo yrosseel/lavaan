@@ -496,7 +496,7 @@ lav_bootstrap_internal <- function(object          = NULL,
     }
 
     # fill in container
-    t.star <- do.call("rbind", res)
+    t.star[] <- do.call("rbind", res)
 
     # handle errors
     error.idx <- which(sapply(res, function(x) is.na(x[1L])))
