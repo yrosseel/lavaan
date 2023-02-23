@@ -12,6 +12,7 @@ lavCor <- function(object,
                    group      = NULL,
                    missing    = "listwise",
                    ov.names.x = NULL,
+                   sampling.weights = NULL,
                    # lavaan options
                    se         = "none",
                    test       = "none",
@@ -43,6 +44,14 @@ lavCor <- function(object,
             se <- "none"
         }
     }
+    
+    # extract sampling.weights.normalization from dots (for lavData() call)
+    dots <- list(...)
+    sampling.weights.normalization <- "total"
+    if (!is.null(dots$sampling.weights.normalization)) {
+        sampling.weights.normalization <- dots$sampling.weights.normalization
+    }
+    
 
     # check object class
     if(inherits(object, "lavData")) {
@@ -53,6 +62,9 @@ lavCor <- function(object,
         NAMES <- names(object)
         if(!is.null(group)) {
             NAMES <- NAMES[- match(group, NAMES)]
+        }
+        if(!is.null(sampling.weights)) {
+            NAMES <- NAMES[- match(sampling.weights, NAMES)]
         }
         if(is.logical(ordered)) {
             ordered.flag <- ordered
@@ -81,8 +93,10 @@ lavCor <- function(object,
         }
         lav.data <- lavData(data = object, group = group,
                             ov.names = NAMES, ordered = ordered,
+                            sampling.weights = sampling.weights,
                             ov.names.x = ov.names.x,
-                            lavoptions = list(missing = missing))
+                            lavoptions = list(missing = missing,
+                                              sampling.weights.normalization = sampling.weights.normalization))
     } else {
         stop("lavaan ERROR: lavCor can not handle objects of class ",
              paste(class(object), collapse= " "))
@@ -98,8 +112,7 @@ lavCor <- function(object,
         }
     }
 
-    # extract partable options from dots
-    dots <- list(...)
+    # extract more partable options from dots
     meanstructure <- FALSE
     fixed.x       <- FALSE
     mimic         <- "lavaan"
@@ -120,7 +133,6 @@ lavCor <- function(object,
         conditional.x <- dots$conditional.x
     }
 
-
     # override, only for backwards compatibility (eg moments() in JWileymisc)
     #if(missing %in% c("ml", "fiml")) {
     #    meanstructure = TRUE
@@ -133,6 +145,7 @@ lavCor <- function(object,
                                   lavoptions    = list(meanstructure = meanstructure,
                                                        fixed.x = fixed.x,
                                                        conditional.x = conditional.x,
+                                                       # sampling.weights.normalization = sampling.weights.normalization,
                                                        group.w.free = FALSE,
                                                        missing = missing,
                                                        correlation = categorical,
