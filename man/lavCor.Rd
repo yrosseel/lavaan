@@ -6,8 +6,8 @@ Fit an unrestricted model to compute polychoric, polyserial and/or Pearson
 correlations.}
 \usage{
 lavCor(object, ordered = NULL, group = NULL, missing = "listwise", 
-       sampling.weights = NULL,
-       ov.names.x = NULL, se = "none", test = "none", 
+       ov.names.x = NULL, sampling.weights = NULL,
+       se = "none", test = "none", 
        estimator = "two.step", baseline = FALSE, ..., 
        cor.smooth = FALSE, cor.smooth.tol = 1e-04, output = "cor")
 }
