@@ -52,6 +52,7 @@ print.lavaan.matrix.symmetric <- function(x, ..., nd = 3L, shift = 0L,
     # in package nlme
     x <- as.matrix(x) # just in case
     y <- x; y <- unclass(y)
+    attributes(y)[c("header","footer")] <- NULL
     ll <- lower.tri(x, diag = TRUE)
     y[ ll] <- format(round(x[ll], digits = nd))
     y[!ll] <- ""
@@ -74,7 +75,17 @@ print.lavaan.matrix.symmetric <- function(x, ..., nd = 3L, shift = 0L,
             rownames(y) <- empty.string
         }
     }
+    
+    if(!is.null(attr(x, "header"))) {
+      cat("\n", attr(x, "header"), "\n\n", sep = "")
+    }
+    
     print(y, ..., quote = FALSE, right = TRUE)
+    
+    if(!is.null(attr(x, "footer"))) {
+      cat("\n", attr(x, "footer"), "\n\n", sep = "")
+    }
+    
     invisible(x)
 }
 
@@ -82,6 +93,7 @@ print.lavaan.matrix.symmetric <- function(x, ..., nd = 3L, shift = 0L,
 print.lavaan.matrix <- function(x, ..., nd = 3L, shift = 0L) {
     x <- as.matrix(x) # just in case
     y <- unclass(x)
+    attributes(y)[c("header","footer")] <- NULL
     if(!is.null(colnames(x))) {
       colnames(y) <- abbreviate(colnames(x), minlength = nd + 3L)
     }
@@ -93,15 +105,29 @@ print.lavaan.matrix <- function(x, ..., nd = 3L, shift = 0L) {
             rownames(y) <- empty.string
         }
     }
+    if(!is.null(attr(x, "header"))) {
+      cat("\n", attr(x, "header"), "\n\n", sep = "")
+    }
+    
     print( round(y, nd), right = TRUE, ... )
+    
+    if(!is.null(attr(x, "footer"))) {
+      cat("\n", attr(x, "footer"), "\n\n", sep = "")
+    }
+    
     invisible(x)
 }
 
 print.lavaan.vector <- function(x, ..., nd = 3L, shift = 0L) {
     y <- unclass(x)
+    attributes(y)[c("header","footer")] <- NULL
     #if(!is.null(names(x))) {
     #    names(y) <- abbreviate(names(x), minlength = nd + 3)
     #}
+    if(!is.null(attr(x, "header"))) {
+      cat("\n", attr(x, "header"), "\n\n", sep = "")
+    }
+    
     if(shift > 0L) {
         empty.string <- strrep(x = " ", times = shift)
         tmp <- format(y, digits = nd, width = 2L + nd)
@@ -110,6 +136,11 @@ print.lavaan.vector <- function(x, ..., nd = 3L, shift = 0L) {
     } else {
         print( round(y, nd), right = TRUE, ... )
     }
+    
+    if(!is.null(attr(x, "footer"))) {
+      cat("\n", attr(x, "footer"), "\n\n", sep = "")
+    }
+    
     invisible(x)
 }
 

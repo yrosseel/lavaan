@@ -6,7 +6,8 @@ Fit an unrestricted model to compute polychoric, polyserial and/or Pearson
 correlations.}
 \usage{
 lavCor(object, ordered = NULL, group = NULL, missing = "listwise", 
-       ov.names.x = NULL, se = "none", test = "none", 
+       ov.names.x = NULL, sampling.weights = NULL,
+       se = "none", test = "none", 
        estimator = "two.step", baseline = FALSE, ..., 
        cor.smooth = FALSE, cor.smooth.tol = 1e-04, output = "cor")
 }
@@ -28,6 +29,8 @@ lavCor(object, ordered = NULL, group = NULL, missing = "listwise",
     (and mean vector). If \code{"pairwise"}, pairwise deletion is used. If
     \code{"default"}, the value is set depending on the estimator and the
     mimic option.}
+\item{sampling.weights}{Only used if \code{object} is a \code{data.frame}. 
+    Specify a variable containing sampling weights.}
 \item{ov.names.x}{Only used if \code{object} is a \code{data.frame}. Specify
     variables that need to be treated as exogenous. Only used if at least
     one variable is declared as ordered.}
