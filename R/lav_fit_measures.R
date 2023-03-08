@@ -54,7 +54,7 @@ fitMeasures.efaList <- fitmeasures.efaList <- function(object,
                    rmsea.close.h0    = 0.05,
                    rmsea.notclose.h0 = 0.08,
                    cat.check.pd      = TRUE),
-    vector = "list", ...) {
+    output = "list", ...) {
 
     # kill object$loadings if present
     object[["loadings"]] <- NULL
