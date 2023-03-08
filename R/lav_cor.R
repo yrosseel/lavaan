@@ -44,14 +44,14 @@ lavCor <- function(object,
             se <- "none"
         }
     }
-    
+
     # extract sampling.weights.normalization from dots (for lavData() call)
     dots <- list(...)
     sampling.weights.normalization <- "total"
     if (!is.null(dots$sampling.weights.normalization)) {
         sampling.weights.normalization <- dots$sampling.weights.normalization
     }
-    
+
 
     # check object class
     if(inherits(object, "lavData")) {

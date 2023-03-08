@@ -75,17 +75,17 @@ print.lavaan.matrix.symmetric <- function(x, ..., nd = 3L, shift = 0L,
             rownames(y) <- empty.string
         }
     }
-    
+
     if(!is.null(attr(x, "header"))) {
       cat("\n", attr(x, "header"), "\n\n", sep = "")
     }
-    
+
     print(y, ..., quote = FALSE, right = TRUE)
-    
+
     if(!is.null(attr(x, "footer"))) {
       cat("\n", attr(x, "footer"), "\n\n", sep = "")
     }
-    
+
     invisible(x)
 }
 
@@ -108,13 +108,13 @@ print.lavaan.matrix <- function(x, ..., nd = 3L, shift = 0L) {
     if(!is.null(attr(x, "header"))) {
       cat("\n", attr(x, "header"), "\n\n", sep = "")
     }
-    
+
     print( round(y, nd), right = TRUE, ... )
-    
+
     if(!is.null(attr(x, "footer"))) {
       cat("\n", attr(x, "footer"), "\n\n", sep = "")
     }
-    
+
     invisible(x)
 }
 
@@ -127,7 +127,7 @@ print.lavaan.vector <- function(x, ..., nd = 3L, shift = 0L) {
     if(!is.null(attr(x, "header"))) {
       cat("\n", attr(x, "header"), "\n\n", sep = "")
     }
-    
+
     if(shift > 0L) {
         empty.string <- strrep(x = " ", times = shift)
         tmp <- format(y, digits = nd, width = 2L + nd)
@@ -136,11 +136,11 @@ print.lavaan.vector <- function(x, ..., nd = 3L, shift = 0L) {
     } else {
         print( round(y, nd), right = TRUE, ... )
     }
-    
+
     if(!is.null(attr(x, "footer"))) {
       cat("\n", attr(x, "footer"), "\n\n", sep = "")
     }
-    
+
     invisible(x)
 }
 

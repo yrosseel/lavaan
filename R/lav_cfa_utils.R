@@ -101,6 +101,80 @@ lav_cfa_lambda2thetapsi <- function(lambda = NULL, S = NULL, S.inv = NULL,
     list(lambda = LAMBDA, theta = theta.nobounds, psi = PSI)
 }
 
+# compute PSI, given lambda and theta using either ULS, GLS, ML
+# this function assumes:
+# - THETA is diagonal
+# - PSI is unrestricted
+#
+# YR 08 Mar 2023: - first version
+lav_cfa_lambdatheta2psi <- function(lambda = NULL, theta = NULL, # vector!
+                                    S = NULL, S.inv = NULL,
+                                    mapping = "ML", nobs = 20L) {
+    LAMBDA <- as.matrix(lambda)
+    nvar <- nrow(LAMBDA); nfac <- ncol(LAMBDA)
+
+    theta.nobounds <- theta
+
+    # ALWAYS check bounds for theta to compute PSI
+    diagS <- diag(S)
+    # lower bound
+    lower.bound <- diagS * 0 # * 0.01
+    too.small.idx <- which(theta < lower.bound)
+    if(length(too.small.idx) > 0L) {
+        theta[ too.small.idx ] <- lower.bound[ too.small.idx ]
+    }
+
+    # upper bound
+    upper.bound <- diagS * 1 # * 0.99
+    too.large.idx <- which(theta > upper.bound)
+    if(length(too.large.idx) > 0L) {
+        theta[ too.large.idx ] <- upper.bound[ too.large.idx ]
+    }
+
+    # psi
+    diag.theta <- diag(theta, nvar)
+    lambda <- try(lav_matrix_symmetric_diff_smallest_root(S, diag.theta),
+                  silent = TRUE)
+    if(inherits(lambda, "try-error")) {
+        warning("lavaan WARNING: failed to compute lambda")
+        SminTheta <- S - diag.theta # and hope for the best
+    } else {
+        cutoff <- 1 + 1/(nobs - 1)
+        if(lambda < cutoff) {
+            lambda.star <- lambda - 1/(nobs - 1)
+            SminTheta <- S - lambda.star * diag.theta
+        } else {
+            SminTheta <- S - diag.theta
+        }
+    }
+
+    # mapping matrix
+    if(mapping == "ML") {
+        Ti <- 1/theta
+        zero.theta.idx <- which(abs(theta) < 0.01) # be conservative
+        if(length(zero.theta.idx) > 0L) {
+            Ti[zero.theta.idx] <- 1
+        }
+        M <- solve(t(LAMBDA) %*% diag(Ti, nvar) %*% LAMBDA) %*% t(LAMBDA) %*% diag(Ti, nvar)
+    } else if(mapping == "GLS") {
+        if(is.null(S.inv)) {
+            S.inv <- try(solve(S), silent = TRUE)
+        }
+        if(inherits(S.inv, "try-error")) {
+            M <- tcrososprod(solve(crossprod(LAMBDA)), LAMBDA)
+        } else {
+            M <- solve(t(LAMBDA) %*% S.inv %*% LAMBDA) %*% t(LAMBDA) %*% S.inv
+        }
+    } else if(mapping == "ULS") {
+        M <- tcrososprod(solve(crossprod(LAMBDA)), LAMBDA)
+    }
+
+    # compute PSI
+    PSI <- M %*% SminTheta %*% t(M)
+
+    PSI
+}
+
 # compute theta elements for a 1-factor model
 lav_cfa_theta_spearman <- function(S, bounds = "wide") {
     p <- ncol(S); out <- numeric(p)

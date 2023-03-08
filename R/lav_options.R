@@ -1203,11 +1203,14 @@ lav_options_set <- function(opt = NULL) {
 
 
     ##################################################################
-    # FABIN, GUTTMAN1952, BENTLER, ...                               #
+    # FABIN, MULTIPLE-GROUP-METHOD (MGM( BENTLER, ...                #
     ##################################################################
     } else if(opt$estimator %in% c("fabin", "fabin2", "fabin3",
-                                    "guttman", "gutman", "guttman1952",
-                                    "bentler", "bentler1982")) {
+                                   "mgm", "guttman", "gutman", "guttman1952",
+                                   "js", "jsa", "james-stein", "james.stein",
+                                   "james-stein-aggregated",
+                                   "james.stein.aggregated",
+                                   "bentler", "bentler1982")) {
         # experimental, for cfa or sam only
 
         # sample.cov.rescale
@@ -1222,10 +1225,16 @@ lav_options_set <- function(opt = NULL) {
         # estimator
         if(opt$estimator == "fabin") {
             opt$estimator <- "FABIN2"
-        } else if(opt$estimator %in% c("guttman", "gutman", "guttmann")) {
-            opt$estimator <- "GUTTMAN1952"
+        } else if(opt$estimator %in% c("mgm", "guttman", "gutman",
+                                       "guttmann", "guttman1952")) {
+            opt$estimator <- "MGM"
         } else if(opt$estimator %in% c("bentler", "bentler1982")) {
             opt$estimator <- "BENTLER1982"
+        } else if(opt$estimator %in% c("js", "james-stein", "james.stein")) {
+            opt$estimator <- "JS"
+        } else if(opt$estimator %in% c("jsa", "james-stein-aggregated",
+                                       "james.stein.aggregated")) {
+            opt$estimator <- "JSA"
         } else {
             opt$estimator <- toupper(opt$estimator)
         }
@@ -1284,8 +1293,8 @@ lav_options_set <- function(opt = NULL) {
             }
         }
 
-        # options for guttman1952
-        if(opt$estimator == "GUTTMAN1952") {
+        # options for guttman1952 multiple group method
+        if(opt$estimator == "MGM") {
             if(is.null(opt$estimator.args)) {
                 opt$estimator.args <- list(psi.mapping = FALSE)
             } else {
