@@ -682,7 +682,8 @@ lav_partable_vnames <- function(partable, type = NULL, ...,
                               target.idx <- which(x[[b]] %in% ov.names.data)
                               if(length(target.idx) > 0L) {
                                   new.ov <-
-                                    ov.names.data[match(x[[b]], ov.names.data)]
+                                    ov.names.data[sort(match(x[[b]],
+                                                       ov.names.data))]
                                   # rm NA's (eg lv's in eqs.y)
                                   na.idx <- which(is.na(new.ov))
                                   if(length(na.idx) > 0L) {
