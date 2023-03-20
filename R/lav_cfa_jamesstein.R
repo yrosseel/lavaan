@@ -1,7 +1,7 @@
 # James-Stein estimator
 #
 # Burghgraeve, E., De Neve, J., & Rosseel, Y. (2021). Estimating structural
-# equation models using James–Stein type shrinkage estimators. Psychometrika,
+# equation models using James-Stein type shrinkage estimators. Psychometrika,
 # 86(1), 96-130.
 #
 # YR 08 Feb 2023: - first version in lavaan, cfa only (for now)

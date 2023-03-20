@@ -161,12 +161,12 @@ lav_cfa_lambdatheta2psi <- function(lambda = NULL, theta = NULL, # vector!
             S.inv <- try(solve(S), silent = TRUE)
         }
         if(inherits(S.inv, "try-error")) {
-            M <- tcrososprod(solve(crossprod(LAMBDA)), LAMBDA)
+            M <- tcrossprod(solve(crossprod(LAMBDA)), LAMBDA)
         } else {
             M <- solve(t(LAMBDA) %*% S.inv %*% LAMBDA) %*% t(LAMBDA) %*% S.inv
         }
     } else if(mapping == "ULS") {
-        M <- tcrososprod(solve(crossprod(LAMBDA)), LAMBDA)
+        M <- tcrossprod(solve(crossprod(LAMBDA)), LAMBDA)
     }
 
     # compute PSI
