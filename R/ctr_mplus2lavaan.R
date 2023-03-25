@@ -135,7 +135,7 @@ expandCmd <- function(cmd, alphaStart=TRUE) {
 parseFixStart <- function(cmd) {
   cmd.parse <- c()
   ep <- 1L
-  
+
   #support ESEM-like syntax: F BY a1* a2*
   #The easy path: putting in 1s before we proceed on parsing
   # Mar2023 bugfix: support parenthesis after * in case a parameter constraint comes next
@@ -702,7 +702,7 @@ mplus2lavaan.modelSyntax <- function(syntax) {
   # VAR | t1 + t2 + t3 (left to write ordering)
   # Parameter labels, fixed values, and starting values are tacked on in the usual way, like
   # VAR | 5*t1 + start(1.5)*t2 + par_label*t3 (left to write ordering)
-  
+
   thresh_lines <- grep("^\\s*[A-z]+\\w*\\|\\d+", lavaan.out, perl=TRUE)
   if (length(thresh_lines) > 0L) {
     thresh_vars <- unname(sub("^\\s*([A-z]+\\w*).*", "\\1", lavaan.out[thresh_lines], perl=TRUE))
@@ -713,13 +713,13 @@ mplus2lavaan.modelSyntax <- function(syntax) {
       tnum <- as.integer(sub("^\\s*[A-z]+\\w*\\|(\\d+)\\s*.*", "\\1", this_set))
       this_set <- this_set[order(tnum)] # ensure that threshold numbering matches ascending order
       this_set <- sub("[^~]+\\s*~\\s*", "", this_set, perl=T) # drop variable and ~
-      
+
       # convert to new t1, t2 syntax by combining modifiers with threshold numbers
       this_set <- sapply(seq_along(this_set), function(j) {
         #gsub("[^~]+\\s*~\\s*([\\w\\.\\-]+\\*)*1", paste0("\\1t", j), this_set[j], perl=TRUE)
         gsub("([\\w\\.\\-]+\\*)*1", paste0("\\1t", j), this_set[j], perl=TRUE)
       })
-      
+
       new_str <- paste(names(thresh_split)[i], "|", paste(this_set, collapse=" + "))
       # replace in model string on the first line having relevant syntax
       lavaan.out[thresh_split[[i]][1]] <- new_str
@@ -728,7 +728,7 @@ mplus2lavaan.modelSyntax <- function(syntax) {
     lavaan.out <- lavaan.out[-drop_elements]
   }
 
-  
+
   #tack on constraint syntax, if included
   lavaan.out <- c(lavaan.out, con_syntax)
 

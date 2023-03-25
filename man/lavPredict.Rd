@@ -10,7 +10,8 @@ function is NOT to predict future values of dependent variables as in the
 regression framework! (For models with only continuous observed variables, the function \code{lavPredictY()} supports this.}
 \usage{
 lavPredict(object, newdata = NULL, type = "lv", method = "EBM",
-           se = "none", acov = "none", label = TRUE, fsm = FALSE, 
+           transform = FALSE, se = "none", acov = "none", 
+           label = TRUE, fsm = FALSE, 
            append.data = FALSE, assemble = FALSE,
            level = 1L, optim.method = "bfgs", ETA = NULL)
 }
@@ -31,6 +32,12 @@ continuous), the possible options are \code{"regression"} or \code{"Bartlett"}.
 In the categorical case, the two options are \code{"EBM"} for
 the Empirical Bayes Modal approach, and \code{"ML"} for the maximum
 likelihood approach.}
+\item{transform}{Logical. If \code{TRUE}, transform the factor scores (per
+group) so that their mean and variance-covariance matrix matches the
+model-implied mean and variance-covariance matrix. This may be useful if the
+individual factor scores will be used in a follow-up (regression) analysis.
+Note: the standard errors (if requested) and the factor score matrix (if
+requested) are not transformed (yet).}
 \item{se}{Character. If \code{"none"}, no standard errors are computed.
 If \code{"standard"}, naive standard errors are computed (assuming the
 parameters of the measurement model are known). The standard errors are

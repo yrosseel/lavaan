@@ -36,7 +36,7 @@ predict.efaList <- function(object, ...) {
 
 # main function
 lavPredict <- function(object, newdata = NULL, # keep order of predict(), 0.6-7
-                       type = "lv", method = "EBM",
+                       type = "lv", method = "EBM", transform = FALSE,
                        se = "none", acov = "none", label = TRUE, fsm = FALSE,
                        append.data = FALSE, assemble = FALSE, # or TRUE?
                        level = 1L, optim.method = "bfgs", ETA = NULL) {
@@ -187,6 +187,31 @@ lavPredict <- function(object, newdata = NULL, # keep order of predict(), 0.6-7
                    }
                    ret
                })
+
+        # new in 0.6-16
+        if(transform) {
+            VETA <- lavTech(object, "cov.lv")
+            EETA <- lavTech(object, "mean.lv")
+            out <- lapply(seq_len(lavdata@ngroups), function(g) {
+                       # determine block
+                       if(lavdata@nlevels == 1L) {
+                           bb <- g
+                       } else {
+                            bb <- (g - 1)*lavdata@nlevels + level
+                       }
+
+                       FS.centered <- scale(out[[g]], center = TRUE,
+                                            scale = FALSE)
+                       FS.cov <- crossprod(FS.centered)/nrow(FS.centered)
+                       FS.cov.inv <- solve(FS.cov)
+                       fs.inv.sqrt <- lav_matrix_symmetric_sqrt(FS.cov.inv)
+                       veta.sqrt <- lav_matrix_symmetric_sqrt(VETA[[g]])
+                       tmp <- FS.centered %*% fs.inv.sqrt %*% veta.sqrt
+                       ret <- t( t(tmp) + drop(EETA[[g]]) )
+
+                       ret
+                   })
+        }
 
         # append original/new data? (also remove attr)
         if(append.data && level == 1L) {
