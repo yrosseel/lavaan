@@ -809,6 +809,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                       meanstructure    = lavoptions$meanstructure,
                       int.ov.free      = lavoptions$int.ov.free,
                       int.lv.free      = lavoptions$int.lv.free,
+                      marker.int.zero  = lavoptions$marker.int.zero,
                       orthogonal       = lavoptions$orthogonal,
                       orthogonal.x     = lavoptions$orthogonal.x,
                       orthogonal.y     = lavoptions$orthogonal.y,

@@ -13,7 +13,8 @@ function \code{lavaanify} turns it into a table that represents the full
 model as specified by the user. We refer to this table as the parameter table.} 
 \usage{
 lavaanify(model = NULL, meanstructure = FALSE, int.ov.free = FALSE, 
-    int.lv.free = FALSE, orthogonal = FALSE, orthogonal.y = FALSE,
+    int.lv.free = FALSE, marker.int.zero = FALSE,
+    orthogonal = FALSE, orthogonal.y = FALSE,
     orthogonal.x = FALSE, orthogonal.efa = FALSE, std.lv = FALSE,
     correlation = FALSE, effect.coding = "", conditional.x = FALSE, 
     fixed.x = FALSE, parameterization = "delta", constraints = NULL, 
@@ -26,7 +27,8 @@ lavaanify(model = NULL, meanstructure = FALSE, int.ov.free = FALSE,
     debug = FALSE, warn = TRUE, as.data.frame. = TRUE)
 
 lavParTable(model = NULL, meanstructure = FALSE, int.ov.free = FALSE,
-    int.lv.free = FALSE, orthogonal = FALSE, orthogonal.y = FALSE, 
+    int.lv.free = FALSE, marker.int.zero = FALSE,
+    orthogonal = FALSE, orthogonal.y = FALSE, 
     orthogonal.x = FALSE, orthogonal.efa = FALSE, std.lv = FALSE,
     correlation = FALSE, effect.coding = "", conditional.x = FALSE, 
     fixed.x = FALSE, parameterization = "delta", constraints = NULL, 
@@ -55,6 +57,12 @@ the model both for both observed and latent variables.}
     are fixed to zero.}
 \item{int.lv.free}{If \code{FALSE}, the intercepts of the latent variables
     are fixed to zero.}
+\item{marker.int.zero}{Logical. Only relevant if the metric of each latent
+    variable is set by fixing the first factor loading to unity.
+    If \code{TRUE}, it implies \code{meanstructure = TRUE} and 
+    \code{std.lv = FALSE}, and it fixes the intercepts of the marker
+    indicators to zero, while freeing the means/intercepts of the latent
+    variables. Only works correcly for single group, single level models.}
 \item{orthogonal}{If \code{TRUE}, all covariances among
    latent variables are set to zero.}
 \item{orthogonal.y}{If \code{TRUE}, all covariances among

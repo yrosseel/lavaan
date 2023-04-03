@@ -50,6 +50,8 @@ lav_options_default <- function(mimic = "lavaan") {
                 meanstructure      = "default",
                 int.ov.free        = FALSE,
                 int.lv.free        = FALSE,
+                marker.int.zero    = FALSE,     # fix maker intercepts,
+                                                # free lv means
                 conditional.x      = "default", # or FALSE?
                 fixed.x            = "default", # or FALSE?
                 orthogonal         = FALSE,
@@ -290,6 +292,19 @@ lav_options_set <- function(opt = NULL) {
         opt$mimic <- "lm"
     } else {
         stop("lavaan ERROR: mimic must be \"lavaan\", \"Mplus\" or \"EQS\" \n")
+    }
+
+    # marker.int.fixed
+    if(opt$marker.int.zero) {
+        opt$meanstructure <- TRUE
+        opt$int.ov.free <- TRUE
+        if((is.logical(opt$effect.coding) && opt$effect.coding) ||
+           (is.character(opt$effect.coding) && nchar(opt$effect.coding) > 0L)) {
+            stop("lavaan ERROR: effect coding cannot be combined with marker.int.zero = TRUE option")
+        }
+        if(opt$std.lv) {
+            stop("lavaan ERROR: std.lv = TRUE cannot be combined with marker.int.zero = TRUE")
+        }
     }
 
     # group.equal and group.partial

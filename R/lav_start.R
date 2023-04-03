@@ -420,6 +420,11 @@ lav_start <- function(start.method    = "default",
             }
         }
 
+        # TODo: if marker.int.zero = TRUE, set lv means to marker means,
+        #       and the non-marker means to
+        #       lavsamplestats@mean[[g]] - LAMBDA %*% ALPHA
+        #       where ALPHA = means of the markers
+
         # 4g) thresholds
         th.idx <- which(lavpartable$group == group.values[g] & lavpartable$op == "|")
         if(length(th.idx) > 0L) {
