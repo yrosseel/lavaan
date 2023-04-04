@@ -34,6 +34,28 @@ lav_utils_get_scaled <- function(lavobject) {
     scaled
 }
 
+# check for marker indicators:
+#   - if std.lv = FALSE: a single '1' per factor, everything else zero
+#   - if std.lv = TRUE: a single non-zero value per factor, everything else zero
+lav_utils_get_marker <- function(LAMBDA = NULL, std.lv = FALSE) {
+    LAMBDA <- as.matrix(LAMBDA)
+    nvar <- nrow(LAMBDA); nfac <- ncol(LAMBDA)
+
+    marker.idx <- numeric(nfac)
+    for(f in seq_len(nfac)) {
+        if(std.lv) {
+            marker.idx[f] <- which(rowSums(cbind(LAMBDA[,f ] != 0,
+                                                 LAMBDA[,-f] == 0)) == nfac)[1]
+        } else {
+            marker.idx[f] <- which(rowSums(cbind(LAMBDA[,f ] == 1,
+                                                 LAMBDA[,-f] == 0)) == nfac)[1]
+        }
+    }
+
+    marker.idx
+}
+
+
 # get npar (taking into account explicit equality constraints)
 # (changed in 0.5-13)
 lav_utils_get_npar <- function(lavobject) {

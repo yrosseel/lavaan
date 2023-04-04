@@ -260,6 +260,15 @@ lav_matrix_vech_match_idx <- function(n = 1L, diagonal = TRUE,
     lav_matrix_vech(B, diagonal = diagonal)
 }
 
+# check if square matrix is diagonal (no tolerance!)
+lav_matrix_is_diagonal <- function(A = NULL) {
+    A <- as.matrix.default(A)
+    stopifnot(nrow(A) == ncol(A))
+
+    diag(A) <- 0
+    all(A == 0)
+}
+
 
 # create the duplication matrix (D_n): it 'duplicates' the elements
 # in vech(S) to create vec(S) (where S is symmetric)

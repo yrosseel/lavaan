@@ -469,9 +469,9 @@ sam <- function(model            = NULL,
 
         # compute VETA/EETA per block
         if(nlevels > 1L && local.twolevel.method == "h1") {
-            out <- lav_h1_implied_logl(lavdata = FIT@Data,
-                                       lavsamplestats = FIT@SampleStats,
-                                       lavoptions     = FIT@Options)
+            H1 <- lav_h1_implied_logl(lavdata = FIT@Data,
+                                      lavsamplestats = FIT@SampleStats,
+                                      lavoptions     = FIT@Options)
         }
 
         for(b in seq_len(nblocks)) {
@@ -488,8 +488,8 @@ sam <- function(model            = NULL,
                 if(this.level == 1L) {
 
                     if(local.twolevel.method == "h1") {
-                        COV  <- out$implied$cov[[1]]
-                        YBAR <- out$implied$mean[[1]]
+                        COV  <- H1$implied$cov[[1]]
+                        YBAR <- H1$implied$mean[[1]]
                     } else if(local.twolevel.method == "anova" ||
                               local.twolevel.method == "mean") {
                         COV  <- FIT@SampleStats@YLp[[this.group]][[2]]$Sigma.W
@@ -502,8 +502,8 @@ sam <- function(model            = NULL,
                     YBAR <- YBAR[ov.idx]
                 } else if(this.level == 2L) {
                     if(local.twolevel.method == "h1") {
-                        COV  <- out$implied$cov[[2]]
-                        YBAR <- out$implied$mean[[2]]
+                        COV  <- H1$implied$cov[[2]]
+                        YBAR <- H1$implied$mean[[2]]
                     } else if(local.twolevel.method == "anova") {
                         COV  <- FIT@SampleStats@YLp[[this.group]][[2]]$Sigma.B
                         YBAR <- FIT@SampleStats@YLp[[this.group]][[2]]$Mu.B
@@ -541,88 +541,33 @@ sam <- function(model            = NULL,
                 }
             }
 
-            # compute 'M'
-            if(local.M.method == "GLS") {
-                Mg <- ( solve(t(LAMBDA[[b]]) %*% ICOV %*% LAMBDA[[b]]) %*%
-                            t(LAMBDA[[b]]) %*% ICOV )
-            } else if(local.M.method == "ML") {
-                zero.theta.idx <- which(abs(diag(THETA[[b]])) < 1e-6) # nearzero
-                # if this happens, the ML mapping matrix 'M' will be
-                # different from the 'fsm' matrix we get from
-                # lavPredict() + Bartlett
-                if(length(zero.theta.idx) > 0L) {
-                    tmp <- THETA[[b]][-zero.theta.idx, -zero.theta.idx,
-                                      drop = FALSE]
-                    tmp.inv <- solve(tmp)
-                    THETA.inv <- matrix(0, nrow = nrow(THETA[[b]]),
-                                           ncol = ncol(THETA[[b]]))
-                    THETA.inv[-zero.theta.idx, -zero.theta.idx] <- tmp.inv
-                    diag(THETA.inv)[zero.theta.idx] <- 1
-                } else {
-                    THETA.inv <- solve(THETA[[b]])
-                }
-                Mg <- ( solve(t(LAMBDA[[b]]) %*% THETA.inv %*% LAMBDA[[b]]) %*%
-                            t(LAMBDA[[b]]) %*% THETA.inv )
-            } else if(local.M.method == "ULS") {
-                Mg <- solve(LAMBDA[[b]] %*%  LAMBDA[[b]]) %*% t(LAMBDA[[b]])
-            }
+            # compute mapping matrix 'M'
+            Mb <- lav_sam_mapping_matrix(LAMBDA = LAMBDA[[b]],
+                                         THETA = THETA[[b]],
+                                         S = COV, S.inv = ICOV,
+                                         method = local.M.method,
+                                         warn = lavoptions$warn)
 
             # handle observed-only variables
             dummy.ov.idx <- FIT@Model@ov.y.dummy.ov.idx[[b]]
             dummy.lv.idx <- FIT@Model@ov.y.dummy.lv.idx[[b]]
             if(length(dummy.ov.idx)) {
-                Mg[dummy.lv.idx,] <- 0
-                Mg[cbind(dummy.lv.idx, dummy.ov.idx)] <- 1
+                Mb[dummy.lv.idx,] <- 0
+                Mb[cbind(dummy.lv.idx, dummy.ov.idx)] <- 1
             }
 
-            MSM <- Mg %*% COV %*% t(Mg)
+            # compute VETA
             if(sam.method == "local") {
-                MTM <- Mg %*% THETA[[b]] %*% t(Mg)
-                N <- nobs(FIT)
-
-                # apply small sample correction (if requested)
-                # if alpha.correction == 0     -> same as local SAM (or MOC)
-                # if alpha.correction == (N-1) -> same as FSR+Bartlett
-                if(alpha.correction > 0) {
-                    alpha.N1 <- alpha.correction / (N - 1)
-                    if(alpha.N1 > 1.0) {
-                        alpha.N1 <- 1.0
-                    } else if (alpha.N1 < 0.0) {
-                        alpha.N1 <- 0.0
-                    }
-                    MTM <- (1 - alpha.N1) * MTM
-                    alpha[[b]] <- alpha.correction
-                } else {
-                    alpha[[b]] <- alpha.correction
-                }
-
-                lambda[[b]] <- as.numeric(NA)
-                if(local.options[["veta.force.pd"]]) {
-                    # use Fuller (1987) approach to ensure VETA is positive
-                    lambda.b <-
-                        try(lav_matrix_symmetric_diff_smallest_root(MSM, MTM),
-                            silent = TRUE)
-                    if(inherits(lambda, "try-error")) {
-                        warning("lavaan WARNING: failed to compute lambda")
-                        VETA[[b]] <- MSM - MTM # and hope for the best
-                    } else {
-                        cutoff <- 1 + 1/(N-1)
-                        if(lambda.b < cutoff) {
-                            lambda.star <- lambda.b - 1/(N - 1)
-                            VETA[[b]] <- MSM - lambda.star * MTM
-                        } else {
-                            VETA[[b]] <- MSM - MTM
-                        }
-                        lambda[[b]] <- lambda.b
-                    }
-                } else {
-                    VETA[[b]] <- MSM - MTM
-                }
-            # end local SAM
-
+                tmp <- lav_sam_veta(M = Mb, S = COV, THETA = THETA[[b]],
+                           alpha.correction = alpha.correction,
+                           lambda.correction = local.options[["veta.force.pd"]],
+                           N <- nobs(FIT), extra = TRUE)
+                VETA[[b]] <- tmp[,,drop = FALSE] # drop attributes
+                alpha[[b]]  <- attr(tmp, "alpha")
+                lambda[[b]] <- attr(tmp, "lambda")
             } else {
-                # FSR
-                VETA[[b]] <- MSM
+                # FSR -- no correction
+                VETA[[b]] <- Mb %*% COV %*% t(Mb)
             }
 
             # standardize? not really needed, but we may have 1.0000001
@@ -637,16 +582,16 @@ sam <- function(model            = NULL,
 
             # compute EETA
             if(lavoptions$meanstructure) {
-                EETA[[b]] <- Mg %*% (YBAR - NU[[b]])
+                EETA[[b]] <- lav_sam_eeta(M = Mb, YBAR = YBAR, NU = NU[[b]])
             }
 
             # compute model-based reliability
-            MSM <- Mg %*% COV %*% t(Mg)
+            MSM <- Mb %*% COV %*% t(Mb)
             #REL[[b]] <- diag(VETA[[b]] %*% solve(MSM)) # CHECKme!
             REL[[b]] <- diag(VETA[[b]]) / diag(MSM)
 
             # store M
-            M[[b]] <- Mg
+            M[[b]] <- Mb
 
         } # blocks
 
@@ -656,17 +601,9 @@ sam <- function(model            = NULL,
             names(REL)  <- FIT@Data@block.label
         }
 
-        # store EETA/VETA
-        out$VETA <- VETA
-        out$EETA <- EETA
-        out$REL  <- REL
-
-        # store M
-        out$M <- M
-
-        # store alpha and lambda (if used)
-        out$lambda <- lambda
-        out$alpha  <- alpha
+        # store EETA/VETA/M/alpha/lambda
+        out$VETA <- VETA; out$EETA <- EETA; out$REL  <- REL
+        out$M <- M; out$lambda <- lambda; out$alpha  <- alpha
 
         if(lavoptions$verbose) {
             cat("done.\n")
