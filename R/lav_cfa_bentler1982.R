@@ -8,6 +8,8 @@
 # YR 03 Feb 2023: - first version in lavaan: simple setting only,
 #                   no constraints, no 'fixed' (but nonzero) values,
 #                   no correlated residuals (ie diagonal-theta only!)
+# YR 23 Apr 2023: - quadprog is not needed if we have no (in)equality
+#                   constraints
 
 lav_cfa_bentler1982 <- function(S,
                                 marker.idx             = NULL,
@@ -15,6 +17,7 @@ lav_cfa_bentler1982 <- function(S,
                                 GLS                    = FALSE,
                                 bounds                 = TRUE,
                                 min.reliability.marker = 0.1,
+                                quadprog               = FALSE,
                                 nobs                   = 20L) { # for cutoff
     # dimensions
     nvar <- ncol(S); nfac <- length(marker.idx)
@@ -142,7 +145,7 @@ lav_cfa_bentler1982 <- function(S,
       diag(PSI)[too.large.idx] <- diag(S.xx)[too.large.idx] * 1
     }
 
-    # in addition, for PSI to be PD
+    # in addition, force PSI to be PD
     PSI <- lav_matrix_symmetric_force_pd(PSI, tol = 1e-04)
 
     # residual variances markers
@@ -154,28 +157,37 @@ lav_cfa_bentler1982 <- function(S,
     theta.nobounds[-marker.idx] <- Theta.f.nobounds
 
     # compute LAMBDA for non-marker items
-    Dmat <- lav_matrix_bdiag(rep(list(PSI), p))
-    dvec <- as.vector(t(S.yx))
-    eq.idx <- which(t(B.y) != 1) # these must be zero (row-wise!)
-    Rmat <- diag(nrow(Dmat))[eq.idx,, drop = FALSE]
-    bvec <- rep(0, length(eq.idx)) # optional, 0=default
-    out <- try(quadprog::solve.QP(Dmat = Dmat, dvec = dvec, Amat = t(Rmat),
+
+    if(quadprog) {
+        # only really needed if we need to impose (in)equality constraints
+        # (TODO)
+        Dmat <- lav_matrix_bdiag(rep(list(PSI), p))
+        dvec <- as.vector(t(S.yx))
+        eq.idx <- which(t(B.y) != 1) # these must be zero (row-wise!)
+        Rmat <- diag(nrow(Dmat))[eq.idx,, drop = FALSE]
+        bvec <- rep(0, length(eq.idx)) # optional, 0=default
+        out <- try(quadprog::solve.QP(Dmat = Dmat, dvec = dvec, Amat = t(Rmat),
                         meq = length(eq.idx), bvec = bvec), silent = TRUE)
-    if(inherits(out, "try-error")) {
-        warning("lavaan WARNING: solve.QP failed to find a solution")
-        Lambda <- matrix(0, nvar, nfac)
-        Lambda[marker.idx,] <- diag(nfac)
-        Lambda[lambda.nonzero.idx] <- as.numeric(NA)
-        Theta <- numeric(nvar)
-        Theta[ marker.idx] <- Theta.x
-        Theta[-marker.idx] <- Theta.f
-        Psi <- PSI
-        return( list(lambda = Lambda, theta = theta.nobounds,
-                     psi = PSI.nobounds) )
+        if(inherits(out, "try-error")) {
+            warning("lavaan WARNING: solve.QP failed to find a solution")
+            Lambda <- matrix(0, nvar, nfac)
+            Lambda[marker.idx,] <- diag(nfac)
+            Lambda[lambda.nonzero.idx] <- as.numeric(NA)
+            Theta <- numeric(nvar)
+            Theta[ marker.idx] <- Theta.x
+            Theta[-marker.idx] <- Theta.f
+            Psi <- PSI
+            return( list(lambda = Lambda, theta = theta.nobounds,
+                         psi = PSI.nobounds) )
+        } else {
+            LAMBDA.y <- matrix(out$solution, nrow = p, ncol = nfac,
+                               byrow = TRUE)
+            # zap almost zero elements
+            LAMBDA.y[ abs(LAMBDA.y) < sqrt(.Machine$double.eps) ] <- 0
+        }
     } else {
-        LAMBDA.y <- matrix(out$solution, nrow = p, ncol = nfac, byrow = TRUE)
-        # zap almost zero elements
-        LAMBDA.y[ abs(LAMBDA.y) < sqrt(.Machine$double.eps) ] <- 0
+        # simple version
+        LAMBDA.y <- t(t(S.yx) / diag(PSI)) * B.y
     }
 
 
@@ -199,6 +211,7 @@ lav_cfa_bentler1982_internal <- function(lavobject      = NULL, # convenience
                                          lavoptions     = NULL,
                                          GLS            = TRUE,
                                          min.reliability.marker = 0.1,
+                                         quadprog       = FALSE,
                                          nobs           = 20L) {
 
     if(!is.null(lavobject)) {
@@ -257,11 +270,17 @@ lav_cfa_bentler1982_internal <- function(lavobject      = NULL, # convenience
         }
     }
 
+    if(missing(quadprog) &&
+       !is.null(lavoptions$estimator.args$quadprog)) {
+        quadprog <- lavoptions$estimator.args$quadprog
+    }
+
     # run bentler1982 non-iterative CFA algorithm
     out <- lav_cfa_bentler1982(S = sample.cov, marker.idx = marker.idx,
                                lambda.nonzero.idx = lambda.nonzero.idx,
                                GLS = GLS.flag,
                                min.reliability.marker = 0.1,
+                               quadprog = quadprog,
                                nobs = lavsamplestats@ntotal)
     LAMBDA <- out$lambda
     THETA  <- diag(out$theta, nvar)

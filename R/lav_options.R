@@ -1300,10 +1300,13 @@ lav_options_set <- function(opt = NULL) {
         # options for Bentler
         if(opt$estimator == "BENTLER1982") {
             if(is.null(opt$estimator.args)) {
-                opt$estimator.args <- list(GLS = FALSE)
+                opt$estimator.args <- list(GLS = FALSE, quadprog = FALSE)
             } else {
                 if(is.null(opt$estimator.args$GLS)) {
                     opt$estimator.args$GLS <- FALSE
+                }
+                if(is.null(opt$estimator.args$quadprog)) {
+                    opt$estimator.args$quadprog <- FALSE
                 }
             }
         }
