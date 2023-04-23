@@ -95,7 +95,7 @@ lav_sam_mapping_matrix <- function(LAMBDA = NULL, THETA = NULL,
             }
         } else {
             # use W&A2000's method using the 'T' transformation
-            M <- try(lav_sam_mapping_matrix_wa(LAMBDA = LAMBDA,
+            M <- try(lav_sam_mapping_matrix_tmat(LAMBDA = LAMBDA,
                                                THETA = THETA), silent = TRUE)
             if(inherits(M, "try-error")) {
                 if(warn) {
@@ -121,10 +121,10 @@ lav_sam_mapping_matrix <- function(LAMBDA = NULL, THETA = NULL,
 # - if std.lv = TRUE, we first rescale to 'create' marker indicators
 #   and then rescale back at the end
 #
-lav_sam_mapping_matrix_wa <- function(LAMBDA     = NULL,
-                                      THETA      = NULL,
-                                      marker.idx = NULL,
-                                      std.lv     = NULL) {
+lav_sam_mapping_matrix_tmat <- function(LAMBDA     = NULL,
+                                        THETA      = NULL,
+                                        marker.idx = NULL,
+                                        std.lv     = NULL) {
 
     LAMBDA <- as.matrix.default(LAMBDA)
     nvar <- nrow(LAMBDA); nfac <- ncol(LAMBDA)
@@ -153,9 +153,48 @@ lav_sam_mapping_matrix_wa <- function(LAMBDA     = NULL,
         LAMBDA <- t(t(LAMBDA) * marker.inv)
     }
 
+    # compute 'T' matrix
+    TMAT <- lav_sam_tmat(LAMBDA = LAMBDA, THETA = THETA,
+                         marker.idx = marker.idx)
+
+    # ML mapping matrix
+    M <- TMAT[marker.idx,,drop = FALSE]
+
+    if(std.lv) {
+        M <- M * marker.inv
+    }
+
+    M
+}
+
+# create 'T' matrix (tmat) for T-transformation
+#
+# Notes: - here we assume that LAMBDA has unity markers (no std.lv = TRUE)
+#        - TMAT is NOT symmetric!
+#        - Yc %*% t(TMAT) transforms the data in such a way that we get:
+#           1)  Bartlett factor scores in the marker columns
+#           2) 'V' values in the non-marker columns, where:
+#               V = Yc - Yc[,marker.idx] %*% t(LAMBDA)
+#
+lav_sam_tmat <- function(LAMBDA     = NULL,
+                         THETA      = NULL,
+                         marker.idx = NULL) {
+
+    LAMBDA <- as.matrix.default(LAMBDA)
+    nvar <- nrow(LAMBDA); nfac <- ncol(LAMBDA)
+
+    # do we have marker.idx?
+    if(is.null(marker.idx)) {
+        # 'marker' indicator has a single 1 element in a row
+        marker.idx <- lav_utils_get_marker(LAMBDA = LAMBDA, std.lv = FALSE)
+        if(any(is.na(marker.idx))) {
+            stop("lavaan ERROR: no clear markers in LAMBDA matrix")
+        }
+    }
+
     # construct 'C' matrix
-    C2 <- diag(nvar); C2[,marker.idx] <- -1 * LAMBDA
-    C <- C2[-marker.idx,,drop = FALSE]
+    C2 <- diag(nvar); C2[, marker.idx] <- -1 * LAMBDA
+    C <- C2[-marker.idx, , drop = FALSE]
 
     # compute Sigma.ve and Sigma.vv
     Sigma.ve <- C %*% THETA
@@ -164,20 +203,24 @@ lav_sam_mapping_matrix_wa <- function(LAMBDA     = NULL,
 
     # construct 'Gamma' (and Gamma2) matrix
     #Gamma <- (t(Sigma.ve) %*% solve(Sigma.vv))[marker.idx,, drop = FALSE]
-    Gamma <- t(solve(Sigma.vv, Sigma.ve)[,marker.idx,drop = FALSE])
+    Gamma <- try(t(solve(Sigma.vv, Sigma.ve)[, marker.idx, drop = FALSE]),
+                 silent = TRUE)
+    if(inherits(Gamma, "try-error")) {
+        tmp <- t(Sigma.ve) %*% MASS::ginv(Sigma.vv)
+        Gamma <- tmp[marker.idx, , drop = FALSE]
+    }
     Gamma2 <- matrix(0, nfac, nvar)
     Gamma2[,-marker.idx] <- Gamma
     Gamma2[, marker.idx] <- diag(nfac)
 
-    # ML mapping matrix
-    M <- -Gamma2 %*% C2
+    # transformation matrix 'T' (we call it here 'Tmat')
+    Tmat <- matrix(0, nvar, nvar)
+    Tmat[-marker.idx, ] <- C
+    Tmat[ marker.idx, ] <- -Gamma2 %*% C2
 
-    if(std.lv) {
-        M <- M * marker.inv
-    }
-
-    M
+    Tmat
 }
+
 
 # compute VETA
 # - if alpha.correction == 0     -> same as local SAM (or MOC)

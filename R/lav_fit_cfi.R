@@ -24,6 +24,10 @@
 
 # note: robust MLM == robust MLMV
 
+# when missing = "fiml":
+# Zhang, X., & Savalei, V. (2022). New computations for RMSEA and CFI following
+# FIML and TS estimation with missing data. Psychological Methods.
+
 
 lav_fit_cfi <- function(X2 = NULL, df = NULL, X2.null = NULL, df.null = NULL,
                         c.hat = 1, c.hat.null = 1) {
@@ -112,10 +116,10 @@ lav_fit_tli <- function(X2 = NULL, df = NULL, X2.null = NULL, df.null = NULL,
     # robust?
     if(df > 0 && !missing(c.hat) && !missing(c.hat.null) &&
        c.hat != 1 && c.hat.null != 1) {
-        t1 <- (X2 - c.hat * df) * df.null
+        t1 <- (X2      - c.hat      * df     ) * df.null
         t2 <- (X2.null - c.hat.null * df.null) * df
     } else {
-        t1 <- (X2 - df) * df.null
+        t1 <- (X2      - df)      * df.null
         t2 <- (X2.null - df.null) * df
     }
 

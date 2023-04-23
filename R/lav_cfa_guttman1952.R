@@ -11,6 +11,7 @@ lav_cfa_guttman1952 <- function(S,
                                 theta              = NULL,  # vector!
                                 theta.bounds       = FALSE,
                                 force.pd           = FALSE,
+                                zero.after.efa     = FALSE,
                                 quadprog           = FALSE,
                                 psi.mapping        = FALSE,
                                 nobs               = 20L) { # for cutoff
@@ -83,17 +84,15 @@ lav_cfa_guttman1952 <- function(S,
     #                           2) (corrected) sum-scores
     YS.COV <- SminTheta %*% B
 
-    # compute covariance matrix of sum-scores
+    # compute covariance matrix of corrected sum-scores
     # SS.COV <- t(B) %*% SminTheta %*% B
     SS.COV <- crossprod(B, YS.COV)
-
 
     # scaling factors
     #D.inv.sqrt <- diag(1/sqrt(diag(SS.COV)))
     d.inv.sqrt <- 1/sqrt(diag(SS.COV))
 
-    # factor *structure* matrix
-    # (covariances corrected Y & corrected normalized sum-scores)
+    # factor correlation matrix
     # PHI <- D.inv.sqrt %*% SS.COV %*% D.inv.sqrt
     PHI <- t(SS.COV * d.inv.sqrt) * d.inv.sqrt
 
@@ -102,8 +101,17 @@ lav_cfa_guttman1952 <- function(S,
     # YS.COR <- YS.COV %*% D.inv.sqrt
     YS.COR <- t(YS.COV) * d.inv.sqrt # transposed!
 
-    # constained version using quadprog
-    if(quadprog) {
+    if(zero.after.efa) {
+        # we initially assume a saturated LAMBDA (like EFA)
+        # then, we just fix the zero-elements to zero
+
+        LAMBDA <- t( solve(PHI, YS.COR) ) # = unconstrained EFA version
+        # force zeroes
+        LAMBDA <- LAMBDA * B
+    } else if(quadprog) {
+        # constained version using quadprog
+        # only useful if (in)equality constraints are needed (TODo)
+
         # PHI MUST be positive-definite
         PHI <- cov2cor(lav_matrix_symmetric_force_pd(PHI,
                        tol = 1e-04)) # option?
@@ -126,9 +134,12 @@ lav_cfa_guttman1952 <- function(S,
             LAMBDA[ abs(LAMBDA) < sqrt(.Machine$double.eps) ] <- 0
         }
     } else {
-        LAMBDA <- t( solve(PHI, YS.COR) ) # = unconstrained EFA version
-        # force zeroes
-        LAMBDA <- LAMBDA * B
+        # default, if no (in)equality constraints
+
+        YS.COR0 <- YS.COR
+        YS.COR0[ t(B) != 1 ] <- 0
+
+        LAMBDA <- t(YS.COR0)
     }
 
     # rescale LAMBDA, so that 'marker' indicator == 1
@@ -138,7 +149,7 @@ lav_cfa_guttman1952 <- function(S,
     # rescale PHI, covariance metric
     Psi <- t(PHI * marker.lambda) * marker.lambda
 
-    # redo psi using mapping function?
+    # redo psi using ML mapping function?
     if(psi.mapping) {
         Ti <- 1/theta
         zero.theta.idx <- which(abs(theta) < 0.01) # be conservative
@@ -166,7 +177,8 @@ lav_cfa_guttman1952_internal <- function(lavobject      = NULL, # convenience
                                          lavoptions     = NULL,
                                          theta.bounds   = TRUE,
                                          force.pd       = TRUE,
-                                         quadprog       = TRUE,
+                                         zero.after.efa = FALSE,
+                                         quadprog       = FALSE,
                                          psi.mapping    = TRUE) {
 
     if(!is.null(lavobject)) {
@@ -184,6 +196,11 @@ lav_cfa_guttman1952_internal <- function(lavobject      = NULL, # convenience
     if(missing(psi.mapping) &&
        !is.null(lavoptions$estimator.args$psi.mapping)) {
         psi.mapping <- lavoptions$estimator.args$psi.mapping
+    }
+
+    if(missing(quadprog) &&
+       !is.null(lavoptions$estimator.args$quadprog)) {
+        quadprog <- lavoptions$estimator.args$quadprog
     }
 
     # no structural part!
@@ -239,10 +256,11 @@ lav_cfa_guttman1952_internal <- function(lavobject      = NULL, # convenience
                                lambda.nonzero.idx = lambda.nonzero.idx,
                                theta = theta,
                                # experimental
-                               theta.bounds = theta.bounds,
-                               force.pd     = force.pd,
-                               quadprog     = quadprog,
-                               psi.mapping  = psi.mapping,
+                               theta.bounds   = theta.bounds,
+                               force.pd       = force.pd,
+                               zero.after.efa = zero.after.efa,
+                               quadprog       = quadprog,
+                               psi.mapping    = psi.mapping,
                                #
                                nobs = lavsamplestats@ntotal)
     LAMBDA <- out$lambda

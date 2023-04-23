@@ -61,6 +61,10 @@
 # mean-and-variance corrected test statistic with nonnormal data in SEM.
 # Multivariate behavioral research, 53(3), 419-429.
 
+# missing = "fiml":
+# Zhang, X., & Savalei, V. (2022). New computations for RMSEA and CFI following
+# FIML and TS estimation with missing data. Psychological Methods.
+
 
 # always using N (if a user needs N-1, just replace N by N-1)
 # vectorized!

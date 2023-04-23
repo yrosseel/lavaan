@@ -1240,7 +1240,7 @@ lav_options_set <- function(opt = NULL) {
         # estimator
         if(opt$estimator == "fabin") {
             opt$estimator <- "FABIN2"
-        } else if(opt$estimator %in% c("mgm", "guttman", "gutman",
+        } else if(opt$estimator %in% c("mgm", "guttman", "gutman", "gutmann",
                                        "guttmann", "guttman1952")) {
             opt$estimator <- "MGM"
         } else if(opt$estimator %in% c("bentler", "bentler1982")) {
@@ -1311,10 +1311,14 @@ lav_options_set <- function(opt = NULL) {
         # options for guttman1952 multiple group method
         if(opt$estimator == "MGM") {
             if(is.null(opt$estimator.args)) {
-                opt$estimator.args <- list(psi.mapping = FALSE)
+                opt$estimator.args <- list(psi.mapping = FALSE,
+                                           quadprog = FALSE)
             } else {
                 if(is.null(opt$estimator.args$psi.mapping)) {
                     opt$estimator.args$psi.mapping <- FALSE
+                }
+                if(is.null(opt$estimator.args$quadprog)) {
+                    opt$estimator.args$quadprog <- FALSE
                 }
             }
         }
