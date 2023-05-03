@@ -294,7 +294,7 @@ Estimation options:
       are computed based on inverting the (expected, observed or first.order) 
       information matrix. If \code{"robust.sem"}, conventional robust
       standard errors are computed.  If \code{"robust.huber.white"},
-      standard errors are computed based on the `mlr' (aka pseudo ML,
+      standard errors are computed based on the 'mlr' (aka pseudo ML,
       Huber-White) approach.
       If \code{"robust"}, either \code{"robust.sem"} or
       \code{"robust.huber.white"} is used depending on the estimator,
@@ -310,7 +310,7 @@ Estimation options:
       depends on the values of other arguments. See also the 
       \code{\link{lavTest}} function to extract (alternative)     
       test statistics from a fitted lavaan object.}
-   \item{code{scaled.test}:}{Character. Choose the test statistic
+   \item{\code{scaled.test}:}{Character. Choose the test statistic
     that will be scaled (if a scaled test statistic is requested).
     The default is \code{"standard"}, but it could also be (for example)
     \code{"Browne.residual.nt"}.}
