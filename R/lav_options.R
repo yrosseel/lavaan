@@ -1982,9 +1982,6 @@ lav_options_set <- function(opt = NULL) {
         opt$rotation.args$rstarts <- 0L
     }
 
-
-
-
     # correlation
     if(opt$correlation) {
         if(opt$missing == "ml") {

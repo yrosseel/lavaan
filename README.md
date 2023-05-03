@@ -33,8 +33,8 @@ model <- '
      y4 ~~ y8
      y6 ~~ y8
 '
-fit <- sem(model, data=PoliticalDemocracy)
+fit <- sem(model, data = PoliticalDemocracy)
 summary(fit)
 ```
 
-More information can be found on the website: http://lavaan.org
+More information can be found on the website: https://lavaan.org

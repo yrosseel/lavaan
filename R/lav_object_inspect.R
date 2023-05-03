@@ -2685,6 +2685,11 @@ lav_object_inspect_vcov_def <- function(object, joint = FALSE,
         # bootstrap or not?
         if(!is.null(object@boot$coef)) {
             BOOT <- object@boot$coef
+            # remove NA rows
+            error.idx <- attr(BOOT, "error.idx")
+            if(length(error.idx) > 0L) {
+                BOOT <- BOOT[-error.idx,,drop = FALSE] # drops attributes
+            }
             BOOT.def <- apply(BOOT, 1L, lavmodel@def.function)
             if(length(def.idx) == 1L) {
                 BOOT.def <- as.matrix(BOOT.def)

@@ -29,8 +29,15 @@ lav_model_fit <- function(lavpartable = NULL,
 
     # did we compute standard errors?
     if(is.null(lavpartable$se)) {
-        se <- lav_model_vcov_se(lavmodel = lavmodel, lavpartable = lavpartable,
-                                VCOV = VCOV, BOOT = attr(VCOV, "BOOT.COEF"))
+        if(is.null(VCOV)) {
+            se <- rep(as.numeric(NA), lavmodel@nx.user)
+            se[lavpartable$free == 0L] <- 0
+        } else {
+            se <- lav_model_vcov_se(lavmodel = lavmodel,
+                                    lavpartable = lavpartable,
+                                    VCOV = VCOV,
+                                    BOOT = attr(VCOV, "BOOT.COEF"))
+        }
     } else {
         se <- lavpartable$se
     }
