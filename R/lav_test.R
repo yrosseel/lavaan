@@ -359,7 +359,7 @@ lav_model_test <- function(lavobject      = NULL,
 
         if(length(lavh1) > 0L) {
             # LRT
-            chisq.group <- -2 * (lavloglik$loglik.group - lavh1$loglik.group)
+            chisq.group <- -2 * (lavloglik$loglik.group - lavh1$logl$loglik.group)
         } else {
             chisq.group <- rep(as.numeric(NA), lavdata@ngroups)
         }

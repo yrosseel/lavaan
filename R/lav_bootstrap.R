@@ -188,6 +188,9 @@ lav_bootstrap_internal <- function(object          = NULL,
         lavoptions$implied <- FALSE
         lavoptions$store.vcov <- FALSE
         lavoptions$se <- "none"
+        if(FUN.orig == "coef") {
+            lavoptions$test <- "none"
+        }
     }
 
     # bollen.stine, yuan, or parametric: we need the Sigma.hat values

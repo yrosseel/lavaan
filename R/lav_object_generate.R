@@ -35,7 +35,7 @@ lav_object_independence <- function(object         = NULL,
         if(.hasSlot(object, "h1"))  {
             lavh1 <- object@h1
         } else {
-            lavh1 <- lav_h1_logl(lavdata = object@Data,
+            lavh1 <- lav_h1_implied_logl(lavdata = object@Data,
                                  lavsamplestats = object@SampleStats,
                                  lavoptions = object@Options)
         }
@@ -192,7 +192,7 @@ lav_object_unrestricted <- function(object, se = FALSE, verbose = FALSE,
     if(.hasSlot(object, "h1"))  {
         lavh1 <- object@h1
     } else {
-        lavh1 <- lav_h1_logl(lavdata = object@Data,
+        lavh1 <- lav_h1_implied_logl(lavdata = object@Data,
                              lavsamplestats = object@SampleStats,
                              lavoptions = object@Options)
     }
@@ -362,7 +362,7 @@ lav_object_extended <- function(object, add = NULL,
         object@Model@estimator <- object@Options$estimator
         object@Model@estimator.args <- list()
 
-        lavh1 <- lav_h1_logl(lavdata = object@Data,
+        lavh1 <- lav_h1_implied_logl(lavdata = object@Data,
                              lavsamplestats = object@SampleStats,
                              lavoptions = object@Options)
     }

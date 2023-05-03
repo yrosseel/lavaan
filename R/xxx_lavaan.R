@@ -963,22 +963,14 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                     cat("lavh1              ... start:\n")
                 }
 
-                # implied h1 statistics
-                out <- lav_h1_implied_logl(lavdata        = lavdata,
-                                           lavsamplestats = lavsamplestats,
-                                           lavpta         = lavpta,
-                                           lavoptions     = lavoptions)
+                # implied h1 statistics and logl (if available)
+                lavh1 <- lav_h1_implied_logl(lavdata        = lavdata,
+                                             lavsamplestats = lavsamplestats,
+                                             lavpta         = lavpta,
+                                             lavoptions     = lavoptions)
                 if(lavoptions$debug) {
-                    print(out)
+                    print(lavh1)
                 }
-                h1.implied      <- out$implied
-                h1.loglik       <- out$logl$loglik
-                h1.loglik.group <- out$logl$loglik.group
-
-                # collect in h1 list
-                lavh1 <- list(implied      = h1.implied,
-                              loglik       = h1.loglik,
-                              loglik.group = h1.loglik.group)
                 if(lavoptions$verbose) {
                     cat("lavh1              ... done.\n")
                 }

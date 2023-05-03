@@ -33,12 +33,22 @@ lav_model_h1_omega <- function(lavobject      = NULL,
         if(.hasSlot(lavobject, "h1")) {
             lavh1      <- lavobject@h1
         } else {
-            lavh1      <- lav_h1_logl(lavdata        = lavobject@Data,
+            lavh1      <- lav_h1_implied_logl(lavdata        = lavobject@Data,
                                       lavsamplestats = lavobject@SampleStats,
                                       lavoptions     = lavobject@Options)
         }
         lavcache       <- lavobject@Cache
         lavoptions     <- lavobject@Options
+    }
+
+    # sanity check
+    if(length(lavh1) == 0L) {
+        lavh1 <- lav_h1_implied_logl(lavdata = lavdata,
+                                     lavsamplestats = lavsamplestats,
+                                     lavoptions = lavoptions)
+    }
+    if(length(lavimplied) == 0L) {
+        lavimplied <- lav_model_implied(lavmodel = lavmodel)
     }
 
     # set options for A
