@@ -269,6 +269,14 @@ lav_partable_add_lv_cov <- function(PT, lavpta = NULL, lv.names = NULL) {
                     if(!is.null(PT$level)) {
                         ADD$level <- unique(PT$level[PT$block == b])
                     }
+                    # add lower column
+                    if(!is.null(PT$lower)) {
+                        ADD$lower <- as.numeric(-Inf)
+                    }
+                    # add upper column
+                    if(!is.null(PT$upper)) {
+                        ADD$upper <- as.numeric(+Inf)
+                    }
                     PT <- lav_partable_add(PT, add = ADD)
                 }
             }
@@ -561,6 +569,14 @@ lav_partable_add_exo_cov <- function(PT, lavpta = NULL, ov.names.x = NULL) {
                     # add level column
                     if(!is.null(PT$level)) {
                         ADD$level <- unique(PT$level[PT$block == b])
+                    }
+                    # add lower column
+                    if(!is.null(PT$lower)) {
+                        ADD$lower <- as.numeric(-Inf)
+                    }
+                    # add upper column
+                    if(!is.null(PT$upper)) {
+                        ADD$upper <- as.numeric(+Inf)
                     }
                     PT <- lav_partable_add(PT, add = ADD)
                 }
