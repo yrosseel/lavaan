@@ -236,6 +236,10 @@ lav_sam_veta <- function(M = NULL, S = NULL, THETA = NULL,
     # MTM
     MTM <- M %*% THETA %*% t(M)
 
+    # new in 0.6-16: make sure MTM is pd
+    # (otherwise lav_matrix_symmetric_diff_smallest_root will fail)
+    MTM <- zapsmall(lav_matrix_symmetric_force_pd(MTM, tol = 1e-04))
+
     # apply small sample correction (if requested)
     if(alpha.correction > 0) {
         alpha.N1 <- alpha.correction / (N - 1)
