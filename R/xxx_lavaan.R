@@ -1055,6 +1055,24 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
             } else {
                 lavpartable$start <- lavpartable$est
             }
+
+            # check for exogenous parameters: if the dataset changed, we must
+            # update them! (new in 0.6-16)
+            if(any(lavpartable$exo == 1L)) {
+                tmp <- lav_start(start.method   = "simple",
+                               lavpartable    = lavpartable,
+                               lavsamplestats = lavsamplestats,
+                               lavh1          = lavh1,
+                               model.type     = lavoptions$model.type,
+                               reflect      = FALSE,
+                               #order.lv.by  = lavoptions$rotation.args$order.lv.by,
+                               order.lv.by  = "none",
+                               mimic          = lavoptions$mimic,
+                               debug          = lavoptions$debug)
+                exo.idx <- which(lavpartable$exo == 1L)
+                lavpartable$start[exo.idx] <- tmp[exo.idx]
+            }
+
             if(lavoptions$verbose) {
                 cat(" done.\n")
             }
