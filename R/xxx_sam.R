@@ -886,7 +886,12 @@ sam <- function(model            = NULL,
         } else {
             N <- nobs(FIT)
         }
-        I.22.inv <- solve(I.22)
+
+        # invert augmented information, for I.22 block only
+        # new in 0.6-16 (otherwise, eq constraints in struc part are ignored)
+        I.22.inv <-
+            lav_model_information_augment_invert(lavmodel = FIT.PA@Model,
+                     information = I.22, inverted = TRUE)
 
         # method below has the advantage that we can use a 'robust' vcov
         # for the joint model;
