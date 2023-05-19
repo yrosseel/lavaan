@@ -104,8 +104,9 @@ lav_partable_full <- function(partable = NULL,
             ov.op  <- rep("~~", length(ov.lhs))
 
             # remove dummy indicators that correlate with 'proper'
-            # indicators; new in 0.6-14
-            ov.other <- ov.names[!ov.names %in% ov.names.ind]
+            # indicators; new in 0.6-14; fixed in 0.6-16
+            ov.other <- ov.names[!ov.names %in% c(ov.names.ind, ov.names.x,
+                                                  eqs.x, eqs.y)]
             if(length(ov.other) > 0L) {
                 bad.idx <- which( (ov.lhs %in% ov.names &
                                    ov.rhs %in% ov.other) |

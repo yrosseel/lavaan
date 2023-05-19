@@ -1681,7 +1681,7 @@ lav_samplestats_cluster_patterns <- function(Y = NULL, Lp = NULL,
                 Y2[, within.idx[i]] <- Y1.means[within.idx[i]]
             }
         }
-        
+
         Y2c <- t( t(Y2) - Y1.means )
 
         # compute S.w
