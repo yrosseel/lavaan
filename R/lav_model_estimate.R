@@ -426,9 +426,10 @@ lav_model_estimate <- function(lavmodel       = NULL,
             if(!attr(Sigma.hat[[g]], "po")) {
                 group.txt <- ifelse(ngroups > 1,
                                     paste(" in group ",g,".",sep=""), ".")
-                if(debug) print(Sigma.hat[[g]])
-                print(Sigma.hat[[g]][,])
-                stop("lavaan ERROR: initial model-implied matrix (Sigma) is not positive definite;\n  check your model and/or starting parameters", group.txt)
+                if(debug) {
+                    print(Sigma.hat[[g]][,])
+                }
+                warning("lavaan ERROR: initial model-implied matrix (Sigma) is not positive definite;\n  check your model and/or starting parameters", group.txt)
                 x <- start.x
                 fx <- as.numeric(NA)
                 attr(fx, "fx.group") <- rep(as.numeric(NA), ngroups)
