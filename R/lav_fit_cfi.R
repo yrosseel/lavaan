@@ -27,7 +27,7 @@
 # when missing = "fiml":
 # Zhang, X., & Savalei, V. (2023). New computations for RMSEA and CFI following
 # FIML and TS estimation with missing data. Psychological Methods, 28(2),
-# 263–283. https://doi.org/10.1037/met0000445
+# 263-283. https://doi.org/10.1037/met0000445
 
 
 lav_fit_cfi <- function(X2 = NULL, df = NULL, X2.null = NULL, df.null = NULL,
@@ -350,7 +350,7 @@ lav_fit_cfi_lavobject <- function(lavobject = NULL, fit.measures = "cfi",
             out <- try(lav_fit_catml_dwls(lavobject, check.pd = cat.check.pd),
                        silent = TRUE)
             if(inherits(out, "try-error")) {
-                XX3 <- df3 <- c.hat3 <- XX3.scaled <- as.numeric(NA)
+                XX3 <- df3 <- c.hat <- c.hat3 <- XX3.scaled <- as.numeric(NA)
             } else {
                 XX3 <- out$XX3
                 df3 <- out$df3
@@ -436,8 +436,12 @@ lav_fit_cfi_lavobject <- function(lavobject = NULL, fit.measures = "cfi",
         if(robust.flag) {
             XX3.null <- X2.null
             if(categorical.flag) {
-                XX3.null   <- out$XX3.null
-                c.hat.null <- out$c.hat3.null
+                if(inherits(out, "try-error")) {
+                    XX3.null <- c.hat.null <- as.numeric(NA)
+                } else {
+                    XX3.null   <- out$XX3.null
+                    c.hat.null <- out$c.hat3.null
+                }
             } else if(fiml.flag) {
                 XX3.null   <- fiml$XX3.null
                 c.hat.null <- fiml$c.hat3.null

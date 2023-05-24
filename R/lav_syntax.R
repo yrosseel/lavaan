@@ -569,7 +569,11 @@ lav_syntax_parse_rhs <- function(rhs, op = "") {
                 # catch interaction term
                 rhs3.names <- all.names(rhs[[3L]])
                 if(rhs3.names[1L] == ":") {
-                    NAME <- paste(NAME[1L], ":", NAME[2L], sep = "")
+                    if(length(NAME) == 1) {
+                        NAME <- paste(NAME[1L], ":", NAME[1L], sep = "")
+                    } else {
+                        NAME <- paste(NAME[1L], ":", NAME[2L], sep = "")
+                    }
                 }
                 names(out)[1L] <- NAME
             } else { # intercept
@@ -587,7 +591,11 @@ lav_syntax_parse_rhs <- function(rhs, op = "") {
         } else if(rhs[[1L]] == ":") { # last one, but interaction term
             out <- c(vector("list", 1L), out)
             NAME <- all.vars(rhs)
-            NAME <- paste(NAME[1L], ":", NAME[2L], sep = "")
+            if(length(NAME) == 1) {
+                NAME <- paste(NAME[1L], ":", NAME[1L], sep = "")
+            } else {
+                NAME <- paste(NAME[1L], ":", NAME[2L], sep = "")
+            }
             names(out)[1L] <- NAME
             break
         } else if(rhs[[1L]] == "+") { # not last one!
@@ -608,7 +616,11 @@ lav_syntax_parse_rhs <- function(rhs, op = "") {
                     # catch interaction term
                     rhs3.names <- all.names(rhs[[3L]][[3]])
                     if(rhs3.names[1L] == ":") {
-                        NAME <- paste(NAME[1L], ":", NAME[2L], sep = "")
+                        if(length(NAME) == 1) {
+                            NAME <- paste(NAME[1L], ":", NAME[1L], sep = "")
+                        } else {
+                            NAME <- paste(NAME[1L], ":", NAME[2L], sep = "")
+                        }
                     }
                     names(out)[1L] <- NAME
                 } else { # intercept
@@ -627,7 +639,11 @@ lav_syntax_parse_rhs <- function(rhs, op = "") {
             } else if(length(rhs[[3L]]) == 3L && rhs[[3L]][[1]] == ":") {
                 # interaction term, without modifier
                 NAME <- all.vars(rhs[[3L]])
-                NAME <- paste(NAME[1L], ":", NAME[2L], sep = "")
+                if(length(NAME) == 1) {
+                    NAME <- paste(NAME[1L], ":", NAME[1L], sep = "")
+                } else {
+                    NAME <- paste(NAME[1L], ":", NAME[2L], sep = "")
+                }
                 names(out)[1L] <- NAME
 
             } else { # no modifier!!

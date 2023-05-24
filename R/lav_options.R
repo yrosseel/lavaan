@@ -206,6 +206,7 @@ lav_options_default <- function(mimic = "lavaan") {
                 check.gradient         = TRUE,
                 check.vcov             = TRUE,
                 check.lv.names         = TRUE,
+                check.lv.interaction   = TRUE,
 
                 # more models/info
                 h1                     = TRUE,

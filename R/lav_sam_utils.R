@@ -289,3 +289,187 @@ lav_sam_eeta <- function(M = NULL, YBAR = NULL, NU = NULL) {
     EETA
 }
 
+# compute veta including quadratic/interaction terms
+lav_sam_veta2 <- function(FS = NULL, M = NULL,
+                          VETA = NULL, EETA = NULL, THETA = NULL,
+                          lv.names = NULL,
+                          lv.int.names = NULL,
+                          alpha.correction = 0L,
+                          lambda.correction = TRUE,
+                          extra = FALSE) {
+
+    varn <- function(x, N) {
+        var(x, use = "pairwise.complete.obs")*(N-1)/N
+    }
+
+    if(length(lv.int.names) == 0L) {
+        stop("lv.int.names is empty: no lv quadratic/interaction terms are provided")
+    }
+
+    if(is.null(lv.names)) {
+        lv.names <- paste("eta", seq_len(ncol(FS)), sep = "")
+    }
+
+    # MTM
+    MTM <- M %*% THETA %*% t(M)
+
+    # new in 0.6-16: make sure MTM is pd
+    # (otherwise lav_matrix_symmetric_diff_smallest_root will fail)
+    MTM <- zapsmall(lav_matrix_symmetric_force_pd(MTM, tol = 1e-04))
+
+    # augment to include intercept
+    FS <- cbind(1, FS)
+    N <- nrow(FS)
+    MTM  <- lav_matrix_bdiag(0, MTM)
+    VETA <- lav_matrix_bdiag(0, VETA)
+    EETA <- c(1, EETA)
+    lv.names <- c("int", lv.names)
+    nfac <- ncol(FS)
+
+    idx1 <- rep(seq_len(nfac), each = nfac)
+    idx2 <- rep(seq_len(nfac), times = nfac)
+
+    NAMES <- paste(lv.names[idx1], lv.names[idx2], sep = ":")
+    NAMES[seq_len(nfac)] <- lv.names
+
+    FS2 <- FS[,idx1] * FS[,idx2]
+
+    K.nfac <- lav_matrix_commutation(nfac, nfac)
+    IK     <- diag(nfac*nfac) + K.nfac
+
+    EETA     <- as.matrix(drop(EETA))
+    VETAkMTM <- VETA %x% MTM
+
+    # normal version (for now):
+    Gamma.ME22 <- IK %*% (MTM %x% MTM)
+
+    # ingredients (normal ME case)
+    Var.FS2  <- varn(FS2, N)
+    Var.ETAkME <- ( tcrossprod(EETA) %x% MTM  + VETAkMTM )
+    Var.MEkETA <- lav_matrix_commutation_pre_post(Var.ETAkME)
+    Var.ME2 <- Gamma.ME22
+
+    cov.ETAkME.MEkETA <- lav_matrix_commutation_post(Var.ETAkME)
+    cov.MEkETA.ETAkME <- t(cov.ETAkME.MEkETA)
+
+    Var.ERROR <- (Var.ETAkME + Var.MEkETA + cov.ETAkME.MEkETA
+                             + cov.MEkETA.ETAkME + Var.ME2 )
+
+    # select only what we need
+    colnames(Var.FS2)   <- rownames(Var.FS2)   <- NAMES
+    colnames(Var.ERROR) <- rownames(Var.ERROR) <- NAMES
+    lv.keep <- c(lv.names[-1], lv.int.names)
+    Var.FS2   <- Var.FS2[  lv.keep, lv.keep]
+    Var.ERROR <- Var.ERROR[lv.keep, lv.keep]
+
+    # apply small sample correction (if requested)
+    if(alpha.correction > 0) {
+        alpha.N1 <- alpha.correction / (N - 1)
+        if(alpha.N1 > 1.0) {
+            alpha.N1 <- 1.0
+        } else if(alpha.N1 < 0.0) {
+            alpha.N1 <- 0.0
+        }
+        Var.ERROR <- (1 - alpha.N1) * Var.ERROR
+        alpha <- alpha.correction
+    } else {
+        alpha <- alpha.correction
+    }
+
+    if(lambda.correction) {
+        # use Fuller (1987) approach to ensure VETA2 is positive
+        lambda <- try(lav_matrix_symmetric_diff_smallest_root(Var.FS2,
+                      Var.ERROR), silent = TRUE)
+        if(inherits(lambda, "try-error")) {
+            warning("lavaan WARNING: failed to compute lambda")
+            VETA2 <- Var.FS2 - Var.ERROR # and hope for the best
+        } else {
+            cutoff <- 1 + 1/(N-1)
+            if(lambda < cutoff) {
+                lambda.star <- lambda - 1/(N - 1)
+                VETA2 <- Var.FS2 - lambda.star * Var.ERROR
+            } else {
+                VETA2 <- Var.FS2 - Var.ERROR
+            }
+        }
+    } else {
+        VETA2 <- Var.FS2 - Var.ERROR
+    }
+
+    # extra attributes?
+    if(extra) {
+        attr(VETA2, "lambda") <- lambda
+        attr(VETA2, "alpha")  <- alpha
+    }
+
+    VETA2
+}
+
+lav_sam_eeta2 <- function(EETA = NULL, VETA = NULL, lv.names = NULL,
+                          lv.int.names = NULL) {
+
+    if(length(lv.int.names) == 0L) {
+        stop("lv.int.names is empty: no lv quadratic/interaction terms are provided")
+    }
+
+    if(is.null(lv.names)) {
+        lv.names <- paste("eta", seq_len(ncol(VETA)), sep = "")
+    }
+
+    nfac <- nrow(VETA)
+    idx1 <- rep(seq_len(nfac), each = nfac)
+    idx2 <- rep(seq_len(nfac), times = nfac)
+    NAMES <- c(lv.names, paste(lv.names[idx1], lv.names[idx2], sep = ":"))
+
+    # E(\eta %x% \eta)
+    EETA2 <- lav_matrix_vec(VETA) + EETA %x% EETA
+
+    # add 1st order
+    EETA2.aug <- c(EETA, EETA2)
+
+    # select only what we need
+    names(EETA2.aug) <- NAMES
+    lv.keep <- c(lv.names, lv.int.names)
+    EETA2.aug <- EETA2.aug[lv.keep]
+
+    EETA2.aug
+}
+
+# compute veta including quadratic/interaction terms
+lav_sam_fs2 <- function(FS = NULL, lv.names = NULL, lv.int.names = NULL) {
+
+    varn <- function(x, N) {
+        var(x)*(N-1)/N
+    }
+
+    if(length(lv.int.names) == 0L) {
+        stop("lv.int.names is empty: no lv quadratic/interaction terms are provided")
+    }
+
+    if(is.null(lv.names)) {
+        lv.names <- paste("eta", seq_len(ncol(FS)), sep = "")
+    }
+
+    # augment to include intercept
+    FS <- cbind(1, FS)
+    N <- nrow(FS)
+    lv.names <- c("int", lv.names)
+    nfac <- ncol(FS)
+
+    idx1 <- rep(seq_len(nfac), each = nfac)
+    idx2 <- rep(seq_len(nfac), times = nfac)
+
+    NAMES <- paste(lv.names[idx1], lv.names[idx2], sep = ":")
+
+    FS2 <- FS[,idx1] * FS[,idx2]
+    Var.FS2  <- varn(FS2, N)
+
+    # select only what we need
+    colnames(Var.FS2)   <- rownames(Var.FS2)   <- NAMES
+    lv.main <- paste(lv.names[-1], "int", sep = ":")
+    lv.keep <- c(lv.main, lv.int.names)
+    Var.FS2   <- Var.FS2[  lv.keep, lv.keep]
+
+    Var.FS2
+}
+

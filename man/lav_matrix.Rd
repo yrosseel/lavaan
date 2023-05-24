@@ -30,6 +30,8 @@
 \alias{lav_matrix_duplication_ginv_pre_post}
 \alias{lav_matrix_commutation}
 \alias{lav_matrix_commutation_pre}
+\alias{lav_matrix_commutation_post}
+\alias{lav_matrix_commutation_pre_post}
 \alias{lav_matrix_commutation_mn_pre}
 \alias{lav_matrix_symmetric_sqrt}
 \alias{lav_matrix_orthogonal_complement}
@@ -77,6 +79,8 @@ lav_matrix_duplication_ginv_pre_post(A = matrix(0,0,0))
 # the commutation matrix
 lav_matrix_commutation(m = 1L, n = 1L)
 lav_matrix_commutation_pre(A = matrix(0,0,0))
+lav_matrix_commutation_post(A = matrix(0,0,0))
+lav_matrix_commutation_pre_post(A = matrix(0,0,0))
 lav_matrix_commutation_mn_pre(A, m = 1L, n = 1L)
 
 # sample statistics
@@ -185,7 +189,6 @@ matrix A with the transpose of the duplication matrix, and then post multiplies
 the result again with the duplication matrix. A must be square matrix with n*n
 rows and columns, where n is an integer. The duplication matrix is not
 explicitly created.
-multiplies a matrix A with the
 
 The \code{lav_matrix_duplication_ginv} function computes the generalized
 inverse of the duplication matrix. The matrix removes the duplicated elements
@@ -204,7 +207,7 @@ duplication matrix is not explicitly created.
 
 The \code{lav_matrix_duplication_ginv_pre_post} function first pre-multiplies
 a matrix A with the transpose of the generalized inverse of the duplication
-matrix, and the post multiplies the result again with the transpose of the
+matrix, and then post multiplies the result again with the transpose of the
 generalized inverse matrix. The matrix A must be square with n*n rows and
 columns, where n is an integer. The generalized inverse of the duplication
 matrix is not explicitly created.
@@ -216,6 +219,14 @@ into vec(t(A)).
 The \code{lav_matrix_commutation_pre} function computes the product of the
 commutation matrix with a matrix A, without explicitly creating the commutation
 matrix. The matrix A must have n*n rows, where n is an integer.
+
+The \code{lav_matrix_commutation_post} function computes the product of a 
+matrix A with the commutation matrix, without explicitly creating the 
+commutation matrix. The matrix A must have n*n rows, where n is an integer.
+
+The \code{lav_matrix_commutation_pre_post} function first pre-multiplies
+a matrix A with the commutation matrix, and then post multiplies the result again with the commutation matrix, without explicitly creating the 
+commutation matrix. The matrix A must have n*n rows, where n is an integer.
 
 The \code{lav_matrix_commutation_mn_pre} function computes the product of the
 commutation matrix with a matrix A, without explicitly creating the commutation

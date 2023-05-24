@@ -34,6 +34,9 @@
 # YR 03 Dec 2022 - allow for sam.method = "fsr" and se = "naive"
 #                - add alpha.correction= argument (for small sample correction)
 
+# YR 21 May 2023 - allow for latent quadratic/interaction terms in the
+#                  structural part (assuming the errors are normal, for now)
+
 
 # twostep = wrapper for global sam
 twostep <- function(model = NULL, data = NULL, cmd = "sem",
@@ -57,11 +60,8 @@ sam <- function(model            = NULL,
                 cmd              = "sem",
                 se               = "twostep",
                 mm.list          = NULL,
-                mm.args          = list(bounds = "wide.zerovar",
-                                        se = "standard"),
-                struc.args       = list(estimator = "ML",
-                                        #fixed.x = TRUE,
-                                        se = "standard"),
+                mm.args          = list(bounds = "wide.zerovar"),
+                struc.args       = list(estimator = "ML"),
                 sam.method       = "local", # or "global", or "fsr"
                 alpha.correction = 0L,
                 ...,           # global options
@@ -111,6 +111,7 @@ sam <- function(model            = NULL,
     dotdotdot0$test   <- "none"
     dotdotdot0$verbose <- FALSE # no output for this 'dummy' FIT
     dotdotdot0$ceq.simple <- TRUE # if not the default yet
+    dotdotdot0$check.lv.interaction <- FALSE # we allow for it
 
     # initial processing of the model, no fitting
     FIT <- do.call(cmd,
@@ -149,6 +150,16 @@ sam <- function(model            = NULL,
     nblocks <- lavpta$nblocks
     PT      <- FIT@ParTable
 
+    if(length(unlist(lavpta$vnames$lv.interaction)) > 0L) {
+        lavoptions$meanstructure <- TRUE
+        #if(lavoptions$se == "twostep") {
+        #    # OVERRIDE!
+        #    lavoptions$se <- "naive" # for now
+        #}
+        lv.interaction.flag <- TRUE
+    } else {
+        lv.interaction.flag <- FALSE
+    }
 
     # local only
     if(sam.method %in% c("local", "fsr")) {
@@ -254,7 +265,11 @@ sam <- function(model            = NULL,
 
     # adjust options for measurement models
     dotdotdot.mm <- dotdotdot
-    #dotdotdot.mm$se <- "none"
+    if(lavoptions$se == "none") {
+        dotdotdot.mm$se <- "none"
+    } else {
+        dotdotdot.mm$se <- "standard" # may be overriden later
+    }
     #if(sam.method == "global") {
     #    dotdotdot.mm$test <- "none"
     #}
@@ -339,7 +354,7 @@ sam <- function(model            = NULL,
              THETA.list[[mm]] <- computeTHETA( fit.mm.block@Model )
             if(lavoptions$meanstructure) {
                 NU.list[[mm]] <- computeNU( fit.mm.block@Model,
-                                            lavsamplestats = FIT@SampleStats )
+                                 lavsamplestats = fit.mm.block@SampleStats )
             }
 
             # store indices
@@ -412,6 +427,11 @@ sam <- function(model            = NULL,
             NU <- computeNU(FIT@Model, lavsamplestats = FIT@SampleStats)
         }
         for(b in seq_len(nblocks)) {
+            # remove 'lv.interaction' columns from LAMBDA[[b]]
+            if(lv.interaction.flag &&
+               length(lavpta$vidx$lv.interaction[[b]]) > 0L) {
+                LAMBDA[[b]] <- LAMBDA[[b]][,-lavpta$vidx$lv.interaction[[b]]]
+            }
             for(mm in seq_len(nMMblocks)) {
                 ov.idx <- OV.idx.list[[mm]][[b]]
                 lv.idx <- LV.idx.list[[mm]][[b]]
@@ -467,6 +487,17 @@ sam <- function(model            = NULL,
             EETA <- NULL
         }
         M <- vector("list", nblocks)
+
+        if(lv.interaction.flag) {
+            # compute Bartlett factor scores
+            FS <- vector("list", nblocks)
+            FS.mm <- lapply(MM.FIT, lav_predict_eta_bartlett)
+            for(b in seq_len(nblocks)) {
+                tmp <- lapply(1:nMMblocks, function(x) FS.mm[[x]][[b]])
+                FS[[b]] <- do.call("cbind", tmp)
+                # label? (not for now)
+            }
+        }
 
         # compute VETA/EETA per block
         if(nlevels > 1L && local.twolevel.method == "h1") {
@@ -527,7 +558,10 @@ sam <- function(model            = NULL,
                 } else {
                     stop("lavaan ERROR: level 3 not supported (yet).")
                 }
+
+            # single level
             } else {
+                this.group <- b
                 YBAR <- FIT@h1$implied$mean[[b]] # EM version if missing="ml"
                 COV  <- FIT@h1$implied$cov[[b]]
                 if(local.M.method == "GLS") {
@@ -557,12 +591,18 @@ sam <- function(model            = NULL,
                 Mb[cbind(dummy.lv.idx, dummy.ov.idx)] <- 1
             }
 
+            # compute EETA
+            if(lavoptions$meanstructure) {
+                EETA[[b]] <- lav_sam_eeta(M = Mb, YBAR = YBAR, NU = NU[[b]])
+            }
+
             # compute VETA
             if(sam.method == "local") {
                 tmp <- lav_sam_veta(M = Mb, S = COV, THETA = THETA[[b]],
                            alpha.correction = alpha.correction,
                            lambda.correction = local.options[["veta.force.pd"]],
-                           N <- nobs(FIT), extra = TRUE)
+                           N <- FIT@SampleStats@nobs[[this.group]],
+                           extra = TRUE)
                 VETA[[b]] <- tmp[,,drop = FALSE] # drop attributes
                 alpha[[b]]  <- attr(tmp, "alpha")
                 lambda[[b]] <- attr(tmp, "lambda")
@@ -570,28 +610,59 @@ sam <- function(model            = NULL,
                 # FSR -- no correction
                 VETA[[b]] <- Mb %*% COV %*% t(Mb)
             }
-
             # standardize? not really needed, but we may have 1.0000001
             # as variances, and this may lead to false convergence
             if(FIT@Options$std.lv) {
                 VETA[[b]] <- stats::cov2cor(VETA[[b]])
             }
 
-            # names
+            # lv.names, including dummy-lv covariates
             psi.idx <- which(names(FIT@Model@GLIST) == "psi")[b]
-            dimnames(VETA[[b]]) <- FIT@Model@dimNames[[psi.idx]]
-
-            # compute EETA
-            if(lavoptions$meanstructure) {
-                EETA[[b]] <- lav_sam_eeta(M = Mb, YBAR = YBAR, NU = NU[[b]])
+            if(!lv.interaction.flag) {
+                dimnames(VETA[[b]]) <- FIT@Model@dimNames[[psi.idx]]
+            } else {
+                # including dummy-lv covariates!
+                lv_names1 <- FIT@Model@dimNames[[psi.idx]][[1]]
             }
 
-            # compute model-based reliability
+            # compute model-based RELiability
             MSM <- Mb %*% COV %*% t(Mb)
-            #REL[[b]] <- diag(VETA[[b]] %*% solve(MSM)) # CHECKme!
+            #REL[[b]] <- diag(VETA[[b]]] %*% solve(MSM)) # CHECKme!
             REL[[b]] <- diag(VETA[[b]]) / diag(MSM)
 
-            # store M
+            # check for lv.interactions
+            if(lv.interaction.flag &&
+               length(lavpta$vidx$lv.interaction[[b]]) > 0L) {
+
+                # EETA2
+                EETA1 <- EETA[[b]]
+                EETA[[b]] <- lav_sam_eeta2(EETA = EETA1, VETA = VETA[[b]],
+                               lv.names = lv_names1,
+                               lv.int.names = lavpta$vnames$lv.interaction[[b]])
+
+                # VETA2
+                if(sam.method == "local") {
+                     tmp <- lav_sam_veta2(FS = FS[[b]], M = Mb,
+                           VETA = VETA[[b]], EETA = EETA1,
+                           THETA = THETA[[b]],
+                           lv.names = lv_names1,
+                           lv.int.names = lavpta$vnames$lv.interaction[[b]],
+                           alpha.correction = alpha.correction,
+                           lambda.correction = local.options[["veta.force.pd"]],
+                           extra = TRUE)
+                    VETA[[b]] <- tmp[,,drop = FALSE] # drop attributes
+                    alpha[[b]]  <- attr(tmp, "alpha")
+                    lambda[[b]] <- attr(tmp, "lambda")
+                } else {
+                    stop("FIXME: not ready yet!")
+                    # FSR -- no correction
+                    VETA[[b]] <- lav_sam_fs2(FS = FS[[b]],
+                           lv.names = lv_names1,
+                           lv.int.names = lavpta$vnames$lv.interaction[[b]])
+                }
+            }
+
+            # store Mapping matrix for this block
             M[[b]] <- Mb
 
         } # blocks
@@ -630,15 +701,21 @@ sam <- function(model            = NULL,
     }
 
 
-
     ####################################
     # STEP 2: estimate structural part #
     ####################################
 
     # adjust options
     lavoptions.PA <- lavoptions
+    if(lavoptions.PA$se == "naive") {
+        lavoptions.PA$se <- "standard"
+    }
     #lavoptions.PA$fixed.x <- TRUE # may be false if indicator is predictor
     lavoptions.PA$fixed.x <- FALSE # until we fix this...
+    # but if we have lv.interactions, we use fixed.x = TRUE after all
+    #if(lv.interaction.flag) {
+    #    lavoptions.PA$fixed.x <- TRUE
+    #}
     lavoptions.PA$verbose <- FALSE # must be in struc.args
     lavoptions.PA$categorical <- FALSE
     lavoptions.PA$.caegorical <- FALSE
@@ -687,7 +764,8 @@ sam <- function(model            = NULL,
         # if meanstructure, 'free' user=0 intercepts?
         if(lavoptions.PA$meanstructure) {
             extra.int.idx <- which(PTS$op == "~1" & PTS$user == 0L &
-                                   PTS$exo == 0L)
+                                   PTS$free == 0L &
+                                   PTS$exo == 0L) # needed?
             if(length(extra.int.idx) > 0L) {
                 PTS$free[  extra.int.idx ] <- 1L
                 PTS$ustart[extra.int.idx ] <- as.numeric(NA)
@@ -770,8 +848,6 @@ sam <- function(model            = NULL,
 
     # fill in point estimates structural part
     PTS <- FIT.PA@ParTable
-    p2def.idx <- seq_len(length(PT$lhs)) %in% reg.idx &
-                 (PT$free > 0 | PT$op %in% c(":=", "<", ">"))
 
     # which parameters from PTS do we wish to fill in:
     # - all 'free' parameters
@@ -791,13 +867,12 @@ sam <- function(model            = NULL,
 
 
     # create step2.idx
-    p2.idx <- seq_len(length(PT$lhs)) %in% reg.idx & PT$free > 0 # no def!
+    p2.idx <- seq_len(length(PT$lhs)) %in% pt.idx & PT$free > 0 # no def!
     step2.idx <- PT.free[ p2.idx ]
 
     # add 'step' column in PT
     PT$step <- rep(1L, length(PT$lhs))
     PT$step[seq_len(length(PT$lhs)) %in% reg.idx] <- 2L
-
 
 
     ################################################################
@@ -845,7 +920,6 @@ sam <- function(model            = NULL,
     # - apply two-step correction for second step
     # - 'insert' these corrected SEs (and vcov) in FIT.PA
     # compute information matrix
-
     if(lavoptions$se == "none") {
         # nothing to do...
     } else {
@@ -853,7 +927,7 @@ sam <- function(model            = NULL,
             cat("Computing ", lavoptions$se, " standard errors ... ", sep = "")
         }
         JOINT@Model@estimator <- FIT@Options$estimator # could be DWLS!
-        JOINT@Options$se <- lavoptions$se # always set to standard?
+        JOINT@Options$se <- lavoptions$se # naive/twostep/none
         if(JOINT@Model@ceq.simple.only) {
             VCOV.ALL <-  matrix(0, JOINT@Model@nx.unco,
                                    JOINT@Model@nx.unco)
@@ -891,7 +965,8 @@ sam <- function(model            = NULL,
         # new in 0.6-16 (otherwise, eq constraints in struc part are ignored)
         I.22.inv <-
             lav_model_information_augment_invert(lavmodel = FIT.PA@Model,
-                     information = I.22, inverted = TRUE)
+                     information = I.22, inverted = TRUE,
+                     use.ginv = lv.interaction.flag)
 
         # method below has the advantage that we can use a 'robust' vcov
         # for the joint model;
@@ -908,6 +983,10 @@ sam <- function(model            = NULL,
             out$VCOV <- VCOV
         } else if(lavoptions$se == "naive") {
             VCOV <- FIT.PA@vcov$vcov
+            if(length(extra.int.idx) > 0L) {
+                rm.idx <- FIT.PA@ParTable$free[extra.int.idx]
+                VCOV <- VCOV[-rm.idx, -rm.idx]
+            }
             out$VCOV <- VCOV
         } else {
 

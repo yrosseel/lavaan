@@ -7,8 +7,8 @@ Fit a Structural Equation Model (SEM) using the Structural After Measurement
 (SAM) approach.}
 \usage{
 sam(model = NULL, data = NULL, cmd = "sem", se = "twostep", 
-    mm.list = NULL, mm.args = list(bounds = "wide.zerovar", se = "standard"), 
-    struc.args = list(estimator = "ML", se = "standard"), 
+    mm.list = NULL, mm.args = list(bounds = "wide.zerovar"), 
+    struc.args = list(estimator = "ML"), 
     sam.method = "local", alpha.correction = 0L, ..., 
     local.options = list(M.method = "ML", veta.force.pd = TRUE, 
     twolevel.method = "h1"), global.options = list(), output = "lavaan")
