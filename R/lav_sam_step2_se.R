@@ -67,12 +67,17 @@ lav_sam_step2_se <- function(FIT = NULL, JOINT = NULL,
             VCOV <- 1/N * I.22.inv
             out$VCOV <- VCOV
         } else if(lavoptions$se == "naive") {
-            VCOV <- FIT.PA@vcov$vcov
+            if(is.null(FIT.PA@vcov$vcov)) {
+                FIT.PA@Options$se <- "standard"
+                VCOV.naive <- lavTech(FIT.PA, "vcov")
+            } else {
+                VCOV.naive <- FIT.PA@vcov$vcov
+            }
             if(length(extra.int.idx) > 0L) {
                 rm.idx <- FIT.PA@ParTable$free[extra.int.idx]
-                VCOV <- VCOV[-rm.idx, -rm.idx]
+                VCOV.naive <- VCOV.naive[-rm.idx, -rm.idx]
             }
-            out$VCOV <- VCOV
+            out$VCOV <- VCOV.naive
         } else {
            # twostep
 
@@ -109,7 +114,16 @@ lav_sam_step2_se <- function(FIT = NULL, JOINT = NULL,
                 } else if (alpha.N1 < 0.0) {
                     alpha.N1 <- 0.0
                 }
-                VCOV.naive <- FIT.PA@vcov$vcov
+                if(is.null(FIT.PA@vcov$vcov)) {
+                    FIT.PA@Options$se <- "standard"
+                    VCOV.naive <- lavTech(FIT.PA, "vcov")
+                } else {
+                    VCOV.naive <- FIT.PA@vcov$vcov
+                }
+                if(length(extra.int.idx) > 0L) {
+                     rm.idx <- FIT.PA@ParTable$free[extra.int.idx]
+                    VCOV.naive <- VCOV.naive[-rm.idx, -rm.idx]
+                }
                 VCOV.corrected <- V2 + V1
                 VCOV <- alpha.N1 * VCOV.naive + (1 - alpha.N1) * VCOV.corrected
             } else {

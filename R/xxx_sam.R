@@ -84,6 +84,11 @@ sam <- function(model            = NULL,
         stop("lavaan ERROR: output should be \"list\" or \"lavaan.\"")
     }
 
+    # check se= argument
+    if(!se %in% c("standard", "naive", "twostep", "none")) {
+        stop("lavaan ERROR: se= argument must be twostep, naive, standard or none.")
+    }
+
     # handle dot dot dot
     dotdotdot <- list(...)
 
