@@ -1178,7 +1178,10 @@ print.lavaan.summary <- function(x, ..., nd = 3L) {
         sam.mm.rel    <- y$sam$sam.mm.rel
         sam.struc.fit <- y$sam$sam.struc.fit
         ngroups       <- y$sam$ngroups
+        nlevels       <- y$sam$nlevels
         group.label   <- y$sam$group.label
+        level.label   <- y$sam$level.label
+        block.label   <- y$sam$block.label
 
         # measurement
         tmp <- sam.mm.table
@@ -1192,18 +1195,40 @@ print.lavaan.summary <- function(x, ..., nd = 3L) {
         if(sam.method == "local") {
             # reliability information
             c1 <- c2 <- character(0L)
-            if(ngroups == 1L) {
+            if(ngroups == 1L && nlevels == 1L) {
                 cat("\n")
                 cat("  Model-based reliability latent variables:\n\n")
                 tmp <- data.frame(as.list(sam.mm.rel[[1]]))
                 class(tmp) <- c("lavaan.data.frame", "data.frame")
                 print(tmp, row.names = rep(" ", nrow(tmp)), nd = nd)
-            } else {
+            } else if(ngroups > 1L && nlevels == 1L) {
                 cat("\n")
                 cat("  Model-based reliability latent variables (per group):\n")
                 for(g in 1:ngroups) {
                     cat("\n")
                     cat("  Group ", g, " [", group.label[g], "]:\n\n",
+                        sep = "")
+                    tmp <- data.frame(as.list(sam.mm.rel[[g]]))
+                    class(tmp) <- c("lavaan.data.frame", "data.frame")
+                    print(tmp, row.names = rep(" ", nrow(tmp)), nd = nd)
+                }
+            } else if(ngroups == 1L && nlevels > 1L) {
+                cat("\n")
+                cat("  Model-based reliability latent variables (per level):\n")
+                for(g in 1:nlevels) {
+                    cat("\n")
+                    cat("  Level ", g, " [", level.label[g], "]:\n\n",
+                        sep = "")
+                    tmp <- data.frame(as.list(sam.mm.rel[[g]]))
+                    class(tmp) <- c("lavaan.data.frame", "data.frame")
+                    print(tmp, row.names = rep(" ", nrow(tmp)), nd = nd)
+                }
+            } else if(ngroups > 1L && nlevels > 1L) {
+                cat("\n")
+                cat("  Model-based reliability latent variables (per group/level):\n")
+                for(g in 1:length(block.label)) {
+                    cat("\n")
+                    cat("  Group/Level ", g, " [", block.label[g], "]:\n\n",
                         sep = "")
                     tmp <- data.frame(as.list(sam.mm.rel[[g]]))
                     class(tmp) <- c("lavaan.data.frame", "data.frame")

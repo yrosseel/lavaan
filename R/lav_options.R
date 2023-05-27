@@ -309,7 +309,7 @@ lav_options_set <- function(opt = NULL) {
     }
 
     # group.equal and group.partial
-    if(opt$group.equal[1] == "none") {
+    if(length(opt$group.equal) > 0L && opt$group.equal[1] == "none") {
         opt$group.equal <- character(0)
     } else if(is.null(opt$group.equal) || all(nchar(opt$group.equal) == 0L)) {
         if(opt$mimic == "Mplus") {
@@ -1591,7 +1591,7 @@ lav_options_set <- function(opt = NULL) {
     # omega information.meat
     if(opt$omega.information.meat == "default") {
         opt$omega.information.meat <- "first.order"
-    } else if(opt$omega.information %in% c("first.order")) {
+    } else if(opt$omega.information.meat %in% c("first.order")) {
         # nothing to do
     } else {
         stop("lavaan ERROR: omega.information.meat must be \"first.order\"")
@@ -1732,6 +1732,9 @@ lav_options_set <- function(opt = NULL) {
         }
     } else if(length(opt$effect.coding) == 0L) {
         # nothing to do
+    } else if(length(opt$effect.coding) == 1L &&
+              nchar(opt$effect.coding) == 0L) {
+         # nothing to do
     } else if(all(opt$effect.coding %in% c("loadings", "intercepts",
                                            "mg.lv.efa.variances",
                                            "mg.lv.variances",

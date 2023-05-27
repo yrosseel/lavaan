@@ -9,9 +9,10 @@ Fit a Structural Equation Model (SEM) using the Structural After Measurement
 sam(model = NULL, data = NULL, cmd = "sem", se = "twostep", 
     mm.list = NULL, mm.args = list(bounds = "wide.zerovar"), 
     struc.args = list(estimator = "ML"), 
-    sam.method = "local", alpha.correction = 0L, ..., 
-    local.options = list(M.method = "ML", veta.force.pd = TRUE, 
-    twolevel.method = "h1"), global.options = list(), output = "lavaan")
+    sam.method = "local", ..., 
+    local.options = list(M.method = "ML", lambda.correction = TRUE, 
+                         alpha.correction = 0L, twolevel.method = "h1"), 
+    global.options = list(), output = "lavaan")
 }
 \arguments{
 \item{model}{A description of the user-specified model. Typically, the model
@@ -43,17 +44,19 @@ sam(model = NULL, data = NULL, cmd = "sem", se = "twostep",
 \item{sam.method}{Character. Can be set to \code{"local"}, \code{"global"}
     or \code{"fsr"}. In the latter case, the results are the same as if
     Bartlett factor scores were used, without any bias correction.}
-\item{alpha.correction}{Integer. Acceptable values are in the range 0 till
-    N-1. If zero (the default), no small sample correction is performed, 
-    and the bias-correction is the same as with local SAM. When equal to N-1, 
-    the bias-correction is eliminated, and the results are the same as 
-    naive FSR. Typical values are 0, P+1 (where P is the number of
-    predictors in the structural model), P+5, and (N-1)/2.}
 \item{...}{Many more additional options can be defined, using 'name = value'.
     See \code{\link{lavOptions}} for a complete list. These options affect
     both the measurement blocks and the structural part.}
 \item{local.options}{List. Options specific for local SAM method (these
-     options may change over time).}
+     options may change over time). If \code{lambda.correction = TRUE},
+     we ensure that the variance matrix of the latent variables (VETA)
+     is positive definite. The \code{alpha.correction} options must be an
+     integer. Acceptable values are in the range 0 till
+     N-1. If zero (the default), no small sample correction is performed,
+     and the bias-correction is the same as with local SAM. When equal to N-1,
+     the bias-correction is eliminated, and the results are the same as
+     naive FSR. Typical values are 0, P+1 (where P is the number of
+     predictors in the structural model), P+5, and (N-1)/2.}
 \item{global.options}{List. Options specific for global SAM method (not
      used for now).}
 \item{output}{Character. If \code{"lavaan"}, a lavaan object returned. If

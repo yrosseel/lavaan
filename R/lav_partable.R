@@ -128,6 +128,12 @@ lavaanify <- lavParTable <- function(
         tmp <- lav_partable_vnames(FLAT, "ov.x", warn = TRUE); rm(tmp)
     }
 
+    # check if group.equal is non-empty, but ngroups = 1L
+    # fixme: triggers this if mimic="Mplus"!
+    # if(ngroups == 1L && length(group.equal) > 0L) {
+    #    warning("lavaan WARNING: group.equal= argument has no effect if no groups are specified.")
+    #}
+
     # auto=TRUE?
     if(auto && model.type == "sem") { # mimic sem/cfa auto behavior
         if(model.type == "sem") {

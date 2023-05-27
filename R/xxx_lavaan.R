@@ -339,6 +339,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     #    ov.names.x <- ov.names.x[-endo.idx]
     #}
 
+
     # handle for lv.names that are also observed variables (new in 0.6-6)
     LV.names <- unique(unlist(lv.names))
     if(length(LV.names) > 0L) {

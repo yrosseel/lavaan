@@ -94,7 +94,10 @@ lav_object_summary <- function(object, header       = TRUE,
                             sam.mm.rel    = object@internal$sam.mm.rel,
                             sam.struc.fit = object@internal$sam.struc.fit,
                             ngroups       = object@Data@ngroups,
-                            group.label   = object@Data@group.label)
+                            group.label   = object@Data@group.label,
+                            nlevels       = object@Data@nlevels,
+                            level.label   = object@Data@level.label,
+                            block.label   = object@Data@block.label)
 
             # 5b. global test statistics (for global only)
             if(object@internal$sam.method == "global") {

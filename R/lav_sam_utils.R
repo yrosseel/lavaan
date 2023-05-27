@@ -473,3 +473,92 @@ lav_sam_fs2 <- function(FS = NULL, lv.names = NULL, lv.int.names = NULL) {
     Var.FS2
 }
 
+# create consistent lavaan object, based on (filled in) PT
+lav_sam_step3_joint <- function(FIT = NULL, PT = NULL, sam.method = "local") {
+
+    lavoptions <- FIT@Options
+
+    lavoptions.joint <- lavoptions
+    lavoptions.joint$optim.method <- "none"
+    lavoptions.joint$optim.force.converged <- TRUE
+    lavoptions.joint$check.gradient <- FALSE
+    lavoptions.joint$check.start <- FALSE
+    lavoptions.joint$check.post <- FALSE
+    lavoptions.joint$se   <- "none"
+    lavoptions.joint$store.vcov <- FALSE # we do this manually
+    lavoptions.joint$verbose <- FALSE
+
+    if(sam.method %in% c("local", "fsr")) {
+        lavoptions.joint$baseline <- FALSE
+        lavoptions.joint$sample.icov <- FALSE
+        lavoptions.joint$h1 <- FALSE
+        lavoptions.joint$test <- "none"
+        lavoptions.joint$estimator <- "none"
+    } else {
+        lavoptions.joint$test <- lavoptions$test
+        lavoptions.joint$estimator <- lavoptions$estimator
+    }
+
+    # set ustart values
+    PT$ustart <- PT$est # as this is used if optim.method == "none"
+
+    JOINT <- lavaan::lavaan(PT, slotOptions = lavoptions.joint,
+                            slotSampleStats = FIT@SampleStats,
+                            slotData = FIT@Data)
+    JOINT
+}
+
+lav_sam_table <- function(JOINT = NULL, STEP1 = NULL, FIT.PA = FIT.PA,
+                          mm.args = list(), struc.args = list(),
+                          sam.method = "local",
+                          local.options = list(), global.options = list()) {
+
+    MM.FIT <- STEP1$MM.FIT
+
+    sam.mm.table <- data.frame(
+        Block  = seq_len(length(STEP1$mm.list)),
+        Latent = sapply(MM.FIT, function(x) {
+                  paste(unique(unlist(x@pta$vnames$lv)), collapse=",")}),
+        Nind = sapply(MM.FIT, function(x) {
+                   length(unique(unlist(x@pta$vnames$ov)))}),
+        #Estimator = sapply(MM.FIT, function(x) { x@Model@estimator} ),
+        Chisq  = sapply(MM.FIT, function(x) {x@test[[1]]$stat}),
+        Df     = sapply(MM.FIT, function(x) {x@test[[1]]$df}) )
+        #pvalue = sapply(MM.FIT, function(x) {x@test[[1]]$pvalue}) )
+    class(sam.mm.table) <- c("lavaan.data.frame", "data.frame")
+
+
+    # extra info for @internal slot
+    if(sam.method %in% c("local", "fsr")) {
+        sam.struc.fit <- try(fitMeasures(FIT.PA,
+                                           c("chisq", "df", # "pvalue",
+                                             "cfi", "rmsea", "srmr")),
+                             silent = TRUE)
+        if(inherits(sam.struc.fit, "try-error")) {
+            sam.struc.fit <- "(unable to obtain fit measures)"
+            names(sam.struc.fit) <- "warning"
+        }
+        sam.mm.rel <- STEP1$REL
+    } else {
+        sam.struc.fit <- "no local fit measures available for structural part if sam.method is global"
+        names(sam.struc.fit) <- "warning"
+        sam.mm.rel <- numeric(0L)
+    }
+
+
+    SAM <- list(sam.method          = sam.method,
+                sam.local.options   = local.options,
+                sam.global.options  = global.options,
+                sam.mm.list         = STEP1$mm.list,
+                sam.mm.estimator    = MM.FIT[[1]]@Model@estimator,
+                sam.mm.args         = mm.args,
+                sam.mm.ov.names     = lapply(MM.FIT, function(x) {
+                                             x@pta$vnames$ov }),
+                sam.mm.table        = sam.mm.table,
+                sam.mm.rel          = sam.mm.rel,
+                sam.struc.estimator = FIT.PA@Model@estimator,
+                sam.struc.args      = struc.args,
+                sam.struc.fit       = sam.struc.fit
+               )
+    SAM
+}
