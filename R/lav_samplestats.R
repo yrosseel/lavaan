@@ -191,13 +191,15 @@ lav_samplestats_from_data <- function(lavdata           = NULL,
     for(g in 1:ngroups) {
 
         # check nobs
-        if(nobs[[g]] < 2L) {
-            if(nobs[[g]] == 0L) {
-                stop("lavaan ERROR: data contains no observations",
+        if(is.null(WT[[g]])) {
+            if(nobs[[g]] < 2L) {
+                if(nobs[[g]] == 0L) {
+                    stop("lavaan ERROR: data contains no observations",
                      ifelse(ngroups > 1L, paste(" in group ", g, sep=""), ""))
-            } else {
-                stop("lavaan ERROR: data contains only a single observation",
+                } else {
+                    stop("lavaan ERROR: data contains only a single observation",
                      ifelse(ngroups > 1L, paste(" in group ", g, sep=""), ""))
+                }
             }
         }
 
