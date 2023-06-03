@@ -1,13 +1,13 @@
 # step 1 in SAM: fitting the measurement blocks
 
 lav_sam_step1 <- function(cmd = "sem", mm.list = NULL, mm.args = list(),
-                          FIT = FIT, data = NULL, sam.method = "local",
-                          dotdotdot = list()) {
+                          FIT = FIT, data = NULL, sam.method = "local") {
 
     lavoptions <- FIT@Options
     lavpta     <- FIT@pta
     PT         <- FIT@ParTable
     nblocks    <- lavpta$nblocks
+    ngroups    <- lavpta$ngroups
 
     if(lavoptions$verbose) {
         cat("Fitting the measurement part:\n")
@@ -92,31 +92,29 @@ lav_sam_step1 <- function(cmd = "sem", mm.list = NULL, mm.args = list(),
     }
 
     # adjust options for measurement models
-    dotdotdot.mm <- lavoptions
-    dotdotdot.mm$categorical  <- NULL
-    dotdotdot.mm$.categorical <- NULL
-    dotdotdot.mm$.clustered   <- NULL
-    dotdotdot.mm$.multilevel  <- NULL
-    dotdotdot.mm$optim.bounds <- NULL
-
+    lavoptions.mm <- lavoptions
+    lavoptions.mm$optim.bounds <- NULL
     if(lavoptions$se == "none") {
-        dotdotdot.mm$se <- "none"
+        lavoptions.mm$se <- "none"
     } else {
-        dotdotdot.mm$se <- "standard" # may be overriden later
+        lavoptions.mm$se <- "standard" # may be overriden later
     }
     #if(sam.method == "global") {
-    #    dotdotdot.mm$test <- "none"
+    #    lavoptions.mm$test <- "none"
     #}
     # we need the tests to create summary info about MM
-    dotdotdot.mm$debug <- FALSE
-    dotdotdot.mm$verbose <- FALSE
-    dotdotdot.mm$check.post <- FALSE # neg lv variances may be overriden
-    dotdotdot.mm$check.gradient <- FALSE # too sensitive in large model (global)
-    dotdotdot.mm$baseline <- FALSE
-    dotdotdot.mm$bounds <- "wide.zerovar"
+    lavoptions.mm$debug <- FALSE
+    lavoptions.mm$verbose <- FALSE
+    lavoptions.mm$check.post <- FALSE # neg lv variances may be overriden
+    lavoptions.mm$check.gradient <- FALSE # too sensitive in large model (global)
+    lavoptions.mm$baseline <- FALSE
+    lavoptions.mm$bounds <- "wide.zerovar"
 
     # override with user-specified mm.args
-    dotdotdot.mm <- modifyList(dotdotdot.mm, mm.args)
+    lavoptions.mm <- modifyList(lavoptions.mm, mm.args)
+
+    # create MM slotOptions
+    slotOptions.mm <- lav_options_set(lavoptions.mm)
 
     # we assume the same number/names of lv's per group!!!
     MM.FIT <- vector("list", nMMblocks)         # fitted object
@@ -154,17 +152,47 @@ lav_sam_step1 <- function(cmd = "sem", mm.list = NULL, mm.args = list(),
         PTM$est <- NULL
         PTM$se <- NULL
 
+        # update slotData for this measurement block
+        ov.names.block <- lapply(1:ngroups, function(g)
+            unique(unlist(lav_partable_vnames(PTM, type = "ov", group = g))))
+        slotData.block <- lav_data_update_subset(FIT@Data,
+                                                 ov.names = ov.names.block)
+        # handle single block 1-factor CFA with (only) two indicators
+        if(length(unlist(ov.names.block)) == 2L && ngroups == 1L) {
+            # hard stop for now, unless se = "none"
+            if(lavoptions$se != "none") {
+                stop("lavaan ERROR: measurement block [", mm, "] (",
+                     paste(mm.list[[mm]], collapse = " "),
+                     ") contains only two indicators;\n",
+                     "\t\tfix both factor loadings to unity, or\n",
+                     "\t\tcombine factors into a single measurement block.", sep = "")
+            } else {
+                lambda.idx <- which(PTM$op == "=~")
+                PTM$free[lambda.idx] <- 0L
+                PTM$ustart[lambda.idx] <- 1
+                PTM$start[lambda.idx] <- 1
+                free.idx <- which(as.logical(PTM$free))
+                if(length(free.idx) > 0L) {
+                    PTM$free[ free.idx ] <- seq_len(length(free.idx))
+                }
+                warning("lavaan WARNING: measurement block [", mm, "] (",
+                        paste(mm.list[[mm]], collapse = " "),
+                        ") contains only two indicators;\n",
+                        "\t\t -> fixing both factor loadings to unity",
+                        sep = "")
+            }
+        }
+
         # fit this measurement model only
-        fit.mm.block <- do.call("lavaan",
-                                args =  c(list(model  = PTM,
-                                               data   = data),
-                                          dotdotdot.mm,
-                                          dotdotdot) ) # eg group=, cluster=
+        # (question: can we re-use even more slots?)
+        fit.mm.block <- lavaan(model = PTM, slotData = slotData.block,
+                               slotOptions = slotOptions.mm)
+
         # check convergence
         if(!lavInspect(fit.mm.block, "converged")) {
             # warning for now, but this is not good!
             warning("lavaan WARNING: measurement model for ",
-                 paste(mm.list[[mm]], collapse = " "), " did not converge.")
+                 paste(mm.list[[mm]], collapse = " "), " did not converge!")
         }
 
         # store fitted measurement model

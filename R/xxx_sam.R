@@ -67,10 +67,10 @@ sam <- function(model            = NULL,
                 mm.args          = list(bounds = "wide.zerovar"),
                 struc.args       = list(estimator = "ML"),
                 sam.method       = "local", # or "global", or "fsr"
-                ...,           # global options
-                local.options    = list(M.method = "ML",
+                ...,             # common options
+                local.options    = list(M.method = "ML", # mapping matrix
                                         lambda.correction = TRUE,
-                                        alpha.correction = 0L,
+                                        alpha.correction = 0L, # 0 -> (N-1)
                                         twolevel.method = "h1"),
                                         # h1, anova, mean
                 global.options   = list(), # not used for now
@@ -110,8 +110,7 @@ sam <- function(model            = NULL,
         cat("Fitting the measurement part:\n")
     }
     STEP1 <- lav_sam_step1(cmd = cmd, mm.list = mm.list, mm.args = mm.args,
-                           FIT = FIT, data = data, sam.method = sam.method,
-                           dotdotdot = dotdotdot)
+                           FIT = FIT, data = data, sam.method = sam.method)
 
     ##################################################
     # STEP 1b: compute Var(eta) and E(eta) per block #
@@ -148,6 +147,9 @@ sam <- function(model            = NULL,
         STEP1$Sigma.11 <- STEP1$Sigma.11[-both.idx, -both.idx]
     }
 
+    if(output == "list" && lavoptions$se == "none") {
+        return(c(STEP1, STEP2))
+    }
 
     ################################################################
     # Step 3: assemble results in a 'dummy' JOINT model for output #

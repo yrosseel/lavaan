@@ -52,6 +52,13 @@ lav_sam_step2_se <- function(FIT = NULL, JOINT = NULL,
         I.22.inv <-
             lav_model_information_augment_invert(lavmodel = FIT.PA@Model,
                      information = I.22, inverted = TRUE)
+        if(inherits(I.22.inv, "try-error")) {
+            # hm, not good
+            if(lavoptions$se != "naive") {
+                warning("lavaan WARNING: problem inverting information matrix (I.22);\n\t\t  -> switching to naive standard errors!")
+                lavoptions$se <- "naive"
+            }
+        }
 
         # method below has the advantage that we can use a 'robust' vcov
         # for the joint model;

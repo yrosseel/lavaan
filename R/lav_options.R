@@ -1384,9 +1384,9 @@ lav_options_set <- function(opt = NULL) {
 
     # likelihood approach (wishart or normal) + sample.cov.rescale
     if(!opt$estimator %in% c("ML", "REML", "PML", "FML","NTRLS","catML")) {
-        if(opt$likelihood != "default") {
-            stop("lavaan ERROR: likelihood argument is only relevant if estimator = ML")
-        }
+        #if(opt$likelihood != "default") {
+        #    stop("lavaan ERROR: likelihood argument is only relevant if estimator = ML")
+        #}
         if(opt$sample.cov.rescale == "default") {
             opt$sample.cov.rescale <- FALSE
         }# else {
