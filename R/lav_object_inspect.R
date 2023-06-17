@@ -2552,6 +2552,10 @@ lav_object_inspect_vcov <- function(object, standardized = FALSE,
                                   lavimplied     = object@implied,
                                   lavh1          = object@h1
                                  )
+
+            if(is.null(OUT)) {
+                return(OUT)
+            }
         }
     }
 

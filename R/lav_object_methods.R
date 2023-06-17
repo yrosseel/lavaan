@@ -171,7 +171,7 @@ standardizedSolution <-
                                             type = type, free.only = FALSE,
                                             add.labels = FALSE,
                                             add.class = FALSE))
-        if(inherits(VCOV, "try-error")) {
+        if(inherits(VCOV, "try-error") || is.null(VCOV)) {
             LIST$se <- rep(NA, length(LIST$lhs))
             if(zstat) {
                 LIST$z  <- rep(NA, length(LIST$lhs))
