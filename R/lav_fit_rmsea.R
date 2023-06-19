@@ -219,7 +219,7 @@ lav_fit_rmsea_lavobject <- function(lavobject = NULL, fit.measures = "rmsea",
     if(test.names[1] == "none" || standard.test == "none") {
         return(list())
     }
-    test.idx <- which(test.names == standard.test)
+    test.idx <- which(test.names == standard.test)[1]
     if(length(test.idx) == 0L) {
         return(list())
     }

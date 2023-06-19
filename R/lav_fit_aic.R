@@ -40,7 +40,7 @@ lav_fit_aic_lavobject <- function(lavobject = NULL, fit.measures = "aic",
     if(test.names[1] == "none" || standard.test == "none") {
         return(list())
     }
-    test.idx <- which(test.names == standard.test)
+    test.idx <- which(test.names == standard.test)[1]
     if(length(test.idx) == 0L) {
         return(list())
     }

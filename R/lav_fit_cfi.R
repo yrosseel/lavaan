@@ -243,7 +243,7 @@ lav_fit_cfi_lavobject <- function(lavobject = NULL, fit.measures = "cfi",
     if(test.names[1] == "none" || standard.test == "none") {
         return(list())
     }
-    test.idx <- which(test.names == standard.test)
+    test.idx <- which(test.names == standard.test)[1]
     if(length(test.idx) == 0L) {
         return(list())
     }
@@ -421,9 +421,9 @@ lav_fit_cfi_lavobject <- function(lavobject = NULL, fit.measures = "cfi",
     }
 
     # baseline.test.idx
-    baseline.test.idx <- which(names(baseline.test) == standard.test)
+    baseline.test.idx <- which(names(baseline.test) == standard.test)[1]
     if(scaled.flag) {
-        baseline.scaled.idx <- which(names(baseline.test) == scaled.test)
+        baseline.scaled.idx <- which(names(baseline.test) == scaled.test)[1]
     }
 
     if(!is.null(baseline.test)) {
