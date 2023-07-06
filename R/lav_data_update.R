@@ -80,6 +80,11 @@ lav_data_update_subset <- function(lavdata = NULL, ov.names = NULL) {
     # replace ov.names
     newdata@ov.names <- ov.names
 
+    # ordered?
+    if(length(lavdata@ordered) > 0L) {
+        newdata@ordered <- lavdata@ordered[lavdata@ordered %in% ov.names]
+    }
+
     # replace/update slots for each group
     for(g in 1:lavdata@ngroups) {
 
@@ -99,12 +104,6 @@ lav_data_update_subset <- function(lavdata = NULL, ov.names = NULL) {
             for(l in 1:newdata@nlevels) {
                 newdata@ov.names.l[[g]][[l]] <- lavdata@ov.names.l[[g]][[l]][lavdata@ov.names.l[[g]][[l]] %in% ov.names[[g]]]
             }
-        }
-
-        # ordered
-        if(length(lavdata@ordered) > 0L &&
-           length(lavdata@ordered[[g]]) > 0L) {
-            newdata@ordered[[g]] <- lavdata@ordered[[g]][lavdata@ordered[[g]] %in% ov.names[[g]]]
         }
 
         # ov table
