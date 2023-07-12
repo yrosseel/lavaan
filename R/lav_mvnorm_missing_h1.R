@@ -86,6 +86,7 @@ lav_mvnorm_missing_h1_estimate_moments <- function(Y           = NULL,
     }
     bad.idx <- which(!is.finite(Mu0))
     if(length(bad.idx) > 0L) {
+        Mu0[bad.idx] <- 0  
     }
     Sigma0 <- diag(x = var0, nrow = P)
     Mu <- Mu0; Sigma <- Sigma0
