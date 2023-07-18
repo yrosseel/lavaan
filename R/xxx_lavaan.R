@@ -602,6 +602,9 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
         # clustered?
         if(length(cluster) > 0L) {
             opt$.clustered <- TRUE
+            if(opt$.categorical) {
+                stop("lavaan ERROR: categorical + clustered is not supported yet.")
+            }
         } else {
             opt$.clustered <- FALSE
         }
