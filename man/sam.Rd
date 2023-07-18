@@ -68,6 +68,10 @@ sam(model = NULL, data = NULL, cmd = "sem", se = "twostep",
     estimating the measurement part of the model,
     and then the structural part of the model. See reference for more
     details.
+
+    Note that in the current implementation, all indicators of latent
+    variables have to be observed. This implies: no support for second-order 
+    factor structures (for now).
 }
 \value{
   If \code{output = "lavaan"}, an object of class 
