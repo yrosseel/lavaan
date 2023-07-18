@@ -34,6 +34,11 @@ lavInspect.lavaan <- function(object,
     # object must inherit from class lavaan
     stopifnot(inherits(object, "lavaan"))
 
+    # old (<0.6) object?
+    if(!.hasSlot(object@Data, "block.label")) {
+        object@Data@block.label <- object@Data@group.label
+    }
+
     # only a single argument
     if(length(what) > 1) {
         stop("`what' arguments contains multiple arguments; only one is allowed")
@@ -936,6 +941,11 @@ lav_object_inspect_sampstat <- function(object, h1 = TRUE,
     std = FALSE,
     add.labels = FALSE, add.class = FALSE, drop.list.single.group = FALSE) {
 
+    # old (<0.6) object?
+    if(!.hasSlot(object@Data, "block.label")) {
+        object@Data@block.label <- object@Data@group.label
+    }
+
     nblocks <- object@Model@nblocks
     ov.names <- object@pta$vnames$ov
     ov.names.res <- object@pta$vnames$ov.nox
@@ -1168,13 +1178,7 @@ lav_object_inspect_sampstat <- function(object, h1 = TRUE,
     if(nblocks == 1L && drop.list.single.group) {
         OUT <- OUT[[1]]
     } else {
-        if(object@Data@nlevels == 1L &&
-           length(object@Data@group.label) > 0L) {
-            names(OUT) <- unlist(object@Data@group.label)
-        } else if(object@Data@nlevels > 1L &&
-                  length(object@Data@group.label) == 0L) {
-            names(OUT) <- object@Data@level.label
-        }
+        names(OUT) <- object@Data@block.label
     }
 
     OUT
@@ -1390,13 +1394,7 @@ lav_object_inspect_rsquare <- function(object, est.std.all=NULL,
     if(nblocks == 1L && drop.list.single.group) {
         OUT <- OUT[[1]]
     } else {
-        if(object@Data@nlevels == 1L &&
-           length(object@Data@group.label) > 0L) {
-            names(OUT) <- unlist(object@Data@group.label)
-        } else if(object@Data@nlevels > 1L &&
-                  length(object@Data@group.label) == 0L) {
-            names(OUT) <- object@Data@level.label
-        }
+        names(OUT) <- object@Data@block.label
     }
 
     OUT
@@ -1405,6 +1403,12 @@ lav_object_inspect_rsquare <- function(object, est.std.all=NULL,
 # model implied sample stats
 lav_object_inspect_implied <- function(object,
     add.labels = FALSE, add.class = FALSE, drop.list.single.group = FALSE) {
+
+    # old (<0.6) object?
+    if(!.hasSlot(object@Data, "block.label")) {
+        object@Data@block.label <- object@Data@group.label
+    }
+
 
     nblocks <- object@Model@nblocks
     ov.names <- object@pta$vnames$ov
@@ -1558,13 +1562,7 @@ lav_object_inspect_implied <- function(object,
     if(nblocks == 1L && drop.list.single.group) {
         OUT <- OUT[[1]]
     } else {
-        if(object@Data@nlevels == 1L &&
-           length(object@Data@group.label) > 0L) {
-            names(OUT) <- unlist(object@Data@group.label)
-        } else if(object@Data@nlevels > 1L &&
-                  length(object@Data@group.label) == 0L) {
-            names(OUT) <- object@Data@level.label
-        }
+        names(OUT) <- object@Data@block.label
     }
 
     OUT
@@ -1611,13 +1609,7 @@ lav_object_inspect_cov_lv <- function(object, correlation.metric = FALSE,
     if(nblocks == 1L && drop.list.single.group) {
         OUT <- OUT[[1]]
     } else {
-          if(object@Data@nlevels == 1L &&
-           length(object@Data@group.label) > 0L) {
-            names(OUT) <- unlist(object@Data@group.label)
-        } else if(object@Data@nlevels > 1L &&
-                  length(object@Data@group.label) == 0L) {
-            names(OUT) <- object@Data@level.label
-        }
+        names(OUT) <- object@Data@block.label
     }
 
     OUT
@@ -1650,13 +1642,7 @@ lav_object_inspect_mean_lv <- function(object,
     if(nblocks == 1L && drop.list.single.group) {
         OUT <- OUT[[1]]
     } else {
-        if(object@Data@nlevels == 1L &&
-           length(object@Data@group.label) > 0L) {
-            names(OUT) <- unlist(object@Data@group.label)
-        } else if(object@Data@nlevels > 1L &&
-                  length(object@Data@group.label) == 0L) {
-            names(OUT) <- object@Data@level.label
-        }
+        names(OUT) <- object@Data@block.label
     }
 
     OUT
@@ -1693,13 +1679,7 @@ lav_object_inspect_cov_all <- function(object, correlation.metric = FALSE,
     if(nblocks == 1L && drop.list.single.group) {
         OUT <- OUT[[1]]
     } else {
-        if(object@Data@nlevels == 1L &&
-           length(object@Data@group.label) > 0L) {
-            names(OUT) <- unlist(object@Data@group.label)
-        } else if(object@Data@nlevels > 1L &&
-                  length(object@Data@group.label) == 0L) {
-            names(OUT) <- object@Data@level.label
-        }
+        names(OUT) <- object@Data@block.label
     }
     OUT
 }
@@ -1738,13 +1718,7 @@ lav_object_inspect_cov_ov <- function(object, correlation.metric = FALSE,
     if(nblocks == 1L && drop.list.single.group) {
         OUT <- OUT[[1]]
     } else {
-        if(object@Data@nlevels == 1L &&
-           length(object@Data@group.label) > 0L) {
-            names(OUT) <- unlist(object@Data@group.label)
-        } else if(object@Data@nlevels > 1L &&
-                  length(object@Data@group.label) == 0L) {
-            names(OUT) <- object@Data@level.label
-        }
+        names(OUT) <- object@Data@block.label
     }
 
     OUT
@@ -1779,13 +1753,7 @@ lav_object_inspect_mean_ov <- function(object,
     if(nblocks == 1L && drop.list.single.group) {
         OUT <- OUT[[1]]
     } else {
-        if(object@Data@nlevels == 1L &&
-           length(object@Data@group.label) > 0L) {
-            names(OUT) <- unlist(object@Data@group.label)
-        } else if(object@Data@nlevels > 1L &&
-                  length(object@Data@group.label) == 0L) {
-            names(OUT) <- object@Data@level.label
-        }
+        names(OUT) <- object@Data@block.label
     }
 
     OUT
@@ -1824,13 +1792,7 @@ lav_object_inspect_th <- function(object,
     if(nblocks == 1L && drop.list.single.group) {
         OUT <- OUT[[1]]
     } else {
-        if(object@Data@nlevels == 1L &&
-           length(object@Data@group.label) > 0L) {
-            names(OUT) <- unlist(object@Data@group.label)
-        } else if(object@Data@nlevels > 1L &&
-                  length(object@Data@group.label) == 0L) {
-            names(OUT) <- object@Data@level.label
-        }
+        names(OUT) <- object@Data@block.label
     }
 
     OUT
@@ -1858,13 +1820,7 @@ lav_object_inspect_th_idx <- function(object,
     if(nblocks == 1L && drop.list.single.group) {
         OUT <- OUT[[1]]
     } else {
-        if(object@Data@nlevels == 1L &&
-           length(object@Data@group.label) > 0L) {
-            names(OUT) <- unlist(object@Data@group.label)
-        } else if(object@Data@nlevels > 1L &&
-                  length(object@Data@group.label) == 0L) {
-            names(OUT) <- object@Data@level.label
-        }
+        names(OUT) <- object@Data@block.label
     }
 
     OUT
@@ -1901,13 +1857,7 @@ lav_object_inspect_vy <- function(object,
     if(nblocks == 1L && drop.list.single.group) {
         OUT <- OUT[[1]]
     } else {
-        if(object@Data@nlevels == 1L &&
-           length(object@Data@group.label) > 0L) {
-            names(OUT) <- unlist(object@Data@group.label)
-        } else if(object@Data@nlevels > 1L &&
-                  length(object@Data@group.label) == 0L) {
-            names(OUT) <- object@Data@level.label
-        }
+        names(OUT) <- object@Data@block.label
     }
 
     OUT
@@ -1947,13 +1897,7 @@ lav_object_inspect_theta <- function(object, correlation.metric = FALSE,
     if(nblocks == 1L && drop.list.single.group) {
         OUT <- OUT[[1]]
     } else {
-        if(object@Data@nlevels == 1L &&
-           length(object@Data@group.label) > 0L) {
-            names(OUT) <- unlist(object@Data@group.label)
-        } else if(object@Data@nlevels > 1L &&
-                  length(object@Data@group.label) == 0L) {
-            names(OUT) <- object@Data@level.label
-        }
+        names(OUT) <- object@Data@block.label
     }
 
     OUT
@@ -2061,6 +2005,12 @@ lav_object_inspect_empty_idx <- function(object,
 lav_object_inspect_wls_est <- function(object,
     add.labels = FALSE, add.class = FALSE, drop.list.single.group = FALSE) {
 
+    # old (<0.6) object?
+    if(!.hasSlot(object@Data, "block.label")) {
+        object@Data@block.label <- object@Data@group.label
+    }
+
+
     OUT <- lav_model_wls_est(object@Model)
 
     if(add.labels) {
@@ -2084,13 +2034,7 @@ lav_object_inspect_wls_est <- function(object,
     if(nblocks == 1L && drop.list.single.group) {
         OUT <- OUT[[1]]
     } else {
-        if(object@Data@nlevels == 1L &&
-           length(object@Data@group.label) > 0L) {
-            names(OUT) <- unlist(object@Data@group.label)
-        } else if(object@Data@nlevels > 1L &&
-                  length(object@Data@group.label) == 0L) {
-            names(OUT) <- object@Data@level.label
-        }
+        names(OUT) <- object@Data@block.label
     }
 
     OUT
@@ -2098,6 +2042,12 @@ lav_object_inspect_wls_est <- function(object,
 
 lav_object_inspect_wls_obs <- function(object,
     add.labels = FALSE, add.class = FALSE, drop.list.single.group = FALSE) {
+
+    # old (<0.6) object?
+    if(!.hasSlot(object@Data, "block.label")) {
+        object@Data@block.label <- object@Data@group.label
+    }
+
 
     OUT <- object@SampleStats@WLS.obs ### FIXME: should be in @h1??
 
@@ -2122,13 +2072,7 @@ lav_object_inspect_wls_obs <- function(object,
     if(nblocks == 1L && drop.list.single.group) {
         OUT <- OUT[[1]]
     } else {
-        if(object@Data@nlevels == 1L &&
-           length(object@Data@group.label) > 0L) {
-            names(OUT) <- unlist(object@Data@group.label)
-        } else if(object@Data@nlevels > 1L &&
-                  length(object@Data@group.label) == 0L) {
-            names(OUT) <- object@Data@level.label
-        }
+        names(OUT) <- object@Data@block.label
     }
 
     OUT
@@ -2136,6 +2080,12 @@ lav_object_inspect_wls_obs <- function(object,
 
 lav_object_inspect_wls_v <- function(object,
     add.labels = FALSE, add.class = FALSE, drop.list.single.group = FALSE) {
+
+    # old (<0.6) object?
+    if(!.hasSlot(object@Data, "block.label")) {
+        object@Data@block.label <- object@Data@group.label
+    }
+
 
     #OUT <- lav_model_wls_v(lavmodel       = object@Model,
     #                       lavsamplestats = object@SampleStats,
@@ -2178,13 +2128,7 @@ lav_object_inspect_wls_v <- function(object,
     if(nblocks == 1L && drop.list.single.group) {
         OUT <- OUT[[1]]
     } else {
-        if(object@Data@nlevels == 1L &&
-           length(object@Data@group.label) > 0L) {
-            names(OUT) <- unlist(object@Data@group.label)
-        } else if(object@Data@nlevels > 1L &&
-                  length(object@Data@group.label) == 0L) {
-            names(OUT) <- object@Data@level.label
-        }
+        names(OUT) <- object@Data@block.label
     }
 
     OUT
