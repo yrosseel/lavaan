@@ -40,8 +40,8 @@ we use a mean and variance adjusted (Satterthwaite style) test statistic.}
 \value{
     An object of class anova. When given a single argument, it simply 
     returns the test statistic of this model. When given a sequence of 
-    objects, this function tests the models against one another in the order
-    specified. 
+    objects, this function tests the models against one another, after
+    reordering the models according to their degrees of freedom.
 }
 \details{
     The \code{anova} function for lavaan objects simply calls the
