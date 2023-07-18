@@ -205,6 +205,7 @@ lav_fit_rmsea_lavobject <- function(lavobject = NULL, fit.measures = "rmsea",
                                     scaled.test   = "none",
                                     ci.level = 0.90,
                                     close.h0 = 0.05, notclose.h0 = 0.08,
+                                    robust = TRUE,
                                     cat.check.pd = TRUE) {
 
     # check lavobject
@@ -235,7 +236,7 @@ lav_fit_rmsea_lavobject <- function(lavobject = NULL, fit.measures = "rmsea",
 
     # robust?
     robust.flag <- FALSE
-    if(scaled.flag &&
+    if(robust && scaled.flag &&
        scaled.test %in% c("satorra.bentler", "yuan.bentler.mplus",
                           "yuan.bentler", "scaled.shifted")) {
         robust.flag <- TRUE
@@ -243,7 +244,7 @@ lav_fit_rmsea_lavobject <- function(lavobject = NULL, fit.measures = "rmsea",
 
     # FIML?
     fiml.flag <- FALSE
-    if(lavobject@Options$missing %in% c("ml", "ml.x")) {
+    if(robust && lavobject@Options$missing %in% c("ml", "ml.x")) {
         fiml.flag <- robust.flag <- TRUE
         # check if we can compute corrected values
         if(scaled.flag) {

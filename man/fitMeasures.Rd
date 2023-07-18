@@ -15,6 +15,7 @@ fitMeasures(object, fit.measures = "all", baseline.model = NULL,
                            rmsea.ci.level    = 0.90,
                            rmsea.close.h0    = 0.05,
                            rmsea.notclose.h0 = 0.08,
+                           robust            = TRUE,
                            cat.check.pd      = TRUE),
             output = "vector", ...)
 fitmeasures(object, fit.measures = "all", baseline.model = NULL, 
@@ -23,6 +24,7 @@ fitmeasures(object, fit.measures = "all", baseline.model = NULL,
                            rmsea.ci.level    = 0.90,
                            rmsea.close.h0    = 0.05,
                            rmsea.notclose.h0 = 0.08,
+                           robust            = TRUE,
                            cat.check.pd      = TRUE),
             output = "vector", ...)
 }
@@ -47,7 +49,9 @@ interval for the rmsea value. The \code{rmsea.close.h0} element
 is the rmsea value
 that is used under the null hypothesis that \code{rmsea <= rmsea.close.h0}.
 The \code{rmsea.notclose.h0} element is the rmsea value that is used under the
-null hypothesis that \code{rsmsea >= rmsea.notclose.h0}. 
+null hypothesis that \code{rsmsea >= rmsea.notclose.h0}. The \code{robust} 
+element can be set to \code{FALSE} to avoid computing the so-called robust
+rmsea/cfi measures (for example if the computations take too long).
 The \code{cat.check.pd} element is only used when data is categorical. If
 \code{TRUE}, robust values for RMSEA and CFI are only computed if the input
 correlation matrix is positive-definite (for all groups).}

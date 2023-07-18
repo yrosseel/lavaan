@@ -1066,20 +1066,26 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
 
             # check for exogenous parameters: if the dataset changed, we must
             # update them! (new in 0.6-16)
-            if(any(lavpartable$exo == 1L)) {
-                tmp <- lav_start(start.method   = "simple",
-                               lavpartable    = lavpartable,
-                               lavsamplestats = lavsamplestats,
-                               lavh1          = lavh1,
-                               model.type     = lavoptions$model.type,
-                               reflect      = FALSE,
-                               #order.lv.by  = lavoptions$rotation.args$order.lv.by,
-                               order.lv.by  = "none",
-                               mimic          = lavoptions$mimic,
-                               debug          = lavoptions$debug)
-                exo.idx <- which(lavpartable$exo == 1L)
-                lavpartable$start[exo.idx] <- tmp[exo.idx]
-            }
+            # ... or not? (not compatible with how we bootstrap under fixed.x=T)
+            # we really need to think about this more carefully...
+            #
+            # if(any(lavpartable$exo == 1L)) {
+            #     # FIXME: there should be an easier way just to
+            #     # (re)initialize the the exogenous part of the model
+            #     tmp <- lav_start(start.method   = "lavaan", # not "simple"
+            #                                                 # if fixed.x = TRUE
+            #                    lavpartable    = lavpartable,
+            #                    lavsamplestats = lavsamplestats,
+            #                    lavh1          = lavh1,
+            #                    model.type     = lavoptions$model.type,
+            #                    reflect      = FALSE,
+            #                    #order.lv.by  = lavoptions$rotation.args$order.lv.by,
+            #                    order.lv.by  = "none",
+            #                    mimic          = lavoptions$mimic,
+            #                    debug          = lavoptions$debug)
+            #     exo.idx <- which(lavpartable$exo == 1L)
+            #     lavpartable$start[exo.idx] <- tmp[exo.idx]
+            # }
 
             if(lavoptions$verbose) {
                 cat(" done.\n")

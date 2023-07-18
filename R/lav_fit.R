@@ -39,7 +39,7 @@ lav_model_fit <- function(lavpartable = NULL,
                                     BOOT = attr(VCOV, "BOOT.COEF"))
         }
     } else {
-        se <- lavpartable$se
+        se <- as.numeric(lavpartable$se) # could be logical NA
     }
 
     # did we compute test statistics

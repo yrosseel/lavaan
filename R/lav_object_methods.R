@@ -57,6 +57,7 @@ function(object, header       = TRUE,
                                      rmsea.ci.level       = 0.90,
                                      rmsea.h0.closefit    = 0.05,
                                      rmsea.h0.notclosefit = 0.08,
+                                     robust               = TRUE,
                                      cat.check.pd         = TRUE),
                  modindices   = FALSE,
                  nd = 3L, cutoff = 0.3, dot.cutoff = 0.1) {
