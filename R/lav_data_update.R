@@ -21,10 +21,12 @@ lav_data_update <- function(lavdata = NULL, newX = NULL, BOOT.idx = NULL,
         # replace raw data
         newdata@X[[g]] <- newX[[g]]
 
-        # Mp
+        # Mp + nobs
         if(lavoptions$missing != "listwise") {
             newdata@Mp[[g]] <- lav_data_missing_patterns(newX[[g]],
                                   sort.freq = FALSE, coverage = FALSE)
+            newdata@nobs[[g]] <-
+                ( nrow(newdata@X[[g]]) - length(newdata@Mp[[g]]$empty.idx) )
         }
 
         # Rp

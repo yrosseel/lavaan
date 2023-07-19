@@ -270,7 +270,7 @@ lav_bootstrap_internal <- function(object          = NULL,
             df <- object@test[[1]]$df
             Sigmahat <- Sigma.hat[[g]]
             nmv <- nrow(Sigmahat)
-            n <- lavdata@nobs[[g]]
+            n <- nrow(lavdata@X[[g]])
 
             # Calculate tauhat_1, middle p. 267.
             # Yuan et al note that tauhat_1 could be negative;
@@ -318,8 +318,8 @@ lav_bootstrap_internal <- function(object          = NULL,
             # Note: we generate the bootstrap indices separately for each
             #       group, in order to ensure the group sizes do not change!
             for(g in 1:lavdata@ngroups) {
-                stopifnot(lavdata@nobs[[g]] > 1L)
-                boot.idx <- sample.int(lavdata@nobs[[g]], replace = TRUE)
+                stopifnot(nrow(lavdata@X[[g]]) > 1L)
+                boot.idx <- sample.int(nrow(lavdata@X[[g]]), replace = TRUE)
                 BOOT.idx[[g]] <- boot.idx
                 dataX[[g]] <- dataX[[g]][boot.idx,,drop = FALSE]
             }
