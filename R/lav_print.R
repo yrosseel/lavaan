@@ -144,7 +144,7 @@ print.lavaan.vector <- function(x, ..., nd = 3L, shift = 0L) {
     invisible(x)
 }
 
-print.lavaan.character <- function(x) {
+print.lavaan.character <- function(x, ...) {
     cat(x)
     invisible(x)
 }
