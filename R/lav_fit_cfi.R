@@ -24,6 +24,11 @@
 
 # note: robust MLM == robust MLMV
 
+# categorical data:
+# Savalei, V. (2021). Improving fit indices in structural equation modeling with
+# categorical data. Multivariate Behavioral Research, 56(3), 390-407. doi:
+# 10.1080/00273171.2020.1717922
+
 # when missing = "fiml":
 # Zhang, X., & Savalei, V. (2023). New computations for RMSEA and CFI following
 # FIML and TS estimation with missing data. Psychological Methods, 28(2),

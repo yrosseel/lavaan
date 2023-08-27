@@ -61,6 +61,11 @@
 # mean-and-variance corrected test statistic with nonnormal data in SEM.
 # Multivariate behavioral research, 53(3), 419-429.
 
+# categorical data:
+# Savalei, V. (2021). Improving fit indices in structural equation modeling with
+# categorical data. Multivariate Behavioral Research, 56(3), 390-407. doi:
+# 10.1080/00273171.2020.1717922
+
 # missing = "fiml":
 # Zhang, X., & Savalei, V. (2022). New computations for RMSEA and CFI following
 # FIML and TS estimation with missing data. Psychological Methods.
