@@ -127,6 +127,12 @@ lav_uvord_init_cache <- function(y  = NULL,
         nexo <- 0L
     } else {
         X <- unname(X); nexo <- ncol(X)
+        # new in 0.6-17: check if X is full rank
+        if(!anyNA(X)) {
+            if(qr(X)$rank < ncol(X)) {
+                stop("lavaan ERROR: matrix of exogenous covariates is rank deficient!\n\t\t(i.e., some x variables contain redundant information)")
+            }
+        }
     }
 
     # nobs

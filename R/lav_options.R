@@ -2016,6 +2016,8 @@ lav_options_set <- function(opt = NULL) {
     }
 
 
+    # store orig.estimator as estimator.orig in upper case
+    opt$estimator.orig <- toupper(orig.estimator)
 
     # group.w.free
     #if(opt$group.w.free && opt$.categorical) {
