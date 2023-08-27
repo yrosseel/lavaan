@@ -607,6 +607,11 @@ lav_predict_eta_normal <- function(lavobject = NULL,  # for convenience
                 Data.B <- matrix(0, nrow = nrow(MB.j),
                                     ncol = ncol(data.obs[[g]]))
                 Data.B[, ov.idx[[1]] ] <- MB.j
+                between.idx <- Lp$between.idx[[2*g]]
+                if(length(between.idx) > 0L) {
+                  Data.B[, between.idx] <- data.obs[[g]][!duplicated(Lp$cluster.idx[[2]]),
+                                                         between.idx]
+                }
                 data.obs.g <- Data.B[, ov.idx[[2]] ]
             } else {
                 stop("lavaan ERROR: only 2 levels are supported")
@@ -885,6 +890,11 @@ lav_predict_eta_bartlett <- function(lavobject = NULL, # for convenience
                 Data.B <- matrix(0, nrow = nrow(MB.j),
                                     ncol = ncol(data.obs[[g]]))
                 Data.B[, ov.idx[[1]] ] <- MB.j
+                between.idx <- Lp$between.idx[[2*g]]
+                if(length(between.idx) > 0L) {
+                  Data.B[, between.idx] <- data.obs[[g]][!duplicated(Lp$cluster.idx[[2]]),
+                                                         between.idx]
+                }
                 data.obs.g <- Data.B[, ov.idx[[2]] ]
             } else {
                 stop("lavaan ERROR: only 2 levels are supported")
