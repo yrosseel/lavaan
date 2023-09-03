@@ -272,6 +272,7 @@ estimator.PML <- function(Sigma.hat  = NULL,    # model-based var/cov/cor
 
         # get frequency per table, per pair
         logl <- sum(lavcache$bifreq * log(pairwisePI))
+        # HJ: FYI the bifreq are already weighted
 
         # more convenient fit function
         prop <- lavcache$bifreq / lavcache$nobs
