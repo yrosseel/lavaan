@@ -517,7 +517,7 @@ lav_model_gradient <- function(lavmodel       = NULL,
                                      X          = lavdata@X[[g]],
                                      lavcache   = lavcache[[g]],
                                      eXo        = lavdata@eXo[[g]],
-                                     wt         = lavdata@weights,
+                                     wt         = lavdata@weights[[g]],
                                      PI         = PI[[g]],
                                      missing    = lavdata@missing)
                 } else {
@@ -529,7 +529,7 @@ lav_model_gradient <- function(lavmodel       = NULL,
                                      X          = lavdata@X[[g]],
                                      lavcache   = lavcache[[g]],
                                      eXo        = NULL,
-                                     wt         = lavdata@weights,
+                                     wt         = lavdata@weights[[g]],
                                      PI         = NULL,
                                      missing    = lavdata@missing)
                 } # not conditional.x
