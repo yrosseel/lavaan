@@ -43,19 +43,19 @@ lav_partable_labels <- function(partable,
            "residual.covariances" %in%  group.equal) {
             ov.names.nox <- vector("list", length=ngroups)
             for(g in 1:ngroups)
-                ov.names.nox[[g]] <- lav_partable_vnames(partable, "ov.nox", group=g)
+                ov.names.nox[[g]] <- unique( unlist(lav_partable_vnames(partable, "ov.nox", group=g)) )
         }
         if("thresholds" %in% group.equal) {
             ov.names.ord <- vector("list", length=ngroups)
             for(g in 1:ngroups)
-                ov.names.ord[[g]] <- lav_partable_vnames(partable, "ov.ord", group=g)
+                ov.names.ord[[g]] <- unique( unlist(lav_partable_vnames(partable, "ov.ord", group=g)) )
         }
         if("means" %in% group.equal ||
            "lv.variances" %in% group.equal ||
            "lv.covariances" %in% group.equal) {
             lv.names <- vector("list", length=ngroups)
             for(g in 1:ngroups)
-                lv.names[[g]] <- lav_partable_vnames(partable, "lv", group=g)
+                lv.names[[g]] <- unique( unlist(lav_partable_vnames(partable, "lv", group=g)) )
         }
 
         # g1.flag: TRUE if included, FALSE if not
