@@ -30,6 +30,12 @@ modindices <- function(object,
         stop("lavaan WARNING: modification indices for estimator PML are not implemented yet.")
     }
 
+    # new in 0.6-17: check if the model contains equality constraints
+    if(object@Model@eq.constraints) {
+        warning("lavaan WARNING: the modindices() function ignores equality constraints;\n\t\t  use lavTestScore() to assess the impact of releasing one ",
+                "\n\t\t  or multiple constraints")
+    }
+
     # sanity check
     if(power) {
         standardized <- TRUE
