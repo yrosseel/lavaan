@@ -1219,7 +1219,7 @@ lav_options_set <- function(opt = NULL) {
 
 
     ##################################################################
-    # FABIN, MULTIPLE-GROUP-METHOD (MGM( BENTLER, ...                #
+    # FABIN, MULTIPLE-GROUP-METHOD (MGM), BENTLER1982, ...           #
     ##################################################################
     } else if(opt$estimator %in% c("fabin", "fabin2", "fabin3",
                                    "mgm", "guttman", "gutman", "guttman1952",
@@ -1324,6 +1324,52 @@ lav_options_set <- function(opt = NULL) {
                 if(is.null(opt$estimator.args$quadprog)) {
                     opt$estimator.args$quadprog <- FALSE
                 }
+            }
+        }
+
+        # brute-force override
+        opt$optim.method <- "noniter"
+        opt$start <- "simple"
+
+    ##################################################################
+    # MIIV-2SLS and friends                                          #
+    ##################################################################
+    } else if(opt$estimator %in% c("miiv", "iv", "miiv-2sls")) {
+        opt$estimator <- "MIIV"
+
+        # sample.cov.rescale
+        if(is.logical(opt$sample.cov.rescale)) {
+            # nothing to do
+        } else if(opt$sample.cov.rescale == "default") {
+            opt$sample.cov.rescale <- TRUE
+        } else {
+            stop("lavaan ERROR: sample.cov.rescale value must be logical.")
+        }
+
+        # se
+        if(opt$se == "default") {
+            opt$se <- "none" # for now
+        }
+
+        # bounds
+        if(opt$bounds == "default") {
+            opt$bounds <- "standard"
+        }
+
+        # test
+        if(opt$test == "default") {
+            opt$test <- "none" # for now
+        }
+
+        # missing
+        opt$missing <- "listwise" # for now
+
+        # estimator options
+        if(is.null(opt$estimator.args)) {
+            opt$estimator.args <- list(method = "2SLS")
+        } else {
+            if(is.null(opt$estimator.args$method)) {
+                opt$estimator.args$method <- "2SLS"
             }
         }
 
