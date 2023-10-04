@@ -33,9 +33,7 @@ growth(model = NULL, data = NULL, ordered = NULL, sampling.weights = NULL,
     sampling weight information. Currently only available for non-clustered
     data. Depending on the \code{sampling.weights.normalization} option, these
     weights may be rescaled (or not) so that their sum equals the number of
-    observations (total or per group). Currently only available if estimator
-    is ML in combination with robust standard errors and a robust test
-    statistic. By default, the estimator will be \code{"MLR"}.}
+    observations (total or per group).
 \item{sample.cov}{Numeric matrix. A sample variance-covariance matrix.
     The rownames and/or colnames must contain the observed variable names.
     For a multiple group analysis, a list with a variance-covariance matrix
