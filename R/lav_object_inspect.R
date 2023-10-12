@@ -2246,7 +2246,10 @@ lav_object_inspect_gradient <- function(object,
                 }
             }
         } else {
-            # do nothing (for now)
+            # FIXME:
+            # non-likelihood: what to do? just switch the sign for now.
+            # Note: this is used in lavTestScore()
+            dx <- - 1 * dx
         }
     }
 
