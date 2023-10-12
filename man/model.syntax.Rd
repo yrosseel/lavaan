@@ -122,8 +122,8 @@ the model both for both observed and latent variables.}
 \item{auto.fix.single}{If \code{TRUE}, the residual variance (if included)
     of an observed indicator is set to zero if it is the only indicator of a
     latent variable.}
-\item{auto.var}{If \code{TRUE}, the residual variances and the variances
-    of exogenous latent variables are included in the model and set free.}
+\item{auto.var}{If \code{TRUE}, the (residual) variances of both observed
+    and latent variables are set free.}
 \item{auto.cov.lv.x}{If \code{TRUE}, the covariances of exogenous latent
     variables are included in the model and set free.}
 \item{auto.cov.y}{If \code{TRUE}, the covariances of dependent variables
