@@ -1391,8 +1391,15 @@ lav_object_inspect_rsquare <- function(object, est.std.all=NULL,
         OUT[[b]] <- tmp
     }
 
-    if(nblocks == 1L && drop.list.single.group) {
-        OUT <- OUT[[1]]
+    if(nblocks == 1L) {
+        if(drop.list.single.group) {
+          OUT <- OUT[[1]]
+        } 
+          #TDJ: Would it make sense to provide a label for 1 block?
+          # else if(length(object@Data@block.label)) {
+          #   names(OUT) <- object@Data@block.label
+          # }
+
     } else {
         names(OUT) <- object@Data@block.label
     }
