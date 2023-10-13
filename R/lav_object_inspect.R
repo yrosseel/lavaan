@@ -901,14 +901,8 @@ lav_object_inspect_modelmatrices <- function(object, what = "free",
 
         if(lavmodel@nblocks == 1L && drop.list.single.group) {
             OUT <- OUT[[1]]
-        } else {
-            if(object@Data@nlevels == 1L &&
-               length(object@Data@group.label) > 0L) {
-                names(OUT) <- unlist(object@Data@group.label)
-            } else if(object@Data@nlevels > 1L &&
-                      length(object@Data@group.label) == 0L) {
-                names(OUT) <- object@Data@level.label
-            }
+        } else if(nblocks > 1L) {
+            names(OUT) <- object@Data@block.label
         }
     } else {
         OUT <- GLIST
@@ -1177,7 +1171,7 @@ lav_object_inspect_sampstat <- function(object, h1 = TRUE,
 
     if(nblocks == 1L && drop.list.single.group) {
         OUT <- OUT[[1]]
-    } else {
+    } else if(nblocks > 1L) {
         names(OUT) <- object@Data@block.label
     }
 
@@ -1391,16 +1385,9 @@ lav_object_inspect_rsquare <- function(object, est.std.all=NULL,
         OUT[[b]] <- tmp
     }
 
-    if(nblocks == 1L) {
-        if(drop.list.single.group) {
-          OUT <- OUT[[1]]
-        } 
-          #TDJ: Would it make sense to provide a label for 1 block?
-          # else if(length(object@Data@block.label)) {
-          #   names(OUT) <- object@Data@block.label
-          # }
-
-    } else {
+    if(nblocks == 1L && drop.list.single.group) {
+        OUT <- OUT[[1]]
+    } else if(nblocks > 1L) {
         names(OUT) <- object@Data@block.label
     }
 
@@ -1568,7 +1555,7 @@ lav_object_inspect_implied <- function(object,
 
     if(nblocks == 1L && drop.list.single.group) {
         OUT <- OUT[[1]]
-    } else {
+    } else if(nblocks > 1L) {
         names(OUT) <- object@Data@block.label
     }
 
@@ -1615,7 +1602,7 @@ lav_object_inspect_cov_lv <- function(object, correlation.metric = FALSE,
 
     if(nblocks == 1L && drop.list.single.group) {
         OUT <- OUT[[1]]
-    } else {
+    } else if(nblocks > 1L) {
         names(OUT) <- object@Data@block.label
     }
 
@@ -1648,7 +1635,7 @@ lav_object_inspect_mean_lv <- function(object,
 
     if(nblocks == 1L && drop.list.single.group) {
         OUT <- OUT[[1]]
-    } else {
+    } else if(nblocks > 1L) {
         names(OUT) <- object@Data@block.label
     }
 
@@ -1685,9 +1672,10 @@ lav_object_inspect_cov_all <- function(object, correlation.metric = FALSE,
 
     if(nblocks == 1L && drop.list.single.group) {
         OUT <- OUT[[1]]
-    } else {
+    } else if(nblocks > 1L) {
         names(OUT) <- object@Data@block.label
     }
+
     OUT
 }
 
@@ -1759,7 +1747,7 @@ lav_object_inspect_mean_ov <- function(object,
 
     if(nblocks == 1L && drop.list.single.group) {
         OUT <- OUT[[1]]
-    } else {
+    } else if(nblocks > 1L) {
         names(OUT) <- object@Data@block.label
     }
 
@@ -1798,7 +1786,7 @@ lav_object_inspect_th <- function(object,
 
     if(nblocks == 1L && drop.list.single.group) {
         OUT <- OUT[[1]]
-    } else {
+    } else if(nblocks > 1L) {
         names(OUT) <- object@Data@block.label
     }
 
@@ -1826,7 +1814,7 @@ lav_object_inspect_th_idx <- function(object,
 
     if(nblocks == 1L && drop.list.single.group) {
         OUT <- OUT[[1]]
-    } else {
+    } else if(nblocks > 1L) {
         names(OUT) <- object@Data@block.label
     }
 
@@ -1863,7 +1851,7 @@ lav_object_inspect_vy <- function(object,
 
     if(nblocks == 1L && drop.list.single.group) {
         OUT <- OUT[[1]]
-    } else {
+    } else if(nblocks > 1L) {
         names(OUT) <- object@Data@block.label
     }
 
@@ -1903,7 +1891,7 @@ lav_object_inspect_theta <- function(object, correlation.metric = FALSE,
 
     if(nblocks == 1L && drop.list.single.group) {
         OUT <- OUT[[1]]
-    } else {
+    } else if(nblocks > 1L) {
         names(OUT) <- object@Data@block.label
     }
 
@@ -2040,7 +2028,7 @@ lav_object_inspect_wls_est <- function(object,
 
     if(nblocks == 1L && drop.list.single.group) {
         OUT <- OUT[[1]]
-    } else {
+    } else if(nblocks > 1L) {
         names(OUT) <- object@Data@block.label
     }
 
@@ -2078,7 +2066,7 @@ lav_object_inspect_wls_obs <- function(object,
 
     if(nblocks == 1L && drop.list.single.group) {
         OUT <- OUT[[1]]
-    } else {
+    } else if(nblocks > 1L) {
         names(OUT) <- object@Data@block.label
     }
 
@@ -2134,7 +2122,7 @@ lav_object_inspect_wls_v <- function(object,
 
     if(nblocks == 1L && drop.list.single.group) {
         OUT <- OUT[[1]]
-    } else {
+    } else if(nblocks > 1L) {
         names(OUT) <- object@Data@block.label
     }
 
@@ -3095,8 +3083,8 @@ lav_object_inspect_ranef <- function(object, add.labels = FALSE,
         implied.group <- lapply(lavimplied, function(x) x[group.idx])
 
         # random effects (=random intercepts or cluster means)
-        out <- lav_mvnorm_cluster_implied22l(Lp = Lp, implied = implied.group)
-        MB.j <- lav_mvnorm_cluster_em_estep_ranef(YLp = YLp, Lp = Lp,
+		out <- lav_mvnorm_cluster_implied22l(Lp = Lp, implied = implied.group)
+		MB.j <- lav_mvnorm_cluster_em_estep_ranef(YLp = YLp, Lp = Lp,
                         sigma.w = out$sigma.w, sigma.b = out$sigma.b,
                         sigma.zz = out$sigma.zz, sigma.yz = out$sigma.yz,
                         mu.z = out$mu.z, mu.w = out$mu.w, mu.b = out$mu.b,
