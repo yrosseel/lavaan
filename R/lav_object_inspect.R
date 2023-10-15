@@ -901,7 +901,7 @@ lav_object_inspect_modelmatrices <- function(object, what = "free",
 
         if(lavmodel@nblocks == 1L && drop.list.single.group) {
             OUT <- OUT[[1]]
-        } else if(nblocks > 1L) {
+        } else if(lavmodel@nblocks > 1L) {
             names(OUT) <- object@Data@block.label
         }
     } else {
