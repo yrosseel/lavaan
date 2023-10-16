@@ -67,6 +67,10 @@ lav_optim_noniter <- function(lavmodel = NULL, lavsamplestats = NULL,
         x <- try(lav_cfa_bentler1982_internal(lavmodel = lavmodel,
                  lavsamplestats = lavsamplestats, lavpartable = lavpartable,
                  lavpta = lavpta, lavoptions = lavoptions), silent = TRUE)
+    } else if(lavoptions$estimator == "MIIV") {
+        x <- try(lav_sem_miiv_internal(lavmodel = lavmodel,
+                 lavsamplestats = lavsamplestats, lavpartable = lavpartable,
+                 lavpta = lavpta, lavoptions = lavoptions), silent = TRUE)
     } else {
         warning("lavaan WARNING: unknown (noniterative) estimator: ",
                 lavoptions$estimator, " (returning starting values)")
