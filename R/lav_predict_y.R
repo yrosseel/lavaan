@@ -57,7 +57,7 @@ lavPredictY <- function(object,
                            ordered     = OV$name[ OV$type == "ordered" ],
                            lavoptions  = list(std.ov = lavdata@std.ov,
                                               group.label = lavdata@group.label,
-                                              missing = "ml", # always!
+                                              missing = "ml.x", # always!
                                               warn = TRUE),
                            allow.single.case = TRUE)
         # if ordered, check if number of levels is still the same (new in 0.6-7)
