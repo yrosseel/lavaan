@@ -260,10 +260,13 @@ lavPredict <- function(object, newdata = NULL, # keep order of predict(), 0.6-7
                        } else {
                            COV <- A %*% Sigma %*% t(A)
                        }
-                       df.squared <- mahalanobis(out[[g]],
-                                                 center = EETA[[g]],
-                                                 cov = COV)
-                       ret <- sqrt(df.squared)
+                       # COV should always be pd, as Sigma is pd
+                       COV.inv <- solve(COV)
+                       # center factor scores
+                       fs.c <- t( t(out[[g]]) -  EETA[[g]])
+                       # Mahalobis distance
+                       df.squared <- rowSums((fs.c %*% COV.inv) * fs.c)
+                       ret <- df.squared # squared!
                        ret
                    })
         }

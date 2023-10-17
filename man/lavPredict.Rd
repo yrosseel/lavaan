@@ -11,7 +11,7 @@ regression framework! (For models with only continuous observed variables, the f
 \usage{
 lavPredict(object, newdata = NULL, type = "lv", method = "EBM",
            transform = FALSE, se = "none", acov = "none", 
-           label = TRUE, fsm = FALSE, 
+           label = TRUE, fsm = FALSE, mdist = FALSE,
            append.data = FALSE, assemble = FALSE,
            level = 1L, optim.method = "bfgs", ETA = NULL)
 }
@@ -49,6 +49,15 @@ only available for complete continuous data.}
 \item{label}{Logical. If TRUE, the columns in the output are labeled.}
 \item{fsm}{Logical. If TRUE, return the factor score matrix as an attribute.
            Only for numeric data.}
+\item{mdist}{Logical. Only used when \code{type = "lv"}. If TRUE, the (squared)
+Mahalanobis distances of the factor scores are returned as an attribute. The
+distances are computed using the model-based mean (i.e., the output of
+\code{lavInspect(fit, "mean.lv")} and variance-covariance matrix of the factor
+scores. If \code{transform = FALSE} (the default), The latter is computed as
+\code{A \%*\% Sigma \%*\% t(A)} where A is the factor score matrix, and Sigma
+the model-implied (co)variance matrix.  If \code{transform = TRUE}, we use
+\code{lavInspect(fit, "cov.lv")} as the (co)variance matrix of the factor
+scores.}
 \item{append.data}{Logical. Only used when \code{type = "lv"}. If TRUE, 
 the original data (or the data provided
 in the newdata argument) is appended to the factor scores.}
