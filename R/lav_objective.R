@@ -186,6 +186,7 @@ estimator.FIML <- function(Sigma.hat = NULL, Mu.hat = NULL, Yp = NULL,
 # - 29/03/2016: adapt for exogenous covariates
 # - 21/09/2016: added code for missing = doubly.robust (contributed by
 #   Myrsini Katsikatsou)
+# - HJ 18/10/2023: For sampling weights the lavcache$bifreq are weighted
 estimator.PML <- function(Sigma.hat  = NULL,    # model-based var/cov/cor
                           Mu.hat     = NULL,    # model-based means
                           TH         = NULL,    # model-based thresholds + means
@@ -272,11 +273,24 @@ estimator.PML <- function(Sigma.hat  = NULL,    # model-based var/cov/cor
 
         # get frequency per table, per pair
         logl <- sum(lavcache$bifreq * log(pairwisePI))
-        # HJ: FYI the bifreq are already weighted
+
+        # >>>>>>>> HJ/MK PML CODE >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+
+        # FYI the bifreq are already weighted so this will work. Alternatively:
+        if (!is.null(wt)) {
+          logl <- sum(lavcache$sum_obs_weights_xixj_ab_vec * log(pairwisePI))
+        }
 
         # more convenient fit function
         prop <- lavcache$bifreq / lavcache$nobs
         freq <- lavcache$bifreq
+        if (!is.null(wt)) {
+          prop <- lavcache$sum_obs_weights_xixj_ab_vec / sum(wt)
+          freq <- lavcache$sum_obs_weights_xixj_ab_vec
+        }
+
+        # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+
         # remove zero props # FIXME!!! or add 0.5???
         #zero.idx <- which(prop == 0.0)
         zero.idx <- which( (prop == 0.0) | !is.finite(prop) )

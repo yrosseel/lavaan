@@ -48,5 +48,5 @@ Delta2 <- lavaan:::computeDelta(lavmodel = fit2@Model)[[1]]
 # [5,] 0.4310165 0.0000000 0.6878226    0    0    0
 # [6,] 0.0000000 0.4310165 0.7724621    0    0    0
 
-
-
+lav_model_objective
+pml_deriv1()
