@@ -88,21 +88,16 @@ pml_deriv1 <- function(Sigma.hat  = NULL,       # model-based var/cov/cor
     if(!scores && all(ov.types == "ordered") && nexo == 0L) {
       # >>>>>>>> HJ/MK PML CODE >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
-      # gradient <- grad_tau_rho(no.x               = nvar,
-      #                          all.thres          = TH,
-      #                          index.var.of.thres = th.idx,
-      #                          rho.xixj           = cors,
-      #                          n.xixj.vec         = lavcache$bifreq,
-      #                          out.LongVecInd     = lavcache$LONG)
-
-      # Change the function grad_tau_rho by removing the input argument
-      # n.xixj.vec  and adding lavcache. This is because we need sum of obs
-      # weights instead in the case of complex design
+      if (is.null(wt)) {
+        n.xixj.vec <- lavcache$bifreq
+      } else {
+        n.xixj.vec <- lavcache$sum_obs_weights_xixj_ab_vec
+      }
       gradient <- grad_tau_rho(no.x               = nvar,
                                all.thres          = TH,
                                index.var.of.thres = th.idx,
                                rho.xixj           = cors,
-                               lavcache           = lavcache,
+                               n.xixj.vec         = n.xixj.vec,
                                out.LongVecInd     = lavcache$LONG)
 
       # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
@@ -501,68 +496,29 @@ pml_deriv1 <- function(Sigma.hat  = NULL,       # model-based var/cov/cor
 #              }
 
 
-# grad_tau_rho_old <- function(no.x, all.thres, index.var.of.thres, rho.xixj,
-#                          n.xixj.vec, out.LongVecInd) {
-#
-#   out.LongVecTH.Rho <- LongVecTH.Rho(no.x=no.x, all.thres=all.thres,
-#                                      index.var.of.thres=index.var.of.thres,
-#                                      rho.xixj=rho.xixj)
-#   pi.xixj <- pairwiseExpProbVec(ind.vec= out.LongVecInd,
-#                                 th.rho.vec= out.LongVecTH.Rho)
-#
-#   out.derLtoRho <- derLtoRho(ind.vec= out.LongVecInd,
-#                              th.rho.vec= out.LongVecTH.Rho,
-#                              n.xixj=n.xixj.vec, pi.xixj=pi.xixj, no.x=no.x)
-#
-#   out.derLtoTau <- derLtoTau(ind.vec= out.LongVecInd,
-#                              th.rho.vec= out.LongVecTH.Rho,
-#                              n.xixj=n.xixj.vec, pi.xixj=pi.xixj,
-#                              no.x=no.x)
-#
-#   grad <- c(out.derLtoTau, out.derLtoRho)
-#   attr(grad, "pi.xixj") <- pi.xixj
-#
-#   grad
-# }
-
-# >>>>>>>> HJ/MK PML CODE >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-
-# Change in the input arguments of grad_tau_rho means that the function needs to
-# be updated accordingly.
 grad_tau_rho <- function(no.x, all.thres, index.var.of.thres, rho.xixj,
-                         lavcache, out.LongVecInd) {
+                         n.xixj.vec, out.LongVecInd) {
 
-  if(is.null(lavcache$sum_obs_weights_xixj_ab_vec)) {
-    n.xixj.vec <- lavcache$bifreq  # again, this should be weighted freq already
-  } else {
-    n.xixj.vec <- lavcache$sum_obs_weights_xixj_ab_vec
-  }
+  out.LongVecTH.Rho <- LongVecTH.Rho(no.x=no.x, all.thres=all.thres,
+                                     index.var.of.thres=index.var.of.thres,
+                                     rho.xixj=rho.xixj)
+  pi.xixj <- pairwiseExpProbVec(ind.vec= out.LongVecInd,
+                                th.rho.vec= out.LongVecTH.Rho)
 
-  out.LongVecTH.Rho <- LongVecTH.Rho(no.x = no.x, all.thres = all.thres,
-                                     index.var.of.thres = index.var.of.thres,
-                                     rho.xixj = rho.xixj)
+  out.derLtoRho <- derLtoRho(ind.vec= out.LongVecInd,
+                             th.rho.vec= out.LongVecTH.Rho,
+                             n.xixj=n.xixj.vec, pi.xixj=pi.xixj, no.x=no.x)
 
-  pi.xixj <- pairwiseExpProbVec(ind.vec = out.LongVecInd,
-                                th.rho.vec = out.LongVecTH.Rho)
-
-  out.derLtoRho <- derLtoRho(ind.vec = out.LongVecInd,
-                             th.rho.vec = out.LongVecTH.Rho,
-                             n.xixj = n.xixj.vec, pi.xixj = pi.xixj,
-                             no.x = no.x)
-
-  out.derLtoTau <- derLtoTau(ind.vec = out.LongVecInd,
-                             th.rho.vec = out.LongVecTH.Rho,
-                             n.xixj = n.xixj.vec, pi.xixj = pi.xixj,
-                             no.x = no.x)
+  out.derLtoTau <- derLtoTau(ind.vec= out.LongVecInd,
+                             th.rho.vec= out.LongVecTH.Rho,
+                             n.xixj=n.xixj.vec, pi.xixj=pi.xixj,
+                             no.x=no.x)
 
   grad <- c(out.derLtoTau, out.derLtoRho)
   attr(grad, "pi.xixj") <- pi.xixj
 
   grad
 }
-
-# >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-
 
 ################################################################################
 
