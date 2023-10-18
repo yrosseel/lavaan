@@ -304,6 +304,7 @@ lav_model_information_observed <- function(lavmodel       = NULL,
         # divide by 'N' for MML and PML
         if(lavmodel@estimator == "PML" || lavmodel@estimator == "MML") {
             Information <- Information / lavsamplestats@ntotal
+            # HJ: Does this need to be divided by sum of weights instead?
         }
 
         # if multilevel, we should divide by 'J', the number of clusters
@@ -378,6 +379,8 @@ lav_model_information_observed <- function(lavmodel       = NULL,
 }
 
 # outer product of the case-wise scores (gradients)
+# HJ 18/10/23: Need to divide sum of crossproduct of individual log-likelihoods
+# by sum of weights rather than sample size.
 lav_model_information_firstorder <- function(lavmodel       = NULL,
                                              lavsamplestats = NULL,
                                              lavdata        = NULL,
@@ -419,7 +422,21 @@ lav_model_information_firstorder <- function(lavmodel       = NULL,
         # unweighted (needed in lav_test?)
         B0.group[[g]] <- t(Delta[[g]]) %*% B1[[g]] %*% Delta[[g]]
 
-        fg <- lavsamplestats@nobs[[g]]/lavsamplestats@ntotal
+        # >>>>>>>> HJ/MK PML CODE >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+
+        # NOTE: UNSURE ABOUT THIS PART. WHAT IS THE ROLE OF fg? For now default
+        # to 1.
+
+        wt <- lavdata@weights[[g]]
+        if (is.null(wt)) {
+          fg <- lavsamplestats@nobs[[g]] / lavsamplestats@ntotal
+        } else {
+          totalwt <- sum(unlist(lavdata@weights))
+          fg <- sum(wt) / totalwt
+        }
+
+        # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+
         # compute information for this group
         Info.group[[g]] <- fg * B0.group[[g]]
     }
@@ -432,15 +449,24 @@ lav_model_information_firstorder <- function(lavmodel       = NULL,
         }
     }
 
+    # NOTE: for MML and PML, we get 'total' information (instead of unit) divide
+    # by 'N' for MML and PML. For weighted sample, use the sum of weights
+    # instead of sample size
 
-    # NOTE: for MML and PML, we get 'total' information (instead of unit)
-    # divide by 'N' for MML and PML
+    # >>>>>>>> HJ/MK PML CODE >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+
     if(lavmodel@estimator == "PML" || lavmodel@estimator == "MML") {
-        Information <- Information / lavsamplestats@ntotal
+        if (length(lavdata@sampling.weights) == 0) {
+          the_N <- lavsamplestats@ntotal
+        } else {
+          the_N <- sum(unlist(lavdata@weights))
+        }
+        Information <- Information / the_N
         for(g in 1:lavsamplestats@ngroups) {
-            B0.group[[g]] <- B0.group[[g]] / lavsamplestats@ntotal
+            B0.group[[g]] <- B0.group[[g]] / the_N
         }
     }
+    # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
     # augmented information?
     if(augmented) {
