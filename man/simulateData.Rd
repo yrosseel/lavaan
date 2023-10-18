@@ -4,8 +4,8 @@
 \description{Simulate data starting from a lavaan model syntax.}
 \usage{
 simulateData(model = NULL, model.type = "sem", meanstructure = FALSE, 
-    int.ov.free = TRUE, int.lv.free = FALSE, conditional.x = FALSE,
-    fixed.x = FALSE, 
+    int.ov.free = TRUE, int.lv.free = FALSE, 
+    marker.int.zero = FALSE, conditional.x = FALSE, fixed.x = FALSE, 
     orthogonal = FALSE, std.lv = TRUE, auto.fix.first = FALSE, 
     auto.fix.single = FALSE, auto.var = TRUE, auto.cov.lv.x = TRUE, 
     auto.cov.y = TRUE, ..., sample.nobs = 500L, ov.var = NULL, 
@@ -32,6 +32,12 @@ simulateData(model = NULL, model.type = "sem", meanstructure = FALSE,
     are fixed to zero.}
 \item{int.lv.free}{If \code{FALSE}, the intercepts of the latent variables
     are fixed to zero.}
+\item{marker.int.zero}{Logical. Only relevant if the metric of each latent
+    variable is set by fixing the first factor loading to unity.
+    If \code{TRUE}, it implies \code{meanstructure = TRUE} and 
+    \code{std.lv = FALSE}, and it fixes the intercepts of the marker
+    indicators to zero, while freeing the means/intercepts of the latent
+    variables. Only works correcly for single group, single level models.}
 \item{conditional.x}{If \code{TRUE}, we set up the model conditional on
     the exogenous `x' covariates; the model-implied sample statistics
     only include the non-x variables. If \code{FALSE}, the exogenous `x'
@@ -55,8 +61,8 @@ simulateData(model = NULL, model.type = "sem", meanstructure = FALSE,
 \item{auto.fix.single}{If \code{TRUE}, the residual variance (if included)
     of an observed indicator is set to zero if it is the only indicator of a
     latent variable.}
-\item{auto.var}{If \code{TRUE}, the residual variances and the variances
-    of exogenous latent variables are included in the model and set free.}
+\item{auto.var}{If \code{TRUE}, the (residual) variances of both observed
+    and latent variables are set free.}
 \item{auto.cov.lv.x}{If \code{TRUE}, the covariances of exogenous latent
     variables are included in the model and set free.}
 \item{auto.cov.y}{If \code{TRUE}, the covariances of dependent variables

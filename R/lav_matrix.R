@@ -76,11 +76,21 @@ lav_matrix_vechru <- function(S, diagonal = TRUE) {
 # return the *vector* indices of the lower triangular elements of a
 # symmetric matrix of size 'n'
 lav_matrix_vech_idx <- function(n = 1L, diagonal = TRUE) {
-    # FIXME: is there a way to avoid creating ROW/COL matrices?
     n <- as.integer(n)
-    ROW <- matrix(seq_len(n), n, n)
-    COL <- matrix(seq_len(n), n, n, byrow = TRUE)
-    if(diagonal) which(ROW >= COL) else which(ROW > COL)
+    if(n < 100L) {
+        ROW <- matrix(seq_len(n), n, n)
+        COL <- matrix(seq_len(n), n, n, byrow = TRUE)
+        if(diagonal) which(ROW >= COL) else which(ROW > COL)
+    } else {
+        # ldw version
+        if(diagonal) {
+            unlist(lapply(seq_len(n),
+                          function(j) (j - 1L) * n + seq.int(j, n)))
+        } else {
+            unlist(lapply(seq_len(n - 1L),
+                          function(j) (j - 1L) * n + seq.int(j + 1L, n)))
+        }
+    }
 }
 
 # return the *row* indices of the lower triangular elements of a
@@ -111,32 +121,59 @@ lav_matrix_vech_col_idx <- function(n = 1L, diagonal = TRUE) {
 # symmetric matrix of size 'n' -- ROW-WISE
 lav_matrix_vechr_idx <- function(n = 1L, diagonal = TRUE) {
     n <- as.integer(n)
-    ROW <- matrix(seq_len(n), n, n)
-    COL <- matrix(seq_len(n),   n, n, byrow = TRUE)
-    tmp <- matrix(seq_len(n*n), n, n, byrow = TRUE)
-    if(diagonal) tmp[ROW <= COL] else tmp[ROW < COL]
+    if(n < 100L) {
+        ROW <- matrix(seq_len(n), n, n)
+        COL <- matrix(seq_len(n),   n, n, byrow = TRUE)
+        tmp <- matrix(seq_len(n*n), n, n, byrow = TRUE)
+        if(diagonal) tmp[ROW <= COL] else tmp[ROW < COL]
+    } else {
+        if(diagonal) {
+            unlist(lapply(seq_len(n),
+                          function(j) seq.int(1, j) * n - (n - j )))
+        } else {
+            unlist(lapply(seq_len(n-1L),
+                          function(j) seq.int(1, j) * n - (n - j ) + 1))
+        }
+    }
 }
 
 # return the *vector* indices of the upper triangular elements of a
 # symmetric matrix of size 'n' -- COLUMN-WISE
 lav_matrix_vechu_idx <- function(n = 1L, diagonal = TRUE) {
     n <- as.integer(n)
-    ROW <- matrix(seq_len(n), n, n)
-    COL <- matrix(seq_len(n), n, n, byrow = TRUE)
-    if(diagonal) which(ROW <= COL) else which(ROW < COL)
+    if(n < 100L) {
+        ROW <- matrix(seq_len(n), n, n)
+        COL <- matrix(seq_len(n), n, n, byrow = TRUE)
+        if(diagonal) which(ROW <= COL) else which(ROW < COL)
+    } else {
+        if(diagonal) {
+            unlist(lapply(seq_len(n), function(j) seq.int(j) + (j - 1) * n))
+        } else {
+            unlist(lapply(seq_len(n-1L), function(j) seq.int(j) + j * n))
+        }
+    }
 }
 
 # return the *vector* indices of the upper triangular elements of a
 # symmetric matrix of size 'n' -- ROW-WISE
-#
-# FIXME!! make this more efficient (without creating 3 n*n matrices!)
-#
 lav_matrix_vechru_idx <- function(n = 1L, diagonal = TRUE) {
     n <- as.integer(n)
-    ROW <- matrix(seq_len(n), n, n)
-    COL <- matrix(seq_len(n),   n, n, byrow = TRUE)
-    tmp <- matrix(seq_len(n*n), n, n, byrow = TRUE)
-    if(diagonal) tmp[ROW >= COL] else tmp[ROW > COL]
+    if(n < 100L) {
+        # FIXME!! make this more efficient (without creating 3 n*n matrices!)
+        ROW <- matrix(seq_len(n), n, n)
+        COL <- matrix(seq_len(n),   n, n, byrow = TRUE)
+        tmp <- matrix(seq_len(n*n), n, n, byrow = TRUE)
+        if(diagonal) tmp[ROW >= COL] else tmp[ROW > COL]
+    } else {
+        # ldw version
+        if(diagonal) {
+            unlist(lapply(seq_len(n),
+                   function(j) seq.int(j - 1, n - 1) * n + j))
+        } else {
+            unlist(lapply(seq_len(n - 1L),
+                          function(j) seq.int(j, n - 1) * n + j))
+        }
+    }
 }
 
 
@@ -258,6 +295,15 @@ lav_matrix_vech_match_idx <- function(n = 1L, diagonal = TRUE,
     A <- lav_matrix_vech_reverse(seq_len(pstar))
     B <- A[idx, idx, drop = FALSE]
     lav_matrix_vech(B, diagonal = diagonal)
+}
+
+# check if square matrix is diagonal (no tolerance!)
+lav_matrix_is_diagonal <- function(A = NULL) {
+    A <- as.matrix.default(A)
+    stopifnot(nrow(A) == ncol(A))
+
+    diag(A) <- 0
+    all(A == 0)
 }
 
 
@@ -741,8 +787,10 @@ lav_matrix_commutation <- .com1
 # = permuting the rows of A
 lav_matrix_commutation_pre <- function(A = matrix(0,0,0)) {
 
+    A <- as.matrix(A)
+
     # number of rows of A
-    n2 <- NROW(A)
+    n2 <- nrow(A)
 
     # K_nn only (n2 = m * n)
     stopifnot(sqrt(n2) == round(sqrt(n2)))
@@ -757,6 +805,56 @@ lav_matrix_commutation_pre <- function(A = matrix(0,0,0)) {
     OUT <- A[row.idx, , drop = FALSE]
     OUT
 }
+
+# compute A %*% K_n without explicitly computing K
+# K_n = K_nn, so sqrt(ncol(A)) must be an integer!
+# = permuting the columns of A
+lav_matrix_commutation_post <- function(A = matrix(0,0,0)) {
+
+    A <- as.matrix(A)
+
+    # number of columns of A
+    n2 <- ncol(A)
+
+    # K_nn only (n2 = m * n)
+    stopifnot(sqrt(n2) == round(sqrt(n2)))
+
+    # dimension
+    n <- sqrt(n2)
+
+    # compute col indices
+    #row.idx <- as.integer(t(matrix(1:n2, n, n)))
+    col.idx <- rep(1:n, each = n) + (0:(n-1L))*n
+
+    OUT <- A[, col.idx, drop = FALSE]
+    OUT
+}
+
+# compute K_n %*% A %*% K_n without explicitly computing K
+# K_n = K_nn, so sqrt(ncol(A)) must be an integer!
+# = permuting both the rows AND columns of A
+lav_matrix_commutation_pre_post <- function(A = matrix(0,0,0)) {
+
+    A <- as.matrix(A)
+
+    # number of columns of A
+    n2 <- NCOL(A)
+
+    # K_nn only (n2 = m * n)
+    stopifnot(sqrt(n2) == round(sqrt(n2)))
+
+    # dimension
+    n <- sqrt(n2)
+
+    # compute col indices
+    row.idx <- rep(1:n, each = n) + (0:(n-1L))*n
+    col.idx <- row.idx
+
+    OUT <- A[row.idx, col.idx, drop = FALSE]
+    OUT
+}
+
+
 
 # compute K_mn %*% A without explicitly computing K
 # = permuting the rows of A

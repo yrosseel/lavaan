@@ -708,7 +708,7 @@ computeNU <- function(lavmodel = NULL, GLIST = NULL,
             stop("only representation LISREL has been implemented for now")
         }
 
-        NU[[g]] <- NU.g
+        NU[[g]] <- as.matrix(NU.g)
     }
 
     NU

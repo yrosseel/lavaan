@@ -320,7 +320,7 @@ lav_model_objective <- function(lavmodel       = NULL,
             stop("unsupported estimator: ", estimator)
         }
 
-        if(estimator == "ML" || estimator == "REML" || estimator == "NTRLS") {
+        if(estimator %in% c("ML", "REML", "NTRLS", "catML")) {
             if(lavdata@nlevels == 1L) {
                 group.fx <- 0.5 * group.fx ## FIXME
             }

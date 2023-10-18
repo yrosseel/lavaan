@@ -1,4 +1,3 @@
-# constructor for the 'lavData' class
 #
 # the lavData class describes how the data looks like
 #  - do we have a full data frame, or only sample statistics?
@@ -47,6 +46,19 @@ lavData <- function(data              = NULL,          # data.frame
     level.label <- lavoptions$level.label
     if(is.null(level.label)) {
         level.label <- character(0L)
+    }
+
+    # block.labels
+    block.label <- character(0L)
+    if(length(group.label) > 0L && length(level.label) == 0L) {
+        block.label <- group.label
+    } else if(length(level.label) > 0L && length(group.label) == 0L) {
+        block.label <- level.label
+    } else if(length(group.label) > 0L &&
+              length(level.label) > 0L) {
+        block.label <- paste(rep(group.label, each = length(level.label)),
+                             rep(level.label, times = length(group.label)),
+                             sep = ".")
     }
 
     # std.ov?
@@ -266,14 +278,15 @@ lavData <- function(data              = NULL,          # data.frame
 
         # block.labels
         block.label <- character(0L)
-        if(length(group.label) > 0L) {
+        if(length(group.label) > 0L && length(level.label) == 0L) {
             block.label <- group.label
-        } else if(length(level.label) > 0L) {
+        } else if(length(level.label) > 0L && length(group.label) == 0L) {
             block.label <- level.label
         } else if(length(group.label) > 0L &&
                   length(level.label) > 0L) {
-            block.label <- paste(group.label,
-                                 level.label, sep = ".")
+            block.label <- paste(rep(group.label, each = length(level.label)),
+                                 rep(level.label, times = length(group.label)),
+                                 sep = ".")
         }
 
         # construct lavData object
@@ -416,14 +429,15 @@ lavData <- function(data              = NULL,          # data.frame
 
         # block.labels
         block.label <- character(0L)
-        if(length(group.label) > 0L) {
+        if(length(group.label) > 0L && length(level.label) == 0L) {
             block.label <- group.label
-        } else if(length(level.label) > 0L) {
+        } else if(length(level.label) > 0L && length(group.label) == 0L) {
             block.label <- level.label
         } else if(length(group.label) > 0L &&
                   length(level.label) > 0L) {
-            block.label <- paste(group.label,
-                                 level.label, sep = ".")
+            block.label <- paste(rep(group.label, each = length(level.label)),
+                                 rep(level.label, times = length(group.label)),
+                                 sep = ".")
         }
 
         # construct lavData object
@@ -1114,14 +1128,15 @@ lav_data_full <- function(data          = NULL,          # data.frame
 
     # block.labels
     block.label <- character(0L)
-    if(length(group.label) > 0L) {
+    if(length(group.label) > 0L && length(level.label) == 0L) {
         block.label <- group.label
-    } else if(length(level.label) > 0L) {
+    } else if(length(level.label) > 0L && length(group.label) == 0L) {
         block.label <- level.label
     } else if(length(group.label) > 0L &&
               length(level.label) > 0L) {
-        block.label <- paste(group.label,
-                             level.label, sep = ".")
+        block.label <- paste(rep(group.label, each = length(level.label)),
+                             rep(level.label, times = length(group.label)),
+                             sep = ".")
     }
 
 

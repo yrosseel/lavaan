@@ -10,7 +10,8 @@ function is NOT to predict future values of dependent variables as in the
 regression framework! (For models with only continuous observed variables, the function \code{lavPredictY()} supports this.}
 \usage{
 lavPredict(object, newdata = NULL, type = "lv", method = "EBM",
-           se = "none", acov = "none", label = TRUE, fsm = FALSE, 
+           transform = FALSE, se = "none", acov = "none", 
+           label = TRUE, fsm = FALSE, mdist = FALSE,
            append.data = FALSE, assemble = FALSE,
            level = 1L, optim.method = "bfgs", ETA = NULL)
 }
@@ -31,6 +32,12 @@ continuous), the possible options are \code{"regression"} or \code{"Bartlett"}.
 In the categorical case, the two options are \code{"EBM"} for
 the Empirical Bayes Modal approach, and \code{"ML"} for the maximum
 likelihood approach.}
+\item{transform}{Logical. If \code{TRUE}, transform the factor scores (per
+group) so that their mean and variance-covariance matrix matches the
+model-implied mean and variance-covariance matrix. This may be useful if the
+individual factor scores will be used in a follow-up (regression) analysis.
+Note: the standard errors (if requested) and the factor score matrix (if
+requested) are not transformed (yet).}
 \item{se}{Character. If \code{"none"}, no standard errors are computed.
 If \code{"standard"}, naive standard errors are computed (assuming the
 parameters of the measurement model are known). The standard errors are
@@ -42,6 +49,15 @@ only available for complete continuous data.}
 \item{label}{Logical. If TRUE, the columns in the output are labeled.}
 \item{fsm}{Logical. If TRUE, return the factor score matrix as an attribute.
            Only for numeric data.}
+\item{mdist}{Logical. Only used when \code{type = "lv"}. If TRUE, the (squared)
+Mahalanobis distances of the factor scores are returned as an attribute. The
+distances are computed using the model-based mean (i.e., the output of
+\code{lavInspect(fit, "mean.lv")} and variance-covariance matrix of the factor
+scores. If \code{transform = FALSE} (the default), The latter is computed as
+\code{A \%*\% Sigma \%*\% t(A)} where A is the factor score matrix, and Sigma
+the model-implied (co)variance matrix.  If \code{transform = TRUE}, we use
+\code{lavInspect(fit, "cov.lv")} as the (co)variance matrix of the factor
+scores.}
 \item{append.data}{Logical. Only used when \code{type = "lv"}. If TRUE, 
 the original data (or the data provided
 in the newdata argument) is appended to the factor scores.}

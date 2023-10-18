@@ -20,7 +20,9 @@ function(object, fit.measures = "all", baseline.model = NULL,
                         scaled.test       = "default",
                         rmsea.ci.level    = 0.90,
                         rmsea.close.h0    = 0.05,
-                        rmsea.notclose.h0 = 0.08),
+                        rmsea.notclose.h0 = 0.08,
+                        robust            = TRUE,
+                        cat.check.pd      = TRUE),
          output = "vector", ...) {
     # note: the ... is not used by lavaan
     lav_fit_measures(object = object, fit.measures = fit.measures,
@@ -34,7 +36,9 @@ function(object, fit.measures = "all", baseline.model = NULL,
                         scaled.test       = "default",
                         rmsea.ci.level    = 0.90,
                         rmsea.close.h0    = 0.05,
-                        rmsea.notclose.h0 = 0.08),
+                        rmsea.notclose.h0 = 0.08,
+                        robust            = TRUE,
+                        cat.check.pd      = TRUE),
          output = "vector",  ...) {
     # note: the ... is not used by lavaan
     lav_fit_measures(object = object, fit.measures = fit.measures,
@@ -50,8 +54,10 @@ fitMeasures.efaList <- fitmeasures.efaList <- function(object,
                    scaled.test       = "default",
                    rmsea.ci.level    = 0.90,
                    rmsea.close.h0    = 0.05,
-                   rmsea.notclose.h0 = 0.08),
-    vector = "list", ...) {
+                   rmsea.notclose.h0 = 0.08,
+                   robust            = TRUE,
+                   cat.check.pd      = TRUE),
+    output = "list", ...) {
 
     # kill object$loadings if present
     object[["loadings"]] <- NULL
@@ -93,7 +99,9 @@ lav_fit_measures <- function(object, fit.measures = "all",
                                             scaled.test       = "default",
                                             rmsea.ci.level    = 0.90,
                                             rmsea.close.h0    = 0.05,
-                                            rmsea.notclose.h0 = 0.08),
+                                            rmsea.notclose.h0 = 0.08,
+                                            robust            = TRUE,
+                                            cat.check.pd      = TRUE),
                              output = "vector") {
 
     # default fm.args
@@ -101,7 +109,9 @@ lav_fit_measures <- function(object, fit.measures = "all",
                             scaled.test       = "default",
                             rmsea.ci.level    = 0.90,
                             rmsea.close.h0    = 0.05,
-                            rmsea.notclose.h0 = 0.08)
+                            rmsea.notclose.h0 = 0.08,
+                            robust            = TRUE,
+                            cat.check.pd      = TRUE)
     if(!missing(fm.args)) {
         fm.args <- modifyList(default.fm.args, fm.args)
     } else {
@@ -209,7 +219,8 @@ lav_fit_measures <- function(object, fit.measures = "all",
 
     # options
     categorical.flag <- object@Model@categorical
-    fiml.flag        <- object@Options$missing %in% c("ml", "ml.x")
+    fiml.flag        <- ( fm.args$robust &&
+                          object@Options$missing %in% c("ml", "ml.x") )
     estimator        <- object@Options$estimator
 
     # basic ingredients
@@ -246,7 +257,7 @@ lav_fit_measures <- function(object, fit.measures = "all",
     if(scaled.flag) {
         fit.cfi.tli <- c(fit.cfi.tli, "cfi.scaled", "tli.scaled")
     }
-    if(scaled.flag || categorical.flag || fiml.flag) {
+    if(fm.args$robust && (scaled.flag || categorical.flag || fiml.flag)) {
         fit.cfi.tli <- c(fit.cfi.tli, "cfi.robust", "tli.robust")
     }
 
@@ -256,7 +267,7 @@ lav_fit_measures <- function(object, fit.measures = "all",
         fit.cfi.other <- c(fit.cfi.other, "nnfi.scaled", "rfi.scaled",
                        "nfi.scaled", "pnfi.scaled", "ifi.scaled", "rni.scaled")
     }
-    if(scaled.flag || categorical.flag || fiml.flag) {
+    if(fm.args$robust && (scaled.flag || categorical.flag || fiml.flag)) {
         fit.cfi.other <- c(fit.cfi.other, "nnfi.robust", "rni.robust")
     }
     fit.cfi <- c(fit.baseline, fit.cfi.tli, fit.cfi.other)
@@ -283,7 +294,7 @@ lav_fit_measures <- function(object, fit.measures = "all",
                        "rmsea.ci.upper.scaled", "rmsea.pvalue.scaled",
                        "rmsea.notclose.pvalue.scaled")
     }
-    if(scaled.flag || categorical.flag || fiml.flag) {
+    if(fm.args$robust && (scaled.flag || categorical.flag || fiml.flag)) {
         fit.rmsea <- c(fit.rmsea, "rmsea.robust", "rmsea.ci.lower.robust",
                        "rmsea.ci.upper.robust", "rmsea.pvalue.robust",
                        "rmsea.notclose.pvalue.robust")
@@ -398,7 +409,9 @@ lav_fit_measures <- function(object, fit.measures = "all",
                                            fit.measures   = fit.measures,
                                            baseline.model = baseline.model,
                                            standard.test  = standard.test,
-                                           scaled.test    = scaled.test))
+                                           scaled.test    = scaled.test,
+                                           robust         = fm.args$robust,
+                                           cat.check.pd   = fm.args$cat.check.pd))
     }
 
     # INFORMATION CRITERIA
@@ -447,7 +460,9 @@ lav_fit_measures <- function(object, fit.measures = "all",
                                      scaled.test       = scaled.test,
                                      ci.level          = rmsea.ci.level,
                                      close.h0          = rmsea.close.h0,
-                                     notclose.h0       = rmsea.notclose.h0))
+                                     notclose.h0       = rmsea.notclose.h0,
+                                     robust            = fm.args$robust,
+                                     cat.check.pd      = fm.args$cat.check.pd))
     }
 
     # SRMR and friends

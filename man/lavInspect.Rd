@@ -256,7 +256,6 @@ Optimizer information:
     \item{\code{"optim"}:}{List. All available information regarding the
         optimization results.}
     \item{\code{"npar"}:}{Integer. Number of free parameters (ignoring constraints).}
-    \item{\code{"coef"}:}{Numeric. The estimated parameter vector.}
 }
 
 Gradient, Hessian, observed, expected and first.order information matrices:

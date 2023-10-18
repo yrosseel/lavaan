@@ -52,9 +52,13 @@ function(object, header       = TRUE,
                  cov.std      = TRUE,
                  rsquare      = FALSE,
                  std.nox      = FALSE,
-                 fm.args      = list(rmsea.ci.level       = 0.90,
+                 fm.args      = list(standard.test        = "default",
+                                     scaled.test          = "default",
+                                     rmsea.ci.level       = 0.90,
                                      rmsea.h0.closefit    = 0.05,
-                                     rmsea.h0.notclosefit = 0.08),
+                                     rmsea.h0.notclosefit = 0.08,
+                                     robust               = TRUE,
+                                     cat.check.pd         = TRUE),
                  modindices   = FALSE,
                  nd = 3L, cutoff = 0.3, dot.cutoff = 0.1) {
 
@@ -168,7 +172,7 @@ standardizedSolution <-
                                             type = type, free.only = FALSE,
                                             add.labels = FALSE,
                                             add.class = FALSE))
-        if(inherits(VCOV, "try-error")) {
+        if(inherits(VCOV, "try-error") || is.null(VCOV)) {
             LIST$se <- rep(NA, length(LIST$lhs))
             if(zstat) {
                 LIST$z  <- rep(NA, length(LIST$lhs))
@@ -244,6 +248,14 @@ standardizedSolution <-
             LIST <- LIST[-def.idx,]
         }
     }
+
+    # always remove 'da' rows (if any)
+    if(any(LIST$op == "da")) {
+        da.idx <- which(LIST$op == "da")
+        LIST <- LIST[-da.idx,,drop = FALSE]
+    }
+
+
 
     if(output == "text") {
         class(LIST) <- c("lavaan.parameterEstimates", "lavaan.data.frame",
@@ -889,6 +901,14 @@ parameterestimates <- function(object,
         # remove step column
         LIST$step <- NULL
     }
+
+    # always remove 'da' entries (if any)
+    if(any(LIST$op == "da")) {
+        da.idx <- which(LIST$op == "da")
+        LIST <- LIST[-da.idx,,drop = FALSE]
+    }
+
+
 
     # remove LIST$user
     LIST$user <- NULL

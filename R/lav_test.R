@@ -139,6 +139,16 @@ lav_test_rename <- function(test, check = FALSE) {
         c("browne.residuals.nt", "browne.residual.nt"))) > 0L) {
         test[target.idx] <- "browne.residual.nt"
     }
+    if(length(target.idx <- which(test %in%
+        c("browne.residual.adf.model"))) > 0L) {
+        test[target.idx] <- "browne.residual.adf.model"
+    }
+    if(length(target.idx <- which(test %in%
+        c("browne.residuals.nt.model", "browne.residual.nt.model",
+          "rls", "browne.rls", "nt.rls", "nt-rls", "ntrls"))) > 0L) {
+        test[target.idx] <- "browne.residual.nt.model"
+    }
+
 
     # check?
     if(check) {
@@ -153,7 +163,9 @@ lav_test_rename <- function(test, check = FALSE) {
                                       "scaled.shifted",
                                       "bollen.stine",
                                       "browne.residual.nt",
-                                      "browne.residual.adf"))
+                                      "browne.residual.nt.model",
+                                      "browne.residual.adf",
+                                      "browne.residual.adf.model"))
         if(length(bad.idx) > 0L) {
             stop("lavaan ERROR: invalid value(s) in test= argument:\n\t\t",
                  paste(test[bad.idx], collapse = " "), "\n")
@@ -175,7 +187,9 @@ lav_test_rename <- function(test, check = FALSE) {
     nonscaled.idx <- which(test %in% c("standard", "none", "default",
                                     "bollen.stine",
                                     "browne.residual.nt",
-                                    "browne.residual.adf"))
+                                    "browne.residual.nt.model",
+                                    "browne.residual.adf",
+                                    "browne.residual.adf.model"))
     scaled.idx <- which(test %in% c("satorra.bentler",
                                     "yuan.bentler",
                                     "yuan.bentler.mplus",
@@ -345,7 +359,7 @@ lav_model_test <- function(lavobject      = NULL,
 
         if(length(lavh1) > 0L) {
             # LRT
-            chisq.group <- -2 * (lavloglik$loglik.group - lavh1$loglik.group)
+            chisq.group <- -2 * (lavloglik$loglik.group - lavh1$logl$loglik.group)
         } else {
             chisq.group <- rep(as.numeric(NA), lavdata@ngroups)
         }
@@ -457,19 +471,31 @@ lav_model_test <- function(lavobject      = NULL,
             }
 
         } else if(this.test %in% c("browne.residual.adf",
-                                   "browne.residual.nt")) {
+                                   "browne.residual.adf.model",
+                                   "browne.residual.nt",
+                                   "browne.residual.nt.model")) {
 
             ADF <- TRUE
-            if(this.test == "browne.residual.nt") {
+            if(this.test %in% c("browne.residual.nt",
+                                "browne.residual.nt.model")) {
                 ADF <- FALSE
             }
+            model.based <- FALSE
+            if(this.test %in% c("browne.residual.adf.model",
+                                "browne.residual.nt.model")) {
+                model.based <- TRUE
+            }
+
             out <- lav_test_browne(lavobject      = NULL,
                                    lavdata        = lavdata,
                                    lavsamplestats = lavsamplestats,
                                    lavmodel       = lavmodel,
                                    lavpartable    = lavpartable,
                                    lavoptions     = lavoptions,
-                                   ADF            = ADF)
+                                   lavh1          = lavh1,
+                                   lavimplied     = lavimplied,
+                                   ADF            = ADF,
+                                   model.based    = model.based)
             TEST[[this.test]] <- out
 
 

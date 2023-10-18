@@ -41,6 +41,9 @@ lav_partable_flat <- function(FLAT = NULL,
     lv.names.f   <- lav_partable_vnames(FLAT, type="lv.formative") # formative latent variables
     ov.names     <- lav_partable_vnames(FLAT, type="ov")     # observed variables
     ov.names.x   <- lav_partable_vnames(FLAT, type="ov.x")   # exogenous x covariates
+    lv.names.int <- lav_partable_vnames(FLAT, type="lv.interaction") # lv interactions
+
+
     if(is.null(ov.names.x.block)) {
         ov.names.x.block <- ov.names.x
     }
@@ -335,6 +338,15 @@ lav_partable_flat <- function(FLAT = NULL,
     rhs     <- FLAT$rhs
     mod.idx <- FLAT$mod.idx
 
+    # remove any 'da' entries here (we put them back at the end later)
+    if(any(op == "da")) {
+        da.idx <- which(op == "da")
+        lhs     <- lhs[-da.idx]
+         op     <-  op[-da.idx]
+        rhs     <- rhs[-da.idx]
+        mod.idx <- mod.idx[-da.idx]
+    }
+
     lv.names     <- lav_partable_vnames(FLAT, type="lv")     # latent variables
     ov.names     <- lav_partable_vnames(FLAT, type="ov")     # observed variables
     USER <- data.frame(lhs=lhs, op=op, rhs=rhs, mod.idx=mod.idx,
@@ -536,6 +548,14 @@ lav_partable_flat <- function(FLAT = NULL,
                                user == 0L)
             ustart[lv.rv.idx] <- as.numeric(NA)
               free[lv.rv.idx] <- 1L
+        }
+        if(length(lv.names.int) > 0L) {
+            lv.int.idx <- which(op == "~1" &
+                               lhs %in% lv.names.int &
+                               user == 0L)
+            ustart[lv.int.idx] <- as.numeric(NA)
+              free[lv.int.idx] <- 1L
+
         }
     }
 

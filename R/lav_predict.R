@@ -36,8 +36,9 @@ predict.efaList <- function(object, ...) {
 
 # main function
 lavPredict <- function(object, newdata = NULL, # keep order of predict(), 0.6-7
-                       type = "lv", method = "EBM",
+                       type = "lv", method = "EBM", transform = FALSE,
                        se = "none", acov = "none", label = TRUE, fsm = FALSE,
+                       mdist = FALSE,
                        append.data = FALSE, assemble = FALSE, # or TRUE?
                        level = 1L, optim.method = "bfgs", ETA = NULL) {
 
@@ -73,6 +74,11 @@ lavPredict <- function(object, newdata = NULL, # keep order of predict(), 0.6-7
     if(append.data && level > 1L) {
         warning("lavaan WARNING: append.data not available if level > 1L")
         append.data <- FALSE
+    }
+
+    # mdist? -> fsm = TRUE
+    if(mdist) {
+        fsm <- TRUE
     }
 
     # se?
@@ -188,14 +194,34 @@ lavPredict <- function(object, newdata = NULL, # keep order of predict(), 0.6-7
                    ret
                })
 
-        # append original/new data? (also remove attr)
-        if(append.data && level == 1L) {
+        # new in 0.6-16
+        if(transform) {
+            VETA <- lavTech(object, "cov.lv")
+            EETA <- lavTech(object, "mean.lv")
             out <- lapply(seq_len(lavdata@ngroups), function(g) {
-                       ret <- cbind(out[[g]], data.obs[[g]])
+                       # determine block
+                       if(lavdata@nlevels == 1L) {
+                           bb <- g
+                       } else {
+                            bb <- (g - 1)*lavdata@nlevels + level
+                       }
+
+                       FS.centered <- scale(out[[g]], center = TRUE,
+                                            scale = FALSE)
+                       FS.cov <- crossprod(FS.centered)/nrow(FS.centered)
+                       FS.cov.inv <- try(solve(FS.cov), silent = TRUE)
+                       if(inherits(FS.cov.inv, "try-error")) {
+                           warning("lavaan WARNING: could not invert (co)variance matrix of factor scores; returning original factor scores.")
+                           return(out[[g]])
+                       }
+                       fs.inv.sqrt <- lav_matrix_symmetric_sqrt(FS.cov.inv)
+                       veta.sqrt <- lav_matrix_symmetric_sqrt(VETA[[g]])
+                       tmp <- FS.centered %*% fs.inv.sqrt %*% veta.sqrt
+                       ret <- t( t(tmp) + drop(EETA[[g]]) )
+
                        ret
                    })
         }
-
 
         if(fsm) {
             FSM <- lapply(seq_len(lavdata@ngroups), function(g) {
@@ -219,6 +245,36 @@ lavPredict <- function(object, newdata = NULL, # keep order of predict(), 0.6-7
                                    ret})
                            }
                        }
+                       ret
+                   })
+        }
+
+        if(mdist) {
+            EETA <- lavTech(object, "mean.lv")
+            VETA <- lavTech(object, "cov.lv")
+            MDIST <- lapply(seq_len(lavdata@ngroups), function(g) {
+                       A <- FSM[[g]]
+                       Sigma <- lavimplied$cov[[g]]
+                       if(transform) {
+                           COV <- VETA[[g]]
+                       } else {
+                           COV <- A %*% Sigma %*% t(A)
+                       }
+                       # COV should always be pd, as Sigma is pd
+                       COV.inv <- solve(COV)
+                       # center factor scores
+                       fs.c <- t( t(out[[g]]) -  EETA[[g]])
+                       # Mahalobis distance
+                       df.squared <- rowSums((fs.c %*% COV.inv) * fs.c)
+                       ret <- df.squared # squared!
+                       ret
+                   })
+        }
+
+        # append original/new data? (also remove attr)
+        if(append.data && level == 1L) {
+            out <- lapply(seq_len(lavdata@ngroups), function(g) {
+                       ret <- cbind(out[[g]], data.obs[[g]])
                        ret
                    })
         }
@@ -402,6 +458,10 @@ lavPredict <- function(object, newdata = NULL, # keep order of predict(), 0.6-7
         attr(res, "fsm") <- FSM
     }
 
+    if(mdist) {
+        attr(res, "mdist") <- MDIST
+    }
+
     if(se != "none") {
         attr(res, "se") <- SE
         # return full sampling covariance matrix?
@@ -582,6 +642,11 @@ lav_predict_eta_normal <- function(lavobject = NULL,  # for convenience
                 Data.B <- matrix(0, nrow = nrow(MB.j),
                                     ncol = ncol(data.obs[[g]]))
                 Data.B[, ov.idx[[1]] ] <- MB.j
+                between.idx <- Lp$between.idx[[2*g]]
+                if(length(between.idx) > 0L) {
+                  Data.B[, between.idx] <- data.obs[[g]][!duplicated(Lp$cluster.idx[[2]]),
+                                                         between.idx]
+                }
                 data.obs.g <- Data.B[, ov.idx[[2]] ]
             } else {
                 stop("lavaan ERROR: only 2 levels are supported")
@@ -860,6 +925,11 @@ lav_predict_eta_bartlett <- function(lavobject = NULL, # for convenience
                 Data.B <- matrix(0, nrow = nrow(MB.j),
                                     ncol = ncol(data.obs[[g]]))
                 Data.B[, ov.idx[[1]] ] <- MB.j
+                between.idx <- Lp$between.idx[[2*g]]
+                if(length(between.idx) > 0L) {
+                  Data.B[, between.idx] <- data.obs[[g]][!duplicated(Lp$cluster.idx[[2]]),
+                                                         between.idx]
+                }
                 data.obs.g <- Data.B[, ov.idx[[2]] ]
             } else {
                 stop("lavaan ERROR: only 2 levels are supported")

@@ -24,6 +24,16 @@
 
 # note: robust MLM == robust MLMV
 
+# categorical data:
+# Savalei, V. (2021). Improving fit indices in structural equation modeling with
+# categorical data. Multivariate Behavioral Research, 56(3), 390-407. doi:
+# 10.1080/00273171.2020.1717922
+
+# when missing = "fiml":
+# Zhang, X., & Savalei, V. (2023). New computations for RMSEA and CFI following
+# FIML and TS estimation with missing data. Psychological Methods, 28(2),
+# 263-283. https://doi.org/10.1037/met0000445
+
 
 lav_fit_cfi <- function(X2 = NULL, df = NULL, X2.null = NULL, df.null = NULL,
                         c.hat = 1, c.hat.null = 1) {
@@ -112,10 +122,10 @@ lav_fit_tli <- function(X2 = NULL, df = NULL, X2.null = NULL, df.null = NULL,
     # robust?
     if(df > 0 && !missing(c.hat) && !missing(c.hat.null) &&
        c.hat != 1 && c.hat.null != 1) {
-        t1 <- (X2 - c.hat * df) * df.null
+        t1 <- (X2      - c.hat      * df     ) * df.null
         t2 <- (X2.null - c.hat.null * df.null) * df
     } else {
-        t1 <- (X2 - df) * df.null
+        t1 <- (X2      - df)      * df.null
         t2 <- (X2.null - df.null) * df
     }
 
@@ -223,7 +233,9 @@ lav_fit_ifi <- function(X2 = NULL, df = NULL, X2.null = NULL, df.null = NULL) {
 lav_fit_cfi_lavobject <- function(lavobject = NULL, fit.measures = "cfi",
                                   baseline.model = NULL,
                                   standard.test = "standard",
-                                  scaled.test   = "none") {
+                                  scaled.test   = "none",
+                                  robust        = TRUE,
+                                  cat.check.pd  = TRUE) {
 
     # check lavobject
     stopifnot(inherits(lavobject, "lavaan"))
@@ -237,7 +249,7 @@ lav_fit_cfi_lavobject <- function(lavobject = NULL, fit.measures = "cfi",
     if(test.names[1] == "none" || standard.test == "none") {
         return(list())
     }
-    test.idx <- which(test.names == standard.test)
+    test.idx <- which(test.names == standard.test)[1]
     if(length(test.idx) == 0L) {
         return(list())
     }
@@ -253,7 +265,7 @@ lav_fit_cfi_lavobject <- function(lavobject = NULL, fit.measures = "cfi",
 
     # robust?
     robust.flag <- FALSE
-    if(scaled.flag &&
+    if(robust && scaled.flag &&
        scaled.test %in% c("satorra.bentler", "yuan.bentler.mplus",
                           "yuan.bentler", "scaled.shifted")) {
         robust.flag <- TRUE
@@ -261,18 +273,25 @@ lav_fit_cfi_lavobject <- function(lavobject = NULL, fit.measures = "cfi",
 
     # FIML?
     fiml.flag <- FALSE
-    if(lavobject@Options$missing %in% c("ml", "ml.x")) {
+    if(robust && lavobject@Options$missing %in% c("ml", "ml.x")) {
+        fiml.flag <- robust.flag <- TRUE
         # check if we can compute corrected values
         if(scaled.flag) {
             version <- "V3"
         } else {
             version <- "V6"
         }
-        fiml <- lav_fit_fiml_corrected(lavobject, version = version)
-        if(!anyNA(c(fiml$XX3, fiml$df3, fiml$c.hat3, fiml$XX3.scaled,
+        fiml <- try(lav_fit_fiml_corrected(lavobject, version = version),
+                    silent = TRUE)
+        if(inherits(fiml, "try-error")) {
+            warning("lavaan WARNING: computation of robust CFI failed.")
+            fiml <- list(XX3 = as.numeric(NA), df3 = as.numeric(NA),
+                         c.hat3= as.numeric(NA), XX3.scaled = as.numeric(NA),
+                         XX3.null = as.numeric(NA), df3.null = as.numeric(NA),
+                         c.hat3.null = as.numeric(NA))
+        } else if(anyNA(c(fiml$XX3, fiml$df3, fiml$c.hat3, fiml$XX3.scaled,
                     fiml$XX3.null, fiml$df3.null, fiml$c.hat3.null))) {
-            robust.flag <- TRUE
-            fiml.flag <- TRUE
+            warning("lavaan WARNING: computation of robust CFI resulted in NA values.")
         }
     }
 
@@ -334,10 +353,16 @@ lav_fit_cfi_lavobject <- function(lavobject = NULL, fit.measures = "cfi",
     if(robust.flag) {
         XX3 <- X2
         if(categorical.flag) {
-            out <- lav_fit_catml_dwls(lavobject)
-            XX3 <- out$XX3
-            df3 <- out$df3
-            c.hat3 <- c.hat <- out$c.hat3
+            out <- try(lav_fit_catml_dwls(lavobject, check.pd = cat.check.pd),
+                       silent = TRUE)
+            if(inherits(out, "try-error")) {
+                XX3 <- df3 <- c.hat <- c.hat3 <- XX3.scaled <- as.numeric(NA)
+            } else {
+                XX3 <- out$XX3
+                df3 <- out$df3
+                c.hat3 <- c.hat <- out$c.hat3
+                XX3.scaled <- out$XX3.scaled
+            }
         } else if(fiml.flag) {
             XX3 <- fiml$XX3
             df3 <- fiml$df3
@@ -402,9 +427,9 @@ lav_fit_cfi_lavobject <- function(lavobject = NULL, fit.measures = "cfi",
     }
 
     # baseline.test.idx
-    baseline.test.idx <- which(names(baseline.test) == standard.test)
+    baseline.test.idx <- which(names(baseline.test) == standard.test)[1]
     if(scaled.flag) {
-        baseline.scaled.idx <- which(names(baseline.test) == scaled.test)
+        baseline.scaled.idx <- which(names(baseline.test) == scaled.test)[1]
     }
 
     if(!is.null(baseline.test)) {
@@ -417,8 +442,12 @@ lav_fit_cfi_lavobject <- function(lavobject = NULL, fit.measures = "cfi",
         if(robust.flag) {
             XX3.null <- X2.null
             if(categorical.flag) {
-                XX3.null   <- out$XX3.null
-                c.hat.null <- out$c.hat3.null
+                if(inherits(out, "try-error")) {
+                    XX3.null <- c.hat.null <- as.numeric(NA)
+                } else {
+                    XX3.null   <- out$XX3.null
+                    c.hat.null <- out$c.hat3.null
+                }
             } else if(fiml.flag) {
                 XX3.null   <- fiml$XX3.null
                 c.hat.null <- fiml$c.hat3.null

@@ -81,77 +81,6 @@ lav_cfa_fabin3 <- function(S, marker.idx = NULL, lambda.nonzero.idx = NULL) {
     lambda
 }
 
-# compute THETA and PSI, given lambda using either ULS or GLS
-# this function assumes:
-# - THETA is diagonal
-# - PSI is unrestricted
-# - we assume W = S^{-1}
-#
-# YR 17 oct 2022: - add lower/upper bounds for theta
-#                 - use 'lambda' correction to ensure PSI is positive definite
-#
-lav_cfa_lambda2thetapsi <- function(lambda = NULL, S = NULL, S.inv = NULL,
-                                    GLS = FALSE, bounds = TRUE) {
-    LAMBDA <- as.matrix(lambda)
-    nvar <- nrow(LAMBDA); nfac <- ncol(LAMBDA)
-
-    if(GLS) {
-        # see Browne, 1974 section 4 case II
-        if(is.null(S.inv)) {
-            W <- solve(S)
-        } else {
-            W <- S.inv
-        }
-        tLW <- crossprod(LAMBDA, W)
-        M <- solve(tLW %*% LAMBDA, tLW) # GLS mapping
-        #D <- W %*% LAMBDA %*% M # symmmetric
-        D <- crossprod(M, tLW)
-        #theta <- solve(W*W - D*D, diag(W %*% S %*% W - D %*% S %*% D))
-        theta <- solve(W*W - D*D, diag(W - D)) # because W == S^{-1}
-    } else {
-        # see Hagglund 1982, section 4
-        M <- solve(crossprod(LAMBDA), t(LAMBDA)) # ULS mapping function
-        D <- LAMBDA %*% M
-        theta <-  solve(diag(nvar) - D*D, diag(S - (D %*% S %*% D)))
-    }
-
-    # check bounds for theta
-    if(bounds) {
-        diagS <- diag(S)
-
-        # nonnegative
-        too.small.idx <- which(theta < 0)
-        theta[too.small.idx] <- 0
-
-        # not larger than diag(S)
-        too.large.idx <- which(theta > diagS)
-        if(length(too.large.idx) > 0L) {
-            theta[too.large.idx] <- diagS[too.large.idx] * 0.99
-        }
-    }
-
-    # psi
-    diag.theta <- diag(theta)
-    lambda <- try(lav_matrix_symmetric_diff_smallest_root(S, diag.theta),
-                  silent = TRUE)
-    if(inherits(lambda, "try-error")) {
-        warning("lavaan WARNING: failed to compute lambda")
-        SminTheta <- S - diag.theta # and hope for the best
-    } else {
-        N <- 20L # conservative lower bound, no need to change
-        cutoff <- 1 + 1/(N-1) # 1.052632
-        if(lambda < cutoff) {
-            lambda.star <- lambda - 1/(N - 1)
-            SminTheta <- S - lambda.star * diag.theta
-        } else {
-            SminTheta <- S - diag.theta
-        }
-    }
-    PSI <- M %*% SminTheta %*% t(M) # Just like local SAM
-
-    list(lambda = LAMBDA, theta = theta, psi = PSI)
-}
-
 # internal function to be used inside lav_optim_noniter
 # return 'x', the estimated vector of free parameters
 lav_cfa_fabin_internal <- function(lavmodel = NULL, lavsamplestats = NULL,
@@ -201,9 +130,21 @@ lav_cfa_fabin_internal <- function(lavmodel = NULL, lavsamplestats = NULL,
     }
 
     # 2. simple ULS method to get THETA and PSI (for now)
+    GLS.flag <- FALSE
+    psi.mapping.ML.flag <- FALSE
+    if(!is.null(lavoptions$estimator.args$thetapsi.method) &&
+       lavoptions$estimator.args$thetapsi.method %in% c("GLS", "GLS.ML")) {
+        GLS.flag <- TRUE
+    }
+    if(!is.null(lavoptions$estimator.args$thetapsi.method) &&
+       lavoptions$estimator.args$thetapsi.method %in% c("ULS.ML", "GLS.ML")) {
+        psi.mapping.ML.flag <- TRUE
+    }
     out <- lav_cfa_lambda2thetapsi(lambda = LAMBDA, S = sample.cov,
                                    S.inv = lavsamplestats@icov[[b]],
-                                   GLS = FALSE)
+                                   GLS = GLS.flag,
+                                   psi.mapping.ML = psi.mapping.ML.flag,
+                                   nobs = lavsamplestats@ntotal)
     THETA <- diag(out$theta)
     PSI <- out$psi
 
@@ -221,6 +162,23 @@ lav_cfa_fabin_internal <- function(lavmodel = NULL, lavsamplestats = NULL,
 
     # extract free parameters only
     x <- lav_model_get_parameters(lavmodel)
+
+    # apply bounds (if any)
+    if(!is.null(lavpartable$lower)) {
+        lower.x <- lavpartable$lower[lavpartable$free > 0]
+        too.small.idx <- which(x < lower.x)
+        if(length(too.small.idx) > 0L) {
+            x[ too.small.idx ] <- lower.x[ too.small.idx ]
+        }
+    }
+    if(!is.null(lavpartable$upper)) {
+        upper.x <- lavpartable$upper[lavpartable$free > 0]
+        too.large.idx <- which(x > upper.x)
+        if(length(too.large.idx) > 0L) {
+            x[ too.large.idx ] <- upper.x[ too.large.idx ]
+        }
+    }
+
     x
 }
 

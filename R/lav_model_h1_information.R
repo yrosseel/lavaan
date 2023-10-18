@@ -31,12 +31,22 @@ lav_model_h1_information <- function(lavobject      = NULL,
         if(.hasSlot(lavobject, "h1")) {
             lavh1      <- lavobject@h1
         } else {
-            lavh1      <- lav_h1_logl(lavdata = lavobject@Data,
+            lavh1      <- lav_h1_implied_logl(lavdata = lavobject@Data,
                                       lavsamplestats = lavobject@SampleStats,
                                       lavoptions = lavobject@Options)
         }
         lavcache       <- lavobject@Cache
         lavoptions     <- lavobject@Options
+    }
+
+    # sanity check
+    if(length(lavh1) == 0L) {
+        lavh1 <- lav_h1_implied_logl(lavdata = lavdata,
+                                     lavsamplestats = lavsamplestats,
+                                     lavoptions = lavoptions)
+    }
+    if(length(lavimplied) == 0L) {
+        lavimplied <- lav_model_implied(lavmodel = lavmodel)
     }
 
     # information
@@ -84,12 +94,22 @@ lav_model_h1_information_expected <- function(lavobject      = NULL,
         if(.hasSlot(lavobject, "h1")) {
             lavh1      <- lavobject@h1
         } else {
-            lavh1      <- lav_h1_logl(lavdata = lavobject@Data,
+            lavh1      <- lav_h1_implied_logl(lavdata = lavobject@Data,
                                       lavsamplestats = lavobject@SampleStats,
                                       lavoptions = lavobject@Options)
         }
         lavcache       <- lavobject@Cache
         lavoptions     <- lavobject@Options
+    }
+
+    # sanity check
+    if(length(lavh1) == 0L) {
+        lavh1 <- lav_h1_implied_logl(lavdata = lavdata,
+                                     lavsamplestats = lavsamplestats,
+                                     lavoptions = lavoptions)
+    }
+    if(length(lavimplied) == 0L) {
+        lavimplied <- lav_model_implied(lavmodel = lavmodel)
     }
 
     estimator <- lavmodel@estimator
@@ -317,12 +337,22 @@ lav_model_h1_information_observed <- function(lavobject      = NULL,
         if(.hasSlot(lavobject, "h1")) {
             lavh1      <- lavobject@h1
         } else {
-            lavh1      <- lav_h1_logl(lavdata = lavobject@Data,
+            lavh1      <- lav_h1_implied_logl(lavdata = lavobject@Data,
                                       lavsamplestats = lavobject@SampleStats,
                                       lavoptions = lavobject@Options)
         }
         lavcache       <- lavobject@Cache
         lavoptions     <- lavobject@Options
+    }
+
+    # sanity check
+    if(length(lavh1) == 0L) {
+        lavh1 <- lav_h1_implied_logl(lavdata = lavdata,
+                                     lavsamplestats = lavsamplestats,
+                                     lavoptions = lavoptions)
+    }
+    if(length(lavimplied) == 0L) {
+        lavimplied <- lav_model_implied(lavmodel = lavmodel)
     }
 
     estimator <- lavmodel@estimator
@@ -545,12 +575,22 @@ lav_model_h1_information_firstorder <- function(lavobject      = NULL,
         if(.hasSlot(lavobject, "h1")) {
             lavh1      <- lavobject@h1
         } else {
-            lavh1      <- lav_h1_logl(lavdata = lavobject@Data,
+            lavh1      <- lav_h1_implied_logl(lavdata = lavobject@Data,
                                       lavsamplestats = lavobject@SampleStats,
                                       lavoptions = lavobject@Options)
         }
         lavcache       <- lavobject@Cache
         lavoptions     <- lavobject@Options
+    }
+
+    # sanity check
+    if(length(lavh1) == 0L) {
+        lavh1 <- lav_h1_implied_logl(lavdata = lavdata,
+                                     lavsamplestats = lavsamplestats,
+                                     lavoptions = lavoptions)
+    }
+    if(length(lavimplied) == 0L) {
+        lavimplied <- lav_model_implied(lavmodel = lavmodel)
     }
 
     estimator <- lavmodel@estimator
@@ -805,12 +845,22 @@ lav_model_h1_acov <- function(lavobject      = NULL,
         if(.hasSlot(lavobject, "h1")) {
             lavh1      <- lavobject@h1
         } else {
-            lavh1      <- lav_h1_logl(lavdata = lavobject@Data,
+            lavh1      <- lav_h1_implied_logl(lavdata = lavobject@Data,
                                       lavsamplestats = lavobject@SampleStats,
                                       lavoptions = lavobject@Options)
         }
         lavcache       <- lavobject@Cache
         lavoptions     <- lavobject@Options
+    }
+
+    # sanity check
+    if(length(lavh1) == 0L) {
+        lavh1 <- lav_h1_implied_logl(lavdata = lavdata,
+                                     lavsamplestats = lavsamplestats,
+                                     lavoptions = lavoptions)
+    }
+    if(length(lavimplied) == 0L) {
+        lavimplied <- lav_model_implied(lavmodel = lavmodel)
     }
 
     # override

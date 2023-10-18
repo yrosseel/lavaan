@@ -191,13 +191,15 @@ lav_samplestats_from_data <- function(lavdata           = NULL,
     for(g in 1:ngroups) {
 
         # check nobs
-        if(nobs[[g]] < 2L) {
-            if(nobs[[g]] == 0L) {
-                stop("lavaan ERROR: data contains no observations",
+        if(is.null(WT[[g]])) {
+            if(nobs[[g]] < 2L) {
+                if(nobs[[g]] == 0L) {
+                    stop("lavaan ERROR: data contains no observations",
                      ifelse(ngroups > 1L, paste(" in group ", g, sep=""), ""))
-            } else {
-                stop("lavaan ERROR: data contains only a single observation",
+                } else {
+                    stop("lavaan ERROR: data contains only a single observation",
                      ifelse(ngroups > 1L, paste(" in group ", g, sep=""), ""))
+                }
             }
         }
 
@@ -351,8 +353,10 @@ lav_samplestats_from_data <- function(lavdata           = NULL,
             # only for catML
             if(estimator == "catML") {
                 COV <- cov2cor(lav_matrix_symmetric_force_pd(cov[[g]],
-                                                             tol = 1e-06))
-                out <- lav_samplestats_icov(COV = COV, ridge = 1e-05,
+                                                             tol = 1e-04))
+                # overwrite
+                cov[[g]] <- COV
+                out <- lav_samplestats_icov(COV = COV,
                            x.idx = x.idx[[g]],
                            ngroups = ngroups, g = g, warn = TRUE)
                 icov[[g]] <- out$icov
@@ -362,7 +366,9 @@ lav_samplestats_from_data <- function(lavdata           = NULL,
                 if(conditional.x) {
                     RES.COV <-
                         cov2cor(lav_matrix_symmetric_force_pd(res.cov[[g]],
-                                                              tol = 1e-06))
+                                                              tol = 1e-04))
+                    # overwrite
+                    res.cov[[g]] <- RES.COV
                     out <- lav_samplestats_icov(COV = RES.COV,
                                ridge = 1e-05,
                                x.idx = x.idx[[g]],
@@ -1671,6 +1677,13 @@ lav_samplestats_cluster_patterns <- function(Y = NULL, Lp = NULL,
         # cluster-means
         Y2 <- rowsum.default(Y1, group = cluster.idx, reorder = FALSE,
                      na.rm = FALSE) / cluster.size
+
+        if(length(within.idx) > 0L) {
+            for(i in 1:length(within.idx)) {
+                Y2[, within.idx[i]] <- Y1.means[within.idx[i]]
+            }
+        }
+
         Y2c <- t( t(Y2) - Y1.means )
 
         # compute S.w

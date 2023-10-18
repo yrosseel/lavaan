@@ -9,7 +9,7 @@ are growth factors. For more complex models, it may be better to use the
 growth(model = NULL, data = NULL, ordered = NULL, sampling.weights = NULL,
        sample.cov = NULL, sample.mean = NULL, sample.th = NULL,
        sample.nobs = NULL, group = NULL, cluster = NULL, 
-       constraints = "", WLS.V = NULL, NACOV = NULL,
+       constraints = "", WLS.V = NULL, NACOV = NULL, ov.order = "model",
        ...) 
 }
 \arguments{
@@ -33,9 +33,7 @@ growth(model = NULL, data = NULL, ordered = NULL, sampling.weights = NULL,
     sampling weight information. Currently only available for non-clustered
     data. Depending on the \code{sampling.weights.normalization} option, these
     weights may be rescaled (or not) so that their sum equals the number of
-    observations (total or per group). Currently only available if estimator
-    is ML in combination with robust standard errors and a robust test
-    statistic. By default, the estimator will be \code{"MLR"}.}
+    observations (total or per group).}
 \item{sample.cov}{Numeric matrix. A sample variance-covariance matrix.
     The rownames and/or colnames must contain the observed variable names.
     For a multiple group analysis, a list with a variance-covariance matrix
@@ -69,6 +67,13 @@ in a multiple group analysis.}
     For a multiple group analysis, a list with an asymptotic
     variance-covariance matrix for each group. See the \code{WLS.V}
     argument for information about the order of the elements.}
+\item{ov.order}{Character. If \code{"model"} (the default), the order of
+    the observed variable names (as reflected for example in the output of
+    \code{lavNames()}) is determined by the model syntax. If
+    \code{"data"}, the order is determined by the data (either the full
+    data.frame or the sample (co)variance matrix). If the \code{WLS.V}
+    and/or \code{NACOV} matrices are provided, this argument is currently
+    set to \code{"data"}.}
 \item{...}{Many more additional options can be defined, using 'name = value'.
     See \code{\link{lavOptions}} for a complete list.}
 }

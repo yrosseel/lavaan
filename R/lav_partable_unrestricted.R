@@ -714,9 +714,15 @@ lav_partable_unrestricted_chol <- function(lavobject = NULL,
             # block
             b <- b + 1L
 
-            ov.names     <- lavpta$vnames$ov[[b]]
-            ov.names.x   <- lavpta$vnames$ov.x[[b]]
-            ov.names.nox <- lavpta$vnames$ov.nox[[b]]
+            if(is.null(lavpta)) {
+                ov.names     <- lavdata@ov.names[[b]]
+                ov.names.x   <- lavdata@ov.names.x[[b]]
+                ov.names.nox <- ov.names[!ov.names %in% ov.names.x]
+            } else {
+                ov.names     <- lavpta$vnames$ov[[b]]
+                ov.names.x   <- lavpta$vnames$ov.x[[b]]
+                ov.names.nox <- lavpta$vnames$ov.nox[[b]]
+            }
 
             # only for multilevel, overwrite sample.cov and sample.mean
             if(nlevels > 1L) {

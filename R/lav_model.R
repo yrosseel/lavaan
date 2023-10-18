@@ -87,14 +87,20 @@ lav_model <- function(lavpartable      = NULL,
     if(lavoptions$debug) print(REP)
 
     # FIXME: check for non-existing parameters
-    bad.idx <- which(REP$mat == "" &
-                     !lavpartable$op %in% c("==","<",">",":="))
+    bad.idx <- which((REP$mat == "" | is.na(REP$row) | is.na(REP$col)) &
+                     !lavpartable$op %in% c("==","<",">",":=", "da"))
 
     if(length(bad.idx) > 0L) {
-        label <- paste(lavpartable$lhs[bad.idx[1]],
-                       lavpartable$op[bad.idx[1]],
-                       lavpartable$rhs[bad.idx[1]], sep = " ")
-        stop("lavaan ERROR: parameter is not defined: ", label)
+        this.formula <- paste(lavpartable$lhs[bad.idx[1]],
+                              lavpartable$op[bad.idx[1]],
+                              lavpartable$rhs[bad.idx[1]], sep = " ")
+        if(lavoptions$representation == "LISREL") {
+            stop("lavaan ERROR: a model parameter is not defined in the LISREL representation: ", "\n\t\t ", this.formula,
+                 "\n  Upgrade to latent variables or consider using representation = ",
+                 dQuote("RAM"), ".")
+        } else {
+            stop("lavaan ERROR: parameter is not defined: ", this.formula)
+        }
     }
 
     # prepare nG-sized slots

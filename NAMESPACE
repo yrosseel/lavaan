@@ -18,7 +18,7 @@ importFrom("stats",
            "dnorm", "lm.fit", "na.omit", "nlminb", "optim", "pchisq",
            "plogis", "pnorm", "qchisq", "qnorm", "quantile", "rnorm", "runif",
            "sd", "terms", "uniroot", "var", "weighted.mean", "aggregate",
-           "dlogis", "qlogis", "optimize",
+           "dlogis", "qlogis", "optimize", "lm",
            # generics
            "coef", "residuals", "resid", "fitted.values", "fitted",
            "predict", "update", "anova", "vcov")
@@ -27,8 +27,8 @@ importFrom("utils",
            "combn", "modifyList", "packageDescription", "read.table",
            "str", "write.table", "write.csv", "packageVersion")
 
-#importFrom("quadprog",
-#           "solve.QP")
+importFrom("quadprog",
+           "solve.QP")
 
 importFrom("mnormt",
            "sadmvn")
@@ -119,6 +119,8 @@ export("lavaan", "cfa", "sem", "growth",
        "lav_matrix_duplication_ginv_pre_post",
        "lav_matrix_commutation",
        "lav_matrix_commutation_pre",
+       "lav_matrix_commutation_post",
+       "lav_matrix_commutation_pre_post",
        "lav_matrix_commutation_mn_pre",
        "lav_matrix_symmetric_sqrt",
        "lav_matrix_orthogonal_complement",

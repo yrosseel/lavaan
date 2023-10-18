@@ -64,7 +64,7 @@ operator \code{op}.}
   test statistic), if we would refit the model but allow this parameter to
   be free.
   This function is a convenience function in the sense that it produces a
-  (hopefully sensible) table of currently fixed-to-zero (of fixed to another
+  (hopefully sensible) table of currently fixed-to-zero (or fixed to another
   constant) parameters. For each of these parameters, a modification index
   is computed, together with an expected parameter change (epc) value.
   It is important to realize that this function will only consider

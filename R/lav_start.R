@@ -420,6 +420,11 @@ lav_start <- function(start.method    = "default",
             }
         }
 
+        # TODo: if marker.int.zero = TRUE, set lv means to marker means,
+        #       and the non-marker means to
+        #       lavsamplestats@mean[[g]] - LAMBDA %*% ALPHA
+        #       where ALPHA = means of the markers
+
         # 4g) thresholds
         th.idx <- which(lavpartable$group == group.values[g] & lavpartable$op == "|")
         if(length(th.idx) > 0L) {
@@ -551,11 +556,24 @@ lav_start <- function(start.method    = "default",
                                      lavpartable$lhs == y.name &
                                      lavpartable$rhs == y.name)
                     res.val <- COV[y.idx, y.idx] - drop(crossprod(beta.i, S.xy))
-                    if(res.val > 0.01*COV[y.idx, y.idx] &&
-                       res.val < 0.99*COV[y.idx, y.idx]) {
+                    if(res.val > 0.001*COV[y.idx, y.idx] &&
+                       res.val < 0.999*COV[y.idx, y.idx]) {
                         start[res.idx] <- res.val
                     } else {
                         # do nothing (keep what we have)
+                    }
+                    # intercept
+                    int.idx <- which(lavpartable$group == group.values[g] &
+                                     lavpartable$op == "~1" &
+                                     lavpartable$lhs == y.name)
+                    if(length(int.idx) > 0L) {
+                        MEAN <- lavsamplestats@mean[[g]]
+                        Ybar <- MEAN[y.idx]
+                        Xbar <- MEAN[x.idx]
+                        int.val <- Ybar - drop(crossprod(beta.i, Xbar))
+                        if(is.finite(int.val)) {
+                            start[int.idx] <- int.val
+                        }
                     }
                 }
             }

@@ -11,6 +11,8 @@
 # StructuralEquation Modeling: A Multidisciplinary Journal
 # DOI:10.1080/10705511.2022.2061494
 
+# YR 31 Jan 2023: we always 'force' meanstructure = TRUE (for now)
+
 # main function
 lavPredictY <- function(object,
                         newdata         = NULL,
@@ -24,8 +26,12 @@ lavPredictY <- function(object,
     stopifnot(inherits(object, "lavaan"))
     lavmodel       <- object@Model
     lavdata        <- object@Data
-    #lavsamplestats <- object@SampleStats
     lavimplied     <- object@implied
+
+    # check meanstructure
+    if(!lavmodel@meanstructure) {
+        lavimplied$mean <- lapply(object@SampleStats@mean, as.matrix)
+    }
 
     # need full data set
     if(is.null(newdata)) {
@@ -40,6 +46,9 @@ lavPredictY <- function(object,
         }
         # eXo <- lavdata@eXo
     } else {
+        # newdata is given!
+
+        # create lavData object
         OV <- lavdata@ov
         newData <- lavData(data        = newdata,
                            group       = lavdata@group,
@@ -48,15 +57,15 @@ lavPredictY <- function(object,
                            ordered     = OV$name[ OV$type == "ordered" ],
                            lavoptions  = list(std.ov = lavdata@std.ov,
                                               group.label = lavdata@group.label,
-                                              missing = lavdata@missing,
+                                              missing = "ml.x", # always!
                                               warn = TRUE),
                            allow.single.case = TRUE)
-        # if ordered, check if number of levels is till the same (new in 0.6-7)
+        # if ordered, check if number of levels is still the same (new in 0.6-7)
         if(lavmodel@categorical) {
             orig.ordered.idx <- which(lavdata@ov$type == "ordered")
             orig.ordered.lev <- lavdata@ov$nlev[orig.ordered.idx]
             match.new.idx <- match(lavdata@ov$name[orig.ordered.idx],
-                                    newData@ov$name)
+                                   newData@ov$name)
             new.ordered.lev <- newData@ov$nlev[match.new.idx]
             if(any(orig.ordered.lev - new.ordered.lev != 0)) {
                 stop("lavaan ERROR: ",
@@ -68,7 +77,7 @@ lavPredictY <- function(object,
         data.obs <- newData@X
         # eXo <- newData@eXo
         ov.names <- newData@ov.names
-    }
+    } # newdata
 
     # check ynames
     if(length(ynames) == 0L) {
@@ -92,7 +101,7 @@ lavPredictY <- function(object,
         if(length(missing.idx) > 0L) {
             stop("lavaan ERROR: some variable names in ynames do not appear in the dataset:\n\t\t", paste(ynames[[g]][missing.idx], collapse = " "))
         } else {
-            y.idx[[g]] <- which(ov.names[[g]] %in% ynames[[g]])
+            y.idx[[g]] <- match(ynames[[g]], ov.names[[g]])
         }
 
         # xnames in ov.names for this group?
@@ -100,7 +109,7 @@ lavPredictY <- function(object,
         if(length(missing.idx) > 0L) {
             stop("lavaan ERROR: some variable names in xnames do not appear in the dataset:\n\t\t", paste(xnames[[g]][missing.idx], collapse = " "))
         } else {
-            x.idx[[g]] <- which(ov.names[[g]] %in% xnames[[g]])
+            x.idx[[g]] <- match(xnames[[g]], ov.names[[g]])
         }
     }
 
@@ -242,15 +251,10 @@ lav_predict_y_conditional_mean <-
             cov.g   <- SigmaHat[[g]]
 
             # model-implied mean vector for this group
-            if(lavmodel@meanstructure) {
-                mean.g <- MuHat[[g]]
+            if(force.zero.mean) {
+                mean.g <- rep(0, ncol(data.obs.g))
             } else {
-                if(force.zero.mean) {
-                    mean.g <- rep(0, ncol(data.obs.g))
-                } else {
-                    # use unrestricted mean vector
-                    mean.g <- colMeans(data.obs.g, na.rm = TRUE)
-                }
+                mean.g <- as.numeric(MuHat[[g]])
             }
 
             # indices (in ov.names)

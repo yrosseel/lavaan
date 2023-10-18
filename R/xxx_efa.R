@@ -42,6 +42,15 @@ efa <- function(data           = NULL,
         } else {
             ov.names <- names(data)
         }
+    } else if(!is.null(sample.cov)) {
+        ov.names <- rownames(sample.cov)
+        if(is.null(ov.names)) {
+            ov.names <- colnames(sample.cov)
+        }
+    }
+    # ov.names?
+    if(length(ov.names) == 0L) {
+        stop("lavaan ERROR: could not extract variable names from data or sample.cov")
     }
 
     # check nfactors

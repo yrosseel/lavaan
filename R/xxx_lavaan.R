@@ -7,6 +7,7 @@
 # YR 25/02/2012: changed data slot (from list() to S4); data@X contains data
 
 # YR 26 Jan 2017: use '...' to capture the never-ending list of options
+# YR 07 Feb 2023: add ov.order= argument
 
 lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                    model              = NULL,
@@ -37,6 +38,9 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                    # user-specified variance matrices
                    WLS.V              = NULL,
                    NACOV              = NULL,
+
+                   # internal order of ov.names
+                   ov.order           = "model",
 
                    # full slots from previous fits
                    slotOptions        = NULL,
@@ -120,6 +124,14 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
         if(is.function(data)) {
             stop("lavaan ERROR: data is a function; it should be a data.frame")
         }
+    }
+
+    # new in 0.6-14: if NACOV and/or WLS.V are provided, we force
+    # ov.order="data" for now
+    # until we have reliable code to re-arrange/select col/rows for
+    # of NACOV/WLS.V based on the model-based ov.names
+    if(!is.null(NACOV) || !is.null(WLS.V)) {
+        ov.order <- "data"
     }
 
     # backwards compatibility, control= argument (<0.5-23)
@@ -228,6 +240,29 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
         stop("lavaan ERROR: model is NULL!")
     }
 
+    # Ok, we got a flattened model; usually this a FLAT object, but it could
+    # also be an already lavaanified parTable, or a bare-minimum list with
+    # lhs/op/rhs/free elements
+
+    # new in 0.6-14
+    # if ov.order = "data", it would seem we need to intervene here;
+    # we do this by 'injecting' dummy lhs da rhs statement in FLAT, to
+    # 'trick' lav_partable_vnames() (which only sees the model!)
+    ov.order <- tolower(ov.order)
+    if(ov.order == "data") {
+        FLAT.orig <- FLAT
+        try(FLAT <- lav_partable_ov_from_data(FLAT, data = data,
+                                              sample.cov = sample.cov,
+                                              slotData   = slotData),
+            silent = TRUE)
+        if(inherits(FLAT, "try-error")) {
+            warning("lavaan WARNING: ov.order = \"data\" setting failed; switching back to ov.order = \"model\"")
+            FLAT <- FLAT.orig
+        }
+    } else if(ov.order != "model") {
+        stop("lavaan ERROR: ov.order= argument should be \"model\" (default) or \"data\"")
+    }
+
     # group blocks?
     if(any(FLAT$op == ":" & tolower(FLAT$lhs) == "group")) {
         # here, we only need to figure out:
@@ -304,6 +339,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     #    ov.names.x <- ov.names.x[-endo.idx]
     #}
 
+
     # handle for lv.names that are also observed variables (new in 0.6-6)
     LV.names <- unique(unlist(lv.names))
     if(length(LV.names) > 0L) {
@@ -342,12 +378,19 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     # sanity check: we do not support latent interaction yet (using the :)
     lv.int.idx <- which(grepl(":", LV.names))
     if(length(lv.int.idx) > 0L) {
-        txt <- c("Interaction terms involving latent variables (",
-                 LV.names[lv.int.idx[1]], ") are not supported.",
-                 " You may consider creating product indicators to define ",
-                 "the latent interaction term. See the indProd() function ",
-                 "in the semTools package.")
-        stop(lav_txt2message(txt, header = "lavaan ERROR:"))
+        if(!is.null(dotdotdot$check.lv.interaction) &&
+           !dotdotdot$check.lv.interaction) {
+            # ignore, user (or sam) switched this check off - new in 0.6-16
+        } else if(!is.null(slotOptions) && !slotOptions$check.lv.interaction) {
+            # ignore
+        } else {
+            txt <- c("Interaction terms involving latent variables (",
+             LV.names[lv.int.idx[1]], ") are not supported.",
+             " You may consider creating product indicators to define ",
+             "the latent interaction term. See the indProd() function ",
+             "in the semTools package.")
+            stop(lav_txt2message(txt, header = "lavaan ERROR:"))
+        }
     }
 
     # handle ov.names.l
@@ -559,6 +602,9 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
         # clustered?
         if(length(cluster) > 0L) {
             opt$.clustered <- TRUE
+            if(opt$.categorical) {
+                stop("lavaan ERROR: categorical + clustered is not supported yet.")
+            }
         } else {
             opt$.clustered <- FALSE
         }
@@ -775,6 +821,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                       meanstructure    = lavoptions$meanstructure,
                       int.ov.free      = lavoptions$int.ov.free,
                       int.lv.free      = lavoptions$int.lv.free,
+                      marker.int.zero  = lavoptions$marker.int.zero,
                       orthogonal       = lavoptions$orthogonal,
                       orthogonal.x     = lavoptions$orthogonal.x,
                       orthogonal.y     = lavoptions$orthogonal.y,
@@ -928,22 +975,14 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                     cat("lavh1              ... start:\n")
                 }
 
-                # implied h1 statistics
-                out <- lav_h1_implied_logl(lavdata        = lavdata,
-                                           lavsamplestats = lavsamplestats,
-                                           lavpta         = lavpta,
-                                           lavoptions     = lavoptions)
+                # implied h1 statistics and logl (if available)
+                lavh1 <- lav_h1_implied_logl(lavdata        = lavdata,
+                                             lavsamplestats = lavsamplestats,
+                                             lavpta         = lavpta,
+                                             lavoptions     = lavoptions)
                 if(lavoptions$debug) {
-                    print(out)
+                    print(lavh1)
                 }
-                h1.implied      <- out$implied
-                h1.loglik       <- out$logl$loglik
-                h1.loglik.group <- out$logl$loglik.group
-
-                # collect in h1 list
-                lavh1 <- list(implied      = h1.implied,
-                              loglik       = h1.loglik,
-                              loglik.group = h1.loglik.group)
                 if(lavoptions$verbose) {
                     cat("lavh1              ... done.\n")
                 }
@@ -1028,6 +1067,30 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
             } else {
                 lavpartable$start <- lavpartable$est
             }
+
+            # check for exogenous parameters: if the dataset changed, we must
+            # update them! (new in 0.6-16)
+            # ... or not? (not compatible with how we bootstrap under fixed.x=T)
+            # we really need to think about this more carefully...
+            #
+            # if(any(lavpartable$exo == 1L)) {
+            #     # FIXME: there should be an easier way just to
+            #     # (re)initialize the the exogenous part of the model
+            #     tmp <- lav_start(start.method   = "lavaan", # not "simple"
+            #                                                 # if fixed.x = TRUE
+            #                    lavpartable    = lavpartable,
+            #                    lavsamplestats = lavsamplestats,
+            #                    lavh1          = lavh1,
+            #                    model.type     = lavoptions$model.type,
+            #                    reflect      = FALSE,
+            #                    #order.lv.by  = lavoptions$rotation.args$order.lv.by,
+            #                    order.lv.by  = "none",
+            #                    mimic          = lavoptions$mimic,
+            #                    debug          = lavoptions$debug)
+            #     exo.idx <- which(lavpartable$exo == 1L)
+            #     lavpartable$start[exo.idx] <- tmp[exo.idx]
+            # }
+
             if(lavoptions$verbose) {
                 cat(" done.\n")
             }
@@ -1687,7 +1750,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                                                 VCOV = NULL, BOOT = NULL)
             warning("lavaan WARNING: se = \"external\" but parameter table does not contain a `se' column")
         }
-    } else if(lavoptions$se == "twostep") {
+    } else if(lavoptions$se %in% c("none", "twostep")) {
        # do nothing
     } else {
         lavpartable$se <- lav_model_vcov_se(lavmodel = lavmodel,
@@ -2073,6 +2136,9 @@ cfa <- sem <- function(# user-specified model: can be syntax, parameter Table
                        WLS.V              = NULL,
                        NACOV              = NULL,
 
+                       # internal order of ov.names
+                       ov.order           = "model",
+
                        # options (dotdotdot)
                        ...) {
 
@@ -2147,6 +2213,9 @@ growth <- function(# user-specified model: can be syntax, parameter Table
                    # user-specified variance matrices
                    WLS.V              = NULL,
                    NACOV              = NULL,
+
+                   # internal order of ov.names
+                   ov.order           = "model",
 
                    # options (dotdotdot)
                    ...) {

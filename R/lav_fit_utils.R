@@ -8,7 +8,12 @@
 #     Savalei, V. (2021) Improving Fit Indices In SEM with categorical data.
 #     Multivariate Behavioral Research, 56(3), 390-407.
 #
-lav_fit_catml_dwls <- function(lavobject) {
+
+# YR Dec 2022: first version
+# YR Jan 2023: catml_dwls should check if the input 'correlation' matrix
+#              is positive-definite (or not)
+
+lav_fit_catml_dwls <- function(lavobject, check.pd = TRUE) {
 
     # empty list
     empty.list <- list(XX3 = as.numeric(NA), df3 = as.numeric(NA),
@@ -24,6 +29,24 @@ lav_fit_catml_dwls <- function(lavobject) {
     } else {
         lavdata        <- lavobject@Data
         lavsamplestats <- lavobject@SampleStats
+    }
+
+    # check if input matrix (or matrices) are all positive definite
+    # (perhaps later, we can rely on 'smoothing', but not for now
+    pd.flag <- TRUE
+    if(check.pd) {
+        for(g in seq_len(lavdata@ngroups)) {
+            COR <- lavsamplestats@cov[[g]]
+            ev <- eigen(COR, symmetric = TRUE, only.values = TRUE)$values
+            if(any(ev < .Machine$double.eps^(1/2))) {
+                # non-pd!
+                pd.flag <- FALSE
+                # should we give a warning here? (not for now)
+                #warning("lavaan WARNING: robust RMSEA/CFI could not be computed because the input correlation matrix is not positive-definite")
+                # what should we do? return NA (for now)
+                return(empty.list)
+            }
+        }
     }
 
     # 'refit' using estimator = "catML"
@@ -163,7 +186,12 @@ lav_fit_fiml_corrected <- function(lavobject, version = "V3") {
     }
     Delta  <- lavTech(lavobject, "delta")
     E.inv  <- lavTech(lavobject, "inverted.information")
-    Wmi <- Wmi.g <- lapply(Wm, solve)
+    #Wmi <- Wmi.g <- lapply(Wm, solve) ## <- how wrote this? (I did)
+    Wmi <- Wmi.g <- try(lapply(Wm, lav_matrix_symmetric_inverse),
+                        silent = TRUE)
+    if(inherits(Wmi, "try-error")) {
+        return(empty.list)
+    }
 
     fg <- unlist(lavsamplestats@nobs)/lavsamplestats@ntotal
     # Fixme: as we only need the trace, perhaps we could do this

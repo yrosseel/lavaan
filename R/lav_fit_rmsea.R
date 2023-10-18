@@ -61,6 +61,15 @@
 # mean-and-variance corrected test statistic with nonnormal data in SEM.
 # Multivariate behavioral research, 53(3), 419-429.
 
+# categorical data:
+# Savalei, V. (2021). Improving fit indices in structural equation modeling with
+# categorical data. Multivariate Behavioral Research, 56(3), 390-407. doi:
+# 10.1080/00273171.2020.1717922
+
+# missing = "fiml":
+# Zhang, X., & Savalei, V. (2022). New computations for RMSEA and CFI following
+# FIML and TS estimation with missing data. Psychological Methods.
+
 
 # always using N (if a user needs N-1, just replace N by N-1)
 # vectorized!
@@ -200,7 +209,9 @@ lav_fit_rmsea_lavobject <- function(lavobject = NULL, fit.measures = "rmsea",
                                     standard.test = "standard",
                                     scaled.test   = "none",
                                     ci.level = 0.90,
-                                    close.h0 = 0.05, notclose.h0 = 0.08) {
+                                    close.h0 = 0.05, notclose.h0 = 0.08,
+                                    robust = TRUE,
+                                    cat.check.pd = TRUE) {
 
     # check lavobject
     stopifnot(inherits(lavobject, "lavaan"))
@@ -214,7 +225,7 @@ lav_fit_rmsea_lavobject <- function(lavobject = NULL, fit.measures = "rmsea",
     if(test.names[1] == "none" || standard.test == "none") {
         return(list())
     }
-    test.idx <- which(test.names == standard.test)
+    test.idx <- which(test.names == standard.test)[1]
     if(length(test.idx) == 0L) {
         return(list())
     }
@@ -230,7 +241,7 @@ lav_fit_rmsea_lavobject <- function(lavobject = NULL, fit.measures = "rmsea",
 
     # robust?
     robust.flag <- FALSE
-    if(scaled.flag &&
+    if(robust && scaled.flag &&
        scaled.test %in% c("satorra.bentler", "yuan.bentler.mplus",
                           "yuan.bentler", "scaled.shifted")) {
         robust.flag <- TRUE
@@ -238,17 +249,22 @@ lav_fit_rmsea_lavobject <- function(lavobject = NULL, fit.measures = "rmsea",
 
     # FIML?
     fiml.flag <- FALSE
-    if(lavobject@Options$missing %in% c("ml", "ml.x")) {
+    if(robust && lavobject@Options$missing %in% c("ml", "ml.x")) {
+        fiml.flag <- robust.flag <- TRUE
         # check if we can compute corrected values
         if(scaled.flag) {
             version <- "V3"
         } else {
             version <- "V6"
         }
-        fiml <- lav_fit_fiml_corrected(lavobject, version = version)
-        if(!anyNA(c(fiml$XX3, fiml$df3, fiml$c.hat3, fiml$XX3.scaled))) {
-            robust.flag <- TRUE
-            fiml.flag <- TRUE
+        fiml <- try(lav_fit_fiml_corrected(lavobject, version = version),
+                    silent = TRUE)
+        if(inherits(fiml, "try-error")) {
+            warning("lavaan WARNING: computation of robust RMSEA failed.")
+            fiml <- list(XX3 = as.numeric(NA), df3 = as.numeric(NA),
+                         c.hat3= as.numeric(NA), XX3.scaled = as.numeric(NA))
+        } else if(anyNA(c(fiml$XX3, fiml$df3, fiml$c.hat3, fiml$XX3.scaled))) {
+             warning("lavaan WARNING: computation of robust RMSEA resulted in NA values.")
         }
     }
 
@@ -307,11 +323,16 @@ lav_fit_rmsea_lavobject <- function(lavobject = NULL, fit.measures = "rmsea",
     # robust ingredients
     if(robust.flag) {
         if(categorical.flag) {
-            out <- lav_fit_catml_dwls(lavobject)
-            XX3 <- out$XX3
-            df3 <- out$df3
-            c.hat3 <- c.hat <- out$c.hat3
-            XX3.scaled <- out$XX3.scaled
+            out <- try(lav_fit_catml_dwls(lavobject, check.pd = cat.check.pd),
+                       silent = TRUE)
+            if(inherits(out, "try-error")) {
+                XX3 <- df3 <- c.hat3 <- XX3.scaled <- as.numeric(NA)
+            } else {
+                XX3 <- out$XX3
+                df3 <- out$df3
+                c.hat3 <- c.hat <- out$c.hat3
+                XX3.scaled <- out$XX3.scaled
+            }
         } else if(fiml.flag) {
             XX3 <- fiml$XX3
             df3 <- fiml$df3

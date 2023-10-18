@@ -10,23 +10,37 @@
 #                                  solve(t(Delta) %*% Gamma.inv %*% Delta) %*%
 #                           t(Delta) %*% Gamma.inv) %*% RES
 
+# Note: if Gamma == solve(Weight matrix), then:
+# t(Delta) %*% solve(Gamma) %*% RES == 0-vector!
+#
+# Therefore:
+# - if estimator = "WLS", X2 == Browne's residual ADF statistic
+# - if estimator = "GLS", X2 == Browne's residual NT statistic
+#
+# - if estimator = "NTRLS", X2 == Browne's residual NT statistic (model-based)
+#   also known as the RLS test statistic
+#   ... except in multigroup + equality constraints, where
+#   t(Delta) %*% solve(Gamma) %*% RES not zero everywhere!?
 
 # YR 26 July 2022: add alternative slots, if lavobject = NULL
+# YR 22 Jan  2023: allow for model-based 'structured' Sigma
 
-# TODo: - allow for 'structured' (model-based) version of Gamma
-#       - allow for non-linear equality constraints
-#         (see Browne, 1982, eq 1.7.19)
+# TODo: - allow for non-linear equality constraints
+#         (see Browne, 1982, eq 1.7.19; although we may face singular matrices)
 
-lav_test_browne <- function(lavobject      = NULL,
+lav_test_browne <- function(lavobject        = NULL,
                             # or
-                            lavdata        = NULL,
-                            lavsamplestats = NULL,
-                            lavmodel       = NULL,
-                            lavpartable    = NULL,
-                            lavoptions     = NULL,
+                            lavdata          = NULL,
+                            lavsamplestats   = NULL, # WLS.obs, NACOV
+                            lavmodel         = NULL,
+                            lavpartable      = NULL,  # DF
+                            lavoptions       = NULL,
+                            lavh1            = NULL,
+                            lavimplied       = NULL,
                             # further options:
-                            n.minus.one    = "default",
-                            ADF            = TRUE) {
+                            n.minus.one      = "default",
+                            ADF              = TRUE,
+                            model.based      = FALSE) {
 
     if(!is.null(lavobject)) {
         # check input
@@ -40,12 +54,14 @@ lav_test_browne <- function(lavobject      = NULL,
         lavmodel       <- lavobject@Model
         lavpartable    <- lavobject@ParTable
         lavoptions     <- lavobject@Options
+        lavh1          <- lavobject@h1
+        lavimplied     <- lavobject@implied
     }
 
     if(!ADF && lavmodel@categorical) {
         stop("lavaan ERROR: normal theory version not available in the categorical setting.")
     }
-    if(lavdata@missing != "listwise") {
+    if(lavdata@missing != "listwise" && !model.based) {
         stop("lavaan ERROR: Browne's test is not available when data is missing")
     }
     if(lavdata@nlevels > 1L) {
@@ -56,20 +72,12 @@ lav_test_browne <- function(lavobject      = NULL,
     }
 
     if(!is.logical(n.minus.one)) {
-        if(lavoptions$estimator == "ML") {
+        if(lavoptions$estimator == "ML" &&
+           lavoptions$likelihood == "normal") {
             n.minus.one <- FALSE
         } else {
             n.minus.one <- TRUE
         }
-    }
-
-    # linear equality constraints?
-    lineq.flag <- FALSE
-    if(lavmodel@eq.constraints) {
-        lineq.flag <- TRUE
-    } else if(.hasSlot(lavmodel, "ceq.simple.only") &&
-              lavmodel@ceq.simple.only) {
-        lineq.flag <- TRUE
     }
 
     # ingredients
@@ -83,43 +91,55 @@ lav_test_browne <- function(lavobject      = NULL,
                 if(lavobject@Data@data.type != "full") {
                     stop("lavaan ERROR: ADF version not available without full data or user-provided Gamma/NACOV matrix")
                 }
-                Gamma <- lavGamma(lavobject)
+                Gamma <- lav_object_gamma(lavobject, ADF = TRUE,
+                                          model.based = model.based)
             } else {
-                if(lavdata@data.type != "full") {
+               if(lavdata@data.type != "full") {
                     stop("lavaan ERROR: ADF version not available without full data or user-provided Gamma/NACOV matrix")
                 }
-                Gamma <- lavGamma(lavdata,
-                    missing = lavoptions$missing,
-                    fixed.x = lavoptions$fixed.x,
-                    conditional.x = lavoptions$conditional.x,
-                    meanstructure = lavoptions$meanstructure,
-                    gamma.n.minus.one = lavoptions$gamma.n.minus.one,
-                    gamma.unbiased = lavoptions$gamma.unbiased)
+                Gamma <- lav_object_gamma(lavobject      = NULL,
+                                          lavdata        = lavdata,
+                                          lavoptions     = lavoptions,
+                                          lavsamplestats = lavsamplestats,
+                                          lavh1          = lavh1,
+                                          lavimplied     = lavimplied,
+                                          ADF            = TRUE,
+                                          model.based    = model.based)
             }
         }
     } else {
         # NT version
         if(!is.null(lavobject)) {
-            Gamma <- lavGamma(lavobject, ADF = FALSE,
-                          NT.rescale = lavoptions$estimator == "ML")
+            Gamma <- lav_object_gamma(lavobject, ADF = FALSE,
+                                      model.based = model.based)
         } else {
-            Gamma <- lavGamma(lavdata, ADF = FALSE,
-                          missing = lavoptions$missing,
-                          fixed.x = lavoptions$fixed.x,
-                          conditional.x = lavoptions$conditional.x,
-                          meanstructure = lavoptions$meanstructure,
-                          NT.rescale = lavoptions$estimator == "ML")
+            Gamma <- lav_object_gamma(lavobject      = NULL,
+                                      lavdata        = lavdata,
+                                      lavoptions     = lavoptions,
+                                      lavsamplestats = lavsamplestats,
+                                      lavh1          = lavh1,
+                                      lavimplied     = lavimplied,
+                                      ADF            = FALSE,
+                                      model.based    = model.based)
         }
     }
     WLS.obs <- lavsamplestats@WLS.obs
     WLS.est <- lav_model_wls_est(lavmodel)
-    nobs <-  lavsamplestats@nobs
-    ntotal <- lavsamplestats@ntotal
+    nobs    <- lavsamplestats@nobs
+    ntotal  <- lavsamplestats@ntotal
+
+    # linear equality constraints?
+    lineq.flag <- FALSE
+    if(lavmodel@eq.constraints) {
+        lineq.flag <- TRUE
+    } else if(.hasSlot(lavmodel, "ceq.simple.only") &&
+              lavmodel@ceq.simple.only) {
+        lineq.flag <- TRUE
+    }
 
     # compute T.B per group
-    ngroups <- lavdata@ngroups
+    ngroups <- length(WLS.obs)
     stat.group <- numeric(ngroups)
-
 
     # 1. standard setting: no equality constraints
     if(!lineq.flag) {
@@ -184,6 +204,7 @@ lav_test_browne <- function(lavobject      = NULL,
         # TODO
     }
 
+
     # DF
     if(!is.null(lavobject)) {
         DF <- lavobject@test[[1]]$df
@@ -206,11 +227,26 @@ lav_test_browne <- function(lavobject      = NULL,
     }
 
     if(ADF) {
-        NAME <- "browne.residual.adf"
-        LABEL <- "Browne's residual-based (ADF) test"
+        if(model.based) {
+            # using model-based Gamma
+            NAME <- "browne.residual.adf.model"
+            LABEL <- "Browne's residual (ADF model-based) test"
+        } else {
+            # regular one
+            NAME <- "browne.residual.adf"
+            LABEL <- "Browne's residual-based (ADF) test"
+        }
     } else {
-        NAME <- "browne.residual.nt"
-        LABEL <- "Browne's residual-based (NT) test"
+        if(model.based) {
+            # using model-implied Sigma (instead of S)
+            # also called the 'reweighted least-squares (RLS)' version
+            NAME <- "browne.residual.nt.model"
+            LABEL <- "Browne's residual (NT model-based) test"
+        } else {
+            # regular one
+            NAME <- "browne.residual.nt"
+            LABEL <- "Browne's residual-based (NT) test"
+        }
     }
     out <- list(test       = NAME,
                 stat       = STAT,
@@ -221,3 +257,4 @@ lav_test_browne <- function(lavobject      = NULL,
                 label      = LABEL)
     out
 }
+

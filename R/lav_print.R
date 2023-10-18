@@ -50,7 +50,9 @@ print.lavaan.matrix.symmetric <- function(x, ..., nd = 3L, shift = 0L,
     # print only lower triangle of a symmetric matrix
     # this function was inspired by the `print.correlation' function
     # in package nlme
+    x <- as.matrix(x) # just in case
     y <- x; y <- unclass(y)
+    attributes(y)[c("header","footer")] <- NULL
     ll <- lower.tri(x, diag = TRUE)
     y[ ll] <- format(round(x[ll], digits = nd))
     y[!ll] <- ""
@@ -73,13 +75,25 @@ print.lavaan.matrix.symmetric <- function(x, ..., nd = 3L, shift = 0L,
             rownames(y) <- empty.string
         }
     }
+
+    if(!is.null(attr(x, "header"))) {
+      cat("\n", attr(x, "header"), "\n\n", sep = "")
+    }
+
     print(y, ..., quote = FALSE, right = TRUE)
+
+    if(!is.null(attr(x, "footer"))) {
+      cat("\n", attr(x, "footer"), "\n\n", sep = "")
+    }
+
     invisible(x)
 }
 
 
 print.lavaan.matrix <- function(x, ..., nd = 3L, shift = 0L) {
+    x <- as.matrix(x) # just in case
     y <- unclass(x)
+    attributes(y)[c("header","footer")] <- NULL
     if(!is.null(colnames(x))) {
       colnames(y) <- abbreviate(colnames(x), minlength = nd + 3L)
     }
@@ -91,15 +105,29 @@ print.lavaan.matrix <- function(x, ..., nd = 3L, shift = 0L) {
             rownames(y) <- empty.string
         }
     }
+    if(!is.null(attr(x, "header"))) {
+      cat("\n", attr(x, "header"), "\n\n", sep = "")
+    }
+
     print( round(y, nd), right = TRUE, ... )
+
+    if(!is.null(attr(x, "footer"))) {
+      cat("\n", attr(x, "footer"), "\n\n", sep = "")
+    }
+
     invisible(x)
 }
 
 print.lavaan.vector <- function(x, ..., nd = 3L, shift = 0L) {
     y <- unclass(x)
+    attributes(y)[c("header","footer")] <- NULL
     #if(!is.null(names(x))) {
     #    names(y) <- abbreviate(names(x), minlength = nd + 3)
     #}
+    if(!is.null(attr(x, "header"))) {
+      cat("\n", attr(x, "header"), "\n\n", sep = "")
+    }
+
     if(shift > 0L) {
         empty.string <- strrep(x = " ", times = shift)
         tmp <- format(y, digits = nd, width = 2L + nd)
@@ -108,10 +136,15 @@ print.lavaan.vector <- function(x, ..., nd = 3L, shift = 0L) {
     } else {
         print( round(y, nd), right = TRUE, ... )
     }
+
+    if(!is.null(attr(x, "footer"))) {
+      cat("\n", attr(x, "footer"), "\n\n", sep = "")
+    }
+
     invisible(x)
 }
 
-print.lavaan.character <- function(x) {
+print.lavaan.character <- function(x, ...) {
     cat(x)
     invisible(x)
 }
@@ -1145,7 +1178,10 @@ print.lavaan.summary <- function(x, ..., nd = 3L) {
         sam.mm.rel    <- y$sam$sam.mm.rel
         sam.struc.fit <- y$sam$sam.struc.fit
         ngroups       <- y$sam$ngroups
+        nlevels       <- y$sam$nlevels
         group.label   <- y$sam$group.label
+        level.label   <- y$sam$level.label
+        block.label   <- y$sam$block.label
 
         # measurement
         tmp <- sam.mm.table
@@ -1159,18 +1195,40 @@ print.lavaan.summary <- function(x, ..., nd = 3L) {
         if(sam.method == "local") {
             # reliability information
             c1 <- c2 <- character(0L)
-            if(ngroups == 1L) {
+            if(ngroups == 1L && nlevels == 1L) {
                 cat("\n")
                 cat("  Model-based reliability latent variables:\n\n")
                 tmp <- data.frame(as.list(sam.mm.rel[[1]]))
                 class(tmp) <- c("lavaan.data.frame", "data.frame")
                 print(tmp, row.names = rep(" ", nrow(tmp)), nd = nd)
-            } else {
+            } else if(ngroups > 1L && nlevels == 1L) {
                 cat("\n")
                 cat("  Model-based reliability latent variables (per group):\n")
                 for(g in 1:ngroups) {
                     cat("\n")
                     cat("  Group ", g, " [", group.label[g], "]:\n\n",
+                        sep = "")
+                    tmp <- data.frame(as.list(sam.mm.rel[[g]]))
+                    class(tmp) <- c("lavaan.data.frame", "data.frame")
+                    print(tmp, row.names = rep(" ", nrow(tmp)), nd = nd)
+                }
+            } else if(ngroups == 1L && nlevels > 1L) {
+                cat("\n")
+                cat("  Model-based reliability latent variables (per level):\n")
+                for(g in 1:nlevels) {
+                    cat("\n")
+                    cat("  Level ", g, " [", level.label[g], "]:\n\n",
+                        sep = "")
+                    tmp <- data.frame(as.list(sam.mm.rel[[g]]))
+                    class(tmp) <- c("lavaan.data.frame", "data.frame")
+                    print(tmp, row.names = rep(" ", nrow(tmp)), nd = nd)
+                }
+            } else if(ngroups > 1L && nlevels > 1L) {
+                cat("\n")
+                cat("  Model-based reliability latent variables (per group/level):\n")
+                for(g in 1:length(block.label)) {
+                    cat("\n")
+                    cat("  Group/Level ", g, " [", block.label[g], "]:\n\n",
                         sep = "")
                     tmp <- data.frame(as.list(sam.mm.rel[[g]]))
                     class(tmp) <- c("lavaan.data.frame", "data.frame")

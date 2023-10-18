@@ -40,7 +40,7 @@ lav_fit_aic_lavobject <- function(lavobject = NULL, fit.measures = "aic",
     if(test.names[1] == "none" || standard.test == "none") {
         return(list())
     }
-    test.idx <- which(test.names == standard.test)
+    test.idx <- which(test.names == standard.test)[1]
     if(length(test.idx) == 0L) {
         return(list())
     }
@@ -100,12 +100,12 @@ lav_fit_aic_lavobject <- function(lavobject = NULL, fit.measures = "aic",
     if(estimator %in% c("ML", "MML")) {
        # do we have a @h1 slot?
         if(.hasSlot(lavobject, "h1") && length(lavobject@h1) > 0L) {
-            indices["unrestricted.logl"] <- lavobject@h1$loglik
+            indices["unrestricted.logl"] <- lavobject@h1$logl$loglik
         } else {
-            out <- lav_h1_logl(lavdata = lavobject@Data,
+            lavh1 <- lav_h1_implied_logl(lavdata = lavobject@Data,
                                lavsamplestats = lavobject@SampleStats,
                                lavoptions = lavobject@Options)
-            indices["unrestricted.logl"] <- out$loglik
+            indices["unrestricted.logl"] <- lavh1$logl$loglik
         }
 
         # logl H0

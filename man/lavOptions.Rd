@@ -92,9 +92,8 @@ Model features (only available for the \code{lavaan()} function):
     \item{\code{auto.fix.single}:}{If \code{TRUE}, the residual variance (if 
       included) of an observed indicator is set to zero if it is the only 
       indicator of a latent variable.}
-    \item{\code{auto.var}:}{If \code{TRUE}, the residual variances and the 
-      variances of exogenous latent variables are included in the model and 
-      set free.}
+    \item{auto.var}{If \code{TRUE}, the (residual) variances of both observed
+      and latent variables are set free.}
     \item{\code{auto.cov.lv.x}:}{If \code{TRUE}, the covariances of exogenous 
       latent variables are included in the model and set free.}
     \item{\code{auto.cov.y}:}{If \code{TRUE}, the covariances of dependent 
@@ -294,7 +293,7 @@ Estimation options:
       are computed based on inverting the (expected, observed or first.order) 
       information matrix. If \code{"robust.sem"}, conventional robust
       standard errors are computed.  If \code{"robust.huber.white"},
-      standard errors are computed based on the `mlr' (aka pseudo ML,
+      standard errors are computed based on the 'mlr' (aka pseudo ML,
       Huber-White) approach.
       If \code{"robust"}, either \code{"robust.sem"} or
       \code{"robust.huber.white"} is used depending on the estimator,
@@ -310,7 +309,7 @@ Estimation options:
       depends on the values of other arguments. See also the 
       \code{\link{lavTest}} function to extract (alternative)     
       test statistics from a fitted lavaan object.}
-   \item{code{scaled.test}:}{Character. Choose the test statistic
+   \item{\code{scaled.test}:}{Character. Choose the test statistic
     that will be scaled (if a scaled test statistic is requested).
     The default is \code{"standard"}, but it could also be (for example)
     \code{"Browne.residual.nt"}.}

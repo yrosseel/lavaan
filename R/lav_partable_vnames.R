@@ -673,6 +673,29 @@ lav_partable_vnames <- function(partable, type = NULL, ...,
 
     } # b
 
+    # new in 0.6-14: if 'da' operator, change order! (for ov.order = "data")
+    if(any(partable$op == "da")) {
+        da.idx <- which(partable$op == "da")
+        ov.names.data <- partable$lhs[da.idx]
+        OUT <- lapply(OUT, function(x) {
+                          for(b in seq_len(length(x))) {
+                              target.idx <- which(x[[b]] %in% ov.names.data)
+                              if(length(target.idx) > 0L) {
+                                  new.ov <-
+                                    ov.names.data[sort(match(x[[b]],
+                                                       ov.names.data))]
+                                  # rm NA's (eg lv's in eqs.y)
+                                  na.idx <- which(is.na(new.ov))
+                                  if(length(na.idx) > 0L) {
+                                      new.ov <- new.ov[-na.idx]
+                                  }
+                                  x[[b]][target.idx] <- new.ov
+                              }
+                          }
+                          x
+                      })
+    }
+
     # to mimic old behaviour, if length(type) == 1L
     if(length(type) == 1L) {
         OUT <- OUT[[type]]
@@ -680,10 +703,10 @@ lav_partable_vnames <- function(partable, type = NULL, ...,
         if(ndotdotdot == 0L) {
             if(type == "lv.marker") {
                 OUT <- unlist(OUT)
-                # no unique, as unique drops attributes, and reduces
+                # no unique(), as unique() drops attributes, and reduces
                 # c("", "", "") to a single ""
                 # (but, say for 2 groups, you get 2 copies)
-                # as this is only for 'display', we leave like that
+                # as this is only for 'display', we leave it like that
             } else {
                 OUT <- unique(unlist(OUT))
             }

@@ -50,17 +50,37 @@ lav_optim_noniter <- function(lavmodel = NULL, lavsamplestats = NULL,
         x <- try(lav_cfa_fabin_internal(lavmodel = lavmodel,
                  lavsamplestats = lavsamplestats, lavpartable = lavpartable,
                  lavpta = lavpta, lavoptions = lavoptions), silent = TRUE)
-        if(inherits(x, "try-error")) {
-            x <- x.old
-        } else {
-            ok.flag <- TRUE
-        }
+    } else if(lavoptions$estimator == "MGM") {
+        x <- try(lav_cfa_guttman1952_internal(lavmodel = lavmodel,
+                 lavsamplestats = lavsamplestats, lavpartable = lavpartable,
+                 lavpta = lavpta, lavoptions = lavoptions), silent = TRUE)
+    } else if(lavoptions$estimator == "BENTLER1982") {
+        x <- try(lav_cfa_bentler1982_internal(lavmodel = lavmodel,
+                 lavsamplestats = lavsamplestats, lavpartable = lavpartable,
+                 lavpta = lavpta, lavoptions = lavoptions), silent = TRUE)
+    } else if(lavoptions$estimator %in% c("JS", "JSA")) {
+        x <- try(lav_cfa_jamesstein_internal(lavmodel = lavmodel,
+                 lavsamplestats = lavsamplestats, lavpartable = lavpartable,
+                 lavdata = lavdata,
+                 lavpta = lavpta, lavoptions = lavoptions), silent = TRUE)
+    } else if(lavoptions$estimator == "BENTLER1982") {
+        x <- try(lav_cfa_bentler1982_internal(lavmodel = lavmodel,
+                 lavsamplestats = lavsamplestats, lavpartable = lavpartable,
+                 lavpta = lavpta, lavoptions = lavoptions), silent = TRUE)
+    } else if(lavoptions$estimator == "MIIV") {
+        x <- try(lav_sem_miiv_internal(lavmodel = lavmodel,
+                 lavsamplestats = lavsamplestats, lavpartable = lavpartable,
+                 lavpta = lavpta, lavoptions = lavoptions), silent = TRUE)
     } else {
         warning("lavaan WARNING: unknown (noniterative) estimator: ",
                 lavoptions$estimator, " (returning starting values)")
 
     }
-
+    if(inherits(x, "try-error")) {
+        x <- x.old
+    } else {
+        ok.flag <- TRUE
+    }
 
     # closing
     fx <- 0
