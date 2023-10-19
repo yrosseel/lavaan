@@ -30,7 +30,8 @@ fit2 <- sem(model = mod, data = Data, estimator = "PML", std.lv = TRUE,
 # > coef(fit2)
 # f1=~y1 f1=~y2 f1=~y3 f1=~y4 f1=~y5  y1|t1  y2|t1  y3|t1  y4|t1  y5|t1
 # 0.713  0.740  0.499  0.327  0.415 -1.515 -0.680 -0.214 -0.810 -1.222
-
+# > parTable(fit2)$se[1:10] |> round(3)
+# [1] 0.075 0.070 0.062 0.065 0.070 0.062 0.043 0.040 0.045 0.053
 
 # Check derivatives. Delta below gives the derivatives of standardised
 # thresholds and polychoric correlations (rows of Delta in this order) with
