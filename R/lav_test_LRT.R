@@ -49,8 +49,16 @@ lavTestLRT <- function(object, ..., method = "default", A.method = "delta",
     nobs <- object@SampleStats@nobs
     ntotal <- object@SampleStats@ntotal
 
+    # TDJ: check for user-supplied h1 model
+    user_h1_exists <- FALSE
+    if( !is.null(object@external$h1) ) {
+      if(inherits(object@external$h1, "lavaan")) {
+        user_h1_exists <- TRUE
+      }
+    }
+    
     # shortcut for single argument (just plain LRT)
-    if(!any(modp)) {
+    if(!any(modp) && !user_h1_exists) {
         if(type == "cf") {
             warning("lavaan WARNING: `type' argument is ignored for a single model")
         }
@@ -65,13 +73,8 @@ lavTestLRT <- function(object, ..., method = "default", A.method = "delta",
         names(mods) <- sapply(as.list(mcall)[which(c(FALSE, TRUE, modp))],
                               function(x) deparse(x))
     }
-
     # TDJ: Add user-supplied h1 model, if it exists
-    if( !is.null(object@external$h1) ) {
-        if(inherits(object@external$h1, "lavaan")) {
-            mods$h1 <- object@external$h1
-        }
-    }
+    if(user_h1_exists)  mods$h1 <- object@external$h1
 
     # put them in order (using degrees of freedom)
     ndf <- sapply(mods, function(x) x@test[[1]]$df)
