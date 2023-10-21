@@ -172,7 +172,11 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     if(!is.null(slotParTable)) {
         FLAT <- slotParTable
     } else if(is.character(model)) {
-        FLAT <- lavParseModelString(model)
+        if(is.null(dotdotdot$parser)) {
+            FLAT <- lavParseModelString(model, parser = "new")
+        } else {
+            FLAT <- lavParseModelString(model, parser = dotdotdot$parser)
+        }
     } else if( inherits(model, "formula") ) {
         # two typical cases:
         # 1. regression type formula

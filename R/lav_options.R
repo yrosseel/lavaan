@@ -218,6 +218,9 @@ lav_options_default <- function(mimic = "lavaan") {
                 # storage of information
                 store.vcov             = "default",
 
+                # internal
+                parser                 = "old",
+
                 # verbosity
                 verbose                = FALSE,
                 warn                   = TRUE,
@@ -2060,6 +2063,16 @@ lav_options_set <- function(opt = NULL) {
             stop("lavaan ERROR: correlation structures only work for fixed.x = FALSE (for now).")
         }
     }
+
+    # parser
+    if(opt$parser %in% c("orig", "old", "classic")) {
+        opt$parser <- "old"
+    } else if(opt$parser %in% c("new", "ldw")) {
+        opt$parser <- "new"
+    } else {
+        stop("lavaan ERROR: parser= argument should be \"old\" or \"new\"")
+    }
+
 
 
     # store orig.estimator as estimator.orig in upper case

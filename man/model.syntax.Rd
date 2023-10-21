@@ -40,8 +40,8 @@ lavParTable(model = NULL, meanstructure = FALSE, int.ov.free = FALSE,
     group.equal = NULL, group.partial = NULL, group.w.free = FALSE,
     debug = FALSE, warn = TRUE, as.data.frame. = TRUE)
 
-lavParseModelString(model.syntax = '', as.data.frame. = FALSE, 
-                    warn = TRUE, debug = FALSE)
+lavParseModelString(model.syntax = '', as.data.frame. = FALSE,
+                    parser = "new", warn = TRUE, debug = FALSE)
 
 }
 \arguments{
@@ -165,10 +165,12 @@ the model both for both observed and latent variables.}
     Poisson model is fitted to estimate the group frequencies. If
     \code{FALSE} (the default), the group frequencies are fixed to their
     observed values.}
+\item{as.data.frame.}{If \code{TRUE}, return the list of model parameters
+    as a \code{data.frame}.}
+\item{parser}{Character. If \code{"old"}, use the original/classic parser.
+    If \code{"new"}, use the new/ldw parser. The default is \code{"new"}.}
 \item{warn}{If \code{TRUE}, some (possibly harmless) warnings are printed
     out.}
-\item{as.data.frame.}{If \code{TRUE}, return the list of model parameters
-as a \code{data.frame}.}
 \item{debug}{If \code{TRUE}, debugging information is printed out.}
 }
 \details{
