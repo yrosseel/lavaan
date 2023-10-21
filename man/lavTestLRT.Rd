@@ -33,7 +33,9 @@ we use a mean and variance adjusted (Satterthwaite style) test statistic.}
 \item{type}{Character. If \code{"Chisq"}, the test statistic for each
   model is the (scaled or unscaled) model fit test statistic. If \code{"Cf"}, 
   the test statistic for each model is computed by the 
-  \code{\link{lavTablesFitCf}} function.} 
+  \code{\link{lavTablesFitCf}} function. If \code{"browne.residual.adf"} (alias
+  \code{"browne"}) or \code{"browne.residual.nt"}, the standard chi-squared
+  difference is calculated from each model's residual-based statistic.}
 \item{model.names}{Character vector. If provided, use these model names in
   the first column of the anova table.}
 }
