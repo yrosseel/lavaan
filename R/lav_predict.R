@@ -64,11 +64,13 @@ lavPredict <- function(object, newdata = NULL, # keep order of predict(), 0.6-7
 
     # type
     type <- tolower(type)
-    if(type %in% c("latent", "lv", "factor", "factor.score", "factorscore"))
+    if(type %in% c("latent", "lv", "factor", "factor.score", "factorscore")) {
         type <- "lv"
-    if(type %in% c("ov","yhat"))
+    } else if(type %in% c("ov","yhat")) {
         type <- "yhat"
-
+    } else if(type %in% c("residuals", "resid", "error")) {
+        type <- "resid"
+    }
 
     # append.data? check level
     if(append.data && level > 1L) {
@@ -260,13 +262,8 @@ lavPredict <- function(object, newdata = NULL, # keep order of predict(), 0.6-7
                        } else {
                            COV <- A %*% Sigma %*% t(A)
                        }
-                       # COV should always be pd, as Sigma is pd
-                       COV.inv <- solve(COV)
-                       # center factor scores
-                       fs.c <- t( t(out[[g]]) -  EETA[[g]])
-                       # Mahalobis distance
-                       df.squared <- rowSums((fs.c %*% COV.inv) * fs.c)
-                       ret <- df.squared # squared!
+                       ret <- lav_mdist_fs(fs = out[[g]], fs.mean = EETA[[g]],
+                                           fs.cov = COV)
                        ret
                    })
         }
@@ -379,14 +376,17 @@ lavPredict <- function(object, newdata = NULL, # keep order of predict(), 0.6-7
 
         } # label
 
-    # estimated value for the observed indicators, given (estimated)
+    # yhat: estimated value for the observed indicators, given (estimated)
     # factor scores
-    } else if(type == "yhat") {
+    # resid: y - yhat
+    } else if(type %in% c("yhat", "resid")) {
+        resid.flag <- type == "resid"
         out <- lav_predict_yhat(lavobject = NULL, lavmodel = lavmodel,
                    lavdata = lavdata, lavsamplestats = lavsamplestats,
                    lavimplied = lavimplied,
                    data.obs = data.obs, eXo = eXo,
-                   ETA = ETA, method = method, optim.method = optim.method)
+                   ETA = ETA, method = method, optim.method = optim.method,
+                   resid.flag = resid.flag)
 
         # label?
         if(label) {
@@ -394,6 +394,32 @@ lavPredict <- function(object, newdata = NULL, # keep order of predict(), 0.6-7
                 colnames(out[[g]]) <- lavpta$vnames$ov[[g]]
             }
         }
+
+        # mdist
+        if(mdist && type == "resid") {
+            LAMBDA <- computeLAMBDA(lavmodel = lavmodel,
+                                    remove.dummy.lv = FALSE)
+            OV.MEAN <- lavTech(object, "mean.ov")
+            MDIST <- lapply(seq_len(lavdata@ngroups), function(g) {
+                       Sigma <- lavimplied$cov[[g]]
+                       LA <- LAMBDA[[g]]
+                       Sigma.inv <- solve(Sigma)
+                       Omega.e <- Sigma - LA %*% solve(t(LA) %*% Sigma.inv %*% LA) %*% t(LA)
+                       eig <- eigen(Omega.e, symmetric = TRUE)
+                       A <- eig$vectors[,seq_len(nrow(LA) - ncol(LA))]
+                       RESA <- t(apply(out[[g]], 1L, function(x)
+                                       colSums(A * x, na.rm = TRUE)))
+                       RESA.mean <- rep(0, ncol(RESA))
+                       RESA.cov <-  t(A) %*% Omega.e %*% A
+                       RESA.cov.inv <- solve(RESA.cov)
+                       # Mahalobis distance
+                       RESA.c <- t( t(RESA) - RESA.mean )
+                       df.squared <- rowSums((RESA.c %*% RESA.cov.inv) * RESA.c)
+                       ret <- df.squared # squared!
+                       ret
+                   })
+        }
+
 
     # density for each observed item, given (estimated) factor scores
     } else if(type == "fy") {
@@ -454,7 +480,7 @@ lavPredict <- function(object, newdata = NULL, # keep order of predict(), 0.6-7
         res <- DATA
     }
 
-    if(fsm) {
+    if(fsm && type == "lv") {
         attr(res, "fsm") <- FSM
     }
 
@@ -1350,7 +1376,8 @@ lav_predict_yhat <- function(lavobject = NULL, # for convience
                              # options
                              method = "EBM",
                              duplicate = FALSE,
-                             optim.method = "bfgs") {
+                             optim.method = "bfgs",
+                             resid.flag = FALSE) {
 
     # full object?
     if(inherits(lavobject, "lavaan")) {
@@ -1412,7 +1439,16 @@ lav_predict_yhat <- function(lavobject = NULL, # for convience
                    ret })
     }
 
-    YHAT
+    # residuals? compute y - yhat
+    if(resid.flag) {
+        RES <- lapply(seq_len(lavdata@ngroups), function(g) {
+                   ret <- data.obs[[g]] - YHAT[[g]]
+                   ret })
+    } else {
+        RES <- YHAT
+    }
+
+    RES
 }
 
 # conditional density y -- assuming independence!!

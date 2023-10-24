@@ -56,7 +56,7 @@ lavTestLRT <- function(object, ..., method = "default", A.method = "delta",
         user_h1_exists <- TRUE
       }
     }
-    
+
     # shortcut for single argument (just plain LRT)
     if(!any(modp) && !user_h1_exists) {
         if(type == "cf") {
