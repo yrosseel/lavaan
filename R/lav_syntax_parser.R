@@ -17,7 +17,10 @@
 #   the new procedure doesn't (cf. first test 'non collapsed' in testing.R)
 # if there are blocks defined and the first one occurs after other formula's have been processed,
 #   a warning is given
-# Splitting of lavaan operators is not allowed in this code, but temporarily supported for '=~', with a warning.
+# Splitting of lavaan operators "=~" and "~~" is possible and regulated by parameter spaces.in.operator:
+#   ignore: silently remove spaces
+#   warn: remove spaces and gives warning
+#   error: spaces are not removed and this will lead to a syntax error
 # -------------------------------------------------------------------------
 
 # ----------------------- ldw_create_enum ---------------------------------
@@ -94,7 +97,7 @@ ldw_txt2message <- function(txt,
 #   elem.formule.number : sequence number of the 'logical' formula where the token occurs
 # the function returns the stored tokens in a list
 # --------------------------------------------------------------------------
-ldw_parse_step1 <- function(modelsrc, types, debug, warn) {
+ldw_parse_step1 <- function(modelsrc, types, debug, warn, spaces.in.operator) {
   nmax <- nchar(modelsrc)
   elem.pos <- vector("integer", nmax)
   elem.type <- elem.pos
@@ -133,20 +136,24 @@ ldw_parse_step1 <- function(modelsrc, types, debug, warn) {
       elem.i <- elem.i + 1L
     }
   }
-  # --------------------- temporarily support '=    ~', transformed to '=~    '.
-  if (grepl("= +~", modelsrcw)) {
-    waar <- regexpr("= +~", modelsrcw)[1]
-    modelsrcw <- gsub("=( +)~", "=~\\1", modelsrcw)
-    warning(ldw_txt2message("obsolete: splitting of '=~' operator temporarily allowed", 2L, modelsrc, waar))
+  # --------------------- handling spaces.in.operator ------------------------------------------------
+  if (spaces.in.operator != "error") {
+    if (grepl("= +~", modelsrcw)) {
+      waar <- regexpr("= +~", modelsrcw)[1]
+      modelsrcw <- gsub("=( +)~", "=~\\1", modelsrcw)
+      if (spaces.in.operator == "warn" && warn == TRUE) {
+        warning(ldw_txt2message("splitting of '=~' operator temporarely allowed", 2L, modelsrc, waar))
+      }
+    }
+    if (grepl("[^=~]~ +~", modelsrcw)) {
+      waar <- regexpr("[^=~]~ +~", modelsrcw)[1]
+      modelsrcw <- gsub("([^=~])~( +)~", "\\1~~\\2", modelsrcw)
+      if (spaces.in.operator == "warn" && warn == TRUE) {
+        warning(ldw_txt2message("splitting of '~~' operator temporarily allowed", 2L, modelsrc, waar + 1L))
+      }
+    }
   }
-  # ----------------------------------------------------------------------------
-  # --------------------- temporarily support '~    ~', transformed to '~~    '.
-  if (grepl("[^=~]~ +~", modelsrcw)) {
-    waar <- regexpr("[^=~]~ +~", modelsrcw)[1]
-    modelsrcw <- gsub("([^=~])~( +)~", "\\1~~\\2", modelsrcw)
-    warning(ldw_txt2message("obsolete: splitting of '~~' operator temporarily allowed", 2L, modelsrc, waar))
-  }
-  # ----------------------------------------------------------------------------
+  # ---------------------------------------------------------------------------------------------------
   lavops <- gregexpr("=~|<~|~\\*~|~~|~|==|<|>|:=|:|\\||%", modelsrcw)[[1]]
   if (lavops[1L] > -1L) {
     lavop.lengths <- attr(lavops, "match.length")
@@ -614,15 +621,16 @@ ldw_parse_get_modifier <- function(formul1, lhs, opi, modelsrc, types, debug, wa
 }
 
 ldw_parse_model_string <- function(model.syntax = "", as.data.frame. = FALSE,
-                                   warn = TRUE, debug = FALSE) {
+                                   warn = TRUE, debug = FALSE, spaces.in.operator = "warn") {
   stopifnot(length(model.syntax) > 0L)
+  stopifnot(any(spaces.in.operator == c("ignore", "warn", "error")))
   # replace 'strange' tildes (in some locales) (new in 0.6-6)
   modelsrc <- gsub(pattern = "\u02dc",
                    replacement = "~",
                    paste(unlist(model.syntax), "", collapse = "\n"))
   types <-  ldw_create_enum(c("identifier", "numliteral", "stringliteral",
                               "symbol", "lavaanoperator", "newline"))
-  modellist <- ldw_parse_step1(modelsrc, types, debug = debug, warn = warn)
+  modellist <- ldw_parse_step1(modelsrc, types, debug = debug, warn = warn, spaces.in.operator = spaces.in.operator)
   if (debug) {
      print(data.frame(pos = modellist$elem.pos,
                       type = types$enum.names[modellist$elem.type],
