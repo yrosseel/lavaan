@@ -246,6 +246,15 @@ Model-implied sample statistics:
         Aliases: \code{"r-square"}, \code{"r2"}.}
 }
 
+Diagnostics:
+
+\describe{
+    \item{\code{"mdist2.fs"}:}{The squared Mahalanobis distances for the (Bartlett) factor scores.}
+    \item{\code{"mdist.fs"}:}{The Mahalanobis distances for the (Bartlett) factor scores.}
+    \item{\code{"mdist2.resid"}:}{The squared Mahalanobis distances for the (Bartlett-based) casewise residuals.}
+    \item{\code{"mdist.fs"}:}{The Mahalanobis distances for the (Bartlett-based) casewise residuals.}
+}
+
 Optimizer information:
 
 \describe{

@@ -350,7 +350,23 @@ lavInspect.lavaan <- function(object,
             add.labels = add.labels, add.class = add.class,
             drop.list.single.group = drop.list.single.group)
 
-
+    #### (squared) Mahalanobis distances ####
+    } else if(what == "mdist2.fs") {
+        lav_object_inspect_mdist2(object, type = "lv", squared = TRUE,
+            add.labels = add.labels, add.class = add.class,
+            drop.list.single.group = drop.list.single.group)
+    } else if(what == "mdist2.resid") {
+        lav_object_inspect_mdist2(object, type = "resid", squared = TRUE,
+            add.labels = add.labels, add.class = add.class,
+            drop.list.single.group = drop.list.single.group)
+    } else if(what == "mdist.fs") {
+        lav_object_inspect_mdist2(object, type = "lv", squared = FALSE,
+            add.labels = add.labels, add.class = add.class,
+            drop.list.single.group = drop.list.single.group)
+    } else if(what == "mdist.resid") {
+        lav_object_inspect_mdist2(object, type = "resid", squared = FALSE,
+            add.labels = add.labels, add.class = add.class,
+            drop.list.single.group = drop.list.single.group)
 
     #### convergence, meanstructure, categorical ####
     } else if(what == "converged") {
@@ -3205,3 +3221,53 @@ lav_object_inspect_loglik_casewise <- function(object, log. = TRUE,
     OUT
 }
 
+# Mahalanobis distances for factor scores or casewise residuals
+# type = "lv" -> factor scores
+# type = "resid" -> casewise residuals
+#
+# we always use Bartlett factor scores (see Yuan & Hayashi 2010)
+# (this has no impact on the m-distances for the factor scores,
+#  and only a very slight impact on the m-distances for the casewise
+#  residuals; but asymptotically, only when we use Bartlett factor
+#  scores are the 'true scores' (=LAMBDA %*% FS) orthogonal to the
+#  casewise residuals)
+lav_object_inspect_mdist2 <- function(object, type = "resid", squared = TRUE,
+                                      add.labels = FALSE, add.class = FALSE,
+                                      drop.list.single.group = FALSE) {
+
+    lavdata <- object@Data
+    G <- lavdata@ngroups
+
+    # lavPredict()
+    out <- lavPredict(object, type = type, method = "ML", # = Bartlett
+                      label = FALSE, fsm = TRUE, mdist = TRUE,
+                      se = "none", acov = "none")
+    OUT <- attr(out, "mdist")
+
+    for(g in seq_len(G)) {
+
+        # squared?
+        if(!squared) {
+            OUT[[g]] <- sqrt(OUT[[g]])
+        }
+
+        # labels?
+        # if(add.labels) {
+        # }
+
+        # class
+        if(add.class) {
+            class(OUT[[g]]) <- c("lavaan.vector", "numeric")
+        }
+    } # g
+
+    if(G == 1L && drop.list.single.group) {
+        OUT <- OUT[[1]]
+    } else {
+        if(length(object@Data@group.label) > 0L) {
+            names(OUT) <- unlist(object@Data@group.label)
+        }
+    }
+
+    OUT
+}
