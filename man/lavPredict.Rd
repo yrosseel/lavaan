@@ -13,7 +13,8 @@ lavPredict(object, newdata = NULL, type = "lv", method = "EBM",
            transform = FALSE, se = "none", acov = "none", 
            label = TRUE, fsm = FALSE, mdist = FALSE,
            append.data = FALSE, assemble = FALSE,
-           level = 1L, optim.method = "bfgs", ETA = NULL)
+           level = 1L, optim.method = "bfgs", ETA = NULL,
+           drop.list.single.group = TRUE)
 }
 \arguments{
 \item{object}{An object of class \code{\linkS4class{lavaan}}.}
@@ -71,6 +72,11 @@ for the optimization. If \code{"bfgs"} or \code{"BFGS"} (the default in 0.6),
 the \code{"optim()"} function is used with the BFGS method.}
 \item{ETA}{An optional matrix or list, containing latent variable values
   for each observation. Used for computations when \code{type = "ov"}.}
+\item{drop.list.single.group}{Logical. If \code{FALSE}, the results are 
+    returned as
+    a list, where each element corresponds to a group (even if there is only
+    a single group). If \code{TRUE}, the list will be unlisted if there is
+    only a single group.}
 }
 \details{
 The \code{predict()} function calls the \code{lavPredict()} function

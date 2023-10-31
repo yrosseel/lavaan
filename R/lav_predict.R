@@ -40,7 +40,8 @@ lavPredict <- function(object, newdata = NULL, # keep order of predict(), 0.6-7
                        se = "none", acov = "none", label = TRUE, fsm = FALSE,
                        mdist = FALSE,
                        append.data = FALSE, assemble = FALSE, # or TRUE?
-                       level = 1L, optim.method = "bfgs", ETA = NULL) {
+                       level = 1L, optim.method = "bfgs", ETA = NULL,
+                       drop.list.single.group = TRUE) {
 
     # catch efaList objects
     if(inherits(object, "efaList")) {
@@ -478,7 +479,7 @@ lavPredict <- function(object, newdata = NULL, # keep order of predict(), 0.6-7
     # lavaan.matrix
     out <- lapply(out, "class<-", c("lavaan.matrix", "matrix"))
 
-    if(lavdata@ngroups == 1L) {
+    if(lavdata@ngroups == 1L && drop.list.single.group) {
         res <- out[[1L]]
     } else {
         res <- out
