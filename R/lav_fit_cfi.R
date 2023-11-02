@@ -599,9 +599,9 @@ lav_fit_measures_check_baseline <- function(fit.indep = NULL, object = NULL) {
         if(!sameTest) {
             warning("lavaan WARNING:\n",
                     "\t Baseline model was using test(s) = ",
-                    dQuote(fit.indep@Options$test),
+                    paste(dQuote(fit.indep@Options$test), collapse = ","),
                     "\n\t But original model was using test(s) = ",
-                    dQuote(object@Options$test),
+                    paste(dQuote(object@Options$test), collapse = ","),
                     "\n\t Refitting baseline model!")
         }
         sameEstimator <- ( object@Options$estimator ==
