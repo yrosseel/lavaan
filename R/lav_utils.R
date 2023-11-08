@@ -94,6 +94,129 @@ lav_utils_logsumexp <- function(x) {
     a + log(sum(exp(x - a)))
 }
 
+# mdist = Mahalanobis distance
+lav_mdist <- function(Y, Mp = NULL, wt = NULL,
+                      Mu = NULL, Sigma = NULL,
+                      Sinv.method = "eigen", ginv = TRUE,
+                      rescale = FALSE) {
+
+    # check input
+    Y <- as.matrix(Y); P <- NCOL(Y)
+    if(!is.null(wt)) {
+        N <- sum(wt)
+    } else {
+        N <- NROW(Y)
+    }
+    NY <- NROW(Y)
+
+    # missing data?
+    missing.flag <- anyNA(Y)
+
+    # missing patterns?
+    if(missing.flag && is.null(Mp)) {
+        Mp <- lav_data_missing_patterns(Y)
+    }
+
+    # no Mu? compute sample mean
+    if(is.null(Mu)) {
+        Mu <- colMeans(Y, na.rm = TRUE)
+    }
+
+    # no Sigma?
+    if(is.null(Sigma)) {
+        if(missing.flag) {
+            out <- lav_mvnorm_missing_h1_estimate_moments(Y = Y, Mp = Mp,
+                                                          wt = wt)
+            Mu <- out$Mu
+            Sigma <- out$Sigma
+        } else {
+            if(!is.null(wt)) {
+                out <- stats::cov.wt(Y, wt = wt, method = "ML")
+                Sigma <- out$cov
+                Mu <- out$center
+            } else {
+                Sigma <- stats::cov(Y, use = "pairwise")
+                # rescale?
+                if(rescale) {
+                    Sigma <- ((N-1)/N) * Sigma
+                }
+            }
+        }
+    }
+
+    # subtract Mu
+    Yc <- t( t(Y) - Mu )
+
+    # DIST per case
+    DIST <- rep(as.numeric(NA), NY)
+
+    # invert Sigma
+    if(ginv) {
+        Sigma.inv <- MASS::ginv(Sigma)
+    } else {
+        Sigma.inv <-
+            try(lav_matrix_symmetric_inverse(S = Sigma, logdet = FALSE,
+                                             Sinv.method = Sinv.method),
+                silent = TRUE)
+        if(inherits(Sigma.inv, "try-error")) {
+            warning("lavaan WARNING: problem computing distances: could not invert Sigma")
+            return(DIST)
+        }
+    }
+
+    # complete data?
+    if(!missing.flag) {
+        # center factor scores
+        Y.c <- t( t(Y) -  Mu )
+        # Mahalobis distance
+        DIST <- rowSums((Y.c %*% Sigma.inv) * Y.c)
+
+    # missing data?
+    } else {
+        # for each pattern, compute sigma.inv; compute DIST for all
+        # observations of this pattern
+        for(p in seq_len(Mp$npatterns)) {
+
+            # observed values for this pattern
+            var.idx <- Mp$pat[p,]
+
+            # missing values for this pattern
+            na.idx <- which(!var.idx)
+
+            # identify cases with this pattern
+            case.idx <- Mp$case.idx[[p]]
+
+            # invert Sigma for this pattern
+            if(length(na.idx) > 0L) {
+                if(ginv) {
+                    sigma.inv <- MASS::ginv(Sigma[-na.idx, -na.idx, drop = FALSE])
+                } else {
+                    sigma.inv <-
+                        lav_matrix_symmetric_inverse_update(S.inv = Sigma.inv,
+                            rm.idx = na.idx, logdet = FALSE)
+                }
+            } else {
+                sigma.inv <- Sigma.inv
+            }
+
+            if(Mp$freq[p] == 1L) {
+                DIST[case.idx] <- sum(sigma.inv *
+                    crossprod(Yc[case.idx, var.idx, drop = FALSE]))
+            } else {
+                DIST[case.idx] <-
+                    rowSums(Yc[case.idx, var.idx, drop = FALSE] %*% sigma.inv *
+                            Yc[case.idx, var.idx, drop = FALSE])
+            }
+        } # patterns
+    } # missing data
+
+    # use weights? (no for now)
+    # DIST <- DIST * wt
+
+    DIST
+}
+
+
 # create matrix with indices to reconstruct the bootstrap samples
 # per group
 # (originally needed for BCa confidence intervals)

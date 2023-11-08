@@ -1,8 +1,37 @@
 # parse lavaan syntax
 # YR 14 Jan 2014: move to lav_syntax.R
+# YR 17 Oct 2023: add ldw parser
 
 lavParseModelString <- function(model.syntax = '', as.data.frame. = FALSE,
+                                parser = "new",
                                 warn = TRUE, debug = FALSE) {
+
+    parser <- tolower(parser)
+    if(!parser %in% c("old", "new")) {
+        stop("lavaan ERROR: parser= argument should be \"old\" or \"new\"")
+    }
+
+    if(parser == "old") {
+        # original/classic parser
+        out <- lav_parse_model_string_orig(model.syntax = model.syntax,
+                                           as.data.frame. = as.data.frame.,
+                                           warn = warn,
+                                           debug = debug)
+    } else {
+        # new parser
+        out <- ldw_parse_model_string(model.syntax = model.syntax,
+                                      as.data.frame. = as.data.frame.,
+                                      warn = warn,
+                                      debug = debug)
+    }
+
+    out
+}
+
+# the 'original' parser (up to 0.6-17)
+lav_parse_model_string_orig <- function(model.syntax = '',
+                                        as.data.frame. = FALSE,
+                                        warn = TRUE, debug = FALSE) {
 
     # check for empty syntax
     if(length(model.syntax) == 0) {

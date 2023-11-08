@@ -527,6 +527,9 @@ Miscellaneous:
     \item{\code{store.vcov}}{Logical. If \code{TRUE}, and \code{se=} is not
       set to \code{"none"}, store the full variance-covariance matrix of
       the model parameters in the vcov slot of the fitted lavaan object.}
+    \item{\code{parser}}{Character. If \code{"new"} (the default), the new
+      parser is used to parse the model syntax. If \code{"old"}, the original
+      (pre 0.6-17) parser is used.}
 }
 
 }

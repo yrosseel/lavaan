@@ -25,7 +25,8 @@ InformativeTesting <- function(model = NULL, data, constraints = NULL,
   #user.equal$op[con.idx] <- "=="
 
   user.equal <- fit.A1@ParTable
-  CON <- attr(lavParseModelString(constraints), "constraints")
+  CON <- attr(lavParseModelString(constraints, parser = fit.B1@Options$parser),
+                                  "constraints")
   for(con in 1:length(CON)) {
     if(CON[[con]]$op %in% c("<", ">")) {
       this.lhs <- CON[[con]]$lhs

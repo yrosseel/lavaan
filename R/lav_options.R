@@ -105,6 +105,7 @@ lav_options_default <- function(mimic = "lavaan") {
 
                 # summary data
                 sample.cov.rescale = "default",
+                sample.cov.robust  = FALSE,
                 sample.icov        = TRUE,
                 ridge              = FALSE,
                 ridge.constant     = "default",
@@ -217,6 +218,9 @@ lav_options_default <- function(mimic = "lavaan") {
 
                 # storage of information
                 store.vcov             = "default",
+
+                # internal
+                parser                 = "old",
 
                 # verbosity
                 verbose                = FALSE,
@@ -2060,6 +2064,42 @@ lav_options_set <- function(opt = NULL) {
             stop("lavaan ERROR: correlation structures only work for fixed.x = FALSE (for now).")
         }
     }
+
+    # parser
+    if(opt$parser %in% c("orig", "old", "classic")) {
+        opt$parser <- "old"
+    } else if(opt$parser %in% c("new", "ldw")) {
+        opt$parser <- "new"
+    } else {
+        stop("lavaan ERROR: parser= argument should be \"old\" or \"new\"")
+    }
+
+    # sample.cov.robust
+    # new in 0.6-17
+    # sample.cov.robust cannot be used if:
+    # - data is missing (for now),
+    # - sampling weights are used
+    # - estimator is (D)WLS
+    # - multilevel
+    # - conditional.x
+    if(opt$sample.cov.robust) {
+        if(opt$missing != "listwise") {
+            stop("lavaan ERROR: sample.cov.robust = TRUE does not work (yet) if data is missing.")
+        }
+        if(opt$.categorical) {
+            stop("lavaan ERROR: sample.cov.robust = TRUE does not work (yet) if data is categorical")
+        }
+        if(opt$.clustered || opt$.multilevel) {
+            stop("lavaan ERROR: sample.cov.robust = TRUE does not work (yet) if data is clustered")
+        }
+        if(opt$conditional.x) {
+             stop("lavaan ERROR: sample.cov.robust = TRUE does not work (yet) if conditional.x = TRUE")
+        }
+        if(!opt$estimator %in% c("ML", "GLS")) {
+            stop("lavaan ERROR: sample.cov.robust = TRUE does not work (yet) if estimator is not GLS or ML")
+        }
+    }
+
 
 
     # store orig.estimator as estimator.orig in upper case

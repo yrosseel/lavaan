@@ -20,7 +20,8 @@ lavTestWald <- function(object, constraints = NULL, verbose = FALSE) {
     partable <- as.list(PT)
 
     # parse constraints
-    FLAT <- lavParseModelString( constraints ); CON <- attr(FLAT, "constraints")
+    FLAT <- lavParseModelString( constraints, parser = object@Options$parser )
+    CON <- attr(FLAT, "constraints")
     LIST <- list()
     if(length(CON) > 0L) {
         lhs = unlist(lapply(CON, "[[", "lhs"))

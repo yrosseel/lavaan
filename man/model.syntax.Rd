@@ -40,8 +40,8 @@ lavParTable(model = NULL, meanstructure = FALSE, int.ov.free = FALSE,
     group.equal = NULL, group.partial = NULL, group.w.free = FALSE,
     debug = FALSE, warn = TRUE, as.data.frame. = TRUE)
 
-lavParseModelString(model.syntax = '', as.data.frame. = FALSE, 
-                    warn = TRUE, debug = FALSE)
+lavParseModelString(model.syntax = '', as.data.frame. = FALSE,
+                    parser = "new", warn = TRUE, debug = FALSE)
 
 }
 \arguments{
@@ -165,10 +165,12 @@ the model both for both observed and latent variables.}
     Poisson model is fitted to estimate the group frequencies. If
     \code{FALSE} (the default), the group frequencies are fixed to their
     observed values.}
+\item{as.data.frame.}{If \code{TRUE}, return the list of model parameters
+    as a \code{data.frame}.}
+\item{parser}{Character. If \code{"old"}, use the original/classic parser.
+    If \code{"new"}, use the new/ldw parser. The default is \code{"new"}.}
 \item{warn}{If \code{TRUE}, some (possibly harmless) warnings are printed
     out.}
-\item{as.data.frame.}{If \code{TRUE}, return the list of model parameters
-as a \code{data.frame}.}
 \item{debug}{If \code{TRUE}, debugging information is printed out.}
 }
 \details{
@@ -271,6 +273,15 @@ There can be seven types of formula-like expressions in the model syntax:
       variable (equivalent to using \code{"f =~ 0"}). And in addition, the
       (residual) variance of the formative factor is fixed to zero.
 }
+There are 4 additional operators, also with left- and right-hand sides, that can
+be included in model syntax.  Three of them are used to specify (in)equality
+constraints on estimated parameters (\code{==}, \code{>}, and \code{<}), and
+those are demonstrated in a later section about 
+\bold{(In)equality constraints}.
+The final additional operator (\code{:=}) can be used to define ``new'' parameters
+that are functions of one or more other estimated parameters. The \code{:=}
+operator is demonstrated in a section about \bold{User-defined parameters}.
+
 Usually, only a single variable name appears on the left side of an
 operator. However, if multiple variable names are specified, 
 separated by the \code{"+"} operator, the formula is repeated for each
@@ -309,6 +320,10 @@ s =~ 0*y11 + 1*y12 + 2*y13 + 3*y14}
 Instead of a numeric constant, one can use a mathematical function that returns
 a numeric constant, for example \code{sqrt(10)}. Multiplying with \code{NA}
 will force the corresponding parameter to be free.
+
+Additionally, the \code{==} operator can be used to set a \emph{labeled} parameter
+equal to a specific numeric value. This will be demonstrated in the section below
+about \bold{(In)equality constraints}.
 }
 
 \section{Starting values}{
@@ -409,8 +424,95 @@ simultaneously; for example, if you want to fix the value of a parameter and
 also label that parameter, you can use something like:
 \preformatted{ f1 =~ x1 + x2 + 4*x3 + x3.loading*x3}
 }
+
+\section{(In)equality constraints}{
+The \code{==} operator can be used either to fix a parameter to a specific value,
+or to set an estimated parameter equal to another parameter. Adapting the
+example in the \bold{Parameter labels and equality constraints} section, we
+could have used different labels for the second factor's intercepts:
+\preformatted{
+    y2a ~ int1*1
+    y2b ~ int2*1
+    y2c ~ int3*1
+}
+Then, we could fix the first intercept to zero by including in the syntax an
+operation that indicates the parameter's label equals that value:
+\preformatted{
+    int1 == 0
+}
+Whereas we could still estimate the other two intercepts under an equality
+constraint by setting their different labels equal to each other:
+\preformatted{
+    int2 == int3
+}
+Optimization can be less efficient when constraining parameters this way (see
+the documentation linked under \bold{See also} for more information). But the
+flexibility might be advantageous.  For example, the constraints could be
+specified in a separate character-string object, which can be passed to the
+\code{lavaan(..., constraints=)} argument, enabling users to compare results
+with(out) the constraints.
+
+Inequality constraints work much the same way, using the \code{<} or \code{>}
+operator indicate which estimated parameter is hypothesized to be greater/less
+than either a specific value or another estimated parameter.  For example, a
+variance can be constrained to be nonnegative:
+\preformatted{
+    y1a ~~ var1a*y1a
+    ## hypothesized constraint:
+    var1a > 0
+}
+Or the factor loading of a particular indicator might be expected to exceed
+other indicators' loadings:
+\preformatted{
+    f1 =~ L1*y1a + L2*y1b + L3*y1c
+    ## hypothesized constraints:
+    L1 > L2
+    L3 < L1
+}
+}
+
+\section{User-defined parameters}{
+Functions of parameters can be useful to test particular hypotheses. Following
+from the \code{Multiple groups} example, we might be interested in which group's
+factor loading is larger (i.e., an estimate of differential item functioning
+(DIF) when the latent scales are linked by anchor items with equal loadings).
+\preformatted{
+  speed =~ c(L7, L7)*x7 + c(L8, L8)*x8 + c(L9.group1, L9.group2)*x9 '
+  ## user-defined parameter:
+  DIF_L9 := L9.group1 - L9.group2
+}
+Note that this hypothesis is easily tested without a user-defined parameter by
+using the \code{lavTestWald()} function. However, a user-defined parameter 
+additionally provides an estimate of the parameter being tested.
+
+User-defined parameters are particularly useful for specifying indirect effects
+in models of mediation.  From the \code{lavaan} tutorial at 
+\url{https://lavaan.ugent.be/tutorial/mediation.html}:
+\preformatted{
+model <- ' # direct effect
+             Y ~ c*X
+           # mediator
+             M ~ a*X
+             Y ~ b*M
+             
+# user defined parameters:
+
+    # indirect effect (a*b)
+             ab := a*b
+    # total effect (defined using another user-defined parameter)
+             total := ab + c
+'
+}
+}
+
+\seealso{Detailed documentation about handling linear equality constraints,
+found among the \bold{Development notes} on the \code{lavaan} web site:
+\url{https://lavaan.ugent.be/about/development.html}
+}
+
 \references{
-Yves Rosseel (2012). lavaan: An R Package for Structural Equation
-Modeling. Journal of Statistical Software, 48(2), 1-36. 
-\doi{https://doi.org/10.18637/jss.v048.i02}}
+Rosseel, Y. (2012). \code{lavaan}: An R package for structural equation
+modeling. \emph{Journal of Statistical Software, 48}(2), 1--36. 
+\doi{https://doi.org/10.18637/jss.v048.i02}
+}
 

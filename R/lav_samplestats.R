@@ -73,6 +73,13 @@ lav_samplestats_from_data <- function(lavdata           = NULL,
         }
     }
 
+    # sample.cov.robust cannot be used if sampling weights are used
+    if(lavoptions$sample.cov.robust) {
+        if(!is.null(WT[[1]])) {
+            stop("lavaan ERROR: sample.cov.robust = TRUE does not work (yet) if sampling weights are provided.")
+        }
+    }
+
     # sample statistics per group
 
     # joint (y,x)
@@ -582,6 +589,13 @@ lav_samplestats_from_data <- function(lavdata           = NULL,
                     }
                     var[[g]]  <- diag(cov[[g]])
                     mean[[g]] <- out$center
+                } else if(lavoptions$sample.cov.robust) {
+                    # fixme: allow prob/max.it to be options
+                    out <- lav_cov_huber(Y = X[[g]], prob = 0.95,
+                                         max.it = 200L, tol = 1e-07)
+                    cov[[g]]  <- out$Sigma
+                    var[[g]]  <- diag(cov[[g]])
+                    mean[[g]] <- out$Mu
                 } else {
                     cov[[g]]  <-   stats::cov(X[[g]], use = "pairwise")
                     # rescale cov by (N-1)/N? (only COV!)
