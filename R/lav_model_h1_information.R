@@ -693,11 +693,11 @@ lav_model_h1_information_firstorder <- function(lavobject      = NULL,
               B1[[g]] <- lav_matrix_crossprod(SC)
             } else {
               # Option 1: Do a weighted cross product
-              # B1[[g]] <- crossprod(sqrt(WT) * SC)
+              B1[[g]] <- crossprod(WT * SC)
 
               # Option 2: Compute the sample covariance multiplied by n
-              cov_tmp <- stats::cov.wt(SC, wt = WT, method = "ML")
-              B1[[g]] <- with(cov_tmp, n.obs * cov)
+              # cov_tmp <- stats::cov.wt(SC, wt = WT, method = "ML")
+              # B1[[g]] <- with(cov_tmp, n.obs * cov)
             }
 
             # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
