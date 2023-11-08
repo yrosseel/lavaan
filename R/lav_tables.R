@@ -767,8 +767,20 @@ lav_tables_pairwise_freq_cell <- function(lavdata = NULL,
                 Y1 <- X[[g]][,idx1]
                 Y2 <- X[[g]][,idx2]
                 # FREQ <- table(Y1, Y2) # we loose missings; useNA is ugly
-                # FREQ <- lav_bvord_freq(Y1, Y2, wt[[g]])
                 FREQ <- lav_bvord_freq(Y1, Y2)
+
+                # >>>>>>>> HJ/MK PML CODE >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+
+                # If we want to use weighted frequencies we can use the code
+                # below. However, it will probably make sense only when the
+                # weights are normalised. If they're not, we may get quite ugly
+                # and nonsensical numbers here. So for now, just keep the
+                # lavtables as is (using non-weighted frequencies).
+                #
+                # FREQ <- lav_bvord_freq(Y1, Y2, wt[[g]])
+
+                # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+
 
                 list(   id = rep.int(id, ncell),
                        lhs = rep.int(x[1], ncell),

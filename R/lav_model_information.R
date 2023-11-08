@@ -424,8 +424,7 @@ lav_model_information_firstorder <- function(lavmodel       = NULL,
 
         # >>>>>>>> HJ/MK PML CODE >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
-        # NOTE: UNSURE ABOUT THIS PART. WHAT IS THE ROLE OF fg? For now default
-        # to 1.
+        # NOTE: UNSURE ABOUT THIS PART. WHAT IS THE ROLE OF fg?
 
         wt <- lavdata@weights[[g]]
         if (is.null(wt)) {

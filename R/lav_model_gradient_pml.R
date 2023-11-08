@@ -519,7 +519,6 @@ grad_tau_rho <- function(no.x, all.thres, index.var.of.thres, rho.xixj,
 
   grad
 }
-
 ################################################################################
 
 

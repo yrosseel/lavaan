@@ -509,20 +509,6 @@ lav_model_vcov <- function(lavmodel       = NULL,
         if(lavmodel@estimator %in% c("ML","PML","FML") &&
            likelihood == "normal") {
             if(lavdata@nlevels == 1L) {
-
-                # >>>>>>>> HJ/MK PML CODE >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-
-                # Actually the H and J matrices already account for this, so
-                # this code is not necessary.
-                # wt <- lavdata@weights[[1]]  # since 1 level only
-                # if (is.null(wt)) {
-                #   N <- lavsamplestats@ntotal
-                # } else {
-                #   N <- sum(wt) ^ 2 / sum(wt ^ 2)  # effective sample size
-                # }
-
-                # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-
                 N <- lavsamplestats@ntotal
                 # new in 0.6-9 (to mimic method="lm" in effectLite)
                 # special case: univariate regression in each group
