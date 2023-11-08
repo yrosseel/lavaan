@@ -1,5 +1,5 @@
 Package: lavaan
-Title: Latent Variable Analysis [HJ Version PML]
+Title: Latent Variable Analysis
 Version: 0.6-17.9001
 Authors@R: c(person(given   = "Yves", family = "Rosseel",
                     role    = c("aut", "cre"),
