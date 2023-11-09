@@ -1,6 +1,6 @@
 Package: lavaan
 Title: Latent Variable Analysis
-Version: 0.6-17.1945
+Version: 0.6-17.1946
 Authors@R: c(person(given   = "Yves", family = "Rosseel",
                     role    = c("aut", "cre"),
                     email   = "Yves.Rosseel@UGent.be",
@@ -48,11 +48,11 @@ Authors@R: c(person(given   = "Yves", family = "Rosseel",
                     email = "florian.scharf@uni-leipzig.de"),
              person(given = "Han", family = "Du",
                     role = "ctb",
-                    email = "hdu@psych.ucla.edu",
+                    email = "hdu@psych.ucla.edu"),
              person(given = "Haziq", family = "Jamil",
                     role = "ctb",
                     email = "haziq.jamil@ubd.edu.bn",
-                    commend = c(ORCID = "0000-0003-3298-1010"))
+                    comment = c(ORCID = "0000-0003-3298-1010"))
             )
 Description: Fit a variety of latent variable models, including confirmatory
    factor analysis, structural equation modeling and latent growth curve models.
