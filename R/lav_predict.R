@@ -34,7 +34,7 @@ predict.efaList <- function(object, ...) {
     predict(object, ...)
 }
 
-# main function
+# public function
 lavPredict <- function(object, newdata = NULL, # keep order of predict(), 0.6-7
                        type = "lv", method = "EBM", transform = FALSE,
                        se = "none", acov = "none", label = TRUE, fsm = FALSE,
@@ -60,8 +60,37 @@ lavPredict <- function(object, newdata = NULL, # keep order of predict(), 0.6-7
     lavmodel       <- object@Model
     lavdata        <- object@Data
     lavsamplestats <- object@SampleStats
+    lavh1          <- object@h1
     lavimplied     <- object@implied
     lavpta         <- object@pta
+
+    res <- lav_predict_internal(lavmodel = lavmodel, lavdata = lavdata,
+        lavsamplestats = lavsamplestats, lavimplied = lavimplied, lavh1 = lavh1,
+        lavpta = lavpta, newdata = newdata, type = type, method = method,
+        transform = transform, se = se, acov = acov, label = label, fsm = fsm,
+        mdist = mdist, append.data = append.data, assemble = assemble,
+        level = level, optim.method = optim.method, ETA = ETA,
+        drop.list.single.group = drop.list.single.group)
+
+    res
+}
+
+# internal version, to be used if lavobject does not exist yet
+lav_predict_internal <- function(lavmodel = NULL,
+                                 lavdata  = NULL,
+                                 lavsamplestats = NULL,
+                                 lavh1 = NULL,
+                                 lavimplied = NULL,
+                                 lavpta = NULL,
+                       # standard options
+                       newdata = NULL, # keep order of predict(), 0.6-7
+                       type = "lv", method = "EBM", transform = FALSE,
+                       se = "none", acov = "none", label = TRUE, fsm = FALSE,
+                       mdist = FALSE,
+                       append.data = FALSE, assemble = FALSE, # or TRUE?
+                       level = 1L, optim.method = "bfgs", ETA = NULL,
+                       drop.list.single.group = TRUE) {
+
 
     # type
     type <- tolower(type)
@@ -98,7 +127,7 @@ lavPredict <- function(object, newdata = NULL, # keep order of predict(), 0.6-7
         if(type != "lv") {
             stop("lavaan ERROR: standard errors only available if type = \"lv\"")
         }
-        if(lavInspect(object, "categorical")) {
+        if(lavmodel@categorical) {
             se <- acov <- "none"
             warning("lavaan WARNING: standard errors not available (yet) for non-normal data")
         }
@@ -156,7 +185,7 @@ lavPredict <- function(object, newdata = NULL, # keep order of predict(), 0.6-7
         }
 
         # post fit check (lv pd?)
-        ok <- lav_object_post_check(object)
+        # ok <- lav_object_post_check(object)
         #if(!ok) {
         #    stop("lavaan ERROR: lavInspect(,\"post.check\") is not TRUE; factor scores can not be computed. See the WARNING message.")
         #}
@@ -199,8 +228,9 @@ lavPredict <- function(object, newdata = NULL, # keep order of predict(), 0.6-7
 
         # new in 0.6-16
         if(transform) {
-            VETA <- lavTech(object, "cov.lv")
-            EETA <- lavTech(object, "mean.lv")
+            VETA <- computeVETA(lavmodel = lavmodel, remove.dummy.lv = TRUE)
+            EETA <- computeEETA(lavmodel = lavmodel,
+                       lavsamplestats = lavsamplestats, remove.dummy.lv = TRUE)
             out <- lapply(seq_len(lavdata@ngroups), function(g) {
                        # determine block
                        if(lavdata@nlevels == 1L) {
@@ -257,8 +287,9 @@ lavPredict <- function(object, newdata = NULL, # keep order of predict(), 0.6-7
         }
 
         if(mdist) {
-            EETA <- lavTech(object, "mean.lv")
-            VETA <- lavTech(object, "cov.lv")
+            VETA <- computeVETA(lavmodel = lavmodel, remove.dummy.lv = TRUE)
+            EETA <- computeEETA(lavmodel = lavmodel,
+                       lavsamplestats = lavsamplestats, remove.dummy.lv = TRUE)
             MDIST <- lapply(seq_len(lavdata@ngroups), function(g) {
                        A <- FSM[[g]]
                        Sigma <- lavimplied$cov[[g]]
@@ -411,8 +442,6 @@ lavPredict <- function(object, newdata = NULL, # keep order of predict(), 0.6-7
         if(mdist) {
             LAMBDA <- computeLAMBDA(lavmodel = lavmodel,
                                     remove.dummy.lv = FALSE)
-            SAMP <- lavTech(object, "observed")
-            IMPL <- lavTech(object, "implied")
             MDIST <- lapply(seq_len(lavdata@ngroups), function(g) {
                        Sigma <- lavimplied$cov[[g]]; LA <- LAMBDA[[g]]
                        if(type == "resid") {
@@ -434,22 +463,23 @@ lavPredict <- function(object, newdata = NULL, # keep order of predict(), 0.6-7
                        } else {
                            outA <- as.matrix(outA)
                        }
-                       if(lavmodel@meanstructure) {
-                           est.mean <- drop(IMPL[[g]]$mean %*% A)
-                           if(type == "resid") {
-                               obs.mean <- drop(SAMP[[g]]$mean %*% A)
-                               est.mean <- drop(IMPL[[g]]$mean %*% A)
-                               outA.mean <- obs.mean - est.mean
-                           } else if(type == "yhat") {
-                               outA.mean <- est.mean
-                           }
-                       } else {
-                           outA.mean <- colMeans(outA)
-                       }
+                       # if(lavmodel@meanstructure) {
+                       #     est.mean <- drop(t(lavimplied$mean[[g]]) %*% A)
+                       #     if(type == "resid") {
+                       #         obs.mean <- drop(lavh1$implied$mean[[g]] %*% A)
+                       #         est.mean <- drop(t(lavimplied$mean[[g]]) %*% A)
+                       #         outA.mean <- obs.mean - est.mean
+                       #     } else if(type == "yhat") {
+                       #         outA.mean <- est.mean
+                       #     }
+                       # } else {
+                       #     outA.mean <- colMeans(outA)
+                       # }
                        outA.cov <-  t(A) %*% Omega.e %*% A
                        outA.cov.inv <- solve(outA.cov)
                        # Mahalobis distance
-                       outA.c <- t( t(outA) - outA.mean ) # center
+                       # outA.c <- t( t(outA) - outA.mean ) # center
+                       outA.c <- outA
                        df.squared <- rowSums((outA.c %*% outA.cov.inv) * outA.c)
                        ret <- df.squared # squared!
                        ret

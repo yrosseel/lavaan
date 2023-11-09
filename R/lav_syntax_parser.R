@@ -755,7 +755,8 @@ ldw_parse_model_string <- function(model.syntax = "", as.data.frame. = FALSE,
       nelem <- length(formul1$elem.type)
     } 
     # handling interaction variable types
-    colons <- which(formul1$elem.text == ":") # check at most 1 colon
+    colons <- which(formul1$elem.text[seq.int(1L, nelem - 1L)] == ":" &
+                      formul1$elem.type[seq.int(2L, nelem)] == types$identifier) # check at most 1 colon
     if (length(colons) > 1) {
       stop(ldw_txt2message(
               "Three-way or higher-order interaction terms (using

@@ -62,11 +62,11 @@ lav_start <- function(start.method    = "default",
             # nothing to do
         } else if(start.method == "simple") {
             start <- numeric( length(lavpartable$ustart) )
-            if(categorical || correlation) {
+            #if(categorical || correlation) {
                 start[ which(lavpartable$op == "=~") ] <- 0.7
-            } else {
-                start[ which(lavpartable$op == "=~") ] <- 1.0
-            }
+            #} else {
+            #    start[ which(lavpartable$op == "=~") ] <- 1.0
+            #}
             start[ which(lavpartable$op == "~*~") ] <- 1.0
             ov.names.ord <- vnames(lavpartable, "ov.ord")
             var.idx <- which(lavpartable$op == "~~" &

@@ -1,6 +1,6 @@
 # 'robust' mean and (co)variance matrix using Huber weights
 #
-# see Yuan & Hayashi (2010). Fittin Data to Model: SEM Diagnosis using two
+# see Yuan & Hayashi (2010). Fitting Data to Model: SEM Diagnosis using two
 #     scatter plots. Psychological Methods, 15(4), 335-351
 #
 # this function is based on the 'robmusig' function from K.H. Yuan's website:

@@ -273,7 +273,7 @@ lav_mplus_header <- function(data.file=NULL, group.label="", ov.names="",
     c.ANALYSIS <- paste(c.ANALYSIS, "  estimator = ", toupper(estimator),
                         ";\n", sep="")
     if(toupper(estimator) %in% c("ML", "MLR")) {
-        c.ANALYSIS <- paste(c.ANALYSIS, "  information = ", information,
+        c.ANALYSIS <- paste(c.ANALYSIS, "  information = ", information[1],
                             ";\n", sep="")
     }
     if(!meanstructure) {
