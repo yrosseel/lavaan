@@ -122,6 +122,11 @@ ldw_parse_step1 <- function(modelsrc, types, debug, warn, spaces.in.operator) {
     comment.lengths <- attr(comments, "match.length")
     for (i in seq_along(comments)) {
       substr(modelsrcw, comments[i], comments[i] + comment.lengths[i] - 1L) <- strrep(" ", comment.lengths[i] - 1L)
+      # check for stringliterals in comment
+      str.in.comment <- (elem.pos > comments[i] & elem.pos < comments[i] + comment.lengths[i])
+      if (any(str.in.comment)) {
+        elem.type[str.in.comment] <- 0
+      }
     }
   }
   modelsrcw <- gsub("\t", " ", modelsrcw)
@@ -238,10 +243,10 @@ ldw_parse_step1 <- function(modelsrc, types, debug, warn, spaces.in.operator) {
     stop(ldw_txt2message("unexpected character", 3L, modelsrc, wrong))
   }
   # remove unused elements from vectors
-  elem.i <- elem.i - 1L
-  elem.pos <- elem.pos[seq_len(elem.i)]
-  elem.type <- elem.type[seq_len(elem.i)]
-  elem.text <- elem.text[seq_len(elem.i)]
+  elements <- which(elem.type > 0L)
+  elem.pos <- elem.pos[elements]
+  elem.type <- elem.type[elements]
+  elem.text <- elem.text[elements]
   # order tokens
   token.order <- order(elem.pos)
   elem.pos <- elem.pos[token.order]
