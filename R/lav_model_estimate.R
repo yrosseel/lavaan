@@ -71,7 +71,7 @@ lav_model_estimate <- function(lavmodel       = NULL,
     if(lavoptions$optim.parscale == "none") {
         # do nothing, but still set SCALE, as before
     } else if(lavoptions$optim.parscale %in% c("stand", "st", "standardize",
-                                               "standarized", "stand.all")) {
+                                               "standardized", "stand.all")) {
         # rescale parameters as if the data was standardized
         # new in 0.6-2
         #

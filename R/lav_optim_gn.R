@@ -10,6 +10,9 @@
 # - better approach for simple bounds
 # ...
 
+# YR - 04 Nov 2023: add huber = TRUE option to get 'outlier-robust' estimates
+#      (see Yuan and Zhong 2008, where they call this IRLS_r)
+
 
 # objective function, plus 'extra' information
 # needed for a Gauss Newton step
@@ -184,7 +187,7 @@ lav_optim_gn <- function(lavmodel = NULL, lavsamplestats = NULL,
         alpha <- 1.0
         step  <- U.invQ[seq_len(npar)]
         # TODO: if step-halving fails, we could also
-        # alllow the steps to be negative
+        # allow the steps to be negative
         for(h in 1:max(1L, stephalf.max)) {
             new.x <- old.x + (alpha * step)
 
