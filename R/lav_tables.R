@@ -724,6 +724,7 @@ lav_tables_oneway <- function(lavobject = NULL, lavdata = NULL,
     out
 }
 
+# HJ 15/1/2023 MODIFIED to add sampling weights
 # compute pairwise (two-way) frequency tables
 lav_tables_pairwise_freq_cell <- function(lavdata = NULL,
                                           as.data.frame. = TRUE) {
@@ -733,6 +734,7 @@ lav_tables_pairwise_freq_cell <- function(lavdata = NULL,
     X        <- lavdata@X
     ov.names <- lavdata@ov.names
     ngroups  <- lavdata@ngroups
+    wt       <- lavdata@weights
 
     # identify 'categorical' variables
     cat.idx <- which(vartable$type %in% c("ordered","factor"))
@@ -766,6 +768,19 @@ lav_tables_pairwise_freq_cell <- function(lavdata = NULL,
                 Y2 <- X[[g]][,idx2]
                 # FREQ <- table(Y1, Y2) # we loose missings; useNA is ugly
                 FREQ <- lav_bvord_freq(Y1, Y2)
+
+                # >>>>>>>> HJ/MK PML CODE >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+
+                # If we want to use weighted frequencies we can use the code
+                # below. However, it will probably make sense only when the
+                # weights are normalised. If they're not, we may get quite ugly
+                # and nonsensical numbers here. So for now, just keep the
+                # lavtables as is (using non-weighted frequencies).
+                #
+                # FREQ <- lav_bvord_freq(Y1, Y2, wt[[g]])
+
+                # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+
 
                 list(   id = rep.int(id, ncell),
                        lhs = rep.int(x[1], ncell),

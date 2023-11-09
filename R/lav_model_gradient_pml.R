@@ -18,6 +18,9 @@ fml_deriv1 <- function(Sigma.hat = NULL,    # model-based var/cov/cor
 # chain rule to get the gradient
 # this is adapted from code written by Myrsini Katsikatsou
 # first attempt - YR 5 okt 2012
+# HJ 18/10/23: Modification for complex design and completely observed data (no
+# missing) with only ordinal indicators to get the right gradient for the
+# optimisation and Hessian computation.
 pml_deriv1 <- function(Sigma.hat  = NULL,       # model-based var/cov/cor
                        Mu.hat     = NULL,       # model-based means
                        TH         = NULL,       # model-based thresholds + means
@@ -83,12 +86,21 @@ pml_deriv1 <- function(Sigma.hat  = NULL,       # model-based var/cov/cor
 
     # shortcut for ordinal-only/no-exo case
     if(!scores && all(ov.types == "ordered") && nexo == 0L) {
-        gradient <- grad_tau_rho(no.x               = nvar,
-                                 all.thres          = TH,
-                                 index.var.of.thres = th.idx,
-                                 rho.xixj           = cors,
-                                 n.xixj.vec         = lavcache$bifreq,
-                                 out.LongVecInd     = lavcache$LONG)
+      # >>>>>>>> HJ/MK PML CODE >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+
+      if (is.null(wt)) {
+        n.xixj.vec <- lavcache$bifreq
+      } else {
+        n.xixj.vec <- lavcache$sum_obs_weights_xixj_ab_vec
+      }
+      gradient <- grad_tau_rho(no.x               = nvar,
+                               all.thres          = TH,
+                               index.var.of.thres = th.idx,
+                               rho.xixj           = cors,
+                               n.xixj.vec         = n.xixj.vec,
+                               out.LongVecInd     = lavcache$LONG)
+
+      # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
         if(missing == "available.cases") {
             uniPI <- univariateExpProbVec(TH = TH, th.idx = th.idx)

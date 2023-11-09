@@ -8,6 +8,7 @@
 
 # YR 26 Jan 2017: use '...' to capture the never-ending list of options
 # YR 07 Feb 2023: add ov.order= argument
+# HJ 18 Oct 2023: extend PML to allow sampling weights
 
 lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                    model              = NULL,
@@ -621,8 +622,9 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
         }
 
         # sampling weights? force MLR
+        # HJ 18/10/23: Except for PML
         if(!is.null(sampling.weights) && !opt$.categorical &&
-           opt$estimator %in% c("default", "ML")) {
+           opt$estimator %in% c("default", "ML", "PML")) {
             opt$estimator <- "MLR"
         }
 
@@ -1305,6 +1307,101 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                 lavcache[[g]] <- list(bifreq = bifreq,
                                       nobs   = binobs,
                                       LONG   = LONG)
+
+                # >>>>>>>> HJ/MK PML CODE >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+
+                # I need to add something that splits weights into g groups so
+                # adjust what follows in the new code also compute the sum of
+                # weights within a group, this will substitute n_g (group size)
+                # of simple random sampling (SRS) and also compute the total the
+                # total sum of weights over all observation over all groups,
+                # this substitutes the total sample size of SRS.
+
+                if(!is.null(sampling.weights)) {
+                  # Keep track of indices of the response categories (a,b) of a
+                  # pair of ordinal variables (xi,xj) appearing in the data as
+                  # well as the index of the pair.
+                  idx_ab_of_xixj_ab <- lapply(LONG[c(1:2, 5)], function(x) {
+                    x[(LONG$index.thres.var1.of.pair != 0) &
+                        (LONG$index.thres.var2.of.pair != 0)]
+                    })
+                  names(idx_ab_of_xixj_ab) <- c("idx_a", "idx_b", "idx_pairs")
+                  lavcache[[g]]$idx_ab_of_xixj_ab <- idx_ab_of_xixj_ab
+
+                  # Raw data for group g
+                  X_g <- lavdata@X[[g]]
+
+                  # I assume that X_g includes only the ordinal indicators nvar
+                  # gives the number of ordinal indicators
+                  nvar <- ncol(X_g)
+
+                  # pstar gives the number of pairs formed by the nvar ordinal
+                  # indicators
+                  pstar <- nvar * (nvar - 1) / 2
+
+                  # Keep track of the indices of variables forming each pair
+                  idx_vars_in_pair <- combn(nvar, 2)
+
+                  # The output of sapply below provides the sum of weights for
+                  # all bivariate response pattern for all pairs of indicators.
+
+                  # If all indicators have the same number of response
+                  # categories, the output of sapply function below is a matrix.
+                  # Each column refers to a different pair of indicators (i,j)
+                  # with j running faster than i, e.g. (1,2) (1,3) (2,3). Within
+                  # each column, each element (i.e. each row of the matrix)
+                  # refers to a different combination of response categories
+                  # (a,b) with a, the category index of indicator i, running
+                  # faster than b, the category index of indicator j, e.g.
+                  # (1,1), (2,1) (3,1) (1,2) (2,2) (3,2)
+
+                  # If the indicators have different number of response
+                  # categories, the output of sapply function below is a list.
+                  # Each element of the list refers to a different pair of
+                  # indicators (i,j) with j running faster than i and it is a
+                  # matrix with number of rows the number of response categories
+                  # of indicator i and ncol =  the number of response categories
+                  # of indicator j.
+
+                  sum_obs_weights_xixj_ab <- sapply(1:pstar, function(x) {
+                    tmp_idx_ab <- lapply(idx_ab_of_xixj_ab, function(y) {
+                      y[idx_ab_of_xixj_ab$idx_pairs == x]})
+                    tmp_idx_cols <- idx_vars_in_pair[, x]
+                    tmp_var1 <- factor(X_g[, tmp_idx_cols[1]], levels =
+                                         as.character(unique(tmp_idx_ab$idx_a)))
+                    tmp_var2 <- factor(X_g[, tmp_idx_cols[2]], levels =
+                                         as.character(unique(tmp_idx_ab$idx_b)))
+                    tapply(X = lavdata@weights[[g]],
+                           INDEX = list(tmp_var1, tmp_var2),
+                           FUN = sum)
+                  })
+
+                  # We need to transform the output of sapply into a vector
+                  # where the sum of weights (for all bivariate response
+                  # patterns for all pairs of indicators) are listed in the same
+                  # order as in pairwisePI vector, i.e. a runs the fastest,
+                  # followed by b, then by j and lastly by i.
+
+                  if (is.matrix(sum_obs_weights_xixj_ab)) {
+                    sum_obs_weights_xixj_ab_vec <- c(sum_obs_weights_xixj_ab)
+                  } else if(is.list(sum_obs_weights_xixj_ab)) {
+                    sum_obs_weights_xixj_ab_vec <-
+                      do.call(c, sum_obs_weights_xixj_ab)
+                  }
+
+                  # Note that sapply gives NA for these bivariate response
+                  # patterns which are not observed at all. Substitute NA with
+                  # 0.
+                  idx_na_sowxav <- is.na(sum_obs_weights_xixj_ab_vec)
+                  if(any(idx_na_sowxav)) {
+                    sum_obs_weights_xixj_ab_vec[idx_na_sowxav] <- 0
+                  }
+
+                  lavcache[[g]]$sum_obs_weights_xixj_ab_vec <-
+                    sum_obs_weights_xixj_ab_vec
+                }
+
+                # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
                 # available cases
                 if(lavoptions$missing == "available.cases" ||

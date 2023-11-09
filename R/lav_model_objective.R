@@ -267,6 +267,7 @@ lav_model_objective <- function(lavmodel       = NULL,
                                           num.idx   = num.idx[[g]],
                                           X         = lavdata@X[[g]],
                                           eXo       = lavdata@eXo[[g]],
+                                          wt        = lavdata@weights[[g]],
                                           lavcache  = lavcache[[g]],
                                           missing   = lavdata@missing)
             } else {
@@ -278,6 +279,7 @@ lav_model_objective <- function(lavmodel       = NULL,
                                           num.idx   = num.idx[[g]],
                                           X         = lavdata@X[[g]],
                                           eXo       = NULL,
+                                          wt        = lavdata@weights[[g]],
                                           lavcache  = lavcache[[g]],
                                           missing   = lavdata@missing)
             }

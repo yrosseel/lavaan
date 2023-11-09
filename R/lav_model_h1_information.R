@@ -558,6 +558,8 @@ lav_model_h1_information_observed <- function(lavobject      = NULL,
 }
 
 # outer product of the case-wise scores (gradients)
+# HJ 18/10/2023: Adjust J matrix correctly using weights. Note: H matrix is
+# based on lav_model_hessian so no changes required.
 lav_model_h1_information_firstorder <- function(lavobject      = NULL,
                                                 lavmodel       = NULL,
                                                 lavsamplestats = NULL,
@@ -677,13 +679,28 @@ lav_model_h1_information_firstorder <- function(lavobject      = NULL,
                              num.idx    = lavmodel@num.idx[[g]],
                              X          = lavdata@X[[g]],
                              eXo        = EXO,
+                             wt         = NULL,
                              PI         = PI,
                              lavcache   = lavcache[[g]],
                              missing    = lavdata@missing,
                              scores     = TRUE,
                              negative   = FALSE)
+
+            # >>>>>>>> HJ/MK PML CODE >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+
             # information H1
-            B1[[g]] <- lav_matrix_crossprod(SC)
+            if (is.null(WT)) {
+              B1[[g]] <- lav_matrix_crossprod(SC)
+            } else {
+              # Option 1: Do a weighted cross product
+              B1[[g]] <- crossprod(WT * SC)
+
+              # Option 2: Compute the sample covariance multiplied by n
+              # cov_tmp <- stats::cov.wt(SC, wt = WT, method = "ML")
+              # B1[[g]] <- with(cov_tmp, n.obs * cov)
+            }
+
+            # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
         } else if(estimator == "ML" && lavdata@nlevels > 1L) {
 
