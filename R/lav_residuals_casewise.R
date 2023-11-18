@@ -6,6 +6,10 @@ lav_residuals_casewise <- function(object, labels = labels) {
     if(object@Data@data.type != "full") {
         stop("lavaan ERROR: casewise residuals not available if sample statistics were used for fitting the model")
     }
+    # check if we have categorical data
+    if(object@Model@categorical) {
+        stop("lavaan ERROR: casewise residuals not available if data is categorical")
+    }
 
     G <- object@Data@ngroups
     ov.names <- object@Data@ov.names

@@ -426,7 +426,11 @@ lav_model_information_firstorder <- function(lavmodel       = NULL,
 
         # NOTE: UNSURE ABOUT THIS PART. WHAT IS THE ROLE OF fg?
 
-        wt <- lavdata@weights[[g]]
+        if(.hasSlot(lavdata, "weights")) {
+            wt <- lavdata@weights[[g]]
+        } else { # pre-0.6 object
+            wt <- NULL
+        }
         if (is.null(wt)) {
           fg <- lavsamplestats@nobs[[g]] / lavsamplestats@ntotal
         } else {
@@ -455,7 +459,8 @@ lav_model_information_firstorder <- function(lavmodel       = NULL,
     # >>>>>>>> HJ/MK PML CODE >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
     if(lavmodel@estimator == "PML" || lavmodel@estimator == "MML") {
-        if (length(lavdata@sampling.weights) == 0) {
+        if (!.hasSlot(lavdata, "sampling.weights") ||
+            length(lavdata@sampling.weights) == 0) {
           the_N <- lavsamplestats@ntotal
         } else {
           the_N <- sum(unlist(lavdata@weights))

@@ -60,7 +60,14 @@ lavPredict <- function(object, newdata = NULL, # keep order of predict(), 0.6-7
     lavmodel       <- object@Model
     lavdata        <- object@Data
     lavsamplestats <- object@SampleStats
-    lavh1          <- object@h1
+    # backward compatibility
+    if(.hasSlot(object, "h1")) {
+        lavh1 <- object@h1
+    } else {
+        lavh1 <- lav_h1_implied_logl(lavdata = object@Data,
+                                     lavsamplestats = object@SampleStats,
+                                     lavoptions = object@Options)
+    }
     lavimplied     <- object@implied
     lavpta         <- object@pta
 
@@ -100,6 +107,11 @@ lav_predict_internal <- function(lavmodel = NULL,
         type <- "yhat"
     } else if(type %in% c("residuals", "resid", "error")) {
         type <- "resid"
+    }
+
+    # if resid, not for categorical
+    if(type == "resid" && lavmodel@categorical) {
+        stop("lavaan ERROR: casewise residuals not available if data is categorical")
     }
 
     # append.data? check level
@@ -350,7 +362,7 @@ lav_predict_internal <- function(lavmodel = NULL,
                            if(is.matrix(ACOV[[g]])) {
                                ret <- ACOV[[g]][-lv.idx, -lv.idx, drop = FALSE]
                            } else if(is.list(ACOV[[g]])) {
-                               ACOV[[g]] <- lapply(ACOV[[g]], function(x) {
+                               ret <- lapply(ACOV[[g]], function(x) {
                                    ret <- x[-lv.idx, -lv.idx, drop = FALSE]
                                    ret})
                            }
@@ -377,7 +389,9 @@ lav_predict_internal <- function(lavmodel = NULL,
                 }
 
                 if(fsm) {
-                    if(is.matrix(FSM[[g]])) {
+                    if(is.null(FSM[[g]])) {
+                        # skip
+                    } else if(is.matrix(FSM[[g]])) {
                         dimnames(FSM[[g]]) <- list(lavpta$vnames$lv[[gg]],
                                                    #ov.names[[g]]) # !not gg
                                                    lavpta$vnames$ov.ind[[gg]])
@@ -391,11 +405,15 @@ lav_predict_internal <- function(lavmodel = NULL,
                 }
 
                 if(se != "none") {
-                    colnames(SE[[g]]) <- lavpta$vnames$lv[[gg]]
+                    if(!is.null(SE[[g]])) {
+                        colnames(SE[[g]]) <- lavpta$vnames$lv[[gg]]
+                    }
                 }
 
                 if(acov != "none") {
-                    if(is.matrix(ACOV[[g]])) {
+                    if(is.null(ACOV[[g]])) {
+                        # skip
+                    } else if(is.matrix(ACOV[[g]])) {
                         dimnames(ACOV[[g]]) <- list(lavpta$vnames$lv[[gg]],
                                                     lavpta$vnames$lv[[gg]])
                     } else if(is.list(ACOV[[g]])) {
@@ -1570,8 +1588,7 @@ lav_predict_fy <- function(lavobject = NULL, # for convience
                 lavdata = lavdata, lavsamplestats = lavsamplestats,
                 lavimplied = lavimplied,
                 data.obs = data.obs, eXo = eXo, ETA = ETA, method = method,
-                duplicate = FALSE, optim.method = optim.method,
-                delta = FALSE)
+                duplicate = FALSE, optim.method = optim.method)
 
     THETA <- computeTHETA(lavmodel = lavmodel)
     TH    <- computeTH(   lavmodel = lavmodel, delta = FALSE)
