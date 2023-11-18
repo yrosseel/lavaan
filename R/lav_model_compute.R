@@ -210,7 +210,7 @@ computeMuHatJoint <- function(lavmodel = NULL, GLIST = NULL) {
 
 # TH.star = DELTA.star * (th.star - pi0.star)
 # see Muthen 1984 eq 11
-computeTH <- function(lavmodel = NULL, GLIST = NULL) {
+computeTH <- function(lavmodel = NULL, GLIST = NULL, delta = TRUE) {
 
     # state or final?
     if(is.null(GLIST)) GLIST <- lavmodel@GLIST
@@ -236,7 +236,7 @@ computeTH <- function(lavmodel = NULL, GLIST = NULL) {
 
         if(representation == "LISREL") {
             TH[[g]] <- computeTH.LISREL(MLIST = GLIST[ mm.in.group ],
-                                        th.idx=th.idx[[g]])
+                                        th.idx = th.idx[[g]], delta = delta)
         } else {
             stop("only representation LISREL has been implemented for now")
         }
@@ -247,7 +247,7 @@ computeTH <- function(lavmodel = NULL, GLIST = NULL) {
 
 # PI = slope structure
 # see Muthen 1984 eq 12
-computePI <- function(lavmodel = NULL, GLIST = NULL) {
+computePI <- function(lavmodel = NULL, GLIST = NULL, delta = TRUE) {
 
     # state or final?
     if(is.null(GLIST)) GLIST <- lavmodel@GLIST
@@ -270,7 +270,7 @@ computePI <- function(lavmodel = NULL, GLIST = NULL) {
             PI.g <- numeric( lavmodel@nvar[g] )
         } else
         if(representation == "LISREL") {
-            PI.g <- computePI.LISREL(MLIST = MLIST)
+            PI.g <- computePI.LISREL(MLIST = MLIST, delta = delta)
         } else {
             stop("only representation LISREL has been implemented for now")
         }
@@ -283,7 +283,7 @@ computePI <- function(lavmodel = NULL, GLIST = NULL) {
 
 
 # GW = group weight
-computeGW <- function(lavmodel = NULL, GLIST=NULL) {
+computeGW <- function(lavmodel = NULL, GLIST = NULL) {
 
     # state or final?
     if(is.null(GLIST)) GLIST <- lavmodel@GLIST
@@ -444,7 +444,7 @@ computeVETAx <- function(lavmodel = NULL, GLIST = NULL) {
 
 # COV: observed+latent variances variances/covariances
 computeCOV <- function(lavmodel = NULL, GLIST = NULL,
-                       remove.dummy.lv = FALSE) {
+                       remove.dummy.lv = FALSE, delta = TRUE) {
 
     # state or final?
     if(is.null(GLIST)) GLIST <- lavmodel@GLIST
@@ -463,7 +463,7 @@ computeCOV <- function(lavmodel = NULL, GLIST = NULL,
         MLIST <- GLIST[ mm.in.group ]
 
         if(representation == "LISREL") {
-            COV.g <- computeCOV.LISREL(MLIST = MLIST)
+            COV.g <- computeCOV.LISREL(MLIST = MLIST, delta = delta)
 
             if(remove.dummy.lv) {
                 # remove all dummy latent variables
@@ -717,7 +717,8 @@ computeNU <- function(lavmodel = NULL, GLIST = NULL,
 
 # E(Y): expectation (mean) of observed variables
 # returns vector 1 x nvar
-computeEY <- function(lavmodel = NULL, GLIST = NULL, lavsamplestats = NULL) {
+computeEY <- function(lavmodel = NULL, GLIST = NULL, lavsamplestats = NULL,
+                      delta = TRUE) {
 
     # state or final?
     if(is.null(GLIST)) GLIST <- lavmodel@GLIST
@@ -742,7 +743,8 @@ computeEY <- function(lavmodel = NULL, GLIST = NULL, lavsamplestats = NULL) {
                              ov.y.dummy.ov.idx=lavmodel@ov.y.dummy.ov.idx[[g]],
                              ov.x.dummy.ov.idx=lavmodel@ov.x.dummy.ov.idx[[g]],
                              ov.y.dummy.lv.idx=lavmodel@ov.y.dummy.lv.idx[[g]],
-                             ov.x.dummy.lv.idx=lavmodel@ov.x.dummy.lv.idx[[g]])
+                             ov.x.dummy.lv.idx=lavmodel@ov.x.dummy.lv.idx[[g]],
+                             delta = delta)
         } else {
             stop("only representation LISREL has been implemented for now")
         }
@@ -757,7 +759,8 @@ computeEY <- function(lavmodel = NULL, GLIST = NULL, lavsamplestats = NULL) {
 # E(Y | ETA, x_i): conditional expectation (means) of observed variables
 # for a given value of x_i AND eta_i
 computeYHAT <- function(lavmodel = NULL, GLIST = NULL, lavsamplestats = NULL,
-                        eXo = NULL, nobs = NULL, ETA = NULL, duplicate = FALSE) {
+                        eXo = NULL, nobs = NULL, ETA = NULL, duplicate = FALSE,
+                        delta = TRUE) {
 
     # state or final?
     if(is.null(GLIST)) GLIST <- lavmodel@GLIST
@@ -789,7 +792,8 @@ computeYHAT <- function(lavmodel = NULL, GLIST = NULL, lavsamplestats = NULL,
                           ov.y.dummy.ov.idx = lavmodel@ov.y.dummy.ov.idx[[g]],
                           ov.x.dummy.ov.idx = lavmodel@ov.x.dummy.ov.idx[[g]],
                           ov.y.dummy.lv.idx = lavmodel@ov.y.dummy.lv.idx[[g]],
-                          ov.x.dummy.lv.idx = lavmodel@ov.x.dummy.lv.idx[[g]])
+                          ov.x.dummy.lv.idx = lavmodel@ov.x.dummy.lv.idx[[g]],
+                          delta = delta)
             } else {
                 # unconditional case
                 YHAT[[g]] <- computeEYetax3.LISREL(MLIST = MLIST,
@@ -799,7 +803,8 @@ computeYHAT <- function(lavmodel = NULL, GLIST = NULL, lavsamplestats = NULL,
                           ov.y.dummy.ov.idx = lavmodel@ov.y.dummy.ov.idx[[g]],
                           ov.x.dummy.ov.idx = lavmodel@ov.x.dummy.ov.idx[[g]],
                           ov.y.dummy.lv.idx = lavmodel@ov.y.dummy.lv.idx[[g]],
-                          ov.x.dummy.lv.idx = lavmodel@ov.x.dummy.lv.idx[[g]])
+                          ov.x.dummy.lv.idx = lavmodel@ov.x.dummy.lv.idx[[g]],
+                          delta = delta)
                 # impute back ov.y values that are NOT indicators
             }
         } else {

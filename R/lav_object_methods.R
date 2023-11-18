@@ -771,6 +771,15 @@ parameterestimates <- function(object,
                               level = level,
                               est = unlist(r2), stringsAsFactors = FALSE )
             }
+            # add step column if needed
+            if(!is.null(LIST$step)) {
+                R2$step <- 2L # per default
+                # simplification: we assume that only the
+                # observed indicators of latent variables are step 1
+                ov.ind <- unlist(object@pta$vnames$ov.ind)
+                step1.idx <- which(R2$lhs %in% ov.ind)
+                R2$step[step1.idx] <- 1L
+            }
             LIST <- lav_partable_merge(pt1 = LIST, pt2 = R2, warn = FALSE)
         }
     }

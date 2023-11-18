@@ -619,7 +619,7 @@ computeEY.LISREL <- function(MLIST=NULL, mean.x = NULL, sample.mean = NULL,
                              ov.y.dummy.ov.idx=NULL,
                              ov.x.dummy.ov.idx=NULL,
                              ov.y.dummy.lv.idx=NULL,
-                             ov.x.dummy.lv.idx=NULL) {
+                             ov.x.dummy.lv.idx=NULL, delta = TRUE) {
 
     LAMBDA <- MLIST$lambda
 
@@ -642,7 +642,7 @@ computeEY.LISREL <- function(MLIST=NULL, mean.x = NULL, sample.mean = NULL,
     EY <- as.vector(NU) + as.vector(LAMBDA %*% EETA)
 
     # if delta, scale
-    if(!is.null(MLIST$delta)) {
+    if(delta && !is.null(MLIST$delta)) {
         EY <- EY * as.vector(MLIST$delta)
     }
 
@@ -671,7 +671,8 @@ computeEYx.LISREL <- function(MLIST             = NULL,
                               ov.y.dummy.ov.idx = NULL,
                               ov.x.dummy.ov.idx = NULL,
                               ov.y.dummy.lv.idx = NULL,
-                              ov.x.dummy.lv.idx = NULL) {
+                              ov.x.dummy.lv.idx = NULL,
+                              delta = TRUE) {
 
     LAMBDA <- MLIST$lambda
 
@@ -697,7 +698,7 @@ computeEYx.LISREL <- function(MLIST             = NULL,
     EYx <- sweep(tcrossprod(EETAx, LAMBDA), 2L, STATS = NU, FUN = "+")
 
     # if delta, scale
-    if(!is.null(MLIST$delta)) {
+    if(delta && !is.null(MLIST$delta)) {
         EYx <- sweep(EYx, 2L, STATS = MLIST$delta, FUN = "*")
     }
 
@@ -729,7 +730,8 @@ computeEYetax.LISREL <- function(MLIST             = NULL,
                                  ov.y.dummy.ov.idx = NULL,
                                  ov.x.dummy.ov.idx = NULL,
                                  ov.y.dummy.lv.idx = NULL,
-                                 ov.x.dummy.lv.idx = NULL) {
+                                 ov.x.dummy.lv.idx = NULL,
+                                 delta = TRUE) {
 
     LAMBDA <- MLIST$lambda
     BETA   <- MLIST$beta
@@ -804,7 +806,7 @@ computeEYetax.LISREL <- function(MLIST             = NULL,
     EYetax <- sweep(tcrossprod(ETA2, LAMBDA), 2L, STATS = NU, FUN = "+")
 
     # if delta, scale
-    if(!is.null(MLIST$delta)) {
+    if(delta && !is.null(MLIST$delta)) {
         EYetax <- sweep(EYetax, 2L, STATS = MLIST$delta, FUN = "*")
     }
 
@@ -818,7 +820,8 @@ computeEYetax2.LISREL <- function(MLIST             = NULL,
                                   ov.y.dummy.ov.idx = NULL,
                                   ov.x.dummy.ov.idx = NULL,
                                   ov.y.dummy.lv.idx = NULL,
-                                  ov.x.dummy.lv.idx = NULL) {
+                                  ov.x.dummy.lv.idx = NULL,
+                                  delta = TRUE) {
 
     LAMBDA <- MLIST$lambda
     BETA   <- MLIST$beta
@@ -859,7 +862,7 @@ computeEYetax2.LISREL <- function(MLIST             = NULL,
     EYetax <- sweep(tcrossprod(ETA, LAMBDA), 2L, STATS = NU, FUN = "+")
 
     # if delta, scale
-    if(!is.null(MLIST$delta)) {
+    if(delta && !is.null(MLIST$delta)) {
         EYetax <- sweep(EYetax, 2L, STATS = MLIST$delta, FUN = "*")
     }
 
@@ -874,7 +877,8 @@ computeEYetax3.LISREL <- function(MLIST             = NULL,
                                   ov.y.dummy.ov.idx = NULL,
                                   ov.x.dummy.ov.idx = NULL,
                                   ov.y.dummy.lv.idx = NULL,
-                                  ov.x.dummy.lv.idx = NULL) {
+                                  ov.x.dummy.lv.idx = NULL,
+                                  delta = TRUE) {
 
     LAMBDA <- MLIST$lambda
 
@@ -940,7 +944,7 @@ computeEYetax3.LISREL <- function(MLIST             = NULL,
     }
 
     # if delta, scale
-    if(!is.null(MLIST$delta)) {
+    if(delta && !is.null(MLIST$delta)) {
         EYetax <- sweep(EYetax, 2L, STATS = MLIST$delta, FUN = "*")
     }
 
@@ -1050,7 +1054,7 @@ computeMuHat.LISREL <- function(MLIST=NULL) {
 }
 
 # compute TH for a single block/group
-computeTH.LISREL <- function(MLIST=NULL, th.idx=NULL) {
+computeTH.LISREL <- function(MLIST=NULL, th.idx=NULL, delta = TRUE) {
 
     LAMBDA <- MLIST$lambda; nvar <- nrow(LAMBDA); nfac <- ncol(LAMBDA)
     BETA   <- MLIST$beta
@@ -1102,7 +1106,7 @@ computeTH.LISREL <- function(MLIST=NULL, th.idx=NULL) {
     TH <- th - (K_nu %*% pi0)
 
     # if delta, scale
-    if(!is.null(MLIST$delta)) {
+    if(delta && !is.null(MLIST$delta)) {
         DELTA.diag <- MLIST$delta[,1L]
         DELTA.star.diag <- rep(DELTA.diag, times=nlev)
         TH <- TH * DELTA.star.diag
@@ -1112,7 +1116,7 @@ computeTH.LISREL <- function(MLIST=NULL, th.idx=NULL) {
 }
 
 # compute PI for a single block/group
-computePI.LISREL <- function(MLIST=NULL) {
+computePI.LISREL <- function(MLIST=NULL, delta = TRUE) {
 
     LAMBDA <- MLIST$lambda
     BETA   <- MLIST$beta
@@ -1133,7 +1137,7 @@ computePI.LISREL <- function(MLIST=NULL) {
     PI <- LAMBDA..IB.inv %*% GAMMA
 
     # if delta, scale
-    if(!is.null(MLIST$delta)) {
+    if(delta && !is.null(MLIST$delta)) {
         DELTA.diag <- MLIST$delta[,1L]
         PI <- PI * DELTA.diag
     }

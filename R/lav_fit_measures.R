@@ -547,7 +547,7 @@ print.lavaan.fitMeasures <- function(x, ..., nd = 3L, add.h0 = TRUE) {
 
         # container three columns
         c1 <- c2 <- c3 <- character(0L)
-        
+
         #TDJ: Add header used in summary() by lavaan.mi
         if (scaled.flag) {
           c1 <- c("", c1); c2 <- c("Standard", c2); c3 <- c("Scaled", c3)

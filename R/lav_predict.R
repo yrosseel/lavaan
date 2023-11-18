@@ -221,12 +221,41 @@ lav_predict_internal <- function(lavmodel = NULL,
                                lavmodel@ov.x.dummy.lv.idx[[bb]])
                    ret <- out[[g]]
                    if(length(lv.idx) > 0L) {
-                       ret <- out[[g]][, -lv.idx, drop=FALSE]
+                       ret <- out[[g]][, -lv.idx, drop = FALSE]
                    }
                    ret
                })
 
+        # we need to remove the dummy's before we transform
+        if(fsm) {
+            FSM <- lapply(seq_len(lavdata@ngroups), function(g) {
+                       # determine block
+                       if(lavdata@nlevels == 1L) {
+                           bb <- g
+                       } else {
+                           bb <- (g - 1)*lavdata@nlevels + level
+                       }
+                       lv.idx <- c(lavmodel@ov.y.dummy.lv.idx[[bb]],
+                                   lavmodel@ov.x.dummy.lv.idx[[bb]])
+                       #ov.idx <- lavmodel@ov.x.dummy.ov.idx[[bb]]
+                       # or should we use pta$vidx$ov.ind?
+                       ov.ind <- lavpta$vidx$ov.ind[[bb]]
+                       ret <- FSM[[g]]
+                       if(length(lv.idx) > 0L) {
+                           if(is.matrix(FSM[[g]])) {
+                               ret <- FSM[[g]][-lv.idx, ov.ind, drop = FALSE]
+                           } else if(is.list(FSM[[g]])) {
+                               FSM[[g]] <- lapply(FSM[[g]], function(x) {
+                                   ret <- x[-lv.idx, ov.ind, drop = FALSE]
+                                   ret})
+                           }
+                       }
+                       ret
+                   })
+        }
+
         # new in 0.6-16
+        # we assume the dummy lv's have already been removed
         if(transform) {
             VETA <- computeVETA(lavmodel = lavmodel, remove.dummy.lv = TRUE)
             EETA <- computeEETA(lavmodel = lavmodel,
@@ -260,32 +289,7 @@ lav_predict_internal <- function(lavmodel = NULL,
                    })
         }
 
-        if(fsm) {
-            FSM <- lapply(seq_len(lavdata@ngroups), function(g) {
-                       # determine block
-                       if(lavdata@nlevels == 1L) {
-                           bb <- g
-                       } else {
-                           bb <- (g - 1)*lavdata@nlevels + level
-                       }
-                       lv.idx <- c(lavmodel@ov.y.dummy.lv.idx[[bb]],
-                                   lavmodel@ov.x.dummy.lv.idx[[bb]])
-                       ov.idx <- c(lavmodel@ov.y.dummy.ov.idx[[bb]],
-                                   lavmodel@ov.x.dummy.ov.idx[[bb]])
-                       ret <- FSM[[g]]
-                       if(length(lv.idx) > 0L) {
-                           if(is.matrix(FSM[[g]])) {
-                               ret <- FSM[[g]][-lv.idx, -ov.idx, drop = FALSE]
-                           } else if(is.list(FSM[[g]])) {
-                               FSM[[g]] <- lapply(FSM[[g]], function(x) {
-                                   ret <- x[-lv.idx, -ov.idx, drop = FALSE]
-                                   ret})
-                           }
-                       }
-                       ret
-                   })
-        }
-
+        # new in 0.6-17
         if(mdist) {
             VETA <- computeVETA(lavmodel = lavmodel, remove.dummy.lv = TRUE)
             EETA <- computeEETA(lavmodel = lavmodel,
@@ -375,11 +379,13 @@ lav_predict_internal <- function(lavmodel = NULL,
                 if(fsm) {
                     if(is.matrix(FSM[[g]])) {
                         dimnames(FSM[[g]]) <- list(lavpta$vnames$lv[[gg]],
-                                                   ov.names[[g]]) # !not gg
+                                                   #ov.names[[g]]) # !not gg
+                                                   lavpta$vnames$ov.ind[[gg]])
                     } else if(is.list(FSM[[g]])) {
                         FSM[[g]] <- lapply(FSM[[g]], function(x) {
                             dimnames(x) <- list(lavpta$vnames$lv[[gg]],
-                                                ov.names[[g]]) # !not gg
+                                                #ov.names[[g]]) # !not gg
+                                                lavpta$vnames$ov.ind[[gg]])
                             x})
                     }
                 }
@@ -1278,7 +1284,7 @@ lav_predict_eta_ebm_ml <- function(lavobject = NULL,  # for convenience
     EETAx <- computeEETAx(lavmodel = lavmodel, lavsamplestats = lavsamplestats,
                           eXo = eXo, nobs = lapply(data.obs, NROW),
                           remove.dummy.lv = TRUE) ## FIXME?
-    TH    <- computeTH(   lavmodel = lavmodel)
+    TH    <- computeTH(   lavmodel = lavmodel, delta = FALSE)
     THETA <- computeTHETA(lavmodel = lavmodel)
 
     # check for zero entries in THETA (new in 0.6-4)
@@ -1564,13 +1570,11 @@ lav_predict_fy <- function(lavobject = NULL, # for convience
                 lavdata = lavdata, lavsamplestats = lavsamplestats,
                 lavimplied = lavimplied,
                 data.obs = data.obs, eXo = eXo, ETA = ETA, method = method,
-                duplicate = FALSE, optim.method = optim.method)
+                duplicate = FALSE, optim.method = optim.method,
+                delta = FALSE)
 
     THETA <- computeTHETA(lavmodel = lavmodel)
-    TH    <- computeTH(   lavmodel = lavmodel)
-
-    # all normal?
-    NORMAL <- all(lavdata@ov$type == "numeric")
+    TH    <- computeTH(   lavmodel = lavmodel, delta = FALSE)
 
     FY <- vector("list", length=lavdata@ngroups)
     for(g in seq_len(lavdata@ngroups)) {
@@ -1704,7 +1708,8 @@ lav_predict_fy_eta.i <- function(lavmodel = NULL, lavdata = NULL,
                             ov.y.dummy.ov.idx = lavmodel@ov.y.dummy.ov.idx[[g]],
                             ov.x.dummy.ov.idx = lavmodel@ov.x.dummy.ov.idx[[g]],
                             ov.y.dummy.lv.idx = lavmodel@ov.y.dummy.lv.idx[[g]],
-                            ov.x.dummy.lv.idx = lavmodel@ov.x.dummy.lv.idx[[g]])
+                            ov.x.dummy.lv.idx = lavmodel@ov.x.dummy.lv.idx[[g]],
+                            delta = FALSE)
 
     # P(y_i | eta_i, x_i) for all items
     if(all(lavdata@ov$type == "numeric")) {
