@@ -926,6 +926,8 @@ parameterestimates <- function(object,
         class(LIST) <- c("lavaan.parameterEstimates", "lavaan.data.frame",
                          "data.frame")
         if(header) {
+            attr(LIST, "categorical") <- object@Model@categorical
+            attr(LIST, "parameterization") <- object@Model@parameterization
             attr(LIST, "information") <- object@Options$information[1]
             attr(LIST, "information.meat") <- object@Options$information.meat
             attr(LIST, "se") <- object@Options$se
