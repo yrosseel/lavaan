@@ -41,24 +41,25 @@ function(object) {
 })
 
 setMethod("summary", "lavaan",
-function(object, header       = TRUE,
-                 fit.measures = FALSE,
-                 estimates    = TRUE,
-                 ci           = FALSE,
-                 fmi          = FALSE,
-                 std          = FALSE,
-                 standardized = FALSE,
-                 remove.step1 = TRUE,
-                 cov.std      = TRUE,
-                 rsquare      = FALSE,
-                 std.nox      = FALSE,
-                 fm.args      = list(standard.test        = "default",
-                                     scaled.test          = "default",
-                                     rmsea.ci.level       = 0.90,
-                                     rmsea.h0.closefit    = 0.05,
-                                     rmsea.h0.notclosefit = 0.08,
-                                     robust               = TRUE,
-                                     cat.check.pd         = TRUE),
+function(object, header        = TRUE,
+                 fit.measures  = FALSE,
+                 estimates     = TRUE,
+                 ci            = FALSE,
+                 fmi           = FALSE,
+                 std           = FALSE,
+                 standardized  = FALSE,
+                 remove.step1  = TRUE,
+                 remove.unused = TRUE,
+                 cov.std       = TRUE,
+                 rsquare       = FALSE,
+                 std.nox       = FALSE,
+                 fm.args       = list(standard.test        = "default",
+                                      scaled.test          = "default",
+                                      rmsea.ci.level       = 0.90,
+                                      rmsea.h0.closefit    = 0.05,
+                                      rmsea.h0.notclosefit = 0.08,
+                                      robust               = TRUE,
+                                      cat.check.pd         = TRUE),
                  modindices   = FALSE,
                  nd = 3L, cutoff = 0.3, dot.cutoff = 0.1) {
 
@@ -68,7 +69,8 @@ function(object, header       = TRUE,
     res <- lav_object_summary(object = object, header = header,
                fit.measures = fit.measures, estimates = estimates,
                ci = ci, fmi = fmi, std = std, standardized = standardized,
-               remove.step1 = remove.step1, cov.std = cov.std,
+               remove.step1 = remove.step1, remove.unused = remove.unused,
+               cov.std = cov.std,
                rsquare = rsquare, std.nox = std.nox, efa = efa.flag,
                fm.args = fm.args, modindices = modindices)
     # res has class c("lavaan.summary", "list")
@@ -300,7 +302,7 @@ parameterestimates <- function(object,
                                remove.def            = FALSE,
                                remove.nonfree        = FALSE,
                                remove.step1          = TRUE,
-                               #remove.nonfree.scales = FALSE,
+                               remove.unused         = TRUE,
 
                                # output
                                add.attributes = FALSE,
@@ -858,17 +860,32 @@ parameterestimates <- function(object,
         }
     }
 
-    # remove non-free scales (categorical only), except 'user-specified'
-    #
-    # (not yet public)
-    #
-    #if(remove.nonfree.scales) {
-    #    nonfree.scales.idx <- which( LIST$free == 0L & LIST$op == "~*~" &
-    #                                 LIST$user == 0L)
-    #    if(length(nonfree.scales.idx) > 0L) {
-    #        LIST <- LIST[-nonfree.scales.idx,]
-    #    }
-    #}
+    # remove 'unused' parameters
+    # these are parameters that are automatically added (user == 0),
+    # but with their final (est) values fixed to their default values
+    # (typically 1 or 0).
+    # currently only intercepts and scaling-factors (for now)
+    # should we also remove fixed-to-1 variances? (parameterization = theta)?
+    if(remove.unused) {
+        # intercepts
+        int.idx <- which(LIST$op == "~1" &
+                         LIST$user == 0L &
+                         LIST$free == 0L &
+                         LIST$est == 0)
+        if(length(int.idx) > 0L) {
+            LIST <- LIST[-int.idx,]
+        }
+
+        # scaling factors
+        scaling.idx <- which(LIST$op == "~*~" &
+                             LIST$user == 0L &
+                             LIST$free == 0L &
+                             LIST$est == 1)
+        if(length(scaling.idx) > 0L) {
+            LIST <- LIST[-scaling.idx,]
+        }
+    }
+
 
     # remove 'free' column
     LIST$free <- NULL

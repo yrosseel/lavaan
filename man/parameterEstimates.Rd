@@ -14,7 +14,7 @@ parameterEstimates(object,
                    remove.system.eq = TRUE, remove.eq = TRUE, 
                    remove.ineq = TRUE, remove.def = FALSE, 
                    remove.nonfree = FALSE, remove.step1 = TRUE,
-                   add.attributes = FALSE, 
+                   remove.unused = TRUE, add.attributes = FALSE, 
                    output = "data.frame", header = FALSE)
 }
 \arguments{
@@ -72,6 +72,11 @@ all rows containing fixed (non-free) parameters.}
 If \code{TRUE}, filter the 
 output by removing all rows corresponding to the measurement parameters
 that are part of the first step.}
+\item{remove.unused}{Logical. If \code{TRUE}, filter the output by removing
+all rows containing automatically added parameters (user == 0) that are 
+nonfree, and with their final (est) values fixed to their default values 
+(typically 1 or 0); currently only used for intercepts and 
+scaling-factors.}
 \item{rsquare}{Logical. If \code{TRUE}, add additional rows containing
 the rsquare values (in the \code{est} column) of all endogenous variables
 in the model. Both the \code{lhs} and \code{rhs} column contain the

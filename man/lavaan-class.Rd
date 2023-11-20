@@ -131,7 +131,7 @@ the independence model) (if available).}
       of the model fit}
     \item{summary}{\code{signature(object = "lavaan", header = TRUE,
      fit.measures = FALSE, estimates = TRUE, ci = FALSE, fmi = FALSE,
-     standardized = FALSE, remove.step1 = TRUE, 
+     standardized = FALSE, remove.step1 = TRUE, remove.unused = TRUE,
      cov.std = TRUE, rsquare = FALSE, std.nox = FALSE,
      modindices = FALSE, ci = FALSE, nd = 3L)}:
       Print a nice summary of the model estimates.
@@ -153,6 +153,8 @@ the independence model) (if available).}
       statistics for standardized estimates.
       If \code{remove.step1}, the parameters of the measurement part are not
       shown (only used when using \code{sam()}.)
+      If \code{remove.unused}, automatically added parameters that are
+      fixed to their default (0 or 1) values are removed.
       If \code{rsquare=TRUE}, the R-Square values for the dependent variables
       in the model are printed.
       If \code{std.nox = TRUE}, the \code{std.all} column contains the

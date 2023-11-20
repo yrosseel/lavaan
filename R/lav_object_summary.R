@@ -10,6 +10,7 @@
 # YR 26 July 2022: add fm.args= argument to change the way (some) fit measures
 #                  are computed
 # YR 24 Sept 2022: add efa= argument
+# YR 19 Nov  2023: add remove.unused= argument
 
 # create summary of a lavaan object
 lav_object_summary <- function(object, header       = TRUE,
@@ -20,17 +21,18 @@ lav_object_summary <- function(object, header       = TRUE,
                                                 rmsea.ci.level       = 0.90,
                                                 rmsea.h0.closefit    = 0.05,
                                                 rmsea.h0.notclosefit = 0.08),
-                                       estimates    = TRUE,
-                                       ci           = FALSE,
-                                       fmi          = FALSE,
-                                       std          = FALSE,
-                                       standardized = FALSE,
-                                       remove.step1 = TRUE,
-                                       cov.std      = TRUE,
-                                       rsquare      = FALSE,
-                                       std.nox      = FALSE,
-                                       efa          = FALSE,
-                                       efa.args     =
+                                       estimates     = TRUE,
+                                       ci            = FALSE,
+                                       fmi           = FALSE,
+                                       std           = FALSE,
+                                       standardized  = FALSE,
+                                       remove.step1  = TRUE,
+                                       remove.unused = TRUE,
+                                       cov.std       = TRUE,
+                                       rsquare       = FALSE,
+                                       std.nox       = FALSE,
+                                       efa           = FALSE,
+                                       efa.args      =
                                            list(lambda           = TRUE,
                                                 theta            = TRUE,
                                                 psi              = TRUE,
@@ -179,7 +181,7 @@ lav_object_summary <- function(object, header       = TRUE,
                                  remove.ineq = FALSE, remove.def = FALSE,
                                  remove.nonfree = FALSE,
                                  remove.step1 = remove.step1,
-                                 #remove.nonfree.scales = TRUE,
+                                 remove.unused = remove.unused,
                                  output = "text",
                                  header = TRUE)
         if(standardized && std.nox) {
