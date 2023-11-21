@@ -200,10 +200,13 @@ lav_sam_step1 <- function(cmd = "sem", mm.list = NULL, mm.args = list(),
 
         # fill in point estimates measurement block (including slack values)
         PTM <- MM.FIT[[mm]]@ParTable
-        PT$est[ seq_len(length(PT$lhs)) %in% mm.idx &
-               (PT$free > 0L | PT$op %in% c(":=", ">", "<")) ] <-
-            PTM$est[ (PTM$free > 0L | PTM$op %in% c(":=", "<", ">")) &
-                     PTM$user != 3L ]
+        # pt.idx: the row-numbers in PT that correspond to the rows in PTM
+        #pt.idx <- lav_partable_map_id_p1_in_p2(p1 = PTM, p2 = PT,
+        #             stopifnotfound = TRUE, exclude.nonpar = FALSE)
+        # pt.idx == mm.idx
+        ptm.idx <- which((PTM$free > 0L | PTM$op %in% c(":=", "<", ">")) &
+                          PTM$user != 3L)
+        PT$est[mm.idx[ptm.idx]] <- PTM$est[ptm.idx]
 
         # fill in standard errors measurement block
         if(lavoptions$se != "none") {
@@ -215,21 +218,25 @@ lav_sam_step1 <- function(cmd = "sem", mm.list = NULL, mm.args = list(),
                 PTM.free <- PTM$free
             }
 
-            PT$se[ seq_len(length(PT$lhs)) %in% mm.idx & PT$free > 0L ] <-
-                PTM$se[ PTM$free > 0L & PTM$user != 3L]
+            ptm.se.idx <- which(PTM$free > 0L & PTM$user != 3L) # no :=, <, >
+            #PT$se[ seq_len(length(PT$lhs)) %in% mm.idx & PT$free > 0L ] <-
+            #    PTM$se[ PTM$free > 0L & PTM$user != 3L]
+            PT$se[mm.idx[ptm.se.idx]] <- PTM$se[ptm.se.idx]
 
             # compute variance matrix for this measurement block
             sigma.11 <- MM.FIT[[mm]]@vcov$vcov
 
             # fill in variance matrix
-            par.idx <- PT.free[ seq_len(length(PT$lhs)) %in% mm.idx &
-                                PT$free > 0L ]
-            keep.idx <- PTM.free[ PTM$free > 0 & PTM$user != 3L ]
+            par.idx <- PT.free[mm.idx[ptm.idx]]
+            keep.idx <- PTM.free[ptm.idx]
+            #par.idx <- PT.free[ seq_len(length(PT$lhs)) %in% mm.idx &
+            #                    PT$free > 0L ]
+            #keep.idx <- PTM.free[ PTM$free > 0 & PTM$user != 3L ]
             Sigma.11[par.idx, par.idx] <-
                 sigma.11[keep.idx, keep.idx, drop = FALSE]
 
-            # store indices in step1.free.idx
-            step1.free.idx <- c(step1.free.idx, par.idx)
+            # store (ordered) indices in step1.free.idx
+            step1.free.idx <- c(step1.free.idx, sort.int(par.idx))
         }
 
     } # measurement block

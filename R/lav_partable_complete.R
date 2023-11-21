@@ -47,6 +47,13 @@ lav_partable_complete <- function(partable = NULL, start = TRUE) {
         partable$id <- seq_len(N)
     #}
 
+    # add user column
+    if(is.null(partable$user)) {
+        partable$user <- rep(1L, N)
+    } else {
+         partable$user <- as.integer( partable$user )
+    }
+
     # add block column
     if(is.null(partable$block)) {
         partable$block <- rep(1L, N)
@@ -54,11 +61,11 @@ lav_partable_complete <- function(partable = NULL, start = TRUE) {
         partable$block <- as.integer(partable$block)
     }
 
-    # add user column
-    if(is.null(partable$user)) {
-        partable$user <- rep(1L, N)
+    # add group column
+    if(is.null(partable$group)) {
+        partable$group <- rep(1L, N)
     } else {
-         partable$user <- as.integer( partable$user )
+        # partable$group <- as.integer(partable$group) # maybe labels?
     }
 
     # add free column
@@ -130,7 +137,7 @@ lav_partable_complete <- function(partable = NULL, start = TRUE) {
     }
 
     # order them nicely: id lhs op rhs group
-    idx <- match(c("id", "lhs","op","rhs", "block","user",
+    idx <- match(c("id", "lhs", "op", "rhs", "user", "block", "group",
                    "free","ustart","exo","label"),
                  names(partable))
     tmp <- partable[idx]

@@ -58,7 +58,7 @@ lav_lavaanList_summary <- function(object,
         pe <- parameterEstimates(object, se = FALSE,
                                  remove.system.eq = FALSE, remove.eq = FALSE,
                                  remove.ineq = FALSE, remove.def = FALSE,
-                                 remove.nonfree = FALSE,
+                                 remove.nonfree = FALSE, remove.unused = FALSE,
                                  # zstat = FALSE, pvalue = FALSE, ci = FALSE,
                                  standardized = FALSE,
                                  output = output)

@@ -218,7 +218,6 @@ lav_cor_output <- function(object, output = "cor") {
         out <- inspect(object, "sampstat")
     } else if(output %in% c("parameterEstimates", "pe",
               "parameterestimates", "est")) {
-        #out <- parameterEstimates(object)
         out <- standardizedSolution(object)
     } else {
         out <- object

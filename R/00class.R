@@ -3,6 +3,7 @@
 # initial version: YR 25/03/2009
 # added ModelSyntax: YR 02/08/2010
 # deleted ModelSyntax: YR 01/11/2010 (using flattened model syntax now)
+# ldw 20/11/2023: replace 'representation()' by 'slots='
 
 setClass("lavData",
   slots = c(

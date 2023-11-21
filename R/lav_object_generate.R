@@ -274,7 +274,8 @@ lav_object_extended <- function(object, add = NULL,
                                          remove.def = FALSE,
                                          remove.eq = FALSE,
                                          remove.ineq = FALSE,
-                                         remove.nonfree = FALSE)$est
+                                         remove.nonfree = FALSE,
+                                         remove.unused = FALSE)$est
 
     # add new parameters, extend model
     if(is.list(add)) {

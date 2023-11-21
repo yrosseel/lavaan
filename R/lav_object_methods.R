@@ -302,7 +302,7 @@ parameterestimates <- function(object,
                                remove.def            = FALSE,
                                remove.nonfree        = FALSE,
                                remove.step1          = TRUE,
-                               remove.unused         = TRUE,
+                               remove.unused         = FALSE,
 
                                # output
                                add.attributes = FALSE,
@@ -827,7 +827,7 @@ parameterestimates <- function(object,
         SE.comp <- parameterEstimates(fit.complete, ci = FALSE, fmi = FALSE,
             zstat = FALSE, pvalue = FALSE, remove.system.eq = FALSE,
             remove.eq = FALSE, remove.ineq = FALSE,
-            remove.def = FALSE, remove.nonfree = FALSE,
+            remove.def = FALSE, remove.nonfree = FALSE, remove.unused = FALSE,
             rsquare = rsquare, add.attributes = FALSE)$se
 
         SE.comp <- ifelse(SE.comp == 0.0, as.numeric(NA), SE.comp)

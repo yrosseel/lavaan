@@ -867,8 +867,6 @@ print.lavaan.fsr <- function(x, ..., nd = 3L, mm = FALSE, struc = FALSE) {
     if(struc) {
         cat("Structural Part\n")
         cat("\n")
-        #print.lavaan.parameterEstimates(y$PE, ..., nd = nd)
-
         print(summary(y$STRUC.FIT, fit.measures = FALSE, estimates = FALSE,
                                     modindices = FALSE))
         FIT <- fitMeasures(y$STRUC.FIT, fit.measures="default")
@@ -879,7 +877,7 @@ print.lavaan.fsr <- function(x, ..., nd = 3L, mm = FALSE, struc = FALSE) {
     PE <- parameterEstimates(y$STRUC.FIT, ci = FALSE,
                              remove.eq = FALSE, remove.system.eq = TRUE,
                              remove.ineq = FALSE, remove.def = FALSE,
-                             remove.nonfree = FALSE,
+                             remove.nonfree = FALSE, remove.unused = TRUE,
                              output = "text", header = TRUE)
     print.lavaan.parameterEstimates(PE, ..., nd = nd)
 
