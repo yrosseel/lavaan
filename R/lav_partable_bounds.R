@@ -1,3 +1,5 @@
+# add parameter bounds to the parameter table
+# lavoptions$optim.bounds
 lav_partable_add_bounds <- function(partable       = NULL,
                                     lavpta         = NULL,
                                     lavh1          = NULL,
@@ -100,6 +102,21 @@ lav_partable_add_bounds <- function(partable       = NULL,
 
     }
 
+    # new in 0.6-17: check if we have theta parameterization
+    theta.parameterization.flag <- FALSE
+    if(any(partable$op == "~*~") && lavoptions$parameterization == "theta") {
+        # some fixed-to-1 theta elements?
+        ov.scaled <- partable$lhs[partable$op == "~*~"]
+        ov.var.idx <- which(partable$op == "~~" &
+                            partable$lhs %in% ov.scaled &
+                            partable$free == 0L &
+                            partable$ustart == 1)
+        if(length(ov.var.idx) > 0L) {
+            theta.parameterization.flag <- TRUE
+            theta.parameterization.names <- partable$lhs[ov.var.idx]
+        }
+    }
+
     # shortcut
     REL <- optim.bounds$min.reliability.marker
 
@@ -172,6 +189,13 @@ lav_partable_add_bounds <- function(partable       = NULL,
             } else {
                 OV.VAR <- diag(lavsamplestats@cov[[g]])
             }
+        }
+
+        # new in 0.6-17: increase observed variances for 'scaled' parameters
+        # if theta parameterization
+        if(theta.parameterization.flag) {
+            sc.idx <- match(theta.parameterization.names, ov.names)
+            OV.VAR[sc.idx] <- OV.VAR[sc.idx]/REL
         }
 
 
@@ -268,6 +292,11 @@ lav_partable_add_bounds <- function(partable       = NULL,
                     LV.VAR.LB[i] <- max(LOWER, optim.bounds$min.var.lv.exo)
                     #LV.VAR.UB[i] <- marker.var - REL*marker.var
                     LV.VAR.UB[i] <- marker.var
+
+                    # new in 0.6-17
+                    if(theta.parameterization.flag) {
+                        LV.VAR.LB[i] <- REL
+                    }
                 } else {
                     LV.VAR.LB[i] <- optim.bounds$min.var.lv.exo
                     LV.VAR.UB[i] <- max(OV.VAR)

@@ -14,7 +14,7 @@ parameterEstimates(object,
                    remove.system.eq = TRUE, remove.eq = TRUE, 
                    remove.ineq = TRUE, remove.def = FALSE, 
                    remove.nonfree = FALSE, remove.step1 = TRUE,
-                   remove.unused = TRUE, add.attributes = FALSE, 
+                   remove.unused = FALSE, add.attributes = FALSE, 
                    output = "data.frame", header = FALSE)
 }
 \arguments{
