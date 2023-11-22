@@ -12,15 +12,14 @@
 
 
 # FIXME:
-# - if we have more than 1 factor, we remove the structural
-#   part, but should we add ALL correlations among the latent variables?
-#   (YES for now, if add.lv.cov = TRUE)
 # - but fixed-to-zero covariances may not be present in PT...
-#
+# - if indicators are regressed on exogenous covariates, should we
+#   add them here? (no for now, unless add.ind.predictors = TRUE)
 lav_partable_subset_measurement_model <- function(PT = NULL,
                                                   lavpta = NULL,
                                                   lv.names = NULL,
                                                   add.lv.cov = TRUE,
+                                                  add.ind.predictors = FALSE,
                                                   add.idx = FALSE,
                                                   idx.only = FALSE) {
 
@@ -57,6 +56,18 @@ lav_partable_subset_measurement_model <- function(PT = NULL,
 
         # keep =~
         keep.idx <- c(keep.idx, IND.idx)
+
+        # new in 0.6-17: indicators regressed on predictors
+        if(add.ind.predictors) {
+            PRED.idx <- which( PT$op == "~" &
+                               PT$lhs %in% IND &
+                               PT$block == block.values[g] )
+            EXTRA <- unique(PT$rhs[ PRED.idx ])
+            keep.idx <- c(keep.idx, PRED.idx)
+            # add them to IND, so we include their variances/intercepts
+            IND <- c(IND, EXTRA)
+        }
+
 
         # keep ~~
         OV.VAR.idx <- which( PT$op == "~~"   &

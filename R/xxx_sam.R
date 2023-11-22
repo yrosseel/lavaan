@@ -98,6 +98,14 @@ sam <- function(model            = NULL,
     FIT <- lav_sam_step0(cmd = cmd, model = model, data = data, se = se,
                          sam.method = sam.method, dotdotdot = dotdotdot)
 
+    # check for conditional.x, which is not supported yet
+    if(FIT@Options$conditional.x) {
+        warning("lavaan WARNING: sam() does not support conditional.x = TRUE (yet)", "\n\t\t", "  -> switching to conditional.x = FALSE")
+        dotdotdot$conditional.x = FALSE
+        FIT <- lav_sam_step0(cmd = cmd, model = model, data = data, se = se,
+                         sam.method = sam.method, dotdotdot = dotdotdot)
+    }
+
     lavoptions <- lavInspect(FIT, "options")
     if(lavoptions$verbose) {
         cat("This is sam using sam.method = ", sam.method, ".\n", sep = "")
