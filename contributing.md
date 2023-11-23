@@ -18,7 +18,7 @@ Here are some resources to help you get started with open source contributions:
 
 ## Getting started
 
-To undestand how lavaan works and how the code base is organized, see this
+To understand how lavaan works and how the code base is organized, see this
 [understanding_lavaan_internals.R](https://github.com/yrosseel/lavaan/blob/master/inst/understanding_lavaan_internals.R) document. When in doubt, feel
 free to contact the main developer.
 
@@ -42,8 +42,6 @@ anyone. If you find an issue to work on, you are welcome to open a PR with a
 fix.
 
 ### Make Changes
-
-#### Make changes locally
 
 1. Fork the repository.
 - Using GitHub Desktop:
