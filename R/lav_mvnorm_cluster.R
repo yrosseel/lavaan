@@ -1282,6 +1282,11 @@ lav_mvnorm_cluster_em_sat <- function(YLp            = NULL,
         # fx.delta
         fx.delta <- fx - fx.old
 
+        # what if fx.delta is negative?
+        if(fx.delta < 0) {
+            warning("lavaan WARNING: logl decreased during EM steps of the saturated (H1) model")
+        }
+
         if(verbose) {
             cat("EM iter:", sprintf("%3d", i),
                 " fx =", sprintf("%17.10f", fx),

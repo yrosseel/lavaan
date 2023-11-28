@@ -1691,17 +1691,19 @@ lav_samplestats_cluster_patterns <- function(Y = NULL, Lp = NULL,
         # cluster-means
         Y2 <- rowsum.default(Y1, group = cluster.idx, reorder = FALSE,
                      na.rm = FALSE) / cluster.size
-
-        if(length(within.idx) > 0L) {
-            for(i in 1:length(within.idx)) {
-                Y2[, within.idx[i]] <- Y1.means[within.idx[i]]
-            }
-        }
-
         Y2c <- t( t(Y2) - Y1.means )
 
         # compute S.w
-        Y1a <- Y1 - Y2[cluster.idx, , drop = FALSE]
+        # center within variables by grand mean instead of group mean?
+        # (YR: apparently not for S.PW)
+
+        Y2a <- Y2
+        #if(length(within.idx) > 0L) {
+        #    for(i in 1:length(within.idx)) {
+        #        Y2a[, within.idx[i]] <- Y1.means[within.idx[i]]
+        #    }
+        #}
+        Y1a <- Y1 - Y2a[cluster.idx, , drop = FALSE]
         S.w <- lav_matrix_crossprod(Y1a) / (N - nclusters)
 
         # S.b
