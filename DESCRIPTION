@@ -63,3 +63,6 @@ License: GPL (>= 2)
 LazyData: yes
 ByteCompile: true
 URL: https://lavaan.ugent.be
+Suggests: 
+    testthat (>= 3.0.0)
+Config/testthat/edition: 3
