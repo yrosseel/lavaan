@@ -122,10 +122,12 @@ lav_data_update_subset <- function(lavdata = NULL, ov.names = NULL) {
             newdata@eXo[[g]] <- lavdata@eXo[[g]][,lavdata@ov.names.x[[g]] %in%  ov.names[[g]], drop = FALSE]
         }
 
-        # Mp
+        # Mp + nobs
         if(lavdata@missing != "listwise") {
             newdata@Mp[[g]] <- lav_data_missing_patterns(newdata@X[[g]],
                                   sort.freq = FALSE, coverage = FALSE)
+            newdata@nobs[[g]] <-
+                ( nrow(newdata@X[[g]]) - length(newdata@Mp[[g]]$empty.idx) )
         }
 
         # Rp

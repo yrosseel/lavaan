@@ -65,7 +65,9 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     mc <- temp[[1]]
     dotdotdot <- temp[[2]]
     rm(temp)
-    cluster <- mc$cluster
+    if(is.null(mc$cluster)) {
+        cluster <- NULL
+    }
 
     # check data
     if (!is.null(data)) {
@@ -128,7 +130,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     # new in 0.6-14: if NACOV and/or WLS.V are provided, we force
     # ov.order="data" for now
     # until we have reliable code to re-arrange/select col/rows for
-    # of NACOV/WLS.V based on the model-based ov.names
+    # NACOV/WLS.V based on the model-based ov.names
     if (!is.null(NACOV) || !is.null(WLS.V)) {
         ov.order <- "data"
     }
