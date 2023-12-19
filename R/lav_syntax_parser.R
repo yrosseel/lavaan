@@ -464,7 +464,7 @@ ldw_parse_get_modifier <- function(formul1, lhs, opi, modelsrc, types, debug, wa
     while (check.more && nelem > 4L) {
       check.more <- FALSE
       for (par.i in seq.int(3L, nelem - 1L)) {
-        if (formul1$elem.text[par.i - 1L] == "(" && 
+        if (formul1$elem.text[par.i - 1L] == "(" &&
             formul1$elem.text[par.i + 1L] == ")" &&
             formul1$elem.type[par.i - 2L] != types$identifier) {
           formul1$elem.type[par.i - 1L] <- 0L
@@ -744,21 +744,21 @@ ldw_parse_model_string <- function(model.syntax = "", as.data.frame. = FALSE,
     # intercept fixed on 0
     # replace 'lhs ~ 0' => 'lhs ~ 0 * 1' - intercept fixed on zero
     if (formul1$elem.text[nelem] == "0" && op == "~" && opi == nelem - 1L) {
-      formul1$elem.type <- c(formul1$elem.type, types$symbol, types$numliteral) 
-      formul1$elem.text <- c(formul1$elem.text, "*", "1") 
-      formul1$elem.pos <- c(formul1$elem.pos, rep(formul1$elem.pos[nelem], 2)) 
+      formul1$elem.type <- c(formul1$elem.type, types$symbol, types$numliteral)
+      formul1$elem.text <- c(formul1$elem.text, "*", "1")
+      formul1$elem.pos <- c(formul1$elem.pos, rep(formul1$elem.pos[nelem], 2))
       nelem <- length(formul1$elem.type)
-    } 
+    }
     # phantom latent variable
-    # replace 'lhs =~ 0' => 'lhs =~ fixed(0)*lhs', 0 can be other numliteral also, lhs is last element before '=~' 
+    # replace 'lhs =~ 0' => 'lhs =~ fixed(0)*lhs', 0 can be other numliteral also, lhs is last element before '=~'
     if (formul1$elem.type[nelem] == types$numliteral && op == "=~") {
-      formul1$elem.type <- c(formul1$elem.type[seq.int(1L, nelem-1L)], types$identifier, types$symbol, 
-                             types$numliteral, types$symbol, types$symbol, types$identifier) 
-      formul1$elem.text <- c(formul1$elem.text[seq.int(1L, nelem-1L)], "fixed", "(", formul1$elem.text[nelem], 
-                             ")", "*", formul1$elem.text[opi - 1L]) 
-      formul1$elem.pos <- c(formul1$elem.pos[seq.int(1L, nelem-1L)], rep(formul1$elem.pos[nelem], 6)) 
+      formul1$elem.type <- c(formul1$elem.type[seq.int(1L, nelem-1L)], types$identifier, types$symbol,
+                             types$numliteral, types$symbol, types$symbol, types$identifier)
+      formul1$elem.text <- c(formul1$elem.text[seq.int(1L, nelem-1L)], "fixed", "(", formul1$elem.text[nelem],
+                             ")", "*", formul1$elem.text[opi - 1L])
+      formul1$elem.pos <- c(formul1$elem.pos[seq.int(1L, nelem-1L)], rep(formul1$elem.pos[nelem], 6))
       nelem <- length(formul1$elem.type)
-    } 
+    }
     # handling interaction variable types
     colons <- which(formul1$elem.text[seq.int(1L, nelem - 1L)] == ":" &
                       formul1$elem.type[seq.int(2L, nelem)] == types$identifier) # check at most 1 colon

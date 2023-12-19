@@ -3,7 +3,7 @@
 # YR 17 Oct 2023: add ldw parser
 
 lavParseModelString <- function(model.syntax = '', as.data.frame. = FALSE,
-                                parser = "new",
+                                parser = "old",
                                 warn = TRUE, debug = FALSE) {
 
     parser <- tolower(parser)

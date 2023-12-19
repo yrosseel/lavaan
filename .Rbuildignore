@@ -2,3 +2,5 @@
 .travis.yml
 ^.*\.Rproj$
 ^\.Rproj\.user$
+^code_of_conduct.md
+^contributing.md

@@ -67,10 +67,10 @@ lav_dataframe_vartable <- function(frame = NULL, ov.names = NULL,
             nlev[i] <- length(lev)
             lnam[i] <- paste(lev, collapse="|")
             user[i] <- 1L
-        } #else {
-        #    nlev[i] <- nlevels(x)
-        #    lnam[i] <- paste(levels(x), collapse="|")
-        #}
+        } else {
+            nlev[i] <- nlevels(x)
+            lnam[i] <- paste(levels(x), collapse="|")
+        }
 
         type[i] <- type.x
         nobs[i] <- sum(!is.na(x))

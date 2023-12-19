@@ -58,16 +58,16 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     # start timer
     start.time0 <- start.time <- proc.time()[3]
     timing <- list()
-
-    temp <- ldw_adapt_match_call(matchcall = match.call(),
+    # set model.type
+    mc <- match.call(expand.dots = TRUE)
+    temp <- ldw_adapt_match_call(matchcall = mc,
+                                 defaults = NULL,
                                  syscall = sys.call(), # to get main arguments without partial matching
                                  dotdotdot = list(...))
     mc <- temp[[1]]
     dotdotdot <- temp[[2]]
     rm(temp)
-    if(is.null(mc$cluster)) {
-        cluster <- NULL
-    }
+    cluster <- mc$cluster
 
     # check data
     if (!is.null(data)) {
@@ -130,7 +130,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     # new in 0.6-14: if NACOV and/or WLS.V are provided, we force
     # ov.order="data" for now
     # until we have reliable code to re-arrange/select col/rows for
-    # NACOV/WLS.V based on the model-based ov.names
+    # of NACOV/WLS.V based on the model-based ov.names
     if (!is.null(NACOV) || !is.null(WLS.V)) {
         ov.order <- "data"
     }
@@ -174,7 +174,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
         flat.model <- slotParTable
     } else if (is.character(model)) {
         if (is.null(dotdotdot$parser)) {
-            flat.model <- lavParseModelString(model, parser = "new")
+            flat.model <- lavParseModelString(model, parser = "old") # for now
         } else {
             flat.model <- lavParseModelString(model, parser = dotdotdot$parser)
         }
@@ -2249,11 +2249,32 @@ cfa <- sem <- function(# user-specified model: can be syntax, parameter Table
   # options (dotdotdot)
   ...) {
 
-  temp <- ldw_adapt_match_call(matchcall = match.call(),
+  # default options for sem/cfa call
+  defaults <- list(
+    int.ov.free = TRUE,
+    int.lv.free = FALSE,
+    auto.fix.first = TRUE, # (re)set in lav_options_set
+    auto.fix.single = TRUE,
+    auto.var = TRUE,
+    auto.cov.lv.x = TRUE,
+    auto.cov.y = TRUE,
+    auto.th = TRUE,
+    auto.delta = TRUE,
+    auto.efa = TRUE
+  )
+
+  # set model.type
+  mc <- match.call(expand.dots = TRUE)
+  temp <- ldw_adapt_match_call(matchcall = mc,
+                               defaults = defaults,
                                syscall = sys.call(), # to get main arguments without partial matching
                                dotdotdot = list(...))
   mc <- temp[[1]]
-  rm(temp)
+  # set model.type (cfa or sem)
+  mc$model.type <- as.character(mc[[1L]])
+  if(length(mc$model.type) == 3L) {
+    mc$model.type <- mc$model.type[3L]
+  }
 
   # call mother function
   mc[[1L]] <- quote(lavaan::lavaan)
@@ -2296,58 +2317,52 @@ growth <- function(# user-specified model: can be syntax, parameter Table
 
   # options (dotdotdot)
   ...) {
+  # default options for growth call
+  defaults <- list(
+    int.ov.free = FALSE,
+    int.lv.free = TRUE,
+    auto.fix.first = TRUE, # (re)set in lav_options_set
+    auto.fix.single = TRUE,
+    auto.var = TRUE,
+    auto.cov.lv.x = TRUE,
+    auto.cov.y = TRUE,
+    auto.th = TRUE,
+    auto.delta = TRUE,
+    auto.efa = TRUE
+  )
 
-  temp <- ldw_adapt_match_call(matchcall = match.call(),
+  mc <- match.call(expand.dots = TRUE)
+  temp <- ldw_adapt_match_call(matchcall = mc,
+                               defaults = defaults,
                                syscall = sys.call(), # to get main arguments without partial matching
                                dotdotdot = list(...))
   mc <- temp[[1]]
-  rm(temp)
+  # set model.type to growth
+  mc$model.type <- "growth"
 
   # call mother function
   mc[[1L]] <- quote(lavaan::lavaan)
   eval(mc, parent.frame())
 }
 
-ldw_adapt_match_call <- function(matchcall, syscall, dotdotdot) {
+ldw_adapt_match_call <- function(matchcall, defaults, syscall, dotdotdot) {
   mc <- matchcall
+  sc <- syscall
   ddd <- dotdotdot
   # catch partial matching of 'cl' (expanded to cluster)
-  if (!is.null(syscall[["cl"]]) && is.null(syscall[["cluster"]]) &&
+  if (!is.null(sc[["cl"]]) && is.null(sc[["cluster"]]) &&
       !is.null(mc[["cluster"]])) {
-    mc[["cl"]] <- matchcall[["cluster"]]
+    mc[["cl"]] <- mc[["cluster"]]
     mc[["cluster"]] <- NULL
-    ddd$cl <- syscall[["cl"]]
+    ddd$cl <- sc[["cl"]]
   }
-  # set model.type
-  model.type <- as.character(mc[[1L]])
-  if (length(model.type) == 3L) model.type <- model.type[3L]
-  # default options for growth call
-  if (model.type == "growth") {
-    mc$model.type      <- model.type
-    mc$int.ov.free     <- FALSE
-    mc$int.lv.free     <- TRUE
-    mc$auto.fix.first  <- TRUE # (re)set in lav_options_set
-    mc$auto.fix.single <- TRUE
-    mc$auto.var        <- TRUE
-    mc$auto.cov.lv.x   <- TRUE
-    mc$auto.cov.y      <- TRUE
-    mc$auto.th         <- TRUE
-    mc$auto.delta      <- TRUE
-    mc$auto.efa        <- TRUE
-  }
-  # default options for sem/cfa call
-  if (any(model.type == c("sem", "cfa"))) {
-    mc$model.type      <- model.type
-    mc$int.ov.free     <- TRUE
-    mc$int.lv.free     <- FALSE
-    mc$auto.fix.first  <- TRUE # (re)set in lav_options_set
-    mc$auto.fix.single <- TRUE
-    mc$auto.var        <- TRUE
-    mc$auto.cov.lv.x   <- TRUE
-    mc$auto.cov.y      <- TRUE
-    mc$auto.th         <- TRUE
-    mc$auto.delta      <- TRUE
-    mc$auto.efa        <- TRUE
+  if (!is.null(mc$cluster)) mc$cluster <- eval(mc$cluster, parent.frame(2))
+  # default options
+  if (!is.null(defaults)) {
+    for (dflt.i in seq_along(defaults)) {
+      argname <- names(defaults)[dflt.i]
+      if (is.null(mc[[argname]])) mc[[argname]] <- defaults[[dflt.i]]
+    }
   }
   return(list(mc, ddd))
 }
