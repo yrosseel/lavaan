@@ -390,7 +390,7 @@ lav_residuals_acov <- function(object, type = "raw", z.type = "standardized",
     ACOV.res <- vector("list", length = lavdata@ngroups)
 
     # compute ACOV for observed h1 sample statistics (ACOV == Gamma/N)
-    if(lavmodel@categorical) {
+    if(!is.null(lavsamplestats@NACOV[[1]])) {
         NACOV.obs <- lavsamplestats@NACOV
         ACOV.obs <- lapply(NACOV.obs, function(x) x / lavsamplestats@ntotal)
     } else {
