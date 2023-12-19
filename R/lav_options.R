@@ -719,9 +719,9 @@ lav_options_set <- function(opt = NULL) {
             if(orig.estimator %in% c("ml", "mlf")) {
                 if(opt$test[1] == "default") {
                     opt$test <- "standard"
-                } else {
-                    opt$test <- union("standard", opt$test)
-                }
+                } #else {
+                #    opt$test <- union("standard", opt$test)
+                #}
             } else if(orig.estimator == "mlm") {
                 if(opt$test[1] == "default") {
                     opt$test <- "satorra.bentler"
@@ -1022,9 +1022,9 @@ lav_options_set <- function(opt = NULL) {
             if(orig.estimator == "dwls") {
                 if(opt$test[1] == "default") {
                     opt$test <- "standard"
-                } else {
-                    opt$test <- union("standard", opt$test)
-                }
+                } # else {
+                  #  opt$test <- union("standard", opt$test)
+                #}
             } else if(orig.estimator == "wlsm") {
                 if(opt$test[1] == "default") {
                     opt$test <- "satorra.bentler"
@@ -1074,9 +1074,9 @@ lav_options_set <- function(opt = NULL) {
             if(orig.estimator == "uls") {
                 if(opt$test[1] == "default") {
                     opt$test <- "standard"
-                } else {
-                    opt$test <- union("standard", opt$test)
-                }
+                } #else {
+                  #  opt$test <- union("standard", opt$test)
+                #}
             } else if(orig.estimator == "ulsm") {
                 if(opt$test[1] == "default") {
                     opt$test <- "satorra.bentler"
