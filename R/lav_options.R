@@ -992,6 +992,14 @@ lav_options_set <- function(opt = NULL) {
     ##################################################################
     } else if(opt$estimator  %in% c("dwls", "wlsm", "wlsmv", "wlsmvs")) {
 
+        # new in 0.6-17: if !categorical, give a warning
+        if(!opt$.categorical) {
+            warning("lavaan WARNING: estimator ",
+                    dQuote(toupper(opt$estimator)),
+                    " is not recommended for continuous data.",
+                    "\n\t\t  Did you forget to set the ordered= argument?")
+        }
+
         # estimator
         opt$estimator <- "DWLS"
 

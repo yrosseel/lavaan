@@ -440,6 +440,8 @@ ldw_adapt_vector_type <- function(typenu, typetoadd, texttoadd, types) {
     } else {
       if (typenu != typetoadd) typenu <- types$stringliteral
     }
+  } else if (typenu == 0) {
+    typenu <- types$numliteral
   }
   return(typenu)
 }
