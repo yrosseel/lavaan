@@ -99,6 +99,18 @@ testthat::test_that("Returns error message when errors present - ov.names - 1", 
                label = "undefined columns selected")
 })
 
+testthat::test_that("Returns error message when errors present - ov.names - 2", {
+  data = NULL
+
+  #ov.name length == 0L
+  expect_error(efa(data = data,
+                   ov.names = NULL,
+                   nfactors = 1:3,
+                   rotation = "geomin",
+                   rotation.args = list(geomin.epsilon= 0.01, rstarts = 1)),
+               label = "could not extract variable names from data or sample.cov")
+})
+
 #invalid groups input
 testthat::test_that("Returns error message when errors present - dotdotdot$groups", {
   data = HolzingerSwineford1939
@@ -114,7 +126,7 @@ testthat::test_that("Returns error message when errors present - dotdotdot$group
 })
 
 #invalid output
-testthat::test_that("Returns error message when errors present - output", {
+testthat::test_that("Returns error message when errors present - output - 1", {
   data = HolzingerSwineford1939
 
   #invalid output
@@ -126,6 +138,20 @@ testthat::test_that("Returns error message when errors present - output", {
                    output = ""),
                label = "output= must be either \"lavaan\" or \"efa\""
   )
+})
+
+#output = 'lavaan' error
+testthat::test_that("Returns error message when errors present - output - 2", {
+  data = HolzingerSwineford1939
+
+  #invalid nfactors with output lavaan
+  expect_error(efa(data = data,
+                   ov.names = paste("x", 1:9, sep = ""),
+                   nfactors = 1:3,
+                   rotation = "geomin",
+                   rotation.args = list(geomin.epsilon = 0.01, rstarts = 1),
+                   output = "lavaan"),
+               label = "when output = \"lavaan\", nfactors must be a single (integer) number.")
 })
 
 #invalid data input
