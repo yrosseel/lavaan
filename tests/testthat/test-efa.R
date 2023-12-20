@@ -1,5 +1,5 @@
 #basic working example
-testthat::test_that("Returns TRUE when no errors present", {
+testthat::test_that("Returns list when no errors present -1", {
   data = HolzingerSwineford1939
 
   #should return a list if it works
@@ -9,7 +9,21 @@ testthat::test_that("Returns TRUE when no errors present", {
              rotation = "geomin",
              rotation.args = list(geomin.epsilon = 0.01, rstarts = 1))
 
-  expect_true(is.list(fit))
+  expect_type(fit, "list")
+})
+
+testthat::test_that("Returns S4 when no errors present - lavaan", {
+  data = HolzingerSwineford1939
+
+  #working example with "lavaan" output
+  fit <- efa(data = data,
+             ov.names = paste("x", 1:9, sep = ""),
+             nfactors = 1,
+             rotation = "geomin",
+             rotation.args = list(geomin.epsilon = 0.01, rstarts = 1),
+             output = "lavaan")
+
+  expect_type(fit, "S4")
 })
 
 
