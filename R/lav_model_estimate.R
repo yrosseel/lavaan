@@ -70,8 +70,20 @@ lav_model_estimate <- function(lavmodel       = NULL,
 
     if(lavoptions$optim.parscale == "none") {
         # do nothing, but still set SCALE, as before
+
+
+    # 0.6-17:
+    # only temporarily: 'keep' this mistake, and change it later:
+    # (note the "standarized")
+    # we only do this to avoid breaking a test in semlbci
     } else if(lavoptions$optim.parscale %in% c("stand", "st", "standardize",
-                                               "standardized", "stand.all")) {
+                                               "standarized", "stand.all")) {
+
+    # this is what it should be:
+    # } else if(lavoptions$optim.parscale %in% c("stand", "st", "standardize",
+    #                                            "standardized", "stand.all")) {
+
+
         # rescale parameters as if the data was standardized
         # new in 0.6-2
         #

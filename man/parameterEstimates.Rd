@@ -80,7 +80,7 @@ scaling-factors.}
 \item{rsquare}{Logical. If \code{TRUE}, add additional rows containing
 the rsquare values (in the \code{est} column) of all endogenous variables
 in the model. Both the \code{lhs} and \code{rhs} column contain the
-name of the endogenous variable, while the code{op} column contains \code{r2},
+name of the endogenous variable, while the \code{op} column contains \code{r2},
 to indicate that the values in the \code{est} column are rsquare values.}
 \item{add.attributes}{Deprecated argument. Please use output= instead.}
 \item{output}{Character. If \code{"data.frame"}, the parameter table is
