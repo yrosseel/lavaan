@@ -24,19 +24,6 @@ testthat::test_that("Returns list when no errors present - 2", {
   expect_type(fit, "list")
 })
 
-# testthat::test_that("Returns list when no errors present - cluster", {
-#   data = HolzingerSwineford1939
-#
-#   #adding cluster option
-#   fit <- efa(data = data,
-#              ov.names = paste("x", 1:9, sep = ""),
-#              nfactors = 1:3,
-#              rotation = "geomin",
-#              rotation.args = list(geomin.epsilon = 0.01, rstarts = 1),
-#              cluster = "sex")
-#
-#   expect_type(fit, "list")
-# })
 
 testthat::test_that("Returns S4 when no errors present - lavaan", {
   data = HolzingerSwineford1939
