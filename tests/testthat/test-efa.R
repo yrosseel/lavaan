@@ -39,6 +39,27 @@ testthat::test_that("Returns S4 when no errors present - lavaan", {
   expect_type(fit, "S4")
 })
 
+
+#sample cov
+testthat::test_that("Working case using sample cov - 1", {
+  data = cov(HolzingerSwineford1939[paste0("x", 1:9)])
+
+  set.seed(1)
+  fit <- efa(sample.cov = data,
+             sample.nobs = 2)
+  expect_type(fit, "list")
+})
+
+testthat::test_that("Working case using sample cov - 2", {
+  data = cov(HolzingerSwineford1939[paste0("x", 1:9)])
+  rownames(data) <- NULL
+
+  set.seed(1)
+  fit <- efa(sample.cov = data,
+             sample.nobs = 2)
+  expect_type(fit, "list")
+})
+
 #no rotation
 testthat::test_that("Returns warning when errors present - rotation", {
   data = HolzingerSwineford1939
