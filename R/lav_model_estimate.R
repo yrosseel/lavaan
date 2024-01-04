@@ -76,12 +76,12 @@ lav_model_estimate <- function(lavmodel       = NULL,
     # only temporarily: 'keep' this mistake, and change it later:
     # (note the "standarized")
     # we only do this to avoid breaking a test in semlbci
-    } else if(lavoptions$optim.parscale %in% c("stand", "st", "standardize",
-                                               "standarized", "stand.all")) {
+    #} else if(lavoptions$optim.parscale %in% c("stand", "st", "standardize",
+    #                                           "standarized", "stand.all")) {
 
     # this is what it should be:
-    # } else if(lavoptions$optim.parscale %in% c("stand", "st", "standardize",
-    #                                            "standardized", "stand.all")) {
+    } else if(lavoptions$optim.parscale %in% c("stand", "st", "standardize",
+                                               "standardized", "stand.all")) {
 
 
         # rescale parameters as if the data was standardized

@@ -3,7 +3,7 @@
 # Guttman, L. (1952). Multiple group methods for common-factor analysis,
 # their basis, computation, and interpretation. Psychometrika, 17(2) 209--222
 #
-# YR 02 Feb 2023: - first version in lavaan, using quadprog (not std.lv yet)
+# YR 02 Feb 2023: - first version in lavaan, using quadprog (no std.lv yet)
 
 lav_cfa_guttman1952 <- function(S,
                                 marker.idx         = NULL,
