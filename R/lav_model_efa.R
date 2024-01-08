@@ -90,6 +90,13 @@ lav_model_efa_rotate_x <- function(x, lavmodel = NULL, lavoptions = NULL,
 
             # just 1 factor?
             if(length(lv.idx) < 2L) {
+                # new in 0.6-18: reflect if needed
+                if(lavoptions$rotation.args$reflect) {
+                    tmp <- LAMBDA.g[ov.idx, lv.idx, drop = TRUE]
+                    if(sum(tmp) < 0) {
+                        MLIST$lambda[ov.idx, 1] <- -1 * MLIST$lambda[ov.idx, 1]
+                    }
+                }
                 next
             }
 

@@ -51,6 +51,7 @@ lav_partable_flat <- function(FLAT = NULL,
     lv.names.x   <- lav_partable_vnames(FLAT, type="lv.x")   # exogenous lv
     ov.names.y   <- lav_partable_vnames(FLAT, type="ov.y")   # dependent ov
     lv.names.y   <- lav_partable_vnames(FLAT, type="lv.y")   # dependent lv
+    lv.names.efa <- lav_partable_vnames(FLAT, type="lv.efa")
     #lvov.names.y <- c(ov.names.y, lv.names.y)
     lvov.names.y <- c(lv.names.y, ov.names.y)
 
@@ -249,18 +250,23 @@ lav_partable_flat <- function(FLAT = NULL,
         }
     }
 
-    # e) efa latent variables COVARIANCES:
-    #if(auto.efa && length(lv.names.efa) > 1L) {
-    #    efa.values <- lav_partable_efa_values(FLAT)
-    #    for(set in efa.values) {
-    #        # correlated factors within each set
-    #        this.set.lv <- unique(FLAT$lhs[ FLAT$op == "=~" &
-    #                                        FLAT$efa == set ])
-    #        tmp <- utils::combn(this.set.lv, 2)
-    #        lhs <- c(lhs, tmp[1,]) # to fill upper.tri
-    #        rhs <- c(rhs, tmp[2,])
-    #    }
-    #}
+    # e) efa latent variables COVARIANCES; only needed for 'mediators'
+    #    (not in lv.names.x, not in lv.names.y) -- added in 0.6-18
+    if(auto.efa && length(lv.names.efa) > 1L) {
+        efa.values <- lav_partable_efa_values(FLAT)
+        for(set in efa.values) {
+            # correlated factors within each set
+            this.set.lv <- unique(FLAT$lhs[ FLAT$op == "=~" &
+                                           !FLAT$lhs %in% lv.names.x &
+                                           !FLAT$lhs %in% lv.names.y &
+                                            FLAT$efa == set ])
+            if(length(this.set.lv) > 0L) {
+                tmp <- utils::combn(this.set.lv, 2)
+                lhs <- c(lhs, tmp[1,]) # to fill upper.tri
+                rhs <- c(rhs, tmp[2,])
+            }
+        }
+    }
 
     # create 'op' (thresholds come first, then variances)
     op <- rep("~~", length(lhs)); op[seq_len(nth)] <- "|"
