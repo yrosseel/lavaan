@@ -93,7 +93,27 @@ lav_efa_extraction <- function(S, nfactors = 1L,
     if(corner) {
         # rotate to echelon pattern (see echelon() in GPArotation package)
         HEAD <- LAMBDA[seq_len(nfactors), , drop = FALSE]
-        LAMBDA <- LAMBDA %*% solve(HEAD, t(chol(tcrossprod(HEAD))))
+        POST <- try(solve(HEAD, t(chol(tcrossprod(HEAD)))), silent = TRUE)
+        okflag <- FALSE
+        if(inherits(POST, "try-error")) { # new in 0.6-18
+            # this will happen if we have identical elements in the columns
+            # of HEAD (perhaps the data is artificial?)
+            # -> add some fuzz and try again
+            SD <- sqrt(mean(abs(HEAD))) * 1e-04
+            fuzz <- matrix(rnorm(nfactors*nfactors, 0, SD), nfactors, nfactors)
+            HEAD2 <- HEAD + fuzz
+            POST <- try(solve(HEAD2, t(chol(tcrossprod(HEAD2)))), silent = TRUE)
+            if(!inherits(POST, "try-error")) {
+                okflag <- TRUE
+            }
+        } else {
+           okflag <- TRUE
+        }
+        if(okflag) {
+            LAMBDA <- LAMBDA %*% POST
+        } else {
+            warning("lavaan WARNING: rotation of initial factor solution to echelon pattern failed.")
+        }
     }
 
     # ALWAYS change the sign so that largest element in the column is positive
