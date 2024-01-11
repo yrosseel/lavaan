@@ -353,7 +353,12 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
         if (!is.null(data)) {
             bad.idx <- which(lv.lv.names %in% names(data))
         } else if (!is.null(sample.cov)) {
-            bad.idx <- which(lv.lv.names %in% rownames(data))
+            if (is.list(sample.cov)) {
+                cov.names <- unique(unlist(lapply(sample.cov, rownames)))
+                bad.idx <- which(lv.lv.names %in% cov.names)
+            } else {
+                bad.idx <- which(lv.lv.names %in% rownames(sample.cov))
+            }
         } else {
             bad.idx <- integer(0L)
         }
