@@ -114,7 +114,7 @@ lavData <- function(data              = NULL,          # data.frame
                 data <- as.data.frame(data, stringsAsFactors = FALSE)
             } else {
                 stop("lavaan ERROR: data= argument",
-                     " is not a data.fame, but of class ", sQuote(class(data)))
+                     " is not a data.frame, but of class ", sQuote(class(data)))
             }
         }
 
