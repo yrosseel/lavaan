@@ -1786,6 +1786,11 @@ lav_matrix_cov_wt <- function(Y, wt = NULL) {
 
 # compute (I-A)^{-1} where A is square
 # using a (truncated) Neumann series:  (I-A)^{-1} = \sum_k=0^{\infty} A^k
+#                                                 = I + A + A^2 + A^3 + ...
+#
+# note: this only works if the largest eigenvalue for A is < 1; but if A
+#       represents regressions, the diagonal will be zero, and all eigenvalues
+#       are zero
 #
 # as A is typically sparse, we can stop if all elements in A^k are zero for,
 # say, k<=6

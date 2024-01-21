@@ -317,6 +317,20 @@ lav_partable_subset_structural_model <- function(PT = NULL,
     # PT
     PT <- as.data.frame(PT, stringsAsFactors = FALSE)
 
+    # remove any EFA related information -- new in 0.6-18
+    if(!is.null(PT$efa)) {
+        PT$efa <- NULL
+        PT$est.unrotated <- NULL
+        seven.idx <- which(PT$user == 7L & PT$op == "~~")
+        if(length(seven.idx) > 0L) {
+            PT$user[seven.idx] <- 0L
+            PT$free[seven.idx] <- 1L
+            PT$ustart[seven.idx] <- as.numeric(NA)
+            PT$est[seven.idx] <- PT$est.std[seven.idx]
+        }
+        PT$est.std <- NULL
+    }
+
     # lavpta
     if(is.null(lavpta)) {
         lavpta <- lav_partable_attributes(PT)

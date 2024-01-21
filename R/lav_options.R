@@ -1962,10 +1962,10 @@ lav_options_set <- function(opt = NULL) {
     } else {
         txt <- c("Rotation method ", dQuote(opt$rotation), " not supported. ",
         "Supported rotation methods are: varimax, quartimax, orthomax, cf, ",
-        "oblimin, quartimin, geomin, entropy, mccammon, infomax,", "promax",
+        "oblimin, quartimin, geomin, entropy, mccammon, infomax, ", "promax, ",
         "tandem1, tandem2, oblimax, bentler, simplimax, target, pst, ",
         "crawford-ferguson,  cf-quartimax,  cf-varimax, cf-equamax, ",
-        "cf-parsimax, cf-facparsim", "biquartimin", "bigeomin")
+        "cf-parsimax, cf-facparsim, ", "biquartimin, ", "bigeomin")
         stop(lav_txt2message(txt, header = "lavaan ERROR:"))
     }
 
