@@ -23,6 +23,7 @@ lav_sam_step2 <- function(STEP1 = NULL, FIT = NULL,
     lavoptions.PA$verbose <- FALSE # must be in struc.args
     lavoptions.PA$categorical <- FALSE
     lavoptions.PA$.categorical <- FALSE
+    lavoptions.PA$rotation <- "none"
     lavoptions.PA <- modifyList(lavoptions.PA, struc.args)
 
     # override, no matter what

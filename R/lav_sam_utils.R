@@ -484,6 +484,7 @@ lav_sam_step3_joint <- function(FIT = NULL, PT = NULL, sam.method = "local") {
     lavoptions.joint$check.gradient <- FALSE
     lavoptions.joint$check.start <- FALSE
     lavoptions.joint$check.post <- FALSE
+    lavoptions.joint$rotation <- "none"
     lavoptions.joint$se   <- "none"
     lavoptions.joint$store.vcov <- FALSE # we do this manually
     lavoptions.joint$verbose <- FALSE

@@ -223,6 +223,8 @@ lav_sam_step1 <- function(cmd = "sem", mm.list = NULL, mm.args = list(),
         # pt.idx == mm.idx
         ptm.idx <- which((PTM$free > 0L | PTM$op %in% c(":=", "<", ">")) &
                           PTM$user != 3L)
+        PT$est[mm.idx[ptm.idx]] <- PTM$est[ptm.idx]
+
         # if categorical, add non-free residual variances
         if(fit.mm.block@Model@categorical || fit.mm.block@Model@correlation) {
             extra.idx <- which(PTM$op %in% c("~~", "~*~") &
@@ -231,11 +233,13 @@ lav_sam_step1 <- function(cmd = "sem", mm.list = NULL, mm.args = list(),
                                PTM$free == 0L &
                                PTM$ustart == 1)
             if(length(extra.idx) > 0L) {
-                ptm.idx2 <- c(ptm.idx, extra.idx)
+                PT$est[mm.idx[extra.idx]] <- PTM$est[extra.idx]
             }
-            PT$est[mm.idx[ptm.idx2]] <- PTM$est[ptm.idx2]
-        } else {
-            PT$est[mm.idx[ptm.idx]] <- PTM$est[ptm.idx]
+        }
+        # if EFA, add user=7 values (but do not add to ptm.idx)
+        user7.idx <- which(PTM$user == 7L)
+        if(length(user7.idx)) {
+            PT$est[mm.idx[user7.idx]] <- PTM$est[user7.idx]
         }
 
         # fill in standard errors measurement block
@@ -248,7 +252,7 @@ lav_sam_step1 <- function(cmd = "sem", mm.list = NULL, mm.args = list(),
                 PTM.free <- PTM$free
             }
 
-            ptm.se.idx <- which(PTM$free > 0L & PTM$user != 3L) # no :=, <, >
+            ptm.se.idx <- which((PTM$free > 0L) & PTM$user != 3L) # no :=, <, >
             #PT$se[ seq_len(length(PT$lhs)) %in% mm.idx & PT$free > 0L ] <-
             #    PTM$se[ PTM$free > 0L & PTM$user != 3L]
             PT$se[mm.idx[ptm.se.idx]] <- PTM$se[ptm.se.idx]

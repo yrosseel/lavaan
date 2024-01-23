@@ -106,6 +106,11 @@ sam <- function(model            = NULL,
                          sam.method = sam.method, dotdotdot = dotdotdot)
     }
 
+    # check for data.type == "none"
+    if(FIT@Data@data.type == "none") {
+        stop("lavaan ERROR: no data or sample statistics are provided.")
+    }
+
     lavoptions <- lavInspect(FIT, "options")
     if(lavoptions$verbose) {
         cat("This is sam using sam.method = ", sam.method, ".\n", sep = "")

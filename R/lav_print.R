@@ -1306,6 +1306,7 @@ print.lavaan.summary <- function(x, ..., nd = 3L) {
 
         for(b in seq_len(y$efa$nblocks)) {
             if(length(y$efa$block.label) > 0L) {
+                cat("\n\n")
                 cat(y$efa$block.label[[b]], ":\n\n", sep = "")
             }
             if(!is.null(y$efa$lambda[[b]])) {

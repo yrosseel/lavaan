@@ -1962,10 +1962,10 @@ lav_options_set <- function(opt = NULL) {
     } else {
         txt <- c("Rotation method ", dQuote(opt$rotation), " not supported. ",
         "Supported rotation methods are: varimax, quartimax, orthomax, cf, ",
-        "oblimin, quartimin, geomin, entropy, mccammon, infomax,", "promax",
+        "oblimin, quartimin, geomin, entropy, mccammon, infomax, ", "promax, ",
         "tandem1, tandem2, oblimax, bentler, simplimax, target, pst, ",
         "crawford-ferguson,  cf-quartimax,  cf-varimax, cf-equamax, ",
-        "cf-parsimax, cf-facparsim", "biquartimin", "bigeomin")
+        "cf-parsimax, cf-facparsim, ", "biquartimin, ", "bigeomin")
         stop(lav_txt2message(txt, header = "lavaan ERROR:"))
     }
 
@@ -2038,12 +2038,14 @@ lav_options_set <- function(opt = NULL) {
     opt$rotation.args$order.lv.by <- tolower(opt$rotation.args$order.lv.by)
     if(opt$rotation.args$order.lv.by %in% c("sumofsquares", "index", "none")) {
         # nothing to do
-    } else if(opt$rotation %in% c("bi-geomin", "bigeomin",
-                                  "bi-quartimin", "biquartimin")) {
-        opt$rotation.args$order.lv.by <- "none"
     } else {
         stop("lavaan ERROR: rotation.args$order.lv.by should be \"none\",",
              " \"index\" or \"sumofsquares\".")
+    }
+    # override if bifactor
+    if(opt$rotation %in% c("bi-geomin", "bigeomin",
+                           "bi-quartimin", "biquartimin")) {
+        opt$rotation.args$order.lv.by <- "none"
     }
 
     # no standard errors for promax (for now)...
@@ -2080,6 +2082,12 @@ lav_options_set <- function(opt = NULL) {
         opt$parser <- "new"
     } else {
         stop("lavaan ERROR: parser= argument should be \"old\" or \"new\"")
+    }
+
+
+    # set additional mimic="Mplus" options
+    if(opt$mimic == "Mplus") {
+        opt$baseline.conditional.x.free.slopes <- FALSE
     }
 
     # sample.cov.robust
