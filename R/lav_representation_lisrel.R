@@ -1251,8 +1251,7 @@ computeNU.LISREL <- function(MLIST=NULL,
 
     if(!is.null(MLIST$alpha)) return(MLIST$alpha)
 
-    LAMBDA <- MLIST$lambda; nvar <- nrow(LAMBDA); nfac <- ncol(LAMBDA)
-    BETA <- MLIST$beta
+    LAMBDA <- MLIST$lambda; nfac <- ncol(LAMBDA)
 
     ov.dummy.idx = c(ov.y.dummy.ov.idx, ov.x.dummy.ov.idx)
     lv.dummy.idx = c(ov.y.dummy.lv.idx, ov.x.dummy.lv.idx)
@@ -1325,15 +1324,15 @@ computeNU.LISREL <- function(MLIST=NULL,
 
     nvar <- nrow(MLIST$lambda)
     if(!is.null(MLIST$gamma)) {
-        nexo <- ncol(MLIST$gamma)
+        this.nexo <- ncol(MLIST$gamma)
     } else if(!is.null(nexo)) {
-        nexo <- nexo
+        this.nexo <- nexo
     } else {
         stop("nexo not known")
     }
 
     # create KAPPA
-    KAPPA <- matrix(0, nvar, nexo)
+    KAPPA <- matrix(0, nvar, this.nexo)
     if(!is.null(MLIST$gamma)) {
         KAPPA[ov.y.dummy.ov.idx,] <-
             MLIST$gamma[ov.y.dummy.lv.idx,,drop=FALSE]

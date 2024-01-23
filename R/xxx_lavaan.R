@@ -56,8 +56,9 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                    ...
                 ) {
     # start timer
-    start.time0 <- start.time <- proc.time()[3]
+    start.time0 <- proc.time()[3]
     timing <- list()
+    timing$start.time <- start.time0
     # set model.type
     mc <- match.call(expand.dots = TRUE)
     temp <- ldw_adapt_match_call(matchcall = mc,
@@ -163,8 +164,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                 dotdotdot$control$init_nelder_mead
         }
     }
-    timing$init <- (proc.time()[3] - start.time)
-    start.time <- proc.time()[3]
+    timing <- ldw_add_timing(timing, "init")
 
     ######################
     #### 1. ov.names  ####
@@ -353,12 +353,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
         if (!is.null(data)) {
             bad.idx <- which(lv.lv.names %in% names(data))
         } else if (!is.null(sample.cov)) {
-            if (is.list(sample.cov)) {
-                cov.names <- unique(unlist(lapply(sample.cov, rownames)))
-                bad.idx <- which(lv.lv.names %in% cov.names)
-            } else {
-                bad.idx <- which(lv.lv.names %in% rownames(sample.cov))
-            }
+            bad.idx <- which(lv.lv.names %in% rownames(sample.cov))
         } else {
             bad.idx <- integer(0L)
         }
@@ -516,9 +511,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     # in the model syntax
     ordered <- unique(c(ordered, lavNames(flat.model, "ov.ord")))
 
-    timing$ov.names <- (proc.time()[3] - start.time)
-    start.time <- proc.time()[3]
-
+    timing <- ldw_add_timing(timing, "ov.names")
 
     #######################
     #### 2. lavoptions ####
@@ -679,9 +672,8 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
             cat(" done.\n")
         }
     }
-    timing$Options <- (proc.time()[3] - start.time)
-    start.time <- proc.time()[3]
-
+    timing <- ldw_add_timing(timing, "Options")
+    
     # fixed.x = FALSE? set ov.names.x = character(0L)
     # new in 0.6-1
     if (!lavoptions$fixed.x) {
@@ -769,8 +761,8 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
             stop("lavaan ERROR: mismatch between number of groups in data, and number of groups in model.")
         }
     }
-    timing$Data <- (proc.time()[3] - start.time)
-    start.time <- proc.time()[3]
+    timing <- ldw_add_timing(timing, "Data")
+    
     if (lavoptions$verbose) {
         print(lavdata)
     }
@@ -902,8 +894,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
             lavpartable$ustart[zero.var.idx] <- lavoptions$em.zerovar.offset
         }
     }
-    timing$ParTable <- (proc.time()[3] - start.time)
-    start.time <- proc.time()[3]
+    timing <- ldw_add_timing(timing, "ParTable")
 
 
     #################################
@@ -916,8 +907,8 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     if (lavoptions$verbose) {
         cat(" done.\n")
     }
-    timing$lavpta <- (proc.time()[3] - start.time)
-    start.time <- proc.time()[3]
+
+    timing <- ldw_add_timing(timing, "lavpta")
 
 
 
@@ -969,8 +960,9 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                                  th.idx = lavpta$th.idx,
                                  missing.flag = FALSE)
     }
-    timing$SampleStats <- (proc.time()[3] - start.time)
-    start.time <- proc.time()[3]
+
+    timing <- ldw_add_timing(timing, "SampleStats")
+    
     if (lavoptions$debug) {
         print(str(lavsamplestats))
     }
@@ -1011,9 +1003,8 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
             # or a fitted lavaan object
         }
     }
-    timing$h1 <- (proc.time()[3] - start.time)
-    start.time <- proc.time()[3]
-
+    
+    timing <- ldw_add_timing(timing, "h1")
 
 
     #############################
@@ -1034,9 +1025,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
             cat(" done.\n")
         }
     }
-    timing$bounds <- (proc.time()[3] - start.time)
-    start.time <- proc.time()[3]
-
+    timing <- ldw_add_timing(timing, "bounds")
 
 
     #####################
@@ -1047,10 +1036,8 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
         # FIXME
         #lavaanStart <- lav_model_get_parameters(lavmodel, type = "user")
         #lavpartable$start <- lavaanStart
-        timing$start <- (proc.time()[3] - start.time)
-        start.time <- proc.time()[3]
-        timing$Model <- (proc.time()[3] - start.time)
-        start.time <- proc.time()[3]
+        timing <- ldw_add_timing(timing, "start")
+        timing <- ldw_add_timing(timing, "Model")
     } else {
         # check if we have provided a full parameter table as model = input
         if (!is.null(lavpartable$est) && is.character(lavoptions$start) &&
@@ -1134,9 +1121,8 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                 cat(" done.\n")
             }
         }
-        timing$start <- (proc.time()[3] - start.time)
-        start.time <- proc.time()[3]
-
+      timing <- ldw_add_timing(timing, "start")
+      
 
         # 8b. EFA -- change user == 7 elements if columns
         #     have been reordered
@@ -1225,8 +1211,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
         if (lavoptions$verbose) {
             cat(" done.\n")
         }
-        timing$Model <- (proc.time()[3] - start.time)
-        start.time <- proc.time()[3]
+        timing <- ldw_add_timing(timing, "Model")
 
     } # slotModel
 
@@ -1535,15 +1520,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
             #lavcache[[g]]$DD <- lav_model_gradient_DD(lavmodel, group = g)
         }
     }
-
-    timing$cache <- (proc.time()[3] - start.time)
-    start.time <- proc.time()[3]
-
-
-
-
-
-
+    timing <- ldw_add_timing(timing, "cache")
 
 
     ############################
@@ -1756,8 +1733,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     }
     lavoptim$control        <- attr(x, "control")
 
-    timing$optim <- (proc.time()[3] - start.time)
-    start.time <- proc.time()[3]
+    timing <- ldw_add_timing(timing, "optim")
 
 
     ####################################
@@ -1773,8 +1749,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
              cat(" done.\n")
          }
     }
-    timing$implied <- (proc.time()[3] - start.time)
-    start.time <- proc.time()[3]
+    timing <- ldw_add_timing(timing, "implied")
 
     lavloglik <- list()
     if (lavoptions$loglik) {
@@ -1790,9 +1765,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
              cat(" done.\n")
          }
     }
-    timing$loglik <- (proc.time()[3] - start.time)
-    start.time <- proc.time()[3]
-
+    timing <- ldw_add_timing(timing, "loglik")
 
     ###############################
     #### 13. lavvcov + lavboot ####
@@ -1871,15 +1844,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                                             BOOT = lavboot$coef)
     }
 
-    timing$vcov <- (proc.time()[3] - start.time)
-    start.time <- proc.time()[3]
-
-
-
-
-
-
-
+    timing <- ldw_add_timing(timing, "vcov")
 
 
     #####################
@@ -1915,16 +1880,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
     # store test in lavtest
     lavtest <- TEST
 
-    timing$test <- (proc.time()[3] - start.time)
-    start.time <- proc.time()[3]
-
-
-
-
-
-
-
-
+    timing <- ldw_add_timing(timing, "test")
 
 
     #######################
@@ -1937,10 +1893,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                             VCOV        = VCOV,
                             TEST        = TEST)
     #lavfit <- new("Fit")
-    timing$Fit <- (proc.time()[3] - start.time)
-    start.time <- proc.time()[3]
-
-
+    timing <- ldw_add_timing(timing, "Fit")
 
 
     ######################
@@ -1978,9 +1931,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
             }
         }
     }
-    timing$baseline <- (proc.time()[3] - start.time)
-    start.time <- proc.time()[3]
-
+    timing <- ldw_add_timing(timing, "baseline")
 
     ######################
     #### 16. rotation ####
@@ -2153,9 +2104,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
             }
         } # vcov
     } # efa
-    timing$rotation <- (proc.time()[3] - start.time)
-    start.time <- proc.time()[3]
-
+    timing <- ldw_add_timing(timing, "rotation")
 
     ####################
     #### 17. lavaan ####
@@ -2163,6 +2112,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
 
     # stop timer
     timing$total <- (proc.time()[3] - start.time0)
+    timing$start.time <- NULL
 
     lavaan <- new("lavaan",
                   version      = as.character(packageVersion("lavaan")),
@@ -2370,4 +2320,10 @@ ldw_adapt_match_call <- function(matchcall, defaults, syscall, dotdotdot) {
     }
   }
   return(list(mc, ddd))
+}
+ldw_add_timing <- function(timing, part) {
+  timenow <- proc.time()[3]
+  timing[[part]] <- (timenow - timing$start.time)
+  timing$start.time <- timenow
+  return(timing)
 }
