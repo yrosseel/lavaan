@@ -957,7 +957,6 @@ computeDeltaDx <- function(lavmodel = NULL, GLIST = NULL, target = "lambda",
     representation   <- lavmodel@representation
     nmat             <- lavmodel@nmat
     nblocks          <- lavmodel@nblocks
-    num.idx          <- lavmodel@num.idx
     th.idx           <- lavmodel@th.idx
 
     # number of columns in DELTA + m.el.idx/x.el.idx
@@ -1083,10 +1082,8 @@ computeOmega <- function(Sigma.hat=NULL, Mu.hat=NULL,
                 # CURRENTLY: stop
                 warning("lav_model_gradient: Sigma.hat is not positive definite\n")
                 Sigma.hat.inv <- MASS::ginv(Sigma.hat[[g]])
-                Sigma.hat.log.det <- log(.Machine$double.eps)
             } else {
                 Sigma.hat.inv <-  attr(Sigma.hat[[g]], "inv")
-                Sigma.hat.log.det <- attr(Sigma.hat[[g]], "log.det")
             }
 
             if(!lavsamplestats@missing.flag) { # complete data

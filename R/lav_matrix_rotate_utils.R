@@ -3,6 +3,13 @@
 # YR  6 Jan 2023: add promax
 
 # generate random orthogonal rotation matrix
+#
+# reference for the orthogonal case:
+#
+# Stewart, G. W. (1980). The Efficient Generation of Random Orthogonal Matrices
+# with an Application to Condition Estimators. SIAM Journal on Numerical
+# Analysis, 17(3), 403–409. http://www.jstor.org/stable/2156882
+#
 lav_matrix_rotate_gen <- function(M = 10L, orthogonal = TRUE) {
 
     # catch M=1
@@ -16,9 +23,12 @@ lav_matrix_rotate_gen <- function(M = 10L, orthogonal = TRUE) {
     if(orthogonal) {
         # use QR decomposition
         qr.out <- qr(tmp)
-
-        # extra 'Q' part
-        out <- qr.Q(qr.out)
+        Q <- qr.Q(qr.out)
+        R <- qr.R(qr.out)
+        # ... "normalized so that the diagonal elements of R are positive"
+        # so we get a 'proper' rotation matrix with det = 1
+        sign.diag.r <- sign(diag(R))
+        out <- Q * rep(sign.diag.r, each = M)
     } else {
         # just normalize *columns* of tmp -> crossprod(out) has 1 on diagonal
         out <- t( t(tmp) / sqrt(diag(crossprod(tmp))) )

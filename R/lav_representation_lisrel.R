@@ -451,7 +451,7 @@ computeEETA.LISREL <- function(MLIST=NULL, mean.x=NULL,
                                ov.y.dummy.lv.idx=NULL,
                                ov.x.dummy.lv.idx=NULL) {
 
-    LAMBDA <- MLIST$lambda; BETA <- MLIST$beta; GAMMA <- MLIST$gamma
+    BETA <- MLIST$beta; GAMMA <- MLIST$gamma
 
     # ALPHA? (reconstruct, but no 'fix')
     ALPHA <- .internal_get_ALPHA(MLIST = MLIST, sample.mean = sample.mean,
@@ -1152,7 +1152,6 @@ computeLAMBDA.LISREL <- function(MLIST = NULL,
                                  ov.x.dummy.lv.idx = NULL,
                                  remove.dummy.lv   = FALSE) {
 
-    ov.dummy.idx = c(ov.y.dummy.ov.idx, ov.x.dummy.ov.idx)
     lv.dummy.idx = c(ov.y.dummy.lv.idx, ov.x.dummy.lv.idx)
 
     # fix LAMBDA
