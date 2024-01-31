@@ -200,6 +200,7 @@ lav_matrix_rotate <- function(A           = NULL,      # original matrix
         REP <- sapply(seq_len(rstarts), function(rep) {
             # random start (always orthogonal)
             init.ROT <- lav_matrix_rotate_gen(M = M, orthogonal = TRUE)
+            # init.ROT <- lav_matrix_rotate_gen(M = M, orthogonal = orthogonal)
 
             if(verbose) {
                 cat("\n")

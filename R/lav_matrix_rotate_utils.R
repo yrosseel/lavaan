@@ -1,6 +1,7 @@
 # collection of functions that deal with rotation matrices
 # YR  3 April 2019 -- initial version
 # YR  6 Jan 2023: add promax
+# YR 30 Jan 2024: orthogonal rotation matrix now reaches the full space
 
 # generate random orthogonal rotation matrix
 #
@@ -17,16 +18,14 @@ lav_matrix_rotate_gen <- function(M = 10L, orthogonal = TRUE) {
         return(matrix(1, 1, 1))
     }
 
-    # create random normal matrix
-    tmp <- matrix(rnorm(M*M), nrow = M, ncol = M)
-
     if(orthogonal) {
+        # create random normal matrix
+        tmp <- matrix(rnorm(M*M), nrow = M, ncol = M)
         # use QR decomposition
         qr.out <- qr(tmp)
         Q <- qr.Q(qr.out)
         R <- qr.R(qr.out)
         # ... "normalized so that the diagonal elements of R are positive"
-        # so we get a 'proper' rotation matrix with det = 1
         sign.diag.r <- sign(diag(R))
         out <- Q * rep(sign.diag.r, each = M)
     } else {
