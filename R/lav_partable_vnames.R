@@ -83,8 +83,8 @@ lav_partable_vnames <- function(partable, type = NULL, ...,
   if (type[1L] == "all") {
     type <- type.list
   } else if (!all(type %in% type.list)) {
-    stop("lavaan ERROR: type = ", 
-         paste(type[!(type %in% type.list)], collapse = ", "), 
+    stop("lavaan ERROR: type = ",
+         paste(type[!(type %in% type.list)], collapse = ", "),
          " is (are) not a valid option(s)")
   }
 
@@ -99,7 +99,7 @@ lav_partable_vnames <- function(partable, type = NULL, ...,
     # nblocks -- block column is integer only
   # nblocks <- lav_partable_nblocks(partable) : LDW 30/1/2024 avoid recalculating block_values !
   nblocks <- length(block.select)
-  
+
   # check for ... selection argument(s)
   ndotdotdot <- length(dotdotdot)
   if (ndotdotdot > 0L) {
@@ -602,10 +602,17 @@ lav_partable_vnames <- function(partable, type = NULL, ...,
             if (x %in% ord.names) {
               idx <- which(x == TH.lhs)
               TH <- unique(paste(TH.lhs[idx], "|",
-                                 TH.rhs[idx], sep = ""), 
+                                 TH.rhs[idx], sep = ""),
                            use.names = FALSE)
               # make sure the th's are in increasing order
-              #sort(TH)
+              # get var name
+              TH1 <- sapply(strsplit(TH, split = "\\|t"),
+                            "[[", 1)
+              # get number, and sort
+              TH2 <- as.character(sort(as.integer(sapply(
+                strsplit(TH, split = "\\|t"), "[[", 2))))
+              # paste back togehter in the right order
+              paste(TH1, TH2, sep = "|t")
             } else {
               x
             }
@@ -1049,7 +1056,14 @@ lav_partable_vnames <- function(partable, type = NULL, ...,
               TH <- unique(paste(TH.lhs[idx], "|",
                                  TH.rhs[idx], sep = ""))
               # make sure the th's are in increasing order
-              #sort(TH)
+              # get var name
+              TH1 <- sapply(strsplit(TH, split = "\\|t"),
+                            "[[", 1)
+              # get number, and sort
+              TH2 <- as.character(sort(as.integer(sapply(
+                strsplit(TH, split = "\\|t"), "[[", 2))))
+              # paste back togehter in the right order
+              paste(TH1, TH2, sep = "|t")
             } else {
               x
             }

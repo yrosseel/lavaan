@@ -281,9 +281,12 @@ lav_matrix_rotate <- function(A           = NULL,      # original matrix
 
     # final rotation
     if(orthogonal) {
+        # LAMBDA <- A %*% solve(t(ROT))
+        # note: when ROT is orthogonal, solve(t(ROT)) == ROT
         LAMBDA <- A %*% ROT
         PHI    <- diag(ncol(LAMBDA)) # correlation matrix == I
     } else {
+        # LAMBDA <- A %*% solve(t(ROT))
         LAMBDA <- t(solve(ROT, t(A)))
         PHI    <- crossprod(ROT)     # correlation matrix
     }
