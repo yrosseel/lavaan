@@ -135,7 +135,7 @@ lavaanify <- lavParTable <- function(
     #}
 
     # auto=TRUE?
-    if(auto && model.type == "sem") { # mimic sem/cfa auto behavior
+    if(auto) { # mimic sem/cfa auto behavior
         if(model.type == "sem") {
             int.ov.free     = TRUE
             int.lv.free     = FALSE
