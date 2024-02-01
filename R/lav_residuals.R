@@ -79,32 +79,47 @@ lavResiduals <- function(object, type = "cor.bentler", custom.rmr = NULL,
 
     # no pretty printing yet...
     if(output == "table") {
-        res <- out$cov
-        # extract only below-diagonal elements
-        res.vech <- lav_matrix_vech(res, diagonal = FALSE)
+        # new in 0.6-18: handle multiple blocks
+        nblocks <- lav_partable_nblocks(object@ParTable)
+        out.list <- vector("list", length = nblocks)
+        for(block in seq_len(nblocks)) {
+            if(nblocks == 1L) {
+                res <- out$cov
+            } else {
+                res <- out[[block]]$cov
+            }
+            # extract only below-diagonal elements
+            res.vech <- lav_matrix_vech(res, diagonal = FALSE)
 
-        # get names
-        P <- nrow(res)
-        NAMES <- colnames(res)
+            # get names
+            P <- nrow(res)
+            NAMES <- colnames(res)
 
-        nam <- expand.grid(NAMES,
-                           NAMES)[lav_matrix_vech_idx(P, diagonal = FALSE),]
-        NAMES.vech <- paste(nam[,1], "~~", nam[,2], sep = "")
+            nam <- expand.grid(NAMES,
+                               NAMES)[lav_matrix_vech_idx(P, diagonal = FALSE),]
+            NAMES.vech <- paste(nam[,1], "~~", nam[,2], sep = "")
 
-        # create table
-        TAB <- data.frame(name = NAMES.vech, res = round(res.vech, 3),
-                          stringsAsFactors = FALSE)
+            # create table
+            TAB <- data.frame(name = NAMES.vech, res = round(res.vech, 3),
+                              stringsAsFactors = FALSE)
 
-        # sort table
-        idx <- sort.int(abs(TAB$res), decreasing = TRUE,
-                        index.return = TRUE)$ix
-        out.sorted <- TAB[idx,]
+            # sort table
+            idx <- sort.int(abs(TAB$res), decreasing = TRUE,
+                            index.return = TRUE)$ix
+            out.sorted <- TAB[idx,]
 
-        # show first rows only
-        if(maximum.number == 0L || maximum.number > length(res.vech)) {
-            maximum.number <- length(res.vech)
+            # show first rows only
+            if(maximum.number == 0L || maximum.number > length(res.vech)) {
+                maximum.number <- length(res.vech)
+            }
+            out.list[[block]] <- out.sorted[seq_len(maximum.number), ]
         }
-        out <- out.sorted[seq_len(maximum.number), ]
+        if(nblocks == 1L) {
+            out <- out.list[[1]]
+        } else {
+            out <- out.list
+            names(out) <- object@Data@block.label
+        }
     } else {
        # list -> nothing to do
     }
