@@ -72,7 +72,11 @@ lav_matrix_rotate_check <- function(ROT = NULL, orthogonal = TRUE,
 
 # get weights vector needed to weight the rows using Kaiser normalization
 lav_matrix_rotate_kaiser_weights <- function(A = NULL) {
-    1 / sqrt( rowSums(A * A) )
+    normalize <- 1 / sqrt( rowSums(A * A) )
+    idxZero <- which(normalize == 0)
+    # catch rows with all zero (thanks to Coen Bernaards for suggesting this)
+    normalize[idxZero] <- normalize[idxZero] + .Machine$double.eps
+    normalize
 }
 
 # get weights vector needed to weight the rows using Cureton & Mulaik (1975)
