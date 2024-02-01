@@ -147,14 +147,14 @@ ldw_parse_step1 <- function(modelsrc, types, debug, warn, spaces.in.operator) {
       waar <- regexpr("= +~", modelsrcw)[1]
       modelsrcw <- gsub("=( +)~", "=~\\1", modelsrcw)
       if (spaces.in.operator == "warn" && warn == TRUE) {
-        warning(ldw_txt2message("splitting of '=~' operator temporarely allowed", 2L, modelsrc, waar))
+        warning(ldw_txt2message("splitting of '=~' deprecated", 2L, modelsrc, waar))
       }
     }
     if (grepl("[^=~]~ +~", modelsrcw)) {
       waar <- regexpr("[^=~]~ +~", modelsrcw)[1]
       modelsrcw <- gsub("([^=~])~( +)~", "\\1~~\\2", modelsrcw)
       if (spaces.in.operator == "warn" && warn == TRUE) {
-        warning(ldw_txt2message("splitting of '~~' operator temporarily allowed", 2L, modelsrc, waar + 1L))
+        warning(ldw_txt2message("splitting of '~~' deprecated", 2L, modelsrc, waar + 1L))
       }
     }
   }
