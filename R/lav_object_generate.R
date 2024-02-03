@@ -94,8 +94,14 @@ lav_object_independence <- function(object         = NULL,
             lavoptions$se <- "standard"
         }
     } else {
+        # 0.6-18: slower, but safer to just keep it
+
         ## FIXME: if test = scaled, we need it anyway?
-        lavoptions$se <- "none"
+        #if(lavoptions$missing %in% c("two.stage", "two.stage.robust")) {
+            # don't touch it
+        #} else {
+        #    lavoptions$se <- "none"
+        #}
     }
 
     # change options

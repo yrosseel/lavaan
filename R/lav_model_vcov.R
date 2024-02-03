@@ -289,10 +289,10 @@ lav_model_nvcov_two_stage <- function(lavmodel       = NULL,
         stop("lavaan ERROR: two.stage + sampling.weights is not supported yet")
     }
     # no fixed.x (yet)
-    if(!is.null(lavsamplestats@x.idx) &&
-       length(lavsamplestats@x.idx[[1]]) > 0L) {
-        stop("lavaan ERROR: two.stage + fixed.x = TRUE is not supported yet")
-    }
+    #if(!is.null(lavsamplestats@x.idx) &&
+    #   length(lavsamplestats@x.idx[[1]]) > 0L) {
+    #    stop("lavaan ERROR: two.stage + fixed.x = TRUE is not supported yet")
+    #}
 
 
     # information matrix
