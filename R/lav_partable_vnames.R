@@ -1129,18 +1129,11 @@ lav_partable_vnames <- function(partable, type = NULL, ...,
     da.idx <- which(partable$op == "da")
     ov.names.data <- partable$lhs[da.idx]
     OUT <- lapply(OUT, function(x) {
-      for (b in seq_len(length(x))) {
-        target.idx <- which(x[[b]] %in% ov.names.data)
-        if (length(target.idx) > 0L) {
-          new.ov <-
-            ov.names.data[sort(match(x[[b]],
-                                     ov.names.data))]
-          # rm NA's (eg lv's in eqs.y)
-          na.idx <- which(is.na(new.ov))
-          if (length(na.idx) > 0L) {
-            new.ov <- new.ov[-na.idx]
-          }
-          x[[b]][target.idx] <- new.ov
+        for (b in seq_len(length(x))) {
+        m <- match(x[[b]], ov.names.data)
+        target.idx <- which(!is.na(m))
+        if (length(target.idx) > 1L) {
+          x[[b]][target.idx] <- x[[b]][target.idx][order(m[target.idx])]
         }
       }
       x
