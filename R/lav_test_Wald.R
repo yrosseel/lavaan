@@ -1,6 +1,7 @@
 # classic Wald test
 #
 # NOTE: does not handle redundant constraints yet!
+#
 
 lavTestWald <- function(object, constraints = NULL, verbose = FALSE) {
 
@@ -11,16 +12,20 @@ lavTestWald <- function(object, constraints = NULL, verbose = FALSE) {
         stop("lavaan ERROR: constraints are empty")
     }
 
+    # extract slots
+    lavoptions  <- object@Options
+    lavmodel    <- object@Model
+    lavpartable <- object@ParTable
+
     # remove == constraints from parTable
-    PT <- as.data.frame(object@ParTable, stringsAsFactors = FALSE)
-    eq.idx <- which(PT$op == "==")
+    eq.idx <- which(lavpartable$op == "==")
     if(length(eq.idx) > 0L) {
-        PT <- PT[-eq.idx,]
+        lavpartable <- lavpartable[-eq.idx,]
     }
-    partable <- as.list(PT)
+    partable <- as.list(lavpartable)
 
     # parse constraints
-    FLAT <- lavParseModelString( constraints, parser = object@Options$parser )
+    FLAT <- lavParseModelString(constraints, parser = lavoptions$parser)
     CON <- attr(FLAT, "constraints")
     LIST <- list()
     if(length(CON) > 0L) {
@@ -35,13 +40,14 @@ lavTestWald <- function(object, constraints = NULL, verbose = FALSE) {
     }
 
     # theta = free parameters only
-    theta <- object@optim$x
+    theta <- lav_model_get_parameters(lavmodel)
 
     # build constraint function
     ceq.function <- lav_partable_constraints_ceq(partable = partable,
                                                  con = LIST, debug = FALSE)
     # compute jacobian restrictions
-    JAC <- try(lav_func_jacobian_complex(func = ceq.function, x = theta), silent=TRUE)
+    JAC <- try(lav_func_jacobian_complex(func = ceq.function, x = theta),
+               silent = TRUE)
     if(inherits(JAC, "try-error")) { # eg. pnorm()
         JAC <- lav_func_jacobian_simple(func = ceq.function, x = theta)
     }
@@ -67,10 +73,11 @@ lavTestWald <- function(object, constraints = NULL, verbose = FALSE) {
                                     remove.duplicated = FALSE)
 
     # restricted vcov
-    info.r  <- JAC %*% VCOV %*% t(JAC)
+    VCOV.r  <- JAC %*% VCOV %*% t(JAC)
 
+    # fixme: what if VCOV.r is singular?
     # Wald test statistic
-    Wald <- as.numeric(t(theta.r) %*% solve( info.r ) %*% theta.r)
+    Wald <- as.numeric(t(theta.r) %*% solve( VCOV.r ) %*% theta.r)
 
     # df
     Wald.df <- nrow(JAC)
@@ -78,5 +85,9 @@ lavTestWald <- function(object, constraints = NULL, verbose = FALSE) {
     # p-value based on chisq
     Wald.pvalue <- 1 - pchisq(Wald, df=Wald.df)
 
-    list(stat=Wald, df=Wald.df, p.value=Wald.pvalue, se=object@Options$se)
+    # prepare output
+    out <- list(stat = Wald, df = Wald.df, p.value = Wald.pvalue,
+                se = lavoptions$se)
+
+    out
 }

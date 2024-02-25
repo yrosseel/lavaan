@@ -20,12 +20,16 @@ lav_model_efa_rotate <- function(lavmodel = NULL, lavoptions = NULL) {
     extra <- attr(tmp, "extra"); attr(tmp, "extra") <- NULL
 
     # store full rotation matrix (per group)
-    lavmodel@H <- extra$H
-    lavmodel@lv.order <- extra$lv.order
-    lavmodel@GLIST <- extra$GLIST
+    #lavmodel@H <- extra$H
+    #lavmodel@lv.order <- extra$lv.order
+    #lavmodel@GLIST <- extra$GLIST
 
     # return updated lavmodel
-    lavmodel
+    #lavmodel
+
+    out <- list(GLIST = extra$GLIST, H = extra$H, lv.order = extra$lv.order)
+
+    out
 }
 
 

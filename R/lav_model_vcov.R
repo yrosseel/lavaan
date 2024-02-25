@@ -419,7 +419,7 @@ lav_model_vcov <- function(lavmodel       = NULL,
                            use.ginv       = FALSE) {
 
     likelihood  <- lavoptions$likelihood
-    information <- lavoptions$information[1]
+    information <- lavoptions$information[1] # first one is for vcov
     se          <- lavoptions$se
     verbose     <- lavoptions$verbose
     mimic       <- lavoptions$mimic

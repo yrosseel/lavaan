@@ -41,6 +41,9 @@ lav_utils_get_marker <- function(LAMBDA = NULL, std.lv = FALSE) {
     LAMBDA <- as.matrix(LAMBDA)
     nvar <- nrow(LAMBDA); nfac <- ncol(LAMBDA)
 
+    # round values
+    LAMBDA <- round(LAMBDA, 3L)
+
     marker.idx <- numeric(nfac)
     for(f in seq_len(nfac)) {
         if(std.lv) {

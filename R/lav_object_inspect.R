@@ -2476,13 +2476,13 @@ lav_object_inspect_vcov <- function(object, standardized = FALSE,
     lavoptions <- object@Options
 
     # rotation?
-    if( .hasSlot(lavmodel, "nefa") && (lavmodel@nefa > 0L) &&
-        lavoptions$rotation != "none" #&& lavoptions$rotation.se == "delta"
-      ) {
-        rotation <- TRUE
-    } else {
-        rotation <- FALSE
-    }
+    #if( .hasSlot(lavmodel, "nefa") && (lavmodel@nefa > 0L) &&
+    #    lavoptions$rotation != "none" #&& lavoptions$rotation.se == "delta"
+    #  ) {
+    #    rotation <- TRUE
+    #} else {
+    #    rotation <- FALSE
+    #}
 
     npar <- max(object@ParTable$free)
     if(object@optim$npar == 0) {
@@ -2510,6 +2510,10 @@ lav_object_inspect_vcov <- function(object, standardized = FALSE,
                                   lavimplied     = object@implied,
                                   lavh1          = object@h1
                                  )
+            #if(rotation && !standardized) {
+            #    # fixme: compute VCOV.rot manually...
+            #    stop("lavaan ERROR: rerun with store.vcov = TRUE")
+            #}
 
             if(is.null(OUT)) {
                 return(OUT)
@@ -2538,18 +2542,18 @@ lav_object_inspect_vcov <- function(object, standardized = FALSE,
 
 
 
-        if(rotation) {
-            if(.hasSlot(object@Model, "ceq.simple.only") &&
-               object@Model@ceq.simple.only) {
-                x.vec <- drop(object@optim$x %*% t(object@Model@ceq.simple.K))
-            } else {
-                x.vec <- object@optim$x
-            }
-            JAC <- numDeriv::jacobian(func = FUN, x = x.vec,
-                       method = "simple",
-                       method.args = list(eps = 1e-03), # default is 1e-04
-                       lavobject = object, rotation = rotation)
-        } else {
+        #if(rotation) {
+        #    if(.hasSlot(object@Model, "ceq.simple.only") &&
+        #       object@Model@ceq.simple.only) {
+        #        x.vec <- drop(object@optim$x %*% t(object@Model@ceq.simple.K))
+        #    } else {
+        #        x.vec <- object@optim$x
+        #    }
+        #    JAC <- numDeriv::jacobian(func = FUN, x = x.vec,
+        #               method = "simple",
+        #               method.args = list(eps = 1e-03), # default is 1e-04
+        #               lavobject = object, rotation = rotation)
+        #} else {
             #if(.hasSlot(object@Model, "ceq.simple.only") &&
             #   object@Model@ceq.simple.only) {
             #    x <- lav_model_get_parameters(lavmodel)
@@ -2564,7 +2568,7 @@ lav_object_inspect_vcov <- function(object, standardized = FALSE,
                 JAC <- lav_func_jacobian_simple(func = FUN, x = x.vec,
                            lavobject = object)
             }
-        }
+        #}
 
         # JAC contains *all* parameters in the parameter table
         if(free.only) {
@@ -2588,8 +2592,12 @@ lav_object_inspect_vcov <- function(object, standardized = FALSE,
 
     # labels
     if(add.labels) {
-        colnames(OUT) <- rownames(OUT) <-
-            lav_partable_labels(object@ParTable, type="free")
+        #if(rotation && !free.only) {
+        #    # todo
+        #} else {
+            colnames(OUT) <- rownames(OUT) <-
+                lav_partable_labels(object@ParTable, type="free")
+        #}
     }
 
     # alias?
