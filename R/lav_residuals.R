@@ -1334,7 +1334,7 @@ lav_residuals_summary_rms <- function(STATS = NULL, ACOV = NULL,
                     crmr.exactfit.z = rms.z, crmr.exactfit.pvalue = rms.pvalue,
                     ucrmr = urms, ucrmr.se = urms.se,
                     ucrmr.ci.lower = urms.ci.lower,
-                    ucrmr.cilupper = urms.ci.upper,
+                    ucrmr.ci.upper = urms.ci.upper,
                     ucrmr.closefit.h0.value = unbiased.test.val,
                     ucrmr.closefit.z = urms.z,
                     ucrmr.closefit.pvalue = urms.pvalue)
