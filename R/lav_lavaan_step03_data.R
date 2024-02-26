@@ -1,0 +1,97 @@
+lav_lavaan_step03_data <- function(slotData, lavoptions, ov.names, ov.names.y, group,
+                                   data, cluster, ov.names.x, ov.names.l, ordered,
+                                   sampling.weights, sample.cov, sample.mean, sample.th, sample.nobs,
+                                   slotParTable, ngroups, dotdotdot, flat.model, model,
+                                   NACOV, WLS.V) {
+  # # # # # # # # # # #
+  # #  3. lavdata  # # 
+  # # # # # # # # # # #
+  if (!is.null(slotData)) {
+    lavdata <- slotData
+  } else {
+    
+    if (lavoptions$verbose) {
+      cat("lavdata            ...")
+    }
+    
+    # FIXME: ov.names should always contain both y and x!
+    OV.NAMES <- if (lavoptions$conditional.x) {
+      ov.names.y
+    } else {
+      ov.names
+    }
+    lavdata <- lavData(data             = data,
+                       group            = group,
+                       cluster          = cluster,
+                       ov.names         = OV.NAMES,
+                       ov.names.x       = ov.names.x,
+                       ov.names.l       = ov.names.l,
+                       ordered          = ordered,
+                       sampling.weights = sampling.weights,
+                       sample.cov       = sample.cov,
+                       sample.mean      = sample.mean,
+                       sample.th        = sample.th,
+                       sample.nobs      = sample.nobs,
+                       lavoptions       = lavoptions)
+    
+    if (lavoptions$verbose) {
+      cat(" done.\n")
+    }
+  }
+  # what have we learned from the data?
+  if (lavdata@data.type == "none") {
+    lavoptions$do.fit <- FALSE
+    # check if 'model' was a fitted parameter table
+    if (!is.null(flat.model$est)) {
+      lavoptions$start <- "est"
+    } else {
+      lavoptions$start  <- "simple"
+    }
+    lavoptions$se     <- "none"
+    lavoptions$test   <- "none"
+  } else if (lavdata@data.type == "moment") {
+    
+    # check user-specified options first
+    if (!is.null(dotdotdot$estimator)) {
+      if (dotdotdot$estimator %in%
+          c("MLM", "MLMV", "MLR", "MLR", "ULSM", "ULSMV", "ULSMVS") &&
+          is.null(NACOV)) {
+        stop("lavaan ERROR: estimator ", dotdotdot$estimator,
+             " requires full data or user-provided NACOV")
+      } else if (dotdotdot$estimator %in%
+                 c("WLS", "WLSM", "WLSMV", "WLSMVS", "DWLS") &&
+                 is.null(WLS.V)) {
+        stop("lavaan ERROR: estimator ", dotdotdot$estimator,
+             " requires full data or user-provided WLS.V and NACOV")
+      }
+    }
+    
+    # catch here some options that will not work with moments
+    if (lavoptions$se == "bootstrap") {
+      stop("lavaan ERROR: bootstrapping requires full data")
+    }
+    # more needed?
+  }
+  # sanity check
+  if (!is.null(slotParTable) || inherits(model, "lavaan")) {
+    if (ngroups != lavdata@ngroups) {
+      stop("lavaan ERROR: mismatch between number of groups in data, and number of groups in model.")
+    }
+  }
+  if (lavoptions$verbose) {
+    print(lavdata)
+  }
+  if (lavoptions$debug) {
+    print(str(lavdata))
+  }
+  
+  # if lavdata@nlevels > 1L, adapt start option (for now)
+  # until we figure out how to handle groups+blocks
+  #if(lavdata@nlevels > 1L) {
+  #   lavoptions$start <- "simple"
+  #}
+  return(list(
+    lavdata = lavdata,
+    lavoptions = lavoptions
+  ))
+}

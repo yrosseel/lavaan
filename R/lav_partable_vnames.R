@@ -41,7 +41,7 @@ lav_partable_vnames <- function(partable, type = NULL, ...,
 
   # check for empy table
   if (length(partable$lhs) == 0) return(character(0L))
-
+  ldw_trace(paste(type, collapse = ","))
   # dotdotdot
   dotdotdot <- list(...)
 

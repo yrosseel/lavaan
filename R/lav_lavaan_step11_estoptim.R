@@ -1,0 +1,219 @@
+lav_lavaan_step11_estoptim <- function(lavdata, lavmodel, lavpta, lavcache,
+                                     lavsamplestats, lavoptions, lavpartable) {
+  # # # # # # # # # # # # # # 
+  # #  11. est + lavoptim # # 
+  # # # # # # # # # # # # # # 
+  
+  x <- NULL
+  if (lavoptions$do.fit && lavoptions$estimator != "none" &&
+      lavmodel@nx.free > 0L) {
+    if (lavoptions$verbose) {
+      cat("lavoptim           ... start:\n")
+    }
+    
+    # non-iterative methods (fabin, ...)
+    if (lavoptions$optim.method == "noniter") {
+      x <- try(lav_optim_noniter(lavmodel       = lavmodel,
+                                 lavsamplestats = lavsamplestats,
+                                 lavdata        = lavdata,
+                                 lavpartable    = lavpartable,
+                                 lavpta         = lavpta,
+                                 lavoptions     = lavoptions),
+               silent = TRUE)
+      # EM for multilevel models
+    } else if (lavoptions$optim.method == "em") {
+      # multilevel only for now
+      stopifnot(lavdata@nlevels > 1L)
+      x <- try(lav_mvnorm_cluster_em_h0(lavsamplestats = lavsamplestats,
+                                        lavdata        = lavdata,
+                                        lavimplied     = NULL,
+                                        lavpartable    = lavpartable,
+                                        lavmodel       = lavmodel,
+                                        lavoptions     = lavoptions,
+                                        verbose        = lavoptions$verbose,
+                                        fx.tol         = lavoptions$em.fx.tol,
+                                        dx.tol         = lavoptions$em.dx.tol,
+                                        max.iter       = lavoptions$em.iter.max),
+               silent = TRUE)
+      # Gauss-Newton
+    } else if (lavoptions$optim.method == "gn") {
+      # only tested for DLS (for now)
+      x <- try(lav_optim_gn(lavmodel       = lavmodel,
+                            lavsamplestats = lavsamplestats,
+                            lavdata        = lavdata,
+                            lavpartable    = lavpartable,
+                            lavoptions     = lavoptions),
+               silent = TRUE)
+      
+      # Quasi-Newton
+    } else {
+      
+      # for backwards compatibility (<0.6)
+      if (is.null(lavoptions$optim.attempts)) {
+        lavoptions$optim.attempts <- 1L
+      }
+      
+      # try 1
+      if (lavoptions$verbose) {
+        cat("attempt 1 -- default options\n")
+      }
+      x <- try(lav_model_estimate(lavmodel        = lavmodel,
+                                  lavpartable     = lavpartable,
+                                  lavsamplestats  = lavsamplestats,
+                                  lavdata         = lavdata,
+                                  lavoptions      = lavoptions,
+                                  lavcache        = lavcache),
+               silent = TRUE)
+      # store first attempt
+      # x.first <- x
+      
+      # try 2: optim.parscale = "standardize" (new in 0.6-7)
+      if (lavoptions$optim.attempts > 1L &&
+          (inherits(x, "try-error") || !attr(x, "converged"))) {
+        lavoptions2 <- lavoptions
+        lavoptions2$optim.parscale <- "standardized"
+        if (lavoptions$verbose) {
+          cat("attempt 2 -- optim.parscale = \"standardized\"\n")
+        }
+        x <- try(lav_model_estimate(lavmodel        = lavmodel,
+                                    lavpartable     = lavpartable,
+                                    lavsamplestats  = lavsamplestats,
+                                    lavdata         = lavdata,
+                                    lavoptions      = lavoptions2,
+                                    lavcache        = lavcache),
+                 silent = TRUE)
+      }
+      
+      # try 3: start = "simple"
+      if (lavoptions$optim.attempts > 2L &&
+          (inherits(x, "try-error") || !attr(x, "converged"))) {
+        if (lavoptions$verbose) {
+          cat("attempt 3 -- start = \"simple\"\n")
+        }
+        x <- try(lav_model_estimate(lavmodel        = lavmodel,
+                                    lavpartable     = lavpartable,
+                                    lavsamplestats  = lavsamplestats,
+                                    lavdata         = lavdata,
+                                    lavoptions      = lavoptions,
+                                    start           = "simple",
+                                    lavcache        = lavcache),
+                 silent = TRUE)
+      }
+      
+      # try 4: start = "simple" + optim.parscale = "standardize"
+      if (lavoptions$optim.attempts > 3L &&
+          (inherits(x, "try-error") || !attr(x, "converged"))) {
+        lavoptions2 <- lavoptions
+        lavoptions2$optim.parscale <- "standardized"
+        if (lavoptions$verbose) {
+          cat("attempt 4 -- optim.parscale = \"standardized\" + start = \"simple\"\n")
+        }
+        x <- try(lav_model_estimate(lavmodel        = lavmodel,
+                                    lavpartable     = lavpartable,
+                                    lavsamplestats  = lavsamplestats,
+                                    lavdata         = lavdata,
+                                    lavoptions      = lavoptions2,
+                                    start           = "simple",
+                                    lavcache        = lavcache),
+                 silent = TRUE)
+      }
+    }
+    
+    # optimization failed with error
+    if (inherits(x, "try-error")) {
+      warn.txt <- "Model estimation FAILED! Returning starting values."
+      x <- lav_model_get_parameters(lavmodel = lavmodel,
+                                    type = "free") # starting values
+      attr(x, "iterations") <- 0L
+      attr(x, "converged") <- FALSE
+      attr(x, "warn.txt") <- warn.txt
+      attr(x, "control") <- lavoptions$control
+      attr(x, "dx") <- numeric(0L)
+      fx <- as.numeric(NA)
+      attr(fx, "fx.group") <-  as.numeric(NA)
+      attr(x, "fx") <- fx
+    }
+    
+    # if a warning was produced, say it here
+    warn.txt <- attr(x, "warn.txt")
+    if (lavoptions$warn && nchar(warn.txt) > 0L) {
+      warning(lav_txt2message(warn.txt))
+    }
+    
+    # in case of non-linear constraints: store final con.jac and con.lambda
+    # in lavmodel
+    if (!is.null(attr(x, "con.jac")))
+      lavmodel@con.jac <- attr(x, "con.jac")
+    if (!is.null(attr(x, "con.lambda")))
+      lavmodel@con.lambda <- attr(x, "con.lambda")
+    
+    # store parameters in lavmodel
+    lavmodel <- lav_model_set_parameters(lavmodel, x = as.numeric(x))
+    
+    # store parameters in @ParTable$est
+    lavpartable$est <- lav_model_get_parameters(lavmodel = lavmodel,
+                                                type = "user", extra = TRUE)
+    
+    if (lavoptions$verbose) {
+      cat("lavoptim    ... done.\n")
+    }
+    
+  } else {
+    x <- numeric(0L)
+    attr(x, "iterations") <- 0L
+    attr(x, "converged") <- FALSE
+    attr(x, "warn.txt") <- ""
+    attr(x, "control") <- lavoptions$control
+    attr(x, "dx") <- numeric(0L)
+    fx <- try(lav_model_objective(lavmodel = lavmodel,
+                                  lavsamplestats = lavsamplestats, lavdata = lavdata,
+                                  lavcache = lavcache), silent = TRUE)
+    if (!inherits(fx, "try-error")) {
+      attr(x, "fx") <- fx
+    } else {
+      fx <- as.numeric(NA)
+      attr(fx, "fx.group") <- as.numeric(NA)
+      attr(x, "fx") <- fx
+    }
+    
+    lavpartable$est <- lavpartable$start
+  }
+  
+  # should we fake/force convergence? (eg. to enforce the
+  # computation of a test statistic)
+  if (lavoptions$optim.force.converged) {
+    attr(x, "converged") <- TRUE
+  }
+  
+  # store optimization info in lavoptim
+  lavoptim <- list()
+  x2 <- x
+  attributes(x2) <- NULL
+  lavoptim$x <- x2
+  lavoptim$dx <- attr(x, "dx")
+  lavoptim$npar <- length(x)
+  lavoptim$iterations <- attr(x, "iterations")
+  lavoptim$converged  <- attr(x, "converged")
+  lavoptim$warn.txt   <- attr(x, "warn.txt")
+  lavoptim$parscale   <- attr(x, "parscale")
+  lavoptim$partrace   <- attr(x, "partrace")
+  fx.copy <- fx <- attr(x, "fx")
+  attributes(fx) <- NULL
+  lavoptim$fx         <- fx
+  lavoptim$fx.group   <- attr(fx.copy, "fx.group")
+  if (!is.null(attr(fx.copy, "logl.group"))) {
+    lavoptim$logl.group <- attr(fx.copy, "logl.group")
+    lavoptim$logl       <- sum(lavoptim$logl.group)
+  } else {
+    lavoptim$logl.group <- as.numeric(NA)
+    lavoptim$logl       <- as.numeric(NA)
+  }
+  lavoptim$control        <- attr(x, "control")
+  
+  return(list(
+    lavoptim = lavoptim,
+    lavmodel = lavmodel,
+    lavpartable = lavpartable,
+    x = x
+  ))
+}
