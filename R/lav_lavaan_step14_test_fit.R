@@ -3,13 +3,18 @@ lav_lavaan_step14_test <- function(lavoptions, lavmodel, lavsamplestats, lavdata
   # # # # # # # # # # #
   # #  14. lavtest # # 
   # # # # # # # # # # #
-  TEST <- NULL
+  # if lavoptions$test != "none" and x converged
+  #   compute lavtest via lav_model_test(...)
+  # else
+  #   lavtest <- list(list(test = "none", stat = NA, stat.group = rep(NA, lavdata@ngroups), 
+  #                       df = NA, refdistr = "unknown", pvalue = NA))
+  lavtest <- NULL
   if (!(length(lavoptions$test) == 1L && lavoptions$test == "none") &&
       attr(x, "converged")) {
     if (lavoptions$verbose) {
       cat("computing TEST for test(s) =", lavoptions$test, "...")
     }
-    TEST <- lav_model_test(lavmodel            = lavmodel,
+    lavtest <- lav_model_test(lavmodel            = lavmodel,
                            lavpartable         = lavpartable,
                            lavpta              = lavpta,
                            lavsamplestats      = lavsamplestats,
@@ -25,11 +30,11 @@ lav_lavaan_step14_test <- function(lavoptions, lavmodel, lavsamplestats, lavdata
       cat(" done.\n")
     }
   } else {
-    TEST <- list(list(test = "none", stat = NA,
+    lavtest <- list(list(test = "none", stat = NA,
                       stat.group = rep(NA, lavdata@ngroups), df = NA,
                       refdistr = "unknown", pvalue = NA))
   }
-  return(TEST)
+  return(lavtest)
 }
 
 lav_lavaan_step14_fit <- function(lavpartable, lavmodel, lavimplied, x, VCOV, lavtest) {
@@ -43,5 +48,6 @@ lav_lavaan_step14_fit <- function(lavpartable, lavmodel, lavimplied, x, VCOV, la
                         VCOV        = VCOV,
                         TEST        = lavtest)
   #lavfit <- new("Fit")
+  return(lavfit)
 }
 

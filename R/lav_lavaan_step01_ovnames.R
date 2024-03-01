@@ -1,25 +1,26 @@
-lav_lavaan_step01_ovnames_1 <- function(slotParTable, model, dotdotdot.parser) {
-  # als slotPartable niet null -> copieer in flat.model
-  # anders
-  #   als model character 
-  #     parseer model naar flat.model
-  #   anders
-  #     als het een "formula" is (geef warning)
-  #       zet "~ x1 + x2 + x3" om naar character "f =~ x1 + x2 + x3" en parseer naar flatmodel 
-  #       zet "y "~ x1 + x2 + x3" om naar character en parseer naar flatmodel 
-  #       iets anders --> ***error***
-  #     anders 
-  #       als het een lavaan object is, flat.model uithalen via functie parTable
-  #       anders 
-  #         als model een list is
-  #           als minimum aanwezig (kolommen lhs, op, rhs, free)
+lav_lavaan_step01_ovnames_initflat <- function(slotParTable, model, dotdotdot.parser) {
+  # if slotPartable not NULL, copy to flat.model
+  # else
+  #   if model type character
+  #     parse model to flat.model
+  #   else
+  #     if it is a formula (** warning **)
+  #       transform "~ x1 + x2 + x3" to character "f =~ x1 + x2 + x3", parse to flat.model
+  #       transform "y =~ x1 + x2 + x3" to character and parse to flat.model
+  #       something else : *** error ***
+  #     else
+  #       if it is a lavaan object, obtain flat.model out of it via function parTable
+  #       else
+  #         if model is a list
+  #           if bare minimum present (columns lhs, op, rhs, free)
   #             flat.model = model
-  #             kolom blmock eventueel overschrijven met kolom group
-  #           anders --> ***error***
-  #         anders
-  #           als model NULL is --> ***error***
-  #           TODO: wat als model bvb een function is ???  Geeft nu een fout object 'flat.model' not found
-  #           
+  #             replace column block by column group (if present)
+  #           else --> *** error ***
+  #         else
+  #           if model NULL --> ***error***
+  #           TODO: wat if model is something else (e.g. a function)??? Now this 
+  #                   results in an error "object 'flat.model' not found" !
+  #
   # 1a. get ov.names and ov.names.x (per group) -- needed for lavData()
   if (!is.null(slotParTable)) {
     flat.model <- slotParTable
@@ -32,7 +33,7 @@ lav_lavaan_step01_ovnames_1 <- function(slotParTable, model, dotdotdot.parser) {
   } else if (inherits(model, "formula")) {
     # two typical cases:
     # 1. regression type formula
-    # 2. no quotes, eg f =~ x1 + x2 + x3     TODO: this isn't a valid formula !!!
+    # 2. no quotes, e.g. f =~ x1 + x2 + x3     TODO: this isn't a valid formula !!!
     tmp <- as.character(model)
     if (tmp[1] == "~" && length(tmp) == 2L) {
       # looks like an unquoted single factor model f =~ something
@@ -56,11 +57,11 @@ lav_lavaan_step01_ovnames_1 <- function(slotParTable, model, dotdotdot.parser) {
   } else if (is.list(model)) {
     # two possibilities: either model is already lavaanified
     # or it is something else...
-    
+
     # look for the bare minimum columns: lhs - op - rhs
     if (!is.null(model$lhs) && !is.null(model$op)  &&
         !is.null(model$rhs) && !is.null(model$free)) {
-      
+
       # ok, we have something that looks like a parameter table
       # FIXME: we need to check for redundant arguments
       # (but if cfa/sem was used, we can not trust the call)
@@ -69,7 +70,7 @@ lav_lavaan_step01_ovnames_1 <- function(slotParTable, model, dotdotdot.parser) {
       #        "auto.fix.first", "auto.fix.single", "auto.var",
       #        "auto.cov.lv.x", "auto.cov.y", "auto.th", "auto.delta")
       flat.model <- model
-      
+
       # fix semTools issue here? for auxiliary() which does not use
       # block column yet
       if (!is.null(flat.model$block)) {
@@ -83,7 +84,7 @@ lav_lavaan_step01_ovnames_1 <- function(slotParTable, model, dotdotdot.parser) {
       } else if (!is.null(flat.model$group)) {
         flat.model$block <- flat.model$group
       }
-      
+
     } else {
       bare.minimum <- c("lhs", "op", "rhs", "free")
       missing.idx <- is.na(match(bare.minimum, names(model)))
@@ -95,24 +96,22 @@ lav_lavaan_step01_ovnames_1 <- function(slotParTable, model, dotdotdot.parser) {
   } else if (is.null(model)) {
     stop("lavaan ERROR: model is NULL!")
   }
-  return(flat.model)
-}
-
-lav_lavaan_step01_ovnames_2 <- function(flat.model, ov.order, data, sample.cov, slotData) {
-  # ov.order naar lowercase, check "data" of "model"
-  # indien "data" flat.model proberen aanpassen met lav_partable_ov_from_data (warning indien mislukt)
-  #           (datanames halen uit data of sample.cov of slotData)
-  # TODO: naar lowercase en check kan veel vroeger gebeuren
-  # TODO: in lav_partable_ov_from_data en waar gebruikt: stockeren in attributes ipv kunstgreep?
-  
   # Ok, we got a flattened model; usually this a flat.model object, but it could
   # also be an already lavaanified parTable, or a bare-minimum list with
   # lhs/op/rhs/free elements
-  
+  return(flat.model)
+}
+
+lav_lavaan_step01_ovnames_ovorder <- function(flat.model, ov.order, data, sample.cov, slotData) {
+  # set ov.order in lowercase, check if it is "data" or "model", if not *** error ***
+  # if ov.order == "data"
+  #  try adapt flat.model via lav_partable_ov_from_data (** warning ** if this fails)
+  # TODO: in lav_partable_ov_from_data and where used: store ov.order in attributes?
+
   # new in 0.6-14
   # if ov.order = "data", it would seem we need to intervene here;
-  # we do this by 'injecting' dummy lhs da rhs statement in flat.model, to
-  # 'trick' lav_partable_vnames() (which only sees the model!)
+  # ldw 1/3/2024:
+  # we do this adding attribute "ovda" to flat.model and partable
   ov.order <- tolower(ov.order)
   if (ov.order == "data") {
     flat.model.orig <- flat.model
@@ -130,27 +129,28 @@ lav_lavaan_step01_ovnames_2 <- function(flat.model, ov.order, data, sample.cov, 
   return(flat.model)
 }
 
-lav_lavaan_step01_ovnames_3 <- function(flat.model, ov.names, ngroups) {
-  # indien "group :" voorkomt in flat.model
-  #   tmp.group.values : rechterzijden
-  #   kopieer model zonder attributen en lavaanify dat -> tmp.lav
-  #   ov.names, ov.names.y, ov.names.x, lv.names uit tmp.lav via lav_partable_vnames
-  # anders
-  #   als flat.model$group niet null
-  #     group.values er uit halen via lav_partable_group_values (indien méér dan 1)
-  #     ov.names, ov.names.y, ov.names.x, lv.names uit flat.model halen via lav_partable_vnames
-  #   anders
-  #     ov.names, ov.names.y, ov.names.x, lv.names uit flat.model halen via lav_partable_vnames
-  #   
-  # Check length(ov.names) > 1  TODO: als ov.names een list is, check voor alle elementen ???  
-  #   
-  # group blocks?
-  # TODO: call lav_partable_vnames only ones and not for each type, when vnames is corrected
+lav_lavaan_step01_ovnames_group <- function(flat.model, ov.names, ngroups) {
+  # if "group :" appears in flat.model
+  #   tmp.group.values: set of names in corresponding right hand sides
+  #   copy flat.model without attributes and call lavaanify, store result in tmp.lav
+  #   extract ov.names, ov.names.y, ov.names.x, lv.names from tmp.lav via lav_partable_vnames
+  # else
+  #   if flat.model$group not NULL and more then 1 group.value 
+  #     extract group.values via lav_partable_group_values 
+  #     extract, for each group.value, 
+  #       ov.names, ov.names.y, ov.names.x, lv.names from flat.model via lav_partable_vnames
+  #   else
+  #     extract ov.names, ov.names.y, ov.names.x, lv.names from flat.model via via lav_partable_vnames
+  #
+  # Check length(ov.names) >= 1  *** error *** if not
+  #     TODO: if ov.names is a list, check for all elements ???
+  #
+  #     TODO: call lav_partable_vnames only ones and not for each type
   #
   flat.model.2 <- NULL
   tmp.lav <- NULL
   group.values <- NULL
-  
+
   if (any(flat.model$op == ":" & tolower(flat.model$lhs) == "group")) {
     # here, we only need to figure out:
     # - ngroups
@@ -163,7 +163,7 @@ lav_lavaan_step01_ovnames_3 <- function(flat.model, ov.names, ngroups) {
     flat.model$lhs[group.idx] <- "group"
     tmp.group.values <- unique(flat.model$rhs[group.idx])
     tmp.ngroups <- length(tmp.group.values)
-    
+
     flat.model.2 <- flat.model
     attr(flat.model.2, "modifiers") <- NULL
     attr(flat.model.2, "constraints") <- NULL
@@ -211,7 +211,7 @@ lav_lavaan_step01_ovnames_3 <- function(flat.model, ov.names, ngroups) {
     ov.names.x <- unique(unlist(lav_partable_vnames(flat.model, type = "ov.x")))
     lv.names   <- unique(unlist(lav_partable_vnames(flat.model, type = "lv")))
   }
-  
+
   # sanity check (new in 0.6-8): do we have any ov.names?
   # detect early
   if (length(ov.names) == 0L) {
@@ -226,10 +226,10 @@ lav_lavaan_step01_ovnames_3 <- function(flat.model, ov.names, ngroups) {
               ngroups = ngroups))
 }
 
-lav_lavaan_step01_ovnames_4 <- function(lv.names, data, sample.cov, dotdotdot, slotOptions) {
-  # latente variabelen kunnen niet in data zitten --> *** error *** (behalve indien expliciet gevraagd)
-  # latente interacties niet toegelaten ---> *** error ***
-  
+lav_lavaan_step01_ovnames_checklv <- function(lv.names, data, sample.cov, dotdotdot, slotOptions) {
+  # latent variables cannot appear in data --> *** error *** (except when explicitly requested)
+  # latent interactions are not supported ---> *** error ***
+
   # sanity check: ov.names.x should NOT appear in ov.names.y
   # this may happen if 'x' is exogenous in one block, but not in another...
   #endo.idx <- which(ov.names.x %in% ov.names.y)
@@ -237,12 +237,12 @@ lav_lavaan_step01_ovnames_4 <- function(lv.names, data, sample.cov, dotdotdot, s
   #    # remove from x! (new in 0.6-8)
   #    ov.names.x <- ov.names.x[-endo.idx]
   #}
-  
-  
+
+
   # handle for lv.names that are also observed variables (new in 0.6-6)
   lv.lv.names <- unique(unlist(lv.names))
   if (length(lv.lv.names) > 0L) {
-    
+
     # check for lv.names in data/cov
     if (!is.null(data)) {
       bad.idx <- which(lv.lv.names %in% names(data))
@@ -251,7 +251,7 @@ lav_lavaan_step01_ovnames_4 <- function(lv.names, data, sample.cov, dotdotdot, s
     } else {
       bad.idx <- integer(0L)
     }
-    
+
     # if found, hard stop
     if (length(bad.idx) > 0L) {
       if (!is.null(dotdotdot$check.lv.names) &&
@@ -262,18 +262,18 @@ lav_lavaan_step01_ovnames_4 <- function(lv.names, data, sample.cov, dotdotdot, s
              "with observed\n\t\tvariable names: ",
              paste(lv.lv.names[bad.idx], collapse = " "))
       }
-      
+
       # rename latent variables (by adding 'lat')
       #flat.model.idx <- which(flat.model$op == "=~" &
       #                  flat.model$lhs %in% lv.names[bad.idx])
       #flat.model$lhs[flat.model.idx] <- paste(flat.model$lhs[flat.model.idx], "lat", sep = "")
-      
+
       # add names to ov.names
       #ov.names <- c(ov.names, lv.names[bad.idx])
       # what about ov.names.y and ov.names.x?
     }
   }
-  
+
   # sanity check: we do not support latent interaction yet (using the :)
   lv.int.idx <- which(grepl(":", lv.lv.names))
   if (length(lv.int.idx) > 0L) {
@@ -291,52 +291,53 @@ lav_lavaan_step01_ovnames_4 <- function(lv.names, data, sample.cov, dotdotdot, s
       stop(lav_txt2message(txt, header = "lavaan ERROR:"))
     }
   }
+  return(invisible(NULL))
 }
 
-lav_lavaan_step01_ovnames_5 <- function(data, cluster, flat.model, group.values, ngroups) {
-  # indien "level :" voorkomt in flat.model 
-  #   cluster moet vermeld zijn indien data opgegeven, zoniet *** error ***
-  #   bepaal tmp.group.values en tmp.level.values
-  #   er moeten minstens 2 levels gedefinieerd zijn, zoniet *** error ***
-  #   kopieer flat.model zonder attributen en lavaanify dat -> tmp.lav
-  #   check minstens 2 levels voor tmp.lav
-  #   bepaal ov.names.l per group en per level (via lav_partable_vnames op tmp.lav)
-  # anders
-  #   als lav_partable_nlevels(flat.model) > 0 
-  #     cluster met vermeld zijn indien data opgegeven, zoniet *** error ***
-  #     bepaal ov.names.l per group en per level via lavNames op flat.model
-  #   anders
-  #     geen levels (ov.names.l = list())
-  #   
+lav_lavaan_step01_ovnames_namesl <- function(data, cluster, flat.model, group.values, ngroups) {
+  # if "level :" appears in flat.model
+  #   if data not NULL, cluster must not be NULL, if it is: *** error ***
+  #   compute tmp.group.values and tmp.level.values from flat.model
+  #   there should be at least 2 levels, if not *** error ***
+  #   copy flat.model without attributes and lavaanify -> tmp.lav
+  #   check at least 2 levels for tmp.lav, if not *** error ***
+  #   compute ov.names.l per group and per level (via lav_partable_vnames on tmp.lav)
+  # else
+  #   if lav_partable_nlevels(flat.model) > 0
+  #   if data not NULL, cluster must not be NULL, if it is: *** error ***
+  #     compute ov.names.l per group and per level (via lav_partable_vnames on flat.model)
+  #   else
+  #     there are no levels (ov.names.l = list())
+  #
   # handle ov.names.l
   if (any(flat.model$op == ":" & tolower(flat.model$lhs) == "level")) {
-    
+
     # check for cluster argument
     if (!is.null(data) && is.null(cluster)) {
       stop("lavaan ERROR: cluster argument is missing.")
     }
-    
+
     # here, we only need to figure out:
     # - nlevels
     # - ov's per level
     # - FIXME: we need a more efficient way, avoiding lavaanify/vnames
-    
+
     group.idx <- which(flat.model$op == ":" & flat.model$lhs == "group")
     tmp.group.values <- unique(flat.model$rhs[group.idx])
     tmp.ngroups <- max(c(length(tmp.group.values), 1))
-    
+
     level.idx <- which(flat.model$op == ":" & tolower(flat.model$lhs) == "level")
     # replace by "level" (in case we got 'Level')
     flat.model$lhs[level.idx] <- "level"
     tmp.level.values <- unique(flat.model$rhs[level.idx])
     tmp.nlevels <- length(tmp.level.values)
-    
+
     # we need at least 2 levels (for now)
     if (tmp.nlevels < 2L) {
       stop("lavaan ERROR: when data is clustered, you must specify a model\n",
            "  for each level in the model syntax (for now); see example(Demo.twolevel)")
     }
-    
+
     flat.model.2 <- flat.model
     attr(flat.model.2, "modifiers") <- NULL
     attr(flat.model.2, "constraints") <- NULL
@@ -347,7 +348,7 @@ lav_lavaan_step01_ovnames_5 <- function(data, cluster, flat.model, group.values,
            "you must specify a model for each level in the model syntax (for now); see example(Demo.twolevel)")
     }
     ov.names.l <- vector("list", length = tmp.ngroups) # per group
-    
+
     for (g in seq_len(tmp.ngroups)) {
       ov.names.l[[g]] <- vector("list", length = tmp.nlevels)
       for (l in seq_len(tmp.nlevels)) {
@@ -369,12 +370,12 @@ lav_lavaan_step01_ovnames_5 <- function(data, cluster, flat.model, group.values,
     # perhaps model is already a parameter table
     nlevels <- lav_partable_nlevels(flat.model)
     if (nlevels > 1L) {
-      
+
       # check for cluster argument (only if we have data)
       if (!is.null(data) && is.null(cluster)) {
         stop("lavaan ERROR: cluster argument is missing.")
       }
-      
+
       ngroups <- lav_partable_ngroups(flat.model)
       group.values <- lav_partable_group_values(flat.model)
       ov.names.l <- vector("list", length = ngroups)
@@ -393,9 +394,9 @@ lav_lavaan_step01_ovnames_5 <- function(data, cluster, flat.model, group.values,
   ))
 }
 
-lav_lavaan_step01_ovnames_6 <- function(ordered, flat.model, data) {
-  # interpretatie en check ordered parameter, eventueel aanpassen
-  
+lav_lavaan_step01_ovnames_ordered <- function(ordered, flat.model, data) {
+  # interpretation and check ordered parameter, modify if needed
+
   # sanity check ordered argument (just in case, add lhs variables names)
   if (!is.null(ordered)) { # new in 0.6-4
     if (is.logical(ordered) && ordered) {  # ordered = TRUE
@@ -415,7 +416,6 @@ lav_lavaan_step01_ovnames_6 <- function(ordered, flat.model, data) {
         } else if (inherits(data, "matrix")) {
           NAMES <- colnames(data)
         }
-        
         missing.idx <- which(!ordered %in% NAMES)
         if (length(missing.idx) > 0L) { # FIXme: warn = FALSE has no eff
           warning("lavaan WARNING: ordered variable(s): ",

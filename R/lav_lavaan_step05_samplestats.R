@@ -1,10 +1,21 @@
 lav_lavaan_step05_samplestats <- function(slotSampleStats, lavdata, lavoptions, WLS.V, NACOV,
                                           sample.cov, sample.mean, sample.th, sample.nobs,
                                           ov.names, ov.names.x, lavpta) {
-  
   # # # # # # # # # # # # # #
-  # #  5. lavsamplestats # # 
+  # #  5. lavsamplestats  # #
   # # # # # # # # # # # # # #
+  # if slotSampleStats not NULL
+  #   copy to lavsamplestats
+  # else
+  #   if lavdata@data.type == "full"
+  #     compute lavsamplestats via lav_samplestats_from_data
+  #   else
+  #     if lavdata@data.type == "moment"
+  #       if lavoptions$meanstructure TRUE but sample.mean is NULL : ** warning **
+  #       compute lavsamplestats via lav_samplestats_from_moments
+  #     else
+  #       create lavsamplestats object (type lavSampleStats) with data from lavdata and lavpta
+  #
   if (!is.null(slotSampleStats)) {
     lavsamplestats <- slotSampleStats
   } else if (lavdata@data.type == "full") {

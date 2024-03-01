@@ -2,6 +2,48 @@ lav_lavaan_step10_cache <- function(slotCache, lavdata, lavmodel, lavpta, lavopt
   # # # # # # # # # # # 
   # #  10. lavcache # # 
   # # # # # # # # # # # 
+  # if slotCache not NULL
+  #   copy to lavcache
+  # else
+  #   lavcache = list of length lavdata@ngroups
+  #   set tmp.ov.types = lavdata$ov$types
+  #   if lavmodel@conditional.x and sum(lavmodel@nexo) > 0L remove elements lavpta$vidx$ov.x from tmp.ov.types
+  #   if lavoptions$estimator == "PML" and all tmp.ov.types are "ordered"
+  #     TH = computeTH(lavmodel)
+  #     BI = lav_tables_pairwise_freq_cells(lavdata)
+  #     if lavoptions$missing is "available.cases" or "doubly.robust" 
+  #       UNI = lav_tables_univariate_freq_cell(lavdata)
+  #       if lavoptions$missing is "doubly.robust"
+  #         if lavoptions$control$pairwiseProbGivObs NULL: *** error ***
+  #         if lavoptions$control$univariateProbGivObs NULL: *** error ***
+  #     for all groups (1:lavdata@ngroups)
+  #       set tmp.idx = 1:length(BI$ibs.freq)
+  #       if BI$group not NULL and max(BI$group) > 1L set tmp.idx = indexes for this group in BI
+  #       set bifreq = BI$obs.freq[tmp.idx]
+  #       set binobs = BI$nobs[tmp.idx]
+  #       set LONG = LongVecInd(no.x = ncol(lavdata@X[[g]]), all.thres = TH[[g]],
+  #                             index.var.of.thres = lavmodel@th.idx[[g]])
+  #       set lavcache[[g]] = list(bifreq = bifreq, nobs = binobs, LONG = LONG)
+  #       if sampling.weights not NULL
+  #         compute (for group g) lavcache[[g]]$sum_obs_weights_xixj_ab_vec (*)
+  #       if lavoptions$missing is "available.cases" or "doubly.robust" 
+  #         set tmp.idx = 1:length(BI$ibs.freq)
+  #         if BI$group not NULL and max(BI$group) > 1L set tmp.idx = indexes for this group in BI
+  #         set lavcache[[g]]$unifreq = unifreq = UNI$obs.freq[tmp.idx]
+  #         set lavcache[[g]]$uninobs = uninobs = UNI$nobs[tmp.idx]
+  #         set lavcache[[g]]$uniweights.casewise = uniweights.casewise = rowSums(is.na(lavdata@X[[g]]))
+  #         compute lavcache[[g]]$uniweights (*)
+  #       if lavoptions$missing is "doubly.robust" 
+  #         lavcache[[g]]$pairwiseProbGivObs = lavoptions$control$pairwiseProbGivObs[[g]]
+  #         lavcache[[g]]$univariateProbGivObs = lavoptions$control$univariateProbGivObs[[g]]
+  #         compute members idx.Y1, idx.Gy2, idx.cat.Y1, idx.cat.Gy2 and id.uniPrGivObs from
+  #           lavchache[[g]] (*)
+  #   if lavdata$data.type is "full" and lavdata@Rp[[1L]] not NULL
+  #     copy lavdata@Rp[[g]]$pat to lavcache[[g]]$pat for all groups g
+  # if lavoptions$estimator is "MML"
+  #   compute for all groups g lavcache[[g]]$GH via lav_integration_gauss_hermite
+  #         
+  # (*) !!! computations too complicated to summarize here !!!
   if (!is.null(slotCache)) {
     lavcache <- slotCache
   } else {
@@ -9,37 +51,35 @@ lav_lavaan_step10_cache <- function(slotCache, lavdata, lavmodel, lavpta, lavopt
     lavcache <- vector("list", length = lavdata@ngroups)
     
     # ov.types? (for PML check)
-    ov.types <- lavdata@ov$type
+    tmp.ov.types <- lavdata@ov$type
     if (lavmodel@conditional.x && sum(lavmodel@nexo) > 0L) {
       # remove ov.x
-      ov.x.idx <- unlist(lavpta$vidx$ov.x)
-      ov.types <- ov.types[-ov.x.idx]
+      tmp.ov.x.idx <- unlist(lavpta$vidx$ov.x)
+      tmp.ov.types <- tmp.ov.types[-tmp.ov.x.idx]
     }
     
-    if (lavoptions$estimator == "PML" && all(ov.types == "ordered")) {
+    if (lavoptions$estimator == "PML" && all(tmp.ov.types == "ordered")) {
       TH <- computeTH(lavmodel)
       BI <- lav_tables_pairwise_freq_cell(lavdata)
       
-      # handle option missing = "available.cases"
+      # handle option missing = "available.cases" or "doubly.robust"
       if (lavoptions$missing == "available.cases" ||
           lavoptions$missing == "doubly.robust") {
         UNI <- lav_tables_univariate_freq_cell(lavdata)
-      }
-      
-      # checks for missing = "double.robust"
-      if (lavoptions$missing == "doubly.robust") {
-        # check whether the probabilities pairwiseProbGivObs and
-        # univariateProbGivObs are given by the user
-        if (is.null(lavoptions$control$pairwiseProbGivObs)) {
-          stop("lavaan ERROR: could not find `pairwiseProbGivObs' in control() list")
+        # checks for missing = "double.robust"
+        if (lavoptions$missing == "doubly.robust") {
+          # check whether the probabilities pairwiseProbGivObs and
+          # univariateProbGivObs are given by the user
+          if (is.null(lavoptions$control$pairwiseProbGivObs)) {
+            stop("lavaan ERROR: could not find `pairwiseProbGivObs' in control() list")
+          }
+          if (is.null(lavoptions$control$univariateProbGivObs)) {
+            stop("lavaan ERROR: could not find `univariateProbGivObs' in control() list")
+          }
         }
-        if (is.null(lavoptions$control$univariateProbGivObs)) {
-          stop("lavaan ERROR: could not find `univariateProbGivObs' in control() list")
-        }
       }
-      
+
       for (g in 1:lavdata@ngroups) {
-        
         if (is.null(BI$group) || max(BI$group) == 1L) {
           bifreq <- BI$obs.freq
           binobs  <- BI$nobs
@@ -245,9 +285,7 @@ lav_lavaan_step10_cache <- function(slotCache, lavdata, lavmodel, lavpta, lavopt
             sort(c(unique(lavmodel@th.idx[[g]]),
                    lavmodel@th.idx[[g]]))
         } # doubly.robust
-        
-        
-        
+
       } # g
     }
     # copy response patterns to cache -- FIXME!! (data not included

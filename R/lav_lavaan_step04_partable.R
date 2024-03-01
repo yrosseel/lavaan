@@ -3,6 +3,27 @@ lav_lavaan_step04_partable <- function(slotParTable, model, flat.model, lavoptio
   # # # # # # # # # # # # 
   # #  4. lavpartable # # 
   # # # # # # # # # # # # 
+  # if slotParTable not null
+  #   copy slotParTable to lavpartable
+  # else
+  #   if model is character or formula
+  #     create a temporary variable tmp.data.ov equal to lavdata@ov 
+  #     if estimator "catML" 
+  #       set meanstructure to FALSE
+  #       set the member type in the temporary variable tmp.data.ov to a numeric vector with all zeroes
+  #     create lavpartable via function lavParTable (=lavaanify) 
+  #                            using the temporary variable for parameter varTable
+  #   else
+  #     if model is lavaan object
+  #       set lavpartable = parTable(model)
+  #     else
+  #       if model is a list
+  #         set lavpartable to as.list(lav_partable_complete(as.list(flat.model)))
+  #       else
+  #         *** error ***
+  # if slotParTable is NULL check lavpartable via lav_partable_check
+  # if lavoptions$optim.method is "em" and there are variances specified in partable with free = 0L and
+  #    starting value ustart 0, set ustart for these variances to lavoptions$em.zerovar.offset      
   if (!is.null(slotParTable)) {
     lavpartable <- slotParTable
   } else if (is.character(model) ||
@@ -31,51 +52,47 @@ lav_lavaan_step04_partable <- function(slotParTable, model, flat.model, lavoptio
     #if(lavoptions$conditional.x) {
     #    tmp <- vnames(flat.model, type = "ov.x", ov.x.fatal = TRUE)
     #}
-    
+    tmp.data.ov <- lavdata@ov
     if (lavoptions$estimator == "catML") {
       lavoptions$meanstructure <- FALSE
-      DataOV <- lavdata@ov
-      DataOV$type <- rep("numeric", length(DataOV$type))
-    } else {
-      DataOV <- lavdata@ov
+      tmp.data.ov$type <- rep("numeric", length(tmp.data.ov$type))
     }
-    
     lavpartable <-
-      lavaanify(model            = flat.model,
-                constraints      = constraints,
-                varTable         = DataOV,
-                ngroups          = lavdata@ngroups,
+      lavParTable(model            = flat.model,
+                  constraints      = constraints,
+                  varTable         = tmp.data.ov,
+                  ngroups          = lavdata@ngroups,
                 
-                meanstructure    = lavoptions$meanstructure,
-                int.ov.free      = lavoptions$int.ov.free,
-                int.lv.free      = lavoptions$int.lv.free,
-                marker.int.zero  = lavoptions$marker.int.zero,
-                orthogonal       = lavoptions$orthogonal,
-                orthogonal.x     = lavoptions$orthogonal.x,
-                orthogonal.y     = lavoptions$orthogonal.y,
-                orthogonal.efa   = lavoptions$rotation.args$orthogonal,
-                conditional.x    = lavoptions$conditional.x,
-                fixed.x          = lavoptions$fixed.x,
-                std.lv           = lavoptions$std.lv,
-                correlation      = lavoptions$correlation,
-                effect.coding    = lavoptions$effect.coding,
-                ceq.simple       = lavoptions$ceq.simple,
-                parameterization = lavoptions$parameterization,
-                auto.fix.first   = lavoptions$auto.fix.first,
-                auto.fix.single  = lavoptions$auto.fix.single,
-                auto.var         = lavoptions$auto.var,
-                auto.cov.lv.x    = lavoptions$auto.cov.lv.x,
-                auto.cov.y       = lavoptions$auto.cov.y,
-                auto.th          = lavoptions$auto.th,
-                auto.delta       = lavoptions$auto.delta,
-                auto.efa         = lavoptions$auto.efa,
-                group.equal      = lavoptions$group.equal,
-                group.partial    = lavoptions$group.partial,
-                group.w.free     = lavoptions$group.w.free,
-                debug            = lavoptions$debug,
-                warn             = lavoptions$warn,
+                  meanstructure    = lavoptions$meanstructure,
+                  int.ov.free      = lavoptions$int.ov.free,
+                  int.lv.free      = lavoptions$int.lv.free,
+                  marker.int.zero  = lavoptions$marker.int.zero,
+                  orthogonal       = lavoptions$orthogonal,
+                  orthogonal.x     = lavoptions$orthogonal.x,
+                  orthogonal.y     = lavoptions$orthogonal.y,
+                  orthogonal.efa   = lavoptions$rotation.args$orthogonal,
+                  conditional.x    = lavoptions$conditional.x,
+                  fixed.x          = lavoptions$fixed.x,
+                  std.lv           = lavoptions$std.lv,
+                  correlation      = lavoptions$correlation,
+                  effect.coding    = lavoptions$effect.coding,
+                  ceq.simple       = lavoptions$ceq.simple,
+                  parameterization = lavoptions$parameterization,
+                  auto.fix.first   = lavoptions$auto.fix.first,
+                  auto.fix.single  = lavoptions$auto.fix.single,
+                  auto.var         = lavoptions$auto.var,
+                  auto.cov.lv.x    = lavoptions$auto.cov.lv.x,
+                  auto.cov.y       = lavoptions$auto.cov.y,
+                  auto.th          = lavoptions$auto.th,
+                  auto.delta       = lavoptions$auto.delta,
+                  auto.efa         = lavoptions$auto.efa,
+                  group.equal      = lavoptions$group.equal,
+                  group.partial    = lavoptions$group.partial,
+                  group.w.free     = lavoptions$group.w.free,
+                  debug            = lavoptions$debug,
+                  warn             = lavoptions$warn,
                 
-                as.data.frame.   = FALSE)
+                  as.data.frame.   = FALSE)
     
     if (lavoptions$verbose) {
       cat(" done.\n")
@@ -126,6 +143,7 @@ lav_lavaan_step04_pta <- function(lavpartable, lavoptions) {
   # # # # # # # # # # # # # # # # #
   # #  4b. parameter attributes # #
   # # # # # # # # # # # # # # # # #
+  # compute pta via lav_partable_attributes
   if (lavoptions$verbose) {
     cat("lavpta             ...")
   }

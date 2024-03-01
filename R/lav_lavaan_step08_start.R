@@ -2,6 +2,15 @@ lav_lavaan_step08_start <- function(slotModel, lavoptions, lavpartable, lavsampl
   # # # # # # # # # # #
   # #  8. lavstart # # 
   # # # # # # # # # # #
+  # if slotModel is NULL
+  #   if lavpartable$est not NULL and lavoptions$start == "default"
+  #     if there are free variances with est==0 or there are NA's in est
+  #       compute start column in lavpartable via lav_start
+  #     else
+  #       set start column in lavpartable equal to est column
+  #   else
+  #     compute start column via lav_start and 
+  #       check via lav_start_check_cov if demanded (lavoptions$check.start) 
   if (is.null(slotModel)) {
     # check if we have provided a full parameter table as model = input
     if (!is.null(lavpartable$est) && is.character(lavoptions$start) &&

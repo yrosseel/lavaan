@@ -1,16 +1,52 @@
 lav_lavaan_step11_estoptim <- function(lavdata, lavmodel, lavpta, lavcache,
                                      lavsamplestats, lavoptions, lavpartable) {
-  # # # # # # # # # # # # # # 
-  # #  11. est + lavoptim # # 
-  # # # # # # # # # # # # # # 
-  
+  # # # # # # # # # # # # # #
+  # #  11. est + lavoptim # #
+  # # # # # # # # # # # # # #
+  # if lavoptions$do.fit and lavoptions$estimator not "none" and lavmodel$nx.free > 0
+  #   select case lavoptions$optim.method
+  #   case "noniter"
+  #     try x <- lav_optim_noniter(...)
+  #   case "em"
+  #     if nlevels < 2L *** error ***
+  #     try x <- lav_mvnorm_cluster_em_h0(...)
+  #   case "gn"
+  #     try x <- lav_optim_gn(...)
+  #   case else
+  #     set 1 in lavoptions$optim.attempts is it wasn't specified
+  #     try x <- lav_model_estimate(...)
+  #     if not successfull and optim.attempts > 1L
+  #       try x <- lav_optim_estimate(...) with options$optim.parscale = "standardized"
+  #       if not successfull and optim.attempts > 2L
+  #         try x <- lav_optim_estimate(...) with start = "simple"
+  #         if not successfull and optim.attempts > 3L
+  #           try x <- lav_optim_estimate(...) with options$optim.parscale = "standardized"
+  #                                             and start = "simple"
+  #   end select
+  #   if x not succesfully computed
+  #     ** warning **
+  #     set starting values and appropriate attributes in x
+  #   in case of non-linear constraints: store final con.jac and con.lambda in lavmodel
+  #   store parameters in lavmodel
+  #   store parameters in partable$est
+  # else
+  #   initialize x and attributes (iterations, converged, warn.txt, control, dx) of x
+  #   try fx <- lav_model_objective
+  #   if not successfull
+  #     fx = NA_real_
+  #     attribute fx.group of fx = NA_real_
+  #   store fx in attribute "fx" of x
+  #   set lavpartable$est to starting values
+  # if lavoptions$optim.force.converged set attribute converged of x to TRUE
+  # store optimization info in lavoptim
+  #
   x <- NULL
   if (lavoptions$do.fit && lavoptions$estimator != "none" &&
       lavmodel@nx.free > 0L) {
     if (lavoptions$verbose) {
       cat("lavoptim           ... start:\n")
     }
-    
+
     # non-iterative methods (fabin, ...)
     if (lavoptions$optim.method == "noniter") {
       x <- try(lav_optim_noniter(lavmodel       = lavmodel,
@@ -44,15 +80,15 @@ lav_lavaan_step11_estoptim <- function(lavdata, lavmodel, lavpta, lavcache,
                             lavpartable    = lavpartable,
                             lavoptions     = lavoptions),
                silent = TRUE)
-      
+
       # Quasi-Newton
     } else {
-      
+
       # for backwards compatibility (<0.6)
       if (is.null(lavoptions$optim.attempts)) {
         lavoptions$optim.attempts <- 1L
       }
-      
+
       # try 1
       if (lavoptions$verbose) {
         cat("attempt 1 -- default options\n")
@@ -66,7 +102,7 @@ lav_lavaan_step11_estoptim <- function(lavdata, lavmodel, lavpta, lavcache,
                silent = TRUE)
       # store first attempt
       # x.first <- x
-      
+
       # try 2: optim.parscale = "standardize" (new in 0.6-7)
       if (lavoptions$optim.attempts > 1L &&
           (inherits(x, "try-error") || !attr(x, "converged"))) {
@@ -83,7 +119,7 @@ lav_lavaan_step11_estoptim <- function(lavdata, lavmodel, lavpta, lavcache,
                                     lavcache        = lavcache),
                  silent = TRUE)
       }
-      
+
       # try 3: start = "simple"
       if (lavoptions$optim.attempts > 2L &&
           (inherits(x, "try-error") || !attr(x, "converged"))) {
@@ -99,7 +135,7 @@ lav_lavaan_step11_estoptim <- function(lavdata, lavmodel, lavpta, lavcache,
                                     lavcache        = lavcache),
                  silent = TRUE)
       }
-      
+
       # try 4: start = "simple" + optim.parscale = "standardize"
       if (lavoptions$optim.attempts > 3L &&
           (inherits(x, "try-error") || !attr(x, "converged"))) {
@@ -118,7 +154,7 @@ lav_lavaan_step11_estoptim <- function(lavdata, lavmodel, lavpta, lavcache,
                  silent = TRUE)
       }
     }
-    
+
     # optimization failed with error
     if (inherits(x, "try-error")) {
       warn.txt <- "Model estimation FAILED! Returning starting values."
@@ -133,31 +169,31 @@ lav_lavaan_step11_estoptim <- function(lavdata, lavmodel, lavpta, lavcache,
       attr(fx, "fx.group") <-  as.numeric(NA)
       attr(x, "fx") <- fx
     }
-    
+
     # if a warning was produced, say it here
     warn.txt <- attr(x, "warn.txt")
     if (lavoptions$warn && nchar(warn.txt) > 0L) {
       warning(lav_txt2message(warn.txt))
     }
-    
+
     # in case of non-linear constraints: store final con.jac and con.lambda
     # in lavmodel
     if (!is.null(attr(x, "con.jac")))
       lavmodel@con.jac <- attr(x, "con.jac")
     if (!is.null(attr(x, "con.lambda")))
       lavmodel@con.lambda <- attr(x, "con.lambda")
-    
+
     # store parameters in lavmodel
     lavmodel <- lav_model_set_parameters(lavmodel, x = as.numeric(x))
-    
+
     # store parameters in @ParTable$est
     lavpartable$est <- lav_model_get_parameters(lavmodel = lavmodel,
                                                 type = "user", extra = TRUE)
-    
+
     if (lavoptions$verbose) {
       cat("lavoptim    ... done.\n")
     }
-    
+
   } else {
     x <- numeric(0L)
     attr(x, "iterations") <- 0L
@@ -175,16 +211,16 @@ lav_lavaan_step11_estoptim <- function(lavdata, lavmodel, lavpta, lavcache,
       attr(fx, "fx.group") <- as.numeric(NA)
       attr(x, "fx") <- fx
     }
-    
+
     lavpartable$est <- lavpartable$start
   }
-  
+
   # should we fake/force convergence? (eg. to enforce the
   # computation of a test statistic)
   if (lavoptions$optim.force.converged) {
     attr(x, "converged") <- TRUE
   }
-  
+
   # store optimization info in lavoptim
   lavoptim <- list()
   x2 <- x
@@ -209,7 +245,7 @@ lav_lavaan_step11_estoptim <- function(lavdata, lavmodel, lavpta, lavcache,
     lavoptim$logl       <- as.numeric(NA)
   }
   lavoptim$control        <- attr(x, "control")
-  
+
   return(list(
     lavoptim = lavoptim,
     lavmodel = lavmodel,

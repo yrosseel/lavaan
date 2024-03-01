@@ -1,7 +1,16 @@
 lav_lavaan_step06_h1 <- function(sloth1, lavoptions, lavsamplestats, lavdata, lavpta) {
   # # # # # # # # # 
   # #  6. lavh1 # # 
-  # # # # # # # # # 
+  # # # # # # # # #
+  # if sloth1 not NULL
+  #   copy to lavh1
+  # else
+  #   if lavoptions$h1 TRUE
+  #     if length(lavsamplestats$ntotal) > 0
+  #       compute lavh1 via lav_h1_implied_logl
+  #   else
+  #     check lavoptions$h1 is logical, if not *** error ***
+  #     
   if (!is.null(sloth1)) {
     lavh1 <- sloth1
   } else {

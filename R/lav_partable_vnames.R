@@ -36,12 +36,12 @@ lavaanNames <- lavNames
 # - the 'block' argument either selects a single block (if block is an integer)
 #   or returns a list per block
 #   LDW 30/1/24: 'block' argument not explicitly tested !?
+#   LDW 29/2/24: ov.order = "data" via attribute "ovda"
 lav_partable_vnames <- function(partable, type = NULL, ...,
                                 warn = FALSE, ov.x.fatal = FALSE) {
 
   # check for empy table
   if (length(partable$lhs) == 0) return(character(0L))
-  ldw_trace(paste(type, collapse = ","))
   # dotdotdot
   dotdotdot <- list(...)
 
@@ -1125,9 +1125,9 @@ lav_partable_vnames <- function(partable, type = NULL, ...,
   } # b
 
   # new in 0.6-14: if 'da' operator, change order! (for ov.order = "data")
-  if (any(partable$op == "da")) {
-    da.idx <- which(partable$op == "da")
-    ov.names.data <- partable$lhs[da.idx]
+  # now via attribute "ovda"
+  ov.names.data <- attr(partable, "ovda")
+  if (!is.null(ov.names.data)) {
     OUT <- lapply(OUT, function(x) {
         for (b in seq_len(length(x))) {
         m <- match(x[[b]], ov.names.data)
@@ -1160,6 +1160,14 @@ lav_partable_vnames <- function(partable, type = NULL, ...,
       OUT <- OUT[block.select]
     }
   }
+  
+  # uncomment following lines to enable trace of result of this function
+  # if (length(type) == 1L) {
+  #   ldw_trace(paste(type, paste(OUT, collapse=",")))
+  # } else {
+  #   ldw_trace(paste(type, collapse = ","))
+  # }
+ 
   OUT
 }
 

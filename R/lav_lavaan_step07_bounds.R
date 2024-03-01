@@ -1,9 +1,10 @@
 lav_lavaan_step07_bounds <- function(lavoptions, lavh1, lavdata, lavsamplestats, lavpartable) {
-  
   # # # # # # # # # # # # # # #
-  # #  7. parameter bounds # # 
+  # #  7. parameter bounds  # #
   # # # # # # # # # # # # # # #
-  
+  # if lavoptions$optim.bounds not NULL and its members lower and upper have length > 0L
+  #   modify lavpartable via lav_partable_add_bounds
+  #
   # automatic bounds (new in 0.6-6)
   if (!is.null(lavoptions$optim.bounds) ||
       length(lavoptions$optim.bounds$lower) > 0L ||

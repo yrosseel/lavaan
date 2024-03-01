@@ -1,19 +1,23 @@
-lav_lavaan_step17_lavaan <- function(mc, timing, lavoptions, lavpartable,
+lav_lavaan_step17_lavaan <- function(lavmc, timing, lavoptions, lavpartable,
                                    lavpta, lavdata, lavsamplestats, lavmodel, lavcache, lavfit, lavboot,
                                    lavoptim, lavimplied, lavloglik, lavvcov, lavtest, lavh1, lavbaseline,
                                    start.time0) {
   # # # # # # # # # # 
   # #  17. lavaan # # 
   # # # # # # # # # # 
-  
   # stop timer
+  # create lavaan object
+  # if lavmodel@nefa > 0
+  #   compute standardizedSolution and store in ParTable slot in lavaan object 
+  # if post-checking demanded and converged, execute lavInspect(lavaan, "post.check")
+  # 
   timing$total <- (proc.time()[3] - start.time0)
   timing$start.time <- NULL
   
   lavaan <- new("lavaan",                           # type_of_slot - where created or modified ?
                                                     # ------------   ------------------------- -
                 version      = as.character(packageVersion("lavaan")),
-                call         = mc,                  # match.call - ldw_adapt_match_call
+                call         = lavmc,               # match.call - ldw_adapt_match_call
                 timing       = timing,              # list - ldw_add_timing
                 Options      = lavoptions,          # list - options (2) / data (3) / partable (4)
                 ParTable     = lavpartable,         # list - partable/bounds/start/model/estoptim/vcovboot/rotation

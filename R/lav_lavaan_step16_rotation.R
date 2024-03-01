@@ -3,6 +3,17 @@ lav_lavaan_step16_rotation <- function(lavoptions, lavmodel, lavpartable, lavh1,
   # # # # # # # # # # # 
   # #  16. rotation # # 
   # # # # # # # # # # # 
+  # if lavmodel@nefa > 0L and lavoptions$rotation not "none"
+  #   store unrotated  solution in partable (column est.unrotated)
+  #   rotate lavmodel via lav_model_efa_rotate and overwrite column est in partable 
+  #   if lavoptions$se not in none, bootstrap, external, twostep 
+  #     if lavoptions$rotation.se == "delta"
+  #       re-compute vcov with delta rule (*)
+  #       re-compute SE and store them in lavpartable (*)
+  #     else if lavoptions$rotation.se == "bordered"
+  #       create 'new' partable where the user = 7/77 parameters are free (*)
+  # 
+  # (*) code too complicated to summarize here
   if ((.hasSlot(lavmodel, "nefa")) && (lavmodel@nefa > 0L) &&
       (lavoptions$rotation != "none")) {
     

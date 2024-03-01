@@ -1,7 +1,19 @@
 lav_lavaan_step09_model <- function(slotModel, lavoptions, lavpartable, lavsamplestats, lavpta, lavdata) {
   # # # # # # # # # # #
-  # #  9. lavmodel # # 
+  # #  9. lavmodel # #
   # # # # # # # # # # #
+  # if slotModel not NULL
+  #   copy to lavmodel
+  # else
+  #   compute lavmodel via lav_model
+  #   if lavdata@data.type == "none" and categorical mode
+  #     set parameters in lavmodel via lav_model_set_parameters and re-adjust start column in lavpartable
+  #     if differences between start and ustart column (in lavpartable)
+  #       if lavmodel$parameterization == "delta"
+  #         if user specified delta values : ** warning **
+  #       if lavmodel$parameterization == "theta"
+  #         if user specified theta values : ** warning **
+  #
   if (!is.null(slotModel)) {
     lavmodel <- slotModel
   } else {
@@ -15,14 +27,14 @@ lav_lavaan_step09_model <- function(slotModel, lavoptions, lavpartable, lavsampl
     # no longer needed: x values are in start
     #cov.x            = lavsamplestats@cov.x,
     #mean.x           = lavsamplestats@mean.x)
-    
+
     # if no data, call lav_model_set_parameters once (for categorical case)
     if (lavdata@data.type == "none" && lavmodel@categorical) {
       lavmodel <- lav_model_set_parameters(lavmodel = lavmodel,
                                            x = lav_model_get_parameters(lavmodel))
       # re-adjust parameter table
       lavpartable$start <- lav_model_get_parameters(lavmodel, type = "user")
-      
+
       # check/warn if theta/delta values make sense
       if (!all(lavpartable$start == lavpartable$ustart)) {
         if (lavmodel@parameterization == "delta") {

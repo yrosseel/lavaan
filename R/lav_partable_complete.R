@@ -4,6 +4,7 @@ lav_partable_complete <- function(partable = NULL, start = TRUE) {
 
     # check if we hava a data.frame
     # if so, check for columns that are 'factor' and convert them to 'character'
+    ovda <- attr(partable, "ovda")
     if(is.data.frame(partable)) {
         fac.idx <- sapply(partable, is.factor)
         partable[fac.idx] <- lapply(partable[fac.idx], as.character)
@@ -150,6 +151,6 @@ lav_partable_complete <- function(partable = NULL, start = TRUE) {
                                         lavpartable = partable)
         }
     }
-
+    attr(partable, "ovda") <- ovda
     partable
 }

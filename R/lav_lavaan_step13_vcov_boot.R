@@ -3,6 +3,19 @@ lav_lavaan_step13_vcov_boot <- function(lavoptions, lavmodel, lavsamplestats, la
   # # # # # # # # # # # # # # # #
   # #  13. lavvcov + lavboot # # 
   # # # # # # # # # # # # # # # #
+  # set VCOV to NULL
+  # if lavoptions$se not "none", "external", "twostep" and lavmodel@nx.free > 0L and x converged
+  #    or optim.method == "none"
+  #   compute VCOV via lav_model_vcov
+  # if attribute BOOT.COEFF of VCOV not NULL, store it in lavboot$coef
+  # lavvcov <- list(se = lavoptions$se, information = lavoptions$information, vcov = VCOV1)
+  #   where VCOV1 = VCOV without attributes (except dim) or ...
+  #                 NULL if lavoptions$store.vcov FALSE or store.vcov=="default" and rotation="none" 
+  # if lavoptions$se == "external"
+  #   if lavpartable$se NULL
+  #     lavpartable$se <- lav_model_vcov_se(..., VCOV=NULL, BOOT=NULL) + ** warning **
+  # if lavpartable not "external" or "none" or "twostep"
+  #     lavpartable$se <- lav_model_vcov_se(...)
   VCOV <- NULL
   if (lavoptions$se != "none" && lavoptions$se != "external" &&
       lavoptions$se != "twostep" &&

@@ -3,6 +3,13 @@ lav_lavaan_step15_baseline <- function(lavoptions, lavsamplestats, lavdata,
   # # # # # # # # # # # 
   # #  15. baseline # #  (since 0.6-5)
   # # # # # # # # # # # 
+  # if options$do.fit and options$test not "none" and options$baseline=TRUE
+  #   try fit.indep <- lav_object_independence(...)
+  #   if not succesfull or not converged
+  #     ** warning **
+  #     lavbaseline < list()
+  #   else
+  #     lavbaseline <- list with partable and test of fit.indep
   lavbaseline <- list()
   if (lavoptions$do.fit &&
       !("none" %in% lavoptions$test) &&

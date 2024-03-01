@@ -4,26 +4,39 @@ lav_lavaan_step03_data <- function(slotData, lavoptions, ov.names, ov.names.y, g
                                    slotParTable, ngroups, dotdotdot, flat.model, model,
                                    NACOV, WLS.V) {
   # # # # # # # # # # #
-  # #  3. lavdata  # # 
+  # #  3. lavdata  # #
   # # # # # # # # # # #
+  # if slotData not null
+  #   copy slotData to lavdata
+  # else
+  #   create lavdata via function lavData, setting ov.names to ov.names.y if lavoptions$conditional.x
+  # if lavdata$data.type is "none"
+  #   set lavoptions$do.fit to FALSE
+  #   if flat.model$est not null set lavoptions$start to "est", else set it to "simple"
+  #   set lavoptions$se and lavoptions$test to "none"
+  # else
+  #   if lavdata$data.type is "moment"
+  #     if estimator one of MLM, MLMV, MLR, ULSM, ULSMV, ULSMVS and NACOV is NULL: *** error ***
+  #     if estimator one of WLS, WLSM, WLSMV, WLSMVS, DWLS and WLS.V is NULL: *** error ***
+  #     if lavoptions$se = bootstrap: *** error ***
+  # if slotPartable not NULL and model is lavaan-object, check equality ngroups and lavdata$ngroups
+  #                                       --> *** error *** if not
   if (!is.null(slotData)) {
     lavdata <- slotData
   } else {
-    
     if (lavoptions$verbose) {
       cat("lavdata            ...")
     }
-    
     # FIXME: ov.names should always contain both y and x!
-    OV.NAMES <- if (lavoptions$conditional.x) {
+    tmp.ov.names <- if (lavoptions$conditional.x) {
       ov.names.y
     } else {
       ov.names
-    }
+    } 
     lavdata <- lavData(data             = data,
                        group            = group,
                        cluster          = cluster,
-                       ov.names         = OV.NAMES,
+                       ov.names         = tmp.ov.names,
                        ov.names.x       = ov.names.x,
                        ov.names.l       = ov.names.l,
                        ordered          = ordered,
@@ -33,7 +46,7 @@ lav_lavaan_step03_data <- function(slotData, lavoptions, ov.names, ov.names.y, g
                        sample.th        = sample.th,
                        sample.nobs      = sample.nobs,
                        lavoptions       = lavoptions)
-    
+
     if (lavoptions$verbose) {
       cat(" done.\n")
     }
@@ -42,30 +55,22 @@ lav_lavaan_step03_data <- function(slotData, lavoptions, ov.names, ov.names.y, g
   if (lavdata@data.type == "none") {
     lavoptions$do.fit <- FALSE
     # check if 'model' was a fitted parameter table
-    if (!is.null(flat.model$est)) {
-      lavoptions$start <- "est"
-    } else {
-      lavoptions$start  <- "simple"
-    }
+    lavoptions$start <- ifelse(is.null(flat.model$est), "simple", "est")
     lavoptions$se     <- "none"
     lavoptions$test   <- "none"
   } else if (lavdata@data.type == "moment") {
-    
     # check user-specified options first
     if (!is.null(dotdotdot$estimator)) {
-      if (dotdotdot$estimator %in%
-          c("MLM", "MLMV", "MLR", "MLR", "ULSM", "ULSMV", "ULSMVS") &&
+      if (any(dotdotdot$estimator == c("MLM", "MLMV", "MLR", "MLR", "ULSM", "ULSMV", "ULSMVS")) &&
           is.null(NACOV)) {
         stop("lavaan ERROR: estimator ", dotdotdot$estimator,
              " requires full data or user-provided NACOV")
-      } else if (dotdotdot$estimator %in%
-                 c("WLS", "WLSM", "WLSMV", "WLSMVS", "DWLS") &&
+      } else if (any(dotdotdot$estimator == c("WLS", "WLSM", "WLSMV", "WLSMVS", "DWLS")) &&
                  is.null(WLS.V)) {
         stop("lavaan ERROR: estimator ", dotdotdot$estimator,
              " requires full data or user-provided WLS.V and NACOV")
       }
     }
-    
     # catch here some options that will not work with moments
     if (lavoptions$se == "bootstrap") {
       stop("lavaan ERROR: bootstrapping requires full data")
@@ -84,7 +89,6 @@ lav_lavaan_step03_data <- function(slotData, lavoptions, ov.names, ov.names.y, g
   if (lavoptions$debug) {
     print(str(lavdata))
   }
-  
   # if lavdata@nlevels > 1L, adapt start option (for now)
   # until we figure out how to handle groups+blocks
   #if(lavdata@nlevels > 1L) {

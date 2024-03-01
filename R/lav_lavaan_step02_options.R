@@ -3,35 +3,35 @@ lav_lavaan_step02_options <- function(slotOptions, slotData, flat.model, ordered
                                       sampling.weights, constraints, group, ov.names.x,
                                       ov.names.y, dotdotdot, cluster, data) {
   # # # # # # # # # # # #
-  # #  2. lavoptions # # 
+  # #  2. lavoptions  # #
   # # # # # # # # # # # #
-  # als slotOptions niet NULL
-  #   kopieer naar lavoptions en voorzie eventueel categorical/clustered/multilevel van "." vooraan
-  #   overchrijf eventueel met waarden in dotdotdot en geef waarschuwing
-  #   kijk of namen in dotdotdot mogelijke opties zijn, zoniet *** error ***
-  #   maak complete lijst (lav_options_default) en vervang waarden die meegegeven zijn in dotdotdot
-  #   als data, slotData en sample.cov NULL zijn : opt$bounds = FALSE
-  #   als slotData$data.type != "full" of slotData en data = NULL: opt$missing = "listwise"
-  #   categorical mode als
-  #     - er een operator "|" (threshold) gebruikt wordt
-  #     - data niet NULL en element(en) in ordered parameter
-  #     - sample.th opgegeven
-  #     - minstens één van de non-exogenous observed variables is "ordered" (ordered factor in R)
-  #   als opt$estimator == "catml" wordt categorical mode off gezet 
-  #       TODO: estimator = "CATML" wordt niet vermeld in lavOptions / estimator !?
-  #   als cluster opgegeven, zet opt$.clustered TRUE en geef *** error *** als categorical mode aan
+  # if slotOptions not NULL
+  #   copy to lavoptions and modify categorical/clustered/multilevel inserting a "." in the first position
+  #   if necessary, overwrite with values in dotdotdot and issue a warning
+  #   check if all names in dotdotdot are possible options, if not *** error ***
+  #   create complete option list (lav_options_default) and substitute values given in dotdotdot
+  #   if data, slotData and sample.cov NULL: opt$bounds = FALSE
+  #   if slotData$data.type != "full" or (slotData and data = NULL): opt$missing = "listwise"
+  #   set categorical mode ON if
+  #     - an operator "|" (threshold) was used
+  #     - data not NULL and one or more elements in ordered parameter
+  #     - sample.th provided
+  #     - at least one of the non-exogenous observed variables is "ordered" (ordered factor in R)
+  #   if opt$estimator == "catml": set categorical mode OFF 
+  #       TODO: estimator = "CATML" isn't mentioned in lavOptions / estimator help text !?
+  #   if cluster not NULL, set opt$.clustered TRUE and  *** error *** if categorical mode is ON
   #   opt$.multilevel = (length(ov.names.l) > 0L && length(ov.names.l[[1]]) > 1L)
-  #   
-  #   
-  #     
-  #   TODO: hier verder doen
-  #   
-  #   
-  #   
-  #   
+  #   if sampling.weights not NULL en categorical mode OFF and opt$estimator in ("default", "ML", "PML")
+  #     set opt$estimator to "MLR"
+  #   if constraints present and estimator == "ML", set opt$information to c("observed", "observed")
+  #   if there is an operator "~1" in flat.model and sample.mean not NULL, set opt$meanstructure TRUE
+  #   if there are no exogene variables but conditional.x explicitly demanded: ** warning **
+  #   if there are no exogene variables set opt$conditional.x FALSE
+  #   if there are no exogene variables and fixed.x not explicitly demanded, set opt$fixed.x to FALSE
+  #
   if (!is.null(slotOptions)) {
     lavoptions <- slotOptions
-    
+
     # backwards compatibility
     if (!is.null(lavoptions$categorical)) {
       lavoptions$.categorical <- lavoptions$categorical
@@ -45,7 +45,7 @@ lav_lavaan_step02_options <- function(slotOptions, slotData, flat.model, ordered
       lavoptions$.multilevel <- lavoptions$multilevel
       lavoptions$multilevel <- NULL
     }
-    
+
     # but what if other 'options' are given anyway (eg 'start = ')?
     # give a warning!
     if (length(dotdotdot) > 0L) {
@@ -59,35 +59,36 @@ lav_lavaan_step02_options <- function(slotOptions, slotData, flat.model, ordered
     if (!is.null(dotdotdot$verbose) && dotdotdot$verbose) {
       cat("lavoptions         ...")
     }
-    
+
     # load default options
     opt <- lav_options_default()
-    
+
     # catch unknown options
     ok.names <- names(opt)
     dot.names <- names(dotdotdot)
     wrong.idx <- which(!dot.names %in% ok.names)
     if (length(wrong.idx) > 0L) {
-      idx <- wrong.idx[1L] # only show first one TODO: why not show all of them?
+      plural <- ""
+      if (length(wrong.idx) > 1L) plural <- "s"
       # stop or warning?? stop for now (there could be more)
-      stop("lavaan ERROR: unknown argument `", dot.names[idx], "'")
+      stop("lavaan ERROR: unknown argument", plural, " ", paste(sQuote(dot.names[wrong.idx]), collapse = ", "))
     }
-    
+
     # modifyList
     opt <- modifyList(opt, dotdotdot)
-    
+
     # no data?
     if (is.null(slotData) && is.null(data) && is.null(sample.cov)) {
       opt$bounds <- FALSE
     }
-    
+
     # only sample moments?
     if (!is.null(slotData) && !slotData@data.type == "full") {
       opt$missing <- "listwise"
     } else if (is.null(slotData) && is.null(data)) {
       opt$missing <- "listwise"
     }
-    
+
     # categorical mode?
     opt$.categorical <- FALSE
     if (any(flat.model$op == "|")) {
@@ -98,25 +99,25 @@ lav_lavaan_step02_options <- function(slotOptions, slotData, flat.model, ordered
       opt$.categorical <- TRUE
     } else if (is.data.frame(data)) {
       # first check if we can find ov.names.y in Data
-      OV.names.y <- unique(unlist(ov.names.y))
+      tmp.ov.names.y <- unique(unlist(ov.names.y))
       # remove possible interaction terms involving an y term
-      int.idx <- which(grepl(":", OV.names.y))
+      int.idx <- which(grepl(":", tmp.ov.names.y))
       if (length(int.idx) > 0L) {
-        OV.names.y <- OV.names.y[-int.idx]
+        tmp.ov.names.y <- tmp.ov.names.y[-int.idx]
       }
-      idx.missing <- which(!(OV.names.y %in% names(data)))
+      idx.missing <- which(!(tmp.ov.names.y %in% names(data)))
       if (length(idx.missing)) {
         stop("lavaan ERROR: missing observed variables in dataset: ",
-             paste(OV.names.y[idx.missing], collapse = " "))
+             paste(tmp.ov.names.y[idx.missing], collapse = " "))
       }
-      if (any(sapply(data[, OV.names.y], inherits, "ordered"))) {
+      if (any(sapply(data[, tmp.ov.names.y], inherits, "ordered"))) {
         opt$.categorical <- TRUE
       }
     }
     if (tolower(opt$estimator) == "catml") {
       opt$.categorical <- FALSE
     }
-    
+
     # clustered?
     if (length(cluster) > 0L) {
       opt$.clustered <- TRUE
@@ -126,26 +127,26 @@ lav_lavaan_step02_options <- function(slotOptions, slotData, flat.model, ordered
     } else {
       opt$.clustered <- FALSE
     }
-    
+
     # multilevel?
     if (length(ov.names.l) > 0L && length(ov.names.l[[1]]) > 1L) {
       opt$.multilevel <- TRUE
     } else {
       opt$.multilevel <- FALSE
     }
-    
+
     # sampling weights? force MLR
     # HJ 18/10/23: Except for PML
     if (!is.null(sampling.weights) && !opt$.categorical &&
         opt$estimator %in% c("default", "ML", "PML")) {
       opt$estimator <- "MLR"
     }
-    
+
     # constraints
     if (any(nchar(constraints) > 0L) && opt$estimator %in% c("ML")) {
       opt$information <- c("observed", "observed")
     }
-    
+
     # meanstructure
     if (any(flat.model$op == "~1") || !is.null(sample.mean)) {
       opt$meanstructure <- TRUE
@@ -153,7 +154,7 @@ lav_lavaan_step02_options <- function(slotOptions, slotData, flat.model, ordered
     if (!is.null(group) && is.null(dotdotdot$meanstructure)) {
       opt$meanstructure <- TRUE
     }
-    
+
     # conditional.x
     if ((is.list(ov.names.x) &&
          sum(sapply(ov.names.x, FUN = length)) == 0L) ||
@@ -164,7 +165,7 @@ lav_lavaan_step02_options <- function(slotOptions, slotData, flat.model, ordered
       }
       opt$conditional.x <- FALSE
     }
-    
+
     # fixed.x
     if ((is.list(ov.names.x) &&
          sum(sapply(ov.names.x, FUN = length)) == 0L) ||
@@ -176,13 +177,18 @@ lav_lavaan_step02_options <- function(slotOptions, slotData, flat.model, ordered
         opt$fixed.x <- FALSE
       }
     }
-    
+
     # fill in remaining "default" values
     lavoptions <- lav_options_set(opt)
-    
+
     if (lavoptions$verbose) {
       cat(" done.\n")
     }
+  }
+  # fixed.x = FALSE? set ov.names.x = character(0L)
+  # new in 0.6-1
+  if (!lavoptions$fixed.x) {
+    ov.names.x <- character(0L)
   }
   return(lavoptions)
 }
