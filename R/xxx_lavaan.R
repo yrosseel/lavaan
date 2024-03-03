@@ -1587,6 +1587,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
             }
             x <- try(lav_model_estimate(lavmodel        = lavmodel,
                                         lavpartable     = lavpartable,
+                                        lavpta          = lavpta,
                                         lavsamplestats  = lavsamplestats,
                                         lavdata         = lavdata,
                                         lavoptions      = lavoptions,
@@ -1596,7 +1597,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
             # x.first <- x
 
             # try 2: optim.parscale = "standardize" (new in 0.6-7)
-            if (lavoptions$optim.attempts > 1L &&
+            if (lavoptions$optim.attempts > 1L && lavoptions$rstarts == 0L &&
                (inherits(x, "try-error") || !attr(x, "converged"))) {
                 lavoptions2 <- lavoptions
                 lavoptions2$optim.parscale <- "standardized"
@@ -1605,6 +1606,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                 }
                 x <- try(lav_model_estimate(lavmodel        = lavmodel,
                                             lavpartable     = lavpartable,
+                                            lavpta          = lavpta,
                                             lavsamplestats  = lavsamplestats,
                                             lavdata         = lavdata,
                                             lavoptions      = lavoptions2,
@@ -1613,13 +1615,14 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
             }
 
             # try 3: start = "simple"
-            if (lavoptions$optim.attempts > 2L &&
+            if (lavoptions$optim.attempts > 2L && lavoptions$rstarts == 0L &&
                (inherits(x, "try-error") || !attr(x, "converged"))) {
                 if (lavoptions$verbose) {
                     cat("attempt 3 -- start = \"simple\"\n")
                 }
                 x <- try(lav_model_estimate(lavmodel        = lavmodel,
                                             lavpartable     = lavpartable,
+                                            lavpta          = lavpta,
                                             lavsamplestats  = lavsamplestats,
                                             lavdata         = lavdata,
                                             lavoptions      = lavoptions,
@@ -1629,7 +1632,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
             }
 
             # try 4: start = "simple" + optim.parscale = "standardize"
-            if (lavoptions$optim.attempts > 3L &&
+            if (lavoptions$optim.attempts > 3L && lavoptions$rstarts == 0L &&
                (inherits(x, "try-error") || !attr(x, "converged"))) {
                 lavoptions2 <- lavoptions
                 lavoptions2$optim.parscale <- "standardized"
@@ -1638,6 +1641,7 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                 }
                 x <- try(lav_model_estimate(lavmodel        = lavmodel,
                                             lavpartable     = lavpartable,
+                                            lavpta          = lavpta,
                                             lavsamplestats  = lavsamplestats,
                                             lavdata         = lavdata,
                                             lavoptions      = lavoptions2,
@@ -1645,6 +1649,62 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
                                            lavcache        = lavcache),
                          silent = TRUE)
             }
+
+            # random starts? -- new in 0.6-18
+            # run this even if we already have a converged solution
+            # perhaps we find a better solution?
+            if (lavoptions$rstarts > 0L) {
+                x.rstarts <- vector("list", length = lavoptions$rstarts)
+                if (lavoptions$verbose) {
+                    cat("trying again with random starts (", lavoptions$rstarts,
+                        " in total):\n", sep = "")
+                }
+                for (i in seq_len(lavoptions$rstarts) ) {
+                    if (lavoptions$verbose) {
+                        cat("-- random start run: ", i, "\n")
+                    }
+                    x.rstarts[[i]] <-
+                        try(lav_model_estimate(lavmodel        = lavmodel,
+                                               lavpartable     = lavpartable,
+                                               lavpta          = lavpta,
+                                               lavsamplestats  = lavsamplestats,
+                                               lavdata         = lavdata,
+                                               lavoptions      = lavoptions,
+                                               start           = "random",
+                                               lavcache        = lavcache),
+                            silent = TRUE)
+                }
+
+                # pick best solution (if any)
+                x.noerror <- x.rstarts[ !sapply(x.rstarts,
+                                                inherits, "try-error") ]
+                x.converged <- vector("list", length = 0L)
+                fx.rstarts <- numeric(0L)
+                if(length(x.noerror) > 0L) {
+                    x.converged <-
+                        x.noerror[ sapply(x.rstarts, "attr", "converged") ]
+                }
+                if (length(x.converged) > 0L) {
+                    fx.rstarts <- sapply(x.converged, "attr", "fx")
+                    x.best <- x.converged[[which.min(fx.rstarts)]]
+                    fx.best <- attr(x.best, "fx")[1]
+
+                    # if we did not find a converged solution, use x.best
+                    if (inherits(x, "try-error") || !attr(x, "converged")) {
+                        x <- x.best
+
+                    # if we already had a converged solution, only replace
+                    # if fx.best is better than attr(x, "fx")[1]
+                    } else {
+                        if (fx.best < attr(x, "fx")[1]) {
+                            x <- x.best
+                        }
+                    }
+                }
+
+                attr(x, "x.rstarts") <- x.rstarts
+
+            } # random starts
         }
 
         # optimization failed with error
@@ -1737,6 +1797,9 @@ lavaan <- function(# user-specified model: can be syntax, parameter Table, ...
         lavoptim$logl       <- as.numeric(NA)
     }
     lavoptim$control        <- attr(x, "control")
+    if(!is.null(attr(x, "x.rstarts"))) {
+        lavoptim$x.rstarts <- attr(x, "x.rstarts")
+    }
 
     timing <- ldw_add_timing(timing, "optim")
 

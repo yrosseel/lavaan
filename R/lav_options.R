@@ -61,7 +61,7 @@ lav_options_default <- function(mimic = "lavaan") {
                 correlation        = FALSE,     # correlation structure
                 effect.coding      = FALSE,     # TRUE implies
                                                 # c("loadings", "intercepts")
-                ceq.simple         = FALSE,      # treat simple eq cons special?
+                ceq.simple         = FALSE,     # treat simple eq cons special?
                 parameterization   = "default",
 
                 auto.fix.first     = FALSE,
@@ -127,6 +127,7 @@ lav_options_default <- function(mimic = "lavaan") {
                 representation         = "default",
                 do.fit                 = TRUE,
                 bounds                 = "none", # new in 0.6-6
+                rstarts                = 0L,     # new in 0.6-18
 
                 # inference
                 se                     = "default",

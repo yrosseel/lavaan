@@ -1,6 +1,7 @@
 # model estimation
 lav_model_estimate <- function(lavmodel       = NULL,
                                lavpartable    = NULL, # for parscale = "stand"
+                               lavpta         = NULL,
                                lavh1          = NULL, # for multilevel + parsc
                                lavsamplestats = NULL,
                                lavdata        = NULL,
@@ -50,6 +51,22 @@ lav_model_estimate <- function(lavmodel       = NULL,
         if(length(var.idx) > 0L) {
             START[var.idx] <- 1
         }
+
+        if(lavmodel@ceq.simple.only) {
+            x.unpack <- START[ lavpartable$free > 0L &
+                               !duplicated(lavpartable$free) ]
+        } else {
+            x.unpack <- START[ lavpartable$free > 0L ]
+        }
+
+    # override? use random starting values instead? (new in 0.6-18)
+    } else if(start == "random") {
+        START <- lav_partable_random(lavpartable = lavpartable,
+                                # needed if we still need to compute bounds:
+                                lavpta = lavpta, lavh1 = lavh1,
+                                lavdata = lavdata,
+                                lavsamplestats = lavsamplestats,
+                                lavoptions = lavoptions)
 
         if(lavmodel@ceq.simple.only) {
             x.unpack <- START[ lavpartable$free > 0L &
@@ -912,6 +929,7 @@ lav_model_estimate <- function(lavmodel       = NULL,
     x <- x / parscale
 
     attr(x, "converged")  <- converged
+    attr(x, "start")      <- start.x
     attr(x, "warn.txt")   <- warn.txt
     attr(x, "iterations") <- iterations
     attr(x, "control")    <- control

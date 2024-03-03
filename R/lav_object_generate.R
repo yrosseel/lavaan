@@ -114,6 +114,7 @@ lav_object_independence <- function(object         = NULL,
     lavoptions$check.post <- FALSE
     lavoptions$check.vcov <- FALSE
     lavoptions$optim.bounds <- list() # we already have the bounds
+    lavoptions$rstarts <- 0L # no random starts
 
     # ALWAYS do.fit and set optim.method = "nlminb" (if npar > 0)
     npar <- lav_partable_npar(lavpartable)
