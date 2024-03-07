@@ -262,13 +262,13 @@ estimator.PML <- function(Sigma.hat  = NULL,    # model-based var/cov/cor
     #####
     if(all(ov.types == "ordered") && nexo == 0L) {
         # prepare for Myrsini's vectorization scheme
-        LONG2 <- LongVecTH.Rho(no.x               = nvar,
+        long2 <- LongVecTH.Rho(no.x               = nvar,
                                all.thres          = TH,
                                index.var.of.thres = th.idx,
                                rho.xixj           = cors)
         # get expected probability per table, per pair
-        pairwisePI <- pairwiseExpProbVec(ind.vec = lavcache$LONG,
-                                         th.rho.vec = LONG2)
+        pairwisePI <- pairwiseExpProbVec(ind.vec = lavcache$long,
+                                         th.rho.vec = long2)
         pairwisePI_orig <- pairwisePI # for doubly.robust
 
         # get frequency per table, per pair

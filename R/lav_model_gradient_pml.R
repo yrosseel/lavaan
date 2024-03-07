@@ -98,7 +98,7 @@ pml_deriv1 <- function(Sigma.hat  = NULL,       # model-based var/cov/cor
                                index.var.of.thres = th.idx,
                                rho.xixj           = cors,
                                n.xixj.vec         = n.xixj.vec,
-                               out.LongVecInd     = lavcache$LONG)
+                               out.LongVecInd     = lavcache$long)
 
       # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 

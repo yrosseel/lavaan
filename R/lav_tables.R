@@ -846,15 +846,15 @@ lav_tables_pairwise_model_pi <- function(lavobject = NULL) {
         nvar <- nrow(Sigmahat)
 
         # shortcut for all ordered - tablewise
-        if(all(ov.types == "ordered") && !is.null(lavobject@Cache[[g]]$LONG)) {
+        if(all(ov.types == "ordered") && !is.null(lavobject@Cache[[g]]$long)) {
             #FREQ.OBS <- c(FREQ.OBS, lavobject@Cache[[g]]$bifreq)
-            LONG2 <- LongVecTH.Rho(no.x               = nvar,
+            long2 <- LongVecTH.Rho(no.x               = nvar,
                                    all.thres          = TH[[g]],
                                    index.var.of.thres = th.idx[[g]],
                                    rho.xixj           = cors)
             # get expected probability per table, per pair
-            PI[[g]] <- pairwiseExpProbVec(ind.vec = lavobject@Cache[[g]]$LONG,
-                                          th.rho.vec=LONG2)
+            PI[[g]] <- pairwiseExpProbVec(ind.vec = lavobject@Cache[[g]]$long,
+                                          th.rho.vec=long2)
         } else {
             PI.group <- integer(0)
             # order! first i, then j, lav_matrix_vec(table)!
