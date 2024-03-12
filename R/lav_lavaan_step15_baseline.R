@@ -3,7 +3,7 @@ lav_lavaan_step15_baseline <- function(lavoptions     = NULL,
                                        lavdata        = NULL,
                                        lavcache       = NULL,
                                        lavh1          = NULL,
-                                       lavpta         = NULL) {
+                                       lavpartable    = NULL) {
   # # # # # # # # # # #
   # #  15. baseline # #  (since 0.6-5)
   # # # # # # # # # # #
@@ -15,7 +15,7 @@ lav_lavaan_step15_baseline <- function(lavoptions     = NULL,
   #     lavbaseline < list()
   #   else
   #     lavbaseline <- list with partable and test of fit.indep
-
+  lavpta <- lav_partable_attributes(lavpartable)
   lavbaseline <- list()
   if (lavoptions$do.fit &&
     !("none" %in% lavoptions$test) &&

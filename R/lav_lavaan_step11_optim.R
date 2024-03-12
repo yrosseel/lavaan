@@ -1,6 +1,5 @@
-lav_lavaan_step11_estoptim <- function(lavdata        = NULL,
+lav_lavaan_step11_estoptim <- function(lavdata        = NULL,    # nolint
                                        lavmodel       = NULL,
-                                       lavpta         = NULL,
                                        lavcache       = NULL,
                                        lavsamplestats = NULL,
                                        lavoptions     = NULL,
@@ -51,6 +50,7 @@ lav_lavaan_step11_estoptim <- function(lavdata        = NULL,
   # store optimization info in lavoptim
 
   x <- NULL
+  lavpta <- lav_partable_attributes(lavpartable)
   if (lavoptions$do.fit && lavoptions$estimator != "none" &&
     lavmodel@nx.free > 0L) {
     if (lavoptions$verbose) {

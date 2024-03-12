@@ -9,31 +9,37 @@ trace_env <- new.env(parent = emptyenv())
 # where x is a characterstring you want to show in the trace
 #
 # thereafter execute a script like this:
-#   library(lavaan)
-#   lavaan:::set_trace(TRUE)
-#   model <- '
-#   # latent variable definitions
-#      ind60 =~ x1 + x2 + x3
-#      dem60 =~ y1 + a*y2 + b*y3 + c*y4
-#      dem65 =~ y5 + a*y6 + b*y7 + c*y8
-#
-#   # regressions
-#     dem60 ~ ind60
-#     dem65 ~ ind60 + dem60
-#
-#   # residual correlations
-#     y1 ~~ y5
-#     y2 ~~ y4 + y6
-#     y3 ~~ y7
-#     y4 ~~ y8
-#     y6 ~~ y8
-#   '
-#   fit <- sem(model, data = PoliticalDemocracy)
-#   lavaan:::set_trace(FALSE)
-#   lavaan:::print_trace("PolDem_trace.txt")
+  # library(lavaan)
+  # lavaan:::set_trace(TRUE)
+  # model <- '
+  # # latent variable definitions
+  #    ind60 =~ x1 + x2 + x3
+  #    dem60 =~ y1 + a*y2 + b*y3 + c*y4
+  #    dem65 =~ y5 + a*y6 + b*y7 + c*y8
+  #
+  # # regressions
+  #   dem60 ~ ind60
+  #   dem65 ~ ind60 + dem60
+  #
+  # # residual correlations
+  #   y1 ~~ y5
+  #   y2 ~~ y4 + y6
+  #   y3 ~~ y7
+  #   y4 ~~ y8
+  #   y6 ~~ y8
+  # '
+  # fit <- sem(model, data = PoliticalDemocracy)
+  # summary(fit)
+  # lavaan:::set_trace(FALSE)
+  # lavaan:::print_trace("PolDem_trace.txt")
 #
 
 ldw_trace <- function(content = "") {
+  ignore.in.stack <- c(
+    "eval", "try", "tryCatch", "tryCatchList", "tryCatchOne", "doTryCatch",
+    "which", "unique", "as.list", "as.character", "unlist", "ldw_trace",
+    "source", "withVisible", "tryCatch.W.E", "withCallingHandlers", "do.call"
+  )
   if (!exists("TRACE", trace_env)) {
     return(invisible(NULL))
   }
@@ -44,11 +50,7 @@ ldw_trace <- function(content = "") {
     return(invisible(NULL))
   }
   a <- paste0("trc", formatC(tracenr, format = "d", width = 5, flag = "0"))
-  x <- x[!(x %in% c(
-    "eval", "try", "tryCatch", "tryCatchList", "tryCatchOne", "doTryCatch",
-    "which", "unique", "as.list", "as.character", "unlist", "ldw_trace",
-    "source", "withVisible"
-  ))]
+  x <- x[!(x %in% ignore.in.stack)]
   if (length(x) > 0) {
     assign(a, list(stack = x, content = content, time = Sys.time()), trace_env)
     assign("TRACENR", tracenr + 1L, trace_env)

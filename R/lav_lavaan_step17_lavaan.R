@@ -2,7 +2,6 @@ lav_lavaan_step17_lavaan <- function(lavmc          = NULL,
                                      timing         = NULL,
                                      lavoptions     = NULL,
                                      lavpartable    = NULL,
-                                     lavpta         = NULL,
                                      lavdata        = NULL,
                                      lavsamplestats = NULL,
                                      lavmodel       = NULL,
@@ -30,7 +29,8 @@ lav_lavaan_step17_lavaan <- function(lavmc          = NULL,
   #
   timing$total <- (proc.time()[3] - start.time0)
   timing$start.time <- NULL
-
+  lavpta <- lav_partable_attributes(lavpartable)
+  lavpartable <- lav_partable_remove_cache(lavpartable)
   lavaan <- new("lavaan", # type_of_slot - where created or modified ?
     # ------------   ------------------------- -
     version = as.character(packageVersion("lavaan")),

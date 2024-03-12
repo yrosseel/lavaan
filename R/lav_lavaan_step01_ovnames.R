@@ -1,7 +1,7 @@
 lav_lavaan_step01_ovnames_initflat <- function(slotParTable     = NULL, # nolint
                                                model            = NULL,
                                                dotdotdot.parser = "new") {
-  # if slotPartable not NULL, copy to flat.model
+  # if slotPartable not NULL copy to flat.model
   # else
   #   if model is of type character
   #     parse model to flat.model
@@ -112,23 +112,21 @@ lav_lavaan_step01_ovnames_initflat <- function(slotParTable     = NULL, # nolint
   flat.model
 }
 
-lav_lavaan_step01_ovnames_ovorder <- function(flat.model = NULL,
+lav_lavaan_step01_ovnames_ovorder <- function(flat.model = NULL,       # nolint
                                               ov.order   = "model",
                                               data       = NULL,
                                               sample.cov = NULL,
-                                              slotData   = NULL) {      # nolint
+                                              slotData   = NULL) {     # nolint
   # set ov.order in lowercase, check if it is "data" or "model",
   #  if not *** error ***
   # if ov.order == "data"
   #   try adapt flat.model via lav_partable_ov_from_data
   #   (** warning ** if this fails)
-  # TODO: in lav_partable_ov_from_data and where used: store ov.order in
-  #       attributes?
 
   # new in 0.6-14
   # if ov.order = "data", it would seem we need to intervene here;
   # ldw 1/3/2024:
-  # we do this adding attribute "ovda" to flat.model and partable
+  # we do this by adding an attribute "ovda" to flat.model and partable
   ov.order <- tolower(ov.order)
   if (ov.order == "data") {
     flat.model.orig <- flat.model
@@ -153,7 +151,7 @@ lav_lavaan_step01_ovnames_ovorder <- function(flat.model = NULL,
   flat.model
 }
 
-lav_lavaan_step01_ovnames_group <- function(flat.model = NULL,
+lav_lavaan_step01_ovnames_group <- function(flat.model = NULL,        # nolint
                                             ov.names   = character(0L),
                                             ngroups    = 1L) {
   # if "group :" appears in flat.model
@@ -273,11 +271,12 @@ lav_lavaan_step01_ovnames_group <- function(flat.model = NULL,
   )
 }
 
-lav_lavaan_step01_ovnames_checklv <- function(lv.names    = character(0L),
-                                              data        = NULL,
-                                              sample.cov  = NULL,
-                                              dotdotdot   = NULL,
-                                              slotOptions = NULL) {     # nolint
+lav_lavaan_step01_ovnames_checklv <- function(                    # nolint
+    lv.names    = character(0L),
+    data        = NULL,
+    sample.cov  = NULL,
+    dotdotdot   = NULL,
+    slotOptions = NULL) {                                         # nolint
   # latent variables cannot appear in data --> *** error ***
   #   (except when explicitly requested)
   # latent interactions are not supported ---> *** error ***
@@ -351,7 +350,7 @@ lav_lavaan_step01_ovnames_checklv <- function(lv.names    = character(0L),
   invisible(NULL)
 }
 
-lav_lavaan_step01_ovnames_namesl <- function(data         = NULL,
+lav_lavaan_step01_ovnames_namesl <- function(data         = NULL,  # nolint
                                              cluster      = NULL,
                                              flat.model   = NULL,
                                              group.values = NULL,
@@ -465,7 +464,7 @@ lav_lavaan_step01_ovnames_namesl <- function(data         = NULL,
   )
 }
 
-lav_lavaan_step01_ovnames_ordered <- function(ordered    = NULL,
+lav_lavaan_step01_ovnames_ordered <- function(ordered    = NULL,  # nolint
                                               flat.model = NULL,
                                               data       = NULL) {
   # interpretation and check ordered parameter, modify if needed

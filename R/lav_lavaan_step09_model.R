@@ -2,7 +2,6 @@ lav_lavaan_step09_model <- function(slotModel      = NULL,              # nolint
                                     lavoptions     = NULL,
                                     lavpartable    = NULL,
                                     lavsamplestats = NULL,
-                                    lavpta         = NULL,
                                     lavdata        = NULL) {
   # # # # # # # # # # #
   # #  9. lavmodel # #
@@ -29,7 +28,7 @@ lav_lavaan_step09_model <- function(slotModel      = NULL,              # nolint
     }
     lavmodel <- lav_model(
       lavpartable = lavpartable,
-      lavpta = lavpta,
+      lavpta = lav_partable_attributes(lavpartable),
       lavoptions = lavoptions,
       th.idx = lavsamplestats@th.idx
     )
@@ -52,7 +51,7 @@ lav_lavaan_step09_model <- function(slotModel      = NULL,              # nolint
           # did the user specify theta values?
           user.var.idx <- which(lavpartable$op == "~~" &
             lavpartable$lhs == lavpartable$rhs &
-            lavpartable$lhs %in% unlist(lavpta$vnames$ov.ord) &
+            lavpartable$lhs %in% unlist(attr(lavpartable, "vnames")$ov.ord) &
             lavpartable$user == 1L)
           if (length(user.var.idx)) {
             warning(
@@ -65,7 +64,7 @@ lav_lavaan_step09_model <- function(slotModel      = NULL,              # nolint
           # did the user specify theta values?
           user.delta.idx <- which(lavpartable$op == "~*~" &
             lavpartable$lhs == lavpartable$rhs &
-            lavpartable$lhs %in% unlist(lavpta$vnames$ov.ord) &
+            lavpartable$lhs %in% unlist(attr(lavpartable, "vnames")$ov.ord) &
             lavpartable$user == 1L)
           if (length(user.delta.idx)) {
             warning(

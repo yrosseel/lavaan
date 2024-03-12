@@ -1,7 +1,7 @@
 lav_lavaan_step10_cache <- function(slotCache        = NULL,            # nolint
                                     lavdata          = NULL,
                                     lavmodel         = NULL,
-                                    lavpta           = NULL,
+                                    lavpartable      = NULL,
                                     lavoptions       = NULL,
                                     sampling.weights = NULL) {
   # # # # # # # # # # #
@@ -70,7 +70,7 @@ lav_lavaan_step10_cache <- function(slotCache        = NULL,            # nolint
     tmp.ov.types <- lavdata@ov$type
     if (lavmodel@conditional.x && sum(lavmodel@nexo) > 0L) {
       # remove ov.x
-      tmp.ov.x.idx <- unlist(lavpta$vidx$ov.x)
+      tmp.ov.x.idx <- unlist(attr(lavpartable, "vidx")$ov.x)
       tmp.ov.types <- tmp.ov.types[-tmp.ov.x.idx]
     }
 
@@ -346,7 +346,7 @@ lav_lavaan_step10_cache <- function(slotCache        = NULL,            # nolint
     for (g in 1:lavdata@ngroups) {
       # count only the ones with non-normal indicators
       # nfac <- lavpta$nfac.nonnormal[[g]]
-      nfac <- lavpta$nfac[[g]]
+      nfac <- attr(lavpartable, "nfac")[[g]]
       lavcache[[g]]$GH <-
         lav_integration_gauss_hermite(
           n = lavoptions$integration.ngh,

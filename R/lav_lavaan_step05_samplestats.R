@@ -9,7 +9,7 @@ lav_lavaan_step05_samplestats <- function(slotSampleStats = NULL,       # nolint
                                           sample.nobs     = NULL,
                                           ov.names        = NULL,
                                           ov.names.x      = NULL,
-                                          lavpta          = NULL) {
+                                          lavpartable     = NULL) {
   # # # # # # # # # # # # # #
   # #  5. lavsamplestats  # #
   # # # # # # # # # # # # # #
@@ -74,7 +74,7 @@ lav_lavaan_step05_samplestats <- function(slotSampleStats = NULL,       # nolint
       nobs = as.list(rep(0L, lavdata@ngroups)),
       cov.x = vector("list", length = lavdata@ngroups),
       mean.x = vector("list", length = lavdata@ngroups),
-      th.idx = lavpta$th.idx,
+      th.idx = attr(lavpartable, "th.idx"),
       missing.flag = FALSE
     )
   }

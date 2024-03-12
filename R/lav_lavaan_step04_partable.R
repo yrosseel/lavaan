@@ -35,7 +35,7 @@ lav_lavaan_step04_partable <- function(slotParTable = NULL,             # nolint
   #    lavoptions$em.zerovar.offset
 
   if (!is.null(slotParTable)) {
-    lavpartable <- slotParTable
+    lavpartable <- lav_partable_set_cache(slotParTable)
   } else if (is.character(model) ||
     inherits(model, "formula")) {
     if (lavoptions$verbose) {
@@ -103,18 +103,19 @@ lav_lavaan_step04_partable <- function(slotParTable = NULL,             # nolint
         warn = lavoptions$warn,
         as.data.frame. = FALSE
       )
-
+    lavpartable <- lav_partable_set_cache(lavpartable)
     if (lavoptions$verbose) {
       cat(" done.\n")
     }
   } else if (inherits(model, "lavaan")) {
-    lavpartable <- as.list(parTable(model))
+    lavpartable <- lav_partable_set_cache(as.list(parTable(model)), model@pta)
   } else if (is.list(model)) {
     # we already checked this when creating flat.model
     # but we may need to complete it
     lavpartable <- as.list(flat.model) # in case model is a data.frame
     # complete table
     lavpartable <- as.list(lav_partable_complete(lavpartable))
+    lavpartable <- lav_partable_set_cache(lavpartable)
   } else {
     stop(
       "lavaan ERROR: model [type = ", class(model),
@@ -146,29 +147,11 @@ lav_lavaan_step04_partable <- function(slotParTable = NULL,             # nolint
     if (length(zero.var.idx) > 0L) {
       lavpartable$ustart[zero.var.idx] <- lavoptions$em.zerovar.offset
     }
+    lavpartable <- lav_partable_set_cache(lavpartable, NULL, force = TRUE)
   }
 
   list(
     lavoptions  = lavoptions,
     lavpartable = lavpartable
   )
-}
-
-lav_lavaan_step04_pta <- function(lavpartable = NULL,
-                                  lavoptions  = NULL) {
-  # # # # # # # # # # # # # # # # #
-  # #  4b. parameter attributes # #
-  # # # # # # # # # # # # # # # # #
-
-  # compute pta via lav_partable_attributes
-  if (lavoptions$verbose) {
-    cat("lavpta             ...")
-  }
-  lavpta <- lav_partable_attributes(lavpartable)
-
-  if (lavoptions$verbose) {
-    cat(" done.\n")
-  }
-
-  lavpta
 }

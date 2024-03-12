@@ -221,15 +221,14 @@ lavaan <- function(
   )
   lavoptions  <- temp$lavoptions
   lavpartable <- temp$lavpartable
-
   timing <- ldw_add_timing(timing, "ParTable")
 
   # ------------ lavpta ------------------------
-  lavpta <- lav_lavaan_step04_pta(
-    lavpartable = lavpartable,
-    lavoptions  = lavoptions
-  )
-  timing <- ldw_add_timing(timing, "lavpta")
+  # lavpta <- lav_lavaan_step04_pta(
+  #   lavpartable = lavpartable,
+  #   lavoptions  = lavoptions
+  # )
+  # timing <- ldw_add_timing(timing, "lavpta")
 
   # ------------ lavsamplestats ---------------
   lavsamplestats <- lav_lavaan_step05_samplestats(
@@ -244,7 +243,7 @@ lavaan <- function(
     sample.nobs     = sample.nobs,
     ov.names        = ov.names,
     ov.names.x      = ov.names.x,
-    lavpta          = lavpta
+    lavpartable     = lavpartable
   )
   timing <- ldw_add_timing(timing, "SampleStats")
 
@@ -254,7 +253,7 @@ lavaan <- function(
     lavoptions     = lavoptions,
     lavsamplestats = lavsamplestats,
     lavdata        = lavdata,
-    lavpta         = lavpta
+    lavpartable    = lavpartable
   )
   timing <- ldw_add_timing(timing, "h1")
 
@@ -276,6 +275,7 @@ lavaan <- function(
     lavsamplestats = lavsamplestats,
     lavh1          = lavh1
   )
+
   timing <- ldw_add_timing(timing, "start")
 
   # ------------ model -------------------------
@@ -284,7 +284,6 @@ lavaan <- function(
     lavoptions     = lavoptions,
     lavpartable    = lavpartable,
     lavsamplestats = lavsamplestats,
-    lavpta         = lavpta,
     lavdata        = lavdata
   )
   lavpartable <- temp$lavpartable
@@ -297,7 +296,7 @@ lavaan <- function(
     slotCache        = slotCache,
     lavdata          = lavdata,
     lavmodel         = lavmodel,
-    lavpta           = lavpta,
+    lavpartable      = lavpartable,
     lavoptions       = lavoptions,
     sampling.weights = sampling.weights
   )
@@ -307,7 +306,6 @@ lavaan <- function(
   temp <- lav_lavaan_step11_estoptim(
     lavdata        = lavdata,
     lavmodel       = lavmodel,
-    lavpta         = lavpta,
     lavcache       = lavcache,
     lavsamplestats = lavsamplestats,
     lavoptions     = lavoptions,
@@ -365,7 +363,6 @@ lavaan <- function(
     lavcache       = lavcache,
     lavimplied     = lavimplied,
     lavh1          = lavh1,
-    lavpta         = lavpta,
     x              = x,
     VCOV           = VCOV,
     lavloglik      = lavloglik
@@ -390,7 +387,7 @@ lavaan <- function(
     lavdata        = lavdata,
     lavcache       = lavcache,
     lavh1          = lavh1,
-    lavpta         = lavpta
+    lavpartable    = lavpartable
   )
   timing <- ldw_add_timing(timing, "baseline")
 
@@ -420,7 +417,6 @@ lavaan <- function(
     timing         = timing,
     lavoptions     = lavoptions,
     lavpartable    = lavpartable,
-    lavpta         = lavpta,
     lavdata        = lavdata,
     lavsamplestats = lavsamplestats,
     lavmodel       = lavmodel,

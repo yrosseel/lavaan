@@ -2,7 +2,7 @@ lav_lavaan_step06_h1 <- function(sloth1         = NULL,
                                  lavoptions     = NULL,
                                  lavsamplestats = NULL,
                                  lavdata        = NULL,
-                                 lavpta         = NULL) {
+                                 lavpartable    = NULL) {
   # # # # # # # # #
   # #  6. lavh1 # #
   # # # # # # # # #
@@ -30,7 +30,7 @@ lav_lavaan_step06_h1 <- function(sloth1         = NULL,
         lavh1 <- lav_h1_implied_logl(
           lavdata = lavdata,
           lavsamplestats = lavsamplestats,
-          lavpta = lavpta,
+          lavpta = lav_partable_attributes(lavpartable),
           lavoptions = lavoptions
         )
         if (lavoptions$debug) {
