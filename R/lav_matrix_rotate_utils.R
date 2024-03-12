@@ -9,7 +9,7 @@
 #
 # Stewart, G. W. (1980). The Efficient Generation of Random Orthogonal Matrices
 # with an Application to Condition Estimators. SIAM Journal on Numerical
-# Analysis, 17(3), 403–409. http://www.jstor.org/stable/2156882
+# Analysis, 17(3), 403-409. http://www.jstor.org/stable/2156882
 #
 lav_matrix_rotate_gen <- function(M = 10L, orthogonal = TRUE) {
 

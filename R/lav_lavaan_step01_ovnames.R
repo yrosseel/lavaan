@@ -255,7 +255,7 @@ lav_lavaan_step01_ovnames_group <- function(flat.model = NULL,        # nolint
 
   # sanity check (new in 0.6-8): do we have any ov.names?
   # detect early
-  if (length(ov.names) == 0L) {
+  if (length(unlist(ov.names)) == 0L) {
     stop("lavaan ERROR: ov.names is empty: model does not refer to any ",
       "observed variables; check your syntax.")
   }
