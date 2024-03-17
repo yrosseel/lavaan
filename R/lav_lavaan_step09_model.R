@@ -1,8 +1,8 @@
-lav_lavaan_step09_model <- function(slotModel      = NULL,              # nolint
-                                    lavoptions     = NULL,
-                                    lavpartable    = NULL,
+lav_lavaan_step09_model <- function(slotModel = NULL, # nolint
+                                    lavoptions = NULL,
+                                    lavpartable = NULL,
                                     lavsamplestats = NULL,
-                                    lavdata        = NULL) {
+                                    lavdata = NULL) {
   # # # # # # # # # # #
   # #  9. lavmodel # #
   # # # # # # # # # # #

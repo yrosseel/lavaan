@@ -5,25 +5,21 @@ lav_lavaan_step01_ovnames_initflat <- function(slotParTable     = NULL, # nolint
   # else
   #   if model is of type character
   #     parse model to flat.model
-  #   else
-  #     if it is a formula (** warning **)
-  #       transform "~ x1 + x2 + x3" to character "f =~ x1 + x2 + x3",
+  #   else if model is a formula (** warning **)
+  #     transform "~ x1 + x2 + x3" to character "f =~ x1 + x2 + x3",
   #         and parse to flat.model
-  #       transform "y =~ x1 + x2 + x3" to character and parse to flat.model
-  #       something else : *** error ***
+  #     transform "y =~ x1 + x2 + x3" to character and parse to flat.model
+  #     something else : *** error ***
+  #   else if model is a lavaan object
+  #     extract flat.model from @parTable
+  #   else if model is a list
+  #     if bare minimum present (columns lhs, op, rhs, free)
+  #        flat.model = model
+  #        replace column block by column group (if present)
   #     else
-  #       if it is a lavaan object, extract flat.model from @parTable
-  #       else
-  #         if model is a list
-  #           if bare minimum present (columns lhs, op, rhs, free)
-  #             flat.model = model
-  #             replace column block by column group (if present)
-  #           else --> *** error ***
-  #         else
-  #           if model NULL --> ***error***
-  #           TODO: wat if model is something else (e.g. a function)???
-  #                 Now this results in an error "object 'flat.model'
-  #                 not found" !
+  #        --> *** error ***
+  #   else
+  #     --> ***error***
   #
 
   # 1a. get ov.names and ov.names.x (per group) -- needed for lavData()
@@ -102,8 +98,8 @@ lav_lavaan_step01_ovnames_initflat <- function(slotParTable     = NULL, # nolint
         "missing column(s) in parameter table: [", missing.txt, "]"
       )
     }
-  } else if (is.null(model)) {
-    stop("lavaan ERROR: model is NULL!")
+  } else {
+    stop("lavaan ERROR: model is NULL or not a valid type for it!")
   }
 
   # Ok, we got a flattened model; usually this a flat.model object, but it
@@ -168,10 +164,7 @@ lav_lavaan_step01_ovnames_group <- function(flat.model = NULL,        # nolint
   #       via lav_partable_vnames
   #   else
   #     extract ov.names, ov.names.y, ov.names.x, lv.names from flat.model
-  #     via via lav_partable_vnames
-  #
-  # Check length(ov.names) >= 1  *** error *** if not
-  #     TODO: if ov.names is a list, check for all elements ???
+  #     via lav_partable_vnames
   #
   #     TODO: call lav_partable_vnames only ones and not for each type
 
@@ -201,6 +194,7 @@ lav_lavaan_step01_ovnames_group <- function(flat.model = NULL,        # nolint
     ov.names <- ov.names.y <- ov.names.x <- lv.names <- vector("list",
       length = tmp.ngroups
     )
+    attr(tmp.lav, "vnames") <- lav_partable_vnames(tmp.lav, type = "*")
     for (g in seq_len(tmp.ngroups)) {
       ov.names[[g]] <- unique(unlist(lav_partable_vnames(tmp.lav,
         type = "ov", group = tmp.group.values[g]
@@ -217,6 +211,7 @@ lav_lavaan_step01_ovnames_group <- function(flat.model = NULL,        # nolint
     }
   } else if (!is.null(flat.model$group)) {
     # user-provided full partable with group column!
+    attr(flat.model, "vnames") <- lav_partable_vnames(flat.model, type = "*")
     ngroups <- lav_partable_ngroups(flat.model)
     if (ngroups > 1L) {
       group.values <- lav_partable_group_values(flat.model)
@@ -246,6 +241,7 @@ lav_lavaan_step01_ovnames_group <- function(flat.model = NULL,        # nolint
     }
   } else {
     # collapse over levels (if any)
+    attr(flat.model, "vnames") <- lav_partable_vnames(flat.model, type = "*")
     ov.names   <- unique(unlist(lav_partable_vnames(flat.model, type = "ov")))
     ov.names.y <- unique(unlist(lav_partable_vnames(flat.model,
       type = "ov.nox")))

@@ -1,6 +1,5 @@
 # return 'attributes' of a lavaan partable -- generate a new set if necessary
 lav_partable_attributes <- function(partable, pta = NULL) {
-
   if (is.null(pta)) {
     # attached to partable?
     pta <- attributes(partable)
@@ -28,8 +27,10 @@ lav_partable_attributes <- function(partable, pta = NULL) {
         match(pta$vnames[[v]][[b]], tmp.lv[[b]])
       } else if (grepl("th", v)) {
         # thresholds have '|t' pattern
-        tmp.th <-  sapply(strsplit(pta$vnames[[v]][[b]],
-          "|t", fixed = TRUE), "[[", 1L)
+        tmp.th <- sapply(strsplit(pta$vnames[[v]][[b]],
+          "|t",
+          fixed = TRUE
+        ), "[[", 1L)
         match(tmp.th, tmp.ov[[b]])
       } else if (grepl("eqs", v)) {
         # mixture of tmp.ov/tmp.lv

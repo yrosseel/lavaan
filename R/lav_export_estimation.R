@@ -24,7 +24,7 @@
 #' @export
 #' @examples
 #' library(lavaan)
-#' model <- '
+#' model <- "
 #'   # latent variable definitions
 #'      ind60 =~ x1 + x2 + x3
 #'      dem60 =~ y1 + y2 + y3 + y4
@@ -33,11 +33,12 @@
 #'   # regressions
 #'     dem60 ~ ind60
 #'     dem65 ~ ind60 + dem60
-#' '
+#' "
 #'
 #' fit <- sem(model,
-#'            data = PoliticalDemocracy,
-#'            do.fit = FALSE)
+#'   data = PoliticalDemocracy,
+#'   do.fit = FALSE
+#' )
 #'
 #' est <- lav_export_estimation(lavaan_model = fit)
 #'
@@ -47,46 +48,63 @@
 #' # in case of equality constraints):
 #' coef(fit)
 #' # To get the same parameters, use:
-#' est$get_coef(parameter_values = est$starting_values,
-#'              lavaan_model = fit)
+#' est$get_coef(
+#'   parameter_values = est$starting_values,
+#'   lavaan_model = fit
+#' )
 #'
 #' # The objective function can be used to compute the fit at the current estimates:
-#' est$objective_function(parameter_values = est$starting_values,
-#'                        lavaan_model = fit)
+#' est$objective_function(
+#'   parameter_values = est$starting_values,
+#'   lavaan_model = fit
+#' )
 #'
 #' # The gradient function can be used to compute the gradients at the current estimates:
-#' est$gradient_function(parameter_values = est$starting_values,
-#'                       lavaan_model = fit)
+#' est$gradient_function(
+#'   parameter_values = est$starting_values,
+#'   lavaan_model = fit
+#' )
 #'
 #' # Together, these elements provide the means to estimate the parameters with a large
 #' # range of optimizers. For simplicity, here is an example using optim:
-#' est_fit <- optim(par = est$starting_values,
-#'                  fn = est$objective_function,
-#'                  gr = est$gradient_function,
-#'                  lavaan_model = fit,
-#'                  method = "BFGS")
-#' est$get_coef(parameter_values = est_fit$par,
-#'              lavaan_model = fit)
+#' est_fit <- optim(
+#'   par = est$starting_values,
+#'   fn = est$objective_function,
+#'   gr = est$gradient_function,
+#'   lavaan_model = fit,
+#'   method = "BFGS"
+#' )
+#' est$get_coef(
+#'   parameter_values = est_fit$par,
+#'   lavaan_model = fit
+#' )
 #'
 #' # This is identical to
 #' coef(sem(model,
-#'          data = PoliticalDemocracy))
+#'   data = PoliticalDemocracy
+#' ))
 #'
 #' # Example using ridge regularization for parameter a
-#' fn_ridge <- function(parameter_values, lavaan_model, est, lambda){
-#'   return(est$objective_function(parameter_values = parameter_values,
-#'                                 lavaan_model = lavaan_model) + lambda * parameter_values[6]^2)
+#' fn_ridge <- function(parameter_values, lavaan_model, est, lambda) {
+#'   return(est$objective_function(
+#'     parameter_values = parameter_values,
+#'     lavaan_model = lavaan_model
+#'   ) + lambda * parameter_values[6]^2)
 #' }
-#' ridge_fit <- optim(par = est$get_coef(est$starting_values,
-#'                                       lavaan_model = fit),
-#'                    fn = fn_ridge,
-#'                    lavaan_model = fit,
-#'                    est = est,
-#'                    lambda = 10)
-#' est$get_coef(parameter_values = ridge_fit$par,
-#'              lavaan_model = fit)
-lav_export_estimation <- function (lavaan_model) {
-
+#' ridge_fit <- optim(
+#'   par = est$get_coef(est$starting_values,
+#'     lavaan_model = fit
+#'   ),
+#'   fn = fn_ridge,
+#'   lavaan_model = fit,
+#'   est = est,
+#'   lambda = 10
+#' )
+#' est$get_coef(
+#'   parameter_values = ridge_fit$par,
+#'   lavaan_model = fit
+#' )
+lav_export_estimation <- function(lavaan_model) {
   # define objective function
   objective_function <- function(parameter_values,
                                  lavaan_model) {
@@ -98,15 +116,17 @@ lav_export_estimation <- function (lavaan_model) {
     # create group list
     GLIST <- lav_model_x2GLIST(lavaan_model@Model, x = parameter_values)
     # get objective function **value**
-    fx <- lav_model_objective(lavmodel = lavaan_model@Model,
-                              GLIST = GLIST,
-                              lavsamplestats = lavaan_model@SampleStats,
-                              lavdata = lavaan_model@Data,
-                              lavcache = list(),
-                              verbose = FALSE)
+    fx <- lav_model_objective(
+      lavmodel = lavaan_model@Model,
+      GLIST = GLIST,
+      lavsamplestats = lavaan_model@SampleStats,
+      lavdata = lavaan_model@Data,
+      lavcache = list(),
+      verbose = FALSE
+    )
     if (lavaan_model@Options$estimator == "PML") {
       # rescale objective function value
-      fx <- fx/lavaan_model@SampleStats@ntotal
+      fx <- fx / lavaan_model@SampleStats@ntotal
     }
 
     if (!is.finite(fx)) {
@@ -126,22 +146,25 @@ lav_export_estimation <- function (lavaan_model) {
     }
 
     GLIST <- lav_model_x2GLIST(lavaan_model@Model,
-                               x = parameter_values)
-    dx <- lav_model_gradient(lavmodel = lavaan_model@Model,
-                             GLIST = GLIST,
-                             lavsamplestats = lavaan_model@SampleStats,
-                             lavdata = lavaan_model@Data,
-                             lavcache = list(),
-                             type = "free",
-                             group.weight = !(lavaan_model@SampleStats@missing.flag || lavaan_model@Options$estimator == "PML"),
-                             verbose = FALSE,
-                             ceq.simple = lavaan_model@Model@ceq.simple.only)
+      x = parameter_values
+    )
+    dx <- lav_model_gradient(
+      lavmodel = lavaan_model@Model,
+      GLIST = GLIST,
+      lavsamplestats = lavaan_model@SampleStats,
+      lavdata = lavaan_model@Data,
+      lavcache = list(),
+      type = "free",
+      group.weight = !(lavaan_model@SampleStats@missing.flag || lavaan_model@Options$estimator == "PML"),
+      verbose = FALSE,
+      ceq.simple = lavaan_model@Model@ceq.simple.only
+    )
 
     if (lavaan_model@Model@eq.constraints) {
       dx <- as.numeric(dx %*% lavaan_model@Model@eq.constraints.K)
     }
     if (lavaan_model@Options$estimator == "PML") {
-      dx <- dx/lavaan_model@SampleStats@ntotal
+      dx <- dx / lavaan_model@SampleStats@ntotal
     }
     return(dx)
   }
@@ -154,20 +177,21 @@ lav_export_estimation <- function (lavaan_model) {
   starting_values <- lav_model_get_parameters(lavaan_model@Model)
   if (lavaan_model@Model@eq.constraints) {
     starting_values <- as.numeric((starting_values - lavaan_model@Model@eq.constraints.k0) %*%
-                                    lavaan_model@Model@eq.constraints.K)
+      lavaan_model@Model@eq.constraints.K)
   }
 
   # lavaan internally uses transformations when there are equality constraints.
   # As a result, the parameters are not necessarily those one would expect when
   # fitting the model. The parameters can be translated with the following function:
   get_coef <- function(parameter_values,
-                       lavaan_model){
+                       lavaan_model) {
     if (lavaan_model@Model@eq.constraints) {
       parameter_values <- as.numeric(lavaan_model@Model@eq.constraints.K %*% parameter_values) +
         lavaan_model@Model@eq.constraints.k0
     }
     names(parameter_values) <- lav_partable_labels(lavaan_model@ParTable,
-                                                   type = "free")
+      type = "free"
+    )
     return(parameter_values)
   }
 
@@ -183,4 +207,3 @@ lav_export_estimation <- function (lavaan_model) {
     )
   )
 }
-

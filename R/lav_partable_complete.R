@@ -151,5 +151,6 @@ lav_partable_complete <- function(partable = NULL, start = TRUE) { # nolint
     }
   }
   attr(partable, "ovda") <- ovda
+  attr(partable, "vnames") <- lav_partable_vnames(partable, "*")
   partable
 }

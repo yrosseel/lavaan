@@ -1,8 +1,8 @@
-lav_lavaan_step07_bounds <- function(lavoptions     = NULL,
-                                     lavh1          = NULL,
-                                     lavdata        = NULL,
+lav_lavaan_step07_bounds <- function(lavoptions = NULL,
+                                     lavh1 = NULL,
+                                     lavdata = NULL,
                                      lavsamplestats = NULL,
-                                     lavpartable    = NULL) {
+                                     lavpartable = NULL) {
   # # # # # # # # # # # # # # #
   # #  7. parameter bounds  # #
   # # # # # # # # # # # # # # #

@@ -36,21 +36,20 @@ lavaan <- function(
     # constraints
     constraints = "",
     # user-specified variance matrices
-    WLS.V = NULL,                                                       # nolint
-    NACOV = NULL,                                                       # nolint
+    WLS.V = NULL, # nolint
+    NACOV = NULL, # nolint
     # internal order of ov.names
     ov.order = "model",
     # full slots from previous fits
-    slotOptions = NULL,                                                 # nolint
-    slotParTable = NULL,                                                # nolint
-    slotSampleStats = NULL,                                             # nolint
-    slotData = NULL,                                                    # nolint
-    slotModel = NULL,                                                   # nolint
-    slotCache = NULL,                                                   # nolint
+    slotOptions = NULL, # nolint
+    slotParTable = NULL, # nolint
+    slotSampleStats = NULL, # nolint
+    slotData = NULL, # nolint
+    slotModel = NULL, # nolint
+    slotCache = NULL, # nolint
     sloth1 = NULL,
     # options (dotdotdot)
     ...) {
-
   # start timer
   start.time0 <- proc.time()[3]
   timing <- list()
@@ -64,9 +63,9 @@ lavaan <- function(
     syscall   = sys.call(), # to get main arguments without partial matching
     dotdotdot = list(...)
   )
-  lavmc     <- temp$mc
+  lavmc <- temp$mc
   dotdotdot <- temp$dotdotdot
-  cluster   <- lavmc$cluster
+  cluster <- lavmc$cluster
   rm(mc)
 
   # ------------ check data ----------------------
@@ -81,15 +80,15 @@ lavaan <- function(
     WLS.V       = WLS.V,
     ov.order    = ov.order
   )
-  data        <- temp$data
-  dotdotdot   <- temp$dotdotdot
-  sample.cov  <- temp$sample.cov
+  data <- temp$data
+  dotdotdot <- temp$dotdotdot
+  sample.cov <- temp$sample.cov
   sample.nobs <- temp$sample.nobs
   sample.mean <- temp$sample.mean
-  sample.th   <- temp$sample.th
-  NACOV       <- temp$NACOV                                             # nolint
-  WLS.V       <- temp$WLS.V                                             # nolint
-  ov.order    <- temp$ov.order
+  sample.th <- temp$sample.th
+  NACOV <- temp$NACOV # nolint
+  WLS.V <- temp$WLS.V # nolint
+  ov.order <- temp$ov.order
 
   timing <- ldw_add_timing(timing, "init")
 
@@ -116,13 +115,13 @@ lavaan <- function(
     ov.names   = ov.names,
     ngroups    = ngroups
   )
-  flat.model   <- temp$flat.model
-  ov.names     <- temp$ov.names
-  ov.names.x   <- temp$ov.names.x
-  ov.names.y   <- temp$ov.names.y
-  lv.names     <- temp$lv.names
+  flat.model <- temp$flat.model
+  ov.names <- temp$ov.names
+  ov.names.x <- temp$ov.names.x
+  ov.names.y <- temp$ov.names.y
+  lv.names <- temp$lv.names
   group.values <- temp$group.values
-  ngroups      <- temp$ngroups
+  ngroups <- temp$ngroups
 
   # ------------ ov.names 4 ------ sanity checks ------------------
   lav_lavaan_step01_ovnames_checklv(
@@ -175,7 +174,7 @@ lavaan <- function(
   # fixed.x = FALSE? set ov.names.x = character(0L)
   # new in 0.6-1
   if (!lavoptions$fixed.x) {
-      ov.names.x <- character(0L)
+    ov.names.x <- character(0L)
   }
 
   timing <- ldw_add_timing(timing, "Options")
@@ -205,7 +204,7 @@ lavaan <- function(
     NACOV            = NACOV,
     WLS.V            = WLS.V
   )
-  lavdata    <- temp$lavdata
+  lavdata <- temp$lavdata
   lavoptions <- temp$lavoptions
 
   timing <- ldw_add_timing(timing, "Data")
@@ -219,7 +218,7 @@ lavaan <- function(
     lavdata      = lavdata,
     constraints  = constraints
   )
-  lavoptions  <- temp$lavoptions
+  lavoptions <- temp$lavoptions
   lavpartable <- temp$lavpartable
   timing <- ldw_add_timing(timing, "ParTable")
 
@@ -287,7 +286,7 @@ lavaan <- function(
     lavdata        = lavdata
   )
   lavpartable <- temp$lavpartable
-  lavmodel    <- temp$lavmodel
+  lavmodel <- temp$lavmodel
 
   timing <- ldw_add_timing(timing, "Model")
 
@@ -311,17 +310,18 @@ lavaan <- function(
     lavoptions     = lavoptions,
     lavpartable    = lavpartable
   )
-  lavoptim    <- temp$lavoptim
-  lavmodel    <- temp$lavmodel
+  lavoptim <- temp$lavoptim
+  lavmodel <- temp$lavmodel
   lavpartable <- temp$lavpartable
-  x           <- temp$x
+  x <- temp$x
 
   timing <- ldw_add_timing(timing, "optim")
 
   # -------- lavimplied + lavloglik --------------------
   lavimplied <- lav_lavaan_step12_implied(
     lavoptions = lavoptions,
-    lavmodel   = lavmodel)
+    lavmodel   = lavmodel
+  )
   timing <- ldw_add_timing(timing, "implied")
 
   lavloglik <- lav_lavaan_step12_loglik(
@@ -346,10 +346,10 @@ lavaan <- function(
     x              = x
   )
   lavpartable <- temp$lavpartable
-  lavvcov     <- temp$lavvcov
-  VCOV        <- temp$VCOV                                              # nolint
-  lavmodel    <- temp$lavmodel
-  lavboot     <- temp$lavboot
+  lavvcov <- temp$lavvcov
+  VCOV <- temp$VCOV # nolint
+  lavmodel <- temp$lavmodel
+  lavboot <- temp$lavboot
 
   timing <- ldw_add_timing(timing, "vcov")
 
@@ -384,10 +384,10 @@ lavaan <- function(
   lavbaseline <- lav_lavaan_step15_baseline(
     lavoptions = lavoptions,
     lavsamplestats = lavsamplestats,
-    lavdata        = lavdata,
-    lavcache       = lavcache,
-    lavh1          = lavh1,
-    lavpartable    = lavpartable
+    lavdata = lavdata,
+    lavcache = lavcache,
+    lavh1 = lavh1,
+    lavpartable = lavpartable
   )
   timing <- ldw_add_timing(timing, "baseline")
 
@@ -406,8 +406,8 @@ lavaan <- function(
     lavsamplestats = lavsamplestats
   )
   lavpartable <- temp$lavpartable
-  lavmodel    <- temp$lavmodel
-  lavvcov     <- temp$lavvcov
+  lavmodel <- temp$lavmodel
+  lavvcov <- temp$lavvcov
 
   timing <- ldw_add_timing(timing, "rotation")
 
@@ -461,13 +461,12 @@ cfa <- sem <- function(
     # constraints
     constraints = "",
     # user-specified variance matrices
-    WLS.V = NULL,                                                       # nolint
-    NACOV = NULL,                                                       # nolint
+    WLS.V = NULL, # nolint
+    NACOV = NULL, # nolint
     # internal order of ov.names
     ov.order = "model",
     # options (dotdotdot)
     ...) {
-
   # default options for sem/cfa call
   defaults <- list(
     int.ov.free     = TRUE,
@@ -528,13 +527,12 @@ growth <- function(
     # constraints
     constraints = "",
     # user-specified variance matrices
-    WLS.V = NULL,                                                       # nolint
-    NACOV = NULL,                                                       # nolint
+    WLS.V = NULL, # nolint
+    NACOV = NULL, # nolint
     # internal order of ov.names
     ov.order = "model",
     # options (dotdotdot)
     ...) {
-
   # default options for growth call
   defaults <- list(
     int.ov.free     = FALSE,

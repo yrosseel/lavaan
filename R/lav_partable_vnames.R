@@ -38,14 +38,29 @@ lavaanNames <- lavNames                                                 # nolint
 #   LDW 29/2/24: ov.order = "data" via attribute "ovda"
 lav_partable_vnames <- function(partable, type = NULL, ...,             # nolint
                                 warn = FALSE, ov.x.fatal = FALSE) {
+  # This function derives the names of some types of variable (as specified
+  # in type) from a 'partable'. The 'warn' parameter needs no explanation.
+  # The ov.x.fatal parameter implies, when set to TRUE, that the function
+  # issues a 'stop' when there are exogenious variables present in variance/
+  # covariance or intercept formulas.
+  # The call of this function can also contain extra parameters (...) which
+  # have to be the name(s) of blockvariable(s) to be used to select names.
+  # If more than 1 blockvariable given, all must be satisfied to select!
+  # The 'partable' must be a list with minimum members lhs, op, rhs.
+  # Other members of 'partable' used (if present): block, ustart, free, exo,
+  #                                                user, efa, rv, 'blockname'
+  # If the 'partable' contains an attribute vnames and the type is not "*",
+  # the 'type' elements of this attribute are used.
+
+  # ----- lav_partable_vnames ---- common ----------------------------------
   # sanity check
   stopifnot(is.list(partable), !missing(type))
   # check for empty table
   if (length(partable$lhs) == 0) return(character(0L))
   # dotdotdot
   dotdotdot <- list(...)
-
-  type.list <- c("ov",          # observed variables (ov)
+  type.list <- c(
+    "ov",          # observed variables (ov)
     "ov.x",        # (pure) exogenous observed variables
     "ov.nox",      # non-exogenous observed variables
     "ov.model",    # modeled observed variables (joint vs cond)
@@ -82,8 +97,8 @@ lav_partable_vnames <- function(partable, type = NULL, ...,             # nolint
       " is (are) not a valid option(s)")
   }
   return.value <- NULL
-  if (type[1L] != "*" && !is.null(attr(partable, "vnames"))) { # cached data
-
+  if (type[1L] != "*" && !is.null(attr(partable, "vnames"))) {
+    # ----- lav_partable_vnames ---- cached data --------------------------
     # uncomment/comment following line to enable/disable trace
     # ldw_trace(paste("cached:", paste(type, collapse = ",")))
 
@@ -93,6 +108,7 @@ lav_partable_vnames <- function(partable, type = NULL, ...,             # nolint
       return.value <- attr(partable, "vnames")[type]
     }
   }
+  # ----- lav_partable_vnames ---- common ----------------------------------
   if (type[1L] == "all" || type[1L] == "*") {
     type <- type.list
   }
@@ -102,15 +118,11 @@ lav_partable_vnames <- function(partable, type = NULL, ...,             # nolint
   }
   # per default, use full partable
   block.select <- lav_partable_block_values(partable)
-  # nblocks -- block column is integer only
-  # nblocks <- lav_partable_nblocks(partable) :
-  #            LDW 30/1/2024 avoid recalculating block_values !
-  nblocks <- length(block.select)
   # check for ... selection argument(s)
   ndotdotdot <- length(dotdotdot)
   if (ndotdotdot > 0L) {
     dot.names <- names(dotdotdot)
-    block.select <- rep(TRUE, length(partable$lhs))
+    row.select <- rep(TRUE, length(partable$lhs))
     for (dot in seq_len(ndotdotdot)) {
       # selection variable?
       block.var <- dot.names[dot]
@@ -125,7 +137,7 @@ lav_partable_vnames <- function(partable, type = NULL, ...,             # nolint
           if (length(idx) > 0L) {
             partable$group[idx] <- 0L
           }
-          block.select <- (block.select &
+          row.select <- (row.select &
             partable[[block.var]] %in% block.val)
         } else {
           stop("lavaan ERROR: selection variable `",
@@ -136,17 +148,18 @@ lav_partable_vnames <- function(partable, type = NULL, ...,             # nolint
           stop("lavaan ERROR: ", block.var,
             " column does not contain value `", block.val, "'")
         }
-        block.select <- (block.select &
+        row.select <- (row.select &
           !partable$op %in% c("==", "<", ">", ":=") &
           partable[[block.var]] %in% block.val)
       }
     } # dot
-    block.select <- unique(partable$block[block.select])
+    block.select <- unique(partable$block[row.select])
     if (length(block.select) == 0L) {
       warning("lavaan WARNING: no blocks selected.")
     }
   }
   if (is.null(return.value)) {
+    # ----- lav_partable_vnames ---- no cache ------------------------
 
     # uncomment/comment following line to enable/disable trace
     # ldw_trace(paste("computed:", paste(type, collapse = ",")))
@@ -159,7 +172,9 @@ lav_partable_vnames <- function(partable, type = NULL, ...,             # nolint
     }
 
     # output: list per block
-    return.value <- lapply(type, function(x) vector("list", length = nblocks))
+    return.value <- lapply(type, function(x) {
+      vector("list", length = length(block.select))
+      })
     names(return.value) <- type
 
     for (b in block.select) {
@@ -168,8 +183,7 @@ lav_partable_vnames <- function(partable, type = NULL, ...,             # nolint
 
       # always compute lv.names
       lv.names <- unique(partable$lhs[block.ind  &
-        (partable$op == "=~" |
-          partable$op == "<~")])
+        (partable$op == "=~" | partable$op == "<~")])
       # including random slope names
       lv.names2 <- unique(c(lv.names, rv.names))
 
@@ -198,6 +212,7 @@ lav_partable_vnames <- function(partable, type = NULL, ...,             # nolint
         lv.interaction <- character(0L)
       }
       if (length(type) == 1L) {
+        # ----- lav_partable_vnames ---- no cache ----- 1 type -----------
         # store lv
         if ("lv" == type) {
           # check if FLAT for random slopes
@@ -682,6 +697,7 @@ lav_partable_vnames <- function(partable, type = NULL, ...,             # nolint
           return.value$lv.marker[[b]] <- out
         }
       } else {
+        # ----- lav_partable_vnames ---- no cache ----- more than 1 type ------
         # store lv
         if (any("lv" == type)) {
           # check if FLAT for random slopes
@@ -1131,6 +1147,7 @@ lav_partable_vnames <- function(partable, type = NULL, ...,             # nolint
       }
     } # b
 
+    # ----- lav_partable_vnames ---- no cache ------------------------
     # new in 0.6-14: if 'da' operator, change order! (for ov.order = "data")
     # now via attribute "ovda"
     ov.names.data <- attr(partable, "ovda")
@@ -1147,6 +1164,7 @@ lav_partable_vnames <- function(partable, type = NULL, ...,             # nolint
       })
     }
   }
+  # ----- lav_partable_vnames ---- common ------ 1 type --------
   # to mimic old behaviour, if length(type) == 1L
   if (length(type) == 1L) {
     return.value <- return.value[[type]]
@@ -1167,7 +1185,7 @@ lav_partable_vnames <- function(partable, type = NULL, ...,             # nolint
       return.value <- return.value[block.select]
     }
   }
-
+  # ----- lav_partable_vnames ---- common ------------------------
   return.value
 }
 

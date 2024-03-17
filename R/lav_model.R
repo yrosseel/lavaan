@@ -8,10 +8,10 @@
 # - YR 12 Mar 2021: add lavpta as argument; create model attributes (ma)
 
 # construct MATRIX lavoptions$representation of the model
-lav_model <- function(lavpartable      = NULL,                  # nolint
-                      lavpta           = NULL,
-                      lavoptions       = NULL,
-                      th.idx           = list()) {
+lav_model <- function(lavpartable = NULL, # nolint
+                      lavpta = NULL,
+                      lavoptions = NULL,
+                      th.idx = list()) {
   # handle bare-minimum partables
   lavpartable <- lav_partable_complete(lavpartable)
 
@@ -31,7 +31,6 @@ lav_model <- function(lavpartable      = NULL,                  # nolint
     if (nblocks != length(th.idx)) {
       th.idx <- rep(th.idx, each = nblocks)
     }
-
   }
   group.w.free <- any(lavpartable$lhs == "group" & lavpartable$op == "%")
   multilevel <- FALSE
@@ -60,9 +59,11 @@ lav_model <- function(lavpartable      = NULL,                  # nolint
   }
 
   # handle variable definitions and (in)equality constraints
-  tmp.con <- lav_constraints_parse(partable = lavpartable,
+  tmp.con <- lav_constraints_parse(
+    partable = lavpartable,
     constraints = NULL,
-    debug = lavoptions$debug)
+    debug = lavoptions$debug
+  )
 
   # handle *linear* equality constraints special
   if (tmp.con$ceq.linear.only.flag) {
@@ -86,18 +87,22 @@ lav_model <- function(lavpartable      = NULL,                  # nolint
   if (lavoptions$debug) print(tmp.rep)
 
   # FIXME: check for non-existing parameters
-  bad.idx <- which((tmp.rep$mat == "" | is.na(tmp.rep$row) | is.na(tmp.rep$col))
-                   & !lavpartable$op %in% c("==", "<", ">", ":="))
+  bad.idx <- which((tmp.rep$mat == "" | is.na(tmp.rep$row) | is.na(tmp.rep$col)) &
+    !lavpartable$op %in% c("==", "<", ">", ":="))
 
   if (length(bad.idx) > 0L) {
     this.formula <- paste(lavpartable$lhs[bad.idx[1]],
       lavpartable$op[bad.idx[1]],
-      lavpartable$rhs[bad.idx[1]], sep = " ")
+      lavpartable$rhs[bad.idx[1]],
+      sep = " "
+    )
     if (lavoptions$representation == "LISREL") {
-      stop("lavaan ERROR: a model parameter is not defined in the LISREL",
-           " representation: ", "\n\t\t ", this.formula,
+      stop(
+        "lavaan ERROR: a model parameter is not defined in the LISREL",
+        " representation: ", "\n\t\t ", this.formula,
         "\n  Upgrade to latent variables or consider using representation = ",
-        dQuote("RAM"), ".")
+        dQuote("RAM"), "."
+      )
     } else {
       stop("lavaan ERROR: parameter is not defined: ", this.formula)
     }
@@ -107,13 +112,15 @@ lav_model <- function(lavpartable      = NULL,                  # nolint
   tmp.ng <- sum(unlist(attr(tmp.rep, "mmNumber")))
   tmp.glist <- vector(mode = "list", tmp.ng)
   names(tmp.glist) <- unlist(attr(tmp.rep, "mmNames"))
-  dim.names    <- vector(mode = "list", length = tmp.ng)
+  dim.names <- vector(mode = "list", length = tmp.ng)
   is.symmetric <- logical(tmp.ng)
-  mm.size      <- integer(tmp.ng)
+  mm.size <- integer(tmp.ng)
 
   m.free.idx <- m.user.idx <- vector(mode = "list", length = tmp.ng)
-  x.free.idx <- x.unco.idx <- x.user.idx <- vector(mode = "list",
-                                                   length = tmp.ng)
+  x.free.idx <- x.unco.idx <- x.user.idx <- vector(
+    mode = "list",
+    length = tmp.ng
+  )
 
   # prepare nblocks-sized slots
   nvar <- integer(nblocks)
@@ -124,29 +131,31 @@ lav_model <- function(lavpartable      = NULL,                  # nolint
   ov.x.dummy.lv.idx <- vector(mode = "list", length = nblocks)
   ov.y.dummy.ov.idx <- vector(mode = "list", length = nblocks)
   ov.y.dummy.lv.idx <- vector(mode = "list", length = nblocks)
-  ov.efa.idx        <- vector(mode = "list", length = nblocks)
-  lv.efa.idx        <- vector(mode = "list", length = nblocks)
+  ov.efa.idx <- vector(mode = "list", length = nblocks)
+  lv.efa.idx <- vector(mode = "list", length = nblocks)
 
   offset <- 0L
   # keep track of ov.names across blocks
   for (g in 1:nblocks) {
     # observed and latent variables for this block
-    ov.names <-     lav_partable_vnames(lavpartable, "ov",     block = g)
+    ov.names <- lav_partable_vnames(lavpartable, "ov", block = g)
     ov.names.nox <- lav_partable_vnames(lavpartable, "ov.nox", block = g)
-    ov.names.x <-   lav_partable_vnames(lavpartable, "ov.x",   block = g)
-    ov.num <-       lav_partable_vnames(lavpartable, "ov.num", block = g)
+    ov.names.x <- lav_partable_vnames(lavpartable, "ov.x", block = g)
+    ov.num <- lav_partable_vnames(lavpartable, "ov.num", block = g)
     if (lavoptions$conditional.x) {
       if (nlevels > 1L) {
         if (ngroups == 1L) {
           other.block.names <- lav_partable_vnames(lavpartable, "ov",
-            block = seq_len(nblocks)[-g])
+            block = seq_len(nblocks)[-g]
+          )
         } else {
           # TEST ME!
           # which group is this?
           this.group <- ceiling(g / nlevels)
           blocks.within.group <- (this.group - 1L) * nlevels + seq_len(nlevels)
           other.block.names <- lav_partable_vnames(lavpartable, "ov",
-            block = blocks.within.group[-g])
+            block = blocks.within.group[-g]
+          )
         }
 
 
@@ -176,16 +185,16 @@ lav_model <- function(lavpartable      = NULL,                  # nolint
     nexo[g] <- length(ov.names.x)
 
     if (nefa > 0L) {
-      lv.names <- lav_partable_vnames(lavpartable, "lv",     block = g)
+      lv.names <- lav_partable_vnames(lavpartable, "lv", block = g)
     }
 
     # model matrices for this block
-    mm.number    <- attr(tmp.rep, "mmNumber")[[g]]
-    mm.names     <- attr(tmp.rep, "mmNames")[[g]]
+    mm.number <- attr(tmp.rep, "mmNumber")[[g]]
+    mm.names <- attr(tmp.rep, "mmNames")[[g]]
     mm.symmetric <- attr(tmp.rep, "mmSymmetric")[[g]]
-    mm.dim.names  <- attr(tmp.rep, "mmDimNames")[[g]]
-    mm.rows      <- attr(tmp.rep, "mmRows")[[g]]
-    mm.cols      <- attr(tmp.rep, "mmCols")[[g]]
+    mm.dim.names <- attr(tmp.rep, "mmDimNames")[[g]]
+    mm.rows <- attr(tmp.rep, "mmRows")[[g]]
+    mm.cols <- attr(tmp.rep, "mmCols")[[g]]
 
     for (mm in 1:mm.number) {
       # offset in tmp.glist
@@ -208,8 +217,10 @@ lav_model <- function(lavpartable      = NULL,                  # nolint
       # create empty `pattern' matrix
       # FIXME: one day, we may want to use sparse matrices...
       #        but they should not slow things down!
-      tmp <- matrix(0L, nrow = mm.rows[mm],
-        ncol = mm.cols[mm])
+      tmp <- matrix(0L,
+        nrow = mm.rows[mm],
+        ncol = mm.cols[mm]
+      )
 
       # 1. first assign free values only, to get vector index
       #    -> to be used in lav_model_objective
@@ -219,14 +230,16 @@ lav_model <- function(lavpartable      = NULL,                  # nolint
         tmp.tt <- t(tmp)
         tmp[lower.tri(tmp)] <- tmp.tt[lower.tri(tmp.tt)]
       }
-      m.free.idx[[offset]] <-     which(tmp > 0)
+      m.free.idx[[offset]] <- which(tmp > 0)
       x.free.idx[[offset]] <- tmp[which(tmp > 0)]
 
       # 2. if simple equality constraints, unconstrained free parameters
       #    -> to be used in lav_model_gradient
       if (eq.simple) {
-        tmp[cbind(tmp.rep$row[idx],
-          tmp.rep$col[idx])] <- lavpartable$unco[idx]
+        tmp[cbind(
+          tmp.rep$row[idx],
+          tmp.rep$col[idx]
+        )] <- lavpartable$unco[idx]
         if (mm.symmetric[mm]) {
           # NOTE: we assume everything is in the UPPER tri!
           tmp.tt <- t(tmp)
@@ -245,14 +258,16 @@ lav_model <- function(lavpartable      = NULL,                  # nolint
         tmp.tt <- t(tmp)
         tmp[lower.tri(tmp)] <- tmp.tt[lower.tri(tmp.tt)]
       }
-      m.user.idx[[offset]] <-     which(tmp > 0)
+      m.user.idx[[offset]] <- which(tmp > 0)
       x.user.idx[[offset]] <- tmp[which(tmp > 0)]
 
       # 4. now assign starting/fixed values
       # create empty matrix
       # FIXME: again, we may want to use sparse matrices here...
-      tmp <- matrix(0.0, nrow = mm.rows[mm],
-        ncol = mm.cols[mm])
+      tmp <- matrix(0.0,
+        nrow = mm.rows[mm],
+        ncol = mm.cols[mm]
+      )
       tmp[cbind(tmp.rep$row[idx], tmp.rep$col[idx])] <- lavpartable$start[idx]
       if (mm.symmetric[mm]) {
         tmp.tt <- t(tmp)
@@ -276,7 +291,7 @@ lav_model <- function(lavpartable      = NULL,                  # nolint
       if (lavoptions$representation == "LISREL" &&
         mm.names[mm] == "lambda") {
         ov.dummy.names.nox <- attr(tmp.rep, "ov.dummy.names.nox")[[g]]
-        ov.dummy.names.x   <- attr(tmp.rep, "ov.dummy.names.x")[[g]]
+        ov.dummy.names.x <- attr(tmp.rep, "ov.dummy.names.x")[[g]]
         ov.dummy.names <- c(ov.dummy.names.nox, ov.dummy.names.x)
         # define dummy latent variables
         if (length(ov.dummy.names)) {
@@ -332,8 +347,6 @@ lav_model <- function(lavpartable      = NULL,                  # nolint
       names(ov.efa.idx[[g]]) <- efa.values
       names(lv.efa.idx[[g]]) <- efa.values
     } # efa
-
-
   } # g
 
   # fixed.x parameters?
@@ -351,7 +364,7 @@ lav_model <- function(lavpartable      = NULL,                  # nolint
 
     # find rows/cols
     b.names <- paste0("b", ov.names) ## ad-hoc assumption!!!
-    tmp.cols <-  match(b.names, tmp.lv.names)
+    tmp.cols <- match(b.names, tmp.lv.names)
     tmp.rows <- seq_len(nvar[2])
     stopifnot(length(tmp.cols) == length(tmp.rows))
     tmp.glist[[lambda.idx]][cbind(tmp.rows, tmp.cols)] <-
@@ -402,11 +415,13 @@ lav_model <- function(lavpartable      = NULL,                  # nolint
   } # multilevel
 
   # new in 0.6-9: model properties
-  modprop <- lav_model_properties(GLIST = tmp.glist,
+  modprop <- lav_model_properties(
+    GLIST = tmp.glist,
     lavpartable = lavpartable,
     lavpta = lavpta,
-    nmat   = nmat,
-    m.free.idx = m.free.idx)
+    nmat = nmat,
+    m.free.idx = m.free.idx
+  )
 
   tmp.model <- new("lavModel",
     GLIST = tmp.glist,
@@ -445,48 +460,41 @@ lav_model <- function(lavpartable      = NULL,                  # nolint
     x.def.idx = which(lavpartable$op == ":="),
     x.ceq.idx = which(lavpartable$op == "=="),
     x.cin.idx = which(lavpartable$op == ">" | lavpartable$op == "<"),
-
-    ceq.simple.only     = tmp.con$ceq.simple.only,
-    ceq.simple.K        = tmp.con$ceq.simple.K,
-    eq.constraints      = tmp.con$ceq.linear.only.flag,
-    eq.constraints.K    = tmp.con$ceq.JAC.NULL,
-    eq.constraints.k0   = tmp.con$ceq.rhs.NULL,
-
-    def.function        = tmp.con$def.function,
-    ceq.function        = tmp.con$ceq.function,
-    ceq.JAC             = tmp.con$ceq.JAC,
-    ceq.rhs             = tmp.con$ceq.rhs,
-    ceq.jacobian        = tmp.con$ceq.jacobian,
-    ceq.linear.idx      = tmp.con$ceq.linear.idx,
-    ceq.nonlinear.idx   = tmp.con$ceq.nonlinear.idx,
-
-    cin.function        = tmp.con$cin.function,
-    cin.JAC             = tmp.con$cin.JAC,
-    cin.rhs             = tmp.con$cin.rhs,
-    cin.jacobian        = tmp.con$cin.jacobian,
-    cin.linear.idx      = tmp.con$cin.linear.idx,
-    cin.nonlinear.idx   = tmp.con$cin.nonlinear.idx,
-
-    con.jac             = con.jac,
-    con.lambda          = con.lambda,
-
-    nexo                = nexo,
-    fixed.x             = lavoptions$fixed.x,
-    conditional.x       = lavoptions$conditional.x,
-    parameterization    = lavoptions$parameterization,
-
-    ov.x.dummy.ov.idx   = ov.x.dummy.ov.idx,
-    ov.x.dummy.lv.idx   = ov.x.dummy.lv.idx,
-    ov.y.dummy.ov.idx   = ov.y.dummy.ov.idx,
-    ov.y.dummy.lv.idx   = ov.y.dummy.lv.idx,
-
-    ov.efa.idx          = ov.efa.idx,
-    lv.efa.idx          = lv.efa.idx,
-    rv.lv               = rv.lv,
-    rv.ov               = rv.ov,
-
-    estimator           = lavoptions$estimator,
-    estimator.args      = lavoptions$estimator.args)
+    ceq.simple.only = tmp.con$ceq.simple.only,
+    ceq.simple.K = tmp.con$ceq.simple.K,
+    eq.constraints = tmp.con$ceq.linear.only.flag,
+    eq.constraints.K = tmp.con$ceq.JAC.NULL,
+    eq.constraints.k0 = tmp.con$ceq.rhs.NULL,
+    def.function = tmp.con$def.function,
+    ceq.function = tmp.con$ceq.function,
+    ceq.JAC = tmp.con$ceq.JAC,
+    ceq.rhs = tmp.con$ceq.rhs,
+    ceq.jacobian = tmp.con$ceq.jacobian,
+    ceq.linear.idx = tmp.con$ceq.linear.idx,
+    ceq.nonlinear.idx = tmp.con$ceq.nonlinear.idx,
+    cin.function = tmp.con$cin.function,
+    cin.JAC = tmp.con$cin.JAC,
+    cin.rhs = tmp.con$cin.rhs,
+    cin.jacobian = tmp.con$cin.jacobian,
+    cin.linear.idx = tmp.con$cin.linear.idx,
+    cin.nonlinear.idx = tmp.con$cin.nonlinear.idx,
+    con.jac = con.jac,
+    con.lambda = con.lambda,
+    nexo = nexo,
+    fixed.x = lavoptions$fixed.x,
+    conditional.x = lavoptions$conditional.x,
+    parameterization = lavoptions$parameterization,
+    ov.x.dummy.ov.idx = ov.x.dummy.ov.idx,
+    ov.x.dummy.lv.idx = ov.x.dummy.lv.idx,
+    ov.y.dummy.ov.idx = ov.y.dummy.ov.idx,
+    ov.y.dummy.lv.idx = ov.y.dummy.lv.idx,
+    ov.efa.idx = ov.efa.idx,
+    lv.efa.idx = lv.efa.idx,
+    rv.lv = rv.lv,
+    rv.ov = rv.ov,
+    estimator = lavoptions$estimator,
+    estimator.args = lavoptions$estimator.args
+  )
 
   if (lavoptions$debug) {
     cat("lavaan lavoptions$debug: lavaanModel\n")

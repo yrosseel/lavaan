@@ -5,16 +5,13 @@
 lav_sem_miiv_internal <- function(lavmodel = NULL, lavsamplestats = NULL,
                                   lavpartable = NULL, lavpta = NULL,
                                   lavdata = NULL, lavoptions = NULL) {
+  # this is the entry-point for MIIV estimation
+  cat("\n")
+  cat("** Estimator MIIV is still under development! **\n")
+  cat("\n")
 
-    # this is the entry-point for MIIV estimation
-    cat("\n")
-    cat("** Estimator MIIV is still under development! **\n")
-    cat("\n")
-
-    # return error (for now)
-    x <- as.numeric(NA)
-    class(x) <- "try-error"
-    x
+  # return error (for now)
+  x <- as.numeric(NA)
+  class(x) <- "try-error"
+  x
 }
-
-

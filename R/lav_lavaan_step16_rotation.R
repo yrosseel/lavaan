@@ -1,13 +1,13 @@
-lav_lavaan_step16_rotation <- function(lavoptions     = NULL,
-                                       lavmodel       = NULL,
-                                       lavpartable    = NULL,
-                                       lavh1          = NULL,
-                                       lavdata        = NULL,
-                                       x              = NULL,
-                                       lavvcov        = NULL,
-                                       VCOV           = NULL,           # nolint
-                                       lavcache       = NULL,
-                                       lavimplied     = NULL,
+lav_lavaan_step16_rotation <- function(lavoptions = NULL,
+                                       lavmodel = NULL,
+                                       lavpartable = NULL,
+                                       lavh1 = NULL,
+                                       lavdata = NULL,
+                                       x = NULL,
+                                       lavvcov = NULL,
+                                       VCOV = NULL, # nolint
+                                       lavcache = NULL,
+                                       lavimplied = NULL,
                                        lavsamplestats = NULL) {
   # # # # # # # # # # #
   # #  16. rotation # #
@@ -51,7 +51,7 @@ lav_lavaan_step16_rotation <- function(lavoptions     = NULL,
     # - save unrotated free column in free.unrotated
     lavpartable$free.unrotated <- lavpartable$free
     user7.idx <- which((lavpartable$user == 7L | lavpartable$user == 77L) &
-                       lavpartable$free == 0L)
+      lavpartable$free == 0L)
     lavpartable$free[user7.idx] <- 1L
     lavpartable$free[lavpartable$free > 0L] <-
       seq_len(sum(lavpartable$free > 0L))
@@ -100,7 +100,7 @@ lav_lavaan_step16_rotation <- function(lavoptions     = NULL,
       # use delta rule to recompute vcov
       if (lavoptions$rotation.se == "delta") {
         # Jacobian
-        JAC <- numDeriv::jacobian(                                      # nolint
+        JAC <- numDeriv::jacobian( # nolint
           func = lav_model_efa_rotate_x,
           x = x.unrotated, lavmodel = lavmodel.unrot,
           init.rot = lavmodel@H, lavoptions = lavoptions,
@@ -110,11 +110,11 @@ lav_lavaan_step16_rotation <- function(lavoptions     = NULL,
         ) # important!
 
         # force VCOV to be pd, before we transform (not very elegant)
-        VCOV.in <- lav_matrix_symmetric_force_pd(lavvcov$vcov,          # nolint
+        VCOV.in <- lav_matrix_symmetric_force_pd(lavvcov$vcov, # nolint
           tol = 1e-10
         )
         # apply Delta rule
-        VCOV.user <- JAC %*% VCOV.in %*% t(JAC)                         # nolint
+        VCOV.user <- JAC %*% VCOV.in %*% t(JAC) # nolint
 
         # re-compute SE and store them in lavpartable
         tmp <- diag(VCOV.user)
@@ -145,7 +145,7 @@ lav_lavaan_step16_rotation <- function(lavoptions     = NULL,
       } else if (lavoptions$rotation.se == "bordered") {
         # create 'border' for augmented information matrix
         x.rot <- lav_model_get_parameters(lavmodel)
-        JAC <- numDeriv::jacobian(                                      # nolint
+        JAC <- numDeriv::jacobian( # nolint
           func = lav_model_efa_rotate_border_x,
           x = x.rot, lavmodel = lavmodel,
           lavoptions = lavoptions,
@@ -177,17 +177,17 @@ lav_lavaan_step16_rotation <- function(lavoptions     = NULL,
           nbord <- nrow(JAC)
 
           # reconstruct con.jac
-          CON.JAC <- rbind(JAC, lavmodel@ceq.JAC, lavmodel@cin.JAC)     # nolint
-          attr(CON.JAC, "cin.idx") <- cin.idx + nbord                   # nolint
-          attr(CON.JAC, "ceq.idx") <- c(1:nbord, ceq.idx + nbord)       # nolint
-          attr(CON.JAC, "inactive.idx") <- inactive.idx + nbord         # nolint
+          CON.JAC <- rbind(JAC, lavmodel@ceq.JAC, lavmodel@cin.JAC) # nolint
+          attr(CON.JAC, "cin.idx") <- cin.idx + nbord # nolint
+          attr(CON.JAC, "ceq.idx") <- c(1:nbord, ceq.idx + nbord) # nolint
+          attr(CON.JAC, "inactive.idx") <- inactive.idx + nbord # nolint
 
           lavmodel@con.jac <- CON.JAC
           lavmodel@con.lambda <- c(rep(0, nbord), lambda)
         }
 
         # compute VCOV, taking 'rotation constraints' into account
-        VCOV <- lav_model_vcov(                                         # nolint
+        VCOV <- lav_model_vcov( # nolint
           lavmodel = lavmodel,
           lavsamplestats = lavsamplestats,
           lavoptions = lavoptions,
@@ -207,8 +207,8 @@ lav_lavaan_step16_rotation <- function(lavoptions     = NULL,
 
         # store rotated VCOV in lavvcov
         tmp.attr <- attributes(VCOV)
-        VCOV1 <- VCOV                                                   # nolint
-        attributes(VCOV1) <- tmp.attr["dim"]                            # nolint
+        VCOV1 <- VCOV # nolint
+        attributes(VCOV1) <- tmp.attr["dim"] # nolint
         # lavvcov$vcov.unrotated <- lavvcov$vcov
         lavvcov$vcov <- VCOV1
       } # bordered

@@ -1,8 +1,8 @@
-lav_lavaan_step10_cache <- function(slotCache        = NULL,            # nolint
-                                    lavdata          = NULL,
-                                    lavmodel         = NULL,
-                                    lavpartable      = NULL,
-                                    lavoptions       = NULL,
+lav_lavaan_step10_cache <- function(slotCache = NULL, # nolint
+                                    lavdata = NULL,
+                                    lavmodel = NULL,
+                                    lavpartable = NULL,
+                                    lavoptions = NULL,
                                     sampling.weights = NULL) {
   # # # # # # # # # # #
   # #  10. lavcache # #
@@ -87,12 +87,16 @@ lav_lavaan_step10_cache <- function(slotCache        = NULL,            # nolint
           # check whether the probabilities pairwiseProbGivObs and
           # univariateProbGivObs are given by the user
           if (is.null(lavoptions$control$pairwiseProbGivObs)) {
-            stop("lavaan ERROR: could not find `pairwiseProbGivObs' ",
-              "in control() list")
+            stop(
+              "lavaan ERROR: could not find `pairwiseProbGivObs' ",
+              "in control() list"
+            )
           }
           if (is.null(lavoptions$control$univariateProbGivObs)) {
-            stop("lavaan ERROR: could not find `univariateProbGivObs' ",
-              "in control() list")
+            stop(
+              "lavaan ERROR: could not find `univariateProbGivObs' ",
+              "in control() list"
+            )
           }
         }
       }
@@ -138,7 +142,7 @@ lav_lavaan_step10_cache <- function(slotCache        = NULL,            # nolint
           lavcache[[g]]$idx_ab_of_xixj_ab <- idx_ab_of_xixj_ab
 
           # Raw data for group g
-          X.g <- lavdata@X[[g]]                                         # nolint
+          X.g <- lavdata@X[[g]] # nolint
 
           # I assume that X.g includes only the ordinal indicators nvar
           # gives the number of ordinal indicators

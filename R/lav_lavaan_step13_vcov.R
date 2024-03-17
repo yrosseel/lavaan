@@ -1,12 +1,12 @@
-lav_lavaan_step13_vcov_boot <- function(lavoptions     = NULL,
-                                        lavmodel       = NULL,
+lav_lavaan_step13_vcov_boot <- function(lavoptions = NULL,
+                                        lavmodel = NULL,
                                         lavsamplestats = NULL,
-                                        lavdata        = NULL,
-                                        lavpartable    = NULL,
-                                        lavcache       = NULL,
-                                        lavimplied     = NULL,
-                                        lavh1          = NULL,
-                                        x              = NULL) {
+                                        lavdata = NULL,
+                                        lavpartable = NULL,
+                                        lavcache = NULL,
+                                        lavimplied = NULL,
+                                        lavh1 = NULL,
+                                        x = NULL) {
   # # # # # # # # # # # # # # # #
   # #  13. lavvcov + lavboot # #
   # # # # # # # # # # # # # # # #
@@ -28,7 +28,7 @@ lav_lavaan_step13_vcov_boot <- function(lavoptions     = NULL,
   # if lavpartable not "external" or "none" or "twostep"
   #     lavpartable$se <- lav_model_vcov_se(...)
 
-  VCOV <- NULL                                                          # nolint
+  VCOV <- NULL # nolint
   if (lavoptions$se != "none" && lavoptions$se != "external" &&
     lavoptions$se != "twostep" &&
     # (.hasSlot(lavmodel, "nefa") &&
@@ -42,7 +42,7 @@ lav_lavaan_step13_vcov_boot <- function(lavoptions     = NULL,
     if (lavoptions$verbose) {
       cat("computing VCOV for      se =", lavoptions$se, "...")
     }
-    VCOV <- lav_model_vcov(                                             # nolint
+    VCOV <- lav_model_vcov( # nolint
       lavmodel = lavmodel,
       lavsamplestats = lavsamplestats,
       lavoptions = lavoptions,
@@ -68,18 +68,18 @@ lav_lavaan_step13_vcov_boot <- function(lavoptions     = NULL,
   # store VCOV in vcov
   # strip all attributes but 'dim'
   tmp.attr <- attributes(VCOV)
-  VCOV1 <- VCOV                                                         # nolint
-  attributes(VCOV1) <- tmp.attr["dim"]                                  # nolint
+  VCOV1 <- VCOV # nolint
+  attributes(VCOV1) <- tmp.attr["dim"] # nolint
   # store vcov? new in 0.6-6
   if (!is.null(lavoptions$store.vcov) && !is.null(VCOV1)) {
     if (is.logical(lavoptions$store.vcov) && !lavoptions$store.vcov) {
-      VCOV1 <- NULL                                                     # nolint
+      VCOV1 <- NULL # nolint
     }
     if (is.character(lavoptions$store.vcov) &&
       lavoptions$rotation == "none" &&
       lavoptions$store.vcov == "default" &&
       ncol(VCOV1) > 200L) {
-      VCOV1 <- NULL                                                     # nolint
+      VCOV1 <- NULL # nolint
     }
   }
   lavvcov <- list(
@@ -96,8 +96,10 @@ lav_lavaan_step13_vcov_boot <- function(lavoptions     = NULL,
         lavpartable = lavpartable,
         VCOV = NULL, BOOT = NULL
       )
-      warning("lavaan WARNING: se = \"external\" but parameter table ",
-        "does not contain a `se' column")
+      warning(
+        "lavaan WARNING: se = \"external\" but parameter table ",
+        "does not contain a `se' column"
+      )
     }
   } else if (lavoptions$se %in% c("none", "twostep")) {
     # do nothing

@@ -1,12 +1,10 @@
-
 # what are the block values (not necessarily integers)
 lav_partable_block_values <- function(partable) {
-
   if (is.null(partable$block)) {
     block.values <- 1L
   } else {
     # always integers
-    tmp <- partable$block[partable$block > 0L &       # non-zero only
+    tmp <- partable$block[partable$block > 0L & # non-zero only
       !partable$op %in% c("==", "<", ">", ":=")]
     block.values <- unique(na.omit(tmp)) # could be, eg, '2' only
   }
@@ -82,7 +80,6 @@ lav_partable_nlevels <- function(partable) {
 
 # efa sets values
 lav_partable_efa_values <- function(partable) {
-
   if (is.null(partable$efa)) {
     efa.values <- character(0L)
   } else { # should be character
@@ -143,7 +140,8 @@ lav_partable_ndat <- function(partable) {
         # except within-only 'y'
         ov.names.y <- lav_partable_vnames(partable, "ov.nox", block = b)
         ov.names.y2 <- unlist(lav_partable_vnames(partable, "ov",
-          block = seq_len(nblocks)[-b]))
+          block = seq_len(nblocks)[-b]
+        ))
         ov.names.y <- ov.names.y[!ov.names.y %in% ov.names.y2]
         if (length(ov.names.y) > 0L) {
           pstar <- pstar + length(ov.names.y)
@@ -152,7 +150,8 @@ lav_partable_ndat <- function(partable) {
         # except within-only 'x' (unless fixed.x)
         ov.names.x <- lav_partable_vnames(partable, "ov.x", block = b)
         ov.names.x2 <- unlist(lav_partable_vnames(partable, "ov",
-          block = seq_len(nblocks)[-b]))
+          block = seq_len(nblocks)[-b]
+        ))
         ov.names.x <- ov.names.x[!ov.names.x %in% ov.names.x2]
         if (!fixed.x && length(ov.names.x) > 0L) {
           pstar <- pstar + length(ov.names.x)
@@ -180,11 +179,11 @@ lav_partable_ndat <- function(partable) {
     # correction for ordinal data?
     if (categorical) {
       ov.names.x <- lav_partable_vnames(partable, "ov.x", block = b)
-      nexo     <- length(ov.names.x)
-      ov.ord   <- lav_partable_vnames(partable, "ov.ord", block = b)
+      nexo <- length(ov.names.x)
+      ov.ord <- lav_partable_vnames(partable, "ov.ord", block = b)
       nvar.ord <- length(ov.ord)
-      th       <- lav_partable_vnames(partable, "th", block = b)
-      nth      <- length(th)
+      th <- lav_partable_vnames(partable, "th", block = b)
+      nth <- length(th)
       # no variances
       ndat[b] <- ndat[b] - nvar.ord
       # no means
@@ -194,7 +193,7 @@ lav_partable_ndat <- function(partable) {
       # add slopes
       if (conditional.x) {
         ov.names.x <- lav_partable_vnames(partable, "ov.x", block = b)
-        nexo     <- length(ov.names.x)
+        nexo <- length(ov.names.x)
         ndat[b] <- ndat[b] + (nvar * nexo)
       }
     }
@@ -239,7 +238,6 @@ lav_partable_npar <- function(partable) {
 # we need to find the rank of con.jac to find the exact amount
 # of non-redundant equality constraints (this is done in lav_test.R)
 lav_partable_df <- function(partable) {
-
   npar <- lav_partable_npar(partable)
   ndat <- lav_partable_ndat(partable)
 
@@ -251,7 +249,7 @@ lav_partable_df <- function(partable) {
 
 # check order of covariances: we only fill the upper.tri
 # therefore, we 'switch' lhs & rhs if they appear in the wrong order
-lav_partable_covariance_reorder <- function(partable,         # nolint
+lav_partable_covariance_reorder <- function(partable, # nolint
                                             ov.names = NULL,
                                             lv.names = NULL) {
   # shortcut
@@ -327,7 +325,6 @@ lav_partable_add <- function(partable = NULL, add = list()) {
     if (names(partable)[c] %in% names(add)) {
       partable[[c]][nel + 1] <- add[[names(partable)[c]]]
     }
-
   }
 
   partable
@@ -385,8 +382,10 @@ lav_partable_map_id_p1_in_p2 <- function(p1, p2, stopifnotfound = TRUE,
     # found?
     if (length(p2.idx) == 0L) {
       if (stopifnotfound) {
-        stop("lavaan ERROR: parameter in p1 not found in p2: ",
-          paste(lhs, op, rhs, "(block = ", block, ")", sep = " "))
+        stop(
+          "lavaan ERROR: parameter in p1 not found in p2: ",
+          paste(lhs, op, rhs, "(block = ", block, ")", sep = " ")
+        )
       } else {
         p2.id[i] <- as.integer(NA)
       }

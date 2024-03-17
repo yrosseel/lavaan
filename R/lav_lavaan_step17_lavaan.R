@@ -1,21 +1,21 @@
-lav_lavaan_step17_lavaan <- function(lavmc          = NULL,
-                                     timing         = NULL,
-                                     lavoptions     = NULL,
-                                     lavpartable    = NULL,
-                                     lavdata        = NULL,
+lav_lavaan_step17_lavaan <- function(lavmc = NULL,
+                                     timing = NULL,
+                                     lavoptions = NULL,
+                                     lavpartable = NULL,
+                                     lavdata = NULL,
                                      lavsamplestats = NULL,
-                                     lavmodel       = NULL,
-                                     lavcache       = NULL,
-                                     lavfit         = NULL,
-                                     lavboot        = NULL,
-                                     lavoptim       = NULL,
-                                     lavimplied     = NULL,
-                                     lavloglik      = NULL,
-                                     lavvcov        = NULL,
-                                     lavtest        = NULL,
-                                     lavh1          = NULL,
-                                     lavbaseline    = NULL,
-                                     start.time0    = NULL) {
+                                     lavmodel = NULL,
+                                     lavcache = NULL,
+                                     lavfit = NULL,
+                                     lavboot = NULL,
+                                     lavoptim = NULL,
+                                     lavimplied = NULL,
+                                     lavloglik = NULL,
+                                     lavvcov = NULL,
+                                     lavtest = NULL,
+                                     lavh1 = NULL,
+                                     lavbaseline = NULL,
+                                     start.time0 = NULL) {
   # # # # # # # # # #
   # #  17. lavaan # #
   # # # # # # # # # #
@@ -38,7 +38,7 @@ lav_lavaan_step17_lavaan <- function(lavmc          = NULL,
     timing = timing, # list - ldw_add_timing
     Options = lavoptions, # list - options (2) / data (3) / partable (4)
     ParTable = lavpartable,
-      # list - partable/bounds/start/model/estoptim/vcovboot/rotation
+    # list - partable/bounds/start/model/estoptim/vcovboot/rotation
     pta = lavpta, # list - lav_partable_attributes
     Data = lavdata, # S4 class - data (3)
     SampleStats = lavsamplestats, # S4 class - samplestats (5)

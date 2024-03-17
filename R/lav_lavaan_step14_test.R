@@ -1,14 +1,14 @@
-lav_lavaan_step14_test <- function(lavoptions     = NULL,
-                                   lavmodel       = NULL,
+lav_lavaan_step14_test <- function(lavoptions = NULL,
+                                   lavmodel = NULL,
                                    lavsamplestats = NULL,
-                                   lavdata        = NULL,
-                                   lavpartable    = NULL,
-                                   lavcache       = NULL,
-                                   lavimplied     = NULL,
-                                   lavh1          = NULL,
-                                   x              = NULL,
-                                   VCOV           = NULL,               # nolint
-                                   lavloglik      = NULL) {
+                                   lavdata = NULL,
+                                   lavpartable = NULL,
+                                   lavcache = NULL,
+                                   lavimplied = NULL,
+                                   lavh1 = NULL,
+                                   x = NULL,
+                                   VCOV = NULL, # nolint
+                                   lavloglik = NULL) {
   # # # # # # # # # # #
   # #  14. lavtest # #
   # # # # # # # # # # #
@@ -55,11 +55,11 @@ lav_lavaan_step14_test <- function(lavoptions     = NULL,
 }
 
 lav_lavaan_step14_fit <- function(lavpartable = NULL,
-                                  lavmodel    = NULL,
-                                  lavimplied  = NULL,
-                                  x           = NULL,
-                                  VCOV        = NULL,                   # nolint
-                                  lavtest     = NULL) {
+                                  lavmodel = NULL,
+                                  lavimplied = NULL,
+                                  x = NULL,
+                                  VCOV = NULL, # nolint
+                                  lavtest = NULL) {
   # # # # # # # # # # # #
   # #  14bis. lavfit  # # -> remove if the offending packages are fixed!!
   # # # # # # # # # # # #

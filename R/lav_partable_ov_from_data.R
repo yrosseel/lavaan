@@ -1,9 +1,8 @@
-
 # handle ov.order = "data" by adding attribute "ovda" to FLAT
-lav_partable_ov_from_data <- function(FLAT = NULL,             # nolint
+lav_partable_ov_from_data <- function(FLAT = NULL, # nolint
                                       data = NULL,
                                       sample.cov = NULL,
-                                      slotData = NULL) {       # nolint
+                                      slotData = NULL) { # nolint
   # current model-based ov.names
   ov.names <- lav_partable_vnames(FLAT, type = "ov")
 
@@ -40,14 +39,16 @@ lav_partable_ov_from_data <- function(FLAT = NULL,             # nolint
   # check if we have all of them
   if (length(ov.names.data) != length(ov.names)) {
     idx.missing <- which(!(ov.names %in% ov.names.data))
-    stop("lavaan ERROR: some (observed) variables specified in the model ",
+    stop(
+      "lavaan ERROR: some (observed) variables specified in the model ",
       "are not found in the data: ",
-      paste(ov.names[idx.missing], collapse = " "))
+      paste(ov.names[idx.missing], collapse = " ")
+    )
   }
 
   # check if the order is the same
   if (!identical(ov.names, ov.names.data)) {
-    attr(FLAT, "ovda") <- ov.names.data                       # nolint
+    attr(FLAT, "ovda") <- ov.names.data # nolint
   }
   return(FLAT)
 }

@@ -1,9 +1,9 @@
-lav_lavaan_step11_estoptim <- function(lavdata        = NULL,    # nolint
-                                       lavmodel       = NULL,
-                                       lavcache       = NULL,
+lav_lavaan_step11_estoptim <- function(lavdata = NULL, # nolint
+                                       lavmodel = NULL,
+                                       lavcache = NULL,
                                        lavsamplestats = NULL,
-                                       lavoptions     = NULL,
-                                       lavpartable    = NULL) {
+                                       lavoptions = NULL,
+                                       lavpartable = NULL) {
   # # # # # # # # # # # # # #
   # #  11. est + lavoptim # #
   # # # # # # # # # # # # # #
@@ -178,8 +178,10 @@ lav_lavaan_step11_estoptim <- function(lavdata        = NULL,    # nolint
         lavoptions2 <- lavoptions
         lavoptions2$optim.parscale <- "standardized"
         if (lavoptions$verbose) {
-          cat("attempt 4 -- optim.parscale = \"standardized\" + ",
-              "start = \"simple\"\n")
+          cat(
+            "attempt 4 -- optim.parscale = \"standardized\" + ",
+            "start = \"simple\"\n"
+          )
         }
         x <- try(
           lav_model_estimate(

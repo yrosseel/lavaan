@@ -1,8 +1,8 @@
-lav_lavaan_step08_start <- function(slotModel      = NULL,              # nolint
-                                    lavoptions     = NULL,
-                                    lavpartable    = NULL,
+lav_lavaan_step08_start <- function(slotModel = NULL, # nolint
+                                    lavoptions = NULL,
+                                    lavpartable = NULL,
                                     lavsamplestats = NULL,
-                                    lavh1          = NULL) {
+                                    lavh1 = NULL) {
   # # # # # # # # # # #
   # #  8. lavstart # #
   # # # # # # # # # # #

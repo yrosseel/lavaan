@@ -9,15 +9,14 @@
 
 # Hoelter Critical N (CN)
 lav_fit_cn <- function(X2 = NULL, df = NULL, N = NULL, alpha = 0.05) {
+  # catch df=0, X2=0
+  if (df == 0 && X2 < .Machine$double.eps) {
+    CN <- as.numeric(NA)
+  } else {
+    CN <- qchisq(p = (1 - alpha), df = df) / (X2 / N) + 1
+  }
 
-    # catch df=0, X2=0
-    if(df == 0 && X2 < .Machine$double.eps) {
-        CN <- as.numeric(NA)
-    } else {
-        CN <- qchisq(p = (1 - alpha), df = df)/(X2/N) + 1
-    }
-
-    CN
+  CN
 }
 
 # WRMR
@@ -25,20 +24,19 @@ lav_fit_cn <- function(X2 = NULL, df = NULL, N = NULL, alpha = 0.05) {
 # Note: when multiple groups, 'nel' only seems to correspond to the
 # first group???
 lav_fit_wrmr <- function(X2 = NULL, nel = NULL) {
+  if (nel > 0) {
+    WRMR <- sqrt(X2 / nel)
+  } else {
+    WRMR <- as.numeric(NA)
+  }
 
-    if(nel > 0) {
-        WRMR <- sqrt( X2 / nel )
-    } else {
-        WRMR <- as.numeric(NA)
-    }
-
-    WRMR
+  WRMR
 }
 
 # MFI - McDonald Fit Index (McDonald, 1989)
 lav_fit_mfi <- function(X2 = NULL, df = NULL, N = NULL) {
-    MFI <- exp(-0.5 * (X2 - df)/N)
-    MFI
+  MFI <- exp(-0.5 * (X2 - df) / N)
+  MFI
 }
 
 # ECVI - cross-validation index (Brown & Cudeck, 1989, eq 5)
@@ -56,8 +54,6 @@ lav_fit_mfi <- function(X2 = NULL, df = NULL, N = NULL) {
 #      was a matter of habitual simplification back then, not necessity.
 # YR: - why does Dudgeon eq 22 use (df + 2*npar) instead of (2*npar)??
 lav_fit_ecvi <- function(X2 = NULL, npar = npar, N = N) {
-    ECVI <- X2/N + (2 * npar)/N
-    ECVI
+  ECVI <- X2 / N + (2 * npar) / N
+  ECVI
 }
-
-

@@ -1,11 +1,12 @@
 # check if the partable is complete/consistent
 # we may have added intercepts/variances (user = 0), fixed to zero
 lav_partable_check <- function(partable, categorical = FALSE, warn = TRUE) {
-
   check <- TRUE
 
   # check for empy table - or should we WARN?
-  if (length(partable$lhs) == 0) return(check)
+  if (length(partable$lhs) == 0) {
+    return(check)
+  }
 
   # get observed/latent variables
   ov.names <- vnames(partable, "ov.nox") # no need to specify exo??
@@ -31,9 +32,11 @@ lav_partable_check <- function(partable, categorical = FALSE, warn = TRUE) {
   if (length(missing.idx) > 0L) {
     check <- FALSE
     if (warn) {
-      warning("lavaan WARNING: parameter table does not contain",
+      warning(
+        "lavaan WARNING: parameter table does not contain",
         " (residual) variances for one or more variables: [",
-        paste(all.names[missing.idx], collapse = " "), "]")
+        paste(all.names[missing.idx], collapse = " "), "]"
+      )
     }
   }
 
@@ -49,9 +52,11 @@ lav_partable_check <- function(partable, categorical = FALSE, warn = TRUE) {
     if (length(missing.idx) > 0L) {
       check <- FALSE
       if (warn) {
-        warning("lavaan WARNING: parameter table does not contain intercepts",
-                " for one or more variables: [",
-                paste(all.names[missing.idx], collapse = " "), "]")
+        warning(
+          "lavaan WARNING: parameter table does not contain intercepts",
+          " for one or more variables: [",
+          paste(all.names[missing.idx], collapse = " "), "]"
+        )
       }
     }
   }
@@ -96,14 +101,15 @@ lav_partable_check <- function(partable, categorical = FALSE, warn = TRUE) {
   if (length(int.fixed) > 0L) {
     check <- FALSE
     if (warn) {
-      warning("lavaan WARNING: ",
+      warning(
+        "lavaan WARNING: ",
         "automatically added intercepts are set to zero:\n",
-        "    [", paste(partable$lhs[int.fixed],  collapse = " "),
-        "]")
+        "    [", paste(partable$lhs[int.fixed], collapse = " "),
+        "]"
+      )
     }
   }
 
   # return check code
   check
-
 }

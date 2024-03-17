@@ -1,9 +1,9 @@
-lav_lavaan_step04_partable <- function(slotParTable = NULL,             # nolint
-                                       model        = NULL,
-                                       flat.model   = NULL,
-                                       lavoptions   = NULL,
-                                       lavdata      = NULL,
-                                       constraints  = NULL) {
+lav_lavaan_step04_partable <- function(slotParTable = NULL, # nolint
+                                       model = NULL,
+                                       flat.model = NULL,
+                                       lavoptions = NULL,
+                                       lavdata = NULL,
+                                       constraints = NULL) {
   # # # # # # # # # # # #
   # #  4. lavpartable # #
   # # # # # # # # # # # #

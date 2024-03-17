@@ -1,20 +1,20 @@
-lav_lavaan_step02_options <- function(slotOptions      = NULL,          # nolint
-                                      slotData         = NULL,          # nolint
-                                      flat.model       = NULL,
-                                      ordered          = NULL,
-                                      sample.cov       = NULL,
-                                      sample.mean      = NULL,
-                                      sample.th        = NULL,
-                                      sample.nobs      = NULL,
-                                      ov.names.l       = NULL,
+lav_lavaan_step02_options <- function(slotOptions = NULL, # nolint
+                                      slotData = NULL, # nolint
+                                      flat.model = NULL,
+                                      ordered = NULL,
+                                      sample.cov = NULL,
+                                      sample.mean = NULL,
+                                      sample.th = NULL,
+                                      sample.nobs = NULL,
+                                      ov.names.l = NULL,
                                       sampling.weights = NULL,
-                                      constraints      = NULL,
-                                      group            = NULL,
-                                      ov.names.x       = NULL,
-                                      ov.names.y       = NULL,
-                                      dotdotdot        = NULL,
-                                      cluster          = NULL,
-                                      data             = NULL) {
+                                      constraints = NULL,
+                                      group = NULL,
+                                      ov.names.x = NULL,
+                                      ov.names.y = NULL,
+                                      dotdotdot = NULL,
+                                      cluster = NULL,
+                                      data = NULL) {
   # # # # # # # # # # # #
   # #  2. lavoptions  # #
   # # # # # # # # # # # #
@@ -84,7 +84,6 @@ lav_lavaan_step02_options <- function(slotOptions      = NULL,          # nolint
       )
       lavoptions[dot.names[op.idx]] <- dotdotdot[op.idx]
     }
-
   } else {
     if (!is.null(dotdotdot$verbose) && dotdotdot$verbose) {
       cat("lavoptions         ...")
@@ -101,8 +100,10 @@ lav_lavaan_step02_options <- function(slotOptions      = NULL,          # nolint
       plural <- ""
       if (length(wrong.idx) > 1L) plural <- "s"
       # stop or warning?? stop for now (there could be more)
-      stop("lavaan ERROR: unknown argument", plural, " ",
-        paste(sQuote(dot.names[wrong.idx]), collapse = ", "))
+      stop(
+        "lavaan ERROR: unknown argument", plural, " ",
+        paste(sQuote(dot.names[wrong.idx]), collapse = ", ")
+      )
     }
 
     # modifyList
@@ -194,8 +195,10 @@ lav_lavaan_step02_options <- function(slotOptions      = NULL,          # nolint
       (is.character(ov.names.x) && length(ov.names.x) == 0L)) {
       # if explicitly set to TRUE, give warning
       if (is.logical(dotdotdot$conditional.x) && dotdotdot$conditional.x) {
-        warning("lavaan WARNING: no exogenous covariates; conditional.x ",
-          "will be set to FALSE")
+        warning(
+          "lavaan WARNING: no exogenous covariates; conditional.x ",
+          "will be set to FALSE"
+        )
       }
       opt$conditional.x <- FALSE
     }

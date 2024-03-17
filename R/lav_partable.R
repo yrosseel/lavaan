@@ -15,46 +15,43 @@
 # - 24 March 2019: handle efa sets
 # - 23 May   2020: support for random slopes
 
-lavaanify <- lavParTable <- function(                            # nolint
-                                     model            = NULL,
-                                     meanstructure    = FALSE,
-                                     int.ov.free      = FALSE,
-                                     int.lv.free      = FALSE,
-                                     marker.int.zero  = FALSE,
-                                     orthogonal       = FALSE,
-                                     orthogonal.y     = FALSE,
-                                     orthogonal.x     = FALSE,
-                                     orthogonal.efa   = FALSE,
-                                     std.lv           = FALSE,
-                                     correlation      = FALSE,
-                                     effect.coding    = "",
-                                     conditional.x    = FALSE,
-                                     fixed.x          = FALSE,
+lavaanify <- lavParTable <- function( # nolint
+                                     model = NULL,
+                                     meanstructure = FALSE,
+                                     int.ov.free = FALSE,
+                                     int.lv.free = FALSE,
+                                     marker.int.zero = FALSE,
+                                     orthogonal = FALSE,
+                                     orthogonal.y = FALSE,
+                                     orthogonal.x = FALSE,
+                                     orthogonal.efa = FALSE,
+                                     std.lv = FALSE,
+                                     correlation = FALSE,
+                                     effect.coding = "",
+                                     conditional.x = FALSE,
+                                     fixed.x = FALSE,
                                      parameterization = "delta",
-                                     constraints      = NULL,
-                                     ceq.simple       = FALSE,
-
-                                     auto             = FALSE,
-                                     model.type       = "sem",
-                                     auto.fix.first   = FALSE,
-                                     auto.fix.single  = FALSE,
-                                     auto.var         = FALSE,
-                                     auto.cov.lv.x    = FALSE,
-                                     auto.cov.y       = FALSE,
-                                     auto.th          = FALSE,
-                                     auto.delta       = FALSE,
-                                     auto.efa         = FALSE,
-
-                                     varTable         = NULL,    # nolint
-                                     ngroups          = 1L,
-                                     nthresholds      = NULL,
-                                     group.equal      = NULL,
-                                     group.partial    = NULL,
-                                     group.w.free     = FALSE,
-                                     debug            = FALSE,
-                                     warn             = TRUE,
-
-                                     as.data.frame.   = TRUE) {  # nolint
+                                     constraints = NULL,
+                                     ceq.simple = FALSE,
+                                     auto = FALSE,
+                                     model.type = "sem",
+                                     auto.fix.first = FALSE,
+                                     auto.fix.single = FALSE,
+                                     auto.var = FALSE,
+                                     auto.cov.lv.x = FALSE,
+                                     auto.cov.y = FALSE,
+                                     auto.th = FALSE,
+                                     auto.delta = FALSE,
+                                     auto.efa = FALSE,
+                                     varTable = NULL, # nolint
+                                     ngroups = 1L,
+                                     nthresholds = NULL,
+                                     group.equal = NULL,
+                                     group.partial = NULL,
+                                     group.w.free = FALSE,
+                                     debug = FALSE,
+                                     warn = TRUE,
+                                     as.data.frame. = TRUE) { # nolint
   # check if model is already flat or a full parameter table
   if (is.list(model) && !is.null(model$lhs)) {
     if (is.null(model$mod.idx)) {
@@ -66,14 +63,16 @@ lavaanify <- lavParTable <- function(                            # nolint
   } else {
     # parse the model syntax and flatten the user-specified model
     # return a data.frame, where each line is a model element (rhs, op, lhs)
-    flat <- lavParseModelString(model.syntax = model, warn = warn,
-                                debug = FALSE)
+    flat <- lavParseModelString(
+      model.syntax = model, warn = warn,
+      debug = FALSE
+    )
   }
   # user-specified *modifiers* are returned as an attribute
-  tmp.mod  <- attr(flat, "modifiers")
+  tmp.mod <- attr(flat, "modifiers")
   attr(flat, "modifiers") <- NULL
   # user-specified *constraints* are returned as an attribute
-  tmp.con  <- attr(flat, "constraints")
+  tmp.con <- attr(flat, "constraints")
   attr(flat, "constraints") <- NULL
 
   # ov.names.data?
@@ -114,11 +113,13 @@ lavaanify <- lavParTable <- function(                            # nolint
   # bogus varTable? (if data.type == "none")
   if (!is.null(varTable)) {
     if (!is.list(varTable) || is.null(varTable$name)) {
-      stop("lavaan ERROR: varTable is not a list or",
-           " does not contain variable names.")
+      stop(
+        "lavaan ERROR: varTable is not a list or",
+        " does not contain variable names."
+      )
     }
     if (all(varTable$nobs == 0)) {
-      varTable <- NULL                                              # nolint
+      varTable <- NULL # nolint
     }
   }
 
@@ -140,28 +141,28 @@ lavaanify <- lavParTable <- function(                            # nolint
   # auto=TRUE?
   if (auto) { # mimic sem/cfa auto behavior
     if (model.type == "sem") {
-      int.ov.free     <- TRUE
-      int.lv.free     <- FALSE
-      auto.fix.first  <- !std.lv
+      int.ov.free <- TRUE
+      int.lv.free <- FALSE
+      auto.fix.first <- !std.lv
       auto.fix.single <- TRUE
-      auto.var        <- TRUE
-      auto.cov.lv.x   <- TRUE
-      auto.cov.y      <- TRUE
-      auto.th         <- TRUE
-      auto.delta      <- TRUE
-      auto.efa        <- TRUE
-    } else        if (model.type == "growth") {
-      model.type      <- "growth"
-      int.ov.free     <- FALSE
-      int.lv.free     <- TRUE
-      auto.fix.first  <- !std.lv
+      auto.var <- TRUE
+      auto.cov.lv.x <- TRUE
+      auto.cov.y <- TRUE
+      auto.th <- TRUE
+      auto.delta <- TRUE
+      auto.efa <- TRUE
+    } else if (model.type == "growth") {
+      model.type <- "growth"
+      int.ov.free <- FALSE
+      int.lv.free <- TRUE
+      auto.fix.first <- !std.lv
       auto.fix.single <- TRUE
-      auto.var        <- TRUE
-      auto.cov.lv.x   <- TRUE
-      auto.cov.y      <- TRUE
-      auto.th         <- TRUE
-      auto.delta      <- TRUE
-      auto.efa        <- TRUE
+      auto.var <- TRUE
+      auto.cov.lv.x <- TRUE
+      auto.cov.y <- TRUE
+      auto.th <- TRUE
+      auto.delta <- TRUE
+      auto.efa <- TRUE
     }
   }
 
@@ -188,8 +189,10 @@ lavaanify <- lavParTable <- function(                            # nolint
       group.idx <- which(block.lhs == "group")
       level.idx <- which(block.lhs == "level")
       if (group.idx > level.idx) {
-        stop("lavaan ERROR: levels must be nested within",
-             " groups (not the other way around).")
+        stop(
+          "lavaan ERROR: levels must be nested within",
+          " groups (not the other way around)."
+        )
       }
     }
 
@@ -198,17 +201,22 @@ lavaanify <- lavParTable <- function(                            # nolint
 
     # check for wrong spelled 'group' lhs
     if (length(grep("group", block.lhs)) > 1L) {
-      warning("lavaan WARNING: ambiguous block identifiers for group:",
+      warning(
+        "lavaan WARNING: ambiguous block identifiers for group:",
         "\n\t\t  ", paste(block.lhs[grep("group", block.lhs)],
-          collapse = ", "))
+          collapse = ", "
+        )
+      )
     }
 
     # no empty :rhs fields allowed!
     if (any(nchar(flat$rhs[block.op.idx]) == 0L)) {
       empty.idx <- nchar(flat$rhs[block.op.idx]) == 0L
       txt <- paste(flat$lhs[block.op.idx][empty.idx], ":")
-      stop("lavaan ERROR: syntax contains block identifiers with ",
-        "missing numbers/labels:\n\t\t", txt)
+      stop(
+        "lavaan ERROR: syntax contains block identifiers with ",
+        "missing numbers/labels:\n\t\t", txt
+      )
     }
 
     # check for ngroups (ngroups is based on the data!)
@@ -218,8 +226,10 @@ lavaanify <- lavParTable <- function(                            # nolint
       n.group.flat <- length(unique(flat$rhs[group.block.idx]))
 
       if (n.group.flat > 0L && n.group.flat != ngroups) {
-        stop("lavaan ERROR: syntax defines ", n.group.flat, " groups; ",
-          "data (or argument ngroups) suggests ", ngroups, " groups")
+        stop(
+          "lavaan ERROR: syntax defines ", n.group.flat, " groups; ",
+          "data (or argument ngroups) suggests ", ngroups, " groups"
+        )
       }
     }
 
@@ -243,13 +253,17 @@ lavaanify <- lavParTable <- function(                            # nolint
       block.id <- block.id + 1L
 
       # select flat rows for this block
-      tmp.idx <- seq.int(block.op.idx1[block.op] + 1L,
-                         block.op.idx1[block.op + 1L] - 1L)
+      tmp.idx <- seq.int(
+        block.op.idx1[block.op] + 1L,
+        block.op.idx1[block.op + 1L] - 1L
+      )
 
       # store info in block.info
-      block.info[[block.id]] <- list(lhs = block.lhs, # always the same
+      block.info[[block.id]] <- list(
+        lhs = block.lhs, # always the same
         rhs = block.rhs, # for this block
-        idx = tmp.idx)
+        idx = tmp.idx
+      )
     }
     block.info <- block.info[seq_len(block.id)]
 
@@ -259,7 +273,9 @@ lavaanify <- lavParTable <- function(                            # nolint
     # - merge the indices
     # - remove the duplicated blocks
     block.labels <- sapply(lapply(block.info, "[[", "rhs"),
-      paste, collapse = ".")
+      paste,
+      collapse = "."
+    )
     nblocks <- length(unique(block.labels))
     if (nblocks < length(block.labels)) {
       # it would appear we have duplicated block.labels -> merge
@@ -267,8 +283,10 @@ lavaanify <- lavParTable <- function(                            # nolint
       for (i in seq_along(dup.idx)) {
         this.dup.idx <- dup.idx[i]
         orig.idx <- which(block.labels == block.labels[this.dup.idx])[1]
-        block.info[[orig.idx]]$idx <- c(block.info[[orig.idx]]$idx,
-          block.info[[this.dup.idx]]$idx)
+        block.info[[orig.idx]]$idx <- c(
+          block.info[[orig.idx]]$idx,
+          block.info[[this.dup.idx]]$idx
+        )
       }
       block.info <- block.info[-dup.idx]
     }
@@ -276,7 +294,6 @@ lavaanify <- lavParTable <- function(                            # nolint
     # split the flat data.frame per `block', create tmp.list
     # for each `block', and rbind them together, adding block columns
     for (block in seq_len(nblocks)) {
-
       block.rhs <- block.info[[block]]$rhs
       block.lhs <- block.info[[block]]$lhs[length(block.lhs)] # last one
       block.idx <- block.info[[block]]$idx
@@ -296,16 +313,16 @@ lavaanify <- lavParTable <- function(                            # nolint
           tmp <- flat.block[1, ]
           tmp$lhs <- lv.names.rv[i]
           tmp$op <- "=~"
-          tmp$rhs     <- lv.names.rv[i]
+          tmp$rhs <- lv.names.rv[i]
           tmp$mod.idx <- max(flat$mod.idx) + i
-          tmp$fixed   <- "0"
-          tmp$start   <- ""
-          tmp$lower   <- ""
-          tmp$upper   <- ""
-          tmp$label   <- ""
-          tmp$prior   <- ""
-          tmp$efa     <- ""
-          tmp$rv      <- lv.names.rv[i]
+          tmp$fixed <- "0"
+          tmp$start <- ""
+          tmp$lower <- ""
+          tmp$upper <- ""
+          tmp$label <- ""
+          tmp$prior <- ""
+          tmp$efa <- ""
+          tmp$rv <- lv.names.rv[i]
           flat.block <- rbind(flat.block, tmp, deparse.level = 0L)
           tmp.mod <- c(tmp.mod, list(list(fixed = 0)))
         }
@@ -319,13 +336,15 @@ lavaanify <- lavParTable <- function(                            # nolint
           idx <- which(!ov.names.x.block %in% tmp.ov.names.x)
           if (length(idx) > 0L) {
             # warn!
-            txt <- c("the variable(s) [",
+            txt <- c(
+              "the variable(s) [",
               paste0(ov.names.x.block[idx], collapse = " "), "] ",
               "are exogenous at one level, but endogenous at ",
               "another level. These variables will be treated as ",
               "endogenous, and their variances/intercepts will be ",
               "freely estimated. To remove this warning, use ",
-              "fixed.x = FALSE.")
+              "fixed.x = FALSE."
+            )
             warning(lav_txt2message(txt))
             ov.names.x.block <- ov.names.x.block[-idx]
           }
@@ -339,13 +358,15 @@ lavaanify <- lavParTable <- function(                            # nolint
       if (conditional.x && block.lhs == "level") {
         if (ngroups == 1L) {
           other.block.names <- lav_partable_vnames(flat, "ov",
-            block = seq_len(nblocks)[-block])
+            block = seq_len(nblocks)[-block]
+          )
         } else {
           # TEST ME
           this.group <- ceiling(block / nlevels)
           blocks.within.group <- (this.group - 1L) * nlevels + seq_len(nlevels)
           other.block.names <- lav_partable_vnames(flat, "ov",
-            block = blocks.within.group[-block])
+            block = blocks.within.group[-block]
+          )
         }
         ov.names.x.block <- lav_partable_vnames(flat.block, "ov.x")
         if (length(ov.names.x.block) > 0L) {
@@ -358,7 +379,8 @@ lavaanify <- lavParTable <- function(                            # nolint
         ov.names.x.block <- NULL
       }
 
-      list.block <- lav_partable_flat(flat.block, blocks = block.lhs,
+      list.block <- lav_partable_flat(flat.block,
+        blocks = block.lhs,
         block.id = block,
         meanstructure = meanstructure,
         int.ov.free = int.ov.free, int.lv.free = int.lv.free,
@@ -375,7 +397,8 @@ lavaanify <- lavParTable <- function(                            # nolint
         varTable = varTable, group.equal = NULL,
         group.w.free = group.w.free, ngroups = 1L,
         nthresholds = nthresholds,
-        ov.names.x.block = ov.names.x.block)
+        ov.names.x.block = ov.names.x.block
+      )
       list.block <- as.data.frame(list.block, stringsAsFactors = FALSE)
 
       # add block columns with current values in block.rhs
@@ -398,15 +421,17 @@ lavaanify <- lavParTable <- function(                            # nolint
     for (b in seq_len(length(block.lhs))) {
       block.lhs <- block.lhs[b]
       block.rhs <- block.rhs[b]
-      tmp <- try(scan(text = tmp.list[[block.lhs]], what = integer(),
-        quiet = TRUE), silent = TRUE)
+      tmp <- try(scan(
+        text = tmp.list[[block.lhs]], what = integer(),
+        quiet = TRUE
+      ), silent = TRUE)
       if (inherits(tmp, "integer")) {
         tmp.list[[block.lhs]] <- tmp
       }
     }
-
   } else {
-    tmp.list <- lav_partable_flat(flat, blocks = "group",
+    tmp.list <- lav_partable_flat(flat,
+      blocks = "group",
       meanstructure = meanstructure,
       int.ov.free = int.ov.free, int.lv.free = int.lv.free,
       orthogonal = orthogonal, orthogonal.y = orthogonal.y,
@@ -420,7 +445,8 @@ lavaanify <- lavParTable <- function(                            # nolint
       auto.delta = auto.delta, auto.efa = auto.efa,
       varTable = varTable, group.equal = group.equal,
       group.w.free = group.w.free,
-      ngroups = ngroups, nthresholds = nthresholds)
+      ngroups = ngroups, nthresholds = nthresholds
+    )
   }
   if (debug) {
     cat("[lavaan DEBUG]: parameter tmp.list without MODIFIERS:\n")
@@ -484,27 +510,34 @@ lavaanify <- lavParTable <- function(                            # nolint
       tmp.mod.upper <- tmp.mod[[el]]$upper
       tmp.mod.label <- tmp.mod[[el]]$label
       tmp.mod.prior <- tmp.mod[[el]]$prior
-      tmp.mod.efa   <- tmp.mod[[el]]$efa
-      tmp.mod.rv    <- tmp.mod[[el]]$rv
+      tmp.mod.efa <- tmp.mod[[el]]$efa
+      tmp.mod.rv <- tmp.mod[[el]]$rv
 
       # check for single argument if multiple groups
       if (ngroups > 1L && length(idx) > 1L) {
         # Ok, this is not very consistent:
         # A) here we force same behavior across groups
-        if (length(tmp.mod.fixed) == 1L)
+        if (length(tmp.mod.fixed) == 1L) {
           tmp.mod.fixed <- rep(tmp.mod.fixed, ngroups)
-        if (length(tmp.mod.start) == 1L)
+        }
+        if (length(tmp.mod.start) == 1L) {
           tmp.mod.start <- rep(tmp.mod.start, ngroups)
-        if (length(tmp.mod.lower) == 1L)
+        }
+        if (length(tmp.mod.lower) == 1L) {
           tmp.mod.lower <- rep(tmp.mod.lower, ngroups)
-        if (length(tmp.mod.upper) == 1L)
+        }
+        if (length(tmp.mod.upper) == 1L) {
           tmp.mod.upper <- rep(tmp.mod.upper, ngroups)
-        if (length(tmp.mod.prior) == 1L)
+        }
+        if (length(tmp.mod.prior) == 1L) {
           tmp.mod.prior <- rep(tmp.mod.prior, ngroups)
-        if (length(tmp.mod.efa)   == 1L)
-          tmp.mod.efa   <- rep(tmp.mod.efa,   ngroups)
-        if (length(tmp.mod.rv)    == 1L)
-          tmp.mod.rv    <- rep(tmp.mod.rv,    ngroups)
+        }
+        if (length(tmp.mod.efa) == 1L) {
+          tmp.mod.efa <- rep(tmp.mod.efa, ngroups)
+        }
+        if (length(tmp.mod.rv) == 1L) {
+          tmp.mod.rv <- rep(tmp.mod.rv, ngroups)
+        }
 
         # new in 0.6-7 (proposal):
         # - always recycle modifiers, including labels
@@ -538,13 +571,15 @@ lavaanify <- lavParTable <- function(                            # nolint
         (!is.null(tmp.mod.lower) && nidx != length(tmp.mod.lower)) ||
         (!is.null(tmp.mod.upper) && nidx != length(tmp.mod.upper)) ||
         (!is.null(tmp.mod.prior) && nidx != length(tmp.mod.prior)) ||
-        (!is.null(tmp.mod.efa)   && nidx != length(tmp.mod.efa))   ||
-        (!is.null(tmp.mod.rv)    && nidx != length(tmp.mod.rv))    ||
+        (!is.null(tmp.mod.efa) && nidx != length(tmp.mod.efa)) ||
+        (!is.null(tmp.mod.rv) && nidx != length(tmp.mod.rv)) ||
         (!is.null(tmp.mod.label) && nidx != length(tmp.mod.label))) {
         el.idx <- which(tmp.list$mod.idx == el)[1L]
-        stop("lavaan ERROR: wrong number of arguments in modifier (",
+        stop(
+          "lavaan ERROR: wrong number of arguments in modifier (",
           paste(tmp.mod.label, collapse = ","), ") of element ",
-          tmp.list$lhs[el.idx], tmp.list$op[el.idx], tmp.list$rhs[el.idx])
+          tmp.list$lhs[el.idx], tmp.list$op[el.idx], tmp.list$rhs[el.idx]
+        )
       }
 
       # apply modifiers
@@ -613,11 +648,11 @@ lavaanify <- lavParTable <- function(                            # nolint
   # warning about single label in multiple group setting?
   if (warn.about.single.label) {
     warning(
-    "lavaan WARNING: using a single label per parameter in a multiple group\n",
-    "\t setting implies imposing equality constraints across all the groups;\n",
-    "\t If this is not intended, either remove the label(s), or use a vector\n",
-    "\t of labels (one for each group);\n",
-    "\t See the Multiple groups section in the man page of model.syntax."
+      "lavaan WARNING: using a single label per parameter in a multiple group\n",
+      "\t setting implies imposing equality constraints across all the groups;\n",
+      "\t If this is not intended, either remove the label(s), or use a vector\n",
+      "\t of labels (one for each group);\n",
+      "\t See the Multiple groups section in the man page of model.syntax."
     )
   }
 
@@ -657,10 +692,12 @@ lavaanify <- lavParTable <- function(                            # nolint
   } else {
     blocks <- "group"
   }
-  label <- lav_partable_labels(partable = tmp.list,
+  label <- lav_partable_labels(
+    partable = tmp.list,
     blocks = blocks,
     group.equal = group.equal,
-    group.partial = group.partial)
+    group.partial = group.partial
+  )
 
   if (debug) {
     cat("[lavaan DEBUG]: parameter tmp.list with LABELS:\n")
@@ -677,9 +714,11 @@ lavaanify <- lavParTable <- function(                            # nolint
   #       are constrained to be equal to the factor-loadings of the first
   #       set, no further constraints are needed
   if (auto.efa && !is.null(tmp.list$efa)) {
-    tmp.list <- lav_partable_efa_constraints(LIST = tmp.list,
+    tmp.list <- lav_partable_efa_constraints(
+      LIST = tmp.list,
       orthogonal.efa = orthogonal.efa,
-      group.equal = group.equal)
+      group.equal = group.equal
+    )
   } # auto.efa
 
   # handle user-specified equality constraints
@@ -695,13 +734,13 @@ lavaanify <- lavParTable <- function(                            # nolint
   for (eq.label in eq.labels) {
     tmp.con.idx <- length(tmp.con)
     all.idx <- which(label == eq.label) # all same-label parameters
-    ref.idx <- all.idx[1L]              # the first one only
-    other.idx <- all.idx[-1L]           # the others
+    ref.idx <- all.idx[1L] # the first one only
+    other.idx <- all.idx[-1L] # the others
     eq.id[all.idx] <- ref.idx
 
     # new in 0.6-6: make sure lower/upper constraints are equal too
     if (!is.null(tmp.list$lower) &&
-        length(unique(tmp.list$lower[all.idx])) > 0L) {
+      length(unique(tmp.list$lower[all.idx])) > 0L) {
       non.inf <- which(is.finite(tmp.list$lower[all.idx]))
       if (length(non.inf) > 0L) {
         smallest.val <- min(tmp.list$lower[all.idx][non.inf])
@@ -709,7 +748,7 @@ lavaanify <- lavParTable <- function(                            # nolint
       }
     }
     if (!is.null(tmp.list$upper) &&
-        length(unique(tmp.list$upper[all.idx])) > 0L) {
+      length(unique(tmp.list$upper[all.idx])) > 0L) {
       non.inf <- which(is.finite(tmp.list$upper[all.idx]))
       if (length(non.inf) > 0L) {
         largest.val <- max(tmp.list$upper[all.idx][non.inf])
@@ -732,16 +771,18 @@ lavaanify <- lavParTable <- function(                            # nolint
       # sanity check: are all ustart values equal?
       ustart1 <- tmp.list$ustart[fixed.idx]
       if (!all(ustart1 == tmp.list$ustart[fixed.all])) {
-        warning("lavaan WARNING: equality constraints involve fixed",
-          " parameters with different values; only the first one will be used")
+        warning(
+          "lavaan WARNING: equality constraints involve fixed",
+          " parameters with different values; only the first one will be used"
+        )
       }
 
       # make them all fixed
       tmp.list$ustart[all.idx] <- tmp.list$ustart[fixed.idx]
-      tmp.list$free[all.idx] <- 0L  # not free anymore, since it must
+      tmp.list$free[all.idx] <- 0L # not free anymore, since it must
       # be equal to the 'fixed' parameter
       # (Note: Mplus ignores this)
-      eq.id[all.idx]       <- 0L  # remove from eq.id list
+      eq.id[all.idx] <- 0L # remove from eq.id list
 
       # new in 0.6-8 (for efa + user-specified eq constraints)
       if (any(tmp.list$user[all.idx] %in% c(7L, 77L))) {
@@ -749,13 +790,14 @@ lavaanify <- lavParTable <- function(                            # nolint
         # we may need it for the rotated solution
         for (o in other.idx) {
           tmp.con.idx <- tmp.con.idx + 1L
-          tmp.con[[tmp.con.idx]] <- list(op   = "==",
-            lhs  = tmp.list$plabel[ref.idx],
-            rhs  = tmp.list$plabel[o],
-            user = 2L)
+          tmp.con[[tmp.con.idx]] <- list(
+            op = "==",
+            lhs = tmp.list$plabel[ref.idx],
+            rhs = tmp.list$plabel[o],
+            user = 2L
+          )
         }
       }
-
     } else {
       # 2. all.idx contains only free parameters
       # old system:
@@ -764,10 +806,12 @@ lavaanify <- lavParTable <- function(                            # nolint
       if (!ceq.simple) {
         for (o in other.idx) {
           tmp.con.idx <- tmp.con.idx + 1L
-          tmp.con[[tmp.con.idx]] <- list(op   = "==",
-            lhs  = tmp.list$plabel[ref.idx],
-            rhs  = tmp.list$plabel[o],
-            user = 2L)
+          tmp.con[[tmp.con.idx]] <- list(
+            op = "==",
+            lhs = tmp.list$plabel[ref.idx],
+            rhs = tmp.list$plabel[o],
+            user = 2L
+          )
         }
       } else {
         # new system:
@@ -786,7 +830,6 @@ lavaanify <- lavParTable <- function(                            # nolint
         }
       }
     } # all free
-
   } # eq in eq.labels
   if (debug) {
     print(tmp.con)
@@ -808,11 +851,11 @@ lavaanify <- lavParTable <- function(                            # nolint
     })
 
     # fill in some columns
-    tmp.list$id[tmp.idx]    <- tmp.idx
-    tmp.list$lhs[tmp.idx]   <- unlist(lapply(tmp.con, "[[", "lhs"))
-    tmp.list$op[tmp.idx]    <- unlist(lapply(tmp.con, "[[",  "op"))
-    tmp.list$rhs[tmp.idx]   <- unlist(lapply(tmp.con, "[[", "rhs"))
-    tmp.list$user[tmp.idx]  <- unlist(lapply(tmp.con, "[[", "user"))
+    tmp.list$id[tmp.idx] <- tmp.idx
+    tmp.list$lhs[tmp.idx] <- unlist(lapply(tmp.con, "[[", "lhs"))
+    tmp.list$op[tmp.idx] <- unlist(lapply(tmp.con, "[[", "op"))
+    tmp.list$rhs[tmp.idx] <- unlist(lapply(tmp.con, "[[", "rhs"))
+    tmp.list$user[tmp.idx] <- unlist(lapply(tmp.con, "[[", "user"))
 
     # zero is nicer?
     tmp.list$free[tmp.idx] <- rep(0L, n.con)
@@ -897,16 +940,17 @@ lavaanify <- lavParTable <- function(                            # nolint
             if (length(loadings.idx) > 1L) {
               tmp.rhs <- paste(length(loadings.idx), "-",
                 paste(plabel[-1], collapse = "-"),
-                sep = "")
+                sep = ""
+              )
             } else {
               tmp.rhs <- length(loadings.idx)
             }
 
-            tmp$lhs    <- c(tmp$lhs,    tmp.lhs)
-            tmp$op     <- c(tmp$op,     "==")
-            tmp$rhs    <- c(tmp$rhs,    tmp.rhs)
-            tmp$block  <- c(tmp$block,  0L)
-            tmp$user   <- c(tmp$user,   2L)
+            tmp$lhs <- c(tmp$lhs, tmp.lhs)
+            tmp$op <- c(tmp$op, "==")
+            tmp$rhs <- c(tmp$rhs, tmp.rhs)
+            tmp$block <- c(tmp$block, 0L)
+            tmp$user <- c(tmp$user, 2L)
             tmp$ustart <- c(tmp$ustart, as.numeric(NA))
           }
         } # loadings
@@ -927,16 +971,17 @@ lavaanify <- lavParTable <- function(                            # nolint
             if (length(intercepts.idx) > 1L) {
               tmp.rhs <- paste("0-",
                 paste(plabel[-1], collapse = "-"),
-                sep = "")
+                sep = ""
+              )
             } else {
               tmp.rhs <- 0L
             }
 
-            tmp$lhs    <- c(tmp$lhs,    tmp.lhs)
-            tmp$op     <- c(tmp$op,     "==")
-            tmp$rhs    <- c(tmp$rhs,    tmp.rhs)
-            tmp$block  <- c(tmp$block,  0L)
-            tmp$user   <- c(tmp$user,   2L)
+            tmp$lhs <- c(tmp$lhs, tmp.lhs)
+            tmp$op <- c(tmp$op, "==")
+            tmp$rhs <- c(tmp$rhs, tmp.rhs)
+            tmp$block <- c(tmp$block, 0L)
+            tmp$user <- c(tmp$user, 2L)
             tmp$ustart <- c(tmp$ustart, as.numeric(NA))
 
             # 2) release latent mean
@@ -950,7 +995,6 @@ lavaanify <- lavParTable <- function(                            # nolint
             }
           }
         } # intercepts
-
       } # lv
     } # blocks
 
@@ -963,18 +1007,24 @@ lavaanify <- lavParTable <- function(                            # nolint
     nblocks <- lav_partable_nblocks(tmp.list)
     for (b in seq_len(nblocks)) {
       # lv's for this block/set
-      lv.names <- lav_partable_vnames(tmp.list, type = "lv.regular",
-        block = b)
-      lv.marker <- lav_partable_vnames(tmp.list, type = "lv.regular",
-        block = b)
+      lv.names <- lav_partable_vnames(tmp.list,
+        type = "lv.regular",
+        block = b
+      )
+      lv.marker <- lav_partable_vnames(tmp.list,
+        type = "lv.regular",
+        block = b
+      )
 
       if (length(lv.names) == 0L) {
         next
       }
 
       # markers for this block
-      lv.marker <- lav_partable_vnames(tmp.list, type = "lv.marker",
-        block = b)
+      lv.marker <- lav_partable_vnames(tmp.list,
+        type = "lv.marker",
+        block = b
+      )
 
       # fix marker intercepts to zero
       marker.idx <- which(tmp.list$op == "~1" &
@@ -995,7 +1045,6 @@ lavaanify <- lavParTable <- function(                            # nolint
 
   # mg.lv.variances
   if (ngroups > 1L && "mg.lv.variances" %in% effect.coding) {
-
     tmp <- list()
 
     # do not include 'EFA' lv's
@@ -1009,7 +1058,7 @@ lavaanify <- lavParTable <- function(                            # nolint
 
     for (lv in lv.names) {
       # factor variances
-      lv.var.idx <- which(tmp.list$op  == "~~" &
+      lv.var.idx <- which(tmp.list$op == "~~" &
         tmp.list$lhs == lv &
         tmp.list$rhs == tmp.list$lhs &
         tmp.list$lhs == lv)
@@ -1024,20 +1073,21 @@ lavaanify <- lavParTable <- function(                            # nolint
         if (length(lv.var.idx) > 1L) {
           tmp.rhs <- paste(length(lv.var.idx), "-",
             paste(plabel[-1], collapse = "-"),
-            sep = "")
+            sep = ""
+          )
         } else {
           tmp.rhs <- length(lv.var.idx)
         }
 
-        tmp$lhs    <- c(tmp$lhs,    tmp.lhs)
-        tmp$op     <- c(tmp$op,     "==")
-        tmp$rhs    <- c(tmp$rhs,    tmp.rhs)
-        tmp$block  <- c(tmp$block,  0L)
-        tmp$user   <- c(tmp$user,   2L)
+        tmp$lhs <- c(tmp$lhs, tmp.lhs)
+        tmp$op <- c(tmp$op, "==")
+        tmp$rhs <- c(tmp$rhs, tmp.rhs)
+        tmp$block <- c(tmp$block, 0L)
+        tmp$user <- c(tmp$user, 2L)
         tmp$ustart <- c(tmp$ustart, as.numeric(NA))
 
         # 2) free lv variances first group
-        lv.var.g1.idx <- which(tmp.list$op  == "~~" &
+        lv.var.g1.idx <- which(tmp.list$op == "~~" &
           tmp.list$group == group.values[1] &
           tmp.list$lhs == lv &
           tmp.list$rhs == tmp.list$lhs &
@@ -1055,7 +1105,6 @@ lavaanify <- lavParTable <- function(                            # nolint
 
   # mg.lv.efa.variances
   if (ngroups > 1L && "mg.lv.efa.variances" %in% effect.coding) {
-
     tmp <- list()
 
     # only 'EFA' lv's
@@ -1069,7 +1118,7 @@ lavaanify <- lavParTable <- function(                            # nolint
 
     for (lv in lv.names) {
       # factor variances
-      lv.var.idx <- which(tmp.list$op  == "~~" &
+      lv.var.idx <- which(tmp.list$op == "~~" &
         tmp.list$lhs == lv &
         tmp.list$rhs == tmp.list$lhs &
         tmp.list$lhs == lv)
@@ -1084,20 +1133,21 @@ lavaanify <- lavParTable <- function(                            # nolint
         if (length(lv.var.idx) > 1L) {
           tmp.rhs <- paste(length(lv.var.idx), "-",
             paste(plabel[-1], collapse = "-"),
-            sep = "")
+            sep = ""
+          )
         } else {
           tmp.rhs <- length(lv.var.idx)
         }
 
-        tmp$lhs    <- c(tmp$lhs,    tmp.lhs)
-        tmp$op     <- c(tmp$op,     "==")
-        tmp$rhs    <- c(tmp$rhs,    tmp.rhs)
-        tmp$block  <- c(tmp$block,  0L)
-        tmp$user   <- c(tmp$user,   2L)
+        tmp$lhs <- c(tmp$lhs, tmp.lhs)
+        tmp$op <- c(tmp$op, "==")
+        tmp$rhs <- c(tmp$rhs, tmp.rhs)
+        tmp$block <- c(tmp$block, 0L)
+        tmp$user <- c(tmp$user, 2L)
         tmp$ustart <- c(tmp$ustart, as.numeric(NA))
 
         # 2) free lv variances first group
-        lv.var.g1.idx <- which(tmp.list$op  == "~~" &
+        lv.var.g1.idx <- which(tmp.list$op == "~~" &
           tmp.list$group == group.values[1] &
           tmp.list$lhs == lv &
           tmp.list$rhs == tmp.list$lhs &

@@ -9,29 +9,29 @@ trace_env <- new.env(parent = emptyenv())
 # where x is a characterstring you want to show in the trace
 #
 # thereafter execute a script like this:
-  # library(lavaan)
-  # lavaan:::set_trace(TRUE)
-  # model <- '
-  # # latent variable definitions
-  #    ind60 =~ x1 + x2 + x3
-  #    dem60 =~ y1 + a*y2 + b*y3 + c*y4
-  #    dem65 =~ y5 + a*y6 + b*y7 + c*y8
-  #
-  # # regressions
-  #   dem60 ~ ind60
-  #   dem65 ~ ind60 + dem60
-  #
-  # # residual correlations
-  #   y1 ~~ y5
-  #   y2 ~~ y4 + y6
-  #   y3 ~~ y7
-  #   y4 ~~ y8
-  #   y6 ~~ y8
-  # '
-  # fit <- sem(model, data = PoliticalDemocracy)
-  # summary(fit)
-  # lavaan:::set_trace(FALSE)
-  # lavaan:::print_trace("PolDem_trace.txt")
+# library(lavaan)
+# lavaan:::set_trace(TRUE)
+# model <- '
+# # latent variable definitions
+#    ind60 =~ x1 + x2 + x3
+#    dem60 =~ y1 + a*y2 + b*y3 + c*y4
+#    dem65 =~ y5 + a*y6 + b*y7 + c*y8
+#
+# # regressions
+#   dem60 ~ ind60
+#   dem65 ~ ind60 + dem60
+#
+# # residual correlations
+#   y1 ~~ y5
+#   y2 ~~ y4 + y6
+#   y3 ~~ y7
+#   y4 ~~ y8
+#   y6 ~~ y8
+# '
+# fit <- sem(model, data = PoliticalDemocracy)
+# summary(fit)
+# lavaan:::set_trace(FALSE)
+# lavaan:::print_trace("PolDem_trace.txt")
 #
 
 ldw_trace <- function(content = "") {

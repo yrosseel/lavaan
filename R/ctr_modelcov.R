@@ -10,6 +10,6 @@
 # update 13 dec 2011 YR: changed name (to avoid confusion with the
 #                        model-implied cov)
 inspectSampleCov <- function(model, data, ...) {
-    fit <- sem(model, data=data, ..., do.fit=FALSE)
-    inspect(fit, "sampstat")
+  fit <- sem(model, data = data, ..., do.fit = FALSE)
+  inspect(fit, "sampstat")
 }

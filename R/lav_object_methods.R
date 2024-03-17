@@ -19,16 +19,19 @@
 # - varTable()
 
 
-setMethod("show", "lavaan",
+setMethod(
+  "show", "lavaan",
   function(object) {
     # efa?
     efa.flag <- object@Options$model.type == "efa"
 
     # show only basic information
-    res <- lav_object_summary(object, fit.measures = FALSE,
-      estimates    = FALSE,
-      modindices   = FALSE,
-      efa          = efa.flag)
+    res <- lav_object_summary(object,
+      fit.measures = FALSE,
+      estimates = FALSE,
+      modindices = FALSE,
+      efa = efa.flag
+    )
     if (efa.flag) {
       # print (standardized) loadings only
       class(res) <- c("lavaan.efa", "list")
@@ -38,40 +41,46 @@ setMethod("show", "lavaan",
       print(res)
     }
     invisible(res)
-  })
+  }
+)
 
-setMethod("summary", "lavaan",
-  function(object, header        = TRUE,
-           fit.measures  = FALSE,
-           estimates     = TRUE,
-           ci            = FALSE,
-           fmi           = FALSE,
-           std           = FALSE,
-           standardized  = FALSE,
-           remove.step1  = TRUE,
+setMethod(
+  "summary", "lavaan",
+  function(object, header = TRUE,
+           fit.measures = FALSE,
+           estimates = TRUE,
+           ci = FALSE,
+           fmi = FALSE,
+           std = FALSE,
+           standardized = FALSE,
+           remove.step1 = TRUE,
            remove.unused = TRUE,
-           cov.std       = TRUE,
-           rsquare       = FALSE,
-           std.nox       = FALSE,
-           fm.args       = list(standard.test        = "default",
-             scaled.test          = "default",
-             rmsea.ci.level       = 0.90,
-             rmsea.h0.closefit    = 0.05,
+           cov.std = TRUE,
+           rsquare = FALSE,
+           std.nox = FALSE,
+           fm.args = list(
+             standard.test = "default",
+             scaled.test = "default",
+             rmsea.ci.level = 0.90,
+             rmsea.h0.closefit = 0.05,
              rmsea.h0.notclosefit = 0.08,
-             robust               = TRUE,
-             cat.check.pd         = TRUE),
-           modindices   = FALSE,
+             robust = TRUE,
+             cat.check.pd = TRUE
+           ),
+           modindices = FALSE,
            nd = 3L, cutoff = 0.3, dot.cutoff = 0.1) {
     # efa?
     efa.flag <- object@Options$model.type == "efa"
 
-    res <- lav_object_summary(object = object, header = header,
+    res <- lav_object_summary(
+      object = object, header = header,
       fit.measures = fit.measures, estimates = estimates,
       ci = ci, fmi = fmi, std = std, standardized = standardized,
       remove.step1 = remove.step1, remove.unused = remove.unused,
       cov.std = cov.std,
       rsquare = rsquare, std.nox = std.nox, efa = efa.flag,
-      fm.args = fm.args, modindices = modindices)
+      fm.args = fm.args, modindices = modindices
+    )
     # res has class c("lavaan.summary", "list")
 
     # what about nd? only used if we actually print; save as attribute
@@ -85,17 +94,22 @@ setMethod("summary", "lavaan",
     }
 
     res
-  })
+  }
+)
 
 
-setMethod("coef", "lavaan",
+setMethod(
+  "coef", "lavaan",
   function(object, type = "free", labels = TRUE) {
-    lav_object_inspect_coef(object = object, type = type,
-      add.labels = labels, add.class = TRUE)
-  })
+    lav_object_inspect_coef(
+      object = object, type = type,
+      add.labels = labels, add.class = TRUE
+    )
+  }
+)
 
-standardizedSolution <-                                        # nolint
-  standardizedsolution <- function(object,                     # nolint
+standardizedSolution <- # nolint
+  standardizedsolution <- function(object, # nolint
                                    type = "std.all",
                                    se = TRUE,
                                    zstat = TRUE,
@@ -107,10 +121,9 @@ standardizedSolution <-                                        # nolint
                                    remove.ineq = TRUE,
                                    remove.def = FALSE,
                                    partable = NULL,
-                                   GLIST = NULL,               # nolint
-                                   est   = NULL,
+                                   GLIST = NULL, # nolint
+                                   est = NULL,
                                    output = "data.frame") {
-
     stopifnot(type %in% c("std.all", "std.lv", "std.nox"))
 
     # check output= argument
@@ -120,8 +133,10 @@ standardizedSolution <-                                        # nolint
     } else if (output %in% c("text", "pretty")) {
       output <- "text"
     } else {
-      stop("lavaan ERROR: output must be ", sQuote("data.frame"),
-        " or ", sQuote("text"))
+      stop(
+        "lavaan ERROR: output must be ", sQuote("data.frame"),
+        " or ", sQuote("text")
+      )
     }
 
     # no zstat + pvalue if estimator is Bayes
@@ -157,29 +172,34 @@ standardizedSolution <-                                        # nolint
 
     # add std and std.all columns
     if (type == "std.lv") {
-      tmp.list$est.std     <- lav_standardize_lv(object,
+      tmp.list$est.std <- lav_standardize_lv(object,
         est = est, GLIST = GLIST,
-        partable = partable, cov.std = cov.std)
+        partable = partable, cov.std = cov.std
+      )
     } else if (type == "std.all") {
       tmp.list$est.std <- lav_standardize_all(object,
         est = est, GLIST = GLIST,
-        partable = partable, cov.std = cov.std)
+        partable = partable, cov.std = cov.std
+      )
     } else if (type == "std.nox") {
       tmp.list$est.std <- lav_standardize_all_nox(object,
         est = est, GLIST = GLIST,
-        partable = partable, cov.std = cov.std)
+        partable = partable, cov.std = cov.std
+      )
     }
 
     if (object@Options$se != "none" && se) {
       # add 'se' for standardized parameters
-      tmp.vcov <- try(lav_object_inspect_vcov(object, standardized = TRUE,
+      tmp.vcov <- try(lav_object_inspect_vcov(object,
+        standardized = TRUE,
         type = type, free.only = FALSE,
         add.labels = FALSE,
-        add.class = FALSE))
+        add.class = FALSE
+      ))
       if (inherits(tmp.vcov, "try-error") || is.null(tmp.vcov)) {
         tmp.list$se <- rep(NA, length(tmp.list$lhs))
         if (zstat) {
-          tmp.list$z  <- rep(NA, length(tmp.list$lhs))
+          tmp.list$z <- rep(NA, length(tmp.list$lhs))
         }
         if (pvalue) {
           tmp.list$pvalue <- rep(NA, length(tmp.list$lhs))
@@ -260,8 +280,10 @@ standardizedSolution <-                                        # nolint
     attr(tmp.list, "ovda") <- NULL
 
     if (output == "text") {
-      class(tmp.list) <- c("lavaan.parameterEstimates", "lavaan.data.frame",
-        "data.frame")
+      class(tmp.list) <- c(
+        "lavaan.parameterEstimates", "lavaan.data.frame",
+        "data.frame"
+      )
       # tmp.list$exo is needed for printing, don't remove it
       attr(tmp.list, "group.label") <- object@Data@group.label
       attr(tmp.list, "level.label") <- object@Data@level.label
@@ -275,40 +297,34 @@ standardizedSolution <-                                        # nolint
     tmp.list
   }
 
-parameterEstimates <-                                         # nolint
+parameterEstimates <- # nolint
   parameterestimates <- function(object,
-
                                  # select columns
-                                 se           = TRUE,
-                                 zstat        = TRUE,
-                                 pvalue       = TRUE,
-                                 ci           = TRUE,
+                                 se = TRUE,
+                                 zstat = TRUE,
+                                 pvalue = TRUE,
+                                 ci = TRUE,
                                  standardized = FALSE,
-                                 fmi          = FALSE,
-
+                                 fmi = FALSE,
                                  # control
-                                 level        = 0.95,
+                                 level = 0.95,
                                  boot.ci.type = "perc",
-                                 cov.std      = TRUE,
-                                 fmi.options  = list(),
-
+                                 cov.std = TRUE,
+                                 fmi.options = list(),
                                  # add rows
                                  rsquare = FALSE,
-
                                  # remove rows
-                                 remove.system.eq      = TRUE,
-                                 remove.eq             = TRUE,
-                                 remove.ineq           = TRUE,
-                                 remove.def            = FALSE,
-                                 remove.nonfree        = FALSE,
-                                 remove.step1          = TRUE,
-                                 remove.unused         = FALSE,
-
+                                 remove.system.eq = TRUE,
+                                 remove.eq = TRUE,
+                                 remove.ineq = TRUE,
+                                 remove.def = FALSE,
+                                 remove.nonfree = FALSE,
+                                 remove.step1 = TRUE,
+                                 remove.unused = FALSE,
                                  # output
                                  add.attributes = FALSE,
                                  output = "data.frame",
                                  header = FALSE) {
-
     if (inherits(object, "lavaan.fsr")) {
       return(object$PE)
     }
@@ -337,15 +353,19 @@ parameterEstimates <-                                         # nolint
     } else if (output %in% c("text", "pretty")) {
       output <- "text"
     } else {
-      stop("lavaan ERROR: output must be ", sQuote("data.frame"),
-        " or ", sQuote("text"))
+      stop(
+        "lavaan ERROR: output must be ", sQuote("data.frame"),
+        " or ", sQuote("text")
+      )
     }
 
     # check fmi
     if (fmi) {
       if (inherits(object, "lavaanList")) {
-        warning("lavaan WARNING: fmi not available",
-                " for object of class \"lavaanList\"")
+        warning(
+          "lavaan WARNING: fmi not available",
+          " for object of class \"lavaanList\""
+        )
         fmi <- FALSE
       }
       if (object@Options$se != "standard") {
@@ -417,8 +437,10 @@ parameterEstimates <-                                         # nolint
     } else if (!is.null(tmp.partable$est)) {
       tmp.list$est <- tmp.partable$est
     } else {
-      tmp.list$est <- lav_model_get_parameters(object@Model, type = "user",
-        extra = TRUE)
+      tmp.list$est <- lav_model_get_parameters(object@Model,
+        type = "user",
+        extra = TRUE
+      )
     }
     if (!is.null(tmp.partable$lower)) {
       tmp.list$lower <- tmp.partable$lower
@@ -433,7 +455,8 @@ parameterEstimates <-                                         # nolint
       tmp.list$se <- lav_object_inspect_se(object)
       # handle tiny SEs
       tmp.list$se <- ifelse(tmp.list$se < sqrt(.Machine$double.eps),
-                            0, tmp.list$se)
+        0, tmp.list$se
+      )
       tmp.se <- ifelse(tmp.list$se < sqrt(.Machine$double.eps), NA, tmp.list$se)
       if (zstat) {
         tmp.list$z <- tmp.list$est / tmp.se
@@ -462,7 +485,7 @@ parameterEstimates <-                                         # nolint
 
     # extract bootstrap data (if any)
     if (object@Options$se == "bootstrap" ||
-      "bootstrap" %in%  object@Options$test ||
+      "bootstrap" %in% object@Options$test ||
       "bollen.stine" %in% object@Options$test) {
       tmp.boot <- lav_object_inspect_boot(object)
       bootstrap.seed <- attr(tmp.boot, "seed") # for bca
@@ -490,8 +513,9 @@ parameterEstimates <-                                         # nolint
           t <- t[is.finite(t)]
           tmp.r <- length(t)
           rk <- (tmp.r + 1) * alpha
-          if (!all(rk > 1 & rk < tmp.r))
+          if (!all(rk > 1 & rk < tmp.r)) {
             warning("extreme order statistics used as endpoints")
+          }
           k <- trunc(rk)
           inds <- seq_along(k)
           out <- inds
@@ -513,15 +537,18 @@ parameterEstimates <-                                         # nolint
         }
 
         stopifnot(!is.null(tmp.boot))
-        stopifnot(boot.ci.type %in% c("norm", "basic", "perc",
-          "bca.simple", "bca"))
+        stopifnot(boot.ci.type %in% c(
+          "norm", "basic", "perc",
+          "bca.simple", "bca"
+        ))
         if (boot.ci.type == "norm") {
           fac <- qnorm(a)
           boot.x <- colMeans(tmp.boot, na.rm = TRUE)
           boot.est <-
             lav_model_get_parameters(object@Model,
               GLIST = lav_model_x2GLIST(object@Model, boot.x),
-              type = "user", extra = TRUE)
+              type = "user", extra = TRUE
+            )
           bias.est <- (boot.est - tmp.list$est)
           ci <- (tmp.list$est - bias.est) + tmp.list$se %o% fac
         } else if (boot.ci.type == "basic") {
@@ -548,7 +575,6 @@ parameterEstimates <-                                         # nolint
           }
 
           # TODO: add cin/ceq?
-
         } else if (boot.ci.type == "perc") {
           ci <- cbind(tmp.list$est, tmp.list$est)
           alpha <- (1 + c(-level, level)) / 2
@@ -574,7 +600,6 @@ parameterEstimates <-                                         # nolint
           }
 
           # TODO:  add cin/ceq?
-
         } else if (boot.ci.type == "bca.simple") {
           # no adjustment for scale!! only bias!!
           alpha <- (1 + c(-level, level)) / 2
@@ -638,14 +663,18 @@ parameterEstimates <-                                         # nolint
             txt <- paste("BCa confidence intervals require more ",
               "(successful) bootstrap runs (", nrow(tmp.boot),
               ") than the number of observations (",
-              ntotal, ").", sep = "")
+              ntotal, ").",
+              sep = ""
+            )
             stop(lav_txt2message(txt, header = "lavaan ERROR:"))
           }
 
           # does not work with sampling weights (yet)
           if (!is.null(object@Data@weights[[1]])) {
-            stop("lavaan ERROR: BCa confidence intervals not available in",
-                 " the presence of sampling weights.")
+            stop(
+              "lavaan ERROR: BCa confidence intervals not available in",
+              " the presence of sampling weights."
+            )
           }
 
           # check if we have a seed
@@ -655,11 +684,13 @@ parameterEstimates <-                                         # nolint
 
           # compute 'X' matrix with frequency indices (to compute
           # the empirical influence values using regression)
-          tmp.freq <- lav_utils_bootstrap_indices(R = lavoptions$bootstrap,
+          tmp.freq <- lav_utils_bootstrap_indices(
+            R = lavoptions$bootstrap,
             nobs = nobs, parallel = lavoptions$parallel[1],
             ncpus = lavoptions$ncpus, cl = lavoptions[["cl"]],
             iseed = bootstrap.seed, return.freq = TRUE,
-            merge.groups = TRUE)
+            merge.groups = TRUE
+          )
           if (length(error.idx) > 0L) {
             tmp.freq <- tmp.freq[-error.idx, , drop = FALSE]
           }
@@ -750,13 +781,15 @@ parameterEstimates <-                                         # nolint
 
     # standardized estimates?
     if (standardized) {
-      tmp.list$std.lv  <- lav_standardize_lv(object, cov.std = cov.std)
+      tmp.list$std.lv <- lav_standardize_lv(object, cov.std = cov.std)
       tmp.list$std.all <- lav_standardize_all(object,
         est.std = tmp.list$est.std,
-        cov.std = cov.std)
+        cov.std = cov.std
+      )
       tmp.list$std.nox <- lav_standardize_all_nox(object,
         est.std = tmp.list$est.std,
-        cov.std = cov.std)
+        cov.std = cov.std
+      )
     }
 
     # rsquare?
@@ -765,8 +798,10 @@ parameterEstimates <-                                         # nolint
       tmp.names <- unlist(lapply(r2, names))
       nel <- length(tmp.names)
       if (nel == 0L) {
-        warning("lavaan WARNING: rsquare = TRUE,",
-          " but there are no dependent variables")
+        warning(
+          "lavaan WARNING: rsquare = TRUE,",
+          " but there are no dependent variables"
+        )
       } else {
         if (lav_partable_nlevels(tmp.list) == 1L) {
           block <- rep(seq_along(r2), sapply(r2, length))
@@ -779,9 +814,11 @@ parameterEstimates <-                                         # nolint
             # single block, single group
             group <- rep(1L, length(block))
           }
-          r2 <- data.frame(lhs = tmp.names, op = rep("r2", nel),
+          r2 <- data.frame(
+            lhs = tmp.names, op = rep("r2", nel),
             rhs = tmp.names, block = block, group = group,
-            est = unlist(r2), stringsAsFactors = FALSE)
+            est = unlist(r2), stringsAsFactors = FALSE
+          )
         } else {
           # add level column
           block <- rep(seq_along(r2), sapply(r2, length))
@@ -792,11 +829,13 @@ parameterEstimates <-                                         # nolint
           group <- rep(gval, sapply(r2, length))
           lval <- tmp.list$level[first.block.idx]
           level <- rep(lval, sapply(r2, length))
-          r2 <- data.frame(lhs = tmp.names, op = rep("r2", nel),
+          r2 <- data.frame(
+            lhs = tmp.names, op = rep("r2", nel),
             rhs = tmp.names,
             block = block, group = group,
             level = level,
-            est = unlist(r2), stringsAsFactors = FALSE)
+            est = unlist(r2), stringsAsFactors = FALSE
+          )
         }
         # add step column if needed
         if (!is.null(tmp.list$step)) {
@@ -819,10 +858,10 @@ parameterEstimates <-                                         # nolint
       # otherwise, it would be as if we use expected info, while the
       # original use observed, producing crazy results
       if (object@Data@ngroups > 1L) {
-        em.cov  <- lapply(lavInspect(object, "sampstat.h1"), "[[", "cov")
+        em.cov <- lapply(lavInspect(object, "sampstat.h1"), "[[", "cov")
         em.mean <- lapply(lavInspect(object, "sampstat.h1"), "[[", "mean")
       } else {
-        em.cov  <- lavInspect(object, "sampstat.h1")$cov
+        em.cov <- lavInspect(object, "sampstat.h1")$cov
         em.mean <- lavInspect(object, "sampstat.h1")$mean
       }
 
@@ -843,17 +882,21 @@ parameterEstimates <-                                         # nolint
       this.options$h1 <- FALSE
       this.options$test <- FALSE
 
-      fit.complete <- lavaan(model = tmp.pt,
-        sample.cov   = em.cov,
-        sample.mean  = em.mean,
-        sample.nobs  = lavInspect(object, "nobs"),
-        slotOptions  = this.options)
+      fit.complete <- lavaan(
+        model = tmp.pt,
+        sample.cov = em.cov,
+        sample.mean = em.mean,
+        sample.nobs = lavInspect(object, "nobs"),
+        slotOptions = this.options
+      )
 
-      se.comp <- parameterEstimates(fit.complete, ci = FALSE, fmi = FALSE,
+      se.comp <- parameterEstimates(fit.complete,
+        ci = FALSE, fmi = FALSE,
         zstat = FALSE, pvalue = FALSE, remove.system.eq = FALSE,
         remove.eq = FALSE, remove.ineq = FALSE,
         remove.def = FALSE, remove.nonfree = FALSE, remove.unused = FALSE,
-        rsquare = rsquare, add.attributes = FALSE)$se
+        rsquare = rsquare, add.attributes = FALSE
+      )$se
 
       se.comp <- ifelse(se.comp == 0.0, as.numeric(NA), se.comp)
       tmp.list$fmi <- 1 - (se.comp * se.comp) / (se.orig * se.orig)
@@ -960,8 +1003,10 @@ parameterEstimates <-                                         # nolint
     tmp.list$user <- NULL
 
     if (output == "text") {
-      class(tmp.list) <- c("lavaan.parameterEstimates", "lavaan.data.frame",
-        "data.frame")
+      class(tmp.list) <- c(
+        "lavaan.parameterEstimates", "lavaan.data.frame",
+        "data.frame"
+      )
       if (header) {
         attr(tmp.list, "categorical") <- object@Model@categorical
         attr(tmp.list, "parameterization") <- object@Model@parameterization
@@ -990,7 +1035,7 @@ parameterEstimates <-                                         # nolint
     tmp.list
   }
 
-parameterTable <- parametertable <- parTable <- partable <-         # nolint
+parameterTable <- parametertable <- parTable <- partable <- # nolint
   function(object) {
     # convert to data.frame
     out <- as.data.frame(object@ParTable, stringsAsFactors = FALSE)
@@ -999,27 +1044,31 @@ parameterTable <- parametertable <- parTable <- partable <-         # nolint
     out
   }
 
-varTable <- vartable <- function(object, ov.names = names(object),  # nolint
+varTable <- vartable <- function(object, ov.names = names(object), # nolint
                                  ov.names.x = NULL,
                                  ordered = NULL, factor = NULL,
-                                 as.data.frame. = TRUE) {           # nolint
+                                 as.data.frame. = TRUE) { # nolint
 
   if (inherits(object, "lavaan")) {
     tmp.var <- object@Data@ov
   } else if (inherits(object, "lavData")) {
     tmp.var <- object@ov
   } else if (inherits(object, "data.frame")) {
-    tmp.var <- lav_dataframe_vartable(frame = object, ov.names = ov.names,
+    tmp.var <- lav_dataframe_vartable(
+      frame = object, ov.names = ov.names,
       ov.names.x = ov.names.x,
       ordered = ordered, factor = factor,
-      as.data.frame. = FALSE)
+      as.data.frame. = FALSE
+    )
   } else {
     stop("object must of class lavaan or a data.frame")
   }
 
   if (as.data.frame.) {
-    tmp.var <- as.data.frame(tmp.var, stringsAsFactors = FALSE,
-      row.names = seq_along(tmp.var$name))
+    tmp.var <- as.data.frame(tmp.var,
+      stringsAsFactors = FALSE,
+      row.names = seq_along(tmp.var$name)
+    )
     class(tmp.var) <- c("lavaan.data.frame", "data.frame")
   }
 
@@ -1027,7 +1076,8 @@ varTable <- vartable <- function(object, ov.names = names(object),  # nolint
 }
 
 
-setMethod("fitted.values", "lavaan",
+setMethod(
+  "fitted.values", "lavaan",
   function(object, type = "moments", labels = TRUE) {
     # lowercase type
     type <- tolower(type)
@@ -1039,21 +1089,27 @@ setMethod("fitted.values", "lavaan",
 
     lav_object_inspect_implied(object,
       add.labels = labels, add.class = TRUE,
-      drop.list.single.group = TRUE)
-  })
+      drop.list.single.group = TRUE
+    )
+  }
+)
 
 
-setMethod("fitted", "lavaan",
+setMethod(
+  "fitted", "lavaan",
   function(object, type = "moments", labels = TRUE) {
     fitted.values(object, type = type, labels = labels)
-  })
+  }
+)
 
 
-setMethod("vcov", "lavaan",
+setMethod(
+  "vcov", "lavaan",
   function(object, type = "free", labels = TRUE, remove.duplicated = FALSE) {
     # check for convergence first!
-    if (object@optim$npar > 0L && !object@optim$converged)
+    if (object@optim$npar > 0L && !object@optim$converged) {
       stop("lavaan ERROR: model did not converge")
+    }
 
     if (object@Options$se == "none") {
       stop("lavaan ERROR: vcov not available if se=\"none\"")
@@ -1062,27 +1118,34 @@ setMethod("vcov", "lavaan",
     if (type == "user" || type == "joint" || type == "all" || type == "full" ||
       type == "complete") {
       if (remove.duplicated) {
-        stop("lavaan ERROR: argument \"remove.duplicated\" not",
-          " supported if type = \"user\"")
+        stop(
+          "lavaan ERROR: argument \"remove.duplicated\" not",
+          " supported if type = \"user\""
+        )
       }
-      tmp.varcov <- lav_object_inspect_vcov_def(object, joint = TRUE,
+      tmp.varcov <- lav_object_inspect_vcov_def(object,
+        joint = TRUE,
         add.labels = labels,
-        add.class = TRUE)
+        add.class = TRUE
+      )
     } else if (type == "free") {
       tmp.varcov <- lav_object_inspect_vcov(object,
         add.labels = labels,
         add.class = TRUE,
-        remove.duplicated = remove.duplicated)
+        remove.duplicated = remove.duplicated
+      )
     } else {
       stop("lavaan ERROR: type argument should be \"user\" or \"free\"")
     }
 
     tmp.varcov
-  })
+  }
+)
 
 
 # logLik (so that we can use the default AIC/BIC functions from stats4(
-setMethod("logLik", "lavaan",
+setMethod(
+  "logLik", "lavaan",
   function(object, ...) {
     if (object@Options$estimator != "ML") {
       warning("lavaan WARNING: logLik only available if estimator is ML")
@@ -1095,36 +1158,42 @@ setMethod("logLik", "lavaan",
     if (.hasSlot(object, "loglik")) {
       tmp.logl <- object@loglik
     } else {
-      tmp.logl <- lav_model_loglik(lavdata        = object@Data,
+      tmp.logl <- lav_model_loglik(
+        lavdata = object@Data,
         lavsamplestats = object@SampleStats,
-        lavimplied     = object@implied,
-        lavmodel       = object@Model,
-        lavoptions     = object@Options)
+        lavimplied = object@implied,
+        lavmodel = object@Model,
+        lavoptions = object@Options
+      )
     }
 
     logl <- tmp.logl$loglik
-    attr(logl, "df") <- tmp.logl$npar    ### note: must be npar, not df!!
+    attr(logl, "df") <- tmp.logl$npar ### note: must be npar, not df!!
     attr(logl, "nobs") <- tmp.logl$ntotal
     class(logl) <- "logLik"
     logl
-  })
+  }
+)
 
 # nobs
 if (!exists("nobs", envir = asNamespace("stats4"))) {
   setGeneric("nobs", function(object, ...) standardGeneric("nobs"))
 }
-setMethod("nobs", signature(object = "lavaan"),
+setMethod(
+  "nobs", signature(object = "lavaan"),
   function(object, ...) {
     object@SampleStats@ntotal
-  })
+  }
+)
 
 # see: src/library/stats/R/update.R
-setMethod("update", signature(object = "lavaan"),
+setMethod(
+  "update", signature(object = "lavaan"),
   function(object, model, add, ..., evaluate = TRUE) {
-
     call <- object@call
-    if (is.null(call))
+    if (is.null(call)) {
       stop("need an object with call slot")
+    }
 
     extras <- match.call(expand.dots = FALSE)$...
 
@@ -1141,8 +1210,9 @@ setMethod("update", signature(object = "lavaan"),
       call$model$est <- NULL
       call$model$se <- NULL
     }
-    if (!is.null(call$slotParTable) && is.list(call$model))
+    if (!is.null(call$slotParTable) && is.list(call$model)) {
       call$slotParTable <- call$model
+    }
 
     if (length(extras) > 0) {
       ## check for call$slotOptions conflicts
@@ -1161,7 +1231,9 @@ setMethod("update", signature(object = "lavaan"),
       }
     }
 
-    if (missing(add) && !evaluate) return(call)
+    if (missing(add) && !evaluate) {
+      return(call)
+    }
     ## for any of the other 3 scenarios, we need the updated fit
 
     ## Check if "add" and "model" are both strings; combine them
@@ -1176,13 +1248,17 @@ setMethod("update", signature(object = "lavaan"),
       }
     }
     newfit <- eval(call, parent.frame())
-    if (add.allready.in.partable && evaluate) return(newfit)
+    if (add.allready.in.partable && evaluate) {
+      return(newfit)
+    }
 
     ## only remaining situations: "add" exists, but either "add" or "model"
     ## is a parameter table, so update the parameter table in the call
     if (!(mode(add) %in% c("list", "character"))) {
-      stop("'add' argument must be model syntax or parameter table. ",
-        "See ?lavaanify help page.")
+      stop(
+        "'add' argument must be model syntax or parameter table. ",
+        "See ?lavaanify help page."
+      )
     }
     tmp.pt <- lav_object_extended(newfit, add = add)@ParTable
     tmp.pt$user <- NULL # get rid of "10" category used in lavTestScore()
@@ -1198,12 +1274,14 @@ setMethod("update", signature(object = "lavaan"),
     } else {
       call
     }
-  })
+  }
+)
 
 
 
 
-setMethod("anova", signature(object = "lavaan"),
+setMethod(
+  "anova", signature(object = "lavaan"),
   function(object, ...) {
     # NOTE: if we add additional arguments, it is not the same generic
     # anova() function anymore, and match.call will be screwed up
@@ -1227,8 +1305,11 @@ setMethod("anova", signature(object = "lavaan"),
     #    dots <- dots[-arg.idx]
     # }
 
-    modp <- if (length(dots))
-      sapply(dots, inherits, "lavaan") else logical(0)
+    modp <- if (length(dots)) {
+      sapply(dots, inherits, "lavaan")
+    } else {
+      logical(0)
+    }
     tmp.names <- sapply(as.list(mcall)[c(FALSE, TRUE, modp)], deparse)
 
     # use do.call to handle changed dots
@@ -1238,4 +1319,5 @@ setMethod("anova", signature(object = "lavaan"),
 
     # ans
     lavTestLRT(object = object, ..., model.names = tmp.names)
-  })
+  }
+)

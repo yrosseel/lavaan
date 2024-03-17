@@ -6,7 +6,7 @@ lavJacobianC <- lav_func_jacobian_complex
 lavGradientC <- lav_func_gradient_complex
 
 # Myrsini
-getHessian     <- lav_object_inspect_hessian
+getHessian <- lav_object_inspect_hessian
 getVariability <- lav_object_inspect_firstorder
 
 # rsem

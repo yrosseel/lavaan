@@ -1,33 +1,32 @@
-lav_partable_flat <- function(FLAT = NULL,                     # nolint
-                              blocks           = "group",
-                              block.id         = NULL,
-                              meanstructure    = FALSE,
-                              int.ov.free      = FALSE,
-                              int.lv.free      = FALSE,
-                              orthogonal       = FALSE,
-                              orthogonal.y     = FALSE,
-                              orthogonal.x     = FALSE,
-                              orthogonal.efa   = FALSE,
-                              std.lv           = FALSE,
-                              correlation      = FALSE,
-                              conditional.x    = FALSE,
-                              fixed.x          = TRUE,
+lav_partable_flat <- function(FLAT = NULL, # nolint
+                              blocks = "group",
+                              block.id = NULL,
+                              meanstructure = FALSE,
+                              int.ov.free = FALSE,
+                              int.lv.free = FALSE,
+                              orthogonal = FALSE,
+                              orthogonal.y = FALSE,
+                              orthogonal.x = FALSE,
+                              orthogonal.efa = FALSE,
+                              std.lv = FALSE,
+                              correlation = FALSE,
+                              conditional.x = FALSE,
+                              fixed.x = TRUE,
                               parameterization = "delta",
-                              auto.fix.first   = FALSE,
-                              auto.fix.single  = FALSE,
-                              auto.var         = FALSE,
-                              auto.cov.lv.x    = FALSE,
-                              auto.cov.y       = FALSE,
-                              auto.th          = FALSE,
-                              auto.delta       = FALSE,
-                              auto.efa         = FALSE,
-                              varTable         = NULL,         # nolint
-                              group.equal      = NULL,
-                              group.w.free     = FALSE,
-                              ngroups          = 1L,
-                              nthresholds      = NULL,
+                              auto.fix.first = FALSE,
+                              auto.fix.single = FALSE,
+                              auto.var = FALSE,
+                              auto.cov.lv.x = FALSE,
+                              auto.cov.y = FALSE,
+                              auto.th = FALSE,
+                              auto.delta = FALSE,
+                              auto.efa = FALSE,
+                              varTable = NULL, # nolint
+                              group.equal = NULL,
+                              group.w.free = FALSE,
+                              ngroups = 1L,
+                              nthresholds = NULL,
                               ov.names.x.block = NULL) {
-
   categorical <- FALSE
 
   ### tmp.default elements: parameters that are typically not specified by
@@ -35,25 +34,25 @@ lav_partable_flat <- function(FLAT = NULL,                     # nolint
   ###                   either free or fixed
 
   # extract `names' of various types of variables:
-  lv.names     <- lav_partable_vnames(FLAT, type = "lv") # latent variables
+  lv.names <- lav_partable_vnames(FLAT, type = "lv") # latent variables
   # lv.names.r   <- lav_partable_vnames(FLAT, type="lv.regular")
-                                                    # regular latent variables
-  lv.names.f   <- lav_partable_vnames(FLAT, type = "lv.formative")
-                                                    # formative latent variables
-  ov.names     <- lav_partable_vnames(FLAT, type = "ov")
-                                                    # observed variables
-  ov.names.x   <- lav_partable_vnames(FLAT, type = "ov.x")
-                                                    # exogenous x covariates
+  # regular latent variables
+  lv.names.f <- lav_partable_vnames(FLAT, type = "lv.formative")
+  # formative latent variables
+  ov.names <- lav_partable_vnames(FLAT, type = "ov")
+  # observed variables
+  ov.names.x <- lav_partable_vnames(FLAT, type = "ov.x")
+  # exogenous x covariates
   lv.names.int <- lav_partable_vnames(FLAT, type = "lv.interaction")
-                                                    # lv interactions
+  # lv interactions
 
   if (is.null(ov.names.x.block)) {
     ov.names.x.block <- ov.names.x
   }
   ov.names.nox <- lav_partable_vnames(FLAT, type = "ov.nox")
-  lv.names.x   <- lav_partable_vnames(FLAT, type = "lv.x")   # exogenous lv
-  ov.names.y   <- lav_partable_vnames(FLAT, type = "ov.y")   # dependent ov
-  lv.names.y   <- lav_partable_vnames(FLAT, type = "lv.y")   # dependent lv
+  lv.names.x <- lav_partable_vnames(FLAT, type = "lv.x") # exogenous lv
+  ov.names.y <- lav_partable_vnames(FLAT, type = "ov.y") # dependent ov
+  lv.names.y <- lav_partable_vnames(FLAT, type = "lv.y") # dependent lv
   lv.names.efa <- lav_partable_vnames(FLAT, type = "lv.efa")
   # lvov.names.y <- c(ov.names.y, lv.names.y)
   lvov.names.y <- c(lv.names.y, ov.names.y)
@@ -64,8 +63,10 @@ lav_partable_flat <- function(FLAT = NULL,                     # nolint
   if (length(ov.names.ord1) > 0L) {
     idx <- which(ov.names.ord1 %in% ov.names.x)
     if (length(idx) > 0L) {
-      warning("lavaan WARNING: thresholds are defined for exogenous",
-              " variables: ", paste(ov.names.ord1[idx], collapse = " "))
+      warning(
+        "lavaan WARNING: thresholds are defined for exogenous",
+        " variables: ", paste(ov.names.ord1[idx], collapse = " ")
+      )
     }
   }
 
@@ -92,8 +93,10 @@ lav_partable_flat <- function(FLAT = NULL,                     # nolint
   ov.names.ord3 <- character(0L)
   if (!is.null(nthresholds)) {
     if (!is.null(varTable)) {
-      stop("lavaan ERROR: the varTable and nthresholds ",
-           "arguments should not be used together.")
+      stop(
+        "lavaan ERROR: the varTable and nthresholds ",
+        "arguments should not be used together."
+      )
     }
     if (!is.numeric(nthresholds)) {
       stop("lavaan ERROR: nthresholds should be a named vector of integers.")
@@ -181,7 +184,7 @@ lav_partable_flat <- function(FLAT = NULL,                     # nolint
     # for(o in ov.names.ord2) {
     for (o in ov.names.ord) {
       if (!is.null(varTable)) {
-        nth  <- varTable$nlev[varTable$name == o] - 1L
+        nth <- varTable$nlev[varTable$name == o] - 1L
       } else if (!is.null(nthresholds)) {
         if (length(nthresholds) == 1L && is.null(nth.names)) {
           nth <- nthresholds
@@ -189,8 +192,10 @@ lav_partable_flat <- function(FLAT = NULL,                     # nolint
           # we can assume nthresholds is a named vector
           nth <- unname(nthresholds[o])
           if (is.na(nth)) {
-            stop("lavaan ERROR: ordered variable ", o,
-                 " not found in the named vector nthresholds.")
+            stop(
+              "lavaan ERROR: ordered variable ", o,
+              " not found in the named vector nthresholds."
+            )
           }
         }
       }
@@ -242,17 +247,17 @@ lav_partable_flat <- function(FLAT = NULL,                     # nolint
       nx2 <- length(ov.names.x2) # regular  x
       if (nx1 > 0L) {
         idx <- lower.tri(matrix(0, nx1, nx1), diag = TRUE)
-        lhs <- c(lhs, rep(ov.names.x1,  each = nx1)[idx]) # fill upper.tri
+        lhs <- c(lhs, rep(ov.names.x1, each = nx1)[idx]) # fill upper.tri
         rhs <- c(rhs, rep(ov.names.x1, times = nx1)[idx])
       }
       if (nx2 > 0L) {
         idx <- lower.tri(matrix(0, nx2, nx2), diag = TRUE)
-        lhs <- c(lhs, rep(ov.names.x2,  each = nx2)[idx]) # fill upper.tri
+        lhs <- c(lhs, rep(ov.names.x2, each = nx2)[idx]) # fill upper.tri
         rhs <- c(rhs, rep(ov.names.x2, times = nx2)[idx])
       }
     } else {
       idx <- lower.tri(matrix(0, nx, nx), diag = TRUE)
-      lhs <- c(lhs, rep(ov.names.x,  each = nx)[idx]) # fill upper.tri
+      lhs <- c(lhs, rep(ov.names.x, each = nx)[idx]) # fill upper.tri
       rhs <- c(rhs, rep(ov.names.x, times = nx)[idx])
     }
   }
@@ -289,14 +294,14 @@ lav_partable_flat <- function(FLAT = NULL,                     # nolint
   if (length(ov.names.ord) > 0L) {
     lhs <- c(lhs, ov.names.ord)
     rhs <- c(rhs, ov.names.ord)
-    op <- c(op,  rep("~*~", length(ov.names.ord)))
+    op <- c(op, rep("~*~", length(ov.names.ord)))
   }
 
   # same for correlation structures, but now for ALL variables
   if (!categorical && correlation) {
     lhs <- c(lhs, ov.names)
     rhs <- c(rhs, ov.names)
-    op <- c(op,  rep("~*~", length(ov.names)))
+    op <- c(op, rep("~*~", length(ov.names)))
   }
 
   # 3. INTERCEPTS
@@ -312,8 +317,8 @@ lav_partable_flat <- function(FLAT = NULL,                     # nolint
 
     int.lhs <- c(ov.int, lv.names)
     lhs <- c(lhs, int.lhs)
-    rhs <- c(rhs, rep("",   length(int.lhs)))
-    op  <- c(op,  rep("~1", length(int.lhs)))
+    rhs <- c(rhs, rep("", length(int.lhs)))
+    op <- c(op, rep("~1", length(int.lhs)))
   }
 
   # 4. REGRESSIONS
@@ -338,36 +343,44 @@ lav_partable_flat <- function(FLAT = NULL,                     # nolint
   if (group.w.free) {
     lhs <- c(lhs, "group")
     rhs <- c(rhs, "w")
-    op <- c(op,  "%")
+    op <- c(op, "%")
   }
 
-  tmp.default <- data.frame(lhs = lhs, op = op, rhs = rhs,
+  tmp.default <- data.frame(
+    lhs = lhs, op = op, rhs = rhs,
     mod.idx = rep(0L, length(lhs)),
-    stringsAsFactors = FALSE)
+    stringsAsFactors = FALSE
+  )
 
 
   # 4. USER: user-specified elements
-  lhs     <- FLAT$lhs
-  op     <- FLAT$op
-  rhs     <- FLAT$rhs
+  lhs <- FLAT$lhs
+  op <- FLAT$op
+  rhs <- FLAT$rhs
   mod.idx <- FLAT$mod.idx
 
-  lv.names     <- lav_partable_vnames(FLAT, type = "lv")   # latent variables
-  ov.names     <- lav_partable_vnames(FLAT, type = "ov")   # observed variables
-  tmp.user <- data.frame(lhs = lhs, op = op, rhs = rhs, mod.idx = mod.idx,
-    stringsAsFactors = FALSE)
+  lv.names <- lav_partable_vnames(FLAT, type = "lv") # latent variables
+  ov.names <- lav_partable_vnames(FLAT, type = "ov") # observed variables
+  tmp.user <- data.frame(
+    lhs = lhs, op = op, rhs = rhs, mod.idx = mod.idx,
+    stringsAsFactors = FALSE
+  )
 
   # check for duplicated elements in tmp.user
   tmp.tmp <- tmp.user[, 1:3]
   idx <- which(duplicated(tmp.tmp))
   if (length(idx) > 0L) {
     txt <- sapply(seq_along(idx), function(i) {
-      paste("    ", tmp.tmp[idx[i], "lhs"],
+      paste(
+        "    ", tmp.tmp[idx[i], "lhs"],
         tmp.tmp[idx[i], "op"],
-        tmp.tmp[idx[i], "rhs"])
+        tmp.tmp[idx[i], "rhs"]
+      )
     })
-    warning("duplicated elements in model syntax have been ignored:\n",
-      paste(txt, collapse = "\n"))
+    warning(
+      "duplicated elements in model syntax have been ignored:\n",
+      paste(txt, collapse = "\n")
+    )
     tmp.user <- tmp.user[-idx, ]
   }
 
@@ -378,12 +391,12 @@ lav_partable_flat <- function(FLAT = NULL,                     # nolint
   # - remove them from tmp.default
   tmp.tmp <- rbind(tmp.default[, 1:3], tmp.user[, 1:3])
   idx <- which(duplicated(tmp.tmp, fromLast = TRUE))
-         # idx should be in tmp.default
+  # idx should be in tmp.default
   if (length(idx)) {
     for (i in idx) {
-      flat.idx <- which(tmp.user$lhs   == tmp.default$lhs[i] &
-        tmp.user$op    == tmp.default$op[i]  &
-        tmp.user$rhs   == tmp.default$rhs[i])
+      flat.idx <- which(tmp.user$lhs == tmp.default$lhs[i] &
+        tmp.user$op == tmp.default$op[i] &
+        tmp.user$rhs == tmp.default$rhs[i])
       if (length(flat.idx) != 1L) {
         cat("[lavaan DEBUG] idx in tmp.tmp: i = ", i, "\n")
         print(tmp.tmp[i, ])
@@ -398,17 +411,19 @@ lav_partable_flat <- function(FLAT = NULL,                     # nolint
 
   # now that we have removed all duplicated elements, we can construct
   # the tmp.list for a single group/block
-  lhs     <- c(tmp.user$lhs, tmp.default$lhs)
-  op      <- c(tmp.user$op,  tmp.default$op)
-  rhs     <- c(tmp.user$rhs, tmp.default$rhs)
-  user    <- c(rep(1L, length(tmp.user$lhs)),
-    rep(0L, length(tmp.default$lhs)))
+  lhs <- c(tmp.user$lhs, tmp.default$lhs)
+  op <- c(tmp.user$op, tmp.default$op)
+  rhs <- c(tmp.user$rhs, tmp.default$rhs)
+  user <- c(
+    rep(1L, length(tmp.user$lhs)),
+    rep(0L, length(tmp.default$lhs))
+  )
   mod.idx <- c(tmp.user$mod.idx, tmp.default$mod.idx)
-  free    <- rep(1L,  length(lhs))
-  ustart  <- rep(as.numeric(NA), length(lhs))
+  free <- rep(1L, length(lhs))
+  ustart <- rep(as.numeric(NA), length(lhs))
   # label   <- paste(lhs, op, rhs, sep="")
-  label   <- rep(character(1), length(lhs))
-  exo     <- rep(0L, length(lhs))
+  label <- rep(character(1), length(lhs))
+  exo <- rep(0L, length(lhs))
 
   # 0a. if auto.th = FALSE, set fix the thresholds
   if (!auto.th) {
@@ -566,7 +581,6 @@ lav_partable_flat <- function(FLAT = NULL,                     # nolint
         user == 0L)
       ustart[lv.int.idx] <- as.numeric(NA)
       free[lv.int.idx] <- 1L
-
     }
   }
 
@@ -581,7 +595,7 @@ lav_partable_flat <- function(FLAT = NULL,                     # nolint
   # 5a conditional.x = FALSE
   if (!conditional.x && fixed.x && length(ov.names.x.block) > 0) {
     # 1. variances/covariances
-    exo.var.idx  <- which(op == "~~" &
+    exo.var.idx <- which(op == "~~" &
       rhs %in% ov.names.x.block &
       lhs %in% ov.names.x.block &
       user == 0L)
@@ -590,7 +604,7 @@ lav_partable_flat <- function(FLAT = NULL,                     # nolint
     exo[exo.var.idx] <- 1L
 
     # 2. intercepts
-    exo.int.idx  <- which(op == "~1" &
+    exo.int.idx <- which(op == "~1" &
       lhs %in% ov.names.x.block &
       user == 0L)
     ustart[exo.int.idx] <- as.numeric(NA) # should be overriden later!
@@ -601,7 +615,7 @@ lav_partable_flat <- function(FLAT = NULL,                     # nolint
   # 5a-bis. conditional.x = TRUE
   if (conditional.x && length(ov.names.x) > 0L) {
     # 1. variances/covariances
-    exo.var.idx  <- which(op == "~~" &
+    exo.var.idx <- which(op == "~~" &
       rhs %in% ov.names.x &
       lhs %in% ov.names.x &
       user == 0L)
@@ -612,7 +626,7 @@ lav_partable_flat <- function(FLAT = NULL,                     # nolint
     exo[exo.var.idx] <- 1L
 
     # 2. intercepts
-    exo.int.idx  <- which(op == "~1" &
+    exo.int.idx <- which(op == "~1" &
       lhs %in% ov.names.x &
       user == 0L)
     if (fixed.x) {
@@ -687,16 +701,16 @@ lav_partable_flat <- function(FLAT = NULL,                     # nolint
   # 6. multiple groups?
   group <- rep(1L, length(lhs))
   if (ngroups > 1) {
-    group   <- rep(1:ngroups, each = length(lhs))
-    user    <- rep(user,    times = ngroups)
-    lhs     <- rep(lhs,     times = ngroups)
-    op      <- rep(op,      times = ngroups)
-    rhs     <- rep(rhs,     times = ngroups)
-    free    <- rep(free,    times = ngroups)
-    ustart  <- rep(ustart,  times = ngroups)
+    group <- rep(1:ngroups, each = length(lhs))
+    user <- rep(user, times = ngroups)
+    lhs <- rep(lhs, times = ngroups)
+    op <- rep(op, times = ngroups)
+    rhs <- rep(rhs, times = ngroups)
+    free <- rep(free, times = ngroups)
+    ustart <- rep(ustart, times = ngroups)
     mod.idx <- rep(mod.idx, times = ngroups)
-    label   <- rep(label,   times = ngroups)
-    exo     <- rep(exo,     times = ngroups)
+    label <- rep(label, times = ngroups)
+    exo <- rep(exo, times = ngroups)
 
     # specific changes per group
     for (g in 2:ngroups) {
@@ -705,7 +719,7 @@ lav_partable_flat <- function(FLAT = NULL,                     # nolint
 
       # free/fix intercepts
       if (meanstructure) {
-        int.idx  <- which(op == "~1" &
+        int.idx <- which(op == "~1" &
           lhs %in% lv.names &
           user == 0L &
           group == g)
@@ -785,7 +799,8 @@ lav_partable_flat <- function(FLAT = NULL,                     # nolint
     lhs         = lhs,
     op          = op,
     rhs         = rhs,
-    user        = user)
+    user        = user
+  )
 
   # add block column (before group/level columns)
   if (!is.null(block.id)) {
@@ -812,7 +827,8 @@ lav_partable_flat <- function(FLAT = NULL,                     # nolint
     free        = free,
     ustart      = ustart,
     exo         = exo,
-    label       = label)
+    label       = label
+  )
 
   tmp.list <- c(tmp.list, tmp.list2)
 }

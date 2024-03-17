@@ -48,150 +48,161 @@
 
 
 
-pairwiseTables <- function(data, var.levels=NULL, no.x=NULL,
-                           perc=FALSE, na.exclude=TRUE) {
+pairwiseTables <- function(data, var.levels = NULL, no.x = NULL,
+                           perc = FALSE, na.exclude = TRUE) {
+  # data in right format?
+  if ((!is.matrix(data)) & (!is.data.frame(data))) {
+    stop("data is neither a matrix nor a data.frame")
+  }
 
- # data in right format?
- if ( (!is.matrix(data)) & (!is.data.frame(data)) ) {
-  stop("data is neither a matrix nor a data.frame")
- }
-
- # at least two variables
- no.var <- dim(data)[2]
- if(no.var<2) {
+  # at least two variables
+  no.var <- dim(data)[2]
+  if (no.var < 2) {
     stop("there are less than 2 variables")
- }
+  }
 
- # no.x < no.var  ?
- if(no.x > no.var) {
+  # no.x < no.var  ?
+  if (no.x > no.var) {
     stop("number of indicators for exogenous latent variables is larger than the total number of variables in data")
- }
+  }
 
 
- # if data as matrix, transforma as data.frame
- if(is.matrix(data)) {
+  # if data as matrix, transforma as data.frame
+  if (is.matrix(data)) {
     data <- as.data.frame(data)
- }
+  }
 
- # listwise deletion
- if(na.exclude) {
+  # listwise deletion
+  if (na.exclude) {
     old.data <- data
     data <- na.omit(data)
- }
+  }
 
- # all columns of data.frame should be of class factor so that function levels
- # can be applied
- if(!all(sapply(data,class)=="factor")) {
-   if(nrow(data)>1) {
-      data <- data.frame( sapply(data,factor) )
-   } else {
-      data <- apply(data,2,factor)
-      data <- as.data.frame( matrix(data, nrow=1) )
-   }
- }
-
- # the levels observed for each variable, obs.levels is a list
- obs.levels <- lapply(data,levels)
-
- # number of variables in data same as number of vectors in var.levels
- if(is.list(var.levels) && no.var!= length(var.levels) ) {
-    stop("the length of var.levels does not match the number of variables of the given data set")
- }
-
- # create var.levels if a list is not given
- old.var.levels <- var.levels
- if(!is.list(old.var.levels)) {
-    if(is.null(old.var.levels) ) {
-       var.levels <- obs.levels
+  # all columns of data.frame should be of class factor so that function levels
+  # can be applied
+  if (!all(sapply(data, class) == "factor")) {
+    if (nrow(data) > 1) {
+      data <- data.frame(sapply(data, factor))
     } else {
-       var.levels <- vector("list", no.var)
-       var.levels <- lapply(var.levels, function(x){x <- old.var.levels} )
+      data <- apply(data, 2, factor)
+      data <- as.data.frame(matrix(data, nrow = 1))
     }
- }
- names(var.levels) <- names(data)
+  }
 
- # also check that obs.levels exist in the object var.levels given by the user, i.e. old.var.levels
- if(is.list(old.var.levels)) {
-    for(i in 1:no.var) {
-        if(!all( obs.levels[[i]] %in% old.var.levels[[i]]))
-           stop("levels observed in data are not mentioned in var.levels")
+  # the levels observed for each variable, obs.levels is a list
+  obs.levels <- lapply(data, levels)
+
+  # number of variables in data same as number of vectors in var.levels
+  if (is.list(var.levels) && no.var != length(var.levels)) {
+    stop("the length of var.levels does not match the number of variables of the given data set")
+  }
+
+  # create var.levels if a list is not given
+  old.var.levels <- var.levels
+  if (!is.list(old.var.levels)) {
+    if (is.null(old.var.levels)) {
+      var.levels <- obs.levels
+    } else {
+      var.levels <- vector("list", no.var)
+      var.levels <- lapply(var.levels, function(x) {
+        x <- old.var.levels
+      })
     }
- } else if (is.vector(old.var.levels)) {
-    if(!all(apply(na.omit(data), 2, function(x){x %in% old.var.levels})))
+  }
+  names(var.levels) <- names(data)
+
+  # also check that obs.levels exist in the object var.levels given by the user, i.e. old.var.levels
+  if (is.list(old.var.levels)) {
+    for (i in 1:no.var) {
+      if (!all(obs.levels[[i]] %in% old.var.levels[[i]])) {
         stop("levels observed in data are not mentioned in var.levels")
- }
-
- no.given.levels <- sapply(var.levels, length)
-
- # assign the right levels for each variable as given in object var.levels if it is not the case
- # it is not the case when the observed levels are a subgroup of the var.levels given
- if(!is.null(old.var.levels)) {
-    no.obs.levels <- sapply(obs.levels, length)
-    if(!all(no.obs.levels==no.given.levels) ) {
-       index <- c(1:no.var)[no.obs.levels!=no.given.levels]
-       for(i in index) {
-           data[,i] <- factor(data[,i] , levels=var.levels[[i]])
-       }
+      }
     }
- }
+  } else if (is.vector(old.var.levels)) {
+    if (!all(apply(na.omit(data), 2, function(x) {
+      x %in% old.var.levels
+    }))) {
+      stop("levels observed in data are not mentioned in var.levels")
+    }
+  }
 
- # compute the bivariate frequency tables
- # Split first into two cases: a) only indicators of exogenous latent variables
- # b) otherwise
- if(is.null(no.x) || no.x==no.var) {
-    pairs.index <- utils::combn(no.var,2)
+  no.given.levels <- sapply(var.levels, length)
+
+  # assign the right levels for each variable as given in object var.levels if it is not the case
+  # it is not the case when the observed levels are a subgroup of the var.levels given
+  if (!is.null(old.var.levels)) {
+    no.obs.levels <- sapply(obs.levels, length)
+    if (!all(no.obs.levels == no.given.levels)) {
+      index <- c(1:no.var)[no.obs.levels != no.given.levels]
+      for (i in index) {
+        data[, i] <- factor(data[, i], levels = var.levels[[i]])
+      }
+    }
+  }
+
+  # compute the bivariate frequency tables
+  # Split first into two cases: a) only indicators of exogenous latent variables
+  # b) otherwise
+  if (is.null(no.x) || no.x == no.var) {
+    pairs.index <- utils::combn(no.var, 2)
     no.pairs <- dim(pairs.index)[2]
     res <- vector("list", no.pairs)
-    for(i in 1:no.pairs ) {
-        res[[i]] <- table( data[, pairs.index[,i] ],  useNA="ifany" )
+    for (i in 1:no.pairs) {
+      res[[i]] <- table(data[, pairs.index[, i]], useNA = "ifany")
     }
- } else {
+  } else {
     no.y <- no.var - no.x
-    pairs.xixj.index <- utils::combn(no.x,2)  # row 1 gives i index, row 2 j index, j runs faster than i
-    pairs.yiyj.index <- utils::combn(no.y,2)
+    pairs.xixj.index <- utils::combn(no.x, 2) # row 1 gives i index, row 2 j index, j runs faster than i
+    pairs.yiyj.index <- utils::combn(no.y, 2)
     pairs.xiyj.index <- expand.grid(1:no.y, 1:no.x)
-    pairs.xiyj.index <- rbind( pairs.xiyj.index[,2], pairs.xiyj.index[,1] ) # row 1 gives i index, row 2 j index, j runs faster than i
+    pairs.xiyj.index <- rbind(pairs.xiyj.index[, 2], pairs.xiyj.index[, 1]) # row 1 gives i index, row 2 j index, j runs faster than i
 
     no.pairs.xixj <- dim(pairs.xixj.index)[2]
     no.pairs.yiyj <- dim(pairs.yiyj.index)[2]
     no.pairs.xiyj <- dim(pairs.xiyj.index)[2]
     no.all.pairs <- no.pairs.xixj + no.pairs.yiyj + no.pairs.xiyj
 
-    data.x <- data[,1:no.x]
-    data.y <- data[,(no.x+1):no.var]
+    data.x <- data[, 1:no.x]
+    data.y <- data[, (no.x + 1):no.var]
 
     res <- vector("list", no.all.pairs)
-    for(i in 1:no.pairs.xixj) {
-        res[[i]] <- table(data.x[,pairs.xixj.index[,i]], useNA="ifany" )
+    for (i in 1:no.pairs.xixj) {
+      res[[i]] <- table(data.x[, pairs.xixj.index[, i]], useNA = "ifany")
     }
 
     j <- 0
-    for(i in (no.pairs.xixj+1):(no.pairs.xixj+no.pairs.yiyj) ) {
-        j <- j+1
-        res[[i]] <- table(data.y[,pairs.yiyj.index[,j]], useNA="ifany" )
+    for (i in (no.pairs.xixj + 1):(no.pairs.xixj + no.pairs.yiyj)) {
+      j <- j + 1
+      res[[i]] <- table(data.y[, pairs.yiyj.index[, j]], useNA = "ifany")
     }
 
-    j <-0
-    for(i in (no.pairs.xixj+no.pairs.yiyj+1):no.all.pairs ) {
-        j <- j+1
-        res[[i]] <- table(cbind(data.x[,pairs.xiyj.index[1,j], drop=FALSE],
-                                data.y[,pairs.xiyj.index[2,j], drop=FALSE]),
-                          useNA="ifany" )
+    j <- 0
+    for (i in (no.pairs.xixj + no.pairs.yiyj + 1):no.all.pairs) {
+      j <- j + 1
+      res[[i]] <- table(
+        cbind(
+          data.x[, pairs.xiyj.index[1, j], drop = FALSE],
+          data.y[, pairs.xiyj.index[2, j], drop = FALSE]
+        ),
+        useNA = "ifany"
+      )
     }
- }
+  }
 
- # if percentages are asked
- if (perc) {
-   Nobs <- dim(data)[1]
-   res <- lapply(res, function(x){x/Nobs} )
- }
+  # if percentages are asked
+  if (perc) {
+    Nobs <- dim(data)[1]
+    res <- lapply(res, function(x) {
+      x / Nobs
+    })
+  }
 
- #Ncases_del = the number of cases deleted because they had missing values
- if (na.exclude) {
-   Ncases_deleted <- dim(old.data)[1] - dim(data)[1]
- } else {
-   Ncases_deleted <- 0
- }
+  # Ncases_del = the number of cases deleted because they had missing values
+  if (na.exclude) {
+    Ncases_deleted <- dim(old.data)[1] - dim(data)[1]
+  } else {
+    Ncases_deleted <- 0
+  }
 
- list(pairTables=res, VarLevels=var.levels, Ncases_del= Ncases_deleted)
+  list(pairTables = res, VarLevels = var.levels, Ncases_del = Ncases_deleted)
 }

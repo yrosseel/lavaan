@@ -1,25 +1,25 @@
-lav_lavaan_step03_data <- function(slotData         = NULL,             # nolint
-                                   lavoptions       = NULL,
-                                   ov.names         = NULL,
-                                   ov.names.y       = NULL,
-                                   group            = NULL,
-                                   data             = NULL,
-                                   cluster          = NULL,
-                                   ov.names.x       = NULL,
-                                   ov.names.l       = NULL,
-                                   ordered          = NULL,
+lav_lavaan_step03_data <- function(slotData = NULL, # nolint
+                                   lavoptions = NULL,
+                                   ov.names = NULL,
+                                   ov.names.y = NULL,
+                                   group = NULL,
+                                   data = NULL,
+                                   cluster = NULL,
+                                   ov.names.x = NULL,
+                                   ov.names.l = NULL,
+                                   ordered = NULL,
                                    sampling.weights = NULL,
-                                   sample.cov       = NULL,
-                                   sample.mean      = NULL,
-                                   sample.th        = NULL,
-                                   sample.nobs      = NULL,
-                                   slotParTable     = NULL,             # nolint
-                                   ngroups          = NULL,
-                                   dotdotdot        = NULL,
-                                   flat.model       = NULL,
-                                   model            = NULL,
-                                   NACOV            = NULL,             # nolint
-                                   WLS.V            = NULL) {           # nolint
+                                   sample.cov = NULL,
+                                   sample.mean = NULL,
+                                   sample.th = NULL,
+                                   sample.nobs = NULL,
+                                   slotParTable = NULL, # nolint
+                                   ngroups = NULL,
+                                   dotdotdot = NULL,
+                                   flat.model = NULL,
+                                   model = NULL,
+                                   NACOV = NULL, # nolint
+                                   WLS.V = NULL) { # nolint
   # # # # # # # # # # #
   # #  3. lavdata  # #
   # # # # # # # # # # #
@@ -87,15 +87,19 @@ lav_lavaan_step03_data <- function(slotData         = NULL,             # nolint
   } else if (lavdata@data.type == "moment") {
     # check user-specified options first
     if (!is.null(dotdotdot$estimator)) {
-      if (any(dotdotdot$estimator == c("MLM", "MLMV", "MLR", "MLR",
-                                       "ULSM", "ULSMV", "ULSMVS")) &&
+      if (any(dotdotdot$estimator == c(
+        "MLM", "MLMV", "MLR", "MLR",
+        "ULSM", "ULSMV", "ULSMVS"
+      )) &&
         is.null(NACOV)) {
         stop(
           "lavaan ERROR: estimator ", dotdotdot$estimator,
           " requires full data or user-provided NACOV"
         )
-      } else if (any(dotdotdot$estimator == c("WLS", "WLSM", "WLSMV",
-                                              "WLSMVS", "DWLS")) &&
+      } else if (any(dotdotdot$estimator == c(
+        "WLS", "WLSM", "WLSMV",
+        "WLSMVS", "DWLS"
+      )) &&
         is.null(WLS.V)) {
         stop(
           "lavaan ERROR: estimator ", dotdotdot$estimator,
@@ -112,8 +116,10 @@ lav_lavaan_step03_data <- function(slotData         = NULL,             # nolint
   # sanity check
   if (!is.null(slotParTable) || inherits(model, "lavaan")) {
     if (ngroups != lavdata@ngroups) {
-      stop("lavaan ERROR: mismatch between number of groups in data, ",
-        "and number of groups in model.")
+      stop(
+        "lavaan ERROR: mismatch between number of groups in data, ",
+        "and number of groups in model."
+      )
     }
   }
   if (lavoptions$verbose) {

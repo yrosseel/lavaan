@@ -1,6 +1,6 @@
 lav_lavaan_step00_parameters <- function(matchcall = NULL,
-                                         defaults  = NULL,
-                                         syscall   = NULL,
+                                         defaults = NULL,
+                                         syscall = NULL,
                                          dotdotdot = NULL) {
   # 1. to resolve a problem where parameter 'cl' is matched to 'cluster'
   #    and shouldn't
@@ -18,8 +18,8 @@ lav_lavaan_step00_parameters <- function(matchcall = NULL,
 
   # catch partial matching of 'cl' (expanded to cluster)
   if (!is.null(sc[["cl"]]) &&
-       is.null(sc[["cluster"]]) &&
-      !is.null(mc[["cluster"]])) {
+    is.null(sc[["cluster"]]) &&
+    !is.null(mc[["cluster"]])) {
     mc[["cl"]] <- mc[["cluster"]]
     mc[["cluster"]] <- NULL
     ddd$cl <- sc[["cl"]]
@@ -64,15 +64,15 @@ lav_lavaan_step00_parameters <- function(matchcall = NULL,
   list(mc = mc, dotdotdot = ddd)
 }
 
-lav_lavaan_step00_checkdata <- function(data        = NULL,
-                                        dotdotdot   = NULL,
-                                        sample.cov  = NULL,
+lav_lavaan_step00_checkdata <- function(data = NULL,
+                                        dotdotdot = NULL,
+                                        sample.cov = NULL,
                                         sample.nobs = NULL,
                                         sample.mean = NULL,
-                                        sample.th   = NULL,
-                                        NACOV       = NULL,             # nolint
-                                        WLS.V       = NULL,             # nolint
-                                        ov.order    = NULL) {
+                                        sample.th = NULL,
+                                        NACOV = NULL, # nolint
+                                        WLS.V = NULL, # nolint
+                                        ov.order = NULL) {
   # if data not NULL:
   #   if it is an 'enriched' data.frame (e.g. a tibble), simplify to an
   #   ordinary data.frame
@@ -91,14 +91,13 @@ lav_lavaan_step00_checkdata <- function(data        = NULL,
     if (inherits(data, "data.frame")) {
       # just in case it is not a traditional data.frame
       data <- as.data.frame(data)
-
     } else if (inherits(data, "lavMoments")) {
       # This object must contain summary statistics
       # e.g., created by lavaan.mi::poolSat
 
       # set required-data arguments
       if ("sample.cov" %in% names(data)) {
-        sample.cov  <- data$sample.cov
+        sample.cov <- data$sample.cov
       } else {
         stop("When data= is of class lavMoments, it must contain sample.cov")
       }
@@ -111,9 +110,9 @@ lav_lavaan_step00_checkdata <- function(data        = NULL,
 
       # check for optional-data arguments
       if ("sample.mean" %in% names(data)) sample.mean <- data$sample.mean
-      if ("sample.th"   %in% names(data)) sample.th   <- data$sample.th
-      if ("NACOV"       %in% names(data)) NACOV       <- data$NACOV     # nolint
-      if ("WLS.V"       %in% names(data)) WLS.V       <- data$WLS.V     # nolint
+      if ("sample.th" %in% names(data)) sample.th <- data$sample.th
+      if ("NACOV" %in% names(data)) NACOV <- data$NACOV # nolint
+      if ("WLS.V" %in% names(data)) WLS.V <- data$WLS.V # nolint
 
       # set other args not included in dotdotdot
       if (length(data$lavOptions)) {
@@ -123,7 +122,7 @@ lav_lavaan_step00_checkdata <- function(data        = NULL,
         }
       }
 
-      #FIXME: Should WLS.V be an I(dentity) matrix when ULS is requested?
+      # FIXME: Should WLS.V be an I(dentity) matrix when ULS is requested?
       #       Unused for point estimates, but still used to scale/shift test
       # if (!is.null(dotdotdot$estimator)) {
       #   if (grepl(pattern = "ULS", x = toupper(dotdotdot$estimator[1L])) &&
@@ -151,7 +150,9 @@ lav_lavaan_step00_checkdata <- function(data        = NULL,
     ov.order <- "data"
   }
 
-  list(data = data, dotdotdot = dotdotdot, sample.cov = sample.cov,
+  list(
+    data = data, dotdotdot = dotdotdot, sample.cov = sample.cov,
     sample.nobs = sample.nobs, sample.mean = sample.mean,
-    sample.th = sample.th, NACOV = NACOV, WLS.V = WLS.V, ov.order = ov.order)
+    sample.th = sample.th, NACOV = NACOV, WLS.V = WLS.V, ov.order = ov.order
+  )
 }

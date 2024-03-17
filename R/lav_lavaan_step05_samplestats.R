@@ -1,15 +1,15 @@
-lav_lavaan_step05_samplestats <- function(slotSampleStats = NULL,       # nolint
-                                          lavdata         = NULL,
-                                          lavoptions      = NULL,
-                                          WLS.V           = NULL,       # nolint
-                                          NACOV           = NULL,       # nolint
-                                          sample.cov      = NULL,
-                                          sample.mean     = NULL,
-                                          sample.th       = NULL,
-                                          sample.nobs     = NULL,
-                                          ov.names        = NULL,
-                                          ov.names.x      = NULL,
-                                          lavpartable     = NULL) {
+lav_lavaan_step05_samplestats <- function(slotSampleStats = NULL, # nolint
+                                          lavdata = NULL,
+                                          lavoptions = NULL,
+                                          WLS.V = NULL, # nolint
+                                          NACOV = NULL, # nolint
+                                          sample.cov = NULL,
+                                          sample.mean = NULL,
+                                          sample.th = NULL,
+                                          sample.nobs = NULL,
+                                          ov.names = NULL,
+                                          ov.names.x = NULL,
+                                          lavpartable = NULL) {
   # # # # # # # # # # # # # #
   # #  5. lavsamplestats  # #
   # # # # # # # # # # # # # #
@@ -49,8 +49,10 @@ lav_lavaan_step05_samplestats <- function(slotSampleStats = NULL,       # nolint
     }
     # check if we have sample.mean and meanstructure = TRUE
     if (lavoptions$meanstructure && is.null(sample.mean)) {
-      txt <- c("sample.mean= argument is missing, but model contains ",
-               "mean/intercept parameters.")
+      txt <- c(
+        "sample.mean= argument is missing, but model contains ",
+        "mean/intercept parameters."
+      )
       warning(lav_txt2message(txt))
     }
     lavsamplestats <- lav_samplestats_from_moments(
