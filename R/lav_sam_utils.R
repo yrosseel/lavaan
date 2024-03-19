@@ -327,7 +327,7 @@ lav_sam_veta2 <- function(FS = NULL, M = NULL,
   MTM <- lav_matrix_bdiag(0, MTM)
   VETA <- lav_matrix_bdiag(0, VETA)
   EETA <- c(1, EETA)
-  lv.names <- c("int", lv.names)
+  lv.names <- c("..int..", lv.names)
   nfac <- ncol(FS)
 
   idx1 <- rep(seq_len(nfac), each = nfac)
@@ -457,7 +457,7 @@ lav_sam_fs2 <- function(FS = NULL, lv.names = NULL, lv.int.names = NULL) {
   # augment to include intercept
   FS <- cbind(1, FS)
   N <- nrow(FS)
-  lv.names <- c("int", lv.names)
+  lv.names <- c("..int..", lv.names)
   nfac <- ncol(FS)
 
   idx1 <- rep(seq_len(nfac), each = nfac)
@@ -470,7 +470,7 @@ lav_sam_fs2 <- function(FS = NULL, lv.names = NULL, lv.int.names = NULL) {
 
   # select only what we need
   colnames(Var.FS2) <- rownames(Var.FS2) <- NAMES
-  lv.main <- paste(lv.names[-1], "int", sep = ":")
+  lv.main <- paste(lv.names[-1], "..int..", sep = ":")
   lv.keep <- c(lv.main, lv.int.names)
   Var.FS2 <- Var.FS2[lv.keep, lv.keep]
 
