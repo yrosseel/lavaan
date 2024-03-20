@@ -65,6 +65,9 @@ lav_sam_mapping_matrix <- function(LAMBDA = NULL, THETA = NULL,
     # new in 0.6-16: we use the Wall & Amemiya (2000) method using
     # the so-called 'T' transformation
 
+    # new in 0.6-18: if we cannot use the marker method (eg growth models),
+    # use the 'old' method anyway: remove zero rows/cols and invert submatrix
+
     zero.theta.idx <- which(abs(diag(THETA)) < 1e-4) # be conservative
     if (length(zero.theta.idx) == 0L) {
       # ok, no zero diagonal elements: try to invert THETA
@@ -77,7 +80,19 @@ lav_sam_mapping_matrix <- function(LAMBDA = NULL, THETA = NULL,
         }
       }
     } else {
-      THETA.inv <- NULL
+      # see if we can use marker method
+      marker.idx <- lav_utils_get_marker(LAMBDA = LAMBDA, std.lv = TRUE)
+      if (any(is.na(marker.idx))) {
+        THETA.inv <- try(lav_matrix_symmetric_inverse(THETA), silent = TRUE)
+        if (inherits(THETA.inv, "try-error")) {
+          THETA.inv <- NULL
+        } else {
+          diag(THETA.inv)[zero.theta.idx] <- 1
+        }
+      } else {
+        # try tmat method later on
+        THETA.inv <- NULL
+      }
     }
 
     # could we invert THETA?
@@ -231,9 +246,8 @@ lav_sam_tmat <- function(LAMBDA = NULL,
 # - if alpha.correction == 0     -> same as local SAM (or MOC)
 # - if alpha.correction == (N-1) -> same as FSR+Bartlett
 lav_sam_veta <- function(M = NULL, S = NULL, THETA = NULL,
-                         alpha.correction = 0L,
-                         lambda.correction = TRUE,
-                         N = 20L, extra = FALSE) {
+                         alpha.correction = 0L, lambda.correction = TRUE,
+                         N = 20L, dummy.lv.idx = integer(0L), extra = FALSE) {
   # MSM
   MSM <- M %*% S %*% t(M)
 
@@ -242,7 +256,16 @@ lav_sam_veta <- function(M = NULL, S = NULL, THETA = NULL,
 
   # new in 0.6-16: make sure MTM is pd
   # (otherwise lav_matrix_symmetric_diff_smallest_root will fail)
-  MTM <- zapsmall(lav_matrix_symmetric_force_pd(MTM, tol = 1e-04))
+  if (length(dummy.lv.idx) > 0L) {
+    MTM.nodummy <- MTM[-dummy.lv.idx, -dummy.lv.idx, drop = FALSE]
+    MTM.nodummy <- zapsmall(lav_matrix_symmetric_force_pd(
+      MTM.nodummy,
+      tol = 1e-04
+    ))
+    MTM[-dummy.lv.idx, -dummy.lv.idx] <- MTM.nodummy
+  } else {
+    MTM <- zapsmall(lav_matrix_symmetric_force_pd(MTM, tol = 1e-04))
+  }
 
   # apply small sample correction (if requested)
   if (alpha.correction > 0) {

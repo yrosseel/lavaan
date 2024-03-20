@@ -517,17 +517,25 @@ lav_model_information_firstorder <- function(lavmodel = NULL,
 
 # create augmented information matrix (if needed), and take the inverse
 # (if inverted = TRUE), returning only the [1:npar, 1:npar] elements
+#
+# rm.idx is used by lav_sam_step2_se; it used when the structural model
+# contains more parameters than the joint model; therefore, information
+# will be 'too small', and we need to remove some columns in H
 lav_model_information_augment_invert <- function(lavmodel = NULL,
                                                  information = NULL,
                                                  inverted = FALSE,
                                                  check.pd = FALSE,
-                                                 use.ginv = FALSE) {
+                                                 use.ginv = FALSE,
+                                                 rm.idx = integer(0L)) {
   npar <- nrow(information)
   is.augmented <- FALSE
 
   # handle constraints
   if (nrow(lavmodel@con.jac) > 0L) {
     H <- lavmodel@con.jac
+    if (length(rm.idx) > 0L) {
+      H <- H[, -rm.idx, drop = FALSE]
+    }
     inactive.idx <- attr(H, "inactive.idx")
     lambda <- lavmodel@con.lambda # lagrangean coefs
     if (length(inactive.idx) > 0L) {
@@ -553,6 +561,9 @@ lav_model_information_augment_invert <- function(lavmodel = NULL,
   } else if (.hasSlot(lavmodel, "ceq.simple.only") &&
     lavmodel@ceq.simple.only) {
     H <- t(lav_matrix_orthogonal_complement(lavmodel@ceq.simple.K))
+    if (length(rm.idx) > 0L) {
+      H <- H[, -rm.idx, drop = FALSE]
+    }
     if (nrow(H) > 0L) {
       is.augmented <- TRUE
       H0 <- matrix(0, nrow(H), nrow(H))

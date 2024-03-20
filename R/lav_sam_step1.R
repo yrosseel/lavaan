@@ -572,12 +572,19 @@ lav_sam_step1_local <- function(STEP1 = NULL, FIT = NULL,
     )
 
     # handle observed-only variables
-    dummy.ov.idx <- FIT@Model@ov.y.dummy.ov.idx[[b]]
-    dummy.lv.idx <- FIT@Model@ov.y.dummy.lv.idx[[b]]
+    dummy.ov.idx <- c(
+      FIT@Model@ov.x.dummy.ov.idx[[b]],
+      FIT@Model@ov.y.dummy.ov.idx[[b]]
+    )
+    dummy.lv.idx <- c(
+      FIT@Model@ov.x.dummy.lv.idx[[b]],
+      FIT@Model@ov.y.dummy.lv.idx[[b]]
+    )
     if (length(dummy.ov.idx)) {
       Mb[dummy.lv.idx, ] <- 0
       Mb[cbind(dummy.lv.idx, dummy.ov.idx)] <- 1
     }
+
     # compute EETA
     if (lavoptions$meanstructure) {
       EETA[[b]] <- lav_sam_eeta(M = Mb, YBAR = YBAR, NU = NU[[b]])
@@ -590,6 +597,7 @@ lav_sam_step1_local <- function(STEP1 = NULL, FIT = NULL,
         alpha.correction = local.options[["alpha.correction"]],
         lambda.correction = local.options[["lambda.correction"]],
         N <- FIT@SampleStats@nobs[[this.group]],
+        dummy.lv.idx = dummy.lv.idx,
         extra = TRUE
       )
       VETA[[b]] <- tmp[, , drop = FALSE] # drop attributes
@@ -599,6 +607,7 @@ lav_sam_step1_local <- function(STEP1 = NULL, FIT = NULL,
       # FSR -- no correction
       VETA[[b]] <- Mb %*% COV %*% t(Mb)
     }
+
     # standardize? not really needed, but we may have 1.0000001
     # as variances, and this may lead to false convergence
     if (FIT@Options$std.lv) {
@@ -612,7 +621,7 @@ lav_sam_step1_local <- function(STEP1 = NULL, FIT = NULL,
     } else {
       lv.int.names <- lavpta$vnames$lv.interaction[[b]]
       # including dummy-lv covariates!
-      tmp <- FIT@Model@dimNames[[psi.idx]][[1]]
+      tmp <- FIT@Model@dimNames[[psi.idx]][[b]]
       # remove interaction terms
       lv.names1 <- tmp[!tmp %in% lv.int.names]
       colnames(VETA[[b]]) <- rownames(VETA[[b]]) <- lv.names1

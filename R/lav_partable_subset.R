@@ -316,7 +316,8 @@ lav_partable_subset_structural_model <- function(PT = NULL,
                                                  add.idx = FALSE,
                                                  idx.only = FALSE,
                                                  add.exo.cov = FALSE,
-                                                 fixed.x = FALSE) {
+                                                 fixed.x = FALSE,
+                                                 meanstructure = FALSE) {
   # PT
   PT <- as.data.frame(PT, stringsAsFactors = FALSE)
 
@@ -495,13 +496,26 @@ lav_partable_subset_structural_model <- function(PT = NULL,
     PT <- lav_partable_add_exo_cov(PT, lavpta = NULL)
   }
 
-  # if fixed.x = FALSE, remove all remaining exo=1 elements
+  # if meanstructure, 'free' user=0 intercepts
+  if (meanstructure) {
+    int.idx <- which(PT$op == "~1" & PT$user == 0L & PT$free == 0L)
+    if (length(int.idx) > 0L) {
+      PT$free[int.idx] <- max(PT$free) + seq_len(length(int.idx))
+      PT$ustart[int.idx] <- as.numeric(NA)
+      PT$user[int.idx] <- 3L
+    }
+  }
+
+  # if fixed.x = FALSE, remove all remaining (free) exo=1 elements
   if (!fixed.x) {
     exo.idx <- which(PT$exo != 0L)
     if (length(exo.idx) > 0L) {
       PT$exo[exo.idx] <- 0L
+      PT$user[exo.idx] <- 3L
       PT$free[exo.idx] <- max(PT$free) + seq_len(length(exo.idx))
     }
+
+    # if fixed.x = TRUE, check/set all exo elements
   } else {
     # redefine ov.x for the structural part only; set exo flag
     for (g in 1:nblocks) {
@@ -514,24 +528,32 @@ lav_partable_subset_structural_model <- function(PT = NULL,
       }
 
       # 1. variances/covariances
-      exo.var.idx <- which(PT$op == "~~" & PT$block == block.values[g] &
-        PT$rhs %in% ov.names.x &
-        PT$lhs %in% ov.names.x &
-        PT$user %in% c(0L, 3L))
+      exo.var.idx <- which(
+        PT$op == "~~" &
+          PT$block == block.values[g] &
+          PT$rhs %in% ov.names.x &
+          PT$lhs %in% ov.names.x &
+          PT$user %in% c(0L, 3L)
+      )
       if (length(exo.var.idx) > 0L) {
         PT$ustart[exo.var.idx] <- as.numeric(NA) # to be overriden
         PT$free[exo.var.idx] <- 0L
         PT$exo[exo.var.idx] <- 1L
+        PT$user[exo.var.idx] <- 3L
       }
 
       # 2. intercepts
-      exo.int.idx <- which(PT$op == "~1" & PT$block == block.values[g] &
-        PT$lhs %in% ov.names.x &
-        PT$user == 0L)
+      exo.int.idx <- which(
+        PT$op == "~1" &
+          PT$block == block.values[g] &
+          PT$lhs %in% ov.names.x &
+          PT$user == 0L
+      )
       if (length(exo.int.idx) > 0L) {
         PT$ustart[exo.int.idx] <- as.numeric(NA) # to be overriden
         PT$free[exo.int.idx] <- 0L
         PT$exo[exo.int.idx] <- 1L
+        PT$user[exo.var.idx] <- 3L
       }
     } # blocks
   } # fixed.x
@@ -599,7 +621,8 @@ lav_partable_add_exo_cov <- function(PT, lavpta = NULL, ov.names.x = NULL) {
             rhs = tmp[2, i],
             user = 3L,
             free = max(PT$free) + 1L,
-            block = b
+            block = b,
+            ustart = as.numeric(NA)
           )
           # add group column
           if (!is.null(PT$group)) {

@@ -7,7 +7,7 @@ lav_sam_step2_se <- function(FIT = NULL, JOINT = NULL,
   # - create 'global' model, only to get the 'joint' information matrix
   # - partition information matrix (step 1, step 2)
   # - apply two-step correction for second step
-  # - 'insert' these corrected SEs (and vcov) in FIT.PA
+  # - 'insert' these corrected SEs (and vcov) in JOINT
 
   out <- list()
   Sigma.11 <- STEP1$Sigma.11
@@ -16,7 +16,7 @@ lav_sam_step2_se <- function(FIT = NULL, JOINT = NULL,
   lavoptions <- FIT@Options
   nlevels <- FIT@pta$nlevels
   FIT.PA <- STEP2$FIT.PA
-  extra.int.idx <- STEP2$extra.int.idx
+  extra.id <- STEP2$extra.id
 
   # catch empty step2.free.idx
   if (length(step2.free.idx) == 0L) {
@@ -48,20 +48,32 @@ lav_sam_step2_se <- function(FIT = NULL, JOINT = NULL,
       N <- nobs(FIT)
     }
 
+    # do we have 'extra' free parameter in FIT.PA that are not free in JOINT?
+    step2.rm.idx <- integer(0L)
+    if (length(extra.id) > 0L) {
+      id.idx <- which(FIT.PA@ParTable$id %in% extra.id &
+        FIT.PA@ParTable$free > 0L)
+      step2.rm.idx <- FIT.PA@ParTable$free[id.idx]
+    }
+
     # invert augmented information, for I.22 block only
     # new in 0.6-16 (otherwise, eq constraints in struc part are ignored)
-    I.22.inv <-
-      lav_model_information_augment_invert(
-        lavmodel = FIT.PA@Model,
-        information = I.22, inverted = TRUE
-      )
-    if (inherits(I.22.inv, "try-error")) {
-      # hm, not good
-      if (lavoptions$se != "naive") {
-        warning("lavaan WARNING: problem inverting information matrix (I.22);\n\t\t  -> switching to naive standard errors!")
-        lavoptions$se <- "naive"
+    if (lavoptions$se != "naive") {
+      I.22.inv <-
+        lav_model_information_augment_invert(
+          lavmodel = FIT.PA@Model,
+          information = I.22,
+          inverted = TRUE,
+          rm.idx = step2.rm.idx
+        )
+      if (inherits(I.22.inv, "try-error")) {
+        # hm, not good
+        if (lavoptions$se != "naive") {
+          warning("lavaan WARNING: problem inverting information matrix (I.22);\n\t\t  -> switching to naive standard errors!")
+          lavoptions$se <- "naive"
+        }
       }
-    }
+    } # se is not "naive", but based  on I.22
 
     # method below has the advantage that we can use a 'robust' vcov
     # for the joint model;
@@ -83,9 +95,8 @@ lav_sam_step2_se <- function(FIT = NULL, JOINT = NULL,
       } else {
         VCOV.naive <- FIT.PA@vcov$vcov
       }
-      if (length(extra.int.idx) > 0L) {
-        rm.idx <- FIT.PA@ParTable$free[extra.int.idx]
-        VCOV.naive <- VCOV.naive[-rm.idx, -rm.idx]
+      if (length(step2.rm.idx) > 0L) {
+        VCOV.naive <- VCOV.naive[-step2.rm.idx, -step2.rm.idx]
       }
       out$VCOV <- VCOV.naive
     } else {
@@ -130,9 +141,8 @@ lav_sam_step2_se <- function(FIT = NULL, JOINT = NULL,
         } else {
           VCOV.naive <- FIT.PA@vcov$vcov
         }
-        if (length(extra.int.idx) > 0L) {
-          rm.idx <- FIT.PA@ParTable$free[extra.int.idx]
-          VCOV.naive <- VCOV.naive[-rm.idx, -rm.idx]
+        if (length(step2.rm.idx) > 0L) {
+          VCOV.naive <- VCOV.naive[-step2.rm.idx, -step2.rm.idx]
         }
         VCOV.corrected <- V2 + V1
         VCOV <- alpha.N1 * VCOV.naive + (1 - alpha.N1) * VCOV.corrected
