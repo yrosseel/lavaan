@@ -721,6 +721,7 @@ lav_partable_vnames <- function(partable, type = NULL, ..., # nolint
             this.lv.name <- lv.names[l]
             # try to see if we can find a 'marker' indicator for this factor
             marker.idx <- which(block.ind &
+              partable$op == "=~" &
               partable$lhs == this.lv.name &
               partable$rhs %in% v.ind &
               partable$ustart == 1L &
@@ -728,6 +729,7 @@ lav_partable_vnames <- function(partable, type = NULL, ..., # nolint
             if (length(marker.idx) == 1L) { # unique only!!
               # check if 'other' loadings are fixed to zero
               other.idx <- which(block.ind &
+                partable$op == "=~" &
                 partable$lhs != this.lv.name &
                 partable$rhs == partable$rhs[marker.idx] &
                 partable$free == 0L)
@@ -1203,6 +1205,7 @@ lav_partable_vnames <- function(partable, type = NULL, ..., # nolint
             this.lv.name <- lv.names[l]
             # try to see if we can find a 'marker' indicator for this factor
             marker.idx <- which(block.ind &
+              partable$op == "=~" &
               partable$lhs == this.lv.name &
               partable$rhs %in% v.ind &
               partable$ustart == 1L &
@@ -1210,6 +1213,7 @@ lav_partable_vnames <- function(partable, type = NULL, ..., # nolint
             if (length(marker.idx) == 1L) { # unique only!!
               # check if 'other' loadings are fixed to zero
               other.idx <- which(block.ind &
+                partable$op == "=~" &
                 partable$lhs != this.lv.name &
                 partable$rhs == partable$rhs[marker.idx] &
                 partable$free == 0L)
