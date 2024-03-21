@@ -322,15 +322,19 @@ lav_sam_veta2 <- function(FS = NULL, M = NULL,
                           VETA = NULL, EETA = NULL, THETA = NULL,
                           lv.names = NULL,
                           lv.int.names = NULL,
+                          dummy.lv.names = character(0L),
                           alpha.correction = 0L,
                           lambda.correction = TRUE,
                           extra = FALSE) {
+
+  # small utility function: var() divided by N
   varn <- function(x, N) {
     var(x, use = "pairwise.complete.obs") * (N - 1) / N
   }
 
   if (length(lv.int.names) == 0L) {
-    stop("lv.int.names is empty: no lv quadratic/interaction terms are provided")
+    stop("lv.int.names is empty: no lv quadratic/interaction terms ",
+         "are provided")
   }
 
   if (is.null(lv.names)) {
@@ -342,7 +346,17 @@ lav_sam_veta2 <- function(FS = NULL, M = NULL,
 
   # new in 0.6-16: make sure MTM is pd
   # (otherwise lav_matrix_symmetric_diff_smallest_root will fail)
-  MTM <- zapsmall(lav_matrix_symmetric_force_pd(MTM, tol = 1e-04))
+  dummy.lv.idx <- which(lv.names %in% dummy.lv.names)
+  if (length(dummy.lv.idx) > 0L) {
+    MTM.nodummy <- MTM[-dummy.lv.idx, -dummy.lv.idx, drop = FALSE]
+    MTM.nodummy <- zapsmall(lav_matrix_symmetric_force_pd(
+      MTM.nodummy,
+      tol = 1e-04
+    ))
+    MTM[-dummy.lv.idx, -dummy.lv.idx] <- MTM.nodummy
+  } else {
+    MTM <- zapsmall(lav_matrix_symmetric_force_pd(MTM, tol = 1e-04))
+  }
 
   # augment to include intercept
   FS <- cbind(1, FS)
