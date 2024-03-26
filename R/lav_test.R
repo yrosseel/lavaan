@@ -5,9 +5,8 @@ lavTest <- function(lavobject, test = "standard",
                     scaled.test = "standard",
                     output = "list", drop.list.single = TRUE) {
   # check output
-  if (!output %in% c("list", "text")) {
-    stop("lavaan ERROR: output should be list or text")
-  }
+  output.valid <- c("list", "text")
+  if (!any(output == output.valid)) lav_msg_notallowed("output", output.valid)
 
   # extract 'test' slot
   TEST <- lavobject@test
@@ -16,7 +15,8 @@ lavTest <- function(lavobject, test = "standard",
   if (!missing(test)) {
     # check 'test'
     if (!is.character(test)) {
-      stop("lavaan ERROR: test should be a character string.")
+      lav_msg_stop(
+        gettextf("%s should be a character string.", "test"))
     } else {
       test <- lav_test_rename(test, check = TRUE)
     }
@@ -24,7 +24,8 @@ lavTest <- function(lavobject, test = "standard",
     # check scaled.test
     if (!missing(scaled.test)) {
       if (!is.character(scaled.test)) {
-        stop("lavaan ERROR: scaled.test should be a character string.")
+        lav_msg_stop(
+          gettextf("%s should be a character string.", "scaled.test"))
       } else {
         scaled.test <- lav_test_rename(scaled.test, check = TRUE)
       }
@@ -42,7 +43,9 @@ lavTest <- function(lavobject, test = "standard",
     if (test[1] == "none") {
       return(list())
     } else if (any(test %in% c("bootstrap", "bollen.stine"))) {
-      stop("lavaan ERROR: please use bootstrapLavaan() to obtain a bootstrap based test statistic.")
+      lav_msg_stop(gettext(
+      "please use bootstrapLavaan() to obtain a bootstrap based test statistic."
+      ))
     }
 
     # check if we already have it:
@@ -177,20 +180,21 @@ lav_test_rename <- function(test, check = FALSE) {
       "browne.residual.adf.model"
     ))
     if (length(bad.idx) > 0L) {
-      stop(
-        "lavaan ERROR: invalid value(s) in test= argument:\n\t\t",
-        paste(test[bad.idx], collapse = " "), "\n"
-      )
+      lav_msg_notallowed_multi("test", test[bad.idx])
     }
 
     # if 'default' is included, length(test) must be 1
-    if (length(test) > 1L && "default" %in% test) {
-      stop("lavaan ERROR: if test= argument contains \"default\", it cannot contain additional elements")
+    if (length(test) > 1L && any("default" == test)) {
+      lav_msg_stop(
+        gettextf("if test= argument contains \"%s\"", "default"),
+        gettext("it cannot contain additional elements"))
     }
 
     # if 'none' is included, length(test) must be 1
-    if (length(test) > 1L && "none" %in% test) {
-      stop("lavaan ERROR: if test= argument contains \"none\", it cannot contain additional elements")
+    if (length(test) > 1L && any("none" == test)) {
+      lav_msg_stop(
+        gettextf("if test= argument contains \"%s\"", "none"),
+        gettext("it cannot contain additional elements"))
     }
   }
 
@@ -219,7 +223,6 @@ lav_test_rename <- function(test, check = FALSE) {
 lav_model_test <- function(lavobject = NULL,
                            lavmodel = NULL,
                            lavpartable = NULL,
-                           lavpta = NULL,
                            lavsamplestats = NULL,
                            lavimplied = NULL,
                            lavh1 = list(),
@@ -233,8 +236,7 @@ lav_model_test <- function(lavobject = NULL,
   # lavobject?
   if (!is.null(lavobject)) {
     lavmodel <- lavobject@Model
-    lavpartable <- lavobject@ParTable
-    lavpta <- lavobject@pta
+    lavpartable <- lav_partable_set_cache(lavobject@ParTable, lavobject@pta)
     lavsamplestats <- lavobject@SampleStats
     lavimplied <- lavobject@implied
     lavh1 <- lavobject@h1
@@ -365,7 +367,6 @@ lav_model_test <- function(lavobject = NULL,
       lavmodel = lavmodel,
       lavdata = lavdata,
       lavoptions = lavoptions,
-      lavpta = lavpta,
       x = x,
       VCOV = VCOV,
       lavcache = lavcache,
@@ -546,13 +547,10 @@ lav_model_test <- function(lavobject = NULL,
         if (length(idx) > 0L) {
           unscaled.TEST <- TEST[[idx[1]]]
         } else {
-          warning(
-            "lavaan WARNING: scaled.test [",
-            lavoptions$scaled.test,
-            "] not found among available (non scaled) tests: ",
-            paste(test, collapse = " "), "\n\t\t",
-            "Using standard test instead."
-          )
+          lav_msg_warn(gettextf(
+            "scaled.test [%s] not found among available (non scaled) tests:",
+            lavoptions$scaled.test), lav_msg_view(test),
+            gettext("Using standard test instead."))
         }
       }
 
@@ -585,13 +583,10 @@ lav_model_test <- function(lavobject = NULL,
         if (length(idx) > 0L) {
           unscaled.TEST <- TEST[[idx[1]]]
         } else {
-          warning(
-            "lavaan WARNING: scaled.test [",
-            lavoptions$scaled.test,
-            "] not found among available (non scaled) tests: ",
-            paste(test, collapse = " "), "\n\t\t",
-            "Using standard test instead."
-          )
+          lav_msg_warn(gettextf(
+            "scaled.test [%s] not found among available (non scaled) tests:",
+            lavoptions$scaled.test), lav_msg_view(test),
+            gettext("Using standard test instead."))
         }
       }
 
@@ -641,18 +636,16 @@ lav_model_test <- function(lavobject = NULL,
         error.idx <- attr(BOOT.TEST, "error.idx")
         nfailed <- length(attr(BOOT.TEST, "error.idx")) # zero if NULL
         if (nfailed > 0L && lavoptions$warn) {
-          warning(
-            "lavaan WARNING: ", nfailed,
-            " bootstrap runs failed or did not converge."
-          )
+          lav_msg_warn(gettextf(
+            "%d bootstrap runs failed or did not converge.", nfailed
+          ))
         }
 
         notok <- length(attr(BOOT.TEST, "nonadmissible")) # zero if NULL
         if (notok > 0L && lavoptions$warn) {
-          warning(
-            "lavaan WARNING: ", notok,
-            " bootstrap runs resulted in nonadmissible solutions."
-          )
+          lav_msg_warn(gettextf(
+            "%d bootstrap runs resulted in nonadmissible solutions.", notok
+          ))
         }
 
         if (length(error.idx) > 0L) {

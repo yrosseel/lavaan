@@ -46,19 +46,10 @@ lav_sam_step2 <- function(STEP1 = NULL, FIT = NULL,
   if (sam.method %in% c("local", "fsr")) {
     # extract structural part
     PTS <- lav_partable_subset_structural_model(PT,
-      lavpta = lavpta,
       add.idx = TRUE,
-      add.exo.cov = TRUE,
       fixed.x = lavoptions.PA$fixed.x,
-      meanstructure = lavoptions.PA$meanstructure
+      add.exo.cov = TRUE
     )
-
-    # any 'extra' parameters: not (free) in PT, but free in PTS (user == 3)
-    #  - fixed.x in PT, but fixed.x = FALSE is PTS
-    #  - fixed-to-zero interceps in PT, but free in PTS
-    #  - add.exo.cov: absent/fixed-to-zero in PT, but add/free in PTS
-    extra.id <- which(PTS$user == 3L)
-
     # remove est/se/start columns
     PTS$est <- NULL
     PTS$se <- NULL
@@ -72,24 +63,21 @@ lav_sam_step2 <- function(STEP1 = NULL, FIT = NULL,
     } else {
       NOBS <- FIT@Data@nobs
     }
-
     # if meanstructure, 'free' user=0 intercepts?
-    # if (lavoptions.PA$meanstructure) {
-    #   extra.int.idx <- which(PTS$op == "~1" & PTS$user == 0L &
-    #     PTS$free == 0L &
-    #     PTS$exo == 0L) # needed?
-    #   if (length(extra.int.idx) > 0L) {
-    #     PTS$free[extra.int.idx] <- 1L
-    #     PTS$ustart[extra.int.idx] <- as.numeric(NA)
-    #     PTS$free[PTS$free > 0L] <-
-    #       seq_len(length(PTS$free[PTS$free > 0L]))
-    #     PTS$user[extra.int.idx] <- 3L
-    #   }
-    # } else {
-    #   extra.int.idx <- integer(0L)
-    # }
-    # extra.id <- c(extra.id, extra.int.idx)
-
+    if (lavoptions.PA$meanstructure) {
+      extra.int.idx <- which(PTS$op == "~1" & PTS$user == 0L &
+        PTS$free == 0L &
+        PTS$exo == 0L) # needed?
+      if (length(extra.int.idx) > 0L) {
+        PTS$free[extra.int.idx] <- 1L
+        PTS$ustart[extra.int.idx] <- as.numeric(NA)
+        PTS$free[PTS$free > 0L] <-
+          seq_len(length(PTS$free[PTS$free > 0L]))
+        PTS$user[extra.int.idx] <- 3L
+      }
+    } else {
+      extra.int.idx <- integer(0L)
+    }
     reg.idx <- attr(PTS, "idx")
     attr(PTS, "idx") <- NULL
   } else {
@@ -100,7 +88,6 @@ lav_sam_step2 <- function(STEP1 = NULL, FIT = NULL,
 
     reg.idx <- lav_partable_subset_structural_model(
       PT = PT,
-      lavpta = lavpta,
       idx.only = TRUE
     )
 
@@ -135,14 +122,13 @@ lav_sam_step2 <- function(STEP1 = NULL, FIT = NULL,
     PTS$est <- NULL
     PTS$se <- NULL
 
-    PTS$free[!PTS$id %in% reg.idx & PTS$free > 0L] <- 0L
+    PTS$free[!seq_len(length(PTS$lhs)) %in% reg.idx & PTS$free > 0L] <- 0L
+    PTS$free[PTS$free > 0L] <- seq_len(sum(PTS$free > 0L))
 
     # set 'ustart' values for free FIT.PA parameter to NA
     PTS$ustart[PTS$free > 0L] <- as.numeric(NA)
 
-    PTS <- lav_partable_complete(PTS)
-
-    extra.id <- extra.int.idx <- integer(0L)
+    extra.int.idx <- integer(0L)
   } # global
 
   # fit structural model
@@ -193,7 +179,7 @@ lav_sam_step2 <- function(STEP1 = NULL, FIT = NULL,
 
   STEP2 <- list(
     FIT.PA = FIT.PA, PT = PT, reg.idx = reg.idx,
-    step2.free.idx = step2.free.idx, extra.id = extra.id
+    step2.free.idx = step2.free.idx, extra.int.idx = extra.int.idx
   )
 
   STEP2

@@ -15,7 +15,7 @@ lav_object_independence <- function(object = NULL,
                                     lavdata = NULL,
                                     lavcache = NULL,
                                     lavoptions = NULL,
-                                    lavpta = NULL,
+                                    lavpartable = NULL,
                                     lavh1 = NULL,
                                     # local options
                                     se = FALSE,
@@ -43,6 +43,9 @@ lav_object_independence <- function(object = NULL,
     if (is.null(lavoptions$estimator.args)) {
       lavoptions$estimator.args <- list()
     }
+  } else {
+    lavpta <- lav_partable_attributes(lavpartable)
+    lavpartable <- lav_partable_set_cache(lavpartable, lavpta)
   }
 
   # if two-level, force conditional.x = FALSE (for now)
@@ -64,7 +67,7 @@ lav_object_independence <- function(object = NULL,
     lavoptions$optim.bounds <- list(lower = "ov.var")
     lavpartable <- lav_partable_add_bounds(
       partable = lavpartable,
-      lavpta = lavpta, lavh1 = lavh1, lavdata = lavdata,
+      lavh1 = lavh1, lavdata = lavdata,
       lavsamplestats = lavsamplestats, lavoptions = lavoptions
     )
   }

@@ -1,21 +1,21 @@
 ctr_pml_plrt2 <- function(lavobject = NULL, lavmodel = NULL, lavdata = NULL,
                           lavsamplestats = NULL, lavpartable = NULL,
-                          lavpta = NULL,
                           lavoptions = NULL, x = NULL, VCOV = NULL,
                           lavcache = NULL) {
+  lavpta <- NULL
   if (!is.null(lavobject)) {
     lavmodel <- lavobject@Model
     lavdata <- lavobject@Data
     lavoptions <- lavobject@Options
     lavsamplestats <- lavobject@SampleStats
     lavcache <- lavobject@Cache
-    lavpartable <- lavobject@ParTable
+    lavpartable <- lav_partable_set_cache(lavobject@ParTable, lavobject@pta)
     lavpta <- lavobject@pta
   }
   if (is.null(lavpta)) {
     lavpta <- lav_partable_attributes(lavpartable)
+    lavpartable <- lav_partable_set_cache(lavpartable, lavpta)
   }
-
 
   if (is.null(x)) {
     # compute 'fx' = objective function value
@@ -95,7 +95,8 @@ ctr_pml_plrt2 <- function(lavobject = NULL, lavmodel = NULL, lavdata = NULL,
 
   ########################### The code for PLRT for overall goodness of fit
 
-  ##### Section 1. Compute the asymptotic mean and variance of the first quadratic quantity
+  ##### Section 1. Compute the asymptotic mean and variance
+  #####            of the first quadratic quantity
   # if(is.null(VCOV)) {
   #    VCOV <- lav_model_vcov(lavmodel       = lavmodel,
   #                           lavsamplestats = lavsamplestats,
@@ -145,7 +146,8 @@ ctr_pml_plrt2 <- function(lavobject = NULL, lavmodel = NULL, lavdata = NULL,
   E_tww <- sum(diag(H0tmp_prod1))
   var_tww <- 2 * sum(diag(H0tmp_prod2))
 
-  ##### Section 2: Compute the asymptotic mean and variance of the second quadratic quantity.
+  ##### Section 2: Compute the asymptotic mean and variance
+  #####            of the second quadratic quantity.
   tmp.options <- fittedSat2@Options
   tmp.options$se <- "robust.huber.white"
   VCOV.Sat2 <- lav_model_vcov(
@@ -169,7 +171,8 @@ ctr_pml_plrt2 <- function(lavobject = NULL, lavmodel = NULL, lavdata = NULL,
   var_tzz <- 2 * sum(diag(H1tmp_prod2))
 
 
-  ##### Section 3: Compute the asymptotic covariance of the two quadratic quantities
+  ##### Section 3: Compute the asymptotic covariance
+  #####            of the two quadratic quantities
 
   drhodpsi_MAT <- vector("list", length = lavsamplestats@ngroups)
   group.values <- lav_partable_group_values(fittedSat2@ParTable)
@@ -217,8 +220,10 @@ ctr_pml_plrt2 <- function(lavobject = NULL, lavmodel = NULL, lavdata = NULL,
   asym_var_PLRTH0Sat <- var_tzz + var_tww - 2 * cov_tzztww
   scaling.factor <- (asym_mean_PLRTH0Sat / (asym_var_PLRTH0Sat / 2))
   FSA_PLRT_SEM <- (asym_mean_PLRTH0Sat / (asym_var_PLRTH0Sat / 2)) * PLRTH0Sat
-  adjusted_df <- (asym_mean_PLRTH0Sat * asym_mean_PLRTH0Sat) / (asym_var_PLRTH0Sat / 2)
-  # In some very few cases (simulations show very few cases in small sample sizes)
+  adjusted_df <- (asym_mean_PLRTH0Sat * asym_mean_PLRTH0Sat) /
+    (asym_var_PLRTH0Sat / 2)
+  # In some very few cases (simulations show very few cases
+  #                         in small sample sizes)
   # the adjusted_df is a negative number, we should then
   # print a warning like: "The adjusted df is computed to be a negative number
   # and for this the first and second moment adjusted PLRT is not computed." .

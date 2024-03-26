@@ -50,7 +50,6 @@ lav_lavaan_step11_estoptim <- function(lavdata = NULL, # nolint
   # store optimization info in lavoptim
 
   x <- NULL
-  lavpta <- lav_partable_attributes(lavpartable)
   if (lavoptions$do.fit && lavoptions$estimator != "none" &&
     lavmodel@nx.free > 0L) {
     if (lavoptions$verbose) {
@@ -65,7 +64,6 @@ lav_lavaan_step11_estoptim <- function(lavdata = NULL, # nolint
           lavsamplestats = lavsamplestats,
           lavdata = lavdata,
           lavpartable = lavpartable,
-          lavpta = lavpta,
           lavoptions = lavoptions
         ),
         silent = TRUE
@@ -218,7 +216,6 @@ lav_lavaan_step11_estoptim <- function(lavdata = NULL, # nolint
               lav_model_estimate(
                 lavmodel = lavmodel,
                 lavpartable = lavpartable,
-                lavpta = lavpta,
                 lavsamplestats = lavsamplestats,
                 lavdata = lavdata,
                 lavoptions = lavoptions,
@@ -265,7 +262,7 @@ lav_lavaan_step11_estoptim <- function(lavdata = NULL, # nolint
 
     # optimization failed with error
     if (inherits(x, "try-error")) {
-      warn.txt <- "Model estimation FAILED! Returning starting values."
+      warn.txt <- gettext("Model estimation FAILED! Returning starting values.")
       x <- lav_model_get_parameters(
         lavmodel = lavmodel,
         type = "free"
@@ -283,7 +280,7 @@ lav_lavaan_step11_estoptim <- function(lavdata = NULL, # nolint
     # if a warning was produced, say it here
     warn.txt <- attr(x, "warn.txt")
     if (lavoptions$warn && nchar(warn.txt) > 0L) {
-      warning(lav_txt2message(warn.txt))
+      lav_msg_warn(warn.txt)
     }
 
     # in case of non-linear constraints: store final con.jac and con.lambda
@@ -364,6 +361,7 @@ lav_lavaan_step11_estoptim <- function(lavdata = NULL, # nolint
     lavoptim$x.rstarts <- attr(x, "x.rstarts")
   }
 
+  lavpartable <- lav_partable_set_cache(lavpartable, force = TRUE)
   list(
     lavoptim = lavoptim, lavmodel = lavmodel, lavpartable = lavpartable,
     x = x

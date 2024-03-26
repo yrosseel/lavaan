@@ -15,7 +15,6 @@ lav_lavaan_step15_baseline <- function(lavoptions = NULL,
   #     lavbaseline < list()
   #   else
   #     lavbaseline <- list with partable and test of fit.indep
-  lavpta <- lav_partable_attributes(lavpartable)
   lavbaseline <- list()
   if (lavoptions$do.fit &&
     !("none" %in% lavoptions$test) &&
@@ -29,13 +28,13 @@ lav_lavaan_step15_baseline <- function(lavoptions = NULL,
       lavdata = lavdata,
       lavcache = lavcache,
       lavoptions = lavoptions,
-      lavpta = lavpta,
+      lavpartable = lavpartable,
       lavh1 = lavh1
     ), silent = TRUE)
     if (inherits(fit.indep, "try-error") ||
       !fit.indep@optim$converged) {
       if (lavoptions$warn) {
-        warning("lavaan WARNING: estimation of the baseline model failed.")
+        lav_msg_warn(gettext("estimation of the baseline model failed."))
       }
       lavbaseline <- list()
       if (lavoptions$verbose) {

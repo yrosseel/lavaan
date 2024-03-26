@@ -6,11 +6,12 @@
 #
 # YR 26 Feb 2024
 
-lav_partable_random <- function(lavpartable = NULL, lavpta = NULL,
+lav_partable_random <- function(lavpartable = NULL,
                                 # needed if we still need to compute bounds:
                                 lavh1 = NULL, lavdata = NULL,
                                 lavsamplestats = NULL, lavoptions = NULL) {
   # check if we have bounds; if not, add them
+  lavpta <- lav_partable_attributes(lavpartable)
   if (is.null(lavpartable$lower) ||
     is.null(lavpartable$upper)) {
     lavoptions2 <- lavoptions
@@ -32,7 +33,7 @@ lav_partable_random <- function(lavpartable = NULL, lavpta = NULL,
       )
     lavpartable <- lav_partable_add_bounds(
       partable = lavpartable,
-      lavpta = lavpta, lavh1 = lavh1, lavdata = lavdata,
+      lavh1 = lavh1, lavdata = lavdata,
       lavsamplestats = lavsamplestats, lavoptions = lavoptions2
     )
   }

@@ -49,9 +49,9 @@ lavGamma <- function(object, group = NULL, missing = "listwise",
       )
     )
   } else {
-    stop(
-      "lavaan ERROR: lavGamma can not handle objects of class ",
-      paste(class(object), collapse = " ")
+    lav_msg_stop(
+      gettextf("lavGamma can not handle objects of class %s",
+                lav_msg_view(class(object)))
     )
   }
 
@@ -141,7 +141,7 @@ lav_object_gamma <- function(lavobject = NULL,
       out <- lav_h1_implied_logl(
         lavdata = lavdata,
         lavsamplestats = lavsamplestats,
-        lavpta = lavobject@pta,
+        lavpartable = lavobject@ParTable,
         lavoptions = lavoptions
       )
       h1.implied <- out$implied
@@ -169,7 +169,8 @@ lav_object_gamma <- function(lavobject = NULL,
   gamma.unbiased <- lavoptions$gamma.unbiased
 
   if (ADF && model.based && conditional.x) {
-    stop("lavaan ERROR: ADF + model.based + conditional.x is not supported yet.")
+    lav_msg_stop(gettext(
+      "ADF + model.based + conditional.x is not supported yet."))
   }
 
   # output container
@@ -295,10 +296,10 @@ lav_samplestats_Gamma_NT <- function(Y = NULL, # should include
     }
   } else {
     if (!missing(rescale)) {
-      warning("lavaan WARNING: rescale= argument has no effect if COV is given")
+      lav_msg_warn(gettext("rescale= argument has no effect if COV is given"))
     }
     if (!missing(wt)) {
-      warning("lavaan WARNING: wt= argument has no effect if COV is given")
+      lav_msg_warn(gettext("wt= argument has no effect if COV is given"))
     }
   }
 
@@ -435,7 +436,9 @@ lav_samplestats_Gamma <- function(Y, # Y+X if cond!
   if (unbiased) {
     if (conditional.x || fixed.x || !is.null(Sigma) ||
       !is.null(cluster.idx)) {
-      stop("lavaan ERROR: unbiased Gamma only available for the simple (not conditional.x or fixed.x or model-based or clustered) setting.")
+      lav_msg_stop(
+        gettext("unbiased Gamma only available for the simple"), gettext(
+        "(not conditional.x or fixed.x or model-based or clustered) setting."))
     } else {
       COV <- COV.unbiased <- cov(Y)
       COV <- COV * (N - 1) / N

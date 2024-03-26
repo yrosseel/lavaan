@@ -19,7 +19,6 @@ lav_lavaan_step14_test <- function(lavoptions = NULL,
   #   lavtest <- list(list(test = "none", stat = NA,
   #                        stat.group = rep(NA, lavdata@ngroups),
   #                        df = NA, refdistr = "unknown", pvalue = NA))
-  lavpta <- lav_partable_attributes(lavpartable)
   lavtest <- NULL
   if (!(length(lavoptions$test) == 1L && lavoptions$test == "none") &&
     attr(x, "converged")) {
@@ -29,7 +28,6 @@ lav_lavaan_step14_test <- function(lavoptions = NULL,
     lavtest <- lav_model_test(
       lavmodel = lavmodel,
       lavpartable = lavpartable,
-      lavpta = lavpta,
       lavsamplestats = lavsamplestats,
       lavimplied = lavimplied,
       lavh1 = lavh1,

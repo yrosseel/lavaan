@@ -30,7 +30,7 @@ lav_lavaan_step06_h1 <- function(sloth1 = NULL,
         lavh1 <- lav_h1_implied_logl(
           lavdata = lavdata,
           lavsamplestats = lavsamplestats,
-          lavpta = lav_partable_attributes(lavpartable),
+          lavpartable = lavpartable,
           lavoptions = lavoptions
         )
         if (lavoptions$debug) {
@@ -44,7 +44,7 @@ lav_lavaan_step06_h1 <- function(sloth1 = NULL,
       }
     } else {
       if (!is.logical(lavoptions$h1)) {
-        stop("lavaan ERROR: argument `h1' must be logical (for now)")
+        lav_msg_stop(gettext("argument `h1' must be logical (for now)"))
       }
       # TODO: allow h1 to be either a model syntax, a parameter table,
       # or a fitted lavaan object

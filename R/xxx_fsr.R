@@ -109,11 +109,11 @@ fsr <- function(model = NULL,
   lavoptions$test <- dotdotdot$test
   ngroups <- lavInspect(FIT, "ngroups")
   lavpta <- FIT@pta
-  lavpartable <- FIT@ParTable
+  lavpartable <- lav_partable_set_cache(FIT@ParTable, lavpta)
 
   # FIXME: not ready for multiple groups yet
   if (ngroups > 1L) {
-    stop("lavaan ERROR: fsr code not ready for multiple groups (yet)")
+    lav_msg_stop(gettext("fsr code not ready for multiple groups (yet)"))
   }
 
   # if missing = "listwise", make data complete
@@ -142,16 +142,16 @@ fsr <- function(model = NULL,
   lv.names <- lv.names[good.idx]
 
   if (length(lv.names) == 0L) {
-    stop("lavaan ERROR: model does not contain any (measured) latent variables")
+    lav_msg_stop(gettext("model does not contain any (measured) latent variables"))
   }
   nfac <- length(lv.names)
 
   # check parameter table
-  PT <- parTable(FIT)
+  PT <- lav_partable_set_cache(parTable(FIT))
   PT$est <- PT$se <- NULL
 
   # extract structural part
-  PT.PA <- lav_partable_subset_structural_model(PT, lavpta = lavpta)
+  PT.PA <- lav_partable_subset_structural_model(PT)
 
   # check if we can use skrondal & laake (no mediational terms?)
   if (fsr.method == "skrondal.laake") {
@@ -160,7 +160,10 @@ fsr <- function(model = NULL,
     eqs.y.names <- unlist(FIT@pta$vnames$eqs.y)
     eqs.names <- unique(c(eqs.x.names, eqs.y.names))
     if (any(eqs.x.names %in% eqs.y.names)) {
-      stop("lavaan ERROR: mediational relationships are not allowed for the Skrondal.Laake method; use ", sQuote("Croon"), " instead.")
+      lav_msg_stop(
+        gettextf("mediational relationships are not allowed for the
+                 Skrondal.Laake method; use %s instead.",
+                 dQuote("Croon")))
     }
   }
 
@@ -170,18 +173,17 @@ fsr <- function(model = NULL,
   # how many measurement models?
   if (!is.null(mm.list)) {
     if (fsr.method != "simple") {
-      stop("lavaan ERROR: mm.list only available if fsr.method = \"simple\"")
+      lav_msg_stop(gettext("mm.list only available if fsr.method = \"simple\""))
     }
 
     nblocks <- length(mm.list)
     # check each measurement block
     for (b in seq_len(nblocks)) {
       if (!all(mm.list[[b]] %in% lv.names)) {
-        stop(
-          "lavaan ERROR: mm.list contains unknown latent variable(s):",
-          paste(mm.list[[b]][mm.list[[b]] %in% lv.names], sep = " "),
-          "\n"
-        )
+        lav_msg_stop(
+          gettextf("mm.list contains unknown latent variable(s): %s",
+            lav_msg_view(mm.list[[b]][mm.list[[b]] %in% lv.names],
+                         log.sep = "none")))
       }
     }
   } else {
@@ -225,7 +227,6 @@ fsr <- function(model = NULL,
     PT.block <-
       lav_partable_subset_measurement_model(
         PT = PT,
-        lavpta = lavpta,
         add.lv.cov = TRUE,
         lv.names = mm.list[[b]]
       )
@@ -238,9 +239,9 @@ fsr <- function(model = NULL,
     )
     # check convergence
     if (!lavInspect(fit.block, "converged")) {
-      stop(
-        "lavaan ERROR: measurement model for ",
-        paste(mm.list[[b]], collapse = " "), " did not converge."
+      lav_msg_stop(
+        gettextf("measurement model for %s did not converge.",
+        lav_msg_view(mm.list[[b]]))
       )
     }
     # store fitted measurement model
@@ -412,12 +413,11 @@ fsr <- function(model = NULL,
       paste(lv.names, ".si", sep = "")
 
     # check if FSR.COV is positive definite for all groups
-    txt.group <- ifelse(ngroups > 1L, paste(" in group ", g, sep = ""), "")
     eigvals <- eigen(FSR.COV[[g]], symmetric = TRUE, only.values = TRUE)$values
     if (any(eigvals < .Machine$double.eps^(3 / 4))) {
-      stop(
-        "lavaan ERROR: corrected covariance matrix of factor scores\n",
-        "                is not positive definite", txt.group, ";\n"
+      lav_msg_stop(gettext(
+        "corrected covariance matrix of factor scores is not positive definite"),
+        sprintf(ngettext(ngroups, "", "in group %s"), g)
       )
     }
   } # g

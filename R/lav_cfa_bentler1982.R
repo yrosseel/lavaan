@@ -214,36 +214,40 @@ lav_cfa_bentler1982_internal <- function(lavobject = NULL, # convenience
                                          lavmodel = NULL,
                                          lavsamplestats = NULL,
                                          lavpartable = NULL,
-                                         lavpta = NULL,
                                          lavdata = NULL,
                                          lavoptions = NULL,
                                          GLS = TRUE,
                                          min.reliability.marker = 0.1,
                                          quadprog = FALSE,
                                          nobs = 20L) {
+  lavpta <- NULL
   if (!is.null(lavobject)) {
     stopifnot(inherits(lavobject, "lavaan"))
-
     # extract slots
     lavmodel <- lavobject@Model
     lavsamplestats <- lavobject@SampleStats
-    lavpartable <- lavobject@ParTable
+    lavpartable <- lav_partable_set_cache(lavobject@ParTable, lavobject@pta)
     lavpta <- lavobject@pta
     lavdata <- lavobject@Data
     lavoptions <- lavobject@Options
   }
-
+  if (is.null(lavpta)) {
+    lavpta <- lav_partable_attributes(lavpartable)
+    lavpartable <- lav_partable_set_cache(lavpartable, lavpta)
+  }
   # no structural part!
   if (any(lavpartable$op == "~")) {
-    stop("lavaan ERROR: bentler1982 estimator only available for CFA models")
+    lav_msg_stop(gettext("bentler1982 estimator only available for CFA models"))
   }
   # no BETA matrix! (i.e., no higher-order factors)
   if (!is.null(lavmodel@GLIST$beta)) {
-    stop("lavaan ERROR: bentler1982 estimator not available for models the require a BETA matrix")
+    lav_msg_stop(gettext("bentler1982 estimator not available"),
+                 gettext("for models the require a BETA matrix"))
   }
   # no std.lv = TRUE for now
   if (lavoptions$std.lv) {
-    stop("lavaan ERROR: bentler1982 estimator not available if std.lv = TRUE")
+    lav_msg_stop(gettext(
+      "bentler1982 estimator not available if std.lv = TRUE"))
   }
 
   nblocks <- lav_partable_nblocks(lavpartable)
@@ -264,7 +268,8 @@ lav_cfa_bentler1982_internal <- function(lavobject = NULL, # convenience
   m.theta <- lavmodel@m.free.idx[[theta.idx]]
   nondiag.idx <- m.theta[!m.theta %in% lav_matrix_diag_idx(nvar)]
   if (length(nondiag.idx) > 0L) {
-    warning("lavaan WARNING: this implementation of FABIN does not handle correlated residuals yet!")
+    lav_msg_warn(gettext(
+      "this implementation of FABIN does not handle correlated residuals yet!"))
   }
 
   if (!missing(GLS)) {

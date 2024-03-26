@@ -43,12 +43,11 @@ lavInspect.lavaan <- function(object,                                # nolint
 
   # only a single argument
   if (length(what) > 1) {
-    stop("`what' arguments contains multiple arguments; only one is allowed")
+    lav_msg_only1_stop("what")
   }
 
   # be case insensitive
   what <- tolower(what)
-
 
   #### model matrices, with different contents ####
   if (what == "free") {
@@ -624,7 +623,7 @@ lavInspect.lavaan <- function(object,                                # nolint
 
     #### not found ####
   } else {
-    stop("unknown `what' argument in inspect function: `", what, "'")
+    lav_msg_unknown("what", what)
   }
 
 }
@@ -705,7 +704,7 @@ lav_object_inspect_boot <- function(object, add.labels = FALSE,
 
   if (object@Options$se   != "bootstrap" &&
     !any(c("bootstrap", "bollen.stine") %in% object@Options$test)) {
-    stop("lavaan ERROR: bootstrap was not used.")
+    lav_msg_stop(gettext("bootstrap was not used."))
   }
 
   # from 0.5-19. they are in a separate slot
@@ -805,7 +804,7 @@ lav_object_inspect_modelmatrices <- function(object, what = "free", # nolint
         m.el.idx <- object@Model@m.user.idx[[mm]]
         x.el.idx <- object@Model@x.user.idx[[mm]]
       } else {
-        stop("lavaan ERROR: unknown type argument:", type, )
+        lav_msg_unknown("type", type)
       }
       # erase everything
       glist[[mm]][, ] <- 0.0
@@ -983,8 +982,8 @@ lav_object_inspect_sampstat <- function(object, h1 = TRUE,        # nolint
 
   # if h1 = FALSE and nlevels > 1L, nothing can show...
   if (!h1 && object@Data@nlevels > 1L) {
-    stop("lavaan ERROR: sample statistics not available;",
-         " refit with option h1 = TRUE")
+    lav_msg_stop(gettext(
+      "sample statistics not available; refit with option h1 = TRUE"))
   }
 
   return.value <- vector("list", length = nblocks)
@@ -2614,9 +2613,10 @@ lav_object_inspect_vcov <- function(object, standardized = FALSE,
       dup.flag <- duplicated(tmp.lab)
       return.value <- return.value[!dup.flag, !dup.flag, drop = FALSE]
     } else {
-      warning("lavaan WARNING: alias is TRUE,",
-              " but equality constraints do not appear to be simple;",
-              " returning full vcov")
+      lav_msg_warn(
+        gettext("alias is TRUE,"),
+        gettext("but equality constraints do not appear to be simple;"),
+        gettext("returning full vcov"))
     }
   }
 
@@ -2769,7 +2769,7 @@ lav_object_inspect_delta <- function(object,
   lavpta      <- object@pta
 
   return.value <- lav_object_inspect_delta_internal(lavmodel = lavmodel,
-    lavdata = lavdata, lavpartable = lavpartable, lavpta = lavpta,
+    lavdata = lavdata, lavpartable = lavpartable, 
     add.labels = add.labels, add.class = add.class,
     drop.list.single.group = drop.list.single.group)
 
@@ -2780,7 +2780,6 @@ lav_object_inspect_delta_rownames <- function(                # nolint
     object,
     lavmodel = NULL,
     lavpartable = NULL,
-    lavpta = NULL,
     drop.list.single.group = FALSE) {
   if (!is.null(object)) {
     lavmodel    <- object@Model
@@ -2789,6 +2788,7 @@ lav_object_inspect_delta_rownames <- function(                # nolint
     lavdata     <- object@Data
   } else {
     lavdata     <- NULL
+    lavpta <- lav_partable_attributes(lavpartable)
   }
 
   categorical    <- lavmodel@categorical
@@ -2802,10 +2802,6 @@ lav_object_inspect_delta_rownames <- function(                # nolint
   num.idx        <- lavmodel@num.idx
   th.idx         <- lavmodel@th.idx
   nblocks        <- lavmodel@nblocks
-
-  if (is.null(lavpta)) {
-    lavpta <- lav_partable_attributes(lavpartable)
-  }
 
   # store names per block, rbind later
   tmp.names <- vector("list", length = nblocks)
@@ -2915,7 +2911,7 @@ lav_object_inspect_delta_rownames <- function(                # nolint
 
 lav_object_inspect_delta_internal <- function(                   # nolint
     lavmodel = NULL, lavdata  = NULL,
-    lavpartable = NULL, lavpta = NULL,
+    lavpartable = NULL,
     add.labels = FALSE, add.class = FALSE, drop.list.single.group = FALSE) {
 
   return.value <- computeDelta(lavmodel)
@@ -2924,7 +2920,7 @@ lav_object_inspect_delta_internal <- function(                   # nolint
     tmp.pnames <- lav_partable_labels(lavpartable, type = "free")
     tmp.rownames  <- lav_object_inspect_delta_rownames(object = NULL,
       lavmodel = lavmodel, lavpartable = lavpartable,
-      lavpta = lavpta, drop.list.single.group = FALSE)
+      drop.list.single.group = FALSE)
   }
 
   for (g in seq_len(lavmodel@ngroups)) {
@@ -2958,7 +2954,7 @@ lav_object_inspect_zero_cell_tables <-                          # nolint
             drop.list.single.group = FALSE) {
   # categorical?
   if (!object@Model@categorical) {
-    warning("lavaan WARNING: no categorical variables in fitted model")
+    lav_msg_warn(gettext("no categorical variables in fitted model"))
     return(invisible(list()))
   }
 
@@ -2998,7 +2994,7 @@ lav_object_inspect_coef <- function(object, type = "free",
     #idx <- which(object@ParTable$free > 0L & !duplicated(object@ParTable$free))
     idx <- which(object@ParTable$free > 0L)
   } else {
-    stop("lavaan ERROR: argument `type' must be one of free or user")
+    lav_msg_notallowed("type", c("free", "user"))
   }
   tmp.est <- lav_object_inspect_est(object)
   cof <- tmp.est[idx]
@@ -3038,12 +3034,12 @@ lav_object_inspect_icc <- function(object, add.labels = FALSE,
 
   # multilevel?
   if (lavdata@nlevels == 1L) {
-    stop("lavaan ERROR: intraclass correlation only",
-         " available for clustered data")
+    lav_msg_stop(gettext(
+      "intraclass correlation only available for clustered data"))
   }
 
   if (length(object@h1) == 0L) {
-    stop("lavaan ERROR: h1 slot is of available; refit with h1 = TRUE")
+    lav_msg_stop(gettext("h1 slot is not available; refit with h1 = TRUE"))
   }
 
   # implied statistics
@@ -3099,8 +3095,8 @@ lav_object_inspect_ranef <- function(object, add.labels = FALSE,
 
   # multilevel?
   if (lavdata@nlevels == 1L) {
-    stop("lavaan ERROR: random effects only available for",
-         " clustered data (in the long format)")
+    lav_msg_stop(gettext(
+      "random effects only available for clustered data (in the long format)"))
   }
 
   # implied statistics
@@ -3163,14 +3159,15 @@ lav_object_inspect_loglik_casewise <- function(object, log. = TRUE, # nolint
 
   # multilevel?
   if (lavdata@nlevels > 1L) {
-    stop("lavaan ERROR: casewise (log)likeloods contributions not yet",
-         " available for clustered data")
+    lav_msg_stop(gettext(
+  "casewise (log)likeloods contributions not yet available for clustered data"))
   }
 
   # estimator ML?
   if (object@Options$estimator != "ML") {
-    stop("lavaan ERROR: casewise (log)likeloods contributions",
-         " only available for estimator = ", dQuote("ML"))
+    lav_msg_stop(gettextf(
+      "casewise (log)likeloods contributions only available for estimator = %s",
+      dQuote("ML")))
   }
 
   for (g in 1:n.g) {
@@ -3185,7 +3182,7 @@ lav_object_inspect_loglik_casewise <- function(object, log. = TRUE, # nolint
     } else { # single-level, complete data
       if (lavoptions$conditional.x) {
         if (!is.null(lavdata@weights[[g]])) {
-          stop("lavaan ERROR: no support (yet) if weights are used.")
+          lav_msg_stop(gettext("no support (yet) if weights are used."))
         }
         return.value[[g]] <- lav_mvreg_loglik_data(
           Y          = lavdata@X[[g]],

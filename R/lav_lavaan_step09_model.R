@@ -28,7 +28,6 @@ lav_lavaan_step09_model <- function(slotModel = NULL, # nolint
     }
     lavmodel <- lav_model(
       lavpartable = lavpartable,
-      lavpta = lav_partable_attributes(lavpartable),
       lavoptions = lavoptions,
       th.idx = lavsamplestats@th.idx
     )
@@ -54,10 +53,9 @@ lav_lavaan_step09_model <- function(slotModel = NULL, # nolint
             lavpartable$lhs %in% unlist(attr(lavpartable, "vnames")$ov.ord) &
             lavpartable$user == 1L)
           if (length(user.var.idx)) {
-            warning(
-              "lavaan WARNING: ",
-              "variance (theta) values for categorical variables are ignored",
-              "\n\t\t  if parameterization = \"delta\"!"
+            lav_msg_warn(
+              gettext("variance (theta) values for categorical variables"),
+              gettextf("are ignored if parameterization = %s!", "'delta'")
             )
           }
         } else if (lavmodel@parameterization == "theta") {
@@ -67,10 +65,9 @@ lav_lavaan_step09_model <- function(slotModel = NULL, # nolint
             lavpartable$lhs %in% unlist(attr(lavpartable, "vnames")$ov.ord) &
             lavpartable$user == 1L)
           if (length(user.delta.idx)) {
-            warning(
-              "lavaan WARNING: ",
-              "scaling (~*~) values for categorical variables are ignored",
-              "\n\t\t  if parameterization = \"theta\"!"
+            lav_msg_warn(
+              gettext("scaling (~*~) values for categorical variables"),
+              gettextf("are ignored if parameterization = %s!", "'theta'")
             )
           }
         }

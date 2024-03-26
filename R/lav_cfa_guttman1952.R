@@ -62,7 +62,7 @@ lav_cfa_guttman1952 <- function(S,
       silent = TRUE
     )
     if (inherits(lambda, "try-error")) {
-      warning("lavaan WARNING: failed to compute lambda")
+      lav_msg_warn(gettext("failed to compute lambda"))
       SminTheta <- S - diag.theta # and hope for the best
     } else {
       cutoff <- 1 + 1 / (nobs - 1)
@@ -128,7 +128,7 @@ lav_cfa_guttman1952 <- function(S,
       meq = length(eq.idx), bvec = bvec
     ), silent = TRUE)
     if (inherits(out, "try-error")) {
-      warning("lavaan WARNING: solve.QP failed to find a solution")
+      lav_msg_warn(gettext("solve.QP failed to find a solution"))
       Lambda <- B
       Lambda[lambda.nonzero.idx] <- as.numeric(NA)
       Theta <- diag(rep(as.numeric(NA), nvar), nvar)
@@ -178,7 +178,6 @@ lav_cfa_guttman1952_internal <- function(lavobject = NULL, # convenience
                                          lavmodel = NULL,
                                          lavsamplestats = NULL,
                                          lavpartable = NULL,
-                                         lavpta = NULL,
                                          lavdata = NULL,
                                          lavoptions = NULL,
                                          theta.bounds = TRUE,
@@ -186,16 +185,21 @@ lav_cfa_guttman1952_internal <- function(lavobject = NULL, # convenience
                                          zero.after.efa = FALSE,
                                          quadprog = FALSE,
                                          psi.mapping = TRUE) {
+  lavpta <- NULL
   if (!is.null(lavobject)) {
     stopifnot(inherits(lavobject, "lavaan"))
 
     # extract slots
     lavmodel <- lavobject@Model
     lavsamplestats <- lavobject@SampleStats
-    lavpartable <- lavobject@ParTable
+    lavpartable <- lav_partable_set_cache(lavobject@ParTable, lavobject@pta)
     lavpta <- lavobject@pta
     lavdata <- lavobject@Data
     lavoptions <- lavobject@Options
+  }
+  if (is.null(lavpta)) {
+    lavpta <- lav_partable_attributes(lavpartable)
+    lavpartable <- lav_partable_set_cache(lavpartable, lavpta)
   }
 
   if (missing(psi.mapping) &&
@@ -210,15 +214,18 @@ lav_cfa_guttman1952_internal <- function(lavobject = NULL, # convenience
 
   # no structural part!
   if (any(lavpartable$op == "~")) {
-    stop("lavaan ERROR: GUTTMAN1952 estimator only available for CFA models")
+    lav_msg_stop(gettext("GUTTMAN1952 estimator only available for CFA models"))
   }
   # no BETA matrix! (i.e., no higher-order factors)
   if (!is.null(lavmodel@GLIST$beta)) {
-    stop("lavaan ERROR: GUTTMAN1952 estimator not available for models the require a BETA matrix")
+    lav_msg_stop(
+      gettext("GUTTMAN1952 estimator not available for models"),
+      gettext("that require a BETA matrix"))
   }
   # no std.lv = TRUE for now
   if (lavoptions$std.lv) {
-    stop("lavaan ERROR: GUTTMAN1952 estimator not available if std.lv = TRUE")
+    lav_msg_stop(gettext(
+      "GUTTMAN1952 estimator not available if std.lv = TRUE"))
   }
 
   nblocks <- lav_partable_nblocks(lavpartable)
@@ -239,9 +246,10 @@ lav_cfa_guttman1952_internal <- function(lavobject = NULL, # convenience
   m.theta <- lavmodel@m.free.idx[[theta.idx]]
   nondiag.idx <- m.theta[!m.theta %in% lav_matrix_diag_idx(nvar)]
   if (length(nondiag.idx) > 0L) {
-    warning("lavaan WARNING: this implementation of FABIN does not handle correlated residuals yet!")
+    lav_msg_warn(
+      gettext("this implementation of FABIN does not handle"),
+      gettext("correlated residuals yet!"))
   }
-
 
   # 1. obtain estimate for (diagonal elements of) THETA
   #    for now we use Spearman per factor

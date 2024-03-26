@@ -4,7 +4,6 @@
 # main motivation: univariate scores tests (modification indices)
 #
 lav_partable_full <- function(partable = NULL,
-                              lavpta = NULL,
                               strict.exo = FALSE,
                               free = FALSE, start = FALSE) {
   # check minimum requirements: lhs, op, rhs
@@ -15,9 +14,7 @@ lav_partable_full <- function(partable = NULL,
   )
 
   # lavpta?
-  if (is.null(lavpta)) {
-    lavpta <- lav_partable_attributes(partable)
-  }
+  lavpta <- lav_partable_attributes(partable)
 
   # meanstructure
   if (!is.null(lavpta$meanstructure)) {

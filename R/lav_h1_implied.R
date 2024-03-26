@@ -2,8 +2,13 @@
 # and also the logl (if available)
 lav_h1_implied_logl <- function(lavdata = NULL,
                                 lavsamplestats = NULL,
-                                lavpta = NULL, # multilevel + missing
+                                lavpartable = NULL, # multilevel + missing
                                 lavoptions = NULL) {
+  lavpta <- NULL
+  if (!is.null(lavpartable)) {
+    lavpta <- lav_partable_attributes(lavpartable)
+    lavpartable <- lav_partable_set_cache(lavpartable, lavpta)
+  }
   if (lavdata@nlevels == 1L) {
     if (lavsamplestats@missing.flag) {
       if (lavoptions$conditional.x) {
@@ -158,17 +163,16 @@ lav_h1_implied_logl <- function(lavdata = NULL,
       zero.var <- which(diag(OUT$Sigma.W) <= 1e-05)
       if (length(zero.var)) {
         gtxt <- if (ngroups > 1L) {
-          paste(" in group ", g, ".", sep = "")
+          gettextf(" in group %s.", g)
         } else {
           " "
         }
-        txt <- c(
-          "H1 estimation resulted in a within covariance matrix",
-          gtxt, "with (near) zero variances for some of the
-                          level-1 variables: ",
-          lavdata@ov.names.l[[g]][[1]][zero.var]
+        lav_msg_warn(
+          gettext("H1 estimation resulted in a within covariance matrix"), gtxt,
+          gettextf(
+            "with (near) zero variances for some of the level-1 variables: %s",
+            lav_msg_view(lavdata@ov.names.l[[g]][[1]][zero.var]))
         )
-        warning(lav_txt2message(txt))
       }
 
       # store in implied

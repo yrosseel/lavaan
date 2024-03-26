@@ -1,7 +1,6 @@
 # add parameter bounds to the parameter table
 # lavoptions$optim.bounds
 lav_partable_add_bounds <- function(partable = NULL,
-                                    lavpta = NULL,
                                     lavh1 = NULL,
                                     lavdata = NULL,
                                     lavsamplestats = NULL,
@@ -24,7 +23,9 @@ lav_partable_add_bounds <- function(partable = NULL,
     # no support from effect.coding (for now)
     if (!is.null(lavoptions$effect.coding) &&
       nchar(lavoptions$effect.coding[1L]) > 0L) {
-      warning("lavaan WARNING: automatic bounds not available (yet) if effect.coding is used")
+      lav_msg_warn(gettext(
+        "automatic bounds not available (yet) if effect.coding is used"
+        ))
       return(partable)
     }
 
@@ -47,10 +48,10 @@ lav_partable_add_bounds <- function(partable = NULL,
     } else {
       if (optim.bounds$min.reliability.marker < 0 ||
         optim.bounds$min.reliability.marker > 1.0) {
-        stop(
-          "lavaan ERROR: optim.bounds$min.reliability.marker ",
-          "is out of range: ", optim.bounds$min.reliability.marker
-        )
+        lav_msg_stop(gettextf(
+          "optim.bounds$min.reliability.marker is out of range: %s",
+          optim.bounds$min.reliability.marker
+        ))
       }
     }
 
@@ -81,9 +82,9 @@ lav_partable_add_bounds <- function(partable = NULL,
         )
       } else if (length(optim.bounds$lower.factor) !=
         length(optim.bounds$lower)) {
-        stop(
-          "lavaan ERROR: length(optim.bounds$lower.factor) is not ",
-          "equal to length(optim.bounds$lower)"
+        lav_msg_stop(
+          gettext("length(optim.bounds$lower.factor) is not equal to"),
+          gettext("length(optim.bounds$lower)")
         )
       }
     }
@@ -100,9 +101,9 @@ lav_partable_add_bounds <- function(partable = NULL,
         )
       } else if (length(optim.bounds$upper.factor) !=
         length(optim.bounds$upper)) {
-        stop(
-          "lavaan ERROR: length(optim.bounds$upper.factor) is not ",
-          "equal to length(optim.bounds$upper)"
+        lav_msg_stop(
+          gettext("length(optim.bounds$lower.factor) is not equal to"),
+          gettext("length(optim.bounds$upper)")
         )
       }
     }
@@ -151,10 +152,7 @@ lav_partable_add_bounds <- function(partable = NULL,
     upper.auto <- rep(+Inf, length(partable$lhs))
   }
 
-  # make sure we have lavpta
-  if (is.null(lavpta)) {
-    lavpta <- lav_partable_attributes(partable)
-  }
+  lavpta <- lav_partable_attributes(partable)
 
   # check blocks
   if (is.null(partable$block)) {

@@ -1,7 +1,6 @@
 # model estimation
 lav_model_estimate <- function(lavmodel = NULL,
                                lavpartable = NULL, # for parscale = "stand"
-                               lavpta = NULL,
                                lavh1 = NULL, # for multilevel + parsc
                                lavsamplestats = NULL,
                                lavdata = NULL,
@@ -9,6 +8,7 @@ lav_model_estimate <- function(lavmodel = NULL,
                                lavcache = list(),
                                start = "model",
                                do.fit = TRUE) {
+  lavpartable <- lav_partable_set_cache(lavpartable)
   estimator <- lavoptions$estimator
   verbose <- lavoptions$verbose
   debug <- lavoptions$debug
@@ -63,7 +63,7 @@ lav_model_estimate <- function(lavmodel = NULL,
     START <- lav_partable_random(
       lavpartable = lavpartable,
       # needed if we still need to compute bounds:
-      lavpta = lavpta, lavh1 = lavh1,
+      lavh1 = lavh1,
       lavdata = lavdata,
       lavsamplestats = lavsamplestats,
       lavoptions = lavoptions

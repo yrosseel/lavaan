@@ -19,19 +19,21 @@ modindices <- function(object,
                        op = NULL) {
   # check if model has converged
   if (object@optim$npar > 0L && !object@optim$converged) {
-    warning("lavaan WARNING: model did not converge")
+    lav_msg_warn(gettext("model did not converge"))
   }
 
   # not ready for estimator = "PML"
   if (object@Options$estimator == "PML") {
-    stop("lavaan WARNING: modification indices for estimator PML are not implemented yet.")
+    lav_msg_stop(gettext(
+      "modification indices for estimator PML are not implemented yet."))
   }
 
   # new in 0.6-17: check if the model contains equality constraints
   if (object@Model@eq.constraints) {
-    warning(
-      "lavaan WARNING: the modindices() function ignores equality constraints;\n\t\t  use lavTestScore() to assess the impact of releasing one ",
-      "\n\t\t  or multiple constraints"
+    lav_msg_warn(
+      gettext("the modindices() function ignores equality constraints;"),
+      gettext("use lavTestScore() to assess the impact of releasing one "),
+      gettext("or multiple constraints.")
     )
   }
 
@@ -46,8 +48,7 @@ modindices <- function(object,
     strict.exo <- TRUE
   }
   FULL <- lav_partable_full(
-    partable = object@ParTable,
-    lavpta = object@pta,
+    partable = lav_partable_set_cache(object@ParTable, object@pta),
     free = TRUE, start = TRUE,
     strict.exo = strict.exo
   )
@@ -105,7 +106,9 @@ modindices <- function(object,
   )
   # just in case...
   if (inherits(I22.inv, "try-error")) {
-    stop("lavaan ERROR: could not compute modification indices; information matrix is singular")
+    lav_msg_stop(
+      gettext("could not compute modification indices;"),
+      gettext("information matrix is singular"))
   }
 
   V <- I11 - I12 %*% I22.inv %*% I21

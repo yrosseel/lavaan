@@ -8,12 +8,13 @@
 # - YR 12 Mar 2021: add lavpta as argument; create model attributes (ma)
 
 # construct MATRIX lavoptions$representation of the model
-lav_model <- function(lavpartable = NULL, # nolint
-                      lavpta = NULL,
+lav_model <- function(lavpartable = NULL,                          # nolint
                       lavoptions = NULL,
                       th.idx = list()) {
   # handle bare-minimum partables
   lavpartable <- lav_partable_complete(lavpartable)
+  lavpta = lav_partable_attributes(lavpartable)
+  lavpartable <- lav_partable_set_cache(lavpartable, lavpta)
 
   # global info from user model
   nblocks <- lav_partable_nblocks(lavpartable)
@@ -82,7 +83,7 @@ lav_model <- function(lavpartable = NULL, # nolint
   } else if (lavoptions$representation == "RAM") {
     tmp.rep <- lav_ram(lavpartable, target = NULL, extra = TRUE)
   } else {
-    stop("lavaan ERROR: representation must be either \"LISREL\" or \"RAM\".")
+    lav_msg_notallowed("representation", c("LISREL", "RAM"))
   }
   if (lavoptions$debug) print(tmp.rep)
 
@@ -97,14 +98,15 @@ lav_model <- function(lavpartable = NULL, # nolint
       sep = " "
     )
     if (lavoptions$representation == "LISREL") {
-      stop(
-        "lavaan ERROR: a model parameter is not defined in the LISREL",
-        " representation: ", "\n\t\t ", this.formula,
-        "\n  Upgrade to latent variables or consider using representation = ",
-        dQuote("RAM"), "."
+      lav_msg_stop(
+      gettext("a model parameter is not defined in the LISREL representation"),
+      this.formula,
+      gettext("Upgrade to latent variables or consider using representation = 'RAM'.")
       )
     } else {
-      stop("lavaan ERROR: parameter is not defined: ", this.formula)
+      lav_msg_stop(
+        gettextf("parameter is not defined: %s", this.formula)
+      )
     }
   }
 
@@ -357,7 +359,7 @@ lav_model <- function(lavpartable = NULL, # nolint
 
   # dirty hack to mimic MUML
   if (!is.null(lavoptions$tech.muml.scale)) {
-    warning("lavaan WARNING: using muml scale in group 2")
+    lav_msg_warn(gettext("using muml scale in group 2"))
 
     # find matrix
     lambda.idx <- which(names(tmp.glist) == "lambda")[2L]
@@ -418,7 +420,6 @@ lav_model <- function(lavpartable = NULL, # nolint
   modprop <- lav_model_properties(
     GLIST = tmp.glist,
     lavpartable = lavpartable,
-    lavpta = lavpta,
     nmat = nmat,
     m.free.idx = m.free.idx
   )

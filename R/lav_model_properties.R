@@ -9,12 +9,9 @@
 
 
 # note: there is no 'lavmodel' yet, because we call this in lav_model.R
-lav_model_properties <- function(GLIST, lavpartable = NULL, lavpta = NULL,
+lav_model_properties <- function(GLIST, lavpartable = NULL,
                                  nmat = NULL, m.free.idx = NULL) {
-  if (is.null(lavpta)) {
-    lavpta <- lav_partable_attributes(lavpartable)
-  }
-
+  lavpta <- lav_partable_attributes(lavpartable)
   nblocks <- lavpta$nblocks
 
   # is the model a univariate/multivariate linear multiple regression

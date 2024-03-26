@@ -1,5 +1,10 @@
 # store pta in attributes of partable
 lav_partable_set_cache <- function(partable, pta = NULL, force = FALSE) {
+  if (!force &&
+      !is.null(attr(partable, "vnames")) &&
+      !is.null(attr(partable, "nvar"))) {
+        return(partable)                    # cache already OK
+    }
   if (is.null(pta)) {
     if (force) attr(partable, "vnames") <- NULL
     pta <- lav_partable_attributes(partable)

@@ -1,21 +1,21 @@
 ctr_pml_plrt <- function(lavobject = NULL, lavmodel = NULL, lavdata = NULL,
                          lavsamplestats = NULL, lavpartable = NULL,
-                         lavpta = NULL,
                          lavoptions = NULL, x = NULL, VCOV = NULL,
                          lavcache = NULL) {
+  lavpta <- NULL
   if (!is.null(lavobject)) {
     lavmodel <- lavobject@Model
     lavdata <- lavobject@Data
     lavoptions <- lavobject@Options
     lavsamplestats <- lavobject@SampleStats
     lavcache <- lavobject@Cache
-    lavpartable <- lavobject@ParTable
+    lavpartable <- lav_partable_set_cache(lavobject@ParTable, lavobject@pta)
     lavpta <- lavobject@pta
   }
   if (is.null(lavpta)) {
     lavpta <- lav_partable_attributes(lavpartable)
+    lavpartable <- lav_partable_set_cache(lavpartable, lavpta)
   }
-
 
   if (is.null(x)) {
     # compute 'fx' = objective function value
@@ -70,7 +70,6 @@ ctr_pml_plrt <- function(lavobject = NULL, lavmodel = NULL, lavdata = NULL,
       lavobject = NULL,
       lavdata = lavdata,
       lavoptions = lavoptions,
-      lavpta = lavpta,
       lavsamplestats = NULL,
       sample.cov = computeSigmaHat(lavmodel),
       sample.mean = computeMuHat(lavmodel),
@@ -109,10 +108,12 @@ ctr_pml_plrt <- function(lavobject = NULL, lavmodel = NULL, lavdata = NULL,
 
   # select `free' parameters (excluding thresholds) from fittedSat2 model
   PT.Sat2 <- fittedSat2@ParTable
-  dSat.idx <- PT.Sat2$free[PT.Sat2$free > 0L & PT.Sat2$op != "|"] # remove thresholds
+  dSat.idx <- PT.Sat2$free[PT.Sat2$free > 0L & PT.Sat2$op != "|"]
+                                                        # remove thresholds
 
-  # Secondly, we need to specify the indices of the rows/columns of vcov(), hessian, and
-  # variability matrix that refer to all SEM parameters except thresholds.
+  # Secondly, we need to specify the indices of the rows/columns of vcov(),
+  # hessian, and variability matrix that refer to all SEM parameters
+  # except thresholds.
   PT <- lavpartable
   index.par <- PT$free[PT$free > 0L & PT$op != "|"]
 
@@ -126,7 +127,8 @@ ctr_pml_plrt <- function(lavobject = NULL, lavmodel = NULL, lavdata = NULL,
   # the asymptotic mean and variance of each quadratic quantity as well as
   # their asymptotic covariance.
 
-  ##### Section 1. Compute the asymptotic mean and variance of the first quadratic quantity
+  ##### Section 1. Compute the asymptotic mean and variance
+  #####            of the first quadratic quantity
   # Below I assume that lavobject is the output of lavaan function. I guess
   # vcov(lavobject) can be substituted by VCOV object insed lavaan function
   # defined at lines 703 -708. But what is the object inside lavaan function
@@ -142,13 +144,15 @@ ctr_pml_plrt <- function(lavobject = NULL, lavmodel = NULL, lavdata = NULL,
       lavcache = lavcache
     )
   }
-  InvG_to_psipsi_attheta0 <- (lavsamplestats@ntotal * VCOV)[index.par, index.par, drop = FALSE] # G^psipsi(theta0)
+  InvG_to_psipsi_attheta0 <- (lavsamplestats@ntotal * VCOV)[index.par,
+                             index.par, drop = FALSE] # G^psipsi(theta0)
   # below the lavaan function getHessian is used
   # Hattheta0 <- (-1) * H0.Hessian
   # Hattheta0 <- H0.Hessian
   # InvHattheta0 <- solve(Hattheta0)
   InvHattheta0 <- attr(VCOV, "E.inv")
-  InvH_to_psipsi_attheta0 <- InvHattheta0[index.par, index.par, drop = FALSE] # H^psipsi(theta0)
+  InvH_to_psipsi_attheta0 <- InvHattheta0[index.par, index.par, drop = FALSE]
+                                                           # H^psipsi(theta0)
   if (lavmodel@eq.constraints) {
     IN <- InvH_to_psipsi_attheta0
     IN.npar <- ncol(IN)
@@ -190,12 +194,13 @@ ctr_pml_plrt <- function(lavobject = NULL, lavmodel = NULL, lavdata = NULL,
 
   H0tmp_prod1 <- Inv_of_InvH_to_psipsi_attheta0 %*% InvG_to_psipsi_attheta0
   H0tmp_prod2 <- H0tmp_prod1 %*% H0tmp_prod1
-  E_tww <- sum(diag(H0tmp_prod1)) # expected mean of the first quadratic quantity
-  var_tww <- 2 * sum(diag(H0tmp_prod2)) # variance of the first quadratic quantity
+  E_tww <- sum(diag(H0tmp_prod1)) # expected mean of first quadratic quantity
+  var_tww <- 2 * sum(diag(H0tmp_prod2)) # variance of first quadratic quantity
 
-  ##### Section 2: Compute the asymptotic mean and variance of the second quadratic quantity.
-  # Now we need to evaluate the fitted (polychoric) correlation/ covariance matrix
-  # using the estimates of SEM parameters derived under the fitted model
+  ##### Section 2: Compute the asymptotic mean and variance
+  #####            of the second quadratic quantity.
+  # Now we need to evaluate the fitted (polychoric) correlation/ covariance
+  # matrix using the estimates of SEM parameters derived under the fitted model
   # which is the model of the null hypothesis. We also need to compute the
   # vcov matrix of these estimates (estimates of polychoric correlations)
   # as well as the related hessian and variability matrix.
@@ -210,24 +215,29 @@ ctr_pml_plrt <- function(lavobject = NULL, lavmodel = NULL, lavdata = NULL,
     lavcache = fittedSat2@Cache,
     use.ginv = TRUE
   )
-  InvG_to_sigmasigma_attheta0 <- lavsamplestats@ntotal * VCOV.Sat2[dSat.idx, dSat.idx, drop = FALSE] # G^sigmasigma(theta0)
+  InvG_to_sigmasigma_attheta0 <- lavsamplestats@ntotal * VCOV.Sat2[dSat.idx,
+                                dSat.idx, drop = FALSE] # G^sigmasigma(theta0)
   # Hattheta0 <- (-1)* getHessian(fittedSat2)
   # Hattheta0 <- getHessian(fittedSat2)
   # InvHattheta0 <- solve(Hattheta0)
   InvHattheta0 <- attr(VCOV.Sat2, "E.inv")
-  InvH_to_sigmasigma_attheta0 <- InvHattheta0[dSat.idx, dSat.idx, drop = FALSE] # H^sigmasigma(theta0)
-  # Inv_of_InvH_to_sigmasigma_attheta0 <- solve(InvH_to_sigmasigma_attheta0) #[H^sigmasigma(theta0)]^(-1)
+  InvH_to_sigmasigma_attheta0 <- InvHattheta0[dSat.idx, dSat.idx, drop = FALSE]
+                                                          # H^sigmasigma(theta0)
+  # Inv_of_InvH_to_sigmasigma_attheta0 <- solve(InvH_to_sigmasigma_attheta0)
+  #                                                 #[H^sigmasigma(theta0)]^(-1)
   Inv_of_InvH_to_sigmasigma_attheta0 <- MASS::ginv(InvH_to_sigmasigma_attheta0,
     tol = .Machine$double.eps^(3 / 4)
   )
-  H1tmp_prod1 <- Inv_of_InvH_to_sigmasigma_attheta0 %*% InvG_to_sigmasigma_attheta0
+  H1tmp_prod1 <- Inv_of_InvH_to_sigmasigma_attheta0 %*%
+                            InvG_to_sigmasigma_attheta0
   H1tmp_prod2 <- H1tmp_prod1 %*% H1tmp_prod1
-  E_tzz <- sum(diag(H1tmp_prod1)) # expected mean of the second quadratic quantity
-  var_tzz <- 2 * sum(diag(H1tmp_prod2)) # variance of the second quadratic quantity
+  E_tzz <- sum(diag(H1tmp_prod1)) # expected mean of the second
+                                  # quadratic quantity
+  var_tzz <- 2 * sum(diag(H1tmp_prod2)) # variance of the second
+                                        # quadratic quantity
 
-
-
-  ##### Section 3: Compute the asymptotic covariance of the two quadratic quantities
+  ##### Section 3: Compute the asymptotic covariance of
+  #####            the two quadratic quantities
 
   drhodpsi_MAT <- vector("list", length = lavsamplestats@ngroups)
   group.values <- lav_partable_group_values(fittedSat2@ParTable)
@@ -235,7 +245,8 @@ ctr_pml_plrt <- function(lavobject = NULL, lavmodel = NULL, lavdata = NULL,
     # delta.g <- computeDelta(lavmodel)[[g]] # [[1]] to be substituted by g?
     # The above gives the derivatives of thresholds and polychoric correlations
     # with respect to SEM param (including thresholds) evaluated under H0.
-    # From deltamat we need to exclude the rows and columns referring to thresholds.
+    # From deltamat we need to exclude the rows and columns referring
+    # to thresholds.
     # For this:
 
     # order of the rows: first the thresholds, then the correlations
@@ -277,7 +288,7 @@ ctr_pml_plrt <- function(lavobject = NULL, lavmodel = NULL, lavdata = NULL,
     delta.g <- lav_object_inspect_delta_internal(
       lavmodel = lavmodel,
       lavdata = lavdata, lavpartable = lavpartable,
-      lavpta = lavpta, add.labels = TRUE, add.class = FALSE,
+      add.labels = TRUE, add.class = FALSE,
       drop.list.single.group = FALSE
     )[[g]]
     NAMES <- rownames(delta.g)
@@ -287,13 +298,12 @@ ctr_pml_plrt <- function(lavobject = NULL, lavmodel = NULL, lavdata = NULL,
 
     par.idx <- match(PARLABEL, NAMES)
     if (any(is.na(par.idx))) {
-      warning(
-        "lavaan WARNING: [ctr_pml_plrt] mismatch between DELTA labels and PAR labels!\n", "PARLABEL:\n", paste(PARLABEL, collapse = " "),
-        "\nDELTA LABELS:\n", paste(NAMES, collapse = " ")
+      lav_msg_warn(
+        gettext("[ctr_pml_plrt] mismatch between DELTA labels and PAR labels!"),
+        gettextf("PARLABEL: %s", lav_msg_view(PARLABEL)),
+        gettextf("DELTA LABELS: %s", lav_msg_view(NAMES))
       )
     }
-
-
 
     drhodpsi_MAT[[g]] <- delta.g[par.idx, index.par, drop = FALSE]
   }
@@ -325,7 +335,8 @@ ctr_pml_plrt <- function(lavobject = NULL, lavmodel = NULL, lavdata = NULL,
     asym_var_PLRTH0Sat <- var_tzz + var_tww - 2 * cov_tzztww
     scaling.factor <- (asym_mean_PLRTH0Sat / (asym_var_PLRTH0Sat / 2))
     FSA_PLRT_SEM <- (asym_mean_PLRTH0Sat / (asym_var_PLRTH0Sat / 2)) * PLRTH0Sat
-    adjusted_df <- (asym_mean_PLRTH0Sat * asym_mean_PLRTH0Sat) / (asym_var_PLRTH0Sat / 2)
+    adjusted_df <- (asym_mean_PLRTH0Sat * asym_mean_PLRTH0Sat) /
+      (asym_var_PLRTH0Sat / 2)
     # In some very few cases (simulations show very few cases in small
     # sample sizes) the adjusted_df is a negative number, we should then
     # print a warning like: "The adjusted df is computed to be a negative number

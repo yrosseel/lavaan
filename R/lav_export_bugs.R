@@ -1,9 +1,9 @@
 # export go BUGS syntax
 
 # we assume that N1, N2, ... are in data
-lav2bugs <- function(partable, pta = NULL, as.function. = FALSE) {
+lav2bugs <- function(partable, as.function. = FALSE) {
   # get parameter table attributes
-  pta <- lav_partable_attributes(partable = partable, pta = pta)
+  pta <- lav_partable_attributes(partable = partable)
   vnames <- pta$vnames
   nblocks <- pta$nblocks
   nvar <- pta$nvar
@@ -57,9 +57,9 @@ lav2bugs <- function(partable, pta = NULL, as.function. = FALSE) {
         partable$lhs == partable$rhs &
         partable$lhs == ov.names.nox[i])
       if (length(theta.free.idx) != 1L) {
-        stop(
-          "lavaan ERROR: parameter for residual variance ",
-          ov.names.nox[i], " not found"
+        lav_msg_stop(gettextf(
+          "parameter for residual variance %s not found",
+          ov.names.nox[i])
         )
       } else {
         theta.idx <- partable$free[theta.free.idx]
@@ -176,9 +176,9 @@ lav2bugs <- function(partable, pta = NULL, as.function. = FALSE) {
           partable$lhs == partable$rhs &
           partable$lhs == lv.y[j])
         if (length(theta.free.idx) != 1L) {
-          stop(
-            "lavaan ERROR: parameter for residual variance ",
-            lv.y[j], " not found"
+          lav_msg_stop(gettextf(
+            "parameter for residual variance %s not found",
+            lv.y[j])
           )
         } else {
           theta.idx <- partable$free[theta.free.idx]
@@ -325,7 +325,7 @@ lav2bugs <- function(partable, pta = NULL, as.function. = FALSE) {
           sep = ""
         )
       } else {
-        stop("lavaan ERROR: FIXME!! parameter ", i)
+        lav_msg_stop(gettextf("FIXME!! parameter %s", i))
       }
     } else if (op == "~~" && lhs != rhs) {
       # covariance
@@ -338,7 +338,7 @@ lav2bugs <- function(partable, pta = NULL, as.function. = FALSE) {
         next
       } else if (lhs %in% vnames$lv.y[[g]] && rhs %in% vnames$lv.y[[g]]) {
         # lv.y
-        stop("lavaan ERROR: FIXME!! parameter ", i)
+        lav_msg_stop(gettextf("FIXME!! parameter ", i))
       } else if (lhs %in% vnames$ov[[g]] && rhs %in% vnames$ov[[g]]) {
         TXT <- paste(TXT, "\n", t1,
           "itheta[", free.idx, "] ~ dgamma(9, 4)",
@@ -349,7 +349,7 @@ lav2bugs <- function(partable, pta = NULL, as.function. = FALSE) {
           sep = ""
         )
       } else {
-        stop("lavaan ERROR: FIXME!! parameter ", i)
+        lav_msg_stop(gettextf("FIXME!! parameter ", i))
       }
     } else if (op == "~1") {
       # intercept
@@ -358,7 +358,7 @@ lav2bugs <- function(partable, pta = NULL, as.function. = FALSE) {
         sep = ""
       )
     } else {
-      stop("lavaan ERROR: op not supported yet for parameter ", i)
+      lav_msg_stop(gettextf("op not supported yet for parameter ", i))
     }
   }
 

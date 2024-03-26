@@ -73,12 +73,11 @@ lavPredict <- function(object, newdata = NULL, # keep order of predict(), 0.6-7
     )
   }
   lavimplied <- object@implied
-  lavpta <- object@pta
 
   res <- lav_predict_internal(
     lavmodel = lavmodel, lavdata = lavdata,
     lavsamplestats = lavsamplestats, lavimplied = lavimplied, lavh1 = lavh1,
-    lavpta = lavpta, newdata = newdata, type = type, method = method,
+    lavpartable = object@ParTable, newdata = newdata, type = type, method = method,
     transform = transform, se = se, acov = acov, label = label, fsm = fsm,
     mdist = mdist, append.data = append.data, assemble = assemble,
     level = level, optim.method = optim.method, ETA = ETA,
@@ -94,7 +93,7 @@ lav_predict_internal <- function(lavmodel = NULL,
                                  lavsamplestats = NULL,
                                  lavh1 = NULL,
                                  lavimplied = NULL,
-                                 lavpta = NULL,
+                                 lavpartable = NULL,
                                  # standard options
                                  newdata = NULL, # keep order of predict(), 0.6-7
                                  type = "lv", method = "EBM", transform = FALSE,
@@ -105,6 +104,7 @@ lav_predict_internal <- function(lavmodel = NULL,
                                  drop.list.single.group = TRUE) {
   # type
   type <- tolower(type)
+  lavpta <- lav_partable_attributes(lavpartable)
   if (type %in% c("latent", "lv", "factor", "factor.score", "factorscore")) {
     type <- "lv"
   } else if (type %in% c("ov", "yhat")) {
@@ -115,12 +115,12 @@ lav_predict_internal <- function(lavmodel = NULL,
 
   # if resid, not for categorical
   if (type == "resid" && lavmodel@categorical) {
-    stop("lavaan ERROR: casewise residuals not available if data is categorical")
+    lav_msg_stop(gettext("casewise residuals not available if data is categorical"))
   }
 
   # append.data? check level
   if (append.data && level > 1L) {
-    warning("lavaan WARNING: append.data not available if level > 1L")
+    lav_msg_warn(gettext("append.data not available if level > 1L"))
     append.data <- FALSE
   }
 
@@ -141,11 +141,12 @@ lav_predict_internal <- function(lavmodel = NULL,
       }
     }
     if (type != "lv") {
-      stop("lavaan ERROR: standard errors only available if type = \"lv\"")
+      lav_msg_stop(gettext("standard errors only available if type = \"lv\""))
     }
     if (lavmodel@categorical) {
       se <- acov <- "none"
-      warning("lavaan WARNING: standard errors not available (yet) for non-normal data")
+      lav_msg_warn(gettext(
+        "standard errors not available (yet) for non-normal data"))
     }
     # if(lavdata@missing %in% c("ml", "ml.x")) {
     #    se <- acov <- "none"
@@ -157,9 +158,10 @@ lav_predict_internal <- function(lavmodel = NULL,
   if (is.null(newdata)) {
     # use internal copy:
     if (lavdata@data.type != "full") {
-      stop("lavaan ERROR: sample statistics were used for fitting and newdata is empty")
+      lav_msg_stop(gettext(
+        "sample statistics were used for fitting and newdata is empty"))
     } else if (is.null(lavdata@X[[1]])) {
-      stop("lavaan ERROR: no local copy of data; FIXME!")
+      lav_msg_stop(gettext("no local copy of data; FIXME!"))
     } else {
       data.obs <- lavdata@X
       ov.names <- lavdata@ov.names
@@ -191,10 +193,9 @@ lav_predict_internal <- function(lavmodel = NULL,
       )
       new.ordered.lev <- newData@ov$nlev[match.new.idx]
       if (any(orig.ordered.lev - new.ordered.lev != 0)) {
-        stop(
-          "lavaan ERROR: ",
-          "mismatch number of categories for some ordered variables",
-          "\n\t\tin newdata compared to original data."
+        lav_msg_stop(
+          gettext("mismatch number of categories for some ordered variables"),
+          gettext("in newdata compared to original data.")
         )
       }
     }
@@ -205,7 +206,7 @@ lav_predict_internal <- function(lavmodel = NULL,
 
   if (type == "lv") {
     if (!is.null(ETA)) {
-      warning("lavaan WARNING: lvs will be predicted here; supplying ETA has no effect")
+      lav_msg_warn(gettext("lvs will be predicted here; supplying ETA has no effect"))
     }
 
     # post fit check (lv pd?)
@@ -308,7 +309,9 @@ lav_predict_internal <- function(lavmodel = NULL,
         FS.cov <- crossprod(FS.centered) / nrow(FS.centered)
         FS.cov.inv <- try(solve(FS.cov), silent = TRUE)
         if (inherits(FS.cov.inv, "try-error")) {
-          warning("lavaan WARNING: could not invert (co)variance matrix of factor scores; returning original factor scores.")
+          lav_msg_warn(
+            gettext("could not invert (co)variance matrix of factor scores;"),
+            gettext("returning original factor scores."))
           return(out[[g]])
         }
         fs.inv.sqrt <- lav_matrix_symmetric_sqrt(FS.cov.inv)
@@ -575,7 +578,7 @@ lav_predict_internal <- function(lavmodel = NULL,
       }
     }
   } else {
-    stop("lavaan ERROR: type must be one of: lv yhat fy")
+    lav_msg_stop(gettext("type must be one of: lv yhat fy"))
   }
 
   # lavaan.matrix
@@ -689,7 +692,7 @@ lav_predict_eta <- function(lavobject = NULL, # for convenience
         data.obs = data.obs, eXo = eXo, fsm = fsm
       )
     } else {
-      stop("lavaan ERROR: unkown method: ", method)
+      lav_msg_stop(gettextf("unkown method: %s.", method))
     }
   } else {
     if (method == "ebm") {
@@ -709,7 +712,7 @@ lav_predict_eta <- function(lavobject = NULL, # for convenience
         ML = TRUE, optim.method = optim.method
       )
     } else {
-      stop("lavaan ERROR: unkown method: ", method)
+      lav_msg_stop(gettextf("unkown method: %s.", method))
     }
   }
 
@@ -830,7 +833,7 @@ lav_predict_eta_normal <- function(lavobject = NULL, # for convenience
         }
         data.obs.g <- Data.B[, ov.idx[[2]]]
       } else {
-        stop("lavaan ERROR: only 2 levels are supported")
+        lav_msg_stop(gettext("only 2 levels are supported"))
       }
 
       gg <- (g - 1) * lavdata@nlevels + level
@@ -900,7 +903,7 @@ lav_predict_eta_normal <- function(lavobject = NULL, # for convenience
           logdet = FALSE
         ), silent = TRUE)
         if (inherits(Sigma_22.inv, "try-error")) {
-          stop("lavaan ERROR: Sigma_22.inv cannot be inverted")
+          lav_msg_stop(gettext("Sigma_22.inv cannot be inverted"))
         }
 
         lambda <- LAMBDA.g[var.idx, , drop = FALSE]
@@ -1120,7 +1123,7 @@ lav_predict_eta_bartlett <- function(lavobject = NULL, # for convenience
         }
         data.obs.g <- Data.B[, ov.idx[[2]]]
       } else {
-        stop("lavaan ERROR: only 2 levels are supported")
+        lav_msg_stop(gettext("only 2 levels are supported"))
       }
 
       gg <- (g - 1) * lavdata@nlevels + level
@@ -1192,7 +1195,7 @@ lav_predict_eta_bartlett <- function(lavobject = NULL, # for convenience
           logdet = FALSE
         ), silent = TRUE)
         if (inherits(Sigma_22.inv, "try-error")) {
-          stop("lavaan ERROR: Sigma_22.inv cannot be inverted")
+          lav_msg_stop(gettext("Sigma_22.inv cannot be inverted"))
         }
 
         lambda <- LAMBDA.g[var.idx, , drop = FALSE]
@@ -1382,7 +1385,8 @@ lav_predict_eta_ebm_ml <- function(lavobject = NULL, # for convenience
   # check for zero entries in THETA (new in 0.6-4)
   for (g in seq_len(lavdata@ngroups)) {
     if (any(diag(THETA[[g]]) == 0)) {
-      stop("lavaan ERROR: (residual) variance matrix THETA contains zero elements on the diagonal.")
+      lav_msg_stop(gettext(
+        "(residual) variance matrix THETA contains zero elements on the diagonal."))
     }
   }
 
@@ -1457,7 +1461,9 @@ lav_predict_eta_ebm_ml <- function(lavobject = NULL, # for convenience
     # check for negative values
     neg.var.idx <- which(diag(THETA[[g]]) < 0)
     if (length(neg.var.idx) > 0) {
-      warning("lavaan WARNING: factor scores could not be computed due to at least one negative (residual) variance")
+      lav_msg_warn(
+        gettext("factor scores could not be computed due to"),
+        gettext("at least one negative (residual) variance"))
       next
     }
 
@@ -1590,7 +1596,7 @@ lav_predict_yhat <- function(lavobject = NULL, # for convience
           byrow = TRUE
         )
       } else if (nrow(ETA) != lavsamplestats@ntotal) {
-        stop("lavaan ERROR: nrow(ETA) != lavsamplestats@ntotal")
+        lav_msg_stop(gettext("nrow(ETA) != lavsamplestats@ntotal"))
       } else {
         tmp <- ETA
       }
@@ -1712,7 +1718,7 @@ lav_predict_fy_internal <- function(X = NULL, yhat = NULL,
 
   # check size YHAT (either 1L or Nobs rows)
   if (!(nrow(yhat) == 1L || nrow(yhat) == nrow(X))) {
-    stop("lavaan ERROR: nrow(YHAT[[g]]) not 1L and not nrow(X))")
+    lav_msg_stop(gettext("nrow(YHAT[[g]]) not 1L and not nrow(X))"))
   }
 
   FY.group <- matrix(0, nrow(X), ncol(X))
@@ -1768,7 +1774,7 @@ lav_predict_fy_internal <- function(X = NULL, yhat = NULL,
         fy[, k] <- plogis((TH.Y[k + 1] - yhat.v) / theta.v) -
           plogis((TH.Y[k] - yhat.v) / theta.v)
       } else {
-        stop("lavaan ERROR: link must be probit or logit")
+        lav_msg_stop(gettext("link must be probit or logit"))
       }
     }
 
@@ -1859,10 +1865,8 @@ lav_predict_fy_eta.i <- function(lavmodel = NULL, lavdata = NULL,
           }
         }
       } else {
-        stop(
-          "lavaan ERROR: unknown type: `",
-          lavdata@ov$type[v], "' for variable: ",
-          lavdata@ov$name[v]
+        lav_msg_stop(gettextf("unknown type: `%1$s' for variable: %2$s",
+          lavdata@ov$type[v], lavdata@ov$name[v])
         )
       }
     }

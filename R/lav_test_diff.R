@@ -46,7 +46,8 @@ lav_test_diff_Satorra2000 <- function(m1, m0, H1 = TRUE, A.method = "delta",
   Gamma <- lavTech(m1, "Gamma") # the same for m1 and m0
   # check for NULL
   if (is.null(Gamma)) {
-    stop("lavaan ERROR: can not compute Gamma matrix; perhaps missing = \"ml\"?")
+    lav_msg_stop(gettext(
+      "can not compute Gamma matrix; perhaps missing = \"ml\"?"))
   }
 
   if (H1) {
@@ -75,7 +76,7 @@ lav_test_diff_Satorra2000 <- function(m1, m0, H1 = TRUE, A.method = "delta",
       if (debug) print(A)
     }
   } else {
-    stop("not ready yet")
+    lav_msg_stop(gettext("not ready yet"))
 
     WLS.V <- lavTech(m0, "WLS.V")
     PI <- computeDelta(m0@Model)
@@ -229,7 +230,7 @@ lav_test_diff_SatorraBentler2001 <- function(m1, m0) {
 
   # warn if cd is negative
   if (cd < 0) {
-    warning("lavaan WARNING: scaling factor is negative")
+    lav_msg_warn(gettext("scaling factor is negative"))
     cd <- as.numeric(NA)
   }
 
@@ -280,9 +281,9 @@ lav_test_diff_SatorraBentler2010 <- function(m1, m0, H1 = FALSE) {
       symmetric = TRUE, only.values = TRUE
     )$values
     if (any(eigvals < -1 * .Machine$double.eps^(3 / 4))) {
-      warning(
-        "lavaan WARNING: information matrix of the M01 model is not positive definite.\n"
-      )
+      lav_msg_warn(gettext(
+        "information matrix of the M01 model is not positive definite."
+      ))
       # "                  As a result, the scale-factor can not be computed.")
       # cd <- as.numeric(NA)
     } # else {
@@ -301,9 +302,9 @@ lav_test_diff_SatorraBentler2010 <- function(m1, m0, H1 = FALSE) {
       symmetric = TRUE, only.values = TRUE
     )$values
     if (any(eigvals < -1 * .Machine$double.eps^(3 / 4))) {
-      warning(
-        "lavaan WARNING: information matrix of the M10 model is not positive definite.\n"
-      )
+      lav_msg_warn(gettext(
+        "information matrix of the M10 model is not positive definite."
+      ))
       # "                  As a result, the scale-factor can not be computed.")
       # cd <- as.numeric(NA)
     } # else {
@@ -336,12 +337,12 @@ lav_test_diff_m10 <- function(m1, m0, test = FALSE) {
     Options$test <- "none"
   }
 
-  PT.M0 <- m0@ParTable
-  PT.M1 <- m1@ParTable
+  PT.M0 <- lav_partable_set_cache(m0@ParTable, m0@pta)
+  PT.M1 <- lav_partable_set_cache(m1@ParTable, m1@pta)
 
   # `extend' PT.M1 partable to include all `fixed-to-zero parameters'
   PT.M1.FULL <- lav_partable_full(
-    partable = PT.M1, lavpta = m1@pta,
+    partable = PT.M1,
     free = TRUE, start = TRUE
   )
   PT.M1.extended <- lav_partable_merge(PT.M1, PT.M1.FULL,
@@ -359,7 +360,7 @@ lav_test_diff_m10 <- function(m1, m0, test = FALSE) {
 
   # `extend' PT.M0 partable to include all `fixed-to-zero parameters'
   PT.M0.FULL <- lav_partable_full(
-    partable = PT.M0, lavpta = m0@pta,
+    partable = PT.M0,
     free = TRUE, start = TRUE
   )
   PT.M0.extended <- lav_partable_merge(PT.M0, PT.M0.FULL,
@@ -403,7 +404,7 @@ lav_test_diff_A <- function(m1, m0, method = "delta", reference = "H1") {
       af <- lav_test_diff_af_h1(m1 = m1, m0 = m0)
       xx <- m1@optim$x
     } else { # evaluate under H0
-      stop("not ready yet")
+      lav_msg_stop(gettext("not ready yet"))
       # af <- .test_compute_partable_A_diff_h0(m1 = m1, m0 = m0)
       xx <- m0@optim$x
     }
@@ -456,8 +457,8 @@ lav_test_diff_A <- function(m1, m0, method = "delta", reference = "H1") {
 #   - the plabels used in "==" constraints must be renamed, if necessary
 #
 lav_test_diff_af_h1 <- function(m1, m0) {
-  PT.M0 <- parTable(m0)
-  PT.M1 <- parTable(m1)
+  PT.M0 <- lav_partable_set_cache(parTable(m0), m0@pta)
+  PT.M1 <- lav_partable_set_cache(parTable(m1), m1@pta)
 
   # select .p*. parameters only
   M0.p.idx <- which(grepl("\\.p", PT.M0$plabel))
@@ -467,7 +468,8 @@ lav_test_diff_af_h1 <- function(m1, m0) {
 
   # check if parameter space is the same
   if (np0 != np1) {
-    stop("lavaan ERROR: unconstrained parameter set is not the same in m0 and m1")
+    lav_msg_stop(gettext(
+      "unconstrained parameter set is not the same in m0 and m1"))
   }
 
   # split partable in 'parameter' and 'constraints' section
@@ -493,7 +495,7 @@ lav_test_diff_af_h1 <- function(m1, m0) {
 
   # `extend' PT.M1 partable to include all `fixed-to-zero parameters'
   PT.M1.FULL <- lav_partable_full(
-    partable = PT.M1, lavpta = m1@pta,
+    partable = PT.M1,
     free = TRUE, start = TRUE
   )
   PT.M1.extended <- lav_partable_merge(PT.M1, PT.M1.FULL,
@@ -502,7 +504,7 @@ lav_test_diff_af_h1 <- function(m1, m0) {
 
   # `extend' PT.M0 partable to include all `fixed-to-zero parameters'
   PT.M0.FULL <- lav_partable_full(
-    partable = PT.M0, lavpta = m0@pta,
+    partable = PT.M0,
     free = TRUE, start = TRUE
   )
   PT.M0.extended <- lav_partable_merge(PT.M0, PT.M0.FULL,
@@ -581,10 +583,10 @@ lav_test_diff_af_h1 <- function(m1, m0) {
     p0.idx <- which(p0$lhs == lhs & p0$op == op & p0$rhs == rhs &
       p0$group == group)
     if (length(p0.idx) == 0L) {
-      stop(
-        "lavaan ERROR: parameter in H1 not found in H0: ",
+      lav_msg_stop(
+        gettextf("parameter in H1 not found in H0: %s",
         paste(lhs, op, rhs, "(group = ", group, ")", sep = " ")
-      )
+      ))
     }
 
     # 4 possibilities: p is free/fixed in p1, p is free/fixed in p0
@@ -592,13 +594,13 @@ lav_test_diff_af_h1 <- function(m1, m0) {
       if (p0$free[p0.idx] == 0L) {
         # match, nothing to do
       } else {
-        warning(
-          "lavaan WARNING: fixed parameter in H1 is free in H0: ",
+        lav_msg_warn(
+          gettextf("fixed parameter in H1 is free in H0: %s",
           paste("\"", lhs, " ", op, " ", rhs,
             "\" (group = ", group, ")",
             sep = ""
           )
-        )
+        ))
       }
     } else {
       if (p0$free[p0.idx] == 0L) {
