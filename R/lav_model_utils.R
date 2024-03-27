@@ -10,7 +10,7 @@ lav_model_get_parameters <- function(lavmodel = NULL, GLIST = NULL,
   # type == "user": all parameters listed in User model
 
   # state or final?
-  if (is.null(GLIST)) GLIST <- lavmodel@GLIST
+  if (is.null(GLIST)) GLIST <- lavmodel@GLIST # if this changes, tag @TDJorgensen in commit message
 
   if (type == "free") {
     N <- lavmodel@nx.free

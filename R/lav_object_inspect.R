@@ -639,7 +639,7 @@ lav_object_inspect_est <- function(object, unrotated = FALSE) {
       if (unrotated) {
         return.value <- object@ParTable$est.unrotated
       } else {
-        return.value <- object@ParTable$est
+        return.value <- object@ParTable$est # if this changes, tag @TDJorgensen in commit message
       }
     } else if (.hasSlot(object, "Fit")) {
       # in < 0.5-19, we should look in @Fit@est
@@ -2498,7 +2498,7 @@ lav_object_inspect_vcov <- function(object, standardized = FALSE,
     # if( !inherits(tmp, "try-error") && !is.null(object@vcov$vcov)
     #   && !(rotation && standardized)) {
     if (.hasSlot(object, "vcov") && !is.null(object@vcov$vcov)) {
-      return.value <- object@vcov$vcov
+      return.value <- object@vcov$vcov # if this changes, tag @TDJorgensen in commit message
     } else {
       # compute it again
       # if(rotation && standardized) {
