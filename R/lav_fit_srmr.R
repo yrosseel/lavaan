@@ -232,8 +232,8 @@ lav_fit_srmr_lavobject <- function(lavobject = NULL, fit.measures = "rmsea") {
     attr(srmr_mplus.group, "nomean") <- NULL
 
     # adjust for group sizes
-    ng <- unlist(lavobject@SampleStats@nobs)
-    ntotal <- lavobject@SampleStats@ntotal
+    ng <- unlist(lavobject@SampleStats@nobs)  # if this changes, tag @TDJorgensen in commit message
+    ntotal <- lavobject@SampleStats@ntotal    # if this changes, tag @TDJorgensen in commit message
     RMR <- sum(ng / ntotal * rmr.group)
     RMR_NOMEAN <- sum(ng / ntotal * rmr_nomean.group)
     SRMR_BENTLER <- sum(ng / ntotal * srmr.group)
