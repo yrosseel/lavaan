@@ -21,6 +21,8 @@ lav_fit_srmr_mplus <- function(lavobject) {
   srmr_mplus.group <- numeric(G)
   srmr_mplus_nomean.group <- numeric(G)
 
+  # If you change how any of the observed/estimated moments below are retrieved,
+  # please tag @TDJorgensen at the end of the commit message.
   for (g in 1:G) {
     # observed
     if (!lavobject@SampleStats@missing.flag) {
@@ -52,7 +54,7 @@ lav_fit_srmr_mplus <- function(lavobject) {
       implied$mean[[g]]
     }
 
-    # Bollen approach: simply using cov2cor ('residual correlations')
+    # Bollen approach: simply using cov2cor ('correlation residuals')
     S.cor <- cov2cor(S)
     Sigma.cor <- cov2cor(Sigma.hat)
     R.cor <- (S.cor - Sigma.cor)
