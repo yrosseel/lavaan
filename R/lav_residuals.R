@@ -446,7 +446,7 @@ lav_residuals_acov <- function(object, type = "raw", z.type = "standardized",
 
   # compute ACOV for observed h1 sample statistics (ACOV == Gamma/N)
   if (!is.null(lavsamplestats@NACOV[[1]])) {
-    NACOV.obs <- lavsamplestats@NACOV
+    NACOV.obs <- lavsamplestats@NACOV # if this changes, tag @TDJorgensen in commit message
     ACOV.obs <- lapply(NACOV.obs, function(x) x / lavsamplestats@ntotal)
   } else {
     ACOV.obs <- lav_model_h1_acov(
@@ -478,7 +478,7 @@ lav_residuals_acov <- function(object, type = "raw", z.type = "standardized",
   # for each group, compute ACOV
   for (g in seq_len(lavdata@ngroups)) {
     # group weight
-    gw <- object@SampleStats@nobs[[g]] / object@SampleStats@ntotal
+    gw <- object@SampleStats@nobs[[g]] / object@SampleStats@ntotal  # if this changes, tag @TDJorgensen in commit message
 
     if (z.type == "standardized.mplus") { # simplified formula
       # also used by LISREL?
