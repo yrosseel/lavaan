@@ -146,8 +146,9 @@ the independence model) (if available).}
       section.
       If \code{fmi = TRUE}, add the fmi (fraction of missing information)
       column, if it is available.
-      If \code{standardized=TRUE},
-      the standardized solution is also printed.  Note that \emph{SE}s and
+      If \code{standardized=TRUE} or a character vector, the standardized 
+      solution is also printed (see \code{\link{parameterEstimates}}).  
+      Note that \emph{SE}s and
       tests are still based on unstandardized estimates. Use
       \code{\link{standardizedSolution}} to obtain \emph{SE}s and test
       statistics for standardized estimates.
