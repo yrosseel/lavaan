@@ -21,6 +21,8 @@ lav_fit_srmr_mplus <- function(lavobject) {
   srmr_mplus.group <- numeric(G)
   srmr_mplus_nomean.group <- numeric(G)
 
+  # If you change how any of the observed/estimated moments below are retrieved,
+  # please tag @TDJorgensen at the end of the commit message.
   for (g in 1:G) {
     # observed
     if (!lavobject@SampleStats@missing.flag) {
@@ -52,7 +54,7 @@ lav_fit_srmr_mplus <- function(lavobject) {
       implied$mean[[g]]
     }
 
-    # Bollen approach: simply using cov2cor ('residual correlations')
+    # Bollen approach: simply using cov2cor ('correlation residuals')
     S.cor <- cov2cor(S)
     Sigma.cor <- cov2cor(Sigma.hat)
     R.cor <- (S.cor - Sigma.cor)
@@ -94,13 +96,13 @@ lav_fit_srmr_twolevel <- function(lavobject = NULL) {
     b.within <- (g - 1L) * nlevels + 1L
     b.between <- (g - 1L) * nlevels + 2L
 
-    # observed
+    # OBSERVED        # if these change, tag @TDJorgensen in commit message
     S.within <- lavobject@h1$implied$cov[[b.within]]
     M.within <- lavobject@h1$implied$mean[[b.within]]
     S.between <- lavobject@h1$implied$cov[[b.between]]
     M.between <- lavobject@h1$implied$mean[[b.between]]
 
-    # estimated
+    # ESTIMATED       # if these change, tag @TDJorgensen in commit message
     implied <- lav_model_implied_cond2uncond(lavobject@implied)
     Sigma.within <- implied$cov[[b.within]]
     Mu.within <- implied$mean[[b.within]]
@@ -139,8 +141,8 @@ lav_fit_srmr_twolevel <- function(lavobject = NULL) {
   }
 
   # adjust for group sizes
-  ng <- unlist(lavobject@SampleStats@nobs)
-  ntotal <- lavobject@SampleStats@ntotal
+  ng <- unlist(lavobject@SampleStats@nobs)  # if this changes, tag @TDJorgensen in commit message
+  ntotal <- lavobject@SampleStats@ntotal    # if this changes, tag @TDJorgensen in commit message
   SRMR_WITHIN <- sum(ng / ntotal * SRMR.within)
   SRMR_BETWEEN <- sum(ng / ntotal * SRMR.between)
   SRMR_TOTAL <- SRMR_WITHIN + SRMR_BETWEEN
@@ -232,8 +234,8 @@ lav_fit_srmr_lavobject <- function(lavobject = NULL, fit.measures = "rmsea") {
     attr(srmr_mplus.group, "nomean") <- NULL
 
     # adjust for group sizes
-    ng <- unlist(lavobject@SampleStats@nobs)
-    ntotal <- lavobject@SampleStats@ntotal
+    ng <- unlist(lavobject@SampleStats@nobs)  # if this changes, tag @TDJorgensen in commit message
+    ntotal <- lavobject@SampleStats@ntotal    # if this changes, tag @TDJorgensen in commit message
     RMR <- sum(ng / ntotal * rmr.group)
     RMR_NOMEAN <- sum(ng / ntotal * rmr_nomean.group)
     SRMR_BENTLER <- sum(ng / ntotal * srmr.group)

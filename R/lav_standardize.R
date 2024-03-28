@@ -19,7 +19,7 @@ lav_standardize_lv_x <- function(x, lavobject, partable = NULL, cov.std = TRUE,
     attributes(est.rot) <- NULL
     est <- est.rot
   } else {
-    GLIST <- lavmodel@GLIST
+    GLIST <- lavmodel@GLIST # if this changes, tag @TDJorgensen in commit message
     est <- lav_model_get_parameters(lavmodel, type = "user")
   }
 
@@ -52,7 +52,7 @@ lav_standardize_all_x <- function(x, lavobject, partable = NULL, cov.std = TRUE,
     attributes(est.rot) <- NULL
     est <- est.rot
   } else {
-    GLIST <- lavmodel@GLIST
+    GLIST <- lavmodel@GLIST # if this changes, tag @TDJorgensen in commit message
     est <- lav_model_get_parameters(lavmodel, type = "user")
   }
 
@@ -84,7 +84,7 @@ lav_standardize_all_nox_x <- function(x, lavobject, partable = NULL,
     attributes(est.rot) <- NULL
     est <- est.rot
   } else {
-    GLIST <- lavmodel@GLIST
+    GLIST <- lavmodel@GLIST # if this changes, tag @TDJorgensen in commit message
     est <- lav_model_get_parameters(lavmodel, type = "user")
   }
 
@@ -117,7 +117,7 @@ lav_standardize_lv <- function(lavobject = NULL,
     stopifnot(!is.null(lavpartable))
     if (is.null(est)) {
       if (!is.null(lavpartable$est)) {
-        est <- lavpartable$est
+        est <- lavpartable$est # if this changes, tag @TDJorgensen in commit message
       } else {
         stop("lavaan ERROR: could not find `est' in lavpartable")
       }
@@ -310,7 +310,7 @@ lav_standardize_all <- function(lavobject = NULL,
     stopifnot(!is.null(lavpartable))
     if (is.null(est)) {
       if (!is.null(lavpartable$est)) {
-        est <- lavpartable$est
+        est <- lavpartable$est # if this changes, tag @TDJorgensen in commit message
       } else {
         stop("lavaan ERROR: could not find `est' in lavpartable")
       }
@@ -327,7 +327,7 @@ lav_standardize_all <- function(lavobject = NULL,
         # if("SampleStats" %in% slotNames(lavobject)) {
         #    cov.x <- lavobject@SampleStats@cov.x
         if (!is.null(lavobject@implied$cov.x[[1]])) {
-          cov.x <- lavobject@implied$cov.x
+          cov.x <- lavobject@implied$cov.x # if this changes, tag @TDJorgensen in commit message
         } else {
           # perhaps lavaanList object
           # extract it from GLIST per block
@@ -546,7 +546,7 @@ lav_standardize_all_nox <- function(lavobject = NULL,
     stopifnot(!is.null(lavpartable))
     if (is.null(est)) {
       if (!is.null(lavpartable$est)) {
-        est <- lavpartable$est
+        est <- lavpartable$est # if this changes, tag @TDJorgensen in commit message
       } else {
         stop("lavaan ERROR: could not find `est' in lavpartable")
       }
@@ -563,7 +563,7 @@ lav_standardize_all_nox <- function(lavobject = NULL,
         # if("SampleStats" %in% slotNames(lavobject)) {
         #    cov.x <- lavobject@SampleStats@cov.x
         if (!is.null(lavobject@implied$cov.x[[1]])) {
-          cov.x <- lavobject@implied$cov.x
+          cov.x <- lavobject@implied$cov.x # if this changes, tag @TDJorgensen in commit message
         } else {
           # perhaps lavaanList object
           # extract it from GLIST per block

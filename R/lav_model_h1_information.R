@@ -14,6 +14,16 @@
 # - YR 03 Jan 2018: add support for clustered data: expected
 # - YR 23 Aug 2018: lav_model_h1_acov (0.6-3)
 
+
+## For the lavaan.mi package, TDJ provides pooled versions of all the
+## sample moments called in these functions.  If any updates to these functions
+## require NEW information (from @SampleStats or @implied or @h1), 
+## PLEASE ADD A TAG     @TDJorgensen
+## at the end of the commit message on GitHub, so TDJ can check whether 
+## lavaan.mi::lavResiduals.mi() needs to be updated accordingly.
+
+
+
 lav_model_h1_information <- function(lavobject = NULL,
                                      lavmodel = NULL,
                                      lavsamplestats = NULL,
