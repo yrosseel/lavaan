@@ -17,9 +17,9 @@
 
 ## For the lavaan.mi package, TDJ provides pooled versions of all the
 ## sample moments called in these functions.  If any updates to these functions
-## require NEW information (from @SampleStats or @implied or @h1), 
+## require NEW information (from @SampleStats or @implied or @h1),
 ## PLEASE ADD A TAG     @TDJorgensen
-## at the end of the commit message on GitHub, so TDJ can check whether 
+## at the end of the commit message on GitHub, so TDJ can check whether
 ## lavaan.mi::lavResiduals.mi() needs to be updated accordingly.
 
 
