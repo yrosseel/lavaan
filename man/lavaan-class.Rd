@@ -131,8 +131,8 @@ the independence model) (if available).}
       of the model fit}
     \item{summary}{\code{signature(object = "lavaan", header = TRUE,
      fit.measures = FALSE, estimates = TRUE, ci = FALSE, fmi = FALSE,
-     standardized = FALSE, remove.step1 = TRUE, remove.unused = TRUE,
-     cov.std = TRUE, rsquare = FALSE, std.nox = FALSE,
+     standardized = FALSE, std.nox = FALSE,
+     remove.step1 = TRUE, remove.unused = TRUE, cov.std = TRUE, rsquare = FALSE,
      modindices = FALSE, ci = FALSE, nd = 3L)}:
       Print a nice summary of the model estimates.
       If \code{header = TRUE}, the header section (including fit measures) is
@@ -146,19 +146,20 @@ the independence model) (if available).}
       section.
       If \code{fmi = TRUE}, add the fmi (fraction of missing information)
       column, if it is available.
-      If \code{standardized=TRUE},
-      the standardized solution is also printed.  Note that \emph{SE}s and
+      If \code{standardized=TRUE} or a character vector, the standardized 
+      solution is also printed (see \code{\link{parameterEstimates}}).  
+      Note that \emph{SE}s and
       tests are still based on unstandardized estimates. Use
       \code{\link{standardizedSolution}} to obtain \emph{SE}s and test
       statistics for standardized estimates.
+      The \code{std.nox} argument is deprecated; the \code{standardized}
+      argument allows \code{"std.nox"} solution to be specifically requested.
       If \code{remove.step1}, the parameters of the measurement part are not
       shown (only used when using \code{sam()}.)
       If \code{remove.unused}, automatically added parameters that are
       fixed to their default (0 or 1) values are removed.
       If \code{rsquare=TRUE}, the R-Square values for the dependent variables
       in the model are printed.
-      If \code{std.nox = TRUE}, the \code{std.all} column contains the
-      the \code{std.nox} column from the parameterEstimates() output.
       If \code{efa = TRUE}, EFA related information is printed. The related
       \code{efa.args} list allows to set options related to the EFA output.
       See \code{\link{summary.efaList}} for more details.

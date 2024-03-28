@@ -11,6 +11,7 @@
 #                  are computed
 # YR 24 Sept 2022: add efa= argument
 # YR 19 Nov  2023: add remove.unused= argument
+# TDJ 28 March 2024: deprecate std.nox= argument ("std.nox" can be %in% standardized=)
 
 # create summary of a lavaan object
 lav_object_summary <- function(object, header = TRUE,
@@ -26,13 +27,12 @@ lav_object_summary <- function(object, header = TRUE,
                                estimates = TRUE,
                                ci = FALSE,
                                fmi = FALSE,
-                               std = FALSE,
                                standardized = FALSE,
+                               std = standardized,
                                remove.step1 = TRUE,
                                remove.unused = TRUE,
                                cov.std = TRUE,
                                rsquare = FALSE,
-                               std.nox = FALSE,
                                efa = FALSE,
                                efa.args =
                                  list(
@@ -52,10 +52,12 @@ lav_object_summary <- function(object, header = TRUE,
   res <- list()
 
   # this is to avoid partial matching of 'std' with std.nox
-  standardized <- std || standardized
-
-  if (std.nox) {
-    standardized <- TRUE
+  if (is.logical(std) && is.logical(standardized)) {
+    standardized <- std || standardized
+  } else {
+    # At least 1 is not logical. Retain only valid standardization options.
+    standardized <- intersect(union(tolower(std), tolower(standardized)),
+                              c("std.lv","std.all","std.nox"))
   }
 
   # create the 'short' summary
@@ -198,9 +200,6 @@ lav_object_summary <- function(object, header = TRUE,
       output = "text",
       header = TRUE
     )
-    if (standardized && std.nox) {
-      PE$std.all <- NULL
-    }
     res$pe <- as.data.frame(PE)
   }
 
