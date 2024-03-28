@@ -51,13 +51,13 @@ setMethod(
            estimates = TRUE,
            ci = FALSE,
            fmi = FALSE,
-           std = FALSE,
            standardized = FALSE,
+           std = standardized,
+           std.nox = FALSE, #TODO: remove deprecated argument in early 2025
            remove.step1 = TRUE,
            remove.unused = TRUE,
            cov.std = TRUE,
            rsquare = FALSE,
-           std.nox = FALSE,
            fm.args = list(
              standard.test = "default",
              scaled.test = "default",
@@ -78,7 +78,7 @@ setMethod(
       ci = ci, fmi = fmi, std = std, standardized = standardized,
       remove.step1 = remove.step1, remove.unused = remove.unused,
       cov.std = cov.std,
-      rsquare = rsquare, std.nox = std.nox, efa = efa.flag,
+      rsquare = rsquare, efa = efa.flag,
       fm.args = fm.args, modindices = modindices
     )
     # res has class c("lavaan.summary", "list")
