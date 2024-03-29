@@ -298,7 +298,7 @@ print.lavaan.parameterEstimates <- function(x, ..., nd = 3L) {
         }
       } # no bootstrap
       
-      #TDJ: Pooling options for lavaan.mi-class objects
+      #TDJ: Pooling options for lavaan.mi-class objects (which NEVER bootstrap)
       if (isTRUE(attr(x, "pooled"))) {
         ## add an empty element for a space before pooling section
         c1 <- c(c1, "", "Pooled across imputations")
@@ -342,6 +342,16 @@ print.lavaan.parameterEstimates <- function(x, ..., nd = 3L) {
 
       # print
       write.table(M, row.names = TRUE, col.names = FALSE, quote = FALSE)
+      
+      #TDJ: Message for lavaan.mi-class objects when df > 1000 for t test
+      if (isTRUE(attr(x, "infDF"))) {
+        cat(c("\n  Pooled t statistics with df >= 1000 are displayed with",
+              "\n  df = Inf(inity) to save space. Although the t distribution",
+              "\n  with large df behaves closely approximates a standard normal",
+              "\n  distribution, exact df for reporting these t tests can be",
+              "\n  obtained from parameterEstimates.mi() \n\n"), sep = "")
+      }
+      
     }
   }
 
