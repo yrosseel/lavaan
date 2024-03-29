@@ -297,6 +297,29 @@ print.lavaan.parameterEstimates <- function(x, ..., nd = 3L) {
           ))
         }
       } # no bootstrap
+      
+      #TDJ: Pooling options for lavaan.mi-class objects
+      if (isTRUE(attr(x, "pooled"))) {
+        ## add an empty element for a space before pooling section
+        c1 <- c(c1, "", "Pooled across imputations")
+        c2 <- c(c2, "", "Rubin's (1987) rules")
+      }
+      if (!is.null(attr(x, "scale.W"))) {
+        c1 <- c(c1, "Augment within-imputation variance")
+        if (attr(x, "scale.W")) {
+          c2 <- c(c2, "Scale by average RIV")
+        } else {
+          c2 <- c(c2, "Add between component")
+        }
+      }
+      if (!is.null(attr(x, "asymptotic"))) {
+        c1 <- c(c1, "Wald test for pooled parameters")
+        if (attr(x, "asymptotic")) {
+          c2 <- c(c2, "Normal (z) distribution")
+        } else {
+          c2 <- c(c2, "t(df) distribution")
+        }
+      }
 
       # 4.
       if (attr(x, "se") == "bootstrap" && !is.null(attr(x, "bootstrap"))) {
