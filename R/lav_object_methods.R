@@ -788,7 +788,7 @@ parameterEstimates <- # nolint
           standardized <- c(standardized, "std.nox")
         }
       } else standardized <- character(0) # corresponds to standardized=FALSE
-      
+
     } else {
       # !is.logical(standardized)
       standardized <- tolower(as.character(standardized))
@@ -819,7 +819,7 @@ parameterEstimates <- # nolint
                                                   est.std = tmp.list$est.std,
                                                   cov.std = cov.std)
     }
-    
+
     # rsquare?
     if (rsquare) {
       r2 <- lavTech(object, "rsquare", add.labels = TRUE)
