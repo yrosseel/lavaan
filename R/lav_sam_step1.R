@@ -308,7 +308,7 @@ lav_sam_step1 <- function(cmd = "sem", mm.list = NULL, mm.args = list(),
 }
 
 ## STEP 1b: compute Var(eta) and E(eta) per block
-##          only needed for local approach!
+##          only needed for local/fsr approach!
 lav_sam_step1_local <- function(STEP1 = NULL, FIT = NULL,
                                 sam.method = "local",
                                 local.options = list(

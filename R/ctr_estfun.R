@@ -140,9 +140,12 @@ lav_scores_ml <- function(ntab = 0L,
   # Delta matrix
   Delta <- computeDelta(lavmodel = lavmodel)
 
+  # rename moments
+  moments.groups <- moments
+
   for (g in 1:lavsamplestats@ngroups) {
     if (lavsamplestats@ngroups > 1) {
-      moments <- moments[[g]]
+      moments <- moments.groups[[g]]
     }
     sigma_hat <- moments$cov
 

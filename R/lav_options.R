@@ -223,7 +223,7 @@ lav_options_default <- function(mimic = "lavaan") {
     store.vcov = "default",
 
     # internal
-    parser = "old",
+    parser = "new",
 
     # verbosity
     verbose = FALSE,

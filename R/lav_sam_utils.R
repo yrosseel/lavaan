@@ -8,6 +8,9 @@
 lav_sam_mapping_matrix <- function(LAMBDA = NULL, THETA = NULL,
                                    S = NULL, S.inv = NULL,
                                    method = "ML", warn = TRUE) {
+
+  method <- toupper(method)
+
   # ULS
   # M == solve( t(LAMBDA) %*% LAMBDA ) %*% t(LAMBDA)
   #   == MASS:::ginv(LAMBDA)
@@ -33,7 +36,7 @@ lav_sam_mapping_matrix <- function(LAMBDA = NULL, THETA = NULL,
     }
     if (inherits(S.inv, "try-error")) {
       if (warn) {
-        warning("lavaan WARNING: S is not invertible; switching to ULS metho")
+        warning("lavaan WARNING: S is not invertible; switching to ULS method")
       }
       M <- lav_sam_mapping_matrix(LAMBDA = LAMBDA, method = "ULS")
     } else {
