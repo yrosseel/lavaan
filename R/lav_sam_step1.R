@@ -308,7 +308,7 @@ lav_sam_step1 <- function(cmd = "sem", mm.list = NULL, mm.args = list(),
 }
 
 ## STEP 1b: compute Var(eta) and E(eta) per block
-##          only needed for local approach!
+##          only needed for local/fsr approach!
 lav_sam_step1_local <- function(STEP1 = NULL, FIT = NULL,
                                 sam.method = "local",
                                 local.options = list(
@@ -402,10 +402,6 @@ lav_sam_step1_local <- function(STEP1 = NULL, FIT = NULL,
     DELTA <- FIT@Model@GLIST[delta.idx]
   }
   for (b in seq_len(nblocks)) {
-    # remove 'lv.interaction' columns from LAMBDA[[b]]
-    if (length(lavpta$vidx$lv.interaction[[b]]) > 0L) {
-      LAMBDA[[b]] <- LAMBDA[[b]][, -lavpta$vidx$lv.interaction[[b]]]
-    }
     for (mm in seq_len(nMMblocks)) {
       ov.idx <- OV.idx.list[[mm]][[b]]
       lv.idx <- LV.idx.list[[mm]][[b]]
@@ -435,9 +431,18 @@ lav_sam_step1_local <- function(STEP1 = NULL, FIT = NULL,
       }
     }
 
+    # remove 'lv.interaction' columns from LAMBDA[[b]]
+    # if (length(lavpta$vidx$lv.interaction[[b]]) > 0L) {
+    #  LAMBDA[[b]] <- LAMBDA[[b]][, -lavpta$vidx$lv.interaction[[b]]]
+    # }
+
     # check if LAMBDA has full column rank
-    if (qr(LAMBDA[[b]])$rank < ncol(LAMBDA[[b]])) {
-      print(LAMBDA[[b]])
+    this.lambda <- LAMBDA[[b]]
+    if (length(lavpta$vidx$lv.interaction[[b]]) > 0L) {
+      this.lambda <- this.lambda[, -lavpta$vidx$lv.interaction[[b]]]
+    }
+    if (qr(this.lambda)$rank < ncol(this.lambda)) {
+      print(this.lambda)
       stop("lavaan ERROR: LAMBDA has no full column rank. Please use sam.method = global")
     }
   } # b
@@ -466,14 +471,26 @@ lav_sam_step1_local <- function(STEP1 = NULL, FIT = NULL,
   if (lv.interaction.flag) {
     # compute Bartlett factor scores
     FS <- vector("list", nblocks)
-    FS.mm <- lapply(STEP1$MM.FIT, lav_predict_eta_bartlett)
+    # FS.mm <- lapply(STEP1$MM.FIT, lav_predict_eta_bartlett)
+    FS.mm <- lapply(STEP1$MM.FIT, lavPredict,
+      method = "Bartlett",
+      drop.list.single.group = FALSE
+    )
     for (b in seq_len(nblocks)) {
       tmp <- lapply(
         1:length(STEP1$MM.FIT),
         function(x) FS.mm[[x]][[b]]
       )
+      LABEL <- unlist(lapply(tmp, colnames))
       FS[[b]] <- do.call("cbind", tmp)
-      # label? (not for now)
+      colnames(FS[[b]]) <- LABEL
+
+      # dummy lv's?
+      if (length(dummy.lv.idx) > 0L) {
+        FS.obs <- FIT@Data@X[[b]][, dummy.ov.idx, drop = FALSE]
+        colnames(FS.obs) <- FIT@Data@ov.names[[b]][dummy.ov.idx]
+        FS[[b]] <- cbind(FS[[b]], FS.obs)
+      }
     }
   }
 
@@ -562,21 +579,42 @@ lav_sam_step1_local <- function(STEP1 = NULL, FIT = NULL,
     }
 
     # compute mapping matrix 'M'
+    this.lambda <- LAMBDA[[b]]
+    if (length(lavpta$vidx$lv.interaction[[b]]) > 0L) {
+      this.lambda <- this.lambda[, -lavpta$vidx$lv.interaction[[b]]]
+    }
     Mb <- lav_sam_mapping_matrix(
-      LAMBDA = LAMBDA[[b]],
+      LAMBDA = this.lambda,
       THETA = THETA[[b]],
       S = COV, S.inv = ICOV,
       method = local.M.method,
       warn = lavoptions$warn
     )
+    if (length(lavpta$vidx$lv.interaction[[b]]) > 0L) {
+      tmp <- Mb
+      Mb <- matrix(0, nrow = ncol(LAMBDA[[b]]), ncol = nrow(LAMBDA[[b]]))
+      Mb[-lavpta$vidx$lv.interaction[[b]], ] <- tmp
+    }
 
     # handle observed-only variables
-    dummy.ov.idx <- FIT@Model@ov.y.dummy.ov.idx[[b]]
-    dummy.lv.idx <- FIT@Model@ov.y.dummy.lv.idx[[b]]
+    dummy.ov.idx <- c(
+      FIT@Model@ov.x.dummy.ov.idx[[b]],
+      FIT@Model@ov.y.dummy.ov.idx[[b]]
+    )
+    dummy.lv.idx <- c(
+      FIT@Model@ov.x.dummy.lv.idx[[b]],
+      FIT@Model@ov.y.dummy.lv.idx[[b]]
+    )
     if (length(dummy.ov.idx)) {
       Mb[dummy.lv.idx, ] <- 0
       Mb[cbind(dummy.lv.idx, dummy.ov.idx)] <- 1
     }
+
+    # here, we remove the lv.interaction row(s) from Mb
+    if (length(lavpta$vidx$lv.interaction[[b]]) > 0L) {
+      Mb <- Mb[-lavpta$vidx$lv.interaction[[b]], ]
+    }
+
     # compute EETA
     if (lavoptions$meanstructure) {
       EETA[[b]] <- lav_sam_eeta(M = Mb, YBAR = YBAR, NU = NU[[b]])
@@ -589,6 +627,7 @@ lav_sam_step1_local <- function(STEP1 = NULL, FIT = NULL,
         alpha.correction = local.options[["alpha.correction"]],
         lambda.correction = local.options[["lambda.correction"]],
         N <- FIT@SampleStats@nobs[[this.group]],
+        dummy.lv.idx = dummy.lv.idx,
         extra = TRUE
       )
       VETA[[b]] <- tmp[, , drop = FALSE] # drop attributes
@@ -598,6 +637,7 @@ lav_sam_step1_local <- function(STEP1 = NULL, FIT = NULL,
       # FSR -- no correction
       VETA[[b]] <- Mb %*% COV %*% t(Mb)
     }
+
     # standardize? not really needed, but we may have 1.0000001
     # as variances, and this may lead to false convergence
     if (FIT@Options$std.lv) {
@@ -606,14 +646,13 @@ lav_sam_step1_local <- function(STEP1 = NULL, FIT = NULL,
 
     # lv.names, including dummy-lv covariates
     psi.idx <- which(names(FIT@Model@GLIST) == "psi")[b]
+    lv.names <- FIT@Model@dimNames[[psi.idx]][[b]] # including dummy/interact/.
     if (!lv.interaction.flag) {
       dimnames(VETA[[b]]) <- FIT@Model@dimNames[[psi.idx]]
     } else {
       lv.int.names <- lavpta$vnames$lv.interaction[[b]]
-      # including dummy-lv covariates!
-      tmp <- FIT@Model@dimNames[[psi.idx]][[1]]
       # remove interaction terms
-      lv.names1 <- tmp[!tmp %in% lv.int.names]
+      lv.names1 <- lv.names[!lv.names %in% lv.int.names]
       colnames(VETA[[b]]) <- rownames(VETA[[b]]) <- lv.names1
     }
 
@@ -638,12 +677,15 @@ lav_sam_step1_local <- function(STEP1 = NULL, FIT = NULL,
 
       # VETA2
       if (sam.method == "local") {
+        # reorder FS[[b]] if needed
+        FS.b <- FS[[b]][, lv.names1, drop = FALSE]
         tmp <- lav_sam_veta2(
-          FS = FS[[b]], M = Mb,
+          FS = FS.b, M = Mb,
           VETA = VETA[[b]], EETA = EETA1,
           THETA = THETA[[b]],
           lv.names = lv.names1,
           lv.int.names = lv.int.names,
+          dummy.lv.names = lv.names[dummy.lv.idx],
           alpha.correction = local.options[["alpha.correction"]],
           lambda.correction = local.options[["lambda.correction"]],
           extra = TRUE

@@ -25,7 +25,7 @@ lav_msg_stop <- function(...) {
 lav_msg <- function(wat, txt.width = 80L, indent = 4L) {
   x <- sub("[() ].*$", "", as.character(sys.calls()))
   ignore.in.stack <- c(
-    "^eval$", "^try", "^doTryCatch", "^lav_msg", "^stop$", "^warn$",
+    "^eval$", "^try", "^doTryCatch", "^lav_msg", "^stop$", "^warning$",
     "^which$", "^unique$", "^as\\.", "^unlist$", "^message$",
     "^source$", "^withVisible$", "^tryCatch.W.E$", "^withCallingHandlers$",
     "^do.call$"
@@ -58,12 +58,14 @@ lav_msg <- function(wat, txt.width = 80L, indent = 4L) {
   nstop <- 1L
   while (nstart <= length(chunks)) {
     while (sum(chunk.size[seq.int(nstart, nstop)]) + nstop - nstart + indent
-          < txt.width && nstop < length(chunks)) {
+    < txt.width && nstop < length(chunks)) {
       nstop <- nstop + 1
     }
     if (nstop < length(chunks)) {
-      chunks[nstop + 1L] <- paste0("\n", strrep(" ", indent),
-                                   chunks[nstop + 1L])
+      chunks[nstop + 1L] <- paste0(
+        "\n", strrep(" ", indent),
+        chunks[nstop + 1L]
+      )
     }
     nstart <- nstop + 1L
     nstop <- nstart
@@ -79,10 +81,12 @@ lav_msg <- function(wat, txt.width = 80L, indent = 4L) {
 # The type of quote can be modified via parameter qd (default = TRUE).
 # If the object has names, the names will be prepended with a colon before the
 # value, e.g. c(x = 2.3, y = 4) --> (x : 2.3, y : 4).
-lav_msg_view <- function(x, 
-                         log.sep = c("array", "none", "and", "or"), 
+lav_msg_view <- function(x,
+                         log.sep = c("array", "none", "and", "or"),
                          qd = TRUE) {
-  if (missing(x)) return("NULL")
+  if (missing(x)) {
+    return("NULL")
+  }
   log.sep <- match.arg(log.sep)
   xn <- names(x)
   if (is.list(x)) {
@@ -101,12 +105,12 @@ lav_msg_view <- function(x,
   }
   if (!is.null(xn)) xx <- paste(xn, ":", xx)
   if (length(xx) == 1) {
-    rv = xx
+    rv <- xx
   } else {
-    if (log.sep == "array") rv = paste0("(", paste(xx, collapse = ", "), ")")
-    if (log.sep == "none") rv = paste(xx, collapse = ", ")
-    if (log.sep == "and") rv = paste(paste(xx[-length(xx)], collapse = ", "), gettext("and"), xx[length(xx)])
-    if (log.sep == "or") rv = paste(paste(xx[-length(xx)], collapse = ", "), gettext("or"), xx[length(xx)])
+    if (log.sep == "array") rv <- paste0("(", paste(xx, collapse = ", "), ")")
+    if (log.sep == "none") rv <- paste(xx, collapse = ", ")
+    if (log.sep == "and") rv <- paste(paste(xx[-length(xx)], collapse = ", "), gettext("and"), xx[length(xx)])
+    if (log.sep == "or") rv <- paste(paste(xx[-length(xx)], collapse = ", "), gettext("or"), xx[length(xx)])
   }
   rv
 }
@@ -116,8 +120,10 @@ lav_msg_missing_stop <- function(x) {
 }
 # warning if argument x is missing
 lav_msg_missing_warn <- function(x, usedvalue) {
-  lav_msg_warn(gettextf("argument %1$s is missing, using %2$s.", 
-      x, lav_msg_view(usedvalue)))
+  lav_msg_warn(gettextf(
+    "argument %1$s is missing, using %2$s.",
+    x, lav_msg_view(usedvalue)
+  ))
 }
 # error if length of an argument x is greater then 1 and cannot be
 lav_msg_only1_stop <- function(x) {
@@ -130,24 +136,33 @@ lav_msg_only1_warn <- function(x, xvalue) {
 }
 # error if argument is unknown (show value)
 lav_msg_unknown <- function(x, xvalue) {
-  lav_msg_stop(gettextf("%1$s argument unknown: %2$s",
-                          x, lav_msg_view(xvalue)))
+  lav_msg_stop(gettextf(
+    "%1$s argument unknown: %2$s",
+    x, lav_msg_view(xvalue)
+  ))
 }
-# error if argument isn't one of the allowed values
+# error if argument isn't one of the allowed values, show values allowed
 lav_msg_notallowed <- function(x, allowed) {
   if (length(allowed) == 2L) {
-    lav_msg_stop(gettextf("%1$s argument must be either %2$s",
-      x, lav_msg_view(allowed, "or")))
+    lav_msg_stop(gettextf(
+      "%1$s argument must be either %2$s",
+      x, lav_msg_view(allowed, "or")
+    ))
   } else {
-    lav_msg_stop(gettextf("%1$s argument must be one of %2$s",
-      x, lav_msg_view(allowed, "or")))
+    lav_msg_stop(gettextf(
+      "%1$s argument must be one of %2$s",
+      x, lav_msg_view(allowed, "or")
+    ))
   }
 }
 # error if argument isn't one of the allowed values (show invalid ones)
 lav_msg_notallowed_multi <- function(x, invalids) {
-  lav_msg_stop(sprintf(ngettext(length(invalids),
-    "invalid value in %1$s argument: %2$s.",
-    "invalid values in %1$s argument: %2$s."),
-    x, lav_msg_view(invalids, log.sep = "none"))
-  )
+  lav_msg_stop(sprintf(
+    ngettext(
+      length(invalids),
+      "invalid value in %1$s argument: %2$s.",
+      "invalid values in %1$s argument: %2$s."
+    ),
+    x, lav_msg_view(invalids, log.sep = "none")
+  ))
 }

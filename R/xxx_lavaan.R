@@ -472,7 +472,7 @@ growth <- cfa <- sem <- function(
   model.type <- as.character(mc[[1L]])
   if (length(model.type) == 3L) {
     model.type <- model.type[3L]
-  } 
+  }
   # default options for sem/cfa or growth
   defaults <- list(
     int.ov.free     = model.type != "growth",
@@ -494,7 +494,7 @@ growth <- cfa <- sem <- function(
   )
   mc <- temp$mc
   mc$model.type <- model.type
-  
+
   # call mother function
   mc[[1L]] <- quote(lavaan::lavaan)
   eval(mc, parent.frame())

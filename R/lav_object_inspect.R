@@ -2769,7 +2769,7 @@ lav_object_inspect_delta <- function(object,
   lavpta      <- object@pta
 
   return.value <- lav_object_inspect_delta_internal(lavmodel = lavmodel,
-    lavdata = lavdata, lavpartable = lavpartable, 
+    lavdata = lavdata, lavpartable = lavpartable,
     add.labels = add.labels, add.class = add.class,
     drop.list.single.group = drop.list.single.group)
 
