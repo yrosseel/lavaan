@@ -182,12 +182,12 @@ lavaanify <- lavParTable <- function( # nolint
 
     # what are the block lhs labels?
     blocks.lhs.all <- tolower(flat$lhs[flat$op == ":"])
-    block.lhs <- unique(blocks.lhs.all)
+    tmp.block.lhs <- unique(blocks.lhs.all)
 
     # if we have group and level, check that group comes first!
-    if ("group" %in% block.lhs && "level" %in% block.lhs) {
-      group.idx <- which(block.lhs == "group")
-      level.idx <- which(block.lhs == "level")
+    if ("group" %in% tmp.block.lhs && "level" %in% tmp.block.lhs) {
+      group.idx <- which(tmp.block.lhs == "group")
+      level.idx <- which(tmp.block.lhs == "level")
       if (group.idx > level.idx) {
         stop(
           "lavaan ERROR: levels must be nested within",
@@ -200,10 +200,10 @@ lavaanify <- lavParTable <- function( # nolint
     block.op.idx <- which(flat$op == ":")
 
     # check for wrong spelled 'group' lhs
-    if (length(grep("group", block.lhs)) > 1L) {
+    if (length(grep("group", tmp.block.lhs)) > 1L) {
       warning(
         "lavaan WARNING: ambiguous block identifiers for group:",
-        "\n\t\t  ", paste(block.lhs[grep("group", block.lhs)],
+        "\n\t\t  ", paste(tmp.block.lhs[grep("group", tmp.block.lhs)],
           collapse = ", "
         )
       )
@@ -220,7 +220,7 @@ lavaanify <- lavParTable <- function( # nolint
     }
 
     # check for ngroups (ngroups is based on the data!)
-    if ("group" %in% block.lhs) {
+    if ("group" %in% tmp.block.lhs) {
       # how many group blocks?
       group.block.idx <- flat$op == ":" & flat$lhs == "group"
       n.group.flat <- length(unique(flat$rhs[group.block.idx]))
@@ -234,7 +234,7 @@ lavaanify <- lavParTable <- function( # nolint
     }
 
     # figure out how many 'blocks' we have, and store indices/block.labels
-    block.rhs <- rep("0", length(block.lhs))
+    tmp.block.rhs <- rep("0", length(tmp.block.lhs))
     block.id <- 0L
     block.info <- vector("list", length = n.block.flat) # too large
     block.op.idx1 <- c(block.op.idx, nrow(flat) + 1L) # add addition row
@@ -242,7 +242,7 @@ lavaanify <- lavParTable <- function( # nolint
       # fill block.rhs value(s)
       block.lhs <- flat$lhs[block.op.idx1[block.op]]
       block.rhs <- flat$rhs[block.op.idx1[block.op]]
-      block.rhs[which(block.lhs == block.lhs)] <- block.rhs
+      tmp.block.rhs[which(block.lhs == tmp.block.lhs)] <- block.rhs
 
       # another block identifier?
       if (block.op.idx1[block.op + 1L] - block.op.idx1[block.op] == 1L) {
@@ -260,8 +260,8 @@ lavaanify <- lavParTable <- function( # nolint
 
       # store info in block.info
       block.info[[block.id]] <- list(
-        lhs = block.lhs, # always the same
-        rhs = block.rhs, # for this block
+        lhs = tmp.block.lhs, # always the same
+        rhs = tmp.block.rhs, # for this block
         idx = tmp.idx
       )
     }
@@ -294,8 +294,8 @@ lavaanify <- lavParTable <- function( # nolint
     # split the flat data.frame per `block', create tmp.list
     # for each `block', and rbind them together, adding block columns
     for (block in seq_len(nblocks)) {
-      block.rhs <- block.info[[block]]$rhs
-      block.lhs <- block.info[[block]]$lhs[length(block.lhs)] # last one
+      tmp.block.rhs <- block.info[[block]]$rhs
+      block.lhs <- block.info[[block]]$lhs[length(tmp.block.lhs)] # last one
       block.idx <- block.info[[block]]$idx
 
       flat.block <- flat[block.idx, ]
@@ -380,7 +380,7 @@ lavaanify <- lavParTable <- function( # nolint
       }
 
       list.block <- lav_partable_flat(flat.block,
-        blocks = block.lhs,
+        blocks = tmp.block.lhs,
         block.id = block,
         meanstructure = meanstructure,
         int.ov.free = int.ov.free, int.lv.free = int.lv.free,
@@ -402,9 +402,9 @@ lavaanify <- lavParTable <- function( # nolint
       list.block <- as.data.frame(list.block, stringsAsFactors = FALSE)
 
       # add block columns with current values in block.rhs
-      for (b in seq_len(length(block.lhs))) {
-        block.lhs <- block.lhs[b]
-        block.rhs <- block.rhs[b]
+      for (b in seq_len(length(tmp.block.lhs))) {
+        block.lhs <- tmp.block.lhs[b]
+        block.rhs <- tmp.block.rhs[b]
         list.block[block.lhs] <- rep(block.rhs, length(list.block$lhs))
       }
 
@@ -418,9 +418,9 @@ lavaanify <- lavParTable <- function( # nolint
     tmp.list <- as.list(tmp.list)
 
     # convert block columns to integers if possible
-    for (b in seq_len(length(block.lhs))) {
-      block.lhs <- block.lhs[b]
-      block.rhs <- block.rhs[b]
+    for (b in seq_len(length(tmp.block.lhs))) {
+      block.lhs <- tmp.block.lhs[b]
+      block.rhs <- tmp.block.rhs[b]
       tmp <- try(scan(
         text = tmp.list[[block.lhs]], what = integer(),
         quiet = TRUE
@@ -688,7 +688,7 @@ lavaanify <- lavParTable <- function( # nolint
 
   # get 'virtual' parameter labels
   if (n.block.flat > 1L) {
-    blocks <- block.lhs
+    blocks <- tmp.block.lhs
   } else {
     blocks <- "group"
   }
