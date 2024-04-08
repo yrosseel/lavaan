@@ -11,7 +11,7 @@ LRT test for comparing (nested) lavaan models.}
 \usage{
 lavTestLRT(object, ..., method = "default", A.method = "delta",
            scaled.shifted = TRUE,
-           H1 = TRUE, type = "Chisq", model.names = NULL)
+           type = "Chisq", model.names = NULL)
 anova(object, ...)
 }
 \arguments{
@@ -20,7 +20,6 @@ anova(object, ...)
 \item{method}{Character string. The possible options are 
 \code{"satorra.bentler.2001"}, \code{"satorra.bentler.2010"},
 \code{"satorra.2000"}, and \code{"standard"}. See details.}
-\item{H1}{Not used yet}
 \item{A.method}{Character string. The possible options are \code{"exact"}
 and \code{"delta"}. This is only used when method = \code{"satorra.2000"}.
 It determines how the Jacobian of the constraint function (the matrix A)

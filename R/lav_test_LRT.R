@@ -18,7 +18,7 @@
 
 lavTestLRT <- function(object, ..., method = "default", A.method = "delta",
                        scaled.shifted = TRUE,
-                       H1 = TRUE, type = "Chisq", model.names = NULL) {
+                       type = "Chisq", model.names = NULL) {
   type <- tolower(type)
   method <- tolower(gsub("[-_\\.]", "", method))
   if (type %in% c("browne", "browne.residual.adf", "browne.residual.nt")) {
