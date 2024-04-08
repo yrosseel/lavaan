@@ -18,8 +18,8 @@ anova(object, ...)
 \item{object}{An object of class \code{\linkS4class{lavaan}}.}
 \item{...}{additional objects of class \code{\linkS4class{lavaan}}.}
 \item{method}{Character string. The possible options are 
-\code{"satorra.bentler.2001"}, \code{"satorra.bentler.2010"} and
-\code{"satorra.2000"}. See details.}
+\code{"satorra.bentler.2001"}, \code{"satorra.bentler.2010"},
+\code{"satorra.2000"}, and \code{"standard"}. See details.}
 \item{H1}{Not used yet}
 \item{A.method}{Character string. The possible options are \code{"exact"}
 and \code{"delta"}. This is only used when method = \code{"satorra.2000"}.
@@ -50,26 +50,32 @@ we use a mean and variance adjusted (Satterthwaite style) test statistic.}
     \code{lavTestLRT} function, which has a few additional arguments.
 
     If \code{type = "Chisq"} and the test statistics are scaled, a
-    special scaled difference test statistic is computed. If method is
+    special scaled difference test statistic is computed. If \code{method} is
     \code{"satorra.bentler.2001"}, a simple approximation is used
     described in Satorra & Bentler (2001). In some settings,
     this can lead to a negative test statistic. To ensure a positive
     test statistic, we can use the method proposed by 
-    Satorra & Bentler (2010). Alternatively, when method is
-    \code{"satorra.2000"}, the original formulas of Satorra (2000) are
-    used.
+    Satorra & Bentler (2010). Alternatively, when \code{method="satorra.2000"},
+    the original formulas of Satorra (2000) are used.  The latter is used for
+    model comparison, when \code{...} contain additional (nested) models.
+    Even when test statistics are scaled in \code{object} or \code{...},
+    users may request the  \code{method="standard"} test statistic,
+    without a robust adjustment.
 }
 \references{
 Satorra, A. (2000). Scaled and adjusted restricted tests in multi-sample
 analysis of moment structures. In Heijmans, R.D.H., Pollock, D.S.G. & Satorra,
-A. (eds.), Innovations in multivariate statistical analysis. A Festschrift for
-Heinz Neudecker (pp.233-247). London: Kluwer Academic Publishers.     
+A. (eds.), \emph{Innovations in multivariate statistical analysis}:
+\emph{A Festschrift for Heinz Neudecker} (pp.233-247). 
+London, UK: Kluwer Academic Publishers.     
 
 Satorra, A., & Bentler, P. M. (2001). A scaled difference chi-square test
-statistic for moment structure analysis. Psychometrika, 66(4), 507-514.
+statistic for moment structure analysis. \emph{Psychometrika, 66}(4), 507-514.
+\doi{10.1007/BF02296192}
 
 Satorra, A., & Bentler, P. M. (2010). Ensuring postiveness of the scaled
-difference chi-square test statistic. Psychometrika, 75(2), 243-248.
+difference chi-square test statistic. \emph{Psychometrika, 75}(2), 243-248.
+\doi{10.1007/s11336-009-9135-y}
 }
 \examples{
 HS.model <- '

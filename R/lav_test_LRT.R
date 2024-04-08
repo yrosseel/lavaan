@@ -5,6 +5,7 @@
 # - in 0.5-18, SB.classic is replaced by 'method', with the following
 #   options:
 #     method = "default" (we choose a default method, based on the estimator)
+#     method = "standard" (option to explicitly avoid robust adjustment)
 #     method = "Satorra.2000"
 #     method = "Satorra.Bentler.2001"
 #     method = "Satorra.Bentler.2010"
@@ -137,7 +138,10 @@ lavTestLRT <- function(object, ..., method = "default", A.method = "delta",
   if (type %in% c("browne.residual.adf", "browne.residual.nt")) {
     scaled <- FALSE
   }
-
+  if (method == "standard") {
+    scaled <- FALSE
+  }
+  
   # select method
   if (method == "default") {
     if (estimator == "PML") {
@@ -164,7 +168,9 @@ lavTestLRT <- function(object, ..., method = "default", A.method = "delta",
     method <- "satorra.bentler.2001"
   } else if (method == "satorrabentler2010") {
     method <- "satorra.bentler.2010"
-  } else {
+    
+    ## only option left:
+  } else if (method != "standard") {
     stop("lavaan ERROR: unknown method for scaled difference test: ", method)
   }
 
@@ -182,7 +188,7 @@ lavTestLRT <- function(object, ..., method = "default", A.method = "delta",
       "\n\t switching to the standard chi-square difference test"
     )
 
-    method <- "default"
+    method <- "standard"
   }
 
 
