@@ -56,8 +56,8 @@ lavTestLRT <- function(object, ..., method = "default", test = "default",
 
   # TDJ: check for user-supplied h1 model
   user_h1_exists <- FALSE
-  if (!is.null(object@external$h1)) {
-    if (inherits(object@external$h1, "lavaan")) {
+  if (!is.null(object@external$h1.model)) {
+    if (inherits(object@external$h1.model, "lavaan")) {
       user_h1_exists <- TRUE
     }
   }
@@ -81,7 +81,7 @@ lavTestLRT <- function(object, ..., method = "default", test = "default",
     )
   }
   # TDJ: Add user-supplied h1 model, if it exists
-  if (user_h1_exists) mods$user_h1 <- object@external$h1
+  if (user_h1_exists) mods$user_h1 <- object@external$h1.model
 
   # put them in order (using degrees of freedom)
   ndf <- sapply(mods, function(x) x@test[[1]]$df)

@@ -700,8 +700,8 @@ lav_update_test_custom_h1 <- function(lav_obj_h0, lav_obj_h1) {
   stopifnot(lav_obj_h0@test[[1]]$df >= lav_obj_h1@test[[1]]$df)
   
   ## remove any other (potentially hidden) h1 model from BOTH objects
-  lav_obj_h0@external$h1 <- NULL
-  lav_obj_h1@external$h1 <- NULL
+  lav_obj_h0@external$h1.model <- NULL
+  lav_obj_h1@external$h1.model <- NULL
   
   ## save old @test slot as template
   ## (so the @test[[1]]$df don't change while looping over tests to update)
@@ -741,7 +741,14 @@ lav_update_test_custom_h1 <- function(lav_obj_h0, lav_obj_h1) {
     }
     
     ## get new test
-    ANOVA <- eval(as.call(lrtCall))
+    if (lav_obj_h0@test[[1]]$df == lav_obj_h1@test[[1]]$df) {
+      ## suppress warning about == df
+      ANOVA <- suppressWarnings(eval(as.call(lrtCall)))
+    } else {
+      ## maybe some other informative warning would be important to see
+      ANOVA <- eval(as.call(lrtCall))
+    }
+    
     
     ## replace old @test[[tn]] values
     newTEST[[tn]]$stat.group <- NULL # avoid wrong stats in summary() header?

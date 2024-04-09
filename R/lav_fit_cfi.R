@@ -683,6 +683,15 @@ lav_fit_measures_check_baseline <- function(fit.indep = NULL, object = NULL) {
       TEST <- fit.indep@test
     }
   } # converged lavaan object
-
+  
+  
+  ## TDJ: Check for user-supplied h1 model in object (maybe in fit.indep, too?)
+  if (!is.null(object@external$h1.model)) {
+    stopifnot(inherits(object@external$h1.model, "lavaan"))
+    ## update @test slot
+    TEST <- lav_update_test_custom_h1(lav_obj_h0 = fit.indep,
+                                      lav_obj_h1 = object@external$h1.model)@test
+  }
+  
   TEST
 }
