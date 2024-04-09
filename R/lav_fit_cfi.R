@@ -411,7 +411,8 @@ lav_fit_cfi_lavobject <- function(lavobject = NULL, fit.measures = "cfi",
     baseline.test <-
       lav_fit_measures_check_baseline(
         fit.indep = baseline.model,
-        object = lavobject
+        object = lavobject,
+        fit.h1 = lavobject@external$h1.model # okay if NULL
       )
     # 2. baseline model in @external slot
   } else if (!is.null(lavobject@external$baseline.model)) {
@@ -419,12 +420,15 @@ lav_fit_cfi_lavobject <- function(lavobject = NULL, fit.measures = "cfi",
     baseline.test <-
       lav_fit_measures_check_baseline(
         fit.indep = fit.indep,
-        object = lavobject
+        object = lavobject,
+        fit.h1 = lavobject@external$h1.model # okay if NULL
       )
     # 3. internal @baseline slot
   } else if (.hasSlot(lavobject, "baseline") &&
     length(lavobject@baseline) > 0L &&
-    !is.null(lavobject@baseline$test)) {
+    !is.null(lavobject@baseline$test) &&
+    ## if there is a custom h1 model, need  _check_baseline() to update @test
+    is.null(lavobject@external$h1.model)) {
     baseline.test <- lavobject@baseline$test
     # 4. (re)compute independence model
   } else {
@@ -432,7 +436,8 @@ lav_fit_cfi_lavobject <- function(lavobject = NULL, fit.measures = "cfi",
     baseline.test <-
       lav_fit_measures_check_baseline(
         fit.indep = fit.indep,
-        object = lavobject
+        object = lavobject,
+        fit.h1 = lavobject@external$h1.model # okay if NULL
       )
   }
 
@@ -611,7 +616,8 @@ lav_fit_cfi_lavobject <- function(lavobject = NULL, fit.measures = "cfi",
 # new in 0.6-5
 # internal function to check the (external) baseline model, and
 # return baseline 'test' list if everything checks out (and NULL otherwise)
-lav_fit_measures_check_baseline <- function(fit.indep = NULL, object = NULL) {
+lav_fit_measures_check_baseline <- function(fit.indep = NULL, object = NULL,
+                                            fit.h1 = NULL) {
   TEST <- NULL
 
   # check if everything is in order
@@ -685,12 +691,31 @@ lav_fit_measures_check_baseline <- function(fit.indep = NULL, object = NULL) {
   } # converged lavaan object
   
   
-  ## TDJ: Check for user-supplied h1 model in object (maybe in fit.indep, too?)
-  if (!is.null(object@external$h1.model)) {
+  
+  # TDJ: Check for user-supplied h1.model (here, the fit.h1= argument)
+  #      Similar to BASELINE model, use the following priority:
+  #        1. user-provided h1 model
+  #        2. h1 model in @external slot
+  #        3. default h1 model (already in @h1 slot, no update necessary)
+  #FIXME? user-supplied h1 model in object might be in fit.indep, too
+  
+  user_h1_exists <- FALSE
+  # 1. user-provided h1 model
+  if (!is.null(fit.h1)) {
+    stopifnot(inherits(fit.h1, "lavaan"))
+    user_h1_exists <- TRUE
+    
+    # 2. h1 model in @external slot
+  } else if (!is.null(object@external$h1.model)) {
     stopifnot(inherits(object@external$h1.model, "lavaan"))
+    fit.h1 <- object@external$h1.model
+    user_h1_exists <- TRUE
+  }
+  
+  if (user_h1_exists) {
     ## update @test slot
     TEST <- lav_update_test_custom_h1(lav_obj_h0 = fit.indep,
-                                      lav_obj_h1 = object@external$h1.model)@test
+                                      lav_obj_h1 = fit.h1)@test
   }
   
   TEST
