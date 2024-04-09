@@ -16,7 +16,7 @@
 
 setMethod(
   "fitMeasures", signature(object = "lavaan"),
-  function(object, fit.measures = "all", baseline.model = NULL,
+  function(object, fit.measures = "all", baseline.model = NULL, h1.model = NULL,
            fm.args = list(
              standard.test = "default",
              scaled.test = "default",
@@ -30,7 +30,7 @@ setMethod(
     # note: the ... is not used by lavaan
     lav_fit_measures(
       object = object, fit.measures = fit.measures,
-      baseline.model = baseline.model, fm.args = fm.args,
+      baseline.model = baseline.model, h1.model = h1.model, fm.args = fm.args,
       output = output
     )
   }
@@ -38,7 +38,7 @@ setMethod(
 
 setMethod(
   "fitmeasures", signature(object = "lavaan"),
-  function(object, fit.measures = "all", baseline.model = NULL,
+  function(object, fit.measures = "all", baseline.model = NULL, h1.model = NULL,
            fm.args = list(
              standard.test = "default",
              scaled.test = "default",
@@ -52,7 +52,7 @@ setMethod(
     # note: the ... is not used by lavaan
     lav_fit_measures(
       object = object, fit.measures = fit.measures,
-      baseline.model = baseline.model, fm.args = fm.args,
+      baseline.model = baseline.model, h1.model = h1.model, fm.args = fm.args,
       output = output
     )
   }
@@ -62,7 +62,7 @@ setMethod(
 fitMeasures.efaList <- fitmeasures.efaList <- function(
     object,
     fit.measures = "all",
-    baseline.model = NULL,
+    baseline.model = NULL, h1.model = NULL,
     fm.args = list(
       standard.test = "default",
       scaled.test = "default",
@@ -82,7 +82,7 @@ fitMeasures.efaList <- fitmeasures.efaList <- function(
     function(x) {
       lav_fit_measures(
         object = x,
-        fit.measures = fit.measures,
+        fit.measures = fit.measures, h1.model = h1.model,
         baseline.model = baseline.model, fm.args = fm.args,
         output = "vector"
       )
@@ -114,7 +114,7 @@ fitMeasures.efaList <- fitmeasures.efaList <- function(
 
 
 lav_fit_measures <- function(object, fit.measures = "all",
-                             baseline.model = NULL,
+                             baseline.model = NULL, h1.model = NULL,
                              fm.args = list(
                                standard.test = "default",
                                scaled.test = "default",
@@ -165,7 +165,8 @@ lav_fit_measures <- function(object, fit.measures = "all",
   TEST <- lavInspect(object, "test")
   test.names <- unname(sapply(TEST, "[[", "test"))
   if (test.names[1] == "none") {
-    stop("lavaan ERROR: fit measures not available if test = \"none\".")
+    stop("lavaan ERROR: fit measures not available if test = \"none\".") 
+    #FIXME: allow RMRs, log.likelihoods, info criteria, npar, ntotal
   }
 
   standard.test <- fm.args$standard.test
@@ -220,6 +221,36 @@ lav_fit_measures <- function(object, fit.measures = "all",
     )
     # replace in object, if we pass it to lav_fit_* functions
     object@test <- TEST
+    test.names <- unname(sapply(TEST, "[[", "test"))
+  }
+  
+  
+  # TDJ: Check for user-supplied h1 model
+  #      Similar to BASELINE model, use the following priority:
+  #        1. user-provided h1 model
+  #        2. h1 model in @external slot
+  #        3. default h1 model (already in @h1 slot, no update necessary)
+  
+  user_h1_exists <- FALSE
+    # 1. user-provided h1 model
+  if (!is.null(h1.model)) {
+    stopifnot(inherits(h1.model, "lavaan"))
+    user_h1_exists <- TRUE
+    
+    # 2. h1 model in @external slot
+  } else if (!is.null(object@external$h1.model)) {
+    stopifnot(inherits(object@external$h1.model, "lavaan"))
+    h1.model <- object@external$h1.model
+    user_h1_exists <- TRUE
+  }
+  
+  ## Update statistics in @test slot?
+  if (user_h1_exists) {
+    ## update @test slot
+    FIT <- lav_update_test_custom_h1(lav_obj_h0 = object, lav_obj_h1 = h1.model)
+
+    ## re-assign TEST object that is used below
+    TEST <- FIT@test
     test.names <- unname(sapply(TEST, "[[", "test"))
   }
 
@@ -466,6 +497,7 @@ lav_fit_measures <- function(object, fit.measures = "all",
         lavobject = object,
         fit.measures = fit.measures,
         baseline.model = baseline.model,
+        h1.model = h1.model,
         standard.test = standard.test,
         scaled.test = scaled.test,
         robust = fm.args$robust,
@@ -1097,6 +1129,7 @@ print.lavaan.fitMeasures <- function(x, ..., nd = 3L, add.h0 = TRUE) {
   }
 
   # SRMR
+  #TODO: add CRMR
   if (any(c("rmr", "srmr") %in% names.x) && !"srmr_within" %in% names.x) {
     cat("\nStandardized Root Mean Square Residual:\n\n")
 
@@ -1146,6 +1179,7 @@ print.lavaan.fitMeasures <- function(x, ..., nd = 3L, add.h0 = TRUE) {
   }
 
   # SRMR -- multilevel
+  #TODO: add CRMR?
   if (any(c("srmr_within", "srmr_between") %in% names.x)) {
     cat("\nStandardized Root Mean Square Residual (corr metric):\n\n")
 
