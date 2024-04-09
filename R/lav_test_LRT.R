@@ -281,6 +281,9 @@ lavTestLRT <- function(object, ..., method = "default", test = "default",
   Df.delta <- c(NA, diff(Df))
   if (method == "satorra.2000" && scaled.shifted) {
     a.delta <- b.delta <- rep(as.numeric(NA), length(STAT))
+  } else if (method %in% c("satorra.bentler.2001","satorra.bentler.2010",
+                           "satorra.2000")) {
+    c.delta <- rep(as.numeric(NA), length(STAT))
   }
   # new in 0.6-13
   if (!scaled) {
@@ -313,6 +316,7 @@ lavTestLRT <- function(object, ..., method = "default", test = "default",
                                                 test = TEST)
         STAT.delta[m + 1] <- out$T.delta
         Df.delta[m + 1] <- out$df.delta
+        c.delta[m + 1] <- out$scaling.factor
       }
     } else if (method == "mean.var.adjusted.PLRT") {
       for (m in seq_len(length(mods) - 1L)) {
@@ -329,6 +333,7 @@ lavTestLRT <- function(object, ..., method = "default", test = "default",
 
         STAT.delta[m + 1] <- out$T.delta
         Df.delta[m + 1] <- out$df.delta
+        c.delta[m + 1] <- out$scaling.factor
       }
     } else if (method == "satorra.2000") {
       for (m in seq_len(length(mods) - 1L)) {
@@ -351,6 +356,8 @@ lavTestLRT <- function(object, ..., method = "default", test = "default",
         if (scaled.shifted) {
           a.delta[m + 1] <- out$a
           b.delta[m + 1] <- out$b
+        } else {
+          c.delta[m + 1] <- out$scaling.factor
         }
       }
     }
@@ -446,6 +453,9 @@ lavTestLRT <- function(object, ..., method = "default", test = "default",
       if (method == "satorra.2000" && scaled.shifted) {
         attr(val, "scale") <- a.delta
         attr(val, "shift") <- b.delta
+      } else if (method %in% c("satorra.bentler.2001","satorra.bentler.2010",
+                               "satorra.2000")) {
+        attr(val, "scale") <- c.delta
       }
     } else {
       attr(val, "heading") <- "\nChi-Squared Difference Test\n"
