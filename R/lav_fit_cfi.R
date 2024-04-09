@@ -224,7 +224,7 @@ lav_fit_ifi <- function(X2 = NULL, df = NULL, X2.null = NULL, df.null = NULL) {
 
 # higher-level function
 lav_fit_cfi_lavobject <- function(lavobject = NULL, fit.measures = "cfi",
-                                  baseline.model = NULL,
+                                  baseline.model = NULL, h1.model = NULL,
                                   standard.test = "standard",
                                   scaled.test = "none",
                                   robust = TRUE,
@@ -406,13 +406,28 @@ lav_fit_cfi_lavobject <- function(lavobject = NULL, fit.measures = "cfi",
   # 3. baseline model in @baseline slot
   # 4. nothing -> compute independence model
 
+  # TDJ: Also check for user-supplied h1.model, using similar priority:
+  #        1. user-provided h1 model
+  #        2. h1 model in @external slot
+  #        3. default h1 model (already in @h1 slot, no update necessary)
+  
+  # 1. user-provided h1 model
+  if (!is.null(h1.model)) {
+    stopifnot(inherits(h1.model, "lavaan"))
+
+    # 2. h1 model in @external slot
+  } else if (!is.null(object@external$h1.model)) {
+    stopifnot(inherits(object@external$h1.model, "lavaan"))
+    h1.model <- object@external$h1.model
+  } # else is.null
+  
   # 1. user-provided baseline model
   if (!is.null(baseline.model)) {
     baseline.test <-
       lav_fit_measures_check_baseline(
         fit.indep = baseline.model,
         object = lavobject,
-        fit.h1 = lavobject@external$h1.model # okay if NULL
+        fit.h1 = h1.model # okay if NULL
       )
     # 2. baseline model in @external slot
   } else if (!is.null(lavobject@external$baseline.model)) {
@@ -421,14 +436,14 @@ lav_fit_cfi_lavobject <- function(lavobject = NULL, fit.measures = "cfi",
       lav_fit_measures_check_baseline(
         fit.indep = fit.indep,
         object = lavobject,
-        fit.h1 = lavobject@external$h1.model # okay if NULL
+        fit.h1 = h1.model # okay if NULL
       )
     # 3. internal @baseline slot
   } else if (.hasSlot(lavobject, "baseline") &&
     length(lavobject@baseline) > 0L &&
     !is.null(lavobject@baseline$test) &&
-    ## if there is a custom h1 model, need  _check_baseline() to update @test
-    is.null(lavobject@external$h1.model)) {
+    ## if there is a custom h1.model, need  _check_baseline() to update @test
+    is.null(h1.model)) {
     baseline.test <- lavobject@baseline$test
     # 4. (re)compute independence model
   } else {
@@ -437,7 +452,7 @@ lav_fit_cfi_lavobject <- function(lavobject = NULL, fit.measures = "cfi",
       lav_fit_measures_check_baseline(
         fit.indep = fit.indep,
         object = lavobject,
-        fit.h1 = lavobject@external$h1.model # okay if NULL
+        fit.h1 = h1.model # okay if NULL
       )
   }
 
