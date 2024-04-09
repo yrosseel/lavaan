@@ -14,13 +14,18 @@
 # - 0.6-13: RMSEA.D (also known as 'RDR') is added to the table (unless scaled)
 # - 0.6-13: fix multiple-group UG^2 bug in Satorra.2000 (reported by
 #           Gronneberg, Foldnes and Moss)
+#
+# - 0.6-19: 
+#     New option method = "standard" (to explicitly avoid robust adjustment)
+#     New test= argument to select scaled stat when method="satorra.bentler.2001/2010"
 
 
-lavTestLRT <- function(object, ..., method = "default", A.method = "delta",
-                       scaled.shifted = TRUE,
+lavTestLRT <- function(object, ..., method = "default", test = "default",
+                       A.method = "delta", scaled.shifted = TRUE, # only when method="Satorra.2000"
                        type = "Chisq", model.names = NULL) {
-  type <- tolower(type)
-  method <- tolower(gsub("[-_\\.]", "", method))
+  type <- tolower(type[1])
+  test <- tolower(test[1])
+  method <- tolower(gsub("[-_\\.]", "", method[1]))
   if (type %in% c("browne", "browne.residual.adf", "browne.residual.nt")) {
     if (type == "browne") {
       type <- "browne.residual.adf"
@@ -76,7 +81,7 @@ lavTestLRT <- function(object, ..., method = "default", A.method = "delta",
     )
   }
   # TDJ: Add user-supplied h1 model, if it exists
-  if (user_h1_exists) mods$h1 <- object@external$h1
+  if (user_h1_exists) mods$user_h1 <- object@external$h1
 
   # put them in order (using degrees of freedom)
   ndf <- sapply(mods, function(x) x@test[[1]]$df)
@@ -121,22 +126,47 @@ lavTestLRT <- function(object, ..., method = "default", A.method = "delta",
       "satorra.bentler", "yuan.bentler", "yuan.bentler.mplus",
       "mean.var.adjusted", "scaled.shifted"
     ) %in%
-      unlist(sapply(slot(x, "test"), "[", "test")))
+      unlist(sapply(slot(x, "test"), "[[", "test")))
   }))
 
   if (all(mods.scaled | ndf == 0) && any(mods.scaled)) {
     # Note: if df=0, test is not really robust, hence the above condition
     scaled <- TRUE
-    # which type?
-    TEST <- object@test[[2]]$test
+    # which test to choose by default? 
+    # i.e., not determined by method=
+    scaledList <- sapply(object@test, function(x) !is.null(x$scaled.test.stat))
+    scaled.idx <- which(scaledList)[[1]]
+    default.TEST <- object@test[[scaled.idx]]$test
+    if (test == "default") {
+      TEST <- default.TEST
+    } else if (! test %in% c("satorra.bentler", "yuan.bentler", "yuan.bentler.mplus",
+                             "mean.var.adjusted", "scaled.shifted")) {
+      stop("lavaan ERROR: test = ", dQuote(test), " not found in object.\n",
+           "See available tests in lavInspect(object, \"options\")$test.")
+    } else TEST <- test
+    
+    ## is the test available from all models?
+    check.scaled <- unlist(lapply(mods, function(x) {
+      TEST %in% unlist(sapply(slot(x, "test"), "[[", "test"))
+    }))
+    
+    if (any(!check.scaled)) {
+      stop("lavaan ERROR: test = ", dQuote(test), " not found in model(s):\n",
+           paste(names(mods)[which(!check.scaled)], collapse = ", "),
+           "\nFind available tests per model using",
+           "lavInspect(fit, \"options\")$test.")
+    }
+    
   } else if (!any(mods.scaled)) { # thanks to R.M. Bee to fix this
     scaled <- FALSE
     TEST <- "standard"
+    method <- "standard"
   } else {
     stop("lavaan ERROR: some models (but not all) have scaled test statistics")
   }
   if (type %in% c("browne.residual.adf", "browne.residual.nt")) {
     scaled <- FALSE
+    method <- "standard"
   }
   if (method == "standard") {
     scaled <- FALSE
@@ -168,10 +198,22 @@ lavTestLRT <- function(object, ..., method = "default", A.method = "delta",
     method <- "satorra.bentler.2001"
   } else if (method == "satorrabentler2010") {
     method <- "satorra.bentler.2010"
-    
+
     ## only option left:
   } else if (method != "standard") {
     stop("lavaan ERROR: unknown method for scaled difference test: ", method)
+  }
+  
+  ## in case users specify method= or test= (but still type="chisq"),
+  ## make sure the arguments are consistent for scaled tests
+  if (method %in% c("satorra.bentler.2001","satorra.bentler.2010") && scaled &&
+      (!TEST %in% c("satorra.bentler","yuan.bentler","yuan.bentler.mplus")) ) {
+    stop("lavaan ERROR: method = ", dQuote(method), " only available when",
+         " models are fitted with test = \"satorra.bentler\",",
+         " \"yuan.bentler\", or \"yuan.bentler.mplus\".")
+  } else {
+    ## method="satorra.2000" still available when TEST != scaled.shifted
+    ## Or !scaled, so nothing to do.
   }
 
   # check method if scaled = FALSE
@@ -185,7 +227,7 @@ lavTestLRT <- function(object, ..., method = "default", A.method = "delta",
     warning(
       "lavaan WARNING: method = ", dQuote(method),
       "\n\t but no robust test statistics were used;",
-      "\n\t switching to the standard chi-square difference test"
+      "\n\t switching to the standard chi-squared difference test"
     )
 
     method <- "standard"
@@ -266,7 +308,9 @@ lavTestLRT <- function(object, ..., method = "default", A.method = "delta",
     if (method == "satorra.bentler.2001") {
       # use formula from Satorra & Bentler 2001
       for (m in seq_len(length(mods) - 1L)) {
-        out <- lav_test_diff_SatorraBentler2001(mods[[m]], mods[[m + 1]])
+        out <- lav_test_diff_SatorraBentler2001(mods[[m]], mods[[m + 1]],
+                                                # in case not @test[[2]]:
+                                                test = TEST)
         STAT.delta[m + 1] <- out$T.delta
         Df.delta[m + 1] <- out$df.delta
       }
@@ -279,6 +323,7 @@ lavTestLRT <- function(object, ..., method = "default", A.method = "delta",
     } else if (method == "satorra.bentler.2010") {
       for (m in seq_len(length(mods) - 1L)) {
         out <- lav_test_diff_SatorraBentler2010(mods[[m]], mods[[m + 1]],
+          test = TEST, # in case not @test[[2]]
           H1 = FALSE
         ) # must be F
 
