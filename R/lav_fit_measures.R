@@ -250,7 +250,7 @@ lav_fit_measures <- function(object, fit.measures = "all",
     FIT <- lav_update_test_custom_h1(lav_obj_h0 = object, lav_obj_h1 = h1.model)
 
     ## re-assign TEST object that is used below
-    TEST <- FIT@test
+    object@test <- TEST <- FIT@test
     test.names <- unname(sapply(TEST, "[[", "test"))
   }
 
