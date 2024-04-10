@@ -131,16 +131,18 @@ lavTestLRT(t6.1, t6.0, method = "satorra.2000", scaled.shifted = FALSE)
 ## Because "satorra.bentler" is not the first scaled test in the list,
 ## we MUST request it explicitly:
 lavTestLRT(t6.1, t6.0, test = "satorra.bentler") # method="satorra.bentler.2001"
-## == lavTestLRT(update(t6.1, test = "satorra.bentler"), update(t6.0, test = "satorra.bentler"))
-
+## == lavTestLRT(update(t6.1, test = "satorra.bentler"),
+##               update(t6.0, test = "satorra.bentler"))
 ## The "strictly-positive test" is necessary when the above test is < 0:
 lavTestLRT(t6.1, t6.0, test = "satorra.bentler", method = "satorra.bentler.2010")
 
 ## Likewise, other scaled statistics can be selected:
 lavTestLRT(t6.1, t6.0, test = "yuan.bentler")
-## == lavTestLRT(update(t6.1, test = "yuan.bentler"), update(t6.0, test = "yuan.bentler"))
+## == lavTestLRT(update(t6.1, test = "yuan.bentler"),
+##               update(t6.0, test = "yuan.bentler"))
 lavTestLRT(t6.1, t6.0, test = "yuan.bentler.mplus")
-## == lavTestLRT(update(t6.1, test = "yuan.bentler.mplus"), update(t6.0, test = "yuan.bentler.mplus"))
+## == lavTestLRT(update(t6.1, test = "yuan.bentler.mplus"),
+##               update(t6.0, test = "yuan.bentler.mplus"))
 
 ## To request the difference between Browne's (1984) residual-based statistics,
 ## rather than statistics based on the fitted model's discrepancy function,
