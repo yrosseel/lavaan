@@ -145,6 +145,13 @@ lav_object_summary <- function(object, header = TRUE,
 
       # 5. test statistics
       TEST <- object@test
+      # TDJ: check for user-supplied h1 model
+      if (!is.null(object@external$h1.model)) {
+        stopifnot(inherits(object@external$h1.model, "lavaan"))
+        ## update @test slot
+        TEST <- lav_update_test_custom_h1(lav_obj_h0 = object,
+                                          lav_obj_h1 = object@external$h1.model)@test
+      }
       # double check if we have attr(TEST, "info") (perhaps old object?)
       if (is.null(attr(TEST, "info"))) {
         lavdata <- object@Data

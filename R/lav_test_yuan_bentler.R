@@ -243,7 +243,9 @@ lav_test_yuan_bentler <- function(lavobject = NULL,
         scaling.factor.h0 = scaling.factor.h0,
         label = "Yuan-Bentler correction",
         trace.UGamma = trace.UGamma,
-        trace.UGamma2 = trace.UGamma2
+        trace.UGamma2 = trace.UGamma2,
+        scaled.test.stat = TEST$standard$stat,
+        scaled.test = TEST$standard$test
       )
   } else if ("yuan.bentler.mplus" %in% test) {
     TEST$yuan.bentler.mplus <-
@@ -260,7 +262,9 @@ lav_test_yuan_bentler <- function(lavobject = NULL,
         label =
           "Yuan-Bentler correction (Mplus variant)",
         trace.UGamma = trace.UGamma,
-        trace.UGamma2 = as.numeric(NA)
+        trace.UGamma2 = as.numeric(NA),
+        scaled.test.stat = TEST$standard$stat,
+        scaled.test = TEST$standard$test
       )
   }
 

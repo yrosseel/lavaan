@@ -201,18 +201,18 @@ lav_test_diff_Satorra2000 <- function(m1, m0, H1 = TRUE, A.method = "delta",
   )
 }
 
-lav_test_diff_SatorraBentler2001 <- function(m1, m0) {
+lav_test_diff_SatorraBentler2001 <- function(m1, m0, test = 2) {
   # extract information from m1 and m2
   T1 <- m1@test[[1]]$stat
   r1 <- m1@test[[1]]$df
-  c1 <- m1@test[[2]]$scaling.factor
+  c1 <- m1@test[[test]]$scaling.factor
   if (r1 == 0) { # saturated model
     c1 <- 1
   }
 
   T0 <- m0@test[[1]]$stat
   r0 <- m0@test[[1]]$df
-  c0 <- m0@test[[2]]$scaling.factor
+  c0 <- m0@test[[test]]$scaling.factor
 
   # m = difference between the df's
   m <- r0 - r1
@@ -240,20 +240,21 @@ lav_test_diff_SatorraBentler2001 <- function(m1, m0) {
   list(T.delta = T.delta, scaling.factor = cd, df.delta = m)
 }
 
-lav_test_diff_SatorraBentler2010 <- function(m1, m0, H1 = FALSE) {
+lav_test_diff_SatorraBentler2010 <- function(m1, m0, test = 2,
+                                             H1 = FALSE) {
   ### FIXME: check if models are nested at the parameter level!!!
 
   # extract information from m1 and m2
   T1 <- m1@test[[1]]$stat
   r1 <- m1@test[[1]]$df
-  c1 <- m1@test[[2]]$scaling.factor
+  c1 <- m1@test[[test]]$scaling.factor
   if (r1 == 0) { # saturated model
     c1 <- 1
   }
 
   T0 <- m0@test[[1]]$stat
   r0 <- m0@test[[1]]$df
-  c0 <- m0@test[[2]]$scaling.factor
+  c0 <- m0@test[[test]]$scaling.factor
   if (r0 == 0) { # should never happen
     c0 <- 1
   }
@@ -273,7 +274,7 @@ lav_test_diff_SatorraBentler2010 <- function(m1, m0, H1 = FALSE) {
   if (H1) {
     # M0 with M1 parameters
     M01 <- lav_test_diff_m10(m0, m1, test = TRUE)
-    c01 <- M01@test[[2]]$scaling.factor
+    c01 <- M01@test[[test]]$scaling.factor
 
     # check if vcov is positive definite (new in 0.6)
     # if not, we may get negative values
@@ -294,7 +295,7 @@ lav_test_diff_SatorraBentler2010 <- function(m1, m0, H1 = FALSE) {
   } else {
     # M1 with M0 parameters (as in Satorra & Bentler 2010)
     M10 <- lav_test_diff_m10(m1, m0, test = TRUE)
-    c10 <- M10@test[[2]]$scaling.factor
+    c10 <- M10@test[[test]]$scaling.factor
 
     # check if vcov is positive definite (new in 0.6)
     # if not, we may get negative values

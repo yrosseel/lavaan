@@ -2,7 +2,8 @@
 # TDJ: add "..." to make the generic actually generic, for lavaan.mi objects
 
 # S3 generic for S3 dispatch
-fitMeasures <- function(object, fit.measures = "all", baseline.model = NULL,
+fitMeasures <- function(object, fit.measures = "all",
+                        baseline.model = NULL, h1.model = NULL,
                         fm.args = list(
                           standard.test = "default",
                           scaled.test = "default",
@@ -15,7 +16,8 @@ fitMeasures <- function(object, fit.measures = "all", baseline.model = NULL,
                         output = "vector", ...) {
   UseMethod("fitMeasures", object)
 }
-fitmeasures <- function(object, fit.measures = "all", baseline.model = NULL,
+fitmeasures <- function(object, fit.measures = "all",
+                        baseline.model = NULL, h1.model = NULL,
                         fm.args = list(
                           standard.test = "default",
                           scaled.test = "default",
@@ -33,7 +35,8 @@ fitmeasures <- function(object, fit.measures = "all", baseline.model = NULL,
 # S4 generic for S4 dispatch
 setGeneric(
   "fitMeasures",
-  function(object, fit.measures = "all", baseline.model = NULL,
+  function(object, fit.measures = "all",
+           baseline.model = NULL, h1.model = NULL,
            fm.args = list(
              standard.test = "default",
              scaled.test = "default",
@@ -49,7 +52,8 @@ setGeneric(
 )
 setGeneric(
   "fitmeasures",
-  function(object, fit.measures = "all", baseline.model = NULL,
+  function(object, fit.measures = "all",
+           baseline.model = NULL, h1.model = NULL,
            fm.args = list(
              standard.test = "default",
              scaled.test = "default",
