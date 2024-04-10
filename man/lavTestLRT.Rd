@@ -74,6 +74,10 @@ anova(object, ...)
     users may request the  \code{method="standard"} test statistic,
     without a robust adjustment.
 }
+\note{
+  If there is a \code{\linkS4class{lavaan}} model stored in 
+  \code{object@external$h1.model}, it will be added to \code{\dots}
+}
 \references{
 Satorra, A. (2000). Scaled and adjusted restricted tests in multi-sample
 analysis of moment structures. In Heijmans, R.D.H., Pollock, D.S.G. & Satorra,
