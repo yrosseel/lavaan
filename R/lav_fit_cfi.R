@@ -416,9 +416,9 @@ lav_fit_cfi_lavobject <- function(lavobject = NULL, fit.measures = "cfi",
     stopifnot(inherits(h1.model, "lavaan"))
 
     # 2. h1 model in @external slot
-  } else if (!is.null(object@external$h1.model)) {
-    stopifnot(inherits(object@external$h1.model, "lavaan"))
-    h1.model <- object@external$h1.model
+  } else if (!is.null(lavobject@external$h1.model)) {
+    stopifnot(inherits(lavobject@external$h1.model, "lavaan"))
+    h1.model <- lavobject@external$h1.model
   } # else is.null
   
   # 1. user-provided baseline model
