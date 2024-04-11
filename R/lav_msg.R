@@ -21,6 +21,16 @@ lav_msg_stop <- function(...) {
   stop(lav_msg(wat), call. = FALSE, domain = NA)
 }
 
+# Displays a message with header and formatted as
+# above via R function 'stop()', where the message is prepended with "FIXME:",
+# to indicate an internal error, e.g. an error condition which was supposed
+# to be handled in the calling functions. Such error message do not have to
+# be created by [n]gettext[f] because they don't have to be translated!!!
+lav_msg_fixme <- function(...) {
+  wat <- c("FIXME: ", unlist(list(...), use.names = FALSE))
+  stop(lav_msg(wat), call. = FALSE, domain = NA)
+}
+
 # subroutine for above functions
 lav_msg <- function(wat, txt.width = 80L, indent = 4L) {
   x <- sub("[() ].*$", "", as.character(sys.calls()))
