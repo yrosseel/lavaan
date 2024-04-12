@@ -32,7 +32,7 @@ lav_msg_fixme <- function(...) {
 }
 
 # subroutine for above functions
-lav_msg <- function(wat, txt.width = 80L, indent = 4L) {
+lav_msg <- function(wat, txt.width = getOption("width", 80L), indent = 4L) {
   x <- sub("[() ].*$", "", as.character(sys.calls()))
   ignore.in.stack <- c(
     "^eval$", "^try", "^doTryCatch", "^lav_msg", "^stop$", "^warning$",
@@ -48,7 +48,7 @@ lav_msg <- function(wat, txt.width = 80L, indent = 4L) {
   if (length(x) == 0) {
     header <- "lavaan:"
   } else {
-    header <- paste0("lavaan(", x[length(x)], "):")
+    header <- paste0("lavaan->", x[length(x)], "():")
   }
   # make sure we only have a single string
   txt <- paste(wat, collapse = " ")
@@ -67,8 +67,9 @@ lav_msg <- function(wat, txt.width = 80L, indent = 4L) {
   nstart <- 1L
   nstop <- 1L
   while (nstart <= length(chunks)) {
-    while (sum(chunk.size[seq.int(nstart, nstop)]) + nstop - nstart + indent
-    < txt.width && nstop < length(chunks)) {
+    while (nstop < length(chunks) &&
+           sum(chunk.size[seq.int(nstart, nstop + 1L)]) +
+           nstop - nstart + indent < txt.width) {
       nstop <- nstop + 1
     }
     if (nstop < length(chunks)) {
