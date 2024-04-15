@@ -53,7 +53,7 @@ setMethod(
            fmi = FALSE,
            standardized = FALSE,
            std = standardized,
-           std.nox = FALSE, #TODO: remove deprecated argument in early 2025
+           std.nox = FALSE, # TODO: remove deprecated argument in early 2025
            remove.step1 = TRUE,
            remove.unused = TRUE,
            cov.std = TRUE,
@@ -783,12 +783,13 @@ parameterEstimates <- # nolint
     # 28 March 2024: TDJ adds option to select specific types
     if (is.logical(standardized)) {
       if (standardized) {
-        standardized <- c("std.lv","std.all")
+        standardized <- c("std.lv", "std.all")
         if (length(lavNames(object, "ov.x")) && object@Options$fixed.x) {
           standardized <- c(standardized, "std.nox")
         }
-      } else standardized <- character(0) # corresponds to standardized=FALSE
-
+      } else {
+        standardized <- character(0)
+      } # corresponds to standardized=FALSE
     } else {
       # !is.logical(standardized)
       standardized <- tolower(as.character(standardized))
@@ -797,9 +798,8 @@ parameterEstimates <- # nolint
         if (length(lavNames(object, "ov.x")) == 0) {
           message("`std.nox' unavailable without fixed exogenous predictors")
           standardized <- setdiff(standardized, "std.nox")
-        }
-        if (!object@Options$fixed.x) {
-          message("`std.nox' unavailable when fixed.x=FALSE")
+        } else if (!object@Options$fixed.x) {
+          message("`std.nox' unavailable when fixed.x = FALSE")
           standardized <- setdiff(standardized, "std.nox")
         }
       }
@@ -811,13 +811,15 @@ parameterEstimates <- # nolint
     }
     if ("std.all" %in% standardized) {
       tmp.list$std.all <- lav_standardize_all(object,
-                                              est.std = tmp.list$est.std,
-                                              cov.std = cov.std)
+        est.std = tmp.list$est.std,
+        cov.std = cov.std
+      )
     }
     if ("std.nox" %in% standardized) {
       tmp.list$std.nox <- lav_standardize_all_nox(object,
-                                                  est.std = tmp.list$est.std,
-                                                  cov.std = cov.std)
+        est.std = tmp.list$est.std,
+        cov.std = cov.std
+      )
     }
 
     # rsquare?
