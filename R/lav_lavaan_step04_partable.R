@@ -117,11 +117,9 @@ lav_lavaan_step04_partable <- function(slotParTable = NULL, # nolint
     lavpartable <- as.list(lav_partable_complete(lavpartable))
     lavpartable <- lav_partable_set_cache(lavpartable)
   } else {
-    stop(
-      "lavaan ERROR: model [type = ", class(model),
-      "] is not of type character or list"
-    )
-  }
+    lav_msg_stop(gettextf(
+      "model [type = %s] is not of type character or list", class(model)))
+    }
   if (lavoptions$debug) {
     print(as.data.frame(lavpartable))
   }

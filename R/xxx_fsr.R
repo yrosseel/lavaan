@@ -26,7 +26,7 @@ fsr <- function(model = NULL,
                 output = "lavaan") {
   # we need full data
   if (is.null(data)) {
-    stop("lavaan ERROR: full data is required for factor score regression")
+    lav_msg_stop(gettext("full data is required for factor score regression"))
   }
 
   # check fsr.method argument
@@ -44,10 +44,8 @@ fsr <- function(model = NULL,
     # force fs.method to Bartlett!
     fs.method <- "Bartlett"
   } else {
-    stop(
-      "lavaan ERROR: invalid option for argument fsr.method: ",
-      fsr.method
-    )
+    lav_msg_stop(gettext("invalid option for argument fsr.method:"),
+      fsr.method)
   }
 
   # check fs.method argument
@@ -57,8 +55,7 @@ fsr <- function(model = NULL,
   } else if (fs.method == "regression") {
     # nothing to do
   } else {
-    stop(
-      "lavaan ERROR: invalid option for argument fs.method: ",
+    lav_msg_stop(gettext("invalid option for argument fs.method:"),
       fs.method
     )
   }
@@ -443,7 +440,7 @@ fsr <- function(model = NULL,
     if (ngroups == 1L) {
       Y <- as.data.frame(Y[[1]])
     } else {
-      stop("fix this!")
+      lav_msg_fixme("fix this!")
     }
   }
 
@@ -594,7 +591,7 @@ fsr <- function(model = NULL,
   } else if (output %in% c("FS.COV", "fs.cov")) {
     out <- FS.COV
   } else {
-    stop("lavaan ERROR: unknown output= argument: ", output)
+    lav_msg_stop(gettext("unknown output= argument:"), output)
   }
 
   out

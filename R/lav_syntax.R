@@ -7,7 +7,7 @@ lavParseModelString <- function(model.syntax = "", as.data.frame. = FALSE,
                                 warn = TRUE, debug = FALSE) {
   parser <- tolower(parser)
   if (!parser %in% c("old", "new")) {
-    stop("lavaan ERROR: parser= argument should be \"old\" or \"new\"")
+    lav_msg_stop(gettext("parser= argument should be \"old\" or \"new\""))
   }
 
   if (parser == "old") {
@@ -246,27 +246,22 @@ lav_parse_model_string_orig <- function(model.syntax = "",
     if (op == ":") {
       # check if rhs is empty (new in 0.6-4)
       if (nchar(rhs) == 0L) {
-        txt <- c(
-          "syntax contains block identifier ", dQuote(lhs),
-          " with missing number/label.",
-          " The correct syntax
-                           is: \"LHS: RHS\", where LHS is a block identifier
-                           (eg group or level), and
-                           RHS is the group/level/block number or label."
+        lav_msg_stop(gettextf(
+          "syntax contains block identifier %s with missing number/label. The
+          correct syntax is: \"LHS: RHS\", where LHS is a block identifier (eg
+          group or level), and RHS is the group/level/block number or label.",
+          dQuote(lhs))
         )
-        stop(lav_txt2message(txt, header = "lavaan ERROR:"))
       }
 
       # check lhs (new in 0.6-4) - note: class is for nlsem
       lhs.orig <- lhs
       lhs <- tolower(lhs)
       if (!lhs %in% c("group", "level", "block", "class")) {
-        txt <- c(
-          "unknown block identifier: ", dQuote(lhs.orig), ".",
-          " Block identifier should be
-                           group, level or block."
+        lav_msg_stop(gettextf(
+          "unknown block identifier: %s. Block identifier should be
+           group, level or block.", dQuote(lhs.orig))
         )
-        stop(lav_txt2message(txt, header = "lavaan ERROR:"))
       }
 
       FLAT.idx <- FLAT.idx + 1L
@@ -303,15 +298,14 @@ lav_parse_model_string_orig <- function(model.syntax = "",
     # remove modifiers
     LHS <- gsub("^\\S*\\*", "", LHS)
     if (!all(make.names(LHS) == LHS)) {
-      stop(
-        "lavaan ERROR: left hand side (lhs) of this formula:\n    ",
-        lhs, " ", op, " ", rhs,
-        "\n    contains either a reserved word (in R) or an illegal character: ",
-        dQuote(LHS[!make.names(LHS) == LHS]),
-        "\n    See ?reserved for a list of reserved words in R",
-        "\n    Please use a variable name that is not a reserved word in R",
-        "\n    and use only characters, digits, or the dot symbol."
-      )
+      lav_msg_stop(gettextf(
+        "lavaan ERROR: left hand side (lhs) of this formula: %1$s %2$s %3$s
+        contains either a reserved word (in R) or an illegal character: %4$s.
+        See ?reserved for a list of reserved words in R. Please use a variable
+        name that is not a reserved word in R and use only characters, digits,
+        or the dot symbol.",
+        lhs, op, rhs, dQuote(LHS[!make.names(LHS) == LHS])
+      ))
     }
 
     lhs.formula <- as.formula(paste("~", lhs))
@@ -371,16 +365,14 @@ lav_parse_model_string_orig <- function(model.syntax = "",
       ncolon <- sapply(gregexpr(":", RHS.names), length)
       if (any(ncolon > 1L)) {
         idx <- which(ncolon > 1L)
-        txt <- "Three-way or higher-order interaction terms (using
+        lav_msg_stop(gettext(
+        "Three-way or higher-order interaction terms (using
 multiple colons) are not supported in the lavaan syntax; please manually
 construct the product terms yourself in the data.frame, give them an
 appropriate name, and then you can use these interaction variables as any
-other (observed) variable in the model syntax."
-        txt <- c(
-          txt, " Problematic term is: ",
+other (observed) variable in the model syntax. Problematic term is: "),
           RHS.names[idx[1]]
         )
-        stop(lav_txt2message(txt, header = "lavaan ERROR:"))
       }
     }
 

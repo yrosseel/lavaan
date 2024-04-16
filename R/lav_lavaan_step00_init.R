@@ -99,13 +99,15 @@ lav_lavaan_step00_checkdata <- function(data = NULL,
       if ("sample.cov" %in% names(data)) {
         sample.cov <- data$sample.cov
       } else {
-        stop("When data= is of class lavMoments, it must contain sample.cov")
+        lav_msg_stop(gettext(
+          "When data= is of class lavMoments, it must contain sample.cov"))
       }
 
       if ("sample.nobs" %in% names(data)) {
         sample.nobs <- data$sample.nobs
       } else {
-        stop("When data= is of class lavMoments, it must contain sample.nobs")
+        lav_msg_stop(gettext(
+          "When data= is of class lavMoments, it must contain sample.nobs"))
       }
 
       # check for optional-data arguments
@@ -139,7 +141,7 @@ lav_lavaan_step00_checkdata <- function(data = NULL,
     }
 
     if (is.function(data)) {
-      stop("lavaan ERROR: data is a function; it should be a data.frame")
+      lav_msg_stop(gettext("data is a function; it should be a data.frame"))
     }
   }
   # new in 0.6-14: if NACOV and/or WLS.V are provided, we force

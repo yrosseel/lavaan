@@ -102,7 +102,9 @@ lavData <- function(data = NULL, # data.frame
         if (nrow(data) == ncol(data)) {
           # perhaps it is a covariance matrix?
           if (isSymmetric(data)) {
-            warning("lavaan WARNING: data argument looks like a covariance matrix; please use the sample.cov argument instead")
+            lav_msg_warn(
+              gettext("data argument looks like a covariance matrix;
+              please use the sample.cov argument instead"))
           }
         }
         # or perhaps it is a data matrix?
@@ -110,10 +112,9 @@ lavData <- function(data = NULL, # data.frame
         ### data matrices directly
         data <- as.data.frame(data, stringsAsFactors = FALSE)
       } else {
-        stop(
-          "lavaan ERROR: data= argument",
-          " is not a data.frame, but of class ", sQuote(class(data))
-        )
+        lav_msg_stop(gettextf(
+          "data= argument is not a data.frame, but of class ",
+          sQuote(class(data))))
       }
     }
 
@@ -162,7 +163,7 @@ lavData <- function(data = NULL, # data.frame
 
     # we also need the number of observations (per group)
     if (is.null(sample.nobs)) {
-      stop("lavaan ERROR: please specify number of observations")
+      lav_msg_stop(gettext("please specify number of observations"))
     }
 
     # if a 'group' argument was provided, keep it -- new in 0.6-4
@@ -171,7 +172,7 @@ lavData <- function(data = NULL, # data.frame
     } else if (is.character(group)) {
       # nothing to do, just store it
     } else {
-      stop("lavaan ERROR: group argument should be a string")
+      lav_msg_stop(gettext("group argument should be a string"))
     }
 
     # list?
@@ -204,7 +205,8 @@ lavData <- function(data = NULL, # data.frame
       ngroups <- 1L
       group.label <- character(0)
       if (!is.matrix(sample.cov)) {
-        stop("lavaan ERROR: sample.cov must be a matrix or a list of matrices")
+        lav_msg_stop(gettext(
+          "sample.cov must be a matrix or a list of matrices"))
       }
       sample.cov <- list(sample.cov)
     }
@@ -219,10 +221,9 @@ lavData <- function(data = NULL, # data.frame
       ov.names[1:ngroups] <- list(tmp)
     } else {
       if (length(ov.names) != ngroups) {
-        stop(
-          "lavaan ERROR: ov.names assumes ", length(ov.names),
-          " groups; data contains ", ngroups, " groups"
-        )
+        lav_msg_stop(gettextf(
+          "ov.names assumes %1$s groups; data contains %2$s groups",
+          length(ov.names), ngroups))
       }
       # nothing to do
     }
@@ -234,10 +235,9 @@ lavData <- function(data = NULL, # data.frame
       ov.names.x[1:ngroups] <- list(tmp)
     } else {
       if (length(ov.names.x) != ngroups) {
-        stop(
-          "lavaan ERROR: ov.names.x assumes ", length(ov.names.x),
-          " groups; data contains ", ngroups, " groups"
-        )
+        lav_msg_stop(gettextf(
+          "ov.names.x assumes %1$s groups; data contains %2$s groups",
+          length(ov.names.x), ngroups))
       }
     }
 
@@ -265,7 +265,8 @@ lavData <- function(data = NULL, # data.frame
 
     # if std.ov = TRUE, give a warning (suggested by Peter Westfall)
     if (std.ov && warn) {
-      warning("lavaan WARNING: std.ov argument is ignored if only sample statistics are provided.")
+      lav_msg_warn(gettext(
+        "std.ov argument is ignored if only sample statistics are provided."))
     }
 
     # check variances (new in 0.6-7)
@@ -273,16 +274,21 @@ lavData <- function(data = NULL, # data.frame
       VAR <- diag(sample.cov[[g]])
       # 1. finite?
       if (!all(is.finite(VAR))) {
-        stop("lavaan ERROR: at least one variance in the sample covariance matrix is not finite.")
-      }
+        lav_msg_stop(gettext(
+        "at least one variance in the sample covariance matrix is not finite."))
+        }
       # 2. near zero (or negative)?
       if (any(VAR < .Machine$double.eps)) {
-        stop("lavaan ERROR: at least one variance in the sample covariance matrix is (near) zero or negative.")
+        lav_msg_stop(
+          gettext("at least one variance in the sample covariance matrix is
+          (near) zero or negative."))
       }
       # 3. very large?
       max.var <- max(VAR)
       if (max.var > 1000000) {
-        warning("lavaan WARNING: some observed variances in the sample covariance matrix are larger than 1000000.")
+        lav_msg_warn(
+          gettext("some observed variances in the sample covariance matrix
+          are larger than 1000000."))
       }
     }
 
@@ -352,7 +358,7 @@ lavData <- function(data = NULL, # data.frame
       } else {
         # check if length(level.label) = 1 + length(cluster)
         if (length(level.label) != length(cluster) + 1L) {
-          stop("lavaan ERROR: length(level.label) != length(cluster) + 1L")
+          lav_msg_stop(gettext("length(level.label) != length(cluster) + 1L"))
         }
         # nothing to do
       }
@@ -364,7 +370,7 @@ lavData <- function(data = NULL, # data.frame
 
     # ngroups: ov.names (when group: is used), or sample.nobs
     if (is.null(ov.names)) {
-      warning("lavaan WARNING: ov.names is NULL")
+      lav_msg_warn(gettext("ov.names is NULL"))
       ov.names <- character(0L)
       if (is.null(sample.nobs)) {
         ngroups <- 1L
@@ -389,11 +395,9 @@ lavData <- function(data = NULL, # data.frame
       } else {
         sample.nobs <- as.list(sample.nobs)
         if (length(sample.nobs) != ngroups) {
-          stop(
-            "lavaan ERROR: length(sample.nobs) = ",
-            length(sample.nobs),
-            " but syntax implies ngroups = ", ngroups
-          )
+          lav_msg_stop(gettextf(
+            "length(sample.nobs) = %1$s but syntax implies ngroups = %2$s",
+            length(sample.nobs), ngroups))
         }
       }
     }
@@ -509,22 +513,18 @@ lav_data_full <- function(data = NULL, # data.frame
   # number of groups and group labels
   if (!is.null(group) && length(group) > 0L) {
     if (!(group %in% names(data))) {
-      stop(
-        "lavaan ERROR: grouping variable ", sQuote(group),
-        " not found;\n  ",
-        "variable names found in data frame are:\n  ",
-        paste(names(data), collapse = " ")
-      )
+      lav_msg_stop(gettextf(
+        "grouping variable %s not found;", sQuote(group)),
+        gettextf("variable names found in data frame are: %s",
+        paste(names(data), collapse = " ")))
     }
     # note: by default, we use the order as in the data;
     # not as in levels(data[,group])
     if (length(group.label) == 0L) {
       group.label <- unique(as.character(data[[group]]))
       if (warn && any(is.na(group.label))) {
-        warning("lavaan WARNING: group variable ", sQuote(group),
-          " contains missing values\n",
-          sep = ""
-        )
+        lav_msg_warn(gettextf("group variable %s contains missing values",
+                              sQuote(group)))
       }
       group.label <- group.label[!is.na(group.label)]
     } else {
@@ -533,25 +533,23 @@ lav_data_full <- function(data = NULL, # data.frame
       LABEL <- unique(as.character(data[[group]]))
       idx <- match(group.label, LABEL)
       if (warn && any(is.na(idx))) {
-        warning(
-          "lavaan WARNING: some group.labels do not appear ",
-          "in the grouping variable: ",
-          paste(group.label[which(is.na(idx))], collapse = " ")
+        lav_msg_warn(gettextf(
+          "some group.labels do not appear in the grouping variable: %s"),
+          lav_msg_view(group.label[which(is.na(idx))], log.sep = "none")
         )
       }
       group.label <- group.label[!is.na(idx)]
       # any groups left?
       if (length(group.label) == 0L) {
-        stop("lavaan ERROR: no group levels left; check the group.label argument")
+        lav_msg_stop(gettext(
+          "no group levels left; check the group.label argument"))
       }
     }
     ngroups <- length(group.label)
   } else {
     if (warn && length(group.label) > 0L) {
-      warning(
-        "lavaan WARNING: `group.label' argument",
-        " will be ignored if `group' argument is missing"
-      )
+      lav_msg_warn(gettext(
+       "`group.label' argument will be ignored if `group' argument is missing"))
     }
     ngroups <- 1L
     group.label <- character(0L)
@@ -562,24 +560,23 @@ lav_data_full <- function(data = NULL, # data.frame
   if (!is.null(sampling.weights)) {
     if (is.character(sampling.weights)) {
       if (!(sampling.weights %in% names(data))) {
-        stop(
-          "lavaan ERROR: sampling weights variable ",
-          sQuote(sampling.weights),
-          " not found;\n  ",
-          "variable names found in data frame are:\n  ",
+        lav_msg_stop(
+          gettextf("sampling weights variable %s not found;",
+          sQuote(sampling.weights)),
+          gettext("variable names found in data frame are: "),
           paste(names(data), collapse = " ")
         )
       }
       # check for missing values in sampling weight variable
       if (any(is.na(data[[sampling.weights]]))) {
-        stop("lavaan ERROR: sampling.weights variable ",
-          sQuote(sampling.weights),
-          " contains missing values\n",
-          sep = ""
-        )
+        lav_msg_stop(
+          gettextf("sampling.weights variable %s contains missing values",
+          sQuote(sampling.weights)))
       }
     } else {
-      stop("lavaan ERROR: sampling weights argument should be a variable name in the data.frame")
+      lav_msg_stop(gettext(
+        "sampling weights argument should be a variable name in the data.frame"
+        ))
     }
   }
 
@@ -589,11 +586,9 @@ lav_data_full <- function(data = NULL, # data.frame
     if (!all(cluster %in% names(data))) {
       # which one did we not find?
       not.ok <- which(!cluster %in% names(data))
-
-      stop(
-        "lavaan ERROR: cluster variable(s) ", sQuote(cluster[not.ok]),
-        " not found;\n  ",
-        "variable names found in data frame are:\n  ",
+      lav_msg_stop(gettextf(
+        "cluster variable(s) %s not found;", sQuote(cluster[not.ok])),
+        gettext("variable names found in data frame are:"),
         paste(names(data), collapse = " ")
       )
     }
@@ -601,11 +596,8 @@ lav_data_full <- function(data = NULL, # data.frame
     # check for missing values in cluster variable(s)
     for (cl in 1:length(cluster)) {
       if (warn && anyNA(data[[cluster[cl]]])) {
-        warning("lavaan WARNING: cluster variable ",
-          sQuote(cluster[cl]),
-          " contains missing values\n",
-          sep = ""
-        )
+        lav_msg_warn(gettextf("cluster variable %s contains missing values",
+          sQuote(cluster[cl])))
       }
     }
 
@@ -617,7 +609,7 @@ lav_data_full <- function(data = NULL, # data.frame
       } else {
         # check if length(level.label) = 1 + length(cluster)
         if (length(level.label) != length(cluster) + 1L) {
-          stop("lavaan ERROR: length(level.label) != length(cluster) + 1L")
+          lav_msg_stop(gettext("length(level.label) != length(cluster) + 1L"))
         }
         # nothing to do
       }
@@ -629,10 +621,9 @@ lav_data_full <- function(data = NULL, # data.frame
     }
   } else {
     if (warn && length(level.label) > 0L) {
-      warning(
-        "lavaan WARNING: `level.label' argument",
-        " will be ignored if `cluster' argument is missing"
-      )
+      lav_msg_warn(gettext(
+       "`level.label' argument will be ignored if `cluster' argument is missing"
+      ))
     }
     nlevels <- 1L
     level.label <- character(0L)
@@ -643,10 +634,9 @@ lav_data_full <- function(data = NULL, # data.frame
   if (ngroups > 1L) {
     if (is.list(ov.names)) {
       if (length(ov.names) != ngroups) {
-        stop(
-          "lavaan ERROR: ov.names assumes ", length(ov.names),
-          " groups; data contains ", ngroups, " groups"
-        )
+        lav_msg_stop(gettextf(
+          "ov.names assumes %1$s groups; data contains %2$s groups",
+          length(ov.names), ngroups))
       }
     } else {
       tmp <- ov.names
@@ -655,10 +645,9 @@ lav_data_full <- function(data = NULL, # data.frame
     }
     if (is.list(ov.names.x)) {
       if (length(ov.names.x) != ngroups) {
-        stop(
-          "lavaan ERROR: ov.names assumes ", length(ov.names.x),
-          " groups; data contains ", ngroups, " groups"
-        )
+        lav_msg_stop(gettextf(
+          "ov.names.x assumes %1$s groups; data contains %2$s groups",
+          length(ov.names.x), ngroups))
       }
     } else {
       tmp <- ov.names.x
@@ -668,14 +657,16 @@ lav_data_full <- function(data = NULL, # data.frame
   } else {
     if (is.list(ov.names)) {
       if (length(ov.names) > 1L) {
-        stop("lavaan ERROR: model syntax defines multiple groups; data suggests a single group")
+        lav_msg_stop(gettext(
+          "model syntax defines multiple groups; data suggests a single group"))
       }
     } else {
       ov.names <- list(ov.names)
     }
     if (is.list(ov.names.x)) {
       if (length(ov.names.x) > 1L) {
-        stop("lavaan ERROR: model syntax defines multiple groups; data suggests a single group")
+        lav_msg_stop(gettext(
+          "model syntax defines multiple groups; data suggests a single group"))
       }
     } else {
       ov.names.x <- list(ov.names.x)
@@ -710,10 +701,10 @@ lav_data_full <- function(data = NULL, # data.frame
     idx.missing <- which(!(ov.all %in% names(data)))
 
     if (length(idx.missing)) {
-      stop(
-        "lavaan ERROR: some (observed) variables specified in the model are not found in the dataset: ",
-        paste(ov.all[idx.missing], collapse = " ")
-      )
+      lav_msg_stop(
+        gettextf("some (observed) variables specified in the model are
+        not found in the dataset: %s",
+        paste(ov.all[idx.missing], collapse = " ")))
     }
   }
 
@@ -736,9 +727,14 @@ lav_data_full <- function(data = NULL, # data.frame
     OV.names.x <- unlist(ov.names.x)
     OV.names.nox <- OV.names[!OV.names %in% OV.names.x]
     if (any(f.names %in% OV.names.x)) {
-      stop(paste("lavaan ERROR: unordered factor(s) with more than 2 levels detected as exogenous covariate(s):", paste(f.names, collapse = " ")))
+      lav_msg_stop(
+        gettext("unordered factor(s) with more than 2 levels detected
+            as exogenous covariate(s): "),
+        paste(f.names, collapse = " "))
     } else if (any(f.names.all %in% OV.names.nox)) {
-      stop(paste("lavaan ERROR: unordered factor(s) detected; make them numeric or ordered:", paste(f.names.all, collapse = " ")))
+      lav_msg_stop(
+        gettext("unordered factor(s) detected; make them numeric or ordered:"),
+        paste(f.names.all, collapse = " "))
     }
   }
   # check for ordered exogenous variables
@@ -746,7 +742,9 @@ lav_data_full <- function(data = NULL, # data.frame
     f.names <- ov$name[ov$type == "ordered" &
       ov$name %in% unlist(ov.names.x)]
     if (warn && any(f.names %in% unlist(ov.names.x))) {
-      warning(paste("lavaan WARNING: exogenous variable(s) declared as ordered in data:", paste(f.names, collapse = " ")))
+      lav_msg_warn(gettextf(
+        "exogenous variable(s) declared as ordered in data: %s",
+        lav_msg_view(f.names, log.sep = "none")))
     }
   }
   # check for ordered endogenous variables with more than 12 levels
@@ -755,7 +753,9 @@ lav_data_full <- function(data = NULL, # data.frame
       !ov$name %in% unlist(ov.names.x) &
       ov$nlev > 12L]
     if (warn && length(f.names) > 0L) {
-      warning(paste("lavaan WARNING: some ordered categorical variable(s) have more than 12 levels:", paste(f.names, collapse = " ")))
+      lav_msg_warn(gettextf(
+        "some ordered categorical variable(s) have more than 12 levels: %s",
+        lav_msg_view(f.names, log.sep = "none")))
     }
   }
   # check for zero-cases
@@ -766,7 +766,8 @@ lav_data_full <- function(data = NULL, # data.frame
     rn[idx] <- paste(rn[idx], "***", sep = "")
     rownames(OV) <- rn
     print(OV)
-    stop("lavaan ERROR: some variables have no values (only missings) or no variance")
+    lav_msg_stop(gettext(
+      "some variables have no values (only missings) or no variance"))
   }
   # check for single cases (no variance!)
   idx <- which(ov$nobs == 1L | (ov$type == "numeric" & !is.finite(ov$var)))
@@ -776,7 +777,8 @@ lav_data_full <- function(data = NULL, # data.frame
     rn[idx] <- paste(rn[idx], "***", sep = "")
     rownames(OV) <- rn
     print(OV)
-    stop("lavaan ERROR: some variables have only 1 observation or no finite variance")
+    lav_msg_stop(gettext(
+      "some variables have only 1 observation or no finite variance"))
   }
   # check for ordered variables with only 1 level
   idx <- which(ov$type == "ordered" & ov$nlev == 1L)
@@ -786,7 +788,7 @@ lav_data_full <- function(data = NULL, # data.frame
     rn[idx] <- paste(rn[idx], "***", sep = "")
     rownames(OV) <- rn
     print(OV)
-    stop("lavaan ERROR: ordered variable(s) has/have only 1 level")
+    lav_msg_stop(gettext("ordered variable(s) has/have only 1 level"))
   }
   # check for mix small/large variances (NOT including exo variables)
   if (!std.ov && !allow.single.case && warn && any(ov$type == "numeric")) {
@@ -796,7 +798,9 @@ lav_data_full <- function(data = NULL, # data.frame
       max.var <- max(ov$var[num.idx])
       rel.var <- max.var / min.var
       if (warn && rel.var > 1000) {
-        warning("lavaan WARNING: some observed variances are (at least) a factor 1000 times larger than others; use varTable(fit) to investigate")
+        lav_msg_warn(
+          gettext("some observed variances are (at least) a factor 1000 times
+           larger than others; use varTable(fit) to investigate"))
       }
     }
   }
@@ -806,13 +810,16 @@ lav_data_full <- function(data = NULL, # data.frame
     if (length(num.idx) > 0L) {
       max.var <- max(ov$var[num.idx])
       if (warn && max.var > 1000000) {
-        warning("lavaan WARNING: some observed variances are larger than 1000000\n", "  lavaan NOTE: use varTable(fit) to investigate")
+        lav_msg_warn(
+          gettext("some observed variances are larger than 1000000
+          use varTable(fit) to investigate"))
       }
     }
   }
   # check for all-exogenous variables (eg in f <~ x1 + x2 + x3)
   if (warn && all(ov$exo == 1L)) {
-    warning("lavaan WARNING: all observed variables are exogenous; model may not be identified")
+    lav_msg_warn(gettext(
+      "all observed variables are exogenous; model may not be identified"))
   }
 
   # prepare empty lists
@@ -860,12 +867,10 @@ lav_data_full <- function(data = NULL, # data.frame
         nobs[[g]] <- length(case.idx[[g]])
         norig[[g]] <- length(which(data[[group]] == group.label[g]))
         if (warn && (nobs[[g]] < norig[[g]])) {
-          warning(
-            "lavaan WARNING: ", (norig[[g]] - nobs[[g]]),
-            " cases were deleted in group ", group.label[g],
-            " due to missing values in ",
-            "\n\t\t  exogenous variable(s), while fixed.x = TRUE."
-          )
+          lav_msg_warn(gettextf(
+              "%1$s cases were deleted in group %2$s  due to missing values",
+              (norig[[g]] - nobs[[g]]), group.label[g]),
+            gettext("in  exogenous variable(s), while fixed.x = TRUE."))
         }
       } else {
         case.idx[[g]] <- which(data[[group]] == group.label[g])
@@ -885,11 +890,10 @@ lav_data_full <- function(data = NULL, # data.frame
         nobs[[g]] <- length(case.idx[[g]])
         norig[[g]] <- nrow(data)
         if (warn && (nobs[[g]] < norig[[g]])) {
-          warning(
-            "lavaan WARNING: ", (norig[[g]] - nobs[[g]]),
-            " cases were deleted due to missing values in ",
-            "\n\t\t  exogenous variable(s), while fixed.x = TRUE."
-          )
+          lav_msg_warn(
+            gettextf("%s cases were deleted due to missing values in ",
+                     (norig[[g]] - nobs[[g]])),
+            gettext("exogenous variable(s), while fixed.x = TRUE."))
         }
       } else {
         case.idx[[g]] <- 1:nrow(data)
@@ -905,16 +909,14 @@ lav_data_full <- function(data = NULL, # data.frame
     if (!is.null(sampling.weights)) {
       WT <- data[[sampling.weights]][case.idx[[g]]]
       if (any(WT < 0)) {
-        stop("lavaan ERROR: some sampling weights are negative")
+        lav_msg_stop(gettext("some sampling weights are negative"))
       }
 
       # check for missing values in sampling weight variable
       if (any(is.na(WT))) {
-        stop("lavaan ERROR: sampling.weights variable ",
-          sQuote(sampling.weights),
-          " contains missing values\n",
-          sep = ""
-        )
+        lav_msg_stop(gettextf(
+          "sampling.weights variable %s contains missing values",
+          sQuote(sampling.weights)))
       }
 
       weights[[g]] <- WT
@@ -968,11 +970,10 @@ lav_data_full <- function(data = NULL, # data.frame
     if (!allow.single.case && warn &&
       nobs[[g]] < (nvar <- length(ov.idx))) {
       txt <- ""
-      if (ngroups > 1L) txt <- paste(" in group ", g, sep = "")
-      warning(
-        "lavaan WARNING: small number of observations (nobs < nvar)", txt,
-        "\n  nobs = ", nobs[[g]], " nvar = ", nvar
-      )
+      if (ngroups > 1L) txt <- gettextf("in group %s", g)
+      lav_msg_warn(
+        gettext("small number of observations (nobs < nvar)"), txt,
+        gettextf(": nobs = %1$s  nvar = %2$s", nobs[[g]], nvar))
     }
     # check variances per group (if we have multiple groups)
     # to catch zero-variance variables within a group (new in 0.6-8)
@@ -985,16 +986,13 @@ lav_data_full <- function(data = NULL, # data.frame
       } else {
         # some zero variances!
         gtxt <- if (ngroups > 1L) {
-          paste(" in group ", g, ":", sep = "")
+          gettextf("in group %s", g)
         } else {
-          ":"
+          ""
         }
-        txt <- c(
-          "some variables have no variance ", gtxt,
-          "\n",
-          paste(ov.names[[g]][zero.var], collapse = " ")
-        )
-        stop(lav_txt2message(txt, header = "lavaan ERROR:"))
+       lav_msg_stop(
+          gettext("some variables have no variance"), gtxt,
+          ":", paste(ov.names[[g]][zero.var], collapse = " "))
       }
 
       # eXo (if conditional.x = TRUE)...
@@ -1006,16 +1004,14 @@ lav_data_full <- function(data = NULL, # data.frame
         } else {
           # some zero variances!
           gtxt <- if (ngroups > 1L) {
-            paste(" in group ", g, ":", sep = "")
+            gettextf("in group %s", g)
           } else {
-            ":"
+            ""
           }
-          txt <- c(
-            "some exogenous variables have no variance ", gtxt,
-            "\n",
-            paste(ov.names.x[[g]][zero.var], collapse = " ")
+          lav_msg_stop(
+            gettext("some exogenous variables have no variance"), gtxt,
+            ":", paste(ov.names.x[[g]][zero.var], collapse = " ")
           )
-          stop(lav_txt2message(txt, header = "lavaan ERROR:"))
         }
       }
     }
@@ -1061,34 +1057,29 @@ lav_data_full <- function(data = NULL, # data.frame
         } else if (length(zero.var) == length(within.var)) {
           # all zero! possibly a between-level variable
           gtxt <- if (ngroups > 1L) {
-            paste(" in group ", g, ".", sep = "")
+            gettextf("in group %s.", g)
           } else {
             "."
           }
-          txt <- c(
-            "Level-1 variable ", dQuote(ov.names[[g]][v]),
-            " has no variance at the within level", gtxt,
-            " The variable appears to be a between-level
-                             variable. Please remove this variable from
-                             the level 1 section in the model syntax."
+          lav_msg_warn(
+            gettextf("Level-1 variable %s", dQuote(ov.names[[g]][v])),
+            gettext("has no variance at the within level"), gtxt,
+            gettext("The variable appears to be a between-level variable."),
+            gettext("Please remove this variable from"),
+            gettext("the level 1 section in the model syntax.")
           )
-          warning(lav_txt2message(txt))
         } else {
           # some zero variances!
           gtxt <- if (ngroups > 1L) {
-            paste(" in group ", g, ".", sep = "")
+            gettextf("in group %s.", g)
           } else {
             "."
           }
-          txt <- c(
-            "Level-1 variable ", dQuote(ov.names[[g]][v]),
-            " has no variance within some clusters", gtxt,
-            " The cluster ids with zero within variance are:\n",
-            paste(Lp[[g]]$cluster.id[[2]][zero.var],
-              collapse = " "
-            )
-          )
-          warning(lav_txt2message(txt))
+          lav_msg_warn(
+            gettextf("Level-1 variable %s has no variance within some clusters",
+                     dQuote(ov.names[[g]][v])), gtxt,
+            gettext("The cluster ids with zero within variance are:"),
+            lav_msg_view(Lp[[g]]$cluster.id[[2]][zero.var], "none"))
         }
       }
 
@@ -1106,45 +1097,38 @@ lav_data_full <- function(data = NULL, # data.frame
         } else if (length(non.zero.var) == 1L) {
           # just one
           gtxt <- if (ngroups > 1L) {
-            paste(" in group ", g, ".", sep = "")
+            gettextf("in group %s.", g)
           } else {
             "."
           }
-          txt <- c(
-            "Level-2 variable ", dQuote(ov.names[[g]][v]),
-            " has non-zero variance at the within level", gtxt,
-            " in one cluster with id: ",
-            Lp[[g]]$cluster.id[[2]][non.zero.var], ".\n",
-            " Please double-check if this is a between only",
-            " variable."
-          )
-          warning(lav_txt2message(txt))
+          lav_msg_warn(gettextf(
+            "Level-2 variable %s has non-zero variance at the within level",
+            dQuote(ov.names[[g]][v])), gtxt,
+            gettextf("in one cluster with id: %s.",
+                      Lp[[g]]$cluster.id[[2]][non.zero.var]),
+            gettext(
+              "Please double-check if this is a between only variable."))
         } else {
           error.flag <- TRUE
           # several
           gtxt <- if (ngroups > 1L) {
-            paste(" in group ", g, ".", sep = "")
+            gettextf("in group %s.", g)
           } else {
             "."
           }
-          txt <- c(
-            "Level-2 variable ", dQuote(ov.names[[g]][v]),
-            " has non-zero variance at the within level", gtxt,
-            " The cluster ids with non-zero within variance are: ",
-            paste(Lp[[g]]$cluster.id[[2]][non.zero.var],
-              collapse = " "
-            )
-          )
-          warning(lav_txt2message(txt))
+          lav_msg_warn(gettextf(
+            "Level-2 variable %s has non-zero variance at the within level",
+            dQuote(ov.names[[g]][v])), gtxt,
+            gettext("The cluster ids with non-zero within variance are: "),
+            lav_msg_view(Lp[[g]]$cluster.id[[2]][non.zero.var], "none"))
         }
       }
       if (error.flag) {
-        txt <- c(
-          "Some between-level (only) variables have non-zero ",
-          " variance at the within-level. ",
-          " Please double-check your data. "
+        lav_msg_stop(
+          gettext("Some between-level (only) variables have
+          non-zero variance at the within-level.
+          Please double-check your data.")
         )
-        stop(lav_txt2message(txt, header = "lavaan ERROR"))
       }
     } # clustered data
 
@@ -1169,15 +1153,19 @@ lav_data_full <- function(data = NULL, # data.frame
         # new in 0.6-4: return 'original' index in full data.frame
         empty.case.idx <- case.idx[[g]][Mp[[g]]$empty.idx]
         if (warn) {
-          warning("lavaan WARNING: some cases are empty and will be ignored:\n  ", paste(empty.case.idx, collapse = " "))
+          lav_msg_warn(gettextf(
+            "some cases are empty and will be ignored: %s.",
+            paste(empty.case.idx, collapse = " ")))
         }
       }
       if (warn && any(Mp[[g]]$coverage == 0)) {
-        txt <- c("due to missing values, some pairwise combinations have 0% coverage;", " use lavInspect(fit, \"coverage\") to investigate.")
-        warning(lav_txt2message(txt))
+        lav_msg_warn(gettext(
+          "due to missing values, some pairwise combinations have 0% coverage;
+          use lavInspect(fit, \"coverage\") to investigate."))
       } else if (warn && any(Mp[[g]]$coverage < 0.1)) {
-        txt <- c("due to missing values, some pairwise combinations have less than 10% coverage;", " use lavInspect(fit, \"coverage\") to investigate.")
-        warning(lav_txt2message(txt))
+        lav_msg_warn(gettext(
+          "due to missing values, some pairwise combinations have less than
+          10% coverage; use lavInspect(fit, \"coverage\") to investigate."))
       }
       # in case we had observations with only missings
       nobs[[g]] <- NROW(X[[g]]) - length(Mp[[g]]$empty.idx)
@@ -1206,7 +1194,8 @@ lav_data_full <- function(data = NULL, # data.frame
         weights[[g]] <- WT2
       }
     } else {
-      stop("lavaan ERROR: sampling.weights.normalization should be total, group or none.")
+      lav_msg_stop(gettext(
+        "sampling.weights.normalization should be total, group or none."))
     }
   }
 

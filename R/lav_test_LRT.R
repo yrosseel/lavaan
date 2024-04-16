@@ -15,7 +15,7 @@
 # - 0.6-13: fix multiple-group UG^2 bug in Satorra.2000 (reported by
 #           Gronneberg, Foldnes and Moss)
 #
-# - 0.6-19: 
+# - 0.6-19:
 #     New option method = "standard" (to explicitly avoid robust adjustment)
 #     New test= argument to select scaled stat when method="satorra.bentler.2001/2010"
 
@@ -31,7 +31,9 @@ lavTestLRT <- function(object, ..., method = "default", test = "default",
       type <- "browne.residual.adf"
     }
     if (!method %in% c("default", "standard")) {
-      stop("lavaan ERROR: method cannot be used if type is browne.residual.adf or browne.residual.nt")
+      lav_msg_stop(gettext(
+        "method cannot be used if type is browne.residual.adf or
+        browne.residual.nt"))
     }
     method <- "default"
   }
@@ -65,7 +67,7 @@ lavTestLRT <- function(object, ..., method = "default", test = "default",
   # shortcut for single argument (just plain LRT)
   if (!any(modp) && !user_h1_exists) {
     if (type == "cf") {
-      warning("lavaan WARNING: `type' argument is ignored for a single model")
+      lav_msg_warn(gettext("`type' argument is ignored for a single model"))
     }
     return(lav_test_lrt_single_model(object))
   }
@@ -97,7 +99,8 @@ lavTestLRT <- function(object, ..., method = "default", test = "default",
     })
     OV <- ov.names[[1L]] # the observed variable names of the first model
     if (!all(sapply(ov.names, function(x) identical(x, OV)))) {
-      warning("lavaan WARNING: some models are based on a different set of observed variables")
+      lav_msg_warn(gettext(
+        "some models are based on a different set of observed variables"))
     }
     ## wow FIXME: we may need to reorder the rows/columns first!!
     # COVS <- lapply(mods, function(x) slot(slot(x, "Sample"), "cov")[[1]])
@@ -112,12 +115,12 @@ lavTestLRT <- function(object, ..., method = "default", test = "default",
     mean.structure <- sapply(mods, inspect, "meanstructure")
     if (sum(mean.structure) > 0L &&
       sum(mean.structure) < length(mean.structure)) {
-      warning("lavaan WARNING: not all models have a meanstructure")
+      lav_msg_warn(gettext("not all models have a meanstructure"))
     }
 
     # 4. all converged?
     if (!all(sapply(mods, lavInspect, "converged"))) {
-      warning("lavaan WARNING: not all models converged")
+      lav_msg_warn(gettext("not all models converged"))
     }
   }
 
@@ -132,7 +135,7 @@ lavTestLRT <- function(object, ..., method = "default", test = "default",
   if (all(mods.scaled | ndf == 0) && any(mods.scaled)) {
     # Note: if df=0, test is not really robust, hence the above condition
     scaled <- TRUE
-    # which test to choose by default? 
+    # which test to choose by default?
     # i.e., not determined by method=
     scaledList <- sapply(object@test, function(x) !is.null(x$scaled.test.stat))
     scaled.idx <- which(scaledList)[[1]]
@@ -141,28 +144,30 @@ lavTestLRT <- function(object, ..., method = "default", test = "default",
       TEST <- default.TEST
     } else if (! test %in% c("satorra.bentler", "yuan.bentler", "yuan.bentler.mplus",
                              "mean.var.adjusted", "scaled.shifted")) {
-      stop("lavaan ERROR: test = ", dQuote(test), " not found in object.\n",
-           "See available tests in lavInspect(object, \"options\")$test.")
+      lav_msg_stop(gettextf(
+        "test = %s not found in object. See available tests in
+        lavInspect(object, \"options\")$test.", dQuote(test)))
     } else TEST <- test
-    
+
     ## is the test available from all models?
     check.scaled <- unlist(lapply(mods, function(x) {
       TEST %in% unlist(sapply(slot(x, "test"), "[[", "test"))
     }))
-    
+
     if (any(!check.scaled)) {
-      stop("lavaan ERROR: test = ", dQuote(test), " not found in model(s):\n",
-           paste(names(mods)[which(!check.scaled)], collapse = ", "),
-           "\nFind available tests per model using",
-           "lavInspect(fit, \"options\")$test.")
+      lav_msg_stop(gettextf(
+        "test = %1$s not found in model(s): %2$s. Find available tests per model
+        using lavInspect(fit, \"options\")$test.", dQuote(test),
+        lav_msg_view(names(mods)[which(!check.scaled)], "none")))
     }
-    
+
   } else if (!any(mods.scaled)) { # thanks to R.M. Bee to fix this
     scaled <- FALSE
     TEST <- "standard"
     method <- "standard"
   } else {
-    stop("lavaan ERROR: some models (but not all) have scaled test statistics")
+    lav_msg_stop(gettext(
+      "some models (but not all) have scaled test statistics"))
   }
   if (type %in% c("browne.residual.adf", "browne.residual.nt")) {
     scaled <- FALSE
@@ -171,7 +176,7 @@ lavTestLRT <- function(object, ..., method = "default", test = "default",
   if (method == "standard") {
     scaled <- FALSE
   }
-  
+
   # select method
   if (method == "default") {
     if (estimator == "PML") {
@@ -201,16 +206,18 @@ lavTestLRT <- function(object, ..., method = "default", test = "default",
 
     ## only option left:
   } else if (method != "standard") {
-    stop("lavaan ERROR: unknown method for scaled difference test: ", method)
+    lav_msg_stop(
+      gettextf("unknown method for scaled difference test: %s.", method))
   }
-  
+
   ## in case users specify method= or test= (but still type="chisq"),
   ## make sure the arguments are consistent for scaled tests
   if (method %in% c("satorra.bentler.2001","satorra.bentler.2010") && scaled &&
       (!TEST %in% c("satorra.bentler","yuan.bentler","yuan.bentler.mplus")) ) {
-    stop("lavaan ERROR: method = ", dQuote(method), " only available when",
-         " models are fitted with test = \"satorra.bentler\",",
-         " \"yuan.bentler\", or \"yuan.bentler.mplus\".")
+    lav_msg_stop(gettextf(
+      "method = %s only available when models are fitted with test =
+      \"satorra.bentler\", \"yuan.bentler\", or \"yuan.bentler.mplus\".",
+      dQuote(method)))
   } else {
     ## method="satorra.2000" still available when TEST != scaled.shifted
     ## Or !scaled, so nothing to do.
@@ -224,12 +231,9 @@ lavTestLRT <- function(object, ..., method = "default", test = "default",
       "satorra.2000",
       "satorra.bentler.2010"
     )) {
-    warning(
-      "lavaan WARNING: method = ", dQuote(method),
-      "\n\t but no robust test statistics were used;",
-      "\n\t switching to the standard chi-squared difference test"
-    )
-
+    lav_msg_warn(gettextf(
+      "method = %s but no robust test statistics were used; switching to the
+      standard chi-squared difference test", dQuote(method)))
     method <- "standard"
   }
 
@@ -246,7 +250,7 @@ lavTestLRT <- function(object, ..., method = "default", test = "default",
   } else if (sum(mods.meanstructure) == 0) {
     meanstructure <- "ok"
   } else {
-    stop("lavaan ERROR: some models (but not all) have a meanstructure")
+    lav_msg_stop(gettext("some models (but not all) have a meanstructure"))
   }
 
   # collect statistics for each model
@@ -272,7 +276,7 @@ lavTestLRT <- function(object, ..., method = "default", test = "default",
     STAT <- unlist(tmp)
     Df <- unlist(lapply(tmp, attr, "DF"))
   } else {
-    stop("lavaan ERROR: test type unknown: ", type)
+    lav_msg_stop(gettextf("test type unknown: %s", type))
   }
 
 
@@ -297,13 +301,10 @@ lavTestLRT <- function(object, ..., method = "default", test = "default",
   # check for negative values in STAT.delta
   # but with a tolerance (0.6-12)!
   if (any(STAT.delta[-1] < -1 * .Machine$double.eps^(1 / 3))) {
-    txt <- c(
-      "Some restricted models fit better than less ",
-      "restricted models; either these models are not nested, or ",
-      "the less restricted model failed to reach a global optimum."
-    )
-    txt <- c(txt, " Smallest difference = ", min(STAT.delta[-1]))
-    warning(lav_txt2message(txt))
+    lav_msg_warn(gettextf(
+      "Some restricted models fit better than less restricted models; either
+      these models are not nested, or the less restricted model failed to reach
+      a global optimum.Smallest difference = %s.", min(STAT.delta[-1])))
   }
 
   # correction for scaled test statistics
@@ -422,7 +423,8 @@ lavTestLRT <- function(object, ..., method = "default", test = "default",
   idx <- which(val[, "Df diff"] == 0)
   if (length(idx) > 0L) {
     # remove models with inequality constraints
-    ineq.idx <- which(sapply(lapply(mods, function(x) slot(slot(x, "Model"), "x.cin.idx")), length) > 0L)
+    ineq.idx <- which(sapply(lapply(mods, function(x)
+      slot(slot(x, "Model"), "x.cin.idx")), length) > 0L)
     rm.idx <- which(idx %in% ineq.idx)
     if (length(rm.idx) > 0L) {
       idx <- idx[-rm.idx]
@@ -430,7 +432,7 @@ lavTestLRT <- function(object, ..., method = "default", test = "default",
   }
   if (length(idx) > 0L) {
     val[idx, "Pr(>Chisq)"] <- as.numeric(NA)
-    warning("lavaan WARNING: some models have the same degrees of freedom")
+    lav_msg_warn(gettext("some models have the same degrees of freedom"))
   }
 
   if (type == "chisq") {
@@ -444,10 +446,7 @@ lavTestLRT <- function(object, ..., method = "default", test = "default",
       attr(val, "heading") <-
         paste("\nScaled Chi-Squared Difference Test (method = ",
           dQuote(method), ")\n\n",
-          lav_txt2message(txt,
-            header = "lavaan NOTE:",
-            footer = " "
-          ),
+          lav_msg(paste("lavaan NOTE:", txt)),
           sep = ""
         )
       if (method == "satorra.2000" && scaled.shifted) {

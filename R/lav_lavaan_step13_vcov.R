@@ -96,10 +96,8 @@ lav_lavaan_step13_vcov_boot <- function(lavoptions = NULL,
         lavpartable = lavpartable,
         VCOV = NULL, BOOT = NULL
       )
-      warning(
-        "lavaan WARNING: se = \"external\" but parameter table ",
-        "does not contain a `se' column"
-      )
+      lav_msg_warn(gettext(
+        "se = \"external\" but parameter table does not contain a `se' column"))
     }
   } else if (lavoptions$se %in% c("none", "twostep")) {
     # do nothing

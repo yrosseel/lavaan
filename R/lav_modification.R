@@ -76,9 +76,12 @@ modindices <- function(object,
   if (length(extra.idx) == 0L) {
     # 2 possibilities: either model is saturated, or we have constraints
     if (object@test[[1]]$df == 0) {
-      warning("lavaan WARNING: list with extra parameters is empty; model is saturated")
+      lav_msg_warn(gettext(
+        "list with extra parameters is empty; model is saturated"))
     } else {
-      warning("lavaan WARNING: list with extra parameters is empty; to release equality\n                  constraints, use lavTestScore()")
+      lav_msg_warn(gettext(
+        "list with extra parameters is empty; to release equality
+        constraints, use lavTestScore()"))
     }
     LIST <- data.frame(
       lhs = character(0), op = character(0),

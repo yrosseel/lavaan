@@ -188,25 +188,21 @@ lav_mvnorm_missing_h1_estimate_moments <- function(Y = NULL,
 
   # warning?
   if (warn && i == max.iter) {
-    txt <- c(
-      "Maximum number of iterations reached when ",
-      "computing the sample moments using EM; ",
-      "use the em.h1.iter.max= argument to increase the number of ",
-      "iterations"
+    lav_msg_warn(
+      gettext("Maximum number of iterations reached when computing the sample
+              moments using EM; use the em.h1.iter.max= argument to increase
+              the number of iterations")
     )
-    warning(lav_txt2message(txt))
   }
 
   if (warn) {
     ev <- eigen(Sigma, symmetric = TRUE, only.values = TRUE)$values
     if (any(ev < 1e-05)) { # make an option?
-      txt <- c(
-        "The smallest eigenvalue of the EM estimated ",
-        "variance-covariance matrix (Sigma) is smaller than ",
-        "1e-05; this may cause numerical instabilities; ",
-        "interpret the results with caution."
+      lav_msg_warn(
+        gettext("The smallest eigenvalue of the EM estimated variance-covariance
+                matrix (Sigma) is smaller than 1e-05; this may cause numerical
+                instabilities; interpret the results with caution.")
       )
-      warning(lav_txt2message(txt))
     }
   }
 

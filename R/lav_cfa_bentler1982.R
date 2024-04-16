@@ -46,7 +46,7 @@ lav_cfa_bentler1982 <- function(S,
   if (GLS) {
     W <- try(solve(S.yy), silent = TRUE)
     if (inherits(W, "try-error")) {
-      warning("lavaan WARNING: could not inverte S.yy; switching to ULS")
+      lav_msg_warn(gettext("could not inverte S.yy; switching to ULS"))
       W <- diag(p)
     }
     WS.yx <- W %*% S.yx
@@ -113,7 +113,7 @@ lav_cfa_bentler1982 <- function(S,
     silent = TRUE
   )
   if (inherits(lambda, "try-error")) {
-    warning("lavaan WARNING: failed to compute lambda")
+    lav_msg_warn(gettext("failed to compute lambda"))
     SminTheta <- S.yy - Theta.yhat # and hope for the best
   } else {
     cutoff <- 1 + 1 / (nobs - 1)
@@ -173,7 +173,7 @@ lav_cfa_bentler1982 <- function(S,
       meq = length(eq.idx), bvec = bvec
     ), silent = TRUE)
     if (inherits(out, "try-error")) {
-      warning("lavaan WARNING: solve.QP failed to find a solution")
+      lav_msg_warn(gettext("solve.QP failed to find a solution"))
       Lambda <- matrix(0, nvar, nfac)
       Lambda[marker.idx, ] <- diag(nfac)
       Lambda[lambda.nonzero.idx] <- as.numeric(NA)
@@ -241,8 +241,8 @@ lav_cfa_bentler1982_internal <- function(lavobject = NULL, # convenience
   }
   # no BETA matrix! (i.e., no higher-order factors)
   if (!is.null(lavmodel@GLIST$beta)) {
-    lav_msg_stop(gettext("bentler1982 estimator not available"),
-                 gettext("for models the require a BETA matrix"))
+    lav_msg_stop(gettext("bentler1982 estimator not available
+                 for models that require a BETA matrix"))
   }
   # no std.lv = TRUE for now
   if (lavoptions$std.lv) {

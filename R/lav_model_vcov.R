@@ -42,18 +42,14 @@ lav_model_nvcov_bootstrap <- function(lavmodel = NULL,
   error.idx <- attr(COEF, "error.idx")
   nfailed <- length(error.idx) # zero if NULL
   if (nfailed > 0L && lavoptions$warn) {
-    warning(
-      "lavaan WARNING: ", nfailed,
-      " bootstrap runs failed or did not converge."
-    )
+    lav_msg_warn(gettextf(
+      "%s bootstrap runs failed or did not converge.", nfailed))
   }
 
   notok <- length(attr(COEF, "nonadmissible")) # zero if NULL
   if (notok > 0L && lavoptions$warn) {
-    warning(
-      "lavaan WARNING: ", notok,
-      " bootstrap runs resulted in nonadmissible solutions."
-    )
+    lav_msg_warn(gettextf(
+      "%s bootstrap runs resulted in nonadmissible solutions.", notok))
   }
 
   if (length(error.idx) > 0L) {
@@ -295,16 +291,18 @@ lav_model_nvcov_two_stage <- function(lavmodel = NULL,
   # - or information is observed but with observed.information == "h1"
   if (lavoptions$information[1] == "observed" &&
     lavoptions$observed.information[1] != "h1") {
-    stop("lavaan ERROR: two.stage + observed information currently only works with observed.information = ", dQuote("h1"))
+    lav_msg_stop(
+      gettext("two.stage + observed information currently only works
+              with observed.information = 'h1'"))
   }
   # no weights (yet)
   if (!is.null(lavdata@weights[[1]])) {
-    stop("lavaan ERROR: two.stage + sampling.weights is not supported yet")
+    lav_msg_stop(gettext("two.stage + sampling.weights is not supported yet"))
   }
   # no fixed.x (yet)
   # if(!is.null(lavsamplestats@x.idx) &&
   #   length(lavsamplestats@x.idx[[1]]) > 0L) {
-  #    stop("lavaan ERROR: two.stage + fixed.x = TRUE is not supported yet")
+  #    lav_msg_stop(gettext("two.stage + fixed.x = TRUE is not supported yet"))
   # }
 
 
@@ -333,7 +331,7 @@ lav_model_nvcov_two_stage <- function(lavmodel = NULL,
 
   # check WLS.V = A1
   if (is.null(WLS.V)) {
-    stop("lavaan ERROR: WLS.V/H/A1 is NULL, observed.information = hessian?")
+    lav_msg_stop(gettext("WLS.V/H/A1 is NULL, observed.information = hessian?"))
   }
 
   # Gamma
@@ -527,7 +525,7 @@ lav_model_vcov <- function(lavmodel = NULL,
       silent = TRUE
     )
   } else {
-    warning("lavaan WARNING: unknown se type: ", se)
+    lav_msg_warn(gettextf("unknown se type: %s", se))
   }
 
   if (!inherits(NVarCov, "try-error")) {
@@ -608,34 +606,29 @@ lav_model_vcov <- function(lavmodel = NULL,
         # }
 
         if (min.val > 0) {
-          txt <- c(
-            "The variance-covariance matrix of the estimated
-                        parameters (vcov) does not appear to be positive
-                        definite! The smallest eigenvalue (= ",
-            sprintf("%e", min(min.val)), ") is close to zero.
-                        This may be a symptom that the model is not
-                        identified."
-          )
-          warning(lav_txt2message(txt))
+          lav_msg_warn(
+            gettextf("The variance-covariance matrix of the estimated
+                    parameters (vcov) does not appear to be positive
+                    definite! The smallest eigenvalue (= %e) is close
+                     to zero. This may be a symptom that the model is
+                     not identified.", min(min.val)))
         } else {
-          txt <- c(
-            "The variance-covariance matrix of the estimated
-                        parameters (vcov) does not appear to be positive
-                        definite! The smallest eigenvalue (= ",
-            sprintf("%e", min(min.val)), ") is smaller than zero.
-                        This may be a symptom that the model is not
-                        identified."
-          )
-          warning(lav_txt2message(txt))
+          lav_msg_warn(
+            gettextf("The variance-covariance matrix of the estimated parameters
+                     (vcov) does not appear to be positive definite! The smallest
+                     eigenvalue (= %e) is smaller than zero. This may be a
+                     symptom that the model is not identified.",
+                     min(min.val)))
         }
       }
     }
   } else {
     if (lavoptions$warn) {
-      txt <- "Could not compute standard errors! The information matrix
-                    could not be inverted. This may be a symptom that the model
-                    is not identified."
-      warning(lav_txt2message(txt))
+      lav_msg_warn(
+       gettext("Could not compute standard errors! The information matrix
+               could not be inverted. This may be a symptom that the model
+               is not identified.")
+      )
     }
     VarCov <- NULL
   } # could not invert

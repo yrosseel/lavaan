@@ -87,16 +87,12 @@ lav_lavaan_step10_cache <- function(slotCache = NULL, # nolint
           # check whether the probabilities pairwiseProbGivObs and
           # univariateProbGivObs are given by the user
           if (is.null(lavoptions$control$pairwiseProbGivObs)) {
-            stop(
-              "lavaan ERROR: could not find `pairwiseProbGivObs' ",
-              "in control() list"
-            )
+            lav_msg_stop(gettext(
+              "could not find `pairwiseProbGivObs' in control() list"))
           }
           if (is.null(lavoptions$control$univariateProbGivObs)) {
-            stop(
-              "lavaan ERROR: could not find `univariateProbGivObs' ",
-              "in control() list"
-            )
+            lav_msg_stop(gettext(
+              "could not find `univariateProbGivObs' in control() list"))
           }
         }
       }

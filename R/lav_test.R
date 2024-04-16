@@ -1,7 +1,7 @@
 # chi-square test statistic:
 # comparing the current model versus the saturated/unrestricted model
 # TDJ 9 April 2024: Add a (hidden) function to update the @test slot
-#                   when the user provides a custom h1 model.  Called by 
+#                   when the user provides a custom h1 model.  Called by
 #                   lav_object_summary and lav_fit_measures(_check_baseline)
 
 lavTest <- function(lavobject, test = "standard",
@@ -499,10 +499,8 @@ lav_model_test <- function(lavobject = NULL,
             UGamma.eigenvalues = as.numeric(NA)
           )
       } else {
-        warning(
-          "test option ", this.test,
-          " not available for estimator PML"
-        )
+        lav_msg_warn(gettextf("test option %s not available for estimator PML",
+                              this.test))
       }
     } else if (this.test %in% c(
       "browne.residual.adf",
@@ -695,27 +693,27 @@ lav_model_test <- function(lavobject = NULL,
 lav_update_test_custom_h1 <- function(lav_obj_h0, lav_obj_h1) {
   stopifnot(inherits(lav_obj_h0, "lavaan"))
   stopifnot(inherits(lav_obj_h1, "lavaan"))
-  
+
   ## this breaks if object not nested in (df >=) h1, so check df
   stopifnot(lav_obj_h0@test[[1]]$df >= lav_obj_h1@test[[1]]$df)
-  
+
   ## remove any other (potentially hidden) h1 model from BOTH objects
   lav_obj_h0@external$h1.model <- NULL
   lav_obj_h1@external$h1.model <- NULL
-  
+
   ## save old @test slot as template
   ## (so the @test[[1]]$df don't change while looping over tests to update)
   newTEST <- lav_obj_h0@test
-  
+
   ## assemble a call to lavTestLRT()
-  lrtCallTemplate <- list(quote(lavTestLRT), object = quote(lav_obj_h1), 
+  lrtCallTemplate <- list(quote(lavTestLRT), object = quote(lav_obj_h1),
                           quote(lav_obj_h0)) # in ...
 
   ## can only update tests available in both objects
   testNames0 <- names(lav_obj_h0@test)
   testNames1 <- names(lav_obj_h1@test)
   testNames <- intersect(testNames0, testNames1)
-  
+
   ## loop over those tests
   for (tn in testNames) {
     lrtCall <- lrtCallTemplate
@@ -739,7 +737,7 @@ lav_update_test_custom_h1 <- function(lav_obj_h0, lav_obj_h1) {
       #   - if (tn %in% c("bootstrap", "bollen.stine")) next
       #   - any other possibilities in @test?
     }
-    
+
     ## get new test
     if (lav_obj_h0@test[[1]]$df == lav_obj_h1@test[[1]]$df) {
       ## suppress warning about == df
@@ -748,8 +746,8 @@ lav_update_test_custom_h1 <- function(lav_obj_h0, lav_obj_h1) {
       ## maybe some other informative warning would be important to see
       ANOVA <- eval(as.call(lrtCall))
     }
-    
-    
+
+
     ## replace old @test[[tn]] values
     newTEST[[tn]]$stat.group <- NULL # avoid wrong stats in summary() header?
     newTEST[[tn]]$stat   <- ANOVA["lav_obj_h0" , "Chisq diff"]
@@ -768,7 +766,7 @@ lav_update_test_custom_h1 <- function(lav_obj_h0, lav_obj_h1) {
     ## should not be necessary to replace $trace.UGamma2
     ## nor to replace $scaling.factor.h0/h1
   } # end loop over tests
-  
+
   ## assign updated @test slot and return
   lav_obj_h0@test <- newTEST
   lav_obj_h0

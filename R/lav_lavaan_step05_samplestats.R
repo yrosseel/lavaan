@@ -49,11 +49,9 @@ lav_lavaan_step05_samplestats <- function(slotSampleStats = NULL, # nolint
     }
     # check if we have sample.mean and meanstructure = TRUE
     if (lavoptions$meanstructure && is.null(sample.mean)) {
-      txt <- c(
-        "sample.mean= argument is missing, but model contains ",
-        "mean/intercept parameters."
-      )
-      warning(lav_txt2message(txt))
+      lav_msg_warn(
+        gettext("sample.mean= argument is missing, but model contains
+                mean/intercept parameters."))
     }
     lavsamplestats <- lav_samplestats_from_moments(
       sample.cov    = sample.cov,

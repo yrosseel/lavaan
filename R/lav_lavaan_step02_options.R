@@ -77,9 +77,8 @@ lav_lavaan_step02_options <- function(slotOptions = NULL, # nolint
     if (length(dotdotdot) > 0L) {
       dot.names <- names(dotdotdot)
       op.idx <- which(dot.names %in% names(slotOptions))
-      warning(
-        "lavaan WARNING: the following argument(s) override(s) the options ",
-        "in slotOptions:\n\t\t",
+      lav_msg_warn(gettext(
+        "the following argument(s) override(s) the options in slotOptions:"),
         paste(dot.names[op.idx], collapse = " ")
       )
       lavoptions[dot.names[op.idx]] <- dotdotdot[op.idx]
@@ -97,12 +96,10 @@ lav_lavaan_step02_options <- function(slotOptions = NULL, # nolint
     dot.names <- names(dotdotdot)
     wrong.idx <- which(!dot.names %in% ok.names)
     if (length(wrong.idx) > 0L) {
-      plural <- ""
-      if (length(wrong.idx) > 1L) plural <- "s"
       # stop or warning?? stop for now (there could be more)
-      stop(
-        "lavaan ERROR: unknown argument", plural, " ",
-        paste(sQuote(dot.names[wrong.idx]), collapse = ", ")
+      lav_msg_stop(ngettext(length(wrong.idx),
+        "unknown argument:", "unknown arguments:"),
+        lav_msg_view(dot.names[wrong.idx], "none", FALSE)
       )
     }
 
@@ -139,8 +136,8 @@ lav_lavaan_step02_options <- function(slotOptions = NULL, # nolint
       }
       idx.missing <- which(!(tmp.ov.names.y %in% names(data)))
       if (length(idx.missing)) {
-        stop(
-          "lavaan ERROR: missing observed variables in dataset: ",
+        lav_msg_stop(
+          gettext("missing observed variables in dataset:"),
           paste(tmp.ov.names.y[idx.missing], collapse = " ")
         )
       }
@@ -156,7 +153,7 @@ lav_lavaan_step02_options <- function(slotOptions = NULL, # nolint
     if (length(cluster) > 0L) {
       opt$.clustered <- TRUE
       if (opt$.categorical) {
-        stop("lavaan ERROR: categorical + clustered is not supported yet.")
+        lav_msg_stop(gettext("categorical + clustered is not supported yet."))
       }
     } else {
       opt$.clustered <- FALSE
@@ -195,10 +192,8 @@ lav_lavaan_step02_options <- function(slotOptions = NULL, # nolint
       (is.character(ov.names.x) && length(ov.names.x) == 0L)) {
       # if explicitly set to TRUE, give warning
       if (is.logical(dotdotdot$conditional.x) && dotdotdot$conditional.x) {
-        warning(
-          "lavaan WARNING: no exogenous covariates; conditional.x ",
-          "will be set to FALSE"
-        )
+        lav_msg_warn(
+          gettext("no exogenous covariates; conditional.x will be set to FALSE"))
       }
       opt$conditional.x <- FALSE
     }

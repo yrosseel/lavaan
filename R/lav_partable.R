@@ -55,7 +55,7 @@ lavaanify <- lavParTable <- function( # nolint
   # check if model is already flat or a full parameter table
   if (is.list(model) && !is.null(model$lhs)) {
     if (is.null(model$mod.idx)) {
-      warning("lavaan WARNING: input already looks like a parameter table")
+      lav_msg_warn(gettext("input already looks like a parameter table"))
       return(lav_partable_set_cache(model))
     } else {
       flat <- model
@@ -113,10 +113,8 @@ lavaanify <- lavParTable <- function( # nolint
   # bogus varTable? (if data.type == "none")
   if (!is.null(varTable)) {
     if (!is.list(varTable) || is.null(varTable$name)) {
-      stop(
-        "lavaan ERROR: varTable is not a list or",
-        " does not contain variable names."
-      )
+      lav_msg_stop(gettext(
+        "varTable is not a list or does not contain variable names."))
     }
     if (all(varTable$nobs == 0)) {
       varTable <- NULL # nolint
@@ -189,10 +187,8 @@ lavaanify <- lavParTable <- function( # nolint
       group.idx <- which(tmp.block.lhs == "group")
       level.idx <- which(tmp.block.lhs == "level")
       if (group.idx > level.idx) {
-        stop(
-          "lavaan ERROR: levels must be nested within",
-          " groups (not the other way around)."
-        )
+        lav_msg_stop(gettext(
+          "levels must be nested within groups (not the other way around)."))
       }
     }
 
@@ -201,22 +197,16 @@ lavaanify <- lavParTable <- function( # nolint
 
     # check for wrong spelled 'group' lhs
     if (length(grep("group", tmp.block.lhs)) > 1L) {
-      warning(
-        "lavaan WARNING: ambiguous block identifiers for group:",
-        "\n\t\t  ", paste(tmp.block.lhs[grep("group", tmp.block.lhs)],
-          collapse = ", "
-        )
-      )
+      lav_msg_warn(gettext("ambiguous block identifiers for group:"),
+        lav_msg_view(tmp.block.lhs[grep("group", tmp.block.lhs)], "none"))
     }
 
     # no empty :rhs fields allowed!
     if (any(nchar(flat$rhs[block.op.idx]) == 0L)) {
       empty.idx <- nchar(flat$rhs[block.op.idx]) == 0L
       txt <- paste(flat$lhs[block.op.idx][empty.idx], ":")
-      stop(
-        "lavaan ERROR: syntax contains block identifiers with ",
-        "missing numbers/labels:\n\t\t", txt
-      )
+      lav_msg_stop(gettext(
+        "syntax contains block identifiers with missing numbers/labels: "), txt)
     }
 
     # check for ngroups (ngroups is based on the data!)
@@ -226,10 +216,9 @@ lavaanify <- lavParTable <- function( # nolint
       n.group.flat <- length(unique(flat$rhs[group.block.idx]))
 
       if (n.group.flat > 0L && n.group.flat != ngroups) {
-        stop(
-          "lavaan ERROR: syntax defines ", n.group.flat, " groups; ",
-          "data (or argument ngroups) suggests ", ngroups, " groups"
-        )
+        lav_msg_stop(gettextf(
+          "syntax defines %1$s groups; data (or argument ngroups)
+          suggests %2$s groups", n.group.flat, ngroups))
       }
     }
 
@@ -336,16 +325,12 @@ lavaanify <- lavParTable <- function( # nolint
           idx <- which(!ov.names.x.block %in% tmp.ov.names.x)
           if (length(idx) > 0L) {
             # warn!
-            txt <- c(
-              "the variable(s) [",
-              paste0(ov.names.x.block[idx], collapse = " "), "] ",
-              "are exogenous at one level, but endogenous at ",
-              "another level. These variables will be treated as ",
-              "endogenous, and their variances/intercepts will be ",
-              "freely estimated. To remove this warning, use ",
-              "fixed.x = FALSE."
-            )
-            warning(lav_txt2message(txt))
+            lav_msg_warn(gettextf(
+              "the variable(s) [%s] are exogenous at one level, but endogenous
+              at another level. These variables will be treated as endogenous,
+              and their variances/intercepts will be freely estimated.
+              To remove this warning, use fixed.x = FALSE.",
+              lav_msg_view(ov.names.x.block[idx], "none")))
             ov.names.x.block <- ov.names.x.block[-idx]
           }
         }
@@ -575,9 +560,9 @@ lavaanify <- lavParTable <- function( # nolint
         (!is.null(tmp.mod.rv) && nidx != length(tmp.mod.rv)) ||
         (!is.null(tmp.mod.label) && nidx != length(tmp.mod.label))) {
         el.idx <- which(tmp.list$mod.idx == el)[1L]
-        stop(
-          "lavaan ERROR: wrong number of arguments in modifier (",
-          paste(tmp.mod.label, collapse = ","), ") of element ",
+        lav_msg_stop(gettextf(
+          "wrong number of arguments in modifier (%s) of element",
+          lav_msg_view(tmp.mod.label, "none")),
           tmp.list$lhs[el.idx], tmp.list$op[el.idx], tmp.list$rhs[el.idx]
         )
       }
@@ -647,13 +632,13 @@ lavaanify <- lavParTable <- function( # nolint
 
   # warning about single label in multiple group setting?
   if (warn.about.single.label) {
-    warning(
-      "lavaan WARNING: using a single label per parameter in a multiple group\n",
-      "\t setting implies imposing equality constraints across all the groups;\n",
-      "\t If this is not intended, either remove the label(s), or use a vector\n",
-      "\t of labels (one for each group);\n",
-      "\t See the Multiple groups section in the man page of model.syntax."
-    )
+    lav_msg_warn(gettext(
+      "using a single label per parameter in a multiple group setting implies
+      imposing equality constraints across all the groups; If this is not
+      intended, either remove the label(s), or use a vector of labels (one for
+      each group); See the Multiple groups section in the man page of
+      model.syntax."
+    ))
   }
 
   # if lower/upper values were added, fix non-free values to ustart values
@@ -771,10 +756,9 @@ lavaanify <- lavParTable <- function( # nolint
       # sanity check: are all ustart values equal?
       ustart1 <- tmp.list$ustart[fixed.idx]
       if (!all(ustart1 == tmp.list$ustart[fixed.all])) {
-        warning(
-          "lavaan WARNING: equality constraints involve fixed",
-          " parameters with different values; only the first one will be used"
-        )
+        lav_msg_warn(gettext(
+          "equality constraints involve fixed parameters with different values;
+          only the first one will be used"))
       }
 
       # make them all fixed
@@ -894,7 +878,7 @@ lavaanify <- lavParTable <- function( # nolint
   if (is.logical(effect.coding) && effect.coding) {
     effect.coding <- c("loadings", "intercepts")
   } else if (!is.character(effect.coding)) {
-    stop("lavaan ERROR: effect.coding argument must be a character string")
+    lav_msg_stop(gettext("effect.coding argument must be a character string"))
   }
   if (any(c("loadings", "intercepts") %in% effect.coding)) {
     tmp <- list()

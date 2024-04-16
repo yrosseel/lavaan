@@ -133,9 +133,8 @@ standardizedSolution <- # nolint
     } else if (output %in% c("text", "pretty")) {
       output <- "text"
     } else {
-      stop(
-        "lavaan ERROR: output must be ", sQuote("data.frame"),
-        " or ", sQuote("text")
+      lav_msg_stop(gettextf(
+        "output must be %s or %s", sQuote("data.frame"), sQuote("text"))
       )
     }
 
@@ -353,35 +352,36 @@ parameterEstimates <- # nolint
     } else if (output %in% c("text", "pretty")) {
       output <- "text"
     } else {
-      stop(
-        "lavaan ERROR: output must be ", sQuote("data.frame"),
-        " or ", sQuote("text")
+      lav_msg_stop(gettextf(
+        "output must be %s or %s", sQuote("data.frame"), sQuote("text"))
       )
     }
 
     # check fmi
     if (fmi) {
       if (inherits(object, "lavaanList")) {
-        warning(
-          "lavaan WARNING: fmi not available",
-          " for object of class \"lavaanList\""
-        )
+        lav_msg_warn(gettext(
+          "fmi not available for object of class \"lavaanList\""))
         fmi <- FALSE
       }
       if (object@Options$se != "standard") {
-        warning("lavaan WARNING: fmi only available if se = \"standard\"")
+        lav_msg_warn(gettext(
+          "fmi only available if se = \"standard\""))
         fmi <- FALSE
       }
       if (object@Options$estimator != "ML") {
-        warning("lavaan WARNING: fmi only available if estimator = \"ML\"")
+        lav_msg_warn(gettext(
+          "fmi only available if estimator = \"ML\""))
         fmi <- FALSE
       }
       if (!object@SampleStats@missing.flag) {
-        warning("lavaan WARNING: fmi only available if missing = \"(fi)ml\"")
+        lav_msg_warn(gettext(
+          "fmi only available if missing = \"(fi)ml\""))
         fmi <- FALSE
       }
       if (!object@optim$converged) {
-        warning("lavaan WARNING: fmi not available; model did not converge")
+        lav_msg_warn(gettext(
+          "fmi not available; model did not converge"))
         fmi <- FALSE
       }
     }
@@ -514,7 +514,7 @@ parameterEstimates <- # nolint
           tmp.r <- length(t)
           rk <- (tmp.r + 1) * alpha
           if (!all(rk > 1 & rk < tmp.r)) {
-            warning("extreme order statistics used as endpoints")
+            lav_msg_warn(gettext("extreme order statistics used as endpoints"))
           }
           k <- trunc(rk)
           inds <- seq_along(k)
@@ -660,26 +660,22 @@ parameterEstimates <- # nolint
 
           # we need enough bootstrap runs
           if (nrow(tmp.boot) < ntotal) {
-            txt <- paste("BCa confidence intervals require more ",
-              "(successful) bootstrap runs (", nrow(tmp.boot),
-              ") than the number of observations (",
-              ntotal, ").",
-              sep = ""
-            )
-            stop(lav_txt2message(txt, header = "lavaan ERROR:"))
+            lav_msg_stop(gettextf(
+            "BCa confidence intervals require more (successful) bootstrap runs
+            (%1$s) than the number of observations (%2$s).",
+            nrow(tmp.boot), ntotal))
           }
 
           # does not work with sampling weights (yet)
           if (!is.null(object@Data@weights[[1]])) {
-            stop(
-              "lavaan ERROR: BCa confidence intervals not available in",
-              " the presence of sampling weights."
-            )
+            lav_msg_stop(
+              gettext("BCa confidence intervals not available in
+                      the presence of sampling weights."))
           }
 
           # check if we have a seed
           if (is.null(bootstrap.seed)) {
-            stop("lavaan ERROR: seed not available in tmp.boot object.")
+            lav_msg_stop(gettext("seed not available in tmp.boot object."))
           }
 
           # compute 'X' matrix with frequency indices (to compute
@@ -796,10 +792,11 @@ parameterEstimates <- # nolint
       if ("std.nox" %in% standardized) {
         # sanity checks
         if (length(lavNames(object, "ov.x")) == 0) {
-          message("`std.nox' unavailable without fixed exogenous predictors")
+          lav_msg_note(gettext(
+            "`std.nox' unavailable without fixed exogenous predictors"))
           standardized <- setdiff(standardized, "std.nox")
         } else if (!object@Options$fixed.x) {
-          message("`std.nox' unavailable when fixed.x = FALSE")
+          lav_msg_note(gettext("`std.nox' unavailable when fixed.x = FALSE"))
           standardized <- setdiff(standardized, "std.nox")
         }
       }
@@ -828,10 +825,8 @@ parameterEstimates <- # nolint
       tmp.names <- unlist(lapply(r2, names))
       nel <- length(tmp.names)
       if (nel == 0L) {
-        warning(
-          "lavaan WARNING: rsquare = TRUE,",
-          " but there are no dependent variables"
-        )
+        lav_msg_warn(
+          gettext("rsquare = TRUE, but there are no dependent variables"))
       } else {
         if (lav_partable_nlevels(tmp.list) == 1L) {
           block <- rep(seq_along(r2), sapply(r2, length))
@@ -1091,7 +1086,7 @@ varTable <- vartable <- function(object, ov.names = names(object), # nolint
       as.data.frame. = FALSE
     )
   } else {
-    stop("object must of class lavaan or a data.frame")
+    lav_msg_stop(gettext("object must of class lavaan or a data.frame"))
   }
 
   if (as.data.frame.) {
@@ -1138,20 +1133,19 @@ setMethod(
   function(object, type = "free", labels = TRUE, remove.duplicated = FALSE) {
     # check for convergence first!
     if (object@optim$npar > 0L && !object@optim$converged) {
-      stop("lavaan ERROR: model did not converge")
+      lav_msg_stop(gettext("model did not converge"))
     }
 
     if (object@Options$se == "none") {
-      stop("lavaan ERROR: vcov not available if se=\"none\"")
+      lav_msg_stop(gettext("vcov not available if se=\"none\""))
     }
 
     if (type == "user" || type == "joint" || type == "all" || type == "full" ||
       type == "complete") {
       if (remove.duplicated) {
-        stop(
-          "lavaan ERROR: argument \"remove.duplicated\" not",
-          " supported if type = \"user\""
-        )
+        lav_msg_stop(gettext(
+          "argument \"remove.duplicated\" not supported if type = \"user\""
+        ))
       }
       tmp.varcov <- lav_object_inspect_vcov_def(object,
         joint = TRUE,
@@ -1165,7 +1159,7 @@ setMethod(
         remove.duplicated = remove.duplicated
       )
     } else {
-      stop("lavaan ERROR: type argument should be \"user\" or \"free\"")
+      lav_msg_stop(gettext("type argument should be \"user\" or \"free\""))
     }
 
     tmp.varcov
@@ -1178,10 +1172,10 @@ setMethod(
   "logLik", "lavaan",
   function(object, ...) {
     if (object@Options$estimator != "ML") {
-      warning("lavaan WARNING: logLik only available if estimator is ML")
+      lav_msg_warn(gettext("logLik only available if estimator is ML"))
     }
     if (object@optim$npar > 0L && !object@optim$converged) {
-      warning("lavaan WARNING: model did not converge")
+      lav_msg_warn(gettext("model did not converge"))
     }
 
     # new in 0.6-1: we use the @loglik slot (instead of fitMeasures)
@@ -1222,7 +1216,7 @@ setMethod(
   function(object, model, add, ..., evaluate = TRUE) {
     call <- object@call
     if (is.null(call)) {
-      stop("need an object with call slot")
+      lav_msg_stop(gettext("need an object with call slot"))
     }
 
     extras <- match.call(expand.dots = FALSE)$...
@@ -1285,9 +1279,9 @@ setMethod(
     ## only remaining situations: "add" exists, but either "add" or "model"
     ## is a parameter table, so update the parameter table in the call
     if (!(mode(add) %in% c("list", "character"))) {
-      stop(
-        "'add' argument must be model syntax or parameter table. ",
-        "See ?lavaanify help page."
+      lav_msg_stop(
+        gettext("'add' argument must be model syntax or parameter table."),
+        gettext("See ?lavaanify help page.")
       )
     }
     tmp.pt <- lav_object_extended(newfit, add = add)@ParTable

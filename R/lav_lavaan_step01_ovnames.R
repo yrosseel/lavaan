@@ -39,21 +39,24 @@ lav_lavaan_step01_ovnames_initflat <- function(slotParTable     = NULL, # nolint
     tmp <- as.character(model)
     if (tmp[1] == "~" && length(tmp) == 2L) {
       # looks like an unquoted single factor model f =~ something
-      warning("lavaan WARNING: model seems to be a formula; ",
-        "please enclose the model syntax between quotes")
+      lav_msg_warn(
+        gettext("model seems to be a formula;
+                please enclose the model syntax between quotes"))
       # create model and hope for the best
       model.bis <- paste("f =", paste(tmp, collapse = " "), sep = "")
       flat.model <- lavParseModelString(model.bis)
     } else if (tmp[1] == "~" && length(tmp) == 3L) {
       # looks like a (unquoted) regression formula
-      warning("lavaan WARNING: model seems to be a formula; ",
-       "please enclose the model syntax between quotes")
+      lav_msg_warn(
+        gettext("model seems to be a formula;
+                please enclose the model syntax between quotes"))
       # create model and hope for the best
       model.bis <- paste(tmp[2], tmp[1], tmp[3])
       flat.model <- lavParseModelString(model.bis)
     } else {
-      stop("lavaan ERROR: model seems to be a formula; ",
-        "please enclose the model syntax between quotes")
+      lav_msg_stop(
+        gettext("model seems to be a formula;
+                please enclose the model syntax between quotes"))
     }
   } else if (inherits(model, "lavaan")) {
     # hm, a lavaan model; let's try to extract the parameter table
@@ -92,14 +95,13 @@ lav_lavaan_step01_ovnames_initflat <- function(slotParTable     = NULL, # nolint
       bare.minimum <- c("lhs", "op", "rhs", "free")
       missing.idx <- is.na(match(bare.minimum, names(model)))
       missing.txt <- paste(bare.minimum[missing.idx], collapse = ", ")
-      stop(
-        "lavaan ERROR: model is a list, but not a parameterTable?",
-        "\n  lavaan  NOTE: ",
-        "missing column(s) in parameter table: [", missing.txt, "]"
-      )
+      lav_msg_stop(
+        gettextf("model is a list, but not a parameterTable?
+                 missing column(s) in parameter table: [%s]",
+                  lav_msg_view(bare.minimum[missing.idx], "none")))
     }
   } else {
-    stop("lavaan ERROR: model is NULL or not a valid type for it!")
+    lav_msg_stop(gettext("model is NULL or not a valid type for it!"))
   }
 
   # Ok, we got a flattened model; usually this a flat.model object, but it
@@ -135,13 +137,13 @@ lav_lavaan_step01_ovnames_ovorder <- function(flat.model = NULL,       # nolint
       silent = TRUE
     )
     if (inherits(flat.model, "try-error")) {
-      warning("lavaan WARNING: ov.order = \"data\" setting failed; ",
-        "switching back to ov.order = \"model\"")
+      lav_msg_warn(gettext("ov.order = \"data\" setting failed;
+                           switching back to ov.order = \"model\""))
       flat.model <- flat.model.orig
     }
   } else if (ov.order != "model") {
-    stop("lavaan ERROR: ov.order= argument should be \"model\" (default) ",
-      "or \"data\"")
+    lav_msg_stop(gettext(
+      "ov.order= argument should be \"model\" (default) or \"data\""))
   }
 
   flat.model
@@ -252,8 +254,9 @@ lav_lavaan_step01_ovnames_group <- function(flat.model = NULL,        # nolint
   # sanity check (new in 0.6-8): do we have any ov.names?
   # detect early
   if (length(unlist(ov.names)) == 0L) {
-    stop("lavaan ERROR: ov.names is empty: model does not refer to any ",
-      "observed variables; check your syntax.")
+    lav_msg_stop(
+      gettext("ov.names is empty: model does not refer to any observed
+              variables; check your syntax."))
   }
 
   list(
@@ -298,15 +301,14 @@ lav_lavaan_step01_ovnames_checklv <- function(                    # nolint
       bad.idx <- integer(0L)
     }
 
-    # if found, hard stop
+        # if found, hard stop
     if (length(bad.idx) > 0L) {
       if (!is.null(dotdotdot$check.lv.names) &&
         !dotdotdot$check.lv.names) {
         # ignore it, user switched this check off -- new in 0.6-7
       } else {
-        stop(
-          "lavaan ERROR: some latent variable names collide ",
-          "with observed\n\t\tvariable names: ",
+        lav_msg_stop(gettext(
+          "some latent variable names collide with observed variable names:"),
           paste(lv.lv.names[bad.idx], collapse = " ")
         )
       }
@@ -332,14 +334,13 @@ lav_lavaan_step01_ovnames_checklv <- function(                    # nolint
     } else if (!is.null(slotOptions) && !slotOptions$check.lv.interaction) {
       # ignore
     } else {
-      txt <- c(
-        "Interaction terms involving latent variables (",
-        lv.lv.names[lv.int.idx[1]], ") are not supported.",
-        " You may consider creating product indicators to define ",
-        "the latent interaction term. See the indProd() function ",
-        "in the semTools package."
+      lav_msg_stop(gettextf(
+        "Interaction terms involving latent variables (%s) are not supported.",
+        lv.lv.names[lv.int.idx[1]]),
+        gettext("You may consider creating product indicators to define
+                the latent interaction term. See the indProd() function
+                in the semTools package.")
       )
-      stop(lav_txt2message(txt, header = "lavaan ERROR:"))
     }
   }
 
@@ -371,7 +372,7 @@ lav_lavaan_step01_ovnames_namesl <- function(data         = NULL,  # nolint
   if (any(flat.model$op == ":" & tolower(flat.model$lhs) == "level")) {
     # check for cluster argument
     if (!is.null(data) && is.null(cluster)) {
-      stop("lavaan ERROR: cluster argument is missing.")
+      lav_msg_stop(gettext("cluster argument is missing."))
     }
 
     # here, we only need to figure out:
@@ -392,10 +393,10 @@ lav_lavaan_step01_ovnames_namesl <- function(data         = NULL,  # nolint
 
     # we need at least 2 levels (for now)
     if (tmp.nlevels < 2L) {
-      stop(
-        "lavaan ERROR: when data is clustered, you must specify a model\n",
-        "  for each level in the model syntax (for now); ",
-        "see example(Demo.twolevel)"
+      lav_msg_stop(
+        gettext("when data is clustered, you must specify a model
+                for each level in the model syntax (for now);
+                see example(Demo.twolevel)")
       )
     }
 
@@ -405,10 +406,10 @@ lav_lavaan_step01_ovnames_namesl <- function(data         = NULL,  # nolint
     tmp.lav <- lavaanify(flat.model.2, ngroups = tmp.ngroups, warn = FALSE)
     # check for empty levels
     if (max(tmp.lav$level) < 2L) {
-      stop(
-        "lavaan ERROR: at least one level has no model syntax;",
-        "you must specify a model for each level in the model syntax; ",
-        "see example(Demo.twolevel)"
+      lav_msg_stop(
+        gettext("at least one level has no model syntax;
+                you must specify a model for each level in the model syntax;
+                see example(Demo.twolevel)")
       )
     }
     ov.names.l <- vector("list", length = tmp.ngroups) # per group
@@ -438,7 +439,7 @@ lav_lavaan_step01_ovnames_namesl <- function(data         = NULL,  # nolint
     if (nlevels > 1L) {
       # check for cluster argument (only if we have data)
       if (!is.null(data) && is.null(cluster)) {
-        stop("lavaan ERROR: cluster argument is missing.")
+        lav_msg_stop(gettext("cluster argument is missing."))
       }
 
       ngroups <- lav_partable_ngroups(flat.model)
@@ -473,7 +474,7 @@ lav_lavaan_step01_ovnames_ordered <- function(ordered    = NULL,  # nolint
     } else if (is.logical(ordered) && !ordered) {
       ordered <- character(0L)
     } else if (!is.character(ordered)) {
-      stop("lavaan ERROR: ordered argument must be a character vector")
+      lav_msg_stop(gettext("ordered argument must be a character vector"))
     } else if (length(ordered) == 1L && nchar(ordered) == 0L) {
       ordered <- character(0L)
     } else {
@@ -486,11 +487,10 @@ lav_lavaan_step01_ovnames_ordered <- function(ordered    = NULL,  # nolint
         }
         missing.idx <- which(!ordered %in% data_names)
         if (length(missing.idx) > 0L) { # FIXme: warn = FALSE has no eff
-          warning(
-            "lavaan WARNING: ordered variable(s): ",
-            paste(ordered[missing.idx], collapse = " "),
-            "\n  could not be found in the data and will be ignored"
-          )
+          lav_msg_warn(gettextf(
+            "ordered variable(s): %s could not be found
+            in the data and will be ignored",
+             paste(ordered[missing.idx], collapse = " ")))
         }
       }
     }

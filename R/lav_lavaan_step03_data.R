@@ -92,34 +92,31 @@ lav_lavaan_step03_data <- function(slotData = NULL, # nolint
         "ULSM", "ULSMV", "ULSMVS"
       )) &&
         is.null(NACOV)) {
-        stop(
-          "lavaan ERROR: estimator ", dotdotdot$estimator,
-          " requires full data or user-provided NACOV"
-        )
+        lav_msg_stop(gettextf(
+          "estimator %s requires full data or user-provided NACOV",
+          dotdotdot$estimator))
       } else if (any(dotdotdot$estimator == c(
         "WLS", "WLSM", "WLSMV",
         "WLSMVS", "DWLS"
       )) &&
         is.null(WLS.V)) {
-        stop(
-          "lavaan ERROR: estimator ", dotdotdot$estimator,
-          " requires full data or user-provided WLS.V and NACOV"
-        )
+        lav_msg_stop(gettextf(
+          "estimator %s requires full data or user-provided WLS.V and NACOV",
+          dotdotdot$estimator))
       }
     }
     # catch here some options that will not work with moments
     if (lavoptions$se == "bootstrap") {
-      stop("lavaan ERROR: bootstrapping requires full data")
+      lav_msg_stop(gettext("bootstrapping requires full data"))
     }
     # more needed?
   }
   # sanity check
   if (!is.null(slotParTable) || inherits(model, "lavaan")) {
     if (ngroups != lavdata@ngroups) {
-      stop(
-        "lavaan ERROR: mismatch between number of groups in data, ",
-        "and number of groups in model."
-      )
+      lav_msg_stop(gettext(
+        "mismatch between number of groups in data
+        and number of groups in model."))
     }
   }
   if (lavoptions$verbose) {

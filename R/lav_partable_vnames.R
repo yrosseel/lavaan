@@ -94,11 +94,12 @@ lav_partable_vnames <- function(partable, type = NULL, ..., # nolint
     "eqs.x" # x's in regression
   )
   if (type[1L] != "all" && type[1L] != "*" && !all(type %in% type.list)) {
-    stop(
-      "lavaan ERROR: type = ",
-      paste(type[!(type %in% type.list)], collapse = ", "),
-      " is (are) not a valid option(s)"
-    )
+    wrongtypes <- type[!(type %in% type.list)]
+    lav_msg_stop(sprintf(
+      ngettext(length(wrongtypes),
+      "type = %s is not a valid option",
+      "type = %s are not valid options"),
+      lav_msg_view(wrongtypes, "none", FALSE)))
   }
   return.value <- NULL
   if (type[1L] != "*" && !is.null(attr(partable, "vnames"))) {
@@ -144,17 +145,14 @@ lav_partable_vnames <- function(partable, type = NULL, ..., # nolint
           row.select <- (row.select &
             partable[[block.var]] %in% block.val)
         } else {
-          stop(
-            "lavaan ERROR: selection variable `",
-            block.var, " not found in the parameter table."
-          )
+          lav_msg_stop(gettextf(
+            "selection variable '%s' not found in the parameter table.",
+            block.var))
         }
       } else {
         if (!all(block.val %in% partable[[block.var]])) {
-          stop(
-            "lavaan ERROR: ", block.var,
-            " column does not contain value `", block.val, "'"
-          )
+          lav_msg_stop(gettextf(
+            "%1$s column does not contain value `%2$s'", block.var, block.val))
         }
         row.select <- (row.select &
           !partable$op %in% c("==", "<", ">", ":=") &
@@ -163,7 +161,7 @@ lav_partable_vnames <- function(partable, type = NULL, ..., # nolint
     } # dot
     block.select <- unique(partable$block[row.select])
     if (length(block.select) == 0L) {
-      warning("lavaan WARNING: no blocks selected.")
+      lav_msg_warn(gettext("no blocks selected."))
     }
   }
   if (is.null(return.value)) {
@@ -460,27 +458,19 @@ lav_partable_vnames <- function(partable, type = NULL, ..., # nolint
           idx.no.x <- which(ov.x %in% vars)
           if (length(idx.no.x)) {
             if (ov.x.fatal) {
-              stop(
-                "lavaan ERROR: model syntax contains variance/covariance/in",
-                "tercept formulas\n  involving (an) exogenous variable(s): [",
-                paste(ov.x[idx.no.x], collapse = " "),
-                "];\n  Please remove them and try again."
-              )
+              lav_msg_stop(gettextf(
+                "model syntax contains variance/covariance/intercept formulas
+                involving (an) exogenous variable(s): [%s];  Please remove them
+                and try again.", lav_msg_view(ov.x[idx.no.x], "none")))
             }
             if (warn) {
-              txt <- c(
-                "model syntax contains ",
-                "variance/covariance/intercept formulas involving",
-                " (an) exogenous variable(s): [",
-                paste(ov.x[idx.no.x], collapse = " "), "]; ",
-                "These variables will now be treated as random ",
-                "introducing additional free parameters. ",
-                "If you wish to treat ",
-                "those variables as fixed, remove these ",
-                "formulas from the model syntax. Otherwise, consider ",
-                "adding the fixed.x = FALSE option."
-              )
-              warning(lav_txt2message(txt))
+              lav_msg_warn(gettextf(
+                "model syntax contains variance/covariance/intercept formulas
+                involving (an) exogenous variable(s): [%s]; these variables will
+                now be treated as random introducing additional free parameters.
+                If you wish to treat those variables as fixed, remove these
+                formulas from the model syntax. Otherwise, consider adding the
+                fixed.x = FALSE option.", lav_msg_view(ov.x[idx.no.x], "none")))
             }
             ov.x <- ov.x[-idx.no.x]
           }
@@ -960,27 +950,19 @@ lav_partable_vnames <- function(partable, type = NULL, ..., # nolint
           idx.no.x <- which(ov.x %in% vars)
           if (length(idx.no.x)) {
             if (ov.x.fatal) {
-              stop(
-                "lavaan ERROR: model syntax contains variance/covariance/in",
-                "tercept formulas\n  involving (an) exogenous variable(s): [",
-                paste(ov.x[idx.no.x], collapse = " "),
-                "];\n  Please remove them and try again."
-              )
+              lav_msg_stop(gettextf(
+                "model syntax contains variance/covariance/intercept formulas
+                involving (an) exogenous variable(s): [%s];  Please remove them
+                and try again.", lav_msg_view(ov.x[idx.no.x], "none")))
             }
             if (warn) {
-              txt <- c(
-                "model syntax contains ",
-                "variance/covariance/intercept formulas involving",
-                " (an) exogenous variable(s): [",
-                paste(ov.x[idx.no.x], collapse = " "), "]; ",
-                "These variables will now be treated as random ",
-                "introducing additional free parameters. ",
-                "If you wish to treat ",
-                "those variables as fixed, remove these ",
-                "formulas from the model syntax. Otherwise, consider ",
-                "adding the fixed.x = FALSE option."
-              )
-              warning(lav_txt2message(txt))
+              lav_msg_warn(gettextf(
+                "model syntax contains variance/covariance/intercept formulas
+                involving (an) exogenous variable(s): [%s]; these variables will
+                now be treated as random introducing additional free parameters.
+                If you wish to treat those variables as fixed, remove these
+                formulas from the model syntax. Otherwise, consider adding the
+                fixed.x = FALSE option.", lav_msg_view(ov.x[idx.no.x], "none")))
             }
             ov.x <- ov.x[-idx.no.x]
           }

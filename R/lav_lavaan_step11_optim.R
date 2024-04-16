@@ -280,7 +280,8 @@ lav_lavaan_step11_estoptim <- function(lavdata = NULL, # nolint
     # if a warning was produced, say it here
     warn.txt <- attr(x, "warn.txt")
     if (lavoptions$warn && nchar(warn.txt) > 0L) {
-      lav_msg_warn(warn.txt)
+      lav_msg_warn(
+        gettext("Model estimation FAILED! Returning starting values."))
     }
 
     # in case of non-linear constraints: store final con.jac and con.lambda
