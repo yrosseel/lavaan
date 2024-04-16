@@ -2,9 +2,9 @@
 # 'lavaan(function):' and formatted to have a maximum line length of 'txt.width'
 # while all but the first line start with 'indent' spaces. The message is shown
 # via R function 'message()'.
-lav_msg_note <- function(...) {
+lav_msg_note <- function(..., showheader = FALSE) {
   wat <- unlist(list(...), use.names = FALSE)
-  message(lav_msg(wat), domain = NA)
+  message(lav_msg(wat, showheader = showheader), domain = NA)
 }
 
 # Displays a message with header and formatted as
@@ -32,23 +32,28 @@ lav_msg_fixme <- function(...) {
 }
 
 # subroutine for above functions
-lav_msg <- function(wat, txt.width = getOption("width", 80L), indent = 4L) {
-  x <- sub("[() ].*$", "", as.character(sys.calls()))
-  ignore.in.stack <- c(
-    "^eval$", "^try", "^doTryCatch", "^lav_msg", "^stop$", "^warning$",
-    "^which$", "^unique$", "^as\\.", "^unlist$", "^message$",
-    "^source$", "^withVisible$", "^tryCatch.W.E$", "^withCallingHandlers$",
-    "^do.call$"
-  )
-  ignores <- rep(FALSE, length(x))
-  for (ptrn in ignore.in.stack) {
-    ignores <- ignores | grepl(ptrn, x)
-  }
-  x <- x[!ignores]
-  if (length(x) == 0) {
-    header <- "lavaan:"
+lav_msg <- function(wat, txt.width = getOption("width", 80L), 
+                    indent = 4L, showheader = TRUE) {
+  if (showheader) {
+    x <- sub("[() ].*$", "", as.character(sys.calls()))
+    ignore.in.stack <- c(
+      "^eval$", "^try", "^doTryCatch", "^lav_msg", "^stop$", "^warning$",
+      "^which$", "^unique$", "^as\\.", "^unlist$", "^message$",
+      "^source$", "^withVisible$", "^tryCatch.W.E$", "^withCallingHandlers$",
+      "^do.call$", "^paste"
+    )
+    ignores <- rep(FALSE, length(x))
+    for (ptrn in ignore.in.stack) {
+      ignores <- ignores | grepl(ptrn, x)
+    }
+    x <- x[!ignores]
+    if (length(x) == 0) {
+      header <- "lavaan:"
+    } else {
+      header <- paste0("lavaan->", x[length(x)], "():")
+    }
   } else {
-    header <- paste0("lavaan->", x[length(x)], "():")
+    header <- ""
   }
   # make sure we only have a single string
   txt <- paste(wat, collapse = " ")
