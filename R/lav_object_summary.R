@@ -33,9 +33,6 @@ lav_object_summary <- function(object, header = TRUE,
                                remove.unused = TRUE,
                                cov.std = TRUE,
                                rsquare = FALSE,
-							   std.nox = FALSE, # TODO: remove deprecated
-							                    # argument once the github
-												# version of blavaan is on CRAN
                                efa = FALSE,
                                efa.args =
                                  list(
