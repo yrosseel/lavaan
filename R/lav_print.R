@@ -347,7 +347,7 @@ print.lavaan.parameterEstimates <- function(x, ..., nd = 3L) {
       if (isTRUE(attr(x, "infDF"))) {
         cat(c("\n  Pooled t statistics with df >= 1000 are displayed with",
               "\n  df = Inf(inity) to save space. Although the t distribution",
-              "\n  with large df behaves closely approximates a standard normal",
+              "\n  with large df closely approximates a standard normal",
               "\n  distribution, exact df for reporting these t tests can be",
               "\n  obtained from parameterEstimates.mi() \n\n"), sep = "")
       }
