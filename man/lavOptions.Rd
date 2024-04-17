@@ -17,7 +17,7 @@ string vector holding multiple option names. All option names are converted to
 lower case.}
 \item{default}{If a single option is specified but not available, this value
 is returned.}
-\item{mimic}{Character. Adjust the option list for this mimic flag.}
+\item{mimic}{Not used for now.}
 }
 \details{
 This is the full list of options that are accepted by the \code{lavaan()}
