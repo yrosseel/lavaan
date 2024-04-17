@@ -24,7 +24,8 @@ computeSigmaHat <- function(lavmodel = NULL, GLIST = NULL, extra = FALSE,
     } else if (representation == "RAM") {
       Sigma.hat[[g]] <- lav_ram_sigmahat(MLIST = MLIST, delta = delta)
     } else {
-      stop("only LISREL and RAM representation has been implemented for now")
+      lav_msg_stop(gettext(
+        "only LISREL and RAM representation has been implemented for now"))
     }
     if (debug) print(Sigma.hat[[g]])
 
@@ -100,7 +101,8 @@ computeSigmaHatJoint <- function(lavmodel = NULL, GLIST = NULL, extra = FALSE,
 
       Sigma.hat[[g]] <- rbind(cbind(S.yy, S.yx), cbind(S.xy, S.xx))
     } else {
-      stop("only representation LISREL has been implemented for now")
+      lav_msg_stop(gettext(
+        "only representation LISREL has been implemented for now"))
     }
     if (debug) print(Sigma.hat[[g]])
 
@@ -153,7 +155,8 @@ computeMuHat <- function(lavmodel = NULL, GLIST = NULL) {
     } else if (representation == "RAM") {
       Mu.hat[[g]] <- lav_ram_muhat(MLIST = MLIST)
     } else {
-      stop("only RAM and LISREL representation has been implemented for now")
+      lav_msg_stop(gettext(
+        "only RAM and LISREL representation has been implemented for now"))
     }
   } # nblocks
 
@@ -194,7 +197,8 @@ computeMuHatJoint <- function(lavmodel = NULL, GLIST = NULL) {
       Mu.x <- M.x
       Mu.hat[[g]] <- c(Mu.y, Mu.x)
     } else {
-      stop("only representation LISREL has been implemented for now")
+      lav_msg_stop(gettext(
+        "only representation LISREL has been implemented for now"))
     }
   } # nblocks
 
@@ -231,7 +235,8 @@ computeTH <- function(lavmodel = NULL, GLIST = NULL, delta = TRUE) {
         th.idx = th.idx[[g]], delta = delta
       )
     } else {
-      stop("only representation LISREL has been implemented for now")
+      lav_msg_stop(gettext(
+        "only representation LISREL has been implemented for now"))
     }
   }
 
@@ -263,7 +268,8 @@ computePI <- function(lavmodel = NULL, GLIST = NULL, delta = TRUE) {
     } else if (representation == "LISREL") {
       PI.g <- computePI.LISREL(MLIST = MLIST, delta = delta)
     } else {
-      stop("only representation LISREL has been implemented for now")
+      lav_msg_stop(gettext(
+        "only representation LISREL has been implemented for now"))
     }
 
     PI[[g]] <- PI.g
@@ -297,7 +303,8 @@ computeGW <- function(lavmodel = NULL, GLIST = NULL) {
     } else if (representation == "LISREL") {
       GW.g <- as.numeric(MLIST$gw[1, 1])
     } else {
-      stop("only representation LISREL has been implemented for now")
+      lav_msg_stop(gettext(
+        "only representation LISREL has been implemented for now"))
     }
 
     GW[[g]] <- GW.g
@@ -342,7 +349,8 @@ computeVY <- function(lavmodel = NULL, GLIST = NULL, diagonal.only = FALSE) {
       stopifnot(!lavmodel@conditional.x)
       VY.g <- lav_ram_sigmahat(MLIST = MLIST)
     } else {
-      stop("only RAM and LISREL representation has been implemented for now")
+      lav_msg_stop(gettext(
+        "only RAM and LISREL representation has been implemented for now"))
     }
 
     if (diagonal.only) {
@@ -390,7 +398,8 @@ computeVETA <- function(lavmodel = NULL, GLIST = NULL,
     } else if (representation == "RAM") {
       VETA.g <- lav_ram_veta(MLIST = MLIST)
     } else {
-      stop("only LISREL and RAM representation has been implemented for now")
+      lav_msg_stop(gettext(
+        "only LISREL and RAM representation has been implemented for now"))
     }
 
     VETA[[g]] <- VETA.g
@@ -428,7 +437,8 @@ computeVETAx <- function(lavmodel = NULL, GLIST = NULL) {
         lv.dummy.idx = lv.idx
       )
     } else {
-      stop("only representation LISREL has been implemented for now")
+      lav_msg_stop(gettext(
+        "only representation LISREL has been implemented for now"))
     }
 
     ETA[[g]] <- ETA.g
@@ -474,7 +484,8 @@ computeCOV <- function(lavmodel = NULL, GLIST = NULL,
         }
       }
     } else {
-      stop("only representation LISREL has been implemented for now")
+      lav_msg_stop(gettext(
+        "only representation LISREL has been implemented for now"))
     }
 
     COV[[g]] <- COV.g
@@ -523,7 +534,8 @@ computeEETA <- function(lavmodel = NULL, GLIST = NULL, lavsamplestats = NULL,
         }
       }
     } else {
-      stop("only representation LISREL has been implemented for now")
+      lav_msg_stop(gettext(
+        "only representation LISREL has been implemented for now"))
     }
 
     EETA[[g]] <- EETA.g
@@ -579,7 +591,8 @@ computeEETAx <- function(lavmodel = NULL, GLIST = NULL, lavsamplestats = NULL,
         }
       }
     } else {
-      stop("only representation LISREL has been implemented for now")
+      lav_msg_stop(gettext(
+        "only representation LISREL has been implemented for now"))
     }
 
     EETAx[[g]] <- EETAx.g
@@ -629,7 +642,8 @@ computeLAMBDA <- function(lavmodel = NULL, GLIST = NULL,
         remove.dummy.lv = remove.dummy.lv
       )
     } else {
-      stop("only representation LISREL has been implemented for now")
+      lav_msg_stop(gettext(
+        "only representation LISREL has been implemented for now"))
     }
 
     LAMBDA[[g]] <- LAMBDA.g
@@ -672,7 +686,8 @@ computeTHETA <- function(lavmodel = NULL, GLIST = NULL, fix = TRUE) {
       ov.idx <- as.integer(MLIST$ov.idx[1, ])
       THETA.g <- MLIST$S[ov.idx, ov.idx, drop = FALSE]
     } else {
-      stop("only LISREL and RAM representation has been implemented for now")
+      lav_msg_stop(gettext(
+        "only LISREL and RAM representation has been implemented for now"))
     }
 
     THETA[[g]] <- THETA.g
@@ -710,7 +725,8 @@ computeNU <- function(lavmodel = NULL, GLIST = NULL,
         ov.x.dummy.lv.idx = lavmodel@ov.x.dummy.lv.idx[[g]]
       )
     } else {
-      stop("only representation LISREL has been implemented for now")
+      lav_msg_stop(gettext(
+        "only representation LISREL has been implemented for now"))
     }
 
     NU[[g]] <- as.matrix(NU.g)
@@ -752,7 +768,8 @@ computeEY <- function(lavmodel = NULL, GLIST = NULL, lavsamplestats = NULL,
         delta = delta
       )
     } else {
-      stop("only representation LISREL has been implemented for now")
+      lav_msg_stop(gettext(
+        "only representation LISREL has been implemented for now"))
     }
 
     EY[[g]] <- EY.g
@@ -817,10 +834,8 @@ computeYHAT <- function(lavmodel = NULL, GLIST = NULL, lavsamplestats = NULL,
         # impute back ov.y values that are NOT indicators
       }
     } else {
-      stop(
-        "lavaan ERROR: representation ", lavmodel@representation,
-        " not supported yet."
-      )
+      lav_msg_stop(gettextf("representation %s not supported yet.",
+                            lavmodel@representation))
     }
   }
 

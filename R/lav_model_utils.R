@@ -233,7 +233,9 @@ lav_model_dmmdpar <- function(lavmodel, target = "theta", group = 1L) {
   # find target model matrix
   mlist.idx <- which(names(MLIST) == target)
   if (length(mlist.idx) == 0L) {
-    stop("lavaan ERROR: model matrix \"", target, "\" not found. Available model matrices are:\n  ", paste(names(MLIST), collapse = " "))
+    lav_msg_stop(gettextf(
+      "model matrix \"%s\" not found. Available model matrices are:", target),
+      paste(names(MLIST), collapse = " "))
   }
 
   # target idx in GLIST

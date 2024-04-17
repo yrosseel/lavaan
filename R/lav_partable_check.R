@@ -20,7 +20,7 @@ lav_partable_check <- function(partable, categorical = FALSE, warn = TRUE) {
   if (categorical && length(ov.names.ord) == 0L) {
     check <- FALSE
     if (warn) {
-      warning("lavaan WARNING: parameter table does not contain thresholds ")
+      lav_msg_warn(gettext("parameter table does not contain thresholds"))
     }
   }
 
@@ -32,11 +32,10 @@ lav_partable_check <- function(partable, categorical = FALSE, warn = TRUE) {
   if (length(missing.idx) > 0L) {
     check <- FALSE
     if (warn) {
-      warning(
-        "lavaan WARNING: parameter table does not contain",
-        " (residual) variances for one or more variables: [",
-        paste(all.names[missing.idx], collapse = " "), "]"
-      )
+      lav_msg_warn(gettextf(
+        "parameter table does not contain (residual) variances for 
+        one or more variables: %s",
+        lav_msg_view(all.names[missing.idx])))
     }
   }
 
@@ -52,11 +51,10 @@ lav_partable_check <- function(partable, categorical = FALSE, warn = TRUE) {
     if (length(missing.idx) > 0L) {
       check <- FALSE
       if (warn) {
-        warning(
-          "lavaan WARNING: parameter table does not contain intercepts",
-          " for one or more variables: [",
-          paste(all.names[missing.idx], collapse = " "), "]"
-        )
+        lav_msg_warn(gettextf(
+          "parameter table does not contain intercepts 
+          for one or more variables: %s",
+          lav_msg_view(all.names[missing.idx])))
       }
     }
   }
@@ -101,12 +99,8 @@ lav_partable_check <- function(partable, categorical = FALSE, warn = TRUE) {
   if (length(int.fixed) > 0L) {
     check <- FALSE
     if (warn) {
-      warning(
-        "lavaan WARNING: ",
-        "automatically added intercepts are set to zero:\n",
-        "    [", paste(partable$lhs[int.fixed], collapse = " "),
-        "]"
-      )
+      lav_msg_warn(gettext("automatically added intercepts are set to zero:"),
+                   lav_msg_view(partable$lhs[int.fixed]))
     }
   }
 

@@ -10,7 +10,7 @@ fml_deriv1 <- function(Sigma.hat = NULL, # model-based var/cov/cor
                        lavcache = NULL, # housekeeping stuff
                        scores = FALSE, # return case-wise scores
                        negative = TRUE) {
-  stop("not implemented")
+  lav_msg_stop(gettext("not implemented"))
 }
 
 # the first derivative of the pairwise logLik function with respect to the
@@ -171,7 +171,9 @@ pml_deriv1 <- function(Sigma.hat = NULL, # model-based var/cov/cor
       }
       if (ov.types[i] == "numeric" && ov.types[j] == "numeric") {
         if (nexo > 1L) {
-          stop("lavaan ERROR: mixed + exo in PML not implemented; try optim.gradient = \"numerical\"")
+          lav_msg_stop(gettext(
+            "mixed + exo in PML not implemented;
+            try optim.gradient = \"numerical\""))
         }
 
         SC <- lav_mvnorm_scores_mu_vech_sigma(
@@ -217,7 +219,9 @@ pml_deriv1 <- function(Sigma.hat = NULL, # model-based var/cov/cor
       } else if (ov.types[i] == "numeric" && ov.types[j] == "ordered") {
         # polyserial correlation
         if (nexo > 1L) {
-          stop("lavaan ERROR: mixed + exo in PML not implemented; try optim.gradient = \"numerical\"")
+          lav_msg_stop(gettext(
+            "mixed + exo in PML not implemented;
+            try optim.gradient = \"numerical\""))
         }
 
         SC.COR.UNI <- lav_bvmix_cor_scores(
@@ -261,7 +265,9 @@ pml_deriv1 <- function(Sigma.hat = NULL, # model-based var/cov/cor
       } else if (ov.types[j] == "numeric" && ov.types[i] == "ordered") {
         # polyserial correlation
         if (nexo > 1L) {
-          stop("lavaan ERROR: mixed + exo in PML not implemented; try optim.gradient = \"numerical\"")
+          lav_msg_stop(gettext(
+            "mixed + exo in PML not implemented;
+            try optim.gradient = \"numerical\""))
         }
 
         SC.COR.UNI <- lav_bvmix_cor_scores(
@@ -792,10 +798,6 @@ LongVecTH.Rho <- function(no.x, all.thres, index.var.of.thres, rho.xixj) {
   )
 }
 #########################################################
-
-
-
-
 
 
 

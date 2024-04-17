@@ -206,7 +206,7 @@ estimator.PML <- function(Sigma.hat = NULL, # model-based var/cov/cor
   # - the idea is to compute for each pair of variables, the model-based
   #   probability (or likelihood in mixed case) (that we observe the data
   #   for this pair under the model)
-  # - if we have exogenous variables + condidional.x, do this for each case
+  # - if we have exogenous variables + conditional.x, do this for each case
   # - after taking logs, the sum over the cases gives the
   #   log probablity/likelihood for this pair
   # - the sum over all pairs gives the final PL based logl
@@ -469,7 +469,7 @@ estimator.PML <- function(Sigma.hat = NULL, # model-based var/cov/cor
         if (ov.types[i] == "numeric" &&
           ov.types[j] == "numeric") {
           logLIK <- lav_mvnorm_loglik_data(
-            Y = X[, c(i, j)], Mu = Mu.hat[c(i, j)],
+            Y = X[, c(i, j)], wt = wt, Mu = Mu.hat[c(i, j)],
             Sigma = Sigma.hat[c(i, j), c(i, j)], casewise = TRUE
           )
           logLikPair[pstar.idx] <- sum(logLIK, na.rm = TRUE)

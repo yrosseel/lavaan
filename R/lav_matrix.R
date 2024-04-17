@@ -342,10 +342,10 @@ lav_matrix_is_diagonal <- function(A = NULL) {
 # dup1: working on the vector indices only
 .dup1 <- function(n = 1L) {
   if ((n < 1L) | (round(n) != n)) {
-    stop("n must be a positive integer")
+    lav_msg_stop(gettext("n must be a positive integer"))
   }
   if (n > 255L) {
-    stop("n is too large")
+    lav_msg_stop(gettext("n is too large"))
   }
 
   # dimensions
@@ -381,11 +381,11 @@ lav_matrix_is_diagonal <- function(A = NULL) {
 # (but only create the matrix at the very end)
 .dup2 <- function(n = 1L) {
   if ((n < 1L) | (round(n) != n)) {
-    stop("n must be a positive integer")
+    lav_msg_stop(gettext("n must be a positive integer"))
   }
 
   if (n > 255L) {
-    stop("n is too large")
+    lav_msg_stop(gettext("n is too large"))
   }
 
   nstar <- n * (n + 1) / 2
@@ -407,11 +407,11 @@ lav_matrix_is_diagonal <- function(A = NULL) {
 # D7 <- dup(7L); x<- apply(D7, 1, function(x) which(x > 0)); matrix(x,7,7)
 .dup3 <- function(n = 1L) {
   if ((n < 1L) | (round(n) != n)) {
-    stop("n must be a positive integer")
+    lav_msg_stop(gettext("n must be a positive integer"))
   }
 
   if (n > 255L) {
-    stop("n is too large")
+    lav_msg_stop(gettext("n is too large"))
   }
 
   nstar <- n * (n + 1) / 2
@@ -650,11 +650,11 @@ lav_matrix_duplication_cor_pre_post <- function(A = matrix(0, 0, 0)) {
 # create first t(DUP.ginv)
 .dup_ginv1 <- function(n = 1L) {
   if ((n < 1L) | (round(n) != n)) {
-    stop("n must be a positive integer")
+    lav_msg_stop(gettext("n must be a positive integer"))
   }
 
   if (n > 255L) {
-    stop("n is too large")
+    lav_msg_stop(gettext("n is too large"))
   }
 
   nstar <- n * (n + 1) / 2
@@ -678,11 +678,11 @@ lav_matrix_duplication_cor_pre_post <- function(A = matrix(0, 0, 0)) {
 # create DUP.ginv without transpose
 .dup_ginv2 <- function(n = 1L) {
   if ((n < 1L) | (round(n) != n)) {
-    stop("n must be a positive integer")
+    lav_msg_stop(gettext("n must be a positive integer"))
   }
 
   if (n > 255L) {
-    stop("n is too large")
+    lav_msg_stop(gettext("n is too large"))
   }
 
   nstar <- n * (n + 1) / 2
@@ -788,11 +788,11 @@ lav_matrix_duplication_ginv_pre_post <- function(A = matrix(0, 0, 0)) {
 # first attempt
 .com1 <- function(m = 1L, n = 1L) {
   if ((m < 1L) | (round(m) != m)) {
-    stop("n must be a positive integer")
+    lav_msg_stop(gettext("n must be a positive integer"))
   }
 
   if ((n < 1L) | (round(n) != n)) {
-    stop("n must be a positive integer")
+    lav_msg_stop(gettext("n must be a positive integer"))
   }
 
   p <- m * n
@@ -901,7 +901,7 @@ lav_matrix_commutation_mn_pre <- function(A, m = 1L, n = 1L) {
 # N_n == D_n %*% D^+_n
 #
 lav_matrix_commutation_Nn <- function(n = 1L) {
-  stop("not implemented yet")
+  lav_msg_stop(gettext("not implemented yet"))
 }
 
 # (simplified) kronecker product for square matrices
@@ -1279,7 +1279,7 @@ lav_matrix_symmetric_inverse <- function(S, logdet = FALSE,
   S.orig <- S
   if (length(zero.idx) > 0L) {
     if (zero.warn) {
-      warning("lavaan WARNING: matrix to be inverted contains zero cols/rows")
+      lav_msg_warn(gettext("matrix to be inverted contains zero cols/rows"))
     }
     S <- S[-zero.idx, -zero.idx, drop = FALSE]
   }
@@ -1362,7 +1362,7 @@ lav_matrix_symmetric_inverse <- function(S, logdet = FALSE,
       attr(S.inv, "logdet") <- sum(log(diag.cS * diag.cS))
     }
   } else {
-    stop("method must be either `eigen', `solve' or `chol'")
+    lav_msg_stop(gettext("method must be either `eigen', `solve' or `chol'"))
   }
 
   if (length(zero.idx) > 0L) {
@@ -1453,7 +1453,7 @@ lav_matrix_symmetric_inverse_update <- function(S.inv, rm.idx = integer(0L),
   } else if (ndel == NCOL(S.inv)) {
     out <- matrix(0, 0, 0)
   } else {
-    stop("lavaan ERROR: column indices exceed number of columns in S.inv")
+    lav_msg_stop(gettext("column indices exceed number of columns in S.inv"))
   }
 
   out
@@ -1571,7 +1571,8 @@ lav_matrix_symmetric_diff_smallest_root <- function(M = NULL, P = NULL,
   neg.idx <- which(diagP < 0)
   if (length(neg.idx) > 0L) {
     if (warn) {
-      warning("some diagonal elements of P are negative (and set to zero)")
+      lav_msg_warn(gettext(
+        "some diagonal elements of P are negative (and set to zero)"))
     }
     diag(P)[neg.idx] <- diagP[neg.idx] <- 0
   }

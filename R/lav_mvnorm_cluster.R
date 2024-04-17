@@ -1390,7 +1390,8 @@ lav_mvnorm_cluster_em_sat <- function(YLp = NULL,
 
     # what if fx.delta is negative?
     if (fx.delta < 0) {
-      warning("lavaan WARNING: logl decreased during EM steps of the saturated (H1) model")
+      lav_msg_warn(gettext(
+        "logl decreased during EM steps of the saturated (H1) model"))
     }
 
     if (verbose) {

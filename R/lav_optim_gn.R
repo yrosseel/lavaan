@@ -132,12 +132,14 @@ lav_optim_gn <- function(lavmodel = NULL, lavsamplestats = NULL,
     lavmodel@cin.nonlinear.idx
   )
   if (length(nonlinear.idx) > 0L) {
-    stop("lavaan ERROR: nonlinear constraints not supported (yet) with optim.method = \"GN\".")
+    lav_msg_stop(gettext(
+      "nonlinear constraints not supported (yet) with optim.method = \"GN\"."))
   }
 
   # no support (yet) for inequality constraints
   if (!is.null(body(lavmodel@cin.function))) {
-    stop("lavaan ERROR: inequality constraints not supported (yet) with optim.method = \"GN\".")
+    lav_msg_stop(gettext(
+      "inequality constraints not supported (yet) with optim.method = \"GN\"."))
   }
 
   # extract current set of free parameters

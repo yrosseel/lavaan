@@ -30,7 +30,7 @@ lav_partable_ov_from_data <- function(FLAT = NULL, # nolint
   }
 
   if (is.null(data.names) || length(data.names) == 0L) {
-    stop("lavaan ERROR: could not find variable names in data/sample.cov")
+    lav_msg_stop(gettext("could not find variable names in data/sample.cov"))
   }
 
   # extract needed ov.names in the same order as the data
@@ -39,11 +39,10 @@ lav_partable_ov_from_data <- function(FLAT = NULL, # nolint
   # check if we have all of them
   if (length(ov.names.data) != length(ov.names)) {
     idx.missing <- which(!(ov.names %in% ov.names.data))
-    stop(
-      "lavaan ERROR: some (observed) variables specified in the model ",
-      "are not found in the data: ",
-      paste(ov.names[idx.missing], collapse = " ")
-    )
+    lav_msg_stop(gettextf(
+      "some (observed) variables specified in the model are not found 
+      in the data: %s",
+      lav_msg_view(ov.names[idx.missing], "none")))
   }
 
   # check if the order is the same

@@ -235,7 +235,8 @@ lav_model_estimate <- function(lavmodel = NULL,
       lower <- lavpartable$lower[free.idx]
     } else if (lavmodel@eq.constraints) {
       # bounds have no effect any longer....
-      warning("lavaan warning: bounds have no effect in the presence of linear equality constraints")
+      lav_msg_warn(gettext(
+        "bounds have no effect in the presence of linear equality constraints"))
       lower <- -Inf
     } else {
       lower <- lavpartable$lower[lavpartable$free > 0L]
@@ -252,7 +253,8 @@ lav_model_estimate <- function(lavmodel = NULL,
       # bounds have no effect any longer....
       if (is.null(lavpartable$lower)) {
         # bounds have no effect any longer....
-        warning("lavaan warning: bounds have no effect in the presence of linear equality constraints")
+        lav_msg_warn(gettext(
+        "bounds have no effect in the presence of linear equality constraints"))
       }
       upper <- +Inf
     } else {
@@ -476,13 +478,14 @@ lav_model_estimate <- function(lavmodel = NULL,
     Sigma.hat <- computeSigmaHat(lavmodel, extra = TRUE, debug = lavoptions$debug)
     for (g in 1:ngroups) {
       if (!attr(Sigma.hat[[g]], "po")) {
-        group.txt <- ifelse(ngroups > 1,
-          paste(" in group ", g, ".", sep = ""), "."
-        )
+        group.txt <- 
+          if(ngroups > 1) gettextf(" in group %s.", g) else "."
         if (debug) {
           print(Sigma.hat[[g]][, ])
         }
-        warning("lavaan WARNING: initial model-implied matrix (Sigma) is not positive definite;\n  check your model and/or starting parameters", group.txt)
+        lav_msg_warn(gettext(
+          "initial model-implied matrix (Sigma) is not positive definite;
+          check your model and/or starting parameters"), group.txt)
         x <- start.x
         fx <- as.numeric(NA)
         attr(fx, "fx.group") <- rep(as.numeric(NA), ngroups)
@@ -535,7 +538,7 @@ lav_model_estimate <- function(lavmodel = NULL,
     } else if (lavoptions$optim.gradient %in% c("NULL", "null")) {
       GRADIENT <- NULL
     } else {
-      warning("lavaan WARNING: gradient should be analytic, numerical or NULL")
+      lav_msg_warn(gettext("gradient should be analytic, numerical or NULL"))
     }
   } else if (is.logical(lavoptions$optim.gradient)) {
     if (lavoptions$optim.gradient) {

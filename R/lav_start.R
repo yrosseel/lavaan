@@ -32,7 +32,6 @@ lav_start <- function(start.method = "default",
 
   # nlevels?
   nlevels <- lav_partable_nlevels(lavpartable)
-  nblocks <- lav_partable_nblocks(lavpartable)
 
   # reflect/order.lv.by
   if (is.null(reflect)) {
@@ -56,8 +55,8 @@ lav_start <- function(start.method = "default",
   # start.method
   start.user <- NULL
   if (is.character(start.method)) {
-    start.method. <- tolower(start.method)
-    if (start.method. == "default") {
+    start.method.lc <- tolower(start.method)
+    if (start.method.lc == "default") {
       # nothing to do
     } else if (start.method == "simple") {
       start <- numeric(length(lavpartable$ustart))
@@ -77,17 +76,19 @@ lav_start <- function(start.method = "default",
       return(start) # assuming fixed.x = FALSE!
     } else if (start.method == "est") {
       return(lavpartable$est)
-    } else if (start.method. %in% c("simple", "lavaan", "mplus")) {
-      start.initial <- start.method.
+    } else if (start.method.lc %in% c("simple", "lavaan", "mplus")) {
+      start.initial <- start.method.lc
     } else {
-      stop("lavaan ERROR: unknown value for start argument")
+     lav_msg_stop(gettext("unknown value for start argument"))
     }
   } else if (is.list(start.method)) {
     start.user <- start.method
   } else if (is.numeric(start.method)) {
     nx.free <- sum(lavpartable$free > 0L)
     if (length(start.method) != nx.free) {
-      stop("lavaan ERROR: start argument contains ", length(start.method), " elements; but parameter table expects ", nx.free, " free parameters.")
+     lav_msg_stop(gettextf(
+       "start argument contains %1$s elements; but parameter table
+       expects %2$s free parameters.", length(start.method), nx.free))
     }
     lavpartable$ustart[lavpartable$free > 0L] <- start.method
   } else if (inherits(start.method, "lavaan")) {
@@ -99,7 +100,9 @@ lav_start <- function(start.method = "default",
     if (is.null(start.user$lhs) ||
       is.null(start.user$op) ||
       is.null(start.user$rhs)) {
-      stop("lavaan ERROR: problem with start argument: model list does not contain all elements: lhs/op/rhs")
+     lav_msg_stop(gettext(
+       "problem with start argument: model list does not contain
+       all elements: lhs/op/rhs"))
     }
     if (!is.null(start.user$est)) {
       # excellent, we got an est column; nothing to do
@@ -110,7 +113,9 @@ lav_start <- function(start.method = "default",
       # no ideal, but better than nothing
       start.user$est <- start.user$ustart
     } else {
-      stop("lavaan ERROR: problem with start argument: could not find est/start column in model list")
+     lav_msg_stop(gettext(
+       "problem with start argument: could not find est/start column 
+       in model list"))
     }
   }
 
@@ -444,7 +449,8 @@ lav_start <- function(start.method = "default",
     #       where ALPHA = means of the markers
 
     # 4g) thresholds
-    th.idx <- which(lavpartable$group == group.values[g] & lavpartable$op == "|")
+    th.idx <- which(lavpartable$group == group.values[g] &
+                      lavpartable$op == "|")
     if (length(th.idx) > 0L) {
       th.names.lavpartable <- paste(lavpartable$lhs[th.idx], "|",
         lavpartable$rhs[th.idx],
@@ -483,7 +489,8 @@ lav_start <- function(start.method = "default",
           # variance/covariances (fixed.x = FALSE);
           # this somehow avoids false convergence in saturated models
           nobs <- lavsamplestats@nobs[[g]]
-          this.idx <- which(seq_len(length(lavpartable$free)) %in% exo.idx & lavpartable$free > 0L)
+          this.idx <- which(seq_len(length(lavpartable$free)) %in% exo.idx &
+                              lavpartable$free > 0L)
           start[this.idx] <- start[this.idx] * (nobs - 1) / nobs
         } else {
           start[exo.idx] <- lavsamplestats@cov[[g]][cbind(row.idx, col.idx)]
@@ -746,10 +753,12 @@ lav_start <- function(start.method = "default",
           # 3) fill splitted-x ~ regular-x regression coefficients
           if (conditional.x) {
             if (is.null(lavh1$implied$cov[[l]])) {
-              stop("lavaan ERROR: lavh1 information is needed; please rerun with h1 = TRUE")
+             lav_msg_stop(gettext(
+               "lavh1 information is needed; please rerun with h1 = TRUE"))
             }
             blocks.within.group <- (g - 1L) * nlevels + seq_len(nlevels)
-            OTHER.BLOCK.NAMES <- lav_partable_vnames(lavpartable, "ov", block = blocks.within.group[-block])
+            OTHER.BLOCK.NAMES <- lav_partable_vnames(lavpartable, "ov",
+                                    block = blocks.within.group[-block])
             ov.names.x.block <- this.block.x
             idx <- which(ov.names.x.block %in% OTHER.BLOCK.NAMES)
             if (length(idx) > 0L) {
@@ -873,7 +882,7 @@ lav_start <- function(start.method = "default",
     }
 
     # FIXME: avoid for loop!!!
-    for (i in 1:length(lavpartable$lhs)) {
+    for (i in seq_along(lavpartable$lhs)) {
       # find corresponding parameters
       lhs <- lavpartable$lhs[i]
       op <- lavpartable$op[i]
@@ -900,7 +909,9 @@ lav_start <- function(start.method = "default",
   if (length(bad.idx) > 0L) {
     cat("starting values:\n")
     print(start)
-    warning("lavaan WARNING: some starting values are non-finite; replacing them with 0.5; please provide better starting values.\n")
+     lav_msg_warn(gettext(
+       "some starting values are non-finite; replacing them with 0.5;
+       please provide better starting values."))
     start[bad.idx] <- 0.5
   }
 
@@ -964,16 +975,17 @@ lav_start_check_cov <- function(lavpartable = NULL, start = lavpartable$start,
           # nothing to do
         } else if (lavpartable$free[this.cov.idx] > 0L) {
           if (warn) {
-            warning(
-              "lavaan WARNING: non-zero covariance element set to zero, due to fixed-to-zero variances\n",
-              "                  variables involved are: ", var.lhs, " ", var.rhs, block.txt
+             lav_msg_warn(gettextf(
+              "non-zero covariance element set to zero, due to fixed-to-zero
+              variances variables involved are: %s", var.lhs), var.rhs,
+              block.txt
             )
           }
           start[this.cov.idx] <- 0
         } else {
-          stop(
-            "lavaan ERROR: please provide better fixed values for (co)variances;\n",
-            "                variables involved are: ", var.lhs, " ", var.rhs, block.txt
+          lav_msg_stop(gettextf(
+            "please provide better fixed values for (co)variances;
+            variables involved are: %s ", var.lhs), var.rhs, block.txt
           )
         }
         next
@@ -996,19 +1008,18 @@ lav_start_check_cov <- function(lavpartable = NULL, start = lavpartable$start,
       if (!is.finite(COR)) {
         # force simple values
         if (warn) {
-          warning(
-            "lavaan WARNING: starting values imply NaN for a correlation value;\n",
-            "                  variables involved are: ", var.lhs, " ", var.rhs, block.txt
+           lav_msg_warn(gettextf(
+            "starting values imply NaN for a correlation value; variables
+            involved are: %s", var.lhs), var.rhs, block.txt
           )
         }
         start[var.lhs.idx] <- 1
         start[var.rhs.idx] <- 1
         start[this.cov.idx] <- 0
       } else if (COR > 1) {
-        txt <- paste(
-          "lavaan WARNING: starting values imply a correlation larger than 1;\n",
-          "                  variables involved are: ", var.lhs, " ", var.rhs, block.txt
-        )
+        txt <- gettextf(
+          "starting values imply a correlation larger than 1; variables 
+          involved are: %1$s %2$s %3$s", var.lhs, var.rhs, block.txt)
 
         # three ways to fix it: rescale cov12, var1 or var2
 
@@ -1016,50 +1027,50 @@ lav_start_check_cov <- function(lavpartable = NULL, start = lavpartable$start,
         if (lavpartable$free[this.cov.idx] > 0L &&
           is.na(lavpartable$ustart[this.cov.idx])) {
           if (warn) {
-            warning(txt)
+             lav_msg_warn(gettext(txt))
           }
           start[this.cov.idx] <- start[this.cov.idx] / (COR * 1.1)
         } else if (lavpartable$free[var.min.idx] > 0L &&
           is.na(lavpartable$ustart[var.min.idx])) {
           if (warn) {
-            warning(txt)
+             lav_msg_warn(gettext(txt))
           }
           start[var.min.idx] <- start[var.min.idx] * (COR * 1.1)^2
         } else if (lavpartable$free[var.max.idx] > 0L &&
           is.na(lavpartable$ustart[var.max.idx])) {
           if (warn) {
-            warning(txt)
+             lav_msg_warn(gettext(txt))
           }
           start[var.max.idx] <- start[var.max.idx] * (COR * 1.1)^2
 
           # not found? try just a free parameter
         } else if (lavpartable$free[this.cov.idx] > 0L) {
           if (warn) {
-            warning(txt)
+             lav_msg_warn(gettext(txt))
           }
           start[this.cov.idx] <- start[this.cov.idx] / (COR * 1.1)
         } else if (lavpartable$free[var.min.idx] > 0L) {
           if (warn) {
-            warning(txt)
+             lav_msg_warn(gettext(txt))
           }
           start[var.min.idx] <- start[var.min.idx] * (COR * 1.1)^2
         } else if (lavpartable$free[var.max.idx] > 0L) {
           if (warn) {
-            warning(txt)
+             lav_msg_warn(gettext(txt))
           }
           start[var.max.idx] <- start[var.max.idx] * (COR * 1.1)^2
 
           # nothing? abort or warn (and fail later...): warn
         } else {
           if (warn) {
-            warning(txt)
+             lav_msg_warn(gettext(txt))
           }
-          # stop("lavaan ERROR: please provide better fixed values for (co)variances;\n",
-          # "                variables involved are: ", var.lhs, " ", var.rhs, block.txt)
+          # lav_msg_stop(gettextf(
+          # "please provide better fixed values for (co)variances;
+          #  variables involved are: %s ", var.lhs), var.rhs, block.txt)
         }
       } # COR > 1
     } # cov.idx
   }
-
   start
 }

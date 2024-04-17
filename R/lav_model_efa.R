@@ -328,7 +328,7 @@ lav_model_efa_rotate_border_x <- function(x, lavmodel = NULL,
       # check if rotation method exists
       check <- try(get(method.fname), silent = TRUE)
       if (inherits(check, "try-error")) {
-        stop("lavaan ERROR: unknown rotation method: ", method.fname)
+        lav_msg_stop(gettextf("unknown rotation method: %s", method.fname))
       }
 
       # 1. compute row weigths
@@ -345,7 +345,8 @@ lav_model_efa_rotate_border_x <- function(x, lavmodel = NULL,
       } else if (ropts$row.weights == "cureton-mulaik") {
         weights <- lav_matrix_rotate_cm_weights(A)
       } else {
-        stop("lavaan ERROR: row.weights can be none, kaiser or cureton-mulaik")
+        lav_msg_stop(gettextf("row.weights can be",
+          lav_msg_view(c("none", "kaiser", "cureton-mulaik"), "or")))
       }
       A <- A * weights
 

@@ -137,7 +137,7 @@ lav_tables_univariate_freq_cell <- function(lavdata = NULL,
 
   # do we have any categorical variables?
   if (length(cat.idx) == 0L) {
-    stop("lavaan ERROR: no categorical variables are found")
+    lav_msg_stop(gettext("no categorical variables are found"))
   }
 
   # univariate tables

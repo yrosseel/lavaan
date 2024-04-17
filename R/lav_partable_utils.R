@@ -382,8 +382,7 @@ lav_partable_map_id_p1_in_p2 <- function(p1, p2, stopifnotfound = TRUE,
     # found?
     if (length(p2.idx) == 0L) {
       if (stopifnotfound) {
-        stop(
-          "lavaan ERROR: parameter in p1 not found in p2: ",
+        lav_msg_stop(gettext("parameter in p1 not found in p2:"),
           paste(lhs, op, rhs, "(block = ", block, ")", sep = " ")
         )
       } else {

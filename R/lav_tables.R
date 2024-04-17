@@ -40,7 +40,8 @@ lavTables <- function(object,
                       patternAsString = TRUE) {
   # check input
   if (!(dimension == 0L || dimension == 1L || dimension == 2L)) {
-    stop("lavaan ERROR: dimension must be 0, 1 or 2 for pattern, one-way or two-way tables")
+    lav_msg_stop(gettext(
+      "dimension must be 0, 1 or 2 for pattern, one-way or two-way tables"))
   }
   stopifnot(type %in% c("cells", "table", "pattern"))
   if (type == "pattern") {
@@ -67,7 +68,8 @@ lavTables <- function(object,
     if (output == "data.frame") {
       class(out) <- c("lavaan.data.frame", "data.frame")
     } else {
-      warning("lavaan WARNING: output option `", output, "' is not available; ignored.")
+      lav_msg_warn(gettextf("output option `%s' is not available; ignored.",
+                            output))
     }
 
     # case 2: one-way/univariate
@@ -81,7 +83,8 @@ lavTables <- function(object,
     if (output == "data.frame") {
       class(out) <- c("lavaan.data.frame", "data.frame")
     } else {
-      warning("lavaan WARNING: output option `", output, "' is not available; ignored.")
+      lav_msg_warn(gettextf("output option `%s' is not available; ignored.",
+                            output))
     }
 
     # case 3a: two-way/pairwise/bivariate + cells
@@ -97,7 +100,8 @@ lavTables <- function(object,
     } else if (output == "table") {
       out <- lav_tables_cells_format(out, lavdata = lavdata)
     } else {
-      warning("lavaan WARNING: output option `", output, "' is not available; ignored.")
+      lav_msg_warn(gettextf("output option `%s' is not available; ignored.",
+                            output))
     }
 
     #  case 3b: two-way/pairwise/bivariate + collapsed table
@@ -119,7 +123,8 @@ lavTables <- function(object,
         lavobject = lavobject
       )
     } else {
-      warning("lavaan WARNING: output option `", output, "' is not available; ignored.")
+      lav_msg_warn(gettext("output option `%s' is not available; ignored.",
+                           output))
     }
   }
 
@@ -174,7 +179,7 @@ lav_tables_pattern <- function(lavobject = NULL, lavdata = NULL,
   # this only works if we have 'categorical' variables
   cat.idx <- which(lavdata@ov$type %in% c("ordered", "factor"))
   if (length(cat.idx) == 0L) {
-    warning("lavaan WARNING: no categorical variables are found")
+    lav_msg_warn(gettext("no categorical variables are found"))
     return(data.frame(
       pattern = character(0L), nobs = integer(0L),
       obs.freq = integer(0L), obs.prop = numeric(0L)
@@ -183,7 +188,7 @@ lav_tables_pattern <- function(lavobject = NULL, lavdata = NULL,
   # no support yet for mixture of endogenous ordered + numeric variables
   if (!is.null(lavobject) &&
     length(lavNames(lavobject, "ov.nox")) > length(cat.idx)) {
-    warning("lavaan WARNING: some endogenous variables are not categorical")
+    lav_msg_warn(gettext("some endogenous variables are not categorical"))
     return(data.frame(
       pattern = character(0L), nobs = integer(0L),
       obs.freq = integer(0L), obs.prop = numeric(0L)
@@ -239,7 +244,9 @@ lav_tables_pattern <- function(lavobject = NULL, lavdata = NULL,
 
   if (any(c("X2.un", "G2.un") %in% statistic)) {
     # not a good statistic... we only have uni+bivariate information
-    warning("lavaan WARNING: limited information used for thresholds and correlations; but X2/G2 assumes full information")
+    lav_msg_warn(gettext(
+      "limited information used for thresholds and correlations;
+      but X2/G2 assumes full information"))
     PI <- lav_tables_resp_pi(
       lavobject = lavobject, lavdata = lavdata,
       est = "h1"
@@ -264,15 +271,12 @@ lav_tables_pattern <- function(lavobject = NULL, lavdata = NULL,
       # ok, nothing to say
     } else if (lavobject@Options$estimator %in%
       c("WLS", "DWLS", "PML", "ULS")) {
-      warning(
-        "lavaan WARNING: estimator ", lavobject@Options$estimator,
-        " is not using full information while est.prop is using full information"
-      )
+      lav_msg_warn(gettextf(
+        "estimator %s is not using full information while est.prop is 
+        using full information", lavobject@Options$estimator))
     } else {
-      stop(
-        "lavaan ERROR: estimator ", lavobject@Options$estimator,
-        " is not supported."
-      )
+      lav_msg_stop(gettextf(
+        "estimator %s is not supported.", lavobject@Options$estimator))
     }
 
     PI <- lav_tables_resp_pi(
@@ -307,7 +311,7 @@ lav_tables_pairwise_cells <- function(lavobject = NULL, lavdata = NULL,
   # this only works if we have at least two 'categorical' variables
   cat.idx <- which(lavdata@ov$type %in% c("ordered", "factor"))
   if (length(cat.idx) == 0L) {
-    warning("lavaan WARNING: no categorical variables are found")
+    lav_msg_warn(gettext("no categorical variables are found"))
     return(data.frame(
       id = integer(0L), lhs = character(0L), rhs = character(0L),
       nobs = integer(0L), row = integer(0L), col = integer(0L),
@@ -315,7 +319,7 @@ lav_tables_pairwise_cells <- function(lavobject = NULL, lavdata = NULL,
     ))
   }
   if (length(cat.idx) == 1L) {
-    warning("lavaan WARNING: at least two categorical variables are needed")
+    lav_msg_warn(gettext("at least two categorical variables are needed"))
     return(data.frame(
       id = integer(0L), lhs = character(0L), rhs = character(0L),
       nobs = integer(0L), row = integer(0L), col = integer(0L),
@@ -661,7 +665,7 @@ lav_tables_oneway <- function(lavobject = NULL, lavdata = NULL,
 
   # do we have any categorical variables?
   if (length(cat.idx) == 0L) {
-    warning("lavaan WARNING: no categorical variables are found")
+    lav_msg_warn(gettext("no categorical variables are found"))
     return(data.frame(
       id = integer(0L), lhs = character(0L), rhs = character(0L),
       nobs = integer(0L),
@@ -846,9 +850,9 @@ lav_tables_pairwise_freq_cell <- function(lavdata = NULL,
 
   # do we have any categorical variables?
   if (length(cat.idx) == 0L) {
-    stop("lavaan ERROR: no categorical variables are found")
+    lav_msg_stop(gettext("no categorical variables are found"))
   } else if (length(cat.idx) == 1L) {
-    stop("lavaan ERROR: at least two categorical variables are needed")
+    lav_msg_stop(gettext("at least two categorical variables are needed"))
   }
 
   # pairwise tables
@@ -948,7 +952,8 @@ lav_tables_pairwise_model_pi <- function(lavobject = NULL) {
     Sigmahat <- Sigma.hat[[g]]
     cors <- Sigmahat[lower.tri(Sigmahat)]
     if (any(abs(cors) > 1)) {
-      warning("lavaan WARNING: some model-implied correlations are larger than 1.0")
+      lav_msg_warn(gettext(
+        "some model-implied correlations are larger than 1.0"))
     }
     nvar <- nrow(Sigmahat)
 
@@ -1019,7 +1024,7 @@ lav_tables_pairwise_sample_pi <- function(lavobject = NULL, lavdata = NULL) {
     }
     TH.IDX <- fit.un@SampleStats@th.idx
   } else {
-    stop("lavaan ERROR: both lavobject and lavdata are NULL")
+    lav_msg_stop(gettext("both lavobject and lavdata are NULL"))
   }
 
   lav_tables_pairwise_sample_pi_cor(
@@ -1038,7 +1043,8 @@ lav_tables_pairwise_sample_pi_cor <- function(COR = NULL, TH = NULL,
     Sigmahat <- COR[[g]]
     cors <- Sigmahat[lower.tri(Sigmahat)]
     if (any(abs(cors) > 1)) {
-      warning("lavaan WARNING: some model-implied correlations are larger than 1.0")
+      lav_msg_warn(gettext(
+        "some model-implied correlations are larger than 1.0"))
     }
     nvar <- nrow(Sigmahat)
     th.idx <- TH.IDX[[g]]
@@ -1117,7 +1123,8 @@ lav_tables_resp_pi <- function(lavobject = NULL, lavdata = NULL,
     Sigmahat <- Sigma.hat[[g]]
     cors <- Sigmahat[lower.tri(Sigmahat)]
     if (any(abs(cors) > 1)) {
-      warning("lavaan WARNING: some model-implied correlations are larger than 1.0")
+      lav_msg_warn(gettext(
+        "some model-implied correlations are larger than 1.0"))
     }
     nvar <- nrow(Sigmahat)
     th.idx <- TH.IDX[[g]]
@@ -1166,7 +1173,7 @@ lav_tables_resp_pi <- function(lavobject = NULL, lavdata = NULL,
       }
     } else { # case-wise
       PI.group <- rep(as.numeric(NA), lavdata@nobs[[g]])
-      warning("lavaan WARNING: casewise PI not implemented")
+      lav_msg_warn(gettext("casewise PI not implemented"))
     }
 
     PI[[g]] <- PI.group
@@ -1195,8 +1202,8 @@ lav_tables_table_format <- function(out, lavdata = lavdata,
     }
     UNI <- NULL
   } else if (length(stat.idx) > 1) {
-    stop(
-      "lavaan ERROR: more than one statistic for table output: ",
+    lav_msg_stop(gettext(
+      "more than one statistic for table output:"),
       paste(NAMES[stat.idx], collapse = " ")
     )
   } else {
@@ -1274,8 +1281,8 @@ lav_tables_cells_format <- function(out, lavdata = lavdata,
   if (length(stat.idx) == 0) {
     statistic <- "obs.freq"
   } else if (length(stat.idx) > 1) {
-    stop(
-      "lavaan ERROR: more than one statistic for table output: ",
+    lav_msg_stop(gettext(
+      "more than one statistic for table output:"),
       paste(NAMES[stat.idx], collapse = " ")
     )
   } else {
