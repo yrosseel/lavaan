@@ -408,8 +408,8 @@ ldw_parse_step2 <- function(modellist, modelsrc, types, debug, warn) {
 ldw_parse_check_valid_name <- function(formul1, ind, modelsrc) {
   if (make.names(formul1$elem.text[ind]) != formul1$elem.text[ind]) {
     lav_msg_stop(
-      gettext("identifier is either a reserved word (in R) or"),
-      gettext("contains an illegal character"),
+      gettext("identifier is either a reserved word (in R) or 
+              contains an illegal character"),
       ldw_txtloc(modelsrc, formul1$elem.pos[ind])
     )
   }
@@ -768,29 +768,26 @@ ldw_parse_model_string <- function(model.syntax = "", as.data.frame. = FALSE,
     if (op == ":") { # ------------------------- block start ------------------
       if (opi == 1L) {
         lav_msg_stop(
-        gettext("Missing block identifier."),
-        gettext("The correct syntax is: \"LHS: RHS\", where LHS is a block"),
-        gettext("identifier (eg group or level), and RHS is the"),
-        gettext("group/level/block number or label."),
+        gettext("Missing block identifier. The correct syntax is: \"LHS: RHS\",
+                where LHS is a block identifier (eg group or level), and RHS is
+                the group/level/block number or label."),
         ldw_txtloc(modelsrc, formul1$elem.pos[1]))
       }
       if (opi > 2L || all(tolower(formul1$elem.text[1]) !=
                           c("group", "level", "block", "class"))) {
         lav_msg_stop(
-        gettext("Invalid block identifier."),
-        gettext("The correct syntax is: \"LHS: RHS\", where LHS is a block"),
-        gettext("identifier (eg group or level), and RHS is the"),
-        gettext("group/level/block number or label."),
+        gettext("Invalid block identifier. The correct syntax is: \"LHS: RHS\",
+                where LHS is a block identifier (eg group or level), and RHS is
+                the group/level/block number or label."),
         ldw_txtloc(modelsrc, formul1$elem.pos[1]))
       }
       if (nelem != 3 || all(formul1$elem.type[3] !=
                 c(types$stringliteral, types$identifier, types$numliteral))) {
         lav_msg_stop(
-        gettext("syntax contains block identifier \"group\" with missing"),
-        gettext("or invalid number/label."),
-        gettext("The correct syntax is: \"LHS: RHS\", where LHS is a block"),
-        gettext("identifier (eg group or level), and RHS is the"),
-        gettext("group/level/block number or label."),
+        gettext("syntax contains block identifier \"group\" with missing or
+                invalid number/label.The correct syntax is: \"LHS: RHS\", where
+                LHS is a block identifier (eg group or level), and RHS is the 
+                group/level/block number or label."),
         ldw_txtloc(modelsrc, formul1$elem.pos[1]))
       }
       flat.idx <- flat.idx + 1L
@@ -824,8 +821,8 @@ ldw_parse_model_string <- function(model.syntax = "", as.data.frame. = FALSE,
       (formul1$elem.type[nelem] != types$numliteral || all(op != c("~", "=~"))))
     {
       lav_msg_stop(
-        gettext("Last element of rhs part expected to be an identifier or,"),
-        gettext("for operator ~ or =~, a numeric literal!"),
+        gettext("Last element of rhs part expected to be an identifier or,
+                for operator ~ or =~, a numeric literal!"),
         ldw_txtloc(modelsrc, formul1$elem.pos[nelem]))
     }
     # intercept fixed on 0
@@ -859,13 +856,12 @@ ldw_parse_model_string <- function(model.syntax = "", as.data.frame. = FALSE,
     # check at most 1 colon
     if (length(colons) > 1) {
       lav_msg_stop(
-        gettext("Three-way or higher-order interaction terms (using multiple"),
-        gettext("colons) are not supported in the lavaan syntax;"),
-        gettext("please manually construct the product terms yourself in the"),
-        gettext("data.frame, give them an appropriate name, and then you can"),
-        gettext("use these interaction variables as any other (observed)"),
-        gettext("variable in the model syntax."),
-        ldw_txtloc(modelsrc, formul1$elem.pos[colons[2]]))
+        gettext("Three-way or higher-order interaction terms (using multiple 
+                colons) are not supported in the lavaan syntax; please manually
+                construct the product terms yourself in the data.frame, give
+                them an appropriate name, and then you can use these interaction
+                variables as any other (observed) variable in the model syntax."
+                ), ldw_txtloc(modelsrc, formul1$elem.pos[colons[2]]))
     }
     if (length(colons) == 1) { # collapse items around colon "a" ":" "b" => "a:b"
       formul1$elem.text[colons - 1L] <-

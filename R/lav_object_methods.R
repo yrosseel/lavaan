@@ -1280,8 +1280,8 @@ setMethod(
     ## is a parameter table, so update the parameter table in the call
     if (!(mode(add) %in% c("list", "character"))) {
       lav_msg_stop(
-        gettext("'add' argument must be model syntax or parameter table."),
-        gettext("See ?lavaanify help page.")
+        gettext("'add' argument must be model syntax or parameter table.
+                See ?lavaanify help page.")
       )
     }
     tmp.pt <- lav_object_extended(newfit, add = add)@ParTable

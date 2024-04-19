@@ -44,7 +44,15 @@ lav_options_checkvalues <- function(optname, optvalue, chr) {
   optvals <- gsub("[_-]", ".", tolower(optvalue))
   optvalsok <- match(optvals, optvalid)
   if (any(is.na(optvalsok))) {
-    lav_msg_notallowed_multi(optname, optvalue[is.na(optvalsok)])
+    lav_msg_stop(sprintf(
+      ngettext(
+        length(optvalue[is.na(optvalsok)]),
+        "invalid value in %1$s option: %2$s.",
+        "invalid values in %1$s option: %2$s."
+      ),
+      optname, 
+      lav_msg_view(optvalue[is.na(optvalsok)], log.sep = "none")
+    ))
   }
   as.vector(chr[optvalsok])
 }
@@ -85,9 +93,10 @@ lav_options_check <- function(opts, opt.check, subname) {    # nolint
           paste0(subname, opt.name), opt.check1$oklen[2]))
       } else {
         lav_msg_warn(gettextf(
-          "Length of option '%1$s' value should be maximum %2$s;",
+          "Length of option '%1$s' value should be maximum %2$s.
+          Only first %3$s elements used.",
           paste0(subname, opt.name), -opt.check1$oklen[2]),
-          gettextf("Only first %s elements used.", -opt.check1$oklen[2]))
+          -opt.check1$oklen[2])
       }
     }
     if (is.null(opt.check1$bl)) opt.check1$bl <- FALSE
@@ -470,8 +479,8 @@ lav_options_set <- function(opt = NULL) {                     # nolint
     # test
     if (length(opt$test) > 1L) {
       lav_msg_warn(gettextf(
-        "test= argument can only contain a single element if missing = %s ",
-        dQuote(opt$missing)), gettext("(taking the first)"))
+        "test= argument can only contain a single element if missing = %s 
+        (taking the first)"), dQuote(opt$missing))
       opt$test <- opt$test[1]
     }
 
@@ -867,17 +876,15 @@ lav_options_set <- function(opt = NULL) {                     # nolint
     "bollen.stine"
   ))
   if (length(wrong.idx) > 0L) {
-    lav_msg_stop(
-      gettextf("invalid option(s) for test argument: %s.",
-               paste(dQuote(opt$test[wrong.idx]), collapse = " ")),
-      gettextf(" Possible options are: %s.",
-               lav_msg_view(c("none", "standard", "browne.residual.adf",
-                              "browne.residual.nt", "browne.residual.adf.model",
-                              "browne.residual.nt.model", "satorra.bentler",
-                              "yuan.bentler", "yuan.bentler.mplus",
-                              "mean.var.adjusted", "scaled.shifted",
-                              "bollen.stine"), log.sep = "or"))
-    )
+    lav_msg_stop(gettextf(
+    "invalid option(s) for test argument: %1$s. Possible options are: %2$s.",
+    lav_msg_view(opt$test[wrong.idx]),
+    lav_msg_view(c("none", "standard", "browne.residual.adf",
+                    "browne.residual.nt", "browne.residual.adf.model",
+                    "browne.residual.nt.model", "satorra.bentler",
+                    "yuan.bentler", "yuan.bentler.mplus",
+                    "mean.var.adjusted", "scaled.shifted",
+                    "bollen.stine"), log.sep = "or")))
   }
 
   # bounds
@@ -902,8 +909,8 @@ lav_options_set <- function(opt = NULL) {                     # nolint
       opt$bounds <- "user"
     } else {
       lav_msg_stop(
-        gettext("bounds and optim.bounds arguments can not be used together;"),
-        gettext("remove the bounds= argument or set it to \"user\".")
+        gettext("bounds and optim.bounds arguments can not be used together;
+                remove the bounds= argument or set it to \"user\".")
       )
     }
   }

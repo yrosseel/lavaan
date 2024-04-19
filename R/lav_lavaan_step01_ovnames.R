@@ -335,12 +335,10 @@ lav_lavaan_step01_ovnames_checklv <- function(                    # nolint
       # ignore
     } else {
       lav_msg_stop(gettextf(
-        "Interaction terms involving latent variables (%s) are not supported.",
-        lv.lv.names[lv.int.idx[1]]),
-        gettext("You may consider creating product indicators to define
-                the latent interaction term. See the indProd() function
-                in the semTools package.")
-      )
+        "Interaction terms involving latent variables (%s) are not supported. 
+        You may consider creating product indicators to define
+        the latent interaction term. See the indProd() function
+        in the semTools package.", lv.lv.names[lv.int.idx[1]]))
     }
   }
 
