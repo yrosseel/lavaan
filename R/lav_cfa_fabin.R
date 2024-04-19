@@ -101,9 +101,8 @@ lav_cfa_fabin_internal <- function(lavmodel = NULL, lavsamplestats = NULL,
   }
   # no BETA matrix! (i.e., no higher-order factors)
   if (!is.null(lavmodel@GLIST$beta)) {
-    lav_msg_stop(
-      gettext("FABIN estimator not available for models"),
-      gettext("that require a BETA matrix"))
+    lav_msg_stop(gettext(
+    "FABIN estimator not available for models that require a BETA matrix"))
   }
   # no std.lv = TRUE for now
   if (lavoptions$std.lv) {

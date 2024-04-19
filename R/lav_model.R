@@ -83,7 +83,9 @@ lav_model <- function(lavpartable = NULL,                          # nolint
   } else if (lavoptions$representation == "RAM") {
     tmp.rep <- lav_ram(lavpartable, target = NULL, extra = TRUE)
   } else {
-    lav_msg_notallowed("representation", c("LISREL", "RAM"))
+    lav_msg_stop(gettextf(
+      "%1$s argument must be either %2$s or %3$s",
+      "representation", "LISREL", "RAM"))
   }
   if (lavoptions$debug) print(tmp.rep)
 
@@ -98,11 +100,10 @@ lav_model <- function(lavpartable = NULL,                          # nolint
       sep = " "
     )
     if (lavoptions$representation == "LISREL") {
-      lav_msg_stop(
-      gettext("a model parameter is not defined in the LISREL representation"),
-      this.formula,
-      gettext("Upgrade to latent variables or consider using representation = 'RAM'.")
-      )
+      lav_msg_stop(gettextf(
+        "a model parameter is not defined in the LISREL representation %s.
+        Upgrade to latent variables or consider using representation = 'RAM'.",
+        this.formula)      )
     } else {
       lav_msg_stop(
         gettextf("parameter is not defined: %s", this.formula)

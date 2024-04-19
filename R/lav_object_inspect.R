@@ -43,7 +43,8 @@ lavInspect.lavaan <- function(object,                                # nolint
 
   # only a single argument
   if (length(what) > 1) {
-    lav_msg_only1_stop("what")
+    lav_msg_stop(gettextf("argument %s cannot have more than one element", 
+                          "what"))
   }
 
   # be case insensitive
@@ -623,7 +624,10 @@ lavInspect.lavaan <- function(object,                                # nolint
 
     #### not found ####
   } else {
-    lav_msg_unknown("what", what)
+    lav_msg_stop(gettextf(
+      "%1$s argument unknown: %2$s",
+      "what", lav_msg_view(what)
+    ))
   }
 
 }
@@ -804,7 +808,10 @@ lav_object_inspect_modelmatrices <- function(object, what = "free", # nolint
         m.el.idx <- object@Model@m.user.idx[[mm]]
         x.el.idx <- object@Model@x.user.idx[[mm]]
       } else {
-        lav_msg_unknown("type", type)
+        lav_msg_stop(gettextf(
+          "%1$s argument unknown: %2$s",
+          "type", lav_msg_view(type)
+        ))
       }
       # erase everything
       glist[[mm]][, ] <- 0.0
@@ -2614,9 +2621,8 @@ lav_object_inspect_vcov <- function(object, standardized = FALSE,
       return.value <- return.value[!dup.flag, !dup.flag, drop = FALSE]
     } else {
       lav_msg_warn(
-        gettext("alias is TRUE,"),
-        gettext("but equality constraints do not appear to be simple;"),
-        gettext("returning full vcov"))
+        gettext("alias is TRUE, but equality constraints do not appear
+                to be simple; returning full vcov"))
     }
   }
 
@@ -2994,7 +3000,9 @@ lav_object_inspect_coef <- function(object, type = "free",
     #idx <- which(object@ParTable$free > 0L & !duplicated(object@ParTable$free))
     idx <- which(object@ParTable$free > 0L)
   } else {
-    lav_msg_notallowed("type", c("free", "user"))
+    lav_msg_stop(gettextf(
+      "%1$s argument must be either %2$s or %3$s",
+      "type", "free", "user"))
   }
   tmp.est <- lav_object_inspect_est(object)
   cof <- tmp.est[idx]

@@ -4,6 +4,7 @@
 # via R function 'message()'.
 lav_msg_note <- function(..., showheader = FALSE) {
   wat <- unlist(list(...), use.names = FALSE)
+  if (!showheader) wat <- c("lavaan NOTE: ___", wat)
   message(lav_msg(wat, showheader = showheader), domain = NA)
 }
 
@@ -74,8 +75,13 @@ lav_msg <- function(wat, txt.width = getOption("width", 80L),
   while (nstart <= length(chunks)) {
     while (nstop < length(chunks) &&
            sum(chunk.size[seq.int(nstart, nstop + 1L)]) +
-           nstop - nstart + indent < txt.width) {
+           nstop - nstart + indent < txt.width && chunks[nstop + 1L] != "___") {
       nstop <- nstop + 1
+    }
+    if (nstop < length(chunks) && chunks[nstop + 1L] == "___") { 
+      # forced line break
+      chunks[nstop + 1L] <-  ""
+      nstop <- nstop + 1L
     }
     if (nstop < length(chunks)) {
       chunks[nstop + 1L] <- paste0(
@@ -130,55 +136,42 @@ lav_msg_view <- function(x,
   }
   rv
 }
-# error if argument x is missing
-lav_msg_missing_stop <- function(x) {
-  lav_msg_stop(gettextf("argument %s is missing", x))
-}
-# warning if argument x is missing
-lav_msg_missing_warn <- function(x, usedvalue) {
-  lav_msg_warn(gettextf(
-    "argument %1$s is missing, using %2$s.",
-    x, lav_msg_view(usedvalue)
-  ))
-}
-# error if length of an argument x is greater then 1 and cannot be
-lav_msg_only1_stop <- function(x) {
-  lav_msg_stop(gettextf("argument %s cannot have more than one element", x))
-}
-# warning if length of an argument x is greater then 1 and cannot be
-lav_msg_only1_warn <- function(x, xvalue) {
-  lav_msg_warn(gettextf("%1$s argument should be a single character string.
-  Only the first one (%2$s) is used.", x, xvalue[[1]]))
-}
-# error if argument is unknown (show value)
-lav_msg_unknown <- function(x, xvalue) {
-  lav_msg_stop(gettextf(
-    "%1$s argument unknown: %2$s",
-    x, lav_msg_view(xvalue)
-  ))
-}
-# error if argument isn't one of the allowed values, show values allowed
-lav_msg_notallowed <- function(x, allowed) {
-  if (length(allowed) == 2L) {
-    lav_msg_stop(gettextf(
-      "%1$s argument must be either %2$s",
-      x, lav_msg_view(allowed, "or")
-    ))
-  } else {
-    lav_msg_stop(gettextf(
-      "%1$s argument must be one of %2$s",
-      x, lav_msg_view(allowed, "or")
-    ))
-  }
-}
-# error if argument isn't one of the allowed values (show invalid ones)
-lav_msg_notallowed_multi <- function(x, invalids) {
-  lav_msg_stop(sprintf(
-    ngettext(
-      length(invalids),
-      "invalid value in %1$s argument: %2$s.",
-      "invalid values in %1$s argument: %2$s."
-    ),
-    x, lav_msg_view(invalids, log.sep = "none")
-  ))
-}
+#  ---------------  examples of use ----------------------
+# # warning if argument x is missing
+#   lav_msg_warn(gettextf(
+#     "argument %1$s is missing, using %2$s.",
+#     x, lav_msg_view(usedvalue)
+#   ))
+# 
+# # warning if length of an argument x is greater then 1 and cannot be
+#   lav_msg_warn(gettextf("%1$s argument should be a single character string.
+#   Only the first one (%2$s) is used.", xname, x[[1]]))
+# 
+# # error if argument is unknown (show value)
+#   lav_msg_stop(gettextf(
+#     "%1$s argument unknown: %2$s",
+#     xname, lav_msg_view(xvalue)
+#   ))
+# 
+# # error if argument isn't one of the allowed values, show values allowed
+#   if (length(allowed) == 2L) {
+#     lav_msg_stop(gettextf(
+#       "%1$s argument must be either %2$s",
+#       x, lav_msg_view(allowed, "or")
+#     ))
+#   } else {
+#     lav_msg_stop(gettextf(
+#       "%1$s argument must be one of %2$s",
+#       x, lav_msg_view(allowed, "or")
+#     ))
+#   }
+# 
+# # error if argument isn't one of the allowed values (show invalid ones)
+#   lav_msg_stop(sprintf(
+#     ngettext(
+#       length(invalids),
+#       "invalid value in %1$s argument: %2$s.",
+#       "invalid values in %1$s argument: %2$s."
+#     ),
+#     x, lav_msg_view(invalids, log.sep = "none")
+#   ))
