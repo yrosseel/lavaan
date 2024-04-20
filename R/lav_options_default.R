@@ -372,7 +372,7 @@ lav_options_default <- function() {
   elm("store.vcov", "default", chr = "default", bl = TRUE)
 
   # internal
-  elm("parser", "old", chr = c(old = "old", orig = "old", new = "new",
+  elm("parser", "new", chr = c(old = "old", orig = "old", new = "new",
                                classic = "old"))
 
   # verbosity
