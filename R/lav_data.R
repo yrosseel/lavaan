@@ -514,9 +514,9 @@ lav_data_full <- function(data = NULL, # data.frame
   if (!is.null(group) && length(group) > 0L) {
     if (!(group %in% names(data))) {
       lav_msg_stop(gettextf(
-        "grouping variable %s not found;", sQuote(group)),
-        gettextf("variable names found in data frame are: %s",
-        paste(names(data), collapse = " ")))
+        "grouping variable %1$s not found; variable names 
+        found in data frame are: %2$s",
+        sQuote(group),paste(names(data), collapse = " ")))
     }
     # note: by default, we use the order as in the data;
     # not as in levels(data[,group])
@@ -561,11 +561,9 @@ lav_data_full <- function(data = NULL, # data.frame
     if (is.character(sampling.weights)) {
       if (!(sampling.weights %in% names(data))) {
         lav_msg_stop(
-          gettextf("sampling weights variable %s not found;",
-          sQuote(sampling.weights)),
-          gettext("variable names found in data frame are: "),
-          paste(names(data), collapse = " ")
-        )
+          gettextf("sampling weights variable %1$s not found; 
+                   variable names found in data frame are: %2$s",
+          sQuote(sampling.weights)), paste(names(data), collapse = " "))
       }
       # check for missing values in sampling weight variable
       if (any(is.na(data[[sampling.weights]]))) {
@@ -587,10 +585,9 @@ lav_data_full <- function(data = NULL, # data.frame
       # which one did we not find?
       not.ok <- which(!cluster %in% names(data))
       lav_msg_stop(gettextf(
-        "cluster variable(s) %s not found;", sQuote(cluster[not.ok])),
-        gettext("variable names found in data frame are:"),
-        paste(names(data), collapse = " ")
-      )
+        "cluster variable(s) %1$s not found;
+        variable names found in data frame are: %2$s",
+        sQuote(cluster[not.ok]), paste(names(data), collapse = " ")))
     }
 
     # check for missing values in cluster variable(s)
@@ -868,9 +865,9 @@ lav_data_full <- function(data = NULL, # data.frame
         norig[[g]] <- length(which(data[[group]] == group.label[g]))
         if (warn && (nobs[[g]] < norig[[g]])) {
           lav_msg_warn(gettextf(
-              "%1$s cases were deleted in group %2$s  due to missing values",
-              (norig[[g]] - nobs[[g]]), group.label[g]),
-            gettext("in  exogenous variable(s), while fixed.x = TRUE."))
+              "%1$s cases were deleted in group %2$s  due to missing values
+              in  exogenous variable(s), while fixed.x = TRUE.",
+              (norig[[g]] - nobs[[g]]), group.label[g]))
         }
       } else {
         case.idx[[g]] <- which(data[[group]] == group.label[g])
@@ -891,9 +888,9 @@ lav_data_full <- function(data = NULL, # data.frame
         norig[[g]] <- nrow(data)
         if (warn && (nobs[[g]] < norig[[g]])) {
           lav_msg_warn(
-            gettextf("%s cases were deleted due to missing values in ",
-                     (norig[[g]] - nobs[[g]])),
-            gettext("exogenous variable(s), while fixed.x = TRUE."))
+            gettextf("%s cases were deleted due to missing values in 
+                     exogenous variable(s), while fixed.x = TRUE.",
+                     (norig[[g]] - nobs[[g]])))
         }
       } else {
         case.idx[[g]] <- 1:nrow(data)
@@ -972,8 +969,8 @@ lav_data_full <- function(data = NULL, # data.frame
       txt <- ""
       if (ngroups > 1L) txt <- gettextf("in group %s", g)
       lav_msg_warn(
-        gettext("small number of observations (nobs < nvar)"), txt,
-        gettextf(": nobs = %1$s  nvar = %2$s", nobs[[g]], nvar))
+        gettextf("small number of observations (nobs < nvar) %1$s: 
+                 nobs = %2$s  nvar = %3$s", txt, nobs[[g]], nvar))
     }
     # check variances per group (if we have multiple groups)
     # to catch zero-variance variables within a group (new in 0.6-8)
@@ -1057,29 +1054,28 @@ lav_data_full <- function(data = NULL, # data.frame
         } else if (length(zero.var) == length(within.var)) {
           # all zero! possibly a between-level variable
           gtxt <- if (ngroups > 1L) {
-            gettextf("in group %s.", g)
+            gettextf("in group %s", g)
           } else {
-            "."
+            ""
           }
           lav_msg_warn(
-            gettextf("Level-1 variable %s", dQuote(ov.names[[g]][v])),
-            gettext("has no variance at the within level"), gtxt,
-            gettext("The variable appears to be a between-level variable."),
-            gettext("Please remove this variable from"),
-            gettext("the level 1 section in the model syntax.")
-          )
+            gettextf("Level-1 variable %1$s has no variance at the within 
+                     level %2$s. The variable appears to be a between-level 
+                     variable. Please remove this variable from the level 1 
+                     section in the model syntax.", 
+                     dQuote(ov.names[[g]][v])), gtxt)
         } else {
           # some zero variances!
           gtxt <- if (ngroups > 1L) {
-            gettextf("in group %s.", g)
+            gettextf("in group %s", g)
           } else {
-            "."
+            ""
           }
-          lav_msg_warn(
-            gettextf("Level-1 variable %s has no variance within some clusters",
-                     dQuote(ov.names[[g]][v])), gtxt,
-            gettext("The cluster ids with zero within variance are:"),
-            lav_msg_view(Lp[[g]]$cluster.id[[2]][zero.var], "none"))
+          lav_msg_warn(gettextf(
+          "Level-1 variable %1$s has no variance within some clusters %2$s.
+          The cluster ids with zero within variance are: %3$s.",
+          dQuote(ov.names[[g]][v])), gtxt,
+          lav_msg_view(Lp[[g]]$cluster.id[[2]][zero.var], "none"))
         }
       }
 
@@ -1102,24 +1098,23 @@ lav_data_full <- function(data = NULL, # data.frame
             "."
           }
           lav_msg_warn(gettextf(
-            "Level-2 variable %s has non-zero variance at the within level",
+            "Level-2 variable %1$ss has non-zero variance at the within
+            level %2$s in one cluster with id: %3$ss. Please double-check
+            if this is a between only variable.",
             dQuote(ov.names[[g]][v])), gtxt,
-            gettextf("in one cluster with id: %s.",
-                      Lp[[g]]$cluster.id[[2]][non.zero.var]),
-            gettext(
-              "Please double-check if this is a between only variable."))
+            Lp[[g]]$cluster.id[[2]][non.zero.var])
         } else {
           error.flag <- TRUE
           # several
           gtxt <- if (ngroups > 1L) {
-            gettextf("in group %s.", g)
+            gettextf("in group %s", g)
           } else {
-            "."
+            ""
           }
           lav_msg_warn(gettextf(
-            "Level-2 variable %s has non-zero variance at the within level",
+            "Level-2 variable %1$s has non-zero variance at the within level
+            %2$s. The cluster ids with non-zero within variance are: %3$s",
             dQuote(ov.names[[g]][v])), gtxt,
-            gettext("The cluster ids with non-zero within variance are: "),
             lav_msg_view(Lp[[g]]$cluster.id[[2]][non.zero.var], "none"))
         }
       }

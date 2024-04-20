@@ -83,8 +83,8 @@ lav_partable_add_bounds <- function(partable = NULL,
       } else if (length(optim.bounds$lower.factor) !=
         length(optim.bounds$lower)) {
         lav_msg_stop(
-          gettext("length(optim.bounds$lower.factor) is not equal to"),
-          gettext("length(optim.bounds$lower)")
+          gettext("length(optim.bounds$lower.factor) is not equal to
+                  length(optim.bounds$lower)")
         )
       }
     }
@@ -102,8 +102,8 @@ lav_partable_add_bounds <- function(partable = NULL,
       } else if (length(optim.bounds$upper.factor) !=
         length(optim.bounds$upper)) {
         lav_msg_stop(
-          gettext("length(optim.bounds$lower.factor) is not equal to"),
-          gettext("length(optim.bounds$upper)")
+          gettext("length(optim.bounds$lower.factor) is not equal to
+                  length(optim.bounds$upper)")
         )
       }
     }
