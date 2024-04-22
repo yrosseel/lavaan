@@ -59,9 +59,11 @@ lav_options_default <- function() {
         opt.check[[name[1]]] <<- sublist
       }
       opt.default[[name[1]]][[name[2]]] <<- dflt
+      if (is.null(dflt)) opt.default[[name[1]]][name[2]] <<- list(NULL)
       opt.check[[name[1]]][[name[2]]] <<- list2store
     } else {
       opt.default[[name[2]]] <<- dflt
+      if (is.null(dflt)) opt.default[name[2]] <<- list(NULL)
       opt.check[[name[2]]] <<- list2store
     }
     NULL
@@ -348,10 +350,8 @@ lav_options_default <- function() {
   elm("zero.keep.margins", "default", chr = "default", bl = TRUE)
   elm("zero.cell.warn", FALSE, bl = TRUE) # since 0.6-1
 
-  # starting values
-  elm("start", "default", chr = c(
-    "default", "simple", "est"
-  ))
+  # starting values (char values checked in lav_options_set())
+  elm("start", "default", oklen = c(1L, 1000L))
 
   # sanity checks
   elm("check.start", TRUE, bl = TRUE)

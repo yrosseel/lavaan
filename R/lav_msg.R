@@ -72,12 +72,14 @@ lav_msg <- function(wat, txt.width = getOption("width", 80L),
 
   nstart <- 1L
   nstop <- 1L
+  corr.line1 <- 7L # first line possibly contains "error: " 
   while (nstart <= length(chunks)) {
     while (nstop < length(chunks) &&
-           sum(chunk.size[seq.int(nstart, nstop + 1L)]) +
+           sum(chunk.size[seq.int(nstart, nstop + 1L)]) + corr.line1 +
            nstop - nstart + indent < txt.width && chunks[nstop + 1L] != "___") {
       nstop <- nstop + 1
     }
+    corr.line1 <- 0L
     if (nstop < length(chunks) && chunks[nstop + 1L] == "___") { 
       # forced line break
       chunks[nstop + 1L] <-  ""
