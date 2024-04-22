@@ -16,10 +16,10 @@ lav_uvreg_fit <- function(y = NULL,
     wt <- rep(1, length(y))
   } else {
     if (length(y) != length(wt)) {
-      stop("lavaan ERROR: length y is not the same as length wt")
+      lav_msg_stop(gettext("length y is not the same as length wt"))
     }
     if (any(wt < 0)) {
-      stop("lavaan ERROR: all weights should be positive")
+      lav_msg_stop(gettext("all weights should be positive"))
     }
   }
 
@@ -90,7 +90,8 @@ lav_uvreg_init_cache <- function(y = NULL,
     # new in 0.6-17: check if X is full rank
     if (!anyNA(X)) {
       if (qr(X)$rank < ncol(X)) {
-        stop("lavaan ERROR: matrix of exogenous covariates is rank deficient!\n\t\t(i.e., some x variables contain redundant information)")
+        lav_msg_stop(gettext("matrix of exogenous covariates is rank deficient!
+                    (i.e., some x variables contain redundant information)"))
       }
     }
   }

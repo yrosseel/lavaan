@@ -175,7 +175,8 @@ lav_mdist <- function(Y, Mp = NULL, wt = NULL,
         silent = TRUE
       )
     if (inherits(Sigma.inv, "try-error")) {
-      warning("lavaan WARNING: problem computing distances: could not invert Sigma")
+      lav_msg_warn(gettext(
+        "problem computing distances: could not invert Sigma"))
       return(DIST)
     }
   }
@@ -255,7 +256,7 @@ lav_utils_bootstrap_indices <- function(R = 0L,
   stopifnot(!is.null(iseed))
 
   if (return.freq && !merge.groups) {
-    stop("lavaan ERROR: return.freq only available if merge.groups = TRUE")
+    lav_msg_stop(gettext("return.freq only available if merge.groups = TRUE"))
   }
 
   if (is.integer(nobs)) {
@@ -392,18 +393,20 @@ inv.chol <- function(S, logdet = FALSE) {
 cor2cov <- function(R, sds, names = NULL) {
   p <- (d <- dim(R))[1L]
   if (!is.numeric(R) || length(d) != 2L || p != d[2L]) {
-    stop("'V' is not a square numeric matrix")
+    lav_msg_stop(gettext("'V' is not a square numeric matrix"))
   }
 
   if (any(!is.finite(sds))) {
-    warning("sds had 0 or NA entries; non-finite result is doubtful")
+    lav_msg_warn(gettext(
+      "sds had 0 or NA entries; non-finite result is doubtful"))
   }
 
   # if(sum(diag(R)) != p)
   #    stop("The diagonal of a correlation matrix should be all ones.")
 
   if (p != length(sds)) {
-    stop("The standard deviation vector and correlation matrix have a different number of variables")
+    lav_msg_stop(gettext("The standard deviation vector and correlation matrix
+                         have a different number of variables"))
   }
 
   S <- R
@@ -630,7 +633,7 @@ augmented.covariance <- function(S., mean) {
   p <- ncol(S)
 
   if (nrow(m) != p) {
-    stop("incompatible dimension of mean vector")
+    lav_msg_stop(gettext("incompatible dimension of mean vector"))
   }
 
   out <- matrix(0, ncol = (p + 1), nrow = (p + 1))

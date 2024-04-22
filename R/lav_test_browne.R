@@ -44,7 +44,7 @@ lav_test_browne <- function(lavobject = NULL,
   if (!is.null(lavobject)) {
     # check input
     if (!inherits(lavobject, "lavaan")) {
-      stop("lavaan ERROR: object is not a lavaan object.")
+      lav_msg_stop(gettext("object is not a lavaan object."))
     }
 
     # slots
@@ -58,16 +58,19 @@ lav_test_browne <- function(lavobject = NULL,
   }
 
   if (!ADF && lavmodel@categorical) {
-    stop("lavaan ERROR: normal theory version not available in the categorical setting.")
+    lav_msg_stop(gettext("normal theory version not available in the categorical
+                         setting."))
   }
   if (lavdata@missing != "listwise" && !model.based) {
-    stop("lavaan ERROR: Browne's test is not available when data is missing")
+    lav_msg_stop(gettext("Browne's test is not available when data is missing"))
   }
   if (lavdata@nlevels > 1L) {
-    stop("lavaan ERROR: Browne's test is not available when data is multilevel.")
+    lav_msg_stop(gettext("Browne's test is not available when data is 
+                         multilevel."))
   }
   if (length(lavmodel@ceq.nonlinear.idx) > 0L) {
-    stop("lavaan ERROR: Browne's test is not available (yet) when nonlinear equality constraints are involved.")
+    lav_msg_stop(gettext("Browne's test is not available (yet) when nonlinear
+                         equality constraints are involved."))
   }
 
   if (!is.logical(n.minus.one)) {
@@ -88,7 +91,8 @@ lav_test_browne <- function(lavobject = NULL,
     } else {
       if (!is.null(lavobject)) {
         if (lavobject@Data@data.type != "full") {
-          stop("lavaan ERROR: ADF version not available without full data or user-provided Gamma/NACOV matrix")
+          lav_msg_stop(gettext("ADF version not available without full data or
+                               user-provided Gamma/NACOV matrix"))
         }
         Gamma <- lav_object_gamma(lavobject,
           ADF = TRUE,
@@ -96,7 +100,8 @@ lav_test_browne <- function(lavobject = NULL,
         )
       } else {
         if (lavdata@data.type != "full") {
-          stop("lavaan ERROR: ADF version not available without full data or user-provided Gamma/NACOV matrix")
+          lav_msg_stop(gettext("ADF version not available without full data or
+                               user-provided Gamma/NACOV matrix"))
         }
         Gamma <- lav_object_gamma(
           lavobject = NULL,

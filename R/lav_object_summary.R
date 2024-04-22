@@ -178,12 +178,15 @@ lav_object_summary <- function(object, header = TRUE,
   if (fit.measures) {
     # some early warnings (to avoid a hard stop)
     if (object@Data@data.type == "none") {
-      warning("lavaan WARNING: fit measures not available if there is no data\n\n")
+      lav_msg_warn(gettext(
+        "fit measures not available if there is no data"))
     } else if (length(object@Options$test) == 1L &&
       object@Options$test == "none") {
-      warning("lavaan WARNING: fit measures not available if test = \"none\"\n\n")
+      lav_msg_warn(gettext(
+        "fit measures not available if test = \"none\""))
     } else if (object@optim$npar > 0L && !object@optim$converged) {
-      warning("lavaan WARNING: fit measures not available if model did not converge\n\n")
+      lav_msg_warn(gettext(
+        "fit measures not available if model did not converge"))
     } else {
       FIT <- lav_fit_measures(object,
         fit.measures = "default",

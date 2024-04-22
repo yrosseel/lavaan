@@ -65,7 +65,8 @@ lavListInspect <- function(object,
 
   # only a single argument
   if (length(what) > 1) {
-    stop("`what' arguments contains multiple arguments; only one is allowed")
+    lav_msg_stop(gettext(
+      "`what' arguments contains multiple arguments; only one is allowed"))
   }
 
   # be case insensitive
@@ -198,7 +199,8 @@ lavListInspect <- function(object,
 
     #### not found ####
   } else {
-    stop("unknown `what' argument in inspect function: `", what, "'")
+    lav_msg_stop(gettextf(
+      "unknown `what' argument in inspect function: `%s'", what))
   }
 }
 
@@ -239,7 +241,7 @@ lav_lavaanList_inspect_modelmatrices <- function(
         m.el.idx <- object@Model@m.user.idx[[mm]]
         x.el.idx <- object@Model@x.user.idx[[mm]]
       } else {
-        stop("lavaan ERROR: unknown type argument:", type, )
+        lav_msg_stop(gettextf("unknown type argument: %s", type))
       }
       # erase everything
       GLIST[[mm]][, ] <- 0.0

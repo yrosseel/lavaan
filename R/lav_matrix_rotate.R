@@ -36,7 +36,7 @@ lav_matrix_rotate <- function(A = NULL, # original matrix
 
   # check A
   if (!inherits(A, "matrix")) {
-    stop("lavaan ERROR: A does not seem to a matrix")
+    lav_msg_stop(gettext("A does not seem to a matrix"))
   }
 
   P <- nrow(A)
@@ -69,24 +69,22 @@ lav_matrix_rotate <- function(A = NULL, # original matrix
   # check init.ROT
   if (!is.null(init.ROT) && init.ROT.check) {
     if (!inherits(init.ROT, "matrix")) {
-      stop("lavaan ERROR: init.ROT does not seem to a matrix")
+      lav_msg_stop(gettext("init.ROT does not seem to a matrix"))
     }
     if (nrow(init.ROT) != M) {
-      stop(
-        "lavaan ERROR: nrow(init.ROT) = ", nrow(init.ROT),
-        " does not equal ncol(A) = ", M
-      )
+      lav_msg_stop(gettextf(
+        "nrow(init.ROT) = %1$s does not equal ncol(A) = %2$s",
+        nrow(init.ROT), M))
     }
     if (nrow(init.ROT) != ncol(init.ROT)) {
-      stop(
-        "lavaan ERROR: nrow(init.ROT) = ", nrow(init.ROT),
-        " does not equal ncol(init.ROT) = ", ncol(init.ROT)
-      )
+      lav_msg_stop(gettextf(
+        "nrow(init.ROT) = %1$s does not equal ncol(init.ROT) = %2$s",
+        nrow(init.ROT), ncol(init.ROT)))
     }
     # rotation matrix? init.ROT^T %*% init.ROT = I
     RR <- crossprod(init.ROT)
     if (!lav_matrix_rotate_check(init.ROT, orthogonal = orthogonal)) {
-      stop("lavaan ERROR: init.ROT does not look like a rotation matrix")
+      lav_msg_stop(gettext("init.ROT does not look like a rotation matrix"))
     }
   }
 
@@ -114,7 +112,7 @@ lav_matrix_rotate <- function(A = NULL, # original matrix
   # check if rotation method exists
   check <- try(get(method.fname), silent = TRUE)
   if (inherits(check, "try-error")) {
-    stop("lavaan ERROR: unknown rotation method: ", method.fname)
+    lav_msg_stop(gettext("unknown rotation method:"), method.fname)
   }
 
   # if target, check target matrix
@@ -122,20 +120,20 @@ lav_matrix_rotate <- function(A = NULL, # original matrix
     target <- method.args$target
     # check dimension of target/A
     if (nrow(target) != nrow(A)) {
-      stop("lavaan ERROR: nrow(target) != nrow(A)")
+      lav_msg_stop(gettext("nrow(target) != nrow(A)"))
     }
     if (ncol(target) != ncol(A)) {
-      stop("lavaan ERROR: ncol(target) != ncol(A)")
+      lav_msg_stop(gettext("ncol(target) != ncol(A)"))
     }
   }
   if (method == "pst") {
     target.mask <- method.args$target.mask
     # check dimension of target.mask/A
     if (nrow(target.mask) != nrow(A)) {
-      stop("lavaan ERROR: nrow(target.mask) != nrow(A)")
+      lav_msg_stop(gettext("nrow(target.mask) != nrow(A)"))
     }
     if (ncol(target.mask) != ncol(A)) {
-      stop("lavaan ERROR: ncol(target.mask) != ncol(A)")
+      lav_msg_stop(gettext("col(target.mask) != ncol(A)"))
     }
   }
   # we keep this here, so lav_matrix_rotate() can be used independently
@@ -164,10 +162,10 @@ lav_matrix_rotate <- function(A = NULL, # original matrix
       "varimax", "entropy", "mccammon",
       "tandem1", "tandem2"
     )) {
-      warning(
-        "lavaan WARNING: rotation method ", dQuote(method),
-        " may not work with oblique rotation."
-      )
+      lav_msg_warn(gettextf(
+        "rotation method %s may not work with oblique rotation.",
+        dQuote(method)
+      ))
     }
   }
 
@@ -187,7 +185,7 @@ lav_matrix_rotate <- function(A = NULL, # original matrix
   if (algorithm %in% c("gpa", "pairwise", "none")) {
     # nothing to do
   } else {
-    stop("lavaan ERROR: algorithm must be gpa or pairwise")
+    lav_msg_stop(gettext("algorithm must be gpa or pairwise"))
   }
 
 
@@ -206,7 +204,7 @@ lav_matrix_rotate <- function(A = NULL, # original matrix
   } else if (row.weights == "cureton-mulaik") {
     weights <- lav_matrix_rotate_cm_weights(A)
   } else {
-    stop("lavaan ERROR: row.weights can be none, kaiser or cureton-mulaik")
+    lav_msg_stop(gettext("row.weights can be none, kaiser or cureton-mulaik"))
   }
   A <- A * weights
 
@@ -391,7 +389,7 @@ lav_matrix_rotate <- function(A = NULL, # original matrix
   } else if (order.lv.by == "none") {
     order.idx <- seq_len(ncol(LAMBDA))
   } else {
-    stop("lavaan ERROR: order must be index, sumofsquares or none")
+    lav_msg_stop(gettext("order must be index, sumofsquares or none"))
   }
 
   # do the same in PHI
@@ -553,7 +551,7 @@ lav_matrix_rotate_gpa <- function(A = NULL, # original matrix
       }
 
       if (warn && i == 1000) {
-        warning("lavaan WARNING: half-stepping failed in GPA\n")
+        lav_msg_warn(gettext("half-stepping failed in GPA"))
       }
     }
 
@@ -570,11 +568,10 @@ lav_matrix_rotate_gpa <- function(A = NULL, # original matrix
 
   # warn if no convergence
   if (!converged && warn) {
-    warning(
-      "lavaan WARNING: ",
-      "GP rotation algorithm did not converge after ",
-      max.iter, " iterations"
-    )
+    lav_msg_warn(gettextf(
+      "GP rotation algorithm did not converge after %s iterations",
+      max.iter
+    ))
   }
 
   # algorithm information
@@ -790,11 +787,10 @@ lav_matrix_rotate_pairwise <- function(A = NULL, # original matrix
 
   # warn if no convergence
   if (!converged && warn) {
-    warning(
-      "lavaan WARNING: ",
-      "pairwise rotation algorithm did not converge after ",
-      max.iter, " iterations"
-    )
+    lav_msg_warn(gettextf(
+      "pairwise rotation algorithm did not converge after %s iterations",
+      max.iter
+    ))
   }
 
   # compute final rotation matrix

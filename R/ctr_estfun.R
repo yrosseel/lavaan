@@ -27,13 +27,13 @@ estfun.lavaan <- lavScores <- function(object, scaling = FALSE, # nolint
   # what if estimator is not ML or WLS?
   # avoid hard error (using stop); throw a warning, and return an empty matrix
   if (!object@Options$estimator %in% c("ML", "WLS")) {
-    warning("lavaan WARNING: scores only availalbe if estimator is ML")
+    lav_msg_warn(gettext("scores only availlabe if estimator is ML"))
     return(matrix(0, 0, 0))
   }
 
   # check if conditional.x = TRUE
   if (object@Model@conditional.x) {
-    stop("lavaan ERROR: scores not available (yet) if conditional.x = TRUE")
+    lav_msg_stop(gettext("scores not available (yet) if conditional.x = TRUE"))
   }
 
   # shortcuts
@@ -64,10 +64,8 @@ estfun.lavaan <- lavScores <- function(object, scaling = FALSE, # nolint
     ov.names <- unlist(lavdata@ov.names)
     ov.idx <- which(lavdata@ov$name %in% ov.names)
     if (!all(lavdata@ov$type[ov.idx] == "ordered")) {
-      stop(
-        "lavaan ERROR: WLS scores only available if all observed ",
-        "variables are ordered."
-      )
+      lav_msg_stop(gettext(
+        "WLS scores only available if all observed variables are ordered."))
     }
 
     # compute WLS scores
@@ -78,7 +76,7 @@ estfun.lavaan <- lavScores <- function(object, scaling = FALSE, # nolint
     )
   } else {
     # should not happen
-    stop("fixme")
+    lav_msg_fixme("this should not happen")
   }
 
   # handle empty rows
@@ -116,10 +114,9 @@ estfun.lavaan <- lavScores <- function(object, scaling = FALSE, # nolint
       k_matrix <- lav_constraints_R2K(lavmodel)
       score_matrix <- score_matrix %*% k_matrix
     } else {
-      warning(
-        "lavaan WARNING: remove.duplicated is TRUE, but equality ",
-        " constraints do not appear to be simple; returning full scores"
-      )
+      lav_msg_warn(gettext(
+        "remove.duplicated is TRUE, but equality constraints do not appear
+        to be simple; returning full scores"))
     }
   }
 

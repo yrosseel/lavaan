@@ -414,7 +414,9 @@ lav_model_information_firstorder <- function(lavmodel = NULL,
                                              inverted = FALSE,
                                              use.ginv = FALSE) {
   if (!lavmodel@estimator %in% c("ML", "PML")) {
-    stop("lavaan ERROR: information = \"first.order\" not available for estimator ", sQuote(lavmodel@estimator))
+    lav_msg_stop(gettext(
+      "information = \"first.order\" not available for estimator"),
+      sQuote(lavmodel@estimator))
   }
 
   if (inverted) {
@@ -583,7 +585,9 @@ lav_model_information_augment_invert <- function(lavmodel = NULL,
       only.values = TRUE
     )$values
     if (any(eigvals < -1 * .Machine$double.eps^(3 / 4))) {
-      warning("lavaan WARNING: information matrix is not positive definite; the model may not be identified")
+      lav_msg_warn(gettext(
+        "information matrix is not positive definite; 
+        the model may not be identified"))
     }
   }
 

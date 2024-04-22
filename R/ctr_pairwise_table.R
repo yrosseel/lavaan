@@ -52,18 +52,20 @@ pairwiseTables <- function(data, var.levels = NULL, no.x = NULL,
                            perc = FALSE, na.exclude = TRUE) {
   # data in right format?
   if ((!is.matrix(data)) & (!is.data.frame(data))) {
-    stop("data is neither a matrix nor a data.frame")
+    lav_msg_stop(gettext("data is neither a matrix nor a data.frame"))
   }
 
   # at least two variables
   no.var <- dim(data)[2]
   if (no.var < 2) {
-    stop("there are less than 2 variables")
+    lav_msg_stop(gettext("there are less than 2 variables"))
   }
 
   # no.x < no.var  ?
   if (no.x > no.var) {
-    stop("number of indicators for exogenous latent variables is larger than the total number of variables in data")
+    lav_msg_stop(gettext(
+      "number of indicators for exogenous latent variables is larger than
+      the total number of variables in data"))
   }
 
 
@@ -94,7 +96,9 @@ pairwiseTables <- function(data, var.levels = NULL, no.x = NULL,
 
   # number of variables in data same as number of vectors in var.levels
   if (is.list(var.levels) && no.var != length(var.levels)) {
-    stop("the length of var.levels does not match the number of variables of the given data set")
+    lav_msg_stop(gettext(
+      "the length of var.levels does not match the number of variables of 
+      the given data set"))
   }
 
   # create var.levels if a list is not given
@@ -115,14 +119,16 @@ pairwiseTables <- function(data, var.levels = NULL, no.x = NULL,
   if (is.list(old.var.levels)) {
     for (i in 1:no.var) {
       if (!all(obs.levels[[i]] %in% old.var.levels[[i]])) {
-        stop("levels observed in data are not mentioned in var.levels")
+        lav_msg_stop(gettext(
+          "levels observed in data are not mentioned in var.levels"))
       }
     }
   } else if (is.vector(old.var.levels)) {
     if (!all(apply(na.omit(data), 2, function(x) {
       x %in% old.var.levels
     }))) {
-      stop("levels observed in data are not mentioned in var.levels")
+      lav_msg_stop(gettext("levels observed in data are not mentioned 
+                           in var.levels"))
     }
   }
 

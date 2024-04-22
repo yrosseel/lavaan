@@ -38,14 +38,16 @@ lav_sam_step1 <- function(cmd = "sem", mm.list = NULL, mm.args = list(),
     PT.free <- PT$free
   }
   if (npar < 1L) {
-    stop("lavaan ERROR: model does not contain any free parameters")
+    lav_msg_stop(gettext("model does not contain any free parameters"))
   }
 
   # check for higher-order factors
   # 0.6-11: hard stop for now, as we do not support them (yet)!
   LV.IND.names <- unique(unlist(FIT@pta$vnames$lv.ind))
   if (length(LV.IND.names) > 0L) {
-    stop("lavaan ERROR: model contains indicators that are also latent variables:\n\t", paste(LV.IND.names, collapse = " "))
+    lav_msg_stop(gettext(
+      "model contains indicators that are also latent variables:"),
+      lav_msg_view(LV.IND.names, "none"))
     # ind.idx <- match(LV.IND.names, LV.names)
     # LV.names <- LV.names[-ind.idx]
   }
@@ -53,7 +55,8 @@ lav_sam_step1 <- function(cmd = "sem", mm.list = NULL, mm.args = list(),
   # do we have at least 1 'regular' (measured) latent variable?
   LV.names <- unique(unlist(FIT@pta$vnames$lv.regular))
   if (length(LV.names) == 0L) {
-    stop("lavaan ERROR: model does not contain any (measured) latent variables; use sem() instead")
+    lav_msg_stop(gettext("model does not contain any (measured) latent 
+                         variables; use sem() instead"))
   }
 
 
@@ -65,21 +68,17 @@ lav_sam_step1 <- function(cmd = "sem", mm.list = NULL, mm.args = list(),
       # check if we can find all lv names in LV.names
       if (!all(unlist(mm.list[[b]]) %in% LV.names)) {
         tmp <- unlist(mm.list[[b]])
-        stop(
-          "lavaan ERROR: mm.list contains unknown latent variable(s): ",
-          paste(tmp[!tmp %in% LV.names], collapse = " "),
-          "\n"
-        )
+        lav_msg_stop(gettext("mm.list contains unknown latent variable(s):"),
+          lav_msg_view(tmp[!tmp %in% LV.names], "none"))
       }
       # make list per block
       if (!is.list(mm.list[[b]])) {
         mm.list[[b]] <- rep(list(mm.list[[b]]), nblocks)
       } else {
         if (length(mm.list[[b]]) != nblocks) {
-          stop(
-            "lavaan ERROR: mm.list block ", b, " has length ",
-            length(mm.list[[b]]), " but nblocks = ", nblocks
-          )
+          lav_msg_stop(gettextf(
+            "mm.list block %1$s has length %2$s but nblocks = %3$s",
+            b, length(mm.list[[b]]), nblocks))
         }
       }
     }
@@ -188,13 +187,10 @@ lav_sam_step1 <- function(cmd = "sem", mm.list = NULL, mm.args = list(),
     if (length(unlist(ov.names.block)) == 2L && ngroups == 1L) {
       # hard stop for now, unless se = "none"
       if (lavoptions$se != "none") {
-        stop("lavaan ERROR: measurement block [", mm, "] (",
-          paste(mm.list[[mm]], collapse = " "),
-          ") contains only two indicators;\n",
-          "\t\tfix both factor loadings to unity, or\n",
-          "\t\tcombine factors into a single measurement block.",
-          sep = ""
-        )
+        lav_msg_stop(gettextf(
+          "measurement block [%1$s", "] (%2$s) contains only two indicators;
+          fix both factor loadings to unity, or combine factors into a single
+          measurement block.", mm, lav_msg_view(mm.list[[mm]], "none")))
       } else {
         lambda.idx <- which(PTM$op == "=~")
         PTM$free[lambda.idx] <- 0L
@@ -204,12 +200,10 @@ lav_sam_step1 <- function(cmd = "sem", mm.list = NULL, mm.args = list(),
         if (length(free.idx) > 0L) {
           PTM$free[free.idx] <- seq_len(length(free.idx))
         }
-        warning("lavaan WARNING: measurement block [", mm, "] (",
-          paste(mm.list[[mm]], collapse = " "),
-          ") contains only two indicators;\n",
-          "\t\t -> fixing both factor loadings to unity",
-          sep = ""
-        )
+        lav_msg_warn(gettextf(
+          "measurement block [%1$s] (%2$s) contains only two indicators;
+          -> fixing both factor loadings to unity",
+          mm, lav_msg_view(mm.list[[mm]], "none")))
       }
     }
 
@@ -223,10 +217,9 @@ lav_sam_step1 <- function(cmd = "sem", mm.list = NULL, mm.args = list(),
     # check convergence
     if (!lavInspect(fit.mm.block, "converged")) {
       # warning for now, but this is not good!
-      warning(
-        "lavaan WARNING: measurement model for ",
-        paste(mm.list[[mm]], collapse = " "), " did not converge!"
-      )
+      lav_msg_warn(gettextf(
+        "measurement model for %s did not converge!", 
+        lav_msg_view(mm.list[[mm]], "none")))
     }
 
     # store fitted measurement model
@@ -320,13 +313,15 @@ lav_sam_step1_local <- function(STEP1 = NULL, FIT = NULL,
   # local.M.method
   local.M.method <- toupper(local.options[["M.method"]])
   if (!local.M.method %in% c("GLS", "ML", "ULS")) {
-    stop("lavaan ERROR: local option M.method should be one of GLS, ML or ULS.")
+    lav_msg_stop(gettext(
+      "local option M.method should be one of GLS, ML or ULS."))
   }
 
   # local.twolevel.method
   local.twolevel.method <- tolower(local.options[["twolevel.method"]])
   if (!local.twolevel.method %in% c("h1", "anova", "mean")) {
-    stop("lavaan ERROR: local option twolevel.method should be one of h1, anova or mean.")
+    lav_msg_stop(gettext(
+      "local option twolevel.method should be one of h1, anova or mean."))
   }
 
   lavoptions <- FIT@Options
@@ -443,7 +438,8 @@ lav_sam_step1_local <- function(STEP1 = NULL, FIT = NULL,
     }
     if (qr(this.lambda)$rank < ncol(this.lambda)) {
       print(this.lambda)
-      stop("lavaan ERROR: LAMBDA has no full column rank. Please use sam.method = global")
+      lav_msg_stop(gettext(
+        "LAMBDA has no full column rank. Please use sam.method = global"))
     }
   } # b
 
@@ -551,7 +547,7 @@ lav_sam_step1_local <- function(STEP1 = NULL, FIT = NULL,
         COV <- COV[ov.idx, ov.idx, drop = FALSE]
         YBAR <- YBAR[ov.idx]
       } else {
-        stop("lavaan ERROR: level 3 not supported (yet).")
+        lav_msg_stop(gettext("level 3 not supported (yet)."))
       }
 
       # single level
@@ -664,7 +660,8 @@ lav_sam_step1_local <- function(STEP1 = NULL, FIT = NULL,
     # check for lv.interactions
     if (lv.interaction.flag && length(lv.int.names) > 0L) {
       if (FIT@Model@categorical || FIT@Model@correlation) {
-        stop("SAM + lv interactions do not work (yet) if correlation structures are used.")
+        lav_msg_stop(gettext("SAM + lv interactions do not work (yet) if 
+                             correlation structures are used."))
       }
 
       # EETA2
@@ -694,7 +691,7 @@ lav_sam_step1_local <- function(STEP1 = NULL, FIT = NULL,
         alpha[[b]] <- attr(tmp, "alpha")
         lambda[[b]] <- attr(tmp, "lambda")
       } else {
-        stop("FIXME: not ready yet!")
+        lav_msg_fixme("not ready yet!")
         # FSR -- no correction
         VETA[[b]] <- lav_sam_fs2(
           FS = FS[[b]],

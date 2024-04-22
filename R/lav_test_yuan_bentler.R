@@ -70,7 +70,8 @@ lav_test_yuan_bentler <- function(lavobject = NULL,
     "yuan.bentler",
     "yuan.bentler.mplus"
   ))) {
-    warning("lavaan WARNING: test must be one of `yuan.bentler', or `yuan.bentler.mplus'; will use `yuan.bentler' only")
+    lav_msg_warn(gettext("test must be one of `yuan.bentler', or 
+                         `yuan.bentler.mplus'; will use `yuan.bentler' only"))
     test <- "yuan.bentler"
   }
 
@@ -98,7 +99,8 @@ lav_test_yuan_bentler <- function(lavobject = NULL,
     )
     if (inherits(E.inv, "try-error")) {
       if (return.ugamma) {
-        warning("lavaan WARNING: could not invert information matrix needed for UGamma\n")
+        lav_msg_warn(gettext(
+          "could not invert information matrix needed for UGamma"))
         return(NULL)
       } else {
         TEST$standard$stat <- as.numeric(NA)
@@ -109,7 +111,8 @@ lav_test_yuan_bentler <- function(lavobject = NULL,
           shift.parameter = as.numeric(NA),
           label = character(0)
         )
-        warning("lavaan WARNING: could not invert information [matrix needed for robust test statistic\n")
+        lav_msg_warn(gettext("could not invert information [matrix needed for
+                             robust test statistic"))
         TEST[[test[1]]]$test <- test[1] # to prevent lavTestLRT error when robust test is detected for some but not all models
         return(TEST)
       }

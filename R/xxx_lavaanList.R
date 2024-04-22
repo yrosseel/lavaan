@@ -34,7 +34,7 @@ lavaanList <- function(model = NULL, # model
   # dataList or function?
   if (is.function(dataFunction)) {
     if (ndat == 0L) {
-      stop("lavaan ERROR: please specify number of requested datasets (ndat)")
+      lav_msg_stop(gettext("please specify number of requested datasets (ndat)"))
     }
     firstData <- do.call(dataFunction, args = dataFunction.args)
     # dataList  <- vector("list", length = ndat)
@@ -47,12 +47,12 @@ lavaanList <- function(model = NULL, # model
     # check if we have column names?
     NAMES <- colnames(firstData)
     if (is.null(NAMES)) {
-      stop("lavaan ERROR: data is a matrix without column names")
+      lav_msg_stop(gettext("data is a matrix without column names"))
     }
   } else if (inherits(firstData, "data.frame")) {
     # check?
   } else {
-    stop("lavaan ERROR: (generated) data is not a data.frame (or a matrix)")
+    lav_msg_stop(gettext("(generated) data is not a data.frame (or a matrix)"))
   }
 
   # parallel (see boot package)
@@ -262,7 +262,7 @@ lavaanList <- function(model = NULL, # model
           silent = TRUE
         )
       } else {
-        stop("lavaan ERROR: unknown cmd: ", cmd)
+        lav_msg_stop(gettext("unknown cmd:"), cmd)
       }
     } # data.ok.flag
 

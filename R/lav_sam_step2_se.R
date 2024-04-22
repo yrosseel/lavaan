@@ -69,7 +69,9 @@ lav_sam_step2_se <- function(FIT = NULL, JOINT = NULL,
       if (inherits(I.22.inv, "try-error")) {
         # hm, not good
         if (lavoptions$se != "naive") {
-          warning("lavaan WARNING: problem inverting information matrix (I.22);\n\t\t  -> switching to naive standard errors!")
+          lav_msg_warn(gettext(
+            "problem inverting information matrix (I.22); -> switching
+            to naive standard errors!"))
           lavoptions$se <- "naive"
         }
       }

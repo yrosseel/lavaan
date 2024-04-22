@@ -15,7 +15,8 @@ lav_samplestats_icov <- function(COV = NULL, ridge = 0.0, x.idx = integer(0L),
 
       if (inherits(tmp, "try-error")) {
         # fatal stop after all
-        stop("lavaan ERROR: sample covariance matrix is not positive-definite")
+        lav_msg_stop(gettext(
+          "sample covariance matrix is not positive-definite"))
       } else {
         cov.log.det <- attr(tmp, "logdet")
         attr(tmp, "logdet") <- NULL
@@ -24,18 +25,18 @@ lav_samplestats_icov <- function(COV = NULL, ridge = 0.0, x.idx = integer(0L),
         # give a warning
         if (warn) {
           if (ngroups > 1) {
-            warning(
-              "lavaan WARNING sample covariance matrix in group: ",
-              g, " is not positive-definite"
-            )
+            lav_msg_warn(gettextf(
+              "sample covariance matrix in group: %s is not
+              positive-definite", g))
           } else {
-            warning("lavaan WARNING: sample covariance matrix is not positive-definite")
+            lav_msg_warn(gettext(
+              "sample covariance matrix is not positive-definite"))
           }
         }
       }
     } else {
       # fatal stop
-      stop("lavaan ERROR: sample covariance matrix is not positive-definite")
+      lav_msg_stop(gettext("sample covariance matrix is not positive-definite"))
     }
   } else {
     cov.log.det <- attr(tmp, "logdet")

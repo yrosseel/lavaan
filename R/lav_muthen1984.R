@@ -442,13 +442,15 @@ muthen1984 <- function(Data = NULL,
   if (inherits(A11.inv, "try-error")) {
     # brute force
     A11.inv <- MASS::ginv(A11)
-    warning("lavaan WARNING: trouble constructing W matrix; used generalized inverse for A11 submatrix")
+    lav_msg_warn(gettext("trouble constructing W matrix;
+                         used generalized inverse for A11 submatrix"))
   }
 
   # invert
   da22 <- diag(A22)
   if (any(da22 == 0)) {
-    warning("lavaan WARNING: trouble constructing W matrix; used generalized inverse for A22 submatrix")
+    lav_msg_warn(gettext("trouble constructing W matrix;
+                         used generalized inverse for A22 submatrix"))
     A22.inv <- MASS::ginv(A22)
   } else {
     A22.inv <- A22

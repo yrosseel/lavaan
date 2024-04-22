@@ -53,7 +53,8 @@ lav_cov_huber <- function(Y = NULL, prob = 0.95, max.it = 200L, tol = 1e-07) {
       break
     }
     if (i == max.it) {
-      warning("lavaan WARNING: maximum number of iterations has been reached, without convergence.")
+      lav_msg_warn(gettext(
+        "maximum number of iterations has been reached, without convergence."))
     }
   }
 

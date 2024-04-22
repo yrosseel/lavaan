@@ -71,7 +71,7 @@ lav_cfa_1fac_3ind <- function(sample.cov, std.lv = FALSE,
   if (s21 * s31 * s32 < 0) {
     neg.triad <- TRUE
     if (warn.neg.triad) {
-      warning("lavaan WARNING: product of the three covariances is negative!")
+      lav_msg_warn(gettext("product of the three covariances is negative!"))
     }
   }
 

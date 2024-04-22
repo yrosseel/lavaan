@@ -279,7 +279,7 @@ lav_fit_cfi_lavobject <- function(lavobject = NULL, fit.measures = "cfi",
       silent = TRUE
     )
     if (inherits(fiml, "try-error")) {
-      warning("lavaan WARNING: computation of robust CFI failed.")
+      lav_msg_warn(gettext("computation of robust CFI failed."))
       fiml <- list(
         XX3 = as.numeric(NA), df3 = as.numeric(NA),
         c.hat3 = as.numeric(NA), XX3.scaled = as.numeric(NA),
@@ -290,7 +290,7 @@ lav_fit_cfi_lavobject <- function(lavobject = NULL, fit.measures = "cfi",
       fiml$XX3, fiml$df3, fiml$c.hat3, fiml$XX3.scaled,
       fiml$XX3.null, fiml$df3.null, fiml$c.hat3.null
     ))) {
-      warning("lavaan WARNING: computation of robust CFI resulted in NA values.")
+      lav_msg_warn(gettext("computation of robust CFI resulted in NA values."))
     }
   }
 
@@ -637,42 +637,34 @@ lav_fit_measures_check_baseline <- function(fit.indep = NULL, object = NULL,
 
   # check if everything is in order
   if (inherits(fit.indep, "try-error")) {
-    warning("lavaan WARNING: baseline model estimation failed")
+    lav_msg_warn(gettext("baseline model estimation failed"))
     return(NULL)
   } else if (!inherits(fit.indep, "lavaan")) {
-    warning(
-      "lavaan WARNING: (user-provided) baseline model ",
-      "is not a fitted lavaan object"
-    )
+    lav_msg_warn(gettext(
+      "(user-provided) baseline model is not a fitted lavaan object"))
     return(NULL)
   } else if (!fit.indep@optim$converged) {
-    warning("lavaan WARNING: baseline model did not converge")
+    lav_msg_warn(gettext("baseline model did not converge"))
     return(NULL)
   } else {
     # evaluate if estimator/test matches original object
     # note: we do not need to check for 'se', as it may be 'none'
     sameTest <- all(object@Options$test == fit.indep@Options$test)
     if (!sameTest) {
-      warning(
-        "lavaan WARNING:\n",
-        "\t Baseline model was using test(s) = ",
-        paste(dQuote(fit.indep@Options$test), collapse = ","),
-        "\n\t But original model was using test(s) = ",
-        paste(dQuote(object@Options$test), collapse = ","),
-        "\n\t Refitting baseline model!"
-      )
+      lav_msg_warn(gettextf(
+        "Baseline model was using test(s) = %1$s, but original model was using
+        test(s) = %2$s. Refitting baseline model!",
+        lav_msg_view(fit.indep@Options$test, "none"),
+        lav_msg_view(object@Options$test, "none")))
     }
     sameEstimator <- (object@Options$estimator ==
       fit.indep@Options$estimator)
     if (!sameEstimator) {
-      warning(
-        "lavaan WARNING:\n",
-        "\t Baseline model was using estimator = ",
+      lav_msg_warn(gettextf(
+        "Baseline model was using estimator = %1$s, but original model was
+        using estimator = %2$s. Refitting baseline model!",
         dQuote(fit.indep@Options$estimator),
-        "\n\t But original model was using estimator = ",
-        dQuote(object@Options$estimator),
-        "\n\t Refitting baseline model!"
-      )
+        dQuote(object@Options$estimator)))
     }
     if (!sameTest || !sameEstimator) {
       lavoptions <- object@Options

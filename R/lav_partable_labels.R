@@ -174,7 +174,7 @@ lav_partable_labels <- function(partable,
     # } else if(type == "unco") {
     #    idx <- which(partable$unco > 0L & !duplicated(partable$unco))
   } else {
-    stop("argument `type' must be one of free or user")
+    lav_msg_stop(gettext("argument `type' must be one of free or user"))
   }
 
   label[idx]

@@ -32,7 +32,8 @@ lav_model_gradient <- function(lavmodel = NULL,
   # state or final?
   if (is.null(GLIST)) GLIST <- lavmodel@GLIST
 
-  if (estimator == "REML") warning("analytical gradient not implement; use numerical approximation")
+  if (estimator == "REML") lav_msg_warn(gettext(
+    "analytical gradient not implement; use numerical approximation"))
 
   # group.weight
   # FIXME --> block.weight
@@ -173,7 +174,8 @@ lav_model_gradient <- function(lavmodel = NULL,
         # only save what we need
         DX[mm.in.group] <- DX.group[mm.names]
       } else {
-        stop("only LISREL and RAM representation has been implemented for now")
+        lav_msg_stop(gettext(
+          "only LISREL and RAM representation has been implemented for now"))
       }
 
       # weight by group
@@ -223,7 +225,7 @@ lav_model_gradient <- function(lavmodel = NULL,
   if (estimator %in% c("WLS", "DWLS", "ULS", "GLS", "NTGLS", "DLS")) {
     if (type != "free") {
       if (is.null(Delta)) {
-        stop("FIXME: Delta should be given if type != free")
+        lav_msg_fixme("Delta should be given if type != free")
       }
       # stop("FIXME: WLS gradient with type != free needs fixing!")
     } else {
@@ -347,7 +349,7 @@ lav_model_gradient <- function(lavmodel = NULL,
     lavdata@nlevels == 1L) {
     if (type != "free") {
       if (is.null(Delta)) {
-        stop("FIXME: Delta should be given if type != free")
+        lav_msg_fixme("Delta should be given if type != free")
       }
       # stop("FIXME: WLS gradient with type != free needs fixing!")
     } else {
@@ -447,7 +449,8 @@ lav_model_gradient <- function(lavmodel = NULL,
 
   else if (estimator == "ML" && lavdata@nlevels > 1L) {
     if (type != "free") {
-      stop("FIXME: type != free in lav_model_gradient for estimator ML for nlevels > 1")
+      lav_msg_fixme("type != free in lav_model_gradient for 
+                    estimator ML for nlevels > 1")
     } else {
       Delta <- computeDelta(
         lavmodel = lavmodel, GLIST. = GLIST,
@@ -484,7 +487,8 @@ lav_model_gradient <- function(lavmodel = NULL,
       } else {
         # missing data
         if (lavmodel@conditional.x) {
-          stop("lavaan ERROR: gradient for twolevel + conditional.x + fiml is not ready; use optim.gradient = \"numerical\"")
+          lav_msg_stop(gettext("gradient for twolevel + conditional.x + fiml
+                  is not ready; use optim.gradient = \"numerical\""))
         } else {
           DX <- lav_mvnorm_cluster_missing_dlogl_2l_samplestats(
             Y1 = lavdata@X[[g]],
@@ -521,7 +525,7 @@ lav_model_gradient <- function(lavmodel = NULL,
   else if (estimator == "PML" || estimator == "FML" ||
     estimator == "MML") {
     if (type != "free") {
-      stop("FIXME: type != free in lav_model_gradient for estimator PML")
+      lav_msg_fixme("type != free in lav_model_gradient for estimator PML")
     } else {
       Delta <- computeDelta(
         lavmodel = lavmodel, GLIST. = GLIST,
@@ -540,7 +544,9 @@ lav_model_gradient <- function(lavmodel = NULL,
       # thresholds/means, slopes, variances, correlations
       if (estimator == "PML") {
         if (lavdata@nlevels > 1L) {
-          stop("lavaan ERROR: PL gradient + multilevel not implemented; try optim.gradient = \"numerical\"")
+          lav_msg_stop(gettext(
+            "PL gradient + multilevel not implemented; 
+            try optim.gradient = \"numerical\""))
         } else if (conditional.x) {
           d1 <- pml_deriv1(
             Sigma.hat = Sigma.hat[[g]],
@@ -613,10 +619,8 @@ lav_model_gradient <- function(lavmodel = NULL,
       }
     } # g
   } else {
-    stop(
-      "lavaan ERROR: no analytical gradient available for estimator ",
-      estimator
-    )
+    lav_msg_stop(gettext(
+      "no analytical gradient available for estimator"), estimator)
   }
 
 
@@ -989,9 +993,9 @@ computeDelta <- function(lavmodel = NULL, GLIST. = NULL,
           DELTA <- rbind(DELTA.mu, DELTA)
         }
       } else {
-        stop("representation ", representation, " not implemented yet")
+        lav_msg_stop(gettextf("representation %s not implemented yet",
+                              representation))
       }
-
       Delta.group[, x.el.idx[[mm]]] <- DELTA
     } # mm
 
@@ -1132,7 +1136,7 @@ computeDeltaDx <- function(lavmodel = NULL, GLIST = NULL, target = "lambda",
             delta = TRUE
           )
         } else {
-          stop("lavaan ERROR: target ", target, " not implemented yet")
+          lav_msg_stop(gettextf("target %s not implemented yet", target))
         }
 
         # initialize?
@@ -1169,7 +1173,8 @@ computeOmega <- function(Sigma.hat = NULL, Mu.hat = NULL,
       if (attr(Sigma.hat[[g]], "po") == FALSE) {
         # FIXME: WHAT IS THE BEST THING TO DO HERE??
         # CURRENTLY: stop
-        warning("lav_model_gradient: Sigma.hat is not positive definite\n")
+        lav_msg_warn(gettext(
+          "lav_model_gradient: Sigma.hat is not positive definite\n"))
         Sigma.hat.inv <- MASS::ginv(Sigma.hat[[g]])
       } else {
         Sigma.hat.inv <- attr(Sigma.hat[[g]], "inv")

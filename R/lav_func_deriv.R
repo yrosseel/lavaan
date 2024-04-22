@@ -16,7 +16,8 @@ lav_func_gradient_complex <- function(func, x,
       dx <- lav_func_gradient_simple(func = func, x = x, h = sqrt(h), ...)
       return(dx)
     } else {
-      stop("function does not return a complex value") # eg abs()
+      lav_msg_stop(gettext(
+        "function does not return a complex value")) # eg abs()
     }
   }
   if (inherits(f0, "try-error")) {
@@ -24,11 +25,13 @@ lav_func_gradient_complex <- function(func, x,
       dx <- lav_func_gradient_simple(func = func, x = x, h = sqrt(h), ...)
       return(dx)
     } else {
-      stop("function does not support non-numeric (complex) argument")
+      lav_msg_stop(gettext(
+        "function does not support non-numeric (complex) argument"))
     }
   }
   if (length(f0) != 1L) {
-    stop("function is not scalar and returns more than one element")
+    lav_msg_stop(gettext(
+      "function is not scalar and returns more than one element"))
   }
 
   nvar <- length(x)
@@ -55,7 +58,8 @@ lav_func_gradient_simple <- function(func, x,
   # check current point, see if it is a scalar function
   f0 <- func(x, ...)
   if (length(f0) != 1L) {
-    stop("function is not scalar and returns more than one element")
+    lav_msg_stop(gettext(
+      "function is not scalar and returns more than one element"))
   }
 
   nvar <- length(x)
@@ -85,7 +89,8 @@ lav_func_jacobian_complex <- function(func, x,
       dx <- lav_func_jacobian_simple(func = func, x = x, h = sqrt(h), ...)
       return(dx)
     } else {
-      stop("function does not return a complex value") # eg abs()
+      lav_msg_stop(gettext(
+        "function does not return a complex value")) # eg abs()
     }
   }
   if (inherits(f0, "try-error")) {
@@ -93,7 +98,8 @@ lav_func_jacobian_complex <- function(func, x,
       dx <- lav_func_jacobian_simple(func = func, x = x, h = sqrt(h), ...)
       return(dx)
     } else {
-      stop("function does not support non-numeric (complex) argument")
+      lav_msg_stop(gettext(
+        "function does not support non-numeric (complex) argument"))
     }
   }
   nres <- length(f0)
@@ -142,13 +148,16 @@ lav_func_hessian_complex <- function(func, x,
                                      h = .Machine$double.eps, ...) {
   f0 <- try(func(x * (0 + 1i), ...), silent = TRUE)
   if (!is.complex(f0)) {
-    stop("function does not return a complex value") # eg abs()
+    lav_msg_stop(gettext(
+      "function does not return a complex value")) # eg abs()
   }
   if (inherits(f0, "try-error")) {
-    stop("function does not support non-numeric (complex) argument")
+    lav_msg_stop(gettext(
+      "function does not support non-numeric (complex) argument"))
   }
   if (length(f0) != 1L) {
-    stop("function is not scalar and returns more than one element")
+    lav_msg_stop(gettext(
+      "function is not scalar and returns more than one element"))
   }
 
   nvar <- length(x)

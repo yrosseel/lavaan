@@ -26,7 +26,8 @@ bootstrapLRT <- function(h0 = NULL, h1 = NULL, R = 1000L,
 
   # check for conditional.x = TRUE
   if (h0@Model@conditional.x) {
-    stop("lavaan ERROR: this function is not (yet) available if conditional.x = TRUE")
+    lav_msg_stop(gettext(
+      "this function is not (yet) available if conditional.x = TRUE"))
   }
 
   # prepare
@@ -79,7 +80,8 @@ bootstrapLRT <- function(h0 = NULL, h1 = NULL, R = 1000L,
   if (type == "bollen.stine" || type == "yuan") {
     # check if data is complete
     if (h0@Options$missing != "listwise") {
-      stop("lavaan ERROR: bollen.stine/yuan bootstrap not available for missing data")
+      lav_msg_stop(gettext(
+        "bollen.stine/yuan bootstrap not available for missing data"))
     }
     dataX <- vector("list", length = data@ngroups)
   } else {

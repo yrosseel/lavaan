@@ -33,7 +33,8 @@ lav_cfa_lambda2thetapsi <- function(lambda = NULL, S = NULL, S.inv = NULL,
     )
     if (inherits(theta, "try-error")) {
       # what to do?
-      warning("lavaan WARNING: problem computing THETA values; trying pace algorithm")
+      lav_msg_warn(gettext(
+        "problem computing THETA values; trying pace algorithm"))
       theta <- lav_efa_pace(S = S, nfactors = nfac, theta.only = TRUE)
     }
   } else {
@@ -45,7 +46,8 @@ lav_cfa_lambda2thetapsi <- function(lambda = NULL, S = NULL, S.inv = NULL,
     )
     if (inherits(theta, "try-error")) {
       # what to do?
-      warning("lavaan WARNING: problem computing THETA values; trying pace algorithm")
+      lav_msg_warn(gettext(
+        "problem computing THETA values; trying pace algorithm"))
       theta <- lav_efa_pace(S = S, nfactors = nfac, theta.only = TRUE)
     }
   }
@@ -76,7 +78,7 @@ lav_cfa_lambda2thetapsi <- function(lambda = NULL, S = NULL, S.inv = NULL,
     silent = TRUE
   )
   if (inherits(lambda, "try-error")) {
-    warning("lavaan WARNING: failed to compute lambda")
+    lav_msg_warn(gettext("failed to compute lambda"))
     SminTheta <- S - diag.theta # and hope for the best
   } else {
     cutoff <- 1 + 1 / (nobs - 1)
@@ -142,7 +144,7 @@ lav_cfa_lambdatheta2psi <- function(lambda = NULL, theta = NULL, # vector!
     silent = TRUE
   )
   if (inherits(lambda, "try-error")) {
-    warning("lavaan WARNING: failed to compute lambda")
+    lav_msg_warn(gettext("failed to compute lambda"))
     SminTheta <- S - diag.theta # and hope for the best
   } else {
     cutoff <- 1 + 1 / (nobs - 1)
