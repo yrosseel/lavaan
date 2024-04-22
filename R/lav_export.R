@@ -54,7 +54,7 @@ lavExport <- function(object, target = "lavaan", prefix = "sem",
   } else if (target == "openmx") {
     syntax <- lav2openmx(object)
   } else {
-    stop("lavaan ERROR: target", target, "has not been implemented yet")
+    lav_msg_stop(gettextf("target %s has not been implemented yet", target))
   }
 
   # export to file?
@@ -90,7 +90,7 @@ lavExport <- function(object, target = "lavaan", prefix = "sem",
         )
       }
     } else {
-      warning("lavaan WARNING: not data available")
+      lav_msg_warn(gettext("not data available"))
     }
     return(invisible(out))
   } else {
@@ -108,7 +108,7 @@ lav2check <- function(lav) {
   } else if (is.list(lav)) {
     # nothing to do
   } else {
-    stop("lavaan ERROR: lav must be of class `lavaan' or a parTable")
+    lav_msg_stop(gettext("lav must be of class `lavaan' or a parTable"))
   }
 
   # check syntax
@@ -172,20 +172,20 @@ lav2lavaan <- lav2lav <- function(lav) {
 
 lav2lisrel <- function(lav) {
   lav <- lav2check(lav)
-  stop("this function needs revision")
+  lav_msg_stop(gettext("this function needs revision"))
 }
 
 lav2eqs <- function(lav) {
   lav <- lav2check(lav)
-  stop("this function needs revision")
+  lav_msg_stop(gettext("this function needs revision"))
 }
 
 lav2sem <- function(lav) {
   lav <- lav2check(lav)
-  stop("this function needs revision")
+  lav_msg_stop(gettext("this function needs revision"))
 }
 
 lav2openmx <- function(lav) {
   lav <- lav2check(lav)
-  stop("this function needs revision")
+  lav_msg_stop(gettext("this function needs revision"))
 }

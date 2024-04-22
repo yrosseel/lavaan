@@ -43,7 +43,7 @@ InformativeTesting <- function(model = NULL, data, constraints = NULL,
         user.equal$rhs == this.rhs
       )
       if (length(idx) == 0L) { # not found, give warning?
-        stop("lavaan ERROR: no inequality constraints (<, >) found.")
+        lav_msg_stop(gettext("no inequality constraints (<, >) found."))
       }
 
       # change op to ==

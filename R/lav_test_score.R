@@ -19,13 +19,14 @@ lavTestScore <- function(object, add = NULL, release = NULL,
   lavoptions <- object@Options
 
   if (object@optim$npar > 0L && !object@optim$converged) {
-    stop("lavaan ERROR: model did not converge")
+    lav_msg_stop(gettext("model did not converge"))
   }
 
   # check for inequality constraints
   PT <- object@ParTable
   if (any(PT$op == ">" | PT$op == "<")) {
-    stop("lavaan ERROR: lavTestScore() does not handle inequality constraints (yet)")
+    lav_msg_stop(gettext(
+      "lavTestScore() does not handle inequality constraints (yet)"))
   }
 
   # check arguments
@@ -38,7 +39,8 @@ lavTestScore <- function(object, add = NULL, release = NULL,
   if (!is.null(add) && all(nchar(add) > 0L)) {
     # check release argument
     if (!is.null(release)) {
-      stop("lavaan ERROR: `add' and `release' arguments cannot be used together.")
+      lav_msg_stop(gettext(
+        "`add' and `release' arguments cannot be used together."))
     }
 
     # extend model with extra set of parameters
@@ -86,7 +88,7 @@ lavTestScore <- function(object, add = NULL, release = NULL,
 
     R <- object@Model@con.jac[, , drop = FALSE]
     if (nrow(R) == 0L) {
-      stop("lavaan ERROR: no equality constraints found in model.")
+      lav_msg_stop(gettext("no equality constraints found in model."))
     }
 
     score <- lavTech(object, "gradient.logl")
@@ -104,10 +106,9 @@ lavTestScore <- function(object, add = NULL, release = NULL,
     } else if (is.numeric(release)) {
       r.idx <- release
       if (max(r.idx) > nrow(R)) {
-        stop(
-          "lavaan ERROR: maximum constraint number (", max(r.idx),
-          ") is larger than number of constraints (", nrow(R), ")"
-        )
+        lav_msg_stop(gettextf(
+          "maximum constraint number (%1$s) is larger than number of
+          constraints (%2$s)", max(r.idx), nrow(R)))
       }
 
       # neutralize the non-needed constraints
@@ -119,7 +120,7 @@ lavTestScore <- function(object, add = NULL, release = NULL,
       Z1.plus <- MASS::ginv(Z1)
       J.inv <- Z1.plus[1:nrow(Information), 1:nrow(Information)]
     } else if (is.character(release)) {
-      stop("not implemented yet")
+      lav_msg_stop(gettext("not implemented yet"))
     }
 
     # lhs/rhs
@@ -156,7 +157,8 @@ lavTestScore <- function(object, add = NULL, release = NULL,
   } else {
     # generalized score test
     if (warn) {
-      warning("lavaan WARNING: se is not `standard'; not implemented yet; falling back to ordinary score test")
+      lav_msg_warn(gettext("se is not `standard'; not implemented yet;
+                           falling back to ordinary score test"))
     }
 
     # NOTE!!!

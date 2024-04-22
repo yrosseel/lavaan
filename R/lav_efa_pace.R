@@ -192,7 +192,7 @@ lav_efa_pace <- function(S, nfactors = 1L, p.idx = seq_len(ncol(S)),
   } else if (order.lv.by == "none") {
     order.idx <- seq_len(ncol(LAMBDA))
   } else {
-    stop("lavaan ERROR: order must be index, sumofsquares or none")
+    lav_msg_stop(gettext("order must be index, sumofsquares or none"))
   }
   LAMBDA <- LAMBDA[, order.idx, drop = FALSE]
 

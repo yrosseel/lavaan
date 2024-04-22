@@ -1390,7 +1390,7 @@ computeNU.LISREL <- function(MLIST = NULL,
   } else if (!is.null(nexo)) {
     this.nexo <- nexo
   } else {
-    stop("nexo not known")
+    lav_msg_stop(gettext("nexo not known"))
   }
 
   # create KAPPA
@@ -1431,7 +1431,7 @@ computeYHATetax.LISREL <- function(MLIST = NULL, eXo = NULL, ETA = NULL,
     nexo <- ncol(eXo)
     # check ETA rows
     if (!(nrow(ETA) == 1L || nrow(ETA) == nrow(eXo))) {
-      stop("lavaan ERROR: !(nrow(ETA) == 1L || nrow(ETA) == nrow(eXo))")
+      lav_msg_stop(gettext("!(nrow(ETA) == 1L || nrow(ETA) == nrow(eXo))"))
     }
   }
 
@@ -1978,7 +1978,7 @@ derivative.sigma.LISREL_OLD <- function(m = "lambda",
     DX <- A[, lav_matrix_diag_idx(nvar), drop = FALSE] +
       B[, lav_matrix_diag_idx(nvar), drop = FALSE]
   } else {
-    stop("wrong model matrix names: ", m, "\n")
+    lav_msg_stop(gettext("wrong model matrix names:"), m)
   }
 
   DX <- DX[v.idx, idx, drop = FALSE]
@@ -2074,7 +2074,7 @@ derivative.sigma.LISREL <- function(m = "lambda",
       B[, lav_matrix_diag_idx(nvar), drop = FALSE]
     DX <- DX[, idx, drop = FALSE]
   } else {
-    stop("wrong model matrix names: ", m, "\n")
+    lav_msg_stop(gettext("wrong model matrix names:"), m)
   }
 
   if (delta.flag && !m == "delta") {
@@ -2130,7 +2130,7 @@ derivative.mu.LISREL <- function(m = "alpha",
   } else if (m == "alpha") {
     DX <- LAMBDA %*% IB.inv
   } else {
-    stop("wrong model matrix names: ", m, "\n")
+    lav_msg_stop(gettext("wrong model matrix names:"), m)
   }
 
   DX <- DX[, idx, drop = FALSE]
@@ -2233,7 +2233,7 @@ derivative.th.LISREL <- function(m = "tau",
     DX2 <- K_nu %*% DX2
     DX <- K_nu * as.vector(DX1 - DX2)
   } else {
-    stop("wrong model matrix names: ", m, "\n")
+    lav_msg_stop(gettext("wrong model matrix names:"), m)
   }
 
   DX <- DX[, idx, drop = FALSE]
@@ -2292,7 +2292,7 @@ derivative.pi.LISREL <- function(m = "lambda",
     PRE <- rep(1, nexo) %x% diag(nvar)
     DX <- PRE * as.vector(LAMBDA %*% IB.inv %*% GAMMA)
   } else {
-    stop("wrong model matrix names: ", m, "\n")
+    lav_msg_stop(gettext("wrong model matrix names:"), m)
   }
 
   DX <- DX[, idx, drop = FALSE]

@@ -631,7 +631,9 @@ lav_model_h1_information_firstorder <- function(lavobject = NULL,
 
   estimator <- lavmodel@estimator
   if (!estimator %in% c("ML", "PML")) {
-    stop("lavaan ERROR: information = \"first.order\" not available for estimator ", sQuote(estimator))
+    lav_msg_stop(gettext(
+      "information = \"first.order\" not available for estimator"), 
+      sQuote(estimator))
   }
 
   # structured?
@@ -649,10 +651,11 @@ lav_model_h1_information_firstorder <- function(lavobject = NULL,
     lavoptions$.clustered) {
     clustered <- TRUE
     if (is.null(lavdata@Lp[[1]])) {
-      stop("lavaan ERROR: lavdata@Lp is empty, while clustered = TRUE")
+      lav_msg_stop(gettext("lavdata@Lp is empty, while clustered = TRUE"))
     }
     if (estimator == "PML") {
-      stop("lavaan ERROR: clustered information is not (yet) available when estimator = \"PML\"")
+      lav_msg_stop(gettext(
+        "clustered information is not (yet) available when estimator = 'PML'"))
     }
     # if(lavsamplestats@missing.flag) {
     #    stop("lavaan ERROR: clustered information is not (yet) available when missing = \"ML\"")
@@ -981,7 +984,8 @@ lav_model_h1_acov <- function(lavobject = NULL,
     # invert information
     I1.g.inv <- try(lav_matrix_symmetric_inverse(I1[[g]]), silent = TRUE)
     if (inherits(I1.g.inv, "try-error")) {
-      stop("lavaan ERROR: could not invert h1 information matrix in group ", g)
+      lav_msg_stop(gettext(
+        "could not invert h1 information matrix in group"), g)
     }
 
     # which type of se?

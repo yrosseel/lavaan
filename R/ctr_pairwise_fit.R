@@ -78,7 +78,7 @@ print.lavaan.tables.fit.Cp <- function(x, ...) {
 lavTablesFitCf <- function(object) {
   # check object class
   if (!inherits(object, "lavaan")) {
-    stop("lavaan ERROR: object must be an object of class lavaan")
+    lav_msg_stop(gettext("object must be an object of class lavaan"))
   }
   lavdata <- object@Data
   lavpta <- object@pta

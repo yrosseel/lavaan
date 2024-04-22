@@ -40,7 +40,8 @@ lavCor <- function(object,
   output <- tolower(output)
   if (se != "none") {
     if (output %in% c("cor", "cov", "sampstat", "th", "thresholds")) {
-      warning("lavaan WARNING: argument `se' is ignored since standard erros are not needed for the requested `output'")
+      lav_msg_warn(gettext("argument `se' is ignored since standard errors
+                           are not needed for the requested `output'"))
       se <- "none"
     }
   }
@@ -79,18 +80,17 @@ lavCor <- function(object,
     } else if (is.null(ordered)) {
       ordered <- character(0L)
     } else if (!is.character(ordered)) {
-      stop("lavaan ERROR: ordered argument must be a character vector")
+      lav_msg_stop(gettext("ordered argument must be a character vector"))
     } else if (length(ordered) == 1L && nchar(ordered) == 0L) {
       ordered <- character(0L)
     } else {
       # check if all names in "ordered" occur in the dataset?
       missing.idx <- which(!ordered %in% NAMES)
       if (length(missing.idx) > 0L) { # FIXme: warn = FALSE has no eff
-        warning(
-          "lavaan WARNING: ordered variable(s): ",
-          paste(ordered[missing.idx], collapse = " "),
-          "\n  could not be found in the data and will be ignored"
-        )
+        lav_msg_warn(gettextf(
+          "ordered variable(s): %s could not be found 
+          in the data and will be ignored",
+          lav_msg_view(ordered[missing.idx])))
       }
     }
     lav.data <- lavData(
@@ -104,8 +104,7 @@ lavCor <- function(object,
       )
     )
   } else {
-    stop(
-      "lavaan ERROR: lavCor can not handle objects of class ",
+    lav_msg_stop(gettext("lavCor can not handle objects of class"),
       paste(class(object), collapse = " ")
     )
   }

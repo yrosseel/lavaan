@@ -75,7 +75,9 @@ lav_samplestats_step2 <- function(UNI = NULL,
       }
       # check for near 1.0 correlations
       if (abs(COR[i, j]) > 0.99) {
-        warning("lavaan WARNING: correlation between variables ", ov.names[i], " and ", ov.names[j], " is (nearly) 1.0")
+        lav_msg_warn(gettextf(
+          "correlation between variables %1$s and %2$s is (nearly) 1.0",
+          ov.names[i], ov.names[j]))
       }
     }
   }

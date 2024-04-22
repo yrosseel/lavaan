@@ -5,11 +5,11 @@
 
 lavTestWald <- function(object, constraints = NULL, verbose = FALSE) {
   if (object@optim$npar > 0L && !object@optim$converged) {
-    stop("lavaan ERROR: model did not converge")
+    lav_msg_stop(gettext("model did not converge"))
   }
 
   if (is.null(constraints) || all(nchar(constraints) == 0L)) {
-    stop("lavaan ERROR: constraints are empty")
+    lav_msg_stop(gettext("constraints are empty"))
   }
 
   # extract slots
@@ -36,7 +36,8 @@ lavTestWald <- function(object, constraints = NULL, verbose = FALSE) {
     LIST$op <- c(LIST$op, op)
     LIST$rhs <- c(LIST$rhs, rhs)
   } else {
-    stop("lavaan ERROR: no equality constraints found in constraints argument")
+    lav_msg_stop(gettext(
+      "no equality constraints found in constraints argument"))
   }
 
   # theta = free parameters only

@@ -1572,7 +1572,7 @@ lav_mvnorm_missing_impute_pattern <- function(Y = NULL,
       silent = TRUE
     )
     if (inherits(Sigma_22.inv, "try-error")) {
-      stop("lavaan ERROR: Sigma_22.inv cannot be inverted")
+      lav_msg_stop(gettext("Sigma_22.inv cannot be inverted"))
     }
 
     # estimate missing values in this pattern
@@ -1655,7 +1655,7 @@ lav_mvnorm_missing_estep <- function(Y = NULL,
       silent = TRUE
     )
     if (inherits(Sigma_22.inv, "try-error")) {
-      stop("lavaan ERROR: Sigma_22.inv cannot be inverted")
+      lav_msg_stop(gettext("Sigma_22.inv cannot be inverted"))
     }
 
     # estimate missing values in this pattern

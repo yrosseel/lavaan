@@ -55,7 +55,7 @@ simulateData <- function( # user-specified model
         lav$start <- NULL
       }
     } else if (is.character(model[[1]])) {
-      stop("lavaan ERROR: model is a list, but not a parameterTable?")
+      lav_msg_stop(gettext("model is a list, but not a parameterTable?"))
     }
   } else {
     lav <- lavaanify(
@@ -99,7 +99,8 @@ simulateData <- function( # user-specified model
 
   idx <- which(lav$op == "~" & is.na(lav$ustart))
   if (length(idx) > 0L) {
-    warning("lavaan WARNING: some regression coefficients are unspecified and will be set to zero")
+    lav_msg_warn(gettext(
+      "some regression coefficients are unspecified and will be set to zero"))
   }
 
   idx <- which(is.na(lav$ustart))
@@ -117,13 +118,14 @@ simulateData <- function( # user-specified model
     # check if factor loadings are smaller than 1.0
     lambda.idx <- which(lav$op == "=~")
     if (any(lav$ustart[lambda.idx] >= 1.0)) {
-      warning("lavaan WARNING: standardized=TRUE but factor loadings are >= 1.0")
+      lav_msg_warn(gettext("standardized=TRUE but factor loadings are >= 1.0"))
     }
 
     # check if regression coefficients are smaller than 1.0
     reg.idx <- which(lav$op == "~")
     if (any(lav$ustart[reg.idx] >= 1.0)) {
-      warning("lavaan WARNING: standardized=TRUE but regression coefficients are >= 1.0")
+      lav_msg_warn(gettext(
+        "standardized=TRUE but regression coefficients are >= 1.0"))
     }
 
     # for ordered observed variables, we will get '0.0', but that is ok
@@ -140,7 +142,8 @@ simulateData <- function( # user-specified model
     lv.var.idx <- which(lav$op == "~~" & lav$lhs %in% lv.nox &
       lav$rhs == lav$lhs)
     if (any(lav$user[c(ov.var.idx, lv.var.idx)] > 0L)) {
-      warning("lavaan WARNING: if residual variances are specified, please use standardized=FALSE")
+      lav_msg_warn(gettext(
+        "if residual variances are specified, please use standardized=FALSE"))
     }
     lav$ustart[c(ov.var.idx, lv.var.idx)] <- 0.0
     fit <- lavaan(model = lav, sample.nobs = sample.nobs, ...)
@@ -380,7 +383,8 @@ lav_fleishman1978 <- function(n = 100, skewness = 0, kurtosis = 0, verbose = FAL
     control = list(trace = ifelse(verbose, 1, 0), rel.tol = 1e-10),
     skewness = skewness, kurtosis = kurtosis
   )
-  if (out$convergence != 0 || out$objective > 1e-5) warning("no convergence")
+  if (out$convergence != 0 || out$objective > 1e-5) 
+    lav_msg_warn(gettext("no convergence"))
   b <- out$par[1L]
   c <- out$par[2L]
   d <- out$par[3L]
@@ -412,7 +416,8 @@ ValeMaurelli1983 <- function(n = 100L, COR, skewness, kurtosis, debug = FALSE) {
       skewness = skewness, kurtosis = kurtosis
     )
     if (out$convergence != 0 || out$objective > 1e-5) {
-      warning("lavaan WARNING: ValeMaurelli1983 method did not convergence, or it did not find the roots")
+      lav_msg_warn(gettext("ValeMaurelli1983 method did not convergence,
+                   or it did not find the roots"))
     }
     b. <- out$par[1L]
     c. <- out$par[2L]
@@ -438,7 +443,8 @@ ValeMaurelli1983 <- function(n = 100L, COR, skewness, kurtosis, debug = FALSE) {
       scale = 10, control = list(trace = 0),
       b1 = b1, c1 = c1, d1 = d1, b2 = b2, c2 = c2, d2 = d2, R = R
     )
-    if (out$convergence != 0 || out$objective > 1e-5) warning("no convergence")
+    if (out$convergence != 0 || out$objective > 1e-5) 
+      lav_msg_warn(gettext("no convergence"))
     rho <- out$par[1L]
     rho
   }
@@ -453,7 +459,7 @@ ValeMaurelli1983 <- function(n = 100L, COR, skewness, kurtosis, debug = FALSE) {
   } else if (length(skewness) == 1L) {
     SK <- rep(skewness, nvar)
   } else {
-    stop("skewness has wrong length")
+    lav_msg_stop(gettext("skewness has wrong length"))
   }
 
   if (is.null(kurtosis)) {
@@ -463,7 +469,7 @@ ValeMaurelli1983 <- function(n = 100L, COR, skewness, kurtosis, debug = FALSE) {
   } else if (length(kurtosis) == 1L) {
     KU <- rep(kurtosis, nvar)
   } else {
-    stop("kurtosis has wrong length")
+    lav_msg_stop(gettext("kurtosis has wrong length"))
   }
 
   # create Fleishman table

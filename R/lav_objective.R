@@ -517,9 +517,8 @@ estimator.PML <- function(Sigma.hat = NULL, # model-based var/cov/cor
 
     na.idx <- which(is.na(logLikPair))
     if (length(na.idx) > 0L) {
-      warning(
-        "lavaan WARNING: some pairs produces NA values for logl:",
-        "\n", paste(round(logLikPair, 3), collapse = " ")
+      lav_msg_warn(gettext("some pairs produces NA values for logl:"),
+        lav_msg_view(round(logLikPair, 3), "none")
       )
     }
 
@@ -730,11 +729,11 @@ estimator.FML <- function(Sigma.hat = NULL, # model-based var/cov/cor
     PI <- numeric(nobs)
     for (i in 1:nobs) {
       # compute probability for each case
-      PI[i] <- stop("not implemented")
+      PI[i] <- lav_msg_stop(gettext("not implemented"))
     }
     # sum (log)likelihood over all observations
     LogLik <- sum(log(PI))
-    stop("not implemented")
+    lav_msg_stop(gettext("not implemented"))
   }
 
   # function value as returned to the minimizer
@@ -798,7 +797,8 @@ estimator.2L <- function(lavmodel = NULL,
 
   if (lavsamplestats@missing.flag) {
     if (lavmodel@conditional.x) {
-      stop("lavaan ERROR: multilevel + conditional.x is not ready yet for fiml; rerun with conditional.x = FALSE\n")
+      lav_msg_stop(gettext("multilevel + conditional.x is not ready yet for
+                           fiml; rerun with conditional.x = FALSE"))
     }
     # SIGMA.B <- Sigma.B[Lp$both.idx[[2]], Lp$both.idx[[2]], drop = FALSE]
     # if(any(diag(SIGMA.B) < 0)) {

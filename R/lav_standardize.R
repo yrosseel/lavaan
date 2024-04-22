@@ -119,7 +119,7 @@ lav_standardize_lv <- function(lavobject = NULL,
       if (!is.null(lavpartable$est)) {
         est <- lavpartable$est # if this changes, tag @TDJorgensen in commit message
       } else {
-        stop("lavaan ERROR: could not find `est' in lavpartable")
+        lav_msg_stop(gettext("could not find `est' in lavpartable"))
       }
     }
   } else {
@@ -312,7 +312,7 @@ lav_standardize_all <- function(lavobject = NULL,
       if (!is.null(lavpartable$est)) {
         est <- lavpartable$est # if this changes, tag @TDJorgensen in commit message
       } else {
-        stop("lavaan ERROR: could not find `est' in lavpartable")
+        lav_msg_stop(gettext("could not find `est' in lavpartable"))
       }
     }
   } else {
@@ -548,7 +548,7 @@ lav_standardize_all_nox <- function(lavobject = NULL,
       if (!is.null(lavpartable$est)) {
         est <- lavpartable$est # if this changes, tag @TDJorgensen in commit message
       } else {
-        stop("lavaan ERROR: could not find `est' in lavpartable")
+        lav_msg_stop(gettext("could not find `est' in lavpartable"))
       }
     }
   } else {

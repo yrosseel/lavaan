@@ -18,7 +18,7 @@ lav_data_summary_short <- function(object) {
   } else if (inherits(object, "lavData")) {
     lavdata <- object
   } else {
-    stop("lavaan ERROR: object must be lavaan or lavData object")
+    lav_msg_stop(gettext("object must be lavaan or lavData object"))
   }
 
   # two or three columns (depends on nobs/norig)

@@ -161,10 +161,9 @@ lav_model_objective <- function(lavmodel = NULL,
           group = g
         )
       } else {
-        stop(
-          "this estimator: `", estimator,
-          "' can not be used with incomplete data and the missing=\"ml\" option"
-        )
+        lav_msg_stop(gettextf(
+          "this estimator: `%s' can not be used with incomplete data and
+          the missing=\"ml\" option", estimator))
       }
     } else if (estimator == "ML" || estimator == "Bayes" ||
       estimator == "catML") {
@@ -172,8 +171,9 @@ lav_model_objective <- function(lavmodel = NULL,
       # ML and friends
       if (lavdata@nlevels > 1L) {
         if (estimator %in% c("catML", "Bayes")) {
-          stop("lavaan ERROR: multilevel data not supported for estimator ", estimator)
-        }
+          lav_msg_stop(gettext("multilevel data not supported for estimator"),
+                       estimator)
+          }
         group.fx <- estimator.2L(
           lavmodel = lavmodel,
           GLIST = GLIST,
@@ -351,7 +351,7 @@ lav_model_objective <- function(lavmodel = NULL,
         lavdata = lavdata
       )
     } else {
-      stop("unsupported estimator: ", estimator)
+      lav_msg_stop(gettext("unsupported estimator:"), estimator)
     }
 
     if (estimator %in% c("ML", "REML", "NTRLS", "catML")) {

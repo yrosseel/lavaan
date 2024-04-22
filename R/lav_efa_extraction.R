@@ -38,7 +38,7 @@ lav_efa_extraction <- function(S, nfactors = 1L,
     minGradient <- efa_extraction_ml_min_gradient
     cache <- efa_extraction_ml_init_cache(R = R, nfactors = nfactors)
   } else {
-    stop("lavaan ERROR: method must be uls or ml (for now)")
+    lav_msg_stop(gettext("method must be uls or ml (for now)"))
   }
   minHessian <- NULL
 
@@ -120,7 +120,8 @@ lav_efa_extraction <- function(S, nfactors = 1L,
     if (okflag) {
       LAMBDA <- LAMBDA %*% POST
     } else {
-      warning("lavaan WARNING: rotation of initial factor solution to echelon pattern failed.")
+      lav_msg_warn(gettext(
+        "rotation of initial factor solution to echelon pattern failed."))
     }
   }
 
@@ -164,7 +165,7 @@ lav_efa_extraction <- function(S, nfactors = 1L,
   } else if (order.lv.by == "none") {
     order.idx <- seq_len(ncol(LAMBDA))
   } else {
-    stop("lavaan ERROR: order must be index, sumofsquares or none")
+    lav_msg_stop(gettext("order must be index, sumofsquares or none"))
   }
   LAMBDA <- LAMBDA[, order.idx, drop = FALSE]
 
@@ -396,7 +397,7 @@ lav_efa_extraction_uls_corner <- function(S, nfactors = 1L, reflect = TRUE,
   } else if (order.lv.by == "none") {
     order.idx <- seq_len(ncol(LAMBDA))
   } else {
-    stop("lavaan ERROR: order must be index, sumofsquares or none")
+    lav_msg_stop(gettext("order must be index, sumofsquares or none"))
   }
   LAMBDA <- LAMBDA[, order.idx, drop = FALSE]
 

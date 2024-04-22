@@ -79,13 +79,11 @@ lav_bvord_cor_twostep_fit <- function(Y1, Y2, eXo = NULL, wt = NULL,
       empty.cells <- TRUE
       if (zero.cell.warn) {
         if (!is.null(Y1.name) && !is.null(Y2.name)) {
-          warning(
-            "lavaan WARNING: ",
-            "empty cell(s) in bivariate table of ",
-            Y1.name, " x ", Y2.name
-          )
+          lav_msg_warn(gettextf(
+            "empty cell(s) in bivariate table of %1$s x %2$s",
+            Y1.name, Y2.name))
         } else {
-          warning("lavaan WARNING: empty cell(s) in bivariate table")
+          lav_msg_warn(gettext("empty cell(s) in bivariate table"))
         }
       }
     }
@@ -95,7 +93,7 @@ lav_bvord_cor_twostep_fit <- function(Y1, Y2, eXo = NULL, wt = NULL,
       idx <- which(freq == 0L)
       # catch 2 empty cells: perfect correlation!
       if (length(idx) == 2L) {
-        warning("lavaan WARNING: two empty cells in 2x2 table")
+        lav_msg_warn(gettext("two empty cells in 2x2 table"))
         if (freq[1, 1] > 0L) {
           rho <- 1.0
           if (zero.cell.flag) {
@@ -209,16 +207,12 @@ lav_bvord_cor_twostep_fit <- function(Y1, Y2, eXo = NULL, wt = NULL,
   # check convergence
   if (optim$convergence != 0L) {
     if (!is.null(Y1.name) && !is.null(Y2.name)) {
-      warning(
-        "lavaan WARNING: ",
+      lav_msg_warn(gettextf(
         "estimation polychoric correlation did not converge for
-                    variables ", Y1.name, " and ", Y2.name
-      )
+                    variables %1$s and %2$s", Y1.name, Y2.name))
     } else {
-      warning(
-        "lavaan WARNING: estimation polychoric correlation(s)",
-        " did not always converge"
-      )
+      lav_msg_warn(gettext(
+        "estimation polychoric correlation(s) did not always converge"))
     }
     rho <- start.x
   } else {

@@ -97,7 +97,8 @@ lavSimulateData <- function(model = NULL,
 
       if (!is.null(sample.nobs) && (length(sample.nobs) > 1L ||
         sample.nobs != 1000L)) {
-        warning("lavaan WARNING: sample.nobs will be ignored if cluster.idx is provided")
+        lav_msg_warn(gettext(
+          "sample.nobs will be ignored if cluster.idx is provided"))
       }
       sample.nobs <- numeric(nblocks)
       for (g in seq_len(ngroups)) {
@@ -113,7 +114,9 @@ lavSimulateData <- function(model = NULL,
     } else if (ngroups > 1L && length(sample.nobs) == 1L) {
       sample.nobs <- rep.int(sample.nobs, ngroups)
     } else {
-      stop("lavaan ERROR: ngroups = ", ngroups, " but sample.nobs has length = ", length(sample.nobs))
+      lav_msg_stop(gettextf(
+        "ngroups = %1$s but sample.nobs has length = %2$s",
+        ngroups, length(sample.nobs)))
     }
   }
 
@@ -126,11 +129,9 @@ lavSimulateData <- function(model = NULL,
     ))) {
       if (output == "data.frame") {
         output <- "matrix"
-        warning(
-          "lavaan WARNING:",
-          " groups do not contain the same set of variables;",
-          "\n\t\t  changing output= argument to \"matrix\""
-        )
+        lav_msg_warn(gettext(
+          "groups do not contain the same set of variables;
+          changing output= argument to \"matrix\""))
       }
     }
   }
@@ -141,7 +142,7 @@ lavSimulateData <- function(model = NULL,
   # generate data per BLOCK
   for (b in seq_len(nblocks)) {
     if (lavoptions$conditional.x) {
-      stop("lavaan ERROR: conditional.x is not ready yet")
+      lav_msg_stop(gettext("conditional.x is not ready yet"))
     } else {
       COV <- lavimplied$cov[[b]]
       MU <- lavimplied$mean[[b]]
@@ -152,12 +153,11 @@ lavSimulateData <- function(model = NULL,
     if (empirical) {
       # check if sample.nobs is large enough
       if (sample.nobs[b] < NCOL(COV)) {
-        stop(
-          "lavaan ERROR: empirical = TRUE requires sample.nobs = ",
-          sample.nobs[b], " to be larger than",
-          "\n\t\tthe number of variables = ", NCOL(COV),
-          " in block = ", b
-        )
+        lav_msg_stop(gettextf(
+          "empirical = TRUE requires sample.nobs = %1$s to be larger than the
+          number of variables = %2$s in block = %3$s", 
+          sample.nobs[b], NCOL(COV), b
+        ))
       }
       if (lavdata@nlevels > 1L && (b %% lavdata@nlevels == 1L)) {
         COV <- COV * sample.nobs[b] / (sample.nobs[b] - sample.nobs[b + 1])
@@ -179,15 +179,12 @@ lavSimulateData <- function(model = NULL,
       # something went wrong; most likely: non-positive COV?
       ev <- eigen(COV, symmetric = TRUE, only.values = TRUE)$values
       if (any(ev < 0)) {
-        stop(
-          "lavaan ERROR: ",
-          "model-implied covariance matrix is not positive-definite",
-          "\n\t\tin block = ", b, "; ",
-          "smallest eigen value = ", round(min(ev), 5), "; ",
-          "\n\t\tchange the model parameters."
-        )
+        lav_msg_stop(gettextf(
+          "model-implied covariance matrix is not positive-definite in block 
+          = %1$s; smallest eigen value = %2$s; change the model parameters.",
+          b, round(min(ev), 5)))
       } else {
-        stop("lavaan ERROR: data generation failed for block = ", b)
+        lav_msg_stop(gettextf("data generation failed for block = %s", b))
       }
     } else {
       X[[b]] <- unname(tmp)
@@ -332,7 +329,7 @@ lavSimulateData <- function(model = NULL,
       out <- lapply(X, cov)
     }
   } else {
-    stop("lavaan ERROR: unknown option for argument output: ", output)
+    lav_msg_stop(gettextf("unknown option for argument output: %s", output))
   }
 
   if (return.fit) {

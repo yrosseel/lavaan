@@ -83,12 +83,13 @@ sam <- function(model = NULL,
   if (output == "list" || output == "lavaan") {
     # nothing to do
   } else {
-    stop("lavaan ERROR: output should be \"list\" or \"lavaan.\"")
+    lav_msg_stop(gettext("output should be \"list\" or \"lavaan.\""))
   }
 
   # check se= argument
   if (!se %in% c("standard", "naive", "twostep", "none")) {
-    stop("lavaan ERROR: se= argument must be twostep, naive, standard or none.")
+    lav_msg_stop(gettext(
+      "se= argument must be twostep, naive, standard or none."))
   }
 
   # handle dot dot dot
@@ -104,7 +105,9 @@ sam <- function(model = NULL,
 
   # check for conditional.x, which is not supported yet
   if (FIT@Options$conditional.x) {
-    warning("lavaan WARNING: sam() does not support conditional.x = TRUE (yet)", "\n\t\t", "  -> switching to conditional.x = FALSE")
+    lav_msg_warn(gettext(
+      "sam() does not support conditional.x = TRUE (yet) -> switching to
+      conditional.x = FALSE"))
     dotdotdot$conditional.x <- FALSE
     FIT <- lav_sam_step0(
       cmd = cmd, model = model, data = data, se = se,
@@ -114,7 +117,7 @@ sam <- function(model = NULL,
 
   # check for data.type == "none"
   if (FIT@Data@data.type == "none") {
-    stop("lavaan ERROR: no data or sample statistics are provided.")
+    lav_msg_stop(gettext("no data or sample statistics are provided."))
   }
 
   lavoptions <- lavInspect(FIT, "options")

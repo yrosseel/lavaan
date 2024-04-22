@@ -50,7 +50,7 @@ lav_model_lik_mml <- function(lavmodel = NULL,
   # VETAx <- computeVETAx.LISREL(MLIST = MLIST)
   # check for negative values?
   if (any(diag(VETAx) < 0)) {
-    warning("lavaan WARNING: --- VETAx contains negative values")
+    lav_msg_warn(gettext("--- VETAx contains negative values"))
     print(VETAx)
     return(0)
   }
@@ -72,7 +72,7 @@ lav_model_lik_mml <- function(lavmodel = NULL,
     # cholesky takes care of scaling
     tchol.VETA <- try(chol(VETAx), silent = TRUE)
     if (inherits(tchol.VETA, "try-error")) {
-      warning("lavaan WARNING: --- VETAx not positive definite")
+      lav_msg_warn(gettext("--- VETAx not positive definite"))
       print(VETAx)
       return(0)
     }

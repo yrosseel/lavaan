@@ -119,11 +119,9 @@ lav_model_hessian <- function(lavmodel = NULL,
   max.diff <- max(abs(Hessian - t(Hessian)))
   if (max.diff > 1e-05 * max(diag(Hessian))) {
     # hm, Hessian is not symmetric -> WARNING!
-    warning(
-      "lavaan WARNING: Hessian is not fully symmetric.",
-      "\n\tMax diff = ", max.diff,
-      "\n\t(Max diag Hessian = ", max(diag(Hessian)), ")"
-    )
+    lav_msg_warn(gettextf(
+    "Hessian is not fully symmetric. Max diff = %1$s (Max diag Hessian = %2$s)",
+    max.diff, max(diag(Hessian))))
     # FIXME: use numDeriv::hessian instead?
   }
   Hessian <- (Hessian + t(Hessian)) / 2.0

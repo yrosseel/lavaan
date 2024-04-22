@@ -47,10 +47,9 @@ lav_samplestats_step1 <- function(Y,
     if (ov.types[i] == "numeric") {
       fit <- lav_uvreg_fit(y = Y[, i], X = eXo, wt = wt)
       if (any(is.na(fit$theta))) {
-        stop(
-          "lavaan ERROR: linear regression failed for ", ov.names[i],
-          "; X may not be of full rank in group ", group
-        )
+        lav_msg_stop(gettextf(
+          "lavaan ERROR: linear regression failed for %1$s;
+          X may not be of full rank in group %2$s", ov.names[i], group))
       }
       FIT[[i]] <- fit
       # compute mean and variance
@@ -75,17 +74,22 @@ lav_samplestats_step1 <- function(Y,
       # FIXME: should we more tolerant here???
       y.freq <- tabulate(Y[, i], nbins = ov.levels[i])
       if (length(y.freq) != ov.levels[i]) {
-        stop("lavaan ERROR: variable ", ov.names[i], " has fewer categories (", length(y.freq), ") than expected (", ov.levels[i], ") in group ", group)
+        lav_msg_stop(gettextf(
+          "variable %1$s has fewer categories (%2$s) than 
+          expected (%3$s) in group %4$s", ov.names[i], 
+          length(y.freq), ov.levels[i], group))
       }
       if (any(y.freq == 0L)) {
-        stop("lavaan ERROR: some categories of variable `", ov.names[i], "' are empty in group ", group, "; frequencies are [", paste(y.freq, collapse = " "), "]")
+        lav_msg_stop(gettextf(
+          "some categories of variable `%1$s' are empty in group %2$s;
+          frequencies are [%3$s]", ov.names[i], group, 
+          lav_msg_view(y.freq, "none")))
       }
       fit <- lav_uvord_fit(y = Y[, i], X = eXo, wt = wt)
       if (any(is.na(fit$theta))) {
-        stop(
-          "lavaan ERROR: probit regression failed for ", ov.names[i],
-          "; X may not be of full rank in group ", group
-        )
+        lav_msg_stop(gettextf(
+          "probit regression failed for %1$s; X may not be of full rank
+          in group %2$s", ov.names[i], group))
       }
       FIT[[i]] <- fit
       TH[[i]] <- fit$theta[fit$th.idx]
@@ -104,7 +108,7 @@ lav_samplestats_step1 <- function(Y,
       )
       TH.IDX[[i]] <- rep(i, length(TH[[i]]))
     } else {
-      stop("lavaan ERROR: unknown ov.types:", ov.types[i])
+      lav_msg_stop(gettext("unknown ov.types:"), ov.types[i])
     }
   }
 

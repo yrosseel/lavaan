@@ -132,7 +132,7 @@ lav_fit_catml_dwls <- function(lavobject, check.pd = TRUE) {
 lav_fit_fiml_corrected <- function(lavobject, version = "V3") {
   version <- toupper(version)
   if (!version %in% c("V3", "V6")) {
-    stop("lavaan ERROR: only FIML-C(V3) and FIML-C(V6) are available.")
+    lav_msg_stop(gettext("only FIML-C(V3) and FIML-C(V6) are available."))
   }
 
   # empty list
