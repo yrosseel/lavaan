@@ -84,9 +84,8 @@ ldw_txtloc <- function(modelsrc, position) {
 }
 
 # ------------------------ ldw_parse_step1 ------------------------------
-# function to split the model source in tokens. Creates the functions what_next,
-# a function that looks at the characters at a location in the model source and
-# a current status to return a new status and store tokens with their attributes
+# function to split the model source in tokens. 
+# Returns a list with tokens with their attributes
 #   elem.pos  : position in source
 #   elem.type : type of token (cf. definition of types
 #               in ldw_parse_model_string)
@@ -263,8 +262,34 @@ ldw_parse_step1 <- function(modelsrc, types, debug, warn, spaces.in.operator) {
   elem.pos <- elem.pos[token.order]
   elem.type <- elem.type[token.order]
   elem.text <- elem.text[token.order]
-  elem.formula.number <- rep(0L, length(elem.type))
+
+  # concatenate identifiers with only spaces in between - LDW 22/4/2024
+  elem.i <- length(elem.pos)
+  concatenated <- FALSE
+  while (elem.i > 1L) {
+    if (elem.type[elem.i] == types$identifier && 
+        elem.type[elem.i - 1L] == types$identifier) {
+        spaces.between <- elem.pos[elem.i] - elem.pos[elem.i - 1L] - 
+          length(elem.text[elem.i - 1L])
+        elem.text[elem.i - 1L] <- paste0(
+          elem.text[elem.i - 1L],
+          strrep(" ", spaces.between),
+          elem.text[elem.i]
+        )
+        elem.type[elem.i] <- 0L
+        concatenated <- TRUE
+    }
+    elem.i <- elem.i - 1L
+  }
+  if (concatenated) { # remove items with type 0
+    elements <- which(elem.type > 0L)
+    elem.pos <- elem.pos[elements]
+    elem.type <- elem.type[elements]
+    elem.text <- elem.text[elements]
+  }
+
   # to set formula number
+  elem.formula.number <- rep(0L, length(elem.type))
   frm.number <- 1L
   frm.hasefa <- FALSE
   frm.lastplus <- FALSE
@@ -406,7 +431,11 @@ ldw_parse_step2 <- function(modellist, modelsrc, types, debug, warn) {
 # checks if an element of the elem.text member in a list is a valid r-name
 # ----------------------------------------------------------------------------
 ldw_parse_check_valid_name <- function(formul1, ind, modelsrc) {
-  if (make.names(formul1$elem.text[ind]) != formul1$elem.text[ind]) {
+  
+  # allow spaces, LDW 22/4/2024
+  testitem <- gsub(" ", "_", formul1$elem.text[ind], fixed = TRUE)
+  
+  if (make.names(testitem) != testitem) {
     lav_msg_stop(
       gettext("identifier is either a reserved word (in R) or 
               contains an illegal character"),
