@@ -27,7 +27,7 @@ lav_lavaan_step01_ovnames_initflat <- function(slotParTable     = NULL, # nolint
     flat.model <- slotParTable
   } else if (is.character(model)) {
     if (is.null(dotdotdot.parser)) {
-      flat.model <- lavParseModelString(model, parser = "old") # for now
+      flat.model <- lavParseModelString(model, parser = "new")
     } else {
       flat.model <- lavParseModelString(model, parser = dotdotdot.parser)
     }
