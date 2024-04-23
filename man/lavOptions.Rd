@@ -184,8 +184,12 @@ Data summary options:
       on the estimator and the likelihood option: it is set to \code{TRUE} if 
       maximum likelihood estimation is used and \code{likelihood="normal"}, 
       and \code{FALSE} otherwise.}
-    \item{\code{ridge}:}{Numeric. Small constant used for ridging. Only used 
-      if the sample covariance matrix is non positive definite.}
+    \item{\code{ridge}:}{Logical. If \code{TRUE} a small constant value will
+      be added the diagonal elements of the covariance (or correlation) 
+      matrix before analysis. The value can be set using the 
+      \code{ridge.constant} option.}
+    \item{\code{ridge.constant}:}{Numeric. Small constant used for ridging.
+      The default value is 1e-05.}
 }
 
 Multiple group options:
