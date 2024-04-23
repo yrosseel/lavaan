@@ -91,7 +91,7 @@ lav_optim_noniter <- function(lavmodel = NULL, lavsamplestats = NULL,
     ), silent = TRUE)
   } else {
     lav_msg_warn(
-      gettextf("unknown (noniterative) estimator: %s 
+      gettextf("unknown (noniterative) estimator: %s
                (returning starting values)", lavoptions$estimator)
     )
   }

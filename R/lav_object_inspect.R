@@ -43,7 +43,7 @@ lavInspect.lavaan <- function(object,                                # nolint
 
   # only a single argument
   if (length(what) > 1) {
-    lav_msg_stop(gettextf("argument %s cannot have more than one element", 
+    lav_msg_stop(gettextf("argument %s cannot have more than one element",
                           "what"))
   }
 

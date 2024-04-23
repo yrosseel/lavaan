@@ -155,7 +155,7 @@ lavSimulateData <- function(model = NULL,
       if (sample.nobs[b] < NCOL(COV)) {
         lav_msg_stop(gettextf(
           "empirical = TRUE requires sample.nobs = %1$s to be larger than the
-          number of variables = %2$s in block = %3$s", 
+          number of variables = %2$s in block = %3$s",
           sample.nobs[b], NCOL(COV), b
         ))
       }
@@ -180,7 +180,7 @@ lavSimulateData <- function(model = NULL,
       ev <- eigen(COV, symmetric = TRUE, only.values = TRUE)$values
       if (any(ev < 0)) {
         lav_msg_stop(gettextf(
-          "model-implied covariance matrix is not positive-definite in block 
+          "model-implied covariance matrix is not positive-definite in block
           = %1$s; smallest eigen value = %2$s; change the model parameters.",
           b, round(min(ev), 5)))
       } else {

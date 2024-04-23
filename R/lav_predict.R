@@ -206,7 +206,7 @@ lav_predict_internal <- function(lavmodel = NULL,
 
   if (type == "lv") {
     if (!is.null(ETA)) {
-      lav_msg_warn(gettext("lvs will be predicted here; 
+      lav_msg_warn(gettext("lvs will be predicted here;
                            supplying ETA has no effect"))
     }
 

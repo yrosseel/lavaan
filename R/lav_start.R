@@ -114,7 +114,7 @@ lav_start <- function(start.method = "default",
       start.user$est <- start.user$ustart
     } else {
      lav_msg_stop(gettext(
-       "problem with start argument: could not find est/start column 
+       "problem with start argument: could not find est/start column
        in model list"))
     }
   }
@@ -1018,7 +1018,7 @@ lav_start_check_cov <- function(lavpartable = NULL, start = lavpartable$start,
         start[this.cov.idx] <- 0
       } else if (COR > 1) {
         txt <- gettextf(
-          "starting values imply a correlation larger than 1; variables 
+          "starting values imply a correlation larger than 1; variables
           involved are: %1$s %2$s %3$s", var.lhs, var.rhs, block.txt)
 
         # three ways to fix it: rescale cov12, var1 or var2

@@ -1180,7 +1180,7 @@ lav_residuals_summary <- function(object, type = c("rmr", "srmr", "crmr"),
                       ACOV.idx[x.idx] <- FALSE
                     }
                   } else if (!is.numeric(custom.rmr[[cus]]$mean)) {
-                    lav_msg_stop(gettextf("custom.rmr$%s$mean must contain 
+                    lav_msg_stop(gettextf("custom.rmr$%s$mean must contain
                                   logical or numeric indices.", cus))
                   } else {
                     ACOV.idx <- custom.rmr[[cus]]$mean
@@ -1208,7 +1208,7 @@ lav_residuals_summary <- function(object, type = c("rmr", "srmr", "crmr"),
                   if (length(dim(custom.rmr[[cus]]$cov))) {
                     if (max(custom.rmr[[cus]]$cov[, 1:2] > nrow(rmsList.g[["cov"]]))) {
                       lav_msg_stop(gettextf(
-                        "numeric indices in custom.rmr$%1$s$cov cannot 
+                        "numeric indices in custom.rmr$%1$s$cov cannot
                         exceed %2$s", cus, nrow(rmsList.g[["cov"]])))
                     }
                     for (RR in 1:nrow(custom.rmr[[cus]]$cov)) {
@@ -1231,14 +1231,14 @@ lav_residuals_summary <- function(object, type = c("rmr", "srmr", "crmr"),
                   custom.rmr[[cus]]$cov <- cusCOV
                 } else if (!is.logical(custom.rmr[[cus]]$cov)) {
                   lav_msg_stop(gettextf(
-                    "custom.rmr$%s$cov must be a logical square matrix or a 
+                    "custom.rmr$%s$cov must be a logical square matrix or a
                     numeric matrix of (row/column) indices.", cus))
                 }
 
                 ## check dimensions
                 if (!all(dim(custom.rmr[[cus]]$cov) == dim(rmsList.g[["cov"]]))) {
                   lav_msg_stop(gettextf(
-                    "dim(custom.rmr$%s$cov) must match 
+                    "dim(custom.rmr$%s$cov) must match
                     dim(lavResiduals(fit)$cov)", cus))
                 }
                 ## users can specify upper.tri or lower.tri indices

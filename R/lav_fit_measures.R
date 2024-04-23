@@ -166,7 +166,7 @@ lav_fit_measures <- function(object, fit.measures = "all",
   TEST <- lavInspect(object, "test")
   test.names <- unname(sapply(TEST, "[[", "test"))
   if (test.names[1] == "none") {
-    lav_msg_stop(gettext("fit measures not available if test = \"none\".")) 
+    lav_msg_stop(gettext("fit measures not available if test = \"none\"."))
     #FIXME: allow RMRs, log.likelihoods, info criteria, npar, ntotal
   }
 
@@ -224,27 +224,27 @@ lav_fit_measures <- function(object, fit.measures = "all",
     object@test <- TEST
     test.names <- unname(sapply(TEST, "[[", "test"))
   }
-  
-  
+
+
   # TDJ: Check for user-supplied h1 model
   #      Similar to BASELINE model, use the following priority:
   #        1. user-provided h1 model
   #        2. h1 model in @external slot
   #        3. default h1 model (already in @h1 slot, no update necessary)
-  
+
   user_h1_exists <- FALSE
     # 1. user-provided h1 model
   if (!is.null(h1.model)) {
     stopifnot(inherits(h1.model, "lavaan"))
     user_h1_exists <- TRUE
-    
+
     # 2. h1 model in @external slot
   } else if (!is.null(object@external$h1.model)) {
     stopifnot(inherits(object@external$h1.model, "lavaan"))
     h1.model <- object@external$h1.model
     user_h1_exists <- TRUE
   }
-  
+
   ## Update statistics in @test slot?
   if (user_h1_exists) {
     ## update @test slot

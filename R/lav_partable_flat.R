@@ -188,7 +188,7 @@ lav_partable_flat <- function(FLAT = NULL, # nolint
           # we can assume nthresholds is a named vector
           nth <- unname(nthresholds[o])
           if (is.na(nth)) {
-            lav_msg_stop(gettextf("ordered variable %s not found in the 
+            lav_msg_stop(gettextf("ordered variable %s not found in the
                                   named vector nthresholds.", o))
           }
         }

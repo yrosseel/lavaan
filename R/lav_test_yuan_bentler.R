@@ -70,7 +70,7 @@ lav_test_yuan_bentler <- function(lavobject = NULL,
     "yuan.bentler",
     "yuan.bentler.mplus"
   ))) {
-    lav_msg_warn(gettext("test must be one of `yuan.bentler', or 
+    lav_msg_warn(gettext("test must be one of `yuan.bentler', or
                          `yuan.bentler.mplus'; will use `yuan.bentler' only"))
     test <- "yuan.bentler"
   }

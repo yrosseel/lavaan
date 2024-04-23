@@ -65,7 +65,7 @@ lav_test_browne <- function(lavobject = NULL,
     lav_msg_stop(gettext("Browne's test is not available when data is missing"))
   }
   if (lavdata@nlevels > 1L) {
-    lav_msg_stop(gettext("Browne's test is not available when data is 
+    lav_msg_stop(gettext("Browne's test is not available when data is
                          multilevel."))
   }
   if (length(lavmodel@ceq.nonlinear.idx) > 0L) {

@@ -84,7 +84,7 @@ ldw_txtloc <- function(modelsrc, position) {
 }
 
 # ------------------------ ldw_parse_step1 ------------------------------
-# function to split the model source in tokens. 
+# function to split the model source in tokens.
 # Returns a list with tokens with their attributes
 #   elem.pos  : position in source
 #   elem.type : type of token (cf. definition of types
@@ -267,9 +267,9 @@ ldw_parse_step1 <- function(modelsrc, types, debug, warn, spaces.in.operator) {
   elem.i <- length(elem.pos)
   concatenated <- FALSE
   while (elem.i > 1L) {
-    if (elem.type[elem.i] == types$identifier && 
+    if (elem.type[elem.i] == types$identifier &&
         elem.type[elem.i - 1L] == types$identifier) {
-        spaces.between <- elem.pos[elem.i] - elem.pos[elem.i - 1L] - 
+        spaces.between <- elem.pos[elem.i] - elem.pos[elem.i - 1L] -
           length(elem.text[elem.i - 1L])
         elem.text[elem.i - 1L] <- paste0(
           elem.text[elem.i - 1L],
@@ -431,13 +431,13 @@ ldw_parse_step2 <- function(modellist, modelsrc, types, debug, warn) {
 # checks if an element of the elem.text member in a list is a valid r-name
 # ----------------------------------------------------------------------------
 ldw_parse_check_valid_name <- function(formul1, ind, modelsrc) {
-  
+
   # allow spaces, LDW 22/4/2024
   testitem <- gsub(" ", "_", formul1$elem.text[ind], fixed = TRUE)
-  
+
   if (make.names(testitem) != testitem) {
     lav_msg_stop(
-      gettext("identifier is either a reserved word (in R) or 
+      gettext("identifier is either a reserved word (in R) or
               contains an illegal character"),
       ldw_txtloc(modelsrc, formul1$elem.pos[ind])
     )
@@ -815,7 +815,7 @@ ldw_parse_model_string <- function(model.syntax = "", as.data.frame. = FALSE,
         lav_msg_stop(
         gettext("syntax contains block identifier \"group\" with missing or
                 invalid number/label.The correct syntax is: \"LHS: RHS\", where
-                LHS is a block identifier (eg group or level), and RHS is the 
+                LHS is a block identifier (eg group or level), and RHS is the
                 group/level/block number or label."),
         ldw_txtloc(modelsrc, formul1$elem.pos[1]))
       }
@@ -885,7 +885,7 @@ ldw_parse_model_string <- function(model.syntax = "", as.data.frame. = FALSE,
     # check at most 1 colon
     if (length(colons) > 1) {
       lav_msg_stop(
-        gettext("Three-way or higher-order interaction terms (using multiple 
+        gettext("Three-way or higher-order interaction terms (using multiple
                 colons) are not supported in the lavaan syntax; please manually
                 construct the product terms yourself in the data.frame, give
                 them an appropriate name, and then you can use these interaction

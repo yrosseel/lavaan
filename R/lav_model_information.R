@@ -586,7 +586,7 @@ lav_model_information_augment_invert <- function(lavmodel = NULL,
     )$values
     if (any(eigvals < -1 * .Machine$double.eps^(3 / 4))) {
       lav_msg_warn(gettext(
-        "information matrix is not positive definite; 
+        "information matrix is not positive definite;
         the model may not be identified"))
     }
   }

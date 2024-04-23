@@ -456,7 +456,7 @@ mplus2lavaan.constraintSyntax <- function(syntax) {
     for (cmd in syntax.split[new.con.lines]) {
       # process new constraint definition
       new.con <- regexpr("^\\s*NEW\\s*\\(([^\\)]+)\\)", cmd, perl = TRUE, ignore.case = TRUE)
-      if (new.con[1L] == -1) 
+      if (new.con[1L] == -1)
         lav_msg_stop(gettext("Unable to parse names of new contraints"))
       new.con <- substr(cmd, attr(new.con, "capture.start"), attr(new.con, "capture.start") + attr(new.con, "capture.length") - 1L)
       new.con <- expandCmd(new.con) # allow for hyphen expansion
@@ -648,7 +648,7 @@ mplus2lavaan.modelSyntax <- function(syntax) {
           if (length(lhs.split) != length(rhs.split)) {
             browser()
             lav_msg_stop(gettext(
-              "PWITH command does not have the same number of arguments on 
+              "PWITH command does not have the same number of arguments on
               the left and right sides."))
           }
 

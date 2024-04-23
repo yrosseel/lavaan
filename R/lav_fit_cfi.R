@@ -410,7 +410,7 @@ lav_fit_cfi_lavobject <- function(lavobject = NULL, fit.measures = "cfi",
   #        1. user-provided h1 model
   #        2. h1 model in @external slot
   #        3. default h1 model (already in @h1 slot, no update necessary)
-  
+
   # 1. user-provided h1 model
   if (!is.null(h1.model)) {
     stopifnot(inherits(h1.model, "lavaan"))
@@ -420,7 +420,7 @@ lav_fit_cfi_lavobject <- function(lavobject = NULL, fit.measures = "cfi",
     stopifnot(inherits(lavobject@external$h1.model, "lavaan"))
     h1.model <- lavobject@external$h1.model
   } # else is.null
-  
+
   # 1. user-provided baseline model
   if (!is.null(baseline.model)) {
     baseline.test <-
@@ -696,34 +696,34 @@ lav_fit_measures_check_baseline <- function(fit.indep = NULL, object = NULL,
       TEST <- fit.indep@test
     }
   } # converged lavaan object
-  
-  
-  
+
+
+
   # TDJ: Check for user-supplied h1.model (here, the fit.h1= argument)
   #      Similar to BASELINE model, use the following priority:
   #        1. user-provided h1 model
   #        2. h1 model in @external slot
   #        3. default h1 model (already in @h1 slot, no update necessary)
   #FIXME? user-supplied h1 model in object might be in fit.indep, too
-  
+
   user_h1_exists <- FALSE
   # 1. user-provided h1 model
   if (!is.null(fit.h1)) {
     stopifnot(inherits(fit.h1, "lavaan"))
     user_h1_exists <- TRUE
-    
+
     # 2. h1 model in @external slot
   } else if (!is.null(object@external$h1.model)) {
     stopifnot(inherits(object@external$h1.model, "lavaan"))
     fit.h1 <- object@external$h1.model
     user_h1_exists <- TRUE
   }
-  
+
   if (user_h1_exists) {
     ## update @test slot
     TEST <- lav_update_test_custom_h1(lav_obj_h0 = fit.indep,
                                       lav_obj_h1 = fit.h1)@test
   }
-  
+
   TEST
 }

@@ -33,7 +33,7 @@ lav_partable_check <- function(partable, categorical = FALSE, warn = TRUE) {
     check <- FALSE
     if (warn) {
       lav_msg_warn(gettextf(
-        "parameter table does not contain (residual) variances for 
+        "parameter table does not contain (residual) variances for
         one or more variables: %s",
         lav_msg_view(all.names[missing.idx])))
     }
@@ -52,7 +52,7 @@ lav_partable_check <- function(partable, categorical = FALSE, warn = TRUE) {
       check <- FALSE
       if (warn) {
         lav_msg_warn(gettextf(
-          "parameter table does not contain intercepts 
+          "parameter table does not contain intercepts
           for one or more variables: %s",
           lav_msg_view(all.names[missing.idx])))
       }

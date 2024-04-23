@@ -449,7 +449,7 @@ lav_model_gradient <- function(lavmodel = NULL,
 
   else if (estimator == "ML" && lavdata@nlevels > 1L) {
     if (type != "free") {
-      lav_msg_fixme("type != free in lav_model_gradient for 
+      lav_msg_fixme("type != free in lav_model_gradient for
                     estimator ML for nlevels > 1")
     } else {
       Delta <- computeDelta(
@@ -545,7 +545,7 @@ lav_model_gradient <- function(lavmodel = NULL,
       if (estimator == "PML") {
         if (lavdata@nlevels > 1L) {
           lav_msg_stop(gettext(
-            "PL gradient + multilevel not implemented; 
+            "PL gradient + multilevel not implemented;
             try optim.gradient = \"numerical\""))
         } else if (conditional.x) {
           d1 <- pml_deriv1(

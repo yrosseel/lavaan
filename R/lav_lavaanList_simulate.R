@@ -74,7 +74,7 @@ lavSimulate <- function(pop.model = NULL, # population model
   na.idx <- which(is.na(p2.id))
   if (length(na.idx) > 0L) {
     lav_msg_warn(gettext(
-      "some estimated parameters were not mentioned in the population model; 
+      "some estimated parameters were not mentioned in the population model;
       partable user model idx = ", lav_msg_view(na.idx, "none")))
 
     # replace NA by '1' (override later!)

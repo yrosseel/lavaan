@@ -75,7 +75,7 @@ lavPredictY <- function(object,
       new.ordered.lev <- newData@ov$nlev[match.new.idx]
       if (any(orig.ordered.lev - new.ordered.lev != 0)) {
         lav_msg_stop(gettext(
-          "mismatch number of categories for some ordered variables in 
+          "mismatch number of categories for some ordered variables in
           newdata compared to original data."))
       }
     }

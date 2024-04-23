@@ -210,8 +210,8 @@ lav_data_cluster_patterns <- function(Y = NULL,
       mean.cluster.size <- mean(cluster.size[[l]])
       if (mean.cluster.size < 1.5) {
         lav_msg_warn(gettextf(
-          "mean cluster size is %s. This means that many clusters only 
-          contain a single observation.", mean.cluster.size)) 
+          "mean cluster size is %s. This means that many clusters only
+          contain a single observation.", mean.cluster.size))
         }
       cluster.sizes[[l]] <- unique(cluster.size[[l]])
       ncluster.sizes[[l]] <- length(cluster.sizes[[l]])

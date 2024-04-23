@@ -75,14 +75,14 @@ lav_samplestats_step1 <- function(Y,
       y.freq <- tabulate(Y[, i], nbins = ov.levels[i])
       if (length(y.freq) != ov.levels[i]) {
         lav_msg_stop(gettextf(
-          "variable %1$s has fewer categories (%2$s) than 
-          expected (%3$s) in group %4$s", ov.names[i], 
+          "variable %1$s has fewer categories (%2$s) than
+          expected (%3$s) in group %4$s", ov.names[i],
           length(y.freq), ov.levels[i], group))
       }
       if (any(y.freq == 0L)) {
         lav_msg_stop(gettextf(
           "some categories of variable `%1$s' are empty in group %2$s;
-          frequencies are [%3$s]", ov.names[i], group, 
+          frequencies are [%3$s]", ov.names[i], group,
           lav_msg_view(y.freq, "none")))
       }
       fit <- lav_uvord_fit(y = Y[, i], X = eXo, wt = wt)

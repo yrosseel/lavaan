@@ -514,7 +514,7 @@ lav_data_full <- function(data = NULL, # data.frame
   if (!is.null(group) && length(group) > 0L) {
     if (!(group %in% names(data))) {
       lav_msg_stop(gettextf(
-        "grouping variable %1$s not found; variable names 
+        "grouping variable %1$s not found; variable names
         found in data frame are: %2$s",
         sQuote(group),paste(names(data), collapse = " ")))
     }
@@ -561,7 +561,7 @@ lav_data_full <- function(data = NULL, # data.frame
     if (is.character(sampling.weights)) {
       if (!(sampling.weights %in% names(data))) {
         lav_msg_stop(
-          gettextf("sampling weights variable %1$s not found; 
+          gettextf("sampling weights variable %1$s not found;
                    variable names found in data frame are: %2$s",
           sQuote(sampling.weights)), paste(names(data), collapse = " "))
       }
@@ -888,7 +888,7 @@ lav_data_full <- function(data = NULL, # data.frame
         norig[[g]] <- nrow(data)
         if (warn && (nobs[[g]] < norig[[g]])) {
           lav_msg_warn(
-            gettextf("%s cases were deleted due to missing values in 
+            gettextf("%s cases were deleted due to missing values in
                      exogenous variable(s), while fixed.x = TRUE.",
                      (norig[[g]] - nobs[[g]])))
         }
@@ -969,7 +969,7 @@ lav_data_full <- function(data = NULL, # data.frame
       txt <- ""
       if (ngroups > 1L) txt <- gettextf("in group %s", g)
       lav_msg_warn(
-        gettextf("small number of observations (nobs < nvar) %1$s: 
+        gettextf("small number of observations (nobs < nvar) %1$s:
                  nobs = %2$s  nvar = %3$s", txt, nobs[[g]], nvar))
     }
     # check variances per group (if we have multiple groups)
@@ -1059,10 +1059,10 @@ lav_data_full <- function(data = NULL, # data.frame
             ""
           }
           lav_msg_warn(
-            gettextf("Level-1 variable %1$s has no variance at the within 
-                     level %2$s. The variable appears to be a between-level 
-                     variable. Please remove this variable from the level 1 
-                     section in the model syntax.", 
+            gettextf("Level-1 variable %1$s has no variance at the within
+                     level %2$s. The variable appears to be a between-level
+                     variable. Please remove this variable from the level 1
+                     section in the model syntax.",
                      dQuote(ov.names[[g]][v])), gtxt)
         } else {
           # some zero variances!

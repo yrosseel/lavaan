@@ -20,7 +20,7 @@ lav_ram <- function(partable = NULL,
   # not for conditional.x = TRUE yet
   conditional.x <- any(partable$exo > 0L & partable$op == "~")
   if (conditional.x) {
-    lav_msg_stop(gettext("RAM representation is not (yet) supported 
+    lav_msg_stop(gettext("RAM representation is not (yet) supported
                          if conditional.x = TRUE"))
   }
 

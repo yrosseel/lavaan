@@ -32,7 +32,7 @@ modindices <- function(object,
   if (object@Model@eq.constraints) {
     lav_msg_warn(
       gettext("the modindices() function ignores equality constraints;
-              use lavTestScore() to assess the impact of releasing one or 
+              use lavTestScore() to assess the impact of releasing one or
               multiple constraints.")
     )
   }

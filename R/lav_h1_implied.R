@@ -168,7 +168,7 @@ lav_h1_implied_logl <- function(lavdata = NULL,
           " "
         }
         lav_msg_warn(gettextf(
-          "H1 estimation resulted in a within covariance matrix %1$s with 
+          "H1 estimation resulted in a within covariance matrix %1$s with
           (near) zero variances for some of the level-1 variables: %2$s",
             gtxt, lav_msg_view(lavdata@ov.names.l[[g]][[1]][zero.var]))
         )

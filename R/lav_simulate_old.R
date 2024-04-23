@@ -383,7 +383,7 @@ lav_fleishman1978 <- function(n = 100, skewness = 0, kurtosis = 0, verbose = FAL
     control = list(trace = ifelse(verbose, 1, 0), rel.tol = 1e-10),
     skewness = skewness, kurtosis = kurtosis
   )
-  if (out$convergence != 0 || out$objective > 1e-5) 
+  if (out$convergence != 0 || out$objective > 1e-5)
     lav_msg_warn(gettext("no convergence"))
   b <- out$par[1L]
   c <- out$par[2L]
@@ -443,7 +443,7 @@ ValeMaurelli1983 <- function(n = 100L, COR, skewness, kurtosis, debug = FALSE) {
       scale = 10, control = list(trace = 0),
       b1 = b1, c1 = c1, d1 = d1, b2 = b2, c2 = c2, d2 = d2, R = R
     )
-    if (out$convergence != 0 || out$objective > 1e-5) 
+    if (out$convergence != 0 || out$objective > 1e-5)
       lav_msg_warn(gettext("no convergence"))
     rho <- out$par[1L]
     rho

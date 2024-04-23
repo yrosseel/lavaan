@@ -88,7 +88,7 @@ lavCor <- function(object,
       missing.idx <- which(!ordered %in% NAMES)
       if (length(missing.idx) > 0L) { # FIXme: warn = FALSE has no eff
         lav_msg_warn(gettextf(
-          "ordered variable(s): %s could not be found 
+          "ordered variable(s): %s could not be found
           in the data and will be ignored",
           lav_msg_view(ordered[missing.idx])))
       }

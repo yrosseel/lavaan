@@ -632,7 +632,7 @@ lav_model_h1_information_firstorder <- function(lavobject = NULL,
   estimator <- lavmodel@estimator
   if (!estimator %in% c("ML", "PML")) {
     lav_msg_stop(gettext(
-      "information = \"first.order\" not available for estimator"), 
+      "information = \"first.order\" not available for estimator"),
       sQuote(estimator))
   }
 

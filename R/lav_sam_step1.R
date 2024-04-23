@@ -55,7 +55,7 @@ lav_sam_step1 <- function(cmd = "sem", mm.list = NULL, mm.args = list(),
   # do we have at least 1 'regular' (measured) latent variable?
   LV.names <- unique(unlist(FIT@pta$vnames$lv.regular))
   if (length(LV.names) == 0L) {
-    lav_msg_stop(gettext("model does not contain any (measured) latent 
+    lav_msg_stop(gettext("model does not contain any (measured) latent
                          variables; use sem() instead"))
   }
 
@@ -218,7 +218,7 @@ lav_sam_step1 <- function(cmd = "sem", mm.list = NULL, mm.args = list(),
     if (!lavInspect(fit.mm.block, "converged")) {
       # warning for now, but this is not good!
       lav_msg_warn(gettextf(
-        "measurement model for %s did not converge!", 
+        "measurement model for %s did not converge!",
         lav_msg_view(mm.list[[mm]], "none")))
     }
 
@@ -660,7 +660,7 @@ lav_sam_step1_local <- function(STEP1 = NULL, FIT = NULL,
     # check for lv.interactions
     if (lv.interaction.flag && length(lv.int.names) > 0L) {
       if (FIT@Model@categorical || FIT@Model@correlation) {
-        lav_msg_stop(gettext("SAM + lv interactions do not work (yet) if 
+        lav_msg_stop(gettext("SAM + lv interactions do not work (yet) if
                              correlation structures are used."))
       }
 

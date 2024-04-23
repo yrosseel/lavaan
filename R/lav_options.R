@@ -50,7 +50,7 @@ lav_options_checkvalues <- function(optname, optvalue, chr) {
         "invalid value in %1$s option: %2$s.",
         "invalid values in %1$s option: %2$s."
       ),
-      optname, 
+      optname,
       lav_msg_view(optvalue[is.na(optvalsok)], log.sep = "none")
     ))
   }
@@ -157,8 +157,8 @@ lav_options_set <- function(opt = NULL) {                     # nolint
   # check option 'start'
   if (is.character(opt$start) && all(opt$start != c("default", "simple", "est")))
     lav_msg_stop(gettext(
-      "start option must be 'default', 'simple', 'est' or a parametertable"))  
-  
+      "start option must be 'default', 'simple', 'est' or a parametertable"))
+
   # first of all: set estimator ####
   if (opt$estimator == "default") {
     if (opt$.categorical) {
@@ -484,7 +484,7 @@ lav_options_set <- function(opt = NULL) {                     # nolint
     # test
     if (length(opt$test) > 1L) {
       lav_msg_warn(gettextf(
-        "test= argument can only contain a single element if missing = %s 
+        "test= argument can only contain a single element if missing = %s
         (taking the first)"), dQuote(opt$missing))
       opt$test <- opt$test[1]
     }

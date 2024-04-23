@@ -72,7 +72,7 @@ lav_test_satorra_bentler <- function(lavobject = NULL,
     "mean.var.adjusted"
   ))) {
     lav_msg_warn(gettext(
-      "test must be one of `satorra.bentler', `scaled.shifted' or 
+      "test must be one of `satorra.bentler', `scaled.shifted' or
       `mean.var.adjusted'; will use `satorra.bentler' only"))
     test <- "satorra.bentler"
   }

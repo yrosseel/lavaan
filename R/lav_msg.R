@@ -33,7 +33,7 @@ lav_msg_fixme <- function(...) {
 }
 
 # subroutine for above functions
-lav_msg <- function(wat, txt.width = getOption("width", 80L), 
+lav_msg <- function(wat, txt.width = getOption("width", 80L),
                     indent = 4L, showheader = TRUE) {
   if (showheader) {
     x <- sub("[() ].*$", "", as.character(sys.calls()))
@@ -72,7 +72,7 @@ lav_msg <- function(wat, txt.width = getOption("width", 80L),
 
   nstart <- 1L
   nstop <- 1L
-  corr.line1 <- 7L # first line possibly contains "error: " 
+  corr.line1 <- 7L # first line possibly contains "error: "
   while (nstart <= length(chunks)) {
     while (nstop < length(chunks) &&
            sum(chunk.size[seq.int(nstart, nstop + 1L)]) + corr.line1 +
@@ -80,7 +80,7 @@ lav_msg <- function(wat, txt.width = getOption("width", 80L),
       nstop <- nstop + 1
     }
     corr.line1 <- 0L
-    if (nstop < length(chunks) && chunks[nstop + 1L] == "___") { 
+    if (nstop < length(chunks) && chunks[nstop + 1L] == "___") {
       # forced line break
       chunks[nstop + 1L] <-  ""
       nstop <- nstop + 1L
@@ -144,17 +144,17 @@ lav_msg_view <- function(x,
 #     "argument %1$s is missing, using %2$s.",
 #     x, lav_msg_view(usedvalue)
 #   ))
-# 
+#
 # # warning if length of an argument x is greater then 1 and cannot be
 #   lav_msg_warn(gettextf("%1$s argument should be a single character string.
 #   Only the first one (%2$s) is used.", xname, x[[1]]))
-# 
+#
 # # error if argument is unknown (show value)
 #   lav_msg_stop(gettextf(
 #     "%1$s argument unknown: %2$s",
 #     xname, lav_msg_view(xvalue)
 #   ))
-# 
+#
 # # error if argument isn't one of the allowed values, show values allowed
 #   if (length(allowed) == 2L) {
 #     lav_msg_stop(gettextf(
@@ -167,7 +167,7 @@ lav_msg_view <- function(x,
 #       x, lav_msg_view(allowed, "or")
 #     ))
 #   }
-# 
+#
 # # error if argument isn't one of the allowed values (show invalid ones)
 #   lav_msg_stop(sprintf(
 #     ngettext(

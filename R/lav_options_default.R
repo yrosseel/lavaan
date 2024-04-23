@@ -96,7 +96,7 @@ lav_options_default <- function() {
     }
   }
   # ------------------------- store options --------------------------
-  elm("model.type", "sem", chr = c("sem", "cfa", "growth", "unrestricted"))
+  elm("model.type", "sem")
 
   # global
   elm("mimic", "lavaan", chr = c(default = "lavaan", lavaan = "lavaan",

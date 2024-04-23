@@ -97,7 +97,7 @@ pairwiseTables <- function(data, var.levels = NULL, no.x = NULL,
   # number of variables in data same as number of vectors in var.levels
   if (is.list(var.levels) && no.var != length(var.levels)) {
     lav_msg_stop(gettext(
-      "the length of var.levels does not match the number of variables of 
+      "the length of var.levels does not match the number of variables of
       the given data set"))
   }
 
@@ -127,7 +127,7 @@ pairwiseTables <- function(data, var.levels = NULL, no.x = NULL,
     if (!all(apply(na.omit(data), 2, function(x) {
       x %in% old.var.levels
     }))) {
-      lav_msg_stop(gettext("levels observed in data are not mentioned 
+      lav_msg_stop(gettext("levels observed in data are not mentioned
                            in var.levels"))
     }
   }
