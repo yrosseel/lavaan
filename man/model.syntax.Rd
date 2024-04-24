@@ -1,9 +1,6 @@
 \name{model.syntax}
 \alias{model.syntax}
 \alias{lavaanify}
-\alias{lavParTable}
-\alias{lavpartable}
-\alias{lavPartable}
 \alias{parseModelString}
 \alias{lavParseModelString}
 \title{The Lavaan Model Syntax}
