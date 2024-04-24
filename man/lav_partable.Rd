@@ -52,7 +52,7 @@ lav_partable_merge(pt1 = NULL, pt2 = NULL, remove.duplicated = FALSE,
 lav_partable_add(partable = NULL, add = list())
 }
 \arguments{
-\item{partable}{A parameter table. see \code{\link{lavParTable}} 
+\item{partable}{A parameter table. See \code{\link{lavParTable}} 
 for more information.}
 \item{blocks}{Character vector. Which columns in the parameter table should be
   taken to distinguish between different blocks of parameters (and hence
