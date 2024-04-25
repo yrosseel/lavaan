@@ -150,7 +150,6 @@ lav_lavaan_step01_ovnames_ovorder <- function(flat.model = NULL,       # nolint
 }
 
 lav_lavaan_step01_ovnames_group <- function(flat.model = NULL,        # nolint
-                                            ov.names   = character(0L),
                                             ngroups    = 1L) {
   # if "group :" appears in flat.model
   #   tmp.group.values: set of names in corresponding right hand sides
@@ -173,7 +172,7 @@ lav_lavaan_step01_ovnames_group <- function(flat.model = NULL,        # nolint
   flat.model.2 <- NULL
   tmp.lav <- NULL
   group.values <- NULL
-
+  ov.names  <- character(0L)
   if (any(flat.model$op == ":" & tolower(flat.model$lhs) == "group")) {
     # here, we only need to figure out:
     # - ngroups

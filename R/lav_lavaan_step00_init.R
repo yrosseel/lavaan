@@ -1,5 +1,4 @@
 lav_lavaan_step00_parameters <- function(matchcall = NULL,
-                                         defaults = NULL,
                                          syscall = NULL,
                                          dotdotdot = NULL) {
   # 1. to resolve a problem where parameter 'cl' is matched to 'cluster'
@@ -27,10 +26,26 @@ lav_lavaan_step00_parameters <- function(matchcall = NULL,
   if (!is.null(mc$cluster)) mc$cluster <- eval(mc$cluster, parent.frame(2))
 
   # default options
-  if (!is.null(defaults)) {
+  if (any(ddd$model.type == c("sem", "cfa", "growth"))) {
+    # default options for sem/cfa or growth
+    defaults <- list(
+      int.ov.free     = ddd$model.type != "growth",
+      int.lv.free     = ddd$model.type == "growth",
+      auto.fix.first  = TRUE, # (re)set in lav_options_set
+      auto.fix.single = TRUE,
+      auto.var        = TRUE,
+      auto.cov.lv.x   = TRUE,
+      auto.cov.y      = TRUE,
+      auto.th         = TRUE,
+      auto.delta      = TRUE,
+      auto.efa        = TRUE
+    )
     for (dflt.i in seq_along(defaults)) {
       argname <- names(defaults)[dflt.i]
-      if (is.null(mc[[argname]])) mc[[argname]] <- defaults[[dflt.i]]
+      if (is.null(mc[[argname]])) {
+        mc[[argname]] <- defaults[[dflt.i]]
+        ddd[[argname]] <- defaults[[dflt.i]]
+      }
     }
   }
 
