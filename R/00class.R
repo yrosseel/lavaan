@@ -215,6 +215,7 @@ setClass("lavaan",
 
 setClass("lavaanList",
   slots = c(
+    version            = "character", # lavaan version
     call               = "call", # matched call
     Options            = "list", # lavOptions
     ParTable           = "list",
