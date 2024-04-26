@@ -73,11 +73,9 @@ lavSimulate <- function(pop.model = NULL, # population model
   est1 <- fit@ParTable$est
   na.idx <- which(is.na(p2.id))
   if (length(na.idx) > 0L) {
-    warning(
-      "lavaan WARNING: some estimated parameters were not mentioned",
-      "\n\t\t in the population model;",
-      " partable user model idx = ", paste(na.idx)
-    )
+    lav_msg_warn(gettext(
+      "some estimated parameters were not mentioned in the population model;
+      partable user model idx = ", lav_msg_view(na.idx, "none")))
 
     # replace NA by '1' (override later!)
     p2.id[na.idx] <- 1L

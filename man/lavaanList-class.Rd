@@ -17,6 +17,7 @@ Objects can be created via the
 }
 \section{Slots}{
   \describe{
+    \item{\code{version}:}{The lavaan package version used to create this objects}
     \item{\code{call}:}{The function call as returned by \code{match.call()}.}
     \item{\code{Options}:}{Named list of options that were provided by
       the user, or filled-in automatically.}

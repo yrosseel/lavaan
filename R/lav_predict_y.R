@@ -36,9 +36,10 @@ lavPredictY <- function(object,
   if (is.null(newdata)) {
     # use internal copy:
     if (lavdata@data.type != "full") {
-      stop("lavaan ERROR: sample statistics were used for fitting and newdata is empty")
+      lav_msg_stop(gettext(
+        "sample statistics were used for fitting and newdata is empty"))
     } else if (is.null(lavdata@X[[1]])) {
-      stop("lavaan ERROR: no local copy of data; FIXME!")
+      lav_msg_stop(gettext("no local copy of data; FIXME!"))
     } else {
       data.obs <- lavdata@X
       ov.names <- lavdata@ov.names
@@ -73,11 +74,9 @@ lavPredictY <- function(object,
       )
       new.ordered.lev <- newData@ov$nlev[match.new.idx]
       if (any(orig.ordered.lev - new.ordered.lev != 0)) {
-        stop(
-          "lavaan ERROR: ",
-          "mismatch number of categories for some ordered variables",
-          "\n\t\tin newdata compared to original data."
-        )
+        lav_msg_stop(gettext(
+          "mismatch number of categories for some ordered variables in
+          newdata compared to original data."))
       }
     }
 
@@ -88,14 +87,16 @@ lavPredictY <- function(object,
 
   # check ynames
   if (length(ynames) == 0L) {
-    stop("lavaan ERROR: please specify the y-variables in the ynames= argument")
+    lav_msg_stop(gettext(
+      "please specify the y-variables in the ynames= argument"))
   } else if (!is.list(ynames)) {
     ynames <- rep(list(ynames), lavdata@ngroups)
   }
 
   # check xnames
   if (length(xnames) == 0L) {
-    stop("lavaan ERROR: please specify the x-variables in the xnames= argument")
+    lav_msg_stop(gettext(
+      "please specify the x-variables in the xnames= argument"))
   } else if (!is.list(xnames)) {
     xnames <- rep(list(xnames), lavdata@ngroups)
   }
@@ -106,7 +107,9 @@ lavPredictY <- function(object,
     # ynames in ov.names for this group?
     missing.idx <- which(!ynames[[g]] %in% ov.names[[g]])
     if (length(missing.idx) > 0L) {
-      stop("lavaan ERROR: some variable names in ynames do not appear in the dataset:\n\t\t", paste(ynames[[g]][missing.idx], collapse = " "))
+      lav_msg_stop(gettext(
+        "some variable names in ynames do not appear in the dataset:"),
+        lav_msg_view(ynames[[g]][missing.idx], "none"))
     } else {
       y.idx[[g]] <- match(ynames[[g]], ov.names[[g]])
     }
@@ -114,7 +117,9 @@ lavPredictY <- function(object,
     # xnames in ov.names for this group?
     missing.idx <- which(!xnames[[g]] %in% ov.names[[g]])
     if (length(missing.idx) > 0L) {
-      stop("lavaan ERROR: some variable names in xnames do not appear in the dataset:\n\t\t", paste(xnames[[g]][missing.idx], collapse = " "))
+      lav_msg_stop(gettext(
+        "some variable names in xnames do not appear in the dataset:"),
+        lav_msg_view(xnames[[g]][missing.idx], "none"))
     } else {
       x.idx[[g]] <- match(xnames[[g]], ov.names[[g]])
     }
@@ -131,7 +136,7 @@ lavPredictY <- function(object,
       force.zero.mean = force.zero.mean
     )
   } else {
-    stop("lavaan ERROR: method must be \"conditional.mean\" (for now).")
+    lav_msg_stop(gettext("method must be \"conditional.mean\" (for now)."))
   }
 
   # label?
@@ -230,10 +235,10 @@ lav_predict_y_conditional_mean <-
 
     # checks
     if (lavmodel@categorical) {
-      stop("lavaan ERROR: no support for categorical data (yet).")
+      lav_msg_stop(gettext("no support for categorical data (yet)."))
     }
     if (lavdata@nlevels > 1L) {
-      stop("lavaan ERROR: no support for multilevel data (yet).")
+      lav_msg_stop(gettext("no support for multilevel data (yet)."))
     }
 
     # conditional.x?
@@ -255,7 +260,7 @@ lav_predict_y_conditional_mean <-
       # multiple levels?
       if (lavdata@nlevels > 1L) {
         # TODO!
-        stop("lavaan ERROR: no support for multilevel data (yet)!")
+        lav_msg_stop(gettext("no support for multilevel data (yet)!"))
       } else {
         data.obs.g <- data.obs[[g]]
 

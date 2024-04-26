@@ -31,9 +31,9 @@ modindices <- function(object,
   # new in 0.6-17: check if the model contains equality constraints
   if (object@Model@eq.constraints) {
     lav_msg_warn(
-      gettext("the modindices() function ignores equality constraints;"),
-      gettext("use lavTestScore() to assess the impact of releasing one "),
-      gettext("or multiple constraints.")
+      gettext("the modindices() function ignores equality constraints;
+              use lavTestScore() to assess the impact of releasing one or
+              multiple constraints.")
     )
   }
 
@@ -109,9 +109,8 @@ modindices <- function(object,
   )
   # just in case...
   if (inherits(I22.inv, "try-error")) {
-    lav_msg_stop(
-      gettext("could not compute modification indices;"),
-      gettext("information matrix is singular"))
+    lav_msg_stop(gettext(
+      "could not compute modification indices; information matrix is singular"))
   }
 
   V <- I11 - I12 %*% I22.inv %*% I21

@@ -236,10 +236,9 @@ lav_partable_efa_constraints <- function(LIST = NULL,
           LIST$block == b &
           LIST$lhs %in% lv.nam.efa[f])
         if (length(ind.idx) < nzero) {
-          stop(
-            "lavaan ERROR: efa factor ", lv.nam.efa[f],
-            " has not enough indicators for echelon pattern"
-          )
+          lav_msg_stop(gettextf(
+            "efa factor %s has not enough indicators for echelon pattern",
+            lv.nam.efa[f]))
         }
 
         # fix to zero

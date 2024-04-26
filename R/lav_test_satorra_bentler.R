@@ -71,7 +71,9 @@ lav_test_satorra_bentler <- function(lavobject = NULL,
     "scaled.shifted",
     "mean.var.adjusted"
   ))) {
-    warning("lavaan WARNING: test must be one of `satorra.bentler', `scaled.shifted' or `mean.var.adjusted'; will use `satorra.bentler' only")
+    lav_msg_warn(gettext(
+      "test must be one of `satorra.bentler', `scaled.shifted' or
+      `mean.var.adjusted'; will use `satorra.bentler' only"))
     test <- "satorra.bentler"
   }
 
@@ -81,7 +83,8 @@ lav_test_satorra_bentler <- function(lavobject = NULL,
 
   # check method
   if (!all(method %in% c("original", "orthogonal.complement", "ABA"))) {
-    warning("lavaan WARNING: method must be one of `original', `ABA', `orthogonal.complement'; will use `ABA'")
+    lav_msg_warn(gettext("method must be one of `original', `ABA',
+                         `orthogonal.complement'; will use `ABA'"))
     method <- "original"
   }
 
@@ -107,10 +110,12 @@ lav_test_satorra_bentler <- function(lavobject = NULL,
     ), silent = TRUE)
     if (inherits(E.inv, "try-error")) {
       if (return.ugamma) {
-        warning("lavaan WARNING: could not invert information matrix needed for UGamma\n")
+        lav_msg_warn(gettext(
+          "could not invert information matrix needed for UGamma"))
         return(NULL)
       } else if (return.u) {
-        warning("lavaan WARNING: could not invert information matrix needed for UfromUGamma\n")
+        lav_msg_warn(gettext(
+          "could not invert information matrix needed for UfromUGamma"))
         return(NULL)
       } else {
         TEST$standard$stat <- as.numeric(NA)
@@ -121,7 +126,8 @@ lav_test_satorra_bentler <- function(lavobject = NULL,
           shift.parameter = as.numeric(NA),
           label = character(0)
         )
-        warning("lavaan WARNING: could not invert information matrix needed for robust test statistic\n")
+        lav_msg_warn(gettext("could not invert information matrix needed for
+                             robust test statistic"))
         TEST[[test[1]]]$test <- test[1] # to prevent lavTestLRT error when robust test is detected for some but not all models
         return(TEST)
       }
@@ -226,7 +232,7 @@ lav_test_satorra_bentler <- function(lavobject = NULL,
       Satterthwaite = Satterthwaite
     )
   } else {
-    stop("lavaan ERROR: method `", method, "' not supported")
+    lav_msg_stop(gettextf("method `%s' not supported", method))
   }
   trace.UGamma <- out$trace.UGamma
   trace.UGamma2 <- out$trace.UGamma2

@@ -77,7 +77,8 @@ lav_fsr_delta21 <- function(object, FSM = NULL) {
         # zero
         next
       } else {
-        stop("lavaan ERROR: model matrix ", mname, " is not lambda/theta/psi")
+        lav_msg_stop(gettextf(
+          "model matrix %s is not lambda/theta/psi", mname))
       }
     } # mm
 
@@ -110,7 +111,7 @@ lav_fsr_pa2si <- function(PT = NULL, LVINFO) {
 
       nfac <- length(lv.names)
       if (nfac > 1L) {
-        stop("lavaan ERROR: more than 1 factor in measurement block")
+        lav_msg_stop(gettext("more than 1 factor in measurement block"))
       }
 
       LV <- lv.names

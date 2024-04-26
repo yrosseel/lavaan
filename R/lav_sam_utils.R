@@ -22,7 +22,8 @@ lav_sam_mapping_matrix <- function(LAMBDA = NULL, THETA = NULL,
     )
     if (inherits(M, "try-error")) {
       if (warn) {
-        warning("lavaan WARNING: cannot invert crossprod(LAMBDA); using generalized inverse")
+        lav_msg_warn(gettext(
+          "cannot invert crossprod(LAMBDA); using generalized inverse"))
       }
       M <- MASS::ginv(LAMBDA)
     }
@@ -36,7 +37,7 @@ lav_sam_mapping_matrix <- function(LAMBDA = NULL, THETA = NULL,
     }
     if (inherits(S.inv, "try-error")) {
       if (warn) {
-        warning("lavaan WARNING: S is not invertible; switching to ULS method")
+        lav_msg_warn(gettext("S is not invertible; switching to ULS method"))
       }
       M <- lav_sam_mapping_matrix(LAMBDA = LAMBDA, method = "ULS")
     } else {
@@ -45,7 +46,8 @@ lav_sam_mapping_matrix <- function(LAMBDA = NULL, THETA = NULL,
       M <- try(solve(tLSinvL, tLSinv), silent = TRUE)
       if (inherits(M, "try-error")) {
         if (warn) {
-          warning("lavaan WARNING: problem contructing mapping matrix; switching to generalized inverse")
+          lav_msg_warn(gettext("problem contructing mapping matrix;
+                               switching to generalized inverse"))
         }
         M <- MASS::ginv(tLSinvL) %*% tLSinv
       }
@@ -106,7 +108,8 @@ lav_sam_mapping_matrix <- function(LAMBDA = NULL, THETA = NULL,
       M <- try(solve(tLTiL, tLTi), silent = TRUE)
       if (inherits(M, "try-error")) {
         if (warn) {
-          warning("lavaan WARNING: problem contructing ML mapping matrix; switching to ULS")
+          lav_msg_warn(gettext(
+            "problem contructing ML mapping matrix; switching to ULS"))
         }
         M <- lav_sam_mapping_matrix(LAMBDA = LAMBDA, method = "ULS")
       }
@@ -118,7 +121,8 @@ lav_sam_mapping_matrix <- function(LAMBDA = NULL, THETA = NULL,
       ), silent = TRUE)
       if (inherits(M, "try-error")) {
         if (warn) {
-          warning("lavaan WARNING: problem contructing ML mapping matrix; switching to ULS")
+          lav_msg_warn(gettext(
+            "problem contructing ML mapping matrix; switching to ULS"))
         }
         M <- lav_sam_mapping_matrix(LAMBDA = LAMBDA, method = "ULS")
       }
@@ -153,7 +157,7 @@ lav_sam_mapping_matrix_tmat <- function(LAMBDA = NULL,
     # 'marker' indicator has a single non-zero element in a row
     marker.idx <- lav_utils_get_marker(LAMBDA = LAMBDA, std.lv = TRUE)
     if (any(is.na(marker.idx))) {
-      stop("lavaan ERROR: no clear markers in LAMBDA matrix")
+      lav_msg_stop(gettext("no clear markers in LAMBDA matrix"))
     }
   }
 
@@ -209,7 +213,7 @@ lav_sam_tmat <- function(LAMBDA = NULL,
     # 'marker' indicator has a single 1 element in a row
     marker.idx <- lav_utils_get_marker(LAMBDA = LAMBDA, std.lv = FALSE)
     if (any(is.na(marker.idx))) {
-      stop("lavaan ERROR: no clear markers in LAMBDA matrix")
+      lav_msg_stop(gettext("no clear markers in LAMBDA matrix"))
     }
   }
 
@@ -290,7 +294,7 @@ lav_sam_veta <- function(M = NULL, S = NULL, THETA = NULL,
       silent = TRUE
     )
     if (inherits(lambda, "try-error")) {
-      warning("lavaan WARNING: failed to compute lambda")
+      lav_msg_warn(gettext("failed to compute lambda"))
       VETA <- MSM - MTM # and hope for the best
     } else {
       cutoff <- 1 + 1 / (N - 1)
@@ -336,8 +340,8 @@ lav_sam_veta2 <- function(FS = NULL, M = NULL,
   }
 
   if (length(lv.int.names) == 0L) {
-    stop("lv.int.names is empty: no lv quadratic/interaction terms ",
-         "are provided")
+    lav_msg_stop(gettext("lv.int.names is empty: no lv quadratic/interaction
+                         terms are provided"))
   }
 
   if (is.null(lv.names)) {
@@ -427,7 +431,7 @@ lav_sam_veta2 <- function(FS = NULL, M = NULL,
       Var.ERROR
     ), silent = TRUE)
     if (inherits(lambda, "try-error")) {
-      warning("lavaan WARNING: failed to compute lambda")
+      lav_msg_warn(gettext("failed to compute lambda"))
       VETA2 <- Var.FS2 - Var.ERROR # and hope for the best
     } else {
       cutoff <- 1 + 1 / (N - 1)
@@ -454,7 +458,8 @@ lav_sam_veta2 <- function(FS = NULL, M = NULL,
 lav_sam_eeta2 <- function(EETA = NULL, VETA = NULL, lv.names = NULL,
                           lv.int.names = NULL) {
   if (length(lv.int.names) == 0L) {
-    stop("lv.int.names is empty: no lv quadratic/interaction terms are provided")
+    lav_msg_stop(gettext("lv.int.names is empty: no lv quadratic/interaction
+                         terms are provided"))
   }
 
   if (is.null(lv.names)) {
@@ -487,7 +492,8 @@ lav_sam_fs2 <- function(FS = NULL, lv.names = NULL, lv.int.names = NULL) {
   }
 
   if (length(lv.int.names) == 0L) {
-    stop("lv.int.names is empty: no lv quadratic/interaction terms are provided")
+    lav_msg_stop(gettext("lv.int.names is empty: no lv quadratic/interaction
+                         terms are provided"))
   }
 
   if (is.null(lv.names)) {

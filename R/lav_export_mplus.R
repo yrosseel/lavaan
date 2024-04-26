@@ -168,7 +168,7 @@ lav_mplus_estimator <- function(object) {
       object@Options$test <- object@Options$test[-standard.idx]
     }
     if (length(object@Options$test) > 1L) {
-      warning("lavaan WARNING: only first (non-standard) test will be used")
+      lav_msg_warn(gettext("only first (non-standard) test will be used"))
       object@Options$test <- object@Options$test[1]
     }
   }
@@ -244,7 +244,7 @@ lav_mplus_header <- function(data.file = NULL, group.label = "", ov.names = "",
     c.DATA <- paste(c.DATA, "  type is fullcov;\n", sep = "")
     c.DATA <- paste(c.DATA, "  nobservations are ", nobs, ";\n", sep = "")
   } else {
-    stop("lavaan ERROR: data.type must be full or moment")
+    lav_msg_stop(gettext("data.type must be full or moment"))
   }
 
   # VARIABLE command

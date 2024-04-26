@@ -478,7 +478,7 @@ lav_model_estimate <- function(lavmodel = NULL,
     Sigma.hat <- computeSigmaHat(lavmodel, extra = TRUE, debug = lavoptions$debug)
     for (g in 1:ngroups) {
       if (!attr(Sigma.hat[[g]], "po")) {
-        group.txt <- 
+        group.txt <-
           if(ngroups > 1) gettextf(" in group %s.", g) else "."
         if (debug) {
           print(Sigma.hat[[g]][, ])

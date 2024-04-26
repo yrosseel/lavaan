@@ -282,8 +282,8 @@ pairwiseExpProbVec_GivenObs_UncMod <- function(lavobject) {
     Cor.hat.g <- cov2cor(Sigma.hat.g)
     cors <- Cor.hat.g[lower.tri(Cor.hat.g)]
     if (any(abs(cors) > 1)) {
-      warning("lavaan WARNING: some model-implied correlations
-                  are larger than 1.0")
+      lav_msg_warn(gettext(
+      "some model-implied correlations are larger than 1.0"))
     }
     nvar <- nrow(Sigma.hat.g)
     MEAN <- rep(0, nvar)

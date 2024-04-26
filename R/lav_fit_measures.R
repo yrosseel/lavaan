@@ -153,19 +153,20 @@ lav_fit_measures <- function(object, fit.measures = "all",
 
   # do we have data? (yep, we had to include this check)
   if (object@Data@data.type == "none") {
-    stop("lavaan ERROR: fit measures not available if there is no data.")
+    lav_msg_stop(gettext("fit measures not available if there is no data."))
   }
 
   # has the model converged?
   if (object@optim$npar > 0L && !object@optim$converged) {
-    stop("lavaan ERROR: fit measures not available if model did not converge")
+    lav_msg_stop(gettext(
+      "fit measures not available if model did not converge"))
   }
 
   # do we have a test statistic?
   TEST <- lavInspect(object, "test")
   test.names <- unname(sapply(TEST, "[[", "test"))
   if (test.names[1] == "none") {
-    stop("lavaan ERROR: fit measures not available if test = \"none\".") 
+    lav_msg_stop(gettext("fit measures not available if test = \"none\"."))
     #FIXME: allow RMRs, log.likelihoods, info criteria, npar, ntotal
   }
 
@@ -223,27 +224,27 @@ lav_fit_measures <- function(object, fit.measures = "all",
     object@test <- TEST
     test.names <- unname(sapply(TEST, "[[", "test"))
   }
-  
-  
+
+
   # TDJ: Check for user-supplied h1 model
   #      Similar to BASELINE model, use the following priority:
   #        1. user-provided h1 model
   #        2. h1 model in @external slot
   #        3. default h1 model (already in @h1 slot, no update necessary)
-  
+
   user_h1_exists <- FALSE
     # 1. user-provided h1 model
   if (!is.null(h1.model)) {
     stopifnot(inherits(h1.model, "lavaan"))
     user_h1_exists <- TRUE
-    
+
     # 2. h1 model in @external slot
   } else if (!is.null(object@external$h1.model)) {
     stopifnot(inherits(object@external$h1.model, "lavaan"))
     h1.model <- object@external$h1.model
     user_h1_exists <- TRUE
   }
-  
+
   ## Update statistics in @test slot?
   if (user_h1_exists) {
     ## update @test slot
@@ -272,11 +273,9 @@ lav_fit_measures <- function(object, fit.measures = "all",
   } else if (output %in% c("text", "pretty", "summary")) {
     output <- "text"
   } else {
-    stop(
-      "lavaan ERROR: output should be ", sQuote("vector"),
-      ", ", sQuote("list"),
-      ", ", sQuote("matrix"), " or ", sQuote("text")
-    )
+    lav_msg_stop(gettextf("output should be %s.",
+      lav_msg_view(c("vector", "list", "matrix", "text"), "none", FALSE)
+    ))
   }
 
   # options
@@ -530,10 +529,9 @@ lav_fit_measures <- function(object, fit.measures = "all",
       is.finite(fm.args$rmsea.ci.level)) {
       rmsea.ci.level <- fm.args$rmsea.ci.level
       if (rmsea.ci.level < 0 || rmsea.ci.level > 1.0) {
-        warning(
-          "lavaan WARNING: invalid rmsea.ci.level value [",
-          rmsea.ci.level, "] set to default 0.90."
-        )
+        lav_msg_warn(gettextf(
+          "invalid rmsea.ci.level value [%s] set to default 0.90.",
+          rmsea.ci.level))
         rmsea.ci.level <- 0.90
       }
     }

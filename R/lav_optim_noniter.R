@@ -11,15 +11,13 @@ lav_optim_noniter <- function(lavmodel = NULL, lavsamplestats = NULL,
 
   # no support for many things:
   if (lavmodel@ngroups > 1L) {
-    lav_msg_stop(
-      gettext("multiple groups not supported (yet)"),
-      gettext("with optim.method = 'NONITER'."))
+    lav_msg_stop(gettext(
+      "multiple groups not supported (yet) with optim.method = 'NONITER'."))
   }
 
   if (lavdata@nlevels > 1L) {
-    lav_msg_stop(
-      gettext("multilevel not supported (yet)"),
-      gettext("with optim.method = 'NONITER'."))
+    lav_msg_stop(gettext(
+      "multilevel not supported (yet) with optim.method = 'NONITER'."))
   }
 
   # no support (yet) for nonlinear constraints
@@ -28,23 +26,23 @@ lav_optim_noniter <- function(lavmodel = NULL, lavsamplestats = NULL,
     lavmodel@cin.nonlinear.idx
   )
   if (length(nonlinear.idx) > 0L) {
-    lav_msg_stop(
-      gettext("nonlinear constraints not supported (yet)"),
-      gettext("with optim.method = 'NONITER'."))
+    lav_msg_stop(gettext(
+      "nonlinear constraints not supported (yet) with optim.method = 'NONITER'."
+      ))
   }
 
   # no support (yet) for inequality constraints
   if (!is.null(body(lavmodel@cin.function))) {
-    lav_msg_stop(
-      gettext("inequality constraints not supported (yet)"),
-      gettext("with optim.method = 'NONITER'."))
+    lav_msg_stop(gettext(
+    "inequality constraints not supported (yet) with optim.method = 'NONITER'."
+    ))
   }
 
   # no support (yet) for equality constraints
   if (length(lavmodel@ceq.linear.idx) > 0L) {
-    lav_msg_stop(
-      gettext("equality constraints not supported (yet)"),
-      gettext("with optim.method = 'NONITER'."))
+    lav_msg_stop(gettext(
+      "equality constraints not supported (yet) with optim.method = 'NONITER'."
+      ))
   }
 
   # extract current set of free parameters
@@ -93,8 +91,8 @@ lav_optim_noniter <- function(lavmodel = NULL, lavsamplestats = NULL,
     ), silent = TRUE)
   } else {
     lav_msg_warn(
-      gettextf("unknown (noniterative) estimator: %s", lavoptions$estimator),
-      gettext("(returning starting values)")
+      gettextf("unknown (noniterative) estimator: %s
+               (returning starting values)", lavoptions$estimator)
     )
   }
   if (inherits(x, "try-error")) {

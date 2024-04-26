@@ -194,8 +194,8 @@ lav_predict_internal <- function(lavmodel = NULL,
       new.ordered.lev <- newData@ov$nlev[match.new.idx]
       if (any(orig.ordered.lev - new.ordered.lev != 0)) {
         lav_msg_stop(
-          gettext("mismatch number of categories for some ordered variables"),
-          gettext("in newdata compared to original data.")
+          gettext("mismatch number of categories for some ordered variables
+                  in newdata compared to original data.")
         )
       }
     }
@@ -206,7 +206,8 @@ lav_predict_internal <- function(lavmodel = NULL,
 
   if (type == "lv") {
     if (!is.null(ETA)) {
-      lav_msg_warn(gettext("lvs will be predicted here; supplying ETA has no effect"))
+      lav_msg_warn(gettext("lvs will be predicted here;
+                           supplying ETA has no effect"))
     }
 
     # post fit check (lv pd?)
@@ -310,8 +311,8 @@ lav_predict_internal <- function(lavmodel = NULL,
         FS.cov.inv <- try(solve(FS.cov), silent = TRUE)
         if (inherits(FS.cov.inv, "try-error")) {
           lav_msg_warn(
-            gettext("could not invert (co)variance matrix of factor scores;"),
-            gettext("returning original factor scores."))
+            gettext("could not invert (co)variance matrix of factor scores;
+                    returning original factor scores."))
           return(out[[g]])
         }
         fs.inv.sqrt <- lav_matrix_symmetric_sqrt(FS.cov.inv)
@@ -1386,7 +1387,8 @@ lav_predict_eta_ebm_ml <- function(lavobject = NULL, # for convenience
   for (g in seq_len(lavdata@ngroups)) {
     if (any(diag(THETA[[g]]) == 0)) {
       lav_msg_stop(gettext(
-        "(residual) variance matrix THETA contains zero elements on the diagonal."))
+        "(residual) variance matrix THETA contains zero elements
+        on the diagonal."))
     }
   }
 
@@ -1462,8 +1464,8 @@ lav_predict_eta_ebm_ml <- function(lavobject = NULL, # for convenience
     neg.var.idx <- which(diag(THETA[[g]]) < 0)
     if (length(neg.var.idx) > 0) {
       lav_msg_warn(
-        gettext("factor scores could not be computed due to"),
-        gettext("at least one negative (residual) variance"))
+        gettext("factor scores could not be computed due to at least
+                one negative (residual) variance"))
       next
     }
 

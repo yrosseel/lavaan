@@ -59,9 +59,11 @@ lav_options_default <- function() {
         opt.check[[name[1]]] <<- sublist
       }
       opt.default[[name[1]]][[name[2]]] <<- dflt
+      if (is.null(dflt)) opt.default[[name[1]]][name[2]] <<- list(NULL)
       opt.check[[name[1]]][[name[2]]] <<- list2store
     } else {
       opt.default[[name[2]]] <<- dflt
+      if (is.null(dflt)) opt.default[name[2]] <<- list(NULL)
       opt.check[[name[2]]] <<- list2store
     }
     NULL
@@ -94,7 +96,9 @@ lav_options_default <- function() {
     }
   }
   # ------------------------- store options --------------------------
-  elm("model.type", "sem", chr = c("sem", "cfa", "growth", "unrestricted"))
+  elm("model.type", "sem", chr = c(lavaan = "lavaan", cfa = "sem",
+            growth = "growth", sem = "sem", efa = "efa", 
+            unrestricted = "unrestricted"))
 
   # global
   elm("mimic", "lavaan", chr = c(default = "lavaan", lavaan = "lavaan",
@@ -348,10 +352,8 @@ lav_options_default <- function() {
   elm("zero.keep.margins", "default", chr = "default", bl = TRUE)
   elm("zero.cell.warn", FALSE, bl = TRUE) # since 0.6-1
 
-  # starting values
-  elm("start", "default", chr = c(
-    "default", "simple", "est"
-  ))
+  # starting values (char values checked in lav_options_set())
+  elm("start", "default", oklen = c(1L, 1000L))
 
   # sanity checks
   elm("check.start", TRUE, bl = TRUE)
@@ -372,7 +374,7 @@ lav_options_default <- function() {
   elm("store.vcov", "default", chr = "default", bl = TRUE)
 
   # internal
-  elm("parser", "old", chr = c(old = "old", orig = "old", new = "new",
+  elm("parser", "new", chr = c(old = "old", orig = "old", new = "new",
                                classic = "old"))
 
   # verbosity

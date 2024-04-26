@@ -575,7 +575,9 @@ MYNvcov.first.order <- function(lavmodel, lavsamplestats = NULL,
 
   eigvals <- eigen(E, symmetric = TRUE, only.values = TRUE)$values
   if (any(eigvals < -1 * .Machine$double.eps^(3 / 4))) {
-    warning("lavaan WARNING: matrix based on first order outer product of the derivatives is not positive definite; the standard errors may not be thrustworthy")
+    lav_msg_warn(gettext(
+      "matrix based on first order outer product of the derivatives is not
+      positive definite; the standard errors may not be thrustworthy"))
   }
   NVarCov <- MASS::ginv(E)
 

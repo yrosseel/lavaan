@@ -98,16 +98,12 @@ lav_bvmix_cor_twostep_fit <- function(Y1, Y2, eXo = NULL, wt = NULL,
   # check convergence
   if (optim$convergence != 0L) {
     if (!is.null(Y1.name) && !is.null(Y2.name)) {
-      warning(
-        "lavaan WARNING: ",
-        "estimation polyserial correlation did not converge for
-                    variables ", Y1.name, " and ", Y2.name
-      )
+      lav_msg_warn(gettextf(
+        "estimation polyserial correlation did not converge
+        for variables %1$s and %2$s", Y1.name, Y2.name))
     } else {
-      warning(
-        "lavaan WARNING: estimation polyserial correlation(s)",
-        " did not always converge"
-      )
+      lav_msg_warn(gettext(
+        "estimation polyserial correlation(s) did not always converge"))
     }
     rho <- cache$theta # starting value
   } else {

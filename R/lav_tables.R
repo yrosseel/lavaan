@@ -272,7 +272,7 @@ lav_tables_pattern <- function(lavobject = NULL, lavdata = NULL,
     } else if (lavobject@Options$estimator %in%
       c("WLS", "DWLS", "PML", "ULS")) {
       lav_msg_warn(gettextf(
-        "estimator %s is not using full information while est.prop is 
+        "estimator %s is not using full information while est.prop is
         using full information", lavobject@Options$estimator))
     } else {
       lav_msg_stop(gettextf(

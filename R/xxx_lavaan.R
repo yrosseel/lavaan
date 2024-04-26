@@ -59,7 +59,6 @@ lavaan <- function(
   mc <- match.call(expand.dots = TRUE)
   temp <- lav_lavaan_step00_parameters(
     matchcall = mc,
-    defaults  = NULL,
     syscall   = sys.call(), # to get main arguments without partial matching
     dotdotdot = list(...)
   )
@@ -112,7 +111,6 @@ lavaan <- function(
   ngroups <- 1L # default value
   temp <- lav_lavaan_step01_ovnames_group(
     flat.model = flat.model,
-    ov.names   = ov.names,
     ngroups    = ngroups
   )
   flat.model <- temp$flat.model
@@ -435,69 +433,55 @@ lavaan <- function(
 
   out
 }
-
-
-# # # # # # # # # # # # #
-# # cfa + sem + growth # #
-# # # # # # # # # # # # #
-growth <- cfa <- sem <- function(
-    # user-specified model: can be syntax, parameter Table
+# # # # # # # # #
+# # cfa + sem # #
+# # # # # # # # #
+cfa <- sem <- function(
+  model = NULL,
+  data = NULL,
+  ordered = NULL,
+  sampling.weights = NULL,
+  sample.cov = NULL,
+  sample.mean = NULL,
+  sample.th = NULL,
+  sample.nobs = NULL,
+  group = NULL,
+  cluster = NULL,
+  constraints = "",
+  WLS.V = NULL, # nolint
+  NACOV = NULL, # nolint
+  ov.order = "model",
+  ...) {
+  sc <- sys.call()
+  sc[["model.type"]] <- quote("sem")
+  # call mother function
+  sc[[1L]] <- quote(lavaan::lavaan)
+  eval(sc, parent.frame())
+}
+# # # # # # # #
+# # growth  # #
+# # # # # # # #
+growth <- function(
     model = NULL,
-    # data (second argument, most used)
     data = NULL,
-    # variable information
     ordered = NULL,
-    # sampling weights
     sampling.weights = NULL,
-    # summary data
     sample.cov = NULL,
     sample.mean = NULL,
     sample.th = NULL,
     sample.nobs = NULL,
-    # multiple groups?
     group = NULL,
-    # multiple levels?
     cluster = NULL,
-    # constraints
     constraints = "",
-    # user-specified variance matrices
     WLS.V = NULL, # nolint
     NACOV = NULL, # nolint
-    # internal order of ov.names
     ov.order = "model",
-    # options (dotdotdot)
     ...) {
-  mc <- match.call(expand.dots = TRUE)
-  # model.type? (cfa or sem or growth)
-  model.type <- as.character(mc[[1L]])
-  if (length(model.type) == 3L) {
-    model.type <- model.type[3L]
-  }
-  # default options for sem/cfa or growth
-  defaults <- list(
-    int.ov.free     = model.type != "growth",
-    int.lv.free     = model.type == "growth",
-    auto.fix.first  = TRUE, # (re)set in lav_options_set
-    auto.fix.single = TRUE,
-    auto.var        = TRUE,
-    auto.cov.lv.x   = TRUE,
-    auto.cov.y      = TRUE,
-    auto.th         = TRUE,
-    auto.delta      = TRUE,
-    auto.efa        = TRUE
-  )
-  temp <- lav_lavaan_step00_parameters(
-    matchcall = mc,
-    defaults  = defaults,
-    syscall   = sys.call(), # to get main arguments without partial matching
-    dotdotdot = list(...)
-  )
-  mc <- temp$mc
-  mc$model.type <- model.type
-
+  sc <- sys.call()
+  sc[["model.type"]] <- quote("growth")
   # call mother function
-  mc[[1L]] <- quote(lavaan::lavaan)
-  eval(mc, parent.frame())
+  sc[[1L]] <- quote(lavaan::lavaan)
+  eval(sc, parent.frame())
 }
 
 # # # # # # # # # # # # # # # # # # #

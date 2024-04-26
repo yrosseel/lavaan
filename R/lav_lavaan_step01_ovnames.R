@@ -27,7 +27,7 @@ lav_lavaan_step01_ovnames_initflat <- function(slotParTable     = NULL, # nolint
     flat.model <- slotParTable
   } else if (is.character(model)) {
     if (is.null(dotdotdot.parser)) {
-      flat.model <- lavParseModelString(model, parser = "old") # for now
+      flat.model <- lavParseModelString(model, parser = "new")
     } else {
       flat.model <- lavParseModelString(model, parser = dotdotdot.parser)
     }
@@ -150,7 +150,6 @@ lav_lavaan_step01_ovnames_ovorder <- function(flat.model = NULL,       # nolint
 }
 
 lav_lavaan_step01_ovnames_group <- function(flat.model = NULL,        # nolint
-                                            ov.names   = character(0L),
                                             ngroups    = 1L) {
   # if "group :" appears in flat.model
   #   tmp.group.values: set of names in corresponding right hand sides
@@ -173,7 +172,7 @@ lav_lavaan_step01_ovnames_group <- function(flat.model = NULL,        # nolint
   flat.model.2 <- NULL
   tmp.lav <- NULL
   group.values <- NULL
-
+  ov.names  <- character(0L)
   if (any(flat.model$op == ":" & tolower(flat.model$lhs) == "group")) {
     # here, we only need to figure out:
     # - ngroups
@@ -335,12 +334,10 @@ lav_lavaan_step01_ovnames_checklv <- function(                    # nolint
       # ignore
     } else {
       lav_msg_stop(gettextf(
-        "Interaction terms involving latent variables (%s) are not supported.",
-        lv.lv.names[lv.int.idx[1]]),
-        gettext("You may consider creating product indicators to define
-                the latent interaction term. See the indProd() function
-                in the semTools package.")
-      )
+        "Interaction terms involving latent variables (%s) are not supported.
+        You may consider creating product indicators to define
+        the latent interaction term. See the indProd() function
+        in the semTools package.", lv.lv.names[lv.int.idx[1]]))
     }
   }
 

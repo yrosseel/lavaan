@@ -437,8 +437,8 @@ lav_samplestats_Gamma <- function(Y, # Y+X if cond!
     if (conditional.x || fixed.x || !is.null(Sigma) ||
       !is.null(cluster.idx)) {
       lav_msg_stop(
-        gettext("unbiased Gamma only available for the simple"), gettext(
-        "(not conditional.x or fixed.x or model-based or clustered) setting."))
+        gettext("unbiased Gamma only available for the simple
+        (not conditional.x or fixed.x or model-based or clustered) setting."))
     } else {
       COV <- COV.unbiased <- cov(Y)
       COV <- COV * (N - 1) / N

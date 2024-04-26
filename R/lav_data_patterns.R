@@ -205,12 +205,14 @@ lav_data_cluster_patterns <- function(Y = NULL,
       nclusters[[l]] <- length(cluster.size[[l]])
       # check if we have more observations than clusters
       if (nclusters[[1]] == nclusters[[l]]) {
-        stop("lavaan ERROR: every cluster contains only one observation.")
+        lav_msg_stop(gettext("every cluster contains only one observation."))
       }
       mean.cluster.size <- mean(cluster.size[[l]])
       if (mean.cluster.size < 1.5) {
-        warning("lavaan WARNING: mean cluster size is ", mean.cluster.size, "\n\t\t This means that many clusters only contain a single observation.")
-      }
+        lav_msg_warn(gettextf(
+          "mean cluster size is %s. This means that many clusters only
+          contain a single observation.", mean.cluster.size))
+        }
       cluster.sizes[[l]] <- unique(cluster.size[[l]])
       ncluster.sizes[[l]] <- length(cluster.sizes[[l]])
       cluster.size.ns[[l]] <- as.integer(table(factor(cluster.size[[l]],

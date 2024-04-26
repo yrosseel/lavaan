@@ -98,7 +98,8 @@ expandCmd <- function(cmd, alphaStart = TRUE) {
       v_post.num <- as.integer(substr(v_post, attr(v_post.match, "capture.start")[whichCapture], attr(v_post.match, "capture.start")[whichCapture] + attr(v_post.match, "capture.length")[whichCapture] - 1))
       v_post.prefix <- substr(v_post, 1, attr(v_post.match, "capture.start")[whichCapture] - 1) # just trusting that pre and post match
 
-      if (is.na(v_pre.num) || is.na(v_post.num)) stop("Cannot expand variables: ", v_pre, ", ", v_post)
+      if (is.na(v_pre.num) || is.na(v_post.num)) lav_msg_stop(
+        gettext("Cannot expand variables:"), v_pre, ", ", v_post)
       v_expand <- paste(v_post.prefix, v_pre.num:v_post.num, v_post.suffix, sep = "", collapse = " ")
 
       # for first hyphen, there may be non-hyphenated syntax preceding the initial match
@@ -161,7 +162,9 @@ parseFixStart <- function(cmd) {
         var <- v_post
         val <- v_pre
       } else {
-        stop("Cannot parse Mplus fixed/starts values specification: ", v_pre, v_post)
+        lav_msg_stop(
+          gettext("Cannot parse Mplus fixed/starts values specification:"),
+          v_pre, v_post)
       }
 
       if (opchar == "@") {
@@ -333,11 +336,15 @@ expandGrowthCmd <- function(cmd) {
 
   # verify that this is not a random slope
   if (any(tolower(strsplit(cmd, "\\s+", perl = TRUE)[[1]]) %in% c("on", "at"))) {
-    stop("lavaan does not support random slopes or individually varying growth model time scores")
+    lav_msg_stop(gettext(
+      "lavaan does not support random slopes or individually varying
+      growth model time scores"))
   }
 
   cmd.split <- strsplit(cmd, "\\s*\\|\\s*", perl = TRUE)[[1]]
-  if (!length(cmd.split) == 2) stop("Unknown growth syntax: ", cmd)
+  if (!length(cmd.split) == 2) {
+    lav_msg_stop(gettext("Unknown growth syntax:"), cmd)
+  }
 
   lhs <- cmd.split[1]
   lhs.split <- strsplit(lhs, "\\s+", perl = TRUE)[[1]]
@@ -345,7 +352,10 @@ expandGrowthCmd <- function(cmd) {
   rhs <- cmd.split[2]
   rhs.split <- strsplit(rhs, "(\\*|\\s+)", perl = TRUE)[[1]]
 
-  if (length(rhs.split) %% 2 != 0) stop("Number of variables and number of tscores does not match: ", rhs)
+  if (length(rhs.split) %% 2 != 0) {
+    lav_msg_stop(gettext(
+      "Number of variables and number of tscores does not match:"), rhs)
+  }
   tscores <- as.numeric(rhs.split[1:length(rhs.split) %% 2 != 0]) # pre-multipliers
 
   vars <- rhs.split[1:length(rhs.split) %% 2 == 0]
@@ -446,7 +456,8 @@ mplus2lavaan.constraintSyntax <- function(syntax) {
     for (cmd in syntax.split[new.con.lines]) {
       # process new constraint definition
       new.con <- regexpr("^\\s*NEW\\s*\\(([^\\)]+)\\)", cmd, perl = TRUE, ignore.case = TRUE)
-      if (new.con[1L] == -1) stop("Unable to parse names of new contraints")
+      if (new.con[1L] == -1)
+        lav_msg_stop(gettext("Unable to parse names of new contraints"))
       new.con <- substr(cmd, attr(new.con, "capture.start"), attr(new.con, "capture.start") + attr(new.con, "capture.length") - 1L)
       new.con <- expandCmd(new.con) # allow for hyphen expansion
       new.parameters <- c(new.parameters, strsplit(trimSpace(new.con), "\\s+", perl = TRUE)[[1L]])
@@ -533,7 +544,9 @@ mplus2lavaan.modelSyntax <- function(syntax) {
       syntax <- paste(syntax, collapse = "\n")
     } # concatenate into a long string separated by newlines
   } else {
-    stop("mplus2lavaan.modelSyntax accepts a single character string or character vector containing all model syntax")
+    lav_msg_stop(gettext(
+      "mplus2lavaan.modelSyntax accepts a single character string or
+      character vector containing all model syntax"))
   }
 
   # because this is now exposed as a function in the package, handle the case of the user passing in full .inp file as text
@@ -634,7 +647,9 @@ mplus2lavaan.modelSyntax <- function(syntax) {
           rhs.split <- strsplit(rhs, "\\s+")[[1]] # trimSpace(
           if (length(lhs.split) != length(rhs.split)) {
             browser()
-            stop("PWITH command does not have the same number of arguments on the left and right sides.")
+            lav_msg_stop(gettext(
+              "PWITH command does not have the same number of arguments on
+              the left and right sides."))
           }
 
           cmd <- sapply(1:length(lhs.split), function(i) paste(lhs.split[i], lav.operator, rhs.split[i]))
@@ -685,7 +700,7 @@ mplus2lavaan.modelSyntax <- function(syntax) {
           # only include constraints on RHS
           cmd <- sapply(1:length(means.scales.split), function(v) paste(means.scales.noModifiers.split[v], "~*~", means.scales.split[v]))
         } else {
-          stop("What's the operator?!")
+          lav_msg_stop(gettext("What's the operator?!"))
         }
       } else if (grepl("|", cmd, fixed = TRUE)) {
         # expand growth modeling language
@@ -710,7 +725,8 @@ mplus2lavaan.modelSyntax <- function(syntax) {
       if (isTRUE(double_asterisks[1])) {
         ss <- strsplit(cmd, "*", fixed = TRUE)[[1]]
         if (length(ss) != 3) {
-          warning("problem interpreting double asterisk syntax: ", cmd) # sanity check on my logic
+          lav_msg_warn(gettext("problem interpreting double asterisk syntax:"),
+                       cmd) # sanity check on my logic
         } else {
           cmd <- paste0(ss[1], "*", ss[3], " + ", ss[2], "*", ss[3])
         }
@@ -763,7 +779,7 @@ mplus2lavaan <- function(inpfile, run = TRUE) {
   stopifnot(length(inpfile) == 1L)
   stopifnot(grepl("\\.inp$", inpfile, ignore.case = TRUE))
   if (!file.exists(inpfile)) {
-    stop("Could not find file: ", inpfile)
+    lav_msg_stop(gettext("Could not find file:"), inpfile)
   }
 
   # for future consideration. For now, require a .inp file
@@ -800,13 +816,16 @@ mplus2lavaan <- function(inpfile, run = TRUE) {
   estimator <- "default"
   if (!is.null(est <- mplus.inp$analysis$estimator)) {
     # no memory of what this is up to....
-    if (toupper(est) == "MUML") warning("Mplus does not support MUML estimator. Using default instead.")
+    if (toupper(est) == "MUML") lav_msg_warn(gettext(
+      "Mplus does not support MUML estimator. Using default instead."))
     estimator <- est
 
     # march 2013: handle case where categorical data are specified, but ML-based estimator requested.
     # use WLSMV instead
     if (!is.null(mplus.inp$variable$categorical) && toupper(substr(mplus.inp$analysis$estimator, 1, 2)) == "ML") {
-      warning("Lavaan does not yet support ML-based estimation for categorical data. Reverting to WLSMV")
+      lav_msg_warn(gettext(
+        "Lavaan does not yet support ML-based estimation for categorical data.
+        Reverting to WLSMV"))
       estimator <- "WLSMV"
     }
   }
@@ -911,8 +930,10 @@ divideIntoFields <- function(section.text, required) {
 splitFilePath <- function(abspath) {
   # function to split path into path and filename
   # code adapted from R.utils filePath command
-  if (!is.character(abspath)) stop("Path not a character string")
-  if (nchar(abspath) < 1 || is.na(abspath)) stop("Path is missing or of zero length")
+  if (!is.character(abspath)) lav_msg_stop(gettext(
+    "Path not a character string"))
+  if (nchar(abspath) < 1 || is.na(abspath)) lav_msg_stop(gettext(
+    "Path is missing or of zero length"))
 
   components <- strsplit(abspath, split = "[\\/]")[[1]]
   lcom <- length(components)
@@ -958,7 +979,7 @@ readMplusInputData <- function(mplus.inp, inpfile) {
   } # dat file path is relative or absent, and inp file directory is present
 
   if (!file.exists(datFile)) {
-    warning("Cannot find data file: ", datFile)
+    lav_msg_warn(gettext("Cannot find data file:"), datFile)
     return(NULL)
   }
 
@@ -1004,7 +1025,8 @@ readMplusInputData <- function(mplus.inp, inpfile) {
             vstart <- which(mplus.inp$variable$names == substr(vname, attr(vnameHyphen, "capture.start")[1L], attr(vnameHyphen, "capture.start")[1L] + attr(vnameHyphen, "capture.length")[1L] - 1L))
             vend <- which(mplus.inp$variable$names == substr(vname, attr(vnameHyphen, "capture.start")[2L], attr(vnameHyphen, "capture.start")[2L] + attr(vnameHyphen, "capture.length")[2L] - 1L))
             if (length(vstart) == 0L || length(vend) == 0L) {
-              stop("Unable to lookup missing variable list: ", vname)
+              lav_msg_stop(gettext("Unable to lookup missing variable list: "),
+                           vname)
             }
             # I suppose start or finish could be mixed up
             if (vstart > vend) {
@@ -1022,7 +1044,8 @@ readMplusInputData <- function(mplus.inp, inpfile) {
           }
         }
       } else {
-        stop("I don't understand this missing specification: ", missSpec)
+        lav_msg_stop(gettext("I don't understand this missing specification:"),
+                     missSpec)
       }
     }
   } else {

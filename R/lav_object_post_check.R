@@ -13,7 +13,7 @@ lav_object_post_check <- function(object, verbose = FALSE) {
     lavpartable$lhs == lavpartable$rhs)
   if (length(var.idx) > 0L && any(lavpartable$est[var.idx] < 0.0)) {
     result.ok <- var.ov.ok <- FALSE
-    warning("lavaan WARNING: some estimated ov variances are negative")
+    lav_msg_warn(gettext("some estimated ov variances are negative"))
   }
 
   # 1b. check for negative variances lv
@@ -22,7 +22,7 @@ lav_object_post_check <- function(object, verbose = FALSE) {
     lavpartable$lhs == lavpartable$rhs)
   if (length(var.idx) > 0L && any(lavpartable$est[var.idx] < 0.0)) {
     result.ok <- var.lv.ok <- FALSE
-    warning("lavaan WARNING: some estimated lv variances are negative")
+    lav_msg_warn(gettext("some estimated lv variances are negative"))
   }
 
   # 2. is cov.lv (PSI) positive definite? (only if we did not already warn
@@ -31,16 +31,13 @@ lav_object_post_check <- function(object, verbose = FALSE) {
     ETA <- lavTech(object, "cov.lv")
     for (g in 1:lavdata@ngroups) {
       if (nrow(ETA[[g]]) == 0L) next
-      txt.group <- ifelse(lavdata@ngroups > 1L,
-        paste(" in group ", g, sep = ""), ""
-      )
+      txt.group <- if (lavdata@ngroups > 1L) gettextf("in group %s", g) else ""
       eigvals <- eigen(ETA[[g]], symmetric = TRUE, only.values = TRUE)$values
       if (any(eigvals < -1 * .Machine$double.eps^(3 / 4))) {
-        warning(
-          "lavaan WARNING: covariance matrix of latent variables\n",
-          "                is not positive definite", txt.group, ";\n",
-          "                use lavInspect(fit, \"cov.lv\") to investigate."
-        )
+        lav_msg_warn(gettextf(
+          "covariance matrix of latent variables is not positive definite %s;
+          use lavInspect(fit, \"cov.lv\") to investigate.", txt.group
+        ))
         result.ok <- FALSE
       }
     }
@@ -53,19 +50,16 @@ lav_object_post_check <- function(object, verbose = FALSE) {
     for (g in 1:lavdata@ngroups) {
       num.idx <- lavmodel@num.idx[[g]]
       if (length(num.idx) > 0L) {
-        txt.group <- ifelse(lavdata@ngroups > 1L,
-          paste(" in group ", g, sep = ""), ""
-        )
+        txt.group <- if (lavdata@ngroups > 1L) gettextf("in group %s", g) else ""
         eigvals <- eigen(THETA[[g]][num.idx, num.idx, drop = FALSE],
           symmetric = TRUE,
           only.values = TRUE
         )$values
         if (any(eigvals < -1 * .Machine$double.eps^(3 / 4))) {
-          warning(
-            "lavaan WARNING: the covariance matrix of the residuals of the observed\n",
-            "                variables (theta) is not positive definite", txt.group, ";\n",
-            "                use lavInspect(fit, \"theta\") to investigate."
-          )
+          lav_msg_warn(gettextf(
+            "the covariance matrix of the residuals of the observed variables
+            (theta) is not positive definite %s; use lavInspect(fit, \"theta\")
+            to investigate.", txt.group))
           result.ok <- FALSE
         }
       }

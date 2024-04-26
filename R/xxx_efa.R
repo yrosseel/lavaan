@@ -27,7 +27,7 @@ efa <- function(data = NULL,
 
   # check for unallowed arguments
   if (!is.null(dotdotdot$group)) {
-    stop("lavaan ERROR: efa has no support for multiple groups (for now)")
+    lav_msg_stop(gettext("efa has no support for multiple groups (for now)"))
   }
 
   # handle ov.names
@@ -49,12 +49,13 @@ efa <- function(data = NULL,
   }
   # ov.names?
   if (length(ov.names) == 0L) {
-    stop("lavaan ERROR: could not extract variable names from data or sample.cov")
+    lav_msg_stop(gettext(
+      "could not extract variable names from data or sample.cov"))
   }
 
   # check nfactors
   if (any(nfactors < 1L)) {
-    stop("lavaan ERROR: nfactors must be greater than zero.")
+    lav_msg_stop(gettext("nfactors must be greater than zero."))
   } else {
     # check for maximum number of factors
     # Fixme: can we do this more efficiently? also holds for categorical?
@@ -70,20 +71,19 @@ efa <- function(data = NULL,
       }
     }
     if (any(nfactors > nfac.max)) {
-      stop("lavaan ERROR: when nvar = ", nvar,
-        " the maximum number of factors is ", nfac.max,
-        sep = ""
-      )
+      lav_msg_stop(gettextf("when nvar = %1$s the maximum number of factors
+                            is %2$s", nvar, nfac.max))
     }
   }
 
   # output
   output <- tolower(output)
   if (!output %in% c("lavaan", "efa")) {
-    stop("lavaan ERROR: output= must be either \"lavaan\" or \"efa\"")
+    lav_msg_stop(gettext("output= must be either \"lavaan\" or \"efa\""))
   }
   if (output == "lavaan" && length(nfactors) > 1L) {
-    stop("lavaan ERROR: when output = \"lavaan\", nfactors must be a single (integer) number.")
+    lav_msg_stop(gettext("when output = \"lavaan\", nfactors must be a
+                         single (integer) number."))
   }
 
   # fit models

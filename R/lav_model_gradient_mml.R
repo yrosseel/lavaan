@@ -8,7 +8,7 @@ lav_model_gradient_mml <- function(lavmodel = NULL,
                                    sample.mean.x = NULL,
                                    lavcache = NULL) {
   if (lavmodel@link == "logit") {
-    stop("logit link not implemented yet; use probit")
+    lav_msg_stop(gettext("logit link not implemented yet; use probit"))
   }
 
   # shortcut
@@ -43,7 +43,7 @@ lav_model_gradient_mml <- function(lavmodel = NULL,
   VETAx <- computeVETAx.LISREL(MLIST = MLIST)
   # check for negative values?
   if (any(diag(VETAx) < 0)) {
-    warning("lavaan WARNING: --- VETAx contains negative values")
+    lav_msg_warn(gettext("--- VETAx contains negative values"))
     print(VETAx)
     return(0)
   }
@@ -66,7 +66,7 @@ lav_model_gradient_mml <- function(lavmodel = NULL,
     ETA.sd <- rep(1, nfac)
     tchol.VETA <- try(chol(VETAx), silent = TRUE)
     if (inherits(tchol.VETA, "try-error")) {
-      warning("lavaan WARNING: --- VETAx not positive definite")
+      lav_msg_warn(gettext("--- VETAx not positive definite"))
       print(VETAx)
       return(0)
     }

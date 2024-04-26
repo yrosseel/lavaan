@@ -218,9 +218,8 @@ lav_cfa_guttman1952_internal <- function(lavobject = NULL, # convenience
   }
   # no BETA matrix! (i.e., no higher-order factors)
   if (!is.null(lavmodel@GLIST$beta)) {
-    lav_msg_stop(
-      gettext("GUTTMAN1952 estimator not available for models"),
-      gettext("that require a BETA matrix"))
+    lav_msg_stop(gettext(
+   "GUTTMAN1952 estimator not available for models that require a BETA matrix"))
   }
   # no std.lv = TRUE for now
   if (lavoptions$std.lv) {
@@ -246,9 +245,8 @@ lav_cfa_guttman1952_internal <- function(lavobject = NULL, # convenience
   m.theta <- lavmodel@m.free.idx[[theta.idx]]
   nondiag.idx <- m.theta[!m.theta %in% lav_matrix_diag_idx(nvar)]
   if (length(nondiag.idx) > 0L) {
-    lav_msg_warn(
-      gettext("this implementation of FABIN does not handle"),
-      gettext("correlated residuals yet!"))
+    lav_msg_warn(gettext(
+      "this implementation of FABIN does not handle correlated residuals yet!"))
   }
 
   # 1. obtain estimate for (diagonal elements of) THETA

@@ -40,7 +40,7 @@ lav_partable_ov_from_data <- function(FLAT = NULL, # nolint
   if (length(ov.names.data) != length(ov.names)) {
     idx.missing <- which(!(ov.names %in% ov.names.data))
     lav_msg_stop(gettextf(
-      "some (observed) variables specified in the model are not found 
+      "some (observed) variables specified in the model are not found
       in the data: %s",
       lav_msg_view(ov.names[idx.missing], "none")))
   }

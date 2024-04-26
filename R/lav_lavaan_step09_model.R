@@ -54,8 +54,9 @@ lav_lavaan_step09_model <- function(slotModel = NULL, # nolint
             lavpartable$user == 1L)
           if (length(user.var.idx)) {
             lav_msg_warn(
-              gettext("variance (theta) values for categorical variables"),
-              gettextf("are ignored if parameterization = %s!", "'delta'")
+              gettextf("variance (theta) values for categorical variables
+                       are ignored if parameterization = %s!",
+                       "'delta'")
             )
           }
         } else if (lavmodel@parameterization == "theta") {
@@ -66,8 +67,9 @@ lav_lavaan_step09_model <- function(slotModel = NULL, # nolint
             lavpartable$user == 1L)
           if (length(user.delta.idx)) {
             lav_msg_warn(
-              gettext("scaling (~*~) values for categorical variables"),
-              gettextf("are ignored if parameterization = %s!", "'theta'")
+              gettextf("scaling (~*~) values for categorical variables
+                       are ignored if parameterization = %s!",
+                       "'theta'")
             )
           }
         }

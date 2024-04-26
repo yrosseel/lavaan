@@ -63,10 +63,8 @@ lav_partable_flat <- function(FLAT = NULL, # nolint
   if (length(ov.names.ord1) > 0L) {
     idx <- which(ov.names.ord1 %in% ov.names.x)
     if (length(idx) > 0L) {
-      warning(
-        "lavaan WARNING: thresholds are defined for exogenous",
-        " variables: ", paste(ov.names.ord1[idx], collapse = " ")
-      )
+      lav_msg_warn(gettext("thresholds are defined for exogenous variables:"),
+                   lav_msg_view(ov.names.ord1[idx], "none"))
     }
   }
 
@@ -93,13 +91,11 @@ lav_partable_flat <- function(FLAT = NULL, # nolint
   ov.names.ord3 <- character(0L)
   if (!is.null(nthresholds)) {
     if (!is.null(varTable)) {
-      stop(
-        "lavaan ERROR: the varTable and nthresholds ",
-        "arguments should not be used together."
-      )
+      lav_msg_stop(gettext(
+        "the varTable and nthresholds arguments should not be used together."))
     }
     if (!is.numeric(nthresholds)) {
-      stop("lavaan ERROR: nthresholds should be a named vector of integers.")
+      lav_msg_stop(gettext("nthresholds should be a named vector of integers."))
     }
     nth.names <- names(nthresholds)
     if (!is.null(nth.names)) {
@@ -108,7 +104,7 @@ lav_partable_flat <- function(FLAT = NULL, # nolint
       # if nthresholds is just a number, all is good; otherwise it
       # should be a names vector
       if (length(nthresholds) > 1L) {
-        warning("lavaan ERROR: nthresholds must be a named vector of integers.")
+        lav_msg_warn(gettext("nthresholds must be a named vector of integers."))
       }
       # just a single number -> assume ALL y variables are ordered
       ov.names.ord3 <- ov.names.nox
@@ -192,10 +188,8 @@ lav_partable_flat <- function(FLAT = NULL, # nolint
           # we can assume nthresholds is a named vector
           nth <- unname(nthresholds[o])
           if (is.na(nth)) {
-            stop(
-              "lavaan ERROR: ordered variable ", o,
-              " not found in the named vector nthresholds."
-            )
+            lav_msg_stop(gettextf("ordered variable %s not found in the
+                                  named vector nthresholds.", o))
           }
         }
       }
@@ -377,10 +371,9 @@ lav_partable_flat <- function(FLAT = NULL, # nolint
         tmp.tmp[idx[i], "rhs"]
       )
     })
-    warning(
-      "duplicated elements in model syntax have been ignored:\n",
-      paste(txt, collapse = "\n")
-    )
+    lav_msg_warn(gettext(
+      "duplicated elements in model syntax have been ignored:"),
+      lav_msg_view(txt, "none"))
     tmp.user <- tmp.user[-idx, ]
   }
 

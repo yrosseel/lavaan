@@ -13,13 +13,15 @@ lav_ram <- function(partable = NULL,
 
   # not for categorical data (yet)
   if (any(partable$op == "|")) {
-    stop("lavaan ERROR: RAM representation is not (yet) supported for categorical endogenous variables.")
+    lav_msg_stop(gettext("RAM representation is not (yet) supported for
+                         categorical endogenous variables."))
   }
 
   # not for conditional.x = TRUE yet
   conditional.x <- any(partable$exo > 0L & partable$op == "~")
   if (conditional.x) {
-    stop("lavaan ERROR: RAM representation is not (yet) supported if conditional.x = TRUE")
+    lav_msg_stop(gettext("RAM representation is not (yet) supported
+                         if conditional.x = TRUE"))
   }
 
   # prepare output
@@ -290,7 +292,7 @@ lav_ram_dsigma <- function(m = "A",
     DX[, c(lower.idx, upper.idx)] <- cbind(offdiagSum, offdiagSum)
     DX <- DX[, idx, drop = FALSE]
   } else {
-    stop("wrong model matrix names: ", m, "\n")
+    lav_msg_stop(gettext("wrong model matrix names:"), m)
   }
 
   # vech?
@@ -327,7 +329,7 @@ lav_ram_dmu <- function(m = "A",
   } else if (m == "m") {
     DX <- IA.inv[ov.idx, idx, drop = FALSE]
   } else {
-    stop("wrong model matrix names: ", m, "\n")
+    lav_msg_stop(gettext("wrong model matrix names:"), m)
   }
 
   DX

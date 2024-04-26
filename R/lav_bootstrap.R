@@ -68,7 +68,8 @@ bootstrapLavaan <- function(object,
 
   # check for conditional.x = TRUE
   if (object@Model@conditional.x) {
-    stop("lavaan ERROR: this function is not (yet) available if conditional.x = TRUE")
+    lav_msg_stop(gettext(
+      "this function is not (yet) available if conditional.x = TRUE"))
   }
 
   lavoptions. <- list(
@@ -95,32 +96,20 @@ bootstrapLavaan <- function(object,
   # new in 0.6-12: always warn for failed and nonadmissible runs
   nfailed <- length(attr(out, "error.idx")) # zero if NULL
   if (nfailed > 0L && object@Options$warn) {
-    if (nfailed == 1L) {
-      warning(
-        "lavaan WARNING: ",
-        "1 bootstrap run failed or did not converge."
-      )
-    } else {
-      warning(
-        "lavaan WARNING: ", nfailed,
-        " bootstrap runs failed or did not converge."
-      )
-    }
+    lav_msg_warn(sprintf(
+      ngettext(nfailed,
+               "1 bootstrap run failed or did not converge.",
+               "%s bootstrap runs failed or did not converge."),
+      nfailed))
   }
 
   notok <- length(attr(out, "nonadmissible")) # zero if NULL
   if (notok > 0L && object@Options$warn) {
-    if (notok == 1L) {
-      warning(
-        "lavaan WARNING: ",
-        "1 bootstrap run resulted in a nonadmissible (n) solution."
-      )
-    } else {
-      warning(
-        "lavaan WARNING: ", notok,
-        " bootstrap runs resulted in nonadmissible (n) solutions."
-      )
-    }
+    lav_msg_warn(sprintf(
+      ngettext(notok,
+               "1 bootstrap resulted in a nonadmissible (n) solution.",
+               "%s bootstrap runs resulted in nonadmissible (n) solutions."),
+      notok))
   }
 
   out
@@ -217,11 +206,14 @@ lav_bootstrap_internal <- function(object = NULL,
   if (type == "bollen.stine" || type == "yuan") {
     # check if data is continuous
     if (lavmodel@categorical) {
-      stop("lavaan ERROR: bollen.stine/yuan bootstrap not available for categorical/ordinal data")
+      lav_msg_stop(gettext(
+        "bollen.stine/yuan bootstrap not available for categorical/ordinal data"
+        ))
     }
     # check if data is complete
     if (lavoptions$missing != "listwise") {
-      stop("lavaan ERROR: bollen.stine/yuan bootstrap not available for missing data")
+      lav_msg_stop(gettext(
+        "bollen.stine/yuan bootstrap not available for missing data"))
     }
     dataX <- vector("list", length = lavdata@ngroups)
   } else {
@@ -275,7 +267,8 @@ lav_bootstrap_internal <- function(object = NULL,
         a0 <- min(max(a0 - dif / g2, 0), max.a)
       }
       # if search fails to converge in 50 iterations
-      warning("lavaan WARNING: yuan bootstrap search for `a` did not converge. h0.rmsea may be too large.")
+      lav_msg_warn(gettext("yuan bootstrap search for `a` did not converge.
+                           h0.rmsea may be too large."))
       a0
     }
 

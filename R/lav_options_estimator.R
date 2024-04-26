@@ -274,10 +274,9 @@ lav_options_est_dwls <- function(opt) {
   # new in 0.6-17: if !categorical, give a warning
   if (!opt$.categorical) {
     lav_msg_warn(gettextf(
-      "estimator %s is not recommended for continuous data. ",
-      dQuote(lav_options_estimatorgroup(opt$estimator))),
-      gettext("Did you forget to set the ordered= argument?"
-      ))
+      "estimator %s is not recommended for continuous data.
+      Did you forget to set the ordered= argument?",
+      dQuote(lav_options_estimatorgroup(opt$estimator))))
   }
   # se
   if (opt$se == "bootstrap" &&

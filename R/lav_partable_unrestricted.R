@@ -678,7 +678,7 @@ lav_partable_unrestricted_chol <- function(lavobject = NULL,
   meanstructure <- lavoptions$meanstructure
   categorical <- any(ov$type == "ordered")
   if (categorical) {
-    stop("lavaan ERROR: categorical data not supported in this function")
+    lav_msg_stop(gettext("categorical data not supported in this function"))
   }
   ngroups <- lavdata@ngroups
   nlevels <- lavdata@nlevels

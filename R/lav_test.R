@@ -9,8 +9,12 @@ lavTest <- function(lavobject, test = "standard",
                     output = "list", drop.list.single = TRUE) {
   # check output
   output.valid <- c("list", "text")
-  if (!any(output == output.valid)) lav_msg_notallowed("output", output.valid)
-
+  if (!any(output == output.valid)) {
+      lav_msg_stop(gettextf(
+        "%1$s argument must be either %2$s",
+        "output", lav_msg_view(output.valid, "or")
+      ))
+  }
   # extract 'test' slot
   TEST <- lavobject@test
 
@@ -183,21 +187,28 @@ lav_test_rename <- function(test, check = FALSE) {
       "browne.residual.adf.model"
     ))
     if (length(bad.idx) > 0L) {
-      lav_msg_notallowed_multi("test", test[bad.idx])
+      lav_msg_stop(sprintf(
+        ngettext(
+          length(test[bad.idx]),
+          "invalid value in %1$s argument: %2$s.",
+          "invalid values in %1$s argument: %2$s."
+        ),
+        "test", lav_msg_view(test[bad.idx], log.sep = "none")
+      ))
     }
 
     # if 'default' is included, length(test) must be 1
     if (length(test) > 1L && any("default" == test)) {
       lav_msg_stop(
-        gettextf("if test= argument contains \"%s\"", "default"),
-        gettext("it cannot contain additional elements"))
+        gettextf("if test= argument contains \"%s\", it cannot contain
+                 additional elements", "default"))
     }
 
     # if 'none' is included, length(test) must be 1
     if (length(test) > 1L && any("none" == test)) {
       lav_msg_stop(
-        gettextf("if test= argument contains \"%s\"", "none"),
-        gettext("it cannot contain additional elements"))
+        gettextf("if test= argument contains \"%s\" it cannot contain
+                 additional elements", "none"))
     }
   }
 
@@ -549,9 +560,9 @@ lav_model_test <- function(lavobject = NULL,
           unscaled.TEST <- TEST[[idx[1]]]
         } else {
           lav_msg_warn(gettextf(
-            "scaled.test [%s] not found among available (non scaled) tests:",
-            lavoptions$scaled.test), lav_msg_view(test),
-            gettext("Using standard test instead."))
+            "scaled.test [%1$s] not found among available (non scaled) tests:
+            %2$s. Using standard test instead.",
+            lavoptions$scaled.test), lav_msg_view(test))
         }
       }
 
@@ -585,12 +596,11 @@ lav_model_test <- function(lavobject = NULL,
           unscaled.TEST <- TEST[[idx[1]]]
         } else {
           lav_msg_warn(gettextf(
-            "scaled.test [%s] not found among available (non scaled) tests:",
-            lavoptions$scaled.test), lav_msg_view(test),
-            gettext("Using standard test instead."))
-        }
+            "scaled.test [%1$s] not found among available (non scaled) tests:
+            %2$s. Using standard test instead.",
+            lavoptions$scaled.test), lav_msg_view(test))
+          }
       }
-
 
       out <- lav_test_yuan_bentler(
         lavobject = NULL,

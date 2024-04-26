@@ -179,9 +179,9 @@ lav_cfa_jamesstein_internal <- function(lavobject = NULL, # convenience
   m.theta <- lavmodel@m.free.idx[[theta.idx]]
   nondiag.idx <- m.theta[!m.theta %in% lav_matrix_diag_idx(nvar)]
   if (length(nondiag.idx) > 0L) {
-    lav_msg_warn(
-      gettext("this implementation of JS/JSA does not handle"),
-      gettext("correlated residuals yet!"))
+    lav_msg_warn(gettext(
+      "this implementation of JS/JSA does not handle correlated residuals yet!"
+      ))
   }
 
 

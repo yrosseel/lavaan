@@ -200,10 +200,12 @@ lav_lavaanList_partable <- function(object, what = "est",
     if (what %in% names(object@ParTableList[[1]])) {
       OUT <- sapply(object@ParTableList, "[[", what)
     } else {
-      stop("lavaan ERROR: column `", what, "' not found in the first element of the ParTableList slot.")
+      lav_msg_stop(gettextf(
+        "column `%s' not found in the first element of the ParTableList slot.",
+        what))
     }
   } else {
-    stop("lavaan ERROR: no ParTable slot stored in lavaanList object")
+    lav_msg_stop(gettext("no ParTable slot stored in lavaanList object"))
   }
 
   if (type == "user" || type == "all") {
@@ -212,7 +214,7 @@ lav_lavaanList_partable <- function(object, what = "est",
   } else if (type == "free") {
     idx <- which(object@ParTable$free > 0L & !duplicated(object@ParTable$free))
   } else {
-    stop("lavaan ERROR: argument `type' must be one of free or user")
+    lav_msg_stop(gettext("argument `type' must be one of free or user"))
   }
 
   OUT <- OUT[idx, , drop = FALSE]

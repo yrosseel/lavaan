@@ -164,7 +164,7 @@ lav_residuals <- function(object, type = "raw", h1 = TRUE, custom.rmr = NULL,
     "rmr", "srmr", "crmr",
     "normalized", "standardized", "standardized.mplus"
   )) {
-    stop("lavaan ERROR: unknown argument for type: ", dQuote(type))
+    lav_msg_stop(gettext("unknown argument for type:"), dQuote(type))
   }
 
   # if cor, choose 'default'
@@ -430,10 +430,9 @@ lav_residuals_acov <- function(object, type = "raw", z.type = "standardized",
                                h1.acov = "unstructured") {
   # check type
   if (z.type %in% c("normalized", "standardized.mplus") && type != "raw") {
-    stop(
-      "lavaan ERROR: z.type = ", dQuote(z.type), " can only be used ",
-      "with type = ", dQuote("raw")
-    )
+    lav_msg_stop(gettextf(
+      "z.type = %1$s can only be used with type = %2$s",
+      dQuote(z.type), dQuote("raw")))
   }
 
   # slots
@@ -519,7 +518,9 @@ lav_residuals_acov <- function(object, type = "raw", z.type = "standardized",
         if (lavmodel@categorical) {
           if (lavmodel@conditional.x ||
             length(unlist(lavmodel@num.idx)) > 0L) {
-            stop("lavaan ERROR: SE for cor.bentler not available (yet) if categorical = TRUE, and conditional.x = TRUE OR some endogenous variables are continuous")
+            lav_msg_stop(gettext(
+              "SE for cor.bentler not available (yet) if categorical = TRUE, and
+              conditional.x = TRUE OR some endogenous variables are continuous"))
           } else {
             # nothing to do, as we already are in correlation metric
           }
@@ -548,7 +549,9 @@ lav_residuals_acov <- function(object, type = "raw", z.type = "standardized",
         if (lavmodel@categorical) {
           if (lavmodel@conditional.x ||
             length(unlist(lavmodel@num.idx)) > 0L) {
-            stop("lavaan ERROR: SE for cor.bentler not available (yet) if categorical = TRUE, and conditional.x = TRUE OR some endogenous variables are continuous")
+            lav_msg_stop(gettext(
+              "SE for cor.bentler not available (yet) if categorical = TRUE, and
+              conditional.x = TRUE OR some endogenous variables are continuous"))
           } else {
             # nothing to do, as we already are in correlation metric
           }
@@ -613,7 +616,7 @@ lav_residuals_se <- function(object, type = "raw", z.type = "standardized",
     if (lavmodel@categorical) {
       if (lavmodel@conditional.x ||
         length(unlist(lavmodel@num.idx)) > 0L) {
-        stop("not ready yet!")
+        lav_msg_stop(gettext("not ready yet!"))
       }
 
       # COR
@@ -646,7 +649,7 @@ lav_residuals_se <- function(object, type = "raw", z.type = "standardized",
       # continuous -- single level
     } else if (lavdata@nlevels == 1L) {
       if (lavmodel@conditional.x) {
-        stop("not ready yet")
+        lav_msg_stop(gettext("not ready yet"))
       } else {
         if (lavmodel@meanstructure) {
           tmp <- sqrt(diag.ACOV[-(1:nvar)])
@@ -675,7 +678,7 @@ lav_residuals_se <- function(object, type = "raw", z.type = "standardized",
 
       # continuous -- multilevel
     } else if (lavdata@nlevels > 1L) {
-      stop("not ready yet")
+      lav_msg_stop(gettext("not ready yet"))
     }
   } # g
 
@@ -694,23 +697,26 @@ lav_residuals_summary <- function(object, type = c("rmr", "srmr", "crmr"),
                                   add.class = FALSE) {
   # arguments
   if (length(custom.rmr)) {
-    if (!is.list(custom.rmr)) stop("custom.rmr must be a list")
+    if (!is.list(custom.rmr)) lav_msg_stop(gettext("custom.rmr must be a list"))
     ## Each custom (S/C)RMR must have a unique name
     customNAMES <- names(custom.rmr)
-    if (is.null(customNAMES)) stop("custom.rmr list must have names")
+    if (is.null(customNAMES)) lav_msg_stop(gettext(
+      "custom.rmr list must have names"))
     if (length(unique(customNAMES)) < length(custom.rmr)) {
-      stop("custom.rmr must have a unique name for each summary")
+      lav_msg_stop(gettext(
+        "custom.rmr must have a unique name for each summary"))
     }
     ## Each list must contain a list consisting of $cov and/or $mean (no $th yet)
     for (i in seq_along(custom.rmr)) {
       if (!is.list(custom.rmr[[i]])) {
-        stop("Each element in custom.rmr must be a list")
+        lav_msg_stop(gettext("Each element in custom.rmr must be a list"))
       }
       if (is.null(names(custom.rmr[[i]]))) {
-        stop("The list in custom.rmr must have names")
+        lav_msg_stop(gettext("The list in custom.rmr must have names"))
       }
       if (!all(names(custom.rmr[[i]]) %in% c("cov", "mean"))) {
-        stop('Elements in custom.rmr must be names "cov" and/or "mean"')
+        lav_msg_stop(gettext(
+          'Elements in custom.rmr must be names "cov" and/or "mean"'))
       }
       ## below, verify dimensions match rmsList.g
     }
@@ -737,7 +743,7 @@ lav_residuals_summary <- function(object, type = c("rmr", "srmr", "crmr"),
     "rmr", "srmr", "crmr",
     "raw", "cor.bentler", "cor.bollen"
   ))) {
-    stop("lavaan ERROR: unknown type: ", dQuote(type))
+    lav_msg_stop(gettext("unknown type:"), dQuote(type))
   }
 
   # change type name
@@ -809,7 +815,7 @@ lav_residuals_summary <- function(object, type = c("rmr", "srmr", "crmr"),
     if (lavdata@nlevels == 1L && lavmodel@categorical) {
       if ((se || unbiased) && (conditional.x ||
         length(unlist(lavmodel@num.idx)) > 0L)) {
-        stop("not ready yet")
+        lav_msg_stop(gettext("not ready yet"))
       } else {
         # remove fixed.x elements:
         # seems like a good idea, but nobody likes it
@@ -1012,7 +1018,7 @@ lav_residuals_summary <- function(object, type = c("rmr", "srmr", "crmr"),
       # continuous -- single level
     } else if (lavdata@nlevels == 1L) {
       if ((se || unbiased) && conditional.x) {
-        stop("not ready yet")
+        lav_msg_stop(gettext("not ready yet"))
       } else {
         # nvar.x <- pstar.x <- 0L
         # if(lavmodel@fixed.x) {
@@ -1166,20 +1172,16 @@ lav_residuals_summary <- function(object, type = c("rmr", "srmr", "crmr"),
                   if (is.logical(custom.rmr[[cus]]$mean)) {
                     ## check length
                     if (length(custom.rmr[[cus]]$mean) != length(rmsList.g[["mean"]])) {
-                      stop(
-                        "length(custom.rmr$", cus, "$mean) must ",
-                        "match length(lavResiduals(fit)$mean)"
-                      )
+                      lav_msg_stop(gettextf("length(custom.rmr$%s$mean) must
+                            match length(lavResiduals(fit)$mean)", cus))
                     }
                     ACOV.idx <- which(custom.rmr[[cus]]$mean)
                     if (lavmodel@fixed.x && !lavmodel@conditional.x) {
                       ACOV.idx[x.idx] <- FALSE
                     }
                   } else if (!is.numeric(custom.rmr[[cus]]$mean)) {
-                    stop(
-                      "custom.rmr$", cus, "$mean must contain ",
-                      "logical or numeric indices."
-                    )
+                    lav_msg_stop(gettextf("custom.rmr$%s$mean must contain
+                                  logical or numeric indices.", cus))
                   } else {
                     ACOV.idx <- custom.rmr[[cus]]$mean
                     if (lavmodel@fixed.x && !lavmodel@conditional.x) {
@@ -1187,19 +1189,15 @@ lav_residuals_summary <- function(object, type = c("rmr", "srmr", "crmr"),
                     }
                     ACOV.idx <- ACOV.idx[!is.na(ACOV.idx)] # necessary?
                     if (max(ACOV.idx) > length(rmsList.g[["mean"]])) {
-                      stop(
-                        "custom.rmr$", cus, "$mean[",
-                        which.max(ACOV.idx),
-                        "] is an out-of-bounds index"
+                      lav_msg_stop(gettextf(
+                        "custom.rmr$%1$s$mean[%2$s] is an out-of-bounds index",
+                        cus, which.max(ACOV.idx))
                       )
                     }
                   }
-
                   STATS <- rmsList.g[["mean"]][ACOV.idx]
                 }
               }
-
-
               # (CO)VARIANCES?
               if ("cov" %in% names(custom.rmr[[cus]])) {
                 ## if numeric, create a logical matrix to obtain
@@ -1209,10 +1207,9 @@ lav_residuals_summary <- function(object, type = c("rmr", "srmr", "crmr"),
                   ## matrix of row/column indices?
                   if (length(dim(custom.rmr[[cus]]$cov))) {
                     if (max(custom.rmr[[cus]]$cov[, 1:2] > nrow(rmsList.g[["cov"]]))) {
-                      stop(
-                        "numeric indices in custom.rmr$", cus, "$cov",
-                        " cannot exceed ", nrow(rmsList.g[["cov"]])
-                      )
+                      lav_msg_stop(gettextf(
+                        "numeric indices in custom.rmr$%1$s$cov cannot
+                        exceed %2$s", cus, nrow(rmsList.g[["cov"]])))
                     }
                     for (RR in 1:nrow(custom.rmr[[cus]]$cov)) {
                       cusCOV[
@@ -1223,10 +1220,9 @@ lav_residuals_summary <- function(object, type = c("rmr", "srmr", "crmr"),
                   } else {
                     ## numeric-vector indices
                     if (max(custom.rmr[[cus]]$cov > length(rmsList.g[["cov"]]))) {
-                      stop(
-                        "numeric indices in custom.rmr$", cus, "$cov",
-                        " cannot exceed ", length(rmsList.g[["cov"]])
-                      )
+                      lav_msg_stop(gettextf(
+                        "numeric indices in custom.rmr$%1$s$cov cannot
+                        exceed %2$s", cus, length(rmsList.g[["cov"]])))
                     }
                     cusCOV[custom.rmr[[cus]]$cov] <- TRUE
                   }
@@ -1234,19 +1230,16 @@ lav_residuals_summary <- function(object, type = c("rmr", "srmr", "crmr"),
                   ## numeric indices no longer needed, use logical
                   custom.rmr[[cus]]$cov <- cusCOV
                 } else if (!is.logical(custom.rmr[[cus]]$cov)) {
-                  stop(
-                    "custom.rmr$", cus, "$cov must be a logical ",
-                    "square matrix or a numeric matrix of ",
-                    "(row/column) indices."
-                  )
+                  lav_msg_stop(gettextf(
+                    "custom.rmr$%s$cov must be a logical square matrix or a
+                    numeric matrix of (row/column) indices.", cus))
                 }
 
                 ## check dimensions
                 if (!all(dim(custom.rmr[[cus]]$cov) == dim(rmsList.g[["cov"]]))) {
-                  stop(
-                    "dim(custom.rmr$", cus, "$cov) must ",
-                    "match dim(lavResiduals(fit)$cov)"
-                  )
+                  lav_msg_stop(gettextf(
+                    "dim(custom.rmr$%s$cov) must match
+                    dim(lavResiduals(fit)$cov)", cus))
                 }
                 ## users can specify upper.tri or lower.tri indices
                 custom.rmr[[cus]]$cov <- custom.rmr[[cus]]$cov | t(custom.rmr[[cus]]$cov)
@@ -1315,7 +1308,7 @@ lav_residuals_summary <- function(object, type = c("rmr", "srmr", "crmr"),
 
       # continuous -- multilevel
     } else if (lavdata@nlevels > 1L) {
-      stop("not ready yet")
+      lav_msg_stop(gettext("not ready yet"))
     }
 
     sumStat[[g]] <- OUT

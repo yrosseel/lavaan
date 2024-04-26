@@ -77,7 +77,7 @@ lav_samplestats_from_data <- function(lavdata = NULL,
   if (lavoptions$sample.cov.robust) {
     if (!is.null(WT[[1]])) {
       lav_msg_stop(gettext(
-        "sample.cov.robust = TRUE does not work (yet) 
+        "sample.cov.robust = TRUE does not work (yet)
         if sampling weights are provided."))
     }
   }
@@ -490,7 +490,7 @@ lav_samplestats_from_data <- function(lavdata = NULL,
         # no correlation structures yet
         if (correlation) {
           lav_msg_stop(gettext(
-            "conditional.x = TRUE is not supported (yet) for 
+            "conditional.x = TRUE is not supported (yet) for
             correlation structures."))
         }
 
@@ -788,7 +788,7 @@ lav_samplestats_from_data <- function(lavdata = NULL,
           if (nrow(X[[g]]) < pstar) {
             lav_msg_warn(gettextf(
               "number of observations (%s) too small to compute Gamma",
-              nrow(X[[g]])), 
+              nrow(X[[g]])),
               if (ngroups > 1L) gettextf("in group %s", g) else ""
             )
           }
@@ -1059,7 +1059,7 @@ lav_samplestats_from_data <- function(lavdata = NULL,
     any(sapply(zero.cell.tables, nrow) > 0L)) {
     nempty <- sum(sapply(zero.cell.tables, nrow))
     lav_msg_warn(gettextf(
-      "%s bivariate tables have empty cells; to see them, use: 
+      "%s bivariate tables have empty cells; to see them, use:
       lavInspect(fit, \"zero.cell.tables\")", nempty)
     )
   }
@@ -1294,7 +1294,7 @@ lav_samplestats_from_moments <- function(sample.cov = NULL,
     } else {
       if (length(NACOV) != ngroups) {
         lav_msg_stop(gettextf(
-          "NACOV assumes %1$s groups; data contains %2$s groups", 
+          "NACOV assumes %1$s groups; data contains %2$s groups",
           length(NACOV), ngroups))
       }
       NACOV <- lapply(NACOV, unclass)
@@ -1359,7 +1359,7 @@ lav_samplestats_from_moments <- function(sample.cov = NULL,
       cat("found: ", cov.names, "\n")
       cat("expected: ", ov.names[[g]], "\n")
       lav_msg_stop(gettextf(
-        "rownames of covariance matrix do not match the model! 
+        "rownames of covariance matrix do not match the model!
         found: %1$s expected: %2$s", lav_msg_view(cov.names),
         lav_msg_view(ov.names[[g]])))
     } else {
@@ -1558,7 +1558,7 @@ lav_samplestats_from_moments <- function(sample.cov = NULL,
       } else if (estimator == "WLS" || estimator == "DWLS") {
         if (is.null(WLS.V[[g]])) {
           lav_msg_stop(gettext(
-            "the (D)WLS estimator is only available with full data 
+            "the (D)WLS estimator is only available with full data
             or with a user-provided WLS.V"))
         }
       }
