@@ -653,10 +653,10 @@ lav_model_h1_information_firstorder <- function(lavobject = NULL,
     if (is.null(lavdata@Lp[[1]])) {
       lav_msg_stop(gettext("lavdata@Lp is empty, while clustered = TRUE"))
     }
-    if (estimator == "PML") {
-      lav_msg_stop(gettext(
-        "clustered information is not (yet) available when estimator = 'PML'"))
-    }
+    # if (estimator == "PML") {
+    #   lav_msg_stop(gettext(
+    #     "clustered information is not (yet) available when estimator = 'PML'"))
+    # }
     # if(lavsamplestats@missing.flag) {
     #    stop("lavaan ERROR: clustered information is not (yet) available when missing = \"ML\"")
     # }
@@ -723,22 +723,40 @@ lav_model_h1_information_firstorder <- function(lavobject = NULL,
         scores = TRUE,
         negative = FALSE
       )
-
+      
       # >>>>>>>> HJ/MK PML CODE >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
+
       # information H1
-      if (is.null(WT)) {
-        B1[[g]] <- lav_matrix_crossprod(SC)
+      
+      if (isTRUE(clustered)) {
+        # For clustered data, need to compute (centred) crossprod within each
+        # cluster and sum them all up.
+        clusters     <- lavdata@Lp[[g]]$cluster.id[[2]]  # why list of 2?
+        clusters.idx <- lavdata@Lp[[g]]$cluster.idx[[2]] 
+        nclust       <- length(clusters)
+        zb <- list()
+    
+        if (is.null(WT)) WT <- rep(1, length(clusters.idx))
+        
+        for (b in seq_along(clusters)) {
+          SC_b <- SC[clusters.idx == b, ]
+          WT_b <- WT[clusters.idx == b]
+          zb[[b]] <- apply(SC_b * WT_b, 2, sum)
+        }
+        zbar <- apply(do.call(cbind, zb), 1, mean)
+        B1c <- 
+          lapply(zb, \(z) tcrossprod(z - zbar)) |>
+          Reduce(f = `+`)
+        B1[[g]] <- nclust / (nclust - 1) * B1c
+        
       } else {
-        # Option 1: Do a weighted cross product
-        B1[[g]] <- crossprod(WT * SC)
-
-        # Option 2: Compute the sample covariance multiplied by n
-        # cov_tmp <- stats::cov.wt(SC, wt = WT, method = "ML")
-        # B1[[g]] <- with(cov_tmp, n.obs * cov)
+        if (is.null(WT)) {
+          B1[[g]] <- lav_matrix_crossprod(SC)
+        } else {
+          B1[[g]] <- crossprod(WT * SC)
+        }
       }
-
-      # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
     } else if (estimator == "ML" && lavdata@nlevels > 1L) {
       # if not-structured, we use lavh1, and that is always
       # 'unconditional' (for now)

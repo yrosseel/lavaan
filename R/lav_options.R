@@ -260,7 +260,7 @@ lav_options_set <- function(opt = NULL) {                     # nolint
       opt$estimator <- "ml"
       opt$test <- "satorra.bentler"
       opt$se <- "robust.cluster.sem"
-    } else if (opt$.categorical) {
+    } else if (opt$.categorical & opt$estimator != "pml") {
       opt$test <- "satorra.bentler"
       opt$se <- "robust.cluster.sem"
     }
