@@ -36,22 +36,37 @@ lav_msg_fixme <- function(...) {
 lav_msg <- function(wat, txt.width = getOption("width", 80L),
                     indent = 4L, showheader = TRUE) {
   if (showheader) {
-    x <- sub("[() ].*$", "", as.character(sys.calls()))
     ignore.in.stack <- c(
       "^eval$", "^try", "^doTryCatch", "^lav_msg", "^stop$", "^warning$",
       "^which$", "^unique$", "^as\\.", "^unlist$", "^message$",
       "^source$", "^withVisible$", "^tryCatch.W.E$", "^withCallingHandlers$",
       "^do.call$", "^paste"
     )
-    ignores <- rep(FALSE, length(x))
-    for (ptrn in ignore.in.stack) {
-      ignores <- ignores | grepl(ptrn, x)
+    sc <- sys.calls()
+    sc.i <- length(sc)
+    sc.naam <- ""
+    while (sc.i > 0L) {
+      x <- tryCatch(
+        as.character(sc[[sc.i]][[1L]]),
+        error = function(e) {"unknown"}
+      )
+      skip <- FALSE
+      for (re in ignore.in.stack) {
+        if (grepl(re, x)) {
+          skip <- TRUE
+          break
+        }
+      }
+      if (!skip) {
+        sc.naam <- x
+        break
+      }
+      sc.i <- sc.i - 1L
     }
-    x <- x[!ignores]
-    if (length(x) == 0) {
+    if (sc.naam == "") {
       header <- "lavaan:"
     } else {
-      header <- paste0("lavaan->", x[length(x)], "():")
+      header <- paste0("lavaan->", sc.naam, "():")
     }
   } else {
     header <- ""

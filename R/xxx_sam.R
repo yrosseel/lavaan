@@ -87,9 +87,9 @@ sam <- function(model = NULL,
   }
 
   # check se= argument
-  if (!se %in% c("standard", "naive", "twostep", "none")) {
+  if (!se %in% c("standard", "naive", "twostep", "twostep2", "none")) {
     lav_msg_stop(gettext(
-      "se= argument must be twostep, naive, standard or none."))
+      "se= argument must be twostep, twostep2, naive, standard or none."))
   }
 
   # handle dot dot dot
