@@ -33,7 +33,7 @@ lav_lavaan_step17_lavaan <- function(lavmc = NULL,
   lavpartable <- lav_partable_remove_cache(lavpartable)
   lavaan <- new("lavaan", # type_of_slot - where created or modified ?
     # ------------   ------------------------- -
-    version = as.character(packageVersion("lavaan")),
+    version = packageDescription("lavaan", fields = "Version"),
     call = lavmc, # match.call - ldw_adapt_match_call
     timing = timing, # list - ldw_add_timing
     Options = lavoptions, # list - options (2) / data (3) / partable (4)

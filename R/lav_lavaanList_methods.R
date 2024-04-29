@@ -10,7 +10,7 @@ setMethod(
 lav_lavaanList_short_summary <- function(object, print = TRUE) {
   txt <- sprintf(
     "lavaanList (%s) -- based on %d datasets (%d converged)\n",
-    packageDescription("lavaan", fields = "Version"),
+    object@version,
     object@meta$ndat,
     sum(object@meta$ok)
   )
