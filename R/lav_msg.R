@@ -50,6 +50,11 @@ lav_msg <- function(wat, txt.width = getOption("width", 80L),
         as.character(sc[[sc.i]][[1L]]),
         error = function(e) {"unknown"}
       )
+      if (length(x) == 3L) {
+        # needed if a function specified in namespace, e.g.
+        # as.character(str2lang("lavaan::sem(m, d)")[[1L]])
+        x <- x[[3L]]
+      }
       skip <- FALSE
       for (re in ignore.in.stack) {
         if (grepl(re, x)) {

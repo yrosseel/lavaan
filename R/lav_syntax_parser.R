@@ -658,6 +658,8 @@ ldw_parse_get_modifier <- function(formul1, lhs, opi, modelsrc, types, debug, wa
       if (any(formul1$elem.text[opi + 1L] ==
               c("fixed", "start", "upper", "lower", "prior"))) {
         if (nelem == opi + 6L) {
+          if (formul1$elem.text[opi + 3L] == "NA")
+            formul1$elem.type[opi + 3L] <- types$numliteral
           if (formul1$elem.type[opi + 3L] == types$numliteral) {
             outje <- list()
             outje[[formul1$elem.text[opi + 1L]]] <-
