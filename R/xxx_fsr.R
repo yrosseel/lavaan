@@ -414,7 +414,7 @@ fsr <- function(model = NULL,
     if (any(eigvals < .Machine$double.eps^(3 / 4))) {
       lav_msg_stop(gettext(
         "corrected covariance matrix of factor scores is not positive definite"),
-        sprintf(ngettext(ngroups, "", "in group %s"), g)
+        if (ngroups > 1L) gettextf("in group %s", g) else ""
       )
     }
   } # g

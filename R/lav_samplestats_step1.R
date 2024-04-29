@@ -48,7 +48,7 @@ lav_samplestats_step1 <- function(Y,
       fit <- lav_uvreg_fit(y = Y[, i], X = eXo, wt = wt)
       if (any(is.na(fit$theta))) {
         lav_msg_stop(gettextf(
-          "lavaan ERROR: linear regression failed for %1$s;
+          "linear regression failed for %1$s;
           X may not be of full rank in group %2$s", ov.names[i], group))
       }
       FIT[[i]] <- fit
