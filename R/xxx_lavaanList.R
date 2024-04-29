@@ -445,7 +445,7 @@ lavaanList <- function(model = NULL, # model
 
   # create lavaanList object
   lavaanList <- new("lavaanList",
-    version = as.character(packageVersion("lavaan")),
+    version = packageDescription("lavaan", fields = "Version"),
     call = mc,
     Options = lavoptions,
     ParTable = lavpartable,
