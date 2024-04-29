@@ -1390,7 +1390,7 @@ print.lavaan.summary <- function(x, ..., nd = 3L) {
   if (!is.null(y$fit)) {
     add.h0 <- FALSE
     if (!is.null(attr(y$fit, "add.h0"))) {
-      add.h0 <- attr(y$fit, "add.h0")
+      add.h0 <- isTRUE(attr(y$fit, "add.h0"))
     }
     print.lavaan.fitMeasures(y$fit, nd = nd, add.h0 = add.h0)
   }
