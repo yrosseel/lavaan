@@ -1086,10 +1086,10 @@ print.lavaan.summary <- function(x, ..., nd = 3L) {
       }
     }
   }
-  
+
   #TDJ: print header for lavaan.mi object (or nothing when NULL)
   cat(y$top_of_lavaanmi)
-  
+
   # optim
   if (!is.null(y$optim)) {
     estimator <- y$optim$estimator
