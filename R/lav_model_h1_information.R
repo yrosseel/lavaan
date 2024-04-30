@@ -723,33 +723,33 @@ lav_model_h1_information_firstorder <- function(lavobject = NULL,
         scores = TRUE,
         negative = FALSE
       )
-      
+
       # >>>>>>>> HJ/MK PML CODE >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
 
       # information H1
-      
+
       if (isTRUE(clustered)) {
         # For clustered data, need to compute (centred) crossprod within each
         # cluster and sum them all up.
         clusters     <- lavdata@Lp[[g]]$cluster.id[[2]]  # why list of 2?
-        clusters.idx <- lavdata@Lp[[g]]$cluster.idx[[2]] 
+        clusters.idx <- lavdata@Lp[[g]]$cluster.idx[[2]]
         nclust       <- length(clusters)
         zb <- list()
-    
+
         if (is.null(WT)) WT <- rep(1, length(clusters.idx))
-        
+
         for (b in seq_along(clusters)) {
           SC_b <- SC[clusters.idx == b, ]
           WT_b <- WT[clusters.idx == b]
           zb[[b]] <- apply(SC_b * WT_b, 2, sum)
         }
         zbar <- apply(do.call(cbind, zb), 1, mean)
-        B1c <- 
+        B1c <-
           lapply(zb, \(z) tcrossprod(z - zbar)) |>
           Reduce(f = `+`)
         B1[[g]] <- nclust / (nclust - 1) * B1c
-        
+
       } else {
         if (is.null(WT)) {
           B1[[g]] <- lav_matrix_crossprod(SC)

@@ -41,7 +41,7 @@ lavParTable(model = NULL, meanstructure = FALSE, int.ov.free = FALSE,
     debug = FALSE, warn = TRUE, as.data.frame. = TRUE)
 
 lavParseModelString(model.syntax = '', as.data.frame. = FALSE,
-                    parser = "old", warn = TRUE, debug = FALSE)
+                    parser = "new", warn = TRUE, debug = FALSE)
 
 }
 \arguments{
