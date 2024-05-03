@@ -96,8 +96,8 @@ lav_options_default <- function() {
     }
   }
   # ------------------------- store options --------------------------
-  elm("model.type", "sem", chr = c(lavaan = "lavaan", cfa = "sem",
-            growth = "growth", sem = "sem", efa = "efa",
+  elm("model.type", "sem", chr = c(lavaan = "lavaan", cfa = "cfa",
+            growth = "growth", sem = "sem", efa = "efa", path = "path",
             unrestricted = "unrestricted"))
 
   # global

@@ -1087,6 +1087,9 @@ print.lavaan.summary <- function(x, ..., nd = 3L) {
     }
   }
 
+  #TDJ: print header for lavaan.mi object (or nothing when NULL)
+  cat(y$top_of_lavaanmi)
+
   # optim
   if (!is.null(y$optim)) {
     estimator <- y$optim$estimator
@@ -1385,7 +1388,11 @@ print.lavaan.summary <- function(x, ..., nd = 3L) {
 
   # extra fit measures (if present)
   if (!is.null(y$fit)) {
-    print.lavaan.fitMeasures(y$fit, nd = nd, add.h0 = FALSE)
+    add.h0 <- FALSE
+    if (!is.null(attr(y$fit, "add.h0"))) {
+      add.h0 <- isTRUE(attr(y$fit, "add.h0"))
+    }
+    print.lavaan.fitMeasures(y$fit, nd = nd, add.h0 = add.h0)
   }
 
   # efa output

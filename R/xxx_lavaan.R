@@ -433,10 +433,10 @@ lavaan <- function(
 
   out
 }
-# # # # # # # # #
-# # cfa + sem # #
-# # # # # # # # #
-cfa <- sem <- function(
+# # # # # #
+# # cfa # #
+# # # # # #
+cfa <- function(
   model = NULL,
   data = NULL,
   ordered = NULL,
@@ -452,6 +452,31 @@ cfa <- sem <- function(
   NACOV = NULL, # nolint
   ov.order = "model",
   ...) {
+  sc <- sys.call()
+  sc[["model.type"]] <- quote("cfa")
+  # call mother function
+  sc[[1L]] <- quote(lavaan::lavaan)
+  eval(sc, parent.frame())
+}
+# # # # # #
+# # sem # #
+# # # # # #
+sem <- function(
+    model = NULL,
+    data = NULL,
+    ordered = NULL,
+    sampling.weights = NULL,
+    sample.cov = NULL,
+    sample.mean = NULL,
+    sample.th = NULL,
+    sample.nobs = NULL,
+    group = NULL,
+    cluster = NULL,
+    constraints = "",
+    WLS.V = NULL, # nolint
+    NACOV = NULL, # nolint
+    ov.order = "model",
+    ...) {
   sc <- sys.call()
   sc[["model.type"]] <- quote("sem")
   # call mother function

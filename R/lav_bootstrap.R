@@ -96,20 +96,14 @@ bootstrapLavaan <- function(object,
   # new in 0.6-12: always warn for failed and nonadmissible runs
   nfailed <- length(attr(out, "error.idx")) # zero if NULL
   if (nfailed > 0L && object@Options$warn) {
-    lav_msg_warn(sprintf(
-      ngettext(nfailed,
-               "1 bootstrap run failed or did not converge.",
-               "%s bootstrap runs failed or did not converge."),
-      nfailed))
+    lav_msg_warn(gettextf(
+      "%s bootstrap runs failed or did not converge.", nfailed))
   }
 
   notok <- length(attr(out, "nonadmissible")) # zero if NULL
   if (notok > 0L && object@Options$warn) {
-    lav_msg_warn(sprintf(
-      ngettext(notok,
-               "1 bootstrap resulted in a nonadmissible (n) solution.",
-               "%s bootstrap runs resulted in nonadmissible (n) solutions."),
-      notok))
+     lav_msg_warn(gettextf(
+      "%s bootstrap runs resulted in nonadmissible solutions.", notok))
   }
 
   out

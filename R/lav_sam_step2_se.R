@@ -30,7 +30,7 @@ lav_sam_step2_se <- function(FIT = NULL, JOINT = NULL,
 
   if (!lavoptions$se %in%
     c("none", "standard", "naive", "twostep", "twostep2")) {
-    lav_msg_warning(gettext(
+    lav_msg_warn(gettext(
       "unknown se= argument: \"%s\". Switching to twostep.",
       lavoptions$se
     ))
