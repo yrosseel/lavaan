@@ -168,24 +168,33 @@ lav_test_rename <- function(test, check = FALSE) {
     test[target.idx] <- "browne.residual.nt.model"
   }
 
+  # report unknown values
+  bad.idx <- which(!test %in% c(
+    "standard", "none", "default",
+    "satorra.bentler",
+    "yuan.bentler",
+    "yuan.bentler.mplus",
+    "mean.adjusted",
+    "mean.var.adjusted",
+    "scaled.shifted",
+    "bollen.stine",
+    "browne.residual.nt",
+    "browne.residual.nt.model",
+    "browne.residual.adf",
+    "browne.residual.adf.model"
+  ))
+
+  fmgs = c()
+  for (j in seq_along(bad.idx)) {
+    fmg_parsed = lav_fmg_parse_input(test[bad.idx[j]])
+    if (!is.null(fmg_parsed)) {
+      fmgs = c(fmgs, test[bad.idx[j]])
+      bad.idx = bad.idx[-j]
+    }
+  }
 
   # check?
   if (check) {
-    # report unknown values
-    bad.idx <- which(!test %in% c(
-      "standard", "none", "default",
-      "satorra.bentler",
-      "yuan.bentler",
-      "yuan.bentler.mplus",
-      "mean.adjusted",
-      "mean.var.adjusted",
-      "scaled.shifted",
-      "bollen.stine",
-      "browne.residual.nt",
-      "browne.residual.nt.model",
-      "browne.residual.adf",
-      "browne.residual.adf.model"
-    ))
     if (length(bad.idx) > 0L) {
       lav_msg_stop(sprintf(
         ngettext(
@@ -212,7 +221,7 @@ lav_test_rename <- function(test, check = FALSE) {
     }
   }
 
-  # reorder: first nonscaled, then scaled
+  # reorder: first nonscaled, then scaled, then fmg.
   nonscaled.idx <- which(test %in% c(
     "standard", "none", "default",
     "bollen.stine",
@@ -229,7 +238,9 @@ lav_test_rename <- function(test, check = FALSE) {
     "mean.var.adjusted",
     "scaled.shifted"
   ))
-  test <- c(test[nonscaled.idx], test[scaled.idx])
+
+  scaled <- c(test[scaled.idx], sort(fmgs))
+  test <- c(test[nonscaled.idx], scaled)
 
   test
 }
@@ -684,6 +695,8 @@ lav_model_test <- function(lavobject = NULL,
         boot.larger = boot.larger,
         boot.length = boot.length
       )
+    } else if (!is.null(input <- lav_fmg_parse_input(this.test))) {
+      TEST[[this.test]] <- lav_test_fmg(lavobject, input)
     }
   } # additional tests
 
