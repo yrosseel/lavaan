@@ -196,6 +196,7 @@ lav_options_default <- function() {
     available.cases = "available.cases", doubly.robust = "doubly.robust"))
   elm("sampling.weights.normalization", "total", chr = c(
     "total", "group", "none"))
+  elm("samplestats", TRUE, bl = TRUE)
 
   # summary data
   elm("sample.cov.rescale", "default", bl = TRUE)
@@ -346,7 +347,7 @@ lav_options_default <- function() {
   elm("cl", NULL, oklen = c(0L, 1L))
   elm("iseed", NULL, oklen = c(0L, 1L))
 
-  # zero values
+  # categorical
   elm("zero.add", c(0.5, 0.0), chr = "default",
       nm = "[0, 1]", oklen = c(1L, -2L))
   elm("zero.keep.margins", "default", chr = "default", bl = TRUE)

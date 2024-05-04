@@ -14,6 +14,7 @@ lav_start <- function(start.method = "default",
                       model.type = "sem",
                       mimic = "lavaan",
                       reflect = FALSE, # rotation only
+					  samplestats.flag = TRUE,
                       order.lv.by = "none", # rotation only
                       debug = FALSE) {
   # check arguments
@@ -41,7 +42,6 @@ lav_start <- function(start.method = "default",
     order.lv.by <- "index"
   }
 
-
   # check start.method
   if (mimic == "lavaan") {
     start.initial <- "lavaan"
@@ -56,6 +56,9 @@ lav_start <- function(start.method = "default",
   start.user <- NULL
   if (is.character(start.method)) {
     start.method.lc <- tolower(start.method)
+	if (start.method.lc != "simple" && !samplestats.flag) {
+	    start.method.lc <- start.method <- "simple"
+    }
     if (start.method.lc == "default") {
       # nothing to do
     } else if (start.method == "simple") {

@@ -29,6 +29,12 @@ lav_h1_logl <- function(lavdata = NULL,
     }
   }
 
+  # lavsamplestats filled in? (not if no data, or samplestats = FALSE)
+  if (length(lavsamplestats@ntotal) == 0L ||
+      (!is.null(lavoptions$samplestats) && !lavoptions$samplestats)) {
+    logl.ok <- FALSE
+  }
+
   # new in 0.6-9 (so SAM can handle N<P)
   if (!is.null(lavoptions$sample.icov) && !lavoptions$sample.icov) {
     logl.ok <- FALSE

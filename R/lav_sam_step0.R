@@ -13,6 +13,12 @@ lav_sam_step0 <- function(cmd = "sem", model = NULL, data = NULL,
   dotdotdot0$test <- "none"
   dotdotdot0$verbose <- FALSE # no output for this 'dummy' FIT
 
+  # estimator: ULS (to avoid computing WLS.V if categorical)
+  # dotdotdot0$estimator <- "ULS"
+
+  dotdotdot0$conditional.x <- FALSE
+  dotdotdot0$fixed.x <- TRUE
+
   # persistent options
   dotdotdot0$ceq.simple <- TRUE # if not the default yet
   dotdotdot0$check.lv.interaction <- FALSE # we allow for it

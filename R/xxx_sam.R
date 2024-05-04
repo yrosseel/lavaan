@@ -95,6 +95,13 @@ sam <- function(model = NULL,
   # handle dot dot dot
   dotdotdot <- list(...)
 
+  if (!is.null(dotdotdot$conditional.x)) {
+    lav_msg_warn(gettext(
+      "sam() does not support conditional.x = TRUE (yet) -> switching to
+      conditional.x = FALSE"))
+    dotdotdot$conditional.x <- FALSE
+  }
+
   ###############################################
   # STEP 0: process full model, without fitting #
   ###############################################
@@ -102,18 +109,6 @@ sam <- function(model = NULL,
     cmd = cmd, model = model, data = data, se = se,
     sam.method = sam.method, dotdotdot = dotdotdot
   )
-
-  # check for conditional.x, which is not supported yet
-  if (FIT@Options$conditional.x) {
-    lav_msg_warn(gettext(
-      "sam() does not support conditional.x = TRUE (yet) -> switching to
-      conditional.x = FALSE"))
-    dotdotdot$conditional.x <- FALSE
-    FIT <- lav_sam_step0(
-      cmd = cmd, model = model, data = data, se = se,
-      sam.method = sam.method, dotdotdot = dotdotdot
-    )
-  }
 
   # check for data.type == "none"
   if (FIT@Data@data.type == "none") {

@@ -17,6 +17,12 @@ lav_lavaan_step08_start <- function(slotModel = NULL, # nolint
   #     compute start column via lav_start and
   #       check via lav_start_check_cov if demanded (lavoptions$check.start)
 
+  samplestats.flag <- TRUE
+  if (!is.null(lavoptions$samplestats) &&
+      !lavoptions$samplestats) {
+    samplestats.flag <- FALSE
+  }
+
   if (is.null(slotModel)) {
     # check if we have provided a full parameter table as model = input
     if (!is.null(lavpartable$est) && is.character(lavoptions$start) &&
@@ -41,6 +47,7 @@ lav_lavaan_step08_start <- function(slotModel = NULL, # nolint
           lavsamplestats = lavsamplestats,
           model.type = lavoptions$model.type,
           reflect = FALSE,
+		  samplestats.flag = samplestats.flag,
           # order.lv.by  = lavoptions$rotation.args$order.lv.by,
           order.lv.by = "none",
           mimic = lavoptions$mimic,
@@ -87,6 +94,7 @@ lav_lavaan_step08_start <- function(slotModel = NULL, # nolint
         lavh1 = lavh1,
         model.type = lavoptions$model.type,
         reflect = FALSE,
+        samplestats.flag = samplestats.flag,
         # order.lv.by  = lavoptions$rotation.args$order.lv.by,
         order.lv.by = "none",
         mimic = lavoptions$mimic,

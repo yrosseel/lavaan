@@ -21,7 +21,9 @@ lav_lavaan_step06_h1 <- function(sloth1 = NULL,
   } else {
     lavh1 <- list()
     if (is.logical(lavoptions$h1) && lavoptions$h1) {
-      if (length(lavsamplestats@ntotal) > 0L) { # lavsamplestats filled in
+      if (length(lavsamplestats@ntotal) > 0L ||
+	      (!is.null(lavoptions$samplestats) && !lavoptions$samplestats)) {
+		  # lavsamplestats filled in
         if (lavoptions$verbose) {
           cat("lavh1              ... start:\n")
         }

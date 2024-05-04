@@ -14,6 +14,9 @@ lav_partable_add_bounds <- function(partable = NULL,
   if (is.null(lavoptions$optim.bounds)) {
     # <0.6-6 version
     return(partable)
+  } else if (!is.null(lavoptions$samplestats) && !lavoptions$samplestats) {
+    # no sample statistics
+    return(partable)
   } else {
     if (!is.null(lavoptions$bounds) && lavoptions$bounds == "none") {
       # no bounds needed

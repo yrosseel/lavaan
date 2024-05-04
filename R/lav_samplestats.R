@@ -207,6 +207,9 @@ lav_samplestats_from_data <- function(lavdata = NULL,
 
   # compute some sample statistics per group
   for (g in 1:ngroups) {
+    if (!is.null(lavoptions$samplestats) && !lavoptions$samplestats) {
+	  next
+	}
     # check nobs
     if (is.null(WT[[g]])) {
       if (nobs[[g]] < 2L) {
@@ -1055,8 +1058,9 @@ lav_samplestats_from_data <- function(lavdata = NULL,
   )
 
   # just a SINGLE warning if we have empty cells
-  if (categorical && zero.cell.warn &&
-    any(sapply(zero.cell.tables, nrow) > 0L)) {
+  if ((!is.null(lavoptions$samplestats) && lavoptions$samplestats) &&
+      categorical && zero.cell.warn &&
+      any(sapply(zero.cell.tables, nrow) > 0L)) {
     nempty <- sum(sapply(zero.cell.tables, nrow))
     lav_msg_warn(gettextf(
       "%s bivariate tables have empty cells; to see them, use:

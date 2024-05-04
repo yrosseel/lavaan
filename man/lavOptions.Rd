@@ -173,6 +173,10 @@ Data options:
       If \code{"group"}, the sampling weights are normalized per group:
       by dividing by the sum of the weights (in each group), and multiplying
       again by the group size. The default is \code{"total"}.}
+    \item{\code{samplestats}:}{Logical. If \code{FALSE}, no sample statistics
+      will be computed (and no estimation can take place). This can be useful
+      when only a dummy lavaan object is requested, without any computations.
+      The default is \code{TRUE}.}
 }
 
 Data summary options:

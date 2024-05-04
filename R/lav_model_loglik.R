@@ -31,8 +31,9 @@ lav_model_loglik <- function(lavdata = NULL,
     # }
   }
 
-  # lavsamplestats filled in? (not if no data...)
-  if (length(lavsamplestats@ntotal) == 0L) {
+  # lavsamplestats filled in? (not if no data, or samplestats = FALSE)
+  if (length(lavsamplestats@ntotal) == 0L ||
+      (!is.null(lavoptions$samplestats) && !lavoptions$samplestats)) {
     logl.ok <- FALSE
   }
 
