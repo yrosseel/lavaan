@@ -276,6 +276,10 @@ lav_samplestats_from_data <- function(lavdata = NULL,
       } else {
         WLS.W <- TRUE
       }
+	  # check cat.wls.w option (new in 0.6-18)
+	  if (!is.null(lavoptions$cat.wls.w) && !lavoptions$cat.wls.w) {
+	    WLS.W <- FALSE # perhaps do.fit = FALSE? (eg sam())
+	  }
       if (verbose) {
         cat("Estimating sample thresholds and correlations ... ")
       }
