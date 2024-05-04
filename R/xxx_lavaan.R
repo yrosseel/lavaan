@@ -198,7 +198,7 @@ lavaan <- function(
     ngroups          = ngroups,
     dotdotdot        = dotdotdot,
     flat.model       = flat.model,
-    model            = model,
+    model            = model, # in case model is a lavaan object
     NACOV            = NACOV,
     WLS.V            = WLS.V
   )

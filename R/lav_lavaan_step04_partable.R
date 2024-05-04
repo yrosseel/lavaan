@@ -37,7 +37,10 @@ lav_lavaan_step04_partable <- function(slotParTable = NULL, # nolint
   if (!is.null(slotParTable)) {
     lavpartable <- lav_partable_set_cache(slotParTable)
   } else if (is.character(model) ||
-    inherits(model, "formula")) {
+    inherits(model, "formula") ||
+	# model was already a flat.model
+	(is.list(model) && !is.null(model$mod.idx) &&
+	 !is.null(attr(model, "modifiers")))) {
     if (lavoptions$verbose) {
       cat("lavpartable        ...")
     }

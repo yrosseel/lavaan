@@ -63,19 +63,20 @@ lav_lavaan_step01_ovnames_initflat <- function(slotParTable     = NULL, # nolint
     # and see what happens
     flat.model <- parTable(model)
   } else if (is.list(model)) {
-    # two possibilities: either model is already lavaanified
-    # or it is something else...
+    # a list! perhaps a full parameter table, or an initial flat model,
+    # or something else...
+
+	# 1. flat.model already (output of lavParseModelString)?
+	if (!is.null(model$lhs) && !is.null(model$op) &&
+	    !is.null(model$rhs) && !is.null(model$mod.idx) &&
+		!is.null(attr(model, "modifiers"))) {
+	  flat.model <- model
+    }
 
     # look for the bare minimum columns: lhs - op - rhs
-    if (!is.null(model$lhs) && !is.null(model$op) &&
+    else if (!is.null(model$lhs) && !is.null(model$op) &&
       !is.null(model$rhs) && !is.null(model$free)) {
       # ok, we have something that looks like a parameter table
-      # FIXME: we need to check for redundant arguments
-      # (but if cfa/sem was used, we can not trust the call)
-      # redundant <- c("meanstructure", "int.ov.free", "int.lv.free",
-      #        "fixed.x", "orthogonal", "std.lv", "parameterization",
-      #        "auto.fix.first", "auto.fix.single", "auto.var",
-      #        "auto.cov.lv.x", "auto.cov.y", "auto.th", "auto.delta")
       flat.model <- model
 
       # fix semTools issue here? for auxiliary() which does not use

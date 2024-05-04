@@ -207,6 +207,7 @@ lav_samplestats_from_data <- function(lavdata = NULL,
 
   # compute some sample statistics per group
   for (g in 1:ngroups) {
+    # switch off computing all sample statistics? (housekeeping only)
     if (!is.null(lavoptions$samplestats) && !lavoptions$samplestats) {
 	  next
 	}

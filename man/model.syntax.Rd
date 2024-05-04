@@ -47,7 +47,7 @@ lavParseModelString(model.syntax = '', as.data.frame. = FALSE,
 \arguments{
 \item{model}{A description of the user-specified model. Typically, the model
     is described using the lavaan model syntax; see details for more 
-    information. Alternatively, a parameter table (e.g., the output of 
+    information. Alternatively, a parameter table (e.g., the output of
     \code{lavParseModelString} is also accepted.}
 \item{model.syntax}{The model syntax specifying the model. Must be a literal
 string.}
