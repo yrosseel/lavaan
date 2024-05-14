@@ -21,7 +21,8 @@ lavPredictY <- function(object,
                         method = "conditional.mean",
                         label = TRUE,
                         assemble = TRUE,
-                        force.zero.mean = FALSE) {
+                        force.zero.mean = FALSE,
+                        lambda = 0) {
   stopifnot(inherits(object, "lavaan"))
   lavmodel <- object@Model
   lavdata <- object@Data
@@ -133,7 +134,8 @@ lavPredictY <- function(object,
       lavmodel = lavmodel, lavdata = lavdata,
       lavimplied = lavimplied,
       data.obs = data.obs, y.idx = y.idx, x.idx = x.idx,
-      force.zero.mean = force.zero.mean
+      force.zero.mean = force.zero.mean,
+      lambda = lambda
     )
   } else {
     lav_msg_stop(gettext("method must be \"conditional.mean\" (for now)."))
@@ -212,6 +214,7 @@ lav_predict_y_conditional_mean <-
            x.idx = NULL,
            # options
            force.zero.mean = FALSE,
+           lambda = lambda,
            level = 1L) { # not used for now
 
     # full object?
@@ -291,6 +294,9 @@ lav_predict_y_conditional_mean <-
 
         # center using mx
         Xtest <- t(t(Xtest) - mx)
+        
+        # Apply regularization
+        Sxx <- Sxx + lambda * diag(nrow(Sxx))        
 
         # prediction rule
         tmp <- Xtest %*% solve(Sxx, Sxy)
@@ -300,3 +306,43 @@ lav_predict_y_conditional_mean <-
 
     YPRED
   }
+
+
+# Takes a sequence of lambdas and performs k-fold cross-validation to determine
+# the best lambda
+cvLavPredictY <- function(model, data, xnames, ynames, n.folds = 10, lambda.seq) {
+  
+  results <- data.frame(matrix(ncol=2,nrow=0, dimnames=list(NULL, c(
+    "mse", "lambda")
+  )))
+  
+  folds = rep(1:n.folds, length.out = nrow(data))
+  folds = sample(folds)
+  
+  for (i in 1:n.folds){
+    indis <- which(folds == i)
+    fold.fit <- sem(model, data = data[-indis,], estimator = "MLR", meanstructure = T, warn = F)
+    
+    for(l in lambda.seq) {
+      yhat <- lavPredictY(
+        fold.fit,
+        newdata = data[indis,],
+        xnames = xnames,
+        ynames = ynames,
+        lambda = l
+      )
+      mse <- mean((as.matrix(data[indis,ynames]) - as.matrix(yhat))^2)
+      results <- rbind(results, data.frame(mse = mse, lambda = l))
+    }
+  }
+  
+  # Group by lambda and determine average MSE per group
+  avg <- aggregate(results$mse, by = list(results$lambda), FUN=mean)
+  avg <- avg[order(avg[,2]),]
+  names(avg) <- c("lambda", "mse")
+  
+  return(list(
+    results = as.data.frame(avg),
+    lambda.min = as.numeric(avg[avg$mse == min(avg$mse),'lambda'])
+  ))
+}

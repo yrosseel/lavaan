@@ -9,7 +9,9 @@ lavPredictY(object, newdata = NULL,
             ynames = lavNames(object, "ov.y"),
             xnames = lavNames(object, "ov.x"), 
             method = "conditional.mean",
-            label = TRUE, assemble = TRUE, force.zero.mean = FALSE)
+            label = TRUE, assemble = TRUE,
+            force.zero.mean = FALSE,
+            lambda = 0)
 }
 \arguments{
 \item{object}{An object of class \code{\linkS4class{lavaan}}.}
@@ -39,6 +41,7 @@ with a group column, having the same dimensions as the original
 If \code{TRUE}, the (model-implied) mean vector is set to the zero vector.
 If \code{FALSE}, the (model-implied) mean vector is set to the (unrestricted)
 sample mean vector.}
+\item{lambda}{Numeric. A lambda regularization penalty term.}
 }
 \details{
 This function can be used for (SEM-based) out-of-sample predictions of
@@ -53,6 +56,9 @@ matrix and  mean vector (Mu), and the standard expression for the
 conditional mean of a multivariate normal distribution. Note that if the
 model is saturated (and hence df = 0), the SEM-based predictions are identical
 to ordinary least squares predictions.
+
+Lambda is a regularization penalty term to improve prediction accuracy that can
+be determined using the cvLavPredictY function.
 }
 \seealso{
 \code{\link{lavPredict}} to compute scores for latent variables.
@@ -62,6 +68,10 @@ de Rooij, M., Karch, J.D., Fokkema, M., Bakk, Z., Pratiwi, B.C, and
 Kelderman, H. (2022) SEM-Based Out-of-Sample Predictions,
 Structural Equation Modeling: A Multidisciplinary Journal.
 DOI:10.1080/10705511.2022.2061494
+
+Molina, M. D., Molina, L., & Zappaterra, M. W. (2024). Aspects of Higher
+Consciousness: A Psychometric Validation and Analysis of a New Model of Mystical
+Experience. DOI:
 }
 \examples{
 model <- ' 
