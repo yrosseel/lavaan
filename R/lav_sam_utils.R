@@ -434,9 +434,11 @@ lav_sam_veta2 <- function(FS = NULL, M = NULL,
       lav_msg_warn(gettext("failed to compute lambda"))
       VETA2 <- Var.FS2 - Var.ERROR # and hope for the best
     } else {
-      cutoff <- 1 + 1 / (N - 1)
+      #cutoff <- 1 + 1 / (N - 1)
+	  cutoff <- 1 + 2/N # be more conservative for VETA2
       if (lambda < cutoff) {
-        lambda.star <- lambda - 1 / (N - 1)
+        #lambda.star <- lambda - 1 / (N - 1)
+		lambda.star <- max(c(0, lambda - 2/N))
         VETA2 <- Var.FS2 - lambda.star * Var.ERROR
       } else {
         VETA2 <- Var.FS2 - Var.ERROR

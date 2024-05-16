@@ -1,25 +1,32 @@
 # Displays a message (... concatenated with spaces in between) with header
-# 'lavaan(function):' and formatted to have a maximum line length of 'txt.width'
-# while all but the first line start with 'indent' spaces. The message is shown
-# via R function 'message()'.
-lav_msg_note <- function(..., showheader = FALSE) {
+# 'lavaan(function):', except when showheader == FALSE, and formatted to have
+# a maximum line length of 'txt.width' while all but the first line start with
+# 'indent' spaces. If a footer is specified it is appended to the formatted text
+# 'as is'. The message is shown via R function 'message()'.
+lav_msg_note <- function(..., showheader = FALSE, footer = "") {
   wat <- unlist(list(...), use.names = FALSE)
   if (!showheader) wat <- c("lavaan NOTE: ___", wat)
-  message(lav_msg(wat, showheader = showheader), domain = NA)
+  msg <- lav_msg(wat, showheader = showheader)
+  if (footer != "") msg <- paste(msg, footer, sep = "\n")
+  message(msg, domain = NA)
 }
 
 # Displays a message with header and formatted as
 # above via R function 'warning()'.
-lav_msg_warn <- function(...) {
+lav_msg_warn <- function(..., footer = "") {
   wat <- unlist(list(...), use.names = FALSE)
-  warning(lav_msg(wat), call. = FALSE, domain = NA)
+  msg <- lav_msg(wat)
+  if (footer != "") msg <- paste(msg, footer, sep = "\n")
+  warning(msg, call. = FALSE, domain = NA)
 }
 
 # Displays a message with header and formatted as
 # above via R function 'stop()'.
-lav_msg_stop <- function(...) {
+lav_msg_stop <- function(..., footer = "") {
   wat <- unlist(list(...), use.names = FALSE)
-  stop(lav_msg(wat), call. = FALSE, domain = NA)
+  msg <- lav_msg(wat)
+  if (footer != "") msg <- paste(msg, footer, sep = "\n")
+  stop(msg, call. = FALSE, domain = NA)
 }
 
 # Displays a message with header and formatted as
@@ -34,7 +41,7 @@ lav_msg_fixme <- function(...) {
 
 # subroutine for above functions
 lav_msg <- function(wat, txt.width = getOption("width", 80L),
-                    indent = 4L, showheader = TRUE) {
+                    indent = 3L, showheader = TRUE) {
   if (showheader) {
     ignore.in.stack <- c(
       "^eval$", "^try", "^doTryCatch", "^lav_msg", "^stop$", "^warning$",
@@ -69,13 +76,14 @@ lav_msg <- function(wat, txt.width = getOption("width", 80L),
       sc.i <- sc.i - 1L
     }
     if (sc.naam == "") {
-      header <- "lavaan:"
+      header <- "lavaan: ___"
     } else {
-      header <- paste0("lavaan->", sc.naam, "():")
+      header <- paste0("lavaan->", sc.naam, "(): ___")
     }
   } else {
     header <- ""
   }
+  txt.width <- txt.width - indent # whitespace at the right
   # make sure we only have a single string
   txt <- paste(wat, collapse = " ")
   # split the txt in little chunks

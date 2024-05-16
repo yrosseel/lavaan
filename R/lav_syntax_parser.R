@@ -56,10 +56,10 @@ ldw_parse_sublist <- function(inlist, indexes) {
 
 # ------------------------ ldw_txtloc  --------------------------------
 # function which translates a position in the model source string to a
-# user friendly locator and shows the line with position
+# user friendly locator (=[1L]) and the line with position (=[2L])
 # --------------------------------------------------------------------------
 ldw_txtloc <- function(modelsrc, position) {
-  txt <- ""
+  txt <- c("", "")
   if (nchar(modelsrc) >= position && position > 0) {
     newlines <- gregexpr("\n", paste0(modelsrc, "\n"), fixed = TRUE)[[1]]
     lijn <- which(newlines >= position)[1]
@@ -77,8 +77,8 @@ ldw_txtloc <- function(modelsrc, position) {
     }
     # adapt line number when first line blank :
     if (grepl("^[ \t]*\n", modelsrc)) lijn <- lijn - 1L
-    txt <- gettextf(" at line %1$s, pos %2$s", lijn, pos)
-    cat(lijnchar, "\n", strrep(" ", pos - 1L), "^\n", sep = "")
+    txt <- c(gettextf(" at line %1$s, pos %2$s", lijn, pos),
+             paste(lijnchar, "\n", strrep(" ", pos - 1L), "^\n", sep = ""))
   }
   txt
 }
@@ -142,26 +142,28 @@ ldw_parse_step1 <- function(modelsrc, types, debug, warn, spaces.in.operator) {
       elem.i <- elem.i + 1L
     }
   }
-  # --------------------- handling spaces.in.operator ------------------------
+  # --------------------- handling spaces.in.operator ---------------------- --
   if (spaces.in.operator != "error") {
     if (grepl("= +~", modelsrcw)) {
       waar <- regexpr("= +~", modelsrcw)[1]
       modelsrcw <- gsub("=( +)~", "=~\\1", modelsrcw)
       if (spaces.in.operator == "warn" && warn == TRUE) {
+        tl <- ldw_txtloc(modelsrc, waar)
         lav_msg_warn(gettext("splitting of '=~' deprecated"),
-                     ldw_txtloc(modelsrc, waar))
+                     tl[1L], footer = tl[2L])
       }
     }
     if (grepl("[^=~]~ +~", modelsrcw)) {
       waar <- regexpr("[^=~]~ +~", modelsrcw)[1]
       modelsrcw <- gsub("([^=~])~( +)~", "\\1~~\\2", modelsrcw)
       if (spaces.in.operator == "warn" && warn == TRUE) {
+        tl <- ldw_txtloc(modelsrc, waar + 1L)
         lav_msg_warn(gettext("splitting of '~~' deprecated"),
-                     ldw_txtloc(modelsrc, waar + 1L))
+                     tl[1L], footer = tl[2L])
       }
     }
   }
-  # --------------------------------------------------------------------------
+  # ----------------------------------------------------------------------- --
   lavops <- gregexpr("=~|<~|~\\*~|~~|~|==|<|>|:=|:|\\||%", modelsrcw)[[1]]
   if (lavops[1L] > -1L) {
     lavop.lengths <- attr(lavops, "match.length")
@@ -249,8 +251,9 @@ ldw_parse_step1 <- function(modelsrc, types, debug, warn, spaces.in.operator) {
   # check for uninterpreted chars
   wrong <- regexpr("[^\"\n ]", modelsrcw)
   if (wrong != -1L) {
+    tl <- ldw_txtloc(modelsrc, wrong)
     lav_msg_stop(gettext("unexpected character"),
-                 ldw_txtloc(modelsrc, wrong))
+                 tl[1L], footer = tl[2L])
   }
   # remove unused elements from vectors
   elements <- which(elem.type > 0L)
@@ -267,7 +270,7 @@ ldw_parse_step1 <- function(modelsrc, types, debug, warn, spaces.in.operator) {
   elem.i <- length(elem.pos)
   concatenated <- FALSE
   while (elem.i > 1L) {
-    if (elem.type[elem.i] == types$identifier &&
+    if (any(elem.type[elem.i] == c(types$identifier, types$numliteral)) &&
         elem.type[elem.i - 1L] == types$identifier) {
         spaces.between <- elem.pos[elem.i] - elem.pos[elem.i - 1L] -
           length(elem.text[elem.i - 1L])
@@ -366,11 +369,13 @@ ldw_parse_step2 <- function(modellist, modelsrc, types, debug, warn) {
     opi <- which(formul1$elem.type == types$lavaanoperator)
     nelem <- length(formul1$elem.type)
     if (length(opi) == 0L) {
+      tl <- ldw_txtloc(modelsrc, formul1$elem.pos[1])
       lav_msg_stop(gettext("formula without valid operator"),
-                   ldw_txtloc(modelsrc, formul1$elem.pos[1]))
+                   tl[1L], footer = tl[2L])
     }
     if (length(opi) > 1L) opi <- opi[1] # only first operator taken
-    if (any(formul1$elem.text[opi] == real.operators) && sum(formul1$elem.text == "+") > 0) {
+    if (any(formul1$elem.text[opi] == real.operators) && 
+        sum(formul1$elem.text == "+") > 0) {
       # check + symbols outside parentheses in left and right hand side
       lhplusjes <- integer(0)
       openparentheses <- 0L
@@ -436,10 +441,11 @@ ldw_parse_check_valid_name <- function(formul1, ind, modelsrc) {
   testitem <- gsub(" ", "_", formul1$elem.text[ind], fixed = TRUE)
 
   if (make.names(testitem) != testitem) {
+    tl <- ldw_txtloc(modelsrc, formul1$elem.pos[ind])
     lav_msg_stop(
       gettext("identifier is either a reserved word (in R) or
               contains an illegal character"),
-      ldw_txtloc(modelsrc, formul1$elem.pos[ind])
+      tl[1L], footer = tl[2L]
     )
   }
   return(invisible(NULL))
@@ -514,7 +520,12 @@ ldw_adapt_vector_type <- function(typenu, typetoadd, texttoadd, types) {
 #  and value an array of values (length > 1 if vector via c(...)) for the modifier value.
 # An error message is produced when no modifier can be determined.
 # --------------------------------------------------------------------------
-ldw_parse_get_modifier <- function(formul1, lhs, opi, modelsrc, types, debug, warn) {
+ldw_parse_get_modifier <- function(formul1, lhs, opi, modelsrc, types,
+                                   debug, warn, rme = 0L, rmeprev = 0L) { 
+  if (rme > rmeprev) {
+    welke <- c(seq.int(1L, opi), seq.int(rmeprev + 1L, rme), length(formul1))
+    formul1 <- ldw_parse_sublist(formul1, welke)
+  }
   nelem <- length(formul1$elem.type)
   # remove unnecessary parentheses (one element between parentheses, previous no identifier)
   check.more <- TRUE
@@ -546,8 +557,9 @@ ldw_parse_get_modifier <- function(formul1, lhs, opi, modelsrc, types, debug, wa
         return(list(efa = temp))
       }
     }
+    tl <- ldw_txtloc(modelsrc, formul1$elem.pos[1L])
     lav_msg_stop(gettext("invalid left hand side modifier"),
-                 ldw_txtloc(modelsrc, formul1$elem.pos[1L]))
+                 tl[1L], footer = tl[2L])
   } else {
     # modifier on right hand side
     # check for vectors c(...), start(...), fixed(...), ...
@@ -578,8 +590,9 @@ ldw_parse_get_modifier <- function(formul1, lhs, opi, modelsrc, types, debug, wa
             nelem <- length(formul1$elem.type)
             break
           } else {
+            tl <- ldw_txtloc(modelsrc, formul1$elem.pos[j])
             lav_msg_stop(gettext("invalid vector specification"),
-                         ldw_txtloc(modelsrc, formul1$elem.pos[j]))
+                         tl[1L], footer = tl[2L])
           }
         }
         if (j + 3L < nelem && formul1$elem.text[j + 3L] == "," &&
@@ -609,8 +622,9 @@ ldw_parse_get_modifier <- function(formul1, lhs, opi, modelsrc, types, debug, wa
             nelem <- length(formul1$elem.type)
             break
           } else {
+            tl <- ldw_txtloc(modelsrc, formul1$elem.pos[j])
             lav_msg_stop(gettext("invalid vector specification"),
-                         ldw_txtloc(modelsrc, formul1$elem.pos[j]))
+                         tl[1L], footer = tl[2L])
           }
         }
       }
@@ -626,16 +640,18 @@ ldw_parse_get_modifier <- function(formul1, lhs, opi, modelsrc, types, debug, wa
     # check on last element being a numliteral or identifier
     #                       already done in calling function
     if (all(formul1$elem.text[nelem - 1L] != c("*", "?"))) {
+      tl <- ldw_txtloc(modelsrc, formul1$elem.pos[nelem - 1L])
       lav_msg_stop(gettext("invalid modifier symbol (should be '*' or '?')"),
-                   ldw_txtloc(modelsrc, formul1$elem.pos[nelem - 1L]))
+                   tl[1L], footer = tl[2L])
     }
     if (formul1$elem.text[nelem - 1L] == "?") {
       temp <- ldw_evaluate_r_expression(formul1, opi + 1L, nelem - 2L, types)
       if (is.numeric(temp)) {
         return(list(start = temp))
       }
+      tl <- ldw_txtloc(modelsrc, formul1$elem.pos[opi + 1L])
       lav_msg_stop(gettext("invalid start value expression (should be numeric)"),
-                   ldw_txtloc(modelsrc, formul1$elem.pos[opi + 1L]))
+                   tl[1L], footer = tl[2L])
     }
     if (nelem == opi + 3) {
       if (formul1$elem.text[opi + 1L] == "NA")
@@ -647,9 +663,10 @@ ldw_parse_get_modifier <- function(formul1, lhs, opi, modelsrc, types, debug, wa
         if (formul1$elem.type[opi + 1L] == types$numliteral) {
           return(list(fixed = ldw_num_modifier(formul1$elem.text[opi + 1L])))
         } else {
+          tl <- ldw_txtloc(modelsrc, formul1$elem.pos[opi + 1L])
           lav_msg_stop(
             gettext("invalid value (should be numeric, identifier or string)"),
-            ldw_txtloc(modelsrc, formul1$elem.pos[opi + 1L]))
+            tl[1L], footer = tl[2L])
         }
       }
     }
@@ -666,8 +683,9 @@ ldw_parse_get_modifier <- function(formul1, lhs, opi, modelsrc, types, debug, wa
               ldw_num_modifier(formul1$elem.text[opi + 3L])
             return(outje)
           }
+          tl <- ldw_txtloc(modelsrc, formul1$elem.pos[opi + 3L])
           lav_msg_stop(gettext("invalid value (should be numeric)"),
-                       ldw_txtloc(modelsrc, formul1$elem.pos[opi + 3L]))
+                       tl[1L], footer = tl[2L])
         }
         temp <- ldw_evaluate_r_expression(formul1, opi + 3L, nelem - 3L, types)
         if (is.numeric(temp)) {
@@ -675,9 +693,10 @@ ldw_parse_get_modifier <- function(formul1, lhs, opi, modelsrc, types, debug, wa
           outje[[formul1$elem.text[opi + 1L]]] <- temp
           return(outje)
         }
+        tl <- ldw_txtloc(modelsrc, formul1$elem.pos[opi + 3L])
         lav_msg_stop(
           gettext("invalid value R-expression (should be numeric)"),
-          ldw_txtloc(modelsrc, formul1$elem.pos[opi + 3L]))
+          tl[1L], footer = tl[2L])
       }
       if (any(formul1$elem.text[opi + 1L] == c("equal", "rv", "label"))) {
         modname <- formul1$elem.text[opi + 1L]
@@ -689,8 +708,9 @@ ldw_parse_get_modifier <- function(formul1, lhs, opi, modelsrc, types, debug, wa
               ldw_unpaste(formul1$elem.text[opi + 3L])
             return(outje)
           }
+          tl <- ldw_txtloc(modelsrc, formul1$elem.pos[opi + 3L])
           lav_msg_stop(gettext("invalid value (should be string)"),
-                       ldw_txtloc(modelsrc, formul1$elem.pos[opi + 3L]))
+                       tl[1L], footer = tl[2L])
         }
         temp <- ldw_evaluate_r_expression(formul1, opi + 3L, nelem - 3L, types)
         if (is.character(temp) && temp[1] != "_error_") {
@@ -698,9 +718,10 @@ ldw_parse_get_modifier <- function(formul1, lhs, opi, modelsrc, types, debug, wa
           outje[[modname]] <- temp
           return(outje)
         }
+        tl <- ldw_txtloc(modelsrc, formul1$elem.pos[opi + 3L])
         lav_msg_stop(
           gettext("invalid value R-expression (should be a string)"),
-          ldw_txtloc(modelsrc, formul1$elem.pos[opi + 3L]))
+          tl[1L], footer = tl[2L])
       }
     }
     temp <- ldw_evaluate_r_expression(formul1, opi + 1L, nelem - 2L, types)
@@ -710,8 +731,9 @@ ldw_parse_get_modifier <- function(formul1, lhs, opi, modelsrc, types, debug, wa
     if (is.character(temp) && temp[1] != "_error_") {
       return(list(label = temp))
     }
+    tl <- ldw_txtloc(modelsrc, formul1$elem.pos[opi + 1L])
     lav_msg_stop(gettext("invalid modifier specification"),
-                 ldw_txtloc(modelsrc, formul1$elem.pos[opi + 1L]))
+                 tl[1L], footer = tl[2L])
   }
 }
 
@@ -798,28 +820,31 @@ ldw_parse_model_string <- function(model.syntax = "", as.data.frame. = FALSE,
     }
     if (op == ":") { # ------------------------- block start ------------------
       if (opi == 1L) {
+        tl <- ldw_txtloc(modelsrc, formul1$elem.pos[1])
         lav_msg_stop(
         gettext("Missing block identifier. The correct syntax is: \"LHS: RHS\",
                 where LHS is a block identifier (eg group or level), and RHS is
                 the group/level/block number or label."),
-        ldw_txtloc(modelsrc, formul1$elem.pos[1]))
+        tl[1L], footer = tl[2L])
       }
       if (opi > 2L || all(tolower(formul1$elem.text[1]) !=
                           c("group", "level", "block", "class"))) {
+        tl <- ldw_txtloc(modelsrc, formul1$elem.pos[1])
         lav_msg_stop(
         gettext("Invalid block identifier. The correct syntax is: \"LHS: RHS\",
                 where LHS is a block identifier (eg group or level), and RHS is
                 the group/level/block number or label."),
-        ldw_txtloc(modelsrc, formul1$elem.pos[1]))
+        tl[1L], footer = tl[2L])
       }
       if (nelem != 3 || all(formul1$elem.type[3] !=
                 c(types$stringliteral, types$identifier, types$numliteral))) {
+        tl <- ldw_txtloc(modelsrc, formul1$elem.pos[1])
         lav_msg_stop(
         gettext("syntax contains block identifier \"group\" with missing or
                 invalid number/label.The correct syntax is: \"LHS: RHS\", where
                 LHS is a block identifier (eg group or level), and RHS is the
                 group/level/block number or label."),
-        ldw_txtloc(modelsrc, formul1$elem.pos[1]))
+        tl[1L], footer = tl[2L])
       }
       flat.idx <- flat.idx + 1L
       flat.lhs[flat.idx] <- formul1$elem.text[1]
@@ -830,9 +855,10 @@ ldw_parse_model_string <- function(model.syntax = "", as.data.frame. = FALSE,
         block <- block + 1L
       } else {
         if (flat.idx != 1 && warn == TRUE) {
+          tl <- ldw_txtloc(modelsrc, formul1$elem.pos[1])
           lav_msg_warn(
             gettext("First block defined after other formula's"),
-            ldw_txtloc(modelsrc, formul1$elem.pos[1]))
+            tl[1L], footer = tl[2L])
         }
       }
       flat.block[flat.idx] <- block
@@ -840,6 +866,16 @@ ldw_parse_model_string <- function(model.syntax = "", as.data.frame. = FALSE,
       next
     }
     # ------------------ relational operators -----------------------------
+    # warn if some identifiers contain spaces
+    contsp <- which(formul1$elem.type == types$identifier &
+                      grepl(" ", formul1$elem.text, fixed = TRUE))
+    if (length(contsp) > 0L) {
+      tl <- ldw_txtloc(modelsrc, formul1$elem.pos[contsp[1L]])
+      lav_msg_warn(
+        gettextf("having identifiers with spaces ('%s') is deprecated",
+                 formul1$elem.text[contsp[1]]),
+        tl[1L], footer = tl[2L])
+    }
     # checks for valid names in lhs and rhs
     ldw_parse_check_valid_name(formul1, opi - 1L, modelsrc) # valid name lhs
     for (j in seq.int(opi + 1L, nelem)) { # valid names rhs
@@ -851,10 +887,11 @@ ldw_parse_model_string <- function(model.syntax = "", as.data.frame. = FALSE,
     if (formul1$elem.type[nelem] != types$identifier &&
       (formul1$elem.type[nelem] != types$numliteral || all(op != c("~", "=~"))))
     {
+      tl <- ldw_txtloc(modelsrc, formul1$elem.pos[nelem])
       lav_msg_stop(
         gettext("Last element of rhs part expected to be an identifier or,
                 for operator ~ or =~, a numeric literal!"),
-        ldw_txtloc(modelsrc, formul1$elem.pos[nelem]))
+        tl[1L], footer = tl[2L])
     }
     # intercept fixed on 0
     # replace 'lhs ~ 0' => 'lhs ~ 0 * 1' - intercept fixed on zero
@@ -886,13 +923,14 @@ ldw_parse_model_string <- function(model.syntax = "", as.data.frame. = FALSE,
       formul1$elem.type[seq.int(2L, nelem)] == types$identifier)
     # check at most 1 colon
     if (length(colons) > 1) {
+      tl <- ldw_txtloc(modelsrc, formul1$elem.pos[colons[2]])
       lav_msg_stop(
         gettext("Three-way or higher-order interaction terms (using multiple
                 colons) are not supported in the lavaan syntax; please manually
                 construct the product terms yourself in the data.frame, give
                 them an appropriate name, and then you can use these interaction
                 variables as any other (observed) variable in the model syntax."
-                ), ldw_txtloc(modelsrc, formul1$elem.pos[colons[2]]))
+                ), tl[1L], footer = tl[2L])
     }
     if (length(colons) == 1) { # collapse items around colon "a" ":" "b" => "a:b"
       formul1$elem.text[colons - 1L] <-
@@ -901,64 +939,81 @@ ldw_parse_model_string <- function(model.syntax = "", as.data.frame. = FALSE,
       formul1 <- ldw_parse_sublist(formul1, seq.int(1L, colons - 1L))
       nelem <- length(formul1$elem.type)
     }
+    # modifiers
+    rhsmodelems <- which(seq_along(formul1$elem.type) > opi &
+                           formul1$elem.type == types$symbol & 
+                        (formul1$elem.text == "*" | formul1$elem.text == "?"))
+    if (length(rhsmodelems) == 0L) rhsmodelems <- opi
     lhs <- formul1$elem.text[opi - 1L]
     rhs <- formul1$elem.text[nelem]
-    already <- which(flat.lhs == lhs & flat.op == op & flat.block == block &
-      (flat.rhs == rhs | (flat.rhs == "" & op == "~" &
-                            formul1$elem.type[nelem] == types$numliteral)))
-    if (length(already) == 1L) {
-      idx <- already
-    } else {
-      flat.idx <- flat.idx + 1L
-      idx <- flat.idx
-      flat.lhs[idx] <- lhs
-      flat.op[idx] <- op
-      flat.rhs[idx] <- rhs
-      flat.block[idx] <- block
-      if (formul1$elem.type[nelem] == types$numliteral) {
-        if (op == "~") flat.rhs[idx] <- ""
+    for (rmei in seq_along(rhsmodelems)) {
+      rme <- rhsmodelems[rmei]
+      rmeprev <- if (rmei == 1L) opi else rhsmodelems[rmei - 1L]
+      already <- which(flat.lhs == lhs & flat.op == op & flat.block == block &
+                         (flat.rhs == rhs | (flat.rhs == "" & op == "~" &
+                          formul1$elem.type[nelem] == types$numliteral)))
+      if (length(already) == 1L) {
+        idx <- already
+      } else {
+        flat.idx <- flat.idx + 1L
+        idx <- flat.idx
+        flat.lhs[idx] <- lhs
+        flat.op[idx] <- op
+        flat.rhs[idx] <- rhs
+        flat.block[idx] <- block
+        if (formul1$elem.type[nelem] == types$numliteral) {
+          if (op == "~") flat.rhs[idx] <- ""
+        }
       }
-    }
-    lhsmod <- list()
-    if (opi > 2) lhsmod <- ldw_parse_get_modifier(formul1,
-                                      TRUE, opi, modelsrc, types, debug, warn)
-    rhsmod <- list()
-    if (nelem - opi > 1) rhsmod <- ldw_parse_get_modifier(formul1,
-                                      FALSE, opi, modelsrc, types, debug, warn)
-    flat.fixed[idx] <- if (is.null(rhsmod$fixed)) flat.fixed[idx] else
-      paste(rhsmod$fixed, collapse = ";")
-    flat.start[idx] <- if (is.null(rhsmod$start)) flat.start[idx] else
-      paste(rhsmod$start, collapse = ";")
-    flat.label[idx] <- if (is.null(rhsmod$label)) flat.label[idx] else
-      paste(rhsmod$label, collapse = ";")
-    flat.lower[idx] <- if (is.null(rhsmod$lower)) flat.lower[idx] else
-      paste(rhsmod$lower, collapse = ";")
-    flat.upper[idx] <- if (is.null(rhsmod$upper)) flat.upper[idx] else
-      paste(rhsmod$upper, collapse = ";")
-    flat.prior[idx] <- if (is.null(rhsmod$prior)) flat.prior[idx] else
-      paste(rhsmod$prior, collapse = ";")
-    flat.efa[idx] <- if (is.null(lhsmod$efa)) flat.efa[idx] else
-      paste(lhsmod$efa, collapse = ";")
-    flat.rv[idx] <- if (is.null(rhsmod$rv)) flat.rv[idx] else
-      paste(rhsmod$rv, collapse = ";")
-    modnu <- c(lhsmod, rhsmod)
-    if (length(modnu) > 0L) { # there is a modifier here
-      if (length(already) == 0) { # unknown element
-        mod.idx <- mod.idx + 1L
-        cur.mod.idx <- mod.idx
-        mod[[cur.mod.idx]] <- modnu
-        flat.rhs.mod.idx[idx] <- cur.mod.idx
-      } else { # known element
-        if (flat.rhs.mod.idx[idx] == 0) { # not yet modifier
+      lhsmod <- list()
+      if (opi > 2 && rmei == 1L) lhsmod <- ldw_parse_get_modifier(formul1,
+                                  TRUE, opi, modelsrc, types, debug, warn)
+      rhsmod <- list()
+      if (nelem - opi > 1) rhsmod <- ldw_parse_get_modifier(formul1,
+                  FALSE, opi, modelsrc, types, debug, warn, rme, rmeprev)
+      flat.fixed[idx] <- if (is.null(rhsmod$fixed)) flat.fixed[idx] else
+        paste(rhsmod$fixed, collapse = ";")
+      flat.start[idx] <- if (is.null(rhsmod$start)) flat.start[idx] else
+        paste(rhsmod$start, collapse = ";")
+      flat.label[idx] <- if (is.null(rhsmod$label)) flat.label[idx] else
+        paste(rhsmod$label, collapse = ";")
+      flat.lower[idx] <- if (is.null(rhsmod$lower)) flat.lower[idx] else
+        paste(rhsmod$lower, collapse = ";")
+      flat.upper[idx] <- if (is.null(rhsmod$upper)) flat.upper[idx] else
+        paste(rhsmod$upper, collapse = ";")
+      flat.prior[idx] <- if (is.null(rhsmod$prior)) flat.prior[idx] else
+        paste(rhsmod$prior, collapse = ";")
+      flat.efa[idx] <- if (is.null(lhsmod$efa)) flat.efa[idx] else
+        paste(lhsmod$efa, collapse = ";")
+      flat.rv[idx] <- if (is.null(rhsmod$rv)) flat.rv[idx] else
+        paste(rhsmod$rv, collapse = ";")
+      modnu <- c(lhsmod, rhsmod)
+      if (length(modnu) > 0L) { # there is a modifier here
+        if (length(already) == 0) { # unknown element
           mod.idx <- mod.idx + 1L
           cur.mod.idx <- mod.idx
           mod[[cur.mod.idx]] <- modnu
           flat.rhs.mod.idx[idx] <- cur.mod.idx
-        } else { # use existing modifier index
-          cur.mod.idx <- flat.rhs.mod.idx[idx]
-          mod[[cur.mod.idx]] <- c(mod[[cur.mod.idx]], modnu)
+        } else { # known element
+          if (flat.rhs.mod.idx[idx] == 0) { # not yet modifier
+            mod.idx <- mod.idx + 1L
+            cur.mod.idx <- mod.idx
+            mod[[cur.mod.idx]] <- modnu
+            flat.rhs.mod.idx[idx] <- cur.mod.idx
+          } else { # use existing modifier index
+            cur.mod.idx <- flat.rhs.mod.idx[idx]
+            overwrite <- names(modnu)[names(modnu) %in% 
+                                        names(mod[[cur.mod.idx]])]
+            if (length(overwrite) > 0) {
+              tl <- ldw_txtloc(modelsrc, formul1$elem.pos[rmeprev + 1L])
+              lav_msg_warn(
+                gettextf("modifier %s specified multiple times, overwritten",
+                         overwrite[1L]), tl[1L], footer = tl[2L]) 
+            }
+            mod[[cur.mod.idx]] <- modifyList(mod[[cur.mod.idx]], modnu)
+          }
         }
-      }
+      }      
     }
   }
   # create flat (omit items without operator)

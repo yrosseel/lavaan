@@ -15,7 +15,7 @@
 # - 0.6-13: fix multiple-group UG^2 bug in Satorra.2000 (reported by
 #           Gronneberg, Foldnes and Moss)
 #
-# - 0.6-19:
+# - 0.6-18:
 #     New option method = "standard" (to explicitly avoid robust adjustment)
 #     New test= argument to select scaled stat when method="satorra.bentler.2001/2010"
 
