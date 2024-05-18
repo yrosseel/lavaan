@@ -5,31 +5,31 @@
 This function can be used to determine an optimal lambda value for the
 \code{lavPredictY} function. based on cross-validation.}
 \usage{
-cvLavPredictY(model, data, 
-            xnames = lavNames(object, "ov.x"),
-            ynames = lavNames(object, "ov.y"),
-            n.folds = 10,
-            lambda.seq)
+cvLavPredictY(object, data = NULL,
+              xnames = lavNames(object, "ov.x"),
+              ynames = lavNames(object, "ov.y"),
+              n.folds = 10L,
+              lambda.seq = seq(0, 1, 0.1))
 }
 \arguments{
-\item{model}{A description of the user-specified model using the lavaan model syntax. }
-\item{data}{A data.frame, containing the same variables as
-the data.frame that was used when fitting the model in \code{object}. 
-This data.frame should also include the y-variables.}
+\item{object}{An object of class \code{\linkS4class{lavaan}}.}
+\item{data}{A data.frame, containing the same variables as the data.frame that
+was used when fitting the model in \code{object}.} 
 \item{xnames}{The names of the observed variables that should be treated as the
 x-variables. Can also be a list to allow for a separate set of variable names
 per group (or block).}
 \item{ynames}{The names of the observed variables that should be treated as the
-y-variables. It is for these variables that the function will predict 
-the (model-based) values for each observation. Can also be a list to allow 
-for a separate set of variable names per group (or block).}
-\item{n.folds}{Numeric. The number of folds to be used during cross-validation.}
+y-variables. It is for these variables that the function will predict the
+(model-based) values for each observation. Can also be a list to allow for a
+separate set of variable names per group (or block).}
+\item{n.folds}{Integer. The number of folds to be used during
+cross-validation.}
 \item{lambda.seq}{An R \code{seq()} containing the range of lambda penalty
 values to be tested during cross-validation.}
 }
 \details{
-This function is used to generate an optimal lambda value for \code{lavPredictY}
-predictions to improve prediction accuracy.
+This function is used to generate an optimal lambda value for
+\code{lavPredictY} predictions to improve prediction accuracy.
 }
 \seealso{
 \code{\link{lavPredictY}} to predict the values of (observed) y-variables given
@@ -41,10 +41,15 @@ Kelderman, H. (2022) SEM-Based Out-of-Sample Predictions,
 Structural Equation Modeling: A Multidisciplinary Journal.
 DOI:10.1080/10705511.2022.2061494
 
-Molina, M. D., Molina, L., & Zappaterra, M. W. (2024). Aspects of Higher Consciousness: A Psychometric Validation and Analysis of a New Model of Mystical Experience. DOI:
+Molina, M. D., Molina, L., & Zappaterra, M. W. (2024). Aspects of Higher
+Consciousness: A Psychometric Validation and Analysis of a New Model of
+Mystical Experience. DOI:
 }
 \examples{
-colnames(PoliticalDemocracy) = c("z1", "z2", "z3", "z4", "y1", "y2", "y3", "y4", "x1", "x2", "x3")
+colnames(PoliticalDemocracy) <- c("z1", "z2", "z3", "z4", 
+                                  "y1", "y2", "y3", "y4", 
+                                  "x1", "x2", "x3")
+
 model <- '
   # latent variable definitions
   ind60 =~ x1 + x2 + x3
@@ -60,28 +65,27 @@ model <- '
   z4 ~~ y4
   y2 ~~ y4
 '
-fit <- sem(model, data = PoliticalDemocracy, meanstructure = TRUE, warn = FALSE)
+fit <- sem(model, data = PoliticalDemocracy, meanstructure = TRUE)
 
-percent <- .5
-idx <- sort(sample(x = nrow(PoliticalDemocracy),
-  size = floor(percent*nrow(PoliticalDemocracy)),
-  replace = FALSE))
+percent <- 0.5
+nobs <- lavInspect(fit, "ntotal")
+idx <- sort(sample(x = nobs, size = floor(percent*nobs)))
 
-xnames = colnames(PoliticalDemocracy)[-c(5,6,7,8)]
-ynames = colnames(PoliticalDemocracy)[c(5,6,7,8)]
+xnames = c("z1", "z2", "z3", "z4", "x1", "x2", "x3")
+ynames = c("y1", "y2", "y3", "y4")
 
 reg.results <- cvLavPredictY(
-    model,
+    fit,
     PoliticalDemocracy[-idx, ],
-    xnames,
-    ynames,
-    n.folds = 10,
+    xnames = xnames,
+    ynames = ynames,
+    n.folds = 10L,
     lambda.seq = seq(from = .6, to = 2.5, by = .1)
 )
 lam <- reg.results$lambda.min
 
 lavPredictY(fit, newdata = PoliticalDemocracy[idx,],
-                  ynames = colnames(PoliticalDemocracy)[-c(5,6,7,8)],
-                  xnames = colnames(PoliticalDemocracy)[c(5,6,7,8)],
-                  lambda = lam)
+                 ynames  = ynames,
+                 xnames  = xnames,
+                 lambda  = lam)
 }

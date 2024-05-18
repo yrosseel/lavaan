@@ -374,7 +374,7 @@ ldw_parse_step2 <- function(modellist, modelsrc, types, debug, warn) {
                    tl[1L], footer = tl[2L])
     }
     if (length(opi) > 1L) opi <- opi[1] # only first operator taken
-    if (any(formul1$elem.text[opi] == real.operators) && 
+    if (any(formul1$elem.text[opi] == real.operators) &&
         sum(formul1$elem.text == "+") > 0) {
       # check + symbols outside parentheses in left and right hand side
       lhplusjes <- integer(0)
@@ -521,7 +521,7 @@ ldw_adapt_vector_type <- function(typenu, typetoadd, texttoadd, types) {
 # An error message is produced when no modifier can be determined.
 # --------------------------------------------------------------------------
 ldw_parse_get_modifier <- function(formul1, lhs, opi, modelsrc, types,
-                                   debug, warn, rme = 0L, rmeprev = 0L) { 
+                                   debug, warn, rme = 0L, rmeprev = 0L) {
   if (rme > rmeprev) {
     welke <- c(seq.int(1L, opi), seq.int(rmeprev + 1L, rme), length(formul1))
     formul1 <- ldw_parse_sublist(formul1, welke)
@@ -941,7 +941,7 @@ ldw_parse_model_string <- function(model.syntax = "", as.data.frame. = FALSE,
     }
     # modifiers
     rhsmodelems <- which(seq_along(formul1$elem.type) > opi &
-                           formul1$elem.type == types$symbol & 
+                           formul1$elem.type == types$symbol &
                         (formul1$elem.text == "*" | formul1$elem.text == "?"))
     if (length(rhsmodelems) == 0L) rhsmodelems <- opi
     lhs <- formul1$elem.text[opi - 1L]
@@ -1002,18 +1002,18 @@ ldw_parse_model_string <- function(model.syntax = "", as.data.frame. = FALSE,
             flat.rhs.mod.idx[idx] <- cur.mod.idx
           } else { # use existing modifier index
             cur.mod.idx <- flat.rhs.mod.idx[idx]
-            overwrite <- names(modnu)[names(modnu) %in% 
+            overwrite <- names(modnu)[names(modnu) %in%
                                         names(mod[[cur.mod.idx]])]
             if (length(overwrite) > 0) {
               tl <- ldw_txtloc(modelsrc, formul1$elem.pos[rmeprev + 1L])
               lav_msg_warn(
                 gettextf("modifier %s specified multiple times, overwritten",
-                         overwrite[1L]), tl[1L], footer = tl[2L]) 
+                         overwrite[1L]), tl[1L], footer = tl[2L])
             }
             mod[[cur.mod.idx]] <- modifyList(mod[[cur.mod.idx]], modnu)
           }
         }
-      }      
+      }
     }
   }
   # create flat (omit items without operator)
