@@ -1396,12 +1396,12 @@ lav_predict_eta_ebm_ml <- function(lavobject = NULL, # for convenience
   f.eta.i <- function(x, y.i, x.i, mu.i) {
     # add 'dummy' values (if any) for ov.y
     if (length(lavmodel@ov.y.dummy.lv.idx[[g]]) > 0L) {
-      x2 <- c(x, data.obs[[g]][i,
+      x2 <- c(x - mu.i, data.obs[[g]][i,
         lavmodel@ov.y.dummy.ov.idx[[g]],
         drop = FALSE
       ])
     } else {
-      x2 <- x
+      x2 <- x - mu.i
     }
 
     # conditional density of y, given eta.i(=x)
