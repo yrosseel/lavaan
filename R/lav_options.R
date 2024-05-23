@@ -993,12 +993,13 @@ lav_options_set <- function(opt = NULL) {                     # nolint
     opt$rotation.args$orthogonal <- TRUE
   }
 
-  # if target, check target matrix
+  # if target, check target matrix, and set order.lv.by to = "none"
   if (opt$rotation == "target" || opt$rotation == "pst") {
     target <- opt$rotation.args$target
     if (is.null(target) || !is.matrix(target)) {
       lav_msg_stop(gettext("rotation target matrix is NULL, or not a matrix"))
     }
+	opt$rotation.args$order.lv.by <- "none"
   }
   if (opt$rotation == "pst") {
     target.mask <- opt$rotation.args$target.mask
