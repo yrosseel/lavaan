@@ -31,7 +31,18 @@ efa <- function(data = NULL,
   }
 
   # handle ov.names
-  if (!is.null(data) && inherits(data, "data.frame")) {
+  if (!is.null(data) && inherits(data, "lavMoments")) {
+    if ("sample.cov" %in% names(data)) {
+      ov.names <- rownames(data$sample.cov)
+      if (is.null(ov.names)) {
+        ov.names <- colnames(data$sample.cov)
+      }
+    } else {
+      lav_msg_stop(gettext(
+        "When data= is of class lavMoments, it must contain sample.cov"))
+    }
+    
+  } else if (!is.null(data) && inherits(data, "data.frame")) {
     if (length(ov.names) > 0L) {
       if (twolevel.flag) {
         data <- data[, c(ov.names, dotdotdot$cluster)]
