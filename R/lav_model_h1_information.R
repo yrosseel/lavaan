@@ -572,16 +572,29 @@ lav_model_h1_information_observed <- function(lavobject = NULL,
       SIGMA.W <- implied$cov[[(g - 1) * lavdata@nlevels + 1L]]
       SIGMA.B <- implied$cov[[(g - 1) * lavdata@nlevels + 2L]]
 
-      # clustered data
-      A1[[g]] <- lav_mvnorm_cluster_information_observed(
-        Lp           = lavdata@Lp[[g]],
-        YLp          = lavsamplestats@YLp[[g]],
-        Mu.W         = MU.W,
-        Sigma.W      = SIGMA.W,
-        Mu.B         = MU.B,
-        Sigma.B      = SIGMA.B,
-        x.idx        = lavsamplestats@x.idx[[g]]
-      )
+      if (lavdata@missing == "ml") {
+          A1[[g]] <- lav_mvnorm_cluster_missing_information_observed(
+            Y1            = lavdata@X[[g]],
+            Y2            = lavsamplestats@YLp[[g]][[2]]$Y2,
+            Lp            = lavdata@Lp[[g]],
+            Mp            = lavdata@Mp[[g]],
+            Mu.W          = MU.W,
+            Sigma.W       = SIGMA.W,
+            Mu.B          = MU.B,
+            Sigma.B       = SIGMA.B,
+            x.idx         = lavsamplestats@x.idx[[g]]
+          )
+      } else {
+        A1[[g]] <- lav_mvnorm_cluster_information_observed(
+          Lp           = lavdata@Lp[[g]],
+          YLp          = lavsamplestats@YLp[[g]],
+          Mu.W         = MU.W,
+          Sigma.W      = SIGMA.W,
+          Mu.B         = MU.B,
+          Sigma.B      = SIGMA.B,
+          x.idx        = lavsamplestats@x.idx[[g]]
+        )
+      }
     } # g
   } # ML + multilevel
 
@@ -761,6 +774,10 @@ lav_model_h1_information_firstorder <- function(lavobject = NULL,
       # if not-structured, we use lavh1, and that is always
       # 'unconditional' (for now)
       if (lavmodel@conditional.x && structured) {
+	    if (lavdata@missing == "ml") {
+		  lav_msg_stop(gettext("firstorder information matrix not available ",
+		                       "(yet) if conditional.x + fiml"))
+		}
         Res.Sigma.W <- implied$res.cov[[(g - 1) * lavdata@nlevels + 1L]]
         Res.Int.W <- implied$res.int[[(g - 1) * lavdata@nlevels + 1L]]
         Res.Pi.W <- implied$res.slopes[[(g - 1) * lavdata@nlevels + 1L]]
@@ -785,17 +802,33 @@ lav_model_h1_information_firstorder <- function(lavobject = NULL,
         MU.B <- implied$mean[[(g - 1) * lavdata@nlevels + 2L]]
         SIGMA.W <- implied$cov[[(g - 1) * lavdata@nlevels + 1L]]
         SIGMA.B <- implied$cov[[(g - 1) * lavdata@nlevels + 2L]]
-        B1[[g]] <- lav_mvnorm_cluster_information_firstorder(
-          Y1            = lavdata@X[[g]],
-          YLp           = lavsamplestats@YLp[[g]],
-          Lp            = lavdata@Lp[[g]],
-          Mu.W          = MU.W,
-          Sigma.W       = SIGMA.W,
-          Mu.B          = MU.B,
-          Sigma.B       = SIGMA.B,
-          x.idx         = lavsamplestats@x.idx[[g]],
-          divide.by.two = TRUE
-        )
+		if (lavdata@missing == "ml") {
+          B1[[g]] <- lav_mvnorm_cluster_missing_information_firstorder(
+            Y1            = lavdata@X[[g]],
+            Y2            = lavsamplestats@YLp[[g]][[2]]$Y2,
+            Lp            = lavdata@Lp[[g]],
+            Mp            = lavdata@Mp[[g]],
+            Mu.W          = MU.W,
+            Sigma.W       = SIGMA.W,
+            Mu.B          = MU.B,
+            Sigma.B       = SIGMA.B,
+            x.idx         = lavsamplestats@x.idx[[g]],
+            divide.by.two = TRUE
+          )
+		} else {
+		  # no missing values
+          B1[[g]] <- lav_mvnorm_cluster_information_firstorder(
+            Y1            = lavdata@X[[g]],
+            YLp           = lavsamplestats@YLp[[g]],
+            Lp            = lavdata@Lp[[g]],
+            Mu.W          = MU.W,
+            Sigma.W       = SIGMA.W,
+            Mu.B          = MU.B,
+            Sigma.B       = SIGMA.B,
+            x.idx         = lavsamplestats@x.idx[[g]],
+            divide.by.two = TRUE
+          )
+		}
       }
     } else if (estimator == "ML" && lavdata@nlevels == 1L) {
       if (length(lavdata@cluster) > 0L) {

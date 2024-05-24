@@ -1786,7 +1786,7 @@ lav_samplestats_cluster_patterns <- function(Y = NULL, Lp = NULL,
     # cluster-means
     Y2 <- rowsum.default(Y1,
       group = cluster.idx, reorder = FALSE,
-      na.rm = FALSE
+      na.rm = FALSE, # must be FALSE!
     ) / cluster.size
     Y2c <- t(t(Y2) - Y1.means)
 
@@ -1812,7 +1812,7 @@ lav_samplestats_cluster_patterns <- function(Y = NULL, Lp = NULL,
     # check for zero variances
     if (length(both.idx) > 0L) {
       zero.idx <- which(diag(S.b)[both.idx] < 0.0001)
-      if (length(zero.idx) > 0L) {
+      if (length(zero.idx) > 0L && !anyNA(Y2)) {
         lav_msg_warn(gettext(
           "(near) zero variance at between level for splitted variable:"),
           paste(Lp$both.names[[l]][zero.idx], collapse = " ")
@@ -1821,6 +1821,8 @@ lav_samplestats_cluster_patterns <- function(Y = NULL, Lp = NULL,
     }
 
     S <- cov(Y1, use = "pairwise.complete.obs") * (N - 1L) / N
+	# missing by design?
+	S[is.na(S)] <- as.numeric(NA)
 
     # loglik.x
     # extract 'fixed' level-1 loglik from here

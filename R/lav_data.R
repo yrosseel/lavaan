@@ -1153,14 +1153,16 @@ lav_data_full <- function(data = NULL, # data.frame
             paste(empty.case.idx, collapse = " ")))
         }
       }
-      if (warn && any(Mp[[g]]$coverage == 0)) {
-        lav_msg_warn(gettext(
-          "due to missing values, some pairwise combinations have 0% coverage;
-          use lavInspect(fit, \"coverage\") to investigate."))
-      } else if (warn && any(Mp[[g]]$coverage < 0.1)) {
-        lav_msg_warn(gettext(
-          "due to missing values, some pairwise combinations have less than
-          10% coverage; use lavInspect(fit, \"coverage\") to investigate."))
+	  if (warn && any(Mp[[g]]$coverage < 0.1)) {
+	    coverage.vech <- lav_matrix_vech(Mp[[g]]$coverage, diagonal = FALSE)
+	    small.idx <- which(coverage.vech < 0.1)
+	    if (all(coverage.vech[small.idx] == 0)) {
+		  # 0.6-18: no warning --> this could be due to missing by design
+		} else {
+          lav_msg_warn(gettext(
+            "due to missing values, some pairwise combinations have less than
+            10% coverage; use lavInspect(fit, \"coverage\") to investigate."))
+	    }
       }
       # in case we had observations with only missings
       nobs[[g]] <- NROW(X[[g]]) - length(Mp[[g]]$empty.idx)

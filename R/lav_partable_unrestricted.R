@@ -313,9 +313,17 @@ lav_partable_indep_or_unrestricted <- function(lavobject = NULL,
 
         # starting values -- covariances
         if (!is.null(sample.cov)) {
-          ustart <- c(ustart, lav_matrix_vech(sample.cov,
-            diagonal = FALSE
-          ))
+          sample.cov.vech <- lav_matrix_vech(sample.cov, diagonal = FALSE)
+          ustart <- c(ustart, sample.cov.vech)
+          # check for 'missing by design' cells: here, the sample.cov
+          # element is *exactly* zero (new in 0.6-18)
+          zero.cov <- which(sample.cov.vech == 0)
+          if (length(zero.cov) > 0L) {
+            n.tmp <- length(free)
+            ones.and.zeroes <- rep(1L, pstar)
+            ones.and.zeroes[zero.cov] <- 0L
+            free[(n.tmp - pstar + 1):n.tmp] <- ones.and.zeroes
+          }
         } else {
           ustart <- c(ustart, rep(as.numeric(NA), pstar))
         }
@@ -784,6 +792,25 @@ lav_partable_unrestricted_chol <- function(lavobject = NULL,
         exo <- c(exo, rep(0L, pstar))
         lower <- c(lower, rep(-Inf, pstar))
         ustart <- c(ustart, rep(as.numeric(NA), pstar))
+      }
+
+      # check for zero coverage at level 1 (new in 0.6-18)
+      if (lavdata@missing == "ml" && l == 1 && !is.null(lavdata@Mp[[g]])) {
+        coverage <- lavdata@Mp[[g]]$coverage
+        sample.cov.vech <- lav_matrix_vech(coverage, diagonal = FALSE)
+        zero.cov <- which(sample.cov.vech == 0)
+        if (length(zero.cov) > 0L) {
+          n.tmp <- length(free)
+          ones.and.zeroes <- rep(1L, pstar)
+          ones.and.zeroes[zero.cov] <- 0L
+		  inf.and.zeroes <- rep(-Inf, pstar)
+		  inf.and.zeroes[zero.cov] <- 0
+		  na.and.zeroes <- rep(as.numeric(NA), pstar)
+		  na.and.zeroes[zero.cov] <- 0
+          free[  (n.tmp - pstar + 1):n.tmp] <- ones.and.zeroes
+		  ustart[(n.tmp - pstar + 1):n.tmp] <- na.and.zeroes
+		  lower[ (n.tmp - pstar + 1):n.tmp] <- inf.and.zeroes
+        }
       }
 
       # meanstructure?
