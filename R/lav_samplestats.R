@@ -436,10 +436,11 @@ lav_samplestats_from_data <- function(lavdata = NULL,
 
         # residual covariances!
         Y <- X[[g]] # contains eXo
-        COV <- unname(stats::cov(Y, use = "pairwise"))
+        COV <- unname(stats::cov(Y, use = "pairwise.complete.obs"))
+		# if we have missing values (missing by design?), replace them by 0
+		COV[is.na(COV)] <- 0
         MEAN <- unname(colMeans(Y, na.rm = TRUE))
         var[[g]] <- diag(COV)
-        cov[[g]] <- COV
         # rescale cov by (N-1)/N? (only COV!)
         if (rescale) {
           # we 'transform' the sample cov (divided by n-1)
@@ -473,7 +474,10 @@ lav_samplestats_from_data <- function(lavdata = NULL,
         res.slopes[[g]] <- t(COEF[-1, , drop = FALSE]) # slopes
       } else {
         # FIXME: needed?
-        cov[[g]] <- unname(stats::cov(X[[g]], use = "pairwise"))
+		COV <- unname(stats::cov(X[[g]], use = "pairwise.complete.obs"))
+        # if we have missing values (missing by design?), replace them by 0
+        COV[is.na(COV)] <- 0
+        cov[[g]] <- COV
         mean[[g]] <- unname(colMeans(X[[g]], na.rm = TRUE))
         var[[g]] <- diag(cov[[g]])
 
@@ -515,7 +519,9 @@ lav_samplestats_from_data <- function(lavdata = NULL,
         # residual covariances!
 
         Y <- cbind(X[[g]], eXo[[g]])
-        COV <- unname(stats::cov(Y, use = "pairwise"))
+		COV <- unname(stats::cov(Y, use = "pairwise.complete.obs"))
+        # if we have missing values (missing by design?), replace them by 0
+        COV[is.na(COV)] <- 0
         MEAN <- unname(colMeans(Y, na.rm = TRUE))
         # rescale cov by (N-1)/N? (only COV!)
         if (rescale) {
@@ -612,7 +618,10 @@ lav_samplestats_from_data <- function(lavdata = NULL,
           mean[[g]] <- missing.h1.[[g]]$mu
         } else {
           # NEEDED? why not just EM-based?
-          cov[[g]] <- stats::cov(X[[g]], use = "pairwise")
+          COV <- unname(stats::cov(X[[g]], use = "pairwise.complete.obs"))
+          # if we have missing values (missing by design?), replace them by 0
+		  COV[is.na(COV)] <- 0
+          cov[[g]] <- COV
           # rescale cov by (N-1)/N? (only COV!)
           if (rescale) {
             # we 'transform' the sample cov (divided by n-1)
@@ -632,7 +641,10 @@ lav_samplestats_from_data <- function(lavdata = NULL,
             wt = WT[[g]],
             method = "ML"
           )
-          cov[[g]] <- out$cov
+		  COV <- out$cov
+          # if we have missing values (missing by design?), replace them by 0
+          COV[is.na(COV)] <- 0
+          cov[[g]] <- COV
           if (ridge) {
             diag(cov[[g]]) <- diag(cov[[g]]) + ridge.eps
           }
@@ -648,7 +660,10 @@ lav_samplestats_from_data <- function(lavdata = NULL,
           var[[g]] <- diag(cov[[g]])
           mean[[g]] <- out$Mu
         } else {
-          cov[[g]] <- stats::cov(X[[g]], use = "pairwise")
+		  COV <- unname(stats::cov(X[[g]], use = "pairwise.complete.obs"))
+          # if we have missing values (missing by design?), replace them by 0
+          COV[is.na(COV)] <- 0
+          cov[[g]] <- COV
           # rescale cov by (N-1)/N? (only COV!)
           if (rescale) {
             # we 'transform' the sample cov (divided by n-1)
