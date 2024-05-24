@@ -318,12 +318,14 @@ lav_options_set <- function(opt = NULL) {                     # nolint
     # test
     if (length(opt$test) == 1L && opt$test == "default") {
       # ok, will be set later
-    } else if (all(opt$test %in% c("none", "standard", "yuan.bentler"))) {
+    } else if (all(opt$test %in% c("none", "standard", "yuan.bentler",
+	                               "yuan.bentler.mplus"))) {
       # nothing to do
     } else {
       lav_msg_stop(gettextf(
         "`test' argument must one of %s in the multilevel case",
-        lav_msg_view(c("none", "standard", "yuan.bentler"), log.sep = "or")))
+        lav_msg_view(c("none", "standard", "yuan.bentler",
+		               "yuan.bentler.mplus"), log.sep = "or")))
     }
 
     # se
