@@ -1,11 +1,11 @@
-\name{cvLavPredictY}
-\alias{cvLavPredictY}
+\name{lavPredictY_cv}
+\alias{lavPredictY_cv}
 \title{Determine an optimal lambda penalty value through cross-validation}
 \description{
 This function can be used to determine an optimal lambda value for the
 \code{lavPredictY} function. based on cross-validation.}
 \usage{
-cvLavPredictY(object, data = NULL,
+lavPredictY_cv(object, data = NULL,
               xnames = lavNames(object, "ov.x"),
               ynames = lavNames(object, "ov.y"),
               n.folds = 10L,
@@ -43,7 +43,7 @@ DOI:10.1080/10705511.2022.2061494
 
 Molina, M. D., Molina, L., & Zappaterra, M. W. (2024). Aspects of Higher
 Consciousness: A Psychometric Validation and Analysis of a New Model of
-Mystical Experience. DOI:
+Mystical Experience. \doi{https://doi.org/10.31219/osf.io/cgb6e}
 }
 \examples{
 colnames(PoliticalDemocracy) <- c("z1", "z2", "z3", "z4", 
@@ -74,7 +74,7 @@ idx <- sort(sample(x = nobs, size = floor(percent*nobs)))
 xnames = c("z1", "z2", "z3", "z4", "x1", "x2", "x3")
 ynames = c("y1", "y2", "y3", "y4")
 
-reg.results <- cvLavPredictY(
+reg.results <- lavPredictY_cv(
     fit,
     PoliticalDemocracy[-idx, ],
     xnames = xnames,

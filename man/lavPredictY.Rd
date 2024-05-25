@@ -58,10 +58,13 @@ model is saturated (and hence df = 0), the SEM-based predictions are identical
 to ordinary least squares predictions.
 
 Lambda is a regularization penalty term to improve prediction accuracy that can
-be determined using the cvLavPredictY function.
+be determined using the \code{lavPredictY_cv} function.
 }
 \seealso{
 \code{\link{lavPredict}} to compute scores for latent variables.
+
+\code{\link{lavPredictY_cv}} to determine an optimal lambda to increase
+prediction accuracy.
 }
 \references{
 de Rooij, M., Karch, J.D., Fokkema, M., Bakk, Z., Pratiwi, B.C, and 
@@ -71,7 +74,7 @@ DOI:10.1080/10705511.2022.2061494
 
 Molina, M. D., Molina, L., & Zappaterra, M. W. (2024). Aspects of Higher
 Consciousness: A Psychometric Validation and Analysis of a New Model of Mystical
-Experience. DOI:
+Experience. \doi{https://doi.org/10.31219/osf.io/cgb6e}
 }
 \examples{
 model <- ' 

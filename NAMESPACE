@@ -83,7 +83,7 @@ export("lavaan", "cfa", "sem", "growth",
        #"lavData",
        "lavPredict",
        "lavPredictY",
-       "cvLavPredictY",
+       "lavPredictY_cv",
        "lavCor",
 
        # API functions
