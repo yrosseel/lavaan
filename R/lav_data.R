@@ -534,8 +534,8 @@ lav_data_full <- function(data = NULL, # data.frame
       idx <- match(group.label, LABEL)
       if (warn && any(is.na(idx))) {
         lav_msg_warn(gettextf(
-          "some group.labels do not appear in the grouping variable: %s"),
-          lav_msg_view(group.label[which(is.na(idx))], log.sep = "none")
+          "some group.labels do not appear in the grouping variable: %s",
+          lav_msg_view(group.label[which(is.na(idx))], log.sep = "none"))
         )
       }
       group.label <- group.label[!is.na(idx)]
@@ -563,7 +563,7 @@ lav_data_full <- function(data = NULL, # data.frame
         lav_msg_stop(
           gettextf("sampling weights variable %1$s not found;
                    variable names found in data frame are: %2$s",
-          sQuote(sampling.weights)), paste(names(data), collapse = " "))
+          sQuote(sampling.weights), paste(names(data), collapse = " ")))
       }
       # check for missing values in sampling weight variable
       if (any(is.na(data[[sampling.weights]]))) {
@@ -726,8 +726,8 @@ lav_data_full <- function(data = NULL, # data.frame
     if (any(f.names %in% OV.names.x)) {
       lav_msg_stop(
         gettext("unordered factor(s) with more than 2 levels detected
-            as exogenous covariate(s): "),
-        paste(f.names, collapse = " "))
+            as exogenous covariate(s): ",
+        paste(f.names, collapse = " ")))
     } else if (any(f.names.all %in% OV.names.nox)) {
       lav_msg_stop(
         gettext("unordered factor(s) detected; make them numeric or ordered:"),
@@ -1063,7 +1063,7 @@ lav_data_full <- function(data = NULL, # data.frame
                      level %2$s. The variable appears to be a between-level
                      variable. Please remove this variable from the level 1
                      section in the model syntax.",
-                     dQuote(ov.names[[g]][v])), gtxt)
+                     dQuote(ov.names[[g]][v]), gtxt))
         } else {
           # some zero variances!
           gtxt <- if (ngroups > 1L) {
@@ -1074,8 +1074,8 @@ lav_data_full <- function(data = NULL, # data.frame
           lav_msg_warn(gettextf(
           "Level-1 variable %1$s has no variance within some clusters %2$s.
           The cluster ids with zero within variance are: %3$s.",
-          dQuote(ov.names[[g]][v])), gtxt,
-          lav_msg_view(Lp[[g]]$cluster.id[[2]][zero.var], "none"))
+          dQuote(ov.names[[g]][v]), gtxt,
+          lav_msg_view(Lp[[g]]$cluster.id[[2]][zero.var], "none")))
         }
       }
 
@@ -1101,8 +1101,8 @@ lav_data_full <- function(data = NULL, # data.frame
             "Level-2 variable %1$ss has non-zero variance at the within
             level %2$s in one cluster with id: %3$ss. Please double-check
             if this is a between only variable.",
-            dQuote(ov.names[[g]][v])), gtxt,
-            Lp[[g]]$cluster.id[[2]][non.zero.var])
+            dQuote(ov.names[[g]][v]), gtxt,
+            Lp[[g]]$cluster.id[[2]][non.zero.var]))
         } else {
           error.flag <- TRUE
           # several
@@ -1114,8 +1114,8 @@ lav_data_full <- function(data = NULL, # data.frame
           lav_msg_warn(gettextf(
             "Level-2 variable %1$s has non-zero variance at the within level
             %2$s. The cluster ids with non-zero within variance are: %3$s",
-            dQuote(ov.names[[g]][v])), gtxt,
-            lav_msg_view(Lp[[g]]$cluster.id[[2]][non.zero.var], "none"))
+            dQuote(ov.names[[g]][v]), gtxt,
+            lav_msg_view(Lp[[g]]$cluster.id[[2]][non.zero.var], "none")))
         }
       }
       if (error.flag) {
