@@ -487,7 +487,7 @@ lav_options_set <- function(opt = NULL) {                     # nolint
     if (length(opt$test) > 1L) {
       lav_msg_warn(gettextf(
         "test= argument can only contain a single element if missing = %s
-        (taking the first)"), dQuote(opt$missing))
+        (taking the first)", dQuote(opt$missing)))
       opt$test <- opt$test[1]
     }
 
@@ -510,8 +510,8 @@ lav_options_set <- function(opt = NULL) {                     # nolint
     if (opt$meanstructure == FALSE) {
       if (any(opt$missing == c("ml", "ml.x", "two.stage"))) {
         lav_msg_warn(gettextf(
-          "missing argument %s forces meanstructure = TRUE"),
-          opt$missing)
+          "missing argument %s forces meanstructure = TRUE",
+          opt$missing))
       }
     }
   } else if (opt$meanstructure == "default") {

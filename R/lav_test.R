@@ -562,7 +562,7 @@ lav_model_test <- function(lavobject = NULL,
           lav_msg_warn(gettextf(
             "scaled.test [%1$s] not found among available (non scaled) tests:
             %2$s. Using standard test instead.",
-            lavoptions$scaled.test), lav_msg_view(test))
+            lavoptions$scaled.test, lav_msg_view(test)))
         }
       }
 
@@ -598,7 +598,7 @@ lav_model_test <- function(lavobject = NULL,
           lav_msg_warn(gettextf(
             "scaled.test [%1$s] not found among available (non scaled) tests:
             %2$s. Using standard test instead.",
-            lavoptions$scaled.test), lav_msg_view(test))
+            lavoptions$scaled.test, lav_msg_view(test)))
           }
       }
 

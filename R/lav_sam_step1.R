@@ -188,7 +188,7 @@ lav_sam_step1 <- function(cmd = "sem", mm.list = NULL, mm.args = list(),
       # hard stop for now, unless se = "none"
       if (lavoptions$se != "none") {
         lav_msg_stop(gettextf(
-          "measurement block [%1$s", "] (%2$s) contains only two indicators;
+          "measurement block [%1$s] (%2$s) contains only two indicators;
           fix both factor loadings to unity, or combine factors into a single
           measurement block.", mm, lav_msg_view(mm.list[[mm]], "none")))
       } else {

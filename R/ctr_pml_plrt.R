@@ -300,8 +300,8 @@ ctr_pml_plrt <- function(lavobject = NULL, lavmodel = NULL, lavdata = NULL,
     if (any(is.na(par.idx))) {
       lav_msg_warn(gettextf(
         "mismatch between DELTA labels and PAR labels!
-        PARLABEL: %1$s, DELTA LABELS: %2$s", lav_msg_view(PARLABEL)),
-         lav_msg_view(NAMES))
+        PARLABEL: %1$s, DELTA LABELS: %2$s", lav_msg_view(PARLABEL),
+         lav_msg_view(NAMES)))
     }
 
     drhodpsi_MAT[[g]] <- delta.g[par.idx, index.par, drop = FALSE]

@@ -726,8 +726,8 @@ lav_data_full <- function(data = NULL, # data.frame
     if (any(f.names %in% OV.names.x)) {
       lav_msg_stop(
         gettext("unordered factor(s) with more than 2 levels detected
-            as exogenous covariate(s): ",
-        paste(f.names, collapse = " ")))
+            as exogenous covariate(s): "),
+        paste(f.names, collapse = " "))
     } else if (any(f.names.all %in% OV.names.nox)) {
       lav_msg_stop(
         gettext("unordered factor(s) detected; make them numeric or ordered:"),
