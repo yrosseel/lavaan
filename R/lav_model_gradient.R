@@ -128,7 +128,8 @@ lav_model_gradient <- function(lavmodel = NULL,
         lavsamplestats = lavsamplestats,
         estimator = estimator,
         meanstructure = TRUE,
-        conditional.x = conditional.x
+        conditional.x = conditional.x,
+		correlation = lavmodel@correlation
       )
       Omega.mu <- attr(Omega, "mu")
     } else {
@@ -137,7 +138,8 @@ lav_model_gradient <- function(lavmodel = NULL,
         lavsamplestats = lavsamplestats,
         estimator = estimator,
         meanstructure = FALSE,
-        conditional.x = conditional.x
+        conditional.x = conditional.x,
+		correlation = lavmodel@correlation
       )
       Omega.mu <- vector("list", length = lavmodel@nblocks)
     }
@@ -1160,7 +1162,8 @@ computeDeltaDx <- function(lavmodel = NULL, GLIST = NULL, target = "lambda",
 
 computeOmega <- function(Sigma.hat = NULL, Mu.hat = NULL,
                          lavsamplestats = NULL, estimator = "ML",
-                         meanstructure = FALSE, conditional.x = FALSE) {
+                         meanstructure = FALSE, conditional.x = FALSE,
+						 correlation = FALSE) {
   # nblocks
   nblocks <- length(Sigma.hat)
 
@@ -1248,6 +1251,11 @@ computeOmega <- function(Sigma.hat = NULL, Mu.hat = NULL,
         Omega.mu[[g]] <- t(t(diff) %*% W.inv)
       }
     }
+
+    # new in 0.6-18
+	if(correlation) {
+	    diag(Omega[[g]]) <- 0
+	}
   } # g
 
   if (meanstructure) attr(Omega, "mu") <- Omega.mu
