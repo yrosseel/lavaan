@@ -320,7 +320,7 @@ lav_predict_y_conditional_mean <- function(
 
 # Takes a sequence of lambdas and performs k-fold cross-validation to determine
 # the best lambda
-cvLavPredictY <- function(
+lavPredictY_cv <- function(
     object,
     data = NULL,
     xnames = lavNames(object, "ov.x"),
