@@ -15,7 +15,7 @@ lavTestWald <- function(object, constraints = NULL, verbose = FALSE) {
   # extract slots
   lavoptions <- object@Options
   lavmodel <- object@Model
-  lavpartable <- object@ParTable
+  lavpartable <- data.frame(object@ParTable)
 
   # remove == constraints from parTable
   eq.idx <- which(lavpartable$op == "==")
