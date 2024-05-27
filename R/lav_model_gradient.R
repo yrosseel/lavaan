@@ -122,6 +122,10 @@ lav_model_gradient <- function(lavmodel = NULL,
   if ((estimator == "ML" || estimator == "REML" || estimator == "catML") &&
     lavdata@nlevels == 1L &&
     !lavmodel@conditional.x) {
+	correlation <- FALSE
+	if (.hasSlot(lavmodel, "correlation") && lavmodel@correlation) {
+	  correlation <- TRUE
+	}
     if (meanstructure) {
       Omega <- computeOmega(
         Sigma.hat = Sigma.hat, Mu.hat = Mu.hat,
@@ -129,7 +133,7 @@ lav_model_gradient <- function(lavmodel = NULL,
         estimator = estimator,
         meanstructure = TRUE,
         conditional.x = conditional.x,
-		correlation = lavmodel@correlation
+		correlation = correlation
       )
       Omega.mu <- attr(Omega, "mu")
     } else {
@@ -139,7 +143,7 @@ lav_model_gradient <- function(lavmodel = NULL,
         estimator = estimator,
         meanstructure = FALSE,
         conditional.x = conditional.x,
-		correlation = lavmodel@correlation
+		correlation = correlation
       )
       Omega.mu <- vector("list", length = lavmodel@nblocks)
     }

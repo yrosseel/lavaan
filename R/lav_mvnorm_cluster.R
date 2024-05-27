@@ -62,8 +62,10 @@ lav_mvnorm_cluster_implied22l <- function(Lp = NULL,
   Mu.WB.tilde[both.idx] <- (Mu.B.tilde[both.idx] +
     Mu.W.tilde[both.idx])
 
-  # set Mu.W[both.idx] to zero (after we added tot WB)
+  # set Mu.W[both.idx] to zero (after we added to WB)
   Mu.W.tilde[both.idx] <- 0
+  # get Mu.B[both.idx[ from WB
+  Mu.B.tilde[both.idx] <- Mu.WB.tilde[both.idx]
 
   # map to matrices needed for loglik
   if (length(within.idx) > 0L) {

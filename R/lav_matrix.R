@@ -288,7 +288,8 @@ lav_matrix_antidiag_idx <- function(n = 1L) {
 # and the result is c(2, 4, 5, 6, 7, 9, 10)
 #
 lav_matrix_vech_which_idx <- function(n = 1L, diagonal = TRUE,
-                                      idx = integer(0L), type = "and") {
+                                      idx = integer(0L), type = "and",
+                                      add.idx.at.start = FALSE) {
   if (length(idx) == 0L) {
     return(integer(0L))
   }
@@ -300,7 +301,13 @@ lav_matrix_vech_which_idx <- function(n = 1L, diagonal = TRUE,
     A[idx, ] <- TRUE
     A[, idx] <- TRUE
   }
-  which(lav_matrix_vech(A, diagonal = diagonal))
+  pstar.idx <- which(lav_matrix_vech(A, diagonal = diagonal))
+
+  if (add.idx.at.start) {
+    pstar.idx <- c(idx, pstar.idx + n)
+  }
+
+  pstar.idx
 }
 
 # similar to lav_matrix_vech_which_idx(), but

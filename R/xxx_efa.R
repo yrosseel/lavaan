@@ -41,7 +41,7 @@ efa <- function(data = NULL,
       lav_msg_stop(gettext(
         "When data= is of class lavMoments, it must contain sample.cov"))
     }
-    
+
   } else if (!is.null(data) && inherits(data, "data.frame")) {
     if (length(ov.names) > 0L) {
       if (twolevel.flag) {

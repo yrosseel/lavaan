@@ -221,7 +221,7 @@ lav_mvnorm_missing_h1_omega_sw <- function(Y = NULL,
                                            Sinv.method = "eigen",
                                            Mu = NULL,
                                            Sigma = NULL,
-                                           x.idx = NULL,
+                                           x.idx = integer(0L),
                                            Sigma.inv = NULL,
                                            information = "observed") {
   # missing patterns

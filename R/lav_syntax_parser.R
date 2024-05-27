@@ -997,6 +997,12 @@ ldw_parse_model_string <- function(model.syntax = "", as.data.frame. = FALSE,
     rhsmodelems <- which(seq_along(formul1$elem.type) > opi &
       formul1$elem.type == types$symbol &
       (formul1$elem.text == "*" | formul1$elem.text == "?"))
+    for (j in seq_along(rhsmodelems)) {
+      if (sum(formul1$elem.text[seq.int(opi, rhsmodelems[j])] == "(") !=
+          sum(formul1$elem.text[seq.int(opi, rhsmodelems[j])] == ")"))
+        rhsmodelems[j] = 0L
+    }
+    rhsmodelems <- rhsmodelems[rhsmodelems != 0L]
     if (length(rhsmodelems) == 0L) rhsmodelems <- opi
     lhs <- formul1$elem.text[opi - 1L]
     rhs <- formul1$elem.text[nelem]

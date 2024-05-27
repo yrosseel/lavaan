@@ -43,7 +43,7 @@ lav_mvnorm_missing_loglik_data <- function(Y = NULL,
                                            Mu = NULL,
                                            wt = NULL,
                                            Sigma = NULL,
-                                           x.idx = NULL,
+                                           x.idx = integer(0L),
                                            casewise = FALSE,
                                            pattern = TRUE,
                                            Sinv.method = "eigen",
@@ -76,16 +76,12 @@ lav_mvnorm_missing_loglik_data <- function(Y = NULL,
 lav_mvnorm_missing_loglik_samplestats <- function(Yp = NULL,
                                                   Mu = NULL,
                                                   Sigma = NULL,
-                                                  x.idx = NULL,
+                                                  x.idx = integer(0L),
                                                   x.mean = NULL,
                                                   x.cov = NULL,
                                                   Sinv.method = "eigen",
                                                   log2pi = TRUE,
                                                   minus.two = FALSE) {
-  # if(!is.null(x.idx) && length(x.idx) > 0L) {
-  #    #warning("lavaan WARNING: x.idx not supported yet (ignored)")
-  # }
-
   LOG.2PI <- log(2 * pi)
   pat.N <- length(Yp)
   P <- length(Yp[[1]]$var.idx)
@@ -163,7 +159,7 @@ lav_mvnorm_missing_llik_casewise <- function(Y = NULL,
                                              wt = NULL,
                                              Mu = NULL,
                                              Sigma = NULL,
-                                             x.idx = NULL,
+                                             x.idx = integer(0L),
                                              Sinv.method = "eigen",
                                              log2pi = TRUE,
                                              minus.two = FALSE) {
@@ -250,7 +246,7 @@ lav_mvnorm_missing_llik_casewise <- function(Y = NULL,
       Y = Y[, x.idx, drop = FALSE],
       wt = wt, Mu = Mu[x.idx],
       Sigma = Sigma[x.idx, x.idx, drop = FALSE],
-      x.idx = NULL, Sinv.method = Sinv.method,
+      x.idx = integer(0L), Sinv.method = Sinv.method,
       log2pi = log2pi, minus.two = minus.two
     )
     llik <- llik - llik.x
@@ -265,7 +261,7 @@ lav_mvnorm_missing_llik_pattern <- function(Y = NULL,
                                             wt = NULL,
                                             Mu = NULL,
                                             Sigma = NULL,
-                                            x.idx = NULL,
+                                            x.idx = integer(0L),
                                             Sinv.method = "eigen",
                                             log2pi = TRUE,
                                             minus.two = FALSE) {
@@ -358,7 +354,7 @@ lav_mvnorm_missing_llik_pattern <- function(Y = NULL,
       Y = Y[, x.idx, drop = FALSE],
       wt = wt, Mu = Mu[x.idx],
       Sigma = Sigma[x.idx, x.idx, drop = FALSE],
-      x.idx = NULL, Sinv.method = Sinv.method,
+      x.idx = integer(0L), Sinv.method = Sinv.method,
       log2pi = log2pi, minus.two = minus.two
     )
     llik <- llik - llik.x
@@ -377,7 +373,7 @@ lav_mvnorm_missing_dlogl_dmu <- function(Y = NULL,
                                          wt = NULL,
                                          Mu = NULL,
                                          Sigma = NULL,
-                                         x.idx = NULL,
+                                         x.idx = integer(0L),
                                          Sigma.inv = NULL,
                                          Sinv.method = "eigen") {
   SC <- lav_mvnorm_missing_scores_mu(
@@ -392,7 +388,7 @@ lav_mvnorm_missing_dlogl_dmu <- function(Y = NULL,
 lav_mvnorm_missing_dlogl_dmu_samplestats <- function(Yp = NULL,
                                                      Mu = NULL,
                                                      Sigma = NULL,
-                                                     x.idx = NULL,
+                                                     x.idx = integer(0L),
                                                      Sigma.inv = NULL,
                                                      Sinv.method = "eigen") {
   pat.N <- length(Yp)
@@ -449,7 +445,7 @@ lav_mvnorm_missing_dlogl_dSigma <- function(Y = NULL,
                                             wt = NULL,
                                             Mu = NULL,
                                             Sigma = NULL,
-                                            x.idx = NULL,
+                                            x.idx = integer(0L),
                                             Sigma.inv = NULL,
                                             Sinv.method = "eigen") {
   P <- NCOL(Y)
@@ -543,7 +539,7 @@ lav_mvnorm_missing_dlogl_dSigma <- function(Y = NULL,
 lav_mvnorm_missing_dlogl_dSigma_samplestats <- function(Yp = NULL,
                                                         Mu = NULL,
                                                         Sigma = NULL,
-                                                        x.idx = NULL,
+                                                        x.idx = integer(0L),
                                                         Sigma.inv = NULL,
                                                         Sinv.method = "eigen") {
   pat.N <- length(Yp)
@@ -602,7 +598,7 @@ lav_mvnorm_missing_dlogl_dSigma_samplestats <- function(Yp = NULL,
 lav_mvnorm_missing_dlogl_dvechSigma <- function(Y = NULL,
                                                 wt = NULL,
                                                 Mu = NULL,
-                                                x.idx = NULL,
+                                                x.idx = integer(0L),
                                                 Sigma = NULL,
                                                 Sigma.inv = NULL,
                                                 Sinv.method = "eigen") {
@@ -624,7 +620,7 @@ lav_mvnorm_missing_dlogl_dvechSigma_samplestats <-
   function(Yp = NULL,
            Mu = NULL,
            Sigma = NULL,
-           x.idx = NULL,
+           x.idx = integer(0L),
            Sigma.inv = NULL,
            Sinv.method = "eigen") {
     pat.N <- length(Yp)
@@ -694,7 +690,7 @@ lav_mvnorm_missing_scores_mu <- function(Y = NULL,
                                          Mp = NULL,
                                          Mu = NULL,
                                          Sigma = NULL,
-                                         x.idx = NULL,
+                                         x.idx = integer(0L),
                                          Sigma.inv = NULL,
                                          Sinv.method = "eigen") {
   P <- NCOL(Y)
@@ -769,7 +765,7 @@ lav_mvnorm_missing_scores_vech_sigma <- function(Y = NULL,
                                                  Mp = NULL,
                                                  Mu = NULL,
                                                  Sigma = NULL,
-                                                 x.idx = NULL,
+                                                 x.idx = integer(0L),
                                                  Sigma.inv = NULL,
                                                  Sinv.method = "eigen") {
   P <- NCOL(Y)
@@ -852,8 +848,7 @@ lav_mvnorm_missing_scores_vech_sigma <- function(Y = NULL,
 
   # fixed.x?
   if (length(x.idx) > 0L) {
-    not.x <- eliminate.pstar.idx(P, el.idx = x.idx)
-    SC[, !not.x] <- 0
+    SC[, lav_matrix_vech_which_idx(n = P, idx = x.idx)] <- 0
   }
 
   SC
@@ -865,7 +860,7 @@ lav_mvnorm_missing_scores_mu_vech_sigma <- function(Y = NULL,
                                                     wt = NULL,
                                                     Mu = NULL,
                                                     Sigma = NULL,
-                                                    x.idx = NULL,
+                                                    x.idx = integer(0L),
                                                     Sigma.inv = NULL,
                                                     Sinv.method = "eigen") {
   P <- NCOL(Y)
@@ -957,8 +952,10 @@ lav_mvnorm_missing_scores_mu_vech_sigma <- function(Y = NULL,
 
   # fixed.x?
   if (length(x.idx) > 0L) {
-    not.x <- eliminate.pstar.idx(P, el.idx = x.idx, meanstructure = TRUE)
-    out[, !not.x] <- 0
+    not.x <- lav_matrix_vech_which_idx(n = P, idx = x.idx,
+                                       #diagonal = !correlation,
+                                       add.idx.at.start = TRUE)
+    out[, not.x] <- 0
   }
 
   out
@@ -971,7 +968,7 @@ lav_mvnorm_missing_logl_hessian_data <- function(Y = NULL,
                                                  wt = NULL,
                                                  Mu = NULL,
                                                  Sigma = NULL,
-                                                 x.idx = NULL,
+                                                 x.idx = integer(0L),
                                                  Sinv.method = "eigen",
                                                  Sigma.inv = NULL) {
   # missing patterns
@@ -989,7 +986,7 @@ lav_mvnorm_missing_logl_hessian_samplestats <-
            # wt not needed
            Mu = NULL,
            Sigma = NULL,
-           x.idx = NULL,
+           x.idx = integer(0L),
            Sinv.method = "eigen",
            Sigma.inv = NULL) {
     pat.N <- length(Yp)
@@ -1056,12 +1053,11 @@ lav_mvnorm_missing_logl_hessian_samplestats <-
 
     # fixed.x?
     if (length(x.idx) > 0L) {
-      not.x <- eliminate.pstar.idx(
-        nvar = P, el.idx = x.idx,
-        meanstructure = TRUE
-      )
-      out[, !not.x] <- 0
-      out[!not.x, ] <- 0
+      not.x <- lav_matrix_vech_which_idx(n = P, idx = x.idx,
+                                         #diagonal = !correlation,
+                                         add.idx.at.start = TRUE)
+      out[, not.x] <- 0
+      out[not.x, ] <- 0
     }
 
     out
@@ -1080,7 +1076,7 @@ lav_mvnorm_missing_information_expected <- function(Y = NULL,
                                                     wt = NULL,
                                                     Mu = NULL, # unused
                                                     Sigma = NULL,
-                                                    x.idx = NULL,
+                                                    x.idx = integer(0L),
                                                     Sigma.inv = NULL,
                                                     Sinv.method = "eigen") {
   P <- NCOL(Y)
@@ -1148,12 +1144,11 @@ lav_mvnorm_missing_information_expected <- function(Y = NULL,
 
   # fixed.x?
   if (length(x.idx) > 0L) {
-    not.x <- eliminate.pstar.idx(
-      nvar = P, el.idx = x.idx,
-      meanstructure = TRUE
-    )
-    out[!not.x, ] <- 0
-    out[, !not.x] <- 0
+    not.x <- lav_matrix_vech_which_idx(n = P, idx = x.idx,
+                                       # diagonal = !correlation,
+                                       add.idx.at.start = TRUE)
+    out[not.x, ] <- 0
+    out[, not.x] <- 0
   }
 
   out
@@ -1166,7 +1161,7 @@ lav_mvnorm_missing_information_observed_data <- function(Y = NULL,
                                                          wt = NULL,
                                                          Mu = NULL,
                                                          Sigma = NULL,
-                                                         x.idx = NULL,
+                                                         x.idx = integer(0L),
                                                          Sinv.method = "eigen",
                                                          Sigma.inv = NULL) {
   # missing patterns
@@ -1201,7 +1196,7 @@ lav_mvnorm_missing_information_observed_samplestats <-
            # wt not needed
            Mu = NULL,
            Sigma = NULL,
-           x.idx = NULL,
+           x.idx = integer(0L),
            Sinv.method = "eigen",
            Sigma.inv = NULL) {
     N <- sum(sapply(Yp, "[[", "freq")) # implicitly: removed empty cases!
@@ -1224,7 +1219,7 @@ lav_mvnorm_missing_information_firstorder <- function(Y = NULL,
                                                       cluster.idx = NULL,
                                                       Mu = NULL,
                                                       Sigma = NULL,
-                                                      x.idx = NULL,
+                                                      x.idx = integer(0L),
                                                       Sinv.method = "eigen",
                                                       Sigma.inv = NULL) {
   # missing patterns
@@ -1271,7 +1266,7 @@ lav_mvnorm_missing_information_both <- function(Y = NULL,
                                                 cluster.idx = NULL,
                                                 Mu = NULL,
                                                 Sigma = NULL,
-                                                x.idx = NULL,
+                                                x.idx = integer(0L),
                                                 Sinv.method = "eigen",
                                                 Sigma.inv = NULL,
                                                 information = "observed") {
@@ -1418,8 +1413,10 @@ lav_mvnorm_missing_information_both <- function(Y = NULL,
 
   # fixed.x?
   if (length(x.idx) > 0L) {
-    not.x <- eliminate.pstar.idx(P, el.idx = x.idx, meanstructure = TRUE)
-    SC[, !not.x] <- 0
+    not.x <- lav_matrix_vech_which_idx(n = P, idx = x.idx,
+                                       #diagonal = !correlation,
+                                       add.idx.at.start = TRUE)
+    SC[, not.x] <- 0
   }
 
   # handle clustering
@@ -1448,12 +1445,11 @@ lav_mvnorm_missing_information_both <- function(Y = NULL,
 
   # fixed.x?
   if (length(x.idx) > 0L) {
-    not.x <- eliminate.pstar.idx(
-      nvar = P, el.idx = x.idx,
-      meanstructure = TRUE
-    )
-    Abeta[!not.x, ] <- 0
-    Abeta[, !not.x] <- 0
+    not.x <- lav_matrix_vech_which_idx(n = P, idx = x.idx,
+                                       # diagonal = !correlation,
+                                       add.idx.at.start = TRUE)
+    Abeta[not.x, ] <- 0
+    Abeta[, not.x] <- 0
   }
 
   list(Abeta = Abeta, Bbeta = Bbeta)

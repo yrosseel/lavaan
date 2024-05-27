@@ -592,6 +592,49 @@ eliminate.rowcols <- function(x, el.idx = integer(0)) {
   x[-el.idx, -el.idx]
 }
 
+# locate pstar idx of a given set of elements
+#
+# for example, if nvar = 4, pstar = 10 elements
+# which elements correponds to the second and third element (in 1:nvar)?
+#
+# deprecated! replaced by lav_matrix_vech_which_idx()
+#
+eliminate.pstar.idx2 <- function(nvar = 1L, el.idx = integer(0),
+                                   meanstructure = FALSE,
+                                   correlation = FALSE,
+                                   return.idx = FALSE) {
+  if (length(el.idx) > 0) {
+    stopifnot(min(el.idx) > 0 && max(el.idx) <= nvar)
+  }
+
+  # create col/row indices
+  XX <- rbind(
+    lav_matrix_vech_col_idx(nvar),
+    lav_matrix_vech_row_idx(nvar)
+  )
+
+  # if correlation matrix, remove col/row corresponding to the variances
+  if (correlation && nvar > 1L) {
+    var.idx <- lav_matrix_diagh_idx(n = nvar)
+    XX <- XX[, -var.idx, drop = FALSE]
+  }
+
+  # locate pstar indices (as logicals)
+  idx <- XX[1, ] %in% el.idx & XX[2, ] %in% el.idx
+
+  # if meanstructure, add location in mean vector
+  if (meanstructure) {
+    idx <- c((1:nvar %in% el.idx), idx)
+  }
+
+  # return indices instead of logicals
+  if (return.idx) {
+    idx <- which(idx)
+  }
+
+  idx
+}
+
 # elimination of rows/cols pstar symmetric matrix
 #
 # type = "all" -> only remove var(el.idx) and cov(el.idx)
@@ -622,8 +665,6 @@ eliminate.pstar.idx <- function(nvar = 1, el.idx = integer(0),
 
   idx
 }
-
-
 
 # construct 'augmented' covariance matrix
 # based on the covariance matrix and the mean vector
