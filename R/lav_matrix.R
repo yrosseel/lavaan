@@ -769,7 +769,27 @@ lav_matrix_duplication_ginv_pre_post <- function(A = matrix(0, 0, 0)) {
   OUT
 }
 
+# pre AND post-multiply with D^+: D^+ %*% A %*% t(D^+)
+# for square matrices only, with ncol = nrow = n^2
+# - ignoring diagonal elements
+lav_matrix_duplication_ginv_cor_pre_post <- function(A = matrix(0, 0, 0)) {
+  A <- as.matrix.default(A)
 
+  # number of columns
+  n2 <- NCOL(A)
+
+  # square A only, n2 = n^2
+  stopifnot(NROW(A) == n2, sqrt(n2) == round(sqrt(n2)))
+
+  # dimension
+  n <- sqrt(n2)
+
+  idx1 <- lav_matrix_vech_idx(n, diagonal = FALSE)
+  idx2 <- lav_matrix_vechru_idx(n, diagonal = FALSE)
+  OUT <- (A[idx1, , drop = FALSE] + A[idx2, , drop = FALSE]) / 2
+  OUT <- (OUT[, idx1, drop = FALSE] + OUT[, idx2, drop = FALSE]) / 2
+  OUT
+}
 
 
 # create the commutation matrix (K_mn)

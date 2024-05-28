@@ -21,7 +21,7 @@
 # YR 25 Mar 2016: first version
 # YR 19 Jan 2017: added 6) + 7)
 # YR 04 Jan 2020: adjust for sum(wt) != N
-# YR 22 Jul 2022: adding rorrelation= argument for information_expected
+# YR 22 Jul 2022: adding correlation= argument for information_expected
 
 # 1. log-likelihood h1
 

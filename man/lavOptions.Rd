@@ -82,6 +82,12 @@ Model features (always available):
     \item{\code{parameterization}:}{Currently only used if data is 
       categorical. If \code{"delta"}, the delta parameterization is used. 
       If \code{"theta"}, the theta parameterization is used.}
+    \item{\code{correlation}:}{(Experimental/incomplete). Only used for 
+     continuous data. If \code{TRUE}, analyze a correlation matrix (instead
+     of a (co)variance matrix). This implies that the residual observed
+     variances are no longer free parameters. Instead, they are set to
+     values to ensure the model-implied variances are unity. This also
+     affects the standard errors.}
 }
 
 Model features (only available for the \code{lavaan()} function):
@@ -113,8 +119,15 @@ Model features (only available for the \code{lavaan()} function):
 Data options:
 
 \describe{
-    \item{\code{std.ov}:}{If \code{TRUE}, all observed variables are 
-      standardized before entering the analysis.}
+    \item{\code{std.ov}:}{If \code{TRUE}, observed variables are 
+      standardized before entering the analysis. By default, these are
+      only the non-exogenous observed variables, unless \code{fixed.x = FALSE}.
+      Use this option with caution; it can be used to test if (for example)
+      nonconvergence was due to scaling issues. But this is still a covariance
+      based analysis, in the sense that no constraints are involved (to 
+      ensure the model-implied (co)variance matrix has unit variances), and the
+      standard errors still assume that the input was unstandardized. See
+      also the \code{correlation} option.}
     \item{\code{missing}:}{The default setting is \code{"listwise"}: all
          cases with missing values
       are removed listwise from the data before the analysis starts. This is

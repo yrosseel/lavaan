@@ -1062,11 +1062,11 @@ lav_options_set <- function(opt = NULL) {                     # nolint
       lav_msg_stop(gettext(
         "correlation structures only work for representation = \"LISREL\"."))
     }
-    if (opt$fixed.x) {
-      # first fix eliminate.pstar.idx in lav_mvnorm_information_expected()
-      lav_msg_stop(gettext(
-        "correlation structures only work for fixed.x = FALSE (for now)."))
-    }
+    #if (opt$fixed.x) {
+    #  # first fix eliminate.pstar.idx in lav_mvnorm_information_expected()
+    #  lav_msg_stop(gettext(
+    #    "correlation structures only work for fixed.x = FALSE (for now)."))
+    #}
   }
 
   # sample.cov.robust

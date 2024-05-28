@@ -87,9 +87,10 @@ sam <- function(model = NULL,
   }
 
   # check se= argument
-  if (!se %in% c("standard", "naive", "twostep", "twostep2", "none")) {
+  if (!se %in% c("standard", "naive", "twostep", "twostep2",
+                 "bootstrap", "none")) {
     lav_msg_stop(gettext(
-      "se= argument must be twostep, twostep2, naive, standard or none."))
+      "se= argument must be twostep, bootstrap, naive, standard or none."))
   }
 
   # handle dot dot dot
@@ -227,23 +228,32 @@ sam <- function(model = NULL,
   # Step 4: compute standard errors for step 2 #
   ##############################################
 
-  VCOV <- lav_sam_step2_se(
-    FIT = FIT, JOINT = JOINT, STEP1 = STEP1,
-    STEP2 = STEP2, local.options = local.options
-  )
-
-  # fill in twostep standard errors
-  if (lavoptions$se != "none") {
-    PT <- JOINT@ParTable
-    JOINT@Options$se <- lavoptions$se
-    JOINT@vcov$se <- lavoptions$se
-    JOINT@vcov$vcov[STEP2$step2.free.idx, STEP2$step2.free.idx] <- VCOV$VCOV
-    PT$se <- lav_model_vcov_se(
-      lavmodel = JOINT@Model,
-      lavpartable = PT,
-      VCOV = JOINT@vcov$vcov
+  if (lavoptions$se == "bootstrap") {
+    #
+	# TODO
+	#
+    #VCOV <- lav_sam_boot_se(FIT = FIT, JOINT = JOINT, STEP1 = STEP1,
+    #  STEP2 = STEP2, local.options = local.options
+    #)
+	#
+  } else {
+    VCOV <- lav_sam_step2_se(
+      FIT = FIT, JOINT = JOINT, STEP1 = STEP1,
+      STEP2 = STEP2, local.options = local.options
     )
-    JOINT@ParTable <- PT
+    # fill in twostep standard errors
+    if (lavoptions$se != "none") {
+      PT <- JOINT@ParTable
+      JOINT@Options$se <- lavoptions$se
+      JOINT@vcov$se <- lavoptions$se
+      JOINT@vcov$vcov[STEP2$step2.free.idx, STEP2$step2.free.idx] <- VCOV$VCOV
+      PT$se <- lav_model_vcov_se(
+        lavmodel = JOINT@Model,
+        lavpartable = PT,
+        VCOV = JOINT@vcov$vcov
+      )
+      JOINT@ParTable <- PT
+    }
   }
 
 

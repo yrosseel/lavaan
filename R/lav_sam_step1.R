@@ -185,21 +185,19 @@ lav_sam_step1 <- function(cmd = "sem", mm.list = NULL, mm.args = list(),
     )
     # handle single block 1-factor CFA with (only) two indicators
     if (length(unlist(ov.names.block)) == 2L && ngroups == 1L) {
-      # hard stop for now, unless se = "none"
-      if (lavoptions$se != "none") {
-        lav_msg_stop(gettextf(
-          "measurement block [%1$s] (%2$s) contains only two indicators;
-          fix both factor loadings to unity, or combine factors into a single
-          measurement block.", mm, lav_msg_view(mm.list[[mm]], "none")))
-      } else {
-        lambda.idx <- which(PTM$op == "=~")
-        PTM$free[lambda.idx] <- 0L
+      lambda.idx <- which(PTM$op == "=~")
+	  # check if both factor loadings are fixed
+	  # (note: this assumes std.lv = FALSE)
+	  if(any(PTM$free[lambda.idx] != 0)) {
+        PTM$free[  lambda.idx] <- 0L
         PTM$ustart[lambda.idx] <- 1
-        PTM$start[lambda.idx] <- 1
+        PTM$start[ lambda.idx] <- 1
         free.idx <- which(as.logical(PTM$free))
+		# adjust free counter
         if (length(free.idx) > 0L) {
           PTM$free[free.idx] <- seq_len(length(free.idx))
         }
+		# warn about it (needed?)
         lav_msg_warn(gettextf(
           "measurement block [%1$s] (%2$s) contains only two indicators;
           -> fixing both factor loadings to unity",
