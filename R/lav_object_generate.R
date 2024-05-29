@@ -430,7 +430,7 @@ lav_object_catml <- function(lavobject = NULL) {
     }
 
     current.warn <- lav_warn()
-    if (current.warn(FALSE))
+    if (lav_warn(FALSE))
       on.exit(lav_warn(current.warn), TRUE)
     out <- lav_samplestats_icov(
       COV = COV, ridge = 1e-05,

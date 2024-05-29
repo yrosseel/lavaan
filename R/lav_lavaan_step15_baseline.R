@@ -22,6 +22,8 @@ lav_lavaan_step15_baseline <- function(lavoptions = NULL,
     if (lav_verbose()) {
       cat("lavbaseline ...")
     }
+	current.verbose <- lav_verbose()
+	lav_verbose(FALSE)
     fit.indep <- try(lav_object_independence(
       object = NULL,
       lavsamplestats = lavsamplestats,
@@ -31,6 +33,7 @@ lav_lavaan_step15_baseline <- function(lavoptions = NULL,
       lavpartable = lavpartable,
       lavh1 = lavh1
     ), silent = TRUE)
+	lav_verbose(current.verbose)
     if (inherits(fit.indep, "try-error") || !fit.indep@optim$converged) {
       lav_msg_warn(gettext("estimation of the baseline model failed."))
       lavbaseline <- list()

@@ -511,10 +511,11 @@ Check options:
 Verbosity options:
 
 \describe{
-    \item{\code{verbose}:}{If \code{TRUE}, the function value is printed out 
+    \item{\code{verbose}:}{If \code{TRUE}, show what lavaan is doing. During
+      estimation, the function value is printed out 
       during each iteration.}
-    \item{\code{warn}:}{If \code{TRUE}, some (possibly harmless) warnings 
-      are printed out during the iterations.}
+    \item{\code{warn}:}{If \code{FALSE}, suppress all lavaan-specific 
+      warning messages.}
     \item{\code{debug}:}{If \code{TRUE}, debugging information is printed 
       out.}
 }
