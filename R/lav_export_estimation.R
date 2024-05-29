@@ -148,7 +148,7 @@ lav_export_estimation <- function(lavaan_model) {
       x = parameter_values
     )
     current.verbose <- lav_verbose()
-    if (lav_verbose(FALSE)) 
+    if (lav_verbose(FALSE))
       on.exit(lav_verbose(current.verbose), TRUE)
     dx <- lav_model_gradient(
       lavmodel = lavaan_model@Model,

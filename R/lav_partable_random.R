@@ -195,7 +195,7 @@ lav_partable_random <- function(lavpartable = NULL,
 
   # sanity check; needed?
   current.warn <- lav_warn()
-  if (lav_warn(TRUE)) 
+  if (lav_warn(TRUE))
       on.exit(lav_warn(current.warn), TRUE)
   START <- lav_start_check_cov(
     lavpartable = lavpartable, start = START

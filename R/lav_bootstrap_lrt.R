@@ -25,7 +25,7 @@ bootstrapLRT <- function(h0 = NULL, h1 = NULL, R = 1000L,
   if (type == "nonparametric") type <- "ordinary"
   if (!missing(verbose)) {
     current.verbose <- lav_verbose()
-    if (lav_verbose(verbose)) 
+    if (lav_verbose(verbose))
       on.exit(lav_verbose(current.verbose), TRUE)
   }
   # check for conditional.x = TRUE

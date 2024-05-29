@@ -3,7 +3,7 @@ lav_partable_constraints_def <- function(partable, con = NULL, debug = FALSE,
                                          txtOnly = FALSE) {
   if (!missing(debug)) {
     current.debug <- lav_debug()
-    if (lav_debug(debug)) 
+    if (lav_debug(debug))
       on.exit(lav_debug(current.debug), TRUE)
   }
   # empty function
@@ -117,7 +117,7 @@ lav_partable_constraints_ceq <- function(partable, con = NULL, debug = FALSE,
                                          txtOnly = FALSE) {
   if (!missing(debug)) {
     current.debug <- lav_debug()
-    if (lav_debug(debug)) 
+    if (lav_debug(debug))
       on.exit(lav_debug(current.debug), TRUE)
   }
   # empty function
@@ -289,7 +289,7 @@ lav_partable_constraints_ciq <- function(partable, con = NULL, debug = FALSE,
                                          txtOnly = FALSE) {
   if (!missing(debug)) {
     current.debug <- lav_debug()
-    if (lav_debug(debug)) 
+    if (lav_debug(debug))
       on.exit(lav_debug(current.debug), TRUE)
   }
   # empty function

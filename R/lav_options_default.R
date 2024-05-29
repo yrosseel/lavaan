@@ -2,10 +2,10 @@
 
 lavaan_cache_env <- new.env(parent = emptyenv())
 
-# functions to handle warn/debug/verbose options 
+# functions to handle warn/debug/verbose options
 #             (no longer in 'standard' options)
 # if x not present returns the current value of opt.warn/debug/verbose
-# if x present 
+# if x present
 #   if x different from current value, assign x to current value and return TRUE
 #   else return FALSE
 lav_warn <- function(x) {

@@ -283,7 +283,7 @@ lav_samplestats_from_data <- function(lavdata = NULL,
       }
 
       current.verbose <- lav_verbose()
-      if (lav_verbose(lav_debug())) 
+      if (lav_verbose(lav_debug()))
         on.exit(lav_verbose(current.verbose), TRUE)
       if (conditional.x) {
         CAT <- muthen1984(

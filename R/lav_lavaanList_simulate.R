@@ -45,7 +45,7 @@ lavSimulate <- function(pop.model = NULL, # population model
   }
 
   # no warnings during/after the simulations
-  # add 'warn = FALSE' to args 
+  # add 'warn = FALSE' to args
 
   # generate simulations
   fit <- do.call("lavaanList", args = c(list(

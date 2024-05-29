@@ -9,7 +9,7 @@ InformativeTesting <- function(model = NULL, data, constraints = NULL,
                                ncpus = 1L, cl = NULL, verbose = FALSE, ...) {
   if (!missing(verbose)) {
     current.verbose <- lav_verbose()
-    if (lav_verbose(verbose)) 
+    if (lav_verbose(verbose))
       on.exit(lav_verbose(current.verbose), TRUE)
   }
   fit.B1 <- sem(model, ...,

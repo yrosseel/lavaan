@@ -145,6 +145,12 @@ lav_model_h1_information_expected <- function(lavobject = NULL,
     structured <- TRUE
   }
 
+  # correlation
+  correlation.flag <- FALSE
+  if (.hasSlot(lavmodel, "correlation")) {
+    correlation.flag <- lavmodel@correlation
+  }
+
 
   # 1. WLS.V (=A1) for GLS/WLS
   if (lavmodel@estimator == "GLS" || lavmodel@estimator == "WLS") {
@@ -274,10 +280,6 @@ lav_model_h1_information_expected <- function(lavobject = NULL,
             MEAN <- lavsamplestats@mean[[g]]
           }
 
-          correlation.flag <- FALSE
-          if (.hasSlot(lavmodel, "correlation")) {
-            correlation.flag <- lavmodel@correlation
-          }
           if (structured) {
             A1[[g]] <- lav_mvnorm_information_expected(
               Sigma         = lavimplied$cov[[g]],
@@ -393,6 +395,13 @@ lav_model_h1_information_observed <- function(lavobject = NULL,
   } else {
     structured <- TRUE
   }
+
+  # correlation
+  correlation.flag <- FALSE
+  if (.hasSlot(lavmodel, "correlation")) {
+    correlation.flag <- lavmodel@correlation
+  }
+
 
   # 1. WLS.V (=A1) for GLS/WLS
   if (lavmodel@estimator == "GLS" || lavmodel@estimator == "WLS" ||
@@ -526,6 +535,7 @@ lav_model_h1_information_observed <- function(lavobject = NULL,
               Sigma         = lavimplied$cov[[g]],
               # wt           = WT, # not needed
               x.idx         = lavsamplestats@x.idx[[g]],
+              correlation   = correlation.flag,
               meanstructure = lavmodel@meanstructure
             )
           } else {
@@ -535,6 +545,7 @@ lav_model_h1_information_observed <- function(lavobject = NULL,
               sample.cov.inv = lavsamplestats@icov[[g]],
               # wt            = WT, not needed
               x.idx          = lavsamplestats@x.idx[[g]],
+              correlation    = correlation.flag,
               meanstructure  = lavmodel@meanstructure
             )
           }
@@ -658,6 +669,13 @@ lav_model_h1_information_firstorder <- function(lavobject = NULL,
     structured <- TRUE
   }
 
+  # correlation
+  correlation.flag <- FALSE
+  if (.hasSlot(lavmodel, "correlation")) {
+    correlation.flag <- lavmodel@correlation
+  }
+
+
   # clustered?
   if (!is.null(lavoptions) &&
     !is.null(lavoptions$.clustered) &&
@@ -775,8 +793,8 @@ lav_model_h1_information_firstorder <- function(lavobject = NULL,
       # 'unconditional' (for now)
       if (lavmodel@conditional.x && structured) {
 	    if (lavdata@missing == "ml") {
-		  lav_msg_stop(gettext("firstorder information matrix not available 
-		                        (yet) if conditional.x + fiml"))
+		  lav_msg_stop(gettext("firstorder information matrix not available
+                                (yet) if conditional.x + fiml"))
 		}
         Res.Sigma.W <- implied$res.cov[[(g - 1) * lavdata@nlevels + 1L]]
         Res.Int.W <- implied$res.int[[(g - 1) * lavdata@nlevels + 1L]]
@@ -897,6 +915,7 @@ lav_model_h1_information_firstorder <- function(lavobject = NULL,
               wt = WT,
               cluster.idx = cluster.idx,
               x.idx = lavsamplestats@x.idx[[g]],
+              correlation = correlation.flag,
               meanstructure = lavmodel@meanstructure
             )
           } else {
@@ -907,6 +926,7 @@ lav_model_h1_information_firstorder <- function(lavobject = NULL,
               wt = WT,
               cluster.idx = cluster.idx, # only if wt
               x.idx = lavsamplestats@x.idx[[g]],
+              correlation = correlation.flag,
               meanstructure = lavmodel@meanstructure
             )
           }
@@ -983,7 +1003,6 @@ lav_model_h1_acov <- function(lavobject = NULL,
   if (!is.null(se)) {
     lavoptions$se <- se
   }
-
 
 
   # information

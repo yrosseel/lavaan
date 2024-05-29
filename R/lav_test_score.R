@@ -16,12 +16,12 @@ lavTestScore <- function(object, add = NULL, release = NULL,
                          information = "expected") {
   if (!missing(warn)) {
     current.warn <- lav_warn()
-    if (lav_warn(warn)) 
+    if (lav_warn(warn))
       on.exit(lav_warn(current.warn))
   }
   if (!missing(verbose)) {
     current.verbose <- lav_verbose()
-    if (lav_verbose(verbose)) 
+    if (lav_verbose(verbose))
       on.exit(lav_verbose(current.verbose), TRUE)
   }
   # check object

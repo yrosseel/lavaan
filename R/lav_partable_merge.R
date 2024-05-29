@@ -6,7 +6,7 @@ lav_partable_merge <- function(pt1 = NULL, pt2 = NULL,
                                warn = TRUE) {
   if (!missing(warn)) {
     current.warn <- lav_warn()
-    if (lav_warn(warn)) 
+    if (lav_warn(warn))
       on.exit(lav_warn(current.warn), TRUE)
   }
   # check for empty pt2

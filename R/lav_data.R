@@ -74,7 +74,7 @@ lavData <- function(data = NULL, # data.frame
   # warn?
   if (allow.single.case) { # eg, in lavPredict
     current.warn <- lav_warn()
-    if (lav_warn(FALSE)) 
+    if (lav_warn(FALSE))
         on.exit(lav_warn(current.warn), TRUE)
   }
 

@@ -15,7 +15,7 @@
 # - 24 March 2019: handle efa sets
 # - 23 May   2020: support for random slopes
 
-lavaanify <- lavParTable <- function( 
+lavaanify <- lavParTable <- function(
                                      model = NULL,
                                      meanstructure = FALSE,
                                      int.ov.free = FALSE,
@@ -54,12 +54,12 @@ lavaanify <- lavParTable <- function(
                                      as.data.frame. = TRUE) { # nolint
   if (!missing(debug)) {
     current.debug <- lav_debug()
-    if (lav_debug(debug)) 
+    if (lav_debug(debug))
       on.exit(lav_debug(current.debug), TRUE)
   }
   if (!missing(warn)) {
     current.warn <- lav_warn()
-    if (lav_warn(warn)) 
+    if (lav_warn(warn))
       on.exit(lav_warn(current.warn), TRUE)
   }
   # check if model is already flat or a full parameter table

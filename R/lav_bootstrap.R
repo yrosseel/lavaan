@@ -50,7 +50,7 @@ bootstrapLavaan <- function(object,
   )
   if (!missing(verbose)) {
     current.verbose <- lav_verbose()
-    if (lav_verbose(verbose)) 
+    if (lav_verbose(verbose))
       on.exit(lav_verbose(current.verbose), TRUE)
   }
   if (type. == "nonparametric") {
@@ -348,7 +348,7 @@ lav_bootstrap_internal <- function(object = NULL,
         lavoptions = lavoptions
       )
     }
-    
+
     # verbose
     lav_verbose(current.verbose) # reset if needed
     if (lav_verbose()) cat("  ... bootstrap draw number:", sprintf("%4d", b))

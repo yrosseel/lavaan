@@ -6,7 +6,7 @@
 lavTestWald <- function(object, constraints = NULL, verbose = FALSE) {
   if (!missing(verbose)) {
     current.verbose <- lav_verbose()
-    if (lav_verbose(verbose)) 
+    if (lav_verbose(verbose))
       on.exit(lav_verbose(current.verbose), TRUE)
   }
   if (object@optim$npar > 0L && !object@optim$converged) {

@@ -348,7 +348,7 @@ lav_matrix_is_diagonal <- function(A = NULL) {
 # first attempt
 # dup1: working on the vector indices only
 .dup1 <- function(n = 1L) {
-  if ((n < 1L) | (round(n) != n)) {
+  if ((n < 1L) || (round(n) != n)) {
     lav_msg_stop(gettext("n must be a positive integer"))
   }
   if (n > 255L) {
@@ -387,7 +387,7 @@ lav_matrix_is_diagonal <- function(A = NULL) {
 # dup2: working on the row/col matrix indices
 # (but only create the matrix at the very end)
 .dup2 <- function(n = 1L) {
-  if ((n < 1L) | (round(n) != n)) {
+  if ((n < 1L) || (round(n) != n)) {
     lav_msg_stop(gettext("n must be a positive integer"))
   }
 
@@ -413,7 +413,7 @@ lav_matrix_is_diagonal <- function(A = NULL) {
 # dup3: using col idx only
 # D7 <- dup(7L); x<- apply(D7, 1, function(x) which(x > 0)); matrix(x,7,7)
 .dup3 <- function(n = 1L) {
-  if ((n < 1L) | (round(n) != n)) {
+  if ((n < 1L) || (round(n) != n)) {
     lav_msg_stop(gettext("n must be a positive integer"))
   }
 
@@ -441,7 +441,7 @@ lav_matrix_is_diagonal <- function(A = NULL) {
 
 # dup4: using Matrix package, returning a sparse matrix
 # .dup4 <- function(n = 1L) {
-#    if ((n < 1L) | (round(n) != n)) {
+#    if ((n < 1L) || (round(n) != n)) {
 #        stop("n must be a positive integer")
 #    }
 #
@@ -645,8 +645,96 @@ lav_matrix_duplication_cor_pre_post <- function(A = matrix(0, 0, 0)) {
   OUT
 }
 
+# create the elimination matrix L_n:
+# it removes the duplicated elements in vec(A) to create vech(A)
+# even if A is not symmetric
+#
+# L %*% vec(A) == vech(A)
+lav_matrix_elimination <- function(n = 1L) {
+  if ((n < 1L) || (round(n) != n)) {
+    lav_msg_stop(gettext("n must be a positive integer"))
+  }
+
+  if (n > 255L) {
+    lav_msg_stop(gettext("n is too large"))
+  }
+
+  nstar <- n * (n + 1) / 2
+  n2 <- n * n
+
+  # THIS is the real bottleneck: allocating an ocean of zeroes...
+  L <- matrix(0, nrow = nstar, ncol = n2)
+  L[ cbind(seq_len(nstar), lav_matrix_vech_idx(n)) ] <- 1
+
+  L
+}
+
+# compute L %*% A (without explicitly computing L)
+# sqrt(nrow(A)) is an integer
+# A is not symmetric, and not even square, only n^2 ROWS
+lav_matrix_elimination_pre <- function(A = matrix(0, 0, 0)) {
+  # number of rows
+  n2 <- NROW(A)
+
+  # square nrow(A) only, n2 = n^2
+  stopifnot(sqrt(n2) == round(sqrt(n2)))
+
+  # dimension
+  n <- sqrt(n2)
+
+  # select vech idx rows
+  idx <- lav_matrix_vech_idx(n)
+  OUT <- A[idx, , drop = FALSE]
+
+  OUT
+}
+
+# compute A  %*% t(L)(without explicitly computing L)
+# sqrt(nrow(A)) is an integer
+# A is not symmetric, and not even square, only n^2 COLS
+lav_matrix_elimination_post <- function(A = matrix(0, 0, 0)) {
+  # number of rows
+  n2 <- NCOL(A)
+
+  # square nrow(A) only, n2 = n^2
+  stopifnot(sqrt(n2) == round(sqrt(n2)))
+
+  # dimension
+  n <- sqrt(n2)
+
+  # select vech idx rows
+  idx <- lav_matrix_vech_idx(n)
+  OUT <- A[, idx, drop = FALSE]
+
+  OUT
+}
+
+# compute L %*% A %*% t(L) (without explicitly computing L)
+# A must be a square matrix and sqrt(ncol) an integer
+lav_matrix_elimination_pre_post <- function(A = matrix(0, 0, 0)) {
+  # number of rows
+  n2 <- NCOL(A)
+
+  # square A only, n2 = n^2
+  stopifnot(NROW(A) == n2, sqrt(n2) == round(sqrt(n2)))
+
+  # dimension
+  n <- sqrt(n2)
+
+  # select vech idx rows
+  idx <- lav_matrix_vech_idx(n)
+  OUT <- A[idx, idx, drop = FALSE]
+
+  OUT
+}
+
+
+
+
+
 # create the generalized inverse of the duplication matrix (D^+_n):
 # it removes the duplicated elements in vec(S) to create vech(S)
+# if S is symmetric
 #
 # D^+ %*% vec(S) == vech(S)
 #
@@ -656,7 +744,7 @@ lav_matrix_duplication_cor_pre_post <- function(A = matrix(0, 0, 0)) {
 
 # create first t(DUP.ginv)
 .dup_ginv1 <- function(n = 1L) {
-  if ((n < 1L) | (round(n) != n)) {
+  if ((n < 1L) || (round(n) != n)) {
     lav_msg_stop(gettext("n must be a positive integer"))
   }
 
@@ -684,7 +772,7 @@ lav_matrix_duplication_cor_pre_post <- function(A = matrix(0, 0, 0)) {
 
 # create DUP.ginv without transpose
 .dup_ginv2 <- function(n = 1L) {
-  if ((n < 1L) | (round(n) != n)) {
+  if ((n < 1L) || (round(n) != n)) {
     lav_msg_stop(gettext("n must be a positive integer"))
   }
 
@@ -814,11 +902,11 @@ lav_matrix_duplication_ginv_cor_pre_post <- function(A = matrix(0, 0, 0)) {
 
 # first attempt
 .com1 <- function(m = 1L, n = 1L) {
-  if ((m < 1L) | (round(m) != m)) {
+  if ((m < 1L) || (round(m) != m)) {
     lav_msg_stop(gettext("n must be a positive integer"))
   }
 
-  if ((n < 1L) | (round(n) != n)) {
+  if ((n < 1L) || (round(n) != n)) {
     lav_msg_stop(gettext("n must be a positive integer"))
   }
 

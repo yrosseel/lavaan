@@ -38,7 +38,7 @@ lav_mvnorm_missing_h1_estimate_moments <- function(Y = NULL,
   if (is.null(tol)) {
     tol <- 1e-05
   }
-  
+
   # remove empty cases
   N.full <- N
   if (length(Mp$empty.idx) > 0L) {

@@ -130,9 +130,9 @@ lav_model_efa_rotate_x <- function(x, lavmodel = NULL, lavoptions = NULL,
       # set warn and verbose to ropts-values
       current.warn <- lav_warn()
       current.verbose <- lav_verbose()
-      if (lav_warn(ropts$warn)) 
+      if (lav_warn(ropts$warn))
         on.exit(lav_warn(current.warn), TRUE)
-      if (lav_verbose(ropts$verbose)) 
+      if (lav_verbose(ropts$verbose))
         on.exit(lav_verbose(current.verbose), TRUE)
       # rotate this set
       res <- lav_matrix_rotate(

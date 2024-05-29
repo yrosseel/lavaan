@@ -66,11 +66,11 @@ lavaan <- function(
   dotdotdot <- temp$dotdotdot
   cluster <- lavmc$cluster
   rm(mc)
-  
+
   # ------------- handling of warn/debug/verbose switches ----------
   if (!is.null(dotdotdot$debug)) {
     current.debug <- lav_debug()
-    if (lav_debug(dotdotdot$debug)) 
+    if (lav_debug(dotdotdot$debug))
       on.exit(lav_debug(current.debug), TRUE)
     dotdotdot$debug <- NULL
     if (lav_debug()) {
@@ -80,17 +80,17 @@ lavaan <- function(
   }
   if (!is.null(dotdotdot$warn)) {
     current.warn <- lav_warn()
-    if (lav_warn(dotdotdot$warn)) 
+    if (lav_warn(dotdotdot$warn))
       on.exit(lav_warn(current.warn), TRUE)
     dotdotdot$warn <- NULL
   }
   if (!is.null(dotdotdot$verbose)) {
     current.verbose <- lav_verbose()
-    if (lav_verbose(dotdotdot$verbose)) 
+    if (lav_verbose(dotdotdot$verbose))
       on.exit(lav_verbose(current.verbose), TRUE)
     dotdotdot$verbose <- NULL
   }
-  
+
   # ------------ check data ------------------------
   temp <- lav_lavaan_step00_checkdata(
     data        = data,

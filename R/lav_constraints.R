@@ -3,7 +3,7 @@ lav_constraints_parse <- function(partable = NULL, constraints = NULL,
                                   debug = FALSE) {
   if (!missing(debug)) {
     current.debug <- lav_debug()
-    if (lav_debug(debug)) 
+    if (lav_debug(debug))
       on.exit(lav_debug(current.debug), TRUE)
   }
   # just in case we do not have a $free column in partable

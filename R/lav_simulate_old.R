@@ -35,7 +35,7 @@ simulateData <- function( # user-specified model
                          standardized = FALSE) {
   if (!missing(debug)) {
     current.debug <- lav_debug()
-    if (lav_debug(debug)) 
+    if (lav_debug(debug))
       on.exit(lav_debug(current.debug), TRUE)
   }
   if (!is.null(seed)) set.seed(seed)

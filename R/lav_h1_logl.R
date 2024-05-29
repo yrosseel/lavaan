@@ -44,7 +44,7 @@ lav_h1_logl <- function(lavdata = NULL,
     for (g in seq_len(ngroups)) {
       if (lavdata@nlevels > 1L) {
         current.verbose <- lav_verbose()
-        if (lav_verbose(FALSE)) 
+        if (lav_verbose(FALSE))
             on.exit(lav_verbose(current.verbose), TRUE)
         OUT <- lav_mvnorm_cluster_em_sat(
           YLp = lavsamplestats@YLp[[g]],

@@ -6,12 +6,12 @@ lavParseModelString <- function(model.syntax = "", as.data.frame. = FALSE,
                                 parser = "new", warn = TRUE, debug = FALSE) {
   if (!missing(debug)) {
     current.debug <- lav_debug()
-    if (lav_debug(debug)) 
+    if (lav_debug(debug))
       on.exit(lav_debug(current.debug), TRUE)
   }
   if (!missing(warn)) {
     current.warn <- lav_warn()
-    if (lav_warn(warn)) 
+    if (lav_warn(warn))
       on.exit(lav_warn(current.warn), TRUE)
   }
   parser <- tolower(parser)
