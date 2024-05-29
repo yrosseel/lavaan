@@ -638,7 +638,6 @@ lav_model_test <- function(lavobject = NULL,
             lavoptions. = lavoptions,
             lavdata. = lavdata,
             R = R,
-            verbose = lavoptions$verbose,
             type = boot.type,
             FUN = "test"
           )
@@ -646,14 +645,14 @@ lav_model_test <- function(lavobject = NULL,
         # new in 0.6-12: always warn for failed and nonadmissible
         error.idx <- attr(BOOT.TEST, "error.idx")
         nfailed <- length(attr(BOOT.TEST, "error.idx")) # zero if NULL
-        if (nfailed > 0L && lavoptions$warn) {
+        if (nfailed > 0L) {
           lav_msg_warn(gettextf(
             "%d bootstrap runs failed or did not converge.", nfailed
           ))
         }
 
         notok <- length(attr(BOOT.TEST, "nonadmissible")) # zero if NULL
-        if (notok > 0L && lavoptions$warn) {
+        if (notok > 0L) {
           lav_msg_warn(gettextf(
             "%d bootstrap runs resulted in nonadmissible solutions.", notok
           ))

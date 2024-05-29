@@ -27,7 +27,7 @@ lav_lavaan_step08_start <- function(slotModel = NULL, # nolint
     # check if we have provided a full parameter table as model = input
     if (!is.null(lavpartable$est) && is.character(lavoptions$start) &&
       lavoptions$start == "default") {
-      if (lavoptions$verbose) {
+      if (lav_verbose()) {
         cat("lavstart           ...")
       }
       # check if all 'est' values look ok
@@ -47,12 +47,11 @@ lav_lavaan_step08_start <- function(slotModel = NULL, # nolint
           lavsamplestats = lavsamplestats,
           model.type = lavoptions$model.type,
           reflect = FALSE,
-		  samplestats.flag = samplestats.flag,
+		      samplestats.flag = samplestats.flag,
           # order.lv.by  = lavoptions$rotation.args$order.lv.by,
           order.lv.by = "none",
-          mimic = lavoptions$mimic,
-          debug = lavoptions$debug
-        )
+          mimic = lavoptions$mimic
+          )
       } else {
         lavpartable$start <- lavpartable$est
       }
@@ -75,16 +74,16 @@ lav_lavaan_step08_start <- function(slotModel = NULL, # nolint
       #                    #order.lv.by  = lavoptions$rotation.args$order.lv.by,
       #                    order.lv.by  = "none",
       #                    mimic          = lavoptions$mimic,
-      #                    debug          = lavoptions$debug)
+      #                    debug          = lav_debug())
       #     exo.idx <- which(lavpartable$exo == 1L)
       #     lavpartable$start[exo.idx] <- tmp[exo.idx]
       # }
 
-      if (lavoptions$verbose) {
+      if (lav_verbose()) {
         cat(" done.\n")
       }
     } else {
-      if (lavoptions$verbose) {
+      if (lav_verbose()) {
         cat("lavstart           ...")
       }
       start.values <- lav_start(
@@ -97,8 +96,7 @@ lav_lavaan_step08_start <- function(slotModel = NULL, # nolint
         samplestats.flag = samplestats.flag,
         # order.lv.by  = lavoptions$rotation.args$order.lv.by,
         order.lv.by = "none",
-        mimic = lavoptions$mimic,
-        debug = lavoptions$debug
+        mimic = lavoptions$mimic
       )
 
       # sanity check
@@ -110,7 +108,7 @@ lav_lavaan_step08_start <- function(slotModel = NULL, # nolint
       }
 
       lavpartable$start <- start.values
-      if (lavoptions$verbose) {
+      if (lav_verbose()) {
         cat(" done.\n")
       }
     }

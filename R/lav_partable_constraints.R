@@ -1,6 +1,11 @@
 # build def function from partable
 lav_partable_constraints_def <- function(partable, con = NULL, debug = FALSE,
                                          txtOnly = FALSE) {
+  if (!missing(debug)) {
+    current.debug <- lav_debug()
+    if (lav_debug(debug)) 
+      on.exit(lav_debug(current.debug), TRUE)
+  }
   # empty function
   def.function <- function() NULL
 
@@ -88,7 +93,7 @@ lav_partable_constraints_def <- function(partable, con = NULL, debug = FALSE,
   BODY.txt <- paste(BODY.txt, "return(out)\n}\n", sep = "")
 
   body(def.function) <- parse(file = "", text = BODY.txt)
-  if (debug) {
+  if (lav_debug()) {
     cat("def.function = \n")
     print(def.function)
     cat("\n")
@@ -110,6 +115,11 @@ lav_partable_constraints_def <- function(partable, con = NULL, debug = FALSE,
 #         }
 lav_partable_constraints_ceq <- function(partable, con = NULL, debug = FALSE,
                                          txtOnly = FALSE) {
+  if (!missing(debug)) {
+    current.debug <- lav_debug()
+    if (lav_debug(debug)) 
+      on.exit(lav_debug(current.debug), TRUE)
+  }
   # empty function
   ceq.function <- function() NULL
 
@@ -251,7 +261,7 @@ lav_partable_constraints_ceq <- function(partable, con = NULL, debug = FALSE,
   BODY.txt <- paste(BODY.txt, "\n", "out[is.na(out)] <- Inf\n", sep = "")
   BODY.txt <- paste(BODY.txt, "return(out)\n}\n", sep = "")
   body(ceq.function) <- parse(file = "", text = BODY.txt)
-  if (debug) {
+  if (lav_debug()) {
     cat("ceq.function = \n")
     print(ceq.function)
     cat("\n")
@@ -277,6 +287,11 @@ lav_partable_constraints_ceq <- function(partable, con = NULL, debug = FALSE,
 #       care of the difference between '<' and '>'
 lav_partable_constraints_ciq <- function(partable, con = NULL, debug = FALSE,
                                          txtOnly = FALSE) {
+  if (!missing(debug)) {
+    current.debug <- lav_debug()
+    if (lav_debug(debug)) 
+      on.exit(lav_debug(current.debug), TRUE)
+  }
   # empty function
   cin.function <- function() NULL
 
@@ -411,7 +426,7 @@ lav_partable_constraints_ciq <- function(partable, con = NULL, debug = FALSE,
   BODY.txt <- paste(BODY.txt, "\n", "out[is.na(out)] <- Inf\n", sep = "")
   BODY.txt <- paste(BODY.txt, "return(out)\n}\n", sep = "")
   body(cin.function) <- parse(file = "", text = BODY.txt)
-  if (debug) {
+  if (lav_debug()) {
     cat("cin.function = \n")
     print(cin.function)
     cat("\n")
@@ -424,8 +439,7 @@ lav_partable_constraints_ciq <- function(partable, con = NULL, debug = FALSE,
 # are used in a constrained (or optionally a definition)
 # (always 0 for definitions)
 lav_partable_constraints_label_id <- function(partable, con = NULL,
-                                              def = TRUE,
-                                              warn = TRUE) {
+                                              def = TRUE) {
   # if 'con', merge partable + con
   if (!is.null(con)) {
     partable$lhs <- c(partable$lhs, con$lhs)
@@ -480,7 +494,7 @@ lav_partable_constraints_label_id <- function(partable, con = NULL,
   }
 
   # check if we have found the label
-  if (any(is.na(con.x.idx)) && warn) {
+  if (any(is.na(con.x.idx))) {
     lav_msg_warn(gettext("unknown label(s) in equality constraint(s):"),
       lav_msg_view(con.labels[which(is.na(con.x.idx))], "none")
     )

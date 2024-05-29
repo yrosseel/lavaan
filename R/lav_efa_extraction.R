@@ -13,7 +13,6 @@ lav_efa_extraction <- function(S, nfactors = 1L,
                                method = "ULS", # or ML
                                corner = FALSE,
                                reflect = FALSE, order.lv.by = "none",
-                               verbose = FALSE,
                                min.var = 0.0001) {
   stopifnot(is.matrix(S))
   S <- unname(S)
@@ -45,7 +44,7 @@ lav_efa_extraction <- function(S, nfactors = 1L,
   # optimize
   control.nlminb <- list(
     eval.max = 20000L, iter.max = 10000L,
-    trace = if (verbose) {
+    trace = if (lav_verbose()) {
       1L
     } else {
       0L
@@ -300,8 +299,7 @@ efa_extraction_ml_min_gradient <- function(x, cache = NULL) {
 # - unless there are heywood cases; this function allows for negative variances!
 
 lav_efa_extraction_uls_corner <- function(S, nfactors = 1L, reflect = TRUE,
-                                          order.lv.by = "none",
-                                          verbose = TRUE) {
+                                          order.lv.by = "none") {
   stopifnot(is.matrix(S))
   S <- unname(S)
   nvar <- nrow(S)
@@ -347,7 +345,7 @@ lav_efa_extraction_uls_corner <- function(S, nfactors = 1L, reflect = TRUE,
 
   control.nlminb <- list(
     eval.max = 20000L, iter.max = 10000L,
-    trace = if (verbose) {
+    trace = if (lav_verbose()) {
       1L
     } else {
       0L

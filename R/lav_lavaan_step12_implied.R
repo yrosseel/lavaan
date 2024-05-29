@@ -7,11 +7,11 @@ lav_lavaan_step12_implied <- function(lavoptions = NULL,
   # if lavoptions$implied compute lavimplied via lav_model_implied
   lavimplied <- list()
   if (lavoptions$implied) {
-    if (lavoptions$verbose) {
+    if (lav_verbose()) {
       cat("lavimplied  ...")
     }
     lavimplied <- lav_model_implied(lavmodel)
-    if (lavoptions$verbose) {
+    if (lav_verbose()) {
       cat(" done.\n")
     }
   }
@@ -31,7 +31,7 @@ lav_lavaan_step12_loglik <- function(lavoptions = NULL,
   # if lavoptions$loglik compute lavloglik via lav_model_loglik
   lavloglik <- list()
   if (lavoptions$loglik) {
-    if (lavoptions$verbose) {
+    if (lav_verbose()) {
       cat("lavloglik   ...")
     }
     lavloglik <- lav_model_loglik(
@@ -41,7 +41,7 @@ lav_lavaan_step12_loglik <- function(lavoptions = NULL,
       lavmodel = lavmodel,
       lavoptions = lavoptions
     )
-    if (lavoptions$verbose) {
+    if (lav_verbose()) {
       cat(" done.\n")
     }
   }

@@ -48,6 +48,11 @@ bootstrapLavaan <- function(object,
       "bollen.stine", "parametric", "yuan"
     )
   )
+  if (!missing(verbose)) {
+    current.verbose <- lav_verbose()
+    if (lav_verbose(verbose)) 
+      on.exit(lav_verbose(current.verbose), TRUE)
+  }
   if (type. == "nonparametric") {
     type. <- "ordinary"
   }
@@ -86,7 +91,6 @@ bootstrapLavaan <- function(object,
     lavpartable. = NULL,
     R = R,
     type = type.,
-    verbose = verbose,
     FUN = FUN,
     keep.idx = keep.idx,
     h0.rmsea = h0.rmsea,
@@ -95,13 +99,13 @@ bootstrapLavaan <- function(object,
 
   # new in 0.6-12: always warn for failed and nonadmissible runs
   nfailed <- length(attr(out, "error.idx")) # zero if NULL
-  if (nfailed > 0L && object@Options$warn) {
+  if (nfailed > 0L) {
     lav_msg_warn(gettextf(
       "%s bootstrap runs failed or did not converge.", nfailed))
   }
 
   notok <- length(attr(out, "nonadmissible")) # zero if NULL
-  if (notok > 0L && object@Options$warn) {
+  if (notok > 0L) {
      lav_msg_warn(gettextf(
       "%s bootstrap runs resulted in nonadmissible solutions.", notok))
   }
@@ -119,9 +123,7 @@ lav_bootstrap_internal <- function(object = NULL,
                                    lavpartable. = NULL,
                                    R = 1000L,
                                    type = "ordinary",
-                                   verbose = FALSE,
                                    FUN = "coef",
-                                   # warn            = -1L, # not used anymore!
                                    check.post = TRUE,
                                    keep.idx = FALSE,
                                    # return.boot     = FALSE,
@@ -172,7 +174,8 @@ lav_bootstrap_internal <- function(object = NULL,
   }
 
   # always shut off some options:
-  lavoptions$verbose <- FALSE
+  current.verbose <- lav_verbose()
+  if (lav_verbose(FALSE)) on.exit(lav_verbose(current.verbose))
   lavoptions$check.start <- FALSE
   lavoptions$check.post <- FALSE
   lavoptions$optim.attempts <- 1L # can save a lot of time
@@ -345,15 +348,16 @@ lav_bootstrap_internal <- function(object = NULL,
         lavoptions = lavoptions
       )
     }
-
+    
     # verbose
-    if (verbose) cat("  ... bootstrap draw number:", sprintf("%4d", b))
+    lav_verbose(current.verbose) # reset if needed
+    if (lav_verbose()) cat("  ... bootstrap draw number:", sprintf("%4d", b))
     bootSampleStats <- try(lav_samplestats_from_data(
       lavdata       = newData,
       lavoptions    = lavoptions
     ), silent = TRUE)
     if (inherits(bootSampleStats, "try-error")) {
-      if (verbose) {
+      if (lav_verbose()) {
         cat("     FAILED: creating sample statistics\n")
         cat(bootSampleStats[1])
       }
@@ -384,7 +388,7 @@ lav_bootstrap_internal <- function(object = NULL,
       slotData = lavdata
     ))
     if (!fit.boot@optim$converged) {
-      if (verbose) cat("     FAILED: no convergence\n")
+      if (lav_verbose()) cat("     FAILED: no convergence\n")
       out <- as.numeric(NA)
       attr(out, "nonadmissible.flag") <- TRUE
       if (keep.idx) {
@@ -406,7 +410,7 @@ lav_bootstrap_internal <- function(object = NULL,
       out <- try(as.numeric(FUN(fit.boot, ...)), silent = TRUE)
     }
     if (inherits(out, "try-error")) {
-      if (verbose) cat("     FAILED: applying FUN to fit.boot\n")
+      if (lav_verbose()) cat("     FAILED: applying FUN to fit.boot\n")
       out <- as.numeric(NA)
       attr(out, "nonadmissible.flag") <- TRUE
       if (keep.idx) {
@@ -419,7 +423,7 @@ lav_bootstrap_internal <- function(object = NULL,
     admissible.flag <- suppressWarnings(lavInspect(fit.boot, "post.check"))
     attr(out, "nonadmissible.flag") <- !admissible.flag
 
-    if (verbose) {
+    if (lav_verbose()) {
       cat(
         "   OK -- niter = ",
         sprintf("%3d", fit.boot@optim$iterations), " fx = ",
@@ -485,7 +489,7 @@ lav_bootstrap_internal <- function(object = NULL,
 
   # this is adapted from the boot function in package boot
   RR <- R
-  if (verbose) {
+  if (lav_verbose()) {
     cat("\n")
   }
   res <- if (ncpus > 1L && (have_mc || have_snow)) {

@@ -4,9 +4,7 @@ lav_model_objective <- function(lavmodel = NULL,
                                 GLIST = NULL,
                                 lavsamplestats = NULL,
                                 lavdata = NULL,
-                                lavcache = NULL,
-                                verbose = FALSE,
-                                debug = FALSE) {
+                                lavcache = NULL) {
   # state or final?
   if (is.null(GLIST)) GLIST <- lavmodel@GLIST
 
@@ -74,7 +72,7 @@ lav_model_objective <- function(lavmodel = NULL,
       )
       Mu.hat <- computeMuHat(lavmodel = lavmodel, GLIST = GLIST)
     }
-    if (debug) print(WLS.est)
+    if (lav_debug()) print(WLS.est)
   } else if (estimator %in% c("ML", "GLS", "PML", "FML", "REML", "catML") &&
     lavdata@nlevels == 1L) {
     # compute moments for all groups
@@ -103,7 +101,7 @@ lav_model_objective <- function(lavmodel = NULL,
           lavsamplestats@ridge
       }
     }
-    if (debug) print(Sigma.hat)
+    if (lav_debug()) print(Sigma.hat)
 
     if (meanstructure) {
       # if(conditional.x) {

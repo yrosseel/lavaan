@@ -8,8 +8,7 @@ lav_test_diff_Satorra2000 <- function(m1, m0, H1 = TRUE, A.method = "delta",
                                       A = NULL,
                                       Satterthwaite = FALSE,
                                       scaled.shifted = FALSE,
-                                      old.approach = FALSE,
-                                      debug = FALSE) {
+                                      old.approach = FALSE) {
   if (scaled.shifted) {
     Satterthwaite <- TRUE
   }
@@ -73,7 +72,7 @@ lav_test_diff_Satorra2000 <- function(m1, m0, H1 = TRUE, A.method = "delta",
           A <- A %*% t(m1@Model@ceq.simple.K)
         }
       }
-      if (debug) print(A)
+      if (lav_debug()) print(A)
     }
   } else {
     lav_msg_stop(gettext("not ready yet"))
@@ -100,7 +99,7 @@ lav_test_diff_Satorra2000 <- function(m1, m0, H1 = TRUE, A.method = "delta",
         m0@Model@ceq.simple.only) {
         A <- A %*% t(m0@Model@ceq.simple.K)
       }
-      if (debug) print(A)
+      if (lav_debug()) print(A)
     }
   }
 
@@ -328,7 +327,6 @@ lav_test_diff_SatorraBentler2010 <- function(m1, m0, test = 2,
 lav_test_diff_m10 <- function(m1, m0, test = FALSE) {
   # switch of verbose/se/test
   Options <- m1@Options
-  Options$verbose <- FALSE
   # switch of optim.gradient check
   Options$check.gradient <- FALSE
 
@@ -386,7 +384,8 @@ lav_test_diff_m10 <- function(m1, m0, test = FALSE) {
     slotOptions = Options,
     slotSampleStats = m1@SampleStats,
     slotData = m1@Data,
-    slotCache = m1@Cache
+    slotCache = m1@Cache,
+    verbose = FALSE
   )
 
   m10

@@ -121,8 +121,7 @@ lav_export_estimation <- function(lavaan_model) {
       GLIST = GLIST,
       lavsamplestats = lavaan_model@SampleStats,
       lavdata = lavaan_model@Data,
-      lavcache = list(),
-      verbose = FALSE
+      lavcache = list()
     )
     if (lavaan_model@Options$estimator == "PML") {
       # rescale objective function value
@@ -148,6 +147,9 @@ lav_export_estimation <- function(lavaan_model) {
     GLIST <- lav_model_x2GLIST(lavaan_model@Model,
       x = parameter_values
     )
+    current.verbose <- lav_verbose()
+    if (lav_verbose(FALSE)) 
+      on.exit(lav_verbose(current.verbose), TRUE)
     dx <- lav_model_gradient(
       lavmodel = lavaan_model@Model,
       GLIST = GLIST,
@@ -156,9 +158,9 @@ lav_export_estimation <- function(lavaan_model) {
       lavcache = list(),
       type = "free",
       group.weight = !(lavaan_model@SampleStats@missing.flag || lavaan_model@Options$estimator == "PML"),
-      verbose = FALSE,
       ceq.simple = lavaan_model@Model@ceq.simple.only
     )
+    lav_verbose(current.verbose)
 
     if (lavaan_model@Model@eq.constraints) {
       dx <- as.numeric(dx %*% lavaan_model@Model@eq.constraints.K)

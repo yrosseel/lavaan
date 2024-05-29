@@ -1,6 +1,6 @@
 # check if the partable is complete/consistent
 # we may have added intercepts/variances (user = 0), fixed to zero
-lav_partable_check <- function(partable, categorical = FALSE, warn = TRUE) {
+lav_partable_check <- function(partable, categorical = FALSE) {
   check <- TRUE
 
   # check for empy table - or should we WARN?
@@ -19,9 +19,7 @@ lav_partable_check <- function(partable, categorical = FALSE, warn = TRUE) {
   # if categorical, we should have some ov.names.ord
   if (categorical && length(ov.names.ord) == 0L) {
     check <- FALSE
-    if (warn) {
-      lav_msg_warn(gettext("parameter table does not contain thresholds"))
-    }
+    lav_msg_warn(gettext("parameter table does not contain thresholds"))
   }
 
   # we should have a (residual) variance for *each* ov/lv
@@ -31,12 +29,10 @@ lav_partable_check <- function(partable, categorical = FALSE, warn = TRUE) {
   missing.idx <- which(is.na(match(all.names, partable$lhs[var.idx])))
   if (length(missing.idx) > 0L) {
     check <- FALSE
-    if (warn) {
-      lav_msg_warn(gettextf(
-        "parameter table does not contain (residual) variances for
-        one or more variables: %s",
-        lav_msg_view(all.names[missing.idx])))
-    }
+    lav_msg_warn(gettextf(
+      "parameter table does not contain (residual) variances for
+      one or more variables: %s",
+      lav_msg_view(all.names[missing.idx])))
   }
 
   # meanstructure?
@@ -50,12 +46,10 @@ lav_partable_check <- function(partable, categorical = FALSE, warn = TRUE) {
     missing.idx <- which(is.na(match(all.names, partable$lhs[int.idx])))
     if (length(missing.idx) > 0L) {
       check <- FALSE
-      if (warn) {
-        lav_msg_warn(gettextf(
-          "parameter table does not contain intercepts
-          for one or more variables: %s",
-          lav_msg_view(all.names[missing.idx])))
-      }
+      lav_msg_warn(gettextf(
+        "parameter table does not contain intercepts
+        for one or more variables: %s",
+        lav_msg_view(all.names[missing.idx])))
     }
   }
 
@@ -98,10 +92,8 @@ lav_partable_check <- function(partable, categorical = FALSE, warn = TRUE) {
 
   if (length(int.fixed) > 0L) {
     check <- FALSE
-    if (warn) {
-      lav_msg_warn(gettext("automatically added intercepts are set to zero:"),
-                   lav_msg_view(partable$lhs[int.fixed]))
-    }
+    lav_msg_warn(gettext("automatically added intercepts are set to zero:"),
+                 lav_msg_view(partable$lhs[int.fixed]))
   }
 
   # return check code

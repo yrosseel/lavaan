@@ -14,9 +14,9 @@ lav_start <- function(start.method = "default",
                       model.type = "sem",
                       mimic = "lavaan",
                       reflect = FALSE, # rotation only
-					  samplestats.flag = TRUE,
-                      order.lv.by = "none", # rotation only
-                      debug = FALSE) {
+					            samplestats.flag = TRUE,
+                      order.lv.by = "none" # rotation only
+					            ) {
   # check arguments
   stopifnot(is.list(lavpartable))
 
@@ -918,7 +918,7 @@ lav_start <- function(start.method = "default",
     start[bad.idx] <- 0.5
   }
 
-  if (debug) {
+  if (lav_debug()) {
     cat("lavaan DEBUG: lavaanStart\n")
     print(start)
   }
@@ -930,8 +930,7 @@ lav_start <- function(start.method = "default",
 # StartingValues <- lav_start
 
 # sanity check: (user-specified) variances smaller than covariances
-lav_start_check_cov <- function(lavpartable = NULL, start = lavpartable$start,
-                                warn = TRUE) {
+lav_start_check_cov <- function(lavpartable = NULL, start = lavpartable$start) {
   nblocks <- lav_partable_nblocks(lavpartable)
   block.values <- lav_partable_block_values(lavpartable)
 
@@ -977,13 +976,11 @@ lav_start_check_cov <- function(lavpartable = NULL, start = lavpartable$start,
         if (start[this.cov.idx] == 0) {
           # nothing to do
         } else if (lavpartable$free[this.cov.idx] > 0L) {
-          if (warn) {
-             lav_msg_warn(gettextf(
-              "non-zero covariance element set to zero, due to fixed-to-zero
-              variances variables involved are: %s", var.lhs), var.rhs,
-              block.txt
+            lav_msg_warn(gettextf(
+             "non-zero covariance element set to zero, due to fixed-to-zero
+             variances variables involved are: %s", var.lhs), var.rhs,
+             block.txt
             )
-          }
           start[this.cov.idx] <- 0
         } else {
           lav_msg_stop(gettextf(
@@ -1010,12 +1007,10 @@ lav_start_check_cov <- function(lavpartable = NULL, start = lavpartable$start,
 
       if (!is.finite(COR)) {
         # force simple values
-        if (warn) {
            lav_msg_warn(gettextf(
             "starting values imply NaN for a correlation value; variables
             involved are: %s", var.lhs), var.rhs, block.txt
           )
-        }
         start[var.lhs.idx] <- 1
         start[var.rhs.idx] <- 1
         start[this.cov.idx] <- 0
@@ -1029,45 +1024,31 @@ lav_start_check_cov <- function(lavpartable = NULL, start = lavpartable$start,
         # we prefer a free parameter, and not user-specified
         if (lavpartable$free[this.cov.idx] > 0L &&
           is.na(lavpartable$ustart[this.cov.idx])) {
-          if (warn) {
              lav_msg_warn(gettext(txt))
-          }
           start[this.cov.idx] <- start[this.cov.idx] / (COR * 1.1)
         } else if (lavpartable$free[var.min.idx] > 0L &&
           is.na(lavpartable$ustart[var.min.idx])) {
-          if (warn) {
              lav_msg_warn(gettext(txt))
-          }
           start[var.min.idx] <- start[var.min.idx] * (COR * 1.1)^2
         } else if (lavpartable$free[var.max.idx] > 0L &&
           is.na(lavpartable$ustart[var.max.idx])) {
-          if (warn) {
              lav_msg_warn(gettext(txt))
-          }
           start[var.max.idx] <- start[var.max.idx] * (COR * 1.1)^2
 
           # not found? try just a free parameter
         } else if (lavpartable$free[this.cov.idx] > 0L) {
-          if (warn) {
              lav_msg_warn(gettext(txt))
-          }
           start[this.cov.idx] <- start[this.cov.idx] / (COR * 1.1)
         } else if (lavpartable$free[var.min.idx] > 0L) {
-          if (warn) {
              lav_msg_warn(gettext(txt))
-          }
           start[var.min.idx] <- start[var.min.idx] * (COR * 1.1)^2
         } else if (lavpartable$free[var.max.idx] > 0L) {
-          if (warn) {
              lav_msg_warn(gettext(txt))
-          }
           start[var.max.idx] <- start[var.max.idx] * (COR * 1.1)^2
 
           # nothing? abort or warn (and fail later...): warn
         } else {
-          if (warn) {
              lav_msg_warn(gettext(txt))
-          }
           # lav_msg_stop(gettextf(
           # "please provide better fixed values for (co)variances;
           #  variables involved are: %s ", var.lhs), var.rhs, block.txt)

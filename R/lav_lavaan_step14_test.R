@@ -22,7 +22,7 @@ lav_lavaan_step14_test <- function(lavoptions = NULL,
   lavtest <- NULL
   if (!(length(lavoptions$test) == 1L && lavoptions$test == "none") &&
     attr(x, "converged")) {
-    if (lavoptions$verbose) {
+    if (lav_verbose()) {
       cat("computing TEST for test(s) =", lavoptions$test, "...")
     }
     lavtest <- lav_model_test(
@@ -38,7 +38,7 @@ lav_lavaan_step14_test <- function(lavoptions = NULL,
       lavcache = lavcache,
       lavloglik = lavloglik
     )
-    if (lavoptions$verbose) {
+    if (lav_verbose()) {
       cat(" done.\n")
     }
   } else {

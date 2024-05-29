@@ -33,7 +33,7 @@ lav_lavaan_step16_rotation <- function(lavoptions = NULL,
     lavpartable$se.unrotated <- lavpartable$se
 
     # rotate, and create new lavmodel
-    if (lavoptions$verbose) {
+    if (lav_verbose()) {
       cat(
         "rotating EFA factors using rotation method =",
         toupper(lavoptions$rotation), "..."
@@ -84,13 +84,13 @@ lav_lavaan_step16_rotation <- function(lavoptions = NULL,
       lavmodel = lavmodel,
       type = "user", extra = TRUE
     )
-    if (lavoptions$verbose) {
+    if (lav_verbose()) {
       cat(" done.\n")
     }
 
     # VCOV rotated parameters
     if (!lavoptions$se %in% c("none", "bootstrap", "external", "two.step")) {
-      if (lavoptions$verbose) {
+      if (lav_verbose()) {
         cat(
           "computing VCOV for se =", lavoptions$se,
           "and rotation.se =", lavoptions$rotation.se, "..."
@@ -213,7 +213,7 @@ lav_lavaan_step16_rotation <- function(lavoptions = NULL,
         lavvcov$vcov <- VCOV1
       } # bordered
 
-      if (lavoptions$verbose) {
+      if (lav_verbose()) {
         cat(" done.\n")
       }
     } # vcov

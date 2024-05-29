@@ -743,7 +743,9 @@ lav_object_inspect_modelmatrices <- function(object, what = "free", # nolint
 
   glist <- object@Model@GLIST
 
+  current.verbose <- lav_verbose()
   if (what == "dx.free") {
+    if (lav_verbose(FALSE)) on.exit(lav_verbose(current.verbose), TRUE)
     tmp.dx <- lav_model_gradient(
       lavmodel       = object@Model,
       GLIST          = NULL,
@@ -751,18 +753,17 @@ lav_object_inspect_modelmatrices <- function(object, what = "free", # nolint
       lavdata        = object@Data,
       lavcache       = object@Cache,
       type           = "free",
-      verbose        = FALSE,
       group.weight   = TRUE,
       ceq.simple     = TRUE,
       Delta          = NULL)
   } else if (what == "dx.all") {
+    if (lav_verbose(FALSE)) on.exit(lav_verbose(current.verbose), TRUE)
     glist <- lav_model_gradient(lavmodel   = object@Model,
       GLIST          = NULL,
       lavsamplestats = object@SampleStats,
       lavdata        = object@Data,
       lavcache       = object@Cache,
       type           = "allofthem",
-      verbose        = FALSE,
       group.weight   = TRUE,
       ceq.simple     = FALSE,
       Delta          = NULL)
@@ -2229,16 +2230,16 @@ lav_object_inspect_gradient <- function(object,
   } else {
     group.weight <- TRUE
   }
-
+  current.verbose <- lav_verbose()
+  if (lav_verbose(FALSE)) on.exit(lav_verbose(current.verbose), TRUE)
   dx <- lav_model_gradient(lavmodel       = lavmodel,
     GLIST          = NULL,
     lavsamplestats = lavsamplestats,
     lavdata        = object@Data,
     lavcache       = object@Cache,
     type           = "free",
-    verbose        = FALSE,
     group.weight   = group.weight)
-
+  lav_verbose(current.verbose)
   # if logl, rescale to get gradient wrt the loglikelihood
   if (logl) {
     if (lavmodel@estimator %in% c("ML")) {

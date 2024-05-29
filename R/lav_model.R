@@ -62,8 +62,7 @@ lav_model <- function(lavpartable = NULL,                          # nolint
   # handle variable definitions and (in)equality constraints
   tmp.con <- lav_constraints_parse(
     partable = lavpartable,
-    constraints = NULL,
-    debug = lavoptions$debug
+    constraints = NULL
   )
 
   # handle *linear* equality constraints special
@@ -87,7 +86,7 @@ lav_model <- function(lavpartable = NULL,                          # nolint
       "%1$s argument must be either %2$s or %3$s",
       "representation", "LISREL", "RAM"))
   }
-  if (lavoptions$debug) print(tmp.rep)
+  if (lav_debug()) print(tmp.rep)
 
   # FIXME: check for non-existing parameters
   bad.idx <- which((tmp.rep$mat == "" | is.na(tmp.rep$row) | is.na(tmp.rep$col)) &
@@ -498,8 +497,8 @@ lav_model <- function(lavpartable = NULL,                          # nolint
     estimator.args = lavoptions$estimator.args
   )
 
-  if (lavoptions$debug) {
-    cat("lavaan lavoptions$debug: lavaanModel\n")
+  if (lav_debug()) {
+    cat("lavaan debug: lavaanModel\n")
     print(str(tmp.model))
     print(tmp.model@GLIST)
   }

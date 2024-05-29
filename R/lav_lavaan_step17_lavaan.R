@@ -59,14 +59,14 @@ lav_lavaan_step17_lavaan <- function(lavmc = NULL,
 
   # if model.type = "efa", add standardized solution to partable
   if ((.hasSlot(lavmodel, "nefa")) && (lavmodel@nefa > 0L)) {
-    if (lavoptions$verbose) {
+    if (lav_verbose()) {
       cat("computing standardized solution ... ")
     }
     std <- standardizedSolution(lavaan,
       remove.eq = FALSE,
       remove.ineq = FALSE, remove.def = FALSE
     )
-    if (lavoptions$verbose) {
+    if (lav_verbose()) {
       cat(" done.\n")
     }
     lavaan@ParTable$est.std <- std$est.std
@@ -76,11 +76,11 @@ lav_lavaan_step17_lavaan <- function(lavmc = NULL,
   # post-fitting check of parameters
   if (!is.null(lavoptions$check.post) && lavoptions$check.post &&
     lavTech(lavaan, "converged")) {
-    if (lavoptions$verbose) {
+    if (lav_verbose()) {
       cat("post check  ...")
     }
     lavInspect(lavaan, "post.check")
-    if (lavoptions$verbose) {
+    if (lav_verbose()) {
       cat(" done.\n")
     }
   }

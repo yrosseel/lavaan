@@ -16,8 +16,7 @@ lav_bvmix_cor_twostep_fit <- function(Y1, Y2, eXo = NULL, wt = NULL,
                                       optim.method = "nlminb1", # 0.6-7
                                       optim.scale = 1.0,
                                       init.theta = NULL,
-                                      control = list(),
-                                      verbose = FALSE) {
+                                      control = list()) {
   if (is.null(fit.y1)) {
     fit.y1 <- lav_uvreg_fit(y = Y1, X = eXo, wt = wt)
   }
@@ -42,7 +41,7 @@ lav_bvmix_cor_twostep_fit <- function(Y1, Y2, eXo = NULL, wt = NULL,
 
   # optimize
   if (is.null(control$trace)) {
-    control$trace <- ifelse(verbose, 1, 0)
+    control$trace <- ifelse(lav_verbose(), 1, 0)
   }
 
   # init theta?

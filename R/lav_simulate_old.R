@@ -33,6 +33,11 @@ simulateData <- function( # user-specified model
                          return.fit = FALSE,
                          debug = FALSE,
                          standardized = FALSE) {
+  if (!missing(debug)) {
+    current.debug <- lav_debug()
+    if (lav_debug(debug)) 
+      on.exit(lav_debug(current.debug), TRUE)
+  }
   if (!is.null(seed)) set.seed(seed)
   # if(!exists(".Random.seed", envir = .GlobalEnv))
   #    runif(1)               # initialize the RNG if necessary
@@ -78,7 +83,7 @@ simulateData <- function( # user-specified model
   }
 
   group.values <- lav_partable_group_values(lav)
-  if (debug) {
+  if (lav_debug()) {
     cat("initial lav\n")
     print(as.data.frame(lav))
   }
@@ -106,7 +111,7 @@ simulateData <- function( # user-specified model
   idx <- which(is.na(lav$ustart))
   if (length(idx) > 0L) lav$ustart[idx] <- 0.0
 
-  if (debug) {
+  if (lav_debug()) {
     cat("lav + default values\n")
     print(as.data.frame(lav))
   }
@@ -150,7 +155,7 @@ simulateData <- function( # user-specified model
     Sigma.hat <- computeSigmaHat(lavmodel = fit@Model)
     ETA <- computeVETA(lavmodel = fit@Model)
 
-    if (debug) {
+    if (lav_debug()) {
       cat("Sigma.hat:\n")
       print(Sigma.hat)
       cat("Eta:\n")
@@ -171,7 +176,7 @@ simulateData <- function( # user-specified model
     fit <- lavaan(model = lav, sample.nobs = sample.nobs, ...)
     Sigma.hat <- computeSigmaHat(lavmodel = fit@Model)
 
-    if (debug) {
+    if (lav_debug()) {
       cat("after stage 1:\n")
       cat("Sigma.hat:\n")
       print(Sigma.hat)
@@ -186,7 +191,7 @@ simulateData <- function( # user-specified model
       lav$ustart[var.group] <- 1 - diag(Sigma.hat[[g]])[ov.idx]
     }
 
-    if (debug) {
+    if (lav_debug()) {
       cat("after standardisation lav\n")
       print(as.data.frame(lav))
     }
@@ -202,7 +207,7 @@ simulateData <- function( # user-specified model
 
     # 2. unstandardized latent variables
 
-    if (debug) {
+    if (lav_debug()) {
       cat("after unstandardisation lav\n")
       print(as.data.frame(lav))
     }
@@ -218,7 +223,7 @@ simulateData <- function( # user-specified model
     TH <- computeTH(lavmodel = fit@Model)
   }
 
-  if (debug) {
+  if (lav_debug()) {
     cat("\nModel-implied moments (before Vale-Maurelli):\n")
     print(Sigma.hat)
     print(Mu.hat)
@@ -255,8 +260,7 @@ simulateData <- function( # user-specified model
         n = sample.nobs[g],
         COR = cov2cor(COV),
         skewness = skewness, # FIXME: per group?
-        kurtosis = kurtosis,
-        debug = debug
+        kurtosis = kurtosis
       )
       # rescale
       # Note: 'scale()' will first center, and then scale
@@ -364,7 +368,7 @@ Kurtosis <- function(x., N1 = TRUE) {
 # not to matter for generating the data
 
 # Fleishman (1978) cubic transformation method
-lav_fleishman1978 <- function(n = 100, skewness = 0, kurtosis = 0, verbose = FALSE) {
+lav_fleishman1978 <- function(n = 100, skewness = 0, kurtosis = 0) {
   system.function <- function(x, skewness, kurtosis) {
     b <- x[1L]
     c <- x[2L]
@@ -380,7 +384,7 @@ lav_fleishman1978 <- function(n = 100, skewness = 0, kurtosis = 0, verbose = FAL
   out <- nlminb(
     start = c(1, 0, 0), objective = system.function,
     scale = 10,
-    control = list(trace = ifelse(verbose, 1, 0), rel.tol = 1e-10),
+    control = list(trace = ifelse(lav_debug(), 1, 0), rel.tol = 1e-10),
     skewness = skewness, kurtosis = kurtosis
   )
   if (out$convergence != 0 || out$objective > 1e-5)
@@ -395,7 +399,7 @@ lav_fleishman1978 <- function(n = 100, skewness = 0, kurtosis = 0, verbose = FAL
   Y
 }
 
-ValeMaurelli1983 <- function(n = 100L, COR, skewness, kurtosis, debug = FALSE) {
+ValeMaurelli1983 <- function(n = 100L, COR, skewness, kurtosis) {
   fleishman1978_abcd <- function(skewness, kurtosis) {
     system.function <- function(x, skewness, kurtosis) {
       b. <- x[1L]
@@ -491,7 +495,7 @@ ValeMaurelli1983 <- function(n = 100L, COR, skewness, kurtosis, debug = FALSE) {
     }
   }
 
-  if (debug) {
+  if (lav_debug()) {
     cat("\nOriginal correlations (for Vale-Maurelli):\n")
     print(COR)
     cat("\nIntermediate correlations (for Vale-Maurelli):\n")

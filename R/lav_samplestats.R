@@ -29,8 +29,6 @@ lav_samplestats_from_data <- function(lavdata = NULL,
   zero.cell.warn <- lavoptions$zero.cell.warn
   dls.a <- lavoptions$estimator.args$dls.a
   dls.GammaNT <- lavoptions$estimator.args$dls.GammaNT
-  debug <- lavoptions$debug
-  verbose <- lavoptions$verbose
 
   # sample.icov (new in 0.6-9; ensure it exists, for older objects)
   sample.icov <- TRUE
@@ -280,10 +278,13 @@ lav_samplestats_from_data <- function(lavdata = NULL,
 	  if (!is.null(lavoptions$cat.wls.w) && !lavoptions$cat.wls.w) {
 	    WLS.W <- FALSE # perhaps do.fit = FALSE? (eg sam())
 	  }
-      if (verbose) {
+      if (lav_verbose()) {
         cat("Estimating sample thresholds and correlations ... ")
       }
 
+      current.verbose <- lav_verbose()
+      if (lav_verbose(lav_debug())) 
+        on.exit(lav_verbose(current.verbose), TRUE)
       if (conditional.x) {
         CAT <- muthen1984(
           Data = X[[g]],
@@ -298,8 +299,7 @@ lav_samplestats_from_data <- function(lavdata = NULL,
           zero.add = zero.add,
           zero.keep.margins = zero.keep.margins,
           zero.cell.warn = FALSE,
-          zero.cell.tables = TRUE,
-          verbose = debug
+          zero.cell.tables = TRUE
         )
       } else {
         CAT <- muthen1984(
@@ -315,13 +315,13 @@ lav_samplestats_from_data <- function(lavdata = NULL,
           zero.add = zero.add,
           zero.keep.margins = zero.keep.margins,
           zero.cell.warn = FALSE,
-          zero.cell.tables = TRUE,
-          verbose = debug
+          zero.cell.tables = TRUE
         )
       }
+      lav_verbose(current.verbose)
       # empty cell tables
       zero.cell.tables[[g]] <- CAT$zero.cell.tables
-      if (verbose) cat("done\n")
+      if (lav_verbose()) cat("done\n")
     }
 
     if (categorical) {
@@ -387,7 +387,7 @@ lav_samplestats_from_data <- function(lavdata = NULL,
         out <- lav_samplestats_icov(
           COV = COV,
           x.idx = x.idx[[g]],
-          ngroups = ngroups, g = g, warn = TRUE
+          ngroups = ngroups, g = g
         )
         icov[[g]] <- out$icov
         cov.log.det[[g]] <- out$cov.log.det
@@ -404,7 +404,7 @@ lav_samplestats_from_data <- function(lavdata = NULL,
             COV = RES.COV,
             ridge = 1e-05,
             x.idx = x.idx[[g]],
-            ngroups = ngroups, g = g, warn = TRUE
+            ngroups = ngroups, g = g
           )
           res.icov[[g]] <- out$icov
           res.cov.log.det[[g]] <- out$cov.log.det
@@ -565,14 +565,17 @@ lav_samplestats_from_data <- function(lavdata = NULL,
             Mp = Mp[[g]],
             wt = WT[[g]]
           )
+        current.warn <- lav_warn()
+        if (lav_warn(lavoptions$em.h1.warn))
+          on.exit(lav_warn(current.warn), TRUE)
         out <- lav_mvnorm_missing_h1_estimate_moments(
           Y = X[[g]],
           wt = WT[[g]],
-          Mp = Mp[[g]], Yp = missing.[[g]], verbose = verbose,
+          Mp = Mp[[g]], Yp = missing.[[g]],
           max.iter = lavoptions$em.h1.iter.max,
           tol = lavoptions$em.h1.tol,
-          warn = lavoptions$em.h1.warn
         )
+        lav_warn(current.warn)
         missing.h1.[[g]]$sigma <- out$Sigma
         missing.h1.[[g]]$mu <- out$Mu
         missing.h1.[[g]]$h1 <- out$fx
@@ -595,14 +598,17 @@ lav_samplestats_from_data <- function(lavdata = NULL,
 
         if (nlevels == 1L) {
           # estimate moments unrestricted model
+          current.warn <- lav_warn()
+          if (lav_warn(lavoptions$em.h1.warn))
+            on.exit(lav_warn(current.warn), TRUE)
           out <- lav_mvnorm_missing_h1_estimate_moments(
             Y = X[[g]],
-            wt = WT[[g]], verbose = verbose,
+            wt = WT[[g]],
             Mp = Mp[[g]], Yp = missing.[[g]],
             max.iter = lavoptions$em.h1.iter.max,
-            tol = lavoptions$em.h1.tol,
-            warn = lavoptions$em.h1.warn
+            tol = lavoptions$em.h1.tol
           )
+          lav_warn(current.warn)
           missing.h1.[[g]]$sigma <- out$Sigma
           missing.h1.[[g]]$mu <- out$Mu
           missing.h1.[[g]]$h1 <- out$fx
@@ -695,7 +701,7 @@ lav_samplestats_from_data <- function(lavdata = NULL,
         out <- lav_samplestats_icov(
           COV = cov[[g]], ridge = 1e-05,
           x.idx = x.idx[[g]],
-          ngroups = ngroups, g = g, warn = TRUE
+          ngroups = ngroups, g = g
         )
         icov[[g]] <- out$icov
         cov.log.det[[g]] <- out$cov.log.det
@@ -706,7 +712,7 @@ lav_samplestats_from_data <- function(lavdata = NULL,
             COV = res.cov[[g]],
             ridge = 1e-05,
             x.idx = x.idx[[g]],
-            ngroups = ngroups, g = g, warn = TRUE
+            ngroups = ngroups, g = g
           )
           res.icov[[g]] <- out$icov
           res.cov.log.det[[g]] <- out$cov.log.det
@@ -1023,7 +1029,7 @@ lav_samplestats_from_data <- function(lavdata = NULL,
   } # ngroups
 
   # remove 'CAT', unless debug -- this is to save memory
-  if (!debug) {
+  if (!lav_debug()) {
     CAT <- list()
   }
 
@@ -1489,8 +1495,7 @@ lav_samplestats_from_moments <- function(sample.cov = NULL,
           COV = res.cov[[g]],
           ridge = 1e-05,
           x.idx = x.idx[[g]],
-          ngroups = ngroups, g = g,
-          warn = TRUE
+          ngroups = ngroups, g = g
         )
         res.icov[[g]] <- out$icov
         res.cov.log.det[[g]] <- out$cov.log.det
@@ -1519,8 +1524,7 @@ lav_samplestats_from_moments <- function(sample.cov = NULL,
           ridge = 1e-05,
           x.idx = x.idx[[g]],
           ngroups = ngroups,
-          g = g,
-          warn = TRUE
+          g = g
         )
         icov[[g]] <- out$icov
         cov.log.det[[g]] <- out$cov.log.det

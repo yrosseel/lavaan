@@ -10,8 +10,8 @@ lav_model_estimate <- function(lavmodel = NULL,
                                do.fit = TRUE) {
   lavpartable <- lav_partable_set_cache(lavpartable)
   estimator <- lavoptions$estimator
-  verbose <- lavoptions$verbose
-  debug <- lavoptions$debug
+  verbose <- lav_verbose()
+  debug <- lav_debug()
   ngroups <- lavsamplestats@ngroups
 
   if (lavsamplestats@missing.flag || estimator == "PML") {
@@ -305,8 +305,7 @@ lav_model_estimate <- function(lavmodel = NULL,
       GLIST = GLIST,
       lavsamplestats = lavsamplestats,
       lavdata = lavdata,
-      lavcache = lavcache,
-      verbose = verbose
+      lavcache = lavcache
     )
 
     # only for PML: divide by N (to speed up convergence)
@@ -377,7 +376,6 @@ lav_model_estimate <- function(lavmodel = NULL,
       lavcache = lavcache,
       type = "free",
       group.weight = group.weight, ### check me!!
-      verbose = verbose,
       ceq.simple = lavmodel@ceq.simple.only
     )
 
@@ -475,7 +473,7 @@ lav_model_estimate <- function(lavmodel = NULL,
   # check if the initial values produce a positive definite Sigma
   # to begin with -- but only for estimator="ML"
   if (estimator %in% c("ML", "FML", "MML")) {
-    Sigma.hat <- computeSigmaHat(lavmodel, extra = TRUE, debug = lavoptions$debug)
+    Sigma.hat <- computeSigmaHat(lavmodel, extra = TRUE)
     for (g in 1:ngroups) {
       if (!attr(Sigma.hat[[g]], "po")) {
         group.txt <-

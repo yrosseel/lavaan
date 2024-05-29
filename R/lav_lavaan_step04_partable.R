@@ -41,11 +41,11 @@ lav_lavaan_step04_partable <- function(slotParTable = NULL, # nolint
 	# model was already a flat.model
 	(is.list(model) && !is.null(model$mod.idx) &&
 	 !is.null(attr(model, "modifiers")))) {
-    if (lavoptions$verbose) {
+    if (lav_verbose()) {
       cat("lavpartable        ...")
     }
     # check flat.model before we proceed
-    if (lavoptions$debug) {
+    if (lav_debug()) {
       print(as.data.frame(flat.model))
     }
     # catch ~~ of fixed.x covariates if fixed.x = TRUE
@@ -102,12 +102,10 @@ lav_lavaan_step04_partable <- function(slotParTable = NULL, # nolint
         group.equal = lavoptions$group.equal,
         group.partial = lavoptions$group.partial,
         group.w.free = lavoptions$group.w.free,
-        debug = lavoptions$debug,
-        warn = lavoptions$warn,
         as.data.frame. = FALSE
       )
     lavpartable <- lav_partable_set_cache(lavpartable)
-    if (lavoptions$verbose) {
+    if (lav_verbose()) {
       cat(" done.\n")
     }
   } else if (inherits(model, "lavaan")) {
@@ -123,7 +121,7 @@ lav_lavaan_step04_partable <- function(slotParTable = NULL, # nolint
     lav_msg_stop(gettextf(
       "model [type = %s] is not of type character or list", class(model)))
     }
-  if (lavoptions$debug) {
+  if (lav_debug()) {
     print(as.data.frame(lavpartable))
   }
 
@@ -132,8 +130,7 @@ lav_lavaan_step04_partable <- function(slotParTable = NULL, # nolint
   # was used, but the user has forgotten some variances/intercepts...
   if (is.null(slotParTable)) {
     junk <- lav_partable_check(lavpartable,
-      categorical = lavoptions$.categorical,
-      warn = TRUE
+      categorical = lavoptions$.categorical
     )
     rm(junk)
   }

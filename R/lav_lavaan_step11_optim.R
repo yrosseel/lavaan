@@ -52,7 +52,7 @@ lav_lavaan_step11_estoptim <- function(lavdata = NULL, # nolint
   x <- NULL
   if (lavoptions$do.fit && lavoptions$estimator != "none" &&
     lavmodel@nx.free > 0L) {
-    if (lavoptions$verbose) {
+    if (lav_verbose()) {
       cat("lavoptim           ... start:\n")
     }
 
@@ -80,7 +80,6 @@ lav_lavaan_step11_estoptim <- function(lavdata = NULL, # nolint
           lavpartable = lavpartable,
           lavmodel = lavmodel,
           lavoptions = lavoptions,
-          verbose = lavoptions$verbose,
           fx.tol = lavoptions$em.fx.tol,
           dx.tol = lavoptions$em.dx.tol,
           max.iter = lavoptions$em.iter.max
@@ -109,7 +108,7 @@ lav_lavaan_step11_estoptim <- function(lavdata = NULL, # nolint
       }
 
       # try 1
-      if (lavoptions$verbose) {
+      if (lav_verbose()) {
         cat("attempt 1 -- default options\n")
       }
       x <- try(
@@ -123,8 +122,6 @@ lav_lavaan_step11_estoptim <- function(lavdata = NULL, # nolint
         ),
         silent = TRUE
       )
-      # store first attempt
-      # x.first <- x
 
       # try 2: optim.parscale = "standardize" (new in 0.6-7)
       if (lavoptions$optim.attempts > 1L &&
@@ -132,7 +129,8 @@ lav_lavaan_step11_estoptim <- function(lavdata = NULL, # nolint
         (inherits(x, "try-error") || !attr(x, "converged"))) {
         lavoptions2 <- lavoptions
         lavoptions2$optim.parscale <- "standardized"
-        if (lavoptions$verbose) {
+        if (lav_verbose()) {
+          str(x)
           cat("attempt 2 -- optim.parscale = \"standardized\"\n")
         }
         x <- try(
@@ -152,7 +150,8 @@ lav_lavaan_step11_estoptim <- function(lavdata = NULL, # nolint
       if (lavoptions$optim.attempts > 2L &&
         lavoptions$rstarts == 0L &&
         (inherits(x, "try-error") || !attr(x, "converged"))) {
-        if (lavoptions$verbose) {
+        if (lav_verbose()) {
+          str(x)
           cat("attempt 3 -- start = \"simple\"\n")
         }
         x <- try(
@@ -175,7 +174,8 @@ lav_lavaan_step11_estoptim <- function(lavdata = NULL, # nolint
         (inherits(x, "try-error") || !attr(x, "converged"))) {
         lavoptions2 <- lavoptions
         lavoptions2$optim.parscale <- "standardized"
-        if (lavoptions$verbose) {
+        if (lav_verbose()) {
+          str(x)
           cat(
             "attempt 4 -- optim.parscale = \"standardized\" + ",
             "start = \"simple\"\n"
@@ -201,14 +201,15 @@ lav_lavaan_step11_estoptim <- function(lavdata = NULL, # nolint
       # perhaps we find a better solution?
       if (lavoptions$rstarts > 0L) {
         x.rstarts <- vector("list", length = lavoptions$rstarts)
-        if (lavoptions$verbose) {
+        if (lav_verbose()) {
+          str(x)
           cat("trying again with random starts (", lavoptions$rstarts,
             " in total):\n",
             sep = ""
           )
         }
         for (i in seq_len(lavoptions$rstarts)) {
-          if (lavoptions$verbose) {
+          if (lav_verbose()) {
             cat("-- random start run: ", i, "\n")
           }
           x.rstarts[[i]] <-
@@ -279,7 +280,7 @@ lav_lavaan_step11_estoptim <- function(lavdata = NULL, # nolint
 
     # if a warning was produced, say it here
     warn.txt <- attr(x, "warn.txt")
-    if (lavoptions$warn && nchar(warn.txt) > 0L) {
+    if (nchar(warn.txt) > 0L) {
       lav_msg_warn(
         gettext("Model estimation FAILED! Returning starting values."))
     }
@@ -302,7 +303,7 @@ lav_lavaan_step11_estoptim <- function(lavdata = NULL, # nolint
       type = "user", extra = TRUE
     )
 
-    if (lavoptions$verbose) {
+    if (lav_verbose()) {
       cat("lavoptim    ... done.\n")
     }
   } else {

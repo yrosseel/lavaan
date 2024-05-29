@@ -127,7 +127,13 @@ lav_model_efa_rotate_x <- function(x, lavmodel = NULL, lavoptions = NULL,
         init.ROT <- NULL
         rstarts <- ropts$rstarts
       }
-
+      # set warn and verbose to ropts-values
+      current.warn <- lav_warn()
+      current.verbose <- lav_verbose()
+      if (lav_warn(ropts$warn)) 
+        on.exit(lav_warn(current.warn), TRUE)
+      if (lav_verbose(ropts$verbose)) 
+        on.exit(lav_verbose(current.verbose), TRUE)
       # rotate this set
       res <- lav_matrix_rotate(
         A = A,
@@ -148,8 +154,6 @@ lav_model_efa_rotate_x <- function(x, lavmodel = NULL, lavoptions = NULL,
         row.weights = ropts$row.weights,
         std.ov = ropts$std.ov,
         ov.var = this.ov.var,
-        verbose = ropts$verbose,
-        warn = ropts$warn,
         algorithm = ropts$algorithm,
         reflect = ropts$reflect,
         order.lv.by = ropts$order.lv.by,

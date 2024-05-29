@@ -23,7 +23,11 @@ bootstrapLRT <- function(h0 = NULL, h1 = NULL, R = 1000L,
     double.bootstrap %in% c("no", "FDB", "standard")
   )
   if (type == "nonparametric") type <- "ordinary"
-
+  if (!missing(verbose)) {
+    current.verbose <- lav_verbose()
+    if (lav_verbose(verbose)) 
+      on.exit(lav_verbose(current.verbose), TRUE)
+  }
   # check for conditional.x = TRUE
   if (h0@Model@conditional.x) {
     lav_msg_stop(gettext(
@@ -202,7 +206,7 @@ bootstrapLRT <- function(h0 = NULL, h1 = NULL, R = 1000L,
     }
 
     # verbose
-    if (verbose) cat("  ... bootstrap draw number: ", b, "\n")
+    if (lav_verbose()) cat("  ... bootstrap draw number: ", b, "\n")
 
     # Get sample statistics
     bootSampleStats <- try(lav_samplestats_from_data(
@@ -210,12 +214,13 @@ bootstrapLRT <- function(h0 = NULL, h1 = NULL, R = 1000L,
       lavoptions    = lavoptions
     ), silent = TRUE)
     if (inherits(bootSampleStats, "try-error")) {
-      if (verbose) cat("     FAILED: creating h0@SampleStats statistics\n")
+      if (lav_verbose()) cat("     FAILED: creating h0@SampleStats statistics\n")
       return(NULL)
     }
 
-    if (verbose) cat("  ... ... model h0: ")
-    h0@Options$verbose <- FALSE
+    if (lav_verbose()) cat("  ... ... model h0: ")
+    current.verbose2 <- lav_verbose()
+    if (lav_verbose(FALSE)) on.exit(lav_verbose(current.verbose2), TRUE, FALSE)
     h0@Options$se <- "none"
     h0@Options$test <- "standard"
     h0@Options$baseline <- FALSE
@@ -228,19 +233,20 @@ bootstrapLRT <- function(h0 = NULL, h1 = NULL, R = 1000L,
       slotSampleStats = bootSampleStats,
       slotData = data
     ))
+    lav_verbose(current.verbose2)
     if (!fit.h0@optim$converged) {
-      if (verbose) cat("     FAILED: no convergence\n")
+      if (lav_verbose()) cat("     FAILED: no convergence\n")
       return(NULL)
     }
-    if (verbose) {
+    if (lav_verbose()) {
       cat(
         "     ok -- niter = ", fit.h0@optim$iterations,
         " fx = ", fit.h0@optim$fx, "\n"
       )
     }
 
-    if (verbose) cat("  ... ... model h1: ")
-    h1@Options$verbose <- FALSE
+    if (lav_verbose()) cat("  ... ... model h1: ")
+    lav_verbose(FALSE)
     h1@Options$se <- "none"
     h1@Options$test <- "standard"
     h1@Options$baseline <- FALSE
@@ -253,9 +259,9 @@ bootstrapLRT <- function(h0 = NULL, h1 = NULL, R = 1000L,
       slotSampleStats = bootSampleStats,
       slotData = data
     ))
-
+    lav_verbose(current.verbose2)
     if (!fit.h1@optim$converged) {
-      if (verbose) {
+      if (lav_verbose()) {
         cat(
           "     FAILED: no convergence -- niter = ", fit.h1@optim$iterations,
           " fx = ", fit.h1@optim$fx, "\n"
@@ -263,7 +269,7 @@ bootstrapLRT <- function(h0 = NULL, h1 = NULL, R = 1000L,
       }
       return(NULL)
     }
-    if (verbose) {
+    if (lav_verbose()) {
       cat(
         "     ok -- niter = ", fit.h1@optim$iterations,
         " fx = ", fit.h1@optim$fx, "\n"
@@ -273,20 +279,20 @@ bootstrapLRT <- function(h0 = NULL, h1 = NULL, R = 1000L,
     # store LRT
     if ((fit.h1@optim$fx - fit.h0@optim$fx) > sqrt(.Machine$double.eps)) {
       # if((fit.h1@optim$fx - fit.h0@optim$fx) > 0.0) {
-      if (verbose) {
+      if (lav_verbose()) {
         cat("  ... ... LRT  = <NA> h0 > h1, delta = ", fit.h1@optim$fx - fit.h0@optim$fx, "\n")
       }
       return(NULL)
     } else {
       lrt.boot <- abs(anova(fit.h1, fit.h0)$`Chisq diff`[2L])
-      if (verbose) {
+      if (lav_verbose()) {
         cat("  ... ... LRT  = ", lrt.boot, "\n")
       }
     }
 
     # double bootstrap
     if (double.bootstrap == "standard") {
-      if (verbose) cat("  ... ... calibrating p.value - ")
+      if (lav_verbose()) cat("  ... ... calibrating p.value - ")
 
       plugin.pvalue <- bootstrapLRT(
         h0 = fit.h0, h1 = fit.h1,
@@ -298,7 +304,7 @@ bootstrapLRT <- function(h0 = NULL, h1 = NULL, R = 1000L,
         ncpus = ncpus, cl = cl,
         double.bootstrap = "no"
       )
-      if (verbose) cat(sprintf("%5.3f", plugin.pvalue), "\n")
+      if (lav_verbose()) cat(sprintf("%5.3f", plugin.pvalue), "\n")
       attr(lrt.boot, "plugin.pvalue") <- plugin.pvalue
     } else if (double.bootstrap == "FDB") {
       # Fast double bootstrap
@@ -315,7 +321,7 @@ bootstrapLRT <- function(h0 = NULL, h1 = NULL, R = 1000L,
 
       LRT.2 <- attr(plugin.pvalue, "LRT")
 
-      if (verbose) cat("  ... ... LRT2 = ", LRT.2, "\n")
+      if (lav_verbose()) cat("  ... ... LRT2 = ", LRT.2, "\n")
       attr(lrt.boot, "LRT.2") <- LRT.2
     }
     lrt.boot
@@ -373,7 +379,7 @@ bootstrapLRT <- function(h0 = NULL, h1 = NULL, R = 1000L,
       attr(LRT.2, "error.idx") <- error.idx
     }
   } else {
-    if (verbose) {
+    if (lav_verbose()) {
       cat("Number of successful bootstrap draws:", (R -
         length(error.idx)), "\n")
     }

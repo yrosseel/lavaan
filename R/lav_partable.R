@@ -15,7 +15,7 @@
 # - 24 March 2019: handle efa sets
 # - 23 May   2020: support for random slopes
 
-lavaanify <- lavParTable <- function( # nolint
+lavaanify <- lavParTable <- function( 
                                      model = NULL,
                                      meanstructure = FALSE,
                                      int.ov.free = FALSE,
@@ -52,6 +52,16 @@ lavaanify <- lavParTable <- function( # nolint
                                      debug = FALSE,
                                      warn = TRUE,
                                      as.data.frame. = TRUE) { # nolint
+  if (!missing(debug)) {
+    current.debug <- lav_debug()
+    if (lav_debug(debug)) 
+      on.exit(lav_debug(current.debug), TRUE)
+  }
+  if (!missing(warn)) {
+    current.warn <- lav_warn()
+    if (lav_warn(warn)) 
+      on.exit(lav_warn(current.warn), TRUE)
+  }
   # check if model is already flat or a full parameter table
   if (is.list(model) && !is.null(model$lhs)) {
     if (is.null(model$mod.idx)) {
@@ -64,8 +74,7 @@ lavaanify <- lavParTable <- function( # nolint
     # parse the model syntax and flatten the user-specified model
     # return a data.frame, where each line is a model element (rhs, op, lhs)
     flat <- lavParseModelString(
-      model.syntax = model, warn = warn,
-      debug = FALSE
+      model.syntax = model, debug = FALSE
     )
   }
   # user-specified *modifiers* are returned as an attribute
@@ -80,7 +89,7 @@ lavaanify <- lavParTable <- function( # nolint
 
   # extra constraints?
   if (!is.null(constraints) && any(nchar(constraints) > 0L)) {
-    flat2 <- lavParseModelString(model.syntax = constraints, warn = warn)
+    flat2 <- lavParseModelString(model.syntax = constraints, warn = lav_warn())
     con2 <- attr(flat2, "constraints")
     rm(flat2)
     tmp.con <- c(tmp.con, con2)
@@ -101,7 +110,7 @@ lavaanify <- lavParTable <- function( # nolint
     }
   }
 
-  if (debug) {
+  if (lav_debug()) {
     cat("[lavaan DEBUG]: flat (flattened user model):\n")
     print(flat)
     cat("[lavaan DEBUG]: tmp.mod (modifiers):\n")
@@ -123,9 +132,9 @@ lavaanify <- lavParTable <- function( # nolint
 
   # check for wrongly specified variances/covariances/intercepts
   # of exogenous variables in model syntax (if fixed.x=TRUE)
-  if (fixed.x && warn) { # we ignore the groups here!
+  if (fixed.x && lav_warn()) { # we ignore the groups here!
     # we only call this function for the warning message
-    tmp <- lav_partable_vnames(flat, "ov.x", warn = TRUE)
+    tmp <- lav_partable_vnames(flat, "ov.x", force.warn = TRUE)
     rm(tmp)
   }
 
@@ -433,7 +442,7 @@ lavaanify <- lavParTable <- function( # nolint
       ngroups = ngroups, nthresholds = nthresholds
     )
   }
-  if (debug) {
+  if (lav_debug()) {
     cat("[lavaan DEBUG]: parameter tmp.list without MODIFIERS:\n")
     print(as.data.frame(tmp.list, stringsAsFactors = FALSE))
   }
@@ -666,7 +675,7 @@ lavaanify <- lavParTable <- function( # nolint
     }
   }
 
-  if (debug) {
+  if (lav_debug()) {
     cat("[lavaan DEBUG]: parameter tmp.list with MODIFIERS:\n")
     print(as.data.frame(tmp.list, stringsAsFactors = FALSE))
   }
@@ -684,7 +693,7 @@ lavaanify <- lavParTable <- function( # nolint
     group.partial = group.partial
   )
 
-  if (debug) {
+  if (lav_debug()) {
     cat("[lavaan DEBUG]: parameter tmp.list with LABELS:\n")
     tmp <- tmp.list
     tmp$label <- label
@@ -815,7 +824,7 @@ lavaanify <- lavParTable <- function( # nolint
       }
     } # all free
   } # eq in eq.labels
-  if (debug) {
+  if (lav_debug()) {
     print(tmp.con)
   }
 
@@ -1168,7 +1177,7 @@ lavaanify <- lavParTable <- function( # nolint
     tmp.list$unco[idx.free] <- seq_along(sum(tmp.list$free > 0L))
   }
 
-  if (debug) {
+  if (lav_debug()) {
     cat("[lavaan DEBUG] lavParTable\n")
     print(as.data.frame(tmp.list))
   }

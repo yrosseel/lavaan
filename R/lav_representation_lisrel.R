@@ -2487,8 +2487,7 @@ TESTING_derivatives.LISREL <- function(MLIST = NULL,
                                        th.idx = NULL, num.idx = NULL,
                                        meanstructure = TRUE,
                                        th = TRUE, delta = TRUE, pi = TRUE,
-                                       gw = FALSE, theta = FALSE,
-                                       debug = FALSE) {
+                                       gw = FALSE, theta = FALSE) {
   if (is.null(MLIST)) {
     # create artificial matrices, compare 'numerical' vs 'analytical'
     # derivatives
@@ -2626,7 +2625,7 @@ TESTING_derivatives.LISREL <- function(MLIST = NULL,
       x <- lav_matrix_vec(MLIST[[mm]])
     }
     if (mm == "delta" && theta) next
-    if (debug) {
+    if (lav_debug()) {
       cat("### mm = ", mm, "\n")
     }
 
@@ -2648,7 +2647,7 @@ TESTING_derivatives.LISREL <- function(MLIST = NULL,
       DX3 <- DX2
       DX2 <- R %*% DX2
     }
-    if (debug) {
+    if (lav_debug()) {
       cat("[SIGMA] mm = ", sprintf("%-8s:", mm), "DX1 (numerical):\n")
       print(zapsmall(DX1))
       cat("\n")
@@ -2683,7 +2682,7 @@ TESTING_derivatives.LISREL <- function(MLIST = NULL,
       sprintf("%12.9f", sum(DX1 - DX2)), "  max delta = ",
       sprintf("%12.9f", max(DX1 - DX2)), "\n"
     )
-    if (debug) {
+    if (lav_debug()) {
       cat("[MU   ] mm = ", sprintf("%-8s:", mm), "DX1 (numerical):\n")
       print(zapsmall(DX1))
       cat("\n")
@@ -2741,7 +2740,7 @@ TESTING_derivatives.LISREL <- function(MLIST = NULL,
         sprintf("%12.9f", sum(DX1 - DX2)), "  max delta = ",
         sprintf("%12.9f", max(DX1 - DX2)), "\n"
       )
-      if (debug) {
+      if (lav_debug()) {
         cat("[TH   ] mm = ", sprintf("%-8s:", mm), "DX1 (numerical):\n")
         print(zapsmall(DX1))
         cat("\n")
@@ -2803,7 +2802,7 @@ TESTING_derivatives.LISREL <- function(MLIST = NULL,
         sprintf("%12.9f", sum(DX1 - DX2)), "  max delta = ",
         sprintf("%12.9f", max(DX1 - DX2)), "\n"
       )
-      if (debug) {
+      if (lav_debug()) {
         cat("[PI   ] mm = ", sprintf("%-8s:", mm), "DX1 (numerical):\n")
         print(zapsmall(DX1))
         cat("\n")
@@ -2830,7 +2829,7 @@ TESTING_derivatives.LISREL <- function(MLIST = NULL,
         sprintf("%12.9f", sum(DX1 - DX2)), "  max delta = ",
         sprintf("%12.9f", max(DX1 - DX2)), "\n"
       )
-      if (debug) {
+      if (lav_debug()) {
         cat("[GW   ] mm = ", sprintf("%-8s:", mm), "DX1 (numerical):\n")
         print(DX1)
         cat("\n\n")

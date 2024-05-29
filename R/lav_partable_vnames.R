@@ -37,7 +37,7 @@ lavaanNames <- lavNames # nolint
 #   LDW 30/1/24: 'block' argument not explicitly tested !?
 #   LDW 29/2/24: ov.order = "data" via attribute "ovda"
 lav_partable_vnames <- function(partable, type = NULL, ..., # nolint
-                                warn = FALSE, ov.x.fatal = FALSE) {
+                                force.warn = FALSE, ov.x.fatal = FALSE) {
   # This function derives the names of some types of variable (as specified
   # in type) from a 'partable'. The 'warn' parameter needs no explanation.
   # The ov.x.fatal parameter implies, when set to TRUE, that the function
@@ -55,6 +55,14 @@ lav_partable_vnames <- function(partable, type = NULL, ..., # nolint
   # ----- lav_partable_vnames ---- common ----------------------------------
   # sanity check
   stopifnot(is.list(partable), !missing(type))
+  # this is a special fuunction where the default is to suppress warnings,
+  # overwritten if parameter force.warn TRUE (used in lav_partable function)
+  current.warn <- lav_warn()
+  if (force.warn) {
+    if (lav_warn(TRUE)) on.exit(lav_warn(current.warn))
+  } else {
+    if (lav_warn(FALSE)) on.exit(lav_warn(current.warn))
+  }
   # check for empty table
   if (length(partable$lhs) == 0) {
     return(character(0L))
@@ -463,15 +471,13 @@ lav_partable_vnames <- function(partable, type = NULL, ..., # nolint
                 involving (an) exogenous variable(s): [%s];  Please remove them
                 and try again.", lav_msg_view(ov.x[idx.no.x], "none")))
             }
-            if (warn) {
-              lav_msg_warn(gettextf(
+            lav_msg_warn(gettextf(
                 "model syntax contains variance/covariance/intercept formulas
                 involving (an) exogenous variable(s): [%s]; these variables will
                 now be treated as random introducing additional free parameters.
                 If you wish to treat those variables as fixed, remove these
                 formulas from the model syntax. Otherwise, consider adding the
                 fixed.x = FALSE option.", lav_msg_view(ov.x[idx.no.x], "none")))
-            }
             ov.x <- ov.x[-idx.no.x]
           }
           ov.tmp.x <- ov.x
@@ -955,7 +961,6 @@ lav_partable_vnames <- function(partable, type = NULL, ..., # nolint
                 involving (an) exogenous variable(s): [%s];  Please remove them
                 and try again.", lav_msg_view(ov.x[idx.no.x], "none")))
             }
-            if (warn) {
               lav_msg_warn(gettextf(
                 "model syntax contains variance/covariance/intercept formulas
                 involving (an) exogenous variable(s): [%s]; these variables will
@@ -963,7 +968,6 @@ lav_partable_vnames <- function(partable, type = NULL, ..., # nolint
                 If you wish to treat those variables as fixed, remove these
                 formulas from the model syntax. Otherwise, consider adding the
                 fixed.x = FALSE option.", lav_msg_view(ov.x[idx.no.x], "none")))
-            }
             ov.x <- ov.x[-idx.no.x]
           }
           ov.tmp.x <- ov.x

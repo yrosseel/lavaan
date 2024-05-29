@@ -24,8 +24,6 @@ lav_matrix_rotate <- function(A = NULL, # original matrix
                               row.weights = "default", # row weighting
                               std.ov = FALSE, # rescale ov
                               ov.var = NULL, # ov variances
-                              warn = TRUE, # show warnings?
-                              verbose = FALSE, # show iterations
                               algorithm = "gpa", # rotation algorithm
                               reflect = TRUE, # refect sign
                               order.lv.by = "index", # how to order the lv's
@@ -218,7 +216,7 @@ lav_matrix_rotate <- function(A = NULL, # original matrix
       init.ROT <- lav_matrix_rotate_gen(M = M, orthogonal = TRUE)
       # init.ROT <- lav_matrix_rotate_gen(M = M, orthogonal = orthogonal)
 
-      if (verbose) {
+      if (lav_verbose()) {
         cat("\n")
         cat("rstart = ", sprintf("%4d", rep), " start:\n")
       }
@@ -231,8 +229,6 @@ lav_matrix_rotate <- function(A = NULL, # original matrix
           init.ROT = init.ROT,
           method.fname = method.fname,
           method.args = method.args,
-          warn = warn,
-          verbose = verbose,
           gpa.tol = gpa.tol,
           max.iter = max.iter
         )
@@ -246,8 +242,6 @@ lav_matrix_rotate <- function(A = NULL, # original matrix
           init.ROT = init.ROT,
           method.fname = method.fname,
           method.args = method.args,
-          warn = warn,
-          verbose = verbose,
           tol = tol,
           max.iter = max.iter
         )
@@ -256,7 +250,7 @@ lav_matrix_rotate <- function(A = NULL, # original matrix
         res <- c(info$method.value, lav_matrix_vec(ROT))
       }
 
-      if (verbose) {
+      if (lav_verbose()) {
         cat(
           "rstart = ", sprintf("%4d", rep),
           " end; current crit = ", sprintf("%17.15f", res[1]), "\n"
@@ -284,8 +278,6 @@ lav_matrix_rotate <- function(A = NULL, # original matrix
         init.ROT = init.ROT,
         method.fname = method.fname,
         method.args = method.args,
-        warn = warn,
-        verbose = verbose,
         gpa.tol = gpa.tol,
         max.iter = max.iter
       )
@@ -296,8 +288,6 @@ lav_matrix_rotate <- function(A = NULL, # original matrix
         init.ROT = init.ROT,
         method.fname = method.fname,
         method.args = method.args,
-        warn = warn,
-        verbose = verbose,
         tol = tol,
         max.iter = max.iter
       )
@@ -427,8 +417,6 @@ lav_matrix_rotate_gpa <- function(A = NULL, # original matrix
                                   init.ROT = NULL, # initial rotation
                                   method.fname = NULL, # criterion function
                                   method.args = list(), # optional method args
-                                  warn = TRUE,
-                                  verbose = FALSE,
                                   gpa.tol = 0.00001,
                                   max.iter = 10000L) {
   # number of columns
@@ -492,7 +480,7 @@ lav_matrix_rotate_gpa <- function(A = NULL, # original matrix
     frob <- sqrt(sum(Gp * Gp))
 
     # if verbose, print
-    if (verbose) {
+    if (lav_verbose()) {
       cat(
         "iter = ", sprintf("%4d", iter - 1),
         " Q = ", sprintf("%9.7f", Q.current),
@@ -550,7 +538,7 @@ lav_matrix_rotate_gpa <- function(A = NULL, # original matrix
         alpha <- alpha / 2
       }
 
-      if (warn && i == 1000) {
+      if (i == 1000) {
         lav_msg_warn(gettext("half-stepping failed in GPA"))
       }
     }
@@ -567,7 +555,7 @@ lav_matrix_rotate_gpa <- function(A = NULL, # original matrix
   } # iter
 
   # warn if no convergence
-  if (!converged && warn) {
+  if (!converged) {
     lav_msg_warn(gettextf(
       "GP rotation algorithm did not converge after %s iterations",
       max.iter
@@ -606,8 +594,6 @@ lav_matrix_rotate_pairwise <- function(A = NULL, # original matrix
                                        init.ROT = NULL,
                                        method.fname = NULL, # crit function
                                        method.args = list(), # method args
-                                       warn = TRUE,
-                                       verbose = FALSE,
                                        tol = 1e-8,
                                        max.iter = 1000L) {
   # number of columns
@@ -636,7 +622,7 @@ lav_matrix_rotate_pairwise <- function(A = NULL, # original matrix
   ))
 
   # if verbose, print
-  if (verbose) {
+  if (lav_verbose()) {
     cat(
       "iter = ", sprintf("%4d", 0),
       " Q = ", sprintf("%13.11f", Q.current), "\n"
@@ -769,7 +755,7 @@ lav_matrix_rotate_pairwise <- function(A = NULL, # original matrix
     diff <- abs(Q.old - Q.current)
 
     # if verbose, print
-    if (verbose) {
+    if (lav_verbose()) {
       cat(
         "iter = ", sprintf("%4d", iter),
         " Q = ", sprintf("%13.11f", Q.current),
@@ -786,7 +772,7 @@ lav_matrix_rotate_pairwise <- function(A = NULL, # original matrix
   } # iter
 
   # warn if no convergence
-  if (!converged && warn) {
+  if (!converged) {
     lav_msg_warn(gettextf(
       "pairwise rotation algorithm did not converge after %s iterations",
       max.iter

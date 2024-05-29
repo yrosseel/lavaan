@@ -178,8 +178,7 @@ lav_predict_internal <- function(lavmodel = NULL,
       lavoptions = list(
         std.ov = lavdata@std.ov,
         group.label = lavdata@group.label,
-        missing = lavdata@missing,
-        warn = TRUE
+        missing = lavdata@missing
       ), # was FALSE before?
       allow.single.case = TRUE
     )

@@ -4,6 +4,11 @@
 #
 
 lavTestWald <- function(object, constraints = NULL, verbose = FALSE) {
+  if (!missing(verbose)) {
+    current.verbose <- lav_verbose()
+    if (lav_verbose(verbose)) 
+      on.exit(lav_verbose(current.verbose), TRUE)
+  }
   if (object@optim$npar > 0L && !object@optim$converged) {
     lav_msg_stop(gettext("model did not converge"))
   }
@@ -56,7 +61,7 @@ lavTestWald <- function(object, constraints = NULL, verbose = FALSE) {
     JAC <- lav_func_jacobian_simple(func = ceq.function, x = theta)
   }
 
-  if (verbose) {
+  if (lav_verbose()) {
     cat("Restriction matrix (jacobian):\n")
     print(JAC)
     cat("\n")
@@ -65,7 +70,7 @@ lavTestWald <- function(object, constraints = NULL, verbose = FALSE) {
   # linear restriction
   theta.r <- ceq.function(theta)
 
-  if (verbose) {
+  if (lav_verbose()) {
     cat("Restricted theta values:\n")
     print(theta.r)
     cat("\n")

@@ -14,6 +14,7 @@ lav_msg_note <- function(..., showheader = FALSE, footer = "") {
 # Displays a message with header and formatted as
 # above via R function 'warning()'.
 lav_msg_warn <- function(..., footer = "") {
+  if (!lav_warn()) return()
   wat <- unlist(list(...), use.names = FALSE)
   msg <- lav_msg(wat)
   if (footer != "") msg <- paste(msg, footer, sep = "\n")

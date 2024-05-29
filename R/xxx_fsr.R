@@ -6,7 +6,7 @@
 #  - Croon (2002) (general + robust SE)
 #  - simple: always use Bartlett, replace var(f) by psi estimate
 #
-# TODO
+# TODO:
 #  - Hishino & Bentler: this is simple + WLS
 
 # changes 09 dec 2018: add analytic SE ('standard')
@@ -28,7 +28,32 @@ fsr <- function(model = NULL,
   if (is.null(data)) {
     lav_msg_stop(gettext("full data is required for factor score regression"))
   }
-
+  # dot dot dot
+  dotdotdot <- list(...)
+  # ------------- handling of warn/debug/verbose switches ----------
+  if (!is.null(dotdotdot$debug)) {
+    current.debug <- lav_debug()
+    if (lav_debug(dotdotdot$debug)) 
+      on.exit(lav_debug(current.debug), TRUE)
+    dotdotdot$debug <- NULL
+    if (lav_debug()) {
+      dotdotdot$warn <- TRUE       # force warnings if debug
+      dotdotdot$verbose <- TRUE    # force verbose if debug
+    }
+  }
+  if (!is.null(dotdotdot$warn)) {
+    current.warn <- lav_warn()
+    if (lav_warn(dotdotdot$warn)) 
+      on.exit(lav_warn(current.warn), TRUE)
+    dotdotdot$warn <- NULL
+  }
+  if (!is.null(dotdotdot$verbose)) {
+    current.verbose <- lav_verbose()
+    if (lav_verbose(dotdotdot$verbose)) 
+      on.exit(lav_verbose(current.verbose), TRUE)
+    dotdotdot$verbose <- NULL
+  }
+ 
   # check fsr.method argument
   fsr.method <- tolower(fsr.method)
   if (fsr.method == "naive") {
@@ -63,9 +88,6 @@ fsr <- function(model = NULL,
   if (output %in% c("scores", "fs.scores", "fsr.scores")) {
     fs.scores <- TRUE
   }
-
-  # dot dot dot
-  dotdotdot <- list(...)
 
   # change 'default' values for fsr
   if (is.null(dotdotdot$se)) {
@@ -209,8 +231,8 @@ fsr <- function(model = NULL,
   dotdotdot2 <- dotdotdot
   dotdotdot2$se <- "none"
   dotdotdot2$test <- "none"
-  dotdotdot2$debug <- FALSE
-  dotdotdot2$verbose <- FALSE
+  dotdotdot2$debug <- FALSE    # only transmitted to lavaan call = ok
+  dotdotdot2$verbose <- FALSE  # only transmitted to lavaan call = ok
   dotdotdot2$auto.cov.lv.x <- TRUE # allow correlated exogenous factors
 
   # override with mm.options

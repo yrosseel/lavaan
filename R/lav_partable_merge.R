@@ -4,6 +4,11 @@ lav_partable_merge <- function(pt1 = NULL, pt2 = NULL,
                                remove.duplicated = FALSE,
                                fromLast = FALSE,
                                warn = TRUE) {
+  if (!missing(warn)) {
+    current.warn <- lav_warn()
+    if (lav_warn(warn)) 
+      on.exit(lav_warn(current.warn), TRUE)
+  }
   # check for empty pt2
   if (is.null(pt2) || length(pt2) == 0L) {
     return(pt1)
@@ -126,15 +131,13 @@ lav_partable_merge <- function(pt1 = NULL, pt2 = NULL,
     idx <- which(duplicated(TMP, fromLast = fromLast))
 
     if (length(idx)) {
-      if (warn) {
-        lav_msg_warn(
-          gettext("duplicated parameters are ignored:"),
-          paste(apply(TMP[idx, c("lhs", "op", "rhs")], 1,
-            paste,
-            collapse = " "
-          ), collapse = "\n")
-        )
-      }
+      lav_msg_warn(
+        gettext("duplicated parameters are ignored:"),
+        paste(apply(TMP[idx, c("lhs", "op", "rhs")], 1,
+          paste,
+          collapse = " "
+        ), collapse = "\n")
+      )
       if (fromLast) {
         pt1 <- pt1[-idx, ]
       } else {

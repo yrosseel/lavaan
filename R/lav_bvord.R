@@ -49,7 +49,6 @@ lav_bvord_cor_twostep_fit <- function(Y1, Y2, eXo = NULL, wt = NULL,
                                       zero.keep.margins = TRUE,
                                       zero.cell.warn = FALSE,
                                       zero.cell.flag = FALSE,
-                                      verbose = FALSE,
                                       optim.method = "nlminb2",
                                       optim.scale = 1.0,
                                       init.theta = NULL,
@@ -173,7 +172,7 @@ lav_bvord_cor_twostep_fit <- function(Y1, Y2, eXo = NULL, wt = NULL,
 
   # optimize
   if (is.null(control$trace)) {
-    control$trace <- ifelse(verbose, 1, 0)
+    control$trace <- ifelse(lav_verbose(), 1, 0)
   }
 
   # init theta?
