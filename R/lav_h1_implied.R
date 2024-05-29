@@ -64,7 +64,7 @@ lav_h1_implied_logl <- function(lavdata = NULL,
     loglik.group <- numeric(lavdata@ngroups)
 
     for (g in 1:lavdata@ngroups) {
-      if (lavoptions$verbose) {
+      if (lav_verbose()) {
         cat("\n\nfitting unrestricted (H1) model in group ", g, "\n")
       }
       if (lavsamplestats@missing.flag) {
@@ -116,13 +116,11 @@ lav_h1_implied_logl <- function(lavdata = NULL,
         lavoptions2$se <- "none"
         lavoptions2$test <- "none"
         lavoptions2$do.fit <- TRUE
-        # lavoptions2$verbose <- FALSE
         lavoptions2$h1 <- FALSE
         lavoptions2$baseline <- FALSE
         lavoptions2$fixed.x <- FALSE # even if model uses fixed.x=TRUE
         lavoptions2$model.type <- "unrestricted"
         lavoptions2$optim.attempts <- 4L
-        lavoptions2$warn <- FALSE
         lavoptions2$check.gradient <- FALSE
         lavoptions2$optim.force.convergence <- TRUE # for now...
         lavoptions2$control <- list(rel.tol = 1e-7)
@@ -132,7 +130,8 @@ lav_h1_implied_logl <- function(lavdata = NULL,
         FIT <- lavaan(lavpartable,
           slotOptions = lavoptions2,
           slotSampleStats = lavsamplestats,
-          slotData = lavdata
+          slotData = lavdata,
+          warn = FALSE
         )
         OUT <- list(
           Sigma.W = FIT@implied$cov[[1]],
@@ -149,13 +148,12 @@ lav_h1_implied_logl <- function(lavdata = NULL,
         OUT <- lav_mvnorm_cluster_em_sat(
           YLp = lavsamplestats@YLp[[g]],
           Lp = lavdata@Lp[[g]],
-          verbose = lavoptions$verbose,
           tol = 1e-04, # option?
           min.variance = 1e-05, # option?
           max.iter = 5000L
         ) # option?
       }
-      if (lavoptions$verbose) {
+      if (lav_verbose()) {
         cat("\n")
       }
 

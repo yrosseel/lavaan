@@ -58,7 +58,7 @@ lav_tables_mvb_getT <- function(nitems = 3L, order. = nitems, rbind. = FALSE) {
 }
 
 # simple test function to check that  pidot = T %*% prop
-lav_tables_mvb_test <- function(nitems = 3L, verbose = FALSE) {
+lav_tables_mvb_test <- function(nitems = 3L) {
   freq <- sample(5:50, 2^nitems, replace = TRUE)
   prop <- freq / sum(freq)
   TABLE <- array(freq, dim = rep(2, nitems))
@@ -69,7 +69,7 @@ lav_tables_mvb_test <- function(nitems = 3L, verbose = FALSE) {
   pidot <- lav_tables_mvb_getPiDot(PROP)
   T.r <- lav_tables_mvb_getT(nitems = nitems, order. = nitems, rbind. = TRUE)
 
-  if (verbose) {
+  if (lav_verbose()) {
     out <- cbind(as.numeric(T.r %*% prop), pidot)
     colnames(out) <- c("T * prop", "pidot")
     print(out)

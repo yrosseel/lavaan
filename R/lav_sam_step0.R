@@ -62,11 +62,6 @@ lav_sam_step0 <- function(cmd = "sem", model = NULL, data = NULL,
     FIT@Options$test <- "standard"
   }
 
-  # verbose
-  if (!is.null(dotdotdot$verbose)) {
-    FIT@Options$verbose <- dotdotdot$verbose
-  }
-
   # adjust parameter table:
   PT <- FIT@ParTable
 

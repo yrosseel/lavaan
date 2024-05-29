@@ -86,7 +86,7 @@ lavCor <- function(object,
     } else {
       # check if all names in "ordered" occur in the dataset?
       missing.idx <- which(!ordered %in% NAMES)
-      if (length(missing.idx) > 0L) { # FIXme: warn = FALSE has no eff
+      if (length(missing.idx) > 0L) {
         lav_msg_warn(gettextf(
           "ordered variable(s): %s could not be found
           in the data and will be ignored",

@@ -153,7 +153,8 @@ lavcache <- list()
 # - lav_optim_gn(): Gauss-Newton optimization
 # - lav_optim_noniter(): non-iterative procedures
 # - lav_mvnorm_cluster_em_h0: EM for multilevel models
-lavoptions$verbose <- TRUE
+current.verbose <- lav_verbose()
+if (lav_verbose(TRUE)) on.exit(lav_verbose(current.verbose), TRUE)
 x <- try(lavaan:::lav_model_estimate(lavmodel        = lavmodel,
                             lavpartable     = lavpartable,
                             lavsamplestats  = lavsamplestats,

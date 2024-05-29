@@ -18,9 +18,7 @@ lav_object_independence <- function(object = NULL,
                                     lavpartable = NULL,
                                     lavh1 = NULL,
                                     # local options
-                                    se = FALSE,
-                                    verbose = FALSE,
-                                    warn = FALSE) {
+                                    se = FALSE) {
   # object or slots?
   if (!is.null(object)) {
     stopifnot(inherits(object, "lavaan"))
@@ -136,12 +134,6 @@ lav_object_independence <- function(object = NULL,
     lavoptions$optim.force.converged <- TRUE
   }
 
-  # verbose?
-  lavoptions$verbose <- verbose
-
-  # warn?
-  lavoptions$warn <- warn
-
   # needed?
   if (any(lavpartable$op == "~1")) lavoptions$meanstructure <- TRUE
 
@@ -167,8 +159,7 @@ lav_object_independence <- function(object = NULL,
 
 
 # 2. unrestricted model
-lav_object_unrestricted <- function(object, se = FALSE, verbose = FALSE,
-                                    warn = FALSE) {
+lav_object_unrestricted <- function(object, se = FALSE) {
   # construct parameter table for unrestricted model
   lavpartable <- lav_partable_unrestricted(object)
 
@@ -187,20 +178,6 @@ lav_object_unrestricted <- function(object, se = FALSE, verbose = FALSE,
 
   # ALWAYS do.fit
   lavoptions$do.fit <- TRUE
-
-  # verbose?
-  if (verbose) {
-    lavoptions$verbose <- TRUE
-  } else {
-    lavoptions$verbose <- FALSE
-  }
-
-  # warn?
-  if (warn) {
-    lavoptions$warn <- TRUE
-  } else {
-    lavoptions$warn <- FALSE
-  }
 
   # needed?
   if (any(lavpartable$op == "~1")) lavoptions$meanstructure <- TRUE
@@ -231,7 +208,6 @@ lav_object_unrestricted <- function(object, se = FALSE, verbose = FALSE,
 lav_object_extended <- function(object, add = NULL,
                                 remove.duplicated = TRUE,
                                 all.free = FALSE,
-                                verbose = FALSE, warn = FALSE,
                                 do.fit = FALSE) {
   # partable original model
   partable <- object@ParTable[c(
@@ -359,12 +335,6 @@ lav_object_extended <- function(object, add = NULL,
   # adapt options
   lavoptions <- object@Options
 
-  # verbose?
-  lavoptions$verbose <- verbose
-
-  # warn?
-  lavoptions$warn <- warn
-
   # do.fit?
   lavoptions$do.fit <- do.fit
 
@@ -459,12 +429,15 @@ lav_object_catml <- function(lavobject = NULL) {
       COV <- COR
     }
 
+    current.warn <- lav_warn()
+    if (current.warn(FALSE)) 
+      on.exit(lav_warn(current.warn), TRUE)
     out <- lav_samplestats_icov(
       COV = COV, ridge = 1e-05,
       x.idx = lavsamplestats@x.idx[[g]],
-      ngroups = lavdata@ngroups, g = g,
-      warn = FALSE
+      ngroups = lavdata@ngroups, g = g
     )
+    lav_warn(current.warn)
     lavsamplestats@icov[[g]] <- out$icov
     lavsamplestats@cov.log.det[[g]] <- out$cov.log.det
 
@@ -481,8 +454,6 @@ lav_object_catml <- function(lavobject = NULL) {
 
   # adapt lavoptions
   lavoptions$estimator <- "catML"
-  lavoptions$verbose <- FALSE
-  lavoptions$debug <- FALSE
   lavoptions$.categorical <- FALSE
   lavoptions$categorical <- FALSE
   lavoptions$correlation <- TRUE

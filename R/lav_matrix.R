@@ -1577,8 +1577,7 @@ lav_matrix_symmetric_logdet_update <- function(S.logdet, S.inv,
 # this approach was suggested to me by Wayne A. Fuller, personal communication,
 # 12 Nov 2020
 #
-lav_matrix_symmetric_diff_smallest_root <- function(M = NULL, P = NULL,
-                                                    warn = FALSE) {
+lav_matrix_symmetric_diff_smallest_root <- function(M = NULL, P = NULL) {
   # check input (we will 'assume' they are square and symmetric)
   stopifnot(is.matrix(M), is.matrix(P))
 
@@ -1597,10 +1596,8 @@ lav_matrix_symmetric_diff_smallest_root <- function(M = NULL, P = NULL,
   # force diagonal elements of P to be nonnegative (warn?)
   neg.idx <- which(diagP < 0)
   if (length(neg.idx) > 0L) {
-    if (warn) {
-      lav_msg_warn(gettext(
-        "some diagonal elements of P are negative (and set to zero)"))
-    }
+    lav_msg_warn(gettext(
+      "some diagonal elements of P are negative (and set to zero)"))
     diag(P)[neg.idx] <- diagP[neg.idx] <- 0
   }
 

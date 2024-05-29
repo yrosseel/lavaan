@@ -7,7 +7,7 @@
 # by construction, M %*% LAMBDA = I (the identity matrix)
 lav_sam_mapping_matrix <- function(LAMBDA = NULL, THETA = NULL,
                                    S = NULL, S.inv = NULL,
-                                   method = "ML", warn = TRUE) {
+                                   method = "ML") {
 
   method <- toupper(method)
 
@@ -21,10 +21,8 @@ lav_sam_mapping_matrix <- function(LAMBDA = NULL, THETA = NULL,
       silent = TRUE
     )
     if (inherits(M, "try-error")) {
-      if (warn) {
-        lav_msg_warn(gettext(
-          "cannot invert crossprod(LAMBDA); using generalized inverse"))
-      }
+      lav_msg_warn(gettext(
+        "cannot invert crossprod(LAMBDA); using generalized inverse"))
       M <- MASS::ginv(LAMBDA)
     }
 
@@ -36,19 +34,15 @@ lav_sam_mapping_matrix <- function(LAMBDA = NULL, THETA = NULL,
       S.inv <- try(solve(S), silent = TRUE)
     }
     if (inherits(S.inv, "try-error")) {
-      if (warn) {
-        lav_msg_warn(gettext("S is not invertible; switching to ULS method"))
-      }
+      lav_msg_warn(gettext("S is not invertible; switching to ULS method"))
       M <- lav_sam_mapping_matrix(LAMBDA = LAMBDA, method = "ULS")
     } else {
       tLSinv <- t(LAMBDA) %*% S.inv
       tLSinvL <- tLSinv %*% LAMBDA
       M <- try(solve(tLSinvL, tLSinv), silent = TRUE)
       if (inherits(M, "try-error")) {
-        if (warn) {
-          lav_msg_warn(gettext("problem contructing mapping matrix;
-                               switching to generalized inverse"))
-        }
+        lav_msg_warn(gettext("problem contructing mapping matrix;
+                              switching to generalized inverse"))
         M <- MASS::ginv(tLSinvL) %*% tLSinv
       }
     }
@@ -107,10 +101,8 @@ lav_sam_mapping_matrix <- function(LAMBDA = NULL, THETA = NULL,
       tLTiL <- tLTi %*% LAMBDA
       M <- try(solve(tLTiL, tLTi), silent = TRUE)
       if (inherits(M, "try-error")) {
-        if (warn) {
-          lav_msg_warn(gettext(
-            "problem contructing ML mapping matrix; switching to ULS"))
-        }
+        lav_msg_warn(gettext(
+          "problem contructing ML mapping matrix; switching to ULS"))
         M <- lav_sam_mapping_matrix(LAMBDA = LAMBDA, method = "ULS")
       }
     } else {
@@ -120,10 +112,8 @@ lav_sam_mapping_matrix <- function(LAMBDA = NULL, THETA = NULL,
         THETA = THETA
       ), silent = TRUE)
       if (inherits(M, "try-error")) {
-        if (warn) {
-          lav_msg_warn(gettext(
-            "problem contructing ML mapping matrix; switching to ULS"))
-        }
+        lav_msg_warn(gettext(
+          "problem contructing ML mapping matrix; switching to ULS"))
         M <- lav_sam_mapping_matrix(LAMBDA = LAMBDA, method = "ULS")
       }
     }
@@ -538,7 +528,6 @@ lav_sam_step3_joint <- function(FIT = NULL, PT = NULL, sam.method = "local") {
   lavoptions.joint$rotation <- "none"
   lavoptions.joint$se <- "none"
   lavoptions.joint$store.vcov <- FALSE # we do this manually
-  lavoptions.joint$verbose <- FALSE
 
   if (sam.method %in% c("local", "fsr")) {
     lavoptions.joint$baseline <- FALSE
@@ -557,7 +546,8 @@ lav_sam_step3_joint <- function(FIT = NULL, PT = NULL, sam.method = "local") {
   JOINT <- lavaan::lavaan(PT,
     slotOptions = lavoptions.joint,
     slotSampleStats = FIT@SampleStats,
-    slotData = FIT@Data
+    slotData = FIT@Data,
+    verbose = FALSE
   )
   JOINT
 }

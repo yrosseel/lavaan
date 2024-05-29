@@ -8,7 +8,7 @@ lav_sam_step1 <- function(cmd = "sem", mm.list = NULL, mm.args = list(),
   nblocks <- lavpta$nblocks
   ngroups <- lavpta$ngroups
 
-  if (lavoptions$verbose) {
+  if (lav_verbose()) {
     cat("Fitting the measurement part:\n")
   }
 
@@ -118,8 +118,6 @@ lav_sam_step1 <- function(cmd = "sem", mm.list = NULL, mm.args = list(),
   #    lavoptions.mm$test <- "none"
   # }
   # we need the tests to create summary info about MM
-  lavoptions.mm$debug <- FALSE
-  lavoptions.mm$verbose <- FALSE
   lavoptions.mm$check.post <- FALSE # neg lv variances may be overriden
   lavoptions.mm$check.gradient <- FALSE # too sensitive in large model (global)
   lavoptions.mm$baseline <- FALSE
@@ -151,7 +149,7 @@ lav_sam_step1 <- function(cmd = "sem", mm.list = NULL, mm.args = list(),
 
   # fit mm model for each measurement block
   for (mm in seq_len(nMMblocks)) {
-    if (lavoptions$verbose) {
+    if (lav_verbose()) {
       cat(
         "  block ", mm, "[",
         paste(mm.list[[mm]], collapse = " "), "]\n"
@@ -209,7 +207,7 @@ lav_sam_step1 <- function(cmd = "sem", mm.list = NULL, mm.args = list(),
     # (question: can we re-use even more slots?)
     fit.mm.block <- lavaan(
       model = PTM, slotData = slotData.block,
-      slotOptions = slotOptions.mm
+      slotOptions = slotOptions.mm, debug = FALSE, verbose = FALSE
     )
 
     # check convergence
@@ -337,7 +335,7 @@ lav_sam_step1_local <- function(STEP1 = NULL, FIT = NULL,
     lv.interaction.flag <- FALSE
   }
 
-  if (lavoptions$verbose) {
+  if (lav_verbose()) {
     cat("Constructing the mapping matrix using the ",
       local.M.method, " method ... ",
       sep = ""
@@ -581,8 +579,7 @@ lav_sam_step1_local <- function(STEP1 = NULL, FIT = NULL,
       LAMBDA = this.lambda,
       THETA = THETA[[b]],
       S = COV, S.inv = ICOV,
-      method = local.M.method,
-      warn = lavoptions$warn
+      method = local.M.method
     )
     if (length(lavpta$vidx$lv.interaction[[b]]) > 0L) {
       tmp <- Mb
@@ -717,7 +714,7 @@ lav_sam_step1_local <- function(STEP1 = NULL, FIT = NULL,
   STEP1$lambda <- lambda
   STEP1$alpha <- alpha
 
-  if (lavoptions$verbose) {
+  if (lav_verbose()) {
     cat("done.\n")
   }
 

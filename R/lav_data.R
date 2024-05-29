@@ -72,12 +72,10 @@ lavData <- function(data = NULL, # data.frame
   }
 
   # warn?
-  warn <- lavoptions$warn
-  if (is.null(warn)) {
-    warn <- TRUE
-  }
   if (allow.single.case) { # eg, in lavPredict
-    warn <- FALSE
+    current.warn <- lav_warn()
+    if (lav_warn(FALSE)) 
+        on.exit(lav_warn(current.warn), TRUE)
   }
 
   # four scenarios:
@@ -149,7 +147,6 @@ lavData <- function(data = NULL, # data.frame
       ov.names.l = ov.names.l,
       std.ov = std.ov,
       missing = missing,
-      warn = warn,
       allow.single.case = allow.single.case
     )
     sample.cov <- NULL # not needed, but just in case
@@ -264,7 +261,7 @@ lavData <- function(data = NULL, # data.frame
     }
 
     # if std.ov = TRUE, give a warning (suggested by Peter Westfall)
-    if (std.ov && warn) {
+    if (std.ov) {
       lav_msg_warn(gettext(
         "std.ov argument is ignored if only sample statistics are provided."))
     }
@@ -507,7 +504,6 @@ lav_data_full <- function(data = NULL, # data.frame
                           ov.names.l = list(), # var per level
                           std.ov = FALSE, # standardize ov's?
                           missing = "listwise", # remove missings?
-                          warn = TRUE, # produce warnings?
                           allow.single.case = FALSE # allow single case?
 ) {
   # number of groups and group labels
@@ -522,7 +518,7 @@ lav_data_full <- function(data = NULL, # data.frame
     # not as in levels(data[,group])
     if (length(group.label) == 0L) {
       group.label <- unique(as.character(data[[group]]))
-      if (warn && any(is.na(group.label))) {
+      if (any(is.na(group.label))) {
         lav_msg_warn(gettextf("group variable %s contains missing values",
                               sQuote(group)))
       }
@@ -532,7 +528,7 @@ lav_data_full <- function(data = NULL, # data.frame
       # check if user-provided group labels exist
       LABEL <- unique(as.character(data[[group]]))
       idx <- match(group.label, LABEL)
-      if (warn && any(is.na(idx))) {
+      if (any(is.na(idx))) {
         lav_msg_warn(gettextf(
           "some group.labels do not appear in the grouping variable: %s",
           lav_msg_view(group.label[which(is.na(idx))], log.sep = "none"))
@@ -547,7 +543,7 @@ lav_data_full <- function(data = NULL, # data.frame
     }
     ngroups <- length(group.label)
   } else {
-    if (warn && length(group.label) > 0L) {
+    if (length(group.label) > 0L) {
       lav_msg_warn(gettext(
        "`group.label' argument will be ignored if `group' argument is missing"))
     }
@@ -592,7 +588,7 @@ lav_data_full <- function(data = NULL, # data.frame
 
     # check for missing values in cluster variable(s)
     for (cl in 1:length(cluster)) {
-      if (warn && anyNA(data[[cluster[cl]]])) {
+      if (anyNA(data[[cluster[cl]]])) {
         lav_msg_warn(gettextf("cluster variable %s contains missing values",
           sQuote(cluster[cl])))
       }
@@ -617,7 +613,7 @@ lav_data_full <- function(data = NULL, # data.frame
       level.label <- character(0L)
     }
   } else {
-    if (warn && length(level.label) > 0L) {
+    if (length(level.label) > 0L) {
       lav_msg_warn(gettext(
        "`level.label' argument will be ignored if `cluster' argument is missing"
       ))
@@ -738,7 +734,7 @@ lav_data_full <- function(data = NULL, # data.frame
   if ("ordered" %in% ov$type[ov$name %in% unlist(ov.names.x)]) {
     f.names <- ov$name[ov$type == "ordered" &
       ov$name %in% unlist(ov.names.x)]
-    if (warn && any(f.names %in% unlist(ov.names.x))) {
+    if (any(f.names %in% unlist(ov.names.x))) {
       lav_msg_warn(gettextf(
         "exogenous variable(s) declared as ordered in data: %s",
         lav_msg_view(f.names, log.sep = "none")))
@@ -749,7 +745,7 @@ lav_data_full <- function(data = NULL, # data.frame
     f.names <- ov$name[ov$type == "ordered" &
       !ov$name %in% unlist(ov.names.x) &
       ov$nlev > 12L]
-    if (warn && length(f.names) > 0L) {
+    if (length(f.names) > 0L) {
       lav_msg_warn(gettextf(
         "some ordered categorical variable(s) have more than 12 levels: %s",
         lav_msg_view(f.names, log.sep = "none")))
@@ -788,13 +784,13 @@ lav_data_full <- function(data = NULL, # data.frame
     lav_msg_stop(gettext("ordered variable(s) has/have only 1 level"))
   }
   # check for mix small/large variances (NOT including exo variables)
-  if (!std.ov && !allow.single.case && warn && any(ov$type == "numeric")) {
+  if (!std.ov && !allow.single.case && any(ov$type == "numeric")) {
     num.idx <- which(ov$type == "numeric" & ov$exo == 0L)
     if (length(num.idx) > 0L) {
       min.var <- min(ov$var[num.idx])
       max.var <- max(ov$var[num.idx])
       rel.var <- max.var / min.var
-      if (warn && rel.var > 1000) {
+      if (rel.var > 1000) {
         lav_msg_warn(
           gettext("some observed variances are (at least) a factor 1000 times
            larger than others; use varTable(fit) to investigate"))
@@ -802,11 +798,11 @@ lav_data_full <- function(data = NULL, # data.frame
     }
   }
   # check for really large variances (perhaps -999999 for missing?)
-  if (!std.ov && warn && any(ov$type == "numeric")) {
+  if (!std.ov && any(ov$type == "numeric")) {
     num.idx <- which(ov$type == "numeric" & ov$exo == 0L)
     if (length(num.idx) > 0L) {
       max.var <- max(ov$var[num.idx])
-      if (warn && max.var > 1000000) {
+      if (max.var > 1000000) {
         lav_msg_warn(
           gettext("some observed variances are larger than 1000000
           use varTable(fit) to investigate"))
@@ -814,7 +810,7 @@ lav_data_full <- function(data = NULL, # data.frame
     }
   }
   # check for all-exogenous variables (eg in f <~ x1 + x2 + x3)
-  if (warn && all(ov$exo == 1L)) {
+  if (all(ov$exo == 1L)) {
     lav_msg_warn(gettext(
       "all observed variables are exogenous; model may not be identified"))
   }
@@ -863,7 +859,7 @@ lav_data_full <- function(data = NULL, # data.frame
           complete.cases(data[exo.idx]))
         nobs[[g]] <- length(case.idx[[g]])
         norig[[g]] <- length(which(data[[group]] == group.label[g]))
-        if (warn && (nobs[[g]] < norig[[g]])) {
+        if ((nobs[[g]] < norig[[g]])) {
           lav_msg_warn(gettextf(
               "%1$s cases were deleted in group %2$s  due to missing values
               in  exogenous variable(s), while fixed.x = TRUE.",
@@ -886,7 +882,7 @@ lav_data_full <- function(data = NULL, # data.frame
         case.idx[[g]] <- which(complete.cases(data[exo.idx]))
         nobs[[g]] <- length(case.idx[[g]])
         norig[[g]] <- nrow(data)
-        if (warn && (nobs[[g]] < norig[[g]])) {
+        if ((nobs[[g]] < norig[[g]])) {
           lav_msg_warn(
             gettextf("%s cases were deleted due to missing values in
                      exogenous variable(s), while fixed.x = TRUE.",
@@ -964,7 +960,7 @@ lav_data_full <- function(data = NULL, # data.frame
     }
 
     # warn if we have a small number of observations (but NO error!)
-    if (!allow.single.case && warn &&
+    if (!allow.single.case &&
       nobs[[g]] < (nvar <- length(ov.idx))) {
       txt <- ""
       if (ngroups > 1L) txt <- gettextf("in group %s", g)
@@ -1147,13 +1143,11 @@ lav_data_full <- function(data = NULL, # data.frame
       if (length(Mp[[g]]$empty.idx) > 0L) {
         # new in 0.6-4: return 'original' index in full data.frame
         empty.case.idx <- case.idx[[g]][Mp[[g]]$empty.idx]
-        if (warn) {
-          lav_msg_warn(gettextf(
-            "some cases are empty and will be ignored: %s.",
-            paste(empty.case.idx, collapse = " ")))
-        }
+        lav_msg_warn(gettextf(
+          "some cases are empty and will be ignored: %s.",
+          paste(empty.case.idx, collapse = " ")))
       }
-	  if (warn && any(Mp[[g]]$coverage < 0.1)) {
+	  if (any(Mp[[g]]$coverage < 0.1)) {
 	    coverage.vech <- lav_matrix_vech(Mp[[g]]$coverage, diagonal = FALSE)
 	    small.idx <- which(coverage.vech < 0.1)
 	    if (all(coverage.vech[small.idx] == 0)) {

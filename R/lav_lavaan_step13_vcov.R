@@ -39,7 +39,7 @@ lav_lavaan_step13_vcov_boot <- function(lavoptions = NULL,
     # ) &&
     lavmodel@nx.free > 0L && (attr(x, "converged") ||
     lavoptions$optim.method == "none")) {
-    if (lavoptions$verbose) {
+    if (lav_verbose()) {
       cat("computing VCOV for      se =", lavoptions$se, "...")
     }
     VCOV <- lav_model_vcov( # nolint
@@ -52,7 +52,7 @@ lav_lavaan_step13_vcov_boot <- function(lavoptions = NULL,
       lavimplied = lavimplied,
       lavh1 = lavh1
     )
-    if (lavoptions$verbose) {
+    if (lav_verbose()) {
       cat(" done.\n")
     }
   } # VCOV

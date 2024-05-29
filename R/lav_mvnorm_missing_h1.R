@@ -13,10 +13,8 @@ lav_mvnorm_missing_h1_estimate_moments <- function(Y = NULL,
                                                    Yp = NULL,
                                                    wt = NULL,
                                                    Sinv.method = "eigen",
-                                                   verbose = FALSE,
                                                    max.iter = 500L,
-                                                   tol = 1e-05,
-                                                   warn = FALSE) {
+                                                   tol = 1e-05) {
   # check input
   Y <- as.matrix(Y)
   P <- NCOL(Y)
@@ -40,10 +38,7 @@ lav_mvnorm_missing_h1_estimate_moments <- function(Y = NULL,
   if (is.null(tol)) {
     tol <- 1e-05
   }
-  if (is.null(warn)) {
-    warn <- FALSE
-  }
-
+  
   # remove empty cases
   N.full <- N
   if (length(Mp$empty.idx) > 0L) {
@@ -55,7 +50,7 @@ lav_mvnorm_missing_h1_estimate_moments <- function(Y = NULL,
   }
 
   # verbose?
-  if (verbose) {
+  if (lav_verbose()) {
     cat("\n")
     cat("lav_mvnorm_missing_h1_estimate_moments: start EM steps\n")
   }
@@ -93,7 +88,7 @@ lav_mvnorm_missing_h1_estimate_moments <- function(Y = NULL,
   Sigma <- Sigma0
 
   # report
-  if (verbose) {
+  if (lav_verbose()) {
     # fx0 <- estimator.FIML(Sigma.hat=Sigma, Mu.hat=Mu, M=Yp)
     fx0 <- lav_mvnorm_missing_loglik_samplestats(
       Yp = Yp,
@@ -141,7 +136,7 @@ lav_mvnorm_missing_h1_estimate_moments <- function(Y = NULL,
       c(Mu0, lav_matrix_vech(Sigma0))))
 
     # report fx
-    if (verbose) {
+    if (lav_verbose()) {
       # fx <- estimator.FIML(Sigma.hat=Sigma, Mu.hat=Mu, M=Yp)
       fx <- lav_mvnorm_missing_loglik_samplestats(
         Yp = Yp,
@@ -167,7 +162,7 @@ lav_mvnorm_missing_h1_estimate_moments <- function(Y = NULL,
     Sigma0 <- Sigma
   } # EM iterations
 
-  if (verbose) {
+  if (lav_verbose()) {
     cat("\nSigma:\n")
     print(Sigma)
     cat("\nMu:\n")
@@ -176,7 +171,7 @@ lav_mvnorm_missing_h1_estimate_moments <- function(Y = NULL,
   }
 
   # compute fx if we haven't already
-  if (!verbose) {
+  if (!lav_verbose()) {
     # fx <- estimator.FIML(Sigma.hat = Sigma, Mu.hat = Mu, M = Yp)
     fx <- lav_mvnorm_missing_loglik_samplestats(
       Yp = Yp,
@@ -187,7 +182,7 @@ lav_mvnorm_missing_h1_estimate_moments <- function(Y = NULL,
   }
 
   # warning?
-  if (warn && i == max.iter) {
+  if (i == max.iter) {
     lav_msg_warn(
       gettext("Maximum number of iterations reached when computing the sample
               moments using EM; use the em.h1.iter.max= argument to increase
@@ -195,15 +190,13 @@ lav_mvnorm_missing_h1_estimate_moments <- function(Y = NULL,
     )
   }
 
-  if (warn) {
-    ev <- eigen(Sigma, symmetric = TRUE, only.values = TRUE)$values
-    if (any(ev < 1e-05)) { # make an option?
-      lav_msg_warn(
-        gettext("The smallest eigenvalue of the EM estimated variance-covariance
-                matrix (Sigma) is smaller than 1e-05; this may cause numerical
-                instabilities; interpret the results with caution.")
-      )
-    }
+  ev <- eigen(Sigma, symmetric = TRUE, only.values = TRUE)$values
+  if (any(ev < 1e-05)) { # make an option?
+    lav_msg_warn(
+      gettext("The smallest eigenvalue of the EM estimated variance-covariance
+              matrix (Sigma) is smaller than 1e-05; this may cause numerical
+              instabilities; interpret the results with caution.")
+    )
   }
 
   list(Sigma = Sigma, Mu = Mu, fx = fx)

@@ -2,6 +2,70 @@
 
 lavaan_cache_env <- new.env(parent = emptyenv())
 
+# functions to handle warn/debug/verbose options 
+#             (no longer in 'standard' options)
+# if x not present returns the current value of opt.warn/debug/verbose
+# if x present 
+#   if x different from current value, assign x to current value and return TRUE
+#   else return FALSE
+lav_warn <- function(x) {
+  optwarn <- get0("opt.warn", lavaan_cache_env, ifnotfound = TRUE)
+  if (missing(x)) {
+    return(optwarn)
+  } else {
+    setwarn <- as.logical(x)
+    if (setwarn != optwarn) {
+      if (setwarn) {
+        # because default TRUE, removing value is the same as setting to TRUE
+        rm("opt.warn", envir = lavaan_cache_env)
+      } else {
+        assign("opt.warn", FALSE, lavaan_cache_env)
+      }
+      return(TRUE)
+    } else {
+      return(FALSE)
+    }
+  }
+}
+lav_debug <- function(x) {
+  optdebug <- get0("opt.debug", lavaan_cache_env, ifnotfound = FALSE)
+  if (missing(x)) {
+    return(optdebug)
+  } else {
+    setdebug <- as.logical(x)
+    if (setdebug != optdebug) {
+      if (setdebug) {
+        assign("opt.debug", TRUE, lavaan_cache_env)
+      } else {
+        # because default FALSE, removing value is the same as setting to FALSE
+        rm("opt.debug", envir = lavaan_cache_env)
+      }
+      return(TRUE)
+    } else {
+      return(FALSE)
+    }
+  }
+}
+lav_verbose <- function(x) {
+  optverbose <- get0("opt.verbose", lavaan_cache_env, ifnotfound = FALSE)
+  if (missing(x)) {
+    return(optverbose)
+  } else {
+    setverbose <- as.logical(x)
+    if (setverbose != optverbose) {
+      if (setverbose) {
+        assign("opt.verbose", TRUE, lavaan_cache_env)
+      } else {
+        # because default FALSE, removing value is the same as setting to FALSE
+        rm("opt.verbose", envir = lavaan_cache_env)
+      }
+      return(TRUE)
+    } else {
+      return(FALSE)
+    }
+  }
+}
+
 # set the default options (including unspecified values "default")
 lav_options_default <- function() {
   if (exists("opt.default", lavaan_cache_env)) {
@@ -378,11 +442,6 @@ lav_options_default <- function() {
   # internal
   elm("parser", "new", chr = c(old = "old", orig = "old", new = "new",
                                classic = "old"))
-
-  # verbosity
-  elm("verbose", FALSE, bl = TRUE)
-  elm("warn", TRUE, bl = TRUE)
-  elm("debug", FALSE, bl = TRUE)
 
   # categorical
   elm("categorical", "default", chr = "default", bl = TRUE)

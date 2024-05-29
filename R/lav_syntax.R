@@ -3,8 +3,17 @@
 # YR 17 Oct 2023: add ldw parser
 
 lavParseModelString <- function(model.syntax = "", as.data.frame. = FALSE,
-                                parser = "new",
-                                warn = TRUE, debug = FALSE) {
+                                parser = "new", warn = TRUE, debug = FALSE) {
+  if (!missing(debug)) {
+    current.debug <- lav_debug()
+    if (lav_debug(debug)) 
+      on.exit(lav_debug(current.debug), TRUE)
+  }
+  if (!missing(warn)) {
+    current.warn <- lav_warn()
+    if (lav_warn(warn)) 
+      on.exit(lav_warn(current.warn), TRUE)
+  }
   parser <- tolower(parser)
   if (!parser %in% c("old", "new")) {
     lav_msg_stop(gettext("parser= argument should be \"old\" or \"new\""))
@@ -14,18 +23,14 @@ lavParseModelString <- function(model.syntax = "", as.data.frame. = FALSE,
     # original/classic parser
     out <- lav_parse_model_string_orig(
       model.syntax = model.syntax,
-      as.data.frame. = as.data.frame.,
-      warn = warn,
-      debug = debug
+      as.data.frame. = as.data.frame.
     )
   } else {
     # new parser
     out <- ldw_parse_model_string(
       model.syntax = model.syntax,
-      as.data.frame. = as.data.frame.,
-      warn = warn,
-      debug = debug
-    )
+      as.data.frame. = as.data.frame.
+      )
   }
 
   out
@@ -33,8 +38,7 @@ lavParseModelString <- function(model.syntax = "", as.data.frame. = FALSE,
 
 # the 'original' parser (up to 0.6-17)
 lav_parse_model_string_orig <- function(model.syntax = "",
-                                        as.data.frame. = FALSE,
-                                        warn = TRUE, debug = FALSE) {
+                                        as.data.frame. = FALSE) {
   # check for empty syntax
   if (length(model.syntax) == 0) {
     stop("lavaan ERROR: empty model syntax")
@@ -162,7 +166,7 @@ lav_parse_model_string_orig <- function(model.syntax = "",
   BLOCK_OP <- FALSE
   for (i in 1:length(model)) {
     x <- model[i]
-    if (debug) {
+    if (lav_debug()) {
       cat("formula to parse:\n")
       print(x)
       cat("\n")
@@ -380,7 +384,7 @@ other (observed) variable in the model syntax. Problematic term is: "),
     rhs.formula <- as.formula(paste("~", rhs))
     out <- lav_syntax_parse_rhs(rhs = rhs.formula[[2L]], op = op)
 
-    if (debug) print(out)
+    if (lav_debug()) print(out)
 
     # for each lhs element
     for (l in 1:length(lhs.names)) {

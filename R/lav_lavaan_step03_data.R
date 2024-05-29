@@ -48,7 +48,7 @@ lav_lavaan_step03_data <- function(slotData = NULL, # nolint
   if (!is.null(slotData)) {
     lavdata <- slotData
   } else {
-    if (lavoptions$verbose) {
+    if (lav_verbose()) {
       cat("lavdata            ...")
     }
     # FIXME: ov.names should always contain both y and x!
@@ -73,7 +73,7 @@ lav_lavaan_step03_data <- function(slotData = NULL, # nolint
       lavoptions = lavoptions
     )
 
-    if (lavoptions$verbose) {
+    if (lav_verbose()) {
       cat(" done.\n")
     }
   }
@@ -119,10 +119,10 @@ lav_lavaan_step03_data <- function(slotData = NULL, # nolint
         and number of groups in model."))
     }
   }
-  if (lavoptions$verbose) {
+  if (lav_verbose()) {
     print(lavdata)
   }
-  if (lavoptions$debug) {
+  if (lav_debug()) {
     print(str(lavdata))
   }
   # if lavdata@nlevels > 1L, adapt start option (for now)

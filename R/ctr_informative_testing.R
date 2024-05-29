@@ -7,6 +7,11 @@ InformativeTesting <- function(model = NULL, data, constraints = NULL,
                                double.bootstrap.alpha = 0.05,
                                parallel = c("no", "multicore", "snow"),
                                ncpus = 1L, cl = NULL, verbose = FALSE, ...) {
+  if (!missing(verbose)) {
+    current.verbose <- lav_verbose()
+    if (lav_verbose(verbose)) 
+      on.exit(lav_verbose(current.verbose), TRUE)
+  }
   fit.B1 <- sem(model, ...,
     data = data,
     se   = "none",

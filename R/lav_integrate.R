@@ -145,7 +145,6 @@ lav_integration_f_dnorm <- function(func = NULL, # often ly.prod
                                     adaptive = FALSE, # adaptive?
                                     iterative = FALSE, # iterative?
                                     max.iter = 20L, # max iterations
-                                    verbose = FALSE, # verbose?
                                     ...) { # optional args for 'f'
 
   # create GH rule
@@ -175,7 +174,7 @@ lav_integration_f_dnorm <- function(func = NULL, # often ly.prod
         var.est <- sum(x.star^2 * (func(x.star, ...) * w.star) / LIK) - mu.est^2
         sd.est <- sqrt(var.est)
 
-        if (verbose) {
+        if (lav_verbose()) {
           cat(
             "i = ", i, "LIK = ", LIK, "mu.est = ", mu.est,
             "sd.est = ", sd.est, "\n"
@@ -218,7 +217,6 @@ lav_integration_f_dnorm_z <- function(func = NULL, # often ly.prod
                                       adaptive = FALSE, # adaptive?
                                       iterative = FALSE, # iterative?
                                       max.iter = 20L, # max iterations
-                                      verbose = FALSE, # verbose?
                                       ...) { # optional args for 'f'
 
   # create GH rule
@@ -248,7 +246,7 @@ lav_integration_f_dnorm_z <- function(func = NULL, # often ly.prod
         var.est <- sum(x.star^2 * (func(f.sd * x.star + f.mean, ...) * w.star) / LIK) - mu.est^2
         sd.est <- sqrt(var.est)
 
-        if (verbose) {
+        if (lav_verbose()) {
           cat(
             "i = ", i, "LIK = ", LIK, "mu.est = ", mu.est,
             "sd.est = ", sd.est, "\n"

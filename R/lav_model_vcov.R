@@ -28,7 +28,6 @@ lav_model_nvcov_bootstrap <- function(lavmodel = NULL,
     lavoptions. = lavoptions,
     lavdata. = lavdata,
     R = R,
-    verbose = lavoptions$verbose,
     check.post = lavoptions$check.post,
     type = boot.type,
     FUN = ifelse(boot.type == "bollen.stine",
@@ -41,13 +40,13 @@ lav_model_nvcov_bootstrap <- function(lavmodel = NULL,
   # new in 0.6-12: always warn for failed and nonadmissible
   error.idx <- attr(COEF, "error.idx")
   nfailed <- length(error.idx) # zero if NULL
-  if (nfailed > 0L && lavoptions$warn) {
+  if (nfailed > 0L) {
     lav_msg_warn(gettextf(
       "%s bootstrap runs failed or did not converge.", nfailed))
   }
 
   notok <- length(attr(COEF, "nonadmissible")) # zero if NULL
-  if (notok > 0L && lavoptions$warn) {
+  if (notok > 0L) {
     lav_msg_warn(gettextf(
       "%s bootstrap runs resulted in nonadmissible solutions.", notok))
   }
@@ -437,7 +436,6 @@ lav_model_vcov <- function(lavmodel = NULL,
   likelihood <- lavoptions$likelihood
   information <- lavoptions$information[1] # first one is for vcov
   se <- lavoptions$se
-  verbose <- lavoptions$verbose
   mimic <- lavoptions$mimic
 
   # special cases
@@ -586,7 +584,7 @@ lav_model_vcov <- function(lavmodel = NULL,
       }
       min.val <- min(eigvals)
       # if(any(eigvals < -1 * sqrt(.Machine$double.eps)) &&
-      if (min.val < .Machine$double.eps^(3 / 4) && lavoptions$warn) {
+      if (min.val < .Machine$double.eps^(3 / 4)) {
         # VarCov.chol <- suppressWarnings(try(chol(VarCov,
         #                   pivot = TRUE), silent = TRUE))
         # VarCov.rank <- attr(VarCov.chol, "rank")
@@ -623,13 +621,11 @@ lav_model_vcov <- function(lavmodel = NULL,
       }
     }
   } else {
-    if (lavoptions$warn) {
-      lav_msg_warn(
-       gettext("Could not compute standard errors! The information matrix
-               could not be inverted. This may be a symptom that the model
-               is not identified.")
-      )
-    }
+    lav_msg_warn(
+     gettext("Could not compute standard errors! The information matrix
+             could not be inverted. This may be a symptom that the model
+             is not identified.")
+    )
     VarCov <- NULL
   } # could not invert
 

@@ -40,7 +40,7 @@ lav_sam_step2_se <- function(FIT = NULL, JOINT = NULL,
     return(out)
   }
 
-  if (lavoptions$verbose) {
+  if (lav_verbose()) {
     cat("Computing ", lavoptions$se, " standard errors ... ", sep = "")
   }
 
@@ -159,7 +159,7 @@ lav_sam_step2_se <- function(FIT = NULL, JOINT = NULL,
     out$VCOV <- VCOV
   }
 
-  if (lavoptions$verbose) {
+  if (lav_verbose()) {
     cat("done.\n")
   }
 

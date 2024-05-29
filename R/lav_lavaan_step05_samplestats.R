@@ -31,7 +31,7 @@ lav_lavaan_step05_samplestats <- function(slotSampleStats = NULL, # nolint
   if (!is.null(slotSampleStats)) {
     lavsamplestats <- slotSampleStats
   } else if (lavdata@data.type == "full") {
-    if (lavoptions$verbose) {
+    if (lav_verbose()) {
       cat("lavsamplestats     ...")
     }
     lavsamplestats <- lav_samplestats_from_data(
@@ -40,11 +40,11 @@ lav_lavaan_step05_samplestats <- function(slotSampleStats = NULL, # nolint
       WLS.V         = WLS.V,
       NACOV         = NACOV
     )
-    if (lavoptions$verbose) {
+    if (lav_verbose()) {
       cat(" done.\n")
     }
   } else if (lavdata@data.type == "moment") {
-    if (lavoptions$verbose) {
+    if (lav_verbose()) {
       cat("lavsamplestats ...")
     }
     # check if we have sample.mean and meanstructure = TRUE
@@ -64,7 +64,7 @@ lav_lavaan_step05_samplestats <- function(slotSampleStats = NULL, # nolint
       NACOV         = NACOV,
       lavoptions    = lavoptions
     )
-    if (lavoptions$verbose) {
+    if (lav_verbose()) {
       cat(" done.\n")
     }
   } else {
@@ -79,7 +79,7 @@ lav_lavaan_step05_samplestats <- function(slotSampleStats = NULL, # nolint
     )
   }
 
-  if (lavoptions$debug) {
+  if (lav_debug()) {
     print(str(lavsamplestats))
   }
 

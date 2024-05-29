@@ -670,7 +670,6 @@ lav_fit_measures_check_baseline <- function(fit.indep = NULL, object = NULL,
       lavoptions <- object@Options
       lavoptions$estimator <- object@Options$estimator
       lavoptions$se <- "none"
-      lavoptions$verbose <- FALSE
       lavoptions$baseline <- FALSE
       lavoptions$check.start <- FALSE
       lavoptions$check.post <- FALSE
@@ -682,7 +681,8 @@ lav_fit_measures_check_baseline <- function(fit.indep = NULL, object = NULL,
           slotData        = object@Data,
           slotSampleStats = object@SampleStats,
           sloth1          = object@h1,
-          slotCache       = object@Cache
+          slotCache       = object@Cache,
+          verbose = FALSE
         ),
         silent = TRUE
       )

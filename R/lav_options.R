@@ -145,7 +145,7 @@ lav_options_set <- function(opt = NULL) {                     # nolint
   if (!exists("opt.check", lavaan_cache_env)) lav_options_default()
   opt.check <- get("opt.check", lavaan_cache_env)
 
-  if (opt$debug) {
+  if (lav_debug()) {
     cat("lavaan DEBUG: lavaanOptions IN\n")
     str(opt)
     opt$optim.partrace <- TRUE
@@ -789,10 +789,6 @@ lav_options_set <- function(opt = NULL) {                     # nolint
     lav_msg_fixme("meanstructure must be logical at this point!")
   }
 
-  if (opt$debug) {
-    opt$verbose <- opt$warn <- TRUE
-  }
-
   # zero cell frequencies
   if (is.character(opt$zero.add)) { # = "default"
     opt$zero.add <- c(0.5, 0.0)
@@ -1113,7 +1109,7 @@ lav_options_set <- function(opt = NULL) {                     # nolint
   # in order not to break semTools and blavaan, we restore categorical:
   opt$categorical <- opt$.categorical
 
-  if (opt$debug) {
+  if (lav_debug()) {
     cat("lavaan DEBUG: lavaanOptions OUT\n")
     str(opt)
   }

@@ -716,10 +716,10 @@ linesearch.backtracking.armijo <- function(f.alpha, s.alpha, alpha = 10) {
   alpha
 }
 
-steepest.descent <- function(start, objective, gradient, iter.max, verbose) {
+steepest.descent <- function(start, objective, gradient, iter.max) {
   x <- start
 
-  if (verbose) {
+  if (lav_verbose()) {
     cat("Steepest descent iterations\n")
     cat("iter        function  abs.change  rel.change     step.size       norm.gx\n")
     gx <- gradient(x)
@@ -782,21 +782,19 @@ steepest.descent <- function(start, objective, gradient, iter.max, verbose) {
     dx.max <- max(abs(gx))
 
     # verbose
-    if (verbose) {
+    if (lav_verbose()) {
       fx <- fx.old
       fx.new <- objective(x)
       abs.change <- fx.new - fx.old
       rel.change <- abs.change / fx.old
       norm.gx <- sqrt(gx %*% gx)
-      if (verbose) {
-        cat(
+      cat(
           sprintf(
             "%4d   %11.7E %10.7f %10.7f %11.5E %11.5E",
             iter, fx.new, abs.change, rel.change, alpha, norm.gx
           ),
           "\n"
         )
-      }
     }
 
     # convergence check

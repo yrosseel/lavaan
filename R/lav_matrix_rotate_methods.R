@@ -559,13 +559,10 @@ lav_matrix_rotate_bigeomin <- function(LAMBDA, geomin.epsilon = 0.01, ...,
   out
 }
 
-
-
 # gradient check
 ilav_matrix_rotate_grad_test <- function(crit = NULL, ...,
                                          LAMBDA = NULL,
-                                         nRow = 20L, nCol = 5L,
-                                         verbose = FALSE) {
+                                         nRow = 20L, nCol = 5L) {
   # test matrix
   if (is.null(LAMBDA)) {
     LAMBDA <- matrix(rnorm(nRow * nCol), nRow, nCol)
@@ -582,7 +579,7 @@ ilav_matrix_rotate_grad_test <- function(crit = NULL, ...,
   )
   GQ2 <- attr(crit(LAMBDA, ..., grad = TRUE), "grad")
 
-  if (verbose) {
+  if (lav_verbose()) {
     print(list(LAMBDA = LAMBDA, GQ1 = GQ1, GQ2 = GQ2))
   }
 

@@ -19,7 +19,6 @@ lav_sam_step2 <- function(STEP1 = NULL, FIT = NULL,
   }
   # lavoptions.PA$fixed.x <- TRUE # may be false if indicator is predictor
   lavoptions.PA$fixed.x <- FALSE # until we fix this...
-  lavoptions.PA$verbose <- FALSE # must be in struc.args
   lavoptions.PA$categorical <- FALSE
   lavoptions.PA$.categorical <- FALSE
   lavoptions.PA$rotation <- "none"
@@ -144,7 +143,7 @@ lav_sam_step2 <- function(STEP1 = NULL, FIT = NULL,
   } # global
 
   # fit structural model
-  if (lavoptions$verbose) {
+  if (lav_verbose()) {
     cat("Fitting the structural part ... \n")
   }
   if (sam.method %in% c("local", "fsr")) {
@@ -152,17 +151,19 @@ lav_sam_step2 <- function(STEP1 = NULL, FIT = NULL,
       sample.cov = STEP1$VETA,
       sample.mean = STEP1$EETA,
       sample.nobs = NOBS,
-      slotOptions = lavoptions.PA
+      slotOptions = lavoptions.PA,
+      verbose = FALSE
     )
   } else {
     FIT.PA <- lavaan::lavaan(
       model = PTS,
       slotData = FIT@Data,
       slotSampleStats = FIT@SampleStats,
-      slotOptions = lavoptions.PA
+      slotOptions = lavoptions.PA,
+      verbose = FALSE
     )
   }
-  if (lavoptions$verbose) {
+  if (lav_verbose()) {
     cat("Fitting the structural part ... done.\n")
   }
 

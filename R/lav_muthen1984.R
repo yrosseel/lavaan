@@ -19,7 +19,6 @@ muthen1984 <- function(Data = NULL,
                        ov.names.x = character(0L),
                        eXo = NULL,
                        wt = NULL,
-                       verbose = FALSE,
                        WLS.W = TRUE,
                        zero.add = c(0.5, 0.0),
                        zero.keep.margins = TRUE,
@@ -38,7 +37,7 @@ muthen1984 <- function(Data = NULL,
   if (nexo > 0L) stopifnot(NCOL(eXo) == nexo)
   pstar <- nvar * (nvar - 1) / 2
 
-  if (verbose) {
+  if (lav_verbose()) {
     cat("\nPreparing for WLS estimation -- STEP 1 + 2\n")
     cat("Number of endogenous variables: ", nvar, "\n")
     cat("Endogenous variable names:\n")
@@ -81,7 +80,7 @@ muthen1984 <- function(Data = NULL,
   }
 
 
-  if (verbose) {
+  if (lav_verbose()) {
     cat("STEP 1: univariate statistics\n")
     cat("Threshold + means:\n")
     TTHH <- unlist(TH)
@@ -98,7 +97,7 @@ muthen1984 <- function(Data = NULL,
 
   # stage two -- correlations
 
-  if (verbose) cat("\n\nSTEP 2: covariances/correlations:\n")
+  if (lav_verbose()) cat("\n\nSTEP 2: covariances/correlations:\n")
   COR <- lav_samplestats_step2(
     UNI = FIT, wt = wt, ov.names = ov.names,
     zero.add = zero.add,
@@ -109,7 +108,7 @@ muthen1984 <- function(Data = NULL,
   empty.cell.tables <- attr(COR, "zero.cell.tables")
   attr(COR, "zero.cell.tables") <- NULL
 
-  if (verbose) {
+  if (lav_verbose()) {
     colnames(COR) <- rownames(COR) <- ov.names
     print(COR)
   }

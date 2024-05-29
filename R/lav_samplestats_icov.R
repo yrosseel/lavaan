@@ -1,5 +1,5 @@
 lav_samplestats_icov <- function(COV = NULL, ridge = 0.0, x.idx = integer(0L),
-                                 ngroups = 1L, g = 1L, warn = TRUE) {
+                                 ngroups = 1L, g = 1L) {
   tmp <- try(inv.chol(COV, logdet = TRUE), silent = TRUE)
 
   # what if this fails...
@@ -21,17 +21,14 @@ lav_samplestats_icov <- function(COV = NULL, ridge = 0.0, x.idx = integer(0L),
         cov.log.det <- attr(tmp, "logdet")
         attr(tmp, "logdet") <- NULL
         icov <- tmp
-
         # give a warning
-        if (warn) {
-          if (ngroups > 1) {
-            lav_msg_warn(gettextf(
-              "sample covariance matrix in group: %s is not
-              positive-definite", g))
-          } else {
-            lav_msg_warn(gettext(
-              "sample covariance matrix is not positive-definite"))
-          }
+        if (ngroups > 1) {
+          lav_msg_warn(gettextf(
+            "sample covariance matrix in group: %s is not
+            positive-definite", g))
+        } else {
+          lav_msg_warn(gettext(
+            "sample covariance matrix is not positive-definite"))
         }
       }
     } else {

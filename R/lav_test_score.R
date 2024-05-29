@@ -14,6 +14,16 @@ lavTestScore <- function(object, add = NULL, release = NULL,
                          epc = FALSE, standardized = epc, cov.std = epc,
                          verbose = FALSE, warn = TRUE,
                          information = "expected") {
+  if (!missing(warn)) {
+    current.warn <- lav_warn()
+    if (lav_warn(warn)) 
+      on.exit(lav_warn(current.warn))
+  }
+  if (!missing(verbose)) {
+    current.verbose <- lav_verbose()
+    if (lav_verbose(verbose)) 
+      on.exit(lav_verbose(current.verbose), TRUE)
+  }
   # check object
   stopifnot(inherits(object, "lavaan"))
   lavoptions <- object@Options
@@ -156,10 +166,8 @@ lavTestScore <- function(object, add = NULL, release = NULL,
     stat <- as.numeric(N * score %*% J.inv %*% score)
   } else {
     # generalized score test
-    if (warn) {
-      lav_msg_warn(gettext("se is not `standard'; not implemented yet;
-                           falling back to ordinary score test"))
-    }
+    lav_msg_warn(gettext("se is not `standard'; not implemented yet;
+                         falling back to ordinary score test"))
 
     # NOTE!!!
     # we can NOT use VCOV here, because it reflects the constraints,

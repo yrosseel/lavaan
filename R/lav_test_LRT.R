@@ -142,7 +142,7 @@ lavTestLRT <- function(object, ..., method = "default", test = "default",
     default.TEST <- object@test[[scaled.idx]]$test
     if (test == "default") {
       TEST <- default.TEST
-    } else if (! test %in% c("satorra.bentler", "yuan.bentler", "yuan.bentler.mplus",
+    } else if (!test %in% c("satorra.bentler", "yuan.bentler", "yuan.bentler.mplus",
                              "mean.var.adjusted", "scaled.shifted")) {
       lav_msg_stop(gettextf(
         "test = %s not found in object. See available tests in

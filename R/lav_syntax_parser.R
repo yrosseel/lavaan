@@ -1,4 +1,4 @@
-# New version of parasere, written by Luc De Wilde in september/october 2023
+# New version of parser, written by Luc De Wilde in september/october 2023
 
 # ----------------------- ldw_create_enum ------------------------------------ #
 # function to create an Enumerable like structure in R
@@ -71,7 +71,7 @@ ldw_txtloc <- function(modelsrc, position) {
 #                         formula where the token occurs
 # the function returns the stored tokens in a list
 # ---------------------------------------------------------------------------- #
-ldw_parse_step1 <- function(modelsrc, types, debug, warn, spaces.in.operator) {
+ldw_parse_step1 <- function(modelsrc, types) {
   nmax <- nchar(modelsrc)
   elem.pos <- vector("integer", nmax)
   elem.type <- elem.pos
@@ -119,30 +119,24 @@ ldw_parse_step1 <- function(modelsrc, types, debug, warn, spaces.in.operator) {
       elem.i <- elem.i + 1L
     }
   }
-  # --------------------- handling spaces.in.operator ------------------------ #
-  if (spaces.in.operator != "error") {
-    if (grepl("= +~", modelsrcw)) {
-      waar <- regexpr("= +~", modelsrcw)[1]
-      modelsrcw <- gsub("=( +)~", "=~\\1", modelsrcw)
-      if (spaces.in.operator == "warn" && warn == TRUE) {
-        tl <- ldw_txtloc(modelsrc, waar)
-        lav_msg_warn(gettext("splitting of '=~' deprecated"),
-          tl[1L],
-          footer = tl[2L]
-        )
-      }
-    }
-    if (grepl("[^=~]~ +~", modelsrcw)) {
-      waar <- regexpr("[^=~]~ +~", modelsrcw)[1]
-      modelsrcw <- gsub("([^=~])~( +)~", "\\1~~\\2", modelsrcw)
-      if (spaces.in.operator == "warn" && warn == TRUE) {
-        tl <- ldw_txtloc(modelsrc, waar + 1L)
-        lav_msg_warn(gettext("splitting of '~~' deprecated"),
-          tl[1L],
-          footer = tl[2L]
-        )
-      }
-    }
+  # --------------------- handling spaces in operators ------------------------ #
+  if (grepl("= +~", modelsrcw)) {
+    waar <- regexpr("= +~", modelsrcw)[1]
+    modelsrcw <- gsub("=( +)~", "=~\\1", modelsrcw)
+    tl <- ldw_txtloc(modelsrc, waar)
+    lav_msg_warn(gettext("splitting of '=~' deprecated"),
+      tl[1L],
+      footer = tl[2L]
+    )
+  }
+  if (grepl("[^=~]~ +~", modelsrcw)) {
+    waar <- regexpr("[^=~]~ +~", modelsrcw)[1]
+    modelsrcw <- gsub("([^=~])~( +)~", "\\1~~\\2", modelsrcw)
+    tl <- ldw_txtloc(modelsrc, waar + 1L)
+    lav_msg_warn(gettext("splitting of '~~' deprecated"),
+      tl[1L],
+      footer = tl[2L]
+    )
   }
   # -------------------------------------------------------------------------- #
   lavops <- gregexpr("=~|<~|~\\*~|~~|~|==|<|>|:=|:|\\||%", modelsrcw)[[1]]
@@ -337,7 +331,7 @@ ldw_parse_step1 <- function(modelsrc, types, debug, warn, spaces.in.operator) {
 # newlines are removed
 # the function returns a list of formulas
 # ---------------------------------------------------------------------------- #
-ldw_parse_step2 <- function(modellist, modelsrc, types, debug, warn) {
+ldw_parse_step2 <- function(modellist, modelsrc, types) {
   real.operators <- c("=~", "<~", "~*~", "~~", "~", "|", "%")
   welke <- modellist$elem.type != types$newline
   formula.numbers <- unique(modellist$elem.formula.number[welke])
@@ -506,8 +500,6 @@ ldw_adapt_vector_type <- function(typenu, typetoadd, texttoadd, types) {
 #       opi : index of the lavaan operator in the list-items
 #  modelsrc : the model source string (for error messages and warnings)
 #     types : the types of tokens
-#     debug : should debug information be displayed?
-#      warn : give warnings when appropiate?
 #       rme : index of last element of modifier in formula (*)
 #   rmeprev : index of first element of modifier in formula - 1L (*)
 # The function return the modifier detected as element of a list
@@ -519,7 +511,7 @@ ldw_adapt_vector_type <- function(typenu, typetoadd, texttoadd, types) {
 # An error message is produced when no modifier can be determined.
 # ---------------------------------------------------------------------------- #
 ldw_parse_get_modifier <- function(formul1, lhs, opi, modelsrc, types,
-                                   debug, warn, rme = 0L, rmeprev = 0L) {
+                                   rme = 0L, rmeprev = 0L) {
   if (rme > rmeprev) {
     welke <- c(seq.int(1L, opi), seq.int(rmeprev + 1L, rme), length(formul1))
     formul1 <- ldw_parse_sublist(formul1, welke)
@@ -661,7 +653,7 @@ ldw_parse_get_modifier <- function(formul1, lhs, opi, modelsrc, types,
       }
       tl <- ldw_txtloc(modelsrc, formul1$elem.pos[opi + 1L])
       lav_msg_stop(gettext(
-	    "invalid start value expression (should be numeric)"),
+        "invalid start value expression (should be numeric)"),
         tl[1L], footer = tl[2L]
       )
     }
@@ -763,11 +755,8 @@ ldw_parse_get_modifier <- function(formul1, lhs, opi, modelsrc, types,
   }
 }
 # -------------------- main parsing function --------------------------------- #
-ldw_parse_model_string <- function(model.syntax = "", as.data.frame. = FALSE,
-                                   warn = TRUE, debug = FALSE,
-                                   spaces.in.operator = "warn") {
+ldw_parse_model_string <- function(model.syntax = "", as.data.frame. = FALSE) {
   stopifnot(length(model.syntax) > 0L)
-  stopifnot(any(spaces.in.operator == c("ignore", "warn", "error")))
   # replace 'strange' tildes (in some locales) (new in 0.6-6)
   modelsrc <- gsub(
     pattern = "\u02dc",
@@ -778,11 +767,8 @@ ldw_parse_model_string <- function(model.syntax = "", as.data.frame. = FALSE,
     "identifier", "numliteral", "stringliteral",
     "symbol", "lavaanoperator", "newline"
   ))
-  modellist <- ldw_parse_step1(modelsrc, types,
-    debug = debug, warn = warn,
-    spaces.in.operator = spaces.in.operator
-  )
-  if (debug) {
+  modellist <- ldw_parse_step1(modelsrc, types)
+  if (lav_debug()) {
     print(data.frame(
       pos = modellist$elem.pos,
       type = types$enum.names[modellist$elem.type],
@@ -790,9 +776,7 @@ ldw_parse_model_string <- function(model.syntax = "", as.data.frame. = FALSE,
       formula = modellist$elem.formula.number
     ))
   }
-  formulalist <- ldw_parse_step2(modellist, modelsrc, types,
-    debug = debug, warn = warn
-  )
+  formulalist <- ldw_parse_step2(modellist, modelsrc, types)
   #---- analyse syntax formulas and put in flat.-----
   max.mono.formulas <- length(formulalist)
   flat.lhs <- character(max.mono.formulas)
@@ -814,7 +798,7 @@ ldw_parse_model_string <- function(model.syntax = "", as.data.frame. = FALSE,
   mod <- list()
   block <- 1L
   block.op <- FALSE
-  if (debug) {
+  if (lav_debug()) {
     cat("formula to analyse:\n")
   }
   #  operators <- c("=~", "<~", "~*~", "~~", "~", "==", "<", ">", ":=",
@@ -822,7 +806,7 @@ ldw_parse_model_string <- function(model.syntax = "", as.data.frame. = FALSE,
   constraint_operators <- c("==", "<", ">", ":=")
   for (s in seq_along(formulalist)) {
     formul1 <- formulalist[[s]]
-    if (debug) {
+    if (lav_debug()) {
       cat(vapply(seq_along(formul1$elem.type), function(j) {
         if (formul1$elem.type[j] == types$stringliteral) {
           return(dQuote(formul1$elem.text[j], FALSE))
@@ -855,11 +839,10 @@ ldw_parse_model_string <- function(model.syntax = "", as.data.frame. = FALSE,
         tl <- ldw_txtloc(modelsrc, formul1$elem.pos[1])
         lav_msg_stop(
           gettext(
-		    "Missing block identifier. The correct syntax is: \"LHS: RHS\",
-             where LHS is a block identifier (eg group or level), and RHS is
-             the group/level/block number or label."
-          ),
-		  tl[1L], footer = tl[2L]
+          "Missing block identifier. The correct syntax is: \"LHS: RHS\",
+          where LHS is a block identifier (eg group or level), and RHS is
+          the group/level/block number or label."
+          ), tl[1L], footer = tl[2L]
         )
       }
       if (opi > 2L || all(tolower(formul1$elem.text[1]) !=
@@ -867,9 +850,9 @@ ldw_parse_model_string <- function(model.syntax = "", as.data.frame. = FALSE,
         tl <- ldw_txtloc(modelsrc, formul1$elem.pos[1])
         lav_msg_stop(
           gettext(
-		    "Invalid block identifier. The correct syntax is: \"LHS: RHS\",
-             where LHS is a block identifier (eg group or level), and RHS is
-             the group/level/block number or label."
+          "Invalid block identifier. The correct syntax is: \"LHS: RHS\",
+          where LHS is a block identifier (eg group or level), and RHS is
+          the group/level/block number or label."
           ),
           tl[1L], footer = tl[2L]
         )
@@ -894,7 +877,7 @@ ldw_parse_model_string <- function(model.syntax = "", as.data.frame. = FALSE,
       if (block.op) {
         block <- block + 1L
       } else {
-        if (flat.idx != 1 && warn == TRUE) {
+        if (flat.idx != 1) {
           tl <- ldw_txtloc(modelsrc, formul1$elem.pos[1])
           lav_msg_warn(
             gettext("First block defined after other formula's"),
@@ -932,7 +915,7 @@ ldw_parse_model_string <- function(model.syntax = "", as.data.frame. = FALSE,
     }
     if (formul1$elem.type[nelem] != types$identifier &&
         (formul1$elem.type[nelem] != types$numliteral ||
-	     all(op != c("~", "=~")))) {
+         all(op != c("~", "=~")))) {
       tl <- ldw_txtloc(modelsrc, formul1$elem.pos[nelem])
       lav_msg_stop(
         gettext("Last element of rhs part expected to be an identifier or,
@@ -976,11 +959,11 @@ ldw_parse_model_string <- function(model.syntax = "", as.data.frame. = FALSE,
       tl <- ldw_txtloc(modelsrc, formul1$elem.pos[colons[2]])
       lav_msg_stop(
         gettext(
-		  "Three-way or higher-order interaction terms (using multiple
-           colons) are not supported in the lavaan syntax; please manually
-           construct the product terms yourself in the data.frame, give
-           them an appropriate name, and then you can use these interaction
-           variables as any other (observed) variable in the model syntax."
+        "Three-way or higher-order interaction terms (using multiple
+         colons) are not supported in the lavaan syntax; please manually
+         construct the product terms yourself in the data.frame, give
+         them an appropriate name, and then you can use these interaction
+         variables as any other (observed) variable in the model syntax."
         ), tl[1L], footer = tl[2L]
       )
     }
@@ -1029,14 +1012,14 @@ ldw_parse_model_string <- function(model.syntax = "", as.data.frame. = FALSE,
       if (opi > 2 && rmei == 1L) {
         lhsmod <- ldw_parse_get_modifier(
           formul1,
-          TRUE, opi, modelsrc, types, debug, warn
+          TRUE, opi, modelsrc, types
         )
       }
       rhsmod <- list()
       if (nelem - opi > 1) {
         rhsmod <- ldw_parse_get_modifier(
           formul1,
-          FALSE, opi, modelsrc, types, debug, warn, rme, rmeprev
+          FALSE, opi, modelsrc, types, rme, rmeprev
         )
       }
       flat.fixed[idx] <- if (is.null(rhsmod$fixed)) {
@@ -1144,9 +1127,7 @@ ldw_parse_model_string <- function(model.syntax = "", as.data.frame. = FALSE,
     op.idx <- which(flat.op == ":")
     if (length(op.idx) < 2L) {
       # only 1 block identifier? this is weird -> give warning
-      if (warn == TRUE) {
-        lav_msg_warn(gettext("syntax contains only a single block identifier!"))
-      }
+      lav_msg_warn(gettext("syntax contains only a single block identifier!"))
     } else {
       first.block <- flat.lhs[op.idx[1L]]
       second.block <- flat.lhs[op.idx[2L]]

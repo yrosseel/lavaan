@@ -44,13 +44,12 @@ ctr_pml_plrt2 <- function(lavobject = NULL, lavmodel = NULL, lavdata = NULL,
 
   # FIXME: se="none", test="none"??
   Options <- lavoptions
-  Options$verbose <- FALSE
   Options$se <- "none"
   Options$test <- "none"
   Options$baseline <- FALSE
   Options$h1 <- FALSE
   fittedSat <- lavaan(ModelSat,
-    slotOptions = Options,
+    slotOptions = Options, verbose = FALSE,
     slotSampleStats = lavsamplestats,
     slotData = lavdata, slotCache = lavcache
   )
@@ -82,7 +81,7 @@ ctr_pml_plrt2 <- function(lavobject = NULL, lavmodel = NULL, lavdata = NULL,
   Options2$optim.method <- "none"
   Options2$optim.force.converged <- TRUE
   fittedSat2 <- lavaan(ModelSat2,
-    slotOptions = Options2,
+    slotOptions = Options2, verbose = FALSE,
     slotSampleStats = lavsamplestats,
     slotData = lavdata, slotCache = lavcache
   )

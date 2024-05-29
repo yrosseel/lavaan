@@ -24,7 +24,7 @@ lav_lavaan_step06_h1 <- function(sloth1 = NULL,
       if (length(lavsamplestats@ntotal) > 0L ||
 	      (!is.null(lavoptions$samplestats) && !lavoptions$samplestats)) {
 		  # lavsamplestats filled in
-        if (lavoptions$verbose) {
+        if (lav_verbose()) {
           cat("lavh1              ... start:\n")
         }
 
@@ -35,10 +35,10 @@ lav_lavaan_step06_h1 <- function(sloth1 = NULL,
           lavpartable = lavpartable,
           lavoptions = lavoptions
         )
-        if (lavoptions$debug) {
+        if (lav_debug()) {
           print(lavh1)
         }
-        if (lavoptions$verbose) {
+        if (lav_verbose()) {
           cat("lavh1              ... done.\n")
         }
       } else {

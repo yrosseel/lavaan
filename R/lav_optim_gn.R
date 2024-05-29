@@ -166,7 +166,6 @@ lav_optim_gn <- function(lavmodel = NULL, lavsamplestats = NULL,
   }
 
   # options
-  verbose <- lavoptions$verbose
   iter.max <- lavoptions$optim.gn.iter.max
   tol.x <- lavoptions$optim.gn.tol.x
   stephalf.max <- as.integer(lavoptions$optim.gn.stephalf.max)
@@ -190,7 +189,7 @@ lav_optim_gn <- function(lavmodel = NULL, lavsamplestats = NULL,
     U.invQ <- old.out$U.invQ
 
     # only the first time
-    if (verbose && iter == 1L) {
+    if (lav_verbose() && iter == 1L) {
       cat("iteration = ", sprintf("%2d", iter - 1L),
         ": objective = ", sprintf("%11.9f", old.obj), "\n",
         sep = ""
@@ -243,7 +242,7 @@ lav_optim_gn <- function(lavmodel = NULL, lavsamplestats = NULL,
     # TODO - if this fails, we need to recover somehow
     # negative steps:
     if (stephalf.max != 0L && h == stephalf.max) {
-      if (verbose) {
+      if (lav_verbose()) {
         cat(" -- step halving failed; function value may increase.\n")
       }
       # forcing step with alpha = 1
@@ -253,7 +252,7 @@ lav_optim_gn <- function(lavmodel = NULL, lavsamplestats = NULL,
     rms.x <- sqrt(mean((old.x - new.x) * (old.x - new.x)))
 
     # verbose?
-    if (verbose) {
+    if (lav_verbose()) {
       cat("iteration = ", sprintf("%2d", iter),
         ": objective = ", sprintf("%11.9f", new.obj),
         " alpha = ", sprintf("%6.5f", alpha),
@@ -267,7 +266,7 @@ lav_optim_gn <- function(lavmodel = NULL, lavsamplestats = NULL,
     if (rms.x < tol.x) {
       old.x <- new.x
       old.obj <- new.obj
-      if (verbose) {
+      if (lav_verbose()) {
         cat("Gauss-Newton algorithm converged: rms.x = ",
           sprintf("%12.12f", rms.x), " < ",
           sprintf("%12.12f", tol.x), "\n",

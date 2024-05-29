@@ -1,5 +1,5 @@
 computeSigmaHat <- function(lavmodel = NULL, GLIST = NULL, extra = FALSE,
-                            delta = TRUE, debug = FALSE) {
+                            delta = TRUE) {
   # state or final?
   if (is.null(GLIST)) GLIST <- lavmodel@GLIST
 
@@ -27,7 +27,7 @@ computeSigmaHat <- function(lavmodel = NULL, GLIST = NULL, extra = FALSE,
       lav_msg_stop(gettext(
         "only LISREL and RAM representation has been implemented for now"))
     }
-    if (debug) print(Sigma.hat[[g]])
+    if (lav_debug()) print(Sigma.hat[[g]])
 
     if (extra) {
       # check if matrix is positive definite
@@ -70,7 +70,7 @@ computeSigmaHat <- function(lavmodel = NULL, GLIST = NULL, extra = FALSE,
 ##     S21 = cov.x %*% t(PI)
 ##     S22 = cov.x
 computeSigmaHatJoint <- function(lavmodel = NULL, GLIST = NULL, extra = FALSE,
-                                 delta = TRUE, debug = FALSE) {
+                                 delta = TRUE) {
   stopifnot(lavmodel@conditional.x)
 
   # state or final?
@@ -104,7 +104,7 @@ computeSigmaHatJoint <- function(lavmodel = NULL, GLIST = NULL, extra = FALSE,
       lav_msg_stop(gettext(
         "only representation LISREL has been implemented for now"))
     }
-    if (debug) print(Sigma.hat[[g]])
+    if (lav_debug()) print(Sigma.hat[[g]])
 
     if (extra) {
       # check if matrix is positive definite

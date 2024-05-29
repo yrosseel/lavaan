@@ -1271,7 +1271,6 @@ lav_mvnorm_cluster_information_observed <- function(Lp = NULL,
 #
 lav_mvnorm_cluster_em_sat <- function(YLp = NULL,
                                       Lp = NULL,
-                                      verbose = TRUE,
                                       tol = 1e-04,
                                       max.iter = 5000,
                                       min.variance = 1e-05) {
@@ -1311,7 +1310,7 @@ lav_mvnorm_cluster_em_sat <- function(YLp = NULL,
   )
 
   # if verbose, report
-  if (verbose) {
+  if (lav_verbose()) {
     cat(
       "EM iter:", sprintf("%3d", 0),
       " fx =", sprintf("%17.10f", fx),
@@ -1399,7 +1398,7 @@ lav_mvnorm_cluster_em_sat <- function(YLp = NULL,
         "logl decreased during EM steps of the saturated (H1) model"))
     }
 
-    if (verbose) {
+    if (lav_verbose()) {
       cat(
         "EM iter:", sprintf("%3d", i),
         " fx =", sprintf("%17.10f", fx),
@@ -1430,7 +1429,6 @@ lav_mvnorm_cluster_em_h0 <- function(lavsamplestats = NULL,
                                      lavpartable = NULL,
                                      lavmodel = NULL,
                                      lavoptions = NULL,
-                                     verbose = FALSE,
                                      verbose.x = FALSE,
                                      fx.tol = 1e-08,
                                      dx.tol = 1e-05,
@@ -1468,7 +1466,7 @@ lav_mvnorm_cluster_em_h0 <- function(lavsamplestats = NULL,
   )
 
   # if verbose, report
-  if (verbose) {
+  if (lav_verbose()) {
     cat(
       "EM iter:", sprintf("%3d", 0),
       " fx =", sprintf("%17.10f", fx),
@@ -1593,7 +1591,7 @@ lav_mvnorm_cluster_em_h0 <- function(lavsamplestats = NULL,
     )
     max.dx <- max(abs(dx))
 
-    if (verbose) {
+    if (lav_verbose()) {
       cat(
         "EM iter:", sprintf("%3d", i),
         " fx =", sprintf("%17.10f", fx),
@@ -1609,7 +1607,7 @@ lav_mvnorm_cluster_em_h0 <- function(lavsamplestats = NULL,
 
     # stopping rule check
     if (fx.delta < fx.tol) {
-      if (verbose) {
+      if (lav_verbose()) {
         cat("EM stopping rule reached: fx.delta < ", fx.tol, "\n")
       }
       break
@@ -1623,7 +1621,7 @@ lav_mvnorm_cluster_em_h0 <- function(lavsamplestats = NULL,
 
     # second stopping rule check -- derivatives
     if (max.dx < dx.tol) {
-      if (verbose) {
+      if (lav_verbose()) {
         cat("EM stopping rule reached: max.dx < ", dx.tol, "\n")
       }
       break

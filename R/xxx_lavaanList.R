@@ -87,8 +87,6 @@ lavaanList <- function(model = NULL, # model
     # dotdotdotFIT$do.fit  <- TRUE    # to get starting values
     # dotdotdotFIT$se      <- "none"
     # dotdotdotFIT$test    <- "none"
-    # dotdotdotFIT$verbose <- FALSE
-    # dotdotdotFIT$debug   <- FALSE
 
     # initial model fit, using first dataset
     FIT <- do.call(cmd,

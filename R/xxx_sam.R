@@ -78,6 +78,30 @@ sam <- function(model = NULL,
                 # h1, anova, mean
                 global.options = list(), # not used for now
                 output = "lavaan") {
+  # ------------- handling of warn/debug/verbose switches ----------
+  dotdotdot <- list(...)
+  if (!is.null(dotdotdot$debug)) {
+    current.debug <- lav_debug()
+    if (lav_debug(dotdotdot$debug)) 
+      on.exit(lav_debug(current.debug), TRUE)
+    dotdotdot$debug <- NULL
+    if (lav_debug()) {
+      dotdotdot$warn <- TRUE       # force warnings if debug
+      dotdotdot$verbose <- TRUE    # force verbose if debug
+    }
+  }
+  if (!is.null(dotdotdot$warn)) {
+    current.warn <- lav_warn()
+    if (lav_warn(dotdotdot$warn)) 
+      on.exit(lav_warn(current.warn), TRUE)
+    dotdotdot$warn <- NULL
+  }
+  if (!is.null(dotdotdot$verbose)) {
+    current.verbose <- lav_verbose()
+    if (lav_verbose(dotdotdot$verbose)) 
+      on.exit(lav_verbose(current.verbose), TRUE)
+    dotdotdot$verbose <- NULL
+  }
   # output
   output <- tolower(output)
   if (output == "list" || output == "lavaan") {
@@ -92,9 +116,6 @@ sam <- function(model = NULL,
     lav_msg_stop(gettext(
       "se= argument must be twostep, bootstrap, naive, standard or none."))
   }
-
-  # handle dot dot dot
-  dotdotdot <- list(...)
 
   if (!is.null(dotdotdot$conditional.x)) {
     lav_msg_warn(gettext(
@@ -117,14 +138,14 @@ sam <- function(model = NULL,
   }
 
   lavoptions <- lavInspect(FIT, "options")
-  if (lavoptions$verbose) {
+  if (lav_verbose()) {
     cat("This is sam using sam.method = ", sam.method, ".\n", sep = "")
   }
 
   ##############################################
   # STEP 1: fit each measurement model (block) #
   ##############################################
-  if (lavoptions$verbose) {
+  if (lav_verbose()) {
     cat("Fitting the measurement part:\n")
   }
   STEP1 <- lav_sam_step1(
@@ -181,7 +202,7 @@ sam <- function(model = NULL,
   ################################################################
   # Step 3: assemble results in a 'dummy' JOINT model for output #
   ################################################################
-  if (lavoptions$verbose) {
+  if (lav_verbose()) {
     cat("Assembling results for output ... ")
   }
   JOINT <- lav_sam_step3_joint(
@@ -219,7 +240,7 @@ sam <- function(model = NULL,
     # be in place
   }
 
-  if (lavoptions$verbose) {
+  if (lav_verbose()) {
     cat("done.\n")
   }
 
@@ -264,7 +285,7 @@ sam <- function(model = NULL,
 
   # assemble pieces to assemble final lavaan object
   if (output == "lavaan") {
-    if (lavoptions$verbose) {
+    if (lav_verbose()) {
       cat("Assembling results for output ... ")
     }
     SAM <- lav_sam_table(
@@ -278,14 +299,14 @@ sam <- function(model = NULL,
     )
     res <- JOINT
     res@internal <- SAM
-    if (lavoptions$verbose) {
+    if (lav_verbose()) {
       cat("done.\n")
     }
   } else {
     res <- c(STEP1, STEP2, VCOV)
   }
 
-  if (lavoptions$verbose) {
+  if (lav_verbose()) {
     cat("End of sam.\n")
   }
 

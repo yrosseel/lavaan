@@ -23,7 +23,7 @@ lav_lavaan_step09_model <- function(slotModel = NULL, # nolint
   if (!is.null(slotModel)) {
     lavmodel <- slotModel
   } else {
-    if (lavoptions$verbose) {
+    if (lav_verbose()) {
       cat("lavmodel           ...")
     }
     lavmodel <- lav_model(
@@ -75,7 +75,7 @@ lav_lavaan_step09_model <- function(slotModel = NULL, # nolint
         }
       }
     }
-    if (lavoptions$verbose) {
+    if (lav_verbose()) {
       cat(" done.\n")
     }
   }

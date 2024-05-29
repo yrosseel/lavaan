@@ -84,7 +84,7 @@ lav_lavaan_step02_options <- function(slotOptions = NULL, # nolint
       lavoptions[dot.names[op.idx]] <- dotdotdot[op.idx]
     }
   } else {
-    if (!is.null(dotdotdot$verbose) && dotdotdot$verbose) {
+    if (lav_verbose()) {
       cat("lavoptions         ...")
     }
 
@@ -213,7 +213,7 @@ lav_lavaan_step02_options <- function(slotOptions = NULL, # nolint
     # fill in remaining "default" values
     lavoptions <- lav_options_set(opt)
 
-    if (lavoptions$verbose) {
+    if (lav_verbose()) {
       cat(" done.\n")
     }
   }
