@@ -687,6 +687,14 @@ print.lavaan.fitMeasures <- function(x, ..., nd = 3L, add.h0 = TRUE) {
       c3 <- c(c3, sprintf(num.format, x["chisq.scaling.factor"]))
     }
 
+    if (scaled.flag && "chisq.shift.parameter" %in% names.x) {
+      c1 <- c(c1, "Shift parameter", "")
+      c2 <- c(c2, "", "")
+      ## This is only provided by the fitMeasures() method for lavaan.mi-class
+      c3 <- c(c3, sprintf(num.format, x["chisq.shift.parameter"]),
+              "  simple second-order correction")
+    }
+    
     # format c1/c2/c3
     c1 <- format(c1, width = 35L)
     c2 <- format(c2, width = 16L + max(0, (nd - 3L)) * 4L, justify = "right")
