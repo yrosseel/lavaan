@@ -82,12 +82,15 @@ Model features (always available):
     \item{\code{parameterization}:}{Currently only used if data is 
       categorical. If \code{"delta"}, the delta parameterization is used. 
       If \code{"theta"}, the theta parameterization is used.}
-    \item{\code{correlation}:}{(Experimental/incomplete). Only used for 
+    \item{\code{correlation}:}{Only used for (single-level)
      continuous data. If \code{TRUE}, analyze a correlation matrix (instead
      of a (co)variance matrix). This implies that the residual observed
      variances are no longer free parameters. Instead, they are set to
      values to ensure the model-implied variances are unity. This also
-     affects the standard errors.}
+     affects the standard errors. The only available estimators are GLS and
+     WLS, which produce correct standard errors and a correct test statistic
+     under normal and non-normal conditions respectively. Always assuming
+     \code{fixed.x = FALSE} and \code{conditional.x = FALSE} (for now).}
 }
 
 Model features (only available for the \code{lavaan()} function):

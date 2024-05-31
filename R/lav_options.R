@@ -1041,6 +1041,14 @@ lav_options_set <- function(opt = NULL) {                     # nolint
 
   # correlation
   if (opt$correlation) {
+    # standardize
+    opt$std.ov <- TRUE
+	# if ML, switch to GLS
+	if(opt$estimator == "ml") {
+	  #lav_msg_warn(gettext(
+	  #        "GLS should be used for correlation structures instead of ML."))
+	  opt$estimator <- "gls"
+	}
     if (opt$missing == "ml") {
       lav_msg_stop(gettext(
         "correlation structures only work for complete data (for now)."))
@@ -1058,11 +1066,10 @@ lav_options_set <- function(opt = NULL) {                     # nolint
       lav_msg_stop(gettext(
         "correlation structures only work for representation = \"LISREL\"."))
     }
-    #if (opt$fixed.x) {
-    #  # first fix eliminate.pstar.idx in lav_mvnorm_information_expected()
-    #  lav_msg_stop(gettext(
-    #    "correlation structures only work for fixed.x = FALSE (for now)."))
-    #}
+    if (opt$fixed.x) {
+      lav_msg_stop(gettext(
+        "correlation structures only work for fixed.x = FALSE (for now)."))
+    }
   }
 
   # sample.cov.robust

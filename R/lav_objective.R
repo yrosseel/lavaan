@@ -109,12 +109,20 @@ estimator.REML <- function(Sigma.hat = NULL, Mu.hat = NULL,
 # 'classic' fitting function for GLS
 # used again since 0.6-10 (we used the much slower estimator.WLS before)
 estimator.GLS <- function(Sigma.hat = NULL, Mu.hat = NULL,
-                          data.cov = NULL, data.cov.inv = NULL, data.mean = NULL,
-                          meanstructure = FALSE) {
+                          data.cov = NULL, data.cov.inv = NULL,
+						  data.mean = NULL,
+                          meanstructure = FALSE, correlation = FALSE) {
   tmp <- data.cov.inv %*% (data.cov - Sigma.hat)
   # tmp is not perfectly symmetric, so we use t(tmp) on the next line
   # to obtain the same value as estimator.WLS
   fx <- 0.5 * sum(tmp * t(tmp))
+
+  if (correlation) {
+    # Bentler & Savalei (2010) eq 1.31
+    DD <- as.matrix(diag(tmp))
+    TT <- diag(nrow(data.cov)) + data.cov * data.cov.inv
+    fx <- fx - drop(t(DD) %*% solve(TT) %*% DD)
+  }
 
   if (meanstructure) {
     tmp2 <- sum(data.cov.inv * tcrossprod(data.mean - Mu.hat))

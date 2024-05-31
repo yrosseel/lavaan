@@ -22,7 +22,7 @@
 # YR 19 Jan 2017: added 6) + 7)
 # YR 04 Jan 2020: adjust for sum(wt) != N
 # YR 22 Jul 2022: adding correlation= argument for information_expected
-# YR 28 May 2024: adding correlation= argument to most functions
+#                 (only for catml; not used if correlation = TRUE!)
 
 # 1. log-likelihood h1
 
@@ -182,7 +182,6 @@ lav_mvnorm_h1_logl_hessian_data <- function(
     Y = NULL,
     wt = NULL,
     x.idx = integer(0L),
-    correlation = FALSE,
     Sinv.method = "eigen",
     sample.cov.inv = NULL,
     meanstructure = TRUE) {
@@ -196,7 +195,7 @@ lav_mvnorm_h1_logl_hessian_data <- function(
   # observed information
   observed <- lav_mvnorm_h1_information_observed_data(
     Y = Y, wt = wt,
-    x.idx = x.idx, correlation = correlation,
+    x.idx = x.idx,
 	Sinv.method = Sinv.method,
     sample.cov.inv = sample.cov.inv,
     meanstructure = meanstructure
@@ -211,7 +210,6 @@ lav_mvnorm_h1_logl_hessian_samplestats <- function(
     sample.cov = NULL,
     sample.nobs = NULL,
     x.idx = integer(0L),
-    correlation = FALSE,
     Sinv.method = "eigen",
     sample.cov.inv = NULL,
     meanstructure = TRUE) {
@@ -221,7 +219,7 @@ lav_mvnorm_h1_logl_hessian_samplestats <- function(
   # observed information
   observed <- lav_mvnorm_h1_information_observed_samplestats(
     sample.mean = sample.mean, sample.cov = sample.cov,
-    x.idx = x.idx, correlation = correlation,
+    x.idx = x.idx,
     Sinv.method = Sinv.method, sample.cov.inv = sample.cov.inv,
     meanstructure = meanstructure
   )
@@ -239,10 +237,10 @@ lav_mvnorm_h1_information_expected <- function(
     wt = NULL,
     sample.cov = NULL,
     x.idx = integer(0L),
-    correlation = FALSE,
     Sinv.method = "eigen",
     sample.cov.inv = NULL,
-    meanstructure = TRUE) {
+    meanstructure = TRUE,
+	correlation = FALSE) {
 
   if (is.null(sample.cov.inv)) {
     if (is.null(sample.cov)) {
@@ -263,19 +261,18 @@ lav_mvnorm_h1_information_expected <- function(
   }
 
   I11 <- sample.cov.inv
-  if (correlation) {
+  if(correlation) {
     I22 <- 0.5 * lav_matrix_duplication_cor_pre_post(sample.cov.inv %x%
-      sample.cov.inv)
+                                                     sample.cov.inv)
   } else {
     I22 <- 0.5 * lav_matrix_duplication_pre_post(sample.cov.inv %x%
-      sample.cov.inv)
+                                                   sample.cov.inv)
   }
 
   # fixed.x?
   if (length(x.idx) > 0L) {
     pstar.x <- lav_matrix_vech_which_idx(
-      n = NCOL(sample.cov.inv), idx = x.idx,
-      diagonal = !correlation
+      n = NCOL(sample.cov.inv), idx = x.idx
     )
     I22[pstar.x, ] <- 0
     I22[, pstar.x] <- 0
@@ -300,14 +297,13 @@ lav_mvnorm_h1_information_observed_data <- function(
     Y = NULL,
     wt = NULL,
     x.idx = integer(0L),
-    correlation = FALSE,
     Sinv.method = "eigen",
     sample.cov.inv = NULL,
     meanstructure = TRUE) {
 
   lav_mvnorm_h1_information_expected(
     Y = Y, Sinv.method = Sinv.method,
-    wt = wt, x.idx = x.idx, correlation = correlation,
+    wt = wt, x.idx = x.idx,
     sample.cov.inv = sample.cov.inv,
     meanstructure = meanstructure
   )
@@ -318,7 +314,6 @@ lav_mvnorm_h1_information_observed_samplestats <- function(
     sample.mean = NULL, # unused!
     sample.cov = NULL,
     x.idx = integer(0L),
-    correlation = FALSE,
     Sinv.method = "eigen",
     sample.cov.inv = NULL,
     meanstructure = TRUE) {
@@ -338,19 +333,13 @@ lav_mvnorm_h1_information_observed_samplestats <- function(
     I11[, x.idx] <- 0
   }
 
-  if (correlation) {
-    I22 <- 0.5 * lav_matrix_duplication_cor_pre_post(sample.cov.inv %x%
-      sample.cov.inv)
-  } else {
-    I22 <- 0.5 * lav_matrix_duplication_pre_post(sample.cov.inv %x%
-      sample.cov.inv)
-  }
+  I22 <- 0.5 * lav_matrix_duplication_pre_post(sample.cov.inv %x%
+    sample.cov.inv)
 
   # fixed.x?
   if (length(x.idx) > 0L) {
     pstar.x <- lav_matrix_vech_which_idx(
-      n = NCOL(sample.cov.inv),
-      idx = x.idx, diagonal = !correlation
+      n = NCOL(sample.cov.inv), idx = x.idx
     )
     I22[pstar.x, ] <- 0
     I22[, pstar.x] <- 0
@@ -373,7 +362,6 @@ lav_mvnorm_h1_information_firstorder <- function(
     wt = NULL,
     sample.cov = NULL,
     x.idx = integer(0L),
-    correlation = FALSE,
     cluster.idx = NULL,
     Sinv.method = "eigen",
     sample.cov.inv = NULL,
@@ -386,7 +374,6 @@ lav_mvnorm_h1_information_firstorder <- function(
       Y = Y, wt = wt,
       cluster.idx = cluster.idx,
       Mu = out$center, Sigma = out$cov, x.idx = x.idx,
-      correlation = correlation,
       meanstructure = meanstructure
     )
     return(res)
@@ -403,17 +390,6 @@ lav_mvnorm_h1_information_firstorder <- function(
       S = sample.cov,
       logdet = FALSE, Sinv.method = Sinv.method
     )
-  }
-
-  if (correlation) {
-    res <- lav_mvnorm_information_firstorder(
-      Y = Y, wt = wt,
-      cluster.idx = cluster.idx,
-      Mu = sample.mean, Sigma = sample.cov, x.idx = x.idx,
-      correlation = correlation,
-      meanstructure = meanstructure, Sigma.inv = sample.cov.inv
-    )
-    return(res)
   }
 
   # question: is there any benefit computing Gamma/A1 instead of just
@@ -472,17 +448,7 @@ lav_mvnorm_h1_inverted_information_observed <- function(
   Y = NULL,
   wt = NULL,
   sample.cov = NULL,
-  x.idx = integer(0L),
-  correlation = FALSE) {
-
-  if (correlation) {
-    info <- lav_mvnorm_h1_information_expected(
-      Y = Y, wt = wt, sample.cov = sample.cov, x.idx = x.idx,
-      correlation = TRUE, meanstructure = TRUE
-    )
-    res <- solve(info)
-    return(res)
-  }
+  x.idx = integer(0L)) {
 
   # sample.cov
   if (is.null(sample.cov)) {
@@ -520,19 +486,9 @@ lav_mvnorm_h1_inverted_information_firstorder <- function(
     wt = NULL,
     sample.cov = NULL,
     x.idx = integer(0L),
-    correlation = FALSE,
     Sinv.method = "eigen",
     sample.cov.inv = NULL,
     Gamma = NULL) {
-
-  if (correlation) {
-    info <- lav_mvnorm_h1_information_firstorder(
-      Y = Y, wt = wt, sample.cov = sample.cov, x.idx = x.idx,
-      correlation = TRUE, meanstructure = TRUE
-    )
-    res <- solve(info)
-    return(res)
-  }
 
   # lav_samplestats_Gamma() has no wt argument (yet)
   if (!is.null(wt)) {
@@ -570,7 +526,7 @@ lav_mvnorm_h1_inverted_information_firstorder <- function(
 }
 
 
-# 7) ACOV h1 mu + vech(Sigma) (no support for correlation = TRUE!) (not used?)
+# 7) ACOV h1 mu + vech(Sigma) (not used?)
 
 #    7a: 1/N * Gamma.NT
 #    7b: 1/N * Gamma.NT

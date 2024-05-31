@@ -204,7 +204,7 @@ lav_model_objective <- function(lavmodel = NULL,
       }
 
 
-      ### GLS #### (0.6-10: nog using WLS function any longer)
+      ### GLS #### (0.6-10: not using WLS function any longer)
     } else if (estimator == "GLS") {
       group.fx <- estimator.GLS(
         Sigma.hat        = Sigma.hat[[g]],
@@ -212,7 +212,8 @@ lav_model_objective <- function(lavmodel = NULL,
         data.cov         = lavsamplestats@cov[[g]],
         data.cov.inv     = lavsamplestats@icov[[g]],
         data.mean        = lavsamplestats@mean[[g]],
-        meanstructure    = meanstructure
+        meanstructure    = meanstructure,
+		correlation      = correlation
       )
     } else if (estimator == "WLS" ||
       estimator == "DLS" ||

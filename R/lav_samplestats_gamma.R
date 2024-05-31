@@ -12,6 +12,7 @@
 
 # - YR  3 Dec 2015: allow for conditional.x = TRUE
 # - YR 22 Jan 2023: add model.based= argument (if object is lavaan object)
+# - YR 30 May 2024: add lav_samplestats_cor_Gamma(_NT)
 
 # generic public function (not exported yet)
 # input for lavGamma can be lavobject, lavdata, data.frame, or matrix
@@ -737,6 +738,143 @@ lav_samplestats_Gamma <- function(Y, # Y+X if cond!
       Gamma <- Gamma.u
     }
   } # unbiased
+
+  Gamma
+}
+
+# ADF Gamma for correlations
+#
+# 30 May 2024: basic version: fixed.x=FALSE, conditional.x=FALSE, ...
+lav_samplestats_cor_Gamma <- function(Y, meanstructure = FALSE) {
+
+  # coerce to matrix
+  Y <- unname(as.matrix(Y))
+  N <- nrow(Y)
+  P <- ncol(Y)
+
+  # compute S and R
+  S <- cov(Y) * (N - 1) / N
+  R <- cov2cor(S)
+
+  # create z-scores
+  SD <- sqrt(diag(S))
+  Yz <- t( (t(Y) - colMeans(Y))/SD )
+
+  # create squared z-scores
+  Yz2 <- Yz*Yz
+
+  # find indices so we avoid 1) double subscripts (diagonal!), and
+  #                          2) duplicated subscripts (symmetric!)
+  idx1 <- lav_matrix_vech_col_idx(P, diagonal = FALSE)
+  idx2 <- lav_matrix_vech_row_idx(P, diagonal = FALSE)
+
+  ZR1 <- (Yz[, idx1, drop = FALSE] * Yz[, idx2, drop = FALSE])
+  ZR2 <- (Yz2[, idx1, drop = FALSE] + Yz2[, idx2, drop = FALSE])
+  ZR2 <- t( t(ZR2) * lav_matrix_vech(R, diagonal = FALSE) )
+  ZRR <- ZR1 - 0.5*ZR2
+  if(meanstructure) {
+      ZRR <- cbind(Yz, ZRR)
+  }
+  Gamma <- crossprod(ZRR)/N
+
+  Gamma
+}
+
+# normal theory version
+# 30 May 2024: basic version: fixed.x=FALSE, conditional.x=FALSE, ...
+lav_samplestats_cor_Gamma_NT <- function(Y = NULL,
+                                         wt = NULL,
+                                         COV = NULL, # joint!
+                                         MEAN = NULL, # joint!
+                                         rescale = FALSE,
+                                         x.idx = integer(0L),
+                                         fixed.x = FALSE,
+                                         conditional.x = FALSE,
+                                         meanstructure = FALSE,
+                                         slopestructure = FALSE) {
+  # check arguments
+  if (length(x.idx) == 0L) {
+    conditional.x <- FALSE
+    fixed.x <- FALSE
+  } else {
+    lav_msg_stop(gettext("x.idx not supported (yet) for correlations; use
+                          fixed.x = FALSE (for now)"))
+  }
+  if(conditional.x) {
+    lav_msg_stop(gettext("conditional.x = TRUE not supported (yet) for
+                          correlations"))
+  }
+
+  # compute COV from Y
+  if (is.null(COV)) {
+    stopifnot(!is.null(Y))
+
+    # coerce to matrix
+    Y <- unname(as.matrix(Y))
+    N <- nrow(Y)
+    if (is.null(wt)) {
+      COV <- cov(Y)
+      if (rescale) {
+        COV <- COV * (N - 1) / N # (normal) ML version
+      }
+    } else {
+      out <- stats::cov.wt(Y, wt = wt, method = "ML")
+      COV <- out$cov
+    }
+  } else {
+    if (!missing(rescale)) {
+      lav_msg_warn(gettext("rescale= argument has no effect if COV is given"))
+    }
+    if (!missing(wt)) {
+      lav_msg_warn(gettext("wt= argument has no effect if COV is given"))
+    }
+  }
+
+  # if needed, compute MEAN from Y
+  if (conditional.x && length(x.idx) > 0L && is.null(MEAN) &&
+    (meanstructure || slopestructure)) {
+    stopifnot(!is.null(Y))
+    if (is.null(wt)) {
+      MEAN <- colMeans(Y, na.rm = TRUE)
+    } else {
+      MEAN <- out$center
+    }
+  }
+
+  # rename
+  S <- COV
+  R <- cov2cor(S)
+  M <- MEAN
+  P <- nrow(S)
+
+  # unconditional
+  if (!conditional.x) {
+    # unconditional - stochastic x
+    if (!fixed.x) {
+      IP <- diag(P) %x% R
+      RR <- R %x% R
+      Gamma.Z.NT <- RR + lav_matrix_commutation_pre(RR)
+      tmp <- (IP + lav_matrix_commutation_pre(IP))/2
+      zero.idx <- seq_len(P*P)[-lav_matrix_diag_idx(P)]
+      tmp[, zero.idx] <- 0
+      A <- -tmp
+      diag(A) <- 1 - diag(tmp)
+      Gamma.NT.big <- A %*% Gamma.Z.NT %*% t(A)
+      r.idx <- lav_matrix_vech_idx(P, diagonal = FALSE)
+      Gamma <- Gamma.NT.big[r.idx, r.idx]
+
+      if (meanstructure) {
+        Gamma <- lav_matrix_bdiag(R, Gamma)
+      }
+
+      # unconditional - fixed x
+    } else {
+      # TODO
+    }
+  } else {
+    # conditional.x
+    # TODO
+  }
 
   Gamma
 }

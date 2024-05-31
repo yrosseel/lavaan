@@ -210,12 +210,6 @@ lav_model_information_expected_MLM <- function(lavmodel = NULL,
     Delta <- computeDelta(lavmodel = lavmodel)
   }
 
-  # correlation
-  correlation.flag <- FALSE
-  if (.hasSlot(lavmodel, "correlation")) {
-    correlation.flag <- lavmodel@correlation
-  }
-
   # compute A1
   A1 <- vector("list", length = lavsamplestats@ngroups)
   if (lavmodel@group.w.free) {
@@ -225,8 +219,7 @@ lav_model_information_expected_MLM <- function(lavmodel = NULL,
     A1[[g]] <- lav_mvnorm_h1_information_expected(
       sample.cov     = lavsamplestats@cov[[g]],
       sample.cov.inv = lavsamplestats@icov[[g]],
-      x.idx          = lavsamplestats@x.idx[[g]],
-      correlation    = correlation.flag
+      x.idx          = lavsamplestats@x.idx[[g]]
     )
     # the same as GLS... (except for the N/N-1 scaling)
     if (lavmodel@group.w.free) {
