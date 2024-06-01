@@ -135,22 +135,40 @@ lav_mvnorm_cluster_2l2implied <- function(Lp,
     mu.w <- mu.w.tilde[ov.idx[[1]]]
   }
 
-  Mu.W.tilde <- numeric(p.tilde)
-  ########## DEBUG ##############
-  # if(length(within.idx) > 0) {
-  Mu.W.tilde[ov.idx[[1]]] <- mu.w
+  # new in 0.6-18: ensure mu.w[both.idx] is zero?
+  # NO: we get Hessian is not fully symmetric again!!
+  # only do this at the very end (post-estimation)
+
+  # Mu.W.tilde <- numeric(p.tilde)
+  # Mu.B.tilde <- numeric(p.tilde)
+  # Mu.W.tilde[ov.idx[[1]]] <- mu.w
+  # Mu.B.tilde[ov.idx[[2]]] <- mu.b
+  # Mu.B.tilde[between.idx] <- mu.z
+  # if (length(within.idx) > 0) {
+  #   Mu.B.tilde[within.idx] <- 0
   # }
-  ###############################
-  Mu.W <- Mu.W.tilde[ov.idx[[1]]]
+  # Mu.B.tilde[both.idx] <- Mu.W.tilde[both.idx] + Mu.B.tilde[both.idx]
+  # Mu.W.tilde[both.idx] <- 0
+  # Mu.W <- Mu.W.tilde[ov.idx[[1]]]
+  # Mu.B <- Mu.B.tilde[ov.idx[[2]]]
+
+  Mu.W.tilde <- numeric( p.tilde )
+  ###### DEBUG ##############
+  #if(length(within.idx) > 0) {
+      Mu.W.tilde[ ov.idx[[1]] ] <- mu.w
+  #}
+  ###########################
+  Mu.W <- Mu.W.tilde[ ov.idx[[1]] ]
 
   # Mu.B
   Mu.B.tilde <- numeric(p.tilde)
-  Mu.B.tilde[ov.idx[[1]]] <- mu.b
-  Mu.B.tilde[between.idx] <- mu.z
-  if (length(within.idx) > 0) {
-    Mu.B.tilde[within.idx] <- 0
+  Mu.B.tilde[ ov.idx[[1]] ] <- mu.b
+  Mu.B.tilde[ between.idx ] <- mu.z
+  if(length(within.idx) > 0) {
+      Mu.B.tilde[within.idx] <- 0
   }
-  Mu.B <- Mu.B.tilde[ov.idx[[2]]]
+  Mu.B <- Mu.B.tilde[ ov.idx[[2]] ]
+
 
   # Sigma.W
   Sigma.W <- sigma.w

@@ -172,6 +172,12 @@ lav_h1_implied_logl <- function(lavdata = NULL,
         )
       }
 
+	  # new in 0.6-18: ensure Mu.W[both.idx] is zero (post-estimation!)
+	  both.idx <- lavdata@Lp[[g]]$both.idx[[2]]
+	  tmp <- OUT$Mu.W[both.idx] + OUT$Mu.B[both.idx]
+	  OUT$Mu.W[both.idx] <- 0
+	  OUT$Mu.B[both.idx]<- tmp[both.idx]
+
       # store in implied
       implied$cov[[(g - 1) * nlevels + 1L]] <- OUT$Sigma.W
       implied$cov[[(g - 1) * nlevels + 2L]] <- OUT$Sigma.B
