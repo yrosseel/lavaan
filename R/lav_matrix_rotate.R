@@ -4,6 +4,8 @@
 # YR 21 April 2019 -- pairwise rotation algorithm
 # YR 11 May   2020 -- order.idx is done in rotation matrix
 #                     (suggested by Florian Scharf)
+# YR 02 June  2024 -- add group argument, so target and target.mask can
+#                     be a list
 
 # main function to rotate a single matrix 'A'
 lav_matrix_rotate <- function(A = NULL, # original matrix
@@ -30,7 +32,8 @@ lav_matrix_rotate <- function(A = NULL, # original matrix
                               gpa.tol = 0.00001, # stopping tol gpa
                               tol = 1e-07, # stopping tol others
                               keep.rep = FALSE, # store replications
-                              max.iter = 10000L) { # max gpa iterations
+                              max.iter = 10000L, # max gpa iterations
+							  group = 1L) { # group number
 
   # check A
   if (!inherits(A, "matrix")) {
@@ -116,6 +119,9 @@ lav_matrix_rotate <- function(A = NULL, # original matrix
   # if target, check target matrix
   if (method == "target" || method == "pst") {
     target <- method.args$target
+	if (is.list(target)) {
+	  method.args$target <- target <- target[[group]]
+	}
     # check dimension of target/A
     if (nrow(target) != nrow(A)) {
       lav_msg_stop(gettext("nrow(target) != nrow(A)"))
@@ -126,6 +132,9 @@ lav_matrix_rotate <- function(A = NULL, # original matrix
   }
   if (method == "pst") {
     target.mask <- method.args$target.mask
+	if (is.list(target.mask)) {
+	  method.args$target.mask <- target.mask <- target.mask[[group]]
+	}
     # check dimension of target.mask/A
     if (nrow(target.mask) != nrow(A)) {
       lav_msg_stop(gettext("nrow(target.mask) != nrow(A)"))
@@ -142,7 +151,6 @@ lav_matrix_rotate <- function(A = NULL, # original matrix
     target.mask[is.na(target)] <- 0
     method.args$target.mask <- target.mask
   }
-
 
   # set orthogonal option
   if (missing(orthogonal)) {

@@ -994,25 +994,72 @@ lav_options_set <- function(opt = NULL) {                     # nolint
   # if target, check target matrix, and set order.lv.by to = "none"
   if (opt$rotation == "target" || opt$rotation == "pst") {
     target <- opt$rotation.args$target
-    if (is.null(target) || !is.matrix(target)) {
-      lav_msg_stop(gettext("rotation target matrix is NULL, or not a matrix"))
+    if (is.null(target)) {
+      lav_msg_stop(gettext("rotation target matrix is NULL"))
+    }
+    if (is.list(target)) {
+      if (!all(sapply(target, is.matrix))) {
+        lav_msg_stop(gettext("the target list contains
+                              elements that are not a matrix"))
+      }
+    } else if (!is.matrix(target)) {
+      lav_msg_stop(gettext("rotation target matrix is not a matrix"))
     }
 	opt$rotation.args$order.lv.by <- "none"
   }
+
   if (opt$rotation == "pst") {
     target.mask <- opt$rotation.args$target.mask
-    if (is.null(target.mask) || !is.matrix(target.mask)) {
-      lav_msg_stop(gettext(
-        "rotation target.mask matrix is NULL, or not a matrix"
-      ))
+    if (is.null(target.mask)) {
+      lav_msg_stop(gettext("rotation target.mask matrix is NULL"))
+    }
+    if (is.list(target.mask)) {
+      if (!all(sapply(target.mask, is.matrix))) {
+        lav_msg_stop(gettext("the target.mask list contains
+                              elements that are not a matrix"))
+      }
+    } else if (!is.matrix(target.mask)) {
+      lav_msg_stop(gettext("rotation target.mask matrix is not a matrix"))
+    }
+    if (is.list(target) && !is.list(target.mask)) {
+      lav_msg_stop(gettext("target is a list, but target.mask is not a list"))
+    }
+    if (is.list(target.mask) && !is.list(target)) {
+      lav_msg_stop(gettext("target.mask is a list, but target is not a list"))
+    }
+    if (is.list(target) && is.list(target.mask)) {
+      if (length(target) != length(target.mask)) {
+        lav_msg_stop(gettext("length(target) != length(target.mask)"))
+      }
     }
   }
+
   # if NAs, force opt$rotation to be 'pst' and create target.mask
-  if (opt$rotation == "target" && anyNA(target)) {
-    opt$rotation <- "pst"
-    target.mask <- matrix(1, nrow = nrow(target), ncol = ncol(target))
-    target.mask[is.na(target)] <- 0
-    opt$rotation.args$target.mask <- target.mask
+  if (opt$rotation == "target") {
+    # matrix
+    if (is.matrix(target) && anyNA(target)) {
+      opt$rotation <- "pst"
+      target.mask <- matrix(1, nrow = nrow(target), ncol = ncol(target))
+      target.mask[is.na(target)] <- 0
+      opt$rotation.args$target.mask <- target.mask
+
+    # list
+    } else if (is.list(target)) {
+      ngroups <- length(target)
+      for (g in seq_len(ngroups)) {
+        if (anyNA(target[[g]])) {
+		  # is target.mask just a <0 x 0 matrix>? create list!
+		  if (is.matrix(opt$rotation.args$target.mask)) {
+		    opt$rotation.args$target.mask <- vector("list", length = ngroups)
+		  }
+          opt$rotation <- "pst"
+          target.mask <- matrix(1, nrow = nrow(target[[g]]),
+                                   ncol = ncol(target[[g]]))
+          target.mask[is.na(target[[g]])] <- 0
+          opt$rotation.args$target.mask[[g]] <- target.mask
+        }
+      }
+    }
   }
 
   # set row.weights

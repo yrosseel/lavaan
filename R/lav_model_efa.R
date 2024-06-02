@@ -159,7 +159,8 @@ lav_model_efa_rotate_x <- function(x, lavmodel = NULL, lavoptions = NULL,
         order.lv.by = ropts$order.lv.by,
         gpa.tol = ropts$gpa.tol,
         tol = ropts$tol,
-        max.iter = ropts$max.iter
+        max.iter = ropts$max.iter,
+		group = g
       )
 
       # extract rotation matrix (note, in Asp & Muthen, 2009; this is H')
@@ -243,6 +244,25 @@ lav_model_efa_rotate_border_x <- function(x, lavmodel = NULL,
 
   # per group (not per block)
   for (g in seq_len(lavmodel@ngroups)) {
+
+    # group-specific method.args
+	this.method.args <- method.args
+
+	# set group-specific target/target.mask (if needed)
+    # if target, check target matrix
+    if (method == "target" || method == "pst") {
+      target <- method.args$target
+      if (is.list(target)) {
+        this.method.args$target <- target[[g]]
+      }
+    }
+    if (method == "pst") {
+      target.mask <- method.args$target.mask
+      if (is.list(target.mask)) {
+        this.method.args$target.mask <- target.mask[[g]]
+      }
+    }
+
     # select model matrices for this group
     mm.in.group <- seq_len(lavmodel@nmat[g]) + cumsum(c(0, lavmodel@nmat))[g]
     MLIST <- GLIST[mm.in.group]
@@ -318,7 +338,7 @@ lav_model_efa_rotate_border_x <- function(x, lavmodel = NULL,
         "cf-parsimax", "cf-facparsim"
       )) {
         method.fname <- "lav_matrix_rotate_cf"
-        method.args$cf.gamma <- switch(method,
+        this.method.args$cf.gamma <- switch(method,
           "cf-quartimax" = 0,
           "cf-varimax"   = 1 / P,
           "cf-equamax"   = M / (2 * P),
@@ -357,7 +377,7 @@ lav_model_efa_rotate_border_x <- function(x, lavmodel = NULL,
       # evaluate rotation criterion, extract GRAD
       Q <- do.call(
         method.fname,
-        c(list(LAMBDA = A), method.args, list(grad = TRUE))
+        c(list(LAMBDA = A), this.method.args, list(grad = TRUE))
       )
       Gq <- attr(Q, "grad")
       attr(Q, "grad") <- NULL

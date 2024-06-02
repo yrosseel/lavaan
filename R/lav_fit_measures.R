@@ -685,7 +685,7 @@ print.lavaan.fitMeasures <- function(x, ..., nd = 3L, add.h0 = TRUE) {
       c1 <- c(c1, "Average scaling correction factor")
       c2 <- c(c2, "")
       c3 <- c(c3, sprintf(num.format, x["chisq.scaling.factor"]))
-      
+
       ## check for shift parameter
       chisq.shift.parameter <- attr(attr(x, "header"), "shift")
       if (!is.null(chisq.shift.parameter)) {
@@ -710,13 +710,13 @@ print.lavaan.fitMeasures <- function(x, ..., nd = 3L, add.h0 = TRUE) {
       c1 <- c(c1, "Pooling method")
       c2 <- c(c2, pool.method)
       c3 <- c(c3, "")
-      
+
       ## (conditionally for D2 method) add other pooling information
       if (scaled.flag) {
         c1 <- c(c1, "  Pooled statistic")
         c2 <- c(c2, ifelse(pool.robust, dQuote(scaled.test), dQuote(standard.test)))
         c3 <- c(c3, "")
-        
+
         if (pool.robust && pool.method == "D2") {
           c1 <- c(c1, paste0("  ", dQuote(scaled.test), " correction applied"))
           c2 <- c(c2, "BEFORE")
@@ -726,10 +726,10 @@ print.lavaan.fitMeasures <- function(x, ..., nd = 3L, add.h0 = TRUE) {
           c2 <- c(c2, "AFTER")
           c3 <- c(c3, "pooling")
         }
-        
+
       }
     }
-    
+
     # format c1/c2/c3
     c1 <- format(c1, width = 35L)
     c2 <- format(c2, width = 16L + max(0, (nd - 3L)) * 4L, justify = "right")
