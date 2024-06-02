@@ -682,11 +682,54 @@ print.lavaan.fitMeasures <- function(x, ..., nd = 3L, add.h0 = TRUE) {
     ))
 
     if (scaled.flag && "chisq.scaling.factor" %in% names.x) {
-      c1 <- c(c1, "Scaling correction factor")
+      c1 <- c(c1, "Average scaling correction factor")
       c2 <- c(c2, "")
       c3 <- c(c3, sprintf(num.format, x["chisq.scaling.factor"]))
+      
+      ## check for shift parameter
+      chisq.shift.parameter <- attr(attr(x, "header"), "shift")
+      if (!is.null(chisq.shift.parameter)) {
+        c1 <- c(c1, "Average shift parameter",
+                "  simple second-order correction")
+        c2 <- c(c2, "", "")
+        ## This is only provided by the fitMeasures() method for lavaan.mi-class
+        c3 <- c(c3, sprintf(num.format, chisq.shift.parameter),
+                "")
+      }
     }
 
+    # check for lavaan.mi attributes "pool.method" and "pool.robust"
+    if (!is.null(attr(x, "pool.method"))) {
+      ## extract information from lavaan.mi object about
+      ## the method used to pool the test statistic
+      pool.method   <- attr(     x           , "pool.method")
+      pool.robust   <- attr(     x           , "pool.robust")
+      standard.test <- attr(attr(x, "header"), "standard.test")
+      scaled.test   <- attr(attr(x, "header"),   "scaled.test")
+
+      c1 <- c(c1, "Pooling method")
+      c2 <- c(c2, pool.method)
+      c3 <- c(c3, "")
+      
+      ## (conditionally for D2 method) add other pooling information
+      if (scaled.flag) {
+        c1 <- c(c1, "  Pooled statistic")
+        c2 <- c(c2, ifelse(pool.robust, dQuote(scaled.test), dQuote(standard.test)))
+        c3 <- c(c3, "")
+        
+        if (pool.robust && pool.method == "D2") {
+          c1 <- c(c1, paste0("  ", dQuote(scaled.test), " correction applied"))
+          c2 <- c(c2, "BEFORE")
+          c3 <- c(c3, "pooling")
+        } else {
+          c1 <- c(c1, paste0("  ", dQuote(scaled.test), " correction applied"))
+          c2 <- c(c2, "AFTER")
+          c3 <- c(c3, "pooling")
+        }
+        
+      }
+    }
+    
     # format c1/c2/c3
     c1 <- format(c1, width = 35L)
     c2 <- format(c2, width = 16L + max(0, (nd - 3L)) * 4L, justify = "right")
