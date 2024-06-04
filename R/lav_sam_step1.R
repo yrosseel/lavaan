@@ -449,7 +449,11 @@ lav_sam_step1_local <- function(STEP1 = NULL, FIT = NULL,
     STEP1$DELTA <- DELTA
   }
 
-  VETA <- vector("list", nblocks)
+  VETA   <- vector("list", nblocks)
+  MSM..  <- vector("list", nblocks)
+  MTM..  <- vector("list", nblocks)
+  COV..  <- vector("list", nblocks)
+  YBAR.. <- vector("list", nblocks)
   REL <- vector("list", nblocks)
   alpha <- vector("list", nblocks)
   lambda <- vector("list", nblocks)
@@ -570,6 +574,9 @@ lav_sam_step1_local <- function(STEP1 = NULL, FIT = NULL,
       }
     }
 
+	COV..[[b]] <- COV
+	YBAR..[[b]] <- YBAR
+
     # compute mapping matrix 'M'
     this.lambda <- LAMBDA[[b]]
     if (length(lavpta$vidx$lv.interaction[[b]]) > 0L) {
@@ -624,6 +631,8 @@ lav_sam_step1_local <- function(STEP1 = NULL, FIT = NULL,
       VETA[[b]] <- tmp[, , drop = FALSE] # drop attributes
       alpha[[b]] <- attr(tmp, "alpha")
       lambda[[b]] <- attr(tmp, "lambda")
+	  MSM..[[b]] <- attr(tmp, "MSM")
+	  MTM..[[b]] <- attr(tmp, "MTM")
     } else {
       # FSR -- no correction
       VETA[[b]] <- Mb %*% COV %*% t(Mb)
@@ -685,6 +694,8 @@ lav_sam_step1_local <- function(STEP1 = NULL, FIT = NULL,
         VETA[[b]] <- tmp[, , drop = FALSE] # drop attributes
         alpha[[b]] <- attr(tmp, "alpha")
         lambda[[b]] <- attr(tmp, "lambda")
+        MSM..[[b]] <- attr(tmp, "MSM")
+        MTM..[[b]] <- attr(tmp, "MTM")
       } else {
         lav_msg_fixme("not ready yet!")
         # FSR -- no correction
@@ -701,18 +712,26 @@ lav_sam_step1_local <- function(STEP1 = NULL, FIT = NULL,
 
   # label blocks
   if (nblocks > 1L) {
-    names(EETA) <- FIT@Data@block.label
-    names(VETA) <- FIT@Data@block.label
-    names(REL) <- FIT@Data@block.label
+    names(EETA)   <- FIT@Data@block.label
+    names(VETA)   <- FIT@Data@block.label
+    names(REL)    <- FIT@Data@block.label
+	names(MSM..)  <- FIT@Data@block.label
+	names(MTM..)  <- FIT@Data@block.label
+	names(COV..)  <- FIT@Data@block.label
+	names(YBAR..) <- FIT@Data@block.label
   }
 
   # store EETA/VETA/M/alpha/lambda
-  STEP1$VETA <- VETA
-  STEP1$EETA <- EETA
-  STEP1$REL <- REL
-  STEP1$M <- M
+  STEP1$VETA   <- VETA
+  STEP1$EETA   <- EETA
+  STEP1$REL    <- REL
+  STEP1$M      <- M
   STEP1$lambda <- lambda
-  STEP1$alpha <- alpha
+  STEP1$alpha  <- alpha
+  STEP1$MSM    <- MSM..
+  STEP1$MTM    <- MTM..
+  STEP1$COV    <- COV..
+  STEP1$YBAR   <- YBAR..
 
   if (lav_verbose()) {
     cat("done.\n")

@@ -196,11 +196,10 @@ ldw_parse_step1 <- function(modelsrc, types) {
 
   numliterals <- gregexpr(
     "([ \n][-+][.0-9]|[ \n]\\.[0-9]|[ \n][0-9])[-+\\.0-9eE]*",
-    modelsrcw
+    paste0(" ",modelsrcw)
   )[[1]]
   if (numliterals[1L] > -1L) {
     numliteral.lengths <- attr(numliterals, "match.length") - 1L
-    numliterals <- numliterals + 1L
     for (i in seq_along(numliterals)) {
       pfpos <- numliterals[i]
       pflen <- numliteral.lengths[i]

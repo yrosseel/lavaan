@@ -303,6 +303,8 @@ lav_sam_veta <- function(M = NULL, S = NULL, THETA = NULL,
   if (extra) {
     attr(VETA, "lambda") <- lambda
     attr(VETA, "alpha") <- alpha
+	attr(VETA, "MSM") <- MSM
+	attr(VETA, "MTM") <- MTM
   }
 
   VETA
@@ -442,6 +444,8 @@ lav_sam_veta2 <- function(FS = NULL, M = NULL,
   if (extra) {
     attr(VETA2, "lambda") <- lambda
     attr(VETA2, "alpha") <- alpha
+    attr(VETA2, "MSM") <- Var.FS2
+    attr(VETA2, "MTM") <- Var.ERROR
   }
 
   VETA2
