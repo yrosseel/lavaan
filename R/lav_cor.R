@@ -157,7 +157,6 @@ lavCor <- function(object,
         # sampling.weights.normalization = sampling.weights.normalization,
         group.w.free = FALSE,
         missing = missing,
-        correlation = categorical,
         estimator = estimator,
         mimic = mimic
       ),
