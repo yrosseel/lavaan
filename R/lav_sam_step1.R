@@ -454,6 +454,7 @@ lav_sam_step1_local <- function(STEP1 = NULL, FIT = NULL,
   MTM..  <- vector("list", nblocks)
   COV..  <- vector("list", nblocks)
   YBAR.. <- vector("list", nblocks)
+  FS.mean <- vector("list", nblocks)
   REL <- vector("list", nblocks)
   alpha <- vector("list", nblocks)
   lambda <- vector("list", nblocks)
@@ -616,6 +617,7 @@ lav_sam_step1_local <- function(STEP1 = NULL, FIT = NULL,
     # compute EETA
     if (lavoptions$meanstructure) {
       EETA[[b]] <- lav_sam_eeta(M = Mb, YBAR = YBAR, NU = NU[[b]])
+	  FS.mean[[b]] <- EETA[[b]] # ok if no interaction
     }
 
     # compute VETA
@@ -696,6 +698,7 @@ lav_sam_step1_local <- function(STEP1 = NULL, FIT = NULL,
         lambda[[b]] <- attr(tmp, "lambda")
         MSM..[[b]] <- attr(tmp, "MSM")
         MTM..[[b]] <- attr(tmp, "MTM")
+		FS.mean[[b]] <- attr(tmp, "FS.mean")
       } else {
         lav_msg_fixme("not ready yet!")
         # FSR -- no correction
@@ -719,6 +722,7 @@ lav_sam_step1_local <- function(STEP1 = NULL, FIT = NULL,
 	names(MTM..)  <- FIT@Data@block.label
 	names(COV..)  <- FIT@Data@block.label
 	names(YBAR..) <- FIT@Data@block.label
+	names(FS.mean)<- FIT@Data@block.label
   }
 
   # store EETA/VETA/M/alpha/lambda
@@ -732,6 +736,7 @@ lav_sam_step1_local <- function(STEP1 = NULL, FIT = NULL,
   STEP1$MTM    <- MTM..
   STEP1$COV    <- COV..
   STEP1$YBAR   <- YBAR..
+  STEP1$FS.mean<- FS.mean
 
   if (lav_verbose()) {
     cat("done.\n")

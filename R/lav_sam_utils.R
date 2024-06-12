@@ -401,6 +401,9 @@ lav_sam_veta2 <- function(FS = NULL, M = NULL,
   lv.keep <- c(lv.names[-1], lv.int.names)
   Var.FS2 <- Var.FS2[lv.keep, lv.keep]
   Var.ERROR <- Var.ERROR[lv.keep, lv.keep]
+  FS.mean <- colMeans(FS2, na.rm = TRUE)
+  names(FS.mean) <- NAMES
+  FS.mean <- FS.mean[lv.keep]
 
   # apply small sample correction (if requested)
   if (alpha.correction > 0) {
@@ -446,6 +449,7 @@ lav_sam_veta2 <- function(FS = NULL, M = NULL,
     attr(VETA2, "alpha") <- alpha
     attr(VETA2, "MSM") <- Var.FS2
     attr(VETA2, "MTM") <- Var.ERROR
+	attr(VETA2, "FS.mean") <- FS.mean
   }
 
   VETA2
