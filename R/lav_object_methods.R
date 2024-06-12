@@ -1140,6 +1140,12 @@ setMethod(
       lav_msg_stop(gettext("vcov not available if se=\"none\""))
     }
 
+    ## verify there are any user-defined parameters
+    #FIXME? smarter to check @ParTable for $op == ":="?
+    if (is.null(formals(object@Model@def.function))) {
+      type <- "free" # avoids error in lav_object_inspect_vcov_def()
+    }
+    
     if (type == "user" || type == "joint" || type == "all" || type == "full" ||
       type == "complete") {
       if (remove.duplicated) {
