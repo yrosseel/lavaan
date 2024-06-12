@@ -61,6 +61,7 @@ Description: Fit a variety of latent variable models, including confirmatory
 Depends: R(>= 3.4)
 Imports: methods, stats4, stats, utils, graphics, MASS,
          mnormt, pbivnorm, numDeriv, quadprog
+BugReports: https://github.com/yrosseel/lavaan/issues
 License: GPL (>= 2)
 LazyData: yes
 ByteCompile: true
