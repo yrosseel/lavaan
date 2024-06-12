@@ -2610,7 +2610,9 @@ lav_object_inspect_vcov <- function(object, standardized = FALSE,
     # } else {
     colnames(return.value) <- rownames(return.value) <-
       lav_partable_labels(object@ParTable,
-                          type = ifelse(free.only, "free", "user"))
+                          ## add "user" labels?
+                          type = ifelse(standardized && !free.only,
+                                        "user", "free"))
     # }
   }
 
