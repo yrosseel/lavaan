@@ -1130,7 +1130,8 @@ setMethod(
 
 setMethod(
   "vcov", "lavaan",
-  function(object, type = "free", labels = TRUE, remove.duplicated = FALSE) {
+  function(object, type = "free", labels = TRUE, remove.duplicated = FALSE, 
+           standardized = NULL, free.only = TRUE) {
     # check for convergence first!
     if (object@optim$npar > 0L && !object@optim$converged) {
       lav_msg_stop(gettext("model did not converge"))
@@ -1140,6 +1141,17 @@ setMethod(
       lav_msg_stop(gettext("vcov not available if se=\"none\""))
     }
 
+    ## verify there are any user-defined parameters
+    #FIXME? smarter to check @ParTable for $op == ":="?
+    if (is.null(formals(object@Model@def.function))) {
+      type <- "free" # avoids error in lav_object_inspect_vcov_def()
+    }
+    
+    if (!is.null(standardized)) {
+      standardized <- tolower(standardized[1])
+      stopifnot(standardized %in% c("std.lv","std.all","std.nox"))
+    }
+    
     if (type == "user" || type == "joint" || type == "all" || type == "full" ||
       type == "complete") {
       if (remove.duplicated) {
@@ -1149,11 +1161,16 @@ setMethod(
       }
       tmp.varcov <- lav_object_inspect_vcov_def(object,
         joint = TRUE,
+        standardized = !is.null(standardized),
+        type = ifelse(is.null(standardized), "std.all", standardized),
         add.labels = labels,
         add.class = TRUE
       )
     } else if (type == "free") {
       tmp.varcov <- lav_object_inspect_vcov(object,
+        standardized = !is.null(standardized),
+        type = ifelse(is.null(standardized), "std.all", standardized),
+        free.only = free.only,
         add.labels = labels,
         add.class = TRUE,
         remove.duplicated = remove.duplicated
