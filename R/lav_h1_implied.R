@@ -172,15 +172,24 @@ lav_h1_implied_logl <- function(lavdata = NULL,
         )
       }
 
-	  # new in 0.6-18: ensure Mu.W[both.idx] is zero (post-estimation!)
-	  both.idx <- lavdata@Lp[[g]]$both.idx[[2]]
-	  tmp <- OUT$Mu.W[both.idx] + OUT$Mu.B[both.idx]
-	  OUT$Mu.W[both.idx] <- 0
-	  OUT$Mu.B[both.idx]<- tmp[both.idx]
+      # new in 0.6-18: ensure Mu.W[both.idx] is zero (post-estimation!)
+      # (not correctly; fixed in 0.6-19...)
+      both.idx   <- lavdata@Lp[[g]]$both.idx[[2]]
+      within.idx <- lavdata@Lp[[g]]$within.idx[[2]]
+      ov.idx     <- lavdata@Lp[[g]]$ov.idx
+      p.tilde <- length(unique(c(ov.idx[[1]], ov.idx[[2]])))
+      Mu.W.tilde <- Mu.B.tilde <- Mu.WB.tilde <- numeric(p.tilde)
+      Mu.W.tilde[ov.idx[[1]]] <- OUT$Mu.W
+      Mu.B.tilde[ov.idx[[2]]] <- OUT$Mu.B
+      Mu.WB.tilde[both.idx  ] <- (Mu.B.tilde[both.idx] + Mu.W.tilde[both.idx])
+      Mu.W.tilde[both.idx] <- 0
+      Mu.B.tilde[both.idx] <- Mu.WB.tilde[both.idx]
+      OUT$Mu.W <- Mu.W.tilde[ ov.idx[[1]] ]
+      OUT$Mu.B <- Mu.B.tilde[ ov.idx[[2]] ]
 
       # store in implied
-      implied$cov[[(g - 1) * nlevels + 1L]] <- OUT$Sigma.W
-      implied$cov[[(g - 1) * nlevels + 2L]] <- OUT$Sigma.B
+      implied$cov[[ (g - 1) * nlevels + 1L]] <- OUT$Sigma.W
+      implied$cov[[ (g - 1) * nlevels + 2L]] <- OUT$Sigma.B
       implied$mean[[(g - 1) * nlevels + 1L]] <- OUT$Mu.W
       implied$mean[[(g - 1) * nlevels + 2L]] <- OUT$Mu.B
 

@@ -1130,7 +1130,7 @@ setMethod(
 
 setMethod(
   "vcov", "lavaan",
-  function(object, type = "free", labels = TRUE, remove.duplicated = FALSE, 
+  function(object, type = "free", labels = TRUE, remove.duplicated = FALSE,
            standardized = NULL, free.only = TRUE) {
     # check for convergence first!
     if (object@optim$npar > 0L && !object@optim$converged) {
@@ -1146,12 +1146,12 @@ setMethod(
     if (is.null(formals(object@Model@def.function))) {
       type <- "free" # avoids error in lav_object_inspect_vcov_def()
     }
-    
+
     if (!is.null(standardized)) {
       standardized <- tolower(standardized[1])
       stopifnot(standardized %in% c("std.lv","std.all","std.nox"))
     }
-    
+
     if (type == "user" || type == "joint" || type == "all" || type == "full" ||
       type == "complete") {
       if (remove.duplicated) {
