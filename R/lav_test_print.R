@@ -271,7 +271,7 @@ lav_test_print <- function(object, nd = 3L) {
 
     # multiple groups?
     ngroups <- ngroups
-    if (ngroups > 1L) {
+    if (ngroups > 1L && !is.null(TEST[[block]]$stat.group)) {
       c1 <- c2 <- c3 <- character(ngroups)
       for (g in 1:ngroups) {
         tmp <- sprintf("  %-40s", group.label[[g]])
