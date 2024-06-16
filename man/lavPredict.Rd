@@ -11,7 +11,7 @@ regression framework! (For models with only continuous observed variables, the f
 \usage{
 lavPredict(object, newdata = NULL, type = "lv", method = "EBM",
            transform = FALSE, se = "none", acov = "none", 
-           label = TRUE, fsm = FALSE, mdist = FALSE,
+           label = TRUE, fsm = FALSE, mdist = FALSE, rel = FALSE,
            append.data = FALSE, assemble = FALSE,
            level = 1L, optim.method = "bfgs", ETA = NULL,
            drop.list.single.group = TRUE)
@@ -54,6 +54,9 @@ only available for complete continuous data.}
 Mahalanobis distances of the factor scores (if \code{type = "lv"}) or
 the casewise residuals (if \code{type = "resid"}) are returned as an 
 attribute.}
+\item{rel}{Logical. Only used if \code{type = "lv"}. If TRUE,
+the factor reliabilities are returned as an attribute. (The squared
+values are often called the factor determinacies.)}
 \item{append.data}{Logical. Only used when \code{type = "lv"}. If TRUE, 
 the original data (or the data provided
 in the newdata argument) is appended to the factor scores.}

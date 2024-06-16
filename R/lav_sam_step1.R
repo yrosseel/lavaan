@@ -660,8 +660,8 @@ lav_sam_step1_local <- function(STEP1 = NULL, FIT = NULL,
 
     # compute model-based RELiability
     MSM <- Mb %*% COV %*% t(Mb)
-    # REL[[b]] <- diag(VETA[[b]]] %*% solve(MSM)) # CHECKme!
-    REL[[b]] <- diag(VETA[[b]]) / diag(MSM)
+    # REL[[b]] <- diag(VETA[[b]]] %*% solve(MSM)) # CHECKme! -> done, must be:
+    REL[[b]] <- diag(VETA[[b]]) / diag(MSM) #
 
     # check for lv.interactions
     if (lv.interaction.flag && length(lv.int.names) > 0L) {

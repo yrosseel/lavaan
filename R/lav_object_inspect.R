@@ -340,6 +340,37 @@ lavInspect.lavaan <- function(object,                                # nolint
     lav_object_inspect_vy(object,
       add.labels = add.labels, add.class = add.class,
       drop.list.single.group = drop.list.single.group)
+  } else if (what %in% c("fs.reliability", "fs.rel", "fs.reliabilities")) {
+    lav_object_inspect_fs_determinacy(object, squared = TRUE,
+      fs.method = "regression",
+      add.labels = add.labels, add.class = add.class,
+      drop.list.single.group = drop.list.single.group)
+  } else if (what %in% c("fs.determinacy", "fs.det", "fs.determin",
+                         "fs.determinacies")) {
+    lav_object_inspect_fs_determinacy(object, squared = FALSE,
+      fs.method = "regression",
+      add.labels = add.labels, add.class = add.class,
+      drop.list.single.group = drop.list.single.group)
+  } else if (what %in% c("fs.reliability.bartlett",
+                         "fs.reliability.Bartlett",
+                         "fs.rel.bartlett", "fs.rel.Bartlett",
+                         "fs.reliabilities.bartlett",
+                         "fs.reliabilities.Bartlett")) {
+    lav_object_inspect_fs_determinacy(object, squared = TRUE,
+      fs.method = "Bartlett",
+      add.labels = add.labels, add.class = add.class,
+      drop.list.single.group = drop.list.single.group)
+  } else if (what %in% c("fs.determinacy.bartlett",
+                         "fs.determinacy.Bartlett",
+                         "fs.det.bartlett", "fs.det.Bartlett",
+                         "fs.determin.bartlett", "fs.determin.Bartlett",
+                         "fs.determinacies.bartlett",
+                         "fs.determinacies.Bartlett")) {
+    lav_object_inspect_fs_determinacy(object, squared = FALSE,
+      fs.method = "Bartlett",
+      add.labels = add.labels, add.class = add.class,
+      drop.list.single.group = drop.list.single.group)
+
 
 
     #### specific model matrices? ####
@@ -1866,6 +1897,43 @@ lav_object_inspect_vy <- function(object,
       } else {
         names(return.value[[b]]) <- object@pta$vnames$ov[[b]]
       }
+    }
+    if (add.class) {
+      class(return.value[[b]]) <- c("lavaan.vector", "numeric")
+    }
+  }
+
+  if (nblocks == 1L && drop.list.single.group) {
+    return.value <- return.value[[1]]
+  } else if (nblocks > 1L) {
+    names(return.value) <- object@Data@block.label
+  }
+
+  return.value
+}
+
+lav_object_inspect_fs_determinacy <- function(object,
+  squared = TRUE, fs.method = "regression",
+  add.labels = FALSE, add.class = FALSE, drop.list.single.group = FALSE) {
+
+  FS <- lavPredict(object, type = "lv", method = fs.method, rel = TRUE)
+  return.value <- attr(FS, "rel")
+
+  # determinacies or reliabilities?
+  if (!squared) {
+    return.value <- lapply(return.value, sqrt)
+  }
+
+  # nblocks
+  nblocks <- length(return.value)
+
+  # ensure numeric
+  return.value <- lapply(return.value, as.numeric)
+
+  # labels + class
+  for (b in seq_len(nblocks)) {
+    if (add.labels && length(return.value[[b]]) > 0L) {
+      names(return.value[[b]]) <- object@pta$vnames$lv[[b]]
     }
     if (add.class) {
       class(return.value[[b]]) <- c("lavaan.vector", "numeric")
