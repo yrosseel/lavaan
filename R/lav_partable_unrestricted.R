@@ -213,7 +213,11 @@ lav_partable_indep_or_unrestricted <- function(lavobject = NULL,
 
       # ov.names for this block
       if (is.null(lavpta)) { # only data was used
-        ov.names <- lavdata@ov.names[[g]]
+	    if (nlevels > 1L) {
+		  ov.names <- lavdata@ov.names.l[[g]][[(ngroups - 1)*g + b]]
+		} else {
+          ov.names <- lavdata@ov.names[[g]]
+		}
         ov.names.x <- lavdata@ov.names.x[[g]]
         ov.names.nox <- ov.names[!ov.names %in% ov.names.x]
       } else {
@@ -318,7 +322,7 @@ lav_partable_indep_or_unrestricted <- function(lavobject = NULL,
           # check for 'missing by design' cells: here, the sample.cov
           # element is *exactly* zero (new in 0.6-18)
           zero.cov <- which(sample.cov.vech == 0)
-          if (length(zero.cov) > 0L) {
+          if (length(zero.cov) > 0L && !is.null(lavh1)) {
             n.tmp <- length(free)
             ones.and.zeroes <- rep(1L, pstar)
             ones.and.zeroes[zero.cov] <- 0L

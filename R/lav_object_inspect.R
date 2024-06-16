@@ -988,7 +988,7 @@ lav_object_inspect_sampstat <- function(object, h1 = TRUE,        # nolint
     h1.implied <- object@h1$implied
   }
 
-  # if h1 = FALSE and nlevels > 1L, nothing can show...
+  # if h1 = FALSE and nlevels > 1L, nothing to show...
   if (!h1 && object@Data@nlevels > 1L) {
     lav_msg_stop(gettext(
       "sample statistics not available; refit with option h1 = TRUE"))
@@ -3044,10 +3044,14 @@ lav_object_inspect_icc <- function(object, add.labels = FALSE,
   n.g <- lavdata@ngroups
   return.value <- vector("list", n.g)
 
-  # multilevel?
-  if (lavdata@nlevels == 1L) {
+  # clustered data?
+  if (length(lavdata@cluster) == 0L) {
     lav_msg_stop(gettext(
       "intraclass correlation only available for clustered data"))
+  } else if (lavdata@nlevels == 1L) {
+    lav_msg_stop(gettext(
+      "intraclass correlation only available if the model syntax
+       contains levels"))
   }
 
   if (length(object@h1) == 0L) {

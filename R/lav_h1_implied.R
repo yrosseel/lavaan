@@ -113,10 +113,14 @@ lav_h1_implied_logl <- function(lavdata = NULL,
         )
 
         lavoptions2 <- lavoptions
+		lavoptions2$estimator <- "ML"
         lavoptions2$se <- "none"
         lavoptions2$test <- "none"
         lavoptions2$do.fit <- TRUE
+		lavoptions2$optim.method <- "nlminb"
         lavoptions2$h1 <- FALSE
+		lavoptions2$implied <- TRUE
+		lavoptions2$loglik <- TRUE
         lavoptions2$baseline <- FALSE
         lavoptions2$fixed.x <- FALSE # even if model uses fixed.x=TRUE
         lavoptions2$model.type <- "unrestricted"
