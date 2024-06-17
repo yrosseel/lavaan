@@ -194,6 +194,7 @@ lav_start <- function(start.method = "default",
       lavpartable$lhs == lavpartable$rhs)
     sample.var.idx <- match(lavpartable$lhs[ov.var.idx], ov.names)
     if (model.type == "unrestricted") {
+	  # this does not work if conditional.x = TRUE...
       if (!is.null(lavsamplestats@missing.h1[[g]])) {
         start[ov.var.idx] <-
           diag(lavsamplestats@missing.h1[[g]]$sigma)[sample.var.idx]

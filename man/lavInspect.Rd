@@ -244,6 +244,18 @@ Model-implied sample statistics:
         observed variables.}
     \item{\code{"rsquare"}:}{The R-square value for all endogenous variables.
         Aliases: \code{"r-square"}, \code{"r2"}.}
+	\item{\code{"fs.determinacy"}:}{The factor determinacies (based on
+	   regression factor scores). They represent the (estimated) correlation
+       between the factor scores and the latent variables scores.}
+	\item{\code{"fs.reliability"}:}{The factor reliabilities (based on
+       regression factor scores). They are the square of the factor 
+       determinacies.}
+    \item{\code{"fs.determinacy.Bartlett"}:}{The factor determinacies (based on
+       Bartlett factor scores). They represent the (estimated) correlation
+       between the factor scores and the latent variables scores.}
+    \item{\code{"fs.reliability.Bartlett"}:}{The factor reliabilities (based on
+       Bartlett factor scores). They are the square of the factor 
+       determinacies.}
 }
 
 Diagnostics:

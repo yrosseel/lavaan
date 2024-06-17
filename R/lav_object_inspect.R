@@ -340,6 +340,37 @@ lavInspect.lavaan <- function(object,                                # nolint
     lav_object_inspect_vy(object,
       add.labels = add.labels, add.class = add.class,
       drop.list.single.group = drop.list.single.group)
+  } else if (what %in% c("fs.reliability", "fs.rel", "fs.reliabilities")) {
+    lav_object_inspect_fs_determinacy(object, squared = TRUE,
+      fs.method = "regression",
+      add.labels = add.labels, add.class = add.class,
+      drop.list.single.group = drop.list.single.group)
+  } else if (what %in% c("fs.determinacy", "fs.det", "fs.determin",
+                         "fs.determinacies")) {
+    lav_object_inspect_fs_determinacy(object, squared = FALSE,
+      fs.method = "regression",
+      add.labels = add.labels, add.class = add.class,
+      drop.list.single.group = drop.list.single.group)
+  } else if (what %in% c("fs.reliability.bartlett",
+                         "fs.reliability.Bartlett",
+                         "fs.rel.bartlett", "fs.rel.Bartlett",
+                         "fs.reliabilities.bartlett",
+                         "fs.reliabilities.Bartlett")) {
+    lav_object_inspect_fs_determinacy(object, squared = TRUE,
+      fs.method = "Bartlett",
+      add.labels = add.labels, add.class = add.class,
+      drop.list.single.group = drop.list.single.group)
+  } else if (what %in% c("fs.determinacy.bartlett",
+                         "fs.determinacy.Bartlett",
+                         "fs.det.bartlett", "fs.det.Bartlett",
+                         "fs.determin.bartlett", "fs.determin.Bartlett",
+                         "fs.determinacies.bartlett",
+                         "fs.determinacies.Bartlett")) {
+    lav_object_inspect_fs_determinacy(object, squared = FALSE,
+      fs.method = "Bartlett",
+      add.labels = add.labels, add.class = add.class,
+      drop.list.single.group = drop.list.single.group)
+
 
 
     #### specific model matrices? ####
@@ -988,7 +1019,7 @@ lav_object_inspect_sampstat <- function(object, h1 = TRUE,        # nolint
     h1.implied <- object@h1$implied
   }
 
-  # if h1 = FALSE and nlevels > 1L, nothing can show...
+  # if h1 = FALSE and nlevels > 1L, nothing to show...
   if (!h1 && object@Data@nlevels > 1L) {
     lav_msg_stop(gettext(
       "sample statistics not available; refit with option h1 = TRUE"))
@@ -1866,6 +1897,43 @@ lav_object_inspect_vy <- function(object,
       } else {
         names(return.value[[b]]) <- object@pta$vnames$ov[[b]]
       }
+    }
+    if (add.class) {
+      class(return.value[[b]]) <- c("lavaan.vector", "numeric")
+    }
+  }
+
+  if (nblocks == 1L && drop.list.single.group) {
+    return.value <- return.value[[1]]
+  } else if (nblocks > 1L) {
+    names(return.value) <- object@Data@block.label
+  }
+
+  return.value
+}
+
+lav_object_inspect_fs_determinacy <- function(object,
+  squared = TRUE, fs.method = "regression",
+  add.labels = FALSE, add.class = FALSE, drop.list.single.group = FALSE) {
+
+  FS <- lavPredict(object, type = "lv", method = fs.method, rel = TRUE)
+  return.value <- attr(FS, "rel")
+
+  # determinacies or reliabilities?
+  if (!squared) {
+    return.value <- lapply(return.value, sqrt)
+  }
+
+  # nblocks
+  nblocks <- length(return.value)
+
+  # ensure numeric
+  return.value <- lapply(return.value, as.numeric)
+
+  # labels + class
+  for (b in seq_len(nblocks)) {
+    if (add.labels && length(return.value[[b]]) > 0L) {
+      names(return.value[[b]]) <- object@pta$vnames$lv[[b]]
     }
     if (add.class) {
       class(return.value[[b]]) <- c("lavaan.vector", "numeric")
@@ -3044,10 +3112,14 @@ lav_object_inspect_icc <- function(object, add.labels = FALSE,
   n.g <- lavdata@ngroups
   return.value <- vector("list", n.g)
 
-  # multilevel?
-  if (lavdata@nlevels == 1L) {
+  # clustered data?
+  if (length(lavdata@cluster) == 0L) {
     lav_msg_stop(gettext(
       "intraclass correlation only available for clustered data"))
+  } else if (lavdata@nlevels == 1L) {
+    lav_msg_stop(gettext(
+      "intraclass correlation only available if the model syntax
+       contains levels"))
   }
 
   if (length(object@h1) == 0L) {
