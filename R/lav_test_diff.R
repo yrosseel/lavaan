@@ -205,8 +205,15 @@ lav_test_diff_SatorraBentler2001 <- function(m1, m0, test = 2) {
   T1 <- m1@test[[1]]$stat
   r1 <- m1@test[[1]]$df
   c1 <- m1@test[[test]]$scaling.factor
-  if (r1 == 0) { # saturated model
-    c1 <- 1
+  
+  ## check for situations when scaling.factor would be NA
+  if (r1 == 0) {
+    ## saturated model
+    c1 <- 1 # canceled out by 0 when calculating "cd"
+    
+  } else if (r1 > 0 && isTRUE(all.equal(T1, 0))) {
+    ## perfect fit
+    c1 <- 0 # cancels out r1 when calculating "cd"
   }
 
   T0 <- m0@test[[1]]$stat

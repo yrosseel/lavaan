@@ -715,8 +715,8 @@ lav_update_test_custom_h1 <- function(lav_obj_h0, lav_obj_h1) {
   newTEST <- lav_obj_h0@test
 
   ## assemble a call to lavTestLRT()
-  lrtCallTemplate <- list(quote(lavTestLRT), object = quote(lav_obj_h1),
-                          quote(lav_obj_h0)) # in ...
+  lrtCallTemplate <- list(quote(lavTestLRT), object = quote(lav_obj_h0),
+                          quote(lav_obj_h1)) # in ...
 
   ## can only update tests available in both objects
   testNames0 <- names(lav_obj_h0@test)
@@ -769,7 +769,7 @@ lav_update_test_custom_h1 <- function(lav_obj_h0, lav_obj_h1) {
       newTEST[[tn]]$shift.parameter <- attr(ANOVA, "shift")[2] # first row is NA
     } else {
       ## unless scaled.shifted, RMSEA is calculated from $standard$stat and
-      ## df == sum($trace.UGamma).  Reverse-engineer from $scaling factor:
+      ## df == sum($trace.UGamma).  Reverse-engineer from $scaling.factor:
       newTEST[[tn]]$trace.UGamma <- newTEST[[tn]]$df * newTEST[[tn]]$scaling.factor
     }
     ## should not be necessary to replace $trace.UGamma2

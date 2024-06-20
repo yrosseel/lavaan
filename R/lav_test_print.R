@@ -271,7 +271,7 @@ lav_test_print <- function(object, nd = 3L) {
 
     # multiple groups?
     ngroups <- ngroups
-    if (ngroups > 1L) {
+    if (ngroups > 1L && !is.null(TEST[[block]]$stat.group)) {
       c1 <- c2 <- c3 <- character(ngroups)
       for (g in 1:ngroups) {
         tmp <- sprintf("  %-40s", group.label[[g]])
@@ -283,7 +283,7 @@ lav_test_print <- function(object, nd = 3L) {
             justify = "right"
           )
         } else {
-          tmp <- sprintf(num.format, TEST[[scaled.idx]]$stat.group[g])
+          tmp <- sprintf(num.format, TEST[[block]]$stat.group[g])
           c2[g] <- format(tmp,
             width = 8L + max(0, (nd - 3L)) * 4L,
             justify = "right"
