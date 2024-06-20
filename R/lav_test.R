@@ -734,7 +734,6 @@ lav_update_test_custom_h1 <- function(lav_obj_h0, lav_obj_h1) {
         lrtCall$method <- "mean.var.adjusted.PLRT"
       } else {
         lrtCall$method <- "satorra.2000"
-        if (tn == "mean.var.adjusted") lrtCall$scaled.shifted <- FALSE
       }
       lrtCall$scaled.shifted <- tn == "scaled.shifted"
     } else if (tn %in% c("satorra.bentler",
