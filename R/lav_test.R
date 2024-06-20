@@ -723,8 +723,6 @@ lav_update_test_custom_h1 <- function(lav_obj_h0, lav_obj_h1) {
   testNames1 <- names(lav_obj_h1@test)
   testNames <- intersect(testNames0, testNames1)
 
-  # copyScaled <- FALSE # in case scaled test is NA (when standard == 0)
-  
   ## loop over those tests
   for (tn in testNames) {
     lrtCall <- lrtCallTemplate
@@ -742,16 +740,6 @@ lav_update_test_custom_h1 <- function(lav_obj_h0, lav_obj_h1) {
     } else if (tn %in% c("satorra.bentler",
                          "yuan.bentler","yuan.bentler.mplus")) {
       lrtCall$test <- tn
-      
-      ## is LRT even necessary?
-      # noScaledStat    <- is.na(lav_obj_h0@test[[tn]]$stat)
-      # noScalingFactor <- is.na(lav_obj_h0@test[[tn]]$scaling.factor)
-      # perfectFit      <- isTRUE( all.equal(lav_obj_h0@test$standard$stat, 0) )
-      # 
-      # if (perfectFit && (noScaledStat || noScalingFactor)) {
-      #   copyScaled <- TRUE
-      # }
-      
     } else if (grepl(pattern = "browne", x = tn)) {
       lrtCall$type <- tn
     } else {
@@ -761,17 +749,6 @@ lav_update_test_custom_h1 <- function(lav_obj_h0, lav_obj_h1) {
     }
 
     ## get new test
-    # if (tn %in% c("satorra.bentler", "yuan.bentler", "yuan.bentler.mplus")
-    #     && copyScaled) {
-    #   ## Don't run lavTestLRT(). Keep existing H0 test stat to avoid error.
-    #   ## But adjust df
-    #   newTEST[[tn]]$df <- lav_obj_h0@test[[tn]]$df - lav_obj_h1@test[[tn]]$df
-    #   ## for RMSEA, reverse-engineer $trace.UGamma from $scaling.factor & new df
-    #   newTEST[[tn]]$trace.UGamma <- newTEST[[tn]]$df * newTEST[[tn]]$scaling.factor
-    #   ## skip the rest of this loop
-    #   next 
-    #   
-    # } else 
     if (lav_obj_h0@test[[1]]$df == lav_obj_h1@test[[1]]$df) {
       ## suppress warning about == df
       ANOVA <- suppressWarnings(eval(as.call(lrtCall)))
