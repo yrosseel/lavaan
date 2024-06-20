@@ -758,9 +758,7 @@ lav_model_h1_information_firstorder <- function(lavobject = NULL,
           zb[[b]] <- apply(SC_b * WT_b, 2, sum)
         }
         zbar <- apply(do.call(cbind, zb), 1, mean)
-        B1c <-
-          lapply(zb, \(z) tcrossprod(z - zbar)) |>
-          Reduce(f = `+`)
+        B1c <- Reduce(f = `+`, lapply(zb, function(z) tcrossprod(z - zbar)))
         B1[[g]] <- nclust / (nclust - 1) * B1c
 
       } else {
