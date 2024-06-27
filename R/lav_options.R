@@ -862,7 +862,9 @@ lav_options_set <- function(opt = NULL) {                     # nolint
 
     # make sure "standard" comes first
     standard.idx <- which(opt$test == "standard")[1]
-    if (length(standard.idx) > 0L && standard.idx != 1L) {
+    if (length(standard.idx) == 0L) {
+      opt$test <- c("standard", opt$test)
+    } else if (length(standard.idx) > 0L && standard.idx != 1L) {
       opt$test <- c("standard", opt$test[-standard.idx])
     }
   }
