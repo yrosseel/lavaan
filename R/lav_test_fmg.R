@@ -125,7 +125,7 @@ lav_fmg_eba <- \(chisq, lambdas, j) {
   dim(eig) <- c(k, j)
   eig_means <- colMeans(eig, na.rm = TRUE)
   repeated <- rep(eig_means, each = k)[seq(m)]
-  CompQuadForm::imhof(chisq, repeated)$Qq
+  lav_fmg_imhof(chisq, repeated)
 }
 
 lav_fmg_peba <- \(chisq, lambdas, j) {
@@ -137,7 +137,7 @@ lav_fmg_peba <- \(chisq, lambdas, j) {
   eig_means <- colMeans(eig, na.rm = TRUE)
   eig_mean <- mean(lambdas)
   repeated <- rep(eig_means, each = k)[seq(m)]
-  CompQuadForm::imhof(chisq, (repeated + eig_mean) / 2)$Qq
+  lav_fmg_imhof(chisq, (repeated + eig_mean) / 2)
 }
 
 lav_fmg_pols <- \(chisq, lambdas, gamma) {
@@ -145,7 +145,7 @@ lav_fmg_pols <- \(chisq, lambdas, gamma) {
   beta1_hat <- 1 / gamma * stats::cov(x, lambdas) / stats::var(x)
   beta0_hat <- mean(lambdas) - beta1_hat * mean(x)
   lambda_hat <- pmax(beta0_hat + beta1_hat * x, 0)
-  CompQuadForm::imhof(chisq, lambda_hat)$Qq
+  lav_fmg_imhof(chisq, lambda_hat)
 }
 
 lav_fmg_gamma_unbiased <- \(obj, gamma) {
@@ -198,4 +198,14 @@ lav_ugamma_no_groups <- \(object, unbiased) {
   object@Options$gamma.unbiased <- bias
   if (unbiased) gamma <- lav_fmg_gamma_unbiased(object, gamma)
   u %*% gamma
+}
+
+lav_fmg_imhof <- \(x, lambda) {
+  theta <- \(u, x, lambda) 0.5 * (sum(atan(lambda * u)) - x * u)
+  rho <- \(u, lambda) exp(1 / 4 * sum(log(1 + lambda^2 * u^2)))
+  integrand <- Vectorize(\(u) {
+    sin(theta(u, x, lambda)) / (u * rho(u, lambda))
+  })
+  z <- integrate(integrand, lower = 0, upper = Inf)$value
+  0.5 + z / pi
 }
