@@ -860,9 +860,14 @@ lav_options_set <- function(opt = NULL) {                     # nolint
       opt$test <- unique(c(opt$scaled.test, opt$test))
     }
 
-    # make sure "standard" comes first
+    # where does "standard" appear in the opt$test vector?
     standard.idx <- which(opt$test == "standard")[1]
-    if (length(standard.idx) > 0L && standard.idx != 1L) {
+    if (is.na(standard.idx)) {
+      # "standard" is not in the opt$test vector at all,
+      # so add it
+      opt$test <- c("standard", opt$test)
+    } else if (length(standard.idx) > 0L && standard.idx != 1L) {
+      # make sure "standard" comes first
       opt$test <- c("standard", opt$test[-standard.idx])
     }
   }
