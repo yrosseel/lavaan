@@ -351,8 +351,9 @@ lav_test_satorra_bentler <- function(lavobject = NULL,
     # scaling factor
     fg <- unlist(lavsamplestats@nobs) / lavsamplestats@ntotal
     a <- sqrt(df.scaled / trace.UGamma2)
+    if (isTRUE(a < 0) || is.nan(a)) a <- as.numeric(NA)
     scaling.factor <- 1 / a
-    if (scaling.factor < 0) scaling.factor <- as.numeric(NA)
+    if (isTRUE(scaling.factor < 0)) scaling.factor <- as.numeric(NA)
 
     if (ug2.old.approach) {
       # scaling factor
