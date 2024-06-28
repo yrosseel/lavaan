@@ -13,7 +13,7 @@ lav_test_fmg <- \(object, input) {
   }
 
   name <- input$name
-  degree <- input$degree
+  param <- input$param
   unbiased <- input$unbiased
   chisq <- if (input$chisq == "ml") lavaan::fitmeasures(object, "chisq") else lav_rls(object)
   df <- lavaan::fitmeasures(object, "df")
@@ -24,111 +24,57 @@ lav_test_fmg <- \(object, input) {
   list(
     test = lav_fmg_reconstruct_input(input),
     pvalue = if (name == "pEBA") {
-    lav_fmg_peba(chisq, lambdas, degree)
+    lav_fmg_peba(chisq, lambdas, param)
   } else if (name == "EBA") {
-    lav_fmg_eba(chisq, lambdas, degree)
+    lav_fmg_eba(chisq, lambdas, param)
   } else if (name == "pOLS") {
-    lav_fmg_pols(chisq, lambdas, degree)
+    lav_fmg_pols(chisq, lambdas, param)
   },
   label = lav_fmg_reconstruct_label(input))
 }
 
 lav_fmg_parse_input <- \(string) {
   na_to_null <- \(x) if (is.na(x)) NULL else x
-  default <- \(x) if (x != "") as.numeric(x) else 2
+  default <- \(x) if (x != "") as.numeric(x) else 4
 
   tryCatch ({
     string <- tolower(string)
     splitted <- strsplit(string, "_")[[1]]
-    unbiased <- FALSE
-    chisq <- "ml"
-    type <- na_to_null(splitted[1])
-
-    if (length(splitted) == 3) {
-      unbiased <- if (splitted[2] == "ug") TRUE else FALSE
-      chisq <- splitted[3]
-    } else if (length(splitted) == 2) {
-      if (splitted[2] == "rls" || splitted[2] == "ml") {
-        chisq <- splitted[2]
-      } else if (splitted[2] == "ug") {
-        unbiased <- TRUE
-      }
-    }
-
+    name <- na_to_null(splitted[1])
     out <- NULL
-    name <- NULL
-    if (startsWith(type, "peba")) {
-      degree <- default(substring(type, 5))
-      name <- "pEBA"
-    } else if (startsWith(type, "eba")) {
-      degree <- default(substring(type, 4))
-      name <- "EBA"
-    } else if (startsWith(type, "pols")) {
-      degree <- default(substring(type, 5))
-      name <- "pOLS"
-    }
 
-    if (is.null(degree) || (chisq != "ml" && chisq != "rls")) {
+    if (name != "fmg" && name != "fmgols") {
       return(NULL)
     }
 
+    param <- if (length(splitted) == 2) {
+      as.numeric(splitted[2])
+    } else if (name == "fmg") {
+      4
+    } else {
+      0.5
+    }
+
     list(
-      degree = degree,
-      name = name,
-      unbiased = unbiased,
-      chisq = chisq
+      param = param,
+      name = name
     )
   }, error = \(e){
-    NULL
+    cat(e)
   })
 }
 
-lav_fmg_reconstruct_input <- \(input) {
-  name <- input$name
-  degree <- input$degree
-  unbiased <- input$unbiased
-  chisq <- input$chisq
+lav_fmg_reconstruct_input <- \(input) paste0(input$name, "_", input$param)
 
-  out <- paste0(name, degree)
-  if (unbiased) out <- paste0(out, "_ug")
-  if (chisq == "rls") out <- paste0(out, "_rls")
-  out
-}
-
-lav_fmg_reconstruct_label <- \(input) {
-  name <- tolower(input$name)
-  degree <- input$degree
-  unbiased <- input$unbiased
-  chisq <- input$chisq
-
-  out <- if (name == "peba") {
-    paste0("Penalized EBA with ", degree, " blocks, ", if (unbiased) "unbiased" else "biased", " gamma, based on ",
-    chisq, ".")
-  } else if (name == "eba" && degree == 1) {
-    paste0("Satorra-Bentler with ", if (unbiased) "unbiased" else "biased", " gamma, based on ",
-           chisq, ".")
-  } else if (name == "eba") {
-    paste0("EBA with ", degree, " blocks, ", if (unbiased) "unbiased" else "biased", " gamma, based on ",
-           chisq, ".")
+lav_fmg_construct_label <- \(input) {
+  if (input$name == "fmg") {
+    paste0("FMG with ", input$param, " blocks.")
   } else {
-    paste0("Penalized OLS with weighting parameter ", degree, ", ", if (unbiased) "unbiased" else "biased", " gamma, based on ",
-           chisq, ".")
+    paste0("FMGOLS with weighting parameter ", input$param, ".")
   }
-  out
 }
 
-lav_fmg_eba <- \(chisq, lambdas, j) {
-  m <- length(lambdas)
-  k <- ceiling(m / j)
-  eig <- lambdas
-  eig <- c(eig, rep(NA, k * j - length(eig)))
-  dim(eig) <- c(k, j)
-  eig_means <- colMeans(eig, na.rm = TRUE)
-  repeated <- rep(eig_means, each = k)[seq(m)]
-  lav_fmg_imhof(chisq, repeated)
-}
-
-lav_fmg_peba <- \(chisq, lambdas, j) {
+lav_fmg <- \(chisq, lambdas, j) {
   m <- length(lambdas)
   k <- ceiling(m / j)
   eig <- lambdas
@@ -140,64 +86,12 @@ lav_fmg_peba <- \(chisq, lambdas, j) {
   lav_fmg_imhof(chisq, (repeated + eig_mean) / 2)
 }
 
-lav_fmg_pols <- \(chisq, lambdas, gamma) {
+lav_fmgols <- \(chisq, lambdas, gamma) {
   x <- seq_along(lambdas)
   beta1_hat <- 1 / gamma * stats::cov(x, lambdas) / stats::var(x)
   beta0_hat <- mean(lambdas) - beta1_hat * mean(x)
   lambda_hat <- pmax(beta0_hat + beta1_hat * x, 0)
   lav_fmg_imhof(chisq, lambda_hat)
-}
-
-lav_fmg_gamma_unbiased <- \(obj, gamma) {
-  gamma_est_nt <- \(sigma) {
-    lower_vec_indices <- \(n = 1L, diagonal = TRUE) {
-      rows <- matrix(seq_len(n), n, n)
-      cols <- matrix(seq_len(n), n, n, byrow = TRUE)
-      if (diagonal) which(rows >= cols) else which(rows > cols)
-    }
-
-    upper_vec_indices <- \(n = 1L, diagonal = TRUE) {
-      rows <- matrix(seq_len(n), n, n)
-      cols <- matrix(seq_len(n), n, n, byrow = TRUE)
-      tmp <- matrix(seq_len(n * n), n, n, byrow = TRUE)
-      if (diagonal) tmp[rows >= cols] else tmp[rows > cols]
-    }
-
-    n <- ncol(sigma)
-    lower <- lower_vec_indices(n)
-    upper <- upper_vec_indices(n)
-    y <- sigma %x% sigma
-    out <- (y[lower, , drop = FALSE] + y[upper, , drop = FALSE]) / 2
-    out[, lower, drop = FALSE] + out[, upper, drop = FALSE]
-  }
-
-  gamma_est_unbiased <- \(x, n = NULL, sigma = NULL, gamma_adf = NULL, gamma_nt = NULL) {
-    vech <- \(x) x[row(x) >= col(x)]
-    if (!missing(x)) n <- nrow(x)
-    sigma <- if (is.null(sigma)) stats::cov(x) * (n - 1) / n else sigma
-    gamma_adf <- if (is.null(gamma_adf)) gamma_est_adf(x) else gamma_adf
-    gamma_nt <- if (is.null(gamma_nt)) gamma_est_nt(sigma) else gamma_nt
-    gamma_rem <- tcrossprod(vech(sigma))
-    mult <- n / ((n - 2) * (n - 3))
-    mult * ((n - 1) * gamma_adf - (gamma_nt - 2 / (n - 1) * gamma_rem))
-  }
-
-  gamma_est_unbiased(
-    n = lavaan::lavInspect(obj, "nobs"),
-    sigma = obj@SampleStats@cov[[1]],
-    gamma_adf = gamma,
-    gamma_nt = NULL
-  )
-}
-
-lav_ugamma_no_groups <- \(object, unbiased) {
-  u <- lavaan::lavInspect(object, "U")
-  bias <- object@Options$gamma.unbiased
-  object@Options$gamma.unbiased <- FALSE
-  gamma <- lavaan::lavInspect(object, "gamma")
-  object@Options$gamma.unbiased <- bias
-  if (unbiased) gamma <- lav_fmg_gamma_unbiased(object, gamma)
-  u %*% gamma
 }
 
 lav_fmg_imhof <- \(x, lambda) {
@@ -208,4 +102,128 @@ lav_fmg_imhof <- \(x, lambda) {
   })
   z <- integrate(integrand, lower = 0, upper = Inf)$value
   0.5 + z / pi
+}
+
+
+#' Calculate non-nested ugamma for multiple groups.
+#' @param object A `lavaan` object.
+#' @param unbiased If `TRUE`, uses the unbiased gamma estimate.
+#' @keywords internal
+#' @return Ugamma for non-nested object.
+ugamma_non_nested <- \(object) {
+  lavmodel <- object@Model
+
+  ceq_idx <- attr(lavmodel@con.jac, "ceq.idx")
+  if (length(ceq_idx) > 0L) {
+    stop("Testing of models with groups and equality constraints not supported.")
+  }
+
+  test <- list()
+  lavsamplestats <- object@SampleStats
+  lavmodel <- object@Model
+  lavoptions <- object@Options
+  lavimplied <- object@implied
+  lavdata <- object@Data
+  test$standard <- object@test[[1]]
+
+  if (test$standard$df == 0L || test$standard$df < 0) {
+    stop("Df must be > 0.")
+  }
+
+  e <- lavaan:::lav_model_information(
+    lavmodel = lavmodel,
+    lavimplied = lavimplied,
+    lavsamplestats = lavsamplestats,
+    lavdata = lavdata,
+    lavoptions = lavoptions,
+    extra = TRUE
+  )
+
+  delta <- attr(e, "Delta")
+  wls_v <- attr(e, "WLS.V")
+
+  gamma <- lavaan:::lav_object_gamma(object)
+  if (is.null(gamma[[1]])) {
+    gamma <- lapply(lavaan::lavInspect(object, "gamma"), \(x) {
+      class(x) <- "matrix"
+      x
+    })
+  }
+
+  gamma_global <- as.matrix(Matrix::bdiag(gamma))
+  delta_global <- do.call(rbind, delta)
+  v_global <- as.matrix(Matrix::bdiag(wls_v))
+  x <- v_global %*% delta_global
+  u_global <- v_global - crossprod(t(x), solve(t(delta_global) %*% x, t(x)))
+  u_global %*% gamma_global
+}
+
+#' Calculate nested ugamma.
+#'
+#' This can also be used with restrictions.
+#'
+#' @param m0,m1 Two nested `lavaan` objects.
+#' @param a The `A` matrix. If if `NULL`, gets calculated by
+#'    `lavaan:::lav_test_diff_A` with `method = method`.
+#' @param method Method passed to `lavaan:::lav_test_diff_A`.
+#' @param unbiased If `TRUE`, uses the unbiased gamma estimate.
+#' @keywords internal
+#' @return Ugamma for nested object.
+lav_ugamma_nested <- \(m0, m1, a = NULL, method = "delta", unbiased = FALSE) {
+  m0@Options$gamma.unbiased <- unbiased
+  m1@Options$gamma.unbiased <- unbiased
+
+  # extract information from m1 and m2
+  t1 <- m1@test[[1]]$stat
+  r1 <- m1@test[[1]]$df
+
+  t0 <- m0@test[[1]]$stat
+  r0 <- m0@test[[1]]$df
+
+  # m = difference between the df's
+  m <- r0 - r1
+
+  # check for identical df setting
+  if (m == 0L) {
+    return(list(
+      T.delta = (t0 - t1), scaling.factor = as.numeric(NA),
+      df.delta = m, a = as.numeric(NA), b = as.numeric(NA)
+    ))
+  }
+
+  gamma <- lavaan:::lav_object_gamma(m0) # the same for m1 and m0
+
+  if (is.null(gamma)) {
+    stop("lavaan error: Can not compute gamma matrix; perhaps missing \"ml\"?")
+  }
+
+  wls_v <- lavaan::lavTech(m1, "WLS.V")
+  pi <- lavaan::lavInspect(m1, "delta")
+
+  p_inv <- lavaan::lavInspect(m1, what = "inverted.information")
+
+  if (is.null(a)) {
+    a <- lavaan:::lav_test_diff_A(m1, m0, method = method, reference = "H1")
+    if (m1@Model@eq.constraints) {
+      a <- a %*% t(m1@Model@eq.constraints.K)
+    }
+  }
+
+  paapaap <- p_inv %*% t(a) %*% MASS::ginv(a %*% p_inv %*% t(a)) %*% a %*% p_inv
+
+  # compute scaling factor
+  fg <- unlist(m1@SampleStats@nobs) / m1@SampleStats@ntotal
+
+  # We need the global gamma, cf. eq.~(10) in Satorra (2000).
+  gamma_rescaled <- gamma
+  for (i in (seq_along(gamma))) {
+    gamma_rescaled[[i]] <- fg[i] * gamma_rescaled[[i]]
+  }
+  gamma_global <- as.matrix(Matrix::bdiag(gamma_rescaled))
+  # Also the global V:
+  v_global <- as.matrix(Matrix::bdiag(wls_v))
+  pi_global <- do.call(rbind, pi)
+  # U global version, eq.~(22) in Satorra (2000).
+  u_global <- v_global %*% pi_global %*% paapaap %*% t(pi_global) %*% v_global
+  return(u_global %*% gamma_global)
 }

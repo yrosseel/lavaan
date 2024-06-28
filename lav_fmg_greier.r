@@ -1,10 +1,21 @@
 n = 500
 data = psych::bfi
 
-model = "A =~ A1+A2+A3+A4+A5;
-         C =~ C1+C2+C3+C4+C5"
-object_chisq <- lavaan::sem(model, data[1:n, 1:10], test = "sb")
+model = "A =~ A1+b*A2+A3+A4+A5;
+         C =~ C1+b*C2+C3+C4+C5
+         "
+object <- sem(model, data[1:n, ], test = "sb")
+sum(diag(ugamma_non_nested(object))) / 34
 
+dim(lavaan::lavInspect(object, "delta"))
+
+model = "A =~ A1+A2+A3+A4+A5;
+         C =~ C1+C2+C3+C4+C5
+         "
+object <- sem(model, data[1:n, ], test = "sb")
+dim(lavaan::lavInspect(object, "delta"))
+
+object_chisq <- sem(model, data[1:n, ], test = "sb")
 
 #lavGamma(object_chisq, gamma.unbiased = TRUE)
 gamma_biased <- lav_samplestats_Gamma(data[1:n, 1:10])

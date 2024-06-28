@@ -880,6 +880,16 @@ lav_options_set <- function(opt = NULL) {                     # nolint
     "browne.residual.adf.model",
     "bollen.stine"
   ))
+
+  fmgs = c()
+  for (j in seq_along(wrong.idx)) {
+    fmg_parsed = lav_fmg_parse_input(opt$test[wrong.idx[j]])
+    if (!is.null(fmg_parsed)) {
+      fmgs = c(fmgs, opt$test[wrong.idx[j]])
+      wrong.idx = wrong.idx[-j]
+    }
+  }
+
   if (length(wrong.idx) > 0L) {
     lav_msg_stop(gettextf(
     "invalid option(s) for test argument: %1$s. Possible options are: %2$s.",
@@ -889,7 +899,7 @@ lav_options_set <- function(opt = NULL) {                     # nolint
                     "browne.residual.nt.model", "satorra.bentler",
                     "yuan.bentler", "yuan.bentler.mplus",
                     "mean.var.adjusted", "scaled.shifted",
-                    "bollen.stine"), log.sep = "or")))
+                    "bollen.stine", "fmg", "fmgols"), log.sep = "or")))
   }
 
   # bounds
