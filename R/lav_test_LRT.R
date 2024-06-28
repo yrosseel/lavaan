@@ -483,12 +483,12 @@ lav_test_lrt_single_model <- function(object, method = "default",
     aic <- c(NA, AIC(object))
     bic <- c(NA, BIC(object))
   }
-  
+
   ## determine which @test element
   tn <- names(object@test)
   if (length(tn) == 1L) {
     TEST <- 1L # only choice
-    
+
     ## More than 1.  Cycle through possible user specifications:
   } else if (method[1] == "standard") {
     TEST <- 1L
@@ -521,14 +521,14 @@ lav_test_lrt_single_model <- function(object, method = "default",
   if (!is.null(object@test[[TEST]]$shift.parameter)) {
     attr(val, "shift") <- c(NA, object@test[[TEST]]$shift.parameter)
   }
-  
+
   ## heading
   if (grepl(pattern = "browne", x = TEST)) {
     attr(val, "heading") <- object@test[[TEST]]$label
-    
+
   } else if (TEST == 1L) {
     attr(val, "heading") <- "Chi-Squared Test Statistic (unscaled)\n"
-    
+
   } else {
     LABEL <- object@test[[TEST]]$label
     attr(val, "heading") <- paste0("Chi-Squared Test Statistic (scaled",
@@ -538,7 +538,7 @@ lav_test_lrt_single_model <- function(object, method = "default",
                                           yes = "\n", no = paste("\n ", LABEL)),
                                    "\n")
   }
-  
+
   class(val) <- c("anova", class(val))
 
   val

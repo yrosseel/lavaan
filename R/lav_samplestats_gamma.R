@@ -441,7 +441,8 @@ lav_samplestats_Gamma <- function(Y, # Y+X if cond!
         gettext("unbiased Gamma only available for the simple
         (not conditional.x or fixed.x or model-based or clustered) setting."))
     } else {
-      COV <- COV.unbiased <- cov(Y)
+	  # data really should be complete
+      COV <- COV.unbiased <- stats::cov(Y, use = "pairwise.complete.obs")
       COV <- COV * (N - 1) / N
       cov.vech <- lav_matrix_vech(COV)
     }
