@@ -552,7 +552,7 @@ estimator.PML <- function(Sigma.hat = NULL, # model-based var/cov/cor
         pstar.idx <- PSTAR[i, j]
         # cat("pstar.idx =", pstar.idx, "i = ", i, " j = ", j, "\n")
         if (ov.types[i] == "numeric" &&
-          ov.types[j] == "numeric") {
+            ov.types[j] == "numeric") {
           # ordinary pearson correlation
           LIK[, pstar.idx] <-
             lav_bvreg_lik(
@@ -565,7 +565,7 @@ estimator.PML <- function(Sigma.hat = NULL, # model-based var/cov/cor
               rho = Cor.hat[i, j]
             )
         } else if (ov.types[i] == "numeric" &&
-          ov.types[j] == "ordered") {
+                   ov.types[j] == "ordered") {
           # polyserial correlation
           ### FIXME: th.y2 should go into ps_lik!!!
           LIK[, pstar.idx] <-
@@ -579,7 +579,7 @@ estimator.PML <- function(Sigma.hat = NULL, # model-based var/cov/cor
               rho = Cor.hat[i, j]
             )
         } else if (ov.types[j] == "numeric" &&
-          ov.types[i] == "ordered") {
+                   ov.types[i] == "ordered") {
           # polyserial correlation
           ### FIXME: th.y1 should go into ps_lik!!!
           LIK[, pstar.idx] <-
@@ -593,7 +593,7 @@ estimator.PML <- function(Sigma.hat = NULL, # model-based var/cov/cor
               rho = Cor.hat[i, j]
             )
         } else if (ov.types[i] == "ordered" &&
-          ov.types[j] == "ordered") {
+                   ov.types[j] == "ordered") {
           LIK[, pstar.idx] <-
             pc_lik_PL_with_cov(
               Y1 = X[, i],

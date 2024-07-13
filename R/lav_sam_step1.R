@@ -482,7 +482,11 @@ lav_sam_step1_local <- function(STEP1 = NULL, FIT = NULL,
       FS[[b]] <- do.call("cbind", tmp)
       colnames(FS[[b]]) <- LABEL
 
-      # dummy lv's?
+      # dummy lv's? (both 'x' and 'y'!)
+	  dummy.ov.idx <- c(FIT@Model@ov.y.dummy.ov.idx[[b]],
+	                    FIT@Model@ov.x.dummy.ov.idx[[b]])
+      dummy.lv.idx <- c(FIT@Model@ov.y.dummy.lv.idx[[b]],
+	                    FIT@Model@ov.x.dummy.lv.idx[[b]])
       if (length(dummy.lv.idx) > 0L) {
         FS.obs <- FIT@Data@X[[b]][, dummy.ov.idx, drop = FALSE]
         colnames(FS.obs) <- FIT@Data@ov.names[[b]][dummy.ov.idx]

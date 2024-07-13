@@ -98,6 +98,8 @@ uni_lik <- function(Y1, th.y1, eXo = NULL, PI.y1 = NULL) {
   uni_lik <- pnorm(th.y1.upper) - pnorm(th.y1.lower)
 
   uni_lik[is.na(uni_lik)] <- 0
+
+  uni_lik
 }
 
 #################################################################
