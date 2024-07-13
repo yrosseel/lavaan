@@ -137,7 +137,9 @@ lavTestLRT <- function(object, ..., method = "default", test = "default",
     scaled <- TRUE
     # which test to choose by default?
     # i.e., not determined by method=
-    scaledList <- sapply(object@test, function(x) !is.null(x$scaled.test.stat))
+    scaledList <- sapply(mods[[ which(ndf > 0)[1] ]]@test, # first mod with df>0
+                         #FIXME? If no mods have df > 0, this still yields error
+                         function(x) !is.null(x$scaled.test.stat))
     scaled.idx <- which(scaledList)[[1]]
     default.TEST <- object@test[[scaled.idx]]$test
     if (test == "default") {
