@@ -210,7 +210,7 @@ lav_scores_ml <- function(ntab = 0L,
       score.sigma <- matrix(0, nsub, nvar * (nvar + 1) / 2)
       score.mu <- matrix(0, nsub, nvar)
 
-      for (p in seq_along(length(M))) {
+      for (p in seq_len(length(M))) {
         ## Data
         # X <- M[[p]][["X"]]
         case.idx <- Mp$case.idx[[p]]
