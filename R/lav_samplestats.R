@@ -1458,7 +1458,7 @@ lav_samplestats_from_moments <- function(sample.cov = NULL,
         ord.idx <- which(th.idx[[g]] > 0)
         num.idx <- which(th.idx[[g]] == 0)
         if (length(ord.idx) > 0L) {
-          th.g[ord.idx] <- sample.th[[g]]
+          th.g[ord.idx] <- sample.th[[g]][ord.idx]
         }
         if (length(num.idx) > 0L) {
           ord.var.idx <- unique(th.idx[[g]][th.idx[[g]] > 0])
@@ -1486,7 +1486,7 @@ lav_samplestats_from_moments <- function(sample.cov = NULL,
         ord.idx <- which(th.idx[[g]] > 0)
         num.idx <- which(th.idx[[g]] == 0)
         if (length(ord.idx) > 0L) {
-          th.g[ord.idx] <- sample.th[[g]]
+          th.g[ord.idx] <- sample.th[[g]][ord.idx]
         }
         if (length(num.idx) > 0L) {
           ord.var.idx <- unique(th.idx[[g]][th.idx[[g]] > 0])
