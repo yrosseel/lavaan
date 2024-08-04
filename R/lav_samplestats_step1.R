@@ -6,6 +6,7 @@ lav_samplestats_step1 <- function(Y,
                                   ov.names.x = character(0L),
                                   eXo = NULL,
                                   scores.flag = TRUE, # scores?
+                                  allow.empty.cell = TRUE, # allow empty categories?
                                   group = 1L) { # for error message
 
 
@@ -73,13 +74,13 @@ lav_samplestats_step1 <- function(Y,
       # check if we have enough categories in this group
       # FIXME: should we more tolerant here???
       y.freq <- tabulate(Y[, i], nbins = ov.levels[i])
-      if (length(y.freq) != ov.levels[i]) {
+      if (length(y.freq) != ov.levels[i] & !allow.empty.cell) {
         lav_msg_stop(gettextf(
           "variable %1$s has fewer categories (%2$s) than
           expected (%3$s) in group %4$s", ov.names[i],
           length(y.freq), ov.levels[i], group))
       }
-      if (any(y.freq == 0L)) {
+      if (any(y.freq == 0L) & !allow.empty.cell) {
         lav_msg_stop(gettextf(
           "some categories of variable `%1$s' are empty in group %2$s;
           frequencies are [%3$s]", ov.names[i], group,
@@ -93,7 +94,35 @@ lav_samplestats_step1 <- function(Y,
       }
       FIT[[i]] <- fit
       TH[[i]] <- fit$theta[fit$th.idx]
-      TH.NOX[[i]] <- lav_uvord_th(y = Y[, i], wt = wt)
+      fit.nox <- lav_uvord_th(y = Y[, i], wt = wt)
+      if (allow.empty.cell) {
+        if (any(y.freq == 0L)) {
+          nzidx <- y.freq != 0L
+          exidx <- (nzidx[1:(ov.levels[i] - 1)] * nzidx[2:ov.levels[i]]) == 1
+          misidx <- (nzidx[1:(ov.levels[i] - 1)] * nzidx[2:ov.levels[i]]) == 0
+          TH[[i]] <- TH.NOX[[i]] <- rep(0, ov.levels[i] - 1)
+          TH[[i]][exidx] <- fit$theta[fit$th.idx]
+          TH.NOX[[i]][exidx] <- fit.nox[exidx]
+
+          for (k in which(misidx)) {
+            if (k == 1) {
+              TH[[i]][k] <- -4
+              TH.NOX[[i]][k] <- -4
+            } else if (k == (ov.levels[i] - 1)) {
+              TH[[i]][k] <- 4
+              TH.NOX[[i]][k] <- 4
+            } else {
+              TH[[i]][k] <- TH[[i]][(k - 1)] + .01
+              TH.NOX[[i]][k] <- TH.NOX[[i]][(k - 1)] + .01
+            }
+          }
+        } else if (length(y.freq) != ov.levels[i]) {
+          nz <- ov.levels[i] - length(y.freq)
+          TH[[i]] <- c(TH[[i]], TH[[i]][length(y.freq)] + (1:nz) * .01)
+        }
+      } else {
+        TH.NOX[[i]] <- fit.nox
+      }
       if (scores.flag) {
         scores <- lav_uvord_scores(y = Y[, i], X = eXo, wt = wt)
         SC.TH[, th.idx] <- scores[, fit$th.idx, drop = FALSE]

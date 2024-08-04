@@ -12,7 +12,8 @@ lav_dataframe_vartable <- function(frame = NULL, ov.names = NULL,
                                    ov.names.x = NULL,
                                    ordered = NULL,
                                    factor = NULL,
-                                   as.data.frame. = FALSE) {
+                                   as.data.frame. = FALSE,
+                                   allow.empty.cell = FALSE) {
   if (missing(ov.names)) {
     var.names <- names(frame)
   } else {
@@ -58,9 +59,18 @@ lav_dataframe_vartable <- function(frame = NULL, ov.names = NULL,
     # handle ordered/factor
     if (!is.null(ordered) && var.names[i] %in% ordered) {
       type.x <- "ordered"
-      lev <- sort(unique(x)) # we assume integers!
-      nlev[i] <- length(lev)
-      lnam[i] <- paste(lev, collapse = "|")
+      if (allow.empty.cell) {
+        nlev[i] <- max(as.numeric(x))
+        if (inherits(x, 'factor')) {
+          lnam[i] <- paste(levels(x), collapse = "|")
+        } else {
+          lnam[i] <- paste(1:nlev[i], collapse = "|")
+        }
+      } else {
+        lev <- sort(unique(x)) # we assume integers!
+        nlev[i] <- length(lev)
+        lnam[i] <- paste(lev, collapse = "|")
+      }
       user[i] <- 1L
     } else if (!is.null(factor) && var.names[i] %in% factor) {
       type.x <- "factor"

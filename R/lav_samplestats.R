@@ -27,6 +27,7 @@ lav_samplestats_from_data <- function(lavdata = NULL,
   zero.add <- lavoptions$zero.add
   zero.keep.margins <- lavoptions$zero.keep.margins
   zero.cell.warn <- lavoptions$zero.cell.warn
+  allow.empty.cell <- lavoptions$allow.empty.cell
   dls.a <- lavoptions$estimator.args$dls.a
   dls.GammaNT <- lavoptions$estimator.args$dls.GammaNT
 
@@ -299,7 +300,8 @@ lav_samplestats_from_data <- function(lavdata = NULL,
           zero.add = zero.add,
           zero.keep.margins = zero.keep.margins,
           zero.cell.warn = FALSE,
-          zero.cell.tables = TRUE
+          zero.cell.tables = TRUE,
+          allow.empty.cell = allow.empty.cell
         )
       } else {
         CAT <- muthen1984(
@@ -315,7 +317,8 @@ lav_samplestats_from_data <- function(lavdata = NULL,
           zero.add = zero.add,
           zero.keep.margins = zero.keep.margins,
           zero.cell.warn = FALSE,
-          zero.cell.tables = TRUE
+          zero.cell.tables = TRUE,
+          allow.empty.cell = allow.empty.cell
         )
       }
       lav_verbose(current.verbose)
