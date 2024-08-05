@@ -561,7 +561,7 @@ lav_model_estimate <- function(lavmodel = NULL,
       OPTIMIZER <- toupper(lavoptions$optim.method)
       stopifnot(OPTIMIZER %in% c(
         "NLMINB0", "NLMINB1", "NLMINB2",
-        "NLMINB", "BFGS", "L-BFGS-B", "NONE"
+        "NLMINB", "BFGS", "L.BFGS.B", "NONE"
       ))
       if (OPTIMIZER == "NLMINB1") {
         OPTIMIZER <- "NLMINB"
@@ -760,7 +760,7 @@ lav_model_estimate <- function(lavmodel = NULL,
     } else {
       converged <- FALSE
     }
-  } else if (OPTIMIZER == "L-BFGS-B") {
+  } else if (OPTIMIZER == "L.BFGS.B") {
     # warning, does not cope with Inf values!!
 
     control.lbfgsb <- list(
@@ -938,7 +938,7 @@ lav_model_estimate <- function(lavmodel = NULL,
   if (converged) {
     # check.gradient
     if (!is.null(GRADIENT) &&
-      OPTIMIZER %in% c("NLMINB", "BFGS", "L-BFGS-B")) {
+      OPTIMIZER %in% c("NLMINB", "BFGS", "L.BFGS.B")) {
       # compute unscaled gradient
       dx <- GRADIENT(x)
 

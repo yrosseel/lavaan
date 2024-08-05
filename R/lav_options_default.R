@@ -369,7 +369,8 @@ lav_options_default <- function() {
   # optimization
   elm("control", list(), oklen = c(0L, 100L))
   elm("optim.method", "default", chr = c(
-    "nlminb", "gn", "default", "noniter", "none", "em"
+    "nlminb", "nlminb0", "nlminb1", "nlminb2",
+    "bfgs", "l.bfgs.b", "gn", "default", "noniter", "none", "em"
   )) # gn for DLS, nlminb rest
   elm("optim.attempts", 4L, nm = "[1, 4]")
   elm("optim.force.converged", FALSE, bl = TRUE)
