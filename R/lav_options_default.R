@@ -417,6 +417,7 @@ lav_options_default <- function() {
       nm = "[0, 1]", oklen = c(1L, -2L))
   elm("zero.keep.margins", "default", chr = "default", bl = TRUE)
   elm("zero.cell.warn", FALSE, bl = TRUE) # since 0.6-1
+  elm("allow.empty.cell", FALSE, bl = TRUE) # since 0.6-19
   elm("cat.wls.w", TRUE, bl = TRUE) # since 0.6-18
 
   # starting values (char values checked in lav_options_set())

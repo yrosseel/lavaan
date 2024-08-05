@@ -458,6 +458,9 @@ Categorical estimation options:
     \item{\code{zero.cell.warn}:}{Logical. Only used if some observed 
       endogenous variables are categorical. If \code{TRUE}, give a warning if 
       one or more cells of a bivariate frequency table are empty.}
+    \item{\code{allow.empty.cell}:}{Logical. If \code{TRUE}, ignore
+      situations where an ordinal variable has fewer categories than
+      expected, or where a category is empty in a specific group.}
 }
 
 Starting values options:

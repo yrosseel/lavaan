@@ -24,6 +24,7 @@ muthen1984 <- function(Data = NULL,
                        zero.keep.margins = TRUE,
                        zero.cell.warn = FALSE,
                        zero.cell.tables = TRUE,
+                       allow.empty.cell = TRUE,
                        group = 1L) { # group only for error messages
 
   # just in case Data is a vector
@@ -58,7 +59,7 @@ muthen1984 <- function(Data = NULL,
   step1 <- lav_samplestats_step1(
     Y = Data, wt = wt, ov.names = ov.names,
     ov.types = ov.types, ov.levels = ov.levels, ov.names.x = ov.names.x,
-    eXo = eXo, scores.flag = WLS.W, group = group
+    eXo = eXo, scores.flag = WLS.W, allow.empty.cell = allow.empty.cell, group = group
   )
 
   FIT <- step1$FIT
