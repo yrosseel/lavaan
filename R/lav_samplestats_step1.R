@@ -95,15 +95,30 @@ lav_samplestats_step1 <- function(Y,
       FIT[[i]] <- fit
       TH[[i]] <- fit$theta[fit$th.idx]
       fit.nox <- lav_uvord_th(y = Y[, i], wt = wt)
+      TH.NOX[[i]] <- fit.nox
+      if (scores.flag) {
+        scores <- lav_uvord_scores(y = Y[, i], X = eXo, wt = wt)
+      }
+
       if (allow.empty.cell) {
         if (any(y.freq == 0L)) {
-          nzidx <- y.freq != 0L
-          exidx <- (nzidx[1:(ov.levels[i] - 1)] * nzidx[2:ov.levels[i]]) == 1
-          misidx <- (nzidx[1:(ov.levels[i] - 1)] * nzidx[2:ov.levels[i]]) == 0
+          ## lav_uvord_fit drops thresholds if extreme categories are missing, but not otherwise
+          exidx <- rep(TRUE, (ov.levels[i] - 1))
+          misidx <- !exidx
+          zidx <- y.freq == 0L
+          if (y.freq[ov.levels[i]] == 0L) {
+            nhi <- ov.levels[i] - tail( which(diff(zidx) == 1), 1)
+            exidx[(ov.levels[i] - nhi) : (ov.levels[i] - 1)] <- FALSE
+            misidx[(ov.levels[i] - nhi) : (ov.levels[i] - 1)] <- TRUE
+          }
+          if (y.freq[1] == 0L) {
+            nlow <- which( diff(zidx) == -1 )[1]
+            exidx[1:nlow] <- FALSE
+            misidx[1:nlow] <- TRUE
+          }
           TH[[i]] <- TH.NOX[[i]] <- rep(0, ov.levels[i] - 1)
           TH[[i]][exidx] <- fit$theta[fit$th.idx]
           TH.NOX[[i]][exidx] <- fit.nox[exidx]
-
           for (k in which(misidx)) {
             if (k == 1) {
               TH[[i]][k] <- -4
@@ -116,16 +131,15 @@ lav_samplestats_step1 <- function(Y,
               TH.NOX[[i]][k] <- TH.NOX[[i]][(k - 1)] + .01
             }
           }
+          if (scores.flag) SC.TH[, th.idx[!misidx]] <- scores[, fit$th.idx, drop = FALSE]
         } else if (length(y.freq) != ov.levels[i]) {
           nz <- ov.levels[i] - length(y.freq)
           TH[[i]] <- c(TH[[i]], TH[[i]][length(y.freq)] + (1:nz) * .01)
+          if (scores.flag) SC.TH[, th.idx[1:length(y.freq)]] <- scores[, fit$th.idx, drop = FALSE]
         }
+        fit$th.idx <- 1:nTH[i]
       } else {
-        TH.NOX[[i]] <- fit.nox
-      }
-      if (scores.flag) {
-        scores <- lav_uvord_scores(y = Y[, i], X = eXo, wt = wt)
-        SC.TH[, th.idx] <- scores[, fit$th.idx, drop = FALSE]
+        if (scores.flag) SC.TH[, th.idx] <- scores[, fit$th.idx, drop = FALSE]
       }
       SLOPES[i, ] <- fit$theta[fit$slope.idx]
       if (scores.flag) {
