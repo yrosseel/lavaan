@@ -7,28 +7,30 @@ lav_rls <- \(object) {
 }
 
 lav_test_fmg <- \(object, input) {
-
   make_chisqs <- \(chisq) {
     if (chisq == "ml") lavaan::fitmeasures(object, "chisq") else rls(object)
   }
 
   name <- input$name
   param <- input$param
-  unbiased <- input$unbiased
-  chisq <- if (input$chisq == "ml") lavaan::fitmeasures(object, "chisq") else lav_rls(object)
-  df <- lavaan::fitmeasures(object, "df")
-  ug <- lav_ugamma_no_groups(object, unbiased)
+  #unbiased <- input$unbiased
+  #chisq <- if (input$chisq == "ml") lavaan::fitmeasures(object, "chisq") else lav_rls(object)
+  chisq <- fitmeasures(object, "chisq")
+  df <- fitmeasures(object, "df")
+  ug <- lav_object_gamma(object)[[1]] # Only for one group.
+  #ug <- lav_ugamma_no_groups(object, unbiased)
+
   lambdas_list <- Re(eigen(ug)$values)[seq(df)]
 
   lambdas <- lambdas_list
   list(
-    test = lav_fmg_reconstruct_input(input),
-    pvalue = if (name == "pEBA") {
-    lav_fmg_peba(chisq, lambdas, param)
+    test = lav_fmg_reconstruct_label(input),
+    pvalue = if (name == "fmg") {
+    lav_fmg(chisq, lambdas, param)
   } else if (name == "EBA") {
     lav_fmg_eba(chisq, lambdas, param)
-  } else if (name == "pOLS") {
-    lav_fmg_pols(chisq, lambdas, param)
+  } else if (name == "fmgols") {
+    lav_fmgols(chisq, lambdas, param)
   },
   label = lav_fmg_reconstruct_label(input))
 }
@@ -64,7 +66,7 @@ lav_fmg_parse_input <- \(string) {
   })
 }
 
-lav_fmg_reconstruct_input <- \(input) paste0(input$name, "_", input$param)
+lav_fmg_reconstruct_label <- \(input) paste0(input$name, "_", input$param)
 
 lav_fmg_construct_label <- \(input) {
   if (input$name == "fmg") {
