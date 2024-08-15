@@ -17,12 +17,13 @@ lav_test_fmg <- \(object, input) {
   #chisq <- if (input$chisq == "ml") lavaan::fitmeasures(object, "chisq") else lav_rls(object)
   chisq <- fitmeasures(object, "chisq")
   df <- fitmeasures(object, "df")
-  ug <- lav_object_gamma(object)[[1]] # Only for one group.
+  ug <- lav_object_inspect_UGamma(object) # Only for one group.
   #ug <- lav_ugamma_no_groups(object, unbiased)
+  lambdas <- Re(eigen(ug)$values)[seq(df)]
 
-  lambdas_list <- Re(eigen(ug)$values)[seq(df)]
-
-  lambdas <- lambdas_list
+  print(chisq)
+  print(lambdas)
+  print(param)
   list(
     test = lav_fmg_reconstruct_label(input),
     pvalue = if (name == "fmg") {
