@@ -45,8 +45,14 @@ lav_uvord_fit <- function(y = NULL,
 
   # optim.method
   minObjective <- lav_uvord_min_objective
-  minGradient <- lav_uvord_min_gradient
-  minHessian <- lav_uvord_min_hessian
+  y.ncat <- length(tabulate(y.freq)) # number of response categories
+  if (y.ncat > 1L) {
+    minGradient <- lav_uvord_min_gradient
+    minHessian <- lav_uvord_min_hessian
+  } else {
+    minGradient <- NULL
+    minHessian <- NULL
+  }
   if (optim.method == "nlminb" || optim.method == "nlminb2") {
     # nothing to do
   } else if (optim.method == "nlminb0") {
@@ -198,13 +204,13 @@ lav_uvord_init_cache <- function(y = NULL,
   Y2 <- matrix(1:nth, nobs, nth, byrow = TRUE) == (y - 1L)
 
   # starting values
-  if (nexo == 0L) {
+  if (nexo == 0L && nth > 0L) {
     if (logistic) {
       th.start <- qlogis(cumsum(y.prop[-length(y.prop)]))
     } else {
       th.start <- qnorm(cumsum(y.prop[-length(y.prop)]))
     }
-  } else if (nth == 1L && nexo > 0L) {
+  } else if ((nth == 1L && nexo > 0L) || nth == 0L) {
     th.start <- 0
   } else {
     if (logistic) {
