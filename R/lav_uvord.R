@@ -45,7 +45,7 @@ lav_uvord_fit <- function(y = NULL,
 
   # optim.method
   minObjective <- lav_uvord_min_objective
-  y.ncat <- length(tabulate(y.freq)) # number of response categories
+  y.ncat <- length(tabulate(y)) # number of response categories
   if (y.ncat > 1L) {
     minGradient <- lav_uvord_min_gradient
     minHessian <- lav_uvord_min_hessian
@@ -200,8 +200,12 @@ lav_uvord_init_cache <- function(y = NULL,
   o2 <- ifelse(y == 1, -100, 0)
 
   # TH matrices (Matrix logical?)
-  Y1 <- matrix(1:nth, nobs, nth, byrow = TRUE) == y
-  Y2 <- matrix(1:nth, nobs, nth, byrow = TRUE) == (y - 1L)
+  if (nth > 0L) {
+    Y1 <- matrix(1:nth, nobs, nth, byrow = TRUE) == y
+    Y2 <- matrix(1:nth, nobs, nth, byrow = TRUE) == (y - 1L)
+  } else {
+    Y1 <- Y2 <- matrix(nrow = nobs, ncol = 0)
+  }
 
   # starting values
   if (nexo == 0L && nth > 0L) {
