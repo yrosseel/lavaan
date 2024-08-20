@@ -279,7 +279,7 @@ lav_bvord_init_cache <- function(fit.y1 = NULL,
 
   # starting value (for both exo and not-exo)
   # if(is.null(wt)) {
-  if(sd(Y1) == 0 || sd(Y2) == 0) {
+  if(sd(Y1, na.rm = TRUE) == 0 || sd(Y2, na.rm = TRUE) == 0) {
     rho.init <- 0.0
   } else {
     rho.init <- cor(Y1, Y2, use = "pairwise.complete.obs")
