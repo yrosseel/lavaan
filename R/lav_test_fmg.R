@@ -103,7 +103,12 @@ lav_fmg_imhof <- \(x, lambda) {
   integrand <- Vectorize(\(u) {
     sin(theta(u, x, lambda)) / (u * rho(u, lambda))
   })
-  z <- integrate(integrand, lower = 0, upper = Inf)$value
+  z <- tryCatch({
+    integrate(integrand, lower = 0, upper = Inf)$value
+  },
+  error = \(e) {
+    integrate(integrand, lower = 0, upper = 1000)$value
+  })
   0.5 + z / pi
 }
 
