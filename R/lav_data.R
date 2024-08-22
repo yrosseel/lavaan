@@ -47,7 +47,7 @@ lavData <- function(data = NULL, # data.frame
 
   # allow empty categories of ordinal variable
   allow.empty.cell <- lavoptions$allow.empty.cell
-  
+
   # block.labels
   block.label <- character(0L)
   if (length(group.label) > 0L && length(level.label) == 0L) {
@@ -559,7 +559,7 @@ lav_data_full <- function(data = NULL, # data.frame
 
   # ensure allow.empty.cell is logical
   if (is.null(allow.empty.cell)) allow.empty.cell <- FALSE
-  
+
   # sampling weights
   if (!is.null(sampling.weights)) {
     if (is.character(sampling.weights)) {
