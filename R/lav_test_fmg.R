@@ -28,8 +28,6 @@ lav_test_fmg <- \(object, input) {
     test = lav_fmg_reconstruct_label(input),
     pvalue = if (name == "fmg") {
     lav_fmg(chisq, lambdas, param)
-  } else if (name == "EBA") {
-    lav_fmg_eba(chisq, lambdas, param)
   } else if (name == "fmgols") {
     lav_fmgols(chisq, lambdas, param)
   },
