@@ -147,7 +147,7 @@ lav_mvnorm_cluster_missing_loglik_samplestats_2l <- function(Y1 = NULL,
 
   # Y per missing pattern
   W.logdet <- 0
-  MPi <- integer(nrow(Y1))
+  #MPi <- integer(nrow(Y1))
   for (p in seq_len(Mp$npatterns)) {
     freq <- Mp$freq[p]
     na.idx <- which(!Mp$pat[p, ])
@@ -158,7 +158,7 @@ lav_mvnorm_cluster_missing_loglik_samplestats_2l <- function(Y1 = NULL,
 
     # compute sigma.w.inv for this pattern
     if (length(na.idx) > 0L) {
-      MPi[Mp$case.idx[[p]]] <- p
+      #MPi[Mp$case.idx[[p]]] <- p
       wp <- sigma.w[-na.idx, -na.idx, drop = FALSE]
       wp.inv <- lav_matrix_symmetric_inverse_update(
         S.inv = sigma.w.inv, rm.idx = na.idx,
