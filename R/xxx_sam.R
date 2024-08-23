@@ -78,6 +78,7 @@ sam <- function(model = NULL,
                 # h1, anova, mean
                 global.options = list(), # not used for now
                 output = "lavaan") {
+
   # ------------- handling of warn/debug/verbose switches ----------
   dotdotdot <- list(...)
   if (!is.null(dotdotdot$debug)) {
@@ -135,6 +136,16 @@ sam <- function(model = NULL,
   # check for data.type == "none"
   if (FIT@Data@data.type == "none") {
     lav_msg_stop(gettext("no data or sample statistics are provided."))
+  }
+
+  # check if we have categorical data
+  if (FIT@Model@categorical) {
+    # if sam.method = "global", force estimator to DWLS in struc par
+	if (sam.method == "global" &&
+	    !is.null(struc.args[["estimator"]]) &&
+	    struc.args[["estimator"]] == "ML") {
+      struc.args[["estimator"]] <- "DWLS"
+    }
   }
 
   lavoptions <- lavInspect(FIT, "options")
