@@ -385,6 +385,9 @@ lav_model_objective <- function(lavmodel = NULL,
     if (estimator == "PML") {
       # no weighting needed! (since N_g is part of the logl per group)
       fx <- sum(fx.group)
+	} else if(lavdata@nlevels > 1L) {
+	  # no weighting needed! (implicit in obj, which is based on loglik)
+	  fx <- sum(fx.group)
     } else {
       nobs <- unlist(lavsamplestats@nobs)
       # }
