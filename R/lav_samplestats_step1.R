@@ -107,7 +107,8 @@ lav_samplestats_step1 <- function(Y,
           misidx <- !exidx
           zidx <- y.freq == 0L
           if (y.freq[ov.levels[i]] == 0L) {
-            nhi <- ov.levels[i] - tail( which(diff(zidx) == 1), 1)
+            wdz <- which(diff(zidx) == 1L)
+            nhi <- ov.levels[i] - wdz[length(wdz)]
             exidx[(ov.levels[i] - nhi) : (ov.levels[i] - 1)] <- FALSE
             misidx[(ov.levels[i] - nhi) : (ov.levels[i] - 1)] <- TRUE
           }
