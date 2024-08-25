@@ -70,7 +70,9 @@ lav_lavaan_step17_lavaan <- function(lavmc = NULL,
       cat(" done.\n")
     }
     lavaan@ParTable$est.std <- std$est.std
-    lavaan@ParTable$se.std <- std$se
+	if (!is.null(std$se)) {
+      lavaan@ParTable$se.std <- std$se
+    }
   }
 
   # post-fitting check of parameters

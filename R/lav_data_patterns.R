@@ -77,11 +77,13 @@ lav_data_missing_patterns <- function(Y, sort.freq = FALSE, coverage = FALSE,
     )
     Mp$j1.idx <- lapply(
       seq_len(pat.npatterns),
-      function(p) unique.default(Mp$j.idx[[p]])
+      function(p) sort(unique.default(Mp$j.idx[[p]])) # new in 0.6-19: sort!!
+	                                                  # because table/tabulate
+													  # also sorts...
     )
     Mp$j.freq <- lapply(
       seq_len(pat.npatterns),
-      function(p) as.integer(unname(table(Mp$j.idx[[p]])))
+      function(p) as.integer(unname(table(sort(Mp$j.idx[[p]])))) # sort not needed?
     )
 
     # between-level patterns
@@ -165,28 +167,29 @@ lav_data_cluster_patterns <- function(Y = NULL,
     stopifnot(ncol(clus) == (nlevels - 1L), nrow(Y) == nrow(clus))
   }
 
-  cluster.size <- vector("list", length = nlevels)
-  cluster.id <- vector("list", length = nlevels)
-  cluster.idx <- vector("list", length = nlevels)
-  nclusters <- vector("list", length = nlevels)
-  cluster.sizes <- vector("list", length = nlevels)
-  ncluster.sizes <- vector("list", length = nlevels)
+  cluster.size    <- vector("list", length = nlevels)
+  cluster.id      <- vector("list", length = nlevels)
+  cluster.idx     <- vector("list", length = nlevels)
+  nclusters       <- vector("list", length = nlevels)
+  cluster.sizes   <- vector("list", length = nlevels)
+  ncluster.sizes  <- vector("list", length = nlevels)
   cluster.size.ns <- vector("list", length = nlevels)
-  ov.idx <- vector("list", length = nlevels)
-  ov.x.idx <- vector("list", length = nlevels)
-  ov.y.idx <- vector("list", length = nlevels)
-  both.idx <- vector("list", length = nlevels)
-  within.idx <- vector("list", length = nlevels)
-  within.x.idx <- vector("list", length = nlevels)
-  within.y.idx <- vector("list", length = nlevels)
-  between.idx <- vector("list", length = nlevels)
-  between.x.idx <- vector("list", length = nlevels)
-  between.y.idx <- vector("list", length = nlevels)
-  both.names <- vector("list", length = nlevels)
-  within.names <- vector("list", length = nlevels)
-  within.x.names <- vector("list", length = nlevels)
-  within.y.names <- vector("list", length = nlevels)
-  between.names <- vector("list", length = nlevels)
+
+  ov.idx          <- vector("list", length = nlevels)
+  ov.x.idx        <- vector("list", length = nlevels)
+  ov.y.idx        <- vector("list", length = nlevels)
+  both.idx        <- vector("list", length = nlevels)
+  within.idx      <- vector("list", length = nlevels)
+  within.x.idx    <- vector("list", length = nlevels)
+  within.y.idx    <- vector("list", length = nlevels)
+  between.idx     <- vector("list", length = nlevels)
+  between.x.idx   <- vector("list", length = nlevels)
+  between.y.idx   <- vector("list", length = nlevels)
+  both.names      <- vector("list", length = nlevels)
+  within.names    <- vector("list", length = nlevels)
+  within.x.names  <- vector("list", length = nlevels)
+  within.y.names  <- vector("list", length = nlevels)
+  between.names   <- vector("list", length = nlevels)
   between.x.names <- vector("list", length = nlevels)
   between.y.names <- vector("list", length = nlevels)
 
@@ -199,8 +202,15 @@ lav_data_cluster_patterns <- function(Y = NULL,
   for (l in 2:nlevels) {
     if (haveData) {
       CLUS <- clus[, (l - 1L)]
+
+	  # cluster.id: original cluster identifier
       cluster.id[[l]] <- unique(CLUS)
+
+	  # cluster.idx: internal cluster idx (always an integer from 1 to J
+	  # for every obervation;
+	  # the first cluster id we observe is '1', the second '2', etc...)
       cluster.idx[[l]] <- match(CLUS, cluster.id[[l]])
+
       cluster.size[[l]] <- tabulate(cluster.idx[[l]])
       nclusters[[l]] <- length(cluster.size[[l]])
       # check if we have more observations than clusters

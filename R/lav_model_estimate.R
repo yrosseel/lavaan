@@ -14,7 +14,8 @@ lav_model_estimate <- function(lavmodel = NULL,
   debug <- lav_debug()
   ngroups <- lavsamplestats@ngroups
 
-  if (lavsamplestats@missing.flag || estimator == "PML") {
+  if (lavsamplestats@missing.flag || estimator == "PML" ||
+      lavdata@nlevels > 1L) {
     group.weight <- FALSE
   } else {
     group.weight <- TRUE
