@@ -566,6 +566,9 @@ lav_model_test <- function(lavobject = NULL,
       # which test statistic shall we scale?
       unscaled.TEST <- TEST[[1]]
       if (lavoptions$scaled.test != "standard") {
+        print(test.orig)
+        print(lavoptions$scaled.test)
+        print(TEST)
         idx <- which(test.orig == lavoptions$scaled.test)
         if (length(idx) > 0L) {
           unscaled.TEST <- TEST[[idx[1]]]

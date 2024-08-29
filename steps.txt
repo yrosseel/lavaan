@@ -1,0 +1,2 @@
+1. [ ] Sjekk ugamma for nested.
+2. [ ] Verifiser ugamma for groups med constraints.

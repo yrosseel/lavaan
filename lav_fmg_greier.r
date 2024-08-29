@@ -1,13 +1,20 @@
-n = 500
+n = 50
 data = psych::bfi
 
-model = "A =~ A1+A2+A3+A4+A5;
-         C =~ C1+C2+C3+C4+C5
+model = "A =~ A1+a*A2+A3+A4+A5;
+         C =~ C1+a*C2+C3+C4+C5
          "
-object <- sem(model, data[1:n, ], test = "sb")
+
+object <- sem(model, data[1:n, ], group = "gender", test = "sb")
+lavTest(object, test = "fmg_1")
+lavTest(object, test = "sb")
+
+
 sum(diag(ugamma_non_nested(object))) / 34
 
 dim(lavaan::lavInspect(object, "delta"))
+
+
 
 model = "A =~ A1+A2+A3+A4+A5;
          C =~ C1+C2+C3+C4+C5
