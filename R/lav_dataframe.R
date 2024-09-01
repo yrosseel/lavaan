@@ -60,10 +60,11 @@ lav_dataframe_vartable <- function(frame = NULL, ov.names = NULL,
     if (!is.null(ordered) && var.names[i] %in% ordered) {
       type.x <- "ordered"
       if (allow.empty.cell) {
-        nlev[i] <- max(as.numeric(x))
         if (inherits(x, 'factor')) {
+          nlev[i] <- nlevels(x)
           lnam[i] <- paste(levels(x), collapse = "|")
         } else {
+          nlev[i] <- max(as.numeric(x), na.rm = TRUE)
           lnam[i] <- paste(1:nlev[i], collapse = "|")
         }
       } else {

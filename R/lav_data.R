@@ -979,7 +979,7 @@ lav_data_full <- function(data = NULL, # data.frame
     }
     # check variances per group (if we have multiple groups)
     # to catch zero-variance variables within a group (new in 0.6-8)
-    if (ngroups > 1L) {
+    if (ngroups > 1L && !allow.empty.cell) {
       # X
       group.var <- apply(X[[g]], 2, var, na.rm = TRUE)
       zero.var <- which(group.var < .Machine$double.eps)

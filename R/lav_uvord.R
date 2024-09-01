@@ -45,8 +45,14 @@ lav_uvord_fit <- function(y = NULL,
 
   # optim.method
   minObjective <- lav_uvord_min_objective
-  minGradient <- lav_uvord_min_gradient
-  minHessian <- lav_uvord_min_hessian
+  y.ncat <- length(tabulate(y)) # number of response categories
+  if (y.ncat > 1L) {
+    minGradient <- lav_uvord_min_gradient
+    minHessian <- lav_uvord_min_hessian
+  } else {
+    minGradient <- NULL
+    minHessian <- NULL
+  }
   if (optim.method == "nlminb" || optim.method == "nlminb2") {
     # nothing to do
   } else if (optim.method == "nlminb0") {
@@ -194,17 +200,21 @@ lav_uvord_init_cache <- function(y = NULL,
   o2 <- ifelse(y == 1, -100, 0)
 
   # TH matrices (Matrix logical?)
-  Y1 <- matrix(1:nth, nobs, nth, byrow = TRUE) == y
-  Y2 <- matrix(1:nth, nobs, nth, byrow = TRUE) == (y - 1L)
+  if (nth > 0L) {
+    Y1 <- matrix(1:nth, nobs, nth, byrow = TRUE) == y
+    Y2 <- matrix(1:nth, nobs, nth, byrow = TRUE) == (y - 1L)
+  } else {
+    Y1 <- Y2 <- matrix(nrow = nobs, ncol = 0)
+  }
 
   # starting values
-  if (nexo == 0L) {
+  if (nexo == 0L && nth > 0L) {
     if (logistic) {
       th.start <- qlogis(cumsum(y.prop[-length(y.prop)]))
     } else {
       th.start <- qnorm(cumsum(y.prop[-length(y.prop)]))
     }
-  } else if (nth == 1L && nexo > 0L) {
+  } else if ((nth == 1L && nexo > 0L) || nth == 0L) {
     th.start <- 0
   } else {
     if (logistic) {
