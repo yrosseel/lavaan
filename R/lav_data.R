@@ -265,7 +265,7 @@ lavData <- function(data = NULL, # data.frame
     }
 
     # if std.ov = TRUE, give a warning (suggested by Peter Westfall)
-    if (std.ov) {
+    if (std.ov && !lavoptions$correlation) {
       lav_msg_warn(gettext(
         "std.ov argument is ignored if only sample statistics are provided."))
     }
