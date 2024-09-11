@@ -593,7 +593,7 @@ ldw_parse_get_modifier <- function(formul1, lhs, opi, modelsrc, types,
         if (j + 3L < nelem && formul1$elem.text[j + 3L] == "," &&
           any(formul1$elem.text[j] == c(
             "start", "fixed", "label",
-            "upp", "lower", "rv", "prior"
+            "upper", "lower", "rv", "prior"
           ))) {
           vector.type <- 0
           labnu <- j + 2L
@@ -1121,26 +1121,46 @@ ldw_parse_model_string <- function(model.syntax = "", as.data.frame. = FALSE) {
   aantal <- length(constraints)
   if (aantal > 0) {
     for (j in aantal:1) {
-      if (any(flat$label == constraints[[j]]$lhs) &&
-          any(constraints[[j]]$op == c("<", ">")) &&
-          mode(str2lang(constraints[[j]]$rhs)) == "numeric") {
-        nr <- which(flat$label == constraints[[j]]$lhs)
-        nrm <- length(mod) + 1L
-        if (flat$mod.idx[nr] > 0L) {
-          nrm <- flat$mod.idx[nr]
-        } else {
-          flat$mod.idx[nr] <- nrm
-          mod <- c(mod, list(label = constraints[[j]]$lhs))
+      if (any(flat$label == constraints[[j]]$lhs) && 
+          any(constraints[[j]]$op == c("<", ">"))) {  
+          rhslang <- str2lang(constraints[[j]]$rhs)
+          if (mode(rhslang) == "numeric") {
+            nr <- which(flat$label == constraints[[j]]$lhs)
+            nrm <- length(mod) + 1L
+            if (flat$mod.idx[nr] > 0L) {
+              nrm <- flat$mod.idx[nr]
+            } else {
+              flat$mod.idx[nr] <- nrm
+              mod <- c(mod, list(label = constraints[[j]]$lhs))
+            }
+            if (constraints[[j]]$op == "<") {
+              flat$upper[nr] <- constraints[[j]]$rhs
+              mod[[nrm]]$upper <- as.numeric(constraints[[j]]$rhs)
+            } else {
+              flat$lower[nr] <- constraints[[j]]$rhs
+              mod[[nrm]]$lower <- as.numeric(constraints[[j]]$rhs)
+            }
+            constraints <- constraints[-j]
+          } else if (mode(rhslang) == "call") {
+            nr <- which(flat$label == constraints[[j]]$lhs)
+            nrm <- length(mod) + 1L
+            if (flat$mod.idx[nr] > 0L) {
+              nrm <- flat$mod.idx[nr]
+            } else {
+              flat$mod.idx[nr] <- nrm
+              mod <- c(mod, list(label = constraints[[j]]$lhs))
+            }
+            rhsval = eval(rhslang)
+            if (constraints[[j]]$op == "<") {
+              flat$upper[nr] <- as.character(rhsval)
+              mod[[nrm]]$upper <- rhsval
+            } else {
+              flat$lower[nr] <- as.character(rhsval)
+              mod[[nrm]]$lower <- rhsval
+            }
+            constraints <- constraints[-j]
+          }
         }
-        if (constraints[[j]]$op == "<") {
-          flat$upper[nr] <- constraints[[j]]$rhs
-          mod[[nrm]]$upper <- as.numeric(constraints[[j]]$rhs)
-        } else {
-          flat$lower[nr] <- constraints[[j]]$rhs
-          mod[[nrm]]$lower <- as.numeric(constraints[[j]]$rhs)
-        }
-        constraints <- constraints[-j]
-      }
     }
   }
   # new in 0.6, reorder covariances here!
