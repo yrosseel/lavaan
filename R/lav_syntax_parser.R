@@ -1116,6 +1116,33 @@ ldw_parse_model_string <- function(model.syntax = "", as.data.frame. = FALSE) {
   if (length(int.idx) > 0L) {
     flat$op[int.idx] <- "~1"
   }
+  # if there are constraints that are simple lower or upper limits, put
+  # them in these members, add a modifier and remove constraint
+  aantal <- length(constraints)
+  if (aantal > 0) {
+    for (j in aantal:1) {
+      if (any(flat$label == constraints[[j]]$lhs) &&
+          any(constraints[[j]]$op == c("<", ">")) &&
+          mode(str2lang(constraints[[j]]$rhs)) == "numeric") {
+        nr <- which(flat$label == constraints[[j]]$lhs)
+        nrm <- length(mod) + 1L
+        if (flat$mod.idx[nr] > 0L) {
+          nrm <- flat$mod.idx[nr]
+        } else {
+          flat$mod.idx[nr] <- nrm
+          mod <- c(mod, list(label = constraints[[j]]$lhs))
+        }
+        if (constraints[[j]]$op == "<") {
+          flat$upper[nr] <- constraints[[j]]$rhs
+          mod[[nrm]]$upper <- as.numeric(constraints[[j]]$rhs)
+        } else {
+          flat$lower[nr] <- constraints[[j]]$rhs
+          mod[[nrm]]$lower <- as.numeric(constraints[[j]]$rhs)
+        }
+        constraints <- constraints[-j]
+      }
+    }
+  }
   # new in 0.6, reorder covariances here!
   flat <- lav_partable_covariance_reorder(flat)
   if (as.data.frame.) {
@@ -1135,6 +1162,7 @@ ldw_parse_model_string <- function(model.syntax = "", as.data.frame. = FALSE) {
       }
     }
   }
+  # create output
   attr(flat, "modifiers") <- mod
   attr(flat, "constraints") <- constraints
   flat
