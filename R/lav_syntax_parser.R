@@ -280,7 +280,7 @@ ldw_parse_step1 <- function(modelsrc, types) {
     if (elem.type[i] == types$identifier && elem.text[i] == "efa") {
       frm.hasefa <- TRUE
     }
-    if (any(elem.text[i] == c("+", "*", "=~"))) {
+    if (any(elem.text[i] == c("+", "*", "=~", "-"))) {
       if (frm.incremented) {
         frm.number <- frm.number - 1L
         elem.formula.number[i] <- frm.number
@@ -1121,8 +1121,8 @@ ldw_parse_model_string <- function(model.syntax = "", as.data.frame. = FALSE) {
   aantal <- length(constraints)
   if (aantal > 0) {
     for (j in aantal:1) {
-      if (any(flat$label == constraints[[j]]$lhs) && 
-          any(constraints[[j]]$op == c("<", ">"))) {  
+      if (any(flat$label == constraints[[j]]$lhs) &&
+          any(constraints[[j]]$op == c("<", ">"))) {
           rhslang <- str2lang(constraints[[j]]$rhs)
           if (mode(rhslang) == "numeric") {
             nr <- which(flat$label == constraints[[j]]$lhs)
@@ -1142,6 +1142,8 @@ ldw_parse_model_string <- function(model.syntax = "", as.data.frame. = FALSE) {
             }
             constraints <- constraints[-j]
           } else if (mode(rhslang) == "call") {
+            if (is.numeric(tryCatch(eval(rhslang),
+                                    error = function(e) "error"))) {
             nr <- which(flat$label == constraints[[j]]$lhs)
             nrm <- length(mod) + 1L
             if (flat$mod.idx[nr] > 0L) {
@@ -1159,6 +1161,7 @@ ldw_parse_model_string <- function(model.syntax = "", as.data.frame. = FALSE) {
               mod[[nrm]]$lower <- rhsval
             }
             constraints <- constraints[-j]
+            }
           }
         }
     }
