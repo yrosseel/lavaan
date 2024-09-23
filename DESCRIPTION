@@ -1,6 +1,6 @@
 Package: lavaan
 Title: Latent Variable Analysis
-Version: 0.6-19.2201
+Version: 0.6-19.2202
 Authors@R: c(person(given   = "Yves", family = "Rosseel",
                     role    = c("aut", "cre"),
                     email   = "Yves.Rosseel@UGent.be",
@@ -29,7 +29,7 @@ Authors@R: c(person(given   = "Yves", family = "Rosseel",
                     email = "merklee@missouri.edu"),
              person(given = "Michael", family = "Hallquist",
                     role = "ctb",
-                    email = "michael.hallquist at gmail.com"),
+                    email = "michael.hallquist@gmail.com"),
              person(given = "Mijke", family = "Rhemtulla",
                     role = "ctb",
                     email = "mrhemtulla@ucdavis.edu"),

@@ -135,9 +135,12 @@ lav_sam_step1 <- function(cmd = "sem", mm.list = NULL, mm.args = list(),
   # for joint model later
   if (lavoptions$se != "none") {
     Sigma.11 <- matrix(0, npar, npar)
+    colnames(Sigma.11) <- rownames(Sigma.11) <-
+      lav_partable_labels(FIT@ParTable, type = "free")
   }
   step1.free.idx <- integer(0L)
-
+  block.mm.idx  <- vector("list", length = nMMblocks)
+  block.ptm.idx <- vector("list", length = nMMblocks)
 
   # NOTE: we should explicitly add zero-constrained LV covariances
   # to PT, and keep them zero in PTM
@@ -167,6 +170,7 @@ lav_sam_step1 <- function(cmd = "sem", mm.list = NULL, mm.args = list(),
     attr(PTM, "idx") <- NULL
     PTM$est <- NULL
     PTM$se <- NULL
+    block.mm.idx[[mm]] <- mm.idx
 
     # check for categorical in PTM in this mm-block
     if (!any(PTM$op == "|")) {
@@ -229,6 +233,7 @@ lav_sam_step1 <- function(cmd = "sem", mm.list = NULL, mm.args = list(),
     # pt.idx == mm.idx
     ptm.idx <- which((PTM$free > 0L | PTM$op %in% c(":=", "<", ">")) &
       PTM$user != 3L)
+    block.ptm.idx[[mm]] <- ptm.idx
     PT$est[mm.idx[ptm.idx]] <- PTM$est[ptm.idx]
 
     # if categorical, add non-free residual variances
@@ -275,7 +280,8 @@ lav_sam_step1 <- function(cmd = "sem", mm.list = NULL, mm.args = list(),
         sigma.11[keep.idx, keep.idx, drop = FALSE]
 
       # store (ordered) indices in step1.free.idx
-      step1.free.idx <- c(step1.free.idx, sort.int(par.idx))
+      this.mm.idx <- sort.int(par.idx)
+      step1.free.idx <- c(step1.free.idx, this.mm.idx) # all combined
     }
   } # measurement block
 
@@ -289,7 +295,10 @@ lav_sam_step1 <- function(cmd = "sem", mm.list = NULL, mm.args = list(),
   # create STEP1 list
   STEP1 <- list(
     MM.FIT = MM.FIT, Sigma.11 = Sigma.11,
-    step1.free.idx = step1.free.idx, PT.free = PT.free,
+    step1.free.idx = step1.free.idx,
+    block.mm.idx = block.mm.idx,
+    block.ptm.idx = block.ptm.idx,
+    PT.free = PT.free,
     mm.list = mm.list, PT = PT
   )
 
@@ -343,9 +352,9 @@ lav_sam_step1_local <- function(STEP1 = NULL, FIT = NULL,
   }
 
   LAMBDA.list <- vector("list", nMMblocks)
-  THETA.list <- vector("list", nMMblocks)
-  NU.list <- vector("list", nMMblocks)
-  DELTA.list <- vector("list", nMMblocks) # correlation/categorical
+  THETA.list  <- vector("list", nMMblocks)
+  NU.list     <- vector("list", nMMblocks)
+  DELTA.list  <- vector("list", nMMblocks) # correlation/categorical
   LV.idx.list <- vector("list", nMMblocks)
   OV.idx.list <- vector("list", nMMblocks)
   for (mm in seq_len(nMMblocks)) {
@@ -357,7 +366,7 @@ lav_sam_step1_local <- function(STEP1 = NULL, FIT = NULL,
 
     # store LAMBDA/THETA
     LAMBDA.list[[mm]] <- computeLAMBDA(fit.mm.block@Model)
-    THETA.list[[mm]] <- computeTHETA(fit.mm.block@Model)
+    THETA.list[[ mm]] <- computeTHETA( fit.mm.block@Model)
     if (fit.mm.block@Model@meanstructure) {
       NU.list[[mm]] <- computeNU(fit.mm.block@Model,
         lavsamplestats = fit.mm.block@SampleStats
@@ -748,3 +757,4 @@ lav_sam_step1_local <- function(STEP1 = NULL, FIT = NULL,
 
   STEP1
 }
+

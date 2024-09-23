@@ -488,6 +488,9 @@ lav_test_lrt_single_model <- function(object, method = "default",
 
   ## determine which @test element
   tn <- names(object@test)
+  if (is.null(tn)) {
+    tn <- "standard" # for lavaan <0.6 objects
+  }
   if (length(tn) == 1L) {
     TEST <- 1L # only choice
 

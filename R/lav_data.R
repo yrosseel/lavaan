@@ -837,7 +837,7 @@ lav_data_full <- function(data = NULL, # data.frame
   weights <- vector("list", length = ngroups)
 
   # collect information per upper-level group
-  datam <- data.matrix(data)
+  # datam <- data.matrix(data) # YR: not yet, this breaks the stuart package!
   for (g in 1:ngroups) {
     # extract variables in correct order
     if (nlevels > 1L) {
@@ -904,7 +904,8 @@ lav_data_full <- function(data = NULL, # data.frame
     }
 
     # extract data
-    X[[g]] <- datam[case.idx[[g]], ov.idx, drop = FALSE]
+    #X[[g]] <- datam[case.idx[[g]], ov.idx, drop = FALSE]
+    X[[g]] <- data.matrix(data[case.idx[[g]], ov.idx, drop = FALSE])
     dimnames(X[[g]]) <- NULL ### copy?
 
     # sampling weights (but no normalization yet)
