@@ -1124,44 +1124,36 @@ ldw_parse_model_string <- function(model.syntax = "", as.data.frame. = FALSE) {
       if (any(flat$label == constraints[[j]]$lhs) &&
           any(constraints[[j]]$op == c("<", ">"))) {
           rhslang <- str2lang(constraints[[j]]$rhs)
+          numbound <- NA_real_
           if (mode(rhslang) == "numeric") {
-            nr <- which(flat$label == constraints[[j]]$lhs)
-            nrm <- length(mod) + 1L
-            if (flat$mod.idx[nr] > 0L) {
-              nrm <- flat$mod.idx[nr]
-            } else {
-              flat$mod.idx[nr] <- nrm
-              mod <- c(mod, list(label = constraints[[j]]$lhs))
+            numbound <- as.numeric(constraints[[j]]$rhs)
+          } else {
+            if (mode(rhslang) == "call") {
+              if (is.numeric(tryCatch(eval(rhslang),
+                                      error = function(e) "error"))) {
+                numbound <- eval(rhslang)
+              }
             }
-            if (constraints[[j]]$op == "<") {
-              flat$upper[nr] <- constraints[[j]]$rhs
-              mod[[nrm]]$upper <- as.numeric(constraints[[j]]$rhs)
-            } else {
-              flat$lower[nr] <- constraints[[j]]$rhs
-              mod[[nrm]]$lower <- as.numeric(constraints[[j]]$rhs)
-            }
-            constraints <- constraints[-j]
-          } else if (mode(rhslang) == "call") {
-            if (is.numeric(tryCatch(eval(rhslang),
-                                    error = function(e) "error"))) {
-            nr <- which(flat$label == constraints[[j]]$lhs)
-            nrm <- length(mod) + 1L
-            if (flat$mod.idx[nr] > 0L) {
-              nrm <- flat$mod.idx[nr]
-            } else {
-              flat$mod.idx[nr] <- nrm
-              mod <- c(mod, list(label = constraints[[j]]$lhs))
-            }
-            rhsval = eval(rhslang)
-            if (constraints[[j]]$op == "<") {
-              flat$upper[nr] <- as.character(rhsval)
-              mod[[nrm]]$upper <- rhsval
-            } else {
-              flat$lower[nr] <- as.character(rhsval)
-              mod[[nrm]]$lower <- rhsval
+          }
+          if (!is.na(numbound)) {
+            nrs <- which(flat$label == constraints[[j]]$lhs)
+            for (nr in nrs) {
+              nrm <- length(mod) + 1L
+              if (flat$mod.idx[nr] > 0L) {
+                nrm <- flat$mod.idx[nr]
+              } else {
+                flat$mod.idx[nr] <- nrm
+                mod <- c(mod, list(label = constraints[[j]]$lhs))
+              }
+              if (constraints[[j]]$op == "<") {
+                flat$upper[nr] <- as.character(numbound)
+                mod[[nrm]]$upper <- numbound
+              } else {
+                flat$lower[nr] <- as.character(numbound)
+                mod[[nrm]]$lower <- numbound
+              }
             }
             constraints <- constraints[-j]
-            }
           }
         }
     }

@@ -366,6 +366,10 @@ lav_object_extended <- function(object, add = NULL,
     )
   }
 
+  # switch off 'consider switching to parameterization = theta' warning
+  # (modindices!)
+  lavoptions$check.delta.cat.mediator <- FALSE
+
   FIT <- lavaan(LIST,
     slotOptions     = lavoptions,
     slotSampleStats = object@SampleStats,

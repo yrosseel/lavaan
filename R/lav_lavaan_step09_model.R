@@ -82,9 +82,15 @@ lav_lavaan_step09_model <- function(slotModel = NULL, # nolint
 
   # if parameterization = "delta" and categorical/correlation: check if
   # we have an observed mediator (new in 0.6-19)
-  if ((lavmodel@categorical || lavmodel@correlation) &&
-       lavmodel@representation == "LISREL" &&
-       lavmodel@parameterization == "delta") {
+  check.flag <- FALSE
+  if (!is.null(lavoptions$check.delta.cat.mediator) && # lavaan >= 0.6.19
+      lavoptions$check.delta.cat.mediator) {
+    check.flag <- TRUE
+  }
+  if (check.flag &&
+      (lavmodel@categorical || lavmodel@correlation) &&
+      lavmodel@representation == "LISREL" &&
+      lavmodel@parameterization == "delta") {
     # get idx BETA matrices
 	beta.idx   <- which(names(lavmodel@GLIST) == "beta")
 	# for every block

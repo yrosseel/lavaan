@@ -430,6 +430,7 @@ lav_options_default <- function() {
   elm("check.vcov", TRUE, bl = TRUE)
   elm("check.lv.names", TRUE, bl = TRUE)
   elm("check.lv.interaction", TRUE, bl = TRUE)
+  elm("check.delta.cat.mediator", TRUE, bl = TRUE)
 
   # more models/info
   elm("h1", TRUE, bl = TRUE)
