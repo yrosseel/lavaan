@@ -158,10 +158,7 @@ lav_lavaan_step16_rotation <- function(lavoptions = NULL,
         lavmodel@ceq.efa.JAC <- JAC
 
         # no other constraints
-        if (length(lavmodel@ceq.linear.idx) == 0L &&
-          length(lavmodel@ceq.nonlinear.idx) == 0L &&
-          length(lavmodel@cin.linear.idx) == 0L &&
-          length(lavmodel@cin.nonlinear.idx) == 0L) {
+        if (nrow(lavmodel@con.jac) == 0L) {
           lavmodel@con.jac <- JAC
           attr(lavmodel@con.jac, "inactive.idx") <- integer(0L)
           attr(lavmodel@con.jac, "ceq.idx") <- seq_len(nrow(JAC))

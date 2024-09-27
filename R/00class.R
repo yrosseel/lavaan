@@ -135,6 +135,7 @@ setClass("lavModel", # MATRIX representation of the sem model
     ceq.rhs            = "numeric",
     ceq.linear.idx     = "integer",
     ceq.nonlinear.idx  = "integer",
+    cin.simple.only    = "logical",
     cin.function       = "function",
     cin.jacobian       = "function",
     cin.JAC            = "matrix",

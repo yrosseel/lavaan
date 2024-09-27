@@ -52,6 +52,18 @@ lav_constraints_parse <- function(partable = NULL, constraints = NULL,
     ceq.simple <- TRUE
   }
 
+  # simple inequality constraints?
+  cin.simple <- TRUE
+  if (any(partable$op %in% c(">", "<"))) {
+    cin.simple <- FALSE
+  }
+  if (!is.null(LIST) && any(LIST$op %in% c(">", "<"))) {
+    cin.simple <- FALSE
+  }
+  if (is.null(partable$upper) && is.null(partable$lower)) {
+    cin.simple <- FALSE
+  }
+
   # variable definitions
   def.function <- lav_partable_constraints_def(partable,
     con = LIST,
@@ -140,18 +152,22 @@ lav_constraints_parse <- function(partable = NULL, constraints = NULL,
   cin.linear.flag <- length(cin.linear.idx) > 0L
   cin.nonlinear.flag <- length(cin.nonlinear.idx) > 0L
   cin.flag <- cin.linear.flag || cin.nonlinear.flag
+  if (cin.simple) {
+    cin.flag <- FALSE
+  }
 
   ceq.only.flag <- ceq.flag && !cin.flag
   cin.only.flag <- cin.flag && !ceq.flag
 
   ceq.linear.only.flag <- (ceq.linear.flag &&
     !ceq.nonlinear.flag &&
-    !cin.flag)
+    !cin.flag && !cin.simple)
 
   ceq.simple.only <- ceq.simple && !ceq.flag && !cin.flag
+  cin.simple.only <- cin.simple && !ceq.linear.flag
 
   # additional info if ceq.linear.flag
-  if (ceq.linear.flag) {
+  if (ceq.linear.only.flag) {
     ## NEW: 18 nov 2014: handle general *linear* constraints
     ##
     ## see Nocedal & Wright (2006) 15.3
@@ -244,7 +260,8 @@ lav_constraints_parse <- function(partable = NULL, constraints = NULL,
     cin.linear.flag = cin.linear.flag,
     cin.nonlinear.flag = cin.nonlinear.flag,
     cin.flag = cin.flag,
-    cin.only.flag = cin.only.flag
+    cin.only.flag = cin.only.flag,
+    cin.simple.only = cin.simple.only
   )
 
   OUT

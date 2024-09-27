@@ -249,7 +249,7 @@ nlminb.constr <- function(start, objective, gradient = NULL, hessian = NULL,
     # FIXME: slack value not too strict??
     slack <- 1e-05
     # cat("DEBUG:\n"); print(con0)
-    inactive.idx <- which(cin.flag & con0 > slack)
+    inactive.idx <- which(cin.flag & abs(con0) > slack)
     # if(length(inactive.idx) > 0L) {
     #    JAC        <-        JAC[-inactive.idx,,drop=FALSE]
     # }

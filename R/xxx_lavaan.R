@@ -67,6 +67,13 @@ lavaan <- function(
   cluster <- lavmc$cluster
   rm(mc)
 
+  # store current random seed (if any)
+  if (exists(".Random.seed", envir = .GlobalEnv, inherits = FALSE)) {
+    temp.seed <- get(".Random.seed", envir = .GlobalEnv, inherits = FALSE)
+  } else {
+    temp.seed <- NULL
+  }
+
   # ------------- handling of warn/debug/verbose switches ----------
   if (!is.null(dotdotdot$debug)) {
     current.debug <- lav_debug()
@@ -454,6 +461,11 @@ lavaan <- function(
     lavbaseline    = lavbaseline,
     start.time0    = start.time0
   )
+
+  # restore random seed (if needed)
+  if (!is.null(temp.seed)) {
+    assign(".Random.seed", temp.seed, envir = .GlobalEnv)
+  }
 
   out
 }

@@ -283,6 +283,8 @@ lav_partable_constraints_ceq <- function(partable, con = NULL, debug = FALSE,
 #             out[1] <- b1 + b2 - 2
 #         }
 #
+#     new in 0.6-19: we also add the lower/upper bounds
+#
 # NOTE: very similar, but not identitical to ceq, because we need to take
 #       care of the difference between '<' and '>'
 lav_partable_constraints_ciq <- function(partable, con = NULL, debug = FALSE,
@@ -302,8 +304,22 @@ lav_partable_constraints_ciq <- function(partable, con = NULL, debug = FALSE,
     partable$rhs <- c(partable$rhs, con$rhs)
   }
 
-  # get inequality constraints
+  # get explicit inequality constraints
   ineq.idx <- which(partable$op == ">" | partable$op == "<")
+
+  # get lower/upper bounds
+  upper.idx <- integer(0L)
+  lower.idx <- integer(0L)
+  if (!is.null(partable$upper)) {
+    upper.idx <- which(partable$free > 0L  & is.finite(partable$upper))
+  }
+  if (!is.null(partable$lower)) {
+    lower.idx <- which(partable$free > 0L & is.finite(partable$lower))
+  }
+
+  # add them to ineq.idx
+  ineq.only.idx <- ineq.idx
+  ineq.idx <- c(upper.idx, lower.idx, ineq.idx)
 
   # catch empty ciq
   if (length(ineq.idx) == 0L) {
@@ -328,8 +344,8 @@ lav_partable_constraints_ciq <- function(partable, con = NULL, debug = FALSE,
   BODY.txt <- paste(BODY.txt, DEF.txt, "\n", sep = "")
 
   # extract labels
-  lhs.labels <- all.vars(parse(file = "", text = partable$lhs[ineq.idx]))
-  rhs.labels <- all.vars(parse(file = "", text = partable$rhs[ineq.idx]))
+  lhs.labels <- all.vars(parse(file = "", text = partable$lhs[ineq.only.idx]))
+  rhs.labels <- all.vars(parse(file = "", text = partable$rhs[ineq.only.idx]))
   ineq.labels <- unique(c(lhs.labels, rhs.labels))
   # remove def.names from ineq.labels
   if (length(def.idx) > 0L) {
@@ -356,13 +372,14 @@ lav_partable_constraints_ciq <- function(partable, con = NULL, debug = FALSE,
   }
 
   # check if we have found the label
-  if (any(is.na(ineq.x.idx))) {
+  if (length(ineq.x.idx) > 0L && any(is.na(ineq.x.idx))) {
     lav_msg_stop(gettext("unknown label(s) in inequality constraint(s):"),
       lav_msg_view(ineq.labels[which(is.na(ineq.x.idx))], "none")
     )
   }
+
   # check if they are all 'free'
-  if (any(ineq.x.idx == 0)) {
+  if (length(ineq.x.idx) > 0L && any(ineq.x.idx == 0)) {
     fixed.ineq.idx <- which(ineq.x.idx == 0)
     # FIXME: what should we do here? we used to stop with an error
     # from 0.5.18, we give a warning, and replace the non-free label
@@ -384,31 +401,48 @@ lav_partable_constraints_ciq <- function(partable, con = NULL, debug = FALSE,
   }
 
   # put the labels the function BODY
-  ineq.x.lab <- paste(".x.[", ineq.x.idx, "]", sep = "")
   if (length(ineq.x.idx) > 0L) {
-    BODY.txt <- paste(BODY.txt, "# parameter labels\n",
-      paste(ineq.labels, "<-", ineq.x.lab, collapse = "\n"),
-      "\n",
-      sep = ""
-    )
+    ineq.x.lab <- paste(".x.[", ineq.x.idx, "]", sep = "")
+    if (length(ineq.x.idx) > 0L) {
+      BODY.txt <- paste(BODY.txt, "# parameter labels\n",
+        paste(ineq.labels, "<-", ineq.x.lab, collapse = "\n"),
+        "\n",
+        sep = ""
+      )
+    }
   }
 
   # write the constraints literally
   BODY.txt <- paste(BODY.txt, "\n# inequality constraints\n", sep = "")
+  FREE <- partable$free
+  FREE[FREE > 0] <- seq_len(length(FREE[FREE > 0]))
   for (i in 1:length(ineq.idx)) {
     lhs <- partable$lhs[ineq.idx[i]]
     op <- partable$op[ineq.idx[i]]
     rhs <- partable$rhs[ineq.idx[i]]
 
-    # note,this is different from ==, because we have < AND >
-    if (rhs == "0" && op == ">") {
-      ineq.string <- lhs
-    } else if (rhs == "0" && op == "<") {
-      ineq.string <- paste(rhs, " - (", lhs, ")", sep = "")
-    } else if (rhs != "0" && op == ">") {
-      ineq.string <- paste(lhs, " - (", rhs, ")", sep = "")
-    } else if (rhs != "0" && op == "<") {
-      ineq.string <- paste(rhs, " - (", lhs, ")", sep = "")
+    if (ineq.idx[i] %in% ineq.only.idx) {
+      # EXPLICIT inequality constraints
+      # note,this is different from ==, because we have < AND >
+      if (rhs == "0" && op == ">") {
+        ineq.string <- lhs
+      } else if (rhs == "0" && op == "<") {
+        ineq.string <- paste(rhs, " - (", lhs, ")", sep = "")
+      } else if (rhs != "0" && op == ">") {
+        ineq.string <- paste(lhs, " - (", rhs, ")", sep = "")
+      } else if (rhs != "0" && op == "<") {
+        ineq.string <- paste(rhs, " - (", lhs, ")", sep = "")
+      }
+    } else if (ineq.idx[i] %in% upper.idx) {
+      # simple upper bound
+      val <- partable$upper[ineq.idx[i]]
+      xlab <- paste(".x.[", FREE[ineq.idx[i]], "]", sep = "")
+      ineq.string <- paste(val, " - (", xlab, ")", sep = "")
+    } else if (ineq.idx[i] %in% lower.idx) {
+      # simple lower bound
+      val <- partable$lower[ineq.idx[i]]
+      xlab <- paste(".x.[", FREE[ineq.idx[i]], "]", sep = "")
+      ineq.string <- paste(xlab, " - (", val, ")", sep = "")
     }
 
     BODY.txt <- paste(BODY.txt, "out[", i, "] <- ", ineq.string, "\n", sep = "")
@@ -419,11 +453,13 @@ lav_partable_constraints_ciq <- function(partable, con = NULL, debug = FALSE,
   }
 
   # put the results in 'out'
-  # BODY.txt <- paste(BODY.txt, "\nout <- ",
-  #    paste("c(", paste(lhs.names, collapse=","),")\n", sep=""), sep="")
-
-  # what to do with NA values? -> return +Inf???
   BODY.txt <- paste(BODY.txt, "\n", "out[is.na(out)] <- Inf\n", sep = "")
+  if (length(upper.idx) > 0L || length(lower.idx) > 0L) {
+    bound.idx <- which(ineq.idx %in% c(upper.idx, lower.idx))
+    bound.txt <- paste("c(", paste(bound.idx, collapse = ", "), ")", sep = "")
+    BODY.txt <- paste(BODY.txt, "attr(out, \"bound.idx\") <- ", bound.txt,
+                      "\n", sep = "")
+  }
   BODY.txt <- paste(BODY.txt, "return(out)\n}\n", sep = "")
   body(cin.function) <- parse(file = "", text = BODY.txt)
   if (lav_debug()) {

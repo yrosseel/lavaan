@@ -52,7 +52,13 @@ lav_model_get_parameters <- function(lavmodel = NULL, GLIST = NULL,
       x[lavmodel@x.ceq.idx] <- lavmodel@ceq.function(x.free)
     }
     if (length(lavmodel@x.cin.idx) > 0L) {
-      x[lavmodel@x.cin.idx] <- lavmodel@cin.function(x.free)
+      tmp <- lavmodel@cin.function(x.free)
+      # remove lower/upper bound values (if any)
+      bound.idx <- attr(tmp, "bound.idx")
+      if (length(bound.idx) > 0L) {
+        tmp <- tmp[-bound.idx]
+      }
+      x[lavmodel@x.cin.idx] <- tmp
     }
   }
 

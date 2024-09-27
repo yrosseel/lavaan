@@ -473,6 +473,7 @@ lav_model <- function(lavpartable = NULL,                          # nolint
     ceq.jacobian = tmp.con$ceq.jacobian,
     ceq.linear.idx = tmp.con$ceq.linear.idx,
     ceq.nonlinear.idx = tmp.con$ceq.nonlinear.idx,
+    cin.simple.only = tmp.con$cin.simple.only,
     cin.function = tmp.con$cin.function,
     cin.JAC = tmp.con$cin.JAC,
     cin.rhs = tmp.con$cin.rhs,

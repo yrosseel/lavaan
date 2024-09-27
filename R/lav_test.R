@@ -281,7 +281,7 @@ lav_model_test <- function(lavobject = NULL,
   # handle equality constraints (note: we ignore inequality constraints,
   # active or not!)
   # we use the rank of con.jac (even if the constraints are nonlinear)
-  if (nrow(lavmodel@con.jac) > 0L) {
+  if (!lavmodel@cin.simple.only && nrow(lavmodel@con.jac) > 0L) {
     ceq.idx <- attr(lavmodel@con.jac, "ceq.idx")
     if (length(ceq.idx) > 0L) {
       neq <- qr(lavmodel@con.jac[ceq.idx, , drop = FALSE])$rank

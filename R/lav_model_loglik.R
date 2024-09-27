@@ -168,15 +168,23 @@ lav_model_loglik <- function(lavdata = NULL,
 
   # number of parameters, taking into account any equality constraints
   npar <- lavmodel@nx.free
-  if (nrow(lavmodel@con.jac) > 0L) {
+  ceq.simple.only <- FALSE
+  cin.simple.only <- FALSE
+  if (.hasSlot(lavmodel, "ceq.simple.only")) {
+    ceq.simple.only <- lavmodel@ceq.simple.only
+  }
+  if (.hasSlot(lavmodel, "cin.simple.only")) {
+    cin.simple.only <- lavmodel@cin.simple.only
+  }
+
+  if (ceq.simple.only) {
+    # nothing to do
+  } else if (!cin.simple.only && nrow(lavmodel@con.jac) > 0L) {
     ceq.idx <- attr(lavmodel@con.jac, "ceq.idx")
     if (length(ceq.idx) > 0L) {
       neq <- qr(lavmodel@con.jac[ceq.idx, , drop = FALSE])$rank
       npar <- npar - neq
     }
-  } else if (.hasSlot(lavmodel, "ceq.simple.only") &&
-    lavmodel@ceq.simple.only) {
-    npar <- lavmodel@nx.free
   }
 
   # logl

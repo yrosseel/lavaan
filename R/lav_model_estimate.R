@@ -1,3 +1,14 @@
+# overview NLMINB (default) versus CONSTR (=constrained optimization)
+
+#                         | cin.simple | nonlinear | no cin
+# ----------------------------------------------------------
+# eq.constraints (linear) | CONSTR     | CONSTR    | NLMINB
+# ceq.nonlinear           | CONSTR     | CONSTR    | CONSTR
+# ceq.simple              | NLMINB     | CONSTR    | NLMINB
+# no ceq                  | NLMINB     | CONSTR    | NLMINB
+
+
+
 # model estimation
 lav_model_estimate <- function(lavmodel = NULL,
                                lavpartable = NULL, # for parscale = "stand"
@@ -236,8 +247,9 @@ lav_model_estimate <- function(lavmodel = NULL,
       lower <- lavpartable$lower[free.idx]
     } else if (lavmodel@eq.constraints) {
       # bounds have no effect any longer....
-      lav_msg_warn(gettext(
-        "bounds have no effect in the presence of linear equality constraints"))
+      # 0.6-19 -> we switch to constrained estimation
+      #lav_msg_warn(gettext(
+      #  "bounds have no effect in the presence of linear equality constraints"))
       lower <- -Inf
     } else {
       lower <- lavpartable$lower[lavpartable$free > 0L]
@@ -254,8 +266,9 @@ lav_model_estimate <- function(lavmodel = NULL,
       # bounds have no effect any longer....
       if (is.null(lavpartable$lower)) {
         # bounds have no effect any longer....
-        lav_msg_warn(gettext(
-        "bounds have no effect in the presence of linear equality constraints"))
+        # 0.6-19 -> we switch to constrained estimation
+        #lav_msg_warn(gettext(
+        #"bounds have no effect in the presence of linear equality constraints"))
       }
       upper <- +Inf
     } else {
@@ -552,8 +565,9 @@ lav_model_estimate <- function(lavmodel = NULL,
 
   # default optimizer
   if (length(lavmodel@ceq.nonlinear.idx) == 0L &&
-    length(lavmodel@cin.linear.idx) == 0L &&
-    length(lavmodel@cin.nonlinear.idx) == 0L) {
+      (lavmodel@cin.simple.only || (length(lavmodel@cin.linear.idx)    == 0L &&
+                                    length(lavmodel@cin.nonlinear.idx) == 0L))
+     ) {
     if (is.null(lavoptions$optim.method)) {
       OPTIMIZER <- "NLMINB"
       # OPTIMIZER <- "BFGS"  # slightly slower, no bounds; better scaling!
@@ -879,8 +893,9 @@ lav_model_estimate <- function(lavmodel = NULL,
     # if inequality constraints, add con.jac/lambda
     # needed for df!
     if (length(lavmodel@ceq.nonlinear.idx) == 0L &&
-      length(lavmodel@cin.linear.idx) == 0L &&
-      length(lavmodel@cin.nonlinear.idx) == 0L) {
+        (lavmodel@cin.simple.only ||
+         (length(lavmodel@cin.linear.idx) == 0L &&
+          length(lavmodel@cin.nonlinear.idx) == 0L))) {
       optim.out <- list()
     } else {
       # if inequality constraints, add con.jac/lambda
@@ -931,6 +946,68 @@ lav_model_estimate <- function(lavmodel = NULL,
       optim.out$lambda <- rep(0, ncon)
     }
   }
+
+  # new in 0.6-19
+  # if NLMINB() + cin.simple.only, add con.jac and lambda to optim.out
+  if (OPTIMIZER %in% c("NLMINB", "NLMINB0", "L.BFGS.B") &&
+      (lavmodel@cin.simple.only || lavmodel@ceq.simple.only)) {
+
+    if (lavmodel@cin.simple.only && nrow(lavmodel@cin.JAC) > 0L) {
+      # JAC
+      cin.JAC <- lavmodel@cin.JAC
+      con0 <- lavmodel@cin.function(x)
+      slack <- 1e-05
+      inactive.idx <- which(abs(con0) > slack)
+
+      # lambda
+      # FIXME! HOW to compute this (post-hoc)?
+      dx <- GRADIENT(x)
+      if(lavmodel@ceq.simple.only) {
+        dx.unpack <- numeric(ncol(cin.JAC))
+        dx.unpack <- dx[lavpartable$free[lavpartable$free > 0]]
+      } else if (lavmodel@eq.constraints) {
+        # this should not happen!
+        cat("\n DEBUG: NLMINB + cin.simple.only + lavmodel@eq.constraints \n")
+        dx.unpack <- as.numeric(lavmodel@eq.constraints.K %*% dx)
+      } else {
+        dx.unpack <- dx
+      }
+      cin.lambda <- drop(cin.JAC %*% dx.unpack)
+      cin.lambda[inactive.idx] <- 0
+
+      # remove all inactive rows
+      #if (length(inactive.idx) > 0L) {
+      #  cin.JAC <- cin.JAC[-inactive.idx, , drop = FALSE]
+      #  cin.lambda <- cin.lambda[-inactive.idx]
+      #  inactive.idx <- integer(0L)
+      #}
+    } else {
+      npar <- length(lavpartable$free[lavpartable$free > 0])
+      cin.JAC <- matrix(0, nrow = 0L, ncol = npar)
+      inactive.idx <- integer(0L)
+      cin.lambda <- numeric(0L)
+    }
+
+    if (lavmodel@ceq.simple.only && nrow(lavmodel@ceq.simple.K) > 0L) {
+      ceq.JAC <- t(lav_matrix_orthogonal_complement(lavmodel@ceq.simple.K))
+      ceq.lambda <- numeric(nrow(ceq.JAC))
+    } else {
+      npar <- length(lavpartable$free[lavpartable$free > 0])
+      ceq.JAC <- matrix(0, nrow = 0L, ncol = npar)
+      ceq.lambda <- numeric(0L)
+    }
+
+    # combine
+    JAC <- rbind(cin.JAC, ceq.JAC)
+    attr(JAC, "inactive.idx") <- inactive.idx
+    attr(JAC, "cin.idx") <- seq_len(nrow(cin.JAC))
+    attr(JAC, "ceq.idx") <- nrow(cin.JAC) + seq_len(nrow(ceq.JAC))
+    lambda <- c(cin.lambda, ceq.lambda)
+
+    optim.out$con.jac <- JAC
+    optim.out$lambda <- lambda
+  }
+
 
   fx <- objective_function(x) # to get "fx.group" attribute
 

@@ -118,16 +118,41 @@ lav_object_summary <- function(object, header = TRUE,
       # SEM version
 
       # 2. summarize optim info (including estimator)
+      nrow.ceq.jac <- nrow(object@Model@ceq.JAC)
+      #if (object@Model@ceq.simple.only) {
+        # not needed, as nrow.ceq.jac is already zero
+      #  nrow.ceq.jac <- 0L
+      #}
+      cin.simple.only <- FALSE
+      ceq.simple.only <- FALSE
+      if (.hasSlot(object@Model, "cin.simple.only")) {
+        cin.simple.only <- object@Model@cin.simple.only
+      }
+      if (.hasSlot(object@Model, "ceq.simple.only")) {
+        ceq.simple.only <- object@Model@ceq.simple.only
+      }
+      nrow.cin.jac <- nrow(object@Model@cin.JAC)
+      if (cin.simple.only) {
+        nrow.cin.jac <- 0L
+      }
+      if (ceq.simple.only && cin.simple.only) {
+        nrow.con.jac <- 0L
+        con.jac.rank <- 0L
+      } else {
+        nrow.con.jac <- nrow(object@Model@con.jac)
+        con.jac.rank <- qr(object@Model@con.jac)$rank
+      }
+
       res$optim <- list(
         estimator = object@Options$estimator,
         estimator.args = object@Options$estimator.args,
         optim.method = object@Options$optim.method,
         npar = object@Model@nx.free,
         eq.constraints = object@Model@eq.constraints,
-        nrow.ceq.jac = nrow(object@Model@ceq.JAC),
-        nrow.cin.jac = nrow(object@Model@cin.JAC),
-        nrow.con.jac = nrow(object@Model@con.jac),
-        con.jac.rank = qr(object@Model@con.jac)$rank
+        nrow.ceq.jac = nrow.ceq.jac,
+        nrow.cin.jac = nrow.cin.jac,
+        nrow.con.jac = nrow.con.jac,
+        con.jac.rank = con.jac.rank
       )
 
 

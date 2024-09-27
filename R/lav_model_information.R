@@ -523,6 +523,7 @@ lav_model_information_firstorder <- function(lavmodel = NULL,
 # rm.idx is used by lav_sam_step2_se; it used when the structural model
 # contains more parameters than the joint model; therefore, information
 # will be 'too small', and we need to remove some columns in H
+#
 lav_model_information_augment_invert <- function(lavmodel = NULL,
                                                  information = NULL,
                                                  inverted = FALSE,
