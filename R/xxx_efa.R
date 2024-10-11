@@ -27,7 +27,14 @@ efa <- function(data = NULL,
 
   # check for unallowed arguments
   if (!is.null(dotdotdot$group)) {
-    lav_msg_stop(gettext("efa has no support for multiple groups (for now)"))
+    lav_msg_stop(gettext("efa has no support for multiple groups (for now);
+                          consider using the cfa() function in combination
+                          with the efa() modifier."))
+  }
+  if (!is.null(dotdotdot$sampling.weights)) {
+    lav_msg_stop(gettext("efa has no support for sampling weights (for now);
+                          consider using the cfa() function in combination
+                          with the efa() modifier."))
   }
 
   # handle ov.names
