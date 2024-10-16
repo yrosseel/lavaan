@@ -8,13 +8,15 @@ of statistics) you can extract from a fitted lavaan object.}
 bootstrapLavaan(object, R = 1000L, type = "ordinary", verbose = FALSE, 
                 FUN = "coef", keep.idx = FALSE,
                 parallel = c("no", "multicore", "snow"),
-                ncpus = 1L, cl = NULL, iseed = NULL, h0.rmsea = NULL, ...)
+                ncpus =  max(1L, parallel::detectCores() - 2L), 
+                cl = NULL, iseed = NULL, h0.rmsea = NULL, ...)
 
 bootstrapLRT(h0 = NULL, h1 = NULL, R = 1000L, type="bollen.stine", 
              verbose = FALSE, return.LRT = FALSE, double.bootstrap = "no", 
              double.bootstrap.R = 500L, double.bootstrap.alpha = 0.05, 
              parallel = c("no", "multicore", "snow"),
-             ncpus = 1L, cl = NULL, iseed = NULL)
+             ncpus =  max(1L, parallel::detectCores() - 2L), 
+             cl = NULL, iseed = NULL)
 }
 \arguments{
 \item{object}{An object of class \code{\linkS4class{lavaan}}.}

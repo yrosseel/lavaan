@@ -311,6 +311,7 @@ lav_partable_subset_structural_model <- function(PT = NULL,
                                                  idx.only = FALSE,
                                                  add.exo.cov = FALSE,
                                                  fixed.x = FALSE,
+                                                 free.fixed.var = FALSE,
                                                  meanstructure = FALSE) {
   # PT
   PT <- as.data.frame(PT, stringsAsFactors = FALSE)
@@ -549,6 +550,16 @@ lav_partable_subset_structural_model <- function(PT = NULL,
       }
     } # blocks
   } # fixed.x
+
+  # if free.fixed.var, free up all 'fixed (to unity)' variances
+  if (free.fixed.var) {
+    fixed.var.idx <- which(PT$op == "~~" & PT$lhs == PT$rhs & PT$free == 0 &
+                           PT$user == 0L & PT$ustart == 1)
+    if (length(fixed.var.idx) > 0L) {
+      PT$free[  fixed.var.idx] <- max(PT$free) + seq_len(length(fixed.var.idx))
+      PT$ustart[fixed.var.idx] <- as.numeric(NA)
+    }
+  }
 
   # clean up
   PT <- lav_partable_complete(PT)

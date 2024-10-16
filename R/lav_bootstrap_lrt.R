@@ -8,7 +8,7 @@ bootstrapLRT <- function(h0 = NULL, h1 = NULL, R = 1000L,
                          double.bootstrap.R = 500L,
                          double.bootstrap.alpha = 0.05,
                          parallel = c("no", "multicore", "snow"),
-                         ncpus = 1L,
+                         ncpus = max(1L, parallel::detectCores() - 2L),
                          cl = NULL,
                          iseed = NULL) {
   # checks

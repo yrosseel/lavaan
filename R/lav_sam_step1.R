@@ -656,7 +656,16 @@ lav_sam_step1_local <- function(STEP1 = NULL, FIT = NULL,
     # standardize? not really needed, but we may have 1.0000001
     # as variances, and this may lead to false convergence
     if (FIT@Options$std.lv) {
-      VETA[[b]] <- stats::cov2cor(VETA[[b]])
+      # warning: we should only do this for the LVs, not the
+      # observed variables
+      if (length(dummy.lv.idx) == 0L) {
+        VETA[[b]] <- stats::cov2cor(VETA[[b]])
+      } else {
+        tmp <- VETA[[b]]
+        tmp.lv <- stats::cov2cor(VETA[[b]][-dummy.lv.idx,
+                                           -dummy.lv.idx, drop = FALSE])
+        VETA[[b]][-dummy.lv.idx, -dummy.lv.idx] <- tmp.lv
+      }
     }
 
     # lv.names, including dummy-lv covariates

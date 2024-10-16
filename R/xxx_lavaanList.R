@@ -361,6 +361,10 @@ lavaanList <- function(model = NULL, # model
 
   # the next 8 lines are borrowed from the boot package
   have_mc <- have_snow <- FALSE
+  if (missing(parallel)) {
+    parallel <- "no"
+  }
+  parallel <- match.arg(parallel)
   if (parallel != "no" && ncpus > 1L) {
     if (parallel == "multicore") {
       have_mc <- .Platform$OS.type != "windows"
@@ -414,7 +418,7 @@ lavaanList <- function(model = NULL, # model
         # if(RNGkind()[1L] == "L'Ecuyer-CMRG")
         # clusterSetRNGStream() always calls `RNGkind("L'Ecuyer-CMRG")`
         parallel::clusterSetRNGStream(cl, iseed = iseed)
-        RES <- parallel::parLapply(cl, seq_len(RR), fn)
+        RES <- parallel::parLapply(cl, seq_len(ndat), fn)
         parallel::stopCluster(cl)
         RES
       } else {
