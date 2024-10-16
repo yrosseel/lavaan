@@ -1,5 +1,7 @@
 # lavSimulate: fit the *same* model, on simulated datasets
-# YR - 4 July 2016
+# YR - 4 July 2016: initial version
+# YR - 15 Oct 2024: add iseed (similar to bootstrapLavaan)
+
 
 lavSimulate <- function(pop.model = NULL, # population model
                         model = NULL, # user model
@@ -16,9 +18,11 @@ lavSimulate <- function(pop.model = NULL, # population model
                         FUN = NULL,
                         show.progress = FALSE,
                         store.failed = FALSE,
-                        parallel = c("no", "multicore", "snow"),
+                        parallel = if(.Platform$OS.type == "unix")
+                                    { "parallel" } else { "no"},
                         ncpus = max(1L, parallel::detectCores() - 1L),
-                        cl = NULL) {
+                        cl = NULL,
+                        iseed = NULL) {
   # dotdotdot
   dotdotdot <- list(...)
 
@@ -56,7 +60,8 @@ lavSimulate <- function(pop.model = NULL, # population model
     store.slots = store.slots, FUN = FUN,
     show.progress = show.progress,
     store.failed = store.failed,
-    parallel = parallel, ncpus = ncpus, cl = cl
+    parallel = parallel, ncpus = ncpus,
+    cl = cl, iseed = iseed
   ), dotdotdot))
 
   # flag this is a simulation

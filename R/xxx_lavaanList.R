@@ -2,6 +2,7 @@
 # YR - 29 Jun 2016
 # YR - 27 Jan 2017: change lavoptions; add dotdotdot to each call
 # TDJ - 23 Aug 2018: change wrappers to preserve arguments from match.call()
+# YR - 15 Oct 2024: add iseed (as in bootstrapLavaan), but does not work yet!
 
 lavaanList <- function(model = NULL, # model
                        dataList = NULL, # list of datasets
@@ -21,6 +22,18 @@ lavaanList <- function(model = NULL, # model
   # store.slots call
   mc <- match.call()
 
+  # store current random seed (if any)
+  if (exists(".Random.seed", envir = .GlobalEnv, inherits = FALSE)) {
+    init.seed <- get(".Random.seed", envir = .GlobalEnv, inherits = FALSE)
+  } else {
+    init.seed <- NULL
+  }
+
+  # initial seed (for the precomputations)
+  if (!is.null(iseed)) {
+    set.seed(min(1, iseed - 1L))
+  }
+
   # check store.slots
   store.slots <- tolower(store.slots)
   if (length(store.slots) == 1L && store.slots == "all") {
@@ -36,6 +49,7 @@ lavaanList <- function(model = NULL, # model
     if (ndat == 0L) {
       lav_msg_stop(gettext("please specify number of requested datasets (ndat)"))
     }
+    # here we already use the random generator
     firstData <- do.call(dataFunction, args = dataFunction.args)
     # dataList  <- vector("list", length = ndat)
   } else {
@@ -53,25 +67,6 @@ lavaanList <- function(model = NULL, # model
     # check?
   } else {
     lav_msg_stop(gettext("(generated) data is not a data.frame (or a matrix)"))
-  }
-
-  # parallel (see boot package)
-  if (missing(parallel)) {
-    # parallel <- getOption("boot.parallel", "no")
-    parallel <- "no"
-  }
-  parallel <- match.arg(parallel)
-  have_mc <- have_snow <- FALSE
-  if (parallel != "no" && ncpus > 1L) {
-    if (parallel == "multicore") {
-      have_mc <- .Platform$OS.type != "windows"
-    } else if (parallel == "snow") {
-      have_snow <- TRUE
-    }
-    if (!have_mc && !have_snow) {
-      ncpus <- 1L
-    }
-    loadNamespace("parallel")
   }
 
   # dot dot dot
@@ -363,18 +358,63 @@ lavaanList <- function(model = NULL, # model
     RES
   }
 
-  # the next 20 lines are based on the boot package
+
+  # the next 8 lines are borrowed from the boot package
+  have_mc <- have_snow <- FALSE
+  if (parallel != "no" && ncpus > 1L) {
+    if (parallel == "multicore") {
+      have_mc <- .Platform$OS.type != "windows"
+    } else if (parallel == "snow") have_snow <- TRUE
+    if (!have_mc && !have_snow) ncpus <- 1L
+    loadNamespace("parallel") # before recording seed!
+  }
+
+  # iseed:
+  # this follows a proposal of Shu Fai Cheung (see github issue #240)
+  # - iseed is used for both serial and parallel
+  # - if iseed is not set, iseed is generated + .Random.seed created/updated
+  #     -> tmp.seed <- NA
+  # - if iseed is set: don't touch .Random.seed (if it exists)
+  #     -> tmp.seed <- .Random.seed (if it exists)
+  #     -> tmp.seed <- NULL (if it does not exist)
+  if (is.null(iseed)) {
+    if (!exists(".Random.seed", envir = .GlobalEnv, inherits = FALSE)) {
+      runif(1)
+    }
+    # identical(temp.seed, NA): Will not change .Random.seed in GlobalEnv
+    temp.seed <- NA
+    iseed <- runif(1, 0, 999999999)
+  } else {
+    if (exists(".Random.seed", envir = .GlobalEnv, inherits = FALSE)) {
+      temp.seed <-
+        get(".Random.seed", envir = .GlobalEnv, inherits = FALSE)
+    } else {
+      # is.null(temp.seed): Will remove .Random.seed in GlobalEnv
+      #                     if serial.
+      #                     If parallel, .Random.seed will not be touched.
+      temp.seed <- NULL
+    }
+  }
+  if (!(ncpus > 1L && (have_mc || have_snow))) { # Only for serial
+    set.seed(iseed)
+  }
+
+  # this is adapted from the boot function in package boot
   RES <- if (ncpus > 1L && (have_mc || have_snow)) {
     if (have_mc) {
+      RNGkind_old <- RNGkind() # store current kind
+      RNGkind("L'Ecuyer-CMRG") # to allow for reproducible results
+      set.seed(iseed)
       parallel::mclapply(seq_len(ndat), fn, mc.cores = ncpus)
     } else if (have_snow) {
       list(...) # evaluate any promises
       if (is.null(cl)) {
         cl <- parallel::makePSOCKcluster(rep("localhost", ncpus))
-        if (RNGkind()[1L] == "L'Ecuyer-CMRG") {
-          parallel::clusterSetRNGStream(cl, iseed = iseed)
-        }
-        RES <- parallel::parLapply(cl, seq_len(ndat), fn)
+        # # No need for
+        # if(RNGkind()[1L] == "L'Ecuyer-CMRG")
+        # clusterSetRNGStream() always calls `RNGkind("L'Ecuyer-CMRG")`
+        parallel::clusterSetRNGStream(cl, iseed = iseed)
+        RES <- parallel::parLapply(cl, seq_len(RR), fn)
         parallel::stopCluster(cl)
         RES
       } else {
@@ -470,6 +510,15 @@ lavaanList <- function(model = NULL, # model
     funList = funList,
     external = list()
   )
+
+  # restore random seed
+  if (!is.null(init.seed)) {
+    assign(".Random.seed", init.seed, envir = .GlobalEnv)
+  } else if (exists(".Random.seed", envir = .GlobalEnv, inherits = FALSE)) {
+    # initially there was no .Random.seed, but we created one along the way
+    # clean up
+    remove(".Random.seed", envir = .GlobalEnv)
+  }
 
   lavaanList
 }

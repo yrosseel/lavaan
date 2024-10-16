@@ -34,7 +34,7 @@ bootstrapLavaan <- function(object,
                             #                      # sample indices differently
                             keep.idx = FALSE,
                             parallel = c("no", "multicore", "snow"),
-                            ncpus = 1L,
+                            ncpus = max(1L, parallel::detectCores() - 2L),
                             cl = NULL,
                             iseed = NULL,
                             h0.rmsea = NULL,
@@ -446,7 +446,7 @@ lav_bootstrap_internal <- function(object = NULL,
   cl <- lavoptions[["cl"]] # often NULL
   iseed <- lavoptions[["iseed"]] # often NULL
 
-  # the next 10 lines are borrowed from the boot package
+  # the next 8 lines are borrowed from the boot package
   have_mc <- have_snow <- FALSE
   if (parallel != "no" && ncpus > 1L) {
     if (parallel == "multicore") {

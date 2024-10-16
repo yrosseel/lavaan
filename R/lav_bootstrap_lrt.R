@@ -327,17 +327,68 @@ bootstrapLRT <- function(h0 = NULL, h1 = NULL, R = 1000L,
     lrt.boot
   }
 
+
+  # get parallelization options
+  parallel <- lavoptions$parallel[1]
+  ncpus <- lavoptions$ncpus
+  cl <- lavoptions[["cl"]] # often NULL
+  iseed <- lavoptions[["iseed"]] # often NULL
+
+  # the next 8 lines are borrowed from the boot package
+  have_mc <- have_snow <- FALSE
+  if (parallel != "no" && ncpus > 1L) {
+    if (parallel == "multicore") {
+      have_mc <- .Platform$OS.type != "windows"
+    } else if (parallel == "snow") have_snow <- TRUE
+    if (!have_mc && !have_snow) ncpus <- 1L
+    loadNamespace("parallel") # before recording seed!
+  }
+
+  # iseed:
+  # this follows a proposal of Shu Fai Cheung (see github issue #240)
+  # - iseed is used for both serial and parallel
+  # - if iseed is not set, iseed is generated + .Random.seed created/updated
+  #     -> tmp.seed <- NA
+  # - if iseed is set: don't touch .Random.seed (if it exists)
+  #     -> tmp.seed <- .Random.seed (if it exists)
+  #     -> tmp.seed <- NULL (if it does not exist)
+  if (is.null(iseed)) {
+    if (!exists(".Random.seed", envir = .GlobalEnv, inherits = FALSE)) {
+      runif(1)
+    }
+    # identical(temp.seed, NA): Will not change .Random.seed in GlobalEnv
+    temp.seed <- NA
+    iseed <- runif(1, 0, 999999999)
+  } else {
+    if (exists(".Random.seed", envir = .GlobalEnv, inherits = FALSE)) {
+      temp.seed <-
+        get(".Random.seed", envir = .GlobalEnv, inherits = FALSE)
+    } else {
+      # is.null(temp.seed): Will remove .Random.seed in GlobalEnv
+      #                     if serial.
+      #                     If parallel, .Random.seed will not be touched.
+      temp.seed <- NULL
+    }
+  }
+  if (!(ncpus > 1L && (have_mc || have_snow))) { # Only for serial
+    set.seed(iseed)
+  }
+
   # Parallel processing
   RR <- sum(R)
   res <- if (ncpus > 1L && (have_mc || have_snow)) {
     if (have_mc) {
+      RNGkind_old <- RNGkind() # store current kind
+      RNGkind("L'Ecuyer-CMRG") # to allow for reproducible results
+      set.seed(iseed)
       parallel::mclapply(seq_len(RR), fn, mc.cores = ncpus)
     } else if (have_snow) {
       if (is.null(cl)) {
         cl <- parallel::makePSOCKcluster(rep("localhost", ncpus))
-        if (RNGkind()[1L] == "L'Ecuyer-CMRG") {
-          parallel::clusterSetRNGStream(cl, iseed = iseed)
-        }
+        # # No need for
+        # if(RNGkind()[1L] == "L'Ecuyer-CMRG")
+        # clusterSetRNGStream() always calls `RNGkind("L'Ecuyer-CMRG")`
+        parallel::clusterSetRNGStream(cl, iseed = iseed)
         res <- parallel::parLapply(cl, seq_len(RR), fn)
         parallel::stopCluster(cl)
         res
@@ -347,6 +398,11 @@ bootstrapLRT <- function(h0 = NULL, h1 = NULL, R = 1000L,
     }
   } else {
     lapply(seq_len(RR), fn)
+  }
+
+  # restore old RNGkind()
+  if (ncpus > 1L && have_mc) {
+    RNGkind(RNGkind_old[1], RNGkind_old[2], RNGkind_old[3])
   }
 
   error.idx <- integer(0)

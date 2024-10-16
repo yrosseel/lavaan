@@ -462,9 +462,13 @@ lavaan <- function(
     start.time0    = start.time0
   )
 
-  # restore random seed (if needed)
+  # restore random seed
   if (!is.null(temp.seed)) {
     assign(".Random.seed", temp.seed, envir = .GlobalEnv)
+  } else if (exists(".Random.seed", envir = .GlobalEnv, inherits = FALSE)) {
+    # initially there was no .Random.seed, but we created one along the way
+    # clean up
+    remove(".Random.seed", envir = .GlobalEnv)
   }
 
   out
