@@ -447,6 +447,23 @@ lavaanify <- lavParTable <- function(
     print(as.data.frame(tmp.list, stringsAsFactors = FALSE))
   }
 
+  # check ordinal variables
+  categorical <- FALSE
+  ov.ord <- lavNames(tmp.list, "ov.ord")
+  if (length(ov.ord) > 0L) {
+    categorical <- TRUE
+    ord.var.idx <- which(tmp.list$op == "~~" &
+                         tmp.list$lhs == tmp.list$rhs &
+                         tmp.list$lhs %in% ov.ord &
+                         tmp.list$user == 1L)
+    if (parameterization == "delta" && length(ord.var.idx) > 0L) {
+      lav_msg_warn(gettextf("variances of ordered variables are ignored when
+      parameterization = \"delta\"; please remove them from the model syntax;
+      variables involved are: %s",
+      paste(tmp.list$lhs[ord.var.idx], collapse = " ")))
+    }
+  }
+
   # handle multilevel-specific constraints
   multilevel <- FALSE
   if (!is.null(tmp.list$level)) {
