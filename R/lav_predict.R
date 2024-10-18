@@ -73,11 +73,19 @@ lavPredict <- function(object, newdata = NULL, # keep order of predict(), 0.6-7
     )
   }
   lavimplied <- object@implied
+  lavpartable <- object@ParTable
+
+  # warn if the model does not contain any 'regular' latent variables
+  if (length(lavNames(lavpartable, "lv.regular")) == 0L) {
+    lav_msg_warn(gettextf("fitted model does not contain regular
+    (i.e., measured) latent variables; the matrix of factor scores may
+    contain no columns"))
+  }
 
   res <- lav_predict_internal(
     lavmodel = lavmodel, lavdata = lavdata,
     lavsamplestats = lavsamplestats, lavimplied = lavimplied, lavh1 = lavh1,
-    lavpartable = object@ParTable, newdata = newdata, type = type, method = method,
+    lavpartable = lavpartable, newdata = newdata, type = type, method = method,
     transform = transform, se = se, acov = acov, label = label,
     fsm = fsm, rel = rel,
     mdist = mdist, append.data = append.data, assemble = assemble,
