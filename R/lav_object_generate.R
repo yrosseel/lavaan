@@ -394,28 +394,29 @@ lav_object_catml <- function(lavobject = NULL) {
 
   # if only categorical variables: remove thresholds and intercepts
   refit <- FALSE
-  if (all(lavdata@ov$type == "ordered")) {
-    partable.catml <- parTable(lavobject)
-    rm.idx <- which(partable.catml$op %in% c("|", "~1"))
-    partable.catml <- partable.catml[-rm.idx, ]
-	# never rotate (new in 0.6-19), as we only need fit measures
-	if (!is.null(partable.catml$efa)) {
-	  partable.catml$efa <- NULL
-      partable.catml$free <- partable.catml$free.unrotated
-	}
-    partable.catml <- lav_partable_complete(partable.catml)
-  } else {
+  partable.catml <- parTable(lavobject)
+  rm.idx <- which(partable.catml$op %in% c("|", "~1"))
+  # remove also any constraints that refer to the labels that belong
+  # to these intercepts/thresholds (new in 0.6-20)
+  th.int.labels <- unique(partable.catml$label[rm.idx],
+                          partable.catml$plabel[rm.idx])
+  if (any(nchar(th.int.labels) == 0L)) {
+    th.int.labels <- th.int.labels[- which(nchar(th.int.labels) == 0L)]
+  }
+  con.idx <- which(partable.catml$op %in% c("==", "<", ">", ":=") &
+                   (partable.catml$lhs %in% th.int.labels |
+                    partable.catml$rhs %in% th.int.labels))
+  partable.catml <- partable.catml[-c(rm.idx, con.idx), ]
+  # never rotate (new in 0.6-19), as we only need fit measures
+  if (!is.null(partable.catml$efa)) {
+    partable.catml$efa <- NULL
+    partable.catml$free <- partable.catml$free.unrotated
+  }
+
+  if (!all(lavdata@ov$type == "ordered")) {
     refit <- TRUE
-    partable.catml <- parTable(lavobject)
     partable.catml$start <- partable.catml$est
     partable.catml$se <- NULL
-    rm.idx <- which(partable.catml$op %in% c("|", "~1"))
-    partable.catml <- partable.catml[-rm.idx, ]
-    # never rotate (new in 0.6-19), as we only need fit measures
-    if (!is.null(partable.catml$efa)) {
-      partable.catml$efa <- NULL
-      partable.catml$free <- partable.catml$free.unrotated
-    }
     partable.catml$ustart <- partable.catml$est
     for (b in seq_len(lavpta$nblocks)) {
       ov.names.num <- lavpta$vnames$ov.num[[b]]
@@ -424,8 +425,8 @@ lav_object_catml <- function(lavobject = NULL) {
         partable.catml$lhs == partable.catml$rhs)
       partable.catml$free[ov.var.idx] <- 0L
     }
-    partable.catml <- lav_partable_complete(partable.catml)
   }
+  partable.catml <- lav_partable_complete(partable.catml)
 
   # adapt lavsamplestats
   for (g in seq_len(lavdata@ngroups)) {
