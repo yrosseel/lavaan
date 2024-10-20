@@ -6,7 +6,7 @@
 Fit one or more Exploratory Factor Analysis (EFA) model(s).}
 \usage{
 efa(data = NULL, nfactors = 1L, sample.cov = NULL, sample.nobs = NULL,
-    rotation = "geomin", rotation.args = list(), ov.names = names(data),
+    rotation = "geomin", rotation.args = list(), ov.names = NULL,
     bounds = "pos.var", ..., output = "efa")
 }
 \arguments{
@@ -46,7 +46,7 @@ efa(data = NULL, nfactors = 1L, sample.cov = NULL, sample.nobs = NULL,
    \code{cf.gamma = 0}, and \code{oblimin.gamma = 0}.}
 \item{ov.names}{Character vector. The variables names that are needed for
    the EFA. Should be a subset of the variables names in the data.frame.
-   By default, all the variables in the data are used.}
+   By default (if NULL), all the variables in the data are used.}
 \item{bounds}{Per default, \code{bounds = "pos.var"} forces all variances
    of both observed and latent variables to be strictly nonnegative. See
    the entry in \code{\link{lavOptions}} for more options.}

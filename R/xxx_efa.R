@@ -15,7 +15,7 @@ efa <- function(data = NULL,
                 sample.nobs = NULL,
                 rotation = "geomin",
                 rotation.args = list(),
-                ov.names = names(data),
+                ov.names = NULL,
                 bounds = "pos.var",
                 ...,
                 output = "efa") {
@@ -25,17 +25,20 @@ efa <- function(data = NULL,
   # twolevel?
   twolevel.flag <- !is.null(dotdotdot$cluster)
 
+  # sampling weights?
+  sampling.weights.flag <- !is.null(dotdotdot$sampling.weights)
+
   # check for unallowed arguments
   if (!is.null(dotdotdot$group)) {
     lav_msg_stop(gettext("efa has no support for multiple groups (for now);
                           consider using the cfa() function in combination
                           with the efa() modifier."))
   }
-  if (!is.null(dotdotdot$sampling.weights)) {
-    lav_msg_stop(gettext("efa has no support for sampling weights (for now);
-                          consider using the cfa() function in combination
-                          with the efa() modifier."))
-  }
+  #if (!is.null(dotdotdot$sampling.weights)) {
+  #  lav_msg_stop(gettext("efa has no support for sampling weights (for now);
+  #                        consider using the cfa() function in combination
+  #                        with the efa() modifier."))
+  #}
 
   # handle ov.names
   if (!is.null(data) && inherits(data, "lavMoments")) {
@@ -51,13 +54,22 @@ efa <- function(data = NULL,
 
   } else if (!is.null(data) && inherits(data, "data.frame")) {
     if (length(ov.names) > 0L) {
+      NAMES <- ov.names
       if (twolevel.flag) {
-        data <- data[, c(ov.names, dotdotdot$cluster)]
-      } else {
-        data <- data[, ov.names, drop = FALSE]
+        NAMES <- c(NAMES, dotdotdot$cluster)
       }
+      if (sampling.weights.flag) {
+        NAMES <- c(NAMES, dotdotdot$sampling.weights)
+      }
+      data <- data[, NAMES, drop = FALSE]
     } else {
       ov.names <- names(data)
+      if (twolevel.flag) {
+        ov.names <- ov.names[-which(ov.names == dotdotdot$cluster)]
+      }
+      if( sampling.weights.flag) {
+        ov.names <- ov.names[-which(ov.names == dotdotdot$sampling.weights)]
+      }
     }
   } else if (!is.null(sample.cov)) {
     ov.names <- rownames(sample.cov)
