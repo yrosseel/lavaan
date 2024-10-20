@@ -15,13 +15,19 @@ lavParseModelString <- function(model.syntax = "", as.data.frame. = FALSE,
       on.exit(lav_warn(current.warn), TRUE)
   }
   parser <- tolower(parser)
-  if (!parser %in% c("old", "new")) {
-    lav_msg_stop(gettext("parser= argument should be \"old\" or \"new\""))
+  if (!parser %in% c("old", "new", "c_r")) {
+    lav_msg_stop(gettext("parser= argument should be \"old\", \"new\" or \"c_r\""))
   }
 
   if (parser == "old") {
     # original/classic parser
     out <- lav_parse_model_string_orig(
+      model.syntax = model.syntax,
+      as.data.frame. = as.data.frame.
+    )
+  } else if (parser == "c_r") {
+    # new parser
+    out <- ldw_parse_model_string_cr(
       model.syntax = model.syntax,
       as.data.frame. = as.data.frame.
     )

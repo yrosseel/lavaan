@@ -210,9 +210,8 @@ ldw_parse_step1 <- function(modelsrc, types) {
       elem.i <- elem.i + 1L
     }
   }
-  identifiers <- gregexpr(
-    "[ \n][_.a-zA-Z][._a-zA-Z0-9]*",
-    paste0(" ", modelsrcw)
+  identifiers <- gregexpr("[ \n][_.[:alpha:]][_.[:alnum:]]*",
+                 paste0(" ", modelsrcw)
   )[[1]]
   identifier.lengths <- attr(identifiers, "match.length") - 1L
   for (i in seq_along(identifiers)) {
