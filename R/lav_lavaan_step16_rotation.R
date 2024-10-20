@@ -55,6 +55,13 @@ lav_lavaan_step16_rotation <- function(lavoptions = NULL,
     lavpartable$free[user7.idx] <- 1L
     lavpartable$free[lavpartable$free > 0L] <-
       seq_len(sum(lavpartable$free > 0L))
+    # avoid cin.simple entries for these user=7 parameters
+    if (!is.null(lavpartable$lower)) {
+      lavpartable$lower[user7.idx] <- -Inf
+    }
+    if (!is.null(lavpartable$upper)) {
+      lavpartable$upper[user7.idx] <- +Inf
+    }
 
     # create 'rotated' lavmodel, reflecting the 'new' free parameters
     lavmodel <- lav_model(
