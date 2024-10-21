@@ -12,7 +12,7 @@ ldw_parse_model_string_cr <- function(model.syntax = "",
   if (requireNamespace("lavaanC", quietly = TRUE)) {
     flat <- lavaanC::lav_parse_model_string_c(modelsrc)
   } else {
-    flat <- lav_parse_model_string_r(modelsrc)
+    flat <- ldw_parse_model_string(modelsrc)
   }
 
   if (!is.list(flat)) {
