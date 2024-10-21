@@ -11,6 +11,23 @@ The long-term goal of lavaan is to implement all the state-of-the-art
 capabilities that are currently available in commercial packages. However,
 lavaan is still under development, and much work still needs to be done.
 
+## Installation
+
+Install the stable version from CRAN:
+
+```R
+install.packages("lavaan")
+```
+
+Or the development version from GitHub:
+
+```R
+# install.packages("remotes")
+remotes::install_github("yrosseel/lavaan")
+```
+
+## Usage
+
 To get a first impression of how lavaan works in practice, consider the
 following example of a SEM model (the Political Democracy Example from 
 Bollen's 1989 book):
