@@ -35,7 +35,7 @@ lav_local_msgcode <- function(isError, msgcode, msgpos, msgenv) {
         assign("error", c(msgcode, msgpos), msgenv)
     } else {
         wrnnum <- 1L + get0("warncount", envir = msgenv, ifnotfound = 0L)
-        assign(paste0("warn", sprintf("%03d", wrnnum)), 
+        assign(paste0("warn", sprintf("%03d", wrnnum)),
                c(msgcode, msgpos - 1L), msgenv)  # msgpos - 1L to align with C
         assign("warncount", wrnnum, msgenv)
     }
@@ -1042,9 +1042,9 @@ lav_parse_model_string_r <- function(model.syntax = "", as.data.frame. = FALSE) 
        warns <- list();
        warncount <- get("warncount", envir = msgenv)
        for (jj in seq.int(warncount)) {
-            warns = c(warns, 
+            warns = c(warns,
             list(get(paste0("warn", sprintf("%03d", jj)), envir = msgenv)))
-       } 
+       }
        attr(flat, "warns") <- warns
    }
   attr(flat, "modifiers") <- mod

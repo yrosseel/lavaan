@@ -118,11 +118,22 @@ sam <- function(model = NULL,
       "se= argument must be twostep, bootstrap, naive, standard or none."))
   }
 
+  # check conditional.x= argument
   if (!is.null(dotdotdot$conditional.x)) {
     lav_msg_warn(gettext(
       "sam() does not support conditional.x = TRUE (yet) -> switching to
       conditional.x = FALSE"))
     dotdotdot$conditional.x <- FALSE
+  }
+
+  # check orthogonal= argument
+  if (!is.null(dotdotdot$orthogonal) &&
+      dotdotdot$orthogonal &&
+      sam.method == "local") {
+    lav_msg_warn(gettext(
+      "local sam does not support orthogonal = TRUE -> switching to
+       global sam"))
+    sam.method <- "global"
   }
 
   ###############################################
