@@ -19,7 +19,7 @@ lavSimulate <- function(pop.model = NULL, # population model
                         show.progress = FALSE,
                         store.failed = FALSE,
                         parallel = if(.Platform$OS.type == "unix")
-                                    { "parallel" } else { "no"},
+                                    { "multicore" } else { "no"},
                         ncpus = max(1L, parallel::detectCores() - 1L),
                         cl = NULL,
                         iseed = NULL) {

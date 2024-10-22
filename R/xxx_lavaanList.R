@@ -22,7 +22,9 @@ lavaanList <- function(model = NULL, # model
   # store.slots call
   mc <- match.call()
 
-  # store current random seed (if any)
+  # store current random seed (if any) and method
+  RNGkind_old <- RNGkind()
+  #cat("RNGkind = ", paste(RNGkind_old, collapse = " "), "\n")
   if (exists(".Random.seed", envir = .GlobalEnv, inherits = FALSE)) {
     init.seed <- get(".Random.seed", envir = .GlobalEnv, inherits = FALSE)
   } else {
@@ -350,7 +352,7 @@ lavaanList <- function(model = NULL, # model
         if (data.ok.flag) {
           # or only if lavobject is of class lavaan?
           objfile <- paste0(tmpfile, ".RData")
-          write(lavobject, file = objfile)
+          save(lavobject, file = objfile)
         }
       }
     }
@@ -406,7 +408,7 @@ lavaanList <- function(model = NULL, # model
   # this is adapted from the boot function in package boot
   RES <- if (ncpus > 1L && (have_mc || have_snow)) {
     if (have_mc) {
-      RNGkind_old <- RNGkind() # store current kind
+      #RNGkind_old <- RNGkind() # store current kind
       RNGkind("L'Ecuyer-CMRG") # to allow for reproducible results
       set.seed(iseed)
       parallel::mclapply(seq_len(ndat), fn, mc.cores = ncpus)
@@ -523,6 +525,8 @@ lavaanList <- function(model = NULL, # model
     # clean up
     remove(".Random.seed", envir = .GlobalEnv)
   }
+  # restore random generator method (if changed)
+  RNGkind(RNGkind_old[1], RNGkind_old[2], RNGkind_old[3])
 
   lavaanList
 }

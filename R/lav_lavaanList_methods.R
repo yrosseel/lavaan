@@ -102,7 +102,8 @@ lav_lavaanList_summary <- function(object,
           SE.AVE <- SE.AVE[seq_len(nel)]
         }
         pe$se.ave <- SE.AVE
-        pe$se.bias <- pe$se.ave - pe$se.obs
+        pe$se.bias <- pe$se.ave / pe$se.obs # use ratio!
+        pe$se.bias[!is.finite(pe$se.bias)] <- as.numeric(NA)
       }
 
       # scenario 2: bootstrap
