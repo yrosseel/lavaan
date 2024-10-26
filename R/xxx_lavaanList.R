@@ -256,6 +256,19 @@ lavaanList <- function(model = NULL, # model
           ),
           silent = TRUE
         )
+      } else if (cmd == "sam") {
+        lavobject <- try(
+          do.call("sam",
+            args = c(
+              list(
+                model = model,
+                data = DATA
+              ),
+              dotdotdot
+            )
+          ),
+          silent = TRUE
+        )
       } else {
         lav_msg_stop(gettext("unknown cmd:"), cmd)
       }

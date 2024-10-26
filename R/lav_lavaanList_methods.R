@@ -66,6 +66,7 @@ lav_lavaanList_summary <- function(object,
       remove.system.eq = FALSE, remove.eq = FALSE,
       remove.ineq = FALSE, remove.def = FALSE,
       remove.nonfree = FALSE, remove.unused = FALSE,
+      remove.step1 = FALSE, # in case we used sam()
       # zstat = FALSE, pvalue = FALSE, ci = FALSE,
       standardized = FALSE,
       output = output
@@ -105,6 +106,9 @@ lav_lavaanList_summary <- function(object,
         pe$se.bias <- pe$se.ave / pe$se.obs # use ratio!
         pe$se.bias[!is.finite(pe$se.bias)] <- as.numeric(NA)
       }
+
+      # if sam(), should we keep or remove the step1 values?
+      # keep them for now, but remove the 'Step' column
 
       # scenario 2: bootstrap
     } else if (!is.null(object@meta$lavBootstrap)) {

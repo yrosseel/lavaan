@@ -1,9 +1,10 @@
 # parse lavaan syntax
 # YR 14 Jan 2014: move to lav_syntax.R
 # YR 17 Oct 2023: add ldw parser
+# YR 23 Oct 2024: switch to "c.r"
 
 lavParseModelString <- function(model.syntax = "", as.data.frame. = FALSE,
-                                parser = "new", warn = TRUE, debug = FALSE) {
+                                parser = "c.r", warn = TRUE, debug = FALSE) {
   if (!missing(debug)) {
     current.debug <- lav_debug()
     if (lav_debug(debug))

@@ -1,9 +1,9 @@
 lav_lavaan_step00_parameters <- function(matchcall = NULL,
                                          syscall = NULL,
                                          dotdotdot = NULL) {
-  # 1. to resolve a problem where parameter 'cl' is matched to 'cluster'
+  # 1. resolve a problem where parameter 'cl' is matched to 'cluster'
   #    and shouldn't
-  # 2. to apply defaut options for cfa/sem/growth functions
+  # 2. apply default options for cfa/sem/growth functions
   # 3. if dotdotdot$control present, copy to dotdotdot$... for
   #   optim.method,
   #   optim.force.converged,

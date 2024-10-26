@@ -146,7 +146,9 @@ sam <- function(model = NULL,
 
   # check for data.type == "none"
   if (FIT@Data@data.type == "none") {
-    lav_msg_stop(gettext("no data or sample statistics are provided."))
+    # we are done; perhaps we only wished to create a FIT object?
+    return(FIT)
+    #lav_msg_stop(gettext("no data or sample statistics are provided."))
   }
 
   # check if we have categorical data
