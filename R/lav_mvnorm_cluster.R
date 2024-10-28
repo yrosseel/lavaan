@@ -1,6 +1,8 @@
 # loglikelihood clustered/twolevel data
 
 # YR: first version around Feb 2017
+# YR 28 Oct 2024: [EM steps:] if fx.delta is NA, check if we have (near)-perfect
+#                 correlations, and provide an informative warning
 
 
 # take model-implied mean+variance matrices, and reorder/augment them
@@ -1409,6 +1411,23 @@ lav_mvnorm_cluster_em_sat <- function(YLp = NULL,
 
     # fx.delta
     fx.delta <- fx - fx.old
+
+    # check if fx.delta is finite
+    if (!is.finite(fx.delta)) {
+      # not good ... something is very wrong; perhaps near-singular
+      # matrices?
+      cat("\n")
+      cat("FATAL problem: dumping Sigma.W and Sigma.B matrices:\n\n")
+      cat("Sigma.W:\n")
+      print(Sigma.W)
+      cat("\n")
+      cat("Sigma.B:\n")
+      print(implied2$Sigma.B)
+      cat("\n")
+      lav_msg_stop(gettext(
+        "EM steps of the saturated (H1) model failed; some matrices may
+         be singular; please check your data for (near-)perfect correlations."))
+    }
 
     # what if fx.delta is negative?
     if (fx.delta < 0) {

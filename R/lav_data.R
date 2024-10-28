@@ -822,6 +822,24 @@ lav_data_full <- function(data = NULL, # data.frame
     lav_msg_warn(gettext(
       "all observed variables are exogenous; model may not be identified"))
   }
+  # check for perfect correlations (NOT including exo variables)
+  if (any(ov$type == "numeric")) {
+    num.idx <- which(ov$type == "numeric" & ov$exo == 0L)
+    COR <- try(cor(data[,ov$idx[num.idx]], use = "pairwise.complete.obs"),
+               silent = TRUE)
+    if (!inherits(COR, "try-error") &&
+        any(lav_matrix_vech(COR, diagonal = FALSE) == 1)) {
+      COR[upper.tri(COR, diag = TRUE)] <- 0
+      idx <- which(COR == 1)
+      this.names <- ov$name[num.idx]
+      bad.names <- this.names[ sort(unique(c(row(COR)[idx], col(COR)[idx]))) ]
+      # should we make this a hard stop? things will most likely fail later...
+      lav_msg_warn(gettextf(
+      "some observed variables are perfectly correlated;
+       please check your data; variables involved are: %s",
+       paste(bad.names, collapse = " ")))
+    }
+  }
 
   # prepare empty lists
 
