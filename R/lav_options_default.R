@@ -443,7 +443,7 @@ lav_options_default <- function() {
   elm("store.vcov", "default", chr = "default", bl = TRUE)
 
   # internal
-  elm("parser", "c.r", chr = c(old = "old", orig = "old", new = "new",
+  elm("parser", "new", chr = c(old = "old", orig = "old", new = "new",
                                c.r = "c.r", cr = "c.r", classic = "old"))
 
   # categorical

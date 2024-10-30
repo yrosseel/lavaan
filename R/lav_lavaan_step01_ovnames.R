@@ -1,6 +1,6 @@
 lav_lavaan_step01_ovnames_initflat <- function(slotParTable     = NULL, # nolint
                                                model            = NULL,
-                                               dotdotdot.parser = "c.r") {
+                                               dotdotdot.parser = "new") {
   # if slotPartable not NULL copy to flat.model
   # else
   #   if model is of type character
@@ -27,7 +27,7 @@ lav_lavaan_step01_ovnames_initflat <- function(slotParTable     = NULL, # nolint
     flat.model <- slotParTable
   } else if (is.character(model)) {
     if (is.null(dotdotdot.parser)) {
-      flat.model <- lavParseModelString(model, parser = "c.r")
+      flat.model <- lavParseModelString(model, parser = "new")
     } else {
       flat.model <- lavParseModelString(model, parser = dotdotdot.parser)
     }

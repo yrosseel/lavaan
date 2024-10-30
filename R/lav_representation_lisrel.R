@@ -1638,8 +1638,129 @@ MLISTX2MLIST <- function(MLISTX = NULL,
 }
 
 # if DELTA parameterization, compute residual elements (in theta, or psi)
-# of observed categorical variables, as a function of other model parameters
+# - typically for (endogenous) observed *categorical* variables only
+# - but could also be all (endogenous) observed variables, if correlation = TRUE
+# - or all (endogenous) latent and observed variables, if ov.only = FALSE
+#
+# new version YR 29 Oct 2024: try harder for psi elements (but this only works
+#                             for recursive models)
+#
 setResidualElements.LISREL <- function(MLIST = NULL,
+                                       num.idx = NULL,
+                                       ov.y.dummy.ov.idx = NULL,
+                                       ov.y.dummy.lv.idx = NULL,
+                                       ov.only = TRUE,
+                                       tol = .Machine$double.eps,
+                                       debug = FALSE) {
+  BETA <- MLIST$beta
+  PSI  <- MLIST$psi
+  if (is.null(MLIST$delta)) {
+    delta <- rep(1, nrow(MLIST$lambda))
+  } else {
+    delta <- MLIST$delta
+  }
+
+  # remove num.idx from ov.y.dummy.*
+  if (length(num.idx) > 0L && length(ov.y.dummy.ov.idx) > 0L) {
+    n.idx <- which(ov.y.dummy.ov.idx %in% num.idx)
+    if (length(n.idx) > 0L) {
+      ov.y.dummy.ov.idx <- ov.y.dummy.ov.idx[-n.idx]
+      ov.y.dummy.lv.idx <- ov.y.dummy.lv.idx[-n.idx]
+    }
+  }
+
+  # if delta, the target may not be unity, but DELTA^(-2)
+  target.all <- 1/(delta * delta) # often the unit vector
+  target.psi <- rep(1, nrow(PSI))
+  if (length(ov.y.dummy.ov.idx) > 0L) {
+    target.psi[ov.y.dummy.lv.idx] <- target.all[ov.y.dummy.ov.idx]
+  }
+
+  # phase 1: set (residual) variances in psi
+  if (!is.null(BETA) && length(ov.y.dummy.ov.idx) > 0L) {
+    abs.beta <- abs(MLIST$beta)
+    if (ov.only) {
+      y.idx <- ov.y.dummy.lv.idx
+    } else {
+      y.idx <- which(apply(abs.beta, 1L, sum) != 0)
+    }
+
+    nr <- nrow(BETA)
+    IB <- -BETA
+    IB[lav_matrix_diag_idx(nr)] <- 1
+    IB.inv <- solve(IB)
+
+    # for each y variable, compute IB.inv %*% psi %*% t(IB.inv), without y
+    ny <- length(y.idx)
+    max_rep <- ny * 10
+    for(rep in seq_len(max_rep)) {
+      if (debug) {
+        cat("rep = ", rep, "\n")
+      }
+      # check current diagonal
+      current.diag <- diag(IB.inv %*% PSI %*% t(IB.inv))
+      if (debug) {
+        cat("target.psi   = ", target.psi[y.idx], "\n")
+        cat("current.diag = ", current.diag[y.idx], "\n")
+      }
+      if (all(abs(current.diag[y.idx] - target.psi[y.idx]) < tol)) {
+        # we are done, bail out
+        break
+      }
+      for (i in seq_len(ny)) {
+        this.y.idx <- y.idx[i]
+        this.x.idx <- which(abs.beta[this.y.idx,] != 0)
+        IB.inv.y <- IB.inv[this.y.idx, this.x.idx, drop = FALSE]
+        PSI.x <- PSI[this.x.idx, this.x.idx, drop = FALSE]
+        var.y <- drop(IB.inv.y %*% PSI.x %*% t(IB.inv.y))
+        PSI[this.y.idx, this.y.idx] <- target.psi[this.y.idx] - var.y
+      }
+    }
+
+    # final check?
+    current.diag <- diag(IB.inv %*% PSI %*% t(IB.inv))
+    if (debug) {
+      cat("final current.diag = ", current.diag[y.idx], "\n")
+    }
+    # don't be too strict here
+    if (any(abs(current.diag[y.idx] - target.psi[y.idx]) > sqrt(tol))) {
+      #cat("target = ", target.psi[y.idx], "\n")
+      #cat("current.dig = ", current.diag[y.idx], "\n")
+      lav_msg_warn(gettext("not all total variances of y variables are unity;
+                            non-recursive model?"))
+    }
+
+    # store PSI
+    MLIST$psi <- PSI
+  }
+
+  # phase 2: set residual variances in theta
+
+  # force non-numeric theta elements to be zero
+  if (length(num.idx) > 0L) {
+    diag(MLIST$theta)[-num.idx] <- 0.0
+  } else {
+    diag(MLIST$theta) <- 0.0
+  }
+
+  Sigma.hat <- computeSigmaHat.LISREL(MLIST = MLIST, delta = FALSE)
+  diag.Sigma <- diag(Sigma.hat)
+  # theta = DELTA^(-2) - diag( LAMBDA (I-B)^-1 PSI (I-B)^-T t(LAMBDA) )
+  theta.diag <- target.all - diag.Sigma
+  not.idx <- unique(c(num.idx, ov.y.dummy.ov.idx))
+  if (length(not.idx) > 0L) {
+    diag(MLIST$theta)[-not.idx] <- theta.diag[-not.idx]
+  } else {
+    diag(MLIST$theta) <- theta.diag
+  }
+
+  MLIST
+}
+
+
+# if DELTA parameterization, compute residual elements (in theta, or psi)
+# of observed categorical variables, as a function of other model parameters
+setResidualElements.LISREL_old <- function(MLIST = NULL,
                                        num.idx = NULL,
                                        ov.y.dummy.ov.idx = NULL,
                                        ov.y.dummy.lv.idx = NULL) {
