@@ -2,6 +2,87 @@
 #
 # initial version: YR 25/03/2009
 
+# find index of 'ancestors' (predictors) for all nodes in a DAG
+# given an adjacency matrix B (rows are y's, columns are x's)
+#
+# surely, there must be a more efficient/elegant way to do this?
+#
+lav_utils_get_ancestors <- function(B = NULL) {
+  B <- abs(B)
+  nr <- nrow(B)
+
+  # container to hold ancestor indices per node
+  out.idx <- vector("list", length = nr)
+
+  # run over each node
+  for(i in seq_len(nr)) {
+    current.x.idx <- integer(0L)
+    x.direct.idx <- which(B[i,] != 0)
+    if (length(x.direct.idx) == 0L) {
+      # no ancestors, we are done
+      out.idx[[i]] <- current.x.idx
+      next
+    } else {
+      depth <- 0L
+      this.x.idx <- x.direct.idx
+      while(depth < (nr*10L) && length(this.x.idx) > 0L) {
+        current.x.idx <- c(current.x.idx, this.x.idx)
+        this.x.idx <- which(colMeans(B[this.x.idx,,drop = FALSE]) != 0)
+        depth <- depth + 1L
+      }
+      current.x.idx <- sort.int(unique(current.x.idx))
+      out.idx[[i]] <- current.x.idx
+    }
+  } # all nodes
+
+  out.idx
+}
+
+lav_utils_find_residuals <- function(BETA = NULL, IB.inv = NULL, PSI = NULL,
+                                     target.psi = NULL, y.idx = NULL) {
+
+  nr <- nrow(PSI)
+
+  # IB.inv (if not given)
+  if (is.null(IB.inv)) {
+    IB <- -BETA
+    IB[lav_matrix_diag_idx(nr)] <- 1
+    IB.inv <- solve(IB)
+  }
+
+  # target.psi
+  if (is.null(target.psi)) {
+    target.psi <- rep(1, nr)
+  }
+
+  # y.idx
+  if (is.null(y.idx)) {
+    y.idx <- seq_len(nr)
+  }
+
+  # cast the problem as a nonlinear optimization problem
+  obj <- function(x) {
+    #cat("x = ", x, "\n")
+    # x are the diagonal elements of PSI
+    this.PSI <- PSI
+    diag(this.PSI)[y.idx] <- x
+    VETA <- IB.inv %*% this.PSI %*% t(IB.inv)
+    current.diag <- diag(VETA)
+    # ratio or difference?
+    diff <- target.psi[y.idx] - current.diag[y.idx]
+    out <- sum(diff * diff) # least squares
+    out
+  }
+
+  VETA <- IB.inv %*% PSI %*% t(IB.inv)
+  x.start <- diag(VETA)[y.idx]
+  out <- nlminb(start = x.start, objective = obj)
+
+  # return updated PSI matrix
+  diag(PSI)[y.idx] <- out$par
+  PSI
+}
+
 # get 'test'
 # make sure we return a single element
 lav_utils_get_test <- function(lavobject) {

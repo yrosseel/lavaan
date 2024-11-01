@@ -40,6 +40,7 @@ lav_lavaanList_summary <- function(object,
                                    estimates = TRUE,
                                    est.bias = TRUE,
                                    se.bias = TRUE,
+                                   prop.sig = TRUE,
                                    zstat = TRUE,
                                    pvalue = TRUE,
                                    print = TRUE,
@@ -103,12 +104,30 @@ lav_lavaanList_summary <- function(object,
           SE.AVE <- SE.AVE[seq_len(nel)]
         }
         pe$se.ave <- SE.AVE
-        pe$se.bias <- pe$se.ave / pe$se.obs # use ratio!
+        se.obs <- SE.OBS
+        se.obs[se.obs < .Machine$double.eps^(1/3)] <- as.numeric(NA)
+        pe$se.bias <- pe$se.ave / se.obs # use ratio!
         pe$se.bias[!is.finite(pe$se.bias)] <- as.numeric(NA)
       }
 
+      if (prop.sig) {
+        SE[SE < sqrt(.Machine$double.eps)] <- as.numeric(NA)
+        WALD <- EST/SE
+        wald <- apply(WALD, 1L, mean, na.rm = TRUE)
+        wald[!is.finite(wald)] <- as.numeric(NA)
+        pe$wald <- wald
+        PVAL <- 2 * (1 - pnorm(abs(WALD)))
+        prop05 <- apply(PVAL, 1L, function(x) {
+                        x.ok <- x[is.finite(x)]
+                        nx <- length(x.ok)
+                        sum(x.ok < 0.05)/nx
+                       })
+        prop05[!is.finite(prop05)] <- as.numeric(NA)
+        pe$prop.p05 <- prop05
+      }
+
       # if sam(), should we keep or remove the step1 values?
-      # keep them for now, but remove the 'Step' column
+      # keep them for now
 
       # scenario 2: bootstrap
     } else if (!is.null(object@meta$lavBootstrap)) {

@@ -2,6 +2,9 @@
 #
 # initial version: YR 24 jan 2011
 # revision for 0.4-11: YR 21 okt 2011
+#
+#
+#
 simulateData <- function( # user-specified model
                          model = NULL,
                          model.type = "sem",
@@ -150,51 +153,85 @@ simulateData <- function( # user-specified model
       lav_msg_warn(gettext(
         "if residual variances are specified, please use standardized=FALSE"))
     }
-    lav$ustart[c(ov.var.idx, lv.var.idx)] <- 0.0
-    fit <- lavaan(model = lav, sample.nobs = sample.nobs, ...)
-    Sigma.hat <- computeSigmaHat(lavmodel = fit@Model)
-    ETA <- computeVETA(lavmodel = fit@Model)
 
-    if (lav_debug()) {
-      cat("Sigma.hat:\n")
-      print(Sigma.hat)
-      cat("Eta:\n")
-      print(ETA)
-    }
+    # new in 0.6-20: use setResidualElements.LISREL
+    dotdotdot <- list(...)
+    dotdotdot$sample.nobs <- sample.nobs
+    dotdotdot$fixed.x <- FALSE # for now
+    dotdotdot$representation <- "LISREL"
+    dotdotdot$correlation <- TRUE # this is the trick
+    tmp.fit <- do.call("lavaan", args = c(list(model = lav), dotdotdot))
+    # set/get parameters to invoke setResidualElements.LISREL
+    tmp.lav <- tmp.fit@ParTable
+    tmp.x <- lav_model_get_parameters(tmp.fit@Model)
+    tmp.model <- lav_model_set_parameters(tmp.fit@Model, x = tmp.x)
+    tmp.lav$ustart <- lav_model_get_parameters(tmp.model, type = "user")
 
-    # stage 1: standardize LV
-    if (length(lv.nox) > 0L) {
-      for (g in 1:ngroups) {
-        var.group <- which(lav$op == "~~" & lav$lhs %in% lv.nox &
-          lav$rhs == lav$lhs &
-          lav$group == group.values[g])
-        eta.idx <- match(lv.nox, lv.names)
-        lav$ustart[var.group] <- 1 - diag(ETA[[g]])[eta.idx]
+    # copy residual values to lav (without assuming parameter tables look the
+    # same)
+    res.idx <- c(ov.var.idx, lv.var.idx)
+    for (i in seq_len(length(res.idx))) {
+      # lookup this parameter in tmp.lav
+      idx.in.lav <- res.idx[i]
+      this.lhs <- lav$lhs[idx.in.lav]
+      idx.in.tmp <- which(tmp.lav$op == "~~" & tmp.lav$lhs == this.lhs &
+                          tmp.lav$rhs == tmp.lav$lhs)
+      if (length(idx.in.tmp) == 0L) {
+        # hm, not found? Give a warning?
+      } else {
+        vals <- tmp.lav$ustart[idx.in.tmp]
+        # check if we have unfortunate values
+        bad.idx <- which(!is.finite(vals) | vals < 0)
+        vals[bad.idx] <- 1.0 # not pretty, but safe
+        lav$ustart[idx.in.lav] <- vals
       }
     }
-    # refit
-    fit <- lavaan(model = lav, sample.nobs = sample.nobs, ...)
-    Sigma.hat <- computeSigmaHat(lavmodel = fit@Model)
 
-    if (lav_debug()) {
-      cat("after stage 1:\n")
-      cat("Sigma.hat:\n")
-      print(Sigma.hat)
-    }
+    # this is what we did <0.6-20
+    # fit <- lavaan(model = lav, sample.nobs = sample.nobs, ...)
+    # Sigma.hat <- computeSigmaHat(lavmodel = fit@Model)
+    # ETA <- computeVETA(lavmodel = fit@Model)
 
-    # stage 2: standardize OV
-    for (g in 1:ngroups) {
-      var.group <- which(lav$op == "~~" & lav$lhs %in% ov.nox &
-        lav$rhs == lav$lhs &
-        lav$group == group.values[g])
-      ov.idx <- match(ov.nox, ov.names)
-      lav$ustart[var.group] <- 1 - diag(Sigma.hat[[g]])[ov.idx]
-    }
+    # if (lav_debug()) {
+    #   cat("Sigma.hat:\n")
+    #   print(Sigma.hat)
+    #   cat("Eta:\n")
+    #   print(ETA)
+    # }
 
-    if (lav_debug()) {
-      cat("after standardisation lav\n")
-      print(as.data.frame(lav))
-    }
+    # # stage 1: standardize LV
+    # if (length(lv.nox) > 0L) {
+    #   for (g in 1:ngroups) {
+    #     var.group <- which(lav$op == "~~" & lav$lhs %in% lv.nox &
+    #       lav$rhs == lav$lhs &
+    #       lav$group == group.values[g])
+    #     eta.idx <- match(lv.nox, lv.names)
+    #     lav$ustart[var.group] <- 1 - diag(ETA[[g]])[eta.idx]
+    #   }
+    # }
+    # # refit
+    # fit <- lavaan(model = lav, sample.nobs = sample.nobs, ...)
+    # Sigma.hat <- computeSigmaHat(lavmodel = fit@Model)
+
+    # if (lav_debug()) {
+    #   cat("after stage 1:\n")
+    #   cat("Sigma.hat:\n")
+    #   print(Sigma.hat)
+    # }
+
+    # # stage 2: standardize OV
+    # for (g in 1:ngroups) {
+    #   var.group <- which(lav$op == "~~" & lav$lhs %in% ov.nox &
+    #     lav$rhs == lav$lhs &
+    #     lav$group == group.values[g])
+    #   ov.idx <- match(ov.nox, ov.names)
+    #   lav$ustart[var.group] <- 1 - diag(Sigma.hat[[g]])[ov.idx]
+    # }
+
+    # if (lav_debug()) {
+    #   cat("after standardisation lav\n")
+    #   print(as.data.frame(lav))
+    # }
   }
 
 

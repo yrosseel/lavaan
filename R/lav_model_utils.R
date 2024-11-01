@@ -69,6 +69,7 @@ lav_model_get_parameters <- function(lavmodel = NULL, GLIST = NULL,
 # warning: if categorical/correlation: 'delta' parameterization does
 #          not work properly if we have 'mediators' (where x is not fixed)
 #          that are observed (residuals are in PSI, and are not additive)
+#          Note: fixed in 0.6-20 for recursive models
 lav_model_set_parameters <- function(lavmodel = NULL, x = NULL) {
   tmp <- lavmodel@GLIST
   for (mm in 1:length(lavmodel@GLIST)) {
