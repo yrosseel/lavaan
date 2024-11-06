@@ -5,39 +5,48 @@
 # find index of 'ancestors' (predictors) for all nodes in a DAG
 # given an adjacency matrix B (rows are y's, columns are x's)
 #
-# surely, there must be a more efficient/elegant way to do this?
-#
+# this (speedy!) version is written by Luc De Wilde
 lav_utils_get_ancestors <- function(B = NULL) {
   B <- abs(B)
   nr <- nrow(B)
+  OUTENV <- new.env(parent = emptyenv())
 
   # container to hold ancestor indices per node
   out.idx <- vector("list", length = nr)
 
-  # run over each node
-  for(i in seq_len(nr)) {
-    current.x.idx <- integer(0L)
-    x.direct.idx <- which(B[i,] != 0)
-    if (length(x.direct.idx) == 0L) {
-      # no ancestors, we are done
-      out.idx[[i]] <- current.x.idx
-      next
-    } else {
-      depth <- 0L
-      this.x.idx <- x.direct.idx
-      while(depth < (nr*10L) && length(this.x.idx) > 0L) {
-        current.x.idx <- c(current.x.idx, this.x.idx)
-        this.x.idx <- which(colMeans(B[this.x.idx,,drop = FALSE]) != 0)
-        depth <- depth + 1L
-      }
-      current.x.idx <- sort.int(unique(current.x.idx))
-      out.idx[[i]] <- current.x.idx
+  get_ancestors <- function(nr, callers) {
+    if (any(callers == nr)) {
+      warning(gettextf("Cycle detected for element nr %d !", nr))
+      return(integer(0));
     }
-  } # all nodes
+    x = get0(as.character(nr), envir = OUTENV, ifnotfound = NULL)
+    if (!is.null(x)) return(x);
+    retval <- integer(0L);
+    x.direct.idx <- which(B[nr,] != 0)
+    for (j in seq_along(x.direct.idx)) {
+      thisone <- x.direct.idx[j]
+      retval <- c(retval, thisone)
+      sub <- get_ancestors(thisone, c(callers, nr))
+      if (all(sub != nr)) retval = c(retval, sub)
+    }
+    retval <- sort.int(unique(retval))
+    assign(as.character(nr), retval, envir = OUTENV)
+    return(retval)
+  }
 
+  # run over each node
+  for (i in seq_len(nr)) {
+    out.idx[[i]] <- get_ancestors(i, integer(0));
+  } # all nodes
   out.idx
 }
 
+# find the residual variances (diagonal element of PSI) in such a way
+# so that the diagonal elements of IB.inv %*% PSI %*% t(IB.inv) are
+# equal to the elements of target.psi (usually the 1 vector)
+#
+# YR 01 Nov 2024: initial version; no bounds for now... (so we may end up
+#                 with negative variances)
 lav_utils_find_residuals <- function(BETA = NULL, IB.inv = NULL, PSI = NULL,
                                      target.psi = NULL, y.idx = NULL) {
 

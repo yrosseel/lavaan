@@ -1698,14 +1698,15 @@ setResidualElements.LISREL <- function(MLIST = NULL,
 
     # check if IB is acyclic
     if (det(IB) != 1) {
-      # damn, we have an acyclic model; use nlminb()
+      # damn, we have an cyclic model; use nlminb()
       PSI <- lav_utils_find_residuals(IB.inv = IB.inv, PSI = PSI,
                                       target.psi = target.psi, y.idx = y.idx)
     } else {
       # for an acyclic model, we should be able to find the
       # residual analytically; simply by computing the model-based
-      # total variances of the lhs of each regression, and set the
+      # total variances of the RHS of each regression, and set the
       # residual of the y variable so that it is exactly equal to unity
+      # (yes, this will result in negative resdidual variances if needed)
 
       # ideally, we first sort the variables 'in topological order'; then
       # we need only one run; but here we are somewhat lazy, and we

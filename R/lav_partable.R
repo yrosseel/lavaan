@@ -447,6 +447,10 @@ lavaanify <- lavParTable <- function(
     print(as.data.frame(tmp.list, stringsAsFactors = FALSE))
   }
 
+  # check for auto-regressions
+  auto.reg.idx <- which(tmp.list$op == "~" &
+                        tmp.list$lhs == tmp.list$rhs)
+
   # check ordinal variables
   categorical <- FALSE
   ov.ord <- lavNames(tmp.list, "ov.ord")
