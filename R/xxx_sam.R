@@ -42,6 +42,8 @@
 #                - move alpha.correction= argument to local.options
 
 
+
+
 # twostep = wrapper for global sam
 twostep <- function(model = NULL, data = NULL, cmd = "sem",
                     mm.list = NULL, mm.args = list(), struc.args = list(),

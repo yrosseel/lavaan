@@ -2,6 +2,25 @@
 #
 # initial version: YR 25/03/2009
 
+# sd with trimming
+lav_utils_sd <- function(x, na.rm = TRUE, trim = 0) {
+  if (isTRUE(na.rm))
+    x <- x[!is.na(x)]
+  n <- length(x)
+  if (trim > 0 && n) {
+      if (is.complex(x))
+          stop("trimmed means are not defined for complex data")
+      if (anyNA(x))
+          return(NA_real_)
+      if (trim >= 0.5)
+          return(stats::median(x, na.rm = FALSE))
+      lo <- floor(n * trim) + 1
+      hi <- n + 1 - lo
+      x <- sort.int(x, partial = unique(c(lo, hi)))[lo:hi]
+  }
+  sd(x)
+}
+
 # find index of 'ancestors' (predictors) for all nodes in a DAG
 # given an adjacency matrix B (rows are y's, columns are x's)
 #

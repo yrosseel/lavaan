@@ -53,17 +53,24 @@ about the data.}
       If \code{type="free"}, only the free parameters are returned.
       If \code{type="user"}, all parameters listed in the parameter table
       are returned, including constrained and fixed parameters.}
-    \item{summary}{\code{signature(object = "lavaanList", header = TRUE, estimates = TRUE, nd = 3L)}: 
+	\item{summary}{\code{signature(object = "lavaanList", header = TRUE,
+         estimates = TRUE, nd = 3L, 
+         simulate.args = list(list(est.bias = TRUE, se.bias = TRUE, 
+         prop.sig = TRUE, trim = 0)))}: 
       Print a summary of the collection of fitted models.
       If \code{header = TRUE}, the header section is
-      printed.  
+      printed.
       If \code{estimates = TRUE}, print the parameter estimates section.
       The argument \code{nd} determines the number of digits after the
       decimal point to be printed (currently only in the parameter estimates
       section.)
-      Nothing is returned (use 
-      \code{parameterEstimates} or another extractor function 
-      to extract information from this object).}
+      The argument \code{simulate.args} is only used if the meta slot
+      indicates that the parameter tables are obtained in the context of
+      a simulattion. The options switch on/off the columns that are printed,
+      and the \code{trim} option determines the amount of trimming that is
+      used when taking the average (or standard deviation) across all 
+      replications.
+    }
   }
 }
 \seealso{

@@ -27,10 +27,14 @@ setMethod(
   function(object, header = TRUE,
            estimates = TRUE,
            print = TRUE,
-           nd = 3L) {
+           nd = 3L,
+           simulate.args = list(est.bias = TRUE,
+                                se.bias  = TRUE,
+                                prop.sig = TRUE,
+                                trim     = 0)) {
     lav_lavaanList_summary(object,
       header = header, estimates = estimates,
-      print = print, nd = nd
+      print = print, nd = nd, simulate.args = simulate.args
     )
   }
 )
@@ -38,9 +42,10 @@ setMethod(
 lav_lavaanList_summary <- function(object,
                                    header = TRUE,
                                    estimates = TRUE,
-                                   est.bias = TRUE,
-                                   se.bias = TRUE,
-                                   prop.sig = TRUE,
+                                   simulate.args = list(est.bias = TRUE,
+                                                        se.bias  = TRUE,
+                                                        prop.sig = TRUE,
+                                                        trim     = 0),
                                    zstat = TRUE,
                                    pvalue = TRUE,
                                    print = TRUE,
@@ -75,31 +80,49 @@ lav_lavaanList_summary <- function(object,
 
     # scenario 1: simulation
     if (!is.null(object@meta$lavSimulate)) {
+
+      # default behavior
+      sim.args <- list(est.bias = TRUE,
+                       se.bias  = TRUE,
+                       prop.sig = TRUE,
+                       trim     = 0)
+      sim.args <- modifyList(sim.args, simulate.args)
+      #if (!sim.args$est.bias) {
+      #  sim.args$se.bias <- FALSE
+      #}
+      if (!sim.args$se.bias) {
+        sim.args$prop.sig <- FALSE
+      }
+
       pe$est.true <- object@meta$est.true
       nel <- length(pe$est.true)
 
-      # EST
+      # always compute EST
       EST <- lav_lavaanList_partable(object, what = "est", type = "all")
-      AVE <- rowMeans(EST, na.rm = TRUE)
 
-      # remove things like equality constraints
-      if (length(AVE) > nel) {
-        AVE <- AVE[seq_len(nel)]
-      }
-      pe$est.ave <- AVE
-      if (est.bias) {
+      # est.bias?
+      if (sim.args$est.bias) {
+        AVE <- apply(EST, 1L, mean, na.rm = TRUE, trim = sim.args$trim)
+
+        # remove things like equality constraints
+        if (length(AVE) > nel) {
+          AVE <- AVE[seq_len(nel)]
+        }
+        pe$est.ave <- AVE
         pe$est.bias <- pe$est.ave - pe$est.true
       }
 
       # SE?
-      if (se.bias) {
-        SE.OBS <- apply(EST, 1L, sd, na.rm = TRUE)
+      if (sim.args$se.bias) {
+        SE.OBS <- apply(EST, 1L, lav_utils_sd, na.rm = TRUE,
+                        trim = sim.args$trim)
         if (length(SE.OBS) > nel) {
           SE.OBS <- SE.OBS[seq_len(nel)]
         }
         pe$se.obs <- SE.OBS
         SE <- lav_lavaanList_partable(object, what = "se", type = "all")
-        SE.AVE <- rowMeans(SE, na.rm = TRUE)
+        SE.AVE <- apply(SE, 1L, mean, na.rm = TRUE,
+                        trim = sim.args$trim)
         if (length(SE.AVE) > nel) {
           SE.AVE <- SE.AVE[seq_len(nel)]
         }
@@ -110,10 +133,11 @@ lav_lavaanList_summary <- function(object,
         pe$se.bias[!is.finite(pe$se.bias)] <- as.numeric(NA)
       }
 
-      if (prop.sig) {
+      if (sim.args$prop.sig) {
         SE[SE < sqrt(.Machine$double.eps)] <- as.numeric(NA)
         WALD <- EST/SE
-        wald <- apply(WALD, 1L, mean, na.rm = TRUE)
+        wald <- apply(WALD, 1L, mean, na.rm = TRUE,
+                      trim = sim.args$trim)
         wald[!is.finite(wald)] <- as.numeric(NA)
         pe$wald <- wald
         PVAL <- 2 * (1 - pnorm(abs(WALD)))
