@@ -41,7 +41,9 @@
 #                - rename veta.force.pd -> lambda.correction
 #                - move alpha.correction= argument to local.options
 
-
+# YR 09 Nov 2024 - add cache (list) argument, to re-use information
+#                  from previous runs (assuming the same model, same data
+#                  features)
 
 
 # twostep = wrapper for global sam
@@ -79,33 +81,59 @@ sam <- function(model = NULL,
                 ),
                 # h1, anova, mean
                 global.options = list(), # not used for now
+                bootstrap.args = list(R = 1000L, type = "ordinary"),
                 output = "lavaan") {
+
+  # check model= argument
+  has.sam.object.flag <- FALSE
+  if (inherits(model, "lavaan") && !is.null(model@internal$sam.method)) {
+    has.sam.object.flag <- TRUE
+  }
 
   # ------------- handling of warn/debug/verbose switches ----------
   dotdotdot <- list(...)
-  if (!is.null(dotdotdot$debug)) {
-    current.debug <- lav_debug()
-    if (lav_debug(dotdotdot$debug))
-      on.exit(lav_debug(current.debug), TRUE)
-    dotdotdot$debug <- NULL
-    if (lav_debug()) {
-      dotdotdot$warn <- TRUE       # force warnings if debug
-      dotdotdot$verbose <- TRUE    # force verbose if debug
+  if( length(dotdotdot) > 0L) {
+    if (!is.null(dotdotdot$debug)) {
+     current.debug <- lav_debug()
+      if (lav_debug(dotdotdot$debug))
+        on.exit(lav_debug(current.debug), TRUE)
+      dotdotdot$debug <- NULL
+      if (lav_debug()) {
+        dotdotdot$warn <- TRUE       # force warnings if debug
+        dotdotdot$verbose <- TRUE    # force verbose if debug
+      }
     }
-  }
-  if (!is.null(dotdotdot$warn)) {
-    current.warn <- lav_warn()
-    if (lav_warn(dotdotdot$warn))
-      on.exit(lav_warn(current.warn), TRUE)
-    dotdotdot$warn <- NULL
-  }
-  if (!is.null(dotdotdot$verbose)) {
-    current.verbose <- lav_verbose()
-    if (lav_verbose(dotdotdot$verbose))
-      on.exit(lav_verbose(current.verbose), TRUE)
-    dotdotdot$verbose <- NULL
-  }
-  # output
+    if (!is.null(dotdotdot$warn)) {
+      current.warn <- lav_warn()
+      if (lav_warn(dotdotdot$warn))
+        on.exit(lav_warn(current.warn), TRUE)
+      dotdotdot$warn <- NULL
+    }
+    if (!is.null(dotdotdot$verbose)) {
+      current.verbose <- lav_verbose()
+      if (lav_verbose(dotdotdot$verbose))
+        on.exit(lav_verbose(current.verbose), TRUE)
+      dotdotdot$verbose <- NULL
+    }
+    # check for conditional.x= argument
+    if (!is.null(dotdotdot$conditional.x)) {
+      lav_msg_warn(gettext(
+        "sam() does not support conditional.x = TRUE (yet) -> switching to
+          conditional.x = FALSE"))
+      dotdotdot$conditional.x <- FALSE
+    }
+    # check for orthogonal= argument
+    if (!is.null(dotdotdot$orthogonal) &&
+        dotdotdot$orthogonal &&
+        sam.method == "local") {
+      lav_msg_warn(gettext(
+        "local sam does not support orthogonal = TRUE -> switching to
+         global sam"))
+     sam.method <- "global"
+    }
+  } # length(dotdotdot) > 0L
+
+  # check output= argument
   output <- tolower(output)
   if (output == "list" || output == "lavaan") {
     # nothing to do
@@ -114,52 +142,76 @@ sam <- function(model = NULL,
   }
 
   # check se= argument
+  if (!missing(se)) {
+    se <- tolower(se)
+    if (se %in% c("two-step", "two_step", "two.step")) {
+      se <- "twostep"
+    }
+  }
   if (!se %in% c("standard", "naive", "twostep", "twostep2",
                  "bootstrap", "none")) {
     lav_msg_stop(gettext(
       "se= argument must be twostep, bootstrap, naive, standard or none."))
   }
 
-  # check conditional.x= argument
-  if (!is.null(dotdotdot$conditional.x)) {
-    lav_msg_warn(gettext(
-      "sam() does not support conditional.x = TRUE (yet) -> switching to
-      conditional.x = FALSE"))
-    dotdotdot$conditional.x <- FALSE
-  }
-
-  # check orthogonal= argument
-  if (!is.null(dotdotdot$orthogonal) &&
-      dotdotdot$orthogonal &&
-      sam.method == "local") {
-    lav_msg_warn(gettext(
-      "local sam does not support orthogonal = TRUE -> switching to
-       global sam"))
-    sam.method <- "global"
-  }
 
   ###############################################
   # STEP 0: process full model, without fitting #
   ###############################################
-  FIT <- lav_sam_step0(
-    cmd = cmd, model = model, data = data, se = se,
-    sam.method = sam.method, dotdotdot = dotdotdot
-  )
+  if (has.sam.object.flag) {
+    FIT <- model
+    # restore options
+    FIT@Options <- FIT@internal$sam.lavoptions
+    # extract other argments from FIT@internal, unless specified as arguments
+    if (missing(mm.list)){
+      mm.list <- FIT@internal$sam.mm.list
+    }
+    if (missing(mm.args)){
+      mm.args <- FIT@internal$sam.mm.args
+    }
+    if (missing(struc.args)) {
+      struc.args <- FIT@internal$sam.struc.args
+    }
+    if (missing(sam.method)) {
+      sam.method <- FIT@internal$sam.method
+    }
+    if (missing(local.options)) {
+      local.options <- FIT@internal$sam.local.options
+    }
+    if (missing(global.options)) {
+      global.options <- FIT@internal$sam.global.options
+    }
+    if (missing(se)) {
+      se <- FIT@Options$se
+    } else {
+      FIT@Options$se <- se
+    }
+    if (missing(cmd)) {
+      cmd <- FIT@internal$sam.cmd
+    }
+    # remove @internal slot
+    FIT@internal <- list()
+  } else {
+    FIT <- lav_sam_step0(
+      cmd = cmd, model = model, data = data, se = se,
+      sam.method = sam.method, dotdotdot = dotdotdot
+    )
 
-  # check for data.type == "none"
-  if (FIT@Data@data.type == "none") {
-    # we are done; perhaps we only wished to create a FIT object?
-    return(FIT)
-    #lav_msg_stop(gettext("no data or sample statistics are provided."))
-  }
+    # check for data.type == "none"
+    if (FIT@Data@data.type == "none") {
+      # we are done; perhaps we only wished to create a FIT object?
+      return(FIT)
+      #lav_msg_stop(gettext("no data or sample statistics are provided."))
+    }
 
-  # check if we have categorical data
-  if (FIT@Model@categorical) {
-    # if sam.method = "global", force estimator to DWLS in struc par
-	if (sam.method == "global" &&
-	    !is.null(struc.args[["estimator"]]) &&
-	    struc.args[["estimator"]] == "ML") {
-      struc.args[["estimator"]] <- "DWLS"
+    # check if we have categorical data
+    if (FIT@Model@categorical) {
+      # if sam.method = "global", force estimator to DWLS in struc par
+  	  if (sam.method == "global" &&
+  	      !is.null(struc.args[["estimator"]]) &&
+    	    struc.args[["estimator"]] == "ML") {
+          struc.args[["estimator"]] <- "DWLS"
+      }
     }
   }
 
@@ -176,7 +228,7 @@ sam <- function(model = NULL,
   }
   STEP1 <- lav_sam_step1(
     cmd = cmd, mm.list = mm.list, mm.args = mm.args,
-    FIT = FIT, data = data, sam.method = sam.method
+    FIT = FIT, sam.method = sam.method
   )
 
   ##################################################
@@ -270,37 +322,77 @@ sam <- function(model = NULL,
     cat("done.\n")
   }
 
-
   ##############################################
   # Step 4: compute standard errors for step 2 #
   ##############################################
 
   if (lavoptions$se == "bootstrap") {
-    #
-	# TODO
-	#
-    #VCOV <- lav_sam_boot_se(FIT = FIT, JOINT = JOINT, STEP1 = STEP1,
-    #  STEP2 = STEP2, local.options = local.options
-    #)
-	#
+    # construct temporary sam object, so that lav_bootstrap_internal() can
+    # use it
+    SAM <- lav_sam_table(
+      JOINT = JOINT, STEP1 = STEP1,
+      FIT.PA = STEP2$FIT.PA,
+      cmd = cmd, lavoptions = FIT@Options,
+      mm.args = mm.args,
+      struc.args = struc.args,
+      sam.method = sam.method,
+      local.options = local.options,
+      global.options = global.options
+    )
+    sam_object <- JOINT
+    sam_object@internal <- SAM
+    default.args <- list(R = 1000L, type = "ordinary",
+                         check.post = TRUE, keep.idx = FALSE)
+    this.args <- modifyList(default.args, bootstrap.args)
+    COEF <- lav_bootstrap_internal(object = sam_object,
+      R = this.args$R, type = this.args$type, FUN = "coef",
+      check.post = this.args$check.post, keep.idx = this.args$keep.idx)
+    COEF.orig <- COEF
+    error.idx <- attr(COEF, "error.idx")
+    nfailed <- length(error.idx) # zero if NULL
+    if (nfailed > 0L) {
+      lav_msg_warn(gettextf(
+        "%s bootstrap runs failed or did not converge.", nfailed))
+    }
+    notok <- length(attr(COEF, "nonadmissible")) # zero if NULL
+    if (notok > 0L) {
+      lav_msg_warn(gettextf(
+        "%s bootstrap runs resulted in nonadmissible solutions.", notok))
+    }
+    if (length(error.idx) > 0L) {
+      # new in 0.6-13: we must still remove them!
+      COEF <- COEF[-error.idx, , drop = FALSE]
+      # this also drops the attributes
+    }
+    nboot <- nrow(COEF)
+    VarCov <- cov(COEF) * (nboot - 1) / nboot
+    JOINT@boot$coef <- COEF.orig
+    VCOV <- list()
+    VCOV$VCOV <- VarCov
+
   } else {
     VCOV <- lav_sam_step2_se(
       FIT = FIT, JOINT = JOINT, STEP1 = STEP1,
       STEP2 = STEP2, local.options = local.options
     )
-    # fill in twostep standard errors
-    if (lavoptions$se != "none") {
-      PT <- JOINT@ParTable
-      JOINT@Options$se <- lavoptions$se
-      JOINT@vcov$se <- lavoptions$se
+  }
+
+  # fill in twostep standard errors
+  if (lavoptions$se != "none") {
+    PT <- JOINT@ParTable
+    JOINT@Options$se <- lavoptions$se
+    JOINT@vcov$se <- lavoptions$se
+    if (lavoptions$se == "bootstrap") {
+      JOINT@vcov$vcov <- VCOV$VCOV
+    } else {
       JOINT@vcov$vcov[STEP2$step2.free.idx, STEP2$step2.free.idx] <- VCOV$VCOV
-      PT$se <- lav_model_vcov_se(
-        lavmodel = JOINT@Model,
-        lavpartable = PT,
-        VCOV = JOINT@vcov$vcov
-      )
-      JOINT@ParTable <- PT
     }
+    PT$se <- lav_model_vcov_se(
+      lavmodel = JOINT@Model,
+      lavpartable = PT,
+      VCOV = JOINT@vcov$vcov
+    )
+    JOINT@ParTable <- PT
   }
 
 
@@ -317,6 +409,7 @@ sam <- function(model = NULL,
     SAM <- lav_sam_table(
       JOINT = JOINT, STEP1 = STEP1,
       FIT.PA = STEP2$FIT.PA,
+      cmd = cmd, lavoptions = FIT@Options,
       mm.args = mm.args,
       struc.args = struc.args,
       sam.method = sam.method,

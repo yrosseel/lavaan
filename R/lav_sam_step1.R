@@ -1,7 +1,7 @@
 # step 1 in SAM: fitting the measurement blocks
 
 lav_sam_step1 <- function(cmd = "sem", mm.list = NULL, mm.args = list(),
-                          FIT = FIT, data = NULL, sam.method = "local") {
+                          FIT = FIT, sam.method = "local") {
   lavoptions <- FIT@Options
   lavpta <- FIT@pta
   PT <- FIT@ParTable
@@ -13,20 +13,20 @@ lav_sam_step1 <- function(cmd = "sem", mm.list = NULL, mm.args = list(),
   }
 
   # local only -> handle missing data
-  if (sam.method %in% c("local", "fsr")) {
-    # if missing = "listwise", make data complete, to avoid different
-    # datasets per measurement block
-    if (lavoptions$missing == "listwise") {
-      # FIXME: make this work for multiple groups!!
-      OV <- unique(unlist(FIT@pta$vnames$ov))
-      # add group/cluster/sample.weights variables (if any)
-      OV <- c(
-        OV, FIT@Data@group, FIT@Data@cluster,
-        FIT@Data@sampling.weights
-      )
-      data <- na.omit(data[, OV])
-    }
-  }
+  # if (sam.method %in% c("local", "fsr")) {
+  #   # if missing = "listwise", make data complete, to avoid different
+  #   # datasets per measurement block
+  #   if (lavoptions$missing == "listwise") {
+  #     # FIXME: make this work for multiple groups!!
+  #     OV <- unique(unlist(FIT@pta$vnames$ov))
+  #     # add group/cluster/sample.weights variables (if any)
+  #     OV <- c(
+  #       OV, FIT@Data@group, FIT@Data@cluster,
+  #       FIT@Data@sampling.weights
+  #     )
+  #     data <- na.omit(data[, OV])
+  #   }
+  # }
 
   # total number of free parameters
   if (FIT@Model@ceq.simple.only) {

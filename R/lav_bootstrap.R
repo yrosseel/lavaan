@@ -17,13 +17,14 @@
 # Question: if fixed.x=TRUE, should we not keep X fixed, and bootstrap Y
 #           only, conditional on X?? How to implement the conditional part?
 
-# YR 27 Aug: - add keep.idx argument
-#            - always return 'full' set of bootstrap results, including
-#              failed runs (as NAs)
-#            - idx nonadmissible/error solutions as an attribute
-#            - thanks to keep.idx, it is easy to replicate/investigate these
-#              cases if needed
+# YR 27 Aug 2022: - add keep.idx argument
+#                 - always return 'full' set of bootstrap results, including
+#                   failed runs (as NAs)
+#                 - idx nonadmissible/error solutions as an attribute
+#                 - thanks to keep.idx, it is easy to replicate/investigate
+#                   these cases if needed
 
+# YR 10 Nov 2024: - detect sam object
 
 bootstrapLavaan <- function(object,
                             R = 1000L,
@@ -39,6 +40,7 @@ bootstrapLavaan <- function(object,
                             iseed = NULL,
                             h0.rmsea = NULL,
                             ...) {
+
   # checks
   type. <- tolower(type) # overwritten if nonparametric
   stopifnot(
@@ -138,7 +140,13 @@ lav_bootstrap_internal <- function(object = NULL,
 
   # object slots
   FUN.orig <- FUN
+  has.sam.object.flag <- FALSE
   if (!is.null(object)) {
+    stopifnot(inherits(object, "lavaan"))
+    # check for sam object
+    if (!is.null(object@internal$sam.method)) {
+      has.sam.object.flag <- TRUE
+    }
     lavdata <- object@Data
     lavmodel <- object@Model
     lavsamplestats <- object@SampleStats
@@ -368,6 +376,12 @@ lav_bootstrap_internal <- function(object = NULL,
       }
       return(out)
     }
+    if (has.sam.object.flag) {
+      # also need h1
+      booth1 <- lav_h1_implied_logl(lavdata = newData,
+        lavsamplestats = bootSampleStats, lavpartable = lavpartable,
+        lavoptions = lavoptions)
+    }
 
     # do we need to update Model slot? only if we have fixed exogenous
     # covariates, as their variances/covariances are stored in GLIST
@@ -377,16 +391,23 @@ lav_bootstrap_internal <- function(object = NULL,
       model.boot <- lavmodel
     }
 
-    # override option
-
     # fit model on bootstrap sample
-    fit.boot <- suppressWarnings(lavaan(
-      slotOptions = lavoptions,
-      slotParTable = lavpartable,
-      slotModel = model.boot,
-      slotSampleStats = bootSampleStats,
-      slotData = lavdata
-    ))
+    if (has.sam.object.flag) {
+      new_object <- object
+      new_object@Data <- newData
+      new_object@SampleStats <- bootSampleStats
+      new_object@h1 <- booth1
+      # what about lavoptions?
+      fit.boot <- suppressWarnings(sam(new_object, se = "none"))
+    } else {
+      fit.boot <- suppressWarnings(lavaan(
+        slotOptions = lavoptions,
+        slotParTable = lavpartable,
+        slotModel = model.boot,
+        slotSampleStats = bootSampleStats,
+        slotData = newData
+      ))
+    }
     if (!fit.boot@optim$converged) {
       if (lav_verbose()) cat("     FAILED: no convergence\n")
       out <- as.numeric(NA)

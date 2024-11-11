@@ -12,7 +12,6 @@ lav_sam_step0 <- function(cmd = "sem", model = NULL, data = NULL,
   # remove do.fit option if present
   dotdotdot0$do.fit <- NULL
 
-  #
   if (sam.method %in% c("local", "fsr")) {
     dotdotdot0$sample.icov <- FALSE # if N < nvar
   }
@@ -24,7 +23,7 @@ lav_sam_step0 <- function(cmd = "sem", model = NULL, data = NULL,
   dotdotdot0$ceq.simple           <- TRUE # if not the default yet
   dotdotdot0$check.lv.interaction <- FALSE # we allow for it
   # dotdotdot0$cat.wls.w            <- FALSE # no weight matrix if categorical
-  # note: this break the computation of twostep standard errors...
+  # note: this breaks the computation of twostep standard errors...
 
   # any lv interaction terms?
   if (length(lavNames(flat.model, "lv.interaction")) > 0L) {

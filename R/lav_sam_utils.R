@@ -540,7 +540,7 @@ lav_sam_step3_joint <- function(FIT = NULL, PT = NULL, sam.method = "local") {
   if (sam.method %in% c("local", "fsr")) {
     lavoptions.joint$baseline <- FALSE
     lavoptions.joint$sample.icov <- FALSE
-    lavoptions.joint$h1 <- FALSE
+    #lavoptions.joint$h1 <- TRUE # we need this if we re-use the sam object
     lavoptions.joint$test <- "none"
     lavoptions.joint$estimator <- "none"
   } else {
@@ -560,7 +560,8 @@ lav_sam_step3_joint <- function(FIT = NULL, PT = NULL, sam.method = "local") {
   JOINT
 }
 
-lav_sam_table <- function(JOINT = NULL, STEP1 = NULL, FIT.PA = FIT.PA,
+lav_sam_table <- function(JOINT = NULL, STEP1 = NULL, FIT.PA = NULL,
+                          cmd = NULL, lavoptions = NULL,
                           mm.args = list(), struc.args = list(),
                           sam.method = "local",
                           local.options = list(), global.options = list()) {
@@ -611,6 +612,7 @@ lav_sam_table <- function(JOINT = NULL, STEP1 = NULL, FIT.PA = FIT.PA,
 
 
   SAM <- list(
+    sam.cmd = cmd,
     sam.method = sam.method,
     sam.local.options = local.options,
     sam.global.options = global.options,
@@ -624,7 +626,9 @@ lav_sam_table <- function(JOINT = NULL, STEP1 = NULL, FIT.PA = FIT.PA,
     sam.mm.rel = sam.mm.rel,
     sam.struc.estimator = FIT.PA@Model@estimator,
     sam.struc.args = struc.args,
-    sam.struc.fit = sam.struc.fit
+    sam.struc.fit = sam.struc.fit,
+    sam.lavoptions = lavoptions
   )
   SAM
 }
+
