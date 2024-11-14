@@ -767,3 +767,150 @@ lav_sam_step1_local <- function(STEP1 = NULL, FIT = NULL,
   STEP1
 }
 
+
+lav_sam_step1_local_jac <- function(STEP1 = NULL, FIT = NULL,
+                                    local.options = NULL) {
+
+  lavdata <- FIT@Data
+  lavsamplestats <- FIT@SampleStats
+  lavmodel <- FIT@Model
+
+  ngroups <- lavdata@ngroups
+  if (ngroups > 1L) {
+    stop("IJ local SEs: not available with multiple groups!\n")
+    # if multiple groups:
+    # - we have a separate Gamma, h1.expected, delta matrix per group
+    # - but we have only 1 observed information matrix, reflecting possible
+    #   across-group equality constraints
+    # - we may need to use the same procedure as for robust test statistics:
+    #   create a (huge) block-diagonal Gamma matrix, and one big 'JAC'
+    #   matrix...
+  }
+  g <- 1L
+  if (lavmodel@categorical) {
+    stop("IJ local SEs: not available for the categorical setting (yet)!\n")
+  }
+  nMMblocks <- length(STEP1$MM.FIT)
+
+  # JAC = (JACc %*% JACa) + JACb
+  # - rows are the elements of vech(VETA)
+  # - cols are the elements of vech(S)
+
+  # JACa: mm.theta x vech(S)
+  # JACc: vech(VETA) x mm.theta
+  # JACb: vech(VETA) x vech(S)
+
+  # JACa: jacobian of theta.mm = f(vech(S))
+  JACa <- matrix(0, nrow = length(FIT@ParTable$lhs), # we select later
+                    ncol = length(FIT@SampleStats@WLS.obs[[g]]))
+  for (mm in seq_len(nMMblocks)) {
+    fit.mm.block <- STEP1$MM.FIT[[mm]]
+    mm.h1.expected   <- lavTech(fit.mm.block, "h1.information.expected")
+    mm.delta         <- lavTech(fit.mm.block, "Delta")
+    mm.inv.observed  <- lavTech(fit.mm.block, "inverted.information.observed")
+
+    #h1.info <- matrix(0, nrow(mm.h1.expected[[1]]), ncol(mm.h1.expected[[1]]))
+    #for (g in seq_len(ngroups)) {
+    #  fg <- lavsamplestats@nobs[[g]] / lavsamplestats@ntotal
+    #  tmp <- fg * (mm.h1.expected[[g]] %*% mm.delta[[g]])
+    #  h1.info <- h1.info + tmp
+    #}
+    mm.jac <- t(mm.h1.expected[[g]] %*% mm.delta[[g]] %*% mm.inv.observed)
+    # keep only rows that are also in FIT@ParTable
+    keep.idx <- fit.mm.block@ParTable$free[STEP1$block.ptm.idx[[mm]]]
+    mm.jac <- mm.jac[keep.idx, , drop = FALSE]
+
+    # select 'S' elements (row index)
+    mm.ov.idx <- match(STEP1$MM.FIT[[mm]]@Data@ov.names[[g]],
+                       lavdata@ov.names[[g]])
+    mm.nvar <- length(lavdata@ov.names[[g]])
+    mm.col.idx <- lav_matrix_vech_which_idx(mm.nvar, idx = mm.ov.idx,
+      add.idx.at.start = lavmodel@meanstructure)
+    mm.row.idx <- STEP1$block.mm.idx[[mm]][STEP1$block.ptm.idx[[mm]]]
+    JACa[mm.row.idx, mm.col.idx] <- mm.jac
+  }
+  # keep only 'LAMBDA/THETA' parameters
+  PT <- FIT@ParTable
+  ov.names <- lavdata@ov.names[[g]]
+  lambda.idx <- which(PT$op == "=~" & PT$free > 0L)
+  theta.idx  <- which(PT$op == "~~" & PT$free > 0L &
+                      PT$lhs %in% ov.names & PT$rhs %in% ov.names)
+  nu.idx <- integer(0L)
+  if (lavmodel@meanstructure) {
+    nu.idx     <- which(PT$op == "~1" & PT$free > 0L &
+                        PT$lhs %in% ov.names)
+  }
+  keep.idx <- sort(c(lambda.idx, theta.idx, nu.idx))
+  JACa <- JACa[keep.idx, ,drop = FALSE]
+
+  # JACb: jacobian of the function vech(VETA) = f(vech(S), theta.mm)
+  #       (treating theta.mm as fixed)
+  Mb <- STEP1$M[[g]]
+  MbxMb <- Mb %x% Mb
+  row.idx <- lav_matrix_vech_idx(nrow(Mb))
+  JACb <- lav_matrix_duplication_post(MbxMb)[row.idx,,drop = FALSE]
+  if (lavmodel@meanstructure) {
+    JACb <- lav_matrix_bdiag(Mb, JACb)
+  }
+
+  # JACc: jacobian of the function vech(VETA) = f(theta.mm, vech(S))
+  #       (treating vech(S) as fixed)
+  ffc <- function(x, YBAR = NULL, COV = NULL, b = 1L) {
+    # x only contains the LAMBDA/THETA/NU elements
+    PT$est[keep.idx] <- x
+    # get all free parameters (for lav_model_set_parameters)
+    x.free <- PT$est[STEP1$PT.free > 0L]
+    this.model <- lav_model_set_parameters(lavmodel, x = x.free)
+    lambda.idx <- which(names(this.model@GLIST) == "lambda")[b]
+    theta.idx  <- which(names(this.model@GLIST) ==  "theta")[b]
+    LAMBDA <- this.model@GLIST[[lambda.idx]]
+    THETA  <- this.model@GLIST[[ theta.idx]]
+    Mb <- lav_sam_mapping_matrix(LAMBDA = LAMBDA,
+                                 THETA = THETA, S = COV,
+                                 method = local.options$M.method)
+    # handle observed-only variables
+    dummy.ov.idx <- c(
+      FIT@Model@ov.x.dummy.ov.idx[[b]],
+      FIT@Model@ov.y.dummy.ov.idx[[b]]
+    )
+    dummy.lv.idx <- c(
+      FIT@Model@ov.x.dummy.lv.idx[[b]],
+      FIT@Model@ov.y.dummy.lv.idx[[b]]
+    )
+    if (length(dummy.ov.idx)) {
+      Mb[dummy.lv.idx, ] <- 0
+      Mb[cbind(dummy.lv.idx, dummy.ov.idx)] <- 1
+    }
+    MSM <- Mb %*% COV %*% t(Mb)
+    MTM <- Mb %*% THETA %*% t(Mb)
+    VETA <- MSM - MTM
+
+    if (lavmodel@meanstructure) {
+      nu.idx <- which(names(this.model@GLIST) ==  "nu")[b]
+      NU <- this.model@GLIST[[nu.idx]]
+      EETA <- lav_sam_eeta(M = Mb, YBAR = YBAR, NU = NU)
+      out <- c(EETA, lav_matrix_vech(VETA))
+    } else {
+      out <- lav_matrix_vech(VETA)
+    }
+
+    out
+  }
+
+  # current point estimates
+  PT <- STEP1$PT
+  x <- PT$est[keep.idx]
+  if (lavmodel@meanstructure) {
+    JACc <- numDeriv::jacobian(func = ffc, x = x, YBAR = STEP1$YBAR[[1]],
+                               COV = STEP1$COV[[1]])
+  } else {
+    JACc <- numDeriv::jacobian(func = ffc, x = x, COV = STEP1$COV[[1]])
+  }
+
+  # assemble JAC
+  JAC <- (JACc %*% JACa) + JACb
+
+  # eventually, this will be a list per group
+  list(JAC)
+}
+

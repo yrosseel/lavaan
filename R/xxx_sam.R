@@ -147,11 +147,17 @@ sam <- function(model = NULL,
     if (se %in% c("two-step", "two_step", "two.step")) {
       se <- "twostep"
     }
+    if (se %in% c("ij", "local")) {
+      se <- "local"
+      if (sam.method != "local") {
+        lav_msg_stop(gettext("local se only available is sam.method is local"))
+      }
+    }
   }
-  if (!se %in% c("standard", "naive", "twostep", "twostep2",
+  if (!se %in% c("standard", "naive", "twostep", "ij", "local",
                  "bootstrap", "none")) {
     lav_msg_stop(gettext(
-      "se= argument must be twostep, bootstrap, naive, standard or none."))
+      "se= argument must be twostep, bootstrap, or local"))
   }
 
 
@@ -254,6 +260,23 @@ sam <- function(model = NULL,
     )
   }
 
+  ##################################################
+  # STEP 1c: jacobian of vech(VETA) = f(vech(S))   #
+  #          only needed for local approach!       #
+  #          only if se = "ij"                     #
+  ##################################################
+  if (se %in% c("ij", "local")) {
+    JAC <- lav_sam_step1_local_jac(STEP1 = STEP1, FIT = FIT,
+      local.options = local.options
+    )
+    Gamma <- FIT@SampleStats@NACOV
+    Gamma.eta <- vector("list", length = FIT@Data@ngroups)
+    for (g in seq_len(FIT@Data@ngroups)) {
+      Gamma.eta[[g]] <- JAC[[g]] %*% Gamma[[g]] %*% t(JAC[[g]])
+    }
+    # STEP1$JAC <- JAC
+    STEP1$Gamma.eta <- Gamma.eta
+  }
 
   ####################################
   # STEP 2: estimate structural part #
@@ -370,6 +393,7 @@ sam <- function(model = NULL,
     VCOV <- list()
     VCOV$VCOV <- VarCov
 
+  # analytic twostep/standard/naive/local
   } else {
     VCOV <- lav_sam_step2_se(
       FIT = FIT, JOINT = JOINT, STEP1 = STEP1,

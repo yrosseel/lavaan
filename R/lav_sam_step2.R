@@ -7,12 +7,20 @@ lav_sam_step2 <- function(STEP1 = NULL, FIT = NULL,
   nlevels <- lavpta$nlevels
   PT <- STEP1$PT
 
+  # Gamma available?
+  gamma.flag <- FALSE
+  if (sam.method == "local" && !is.null(STEP1$Gamma.eta[[1]])) {
+    gamma.flag <- TRUE
+  }
+
   LV.names <- unique(unlist(FIT@pta$vnames$lv.regular))
 
   # adjust options
   lavoptions.PA <- lavoptions
   if (lavoptions.PA$se == "naive") {
     lavoptions.PA$se <- "standard"
+  } else if (gamma.flag) {
+    lavoptions.PA$se <- "robust.sem"
   } else {
     # twostep or none -> none
     lavoptions.PA$se <- "none"
@@ -148,12 +156,18 @@ lav_sam_step2 <- function(STEP1 = NULL, FIT = NULL,
     cat("Fitting the structural part ... \n")
   }
   if (sam.method %in% c("local", "fsr")) {
+    if (gamma.flag) {
+      NACOV <- STEP1$Gamma.eta
+    } else {
+      NACOV <- NULL
+    }
     FIT.PA <- lavaan::lavaan(PTS,
-      sample.cov = STEP1$VETA,
+      sample.cov  = STEP1$VETA,
       sample.mean = STEP1$EETA,
       sample.nobs = NOBS,
+      NACOV       = NACOV,
       slotOptions = lavoptions.PA,
-      verbose = FALSE
+      verbose     = FALSE
     )
   } else {
     FIT.PA <- lavaan::lavaan(
@@ -193,7 +207,8 @@ lav_sam_step2 <- function(STEP1 = NULL, FIT = NULL,
 
   STEP2 <- list(
     FIT.PA = FIT.PA, PT = PT, reg.idx = reg.idx,
-    step2.free.idx = step2.free.idx, extra.id = extra.id
+    step2.free.idx = step2.free.idx, extra.id = extra.id,
+    pt.idx = pt.idx, pts.idx = pts.idx
   )
 
   STEP2

@@ -24,6 +24,9 @@ lav_sam_step0 <- function(cmd = "sem", model = NULL, data = NULL,
   dotdotdot0$check.lv.interaction <- FALSE # we allow for it
   # dotdotdot0$cat.wls.w            <- FALSE # no weight matrix if categorical
   # note: this breaks the computation of twostep standard errors...
+  if (se %in% c("local", "ij")) {
+    dotdotdot0$NACOV <- TRUE
+  }
 
   # any lv interaction terms?
   if (length(lavNames(flat.model, "lv.interaction")) > 0L) {

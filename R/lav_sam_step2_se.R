@@ -1,14 +1,18 @@
 # compute two-step standard errors for SAM models
+#
+# several possibilities:
+# 1) se = "twostep": classic (but global) two-step corrected SEs
+#     - create 'global' model, only to get the 'joint' information matrix
+#     - partition information matrix (step 1, step 2)
+#     - apply two-step correction for second step
+#     - 'insert' these corrected SEs (and vcov) in JOINT
+# 2) se = "standard": using I.22.inv (but without correction term)
+# 3) se = "naive": grab (naive) VCOV from FIT.PA
+# 4) se = "local": grab (robust) VCOV from FIT.PA
 
 lav_sam_step2_se <- function(FIT = NULL, JOINT = NULL,
                              STEP1 = NULL, STEP2 = NULL,
                              local.options = list()) {
-  # current approach for se = "twostep":
-  # - create 'global' model, only to get the 'joint' information matrix
-  # - partition information matrix (step 1, step 2)
-  # - apply two-step correction for second step
-  # - 'insert' these corrected SEs (and vcov) in JOINT
-
   out <- list()
   Sigma.11 <- STEP1$Sigma.11
   step1.free.idx <- STEP1$step1.free.idx
@@ -29,9 +33,9 @@ lav_sam_step2_se <- function(FIT = NULL, JOINT = NULL,
   }
 
   if (!lavoptions$se %in%
-    c("none", "standard", "naive", "twostep", "twostep2")) {
+    c("none", "standard", "naive", "twostep", "local")) {
     lav_msg_warn(gettext(
-      "unknown se= argument: \"%s\". Switching to twostep.",
+      "unknown se= argument: %s. Switching to twostep.",
       lavoptions$se
     ))
   }
@@ -44,10 +48,12 @@ lav_sam_step2_se <- function(FIT = NULL, JOINT = NULL,
     cat("Computing ", lavoptions$se, " standard errors ... ", sep = "")
   }
 
-  INFO <- lavInspect(JOINT, "information")
-  I.12 <- INFO[step1.free.idx, step2.free.idx]
-  I.22 <- INFO[step2.free.idx, step2.free.idx]
-  I.21 <- INFO[step2.free.idx, step1.free.idx]
+  if (lavoptions$se %in% c("naive", "twostep")) {
+    INFO <- lavInspect(JOINT, "information")
+    I.12 <- INFO[step1.free.idx, step2.free.idx]
+    I.22 <- INFO[step2.free.idx, step2.free.idx]
+    I.21 <- INFO[step2.free.idx, step1.free.idx]
+  }
 
   # V2
   if (nlevels > 1L) {
@@ -67,7 +73,7 @@ lav_sam_step2_se <- function(FIT = NULL, JOINT = NULL,
 
   # invert augmented information, for I.22 block only
   # new in 0.6-16 (otherwise, eq constraints in struc part are ignored)
-  if (lavoptions$se != "naive") {
+  if (lavoptions$se %in% c("standard", "twostep")) {
     I.22.inv <-
       lav_model_information_augment_invert(
         lavmodel = FIT.PA@Model,
@@ -85,7 +91,7 @@ lav_sam_step2_se <- function(FIT = NULL, JOINT = NULL,
         lavoptions$se <- "naive"
       }
     }
-  } # se is not "naive", but based  on I.22
+  } # se needs I.22.inv
 
   # method below has the advantage that we can use a 'robust' vcov
   # for the joint model;
@@ -102,21 +108,26 @@ lav_sam_step2_se <- function(FIT = NULL, JOINT = NULL,
     VCOV <- 1 / N * I.22.inv
     out$VCOV <- VCOV
 
-  # se = "naive"
-  } else if (lavoptions$se == "naive") {
+  # se = "naive" or "local": grab VCOV directly from FIT.PA
+  } else if (lavoptions$se %in% c("naive", "local")) {
     if (is.null(FIT.PA@vcov$vcov)) {
       FIT.PA@Options$se <- "standard"
-      VCOV.naive <- lavTech(FIT.PA, "vcov")
+      VCOV <- lavTech(FIT.PA, "vcov")
     } else {
-      VCOV.naive <- FIT.PA@vcov$vcov
+      VCOV <- FIT.PA@vcov$vcov
     }
     if (length(step2.rm.idx) > 0L) {
-      VCOV.naive <- VCOV.naive[-step2.rm.idx, -step2.rm.idx]
+      VCOV <- VCOV[-step2.rm.idx, -step2.rm.idx]
     }
-    out$VCOV <- VCOV.naive
+    # order rows/cols of VCOV, so that they correspond with the (step 2)
+    # parameters of the JOINT model
+    idx <- sort.int(STEP2$pt.idx, index.return = TRUE)$ix
+    VCOV <- VCOV[idx, idx]
 
-  # se = "twostep" or "twostep2"
-  } else if (lavoptions$se %in% c("twostep", "twostep2")) {
+    out$VCOV <- VCOV
+
+  # se = "twostep"
+  } else if (lavoptions$se  == "twostep") {
     V2 <- 1 / N * I.22.inv # not the same as FIT.PA@vcov$vcov!!
 
 	if (lavoptions$se == "twostep" ) {
