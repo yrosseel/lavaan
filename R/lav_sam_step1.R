@@ -831,7 +831,8 @@ lav_sam_step1_local_jac <- function(STEP1 = NULL, FIT = NULL,
   }
   # keep only 'LAMBDA/THETA' parameters
   PT <- FIT@ParTable
-  ov.names <- lavdata@ov.names[[g]]
+  # only ov.names that are actually used in the measurement models
+  ov.names <- unique(unlist(lapply(STEP1$MM.FIT, lavNames, "ov")))
   lambda.idx <- which(PT$op == "=~" & PT$free > 0L)
   theta.idx  <- which(PT$op == "~~" & PT$free > 0L &
                       PT$lhs %in% ov.names & PT$rhs %in% ov.names)
