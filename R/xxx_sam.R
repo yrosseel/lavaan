@@ -272,7 +272,7 @@ sam <- function(model = NULL,
     for (g in seq_len(FIT@Data@ngroups)) {
       Gamma.eta[[g]] <- JAC[[g]] %*% Gamma[[g]] %*% t(JAC[[g]])
     }
-    # STEP1$JAC <- JAC
+    STEP1$JAC <- JAC
     STEP1$Gamma.eta <- Gamma.eta
   }
 
