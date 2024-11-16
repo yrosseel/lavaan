@@ -41,10 +41,8 @@
 #                - rename veta.force.pd -> lambda.correction
 #                - move alpha.correction= argument to local.options
 
-# YR 09 Nov 2024 - add cache (list) argument, to re-use information
-#                  from previous runs (assuming the same model, same data
-#                  features)
-
+# YR 09 Nov 2024 - add se = "bootstrap"
+# YR 14 Nov 2024 - add se = "local"
 
 # twostep = wrapper for global sam
 twostep <- function(model = NULL, data = NULL, cmd = "sem",

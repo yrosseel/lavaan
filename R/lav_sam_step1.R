@@ -185,6 +185,32 @@ lav_sam_step1 <- function(cmd = "sem", mm.list = NULL, mm.args = list(),
     slotData.block <- lav_data_update_subset(FIT@Data,
       ov.names = ov.names.block
     )
+    # if data.type == "moment", (re)create sample.cov and sample.nobs
+    if (FIT@Data@data.type == "moment") {
+      if (ngroups == 1L) {
+        mm.sample.cov <- lavInspect(FIT, "h1")$cov
+        mm.sample.mean <- NULL
+        if (FIT@Model@meanstructure) {
+          mm.sample.mean <- lavInspect(FIT, "h1")$mean
+        }
+        mm.sample.nobs <- FIT@SampleStats@nobs[[1L]]
+      } else {
+        cov.list <- lapply(lavTech(FIT, "h1", add.labels = TRUE),
+                           "[[", "cov")
+        mm.sample.cov <- lapply(seq_len(ngroups),
+          function(x) cov.list[[x]][ov.names.block[[x]], ov.names.block[[x]]])
+        mm.sample.mean <- NULL
+        if (FIT@Model@meanstructure) {
+          mean.list <- lapply(lavTech(FIT, "h1", add.labels = TRUE),
+                           "[[", "mean")
+          mm.sample.mean <- lapply(seq_len(ngroups),
+            function(x) mean.list[[x]][ov.names.block[[x]]])
+        }
+        mm.sample.nobs <- FIT@SampleStats@nobs
+      }
+    }
+
+
     # handle single block 1-factor CFA with (only) two indicators
     if (length(unlist(ov.names.block)) == 2L && ngroups == 1L) {
       lambda.idx <- which(PTM$op == "=~")
@@ -209,10 +235,20 @@ lav_sam_step1 <- function(cmd = "sem", mm.list = NULL, mm.args = list(),
 
     # fit this measurement model only
     # (question: can we re-use even more slots?)
-    fit.mm.block <- lavaan(
-      model = PTM, slotData = slotData.block,
-      slotOptions = slotOptions.mm, debug = FALSE, verbose = FALSE
-    )
+    if (FIT@Data@data.type == "full") {
+      fit.mm.block <- lavaan(
+        model = PTM, slotData = slotData.block,
+        slotOptions = slotOptions.mm, debug = FALSE, verbose = FALSE
+      )
+    } else if (FIT@Data@data.type == "moment") {
+      slotOptions.mm$sample.cov.rescale <- FALSE
+      fit.mm.block <- lavaan(
+        model = PTM, slotData = slotData.block,
+        sample.cov = mm.sample.cov, sample.mean = mm.sample.mean,
+        sample.nobs = mm.sample.nobs,
+        slotOptions = slotOptions.mm, debug = FALSE, verbose = FALSE
+      )
+    }
 
     # check convergence
     if (!lavInspect(fit.mm.block, "converged")) {

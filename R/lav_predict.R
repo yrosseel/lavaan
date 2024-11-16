@@ -333,7 +333,7 @@ lav_predict_internal <- function(lavmodel = NULL,
         veta.sqrt <- lav_matrix_symmetric_sqrt(VETA[[g]])
         if (fsm) {
           # change FSM
-          FSM[[g]] <<- veta.sqrt %*% fs.inv.sqrt %*% FSM[[g]]
+          FSM[[g]] <- veta.sqrt %*% fs.inv.sqrt %*% FSM[[g]]
         }
         tmp <- FS.centered %*% fs.inv.sqrt %*% veta.sqrt
         ret <- t(t(tmp) + drop(EETA[[g]]))
