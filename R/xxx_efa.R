@@ -40,6 +40,11 @@ efa <- function(data = NULL,
   #                        with the efa() modifier."))
   #}
 
+  # if data= argument is used, convert to data.frame (eg matrix, tibble, ...)
+  if (!is.null(data)) {
+    data <- as.data.frame(data)
+  }
+
   # handle ov.names
   if (!is.null(data) && inherits(data, "lavMoments")) {
     if ("sample.cov" %in% names(data)) {
