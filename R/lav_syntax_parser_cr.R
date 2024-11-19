@@ -63,6 +63,11 @@ ldw_parse_model_string_cr <- function(model.syntax = "",
                      tl[1L],
                      footer = tl[2L]
         )
+      } else if (flat[1L] == 34L) { # SPE_INVALIDNAME
+        lav_msg_stop(gettext("a variable cannot be regressed on itself"),
+                     tl[1L],
+                     footer = tl[2L]
+        )
       } else if (flat[1L] == 41L) { # SPE_INVALIDNAME
         lav_msg_stop(gettext("identifier is either a reserved word (in R) or
               contains an illegal character"),
@@ -123,6 +128,11 @@ ldw_parse_model_string_cr <- function(model.syntax = "",
         )
       } else if (flat[1L] == 51L) { # SPE_INVALIDEXPRTYP
         lav_msg_stop(gettext("Incorrrect type for expression!"),
+                     tl[1L],
+                     footer = tl[2L]
+        )
+      } else if (flat[1L] == 52L) { # SPE_LVLGRP
+        lav_msg_stop(gettext("groups can not be nested within levels!"),
                      tl[1L],
                      footer = tl[2L]
         )
@@ -203,24 +213,15 @@ ldw_parse_model_string_cr <- function(model.syntax = "",
                      tl[1L],
                      footer = tl[2L]
         )
+      } else if (w[1L] == 105L) { # SPW_MODMULTIPLE
+        lav_msg_warn(gettext("syntax contains only a single block identifier!"),
+                     tl[1L],
+                     footer = tl[2L]
+        )
       }
     }
   }
 
-  # new in 0.6-4: check for 'group' within 'level'
-  if (any(flat$op == ":")) {
-    op.idx <- which(flat$op == ":")
-    if (length(op.idx) < 2L) {
-      # only 1 block identifier? this is weird -> give warning
-      lav_msg_warn(gettext("syntax contains only a single block identifier!"))
-    } else {
-      first.block <- flat$lhs[op.idx[1L]]
-      second.block <- flat$lhs[op.idx[2L]]
-      if (first.block == "level" && second.block == "group") {
-        lav_msg_stop(gettext("groups can not be nested within levels!"))
-      }
-    }
-  }
   if (as.data.frame.) {
     flat <- as.data.frame(flat, stringsAsFactors = FALSE)
   }
