@@ -228,9 +228,9 @@ lav_options_default <- function() {
   elm(c("rotation.args", "cf.gamma"), 0, nm = "[0, 1]")
   elm(c("rotation.args", "oblimin.gamma"), 0, nm = "[0, 1000]")
   elm(c("rotation.args", "promax.kappa"), 4, nm = "[0, 1000]")
-  elm(c("rotation.args", "target"), matrix(0, 0, 0), oklen = c(0L, 1000L))
-  elm(c("rotation.args", "target.mask"), matrix(0, 0, 0), oklen = c(0L, 1000L))
-  elm(c("rotation.args", "rstarts"), 30L, nm = "[0, 1000000]")
+  elm(c("rotation.args", "target"), matrix(0, 0L, 0L), oklen = c(0L, 1e07L))
+  elm(c("rotation.args", "target.mask"), matrix(0, 0L, 0L), oklen = c(0L, 1e07L))
+  elm(c("rotation.args", "rstarts"), 30L, nm = "[0L, 1e06L]")
   elm(c("rotation.args", "algorithm"), "gpa", chr = c("gpa", "pairwise"))
   elm(c("rotation.args", "reflect"), TRUE, bl = TRUE)
   elm(c("rotation.args", "order.lv.by"), "index",
@@ -240,7 +240,7 @@ lav_options_default <- function() {
   elm(c("rotation.args", "warn"), FALSE, bl = TRUE)
   elm(c("rotation.args", "verbose"), FALSE, bl = TRUE)
   elm(c("rotation.args", "jac.init.rot"), TRUE, bl = TRUE)
-  elm(c("rotation.args", "max.iter"), 10000L, nm = "[0, 1000000]")
+  elm(c("rotation.args", "max.iter"), 10000L, nm = "[0L, 1e07L]")
 
   # full data
   elm("std.ov", FALSE, bl = TRUE)
