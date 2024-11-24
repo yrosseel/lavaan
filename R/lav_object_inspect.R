@@ -2655,7 +2655,7 @@ lav_object_inspect_vcov <- function(object, standardized = FALSE,
     if (free.only) {
       if (.hasSlot(object@Model, "ceq.simple.only") &&
         object@Model@ceq.simple.only) {
-        free.idx <- which(object@ParTable$free > 0L &&
+        free.idx <- which(object@ParTable$free > 0L &
           !duplicated(object@ParTable$free))
       } else {
         free.idx <- which(object@ParTable$free > 0L)
