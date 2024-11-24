@@ -1031,6 +1031,20 @@ lav_parse_model_string_r <- function(model.syntax = "", as.data.frame. = FALSE) 
         }
     }
   }
+  # new in 0.6-4: check for 'group' within 'level'
+  if (any(flat$op == ":")) {
+    op.idx <- which(flat$op == ":")
+    if (length(op.idx) < 2L) {
+      # only 1 block identifier? this is weird -> give warning
+      lav_local_msgcode(FALSE, 105L, 1L, msgenv)
+    } else {
+      first.block <- flat$lhs[op.idx[1L]]
+      second.block <- flat$lhs[op.idx[2L]]
+      if (first.block == "level" && second.block == "group") {
+        return(c(52L, 1L))
+      }
+    }
+  }
   # new in 0.6, reorder covariances here!
   flat <- lav_partable_covariance_reorder(flat)
   if (as.data.frame.) {
