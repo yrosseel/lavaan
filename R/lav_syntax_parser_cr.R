@@ -63,7 +63,7 @@ ldw_parse_model_string_cr <- function(model.syntax = "",
                      tl[1L],
                      footer = tl[2L]
         )
-      } else if (flat[1L] == 34L) { # SPE_INVALIDNAME
+      } else if (flat[1L] == 34L) { # SPE_AUTOREGRESS
         lav_msg_stop(gettext("a variable cannot be regressed on itself"),
                      tl[1L],
                      footer = tl[2L]

@@ -109,3 +109,18 @@ print_trace <- function(file = "", clean_after = (file != "")) {
   }
   if (clean_after) set_trace(NULL, TRUE)
 }
+
+summary_trace <- function(file = "", clean_after = FALSE) {
+  x <- get_trace()
+  temp <- new.env(parent = emptyenv())
+  for (x1 in x) {
+    nn <- length(x1$stack)
+    mm <- paste(x1$stack[nn], paste(x1$stack[seq_len(nn - 1L)], collapse = ">"), sep = "\t")
+    assign(mm, 1L + get0(mm, temp, ifnotfound = 0L), temp)
+  }
+  objects <- sort(ls(temp))
+  for (i in seq_along(objects)) {
+    cat(objects[i], get(objects[i], temp), "\n", file = file, append = TRUE)
+  }
+  if (clean_after) set_trace(NULL, TRUE)
+}
