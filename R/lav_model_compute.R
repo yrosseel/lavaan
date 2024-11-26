@@ -4,7 +4,6 @@ computeSigmaHat <- function(lavmodel = NULL, GLIST = NULL, extra = FALSE,
   if (is.null(GLIST)) GLIST <- lavmodel@GLIST
 
   nmat <- lavmodel@nmat
-  nvar <- lavmodel@nvar
   nblocks <- lavmodel@nblocks
   representation <- lavmodel@representation
 
@@ -77,7 +76,6 @@ computeSigmaHatJoint <- function(lavmodel = NULL, GLIST = NULL, extra = FALSE,
   if (is.null(GLIST)) GLIST <- lavmodel@GLIST
 
   nmat <- lavmodel@nmat
-  nvar <- lavmodel@nvar
   nblocks <- lavmodel@nblocks
   representation <- lavmodel@representation
 
@@ -91,7 +89,7 @@ computeSigmaHatJoint <- function(lavmodel = NULL, GLIST = NULL, extra = FALSE,
 
     if (representation == "LISREL") {
       res.Sigma <- computeSigmaHat.LISREL(MLIST = MLIST, delta = delta)
-      res.int <- computeMuHat.LISREL(MLIST = MLIST)
+      # res.int <- computeMuHat.LISREL(MLIST = MLIST)
       res.slopes <- computePI.LISREL(MLIST = MLIST)
       S.xx <- MLIST$cov.x
 

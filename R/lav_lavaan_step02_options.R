@@ -152,7 +152,7 @@ lav_lavaan_step02_options <- function(slotOptions = NULL, # nolint
     # clustered?
     if (length(cluster) > 0L) {
       opt$.clustered <- TRUE
-      if (opt$.categorical & opt$estimator != "PML") {
+      if (opt$.categorical && opt$estimator != "PML") {
         lav_msg_stop(gettext("categorical + clustered is not supported yet."))
       }
     } else {

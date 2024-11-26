@@ -434,9 +434,9 @@ lav_model_vcov <- function(lavmodel = NULL,
                            lavh1 = NULL,
                            use.ginv = FALSE) {
   likelihood <- lavoptions$likelihood
-  information <- lavoptions$information[1] # first one is for vcov
+#  information <- lavoptions$information[1] # first one is for vcov
   se <- lavoptions$se
-  mimic <- lavoptions$mimic
+#  mimic <- lavoptions$mimic
 
   # special cases
   if (se == "none" || se == "external" || se == "twostep") {
