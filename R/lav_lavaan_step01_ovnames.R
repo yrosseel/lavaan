@@ -95,7 +95,6 @@ lav_lavaan_step01_ovnames_initflat <- function(slotParTable     = NULL, # nolint
     } else {
       bare.minimum <- c("lhs", "op", "rhs", "free")
       missing.idx <- is.na(match(bare.minimum, names(model)))
-      missing.txt <- paste(bare.minimum[missing.idx], collapse = ", ")
       lav_msg_stop(
         gettextf("model is a list, but not a parameterTable?
                  missing column(s) in parameter table: [%s]",

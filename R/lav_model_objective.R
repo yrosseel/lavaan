@@ -24,7 +24,7 @@ lav_model_objective <- function(lavmodel = NULL,
     correlation <- FALSE
   }
   group.w.free <- lavmodel@group.w.free
-  fixed.x <- lavmodel@fixed.x
+  # fixed.x <- lavmodel@fixed.x
   conditional.x <- lavmodel@conditional.x
   num.idx <- lavmodel@num.idx
   th.idx <- lavmodel@th.idx
@@ -90,9 +90,9 @@ lav_model_objective <- function(lavmodel = NULL,
     )
     # }
 
-    if (estimator == "REML") {
-      LAMBDA <- computeLAMBDA(lavmodel = lavmodel, GLIST = GLIST)
-    }
+    # if (estimator == "REML") {
+    #   LAMBDA <- computeLAMBDA(lavmodel = lavmodel, GLIST = GLIST)
+    # }
 
     # ridge?
     if (lavsamplestats@ridge > 0.0) {

@@ -123,10 +123,18 @@ lavaan <- function(
   timing <- ldw_add_timing(timing, "init")
 
   # ------------ ov.names 1 -----  initial flat model --------------------
+  # if parser not specified, take default one
+  if (is.null(dotdotdot$parser)) {
+    opt.default <- lav_options_default()
+    useparser <- opt.default$parser
+  } else {
+    useparser <- dotdotdot$parser
+  }
+
   flat.model <- lav_lavaan_step01_ovnames_initflat(
     slotParTable     = slotParTable,
     model            = model,
-    dotdotdot.parser = dotdotdot$parser
+    dotdotdot.parser = useparser
   )
 
   # ------------ ov.names 2 ------ handle ov.order -----------------------

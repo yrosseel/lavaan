@@ -17,11 +17,11 @@ lav_model_information <- function(lavmodel = NULL,
                                   augmented = FALSE,
                                   inverted = FALSE,
                                   use.ginv = FALSE) {
-  if (.hasSlot(lavmodel, "estimator")) {
-    estimator <- lavmodel@estimator
-  } else {
-    estmator <- lavoptions$estimator
-  }
+  # if (.hasSlot(lavmodel, "estimator")) {
+  #   estimator <- lavmodel@estimator
+  # } else {
+  #   estmator <- lavoptions$estimator
+  # }
   information <- lavoptions$information[1] # ALWAYS used the first one
   # called can control it
 
