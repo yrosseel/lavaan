@@ -903,15 +903,6 @@ ldw_parse_model_string <- function(model.syntax = "", as.data.frame. = FALSE) {
         footer = tl[2L]
       )
     }
-       # check for variable regressed on itself
-    if (formul1$elem.text[opi] == "~" && formul1$elem.text[opi - 1L] == formul1$elem.text[nelem]) {
-        tl <- ldw_txtloc(modelsrc, formul1$elem.pos[opi])
-        lav_msg_stop(
-          gettext("a variable cannot be regressed on itself"),
-          tl[1L],
-          footer = tl[2L]
-        )
-      }
     # checks for valid names in lhs and rhs
     ldw_parse_check_valid_name(formul1, opi - 1L, modelsrc) # valid name lhs
     for (j in seq.int(opi + 1L, nelem)) { # valid names rhs
@@ -1099,6 +1090,18 @@ ldw_parse_model_string <- function(model.syntax = "", as.data.frame. = FALSE) {
             mod[[cur.mod.idx]] <- modifyList(mod[[cur.mod.idx]], modnu)
           }
         }
+      }
+    }
+    # check for variable regressed on itself
+    if (formul1$elem.text[opi] == "~" && 
+        formul1$elem.text[opi - 1L] == formul1$elem.text[nelem]) {
+      if (!grepl("^0\\.?0*$", flat.fixed[idx])) {
+        tl <- ldw_txtloc(modelsrc, formul1$elem.pos[opi])
+        lav_msg_stop(
+          gettext("a variable cannot be regressed on itself"),
+          tl[1L],
+          footer = tl[2L]
+        )
       }
     }
   }

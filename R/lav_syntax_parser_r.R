@@ -797,9 +797,6 @@ lav_parse_model_string_r <- function(model.syntax = "", as.data.frame. = FALSE) 
     if (length(contsp) > 0L) {
       lav_local_msgcode(FALSE, 102L, formul1$elem.pos[contsp[1L]], msgenv)
     }
-    # check for variable regressed on itself
-    if (formul1$elem.text[opi] == "~" && formul1$elem.text[opi - 1L] == formul1$elem.text[nelem])
-            return(c(34L, formul1$elem.pos[opi] - 1L))
     # checks for valid names in lhs and rhs
     lav_parse_check_valid_name(formul1, opi - 1L, modelsrc, msgenv) # valid name lhs
     if (exists("error", envir = msgenv)) return(msgenv$error);
@@ -969,6 +966,10 @@ lav_parse_model_string_r <- function(model.syntax = "", as.data.frame. = FALSE) 
         }
       }
     }
+    # check for variable regressed on itself
+    if (formul1$elem.text[opi] == "~" && 
+        formul1$elem.text[opi - 1L] == formul1$elem.text[nelem])
+      if (!grepl("^0\\.?0*$", flat.fixed[idx])) return(c(34L, formul1$elem.pos[opi] - 1L))
   }
   # create flat (omit items without operator)
   filled.ones <- which(flat.op != "")
