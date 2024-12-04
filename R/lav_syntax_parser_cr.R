@@ -9,7 +9,7 @@ ldw_parse_model_string_cr <- function(model.syntax = "",
     paste(unlist(model.syntax), "", collapse = "\n")
   )
 
-  if (requireNamespace("lavaanC", quietly = TRUE)) {
+  if (lav_use_lavaanC()) {
     flat <- lavaanC::lav_parse_model_string_c(modelsrc)
   } else {
     flat <- lav_parse_model_string_r(modelsrc)

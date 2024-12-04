@@ -2,6 +2,28 @@
 
 lavaan_cache_env <- new.env(parent = emptyenv())
 
+# function to get or set the switch to use c++ code in lavaanC
+lav_use_lavaanC <- uselavaanC <- function(x) {
+  if (missing(x)) {
+    if (!exists("opt.lavaanC", lavaan_cache_env)) {
+      assign("opt.lavaanC", requireNamespace("lavaanC", quietly = TRUE), lavaan_cache_env)
+    }
+    return(get("opt.lavaanC", lavaan_cache_env))
+  } else {
+    if (!is.logical(x) || length(x) != 1L) 
+      lav_msg_stop(gettext("'x' must be a scalar logical"))
+    if (x) {
+      if (!requireNamespace("lavaanC", quietly = TRUE)) {
+        lav_msg_warn(gettext("cannot use lavaanC, package not found."))
+        assign("opt.lavaanC", FALSE, lavaan_cache_env)
+        return(invisible(NULL))
+      }
+    }
+    assign("opt.lavaanC", x, lavaan_cache_env)
+    return(invisible(NULL))
+  }
+}
+
 # functions to handle warn/debug/verbose options
 #             (no longer in 'standard' options)
 # if x not present returns the current value of opt.warn/debug/verbose
