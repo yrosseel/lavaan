@@ -10,7 +10,7 @@ ldw_parse_model_string_cr <- function(model.syntax = "",
   )
 
   if (lav_use_lavaanC()) {
-    flat <- lavaanC::lav_parse_model_string_c(modelsrc)
+    flat <- lavaanC::parse_model_string(modelsrc)
   } else {
     flat <- lav_parse_model_string_r(modelsrc)
   }

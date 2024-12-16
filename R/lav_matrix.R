@@ -23,7 +23,9 @@ lav_matrix_vecr <- function(A) {
   # faster way??
   # nRow <- NROW(A); nCol <- NCOL(A)
   # idx <- (seq_len(nCol) - 1L) * nRow + rep(seq_len(nRow), each = nCol)
-
+  if (lav_use_lavaanC() && is.numeric(A)) {
+    return(lavaanC::m_vecr(A))
+  }
   lav_matrix_vec(t(A))
 }
 
@@ -39,6 +41,9 @@ lav_matrix_vecr <- function(A) {
 # M&N book: page 48-49
 #
 lav_matrix_vech <- function(S, diagonal = TRUE) {
+  if (lav_use_lavaanC() && is.numeric(S)) {
+    return(lavaanC::m_vech(S, diagonal))
+  }
   ROW <- row(S)
   COL <- col(S)
   if (diagonal) S[ROW >= COL] else S[ROW > COL]
@@ -49,6 +54,9 @@ lav_matrix_vech <- function(S, diagonal = TRUE) {
 # into a vector by stacking the *rows* of the matrix one after the
 # other, but eliminating all supradiagonal elements
 lav_matrix_vechr <- function(S, diagonal = TRUE) {
+  if (lav_use_lavaanC() && is.numeric(S)) {
+    return(lavaanC::m_vechr(S, diagonal))
+  }
   S[lav_matrix_vechr_idx(n = NCOL(S), diagonal = diagonal)]
 }
 
@@ -57,9 +65,11 @@ lav_matrix_vechr <- function(S, diagonal = TRUE) {
 # into a vector by stacking the *columns* of the matrix one after the
 # other, but eliminating all infradiagonal elements
 lav_matrix_vechu <- function(S, diagonal = TRUE) {
+  if (lav_use_lavaanC() && is.numeric(S)) {
+    return(lavaanC::m_vechu(S, diagonal))
+  }
   S[lav_matrix_vechu_idx(n = NCOL(S), diagonal = diagonal)]
 }
-
 
 # the vechru operator transforms a *symmetric* matrix
 # into a vector by stacking the *rows* of the matrix one after the
@@ -67,16 +77,19 @@ lav_matrix_vechu <- function(S, diagonal = TRUE) {
 #
 # same as vech (but using upper-diagonal elements)
 lav_matrix_vechru <- function(S, diagonal = TRUE) {
+  if (lav_use_lavaanC() && is.numeric(S)) {
+    return(lavaanC::m_vechru(S, diagonal))
+  }
   S[lav_matrix_vechru_idx(n = NCOL(S), diagonal = diagonal)]
 }
-
-
-
 
 # return the *vector* indices of the lower triangular elements of a
 # symmetric matrix of size 'n'
 lav_matrix_vech_idx <- function(n = 1L, diagonal = TRUE) {
   n <- as.integer(n)
+  if (lav_use_lavaanC() && n > 1L) {
+    return(lavaanC::m_vech_idx(n, diagonal))
+  }
   if (n < 100L) {
     ROW <- matrix(seq_len(n), n, n)
     COL <- matrix(seq_len(n), n, n, byrow = TRUE)
@@ -101,6 +114,9 @@ lav_matrix_vech_idx <- function(n = 1L, diagonal = TRUE) {
 # symmetric matrix of size 'n'
 lav_matrix_vech_row_idx <- function(n = 1L, diagonal = TRUE) {
   n <- as.integer(n)
+  if (lav_use_lavaanC() && n > 1L) {
+    return(lavaanC::m_vech_row_idx(n, diagonal))
+  }
   if (diagonal) {
     unlist(lapply(seq_len(n), seq.int, n))
   } else {
@@ -112,6 +128,9 @@ lav_matrix_vech_row_idx <- function(n = 1L, diagonal = TRUE) {
 # symmetric matrix of size 'n'
 lav_matrix_vech_col_idx <- function(n = 1L, diagonal = TRUE) {
   n <- as.integer(n)
+  if (lav_use_lavaanC() && n > 1L) {
+    return(lavaanC::m_vech_col_idx(n, diagonal))
+  }
   if (!diagonal) {
     n <- n - 1L
   }
@@ -125,6 +144,9 @@ lav_matrix_vech_col_idx <- function(n = 1L, diagonal = TRUE) {
 # symmetric matrix of size 'n' -- ROW-WISE
 lav_matrix_vechr_idx <- function(n = 1L, diagonal = TRUE) {
   n <- as.integer(n)
+  if (lav_use_lavaanC() && n > 1L) {
+    return(lavaanC::m_vechr_idx(n, diagonal))
+  }
   if (n < 100L) {
     ROW <- matrix(seq_len(n), n, n)
     COL <- matrix(seq_len(n), n, n, byrow = TRUE)
@@ -149,6 +171,9 @@ lav_matrix_vechr_idx <- function(n = 1L, diagonal = TRUE) {
 # symmetric matrix of size 'n' -- COLUMN-WISE
 lav_matrix_vechu_idx <- function(n = 1L, diagonal = TRUE) {
   n <- as.integer(n)
+  if (lav_use_lavaanC() && n > 1L) {
+    return(lavaanC::m_vechu_idx(n, diagonal))
+  }
   if (n < 100L) {
     ROW <- matrix(seq_len(n), n, n)
     COL <- matrix(seq_len(n), n, n, byrow = TRUE)
@@ -166,6 +191,9 @@ lav_matrix_vechu_idx <- function(n = 1L, diagonal = TRUE) {
 # symmetric matrix of size 'n' -- ROW-WISE
 lav_matrix_vechru_idx <- function(n = 1L, diagonal = TRUE) {
   n <- as.integer(n)
+  if (lav_use_lavaanC() && n > 1L) {
+    return(lavaanC::m_vechru_idx(n, diagonal))
+  }
   if (n < 100L) {
     # FIXME!! make this more efficient (without creating 3 n*n matrices!)
     ROW <- matrix(seq_len(n), n, n)
@@ -196,6 +224,9 @@ lav_matrix_vechru_idx <- function(n = 1L, diagonal = TRUE) {
 lav_matrix_vech_reverse <- lav_matrix_vechru_reverse <-
   lav_matrix_upper2full <-
   function(x, diagonal = TRUE) {
+    if (lav_use_lavaanC()) {
+      return(lavaanC::m_vech_reverse(x, diagonal))
+    }
     # guess dimensions
     if (diagonal) {
       p <- (sqrt(1 + 8 * length(x)) - 1) / 2
@@ -218,6 +249,9 @@ lav_matrix_vech_reverse <- lav_matrix_vechru_reverse <-
 # reconstruct S
 lav_matrix_vechr_reverse <- lav_matrix_vechu_reverse <-
   lav_matrix_lower2full <- function(x, diagonal = TRUE) {
+    if (lav_use_lavaanC()) {
+      return(lavaanC::m_vechr_reverse(x, diagonal))
+    }
     # guess dimensions
     if (diagonal) {
       p <- (sqrt(1 + 8 * length(x)) - 1) / 2
@@ -239,6 +273,10 @@ lav_matrix_vechr_reverse <- lav_matrix_vechu_reverse <-
 # matrix of size 'n'
 lav_matrix_diag_idx <- function(n = 1L) {
   # if(n < 1L) return(integer(0L))
+  n <- as.integer(n)
+  if (lav_use_lavaanC()) {
+    return(lavaanC::m_diag_idx(n))
+  }
   1L + (seq_len(n) - 1L) * (n + 1L)
 }
 
@@ -246,11 +284,15 @@ lav_matrix_diag_idx <- function(n = 1L) {
 # return the *vector* indices of the diagonal elements of the LOWER part
 # of a symmatrix matrix of size 'n'
 lav_matrix_diagh_idx <- function(n = 1L) {
+  n <- as.integer(n)
   if (n < 1L) {
     return(integer(0L))
   }
   if (n == 1L) {
     return(1L)
+  }
+  if (lav_use_lavaanC()) {
+    return(lavaanC::m_diagh_idx(n))
   }
   c(1L, cumsum(n:2L) + 1L)
 }
@@ -261,6 +303,9 @@ lav_matrix_diagh_idx <- function(n = 1L) {
 lav_matrix_antidiag_idx <- function(n = 1L) {
   if (n < 1L) {
     return(integer(0L))
+  }
+  if (lav_use_lavaanC()) {
+    return(lavaanC::m_antidiag_idx(n))
   }
   1L + seq_len(n) * (n - 1L)
 }
@@ -294,6 +339,10 @@ lav_matrix_vech_which_idx <- function(n = 1L, diagonal = TRUE,
     return(integer(0L))
   }
   n <- as.integer(n)
+  idx <- as.integer(idx)
+  if (lav_use_lavaanC()) {
+    return(lavaanC::m_vech_which_idx(n, diagonal, idx, type, add.idx.at.start))
+  }
   A <- matrix(FALSE, n, n)
   if (type == "and") {
     A[idx, idx] <- TRUE
@@ -319,6 +368,10 @@ lav_matrix_vech_match_idx <- function(n = 1L, diagonal = TRUE,
     return(integer(0L))
   }
   n <- as.integer(n)
+  idx <- as.integer(idx)
+  if (lav_use_lavaanC()) {
+    return(lavaanC::m_vech_match_idx(n, diagonal, idx))
+  }
   pstar <- n * (n + 1) / 2
   A <- lav_matrix_vech_reverse(seq_len(pstar))
   B <- A[idx, idx, drop = FALSE]
@@ -329,7 +382,9 @@ lav_matrix_vech_match_idx <- function(n = 1L, diagonal = TRUE,
 lav_matrix_is_diagonal <- function(A = NULL) {
   A <- as.matrix.default(A)
   stopifnot(nrow(A) == ncol(A))
-
+  if (lav_use_lavaanC()) {
+    return(lavaanC::m_is_diagonal(A))
+  }
   diag(A) <- 0
   all(A == 0)
 }
@@ -413,6 +468,10 @@ lav_matrix_is_diagonal <- function(A = NULL) {
 # dup3: using col idx only
 # D7 <- dup(7L); x<- apply(D7, 1, function(x) which(x > 0)); matrix(x,7,7)
 .dup3 <- function(n = 1L) {
+  n <- as.integer(n)
+  if (lav_use_lavaanC()) {
+    return(lavaanC::m_duplication(n))
+  }
   if ((n < 1L) || (round(n) != n)) {
     lav_msg_stop(gettext("n must be a positive integer"))
   }
@@ -468,6 +527,10 @@ lav_matrix_duplication <- .dup3
 # - it returns a matrix of size p^2 * (p*(p-1))/2
 # - the columns corresponding to the diagonal elements have been removed
 lav_matrix_duplication_cor <- function(n = 1L) {
+  n <- as.integer(n)
+  if (lav_use_lavaanC()) {
+    return(lavaanC::m_duplication_cor(n))
+  }
   out <- lav_matrix_duplication(n = n)
   diag.idx <- lav_matrix_diagh_idx(n = n)
   out[, -diag.idx, drop = FALSE]
@@ -477,6 +540,9 @@ lav_matrix_duplication_cor <- function(n = 1L) {
 # sqrt(nrow(A)) is an integer
 # A is not symmetric, and not even square, only n^2 ROWS
 lav_matrix_duplication_pre <- function(A = matrix(0, 0, 0)) {
+  if (lav_use_lavaanC()) {
+    return(lavaanC::m_duplication_pre(A))
+  }
   # number of rows
   n2 <- NROW(A)
 
@@ -524,6 +590,9 @@ lav_matrix_duplication_dup_pre2 <- function(A = matrix(0, 0, 0)) {
 # A is not symmetric, and not even square, only n^2 ROWS
 # correlation version: ignoring diagonal elements
 lav_matrix_duplication_cor_pre <- function(A = matrix(0, 0, 0)) {
+  if (lav_use_lavaanC()) {
+    return(lavaanC::m_duplication_cor_pre(A))
+  }
   # number of rows
   n2 <- NROW(A)
 
@@ -548,6 +617,9 @@ lav_matrix_duplication_cor_pre <- function(A = matrix(0, 0, 0)) {
 # sqrt(ncol(A)) must be an integer
 # A is not symmetric, and not even square, only n^2 COLUMNS
 lav_matrix_duplication_post <- function(A = matrix(0, 0, 0)) {
+  if (lav_use_lavaanC()) {
+    return(lavaanC::m_duplication_post(A))
+  }
   # number of columns
   n2 <- NCOL(A)
 
@@ -573,6 +645,9 @@ lav_matrix_duplication_post <- function(A = matrix(0, 0, 0)) {
 # A is not symmetric, and not even square, only n^2 COLUMNS
 # correlation version: ignoring the diagonal elements
 lav_matrix_duplication_cor_post <- function(A = matrix(0, 0, 0)) {
+  if (lav_use_lavaanC()) {
+    return(lavaanC::m_duplication_cor_post(A))
+  }
   # number of columns
   n2 <- NCOL(A)
 
@@ -597,6 +672,9 @@ lav_matrix_duplication_cor_post <- function(A = matrix(0, 0, 0)) {
 # compute t(D) %*% A %*% D (without explicitly computing D)
 # A must be a square matrix and sqrt(ncol) an integer
 lav_matrix_duplication_pre_post <- function(A = matrix(0, 0, 0)) {
+  if (lav_use_lavaanC()) {
+    return(lavaanC::m_duplication_pre_post(A))
+  }
   # number of columns
   n2 <- NCOL(A)
 
@@ -623,6 +701,9 @@ lav_matrix_duplication_pre_post <- function(A = matrix(0, 0, 0)) {
 # A must be a square matrix and sqrt(ncol) an integer
 # correlation version: ignoring diagonal elements
 lav_matrix_duplication_cor_pre_post <- function(A = matrix(0, 0, 0)) {
+  if (lav_use_lavaanC()) {
+    return(lavaanC::m_duplication_cor_pre_post(A))
+  }
   # number of columns
   n2 <- NCOL(A)
 
@@ -772,6 +853,10 @@ lav_matrix_elimination_pre_post <- function(A = matrix(0, 0, 0)) {
 
 # create DUP.ginv without transpose
 .dup_ginv2 <- function(n = 1L) {
+  if (lav_use_lavaanC()) {
+    n <- as.integer(n)
+    return(lavaanC::m_duplication_ginv(n))
+  }
   if ((n < 1L) || (round(n) != n)) {
     lav_msg_stop(gettext("n must be a positive integer"))
   }
@@ -840,7 +925,9 @@ lav_matrix_duplication_ginv_post <- function(A = matrix(0, 0, 0)) {
 # for square matrices only, with ncol = nrow = n^2
 lav_matrix_duplication_ginv_pre_post <- function(A = matrix(0, 0, 0)) {
   A <- as.matrix.default(A)
-
+  if (lav_use_lavaanC()) {
+    return(lavaanC::m_duplication_ginv_pre_post(A))
+  }
   # number of columns
   n2 <- NCOL(A)
 
@@ -902,6 +989,12 @@ lav_matrix_duplication_ginv_cor_pre_post <- function(A = matrix(0, 0, 0)) {
 
 # first attempt
 .com1 <- function(m = 1L, n = 1L) {
+  if (lav_use_lavaanC()) {
+    m <- as.integer(m)
+    n <- as.integer(n)
+    return(lavaanC::m_commutation(m, n))
+  }
+  
   if ((m < 1L) || (round(m) != m)) {
     lav_msg_stop(gettext("n must be a positive integer"))
   }
@@ -929,6 +1022,10 @@ lav_matrix_commutation <- .com1
 # = permuting the rows of A
 lav_matrix_commutation_pre <- function(A = matrix(0, 0, 0)) {
   A <- as.matrix(A)
+  
+  if (lav_use_lavaanC()) {
+    return(lavaanC::m_commutation_pre(A))
+  }
 
   # number of rows of A
   n2 <- nrow(A)
@@ -952,6 +1049,10 @@ lav_matrix_commutation_pre <- function(A = matrix(0, 0, 0)) {
 # = permuting the columns of A
 lav_matrix_commutation_post <- function(A = matrix(0, 0, 0)) {
   A <- as.matrix(A)
+  
+  if (lav_use_lavaanC()) {
+    return(lavaanC::m_commutation_post(A))
+  }
 
   # number of columns of A
   n2 <- ncol(A)
@@ -975,7 +1076,9 @@ lav_matrix_commutation_post <- function(A = matrix(0, 0, 0)) {
 # = permuting both the rows AND columns of A
 lav_matrix_commutation_pre_post <- function(A = matrix(0, 0, 0)) {
   A <- as.matrix(A)
-
+  if (lav_use_lavaanC()) {
+    return(lavaanC::m_commutation_pre_post(A))
+  }
   # number of columns of A
   n2 <- NCOL(A)
 
