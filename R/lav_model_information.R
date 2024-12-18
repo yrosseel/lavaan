@@ -153,6 +153,7 @@ lav_model_information_expected <- function(lavmodel = NULL,
         )
       Info.group[[g]] <- fg * Info.g
     } else {
+      # ldw_trace(paste(sum(Delta[[g]] == 0),"/",length(Delta[[g]])))
       # compute information for this group
       if (lavmodel@estimator %in% c("DWLS", "ULS")) {
         # diagonal weight matrix
@@ -160,8 +161,14 @@ lav_model_information_expected <- function(lavmodel = NULL,
         Info.group[[g]] <- fg * crossprod(Delta2)
       } else {
         # full weight matrix
-        Info.group[[g]] <-
-          fg * (crossprod(Delta[[g]], A1[[g]]) %*% Delta[[g]])
+        if (lav_use_lavaanC()) {
+          Info.group[[g]] <-
+            fg * lavaanC::m_prod(
+              lavaanC::m_crossprod(Delta[[g]], A1[[g]], "L"), Delta[[g]], "R")  
+        } else {
+          Info.group[[g]] <-
+            fg * (crossprod(Delta[[g]], A1[[g]]) %*% Delta[[g]])
+        }
       }
     }
   } # g
