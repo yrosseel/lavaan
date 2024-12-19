@@ -153,7 +153,6 @@ lav_model_information_expected <- function(lavmodel = NULL,
         )
       Info.group[[g]] <- fg * Info.g
     } else {
-      # ldw_trace(paste(sum(Delta[[g]] == 0),"/",length(Delta[[g]])))
       # compute information for this group
       if (lavmodel@estimator %in% c("DWLS", "ULS")) {
         # diagonal weight matrix
@@ -162,9 +161,13 @@ lav_model_information_expected <- function(lavmodel = NULL,
       } else {
         # full weight matrix
         if (lav_use_lavaanC()) {
-          Info.group[[g]] <-
-            fg * lavaanC::m_prod(
-              lavaanC::m_crossprod(Delta[[g]], A1[[g]], "L"), Delta[[g]], "R")  
+        # (i) use of m_crossprod with sparse matrix on the left:
+        # Info.group[[g]] <- fg * lavaanC::m_crossprod(Delta[[g]], 
+        #                     lavaanC::m_prod(A1[[g]], Delta[[g]], "R"), "L")
+        #
+        # (ii) use of m_prod on transposed sparse first matrix, faster than (i):
+          Info.group[[g]] <- fg * lavaanC::m_prod(t(Delta[[g]]), 
+                              lavaanC::m_prod(A1[[g]], Delta[[g]], "R"), "L")
         } else {
           Info.group[[g]] <-
             fg * (crossprod(Delta[[g]], A1[[g]]) %*% Delta[[g]])
