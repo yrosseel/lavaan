@@ -274,6 +274,9 @@ lav_matrix_vechr_reverse <- lav_matrix_vechu_reverse <-
 lav_matrix_diag_idx <- function(n = 1L) {
   # if(n < 1L) return(integer(0L))
   n <- as.integer(n)
+  if (n < 1L) {
+    return(integer(0L))
+  }
   if (lav_use_lavaanC()) {
     return(lavaanC::m_diag_idx(n))
   }
