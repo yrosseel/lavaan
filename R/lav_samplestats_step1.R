@@ -102,7 +102,6 @@ lav_samplestats_step1 <- function(Y,
 
       if (allow.empty.cell) {
         if (any(y.freq == 0L)) {
-        #if (i==7) browser()
           ## lav_uvord_fit drops thresholds if extreme categories are missing, but not otherwise
           exidx <- rep(TRUE, (ov.levels[i] - 1))
           misidx <- !exidx
