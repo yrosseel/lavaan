@@ -244,7 +244,7 @@ lav_options_default <- function() {
     default = "default", kaiser = "kaiser", none = "none",
     cureton.mulaik = "cm", cm = "cm"))
   elm(c("rotation.args", "std.ov"), TRUE, bl = TRUE)
-  elm(c("rotation.args", "geomin.epsilon"), 0.001, nm = "]0, 0.01]")
+  elm(c("rotation.args", "geomin.epsilon"), 0.001, nm = "]0, 1.00]")
   # was 0.01 < 0.6-10
   elm(c("rotation.args", "orthomax.gamma"), 1, nm = "[0, 1]")
   elm(c("rotation.args", "cf.gamma"), 0, nm = "[0, 1]")
