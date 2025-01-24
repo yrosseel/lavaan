@@ -997,7 +997,7 @@ lav_matrix_duplication_ginv_cor_pre_post <- function(A = matrix(0, 0, 0)) {
     n <- as.integer(n)
     return(lavaanC::m_commutation(m, n))
   }
-  
+
   if ((m < 1L) || (round(m) != m)) {
     lav_msg_stop(gettext("n must be a positive integer"))
   }
@@ -1025,7 +1025,7 @@ lav_matrix_commutation <- .com1
 # = permuting the rows of A
 lav_matrix_commutation_pre <- function(A = matrix(0, 0, 0)) {
   A <- as.matrix(A)
-  
+
   if (lav_use_lavaanC()) {
     return(lavaanC::m_commutation_pre(A))
   }
@@ -1052,7 +1052,7 @@ lav_matrix_commutation_pre <- function(A = matrix(0, 0, 0)) {
 # = permuting the columns of A
 lav_matrix_commutation_post <- function(A = matrix(0, 0, 0)) {
   A <- as.matrix(A)
-  
+
   if (lav_use_lavaanC()) {
     return(lavaanC::m_commutation_post(A))
   }

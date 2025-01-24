@@ -92,7 +92,7 @@ lav_samplestats_Gamma_inverse_NT <- function(Y = NULL,
       } else {
         Gamma.inv <- 0.5 * lav_matrix_duplication_pre_post(S.inv %x% S.inv)
       }
-      
+
       # zero rows/cols corresponding with x/x combinations
       nvar <- NROW(ICOV)
       pstar <- nvar * (nvar + 1) / 2
@@ -125,7 +125,7 @@ lav_samplestats_Gamma_inverse_NT <- function(Y = NULL,
     } else {
       Gamma.inv <- 0.5 * lav_matrix_duplication_pre_post(S11 %x% S11)
     }
-    
+
     if (meanstructure || slopestructure) {
       C <- S[x.idx, x.idx, drop = FALSE]
       MY <- M[-x.idx]

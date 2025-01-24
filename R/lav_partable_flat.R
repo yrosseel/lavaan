@@ -10,6 +10,7 @@ lav_partable_flat <- function(FLAT = NULL, # nolint
                               orthogonal.efa = FALSE,
                               std.lv = FALSE,
                               correlation = FALSE,
+                              composites = TRUE,
                               conditional.x = FALSE,
                               fixed.x = TRUE,
                               parameterization = "delta",
@@ -37,7 +38,16 @@ lav_partable_flat <- function(FLAT = NULL, # nolint
   lv.names <- lav_partable_vnames(FLAT, type = "lv") # latent variables
   # lv.names.r   <- lav_partable_vnames(FLAT, type="lv.regular")
   # regular latent variables
-  lv.names.f <- lav_partable_vnames(FLAT, type = "lv.formative")
+  if (composites ) {
+    lv.names.f <- character(0L)
+    lv.names.c <- lav_partable_vnames(FLAT, type = "lv.composite")
+    ov.ind.c <- lav_partable_vnames(FLAT, type = "ov.cind")
+  } else {
+    lv.names.c <- character(0L)
+    ov.ind.c <- character(0L)
+    lv.names.f <- lav_partable_vnames(FLAT, type = "lv.formative")
+  }
+
   # formative latent variables
   ov.names <- lav_partable_vnames(FLAT, type = "ov")
   # observed variables
@@ -256,7 +266,23 @@ lav_partable_flat <- function(FLAT = NULL, # nolint
     }
   }
 
-  # e) efa latent variables COVARIANCES; only needed for 'mediators'
+  # e) indicators of composites: COVARIANCES
+  #    but only within/intra blocks
+  if ((ncx <- length(ov.ind.c)) > 0L) {
+    # create W1
+    W1 <- matrix(0, length(ov.ind.c), length(lv.names.c))
+    c.idx <- which(FLAT$op == "<~")
+    W1[cbind(match(FLAT$rhs[c.idx], ov.ind.c),
+             match(FLAT$lhs[c.idx], lv.names.c))] <- 1
+    W1W1 <- tcrossprod(W1)
+    W1W1[upper.tri(W1W1, diag = TRUE)] <- 0 # keep lower.tri only
+    if (ncx > 1L) {
+      lhs <- c(lhs, ov.ind.c[col(W1W1)[as.logical(W1W1)]])
+      rhs <- c(rhs, ov.ind.c[row(W1W1)[as.logical(W1W1)]])
+    }
+  }
+
+  # f) efa latent variables COVARIANCES; only needed for 'mediators'
   #    (not in lv.names.x, not in lv.names.y) -- added in 0.6-18
   if (auto.efa && length(lv.names.efa) > 1L) {
     efa.values <- lav_partable_efa_values(FLAT)
@@ -412,6 +438,8 @@ lav_partable_flat <- function(FLAT = NULL, # nolint
     rep(0L, length(tmp.default$lhs))
   )
   mod.idx <- c(tmp.user$mod.idx, tmp.default$mod.idx)
+
+  # by default: everyting is free!
   free <- rep(1L, length(lhs))
   ustart <- rep(as.numeric(NA), length(lhs))
   # label   <- paste(lhs, op, rhs, sep="")
@@ -428,6 +456,7 @@ lav_partable_flat <- function(FLAT = NULL, # nolint
   if (!auto.var) {
     var.idx <- which(op == "~~" &
       lhs == rhs &
+      !lhs %in% ov.ind.c &
       user == 0L)
     ustart[var.idx] <- 0.0
     free[var.idx] <- 0L
@@ -441,6 +470,13 @@ lav_partable_flat <- function(FLAT = NULL, # nolint
     free[var.idx] <- 0L
   }
 
+  # 0c. for the ~~ for composite indicators: currently ALWAYS fixed
+  #     todo: create an option to free them anyway
+  if (length(ov.ind.c) > 0) {
+    var.idx <- which(op == "~~" & lhs %in% ov.ind.c)
+    ustart[var.idx] <- as.numeric(NA)
+    free[var.idx] <- 0L
+  }
 
   # 1. fix metric of regular latent variables
   if (std.lv) {
@@ -464,6 +500,12 @@ lav_partable_flat <- function(FLAT = NULL, # nolint
     first.idx <- mm.idx[which(!duplicated(lhs[mm.idx]))]
     ustart[first.idx] <- 1.0
     free[first.idx] <- 0L
+    if (composites && length(lv.names.c) > 0L) {
+      mm.idx <- which(op == "<~")
+      first.idx <- mm.idx[which(!duplicated(lhs[mm.idx]))]
+      ustart[first.idx] <- 1.0
+      free[first.idx] <- 0L
+    }
   }
 
   # 2. fix residual variance of single indicators to zero

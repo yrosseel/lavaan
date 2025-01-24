@@ -745,7 +745,7 @@ lav_mvnorm_information_expected <- function(Y = NULL, # unused!
 
   if (lav_use_lavaanC()) {
     if (correlation) {
-      I22 <- lavaanC::m_kronecker_dup_cor_pre_post(Sigma.inv, 
+      I22 <- lavaanC::m_kronecker_dup_cor_pre_post(Sigma.inv,
                                                    multiplicator = 0.5)
     } else {
       I22 <- lavaanC::m_kronecker_dup_pre_post(Sigma.inv, multiplicator = 0.5)

@@ -10,7 +10,7 @@ lav_use_lavaanC <- uselavaanC <- function(x) {
     }
     return(get("opt.lavaanC", lavaan_cache_env))
   } else {
-    if (!is.logical(x) || length(x) != 1L) 
+    if (!is.logical(x) || length(x) != 1L)
       lav_msg_stop(gettext("'x' must be a scalar logical"))
     if (x) {
       if (!requireNamespace("lavaanC", quietly = TRUE)) {
@@ -221,6 +221,7 @@ lav_options_default <- function() {
   elm("auto.th", FALSE, bl = TRUE)
   elm("auto.delta", FALSE, bl = TRUE)
   elm("auto.efa", FALSE, bl = TRUE)
+  elm("composites", TRUE, bl = TRUE)
 
   # rotation
   elm("rotation", "geomin", chr = c(crawfer = "cf", crawford.ferguson = "cf",

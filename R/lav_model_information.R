@@ -162,11 +162,11 @@ lav_model_information_expected <- function(lavmodel = NULL,
         # full weight matrix
         if (lav_use_lavaanC()) {
         # (i) use of m_crossprod with sparse matrix on the left:
-        # Info.group[[g]] <- fg * lavaanC::m_crossprod(Delta[[g]], 
+        # Info.group[[g]] <- fg * lavaanC::m_crossprod(Delta[[g]],
         #                     lavaanC::m_prod(A1[[g]], Delta[[g]], "R"), "L")
         #
         # (ii) use of m_prod on transposed sparse first matrix, faster than (i):
-          Info.group[[g]] <- fg * lavaanC::m_prod(t(Delta[[g]]), 
+          Info.group[[g]] <- fg * lavaanC::m_prod(t(Delta[[g]]),
                               lavaanC::m_prod(A1[[g]], Delta[[g]], "R"), "L")
         } else {
           Info.group[[g]] <-

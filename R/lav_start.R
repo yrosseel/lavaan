@@ -26,6 +26,9 @@ lav_start <- function(start.method = "default",
   # correlation structure?
   correlation <- any(lavpartable$op == "~*~")
 
+  # composites?
+  composites <- any(lavpartable$op == "<~")
+
   # conditional.x?
   conditional.x <- any(lavpartable$exo == 1L &
     lavpartable$op %in% c("~", "<~"))
@@ -178,6 +181,7 @@ lav_start <- function(start.method = "default",
     lv.names <- vnames(lavpartable, "lv", group = group.values[g])
     lv.names.efa <- vnames(lavpartable, "lv.efa", group = group.values[g])
     ov.names.x <- vnames(lavpartable, "ov.x", group = group.values[g])
+    ov.ind.c <- vnames(lavpartable, "ov.cind", group = group.values[g])
 
     # just for the nlevels >1 case
     ov.names <- unique(unlist(ov.names))
@@ -185,6 +189,7 @@ lav_start <- function(start.method = "default",
     lv.names <- unique(unlist(lv.names))
     lv.names.efa <- unique(unlist(lv.names.efa))
     ov.names.x <- unique(unlist(ov.names.x))
+    ov.ind.c <- unique(unlist(ov.ind.c))
 
 
     # residual ov variances (including exo/ind, to be overriden)
@@ -219,6 +224,10 @@ lav_start <- function(start.method = "default",
           start[ov.var.idx] <-
             (1.0 - 0.50) * diag(lavsamplestats@cov[[g]])[sample.var.idx]
         }
+      }
+      # composite indicators: fill in total variances
+      if (composites) {
+        start[ov.var.idx] <- diag(lavsamplestats@cov[[g]])[sample.var.idx]
       }
     }
 
@@ -412,6 +421,31 @@ lav_start <- function(start.method = "default",
         lavpartable$lhs != lavpartable$rhs)
       lhs.idx <- match(lavpartable$lhs[cov.idx], ov.names)
       rhs.idx <- match(lavpartable$rhs[cov.idx], ov.names)
+      if (!is.null(lavsamplestats@missing.h1[[g]])) {
+        start[cov.idx] <- lavsamplestats@missing.h1[[g]]$sigma[
+          cbind(lhs.idx, rhs.idx)
+        ]
+      } else {
+        start[cov.idx] <- lavsamplestats@cov[[g]][
+          cbind(lhs.idx, rhs.idx)
+        ]
+      }
+    }
+
+    # composites
+    if (composites) {
+      # weights
+      cidx <- which(lavpartable$group == group.values[g] &
+        lavpartable$op == "<~")
+      start[cidx] <- 1
+
+      # fill in 'covariances' from lavsamplestats
+      cov.idx <- which(lavpartable$group == group.values[g] &
+        lavpartable$op == "~~" &
+        lavpartable$rhs %in% ov.ind.c &
+        lavpartable$lhs != lavpartable$rhs)
+      lhs.idx <- match(lavpartable$lhs[cov.idx], ov.ind.c)
+      rhs.idx <- match(lavpartable$rhs[cov.idx], ov.ind.c)
       if (!is.null(lavsamplestats@missing.h1[[g]])) {
         start[cov.idx] <- lavsamplestats@missing.h1[[g]]$sigma[
           cbind(lhs.idx, rhs.idx)

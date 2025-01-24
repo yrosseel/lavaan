@@ -522,7 +522,7 @@ lav_mvreg_information_expected <- function(Y = NULL, # not used
   } else {
     I22 <- 0.5 * lav_matrix_duplication_pre_post(res.cov.inv %x% res.cov.inv)
   }
-  
+
   lav_matrix_bdiag(I11, I22)
 }
 
@@ -614,7 +614,7 @@ lav_mvreg_information_observed_samplestats <-
     } else {
       H22 <- (1 / 2) * lav_matrix_duplication_pre_post(res.cov.inv %x% AAA)
     }
-    
+
     out <- rbind(
       cbind(H11, H12),
       cbind(H21, H22)

@@ -88,6 +88,7 @@ lav_lavaan_step04_partable <- function(slotParTable = NULL, # nolint
         fixed.x = lavoptions$fixed.x,
         std.lv = lavoptions$std.lv,
         correlation = lavoptions$correlation,
+        composites = lavoptions$composites,
         effect.coding = lavoptions$effect.coding,
         ceq.simple = lavoptions$ceq.simple,
         parameterization = lavoptions$parameterization,

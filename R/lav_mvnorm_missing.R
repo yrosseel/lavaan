@@ -1136,7 +1136,7 @@ lav_mvnorm_missing_information_expected <- function(Y = NULL,
     } else {
       S2.inv <- 0.5 * lav_matrix_duplication_pre_post(S.inv %x% S.inv)
     }
-    
+
     if (!is.null(wt)) {
       FREQ <- sum(wt[Mp$case.idx[[p]]])
     } else {
@@ -1371,8 +1371,8 @@ lav_mvnorm_missing_information_both <- function(Y = NULL,
         S2.inv <- lavaanC::m_kronecker_dup_pre_post(S.inv, multiplicator = 0.5)
       } else {
         S2.inv <- 0.5 * lav_matrix_duplication_pre_post(S.inv %x% S.inv)
-      } 
-      
+      }
+
       I11 <- I11 + FREQ * S.inv
       I22 <- I22 + FREQ * S2.inv
     } else {
@@ -1395,7 +1395,7 @@ lav_mvnorm_missing_information_both <- function(Y = NULL,
       } else {
         i22 <- (1 / 2) * lav_matrix_duplication_pre_post(S.inv %x% tmp22)
       }
-      
+
       I11 <- I11 + pat.freq * i11
       I21 <- I21 + pat.freq * i21
       I22 <- I22 + pat.freq * i22

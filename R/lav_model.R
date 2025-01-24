@@ -6,6 +6,7 @@
 # - YR 02 Dec 2014: allow for bare-minimum parameter tables
 # - YR 25 Jan 2017: collect options in lavoptions
 # - YR 12 Mar 2021: add lavpta as argument; create model attributes (ma)
+# - YR 21 Jan 2025: add composites
 
 # construct MATRIX lavoptions$representation of the model
 lav_model <- function(lavpartable = NULL,                          # nolint
@@ -24,6 +25,11 @@ lav_model <- function(lavpartable = NULL,                          # nolint
   if (is.null(correlation)) {
     correlation <- FALSE
   }
+  composites.option <- lavoptions$composites
+  if (is.null(composites.option)) {
+    composites.option <- TRUE
+  }
+  composites <- any(lavpartable$op == "<~") && composites.option
   categorical <- any(lavpartable$op == "|")
   if (categorical) {
     meanstructure <- TRUE
@@ -78,7 +84,8 @@ lav_model <- function(lavpartable = NULL,                          # nolint
 
   # select model matrices
   if (lavoptions$representation == "LISREL") {
-    tmp.rep <- lav_lisrel(lavpartable, target = NULL, extra = TRUE)
+    tmp.rep <- lav_lisrel(lavpartable, target = NULL, extra = TRUE,
+                          allow.composites = composites)
   } else if (lavoptions$representation == "RAM") {
     tmp.rep <- lav_ram(lavpartable, target = NULL, extra = TRUE)
   } else {
@@ -433,6 +440,7 @@ lav_model <- function(lavpartable = NULL,                          # nolint
     modprop = modprop,
     meanstructure = meanstructure,
     correlation = correlation,
+    composites = composites,
     categorical = categorical,
     multilevel = multilevel,
     link = lavoptions$link,

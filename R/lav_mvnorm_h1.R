@@ -263,7 +263,7 @@ lav_mvnorm_h1_information_expected <- function(
   I11 <- sample.cov.inv
   if(correlation) {
     if (lav_use_lavaanC()) {
-      I22 <- lavaanC::m_kronecker_dup_cor_pre_post(sample.cov.inv, 
+      I22 <- lavaanC::m_kronecker_dup_cor_pre_post(sample.cov.inv,
                                                    multiplicator = 0.5)
     } else {
       I22 <- 0.5 * lav_matrix_duplication_cor_pre_post(sample.cov.inv %x%
@@ -344,13 +344,13 @@ lav_mvnorm_h1_information_observed_samplestats <- function(
   }
 
   if (lav_use_lavaanC()) {
-    I22 <- lavaanC::m_kronecker_dup_pre_post(sample.cov.inv, 
+    I22 <- lavaanC::m_kronecker_dup_pre_post(sample.cov.inv,
                                              multiplicator = 0.5)
   } else {
     I22 <- 0.5 * lav_matrix_duplication_pre_post(sample.cov.inv %x%
     sample.cov.inv)
   }
-  
+
   # fixed.x?
   if (length(x.idx) > 0L) {
     pstar.x <- lav_matrix_vech_which_idx(
@@ -486,7 +486,7 @@ lav_mvnorm_h1_inverted_information_observed <- function(
   } else {
     I11 <- sample.cov
     if (lav_use_lavaanC()) {
-      I22 <- lavaanC::m_kronecker_dup_ginv_pre_post(sample.cov, 
+      I22 <- lavaanC::m_kronecker_dup_ginv_pre_post(sample.cov,
                                                     multiplicator = 2.0)
     } else {
       I22 <- 2 * lav_matrix_duplication_ginv_pre_post(sample.cov %x% sample.cov)
