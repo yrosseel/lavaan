@@ -42,10 +42,12 @@ lav_partable_flat <- function(FLAT = NULL, # nolint
     lv.names.f <- character(0L)
     lv.names.c <- lav_partable_vnames(FLAT, type = "lv.composite")
     ov.ind.c <- lav_partable_vnames(FLAT, type = "ov.cind")
+    lv.names.noc <- lv.names[!lv.names %in% lv.names.c]
   } else {
     lv.names.c <- character(0L)
     ov.ind.c <- character(0L)
     lv.names.f <- lav_partable_vnames(FLAT, type = "lv.formative")
+    lv.names.noc <- lv.names
   }
 
   # formative latent variables
@@ -220,8 +222,8 @@ lav_partable_flat <- function(FLAT = NULL, # nolint
   # auto-remove ordinal variables
   # idx <- match(ov.names.ord, ov.var)
   # if(length(idx)) ov.var <- ov.var[-idx]
-  lhs <- c(lhs, ov.var, lv.names)
-  rhs <- c(rhs, ov.var, lv.names)
+  lhs <- c(lhs, ov.var, lv.names.noc)
+  rhs <- c(rhs, ov.var, lv.names.noc)
   # }
 
   # b) `independent` latent variable COVARIANCES (lv.names.x)

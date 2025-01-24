@@ -11,7 +11,9 @@ lav_partable_check <- function(partable, categorical = FALSE) {
   # get observed/latent variables
   ov.names <- vnames(partable, "ov.nox") # no need to specify exo??
   lv.names <- vnames(partable, "lv")
-  all.names <- c(ov.names, lv.names)
+  lv.names.c <- vnames(partable, "lv.composite")
+  lv.names.noc <- lv.names[!lv.names %in% lv.names.c]
+  all.names <- c(ov.names, lv.names.noc)
   ov.names.ord <- vnames(partable, "ov.ord")
 
   nlevels <- lav_partable_nlevels(partable)
@@ -25,7 +27,7 @@ lav_partable_check <- function(partable, categorical = FALSE) {
   # we should have a (residual) variance for *each* ov/lv
   # note: if lavaanify() has been used, this is always TRUE
   var.idx <- which(partable$op == "~~" &
-    partable$lhs == partable$rhs)
+    partable$lhs == partable$rhs & !partable$lhs %in% lv.names.c)
   missing.idx <- which(is.na(match(all.names, partable$lhs[var.idx])))
   if (length(missing.idx) > 0L) {
     check <- FALSE

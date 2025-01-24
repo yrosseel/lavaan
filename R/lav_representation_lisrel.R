@@ -1714,6 +1714,117 @@ MLISTX2MLIST <- function(MLISTX = NULL,
   MLIST
 }
 
+# set (total/residual) variances of composites
+setVarianceComposites.LISREL <- function(MLIST = NULL,
+                                         tol = .Machine$double.eps,
+                                         debug = FALSE) {
+  LAMBDA <- MLIST$lambda
+  BETA   <- MLIST$beta
+  PSI    <- MLIST$psi
+  WMAT   <- MLIST$wmat
+  THETA  <- MLIST$theta
+
+  # housekeeping
+  ovc.idx <- which(apply(LAMBDA, 1L,
+                         function(x) sum(x == 0) == ncol(LAMBDA)))
+  lvc.idx <- which(apply(LAMBDA, 2L,
+                         function(x) sum(x == 0) == nrow(LAMBDA)))
+  lvc.flag <- logical(nrow(BETA))
+  lvc.flag[lvc.idx] <- TRUE
+  Tmat <- diag(nrow(LAMBDA))
+  Tmat[ovc.idx, ovc.idx] <- MLIST$theta[ovc.idx, ovc.idx]
+
+  # total variances composites
+  target.psi <- diag(t(WMAT) %*% Tmat %*% WMAT)[lvc.idx]
+
+  # initial values (including exogenous variances)
+  diag(PSI)[lvc.idx] <- target.psi
+
+  # no regressions
+  if (is.null(BETA)) {
+    # store PSI
+    MLIST$psi <- PSI
+
+    return(MLIST)
+  }
+
+  # set (residual) variances in psi
+  abs.beta <- abs(MLIST$beta)
+  x.idx <- which(apply(abs.beta, 1L, sum) == 0 & lvc.flag)
+  y.idx <- which(apply(abs.beta, 1L, sum) != 0 & lvc.flag)
+
+  nr <- nrow(BETA)
+  IB <- -BETA
+  IB[lav_matrix_diag_idx(nr)] <- 1
+  IB.inv <- solve(IB)
+
+
+  # check if IB is acyclic
+  if (det(IB) != 1) {
+    # damn, we have an cyclic model; use nlminb()
+    PSI <- lav_utils_find_residuals(IB.inv = IB.inv, PSI = PSI,
+                                    target.psi = target.psi, y.idx = y.idx)
+  } else {
+    # for an acyclic model, we should be able to find the
+    # residual analytically; simply by computing the model-based
+    # total variances of the RHS of each regression, and set the
+    # residual of the y variable so that it is exactly equal to unity
+    # (yes, this will result in negative resdidual variances if needed)
+
+    # ideally, we first sort the variables 'in topological order'; then
+    # we need only one run; but here we are somewhat lazy, and we
+    # use a few runs, each time setting more variables right
+
+    # get ancestors list for each node/variable
+    ancestors <- lav_utils_get_ancestors(BETA)
+
+    # for each y variable, compute IB.inv %*% psi %*% t(IB.inv), without y
+    ny <- length(y.idx)
+    max_rep <- ny * 4
+    for(rep in seq_len(max_rep)) {
+      if (debug) {
+        cat("rep = ", rep, "\n")
+      }
+      # check current diagonal
+      current.diag <- diag(IB.inv %*% PSI %*% t(IB.inv))
+      if (debug) {
+        cat("target.psi   = ", target.psi[y.idx], "\n")
+        cat("current.diag = ", current.diag[y.idx], "\n")
+      }
+      if (all(abs(current.diag[y.idx] - target.psi[y.idx]) < tol)) {
+        # we are done, bail out
+        break
+      }
+      for (i in seq_len(ny)) {
+        this.y.idx <- y.idx[i]
+        this.x.idx <- ancestors[[this.y.idx]]
+        IB.inv.y <- IB.inv[this.y.idx, this.x.idx, drop = FALSE]
+        PSI.x <- PSI[this.x.idx, this.x.idx, drop = FALSE]
+        var.y <- drop(IB.inv.y %*% PSI.x %*% t(IB.inv.y))
+        PSI[this.y.idx, this.y.idx] <- target.psi[this.y.idx] - var.y
+      }
+    }
+
+    # final check?
+    current.diag <- diag(IB.inv %*% PSI %*% t(IB.inv))
+    if (debug) {
+      cat("final current.diag = ", current.diag[y.idx], "\n")
+    }
+    # don't be too strict here
+    if (any(abs(current.diag[y.idx] - target.psi[y.idx]) > sqrt(tol))) {
+      # as a last resort, use optimization
+      PSI <- lav_utils_find_residuals(IB.inv = IB.inv, PSI = PSI,
+                                      target.psi = target.psi, y.idx = y.idx)
+    }
+
+  } # acyclic
+
+  # store PSI
+  MLIST$psi <- PSI
+
+  MLIST
+}
+
 # if DELTA parameterization, compute residual elements (in theta, or psi)
 # - typically for (endogenous) observed *categorical* variables only
 # - but could also be all (endogenous) observed variables, if correlation = TRUE

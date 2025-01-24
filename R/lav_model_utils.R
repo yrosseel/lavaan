@@ -125,6 +125,21 @@ lav_model_set_parameters <- function(lavmodel = NULL, x = NULL) {
     }
   }
 
+  if (lavmodel@composites) {
+    nmat <- lavmodel@nmat
+    if (lavmodel@representation == "LISREL") {
+      for (g in 1:lavmodel@nblocks) {
+        # which mm belong to group g?
+        mm.in.group <- 1:nmat[g] + cumsum(c(0L, nmat))[g]
+
+        tmp[mm.in.group] <-
+          setVarianceComposites.LISREL(MLIST = tmp[mm.in.group])
+      }
+    } else {
+      cat("FIXME: deal with Composites if representation = RAM")
+    }
+  }
+
   lavmodel@GLIST <- tmp
 
   lavmodel
@@ -217,6 +232,21 @@ lav_model_x2GLIST <- function(lavmodel = NULL, x = NULL,
       } # blocks
     } else {
       cat("FIXME: deal with theta elements in the categorical case (RAM)")
+    }
+  }
+
+  if (lavmodel@composites) {
+    nmat <- lavmodel@nmat
+    if (lavmodel@representation == "LISREL") {
+      for (g in 1:lavmodel@nblocks) {
+        # which mm belong to group g?
+        mm.in.group <- 1:nmat[g] + cumsum(c(0L, nmat))[g]
+
+        GLIST[mm.in.group] <-
+          setVarianceComposites.LISREL(MLIST = GLIST[mm.in.group])
+      }
+    } else {
+      cat("FIXME: deal with Composites when representation = RAM")
     }
   }
 
