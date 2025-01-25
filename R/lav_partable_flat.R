@@ -38,7 +38,7 @@ lav_partable_flat <- function(FLAT = NULL, # nolint
   lv.names <- lav_partable_vnames(FLAT, type = "lv") # latent variables
   # lv.names.r   <- lav_partable_vnames(FLAT, type="lv.regular")
   # regular latent variables
-  if (composites ) {
+  if (composites) {
     lv.names.f <- character(0L)
     lv.names.c <- lav_partable_vnames(FLAT, type = "lv.composite")
     ov.ind.c <- lav_partable_vnames(FLAT, type = "ov.cind")
@@ -222,8 +222,8 @@ lav_partable_flat <- function(FLAT = NULL, # nolint
   # auto-remove ordinal variables
   # idx <- match(ov.names.ord, ov.var)
   # if(length(idx)) ov.var <- ov.var[-idx]
-  lhs <- c(lhs, ov.var, lv.names.noc)
-  rhs <- c(rhs, ov.var, lv.names.noc)
+  lhs <- c(lhs, ov.var, lv.names)
+  rhs <- c(rhs, ov.var, lv.names)
   # }
 
   # b) `independent` latent variable COVARIANCES (lv.names.x)
@@ -479,6 +479,15 @@ lav_partable_flat <- function(FLAT = NULL, # nolint
     ustart[var.idx] <- as.numeric(NA)
     free[var.idx] <- 0L
   }
+
+  # 0d. variances for composites: ALWAYS fixed (should be set later
+  #     by setVarianceComposites.LISREL
+  if (length(lv.names.c) > 0) {
+    var.idx <- which(op == "~~" & lhs %in% lv.names.c & lhs == rhs)
+    ustart[var.idx] <- as.numeric(NA)
+    free[var.idx] <- 0L
+  }
+
 
   # 1. fix metric of regular latent variables
   if (std.lv) {

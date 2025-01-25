@@ -107,6 +107,7 @@ lav_partable_ndat <- function(partable) {
   fixed.x <- any(partable$exo > 0L & partable$free == 0L)
   conditional.x <- any(partable$exo > 0L & partable$op == "~")
   categorical <- any(partable$op == "|")
+  composites <- any(partable$op == "<~")
   correlation <- any(partable$op == "~*~")
   if (categorical) {
     meanstructure <- TRUE
@@ -174,6 +175,16 @@ lav_partable_ndat <- function(partable) {
         }
       }
       ndat[b] <- ndat[b] - pstar.x
+    }
+
+    # composites?
+    if (composites) {
+      ov.cind <- lav_partable_vnames(partable, "ov.cind", block = b)
+      covar.idx <- which(partable$op == "~~" &
+                         partable$lhs %in% ov.cind &
+                         partable$rhs %in% ov.cind &
+                         partable$free == 0L)
+      ndat[b] <- ndat[b] - length(covar.idx)
     }
 
     # correction for ordinal data?

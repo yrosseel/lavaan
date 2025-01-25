@@ -68,6 +68,7 @@ lav_start <- function(start.method = "default",
       start <- numeric(length(lavpartable$ustart))
       # if(categorical || correlation) {
       start[which(lavpartable$op == "=~")] <- 0.7
+      start[which(lavpartable$op == "<~")] <- 1
       # } else {
       #    start[ which(lavpartable$op == "=~") ] <- 1.0
       # }
@@ -182,6 +183,7 @@ lav_start <- function(start.method = "default",
     lv.names.efa <- vnames(lavpartable, "lv.efa", group = group.values[g])
     ov.names.x <- vnames(lavpartable, "ov.x", group = group.values[g])
     ov.ind.c <- vnames(lavpartable, "ov.cind", group = group.values[g])
+    lv.names.c <- vnames(lavpartable, "lv.composite", group = group.values[g])
 
     # just for the nlevels >1 case
     ov.names <- unique(unlist(ov.names))
@@ -190,7 +192,8 @@ lav_start <- function(start.method = "default",
     lv.names.efa <- unique(unlist(lv.names.efa))
     ov.names.x <- unique(unlist(ov.names.x))
     ov.ind.c <- unique(unlist(ov.ind.c))
-
+    lv.names.c <- unique(unlist(lv.names.c))
+    lv.names.noc <- lv.names[!lv.names %in% lv.names.c]
 
     # residual ov variances (including exo/ind, to be overriden)
     ov.var.idx <- which(lavpartable$group == group.values[g] &
@@ -235,7 +238,7 @@ lav_start <- function(start.method = "default",
     if (start.initial %in% c("lavaan", "mplus") &&
       model.type %in% c("sem", "cfa")) {
       # fabin3 estimator (2sls) of Hagglund (1982) per factor
-      for (f in lv.names) {
+      for (f in lv.names.noc) {
         # not for efa factors
         if (f %in% lv.names.efa) {
           next
