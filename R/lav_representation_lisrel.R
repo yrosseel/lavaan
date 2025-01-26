@@ -1724,21 +1724,34 @@ setVarianceComposites.LISREL <- function(MLIST = NULL,
   WMAT   <- MLIST$wmat
   THETA  <- MLIST$theta
 
+  # std.lv or not?
+  marker.idx <- lav_utils_get_marker(MLIST$wmat)
+  std.lv <- FALSE
+  if (all(is.na(marker.idx))) {
+    std.lv <- TRUE
+  }
+
   # housekeeping
   ovc.idx <- which(apply(LAMBDA, 1L,
                          function(x) sum(x == 0) == ncol(LAMBDA)))
   lvc.idx <- which(apply(LAMBDA, 2L,
                          function(x) sum(x == 0) == nrow(LAMBDA)))
-  lvc.flag <- logical(nrow(BETA))
+  lvc.flag <- logical(nrow(PSI))
   lvc.flag[lvc.idx] <- TRUE
   Tmat <- diag(nrow(LAMBDA))
   Tmat[ovc.idx, ovc.idx] <- MLIST$theta[ovc.idx, ovc.idx]
 
-  # total variances composites
-  target.psi <- diag(t(WMAT) %*% Tmat %*% WMAT)[lvc.idx]
+  if (std.lv) {
+    target.psi <- rep(1, ncol(WMAT))
+  } else {
+    # total variances composites
+    target.psi <- diag(t(WMAT) %*% Tmat %*% WMAT)
+  }
+  # fill in PSI element for non-composites
+  target.psi[!lvc.flag] <- diag(PSI)[!lvc.flag]
 
   # initial values (including exogenous variances)
-  diag(PSI)[lvc.idx] <- target.psi
+  diag(PSI) <- target.psi
 
   # no regressions
   if (is.null(BETA)) {

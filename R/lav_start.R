@@ -437,10 +437,26 @@ lav_start <- function(start.method = "default",
 
     # composites
     if (composites) {
+      std.lv <- FALSE
+      var.f.idx <- which(lavpartable$lhs %in% lv.names.c &
+        lavpartable$op == "~~" &
+        lavpartable$group == group.values[g] &
+        lavpartable$rhs %in% lv.names.c)
+      if (length(var.f.idx) > 0L &&
+        all(lavpartable$free[var.f.idx] == 0) &&
+        !all(is.na(lavpartable$ustart[var.f.idx])) &&
+        all(lavpartable$ustart[var.f.idx] == 1)) {
+        std.lv <- TRUE
+      }
+
       # weights
       cidx <- which(lavpartable$group == group.values[g] &
         lavpartable$op == "<~")
-      start[cidx] <- 1
+      if (std.lv) {
+        start[cidx] <- 0.10
+      } else {
+        start[cidx] <- 1
+      }
 
       # fill in 'covariances' from lavsamplestats
       cov.idx <- which(lavpartable$group == group.values[g] &
