@@ -463,8 +463,8 @@ lav_start <- function(start.method = "default",
         lavpartable$op == "~~" &
         lavpartable$rhs %in% ov.ind.c &
         lavpartable$lhs != lavpartable$rhs)
-      lhs.idx <- match(lavpartable$lhs[cov.idx], ov.ind.c)
-      rhs.idx <- match(lavpartable$rhs[cov.idx], ov.ind.c)
+      lhs.idx <- match(lavpartable$lhs[cov.idx], ov.names)
+      rhs.idx <- match(lavpartable$rhs[cov.idx], ov.names)
       if (!is.null(lavsamplestats@missing.h1[[g]])) {
         start[cov.idx] <- lavsamplestats@missing.h1[[g]]$sigma[
           cbind(lhs.idx, rhs.idx)
@@ -984,14 +984,19 @@ lav_start <- function(start.method = "default",
 # StartingValues <- lav_start
 
 # sanity check: (user-specified) variances smaller than covariances
+# but not for composites, as we have not 'set' their variances yet
 lav_start_check_cov <- function(lavpartable = NULL, start = lavpartable$start) {
   nblocks <- lav_partable_nblocks(lavpartable)
   block.values <- lav_partable_block_values(lavpartable)
 
   for (g in 1:nblocks) {
+
+    lv.names.c <- lav_partable_vnames(lavpartable, "lv.composite", block = g)
+
     # collect all non-zero covariances
     cov.idx <- which(lavpartable$op == "~~" &
       lavpartable$block == block.values[g] &
+      !lavpartable$lhs %in% lv.names.c &
       lavpartable$lhs != lavpartable$rhs &
       !lavpartable$exo &
       start != 0)

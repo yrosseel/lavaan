@@ -1105,10 +1105,19 @@ computeVYx.LISREL <- computeSigmaHat.LISREL <- function(MLIST = NULL,
                            function(x) sum(x == 0) == ncol(LAMBDA)))
     clv.idx <- which(apply(LAMBDA, 2L,
                            function(x) sum(x == 0) == nrow(LAMBDA)))
+    # regular latent variables
+    rlv.idx <- seq_len(ncol(LAMBDA))[-clv.idx]
+
+    # combine LAMBDA and WMAT
+    LW <- LAMBDA + WMAT
+
     Tmat <- diag(nrow(LAMBDA))
     Tmat[cov.idx, cov.idx] <- THETA[cov.idx, cov.idx]
+    wtw <- t(LW[,clv.idx, drop = FALSE]) %*% Tmat %*% LW[,clv.idx, drop = FALSE]
+    wtw.inv <- solve(wtw)
+    WTW.inv <- diag(ncol(LAMBDA))
+    WTW.inv[clv.idx, clv.idx] <- wtw.inv
 
-    LambdaWmat <- LAMBDA + WMAT
     if (is.null(BETA)) {
       IB.inv <- diag(nrow(PSI))
     } else {
@@ -1117,7 +1126,7 @@ computeVYx.LISREL <- computeSigmaHat.LISREL <- function(MLIST = NULL,
     VETA <- IB.inv %*% PSI %*% t(IB.inv)
     C0 <- VETA; diag(C0)[clv.idx] <- 0
 
-    VYx <- Tmat %*% LambdaWmat %*% C0 %*% t(LambdaWmat) %*% Tmat + THETA
+    VYx <- Tmat %*% LW %*% WTW.inv %*% C0 %*% t(WTW.inv) %*% t(LW) %*% Tmat + THETA
   }
 
   # if delta, scale
