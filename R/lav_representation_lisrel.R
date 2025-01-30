@@ -2409,7 +2409,7 @@ derivative.sigma.LISREL <- function(m = "lambda",
   # if(m == "lambda" || m == "beta")
   #    IK <- diag(nvar*nvar) + lav_matrix_commutation(nvar, nvar)
   if (m == "lambda" || m == "beta") {
-    L1 <- LAMBDA %*% IB.inv %*% PSI %*% t(IB.inv)
+    L1 <- LAMBDA %*% IB.inv %*% PSI %*% t(IB.inv) # parentheses for performance
   }
   if (m == "beta" || m == "psi") {
     LAMBDA..IB.inv <- LAMBDA %*% IB.inv
@@ -2418,8 +2418,13 @@ derivative.sigma.LISREL <- function(m = "lambda",
   # here we go:
   if (m == "lambda") {
     KOL.idx <- matrix(1:(nvar * nfac), nvar, nfac, byrow = TRUE)[idx]
-    DX <- (L1 %x% diag(nvar))[, idx, drop = FALSE] +
-      (diag(nvar) %x% L1)[, KOL.idx, drop = FALSE]
+    if (lav_use_lavaanC()) {
+      DX <- lavaanC::m_kronecker_diagright_cols(L1, nvar, idx) +
+        lavaanC::m_kronecker_diagleft_cols(L1, nvar, KOL.idx)
+    } else {
+      DX <- (L1 %x% diag(nvar))[, idx, drop = FALSE] +
+        (diag(nvar) %x% L1)[, KOL.idx, drop = FALSE]
+    } 
   } else if (m == "beta") {
     if (composites) {
       DX <- lav_func_jacobian_complex(func = compute.sigma,
@@ -2428,8 +2433,13 @@ derivative.sigma.LISREL <- function(m = "lambda",
       DX <- DX[, idx, drop = FALSE]
     } else {
       KOL.idx <- matrix(1:(nfac * nfac), nfac, nfac, byrow = TRUE)[idx]
-      DX <- (L1 %x% LAMBDA..IB.inv)[, idx, drop = FALSE] +
-        (LAMBDA..IB.inv %x% L1)[, KOL.idx, drop = FALSE]
+      if (lav_use_lavaanC()) {
+        DX <- lavaanC::m_kronecker_cols(L1, LAMBDA..IB.inv, idx) +
+          lavaanC::m_kronecker_cols(LAMBDA..IB.inv, L1, KOL.idx) 
+      } else  {
+        DX <- (L1 %x% LAMBDA..IB.inv)[, idx, drop = FALSE] +
+          (LAMBDA..IB.inv %x% L1)[, KOL.idx, drop = FALSE]
+      }
       # this is not really needed (because we select idx=m.el.idx)
       # but just in case we need all elements of beta...
       DX[, which(idx %in% lav_matrix_diag_idx(nfac))] <- 0.0

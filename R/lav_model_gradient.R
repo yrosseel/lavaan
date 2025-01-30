@@ -254,10 +254,13 @@ lav_model_gradient <- function(lavmodel = NULL,
         # full weight matrix
         if (estimator == "GLS" || estimator == "WLS") {
           WLS.V <- lavsamplestats@WLS.V[[g]]
-          group.dx <- -1 * crossprod(
-            Delta[[g]],
-            crossprod(WLS.V, diff)
-          )
+          if (lav_use_lavaanC()) {
+            group.dx <- lavaanC::m_crossprod(Delta[[g]],
+              lavaanC::m_crossprod(WLS.V, -1 * diff, "L"))
+          } else {
+            group.dx <- -1 * crossprod(Delta[[g]],
+                              crossprod(WLS.V, diff))
+          }
         } else if (estimator == "DLS") {
           if (estimator.args$dls.GammaNT == "sample") {
             WLS.V <- lavsamplestats@WLS.V[[g]] # for now
