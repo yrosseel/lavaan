@@ -34,6 +34,14 @@ if (!exists("lavaan_cache_env")) lavaan_cache_env <- new.env(parent = emptyenv()
 # lavaan:::print_trace("PolDem_trace.txt")
 #
 
+ldw_matrix_info <- function(matrixje) {
+  ll <- length(matrixje)
+  nul <- sum(matrixje == 0)
+  som <- sum(matrixje)
+  paste(paste(dim(matrixje), collapse = " x "), ", splvl:", 100 * nul / ll,
+        ", som:", som)
+}
+
 ldw_trace <- function(content = "") {
   ignore.in.stack <- c(
     "eval", "try", "tryCatch", "tryCatchList", "tryCatchOne", "doTryCatch",
