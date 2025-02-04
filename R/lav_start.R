@@ -302,6 +302,12 @@ lav_start <- function(start.method = "default",
               tmp <- rep(1.0, length(tmp))
             }
           }
+
+          # check for negative marker
+          if (!std.lv && lavpartable$ustart[lambda.idx[1]] < 0) {
+            tmp <- -1 * tmp
+          }
+
           start[lambda.idx] <- tmp
 
           # factor variance
