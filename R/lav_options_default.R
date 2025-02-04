@@ -330,7 +330,7 @@ lav_options_default <- function() {
   elm("bounds", "none", chr = c(
     "none", "default", "standard", "user", "wide", "wide.zerovar", "pos.var",
     "pos.ov.var", "pos.lv.var"))      # new in 0.6-6
-  elm("rstarts", 0L, nm = "[0, 1000]", num2int = TRUE) # new in 0.6-18
+  elm("rstarts", 0L, nm = "[0, 10000]", num2int = TRUE) # new in 0.6-18
 
   # inference
   elm("se", "default", chr = c(

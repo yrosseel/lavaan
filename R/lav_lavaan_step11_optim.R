@@ -228,15 +228,17 @@ lav_lavaan_step11_estoptim <- function(lavdata = NULL, # nolint
         }
 
         # pick best solution (if any)
-        x.noerror <- x.rstarts[!sapply(
-          x.rstarts,
-          inherits, "try-error"
-        )]
         x.converged <- vector("list", length = 0L)
         fx.rstarts <- numeric(0L)
-        if (length(x.noerror) > 0L) {
-          x.converged <-
-            x.noerror[sapply(x.rstarts, "attr", "converged")]
+        ok.flag <- sapply(x.rstarts, function(x) {
+            if (inherits(x, "try-error")) {
+              return(FALSE)
+            } else {
+              return(attr(x, "converged"))
+            }
+          })
+        if (sum(ok.flag) > 0L) {
+          x.converged <- x.rstarts[ok.flag]
         }
         if (length(x.converged) > 0L) {
           fx.rstarts <- sapply(x.converged, "attr", "fx")

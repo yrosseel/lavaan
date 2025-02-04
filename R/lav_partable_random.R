@@ -10,33 +10,33 @@ lav_partable_random <- function(lavpartable = NULL,
                                 # needed if we still need to compute bounds:
                                 lavh1 = NULL, lavdata = NULL,
                                 lavsamplestats = NULL, lavoptions = NULL) {
-  # check if we have bounds; if not, add them
+
   lavpta <- lav_partable_attributes(lavpartable)
-  if (is.null(lavpartable$lower) ||
-    is.null(lavpartable$upper)) {
-    lavoptions2 <- lavoptions
-    lavoptions2$bounds <- "standard"
-    lavoptions2$optim.bounds <-
-      list(
-        lower = c(
-          "ov.var", "lv.var", "loadings",
-          "covariances"
-        ),
-        upper = c(
-          "ov.var", "lv.var", "loadings",
-          "covariances"
-        ),
-        lower.factor = c(1.0, 1.0, 1.0, 0.999),
-        upper.factor = c(1.0, 1.0, 1.0, 0.999),
-        min.reliability.marker = 0.1,
-        min.var.lv.endo = 0.005
-      )
-    lavpartable <- lav_partable_add_bounds(
-      partable = lavpartable,
-      lavh1 = lavh1, lavdata = lavdata,
-      lavsamplestats = lavsamplestats, lavoptions = lavoptions2
+
+  # ALWAYS (recompute) bounds, as user may have provide other
+  # bounds (eg "pos.var") (0.6-20)
+  lavoptions2 <- lavoptions
+  lavoptions2$bounds <- "standard"
+  lavoptions2$optim.bounds <-
+    list(
+      lower = c(
+        "ov.var", "lv.var", "loadings",
+        "covariances"
+      ),
+      upper = c(
+        "ov.var", "lv.var", "loadings",
+        "covariances"
+      ),
+      lower.factor = c(1.0, 1.0, 1.0, 0.999),
+      upper.factor = c(1.0, 1.0, 1.0, 0.999),
+      min.reliability.marker = 0.1,
+      min.var.lv.endo = 0.005
     )
-  }
+  lavpartable <- lav_partable_add_bounds(
+    partable = lavpartable,
+    lavh1 = lavh1, lavdata = lavdata,
+    lavsamplestats = lavsamplestats, lavoptions = lavoptions2
+  )
 
   # replace -Inf/Inf by -1/1 * .Machine$double.eps (for runif)
   inf.idx <- which(lavpartable$lower < -1e+16)
