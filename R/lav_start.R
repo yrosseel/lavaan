@@ -304,7 +304,8 @@ lav_start <- function(start.method = "default",
           }
 
           # check for negative marker
-          if (!std.lv && lavpartable$ustart[lambda.idx[1]] < 0) {
+          if (!std.lv && !is.na(lavpartable$ustart[lambda.idx[1]]) &&
+              lavpartable$ustart[lambda.idx[1]] < 0) {
             tmp <- -1 * tmp
           }
 

@@ -36,6 +36,7 @@ lavaanNames <- lavNames # nolint
 #   or returns a list per block
 #   LDW 30/1/24: 'block' argument not explicitly tested !?
 #   LDW 29/2/24: ov.order = "data" via attribute "ovda"
+# - YR 11/02/25: add type = "lv.ho" for higher-order latent variables
 lav_partable_vnames <- function(partable, type = NULL, ..., # nolint
                                 force.warn = FALSE, ov.x.fatal = FALSE) {
   # This function derives the names of some types of variable (as specified
@@ -98,6 +99,7 @@ lav_partable_vnames <- function(partable, type = NULL, ..., # nolint
     "lv.efa", # latent variables involved in efa
     "lv.rv", # random slopes, random variables
     "lv.ind", # latent indicators (higher-order cfa)
+    "lv.ho",  # higher-order latent variables
     "lv.marker", # marker indicator per lv
 
     "eqs.y", # y's in regression
@@ -308,6 +310,19 @@ lav_partable_vnames <- function(partable, type = NULL, ..., # nolint
             partable$op == "=~" &
             partable$rhs %in% lv.names])
           return.value$lv.ind[[b]] <- out
+          next
+        }
+
+        # higher-order latent variables
+        if ("lv.ho" == type) {
+          out.ind <- unique(partable$rhs[block.ind &
+            partable$op == "=~" &
+            partable$rhs %in% lv.names])
+          out <- unique(partable$lhs[block.ind &
+            partable$op == "=~" &
+            partable$lhs %in% lv.names &
+            partable$rhs %in% out.ind])
+          return.value$lv.ho[[b]] <- out
           next
         }
 
@@ -832,6 +847,18 @@ lav_partable_vnames <- function(partable, type = NULL, ..., # nolint
             partable$op == "=~" &
             partable$rhs %in% lv.names])
           return.value$lv.ind[[b]] <- out
+        }
+
+        # higher-order latent variables
+        if (any("lv.ho" == type)) {
+          out.ind <- unique(partable$rhs[block.ind &
+            partable$op == "=~" &
+            partable$rhs %in% lv.names])
+          out <- unique(partable$lhs[block.ind &
+            partable$op == "=~" &
+            partable$lhs %in% lv.names &
+            partable$rhs %in% out.ind])
+          return.value$lv.ho[[b]] <- out
         }
 
         # eqs.y
