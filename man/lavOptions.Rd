@@ -461,8 +461,8 @@ Categorical estimation options:
     \item{\code{allow.empty.cell}:}{Logical. If \code{TRUE}, ignore
       situations where an ordinal variable has fewer categories than
       expected, or where a category is empty in a specific group. This
-    argument is currently only relevant to the blavaan package (which
-    uses lavaan to set up the model). The argument cannot currently be used to
+    argument is currently used by the blavaan package (which
+    uses lavaan to set up the model). The argument is not expected to
     salvage a lavaan model that results in errors.}
 }
 

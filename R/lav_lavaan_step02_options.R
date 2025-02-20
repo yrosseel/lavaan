@@ -214,7 +214,7 @@ lav_lavaan_step02_options <- function(slotOptions = NULL, # nolint
     # allow.empty.cell
     if (opt$allow.empty.cell && opt$do.fit && opt$estimator != "Bayes") {
       lav_msg_warn(
-        gettext("allow.empty.cell has no effect on estimation of this model"))
+        gettext("allow.empty.cell is not intended to salvage estimation of this model, see ?lavOptions"))
     }
     
     # fill in remaining "default" values
