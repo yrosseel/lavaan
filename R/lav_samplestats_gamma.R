@@ -323,7 +323,11 @@ lav_samplestats_Gamma_NT <- function(Y = NULL, # should include
   if (!conditional.x) {
     # unconditional - stochastic x
     if (!fixed.x) {
-      Gamma <- 2 * lav_matrix_duplication_ginv_pre_post(S %x% S)
+      if (lav_use_lavaanC()) {
+        Gamma <- lavaanC::m_kronecker_dup_ginv_pre_post(S, multiplicator = 2.0)
+      } else {
+        Gamma <- 2 * lav_matrix_duplication_ginv_pre_post(S %x% S)
+      }
       if (meanstructure) {
         Gamma <- lav_matrix_bdiag(S, Gamma)
       }
@@ -346,8 +350,13 @@ lav_samplestats_Gamma_NT <- function(Y = NULL, # should include
       # take difference
       R <- S - YbarX.aug
 
-      Gamma.S <- 2 * lav_matrix_duplication_ginv_pre_post(S %x% S)
-      Gamma.R <- 2 * lav_matrix_duplication_ginv_pre_post(R %x% R)
+      if (lav_use_lavaanC()) {
+        Gamma.S <- lavaanC::m_kronecker_dup_ginv_pre_post(S, multiplicator = 2.0)
+        Gamma.R <- lavaanC::m_kronecker_dup_ginv_pre_post(R, multiplicator = 2.0)
+      } else {
+        Gamma.S <- 2 * lav_matrix_duplication_ginv_pre_post(S %x% S)
+        Gamma.R <- 2 * lav_matrix_duplication_ginv_pre_post(R %x% R)
+      }
       Gamma <- Gamma.S - Gamma.R
 
       if (meanstructure) {
@@ -368,7 +377,11 @@ lav_samplestats_Gamma_NT <- function(Y = NULL, # should include
     B <- S[-x.idx, x.idx, drop = FALSE]
     C <- S[x.idx, x.idx, drop = FALSE]
     Cov.YbarX <- A - B %*% solve(C) %*% t(B)
-    Gamma <- 2 * lav_matrix_duplication_ginv_pre_post(Cov.YbarX %x% Cov.YbarX)
+    if (lav_use_lavaanC()) {
+      Gamma <- lavaanC::m_kronecker_dup_ginv_pre_post(Cov.YbarX, multiplicator = 2.0)
+    } else {
+      Gamma <- 2 * lav_matrix_duplication_ginv_pre_post(Cov.YbarX %x% Cov.YbarX)
+    }
 
     if (meanstructure || slopestructure) {
       MY <- M[-x.idx]
@@ -716,7 +729,12 @@ lav_samplestats_Gamma <- function(Y, # Y+X if cond!
   # unbiased?
   if (unbiased) {
     # normal-theory Gamma (cov only)
-    GammaNT.cov <- 2 * lav_matrix_duplication_ginv_pre_post(COV %x% COV)
+    if (lav_use_lavaanC()) {
+      GammaNT.cov <- lavaanC::m_kronecker_dup_ginv_pre_post(COV,
+                                                            multiplicator = 2.0)
+    } else {
+      GammaNT.cov <- 2 * lav_matrix_duplication_ginv_pre_post(COV %x% COV)
+    }
 
     if (meanstructure) {
       Gamma.cov <- Gamma[-(1:p), -(1:p), drop = FALSE]

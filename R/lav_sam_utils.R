@@ -11,6 +11,13 @@ lav_sam_mapping_matrix <- function(LAMBDA = NULL, THETA = NULL,
 
   method <- toupper(method)
 
+  # catch empty columns in LAMBDA (eg higher order!)
+  LAMBDA.orig <- LAMBDA
+  empty.idx <- which(apply(LAMBDA, 2L, function(x) all(x == 0)))
+  if (length(empty.idx) > 0L) {
+    LAMBDA <- LAMBDA.orig[, -empty.idx, drop = FALSE]
+  }
+
   # ULS
   # M == solve( t(LAMBDA) %*% LAMBDA ) %*% t(LAMBDA)
   #   == MASS:::ginv(LAMBDA)
@@ -119,6 +126,13 @@ lav_sam_mapping_matrix <- function(LAMBDA = NULL, THETA = NULL,
     }
   } # ML
 
+  # empty.idx?
+  if (length(empty.idx) > 0L) {
+    M.full <- M
+    M <- matrix(0, nrow = ncol(LAMBDA.orig), ncol = ncol(M.full))
+    M[-empty.idx, ] <- M.full
+  }
+
   M
 }
 
@@ -138,7 +152,16 @@ lav_sam_mapping_matrix_tmat <- function(LAMBDA = NULL,
                                         THETA = NULL,
                                         marker.idx = NULL,
                                         std.lv = NULL) {
+
   LAMBDA <- as.matrix.default(LAMBDA)
+
+  # catch empty columns in LAMBDA (eg higher order!)
+  LAMBDA.orig <- LAMBDA
+  empty.idx <- which(apply(LAMBDA, 2L, function(x) all(x == 0)))
+  if (length(empty.idx) > 0L) {
+    LAMBDA <- LAMBDA.orig[, -empty.idx, drop = FALSE]
+  }
+
   nvar <- nrow(LAMBDA)
   nfac <- ncol(LAMBDA)
 
@@ -177,6 +200,13 @@ lav_sam_mapping_matrix_tmat <- function(LAMBDA = NULL,
 
   if (std.lv) {
     M <- M * marker.inv
+  }
+
+  # empty.idx?
+  if (length(empty.idx) > 0L) {
+    M.full <- M
+    M <- matrix(0, nrow = ncol(LAMBDA.orig), ncol = ncol(M.full))
+    M[-empty.idx, ] <- M.full
   }
 
   M
@@ -245,21 +275,33 @@ lav_sam_tmat <- function(LAMBDA = NULL,
 lav_sam_veta <- function(M = NULL, S = NULL, THETA = NULL,
                          alpha.correction = 0L, lambda.correction = TRUE,
                          N = 20L, dummy.lv.idx = integer(0L), extra = FALSE) {
+
+  # catch empty rows in M (higher-order?)
+  M.orig <- M
+  empty.idx <- which(apply(M.orig, 1L, function(x) all(x == 0)))
+  if (length(empty.idx) > 0L) {
+    M <- M.orig[-empty.idx,, drop = FALSE]
+  }
+
   # MSM
   MSM <- M %*% S %*% t(M)
 
   # MTM
   MTM <- M %*% THETA %*% t(M)
 
+  # empty theta elements?
+  empty.theta.idx <- which(diag(MTM) == 0)
+
   # new in 0.6-16: make sure MTM is pd
   # (otherwise lav_matrix_symmetric_diff_smallest_root will fail)
-  if (length(dummy.lv.idx) > 0L) {
-    MTM.nodummy <- MTM[-dummy.lv.idx, -dummy.lv.idx, drop = FALSE]
-    MTM.nodummy <- zapsmall(lav_matrix_symmetric_force_pd(
-      MTM.nodummy,
+  theta.rm.idx <- unique(c(dummy.lv.idx, empty.theta.idx))
+  if (length(theta.rm.idx) > 0L) {
+    MTM.small <- MTM[-theta.rm.idx, -theta.rm.idx, drop = FALSE]
+    MTM.small <- zapsmall(lav_matrix_symmetric_force_pd(
+      MTM.small,
       tol = 1e-04
     ))
-    MTM[-dummy.lv.idx, -dummy.lv.idx] <- MTM.nodummy
+    MTM[-theta.rm.idx, -theta.rm.idx] <- MTM.small
   } else {
     MTM <- zapsmall(lav_matrix_symmetric_force_pd(MTM, tol = 1e-04))
   }
@@ -297,6 +339,19 @@ lav_sam_veta <- function(M = NULL, S = NULL, THETA = NULL,
     }
   } else {
     VETA <- MSM - MTM
+  }
+
+  # empty.idx?
+  if (length(empty.idx) > 0L) {
+    MSM.full <- MSM
+    MTM.full <- MTM
+    VETA.full <- VETA
+    nfac.orig <- nrow(M.orig)
+
+    MSM <- MTM <- VETA <- matrix(0, nrow = nfac.orig, ncol = nfac.orig)
+    MSM[ -empty.idx, -empty.idx] <- MSM.full
+    MTM[ -empty.idx, -empty.idx] <- MTM.full
+    VETA[-empty.idx, -empty.idx] <- VETA.full
   }
 
   # extra attributes?

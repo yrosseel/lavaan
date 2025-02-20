@@ -517,7 +517,11 @@ lav_mvreg_information_expected <- function(Y = NULL, # not used
 
   # expected information
   I11 <- res.cov.inv %x% sample.xx
-  I22 <- 0.5 * lav_matrix_duplication_pre_post(res.cov.inv %x% res.cov.inv)
+  if (lav_use_lavaanC()) {
+    I22 <- lavaanC::m_kronecker_dup_pre_post(res.cov.inv, multiplicator = 0.5)
+  } else {
+    I22 <- 0.5 * lav_matrix_duplication_pre_post(res.cov.inv %x% res.cov.inv)
+  }
 
   lav_matrix_bdiag(I11, I22)
 }
@@ -605,7 +609,11 @@ lav_mvreg_information_observed_samplestats <-
     H12 <- t(H21)
 
     AAA <- res.cov.inv %*% (2 * W.tilde - res.cov) %*% res.cov.inv
-    H22 <- (1 / 2) * lav_matrix_duplication_pre_post(res.cov.inv %x% AAA)
+    if (lav_use_lavaanC()) {
+      H22 <- lavaanC::m_kronecker_dup_pre_post(res.cov.inv, AAA, 0.5)
+    } else {
+      H22 <- (1 / 2) * lav_matrix_duplication_pre_post(res.cov.inv %x% AAA)
+    }
 
     out <- rbind(
       cbind(H11, H12),

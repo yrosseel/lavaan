@@ -36,6 +36,7 @@ lavaanNames <- lavNames # nolint
 #   or returns a list per block
 #   LDW 30/1/24: 'block' argument not explicitly tested !?
 #   LDW 29/2/24: ov.order = "data" via attribute "ovda"
+# - YR 11/02/25: add type = "lv.ho" for higher-order latent variables
 lav_partable_vnames <- function(partable, type = NULL, ..., # nolint
                                 force.warn = FALSE, ov.x.fatal = FALSE) {
   # This function derives the names of some types of variable (as specified
@@ -77,7 +78,8 @@ lav_partable_vnames <- function(partable, type = NULL, ..., # nolint
     "ov.y", # (pure) endogenous variables (dependent only)
     "ov.num", # numeric observed variables
     "ov.ord", # ordinal observed variables
-    "ov.ind", # observed indicators of latent variables
+    "ov.ind",  # observed indicators of latent variables
+    "ov.cind", # observed indicators of composites (new in 0.6-20)
     "ov.orphan", # lonely observed intercepts/variances
     "ov.interaction", # interaction terms (with colon)
     "ov.efa", # indicators involved in efa
@@ -87,7 +89,8 @@ lav_partable_vnames <- function(partable, type = NULL, ..., # nolint
 
     "lv", # latent variables
     "lv.regular", # latent variables (defined by =~ only)
-    "lv.formative", # latent variables (defined by <~ only)
+    "lv.formative", # latent variables (defined by <~ only) (old style)
+    "lv.composite", # latent variables (defined by <~ only) (new style)
     "lv.x", # (pure) exogenous variables
     "lv.y", # (pure) endogenous variables
     "lv.nox", # non-exogenous latent variables
@@ -96,6 +99,7 @@ lav_partable_vnames <- function(partable, type = NULL, ..., # nolint
     "lv.efa", # latent variables involved in efa
     "lv.rv", # random slopes, random variables
     "lv.ind", # latent indicators (higher-order cfa)
+    "lv.ho",  # higher-order latent variables
     "lv.marker", # marker indicator per lv
 
     "eqs.y", # y's in regression
@@ -262,6 +266,13 @@ lav_partable_vnames <- function(partable, type = NULL, ..., # nolint
           return.value$lv.formative[[b]] <- out
           next
         }
+        if ("lv.composite" == type) {
+          out <- unique(partable$lhs[block.ind &
+            partable$op == "<~"])
+          return.value$lv.composite[[b]] <- out
+          next
+        }
+
 
         # lv's involved in efa
         if (any(type == c("lv.efa", "ov.efa"))) {
@@ -302,6 +313,19 @@ lav_partable_vnames <- function(partable, type = NULL, ..., # nolint
           next
         }
 
+        # higher-order latent variables
+        if ("lv.ho" == type) {
+          out.ind <- unique(partable$rhs[block.ind &
+            partable$op == "=~" &
+            partable$rhs %in% lv.names])
+          out <- unique(partable$lhs[block.ind &
+            partable$op == "=~" &
+            partable$lhs %in% lv.names &
+            partable$rhs %in% out.ind])
+          return.value$lv.ho[[b]] <- out
+          next
+        }
+
         # eqs.y
         if (!(any(type == c("lv", "lv.regular")))) {
           eqs.y <- unique(partable$lhs[block.ind &
@@ -333,20 +357,28 @@ lav_partable_vnames <- function(partable, type = NULL, ..., # nolint
             partable$op == "=~"])
         }
 
+        # v.cind -- indicators of composites
+        if (!(any(type == c("lv", "lv.regular")))) {
+          v.cind <- unique(partable$rhs[block.ind &
+            partable$op == "<~"])
+        }
+
         # ov.*
         if (!(any(type == c("lv", "lv.regular", "lv.x", "lv.y")))) {
           # 1. indicators, which are not latent variables themselves
           ov.ind <- v.ind[!v.ind %in% lv.names2]
+          # 1b. indicator of composites
+          ov.cind <- v.cind[!v.cind %in% lv.names2]
           # 2. dependent ov's
-          ov.y <- eqs.y[!eqs.y %in% c(lv.names2, ov.ind)]
+          ov.y <- eqs.y[!eqs.y %in% c(lv.names2, ov.ind, ov.cind)]
           # 3. independent ov's
           if (lav_partable_nlevels(partable) > 1L && b > 1L) {
             # NEW in 0.6-8: if an 'x' was an 'y' in a previous level,
             #               treat it as 'y'
             tmp.eqs.y <- unique(partable$lhs[partable$op == "~"]) # all blocks
-            ov.x <- eqs.x[!eqs.x %in% c(lv.names2, ov.ind, tmp.eqs.y)]
+            ov.x <- eqs.x[!eqs.x %in% c(lv.names2, ov.ind, ov.cind, tmp.eqs.y)]
           } else {
-            ov.x <- eqs.x[!eqs.x %in% c(lv.names2, ov.ind, ov.y)]
+            ov.x <- eqs.x[!eqs.x %in% c(lv.names2, ov.ind, ov.cind, ov.y)]
           }
           # new in 0.6-12: if we have interaction terms in ov.x, check
           # if some terms are in eqs.y; if so, remove the interaction term
@@ -386,7 +418,7 @@ lav_partable_vnames <- function(partable, type = NULL, ..., # nolint
               partable$op == "|") &
             !partable$lhs %in% lv.names2]
 
-          ov.tmp <- c(ov.ind, ov.y, ov.x)
+          ov.tmp <- c(ov.ind, ov.cind, ov.y, ov.x)
           ov.extra <- unique(c(ov.cov, ov.int)) # must be in this order!
           # so that
           # lav_partable_independence
@@ -402,6 +434,11 @@ lav_partable_vnames <- function(partable, type = NULL, ..., # nolint
 
         if ("ov.ind" == type) {
           return.value$ov.ind[[b]] <- ov.ind
+          next
+        }
+
+        if ("ov.cind" == type) {
+          return.value$ov.cind[[b]] <- ov.cind
           next
         }
 
@@ -766,11 +803,16 @@ lav_partable_vnames <- function(partable, type = NULL, ..., # nolint
           return.value$lv.interaction[[b]] <- lv.interaction
         }
 
-        # formative latent variables ONLY (ie defined by <~ only)
+        # formative/composite latent variables ONLY (ie defined by <~ only)
         if (any("lv.formative" == type)) {
           out <- unique(partable$lhs[block.ind &
             partable$op == "<~"])
           return.value$lv.formative[[b]] <- out
+        }
+        if (any("lv.composite" == type)) {
+          out <- unique(partable$lhs[block.ind &
+            partable$op == "<~"])
+          return.value$lv.composite[[b]] <- out
         }
 
         # lv's involved in efa
@@ -807,6 +849,18 @@ lav_partable_vnames <- function(partable, type = NULL, ..., # nolint
           return.value$lv.ind[[b]] <- out
         }
 
+        # higher-order latent variables
+        if (any("lv.ho" == type)) {
+          out.ind <- unique(partable$rhs[block.ind &
+            partable$op == "=~" &
+            partable$rhs %in% lv.names])
+          out <- unique(partable$lhs[block.ind &
+            partable$op == "=~" &
+            partable$lhs %in% lv.names &
+            partable$rhs %in% out.ind])
+          return.value$lv.ho[[b]] <- out
+        }
+
         # eqs.y
         eqs.y <- unique(partable$lhs[block.ind &
           partable$op == "~"])
@@ -830,19 +884,26 @@ lav_partable_vnames <- function(partable, type = NULL, ..., # nolint
         v.ind <- unique(partable$rhs[block.ind &
           partable$op == "=~"])
 
+        # v.cind -- indicators of composites
+        v.cind <- unique(partable$rhs[block.ind &
+          partable$op == "<~"])
+
+
         # ov.*
         # 1. indicators, which are not latent variables themselves
         ov.ind <- v.ind[!v.ind %in% lv.names2]
+        # 1a. indicators of composites
+        ov.cind <- v.cind[!v.cind %in% lv.names2]
         # 2. dependent ov's
-        ov.y <- eqs.y[!eqs.y %in% c(lv.names2, ov.ind)]
+        ov.y <- eqs.y[!eqs.y %in% c(lv.names2, ov.ind, ov.cind)]
         # 3. independent ov's
         if (lav_partable_nlevels(partable) > 1L && b > 1L) {
           # NEW in 0.6-8: if an 'x' was an 'y' in a previous level,
           #               treat it as 'y'
           tmp.eqs.y <- unique(partable$lhs[partable$op == "~"]) # all blocks
-          ov.x <- eqs.x[!eqs.x %in% c(lv.names2, ov.ind, tmp.eqs.y)]
+          ov.x <- eqs.x[!eqs.x %in% c(lv.names2, ov.ind, ov.cind, tmp.eqs.y)]
         } else {
-          ov.x <- eqs.x[!eqs.x %in% c(lv.names2, ov.ind, ov.y)]
+          ov.x <- eqs.x[!eqs.x %in% c(lv.names2, ov.ind, ov.cind, ov.y)]
         }
         # new in 0.6-12: if we have interaction terms in ov.x, check
         # if some terms are in eqs.y; if so, remove the interaction term
@@ -881,7 +942,7 @@ lav_partable_vnames <- function(partable, type = NULL, ..., # nolint
             partable$op == "|") &
           !partable$lhs %in% lv.names2]
 
-        ov.tmp <- c(ov.ind, ov.y, ov.x)
+        ov.tmp <- c(ov.ind, ov.cind, ov.y, ov.x)
         ov.extra <- unique(c(ov.cov, ov.int)) # must be in this order!
         # so that
         # lav_partable_independence
@@ -895,6 +956,10 @@ lav_partable_vnames <- function(partable, type = NULL, ..., # nolint
 
         if (any("ov.ind" == type)) {
           return.value$ov.ind[[b]] <- ov.ind
+        }
+
+        if (any("ov.cind" == type)) {
+          return.value$ov.cind[[b]] <- ov.cind
         }
 
         if (any("ov.interaction" == type)) {

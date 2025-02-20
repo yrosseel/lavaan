@@ -99,6 +99,7 @@ setClass("lavModel", # MATRIX representation of the sem model
     modprop            = "list", # model properties
     meanstructure      = "logical",
     correlation        = "logical",
+    composites         = "logical",
     categorical        = "logical",
     multilevel         = "logical",
     group.w.free       = "logical",

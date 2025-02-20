@@ -1,5 +1,6 @@
 # user visible function to add 'matrix' entries in the parameter table
 lavMatrixRepresentation <- function(partable, representation = "LISREL",
+                                    allow.composites = TRUE, # new in 0.6-20
                                     add.attributes = FALSE,
                                     as.data.frame. = TRUE) {
   # check parameter table
@@ -7,7 +8,8 @@ lavMatrixRepresentation <- function(partable, representation = "LISREL",
 
   # get model matrices
   if (representation == "LISREL") {
-    REP <- lav_lisrel(partable, target = NULL, extra = add.attributes)
+    REP <- lav_lisrel(partable, target = NULL, extra = add.attributes,
+                      allow.composites = allow.composites)
   } else if (representation == "RAM") {
     REP <- lav_ram(partable, target = NULL, extra = add.attributes)
   } else {

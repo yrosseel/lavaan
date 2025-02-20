@@ -125,9 +125,9 @@ modindices <- function(object,
   # create and fill in mi
   if (object@Data@nlevels == 1L) {
     N <- object@SampleStats@ntotal
-    if (object@Model@estimator %in% ("ML")) {
+    #if (object@Model@estimator %in% ("ML")) {
       score <- -1 * score # due to gradient.logl
-    }
+    #}
   } else {
     # total number of clusters (over groups)
     N <- 0

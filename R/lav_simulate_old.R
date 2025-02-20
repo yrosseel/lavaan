@@ -14,6 +14,7 @@ simulateData <- function( # user-specified model
                          int.lv.free = FALSE,
                          marker.int.zero = FALSE,
                          conditional.x = FALSE,
+                         composites = TRUE,
                          fixed.x = FALSE,
                          orthogonal = FALSE,
                          std.lv = TRUE,
@@ -72,6 +73,7 @@ simulateData <- function( # user-specified model
       int.ov.free = int.ov.free,
       int.lv.free = int.lv.free,
       marker.int.zero = marker.int.zero,
+      composites = composites,
       conditional.x = conditional.x,
       fixed.x = fixed.x,
       orthogonal = orthogonal,
@@ -154,11 +156,13 @@ simulateData <- function( # user-specified model
         "if residual variances are specified, please use standardized=FALSE"))
     }
 
-    # new in 0.6-20: use setResidualElements.LISREL
+    # new in 0.6-20: - use setResidualElements.LISREL
+    #                - use setVarianceComposites.LISREL
     dotdotdot <- list(...)
     dotdotdot$sample.nobs <- sample.nobs
     dotdotdot$fixed.x <- FALSE # for now
     dotdotdot$representation <- "LISREL"
+    dotdotdot$composites <- composites
     dotdotdot$correlation <- TRUE # this is the trick
     tmp.fit <- do.call("lavaan", args = c(list(model = lav), dotdotdot))
     # set/get parameters to invoke setResidualElements.LISREL

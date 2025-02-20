@@ -74,6 +74,16 @@ lav_lavaan_step09_model <- function(slotModel = NULL, # nolint
           }
         }
       }
+
+    # same for composites: call lav_model_set_parameters once to set
+    # total/residual variances of composites in PSI
+    } else if (lavmodel@composites) {
+      lavmodel <- lav_model_set_parameters(
+        lavmodel = lavmodel,
+        x = lav_model_get_parameters(lavmodel)
+      )
+      # re-adjust parameter table
+      lavpartable$start <- lav_model_get_parameters(lavmodel, type = "user")
     }
     if (lav_verbose()) {
       cat(" done.\n")

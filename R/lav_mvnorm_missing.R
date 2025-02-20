@@ -1037,8 +1037,11 @@ lav_mvnorm_missing_logl_hessian_samplestats <-
 
       i11 <- S.inv
       i21 <- lav_matrix_duplication_pre(tmp21 %x% S.inv)
-      i22 <- (1 / 2) * lav_matrix_duplication_pre_post(S.inv %x% tmp22)
-
+      if (lav_use_lavaanC()) {
+        i22 <- lavaanC::m_kronecker_dup_pre_post(S.inv, tmp22, 0.5)
+      } else {
+        i22 <- (1 / 2) * lav_matrix_duplication_pre_post(S.inv %x% tmp22)
+      }
       H11 <- H11 + pat.freq * i11
       H21 <- H21 + pat.freq * i21
       H22 <- H22 + pat.freq * i22
@@ -1128,7 +1131,11 @@ lav_mvnorm_missing_information_expected <- function(Y = NULL,
     S.inv <- matrix(0, P, P)
     S.inv[var.idx, var.idx] <- sigma.inv
 
-    S2.inv <- 0.5 * lav_matrix_duplication_pre_post(S.inv %x% S.inv)
+    if (lav_use_lavaanC()) {
+      S2.inv <- lavaanC::m_kronecker_dup_pre_post(S.inv, multiplicator = 0.5)
+    } else {
+      S2.inv <- 0.5 * lav_matrix_duplication_pre_post(S.inv %x% S.inv)
+    }
 
     if (!is.null(wt)) {
       FREQ <- sum(wt[Mp$case.idx[[p]]])
@@ -1360,7 +1367,11 @@ lav_mvnorm_missing_information_both <- function(Y = NULL,
     }
 
     if (information == "expected") {
-      S2.inv <- 0.5 * lav_matrix_duplication_pre_post(S.inv %x% S.inv)
+      if (lav_use_lavaanC()) {
+        S2.inv <- lavaanC::m_kronecker_dup_pre_post(S.inv, multiplicator = 0.5)
+      } else {
+        S2.inv <- 0.5 * lav_matrix_duplication_pre_post(S.inv %x% S.inv)
+      }
 
       I11 <- I11 + FREQ * S.inv
       I22 <- I22 + FREQ * S2.inv
@@ -1379,7 +1390,11 @@ lav_mvnorm_missing_information_both <- function(Y = NULL,
 
       i11 <- S.inv
       i21 <- lav_matrix_duplication_pre(tmp21 %x% S.inv)
-      i22 <- (1 / 2) * lav_matrix_duplication_pre_post(S.inv %x% tmp22)
+      if (lav_use_lavaanC()) {
+        i22 <- lavaanC::m_kronecker_dup_pre_post(S.inv, tmp22, 0.5)
+      } else {
+        i22 <- (1 / 2) * lav_matrix_duplication_pre_post(S.inv %x% tmp22)
+      }
 
       I11 <- I11 + pat.freq * i11
       I21 <- I21 + pat.freq * i21

@@ -11,6 +11,7 @@
 lav_lisrel <- function(lavpartable = NULL,
                        target = NULL,
                        extra = FALSE,
+                       allow.composites = TRUE,
                        remove.nonexisting = TRUE) {
   # prepare target list
   if (is.null(target)) target <- lavpartable
@@ -26,10 +27,12 @@ lav_lisrel <- function(lavpartable = NULL,
   # global settings
   meanstructure <- any(lavpartable$op == "~1")
   categorical <- any(lavpartable$op == "|")
+  composites <- any(lavpartable$op == "<~") && allow.composites
   group.w.free <- any(lavpartable$lhs == "group" & lavpartable$op == "%")
 
   # gamma?only if conditional.x
-  if (any(lavpartable$op %in% c("~", "<~") & lavpartable$exo == 1L)) {
+  if (any(lavpartable$op %in% c("~", "<~") & lavpartable$exo == 1L) &&
+      !composites) {
     gamma <- TRUE
   } else {
     gamma <- FALSE
@@ -108,15 +111,26 @@ lav_lisrel <- function(lavpartable = NULL,
         }
       }
     } else {
-      tmp.names <-
-        unique(c(
-          lavpartable$lhs[(lavpartable$op == "~" |
-            lavpartable$op == "<~") &
-            lavpartable$block == g],
-          lavpartable$rhs[(lavpartable$op == "~" |
-            lavpartable$op == "<~") &
-            lavpartable$block == g]
-        ))
+      if (composites) {
+        tmp.names <-
+          unique(c(
+            lavpartable$lhs[(lavpartable$op == "~") &
+              lavpartable$block == g],
+            lavpartable$rhs[(lavpartable$op == "~") &
+              lavpartable$block == g]
+          ))
+      } else {
+        # old behavior < 0.6-20
+        tmp.names <-
+          unique(c(
+            lavpartable$lhs[(lavpartable$op == "~" |
+              lavpartable$op == "<~") &
+              lavpartable$block == g],
+            lavpartable$rhs[(lavpartable$op == "~" |
+              lavpartable$op == "<~") &
+              lavpartable$block == g]
+          ))
+      }
     }
     dummy.names1 <- tmp.names[!tmp.names %in% lv.names]
     # covariances involving dummys
@@ -216,26 +230,49 @@ lav_lisrel <- function(lavpartable = NULL,
     tmp.row[idx] <- match(target$rhs[idx], lv.names)
     tmp.col[idx] <- match(target$lhs[idx], lv.names)
 
+    # 1d. "<~" indicators
+    if (composites) {
+      idx <- which(target$block == g &
+        target$op == "<~" & !(target$rhs %in% lv.names))
+      tmp.mat[idx] <- "wmat"
+      tmp.row[idx] <- match(target$rhs[idx], ov.names)
+      tmp.col[idx] <- match(target$lhs[idx], lv.names)
+    }
+
     # 2. "~" regressions
     if (gamma) {
       # gamma
-      idx <- which(target$rhs %in% ov.names.x &
-        target$block == g & (target$op == "~" |
-        target$op == "<~"))
+      if (composites) {
+        idx <- which(target$rhs %in% ov.names.x &
+          target$block == g & target$op == "~")
+      } else {
+        idx <- which(target$rhs %in% ov.names.x &
+          target$block == g & (target$op == "~" |
+          target$op == "<~"))
+      }
       tmp.mat[idx] <- "gamma"
       tmp.row[idx] <- match(target$lhs[idx], lv.names)
       tmp.col[idx] <- match(target$rhs[idx], ov.names.x)
 
       # beta
-      idx <- which(!target$rhs %in% ov.names.x &
-        target$block == g & (target$op == "~" |
-        target$op == "<~"))
+      if (composites) {
+        idx <- which(!target$rhs %in% ov.names.x &
+          target$block == g & target$op == "~")
+      } else {
+        idx <- which(!target$rhs %in% ov.names.x &
+          target$block == g & (target$op == "~" |
+          target$op == "<~"))
+      }
       tmp.mat[idx] <- "beta"
       tmp.row[idx] <- match(target$lhs[idx], lv.names)
       tmp.col[idx] <- match(target$rhs[idx], lv.names)
     } else {
-      idx <- which(target$block == g & (target$op == "~" |
-        target$op == "<~"))
+      if (composites) {
+        idx <- which(target$block == g & target$op == "~")
+      } else {
+        idx <- which(target$block == g & (target$op == "~" |
+          target$op == "<~"))
+      }
       tmp.mat[idx] <- "beta"
       tmp.row[idx] <- match(target$lhs[idx], lv.names)
       tmp.col[idx] <- match(target$rhs[idx], lv.names)
@@ -325,6 +362,7 @@ lav_lisrel <- function(lavpartable = NULL,
         delta = nvar,
         nu = nvar,
         lambda = nvar,
+        wmat = nvar,
         theta = nvar,
         alpha = nfac,
         beta = nfac,
@@ -341,6 +379,7 @@ lav_lisrel <- function(lavpartable = NULL,
         delta = 1L,
         nu = 1L,
         lambda = nfac,
+        wmat = nfac,
         theta = nvar,
         alpha = 1L,
         beta = nfac,
@@ -357,6 +396,7 @@ lav_lisrel <- function(lavpartable = NULL,
         delta = list(ov.names, "scales"),
         nu = list(ov.names, "intercept"),
         lambda = list(ov.names, lv.names),
+        wmat = list(ov.names, lv.names),
         theta = list(ov.names, ov.names),
         alpha = list(lv.names, "intercept"),
         beta = list(lv.names, lv.names),
@@ -373,6 +413,7 @@ lav_lisrel <- function(lavpartable = NULL,
         delta = FALSE,
         nu = FALSE,
         lambda = FALSE,
+        wmat = FALSE,
         theta = TRUE,
         alpha = FALSE,
         beta = FALSE,
@@ -386,7 +427,12 @@ lav_lisrel <- function(lavpartable = NULL,
       # which mm's do we need? (always include lambda, theta and psi)
       # new: 0.6 this block only!!
       IDX <- which(target$block == g)
-      mmNames <- c("lambda", "theta", "psi")
+      if ("wmat" %in% tmp.mat[IDX]) {
+        mmNames <- c("lambda", "wmat", "theta", "psi")
+      } else {
+        mmNames <- c("lambda", "theta", "psi")
+      }
+
       if ("beta" %in% tmp.mat[IDX]) {
         mmNames <- c(mmNames, "beta")
       }
@@ -1024,6 +1070,9 @@ computeVY.LISREL <- function(MLIST = NULL) {
 # 5) VYx
 # compute V(Y*|x_i) == model-implied covariance matrix
 # this equals V(Y*) if no (explicit) eXo no GAMMA
+#
+# in >0.6-20: special treatment for composites
+#
 computeVYx.LISREL <- computeSigmaHat.LISREL <- function(MLIST = NULL,
                                                         delta = TRUE) {
   LAMBDA <- MLIST$lambda
@@ -1031,17 +1080,54 @@ computeVYx.LISREL <- computeSigmaHat.LISREL <- function(MLIST = NULL,
   PSI <- MLIST$psi
   THETA <- MLIST$theta
   BETA <- MLIST$beta
+  WMAT <- MLIST$wmat
 
-  # beta?
-  if (is.null(BETA)) {
-    LAMBDA..IB.inv <- LAMBDA
+  # standard: no composites
+  if (is.null(WMAT)) {
+    # beta?
+    if (is.null(BETA)) {
+      LAMBDA..IB.inv <- LAMBDA
+    } else {
+      IB.inv <- .internal_get_IB.inv(MLIST = MLIST)
+      LAMBDA..IB.inv <- LAMBDA %*% IB.inv
+    }
+
+    # compute V(Y*|x_i)
+    VYx <- tcrossprod(LAMBDA..IB.inv %*% PSI, LAMBDA..IB.inv) + THETA
+
+  # composites, or mix of composites and latent variables
   } else {
-    IB.inv <- .internal_get_IB.inv(MLIST = MLIST)
-    LAMBDA..IB.inv <- LAMBDA %*% IB.inv
-  }
+    # - first join LAMBDA and WMAT
+    # - create 'T' matrix: - identity for regular lv's,
+    #                      - THETA block-diagonal for composites
+    # - create C_0: VETA, but zero diagonal elements for composites
+    cov.idx <- which(apply(LAMBDA, 1L,
+                           function(x) sum(x == 0) == ncol(LAMBDA)))
+    clv.idx <- which(apply(LAMBDA, 2L,
+                           function(x) sum(x == 0) == nrow(LAMBDA)))
+    # regular latent variables
+    rlv.idx <- seq_len(ncol(LAMBDA))[-clv.idx]
 
-  # compute V(Y*|x_i)
-  VYx <- tcrossprod(LAMBDA..IB.inv %*% PSI, LAMBDA..IB.inv) + THETA
+    # combine LAMBDA and WMAT
+    LW <- LAMBDA + WMAT
+
+    Tmat <- diag(nrow(LAMBDA))
+    Tmat[cov.idx, cov.idx] <- THETA[cov.idx, cov.idx]
+    wtw <- t(LW[,clv.idx, drop = FALSE]) %*% Tmat %*% LW[,clv.idx, drop = FALSE]
+    wtw.inv <- solve(wtw)
+    WTW.inv <- diag(ncol(LAMBDA))
+    WTW.inv[clv.idx, clv.idx] <- wtw.inv
+
+    if (is.null(BETA)) {
+      IB.inv <- diag(nrow(PSI))
+    } else {
+      IB.inv <- .internal_get_IB.inv(MLIST = MLIST)
+    }
+    VETA <- IB.inv %*% PSI %*% t(IB.inv)
+    C0 <- VETA; diag(C0)[clv.idx] <- 0
+
+    VYx <- Tmat %*% LW %*% WTW.inv %*% C0 %*% t(WTW.inv) %*% t(LW) %*% Tmat + THETA
+  }
 
   # if delta, scale
   if (delta && !is.null(MLIST$delta)) {
@@ -1637,6 +1723,130 @@ MLISTX2MLIST <- function(MLISTX = NULL,
   MLIST
 }
 
+# set (total/residual) variances of composites
+setVarianceComposites.LISREL <- function(MLIST = NULL,
+                                         tol = .Machine$double.eps,
+                                         debug = FALSE) {
+  LAMBDA <- MLIST$lambda
+  BETA   <- MLIST$beta
+  PSI    <- MLIST$psi
+  WMAT   <- MLIST$wmat
+  THETA  <- MLIST$theta
+
+  # std.lv or not?
+  marker.idx <- lav_utils_get_marker(MLIST$wmat)
+  std.lv <- FALSE
+  if (all(is.na(marker.idx))) {
+    std.lv <- TRUE
+  }
+
+  # housekeeping
+  ovc.idx <- which(apply(LAMBDA, 1L,
+                         function(x) sum(x == 0) == ncol(LAMBDA)))
+  lvc.idx <- which(apply(LAMBDA, 2L,
+                         function(x) sum(x == 0) == nrow(LAMBDA)))
+  lvc.flag <- logical(nrow(PSI))
+  lvc.flag[lvc.idx] <- TRUE
+  Tmat <- diag(nrow(LAMBDA))
+  Tmat[ovc.idx, ovc.idx] <- MLIST$theta[ovc.idx, ovc.idx]
+
+  if (std.lv) {
+    target.psi <- rep(1, ncol(WMAT))
+  } else {
+    # total variances composites
+    target.psi <- diag(t(WMAT) %*% Tmat %*% WMAT)
+  }
+  # fill in PSI element for non-composites
+  target.psi[!lvc.flag] <- diag(PSI)[!lvc.flag]
+
+  # initial values (including exogenous variances)
+  diag(PSI) <- target.psi
+
+  # no regressions
+  if (is.null(BETA)) {
+    # store PSI
+    MLIST$psi <- PSI
+
+    return(MLIST)
+  }
+
+  # set (residual) variances in psi
+  abs.beta <- abs(MLIST$beta)
+  x.idx <- which(apply(abs.beta, 1L, sum) == 0 & lvc.flag)
+  y.idx <- which(apply(abs.beta, 1L, sum) != 0 & lvc.flag)
+
+  nr <- nrow(BETA)
+  IB <- -BETA
+  IB[lav_matrix_diag_idx(nr)] <- 1
+  IB.inv <- solve(IB)
+
+
+  # check if IB is acyclic
+  if (det(IB) != 1) {
+    # damn, we have an cyclic model; use nlminb()
+    PSI <- lav_utils_find_residuals(IB.inv = IB.inv, PSI = PSI,
+                                    target.psi = target.psi, y.idx = y.idx)
+  } else {
+    # for an acyclic model, we should be able to find the
+    # residual analytically; simply by computing the model-based
+    # total variances of the RHS of each regression, and set the
+    # residual of the y variable so that it is exactly equal to unity
+    # (yes, this will result in negative resdidual variances if needed)
+
+    # ideally, we first sort the variables 'in topological order'; then
+    # we need only one run; but here we are somewhat lazy, and we
+    # use a few runs, each time setting more variables right
+
+    # get ancestors list for each node/variable
+    ancestors <- lav_utils_get_ancestors(BETA)
+
+    # for each y variable, compute IB.inv %*% psi %*% t(IB.inv), without y
+    ny <- length(y.idx)
+    max_rep <- ny * 4
+    for(rep in seq_len(max_rep)) {
+      if (debug) {
+        cat("rep = ", rep, "\n")
+      }
+      # check current diagonal
+      current.diag <- diag(IB.inv %*% PSI %*% t(IB.inv))
+      if (debug) {
+        cat("target.psi   = ", target.psi[y.idx], "\n")
+        cat("current.diag = ", current.diag[y.idx], "\n")
+      }
+      if (all(abs(current.diag[y.idx] - target.psi[y.idx]) < tol)) {
+        # we are done, bail out
+        break
+      }
+      for (i in seq_len(ny)) {
+        this.y.idx <- y.idx[i]
+        this.x.idx <- ancestors[[this.y.idx]]
+        IB.inv.y <- IB.inv[this.y.idx, this.x.idx, drop = FALSE]
+        PSI.x <- PSI[this.x.idx, this.x.idx, drop = FALSE]
+        var.y <- drop(IB.inv.y %*% PSI.x %*% t(IB.inv.y))
+        PSI[this.y.idx, this.y.idx] <- target.psi[this.y.idx] - var.y
+      }
+    }
+
+    # final check?
+    current.diag <- diag(IB.inv %*% PSI %*% t(IB.inv))
+    if (debug) {
+      cat("final current.diag = ", current.diag[y.idx], "\n")
+    }
+    # don't be too strict here
+    if (any(abs(current.diag[y.idx] - target.psi[y.idx]) > sqrt(tol))) {
+      # as a last resort, use optimization
+      PSI <- lav_utils_find_residuals(IB.inv = IB.inv, PSI = PSI,
+                                      target.psi = target.psi, y.idx = y.idx)
+    }
+
+  } # acyclic
+
+  # store PSI
+  MLIST$psi <- PSI
+
+  MLIST
+}
+
 # if DELTA parameterization, compute residual elements (in theta, or psi)
 # - typically for (endogenous) observed *categorical* variables only
 # - but could also be all (endogenous) observed variables, if correlation = TRUE
@@ -1923,6 +2133,16 @@ derivative.F.LISREL <- function(MLIST = NULL, Omega = NULL, Omega.mu = NULL) {
   PSI <- MLIST$psi
   BETA <- MLIST$beta
   ALPHA <- MLIST$alpha
+  WMAT <- MLIST$wmat
+
+  LAMBDA.deriv  <- NULL
+  BETA.deriv    <- NULL
+  THETA.deriv   <- NULL
+  PSI.deriv     <- NULL
+  NU.deriv      <- NULL
+  ALPHA.deriv   <- NULL
+  GROUP.W.deriv <- NULL
+  WMAT.deriv    <- NULL
 
   # beta?
   if (is.null(BETA)) {
@@ -1952,7 +2172,7 @@ derivative.F.LISREL <- function(MLIST = NULL, Omega = NULL, Omega.mu = NULL) {
   # 1. LAMBDA
   if (!is.null(BETA)) {
     if (meanstructure) {
-      LAMBDA.deriv <- -1.0 * (Omega.mu %*% t(ALPHA) %*% t(IB.inv) +
+    LAMBDA.deriv <- -1.0 * (Omega.mu %*% t(ALPHA) %*% t(IB.inv) +
         Omega..LAMBDA..IB.inv..PSI..tIB.inv)
     } else {
       LAMBDA.deriv <- -1.0 * Omega..LAMBDA..IB.inv..PSI..tIB.inv
@@ -1979,8 +2199,6 @@ derivative.F.LISREL <- function(MLIST = NULL, Omega = NULL, Omega.mu = NULL) {
       BETA.deriv <- -1.0 * (tLAMBDA..IB.inv %*%
         Omega..LAMBDA..IB.inv..PSI..tIB.inv)
     }
-  } else {
-    BETA.deriv <- NULL
   }
 
   # 3. PSI
@@ -1997,19 +2215,15 @@ derivative.F.LISREL <- function(MLIST = NULL, Omega = NULL, Omega.mu = NULL) {
 
     # 6. ALPHA
     ALPHA.deriv <- -1.0 * t(t(Omega.mu) %*% LAMBDA..IB.inv)
-  } else {
-    NU.deriv <- NULL
-    ALPHA.deriv <- NULL
   }
 
   if (group.w.free) {
     GROUP.W.deriv <- 0.0
-  } else {
-    GROUP.W.deriv <- NULL
   }
 
   list(
     lambda = LAMBDA.deriv,
+    wmat = WMAT.deriv,
     beta = BETA.deriv,
     theta = THETA.deriv,
     psi = PSI.deriv,
@@ -2147,6 +2361,23 @@ derivative.sigma.LISREL <- function(m = "lambda",
   nvar <- nrow(LAMBDA)
   nfac <- ncol(LAMBDA)
   PSI <- MLIST$psi
+  WMAT <- MLIST$wmat
+
+  # for composites (vec version)
+  compute.sigma <- function(x, mm = "wmat", MLIST = NULL) {
+    mlist <- MLIST
+    if (mm %in% c("psi", "theta")) {
+      mlist[[mm]] <- lav_matrix_vech_reverse(x)
+    } else {
+      mlist[[mm]][, ] <- x
+    }
+    lav_matrix_vec(computeSigmaHat.LISREL(mlist))
+  }
+
+  composites <- FALSE
+  if (!is.null(WMAT)) {
+    composites <- TRUE
+  }
 
   # only lower.tri part of sigma (not same order as elimination matrix?)
   v.idx <- lav_matrix_vech_idx(nvar)
@@ -2190,21 +2421,39 @@ derivative.sigma.LISREL <- function(m = "lambda",
     DX <- (L1 %x% diag(nvar))[, idx, drop = FALSE] +
       (diag(nvar) %x% L1)[, KOL.idx, drop = FALSE]
   } else if (m == "beta") {
-    KOL.idx <- matrix(1:(nfac * nfac), nfac, nfac, byrow = TRUE)[idx]
-    DX <- (L1 %x% LAMBDA..IB.inv)[, idx, drop = FALSE] +
-      (LAMBDA..IB.inv %x% L1)[, KOL.idx, drop = FALSE]
-    # this is not really needed (because we select idx=m.el.idx)
-    # but just in case we need all elements of beta...
-    DX[, which(idx %in% lav_matrix_diag_idx(nfac))] <- 0.0
+    if (composites) {
+      DX <- lav_func_jacobian_complex(func = compute.sigma,
+            x = lav_matrix_vec(MLIST$beta),
+            mm = "beta", MLIST = MLIST)
+      DX <- DX[, idx, drop = FALSE]
+    } else {
+      KOL.idx <- matrix(1:(nfac * nfac), nfac, nfac, byrow = TRUE)[idx]
+      DX <- (L1 %x% LAMBDA..IB.inv)[, idx, drop = FALSE] +
+        (LAMBDA..IB.inv %x% L1)[, KOL.idx, drop = FALSE]
+      # this is not really needed (because we select idx=m.el.idx)
+      # but just in case we need all elements of beta...
+      DX[, which(idx %in% lav_matrix_diag_idx(nfac))] <- 0.0
+    }
   } else if (m == "psi") {
-    DX <- (LAMBDA..IB.inv %x% LAMBDA..IB.inv)
-    # symmetry correction, but keeping all duplicated elements
-    # since we depend on idx=m.el.idx
-    lower.idx <- lav_matrix_vech_idx(nfac, diagonal = FALSE)
-    upper.idx <- lav_matrix_vechru_idx(nfac, diagonal = FALSE)
-    offdiagSum <- DX[, lower.idx] + DX[, upper.idx]
-    DX[, c(lower.idx, upper.idx)] <- cbind(offdiagSum, offdiagSum)
-    DX <- DX[, idx, drop = FALSE]
+    if (composites) {
+      tmp <- lav_func_jacobian_complex(func = compute.sigma,
+            x = lav_matrix_vech(MLIST$psi),
+            mm = "psi", MLIST = MLIST)
+      DX <- matrix(0, nrow = nrow(tmp), ncol = length(PSI))
+      DX[, lav_matrix_vech_idx(nrow(PSI))] <- tmp
+      DX[, lav_matrix_vechu_idx(nrow(PSI), diagonal = FALSE)] <-
+        DX[, lav_matrix_vech_idx(nrow(PSI), diagonal = FALSE), drop = FALSE]
+      DX <- DX[, idx, drop = FALSE]
+    } else {
+      DX <- (LAMBDA..IB.inv %x% LAMBDA..IB.inv)
+      # symmetry correction, but keeping all duplicated elements
+      # since we depend on idx=m.el.idx
+      lower.idx <- lav_matrix_vech_idx(nfac, diagonal = FALSE)
+      upper.idx <- lav_matrix_vechru_idx(nfac, diagonal = FALSE)
+      offdiagSum <- DX[, lower.idx] + DX[, upper.idx]
+      DX[, c(lower.idx, upper.idx)] <- cbind(offdiagSum, offdiagSum)
+      DX <- DX[, idx, drop = FALSE]
+    }
   } else if (m == "theta") {
     # DX <- diag(nvar*nvar) # very sparse...
     DX <- matrix(0, nvar * nvar, length(idx))
@@ -2220,8 +2469,28 @@ derivative.sigma.LISREL <- function(m = "lambda",
     DX <- A[, lav_matrix_diag_idx(nvar), drop = FALSE] +
       B[, lav_matrix_diag_idx(nvar), drop = FALSE]
     DX <- DX[, idx, drop = FALSE]
+  } else if (m == "wmat") {
+    # just a dummy to get us going
+    DX <- lav_func_jacobian_complex(func = compute.sigma,
+            x = lav_matrix_vec(WMAT),
+            mm = "wmat", MLIST = MLIST)
+    DX <- DX[, idx, drop = FALSE]
+
+    # KOL.idx <- matrix(1:(nvar * nfac), nvar, nfac, byrow = TRUE)[idx]
+    # VETA <- IB.inv %*% PSI %*% t(IB.inv)
+    # C0 <- VETA; diag(C0) <- 0
+    # cov.idx <- which(apply(LAMBDA, 1L,
+    #                        function(x) sum(x == 0) == ncol(LAMBDA)))
+    # clv.idx <- which(apply(LAMBDA, 2L,
+    #                        function(x) sum(x == 0) == nrow(LAMBDA)))
+    # Tmat <- diag(nrow(LAMBDA))
+    # Tmat[cov.idx, cov.idx] <- MLIST$theta[cov.idx, cov.idx]
+    # L1 <- Tmat %*% WMAT %*% C0
+    # DX <- (L1 %x% diag(nvar))[, idx, drop = FALSE] +
+    #   (diag(nvar) %x% L1)[, KOL.idx, drop = FALSE]
+    # DX <- DX * nfac
   } else {
-    lav_msg_stop(gettext("wrong model matrix names:"), m)
+    lav_msg_stop(gettext("wrong model matrix name:"), m)
   }
 
   if (delta.flag && !m == "delta") {
@@ -2244,6 +2513,7 @@ derivative.mu.LISREL <- function(m = "alpha",
   LAMBDA <- MLIST$lambda
   nvar <- nrow(LAMBDA)
   nfac <- ncol(LAMBDA)
+  WMAT <- MLIST$wmat
 
   # shortcut for empty matrices
   if (m == "gamma" || m == "psi" || m == "theta" || m == "tau" ||
@@ -2269,6 +2539,9 @@ derivative.mu.LISREL <- function(m = "alpha",
   if (m == "nu") {
     DX <- diag(nvar)
   } else if (m == "lambda") {
+    DX <- t(IB.inv %*% ALPHA) %x% diag(nvar)
+  } else if (m == "wmat") {
+    # dummy, just to get us going
     DX <- t(IB.inv %*% ALPHA) %x% diag(nvar)
   } else if (m == "beta") {
     DX <- t(IB.inv %*% ALPHA) %x% (LAMBDA %*% IB.inv)

@@ -75,7 +75,11 @@ lav_samplestats_Gamma_inverse_NT <- function(Y = NULL,
   if (!conditional.x) {
     # unconditional - stochastic x
     if (!fixed.x) {
-      Gamma.inv <- 0.5 * lav_matrix_duplication_pre_post(S.inv %x% S.inv)
+      if (lav_use_lavaanC()) {
+        Gamma.inv <- lavaanC::m_kronecker_dup_pre_post(S.inv, multiplicator = 0.5)
+      } else {
+        Gamma.inv <- 0.5 * lav_matrix_duplication_pre_post(S.inv %x% S.inv)
+      }
       if (meanstructure) {
         Gamma.inv <- lav_matrix_bdiag(S.inv, Gamma.inv)
       }
@@ -83,7 +87,11 @@ lav_samplestats_Gamma_inverse_NT <- function(Y = NULL,
       # unconditional - fixed x
     } else {
       # handle fixed.x = TRUE
-      Gamma.inv <- 0.5 * lav_matrix_duplication_pre_post(S.inv %x% S.inv)
+      if (lav_use_lavaanC()) {
+        Gamma.inv <- lavaanC::m_kronecker_dup_pre_post(S.inv, multiplicator = 0.5)
+      } else {
+        Gamma.inv <- 0.5 * lav_matrix_duplication_pre_post(S.inv %x% S.inv)
+      }
 
       # zero rows/cols corresponding with x/x combinations
       nvar <- NROW(ICOV)
@@ -112,7 +120,11 @@ lav_samplestats_Gamma_inverse_NT <- function(Y = NULL,
 
     S11 <- S.inv[-x.idx, -x.idx, drop = FALSE]
 
-    Gamma.inv <- 0.5 * lav_matrix_duplication_pre_post(S11 %x% S11)
+    if (lav_use_lavaanC()) {
+      Gamma.inv <- lavaanC::m_kronecker_dup_pre_post(S11, multiplicator = 0.5)
+    } else {
+      Gamma.inv <- 0.5 * lav_matrix_duplication_pre_post(S11 %x% S11)
+    }
 
     if (meanstructure || slopestructure) {
       C <- S[x.idx, x.idx, drop = FALSE]

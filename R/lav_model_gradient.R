@@ -119,7 +119,7 @@ lav_model_gradient <- function(lavmodel = NULL,
 
   # 1. ML approach
   if ((estimator == "ML" || estimator == "REML" || estimator == "catML") &&
-    lavdata@nlevels == 1L &&
+    lavdata@nlevels == 1L && !lavmodel@composites &&
     !lavmodel@conditional.x) {
 	correlation <- FALSE
 	if (.hasSlot(lavmodel, "correlation") && lavmodel@correlation) {
@@ -662,29 +662,30 @@ lav_model_gradient <- function(lavmodel = NULL,
 }
 
 # for testing purposes only
-# computeDeltaNumerical <- function(lavmodel = NULL, GLIST = NULL, g = 1L) {
-#
-#     # state or final?
-#    if(is.null(GLIST)) GLIST <- lavmodel@GLIST
-#
-#    compute.moments <- function(x) {
-#        GLIST <- lav_model_x2GLIST(lavmodel = lavmodel, x=x, type="free")
-#        Sigma.hat <- computeSigmaHat(lavmodel = lavmodel, GLIST = GLIST)
-#         S.vec <- lav_matrix_vech(Sigma.hat[[g]])
-#         if(lavmodel@meanstructure) {
-#             Mu.hat <- computeMuHat(lavmodel = lavmodel, GLIST=GLIST)
-#             out <- c(Mu.hat[[g]], S.vec)
-#         } else {
-#             out <- S.vec
-#         }
-#         out
-#     }
-#
-#     x <- lav_model_get_parameters(lavmodel = lavmodel, GLIST=GLIST, type="free")
-#     Delta <- lav_func_jacobian_complex(func=compute.moments, x = x)
-#
-#     Delta
-# }
+computeDeltaNumerical <- function(lavmodel = NULL, GLIST = NULL, g = 1L) {
+
+  # state or final?
+  if(is.null(GLIST)) GLIST <- lavmodel@GLIST
+
+  compute.moments <- function(x) {
+    GLIST <- lav_model_x2GLIST(lavmodel = lavmodel, x = x, type = "free")
+    Sigma.hat <- computeSigmaHat(lavmodel = lavmodel, GLIST = GLIST)
+    S.vec <- lav_matrix_vech(Sigma.hat[[g]])
+    if(lavmodel@meanstructure) {
+      Mu.hat <- computeMuHat(lavmodel = lavmodel, GLIST=GLIST)
+      out <- c(Mu.hat[[g]], S.vec)
+    } else {
+      out <- S.vec
+    }
+    out
+  }
+
+  x <- lav_model_get_parameters(lavmodel = lavmodel,
+                                GLIST = GLIST, type = "free")
+  Delta <- lav_func_jacobian_complex(func = compute.moments, x = x)
+
+  Delta
+}
 
 
 ### FIXME: should we here also:

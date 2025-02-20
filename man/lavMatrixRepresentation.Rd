@@ -6,6 +6,7 @@ Extend the parameter table with a matrix representation.
 }
 \usage{
 lavMatrixRepresentation(partable, representation = "LISREL", 
+                        allow.composites = TRUE,
                         add.attributes = FALSE, as.data.frame. = TRUE)
 }
 \arguments{
@@ -15,6 +16,9 @@ lavMatrixRepresentation(partable, representation = "LISREL",
 \item{representation}{Character. The matrix representation style.
 Currently, only the all-y version of the LISREL representation 
 is supported.}
+\item{allow.composites}{Logical. If \code{TRUE}, and the model syntax
+contains the "<~" operator, handle the lhs as proper composites.
+If \code{FALSE}, use the old (<0.6-20) approach.}
 \item{add.attributes}{Logical. If \code{TRUE}, additional information
 about the model matrix representation is added as attributes.}
 \item{as.data.frame.}{Logical. If \code{TRUE}, the extended parameter table is

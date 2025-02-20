@@ -503,7 +503,7 @@ lav_model_estimate <- function(lavmodel = NULL,
         attr(fx, "fx.group") <- rep(as.numeric(NA), ngroups)
         attr(x, "converged") <- FALSE
         attr(x, "iterations") <- 0L
-        attr(x, "control") <- lavoptions@control
+        attr(x, "control") <- lavoptions$control
         attr(x, "fx") <- fx
         return(x)
       }

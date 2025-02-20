@@ -10,7 +10,7 @@ lav_use_lavaanC <- uselavaanC <- function(x) {
     }
     return(get("opt.lavaanC", lavaan_cache_env))
   } else {
-    if (!is.logical(x) || length(x) != 1L) 
+    if (!is.logical(x) || length(x) != 1L)
       lav_msg_stop(gettext("'x' must be a scalar logical"))
     if (x) {
       if (!requireNamespace("lavaanC", quietly = TRUE)) {
@@ -221,6 +221,7 @@ lav_options_default <- function() {
   elm("auto.th", FALSE, bl = TRUE)
   elm("auto.delta", FALSE, bl = TRUE)
   elm("auto.efa", FALSE, bl = TRUE)
+  elm("composites", TRUE, bl = TRUE)
 
   # rotation
   elm("rotation", "geomin", chr = c(crawfer = "cf", crawford.ferguson = "cf",
@@ -244,7 +245,7 @@ lav_options_default <- function() {
     default = "default", kaiser = "kaiser", none = "none",
     cureton.mulaik = "cm", cm = "cm"))
   elm(c("rotation.args", "std.ov"), TRUE, bl = TRUE)
-  elm(c("rotation.args", "geomin.epsilon"), 0.001, nm = "]0, 0.01]")
+  elm(c("rotation.args", "geomin.epsilon"), 0.001, nm = "]0, 1.00]")
   # was 0.01 < 0.6-10
   elm(c("rotation.args", "orthomax.gamma"), 1, nm = "[0, 1]")
   elm(c("rotation.args", "cf.gamma"), 0, nm = "[0, 1]")
@@ -329,7 +330,7 @@ lav_options_default <- function() {
   elm("bounds", "none", chr = c(
     "none", "default", "standard", "user", "wide", "wide.zerovar", "pos.var",
     "pos.ov.var", "pos.lv.var"))      # new in 0.6-6
-  elm("rstarts", 0L, nm = "[0, 1000]", num2int = TRUE) # new in 0.6-18
+  elm("rstarts", 0L, nm = "[0, 10000]", num2int = TRUE) # new in 0.6-18
 
   # inference
   elm("se", "default", chr = c(

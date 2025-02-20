@@ -1093,7 +1093,7 @@ ldw_parse_model_string <- function(model.syntax = "", as.data.frame. = FALSE) {
       }
     }
     # check for variable regressed on itself
-    if (formul1$elem.text[opi] == "~" && 
+    if (formul1$elem.text[opi] == "~" &&
         formul1$elem.text[opi - 1L] == formul1$elem.text[nelem]) {
       if (!grepl("^0\\.?0*$", flat.fixed[idx])) {
         tl <- ldw_txtloc(modelsrc, formul1$elem.pos[opi])
