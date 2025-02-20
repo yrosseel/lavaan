@@ -54,7 +54,8 @@ lav_lavaan_step02_options <- function(slotOptions = NULL, # nolint
   #   if there are no exogene variables set opt$conditional.x FALSE
   #   if there are no exogene variables and fixed.x not explicitly requested,
   #     set opt$fixed.x to FALSE
-
+  #   if allow.empty.cell and estimator not Bayes, issue a warning
+  
   if (!is.null(slotOptions)) {
     lavoptions <- slotOptions
 
@@ -210,6 +211,12 @@ lav_lavaan_step02_options <- function(slotOptions = NULL, # nolint
       }
     }
 
+    # allow.empty.cell
+    if (opt$allow.empty.cell && opt$do.fit && opt$estimator != "Bayes") {
+      lav_msg_warn(
+        gettext("allow.empty.cell has no effect on estimation of this model"))
+    }
+    
     # fill in remaining "default" values
     lavoptions <- lav_options_set(opt)
 
