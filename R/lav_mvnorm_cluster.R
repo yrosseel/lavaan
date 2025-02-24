@@ -1012,11 +1012,11 @@ lav_mvnorm_cluster_information_expected <- function(Lp = NULL,
     omega.j.inv <- solve(omega.j)
 
     I11.j <- omega.j.inv
-    if (lav_use_lavaanC()) {
-      I22.j <- lavaanC::m_kronecker_dup_pre_post(omega.j.inv, multiplicator = 0.5)
-    } else {
+    # if (lav_use_lavaanC()) {
+    #   I22.j <- lavaanC::m_kronecker_dup_pre_post(omega.j.inv, multiplicator = 0.5)
+    # } else {
       I22.j <- 0.5 * lav_matrix_duplication_pre_post(omega.j.inv %x% omega.j.inv)
-    }
+    # }
     I.j <- lav_matrix_bdiag(I11.j, I22.j)
     info.j <- t(Delta.j) %*% I.j %*% Delta.j
 
@@ -1032,11 +1032,11 @@ lav_mvnorm_cluster_information_expected <- function(Lp = NULL,
   Sigma.W.inv.tilde[ov.idx[[1]], ov.idx[[1]]] <- Sigma.W.inv
 
   I11.w <- Sigma.W.inv.tilde
-  if (lav_use_lavaanC()) {
-    I22.W <- lavaanC::m_kronecker_dup_pre_post(Sigma.W.inv.tilde, multiplicator = 0.5)
-  } else {
+  # if (lav_use_lavaanC()) {
+  #   I22.W <- lavaanC::m_kronecker_dup_pre_post(Sigma.W.inv.tilde, multiplicator = 0.5)
+  # } else {
     I22.w <- 0.5 * lav_matrix_duplication_pre_post(Sigma.W.inv.tilde %x% Sigma.W.inv.tilde)
-  }
+  # }
   I.w <- lav_matrix_bdiag(I11.w, I22.w)
   information.w <- (nobs - nclusters) *
     (t(Delta.W.tilde) %*% I.w %*% Delta.W.tilde)
@@ -1168,11 +1168,11 @@ lav_mvnorm_cluster_information_expected_delta <- function(Lp = NULL,
     omega.j.inv <- solve(omega.j)
 
     I11.j <- omega.j.inv
-    if (lav_use_lavaanC()) {
-      I22.j <- lavaanC::m_kronecker_dup_pre_post(omega.j.inv, multiplicator = 0.5)
-    } else {
+    # if (lav_use_lavaanC()) {
+    #   I22.j <- lavaanC::m_kronecker_dup_pre_post(omega.j.inv, multiplicator = 0.5)
+    # } else {
       I22.j <- 0.5 * lav_matrix_duplication_pre_post(omega.j.inv %x% omega.j.inv)
-    }
+    # }
     I.j <- lav_matrix_bdiag(I11.j, I22.j)
     info.j <- t(Delta.j) %*% I.j %*% Delta.j
 
@@ -1185,11 +1185,11 @@ lav_mvnorm_cluster_information_expected_delta <- function(Lp = NULL,
     Sinv.method = Sinv.method
   )
   I11.w <- Sigma.W.inv
-  if (lav_use_lavaanC()) {
-    I22.w <- lavaanC::m_kronecker_dup_pre_post(Sigma.W.inv, multiplicator = 0.5)
-  } else {
+  # if (lav_use_lavaanC()) {
+  #   I22.w <- lavaanC::m_kronecker_dup_pre_post(Sigma.W.inv, multiplicator = 0.5)
+  # } else {
     I22.w <- 0.5 * lav_matrix_duplication_pre_post(Sigma.W.inv %x% Sigma.W.inv)
-  }
+  # }
   I.w <- lav_matrix_bdiag(I11.w, I22.w)
 
   # force zero for means both.idx in within part
