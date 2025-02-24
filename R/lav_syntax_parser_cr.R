@@ -9,11 +9,11 @@ ldw_parse_model_string_cr <- function(model.syntax = "",
     paste(unlist(model.syntax), "", collapse = "\n")
   )
 
-  if (lav_use_lavaanC()) {
-    flat <- lavaanC::parse_model_string(modelsrc)
-  } else {
+  # if (lav_use_lavaanC()) {
+  #   flat <- lavaanC::parse_model_string(modelsrc)
+  # } else {
     flat <- lav_parse_model_string_r(modelsrc)
-  }
+  # }
 
   if (!is.list(flat)) {
     if (!is.integer(flat) || length(flat) != 2L) {

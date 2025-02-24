@@ -743,20 +743,20 @@ lav_mvnorm_information_expected <- function(Y = NULL, # unused!
     )
   }
 
-  if (lav_use_lavaanC()) {
-    if (correlation) {
-      I22 <- lavaanC::m_kronecker_dup_cor_pre_post(Sigma.inv,
-                                                   multiplicator = 0.5)
-    } else {
-      I22 <- lavaanC::m_kronecker_dup_pre_post(Sigma.inv, multiplicator = 0.5)
-    }
-  } else {
+  # if (lav_use_lavaanC()) {
+  #   if (correlation) {
+  #     I22 <- lavaanC::m_kronecker_dup_cor_pre_post(Sigma.inv,
+  #                                                  multiplicator = 0.5)
+  #   } else {
+  #     I22 <- lavaanC::m_kronecker_dup_pre_post(Sigma.inv, multiplicator = 0.5)
+  #   }
+  # } else {
     if (correlation) {
       I22 <- 0.5 * lav_matrix_duplication_cor_pre_post(Sigma.inv %x% Sigma.inv)
     } else {
       I22 <- 0.5 * lav_matrix_duplication_pre_post(Sigma.inv %x% Sigma.inv)
     }
-  }
+  # }
 
   # fixed.x?
   if (length(x.idx) > 0L) {
@@ -843,11 +843,11 @@ lav_mvnorm_information_observed_samplestats <- function(
   }
 
   AAA <- Sigma.inv %*% (2 * W.tilde - Sigma) %*% Sigma.inv
-  if (lav_use_lavaanC()) {
-    I22 <- lavaanC::m_kronecker_dup_pre_post(Sigma.inv, AAA, 0.5)
-  } else {
+  # if (lav_use_lavaanC()) {
+  #   I22 <- lavaanC::m_kronecker_dup_pre_post(Sigma.inv, AAA, 0.5)
+  # } else {
     I22 <- (1 / 2) * lav_matrix_duplication_pre_post(Sigma.inv %x% AAA)
-  }
+  # }
 
   if (meanstructure) {
     out <- rbind(
@@ -949,13 +949,13 @@ lav_mvnorm_inverted_information_expected <- function(Y = NULL, # unused!
     # take difference
     R <- Sigma - YbarX.aug
 
-    if (lav_use_lavaanC()) {
-      SS <- lavaanC::m_kronecker_dup_ginv_pre_post(Sigma, multiplicator = 2.0)
-      RR <- lavaanC::m_kronecker_dup_ginv_pre_post(R, multiplicator = 2.0)
-    } else {
+    # if (lav_use_lavaanC()) {
+    #   SS <- lavaanC::m_kronecker_dup_ginv_pre_post(Sigma, multiplicator = 2.0)
+    #   RR <- lavaanC::m_kronecker_dup_ginv_pre_post(R, multiplicator = 2.0)
+    # } else {
       SS <- 2 * lav_matrix_duplication_ginv_pre_post(Sigma %x% Sigma)
       RR <- 2 * lav_matrix_duplication_ginv_pre_post(R %x% R)
-    }
+    # }
     I22 <- SS - RR
 
     if (meanstructure) {
@@ -965,11 +965,11 @@ lav_mvnorm_inverted_information_expected <- function(Y = NULL, # unused!
       out <- I22
     }
   } else {
-    if (lav_use_lavaanC()) {
-      I22 <- lavaanC::m_kronecker_dup_ginv_pre_post(Sigma, multiplicator = 2.0)
-    } else {
+    # if (lav_use_lavaanC()) {
+    #   I22 <- lavaanC::m_kronecker_dup_ginv_pre_post(Sigma, multiplicator = 2.0)
+    # } else {
       I22 <- 2 * lav_matrix_duplication_ginv_pre_post(Sigma %x% Sigma)
-    }
+    # }
     if (meanstructure) {
       I11 <- Sigma
       out <- lav_matrix_bdiag(I11, I22)
