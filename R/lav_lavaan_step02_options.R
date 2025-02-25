@@ -55,7 +55,7 @@ lav_lavaan_step02_options <- function(slotOptions = NULL, # nolint
   #   if there are no exogene variables and fixed.x not explicitly requested,
   #     set opt$fixed.x to FALSE
   #   if allow.empty.cell and estimator not Bayes, issue a warning
-  
+
   if (!is.null(slotOptions)) {
     lavoptions <- slotOptions
 
@@ -216,7 +216,7 @@ lav_lavaan_step02_options <- function(slotOptions = NULL, # nolint
       lav_msg_warn(
         gettext("allow.empty.cell is not intended to salvage estimation of this model, see ?lavOptions"))
     }
-    
+
     # fill in remaining "default" values
     lavoptions <- lav_options_set(opt)
 

@@ -41,24 +41,32 @@ lav_sam_step1 <- function(cmd = "sem", mm.list = NULL, mm.args = list(),
     lav_msg_stop(gettext("model does not contain any free parameters"))
   }
 
-  # check for higher-order factors
-  # 0.6-11: hard stop for now, as we do not support them (yet)!
-  LV.IND.names <- unique(unlist(FIT@pta$vnames$lv.ind))
-  if (length(LV.IND.names) > 0L) {
-    lav_msg_stop(gettext(
-      "model contains indicators that are also latent variables:"),
-      lav_msg_view(LV.IND.names, "none"))
-    # ind.idx <- match(LV.IND.names, LV.names)
-    # LV.names <- LV.names[-ind.idx]
-  }
-
   # do we have at least 1 'regular' (measured) latent variable?
   LV.names <- unique(unlist(FIT@pta$vnames$lv.regular))
-  if (length(LV.names) == 0L) {
-    lav_msg_stop(gettext("model does not contain any (measured) latent
-                         variables; use sem() instead"))
+
+  eqs.x <- unlist(FIT@pta$vnames$eqs.x)
+  eqs.y <- unlist(FIT@pta$vnames$eqs.y)
+
+  if (length(eqs.x) == 0L && length(eqs.y) == 0L) {
+    lav_msg_warn(gettext("the model does seem to contain a structural part
+                          (i.e., regressions); consider using sem() instead"))
+  } else if (length(LV.names) == 0L) {
+    lav_msg_warn(gettext("structural model does not contain any (measured)
+                          latent variables; consider using sem() instead"))
   }
 
+  # check for higher-order factors
+  # 0.6-11: hard stop for now, as we do not support them (yet)!
+  # 0.6-20: now we do!
+  LV.IND.names <- unique(unlist(FIT@pta$vnames$lv.ind))
+  lv.higherorder.flag <- FALSE
+  if (length(LV.IND.names) > 0L) {
+    lv.higherorder.flag <- TRUE
+    LV.names <- LV.names[!LV.names %in% LV.IND.names]
+    #  lav_msg_stop(gettext(
+    #    "model contains indicators that are also latent variables:"),
+    #    lav_msg_view(LV.IND.names, "none"))
+  }
 
   # how many measurement models?
   if (!is.null(mm.list)) {
@@ -372,12 +380,15 @@ lav_sam_step1_local <- function(STEP1 = NULL, FIT = NULL,
   nlevels <- lavpta$nlevels
   nblocks <- lavpta$nblocks
   nMMblocks <- length(STEP1$MM.FIT)
-  mm.list <- STEP1$mm.list
 
+  # flags
+  lv.interaction.flag <- FALSE
+  lv.higherorder.flag <- FALSE
   if (length(unlist(lavpta$vnames$lv.interaction)) > 0L) {
     lv.interaction.flag <- TRUE
-  } else {
-    lv.interaction.flag <- FALSE
+  }
+  if (length(unlist(lavpta$vnames$lv.ind)) > 0L) {
+    lv.higherorder.flag <- TRUE
   }
 
   if (lav_verbose()) {
@@ -389,6 +400,8 @@ lav_sam_step1_local <- function(STEP1 = NULL, FIT = NULL,
 
   LAMBDA.list <- vector("list", nMMblocks)
   THETA.list  <- vector("list", nMMblocks)
+  BETA.list   <- vector("list", nMMblocks) # higher-order factor models
+  PSI.list    <- vector("list", nMMblocks) # higher-order factor models
   NU.list     <- vector("list", nMMblocks)
   DELTA.list  <- vector("list", nMMblocks) # correlation/categorical
   LV.idx.list <- vector("list", nMMblocks)
@@ -413,11 +426,22 @@ lav_sam_step1_local <- function(STEP1 = NULL, FIT = NULL,
       DELTA.list[[mm]] <- fit.mm.block@Model@GLIST[delta.idx]
     }
 
+    # BETA and PSI? (higher-order factor models only)
+    if (lv.higherorder.flag) {
+      beta.idx <- which(names(fit.mm.block@Model@GLIST) == "beta")
+      if (length(beta.idx) > 0L) {
+        BETA.list[[mm]] <- fit.mm.block@Model@GLIST[beta.idx]
+        psi.idx <- which(names(fit.mm.block@Model@GLIST) == "psi")
+        PSI.list[[mm]] <- fit.mm.block@Model@GLIST[psi.idx]
+      }
+    }
+
+    # lv/ov idx list
     for (bb in seq_len(nblocks)) {
       lambda.idx <- which(names(FIT@Model@GLIST) == "lambda")[bb]
       ind.names <- fit.mm.block@pta$vnames$ov.ind[[bb]]
       LV.idx.list[[mm]][[bb]] <- match(
-        mm.list[[mm]][[bb]],
+        fit.mm.block@pta$vnames$lv.regular[[bb]],
         FIT@Model@dimNames[[lambda.idx]][[2]]
       )
       OV.idx.list[[mm]][[bb]] <- match(
@@ -427,9 +451,19 @@ lav_sam_step1_local <- function(STEP1 = NULL, FIT = NULL,
     } # nblocks
   } ## nMMblocks
 
-  # assemble global LAMBDA/THETA (per block)
+  # assemble global matrices (per block)
   LAMBDA <- computeLAMBDA(FIT@Model, handle.dummy.lv = FALSE)
   THETA <- computeTHETA(FIT@Model, fix = FALSE) # keep dummy lv
+  if (lv.higherorder.flag) {
+    beta.idx <- which(names(FIT@Model@GLIST) == "beta")
+    if (length(beta.idx) > 0L) {
+      BETA <- FIT@Model@GLIST[beta.idx]
+    }
+    psi.idx <- which(names(FIT@Model@GLIST) == "psi")
+    if (length(psi.idx) > 0L) {
+      PSI <- FIT@Model@GLIST[psi.idx]
+    }
+  }
   if (FIT@Model@meanstructure) {
     NU <- computeNU(FIT@Model, lavsamplestats = FIT@SampleStats)
   }
@@ -455,6 +489,11 @@ lav_sam_step1_local <- function(STEP1 = NULL, FIT = NULL,
         LAMBDA[[b]][dummy.ov.idx, ] <- 0
         LAMBDA[[b]][cbind(dummy.ov.idx, dummy.lv.idx)] <- 1
       }
+      if (lv.higherorder.flag && !is.null(BETA.list[[mm]][[b]])) {
+        BETA[[b]][lv.idx, lv.idx] <- BETA.list[[mm]][[b]]
+        PSI[[b]][lv.idx, lv.idx] <- PSI.list[[mm]][[b]]
+      }
+
       if (FIT@Model@meanstructure) {
         NU[[b]][ov.idx, 1] <- NU.list[[mm]][[b]]
         if (length(dummy.ov.idx)) {
@@ -465,17 +504,45 @@ lav_sam_step1_local <- function(STEP1 = NULL, FIT = NULL,
         !is.null(DELTA.list[[mm]][[b]])) { # could be mixed cat/cont
         DELTA[[b]][ov.idx, 1] <- DELTA.list[[mm]][[b]]
       }
-    }
+    } # nMMblocks
 
-    # remove 'lv.interaction' columns from LAMBDA[[b]]
-    # if (length(lavpta$vidx$lv.interaction[[b]]) > 0L) {
-    #  LAMBDA[[b]] <- LAMBDA[[b]][, -lavpta$vidx$lv.interaction[[b]]]
-    # }
+    # get ALL lv names (including dummy ov.x/ov.y)
+    lambda.idx <- which(names(FIT@Model@GLIST) == "lambda")[b]
+    lv.names <- FIT@Model@dimNames[[lambda.idx]][[2L]] # all of them (+dummy!)
+
+    # handle higher-order factors here
+    if (length(lavpta$vidx$lv.ind[[b]]) > 0L) {
+      lv.ind.names <- lavpta$vnames$lv.ind[[b]]
+      lv.target <- lv.names[!lv.names %in% lv.ind.names]
+
+      target.idx <- match(lv.target, lv.names)
+      other.idx <- seq_len(length(lv.names))[-target.idx]
+
+      IB <- diag(nrow(BETA[[b]])) - BETA[[b]]
+      IB.inv <- solve(IB)
+      LB.inv <- LAMBDA[[b]] %*% IB.inv
+
+      # replace LAMBDA
+      LAMBDA[[b]] <- LB.inv[,target.idx,drop = FALSE]
+
+      PSI.other <- PSI[[b]][other.idx, other.idx, drop = FALSE]
+      LB.inv2 <- LB.inv[, other.idx, drop = FALSE]
+
+      # replace THETA
+      THETA[[b]] <- LB.inv2 %*% PSI.other %*% t(LB.inv2) + THETA[[b]]
+    }
 
     # check if LAMBDA has full column rank
     this.lambda <- LAMBDA[[b]]
     if (length(lavpta$vidx$lv.interaction[[b]]) > 0L) {
-      this.lambda <- this.lambda[, -lavpta$vidx$lv.interaction[[b]]]
+      if (length(lavpta$vidx$lv.ind[[b]]) > 0L) {
+        rm.idx <- c(match(lavpta$vnames$lv.ind[[b]], lv.names),
+                    match(lavpta$vnames$lv.interaction[[b]], lv.names))
+        this.lambda <- this.lambda[, -rm.idx, drop = FALSE]
+      } else {
+        rm.idx <- match(lavpta$vnames$lv.interaction[[b]], lv.names)
+        this.lambda <- this.lambda[, -rm.idx, drop = FALSE]
+      }
     }
     if (qr(this.lambda)$rank < ncol(this.lambda)) {
       print(this.lambda)
@@ -487,6 +554,7 @@ lav_sam_step1_local <- function(STEP1 = NULL, FIT = NULL,
   # store LAMBDA/THETA/NU per block
   STEP1$LAMBDA <- LAMBDA
   STEP1$THETA <- THETA
+  #STEP1$BETA <- BETA
   if (FIT@Model@meanstructure) {
     STEP1$NU <- NU
   }
@@ -550,6 +618,29 @@ lav_sam_step1_local <- function(STEP1 = NULL, FIT = NULL,
   }
 
   for (b in seq_len(nblocks)) {
+
+    # lv.names, including dummy-lv covariates
+    psi.idx <- which(names(FIT@Model@GLIST) == "psi")[b]
+    lv.names <- FIT@Model@dimNames[[psi.idx]][[1L]] # including dummy/interact/.
+    rm.idx <- integer(0L)
+
+    # higher-order? remove lower-order factors
+    if (lv.higherorder.flag && length(lavpta$vnames$lv.ind[[b]]) > 0L) {
+      rm.idx <- c(rm.idx, match(lavpta$vnames$lv.ind[[b]], lv.names))
+    }
+
+    # interaction terms? remove them for VETA
+    if (lv.interaction.flag && length(lavpta$vnames$lv.interaction[[b]]) > 0L) {
+      rm.idx <- c(rm.idx, match(lavpta$vnames$lv.interaction[[b]], lv.names))
+      lv.int.names <- lavpta$vnames$lv.interaction[[b]]
+    }
+
+    # final names for EETA/VETA (not including interaction terms!)
+    lv.names1 <- lv.names
+    if (length(rm.idx) > 0L) {
+      lv.names1 <- lv.names[-rm.idx]
+    }
+
     # get sample statistics for this block
     if (nlevels > 1L) {
       if (ngroups > 1L) {
@@ -644,7 +735,7 @@ lav_sam_step1_local <- function(STEP1 = NULL, FIT = NULL,
       Mb[-lavpta$vidx$lv.interaction[[b]], ] <- tmp
     }
 
-    # handle observed-only variables
+    # handle observed-only variables (needed?)
     dummy.ov.idx <- c(
       FIT@Model@ov.x.dummy.ov.idx[[b]],
       FIT@Model@ov.y.dummy.ov.idx[[b]]
@@ -653,12 +744,18 @@ lav_sam_step1_local <- function(STEP1 = NULL, FIT = NULL,
       FIT@Model@ov.x.dummy.lv.idx[[b]],
       FIT@Model@ov.y.dummy.lv.idx[[b]]
     )
+    # fix dummy.lv.idx if we have higher-order factors!
+    if (lv.higherorder.flag) {
+      dummy.lv.idx <- match(lv.names[dummy.lv.idx], lv.names1)
+    }
+
     if (length(dummy.ov.idx)) {
       Mb[dummy.lv.idx, ] <- 0
       Mb[cbind(dummy.lv.idx, dummy.ov.idx)] <- 1
     }
 
     # here, we remove the lv.interaction row(s) from Mb
+    # FIXME: if we have higher order factors!
     if (length(lavpta$vidx$lv.interaction[[b]]) > 0L) {
       Mb <- Mb[-lavpta$vidx$lv.interaction[[b]], ]
     }
@@ -703,23 +800,12 @@ lav_sam_step1_local <- function(STEP1 = NULL, FIT = NULL,
         VETA[[b]][-dummy.lv.idx, -dummy.lv.idx] <- tmp.lv
       }
     }
-
-    # lv.names, including dummy-lv covariates
-    psi.idx <- which(names(FIT@Model@GLIST) == "psi")[b]
-    lv.names <- FIT@Model@dimNames[[psi.idx]][[b]] # including dummy/interact/.
-    if (!lv.interaction.flag) {
-      dimnames(VETA[[b]]) <- FIT@Model@dimNames[[psi.idx]]
-    } else {
-      lv.int.names <- lavpta$vnames$lv.interaction[[b]]
-      # remove interaction terms
-      lv.names1 <- lv.names[!lv.names %in% lv.int.names]
-      colnames(VETA[[b]]) <- rownames(VETA[[b]]) <- lv.names1
-    }
+    colnames(VETA[[b]]) <- rownames(VETA[[b]]) <- lv.names1
 
     # compute model-based RELiability
     MSM <- Mb %*% COV %*% t(Mb)
     # REL[[b]] <- diag(VETA[[b]]] %*% solve(MSM)) # CHECKme! -> done, must be:
-    REL[[b]] <- diag(VETA[[b]]) / diag(MSM) #
+    REL[[b]] <- diag(VETA[[b]]) / diag(MSM) #!
 
     # check for lv.interactions
     if (lv.interaction.flag && length(lv.int.names) > 0L) {

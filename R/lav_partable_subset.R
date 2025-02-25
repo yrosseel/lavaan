@@ -15,6 +15,7 @@
 # - but fixed-to-zero covariances may not be present in PT...
 # - if indicators are regressed on exogenous covariates, should we
 #   add them here? (no for now, unless add.ind.predictors = TRUE)
+# - new in 0.6-20: check for 2nd, 3rd order lv.names...
 lav_partable_subset_measurement_model <- function(PT = NULL,
                                                   lv.names = NULL,
                                                   add.lv.cov = TRUE,
@@ -36,6 +37,38 @@ lav_partable_subset_measurement_model <- function(PT = NULL,
     lv.names <- lavpta$vnames$lv.regular
   } else if (!is.list(lv.names)) {
     lv.names <- rep(list(lv.names), nblocks)
+  }
+
+  # if lv.names contains a higher-order latent variable,
+  # add its (latent) indicators
+  for (g in 1:nblocks) {
+    if (length(lavpta$vnames$lv.ind[[g]]) == 0L) {
+      next
+    }
+    # ALL lv names
+    LV.names <- lavpta$vnames$lv[[g]]
+
+    # lv.names in this block
+    this.lv <- lv.names[[g]]
+
+    all.ind.are.observed.flag <- FALSE
+    new.lv <- character(0L)
+    while (!all.ind.are.observed.flag) {
+      # check indicators of all this.lv
+      RHS <- PT$rhs[which(PT$op == "=~" & PT$block == g &
+                          PT$lhs %in% this.lv)]
+      lv.idx <- which(RHS %in% LV.names)
+      if (length(lv.idx) > 0L) {
+        # add these 'new' ones to new.lv
+        new.lv <- c(new.lv, RHS[lv.idx])
+        this.lv <- RHS[lv.idx]
+      } else {
+        all.ind.are.observed.flag <- TRUE
+      }
+    }
+
+    # update lv.names for this block
+    lv.names[[g]] <- unique(c(lv.names[[g]], new.lv))
   }
 
   # keep rows idx
@@ -192,6 +225,9 @@ lav_partable_subset_measurement_model <- function(PT = NULL,
     } # con
   } # block
 
+  # remove any duplicated (only with higher-order factors)
+  keep.idx <- keep.idx[!duplicated(keep.idx)]
+
   if (idx.only) {
     return(keep.idx)
   }
@@ -231,12 +267,21 @@ lav_partable_add_lv_cov <- function(PT, lv.names = NULL) {
   nblocks <- lavpta$nblocks
   block.values <- lav_partable_block_values(PT)
 
-
   # lv.names: list with element per block
   if (is.null(lv.names)) {
     lv.names <- lavpta$vnames$lv.regular
   } else if (!is.list(lv.names)) {
     lv.names <- rep(list(lv.names), nblocks)
+  }
+
+  # check for higher-order models (new in 0.6-20)
+  for (b in seq_len(nblocks)) {
+    if (length(lavpta$vnames$lv.ind[[b]]) > 0L) {
+      ind.idx <- which(lv.names[[b]] %in% lavpta$vnames$lv.ind[[b]])
+      if (length(ind.idx) > 0L) {
+        lv.names[[b]] <- lv.names[[b]][-ind.idx]
+      }
+    }
   }
 
   # remove lv.names if not present at same level/block
@@ -348,19 +393,22 @@ lav_partable_subset_structural_model <- function(PT = NULL,
   # remove not-needed measurement models
   for (g in 1:nblocks) {
     # higher-order factor loadings
-    fac.idx <- which(PT$op == "=~" & PT$block == block.values[g] &
-      PT$lhs %in% lavpta$vnames$lv.regular[[g]] &
-      PT$rhs %in% lavpta$vnames$lv.regular[[g]])
+    #fac.idx <- which(PT$op == "=~" & PT$block == block.values[g] &
+    #  PT$lhs %in% lavpta$vnames$lv.regular[[g]] &
+    #  PT$rhs %in% lavpta$vnames$lv.regular[[g]])
 
     # eqs.names
     eqs.names <- unique(c(
       lavpta$vnames$eqs.x[[g]],
       lavpta$vnames$eqs.y[[g]]
     ))
-    all.names <- unique(c(
-      eqs.names,
-      lavpta$vnames$lv.regular[[g]]
-    ))
+    if (length(eqs.names) == 0L) { # no structural model
+      eqs.names <- lv.names[[g]]
+    }
+    # all.names <- unique(c(
+    #   eqs.names,
+    #   lavpta$vnames$lv.regular[[g]]
+    # ))
 
     # regressions
     reg.idx <- which(PT$op == "~" & PT$block == block.values[g] &
@@ -369,23 +417,22 @@ lav_partable_subset_structural_model <- function(PT = NULL,
 
     # the variances
     var.idx <- which(PT$op == "~~" & PT$block == block.values[g] &
-      PT$lhs %in% all.names &
-      PT$rhs %in% all.names &
+      PT$lhs %in% eqs.names &
+      PT$rhs %in% eqs.names &
       PT$lhs == PT$rhs)
 
     # optionally covariances (exo!)
     cov.idx <- which(PT$op == "~~" & PT$block == block.values[g] &
-      PT$lhs %in% all.names &
-      PT$rhs %in% all.names &
+      PT$lhs %in% eqs.names &
+      PT$rhs %in% eqs.names &
       PT$lhs != PT$rhs)
 
     # means/intercepts
     int.idx <- which(PT$op == "~1" & PT$block == block.values[g] &
-      PT$lhs %in% all.names)
+      PT$lhs %in% eqs.names)
 
     keep.idx <- c(
-      keep.idx, reg.idx, var.idx, cov.idx, int.idx,
-      fac.idx
+      keep.idx, reg.idx, var.idx, cov.idx, int.idx
     )
 
     # defined/constraints
