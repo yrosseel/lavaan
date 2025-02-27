@@ -47,25 +47,22 @@ lav_sam_step1 <- function(cmd = "sem", mm.list = NULL, mm.args = list(),
   eqs.x <- unlist(FIT@pta$vnames$eqs.x)
   eqs.y <- unlist(FIT@pta$vnames$eqs.y)
 
-  if (length(eqs.x) == 0L && length(eqs.y) == 0L) {
-    lav_msg_warn(gettext("the model does seem to contain a structural part
-                          (i.e., regressions); consider using sem() instead"))
-  } else if (length(LV.names) == 0L) {
+  #if (length(eqs.x) == 0L && length(eqs.y) == 0L) {
+  #  lav_msg_warn(gettext("the model does seem to contain a structural part
+  #                        (i.e., regressions); consider using sem() instead"))
+  #} else
+  if (length(LV.names) == 0L) {
     lav_msg_warn(gettext("structural model does not contain any (measured)
                           latent variables; consider using sem() instead"))
   }
 
   # check for higher-order factors
-  # 0.6-11: hard stop for now, as we do not support them (yet)!
   # 0.6-20: now we do!
   LV.IND.names <- unique(unlist(FIT@pta$vnames$lv.ind))
   lv.higherorder.flag <- FALSE
   if (length(LV.IND.names) > 0L) {
     lv.higherorder.flag <- TRUE
     LV.names <- LV.names[!LV.names %in% LV.IND.names]
-    #  lav_msg_stop(gettext(
-    #    "model contains indicators that are also latent variables:"),
-    #    lav_msg_view(LV.IND.names, "none"))
   }
 
   # how many measurement models?

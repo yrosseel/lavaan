@@ -823,7 +823,7 @@ lav_data_full <- function(data = NULL, # data.frame
       "all observed variables are exogenous; model may not be identified"))
   }
   # check for perfect correlations (NOT including exo variables)
-  if (any(ov$type == "numeric")) {
+  if (!allow.single.case && any(ov$type == "numeric")) {
     num.idx <- which(ov$type == "numeric" & ov$exo == 0L)
     COR <- try(cor(data[,ov$idx[num.idx]], use = "pairwise.complete.obs"),
                silent = TRUE)

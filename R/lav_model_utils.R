@@ -125,7 +125,7 @@ lav_model_set_parameters <- function(lavmodel = NULL, x = NULL) {
     }
   }
 
-  if (lavmodel@composites) {
+  if (.hasSlot(lavmodel, "composites") && lavmodel@composites) {
     nmat <- lavmodel@nmat
     if (lavmodel@representation == "LISREL") {
       for (g in 1:lavmodel@nblocks) {
@@ -155,6 +155,7 @@ lav_model_x2GLIST <- function(lavmodel = NULL, x = NULL,
   } else {
     correlation <- FALSE
   }
+
 
   GLIST <- lavmodel@GLIST
   for (mm in 1:length(GLIST)) {
@@ -235,7 +236,7 @@ lav_model_x2GLIST <- function(lavmodel = NULL, x = NULL,
     }
   }
 
-  if (lavmodel@composites) {
+  if (.hasSlot(lavmodel, "composites") && lavmodel@composites) {
     nmat <- lavmodel@nmat
     if (lavmodel@representation == "LISREL") {
       for (g in 1:lavmodel@nblocks) {

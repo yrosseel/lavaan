@@ -117,9 +117,14 @@ lav_model_gradient <- function(lavmodel = NULL,
   # - (ML)/NTRLS: using Delta, no support for fixed.x, conditional.x
   # - PML/FML/MML: custom
 
+  composites.flag <- FALSE
+  if (.hasSlot(lavmodel, "composites") && lavmodel@composites) {
+    composites.flag <- TRUE
+  }
+
   # 1. ML approach
   if ((estimator == "ML" || estimator == "REML" || estimator == "catML") &&
-    lavdata@nlevels == 1L && !lavmodel@composites &&
+    lavdata@nlevels == 1L && !composites.flag &&
     !lavmodel@conditional.x) {
 	correlation <- FALSE
 	if (.hasSlot(lavmodel, "correlation") && lavmodel@correlation) {
