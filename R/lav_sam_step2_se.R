@@ -33,8 +33,8 @@ lav_sam_step2_se <- function(FIT = NULL, JOINT = NULL,
   }
 
   if (!lavoptions$se %in%
-    c("none", "standard", "naive", "twostep", "local")) {
-    lav_msg_warn(gettext(
+    c("none", "standard", "naive", "twostep", "local", "local.nt")) {
+    lav_msg_warn(gettextf(
       "unknown se= argument: %s. Switching to twostep.",
       lavoptions$se
     ))
@@ -63,12 +63,22 @@ lav_sam_step2_se <- function(FIT = NULL, JOINT = NULL,
     N <- nobs(FIT)
   }
 
+  # total number of free parameters STRUC
+  if (FIT.PA@Model@ceq.simple.only) {
+    npar <- FIT.PA@Model@nx.unco
+    PTS.free <- FIT.PA@ParTable$free
+    PTS.free[PTS.free > 0] <- seq_len(npar)
+  } else {
+    npar <- FIT.PA@Model@nx.free
+    PTS.free <- FIT.PA@ParTable$free
+  }
+
   # do we have 'extra' free parameter in FIT.PA that are not free in JOINT?
   step2.rm.idx <- integer(0L)
   if (length(extra.id) > 0L) {
     id.idx <- which(FIT.PA@ParTable$id %in% extra.id &
       FIT.PA@ParTable$free > 0L)
-    step2.rm.idx <- FIT.PA@ParTable$free[id.idx]
+    step2.rm.idx <- PTS.free[id.idx]
   }
 
   # invert augmented information, for I.22 block only
@@ -109,7 +119,7 @@ lav_sam_step2_se <- function(FIT = NULL, JOINT = NULL,
     out$VCOV <- VCOV
 
   # se = "naive" or "local": grab VCOV directly from FIT.PA
-  } else if (lavoptions$se %in% c("naive", "local")) {
+  } else if (lavoptions$se %in% c("naive", "local", "local.nt")) {
     if (is.null(FIT.PA@vcov$vcov)) {
       FIT.PA@Options$se <- "standard"
       VCOV <- lavTech(FIT.PA, "vcov")

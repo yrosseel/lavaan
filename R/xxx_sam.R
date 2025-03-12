@@ -12,10 +12,14 @@
 #
 # local and global:
 #  - all (measured) latent variables must have indicators that are observed
+#    update: higher-order measurement models are supported in local SAM (0.6-20)
 # local:
 #  - only if LAMBDA is of full column rank (eg no SRM, no bi-factor, no MTMM)
 #  - if multiple groups: each group has the same set of latent variables!
 #  - global approach is used to compute corrected two-step standard errors
+#    update: se = "local" is truely local, and uses 'Gamma' as an additional
+#            ingredient; Gamma reflects the sampling variability of the
+#            sample statistics (VETA and EETA)
 
 # YR 12 May 2019 - first version
 # YR 22 May 2019 - merge sam/twostep (call it 'local' vs 'global' sam)
@@ -43,6 +47,7 @@
 
 # YR 09 Nov 2024 - add se = "bootstrap"
 # YR 14 Nov 2024 - add se = "local"
+# YR 01 Mar 2025 - allow for higher-order measurement models in local SAM
 
 # twostep = wrapper for global sam
 twostep <- function(model = NULL, data = NULL, cmd = "sem",
@@ -139,24 +144,32 @@ sam <- function(model = NULL,
     lav_msg_stop(gettext("output should be \"list\" or \"lavaan.\""))
   }
 
+  #
+
   # check se= argument
   if (!missing(se)) {
     se <- tolower(se)
+    # aliases
     if (se %in% c("two-step", "two_step", "two.step")) {
       se <- "twostep"
     }
-    if (se %in% c("ij", "local")) {
+    else if (se %in% c("ij", "local")) {
       se <- "local"
-      if (sam.method != "local") {
+    }
+    # check if valid
+    if (!se %in% c("standard", "naive", "twostep", "local", "local.nt",
+                   "bootstrap", "none")) {
+      lav_msg_stop(gettext(
+        "se= argument must be twostep, bootstrap, or local"))
+    }
+    # check for local
+    if (se %in% c("local", "local.nt")) {
+      if (sam.method != "local") { # for now
         lav_msg_stop(gettext("local se only available is sam.method is local"))
       }
     }
   }
-  if (!se %in% c("standard", "naive", "twostep", "ij", "local",
-                 "bootstrap", "none")) {
-    lav_msg_stop(gettext(
-      "se= argument must be twostep, bootstrap, or local"))
-  }
+  # default is twostep
 
 
   ###############################################
@@ -251,6 +264,12 @@ sam <- function(model = NULL,
       keep.null = FALSE
     )
 
+    # collect COV/YBAR sample statistics per block from FIT
+    out <- lav_sam_get_cov_ybar(FIT = FIT, local.options = local.options)
+    STEP1$COV  <- out$COV
+    STEP1$YBAR <- out$YBAR
+
+    # compute EETA/VETA
     STEP1 <- lav_sam_step1_local(
       STEP1 = STEP1, FIT = FIT,
       sam.method = sam.method,
@@ -261,13 +280,16 @@ sam <- function(model = NULL,
   ##################################################
   # STEP 1c: jacobian of vech(VETA) = f(vech(S))   #
   #          only needed for local approach!       #
-  #          only if se = "ij"                     #
+  #          only if se = "local"                  #
   ##################################################
-  if (se %in% c("ij", "local")) {
-    JAC <- lav_sam_step1_local_jac(STEP1 = STEP1, FIT = FIT,
-      local.options = local.options
-    )
-    Gamma <- FIT@SampleStats@NACOV
+  if (se %in% c("local", "local.nt")) {
+    JAC <- lav_sam_step1_local_jac(STEP1 = STEP1, FIT = FIT)
+    if (se == "local") {
+      Gamma <- FIT@SampleStats@NACOV
+    } else if (se == "local.nt") {
+      Gamma <- lav_object_gamma(lavobject = FIT, ADF = FALSE)
+    }
+
     Gamma.eta <- vector("list", length = FIT@Data@ngroups)
     for (g in seq_len(FIT@Data@ngroups)) {
       Gamma.eta[[g]] <- JAC[[g]] %*% Gamma[[g]] %*% t(JAC[[g]])

@@ -540,7 +540,7 @@ lav_sam_eeta2 <- function(EETA = NULL, VETA = NULL, lv.names = NULL,
   EETA2.aug
 }
 
-# compute veta including quadratic/interaction terms
+# compute var(fs2) including quadratic/interaction terms
 lav_sam_fs2 <- function(FS = NULL, lv.names = NULL, lv.int.names = NULL) {
   varn <- function(x, N) {
     var(x) * (N - 1) / N
@@ -687,3 +687,109 @@ lav_sam_table <- function(JOINT = NULL, STEP1 = NULL, FIT.PA = NULL,
   SAM
 }
 
+lav_sam_get_cov_ybar <- function(FIT = NULL, local.options = list(
+                                  M.method = "ML",
+                                  lambda.correction = TRUE,
+                                  alpha.correction = 0L,
+                                  twolevel.method = "h1"
+                                )) {
+
+  # local.twolevel.method
+  local.twolevel.method <- tolower(local.options[["twolevel.method"]])
+  if (!local.twolevel.method %in% c("h1", "anova", "mean")) {
+    lav_msg_stop(gettext(
+      "local option twolevel.method should be one of h1, anova or mean."))
+  }
+
+  local.M.method <- toupper(local.options[["M.method"]])
+
+  lavpta <- FIT@pta
+  ngroups <- lavpta$ngroups
+  nlevels <- lavpta$nlevels
+  nblocks <- lavpta$nblocks
+
+  # do we need H1?
+  if (nlevels > 1L && local.twolevel.method == "h1") {
+    H1 <- lav_h1_implied_logl(
+      lavdata = FIT@Data,
+      lavsamplestats = FIT@SampleStats,
+      lavoptions = FIT@Options
+    )
+  }
+
+  # containers
+  COV.list  <- vector("list", nblocks)
+  YBAR.list <- vector("list", nblocks)
+
+  # label
+  if (nblocks > 1L) {
+    names(COV.list)  <- FIT@Data@block.label
+    names(YBAR.list) <- FIT@Data@block.label
+  }
+
+  # collect COV/YBAR per block
+  for (b in seq_len(nblocks)) {
+
+    # get sample statistics for this block
+    if (nlevels > 1L) {
+      if (ngroups > 1L) {
+        this.level <- (b - 1L) %% ngroups + 1L
+      } else {
+        this.level <- b
+      }
+      this.group <- floor(b / nlevels + 0.5)
+
+      if (this.level == 1L) {
+        if (local.twolevel.method == "h1") {
+          COV <- H1$implied$cov[[1]]
+          YBAR <- H1$implied$mean[[1]]
+        } else if (local.twolevel.method == "anova" ||
+          local.twolevel.method == "mean") {
+          COV <- FIT@SampleStats@YLp[[this.group]][[2]]$Sigma.W
+          YBAR <- FIT@SampleStats@YLp[[this.group]][[2]]$Mu.W
+        }
+
+        # reduce
+        ov.idx <- FIT@Data@Lp[[this.group]]$ov.idx[[this.level]]
+        COV <- COV[ov.idx, ov.idx, drop = FALSE]
+        YBAR <- YBAR[ov.idx]
+      } else if (this.level == 2L) {
+        if (local.twolevel.method == "h1") {
+          COV <- H1$implied$cov[[2]]
+          YBAR <- H1$implied$mean[[2]]
+        } else if (local.twolevel.method == "anova") {
+          COV <- FIT@SampleStats@YLp[[this.group]][[2]]$Sigma.B
+          YBAR <- FIT@SampleStats@YLp[[this.group]][[2]]$Mu.B
+        } else if (local.twolevel.method == "mean") {
+          S.PW <- FIT@SampleStats@YLp[[this.group]][[2]]$Sigma.W
+          NJ <- FIT@SampleStats@YLp[[this.group]][[2]]$s
+          Y2 <- FIT@SampleStats@YLp[[this.group]][[2]]$Y2
+          # grand mean
+          MU.Y <- (FIT@SampleStats@YLp[[this.group]][[2]]$Mu.W + FIT@SampleStats@YLp[[this.group]][[2]]$Mu.B)
+          Y2c <- t(t(Y2) - MU.Y) # MUST be centered
+          YB <- crossprod(Y2c) / nrow(Y2c)
+          COV <- YB - 1 / NJ * S.PW
+          YBAR <- FIT@SampleStats@YLp[[this.group]][[2]]$Mu.B
+        }
+
+        # reduce
+        ov.idx <- FIT@Data@Lp[[this.group]]$ov.idx[[this.level]]
+        COV <- COV[ov.idx, ov.idx, drop = FALSE]
+        YBAR <- YBAR[ov.idx]
+      } else {
+        lav_msg_stop(gettext("level 3 not supported (yet)."))
+      }
+
+      # single level
+    } else {
+      this.group <- b
+      YBAR <- FIT@h1$implied$mean[[b]] # EM version if missing="ml"
+      COV <- FIT@h1$implied$cov[[b]]
+    } # single level
+
+    COV.list[[b]] <- COV
+    YBAR.list[[b]] <- YBAR
+  }
+
+  list(COV = COV.list, YBAR = YBAR.list)
+}
