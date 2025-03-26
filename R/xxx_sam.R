@@ -48,6 +48,7 @@
 # YR 09 Nov 2024 - add se = "bootstrap"
 # YR 14 Nov 2024 - add se = "local"
 # YR 01 Mar 2025 - allow for higher-order measurement models in local SAM
+# YR 25 Mar 2025 - add sam.method = "cFSR" (using correlation-preserving FS)
 
 # twostep = wrapper for global sam
 twostep <- function(model = NULL, data = NULL, cmd = "sem",
@@ -74,7 +75,7 @@ sam <- function(model = NULL,
                 mm.list = NULL,
                 mm.args = list(bounds = "wide.zerovar"),
                 struc.args = list(estimator = "ML"),
-                sam.method = "local", # or "global", or "fsr"
+                sam.method = "local", # or "global", or "fsr", or "cfsr"
                 ..., # common options
                 local.options = list(
                   M.method = "ML", # mapping matrix
@@ -91,6 +92,13 @@ sam <- function(model = NULL,
   has.sam.object.flag <- FALSE
   if (inherits(model, "lavaan") && !is.null(model@internal$sam.method)) {
     has.sam.object.flag <- TRUE
+  }
+
+  # check sam.method
+  sam.method <- tolower(sam.method)
+  if (!sam.method %in% c("local", "global", "fsr", "cfsr")) {
+    lav_msg_stop(gettextf("unknown option for sam.method: [%s]",
+                          "available options are local, global, fsr and cfs."))
   }
 
   # ------------- handling of warn/debug/verbose switches ----------
@@ -164,8 +172,8 @@ sam <- function(model = NULL,
     }
     # check for local
     if (se %in% c("local", "local.nt")) {
-      if (sam.method != "local") { # for now
-        lav_msg_stop(gettext("local se only available is sam.method is local"))
+      if (!sam.method %in% c("local", "fsr", "cfsr")) { # for now
+        lav_msg_stop(gettext("local se only available if sam.method is local, fsr, or cfsr"))
       }
     }
   }
@@ -252,7 +260,7 @@ sam <- function(model = NULL,
   # STEP 1b: compute Var(eta) and E(eta) per block #
   #          only needed for local approach!       #
   ##################################################
-  if (sam.method %in% c("local", "fsr")) {
+  if (sam.method %in% c("local", "fsr", "cfsr")) {
     # default local.options
     local.opt <- list(
       M.method = "ML",
@@ -333,7 +341,7 @@ sam <- function(model = NULL,
   # fill information from FIT.PA
   JOINT@Options$optim.method <- STEP2$FIT.PA@Options$optim.method
   JOINT@Model@estimator <- FIT@Options$estimator # could be DWLS!
-  if (sam.method %in% c("local", "fsr")) {
+  if (sam.method %in% c("local", "fsr", "cfsr")) {
     JOINT@optim <- STEP2$FIT.PA@optim
     JOINT@test <- STEP2$FIT.PA@test
   }

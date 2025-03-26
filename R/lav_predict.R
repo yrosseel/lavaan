@@ -2048,3 +2048,15 @@ lav_predict_tmat_det <- function(lavobject = NULL,
   tmat
 }
 
+# single block only, for internal use in lav_sam_step1_local()
+lav_predict_tmat_det_internal <- function(Sigma = NULL, Veta = NULL,
+                                          Lambda = NULL) {
+    Sigma.inv <- solve(Sigma)
+    Veta.sqrt <- lav_matrix_symmetric_sqrt(Veta)
+    Veta.inv.sqrt <- lav_matrix_symmetric_sqrt(solve(Veta))
+    tmp <- Veta.sqrt %*% t(Lambda) %*% Sigma.inv %*% Lambda %*% Veta.sqrt
+    tmp.sqrt <- lav_matrix_symmetric_sqrt(tmp)
+    tmat <- Veta.sqrt %*% tmp.sqrt %*% Veta.inv.sqrt
+    tmat
+}
+

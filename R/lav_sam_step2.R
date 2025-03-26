@@ -9,7 +9,8 @@ lav_sam_step2 <- function(STEP1 = NULL, FIT = NULL,
 
   # Gamma available?
   gamma.flag <- FALSE
-  if (sam.method == "local" && !is.null(STEP1$Gamma.eta[[1]])) {
+  if (sam.method %in% c("local", "fsr", "cfsr") &&
+      !is.null(STEP1$Gamma.eta[[1]])) {
     gamma.flag <- TRUE
   }
 
@@ -35,7 +36,7 @@ lav_sam_step2 <- function(STEP1 = NULL, FIT = NULL,
   # override, no matter what
   lavoptions.PA$do.fit <- TRUE
 
-  if (sam.method %in% c("local", "fsr")) {
+  if (sam.method %in% c("local", "fsr", "cfsr")) {
     lavoptions.PA$missing <- "listwise"
     lavoptions.PA$sample.cov.rescale <- FALSE
     # lavoptions.PA$baseline <- FALSE
@@ -50,7 +51,7 @@ lav_sam_step2 <- function(STEP1 = NULL, FIT = NULL,
 
 
   # construct PTS
-  if (sam.method %in% c("local", "fsr")) {
+  if (sam.method %in% c("local", "fsr", "cfsr")) {
     # extract structural part
     PTS <- lav_partable_subset_structural_model(PT,
       add.idx = TRUE,
@@ -155,7 +156,7 @@ lav_sam_step2 <- function(STEP1 = NULL, FIT = NULL,
   if (lav_verbose()) {
     cat("Fitting the structural part ... \n")
   }
-  if (sam.method %in% c("local", "fsr")) {
+  if (sam.method %in% c("local", "fsr", "cfsr")) {
     if (gamma.flag) {
       NACOV <- STEP1$Gamma.eta
     } else {

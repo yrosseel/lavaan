@@ -662,6 +662,24 @@ lav_sam_step1_local <- function(STEP1 = NULL, FIT = NULL, Y = NULL,
       lambda[[b]] <- attr(tmp, "lambda")
 	  MSM..[[b]] <- attr(tmp, "MSM")
 	  MTM..[[b]] <- attr(tmp, "MTM")
+    } else if (sam.method == "cfsr") {
+      # first, we need to 'true' VETA (to get Sigma)
+      this.group <- floor(b / FIT@Data@nlevels + 0.5)
+      tmp <- lav_sam_veta(
+        M = Mb, S = COV, THETA = THETA[[b]],
+        alpha.correction = 0L,
+        lambda.correction = local.options[["lambda.correction"]],
+        N <- FIT@SampleStats@nobs[[this.group]],
+        dummy.lv.idx = dummy.lv.idx,
+        extra = FALSE
+      )
+      VETA[[b]] <- tmp[, , drop = FALSE]
+      # compute 'Sigma'
+      Sigma <- this.lambda %*% VETA[[b]] %*% t(this.lambda) + THETA[[b]]
+      tmat <- lav_predict_tmat_det_internal(Sigma = Sigma, Veta = VETA[[b]],
+                                            Lambda = this.lambda)
+      A <- tmat %*% Mb
+      VETA[[b]] <- A %*% COV %*% t(A)
     } else {
       # FSR -- no correction
       VETA[[b]] <- Mb %*% COV %*% t(Mb)
@@ -789,6 +807,7 @@ lav_sam_step1_local_jac <- function(STEP1 = NULL, FIT = NULL) {
   nblocks <- lavpta$nblocks
 
   local.options <- STEP1$local.options
+  sam.method <- STEP1$sam.method
 
   ngroups <- lavdata@ngroups
   if (ngroups > 1L) {

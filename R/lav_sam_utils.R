@@ -592,7 +592,7 @@ lav_sam_step3_joint <- function(FIT = NULL, PT = NULL, sam.method = "local") {
   lavoptions.joint$se <- "none"
   lavoptions.joint$store.vcov <- FALSE # we do this manually
 
-  if (sam.method %in% c("local", "fsr")) {
+  if (sam.method %in% c("local", "fsr", "cfsr")) {
     lavoptions.joint$baseline <- FALSE
     lavoptions.joint$sample.icov <- FALSE
     #lavoptions.joint$h1 <- TRUE # we need this if we re-use the sam object
@@ -643,7 +643,7 @@ lav_sam_table <- function(JOINT = NULL, STEP1 = NULL, FIT.PA = NULL,
 
 
   # extra info for @internal slot
-  if (sam.method %in% c("local", "fsr")) {
+  if (sam.method %in% c("local", "fsr", "cfsr")) {
     sam.struc.fit <- try(
       fitMeasures(
         FIT.PA,

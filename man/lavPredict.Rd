@@ -4,7 +4,7 @@
 \title{Predict the values of latent variables (and their indicators).}
 \description{
 The main purpose of the \code{lavPredict()} function is to compute (or
-`predict') estimated values for the latent variables in the model
+`predict') individual scores for the latent variables in the model
 (`factor scores'). NOTE: the goal of this
 function is NOT to predict future values of dependent variables as in the
 regression framework! (For models with only continuous observed variables, the function \code{lavPredictY()} supports this.)}
@@ -37,8 +37,8 @@ likelihood approach.}
 group) so that their mean and variance-covariance matrix matches the
 model-implied mean and variance-covariance matrix. This may be useful if the
 individual factor scores will be used in a follow-up (regression) analysis.
-Note: the standard errors (if requested) and the factor score matrix (if
-requested) are not transformed (yet).}
+Note: the standard errors (if requested) not transformed (yet). The resulting
+factor scores are often called correlation-preserving factor scores.}
 \item{se}{Character. If \code{"none"}, no standard errors are computed.
 If \code{"standard"}, naive standard errors are computed (assuming the
 parameters of the measurement model are known). The standard errors are
