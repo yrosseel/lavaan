@@ -257,6 +257,14 @@ lav_partable_add_bounds <- function(partable = NULL,
           new.range <- bound.range * factor
           diff <- abs(new.range - bound.range)
           upper.auto[par.idx] <- upper.auto[par.idx] + diff
+        } else if (is.finite(factor) && factor == 1.0) {
+          # new in 0.6-20
+          # enlarge anyway, but only with 0.5%
+          # this is in particular useful for exogenous variances, otherwise,
+          # they will always end up on the boundary
+          new.range <- bound.range * 1.005
+          diff <- abs(new.range - bound.range)
+          upper.auto[par.idx] <- upper.auto[par.idx] + diff
         }
       }
 
