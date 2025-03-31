@@ -114,7 +114,7 @@ lavData <- function(data = NULL, # data.frame
         data <- as.data.frame(data, stringsAsFactors = FALSE)
       } else {
         lav_msg_stop(gettextf(
-          "data= argument is not a data.frame, but of class ",
+          "data= argument is not a data.frame, but of class %s",
           sQuote(class(data))))
       }
     }

@@ -907,6 +907,15 @@ lav_predict_eta_normal <- function(lavobject = NULL, # for convenience
     # center data
     Yc <- t(t(data.obs.g) - EY.g)
 
+    # sampling weights?
+    if (!is.null(lavdata@weights[[g]]) && level == 1L) {
+      # EY.g is already weighted
+      # use sampling.weights.normalization == "group"
+      WT <- lavdata@weights[[g]]
+      WT2 <- WT / sum(WT) * lavdata@nobs[[g]]
+      Yc <- Yc * sqrt(WT2)
+    }
+
     # global factor score coefficient matrix 'C'
     FSC <- VETA.g %*% t(LAMBDA.g) %*% Sigma.inv.g
 
@@ -1221,6 +1230,15 @@ lav_predict_eta_bartlett <- function(lavobject = NULL, # for convenience
 
     # center data
     Yc <- t(t(data.obs.g) - EY.g)
+
+    # sampling weights?
+    if (!is.null(lavdata@weights[[g]]) && level == 1L) {
+      # EY.g is already weighted
+      # use sampling.weights.normalization == "group"
+      WT <- lavdata@weights[[g]]
+      WT2 <- WT / sum(WT) * lavdata@nobs[[g]]
+      Yc <- Yc * sqrt(WT2)
+    }
 
     # global factor score coefficient matrix 'C'
     FSC <- (MASS::ginv(t(LAMBDA.g) %*% Sigma.inv.g %*% LAMBDA.g)

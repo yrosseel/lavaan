@@ -171,7 +171,12 @@ lav_lavaan_step02_options <- function(slotOptions = NULL, # nolint
     # HJ 18/10/23: Except for PML
     if (!is.null(sampling.weights) && !opt$.categorical &&
       opt$estimator %in% c("default", "ML", "PML")) {
-      opt$estimator <- "MLR"
+      if (opt$se != "none") {
+        opt$se <- "robust.huber.white"
+      }
+      if (opt$se != "none") {
+        opt$test <- "yuan.bentler.mplus"
+      }
     }
 
     # constraints
