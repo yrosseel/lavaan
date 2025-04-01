@@ -55,3 +55,4 @@ summary(fit)
 ```
 
 More information can be found on the website: https://lavaan.org
+
