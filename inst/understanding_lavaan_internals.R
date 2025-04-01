@@ -55,7 +55,7 @@ cbind(PT, MAT)
 fit <- sem(model = 'f =~x1 + x2 + x3', data = HolzingerSwineford1939)
 lavoptions <- fit@Options
 
-# create 'Model' object (S4 class) 
+# create 'Model' object (S4 class)
 # (often called lavmodel in internal functions)
 Model <- lavaan:::lav_model(PT, lavoptions = lavoptions)
 # another representation of the model, more suitable for computations
@@ -68,7 +68,7 @@ Model@dimNames
 MLIST <- Model@GLIST
 
 # MLIST is the matrix representation of a single block
-# MLIST is used to compute model-based statistics, e.g., 
+# MLIST is used to compute model-based statistics, e.g.,
 # the model-implied variance-covariance matrix
 lavaan:::computeSigmaHat.LISREL(MLIST)
 
@@ -80,19 +80,19 @@ lavaan:::computeSigmaHat.LISREL(MLIST)
 
 # 1. lavParseModelString + ov.names + ngroups + nlevels ...
 
-# 2. set/check options (eg meanstructure = TRUE) 
+# 2. set/check options (eg meanstructure = TRUE)
 #   lav_options_set() # lav_options.R
 
 # 3. check the (raw) data, or the sample statistics
 #   lavData()
-lavdata <- lavaan:::lavData(data = HolzingerSwineford1939, 
+lavdata <- lavaan:::lavData(data = HolzingerSwineford1939,
                             ov.names = c("x1", "x2", "x3"))
 slotNames(lavdata)
 lavdata@ov.names
 lavdata@ngroups
 lavdata@X[[1]] # the raw data in group/block 1
 
-# 4. lavpartable: create the parameter table 
+# 4. lavpartable: create the parameter table
 # needs to know: how many groups, how many categories, ...
 lavpartable <- lavaanify(model = FLAT, auto = TRUE)
 
@@ -102,7 +102,7 @@ lavpta$vnames$ov
 
 # 5. lavsamplestats
 # compute sample statistics (cov, mean, Gamma, ...)
-lavsamplestats <- lavaan:::lav_samplestats_from_data(lavdata, 
+lavsamplestats <- lavaan:::lav_samplestats_from_data(lavdata,
                                                      lavoptions = lavoptions)
 slotNames(lavsamplestats)
 lavsamplestats@cov[[1]] # observed covariance matrix first group/block
@@ -115,7 +115,6 @@ lavsamplestats@cov.log.det[[1]] # log determinant covariance matrix
 # when data is missing, we need to estimate cov/mean using EM
 lavh1 <- lavaan:::lav_h1_implied_logl(lavdata = lavdata,
                              lavsamplestats   = lavsamplestats,
-                             lavpta           = lavpta,
                              lavoptions       = lavoptions)
 lavh1$implied
 
@@ -140,7 +139,6 @@ lavpartable
 
 # 9. lavmodel: create internal model representation (with GLIST)
 lavmodel <- lavaan:::lav_model(lavpartable      = lavpartable,
-                               lavpta           = lavpta,
                                lavoptions       = lavoptions)
 lavmodel@GLIST
 
@@ -153,14 +151,14 @@ lavcache <- list()
 # - lav_optim_gn(): Gauss-Newton optimization
 # - lav_optim_noniter(): non-iterative procedures
 # - lav_mvnorm_cluster_em_h0: EM for multilevel models
-current.verbose <- lav_verbose()
-if (lav_verbose(TRUE)) on.exit(lav_verbose(current.verbose), TRUE)
+lavaan:::lav_verbose(TRUE) # be verbose
 x <- try(lavaan:::lav_model_estimate(lavmodel        = lavmodel,
                             lavpartable     = lavpartable,
                             lavsamplestats  = lavsamplestats,
                             lavdata         = lavdata,
                             lavoptions      = lavoptions,
                             lavcache        = lavcache))
+lavaan:::lav_verbose(FALSE) # switch off verbose
 
 # store parameters in lavmodel
 lavmodel <- lav_model_set_parameters(lavmodel, x = as.numeric(x))
@@ -170,7 +168,7 @@ lavpartable$est <- lav_model_get_parameters(lavmodel = lavmodel,
                                             type = "user", extra = TRUE)
 lavpartable
 
-# 12. lavimplied + lavloglik 
+# 12. lavimplied + lavloglik
 # store model implied statistics in @implied
 # if likelihood-based method, store also loglik in @loglik
 lavimplied <- lav_model_implied(lavmodel)
@@ -206,7 +204,6 @@ lavpartable$se <- lavaan:::lav_model_vcov_se(lavmodel = lavmodel,
 # more work for 'robust' test statistics (eg test = "satorra-bentler")
 TEST <- lavaan:::lav_model_test(lavmodel            = lavmodel,
                        lavpartable         = lavpartable,
-                       lavpta              = lavpta,
                        lavsamplestats      = lavsamplestats,
                        lavimplied          = lavimplied,
                        lavh1               = lavh1,
@@ -218,7 +215,7 @@ TEST <- lavaan:::lav_model_test(lavmodel            = lavmodel,
                        lavloglik           = lavloglik)
 lavtest <- TEST
 
-# 14bis. lavfit 
+# 14bis. lavfit
 # store 'fit'information
 # no longer used, but if I remove it, a dozen (old) packages break...
 
@@ -228,7 +225,6 @@ fit.indep <- try(lavaan:::lav_object_independence(object = NULL,
                                          lavdata        = lavdata,
                                          lavcache       = lavcache,
                                          lavoptions     = lavoptions,
-                                         lavpta         = lavpta,
                                          lavh1          = lavh1), silent = TRUE)
 
 # 16. rotation
@@ -431,7 +427,7 @@ lavaan:::computeSigmaHat
 # eg computeExpectedInformation <- lav_model_information_expected
 
 # zzz.R traditionally contains the (in)famous startup message
- 
+
 # most files start with the lav_ prefix
 # the second term often refers the type of object for which the file
 # contains functions, for example
@@ -448,9 +444,9 @@ lavaan:::computeSigmaHat
 # lav_mvnorm.R
 # lav_mvnorm_h1.R
 # lav_mvnorm_missing.R
-# lav_mvnorm_missing_h1.R 
+# lav_mvnorm_missing_h1.R
 # lav_mvnorm_cluster.R
-# lav_mvnorm_cluster_missing.R 
+# lav_mvnorm_cluster_missing.R
 
 # the standard ML discrepancy function is found at the top of
 # lav_objective.R
