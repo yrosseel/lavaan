@@ -271,56 +271,45 @@ lav_lavaan_step01_ovnames_group <- function(flat.model = NULL,        # nolint
 
 lav_lavaan_step01_ovnames_checklv <- function(                    # nolint
     lv.names    = character(0L),
+    ov.names    = character(0L),
     data        = NULL,
     sample.cov  = NULL,
     dotdotdot   = NULL,
     slotOptions = NULL) {                                         # nolint
-  # latent variables cannot appear in data --> *** error ***
-  #   (except when explicitly requested)
+
+  # latent variable names should not appear in the subset of the data
+  #   that is formed by merging ov+lv names --> **warning**
   # latent interactions are not supported ---> *** error ***
-
-  # sanity check: ov.names.x should NOT appear in ov.names.y
-  # this may happen if 'x' is exogenous in one block, but not in another...
-  # endo.idx <- which(ov.names.x %in% ov.names.y)
-  # if (length(endo.idx) > 0L) {
-  #    # remove from x! (new in 0.6-8)
-  #    ov.names.x <- ov.names.x[-endo.idx]
-  # }
-
 
   # handle for lv.names that are also observed variables (new in 0.6-6)
   lv.lv.names <- unique(unlist(lv.names))
+  ov.ov.names <- unique(unlist(ov.names))
   if (length(lv.lv.names) > 0L) {
-    # check for lv.names in data/cov
+
+    # get data-based variable names
     if (!is.null(data)) {
-      bad.idx <- which(lv.lv.names %in% names(data))
+      data_names <- names(data)
     } else if (!is.null(sample.cov)) {
-      bad.idx <- which(lv.lv.names %in% rownames(sample.cov))
-    } else {
-      bad.idx <- integer(0L)
+      data_names <- rownames(sample.cov)
     }
 
-        # if found, hard stop
+    # create subset of variable names, based on the model
+    model_names <- unique(c(ov.ov.names, lv.lv.names))
+    subset_names <- data_names[data_names %in% model_names]
+    bad.idx <- which(lv.lv.names %in% subset_names)
+
     if (length(bad.idx) > 0L) {
       if (!is.null(dotdotdot$check.lv.names) &&
         !dotdotdot$check.lv.names) {
         # ignore it, user switched this check off -- new in 0.6-7
       } else {
-        lav_msg_stop(gettext(
-          "some latent variable names collide with observed variable names:"),
-          paste(lv.lv.names[bad.idx], collapse = " ")
+        lav_msg_warn(gettextf(
+          "Some latent variable names collide with observed variable names in
+           the dataset: %s. Please provide alternative names for the latent
+           variables, or switch off this check using check.lv.names = FALSE",
+           paste(lv.lv.names[bad.idx], collapse = " "))
         )
       }
-
-      # rename latent variables (by adding 'lat')
-      # flat.model.idx <- which(flat.model$op == "=~" &
-      #                  flat.model$lhs %in% lv.names[bad.idx])
-      # flat.model$lhs[flat.model.idx] <-
-      #   paste(flat.model$lhs[flat.model.idx], "lat", sep = "")
-
-      # add names to ov.names
-      # ov.names <- c(ov.names, lv.names[bad.idx])
-      # what about ov.names.y and ov.names.x?
     }
   }
 
@@ -335,9 +324,8 @@ lav_lavaan_step01_ovnames_checklv <- function(                    # nolint
     } else {
       lav_msg_stop(gettextf(
         "Interaction terms involving latent variables (%s) are not supported.
-        You may consider creating product indicators to define
-        the latent interaction term. See the indProd() function
-        in the semTools package.", lv.lv.names[lv.int.idx[1]]))
+         Either use the sam() function, or consider using the modsem package.",
+         lv.lv.names[lv.int.idx[1]]))
     }
   }
 

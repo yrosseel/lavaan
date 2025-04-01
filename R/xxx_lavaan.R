@@ -163,6 +163,7 @@ lavaan <- function(
   # ------------ ov.names 4 ------ sanity checks ------------------
   lav_lavaan_step01_ovnames_checklv(
     lv.names    = lv.names,
+    ov.names    = ov.names,
     data        = data,
     sample.cov  = sample.cov,
     dotdotdot   = dotdotdot,
