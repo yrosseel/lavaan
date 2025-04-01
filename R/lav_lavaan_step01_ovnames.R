@@ -281,12 +281,17 @@ lav_lavaan_step01_ovnames_checklv <- function(                    # nolint
   #   that is formed by merging ov+lv names --> **warning**
   # latent interactions are not supported ---> *** error ***
 
+  if (is.null(data) && is.null(sample.cov)) {
+    return(invisible(NULL))
+  }
+
   # handle for lv.names that are also observed variables (new in 0.6-6)
   lv.lv.names <- unique(unlist(lv.names))
   ov.ov.names <- unique(unlist(ov.names))
   if (length(lv.lv.names) > 0L) {
 
     # get data-based variable names
+    data_names <- character(0L)
     if (!is.null(data)) {
       data_names <- names(data)
     } else if (!is.null(sample.cov)) {

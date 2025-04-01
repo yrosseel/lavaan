@@ -312,11 +312,11 @@ lav_predict_internal <- function(lavmodel = NULL,
       )
       # compute transformation matrix
       if (tolower(method) %in% c("ebm", "regression")) {
-        tmat <- lavaan:::lav_predict_tmat_green(lavmodel = lavmodel,
-                                                lavimplied = lavimplied)
+        tmat <- lav_predict_tmat_green(lavmodel = lavmodel,
+                                       lavimplied = lavimplied)
       } else {
-        tmat <- lavaan:::lav_predict_tmat_det(lavmodel = lavmodel,
-                                              lavimplied = lavimplied)
+        tmat <- lav_predict_tmat_det(lavmodel = lavmodel,
+                                     lavimplied = lavimplied)
       }
 
       # update FSM

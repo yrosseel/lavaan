@@ -391,7 +391,7 @@ lav_sam_step1_local <- function(STEP1 = NULL, FIT = NULL, Y = NULL,
   } else {
     x.free <- PT$est[PT$free > 0]
   }
-  lavmodel.tmp <- lavaan:::lav_model_set_parameters(FIT@Model, x = x.free)
+  lavmodel.tmp <- lav_model_set_parameters(FIT@Model, x = x.free)
   LAMBDA <- THETA <- BETA <- PSI <- NU <- DELTA <- NULL
 
   # create LAMBDA
