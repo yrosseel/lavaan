@@ -114,7 +114,8 @@ lav_sam_step2 <- function(STEP1 = NULL, FIT = NULL,
     # remove 'exogenous' factor variances (if any) from reg.idx
     lv.names.x <- LV.names[LV.names %in% unlist(lavpta$vnames$eqs.x) &
       !LV.names %in% unlist(lavpta$vnames$eqs.y)]
-    if (lavoptions.PA$fixed.x && length(lv.names.x) > 0L) {
+    if ((lavoptions.PA$fixed.x || lavoptions.PA$std.lv) &&
+        length(lv.names.x) > 0L) {
       var.idx <- which(PT$lhs %in% lv.names.x &
         PT$op == "~~" &
         PT$lhs == PT$rhs)
@@ -142,7 +143,12 @@ lav_sam_step2 <- function(STEP1 = NULL, FIT = NULL,
     PTS$est <- NULL
     PTS$se <- NULL
 
+    # 'fix' step 1 parameters
     PTS$free[!PTS$id %in% reg.idx & PTS$free > 0L] <- 0L
+
+    # but free up residual variances if fixed (eg std.lv = TRUE) (new in 0.6-20)
+    var.idx <- reg.idx[which(PT$free[reg.idx] == 0L)]
+    PTS$free[var.idx] <- max(PTS$free) + seq_len(length(var.idx))
 
     # set 'ustart' values for free FIT.PA parameter to NA
     PTS$ustart[PTS$free > 0L] <- as.numeric(NA)
