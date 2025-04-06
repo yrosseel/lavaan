@@ -31,6 +31,8 @@ setMethod(
            simulate.args = list(est.bias = TRUE,
                                 se.bias  = TRUE,
                                 prop.sig = TRUE,
+                                coverage = TRUE,
+                                level    = 0.95,
                                 trim     = 0)) {
     lav_lavaanList_summary(object,
       header = header, estimates = estimates,
@@ -45,6 +47,8 @@ lav_lavaanList_summary <- function(object,
                                    simulate.args = list(est.bias = TRUE,
                                                         se.bias  = TRUE,
                                                         prop.sig = TRUE,
+                                                        coverage = TRUE,
+                                                        level    = 0.95,
                                                         trim     = 0),
                                    zstat = TRUE,
                                    pvalue = TRUE,
@@ -85,6 +89,8 @@ lav_lavaanList_summary <- function(object,
       sim.args <- list(est.bias = TRUE,
                        se.bias  = TRUE,
                        prop.sig = TRUE,
+                       coverage = TRUE,
+                       level    = 0.95,
                        trim     = 0)
       sim.args <- modifyList(sim.args, simulate.args)
       #if (!sim.args$est.bias) {
@@ -99,6 +105,11 @@ lav_lavaanList_summary <- function(object,
 
       # always compute EST
       EST <- lav_lavaanList_partable(object, what = "est", type = "all")
+
+      # sometimes compute SE
+      if (sim.args$se.bias || sim.args$prop.sig || sim.args$coverage) {
+        SE <- lav_lavaanList_partable(object, what = "se", type = "all")
+      }
 
       # est.bias?
       if (sim.args$est.bias) {
@@ -120,9 +131,7 @@ lav_lavaanList_summary <- function(object,
           SE.OBS <- SE.OBS[seq_len(nel)]
         }
         pe$se.obs <- SE.OBS
-        SE <- lav_lavaanList_partable(object, what = "se", type = "all")
-        SE.AVE <- apply(SE, 1L, mean, na.rm = TRUE,
-                        trim = sim.args$trim)
+        SE.AVE <- apply(SE, 1L, mean, na.rm = TRUE, trim = sim.args$trim)
         if (length(SE.AVE) > nel) {
           SE.AVE <- SE.AVE[seq_len(nel)]
         }
@@ -141,13 +150,35 @@ lav_lavaanList_summary <- function(object,
         wald[!is.finite(wald)] <- as.numeric(NA)
         pe$wald <- wald
         PVAL <- 2 * (1 - pnorm(abs(WALD)))
-        prop05 <- apply(PVAL, 1L, function(x) {
+        propsig <- apply(PVAL, 1L, function(x) {
                         x.ok <- x[is.finite(x)]
                         nx <- length(x.ok)
-                        sum(x.ok < 0.05)/nx
+                        sum(x.ok < (1 - sim.args$level))/nx
                        })
-        prop05[!is.finite(prop05)] <- as.numeric(NA)
-        pe$prop.p05 <- prop05
+        propsig[!is.finite(propsig)] <- as.numeric(NA)
+        pe$prop.sig <- propsig
+      }
+
+      if (sim.args$coverage) {
+        # next three lines based on confint.lm
+        a <- (1 - sim.args$level) / 2
+        a <- c(a, 1 - a)
+        fac <- qnorm(a)
+        CI.LOWER <- EST + fac[1]*SE
+        CI.UPPER <- EST + fac[2]*SE
+        ci.lower <- apply(CI.LOWER, 1L, mean, na.rm = TRUE,
+                          trim = sim.args$trim)
+        ci.upper <- apply(CI.UPPER, 1L, mean, na.rm = TRUE,
+                          trim = sim.args$trim)
+        ci.lower[!is.finite(ci.lower)] <- as.numeric(NA)
+        ci.upper[!is.finite(ci.upper)] <- as.numeric(NA)
+        pe$ci.lower <- ci.lower
+        pe$ci.upper <- ci.upper
+        # columnwise comparison
+        inside.flag <- (CI.LOWER <= pe$est.true) & (CI.UPPER >= pe$est.true)
+        coverage <- apply(inside.flag, 1L, mean, na.rm = TRUE)
+        coverage[!is.finite(coverage)] <- as.numeric(NA)
+        pe$coverage <- coverage
       }
 
       # if sam(), should we keep or remove the step1 values?
