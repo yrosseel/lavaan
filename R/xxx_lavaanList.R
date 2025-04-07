@@ -271,7 +271,20 @@ lavaanList <- function(model = NULL, # model
           silent = TRUE
         )
       } else {
-        lav_msg_stop(gettext("unknown cmd:"), cmd)
+        lavobject <- try(do.call(cmd, 
+          args = c(
+              list(
+                model = model,
+                data = DATA,
+                se = FIT@Options$se,
+                bootstrap = FIT@Options$bootstrap
+              ),
+              dotdotdot
+            )
+          ),
+          silent = TRUE
+        )
+        #lav_msg_stop(gettext("unknown cmd:"), cmd)
       }
     } # data.ok.flag
 

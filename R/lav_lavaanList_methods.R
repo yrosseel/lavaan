@@ -119,6 +119,7 @@ lav_lavaanList_summary <- function(object,
         if (length(AVE) > nel) {
           AVE <- AVE[seq_len(nel)]
         }
+        AVE[!is.finite(AVE)] <- as.numeric(NA)
         pe$est.ave <- AVE
         pe$est.bias <- pe$est.ave - pe$est.true
       }
@@ -130,11 +131,13 @@ lav_lavaanList_summary <- function(object,
         if (length(SE.OBS) > nel) {
           SE.OBS <- SE.OBS[seq_len(nel)]
         }
+        SE.OBS[!is.finite(SE.OBS)] <- as.numeric(NA)
         pe$se.obs <- SE.OBS
         SE.AVE <- apply(SE, 1L, mean, na.rm = TRUE, trim = sim.args$trim)
         if (length(SE.AVE) > nel) {
           SE.AVE <- SE.AVE[seq_len(nel)]
         }
+        SE.AVE[!is.finite(SE.AVE)] <- as.numeric(NA)
         pe$se.ave <- SE.AVE
         se.obs <- SE.OBS
         se.obs[se.obs < .Machine$double.eps^(1/3)] <- as.numeric(NA)
