@@ -271,7 +271,7 @@ lavaanList <- function(model = NULL, # model
           silent = TRUE
         )
       } else {
-        lavobject <- try(do.call(cmd, 
+        lavobject <- try(do.call(cmd,
           args = c(
               list(
                 model = model,

@@ -27,7 +27,7 @@ estfun.lavaan <- lavScores <- function(object, scaling = FALSE, # nolint
   # what if estimator is not ML or WLS?
   # avoid hard error (using stop); throw a warning, and return an empty matrix
   if (!object@Options$estimator %in% c("ML", "WLS")) {
-    lav_msg_warn(gettext("scores only availlabe if estimator is ML"))
+    lav_msg_warn(gettext("scores only availalbe if estimator is ML"))
     return(matrix(0, 0, 0))
   }
 
