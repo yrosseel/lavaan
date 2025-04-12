@@ -128,6 +128,12 @@ lav_sam_step1 <- function(cmd = "sem", mm.list = NULL, mm.args = list(),
   lavoptions.mm$baseline <- FALSE
   lavoptions.mm$bounds <- "wide.zerovar"
 
+  # ALWAYS conditional.x = FALSE!
+  # even if global model uses conditional.x = TRUE
+  # this should not affect the measurement models (if the covariates act on
+  # the structural part only)
+  lavoptions.mm$conditional.x = FALSE
+
   # override with user-specified mm.args
   lavoptions.mm <- modifyList(lavoptions.mm, mm.args)
 
@@ -169,7 +175,7 @@ lav_sam_step1 <- function(cmd = "sem", mm.list = NULL, mm.args = list(),
       PT = PT,
       add.lv.cov = add.lv.cov,
       add.idx = TRUE,
-      lv.names = mm.list[[mm]]
+      lv.names = mm.list[[mm]],
     )
     mm.idx <- attr(PTM, "idx")
     attr(PTM, "idx") <- NULL
@@ -190,6 +196,14 @@ lav_sam_step1 <- function(cmd = "sem", mm.list = NULL, mm.args = list(),
     slotData.block <- lav_data_update_subset(FIT@Data,
       ov.names = ov.names.block
     )
+    # get rid of ov.names.x
+    if (!slotOptions.mm$conditional.x) {
+      slotData.block@ov.names.x <-
+        lapply(seq_len(nblocks), function(x) character(0L))
+      slotData.block@eXo <-
+        lapply(seq_len(nblocks), function(x) NULL)
+    }
+
     # if data.type == "moment", (re)create sample.cov and sample.nobs
     if (FIT@Data@data.type == "moment") {
       if (ngroups == 1L) {
@@ -391,6 +405,9 @@ lav_sam_step1_local <- function(STEP1 = NULL, FIT = NULL, Y = NULL,
   } else {
     x.free <- PT$est[PT$free > 0]
   }
+  # check for NA values (eg in BETA); set them to zero
+  x.free[!is.finite(x.free)] <- 0
+
   lavmodel.tmp <- lav_model_set_parameters(FIT@Model, x = x.free)
   LAMBDA <- THETA <- BETA <- PSI <- NU <- DELTA <- NULL
 

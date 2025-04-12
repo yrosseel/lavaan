@@ -18,8 +18,10 @@ lav_sam_step0 <- function(cmd = "sem", model = NULL, data = NULL,
   dotdotdot0$se                   <- "none"
   dotdotdot0$test                 <- "none"
   dotdotdot0$verbose              <- FALSE # no output for this 'dummy' FIT
-  dotdotdot0$conditional.x        <- FALSE
-  dotdotdot0$fixed.x              <- TRUE
+  if (sam.method != "global") {
+    dotdotdot0$conditional.x        <- FALSE
+  }
+  #dotdotdot0$fixed.x              <- TRUE
   dotdotdot0$ceq.simple           <- TRUE # if not the default yet
   dotdotdot0$check.lv.interaction <- FALSE # we allow for it
   # dotdotdot0$cat.wls.w            <- FALSE # no weight matrix if categorical

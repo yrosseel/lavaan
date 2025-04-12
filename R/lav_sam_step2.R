@@ -27,7 +27,9 @@ lav_sam_step2 <- function(STEP1 = NULL, FIT = NULL,
     lavoptions.PA$se <- "none"
   }
   # lavoptions.PA$fixed.x <- TRUE # may be false if indicator is predictor
-  lavoptions.PA$fixed.x <- FALSE # until we fix this...
+  if (!lavoptions.PA$conditional.x) {
+    lavoptions.PA$fixed.x <- FALSE # until we fix this...
+  }
   lavoptions.PA$categorical <- FALSE
   lavoptions.PA$.categorical <- FALSE
   lavoptions.PA$rotation <- "none"

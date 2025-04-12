@@ -15,7 +15,8 @@
 # - but fixed-to-zero covariances may not be present in PT...
 # - if indicators are regressed on exogenous covariates, should we
 #   add them here? (no for now, unless add.ind.predictors = TRUE)
-# - new in 0.6-20: check for 2nd, 3rd order lv.names...
+# - new in 0.6-20: - check for 2nd, 3rd order lv.names...
+#                  - allow for conditional.x (global SAM)
 lav_partable_subset_measurement_model <- function(PT = NULL,
                                                   lv.names = NULL,
                                                   add.lv.cov = TRUE,
@@ -96,7 +97,6 @@ lav_partable_subset_measurement_model <- function(PT = NULL,
       # add them to IND, so we include their variances/intercepts
       IND <- c(IND, EXTRA)
     }
-
 
     # keep ~~
     OV.VAR.idx <- which(PT$op == "~~" &
@@ -258,7 +258,9 @@ lav_partable_subset_measurement_model <- function(PT = NULL,
 # NOTE: only within same level
 lav_partable_add_lv_cov <- function(PT, lv.names = NULL) {
   # PT
-  PT <- as.data.frame(PT, stringsAsFactors = FALSE)
+  if (!is.data.frame(PT)) {
+    PT <- as.data.frame(PT, stringsAsFactors = FALSE)
+  }
 
   # lavpta
   lavpta <- lav_partable_attributes(PT)
@@ -341,7 +343,6 @@ lav_partable_add_lv_cov <- function(PT, lv.names = NULL) {
 
   PT
 }
-
 
 # this function takes a 'full' SEM (measurement models + structural part)
 # and returns only the structural part
