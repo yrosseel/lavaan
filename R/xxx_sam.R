@@ -127,13 +127,13 @@ sam <- function(model = NULL,
       dotdotdot$verbose <- NULL
     }
     # check for conditional.x= argument
-    if (!sam.method == "global" && !is.null(dotdotdot$conditional.x) &&
-        dotdotdot$conditional.x) {
-      lav_msg_warn(gettext(
-        "local sam() does not support conditional.x = TRUE (yet) -> switching to
-          conditional.x = FALSE"))
-      dotdotdot$conditional.x <- FALSE
-    }
+    # if (!sam.method == "global" && !is.null(dotdotdot$conditional.x) &&
+    #     dotdotdot$conditional.x) {
+    #   lav_msg_warn(gettext(
+    #     "local sam() does not support conditional.x = TRUE (yet) -> switching to
+    #       conditional.x = FALSE"))
+    #   dotdotdot$conditional.x <- FALSE
+    # }
     # check for orthogonal= argument
     if (!is.null(dotdotdot$orthogonal) &&
         dotdotdot$orthogonal &&

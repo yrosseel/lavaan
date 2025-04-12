@@ -715,6 +715,12 @@ lav_sam_get_cov_ybar <- function(FIT = NULL, local.options = list(
       lavsamplestats = FIT@SampleStats,
       lavoptions = FIT@Options
     )
+    h1implied <- h1implied
+  } else {
+    h1implied <- FIT@h1$implied
+    # if (FIT@Options$conditional.x) {
+    #   h1implied <- lav_model_implied_cond2uncond(h1implied)
+    # }
   }
 
   # containers
@@ -741,8 +747,8 @@ lav_sam_get_cov_ybar <- function(FIT = NULL, local.options = list(
 
       if (this.level == 1L) {
         if (local.twolevel.method == "h1") {
-          COV <- H1$implied$cov[[1]]
-          YBAR <- H1$implied$mean[[1]]
+          COV <- h1implied$cov[[1]]
+          YBAR <- h1implied$mean[[1]]
         } else if (local.twolevel.method == "anova" ||
           local.twolevel.method == "mean") {
           COV <- FIT@SampleStats@YLp[[this.group]][[2]]$Sigma.W
@@ -755,8 +761,8 @@ lav_sam_get_cov_ybar <- function(FIT = NULL, local.options = list(
         YBAR <- YBAR[ov.idx]
       } else if (this.level == 2L) {
         if (local.twolevel.method == "h1") {
-          COV <- H1$implied$cov[[2]]
-          YBAR <- H1$implied$mean[[2]]
+          COV <- h1implied$cov[[2]]
+          YBAR <- h1implied$mean[[2]]
         } else if (local.twolevel.method == "anova") {
           COV <- FIT@SampleStats@YLp[[this.group]][[2]]$Sigma.B
           YBAR <- FIT@SampleStats@YLp[[this.group]][[2]]$Mu.B
@@ -783,8 +789,13 @@ lav_sam_get_cov_ybar <- function(FIT = NULL, local.options = list(
       # single level
     } else {
       this.group <- b
-      YBAR <- FIT@h1$implied$mean[[b]] # EM version if missing="ml"
-      COV <- FIT@h1$implied$cov[[b]]
+      if (FIT@Model@conditional.x) {
+        YBAR <- h1implied$res.int[[b]]
+        COV  <- h1implied$res.cov[[b]]
+      } else {
+        YBAR <- h1implied$mean[[b]] # EM version if missing="ml"
+        COV  <- h1implied$cov[[b]]
+      }
     } # single level
 
     COV.list[[b]] <- COV

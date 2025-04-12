@@ -415,7 +415,7 @@ lav_sam_step1_local <- function(STEP1 = NULL, FIT = NULL, Y = NULL,
   lambda.idx <- which(names(FIT@Model@GLIST) == "lambda")
   LAMBDA <- lavmodel.tmp@GLIST[lambda.idx]
 
-  # creat THETA
+  # create THETA
   theta.idx <- which(names(FIT@Model@GLIST) == "theta")
   THETA <- lavmodel.tmp@GLIST[theta.idx]
 
@@ -439,6 +439,11 @@ lav_sam_step1_local <- function(STEP1 = NULL, FIT = NULL, Y = NULL,
     PSI <- lavmodel.tmp@GLIST[psi.idx]
   }
 
+  # GAMMA (only for names, if conditional.x)
+  #if (FIT@Model@conditional.x) {
+  #  gamma.idx <- which(names(FIT@Model@GLIST) == "gamma")
+  #}
+
   # handle dummy's + higher-order + rank-deficient
   for (b in seq_len(nblocks)) {
     # new in 0.6-10: check if any indicators are also involved
@@ -461,6 +466,12 @@ lav_sam_step1_local <- function(STEP1 = NULL, FIT = NULL, Y = NULL,
 
     # get ALL lv names (including dummy ov.x/ov.y)
     lv.names <- FIT@Model@dimNames[[lambda.idx[b]]][[2L]]
+
+    # if conditional.x, we must add the ov.names.x manually
+    # if (FIT@Model@conditional.x) {
+    #   exo.names <- FIT@Model@dimNames[[gamma.idx[b]]][[2L]]
+    #   lv.names <- c(lv.names, exo.names)
+    # }
 
     # handle higher-order factors here
     if (length(lavpta$vidx$lv.ind[[b]]) > 0L) {
@@ -571,6 +582,10 @@ lav_sam_step1_local <- function(STEP1 = NULL, FIT = NULL, Y = NULL,
     # lv.names, including dummy-lv covariates
     psi.idx <- which(names(FIT@Model@GLIST) == "psi")[b]
     lv.names.b <- FIT@Model@dimNames[[psi.idx]][[1L]] # including dummy/inter.
+    # if (FIT@Model@conditional.x) {
+    #   exo.names <- FIT@Model@dimNames[[gamma.idx[b]]][[2L]]
+    #   lv.names.b <- c(lv.names.b, exo.names)
+    # }
     rm.idx <- integer(0L)
 
     # higher-order? remove lower-order factors
@@ -593,7 +608,7 @@ lav_sam_step1_local <- function(STEP1 = NULL, FIT = NULL, Y = NULL,
 
     # get sample statistics for this block
     COV <- STEP1$COV[[b]]
-    YBAR <- STEP1$YBAR[[b]]
+    YBAR <- drop(STEP1$YBAR[[b]])
 
     # rescale COV?
     if (FIT@Data@nlevels == 1L &&
@@ -641,6 +656,17 @@ lav_sam_step1_local <- function(STEP1 = NULL, FIT = NULL, Y = NULL,
       FIT@Model@ov.x.dummy.lv.idx[[b]],
       FIT@Model@ov.y.dummy.lv.idx[[b]]
     )
+
+    # handle conditional.x
+    # if (FIT@Model@conditional.x) {
+    #   I0 <- diag(x = 0, nrow = length(exo.names))
+    #   I1 <- diag(x = 1, nrow = length(exo.names))
+    #   Mb <- lav_matrix_bdiag(Mb, I1)
+    #   LAMBDA[[b]] <- lav_matrix_bdiag(LAMBDA[[b]], I1)
+    #   THETA[[b]] <- lav_matrix_bdiag(THETA[[b]], I0)
+    #   NU[[b]] <- c(drop(NU[[b]]), numeric(length(exo.names)))
+    # }
+
     # fix dummy.lv.idx if we have higher-order factors!
     if (lv.higherorder.flag) {
       dummy.lv.idx <- match(lv.names.b[dummy.lv.idx], lv.names1)
@@ -790,6 +816,17 @@ lav_sam_step1_local <- function(STEP1 = NULL, FIT = NULL, Y = NULL,
 	names(MSM..)  <- FIT@Data@block.label
 	names(MTM..)  <- FIT@Data@block.label
 	names(FS.mean)<- FIT@Data@block.label
+  }
+
+  # handle conditional.x: add res.slopes, cov.x and mean.x
+  if (FIT@Model@conditional.x) {
+    res.slopes <- vector("list", length = nblocks)
+    for (b in seq_len(nblocks)) {
+      res.slopes[[b]] <- M[[b]] %*% FIT@h1$implied$res.slopes[[b]]
+    }
+    attr(VETA, "res.slopes") <- res.slopes
+    attr(VETA, "cov.x") <- FIT@h1$implied$cov.x
+    attr(VETA, "mean.x") <- FIT@h1$implied$mean.x
   }
 
   # store EETA/VETA/M/alpha/lambda

@@ -1057,7 +1057,11 @@ lav_residuals_summary <- function(object, type = c("rmr", "srmr", "crmr"),
           pstar <- length(STATS)
           if (type[typ] == "crmr") {
             # pstar <- pstar - ( nvar - nvar.x )
-            pstar <- pstar - nvar
+            if (conditional.x) {
+              pstar <- pstar - nrow(rmsList.g[["res.cov"]])
+            } else {
+              pstar <- pstar - nvar
+            }
           }
 
           ACOV <- NULL

@@ -59,6 +59,7 @@ lav_sam_step2 <- function(STEP1 = NULL, FIT = NULL,
       add.idx = TRUE,
       add.exo.cov = TRUE,
       fixed.x = lavoptions.PA$fixed.x,
+      conditional.x = lavoptions.PA$conditional.x,
       free.fixed.var = TRUE,
       meanstructure = lavoptions.PA$meanstructure
     )
