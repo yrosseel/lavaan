@@ -6,6 +6,7 @@ bibentry(
   author       = "Yves Rosseel and Terrence D. Jorgensen and Luc {De Wilde}",
   year         = "2025",
   note         = "R package version 0.6-20",
+  doi          = "10.32614/CRAN.package.lavaan",
   url          = "https://CRAN.R-project.org/package=lavaan",
 
   textVersion =
