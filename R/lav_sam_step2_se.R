@@ -33,7 +33,8 @@ lav_sam_step2_se <- function(FIT = NULL, JOINT = NULL,
   }
 
   if (!lavoptions$se %in%
-    c("none", "standard", "naive", "twostep", "local", "local.nt")) {
+    c("none", "standard", "naive", "twostep", "twostep.robust",
+      "local", "local.nt")) {
     lav_msg_warn(gettextf(
       "unknown se= argument: %s. Switching to twostep.",
       lavoptions$se
@@ -48,7 +49,7 @@ lav_sam_step2_se <- function(FIT = NULL, JOINT = NULL,
     cat("Computing ", lavoptions$se, " standard errors ... ", sep = "")
   }
 
-  if (lavoptions$se %in% c("naive", "twostep")) {
+  if (lavoptions$se %in% c("naive", "twostep", "twostep.robust")) {
     INFO <- lavInspect(JOINT, "information")
     I.12 <- INFO[step1.free.idx, step2.free.idx]
     I.22 <- INFO[step2.free.idx, step2.free.idx]
@@ -83,7 +84,7 @@ lav_sam_step2_se <- function(FIT = NULL, JOINT = NULL,
 
   # invert augmented information, for I.22 block only
   # new in 0.6-16 (otherwise, eq constraints in struc part are ignored)
-  if (lavoptions$se %in% c("standard", "twostep")) {
+  if (lavoptions$se %in% c("standard", "twostep", "twostep.robust")) {
     I.22.inv <-
       lav_model_information_augment_invert(
         lavmodel = FIT.PA@Model,
@@ -136,19 +137,45 @@ lav_sam_step2_se <- function(FIT = NULL, JOINT = NULL,
 
     out$VCOV <- VCOV
 
-  # se = "twostep"
-  } else if (lavoptions$se  == "twostep") {
-    V2 <- 1 / N * I.22.inv # not the same as FIT.PA@vcov$vcov!!
+  # se = "twostep" or "twostep.robust"
+  } else if (lavoptions$se  == "twostep" || lavoptions$se == "twostep.robust") {
 
-	if (lavoptions$se == "twostep" ) {
+    if (lavoptions$se  == "twostep") {
+      V2 <- 1 / N * I.22.inv # not the same as FIT.PA@vcov$vcov!!
       V1 <- I.22.inv %*% I.21 %*% Sigma.11 %*% I.12 %*% I.22.inv
-	} else {
-	  stop("not ready yet")
-	  # R.21 <- crossprod(J2, J1)/nrow(J2)
-	  # V1 <- I.22.inv %*% (I.21 %*% Sigma.11 %*% t(I.21) -
-	  #                     I.21 %*% Sigma.11 %*% t(R.21) -
-      #                     R.21 %*% Sigma.11 %*% t(I.21)) %*% I.22.inv
-	}
+    } else if(lavoptions$se == "twostep.robust") {
+      # following Yuan & Chan 2002, eqs 4, 10, 11, 12, 13 and 14
+      if (is.null(JOINT@SampleStats@NACOV[[1]])) {
+        JOINT@SampleStats@NACOV <- lavTech(JOINT, "gamma")
+      }
+
+      tmp <- lavaan:::lav_model_nvcov_robust_sem(
+        lavmodel = JOINT@Model, lavsamplestats = JOINT@SampleStats,
+        lavcache = JOINT@cache, lavdata = JOINT@Data,
+        lavimplied = JOINT@implied, lavh1 = JOINT@h1,
+        lavoptions = JOINT@Options, use.ginv = FALSE,
+        attr.Delta = TRUE, attr.tDVGVD = TRUE, attr.E.inv = TRUE,
+        attr.WLS.V = TRUE)
+      NVarCov <- tmp[,] # remove attributes
+      Delta <- attr(tmp, "Delta")
+      E.inv <- attr(tmp, "E.inv")
+      WLS.V <- attr(tmp, "WLS.V")
+      tDVGVD <- attr(tmp, "tDVGVD")
+      tmp2 <- tDVGVD %*% E.inv
+
+      A <- -1 * INFO[step2.free.idx, step2.free.idx, drop = FALSE]
+      B <- -1 * INFO[step2.free.idx, step1.free.idx, drop = FALSE]
+      V11 <- tDVGVD[ step2.free.idx, step2.free.idx, drop = FALSE]
+      V22 <- NVarCov[step1.free.idx, step1.free.idx, drop = FALSE]
+      V12 <- tmp2[   step2.free.idx, step1.free.idx, drop = FALSE]
+      V21 <- t(V12)
+      #PI <- V11 + B %*% V21 + V12 %*% t(B) + B %*% V22 %*% t(B)
+      #A.inv <- solve(A)
+      A.inv <-  -1 * I.22.inv
+      #VCOV <- A.inv %*% PI %*% t(A.inv)
+      V2 <- 1/N * (A.inv %*% V11 %*% A.inv)
+      V1 <- 1/N * (A.inv %*% (B %*% V21 + V12 %*% t(B) + B %*% V22 %*% t(B)) %*% A.inv)
+    }
 
     # V for second step
     if (!is.null(local.options$alpha.correction) &&
@@ -171,6 +198,7 @@ lav_sam_step2_se <- function(FIT = NULL, JOINT = NULL,
       VCOV.corrected <- V2 + V1
       VCOV <- alpha.N1 * VCOV.naive + (1 - alpha.N1) * VCOV.corrected
     } else {
+      # no alpha correction
       VCOV <- V2 + V1
     }
 

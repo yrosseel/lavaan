@@ -26,7 +26,7 @@ lav_sam_step0 <- function(cmd = "sem", model = NULL, data = NULL,
   dotdotdot0$check.lv.interaction <- FALSE # we allow for it
   # dotdotdot0$cat.wls.w            <- FALSE # no weight matrix if categorical
   # note: this breaks the computation of twostep standard errors...
-  if (se %in% c("local", "ij")) {
+  if (se %in% c("local", "ij", "twostep.robust")) {
     dotdotdot0$NACOV <- TRUE
   }
 
@@ -57,6 +57,9 @@ lav_sam_step0 <- function(cmd = "sem", model = NULL, data = NULL,
   }
 
   # se
+  if (FIT@Model@categorical && se == "twostep") {
+    se <- "twostep.robust"
+  }
   FIT@Options$se <- se
 
   # test

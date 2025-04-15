@@ -5,7 +5,7 @@
 # local vs global sam
 # local sam = alternative for FSR+Croon
 # - but no need to compute factor scores or corrections
-# gloal sam = (old) twostep
+# global sam = (old) twostep
 # - but we can also take a 'local' perspective
 
 # restrictions:
@@ -49,6 +49,7 @@
 # YR 14 Nov 2024 - add se = "local"
 # YR 01 Mar 2025 - allow for higher-order measurement models in local SAM
 # YR 25 Mar 2025 - add sam.method = "cFSR" (using correlation-preserving FS)
+# YR 15 Apr 2025 - add se = "twostep.robust"
 
 # twostep = wrapper for global sam
 twostep <- function(model = NULL, data = NULL, cmd = "sem",
@@ -161,15 +162,19 @@ sam <- function(model = NULL,
     # aliases
     if (se %in% c("two-step", "two_step", "two.step")) {
       se <- "twostep"
+    } else if(se %in% c("two-step-robust", "two-step.robust",
+                        "two_step_robust", "two.step.robust",
+                        "twostep.robust")) {
+      se <- "twostep.robust"
     }
     else if (se %in% c("ij", "local")) {
       se <- "local"
     }
     # check if valid
     if (!se %in% c("standard", "naive", "twostep", "local", "local.nt",
-                   "bootstrap", "none")) {
+                   "twostep.robust", "bootstrap", "none")) {
       lav_msg_stop(gettext(
-        "se= argument must be twostep, bootstrap, or local"))
+        "se= argument must be twostep, twostep.robust, bootstrap, or local"))
     }
     # check for local
     if (se %in% c("local", "local.nt")) {
@@ -232,6 +237,8 @@ sam <- function(model = NULL,
 
     # check if we have categorical data
     if (FIT@Model@categorical) {
+      # switch to M.method = "ULS"
+      local.options[["M.method"]] <- "ULS"
       # if sam.method = "global", force estimator to DWLS in struc par
   	  if (sam.method == "global" &&
   	      !is.null(struc.args[["estimator"]]) &&

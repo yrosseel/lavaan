@@ -83,7 +83,11 @@ lav_model_nvcov_robust_sem <- function(lavmodel = NULL,
                                        lavimplied = NULL,
                                        lavh1 = NULL,
                                        lavoptions = NULL,
-                                       use.ginv = FALSE) {
+                                       use.ginv = FALSE,
+                                       attr.Delta = TRUE,
+                                       attr.tDVGVD = FALSE,
+                                       attr.E.inv = FALSE,
+                                       attr.WLS.V = FALSE) {
   # compute inverse of the expected(!) information matrix
   if (lavmodel@estimator == "ML" && lavoptions$mimic == "Mplus") {
     # YR - 11 aug 2010 - what Mplus seems to do is (see Muthen apx 4 eq102)
@@ -122,7 +126,8 @@ lav_model_nvcov_robust_sem <- function(lavmodel = NULL,
 
   Delta <- attr(E.inv, "Delta")
   WLS.V <- attr(E.inv, "WLS.V")
-
+  attr(E.inv, "Delta") <- NULL
+  attr(E.inv, "WLS.V") <- NULL
   # Gamma
   Gamma <- lavsamplestats@NACOV
   if (lavmodel@estimator == "ML" &&
@@ -167,7 +172,13 @@ lav_model_nvcov_robust_sem <- function(lavmodel = NULL,
   NVarCov <- (E.inv %*% tDVGVD %*% E.inv)
 
   # to be reused by lav_test()
-  attr(NVarCov, "Delta") <- Delta
+  if (attr.Delta) {
+    attr(NVarCov, "Delta") <- Delta
+  }
+  # for twostep.robust in sam()
+  if (attr.tDVGVD) {
+    attr(NVarCov, "tDVGVD") <- tDVGVD
+  }
 
   if ((lavoptions$information[1] == lavoptions$information[2]) &&
     (lavoptions$h1.information[1] == lavoptions$h1.information[2]) &&
@@ -176,6 +187,14 @@ lav_model_nvcov_robust_sem <- function(lavmodel = NULL,
         lavoptions$observed.information[2])) {
     # only when same type of information is used # new in 0.6-6
     attr(NVarCov, "E.inv") <- E.inv
+    attr(NVarCov, "WLS.V") <- WLS.V
+  }
+
+  # user override
+  if (attr.E.inv && is.null(attr(NVarCov, "E.inv"))) {
+    attr(NVarCov, "E.inv") <- E.inv
+  }
+  if (attr.WLS.V && is.null(attr(NVarCov, "WLS.V"))) {
     attr(NVarCov, "WLS.V") <- WLS.V
   }
 
