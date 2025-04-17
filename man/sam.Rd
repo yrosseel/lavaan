@@ -13,7 +13,7 @@ sam(model = NULL, data = NULL, cmd = "sem", se = "twostep",
     local.options = list(M.method = "ML", lambda.correction = TRUE, 
                          alpha.correction = 0L, twolevel.method = "h1"), 
     global.options = list(), 
-    bootstrap.args = list(R = 1000L, type = "ordinary"),
+    bootstrap.args = list(R = 1000L, type = "ordinary", show.progress = FALSE),
     output = "lavaan")
 }
 \arguments{

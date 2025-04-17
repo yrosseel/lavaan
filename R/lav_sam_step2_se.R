@@ -149,7 +149,7 @@ lav_sam_step2_se <- function(FIT = NULL, JOINT = NULL,
         JOINT@SampleStats@NACOV <- lavTech(JOINT, "gamma")
       }
 
-      tmp <- lavaan:::lav_model_nvcov_robust_sem(
+      tmp <- lav_model_nvcov_robust_sem(
         lavmodel = JOINT@Model, lavsamplestats = JOINT@SampleStats,
         lavcache = JOINT@cache, lavdata = JOINT@Data,
         lavimplied = JOINT@implied, lavh1 = JOINT@h1,
