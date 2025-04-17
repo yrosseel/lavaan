@@ -86,7 +86,8 @@ sam <- function(model = NULL,
                 ),
                 # h1, anova, mean
                 global.options = list(), # not used for now
-                bootstrap.args = list(R = 1000L, type = "ordinary"),
+                bootstrap.args = list(R = 1000L, type = "ordinary",
+                                      show.progress = FALSE),
                 output = "lavaan") {
 
   # check model= argument
@@ -340,7 +341,7 @@ sam <- function(model = NULL,
   # Step 3: assemble results in a 'dummy' JOINT model for output #
   ################################################################
   if (lav_verbose()) {
-    cat("Assembling results for output ... ")
+    cat("Creating JOINT lavaan object ... ")
   }
   JOINT <- lav_sam_step3_joint(
     FIT = FIT, PT = STEP2$PT,
@@ -354,8 +355,8 @@ sam <- function(model = NULL,
     JOINT@test <- STEP2$FIT.PA@test
   }
   # fill in vcov/se information from step 1
-  if (lavoptions$se != "none") {
-    JOINT@Options$se <- lavoptions$se # naive/twostep/none
+  if (!lavoptions$se %in% c("none", "bootstrap")) {
+    JOINT@Options$se <- lavoptions$se # naive/twostep/none/local/bootstrap
     if (JOINT@Model@ceq.simple.only) {
       VCOV.ALL <- matrix(
         0, JOINT@Model@nx.unco,
@@ -386,6 +387,9 @@ sam <- function(model = NULL,
   ##############################################
 
   if (lavoptions$se == "bootstrap") {
+    if (lav_verbose()) {
+      cat("computing VCOV for      se = bootstrap ...")
+    }
     # construct temporary sam object, so that lav_bootstrap_internal() can
     # use it
     SAM <- lav_sam_table(
@@ -401,10 +405,12 @@ sam <- function(model = NULL,
     sam_object <- JOINT
     sam_object@internal <- SAM
     default.args <- list(R = 1000L, type = "ordinary",
+                         show.progress = FALSE,
                          check.post = TRUE, keep.idx = FALSE)
     this.args <- modifyList(default.args, bootstrap.args)
     COEF <- lav_bootstrap_internal(object = sam_object,
-      R = this.args$R, type = this.args$type, FUN = "coef",
+      R = this.args$R, show.progress = this.args$show.progress,
+      type = this.args$type, FUN = "coef",
       check.post = this.args$check.post, keep.idx = this.args$keep.idx)
     COEF.orig <- COEF
     error.idx <- attr(COEF, "error.idx")
@@ -426,8 +432,12 @@ sam <- function(model = NULL,
     nboot <- nrow(COEF)
     VarCov <- cov(COEF) * (nboot - 1) / nboot
     JOINT@boot$coef <- COEF.orig
-    VCOV <- list()
-    VCOV$VCOV <- VarCov
+    JOINT@Options$bootstrap <- this.args$R
+    VCOV <- list(se = "bootstrap", VCOV = VarCov)
+
+    if (lav_verbose()) {
+      cat("done.\n")
+    }
 
   # analytic twostep/standard/naive/local
   } else {
@@ -440,8 +450,8 @@ sam <- function(model = NULL,
   # fill in twostep standard errors
   if (lavoptions$se != "none") {
     PT <- JOINT@ParTable
-    JOINT@Options$se <- lavoptions$se
-    JOINT@vcov$se <- lavoptions$se
+    JOINT@Options$se <- VCOV$se
+    JOINT@vcov$se <- VCOV$se
     if (lavoptions$se == "bootstrap") {
       JOINT@vcov$vcov <- VCOV$VCOV
     } else {

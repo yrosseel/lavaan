@@ -103,7 +103,7 @@ lav_sam_step1 <- function(cmd = "sem", mm.list = NULL, mm.args = list(),
   # adjust options for measurement models
   lavoptions.mm <- lavoptions
   lavoptions.mm$optim.bounds <- NULL
-  if (lavoptions$se == "none") {
+  if (lavoptions$se %in% c("none", "bootstrap")) {
     lavoptions.mm$se <- "none"
   } else {
     # categorical?
@@ -144,7 +144,7 @@ lav_sam_step1 <- function(cmd = "sem", mm.list = NULL, mm.args = list(),
   MM.FIT <- vector("list", nMMblocks) # fitted object
 
   # for joint model later
-  if (lavoptions$se != "none") {
+  if (!lavoptions$se %in% c("none", "bootstrap")) {
     Sigma.11 <- matrix(0, npar, npar)
     colnames(Sigma.11) <- rownames(Sigma.11) <-
       lav_partable_labels(FIT@ParTable, type = "free")
@@ -309,7 +309,7 @@ lav_sam_step1 <- function(cmd = "sem", mm.list = NULL, mm.args = list(),
     }
 
     # fill in standard errors measurement block
-    if (lavoptions$se != "none") {
+    if (!lavoptions$se %in% c("none", "bootstrap")) {
       if (fit.mm.block@Model@ceq.simple.only) {
         PTM.free <- PTM$free
         PTM.free[PTM.free > 0] <- seq_len(fit.mm.block@Model@nx.unco)
@@ -341,7 +341,7 @@ lav_sam_step1 <- function(cmd = "sem", mm.list = NULL, mm.args = list(),
   } # measurement block
 
   # only keep 'measurement part' parameters in Sigma.11
-  if (lavoptions$se != "none") {
+  if (!lavoptions$se %in% c("none", "bootstrap")) {
     Sigma.11 <- Sigma.11[step1.free.idx, step1.free.idx, drop = FALSE]
   } else {
     Sigma.11 <- NULL

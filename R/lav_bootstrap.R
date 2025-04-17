@@ -92,6 +92,7 @@ bootstrapLavaan <- function(object,
     lavoptions. = lavoptions.,
     lavpartable. = NULL,
     R = R,
+    show.progress = verbose,
     type = type.,
     FUN = FUN,
     keep.idx = keep.idx,
@@ -124,6 +125,7 @@ lav_bootstrap_internal <- function(object = NULL,
                                    lavoptions. = NULL,
                                    lavpartable. = NULL,
                                    R = 1000L,
+                                   show.progress = FALSE,
                                    type = "ordinary",
                                    FUN = "coef",
                                    check.post = TRUE,
@@ -183,6 +185,9 @@ lav_bootstrap_internal <- function(object = NULL,
 
   # always shut off some options:
   current.verbose <- lav_verbose()
+  if (missing(show.progress)) {
+    show.progress <- current.verbose
+  }
   if (lav_verbose(FALSE)) on.exit(lav_verbose(current.verbose))
   lavoptions$check.start <- FALSE
   lavoptions$check.post <- FALSE
@@ -357,15 +362,16 @@ lav_bootstrap_internal <- function(object = NULL,
       )
     }
 
-    # verbose
-    lav_verbose(current.verbose) # reset if needed
-    if (lav_verbose()) cat("  ... bootstrap draw number:", sprintf("%4d", b))
+    # show progress?
+    if (show.progress) {
+      cat("  ... bootstrap draw number:", sprintf("%4d", b))
+    }
     bootSampleStats <- try(lav_samplestats_from_data(
       lavdata       = newData,
       lavoptions    = lavoptions
     ), silent = TRUE)
     if (inherits(bootSampleStats, "try-error")) {
-      if (lav_verbose()) {
+      if (show.progress) {
         cat("     FAILED: creating sample statistics\n")
         cat(bootSampleStats[1])
       }
@@ -398,18 +404,32 @@ lav_bootstrap_internal <- function(object = NULL,
       new_object@SampleStats <- bootSampleStats
       new_object@h1 <- booth1
       # what about lavoptions?
-      fit.boot <- suppressWarnings(sam(new_object, se = "none"))
+      fit.boot <- suppressWarnings(try(sam(new_object, se = "none"),
+                                       silent = FALSE)) # show what is wrong
     } else {
-      fit.boot <- suppressWarnings(lavaan(
+      fit.boot <- suppressWarnings(try(lavaan(
         slotOptions = lavoptions,
         slotParTable = lavpartable,
         slotModel = model.boot,
         slotSampleStats = bootSampleStats,
         slotData = newData
-      ))
+      ), silent = FALSE))
+    }
+    if (inherits(fit.boot, "try-error")) {
+      if (show.progress) {
+        cat("     FAILED: with ERROR message\n")
+      }
+      out <- as.numeric(NA)
+      attr(out, "nonadmissible.flag") <- TRUE
+      if (keep.idx) {
+        attr(out, "BOOT.idx") <- BOOT.idx
+      }
+      return(out)
     }
     if (!fit.boot@optim$converged) {
-      if (lav_verbose()) cat("     FAILED: no convergence\n")
+      if (show.progress) {
+        cat("     FAILED: no convergence\n")
+      }
       out <- as.numeric(NA)
       attr(out, "nonadmissible.flag") <- TRUE
       if (keep.idx) {
@@ -431,7 +451,9 @@ lav_bootstrap_internal <- function(object = NULL,
       out <- try(as.numeric(FUN(fit.boot, ...)), silent = TRUE)
     }
     if (inherits(out, "try-error")) {
-      if (lav_verbose()) cat("     FAILED: applying FUN to fit.boot\n")
+      if (show.progress) {
+        cat("     FAILED: applying FUN to fit.boot\n")
+      }
       out <- as.numeric(NA)
       attr(out, "nonadmissible.flag") <- TRUE
       if (keep.idx) {
@@ -444,7 +466,7 @@ lav_bootstrap_internal <- function(object = NULL,
     admissible.flag <- suppressWarnings(lavInspect(fit.boot, "post.check"))
     attr(out, "nonadmissible.flag") <- !admissible.flag
 
-    if (lav_verbose()) {
+    if (show.progress) {
       cat(
         "   OK -- niter = ",
         sprintf("%3d", fit.boot@optim$iterations), " fx = ",
@@ -510,7 +532,7 @@ lav_bootstrap_internal <- function(object = NULL,
 
   # this is adapted from the boot function in package boot
   RR <- R
-  if (lav_verbose()) {
+  if (show.progress) {
     cat("\n")
   }
   res <- if (ncpus > 1L && (have_mc || have_snow)) {

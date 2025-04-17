@@ -206,7 +206,10 @@ lav_sam_step2_se <- function(FIT = NULL, JOINT = NULL,
     out$V2 <- V2
     out$V1 <- V1
     out$VCOV <- VCOV
-  }
+  } # twostep
+
+  # store se
+  out$se <- lavoptions$se # in case it changed
 
   if (lav_verbose()) {
     cat("done.\n")

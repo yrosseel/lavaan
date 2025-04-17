@@ -295,7 +295,12 @@ lav_sam_veta <- function(M = NULL, S = NULL, THETA = NULL,
   # new in 0.6-16: make sure MTM is pd
   # (otherwise lav_matrix_symmetric_diff_smallest_root will fail)
   theta.rm.idx <- unique(c(dummy.lv.idx, empty.theta.idx))
-  if (length(theta.rm.idx) > 0L) {
+  if (length(theta.rm.idx) == nrow(MTM)) {
+    # all zero?
+    # do nothing, but certainly no need for alpha or lambda.correction
+    alpha.correction = 0L
+    lambda.correction = FALSE
+  } else if (length(theta.rm.idx) > 0L) {
     MTM.small <- MTM[-theta.rm.idx, -theta.rm.idx, drop = FALSE]
     MTM.small <- zapsmall(lav_matrix_symmetric_force_pd(
       MTM.small,
