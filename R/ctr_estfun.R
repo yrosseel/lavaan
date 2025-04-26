@@ -17,6 +17,7 @@
 #                 argument
 # YR 12 Mar 2024: make lintr (more) happy; include WLS code from Franz Classe
 #                 move ML-specific code to lav_scores_ml() function
+# YR 26 Apr 2025: add lav_scores_gls()
 
 estfun.lavaan <- lavScores <- function(object, scaling = FALSE, # nolint
                                        ignore.constraints = FALSE,
@@ -26,7 +27,7 @@ estfun.lavaan <- lavScores <- function(object, scaling = FALSE, # nolint
 
   # what if estimator is not ML or WLS?
   # avoid hard error (using stop); throw a warning, and return an empty matrix
-  if (!object@Options$estimator %in% c("ML", "WLS")) {
+  if (!object@Options$estimator %in% c("ML", "WLS", "GLS", "ULS")) {
     lav_msg_warn(gettext("scores only availalbe if estimator is ML"))
     return(matrix(0, 0, 0))
   }
@@ -59,7 +60,7 @@ estfun.lavaan <- lavScores <- function(object, scaling = FALSE, # nolint
       moments = moments, lavdata = lavdata, lavsamplestats = lavsamplestats,
       lavmodel = lavmodel, lavoptions = lavoptions, scaling = scaling
     )
-  } else if (object@Options$estimator == "WLS") {
+  } else if (object@Options$estimator == "WLS" && lavmodel@categorical) {
     # check if ALL observed variables are ordered
     ov.names <- unlist(lavdata@ov.names)
     ov.idx <- which(lavdata@ov$name %in% ov.names)
@@ -70,6 +71,14 @@ estfun.lavaan <- lavScores <- function(object, scaling = FALSE, # nolint
 
     # compute WLS scores
     score_matrix <- lav_scores_wls(
+      ntab = ntab, ntot = ntot, npar = npar,
+      lavdata = lavdata, lavsamplestats = lavsamplestats,
+      lavmodel = lavmodel, lavoptions = lavoptions
+    )
+  } else if (!lavmodel@categorical &&
+             object@Options$estimator %in% c("GLS", "ULS", "WLS")) {
+    # compute WLS/GLS/ULS `scores'
+    score_matrix <- lav_scores_ls(
       ntab = ntab, ntot = ntot, npar = npar,
       lavdata = lavdata, lavsamplestats = lavsamplestats,
       lavmodel = lavmodel, lavoptions = lavoptions
@@ -266,6 +275,7 @@ lav_scores_ml <- function(ntab = 0L,
 }
 
 # this function is based on code originally written by Franz Classe (Munich)
+# for categorical data only!
 lav_scores_wls <- function(ntab = 0L,
                            ntot = 0L,
                            npar = 0L,
@@ -334,6 +344,81 @@ lav_scores_wls <- function(ntab = 0L,
     # combine matrices
     wi <- lavdata@case.idx[[g]]
     score_matrix[wi, ] <- t(t(Delta[[g]]) %*% W %*% t(e))
+  } # g
+
+  score_matrix
+}
+
+
+# wls/gls/uls (continuous data only)
+lav_scores_ls <- function(ntab = 0L,
+                          ntot = 0L,
+                          npar = 0L,
+                          lavdata = NULL,
+                          lavsamplestats = NULL,
+                          lavmodel = NULL,
+                          lavoptions = NULL) {
+
+  # containere for scores
+  score_matrix <- matrix(NA, ntot, npar)
+
+  # estimator
+  estimator <- lavoptions$estimator
+
+  # Delta matrix
+  Delta <- computeDelta(lavmodel = lavmodel)
+
+  # implied stats
+  implied <- lav_model_implied(lavmodel)
+
+  for (g in 1:lavsamplestats@ngroups) {
+    nvar <- ncol(lavsamplestats@cov[[g]])
+    nobs <- lavsamplestats@nobs[[g]]
+    Y <- lavdata@X[[g]]
+
+    # center (not using model-implied!)
+    Yc <- t(t(Y) - colMeans(Y, na.rm = TRUE))
+
+    # create Z where the rows_i contain the following elements:
+    #  - Y_i (if meanstructure is TRUE)
+    #  - vech(Yc_i' %*% Yc_i) where Yc_i are the residuals
+    idx1 <- lav_matrix_vech_col_idx(nvar)
+    idx2 <- lav_matrix_vech_row_idx(nvar)
+    if (lavmodel@meanstructure) {
+      Z <- cbind(Y, Yc[, idx1, drop = FALSE] * Yc[, idx2, drop = FALSE])
+    } else {
+      Z <- (Yc[, idx1, drop = FALSE] * Yc[, idx2, drop = FALSE])
+    }
+
+    # model-based sample statistics
+    if (lavmodel@meanstructure) {
+      sigma <- c(as.numeric(implied$mean[[g]]),
+                 lav_matrix_vech(implied$cov[[g]]))
+    } else {
+      sigma <- lav_matrix_vech(implied$cov[[g]])
+    }
+
+    # adjust sigma for N-1, so that colMeans(scores) == gradient
+    # (not for the means)
+    if (lavmodel@meanstructure) {
+      Z[,-seq_len(nvar)] <- Z[,-seq_len(nvar), drop = FALSE] * nobs / (nobs - 1)
+    } else {
+      Z <- Z * nobs / (nobs - 1)
+    }
+
+    # compute Zc
+    Zc <- t(t(Z) - sigma)
+
+    # weight matrix
+    if (estimator == "ULS") {
+      W <- diag(ncol(Z))
+    } else {
+      W <- lavsamplestats@WLS.V[[g]]
+    }
+
+    # combine matrices
+    wi <- lavdata@case.idx[[g]]
+    score_matrix[wi, ] <- Zc %*% W %*% Delta[[g]]
   } # g
 
   score_matrix
