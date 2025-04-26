@@ -448,7 +448,8 @@ lavTestLRT <- function(object, ..., method = "default", test = "default",
       attr(val, "heading") <-
         paste("\nScaled Chi-Squared Difference Test (method = ",
           dQuote(method), ")\n\n",
-          lav_msg(paste("lavaan NOTE:", txt)),
+          lav_msg(paste("lavaan NOTE:", txt), showheader = TRUE),
+          "\n",
           sep = ""
         )
       if (method == "satorra.2000" && scaled.shifted) {
