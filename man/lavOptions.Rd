@@ -24,7 +24,7 @@ This is the full list of options that are accepted by the \code{lavaan()}
 function, organized in several sections:
 
 
-Model features (always available):
+Model features:
 
 \describe{
     \item{\code{meanstructure}:}{If \code{TRUE}, the means of the observed
@@ -91,11 +91,6 @@ Model features (always available):
      WLS, which produce correct standard errors and a correct test statistic
      under normal and non-normal conditions respectively. Always assuming
      \code{fixed.x = FALSE} and \code{conditional.x = FALSE} (for now).}
-}
-
-Model features (only available for the \code{lavaan()} function):
-
-\describe{
     \item{\code{auto.fix.first}:}{If \code{TRUE}, the factor loading of the 
       first indicator is set to 1.0 for every latent variable.}
     \item{\code{auto.fix.single}:}{If \code{TRUE}, the residual variance (if 
