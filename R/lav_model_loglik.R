@@ -37,6 +37,21 @@ lav_model_loglik <- function(lavdata = NULL,
     logl.ok <- FALSE
   }
 
+  # catch all-zero Sigma (new in 0.6-20)
+  nblocks <- lavmodel@nblocks
+  for (b in seq_len(nblocks)) {
+    if (lavmodel@conditional.x) {
+      if (all(lavimplied$res.cov[[b]] == 0)) {
+        logl.ok <- FALSE
+      }
+    } else {
+      if (all(lavimplied$cov[[b]] == 0)) {
+        logl.ok <- FALSE
+      }
+    }
+  }
+
+
   if (logl.ok) {
     for (g in seq_len(ngroups)) {
       if (lavdata@nlevels > 1L) {
