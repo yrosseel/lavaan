@@ -113,8 +113,8 @@ the independence model) (if available).}
       likelihood ratio test. For more details and
       further options, see the \code{\link{lavTestLRT}} page.}
     \item{update}{\code{signature(object = "lavaan", model, add, ...,
-        evaluate=TRUE)}: update a fitted lavaan object and evaluate it
-        (unless \code{evaluate=FALSE}). Note that we use the environment
+        evaluate = TRUE)}: update a fitted lavaan object and evaluate it
+        (unless \code{evaluate = FALSE}). Note that we use the environment
         that is stored within the lavaan object, which is not necessarily
         the parent frame. The \code{add} argument is analogous to the one
         described in the \code{\link{lavTestScore}} page, and can be used to
@@ -132,7 +132,10 @@ the independence model) (if available).}
     \item{summary}{\code{signature(object = "lavaan", header = TRUE,
      fit.measures = FALSE, estimates = TRUE, ci = FALSE, fmi = FALSE,
      standardized = FALSE, std.nox = FALSE,
-     remove.step1 = TRUE, remove.unused = TRUE, cov.std = TRUE, rsquare = FALSE,
+     remove.system.eq = TRUE, remove.eq = TRUE, remove.ineq = TRUE,
+     remove.def = FALSE, remove.nonfree = FALSE, remove.step1 = TRUE,
+     remove.unused = TRUE, plabel = FALSE,
+     cov.std = TRUE, rsquare = FALSE,
      modindices = FALSE, ci = FALSE, nd = 3L)}:
       Print a nice summary of the model estimates.
       If \code{header = TRUE}, the header section (including fit measures) is
@@ -146,7 +149,7 @@ the independence model) (if available).}
       section.
       If \code{fmi = TRUE}, add the fmi (fraction of missing information)
       column, if it is available.
-      If \code{standardized=TRUE} or a character vector, the standardized 
+      If \code{standardized = TRUE} or a character vector, the standardized 
       solution is also printed (see \code{\link{parameterEstimates}}).  
       Note that \emph{SE}s and
       tests are still based on unstandardized estimates. Use
@@ -154,21 +157,28 @@ the independence model) (if available).}
       statistics for standardized estimates.
       The \code{std.nox} argument is deprecated; the \code{standardized}
       argument allows \code{"std.nox"} solution to be specifically requested.
-      If \code{remove.step1}, the parameters of the measurement part are not
-      shown (only used when using \code{sam()}.)
-      If \code{remove.unused}, automatically added parameters that are
+      If \code{remove.system.eq = TRUE}, the system-generated equality 
+      constraints (using plabels) are not shown.
+      If \code{remove.eq = TRUE} or \code{remove.ineq = TRUE}, 
+      the user-specified (in)equality constraints are not shown.
+      If \code{remove.def = TRUE}, the user-specified parameter definitions are
+      not shown.
+      If \code{remove.nonfree = TRUE}, the nonfree parameters are not shown.
+      If \code{remove.step1 = TRUE}, the parameters of the measurement part 
+      are not shown (only used when using \code{sam()}.)
+      If \code{remove.unused = TRUE}, automatically added parameters that are
       fixed to their default (0 or 1) values are removed.
-      If \code{rsquare=TRUE}, the R-Square values for the dependent variables
+      If \code{rsquare = TRUE}, the R-Square values for the dependent variables
       in the model are printed.
       If \code{efa = TRUE}, EFA related information is printed. The related
       \code{efa.args} list allows to set options related to the EFA output.
       See \code{\link{summary.efaList}} for more details.
-      If \code{modindices=TRUE}, modification indices
+      If \code{modindices = TRUE}, modification indices
       are printed for all fixed parameters.
       The argument \code{nd} determines the number of digits after the
       decimal point to be printed (currently only in the parameter estimates
       section.) Historically, nothing was returned, but since 0.6-12, a
-      list is returned of class \code{lavaan.summary} for which is print
+      list is returned of class \code{lavaan.summary} for which a print
       function is available.}
   }
 }

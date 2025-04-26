@@ -8,7 +8,8 @@ Parameter estimates of a latent variable model.}
 parameterEstimates(object, 
                    se = TRUE, zstat = TRUE, pvalue = TRUE, ci = TRUE, 
                    standardized = FALSE, 
-                   fmi = FALSE, level = 0.95, boot.ci.type = "perc", 
+                   fmi = FALSE, plabel = FALSE,
+                   level = 0.95, boot.ci.type = "perc", 
                    cov.std = TRUE, fmi.options = list(), 
                    rsquare = FALSE, 
                    remove.system.eq = TRUE, remove.eq = TRUE, 
@@ -28,8 +29,10 @@ by its standard error.}
 \item{pvalue}{Logical. If \code{TRUE}, an extra column is added containing
 the pvalues corresponding to the z-statistic, evaluated under a standard
 normal distribution.}
-\item{ci}{If \code{TRUE}, confidence intervals are added to the output}
+\item{ci}{If \code{TRUE}, confidence intervals are added to the output.}
 \item{level}{The confidence level required.}
+\item{plabel}{Logical. If \code{TRUE}, show the plabel column of the
+  parameter table in the output.}
 \item{boot.ci.type}{If bootstrapping was used, the type of interval required.
   The value should be one of \code{"norm"}, \code{"basic"}, \code{"perc"},
   or \code{"bca.simple"}. For the first three options, see the help page of

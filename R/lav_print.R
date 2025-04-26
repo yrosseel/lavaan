@@ -398,6 +398,8 @@ print.lavaan.parameterEstimates <- function(x, ..., nd = 3L) {
     lapply(x, function(x) {
       if (is.integer(x)) {
         sprintf(int.format, x)
+      } else if (is.character(x)) { # perhaps plabel
+        sprintf(char.format, x)
       } else if (is.numeric(x)) {
         sprintf(num.format, x)
       } else {

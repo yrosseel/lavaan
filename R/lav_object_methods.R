@@ -54,8 +54,14 @@ setMethod(
            standardized = FALSE,
            std = standardized,
            std.nox = FALSE, # TODO: remove deprecated argument in early 2025
+           remove.system.eq = TRUE,
+           remove.eq = TRUE,
+           remove.ineq = TRUE,
+           remove.def = FALSE,
+           remove.nonfree = FALSE,
            remove.step1 = TRUE,
            remove.unused = TRUE,
+           plabel = FALSE,
            cov.std = TRUE,
            rsquare = FALSE,
            fm.args = list(
@@ -76,8 +82,11 @@ setMethod(
       object = object, header = header,
       fit.measures = fit.measures, estimates = estimates,
       ci = ci, fmi = fmi, std = std, standardized = standardized,
+      remove.system.eq = remove.system.eq,
+      remove.eq = remove.eq, remove.ineq = remove.ineq,
+      remove.def = remove.def, remove.nonfree = remove.nonfree,
       remove.step1 = remove.step1, remove.unused = remove.unused,
-      cov.std = cov.std,
+      plabel = plabel, cov.std = cov.std,
       rsquare = rsquare, efa = efa.flag,
       fm.args = fm.args, modindices = modindices
     )
@@ -305,6 +314,7 @@ parameterEstimates <- # nolint
                                  ci = TRUE,
                                  standardized = FALSE,
                                  fmi = FALSE,
+                                 plabel = FALSE,
                                  # control
                                  level = 0.95,
                                  boot.ci.type = "perc",
@@ -942,6 +952,20 @@ parameterEstimates <- # nolint
     # if no user-defined labels, remove label column
     if (sum(nchar(object@ParTable$label)) == 0L) {
       tmp.list$label <- NULL
+    }
+
+    # if plabel = TRUE, add it (new in 0.6-20)
+    if (plabel) {
+      if (!is.null(tmp.partable$plabel)) {
+        tmp.list$plabel <- tmp.partable$plabel
+      } else {
+        if (!is.null(tmp.partable$id)) {
+          tmp.list$plabel <- paste(".p", tmp.list$id, ".", sep = "")
+        } else {
+          tmp.list$plabel <- paste(".p", seq_len(length(tmp.list$plabel)),
+                                   ".", sep = "")
+        }
+      }
     }
 
     # remove non-free parameters? (but keep ==, >, < and :=)
