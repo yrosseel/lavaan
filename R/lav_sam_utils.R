@@ -589,6 +589,8 @@ lav_sam_step3_joint <- function(FIT = NULL, PT = NULL, sam.method = "local") {
 
   lavoptions.joint <- lavoptions
   lavoptions.joint$optim.method <- "none"
+  lavoptions.joint$optim.parscale <- "none"
+  lavoptions.joint$start <- "default"
   lavoptions.joint$optim.force.converged <- TRUE
   lavoptions.joint$check.gradient <- FALSE
   lavoptions.joint$check.start <- FALSE
