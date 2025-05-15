@@ -1,4 +1,8 @@
 # build a bare-bones parameter table from a fitted lm object
+#
+# YR: this function was broken since Mar 3, 2017, but nobody noticed this!
+#     fixed again Apr 29, 2025.
+
 lav_partable_from_lm <- function(object, est = FALSE, label = FALSE,
                                  as.data.frame. = FALSE) {
   # sanity check
@@ -12,10 +16,7 @@ lav_partable_from_lm <- function(object, est = FALSE, label = FALSE,
   varNames <- as.character(attr(objectTerms, "variables"))[-1]
   responseName <- varNames[responseIndex]
 
-  predCoef <- lav_object_inspect_coef(object,
-    type = "free",
-    add.labels = TRUE
-  )
+  predCoef <- coef(object)
   predNames <- names(predCoef)
 
   lhs <- rep(responseName, length(predNames))

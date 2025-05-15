@@ -149,7 +149,7 @@ sam <- function(model = NULL,
 
   # check output= argument
   output <- tolower(output)
-  if (output == "list" || output == "lavaan") {
+  if (output %in% c("list", "list.step1.only", "lavaan")) {
     # nothing to do
   } else {
     lav_msg_stop(gettext("output should be \"list\" or \"lavaan.\""))
@@ -247,6 +247,22 @@ sam <- function(model = NULL,
           struc.args[["estimator"]] <- "DWLS"
       }
     }
+
+    # check if we have latent interactions
+    lv.interaction.flag <- FALSE
+    if (length(unlist(FIT@pta$vnames$lv.interaction)) > 0L) {
+      lv.interaction.flag <- TRUE
+      if (se != "none") {
+        se <- "local"
+        FIT@Options$se <- se
+      }
+    }
+
+    # check for multiple groups/blocks
+    if (FIT@Model@nblocks > 1L && se == "local") {
+      lav_msg_stop(gettext("se = \"local\" not available (yet) if multiple
+                            blocks (groups, levels) are involved."))
+    }
   }
 
   lavoptions <- lavInspect(FIT, "options")
@@ -300,19 +316,35 @@ sam <- function(model = NULL,
   #          only if se = "local"                  #
   ##################################################
   if (se %in% c("local", "local.nt")) {
-    JAC <- lav_sam_step1_local_jac(STEP1 = STEP1, FIT = FIT)
-    if (se == "local") {
-      Gamma <- FIT@SampleStats@NACOV
-    } else if (se == "local.nt") {
-      Gamma <- lav_object_gamma(lavobject = FIT, ADF = FALSE)
-    }
-
     Gamma.eta <- vector("list", length = FIT@Data@ngroups)
-    for (g in seq_len(FIT@Data@ngroups)) {
-      Gamma.eta[[g]] <- JAC[[g]] %*% Gamma[[g]] %*% t(JAC[[g]])
-    }
-    STEP1$JAC <- JAC
+    if (lv.interaction.flag) {
+      for (g in seq_len(FIT@Data@ngroups)) { # group or block
+        # initial Gamma.eta
+        Gamma.eta.init <- lav_matrix_bdiag(STEP1$VETA[[g]],
+                                           STEP1$COV.IVETA2[[g]])
+        # compute 'additional variability' due to step1
+        Gamma.eta.add <- lav_sam_gamma_add(STEP1 = STEP1, FIT = FIT, group = g)
+        Gamma.eta[[g]] <- Gamma.eta.init + Gamma.eta.add
+      }
+    } else {
+      JAC <- lav_sam_step1_local_jac(STEP1 = STEP1, FIT = FIT)
+      if (se == "local") {
+        Gamma <- FIT@SampleStats@NACOV
+      } else if (se == "local.nt") {
+        Gamma <- lav_object_gamma(lavobject = FIT, ADF = FALSE)
+      }
+
+      for (g in seq_len(FIT@Data@ngroups)) {
+        Gamma.eta[[g]] <- JAC[[g]] %*% Gamma[[g]] %*% t(JAC[[g]])
+      }
+      STEP1$JAC <- JAC
+    } # no lv-interaction
     STEP1$Gamma.eta <- Gamma.eta
+  }
+
+  if (output == "list.step1.only") {
+    # stop here, return interim results
+    return(STEP1)
   }
 
   ####################################

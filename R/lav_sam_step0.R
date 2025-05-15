@@ -28,6 +28,7 @@ lav_sam_step0 <- function(cmd = "sem", model = NULL, data = NULL,
   # note: this breaks the computation of twostep standard errors...
   if (se %in% c("local", "ij", "twostep.robust")) {
     dotdotdot0$NACOV <- TRUE
+    dotdotdot0$ov.order <- "force.model" # avoid data ordering...
   }
 
   # any lv interaction terms?

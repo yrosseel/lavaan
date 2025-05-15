@@ -164,7 +164,11 @@ lav_lavaan_step00_checkdata <- function(data = NULL,
   # until we have reliable code to re-arrange/select col/rows for
   # of NACOV/WLS.V based on the model-based ov.names
   if (!is.null(NACOV) || !is.null(WLS.V)) {
-    ov.order <- "data"
+    if (ov.order != "force.model") { # used by sam()
+      ov.order <- "data"
+    } else {
+      ov.order <- "model"
+    }
   }
 
   list(

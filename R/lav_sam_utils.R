@@ -325,6 +325,7 @@ lav_sam_veta <- function(M = NULL, S = NULL, THETA = NULL,
     alpha <- alpha.correction
   }
 
+  lambda <- +Inf
   if (lambda.correction) {
     # use Fuller (1987) approach to ensure VETA is positive
     lambda <- try(lav_matrix_symmetric_diff_smallest_root(MSM, MTM),
@@ -384,6 +385,8 @@ lav_sam_veta2 <- function(FS = NULL, M = NULL,
                           dummy.lv.names = character(0L),
                           alpha.correction = 0L,
                           lambda.correction = TRUE,
+                          return.FS = FALSE,
+                          return.cov.iveta2 = TRUE,
                           extra = FALSE) {
 
   # small utility function: var() divided by N
@@ -458,12 +461,18 @@ lav_sam_veta2 <- function(FS = NULL, M = NULL,
   # select only what we need
   colnames(Var.FS2) <- rownames(Var.FS2) <- NAMES
   colnames(Var.ERROR) <- rownames(Var.ERROR) <- NAMES
+  colnames(FS2) <- NAMES
   lv.keep <- c(lv.names[-1], lv.int.names)
   Var.FS2 <- Var.FS2[lv.keep, lv.keep]
   Var.ERROR <- Var.ERROR[lv.keep, lv.keep]
   FS.mean <- colMeans(FS2, na.rm = TRUE)
   names(FS.mean) <- NAMES
+  FS2.mean <- FS.mean # all of them
   FS.mean <- FS.mean[lv.keep]
+
+  # compute Gamma for FS2[,lv.keep]
+  #FS.gamma <- lav_samplestats_Gamma(FS2[,lv.keep, drop  = FALSE],
+  #                                  meanstructure = TRUE)
 
   # apply small sample correction (if requested)
   if (alpha.correction > 0) {
@@ -479,6 +488,8 @@ lav_sam_veta2 <- function(FS = NULL, M = NULL,
     alpha <- alpha.correction
   }
 
+  lambda <- +Inf
+  lambda.star <- 1
   if (lambda.correction) {
     # use Fuller (1987) approach to ensure VETA2 is positive
     lambda <- try(lav_matrix_symmetric_diff_smallest_root(
@@ -503,6 +514,23 @@ lav_sam_veta2 <- function(FS = NULL, M = NULL,
     VETA2 <- Var.FS2 - Var.ERROR
   }
 
+  # new in 0.6-20: to compute Gamma.eta
+  if (return.cov.iveta2) {
+    IVETA2 <- matrix(0, N, ncol = length(lav_matrix_vech(VETA2)))
+    for(i in 1:N) {
+      fi <- as.matrix(FS2[i,seq_len(nfac)])
+      tmp <- ( ((tcrossprod(fi) - MTM) %x% MTM) +
+           (MTM %x% (tcrossprod(fi) - MTM)) +
+           lav_matrix_commutation_post((tcrossprod(fi) - MTM) %x% MTM) +
+           lav_matrix_commutation_pre((tcrossprod(fi) - MTM) %x% MTM) +
+           (IK %*% (MTM %x% MTM)) )
+      iveta2 <- tcrossprod(FS2[i,] - FS2.mean) - lambda.star * tmp
+      colnames(iveta2) <- rownames(iveta2) <- NAMES
+      IVETA2[i,] <- lav_matrix_vech(iveta2[lv.keep, lv.keep])
+    } # N
+    cov.iveta2 <- cov(IVETA2) * (N-1)/N
+  }
+
   # extra attributes?
   if (extra) {
     attr(VETA2, "lambda") <- lambda
@@ -510,6 +538,13 @@ lav_sam_veta2 <- function(FS = NULL, M = NULL,
     attr(VETA2, "MSM") <- Var.FS2
     attr(VETA2, "MTM") <- Var.ERROR
 	attr(VETA2, "FS.mean") <- FS.mean
+    #attr(VETA2, "FS.gamma") <- FS.gamma
+  }
+  if (return.FS) {
+    attr(VETA2, "FS") <- FS2[, lv.keep, drop = FALSE]
+  }
+  if (return.cov.iveta2) {
+    attr(VETA2, "cov.iveta2") <- cov.iveta2
   }
 
   VETA2

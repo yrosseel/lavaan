@@ -90,6 +90,7 @@ lav_sam_step2_se <- function(FIT = NULL, JOINT = NULL,
         lavmodel = FIT.PA@Model,
         information = I.22,
         inverted = TRUE,
+        use.ginv = FALSE, # if interaction, SEs end up smaller than naive...
         rm.idx = step2.rm.idx
       )
     if (inherits(I.22.inv, "try-error")) {

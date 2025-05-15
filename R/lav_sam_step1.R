@@ -369,7 +369,9 @@ lav_sam_step1_local <- function(STEP1 = NULL, FIT = NULL, Y = NULL,
                                   lambda.correction = TRUE,
                                   alpha.correction = 0L,
                                   twolevel.method = "h1"
-                                )) {
+                                ),
+                                return.cov.iveta2 = TRUE,
+                                return.FS = FALSE) {
   # local.M.method
   local.M.method <- toupper(local.options[["M.method"]])
   if (!local.M.method %in% c("GLS", "ML", "ULS")) {
@@ -527,10 +529,13 @@ lav_sam_step1_local <- function(STEP1 = NULL, FIT = NULL, Y = NULL,
     STEP1$DELTA <- DELTA
   }
 
-  VETA   <- vector("list", nblocks)
-  MSM..  <- vector("list", nblocks)
-  MTM..  <- vector("list", nblocks)
-  FS.mean <- vector("list", nblocks)
+  VETA     <- vector("list", nblocks)
+  MSM..    <- vector("list", nblocks)
+  MTM..    <- vector("list", nblocks)
+  FS.mean  <- vector("list", nblocks)
+  #FS.gamma <- vector("list", nblocks)
+  FS       <- vector("list", nblocks)
+  COV.IVETA2 <- vector("list", nblocks)
   REL <- vector("list", nblocks)
   alpha <- vector("list", nblocks)
   lambda <- vector("list", nblocks)
@@ -786,6 +791,8 @@ lav_sam_step1_local <- function(STEP1 = NULL, FIT = NULL, Y = NULL,
           dummy.lv.names = lv.names.b[dummy.lv.idx],
           alpha.correction = local.options[["alpha.correction"]],
           lambda.correction = local.options[["lambda.correction"]],
+          return.FS = return.FS,
+          return.cov.iveta2 = return.cov.iveta2,
           extra = TRUE
         )
         VETA[[b]] <- tmp[, , drop = FALSE] # drop attributes
@@ -794,6 +801,13 @@ lav_sam_step1_local <- function(STEP1 = NULL, FIT = NULL, Y = NULL,
         MSM..[[b]] <- attr(tmp, "MSM")
         MTM..[[b]] <- attr(tmp, "MTM")
 		FS.mean[[b]] <- attr(tmp, "FS.mean")
+        if (return.FS) {
+          FS[[b]] <- attr(tmp, "FS")
+        }
+        if (return.cov.iveta2) {
+          COV.IVETA2[[b]] <- attr(tmp, "cov.iveta2")
+        }
+        #FS.gamma[[b]] <- attr(tmp, "FS.gamma")
       } else {
         lav_msg_fixme("not ready yet!")
         # FSR -- no correction
@@ -810,12 +824,15 @@ lav_sam_step1_local <- function(STEP1 = NULL, FIT = NULL, Y = NULL,
 
   # label blocks
   if (nblocks > 1L) {
-    names(EETA)   <- FIT@Data@block.label
-    names(VETA)   <- FIT@Data@block.label
-    names(REL)    <- FIT@Data@block.label
-	names(MSM..)  <- FIT@Data@block.label
-	names(MTM..)  <- FIT@Data@block.label
-	names(FS.mean)<- FIT@Data@block.label
+    names(EETA)       <- FIT@Data@block.label
+    names(VETA)       <- FIT@Data@block.label
+    names(REL)        <- FIT@Data@block.label
+	names(MSM..)      <- FIT@Data@block.label
+	names(MTM..)      <- FIT@Data@block.label
+	names(FS.mean)    <- FIT@Data@block.label
+    names(FS)         <- FIT@Data@block.label
+    names(COV.IVETA2) <- FIT@Data@block.label
+    #names(FS.gamma) <- FIT@Data@block.label
   }
 
   # handle conditional.x: add res.slopes, cov.x and mean.x
@@ -830,15 +847,18 @@ lav_sam_step1_local <- function(STEP1 = NULL, FIT = NULL, Y = NULL,
   }
 
   # store EETA/VETA/M/alpha/lambda
-  STEP1$VETA   <- VETA
-  STEP1$EETA   <- EETA
-  STEP1$REL    <- REL
-  STEP1$M      <- M
-  STEP1$lambda <- lambda
-  STEP1$alpha  <- alpha
-  STEP1$MSM    <- MSM..
-  STEP1$MTM    <- MTM..
-  STEP1$FS.mean<- FS.mean
+  STEP1$VETA     <- VETA
+  STEP1$EETA     <- EETA
+  STEP1$REL      <- REL
+  STEP1$M        <- M
+  STEP1$lambda   <- lambda
+  STEP1$alpha    <- alpha
+  STEP1$MSM      <- MSM..
+  STEP1$MTM      <- MTM..
+  STEP1$FS.mean  <- FS.mean
+  STEP1$FS       <- FS
+  STEP1$COV.IVETA2 <- COV.IVETA2
+  #STEP1$FS.gamma <- FS.gamma
   STEP1$LV.NAMES <- LV.NAMES
   # store also sam.method and local.options
   STEP1$sam.method <- sam.method
@@ -1142,4 +1162,92 @@ lav_sam_step1_local_jac_mean2 <- function(ybar = NULL, M = NULL, NU = NULL) {
   tmp2 <- lav_matrix_duplication_post(M %x% M)
   JAC.M.analytic <- cbind(tmp1, tmp2)
   JAC.M.analytic
+}
+
+lav_sam_gamma_add <- function(STEP1 = NULL, FIT = NULL, group = 1L) {
+
+  lavdata <- FIT@Data
+  lavsamplestats <- FIT@SampleStats
+  lavmodel <- FIT@Model
+  lavpta <- FIT@pta
+  nblocks <- lavpta$nblocks
+
+  local.options <- STEP1$local.options
+  sam.method <- STEP1$sam.method
+
+  ngroups <- lavdata@ngroups
+  if (ngroups > 1L) {
+    stop("IJ local SEs: not available with multiple groups!\n")
+  }
+  g <- group
+  Y <- FIT@Data@X[[g]]
+  N <- nrow(Y)
+
+  # NAMES + lv.keep
+  lv.names <- STEP1$LV.NAMES[[1]]
+  lv.names <- c("..int..", lv.names)
+  nfac <- length(lv.names)
+  idx1 <- rep(seq_len(nfac), each = nfac)
+  idx2 <- rep(seq_len(nfac), times = nfac)
+
+  K.nfac <- lav_matrix_commutation(nfac, nfac)
+  IK <- diag(nfac * nfac) + K.nfac
+
+  NAMES <- paste(lv.names[idx1], lv.names[idx2], sep = ":")
+  NAMES[seq_len(nfac)] <- lv.names
+  lv.keep <- colnames(STEP1$VETA[[1]])
+  FS.mean <- STEP1$FS.mean[[1]]
+  keep.idx <- which(NAMES %in% lv.keep)
+
+  theta.to.eetavetai <- function(x, i = 1L) {
+    PT <- STEP1$PT
+    PT$est[step1.idx] <- x
+    this.lavmodel <- lav_model_set_parameters(lavmodel,
+                       x = PT$est[PT$free > 0 & !duplicated(PT$free)])
+    this.nu     <- this.lavmodel@GLIST$nu
+    rm.idx <- lavpta$vidx$lv.interaction[[1]]
+    # no interaction columns!
+    this.lambda <- this.lavmodel@GLIST$lambda[, -rm.idx,drop = FALSE]
+    this.theta  <- this.lavmodel@GLIST$theta
+    this.M <- lav_sam_mapping_matrix(LAMBDA = this.lambda,
+                                     THETA = this.theta,
+                                     S = STEP1$COV[[1]],
+                                     method = STEP1$local.options$M.method)
+    MTM <- this.M %*% this.theta %*% t(this.M)
+    MTM <- lav_matrix_bdiag(0,MTM)
+
+    fi <- this.M %*% (Y[i,] - this.nu); fi <- rbind(1, fi); fii <- drop(fi)
+    fi2 <- (fii[idx1]*fii[idx2])
+
+    tmp <- ( ((tcrossprod(fi) - MTM) %x% MTM) +
+             (MTM %x% (tcrossprod(fi) - MTM)) +
+             lav_matrix_commutation_post((tcrossprod(fi) - MTM) %x% MTM) +
+             lav_matrix_commutation_pre((tcrossprod(fi) - MTM) %x% MTM) +
+             (IK %*% (MTM %x% MTM)) )
+
+    # we have no access to FS2.mean, so we need to reduce the matrices
+    # right away
+    f.star <- tcrossprod(fi2[keep.idx] - FS.mean)
+    e.star <- STEP1$lambda[[1]] * tmp[keep.idx, keep.idx, drop = FALSE]
+    iveta2 <- f.star - e.star
+    iveta  <- iveta2[seq_len(nfac - 1), seq_len(nfac - 1)]
+
+    FS.m <- c(1,FS.mean[seq_len(nfac - 1)])
+    ieeta2.all <- lav_matrix_vec(lav_matrix_bdiag(0,iveta)) + FS.m %x% FS.m
+    ieeta2 <- ieeta2.all[keep.idx]
+    ieeta2[seq_len(nfac - 1)] <- fii[-1]
+
+    c(ieeta2, lav_matrix_vech(iveta2))
+  } # single 'i'
+
+  step1.idx <- which(STEP1$PT$free %in% STEP1$step1.free.idx)
+  x.step1 <- STEP1$PT$est[step1.idx]
+  CVETA <- matrix(0, nrow = 14L, ncol = length(x.step1))
+  for(i in 1:N) {
+    tmp <- numDeriv:::jacobian(func = theta.to.eetavetai, x = x.step1, i = i)
+    CVETA <- CVETA + 1/N * tmp
+  }
+
+  Gamma.addition <- N * (CVETA %*% STEP1$Sigma.11 %*% t(CVETA))
+  Gamma.addition
 }
