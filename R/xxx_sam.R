@@ -320,8 +320,7 @@ sam <- function(model = NULL,
     if (lv.interaction.flag) {
       for (g in seq_len(FIT@Data@ngroups)) { # group or block
         # initial Gamma.eta
-        Gamma.eta.init <- lav_matrix_bdiag(STEP1$VETA[[g]],
-                                           STEP1$COV.IVETA2[[g]])
+        Gamma.eta.init <- STEP1$COV.IVETA2[[g]]
         # compute 'additional variability' due to step1
         Gamma.eta.add <- lav_sam_gamma_add(STEP1 = STEP1, FIT = FIT, group = g)
         Gamma.eta[[g]] <- Gamma.eta.init + Gamma.eta.add

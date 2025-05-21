@@ -707,7 +707,7 @@ lav_sam_step1_local <- function(STEP1 = NULL, FIT = NULL, Y = NULL,
       )
       VETA[[b]] <- tmp[, , drop = FALSE] # drop attributes
       alpha[[b]] <- attr(tmp, "alpha")
-      lambda[[b]] <- attr(tmp, "lambda")
+      lambda[[b]] <- attr(tmp, "lambda.star")
 	  MSM..[[b]] <- attr(tmp, "MSM")
 	  MTM..[[b]] <- attr(tmp, "MTM")
     } else if (sam.method == "cfsr") {
@@ -797,7 +797,7 @@ lav_sam_step1_local <- function(STEP1 = NULL, FIT = NULL, Y = NULL,
         )
         VETA[[b]] <- tmp[, , drop = FALSE] # drop attributes
         alpha[[b]] <- attr(tmp, "alpha")
-        lambda[[b]] <- attr(tmp, "lambda")
+        lambda[[b]] <- attr(tmp, "lambda.star")
         MSM..[[b]] <- attr(tmp, "MSM")
         MTM..[[b]] <- attr(tmp, "MTM")
 		FS.mean[[b]] <- attr(tmp, "FS.mean")
@@ -1230,21 +1230,22 @@ lav_sam_gamma_add <- function(STEP1 = NULL, FIT = NULL, group = 1L) {
     f.star <- tcrossprod(fi2[keep.idx] - FS.mean)
     e.star <- STEP1$lambda[[1]] * tmp[keep.idx, keep.idx, drop = FALSE]
     iveta2 <- f.star - e.star
-    iveta  <- iveta2[seq_len(nfac - 1), seq_len(nfac - 1)]
+    #iveta  <- iveta2[seq_len(nfac - 1), seq_len(nfac - 1)]
 
-    FS.m <- c(1,FS.mean[seq_len(nfac - 1)])
-    ieeta2.all <- lav_matrix_vec(lav_matrix_bdiag(0,iveta)) + FS.m %x% FS.m
-    ieeta2 <- ieeta2.all[keep.idx]
-    ieeta2[seq_len(nfac - 1)] <- fii[-1]
+    ieeta2 <- ( lav_matrix_vec(tcrossprod(fi))[keep.idx] -
+                lav_matrix_vec(tcrossprod(FS.mean))[keep.idx] +
+                (FS.mean %x% FS.mean)[keep.idx] -
+                STEP1$lambda[[1]] * lav_matrix_vec(MTM)[keep.idx] )
 
     c(ieeta2, lav_matrix_vech(iveta2))
   } # single 'i'
 
   step1.idx <- which(STEP1$PT$free %in% STEP1$step1.free.idx)
   x.step1 <- STEP1$PT$est[step1.idx]
-  CVETA <- matrix(0, nrow = 14L, ncol = length(x.step1))
+  try.one <- theta.to.eetavetai(x = x.step1, i = 1)
+  CVETA <- matrix(0, nrow = length(try.one), ncol = length(x.step1))
   for(i in 1:N) {
-    tmp <- numDeriv:::jacobian(func = theta.to.eetavetai, x = x.step1, i = i)
+    tmp <- numDeriv::jacobian(func = theta.to.eetavetai, x = x.step1, i = i)
     CVETA <- CVETA + 1/N * tmp
   }
 
