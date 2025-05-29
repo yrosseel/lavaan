@@ -1197,7 +1197,7 @@ lav_sam_gamma_add <- function(STEP1 = NULL, FIT = NULL, group = 1L) {
   NAMES[seq_len(nfac)] <- lv.names
   lv.keep <- colnames(STEP1$VETA[[1]])
   FS.mean <- STEP1$FS.mean[[1]]
-  keep.idx <- which(NAMES %in% lv.keep)
+  keep.idx <- match(lv.keep, NAMES)
 
   theta.to.eetavetai <- function(x, i = 1L) {
     PT <- STEP1$PT

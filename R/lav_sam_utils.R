@@ -518,6 +518,7 @@ lav_sam_veta2 <- function(FS = NULL, M = NULL,
   # new in 0.6-20: to compute Gamma.eta
   if (return.cov.iveta2) {
     IVETA2 <- matrix(0, N, ncol = length(lav_matrix_vech(VETA2)) + ncol(VETA2))
+    EF <- colMeans(FS)
     for(i in 1:N) {
       fi <- as.matrix(FS2[i,seq_len(nfac)])
       tmp <- ( ((tcrossprod(fi) - MTM) %x% MTM) +
@@ -529,8 +530,8 @@ lav_sam_veta2 <- function(FS = NULL, M = NULL,
       colnames(iveta2) <- rownames(iveta2) <- NAMES
 
       ieeta2 <- ( lav_matrix_vec(tcrossprod(fi)) -
-                  lav_matrix_vec(tcrossprod(FS2.mean)) +
-                  (FS2.mean %x% FS2.mean) -
+                  lav_matrix_vec(tcrossprod(EF)) +
+                  (EF %x% EF) -
                   lambda.star * lav_matrix_vec(MTM) )
       names(ieeta2) <- NAMES
 

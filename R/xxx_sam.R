@@ -252,7 +252,7 @@ sam <- function(model = NULL,
     lv.interaction.flag <- FALSE
     if (length(unlist(FIT@pta$vnames$lv.interaction)) > 0L) {
       lv.interaction.flag <- TRUE
-      if (se != "none") {
+      if (!se %in% c("none", "bootstrap")) {
         se <- "local"
         FIT@Options$se <- se
       }
@@ -361,7 +361,9 @@ sam <- function(model = NULL,
     STEP1$step1.free.idx <- STEP1$step1.free.idx[-both.idx]
     # STEP1$Sigma.11[both.idx,] <- 0
     # STEP1$Sigma.11[,both.idx] <- 0
-    STEP1$Sigma.11 <- STEP1$Sigma.11[-both.idx, -both.idx]
+    if (!is.null(STEP1$Sigma.11)) { # maybe se = "none"...
+      STEP1$Sigma.11 <- STEP1$Sigma.11[-both.idx, -both.idx]
+    }
   }
 
   if (output == "list" && lavoptions$se == "none") {
