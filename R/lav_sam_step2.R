@@ -35,6 +35,10 @@ lav_sam_step2 <- function(STEP1 = NULL, FIT = NULL,
   lavoptions.PA$rotation <- "none"
   lavoptions.PA <- modifyList(lavoptions.PA, struc.args)
 
+  if (gamma.flag) {
+    lavoptions.PA$check.vcov <- FALSE # always non-pd if interactions + fixed.x = FALSE
+  }
+
   # override, no matter what
   lavoptions.PA$do.fit <- TRUE
 

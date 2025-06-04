@@ -308,6 +308,13 @@ lav_sam_step1 <- function(cmd = "sem", mm.list = NULL, mm.args = list(),
       PT$est[mm.idx[user7.idx]] <- PTM$est[user7.idx]
     }
 
+    # add step1.free.idx
+    par.idx <- PT.free[mm.idx[ptm.idx]]
+    # store (ordered) indices in step1.free.idx
+    this.mm.idx <- sort.int(par.idx)
+    step1.free.idx <- c(step1.free.idx, this.mm.idx) # all combined
+
+
     # fill in standard errors measurement block
     if (!lavoptions$se %in% c("none", "bootstrap")) {
       if (fit.mm.block@Model@ceq.simple.only) {
@@ -326,17 +333,12 @@ lav_sam_step1 <- function(cmd = "sem", mm.list = NULL, mm.args = list(),
       sigma.11 <- MM.FIT[[mm]]@vcov$vcov
 
       # fill in variance matrix
-      par.idx <- PT.free[mm.idx[ptm.idx]]
       keep.idx <- PTM.free[ptm.idx]
       # par.idx <- PT.free[ seq_len(length(PT$lhs)) %in% mm.idx &
       #                    PT$free > 0L ]
       # keep.idx <- PTM.free[ PTM$free > 0 & PTM$user != 3L ]
       Sigma.11[par.idx, par.idx] <-
         sigma.11[keep.idx, keep.idx, drop = FALSE]
-
-      # store (ordered) indices in step1.free.idx
-      this.mm.idx <- sort.int(par.idx)
-      step1.free.idx <- c(step1.free.idx, this.mm.idx) # all combined
     }
   } # measurement block
 
@@ -1164,7 +1166,7 @@ lav_sam_step1_local_jac_mean2 <- function(ybar = NULL, M = NULL, NU = NULL) {
   JAC.M.analytic
 }
 
-lav_sam_gamma_add <- function(STEP1 = NULL, FIT = NULL, group = 1L) {
+lav_sam_gamma_add_numerical <- function(STEP1 = NULL, FIT = NULL, group = 1L) {
 
   lavdata <- FIT@Data
   lavsamplestats <- FIT@SampleStats
@@ -1252,3 +1254,212 @@ lav_sam_gamma_add <- function(STEP1 = NULL, FIT = NULL, group = 1L) {
   Gamma.addition <- N * (CVETA %*% STEP1$Sigma.11 %*% t(CVETA))
   Gamma.addition
 }
+
+# semi-analytic version
+# YR 4 June 2025: works, but still needs cleanup + avoid redundant calculations
+# (eg when multiplied with a matrix with many zero rows/cols)
+lav_sam_gamma_add <- function(STEP1 = NULL, FIT = NULL, group = 1L) {
+
+  lavdata <- FIT@Data
+  lavsamplestats <- FIT@SampleStats
+  lavmodel <- FIT@Model
+  lavpta <- FIT@pta
+  nblocks <- lavpta$nblocks
+
+  local.options <- STEP1$local.options
+  sam.method <- STEP1$sam.method
+
+  ngroups <- lavdata@ngroups
+  if (ngroups > 1L) {
+    stop("IJ local SEs: not available with multiple groups!\n")
+  }
+  g <- group
+  Y <- FIT@Data@X[[g]]
+  N <- nrow(Y)
+  P <- ncol(Y)
+
+  # NAMES + lv.keep
+  lv.names <- STEP1$LV.NAMES[[1]]
+  lv.names <- c("..int..", lv.names)
+  nfac <- length(lv.names)
+  idx1 <- rep(seq_len(nfac), each = nfac)
+  idx2 <- rep(seq_len(nfac), times = nfac)
+
+  K.nfac <- lav_matrix_commutation(nfac, nfac)
+  IK <- diag(nfac * nfac) + K.nfac
+  D <- lav_matrix_duplication(nfac)
+
+  NAMES <- paste(lv.names[idx1], lv.names[idx2], sep = ":")
+  NAMES[seq_len(nfac)] <- lv.names
+  lv.keep <- colnames(STEP1$VETA[[1]])
+  FS.mean <- STEP1$FS.mean[[1]]
+  keep.idx <- match(lv.keep, NAMES)
+
+  # step 1 free parameters
+  step1.idx <- which(STEP1$PT$free %in% STEP1$step1.free.idx)
+  x.step1 <- STEP1$PT$est[step1.idx]
+
+  this.nu <- STEP1$NU[[1]]
+  this.M  <- STEP1$M[[1]]
+  this.MTM <- lav_matrix_bdiag(0, STEP1$MTM[[1]][seq_len(nfac - 1), seq_len(nfac - 1)])
+  this <- c(this.nu, lav_matrix_vec(this.M), lav_matrix_vech(this.MTM))
+  INDEX <- matrix(seq_len(nfac^2 * nfac^2), nfac^2, nfac^2)
+
+  x2this <- function(x) {
+    PT <- STEP1$PT
+   PT$est[step1.idx] <- x
+    this.lavmodel <- lav_model_set_parameters(lavmodel,
+                       x = PT$est[PT$free > 0 & !duplicated(PT$free)])
+    this.nu     <- this.lavmodel@GLIST$nu
+    rm.idx <- lavpta$vidx$lv.interaction[[1]]
+    # no interaction columns!
+    this.lambda <- this.lavmodel@GLIST$lambda[, -rm.idx,drop = FALSE]
+    this.theta  <- this.lavmodel@GLIST$theta
+    this.M <- lav_sam_mapping_matrix(LAMBDA = this.lambda,
+                                     THETA = this.theta,
+                                     S = STEP1$COV[[1]],
+                                     method = STEP1$local.options$M.method)
+    MTM <- this.M %*% this.theta %*% t(this.M)
+    MTM <- lav_matrix_bdiag(0,MTM)
+
+    out <- c(this.nu, lav_matrix_vec(this.M), lav_matrix_vech(MTM))
+    out
+  }
+  JAC.x2this <- numDeriv::jacobian(func = x2this, x = x.step1)
+  # 46 x 24
+
+  # JAC.eetai2.this
+  JAC.eeta2.this <- matrix(0, nrow = length(STEP1$EETA[[1]]), ncol = length(this))
+  pstar <- nfac * (nfac + 1) / 2
+  idx <- P + length(this.M) + seq_len(pstar)
+  JAC.eeta2.this[,idx] <- (-diag(nfac^2) %*% D)[keep.idx,]
+
+  # define function for JAC.veta2.fi
+  get.JAC.veta2.fi <- function(x, MTM, FS.MEAN = NULL, lambda.star = 1, keep.idx = NULL) {
+    fi <- drop(fi)
+    P <- length(fi)
+    stopifnot(P == ncol(MTM))
+
+    #INDEX <- matrix(seq_len(P^2 * P^2), P^2, P^2)
+
+    # (tcrossprod(fi) - MTM) %x% MTM) -- part A
+    block.a <- fi %x% do.call("rbind", lapply(seq_len(P), function(i) diag(P) %x% MTM[,i]))
+    long.a <- diag(P) %x% lav_matrix_vec(fi %x% MTM)
+    big.a <- block.a + long.a
+    part.a <- big.a[lav_matrix_vech(INDEX[keep.idx, keep.idx]),]
+
+    # (MTM %x% (tcrossprod(fi) - MTM)) -- part B
+    block.b <- lav_matrix_vec(fi %x% MTM) %x% diag(P)
+    long.b <- do.call("rbind", lapply(seq_len(P), function(i) diag(4) %x% MTM[,i])) %x% fi
+    big.b <- block.b + long.b
+    part.b <- big.b[lav_matrix_vech(INDEX[keep.idx, keep.idx]),]
+
+    # lav_matrix_commutation_post((tcrossprod(fi) - MTM) %x% MTM) -- part C
+    block.c <- do.call("rbind", lapply(seq_len(P), function(i) fi %x% (diag(P) %x% MTM[,i])))
+    long.c  <- do.call("rbind", lapply(seq_len(P), function(i) diag(P) %x% (fi %x% MTM[,i])))
+    big.c <- block.c + long.c
+    part.c <- big.c[lav_matrix_vech(INDEX[keep.idx, keep.idx]),]
+
+    # lav_matrix_commutation_pre((tcrossprod(fi) - MTM) %x% MTM) -- part D
+    long.d <- diag(P) %x% lav_matrix_vec(MTM %x% fi)
+    block.d <- (fi %x% lav_matrix_vec(MTM)) %x% diag(P)
+    big.d <- block.d + long.d
+    part.d <- big.d[lav_matrix_vech(INDEX[keep.idx, keep.idx]),]
+
+    # t1 (tcrossprod(fi2[keep.idx] - FS.mean) only) -- part E
+    idx1 <- rep(seq_len(P), each = P)
+    idx2 <- rep(seq_len(P), times = P)
+    fi2 <- (fi[idx1]*fi[idx2])
+    fik <- fi2[keep.idx]
+
+    fi <- as.matrix(fi)
+    tt <- ((fi %x% diag(P))[keep.idx,] + (diag(P) %x% fi)[keep.idx,])
+    tmp <- ((fik - FS.mean) %x% tt) + (tt %x% (fik - FS.mean))
+    part.e <- tmp[lav_matrix_vech_idx(length(fik)),]
+
+    final <- part.e - lambda.star * (part.a + part.b + part.c + part.d)
+    final
+  }
+
+  # define function for JAC.veta2.this.i
+  get.JAC.veta2.this <- function(x, fi = NULL, lambda.star = 1, keep.idx = NULL) {
+    nvar <- ncol(STEP1$M[[1]])
+    nfac <- nrow(STEP1$M[[1]])
+    this.nu <- x[seq_len(nvar)]; x <- x[-seq_len(nvar)]
+    this.M  <- matrix(x[seq_len(nvar*nfac)], nrow = nfac, ncol = nvar)
+    x <- x[-seq_len(nvar*nfac)]
+    MTM <- lav_matrix_vech_reverse(x)
+    fi <- as.matrix(fi)
+    P <- nrow(fi)
+
+    # part a: ((tcrossprod(fi) - MTM) %x% MTM)
+    long.a <- diag(P) %x% do.call("rbind", lapply(seq_len(P), function(i) diag(P) %x% -MTM[,i]))
+    block.a <- do.call("rbind", lapply(seq_len(P), function(i) diag(P) %x% (tcrossprod(fi) - MTM)[,i])) %x% diag(P)
+    big.a.vec <- long.a + block.a
+    big.a <- big.a.vec %*% D
+    part.a <- big.a[lav_matrix_vech(INDEX[keep.idx, keep.idx]),]
+
+    # part b: (MTM %x% (tcrossprod(fi) - MTM))
+    block.b <- do.call("rbind", lapply(seq_len(P), function(i) diag(P) %x% -MTM[,i])) %x% diag(P)
+    long.b <- diag(P) %x% do.call("rbind", lapply(seq_len(P), function(i) diag(P) %x% (tcrossprod(fi) - MTM)[,i]))
+    big.b.vec <- block.b + long.b
+    big.b <- big.b.vec %*% D
+    part.b <- big.b[lav_matrix_vech(INDEX[keep.idx, keep.idx]),]
+
+    # part c: lav_matrix_commutation_post((tcrossprod(fi) - MTM) %x% MTM)
+    block.c <- diag(P) %x% do.call("rbind", lapply(seq_len(P), function(i) ((tcrossprod(fi) - MTM)[,i]) %x% diag(P)))
+    long.c <- do.call("rbind", lapply(seq_len(P), function(i) diag(P*P) %x% (-MTM[,i]) ))
+    big.c.vec <- block.c + long.c
+    big.c <- big.c.vec %*% D
+    part.c <- big.c[lav_matrix_vech(INDEX[keep.idx, keep.idx]),]
+
+    # part d: lav_matrix_commutation_pre((tcrossprod(fi) - MTM) %x% MTM)
+    block.d <- diag(P) %x% do.call("rbind", lapply(seq_len(P), function(i) -MTM[,i] %x% diag(P)))
+    long.d <- do.call("rbind", lapply(seq_len(P), function(i) diag(P*P) %x% ((tcrossprod(fi) - MTM)[,i]) ))
+    big.d.vec <- block.d + long.d
+    big.d <- big.d.vec %*% D
+    part.d <- big.d[lav_matrix_vech(INDEX[keep.idx, keep.idx]),]
+
+    # part e: (IK %*% (MTM %x% MTM))
+    K <- lav_matrix_commutation(P, P)
+    e1 <- diag(P) %x% do.call("rbind", lapply(seq_len(P), function(i) diag(P) %x% MTM[,i]))
+    e2 <- do.call("rbind", lapply(seq_len(P), function(i) diag(P*P) %x% MTM[,i] ))
+    e3 <- do.call("rbind", lapply(seq_len(P), function(i) diag(P) %x% MTM[,i])) %x% diag(P)
+    e4 <- diag(P) %x% do.call("rbind", lapply(seq_len(P), function(i) K %*% (diag(P) %x% MTM[,i])))
+    big.e.vec <- e1 + e2 + e3 + e4
+    big.e <- big.e.vec %*% D
+    part.e <-  big.e[lav_matrix_vech(INDEX[keep.idx, keep.idx]),]
+
+    final <- -1 * lambda.star * (part.a + part.b + part.c + part.d + part.e)
+    final
+  }
+
+  n_eeta_veta <- length(STEP1$EETA[[1]]) + length(lav_matrix_vech(STEP1$VETA[[1]]))
+  CVETA <- matrix(0, nrow = n_eeta_veta, ncol = length(x.step1))
+  for(i in 1:N) {
+    # factor score
+    fi <- rbind(1, this.M %*% (Y[i,] - this.nu))
+
+    #tmp <- numDeriv::jacobian(func = theta.to.eetavetai, x = x.step1, i = i)
+    JAC.this2fi.i <- rbind(0, cbind(-1 * this.M,
+                           t(as.matrix(Y[i,] - drop(this.nu))) %x% diag(nrow(this.M)),
+                           matrix(0, nrow = nrow(this.M), ncol = length(lav_matrix_vech(this.MTM)))))
+
+    JAC.eeta2.fi.i <- ((fi %x% diag(nfac)) + (diag(nfac) %x% fi))[keep.idx,]
+    EETA2 <- ((JAC.eeta2.fi.i %*% JAC.this2fi.i) + JAC.eeta2.this) %*% JAC.x2this
+
+    JAC.veta2.fi.i <- get.JAC.veta2.fi(x = fi, MTM = this.MTM, FS.MEAN = FS.MEAN,
+                                       lambda.star = STEP1$lambda[[1]], keep.idx = keep.idx)
+    JAC.veta2.this.i <- matrix(0, nrow = nrow(JAC.veta2.fi.i), ncol = ncol(JAC.this2fi.i))
+    JAC.veta2.this.i[,idx] <- get.JAC.veta2.this(x = this, fi = fi,
+                                                 lambda.star = STEP1$lambda[[1]],
+                                                 keep.idx = keep.idx)
+    VETA2 <- ((JAC.veta2.fi.i %*% JAC.this2fi.i) + JAC.veta2.this.i) %*% JAC.x2this
+
+    CVETA <- CVETA + 1/N * rbind(EETA2, VETA2)
+  }
+
+  Gamma.addition <- N * (CVETA %*% STEP1$Sigma.11 %*% t(CVETA))
+  Gamma.addition
+}
+
