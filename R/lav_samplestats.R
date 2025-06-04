@@ -214,11 +214,19 @@ lav_samplestats_from_data <- function(lavdata = NULL,
     if (is.null(WT[[g]])) {
       if (nobs[[g]] < 2L) {
         if (nobs[[g]] == 0L) {
-          lav_msg_stop(gettext("data contains no observations"),
-            if (ngroups > 1L) gettextf("in group %s", g) else "")
+          if (ngroups > 1L) {
+            lav_msg_stop(gettextf("data contains no observations in
+                                   group %s", g))
+          } else {
+            lav_msg_stop(gettext("data contains no observations"))
+          }
         } else {
-          lav_msg_stop(gettext("data contains only a single observation"),
-           if (ngroups > 1L) gettextf("in group %s", g) else "")
+          if (ngroups > 1L) {
+            lav_msg_stop(gettextf("data contains only a single observation
+                                   in group %s", g))
+          } else {
+            lav_msg_stop(gettext("data contains only a single observation"))
+          }
         }
       }
     }
@@ -825,11 +833,15 @@ lav_samplestats_from_data <- function(lavdata = NULL,
             pstar <- pstar + (nvar * nexo)
           }
           if (nrow(X[[g]]) < pstar) {
-            lav_msg_warn(gettextf(
+            if (ngroups > 1L) {
+              lav_msg_warn(gettextf(
               "number of observations (%s) too small to compute Gamma",
-              nrow(X[[g]])),
-              if (ngroups > 1L) gettextf("in group %s", g) else ""
-            )
+              nrow(X[[g]]), " in group %s", g))
+            } else {
+              lav_msg_warn(gettextf(
+              "number of observations (%s) too small to compute Gamma",
+              nrow(X[[g]])))
+            }
           }
           if (conditional.x) {
             Y <- Y

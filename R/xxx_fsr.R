@@ -434,10 +434,14 @@ fsr <- function(model = NULL,
     # check if FSR.COV is positive definite for all groups
     eigvals <- eigen(FSR.COV[[g]], symmetric = TRUE, only.values = TRUE)$values
     if (any(eigvals < .Machine$double.eps^(3 / 4))) {
-      lav_msg_stop(gettext(
-        "corrected covariance matrix of factor scores is not positive definite"),
-        if (ngroups > 1L) gettextf("in group %s", g) else ""
-      )
+      if (ngroups > 1L) {
+        lav_msg_stop(gettextf("corrected covariance matrix of factor scores
+                               is not positive definite in group %s", g))
+
+      } else {
+        lav_msg_stop(gettext("corrected covariance matrix of factor scores
+                              is not positive definite"))
+      }
     }
   } # g
 

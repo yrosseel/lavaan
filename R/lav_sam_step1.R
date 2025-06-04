@@ -887,7 +887,7 @@ lav_sam_step1_local_jac <- function(STEP1 = NULL, FIT = NULL) {
 
   ngroups <- lavdata@ngroups
   if (ngroups > 1L) {
-    stop("IJ local SEs: not available with multiple groups!\n")
+    lav_msg_stop(gettext("IJ local SEs: not available with multiple groups!\n"))
     # if multiple groups:
     # - we have a separate Gamma, h1.expected, delta matrix per group
     # - but we have only 1 observed information matrix, reflecting possible
@@ -898,7 +898,7 @@ lav_sam_step1_local_jac <- function(STEP1 = NULL, FIT = NULL) {
   }
   g <- 1L
   if (lavmodel@categorical) {
-    stop("IJ local SEs: not available for the categorical setting (yet)!\n")
+    lav_msg_stop(gettext("IJ local SEs: not available for the categorical setting (yet)!\n"))
   }
   nMMblocks <- length(STEP1$MM.FIT)
 
@@ -1179,7 +1179,7 @@ lav_sam_gamma_add_numerical <- function(STEP1 = NULL, FIT = NULL, group = 1L) {
 
   ngroups <- lavdata@ngroups
   if (ngroups > 1L) {
-    stop("IJ local SEs: not available with multiple groups!\n")
+    lav_msg_stop(gettext("IJ local SEs: not available with multiple groups!\n"))
   }
   g <- group
   Y <- FIT@Data@X[[g]]
@@ -1271,7 +1271,7 @@ lav_sam_gamma_add <- function(STEP1 = NULL, FIT = NULL, group = 1L) {
 
   ngroups <- lavdata@ngroups
   if (ngroups > 1L) {
-    stop("IJ local SEs: not available with multiple groups!\n")
+    lav_msg_stop(gettext("IJ local SEs: not available with multiple groups!\n"))
   }
   g <- group
   Y <- FIT@Data@X[[g]]

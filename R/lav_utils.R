@@ -9,7 +9,7 @@ lav_utils_sd <- function(x, na.rm = TRUE, trim = 0) {
   n <- length(x)
   if (trim > 0 && n) {
       if (is.complex(x))
-          stop("trimmed means are not defined for complex data")
+          lav_msg_stop(gettext("trimmed means are not defined for complex data"))
       if (anyNA(x))
           return(NA_real_)
       if (trim >= 0.5)
@@ -35,7 +35,7 @@ lav_utils_get_ancestors <- function(B = NULL) {
 
   get_ancestors <- function(nr, callers) {
     if (any(callers == nr)) {
-      warning(gettextf("Cycle detected for element nr %d !", nr))
+      lav_msg_warn(gettextf("Cycle detected for element nr %d !", nr))
       return(integer(0));
     }
     x = get0(as.character(nr), envir = OUTENV, ifnotfound = NULL)
