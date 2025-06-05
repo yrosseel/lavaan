@@ -1448,7 +1448,7 @@ lav_sam_gamma_add <- function(STEP1 = NULL, FIT = NULL, group = 1L) {
     JAC.eeta2.fi.i <- ((fi %x% diag(nfac)) + (diag(nfac) %x% fi))[keep.idx,]
     EETA2 <- ((JAC.eeta2.fi.i %*% JAC.this2fi.i) + JAC.eeta2.this) %*% JAC.x2this
 
-    JAC.veta2.fi.i <- get.JAC.veta2.fi(x = fi, MTM = this.MTM, FS.MEAN = FS.MEAN,
+    JAC.veta2.fi.i <- get.JAC.veta2.fi(x = fi, MTM = this.MTM, FS.MEAN = FS.mean,
                                        lambda.star = STEP1$lambda[[1]], keep.idx = keep.idx)
     JAC.veta2.this.i <- matrix(0, nrow = nrow(JAC.veta2.fi.i), ncol = ncol(JAC.this2fi.i))
     JAC.veta2.this.i[,idx] <- get.JAC.veta2.this(x = this, fi = fi,

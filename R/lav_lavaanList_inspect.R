@@ -1,6 +1,15 @@
 # inspect a lavaanList object
 
 inspect.lavaanList <- function(object, what = "free", ...) {
+  dotdotdot <- list(...)
+  if (length(dotdotdot) > 0L) {
+    for (j in seq_along(dotdotdot)) {
+      lav_msg_warn(gettextf(
+        "Unknown argument %s for %s", sQuote(names(dotdotdot)[j]),
+        sQuote("inspect"))
+      )
+    }
+  }
   lavListInspect(
     object = object,
     what = what,
