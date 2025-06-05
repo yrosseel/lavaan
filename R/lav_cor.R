@@ -25,6 +25,15 @@ lavCor <- function(object,
                    output = "cor") {
   # shortcut if object = lavaan object
   if (inherits(object, "lavaan")) {
+    dotdotdot <- list(...)
+    if (length(dotdotdot) > 0L) {
+      for (j in seq_along(dotdotdot)) {
+        lav_msg_warn(gettextf(
+          "Unknown argument %s for %s", sQuote(names(dotdotdot)[j]),
+          "function lavCor for lavaan-object")
+        )
+      }
+    }
     out <- lav_cor_output(object, output = output)
     return(out)
   }
