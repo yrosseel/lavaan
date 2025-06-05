@@ -74,7 +74,16 @@ setMethod(
              cat.check.pd = TRUE
            ),
            modindices = FALSE,
-           nd = 3L, cutoff = 0.3, dot.cutoff = 0.1) {
+           nd = 3L, cutoff = 0.3, dot.cutoff = 0.1, ...) {
+    dotdotdot <- list(...)
+    if (length(dotdotdot) > 0L) {
+      for (j in seq_along(dotdotdot)) {
+        lav_msg_warn(gettextf(
+          "Unknown argument %s for %s", sQuote(names(dotdotdot)[j]),
+          sQuote("summary"))
+        )
+      }
+    }
     # efa?
     efa.flag <- object@Options$model.type == "efa"
 
@@ -109,7 +118,16 @@ setMethod(
 
 setMethod(
   "coef", "lavaan",
-  function(object, type = "free", labels = TRUE) {
+  function(object, type = "free", labels = TRUE, ...) {
+    dotdotdot <- list(...)
+    if (length(dotdotdot) > 0L) {
+      for (j in seq_along(dotdotdot)) {
+        lav_msg_warn(gettextf(
+          "Unknown argument %s for %s", sQuote(names(dotdotdot)[j]),
+            sQuote("coef"))
+        )
+      }
+    }
     lav_object_inspect_coef(
       object = object, type = type,
       add.labels = labels, add.class = TRUE
@@ -1127,7 +1145,16 @@ varTable <- vartable <- function(object, ov.names = names(object), # nolint
 
 setMethod(
   "fitted.values", "lavaan",
-  function(object, type = "moments", labels = TRUE) {
+  function(object, type = "moments", labels = TRUE, ...) {
+    dotdotdot <- list(...)
+    if (length(dotdotdot) > 0L) {
+      for (j in seq_along(dotdotdot)) {
+        lav_msg_warn(gettextf(
+          "Unknown argument %s for %s", sQuote(names(dotdotdot)[j]),
+          sQuote("fitted.values"))
+        )
+      }
+    }
     # lowercase type
     type <- tolower(type)
 
@@ -1146,16 +1173,33 @@ setMethod(
 
 setMethod(
   "fitted", "lavaan",
-  function(object, type = "moments", labels = TRUE) {
+  function(object, type = "moments", labels = TRUE, ...) {
+    dotdotdot <- list(...)
+    if (length(dotdotdot) > 0L) {
+      for (j in seq_along(dotdotdot)) {
+        lav_msg_warn(gettextf(
+          "Unknown argument %s for %s", sQuote(names(dotdotdot)[j]),
+          sQuote("fitted"))
+        )
+      }
+    }
     fitted.values(object, type = type, labels = labels)
   }
 )
 
-
 setMethod(
   "vcov", "lavaan",
   function(object, type = "free", labels = TRUE, remove.duplicated = FALSE,
-           standardized = NULL, free.only = TRUE) {
+           standardized = NULL, free.only = TRUE, ...) {
+    dotdotdot <- list(...)
+    if (length(dotdotdot) > 0L) {
+      for (j in seq_along(dotdotdot)) {
+        lav_msg_warn(gettextf(
+          "Unknown argument %s for %s", sQuote(names(dotdotdot)[j]),
+          sQuote("vcov"))
+        )
+      }
+    }
     # check for convergence first!
     if (object@optim$npar > 0L && !object@optim$converged) {
       lav_msg_stop(gettext("model did not converge"))
@@ -1212,6 +1256,15 @@ setMethod(
 setMethod(
   "logLik", "lavaan",
   function(object, ...) {
+    dotdotdot <- list(...)
+    if (length(dotdotdot) > 0L) {
+      for (j in seq_along(dotdotdot)) {
+        lav_msg_warn(gettextf(
+          "Unknown argument %s for %s", sQuote(names(dotdotdot)[j]),
+          sQuote("logLik"))
+        )
+      }
+    }
     if (object@Options$estimator != "ML") {
       lav_msg_warn(gettext("logLik only available if estimator is ML"))
     }
@@ -1247,6 +1300,15 @@ if (!exists("nobs", envir = asNamespace("stats4"))) {
 setMethod(
   "nobs", signature(object = "lavaan"),
   function(object, ...) {
+    dotdotdot <- list(...)
+    if (length(dotdotdot) > 0L) {
+      for (j in seq_along(dotdotdot)) {
+        lav_msg_warn(gettextf(
+          "Unknown argument %s for %s", sQuote(names(dotdotdot)[j]),
+          sQuote("nobs"))
+        )
+      }
+    }
     object@SampleStats@ntotal
   }
 )
@@ -1341,9 +1403,6 @@ setMethod(
     }
   }
 )
-
-
-
 
 setMethod(
   "anova", signature(object = "lavaan"),

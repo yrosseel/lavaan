@@ -14,7 +14,16 @@
 # overload standard R function `predict'
 setMethod(
   "predict", "lavaan",
-  function(object, newdata = NULL) {
+  function(object, newdata = NULL, ...) {
+    dotdotdot <- list(...)
+    if (length(dotdotdot) > 0L) {
+      for (j in seq_along(dotdotdot)) {
+        lav_msg_warn(gettextf(
+          "Unknown argument %s for %s", sQuote(names(dotdotdot)[j]),
+          sQuote("predict"))
+        )
+      }
+    }
     lavPredict(
       object = object, newdata = newdata, type = "lv", method = "EBM",
       fsm = FALSE, rel = FALSE, optim.method = "bfgs"

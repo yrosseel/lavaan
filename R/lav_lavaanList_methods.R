@@ -33,7 +33,17 @@ setMethod(
                                 prop.sig = TRUE,
                                 coverage = TRUE,
                                 level    = 0.95,
-                                trim     = 0)) {
+                                trim     = 0),
+           ...) {
+    dotdotdot <- list(...)
+    if (length(dotdotdot) > 0L) {
+      for (j in seq_along(dotdotdot)) {
+        lav_msg_warn(gettextf(
+          "Unknown argument %s for %s", sQuote(names(dotdotdot)[j]),
+          sQuote("summary"))
+        )
+      }
+    }
     lav_lavaanList_summary(object,
       header = header, estimates = estimates,
       print = print, nd = nd, simulate.args = simulate.args
@@ -268,7 +278,16 @@ lav_lavaanList_summary <- function(object,
 
 setMethod(
   "coef", "lavaanList",
-  function(object, type = "free", labels = TRUE) {
+  function(object, type = "free", labels = TRUE, ...) {
+    dotdotdot <- list(...)
+    if (length(dotdotdot) > 0L) {
+      for (j in seq_along(dotdotdot)) {
+        lav_msg_warn(gettextf(
+          "Unknown argument %s for %s", sQuote(names(dotdotdot)[j]),
+          sQuote("coef"))
+        )
+      }
+    }
     lav_lavaanList_partable(
       object = object, what = "est", type = type,
       labels = labels

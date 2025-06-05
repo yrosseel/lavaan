@@ -27,6 +27,15 @@ setMethod(
              cat.check.pd = TRUE
            ),
            output = "vector", ...) {
+    dotdotdot <- list(...)
+    if (length(dotdotdot) > 0L) {
+      for (j in seq_along(dotdotdot)) {
+        lav_msg_warn(gettextf(
+          "Unknown argument %s for %s", sQuote(names(dotdotdot)[j]),
+          sQuote("fitMeasures"))
+        )
+      }
+    }
     # note: the ... is not used by lavaan
     lav_fit_measures(
       object = object, fit.measures = fit.measures,
@@ -49,6 +58,15 @@ setMethod(
              cat.check.pd = TRUE
            ),
            output = "vector", ...) {
+    dotdotdot <- list(...)
+    if (length(dotdotdot) > 0L) {
+      for (j in seq_along(dotdotdot)) {
+        lav_msg_warn(gettextf(
+          "Unknown argument %s for %s", sQuote(names(dotdotdot)[j]),
+          sQuote("fitmeasures"))
+        )
+      }
+    }
     # note: the ... is not used by lavaan
     lav_fit_measures(
       object = object, fit.measures = fit.measures,

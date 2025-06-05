@@ -31,7 +31,16 @@
 
 setMethod(
   "residuals", "lavaan",
-  function(object, type = "raw", labels = TRUE) {
+  function(object, type = "raw", labels = TRUE, ...) {
+    dotdotdot <- list(...)
+    if (length(dotdotdot) > 0L) {
+      for (j in seq_along(dotdotdot)) {
+        lav_msg_warn(gettextf(
+          "Unknown argument %s for %s", sQuote(names(dotdotdot)[j]),
+          sQuote("residuals"))
+        )
+      }
+    }
     # lowercase type
     type <- tolower(type)
 
@@ -56,7 +65,16 @@ setMethod(
 
 setMethod(
   "resid", "lavaan",
-  function(object, type = "raw") {
+  function(object, type = "raw", ...) {
+    dotdotdot <- list(...)
+    if (length(dotdotdot) > 0L) {
+      for (j in seq_along(dotdotdot)) {
+        lav_msg_warn(gettextf(
+          "Unknown argument %s for %s", sQuote(names(dotdotdot)[j]),
+          sQuote("resid"))
+        )
+      }
+    }
     residuals(object, type = type, labels = TRUE)
   }
 )
