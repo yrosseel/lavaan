@@ -154,7 +154,9 @@ lav_sam_step2 <- function(STEP1 = NULL, FIT = NULL,
     PTS$free[!PTS$id %in% reg.idx & PTS$free > 0L] <- 0L
 
     # but free up residual variances if fixed (eg std.lv = TRUE) (new in 0.6-20)
-    var.idx <- reg.idx[which(PT$free[reg.idx] == 0L)]
+    var.idx <- reg.idx[which(PT$free[reg.idx] == 0L &
+                             PT$user[reg.idx] != 1L &
+                             PT$op[reg.idx] == "~~")] # FIXME: more?
     PTS$free[var.idx] <- max(PTS$free) + seq_len(length(var.idx))
 
     # set 'ustart' values for free FIT.PA parameter to NA
