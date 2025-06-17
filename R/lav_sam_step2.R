@@ -22,6 +22,7 @@ lav_sam_step2 <- function(STEP1 = NULL, FIT = NULL,
     lavoptions.PA$se <- "standard"
   } else if (gamma.flag) {
     lavoptions.PA$se <- "robust.sem"
+    lavoptions.PA$test <- "satorra.bentler"
   } else {
     # twostep or none -> none
     lavoptions.PA$se <- "none"
@@ -46,7 +47,7 @@ lav_sam_step2 <- function(STEP1 = NULL, FIT = NULL,
     lavoptions.PA$missing <- "listwise"
     lavoptions.PA$sample.cov.rescale <- FALSE
     # lavoptions.PA$baseline <- FALSE
-    lavoptions.PA$h1 <- FALSE
+    # lavoptions.PA$h1 <- FALSE
     # lavoptions.PA$implied <- FALSE
     lavoptions.PA$loglik <- FALSE
   } else {
@@ -174,8 +175,10 @@ lav_sam_step2 <- function(STEP1 = NULL, FIT = NULL,
   if (sam.method %in% c("local", "fsr", "cfsr")) {
     if (gamma.flag) {
       NACOV <- STEP1$Gamma.eta
+      ov.order <- "data"
     } else {
       NACOV <- NULL
+      ov.order <- "model"
     }
     FIT.PA <- lavaan::lavaan(PTS,
       sample.cov  = STEP1$VETA,
