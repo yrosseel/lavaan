@@ -874,7 +874,7 @@ lav_sam_step1_local <- function(STEP1 = NULL, FIT = NULL, Y = NULL,
 }
 
 
-lav_sam_step1_local_jac <- function(STEP1 = NULL, FIT = NULL) {
+lav_sam_step1_local_jac <- function(STEP1 = NULL, FIT = NULL, P.only = FALSE) {
 
   lavdata <- FIT@Data
   lavsamplestats <- FIT@SampleStats
@@ -917,7 +917,12 @@ lav_sam_step1_local_jac <- function(STEP1 = NULL, FIT = NULL) {
     fit.mm.block <- STEP1$MM.FIT[[mm]]
     mm.h1.expected   <- lavTech(fit.mm.block, "h1.information.expected")
     mm.delta         <- lavTech(fit.mm.block, "Delta")
-    mm.inv.observed  <- lavTech(fit.mm.block, "inverted.information.observed")
+    if (P.only) {
+      # for twostep.robust
+      mm.inv.observed <- lavTech(fit.mm.block, "inverted.information.expected")
+    } else {
+      mm.inv.observed  <- lavTech(fit.mm.block, "inverted.information.observed")
+    }
 
     #h1.info <- matrix(0, nrow(mm.h1.expected[[1]]), ncol(mm.h1.expected[[1]]))
     #for (g in seq_len(ngroups)) {
@@ -968,6 +973,9 @@ lav_sam_step1_local_jac <- function(STEP1 = NULL, FIT = NULL) {
   keep.idx <- sort(c(lambda.idx, theta.idx, nu.idx,
                      delta.idx, beta.idx, psi.idx))
   JACa <- JACa[keep.idx, ,drop = FALSE]
+  if (P.only) {
+    return(JACa)
+  }
 
   # JACb: jacobian of the function vech(VETA) = f(vech(S), theta.mm)
   #       (treating theta.mm as fixed)

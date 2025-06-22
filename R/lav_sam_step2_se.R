@@ -146,10 +146,19 @@ lav_sam_step2_se <- function(FIT = NULL, JOINT = NULL,
       V1 <- I.22.inv %*% I.21 %*% Sigma.11 %*% I.12 %*% I.22.inv
     } else if(lavoptions$se == "twostep.robust") {
       # following Yuan & Chan 2002, eqs 4, 10, 11, 12, 13 and 14
+      # but for V11, V12, V21, V22: we use index '1' for step1, and '2'
+      # for step 2!!
+
+      A <- -1 * INFO[step2.free.idx, step2.free.idx, drop = FALSE]
+      B <- -1 * INFO[step2.free.idx, step1.free.idx, drop = FALSE]
+
+      # get P (for a single group!! for now)
+      P <- lav_sam_step1_local_jac(STEP1 = STEP1, FIT = FIT, P.only = TRUE)
+
+      # get V11
       if (is.null(JOINT@SampleStats@NACOV[[1]])) {
         JOINT@SampleStats@NACOV <- lavTech(JOINT, "gamma")
       }
-
       tmp <- lav_model_nvcov_robust_sem(
         lavmodel = JOINT@Model, lavsamplestats = JOINT@SampleStats,
         lavcache = JOINT@cache, lavdata = JOINT@Data,
@@ -162,20 +171,22 @@ lav_sam_step2_se <- function(FIT = NULL, JOINT = NULL,
       E.inv <- attr(tmp, "E.inv")
       WLS.V <- attr(tmp, "WLS.V")
       tDVGVD <- attr(tmp, "tDVGVD")
-      tmp2 <- tDVGVD %*% E.inv
 
-      A <- -1 * INFO[step2.free.idx, step2.free.idx, drop = FALSE]
-      B <- -1 * INFO[step2.free.idx, step1.free.idx, drop = FALSE]
-      V11 <- tDVGVD[ step2.free.idx, step2.free.idx, drop = FALSE]
-      V22 <- NVarCov[step1.free.idx, step1.free.idx, drop = FALSE]
-      V12 <- tmp2[   step2.free.idx, step1.free.idx, drop = FALSE]
-      V21 <- t(V12)
-      #PI <- V11 + B %*% V21 + V12 %*% t(B) + B %*% V22 %*% t(B)
+      V22 <- tDVGVD[ step2.free.idx, step2.free.idx, drop = FALSE] # ok
+
+      # FIXME: for a single group only:
+      V11 <- P %*% lavTech(JOINT, "gamma")[[1]] %*% t(P)
+      V21 <- t(Delta[[1]][, step2.free.idx]) %*% WLS.V[[1]] %*% lavTech(JOINT, "gamma")[[1]] %*% t(P)
+      V12 <- t(V21)
+
+      #V11 <- NVarCov[step1.free.idx, step1.free.idx, drop = FALSE]
+      #V21 <- tmp2[   step2.free.idx, step1.free.idx, drop = FALSE]
+      #PI <- V22 + B %*% V12 + V21 %*% t(B) + B %*% V11 %*% t(B)
       #A.inv <- solve(A)
       A.inv <-  -1 * I.22.inv
       #VCOV <- A.inv %*% PI %*% t(A.inv)
-      V2 <- 1/N * (A.inv %*% V11 %*% A.inv)
-      V1 <- 1/N * (A.inv %*% (B %*% V21 + V12 %*% t(B) + B %*% V22 %*% t(B)) %*% A.inv)
+      V2 <- 1/N * (A.inv %*% V22 %*% A.inv)
+      V1 <- 1/N * (A.inv %*% (B %*% V12 + V21 %*% t(B) + B %*% V11 %*% t(B)) %*% A.inv)
     }
 
     # V for second step
