@@ -60,6 +60,61 @@ lav_utils_get_ancestors <- function(B = NULL) {
   out.idx
 }
 
+# cluster rows/cols that are linked/connected
+# return list of connected nodes
+# we assume A is the square/symmetric (binary) adjacency matrix of an
+# undirected graph
+#
+# this version written by Luc De Wilde
+lav_utils_get_connected_nodes <- function(A) {
+
+  # make sure we have square symmetric matrix
+  A <- as.matrix(A)
+
+  # A must be square
+  stopifnot(nrow(A) == ncol(A))
+
+  # A must be symmetric
+  stopifnot(isSymmetric(A))
+
+  # set diagonal to zero (just in case)
+  diag(A) <- 0L
+
+  # make it logical
+  A <- (A != 0)
+
+  # number of cols/rows
+  M <- ncol(A)
+
+  # catch diagonal A
+  if (all(lavaan::lav_matrix_vech(A, diagonal = FALSE) == 0L)) {
+    return(seq_len(M))
+  }
+
+  visited <- rep(FALSE, M)         # track visited nodes
+  membership <- integer(M)         # component id for each node
+  component.id <- 0L               # current component id
+
+  put_node_in_component <- function(node, componentid) {
+    visited[node] <<- TRUE
+    membership[node] <<- componentid
+    toadd <- which(A[, node])
+    for (n in toadd) {
+      if (!visited[n]) put_node_in_component(n, componentid)
+    }
+  }
+
+  for (node in seq_len(M)) {
+    if (!visited[node]) {
+      component.id <- component.id + 1L
+      put_node_in_component(node, component.id)
+    }
+  }
+
+  membership
+}
+
+
 # find the residual variances (diagonal element of PSI) in such a way
 # so that the diagonal elements of IB.inv %*% PSI %*% t(IB.inv) are
 # equal to the elements of target.psi (usually the 1 vector)

@@ -88,16 +88,11 @@ lav_sam_step1 <- function(cmd = "sem", mm.list = NULL, mm.args = list(),
       }
     }
   } else {
-    # TODO: here comes the automatic 'detection' of linked
-    #       measurement models
-    #
-    # for now we take a single latent variable per measurement model block
-    mm.list <- as.list(LV.names)
+    mm.list.per.block <- lav_sam_get_mmlist(FIT)
+    # we get a list PER BLOCK
+    # for now, we only keep the first block
+    mm.list <- mm.list.per.block[[1]]
     nMMblocks <- length(mm.list)
-    for (b in seq_len(nMMblocks)) {
-      # make list per block
-      mm.list[[b]] <- rep(list(mm.list[[b]]), nblocks)
-    }
   }
 
   # adjust options for measurement models

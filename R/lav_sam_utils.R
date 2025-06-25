@@ -768,7 +768,7 @@ lav_sam_get_cov_ybar <- function(FIT = NULL, local.options = list(
       lavsamplestats = FIT@SampleStats,
       lavoptions = FIT@Options
     )
-    h1implied <- h1implied
+    h1implied <- H1$implied
   } else {
     h1implied <- FIT@h1$implied
     # if (FIT@Options$conditional.x) {
@@ -856,4 +856,63 @@ lav_sam_get_cov_ybar <- function(FIT = NULL, local.options = list(
   }
 
   list(COV = COV.list, YBAR = YBAR.list)
+}
+
+lav_sam_get_mmlist <- function(lavobject) {
+
+  lavmodel <- lavobject@Model
+  lavpta <- lavobject@pta
+  nblocks <- lavpta$nblocks
+
+  # flags
+  lv.interaction.flag <- FALSE
+  lv.higherorder.flag <- FALSE
+  if (length(unlist(lavpta$vnames$lv.interaction)) > 0L) {
+    lv.interaction.flag <- TRUE
+  }
+  if (length(unlist(lavpta$vnames$lv.ind)) > 0L) {
+    lv.higherorder.flag <- TRUE
+  }
+
+  lambda.idx <- which(names(lavmodel@GLIST) == "lambda")
+
+  mm.list <- vector("list", length = nblocks)
+
+  GLIST <- lavTech(lavobject, "partable")
+  for (b in seq_len(nblocks)) {
+    mm.in.block <- (seq_len(lavmodel@nmat[b]) +
+        cumsum(c(0, lavmodel@nmat))[b])
+    MLIST <- GLIST[mm.in.block]
+    CC <- t(MLIST$lambda) %*% MLIST$theta %*% MLIST$lambda
+
+    # note: CC contains dummy lv's, higher-order, etc... and they
+    # must be remove
+
+    # get ALL lv names (including dummy ov.x/ov.y)
+    ov.names <- lavmodel@dimNames[[lambda.idx[b]]][[1L]]
+    lv.names <- lavmodel@dimNames[[lambda.idx[b]]][[2L]]
+    NAMES <- lv.names
+
+    # needs to removed:
+    # - all lv.ind variables
+    # - all higher-order latent variables
+    # - all dummy lv's
+    rm.idx <- c(match(lavpta$vnames$lv.ind[[b]], lv.names),
+                match(lavpta$vnames$lv.interaction[[b]], lv.names),
+                which(lv.names %in% ov.names))
+    if (length(rm.idx) > 0L) {
+      CC <- CC[-rm.idx, -rm.idx, drop = FALSE]
+      NAMES <- lv.names[-rm.idx]
+    }
+
+    # cluster membership
+    membership <- lav_utils_get_connected_nodes(CC)
+
+    out <- split(NAMES, NAMES[membership])
+    names(out) <- paste("block", seq_len(length(out)), sep = "")
+
+    mm.list[[b]] <- out
+  }
+
+  mm.list
 }
