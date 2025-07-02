@@ -186,6 +186,12 @@ sam <- function(model = NULL,
   }
   # default is twostep
 
+  # check for gamma.unbiased
+  if (is.null(dotdotdot$gamma.unbiased)) {
+     # put in TRUE in dotdotdot # lavaan default is still FALSE
+     dotdotdot$gamma.unbiased <- TRUE  
+  }
+
 
   ###############################################
   # STEP 0: process full model, without fitting #

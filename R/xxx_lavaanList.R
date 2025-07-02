@@ -99,8 +99,9 @@ lavaanList <- function(model = NULL, # model
   lavpartable <- FIT@ParTable
   lavpta <- FIT@pta
 
-  # remove any options in lavoptions from dotdotdot
-  if (length(dotdotdot) > 0L) {
+  # remove any options in lavoptions from dotdotdot (sem/lavaan only)
+  # because we can use the lavoptions slot
+  if (length(dotdotdot) > 0L && cmd %in% c("lavaan", "sem", "cfa", "growth")) {
     rm.idx <- which(names(dotdotdot) %in% names(lavoptions))
     if (length(rm.idx) > 0L) {
       dotdotdot <- dotdotdot[-rm.idx]
@@ -262,8 +263,7 @@ lavaanList <- function(model = NULL, # model
             args = c(
               list(
                 model = model,
-                data = DATA,
-                se = FIT@Options$se
+                data = DATA
               ),
               dotdotdot
             )
