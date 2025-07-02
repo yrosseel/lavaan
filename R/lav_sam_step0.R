@@ -27,7 +27,9 @@ lav_sam_step0 <- function(cmd = "sem", model = NULL, data = NULL,
   # dotdotdot0$cat.wls.w            <- FALSE # no weight matrix if categorical
   # note: this breaks the computation of twostep standard errors...
   if (se %in% c("local", "ij", "twostep.robust")) {
+    dotdotdot0$sample.icov <- TRUE
     dotdotdot0$NACOV <- TRUE
+    dotdotdot0$gamma.unbiased <- TRUE
     dotdotdot0$fixed.x <- FALSE
     dotdotdot0$ov.order <- "force.model" # avoid data ordering...
   }

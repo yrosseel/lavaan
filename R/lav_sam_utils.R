@@ -858,6 +858,10 @@ lav_sam_get_cov_ybar <- function(FIT = NULL, local.options = list(
   list(COV = COV.list, YBAR = YBAR.list)
 }
 
+# automatically generate mm.list; we create measurement blocks so that:
+# - unlinked factors become a singleton
+# - linked factor are joined into a single measurement block
+#   based: cross-loadings, or correlated residuals between item errors
 lav_sam_get_mmlist <- function(lavobject) {
 
   lavmodel <- lavobject@Model
@@ -886,7 +890,7 @@ lav_sam_get_mmlist <- function(lavobject) {
     CC <- t(MLIST$lambda) %*% MLIST$theta %*% MLIST$lambda
 
     # note: CC contains dummy lv's, higher-order, etc... and they
-    # must be remove
+    # must be removed
 
     # get ALL lv names (including dummy ov.x/ov.y)
     ov.names <- lavmodel@dimNames[[lambda.idx[b]]][[1L]]
@@ -916,3 +920,82 @@ lav_sam_get_mmlist <- function(lavobject) {
 
   mm.list
 }
+
+lav_sam_veta_partable <- function(lavobject, block = 1L) {
+
+  lavmodel <- lavobject@Model
+  lavpta   <- lavobject@pta
+  nblocks  <- lavpta$nblocks
+
+  lambda.idx <- which(names(lavmodel@GLIST) == "lambda")
+
+  GLIST <- lavTech(lavobject, "partable")
+  b <- block
+  mm.in.block <- (seq_len(lavmodel@nmat[b]) + cumsum(c(0, lavmodel@nmat))[b])
+  MLIST <- GLIST[mm.in.block]
+  PSI    <- (MLIST$psi    != 0) + 0L
+  nr <- nrow(MLIST$psi)
+  if (!is.null(MLIST$beta)) {
+    BETA <- (MLIST$beta != 0) + 0L
+    tmp <- -BETA
+    tmp[lav_matrix_diag_idx(nr)] <- 1
+    IB.inv <- solve(tmp)
+  } else {
+    IB.inv <- diag(nr)
+  }
+  VETA <- IB.inv %*% PSI %*% t(IB.inv)
+  # get ALL lv names (including dummy ov.x/ov.y)
+  lv.names <- lavmodel@dimNames[[lambda.idx[b]]][[2L]]
+  colnames(VETA) <- rownames(VETA) <- lv.names
+
+  VETA
+}
+
+lav_sam_veta_con <- function(S = NULL, LAMBDA = NULL, THETA = NULL, 
+                             L.veta = NULL, local.M.method = "ML", 
+                             tol = 1e-07, max.iter = 100L) {
+
+  # first do GLS/ULS
+  M <- ncol(LAMBDA)
+  if (local.M.method == "ULS") {
+    W <- diag(M)
+  } else {
+    W <- solve(S)
+  }
+
+  WL <- W %*% LAMBDA
+  tLW  <- t(WL)
+  tLWL <- tLW %*% LAMBDA
+  tmp1 <- t(L.veta) %*% (tLWL %x% tLWL) %*% L.veta
+  tmp2 <- t(L.veta) %*% lav_matrix_vec(tLW %*% (S - THETA) %*% WL)
+  out <- solve(tmp1, tmp2)
+  VETA.init <- matrix(L.veta %*% out, M, M)
+
+  if (local.M.method != "ML") {
+    # we are done!
+    return(VETA.init)
+  }
+
+  VETA.new <- VETA.init
+  for(i in seq_len(max.iter)) {
+    Sigma.ml <- LAMBDA %*% VETA.new %*% t(LAMBDA) + THETA
+    W <- solve(Sigma.ml)
+    WL <- W %*% LAMBDA
+    tLW  <- t(WL)
+    tLWL <- tLW %*% LAMBDA
+    tmp1 <- t(L.veta) %*% (tLWL %x% tLWL) %*% L.veta
+    tmp2 <- t(L.veta) %*% lav_matrix_vec(tLW %*% (S - THETA) %*% WL)
+    out <- solve(tmp1, tmp2)
+    VETA.ml <- matrix(L.veta %*% out, M, M)
+    rmsea <- sqrt(sum((VETA.new - VETA.ml)^2))
+    #cat("i = ", i, " rmsea = ", rmsea, "\n")
+    VETA.new <- VETA.ml
+    if (rmsea < tol) {
+      break
+    }
+  }
+
+  VETA.new
+}
+
+

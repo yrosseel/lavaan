@@ -23,7 +23,7 @@ lav_model_information <- function(lavmodel = NULL,
   #   estmator <- lavoptions$estimator
   # }
   information <- lavoptions$information[1] # ALWAYS used the first one
-  # called can control it
+  # caller can control it
 
   # rotation?
   # if(!is.null(lavoptions$rotation) && lavoptions$rotation != "none") {

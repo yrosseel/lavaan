@@ -155,7 +155,7 @@ lav_sam_step2_se <- function(FIT = NULL, JOINT = NULL,
       # get P (for a single group!! for now)
       P <- lav_sam_step1_local_jac(STEP1 = STEP1, FIT = FIT, P.only = TRUE)
 
-      # get V11
+      # get V22
       if (is.null(JOINT@SampleStats@NACOV[[1]])) {
         JOINT@SampleStats@NACOV <- lavTech(JOINT, "gamma")
       }
