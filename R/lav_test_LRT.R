@@ -288,6 +288,7 @@ lavTestLRT <- function(object, ..., method = "default", test = "default",
   Df.delta <- c(NA, diff(Df))
   if (method == "satorra.2000" && scaled.shifted) {
     a.delta <- b.delta <- rep(as.numeric(NA), length(STAT))
+    c.delta <- NULL
   } else if (method %in% c("satorra.bentler.2001","satorra.bentler.2010",
                            "satorra.2000")) {
     c.delta <- rep(as.numeric(NA), length(STAT))
@@ -362,7 +363,7 @@ lavTestLRT <- function(object, ..., method = "default", test = "default",
   # unname
   STAT.delta <- unname(STAT.delta)
   Df.delta <- unname(Df.delta)
-  if (scaled) {
+  if (scaled && !is.null(c.delta)) {
     c.delta <- unname(c.delta)
   }
 
@@ -371,12 +372,17 @@ lavTestLRT <- function(object, ..., method = "default", test = "default",
 
   # new in 0.6-13: RMSEA (RMSEA.D or RDR)
   if (object@Options$missing == "listwise") {
+    if (scaled && !is.null(c.delta)) {
+      c.hat <- c.delta[-1]
+    } else {
+      c.hat <- rep(1, length(STAT.delta) - 1L)
+    }
     RMSEA.delta <- c(NA, lav_fit_rmsea(
       X2 = STAT.delta[-1],
       df = Df.delta[-1],
       N = ntotal,
       G = ngroups,
-      c.hat = ifelse (scaled, c.delta[-1], rep(1, length(STAT.delta) - 1L))
+      c.hat = c.hat
     ))
   }
 
