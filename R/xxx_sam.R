@@ -189,7 +189,7 @@ sam <- function(model = NULL,
   # check for gamma.unbiased
   if (is.null(dotdotdot$gamma.unbiased)) {
      # put in TRUE in dotdotdot # lavaan default is still FALSE
-     dotdotdot$gamma.unbiased <- TRUE  
+     dotdotdot$gamma.unbiased <- TRUE
   }
 
 
@@ -312,7 +312,8 @@ sam <- function(model = NULL,
     STEP1 <- lav_sam_step1_local(
       STEP1 = STEP1, FIT = FIT,
       sam.method = sam.method,
-      local.options = local.options
+      local.options = local.options,
+      return.cov.iveta2 = (se %in% c("local", "local.nt"))
     )
   }
 

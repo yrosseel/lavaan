@@ -951,8 +951,8 @@ lav_sam_veta_partable <- function(lavobject, block = 1L) {
   VETA
 }
 
-lav_sam_veta_con <- function(S = NULL, LAMBDA = NULL, THETA = NULL, 
-                             L.veta = NULL, local.M.method = "ML", 
+lav_sam_veta_con <- function(S = NULL, LAMBDA = NULL, THETA = NULL,
+                             L.veta = NULL, local.M.method = "ML",
                              tol = 1e-07, max.iter = 100L) {
 
   # first do GLS/ULS

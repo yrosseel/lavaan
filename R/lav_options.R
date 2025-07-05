@@ -367,7 +367,8 @@ lav_options_set <- function(opt = NULL) {                     # nolint
     ))) {
       lav_msg_stop(gettextf(
         "missing=%1$s is not allowed for estimator %2$s",
-        dQuote(opt$missing), dQuote(lav_options_estimatorgroup(opt$estimator))))
+        dQuote(opt$missing),
+        dQuote(lav_options_estimatorgroup(opt$estimator.orig))))
     }
   } else if (opt$missing == "ml.x") {
     if (opt$.categorical) {
@@ -381,7 +382,8 @@ lav_options_set <- function(opt = NULL) {                     # nolint
     ))) {
       lav_msg_stop(gettextf(
         "missing=%1$s is not allowed for estimator %2$s",
-        dQuote(opt$missing), dQuote(lav_options_estimatorgroup(opt$estimator))))
+        dQuote(opt$missing),
+        dQuote(lav_options_estimatorgroup(opt$estimator.orig))))
     }
   } else if (opt$missing == "two.stage") {
     if (opt$.categorical) {
@@ -395,7 +397,8 @@ lav_options_set <- function(opt = NULL) {                     # nolint
     ))) {
       lav_msg_stop(gettextf(
         "missing=%1$s is not allowed for estimator %2$s",
-        dQuote(opt$missing), dQuote(lav_options_estimatorgroup(opt$estimator))))
+        dQuote(opt$missing),
+        dQuote(lav_options_estimatorgroup(opt$estimator.orig))))
     }
   } else if (opt$missing == "robust.two.stage") {
     if (opt$.categorical) {
@@ -409,7 +412,8 @@ lav_options_set <- function(opt = NULL) {                     # nolint
     ))) {
       lav_msg_stop(gettextf(
         "missing=%1$s is not allowed for estimator %2$s",
-        dQuote(opt$missing), dQuote(lav_options_estimatorgroup(opt$estimator))))
+        dQuote(opt$missing),
+        dQuote(lav_options_estimatorgroup(opt$estimator.orig))))
     }
   } else if (opt$missing == "doubly.robust") {
     if (opt$estimator != "pml") {

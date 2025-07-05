@@ -371,7 +371,7 @@ lav_sam_step1_local <- function(STEP1 = NULL, FIT = NULL, Y = NULL,
         # EETA is constrained somehow
         stop("not ready yet")
         # EETA[[b]] <- lav_sam_eeta_con(YBAR = YBAR, LAMBDA = LAMBDA[[b]],
-        #                               THETA = THETA[[b]], 
+        #                               THETA = THETA[[b]],
         #                               L.veta = L.veta[[b]])
 
       }
