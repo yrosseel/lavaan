@@ -317,10 +317,10 @@ lav_lavaan_step10_cache <- function(slotCache = NULL, # nolint
             each = dim.pairs
           ))
 
-          lavcache[[g]]$idx.y1 <- idx.y1
-          lavcache[[g]]$idx.gy2 <- idx.gy2
-          lavcache[[g]]$idx.cat.y1 <- idx.cat.y1
-          lavcache[[g]]$idx.cat.gy2 <- idx.cat.gy2
+          lavcache[[g]]$idx.Y1 <- idx.y1
+          lavcache[[g]]$idx.Gy2 <- idx.gy2
+          lavcache[[g]]$idx.cat.Y1 <- idx.cat.y1
+          lavcache[[g]]$idx.cat.Gy2 <- idx.cat.gy2
 
           # the vector below keeps track of the variable each column
           # of the matrix univariateProbGivObs refers to
