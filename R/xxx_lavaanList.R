@@ -275,9 +275,7 @@ lavaanList <- function(model = NULL, # model
           args = c(
               list(
                 model = model,
-                data = DATA,
-                se = FIT@Options$se,
-                bootstrap = FIT@Options$bootstrap
+                data = DATA
               ),
               dotdotdot
             )
