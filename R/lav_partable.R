@@ -786,7 +786,9 @@ lavaanify <- lavParTable <- function(
 
       # sanity check: are all ustart values equal?
       ustart1 <- tmp.list$ustart[fixed.idx]
-      if (!all(ustart1 == tmp.list$ustart[fixed.all])) {
+      if (all(is.na(tmp.list$ustart[fixed.all]))) {
+        # nothing to do; ustart values have not been set yet
+      } else if (!all(ustart1 == tmp.list$ustart[fixed.all])) {
         lav_msg_warn(gettext(
           "equality constraints involve fixed parameters with different values;
           only the first one will be used"))

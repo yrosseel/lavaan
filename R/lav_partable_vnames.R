@@ -248,6 +248,7 @@ lav_partable_vnames <- function(partable, type = NULL, ..., # nolint
         if ("lv.regular" == type) {
           out <- unique(partable$lhs[block.ind &
             partable$op == "=~" &
+            partable$lhs != partable$rhs & # no phantom
             !partable$lhs %in% rv.names])
           return.value$lv.regular[[b]] <- out
           next
@@ -259,20 +260,45 @@ lav_partable_vnames <- function(partable, type = NULL, ..., # nolint
           next
         }
 
-        # formative latent variables ONLY (ie defined by <~ only)
+        # formative latent variables: phantom lv + zero residual
         if ("lv.formative" == type) {
           out <- unique(partable$lhs[block.ind &
-            partable$op == "<~"])
+            partable$lhs == partable$rhs &
+            partable$op == "=~"])
+          rm.idx <- integer(0L)
+          for (i in seq_len(length(out))) {
+            var.idx <- which(block.ind &
+                             partable$op == "~~" &
+                             partable$lhs == out[i] &
+                             partable$lhs == partable$rhs)
+            if (length(var.idx) == 0L) {
+              next
+            }
+            if (!is.null(partable$mod.idx) && !is.null(partable$fixed)) {
+              if (partable$fixed[var.idx] != "0") {
+                rm.idx <- c(rm.idx, i)
+              }
+            } else if (!is.null(partable$free) && !is.null(partable$ustart)) {
+              if (partable$free[var.idx] > 0L ||
+                  partable$ustart[var.idx] != 0) {
+                rm.idx <- c(rm.idx, i)
+              }
+            }
+          }
+          if (length(rm.idx) > 0L) {
+            out <- out[-rm.idx]
+          }
           return.value$lv.formative[[b]] <- out
           next
         }
+
+        # composites defined by "<~"
         if ("lv.composite" == type) {
           out <- unique(partable$lhs[block.ind &
             partable$op == "<~"])
           return.value$lv.composite[[b]] <- out
           next
         }
-
 
         # lv's involved in efa
         if (any(type == c("lv.efa", "ov.efa"))) {
@@ -308,7 +334,8 @@ lav_partable_vnames <- function(partable, type = NULL, ..., # nolint
         if ("lv.ind" == type) {
           out <- unique(partable$rhs[block.ind &
             partable$op == "=~" &
-            partable$rhs %in% lv.names])
+            partable$rhs %in% lv.names &
+            partable$lhs != partable$rhs]) # no phantom lv's
           return.value$lv.ind[[b]] <- out
           next
         }
@@ -317,7 +344,8 @@ lav_partable_vnames <- function(partable, type = NULL, ..., # nolint
         if ("lv.ho" == type) {
           out.ind <- unique(partable$rhs[block.ind &
             partable$op == "=~" &
-            partable$rhs %in% lv.names])
+            partable$rhs %in% lv.names &
+            partable$lhs != partable$rhs]) # no phantom lv's
           out <- unique(partable$lhs[block.ind &
             partable$op == "=~" &
             partable$lhs %in% lv.names &
@@ -607,7 +635,8 @@ lav_partable_vnames <- function(partable, type = NULL, ..., # nolint
         if ("lv.nonnormal" == type) {
           # regular lv's
           lv.reg <- unique(partable$lhs[block.ind &
-            partable$op == "=~"])
+                           partable$op == "=~" &
+                           partable$lhs != partable$rhs])
           if (length(lv.reg) > 0L) {
             out <- unlist(lapply(lv.reg, function(x) {
               # get indicators for this lv
@@ -793,6 +822,7 @@ lav_partable_vnames <- function(partable, type = NULL, ..., # nolint
         if (any("lv.regular" == type)) {
           out <- unique(partable$lhs[block.ind &
             partable$op == "=~" &
+            partable$lhs != partable$rhs & # no phantom
             !partable$lhs %in% rv.names])
           return.value$lv.regular[[b]] <- out
         }
@@ -803,12 +833,38 @@ lav_partable_vnames <- function(partable, type = NULL, ..., # nolint
           return.value$lv.interaction[[b]] <- lv.interaction
         }
 
-        # formative/composite latent variables ONLY (ie defined by <~ only)
+        # formative latent variables: phantom lv + zero residual
         if (any("lv.formative" == type)) {
           out <- unique(partable$lhs[block.ind &
-            partable$op == "<~"])
+            partable$lhs == partable$rhs &
+            partable$op == "=~"])
+          rm.idx <- integer(0L)
+          for (i in seq_len(length(out))) {
+            var.idx <- which(block.ind &
+                             partable$op == "~~" &
+                             partable$lhs == out[i] &
+                             partable$lhs == partable$rhs)
+            if (length(var.idx) == 0L) {
+              next
+            }
+            if (!is.null(partable$mod.idx) && !is.null(partable$fixed)) {
+              if (partable$fixed[var.idx] != "0") {
+                rm.idx <- c(rm.idx, i)
+              }
+            } else if (!is.null(partable$free) && !is.null(partable$ustart)) {
+              if (partable$free[var.idx] > 0L ||
+                  partable$ustart[var.idx] != 0) {
+                rm.idx <- c(rm.idx, i)
+              }
+            }
+          }
+          if (length(rm.idx) > 0L) {
+            out <- out[-rm.idx]
+          }
           return.value$lv.formative[[b]] <- out
         }
+
+        # composite latent variables (ie defined by <~)
         if (any("lv.composite" == type)) {
           out <- unique(partable$lhs[block.ind &
             partable$op == "<~"])
@@ -845,7 +901,8 @@ lav_partable_vnames <- function(partable, type = NULL, ..., # nolint
         if (any("lv.ind" == type)) {
           out <- unique(partable$rhs[block.ind &
             partable$op == "=~" &
-            partable$rhs %in% lv.names])
+            partable$rhs %in% lv.names &
+            partable$lhs != partable$rhs]) # no phantom lv's
           return.value$lv.ind[[b]] <- out
         }
 
@@ -853,7 +910,8 @@ lav_partable_vnames <- function(partable, type = NULL, ..., # nolint
         if (any("lv.ho" == type)) {
           out.ind <- unique(partable$rhs[block.ind &
             partable$op == "=~" &
-            partable$rhs %in% lv.names])
+            partable$rhs %in% lv.names &
+            partable$lhs != partable$rhs]) # no phantom lv's
           out <- unique(partable$lhs[block.ind &
             partable$op == "=~" &
             partable$lhs %in% lv.names &
@@ -1119,7 +1177,8 @@ lav_partable_vnames <- function(partable, type = NULL, ..., # nolint
         if (any("lv.nonnormal" == type)) {
           # regular lv's
           lv.reg <- unique(partable$lhs[block.ind &
-            partable$op == "=~"])
+                           partable$op == "=~" &
+                           partable$lhs != partable$rhs])
           if (length(lv.reg) > 0L) {
             out <- unlist(lapply(lv.reg, function(x) {
               # get indicators for this lv

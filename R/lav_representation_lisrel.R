@@ -1724,6 +1724,7 @@ MLISTX2MLIST <- function(MLISTX = NULL,
 }
 
 # set (total/residual) variances of composites
+# and while we at it, also set intercepts of composites
 setVarianceComposites.LISREL <- function(MLIST = NULL,
                                          tol = .Machine$double.eps,
                                          debug = FALSE) {
@@ -1843,6 +1844,12 @@ setVarianceComposites.LISREL <- function(MLIST = NULL,
 
   # store PSI
   MLIST$psi <- PSI
+
+  # fix composite mean (if needed)
+  if (!is.null(MLIST$alpha)) {
+    tmp <- t(WMAT) %*% MLIST$nu
+    MLIST$alpha[lvc.idx, 1L] <- tmp[lvc.idx, 1L]
+  }
 
   MLIST
 }

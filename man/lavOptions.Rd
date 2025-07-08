@@ -216,7 +216,7 @@ Multiple group options:
       selected, in the order as they appear in the data.}
     \item{\code{group.equal}:}{A vector of character strings. Only used in
       a multiple group analysis. Can be one or more of the following:
-      \code{"loadings"}, \code{"composite.loadings"}, 
+      \code{"loadings"}, \code{"composite.weights"}, 
       \code{"intercepts"}, \code{"means"},
       \code{"thresholds"}, \code{"regressions"}, \code{"residuals"},
       \code{"residual.covariances"}, \code{"lv.variances"} or

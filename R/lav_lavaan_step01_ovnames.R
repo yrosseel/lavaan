@@ -110,6 +110,77 @@ lav_lavaan_step01_ovnames_initflat <- function(slotParTable     = NULL, # nolint
   flat.model
 }
 
+# this function is only needed for backwards compatibility: it falls back
+# to the old (<0.6-20) way of handling composites (defined by the '<~' operator)
+# we do this by substituting the '<~' operator by '~', and by creating
+# phantom latent variables for the LHS, and setting the residual variance
+# to zero
+#
+# For example: "f <~ 1*income + occup + educ" is replaced by:
+# "f =~ 0; f ~~ 0*f; f ~ 1*income + occup + educ"
+#
+lav_lavaan_step01_ovnames_composites <- function(flat.model = NULL) {  # nolint
+
+  # get composite idx
+  c.idx <- which(flat.model$op == "<~")
+  if (length(c.idx) == 0L) {
+    return(flat.model)
+  }
+
+  # flat.model info
+  nel <- length(flat.model$lhs)
+  flat.names <- names(flat.model)
+  c.names <- unique(flat.model$lhs[c.idx])
+  nc <- length(c.names)
+  mod.val <- max(flat.model$mod.idx)
+
+  # check block numbers
+  max.block <- max(flat.model$block)
+  if (max.block > 1L) {
+    lav_msg_stop(gettext("composites = FALSE is not support when multiple blocks are supported; manually replace f <~ rhs by f =~ 0; f ~~ 0*f; f ~ rhs"))
+  }
+
+  block <- 1L
+
+  # replace '<~' by '~'
+  flat.model$op[c.idx] <- "~"
+
+  # add phantom latent variables
+  flat.model$lhs     <- c(flat.model$lhs, c.names)
+  flat.model$op      <- c(flat.model$op,  rep("=~", nc))
+  flat.model$rhs     <- c(flat.model$rhs, c.names)
+  flat.model$fixed   <- c(flat.model$fixed, rep("", nc))
+  flat.model$mod.idx <- c(flat.model$mod.idx, rep(0L, nc))
+  flat.model$block   <- c(flat.model$block, rep(block, nc))
+
+  # fix residual variances
+  flat.model$lhs     <- c(flat.model$lhs, c.names)
+  flat.model$op      <- c(flat.model$op,  rep("~~", nc))
+  flat.model$rhs     <- c(flat.model$rhs, c.names)
+  flat.model$fixed   <- c(flat.model$fixed, rep("0", nc)) # just for show
+  flat.model$mod.idx <- c(flat.model$mod.idx, mod.val + seq_len(nc))
+  flat.model$block   <- c(flat.model$block, rep(block, nc))
+
+  # extend the 'other' columns
+  other <- flat.names[!flat.names %in% c("lhs", "op", "rhs",
+                                         "fixed", "mod.idx", "block")]
+  for (o in other) {
+    if (is.character(flat.model[[o]])) {
+      flat.model[[o]] <- c(flat.model[[o]], rep("", nc*2))
+    } else if(is.integer(flat.model[[o]])) {
+      flat.model[[o]] <- c(flat.model[[o]], rep(0L, nc*2))
+    } else {
+      flat.model[[o]] <- c(flat.model[[o]], rep(as.numeric(NA), nc*2))
+    }
+  }
+
+  # add fixed values to the modifier attribute
+  attr(flat.model, "modifiers") <- c(attr(flat.model, "modifiers"),
+                                     rep(list(list(fixed = 0)), nc))
+
+  flat.model
+}
+
 lav_lavaan_step01_ovnames_ovorder <- function(flat.model = NULL,       # nolint
                                               ov.order   = "model",
                                               data       = NULL,

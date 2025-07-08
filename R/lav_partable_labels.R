@@ -72,6 +72,21 @@ lav_partable_labels <- function(partable,
     }
     # COMPOSITE LOADINGS (new in 0.6-4)
     if ("composite.loadings" %in% group.equal) {
+      # new setting (0.6-20): <~
+      if (any(partable$op == "<~" & partable$group == 1L)) {
+        lav_msg_warn(gettext("composite.loadings are in fact composite weights;
+                              better use composite.weights"))
+        g1.flag[partable$op == "<~" & partable$group == 1L] <- TRUE
+      } else {
+        # old school: composites are phantom constructs with zero residual...
+        lv.f.names <- unique(unlist(lav_partable_vnames(partable, "lv.formative")))
+        g1.flag[partable$op == "~" &
+                partable$lhs %in% lv.f.names &
+                partable$group == 1L] <- TRUE
+      }
+    }
+    # COMPOSITE WEIGHTS (new in 0.6-20) # same as 'loadings'...
+    if ("composite.weights" %in% group.equal) {
       g1.flag[partable$op == "<~" & partable$group == 1L] <- TRUE
     }
     # INTERCEPTS (OV)

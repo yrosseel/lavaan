@@ -137,6 +137,12 @@ lavaan <- function(
     dotdotdot.parser = useparser
   )
 
+  # ------------ ov.names 1b ----- handle 'old way' for composites -------
+  if (!is.null(dotdotdot$composites) && !dotdotdot$composites &&
+     any(flat.model$op == "<~")) {
+    flat.model <- lav_lavaan_step01_ovnames_composites(flat.model)
+  }
+
   # ------------ ov.names 2 ------ handle ov.order -----------------------
   flat.model <- lav_lavaan_step01_ovnames_ovorder(
     flat.model = flat.model,

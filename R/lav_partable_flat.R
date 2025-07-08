@@ -628,6 +628,13 @@ lav_partable_flat <- function(FLAT = NULL, # nolint
       ustart[lv.int.idx] <- as.numeric(NA)
       free[lv.int.idx] <- 1L
     }
+    # composites: always non-free, but with ustart = NA; value should be
+    # filled in later as a function of the other parameters
+    if (length(lv.names.c) > 0L) {
+      c.int.idx <- which(op == "~1" & lhs %in% lv.names.c & user == 0L)
+      ustart[c.int.idx] <- as.numeric(NA)
+      free[c.int.idx] <- 0L
+    }
   }
 
   # 4b. fixed effect (only if we have random slopes)
@@ -766,7 +773,7 @@ lav_partable_flat <- function(FLAT = NULL, # nolint
       # free/fix intercepts
       if (meanstructure) {
         int.idx <- which(op == "~1" &
-          lhs %in% lv.names &
+          lhs %in% lv.names.noc &
           user == 0L &
           group == g)
         if (int.lv.free == FALSE && g > 1 &&
