@@ -763,8 +763,8 @@ lav_partable_flat <- function(FLAT = NULL, # nolint
         lhs         = lhs,
         op          = op,
         rhs         = rhs,
-        free        = free, 
-        ustart      = ustart, 
+        free        = free,
+        ustart      = ustart,
         block       = rep(1, length(rhs)))
       lv.marker <- lav_partable_vnames(tmp.list, "lv.marker")
     }

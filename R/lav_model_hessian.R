@@ -16,7 +16,8 @@ lav_model_hessian <- function(lavmodel = NULL,
       lavmodel2 <- lav_model_set_parameters(lavmodel, x = x)
       lav_model_objective(
         lavmodel = lavmodel2,
-        lavsamplestats = lavsamplestats, lavdata = lavdata
+        lavsamplestats = lavsamplestats, lavdata = lavdata,
+        lavcache = lavcache
       )[1]
     }
     x <- lav_model_get_parameters(lavmodel = lavmodel)
