@@ -471,6 +471,7 @@ lavaanify <- lavParTable <- function(
 
   # handle multilevel-specific constraints
   multilevel <- FALSE
+  nlevels <- 1L
   if (!is.null(tmp.list$level)) {
     nlevels <- lav_partable_nlevels(tmp.list)
     if (nlevels > 1L) {
@@ -918,6 +919,10 @@ lavaanify <- lavParTable <- function(
     # for each block
     nblocks <- lav_partable_nblocks(tmp.list)
     for (b in seq_len(nblocks)) {
+
+      # which group?
+      this.group <- floor(b / nlevels + 0.5)
+
       # lv's for this block/set
       lv.names <- unique(tmp.list$lhs[tmp.list$op == "=~" &
         tmp.list$block == b])
@@ -933,7 +938,8 @@ lavaanify <- lavParTable <- function(
           tmp.list$block == b &
           tmp.list$lhs == lv]
 
-        if ("loadings" %in% effect.coding) {
+        if ("loadings" %in% effect.coding &
+            (!"loadings" %in% group.equal || this.group == 1L)) {
           # factor loadings indicators of this lv
           loadings.idx <- which(tmp.list$op == "=~" &
             tmp.list$block == b &
@@ -972,7 +978,8 @@ lavaanify <- lavParTable <- function(
           }
         } # loadings
 
-        if ("intercepts" %in% effect.coding) {
+        if ("intercepts" %in% effect.coding &
+            (!"intercepts" %in% group.equal || this.group == 1L)) {
           # intercepts for indicators of this lv
           intercepts.idx <- which(tmp.list$op == "~1" &
             tmp.list$block == b &

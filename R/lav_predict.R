@@ -916,8 +916,9 @@ lav_predict_eta_normal <- function(lavobject = NULL, # for convenience
     # center data
     Yc <- t(t(data.obs.g) - EY.g)
 
-    # sampling weights?
-    if (!is.null(lavdata@weights[[g]]) && level == 1L) {
+    # sampling weights? -- CHECKME: needed??
+    if (.hasSlot(lavdata, "weights") &&
+        !is.null(lavdata@weights[[g]]) && level == 1L) {
       # EY.g is already weighted
       # use sampling.weights.normalization == "group"
       WT <- lavdata@weights[[g]]
@@ -1240,8 +1241,9 @@ lav_predict_eta_bartlett <- function(lavobject = NULL, # for convenience
     # center data
     Yc <- t(t(data.obs.g) - EY.g)
 
-    # sampling weights?
-    if (!is.null(lavdata@weights[[g]]) && level == 1L) {
+    # sampling weights? CHECKME: needed??
+    if (.hasSlot(lavdata, "weights") &&
+        !is.null(lavdata@weights[[g]]) && level == 1L) {
       # EY.g is already weighted
       # use sampling.weights.normalization == "group"
       WT <- lavdata@weights[[g]]

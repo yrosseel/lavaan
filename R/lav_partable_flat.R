@@ -754,6 +754,22 @@ lav_partable_flat <- function(FLAT = NULL, # nolint
   # 6. multiple groups?
   group <- rep(1L, length(lhs))
   if (ngroups > 1) {
+
+    # only if "loadings" in group.equal and !std.lv:
+    # construct tempory tmp.list to obtain lv.marker
+    if (!std.lv & "loadings" %in% group.equal) {
+      tmp.list <- list(
+        id          = seq_along(lhs),
+        lhs         = lhs,
+        op          = op,
+        rhs         = rhs,
+        free        = free, 
+        ustart      = ustart, 
+        block       = rep(1, length(rhs)))
+      lv.marker <- lav_partable_vnames(tmp.list, "lv.marker")
+    }
+
+
     group <- rep(1:ngroups, each = length(lhs))
     user <- rep(user, times = ngroups)
     lhs <- rep(lhs, times = ngroups)
@@ -798,10 +814,22 @@ lav_partable_flat <- function(FLAT = NULL, # nolint
           free[lv.var.idx] <- 1L
           ustart[lv.var.idx] <- as.numeric(NA)
         }
+      # marker indicator if std.lv = FALSE (new in 0.6-20)
+      } else if(!std.lv && "loadings" %in% group.equal) {
+        marker.idx <- which(op == "=~" &
+          rhs %in% lv.marker &
+          free == 0L &
+          ustart == 1L &
+          group == g)
+        if (length(marker.idx) > 0L) {
+          free[marker.idx] <- 1L
+          ustart[marker.idx] <- as.numeric(NA)
+        }
       }
 
       # latent variances if efa = TRUE (new in 0.6-5)
-      if (auto.efa && "loadings" %in% group.equal &&
+      if (length(lv.names.efa) > 0L &&
+          auto.efa && "loadings" %in% group.equal &&
         !"lv.variances" %in% group.equal) {
         lv.var.idx <- which(op == "~~" &
           lhs %in% lv.names.efa &

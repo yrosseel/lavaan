@@ -167,7 +167,7 @@ lav_sam_step1_local <- function(STEP1 = NULL, FIT = NULL, Y = NULL,
     # if lambda has full rank, check if cov.lv is unrestricted
     if (!lsam.analytic.flag[b]) {
       VETA.symbolic <- lav_sam_veta_partable(FIT, block = b)
-      # this is the tricky things: which rows/cols should we remove?
+      # this is the tricky thing: which rows/cols should we remove?
       # none for now
       if (FIT@Options$std.lv) {
         veta.symbolic <- lav_matrix_vech(VETA.symbolic, diagonal = FALSE)
@@ -369,7 +369,7 @@ lav_sam_step1_local <- function(STEP1 = NULL, FIT = NULL, Y = NULL,
         EETA[[b]] <- lav_sam_eeta(M = Mb, YBAR = YBAR, NU = NU[[b]])
       } else {
         # EETA is constrained somehow
-        stop("not ready yet")
+        lav_msg_stop(gettext("not ready yet"))
         # EETA[[b]] <- lav_sam_eeta_con(YBAR = YBAR, LAMBDA = LAMBDA[[b]],
         #                               THETA = THETA[[b]],
         #                               L.veta = L.veta[[b]])
