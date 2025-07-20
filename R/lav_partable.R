@@ -903,9 +903,22 @@ lavaanify <- lavParTable <- function(
     }
   }
 
-  # put lhs of := elements in label column
+  # check defined variables (:=)
   def.idx <- which(tmp.list$op == ":=")
-  tmp.list$label[def.idx] <- tmp.list$lhs[def.idx]
+  if (length(def.idx) > 0L) {
+    # check if the lhs is unique (new in 0.6-20)
+    def.lhs <- tmp.list$lhs[def.idx]
+    dup.idx <- which(duplicated(def.lhs))
+    if (length(dup.idx) > 0L) {
+      # warn or stop? warn for now
+      lav_msg_warn(gettextf("at least one defined variable (using the :=
+                             operator) has been duplicated, and will be
+                             overwritten by the last one: %s",
+                            paste(def.lhs[dup.idx], collapse = " ")))
+    }
+    # put lhs of := elements in label column
+    tmp.list$label[def.idx] <- def.lhs
+  }
 
 
   # handle effect.coding related equality constraints
