@@ -144,16 +144,6 @@ lav_partable_flat <- function(FLAT = NULL, # nolint
     categorical <- TRUE
   }
 
-  # std.lv = TRUE, group.equal includes "loadings"
-  # if(ngroups > 1L && std.lv && "loadings" %in% group.equal) {
-  # suggested by Michael Hallquist
-  # in 0.6.3, we gave a warning,
-  # warning("lavaan WARNING: std.lv = TRUE forces all variances to be unity",
-  # " in all groups, despite group.equal = \"loadings\"")
-  # in >0.6.4, we free the lv variances in all but the first group,
-  # }
-
-
   # do we have any EFA lv's? they need special treatment if auto.efa = TRUE
   if (!is.null(FLAT$efa) && auto.efa) {
     lv.names.efa <- unique(FLAT$lhs[FLAT$op == "=~" &
@@ -783,21 +773,30 @@ lav_partable_flat <- function(FLAT = NULL, # nolint
 
     # specific changes per group
     for (g in 2:ngroups) {
-      # label
-      # label[group == g] <- paste(label[group == 1], ".g", g, sep="")
-
-      # free/fix intercepts
+      # free/fix intercepts latent variables
       if (meanstructure) {
         int.idx <- which(op == "~1" &
           lhs %in% lv.names.noc &
           user == 0L &
           group == g)
         if (int.lv.free == FALSE && g > 1 &&
-          ("intercepts" %in% group.equal ||
-            "thresholds" %in% group.equal) &&
+          ("intercepts" %in% group.equal) &&
           !("means" %in% group.equal)) {
           free[int.idx] <- 1L
           ustart[int.idx] <- as.numeric(NA)
+        }
+      }
+
+      # free intercept indicators if equal thresholds (new in 0.6-20)
+      if (meanstructure && length(ov.names.ord) > 0L) {
+        ord.idx <- which(op == "~1" &
+          lhs %in% ov.names.ord &
+          user == 0L &
+          group == g)
+        if (int.lv.free == FALSE && g > 1 &&
+           "thresholds" %in% group.equal) {
+          free[ord.idx] <- 1L
+          ustart[ord.idx] <- as.numeric(NA)
         }
       }
 
@@ -842,21 +841,29 @@ lav_partable_flat <- function(FLAT = NULL, # nolint
         }
       }
 
-      # latent response scaling
-      if (auto.delta && parameterization == "delta") {
-        if (any(op == "~*~" & group == g) &&
-          ("thresholds" %in% group.equal)) {
-          delta.idx <- which(op == "~*~" & group == g)
-          free[delta.idx] <- 1L
-          ustart[delta.idx] <- as.numeric(NA)
-        }
-      } else if (parameterization == "theta") {
-        if (any(op == "~*~" & group == g) &&
-          ("thresholds" %in% group.equal)) {
-          var.ord.idx <- which(op == "~~" & group == g &
-            lhs %in% ov.names.ord & lhs == rhs)
-          free[var.ord.idx] <- 1L
-          ustart[var.ord.idx] <- as.numeric(NA)
+      # latent response scaling -- categorical only
+      # - if thresholds are equal -> free scalings/residual variances
+      # - but not for binary indicators!
+      if (length(ov.names.ord) > 0L) {
+        nth <- sapply(ov.names.ord,
+          function(x) sum(lhs == x & op == "|" & group == 1L))
+        ov.names.ord.notbinary <- ov.names.ord[nth > 1L]
+        if (auto.delta && parameterization == "delta") {
+          if (any(op == "~*~" & group == g) &&
+            ("thresholds" %in% group.equal)) {
+            delta.idx <- which(op == "~*~" & group == g &
+              lhs %in% ov.names.ord.notbinary)
+            free[delta.idx] <- 1L
+            ustart[delta.idx] <- as.numeric(NA)
+          }
+        } else if (parameterization == "theta") {
+          if (any(op == "~*~" & group == g) &&
+            ("thresholds" %in% group.equal)) {
+            var.ord.idx <- which(op == "~~" & group == g &
+              lhs %in% ov.names.ord.notbinary & lhs == rhs)
+            free[var.ord.idx] <- 1L
+            ustart[var.ord.idx] <- as.numeric(NA)
+          }
         }
       }
 

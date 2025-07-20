@@ -240,12 +240,13 @@ lav_options_set <- function(opt = NULL) {                     # nolint
 
   # if categorical, and group.equal contains "intercepts", also add
   # thresholds (and vice versa)
-  if (opt$.categorical && any("intercepts" == opt$group.equal)) {
-    opt$group.equal <- unique(c(opt$group.equal, "thresholds"))
-  }
-  if (opt$.categorical && any("thresholds" == opt$group.equal)) {
-    opt$group.equal <- unique(c(opt$group.equal, "intercepts"))
-  }
+  # not any longer since 0.6-20
+  #if (opt$.categorical && any("intercepts" == opt$group.equal)) {
+  #  opt$group.equal <- unique(c(opt$group.equal, "thresholds"))
+  #}
+  #if (opt$.categorical && any("thresholds" == opt$group.equal)) {
+  #  opt$group.equal <- unique(c(opt$group.equal, "intercepts"))
+  #}
 
   # clustered ####
   # brute-force override (for now)
