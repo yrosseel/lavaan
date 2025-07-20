@@ -70,7 +70,7 @@ prediction accuracy.
 de Rooij, M., Karch, J.D., Fokkema, M., Bakk, Z., Pratiwi, B.C, and 
 Kelderman, H. (2022) SEM-Based Out-of-Sample Predictions,
 Structural Equation Modeling: A Multidisciplinary Journal.
-DOI:10.1080/10705511.2022.2061494
+\doi{https://doi.org/10.1080/10705511.2022.2061494}
 
 Molina, M. D., Molina, L., & Zappaterra, M. W. (2024). Aspects of Higher
 Consciousness: A Psychometric Validation and Analysis of a New Model of Mystical

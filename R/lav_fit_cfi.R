@@ -16,6 +16,8 @@
 
 # CFI - comparative fit index (Bentler, 1990)
 # robust version: Brosseau-Liard & Savalei MBR 2014, equation 15
+# Brosseau-Liard, P. E., & Savalei, V. (2014). Adjusting incremental fit
+# indices for nonnormality. Multivariate behavioral research, 49(5), 460-470.
 
 # robust version MLMV (scaled.shifted)
 # Savalei, V. (2018). On the computation of the RMSEA and CFI from the
