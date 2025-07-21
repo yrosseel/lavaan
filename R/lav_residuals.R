@@ -643,7 +643,7 @@ lav_residuals_se <- function(object, type = "raw", z.type = "standardized",
       cov.se <- lav_matrix_vech_reverse(tmp, diagonal = FALSE)
 
       # MEAN
-      mean.se <- rep(as.numeric(NA), nth)
+      mean.se <- rep(as.numeric(NA), nvar)
 
       # TH
       th.se <- sqrt(diag.ACOV[1:nth])
@@ -662,7 +662,6 @@ lav_residuals_se <- function(object, type = "raw", z.type = "standardized",
         cov.se = cov.se, mean.se = mean.se,
         th.se = th.se
       )
-
 
       # continuous -- single level
     } else if (lavdata@nlevels == 1L) {
