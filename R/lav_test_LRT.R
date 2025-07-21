@@ -341,7 +341,7 @@ lavTestLRT <- function(object, ..., method = "default", test = "default",
           Satterthwaite <- FALSE
         } else {
           Satterthwaite <- TRUE
-        }
+         }
         out <- lav_test_diff_Satorra2000(mods[[m]], mods[[m + 1]],
           H1 = TRUE,
           Satterthwaite = Satterthwaite,
@@ -360,8 +360,14 @@ lavTestLRT <- function(object, ..., method = "default", test = "default",
     }
   }
 
-  if (scaled && method %in% c("satorra.bentler.2001", "satorra.bentler.2010",
-                              "satorra.2000") && is.na(out$scaling.factor)) {
+  # check if scaled diff failed somehow
+  if (scaled &&
+     ( (method %in% c("satorra.bentler.2001", "satorra.bentler.2010") &&
+          is.na(out$scaling.factor)) ||
+         (method == "satorra.2000" && scaled.shifted && is.na(out$a)) ||
+         (method == "satorra.2000" && !scaled.shifted &&
+          is.na(out$scaling.factor)) )
+     ) {
     scaled <- FALSE
   }
 
