@@ -463,11 +463,13 @@ lavaanify <- lavParTable <- function(
                          tmp.list$user == 1L)
     if (parameterization == "delta" && length(ord.var.idx) > 0L) {
       lav_msg_warn(gettextf("variances of ordered variables are ignored when
-      parameterization = \"delta\"; please remove them from the model syntax;
-      variables involved are: %s",
+      parameterization = \"delta\"; please remove them from the model syntax
+      or use parameterization = \"theta\"; variables involved are: %s",
       paste(tmp.list$lhs[ord.var.idx], collapse = " ")))
+      # force them to be nonfree and set ustart to 1 (new in 0.6-20)
+      # later, after we have processes the modifiers
     }
-  }
+  } # ov.ord
 
   # handle multilevel-specific constraints
   multilevel <- FALSE
@@ -661,6 +663,21 @@ lavaanify <- lavParTable <- function(
   }
   # remove mod.idx column
   tmp.list$mod.idx <- NULL
+
+  # categorical: check for nonfree variances if parameterization = "delta"
+  # we already gave warning; here, we force them to be nonfree
+  if (categorical && parameterization == "delta") {
+    ord.var.idx <- which(tmp.list$op == "~~" &
+                         tmp.list$lhs == tmp.list$rhs &
+                         tmp.list$lhs %in% ov.ord &
+                         tmp.list$user == 1L)
+    if (length(ord.var.idx) > 0L) {
+      # force them to be nonfree and set ustart to 1 (new in 0.6-20)
+      tmp.list$free[ord.var.idx]   <- rep(0L, length(ord.var.idx))
+      tmp.list$ustart[ord.var.idx] <- rep(1,  length(ord.var.idx))
+    }
+  } # categorical
+
 
   # warning about single label in multiple group setting?
   if (warn.about.single.label) {

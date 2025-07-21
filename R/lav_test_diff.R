@@ -31,6 +31,13 @@ lav_test_diff_Satorra2000 <- function(m1, m0, H1 = TRUE, A.method = "delta",
     ))
   }
 
+  # check for (near) identical test statistics (despite m > 0)
+  if (abs(T1 - T0) < sqrt(.Machine$double.eps)) {
+    lav_msg_warn(gettext("the test statistic of the restriced model is (nearly)
+                         identical to the test statistic of the full model;
+                         check your models."))
+  }
+
 
   # bail out here, if m == 0 (but we should catch this earlier)
   # if(m < 1L) {
@@ -117,6 +124,13 @@ lav_test_diff_Satorra2000 <- function(m1, m0, H1 = TRUE, A.method = "delta",
     abs(rSums) < .Machine$double.eps^0.5)
   if (length(empty.idx) > 0) {
     A <- A[-empty.idx, , drop = FALSE]
+  }
+  if (nrow(A) == 0L) {
+    # oops... abort!
+    return(list(
+      T.delta = (T0 - T1), scaling.factor = as.numeric(NA),
+      df.delta = m, a = as.numeric(NA), b = as.numeric(NA)
+    ))
   }
 
   # PAAPAAP

@@ -360,6 +360,12 @@ lavTestLRT <- function(object, ..., method = "default", test = "default",
     }
   }
 
+  if (scaled && method %in% c("satorra.bentler.2001", "satorra.bentler.2010",
+                              "satorra.2000") && is.na(out$scaling.factor)) {
+    scaled <- FALSE
+  }
+
+
   # unname
   STAT.delta <- unname(STAT.delta)
   Df.delta <- unname(Df.delta)
