@@ -107,7 +107,8 @@ lav_fit_rmsea_ci <- function(X2 = NULL, df = NULL, N = NULL,
 
   if (!is.finite(level) || level < 0 || level > 1.0) {
     lav_msg_warn(gettextf(
-      "invalid level value [%s] set to default 0.90.", level))
+      "invalid level value [%s] set to default 0.90.", level
+    ))
     level <- 0.90
   }
 
@@ -264,7 +265,11 @@ lav_fit_rmsea_lavobject <- function(lavobject = NULL, fit.measures = "rmsea",
     } else {
       version <- "V6"
     }
-    fiml <- try(lav_fit_fiml_corrected(lavobject, version = version),
+    fiml <- try(
+      lav_fit_fiml_corrected(lavobject,
+        baseline.model = NULL,
+        version = version
+      ),
       silent = TRUE
     )
     if (inherits(fiml, "try-error")) {
@@ -275,7 +280,8 @@ lav_fit_rmsea_lavobject <- function(lavobject = NULL, fit.measures = "rmsea",
       )
     } else if (anyNA(c(fiml$XX3, fiml$df3, fiml$c.hat3, fiml$XX3.scaled))) {
       lav_msg_warn(gettext(
-        "computation of robust RMSEA resulted in NA values."))
+        "computation of robust RMSEA resulted in NA values."
+      ))
     }
   }
 
