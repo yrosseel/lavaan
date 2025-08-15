@@ -813,11 +813,20 @@ ldw_parse_model_string <- function(model.syntax = "", as.data.frame. = FALSE) {
       }, ""), "\n")
     }
     nelem <- length(formul1$elem.type)
+    opi2 <- which(formul1$elem.type %in% types$lavaanoperator)
+    op2 <- formul1$elem.text[opi2]
     # where is the operator
-    opi <- match(types$lavaanoperator, formul1$elem.type)
-    # opi <- which(formul1$elem.type == types$lavaanoperator)
-    # if (length(opi) > 1L) opi <- opi[1L]
-    op <- formul1$elem.text[opi]
+    # SF: If more than one operator, then don't treat ":" as an operator
+    if ((":" %in% op2) &&
+        (length(opi2) > 1)) {
+      colon_on_lhs <- (op2[1] == ":")
+      opi <- opi2[which(op2 != ":")]
+      op <- formul1$elem.text[opi]
+    } else {
+      colon_on_lhs <- FALSE
+      opi <- match(types$lavaanoperator, formul1$elem.type)
+      op <- formul1$elem.text[opi]
+    }
     if (any(op == constraint_operators)) { # ----- constraints -------
       lhs <- paste(formul1$elem.text[seq.int(1L, opi - 1L)], collapse = "")
       rhs <- paste(formul1$elem.text[seq.int(opi + 1L, nelem)], collapse = "")
@@ -904,8 +913,9 @@ ldw_parse_model_string <- function(model.syntax = "", as.data.frame. = FALSE) {
       )
     }
     # checks for valid names in lhs and rhs
-    ldw_parse_check_valid_name(formul1, opi - 1L, modelsrc) # valid name lhs
-    for (j in seq.int(opi + 1L, nelem)) { # valid names rhs
+    # ldw_parse_check_valid_name(formul1, opi - 1L, modelsrc) # valid name lhs
+    # SF: LHS may have more than one element
+    for (j in c(seq.int(opi - 1L), seq.int(opi + 1L, nelem))) { # valid names rhs
       if (formul1$elem.type[j] == types$identifier &&
         formul1$elem.text[j] != "NA") {
         ldw_parse_check_valid_name(formul1, j, modelsrc)
@@ -954,16 +964,20 @@ ldw_parse_model_string <- function(model.syntax = "", as.data.frame. = FALSE) {
       formul1$elem.type[seq.int(2L, nelem)] == types$identifier)
     # check at most 1 colon
     if (length(colons) > 1) {
-      tl <- ldw_txtloc(modelsrc, formul1$elem.pos[colons[2]])
-      lav_msg_stop(
-        gettext(
-        "Three-way or higher-order interaction terms (using multiple
-         colons) are not supported in the lavaan syntax; please manually
-         construct the product terms yourself in the data.frame, give
-         them an appropriate name, and then you can use these interaction
-         variables as any other (observed) variable in the model syntax."
-        ), tl[1L], footer = tl[2L]
-      )
+      # SF: Exclude cases when colon separated by 2+ elements (and so is not a higher-interaction term)
+      tmp <- all((colons[-1] - colons[-length(colons)] > 2))
+      if (!tmp) {
+        tl <- ldw_txtloc(modelsrc, formul1$elem.pos[colons[2]])
+        lav_msg_stop(
+          gettext(
+          "Three-way or higher-order interaction terms (using multiple
+          colons) are not supported in the lavaan syntax; please manually
+          construct the product terms yourself in the data.frame, give
+          them an appropriate name, and then you can use these interaction
+          variables as any other (observed) variable in the model syntax."
+          ), tl[1L], footer = tl[2L]
+        )
+      }
     }
     if (length(colons) == 1) {
       # collapse items around colon "a" ":" "b" => "a:b"
@@ -971,8 +985,36 @@ ldw_parse_model_string <- function(model.syntax = "", as.data.frame. = FALSE) {
         paste(formul1$elem.text[seq.int(colons - 1L, colons + 1L)],
           collapse = ""
         )
-      formul1 <- ldw_parse_sublist(formul1, seq.int(1L, colons - 1L))
+      # formul1 <- ldw_parse_sublist(formul1, seq.int(1L, colons - 1L))
+      # SF: Update formul1
+      formul1 <- ldw_parse_sublist(formul1,
+                                   setdiff(seq_along(formul1$elem.type),
+                                           c(colons, colons + 1L)))
       nelem <- length(formul1$elem.type)
+      # SF: Update opi
+      opi <- match(types$lavaanoperator, formul1$elem.type)
+      op <- formul1$elem.text[opi]
+    } else if (length(colons) > 1) {
+      # SF: colons should only be at most 2, for now
+      # SF: Collapse two interaction terms
+      # collapse items around colon "a" ":" "b" => "a:b"
+      colons_tmp <- colons
+      for (i in seq_along(colons_tmp)) {
+        colons_i <- colons_tmp[i]
+        formul1$elem.text[colons_i - 1L] <-
+          paste(formul1$elem.text[seq.int(colons_i - 1L, colons_i + 1L)],
+            collapse = ""
+          )
+        # SF: Update formul1
+        formul1 <- ldw_parse_sublist(formul1,
+                                     setdiff(seq_along(formul1$elem.type),
+                                             c(colons_i, colons_i + 1L)))
+        nelem <- length(formul1$elem.type)
+        # SF: Update opi
+        opi <- match(types$lavaanoperator, formul1$elem.type)
+        op <- formul1$elem.text[opi]
+        colons_tmp <- colons_tmp - colons_tmp[i]
+      }
     }
     # modifiers
     rhsmodelems <- which(seq_along(formul1$elem.type) > opi &
