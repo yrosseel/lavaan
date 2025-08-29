@@ -93,7 +93,15 @@ lavPredictY <- function(object,
     lav_msg_stop(gettext(
       "please specify the y-variables in the ynames= argument"
     ))
-  } else if (!is.list(ynames)) {
+  }
+
+  if (anyDuplicated((ynames))) {
+    lav_msg_stop(gettext(
+      "ynames contains duplicate variable names"
+    ))
+  }
+
+  if (!is.list(ynames)) {
     ynames <- rep(list(ynames), lavdata@ngroups)
   }
 
@@ -102,7 +110,15 @@ lavPredictY <- function(object,
     lav_msg_stop(gettext(
       "please specify the x-variables in the xnames= argument"
     ))
-  } else if (!is.list(xnames)) {
+  }
+
+  if (anyDuplicated((xnames))) {
+    lav_msg_stop(gettext(
+      "ynames contains duplicate variable names"
+    ))
+  }
+
+  if (!is.list(xnames)) {
     xnames <- rep(list(xnames), lavdata@ngroups)
   }
 
