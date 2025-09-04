@@ -155,9 +155,9 @@ lav_options_set <- function(opt = NULL) {                     # nolint
   opt <- lav_options_check(opt, opt.check, "")
 
   # check option 'start'
-  if (is.character(opt$start) && all(opt$start != c("default", "simple", "est")))
+  if (is.character(opt$start) && all(opt$start != c("default", "simple")))
     lav_msg_stop(gettext(
-      "start option must be 'default', 'simple', 'est' or a parametertable"))
+      "start option must be 'default', 'simple', a fitted object, a vector of parameter values, or a parameter table"))
 
   # first of all: set estimator ####
   if (opt$estimator == "default") {
