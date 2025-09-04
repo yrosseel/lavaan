@@ -63,6 +63,20 @@ lav_model_nvcov_bootstrap <- function(lavmodel = NULL,
     COEF <- COEF[, -nc, drop = FALSE]
   }
 
+  # new in 0.6-20: check for outliers, ie big difference betwen sd() and mad()
+  # see github issue 347
+  sd_mad_ratio <- ( apply(COEF, 2,  sd, na.rm = TRUE) /
+                    apply(COEF, 2, mad, na.rm = TRUE) )
+  crit.ratio <- 5
+  if (any(sd_mad_ratio > crit.ratio)) {
+    NAMES <- lav_partable_labels(lavpartable, type = "free")
+    params_w_outliers <- paste(NAMES[sd_mad_ratio > crit.ratio], collapse = " ")
+    lav_msg_warn(gettextf(
+      "The following boostrapped free parameters have a high (>5)
+      ratio of standard deviation to median absolute deviation: %s.
+      P-values and confidence intervals may not match.", params_w_outliers))
+  }
+
   # FIXME: cov rescale? Yes for now
   nboot <- nrow(COEF)
   NVarCov <- lavsamplestats@ntotal * (cov(COEF) * (nboot - 1) / nboot)
@@ -705,7 +719,22 @@ lav_model_vcov_se <- function(lavmodel, lavpartable, VCOV = NULL,
       } else {
         BOOT.def <- t(BOOT.def)
       }
-      def.cov <- cov(BOOT.def)
+      # new in 0.6-20: check for outliers, big difference betwen sd() and mad()
+      # see github issue 347
+      sd_mad_ratio <- ( apply(BOOT.def, 2,  sd, na.rm = TRUE) /
+                        apply(BOOT.def, 2, mad, na.rm = TRUE) )
+      crit.ratio <- 5
+      if (any(sd_mad_ratio > crit.ratio)) {
+        NAMES <- colnames(BOOT.def)
+        def_w_outliers <- paste(NAMES[sd_mad_ratio > crit.ratio],
+                                collapse = " ")
+        lav_msg_warn(gettextf(
+          "The following boostrapped defined parameters have a high (>5)
+          ratio of standard deviation to median absolute deviation: %s.
+          P-values and confidence intervals may not match.", def_w_outliers))
+      }
+      nboot <- nrow(BOOT.def)
+      def.cov <- cov(BOOT.def) * (nboot - 1) / nboot
     } else {
       # regular delta method
       x <- lav_model_get_parameters(lavmodel = lavmodel, type = "free")

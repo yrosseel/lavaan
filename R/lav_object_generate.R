@@ -103,6 +103,11 @@ lav_object_independence <- function(object = NULL,
   } else {
     # 0.6-18: slower, but safer to just keep it
 
+    # 0.6-20 -- except if se = "bootstrap" -> "none"
+    if (lavoptions$se == "bootstrap") {
+      lavoptions$se <- "none"
+    }
+
     ## FIXME: if test = scaled, we need it anyway?
     # if(lavoptions$missing %in% c("two.stage", "two.stage.robust")) {
     # don't touch it
