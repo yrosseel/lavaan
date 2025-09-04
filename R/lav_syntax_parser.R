@@ -815,7 +815,7 @@ ldw_parse_model_string <- function(model.syntax = "", as.data.frame. = FALSE) {
     nelem <- length(formul1$elem.type)
     # where is the operator
     opi <- which(formul1$elem.type == types$lavaanoperator)
-    if (length(opi) > 1L) { # if more then 1 operator skip operators ':' 
+    if (length(opi) > 1L) { # if more then 1 operator skip operators ':'
       opii <- 1L
       while (formul1$elem.text[opi[opii]] == ":" && opii < length(opi)) {
         opii <- opii + 1L
@@ -958,7 +958,7 @@ ldw_parse_model_string <- function(model.syntax = "", as.data.frame. = FALSE) {
     colons <- which(formul1$elem.text[seq.int(1L, nelem - 1L)] == ":" &
       formul1$elem.type[seq.int(2L, nelem)] == types$identifier)
     # check at most 1 colon
-    if (length(colons) > 2L || 
+    if (length(colons) > 2L ||
         (length(colons) == 2L && (colons[1L] > opi || colons[2L] < opi))) {
       tl <- ldw_txtloc(modelsrc, formul1$elem.pos[colons[2]])
       lav_msg_stop(
@@ -977,12 +977,12 @@ ldw_parse_model_string <- function(model.syntax = "", as.data.frame. = FALSE) {
         paste(formul1$elem.text[seq.int(colons[1L] - 1L, colons[1L] + 1L)],
           collapse = ""
         )
-      formul1 <- ldw_parse_sublist(formul1, 
+      formul1 <- ldw_parse_sublist(formul1,
           setdiff(seq.int(1L, nelem), seq.int(colons[1L], colons[1L] + 1L)))
       nelem <- length(formul1$elem.type)
       if (colons[1L] < opi) {
         opi <- opi - 2L # is in LHS
-        if (length(colons) == 2L) colons[2L] <- colons[2L] - 2L 
+        if (length(colons) == 2L) colons[2L] <- colons[2L] - 2L
       }
     }
     if (length(colons) == 2L) {
@@ -991,7 +991,7 @@ ldw_parse_model_string <- function(model.syntax = "", as.data.frame. = FALSE) {
         paste(formul1$elem.text[seq.int(colons[2L] - 1L, colons[2L] + 1L)],
               collapse = ""
         )
-      formul1 <- ldw_parse_sublist(formul1, 
+      formul1 <- ldw_parse_sublist(formul1,
           setdiff(seq.int(1L, nelem), seq.int(colons[2L], colons[2L] + 1L)))
       nelem <- length(formul1$elem.type)
     }

@@ -26,6 +26,15 @@ lav_partable_subset_measurement_model <- function(PT = NULL,
   # PT
   PT <- as.data.frame(PT, stringsAsFactors = FALSE)
 
+  # check if we have free.unrotated column (rotation!)
+  if (!is.null(PT$free.unrotated)) {
+    PT$free.orig <- PT$free
+    PT$free <- PT$free.unrotated
+    PT$est.unrotated <- NULL
+    PT$free.unrotated <- NULL
+    PT$est.std <- NULL
+  }
+
   # lavpta
   lavpta <- lav_partable_attributes(PT)
 
