@@ -1002,7 +1002,7 @@ lav_options_set <- function(opt = NULL) {                     # nolint
   }
 
   # if target, check target matrix, and set order.lv.by to = "none"
-  if (opt$rotation == "target" || opt$rotation == "pst") {
+  if (opt$rotation == "target.strict" || opt$rotation == "pst") {
     target <- opt$rotation.args$target
     if (is.null(target)) {
       lav_msg_stop(gettext("rotation target matrix is NULL"))
@@ -1045,7 +1045,7 @@ lav_options_set <- function(opt = NULL) {                     # nolint
   }
 
   # if NAs, force opt$rotation to be 'pst' and create target.mask
-  if (opt$rotation == "target") {
+  if (opt$rotation == "target.strict") {
     # matrix
     if (is.matrix(target) && anyNA(target)) {
       opt$rotation <- "pst"

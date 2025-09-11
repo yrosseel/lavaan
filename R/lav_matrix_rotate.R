@@ -106,6 +106,8 @@ lav_matrix_rotate <- function(A = NULL, # original matrix
     method.fname <- "lav_matrix_rotate_biquartimin"
   } else if (method %in% c("bi-geomin", "bigeomin")) {
     method.fname <- "lav_matrix_rotate_bigeomin"
+  } else if (method == "target.strict") {
+    method.fname <- "lav_matrix_rotate_target"
   } else {
     method.fname <- paste("lav_matrix_rotate_", method, sep = "")
   }
@@ -117,7 +119,7 @@ lav_matrix_rotate <- function(A = NULL, # original matrix
   }
 
   # if target, check target matrix
-  if (method == "target" || method == "pst") {
+  if (method == "target.strict" || method == "pst") {
     target <- method.args$target
 	if (is.list(target)) {
 	  method.args$target <- target <- target[[group]]
@@ -144,7 +146,7 @@ lav_matrix_rotate <- function(A = NULL, # original matrix
     }
   }
   # we keep this here, so lav_matrix_rotate() can be used independently
-  if (method == "target" && anyNA(target)) {
+  if (method == "target.strict" && anyNA(target)) {
     method <- "pst"
     method.fname <- "lav_matrix_rotate_pst"
     target.mask <- matrix(1, nrow = nrow(target), ncol = ncol(target))

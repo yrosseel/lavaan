@@ -63,7 +63,7 @@ lav_model_nvcov_bootstrap <- function(lavmodel = NULL,
     COEF <- COEF[, -nc, drop = FALSE]
   }
 
-  # new in 0.6-20: check for outliers, ie big difference betwen sd() and mad()
+  # new in 0.6-20: check for outliers, ie big difference between sd() and mad()
   # see github issue 347
   sd_mad_ratio <- ( apply(COEF, 2,  sd, na.rm = TRUE) /
                     apply(COEF, 2, mad, na.rm = TRUE) )
