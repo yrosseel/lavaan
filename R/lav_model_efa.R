@@ -250,7 +250,7 @@ lav_model_efa_rotate_border_x <- function(x, lavmodel = NULL,
 
 	# set group-specific target/target.mask (if needed)
     # if target, check target matrix
-    if (method == "target" || method == "pst") {
+    if (method == "target.strict" || method == "pst") {
       target <- method.args$target
       if (is.list(target)) {
         this.method.args$target <- target[[g]]
@@ -345,6 +345,8 @@ lav_model_efa_rotate_border_x <- function(x, lavmodel = NULL,
           "cf-parsimax"  = (M - 1) / (P + M - 2),
           "cf-facparsim" = 1
         )
+      } else if (method == "target.strict") {
+        method.fname <- "lav_matrix_rotate_target"
       } else {
         method.fname <- paste("lav_matrix_rotate_", method, sep = "")
       }

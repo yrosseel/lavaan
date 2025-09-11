@@ -231,10 +231,10 @@ lav_options_default <- function() {
     entropy = "entropy", mccammon = "mccammon", infomax = "infomax",
     tandem1 = "tandem1", tandem2 = "tandem2", none = "none", promax = "promax",
     oblimax = "oblimax", bentler = "bentler", simplimax = "simplimax",
-    target = "target", pst = "pst", cf.quartimax = "cf-quartimax",
-    cf.varimax = "cf-varimax", cf.equamax = "cf-equamax",
-    cf.parsimax = "cf-parsimax", cf.facparsim = "cf-facparsim",
-    bi.quartimin = "biquartimin",
+    target.strict = "target.strict", target = "pst", pst = "pst",
+    cf.quartimax = "cf-quartimax", cf.varimax = "cf-varimax",
+    cf.equamax = "cf-equamax", cf.parsimax = "cf-parsimax",
+    cf.facparsim = "cf-facparsim", bi.quartimin = "biquartimin",
     biquartimin = "biquartimin", bi.geomin = "bigeomin", bigeomin = "bigeomin"
   ))
   elm("rotation.se", "bordered", chr = c("delta", "bordered"))

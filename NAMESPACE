@@ -15,7 +15,7 @@ importFrom("methods",
 
 importFrom("stats",
            "as.formula", "complete.cases", "cor", "cov", "cov2cor", "cov.wt",
-           "dnorm", "lm.fit", "na.omit", "nlminb", "optim", "pchisq",
+           "dnorm", "lm.fit", "mad", "na.omit", "nlminb", "optim", "pchisq",
            "plogis", "pnorm", "qchisq", "qnorm", "quantile", "rnorm", "runif",
            "sd", "terms", "uniroot", "var", "weighted.mean", "aggregate",
            "dlogis", "qlogis", "optimize", "lm", "setNames",
