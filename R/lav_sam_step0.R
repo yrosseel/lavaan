@@ -62,7 +62,12 @@ lav_sam_step0 <- function(cmd = "sem", model = NULL, data = NULL,
 
   # se
   if (FIT@Model@categorical && se == "twostep") {
-    se <- "twostep.robust"
+    # FIXME!
+    # should do this for global too, but we need the 'P' matrix, which
+    # we only have for local (for now)
+    if (sam.method == "local") {
+      se <- "twostep.robust"
+    }
   }
   FIT@Options$se <- se
 
