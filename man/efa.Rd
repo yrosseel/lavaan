@@ -25,13 +25,16 @@ efa(data = NULL, nfactors = 1L, sample.cov = NULL, sample.nobs = NULL,
 \item{rotation}{Character. The rotation method to be used. Possible options
     are varimax, quartimax, orthomax, oblimin, quartimin, geomin, promax,
     entropy, mccammon, infomax, tandem1, tandem2, oblimax, bentler, simplimax, 
-    target, pst (=partially specified target), cf, crawford-ferguson,
+    target.strict, target (alias for pst), pst (=partially specified target), 
+    cf, crawford-ferguson,
     cf-quartimax,  cf-varimax, cf-equamax,
     cf-parsimax, cf-facparsim, biquartimin, bigeomin. The latter two are
-    for bifactor rotation only. The rotation algorithms (except promax) 
-    are similar to those from the GPArotation package, but have been 
-    reimplemented for better control. The promax method is taken from the
-    stats package.}
+    for bifactor rotation only. The rotation algorithms (except promax
+    and target) are similar to those from the GPArotation package, but have 
+    been reimplemented for better control. The promax method is taken from the
+    stats package. The target.strict method is equal to the target method in
+    the GPArotation package. The target method is in fact the pst method where
+    all non-zero elements (in the target matrix) are ignored.}
 \item{rotation.args}{List. Options related to the rotation algorithm. The
    default options (and their alternatives) are \code{orthogonal = FALSE},
    \code{row.weights = "default"} (or \code{"kaiser"},
@@ -95,4 +98,16 @@ fit <- efa(data = HolzingerSwineford1939,
            rotation.args = list(geomin.epsilon = 0.01, rstarts = 1))
 summary(fit, nd = 3L, cutoff = 0.2, dot.cutoff = 0.05)
 fitMeasures(fit, fit.measures = "all")
+
+# target rotation
+target <- matrix(0, 9, 3)
+target[1:3, 1] <- 1
+target[4:6, 2] <- 1
+target[7:9, 3] <- 1
+fit2 <- efa(data = HolzingerSwineford1939,
+            ov.names = paste("x", 1:9, sep = ""), 
+            nfactors = 3,
+            rotation = "target",
+            rotation.args = list(target = target))
+summary(fit2)
 }

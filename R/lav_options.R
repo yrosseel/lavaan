@@ -1020,8 +1020,21 @@ lav_options_set <- function(opt = NULL) {                     # nolint
 
   if (opt$rotation == "pst") {
     target.mask <- opt$rotation.args$target.mask
-    if (is.null(target.mask)) {
-      lav_msg_stop(gettext("rotation target.mask matrix is NULL"))
+    if (is.null(target.mask) || length(target.mask) == 0L) {
+      #lav_msg_stop(gettext("rotation target.mask matrix is NULL"))
+      if (is.matrix(target)) {
+        tmp <- matrix(1L, nrow = nrow(target), ncol = ncol(target))
+        tmp[target != 0] <- 0L # ignore these (non-zero) elements
+        opt$rotation.args$target.mask <- target.mask <- tmp
+      } else if (is.list(target)) {
+        out <- lapply(1:length(target), function(g) {
+                 tmp <- matrix(1L, nrow = nrow(target[[g]]),
+                                   ncol = ncol(target[[g]]))
+                 tmp[target[[g]] != 0] <- 0L # ignore these (non-zero) elements
+                 tmp
+               })
+        opt$rotation.args$target.mask <- target.mask <- out
+      }
     }
     if (is.list(target.mask)) {
       if (!all(sapply(target.mask, is.matrix))) {
@@ -1047,7 +1060,9 @@ lav_options_set <- function(opt = NULL) {                     # nolint
   # if NAs, force opt$rotation to be 'pst' and create target.mask
   if (opt$rotation == "target.strict") {
     # matrix
+    warn.flag <- FALSE
     if (is.matrix(target) && anyNA(target)) {
+      warn.flag <- TRUE
       opt$rotation <- "pst"
       target.mask <- matrix(1, nrow = nrow(target), ncol = ncol(target))
       target.mask[is.na(target)] <- 0
@@ -1058,6 +1073,7 @@ lav_options_set <- function(opt = NULL) {                     # nolint
       ngroups <- length(target)
       for (g in seq_len(ngroups)) {
         if (anyNA(target[[g]])) {
+          warn.flag <- TRUE
 		  # is target.mask just a <0 x 0 matrix>? create list!
 		  if (is.matrix(opt$rotation.args$target.mask)) {
 		    opt$rotation.args$target.mask <- vector("list", length = ngroups)
@@ -1069,6 +1085,9 @@ lav_options_set <- function(opt = NULL) {                     # nolint
           opt$rotation.args$target.mask[[g]] <- target.mask
         }
       }
+    }
+    if (warn.flag) {
+       lav_msg_warn(gettext("switching to PST rotation as target matrix contains NA values"))
     }
   }
 
