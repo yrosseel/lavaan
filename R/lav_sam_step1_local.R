@@ -1060,7 +1060,7 @@ lav_sam_gamma_add <- function(STEP1 = NULL, FIT = NULL, group = 1L) {
 
     # (MTM %x% (tcrossprod(fi) - MTM)) -- part B
     block.b <- lav_matrix_vec(fi %x% MTM) %x% diag(P)
-    long.b <- do.call("rbind", lapply(seq_len(P), function(i) diag(4) %x% MTM[,i])) %x% fi
+    long.b <- do.call("rbind", lapply(seq_len(P), function(i) diag(P) %x% MTM[,i])) %x% fi
     big.b <- block.b + long.b
     part.b <- big.b[lav_matrix_vech(INDEX[keep.idx, keep.idx]),]
 
