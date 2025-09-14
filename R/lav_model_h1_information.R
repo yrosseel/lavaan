@@ -204,7 +204,8 @@ lav_model_h1_information_expected <- function(lavobject = NULL,
         if (lavmodel@meanstructure && structured) {
           MEAN <- lavimplied$mean[[g]]
         } else {
-          MEAN <- lavsamplestats@missing.h1[[g]]$mu
+          #MEAN <- lavsamplestats@missing.h1[[g]]$mu
+          MEAN <- lavh1$implied$mean[[g]]
         }
 
         if (structured) {
@@ -226,7 +227,8 @@ lav_model_h1_information_expected <- function(lavobject = NULL,
               wt = WT,
               Mu = MEAN,
               # meanstructure = lavmodel@meanstructure,
-              Sigma = lavsamplestats@missing.h1[[g]]$sigma,
+              #Sigma = lavsamplestats@missing.h1[[g]]$sigma,
+              Sigma = lavh1$implied$cov[[g]],
               x.idx = lavsamplestats@x.idx[[g]]
             )
         }
@@ -447,7 +449,8 @@ lav_model_h1_information_observed <- function(lavobject = NULL,
         if (lavmodel@meanstructure && structured) {
           MEAN <- lavimplied$mean[[g]]
         } else {
-          MEAN <- lavsamplestats@missing.h1[[g]]$mu
+          #MEAN <- lavsamplestats@missing.h1[[g]]$mu
+          MEAN <- lavh1$implied$mean[[g]]
         }
 
         if (structured) {
@@ -467,7 +470,8 @@ lav_model_h1_information_observed <- function(lavobject = NULL,
               # wt not needed
               Mu = MEAN,
               # meanstructure = lavmodel@meanstructure,
-              Sigma = lavsamplestats@missing.h1[[g]]$sigma,
+              #Sigma = lavsamplestats@missing.h1[[g]]$sigma,
+              Sigma = lavh1$implied$cov[[g]],
               x.idx = lavsamplestats@x.idx[[g]]
             )
         }
@@ -842,7 +846,8 @@ lav_model_h1_information_firstorder <- function(lavobject = NULL,
         if (lavmodel@meanstructure && structured) {
           MEAN <- lavimplied$mean[[g]]
         } else {
-          MEAN <- lavsamplestats@missing.h1[[g]]$mu
+          #MEAN <- lavsamplestats@missing.h1[[g]]$mu
+          MEAN <- lavh1$implied$mean[[g]]
         }
 
         B1[[g]] <- lav_mvnorm_missing_information_firstorder(

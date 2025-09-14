@@ -214,6 +214,55 @@ lav_mvnorm_missing_h1_estimate_moments <- function(Y = NULL,
   list(Sigma = Sigma, Mu = Mu, fx = fx)
 }
 
+# if we cannot use the EM algorithm (zero coverage?), we can always use
+# plain FIML and nlminb() instead
+#
+# single level only
+lav_mvnorm_missing_h1_estimate_moments_chol <- function(lavdata = NULL,
+                                                        lavsamplestats = NULL,
+                                                        lavoptions = NULL,
+                                                        group = 1L) {
+  # not for multilevel
+  stopifnot(lavdata@nlevels == 1L)
+
+  # construct unrestricted partable (using chol parameterization)
+  # for this group only
+  lavpartable <- lav_partable_unrestricted_chol(
+                             lavdata = lavdata, lavoptions = lavoptions,
+                             lavpta = NULL, group = group)
+
+  lavoptions2 <- lavoptions
+  lavoptions2$estimator <- "ML"
+  lavoptions2$missing <- "ml"
+  lavoptions2$se <- "none"
+  lavoptions2$test <- "none"
+  lavoptions2$do.fit <- TRUE
+  lavoptions2$optim.method <- "nlminb"
+  lavoptions2$h1 <- FALSE
+  lavoptions2$implied <- TRUE
+  lavoptions2$loglik <- TRUE
+  lavoptions2$baseline <- FALSE
+  lavoptions2$fixed.x <- FALSE # even if model uses fixed.x=TRUE
+  lavoptions2$model.type <- "unrestricted"
+  lavoptions2$optim.attempts <- 4L
+  lavoptions2$check.gradient <- FALSE
+  lavoptions2$optim.force.convergence <- TRUE # for now...
+  lavoptions2$control <- list(rel.tol = 1e-7)
+  lavoptions2$start <- "simple" # add this point, we have no lavh1 yet!
+  FIT <- lavaan(lavpartable,
+    slotOptions = lavoptions2,
+    slotSampleStats = lavsamplestats,
+    slotData = lavdata,
+    warn = FALSE
+  )
+
+  out <- list(Sigma = FIT@implied$cov[[1]],
+              Mu = FIT@implied$mean[[1]],
+              fx = FIT@optim$fx)
+
+  out
+}
+
 # compute N times ACOV(Mu, vech(Sigma))
 # in the literature: - `Omega_{SW}'
 #                    - `Gamma for incomplete data'
@@ -266,3 +315,5 @@ lav_mvnorm_missing_h1_omega_sw <- function(Y = NULL,
 
   SW
 }
+
+

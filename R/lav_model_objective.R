@@ -141,11 +141,22 @@ lav_model_objective <- function(lavmodel = NULL,
         if (!attr(Sigma.hat[[g]], "po")) {
           return(Inf)
         }
+        # check if h1 is defined (eg zero coverage)
+        if (is.null(lavsamplestats@missing.h1[[g]]$h1)) {
+          #this.h1 <- lav_mvnorm_missing_loglik_samplestats(
+          #  Yp = lavsamplestats@missing[[g]],
+          #  Mu = Mu.hat[[g]], Sigma = Sigma.hat[[g]],
+          #  log2pi = FALSE, minus.two = TRUE) / lavsamplestats@nobs[[g]]
+          #this.h1 <- this.h1 * 0.9999999 # avoid perfect fit
+          this.h1 <- NULL #for now
+        } else {
+          this.h1 <- lavsamplestats@missing.h1[[g]]$h1
+        }
         group.fx <- estimator.FIML(
           Sigma.hat = Sigma.hat[[g]],
           Mu.hat = Mu.hat[[g]],
           Yp = lavsamplestats@missing[[g]],
-          h1 = lavsamplestats@missing.h1[[g]]$h1, N = lavsamplestats@nobs[[g]]
+          h1 = this.h1, N = lavsamplestats@nobs[[g]]
         )
       } else if (estimator == "ML" && lavdata@nlevels > 1L) {
         # FIML twolevel

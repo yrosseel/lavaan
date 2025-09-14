@@ -68,10 +68,14 @@ lavData <- function(data = NULL, # data.frame
     std.ov <- FALSE
   }
 
-  # missing?
-  missing <- lavoptions$missing
+  # missing? (lavCor() does not parse options before calling lavdata...)
+  missing <- tolower(lavoptions$missing)
   if (is.null(missing) || missing == "default") {
     missing <- "listwise"
+  } else if (missing %in% c("ml", "fiml", "direct")) {
+    missing <- "ml"
+  } else if (missing %in% c("ml.x", "fiml.x", "direct.x")) {
+    missing <- "ml.x"
   }
 
   # warn?

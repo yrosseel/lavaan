@@ -1,6 +1,7 @@
 # compute logl for the unrestricted (h1) model -- per group
 lav_h1_logl <- function(lavdata = NULL,
                         lavsamplestats = NULL,
+                        h1.implied = NULL,
                         lavoptions = NULL) {
   # number of groups
   ngroups <- lavdata@ngroups
@@ -60,8 +61,10 @@ lav_h1_logl <- function(lavdata = NULL,
         logl.group[g] <-
           lav_mvnorm_missing_loglik_samplestats(
             Yp     = lavsamplestats@missing[[g]],
-            Mu     = lavsamplestats@missing.h1[[g]]$mu,
-            Sigma  = lavsamplestats@missing.h1[[g]]$sigma,
+            #Mu     = lavsamplestats@missing.h1[[g]]$mu,
+            Mu     = h1.implied$mean[[g]],
+            #Sigma  = lavsamplestats@missing.h1[[g]]$sigma,
+            Sigma  = h1.implied$cov[[g]],
             x.idx  = lavsamplestats@x.idx[[g]],
             x.mean = lavsamplestats@mean.x[[g]],
             x.cov  = lavsamplestats@cov.x[[g]]

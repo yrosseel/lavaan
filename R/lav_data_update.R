@@ -22,7 +22,7 @@ lav_data_update <- function(lavdata = NULL, newX = NULL, BOOT.idx = NULL,
     # Mp + nobs
     if (lavoptions$missing != "listwise") {
       newdata@Mp[[g]] <- lav_data_missing_patterns(newX[[g]],
-        sort.freq = FALSE, coverage = FALSE
+        sort.freq = FALSE, coverage = TRUE
       )
       newdata@nobs[[g]] <-
         (nrow(newdata@X[[g]]) - length(newdata@Mp[[g]]$empty.idx))
@@ -123,7 +123,7 @@ lav_data_update_subset <- function(lavdata = NULL, ov.names = NULL) {
     # Mp + nobs
     if (lavdata@missing != "listwise") {
       newdata@Mp[[g]] <- lav_data_missing_patterns(newdata@X[[g]],
-        sort.freq = FALSE, coverage = FALSE
+        sort.freq = FALSE, coverage = TRUE
       )
       newdata@nobs[[g]] <-
         (nrow(newdata@X[[g]]) - length(newdata@Mp[[g]]$empty.idx))

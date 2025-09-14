@@ -386,8 +386,10 @@ lav_model_nvcov_two_stage <- function(lavmodel = NULL,
     # we use the same setting as to compute 'H' (the h1 information matrix)
     # so that at Omega = H if data is complete
     if (lavoptions$h1.information[1] == "unstructured") {
-      MU <- lavsamplestats@missing.h1[[g]]$mu
-      SIGMA <- lavsamplestats@missing.h1[[g]]$sigma
+      #MU <- lavsamplestats@missing.h1[[g]]$mu
+      #SIGMA <- lavsamplestats@missing.h1[[g]]$sigma
+      MU <- lavh1$implied$mean[[g]]
+      SIGMA <- lavh1$implied$cov[[g]]
     } else {
       MU <- lavimplied$mean[[g]]
       SIGMA <- lavimplied$cov[[g]]

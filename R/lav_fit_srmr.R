@@ -35,8 +35,16 @@ lav_fit_srmr_mplus <- function(lavobject) {
       }
     } else {
       # EM estimates
-      S <- lavobject@SampleStats@missing.h1[[g]]$sigma
-      M <- lavobject@SampleStats@missing.h1[[g]]$mu
+      if (!is.null(lavobject@h1$implied$cov[[g]])) {
+        S <- lavobject@h1$implied$cov[[g]]
+      } else {
+        S <- lavobject@SampleStats@missing.h1[[g]]$sigma
+      }
+      if (!is.null(lavobject@h1$implied$mean[[g]])) {
+        M <- lavobject@h1$implied$mean[[g]]
+      } else {
+        M <- lavobject@SampleStats@missing.h1[[g]]$mu
+      }
     }
     nvar <- ncol(S)
 

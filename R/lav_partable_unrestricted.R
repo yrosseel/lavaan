@@ -673,8 +673,9 @@ lav_partable_indep_or_unrestricted <- function(lavobject = NULL,
 lav_partable_unrestricted_chol <- function(lavobject = NULL,
                                            # if no object is available,
                                            lavdata = NULL,
-                                           lavpta = NULL,
-                                           lavoptions = NULL) {
+                                           lavpta = NULL, # optional
+                                           lavoptions = NULL,
+                                           group = NULL) {
   # grab everything from lavaan lavobject
   if (!is.null(lavobject)) {
     stopifnot(inherits(lavobject, "lavaan"))
@@ -694,6 +695,17 @@ lav_partable_unrestricted_chol <- function(lavobject = NULL,
   }
   ngroups <- lavdata@ngroups
   nlevels <- lavdata@nlevels
+
+  # select groups
+  if (is.null(group)) {
+    group.select <- seq_len(ngroups)
+  } else {
+    stopifnot(is.numeric(group), all(group <= ngroups))
+    group.select <- group
+    if (length(group.select) == 0L) {
+      lav_msg_stop(gettext("no groups selected"))
+    }
+  }
 
   # what with fixed.x?
   # - does not really matter; fit will be saturated anyway
@@ -715,6 +727,12 @@ lav_partable_unrestricted_chol <- function(lavobject = NULL,
   # block number
   b <- 0L
   for (g in 1:ngroups) {
+
+    # select group?
+    if (! g %in% group.select) {
+      next
+    }
+
     # only for multilevel
     if (nlevels > 1L) {
       Lp <- lavdata@Lp[[g]]

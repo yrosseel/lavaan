@@ -9,24 +9,40 @@ lav_h1_implied_logl <- function(lavdata = NULL,
     lavpta <- lav_partable_attributes(lavpartable)
     lavpartable <- lav_partable_set_cache(lavpartable, lavpta)
   }
+
+  # single-level case
   if (lavdata@nlevels == 1L) {
+
+    # missing data
     if (lavsamplestats@missing.flag) {
       if (lavoptions$conditional.x) {
         implied <- list() # not available yet
       } else {
         implied <- list(
-          cov = lapply(
-            lavsamplestats@missing.h1,
-            "[[", "sigma"
-          ),
-          mean = lapply(
-            lavsamplestats@missing.h1,
-            "[[", "mu"
-          ),
+          cov = lavsamplestats@cov,
+          mean = lavsamplestats@mean,
           th = lavsamplestats@th,
           group.w = lavsamplestats@group.w
         )
+        # insert ML estimates
+        for (g in 1:lavdata@ngroups) {
+          # zero coverage?
+          if (any(lav_matrix_vech(lavdata@Mp[[g]]$coverage,
+                                  diagonal = FALSE) == 0L)) {
+            out <- lav_mvnorm_missing_h1_estimate_moments_chol(
+              lavdata = lavdata, lavsamplestats = lavsamplestats,
+              lavoptions = lavoptions, group = g)
+            implied$cov[[g]] <- out$Sigma
+            implied$mean[[g]] <- out$Mu
+          } else {
+            # regular EM estimates
+            implied$cov[[g]] <- lavsamplestats@missing.h1[[g]]$sigma
+            implied$mean[[g]] <- lavsamplestats@missing.h1[[g]]$mu
+          }
+        }
       }
+
+    # complete data
     } else {
       if (lavoptions$conditional.x) {
         implied <- list(
@@ -51,6 +67,7 @@ lav_h1_implied_logl <- function(lavdata = NULL,
     logl <- lav_h1_logl(
       lavdata = lavdata,
       lavsamplestats = lavsamplestats,
+      h1.implied = implied,
       lavoptions = lavoptions
     )
   } else {

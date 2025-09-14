@@ -612,17 +612,26 @@ lav_samplestats_from_data <- function(lavdata = NULL,
           current.warn <- lav_warn()
           if (lav_warn(lavoptions$em.h1.warn))
             on.exit(lav_warn(current.warn), TRUE)
-          out <- lav_mvnorm_missing_h1_estimate_moments(
-            Y = X[[g]],
-            wt = WT[[g]],
-            Mp = Mp[[g]], Yp = missing.[[g]],
-            max.iter = lavoptions$em.h1.iter.max,
-            tol = lavoptions$em.h1.tol
-          )
+          # zero coverage?
+          if (any(lav_matrix_vech(Mp[[g]]$coverage, diagonal = FALSE) == 0)) {
+            #out <- lav_mvnorm_missing_h1_estimate_moments_chol(
+            #         lavdata = lavdata, lavoptions = lavoptions, group = g)
+            #missing.h1.[[g]]$sigma <- out$Sigma
+            #missing.h1.[[g]]$mu <- out$Mu
+            #missing.h1.[[g]]$h1 <- out$fx
+          } else {
+            out <- lav_mvnorm_missing_h1_estimate_moments(
+              Y = X[[g]],
+              wt = WT[[g]],
+              Mp = Mp[[g]], Yp = missing.[[g]],
+              max.iter = lavoptions$em.h1.iter.max,
+              tol = lavoptions$em.h1.tol
+            )
+            missing.h1.[[g]]$sigma <- out$Sigma
+            missing.h1.[[g]]$mu <- out$Mu
+            missing.h1.[[g]]$h1 <- out$fx
+          }
           lav_warn(current.warn)
-          missing.h1.[[g]]$sigma <- out$Sigma
-          missing.h1.[[g]]$mu <- out$Mu
-          missing.h1.[[g]]$h1 <- out$fx
         }
 
         if (!is.null(WT[[g]])) {

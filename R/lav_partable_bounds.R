@@ -189,7 +189,11 @@ lav_partable_add_bounds <- function(partable = NULL,
 
     # OV.VAR for this group
     if (lavsamplestats@missing.flag && lavdata@nlevels == 1L) {
-      OV.VAR <- diag(lavsamplestats@missing.h1[[g]]$sigma)
+      if (!is.null(lavh1$implied$cov[[g]])) {
+        OV.VAR <- diag(lavh1$implied$cov[[g]])
+      } else {
+        OV.VAR <- diag(lavsamplestats@missing.h1[[g]]$sigma)
+      }
     } else {
       if (lavoptions$conditional.x) {
         OV.VAR <- diag(lavsamplestats@res.cov[[g]])

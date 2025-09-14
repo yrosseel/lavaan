@@ -399,6 +399,12 @@ lav_model_test <- function(lavobject = NULL,
     } else {
       chisq.group <- rep(as.numeric(NA), lavdata@ngroups)
     }
+  } else if (lavdata@missing == "ml" && any(lavdata@Mp[[1]]$coverage == 0)) {
+    if (length(lavh1) > 0L) {
+      chisq.group <- -2 * (lavloglik$loglik.group - lavh1$logl$loglik.group)
+    } else {
+      chisq.group <- rep(as.numeric(NA), lavdata@ngroups)
+    }
   } else {
     # get fx.group
     fx <- attr(x, "fx")

@@ -125,6 +125,7 @@ lav_model_loglik <- function(lavdata = NULL,
         x.idx <- lavsamplestats@x.idx[[g]]
         X.MEAN <- X.COV <- NULL
         if (length(x.idx) > 0L) {
+          # FIXME: should use lavh1 instead!
           X.MEAN <- lavsamplestats@missing.h1[[g]]$mu[x.idx]
           X.COV <- lavsamplestats@missing.h1[[g]]$sigma[x.idx,
             x.idx,
