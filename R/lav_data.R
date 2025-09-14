@@ -1195,6 +1195,11 @@ lav_data_full <- function(data = NULL, # data.frame
 	    small.idx <- which(coverage.vech < 0.1)
 	    if (all(coverage.vech[small.idx] == 0)) {
 		  # 0.6-18: no warning --> this could be due to missing by design
+          # 0.6-20: give warning anyway (as EM is ignoring this)
+          lav_msg_warn(gettext(
+            "due to missing values, some pairwise combinations have zero
+             coverage; the corresponding covariances are not identified;
+             use lavInspect(fit, \"coverage\") to investigate."))
 		} else {
           lav_msg_warn(gettext(
             "due to missing values, some pairwise combinations have less than
