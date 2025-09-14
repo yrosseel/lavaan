@@ -32,6 +32,18 @@ lav_mvnorm_missing_h1_estimate_moments <- function(Y = NULL,
     Yp <- lav_samplestats_missing_patterns(Y = Y, Mp = Mp, wt = wt)
   }
 
+  # covariances with zero coverage (perhaps planned?)
+  zero.coverage.flag <- FALSE
+  zero.coverage.idx <- which(Mp$coverage == 0) # as a vector
+  if (length(zero.coverage.idx) > 0L) {
+    zero.coverage.flag <- TRUE
+    # this is a problem; the current implementation of the E-step does not
+    # take this into account; for now, we need to switch to nlminb() instead
+    lav_msg_warn(
+      gettext("some covariances have zero coverage; the current implementation
+               of the EM algorithm will ignore this!"))
+  }
+
   if (is.null(max.iter)) {
     max.iter <- 500L
   }
