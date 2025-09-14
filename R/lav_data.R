@@ -827,6 +827,8 @@ lav_data_full <- function(data = NULL, # data.frame
     num.idx <- which(ov$type == "numeric" & ov$exo == 0L)
     COR <- try(cor(data[,ov$idx[num.idx]], use = "pairwise.complete.obs"),
                silent = TRUE)
+    # replace any NAs by 0 (as we only wish to detect perfect correlations)
+    COR[is.na(COR)] <- 0
     if (!inherits(COR, "try-error") &&
         any(lav_matrix_vech(COR, diagonal = FALSE) == 1)) {
       COR[upper.tri(COR, diag = TRUE)] <- 0
@@ -876,6 +878,13 @@ lav_data_full <- function(data = NULL, # data.frame
           complete.cases(data[all.idx]))
         nobs[[g]] <- length(case.idx[[g]])
         norig[[g]] <- length(which(data[[group]] == group.label[g]))
+        # check for empty data
+        if (nobs[[g]] == 0L) {
+          lav_msg_stop(gettextf("all observations were deleted due to missing
+                                 data after listwise deletion in group [%s];
+                                 check your data
+                                 or consider a different option for the missing=                                 argument.", group.label[g]))
+        }
         # } else if(missing == "pairwise" && length(exo.idx) > 0L) {
         #    case.idx[[g]] <- which(data[[group]] == group.label[g] &
         #                           complete.cases(data[exo.idx]))
@@ -901,6 +910,12 @@ lav_data_full <- function(data = NULL, # data.frame
         case.idx[[g]] <- which(complete.cases(data[all.idx]))
         nobs[[g]] <- length(case.idx[[g]])
         norig[[g]] <- nrow(data)
+        if (nobs[[g]] == 0L) {
+          lav_msg_stop(gettext("all observations were deleted due to missing
+                                data after listwise deletion;
+                                check your data
+                                or consider a different option for the missing=                                 argument."))
+        }
         # } else if(missing == "pairwise" && length(exo.idx) > 0L) {
         #    case.idx[[g]] <- which(complete.cases(data[exo.idx]))
         #    nobs[[g]] <- length(case.idx[[g]])
