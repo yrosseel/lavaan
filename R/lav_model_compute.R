@@ -29,33 +29,47 @@ computeSigmaHat <- function(lavmodel = NULL, GLIST = NULL, extra = FALSE,
     if (lav_debug()) print(Sigma.hat[[g]])
 
     if (extra) {
+      speed <- lavaan_speed_cholesky()
       # check if matrix is positive definite
-      ev <- eigen(Sigma.hat[[g]], symmetric = TRUE, only.values = TRUE)$values
-      if (any(ev < sqrt(.Machine$double.eps)) || sum(ev) == 0) {
+      if (speed) {
+        # fast path: try Cholesky directly
+        cS <- tryCatch(chol(Sigma.hat[[g]]), error = function(e) NULL)
+        is_pd <- !is.null(cS)
+      } else {
+        # slow path: eigenvalue-based PD check (values only)
+        ev <- eigen(Sigma.hat[[g]], symmetric = TRUE, only.values = TRUE)$values
+        is_pd <- !(any(ev < sqrt(.Machine$double.eps)) || sum(ev) == 0)
+      }
+      if (!is_pd) {
         Sigma.hat.inv <- MASS::ginv(Sigma.hat[[g]])
         Sigma.hat.log.det <- log(.Machine$double.eps)
         attr(Sigma.hat[[g]], "po") <- FALSE
         attr(Sigma.hat[[g]], "inv") <- Sigma.hat.inv
         attr(Sigma.hat[[g]], "log.det") <- Sigma.hat.log.det
       } else {
-        ## since we already do an 'eigen' decomposition, we should
-        ## 'reuse' that information, instead of doing a new cholesky?
-        # EV <- eigen(Sigma.hat[[g]], symmetric = TRUE)
-        # Sigma.hat.inv <- tcrossprod(EV$vectors / rep(EV$values,
-        #        each = length(EV$values)), EV$vectors)
-        # Sigma.hat.log.det <- sum(log(EV$values))
+        if (speed) {
+          # reuse Cholesky factor computed above
+          Sigma.hat.inv <- chol2inv(cS)
+          d <- diag(cS)
+          Sigma.hat.log.det <- 2 * sum(log(d))
+        }else{
+          ## since we already do an 'eigen' decomposition, we should
+          ## 'reuse' that information, instead of doing a new cholesky?
+          # EV <- eigen(Sigma.hat[[g]], symmetric = TRUE)
+          # Sigma.hat.inv <- tcrossprod(EV$vectors / rep(EV$values,
+          #        each = length(EV$values)), EV$vectors)
+          # Sigma.hat.log.det <- sum(log(EV$values))
 
-        ## --> No, chol() is much (x2) times faster
-        Sigma.hat.inv <- inv.chol(Sigma.hat[[g]], logdet = TRUE)
-        Sigma.hat.log.det <- attr(Sigma.hat.inv, "logdet")
-
+          ## --> No, chol() is much (x2) times faster
+          Sigma.hat.inv <- inv.chol(Sigma.hat[[g]], logdet = TRUE)
+          Sigma.hat.log.det <- attr(Sigma.hat.inv, "logdet")
+        }
         attr(Sigma.hat[[g]], "po") <- TRUE
         attr(Sigma.hat[[g]], "inv") <- Sigma.hat.inv
         attr(Sigma.hat[[g]], "log.det") <- Sigma.hat.log.det
       }
     }
   } # nblocks
-
   Sigma.hat
 }
 
