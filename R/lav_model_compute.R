@@ -29,14 +29,14 @@ computeSigmaHat <- function(lavmodel = NULL, GLIST = NULL, extra = FALSE,
     if (lav_debug()) print(Sigma.hat[[g]])
 
     if (extra) {
-      speed <- lavaan_speed_cholesky()
+      speed <- if (exists("lavaan_speed_cholesky")) lavaan_speed_cholesky() else FALSE
       # check if matrix is positive definite
       if (speed) {
         # fast path: try Cholesky directly
         cS <- tryCatch(chol(Sigma.hat[[g]]), error = function(e) NULL)
         is_pd <- !is.null(cS)
       } else {
-        # slow path: eigenvalue-based PD check (values only)
+        # slow path: eigenvalue-based PD check
         ev <- eigen(Sigma.hat[[g]], symmetric = TRUE, only.values = TRUE)$values
         is_pd <- !(any(ev < sqrt(.Machine$double.eps)) || sum(ev) == 0)
       }
