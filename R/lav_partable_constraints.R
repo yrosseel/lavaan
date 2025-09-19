@@ -29,10 +29,10 @@ lav_partable_constraints_def <- function(partable, con = NULL, debug = FALSE,
   }
 
   # sort order of def.idx by dependencies
-  dep <- lapply(partable$rhs[def.idx], FUN = \(x) all.vars(parse(text=x)))
-  lab.raw <- partable$lhs[def.idx]
+  deps <- lapply(partable$rhs[def.idx], FUN = \(x) all.vars(parse(text=x)))
+  lab.unsorted <- partable$lhs[def.idx]
   adj.mat <- matrix(0L, nrow = length(def.idx), ncol = length(def.idx))
-  for (i in seq_along(lab.raw)) adj.mat[lab.raw %in% dep[[i]], i] <- 1L
+  for (i in seq_along(lab.raw)) adj.mat[lab.unsorted %in% deps[[i]], i] <- 1L
   def.idx <- def.idx[order_adj_mat(adj.mat)]
 
   # create function
@@ -560,7 +560,7 @@ order_adj_mat <- function(adj.mat) {
     in_degree <- colSums(A)
 
     # Find nodes with zero in-degree and not already sorted
-    zero_nodes <- which(in_degree == 0 & !(1:n %in% ordered))
+    zero_nodes <- which(in_degree == 0 & !(seq_len(n) %in% ordered))
 
     # If there are no zero in-degree nodes, the graph has a cycle
     if (!length(zero_nodes)) {
