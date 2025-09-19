@@ -100,12 +100,12 @@ simulateData(model = NULL, model.type = "sem", meanstructure = FALSE,
     are unity. This allows regression coefficients and factor loadings 
     (involving observed variables) to be specified in a standardized metric.}
 }
-\details{Model parameters can be specified by fixed values in the lavaan
-model syntax. If no fixed values are specified, the value zero will be 
-assumed, except for factor loadings and variances, which are set to unity 
-by default. By default, multivariate normal data are generated. However,
-by providing skewness and/or kurtosis values, nonnormal multivariate data
-can be generated, using the Vale & Maurelli (1983) method.}
+\details{Model parameters can be specified by fixed values in the lavaan model
+syntax. If no fixed values are specified, the value zero will be assumed,
+except for factor loadings and variances, which are set to 0.7 and 1.0
+respectively. By default, multivariate normal data are generated. However, by
+providing skewness and/or kurtosis values, nonnormal multivariate data can be
+generated, using the Vale & Maurelli (1983) method.}
 \value{The generated data. Either as a data.frame 
 (if \code{return.type="data.frame"}), 
 a numeric matrix (if \code{return.type="matrix"}),
