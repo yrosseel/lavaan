@@ -14,6 +14,19 @@
 # SRMR for continuous data only
 # see https://www.statmodel.com/download/SRMR.pdf
 lav_fit_srmr_mplus <- function(lavobject) {
+
+  lavsamplestats <- lavobject@SampleStats
+  if (.hasSlot(lavobject, "h1") {
+    lavh1 <- lavobject@h1
+  } else {
+    # for <0.6 objects
+    lavh1 <- lav_h1_implied_logl(
+        lavdata = lavobject@Data,
+        lavsamplestats = lavobject@SampleStats,
+        lavoptions = lavobject@Options
+      )
+  }
+
   # ngroups
   G <- lavobject@Data@ngroups
 
@@ -25,25 +38,25 @@ lav_fit_srmr_mplus <- function(lavobject) {
   # please tag @TDJorgensen at the end of the commit message.
   for (g in 1:G) {
     # observed
-    if (!lavobject@SampleStats@missing.flag) {
+    if (!lavsamplestats@missing.flag) {
       if (lavobject@Model@conditional.x) {
-        S <- lavobject@SampleStats@res.cov[[g]]
-        M <- lavobject@SampleStats@res.int[[g]]
+        S <- lavsamplestats@res.cov[[g]]
+        M <- lavsamplestats@res.int[[g]]
       } else {
-        S <- lavobject@SampleStats@cov[[g]]
-        M <- lavobject@SampleStats@mean[[g]]
+        S <- lavsamplestats@cov[[g]]
+        M <- lavsamplestats@mean[[g]]
       }
     } else {
       # EM estimates
-      if (!is.null(lavobject@h1$implied$cov[[g]])) {
-        S <- lavobject@h1$implied$cov[[g]]
+      if (!is.null(lavh1$implied$cov[[g]])) {
+        S <- lavh1$implied$cov[[g]]
       } else {
-        S <- lavobject@SampleStats@missing.h1[[g]]$sigma
+        S <- lavsamplestats@missing.h1[[g]]$sigma
       }
-      if (!is.null(lavobject@h1$implied$mean[[g]])) {
-        M <- lavobject@h1$implied$mean[[g]]
+      if (!is.null(lavh1$implied$mean[[g]])) {
+        M <- lavh1$implied$mean[[g]]
       } else {
-        M <- lavobject@SampleStats@missing.h1[[g]]$mu
+        M <- lavsamplestats@missing.h1[[g]]$mu
       }
     }
     nvar <- ncol(S)
