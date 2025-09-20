@@ -16,7 +16,7 @@
 lav_fit_srmr_mplus <- function(lavobject) {
 
   lavsamplestats <- lavobject@SampleStats
-  if (.hasSlot(lavobject, "h1") {
+  if (.hasSlot(lavobject, "h1")) {
     lavh1 <- lavobject@h1
   } else {
     # for <0.6 objects
