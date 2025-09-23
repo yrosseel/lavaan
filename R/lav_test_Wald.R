@@ -61,6 +61,14 @@ lavTestWald <- function(object, constraints = NULL, verbose = FALSE) {
     JAC <- lav_func_jacobian_simple(func = ceq.function, x = theta)
   }
 
+  # check for linear redundant rows in JAC
+  out <- lav_matrix_rref(t(JAC))
+  ranK <- length(out$pivot)
+  if (ranK < nrow(JAC)) {
+    lav_msg_warn(gettext("Jacobian of constraints is rank deficient. Some constraints may be redundant, and have been removed."))
+  }
+  JAC <- JAC[out$pivot, , drop = FALSE]
+
   if (lav_verbose()) {
     cat("Restriction matrix (jacobian):\n")
     print(JAC)
@@ -69,6 +77,7 @@ lavTestWald <- function(object, constraints = NULL, verbose = FALSE) {
 
   # linear restriction
   theta.r <- ceq.function(theta)
+  theta.r <- theta.r[out$pivot]
 
   if (lav_verbose()) {
     cat("Restricted theta values:\n")
@@ -95,7 +104,7 @@ lavTestWald <- function(object, constraints = NULL, verbose = FALSE) {
   Wald <- as.numeric(t(theta.r) %*% solve(VCOV.r) %*% theta.r)
 
   # df
-  Wald.df <- nrow(JAC)
+  Wald.df <- ranK
 
   # p-value based on chisq
   Wald.pvalue <- 1 - pchisq(Wald, df = Wald.df)
