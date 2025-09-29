@@ -12,7 +12,6 @@ lav_start <- function(start.method = "default",
                       lavsamplestats = NULL,
                       lavh1 = NULL, # fixme: only use lavh1?
                       model.type = "sem",
-                      mimic = "lavaan",
                       reflect = FALSE, # rotation only
 					            samplestats.flag = TRUE,
                       order.lv.by = "none" # rotation only
@@ -46,14 +45,14 @@ lav_start <- function(start.method = "default",
   }
 
   # check start.method
-  if (mimic == "lavaan") {
-    start.initial <- "lavaan"
-  } else if (mimic == "Mplus") {
-    start.initial <- "mplus"
-  } else {
-    # FIXME: use LISREL/EQS/AMOS/.... schemes
-    start.initial <- "lavaan"
-  }
+  #if (mimic == "lavaan") {
+  start.initial <- "lavaan"
+  #} else if (mimic == "Mplus") {
+  #  start.initial <- "mplus"
+  #} else {
+  #  # FIXME: use LISREL/EQS/AMOS/.... schemes
+  #  start.initial <- "lavaan"
+  #}
 
   # start.method
   start.user <- NULL
@@ -83,7 +82,7 @@ lav_start <- function(start.method = "default",
       return(start) # assuming fixed.x = FALSE!
     } else if (start.method == "est") {
       return(lavpartable$est)
-    } else if (start.method.lc %in% c("simple", "lavaan", "mplus")) {
+    } else if (start.method.lc %in% c("simple", "lavaan")) {
       start.initial <- start.method.lc
     } else {
      lav_msg_stop(gettext("unknown value for start argument"))
@@ -212,15 +211,15 @@ lav_start <- function(start.method = "default",
       }
       start[ov.var.idx] <- diag(h1.cov)[sample.var.idx]
     } else {
-      if (start.initial == "mplus") {
-        if (conditional.x && nlevels == 1L) {
-          start[ov.var.idx] <-
-            (1.0 - 0.50) * lavsamplestats@res.var[[1L]][sample.var.idx]
-        } else {
-          start[ov.var.idx] <-
-            (1.0 - 0.50) * lavsamplestats@var[[1L]][sample.var.idx]
-        }
-      } else {
+      #if (start.initial == "mplus") {
+      #  if (conditional.x && nlevels == 1L) {
+      #    start[ov.var.idx] <-
+      #      (1.0 - 0.50) * lavsamplestats@res.var[[1L]][sample.var.idx]
+      #  } else {
+      #    start[ov.var.idx] <-
+      #      (1.0 - 0.50) * lavsamplestats@var[[1L]][sample.var.idx]
+      #  }
+      #} else {
         if (conditional.x && nlevels == 1L) {
           start[ov.var.idx] <-
             (1.0 - 0.50) * diag(lavsamplestats@res.cov[[g]])[sample.var.idx]
@@ -228,7 +227,7 @@ lav_start <- function(start.method = "default",
           start[ov.var.idx] <-
             (1.0 - 0.50) * diag(lavsamplestats@cov[[g]])[sample.var.idx]
         }
-      }
+      #}
       # composite indicators: fill in total variances
       if (composites) {
         start[ov.var.idx] <- diag(lavsamplestats@cov[[g]])[sample.var.idx]
@@ -236,7 +235,7 @@ lav_start <- function(start.method = "default",
     }
 
     # 1-fac measurement models: loadings, psi, theta
-    if (start.initial %in% c("lavaan", "mplus") &&
+    if (start.initial %in% c("lavaan") &&
       model.type %in% c("sem", "cfa")) {
       # fabin3 estimator (2sls) of Hagglund (1982) per factor
       for (f in lv.names.noc) {
@@ -917,7 +916,7 @@ lav_start <- function(start.method = "default",
   # growth models:
   # - compute starting values for mean latent variables
   # - compute starting values for variance latent variables
-  if (start.initial %in% c("lavaan", "mplus") &&
+  if (start.initial %in% c("lavaan") &&
     model.type == "growth") {
     ### DEBUG ONLY
     # lv.var.idx <- which(lavpartable$op == "~~"                &

@@ -49,8 +49,7 @@ lav_lavaan_step08_start <- function(slotModel = NULL, # nolint
           reflect = FALSE,
 		      samplestats.flag = samplestats.flag,
           # order.lv.by  = lavoptions$rotation.args$order.lv.by,
-          order.lv.by = "none",
-          mimic = lavoptions$mimic
+          order.lv.by = "none"
           )
       } else {
         lavpartable$start <- lavpartable$est
@@ -73,7 +72,6 @@ lav_lavaan_step08_start <- function(slotModel = NULL, # nolint
       #                    reflect      = FALSE,
       #                    #order.lv.by  = lavoptions$rotation.args$order.lv.by,
       #                    order.lv.by  = "none",
-      #                    mimic          = lavoptions$mimic,
       #                    debug          = lav_debug())
       #     exo.idx <- which(lavpartable$exo == 1L)
       #     lavpartable$start[exo.idx] <- tmp[exo.idx]
@@ -95,8 +93,7 @@ lav_lavaan_step08_start <- function(slotModel = NULL, # nolint
         reflect = FALSE,
         samplestats.flag = samplestats.flag,
         # order.lv.by  = lavoptions$rotation.args$order.lv.by,
-        order.lv.by = "none",
-        mimic = lavoptions$mimic
+        order.lv.by = "none"
       )
 
       # sanity check
