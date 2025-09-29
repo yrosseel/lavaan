@@ -1299,7 +1299,7 @@ computeLAMBDA.LISREL <- function(MLIST = NULL,
 
   # fix LAMBDA
   LAMBDA <- MLIST$lambda
-  if (length(ov.y.dummy.ov.idx) > 0L) {
+  if (length(ov.y.dummy.ov.idx) > 0L && !is.null(MLIST$beta)) {
     LAMBDA[ov.y.dummy.ov.idx, ] <- MLIST$beta[ov.y.dummy.lv.idx, ]
   }
 
