@@ -352,7 +352,8 @@ lav_options_default <- function() {
 
   # information (se + test)
   elm("information", c("default", "default"), chr = c(
-    "default", "expected", "observed", "first.order"), oklen = c(1L, 2L))
+    "default", "expected", "observed", "first.order", "expected_mlm"),
+    oklen = c(1L, 2L))
   elm("h1.information", c("structured", "structured"), chr = c(
     "structured", "unstructured"), oklen =  c(1L, 2L))
   elm("observed.information", c("hessian", "default"), chr = c(

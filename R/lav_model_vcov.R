@@ -103,7 +103,7 @@ lav_model_nvcov_robust_sem <- function(lavmodel = NULL,
                                        attr.E.inv = FALSE,
                                        attr.WLS.V = FALSE) {
   # compute inverse of the expected(!) information matrix
-  if (lavmodel@estimator == "ML" && lavoptions$mimic == "Mplus") {
+  if (lavmodel@estimator == "ML" && lavoptions$information == "expected_mlm") {
     # YR - 11 aug 2010 - what Mplus seems to do is (see Muthen apx 4 eq102)
     # - A1 is not based on Sigma.hat and Mu.hat,
     # but on lavsamplestats@cov and lavsamplestats@mean... ('unstructured')
