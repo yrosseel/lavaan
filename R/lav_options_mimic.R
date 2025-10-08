@@ -2,6 +2,9 @@
 #
 lav_options_mimic <- function(opt) {
   mlr.test <- "yuan.bentler.mplus" # for now
+  if (opt$gls.v11.mplus == "default") {
+    opt$gls.v11.mplus <- (opt$mimic == "Mplus")
+  }
   if (opt$mimic == "lavaan") {
     if (is.character(opt$conditional.x)) { # = "default"
       if (lav_options_estimatorgroup(opt$estimator) == "ML") {

@@ -191,6 +191,7 @@ lav_options_default <- function() {
                                  regression = "lm", lisrel = "EQS",
                                  eqs = "EQS", lm = "lm", mplus = "Mplus"
   ))
+  elm("gls.v11.mplus", "default", chr = "default", bl = TRUE)
 
   # model modifiers
   elm("meanstructure", "default", chr = "default", bl = TRUE)
@@ -473,6 +474,12 @@ lav_options_default <- function() {
   # categorical
   elm("categorical", "default", chr = "default", bl = TRUE)
 
+  # sort list and sublists
+  for (nm in names(opt.default)) {
+      if (is.list(opt.default[[nm]])) 
+        opt.default[[nm]] <- opt.default[[nm]][sort(names(opt.default[[nm]]))]
+    }
+  opt.default <- opt.default[sort(names(opt.default))]
   # ------------- store info in lavaan environment ---------------
   assign("opt.default", opt.default, lavaan_cache_env)
   assign("opt.check", opt.check, lavaan_cache_env)
