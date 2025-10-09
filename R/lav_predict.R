@@ -2,7 +2,7 @@
 # the unifying theme is that they all rely on the (unknown, to be estimated)
 # or (known, apriori specified) values for the latent variables
 #
-# lv: lavtent variables (aka `factor scores')
+# lv: latent variables (aka `factor scores')
 # ov: predict linear part of y_i
 #
 # - YR 11 June 2013: first version, in order to get factor scores for the
@@ -240,7 +240,7 @@ lav_predict_internal <- function(lavmodel = NULL,
       lavdata = lavdata, lavsamplestats = lavsamplestats,
       lavimplied = lavimplied, se = se, acov = acov, level = level,
       data.obs = data.obs, eXo = eXo, method = method,
-      fsm = fsm, rel = rel, optim.method = optim.method
+      fsm = fsm, rel = rel, transform = transform, optim.method = optim.method
     )
 
     # extract fsm here
@@ -265,13 +265,13 @@ lav_predict_internal <- function(lavmodel = NULL,
     out <- lapply(seq_len(lavdata@ngroups), function(g) {
       # determine block
       if (lavdata@nlevels == 1L) {
-        bb <- g
+        b <- g
       } else {
-        bb <- (g - 1) * lavdata@nlevels + level
+        b <- (g - 1) * lavdata@nlevels + level
       }
       lv.idx <- c(
-        lavmodel@ov.y.dummy.lv.idx[[bb]],
-        lavmodel@ov.x.dummy.lv.idx[[bb]]
+        lavmodel@ov.y.dummy.lv.idx[[b]],
+        lavmodel@ov.x.dummy.lv.idx[[b]]
       )
       ret <- out[[g]]
       if (length(lv.idx) > 0L) {
@@ -281,21 +281,22 @@ lav_predict_internal <- function(lavmodel = NULL,
     })
 
     # we need to remove the dummy's before we transform
+    # (update 0.6-20: no longer needed... as transform happens internally)
     if (fsm) {
       FSM <- lapply(seq_len(lavdata@ngroups), function(g) {
         # determine block
         if (lavdata@nlevels == 1L) {
-          bb <- g
+          b <- g
         } else {
-          bb <- (g - 1) * lavdata@nlevels + level
+          b <- (g - 1) * lavdata@nlevels + level
         }
         lv.idx <- c(
-          lavmodel@ov.y.dummy.lv.idx[[bb]],
-          lavmodel@ov.x.dummy.lv.idx[[bb]]
+          lavmodel@ov.y.dummy.lv.idx[[b]],
+          lavmodel@ov.x.dummy.lv.idx[[b]]
         )
-        # ov.idx <- lavmodel@ov.x.dummy.ov.idx[[bb]]
+        # ov.idx <- lavmodel@ov.x.dummy.ov.idx[[b]]
         # or should we use pta$vidx$ov.ind?
-        ov.ind <- lavpta$vidx$ov.ind[[bb]]
+        ov.ind <- lavpta$vidx$ov.ind[[b]]
         ret <- FSM[[g]]
         if (length(lv.idx) > 0L) {
           if (is.matrix(FSM[[g]])) {
@@ -311,63 +312,63 @@ lav_predict_internal <- function(lavmodel = NULL,
       })
     }
 
-    # new in 0.6-16
-    # we assume the dummy lv's have already been removed
-    if (transform) {
-      # VETA <- computeVETA(lavmodel = lavmodel, remove.dummy.lv = TRUE)
-      EETA <- computeEETA(
-        lavmodel = lavmodel,
-        lavsamplestats = lavsamplestats, remove.dummy.lv = TRUE
-      )
-      # compute transformation matrix
-      if (tolower(method) %in% c("ebm", "regression")) {
-        tmat <- lav_predict_tmat_green(lavmodel = lavmodel,
-                                       lavimplied = lavimplied)
-      } else {
-        tmat <- lav_predict_tmat_det(lavmodel = lavmodel,
-                                     lavimplied = lavimplied)
-      }
-
-      # update FSM
-      if (fsm) {
-        FSM <- lapply(seq_len(lavdata@ngroups), function(g) {
-          # determine block
-          if (lavdata@nlevels == 1L) {
-            bb <- g
-          } else {
-            bb <- (g - 1) * lavdata@nlevels + level
-          }
-          ret <- tmat[[bb]] %*% FSM[[g]]
-          ret
-        })
-      }
-
-      out <- lapply(seq_len(lavdata@ngroups), function(g) {
-        # determine block
-        if (lavdata@nlevels == 1L) {
-          bb <- g
-        } else {
-          bb <- (g - 1) * lavdata@nlevels + level
-        }
-
-        FS.centered <- scale(out[[g]], center = TRUE, scale = FALSE)
-        #FS.cov <- crossprod(FS.centered) / nrow(FS.centered)
-        #FS.cov.inv <- try(solve(FS.cov), silent = TRUE)
-        #if (inherits(FS.cov.inv, "try-error")) {
-        #  lav_msg_warn(
-        #    gettext("could not invert (co)variance matrix of factor scores;
-        #            returning original factor scores."))
-        #  return(out[[g]])
-        #}
-        #fs.inv.sqrt <- lav_matrix_symmetric_sqrt(FS.cov.inv)
-        #veta.sqrt <- lav_matrix_symmetric_sqrt(VETA[[g]])
-        #tmp <- FS.centered %*% fs.inv.sqrt %*% veta.sqrt
-        tmp <- FS.centered %*% t(tmat[[bb]])
-        ret <- t(t(tmp) + drop(EETA[[g]]))
-
-        ret
-      })
-    }
+#   # new in 0.6-16
+#   # we assume the dummy lv's have already been removed
+#     if (transform) {
+#       # VETA <- computeVETA(lavmodel = lavmodel, remove.dummy.lv = TRUE)
+#       EETA <- computeEETA(
+#         lavmodel = lavmodel,
+#         lavsamplestats = lavsamplestats, remove.dummy.lv = TRUE
+#       )
+#       # compute transformation matrix
+#       if (tolower(method) %in% c("ebm", "regression")) {
+#         tmat <- lav_predict_tmat_green(lavmodel = lavmodel,
+#                                        lavimplied = lavimplied)
+#       } else {
+#         tmat <- lav_predict_tmat_det(lavmodel = lavmodel,
+#                                      lavimplied = lavimplied)
+#       }
+#
+#       # update FSM
+#       if (fsm) {
+#         FSM <- lapply(seq_len(lavdata@ngroups), function(g) {
+#           # determine block
+#           if (lavdata@nlevels == 1L) {
+#             b <- g
+#           } else {
+#             b <- (g - 1) * lavdata@nlevels + level
+#           }
+#           ret <- tmat[[b]] %*% FSM[[g]]
+#           ret
+#         })
+#       }
+#
+#       out <- lapply(seq_len(lavdata@ngroups), function(g) {
+#         # determine block
+#         if (lavdata@nlevels == 1L) {
+#           b <- g
+#         } else {
+#           b <- (g - 1) * lavdata@nlevels + level
+#         }
+#
+#         FS.centered <- scale(out[[g]], center = TRUE, scale = FALSE)
+#         #FS.cov <- crossprod(FS.centered) / nrow(FS.centered)
+#         #FS.cov.inv <- try(solve(FS.cov), silent = TRUE)
+#         #if (inherits(FS.cov.inv, "try-error")) {
+#         #  lav_msg_warn(
+#         #    gettext("could not invert (co)variance matrix of factor scores;
+#         #            returning original factor scores."))
+#         #  return(out[[g]])
+#         #}
+#         #fs.inv.sqrt <- lav_matrix_symmetric_sqrt(FS.cov.inv)
+#         #veta.sqrt <- lav_matrix_symmetric_sqrt(VETA[[g]])
+#         #tmp <- FS.centered %*% fs.inv.sqrt %*% veta.sqrt
+#         tmp <- FS.centered %*% t(tmat[[b]])
+#         ret <- t(t(tmp) + drop(EETA[[g]]))
+#
+#         ret
+#       })
+#     }
 
     # new in 0.6-17
     if (mdist) {
@@ -405,13 +406,13 @@ lav_predict_internal <- function(lavmodel = NULL,
       SE <- lapply(seq_len(lavdata@ngroups), function(g) {
         # determine block
         if (lavdata@nlevels == 1L) {
-          bb <- g
+          b <- g
         } else {
-          bb <- (g - 1) * lavdata@nlevels + level
+          b <- (g - 1) * lavdata@nlevels + level
         }
         lv.idx <- c(
-          lavmodel@ov.y.dummy.lv.idx[[bb]],
-          lavmodel@ov.x.dummy.lv.idx[[bb]]
+          lavmodel@ov.y.dummy.lv.idx[[b]],
+          lavmodel@ov.x.dummy.lv.idx[[b]]
         )
         ret <- SE[[g]]
         if (length(lv.idx) > 0L) {
@@ -423,13 +424,13 @@ lav_predict_internal <- function(lavmodel = NULL,
         ACOV <- lapply(seq_len(lavdata@ngroups), function(g) {
           # determine block
           if (lavdata@nlevels == 1L) {
-            bb <- g
+            b <- g
           } else {
-            bb <- (g - 1) * lavdata@nlevels + level
+            b <- (g - 1) * lavdata@nlevels + level
           }
           lv.idx <- c(
-            lavmodel@ov.y.dummy.lv.idx[[bb]],
-            lavmodel@ov.x.dummy.lv.idx[[bb]]
+            lavmodel@ov.y.dummy.lv.idx[[b]],
+            lavmodel@ov.x.dummy.lv.idx[[b]]
           )
           ret <- ACOV[[g]]
           if (length(lv.idx) > 0L) {
@@ -706,6 +707,7 @@ lav_predict_eta <- function(lavobject = NULL, # for convenience
                             method = "EBM",
                             fsm = FALSE,
 							rel = FALSE,
+                            transform = FALSE,
                             se = "none", acov = "none",
                             level = 1L,
                             optim.method = "bfgs") {
@@ -734,7 +736,8 @@ lav_predict_eta <- function(lavobject = NULL, # for convenience
         lavmodel = lavmodel, lavdata = lavdata,
         lavimplied = lavimplied, se = se, acov = acov,
         level = level, lavsamplestats = lavsamplestats,
-        data.obs = data.obs, eXo = eXo, fsm = fsm, rel = rel
+        data.obs = data.obs, eXo = eXo, fsm = fsm, rel = rel,
+        transform = transform
       )
     } else if (method == "ml") {
       out <- lav_predict_eta_bartlett(
@@ -742,7 +745,8 @@ lav_predict_eta <- function(lavobject = NULL, # for convenience
         lavmodel = lavmodel, lavdata = lavdata,
         lavimplied = lavimplied, se = se, acov = acov,
         level = level, lavsamplestats = lavsamplestats,
-        data.obs = data.obs, eXo = eXo, fsm = fsm, rel = rel
+        data.obs = data.obs, eXo = eXo, fsm = fsm, rel = rel,
+        transform = transform
       )
     } else {
       lav_msg_stop(gettextf("unkown method: %s.", method))
@@ -784,7 +788,8 @@ lav_predict_eta_normal <- function(lavobject = NULL, # for convenience
                                    # optional new data
                                    data.obs = NULL, eXo = NULL,
                                    se = "none", acov = "none", level = 1L,
-                                   fsm = FALSE, rel = FALSE) {
+                                   fsm = FALSE, rel = FALSE,
+                                   transform = FALSE) {
   # full object?
   if (inherits(lavobject, "lavaan")) {
     lavmodel <- lavobject@Model
@@ -832,6 +837,10 @@ lav_predict_eta_normal <- function(lavobject = NULL, # for convenience
   if (rel) {
     REL <- vector("list", length = lavdata@ngroups)
   }
+  if (transform) {
+    TMAT <- lav_predict_tmat_green(lavmodel = lavmodel,
+                                   lavimplied = lavimplied)
+  }
 
   if (acov != "none") {
     se <- acov # ACOV implies SE
@@ -845,6 +854,19 @@ lav_predict_eta_normal <- function(lavobject = NULL, # for convenience
   }
 
   for (g in 1:lavdata@ngroups) {
+    # determine block
+    if (lavdata@nlevels == 1L) {
+      b <- g
+    } else {
+      b <- (g - 1) * lavdata@nlevels + level
+    }
+
+    VETA.g <- VETA[[b]]
+    EETA.g <- EETA[[b]]
+    LAMBDA.g <- LAMBDA[[b]]
+    EY.g <- EY[[b]]
+    Sigma.inv.g <- Sigma.inv[[b]]
+
     if (lavdata@nlevels > 1L) {
       Lp <- lavdata@Lp[[g]]
       YLp <- lavsamplestats@YLp[[g]]
@@ -891,23 +913,11 @@ lav_predict_eta_normal <- function(lavobject = NULL, # for convenience
       } else {
         lav_msg_stop(gettext("only 2 levels are supported"))
       }
-
-      gg <- (g - 1) * lavdata@nlevels + level
-      VETA.g <- VETA[[gg]]
-      EETA.g <- EETA[[gg]]
-      LAMBDA.g <- LAMBDA[[gg]]
-      EY.g <- EY[[gg]]
-      Sigma.inv.g <- Sigma.inv[[gg]]
     } else {
-      data.obs.g <- data.obs[[g]]
-      VETA.g <- VETA[[g]]
-      EETA.g <- EETA[[g]]
-      LAMBDA.g <- LAMBDA[[g]]
-      EY.g <- EY[[g]]
-      Sigma.inv.g <- Sigma.inv[[g]]
+      data.obs.g <- data.obs[[b]]
     }
 
-    nfac <- ncol(VETA[[g]])
+    nfac <- ncol(VETA.g)
     if (nfac == 0L) {
       FS[[g]] <- matrix(0, lavdata@nobs[[g]], nfac)
       next
@@ -928,6 +938,11 @@ lav_predict_eta_normal <- function(lavobject = NULL, # for convenience
 
     # global factor score coefficient matrix 'C'
     FSC <- VETA.g %*% t(LAMBDA.g) %*% Sigma.inv.g
+
+    # transform?
+    if (transform) {
+      FSC <- TMAT[[b]] %*% FSC
+    }
 
     # store fsm?
     if (fsm) {
@@ -1047,7 +1062,7 @@ lav_predict_eta_normal <- function(lavobject = NULL, # for convenience
 	}
 
     # standard error
-    if (se == "standard") {
+    if (se == "standard" && !transform) { # for now
       if (lavdata@missing %in% c("ml", "ml.x")) {
         SE[[g]] <- SE.g
         if (acov == "standard") {
@@ -1109,7 +1124,8 @@ lav_predict_eta_bartlett <- function(lavobject = NULL, # for convenience
                                      # optional new data
                                      data.obs = NULL, eXo = NULL,
                                      se = "none", acov = "none", level = 1L,
-                                     fsm = FALSE, rel = FALSE) {
+                                     fsm = FALSE, rel = FALSE,
+                                     transform = FALSE) {
   # full object?
   if (inherits(lavobject, "lavaan")) {
     lavmodel <- lavobject@Model
@@ -1157,6 +1173,10 @@ lav_predict_eta_bartlett <- function(lavobject = NULL, # for convenience
   if (rel) {
     REL <- vector("list", length = lavdata@ngroups)
   }
+  if (transform) {
+    TMAT <- lav_predict_tmat_det(lavmodel = lavmodel,
+                                 lavimplied = lavimplied)
+  }
 
   if (acov != "none") se <- acov # ACOV implies SE
   if (se != "none") {
@@ -1168,6 +1188,19 @@ lav_predict_eta_bartlett <- function(lavobject = NULL, # for convenience
   }
 
   for (g in 1:lavdata@ngroups) {
+    # determine block
+    if (lavdata@nlevels == 1L) {
+      b <- g
+    } else {
+      b <- (g - 1) * lavdata@nlevels + level
+    }
+
+    VETA.g <- VETA[[b]]
+    EETA.g <- EETA[[b]]
+    LAMBDA.g <- LAMBDA[[b]]
+    EY.g <- EY[[b]]
+    Sigma.inv.g <- Sigma.inv[[b]]
+
     if (lavdata@nlevels > 1L) {
       Lp <- lavdata@Lp[[g]]
       YLp <- lavsamplestats@YLp[[g]]
@@ -1216,23 +1249,11 @@ lav_predict_eta_bartlett <- function(lavobject = NULL, # for convenience
       } else {
         lav_msg_stop(gettext("only 2 levels are supported"))
       }
-
-      gg <- (g - 1) * lavdata@nlevels + level
-      VETA.g <- VETA[[gg]]
-      EETA.g <- EETA[[gg]]
-      LAMBDA.g <- LAMBDA[[gg]]
-      EY.g <- EY[[gg]]
-      Sigma.inv.g <- Sigma.inv[[gg]]
     } else {
-      data.obs.g <- data.obs[[g]]
-      VETA.g <- VETA[[g]]
-      EETA.g <- EETA[[g]]
-      LAMBDA.g <- LAMBDA[[g]]
-      EY.g <- EY[[g]]
-      Sigma.inv.g <- Sigma.inv[[g]]
+      data.obs.g <- data.obs[[b]]
     }
 
-    nfac <- length(EETA[[g]])
+    nfac <- ncol(VETA.g)
     if (nfac == 0L) {
       FS[[g]] <- matrix(0, lavdata@nobs[[g]], nfac)
       next
@@ -1254,6 +1275,11 @@ lav_predict_eta_bartlett <- function(lavobject = NULL, # for convenience
     # global factor score coefficient matrix 'C'
     FSC <- (MASS::ginv(t(LAMBDA.g) %*% Sigma.inv.g %*% LAMBDA.g)
     %*% t(LAMBDA.g) %*% Sigma.inv.g)
+
+    # transform?
+    if (transform) {
+      FSC <- TMAT[[b]] %*% FSC
+    }
 
     # store fsm?
     if (fsm) {
@@ -1399,7 +1425,7 @@ lav_predict_eta_bartlett <- function(lavobject = NULL, # for convenience
 	}
 
     # standard error
-    if (se == "standard") {
+    if (se == "standard" && !transform) {
       if (lavdata@missing %in% c("ml", "ml.x")) {
         SE[[g]] <- SE.g
         if (acov == "standard") {
@@ -2016,8 +2042,8 @@ lav_predict_tmat_green <- function(lavobject = NULL,
     lavimplied <- lav_model_implied_cond2uncond(lavimplied)
   }
   Sigma <- lavimplied$cov
-  VETA <- computeVETA(lavmodel = lavmodel, remove.dummy.lv = TRUE)
-  LAMBDA <- computeLAMBDA(lavmodel)
+  VETA <- computeVETA(lavmodel = lavmodel, remove.dummy.lv = FALSE)
+  LAMBDA <- computeLAMBDA(lavmodel, remove.dummy.lv = FALSE)
 
   nblocks <- lavmodel@nblocks
   tmat <- vector("list", length = nblocks)
@@ -2055,8 +2081,8 @@ lav_predict_tmat_det <- function(lavobject = NULL,
     lavimplied <- lav_model_implied_cond2uncond(lavimplied)
   }
   Sigma <- lavimplied$cov
-  VETA <- computeVETA(lavmodel = lavmodel, remove.dummy.lv = TRUE)
-  LAMBDA <- computeLAMBDA(lavmodel)
+  VETA <- computeVETA(lavmodel = lavmodel, remove.dummy.lv = FALSE)
+  LAMBDA <- computeLAMBDA(lavmodel, remove.dummy.lv = FALSE)
 
   nblocks <- lavmodel@nblocks
   tmat <- vector("list", length = nblocks)
