@@ -2,9 +2,12 @@
 # useDynLib("lavaan")
 
 importFrom("graphics",
-           "abline", "axis", "box", "hist", "pairs", "par",
+           "abline", "axis", "box", "hist", "lines", "pairs", "par", "plot.default",
+           "polygon", "text",
            # generics
            "plot")
+
+importFrom("grDevices", "dev.off", "png", "col2rgb")
 
 importFrom("methods",
            "is", "new", "slot", "slotNames", ".hasSlot",
@@ -167,8 +170,18 @@ export("lavaan", "cfa", "sem", "growth",
        "lav_samplestats_from_data",
 
        # estimation
-       "lav_export_estimation"
+       "lav_export_estimation",
        
+       # plotting utilities
+       "lav_format_label",
+       "lav_get_model_info",
+       "lav_position_nodes",
+       "lav_make_tikz",
+       "lav_make_rplot",
+       "lav_make_svg",
+       "lav_plot",
+       "lavplot"
+
        # deprecated functions
        #"vech", "vech.reverse", "vechru", "vechru.reverse", "lower2full",
        #"vechr", "vechr.reverse", "vechu", "vechu.reverse", "upper2full",
