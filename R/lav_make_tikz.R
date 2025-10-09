@@ -33,7 +33,7 @@ lav_make_tikz <- function(nodes.edges,
     return(gsub("_", "", nm))
     }
   mlrij <- nodes.edges$mlrij
-  if (is.null(mlrij)) 
+  if (is.null(mlrij))
     lav_msg_stop(gettext(
       "nodes.edges hasn't been processed by lav_position_nodes!"))
   nodes <- nodes.edges$nodes

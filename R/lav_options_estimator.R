@@ -341,7 +341,7 @@ lav_options_est_uls <- function(opt) {
   if (!opt$test[1] == "none") {
     if (opt$estimator == "uls") {
       if (opt$test[1] == "default") {
-        opt$test <- "standard"
+        opt$test <- "browne.residual.nt" # new in 0.6-21
       } # else {
       #  opt$test <- union("standard", opt$test)
       # }

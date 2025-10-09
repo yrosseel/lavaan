@@ -477,7 +477,7 @@ lav_options_default <- function() {
 
   # sort list and sublists
   for (nm in names(opt.default)) {
-      if (is.list(opt.default[[nm]])) 
+      if (is.list(opt.default[[nm]]))
         opt.default[[nm]] <- opt.default[[nm]][sort(names(opt.default[[nm]]))]
     }
   opt.default <- opt.default[sort(names(opt.default))]
