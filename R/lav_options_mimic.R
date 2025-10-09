@@ -62,12 +62,12 @@ lav_options_mimic <- function(opt) {
       opt$zero.keep.margins <- TRUE
     }
     opt$baseline.conditional.x.free.slopes <- FALSE
-    if (opt$information[1L] == "default" && opt@estimator == "ML" &&
+    if (opt$information[1L] == "default" && opt$estimator == "ML" &&
         (opt$se == "robust.sem" || opt$se == "robust.cluster.sem")) {
       opt$information[1L] <- "expected_mlm"
     }
     if (length(opt$information) == 2L  && opt$information[2L] == "default" &&
-        opt@estimator == "ML" &&
+        opt$estimator == "ML" &&
         (opt$se == "robust.sem" || opt$se == "robust.cluster.sem")) {
       opt$information[2L] <- "expected_mlm"
     }
