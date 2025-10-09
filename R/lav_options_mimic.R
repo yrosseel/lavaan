@@ -2,6 +2,9 @@
 #
 lav_options_mimic <- function(opt) {
   mlr.test <- "yuan.bentler.mplus" # for now
+  if (opt$gls.v11.mplus == "default") {
+    opt$gls.v11.mplus <- (opt$mimic == "Mplus")
+  }
   if (opt$mimic == "lavaan") {
     if (is.character(opt$conditional.x)) { # = "default"
       if (lav_options_estimatorgroup(opt$estimator) == "ML") {
@@ -59,6 +62,15 @@ lav_options_mimic <- function(opt) {
       opt$zero.keep.margins <- TRUE
     }
     opt$baseline.conditional.x.free.slopes <- FALSE
+    if (opt$information[1L] == "default" && opt@estimator == "ML" &&
+        (opt$se == "robust.sem" || opt$se == "robust.cluster.sem")) {
+      opt$information[1L] <- "expected_mlm"
+    }
+    if (length(opt$information) == 2L  && opt$information[2L] == "default" &&
+        opt@estimator == "ML" &&
+        (opt$se == "robust.sem" || opt$se == "robust.cluster.sem")) {
+      opt$information[2L] <- "expected_mlm"
+    }
   } else if (opt$mimic == "EQS") {
     if (opt$estimator == "mlr") mlr.test <- "yuan.bentler"
     if (any(lav_options_estimatorgroup(opt$estimator) ==
