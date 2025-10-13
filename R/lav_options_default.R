@@ -192,7 +192,10 @@ lav_options_default <- function() {
                                  eqs = "EQS", lm = "lm", mplus = "Mplus"
   ))
   elm("gls.v11.mplus", "default", chr = "default", bl = TRUE)
-
+  elm("gamma.vcov.mplus", "default", chr = "default", bl = TRUE)
+  elm("gamma.wls.mplus", "default", chr = "default", bl = TRUE)
+  elm("information.expected.mplus", "default", chr = "default", bl = TRUE)
+  
   # model modifiers
   elm("meanstructure", "default", chr = "default", bl = TRUE)
   elm("int.ov.free", FALSE, bl = TRUE)
@@ -352,7 +355,7 @@ lav_options_default <- function() {
 
   # information (se + test)
   elm("information", c("default", "default"), chr = c(
-    "default", "expected", "observed", "first.order", "expected_mlm"),
+    "default", "expected", "observed", "first.order"),
     oklen = c(1L, 2L))
   elm("h1.information", c("structured", "structured"), chr = c(
     "structured", "unstructured"), oklen =  c(1L, 2L))

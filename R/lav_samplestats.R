@@ -882,7 +882,7 @@ lav_samplestats_from_data <- function(lavdata = NULL,
                   lavoptions$gamma.n.minus.one,
                 unbiased =
                   lavoptions$gamma.unbiased,
-                Mplus.WLS = (mimic == "Mplus")
+                Mplus.WLS = lavoptions$gamma.wls.mplus
               )
           }
         } else { # categorical case
