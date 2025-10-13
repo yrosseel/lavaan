@@ -16,7 +16,8 @@ lav_get_model_info <- function(model = NULL, infile = NULL, varlv = FALSE) {
     model <- readLines(infile)
   }
   if (inherits(model, "lavaan")) {
-    model <- model@ParTable
+    model <- as.data.frame(model@ParTable)
+    model <- model[model$user == 1, ]
     model$fixed <- round(model$est, 3L)
     if (max(model$block) == 1L) model$block <- rep(0L, length(model$block))
     model$est <- NULL
