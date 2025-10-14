@@ -72,12 +72,14 @@ lav_options_mimic <- function(opt) {
     }
     opt$baseline.conditional.x.free.slopes <- FALSE
   } else if (opt$mimic == "EQS") {
+    opt$baseline.fixed.x.free.cov <- FALSE
     if (opt$estimator == "mlr") mlr.test <- "yuan.bentler"
     if (any(lav_options_estimatorgroup(opt$estimator) ==
             c("ML", "REML", "NTRLS", "catML"))) {
       if (opt$likelihood == "default") opt$likelihood <- "wishart"
     }
   } else if (opt$mimic == "LISREL") {
+    opt$baseline.fixed.x.free.cov <- FALSE
     if (any(lav_options_estimatorgroup(opt$estimator) ==
             c("ML", "REML", "NTRLS", "catML"))) {
       if (opt$likelihood == "default") opt$likelihood <- "wishart"

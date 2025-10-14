@@ -465,6 +465,7 @@ lav_options_default <- function() {
   elm("h1", TRUE, bl = TRUE)
   elm("baseline", TRUE, bl = TRUE)
   elm("baseline.conditional.x.free.slopes", TRUE, bl = TRUE)
+  elm("baseline.fixed.x.free.cov", TRUE, bl = TRUE)
   elm("implied", TRUE, bl = TRUE)
   elm("loglik", TRUE, bl = TRUE)
 
