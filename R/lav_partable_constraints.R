@@ -1,6 +1,6 @@
 # build def function from partable
 lav_partable_constraints_def <- function(partable, con = NULL, debug = FALSE,
-                                         txtOnly = FALSE) {
+                                         txtOnly = FALSE, warn = TRUE) {
   if (!missing(debug)) {
     current.debug <- lav_debug()
     if (lav_debug(debug))
@@ -29,11 +29,14 @@ lav_partable_constraints_def <- function(partable, con = NULL, debug = FALSE,
   }
 
   # sort order of def.idx by dependencies
-  deps <- lapply(partable$rhs[def.idx], FUN = \(x) all.vars(parse(text=x)))
+  deps <- lapply(partable$rhs[def.idx], FUN = function(x) {
+                                                all.vars(parse(text=x)) })
   lab.unsorted <- partable$lhs[def.idx]
   adj.mat <- matrix(0L, nrow = length(def.idx), ncol = length(def.idx))
-  for (i in seq_along(lab.raw)) adj.mat[lab.unsorted %in% deps[[i]], i] <- 1L
-  def.idx <- def.idx[order_adj_mat(adj.mat)]
+  for (i in seq_along(lab.unsorted)) {
+    adj.mat[lab.unsorted %in% deps[[i]], i] <- 1L
+  }
+  def.idx <- def.idx[order_adj_mat(adj.mat, warn = warn)]
 
   # create function
   formals(def.function) <- alist(.x. = , ... = )
@@ -158,7 +161,8 @@ lav_partable_constraints_ceq <- function(partable, con = NULL, debug = FALSE,
   }
 
   # first come the variable definitions
-  DEF.txt <- lav_partable_constraints_def(partable, txtOnly = TRUE)
+  DEF.txt <- lav_partable_constraints_def(partable, txtOnly = TRUE,
+                                          warn = FALSE)
   def.idx <- which(partable$op == ":=")
   BODY.txt <- paste(BODY.txt, DEF.txt, "\n", sep = "")
 
@@ -346,7 +350,8 @@ lav_partable_constraints_ciq <- function(partable, con = NULL, debug = FALSE,
   }
 
   # first come the variable definitions
-  DEF.txt <- lav_partable_constraints_def(partable, txtOnly = TRUE)
+  DEF.txt <- lav_partable_constraints_def(partable, txtOnly = TRUE,
+                                          warn = FALSE)
   def.idx <- which(partable$op == ":=")
   BODY.txt <- paste(BODY.txt, DEF.txt, "\n", sep = "")
 
@@ -549,7 +554,8 @@ lav_partable_constraints_label_id <- function(partable, con = NULL,
   con.x.idx
 }
 
-order_adj_mat <- function(adj.mat) {
+# contributed by Kss2k (github issue #445)
+order_adj_mat <- function(adj.mat, warn = TRUE) {
   A <- adj.mat
   n <- nrow(A)
 
@@ -564,7 +570,9 @@ order_adj_mat <- function(adj.mat) {
 
     # If there are no zero in-degree nodes, the graph has a cycle
     if (!length(zero_nodes)) {
-      lav_msg_warn(gettext("unable to sort `:=` parameters, might be non-recursive!"))
+      if (warn) {
+        lav_msg_warn(gettext("unable to sort `:=` parameters; system of defined parameters may not be recursive (and contain a cycle)"))
+      }
       return(seq_len(n)) # return input order
     }
 

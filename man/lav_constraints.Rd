@@ -13,7 +13,7 @@ lav_partable_constraints_ceq(partable, con = NULL, debug = FALSE,
 lav_partable_constraints_ciq(partable, con = NULL, debug = FALSE, 
                              txtOnly = FALSE)
 lav_partable_constraints_def(partable, con = NULL, debug = FALSE, 
-                             txtOnly = FALSE)
+                             txtOnly = FALSE, warn = TRUE)
 }
 \arguments{
 \item{partable}{A lavaan parameter table.}
@@ -24,6 +24,7 @@ model parameters in the parameter table.}
 \item{con}{An optional partable where the operator is one of `==',
 `>', `<' or `:='}
 \item{txtOnly}{Logical. If TRUE, only the body of the function is returned as a character string. If FALSE, a function is returned.}
+\item{warn}{Logical. If FALSE, warnings are suppressed.}
 }
 \details{
 This is a collection of lower-level constraint related functions
