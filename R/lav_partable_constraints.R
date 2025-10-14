@@ -28,6 +28,13 @@ lav_partable_constraints_def <- function(partable, con = NULL, debug = FALSE,
     }
   }
 
+  # sort order of def.idx by dependencies
+  deps <- lapply(partable$rhs[def.idx], FUN = \(x) all.vars(parse(text=x)))
+  lab.unsorted <- partable$lhs[def.idx]
+  adj.mat <- matrix(0L, nrow = length(def.idx), ncol = length(def.idx))
+  for (i in seq_along(lab.raw)) adj.mat[lab.unsorted %in% deps[[i]], i] <- 1L
+  def.idx <- def.idx[order_adj_mat(adj.mat)]
+
   # create function
   formals(def.function) <- alist(.x. = , ... = )
   if (txtOnly) {
@@ -540,4 +547,33 @@ lav_partable_constraints_label_id <- function(partable, con = NULL,
   names(con.x.idx) <- con.labels
 
   con.x.idx
+}
+
+order_adj_mat <- function(adj.mat) {
+  A <- adj.mat
+  n <- nrow(A)
+
+  ordered <- c()  # Vector to store sorted nodes
+
+  while (length(ordered) < n) {
+    # Compute in-degree as column sums
+    in_degree <- colSums(A)
+
+    # Find nodes with zero in-degree and not already sorted
+    zero_nodes <- which(in_degree == 0 & !(seq_len(n) %in% ordered))
+
+    # If there are no zero in-degree nodes, the graph has a cycle
+    if (!length(zero_nodes)) {
+      lav_msg_warn(gettext("unable to sort `:=` parameters, might be non-recursive!"))
+      return(seq_len(n)) # return input order
+    }
+
+    # Add zero in-degree nodes to the sorted list
+    ordered <- c(ordered, zero_nodes)
+
+    # Remove outgoing edges from these nodes
+    A[zero_nodes, ] <- 0
+  }
+
+  ordered
 }
