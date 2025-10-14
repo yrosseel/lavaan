@@ -164,7 +164,7 @@ lav_samplestats_from_data <- function(lavdata = NULL,
   if (is.null(NACOV)) {
     NACOV <- vector("list", length = ngroups)
     NACOV.user <- FALSE
-    if (se == "robust.sem" && missing == "listwise") {
+    if (se %in% c("robust.sem", "robust.sem.nt") && missing == "listwise") {
       NACOV.compute <- TRUE
     }
     # note: test can be a vector...
@@ -275,9 +275,7 @@ lav_samplestats_from_data <- function(lavdata = NULL,
 
       if (estimator %in% c("ML", "REML", "PML", "FML", "MML", "none", "ULS")) {
         WLS.W <- FALSE
-        if (estimator == "ULS" && se == "robust.sem") { #||
-          # any(test %in% c("satorra.bentler", "scaled.shifted",
-          #            "mean.var.adjusted")))) {
+        if (estimator == "ULS" && se %in% c("robust.sem", "robust.sem.nt")) {
           WLS.W <- TRUE
         }
       } else {
@@ -869,21 +867,34 @@ lav_samplestats_from_data <- function(lavdata = NULL,
               meanstructure = meanstructure
             )
 		  } else {
-            NACOV[[g]] <-
-              lav_samplestats_Gamma(
-                Y = Y,
-                x.idx = x.idx[[g]],
-                cluster.idx = cluster.idx,
-                fixed.x = fixed.x,
-                conditional.x = conditional.x,
-                meanstructure = meanstructure,
-                slopestructure = conditional.x,
-                gamma.n.minus.one =
-                  lavoptions$gamma.n.minus.one,
-                unbiased =
-                  lavoptions$gamma.unbiased,
-                Mplus.WLS = lavoptions$gamma.wls.mplus
-              )
+            if (lavoptions$se == "robust.sem.nt") {
+              NACOV[[g]] <-
+                lav_samplestats_Gamma_NT(
+                  Y = Y,
+                  x.idx = x.idx[[g]],
+                  # cluster.idx = cluster.idx, # not available
+                  fixed.x = fixed.x,
+                  conditional.x = conditional.x,
+                  meanstructure = meanstructure,
+                  slopestructure = conditional.x
+                )
+            } else {
+              NACOV[[g]] <-
+                lav_samplestats_Gamma(
+                  Y = Y,
+                  x.idx = x.idx[[g]],
+                  cluster.idx = cluster.idx,
+                  fixed.x = fixed.x,
+                  conditional.x = conditional.x,
+                  meanstructure = meanstructure,
+                  slopestructure = conditional.x,
+                  gamma.n.minus.one =
+                    lavoptions$gamma.n.minus.one,
+                  unbiased =
+                    lavoptions$gamma.unbiased,
+                  Mplus.WLS = lavoptions$gamma.wls.mplus
+                )
+            }
           }
         } else { # categorical case
           NACOV[[g]] <- CAT$WLS.W * nobs[[g]]

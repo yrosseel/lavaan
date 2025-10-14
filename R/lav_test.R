@@ -435,7 +435,7 @@ lav_model_test <- function(lavobject = NULL,
 
   # reference distribution: always chi-square, except for the
   # non-robust version of ULS and PML
-  if (lavoptions$estimator == "ULS" || lavoptions$estimator == "PML") {
+  if (lavoptions$estimator %in% c("ULS", "DWLS", "PML")) {
     refdistr <- "unknown"
     pvalue <- as.numeric(NA)
   } else {

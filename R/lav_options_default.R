@@ -344,8 +344,10 @@ lav_options_default <- function() {
     robust.cluster = "robust.cluster",
     robust.cluster.sem = "robust.cluster.sem",
     sandwich = "robust.huber.white", robust.sem = "robust.sem",
+    robust.sem.nt = "robust.sem.nt",
     two.stage = "two.stage", robust.two.stage = "robust.two.stage",
     bootstrap = "bootstrap", boot = "bootstrap", first.order = "first.order",
+    robust.mlm.nt = "robust.sem.nt",
     robust.mlm = "robust.sem", robust.mlr = "robust.huber.white",
     observed = "observed", expected = "expected"),
     oklen = c(1L, -1L)

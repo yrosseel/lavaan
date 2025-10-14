@@ -61,7 +61,7 @@ lav_options_check_se <- function(opt = NULL) {
     ok.flag <- any(opt$se == c(
       "default", "none", "standard",
       "bootstrap", "external",
-      "robust", "robust.sem"
+      "robust", "robust.sem", "robust.sem.nt"
     ))
   }
 

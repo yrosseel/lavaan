@@ -425,7 +425,8 @@ lav_options_set <- function(opt = NULL) {                     # nolint
   }
 
   # check missing ####
-  if (any(opt$missing == c("ml", "ml.x")) && opt$se == "robust.sem") {
+  if (any(opt$missing == c("ml", "ml.x")) &&
+      opt$se %in% c("robust.sem", "robust.sem.nt")) {
     lav_msg_warn(gettextf(
       "missing will be set to %1$s for se = %2$s.",
       dQuote("listwise"), dQuote(opt$se)))
@@ -640,7 +641,7 @@ lav_options_set <- function(opt = NULL) {                     # nolint
 
   # first.order information can not be used with robust
   if (opt$information[1] == "first.order" &&
-      any(opt$se == c("robust.huber.white", "robust.sem"))) {
+      any(opt$se == c("robust.huber.white", "robust.sem", "robust.sem.nt"))) {
     lav_msg_stop(gettextf(
       "information must be either %s if robust standard errors are requested.",
       lav_msg_view(c("expected", "observed"), log.sep = "or")))

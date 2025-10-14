@@ -284,7 +284,8 @@ lav_options_est_dwls <- function(opt) {
     lav_msg_stop(gettext("use (D)WLS estimator for bootstrap"))
   } else if (opt$se == "default") {
     if (opt$estimator == "dwls") {
-      opt$se <- "standard"
+      # opt$se <- "standard"
+      opt$se <- "robust.sem.nt" # new in 0.6-21
     } else {
       opt$se <- "robust.sem"
     }
@@ -295,7 +296,8 @@ lav_options_est_dwls <- function(opt) {
   if (!opt$test[1] == "none") {
     if (opt$estimator == "dwls") {
       if (opt$test[1] == "default") {
-        opt$test <- "standard"
+        #opt$test <- "standard"
+        opt$test <- "browne.residual.nt"
       } # else {
       #  opt$test <- union("standard", opt$test)
       # }
@@ -330,7 +332,8 @@ lav_options_est_uls <- function(opt) {
     lav_msg_stop(gettext("use ULS estimator for bootstrap"))
   } else if (opt$se == "default") {
     if (opt$estimator == "uls") {
-      opt$se <- "standard"
+      #opt$se <- "standard"
+      opt$se <- "robust.sem.nt" # new in 0.6-21
     } else {
       opt$se <- "robust.sem"
     }
