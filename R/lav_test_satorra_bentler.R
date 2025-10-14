@@ -14,7 +14,6 @@ lav_test_satorra_bentler <- function(lavobject = NULL,
                                      WLS.V = NULL,
                                      Gamma = NULL,
                                      test = "satorra.bentler",
-                                     mimic = "lavaan",
                                      method = "original",
                                      ug2.old.approach = FALSE,
                                      return.u = FALSE,
@@ -91,7 +90,7 @@ lav_test_satorra_bentler <- function(lavobject = NULL,
   # do we have E.inv, Delta, WLS.V?
   if (npar > 0L &&
     (is.null(E.inv) || is.null(Delta) || is.null(WLS.V) || E.inv.recompute)) {
-    if (mimic == "Mplus" && lavoptions$estimator == "ML") {
+    if (lavoptions$information.expected.mplus && lavoptions$estimator == "ML") {
       E <- lav_model_information_expected_MLM(
         lavmodel = lavmodel,
         augmented = FALSE, inverted = FALSE,
@@ -169,7 +168,7 @@ lav_test_satorra_bentler <- function(lavobject = NULL,
     }
   }
 
-  if (mimic == "Mplus" && lavmodel@categorical) {
+  if (lavoptions$information.expected.mplus && lavmodel@categorical) {
     for (g in 1:lavsamplestats@ngroups) {
       Ng <- lavsamplestats@nobs[[g]]
       Gamma[[g]] <- Gamma[[g]] / Ng * (Ng - 1L)
@@ -252,7 +251,7 @@ lav_test_satorra_bentler <- function(lavobject = NULL,
     stat <- sum(stat.group)
 
     # label
-    if (mimic == "Mplus") {
+    if (lavoptions$information.expected.mplus) {
       if (lavoptions$estimator == "ML") {
         label <-
           "Satorra-Bentler correction (Mplus variant)"
@@ -283,7 +282,7 @@ lav_test_satorra_bentler <- function(lavobject = NULL,
   }
 
   if ("mean.var.adjusted" %in% test) {
-    if (mimic == "Mplus") {
+    if (lavoptions$information.expected.mplus) {
       df.scaled <- floor(trace.UGamma^2 / trace.UGamma2 + 0.5)
     } else {
       # more precise, fractional df
@@ -309,7 +308,7 @@ lav_test_satorra_bentler <- function(lavobject = NULL,
     }
 
     # label
-    if (mimic == "Mplus") {
+    if (lavoptions$information.expected.mplus) {
       if (lavoptions$estimator == "ML") {
         label <-
           "mean and variance adjusted correction (MLMV)"
@@ -369,7 +368,7 @@ lav_test_satorra_bentler <- function(lavobject = NULL,
     }
 
     # label
-    if (mimic == "Mplus") {
+    if (lavoptions$information.expected.mplus) {
       if (lavoptions$estimator == "ML") {
         label <-
           "simple second-order correction (MLMV)"

@@ -103,7 +103,7 @@ lav_model_nvcov_robust_sem <- function(lavmodel = NULL,
                                        attr.E.inv = FALSE,
                                        attr.WLS.V = FALSE) {
   # compute inverse of the expected(!) information matrix
-  if (lavmodel@estimator == "ML" && lavoptions$information == "expected_mlm") {
+  if (lavmodel@estimator == "ML" && lavoptions$information.expected.mplus) {
     # YR - 11 aug 2010 - what Mplus seems to do is (see Muthen apx 4 eq102)
     # - A1 is not based on Sigma.hat and Mu.hat,
     # but on lavsamplestats@cov and lavsamplestats@mean... ('unstructured')
@@ -145,7 +145,7 @@ lav_model_nvcov_robust_sem <- function(lavmodel = NULL,
   # Gamma
   Gamma <- lavsamplestats@NACOV
   if (lavmodel@estimator == "ML" &&
-    lavoptions$mimic == "Mplus" && !lavsamplestats@NACOV.user) {
+    lavoptions$gamma.vcov.mplus && !lavsamplestats@NACOV.user) {
     # 'fix' G11 part of Gamma (NOTE: this is NOT needed for SB test
     # statistic
     for (g in 1:lavsamplestats@ngroups) {
@@ -164,7 +164,7 @@ lav_model_nvcov_robust_sem <- function(lavmodel = NULL,
   tDVGVD <- matrix(0, ncol = ncol(E.inv), nrow = nrow(E.inv))
   for (g in 1:lavsamplestats@ngroups) {
     fg <- lavsamplestats@nobs[[g]] / lavsamplestats@ntotal
-    if (lavoptions$mimic == "Mplus") {
+    if (lavoptions$gamma.vcov.mplus) {
       fg1 <- (lavsamplestats@nobs[[g]] - 1) / lavsamplestats@ntotal
     } else {
       # from 0.6 onwards, we use fg1 == fg, to be more consistent with

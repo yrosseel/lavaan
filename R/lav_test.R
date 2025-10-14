@@ -585,7 +585,6 @@ lav_model_test <- function(lavobject = NULL,
         WLS.V = attr(VCOV, "WLS.V"),
         Gamma = attr(VCOV, "Gamma"),
         test = this.test,
-        mimic = lavoptions$mimic,
         method = "original", # since 0.6-13
         return.ugamma = FALSE
       )
