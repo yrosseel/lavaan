@@ -452,7 +452,7 @@ lav_partable_indep_or_unrestricted <- function(lavobject = NULL,
 
       # fixed.x exogenous variables?
       if (!conditional.x && (nx <- length(ov.names.x)) > 0L) {
-        if (independent && lavoptions$mimic %in% c("Mplus", "lavaan")) {
+        if (independent && lavoptions$baseline.fixed.x.free.cov) {
           # add covariances for eXo
           pstar <- nx * (nx - 1) / 2
           if (pstar > 0L) { # only if more than 1 variable
