@@ -910,7 +910,7 @@ lav_sam_get_mmlist <- function(lavobject) {
     }
 
     # cluster membership
-    membership <- lav_utils_get_connected_nodes(CC)
+    membership <- lav_graph_get_connected_nodes(CC)
 
     out <- split(NAMES, NAMES[membership])
     names(out) <- paste("block", seq_len(length(out)), sep = "")

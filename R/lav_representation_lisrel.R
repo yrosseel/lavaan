@@ -1799,7 +1799,7 @@ setVarianceComposites.LISREL <- function(MLIST = NULL,
     # use a few runs, each time setting more variables right
 
     # get ancestors list for each node/variable
-    ancestors <- lav_utils_get_ancestors(BETA)
+    ancestors <- lav_graph_get_ancestors(BETA)
 
     # for each y variable, compute IB.inv %*% psi %*% t(IB.inv), without y
     ny <- length(y.idx)
@@ -1930,7 +1930,7 @@ setResidualElements.LISREL <- function(MLIST = NULL,
       # use a few runs, each time setting more variables right
 
       # get ancestors list for each node/variable
-      ancestors <- lav_utils_get_ancestors(BETA)
+      ancestors <- lav_graph_get_ancestors(BETA)
 
       # for each y variable, compute IB.inv %*% psi %*% t(IB.inv), without y
       ny <- length(y.idx)
