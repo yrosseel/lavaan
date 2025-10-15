@@ -161,11 +161,19 @@ lav_fit_measures <- function(object, fit.measures = "all",
 
   # standard test
   if (fm.args$standard.test == "default") {
-    fm.args$standard.test <- object@Options$scaled.test
+    fm.args$standard.test <- object@Options$standard.test
     # usually "standard", but could have been changed
-    # the 'scaled' version will be based on the scaled.test!
     if (is.null(fm.args$standard.test)) { # <older objects
       fm.args$standard.test <- "standard"
+    }
+  }
+
+  # scaled test
+  if (fm.args$scaled.test == "default") {
+    fm.args$scaled.test <- object@Options$scaled.test
+    # usually "standard", but could have been changed
+    if (is.null(fm.args$scaled.test)) { # <older objects
+      fm.args$scaled.test <- "standard"
     }
   }
 
@@ -437,7 +445,7 @@ lav_fit_measures <- function(object, fit.measures = "all",
   }
 
   # lower case
-  fit.measures <- tolower(fit.measures)
+  fit.measures <- fit.measures.orig <- tolower(fit.measures)
 
   # select 'default' fit measures
   if (length(fit.measures) == 1L) {
@@ -652,6 +660,22 @@ lav_fit_measures <- function(object, fit.measures = "all",
     class(out) <- c("lavaan.fitMeasures", "lavaan.vector", "numeric")
   }
 
+  # attributes?
+  # only if fit.measures == "all" or "default"
+  if (length(fit.measures.orig) == 1L &&
+      fit.measures.orig %in% c("all", "default")) {
+    X2.label <- TEST[[test.idx]]$label # NULL if "standard"
+    X2.baseline.label <- object@baseline$test[[test.idx]]$label
+    attr(out, "X2.label") <- X2.label
+    attr(out, "X2.baseline.label") <- X2.baseline.label
+    if (standard.test != "standard") {
+      attr(out, "standard.test") <- standard.test
+    }
+    if (scaled.flag && scaled.test != "standard") {
+      attr(out, "scaled.test") <- scaled.test
+    }
+  }
+
   out
 }
 
@@ -677,6 +701,13 @@ print.lavaan.fitMeasures <- function(x, ..., nd = 3L, add.h0 = TRUE) {
       c1 <- c("", c1)
       c2 <- c("Standard", c2)
       c3 <- c("Scaled", c3)
+    }
+
+    # if test is not standard, add label
+    if (!is.null(attr(x, "X2.label"))) {
+      c1 <- c(c1, attr(x, "X2.label"))
+      c2 <- c(c2, "")
+      c3 <- c(c3, "")
     }
 
     c1 <- c(c1, "Test statistic")
@@ -766,11 +797,24 @@ print.lavaan.fitMeasures <- function(x, ..., nd = 3L, add.h0 = TRUE) {
     write.table(M, row.names = TRUE, col.names = FALSE, quote = FALSE)
   }
 
+  # print information about standard.test? (new in 0.6-21)
+  # (only if "standard.test" is not "standard")
+  if (!is.null(attr(x, "standard.test"))) {
+    cat("\nNote: fit measures based on the chi-square test statistic\n",
+           "     use", attr(x, "X2.label"),"\n")
+  }
+
   # independence model
   if ("baseline.chisq" %in% names.x) {
     cat("\nModel Test Baseline Model:\n\n")
 
     c1 <- c2 <- c3 <- character(0L)
+    # if test is not standard, add label
+    if (!is.null(attr(x, "X2.baseline.label"))) {
+      c1 <- c(c1, attr(x, "X2.label"))
+      c2 <- c(c2, "")
+      c3 <- c(c3, "")
+    }
 
     c1 <- c(c1, "Test statistic")
     c2 <- c(c2, sprintf(num.format, x["baseline.chisq"]))

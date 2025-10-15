@@ -193,6 +193,9 @@ lav_options_set <- function(opt = NULL) {                     # nolint
   # rename names of test statistics if needed, check for invalid values ####
   opt$test <- lav_test_rename(opt$test, check = TRUE)
 
+  # same for standard.test
+  opt$standard.test <- lav_test_rename(opt$standard.test, check = TRUE)
+
   # same for scaled.test
   opt$scaled.test <- lav_test_rename(opt$scaled.test, check = TRUE)
 
@@ -858,6 +861,15 @@ lav_options_set <- function(opt = NULL) {                     # nolint
   #    opt$test <- unique(opt$test)
   # }
 
+  # add standard.test to test (if not already there)
+  if (opt$standard.test != "standard") {
+    if (length(opt$test) == 1L && opt$test[1] == "standard") {
+      opt$test <- unique(c(opt$test, opt$standard.test))
+    } else {
+      opt$test <- unique(c(opt$standard.test, opt$test))
+    }
+  }
+
   # add scaled.test to test (if not already there)
   if (opt$scaled.test != "standard") {
     if (length(opt$test) == 1L && opt$test[1] == "standard") {
@@ -865,19 +877,18 @@ lav_options_set <- function(opt = NULL) {                     # nolint
     } else {
       opt$test <- unique(c(opt$scaled.test, opt$test))
     }
-
-    # where does "standard" appear in the opt$test vector?
-    standard.idx <- which(opt$test == "standard")[1]
-    if (is.na(standard.idx)) {
-      # "standard" is not in the opt$test vector at all,
-      # so add it
-      opt$test <- c("standard", opt$test)
-    } else if (length(standard.idx) > 0L && standard.idx != 1L) {
-      # make sure "standard" comes first
-      opt$test <- c("standard", opt$test[-standard.idx])
-    }
   }
 
+  # where does "standard" appear in the opt$test vector?
+  standard.idx <- which(opt$test == "standard")[1]
+  if (is.na(standard.idx)) {
+    # "standard" is not in the opt$test vector at all,
+    # so add it
+    opt$test <- c("standard", opt$test)
+  } else if (length(standard.idx) > 0L && standard.idx != 1L) {
+    # make sure "standard" comes first
+    opt$test <- c("standard", opt$test[-standard.idx])
+  }
 
   # final check
   wrong.idx <- which(!opt$test %in% c(

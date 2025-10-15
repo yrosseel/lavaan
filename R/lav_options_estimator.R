@@ -298,6 +298,7 @@ lav_options_est_dwls <- function(opt) {
       if (opt$test[1] == "default") {
         #opt$test <- "standard"
         opt$test <- "browne.residual.nt"
+        opt$standard.test <- "browne.residual.nt"
         opt$scaled.test <- "browne.residual.nt"
       } # else {
       #  opt$test <- union("standard", opt$test)
@@ -346,6 +347,7 @@ lav_options_est_uls <- function(opt) {
     if (opt$estimator == "uls") {
       if (opt$test[1] == "default") {
         opt$test <- "browne.residual.nt" # new in 0.6-21
+        opt$standard.test <- "browne.residual.nt"
         opt$scaled.test <- "browne.residual.nt"
       } # else {
       #  opt$test <- union("standard", opt$test)

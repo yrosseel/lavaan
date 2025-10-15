@@ -384,6 +384,9 @@ lav_options_default <- function() {
     "default", "structured", "unstructured"
   ))
 
+  # test statistic for fit measures
+  elm("standard.test", "standard", oklen = c(1L, 100L))
+
   # test statistic for scaling
   elm("scaled.test", "standard", oklen = c(1L, 100L))
 

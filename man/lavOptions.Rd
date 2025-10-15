@@ -328,6 +328,10 @@ Estimation options:
       depends on the values of other arguments. See also the 
       \code{\link{lavTest}} function to extract (alternative)     
       test statistics from a fitted lavaan object.}
+   \item{\code{standard.test}:}{Character. Choose the test statistic
+    that will be used to compute fit measures (like CFI or RSMEA).
+    The default is \code{"standard"}, but it could also be (for example)
+    \code{"Browne.residual.nt"}.}
    \item{\code{scaled.test}:}{Character. Choose the test statistic
     that will be scaled (if a scaled test statistic is requested).
     The default is \code{"standard"}, but it could also be (for example)

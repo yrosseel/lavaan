@@ -244,6 +244,13 @@ lav_object_gamma <- function(lavobject = NULL,
         slopestructure = conditional.x
       )
     }
+
+    # group.w.free
+    if (lavoptions$group.w.free) {
+      # checkme!
+      OUT[[g]] <- lav_matrix_bdiag(matrix(1, 1, 1), OUT[[g]])
+    }
+
   } # g
 
   OUT
