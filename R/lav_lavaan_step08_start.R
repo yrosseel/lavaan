@@ -35,10 +35,19 @@ lav_lavaan_step08_start <- function(slotModel = NULL, # nolint
       # in semTools' auxiliary() function
 
       # check for zero free variances and NA values
-      zero.idx <- which(lavpartable$free > 0L &
-        lavpartable$op == "~~" &
-        lavpartable$lhs == lavpartable$rhs &
-        lavpartable$est == 0)
+      if (is.null(lavpartable$lower)) {
+        zero.idx <- which(lavpartable$free > 0L &
+          lavpartable$op == "~~" &
+          lavpartable$lhs == lavpartable$rhs &
+          lavpartable$est == 0)
+      } else {
+        # ignore zero variances on the boundary; new in 0.6-21
+        zero.idx <- which(lavpartable$free > 0L &
+          lavpartable$op == "~~" &
+          lavpartable$lhs == lavpartable$rhs &
+          lavpartable$est == 0 &
+          lavpartable$lower != 0)
+      }
 
       if (length(zero.idx) > 0L || any(is.na(lavpartable$est))) {
         lavpartable$start <- lav_start(
