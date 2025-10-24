@@ -37,15 +37,7 @@ lav_model_h1_information <- function(lavobject = NULL,
     lavsamplestats <- lavobject@SampleStats
     lavdata <- lavobject@Data
     lavimplied <- lavobject@implied
-    if (.hasSlot(lavobject, "h1")) {
-      lavh1 <- lavobject@h1
-    } else {
-      lavh1 <- lav_h1_implied_logl(
-        lavdata = lavobject@Data,
-        lavsamplestats = lavobject@SampleStats,
-        lavoptions = lavobject@Options
-      )
-    }
+    lavh1 <- lavobject@h1
     lavcache <- lavobject@Cache
     lavoptions <- lavobject@Options
   }
@@ -109,15 +101,7 @@ lav_model_h1_information_expected <- function(lavobject = NULL,
     lavsamplestats <- lavobject@SampleStats
     lavdata <- lavobject@Data
     lavimplied <- lavobject@implied
-    if (.hasSlot(lavobject, "h1")) {
-      lavh1 <- lavobject@h1
-    } else {
-      lavh1 <- lav_h1_implied_logl(
-        lavdata = lavobject@Data,
-        lavsamplestats = lavobject@SampleStats,
-        lavoptions = lavobject@Options
-      )
-    }
+    lavh1 <- lavobject@h1
     lavcache <- lavobject@Cache
     lavoptions <- lavobject@Options
   }
@@ -191,11 +175,7 @@ lav_model_h1_information_expected <- function(lavobject = NULL,
     }
 
     for (g in 1:lavsamplestats@ngroups) {
-      if (.hasSlot(lavdata, "weights")) {
-        WT <- lavdata@weights[[g]]
-      } else {
-        WT <- NULL
-      }
+      WT <- lavdata@weights[[g]]
 
       if (lavsamplestats@missing.flag) {
         # mvnorm
@@ -275,10 +255,7 @@ lav_model_h1_information_expected <- function(lavobject = NULL,
             MEAN <- lavsamplestats@mean[[g]]
           }
 
-          correlation.flag <- FALSE
-          if (.hasSlot(lavmodel, "correlation")) {
-            correlation.flag <- lavmodel@correlation
-          }
+          correlation.flag <- lavmodel@correlation
 
           if (structured) {
             A1[[g]] <- lav_mvnorm_information_expected(
@@ -360,15 +337,7 @@ lav_model_h1_information_observed <- function(lavobject = NULL,
     lavsamplestats <- lavobject@SampleStats
     lavdata <- lavobject@Data
     lavimplied <- lavobject@implied
-    if (.hasSlot(lavobject, "h1")) {
-      lavh1 <- lavobject@h1
-    } else {
-      lavh1 <- lav_h1_implied_logl(
-        lavdata = lavobject@Data,
-        lavsamplestats = lavobject@SampleStats,
-        lavoptions = lavobject@Options
-      )
-    }
+    lavh1 <- lavobject@h1
     lavcache <- lavobject@Cache
     lavoptions <- lavobject@Options
   }
@@ -621,15 +590,7 @@ lav_model_h1_information_firstorder <- function(lavobject = NULL,
     lavsamplestats <- lavobject@SampleStats
     lavdata <- lavobject@Data
     lavimplied <- lavobject@implied
-    if (.hasSlot(lavobject, "h1")) {
-      lavh1 <- lavobject@h1
-    } else {
-      lavh1 <- lav_h1_implied_logl(
-        lavdata = lavobject@Data,
-        lavsamplestats = lavobject@SampleStats,
-        lavoptions = lavobject@Options
-      )
-    }
+    lavh1 <- lavobject@h1
     lavcache <- lavobject@Cache
     lavoptions <- lavobject@Options
   }
@@ -703,11 +664,7 @@ lav_model_h1_information_firstorder <- function(lavobject = NULL,
 
   B1 <- vector("list", length = lavsamplestats@ngroups)
   for (g in 1:lavdata@ngroups) {
-    if (.hasSlot(lavdata, "weights")) {
-      WT <- lavdata@weights[[g]]
-    } else {
-      WT <- NULL
-    }
+    WT <- lavdata@weights[[g]]
 
     if (estimator == "PML") {
       # slow approach: compute outer product of case-wise scores
@@ -951,15 +908,7 @@ lav_model_h1_acov <- function(lavobject = NULL,
     lavsamplestats <- lavobject@SampleStats
     lavdata <- lavobject@Data
     lavimplied <- lavobject@implied
-    if (.hasSlot(lavobject, "h1")) {
-      lavh1 <- lavobject@h1
-    } else {
-      lavh1 <- lav_h1_implied_logl(
-        lavdata = lavobject@Data,
-        lavsamplestats = lavobject@SampleStats,
-        lavoptions = lavobject@Options
-      )
-    }
+    lavh1 <- lavobject@h1
     lavcache <- lavobject@Cache
     lavoptions <- lavobject@Options
   }

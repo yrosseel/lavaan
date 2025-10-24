@@ -128,6 +128,9 @@ setMethod(
         )
       }
     }
+    # check object
+    object <- lav_object_check_version(object)
+
     lav_object_inspect_coef(
       object = object, type = type,
       add.labels = labels, add.class = TRUE
@@ -151,6 +154,11 @@ standardizedSolution <- # nolint
                                    GLIST = NULL, # nolint
                                    est = NULL,
                                    output = "data.frame") {
+
+    # check object
+    object <- lav_object_check_version(object)
+
+    # check type
     stopifnot(type %in% c("std.all", "std.lv", "std.nox"))
 
     # check output= argument
@@ -352,9 +360,14 @@ parameterEstimates <- # nolint
                                  add.attributes = FALSE,
                                  output = "data.frame",
                                  header = FALSE) {
+
+    # lavaan.fsr?
     if (inherits(object, "lavaan.fsr")) {
       return(object$PE)
     }
+
+    # check object
+    object <- lav_object_check_version(object)
 
     # deprecated add.attributes (for psycho/blavaan)
     if (add.attributes) {
@@ -1104,6 +1117,9 @@ parameterEstimates <- # nolint
 
 parameterTable <- parametertable <- parTable <- partable <- # nolint
   function(object) {
+    # check object
+    object <- lav_object_check_version(object)
+
     # convert to data.frame
     out <- as.data.frame(object@ParTable, stringsAsFactors = FALSE)
 
@@ -1117,6 +1133,8 @@ varTable <- vartable <- function(object, ov.names = names(object), # nolint
                                  as.data.frame. = TRUE) { # nolint
 
   if (inherits(object, "lavaan")) {
+    # check object
+    object <- lav_object_check_version(object)
     tmp.var <- object@Data@ov
   } else if (inherits(object, "lavData")) {
     tmp.var <- object@ov
@@ -1157,6 +1175,9 @@ setMethod(
     }
     # lowercase type
     type <- tolower(type)
+
+    # check object
+    object <- lav_object_check_version(object)
 
     # catch type="casewise"
     if (type %in% c("casewise", "case", "obs", "observations", "ov")) {
@@ -1200,6 +1221,9 @@ setMethod(
         )
       }
     }
+    # check object
+    object <- lav_object_check_version(object)
+
     # check for convergence first!
     if (object@optim$npar > 0L && !object@optim$converged) {
       lav_msg_stop(gettext("model did not converge"))
@@ -1265,6 +1289,9 @@ setMethod(
         )
       }
     }
+    # check object
+    object <- lav_object_check_version(object)
+
     if (object@Options$estimator != "ML") {
       lav_msg_warn(gettext("logLik only available if estimator is ML"))
     }
@@ -1273,18 +1300,7 @@ setMethod(
     }
 
     # new in 0.6-1: we use the @loglik slot (instead of fitMeasures)
-    if (.hasSlot(object, "loglik")) {
-      tmp.logl <- object@loglik
-    } else {
-      tmp.logl <- lav_model_loglik(
-        lavdata = object@Data,
-        lavsamplestats = object@SampleStats,
-        lavimplied = object@implied,
-        lavmodel = object@Model,
-        lavoptions = object@Options
-      )
-    }
-
+    tmp.logl <- object@loglik
     logl <- tmp.logl$loglik
     attr(logl, "df") <- tmp.logl$npar ### note: must be npar, not df!!
     attr(logl, "nobs") <- tmp.logl$ntotal
@@ -1317,6 +1333,9 @@ setMethod(
 setMethod(
   "update", signature(object = "lavaan"),
   function(object, model, add, ..., evaluate = TRUE) {
+    # check object
+    object <- lav_object_check_version(object)
+
     call <- object@call
     if (is.null(call)) {
       lav_msg_stop(gettext("need an object with call slot"))
@@ -1416,19 +1435,6 @@ setMethod(
     mcall <- match.call(expand.dots = TRUE)
     dots <- list(...)
 
-    # catch SB.classic and SB.H0
-    # SB.classic <- TRUE; SB.H0 <- FALSE
-
-    # arg.names <- names(dots)
-    # arg.idx <- which(nchar(arg.names) > 0L)
-    # if(length(arg.idx) > 0L) {
-    #    if(!is.null(dots$SB.classic))
-    #        SB.classic <- dots$SB.classic
-    #    if(!is.null(dots$SB.H0))
-    #        SB.H0 <- dots$SB.H0
-    #    dots <- dots[-arg.idx]
-    # }
-
     modp <- if (length(dots)) {
       sapply(dots, inherits, "lavaan")
     } else {
@@ -1436,12 +1442,6 @@ setMethod(
     }
     tmp.names <- sapply(as.list(mcall)[c(FALSE, TRUE, modp)], deparse)
 
-    # use do.call to handle changed dots
-    # ans <- do.call("lavTestLRT", c(list(object = object,
-    #               SB.classic = SB.classic, SB.H0 = SB.H0,
-    #               model.names = tmp.names), dots))
-
-    # ans
     lavTestLRT(object = object, ..., model.names = tmp.names)
   }
 )

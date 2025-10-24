@@ -49,6 +49,10 @@ lavTestLRT <- function(object, ..., method = "default", test = "default",
   } else {
     logical(0L)
   }
+  # check object
+  object <- lav_object_check_version(object)
+  # check models in dots
+  dots[modp] <- lapply(dots[modp], lav_object_check_version)
 
   # some general properties (taken from the first model)
   estimator <- object@Options$estimator

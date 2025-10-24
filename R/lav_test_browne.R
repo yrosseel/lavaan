@@ -1,7 +1,7 @@
 # Browne's residual test statistic
 # see Browne (1984) eq 2.20a
 
-# T.B = (N-1) * t(RES) %*% Delta.c %*%
+# T_B = (N-1) * t(RES) %*% Delta.c %*%
 #                          solve(t(Delta.c) %*% Gamma %*% Delta.c) %*%
 #                          t(Delta.c) %*% RES
 #
@@ -144,8 +144,7 @@ lav_test_browne <- function(lavobject = NULL,
   lineq.flag <- FALSE
   if (lavmodel@eq.constraints) {
     lineq.flag <- TRUE
-  } else if (.hasSlot(lavmodel, "ceq.simple.only") &&
-    lavmodel@ceq.simple.only) {
+  } else if (lavmodel@ceq.simple.only) {
     lineq.flag <- TRUE
   }
 
@@ -179,8 +178,7 @@ lav_test_browne <- function(lavobject = NULL,
     Delta.all <- do.call("rbind", Delta)
     if (lavmodel@eq.constraints) {
       Delta.g <- Delta.all %*% lavmodel@eq.constraints.K
-    } else if (.hasSlot(lavmodel, "ceq.simple.only") &&
-      lavmodel@ceq.simple.only) {
+    } else if (lavmodel@ceq.simple.only) {
       Delta.g <- Delta.all %*% lavmodel@ceq.simple.K
     }
     Gamma.inv.weighted <- vector("list", ngroups)

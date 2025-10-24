@@ -14,6 +14,9 @@ lavTestScore <- function(object, add = NULL, release = NULL,
                          epc = FALSE, standardized = epc, cov.std = epc,
                          verbose = FALSE, warn = TRUE,
                          information = "expected") {
+  # check object
+  object <- lav_object_check_version(object)
+
   if (!missing(warn)) {
     current.warn <- lav_warn()
     if (lav_warn(warn))

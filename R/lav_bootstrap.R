@@ -41,6 +41,9 @@ bootstrapLavaan <- function(object,
                             h0.rmsea = NULL,
                             ...) {
 
+  # check object
+  object <- lav_object_check_version(object)
+
   # checks
   type. <- tolower(type) # overwritten if nonparametric
   stopifnot(

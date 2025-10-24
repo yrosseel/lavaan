@@ -143,6 +143,9 @@ lav_fit_measures <- function(object, fit.measures = "all",
                                cat.check.pd = TRUE
                              ),
                              output = "vector") {
+  # check object
+  object <- lav_object_check_version(object)
+
   # default fm.args
   default.fm.args <- list(
     standard.test = "default",
@@ -508,18 +511,6 @@ lav_fit_measures <- function(object, fit.measures = "all",
 
   # BASELINE FAMILY
   if (any(fit.cfi %in% fit.measures)) {
-
-    # check if we have a @baseline slot
-    if (!.hasSlot(object, "baseline")) {
-      lavbaseline <- lav_lavaan_step15_baseline(
-        lavoptions = object@Options,
-        lavsamplestats = object@SampleStats,
-        lavdata = object@Data,
-        lavcache = object@Cache,
-        lavpartable = object@parTable
-      )
-      object@baseline <- lavbaseline
-    }
 
     # rerun baseline?
     if (rerun.lavtest.flag) {

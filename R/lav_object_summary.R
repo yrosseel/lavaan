@@ -54,6 +54,10 @@ lav_object_summary <- function(object, header = TRUE,
                                    pvalue = FALSE
                                  ),
                                modindices = FALSE) {
+
+  # check object
+  object <- lav_object_check_version(object)
+
   # return a list with the main ingredients
   res <- list()
 
@@ -69,23 +73,18 @@ lav_object_summary <- function(object, header = TRUE,
   # create the 'short' summary
   if (header) {
     # 1. collect header information
-    if (.hasSlot(object, "version")) {
-      VERSION <- object@version
-    } else {
-      VERSION <- "pre 0.6"
-    }
+    VERSION <- object@version
+
     res$header <- list(
       lavaan.version = VERSION,
-      sam.approach = (.hasSlot(object, "internal") &&
-        !is.null(object@internal$sam.method)),
+      sam.approach = !is.null(object@internal$sam.method),
       optim.method = object@Options$optim.method,
       optim.iterations = object@optim$iterations,
       optim.converged = object@optim$converged
     )
 
     # sam or sem?
-    if (.hasSlot(object, "internal") &&
-      !is.null(object@internal$sam.method)) {
+    if (!is.null(object@internal$sam.method)) {
       # SAM version
 
       # 2. sam header
@@ -131,12 +130,8 @@ lav_object_summary <- function(object, header = TRUE,
       #}
       cin.simple.only <- FALSE
       ceq.simple.only <- FALSE
-      if (.hasSlot(object@Model, "cin.simple.only")) {
-        cin.simple.only <- object@Model@cin.simple.only
-      }
-      if (.hasSlot(object@Model, "ceq.simple.only")) {
-        ceq.simple.only <- object@Model@ceq.simple.only
-      }
+      cin.simple.only <- object@Model@cin.simple.only
+      ceq.simple.only <- object@Model@ceq.simple.only
       nrow.cin.jac <- nrow(object@Model@cin.JAC)
       if (cin.simple.only) {
         nrow.cin.jac <- 0L
@@ -163,7 +158,7 @@ lav_object_summary <- function(object, header = TRUE,
 
 
       # 3. if EFA/ESEM, summarize rotation info
-      if (.hasSlot(object@Model, "nefa") && object@Model@nefa > 0L) {
+      if (object@Model@nefa > 0L) {
         res$rotation <-
           list(
             rotation = object@Options$rotation,

@@ -1,6 +1,10 @@
 # casewise residuals
 
 lav_residuals_casewise <- function(object, labels = labels) {
+
+  # check object
+  object <- lav_object_check_version(object)
+
   # check if we have full data
   if (object@Data@data.type != "full") {
     lav_msg_stop(gettext("casewise residuals not available if sample statistics

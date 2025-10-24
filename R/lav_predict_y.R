@@ -24,6 +24,9 @@ lavPredictY <- function(object,
                         force.zero.mean = FALSE,
                         lambda = 0) {
   stopifnot(inherits(object, "lavaan"))
+  # check object
+  object <- lav_object_check_version(object)
+
   lavmodel <- object@Model
   lavdata <- object@Data
   lavimplied <- object@implied
@@ -346,6 +349,8 @@ lavPredictY_cv <- function(
 
   # object should be (or inherit from) a lavaan object
   stopifnot(inherits(object, "lavaan"))
+  # check object
+  object <- lav_object_check_version(object)
 
   # results container
   results <- matrix(as.numeric(NA),

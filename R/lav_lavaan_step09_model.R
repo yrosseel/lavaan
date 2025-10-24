@@ -151,30 +151,3 @@ lav_lavaan_step09_model <- function(slotModel = NULL, # nolint
   )
 }
 
-# 9b. bounds for EFA -- to force diag(LAMBDA) to be positive (new in 0.6-7)
-# if((.hasSlot(lavmodel, "nefa")) && (lavmodel@nefa > 0L) &&
-#    (lavoptions$rotation != "none")) {
-#
-#    # add lower column
-#    if (is.null(lavpartable$lower)) {
-#        lavpartable$lower <- rep(-Inf, length(lavpartable$lhs))
-#    }
-#    efa.values <- lav_partable_efa_values(lavpartable)
-#    group.values <- lav_partable_group_values(lavpartable)
-#    for (g in seq_len(lavdata@ngroups)) {
-#        for (set in seq_len(lavmodel@nefa)) {
-#            lv.efa <-
-#                unique(lavpartable$lhs[lavpartable$op == "=~" &
-#                                       lavpartable$block == g &
-#                                       lavpartable$efa == efa.values[set] ])
-#            for (f in seq_len(length(lv.efa))) {
-#                lambda.idx <- which(lavpartable$lhs == lv.efa[f] &
-#                                     lavpartable$op == "=~" &
-#                                     lavpartable$group == group.values[g])
-#                # get diagonal element of LAMBDA
-#                midx <- lambda.idx[f] # diagonal element of LAMBDA
-#                lavpartable$lower[midx] <- 0
-#             } # factors
-#        } # sets
-#    } # groups
-# }

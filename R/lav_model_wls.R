@@ -3,11 +3,7 @@ lav_model_wls_est <- function(lavmodel = NULL, GLIST = NULL,
                               lavimplied = NULL) {
   nblocks <- lavmodel@nblocks
   meanstructure <- lavmodel@meanstructure
-  if (.hasSlot(lavmodel, "correlation")) {
-    correlation <- lavmodel@correlation
-  } else {
-    correlation <- FALSE
-  }
+  correlation <- lavmodel@correlation
   categorical <- lavmodel@categorical
   group.w.free <- lavmodel@group.w.free
   num.idx <- lavmodel@num.idx

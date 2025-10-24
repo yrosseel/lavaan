@@ -4,6 +4,8 @@
 lavExport <- function(object, target = "lavaan", prefix = "sem",
                       dir.name = "lavExport", export = TRUE) {
   stopifnot(inherits(object, "lavaan"))
+  # check object
+  object <- lav_object_check_version(object)
   target <- tolower(target)
 
   # check for conditional.x = TRUE

@@ -4,6 +4,9 @@
 #
 
 lavTestWald <- function(object, constraints = NULL, verbose = FALSE) {
+  # check object
+  object <- lav_object_check_version(object)
+
   if (!missing(verbose)) {
     current.verbose <- lav_verbose()
     if (lav_verbose(verbose))

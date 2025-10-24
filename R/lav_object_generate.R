@@ -22,6 +22,7 @@ lav_object_independence <- function(object = NULL,
   # object or slots?
   if (!is.null(object)) {
     stopifnot(inherits(object, "lavaan"))
+    object <- lav_object_check_version(object)
 
     # extract needed slots
     lavsamplestats <- object@SampleStats
@@ -29,15 +30,7 @@ lav_object_independence <- function(object = NULL,
     lavcache <- object@Cache
     lavoptions <- object@Options
     lavpta <- object@pta
-    if (.hasSlot(object, "h1")) {
-      lavh1 <- object@h1
-    } else {
-      lavh1 <- lav_h1_implied_logl(
-        lavdata = object@Data,
-        lavsamplestats = object@SampleStats,
-        lavoptions = object@Options
-      )
-    }
+    lavh1 <- object@h1
     if (is.null(lavoptions$estimator.args)) {
       lavoptions$estimator.args <- list()
     }
@@ -166,6 +159,8 @@ lav_object_independence <- function(object = NULL,
 
 # 2. unrestricted model
 lav_object_unrestricted <- function(object, se = FALSE) {
+
+  object <- lav_object_check_version(object)
   # construct parameter table for unrestricted model
   lavpartable <- lav_partable_unrestricted(object)
 
@@ -188,15 +183,7 @@ lav_object_unrestricted <- function(object, se = FALSE) {
   # needed?
   if (any(lavpartable$op == "~1")) lavoptions$meanstructure <- TRUE
 
-  if (.hasSlot(object, "h1")) {
-    lavh1 <- object@h1
-  } else {
-    lavh1 <- lav_h1_implied_logl(
-      lavdata = object@Data,
-      lavsamplestats = object@SampleStats,
-      lavoptions = object@Options
-    )
-  }
+  lavh1 <- object@h1
 
   FIT <- lavaan(lavpartable,
     slotOptions     = lavoptions,
@@ -210,11 +197,13 @@ lav_object_unrestricted <- function(object, se = FALSE) {
 }
 
 
-# 3. extended model
+# 3. extended model (used for modification indices)
 lav_object_extended <- function(object, add = NULL,
                                 remove.duplicated = TRUE,
                                 all.free = FALSE,
                                 do.fit = FALSE) {
+
+  object <- lav_object_check_version(object)
   # partable original model
   partable <- object@ParTable[c(
     "lhs", "op", "rhs", "free", "exo", "label",
@@ -347,30 +336,6 @@ lav_object_extended <- function(object, add = NULL,
   # needed?
   if (any(LIST$op == "~1")) lavoptions$meanstructure <- TRUE
 
-  if (.hasSlot(object, "h1")) {
-    lavh1 <- object@h1
-  } else {
-    # old object -- for example 'usemmodelfit' in package 'pompom'
-
-    # add a few fields
-    lavoptions$h1 <- FALSE
-    lavoptions$implied <- FALSE
-    lavoptions$baseline <- FALSE
-    lavoptions$loglik <- FALSE
-    lavoptions$estimator.args <- list()
-
-    # add a few slots
-    object@Data@weights <- vector("list", object@Data@ngroups)
-    object@Model@estimator <- object@Options$estimator
-    object@Model@estimator.args <- list()
-
-    lavh1 <- lav_h1_implied_logl(
-      lavdata = object@Data,
-      lavsamplestats = object@SampleStats,
-      lavoptions = object@Options
-    )
-  }
-
   # switch off 'consider switching to parameterization = theta' warning
   # (modindices!)
   lavoptions$check.delta.cat.mediator <- FALSE
@@ -380,7 +345,7 @@ lav_object_extended <- function(object, add = NULL,
     slotSampleStats = object@SampleStats,
     slotData        = object@Data,
     slotCache       = object@Cache,
-    sloth1          = lavh1
+    sloth1          = object@h1
   )
 
   FIT

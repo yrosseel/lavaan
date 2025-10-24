@@ -26,7 +26,7 @@ lav_lavaan_step16_rotation <- function(lavoptions = NULL,
   #
   # (*) code too complicated to summarize here
 
-  if ((.hasSlot(lavmodel, "nefa")) && (lavmodel@nefa > 0L) &&
+  if (lavmodel@nefa > 0L &&
     (lavoptions$rotation != "none")) {
     # store unrotated solution in partable
     lavpartable$est.unrotated <- lavpartable$est
@@ -139,8 +139,7 @@ lav_lavaan_step16_rotation <- function(lavoptions = NULL,
 
         # store rotated VCOV
         # lavvcov$vcov.unrotated <- lavvcov$vcov
-        if (.hasSlot(lavmodel, "ceq.simple.only") &&
-          lavmodel@ceq.simple.only) {
+        if (lavmodel@ceq.simple.only) {
           free.idx <- which(lavpartable$free > 0L &&
             !duplicated(lavpartable$free))
         } else {

@@ -17,11 +17,7 @@ lav_model_information <- function(lavmodel = NULL,
                                   augmented = FALSE,
                                   inverted = FALSE,
                                   use.ginv = FALSE) {
-  # if (.hasSlot(lavmodel, "estimator")) {
-  #   estimator <- lavmodel@estimator
-  # } else {
-  #   estmator <- lavoptions$estimator
-  # }
+
   information <- lavoptions$information[1] # ALWAYS used the first one
   # caller can control it
 
@@ -459,11 +455,7 @@ lav_model_information_firstorder <- function(lavmodel = NULL,
 
     # NOTE: UNSURE ABOUT THIS PART. WHAT IS THE ROLE OF fg?
 
-    if (.hasSlot(lavdata, "weights")) {
-      wt <- lavdata@weights[[g]]
-    } else { # pre-0.6 object
-      wt <- NULL
-    }
+    wt <- lavdata@weights[[g]]
     if (is.null(wt)) {
       fg <- lavsamplestats@nobs[[g]] / lavsamplestats@ntotal
     } else {
@@ -492,8 +484,7 @@ lav_model_information_firstorder <- function(lavmodel = NULL,
   # >>>>>>>> HJ/MK PML CODE >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
   if (lavmodel@estimator == "PML" || lavmodel@estimator == "MML") {
-    if (!.hasSlot(lavdata, "sampling.weights") ||
-      length(lavdata@sampling.weights) == 0) {
+    if (length(lavdata@sampling.weights) == 0) {
       the_N <- lavsamplestats@ntotal
     } else {
       the_N <- sum(unlist(lavdata@weights))
@@ -571,8 +562,7 @@ lav_model_information_augment_invert <- function(lavmodel = NULL,
       )
       information <- E3
     }
-  } else if (.hasSlot(lavmodel, "ceq.simple.only") &&
-    lavmodel@ceq.simple.only) {
+  } else if (lavmodel@ceq.simple.only) {
     H <- t(lav_matrix_orthogonal_complement(lavmodel@ceq.simple.K))
     if (length(rm.idx) > 0L) {
       H <- H[, -rm.idx, drop = FALSE]

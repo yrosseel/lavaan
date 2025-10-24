@@ -42,13 +42,11 @@ lavInspect.lavaan <- function(object,                                # nolint
   # object must inherit from class lavaan
   stopifnot(inherits(object, "lavaan"))
 
+  # check object
+  object <- lav_object_check_version(object)
+
   # store partable with pta in object to use cache in called functions
   object@ParTable <- lav_partable_set_cache(object@ParTable, object@pta)
-
-  # old (<0.6) object?
-  if (!.hasSlot(object@Data, "block.label")) {
-    object@Data@block.label <- object@Data@group.label
-  }
 
   # only a single argument
   if (length(what) > 1) {
@@ -685,9 +683,6 @@ lav_object_inspect_est <- function(object, unrotated = FALSE) {
       } else {
         return.value <- object@ParTable$est # if this changes, tag @TDJorgensen in commit message
       }
-    } else if (.hasSlot(object, "Fit")) {
-      # in < 0.5-19, we should look in @Fit@est
-      return.value <- object@Fit@est
     } else {
       partable <- parTable(object)
       return.value <- rep(as.numeric(NA), length(partable$lhs))
@@ -708,9 +703,6 @@ lav_object_inspect_se <- function(object) {
   # from 0.5-19, they are in the partable
   if (!is.null(object@ParTable$se)) {
     return.value <- object@ParTable$se
-  } else if (.hasSlot(object, "Fit")) {
-    # in < 0.5-19, we should look in @Fit@se
-    return.value <- object@Fit@se
   } else {
     partable <- parTable(object)
     return.value <- rep(as.numeric(NA), length(partable$lhs))
@@ -997,10 +989,6 @@ lav_object_inspect_modelmatrices <- function(object, what = "free", # nolint
 lav_object_inspect_sampstat <- function(object, h1 = TRUE,        # nolint
     std = FALSE,
     add.labels = FALSE, add.class = FALSE, drop.list.single.group = FALSE) {
-  # old (<0.6) object?
-  if (!.hasSlot(object@Data, "block.label")) {
-    object@Data@block.label <- object@Data@group.label
-  }
 
   nblocks <- object@Model@nblocks
   ov.names <- object@pta$vnames$ov
@@ -1020,9 +1008,7 @@ lav_object_inspect_sampstat <- function(object, h1 = TRUE,        # nolint
   }
 
   # check if we have a non-empty @h1 slot
-  if (!.hasSlot(object, "h1")) {
-    h1 <- FALSE
-  } else if (length(object@h1) == 0L) {
+  if (length(object@h1) == 0L) {
     h1 <- FALSE
   } else {
     h1.implied <- object@h1$implied
@@ -1470,11 +1456,6 @@ lav_object_inspect_rsquare <- function(object, est.std.all = NULL,
 # model implied sample stats
 lav_object_inspect_implied <- function(object,                    # nolint
     add.labels = FALSE, add.class = FALSE, drop.list.single.group = FALSE) {
-  # old (<0.6) object?
-  if (!.hasSlot(object@Data, "block.label")) {
-    object@Data@block.label <- object@Data@group.label
-  }
-
 
   nblocks <- object@Model@nblocks
   ov.names <- object@pta$vnames$ov
@@ -2098,11 +2079,6 @@ lav_object_inspect_empty_idx <- function(object,
 
 lav_object_inspect_wls_est <- function(object,
     add.labels = FALSE, add.class = FALSE, drop.list.single.group = FALSE) {
-  # old (<0.6) object?
-  if (!.hasSlot(object@Data, "block.label")) {
-    object@Data@block.label <- object@Data@group.label
-  }
-
 
   return.value <- lav_model_wls_est(object@Model)
 
@@ -2136,11 +2112,6 @@ lav_object_inspect_wls_est <- function(object,
 
 lav_object_inspect_wls_obs <- function(object,
     add.labels = FALSE, add.class = FALSE, drop.list.single.group = FALSE) {
-  # old (<0.6) object?
-  if (!.hasSlot(object@Data, "block.label")) {
-    object@Data@block.label <- object@Data@group.label
-  }
-
 
   return.value <- object@SampleStats@WLS.obs ### FIXME: should be in @h1??
 
@@ -2174,11 +2145,6 @@ lav_object_inspect_wls_obs <- function(object,
 
 lav_object_inspect_wls_v <- function(object,
     add.labels = FALSE, add.class = FALSE, drop.list.single.group = FALSE) {
-  # old (<0.6) object?
-  if (!.hasSlot(object@Data, "block.label")) {
-    object@Data@block.label <- object@Data@group.label
-  }
-
 
   # return.value <- lav_model_wls_v(lavmodel       = object@Model,
   #                       lavsamplestats = object@SampleStats,
@@ -2425,21 +2391,12 @@ lav_object_inspect_information <- function(object,
     object@Options$information <- information
   }
 
-  # backward compatibility
-  if (.hasSlot(object, "h1")) {
-    lavh1 <- object@h1
-  } else {
-    lavh1 <- lav_h1_implied_logl(lavdata = object@Data,
-      lavsamplestats = object@SampleStats,
-      lavoptions = object@Options)
-  }
-
   return.value <- lav_model_information(lavmodel =  object@Model,
     lavsamplestats = object@SampleStats,
     lavdata        = object@Data,
     lavcache       = object@Cache,
     lavimplied     = object@implied,
-    lavh1          = lavh1,
+    lavh1          = object@h1,
     lavoptions     = object@Options,
     extra          = FALSE,
     augmented      = augmented,
@@ -2566,14 +2523,6 @@ lav_object_inspect_vcov <- function(object, standardized = FALSE,
   if (is.null(attr(object, "vnames"))) {
     object@ParTable <- lav_partable_set_cache(object@ParTable, object@pta)
   }
-  # rotation?
-  # if( .hasSlot(lavmodel, "nefa") && (lavmodel@nefa > 0L) &&
-  #    lavoptions$rotation != "none" #&& lavoptions$rotation.se == "delta"
-  #  ) {
-  #    rotation <- TRUE
-  # } else {
-  #    rotation <- FALSE
-  # }
 
   if (object@optim$npar == 0) {
     return.value <- matrix(0, 0, 0)
@@ -2582,7 +2531,7 @@ lav_object_inspect_vcov <- function(object, standardized = FALSE,
     # tmp <- try(slot(object, "vcov"), silent = TRUE)
     # if( !inherits(tmp, "try-error") && !is.null(object@vcov$vcov)
     #   && !(rotation && standardized)) {
-    if (.hasSlot(object, "vcov") && !is.null(object@vcov$vcov)) {
+    if (!is.null(object@vcov$vcov)) {
       return.value <- object@vcov$vcov # if this changes, tag @TDJorgensen in commit message
     } else {
       # compute it again
@@ -2630,27 +2579,7 @@ lav_object_inspect_vcov <- function(object, standardized = FALSE,
       tmp.fun <- lav_standardize_all_nox_x
     }
 
-
-
-    # if(rotation) {
-    #    if(.hasSlot(object@Model, "ceq.simple.only") &&
-    #       object@Model@ceq.simple.only) {
-    #        x.vec <- drop(object@optim$x %*% t(object@Model@ceq.simple.K))
-    #    } else {
-    #        x.vec <- object@optim$x
-    #    }
-    #    tmp.jac <- numDeriv::jacobian(func = tmp.fun, x = x.vec,
-    #               method = "simple",
-    #               method.args = list(eps = 1e-03), # default is 1e-04
-    #               lavobject = object, rotation = rotation)
-    # } else {
-    # if(.hasSlot(object@Model, "ceq.simple.only") &&
-    #   object@Model@ceq.simple.only) {
-    #    x <- lav_model_get_parameters(lavmodel)
-    #    x.vec <- drop(x %*% t(object@Model@ceq.simple.K))
-    # } else {
     x.vec <- lav_model_get_parameters(lavmodel)
-    # }
     tmp.jac <- try(lav_func_jacobian_complex(func = tmp.fun, x = x.vec,
       lavobject = object),
     silent = TRUE)
@@ -2662,8 +2591,7 @@ lav_object_inspect_vcov <- function(object, standardized = FALSE,
 
     # tmp.jac contains *all* parameters in the parameter table
     if (free.only) {
-      if (.hasSlot(object@Model, "ceq.simple.only") &&
-        object@Model@ceq.simple.only) {
+      if (object@Model@ceq.simple.only) {
         free.idx <- which(object@ParTable$free > 0L &
           !duplicated(object@ParTable$free))
       } else {
@@ -2879,10 +2807,7 @@ lav_object_inspect_delta_rownames <- function(                # nolint
   }
 
   categorical    <- lavmodel@categorical
-  correlation    <- FALSE
-  if (.hasSlot(lavmodel, "correlation")) {
-    correlation    <- lavmodel@correlation
-  }
+  correlation    <- lavmodel@correlation
   conditional.x  <- lavmodel@conditional.x
   group.w.free   <- lavmodel@group.w.free
   nvar           <- lavmodel@nvar
@@ -2975,7 +2900,7 @@ lav_object_inspect_delta_rownames <- function(                # nolint
   } # blocks
 
   # multilevel?
-  if (.hasSlot(lavmodel, "multilevel") && lavmodel@multilevel) {
+  if (lavmodel@multilevel) {
     for (g in 1:lavmodel@ngroups) {
       return.value[[g]] <- c(tmp.names[[(g - 1) * 2 + 1]],
         tmp.names[[(g - 1) * 2 + 2]])

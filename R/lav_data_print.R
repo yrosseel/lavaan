@@ -14,6 +14,8 @@ setMethod(
 lav_data_summary_short <- function(object) {
   # which object?
   if (inherits(object, "lavaan")) {
+    # check object
+    object <- lav_object_check_version(object)
     lavdata <- object@Data
   } else if (inherits(object, "lavData")) {
     lavdata <- object
@@ -31,18 +33,10 @@ lav_data_summary_short <- function(object) {
   }
 
   # clustered data?
-  clustered <- FALSE
-  if (.hasSlot(lavdata, "cluster") && # in case we have an old obj
-    length(lavdata@cluster) > 0L) {
-    clustered <- TRUE
-  }
+  clustered <- length(lavdata@cluster) > 0L
 
   # multilevel data?
-  multilevel <- FALSE
-  if (.hasSlot(lavdata, "nlevels") && # in case we have an old obj
-    lavdata@nlevels > 1L) {
-    multilevel <- TRUE
-  }
+  multilevel <- lavdata@nlevels > 1L
 
   # extract summary information
   datasummary <- list(
@@ -61,8 +55,7 @@ lav_data_summary_short <- function(object) {
   }
 
   # sampling weights?
-  if ((.hasSlot(lavdata, "weights")) && # in case we have an old object
-    (!is.null(lavdata@weights[[1L]]))) {
+  if (!is.null(lavdata@weights[[1L]])) {
     datasummary$sampling.weights <- lavdata@sampling.weights
   }
 

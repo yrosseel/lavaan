@@ -31,12 +31,10 @@ lav_lavaan_step13_vcov_boot <- function(lavoptions = NULL,
   VCOV <- NULL # nolint
   if (lavoptions$se != "none" && lavoptions$se != "external" &&
     lavoptions$se != "twostep" &&
-    # (.hasSlot(lavmodel, "nefa") &&
-    #    (lavmodel@nefa == 0L ||
-    #       (lavmodel@nefa > 0L && lavoptions$rotation == "none") ||
-    #       (lavmodel@nefa > 0L && lavoptions$rotation.se == "delta")
-    # )
-    # ) &&
+    (lavmodel@nefa == 0L ||
+     (lavmodel@nefa > 0L && lavoptions$rotation == "none") ||
+     (lavmodel@nefa > 0L && lavoptions$rotation.se == "delta")
+    ) &&
     lavmodel@nx.free > 0L && (attr(x, "converged") ||
     lavoptions$optim.method == "none")) {
     if (lav_verbose()) {

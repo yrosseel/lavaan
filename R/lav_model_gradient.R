@@ -22,11 +22,7 @@ lav_model_gradient <- function(lavmodel = NULL,
   num.idx <- lavmodel@num.idx
   th.idx <- lavmodel@th.idx
   nx.free <- lavmodel@nx.free
-  if (.hasSlot(lavmodel, "estimator.args")) {
-    estimator.args <- lavmodel@estimator.args
-  } else {
-    estimator.args <- list()
-  }
+  estimator.args <- lavmodel@estimator.args
 
   # state or final?
   if (is.null(GLIST)) GLIST <- lavmodel@GLIST
@@ -117,19 +113,14 @@ lav_model_gradient <- function(lavmodel = NULL,
   # - (ML)/NTRLS: using Delta, no support for fixed.x, conditional.x
   # - PML/FML/MML: custom
 
-  composites.flag <- FALSE
-  if (.hasSlot(lavmodel, "composites") && lavmodel@composites) {
-    composites.flag <- TRUE
-  }
+  # composites?
+  composites.flag <- lavmodel@composites
 
   # 1. ML approach
   if ((estimator == "ML" || estimator == "REML" || estimator == "catML") &&
     lavdata@nlevels == 1L && !composites.flag &&
     !lavmodel@conditional.x) {
-	correlation <- FALSE
-	if (.hasSlot(lavmodel, "correlation") && lavmodel@correlation) {
-	  correlation <- TRUE
-	}
+	correlation <- lavmodel@correlation
     if (meanstructure) {
       Omega <- computeOmega(
         Sigma.hat = Sigma.hat, Mu.hat = Mu.hat,
@@ -199,8 +190,7 @@ lav_model_gradient <- function(lavmodel = NULL,
     # extract free parameters
 
     if (type == "free") {
-      if (.hasSlot(lavmodel, "ceq.simple.only") &&
-        lavmodel@ceq.simple.only) { # new in 0.6-11
+      if (lavmodel@ceq.simple.only) { # new in 0.6-11
         dx <- numeric(lavmodel@nx.unco)
         for (g in 1:lavmodel@nblocks) {
           mm.in.group <- 1:nmat[g] + cumsum(c(0, nmat))[g]
@@ -702,11 +692,7 @@ computeDelta <- function(lavmodel = NULL, GLIST. = NULL,
                          force.conditional.x.false = FALSE) {
   representation <- lavmodel@representation
   categorical <- lavmodel@categorical
-  if (.hasSlot(lavmodel, "correlation")) {
-    correlation <- lavmodel@correlation
-  } else {
-    correlation <- FALSE
-  }
+  correlation <- lavmodel@correlation
   conditional.x <- lavmodel@conditional.x
   group.w.free <- lavmodel@group.w.free
   nmat <- lavmodel@nmat
@@ -763,7 +749,7 @@ computeDelta <- function(lavmodel = NULL, GLIST. = NULL,
 
   # number of columns in DELTA + m.el.idx/x.el.idx
   if (type == "free") {
-    if (.hasSlot(lavmodel, "ceq.simple.only") && lavmodel@ceq.simple.only) {
+    if (lavmodel@ceq.simple.only) {
       NCOL <- lavmodel@nx.unco
     } else {
       NCOL <- lavmodel@nx.free
@@ -771,8 +757,7 @@ computeDelta <- function(lavmodel = NULL, GLIST. = NULL,
     m.el.idx <- x.el.idx <- vector("list", length = length(GLIST))
     for (mm in 1:length(GLIST)) {
       m.el.idx[[mm]] <- lavmodel@m.free.idx[[mm]]
-      if (.hasSlot(lavmodel, "ceq.simple.only") &&
-        lavmodel@ceq.simple.only) {
+      if (lavmodel@ceq.simple.only) {
         x.el.idx[[mm]] <- lavmodel@x.unco.idx[[mm]]
       } else {
         x.el.idx[[mm]] <- lavmodel@x.free.idx[[mm]]
@@ -1011,8 +996,7 @@ computeDelta <- function(lavmodel = NULL, GLIST. = NULL,
     } # mm
 
     # if type == "free" take care of equality constraints
-    if (type == "free" && ceq.simple &&
-      .hasSlot(lavmodel, "ceq.simple.only") && lavmodel@ceq.simple.only) {
+    if (type == "free" && ceq.simple && lavmodel@ceq.simple.only) {
       Delta.group <- Delta.group %*% lavmodel@ceq.simple.K
     }
 
@@ -1020,7 +1004,7 @@ computeDelta <- function(lavmodel = NULL, GLIST. = NULL,
   } # g
 
   # if multilevel, rbind levels within group
-  if (.hasSlot(lavmodel, "multilevel") && lavmodel@multilevel) {
+  if (lavmodel@multilevel) {
     DELTA <- vector("list", length = lavmodel@ngroups)
     for (g in 1:lavmodel@ngroups) {
       DELTA[[g]] <- rbind(
@@ -1047,7 +1031,7 @@ computeDeltaDx <- function(lavmodel = NULL, GLIST = NULL, target = "lambda",
   # number of columns in DELTA + m.el.idx/x.el.idx
   type <- "free"
   # if(type == "free") {
-  if (.hasSlot(lavmodel, "ceq.simple.only") && lavmodel@ceq.simple.only) {
+  if (lavmodel@ceq.simple.only) {
     NCOL <- lavmodel@nx.unco
   } else {
     NCOL <- lavmodel@nx.free
@@ -1055,8 +1039,7 @@ computeDeltaDx <- function(lavmodel = NULL, GLIST = NULL, target = "lambda",
   m.el.idx <- x.el.idx <- vector("list", length = length(GLIST))
   for (mm in 1:length(GLIST)) {
     m.el.idx[[mm]] <- lavmodel@m.free.idx[[mm]]
-    if (.hasSlot(lavmodel, "ceq.simple.only") &&
-      lavmodel@ceq.simple.only) {
+    if (lavmodel@ceq.simple.only) {
       x.el.idx[[mm]] <- lavmodel@x.unco.idx[[mm]]
     } else {
       x.el.idx[[mm]] <- lavmodel@x.free.idx[[mm]]
@@ -1158,8 +1141,7 @@ computeDeltaDx <- function(lavmodel = NULL, GLIST = NULL, target = "lambda",
       }
     } # mm
 
-    if (type == "free" && ceq.simple &&
-      .hasSlot(lavmodel, "ceq.simple.only") && lavmodel@ceq.simple.only) {
+    if (type == "free" && ceq.simple && lavmodel@ceq.simple.only) {
       Delta.group <- Delta.group %*% lavmodel@ceq.simple.K
     }
 

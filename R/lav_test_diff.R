@@ -74,8 +74,7 @@ lav_test_diff_Satorra2000 <- function(m1, m0, H1 = TRUE, A.method = "delta",
       if (A.method == "delta") {
         if (m1@Model@eq.constraints) {
           A <- A %*% t(m1@Model@eq.constraints.K)
-        } else if (.hasSlot(m1@Model, "ceq.simple.only") &&
-          m1@Model@ceq.simple.only) {
+        } else if (m1@Model@ceq.simple.only) {
           A <- A %*% t(m1@Model@ceq.simple.K)
         }
       }
@@ -102,8 +101,7 @@ lav_test_diff_Satorra2000 <- function(m1, m0, H1 = TRUE, A.method = "delta",
       # take into account equality constraints m1
       if (m0@Model@eq.constraints) {
         A <- A %*% t(m0@Model@eq.constraints.K)
-      } else if (.hasSlot(m0@Model, "ceq.simple.only") &&
-        m0@Model@ceq.simple.only) {
+      } else if (m0@Model@ceq.simple.only) {
         A <- A %*% t(m0@Model@ceq.simple.K)
       }
       if (lav_debug()) print(A)
@@ -443,16 +441,14 @@ lav_test_diff_A <- function(m1, m0, method = "delta", reference = "H1") {
     # take into account equality constraints m0
     if (m0@Model@eq.constraints) {
       Delta0 <- Delta0 %*% m0@Model@eq.constraints.K
-    } else if (.hasSlot(m0@Model, "ceq.simple.only") &&
-      m0@Model@ceq.simple.only) {
+    } else if (m0@Model@ceq.simple.only) {
       Delta0 <- Delta0 %*% t(m0@Model@ceq.simple.K)
     }
 
     # take into account equality constraints m1
     if (m1@Model@eq.constraints) {
       Delta1 <- Delta1 %*% m1@Model@eq.constraints.K
-    } else if (.hasSlot(m1@Model, "ceq.simple.only") &&
-      m1@Model@ceq.simple.only) {
+    } else if (m1@Model@ceq.simple.only) {
       Delta1 <- Delta1 %*% t(m1@Model@ceq.simple.K)
     }
 

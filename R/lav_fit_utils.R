@@ -147,7 +147,6 @@ lav_fit_fiml_corrected <- function(lavobject, baseline.model,
   # limitations
   if (lavobject@Options$conditional.x ||
     lavobject@Data@nlevels > 1L ||
-    !.hasSlot(lavobject, "h1") ||
     is.null(lavobject@h1$implied$cov[[1]])) {
     return(empty.list)
   } else {

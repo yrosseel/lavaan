@@ -32,6 +32,8 @@ lav_fit_aic_lavobject <- function(lavobject = NULL, fit.measures = "aic",
                                   estimator = "ML") {
   # check lavobject
   stopifnot(inherits(lavobject, "lavaan"))
+  # check object
+  lavobject <- lav_object_check_version(lavobject)
 
   # tests
   TEST <- lavobject@test
@@ -100,7 +102,7 @@ lav_fit_aic_lavobject <- function(lavobject = NULL, fit.measures = "aic",
 
   if (estimator %in% c("ML", "MML")) {
     # do we have a @h1 slot?
-    if (.hasSlot(lavobject, "h1") && length(lavobject@h1) > 0L) {
+    if (length(lavobject@h1) > 0L) {
       indices["unrestricted.logl"] <- lavobject@h1$logl$loglik
     } else {
       lavh1 <- lav_h1_implied_logl(
@@ -112,17 +114,7 @@ lav_fit_aic_lavobject <- function(lavobject = NULL, fit.measures = "aic",
     }
 
     # logl H0
-    if (.hasSlot(lavobject, "loglik")) {
-      loglik <- lavobject@loglik
-    } else {
-      loglik <- lav_model_loglik(
-        lavdata = lavobject@Data,
-        lavsamplestats = lavobject@SampleStats,
-        lavimplied = lavobject@implied,
-        lavmodel = lavobject@Model,
-        lavoptions = lavobject@Options
-      )
-    }
+    loglik <- lavobject@loglik
     indices["logl"] <- loglik$loglik
     indices["aic"] <- loglik$AIC
     indices["bic"] <- loglik$BIC

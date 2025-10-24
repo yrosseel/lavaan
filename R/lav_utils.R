@@ -146,8 +146,7 @@ lav_utils_get_npar <- function(lavobject) {
       neq <- qr(lavobject@Model@con.jac[ceq.idx, , drop = FALSE])$rank
       npar <- npar - neq
     }
-  } else if (.hasSlot(lavobject@Model, "ceq.simple.only") &&
-    lavobject@Model@ceq.simple.only) {
+  } else if (lavobject@Model@ceq.simple.only) {
     npar <- lavobject@Model@nx.free
   }
 

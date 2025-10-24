@@ -26,8 +26,7 @@ lav_model_hessian <- function(lavmodel = NULL,
   }
 
   # computing the Richardson extrapolation
-  if (!ceq.simple && .hasSlot(lavmodel, "ceq.simple.only") &&
-    lavmodel@ceq.simple.only) {
+  if (!ceq.simple && lavmodel@ceq.simple.only) {
     npar <- lavmodel@nx.unco
     type.glist <- "unco"
   } else {
@@ -36,8 +35,7 @@ lav_model_hessian <- function(lavmodel = NULL,
   }
   Hessian <- matrix(0, npar, npar)
   x <- lav_model_get_parameters(lavmodel = lavmodel)
-  if (!ceq.simple && .hasSlot(lavmodel, "ceq.simple.only") &&
-    lavmodel@ceq.simple.only) {
+  if (!ceq.simple && lavmodel@ceq.simple.only) {
     # unpack
     x <- drop(x %*% t(lavmodel@ceq.simple.K))
   }

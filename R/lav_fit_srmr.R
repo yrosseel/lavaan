@@ -16,16 +16,7 @@
 lav_fit_srmr_mplus <- function(lavobject) {
 
   lavsamplestats <- lavobject@SampleStats
-  if (.hasSlot(lavobject, "h1")) {
-    lavh1 <- lavobject@h1
-  } else {
-    # for <0.6 objects
-    lavh1 <- lav_h1_implied_logl(
-        lavdata = lavobject@Data,
-        lavsamplestats = lavobject@SampleStats,
-        lavoptions = lavobject@Options
-      )
-  }
+  lavh1 <- lavobject@h1
 
   # ngroups
   G <- lavobject@Data@ngroups

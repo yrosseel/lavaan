@@ -444,8 +444,7 @@ lav_fit_cfi_lavobject <- function(lavobject = NULL, fit.measures = "cfi",
         fit.h1 = h1.model # okay if NULL
       )
     # 3. internal @baseline slot
-  } else if (.hasSlot(lavobject, "baseline") &&
-    length(lavobject@baseline) > 0L &&
+  } else if (length(lavobject@baseline) > 0L &&
     !is.null(lavobject@baseline$test) &&
     ## if there is a custom h1.model, need  _check_baseline() to update @test
     is.null(h1.model)) {

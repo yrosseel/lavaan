@@ -539,8 +539,7 @@ lav_test_satorra_bentler_trace_complement <- function(Gamma = NULL,
       # FIXME: inequality constraints are ignored!
       if (lavmodel@eq.constraints) {
         Delta.g <- Delta.g %*% lavmodel@eq.constraints.K
-      } else if (.hasSlot(lavmodel, "ceq.simple.only") &&
-        lavmodel@ceq.simple.only) {
+      } else if (lavmodel@ceq.simple.only) {
         Delta.g <- Delta.g %*% lavmodel@ceq.simple.K
       }
 
@@ -587,8 +586,7 @@ lav_test_satorra_bentler_trace_complement <- function(Gamma = NULL,
     # FIXME: inequality constraints are ignored!
     if (lavmodel@eq.constraints) {
       Delta.all <- Delta.all %*% lavmodel@eq.constraints.K
-    } else if (.hasSlot(lavmodel, "ceq.simple.only") &&
-      lavmodel@ceq.simple.only) {
+    } else if (lavmodel@ceq.simple.only) {
       Delta.all <- Delta.all %*% lavmodel@ceq.simple.K
     }
 

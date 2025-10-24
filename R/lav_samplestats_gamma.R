@@ -26,6 +26,7 @@ lavGamma <- function(object, group = NULL, missing = "listwise",
 
   # 1. object is lavaan object
   if (inherits(object, "lavaan")) {
+    object <- lav_object_check_version(object)
     lav_object_gamma(
       lavobject = object, ADF = ADF,
       model.based = model.based, Mplus.WLS = Mplus.WLS
@@ -135,27 +136,7 @@ lav_object_gamma <- function(lavobject = NULL,
     lavdata <- lavobject@Data
     lavoptions <- lavobject@Options
     lavsamplestats <- lavobject@SampleStats
-    if (.hasSlot(lavobject, "h1")) {
-      lavh1 <- lavobject@h1
-    } else {
-      # only for <0.6
-      out <- lav_h1_implied_logl(
-        lavdata = lavdata,
-        lavsamplestats = lavsamplestats,
-        lavpartable = lavobject@ParTable,
-        lavoptions = lavoptions
-      )
-      h1.implied <- out$implied
-      h1.loglik <- out$logl$loglik
-      h1.loglik.group <- out$logl$loglik.group
-      lavh1 <- list(
-        implied = h1.implied,
-        loglik = h1.loglik,
-        loglik.group = h1.loglik.group
-      )
-      lavoptions$gamma.n.minus.one <- FALSE
-      lavoptions$gamma.unbiased <- FALSE
-    }
+    lavh1 <- lavobject@h1
     lavimplied <- lavobject@implied
   }
 

@@ -25,6 +25,8 @@ lavCor <- function(object,
                    output = "cor") {
   # shortcut if object = lavaan object
   if (inherits(object, "lavaan")) {
+    # check object
+    object <- lav_object_check_version(object)
     dotdotdot <- list(...)
     if (length(dotdotdot) > 0L) {
       for (j in seq_along(dotdotdot)) {

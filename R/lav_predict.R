@@ -55,6 +55,9 @@ lavPredict <- function(object, newdata = NULL, # keep order of predict(), 0.6-7
                        append.data = FALSE, assemble = FALSE, # or TRUE?
                        level = 1L, optim.method = "bfgs", ETA = NULL,
                        drop.list.single.group = TRUE) {
+  # check object
+  object <- lav_object_check_version(object)
+
   # catch efaList objects
   if (inherits(object, "efaList")) {
     # kill object$loadings if present
@@ -72,16 +75,7 @@ lavPredict <- function(object, newdata = NULL, # keep order of predict(), 0.6-7
   lavmodel <- object@Model
   lavdata <- object@Data
   lavsamplestats <- object@SampleStats
-  # backward compatibility
-  if (.hasSlot(object, "h1")) {
-    lavh1 <- object@h1
-  } else {
-    lavh1 <- lav_h1_implied_logl(
-      lavdata = object@Data,
-      lavsamplestats = object@SampleStats,
-      lavoptions = object@Options
-    )
-  }
+  lavh1 <- object@h1
   lavimplied <- object@implied
   lavpartable <- object@ParTable
 
@@ -927,8 +921,7 @@ lav_predict_eta_normal <- function(lavobject = NULL, # for convenience
     Yc <- t(t(data.obs.g) - EY.g)
 
     # sampling weights? -- CHECKME: needed??
-    if (.hasSlot(lavdata, "weights") &&
-        !is.null(lavdata@weights[[g]]) && level == 1L) {
+    if (!is.null(lavdata@weights[[g]]) && level == 1L) {
       # EY.g is already weighted
       # use sampling.weights.normalization == "group"
       WT <- lavdata@weights[[g]]
@@ -1263,8 +1256,7 @@ lav_predict_eta_bartlett <- function(lavobject = NULL, # for convenience
     Yc <- t(t(data.obs.g) - EY.g)
 
     # sampling weights? CHECKME: needed??
-    if (.hasSlot(lavdata, "weights") &&
-        !is.null(lavdata@weights[[g]]) && level == 1L) {
+    if (!is.null(lavdata@weights[[g]]) && level == 1L) {
       # EY.g is already weighted
       # use sampling.weights.normalization == "group"
       WT <- lavdata@weights[[g]]

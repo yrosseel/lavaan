@@ -2,6 +2,8 @@
 setMethod(
   "show", "lavaanList",
   function(object) {
+    # check object
+    object <- lav_object_check_version(object)
     # show only basic information
     lav_lavaanList_short_summary(object, print = TRUE)
   }
@@ -64,6 +66,9 @@ lav_lavaanList_summary <- function(object,
                                    pvalue = TRUE,
                                    print = TRUE,
                                    nd = 3L) {
+  # check object
+  object <- lav_object_check_version(object)
+
   out <- list()
 
   if (header) {
@@ -279,6 +284,8 @@ lav_lavaanList_summary <- function(object,
 setMethod(
   "coef", "lavaanList",
   function(object, type = "free", labels = TRUE, ...) {
+    # check object
+    object <- lav_object_check_version(object)
     dotdotdot <- list(...)
     if (length(dotdotdot) > 0L) {
       for (j in seq_along(dotdotdot)) {
@@ -297,6 +304,8 @@ setMethod(
 
 lav_lavaanList_partable <- function(object, what = "est",
                                     type = "free", labels = TRUE) {
+  # check object
+  object <- lav_object_check_version(object)
   if ("partable" %in% object@meta$store.slots) {
     if (what %in% names(object@ParTableList[[1]])) {
       OUT <- sapply(object@ParTableList, "[[", what)

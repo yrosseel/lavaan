@@ -58,7 +58,7 @@ lav_lavaan_step17_lavaan <- function(lavmc = NULL,
   )
 
   # if model.type = "efa", add standardized solution to partable
-  if ((.hasSlot(lavmodel, "nefa")) && (lavmodel@nefa > 0L)) {
+  if (lavmodel@nefa > 0L) {
     if (lav_verbose()) {
       cat("computing standardized solution ... ")
     }

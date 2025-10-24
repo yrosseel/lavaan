@@ -25,6 +25,9 @@ estfun.lavaan <- lavScores <- function(object, scaling = FALSE, # nolint
                                        remove.empty.cases = TRUE) {
   stopifnot(inherits(object, "lavaan"))
 
+  # check object
+  object <- lav_object_check_version(object)
+
   # what if estimator is not ML or WLS?
   # avoid hard error (using stop); throw a warning, and return an empty matrix
   if (!object@Options$estimator %in% c("ML", "WLS", "GLS", "ULS")) {

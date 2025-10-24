@@ -173,6 +173,9 @@ lav_residuals <- function(object, type = "raw", h1 = TRUE, custom.rmr = NULL,
                           rename.cov.cor = FALSE,
                           add.labels = FALSE, add.class = FALSE,
                           drop.list.single.group = FALSE) {
+  # check object
+  object <- lav_object_check_version(object)
+
   # type
   type <- tolower(type)[1]
 

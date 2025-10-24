@@ -78,11 +78,7 @@ lav_model_set_parameters <- function(lavmodel = NULL, x = NULL) {
     tmp[[mm]][m.free.idx] <- x[x.free.idx]
   }
 
-  if (.hasSlot(lavmodel, "correlation")) {
-    correlation <- lavmodel@correlation
-  } else {
-    correlation <- FALSE
-  }
+  correlation <- lavmodel@correlation
 
   # categorical? set categorical theta elements (if any)
   if (lavmodel@categorical || correlation) {
@@ -125,7 +121,7 @@ lav_model_set_parameters <- function(lavmodel = NULL, x = NULL) {
     }
   }
 
-  if (.hasSlot(lavmodel, "composites") && lavmodel@composites) {
+  if (lavmodel@composites) {
     nmat <- lavmodel@nmat
     if (lavmodel@representation == "LISREL") {
       for (g in 1:lavmodel@nblocks) {
@@ -150,12 +146,7 @@ lav_model_set_parameters <- function(lavmodel = NULL, x = NULL) {
 lav_model_x2GLIST <- function(lavmodel = NULL, x = NULL,
                               type = "free", setDelta = TRUE,
                               m.el.idx = NULL, x.el.idx = NULL) {
-  if (.hasSlot(lavmodel, "correlation")) {
-    correlation <- lavmodel@correlation
-  } else {
-    correlation <- FALSE
-  }
-
+  correlation <- lavmodel@correlation
 
   GLIST <- lavmodel@GLIST
   for (mm in 1:length(GLIST)) {
@@ -236,7 +227,7 @@ lav_model_x2GLIST <- function(lavmodel = NULL, x = NULL,
     }
   }
 
-  if (.hasSlot(lavmodel, "composites") && lavmodel@composites) {
+  if (lavmodel@composites) {
     nmat <- lavmodel@nmat
     if (lavmodel@representation == "LISREL") {
       for (g in 1:lavmodel@nblocks) {

@@ -29,15 +29,7 @@ lav_model_h1_omega <- function(lavobject = NULL,
     lavsamplestats <- lavobject@SampleStats
     lavdata <- lavobject@Data
     lavimplied <- lavobject@implied
-    if (.hasSlot(lavobject, "h1")) {
-      lavh1 <- lavobject@h1
-    } else {
-      lavh1 <- lav_h1_implied_logl(
-        lavdata = lavobject@Data,
-        lavsamplestats = lavobject@SampleStats,
-        lavoptions = lavobject@Options
-      )
-    }
+    lavh1 <- lavobject@h1
     lavcache <- lavobject@Cache
     lavoptions <- lavobject@Options
   }

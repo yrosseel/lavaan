@@ -7,6 +7,10 @@
 lavTest <- function(lavobject, test = "standard",
                     scaled.test = "standard",
                     output = "list", drop.list.single = TRUE) {
+
+  # check object
+  lavobject <- lav_object_check_version(lavobject)
+
   # check output
   output.valid <- c("list", "text")
   if (!any(output == output.valid)) {
@@ -17,6 +21,11 @@ lavTest <- function(lavobject, test = "standard",
   }
   # extract 'test' slot
   TEST <- lavobject@test
+
+  # backwards compatibility:
+  # if (length(TEST) > 0L && is.null(names(TEST))) {
+  #   names(TEST) <- sapply(TEST, "[[", "test")
+  # }
 
   # which test?
   if (!missing(test)) {

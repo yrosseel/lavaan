@@ -570,7 +570,6 @@ lav_model_vcov <- function(lavmodel = NULL,
         # new in 0.6-9 (to mimic method="lm" in effectLite)
         # special case: univariate regression in each group
         if (lavoptions$mimic == "lm" &&
-          .hasSlot(lavmodel, "modprop") &&
           all(lavmodel@modprop$uvreg)) {
           N <- sum(unlist(lavsamplestats@nobs) -
             (unlist(lavmodel@modprop$nexo) + 1L))
@@ -591,7 +590,7 @@ lav_model_vcov <- function(lavmodel = NULL,
 
     # check if VarCov is pd -- new in 0.6-2
     # mostly important if we have (in)equality constraints (MASS::ginv!)
-    if (.hasSlot(lavmodel, "ceq.simple.only") && lavmodel@ceq.simple.only) {
+    if (lavmodel@ceq.simple.only) {
       # do nothing
     } else if (!is.null(lavoptions$check.vcov) && lavoptions$check.vcov) {
       eigvals <- eigen(VarCov,
@@ -681,7 +680,7 @@ lav_model_vcov_se <- function(lavmodel, lavpartable, VCOV = NULL,
   # check for negative values (what to do: NA or 0.0?)
   x.var[x.var < 0] <- as.numeric(NA)
   x.se <- sqrt(x.var)
-  if (.hasSlot(lavmodel, "ceq.simple.only") && lavmodel@ceq.simple.only) {
+  if (lavmodel@ceq.simple.only) {
     GLIST <- lav_model_x2GLIST(
       lavmodel = lavmodel, x = x.se,
       type = "unco"
@@ -746,8 +745,7 @@ lav_model_vcov_se <- function(lavmodel, lavpartable, VCOV = NULL,
       if (inherits(JAC, "try-error")) { # eg. pnorm()
         JAC <- lav_func_jacobian_simple(func = lavmodel@def.function, x = x)
       }
-      if (.hasSlot(lavmodel, "ceq.simple.only") &&
-        lavmodel@ceq.simple.only) {
+      if (lavmodel@ceq.simple.only) {
         JAC <- JAC %*% t(lavmodel@ceq.simple.K)
       }
       def.cov <- JAC %*% VCOV %*% t(JAC)

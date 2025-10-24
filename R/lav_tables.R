@@ -38,6 +38,9 @@ lavTables <- function(object,
                       # output format
                       output = "data.frame",
                       patternAsString = TRUE) {
+  # check object
+  object <- lav_object_check_version(object)
+
   # check input
   if (!(dimension == 0L || dimension == 1L || dimension == 2L)) {
     lav_msg_stop(gettext(

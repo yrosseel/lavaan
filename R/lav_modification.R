@@ -17,6 +17,9 @@ modindices <- function(object,
                        free.remove = TRUE,
                        na.remove = TRUE,
                        op = NULL) {
+  # check object
+  object <- lav_object_check_version(object)
+
   # check if model has converged
   if (object@optim$npar > 0L && !object@optim$converged) {
     lav_msg_warn(gettext("model did not converge"))

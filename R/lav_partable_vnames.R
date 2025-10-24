@@ -8,6 +8,8 @@
 # public version
 lavNames <- function(object, type = "ov", ...) { # nolint
   if (inherits(object, "lavaan") || inherits(object, "lavaanList")) {
+    # check object
+    object <- lav_object_check_version(object)
     partable <- object@ParTable
   } else if (inherits(object, "list") ||
     inherits(object, "data.frame")) {
