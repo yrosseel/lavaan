@@ -25,7 +25,7 @@ lav_object_check_version <- function(object = NULL) {
   # do we have a version slot?
   if(.hasSlot(object, "version")) {
     has_version_flag <- TRUE
-    lavobject_version <- object@version
+    lavobject_version <- object@version[1] # lavaan.mi has two
     lavaanpkg_version <- version <- read.dcf(
       file = system.file("DESCRIPTION", package = "lavaan"),
       fields = "Version"
