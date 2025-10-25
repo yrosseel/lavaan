@@ -386,6 +386,7 @@ lav_sam_veta2 <- function(FS = NULL, M = NULL,
                           dummy.lv.names = character(0L),
                           alpha.correction = 0L,
                           lambda.correction = TRUE,
+                          fs.outlier.idx = integer(0L),
                           return.FS = FALSE,
                           return.cov.iveta2 = TRUE,
                           extra = FALSE) {
@@ -538,6 +539,12 @@ lav_sam_veta2 <- function(FS = NULL, M = NULL,
       IVETA2[i,] <- c(ieeta2[lv.keep],
                       lav_matrix_vech(iveta2[lv.keep, lv.keep]))
     } # N
+    # experimental:
+    # remove outliers in FS?
+    #if (length(fs.outlier.idx) > 0L) {
+    #  IVETA2 <- IVETA2[-fs.outlier.idx, ,drop = FALSE]
+    #  N <- N - length(fs.outlier.idx)
+    #}
     cov.iveta2 <- cov(IVETA2) * (N-1)/N
   }
 

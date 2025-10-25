@@ -2,6 +2,24 @@
 #
 # initial version: YR 25/03/2009
 
+# outlier detection based on inter-quartile range
+# same as boxplot.stats, but returning the indices (not the values)
+lav_utils_outlier_idx <- function (x, coef = 1.5) {
+  if (coef < 0)
+      stop("'coef' must not be negative")
+  stats <- stats::fivenum(x, na.rm = TRUE)
+  iqr <- diff(stats[c(2, 4)])
+  if (coef == 0)
+    return(seq_len(length(x)))
+  else {
+    out <- if (!is.na(iqr)) {
+      which(x < (stats[2L] - coef * iqr) | x > (stats[4L] + coef * iqr))
+    }
+    else which(!is.finite(x))
+  }
+  out
+}
+
 # sd with trimming
 lav_utils_sd <- function(x, na.rm = TRUE, trim = 0) {
   if (isTRUE(na.rm))

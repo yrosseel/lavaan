@@ -215,6 +215,7 @@ lav_sam_step1_local <- function(STEP1 = NULL, FIT = NULL, Y = NULL,
   } else {
     EETA <- NULL
   }
+  #fs.outlier.idx <- vector("list", nblocks)
   M <- vector("list", nblocks)
   LV.NAMES <- vector("list", nblocks)
 
@@ -469,6 +470,9 @@ lav_sam_step1_local <- function(STEP1 = NULL, FIT = NULL, Y = NULL,
       colnames(FS.b) <- lv.names1
       # FIXME: what about observed covariates?
 
+      # get (approximate) indices with outliers
+      #fs.outlier.idx[[b]] <- lav_utils_outlier_idx(lav_mdist(FS.b), coef = 1.5)
+
       # EETA2
       EETA1 <- EETA[[b]]
       EETA[[b]] <- lav_sam_eeta2(
@@ -488,6 +492,7 @@ lav_sam_step1_local <- function(STEP1 = NULL, FIT = NULL, Y = NULL,
           dummy.lv.names = lv.names.b[dummy.lv.idx],
           alpha.correction = local.options[["alpha.correction"]],
           lambda.correction = local.options[["lambda.correction"]],
+          #fs.outlier.idx = fs.outlier.idx[[b]],
           return.FS = return.FS,
           return.cov.iveta2 = return.cov.iveta2,
           extra = TRUE
@@ -529,6 +534,7 @@ lav_sam_step1_local <- function(STEP1 = NULL, FIT = NULL, Y = NULL,
 	names(FS.mean)    <- FIT@Data@block.label
     names(FS)         <- FIT@Data@block.label
     names(COV.IVETA2) <- FIT@Data@block.label
+    #names(fs.outlier.idx) <- FIT@Data@block.label
     #names(FS.gamma) <- FIT@Data@block.label
   }
 
@@ -555,6 +561,7 @@ lav_sam_step1_local <- function(STEP1 = NULL, FIT = NULL, Y = NULL,
   STEP1$FS.mean  <- FS.mean
   STEP1$FS       <- FS
   STEP1$COV.IVETA2 <- COV.IVETA2
+  #STEP1$fs.outlier.idx <- fs.outlier.idx
   #STEP1$FS.gamma <- FS.gamma
   STEP1$LV.NAMES <- LV.NAMES
   # store also sam.method and local.options
@@ -1147,6 +1154,11 @@ lav_sam_gamma_add <- function(STEP1 = NULL, FIT = NULL, group = 1L) {
   n_eeta_veta <- length(STEP1$EETA[[1]]) + length(lav_matrix_vech(STEP1$VETA[[1]]))
   CVETA <- matrix(0, nrow = n_eeta_veta, ncol = length(x.step1))
   for(i in 1:N) {
+    # experimental: remove fs outliers
+    #if (i %in% STEP1$fs.outlier.idx[[1]]) {
+    #  next
+    #}
+
     # factor score
     fi <- rbind(1, this.M %*% (Y[i,] - this.nu))
 
@@ -1166,6 +1178,7 @@ lav_sam_gamma_add <- function(STEP1 = NULL, FIT = NULL, group = 1L) {
                                                  keep.idx = keep.idx)
     VETA2 <- ((JAC.veta2.fi.i %*% JAC.this2fi.i) + JAC.veta2.this.i) %*% JAC.x2this
 
+    # FIXME: remove outliers somehow?
     CVETA <- CVETA + 1/N * rbind(EETA2, VETA2)
   }
 
