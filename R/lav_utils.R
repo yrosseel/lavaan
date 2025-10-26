@@ -6,7 +6,7 @@
 # same as boxplot.stats, but returning the indices (not the values)
 lav_utils_outlier_idx <- function (x, coef = 1.5) {
   if (coef < 0)
-      stop("'coef' must not be negative")
+   lav_msg_stop(gettext("'coef' must not be negative"))
   stats <- stats::fivenum(x, na.rm = TRUE)
   iqr <- diff(stats[c(2, 4)])
   if (coef == 0)

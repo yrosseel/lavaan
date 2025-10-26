@@ -379,6 +379,8 @@ lavTestLRT <- function(object, ..., method = "default", test = "default",
 
   # unname
   STAT.delta <- unname(STAT.delta)
+  # zap small values (for near-zero values) (anova class does not use rounding)
+  STAT.delta <- round(STAT.delta, 10)
   Df.delta <- unname(Df.delta)
   STAT.delta.orig <- unname(STAT.delta.orig)
   Df.delta.orig <- unname(Df.delta.orig)

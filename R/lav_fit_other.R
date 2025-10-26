@@ -10,7 +10,7 @@
 # Hoelter Critical N (CN)
 lav_fit_cn <- function(X2 = NULL, df = NULL, N = NULL, alpha = 0.05) {
   # catch df=0, X2=0
-  if (df == 0 && X2 < .Machine$double.eps) {
+  if (df == 0 && X2 < sqrt(.Machine$double.eps)) { # added sqrt() in 0.6-21
     CN <- as.numeric(NA)
   } else {
     CN <- qchisq(p = (1 - alpha), df = df) / (X2 / N) + 1
