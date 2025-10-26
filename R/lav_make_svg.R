@@ -194,7 +194,7 @@ lav_make_svg <- function(nodes.edges,
                    zz)
       }
       midden <- (van + naar) * 0.5
-    } else {  # path Q (quadratic Bézier)
+    } else {  # path Q (quadratic B\'{e}zier)
       if (van[1L] <= naar[1L]) {
         writeLines(paste0('<path id="L', id, '" d="M ', van[1L], ' ',
                           van[2L], ' Q ', control[1L], ' ', control[2L],

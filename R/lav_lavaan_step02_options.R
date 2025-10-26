@@ -49,10 +49,10 @@ lav_lavaan_step02_options <- function(slotOptions = NULL, # nolint
   #     c("observed", "observed")
   #   if there is an operator "~1" in flat.model and sample.mean not NULL,
   #     set opt$meanstructure TRUE
-  #   if there are no exogene variables but conditional.x explicitly
+  #   if there are no exogenous variables but conditional.x explicitly
   #     requested: ** warning **
-  #   if there are no exogene variables set opt$conditional.x FALSE
-  #   if there are no exogene variables and fixed.x not explicitly requested,
+  #   if there are no exogenous variables set opt$conditional.x FALSE
+  #   if there are no exogenous variables and fixed.x not explicitly requested,
   #     set opt$fixed.x to FALSE
   #   if allow.empty.cell and estimator not Bayes, issue a warning
 
@@ -224,6 +224,9 @@ lav_lavaan_step02_options <- function(slotOptions = NULL, # nolint
 
     # fill in remaining "default" values
     lavoptions <- lav_options_set(opt)
+
+    # store check.sigma.pd in lavaan_cache_env
+    assign("opt.check.sigma.pd", opt$check.sigma.pd, lavaan_cache_env)
 
     if (lav_verbose()) {
       cat(" done.\n")

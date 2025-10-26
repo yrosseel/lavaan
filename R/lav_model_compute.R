@@ -1,7 +1,11 @@
 computeSigmaHat <- function(lavmodel = NULL, GLIST = NULL, extra = FALSE,
-                            delta = TRUE) {
+                            delta = TRUE, check.sigma.pd = "chol") {
   # state or final?
   if (is.null(GLIST)) GLIST <- lavmodel@GLIST
+
+  # check.sigma.pd -- new in 0.6-21
+  check.sigma.pd <- get0("opt.check.sigma.pd", lavaan_cache_env,
+                         ifnotfound = "chol")
 
   nmat <- lavmodel@nmat
   nblocks <- lavmodel@nblocks
@@ -29,9 +33,8 @@ computeSigmaHat <- function(lavmodel = NULL, GLIST = NULL, extra = FALSE,
     if (lav_debug()) print(Sigma.hat[[g]])
 
     if (extra) {
-      speed <- if (exists("lavaan_speed_cholesky")) lavaan_speed_cholesky() else FALSE
       # check if matrix is positive definite
-      if (speed) {
+      if (check.sigma.pd == "chol") {
         # fast path: try Cholesky directly
         cS <- tryCatch(chol(Sigma.hat[[g]]), error = function(e) NULL)
         is_pd <- !is.null(cS)
@@ -47,23 +50,12 @@ computeSigmaHat <- function(lavmodel = NULL, GLIST = NULL, extra = FALSE,
         attr(Sigma.hat[[g]], "inv") <- Sigma.hat.inv
         attr(Sigma.hat[[g]], "log.det") <- Sigma.hat.log.det
       } else {
-        if (speed) {
-          # reuse Cholesky factor computed above
-          Sigma.hat.inv <- chol2inv(cS)
-          d <- diag(cS)
-          Sigma.hat.log.det <- 2 * sum(log(d))
-        }else{
-          ## since we already do an 'eigen' decomposition, we should
-          ## 'reuse' that information, instead of doing a new cholesky?
-          # EV <- eigen(Sigma.hat[[g]], symmetric = TRUE)
-          # Sigma.hat.inv <- tcrossprod(EV$vectors / rep(EV$values,
-          #        each = length(EV$values)), EV$vectors)
-          # Sigma.hat.log.det <- sum(log(EV$values))
-
-          ## --> No, chol() is much (x2) times faster
-          Sigma.hat.inv <- inv.chol(Sigma.hat[[g]], logdet = TRUE)
-          Sigma.hat.log.det <- attr(Sigma.hat.inv, "logdet")
+        if (check.sigma.pd != "chol") {
+          cS <- chol(Sigma.hat[[g]])
         }
+        Sigma.hat.inv <- chol2inv(cS)
+        d <- diag(cS)
+        Sigma.hat.log.det <- 2 * sum(log(d))
         attr(Sigma.hat[[g]], "po") <- TRUE
         attr(Sigma.hat[[g]], "inv") <- Sigma.hat.inv
         attr(Sigma.hat[[g]], "log.det") <- Sigma.hat.log.det
@@ -120,19 +112,28 @@ computeSigmaHatJoint <- function(lavmodel = NULL, GLIST = NULL, extra = FALSE,
 
     if (extra) {
       # check if matrix is positive definite
-      ev <- eigen(Sigma.hat[[g]], symmetric = TRUE, only.values = TRUE)$values
-      if (any(ev < .Machine$double.eps) || sum(ev) == 0) {
+      if (check.sigma.pd == "chol") {
+        # fast path: try Cholesky directly
+        cS <- tryCatch(chol(Sigma.hat[[g]]), error = function(e) NULL)
+        is_pd <- !is.null(cS)
+      } else {
+        # slow path: eigenvalue-based PD check
+        ev <- eigen(Sigma.hat[[g]], symmetric = TRUE, only.values = TRUE)$values
+        is_pd <- !(any(ev < sqrt(.Machine$double.eps)) || sum(ev) == 0)
+      }
+      if (!is_pd) {
         Sigma.hat.inv <- MASS::ginv(Sigma.hat[[g]])
         Sigma.hat.log.det <- log(.Machine$double.eps)
         attr(Sigma.hat[[g]], "po") <- FALSE
         attr(Sigma.hat[[g]], "inv") <- Sigma.hat.inv
         attr(Sigma.hat[[g]], "log.det") <- Sigma.hat.log.det
       } else {
-        ## FIXME
-        ## since we already do an 'eigen' decomposition, we should
-        ## 'reuse' that information, instead of doing a new cholesky
-        Sigma.hat.inv <- inv.chol(Sigma.hat[[g]], logdet = TRUE)
-        Sigma.hat.log.det <- attr(Sigma.hat.inv, "logdet")
+        if (check.sigma.pd != "chol") {
+          cS <- chol(Sigma.hat[[g]])
+        }
+        Sigma.hat.inv <- chol2inv(cS)
+        d <- diag(cS)
+        Sigma.hat.log.det <- 2 * sum(log(d))
         attr(Sigma.hat[[g]], "po") <- TRUE
         attr(Sigma.hat[[g]], "inv") <- Sigma.hat.inv
         attr(Sigma.hat[[g]], "log.det") <- Sigma.hat.log.det
@@ -197,6 +198,10 @@ computeMuHat <- function(lavmodel = NULL, GLIST = NULL) {
 computeMuHatJoint <- function(lavmodel = NULL, GLIST = NULL) {
   # state or final?
   if (is.null(GLIST)) GLIST <- lavmodel@GLIST
+
+  # check.sigma.pd -- new in 0.6-21
+  check.sigma.pd <- get0("opt.check.sigma.pd", lavaan_cache_env,
+                         ifnotfound = "chol")
 
   nmat <- lavmodel@nmat
   nblocks <- lavmodel@nblocks

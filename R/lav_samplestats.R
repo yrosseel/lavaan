@@ -1067,7 +1067,12 @@ lav_samplestats_from_data <- function(lavdata = NULL,
           }
         } else {
           if (estimator == "WLS") {
-            WLS.V[[g]] <- inv.chol(CAT$WLS.W * nobs[[g]])
+            cS <- tryCatch(chol(CAT$WLS.W * nobs[[g]]),
+                           error = function(e) NULL)
+            if (is.null(cS)) {
+              lav_msg_stop(gettext("could not invert CAT$WLS.W"))
+            }
+            WLS.V[[g]] <- chol2inv(cS)
           } else if (estimator == "DWLS") {
             dacov <- diag(CAT$WLS.W * nobs[[g]])
             # WLS.V[[g]] <- diag(1/dacov, nrow=NROW(CAT$WLS.W),

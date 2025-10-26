@@ -38,7 +38,7 @@ Model features:
       conditional on the exogenous `x' covariates; the model-implied sample 
       statistics only include the non-x variables. If \code{FALSE}, the 
       exogenous `x' variables are modeled jointly with the other variables, and 
-      the model-implied statistics refect both sets of variables. If
+      the model-implied statistics reflect both sets of variables. If
       \code{"default"}, the value is set depending on the estimator, and
       whether or not the model involves categorical endogenous variables.}
     \item{\code{fixed.x}:}{If \code{TRUE}, the exogenous `x' covariates are 
@@ -269,14 +269,14 @@ Estimation options:
       estimator with robust standard errors
       and a mean or mean and variance adjusted test statistic.}
     \item{\code{likelihood}:}{Only relevant for ML estimation. If 
-      \code{"wishart"}, the wishart likelihood approach is used. In this 
+      \code{"wishart"}, the Wishart likelihood approach is used. In this 
       approach, the covariance matrix has been divided by N-1, and both 
       standard errors and test statistics are based on N-1.
       If \code{"normal"}, the normal likelihood approach is used. Here,
       the covariance matrix has been divided by N, and both standard errors
       and test statistics are based on N. If \code{"default"}, it depends
       on the mimic option: if \code{mimic="lavaan"} or \code{mimic="Mplus"},
-      normal likelihood is used; otherwise, wishart likelihood is used.}
+      normal likelihood is used; otherwise, Wishart likelihood is used.}
     \item{\code{link}:}{Not used yet. This is just a placeholder until
       the MML estimator is back.}
     \item{\code{information}:}{If \code{"expected"}, the expected 
@@ -507,6 +507,12 @@ Check options:
       the starting values are checked for possibly 
       inconsistent values (for example values implying correlations larger 
       than one). If needed, a warning is given.}
+    \item{\code{check.sigma.pd}:}{Character. If \code{"chol"}, a Cholesky
+      decomposition is used to check if the model implied covariance matrix
+      (Sigma) is positive definite. If \code{"eigen"}, an eigen decomposition 
+      is used to check if Sigma is positive definite. The latter was the
+      default until 0.6-20. From 0.6-21 onwards, \code{"chol"} became the
+      default (as it is much faster).}
     \item{\code{check.gradient}:}{Logical. If \code{TRUE}, and the model
       converged, a warning
       is given if the optimizer decided that a (local) solution has
@@ -523,7 +529,7 @@ Check options:
     \item{\code{check.vcov}:}{Logical. If \code{TRUE}, and the model converged,
       we check if the variance-covariance matrix of the free parameters
       is positive definite. We take into account possible equality and
-      acitive inequality constraints. If needed, a warning is given.}
+      active inequality constraints. If needed, a warning is given.}
     \item{\code{check.lv.names}:}{Logical. If \code{TRUE}, and latent variables
       are defined in the model, lavaan will stop with an error message if
       a latent variable name also occurs in the data (implying it is also

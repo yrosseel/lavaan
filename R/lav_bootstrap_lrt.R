@@ -138,7 +138,7 @@ bootstrapLRT <- function(h0 = NULL, h1 = NULL, R = 1000L,
       ghat <- h0@test[[1]]$stat.group[[g]]
       df <- h0@test[[1]]$df
       Sigmahat <- Sigma.hat[[g]]
-      Sigmahat.inv <- inv.chol(Sigmahat)
+      Sigmahat.inv <- chol2inv(chol(Sigmahat))
       nmv <- nrow(Sigmahat)
       n <- data@nobs[[g]]
 

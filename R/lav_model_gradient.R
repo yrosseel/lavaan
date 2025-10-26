@@ -1211,9 +1211,7 @@ computeOmega <- function(Sigma.hat = NULL, Mu.hat = NULL,
           nobs <- M[[p]][["freq"]]
           var.idx <- M[[p]][["var.idx"]]
 
-          Sigma.inv <- inv.chol(Sigma.hat[[g]][var.idx, var.idx],
-            logdet = FALSE
-          )
+          Sigma.inv <- chol2inv(chol(Sigma.hat[[g]][var.idx, var.idx]))
           Mu <- Mu.hat[[g]][var.idx]
           W.tilde <- SX + tcrossprod(MX - Mu)
 

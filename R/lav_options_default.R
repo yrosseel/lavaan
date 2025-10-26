@@ -459,6 +459,7 @@ lav_options_default <- function() {
 
   # sanity checks
   elm("check.start", TRUE, bl = TRUE)
+  elm("check.sigma.pd", "chol", chr = c("chol", "eigen")) # stored in env
   elm("check.post", TRUE, bl = TRUE)
   elm("check.gradient", TRUE, bl = TRUE)
   elm("check.vcov", TRUE, bl = TRUE)
@@ -493,6 +494,7 @@ lav_options_default <- function() {
   # ------------- store info in lavaan environment ---------------
   assign("opt.default", opt.default, lavaan_cache_env)
   assign("opt.check", opt.check, lavaan_cache_env)
+  assign("opt.check.sigma.pd", "chol", lavaan_cache_env)
 
   # return defaults
   return(opt.default)

@@ -169,7 +169,7 @@ lav_scores_ml <- function(ntab = 0L,
       nvar <- ncol(lavsamplestats@cov[[g]])
       mu_hat <- moments$mean
       X <- lavdata@X[[g]]
-      sigma_inv <- inv.chol(sigma_hat, logdet = FALSE)
+      sigma_inv <- chol2inv(chol(sigma_hat)) # FIXME: check for pd?
       group.w <- (unlist(lavsamplestats@nobs) / lavsamplestats@ntotal)
 
       J <- matrix(1, 1L, ntab[g]) ## FIXME: needed? better maybe rowSums/colSums?
@@ -238,9 +238,8 @@ lav_scores_ml <- function(ntab = 0L,
         J <- matrix(1, 1L, nobs) # [var.idx]
         J2 <- matrix(1, nvar, nvar)[var.idx, var.idx, drop = FALSE]
         diag(J2) <- 0.5
-        sigma_inv <- inv.chol(sigma_hat[var.idx, var.idx, drop = FALSE],
-          logdet = FALSE
-        )
+        # FIXME: check for pd?
+        sigma_inv <- chol2inv(chol(sigma_hat[var.idx, var.idx, drop = FALSE]))
         Mu <- mu_hat[var.idx]
         mean.diff <- t(t(X) - Mu %*% J)
 
