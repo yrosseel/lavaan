@@ -1415,7 +1415,7 @@ computeNU.LISREL <- function(MLIST = NULL,
     LAMBDA..IB.inv <- LAMBDA %*% IB.inv
     LAMBDA..IB.inv.dummy <- LAMBDA..IB.inv[ov.dummy.idx, lv.dummy.idx]
     ALPHA[lv.dummy.idx] <-
-      solve(LAMBDA..IB.inv.dummy) %*% sample.mean[ov.dummy.idx]
+      solve(LAMBDA..IB.inv.dummy, sample.mean[ov.dummy.idx])
   } else {
     ALPHA <- matrix(0, nfac, 1L)
   }

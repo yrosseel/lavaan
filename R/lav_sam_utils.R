@@ -506,7 +506,7 @@ lav_sam_veta2 <- function(FS = NULL, M = NULL,
 	  cutoff <- 1 + 2/N # be more conservative for VETA2
       if (lambda < cutoff) {
         #lambda.star <- lambda - 1 / (N - 1)
-		lambda.star <- max(c(0, lambda - 2/N))
+		lambda.star <- max(c(0, lambda - ncol(Var.FS2)/(N - 1)))
         VETA2 <- Var.FS2 - lambda.star * Var.ERROR
       } else {
         VETA2 <- Var.FS2 - Var.ERROR
