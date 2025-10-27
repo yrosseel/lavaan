@@ -23,10 +23,10 @@ lav_object_check_version <- function(object = NULL) {
   check_not_needed_flag <- TRUE
 
   # do we have a version slot?
-  if(.hasSlot(object, "version")) {
+  if (.hasSlot(object, "version")) {
     has_version_flag <- TRUE
     lavobject_version <- object@version[1] # lavaan.mi has two
-    lavaanpkg_version <- version <- read.dcf(
+    lavaanpkg_version <- read.dcf(
       file = system.file("DESCRIPTION", package = "lavaan"),
       fields = "Version"
     )[1]
@@ -49,7 +49,8 @@ lav_object_check_version <- function(object = NULL) {
   suppressWarnings(lavobject <- object)
   ngroups <- lav_partable_ngroups(lavobject@ParTable)
   nblocks <- lav_partable_nblocks(lavobject@ParTable)
-
+  nlevels <- lav_partable_nlevels(lavobject@ParTable)
+  
   if (!has_version_flag) { # pre 0.6 object!
     # 0.5-10 (25 Oct 2012)
     if (!.hasSlot(lavobject@Data, "group")) {
@@ -264,29 +265,76 @@ lav_object_check_version <- function(object = NULL) {
       lavobject@Model@nblocks <- nblocks
     }
     if (is.lavaan.object) {
+      if (!.hasSlot(lavobject@Data, "level.label")) {
+        lavobject@Data@level.label <- as.character(seq.int(nlevels))
+      }
+    } else {
+      for (j in seq_along(lavobject@DataList)) {
+        if (!.hasSlot(lavobject@DataList[[j]], "level.label")) {
+          lavobject@DataList[[j]]@level.label <- as.character(seq.int(nlevels))
+        }
+      }
+    }
+    if (is.lavaan.object) {
       if (!.hasSlot(lavobject@Data, "block.label")) {
-        lavobject@Data@block.label <- character(0L) # or length nblocks ?
-        lavobject@Data@level.label <- character(0L)
+        if (nlevels <= 1L) { 
+          if (ngroups <= 1L) {
+            lavobject@Data@block.label <- character(0L)
+          } else {
+            lavobject@Data@block.label <- lavobject@Data@group.label
+          }
+        } else {
+          if (ngroups <= 1L) {
+            lavobject@Data@block.label <- lavobject@Data@level.label
+          } else {
+            lavobject@Data@block.label <- 
+              paste(rep(lavobject@Data@group.label, 
+                        each = length(lavobject@Data@level.label)),
+                    rep(lavobject@Data@level.label, 
+                        times = length(lavobject@Data@group.label)),
+                    sep = "."
+              )
+          }
+        }
       }
     } else {
       for (j in seq_along(lavobject@DataList)) {
         if (!.hasSlot(lavobject@DataList[[j]], "block.label")) {
-          lavobject@DataList[[j]]@block.label <- character(0L) # or length nblocks ?
-          lavobject@DataList[[j]]@level.label <- character(0L)
+          if (nlevels <= 1L) { 
+            if (ngroups <= 1L) {
+              lavobject@DataList[[j]]@block.label <- character(0L)
+            } else {
+              lavobject@DataList[[j]]@block.label <- 
+                lavobject@DataList[[j]]@group.label
+            }
+          } else {
+            if (ngroups <= 1L) {
+              lavobject@DataList[[j]]@block.label <- 
+                lavobject@DataList[[j]]@level.label
+            } else {
+              lavobject@DataList[[j]]@block.label <- 
+                paste(rep(lavobject@DataList[[j]]@group.label, 
+                          each = length(lavobject@DataList[[j]]@level.label)),
+                      rep(lavobject@DataList[[j]]@level.label, 
+                          times = length(lavobject@DataList[[j]]@group.label)),
+                      sep = "."
+                )
+            }
+          }
         }
       }
     }
-
+    
     # 0.5-23 (24 Feb 2017)
     if (is.lavaan.object) {
       if (!.hasSlot(lavobject@Data, "nlevels")) {
-        lavobject@Data@nlevels <- 1L
+        lavobject@Data@nlevels <- nlevels
         lavobject@Data@Lp <- vector("list", ngroups)
       }
     } else {
       for (j in seq_along(lavobject@DataList)) {
         if (!.hasSlot(lavobject@DataList[[j]], "nlevels")) {
-          lavobject@DataList[[j]]@nlevels <- 1L
+          lavobject@DataList[[j]]@nlevels <- nlevels
           lavobject@DataList[[j]]@Lp <- vector("list", ngroups)
         }
       }
@@ -421,7 +469,7 @@ lav_object_check_version <- function(object = NULL) {
 
   # 0.6-4 (26 Apr 2019)
   if (!.hasSlot(lavobject@Model, "ceq.efa.JAC")) {
-    lavobject@Model@ceq.efa.JAC <- matrix(0, nrow <- 0L, ncol <- 0L)
+    lavobject@Model@ceq.efa.JAC <- matrix(0, nrow = 0L, ncol = 0L)
   }
 
   # 0.6-5 (7 Jul 2019)
@@ -469,7 +517,7 @@ lav_object_check_version <- function(object = NULL) {
     lavobject@Model@nx.unco <- lavobject@Model@nx.free
     lavobject@Model@x.unco.idx <- lavobject@Model@x.free.idx
     lavobject@Model@ceq.simple.only <- FALSE
-    lavobject@Model@ceq.simple.K <- matrix(0, nrow <- 0L, ncol <- 0L)
+    lavobject@Model@ceq.simple.K <- matrix(0, nrow = 0L, ncol = 0L)
   }
 
   # 0.6-13 (25 Jul 2022)
