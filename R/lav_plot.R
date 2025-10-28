@@ -23,25 +23,25 @@ lavplot <- lav_plot <- function(
              font.family = "Latin Modern Math, arial, Aerial, sans",
              standalone = FALSE)
 ) {
-  tmp <- lav_get_model_info(model,
+  tmp <- lav_model_plotinfo(model,
                             infile = infile,
                             varlv = varlv)
-  tmp <- lav_position_nodes(tmp,
+  tmp <- lav_plotinfo_positions(tmp,
                             placenodes = placenodes,
                             edgelabelsbelow = edgelabelsbelow,
                             group.covar.indicators = group.covar.indicators)
   mc <- match.call()
   create_rplot <- !is.null(mc$rplot) || (is.null(mc$tikz) && is.null(mc$svg))
   if (create_rplot)
-    do.call(lav_make_rplot, c(list(nodes.edges = tmp),
+    do.call(lav_plotinfo_rgraph, c(list(plotinfo = tmp),
                                    common.opts,
                                    rplot))
   if (!is.null(mc$tikz))
-    do.call(lav_make_tikz, c(list(nodes.edges = tmp),
+    do.call(lav_plotinfo_tikzcode, c(list(plotinfo = tmp),
                              common.opts,
                              tikz))
   if (!is.null(mc$svg))
-    do.call(lav_make_svg, c(list(nodes.edges = tmp),
+    do.call(lav_plotinfo_svgcode, c(list(plotinfo = tmp),
                              common.opts,
                              svg))
 }

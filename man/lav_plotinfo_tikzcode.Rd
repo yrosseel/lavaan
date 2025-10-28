@@ -1,21 +1,20 @@
-\name{lav_make_tikz}
-\alias{lav_make_tikz}
+\name{lav_plotinfo_tikzcode}
+\alias{lav_plotinfo_tikzcode}
 \title{Creates code to show a diagram in tikz format.}
 \usage{
-lav_make_tikz(nodes.edges,
-              outfile = "",
-              cex = 1.3,
-              sloped.labels = TRUE,
-              standalone = FALSE,
-              mlovcolors = c("lightgreen", "lightblue"),
-              lightness = 1,
-              italic = TRUE,
-              auto.subscript = TRUE
-              )
+lav_plotinfo_tikzcode(plotinfo,
+                      outfile = "",
+                      cex = 1.3,
+                      sloped.labels = TRUE,
+                      standalone = FALSE,
+                      mlovcolors = c("lightgreen", "lightblue"),
+                      lightness = 1,
+                      italic = TRUE,
+                      auto.subscript = TRUE
+                     )
 }
 \arguments{
-\item{nodes.edges}{A list with data.frames \code{nodes} and \code{edges} and
-integer \code{mlrij} as returned from \code{lav_position_nodes}.}
+\item{plotinfo}{A plotinfo structure as returned from \code{lav_plotinfo_positions}.}
 \item{outfile}{A connection or a character string, the file to store the code.}
 \item{cex}{Minimum distance between nodes in cm.}
 \item{sloped.labels}{logical, sloped labels for the edges.}
@@ -25,7 +24,7 @@ between the levels in a  multilevel model.}
 \item{lightness}{A scalar factor to modify the distances between nodes.}
 \item{italic}{Are labels to be in italic font? If FALSE the labels will be
 shown in mathrm font.}
-\item{auto.subscript}{Logical, see \code{\link{lav_format_label}}.}
+\item{auto.subscript}{Logical, see \code{\link{lav_label_code}}.}
 }
 \value{
 NULL, invisible
@@ -34,7 +33,7 @@ NULL, invisible
 Creates the code to make a diagram in tikz.
 }
 \seealso{
-\code{\link{lav_position_nodes}}
+\code{\link{lav_plotinfo_positions}}
 }
 \examples{
 model <- 'alpha  =~ x1 + x2 + x3       # latent variable
@@ -45,9 +44,9 @@ model <- 'alpha  =~ x1 + x2 + x3       # latent variable
           Xi ~ v * alpha + t * beta + 1
           alpha ~ yy * Theta1 + tt * beta + ss * gamma
           '
-test <- lav_get_model_info(model)
-test <- lav_position_nodes(test)
-lav_make_tikz(test) # no file given, so output to R console
+test <- lav_model_plotinfo(model)
+test <- lav_plotinfo_positions(test)
+lav_plotinfo_tikzcode(test) # no file given, so output to R console
 modelml <- '
         level: 1
         fw =~ 1*y_1 + y_2 + y_3 + y_5
@@ -55,10 +54,10 @@ modelml <- '
         fb =~ 1*y_1 + y_2 + y_3 + y_4
         y_2 ~~ cv24 * y_4
   '
-testml <- lav_get_model_info(modelml)
-testml <- lav_position_nodes(testml)
+testml <- lav_model_plotinfo(modelml)
+testml <- lav_plotinfo_positions(testml)
 # in the line hereunder no file is given, so output to R console
-lav_make_tikz(testml, cex = 1.4, sloped.labels = FALSE,
+lav_plotinfo_tikzcode(testml, cex = 1.4, sloped.labels = FALSE,
         standalone = TRUE, auto.subscript = FALSE)
 \dontrun{
 # example creating tex file with the above diagrams
@@ -75,11 +74,11 @@ writeLines(c(
   '\\usetikzlibrary {shapes.geometric}',
   '\\begin{document}'),
   zz)
-lav_make_tikz(test, outfile = "temp.tex")
+lav_plotinfo_tikzcode(test, outfile = "temp.tex")
 tmp <- readLines("tmp.tex")
 writeLines(tmp, zz)
 writeLines(" ", zz)
-lav_make_tikz(testml, outfile = "temp.tex", cex = 1.4,
+lav_plotinfo_tikzcode(testml, outfile = "temp.tex", cex = 1.4,
               sloped.labels = FALSE, auto.subscript = FALSE)
 tmp <- readLines("tmp.tex")
 writeLines(tmp, zz)

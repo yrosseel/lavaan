@@ -173,12 +173,12 @@ export("lavaan", "cfa", "sem", "growth",
        "lav_export_estimation",
        
        # plotting utilities
-       "lav_format_label",
-       "lav_get_model_info",
-       "lav_position_nodes",
-       "lav_make_tikz",
-       "lav_make_rplot",
-       "lav_make_svg",
+       "lav_label_code",
+       "lav_model_plotinfo",
+       "lav_plotinfo_positions",
+       "lav_plotinfo_tikzcode",
+       "lav_plotinfo_rgraph",
+       "lav_plotinfo_svgcode",
        "lav_plot",
        "lavplot"
 

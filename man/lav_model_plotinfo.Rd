@@ -1,8 +1,8 @@
-\name{lav_get_model_info}
-\alias{lav_get_model_info}
+\name{lav_model_plotinfo}
+\alias{lav_model_plotinfo}
 \title{Get model information}
 \usage{
-lav_get_model_info(model = NULL, infile = NULL, varlv = FALSE)
+lav_model_plotinfo(model = NULL, infile = NULL, varlv = FALSE)
 }
 \arguments{
 \item{model}{A character vector specifying the model in lavaan syntax or a list
@@ -18,8 +18,9 @@ ordinary latent variables). In this case covariances between two such variables
 will be plotted as covariance between the latent variables for the variance.}
 }
 \value{
-A list with members nodes and edges, containing the necessary data to create
-a diagram. The return value consists of a list of two data.frames:
+A structure 'plotinfo', which is a list with members nodes and edges, 
+which are data.frames containing the necessary data to create
+a diagram.
 \enumerate{
 \item nodes
   \describe{
@@ -67,5 +68,5 @@ model <- 'alpha  =~ 1 * x1 + x2 + x3        # latent variable
           x3 ~~ cc34 * x4
           gamma ~~ 0.55 * gamma
           '
-(test <- lav_get_model_info(model))
+(test <- lav_model_plotinfo(model))
 }

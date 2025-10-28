@@ -73,11 +73,11 @@ have an explicit covariance link be placed in the same group, i.e. forced
 to be on the same side of the diagram?}
 \item{common.opts}{options common to the three types of generated plots.}
 \item{rplot}{options for creating Rplot,
-see \code{\link{lav_make_rplot}}.}
+see \code{\link{lav_plotinfo_rgraph}}.}
 \item{tikz}{options for creating code for tikz plot,
-see \code{\link{lav_make_tikz}}.}
+see \code{\link{lav_plotinfo_tikzcode}}.}
 \item{svg}{options for creating code for svg plot,
-see \code{\link{lav_make_svg}}.}
+see \code{\link{lav_plotinfo_svgcode}}.}
 }
 \details{
 If \code{rplot} is specified or neither \code{tikz} nor \code{svg} are specified
@@ -106,9 +106,9 @@ Creates code to make a diagram in tikz or svg or plot the diagram or store
 the diagram in a png file.
 }
 \seealso{
-\code{\link{lav_get_model_info}}, \code{\link{lav_position_nodes}},
-\code{\link{lav_make_rplot}}, \code{\link{lav_make_tikz}},
-\code{\link{lav_make_svg}}
+\code{\link{lav_model_plotinfo}}, \code{\link{lav_plotinfo_positions}},
+\code{\link{lav_plotinfo_rgraph}}, \code{\link{lav_plotinfo_tikzcode}},
+\code{\link{lav_plotinfo_svgcode}}
 }
 \examples{
 model <- 'alpha11  =~ 1 * x1 + x2 + x3     # latent variable

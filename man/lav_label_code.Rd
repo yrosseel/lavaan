@@ -1,10 +1,10 @@
-\name{lav_format_label}
-\alias{lav_format_label}
+\name{lav_label_code}
+\alias{lav_label_code}
 \title{Provides formatted label for use in tikz, svg or rplot}
 \usage{
-lav_format_label(label = "", value = "", show =FALSE,
-                 idx.font.size = 20L, dy = 7L,
-                 italic = TRUE, auto.subscript = TRUE)
+lav_label_code(label = "", value = "", show =FALSE,
+               idx.font.size = 20L, dy = 7L,
+               italic = TRUE, auto.subscript = TRUE)
 }
 \arguments{
 \item{label}{A character string in one of the formats
@@ -54,9 +54,9 @@ generated code. If a \var{value} is present, it is attempted
 to show this value after the label, with an equal sign in between both.
 }
 \examples{
-lav_format_label("x3")
-lav_format_label("beta10", 0.65, show = TRUE)
-lav_format_label("A_i,j=0.45", show = TRUE)
-lav_format_label("Gamma")
-lav_format_label(value="1.2345")
+lav_label_code("x3")
+lav_label_code("beta10", 0.65, show = TRUE)
+lav_label_code("A_i,j=0.45", show = TRUE)
+lav_label_code("Gamma")
+lav_label_code(value="1.2345")
 }
