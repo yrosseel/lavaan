@@ -1,4 +1,4 @@
-lav_make_svg <- function(nodes.edges,
+lav_plotinfo_svgcode <- function(plotinfo,
                          outfile = "",
                          sloped.labels = TRUE,
                          standalone = FALSE,
@@ -114,10 +114,10 @@ lav_make_svg <- function(nodes.edges,
     stopifnot(standalone || get_file_extension(outfile) == "svg",
               !standalone || get_file_extension(outfile) %in% c("htm", "html"))
   }
-  mlrij <- nodes.edges$mlrij
+  mlrij <- plotinfo$mlrij
   if (is.null(mlrij))
     lav_msg_stop(gettext(
-      "nodes.edges hasn't been processed by lav_position_nodes!"))
+      "plotinfo hasn't been processed by lav_plotinfo_positions!"))
   if (outfile == "") outfile <- stdout()
   if (is.character(outfile)) {
     zz <- file(outfile, open = "w")
@@ -126,8 +126,8 @@ lav_make_svg <- function(nodes.edges,
     zz <- outfile
     closezz <- FALSE
   }
-  nodes <- nodes.edges$nodes
-  edges <- nodes.edges$edges
+  nodes <- plotinfo$nodes
+  edges <- plotinfo$edges
   nodedist <- 100
   noderadius <- 0.3
   rijen <- max(nodes$rij)
@@ -169,7 +169,7 @@ lav_make_svg <- function(nodes.edges,
   plot_edge <- function(van, naar, label = "", dubbel = FALSE,
                         control = NA_real_, below = FALSE,
                         id = 0) {
-    labele <- lav_format_label(label,
+    labele <- lav_label_code(label,
                                idx.font.size = idx.font.size,
                                dy = dy,
                                auto.subscript = auto.subscript)$svg
@@ -253,7 +253,7 @@ lav_make_svg <- function(nodes.edges,
     }
   }
   plot_var <- function(waar, noderadius, label = "", side = "n") {
-    labele <- lav_format_label(label,
+    labele <- lav_label_code(label,
                                idx.font.size = idx.font.size,
                                dy = dy,
                                auto.subscript = auto.subscript)$svg
@@ -286,7 +286,7 @@ lav_make_svg <- function(nodes.edges,
     }
   }
   plot_node <- function(waar, tiepe, label = "") {
-    labele <- lav_format_label(label,
+    labele <- lav_label_code(label,
                                idx.font.size = idx.font.size,
                                dy = dy,
                                auto.subscript = auto.subscript)$svg

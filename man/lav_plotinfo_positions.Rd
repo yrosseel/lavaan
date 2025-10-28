@@ -1,16 +1,15 @@
-\name{lav_position_nodes}
-\alias{lav_position_nodes}
+\name{lav_plotinfo_positions}
+\alias{lav_plotinfo_positions}
 \title{Position the nodes in the diagram}
 \usage{
-lav_position_nodes(nodes.edges,
-                   placenodes = NULL,
-                   edgelabelsbelow = NULL,
-                   group.covar.indicators = FALSE)
+lav_plotinfo_positions(plotinfo,
+                       placenodes = NULL,
+                       edgelabelsbelow = NULL,
+                       group.covar.indicators = FALSE)
 }
 \arguments{
-\item{nodes.edges}{The nodes and edges data.frames in a list as
-        returned from \code{lav_get_model_info}.}
- \item{placenodes}{optional list with members \code{\var{nodename} = c(row, column)},
+\item{plotinfo}{The plotinfo structure as returned from \code{lav_model_plotinfo}.}
+\item{placenodes}{optional list with members \code{\var{nodename} = c(row, column)},
 \code{row} and \code{column} don't have to be integers.}
 \item{edgelabelsbelow}{optional list with members \code{c(\var{nodename1},
 \var{nodename2})}.}
@@ -19,9 +18,9 @@ have an explicit covariance link be placed in the same group, i.e. forced
 to be on the same side of the diagram?}
 }
 \value{
-A list with modified \code{nodes} and \code{edges} data.frames, and an
-integer \code{mlrij} giving the position at which a line should be drawn
-for multilevel models.
+A plotinfo strucure with modified \code{nodes} and \code{edges} 
+data.frames, and an integer \code{mlrij} giving the position at which a line
+should be drawn for multilevel models.
 
 The data.frames have new columns defined as follows:
 \enumerate{
@@ -53,7 +52,7 @@ edges in the diagram.
 This function \strong{tries} to arrange the nodes and anchor points for the edges in
 a way that gives a not-to-large diagram and taking into account the \code{voorkeur}
 column in the input nodes data.frame. If the result is not what you want, you can
-take a look at the plot via \code{lav_make_rplot} or \code{lavplot} functions and
+take a look at the plot via \code{lav_plotinfo_rgraph} or \code{lavplot} functions and
 decide yourself to place some nodes at another location (\code{placenodes})
 and/or put some edge labels at the other side of the edge (\code{labelsbelow}).
 
@@ -63,7 +62,7 @@ at the top of the diagram and those in block 1 at the bottom. The item
 }
 
 \seealso{
-\code{\link{lav_get_model_info}}, \code{\link{lav_make_rplot}},
+\code{\link{lav_model_plotinfo}}, \code{\link{lav_plotinfo_rgraph}},
 \code{\link{lavplot}}
 }
 
@@ -81,6 +80,6 @@ model <- 'alfa  =~ 1 * x1 + x2 + x3         # latent variable
           x3 ~~ cc34 * x4
           gamma ~~ 0.55 * gamma
           '
-test <- lav_get_model_info(model)
-(test_positioned <- lav_position_nodes(test))
+test <- lav_model_plotinfo(model)
+(test_positioned <- lav_plotinfo_positions(test))
 }

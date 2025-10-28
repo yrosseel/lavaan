@@ -1,4 +1,4 @@
-beziers <- function(x, y = NULL, col = par("col"), lwd = par("lwd")) {
+lav_points_beziers <- function(x, y = NULL, col = par("col"), lwd = par("lwd")) {
   if (is.null(y)) {
     if (dim(x)[1L] == 2) {
       Px <- x[1L, ]
@@ -26,7 +26,7 @@ beziers <- function(x, y = NULL, col = par("col"), lwd = par("lwd")) {
   lines(PuntenX, PuntenY, col = col, lwd = lwd)
 }
 
-lav_make_rplot <- function(nodes.edges,
+lav_plotinfo_rgraph <- function(plotinfo,
                            sloped.labels = TRUE,
                            outfile = "",
                            addgrid = TRUE,
@@ -114,7 +114,7 @@ lav_make_rplot <- function(nodes.edges,
   }
   plot_edge <- function(van, naar, label = "", dubbel = FALSE,
                         control = NA_real_, below = FALSE, txtcex = 0.9) {
-    labele <- lav_format_label(label, auto.subscript = auto.subscript)$r
+    labele <- lav_label_code(label, auto.subscript = auto.subscript)$r
     dirvec <- naar - van
     theta <- atan2(naar[2] - van[2], naar[1] - van[1])
     srt <- ifelse(sloped.labels, 180 * theta / pi, 0)
@@ -127,8 +127,8 @@ lav_make_rplot <- function(nodes.edges,
       if (dubbel) plot_arrow(van, -dirvec)
       midden <- (van + naar) * 0.5
     } else {
-      # gebogen lijn (quadratic beziers)
-      beziers(rbind(van, control, naar), lwd = 2)
+      # gebogen lijn (quadratic lav_points_beziers)
+      lav_points_beziers(rbind(van, control, naar), lwd = 2)
       midden <- (van + naar) / 4 + control / 2
       plot_arrow(naar, naar - control)
       if (dubbel) plot_arrow(van, van - control)
@@ -166,7 +166,7 @@ lav_make_rplot <- function(nodes.edges,
     }
   }
   plot_var <- function(waar, noderadius, label = "", side = "n", txtcex = 0.9) {
-    labele <- lav_format_label(label, auto.subscript = auto.subscript)$r
+    labele <- lav_label_code(label, auto.subscript = auto.subscript)$r
     thetarange <- c(pi / 6, 11 * pi / 6)
     if (side == "s") thetarange <- thetarange + pi / 2
     if (side == "e") thetarange <- thetarange + pi
@@ -193,19 +193,19 @@ lav_make_rplot <- function(nodes.edges,
            font = font)
   }
   plot_node <- function(waar, tiepe, label = "", txtcex = 0.9) {
-    labele <- lav_format_label(label, auto.subscript = auto.subscript)$r
+    labele <- lav_label_code(label, auto.subscript = auto.subscript)$r
     elems <- node_elements(tiepe, noderadius)
     x <- waar[1] + elems$drawx
     y <- waar[2] + elems$drawy
     polygon(x, y, col = elems$boxcol, lwd = 1)
     text(waar[1L], waar[2L], labele, adj = 0.5, cex = txtcex, font = font)
   }
-  mlrij <- nodes.edges$mlrij
+  mlrij <- plotinfo$mlrij
   if (is.null(mlrij))
     lav_msg_stop(gettext(
-      "nodes.edges hasn't been processed by lav_position_nodes!"))
-  nodes <- nodes.edges$nodes
-  edges <- nodes.edges$edges
+      "plotinfo hasn't been processed by lav_plotinfo_positions!"))
+  nodes <- plotinfo$nodes
+  edges <- plotinfo$edges
   noderadius <- 0.3
   arrowlength <- noderadius / 3
   rijen <- max(nodes$rij)

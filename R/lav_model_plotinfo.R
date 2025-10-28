@@ -1,5 +1,5 @@
 # extract info from model
-lav_get_model_info <- function(model = NULL, infile = NULL, varlv = FALSE) {
+lav_model_plotinfo <- function(model = NULL, infile = NULL, varlv = FALSE) {
   if (is.null(model) == is.null(infile)) {
       lav_msg_stop(gettext("either model or infile must be specified"))
   }
@@ -62,7 +62,7 @@ lav_get_model_info <- function(model = NULL, infile = NULL, varlv = FALSE) {
     if (tbl$op[i] == "=~") {
       #### =~ : is manifested by ####
       # lhs node
-      jl <-match(paste(tbl$block[i], tbl$lhs[i]), nodes$tmp, nomatch = 0L)
+      jl <- match(paste(tbl$block[i], tbl$lhs[i]), nodes$tmp, nomatch = 0L)
       if (jl == 0L) {
         curnode <- curnode + 1L
         jl <- curnode
@@ -75,7 +75,7 @@ lav_get_model_info <- function(model = NULL, infile = NULL, varlv = FALSE) {
         nodes$tiepe[jl] <- "lv"
       }
       # rhs node
-      jr <-match(paste(tbl$block[i], tbl$rhs[i]), nodes$tmp, nomatch = 0L)
+      jr <- match(paste(tbl$block[i], tbl$rhs[i]), nodes$tmp, nomatch = 0L)
       nodetype <- "ov"
       if (length(unique(tbl$block[tbl$rhs == tbl$rhs[i]])) > 1L)
         nodetype <- switch(tbl$block[i], "wov", "bov")
@@ -100,7 +100,7 @@ lav_get_model_info <- function(model = NULL, infile = NULL, varlv = FALSE) {
     } else if (tbl$op[i] == "<~") {
       #### <~ : is a result of ####
       # lhs node
-      jl <-match(paste(tbl$block[i], tbl$lhs[i]), nodes$tmp, nomatch = 0L)
+      jl <- match(paste(tbl$block[i], tbl$lhs[i]), nodes$tmp, nomatch = 0L)
       if (jl == 0L) {
         curnode <- curnode + 1L
         jl <- curnode
@@ -113,7 +113,7 @@ lav_get_model_info <- function(model = NULL, infile = NULL, varlv = FALSE) {
         nodes$tiepe[jl] <- "cv"
       }
       # rhs node
-      jr <-match(paste(tbl$block[i], tbl$rhs[i]), nodes$tmp, nomatch = 0L)
+      jr <- match(paste(tbl$block[i], tbl$rhs[i]), nodes$tmp, nomatch = 0L)
       nodetype <- "ov"
       if (length(unique(tbl$block[tbl$rhs == tbl$rhs[i]])) > 1L)
         nodetype <- switch(tbl$block[i], "wov", "bov")
@@ -138,7 +138,7 @@ lav_get_model_info <- function(model = NULL, infile = NULL, varlv = FALSE) {
     } else if (tbl$op[i] == "~") {
       #### ~ : is regressed on ####
       # lhs node
-      jl <-match(paste(tbl$block[i], tbl$lhs[i]), nodes$tmp, nomatch = 0L)
+      jl <- match(paste(tbl$block[i], tbl$lhs[i]), nodes$tmp, nomatch = 0L)
       nodetype <- "ov"
       if (length(unique(tbl$block[tbl$rhs == tbl$rhs[i]])) > 1L)
         nodetype <- switch(tbl$block[i], "wov", "bov")
@@ -160,7 +160,7 @@ lav_get_model_info <- function(model = NULL, infile = NULL, varlv = FALSE) {
         }
       }
       # rhs node
-      jr <-match(paste(tbl$block[i], tbl$rhs[i]), nodes$tmp, nomatch = 0L)
+      jr <- match(paste(tbl$block[i], tbl$rhs[i]), nodes$tmp, nomatch = 0L)
       if (jr == 0L) {
         curnode <- curnode + 1L
         jr <- curnode
@@ -188,7 +188,7 @@ lav_get_model_info <- function(model = NULL, infile = NULL, varlv = FALSE) {
     } else if (tbl$op[i] == "~1") {
       #### ~1 : intercept ####
       # lhs node
-      jl <-match(paste(tbl$block[i], tbl$lhs[i]), nodes$tmp, nomatch = 0L)
+      jl <- match(paste(tbl$block[i], tbl$lhs[i]), nodes$tmp, nomatch = 0L)
       nodetype <- "ov"
       if (length(unique(tbl$block[tbl$rhs == tbl$lhs[i] |
                                   tbl$lhs == tbl$lhs[i]])) > 1L)
@@ -230,7 +230,7 @@ lav_get_model_info <- function(model = NULL, infile = NULL, varlv = FALSE) {
     } else if (tbl$op[i] == "~~") {
       #### ~~ : is correlated with ####
       # lhs node
-      jl <-match(paste(tbl$block[i], tbl$lhs[i]), nodes$tmp, nomatch = 0L)
+      jl <- match(paste(tbl$block[i], tbl$lhs[i]), nodes$tmp, nomatch = 0L)
       nodetype <- "ov"
       if (length(unique(tbl$block[tbl$rhs == tbl$lhs[i] |
                                   tbl$lhs == tbl$lhs[i]])) > 1L)
@@ -247,7 +247,7 @@ lav_get_model_info <- function(model = NULL, infile = NULL, varlv = FALSE) {
         if (nodes$tiepe[jl] == "") nodes$tiepe[jl] <- nodetype
       }
       # rhs node
-      jr <-match(paste(tbl$block[i], tbl$rhs[i]), nodes$tmp, nomatch = 0L)
+      jr <- match(paste(tbl$block[i], tbl$rhs[i]), nodes$tmp, nomatch = 0L)
       nodetype <- "ov"
       if (length(unique(tbl$block[tbl$rhs == tbl$lhs[i] |
                                   tbl$lhs == tbl$lhs[i]])) > 1L)

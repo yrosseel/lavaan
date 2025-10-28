@@ -1,20 +1,19 @@
-\name{lav_make_rplot}
-\alias{lav_make_rplot}
-\title{Plots a diagram.}
+\name{lav_plotinfo_rgraph}
+\alias{lav_plotinfo_rgraph}
+\title{Plots a graph in R.}
 \usage{
-lav_make_rplot(nodes.edges,
-               sloped.labels = TRUE,
-               outfile = "",
-               addgrid = TRUE,
-               mlovcolors = c("lightgreen", "lightblue"),
-               lightness = 1,
-               italic = TRUE,
-               auto.subscript = TRUE
-               )
+lav_plotinfo_rgraph(plotinfo,
+                    sloped.labels = TRUE,
+                    outfile = "",
+                    addgrid = TRUE,
+                    mlovcolors = c("lightgreen", "lightblue"),
+                    lightness = 1,
+                    italic = TRUE,
+                    auto.subscript = TRUE
+                   )
 }
 \arguments{
-\item{nodes.edges}{A list with data.frames \code{nodes} and \code{edges} and
-integer \code{mlrij} as returned from \code{lav_position_nodes}.}
+\item{plotinfo}{A plotinfo structure as returned from \code{lav_plotinfo_positions}.}
 \item{sloped.labels}{Logical, sloped labels above (or under) the edges.}
 \item{outfile}{Character string naming the file to store the diagram in PNG or
   NA to show the plot in R.}
@@ -24,15 +23,15 @@ between the levels in a  multilevel model.}
 \item{lightness}{A scalar factor to modify the distances between nodes.}
 \item{italic}{Are labels to be in italic font? \strong{Attention:} The switch 
 to an italic font will only be possible if the label value isn't an expression!}
-\item{auto.subscript}{Logical, see \code{\link{lav_format_label}}.}
+\item{auto.subscript}{Logical, see \code{\link{lav_label_code}}.}
 }
 \value{
 NULL (invisible)}
 \description{
-Creates a plot in R showing a simple diagram of the model.
+Creates a graph in R showing a simple diagram of the model.
 }
 \seealso{
-\code{\link{lav_position_nodes}}
+\code{\link{lav_plotinfo_positions}}
 }
 \examples{
 model <- 'alpha  =~ x1 + x2 + x_3     # latent variable
@@ -43,12 +42,12 @@ model <- 'alpha  =~ x1 + x2 + x_3     # latent variable
           Xi ~ v * alpha + t * beta + c * 1
           alpha ~ yy * Theta1 + tt * beta + ss * gamma
           '
-test <- lav_get_model_info(model)
-test1 <- lav_position_nodes(test)
-lav_make_rplot(test1, lightness = 1.1)
+test <- lav_model_plotinfo(model)
+test1 <- lav_plotinfo_positions(test)
+lav_plotinfo_rgraph(test1, lightness = 1.1)
 # better position for constant in regressen Xi, no sloped labels
-test2 <- lav_position_nodes(test, placenodes = list(`1vanXi` = c(2, 5)))
-lav_make_rplot(test2, FALSE, lightness = 1.1)
+test2 <- lav_plotinfo_positions(test, placenodes = list(`1vanXi` = c(2, 5)))
+lav_plotinfo_rgraph(test2, FALSE, lightness = 1.1)
 modelml <- '
         level: 1
         fw =~ 1*y_1 + y_2 + y_3 + y_5
@@ -56,13 +55,13 @@ modelml <- '
         fb =~ 1*y_1 + y_2 + y_3 + y_4
         y_2 ~~ cv24 * y_4
   '
-test <- lav_get_model_info(modelml)
-test <- lav_position_nodes(test)
-lav_make_rplot(test, sloped.labels = FALSE, addgrid = FALSE, 
+test <- lav_model_plotinfo(modelml)
+test <- lav_plotinfo_positions(test)
+lav_plotinfo_rgraph(test, sloped.labels = FALSE, addgrid = FALSE, 
                 auto.subscript = FALSE)
 \dontrun{
 # example where plot is stored in a PNG file
-lav_make_rplot(test, sloped.labels = FALSE, addgrid = FALSE,
+lav_plotinfo_rgraph(test, sloped.labels = FALSE, addgrid = FALSE,
                 auto.subscript = FALSE, outfile="demo_rplot.png")
 }
 }

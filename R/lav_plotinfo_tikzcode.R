@@ -1,4 +1,4 @@
-beziersq2beziersc <- function(x) {
+lav_beziersq_beziersc <- function(x) {
   # x contains the beziers points P1, P, P2 (P = control) for quadratic beziers
   # x is a matrix with 2 rows and 3 columns
   # returns rtval which contains P1, C1, C2, P2 so that the cubic beziers
@@ -7,7 +7,7 @@ beziersq2beziersc <- function(x) {
   matrix(c(x[ , 1L], x[ , 1L] / 3 + 2 * x[ ,2L] / 3,
          x[ , 3L] / 3 + 2 * x[ ,2L] / 3, x [ ,3L]), nrow = 2)
 }
-getcoord <- function(nodeid, anker, nodes, maxrij) {
+lav_node_coordinates <- function(nodeid, anker, nodes, maxrij) {
   nodenr <- which(nodes$id == nodeid)
   middelpunt <- c(nodes$kolom[nodenr], maxrij - nodes$rij[nodenr])
   delta <- switch(anker, n = c(0, 0.3), ne = c(0.3, 0.3), e = c(0.3, 0),
@@ -15,7 +15,7 @@ getcoord <- function(nodeid, anker, nodes, maxrij) {
                   w = c(-0.3, 0), nw = c(-0.3, 0.3))
   middelpunt + delta
 }
-lav_make_tikz <- function(nodes.edges,
+lav_plotinfo_tikzcode <- function(plotinfo,
                           outfile = "",
                           cex = 1.3,
                           sloped.labels = TRUE,
@@ -32,12 +32,12 @@ lav_make_tikz <- function(nodes.edges,
     if (blk > 0L) return(gsub("_", "", paste0("B", blk, nm)))
     return(gsub("_", "", nm))
     }
-  mlrij <- nodes.edges$mlrij
+  mlrij <- plotinfo$mlrij
   if (is.null(mlrij))
     lav_msg_stop(gettext(
-      "nodes.edges hasn't been processed by lav_position_nodes!"))
-  nodes <- nodes.edges$nodes
-  edges <- nodes.edges$edges
+      "plotinfo hasn't been processed by lav_plotinfo_positions!"))
+  nodes <- plotinfo$nodes
+  edges <- plotinfo$edges
   if (lightness != 1) {
     mlrij <- lightness * mlrij
     nodes$kolom <- lightness * nodes$kolom
@@ -90,7 +90,7 @@ lav_make_tikz <- function(nodes.edges,
     writeLines(paste(
       "\\node[", nodes$tiepe[j], "] (", nodenaam(nodes$naam[j], nodes$blok[j]),
       ") at (", xpos, ",", ypos, ") {",
-      lav_format_label(nodes$naam[j], italic = italic,
+      lav_label_code(nodes$naam[j], italic = italic,
                     auto.subscript = auto.subscript)$tikz, "};", sep = ""), zz)
   }
   varlv <-any(nodes$tiepe == "varlv")
@@ -99,7 +99,7 @@ lav_make_tikz <- function(nodes.edges,
     vannaam <- nodenaam(nodes$naam[van], nodes$blok[van])
     naar <- which(nodes$id == edges$naar[j])
     naarnaam <- nodenaam(nodes$naam[naar], nodes$blok[naar])
-    nodelabel <- lav_format_label(edges$label[j], italic = italic,
+    nodelabel <- lav_label_code(edges$label[j], italic = italic,
                                   auto.subscript = auto.subscript)$tikz
     if (van == naar) { # self
       if (nodes$kolom[van] == 1L) {
@@ -135,17 +135,17 @@ lav_make_tikz <- function(nodes.edges,
       if (is.na(edges$controlpt.kol[j])) {
         pathtype <- " -- "
       } else {
-        vanadr <- getcoord(edges$van[j], edges$vananker[j], nodes, maxrij)
-        naaradr <- getcoord(edges$naar[j], edges$naaranker[j], nodes, maxrij)
+        vanadr <- lav_node_coordinates(edges$van[j], edges$vananker[j], nodes, maxrij)
+        naaradr <- lav_node_coordinates(edges$naar[j], edges$naaranker[j], nodes, maxrij)
         controlq <- c(edges$controlpt.kol[j], maxrij - edges$controlpt.rij[j])
-        beziersc <- beziersq2beziersc(
+        beziersc <- lav_beziersq_beziersc(
           matrix(c(vanadr, controlq, naaradr), nrow = 2L)
         )
         pathtype <- paste0(" .. controls (", beziersc[1L, 2L] , ",",
                            beziersc[2L, 2L], ") and (", beziersc[1L, 3L] , ",",
                            beziersc[2L, 3L], ") .. ")
       }
-      thelabel <- lav_format_label(edges$label[j], italic = italic,
+      thelabel <- lav_label_code(edges$label[j], italic = italic,
                                    auto.subscript = auto.subscript)$tikz
       if (thelabel != "") {
         thelabel <- paste0("node[pos=0.5,",
