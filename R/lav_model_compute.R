@@ -81,6 +81,10 @@ computeSigmaHatJoint <- function(lavmodel = NULL, GLIST = NULL, extra = FALSE,
   # state or final?
   if (is.null(GLIST)) GLIST <- lavmodel@GLIST
 
+  # check.sigma.pd -- new in 0.6-21
+  check.sigma.pd <- get0("opt.check.sigma.pd", lavaan_cache_env, 
+                         ifnotfound = "chol")
+
   nmat <- lavmodel@nmat
   nblocks <- lavmodel@nblocks
   representation <- lavmodel@representation
