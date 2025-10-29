@@ -1,5 +1,5 @@
 lav_model_sigma <- function(lavmodel = NULL, GLIST = NULL, extra = FALSE,
-                            delta = TRUE, check.sigma.pd = "chol") {
+                            delta = TRUE) {
   # state or final?
   if (is.null(GLIST)) GLIST <- lavmodel@GLIST
 
@@ -74,8 +74,8 @@ lav_model_sigma <- function(lavmodel = NULL, GLIST = NULL, extra = FALSE,
 ##     S12 = PI %*% cov.x
 ##     S21 = cov.x %*% t(PI)
 ##     S22 = cov.x
-lav_model_cond2joint_sigma <- function(lavmodel = NULL, GLIST = NULL, extra = FALSE,
-                                 delta = TRUE) {
+lav_model_cond2joint_sigma <- function(lavmodel = NULL, GLIST = NULL,
+                                       extra = FALSE, delta = TRUE) {
   stopifnot(lavmodel@conditional.x)
 
   # state or final?
@@ -399,7 +399,7 @@ lav_model_vy <- function(lavmodel = NULL, GLIST = NULL, diagonal.only = FALSE) {
 
 # V(ETA): latent variances variances/covariances
 lav_model_veta <- function(lavmodel = NULL, GLIST = NULL,
-                        remove.dummy.lv = FALSE) {
+                           remove.dummy.lv = FALSE) {
   # state or final?
   if (is.null(GLIST)) GLIST <- lavmodel@GLIST
 
@@ -483,7 +483,7 @@ lav_model_vetax <- function(lavmodel = NULL, GLIST = NULL) {
 
 # COV: observed+latent variances variances/covariances
 lav_model_cov_both <- function(lavmodel = NULL, GLIST = NULL,
-                       remove.dummy.lv = FALSE, delta = TRUE) {
+                               remove.dummy.lv = FALSE, delta = TRUE) {
   # state or final?
   if (is.null(GLIST)) GLIST <- lavmodel@GLIST
 
@@ -531,7 +531,7 @@ lav_model_cov_both <- function(lavmodel = NULL, GLIST = NULL,
 
 # E(ETA): expectation (means) of latent variables (return vector)
 lav_model_eeta <- function(lavmodel = NULL, GLIST = NULL, lavsamplestats = NULL,
-                        remove.dummy.lv = FALSE) {
+                           remove.dummy.lv = FALSE) {
   # state or final?
   if (is.null(GLIST)) GLIST <- lavmodel@GLIST
 
@@ -580,8 +580,9 @@ lav_model_eeta <- function(lavmodel = NULL, GLIST = NULL, lavsamplestats = NULL,
 
 # E(ETA|x_i): conditional expectation (means) of latent variables
 # for a given value of x_i (instead of E(x_i))
-lav_model_eetax <- function(lavmodel = NULL, GLIST = NULL, lavsamplestats = NULL,
-                         eXo = NULL, nobs = NULL, remove.dummy.lv = FALSE) {
+lav_model_eetax <- function(lavmodel = NULL, GLIST = NULL,
+                            lavsamplestats = NULL, eXo = NULL,
+                            nobs = NULL, remove.dummy.lv = FALSE) {
   # state or final?
   if (is.null(GLIST)) GLIST <- lavmodel@GLIST
 
@@ -637,8 +638,8 @@ lav_model_eetax <- function(lavmodel = NULL, GLIST = NULL, lavsamplestats = NULL
 
 # return 'regular' LAMBDA
 lav_model_lambda <- function(lavmodel = NULL, GLIST = NULL,
-                          handle.dummy.lv = TRUE,
-                          remove.dummy.lv = FALSE) {
+                             handle.dummy.lv = TRUE,
+                             remove.dummy.lv = FALSE) {
   # state or final?
   if (is.null(GLIST)) GLIST <- lavmodel@GLIST
 
@@ -732,7 +733,7 @@ lav_model_theta <- function(lavmodel = NULL, GLIST = NULL, fix = TRUE) {
 
 # NU: observed intercepts
 lav_model_nu <- function(lavmodel = NULL, GLIST = NULL,
-                      lavsamplestats = NULL) {
+                         lavsamplestats = NULL) {
   # state or final?
   if (is.null(GLIST)) GLIST <- lavmodel@GLIST
 
@@ -772,7 +773,7 @@ lav_model_nu <- function(lavmodel = NULL, GLIST = NULL,
 # E(Y): expectation (mean) of observed variables
 # returns vector 1 x nvar
 lav_model_ey <- function(lavmodel = NULL, GLIST = NULL, lavsamplestats = NULL,
-                      delta = TRUE) {
+                         delta = TRUE) {
   # state or final?
   if (is.null(GLIST)) GLIST <- lavmodel@GLIST
 
@@ -814,7 +815,7 @@ lav_model_ey <- function(lavmodel = NULL, GLIST = NULL, lavsamplestats = NULL,
 # E(Y|x_i): conditional expectation (mean) of observed variables
 # returns matrix N x nvar
 lav_model_eyx <- function(lavmodel = NULL, GLIST = NULL, lavsamplestats = NULL,
-                       eXo = NULL, delta = TRUE) {
+                          eXo = NULL, delta = TRUE) {
   # state or final?
   if (is.null(GLIST)) GLIST <- lavmodel@GLIST
 
@@ -857,8 +858,8 @@ lav_model_eyx <- function(lavmodel = NULL, GLIST = NULL, lavsamplestats = NULL,
 # E(Y | ETA, x_i): conditional expectation (means) of observed variables
 # for a given value of x_i AND eta_i
 lav_model_yhat <- function(lavmodel = NULL, GLIST = NULL, lavsamplestats = NULL,
-                        eXo = NULL, nobs = NULL, ETA = NULL, duplicate = FALSE,
-                        delta = TRUE) {
+                           eXo = NULL, nobs = NULL, ETA = NULL,
+                           duplicate = FALSE, delta = TRUE) {
   # state or final?
   if (is.null(GLIST)) GLIST <- lavmodel@GLIST
 
