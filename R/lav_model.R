@@ -361,7 +361,7 @@ lav_model <- function(lavpartable = NULL,                          # nolint
     if (composites) {
       mm.in.group <- 1:nmat[g] + cumsum(c(0L, nmat))[g]
       tmp.glist[mm.in.group] <-
-        setVarianceComposites.LISREL(tmp.glist[mm.in.group])
+        lav_lisrel_composites_variances(tmp.glist[mm.in.group])
     }
   } # g
 

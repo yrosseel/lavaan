@@ -43,11 +43,11 @@ lav_model_lik_mml <- function(lavmodel = NULL,
     lavmodel@ov.y.dummy.lv.idx[[group]],
     lavmodel@ov.x.dummy.lv.idx[[group]]
   )
-  VETAx <- computeVETAx.LISREL(
+  VETAx <- lav_lisrel_vetax(
     MLIST = MLIST,
     lv.dummy.idx = lv.dummy.idx
   )
-  # VETAx <- computeVETAx.LISREL(MLIST = MLIST)
+  # VETAx <- lav_lisrel_vetax(MLIST = MLIST)
   # check for negative values?
   if (any(diag(VETAx) < 0)) {
     lav_msg_warn(gettext("--- VETAx contains negative values"))
@@ -78,7 +78,7 @@ lav_model_lik_mml <- function(lavmodel = NULL,
     }
     if (!is.null(MLIST$alpha) || !is.null(MLIST$gamma)) {
       if (conditional.x) {
-        EETAx <- computeEETAx.LISREL(
+        EETAx <- lav_lisrel_eetax(
           MLIST = MLIST, eXo = eXo, N = nobs,
           sample.mean = sample.mean,
           ov.y.dummy.ov.idx = lavmodel@ov.y.dummy.ov.idx[[group]],
@@ -87,7 +87,7 @@ lav_model_lik_mml <- function(lavmodel = NULL,
           ov.x.dummy.lv.idx = lavmodel@ov.x.dummy.lv.idx[[group]]
         )
       } else {
-        EETA <- computeEETA.LISREL(
+        EETA <- lav_lisrel_eeta(
           MLIST = MLIST,
           mean.x = sample.mean.x,
           sample.mean = sample.mean,
@@ -143,7 +143,7 @@ lav_model_lik_mml <- function(lavmodel = NULL,
 
     # compute yhat for this node (eta)
     if (lavmodel@conditional.x) {
-      yhat <- computeEYetax.LISREL(
+      yhat <- lav_lisrel_eyetax(
         MLIST = MLIST, eXo = eXo,
         ETA = eta, sample.mean = sample.mean,
         ov.y.dummy.ov.idx = lavmodel@ov.y.dummy.ov.idx[[group]],
@@ -152,7 +152,7 @@ lav_model_lik_mml <- function(lavmodel = NULL,
         ov.x.dummy.lv.idx = lavmodel@ov.x.dummy.lv.idx[[group]]
       )
     } else {
-      yhat <- computeEYetax3.LISREL(
+      yhat <- lav_lisrel_eyetax3(
         MLIST = MLIST,
         ETA = eta, sample.mean = sample.mean,
         mean.x = sample.mean.x,

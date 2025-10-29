@@ -156,8 +156,8 @@ simulateData <- function( # user-specified model
         "if residual variances are specified, please use standardized=FALSE"))
     }
 
-    # new in 0.6-20: - use setResidualElements.LISREL
-    #                - use setVarianceComposites.LISREL
+    # new in 0.6-20: - use lav_lisrel_residual_variances
+    #                - use lav_lisrel_composites_variances
     dotdotdot <- list(...)
     dotdotdot$sample.nobs <- sample.nobs
     dotdotdot$fixed.x <- FALSE # for now
@@ -165,7 +165,7 @@ simulateData <- function( # user-specified model
     dotdotdot$composites <- composites
     dotdotdot$correlation <- TRUE # this is the trick
     tmp.fit <- do.call("lavaan", args = c(list(model = lav), dotdotdot))
-    # set/get parameters to invoke setResidualElements.LISREL
+    # set/get parameters to invoke lav_lisrel_residual_variances
     tmp.lav <- tmp.fit@ParTable
     tmp.x <- lav_model_get_parameters(tmp.fit@Model)
     tmp.model <- lav_model_set_parameters(tmp.fit@Model, x = tmp.x)

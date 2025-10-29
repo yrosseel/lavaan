@@ -516,7 +516,7 @@ lav_lisrel <- function(lavpartable = NULL,
 #     E(ETA) = (I-B)^-1 ALPHA
 # - if eXo and GAMMA:
 #     E(ETA) = (I-B)^-1 ALPHA + (I-B)^-1 GAMMA mean.x
-computeEETA.LISREL <- function(MLIST = NULL, mean.x = NULL,
+lav_lisrel_eeta <- function(MLIST = NULL, mean.x = NULL,
                                sample.mean = NULL,
                                ov.y.dummy.ov.idx = NULL,
                                ov.x.dummy.ov.idx = NULL,
@@ -526,7 +526,7 @@ computeEETA.LISREL <- function(MLIST = NULL, mean.x = NULL,
   GAMMA <- MLIST$gamma
 
   # ALPHA? (reconstruct, but no 'fix')
-  ALPHA <- .internal_get_ALPHA(
+  ALPHA <- lav_lisrel_alpha0(
     MLIST = MLIST, sample.mean = sample.mean,
     ov.y.dummy.ov.idx = ov.y.dummy.ov.idx,
     ov.x.dummy.ov.idx = ov.x.dummy.ov.idx,
@@ -536,7 +536,7 @@ computeEETA.LISREL <- function(MLIST = NULL, mean.x = NULL,
 
   # BETA?
   if (!is.null(BETA)) {
-    IB.inv <- .internal_get_IB.inv(MLIST = MLIST)
+    IB.inv <- lav_lisrel_ibinv (MLIST = MLIST)
     # GAMMA?
     if (!is.null(GAMMA)) {
       eeta <- as.vector(IB.inv %*% ALPHA + IB.inv %*% GAMMA %*% mean.x)
@@ -565,7 +565,7 @@ computeEETA.LISREL <- function(MLIST = NULL, mean.x = NULL,
 #     E(ETA|x_i) = (I-B)^-1 ALPHA + (I-B)^-1 GAMMA x_i
 #     we return  a matrix of size [nobs x nfac]
 #
-computeEETAx.LISREL <- function(MLIST = NULL, eXo = NULL, N = nrow(eXo),
+lav_lisrel_eetax <- function(MLIST = NULL, eXo = NULL, N = nrow(eXo),
                                 sample.mean = NULL,
                                 ov.y.dummy.ov.idx = NULL,
                                 ov.x.dummy.ov.idx = NULL,
@@ -581,7 +581,7 @@ computeEETAx.LISREL <- function(MLIST = NULL, eXo = NULL, N = nrow(eXo),
   }
 
   # ALPHA?
-  ALPHA <- .internal_get_ALPHA(
+  ALPHA <- lav_lisrel_alpha0(
     MLIST = MLIST, sample.mean = sample.mean,
     ov.y.dummy.ov.idx = ov.y.dummy.ov.idx,
     ov.x.dummy.ov.idx = ov.x.dummy.ov.idx,
@@ -599,7 +599,7 @@ computeEETAx.LISREL <- function(MLIST = NULL, eXo = NULL, N = nrow(eXo),
 
   # BETA?
   if (!is.null(BETA)) {
-    IB.inv <- .internal_get_IB.inv(MLIST = MLIST)
+    IB.inv <- lav_lisrel_ibinv (MLIST = MLIST)
     EETA <- EETA %*% t(IB.inv)
   }
 
@@ -621,7 +621,7 @@ computeEETAx.LISREL <- function(MLIST = NULL, eXo = NULL, N = nrow(eXo),
 #     V(ETA) = (I-B)^-1 PSI (I-B)^-T
 # - if eXo and GAMMA: (cfr lisrel submodel 3a with ksi=x)
 #     V(ETA) = (I-B)^-1 [ GAMMA  cov.x t(GAMMA) + PSI] (I-B)^-T
-computeVETA.LISREL <- function(MLIST = NULL) {
+lav_lisrel_veta <- function(MLIST = NULL) {
   LAMBDA <- MLIST$lambda
   nvar <- nrow(LAMBDA)
   PSI <- MLIST$psi
@@ -639,7 +639,7 @@ computeVETA.LISREL <- function(MLIST = NULL) {
   if (is.null(BETA)) {
     VETA <- PSI
   } else {
-    IB.inv <- .internal_get_IB.inv(MLIST = MLIST)
+    IB.inv <- lav_lisrel_ibinv (MLIST = MLIST)
     VETA <- tcrossprod(IB.inv %*% PSI, IB.inv)
   }
 
@@ -649,7 +649,7 @@ computeVETA.LISREL <- function(MLIST = NULL) {
 # 4) VETAx
 # compute V(ETA|x_i): variances/covariances of latent variables
 #     V(ETA) = (I-B)^-1 PSI (I-B)^-T  + remove dummies
-computeVETAx.LISREL <- function(MLIST = NULL, lv.dummy.idx = NULL) {
+lav_lisrel_vetax <- function(MLIST = NULL, lv.dummy.idx = NULL) {
   PSI <- MLIST$psi
   BETA <- MLIST$beta
 
@@ -657,7 +657,7 @@ computeVETAx.LISREL <- function(MLIST = NULL, lv.dummy.idx = NULL) {
   if (is.null(BETA)) {
     VETA <- PSI
   } else {
-    IB.inv <- .internal_get_IB.inv(MLIST = MLIST)
+    IB.inv <- lav_lisrel_ibinv (MLIST = MLIST)
     VETA <- tcrossprod(IB.inv %*% PSI, IB.inv)
   }
 
@@ -691,7 +691,7 @@ computeVETAx.LISREL <- function(MLIST = NULL, lv.dummy.idx = NULL) {
 # - never used if GAMMA, since we then have categorical variables, and the
 #   'part 1' structure contains the (thresholds +) intercepts, not
 #   the means
-computeEY.LISREL <- function(MLIST = NULL, mean.x = NULL, sample.mean = NULL,
+lav_lisrel_ey <- function(MLIST = NULL, mean.x = NULL, sample.mean = NULL,
                              ov.y.dummy.ov.idx = NULL,
                              ov.x.dummy.ov.idx = NULL,
                              ov.y.dummy.lv.idx = NULL,
@@ -699,7 +699,7 @@ computeEY.LISREL <- function(MLIST = NULL, mean.x = NULL, sample.mean = NULL,
   LAMBDA <- MLIST$lambda
 
   # get NU, but do not 'fix'
-  NU <- .internal_get_NU(
+  NU <- lav_lisrel_nu0(
     MLIST = MLIST, sample.mean = sample.mean,
     ov.y.dummy.ov.idx = ov.y.dummy.ov.idx,
     ov.x.dummy.ov.idx = ov.x.dummy.ov.idx,
@@ -708,7 +708,7 @@ computeEY.LISREL <- function(MLIST = NULL, mean.x = NULL, sample.mean = NULL,
   )
 
   # compute E(ETA)
-  EETA <- computeEETA.LISREL(
+  EETA <- lav_lisrel_eeta(
     MLIST = MLIST, sample.mean = sample.mean,
     mean.x = mean.x,
     ov.y.dummy.ov.idx = ov.y.dummy.ov.idx,
@@ -743,7 +743,7 @@ computeEY.LISREL <- function(MLIST = NULL, mean.x = NULL, sample.mean = NULL,
 # - never used if GAMMA, since we then have categorical variables, and the
 #   'part 1' structure contains the (thresholds +) intercepts, not
 #   the means
-computeEYx.LISREL <- function(MLIST = NULL,
+lav_lisrel_eyx <- function(MLIST = NULL,
                               eXo = NULL,
                               N = nrow(eXo),
                               sample.mean = NULL,
@@ -755,7 +755,7 @@ computeEYx.LISREL <- function(MLIST = NULL,
   LAMBDA <- MLIST$lambda
 
   # get NU, but do not 'fix'
-  NU <- .internal_get_NU(
+  NU <- lav_lisrel_nu0(
     MLIST = MLIST,
     sample.mean = sample.mean,
     ov.y.dummy.ov.idx = ov.y.dummy.ov.idx,
@@ -765,7 +765,7 @@ computeEYx.LISREL <- function(MLIST = NULL,
   )
 
   # compute E(ETA|x_i)
-  EETAx <- computeEETAx.LISREL(
+  EETAx <- lav_lisrel_eetax(
     MLIST = MLIST,
     eXo = eXo,
     N = N,
@@ -804,7 +804,7 @@ computeEYx.LISREL <- function(MLIST = NULL,
 #       care off
 
 # categorical version
-computeEYetax.LISREL <- function(MLIST = NULL,
+lav_lisrel_eyetax <- function(MLIST = NULL,
                                  eXo = NULL,
                                  ETA = NULL,
                                  N = nrow(eXo),
@@ -850,7 +850,7 @@ computeEYetax.LISREL <- function(MLIST = NULL,
     }
 
     # ALPHA? (reconstruct, but no 'fix')
-    ALPHA <- .internal_get_ALPHA(
+    ALPHA <- lav_lisrel_alpha0(
       MLIST = MLIST, sample.mean = sample.mean,
       ov.y.dummy.ov.idx = ov.y.dummy.ov.idx,
       ov.x.dummy.ov.idx = ov.x.dummy.ov.idx,
@@ -878,7 +878,7 @@ computeEYetax.LISREL <- function(MLIST = NULL,
   }
 
   # get NU, but do not 'fix'
-  NU <- .internal_get_NU(
+  NU <- lav_lisrel_nu0(
     MLIST = MLIST,
     sample.mean = sample.mean,
     ov.y.dummy.ov.idx = ov.y.dummy.ov.idx,
@@ -899,7 +899,7 @@ computeEYetax.LISREL <- function(MLIST = NULL,
 }
 
 # unconditional version
-computeEYetax2.LISREL <- function(MLIST = NULL,
+lav_lisrel_eyetax2 <- function(MLIST = NULL,
                                   ETA = NULL,
                                   sample.mean = NULL,
                                   ov.y.dummy.ov.idx = NULL,
@@ -915,7 +915,7 @@ computeEYetax2.LISREL <- function(MLIST = NULL,
   # beforehand, and impute them in ETA[,ov.y]
   if (length(ov.y.dummy.lv.idx) > 0L) {
     # ALPHA? (reconstruct, but no 'fix')
-    ALPHA <- .internal_get_ALPHA(
+    ALPHA <- lav_lisrel_alpha0(
       MLIST = MLIST, sample.mean = sample.mean,
       ov.y.dummy.ov.idx = ov.y.dummy.ov.idx,
       ov.x.dummy.ov.idx = ov.x.dummy.ov.idx,
@@ -936,7 +936,7 @@ computeEYetax2.LISREL <- function(MLIST = NULL,
   }
 
   # get NU, but do not 'fix'
-  NU <- .internal_get_NU(
+  NU <- lav_lisrel_nu0(
     MLIST = MLIST,
     sample.mean = sample.mean,
     ov.y.dummy.ov.idx = ov.y.dummy.ov.idx,
@@ -957,7 +957,7 @@ computeEYetax2.LISREL <- function(MLIST = NULL,
 }
 
 # unconditional version
-computeEYetax3.LISREL <- function(MLIST = NULL,
+lav_lisrel_eyetax3 <- function(MLIST = NULL,
                                   ETA = NULL,
                                   sample.mean = NULL,
                                   mean.x = NULL,
@@ -994,12 +994,12 @@ computeEYetax3.LISREL <- function(MLIST = NULL,
     # (ie. ignore the structural part altogether)
     MLIST2 <- MLIST
     MLIST2$beta[, dummy.idx] <- 0
-    IB.inv <- .internal_get_IB.inv(MLIST = MLIST2)
+    IB.inv <- lav_lisrel_ibinv (MLIST = MLIST2)
     LAMBDA..IB.inv <- LAMBDA %*% IB.inv
   }
 
   # compute model-implied means
-  EY <- computeEY.LISREL(
+  EY <- lav_lisrel_ey(
     MLIST = MLIST, mean.x = mean.x,
     sample.mean = sample.mean,
     ov.y.dummy.ov.idx = ov.y.dummy.ov.idx,
@@ -1008,7 +1008,7 @@ computeEYetax3.LISREL <- function(MLIST = NULL,
     ov.x.dummy.lv.idx = ov.x.dummy.lv.idx
   )
 
-  EETA <- computeEETA.LISREL(
+  EETA <- lav_lisrel_eeta(
     MLIST = MLIST, sample.mean = sample.mean,
     mean.x = mean.x,
     ov.y.dummy.ov.idx = ov.y.dummy.ov.idx,
@@ -1058,11 +1058,11 @@ computeEYetax3.LISREL <- function(MLIST = NULL,
 #    only in THIS case, VY is different from diag(VYx)
 #
 # V(Y) = LAMBDA V(ETA) t(LAMBDA) + THETA
-computeVY.LISREL <- function(MLIST = NULL) {
+lav_lisrel_vy <- function(MLIST = NULL) {
   LAMBDA <- MLIST$lambda
   THETA <- MLIST$theta
 
-  VETA <- computeVETA.LISREL(MLIST = MLIST)
+  VETA <- lav_lisrel_veta(MLIST = MLIST)
   VY <- tcrossprod(LAMBDA %*% VETA, LAMBDA) + THETA
   VY
 }
@@ -1073,7 +1073,7 @@ computeVY.LISREL <- function(MLIST = NULL) {
 #
 # in >0.6-20: special treatment for composites
 #
-computeVYx.LISREL <- computeSigmaHat.LISREL <- function(MLIST = NULL,
+lav_lisrel_sigma <- function(MLIST = NULL,
                                                         delta = TRUE) {
   LAMBDA <- MLIST$lambda
   nvar <- nrow(LAMBDA)
@@ -1088,7 +1088,7 @@ computeVYx.LISREL <- computeSigmaHat.LISREL <- function(MLIST = NULL,
     if (is.null(BETA)) {
       LAMBDA..IB.inv <- LAMBDA
     } else {
-      IB.inv <- .internal_get_IB.inv(MLIST = MLIST)
+      IB.inv <- lav_lisrel_ibinv (MLIST = MLIST)
       LAMBDA..IB.inv <- LAMBDA %*% IB.inv
     }
 
@@ -1121,7 +1121,7 @@ computeVYx.LISREL <- computeSigmaHat.LISREL <- function(MLIST = NULL,
     if (is.null(BETA)) {
       IB.inv <- diag(nrow(PSI))
     } else {
-      IB.inv <- .internal_get_IB.inv(MLIST = MLIST)
+      IB.inv <- lav_lisrel_ibinv (MLIST = MLIST)
     }
     VETA <- IB.inv %*% PSI %*% t(IB.inv)
     C0 <- VETA; diag(C0)[clv.idx] <- 0
@@ -1140,7 +1140,7 @@ computeVYx.LISREL <- computeSigmaHat.LISREL <- function(MLIST = NULL,
 
 # 6) VYetax
 # V(Y | eta_i, x_i) = THETA
-computeVYetax.LISREL <- function(MLIST = NULL, delta = TRUE) {
+lav_lisrel_vyetax <- function(MLIST = NULL, delta = TRUE) {
   VYetax <- MLIST$theta
   nvar <- nrow(MLIST$theta)
 
@@ -1166,7 +1166,7 @@ computeVYetax.LISREL <- function(MLIST = NULL, delta = TRUE) {
 # this is a special case of E(Y) where
 # - we have no (explicit) eXogenous variables
 # - only continuous
-computeMuHat.LISREL <- function(MLIST = NULL) {
+lav_lisrel_mu<- function(MLIST = NULL) {
   NU <- MLIST$nu
   ALPHA <- MLIST$alpha
   LAMBDA <- MLIST$lambda
@@ -1181,7 +1181,7 @@ computeMuHat.LISREL <- function(MLIST = NULL) {
   if (is.null(BETA)) {
     LAMBDA..IB.inv <- LAMBDA
   } else {
-    IB.inv <- .internal_get_IB.inv(MLIST = MLIST)
+    IB.inv <- lav_lisrel_ibinv (MLIST = MLIST)
     LAMBDA..IB.inv <- LAMBDA %*% IB.inv
   }
 
@@ -1192,7 +1192,7 @@ computeMuHat.LISREL <- function(MLIST = NULL) {
 }
 
 # compute TH for a single block/group
-computeTH.LISREL <- function(MLIST = NULL, th.idx = NULL, delta = TRUE) {
+lav_lisrel_th <- function(MLIST = NULL, th.idx = NULL, delta = TRUE) {
   LAMBDA <- MLIST$lambda
   nvar <- nrow(LAMBDA)
   nfac <- ncol(LAMBDA)
@@ -1234,7 +1234,7 @@ computeTH.LISREL <- function(MLIST = NULL, th.idx = NULL, delta = TRUE) {
   if (is.null(BETA)) {
     LAMBDA..IB.inv <- LAMBDA
   } else {
-    IB.inv <- .internal_get_IB.inv(MLIST = MLIST)
+    IB.inv <- lav_lisrel_ibinv (MLIST = MLIST)
     LAMBDA..IB.inv <- LAMBDA %*% IB.inv
   }
 
@@ -1259,7 +1259,7 @@ computeTH.LISREL <- function(MLIST = NULL, th.idx = NULL, delta = TRUE) {
 }
 
 # compute PI for a single block/group
-computePI.LISREL <- function(MLIST = NULL, delta = TRUE) {
+lav_lisrel_pi <- function(MLIST = NULL, delta = TRUE) {
   LAMBDA <- MLIST$lambda
   BETA <- MLIST$beta
   GAMMA <- MLIST$gamma
@@ -1273,7 +1273,7 @@ computePI.LISREL <- function(MLIST = NULL, delta = TRUE) {
   if (is.null(BETA)) {
     LAMBDA..IB.inv <- LAMBDA
   } else {
-    IB.inv <- .internal_get_IB.inv(MLIST = MLIST)
+    IB.inv <- lav_lisrel_ibinv (MLIST = MLIST)
     LAMBDA..IB.inv <- LAMBDA %*% IB.inv
   }
 
@@ -1289,7 +1289,7 @@ computePI.LISREL <- function(MLIST = NULL, delta = TRUE) {
   PI
 }
 
-computeLAMBDA.LISREL <- function(MLIST = NULL,
+lav_lisrel_lambda <- function(MLIST = NULL,
                                  ov.y.dummy.ov.idx = NULL,
                                  ov.x.dummy.ov.idx = NULL,
                                  ov.y.dummy.lv.idx = NULL,
@@ -1311,7 +1311,7 @@ computeLAMBDA.LISREL <- function(MLIST = NULL,
   LAMBDA
 }
 
-computeTHETA.LISREL <- function(MLIST = NULL,
+lav_lisrel_theta <- function(MLIST = NULL,
                                 ov.y.dummy.ov.idx = NULL,
                                 ov.x.dummy.ov.idx = NULL,
                                 ov.y.dummy.lv.idx = NULL,
@@ -1329,14 +1329,14 @@ computeTHETA.LISREL <- function(MLIST = NULL,
   THETA
 }
 
-computeNU.LISREL <- function(MLIST = NULL,
+lav_lisrel_nu <- function(MLIST = NULL,
                              sample.mean = sample.mean,
                              ov.y.dummy.ov.idx = NULL,
                              ov.x.dummy.ov.idx = NULL,
                              ov.y.dummy.lv.idx = NULL,
                              ov.x.dummy.lv.idx = NULL) {
   # get NU, but do not 'fix'
-  NU <- .internal_get_NU(
+  NU <- lav_lisrel_nu0(
     MLIST = MLIST, sample.mean = sample.mean,
     ov.y.dummy.ov.idx = ov.y.dummy.ov.idx,
     ov.x.dummy.ov.idx = ov.x.dummy.ov.idx,
@@ -1345,7 +1345,7 @@ computeNU.LISREL <- function(MLIST = NULL,
   )
 
   # ALPHA? (reconstruct, but no 'fix')
-  ALPHA <- .internal_get_ALPHA(
+  ALPHA <- lav_lisrel_alpha0(
     MLIST = MLIST, sample.mean = sample.mean,
     ov.y.dummy.ov.idx = ov.y.dummy.ov.idx,
     ov.x.dummy.ov.idx = ov.x.dummy.ov.idx,
@@ -1365,7 +1365,7 @@ computeNU.LISREL <- function(MLIST = NULL,
 }
 
 # compute IB.inv
-.internal_get_IB.inv <- function(MLIST = NULL) {
+lav_lisrel_ibinv  <- function(MLIST = NULL) {
   BETA <- MLIST$beta
   nr <- nrow(MLIST$psi)
 
@@ -1387,7 +1387,7 @@ computeNU.LISREL <- function(MLIST = NULL,
 # but if we have dummy variables, we need to fill in their values
 #
 #
-.internal_get_ALPHA <- function(MLIST = NULL, sample.mean = NULL,
+lav_lisrel_alpha0 <- function(MLIST = NULL, sample.mean = NULL,
                                 ov.y.dummy.ov.idx = NULL,
                                 ov.x.dummy.ov.idx = NULL,
                                 ov.y.dummy.lv.idx = NULL,
@@ -1411,7 +1411,7 @@ computeNU.LISREL <- function(MLIST = NULL,
     # where
     # - LAMBDA..IB.inv only contains 'dummy' variables, and is square
     # - NU elements are not needed (since not in ov.dummy.idx)
-    IB.inv <- .internal_get_IB.inv(MLIST = MLIST)
+    IB.inv <- lav_lisrel_ibinv (MLIST = MLIST)
     LAMBDA..IB.inv <- LAMBDA %*% IB.inv
     LAMBDA..IB.inv.dummy <- LAMBDA..IB.inv[ov.dummy.idx, lv.dummy.idx]
     ALPHA[lv.dummy.idx] <-
@@ -1431,7 +1431,7 @@ computeNU.LISREL <- function(MLIST = NULL,
 #     2) the intercepts, if we have exogenous covariates
 #        since sample.mean = NU + LAMBDA %*% E(eta)
 #        we have NU = sample.mean - LAMBDA %*% E(eta)
-.internal_get_NU <- function(MLIST = NULL, sample.mean = NULL,
+lav_lisrel_nu0 <- function(MLIST = NULL, sample.mean = NULL,
                              ov.y.dummy.ov.idx = NULL,
                              ov.x.dummy.ov.idx = NULL,
                              ov.y.dummy.lv.idx = NULL,
@@ -1442,7 +1442,7 @@ computeNU.LISREL <- function(MLIST = NULL,
 
   # if nexo > 0, substract lambda %*% EETA
   if (length(ov.x.dummy.ov.idx) > 0L) {
-    EETA <- computeEETA.LISREL(MLIST,
+    EETA <- lav_lisrel_eeta(MLIST,
       mean.x = NULL,
       sample.mean = sample.mean,
       ov.y.dummy.ov.idx = ov.y.dummy.ov.idx,
@@ -1464,7 +1464,7 @@ computeNU.LISREL <- function(MLIST = NULL,
   NU
 }
 
-.internal_get_KAPPA <- function(MLIST = NULL,
+lav_lisrel_kappa <- function(MLIST = NULL,
                                 ov.y.dummy.ov.idx = NULL,
                                 ov.x.dummy.ov.idx = NULL,
                                 ov.y.dummy.lv.idx = NULL,
@@ -1497,7 +1497,7 @@ computeNU.LISREL <- function(MLIST = NULL,
 
 
 # old version of computeEYetax (using 'fixing')
-computeYHATetax.LISREL <- function(MLIST = NULL, eXo = NULL, ETA = NULL,
+lav_lisrel_eyetax_old <- function(MLIST = NULL, eXo = NULL, ETA = NULL,
                                    sample.mean = NULL,
                                    ov.y.dummy.ov.idx = NULL,
                                    ov.x.dummy.ov.idx = NULL,
@@ -1522,7 +1522,7 @@ computeYHATetax.LISREL <- function(MLIST = NULL, eXo = NULL, ETA = NULL,
   }
 
   # get NU
-  NU <- .internal_get_NU(
+  NU <- lav_lisrel_nu0(
     MLIST = MLIST, sample.mean = sample.mean,
     ov.y.dummy.ov.idx = ov.y.dummy.ov.idx,
     ov.x.dummy.ov.idx = ov.x.dummy.ov.idx,
@@ -1531,7 +1531,7 @@ computeYHATetax.LISREL <- function(MLIST = NULL, eXo = NULL, ETA = NULL,
   )
 
   # ALPHA? (reconstruct, but no 'fix')
-  ALPHA <- .internal_get_ALPHA(
+  ALPHA <- lav_lisrel_alpha0(
     MLIST = MLIST, sample.mean = sample.mean,
     ov.y.dummy.ov.idx = ov.y.dummy.ov.idx,
     ov.x.dummy.ov.idx = ov.x.dummy.ov.idx,
@@ -1560,7 +1560,7 @@ computeYHATetax.LISREL <- function(MLIST = NULL, eXo = NULL, ETA = NULL,
   # note: Kappa elements are either in Gamma or in Beta
   if (nexo > 0L) {
     # create KAPPA
-    KAPPA <- .internal_get_KAPPA(
+    KAPPA <- lav_lisrel_kappa(
       MLIST = MLIST,
       ov.y.dummy.ov.idx = ov.y.dummy.ov.idx,
       ov.x.dummy.ov.idx = ov.x.dummy.ov.idx,
@@ -1602,7 +1602,7 @@ computeYHATetax.LISREL <- function(MLIST = NULL, eXo = NULL, ETA = NULL,
 # deal with 'dummy' OV.X latent variables
 # create additional matrices (eg GAMMA), and resize
 # remove all ov.x related entries
-MLIST2MLISTX <- function(MLIST = NULL,
+lav_lisrel_lisrelx <- function(MLIST = NULL,
                          ov.x.dummy.ov.idx = NULL,
                          ov.x.dummy.lv.idx = NULL) {
   lv.idx <- ov.x.dummy.lv.idx
@@ -1659,7 +1659,7 @@ MLIST2MLISTX <- function(MLIST = NULL,
 
 
 # create MLIST from MLISTX
-MLISTX2MLIST <- function(MLISTX = NULL,
+lav_lisrelx_lisrel <- function(MLISTX = NULL,
                          ov.x.dummy.ov.idx = NULL,
                          ov.x.dummy.lv.idx = NULL,
                          mean.x = NULL,
@@ -1725,7 +1725,7 @@ MLISTX2MLIST <- function(MLISTX = NULL,
 
 # set (total/residual) variances of composites
 # and while we at it, also set intercepts of composites
-setVarianceComposites.LISREL <- function(MLIST = NULL,
+lav_lisrel_composites_variances<- function(MLIST = NULL,
                                          tol = .Machine$double.eps,
                                          debug = FALSE) {
   LAMBDA <- MLIST$lambda
@@ -1862,7 +1862,7 @@ setVarianceComposites.LISREL <- function(MLIST = NULL,
 # new version YR 29 Oct 2024: try harder for psi elements (but this only works
 #                             for acyclic models)
 #             YR 01 Noc 2024: for non-acyclic models: use optimization
-setResidualElements.LISREL <- function(MLIST = NULL,
+lav_lisrel_residual_variances <- function(MLIST = NULL,
                                        num.idx = NULL,
                                        ov.y.dummy.ov.idx = NULL,
                                        ov.y.dummy.lv.idx = NULL,
@@ -1986,7 +1986,7 @@ setResidualElements.LISREL <- function(MLIST = NULL,
     diag(MLIST$theta) <- 0.0
   }
 
-  Sigma.hat <- computeSigmaHat.LISREL(MLIST = MLIST, delta = FALSE)
+  Sigma.hat <- lav_lisrel_sigma(MLIST = MLIST, delta = FALSE)
   diag.Sigma <- diag(Sigma.hat)
   # theta = DELTA^(-2) - diag( LAMBDA (I-B)^-1 PSI (I-B)^-T t(LAMBDA) )
   theta.diag <- target.all - diag.Sigma
@@ -2000,73 +2000,10 @@ setResidualElements.LISREL <- function(MLIST = NULL,
   MLIST
 }
 
-
-# if DELTA parameterization, compute residual elements (in theta, or psi)
-# of observed categorical variables, as a function of other model parameters
-setResidualElements.LISREL_old <- function(MLIST = NULL,
-                                       num.idx = NULL,
-                                       ov.y.dummy.ov.idx = NULL,
-                                       ov.y.dummy.lv.idx = NULL) {
-  # remove num.idx from ov.y.dummy.*
-  if (length(num.idx) > 0L && length(ov.y.dummy.ov.idx) > 0L) {
-    n.idx <- which(ov.y.dummy.ov.idx %in% num.idx)
-    if (length(n.idx) > 0L) {
-      ov.y.dummy.ov.idx <- ov.y.dummy.ov.idx[-n.idx]
-      ov.y.dummy.lv.idx <- ov.y.dummy.lv.idx[-n.idx]
-    }
-  }
-
-  # force non-numeric theta elements to be zero
-  if (length(num.idx) > 0L) {
-    diag(MLIST$theta)[-num.idx] <- 0.0
-  } else {
-    diag(MLIST$theta) <- 0.0
-  }
-  if (length(ov.y.dummy.ov.idx) > 0L) {
-    MLIST$psi[cbind(ov.y.dummy.lv.idx, ov.y.dummy.lv.idx)] <- 0.0
-  }
-
-  # special case: PSI=0, and lambda=I (eg ex3.12)
-  if (ncol(MLIST$psi) > 0L &&
-    sum(diag(MLIST$psi)) == 0.0 && all(diag(MLIST$lambda) == 1)) {
-    ### FIXME: more elegant/general solution??
-    diag(MLIST$psi) <- 1
-    Sigma.hat <- computeSigmaHat.LISREL(MLIST = MLIST, delta = FALSE)
-    diag.Sigma <- diag(Sigma.hat) - 1.0
-  } else if (ncol(MLIST$psi) == 0L) {
-    diag.Sigma <- rep(0, ncol(MLIST$theta))
-  } else {
-    Sigma.hat <- computeSigmaHat.LISREL(MLIST = MLIST, delta = FALSE)
-    diag.Sigma <- diag(Sigma.hat)
-  }
-
-  if (is.null(MLIST$delta)) {
-    delta <- rep(1, length(diag.Sigma))
-  } else {
-    delta <- MLIST$delta
-  }
-  # theta = DELTA^(-2) - diag( LAMBDA (I-B)^-1 PSI (I-B)^-T t(LAMBDA) )
-  RESIDUAL <- as.vector(1 / (delta * delta) - diag.Sigma)
-  if (length(num.idx) > 0L) {
-    diag(MLIST$theta)[-num.idx] <- RESIDUAL[-num.idx]
-  } else {
-    diag(MLIST$theta) <- RESIDUAL
-  }
-
-  # move ov.y.dummy 'RESIDUAL' elements from THETA to PSI
-  if (length(ov.y.dummy.ov.idx) > 0L) {
-    MLIST$psi[cbind(ov.y.dummy.lv.idx, ov.y.dummy.lv.idx)] <-
-      MLIST$theta[cbind(ov.y.dummy.ov.idx, ov.y.dummy.ov.idx)]
-    MLIST$theta[cbind(ov.y.dummy.ov.idx, ov.y.dummy.ov.idx)] <- 0.0
-  }
-
-  MLIST
-}
-
 # if THETA parameterization, compute delta elements
 # of observed categorical variables, as a function of other model parameters
-setDeltaElements.LISREL <- function(MLIST = NULL, num.idx = NULL) {
-  Sigma.hat <- computeSigmaHat.LISREL(MLIST = MLIST, delta = FALSE)
+lav_lisrel_delta <- function(MLIST = NULL, num.idx = NULL) {
+  Sigma.hat <- lav_lisrel_sigma(MLIST = MLIST, delta = FALSE)
   diag.Sigma <- diag(Sigma.hat)
 
   # (1/delta^2) = diag( LAMBDA (I-B)^-1 PSI (I-B)^-T t(LAMBDA) ) + THETA
@@ -2084,7 +2021,7 @@ setDeltaElements.LISREL <- function(MLIST = NULL, num.idx = NULL) {
 }
 
 # compute Sigma/ETA: variances/covariances of BOTH observed and latent variables
-computeCOV.LISREL <- function(MLIST = NULL, delta = TRUE) {
+lav_lisrel_cov_both <- function(MLIST = NULL, delta = TRUE) {
   LAMBDA <- MLIST$lambda
   nvar <- nrow(LAMBDA)
   PSI <- MLIST$psi
@@ -2101,7 +2038,7 @@ computeCOV.LISREL <- function(MLIST = NULL, delta = TRUE) {
   if (is.null(BETA)) {
     LAMBDA..IB.inv <- LAMBDA2
   } else {
-    IB.inv <- .internal_get_IB.inv(MLIST = MLIST)
+    IB.inv <- lav_lisrel_ibinv (MLIST = MLIST)
     LAMBDA..IB.inv <- LAMBDA2 %*% IB.inv
   }
 
@@ -2135,7 +2072,7 @@ computeCOV.LISREL <- function(MLIST = NULL, delta = TRUE) {
 
 
 # derivative of the objective function
-derivative.F.LISREL <- function(MLIST = NULL, Omega = NULL, Omega.mu = NULL) {
+lav_lisrel_df_dmlist <- function(MLIST = NULL, Omega = NULL, Omega.mu = NULL) {
   LAMBDA <- MLIST$lambda
   PSI <- MLIST$psi
   BETA <- MLIST$beta
@@ -2155,7 +2092,7 @@ derivative.F.LISREL <- function(MLIST = NULL, Omega = NULL, Omega.mu = NULL) {
   if (is.null(BETA)) {
     LAMBDA..IB.inv <- LAMBDA
   } else {
-    IB.inv <- .internal_get_IB.inv(MLIST = MLIST)
+    IB.inv <- lav_lisrel_ibinv (MLIST = MLIST)
     LAMBDA..IB.inv <- LAMBDA %*% IB.inv
   }
 
@@ -2244,15 +2181,15 @@ derivative.F.LISREL <- function(MLIST = NULL, Omega = NULL, Omega.mu = NULL) {
 # note:
 # we avoid using the duplication and elimination matrices
 # for now (perhaps until we'll use the Matrix package)
-derivative.sigma.LISREL_OLD <- function(m = "lambda",
-                                        # all model matrix elements, or only a few?
-                                        # NOTE: for symmetric matrices,
-                                        # we assume that the have full size
-                                        # (nvar*nvar) (but already correct for
-                                        # symmetry)
-                                        idx = seq_len(length(MLIST[[m]])),
-                                        MLIST = NULL,
-                                        delta = TRUE) {
+lav_lisrel_dsigma_dx_old <- function(MLIST = NULL,
+                                     m = "lambda",
+                                     # all model matrix elements, or only a few?
+                                     # NOTE: for symmetric matrices,
+                                     # we assume that the have full size
+                                     # (nvar*nvar) (but already correct for
+                                     # symmetry)
+                                     idx = seq_len(length(MLIST[[m]])),
+                                     delta = TRUE) {
   LAMBDA <- MLIST$lambda
   nvar <- nrow(LAMBDA)
   nfac <- ncol(LAMBDA)
@@ -2281,7 +2218,7 @@ derivative.sigma.LISREL_OLD <- function(m = "lambda",
   if (!is.null(MLIST$ibeta.inv)) {
     IB.inv <- MLIST$ibeta.inv
   } else {
-    IB.inv <- .internal_get_IB.inv(MLIST = MLIST)
+    IB.inv <- lav_lisrel_ibinv (MLIST = MLIST)
   }
 
   # pre
@@ -2338,7 +2275,7 @@ derivative.sigma.LISREL_OLD <- function(m = "lambda",
       DX <- DX * as.vector(DELTA %x% DELTA)
     }
   } else if (m == "delta") {
-    Omega <- computeSigmaHat.LISREL(MLIST, delta = FALSE)
+    Omega <- lav_lisrel_sigma(MLIST, delta = FALSE)
     DD <- diag(DELTA[, 1], nvar, nvar)
     DD.Omega <- (DD %*% Omega)
     A <- DD.Omega %x% diag(nvar)
@@ -2354,16 +2291,16 @@ derivative.sigma.LISREL_OLD <- function(m = "lambda",
 }
 
 # dSigma/dx -- per model matrix
-derivative.sigma.LISREL <- function(m = "lambda",
-                                    # all model matrix elements, or only a few?
-                                    # NOTE: for symmetric matrices,
-                                    # we assume that the have full size
-                                    # (nvar*nvar) (but already correct for
-                                    # symmetry)
-                                    idx = seq_len(length(MLIST[[m]])),
-                                    MLIST = NULL,
-                                    vech = TRUE,
-                                    delta = TRUE) {
+lav_lisrel_dsigma_dx <- function(MLIST = NULL,
+                                 m = "lambda",
+                                 # all model matrix elements, or only a few?
+                                 # NOTE: for symmetric matrices,
+                                 # we assume that the have full size
+                                 # (nvar*nvar) (but already correct for
+                                 # symmetry)
+                                 idx = seq_len(length(MLIST[[m]])),
+                                 vech = TRUE,
+                                 delta = TRUE) {
   LAMBDA <- MLIST$lambda
   nvar <- nrow(LAMBDA)
   nfac <- ncol(LAMBDA)
@@ -2378,7 +2315,7 @@ derivative.sigma.LISREL <- function(m = "lambda",
     } else {
       mlist[[mm]][, ] <- x
     }
-    lav_matrix_vec(computeSigmaHat.LISREL(mlist))
+    lav_matrix_vec(lav_lisrel_sigma(mlist))
   }
 
   composites <- FALSE
@@ -2409,7 +2346,7 @@ derivative.sigma.LISREL <- function(m = "lambda",
   if (!is.null(MLIST$ibeta.inv)) {
     IB.inv <- MLIST$ibeta.inv
   } else {
-    IB.inv <- .internal_get_IB.inv(MLIST = MLIST)
+    IB.inv <- lav_lisrel_ibinv (MLIST = MLIST)
   }
 
   # pre
@@ -2468,7 +2405,7 @@ derivative.sigma.LISREL <- function(m = "lambda",
     # symmetry correction not needed, since all off-diagonal elements
     # are zero?
   } else if (m == "delta") {
-    Omega <- computeSigmaHat.LISREL(MLIST, delta = FALSE)
+    Omega <- lav_lisrel_sigma(MLIST, delta = FALSE)
     DD <- diag(DELTA[, 1], nvar, nvar)
     DD.Omega <- (DD %*% Omega)
     A <- DD.Omega %x% diag(nvar)
@@ -2513,10 +2450,10 @@ derivative.sigma.LISREL <- function(m = "lambda",
 }
 
 # dMu/dx -- per model matrix
-derivative.mu.LISREL <- function(m = "alpha",
+lav_lisrel_dmu_dx <- function(MLIST = NULL,
+                                 m = "alpha",
                                  # all model matrix elements, or only a few?
-                                 idx = seq_len(length(MLIST[[m]])),
-                                 MLIST = NULL) {
+                                 idx = seq_len(length(MLIST[[m]]))) {
   LAMBDA <- MLIST$lambda
   nvar <- nrow(LAMBDA)
   nfac <- ncol(LAMBDA)
@@ -2540,7 +2477,7 @@ derivative.mu.LISREL <- function(m = "alpha",
   if (!is.null(MLIST$ibeta.inv)) {
     IB.inv <- MLIST$ibeta.inv
   } else {
-    IB.inv <- .internal_get_IB.inv(MLIST = MLIST)
+    IB.inv <- lav_lisrel_ibinv (MLIST = MLIST)
   }
 
   if (m == "nu") {
@@ -2565,12 +2502,12 @@ derivative.mu.LISREL <- function(m = "alpha",
 }
 
 # dTh/dx -- per model matrix
-derivative.th.LISREL <- function(m = "tau",
-                                 # all model matrix elements, or only a few?
-                                 idx = seq_len(length(MLIST[[m]])),
-                                 th.idx = NULL,
-                                 MLIST = NULL,
-                                 delta = TRUE) {
+lav_lisrel_dth_dx <- function( MLIST = NULL,
+                                  m = "tau",
+                                  # all model matrix elements, or only a few?
+                                  idx = seq_len(length(MLIST[[m]])),
+                                  th.idx = NULL,
+                                  delta = TRUE) {
   LAMBDA <- MLIST$lambda
   nvar <- nrow(LAMBDA)
   nfac <- ncol(LAMBDA)
@@ -2619,7 +2556,7 @@ derivative.th.LISREL <- function(m = "tau",
   if (!is.null(MLIST$ibeta.inv)) {
     IB.inv <- MLIST$ibeta.inv
   } else {
-    IB.inv <- .internal_get_IB.inv(MLIST = MLIST)
+    IB.inv <- lav_lisrel_ibinv (MLIST = MLIST)
   }
 
   if (m == "tau") {
@@ -2668,10 +2605,11 @@ derivative.th.LISREL <- function(m = "tau",
 }
 
 # dPi/dx -- per model matrix
-derivative.pi.LISREL <- function(m = "lambda",
+lav_lisrel_dpi_dx <- function(MLIST = NULL,
+                                 m = "lambda",
                                  # all model matrix elements, or only a few?
-                                 idx = seq_len(length(MLIST[[m]])),
-                                 MLIST = NULL) {
+                                 idx = seq_len(length(MLIST[[m]]))
+                                ) {
   LAMBDA <- MLIST$lambda
   nvar <- nrow(LAMBDA)
   nfac <- ncol(LAMBDA)
@@ -2695,7 +2633,7 @@ derivative.pi.LISREL <- function(m = "lambda",
   if (!is.null(MLIST$ibeta.inv)) {
     IB.inv <- MLIST$ibeta.inv
   } else {
-    IB.inv <- .internal_get_IB.inv(MLIST = MLIST)
+    IB.inv <- lav_lisrel_ibinv (MLIST = MLIST)
   }
 
   if (m == "lambda") {
@@ -2727,10 +2665,11 @@ derivative.pi.LISREL <- function(m = "lambda",
 }
 
 # dGW/dx -- per model matrix
-derivative.gw.LISREL <- function(m = "gw",
+lav_lisrel_dgw_dx <- function(MLIST = NULL,
+                                 m = "gw",
                                  # all model matrix elements, or only a few?
-                                 idx = seq_len(length(MLIST[[m]])),
-                                 MLIST = NULL) {
+                                 idx = seq_len(length(MLIST[[m]]))
+                                 ) {
   # shortcut for empty matrices
   if (m != "gw") {
     return(matrix(0.0, nrow = 1L, ncol = length(idx)))
@@ -2744,10 +2683,11 @@ derivative.gw.LISREL <- function(m = "gw",
 }
 
 # dlambda/dx -- per model matrix
-derivative.lambda.LISREL <- function(m = "lambda",
+lav_lisrel_dlambda_dx <- function(MLIST = NULL,
+                                     m = "lambda",
                                      # all model matrix elements, or only a few?
-                                     idx = seq_len(length(MLIST[[m]])),
-                                     MLIST = NULL) {
+                                     idx = seq_len(length(MLIST[[m]]))
+                                    ) {
   LAMBDA <- MLIST$lambda
 
   # shortcut for empty matrices
@@ -2763,10 +2703,11 @@ derivative.lambda.LISREL <- function(m = "lambda",
 }
 
 # dpsi/dx -- per model matrix - FIXME!!!!!
-derivative.psi.LISREL <- function(m = "psi",
+lav_lisrel_dpsi_dx <- function(MLIST = NULL,
+                                  m = "psi",
                                   # all model matrix elements, or only a few?
-                                  idx = seq_len(length(MLIST[[m]])),
-                                  MLIST = NULL) {
+                                  idx = seq_len(length(MLIST[[m]]))
+                                  ) {
   PSI <- MLIST$psi
   nfac <- nrow(PSI)
   v.idx <- lav_matrix_vech_idx(nfac)
@@ -2785,10 +2726,11 @@ derivative.psi.LISREL <- function(m = "psi",
 }
 
 # dtheta/dx -- per model matrix
-derivative.theta.LISREL <- function(m = "theta",
+lav_lisrel_dtheta_dx <- function(MLIST = NULL,
+                                    m = "theta",
                                     # all model matrix elements, or only a few?
-                                    idx = seq_len(length(MLIST[[m]])),
-                                    MLIST = NULL) {
+                                    idx = seq_len(length(MLIST[[m]]))
+                                    ) {
   THETA <- MLIST$theta
   nvar <- nrow(THETA)
   v.idx <- lav_matrix_vech_idx(nvar)
@@ -2808,10 +2750,11 @@ derivative.theta.LISREL <- function(m = "theta",
 
 
 # dbeta/dx -- per model matrix
-derivative.beta.LISREL <- function(m = "beta",
-                                   # all model matrix elements, or only a few?
-                                   idx = seq_len(length(MLIST[[m]])),
-                                   MLIST = NULL) {
+lav_lisrel_dbeta_dx <- function(MLIST = NULL, 
+                                 m = "beta",
+                                 # all model matrix elements, or only a few?
+                                 idx = seq_len(length(MLIST[[m]]))
+                                 ) {
   BETA <- MLIST$beta
 
   # shortcut for empty matrices
@@ -2827,10 +2770,11 @@ derivative.beta.LISREL <- function(m = "beta",
 }
 
 # dgamma/dx -- per model matrix
-derivative.gamma.LISREL <- function(m = "gamma",
-                                    # all model matrix elements, or only a few?
-                                    idx = seq_len(length(MLIST[[m]])),
-                                    MLIST = NULL) {
+lav_lisrel_dgamma_dx <- function(MLIST = NULL,
+                                 m = "gamma",
+                                 # all model matrix elements, or only a few?
+                                 idx = seq_len(length(MLIST[[m]]))
+                                 ) {
   GAMMA <- MLIST$gamma
 
   # shortcut for empty matrices
@@ -2846,10 +2790,11 @@ derivative.gamma.LISREL <- function(m = "gamma",
 }
 
 # dnu/dx -- per model matrix
-derivative.nu.LISREL <- function(m = "nu",
-                                 # all model matrix elements, or only a few?
-                                 idx = seq_len(length(MLIST[[m]])),
-                                 MLIST = NULL) {
+lav_lisrel_dnu_dx <- function( MLIST = NULL,
+                               m = "nu",
+                               # all model matrix elements, or only a few?
+                               idx = seq_len(length(MLIST[[m]]))
+                               ) {
   NU <- MLIST$nu
 
   # shortcut for empty matrices
@@ -2865,10 +2810,11 @@ derivative.nu.LISREL <- function(m = "nu",
 }
 
 # dtau/dx -- per model matrix
-derivative.tau.LISREL <- function(m = "tau",
-                                  # all model matrix elements, or only a few?
-                                  idx = seq_len(length(MLIST[[m]])),
-                                  MLIST = NULL) {
+lav_lisrel_dtau_dx <- function(MLIST = NULL,
+                                m = "tau",
+                                # all model matrix elements, or only a few?
+                                idx = seq_len(length(MLIST[[m]]))
+                                ) {
   TAU <- MLIST$tau
 
   # shortcut for empty matrices
@@ -2886,10 +2832,11 @@ derivative.tau.LISREL <- function(m = "tau",
 
 
 # dalpha/dx -- per model matrix
-derivative.alpha.LISREL <- function(m = "alpha",
-                                    # all model matrix elements, or only a few?
-                                    idx = seq_len(length(MLIST[[m]])),
-                                    MLIST = NULL) {
+lav_lisrel_dalpha_dx <- function(MLIST = NULL,
+                                  m = "alpha",
+                                  # all model matrix elements, or only a few?
+                                  idx = seq_len(length(MLIST[[m]]))
+                                  ) {
   ALPHA <- MLIST$alpha
 
   # shortcut for empty matrices
@@ -2907,9 +2854,9 @@ derivative.alpha.LISREL <- function(m = "alpha",
 # MLIST = NULL; meanstructure=TRUE; th=TRUE; delta=TRUE; pi=TRUE; gw=FALSE
 # lav_matrix_vech_idx <- lavaan:::lav_matrix_vech_idx; lav_matrix_vechru_idx <- lavaan:::lav_matrix_vechru_idx
 # vec <- lavaan:::vec; lav_func_jacobian_complex <- lavaan:::lav_func_jacobian_complex
-# computeSigmaHat.LISREL <- lavaan:::computeSigmaHat.LISREL
-# setDeltaElements.LISREL <- lavaan:::setDeltaElements.LISREL
-TESTING_derivatives.LISREL <- function(MLIST = NULL,
+# lav_lisrel_sigma <- lavaan:::lav_lisrel_sigma
+# lav_lisrel_delta <- lavaan:::lav_lisrel_delta
+lav_lisrel_test_derivatives  <- function(MLIST = NULL,
                                        nvar = NULL, nfac = NULL, nexo = NULL,
                                        th.idx = NULL, num.idx = NULL,
                                        meanstructure = TRUE,
@@ -2983,9 +2930,9 @@ TESTING_derivatives.LISREL <- function(MLIST = NULL,
       mlist[[mm]][, ] <- x
     }
     if (theta) {
-      mlist <- setDeltaElements.LISREL(MLIST = mlist, num.idx = num.idx)
+      mlist <- lav_lisrel_delta(MLIST = mlist, num.idx = num.idx)
     }
-    lav_matrix_vech(computeSigmaHat.LISREL(mlist))
+    lav_matrix_vech(lav_lisrel_sigma(mlist))
   }
 
   compute.mu <- function(x, mm = "lambda", MLIST = NULL) {
@@ -2996,9 +2943,9 @@ TESTING_derivatives.LISREL <- function(MLIST = NULL,
       mlist[[mm]][, ] <- x
     }
     if (theta) {
-      mlist <- setDeltaElements.LISREL(MLIST = mlist, num.idx = num.idx)
+      mlist <- lav_lisrel_delta(MLIST = mlist, num.idx = num.idx)
     }
-    computeMuHat.LISREL(mlist)
+    lav_lisrel_mu(mlist)
   }
 
   compute.th2 <- function(x, mm = "tau", MLIST = NULL, th.idx) {
@@ -3009,9 +2956,9 @@ TESTING_derivatives.LISREL <- function(MLIST = NULL,
       mlist[[mm]][, ] <- x
     }
     if (theta) {
-      mlist <- setDeltaElements.LISREL(MLIST = mlist, num.idx = num.idx)
+      mlist <- lav_lisrel_delta(MLIST = mlist, num.idx = num.idx)
     }
-    computeTH.LISREL(mlist, th.idx = th.idx)
+    lav_lisrel_th(mlist, th.idx = th.idx)
   }
 
   compute.pi <- function(x, mm = "lambda", MLIST = NULL) {
@@ -3022,9 +2969,9 @@ TESTING_derivatives.LISREL <- function(MLIST = NULL,
       mlist[[mm]][, ] <- x
     }
     if (theta) {
-      mlist <- setDeltaElements.LISREL(MLIST = mlist, num.idx = num.idx)
+      mlist <- lav_lisrel_delta(MLIST = mlist, num.idx = num.idx)
     }
-    computePI.LISREL(mlist)
+    lav_lisrel_pi(mlist)
   }
 
   compute.gw <- function(x, mm = "gw", MLIST = NULL) {
@@ -3035,14 +2982,14 @@ TESTING_derivatives.LISREL <- function(MLIST = NULL,
       mlist[[mm]][, ] <- x
     }
     if (theta) {
-      mlist <- setDeltaElements.LISREL(MLIST = mlist, num.idx = num.idx)
+      mlist <- lav_lisrel_delta(MLIST = mlist, num.idx = num.idx)
     }
     mlist$gw[1, 1]
   }
 
   # if theta, set MLIST$delta
   if (theta) {
-    MLIST <- setDeltaElements.LISREL(MLIST = MLIST, num.idx = num.idx)
+    MLIST <- lav_lisrel_delta(MLIST = MLIST, num.idx = num.idx)
   }
 
   for (mm in names(MLIST)) {
@@ -3058,9 +3005,9 @@ TESTING_derivatives.LISREL <- function(MLIST = NULL,
 
     # 1. sigma
     DX1 <- lav_func_jacobian_complex(func = compute.sigma, x = x, mm = mm, MLIST = MLIST)
-    DX2 <- derivative.sigma.LISREL(
-      m = mm, idx = seq_len(length(MLIST[[mm]])),
-      MLIST = MLIST, delta = !theta
+    DX2 <- lav_lisrel_dsigma_dx(
+      MLIST = MLIST, m = mm, idx = seq_len(length(MLIST[[mm]])),
+      delta = !theta
     )
     if (mm %in% c("psi", "theta")) {
       # remove duplicated columns of symmetric matrices
@@ -3068,7 +3015,7 @@ TESTING_derivatives.LISREL <- function(MLIST = NULL,
       if (length(idx) > 0L) DX2 <- DX2[, -idx]
     }
     if (theta) {
-      sigma.hat <- computeSigmaHat.LISREL(MLIST = MLIST, delta = FALSE)
+      sigma.hat <- lav_lisrel_sigma(MLIST = MLIST, delta = FALSE)
       R <- lav_deriv_cov2cor(sigma.hat, num.idx = num.idx)
 
       DX3 <- DX2
@@ -3095,9 +3042,9 @@ TESTING_derivatives.LISREL <- function(MLIST = NULL,
 
     # 2. mu
     DX1 <- lav_func_jacobian_complex(func = compute.mu, x = x, mm = mm, MLIST = MLIST)
-    DX2 <- derivative.mu.LISREL(
-      m = mm, idx = seq_len(length(MLIST[[mm]])),
-      MLIST = MLIST
+    DX2 <- lav_lisrel_dmu_dx(
+      MLIST = MLIST,
+      m = mm, idx = seq_len(length(MLIST[[mm]]))
     )
     if (mm %in% c("psi", "theta")) {
       # remove duplicated columns of symmetric matrices
@@ -3124,31 +3071,32 @@ TESTING_derivatives.LISREL <- function(MLIST = NULL,
         func = compute.th2, x = x, mm = mm, MLIST = MLIST,
         th.idx = th.idx
       )
-      DX2 <- derivative.th.LISREL(
-        m = mm, idx = seq_len(length(MLIST[[mm]])),
-        MLIST = MLIST, th.idx = th.idx,
+      DX2 <- lav_lisrel_dth_dx(
+         MLIST = MLIST, m = mm, idx = seq_len(length(MLIST[[mm]])),
+        th.idx = th.idx,
         delta = TRUE
       )
       if (theta) {
         # 1. compute dDelta.dx
         dxSigma <-
-          derivative.sigma.LISREL(
+          lav_lisrel_dsigma_dx(
             m = mm, idx = seq_len(length(MLIST[[mm]])),
             MLIST = MLIST, delta = !theta
           )
         var.idx <- which(!lav_matrix_vech_idx(nvar) %in%
           lav_matrix_vech_idx(nvar, diagonal = FALSE))
-        sigma.hat <- computeSigmaHat.LISREL(MLIST = MLIST, delta = FALSE)
+        sigma.hat <- lav_lisrel_sigma(MLIST = MLIST, delta = FALSE)
         dsigma <- diag(sigma.hat)
         # dy/ddsigma = -0.5/(ddsigma*sqrt(ddsigma))
         dDelta.dx <- dxSigma[var.idx, ] * -0.5 / (dsigma * sqrt(dsigma))
 
         # 2. compute dth.dDelta
         dth.dDelta <-
-          derivative.th.LISREL(
+          lav_lisrel_dth_dx(
+            MLIST = MLIST,
             m = "delta",
             idx = seq_len(length(MLIST[["delta"]])),
-            MLIST = MLIST, th.idx = th.idx
+            th.idx = th.idx
           )
 
         # 3. add dth.dDelta %*% dDelta.dx
@@ -3180,9 +3128,9 @@ TESTING_derivatives.LISREL <- function(MLIST = NULL,
     # 4. pi
     if (pi) {
       DX1 <- lav_func_jacobian_complex(func = compute.pi, x = x, mm = mm, MLIST = MLIST)
-      DX2 <- derivative.pi.LISREL(
-        m = mm, idx = seq_len(length(MLIST[[mm]])),
-        MLIST = MLIST
+      DX2 <- lav_lisrel_dpi_dx(
+        MLIST = MLIST,
+        m = mm, idx = seq_len(length(MLIST[[mm]]))
       )
       if (mm %in% c("psi", "theta")) {
         # remove duplicated columns of symmetric matrices
@@ -3192,9 +3140,9 @@ TESTING_derivatives.LISREL <- function(MLIST = NULL,
       if (theta) {
         # 1. compute dDelta.dx
         dxSigma <-
-          derivative.sigma.LISREL(
-            m = mm, idx = seq_len(length(MLIST[[mm]])),
-            MLIST = MLIST, delta = !theta
+          lav_lisrel_dsigma_dx(
+            MLIST = MLIST, m = mm, idx = seq_len(length(MLIST[[mm]])),
+            delta = !theta
           )
         if (mm %in% c("psi", "theta")) {
           # remove duplicated columns of symmetric matrices
@@ -3203,17 +3151,17 @@ TESTING_derivatives.LISREL <- function(MLIST = NULL,
         }
         var.idx <- which(!lav_matrix_vech_idx(nvar) %in%
           lav_matrix_vech_idx(nvar, diagonal = FALSE))
-        sigma.hat <- computeSigmaHat.LISREL(MLIST = MLIST, delta = FALSE)
+        sigma.hat <- lav_lisrel_sigma(MLIST = MLIST, delta = FALSE)
         dsigma <- diag(sigma.hat)
         # dy/ddsigma = -0.5/(ddsigma*sqrt(ddsigma))
         dDelta.dx <- dxSigma[var.idx, ] * -0.5 / (dsigma * sqrt(dsigma))
 
         # 2. compute dpi.dDelta
         dpi.dDelta <-
-          derivative.pi.LISREL(
+          lav_lisrel_dpi_dx(
+            MLIST = MLIST,
             m = "delta",
-            idx = seq_len(length(MLIST[["delta"]])),
-            MLIST = MLIST
+            idx = seq_len(length(MLIST[["delta"]]))
           )
 
         # 3. add dpi.dDelta %*% dDelta.dx
@@ -3242,9 +3190,9 @@ TESTING_derivatives.LISREL <- function(MLIST = NULL,
     # 5. gw
     if (gw) {
       DX1 <- lav_func_jacobian_complex(func = compute.gw, x = x, mm = mm, MLIST = MLIST)
-      DX2 <- derivative.gw.LISREL(
-        m = mm, idx = seq_len(length(MLIST[[mm]])),
-        MLIST = MLIST
+      DX2 <- lav_lisrel_dgw_dx(
+        MLIST = MLIST,
+        m = mm, idx = seq_len(length(MLIST[[mm]]))
       )
       if (mm %in% c("psi", "theta")) {
         # remove duplicated columns of symmetric matrices

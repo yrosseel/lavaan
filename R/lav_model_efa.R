@@ -67,7 +67,7 @@ lav_model_efa_rotate_x <- function(x, lavmodel = NULL, lavoptions = NULL,
     lv.order <- seq_len(ncol(MLIST$lambda))
 
     # reconstruct full LAMBDA (in case of dummy ov's)
-    LAMBDA.g <- computeLAMBDA.LISREL(
+    LAMBDA.g <- lav_lisrel_lambda(
       MLIST = MLIST,
       ov.y.dummy.ov.idx = lavmodel@ov.y.dummy.ov.idx[[g]],
       ov.x.dummy.ov.idx = lavmodel@ov.x.dummy.ov.idx[[g]],
@@ -76,7 +76,7 @@ lav_model_efa_rotate_x <- function(x, lavmodel = NULL, lavoptions = NULL,
       remove.dummy.lv = TRUE
     )
     # reconstruct full THETA (in case of dummy ov's)
-    THETA.g <- computeTHETA.LISREL(
+    THETA.g <- lav_lisrel_theta(
       MLIST = MLIST,
       ov.y.dummy.ov.idx = lavmodel@ov.y.dummy.ov.idx[[g]],
       ov.x.dummy.ov.idx = lavmodel@ov.x.dummy.ov.idx[[g]],
@@ -268,7 +268,7 @@ lav_model_efa_rotate_border_x <- function(x, lavmodel = NULL,
     MLIST <- GLIST[mm.in.group]
 
     # reconstruct full LAMBDA (in case of dummy ov's)
-    LAMBDA.g <- computeLAMBDA.LISREL(
+    LAMBDA.g <- lav_lisrel_lambda(
       MLIST = MLIST,
       ov.y.dummy.ov.idx = lavmodel@ov.y.dummy.ov.idx[[g]],
       ov.x.dummy.ov.idx = lavmodel@ov.x.dummy.ov.idx[[g]],
@@ -277,7 +277,7 @@ lav_model_efa_rotate_border_x <- function(x, lavmodel = NULL,
       remove.dummy.lv = TRUE
     )
     # reconstruct full THETA (in case of dummy ov's)
-    THETA.g <- computeTHETA.LISREL(
+    THETA.g <- lav_lisrel_theta(
       MLIST = MLIST,
       ov.y.dummy.ov.idx = lavmodel@ov.y.dummy.ov.idx[[g]],
       ov.x.dummy.ov.idx = lavmodel@ov.x.dummy.ov.idx[[g]],
