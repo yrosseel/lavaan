@@ -309,8 +309,8 @@ lav_predict_internal <- function(lavmodel = NULL,
 #   # new in 0.6-16
 #   # we assume the dummy lv's have already been removed
 #     if (transform) {
-#       # VETA <- computeVETA(lavmodel = lavmodel, remove.dummy.lv = TRUE)
-#       EETA <- computeEETA(
+#       # VETA <- lav_model_veta(lavmodel = lavmodel, remove.dummy.lv = TRUE)
+#       EETA <- lav_model_eeta(
 #         lavmodel = lavmodel,
 #         lavsamplestats = lavsamplestats, remove.dummy.lv = TRUE
 #       )
@@ -366,8 +366,8 @@ lav_predict_internal <- function(lavmodel = NULL,
 
     # new in 0.6-17
     if (mdist) {
-      VETA <- computeVETA(lavmodel = lavmodel, remove.dummy.lv = TRUE)
-      EETA <- computeEETA(
+      VETA <- lav_model_veta(lavmodel = lavmodel, remove.dummy.lv = TRUE)
+      EETA <- lav_model_eeta(
         lavmodel = lavmodel,
         lavsamplestats = lavsamplestats, remove.dummy.lv = TRUE
       )
@@ -552,7 +552,7 @@ lav_predict_internal <- function(lavmodel = NULL,
 
     # mdist
     if (mdist) {
-      LAMBDA <- computeLAMBDA(
+      LAMBDA <- lav_model_lambda(
         lavmodel = lavmodel,
         remove.dummy.lv = FALSE
       )
@@ -817,12 +817,12 @@ lav_predict_eta_normal <- function(lavobject = NULL, # for convenience
     }
   }
 
-  LAMBDA <- computeLAMBDA(lavmodel = lavmodel, remove.dummy.lv = FALSE)
+  LAMBDA <- lav_model_lambda(lavmodel = lavmodel, remove.dummy.lv = FALSE)
   Sigma.hat <- lavimplied$cov
   Sigma.inv <- lapply(Sigma.hat, MASS::ginv)
-  VETA <- computeVETA(lavmodel = lavmodel)
-  EETA <- computeEETA(lavmodel = lavmodel, lavsamplestats = lavsamplestats)
-  EY <- computeEY(lavmodel = lavmodel, lavsamplestats = lavsamplestats)
+  VETA <- lav_model_veta(lavmodel = lavmodel)
+  EETA <- lav_model_eeta(lavmodel = lavmodel, lavsamplestats = lavsamplestats)
+  EY <- lav_model_ey(lavmodel = lavmodel, lavsamplestats = lavsamplestats)
 
   FS <- vector("list", length = lavdata@ngroups)
   if (fsm) {
@@ -1152,12 +1152,12 @@ lav_predict_eta_bartlett <- function(lavobject = NULL, # for convenience
     }
   }
 
-  LAMBDA <- computeLAMBDA(lavmodel = lavmodel, remove.dummy.lv = FALSE)
+  LAMBDA <- lav_model_lambda(lavmodel = lavmodel, remove.dummy.lv = FALSE)
   Sigma.hat <- lavimplied$cov
   Sigma.inv <- lapply(lavimplied$cov, MASS::ginv)
-  VETA <- computeVETA(lavmodel = lavmodel) # for se only
-  EETA <- computeEETA(lavmodel = lavmodel, lavsamplestats = lavsamplestats)
-  EY <- computeEY(lavmodel = lavmodel, lavsamplestats = lavsamplestats)
+  VETA <- lav_model_veta(lavmodel = lavmodel) # for se only
+  EETA <- lav_model_eeta(lavmodel = lavmodel, lavsamplestats = lavsamplestats)
+  EY <- lav_model_ey(lavmodel = lavmodel, lavsamplestats = lavsamplestats)
 
   FS <- vector("list", length = lavdata@ngroups)
   if (fsm) {
@@ -1508,20 +1508,20 @@ lav_predict_eta_ebm_ml <- function(lavobject = NULL, # for convenience
   #    warning("lavaan WARNING: standard errors are not available (yet) for the non-normal case")
   # }
 
-  VETAx <- computeVETAx(lavmodel = lavmodel)
+  VETAx <- lav_model_vetax(lavmodel = lavmodel)
   VETAx.inv <- VETAx
   for (g in seq_len(lavdata@ngroups)) {
     if (nrow(VETAx[[g]]) > 0L) {
       VETAx.inv[[g]] <- solve(VETAx[[g]])
     }
   }
-  EETAx <- computeEETAx(
+  EETAx <- lav_model_eetax(
     lavmodel = lavmodel, lavsamplestats = lavsamplestats,
     eXo = eXo, nobs = lapply(data.obs, NROW),
     remove.dummy.lv = TRUE
   ) ## FIXME?
-  TH <- computeTH(lavmodel = lavmodel, delta = FALSE)
-  THETA <- computeTHETA(lavmodel = lavmodel)
+  TH <- lav_model_th(lavmodel = lavmodel, delta = FALSE)
+  THETA <- lav_model_theta(lavmodel = lavmodel)
 
   # check for zero entries in THETA (new in 0.6-4)
   for (g in seq_len(lavdata@ngroups)) {
@@ -1753,7 +1753,7 @@ lav_predict_yhat <- function(lavobject = NULL, # for convience
     }
   }
 
-  YHAT <- computeYHAT(
+  YHAT <- lav_model_yhat(
     lavmodel = lavmodel, GLIST = NULL,
     lavsamplestats = lavsamplestats, eXo = eXo,
     nobs = lapply(data.obs, NROW),
@@ -1832,8 +1832,8 @@ lav_predict_fy <- function(lavobject = NULL, # for convience
     duplicate = FALSE, optim.method = optim.method
   )
 
-  THETA <- computeTHETA(lavmodel = lavmodel)
-  TH <- computeTH(lavmodel = lavmodel, delta = FALSE)
+  THETA <- lav_model_theta(lavmodel = lavmodel)
+  TH <- lav_model_th(lavmodel = lavmodel, delta = FALSE)
 
   FY <- vector("list", length = lavdata@ngroups)
   for (g in seq_len(lavdata@ngroups)) {
@@ -2034,8 +2034,8 @@ lav_predict_tmat_green <- function(lavobject = NULL,
     lavimplied <- lav_model_implied_cond2uncond(lavimplied)
   }
   Sigma <- lavimplied$cov
-  VETA <- computeVETA(lavmodel = lavmodel, remove.dummy.lv = FALSE)
-  LAMBDA <- computeLAMBDA(lavmodel, remove.dummy.lv = FALSE)
+  VETA <- lav_model_veta(lavmodel = lavmodel, remove.dummy.lv = FALSE)
+  LAMBDA <- lav_model_lambda(lavmodel, remove.dummy.lv = FALSE)
 
   nblocks <- lavmodel@nblocks
   tmat <- vector("list", length = nblocks)
@@ -2073,8 +2073,8 @@ lav_predict_tmat_det <- function(lavobject = NULL,
     lavimplied <- lav_model_implied_cond2uncond(lavimplied)
   }
   Sigma <- lavimplied$cov
-  VETA <- computeVETA(lavmodel = lavmodel, remove.dummy.lv = FALSE)
-  LAMBDA <- computeLAMBDA(lavmodel, remove.dummy.lv = FALSE)
+  VETA <- lav_model_veta(lavmodel = lavmodel, remove.dummy.lv = FALSE)
+  LAMBDA <- lav_model_lambda(lavmodel, remove.dummy.lv = FALSE)
 
   nblocks <- lavmodel@nblocks
   tmat <- vector("list", length = nblocks)

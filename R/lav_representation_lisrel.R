@@ -1,6 +1,6 @@
 # and matrix-representation specific functions:
-# - computeSigmaHat
-# - computeMuHat
+# - lav_model_sigma
+# - lav_model_mu
 # - derivative.F
 
 # initital version: YR 2011-01-21: LISREL stuff
@@ -686,7 +686,7 @@ lav_lisrel_vetax <- function(MLIST = NULL, lv.dummy.idx = NULL) {
 #      = NU + LAMBDA %*% (IB.inv %*% ALPHA + IB.inv %*% GAMMA %*% mean.x) # eXo
 # if DELTA -> E(Y) = delta * E(Y)
 #
-# this is similar to computeMuHat but:
+# this is similar to lav_model_mu but:
 # - we ALWAYS compute NU+ALPHA, even if meanstructure=FALSE
 # - never used if GAMMA, since we then have categorical variables, and the
 #   'part 1' structure contains the (thresholds +) intercepts, not

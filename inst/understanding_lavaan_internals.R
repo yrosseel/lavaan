@@ -411,7 +411,7 @@ fit@baseline$test$standard
 # mixture of new, old, and very old code
 # very old code: functions do not start with lav_ prefix
 # for example:
-lavaan:::computeSigmaHat
+lavaan:::lav_model_sigma
 
 # files that start with ctr_  contain contributed code
 # written by others
@@ -516,7 +516,7 @@ lavaan:::computeSigmaHat
 
 # lav_model_objective() can be found in lav_model_objective.R
 # 1) compute model implied summary statistics (for each group)
-#    using eg computeSigmaHat()
+#    using eg lav_model_sigma()
 # 2) compute value discrepancy function
 #    eg estimator.GLS() or estimator.ML() # see lav_objective.R
 # 3) if multiple groups, combine the values using group weights

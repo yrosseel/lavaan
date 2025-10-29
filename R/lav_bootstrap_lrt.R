@@ -76,8 +76,8 @@ bootstrapLRT <- function(h0 = NULL, h1 = NULL, R = 1000L,
 
   # Compute covariance matrix and additional mean vector
   if (type == "bollen.stine" || type == "parametric" || type == "yuan") {
-    Sigma.hat <- computeSigmaHat(lavmodel = h0@Model)
-    Mu.hat <- computeMuHat(lavmodel = h0@Model)
+    Sigma.hat <- lav_model_sigma(lavmodel = h0@Model)
+    Mu.hat <- lav_model_mu(lavmodel = h0@Model)
   }
 
   # can we use the original data, or do we need to transform it first?

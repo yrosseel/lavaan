@@ -17,7 +17,7 @@
 # ncols= no of covariates
 # PI.y1 is a vector, includes the regression coefficients of the covariates
 # for the first variable, Y1, the length of the vector is the no of covariates;
-# to obtain this vector apply the function lavaan:::computePI()[row_correspondin_to_Y1, ]
+# to obtain this vector apply the function lavaan:::lav_model_pi()[row_correspondin_to_Y1, ]
 # PI.y2 is similar to PI.y2
 # missing.ind is of "character" value, taking the values listwise, pairwise, available_cases;
 # to obtain a value use lavdata@missing
@@ -213,7 +213,7 @@ lav_tables_univariate_freq_cell <- function(lavdata = NULL,
 # Input arguments:
 # TH is a vector giving the thresholds for all variables, tau_ia, with a running
 #    faster than i (the first and the last thresholds which are -Inf and Inf are
-#    not included). TH can be given by the lavaan function computeTH .
+#    not included). TH can be given by the lavaan function lav_model_th .
 # th.idx is a vector of same length as TH which gives the value of the i index,
 #        namely which variable each thresholds refers to. This can be obtained by
 #        lavmodel@th.idx .
@@ -343,7 +343,7 @@ pc_cor_scores_PL_with_cov <- function(Y1, Y2, eXo, Rho,
   dx.rho[is.na(dx.rho)] <- 0
 
 
-  # der of pl w.r.t. slopes (also referred to PI obtained by computePI function)
+  # der of pl w.r.t. slopes (also referred to PI obtained by lav_model_pi function)
   row.sums.y1 <- rowSums(dx.th.tilde.y1)
   row.sums.y2 <- rowSums(dx.th.tilde.y2)
   dx.sl.y1 <- (-1) * eXo * row.sums.y1
@@ -418,7 +418,7 @@ uni_scores <- function(Y1, th.y1, eXo = NULL, sl.y1 = NULL,
   dx.th.tilde.y1 <- der.table.y1 * (weights.casewise / lik)
   dx.th.tilde.y1[is.na(dx.th.tilde.y1)] <- 0
 
-  # der of pl w.r.t. slopes (also referred to PI obtained by computePI function)
+  # der of pl w.r.t. slopes (also referred to PI obtained by lav_model_pi function)
   dx.sl.y1 <- NULL
   if (!is.null(eXo)) {
     row.sums.y1 <- rowSums(dx.th.tilde.y1)

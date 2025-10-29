@@ -50,29 +50,29 @@ lav_model_objective <- function(lavmodel = NULL,
     ) # ,
     # cov.x = lavsamplestats@cov.x)
     if (estimator == "NTRLS") {
-      Sigma.hat <- computeSigmaHat(
+      Sigma.hat <- lav_model_sigma(
         lavmodel = lavmodel, GLIST = GLIST,
         extra = TRUE
       )
-      Mu.hat <- computeMuHat(lavmodel = lavmodel, GLIST = GLIST)
+      Mu.hat <- lav_model_mu(lavmodel = lavmodel, GLIST = GLIST)
     }
     if (estimator == "DLS" && estimator.args$dls.GammaNT == "model") {
-      Sigma.hat <- computeSigmaHat(
+      Sigma.hat <- lav_model_sigma(
         lavmodel = lavmodel, GLIST = GLIST,
         extra = FALSE
       )
-      Mu.hat <- computeMuHat(lavmodel = lavmodel, GLIST = GLIST)
+      Mu.hat <- lav_model_mu(lavmodel = lavmodel, GLIST = GLIST)
     }
     if (lav_debug()) print(WLS.est)
   } else if (estimator %in% c("ML", "GLS", "PML", "FML", "REML", "catML") &&
     lavdata@nlevels == 1L) {
     # compute moments for all groups
     # if(conditional.x) {
-    #    Sigma.hat <- computeSigmaHatJoint(lavmodel = lavmodel,
+    #    Sigma.hat <- lav_model_cond2joint_sigma(lavmodel = lavmodel,
     #                     GLIST = GLIST, lavsamplestats = lavsamplestats,
     #                     extra = (estimator %in% c("ML", "REML","NTRLS")))
     # } else {
-    Sigma.hat <- computeSigmaHat(
+    Sigma.hat <- lav_model_sigma(
       lavmodel = lavmodel, GLIST = GLIST,
       extra = (estimator %in% c(
         "ML", "REML",
@@ -82,7 +82,7 @@ lav_model_objective <- function(lavmodel = NULL,
     # }
 
     # if (estimator == "REML") {
-    #   LAMBDA <- computeLAMBDA(lavmodel = lavmodel, GLIST = GLIST)
+    #   LAMBDA <- lav_model_lambda(lavmodel = lavmodel, GLIST = GLIST)
     # }
 
     # ridge?
@@ -96,28 +96,28 @@ lav_model_objective <- function(lavmodel = NULL,
 
     if (meanstructure) {
       # if(conditional.x) {
-      #    Mu.hat <- computeMuHatJoint(lavmodel = lavmodel, GLIST = GLIST,
+      #    Mu.hat <- lav_model_cond2joint_mu(lavmodel = lavmodel, GLIST = GLIST,
       #                           lavsamplestats = lavsamplestats)
       # } else {
-      Mu.hat <- computeMuHat(lavmodel = lavmodel, GLIST = GLIST)
+      Mu.hat <- lav_model_mu(lavmodel = lavmodel, GLIST = GLIST)
       # }
     }
 
     if (categorical) {
-      TH <- computeTH(lavmodel = lavmodel, GLIST = GLIST)
+      TH <- lav_model_th(lavmodel = lavmodel, GLIST = GLIST)
     }
 
     if (conditional.x) {
-      PI <- computePI(lavmodel = lavmodel, GLIST = GLIST)
+      PI <- lav_model_pi(lavmodel = lavmodel, GLIST = GLIST)
     }
 
     if (group.w.free) {
-      GW <- computeGW(lavmodel = lavmodel, GLIST = GLIST)
+      GW <- lav_model_gw(lavmodel = lavmodel, GLIST = GLIST)
     }
   } else if (estimator == "MML") {
-    TH <- computeTH(lavmodel = lavmodel, GLIST = GLIST)
-    THETA <- computeTHETA(lavmodel = lavmodel, GLIST = GLIST)
-    GW <- computeGW(lavmodel = lavmodel, GLIST = GLIST)
+    TH <- lav_model_th(lavmodel = lavmodel, GLIST = GLIST)
+    THETA <- lav_model_theta(lavmodel = lavmodel, GLIST = GLIST)
+    GW <- lav_model_gw(lavmodel = lavmodel, GLIST = GLIST)
   }
 
   fx <- 0.0

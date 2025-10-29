@@ -16,7 +16,7 @@ lav_lavaan_step10_cache <- function(slotCache = NULL, # nolint
   #   if lavmodel@conditional.x and sum(lavmodel@nexo) > 0L remove elements
   #     lavpta$vidx$ov.x from tmp.ov.types
   #   if lavoptions$estimator == "PML" and all tmp.ov.types are "ordered"
-  #     th = computeTH(lavmodel)
+  #     th = lav_model_th(lavmodel)
   #     bi = lav_tables_pairwise_freq_cells(lavdata)
   #     if lavoptions$missing is "available.cases" or "doubly.robust"
   #       uni = lav_tables_univariate_freq_cell(lavdata)
@@ -75,7 +75,7 @@ lav_lavaan_step10_cache <- function(slotCache = NULL, # nolint
     }
 
     if (lavoptions$estimator == "PML" && all(tmp.ov.types == "ordered")) {
-      th <- computeTH(lavmodel)
+      th <- lav_model_th(lavmodel)
       bi <- lav_tables_pairwise_freq_cell(lavdata)
 
       # handle option missing = "available.cases" or "doubly.robust"

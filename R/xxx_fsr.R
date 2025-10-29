@@ -292,9 +292,9 @@ fsr <- function(model = NULL,
     #    }
     # }
 
-    LAMBDA <- computeLAMBDA(fit.block@Model) # FIXME: remove dummy lv's?
-    THETA <- computeTHETA(fit.block@Model) # FIXME: remove not used ov?
-    PSI <- computeVETA(fit.block@Model)
+    LAMBDA <- lav_model_lambda(fit.block@Model) # FIXME: remove dummy lv's?
+    THETA <- lav_model_theta(fit.block@Model) # FIXME: remove not used ov?
+    PSI <- lav_model_veta(fit.block@Model)
 
     # if ngroups = 1, make list again
     if (ngroups == 1L) {

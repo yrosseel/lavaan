@@ -219,7 +219,7 @@ lav_model_information_expected_MLM <- function(lavmodel = NULL,
   # compute A1
   A1 <- vector("list", length = lavsamplestats@ngroups)
   if (lavmodel@group.w.free) {
-    GW <- unlist(computeGW(lavmodel = lavmodel))
+    GW <- unlist(lav_model_gw(lavmodel = lavmodel))
   }
   for (g in 1:lavsamplestats@ngroups) {
     A1[[g]] <- lav_mvnorm_h1_information_expected(
