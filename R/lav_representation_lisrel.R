@@ -1091,7 +1091,6 @@ computeVYx.LISREL <- computeSigmaHat.LISREL <- function(MLIST = NULL,
       IB.inv <- .internal_get_IB.inv(MLIST = MLIST)
       LAMBDA..IB.inv <- LAMBDA %*% IB.inv
     }
-
     # compute V(Y*|x_i)
     VYx <- tcrossprod(LAMBDA..IB.inv %*% PSI, LAMBDA..IB.inv) + THETA
 

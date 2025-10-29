@@ -50,7 +50,7 @@ lav_object_check_version <- function(object = NULL) {
   ngroups <- lav_partable_ngroups(lavobject@ParTable)
   nblocks <- lav_partable_nblocks(lavobject@ParTable)
   nlevels <- lav_partable_nlevels(lavobject@ParTable)
-  
+
   if (!has_version_flag) { # pre 0.6 object!
     # 0.5-10 (25 Oct 2012)
     if (!.hasSlot(lavobject@Data, "group")) {
@@ -277,7 +277,7 @@ lav_object_check_version <- function(object = NULL) {
     }
     if (is.lavaan.object) {
       if (!.hasSlot(lavobject@Data, "block.label")) {
-        if (nlevels <= 1L) { 
+        if (nlevels <= 1L) {
           if (ngroups <= 1L) {
             lavobject@Data@block.label <- character(0L)
           } else {
@@ -287,10 +287,10 @@ lav_object_check_version <- function(object = NULL) {
           if (ngroups <= 1L) {
             lavobject@Data@block.label <- lavobject@Data@level.label
           } else {
-            lavobject@Data@block.label <- 
-              paste(rep(lavobject@Data@group.label, 
+            lavobject@Data@block.label <-
+              paste(rep(lavobject@Data@group.label,
                         each = length(lavobject@Data@level.label)),
-                    rep(lavobject@Data@level.label, 
+                    rep(lavobject@Data@level.label,
                         times = length(lavobject@Data@group.label)),
                     sep = "."
               )
@@ -300,22 +300,22 @@ lav_object_check_version <- function(object = NULL) {
     } else {
       for (j in seq_along(lavobject@DataList)) {
         if (!.hasSlot(lavobject@DataList[[j]], "block.label")) {
-          if (nlevels <= 1L) { 
+          if (nlevels <= 1L) {
             if (ngroups <= 1L) {
               lavobject@DataList[[j]]@block.label <- character(0L)
             } else {
-              lavobject@DataList[[j]]@block.label <- 
+              lavobject@DataList[[j]]@block.label <-
                 lavobject@DataList[[j]]@group.label
             }
           } else {
             if (ngroups <= 1L) {
-              lavobject@DataList[[j]]@block.label <- 
+              lavobject@DataList[[j]]@block.label <-
                 lavobject@DataList[[j]]@level.label
             } else {
-              lavobject@DataList[[j]]@block.label <- 
-                paste(rep(lavobject@DataList[[j]]@group.label, 
+              lavobject@DataList[[j]]@block.label <-
+                paste(rep(lavobject@DataList[[j]]@group.label,
                           each = length(lavobject@DataList[[j]]@level.label)),
-                      rep(lavobject@DataList[[j]]@level.label, 
+                      rep(lavobject@DataList[[j]]@level.label,
                           times = length(lavobject@DataList[[j]]@group.label)),
                       sep = "."
                 )
@@ -324,7 +324,7 @@ lav_object_check_version <- function(object = NULL) {
         }
       }
     }
-    
+
     # 0.5-23 (24 Feb 2017)
     if (is.lavaan.object) {
       if (!.hasSlot(lavobject@Data, "nlevels")) {
