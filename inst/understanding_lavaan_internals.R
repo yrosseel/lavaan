@@ -411,7 +411,7 @@ fit@baseline$test$standard
 # mixture of new, old, and very old code
 # very old code: functions do not start with lav_ prefix
 # for example:
-lavaan:::lav_model_sigma
+lavaan::getCov
 
 # files that start with ctr_  contain contributed code
 # written by others
