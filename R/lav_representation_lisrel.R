@@ -517,11 +517,11 @@ lav_lisrel <- function(lavpartable = NULL,
 # - if eXo and GAMMA:
 #     E(ETA) = (I-B)^-1 ALPHA + (I-B)^-1 GAMMA mean.x
 lav_lisrel_eeta <- function(MLIST = NULL, mean.x = NULL,
-                               sample.mean = NULL,
-                               ov.y.dummy.ov.idx = NULL,
-                               ov.x.dummy.ov.idx = NULL,
-                               ov.y.dummy.lv.idx = NULL,
-                               ov.x.dummy.lv.idx = NULL) {
+                            sample.mean = NULL,
+                            ov.y.dummy.ov.idx = NULL,
+                            ov.x.dummy.ov.idx = NULL,
+                            ov.y.dummy.lv.idx = NULL,
+                            ov.x.dummy.lv.idx = NULL) {
   BETA <- MLIST$beta
   GAMMA <- MLIST$gamma
 
@@ -566,11 +566,11 @@ lav_lisrel_eeta <- function(MLIST = NULL, mean.x = NULL,
 #     we return  a matrix of size [nobs x nfac]
 #
 lav_lisrel_eetax <- function(MLIST = NULL, eXo = NULL, N = nrow(eXo),
-                                sample.mean = NULL,
-                                ov.y.dummy.ov.idx = NULL,
-                                ov.x.dummy.ov.idx = NULL,
-                                ov.y.dummy.lv.idx = NULL,
-                                ov.x.dummy.lv.idx = NULL) {
+                             sample.mean = NULL,
+                             ov.y.dummy.ov.idx = NULL,
+                             ov.x.dummy.ov.idx = NULL,
+                             ov.y.dummy.lv.idx = NULL,
+                             ov.x.dummy.lv.idx = NULL) {
   LAMBDA <- MLIST$lambda
   BETA <- MLIST$beta
   GAMMA <- MLIST$gamma
@@ -692,10 +692,10 @@ lav_lisrel_vetax <- function(MLIST = NULL, lv.dummy.idx = NULL) {
 #   'part 1' structure contains the (thresholds +) intercepts, not
 #   the means
 lav_lisrel_ey <- function(MLIST = NULL, mean.x = NULL, sample.mean = NULL,
-                             ov.y.dummy.ov.idx = NULL,
-                             ov.x.dummy.ov.idx = NULL,
-                             ov.y.dummy.lv.idx = NULL,
-                             ov.x.dummy.lv.idx = NULL, delta = TRUE) {
+                          ov.y.dummy.ov.idx = NULL,
+                          ov.x.dummy.ov.idx = NULL,
+                          ov.y.dummy.lv.idx = NULL,
+                          ov.x.dummy.lv.idx = NULL, delta = TRUE) {
   LAMBDA <- MLIST$lambda
 
   # get NU, but do not 'fix'
@@ -744,14 +744,14 @@ lav_lisrel_ey <- function(MLIST = NULL, mean.x = NULL, sample.mean = NULL,
 #   'part 1' structure contains the (thresholds +) intercepts, not
 #   the means
 lav_lisrel_eyx <- function(MLIST = NULL,
-                              eXo = NULL,
-                              N = nrow(eXo),
-                              sample.mean = NULL,
-                              ov.y.dummy.ov.idx = NULL,
-                              ov.x.dummy.ov.idx = NULL,
-                              ov.y.dummy.lv.idx = NULL,
-                              ov.x.dummy.lv.idx = NULL,
-                              delta = TRUE) {
+                           eXo = NULL,
+                           N = nrow(eXo),
+                           sample.mean = NULL,
+                           ov.y.dummy.ov.idx = NULL,
+                           ov.x.dummy.ov.idx = NULL,
+                           ov.y.dummy.lv.idx = NULL,
+                           ov.x.dummy.lv.idx = NULL,
+                           delta = TRUE) {
   LAMBDA <- MLIST$lambda
 
   # get NU, but do not 'fix'
@@ -805,15 +805,15 @@ lav_lisrel_eyx <- function(MLIST = NULL,
 
 # categorical version
 lav_lisrel_eyetax <- function(MLIST = NULL,
-                                 eXo = NULL,
-                                 ETA = NULL,
-                                 N = nrow(eXo),
-                                 sample.mean = NULL,
-                                 ov.y.dummy.ov.idx = NULL,
-                                 ov.x.dummy.ov.idx = NULL,
-                                 ov.y.dummy.lv.idx = NULL,
-                                 ov.x.dummy.lv.idx = NULL,
-                                 delta = TRUE) {
+                              eXo = NULL,
+                              ETA = NULL,
+                              N = nrow(eXo),
+                              sample.mean = NULL,
+                              ov.y.dummy.ov.idx = NULL,
+                              ov.x.dummy.ov.idx = NULL,
+                              ov.y.dummy.lv.idx = NULL,
+                              ov.x.dummy.lv.idx = NULL,
+                              delta = TRUE) {
   LAMBDA <- MLIST$lambda
   BETA <- MLIST$beta
   if (!is.null(eXo)) {
@@ -900,13 +900,13 @@ lav_lisrel_eyetax <- function(MLIST = NULL,
 
 # unconditional version
 lav_lisrel_eyetax2 <- function(MLIST = NULL,
-                                  ETA = NULL,
-                                  sample.mean = NULL,
-                                  ov.y.dummy.ov.idx = NULL,
-                                  ov.x.dummy.ov.idx = NULL,
-                                  ov.y.dummy.lv.idx = NULL,
-                                  ov.x.dummy.lv.idx = NULL,
-                                  delta = TRUE) {
+                               ETA = NULL,
+                               sample.mean = NULL,
+                               ov.y.dummy.ov.idx = NULL,
+                               ov.x.dummy.ov.idx = NULL,
+                               ov.y.dummy.lv.idx = NULL,
+                               ov.x.dummy.lv.idx = NULL,
+                               delta = TRUE) {
   LAMBDA <- MLIST$lambda
   BETA <- MLIST$beta
 
@@ -958,14 +958,14 @@ lav_lisrel_eyetax2 <- function(MLIST = NULL,
 
 # unconditional version
 lav_lisrel_eyetax3 <- function(MLIST = NULL,
-                                  ETA = NULL,
-                                  sample.mean = NULL,
-                                  mean.x = NULL,
-                                  ov.y.dummy.ov.idx = NULL,
-                                  ov.x.dummy.ov.idx = NULL,
-                                  ov.y.dummy.lv.idx = NULL,
-                                  ov.x.dummy.lv.idx = NULL,
-                                  delta = TRUE) {
+                               ETA = NULL,
+                               sample.mean = NULL,
+                               mean.x = NULL,
+                               ov.y.dummy.ov.idx = NULL,
+                               ov.x.dummy.ov.idx = NULL,
+                               ov.y.dummy.lv.idx = NULL,
+                               ov.x.dummy.lv.idx = NULL,
+                               delta = TRUE) {
   LAMBDA <- MLIST$lambda
 
   # special case: empty lambda
@@ -1073,8 +1073,7 @@ lav_lisrel_vy <- function(MLIST = NULL) {
 #
 # in >0.6-20: special treatment for composites
 #
-lav_lisrel_sigma <- function(MLIST = NULL,
-                                                        delta = TRUE) {
+lav_lisrel_sigma <- function(MLIST = NULL, delta = TRUE) {
   LAMBDA <- MLIST$lambda
   nvar <- nrow(LAMBDA)
   PSI <- MLIST$psi
@@ -1289,11 +1288,11 @@ lav_lisrel_pi <- function(MLIST = NULL, delta = TRUE) {
 }
 
 lav_lisrel_lambda <- function(MLIST = NULL,
-                                 ov.y.dummy.ov.idx = NULL,
-                                 ov.x.dummy.ov.idx = NULL,
-                                 ov.y.dummy.lv.idx = NULL,
-                                 ov.x.dummy.lv.idx = NULL,
-                                 remove.dummy.lv = FALSE) {
+                              ov.y.dummy.ov.idx = NULL,
+                              ov.x.dummy.ov.idx = NULL,
+                              ov.y.dummy.lv.idx = NULL,
+                              ov.x.dummy.lv.idx = NULL,
+                              remove.dummy.lv = FALSE) {
   lv.dummy.idx <- c(ov.y.dummy.lv.idx, ov.x.dummy.lv.idx)
 
   # fix LAMBDA
@@ -1311,10 +1310,10 @@ lav_lisrel_lambda <- function(MLIST = NULL,
 }
 
 lav_lisrel_theta <- function(MLIST = NULL,
-                                ov.y.dummy.ov.idx = NULL,
-                                ov.x.dummy.ov.idx = NULL,
-                                ov.y.dummy.lv.idx = NULL,
-                                ov.x.dummy.lv.idx = NULL) {
+                             ov.y.dummy.ov.idx = NULL,
+                             ov.x.dummy.ov.idx = NULL,
+                             ov.y.dummy.lv.idx = NULL,
+                             ov.x.dummy.lv.idx = NULL) {
   ov.dummy.idx <- c(ov.y.dummy.ov.idx, ov.x.dummy.ov.idx)
   lv.dummy.idx <- c(ov.y.dummy.lv.idx, ov.x.dummy.lv.idx)
 
@@ -1387,10 +1386,10 @@ lav_lisrel_ibinv  <- function(MLIST = NULL) {
 #
 #
 lav_lisrel_alpha0 <- function(MLIST = NULL, sample.mean = NULL,
-                                ov.y.dummy.ov.idx = NULL,
-                                ov.x.dummy.ov.idx = NULL,
-                                ov.y.dummy.lv.idx = NULL,
-                                ov.x.dummy.lv.idx = NULL) {
+                              ov.y.dummy.ov.idx = NULL,
+                              ov.x.dummy.ov.idx = NULL,
+                              ov.y.dummy.lv.idx = NULL,
+                              ov.x.dummy.lv.idx = NULL) {
   if (!is.null(MLIST$alpha)) {
     return(MLIST$alpha)
   }
@@ -1431,10 +1430,10 @@ lav_lisrel_alpha0 <- function(MLIST = NULL, sample.mean = NULL,
 #        since sample.mean = NU + LAMBDA %*% E(eta)
 #        we have NU = sample.mean - LAMBDA %*% E(eta)
 lav_lisrel_nu0 <- function(MLIST = NULL, sample.mean = NULL,
-                             ov.y.dummy.ov.idx = NULL,
-                             ov.x.dummy.ov.idx = NULL,
-                             ov.y.dummy.lv.idx = NULL,
-                             ov.x.dummy.lv.idx = NULL) {
+                           ov.y.dummy.ov.idx = NULL,
+                           ov.x.dummy.ov.idx = NULL,
+                           ov.y.dummy.lv.idx = NULL,
+                           ov.x.dummy.lv.idx = NULL) {
   if (!is.null(MLIST$nu)) {
     return(MLIST$nu)
   }
@@ -1464,11 +1463,11 @@ lav_lisrel_nu0 <- function(MLIST = NULL, sample.mean = NULL,
 }
 
 lav_lisrel_kappa <- function(MLIST = NULL,
-                                ov.y.dummy.ov.idx = NULL,
-                                ov.x.dummy.ov.idx = NULL,
-                                ov.y.dummy.lv.idx = NULL,
-                                ov.x.dummy.lv.idx = NULL,
-                                nexo = NULL) {
+                             ov.y.dummy.ov.idx = NULL,
+                             ov.x.dummy.ov.idx = NULL,
+                             ov.y.dummy.lv.idx = NULL,
+                             ov.x.dummy.lv.idx = NULL,
+                             nexo = NULL) {
   nvar <- nrow(MLIST$lambda)
   if (!is.null(MLIST$gamma)) {
     this.nexo <- ncol(MLIST$gamma)
@@ -1497,12 +1496,12 @@ lav_lisrel_kappa <- function(MLIST = NULL,
 
 # old version of computeEYetax (using 'fixing')
 lav_lisrel_eyetax_old <- function(MLIST = NULL, eXo = NULL, ETA = NULL,
-                                   sample.mean = NULL,
-                                   ov.y.dummy.ov.idx = NULL,
-                                   ov.x.dummy.ov.idx = NULL,
-                                   ov.y.dummy.lv.idx = NULL,
-                                   ov.x.dummy.lv.idx = NULL,
-                                   Nobs = 1L) {
+                                  sample.mean = NULL,
+                                  ov.y.dummy.ov.idx = NULL,
+                                  ov.x.dummy.ov.idx = NULL,
+                                  ov.y.dummy.lv.idx = NULL,
+                                  ov.x.dummy.lv.idx = NULL,
+                                  Nobs = 1L) {
   LAMBDA <- MLIST$lambda
   nvar <- nrow(LAMBDA)
   nfac <- ncol(LAMBDA)
@@ -1725,8 +1724,8 @@ lav_lisrelx_lisrel <- function(MLISTX = NULL,
 # set (total/residual) variances of composites
 # and while we at it, also set intercepts of composites
 lav_lisrel_composites_variances<- function(MLIST = NULL,
-                                         tol = .Machine$double.eps,
-                                         debug = FALSE) {
+                                           tol = .Machine$double.eps,
+                                           debug = FALSE) {
   LAMBDA <- MLIST$lambda
   BETA   <- MLIST$beta
   PSI    <- MLIST$psi
@@ -1862,12 +1861,12 @@ lav_lisrel_composites_variances<- function(MLIST = NULL,
 #                             for acyclic models)
 #             YR 01 Noc 2024: for non-acyclic models: use optimization
 lav_lisrel_residual_variances <- function(MLIST = NULL,
-                                       num.idx = NULL,
-                                       ov.y.dummy.ov.idx = NULL,
-                                       ov.y.dummy.lv.idx = NULL,
-                                       ov.only = TRUE,
-                                       tol = .Machine$double.eps,
-                                       debug = FALSE) {
+                                          num.idx = NULL,
+                                          ov.y.dummy.ov.idx = NULL,
+                                          ov.y.dummy.lv.idx = NULL,
+                                          ov.only = TRUE,
+                                          tol = .Machine$double.eps,
+                                          debug = FALSE) {
   BETA <- MLIST$beta
   PSI  <- MLIST$psi
   if (is.null(MLIST$delta)) {
@@ -2450,9 +2449,9 @@ lav_lisrel_dsigma_dx <- function(MLIST = NULL,
 
 # dMu/dx -- per model matrix
 lav_lisrel_dmu_dx <- function(MLIST = NULL,
-                                 m = "alpha",
-                                 # all model matrix elements, or only a few?
-                                 idx = seq_len(length(MLIST[[m]]))) {
+                              m = "alpha",
+                              # all model matrix elements, or only a few?
+                              idx = seq_len(length(MLIST[[m]]))) {
   LAMBDA <- MLIST$lambda
   nvar <- nrow(LAMBDA)
   nfac <- ncol(LAMBDA)
@@ -2501,12 +2500,12 @@ lav_lisrel_dmu_dx <- function(MLIST = NULL,
 }
 
 # dTh/dx -- per model matrix
-lav_lisrel_dth_dx <- function( MLIST = NULL,
-                                  m = "tau",
-                                  # all model matrix elements, or only a few?
-                                  idx = seq_len(length(MLIST[[m]])),
-                                  th.idx = NULL,
-                                  delta = TRUE) {
+lav_lisrel_dth_dx <- function(MLIST = NULL,
+                              m = "tau",
+                              # all model matrix elements, or only a few?
+                              idx = seq_len(length(MLIST[[m]])),
+                              th.idx = NULL,
+                              delta = TRUE) {
   LAMBDA <- MLIST$lambda
   nvar <- nrow(LAMBDA)
   nfac <- ncol(LAMBDA)
@@ -2605,10 +2604,9 @@ lav_lisrel_dth_dx <- function( MLIST = NULL,
 
 # dPi/dx -- per model matrix
 lav_lisrel_dpi_dx <- function(MLIST = NULL,
-                                 m = "lambda",
-                                 # all model matrix elements, or only a few?
-                                 idx = seq_len(length(MLIST[[m]]))
-                                ) {
+                              m = "lambda",
+                              # all model matrix elements, or only a few?
+                              idx = seq_len(length(MLIST[[m]]))) {
   LAMBDA <- MLIST$lambda
   nvar <- nrow(LAMBDA)
   nfac <- ncol(LAMBDA)
@@ -2665,10 +2663,9 @@ lav_lisrel_dpi_dx <- function(MLIST = NULL,
 
 # dGW/dx -- per model matrix
 lav_lisrel_dgw_dx <- function(MLIST = NULL,
-                                 m = "gw",
-                                 # all model matrix elements, or only a few?
-                                 idx = seq_len(length(MLIST[[m]]))
-                                 ) {
+                              m = "gw",
+                              # all model matrix elements, or only a few?
+                              idx = seq_len(length(MLIST[[m]]))) {
   # shortcut for empty matrices
   if (m != "gw") {
     return(matrix(0.0, nrow = 1L, ncol = length(idx)))
@@ -2683,10 +2680,9 @@ lav_lisrel_dgw_dx <- function(MLIST = NULL,
 
 # dlambda/dx -- per model matrix
 lav_lisrel_dlambda_dx <- function(MLIST = NULL,
-                                     m = "lambda",
-                                     # all model matrix elements, or only a few?
-                                     idx = seq_len(length(MLIST[[m]]))
-                                    ) {
+                                  m = "lambda",
+                                  # all model matrix elements, or only a few?
+                                  idx = seq_len(length(MLIST[[m]]))) {
   LAMBDA <- MLIST$lambda
 
   # shortcut for empty matrices
@@ -2703,10 +2699,9 @@ lav_lisrel_dlambda_dx <- function(MLIST = NULL,
 
 # dpsi/dx -- per model matrix - FIXME!!!!!
 lav_lisrel_dpsi_dx <- function(MLIST = NULL,
-                                  m = "psi",
-                                  # all model matrix elements, or only a few?
-                                  idx = seq_len(length(MLIST[[m]]))
-                                  ) {
+                               m = "psi",
+                               # all model matrix elements, or only a few?
+                               idx = seq_len(length(MLIST[[m]]))) {
   PSI <- MLIST$psi
   nfac <- nrow(PSI)
   v.idx <- lav_matrix_vech_idx(nfac)
@@ -2726,10 +2721,9 @@ lav_lisrel_dpsi_dx <- function(MLIST = NULL,
 
 # dtheta/dx -- per model matrix
 lav_lisrel_dtheta_dx <- function(MLIST = NULL,
-                                    m = "theta",
-                                    # all model matrix elements, or only a few?
-                                    idx = seq_len(length(MLIST[[m]]))
-                                    ) {
+                                 m = "theta",
+                                 # all model matrix elements, or only a few?
+                                 idx = seq_len(length(MLIST[[m]]))) {
   THETA <- MLIST$theta
   nvar <- nrow(THETA)
   v.idx <- lav_matrix_vech_idx(nvar)
@@ -2749,11 +2743,10 @@ lav_lisrel_dtheta_dx <- function(MLIST = NULL,
 
 
 # dbeta/dx -- per model matrix
-lav_lisrel_dbeta_dx <- function(MLIST = NULL, 
-                                 m = "beta",
-                                 # all model matrix elements, or only a few?
-                                 idx = seq_len(length(MLIST[[m]]))
-                                 ) {
+lav_lisrel_dbeta_dx <- function(MLIST = NULL,
+                                m = "beta",
+                                # all model matrix elements, or only a few?
+                                idx = seq_len(length(MLIST[[m]]))) {
   BETA <- MLIST$beta
 
   # shortcut for empty matrices
@@ -2772,8 +2765,7 @@ lav_lisrel_dbeta_dx <- function(MLIST = NULL,
 lav_lisrel_dgamma_dx <- function(MLIST = NULL,
                                  m = "gamma",
                                  # all model matrix elements, or only a few?
-                                 idx = seq_len(length(MLIST[[m]]))
-                                 ) {
+                                 idx = seq_len(length(MLIST[[m]]))) {
   GAMMA <- MLIST$gamma
 
   # shortcut for empty matrices
@@ -2789,11 +2781,10 @@ lav_lisrel_dgamma_dx <- function(MLIST = NULL,
 }
 
 # dnu/dx -- per model matrix
-lav_lisrel_dnu_dx <- function( MLIST = NULL,
-                               m = "nu",
-                               # all model matrix elements, or only a few?
-                               idx = seq_len(length(MLIST[[m]]))
-                               ) {
+lav_lisrel_dnu_dx <- function(MLIST = NULL,
+                              m = "nu",
+                              # all model matrix elements, or only a few?
+                              idx = seq_len(length(MLIST[[m]]))) {
   NU <- MLIST$nu
 
   # shortcut for empty matrices
@@ -2810,10 +2801,9 @@ lav_lisrel_dnu_dx <- function( MLIST = NULL,
 
 # dtau/dx -- per model matrix
 lav_lisrel_dtau_dx <- function(MLIST = NULL,
-                                m = "tau",
-                                # all model matrix elements, or only a few?
-                                idx = seq_len(length(MLIST[[m]]))
-                                ) {
+                               m = "tau",
+                               # all model matrix elements, or only a few?
+                               idx = seq_len(length(MLIST[[m]]))) {
   TAU <- MLIST$tau
 
   # shortcut for empty matrices
@@ -2832,10 +2822,9 @@ lav_lisrel_dtau_dx <- function(MLIST = NULL,
 
 # dalpha/dx -- per model matrix
 lav_lisrel_dalpha_dx <- function(MLIST = NULL,
-                                  m = "alpha",
-                                  # all model matrix elements, or only a few?
-                                  idx = seq_len(length(MLIST[[m]]))
-                                  ) {
+                                 m = "alpha",
+                                 # all model matrix elements, or only a few?
+                                 idx = seq_len(length(MLIST[[m]]))) {
   ALPHA <- MLIST$alpha
 
   # shortcut for empty matrices
@@ -2856,11 +2845,11 @@ lav_lisrel_dalpha_dx <- function(MLIST = NULL,
 # lav_lisrel_sigma <- lavaan:::lav_lisrel_sigma
 # lav_lisrel_delta <- lavaan:::lav_lisrel_delta
 lav_lisrel_test_derivatives  <- function(MLIST = NULL,
-                                       nvar = NULL, nfac = NULL, nexo = NULL,
-                                       th.idx = NULL, num.idx = NULL,
-                                       meanstructure = TRUE,
-                                       th = TRUE, delta = TRUE, pi = TRUE,
-                                       gw = FALSE, theta = FALSE) {
+                                         nvar = NULL, nfac = NULL, nexo = NULL,
+                                         th.idx = NULL, num.idx = NULL,
+                                         meanstructure = TRUE,
+                                         th = TRUE, delta = TRUE, pi = TRUE,
+                                         gw = FALSE, theta = FALSE) {
   if (is.null(MLIST)) {
     # create artificial matrices, compare 'numerical' vs 'analytical'
     # derivatives

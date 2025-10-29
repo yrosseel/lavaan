@@ -869,7 +869,7 @@ computeDelta <- function(lavmodel = NULL, GLIST. = NULL,
             DELTA.mu <- lav_lisrel_dmu_dx(
               MLIST = GLIST[mm.in.group],
               m = mname,
-              idx = m.el.idx[[mm]] 
+              idx = m.el.idx[[mm]]
             )
 
             # slopes
@@ -1091,7 +1091,7 @@ computeDeltaDx <- function(lavmodel = NULL, GLIST = NULL, target = "lambda",
           DELTA <- lav_lisrel_dmu_dx(
             MLIST = GLIST[mm.in.group],
             m = mname,
-            idx = m.el.idx[[mm]] 
+            idx = m.el.idx[[mm]]
           )
         } else if (target == "nu") {
           DELTA <- lav_lisrel_dnu_dx(
@@ -1133,13 +1133,13 @@ computeDeltaDx <- function(lavmodel = NULL, GLIST = NULL, target = "lambda",
           DELTA <- lav_lisrel_dpsi_dx(
             MLIST = GLIST[mm.in.group],
             m = mname,
-            idx = m.el.idx[[mm]] 
+            idx = m.el.idx[[mm]]
           )
         } else if (target == "sigma") {
           DELTA <- lav_lisrel_dsigma_dx(
             MLIST = GLIST[mm.in.group],
             m = mname,
-            idx = m.el.idx[[mm]], 
+            idx = m.el.idx[[mm]],
             delta = TRUE
           )
         } else {
