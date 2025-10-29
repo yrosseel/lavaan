@@ -70,7 +70,7 @@ MLIST <- Model@GLIST
 # MLIST is the matrix representation of a single block
 # MLIST is used to compute model-based statistics, e.g.,
 # the model-implied variance-covariance matrix
-lavaan:::computeSigmaHat.LISREL(MLIST)
+lavaan:::lav_lisrel_sigma(MLIST)
 
 
 

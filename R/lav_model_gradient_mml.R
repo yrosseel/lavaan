@@ -39,8 +39,8 @@ lav_model_gradient_mml <- function(lavmodel = NULL,
   nfac <- ncol(GH$x)
 
   # compute VETAx (latent lv only)
-  # VETAx <- computeVETAx.LISREL(MLIST = MLIST, lv.dummy.idx = lv.dummy.idx)
-  VETAx <- computeVETAx.LISREL(MLIST = MLIST)
+  # VETAx <- lav_lisrel_vetax(MLIST = MLIST, lv.dummy.idx = lv.dummy.idx)
+  VETAx <- lav_lisrel_vetax(MLIST = MLIST)
   # check for negative values?
   if (any(diag(VETAx) < 0)) {
     lav_msg_warn(gettext("--- VETAx contains negative values"))
@@ -71,7 +71,7 @@ lav_model_gradient_mml <- function(lavmodel = NULL,
       return(0)
     }
     if (!is.null(MLIST$alpha) || !is.null(MLIST$gamma)) {
-      EETAx <- computeEETAx.LISREL(
+      EETAx <- lav_lisrel_eetax(
         MLIST = MLIST, eXo = eXo, N = nobs,
         sample.mean = sample.mean,
         ov.y.dummy.ov.idx = ov.y.dummy.ov.idx,
@@ -87,7 +87,7 @@ lav_model_gradient_mml <- function(lavmodel = NULL,
 
   # prepare common stuff
   # fix Lambda?
-  LAMBDA <- computeLAMBDA.LISREL(
+  LAMBDA <- lav_lisrel_lambda(
     MLIST = MLIST,
     ov.y.dummy.ov.idx = ov.y.dummy.ov.idx,
     ov.x.dummy.ov.idx = ov.x.dummy.ov.idx,
@@ -188,7 +188,7 @@ lav_model_gradient_mml <- function(lavmodel = NULL,
 
     # again, compute yhat for this node (eta)
     if (lavmodel@conditional.x) {
-      yhat <- computeEYetax.LISREL(
+      yhat <- lav_lisrel_eyetax(
         MLIST = MLIST, eXo = eXo,
         ETA = eta, sample.mean = sample.mean,
         ov.y.dummy.ov.idx = ov.y.dummy.ov.idx,
@@ -197,7 +197,7 @@ lav_model_gradient_mml <- function(lavmodel = NULL,
         ov.x.dummy.lv.idx = ov.x.dummy.lv.idx
       )
     } else {
-      yhat <- computeEYetax3.LISREL(
+      yhat <- lav_lisrel_eyetax3(
         MLIST = MLIST,
         ETA = eta, sample.mean = sample.mean,
         mean.x = sample.mean.x,

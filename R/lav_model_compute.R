@@ -20,7 +20,7 @@ computeSigmaHat <- function(lavmodel = NULL, GLIST = NULL, extra = FALSE,
     MLIST <- GLIST[mm.in.group]
 
     if (representation == "LISREL") {
-      Sigma.hat[[g]] <- computeSigmaHat.LISREL(
+      Sigma.hat[[g]] <- lav_lisrel_sigma(
         MLIST = MLIST,
         delta = delta
       )
@@ -98,9 +98,9 @@ computeSigmaHatJoint <- function(lavmodel = NULL, GLIST = NULL, extra = FALSE,
     MLIST <- GLIST[mm.in.group]
 
     if (representation == "LISREL") {
-      res.Sigma <- computeSigmaHat.LISREL(MLIST = MLIST, delta = delta)
-      # res.int <- computeMuHat.LISREL(MLIST = MLIST)
-      res.slopes <- computePI.LISREL(MLIST = MLIST)
+      res.Sigma <- lav_lisrel_sigma(MLIST = MLIST, delta = delta)
+      # res.int <- lav_lisrel_mu(MLIST = MLIST)
+      res.slopes <- lav_lisrel_pi(MLIST = MLIST)
       S.xx <- MLIST$cov.x
 
       S.yy <- res.Sigma + res.slopes %*% S.xx %*% t(res.slopes)
@@ -168,7 +168,7 @@ computeMuHat <- function(lavmodel = NULL, GLIST = NULL) {
     if (!meanstructure) {
       Mu.hat[[g]] <- numeric(lavmodel@nvar[g])
     } else if (representation == "LISREL") {
-      Mu.hat[[g]] <- computeMuHat.LISREL(MLIST = MLIST)
+      Mu.hat[[g]] <- lav_lisrel_mu(MLIST = MLIST)
     } else if (representation == "RAM") {
       Mu.hat[[g]] <- lav_ram_muhat(MLIST = MLIST)
     } else {
@@ -223,8 +223,8 @@ computeMuHatJoint <- function(lavmodel = NULL, GLIST = NULL) {
       Mu.hat[[g]] <- numeric(lavmodel@nvar[g])
     } else if (representation == "LISREL") {
       MLIST <- GLIST[mm.in.group]
-      res.int <- computeMuHat.LISREL(MLIST = MLIST)
-      res.slopes <- computePI.LISREL(MLIST = MLIST)
+      res.int <- lav_lisrel_mu(MLIST = MLIST)
+      res.slopes <- lav_lisrel_pi(MLIST = MLIST)
       M.x <- MLIST$mean.x
 
       Mu.y <- res.int + res.slopes %*% M.x
@@ -264,7 +264,7 @@ computeTH <- function(lavmodel = NULL, GLIST = NULL, delta = TRUE) {
     mm.in.group <- 1:nmat[g] + cumsum(c(0, nmat))[g]
 
     if (representation == "LISREL") {
-      TH[[g]] <- computeTH.LISREL(
+      TH[[g]] <- lav_lisrel_th(
         MLIST = GLIST[mm.in.group],
         th.idx = th.idx[[g]], delta = delta
       )
@@ -300,7 +300,7 @@ computePI <- function(lavmodel = NULL, GLIST = NULL, delta = TRUE) {
     if (!conditional.x) {
       PI.g <- numeric(lavmodel@nvar[g])
     } else if (representation == "LISREL") {
-      PI.g <- computePI.LISREL(MLIST = MLIST, delta = delta)
+      PI.g <- lav_lisrel_pi(MLIST = MLIST, delta = delta)
     } else {
       lav_msg_stop(gettext(
         "only representation LISREL has been implemented for now"))
@@ -375,7 +375,7 @@ computeVY <- function(lavmodel = NULL, GLIST = NULL, diagonal.only = FALSE) {
     MLIST <- GLIST[mm.in.group]
 
     if (representation == "LISREL") {
-      VY.g <- computeVY.LISREL(MLIST = MLIST)
+      VY.g <- lav_lisrel_vy(MLIST = MLIST)
     } else if (representation == "RAM") {
       # does not work for categorical setting yet
       stopifnot(!lavmodel@categorical)
@@ -417,7 +417,7 @@ computeVETA <- function(lavmodel = NULL, GLIST = NULL,
     MLIST <- GLIST[mm.in.group]
 
     if (representation == "LISREL") {
-      VETA.g <- computeVETA.LISREL(MLIST = MLIST)
+      VETA.g <- lav_lisrel_veta(MLIST = MLIST)
 
       if (remove.dummy.lv) {
         # remove all dummy latent variables
@@ -466,7 +466,7 @@ computeVETAx <- function(lavmodel = NULL, GLIST = NULL) {
         lavmodel@ov.y.dummy.lv.idx[[g]],
         lavmodel@ov.x.dummy.lv.idx[[g]]
       )
-      ETA.g <- computeVETAx.LISREL(
+      ETA.g <- lav_lisrel_vetax(
         MLIST = MLIST,
         lv.dummy.idx = lv.idx
       )
@@ -501,7 +501,7 @@ computeCOV <- function(lavmodel = NULL, GLIST = NULL,
     MLIST <- GLIST[mm.in.group]
 
     if (representation == "LISREL") {
-      COV.g <- computeCOV.LISREL(MLIST = MLIST, delta = delta)
+      COV.g <- lav_lisrel_cov_both(MLIST = MLIST, delta = delta)
 
       if (remove.dummy.lv) {
         # remove all dummy latent variables
@@ -549,7 +549,7 @@ computeEETA <- function(lavmodel = NULL, GLIST = NULL, lavsamplestats = NULL,
     MLIST <- GLIST[mm.in.group]
 
     if (representation == "LISREL") {
-      EETA.g <- computeEETA.LISREL(MLIST,
+      EETA.g <- lav_lisrel_eeta(MLIST,
         mean.x = lavsamplestats@mean.x[[g]],
         sample.mean = lavsamplestats@mean[[g]],
         ov.y.dummy.lv.idx = lavmodel@ov.y.dummy.lv.idx[[g]],
@@ -605,7 +605,7 @@ computeEETAx <- function(lavmodel = NULL, GLIST = NULL, lavsamplestats = NULL,
     }
 
     if (representation == "LISREL") {
-      EETAx.g <- computeEETAx.LISREL(MLIST,
+      EETAx.g <- lav_lisrel_eetax(MLIST,
         eXo = EXO, N = nobs[[g]],
         sample.mean = lavsamplestats@mean[[g]],
         ov.y.dummy.lv.idx = lavmodel@ov.y.dummy.lv.idx[[g]],
@@ -667,7 +667,7 @@ computeLAMBDA <- function(lavmodel = NULL, GLIST = NULL,
         ov.y.dummy.lv.idx <- NULL
         ov.x.dummy.lv.idx <- NULL
       }
-      LAMBDA.g <- computeLAMBDA.LISREL(
+      LAMBDA.g <- lav_lisrel_lambda(
         MLIST = MLIST,
         ov.y.dummy.ov.idx = ov.y.dummy.ov.idx,
         ov.x.dummy.ov.idx = ov.x.dummy.ov.idx,
@@ -706,7 +706,7 @@ computeTHETA <- function(lavmodel = NULL, GLIST = NULL, fix = TRUE) {
 
     if (representation == "LISREL") {
       if (fix) {
-        THETA.g <- computeTHETA.LISREL(
+        THETA.g <- lav_lisrel_theta(
           MLIST = MLIST,
           ov.y.dummy.ov.idx = lavmodel@ov.y.dummy.ov.idx[[g]],
           ov.x.dummy.ov.idx = lavmodel@ov.x.dummy.ov.idx[[g]],
@@ -714,7 +714,7 @@ computeTHETA <- function(lavmodel = NULL, GLIST = NULL, fix = TRUE) {
           ov.x.dummy.lv.idx = lavmodel@ov.x.dummy.lv.idx[[g]]
         )
       } else {
-        THETA.g <- computeTHETA.LISREL(MLIST = MLIST)
+        THETA.g <- lav_lisrel_theta(MLIST = MLIST)
       }
     } else if (representation == "RAM") {
       ov.idx <- as.integer(MLIST$ov.idx[1, ])
@@ -750,7 +750,7 @@ computeNU <- function(lavmodel = NULL, GLIST = NULL,
     MLIST <- GLIST[mm.in.group]
 
     if (representation == "LISREL") {
-      NU.g <- computeNU.LISREL(
+      NU.g <- lav_lisrel_nu(
         MLIST = MLIST,
         sample.mean = lavsamplestats@mean[[g]],
         ov.y.dummy.ov.idx = lavmodel@ov.y.dummy.ov.idx[[g]],
@@ -790,7 +790,7 @@ computeEY <- function(lavmodel = NULL, GLIST = NULL, lavsamplestats = NULL,
     MLIST <- GLIST[mm.in.group]
 
     if (representation == "LISREL") {
-      EY.g <- computeEY.LISREL(
+      EY.g <- lav_lisrel_ey(
         MLIST = MLIST,
         mean.x = lavsamplestats@mean.x[[g]],
         sample.mean = lavsamplestats@mean[[g]],
@@ -832,7 +832,7 @@ computeEYx <- function(lavmodel = NULL, GLIST = NULL, lavsamplestats = NULL,
     MLIST <- GLIST[mm.in.group]
 
     if (representation == "LISREL") {
-      EYx.g <- computeEYx.LISREL(
+      EYx.g <- lav_lisrel_eyx(
         MLIST = MLIST,
 		eXo = eXo[[g]],
         sample.mean = lavsamplestats@mean[[g]],
@@ -883,7 +883,7 @@ computeYHAT <- function(lavmodel = NULL, GLIST = NULL, lavsamplestats = NULL,
 
     if (lavmodel@representation == "LISREL") {
       if (lavmodel@conditional.x) {
-        YHAT[[g]] <- computeEYetax.LISREL(
+        YHAT[[g]] <- lav_lisrel_eyetax(
           MLIST = MLIST,
           eXo = eXo[[g]], ETA = ETA[[g]], N = Nobs,
           sample.mean = lavsamplestats@mean[[g]],
@@ -895,7 +895,7 @@ computeYHAT <- function(lavmodel = NULL, GLIST = NULL, lavsamplestats = NULL,
         )
       } else {
         # unconditional case
-        YHAT[[g]] <- computeEYetax3.LISREL(
+        YHAT[[g]] <- lav_lisrel_eyetax3(
           MLIST = MLIST,
           ETA = ETA[[g]],
           sample.mean = lavsamplestats@mean[[g]],

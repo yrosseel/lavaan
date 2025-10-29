@@ -1961,7 +1961,7 @@ lav_predict_fy_eta.i <- function(lavmodel = NULL, lavdata = NULL,
 
   # linear predictor for all items
   YHAT <-
-    computeEYetax.LISREL(
+    lav_lisrel_eyetax(
       MLIST = MLIST,
       eXo = x.i,
       ETA = eta.i,

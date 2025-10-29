@@ -152,7 +152,7 @@ lav_model_gradient <- function(lavmodel = NULL,
       mm.names <- names(GLIST[mm.in.group])
 
       if (representation == "LISREL") {
-        DX.group <- derivative.F.LISREL(
+        DX.group <- lav_lisrel_df_dmlist(
           GLIST[mm.in.group],
           Omega[[g]],
           Omega.mu[[g]]
@@ -810,7 +810,7 @@ computeDelta <- function(lavmodel = NULL, GLIST. = NULL,
 
     # if theta, do some preparation
     if (representation == "LISREL" && parameterization == "theta") {
-      sigma.hat <- computeSigmaHat.LISREL(
+      sigma.hat <- lav_lisrel_sigma(
         MLIST = GLIST[mm.in.group],
         delta = FALSE
       )
@@ -830,10 +830,10 @@ computeDelta <- function(lavmodel = NULL, GLIST. = NULL,
       if (representation == "LISREL") {
         # Sigma
         DELTA <- dxSigma <-
-          derivative.sigma.LISREL(
+          lav_lisrel_dsigma_dx(
+            MLIST = GLIST[mm.in.group],
             m = mname,
             idx = m.el.idx[[mm]],
-            MLIST = GLIST[mm.in.group],
             delta = parameterization == "delta"
           )
         if (categorical && parameterization == "theta") {
@@ -866,16 +866,18 @@ computeDelta <- function(lavmodel = NULL, GLIST. = NULL,
         if (!categorical) {
           if (conditional.x) {
             # means/intercepts
-            DELTA.mu <- derivative.mu.LISREL(
+            DELTA.mu <- lav_lisrel_dmu_dx(
+              MLIST = GLIST[mm.in.group],
               m = mname,
-              idx = m.el.idx[[mm]], MLIST = GLIST[mm.in.group]
+              idx = m.el.idx[[mm]] 
             )
 
             # slopes
             if (lavmodel@nexo[g] > 0L) {
-              DELTA.pi <- derivative.pi.LISREL(
+              DELTA.pi <- lav_lisrel_dpi_dx(
+                 MLIST = GLIST[mm.in.group],
                 m = mname,
-                idx = m.el.idx[[mm]], MLIST = GLIST[mm.in.group]
+                idx = m.el.idx[[mm]]
               )
 
               if (lavmodel@multilevel) {
@@ -904,18 +906,19 @@ computeDelta <- function(lavmodel = NULL, GLIST. = NULL,
               DELTA <- rbind(DELTA.mu, DELTA)
             }
           } else if (!conditional.x && lavmodel@meanstructure) {
-            DELTA.mu <- derivative.mu.LISREL(
+            DELTA.mu <- lav_lisrel_dmu_dx(
+               MLIST = GLIST[mm.in.group],
               m = mname,
-              idx = m.el.idx[[mm]], MLIST = GLIST[mm.in.group]
+              idx = m.el.idx[[mm]]
             )
             DELTA <- rbind(DELTA.mu, DELTA)
           }
         } else if (categorical) {
-          DELTA.th <- derivative.th.LISREL(
+          DELTA.th <- lav_lisrel_dth_dx(
+            MLIST = GLIST[mm.in.group],
             m = mname,
             idx = m.el.idx[[mm]],
             th.idx = th.idx[[g]],
-            MLIST = GLIST[mm.in.group],
             delta = TRUE
           )
           if (parameterization == "theta") {
@@ -924,10 +927,10 @@ computeDelta <- function(lavmodel = NULL, GLIST. = NULL,
               (dxSigma[theta.var.idx, , drop = FALSE] *
                 -0.5 / (dsigma * sqrt(dsigma)))
             dth.dDelta <-
-              derivative.th.LISREL(
+              lav_lisrel_dth_dx(
+                MLIST = GLIST[mm.in.group],
                 m = "delta",
                 idx = 1:nvar[g],
-                MLIST = GLIST[mm.in.group],
                 th.idx = th.idx[[g]]
               )
             # add dth.dDelta %*% dDelta.dx
@@ -938,17 +941,17 @@ computeDelta <- function(lavmodel = NULL, GLIST. = NULL,
           }
           if (conditional.x && lavmodel@nexo[g] > 0L) {
             DELTA.pi <-
-              derivative.pi.LISREL(
+              lav_lisrel_dpi_dx(
+                MLIST = GLIST[mm.in.group],
                 m = mname,
-                idx = m.el.idx[[mm]],
-                MLIST = GLIST[mm.in.group]
+                idx = m.el.idx[[mm]]
               )
             if (parameterization == "theta") {
               dpi.dDelta <-
-                derivative.pi.LISREL(
+                lav_lisrel_dpi_dx(
+                  MLIST = GLIST[mm.in.group],
                   m = "delta",
-                  idx = 1:nvar[g],
-                  MLIST = GLIST[mm.in.group]
+                  idx = 1:nvar[g]
                 )
               # add dpi.dDelta %*% dDelta.dx
               no.num.idx <-
@@ -966,10 +969,10 @@ computeDelta <- function(lavmodel = NULL, GLIST. = NULL,
           }
         }
         if (group.w.free) {
-          DELTA.gw <- derivative.gw.LISREL(
+          DELTA.gw <- lav_lisrel_dgw_dx(
+            MLIST = GLIST[mm.in.group],
             m = mname,
-            idx = m.el.idx[[mm]],
-            MLIST = GLIST[mm.in.group]
+            idx = m.el.idx[[mm]]
           )
           DELTA <- rbind(DELTA.gw, DELTA)
         }
@@ -1073,60 +1076,70 @@ computeDeltaDx <- function(lavmodel = NULL, GLIST = NULL, target = "lambda",
       # get Delta columns for this model matrix
       if (representation == "LISREL") {
         if (target == "lambda") {
-          DELTA <- derivative.lambda.LISREL(
+         DELTA <- lav_lisrel_dlambda_dx(
+            MLIST = GLIST[mm.in.group],
             m = mname,
-            idx = m.el.idx[[mm]], MLIST = GLIST[mm.in.group]
+            idx = m.el.idx[[mm]]
           )
         } else if (target == "th") {
-          DELTA <- derivative.th.LISREL(
-            m = mname, th.idx = th.idx[[g]],
-            idx = m.el.idx[[mm]], MLIST = GLIST[mm.in.group],
+          DELTA <- lav_lisrel_dth_dx(
+             MLIST = GLIST[mm.in.group], m = mname, th.idx = th.idx[[g]],
+            idx = m.el.idx[[mm]],
             delta = TRUE
           )
         } else if (target == "mu") {
-          DELTA <- derivative.mu.LISREL(
+          DELTA <- lav_lisrel_dmu_dx(
+            MLIST = GLIST[mm.in.group],
             m = mname,
-            idx = m.el.idx[[mm]], MLIST = GLIST[mm.in.group]
+            idx = m.el.idx[[mm]] 
           )
         } else if (target == "nu") {
-          DELTA <- derivative.nu.LISREL(
+          DELTA <- lav_lisrel_dnu_dx(
+            MLIST = GLIST[mm.in.group],
             m = mname,
-            idx = m.el.idx[[mm]], MLIST = GLIST[mm.in.group]
+            idx = m.el.idx[[mm]]
           )
         } else if (target == "tau") {
-          DELTA <- derivative.tau.LISREL(
+          DELTA <- lav_lisrel_dtau_dx(
+            MLIST = GLIST[mm.in.group],
             m = mname,
-            idx = m.el.idx[[mm]], MLIST = GLIST[mm.in.group]
+            idx = m.el.idx[[mm]]
           )
         } else if (target == "theta") {
-          DELTA <- derivative.theta.LISREL(
+          DELTA <- lav_lisrel_dtheta_dx(
+            MLIST = GLIST[mm.in.group],
             m = mname,
-            idx = m.el.idx[[mm]], MLIST = GLIST[mm.in.group]
+            idx = m.el.idx[[mm]]
           )
         } else if (target == "gamma") {
-          DELTA <- derivative.gamma.LISREL(
+          DELTA <- lav_lisrel_dgamma_dx(
+            MLIST = GLIST[mm.in.group],
             m = mname,
-            idx = m.el.idx[[mm]], MLIST = GLIST[mm.in.group]
+            idx = m.el.idx[[mm]]
           )
         } else if (target == "beta") {
-          DELTA <- derivative.beta.LISREL(
+          DELTA <- lav_lisrel_dbeta_dx(
+            MLIST = GLIST[mm.in.group],
             m = mname,
-            idx = m.el.idx[[mm]], MLIST = GLIST[mm.in.group]
+            idx = m.el.idx[[mm]]
           )
         } else if (target == "alpha") {
-          DELTA <- derivative.alpha.LISREL(
+          DELTA <- lav_lisrel_dalpha_dx(
+            MLIST = GLIST[mm.in.group],
             m = mname,
-            idx = m.el.idx[[mm]], MLIST = GLIST[mm.in.group]
+            idx = m.el.idx[[mm]]
           )
         } else if (target == "psi") {
-          DELTA <- derivative.psi.LISREL(
+          DELTA <- lav_lisrel_dpsi_dx(
+            MLIST = GLIST[mm.in.group],
             m = mname,
-            idx = m.el.idx[[mm]], MLIST = GLIST[mm.in.group]
+            idx = m.el.idx[[mm]] 
           )
         } else if (target == "sigma") {
-          DELTA <- derivative.sigma.LISREL(
+          DELTA <- lav_lisrel_dsigma_dx(
+            MLIST = GLIST[mm.in.group],
             m = mname,
-            idx = m.el.idx[[mm]], MLIST = GLIST[mm.in.group],
+            idx = m.el.idx[[mm]], 
             delta = TRUE
           )
         } else {

@@ -471,7 +471,7 @@ lav_partable_flat <- function(FLAT = NULL, # nolint
   }
 
   # 0d. variances for composites: ALWAYS fixed (should be set later
-  #     by setVarianceComposites.LISREL
+  #     by lav_lisrel_composites_variances
   if (length(lv.names.c) > 0) {
     var.idx <- which(op == "~~" & lhs %in% lv.names.c & lhs == rhs)
     ustart[var.idx] <- as.numeric(NA)
