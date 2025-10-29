@@ -211,8 +211,8 @@ lav_bootstrap_internal <- function(object = NULL,
 
   # bollen.stine, yuan, or parametric: we need the Sigma.hat values
   if (type == "bollen.stine" || type == "parametric" || type == "yuan") {
-    Sigma.hat <- computeSigmaHat(lavmodel = lavmodel)
-    Mu.hat <- computeMuHat(lavmodel = lavmodel)
+    Sigma.hat <- lav_model_sigma(lavmodel = lavmodel)
+    Mu.hat <- lav_model_mu(lavmodel = lavmodel)
   }
 
   # can we use the original data, or do we need to transform it first?

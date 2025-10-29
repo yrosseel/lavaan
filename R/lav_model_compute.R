@@ -1,4 +1,4 @@
-computeSigmaHat <- function(lavmodel = NULL, GLIST = NULL, extra = FALSE,
+lav_model_sigma <- function(lavmodel = NULL, GLIST = NULL, extra = FALSE,
                             delta = TRUE, check.sigma.pd = "chol") {
   # state or final?
   if (is.null(GLIST)) GLIST <- lavmodel@GLIST
@@ -74,7 +74,7 @@ computeSigmaHat <- function(lavmodel = NULL, GLIST = NULL, extra = FALSE,
 ##     S12 = PI %*% cov.x
 ##     S21 = cov.x %*% t(PI)
 ##     S22 = cov.x
-computeSigmaHatJoint <- function(lavmodel = NULL, GLIST = NULL, extra = FALSE,
+lav_model_cond2joint_sigma <- function(lavmodel = NULL, GLIST = NULL, extra = FALSE,
                                  delta = TRUE) {
   stopifnot(lavmodel@conditional.x)
 
@@ -148,7 +148,7 @@ computeSigmaHatJoint <- function(lavmodel = NULL, GLIST = NULL, extra = FALSE,
   Sigma.hat
 }
 
-computeMuHat <- function(lavmodel = NULL, GLIST = NULL) {
+lav_model_mu <- function(lavmodel = NULL, GLIST = NULL) {
   # state or final?
   if (is.null(GLIST)) GLIST <- lavmodel@GLIST
 
@@ -199,7 +199,7 @@ computeMuHat <- function(lavmodel = NULL, GLIST = NULL) {
 ## Mu (Joint ) = [ Mu.y, Mu.x ] where
 ##     Mu.y = res.int + PI %*% M.x
 ##     Mu.x = M.x
-computeMuHatJoint <- function(lavmodel = NULL, GLIST = NULL) {
+lav_model_cond2joint_mu <- function(lavmodel = NULL, GLIST = NULL) {
   # state or final?
   if (is.null(GLIST)) GLIST <- lavmodel@GLIST
 
@@ -241,7 +241,7 @@ computeMuHatJoint <- function(lavmodel = NULL, GLIST = NULL) {
 
 # TH.star = DELTA.star * (th.star - pi0.star)
 # see Muthen 1984 eq 11
-computeTH <- function(lavmodel = NULL, GLIST = NULL, delta = TRUE) {
+lav_model_th <- function(lavmodel = NULL, GLIST = NULL, delta = TRUE) {
   # state or final?
   if (is.null(GLIST)) GLIST <- lavmodel@GLIST
 
@@ -279,7 +279,7 @@ computeTH <- function(lavmodel = NULL, GLIST = NULL, delta = TRUE) {
 
 # PI = slope structure
 # see Muthen 1984 eq 12
-computePI <- function(lavmodel = NULL, GLIST = NULL, delta = TRUE) {
+lav_model_pi <- function(lavmodel = NULL, GLIST = NULL, delta = TRUE) {
   # state or final?
   if (is.null(GLIST)) GLIST <- lavmodel@GLIST
 
@@ -314,7 +314,7 @@ computePI <- function(lavmodel = NULL, GLIST = NULL, delta = TRUE) {
 
 
 # GW = group weight
-computeGW <- function(lavmodel = NULL, GLIST = NULL) {
+lav_model_gw <- function(lavmodel = NULL, GLIST = NULL) {
   # state or final?
   if (is.null(GLIST)) GLIST <- lavmodel@GLIST
 
@@ -357,7 +357,7 @@ computeGW <- function(lavmodel = NULL, GLIST = NULL) {
 # *unconditional* variance/covariance matrix of Y
 #  - same as Sigma.hat if all Y are continuous)
 #  - if also Gamma, cov.x is used (only if categorical)
-computeVY <- function(lavmodel = NULL, GLIST = NULL, diagonal.only = FALSE) {
+lav_model_vy <- function(lavmodel = NULL, GLIST = NULL, diagonal.only = FALSE) {
   # state or final?
   if (is.null(GLIST)) GLIST <- lavmodel@GLIST
 
@@ -398,7 +398,7 @@ computeVY <- function(lavmodel = NULL, GLIST = NULL, diagonal.only = FALSE) {
 }
 
 # V(ETA): latent variances variances/covariances
-computeVETA <- function(lavmodel = NULL, GLIST = NULL,
+lav_model_veta <- function(lavmodel = NULL, GLIST = NULL,
                         remove.dummy.lv = FALSE) {
   # state or final?
   if (is.null(GLIST)) GLIST <- lavmodel@GLIST
@@ -444,7 +444,7 @@ computeVETA <- function(lavmodel = NULL, GLIST = NULL,
 
 # V(ETA|x_i): latent variances variances/covariances, conditional on x_
 # - this is always (I-B)^-1 PSI (I-B)^-T, after REMOVING lv dummies
-computeVETAx <- function(lavmodel = NULL, GLIST = NULL) {
+lav_model_vetax <- function(lavmodel = NULL, GLIST = NULL) {
   # state or final?
   if (is.null(GLIST)) GLIST <- lavmodel@GLIST
 
@@ -482,7 +482,7 @@ computeVETAx <- function(lavmodel = NULL, GLIST = NULL) {
 }
 
 # COV: observed+latent variances variances/covariances
-computeCOV <- function(lavmodel = NULL, GLIST = NULL,
+lav_model_cov_both <- function(lavmodel = NULL, GLIST = NULL,
                        remove.dummy.lv = FALSE, delta = TRUE) {
   # state or final?
   if (is.null(GLIST)) GLIST <- lavmodel@GLIST
@@ -530,7 +530,7 @@ computeCOV <- function(lavmodel = NULL, GLIST = NULL,
 
 
 # E(ETA): expectation (means) of latent variables (return vector)
-computeEETA <- function(lavmodel = NULL, GLIST = NULL, lavsamplestats = NULL,
+lav_model_eeta <- function(lavmodel = NULL, GLIST = NULL, lavsamplestats = NULL,
                         remove.dummy.lv = FALSE) {
   # state or final?
   if (is.null(GLIST)) GLIST <- lavmodel@GLIST
@@ -580,7 +580,7 @@ computeEETA <- function(lavmodel = NULL, GLIST = NULL, lavsamplestats = NULL,
 
 # E(ETA|x_i): conditional expectation (means) of latent variables
 # for a given value of x_i (instead of E(x_i))
-computeEETAx <- function(lavmodel = NULL, GLIST = NULL, lavsamplestats = NULL,
+lav_model_eetax <- function(lavmodel = NULL, GLIST = NULL, lavsamplestats = NULL,
                          eXo = NULL, nobs = NULL, remove.dummy.lv = FALSE) {
   # state or final?
   if (is.null(GLIST)) GLIST <- lavmodel@GLIST
@@ -636,7 +636,7 @@ computeEETAx <- function(lavmodel = NULL, GLIST = NULL, lavsamplestats = NULL,
 }
 
 # return 'regular' LAMBDA
-computeLAMBDA <- function(lavmodel = NULL, GLIST = NULL,
+lav_model_lambda <- function(lavmodel = NULL, GLIST = NULL,
                           handle.dummy.lv = TRUE,
                           remove.dummy.lv = FALSE) {
   # state or final?
@@ -687,7 +687,7 @@ computeLAMBDA <- function(lavmodel = NULL, GLIST = NULL,
 }
 
 # THETA: observed (residual) variances
-computeTHETA <- function(lavmodel = NULL, GLIST = NULL, fix = TRUE) {
+lav_model_theta <- function(lavmodel = NULL, GLIST = NULL, fix = TRUE) {
   # state or final?
   if (is.null(GLIST)) GLIST <- lavmodel@GLIST
 
@@ -731,7 +731,7 @@ computeTHETA <- function(lavmodel = NULL, GLIST = NULL, fix = TRUE) {
 }
 
 # NU: observed intercepts
-computeNU <- function(lavmodel = NULL, GLIST = NULL,
+lav_model_nu <- function(lavmodel = NULL, GLIST = NULL,
                       lavsamplestats = NULL) {
   # state or final?
   if (is.null(GLIST)) GLIST <- lavmodel@GLIST
@@ -771,7 +771,7 @@ computeNU <- function(lavmodel = NULL, GLIST = NULL,
 
 # E(Y): expectation (mean) of observed variables
 # returns vector 1 x nvar
-computeEY <- function(lavmodel = NULL, GLIST = NULL, lavsamplestats = NULL,
+lav_model_ey <- function(lavmodel = NULL, GLIST = NULL, lavsamplestats = NULL,
                       delta = TRUE) {
   # state or final?
   if (is.null(GLIST)) GLIST <- lavmodel@GLIST
@@ -813,7 +813,7 @@ computeEY <- function(lavmodel = NULL, GLIST = NULL, lavsamplestats = NULL,
 
 # E(Y|x_i): conditional expectation (mean) of observed variables
 # returns matrix N x nvar
-computeEYx <- function(lavmodel = NULL, GLIST = NULL, lavsamplestats = NULL,
+lav_model_eyx <- function(lavmodel = NULL, GLIST = NULL, lavsamplestats = NULL,
                        eXo = NULL, delta = TRUE) {
   # state or final?
   if (is.null(GLIST)) GLIST <- lavmodel@GLIST
@@ -856,7 +856,7 @@ computeEYx <- function(lavmodel = NULL, GLIST = NULL, lavsamplestats = NULL,
 
 # E(Y | ETA, x_i): conditional expectation (means) of observed variables
 # for a given value of x_i AND eta_i
-computeYHAT <- function(lavmodel = NULL, GLIST = NULL, lavsamplestats = NULL,
+lav_model_yhat <- function(lavmodel = NULL, GLIST = NULL, lavsamplestats = NULL,
                         eXo = NULL, nobs = NULL, ETA = NULL, duplicate = FALSE,
                         delta = TRUE) {
   # state or final?

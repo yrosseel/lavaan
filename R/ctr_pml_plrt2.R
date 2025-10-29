@@ -71,9 +71,9 @@ ctr_pml_plrt2 <- function(lavobject = NULL, lavmodel = NULL, lavdata = NULL,
       lavoptions = lavoptions,
       lavpta = lavpta,
       lavsamplestats = NULL,
-      sample.cov = computeSigmaHat(lavmodel),
-      sample.mean = computeMuHat(lavmodel),
-      sample.th = computeTH(lavmodel),
+      sample.cov = lav_model_sigma(lavmodel),
+      sample.mean = lav_model_mu(lavmodel),
+      sample.th = lav_model_th(lavmodel),
       sample.th.idx = lavsamplestats@th.idx
     )
 

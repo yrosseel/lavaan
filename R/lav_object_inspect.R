@@ -1628,7 +1628,7 @@ lav_object_inspect_residuals <- function(object, h1 = TRUE,
 lav_object_inspect_cov_lv <- function(object, correlation.metric = FALSE,
     add.labels = FALSE, add.class = FALSE, drop.list.single.group = FALSE) {
   # compute lv covar
-  return.value <- computeVETA(lavmodel = object@Model, remove.dummy.lv = TRUE)
+  return.value <- lav_model_veta(lavmodel = object@Model, remove.dummy.lv = TRUE)
 
   # nblocks
   nblocks <- length(return.value)
@@ -1663,7 +1663,7 @@ lav_object_inspect_cov_lv <- function(object, correlation.metric = FALSE,
 lav_object_inspect_mean_lv <- function(object,
     add.labels = FALSE, add.class = FALSE, drop.list.single.group = FALSE) {
   # compute lv means
-  return.value <- computeEETA(lavmodel       = object@Model,
+  return.value <- lav_model_eeta(lavmodel       = object@Model,
     lavsamplestats = object@SampleStats,
     remove.dummy.lv = TRUE)
 
@@ -1695,7 +1695,7 @@ lav_object_inspect_mean_lv <- function(object,
 lav_object_inspect_cov_all <- function(object, correlation.metric = FALSE,
     add.labels = FALSE, add.class = FALSE, drop.list.single.group = FALSE) {
   # compute extended model implied covariance matrix (both ov and lv)
-  return.value <- computeCOV(lavmodel = object@Model,
+  return.value <- lav_model_cov_both(lavmodel = object@Model,
     remove.dummy.lv = TRUE)
 
   # nblocks
@@ -1873,7 +1873,7 @@ lav_object_inspect_vy <- function(object,
   #  - 1.0 (or delta^2) if categorical
   #  - if also Gamma, cov.x is used (only if categorical)
 
-  return.value <- computeVY(lavmodel = object@Model, GLIST = NULL,
+  return.value <- lav_model_vy(lavmodel = object@Model, GLIST = NULL,
     diagonal.only = TRUE)
 
   # nblocks
@@ -1943,7 +1943,7 @@ lav_object_inspect_fs_determinacy <- function(object,
 lav_object_inspect_theta <- function(object, correlation.metric = FALSE,
     add.labels = FALSE, add.class = FALSE, drop.list.single.group = FALSE) {
   # get residual covariances
-  return.value <- computeTHETA(lavmodel = object@Model)
+  return.value <- lav_model_theta(lavmodel = object@Model)
 
   # nblocks
   nblocks <- length(return.value)

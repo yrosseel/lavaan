@@ -275,9 +275,9 @@ lav_predict_y_conditional_mean <- function(
 
   # conditional.x?
   if (lavmodel@conditional.x) {
-    SigmaHat <- computeSigmaHatJoint(lavmodel)
+    SigmaHat <- lav_model_cond2joint_sigma(lavmodel)
     if (lavmodel@meanstructure) {
-      MuHat <- computeMuHatJoint(lavmodel)
+      MuHat <- lav_model_cond2joint_mu(lavmodel)
     }
   } else {
     SigmaHat <- lavimplied$cov

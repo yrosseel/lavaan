@@ -193,8 +193,8 @@ simulateData <- function( # user-specified model
 
     # this is what we did <0.6-20
     # fit <- lavaan(model = lav, sample.nobs = sample.nobs, ...)
-    # Sigma.hat <- computeSigmaHat(lavmodel = fit@Model)
-    # ETA <- computeVETA(lavmodel = fit@Model)
+    # Sigma.hat <- lav_model_sigma(lavmodel = fit@Model)
+    # ETA <- lav_model_veta(lavmodel = fit@Model)
 
     # if (lav_debug()) {
     #   cat("Sigma.hat:\n")
@@ -215,7 +215,7 @@ simulateData <- function( # user-specified model
     # }
     # # refit
     # fit <- lavaan(model = lav, sample.nobs = sample.nobs, ...)
-    # Sigma.hat <- computeSigmaHat(lavmodel = fit@Model)
+    # Sigma.hat <- lav_model_sigma(lavmodel = fit@Model)
 
     # if (lav_debug()) {
     #   cat("after stage 1:\n")
@@ -258,10 +258,10 @@ simulateData <- function( # user-specified model
   fit <- lavaan(model = lav, sample.nobs = sample.nobs, ...)
 
   # the model-implied moments for the population
-  Sigma.hat <- computeSigmaHat(lavmodel = fit@Model)
-  Mu.hat <- computeMuHat(lavmodel = fit@Model)
+  Sigma.hat <- lav_model_sigma(lavmodel = fit@Model)
+  Mu.hat <- lav_model_mu(lavmodel = fit@Model)
   if (fit@Model@categorical) {
-    TH <- computeTH(lavmodel = fit@Model)
+    TH <- lav_model_th(lavmodel = fit@Model)
   }
 
   if (lav_debug()) {

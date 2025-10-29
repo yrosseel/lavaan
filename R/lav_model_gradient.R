@@ -59,11 +59,11 @@ lav_model_gradient <- function(lavmodel = NULL,
   if (estimator %in% c("ML", "PML", "FML", "REML", "NTRLS", "catML")) {
     # compute moments for all groups
     # if(conditional.x) {
-    #    Sigma.hat <- computeSigmaHatJoint(lavmodel = lavmodel,
+    #    Sigma.hat <- lav_model_cond2joint_sigma(lavmodel = lavmodel,
     #                     GLIST = GLIST,
     #                     extra = (estimator %in% c("ML", "REML","NTRLS")))
     # } else {
-    Sigma.hat <- computeSigmaHat(
+    Sigma.hat <- lav_model_sigma(
       lavmodel = lavmodel, GLIST = GLIST,
       extra = (estimator %in% c(
         "ML", "REML",
@@ -74,35 +74,35 @@ lav_model_gradient <- function(lavmodel = NULL,
 
     if (meanstructure) {
       # if(conditional.x) {
-      #    Mu.hat <- computeMuHat(lavmodel = lavmodel, GLIST = GLIST)
+      #    Mu.hat <- lav_model_mu(lavmodel = lavmodel, GLIST = GLIST)
       # } else {
-      Mu.hat <- computeMuHat(lavmodel = lavmodel, GLIST = GLIST)
+      Mu.hat <- lav_model_mu(lavmodel = lavmodel, GLIST = GLIST)
       # }
     }
 
     if (categorical) {
-      TH <- computeTH(lavmodel = lavmodel, GLIST = GLIST)
+      TH <- lav_model_th(lavmodel = lavmodel, GLIST = GLIST)
     }
 
     if (conditional.x) {
-      PI <- computePI(lavmodel = lavmodel, GLIST = GLIST)
+      PI <- lav_model_pi(lavmodel = lavmodel, GLIST = GLIST)
     } else if (estimator == "PML") {
       PI <- vector("list", length = lavmodel@nblocks)
     }
 
     if (group.w.free) {
-      GW <- computeGW(lavmodel = lavmodel, GLIST = GLIST)
+      GW <- lav_model_gw(lavmodel = lavmodel, GLIST = GLIST)
     }
   } else if (estimator == "DLS" && estimator.args$dls.GammaNT == "model") {
-    Sigma.hat <- computeSigmaHat(
+    Sigma.hat <- lav_model_sigma(
       lavmodel = lavmodel, GLIST = GLIST,
       extra = FALSE
     )
-    Mu.hat <- computeMuHat(lavmodel = lavmodel, GLIST = GLIST)
+    Mu.hat <- lav_model_mu(lavmodel = lavmodel, GLIST = GLIST)
   } else if (estimator == "MML") {
-    TH <- computeTH(lavmodel = lavmodel, GLIST = GLIST)
-    THETA <- computeTHETA(lavmodel = lavmodel, GLIST = GLIST)
-    GW <- computeGW(lavmodel = lavmodel, GLIST = GLIST)
+    TH <- lav_model_th(lavmodel = lavmodel, GLIST = GLIST)
+    THETA <- lav_model_theta(lavmodel = lavmodel, GLIST = GLIST)
+    GW <- lav_model_gw(lavmodel = lavmodel, GLIST = GLIST)
   }
 
   # four approaches (FIXME!!!! merge this!)
@@ -627,13 +627,13 @@ lav_model_gradient <- function(lavmodel = NULL,
   # group.w.free for ML
   if (lavmodel@group.w.free &&
     estimator %in% c("ML", "MML", "FML", "PML", "REML", "catML")) {
-    # est.prop <- unlist( computeGW(lavmodel = lavmodel, GLIST = GLIST) )
+    # est.prop <- unlist( lav_model_gw(lavmodel = lavmodel, GLIST = GLIST) )
     # obs.prop <- unlist(lavsamplestats@group.w)
     # FIXME: G2 based -- ML and friends only!!
     # dx.GW <- - (obs.prop - est.prop)
 
     # poisson version
-    est.freq <- exp(unlist(computeGW(lavmodel = lavmodel, GLIST = GLIST)))
+    est.freq <- exp(unlist(lav_model_gw(lavmodel = lavmodel, GLIST = GLIST)))
     obs.freq <- unlist(lavsamplestats@group.w) * lavsamplestats@ntotal
     dx.GW <- -(obs.freq - est.freq)
     # divide by N (to be consistent with the rest of lavaan)
@@ -664,10 +664,10 @@ computeDeltaNumerical <- function(lavmodel = NULL, GLIST = NULL, g = 1L) {
 
   compute.moments <- function(x) {
     GLIST <- lav_model_x2GLIST(lavmodel = lavmodel, x = x, type = "free")
-    Sigma.hat <- computeSigmaHat(lavmodel = lavmodel, GLIST = GLIST)
+    Sigma.hat <- lav_model_sigma(lavmodel = lavmodel, GLIST = GLIST)
     S.vec <- lav_matrix_vech(Sigma.hat[[g]])
     if(lavmodel@meanstructure) {
-      Mu.hat <- computeMuHat(lavmodel = lavmodel, GLIST=GLIST)
+      Mu.hat <- lav_model_mu(lavmodel = lavmodel, GLIST=GLIST)
       out <- c(Mu.hat[[g]], S.vec)
     } else {
       out <- S.vec

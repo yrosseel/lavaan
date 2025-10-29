@@ -487,7 +487,7 @@ lav_model_estimate <- function(lavmodel = NULL,
   # check if the initial values produce a positive definite Sigma
   # to begin with -- but only for estimator="ML"
   if (estimator %in% c("ML", "FML", "MML")) {
-    Sigma.hat <- computeSigmaHat(lavmodel, extra = TRUE)
+    Sigma.hat <- lav_model_sigma(lavmodel, extra = TRUE)
     for (g in 1:ngroups) {
       if (!attr(Sigma.hat[[g]], "po")) {
         group.txt <-

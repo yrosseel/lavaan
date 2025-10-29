@@ -445,9 +445,9 @@ MYcomputeGradient <- function(object, GLIST, samplestats = NULL, X = NULL,
   if (is.null(GLIST)) {
     GLIST <- object@GLIST
   }
-  Sigma.hat <- computeSigmaHat(object, GLIST = GLIST, extra = (estimator == "ML"))
-  Mu.hat <- computeMuHat(object, GLIST = GLIST)
-  TH <- computeTH(object, GLIST = GLIST)
+  Sigma.hat <- lav_model_sigma(object, GLIST = GLIST, extra = (estimator == "ML"))
+  Mu.hat <- lav_model_mu(object, GLIST = GLIST)
+  TH <- lav_model_th(object, GLIST = GLIST)
   g <- 1
   d1 <- pml_deriv1(
     Sigma.hat = Sigma.hat[[g]], Mu.hat = Mu.hat[[g]],
@@ -552,9 +552,9 @@ MYNvcov.first.order <- function(lavmodel, lavsamplestats = NULL,
     x.el.idx. = MY.x.el.idx
   )
   #  }
-  Sigma.hat <- computeSigmaHat(lavmodel)
-  Mu.hat <- computeMuHat(lavmodel)
-  TH <- computeTH(lavmodel)
+  Sigma.hat <- lav_model_sigma(lavmodel)
+  Mu.hat <- lav_model_mu(lavmodel)
+  TH <- lav_model_th(lavmodel)
   g <- 1
 
   SC <- pml_deriv1(

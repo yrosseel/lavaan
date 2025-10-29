@@ -516,7 +516,7 @@ lavaan::getCov
 
 # lav_model_objective() can be found in lav_model_objective.R
 # 1) compute model implied summary statistics (for each group)
-#    using eg computeSigmaHat()
+#    using eg lav_model_sigma()
 # 2) compute value discrepancy function
 #    eg estimator.GLS() or estimator.ML() # see lav_objective.R
 # 3) if multiple groups, combine the values using group weights

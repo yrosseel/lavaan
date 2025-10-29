@@ -145,7 +145,7 @@ lav_standardize_lv <- function(lavobject = NULL,
 
   # compute ETA
   if (is.null(lv.var)) {
-    LV.ETA <- computeVETA(
+    LV.ETA <- lav_model_veta(
       lavmodel = lavmodel,
       GLIST = GLIST
     )
@@ -363,7 +363,7 @@ lav_standardize_all <- function(lavobject = NULL,
   N <- length(est.std)
   stopifnot(N == length(partable$lhs))
 
-  VY <- computeVY(
+  VY <- lav_model_vy(
     lavmodel = lavmodel, GLIST = GLIST,
     diagonal.only = TRUE
   )
@@ -600,7 +600,7 @@ lav_standardize_all_nox <- function(lavobject = NULL,
   N <- length(est.std)
   stopifnot(N == length(partable$lhs))
 
-  VY <- computeVY(
+  VY <- lav_model_vy(
     lavmodel = lavmodel, GLIST = GLIST,
     diagonal.only = TRUE
   )
