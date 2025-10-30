@@ -241,7 +241,7 @@ ctr_pml_plrt <- function(lavobject = NULL, lavmodel = NULL, lavdata = NULL,
   drhodpsi_MAT <- vector("list", length = lavsamplestats@ngroups)
   group.values <- lav_partable_group_values(fittedSat2@ParTable)
   for (g in 1:lavsamplestats@ngroups) {
-    # delta.g <- computeDelta(lavmodel)[[g]] # [[1]] to be substituted by g?
+    # delta.g <- lav_model_delta(lavmodel)[[g]] # [[1]] to be substituted by g?
     # The above gives the derivatives of thresholds and polychoric correlations
     # with respect to SEM param (including thresholds) evaluated under H0.
     # From deltamat we need to exclude the rows and columns referring
@@ -257,11 +257,11 @@ ctr_pml_plrt <- function(lavobject = NULL, lavmodel = NULL, lavdata = NULL,
     free.idx <- which(PT$free > 0 & PT$op != "|" & PT$group == group.values[g])
     PARLABEL <- PT$label[free.idx]
 
-    # for now, we can assume that computeDelta will always return
+    # for now, we can assume that lav_model_delta will always return
     # the thresholds first, then the correlations
     #
     # later, we should add a (working) add.labels = TRUE option to
-    # computeDelta
+    # lav_model_delta
     # th.names <- lavobject@pta$vnames$th[[g]]
     # ov.names <- lavobject@pta$vnames$ov[[g]]
     # th.names <- lavNames(lavpartable, "th")

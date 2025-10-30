@@ -95,7 +95,7 @@ lav_model_information_expected <- function(lavmodel = NULL,
 
   # 1. Delta
   if (is.null(Delta)) {
-    Delta <- computeDelta(lavmodel = lavmodel)
+    Delta <- lav_model_delta(lavmodel = lavmodel)
   }
 
 
@@ -213,7 +213,7 @@ lav_model_information_expected_MLM <- function(lavmodel = NULL,
   }
 
   if (is.null(Delta)) {
-    Delta <- computeDelta(lavmodel = lavmodel)
+    Delta <- lav_model_delta(lavmodel = lavmodel)
   }
 
   # compute A1
@@ -344,7 +344,7 @@ lav_model_information_observed <- function(lavmodel = NULL,
 
   if (observed.information == "h1" || extra) {
     # 1. Delta
-    Delta <- computeDelta(lavmodel = lavmodel)
+    Delta <- lav_model_delta(lavmodel = lavmodel)
 
     # 2. H1 information
 
@@ -432,7 +432,7 @@ lav_model_information_firstorder <- function(lavmodel = NULL,
   B0.group <- vector("list", lavsamplestats@ngroups)
 
   # 1. Delta
-  Delta <- computeDelta(lavmodel = lavmodel)
+  Delta <- lav_model_delta(lavmodel = lavmodel)
 
   # 2. H1 information
   B1 <- lav_model_h1_information_firstorder(

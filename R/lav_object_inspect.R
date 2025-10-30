@@ -2926,7 +2926,7 @@ lav_object_inspect_delta_internal <- function(                   # nolint
     lavpartable = NULL,
     add.labels = FALSE, add.class = FALSE, drop.list.single.group = FALSE) {
 
-  return.value <- computeDelta(lavmodel)
+  return.value <- lav_model_delta(lavmodel)
 
   if (add.labels) {
     tmp.pnames <- lav_partable_labels(lavpartable, type = "free")

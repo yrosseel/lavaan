@@ -83,7 +83,7 @@ lav_test_browne <- function(lavobject = NULL,
   }
 
   # ingredients
-  Delta <- computeDelta(lavmodel)
+  Delta <- lav_model_delta(lavmodel)
   if (ADF) {
     # ADF version
     if (!is.null(lavsamplestats@NACOV[[1]])) {
