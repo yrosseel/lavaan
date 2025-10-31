@@ -122,7 +122,7 @@ lav_model_gradient <- function(lavmodel = NULL,
     !lavmodel@conditional.x) {
 	correlation <- lavmodel@correlation
     if (meanstructure) {
-      Omega <- computeOmega(
+      Omega <- lav_model_omega(
         Sigma.hat = Sigma.hat, Mu.hat = Mu.hat,
         lavsamplestats = lavsamplestats,
         estimator = estimator,
@@ -132,7 +132,7 @@ lav_model_gradient <- function(lavmodel = NULL,
       )
       Omega.mu <- attr(Omega, "mu")
     } else {
-      Omega <- computeOmega(
+      Omega <- lav_model_omega(
         Sigma.hat = Sigma.hat, Mu.hat = NULL,
         lavsamplestats = lavsamplestats,
         estimator = estimator,
@@ -229,7 +229,7 @@ lav_model_gradient <- function(lavmodel = NULL,
       }
       # stop("FIXME: WLS gradient with type != free needs fixing!")
     } else {
-      Delta <- computeDelta(
+      Delta <- lav_model_delta(
         lavmodel = lavmodel, GLIST. = GLIST,
         ceq.simple = ceq.simple
       )
@@ -353,7 +353,7 @@ lav_model_gradient <- function(lavmodel = NULL,
       }
       # stop("FIXME: WLS gradient with type != free needs fixing!")
     } else {
-      Delta <- computeDelta(
+      Delta <- lav_model_delta(
         lavmodel = lavmodel, GLIST. = GLIST,
         ceq.simple = ceq.simple
       )
@@ -452,7 +452,7 @@ lav_model_gradient <- function(lavmodel = NULL,
       lav_msg_fixme("type != free in lav_model_gradient for
                     estimator ML for nlevels > 1")
     } else {
-      Delta <- computeDelta(
+      Delta <- lav_model_delta(
         lavmodel = lavmodel, GLIST. = GLIST,
         ceq.simple = ceq.simple
       )
@@ -527,7 +527,7 @@ lav_model_gradient <- function(lavmodel = NULL,
     if (type != "free") {
       lav_msg_fixme("type != free in lav_model_gradient for estimator PML")
     } else {
-      Delta <- computeDelta(
+      Delta <- lav_model_delta(
         lavmodel = lavmodel, GLIST. = GLIST,
         ceq.simple = ceq.simple
       )
@@ -657,7 +657,7 @@ lav_model_gradient <- function(lavmodel = NULL,
 }
 
 # for testing purposes only
-computeDeltaNumerical <- function(lavmodel = NULL, GLIST = NULL, g = 1L) {
+lav_model_delta_numerical <- function(lavmodel = NULL, GLIST = NULL, g = 1L) {
 
   # state or final?
   if(is.null(GLIST)) GLIST <- lavmodel@GLIST
@@ -686,7 +686,7 @@ computeDeltaNumerical <- function(lavmodel = NULL, GLIST = NULL, g = 1L) {
 ### FIXME: should we here also:
 ###        - weight for groups? (no, for now)
 ###        - handle equality constraints? (yes, for now)
-computeDelta <- function(lavmodel = NULL, GLIST. = NULL,
+lav_model_delta <- function(lavmodel = NULL, GLIST. = NULL,
                          m.el.idx. = NULL, x.el.idx. = NULL,
                          ceq.simple = FALSE,
                          force.conditional.x.false = FALSE) {
@@ -1021,7 +1021,7 @@ computeDelta <- function(lavmodel = NULL, GLIST. = NULL,
   Delta
 }
 
-computeDeltaDx <- function(lavmodel = NULL, GLIST = NULL, target = "lambda",
+lav_model_ddelta_dx <- function(lavmodel = NULL, GLIST = NULL, target = "lambda",
                            ceq.simple = FALSE) {
   # state or final?
   if (is.null(GLIST)) GLIST <- lavmodel@GLIST
@@ -1164,7 +1164,7 @@ computeDeltaDx <- function(lavmodel = NULL, GLIST = NULL, target = "lambda",
   Delta
 }
 
-computeOmega <- function(Sigma.hat = NULL, Mu.hat = NULL,
+lav_model_omega <- function(Sigma.hat = NULL, Mu.hat = NULL,
                          lavsamplestats = NULL, estimator = "ML",
                          meanstructure = FALSE, conditional.x = FALSE,
 						 correlation = FALSE) {
@@ -1269,14 +1269,14 @@ lav_model_gradient_DD <- function(lavmodel, GLIST = NULL, group = 1L) {
   if (is.null(GLIST)) GLIST <- lavmodel@GLIST
 
   #### FIX th + mu!!!!!
-  Delta.lambda <- computeDeltaDx(lavmodel, GLIST = GLIST, target = "lambda")[[group]]
-  Delta.tau <- computeDeltaDx(lavmodel, GLIST = GLIST, target = "tau")[[group]]
-  Delta.nu <- computeDeltaDx(lavmodel, GLIST = GLIST, target = "nu")[[group]]
-  Delta.theta <- computeDeltaDx(lavmodel, GLIST = GLIST, target = "theta")[[group]]
-  Delta.beta <- computeDeltaDx(lavmodel, GLIST = GLIST, target = "beta")[[group]]
-  Delta.psi <- computeDeltaDx(lavmodel, GLIST = GLIST, target = "psi")[[group]]
-  Delta.alpha <- computeDeltaDx(lavmodel, GLIST = GLIST, target = "alpha")[[group]]
-  Delta.gamma <- computeDeltaDx(lavmodel, GLIST = GLIST, target = "gamma")[[group]]
+  Delta.lambda <- lav_model_ddelta_dx(lavmodel, GLIST = GLIST, target = "lambda")[[group]]
+  Delta.tau <- lav_model_ddelta_dx(lavmodel, GLIST = GLIST, target = "tau")[[group]]
+  Delta.nu <- lav_model_ddelta_dx(lavmodel, GLIST = GLIST, target = "nu")[[group]]
+  Delta.theta <- lav_model_ddelta_dx(lavmodel, GLIST = GLIST, target = "theta")[[group]]
+  Delta.beta <- lav_model_ddelta_dx(lavmodel, GLIST = GLIST, target = "beta")[[group]]
+  Delta.psi <- lav_model_ddelta_dx(lavmodel, GLIST = GLIST, target = "psi")[[group]]
+  Delta.alpha <- lav_model_ddelta_dx(lavmodel, GLIST = GLIST, target = "alpha")[[group]]
+  Delta.gamma <- lav_model_ddelta_dx(lavmodel, GLIST = GLIST, target = "gamma")[[group]]
 
   ov.y.dummy.ov.idx <- lavmodel@ov.y.dummy.ov.idx[[group]]
   ov.x.dummy.ov.idx <- lavmodel@ov.x.dummy.ov.idx[[group]]

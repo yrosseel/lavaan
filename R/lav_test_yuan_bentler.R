@@ -190,7 +190,7 @@ lav_test_yuan_bentler <- function(lavobject = NULL,
       )
   } else if (test == "yuan.bentler") {
     # compute Delta
-    Delta <- computeDelta(lavmodel = lavmodel)
+    Delta <- lav_model_delta(lavmodel = lavmodel)
 
     # compute Omega/Gamma
     Omega <- lav_model_h1_omega(

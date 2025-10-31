@@ -400,77 +400,10 @@ lav_matrix_is_diagonal <- function(A = NULL) {
 #
 # M&N book: pages 48-50
 #
-# note: several flavors: dup1, dup2, dup3, ...
-# currently used: dup3
-
-# first attempt
-# dup1: working on the vector indices only
-.dup1 <- function(n = 1L) {
-  if ((n < 1L) || (round(n) != n)) {
-    lav_msg_stop(gettext("n must be a positive integer"))
-  }
-  if (n > 255L) {
-    lav_msg_stop(gettext("n is too large"))
-  }
-
-  # dimensions
-  n2 <- n * n
-  nstar <- n * (n + 1) / 2
-  # THIS is the real bottleneck: allocating an ocean of zeroes...
-  x <- numeric(n2 * nstar)
-
-  # delta patterns
-  r1 <- seq.int(from = n * n + 1, by = -(n - 1), length.out = n - 1)
-  r2 <- seq.int(from = n - 1, by = n - 1, length.out = n - 1)
-  r3 <- seq.int(from = 2 * n + 1, by = n, length.out = n - 1)
-
-  # is there a more elegant way to do this?
-  rr <- unlist(lapply(
-    (n - 1):1,
-    function(x) {
-      c(rbind(r1[1:x], r2[1:x]), r3[n - x])
-    }
-  ))
-
-  idx <- c(1L, cumsum(rr) + 1L)
-
-  # create matrix
-  x[idx] <- 1.0
-  attr(x, "dim") <- c(n2, nstar)
-
-  x
-}
-
-# second attempt
-# dup2: working on the row/col matrix indices
-# (but only create the matrix at the very end)
-.dup2 <- function(n = 1L) {
-  if ((n < 1L) || (round(n) != n)) {
-    lav_msg_stop(gettext("n must be a positive integer"))
-  }
-
-  if (n > 255L) {
-    lav_msg_stop(gettext("n is too large"))
-  }
-
-  nstar <- n * (n + 1) / 2
-  n2 <- n * n
-  # THIS is the real bottleneck: allocating an ocean of zeroes...
-  x <- numeric(n2 * nstar)
-
-  idx1 <- lav_matrix_vech_idx(n) + ((1L:nstar) - 1L) * n2 # vector indices
-  idx2 <- lav_matrix_vechru_idx(n) + ((1L:nstar) - 1L) * n2 # vector indices
-
-  x[idx1] <- 1.0
-  x[idx2] <- 1.0
-
-  attr(x, "dim") <- c(n2, nstar)
-  x
-}
 
 # dup3: using col idx only
 # D7 <- dup(7L); x<- apply(D7, 1, function(x) which(x > 0)); matrix(x,7,7)
-.dup3 <- function(n = 1L) {
+lav_matrix_duplication <- function(n = 1L) {
   n <- as.integer(n)
   # if (lav_use_lavaanC()) {
   #   return(lavaanC::m_duplication(n))
@@ -522,9 +455,6 @@ lav_matrix_is_diagonal <- function(A = NULL) {
 #
 #    x
 # }
-
-# default dup:
-lav_matrix_duplication <- .dup3
 
 # duplication matrix for correlation matrices:
 # - it returns a matrix of size p^2 * (p*(p-1))/2
@@ -826,36 +756,8 @@ lav_matrix_elimination_pre_post <- function(A = matrix(0, 0, 0)) {
 #
 # D^+ == solve(t(D_n %*% D_n) %*% t(D_n)
 
-# create first t(DUP.ginv)
-.dup_ginv1 <- function(n = 1L) {
-  if ((n < 1L) || (round(n) != n)) {
-    lav_msg_stop(gettext("n must be a positive integer"))
-  }
-
-  if (n > 255L) {
-    lav_msg_stop(gettext("n is too large"))
-  }
-
-  nstar <- n * (n + 1) / 2
-  n2 <- n * n
-  # THIS is the real bottleneck: allocating an ocean of zeroes...
-  x <- numeric(nstar * n2)
-
-  tmp <- matrix(1:(n * n), n, n)
-  idx1 <- lav_matrix_vech(tmp) + (0:(nstar - 1L)) * n2
-  x[idx1] <- 0.5
-  idx2 <- lav_matrix_vechru(tmp) + (0:(nstar - 1L)) * n2
-  x[idx2] <- 0.5
-  idx3 <- lav_matrix_diag_idx(n) + (lav_matrix_diagh_idx(n) - 1L) * n2
-  x[idx3] <- 1.0
-
-  attr(x, "dim") <- c(n2, nstar)
-  x <- t(x)
-  x
-}
-
 # create DUP.ginv without transpose
-.dup_ginv2 <- function(n = 1L) {
+lav_matrix_duplication_ginv <- function(n = 1L) {
   # if (lav_use_lavaanC()) {
   #   n <- as.integer(n)
   #   return(lavaanC::m_duplication_ginv(n))
@@ -880,8 +782,6 @@ lav_matrix_elimination_pre_post <- function(A = matrix(0, 0, 0)) {
   attr(x, "dim") <- c(nstar, n2)
   x
 }
-
-lav_matrix_duplication_ginv <- .dup_ginv2
 
 # pre-multiply with D^+
 # number of rows in A must be 'square' (n*n)
@@ -991,7 +891,7 @@ lav_matrix_duplication_ginv_cor_pre_post <- function(A = matrix(0, 0, 0)) {
 #   vec(A %x% B) == (I_n %x% K_qm %x% I_p)(vec A %x% vec B)
 
 # first attempt
-.com1 <- function(m = 1L, n = 1L) {
+lav_matrix_commutation <- function(m = 1L, n = 1L) {
   # if (lav_use_lavaanC()) {
   #   m <- as.integer(m)
   #   n <- as.integer(n)
@@ -1017,8 +917,6 @@ lav_matrix_duplication_ginv_cor_pre_post <- function(A = matrix(0, 0, 0)) {
 
   x
 }
-
-lav_matrix_commutation <- .com1
 
 # compute K_n %*% A without explicitly computing K
 # K_n = K_nn, so sqrt(nrow(A)) must be an integer!

@@ -624,15 +624,15 @@ print.lavaan.parameterEstimates <- function(x, ..., nd = 3L) {
           row.idx <- which(x$op == "=~" & !x$lhs %in% ov.names &
             x$block == b)
           if (length(row.idx) == 0L) next
-          m[row.idx, 1] <- .makeNames(x$rhs[row.idx], x$label[row.idx])
+          m[row.idx, 1] <- lav_print_format_names(x$rhs[row.idx], x$label[row.idx])
         } else if (s == "Composites") {
           row.idx <- which(x$op == "<~" & x$block == b)
           if (length(row.idx) == 0L) next
-          m[row.idx, 1] <- .makeNames(x$rhs[row.idx], x$label[row.idx])
+          m[row.idx, 1] <- lav_print_format_names(x$rhs[row.idx], x$label[row.idx])
         } else if (s == "Regressions") {
           row.idx <- which(x$op == "~" & x$block == b)
           if (length(row.idx) == 0L) next
-          m[row.idx, 1] <- .makeNames(x$rhs[row.idx], x$label[row.idx])
+          m[row.idx, 1] <- lav_print_format_names(x$rhs[row.idx], x$label[row.idx])
         } else if (s == "Covariances") {
           row.idx <- which(x$op == "~~" & x$lhs != x$rhs & !x$exo &
             x$block == b)
@@ -645,10 +645,10 @@ print.lavaan.parameterEstimates <- function(x, ..., nd = 3L) {
           ))
           PREFIX <- rep("", length(row.idx))
           PREFIX[x$rhs[row.idx] %in% y.names] <- "  ."
-          m[row.idx, 1] <- .makeNames(x$rhs[row.idx], x$label[row.idx],
+          m[row.idx, 1] <- lav_print_format_names(x$rhs[row.idx], x$label[row.idx],
             PREFIX = PREFIX
           )
-          # m[row.idx,1] <- .makeNames(x$rhs[row.idx], x$label[row.idx])
+          # m[row.idx,1] <- lav_print_format_names(x$rhs[row.idx], x$label[row.idx])
         } else if (s == "Intercepts") {
           row.idx <- which(x$op == "~1" & !x$exo & x$block == b)
           if (length(row.idx) == 0L) next
@@ -660,14 +660,14 @@ print.lavaan.parameterEstimates <- function(x, ..., nd = 3L) {
           ))
           PREFIX <- rep("", length(row.idx))
           PREFIX[x$lhs[row.idx] %in% y.names] <- "  ."
-          m[row.idx, 1] <- .makeNames(x$lhs[row.idx], x$label[row.idx],
+          m[row.idx, 1] <- lav_print_format_names(x$lhs[row.idx], x$label[row.idx],
             PREFIX = PREFIX
           )
-          # m[row.idx,1] <- .makeNames(x$lhs[row.idx], x$label[row.idx])
+          # m[row.idx,1] <- lav_print_format_names(x$lhs[row.idx], x$label[row.idx])
         } else if (s == "Thresholds") {
           row.idx <- which(x$op == "|" & x$block == b)
           if (length(row.idx) == 0L) next
-          m[row.idx, 1] <- .makeNames(paste(x$lhs[row.idx], "|",
+          m[row.idx, 1] <- lav_print_format_names(paste(x$lhs[row.idx], "|",
             x$rhs[row.idx],
             sep = ""
           ), x$label[row.idx])
@@ -683,21 +683,21 @@ print.lavaan.parameterEstimates <- function(x, ..., nd = 3L) {
           ))
           PREFIX <- rep("", length(row.idx))
           PREFIX[x$rhs[row.idx] %in% y.names] <- "  ."
-          m[row.idx, 1] <- .makeNames(x$rhs[row.idx], x$label[row.idx],
+          m[row.idx, 1] <- lav_print_format_names(x$rhs[row.idx], x$label[row.idx],
             PREFIX = PREFIX
           )
         } else if (s == "Scales y*") {
           row.idx <- which(x$op == "~*~" & x$block == b)
           if (length(row.idx) == 0L) next
-          m[row.idx, 1] <- .makeNames(x$rhs[row.idx], x$label[row.idx])
+          m[row.idx, 1] <- lav_print_format_names(x$rhs[row.idx], x$label[row.idx])
         } else if (s == "Group Weight") {
           row.idx <- which(x$lhs == "group" & x$op == "%" & x$block == b)
           if (length(row.idx) == 0L) next
-          m[row.idx, 1] <- .makeNames(x$rhs[row.idx], x$label[row.idx])
+          m[row.idx, 1] <- lav_print_format_names(x$rhs[row.idx], x$label[row.idx])
         } else if (s == "R-Square") {
           row.idx <- which(x$op == "r2" & x$block == b)
           if (length(row.idx) == 0L) next
-          m[row.idx, 1] <- .makeNames(x$rhs[row.idx], x$label[row.idx])
+          m[row.idx, 1] <- lav_print_format_names(x$rhs[row.idx], x$label[row.idx])
         } else {
           row.idx <- integer(0L)
         }
@@ -791,13 +791,13 @@ print.lavaan.parameterEstimates <- function(x, ..., nd = 3L) {
   for (s in ASECTIONS) {
     if (s == "Defined Parameters") {
       row.idx <- which(x$op == ":=")
-      m[row.idx, 1] <- .makeNames(x$lhs[row.idx], "")
+      m[row.idx, 1] <- lav_print_format_names(x$lhs[row.idx], "")
       M <- m[row.idx, , drop = FALSE]
       colnames(M) <- colnames(m)
     } else if (s == "Constraints") {
       row.idx <- which(x$op %in% c("==", "<", ">"))
       if (length(row.idx) == 0) next
-      m[row.idx, 1] <- .makeConNames(x$lhs[row.idx], x$op[row.idx],
+      m[row.idx, 1] <- lav_print_format_constraints(x$lhs[row.idx], x$op[row.idx],
         x$rhs[row.idx],
         nd = nd
       )
@@ -823,7 +823,7 @@ print.lavaan.parameterEstimates <- function(x, ..., nd = 3L) {
   invisible(m)
 }
 
-.makeNames <- function(NAMES, LABELS, PREFIX = NULL) {
+lav_print_format_names <- function(NAMES, LABELS, PREFIX = NULL) {
   W <- 14
   if (is.null(PREFIX)) {
     PREFIX <- rep("", length(NAMES))
@@ -866,7 +866,7 @@ print.lavaan.parameterEstimates <- function(x, ..., nd = 3L) {
   sprintf(char.format, PREFIX, NAMES)
 }
 
-.makeConNames <- function(lhs, op, rhs, nd) {
+lav_print_format_constraints <- function(lhs, op, rhs, nd) {
   nd <- max(nd, 3)
   W <- 41 + (nd - 3) * 3
 

@@ -56,7 +56,7 @@ lav_objective_GN <- function(x, lavsamplestats = NULL, lavmodel = NULL,
     lavcache = NULL
   )
   # Delta
-  Delta <- computeDelta(lavmodel = lavmodel)
+  Delta <- lav_model_delta(lavmodel = lavmodel)
 
   # first group
   g <- 1L

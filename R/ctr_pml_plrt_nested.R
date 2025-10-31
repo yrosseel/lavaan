@@ -434,7 +434,7 @@ MYgetModelParameters <- function(object, GLIST = NULL, N, # N the number of para
 
 #############################  MYcomputeGradient
 # the difference are the input arguments MY.m.el.idx, MY.x.el.idx
-# used  in  lavaan:::computeDelta
+# used  in  lavaan:::lav_model_delta
 MYcomputeGradient <- function(object, GLIST, samplestats = NULL, X = NULL,
                               lavcache = NULL, estimator = "PML",
                               MY.m.el.idx, MY.x.el.idx, equalConstr) {
@@ -456,9 +456,9 @@ MYcomputeGradient <- function(object, GLIST, samplestats = NULL, X = NULL,
   )
 
   # !?  if(equalConstr) { #delete the following three commented lines, wrong
-  #     Delta <- lavaan:::computeDelta (lavmodel= object, GLIST. = GLIST)
+  #     Delta <- lavaan:::lav_model_delta (lavmodel= object, GLIST. = GLIST)
   #  } else {
-  Delta <- computeDelta(
+  Delta <- lav_model_delta(
     lavmodel = object, GLIST. = GLIST,
     m.el.idx. = MY.m.el.idx,
     x.el.idx. = MY.x.el.idx
@@ -544,9 +544,9 @@ MYNvcov.first.order <- function(lavmodel, lavsamplestats = NULL,
   B0.group <- vector("list", lavsamplestats@ngroups) # in my case list of length 1
 
   # !?   if (equalConstr) {     ###the following three lines are commented because they are wrong
-  #      Delta <- lavaan:::computeDelta(lavmodel, GLIST. = NULL)
+  #      Delta <- lavaan:::lav_model_delta(lavmodel, GLIST. = NULL)
   #   } else {
-  Delta <- computeDelta(lavmodel,
+  Delta <- lav_model_delta(lavmodel,
     GLIST. = NULL,
     m.el.idx. = MY.m.el.idx, # !!!!! different here and below
     x.el.idx. = MY.x.el.idx

@@ -58,7 +58,7 @@ lav_test_diff_Satorra2000 <- function(m1, m0, H1 = TRUE, A.method = "delta",
 
   if (H1) {
     WLS.V <- lavTech(m1, "WLS.V")
-    PI <- computeDelta(m1@Model)
+    PI <- lav_model_delta(m1@Model)
     P <- lavTech(m1, "information")
     # needed? (yes, if H1 already has eq constraints)
     P.inv <- lav_model_information_augment_invert(m1@Model,
@@ -84,7 +84,7 @@ lav_test_diff_Satorra2000 <- function(m1, m0, H1 = TRUE, A.method = "delta",
     lav_msg_stop(gettext("not ready yet"))
 
     WLS.V <- lavTech(m0, "WLS.V")
-    PI <- computeDelta(m0@Model)
+    PI <- lav_model_delta(m0@Model)
     P <- lavTech(m0, "information")
     # needed?
     P.inv <- lav_model_information_augment_invert(m0@Model,
@@ -433,8 +433,8 @@ lav_test_diff_A <- function(m1, m0, method = "delta", reference = "H1") {
     }
   } else if (method == "delta") {
     # use a numeric approximation of `A'
-    Delta1.list <- computeDelta(m1@Model)
-    Delta0.list <- computeDelta(m0@Model)
+    Delta1.list <- lav_model_delta(m1@Model)
+    Delta0.list <- lav_model_delta(m0@Model)
     Delta1 <- do.call(rbind, Delta1.list)
     Delta0 <- do.call(rbind, Delta0.list)
 

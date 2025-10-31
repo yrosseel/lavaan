@@ -176,7 +176,7 @@ ctr_pml_plrt2 <- function(lavobject = NULL, lavmodel = NULL, lavdata = NULL,
   drhodpsi_MAT <- vector("list", length = lavsamplestats@ngroups)
   group.values <- lav_partable_group_values(fittedSat2@ParTable)
   for (g in 1:lavsamplestats@ngroups) {
-    delta.g <- computeDelta(lavmodel)[[g]]
+    delta.g <- lav_model_delta(lavmodel)[[g]]
     # order of the rows: first the thresholds, then the correlations
     # we need to map the rows of delta.g to the rows/cols of H_at_vartheta0
     # of H1
@@ -186,11 +186,11 @@ ctr_pml_plrt2 <- function(lavobject = NULL, lavmodel = NULL, lavdata = NULL,
     free.idx <- which(PT$free > 0 & PT$group == group.values[g])
     PARLABEL <- PT$label[free.idx]
 
-    # for now, we can assume that computeDelta will always return
+    # for now, we can assume that lav_model_delta will always return
     # the thresholds first, then the correlations
     #
     # later, we should add a (working) add.labels = TRUE option to
-    # computeDelta
+    # lav_model_delta
     th.names <- lavpta$vnames$th[[g]]
     ov.names <- lavpta$vnames$ov[[g]]
     tmp <- utils::combn(ov.names, 2)

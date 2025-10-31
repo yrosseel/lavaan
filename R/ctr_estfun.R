@@ -147,7 +147,7 @@ lav_scores_ml <- function(ntab = 0L,
   score_matrix <- matrix(NA, ntot, npar)
 
   # Delta matrix
-  Delta <- computeDelta(lavmodel = lavmodel)
+  Delta <- lav_model_delta(lavmodel = lavmodel)
 
   # rename moments
   moments.groups <- moments
@@ -305,7 +305,7 @@ lav_scores_wls <- function(ntab = 0L,
   score_matrix <- matrix(NA, ntot, npar)
 
   # Delta matrix
-  Delta <- computeDelta(lavmodel = lavmodel)
+  Delta <- lav_model_delta(lavmodel = lavmodel)
 
   # shortcuts
   lv <- lavdata@ov[["nlev"]]
@@ -368,7 +368,7 @@ lav_scores_ls <- function(ntab = 0L,
   estimator <- lavoptions$estimator
 
   # Delta matrix
-  Delta <- computeDelta(lavmodel = lavmodel)
+  Delta <- lav_model_delta(lavmodel = lavmodel)
 
   # implied stats
   implied <- lav_model_implied(lavmodel)
