@@ -1,20 +1,27 @@
-\name{getCov}
+\name{lav_get_cov}
+\alias{lav_get_cov}
 \alias{getCov}
+\alias{lav_cor2cov}
 \alias{cor2cov}
+\alias{lav_char2num}
 \alias{char2num}
 \title{Utility Functions For Covariance Matrices}
 \description{Convenience functions to deal with covariance and correlation
 matrices.}
 \usage{
+lav_get_cov(x, lower = TRUE, diagonal = TRUE, sds = NULL,
+       names = paste("V", 1:nvar, sep=""))
 getCov(x, lower = TRUE, diagonal = TRUE, sds = NULL,
        names = paste("V", 1:nvar, sep=""))
+lav_char2num(s)
 char2num(s)
+lav_cor2cov(R, sds, names = NULL)
 cor2cov(R, sds, names = NULL)
 }
 \arguments{
 \item{x}{The elements of the covariance matrix. Either inside a character 
   string or as a numeric vector. In the former case, the function
-  \code{char2num} is used to convert the numbers (inside the character
+  \code{lav_char2num} is used to convert the numbers (inside the character
   string) to numeric values.}
 \item{lower}{Logical. If \code{TRUE}, the numeric values in \code{x} are
 the lower-triangular elements of the (symmetric) covariance matrix only.
@@ -31,12 +38,12 @@ are ignored.}
 \item{R}{A correlation matrix, to be scaled into a covariance matrix.}
 }
 \details{
-The \code{getCov} function is typically used to input the lower 
+The \code{lav_get_cov} function is typically used to input the lower 
 (or upper) triangular elements of a (symmetric) covariance matrix. In many 
 examples found in handbooks, only those elements are shown. However, lavaan 
 needs a full matrix to proceed. 
 
-The \code{cor2cov} function is the inverse of the \code{\link[stats]{cov2cor}} 
+The \code{lav_cor2cov} function is the inverse of the \code{\link[stats]{cov2cor}} 
 function, and scales a correlation matrix into a covariance matrix given
 the standard deviations of the variables. Optionally, variable names can
 be given.
@@ -53,7 +60,7 @@ lower <- '
 -21.899,  -18.831,  -21.748,  -18.775,  35.522,  450.288 '
 
 # convert to a full symmetric covariance matrix with names
-wheaton.cov <- getCov(lower, names=c("anomia67","powerless67", "anomia71",
+wheaton.cov <- lav_get_cov(lower, names=c("anomia67","powerless67", "anomia71",
                                      "powerless71","education","sei"))
 
 # the model

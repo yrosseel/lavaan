@@ -612,7 +612,7 @@ lav_bootstrap_internal <- function(object = NULL,
   }
 
   #    # No use, as boot package stores the sample indices differently
-  #    # See boot:::boot.array() versus lav_utils_bootstrap_indices()
+  #    # See boot:::boot.array() versus lav_bootstrap_indices()
   #    if(return.boot) {
   #        # mimic output boot function
   #
@@ -662,3 +662,139 @@ lav_bootstrap_internal <- function(object = NULL,
   #
   t.star
 }
+
+# create matrix with indices to reconstruct the bootstrap samples
+# per group
+# (originally needed for BCa confidence intervals)
+#
+# rows are the (R) bootstrap runs
+# columns are the (N) observations
+#
+# simple version: no strata, no weights
+#
+lav_bootstrap_indices <- function(R = 0L,
+                                        nobs = list(0L), # per group
+                                        parallel = "no",
+                                        ncpus = 1L,
+                                        cl = NULL,
+                                        iseed = NULL,
+                                        merge.groups = FALSE,
+                                        return.freq = FALSE) {
+  # iseed must be set!
+  stopifnot(!is.null(iseed))
+
+  if (return.freq && !merge.groups) {
+    lav_msg_stop(gettext("return.freq only available if merge.groups = TRUE"))
+  }
+
+  if (is.integer(nobs)) {
+    nobs <- list(nobs)
+  }
+
+  # number of groups
+  ngroups <- length(nobs)
+
+  # mimic 'random' sampling from lav_bootstrap_internal:
+
+  # the next 7 lines are borrowed from the boot package
+  have_mc <- have_snow <- FALSE
+  parallel <- parallel[1]
+  if (parallel != "no" && ncpus > 1L) {
+    if (parallel == "multicore") {
+      have_mc <- .Platform$OS.type != "windows"
+    } else if (parallel == "snow") have_snow <- TRUE
+    if (!have_mc && !have_snow) ncpus <- 1L
+    loadNamespace("parallel") # before recording seed!
+  }
+  temp.seed <- NULL
+  if (exists(".Random.seed", envir = .GlobalEnv, inherits = FALSE)) {
+    temp.seed <- get(".Random.seed", envir = .GlobalEnv, inherits = FALSE)
+  }
+  if (!(ncpus > 1L && (have_mc || have_snow))) { # Only for serial
+    set.seed(iseed)
+  }
+
+  # fn() returns indices per group
+  fn <- function(b) {
+    BOOT.idx <- vector("list", length = ngroups)
+    OFFSet <- cumsum(c(0, unlist(nobs)))
+    for (g in 1:ngroups) {
+      stopifnot(nobs[[g]] > 1L)
+      boot.idx <- sample.int(nobs[[g]], replace = TRUE)
+      if (merge.groups) {
+        BOOT.idx[[g]] <- boot.idx + OFFSet[g]
+      } else {
+        BOOT.idx[[g]] <- boot.idx
+      }
+    }
+    BOOT.idx
+  }
+
+  RR <- R
+  res <- if (ncpus > 1L && (have_mc || have_snow)) {
+    if (have_mc) {
+      RNGkind_old <- RNGkind() # store current kind
+      RNGkind("L'Ecuyer-CMRG") # to allow for reproducible results
+      set.seed(iseed)
+      parallel::mclapply(seq_len(RR), fn, mc.cores = ncpus)
+    } else if (have_snow) {
+      # list(...) # evaluate any promises
+      if (is.null(cl)) {
+        cl <- parallel::makePSOCKcluster(rep("localhost", ncpus))
+        parallel::clusterSetRNGStream(cl, iseed = iseed)
+        res <- parallel::parLapply(cl, seq_len(RR), fn)
+        parallel::stopCluster(cl)
+        res
+      } else {
+        parallel::parLapply(cl, seq_len(RR), fn)
+      }
+    }
+  } else {
+    lapply(seq_len(RR), fn)
+  }
+
+  # restore old RNGkind()
+  if (ncpus > 1L && have_mc) {
+    RNGkind(RNGkind_old[1], RNGkind_old[2], RNGkind_old[3])
+  }
+
+  # handle temp.seed
+  if (!is.null(temp.seed) && !identical(temp.seed, NA)) {
+    assign(".Random.seed", temp.seed, envir = .GlobalEnv)
+  } else if (is.null(temp.seed) && !(ncpus > 1L && (have_mc || have_snow))) {
+    # serial
+    rm(.Random.seed, pos = 1)
+  } else if (is.null(temp.seed) && (ncpus > 1L && have_mc)) {
+    # parallel/multicore only
+    rm(.Random.seed, pos = 1) # because set used set.seed()
+  }
+
+
+  # assemble IDX
+  BOOT.idx <- vector("list", length = ngroups)
+  for (g in 1:ngroups) {
+    # FIXME: handle failed runs
+    BOOT.idx[[g]] <- do.call("rbind", lapply(res, "[[", g))
+  }
+
+  # merge groups
+  if (merge.groups) {
+    out <- do.call("cbind", BOOT.idx)
+  } else {
+    out <- BOOT.idx
+  }
+
+  # NOTE: the order of the indices is different from the boot package!
+  # we fill in the matrix 'row-wise' (1 row = sample(N, replace = TRUE)),
+  # while boot fills in the matrix 'column-wise'
+  # this also explains why we get different results with return.boot = TRUE
+  # despite using the same iseed
+
+  # return frequencies instead?
+  if (return.freq && merge.groups) {
+    out <- t(apply(out, 1L, tabulate, ncol(out)))
+  }
+
+  out
+}
+

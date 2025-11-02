@@ -471,7 +471,7 @@ lav_sam_step1_local <- function(STEP1 = NULL, FIT = NULL, Y = NULL,
       # FIXME: what about observed covariates?
 
       # get (approximate) indices with outliers
-      #fs.outlier.idx[[b]] <- lav_utils_outlier_idx(lav_mdist(FS.b), coef = 1.5)
+      #fs.outlier.idx[[b]] <- lav_sample_outlier_idx(lav_sample_mdist(FS.b), coef = 1.5)
 
       # EETA2
       EETA1 <- EETA[[b]]

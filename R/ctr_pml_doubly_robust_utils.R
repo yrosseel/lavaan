@@ -1,11 +1,11 @@
 # This code was contributed by Myrsini Katsikatsou (LSE) -- September 2016
 #
-# compute_uniCondProb_based_on_bivProb()
-# pairwiseExpProbVec_GivenObs()
-# LongVecTH.Rho.Generalised()
+# lav_pml_bivprob_unicondprob()
+# lav_pml_object_uni_pairwise_prob()
+# lav_pml_th_rho_generalised()
 # pairwiseExpProbVec_GivenObs_UncMod()
 
-compute_uniCondProb_based_on_bivProb <- function(bivProb, nvar,
+lav_pml_bivprob_unicondprob <- function(bivProb, nvar,
                                                  idx.pairs,
                                                  idx.Y1,
                                                  idx.Gy2,
@@ -79,7 +79,7 @@ compute_uniCondProb_based_on_bivProb <- function(bivProb, nvar,
 
 # Version 3 - first compute univariate and then bivariate probabilities
 
-pairwiseExpProbVec_GivenObs <- function(lavobject) {
+lav_pml_object_uni_pairwise_prob <- function(lavobject) {
   # compute yhat where yaht=nu + Lamda*eta + K*x where the parameter estimates are
   # used and the factor scores for eta
   # Below yhat is a list if lavobject@Data@ngroups >1, it is a list of G matrices
@@ -198,7 +198,7 @@ pairwiseExpProbVec_GivenObs <- function(lavobject) {
               index.var.of.thres = tmp.th.idx.recoded
             )
 
-            tmp.th.rho.vec <- LongVecTH.Rho.Generalised(
+            tmp.th.rho.vec <- lav_pml_th_rho_generalised(
               no.x = noMissVar,
               TH = tmp.TH,
               th.idx = tmp.th.idx.recoded,
@@ -226,14 +226,14 @@ pairwiseExpProbVec_GivenObs <- function(lavobject) {
     univariateProbGivObs = univariateProb,
     pairwiseProbGivObs = pairwiseProb
   )
-} # end of the function pairwiseExpProbVec_GivenObs
+} # end of the function lav_pml_object_uni_pairwise_prob
 
 ##################################################################
 
 
 
-# LongVecTH.Rho.Generalised function is defined as follows
-LongVecTH.Rho.Generalised <- function(no.x, TH, th.idx,
+# lav_pml_th_rho_generalised function is defined as follows
+lav_pml_th_rho_generalised <- function(no.x, TH, th.idx,
                                       cov.xixj, mean.x, stddev.x) {
   all.std.thres <- (TH - mean.x[th.idx]) / stddev.x[th.idx]
   id.pairs <- utils::combn(no.x, 2)
@@ -247,12 +247,12 @@ LongVecTH.Rho.Generalised <- function(no.x, TH, th.idx,
   )
 }
 
-# LongVecTH.Rho.Generalised is a generalisation  of the function
+# lav_pml_th_rho_generalised is a generalisation  of the function
 #  lavaan:::LongVecTH.Rho . The latter assumes that all y* follow standard
 #  normal so the thresholds are automatically the standardised ones.
-# LongVecTH.Rho.Generalised does not assume that, each of y*'s can follow
+# lav_pml_th_rho_generalised does not assume that, each of y*'s can follow
 # a normal distribution with mean mu and standard deviation sigma.
-# LongVecTH.Rho.Generalised has the following input arguments:
+# lav_pml_th_rho_generalised has the following input arguments:
 # no.x (same as in lavaan:::LongVecTH.Rho),
 # TH (similar to the TH in lavaan:::LongVecTH.Rho but here they are the unstandardised thresholds, i.e. of the normal distribution with mean mu and standard deviation sigma)
 # th.idx (same as index.var.of.thres in lavaan:::LongVecTH.Rho)
@@ -266,7 +266,7 @@ LongVecTH.Rho.Generalised <- function(no.x, TH, th.idx,
 
 # lavobject is the output of lavaan function where either the unconstrained
 # or a hypothesized model has been fitted
-pairwiseExpProbVec_GivenObs_UncMod <- function(lavobject) {
+lav_pml_object_uni_pairwise_unconstr<- function(lavobject) {
   ngroups <- lavobject@Data@ngroups
   TH <- lavobject@implied$th # these are the standardized thresholds
   # mean and variance of y* have been taken into account

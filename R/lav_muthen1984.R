@@ -116,7 +116,7 @@ muthen1984 <- function(Data = NULL,
 
   if (!WLS.W) { # we do not need the asymptotic variance matrix
     if (any("numeric" %in% ov.types)) {
-      COV <- cor2cov(R = COR, sds = sqrt(unlist(VAR)))
+      COV <- lav_cor2cov(R = COR, sds = sqrt(unlist(VAR)))
     } else {
       COV <- COR
     }
@@ -475,7 +475,7 @@ muthen1984 <- function(Data = NULL,
 
   # COV matrix?
   if (any("numeric" %in% ov.types)) {
-    COV <- cor2cov(R = COR, sds = sqrt(unlist(VAR)))
+    COV <- lav_cor2cov(R = COR, sds = sqrt(unlist(VAR)))
 
     # construct H matrix to apply delta rule (for the tranformation
     # of rho_ij to cov_ij)

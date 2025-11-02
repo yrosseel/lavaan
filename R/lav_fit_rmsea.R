@@ -327,7 +327,7 @@ lav_fit_rmsea_lavobject <- function(lavobject = NULL, fit.measures = "rmsea",
   X2 <- TEST[[test.idx]]$stat
   df <- TEST[[test.idx]]$df
   G <- lavobject@Data@ngroups # number of groups
-  N <- lav_utils_get_ntotal(lavobject = lavobject) # N vs N-1
+  N <- lav_object_inspect_ntotal(lavobject = lavobject) # N vs N-1
 
   # scaled X2/df values
   if (scaled.flag) {

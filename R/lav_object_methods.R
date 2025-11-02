@@ -721,7 +721,7 @@ parameterEstimates <- # nolint
 
           # compute 'X' matrix with frequency indices (to compute
           # the empirical influence values using regression)
-          tmp.freq <- lav_utils_bootstrap_indices(
+          tmp.freq <- lav_bootstrap_indices(
             R = lavoptions$bootstrap,
             nobs = nobs, parallel = lavoptions$parallel[1],
             ncpus = lavoptions$ncpus, cl = lavoptions[["cl"]],
