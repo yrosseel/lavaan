@@ -15,7 +15,7 @@ computeExpectedInformation <- lav_model_information_expected
 # only for simsem ....
 getParameterLabels <- lav_partable_labels
 
-# standardize function names in lav_utils.R / 31 oct 2025 
+# standardize function names in lav_utils.R / 31 oct 2025
 getCov <- lav_get_cov
 char2num <- lav_char2num
 cor2cov <- lav_cor2cov

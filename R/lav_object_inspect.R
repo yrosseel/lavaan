@@ -424,7 +424,7 @@ lavInspect.lavaan <- function(object,                                # nolint
   } else if (what == "parameterization") {
     object@Model@parameterization
   } else if (what == "npar") {
-    lav_object_inspect_npar(object, type = "free")
+    lav_object_inspect_npar(object, ceq = FALSE) # ignore equality constraints
   } else if (what == "coef") {
     # this breaks simsem and semTools -- 0.6-1
     # lav_object_inspect_coef(object, type = "free",
@@ -3026,30 +3026,18 @@ lav_object_inspect_coef <- function(object, type = "free",
   cof
 }
 
-lav_object_inspect_npar <- function(object, type = "free") {
+lav_object_inspect_npar <- function(object, ceq = FALSE) {
 
-  if (type == "free") {
-    npar <- sum(object@ParTable$free > 0L &
-      !duplicated(object@ParTable$free))
-  } else {
-    npar <- length(object@ParTable$lhs)
-  }
+  # free parameters (going to the optimizer)
+  npar <- object@Model@nx.free
 
-  npar
-}
-
-# get npar (taking into account explicit equality constraints)
-# (changed in 0.5-13)
-lav_object_inspect_npar2 <- function(lavobject) {
-  npar <- lav_partable_npar(lavobject@ParTable)
-  if (nrow(lavobject@Model@con.jac) > 0L) {
-    ceq.idx <- attr(lavobject@Model@con.jac, "ceq.idx")
+  # account for equality constraints?
+  if (ceq && nrow(object@Model@con.jac) > 0L) {
+    ceq.idx <- attr(object@Model@con.jac, "ceq.idx")
     if (length(ceq.idx) > 0L) {
-      neq <- qr(lavobject@Model@con.jac[ceq.idx, , drop = FALSE])$rank
+      neq <- qr(object@Model@con.jac[ceq.idx, , drop = FALSE])$rank
       npar <- npar - neq
     }
-  } else if (lavobject@Model@ceq.simple.only) {
-    npar <- lavobject@Model@nx.free
   }
 
   npar
@@ -3324,12 +3312,12 @@ lav_object_inspect_mdist2 <- function(object, type = "resid", squared = TRUE,
 
 # N versus N-1 (or N versus N-G in the multiple group setting)
 # Changed 0.5-15: suggestion by Mark Seeto
-lav_object_inspect_ntotal <- function(lavobject) {
-  if (lavobject@Options$estimator %in% c("ML", "PML", "FML", "catML") &&
-    lavobject@Options$likelihood %in% c("default", "normal")) {
-    N <- lavobject@SampleStats@ntotal
+lav_object_inspect_ntotal <- function(object) {
+  if (object@Options$estimator %in% c("ML", "PML", "FML", "catML") &&
+    object@Options$likelihood %in% c("default", "normal")) {
+    N <- object@SampleStats@ntotal
   } else {
-    N <- lavobject@SampleStats@ntotal - lavobject@SampleStats@ngroups
+    N <- object@SampleStats@ntotal - object@SampleStats@ngroups
   }
 
   N

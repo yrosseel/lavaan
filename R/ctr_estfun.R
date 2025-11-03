@@ -54,7 +54,7 @@ estfun.lavaan <- lavScores <- function(object, scaling = FALSE, # nolint
   # ntot <- max( object@Data@case.idx[[ object@Data@ngroups ]] )
   ntab <- unlist(lavdata@norig)
   ntot <- sum(ntab)
-  npar <- lav_object_inspect_npar(object)
+  npar <- lav_object_inspect_npar(object, ceq = FALSE)
 
   if (object@Options$estimator == "ML") {
     moments <- fitted(object)
