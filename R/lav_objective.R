@@ -389,9 +389,9 @@ estimator.PML <- function(Sigma.hat = NULL, # model-based var/cov/cor
       # the latter keeps track which variable each column of the matrix
       # univariateProbGivObs refers to
 
-      # For the function compute_uniCondProb_based_on_bivProb see the .r file
+      # For the function lav_pml_bivprob_unicondprob see the .r file
       # with the same name.
-      ModProbY1Gy2 <- compute_uniCondProb_based_on_bivProb(
+      ModProbY1Gy2 <- lav_pml_bivprob_unicondprob(
         bivProb = pairwisePI_orig,
         nvar = nvar,
         idx.pairs = idx.pairs,

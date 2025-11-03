@@ -3038,6 +3038,23 @@ lav_object_inspect_npar <- function(object, type = "free") {
   npar
 }
 
+# get npar (taking into account explicit equality constraints)
+# (changed in 0.5-13)
+lav_object_inspect_npar2 <- function(lavobject) {
+  npar <- lav_partable_npar(lavobject@ParTable)
+  if (nrow(lavobject@Model@con.jac) > 0L) {
+    ceq.idx <- attr(lavobject@Model@con.jac, "ceq.idx")
+    if (length(ceq.idx) > 0L) {
+      neq <- qr(lavobject@Model@con.jac[ceq.idx, , drop = FALSE])$rank
+      npar <- npar - neq
+    }
+  } else if (lavobject@Model@ceq.simple.only) {
+    npar <- lavobject@Model@nx.free
+  }
+
+  npar
+}
+
 lav_object_inspect_icc <- function(object, add.labels = FALSE,
                                    add.class = FALSE,
                                    drop.list.single.group = FALSE) {
@@ -3304,3 +3321,17 @@ lav_object_inspect_mdist2 <- function(object, type = "resid", squared = TRUE,
 
   return.value
 }
+
+# N versus N-1 (or N versus N-G in the multiple group setting)
+# Changed 0.5-15: suggestion by Mark Seeto
+lav_object_inspect_ntotal <- function(lavobject) {
+  if (lavobject@Options$estimator %in% c("ML", "PML", "FML", "catML") &&
+    lavobject@Options$likelihood %in% c("default", "normal")) {
+    N <- lavobject@SampleStats@ntotal
+  } else {
+    N <- lavobject@SampleStats@ntotal - lavobject@SampleStats@ngroups
+  }
+
+  N
+}
+

@@ -321,8 +321,8 @@ lav_fit_measures <- function(object, fit.measures = "all",
     X2.scaled <- TEST[[scaled.idx]]$stat
     df.scaled <- TEST[[scaled.idx]]$df
   }
-  npar <- lav_utils_get_npar(lavobject = object)
-  N <- lav_utils_get_ntotal(lavobject = object) # N vs N-1
+  npar <- lav_object_inspect_npar2(lavobject = object)
+  N <- lav_object_inspect_ntotal(lavobject = object) # N vs N-1
 
 
   # define 'sets' of fit measures:

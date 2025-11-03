@@ -1783,7 +1783,7 @@ lav_lisrel_composites_variances<- function(MLIST = NULL,
   # check if IB is acyclic
   if (det(IB) != 1) {
     # damn, we have an cyclic model; use nlminb()
-    PSI <- lav_utils_find_residuals(IB.inv = IB.inv, PSI = PSI,
+    PSI <- lav_mlist_target_psi(IB.inv = IB.inv, PSI = PSI,
                                     target.psi = target.psi, y.idx = y.idx)
   } else {
     # for an acyclic model, we should be able to find the
@@ -1834,7 +1834,7 @@ lav_lisrel_composites_variances<- function(MLIST = NULL,
     # don't be too strict here
     if (any(abs(current.diag[y.idx] - target.psi[y.idx]) > sqrt(tol))) {
       # as a last resort, use optimization
-      PSI <- lav_utils_find_residuals(IB.inv = IB.inv, PSI = PSI,
+      PSI <- lav_mlist_target_psi(IB.inv = IB.inv, PSI = PSI,
                                       target.psi = target.psi, y.idx = y.idx)
     }
 
@@ -1914,7 +1914,7 @@ lav_lisrel_residual_variances <- function(MLIST = NULL,
     # check if IB is acyclic
     if (det(IB) != 1) {
       # damn, we have an cyclic model; use nlminb()
-      PSI <- lav_utils_find_residuals(IB.inv = IB.inv, PSI = PSI,
+      PSI <- lav_mlist_target_psi(IB.inv = IB.inv, PSI = PSI,
                                       target.psi = target.psi, y.idx = y.idx)
     } else {
       # for an acyclic model, we should be able to find the
@@ -1965,7 +1965,7 @@ lav_lisrel_residual_variances <- function(MLIST = NULL,
       # don't be too strict here
       if (any(abs(current.diag[y.idx] - target.psi[y.idx]) > sqrt(tol))) {
         # as a last resort, use optimization
-        PSI <- lav_utils_find_residuals(IB.inv = IB.inv, PSI = PSI,
+        PSI <- lav_mlist_target_psi(IB.inv = IB.inv, PSI = PSI,
                                         target.psi = target.psi, y.idx = y.idx)
       }
 
@@ -3208,3 +3208,103 @@ lav_lisrel_test_derivatives  <- function(MLIST = NULL,
 
   MLIST
 }
+
+# check for marker indicators:
+#   - if std.lv = FALSE: a single '1' per factor, everything else zero
+#   - if std.lv = TRUE: a single non-zero value per factor, everything else zero
+lav_utils_get_marker <- function(LAMBDA = NULL, std.lv = FALSE) {
+  LAMBDA <- as.matrix(LAMBDA)
+  nvar <- nrow(LAMBDA)
+  nfac <- ncol(LAMBDA)
+
+  # round values
+  LAMBDA <- round(LAMBDA, 3L)
+
+  marker.idx <- numeric(nfac)
+  for (f in seq_len(nfac)) {
+    if (std.lv) {
+      marker.idx[f] <- which(rowSums(cbind(
+        LAMBDA[, f] != 0,
+        LAMBDA[, -f] == 0
+      )) == nfac)[1]
+    } else {
+      marker.idx[f] <- which(rowSums(cbind(
+        LAMBDA[, f] == 1,
+        LAMBDA[, -f] == 0
+      )) == nfac)[1]
+    }
+  }
+
+  marker.idx
+}
+
+# find the residual variances (diagonal element of PSI) in such a way
+# so that the diagonal elements of IB.inv %*% PSI %*% t(IB.inv) are
+# equal to the elements of target.psi (usually the 1 vector)
+#
+# YR 01 Nov 2024: initial version; no bounds for now... (so we may end up
+#                 with negative variances)
+lav_mlist_target_psi <- function(BETA = NULL, IB.inv = NULL, PSI = NULL,
+                                     target.psi = NULL, y.idx = NULL) {
+
+  nr <- nrow(PSI)
+
+  # IB.inv (if not given)
+  if (is.null(IB.inv)) {
+    IB <- -BETA
+    IB[lav_matrix_diag_idx(nr)] <- 1
+    IB.inv <- solve(IB)
+  }
+
+  # target.psi
+  if (is.null(target.psi)) {
+    target.psi <- rep(1, nr)
+  }
+
+  # y.idx
+  if (is.null(y.idx)) {
+    y.idx <- seq_len(nr)
+  }
+
+  # cast the problem as a nonlinear optimization problem
+  obj <- function(x) {
+    #cat("x = ", x, "\n")
+    # x are the diagonal elements of PSI
+    this.PSI <- PSI
+    diag(this.PSI)[y.idx] <- x
+    VETA <- IB.inv %*% this.PSI %*% t(IB.inv)
+    current.diag <- diag(VETA)
+    # ratio or difference?
+    diff <- target.psi[y.idx] - current.diag[y.idx]
+    out <- sum(diff * diff) # least squares
+    out
+  }
+
+  VETA <- IB.inv %*% PSI %*% t(IB.inv)
+  x.start <- diag(VETA)[y.idx]
+  out <- nlminb(start = x.start, objective = obj)
+
+  # return updated PSI matrix
+  diag(PSI)[y.idx] <- out$par
+  PSI
+}
+
+# get 'test'
+# make sure we return a single element
+lav_utils_get_test <- function(lavobject) {
+  test <- lavobject@Options$test
+  # 0.6.5: for now, we make sure that 'test' is a single element
+  if (length(test) > 1L) {
+    standard.idx <- which(test == "standard")
+    if (length(standard.idx) > 0L) {
+      test <- test[-standard.idx]
+    }
+    if (length(test) > 1L) {
+      # only retain the first one
+      test <- test[1]
+    }
+  }
+
+  test
+}
+

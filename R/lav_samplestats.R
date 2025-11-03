@@ -1278,7 +1278,7 @@ lav_samplestats_from_moments <- function(sample.cov = NULL,
     if (!is.list(sample.mean)) {
       # check if sample.mean is string (between single quotes)
       if (is.character(sample.mean)) {
-        sample.mean <- char2num(sample.mean)
+        sample.mean <- lav_char2num(sample.mean)
       }
       sample.mean <- list(unname(sample.mean))
     } else {
