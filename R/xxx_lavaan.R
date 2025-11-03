@@ -372,6 +372,7 @@ lavaan <- function(
     lavoptions     = lavoptions,
     lavdata        = lavdata,
     lavsamplestats = lavsamplestats,
+    lavh1          = lavh1,
     lavimplied     = lavimplied,
     lavmodel       = lavmodel
   )

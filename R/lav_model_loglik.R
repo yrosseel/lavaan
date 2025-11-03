@@ -2,6 +2,7 @@
 # model parameters
 lav_model_loglik <- function(lavdata = NULL,
                              lavsamplestats = NULL,
+                             lavh1 = NULL,
                              lavimplied = NULL,
                              lavmodel = NULL,
                              lavoptions = NULL) {
@@ -125,12 +126,8 @@ lav_model_loglik <- function(lavdata = NULL,
         x.idx <- lavsamplestats@x.idx[[g]]
         X.MEAN <- X.COV <- NULL
         if (length(x.idx) > 0L) {
-          # FIXME: should use lavh1 instead!
-          X.MEAN <- lavsamplestats@missing.h1[[g]]$mu[x.idx]
-          X.COV <- lavsamplestats@missing.h1[[g]]$sigma[x.idx,
-            x.idx,
-            drop = FALSE
-          ]
+          X.MEAN <- lavh1$implied$mean[[g]][x.idx]
+          X.COV <- lavh1$implied$cov[[g]][x.idx, x.idx, drop = FALSE]
         }
         logl.group[g] <- lav_mvnorm_missing_loglik_samplestats(
           Yp     = lavsamplestats@missing[[g]],
@@ -140,10 +137,9 @@ lav_model_loglik <- function(lavdata = NULL,
           x.mean = X.MEAN, # not needed? should be part of Sigma
           x.cov  = X.COV
         ) # not needed at all!
-        # x.mean = lavsamplestats@mean.x[[g]],
-        # x.cov  = lavsamplestats@cov.x[[g]])
       } else { # single-level, complete data
         if (lavoptions$conditional.x) {
+          # FIXME: use lavh1
           logl.group[g] <- lav_mvreg_loglik_samplestats(
             sample.res.int    = lavsamplestats@res.int[[g]],
             sample.res.slopes = lavsamplestats@res.slopes[[g]],

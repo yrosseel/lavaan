@@ -225,6 +225,9 @@ lav_mvnorm_missing_h1_estimate_moments_chol <- function(lavdata = NULL,
   # not for multilevel
   stopifnot(lavdata@nlevels == 1L)
 
+  # no ov.names.x in lavdata
+  lavdata@ov.names.x <- vector("list", length = lavdata@ngroups)
+
   # construct unrestricted partable (using chol parameterization)
   # for this group only
   lavpartable <- lav_partable_unrestricted_chol(

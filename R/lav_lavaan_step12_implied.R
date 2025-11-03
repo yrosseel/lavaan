@@ -22,11 +22,19 @@ lav_lavaan_step12_implied <- function(lavoptions = NULL,
 lav_lavaan_step12_loglik <- function(lavoptions = NULL,
                                      lavdata = NULL,
                                      lavsamplestats = NULL,
+                                     lavh1 = NULL,
                                      lavimplied = NULL,
                                      lavmodel = NULL) {
   # # # # # # # # # # # #
   # #  12. lavloglik  # #
   # # # # # # # # # # # #
+
+  # only when missing = "ml" and zero coverage
+  if (lavoptions$missing == "ml" && lavoptions$model.type == "unrestricted" &&
+      length(lavh1) == 0L) {
+    lavh1 <- list(implied = lavimplied,
+                  logl = list())
+  }
 
   # if lavoptions$loglik compute lavloglik via lav_model_loglik
   lavloglik <- list()
@@ -37,6 +45,7 @@ lav_lavaan_step12_loglik <- function(lavoptions = NULL,
     lavloglik <- lav_model_loglik(
       lavdata = lavdata,
       lavsamplestats = lavsamplestats,
+      lavh1 = lavh1,
       lavimplied = lavimplied,
       lavmodel = lavmodel,
       lavoptions = lavoptions
