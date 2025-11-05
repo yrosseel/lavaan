@@ -147,7 +147,7 @@ lav_model_gradient_mml <- function(lavmodel = NULL,
   ## FIXME!!! do this analytically...
   x <- lav_model_get_parameters(lavmodel = lavmodel, GLIST = MLIST)
   dVetadx <- function(x, lavmodel = lavmodel, g = 1L) {
-    GLIST <- lav_model_x2GLIST(lavmodel, x = x, type = "free")
+    GLIST <- lav_model_x2glist(lavmodel, x = x, type = "free")
     VETAx <- lav_model_vetax(lavmodel, GLIST = GLIST)[[g]]
     if (CHOLESKY) {
       S <- chol(VETAx) ### FIXME or t(chol())????

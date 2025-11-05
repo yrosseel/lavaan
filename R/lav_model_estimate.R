@@ -312,7 +312,7 @@ lav_model_estimate <- function(lavmodel = NULL,
     x <- x / parscale
 
     # update GLIST (change `state') and make a COPY!
-    GLIST <- lav_model_x2GLIST(lavmodel, x = x)
+    GLIST <- lav_model_x2glist(lavmodel, x = x)
 
     fx <- lav_model_objective(
       lavmodel = lavmodel,
@@ -380,7 +380,7 @@ lav_model_estimate <- function(lavmodel = NULL,
     x <- x / parscale
 
     # update GLIST (change `state') and make a COPY!
-    GLIST <- lav_model_x2GLIST(lavmodel, x = x)
+    GLIST <- lav_model_x2glist(lavmodel, x = x)
 
     dx <- lav_model_gradient(
       lavmodel = lavmodel,

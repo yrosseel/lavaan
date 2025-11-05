@@ -322,7 +322,7 @@ lavTestLRT <- function(object, ..., method = "default", test = "default",
       }
     } else if (method == "mean.var.adjusted.PLRT") {
       for (m in seq_len(length(mods) - 1L)) {
-        out <- ctr_pml_plrt_nested(mods[[m]], mods[[m + 1]])
+        out <- lav_pml_test_plrt(mods[[m]], mods[[m + 1]])
         STAT.delta[m + 1] <- out$FSMA.PLRT
         Df.delta[m + 1] <- out$adj.df
       }
@@ -413,7 +413,7 @@ lavTestLRT <- function(object, ..., method = "default", test = "default",
     aic <- sapply(mods, FUN = AIC)
     bic <- sapply(mods, FUN = BIC)
   } else if (estimator == "PML") {
-    OUT <- lapply(mods, ctr_pml_aic_bic)
+    OUT <- lapply(mods, lav_pml_object_aic_bic)
     aic <- sapply(OUT, "[[", "PL_AIC")
     bic <- sapply(OUT, "[[", "PL_BIC")
   }

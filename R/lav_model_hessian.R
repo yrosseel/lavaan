@@ -51,7 +51,7 @@ lav_model_hessian <- function(lavmodel = NULL,
     g.left <-
       lav_model_gradient(
         lavmodel = lavmodel,
-        GLIST = lav_model_x2GLIST(
+        GLIST = lav_model_x2glist(
           lavmodel =
             lavmodel, type = type.glist,
           x.left
@@ -66,7 +66,7 @@ lav_model_hessian <- function(lavmodel = NULL,
     g.left2 <-
       lav_model_gradient(
         lavmodel = lavmodel,
-        GLIST = lav_model_x2GLIST(
+        GLIST = lav_model_x2glist(
           lavmodel =
             lavmodel, type = type.glist,
           x.left2
@@ -82,7 +82,7 @@ lav_model_hessian <- function(lavmodel = NULL,
     g.right <-
       lav_model_gradient(
         lavmodel = lavmodel,
-        GLIST = lav_model_x2GLIST(
+        GLIST = lav_model_x2glist(
           lavmodel =
             lavmodel, type = type.glist,
           x.right
@@ -98,7 +98,7 @@ lav_model_hessian <- function(lavmodel = NULL,
     g.right2 <-
       lav_model_gradient(
         lavmodel = lavmodel,
-        GLIST = lav_model_x2GLIST(
+        GLIST = lav_model_x2glist(
           lavmodel =
             lavmodel, type = type.glist,
           x.right2
@@ -135,7 +135,7 @@ lav_model_hessian_complex <- function(lavmodel = NULL,
                                       lavcache = NULL,
                                       group.weight = TRUE) {
   gradf <- function(x) {
-    GLIST <- lav_model_x2GLIST(lavmodel = lavmodel, x = x)
+    GLIST <- lav_model_x2glist(lavmodel = lavmodel, x = x)
     dx <- lav_model_gradient(
       lavmodel = lavmodel,
       GLIST = GLIST,

@@ -407,7 +407,7 @@ lav_bvmix_cor_scores_cache <- function(cache = NULL,
     }
 
     # FIXME: only tested for non_exo!
-    # used by pml_deriv1()
+    # used by lav_pml_dploglik_dimplied()
     if (sigma.correction) {
       dx.rho.orig <- dx.rho
       dx.var.y1.orig <- dx.var.y1
@@ -451,7 +451,7 @@ lav_bvmix_cor_scores <- function(Y1, Y2, eXo = NULL, wt = NULL,
     fit.y2 <- lav_uvord_fit(y = Y2, X = eXo, wt = wt)
   }
 
-  # update z1/z2 if needed (used in pml_deriv1() in lav_model_gradient_pml.R)
+  # update z1/z2 if needed (used in lav_pml_dploglik_dimplied() in lav_model_gradient_pml.R)
   fit.y1 <- lav_uvreg_update_fit(
     fit.y = fit.y1, evar.new = evar.y1,
     beta.new = beta.y1
@@ -490,7 +490,7 @@ lav_bvmix_logl <- function(Y1, Y2, eXo = NULL, wt = NULL,
     fit.y2 <- lav_uvord_fit(y = Y2, X = eXo, wt = wt)
   }
 
-  # update z1/z2 if needed (used in pml_deriv1() in lav_model_gradient_pml.R)
+  # update z1/z2 if needed (used in lav_pml_dploglik_dimplied() in lav_model_gradient_pml.R)
   fit.y1 <- lav_uvreg_update_fit(
     fit.y = fit.y1, evar.new = evar.y1,
     beta.new = beta.y1
@@ -524,7 +524,7 @@ lav_bvmix_lik <- function(Y1, Y2, eXo = NULL, wt = NULL,
     fit.y2 <- lav_uvord_fit(y = Y2, X = eXo, wt = wt)
   }
 
-  # update z1/z2 if needed (used in pml_deriv1() in lav_model_gradient_pml.R)
+  # update z1/z2 if needed (used in lav_pml_dploglik_dimplied() in lav_model_gradient_pml.R)
   fit.y1 <- lav_uvreg_update_fit(
     fit.y = fit.y1, evar.new = evar.y1,
     beta.new = beta.y1

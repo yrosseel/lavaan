@@ -728,7 +728,7 @@ lav_bvord_cor_scores <- function(Y1, Y2, eXo = NULL, wt = NULL,
     fit.y2 <- lav_uvord_fit(y = Y2, X = eXo, wt = wt)
   }
 
-  # update z1/z2 if needed (used in pml_deriv1() in lav_model_gradient_pml.R)
+  # update z1/z2 if needed (used in lav_pml_dploglik_dimplied() in lav_model_gradient_pml.R)
   fit.y1 <- lav_uvord_update_fit(
     fit.y = fit.y1,
     th.new = th.y1, sl.new = sl.y1
@@ -766,7 +766,7 @@ lav_bvord_logl <- function(Y1, Y2, eXo = NULL, wt = NULL,
     fit.y2 <- lav_uvord_fit(y = Y2, X = eXo, wt = wt)
   }
 
-  # update z1/z2 if needed (used in pml_deriv1() in lav_model_gradient_pml.R)
+  # update z1/z2 if needed (used in lav_pml_dploglik_dimplied() in lav_model_gradient_pml.R)
   fit.y1 <- lav_uvord_update_fit(
     fit.y = fit.y1,
     th.new = th.y1, sl.new = sl.y1

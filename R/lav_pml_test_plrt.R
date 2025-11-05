@@ -18,7 +18,7 @@
 # values we should evaluate the Hessian, the variability matrix (denoted by J)
 # and Godambe matrix.
 
-ctr_pml_plrt_nested <- function(fit_objH0, fit_objH1) {
+lav_pml_test_plrt <- function(fit_objH0, fit_objH1) {
   # sanity check, perhaps we misordered H0 and H1 in the function call??
   if (fit_objH1@test[[1]]$df > fit_objH0@test[[1]]$df) {
     tmp <- fit_objH0
@@ -107,7 +107,7 @@ ctr_pml_plrt_nested <- function(fit_objH0, fit_objH1) {
 
 
 # for testing: this is the 'original' (using m.el.idx and x.el.idx)
-ctr_pml_plrt_nested2 <- function(fit_objH0, fit_objH1) {
+lav_pml_test_plrt2 <- function(fit_objH0, fit_objH1) {
   if (fit_objH1@test[[1]]$df > fit_objH0@test[[1]]$df) {
     tmp <- fit_objH0
     fit_objH0 <- fit_objH1
@@ -241,23 +241,23 @@ ctr_pml_plrt_nested2 <- function(fit_objH0, fit_objH1) {
 
   # Compute the sum of the eigenvalues and the sum of the squared eigenvalues
   # so that the adjustment to PLRT can be applied.
-  # Here a couple of functions (e.g. MYgetHessian) which are modifications of
+  # Here a couple of functions (e.g. lav_pml_object_inspect_hessian) which are modifications of
   # lavaan functions (e.g. getHessian) are needed. These are defined in the end of the file.
 
   # the quantity below follows the same logic as getHessian of lavaan 0.5-18
   # and it actually gives N*Hessian. That's why the command following the command below.
-  # NHes.theta0 <- MYgetHessian (object = obj@Model,
+  # NHes.theta0 <- lav_pml_object_inspect_hessian (object = obj@Model,
   #                           samplestats = obj@SampleStats ,
   #                           X = obj@Data@X ,
   #                           estimator = "PML",
   #                           lavcache = obj@Cache,
   #                           MY.m.el.idx = MY.m.el.idx,
   #                           MY.x.el.idx = MY.x.el.idx,
-  #                           MY.m.el.idx2 = MY.m.el.idx2, # input for MYx2GLIST
-  #                           MY.x.el.idx2 = MY.x.el.idx2, # input for MYx2GLIST
+  #                           MY.m.el.idx2 = MY.m.el.idx2, # input for lav_pml_object_x2glist
+  #                           MY.x.el.idx2 = MY.x.el.idx2, # input for lav_pml_object_x2glist
   #                           Npar = Npar,
   #                           equalConstr=equalConstr)
-  NHes.theta0 <- MYgetHessian(
+  NHes.theta0 <- lav_pml_object_inspect_hessian(
     object = obj@Model, samplestats = obj@SampleStats,
     X = obj@Data@X, estimator = "PML", lavcache = obj@Cache,
     MY.m.el.idx = MY.m.el.idx, MY.x.el.idx = MY.x.el.idx,
@@ -268,7 +268,7 @@ ctr_pml_plrt_nested2 <- function(fit_objH0, fit_objH1) {
   # Inv.Hes.theta0 <- solve(Hes.theta0)
   Inv.Hes.theta0 <- MASS::ginv(Hes.theta0)
 
-  NJ.theta0 <- MYgetVariability(
+  NJ.theta0 <- lav_pml_object_information_firstorder(
     object = obj, MY.m.el.idx = MY.m.el.idx,
     MY.x.el.idx = MY.x.el.idx, equalConstr = equalConstr
   )
@@ -312,15 +312,15 @@ ctr_pml_plrt_nested2 <- function(fit_objH0, fit_objH1) {
 # lavcache = obj@Cache
 # MY.m.el.idx = MY.m.el.idx
 # MY.x.el.idx = MY.x.el.idx
-# MY.m.el.idx2 = MY.m.el.idx2 # input for MYx2GLIST
-# MY.x.el.idx2 = MY.x.el.idx2 # input for MYx2GLIST
+# MY.m.el.idx2 = MY.m.el.idx2 # input for lav_pml_object_x2glist
+# MY.x.el.idx2 = MY.x.el.idx2 # input for lav_pml_object_x2glist
 # Npar = Npar
 # equalConstr =TRUE
 
-MYgetHessian <- function(object, samplestats, X,
+lav_pml_object_inspect_hessian <- function(object, samplestats, X,
                          estimator = "PML", lavcache,
                          MY.m.el.idx, MY.x.el.idx,
-                         MY.m.el.idx2, MY.x.el.idx2, # input for MYx2GLIST
+                         MY.m.el.idx2, MY.x.el.idx2, # input for lav_pml_object_x2glist
                          Npar, # Npar is the number of parameters under H1
                          equalConstr) { # takes TRUE/ FALSE
   if (equalConstr) { # !!! added line
@@ -328,7 +328,7 @@ MYgetHessian <- function(object, samplestats, X,
   Hessian <- matrix(0, Npar, Npar) #
 
   # !!!! MYfunction below
-  x <- MYgetModelParameters(
+  x <- lav_pml_object_inspect_parameters(
     object = object,
     GLIST = NULL, N = Npar, # N the number of parameters to consider
     MY.m.el.idx = MY.m.el.idx,
@@ -342,10 +342,10 @@ MYgetHessian <- function(object, samplestats, X,
     x.left2[j] <- x[j] - 2 * h.j
     x.right[j] <- x[j] + h.j
     x.right2[j] <- x[j] + 2 * h.j
-    # !!!! MYfunction below : MYcomputeGradient and  MYx2GLIST
-    g.left <- MYcomputeGradient(
+    # !!!! MYfunction below : lav_pml_object_inspect_gradient and  lav_pml_object_x2glist
+    g.left <- lav_pml_object_inspect_gradient(
       object = object,
-      GLIST = MYx2GLIST(
+      GLIST = lav_pml_object_x2glist(
         object = object, x = x.left,
         MY.m.el.idx = MY.m.el.idx2,
         MY.x.el.idx = MY.x.el.idx2
@@ -357,9 +357,9 @@ MYgetHessian <- function(object, samplestats, X,
       equalConstr = equalConstr
     )
 
-    g.left2 <- MYcomputeGradient(
+    g.left2 <- lav_pml_object_inspect_gradient(
       object = object,
-      GLIST = MYx2GLIST(
+      GLIST = lav_pml_object_x2glist(
         object = object, x = x.left2,
         MY.m.el.idx = MY.m.el.idx2,
         MY.x.el.idx = MY.x.el.idx2
@@ -371,9 +371,9 @@ MYgetHessian <- function(object, samplestats, X,
       equalConstr = equalConstr
     )
 
-    g.right <- MYcomputeGradient(
+    g.right <- lav_pml_object_inspect_gradient(
       object = object,
-      GLIST = MYx2GLIST(
+      GLIST = lav_pml_object_x2glist(
         object = object, x = x.right,
         MY.m.el.idx = MY.m.el.idx2,
         MY.x.el.idx = MY.x.el.idx2
@@ -385,9 +385,9 @@ MYgetHessian <- function(object, samplestats, X,
       equalConstr = equalConstr
     )
 
-    g.right2 <- MYcomputeGradient(
+    g.right2 <- lav_pml_object_inspect_gradient(
       object = object,
-      GLIST = MYx2GLIST(
+      GLIST = lav_pml_object_x2glist(
         object = object, x = x.right2,
         MY.m.el.idx = MY.m.el.idx2,
         MY.x.el.idx = MY.x.el.idx2
@@ -410,9 +410,9 @@ MYgetHessian <- function(object, samplestats, X,
 
 
 
-##################################  MYgetModelParameters
+##################################  lav_pml_object_inspect_parameters
 # different input arguments: MY.m.el.idx, MY.x.el.idx
-MYgetModelParameters <- function(object, GLIST = NULL, N, # N the number of parameters to consider
+lav_pml_object_inspect_parameters <- function(object, GLIST = NULL, N, # N the number of parameters to consider
                                  MY.m.el.idx, MY.x.el.idx) {
   if (is.null(GLIST)) {
     GLIST <- object@GLIST
@@ -432,10 +432,10 @@ MYgetModelParameters <- function(object, GLIST = NULL, N, # N the number of para
 
 
 
-#############################  MYcomputeGradient
+#############################  lav_pml_object_inspect_gradient
 # the difference are the input arguments MY.m.el.idx, MY.x.el.idx
 # used  in  lavaan:::lav_model_delta
-MYcomputeGradient <- function(object, GLIST, samplestats = NULL, X = NULL,
+lav_pml_object_inspect_gradient <- function(object, GLIST, samplestats = NULL, X = NULL,
                               lavcache = NULL, estimator = "PML",
                               MY.m.el.idx, MY.x.el.idx, equalConstr) {
   if (equalConstr) { # added line
@@ -449,7 +449,7 @@ MYcomputeGradient <- function(object, GLIST, samplestats = NULL, X = NULL,
   Mu.hat <- lav_model_mu(object, GLIST = GLIST)
   TH <- lav_model_th(object, GLIST = GLIST)
   g <- 1
-  d1 <- pml_deriv1(
+  d1 <- lav_pml_dploglik_dimplied(
     Sigma.hat = Sigma.hat[[g]], Mu.hat = Mu.hat[[g]],
     TH = TH[[g]], th.idx = th.idx[[g]], num.idx = num.idx[[g]],
     X = X[[g]], lavcache = lavcache[[g]]
@@ -473,10 +473,10 @@ MYcomputeGradient <- function(object, GLIST, samplestats = NULL, X = NULL,
 ###############################################################################
 
 
-##################################  MYx2GLIST
+##################################  lav_pml_object_x2glist
 # difference in input arguments MY.m.el.idx, MY.x.el.idx
 
-MYx2GLIST <- function(object, x = NULL, MY.m.el.idx, MY.x.el.idx) {
+lav_pml_object_x2glist <- function(object, x = NULL, MY.m.el.idx, MY.x.el.idx) {
   GLIST <- object@GLIST
   for (mm in 1:length(GLIST)) {
     m.el.idx <- MY.m.el.idx[[mm]]
@@ -488,10 +488,10 @@ MYx2GLIST <- function(object, x = NULL, MY.m.el.idx, MY.x.el.idx) {
 ############################################################################
 
 
-##### MYgetVariability function
-# difference from corresponding of lavaan: I use MYNvcov.first.order
-MYgetVariability <- function(object, MY.m.el.idx, MY.x.el.idx, equalConstr) {
-  NACOV <- MYNvcov.first.order(
+##### lav_pml_object_information_firstorder function
+# difference from corresponding of lavaan: I use lav_pml_model_vcov_firstorder
+lav_pml_object_information_firstorder <- function(object, MY.m.el.idx, MY.x.el.idx, equalConstr) {
+  NACOV <- lav_pml_model_vcov_firstorder(
     lavmodel = object@Model,
     lavsamplestats = object@SampleStats,
     lavdata = object@Data,
@@ -509,7 +509,7 @@ MYgetVariability <- function(object, MY.m.el.idx, MY.x.el.idx, equalConstr) {
   #    B0 <- B0 * object@SampleStats@ntotal
   # }
   # !!!!!!!!!!!!!!!!!!! added the following lines so that the output of
-  # !!!!! MYgetVariability is in line with that of lavaan 0.5-18 getVariability
+  # !!!!! lav_pml_object_information_firstorder is in line with that of lavaan 0.5-18 getVariability
   # !! what's the purpose of the following lines?
   if (object@Options$estimator == "PML") {
     B0 <- B0 * object@SampleStats@ntotal
@@ -528,13 +528,13 @@ MYgetVariability <- function(object, MY.m.el.idx, MY.x.el.idx, equalConstr) {
 # lavcache = obj@Cache
 # MY.m.el.idx = MY.m.el.idx
 # MY.x.el.idx = MY.x.el.idx
-# MY.m.el.idx2 = MY.m.el.idx2 # input for MYx2GLIST
-# MY.x.el.idx2 = MY.x.el.idx2 # input for MYx2GLIST
+# MY.m.el.idx2 = MY.m.el.idx2 # input for lav_pml_object_x2glist
+# MY.x.el.idx2 = MY.x.el.idx2 # input for lav_pml_object_x2glist
 # Npar = Npar
 # equalConstr =TRUE
 
 
-MYNvcov.first.order <- function(lavmodel, lavsamplestats = NULL,
+lav_pml_model_vcov_firstorder <- function(lavmodel, lavsamplestats = NULL,
                                 lavdata = NULL, lavcache = NULL,
                                 estimator = "PML",
                                 MY.m.el.idx, MY.x.el.idx,
@@ -557,7 +557,7 @@ MYNvcov.first.order <- function(lavmodel, lavsamplestats = NULL,
   TH <- lav_model_th(lavmodel)
   g <- 1
 
-  SC <- pml_deriv1(
+  SC <- lav_pml_dploglik_dimplied(
     Sigma.hat = Sigma.hat[[g]], TH = TH[[g]],
     Mu.hat = Mu.hat[[g]], th.idx = lavmodel@th.idx[[g]],
     num.idx = lavmodel@num.idx[[g]],

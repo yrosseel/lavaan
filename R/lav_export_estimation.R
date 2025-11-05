@@ -114,7 +114,7 @@ lav_export_estimation <- function(lavaan_model) {
     }
 
     # create group list
-    GLIST <- lav_model_x2GLIST(lavaan_model@Model, x = parameter_values)
+    GLIST <- lav_model_x2glist(lavaan_model@Model, x = parameter_values)
     # get objective function **value**
     fx <- lav_model_objective(
       lavmodel = lavaan_model@Model,
@@ -144,7 +144,7 @@ lav_export_estimation <- function(lavaan_model) {
         lavaan_model@Model@eq.constraints.k0
     }
 
-    GLIST <- lav_model_x2GLIST(lavaan_model@Model,
+    GLIST <- lav_model_x2glist(lavaan_model@Model,
       x = parameter_values
     )
     current.verbose <- lav_verbose()

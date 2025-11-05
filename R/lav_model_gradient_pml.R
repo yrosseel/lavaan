@@ -1,7 +1,7 @@
 # utility functions for pairwise maximum likelihood
 
-# stub for fml_deriv1
-fml_deriv1 <- function(Sigma.hat = NULL, # model-based var/cov/cor
+# stub for lav_pml_fml_dploglik_dimplied
+lav_pml_fml_dploglik_dimplied <- function(Sigma.hat = NULL, # model-based var/cov/cor
                        TH = NULL, # model-based thresholds + means
                        th.idx = NULL, # threshold idx per variable
                        num.idx = NULL, # which variables are numeric
@@ -21,7 +21,7 @@ fml_deriv1 <- function(Sigma.hat = NULL, # model-based var/cov/cor
 # HJ 18/10/23: Modification for complex design and completely observed data (no
 # missing) with only ordinal indicators to get the right gradient for the
 # optimisation and Hessian computation.
-pml_deriv1 <- function(Sigma.hat = NULL, # model-based var/cov/cor
+lav_pml_dploglik_dimplied <- function(Sigma.hat = NULL, # model-based var/cov/cor
                        Mu.hat = NULL, # model-based means
                        TH = NULL, # model-based thresholds + means
                        th.idx = NULL, # threshold idx per variable
@@ -93,13 +93,13 @@ pml_deriv1 <- function(Sigma.hat = NULL, # model-based var/cov/cor
     } else {
       n.xixj.vec <- lavcache$sum_obs_weights_xixj_ab_vec
     }
-    gradient <- grad_tau_rho(
+    gradient <- lav_pml_grad_tau_rho(
       no.x = nvar,
       all.thres = TH,
       index.var.of.thres = th.idx,
       rho.xixj = cors,
       n.xixj.vec = n.xixj.vec,
-      out.LongVecInd = lavcache$long
+      out.lav_pml_longvec_ind = lavcache$long
     )
 
     # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
@@ -472,7 +472,7 @@ pml_deriv1 <- function(Sigma.hat = NULL, # model-based var/cov/cor
 ### all code below written by Myrsini Katsikatsou
 
 
-# The function grad_tau_rho
+# The function lav_pml_grad_tau_rho
 # input:
 # no.x -  is scalar, the number of ordinal variables
 # all.thres  - is vector containing the thresholds of all variables in the
@@ -489,8 +489,8 @@ pml_deriv1 <- function(Sigma.hat = NULL, # model-based var/cov/cor
 # n.xixj.vec -  a vector with the observed frequency for every combination
 #               of categories and every pair. The frequencies are given in
 #               the same order as the expected probabilities in the output of
-#               pairwiseExpProbVec output
-# out.LongVecInd - it is the output of function LongVecInd
+#               lav_pml_expprob_vec output
+# out.lav_pml_longvec_ind - it is the output of function lav_pml_longvec_ind
 # the output: it gives the elements of der.L.to.tau and der.L.to.rho in this
 #             order. The elements of der.L.to.tau where the elements are
 #             ordered as follows: the thresholds of each variable with respect
@@ -500,8 +500,8 @@ pml_deriv1 <- function(Sigma.hat = NULL, # model-based var/cov/cor
 #             The elements of vector der.L.to.rho are der.Lxixj.to.rho.xixj
 #             where j runs faster than i.
 
-# The function depends on four other functions: LongVecTH.Rho,
-# pairwiseExpProbVec, derLtoRho, and derLtoTau, all given below.
+# The function depends on four other functions: lav_pml_longvec_th_rho,
+# lav_pml_expprob_vec, lav_pml_dl_drho, and lav_pml_dl_dtau, all given below.
 
 # if n.xixj.ab is either an array or a list the following should be done
 # n.xixj.vec <- if(is.array(n.xixj.ab)) {
@@ -511,32 +511,32 @@ pml_deriv1 <- function(Sigma.hat = NULL, # model-based var/cov/cor
 #              }
 
 
-grad_tau_rho <- function(no.x, all.thres, index.var.of.thres, rho.xixj,
-                         n.xixj.vec, out.LongVecInd) {
-  out.LongVecTH.Rho <- LongVecTH.Rho(
+lav_pml_grad_tau_rho <- function(no.x, all.thres, index.var.of.thres, rho.xixj,
+                         n.xixj.vec, out.lav_pml_longvec_ind) {
+  out.lav_pml_longvec_th_rho <- lav_pml_longvec_th_rho(
     no.x = no.x, all.thres = all.thres,
     index.var.of.thres = index.var.of.thres,
     rho.xixj = rho.xixj
   )
-  pi.xixj <- pairwiseExpProbVec(
-    ind.vec = out.LongVecInd,
-    th.rho.vec = out.LongVecTH.Rho
+  pi.xixj <- lav_pml_expprob_vec(
+    ind.vec = out.lav_pml_longvec_ind,
+    th.rho.vec = out.lav_pml_longvec_th_rho
   )
 
-  out.derLtoRho <- derLtoRho(
-    ind.vec = out.LongVecInd,
-    th.rho.vec = out.LongVecTH.Rho,
+  out.lav_pml_dl_drho <- lav_pml_dl_drho(
+    ind.vec = out.lav_pml_longvec_ind,
+    th.rho.vec = out.lav_pml_longvec_th_rho,
     n.xixj = n.xixj.vec, pi.xixj = pi.xixj, no.x = no.x
   )
 
-  out.derLtoTau <- derLtoTau(
-    ind.vec = out.LongVecInd,
-    th.rho.vec = out.LongVecTH.Rho,
+  out.lav_pml_dl_dtau <- lav_pml_dl_dtau(
+    ind.vec = out.lav_pml_longvec_ind,
+    th.rho.vec = out.lav_pml_longvec_th_rho,
     n.xixj = n.xixj.vec, pi.xixj = pi.xixj,
     no.x = no.x
   )
 
-  grad <- c(out.derLtoTau, out.derLtoRho)
+  grad <- c(out.lav_pml_dl_dtau, out.lav_pml_dl_drho)
   attr(grad, "pi.xixj") <- pi.xixj
 
   grad
@@ -546,7 +546,7 @@ grad_tau_rho <- function(no.x, all.thres, index.var.of.thres, rho.xixj,
 
 
 
-# The input of the function  LongVecInd:
+# The input of the function  lav_pml_longvec_ind:
 
 # no.x is scalar, the number of ordinal variables
 
@@ -577,7 +577,7 @@ grad_tau_rho <- function(no.x, all.thres, index.var.of.thres, rho.xixj,
 # Note that each variable may have a different number of categories, that's why
 # for example we take lists below.
 
-LongVecInd <- function(no.x, all.thres, index.var.of.thres) {
+lav_pml_longvec_ind <- function(no.x, all.thres, index.var.of.thres) {
   no.thres.of.each.var <- tapply(all.thres, index.var.of.thres, length)
   index.pairs <- utils::combn(no.x, 2)
   no.pairs <- ncol(index.pairs)
@@ -666,7 +666,7 @@ LongVecInd <- function(no.x, all.thres, index.var.of.thres) {
 ################################################################################
 
 
-# The input of the function  LongVecTH.Rho:
+# The input of the function  lav_pml_longvec_th_rho:
 
 # no.x is scalar, the number of ordinal variables
 
@@ -698,7 +698,7 @@ LongVecInd <- function(no.x, all.thres, index.var.of.thres) {
 # Note that each variable may have a different number of categories, that's why
 # for example we take lists below.
 
-LongVecTH.Rho <- function(no.x, all.thres, index.var.of.thres, rho.xixj) {
+lav_pml_longvec_th_rho <- function(no.x, all.thres, index.var.of.thres, rho.xixj) {
   no.thres.of.each.var <- tapply(all.thres, index.var.of.thres, length)
   index.pairs <- utils::combn(no.x, 2)
   no.pairs <- ncol(index.pairs)
@@ -803,16 +803,16 @@ LongVecTH.Rho <- function(no.x, all.thres, index.var.of.thres, rho.xixj) {
 
 #########################################################
 
-# The function  pairwiseExpProbVec
-# input: ind.vec - the output of function LongVecInd
-#        th.rho.vec - the output of function LongVecTH.Rho
+# The function  lav_pml_expprob_vec
+# input: ind.vec - the output of function lav_pml_longvec_ind
+#        th.rho.vec - the output of function lav_pml_longvec_th_rho
 # output: it gives the elements of pairwiseTablesExpected()$pi.tables
 # table-wise and column-wise within each table. In other words if
 # pi^xixj_ab is the expected probability for the pair of variables xi-xj
 # and categories a and b, then index a runs the fastest of all, followed by b,
 # then by j, and lastly by i.
 
-pairwiseExpProbVec <- function(ind.vec, th.rho.vec) {
+lav_pml_expprob_vec <- function(ind.vec, th.rho.vec) {
   prob.vec <- rep(NA, length(ind.vec$index.thres.var1.of.pair))
 
   prob.vec[ind.vec$index.thres.var1.of.pair == 0 |
@@ -860,19 +860,19 @@ pairwiseExpProbVec <- function(ind.vec, th.rho.vec) {
 }
 
 
-# derLtoRho
-# input: ind.vec - the output of function LongVecInd
-#        th.rho.vec - the output of function LongVecTH.Rho
+# lav_pml_dl_drho
+# input: ind.vec - the output of function lav_pml_longvec_ind
+#        th.rho.vec - the output of function lav_pml_longvec_th_rho
 #        n.xixj - a vector with the observed frequency for every combination
 #                 of categories and every pair. The frequencies are given in
 #                 the same order as the expected probabilities in the output of
-#                 pairwiseExpProbVec output
-#        pi.xixj - the output of pairwiseExpProbVec function
+#                 lav_pml_expprob_vec output
+#        pi.xixj - the output of lav_pml_expprob_vec function
 #        no.x    - the number of ordinal variables
 # output: the vector of der.L.to.rho, each element corresponds to
 #         der.Lxixj.to.rho.xixj where j runs faster than i
 
-derLtoRho <- function(ind.vec, th.rho.vec, n.xixj, pi.xixj, no.x) {
+lav_pml_dl_drho <- function(ind.vec, th.rho.vec, n.xixj, pi.xixj, no.x) {
   prob.vec <- rep(NA, length(ind.vec$index.thres.var1.of.pair))
 
   prob.vec[ind.vec$index.thres.var1.of.pair == 0 |
@@ -915,21 +915,21 @@ derLtoRho <- function(ind.vec, th.rho.vec, n.xixj, pi.xixj, no.x) {
 ###########################################################################
 
 
-# derLtoTau
-# input: ind.vec - the output of function LongVecInd
-#        th.rho.vec - the output of function LongVecTH.Rho
+# lav_pml_dl_dtau
+# input: ind.vec - the output of function lav_pml_longvec_ind
+#        th.rho.vec - the output of function lav_pml_longvec_th_rho
 #        n.xixj - a vector with the observed frequency for every combination
 #                 of categories and every pair. The frequencies are given in
 #                 the same order as the expected probabilities in the output of
-#                 pairwiseExpProbVec output
-#        pi.xixj - the output of pairwiseExpProbVec function
+#                 lav_pml_expprob_vec output
+#        pi.xixj - the output of lav_pml_expprob_vec function
 # output: the vector of der.L.to.tau where the elements are ordered as follows:
 #         the thresholds of each variable with respect to ascending order of
 #         the variable index (i.e. thres_var1, thres_var2, etc.) and within
 #         each variable the thresholds in ascending order.
 
 
-derLtoTau <- function(ind.vec, th.rho.vec, n.xixj, pi.xixj, no.x = 0L) {
+lav_pml_dl_dtau <- function(ind.vec, th.rho.vec, n.xixj, pi.xixj, no.x = 0L) {
   # to compute der.pi.xixj.to.tau.xi
   xi <- lapply(
     ind.vec[c(

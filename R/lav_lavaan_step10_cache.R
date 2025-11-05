@@ -29,7 +29,7 @@ lav_lavaan_step10_cache <- function(slotCache = NULL, # nolint
   #         for this group in bi
   #       set bifreq = bi$obs.freq[tmp.idx]
   #       set binobs = bi$nobs[tmp.idx]
-  #       set long = LongVecInd(no.x = ncol(lavdata@X[[g]]),
+  #       set long = lav_pml_longvec_ind(no.x = ncol(lavdata@X[[g]]),
   #                             all.thres = th[[g]],
   #                             index.var.of.thres = lavmodel@th.idx[[g]])
   #       set lavcache[[g]] = list(bifreq = bifreq, nobs = binobs, long = long)
@@ -106,7 +106,7 @@ lav_lavaan_step10_cache <- function(slotCache = NULL, # nolint
           bifreq <- bi$obs.freq[idx]
           binobs <- bi$nobs[idx]
         }
-        long <- LongVecInd(
+        long <- lav_pml_longvec_ind(
           no.x = ncol(lavdata@X[[g]]),
           all.thres = th[[g]],
           index.var.of.thres = lavmodel@th.idx[[g]]

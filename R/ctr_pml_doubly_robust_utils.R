@@ -192,7 +192,7 @@ lav_pml_object_uni_pairwise_prob <- function(lavobject) {
             tmp.th.idx.recoded <- rep(c(1:noMissVar), times = table(tmp.th.idx))
             tmp.TH <- TH[th.idx %in% idx.MissVar]
 
-            tmp.ind.vec <- LongVecInd(
+            tmp.ind.vec <- lav_pml_longvec_ind(
               no.x = noMissVar,
               all.thres = tmp.TH,
               index.var.of.thres = tmp.th.idx.recoded
@@ -207,7 +207,7 @@ lav_pml_object_uni_pairwise_prob <- function(lavobject) {
               stddev.x = error.stddev[idx.MissVar]
             )
 
-            tmp.bivProb <- pairwiseExpProbVec(
+            tmp.bivProb <- lav_pml_expprob_vec(
               ind.vec = tmp.ind.vec,
               th.rho.vec = tmp.th.rho.vec
             )
@@ -239,7 +239,7 @@ lav_pml_th_rho_generalised <- function(no.x, TH, th.idx,
   id.pairs <- utils::combn(no.x, 2)
   cor.xixj <- cov.xixj / (stddev.x[id.pairs[1, ]] * stddev.x[id.pairs[2, ]])
 
-  LongVecTH.Rho(
+  lav_pml_longvec_th_rho(
     no.x = no.x,
     all.thres = all.std.thres,
     index.var.of.thres = th.idx,
@@ -248,19 +248,19 @@ lav_pml_th_rho_generalised <- function(no.x, TH, th.idx,
 }
 
 # lav_pml_th_rho_generalised is a generalisation  of the function
-#  lavaan:::LongVecTH.Rho . The latter assumes that all y* follow standard
+#  lavaan:::lav_pml_longvec_th_rho . The latter assumes that all y* follow standard
 #  normal so the thresholds are automatically the standardised ones.
 # lav_pml_th_rho_generalised does not assume that, each of y*'s can follow
 # a normal distribution with mean mu and standard deviation sigma.
 # lav_pml_th_rho_generalised has the following input arguments:
-# no.x (same as in lavaan:::LongVecTH.Rho),
-# TH (similar to the TH in lavaan:::LongVecTH.Rho but here they are the unstandardised thresholds, i.e. of the normal distribution with mean mu and standard deviation sigma)
-# th.idx (same as index.var.of.thres in lavaan:::LongVecTH.Rho)
-# cov.xixj which are the polychoric covariances of the pairs of underlying variables provided in a similar fashion as rho.xixj in lavaan:::LongVecTH.Rho)
+# no.x (same as in lavaan:::lav_pml_longvec_th_rho),
+# TH (similar to the TH in lavaan:::lav_pml_longvec_th_rho but here they are the unstandardised thresholds, i.e. of the normal distribution with mean mu and standard deviation sigma)
+# th.idx (same as index.var.of.thres in lavaan:::lav_pml_longvec_th_rho)
+# cov.xixj which are the polychoric covariances of the pairs of underlying variables provided in a similar fashion as rho.xixj in lavaan:::lav_pml_longvec_th_rho)
 # mean.x  is a vector including the means of y*'s provided in the order mean.x1, mean.x2, ...., mean.xp
 # stddev.x  is a vector including the standard deviations of y*'s provided in the order stddev.x1, stddev.x2, ...., stddev.xp
 
-# The output of the new function is similar to that of lavaan:::LongVecTH.Rho#############################################
+# The output of the new function is similar to that of lavaan:::lav_pml_longvec_th_rho#############################################
 
 
 
