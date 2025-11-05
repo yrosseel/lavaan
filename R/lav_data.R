@@ -275,25 +275,27 @@ lavData <- function(data = NULL, # data.frame
     }
 
     # check variances (new in 0.6-7)
-    for (g in seq_len(ngroups)) {
-      VAR <- diag(sample.cov[[g]])
-      # 1. finite?
-      if (!all(is.finite(VAR))) {
-        lav_msg_stop(gettext(
-        "at least one variance in the sample covariance matrix is not finite."))
+    if (!allow.single.case) {
+      for (g in seq_len(ngroups)) {
+        VAR <- diag(sample.cov[[g]])
+        # 1. finite?
+        if (!all(is.finite(VAR))) {
+          lav_msg_stop(gettext(
+          "at least one variance in the sample covariance matrix is not finite."))
+          }
+        # 2. near zero (or negative)?
+        if (any(VAR < .Machine$double.eps)) {
+          lav_msg_stop(
+            gettext("at least one variance in the sample covariance matrix is
+            (near) zero or negative."))
         }
-      # 2. near zero (or negative)?
-      if (any(VAR < .Machine$double.eps)) {
-        lav_msg_stop(
-          gettext("at least one variance in the sample covariance matrix is
-          (near) zero or negative."))
-      }
-      # 3. very large?
-      max.var <- max(VAR)
-      if (max.var > 1000000) {
-        lav_msg_warn(
-          gettext("some observed variances in the sample covariance matrix
-          are larger than 1000000."))
+        # 3. very large?
+        max.var <- max(VAR)
+        if (max.var > 1000000) {
+          lav_msg_warn(
+            gettext("some observed variances in the sample covariance matrix
+            are larger than 1000000."))
+        }
       }
     }
 
@@ -810,7 +812,7 @@ lav_data_full <- function(data = NULL, # data.frame
     }
   }
   # check for really large variances (perhaps -999999 for missing?)
-  if (!std.ov && any(ov$type == "numeric")) {
+  if (!allow.single.case && !std.ov && any(ov$type == "numeric")) {
     num.idx <- which(ov$type == "numeric" & ov$exo == 0L)
     if (length(num.idx) > 0L) {
       max.var <- max(ov$var[num.idx])
