@@ -415,7 +415,7 @@ lavaan::lav_get_cov
 
 # files that start with ctr_  contain contributed code
 # written by others
-# for example: ctr_pml_plrt.R (written by Myrsini Katsikatsou)
+# for example: lav_pml_plrt.R (written by Myrsini Katsikatsou)
 # (with only minor edits by YR)
 
 # 00class.R contains S4 class definitions
@@ -477,7 +477,7 @@ lavaan::lav_get_cov
         x <- x / parscale
 
         # update GLIST (change `state') and make a COPY!
-        GLIST <- lav_model_x2GLIST(lavmodel, x = x)
+        GLIST <- lav_model_x2glist(lavmodel, x = x)
 
         fx <- lav_model_objective(lavmodel       = lavmodel,
                                   GLIST          = GLIST,

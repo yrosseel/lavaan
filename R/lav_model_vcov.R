@@ -681,12 +681,12 @@ lav_model_vcov_se <- function(lavmodel, lavpartable, VCOV = NULL,
   x.var[x.var < 0] <- as.numeric(NA)
   x.se <- sqrt(x.var)
   if (lavmodel@ceq.simple.only) {
-    GLIST <- lav_model_x2GLIST(
+    GLIST <- lav_model_x2glist(
       lavmodel = lavmodel, x = x.se,
       type = "unco"
     )
   } else {
-    GLIST <- lav_model_x2GLIST(
+    GLIST <- lav_model_x2glist(
       lavmodel = lavmodel, x = x.se,
       type = "free"
     )

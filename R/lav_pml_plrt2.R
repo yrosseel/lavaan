@@ -1,4 +1,4 @@
-ctr_pml_plrt2 <- function(lavobject = NULL, lavmodel = NULL, lavdata = NULL,
+lav_pml_plrt2 <- function(lavobject = NULL, lavmodel = NULL, lavdata = NULL,
                           lavsamplestats = NULL, lavpartable = NULL,
                           lavoptions = NULL, x = NULL, VCOV = NULL,
                           lavcache = NULL) {

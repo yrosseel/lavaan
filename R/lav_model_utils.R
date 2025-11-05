@@ -143,7 +143,7 @@ lav_model_set_parameters <- function(lavmodel = NULL, x = NULL) {
 
 # create a standalone GLIST, filled with (new) x values
 # (avoiding a copy of lavmodel)
-lav_model_x2GLIST <- function(lavmodel = NULL, x = NULL,
+lav_model_x2glist <- function(lavmodel = NULL, x = NULL,
                               type = "free", setDelta = TRUE,
                               m.el.idx = NULL, x.el.idx = NULL) {
   correlation <- lavmodel@correlation
@@ -302,4 +302,4 @@ lav_model_dmmdpar <- function(lavmodel, target = "theta", group = 1L) {
 # backwards compatibility
 # getModelParameters <- lav_model_get_parameters
 # setModelParameters <- lav_model_set_parameters
-# x2GLIST            <- lav_model_x2GLIST
+# x2GLIST            <- lav_model_x2glist

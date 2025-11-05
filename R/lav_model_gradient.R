@@ -335,7 +335,7 @@ lav_model_gradient <- function(lavmodel = NULL,
       # nothing to do
     } else {
       # make a GLIST
-      dx <- lav_model_x2GLIST(
+      dx <- lav_model_x2glist(
         lavmodel = lavmodel, x = dx,
         type = "custom", setDelta = FALSE,
         m.el.idx = m.el.idx,
@@ -438,7 +438,7 @@ lav_model_gradient <- function(lavmodel = NULL,
       # nothing to do
     } else {
       # make a GLIST
-      dx <- lav_model_x2GLIST(
+      dx <- lav_model_x2glist(
         lavmodel = lavmodel, x = dx,
         type = "custom", setDelta = FALSE,
         m.el.idx = m.el.idx,
@@ -548,7 +548,7 @@ lav_model_gradient <- function(lavmodel = NULL,
             "PL gradient + multilevel not implemented;
             try optim.gradient = \"numerical\""))
         } else if (conditional.x) {
-          d1 <- pml_deriv1(
+          d1 <- lav_pml_dploglik_dimplied(
             Sigma.hat = Sigma.hat[[g]],
             Mu.hat = Mu.hat[[g]],
             TH = TH[[g]],
@@ -562,7 +562,7 @@ lav_model_gradient <- function(lavmodel = NULL,
             missing = lavdata@missing
           )
         } else {
-          d1 <- pml_deriv1(
+          d1 <- lav_pml_dploglik_dimplied(
             Sigma.hat = Sigma.hat[[g]],
             Mu.hat = Mu.hat[[g]],
             TH = TH[[g]],
@@ -583,7 +583,7 @@ lav_model_gradient <- function(lavmodel = NULL,
       } # PML
 
       else if (estimator == "FML") {
-        d1 <- fml_deriv1(
+        d1 <- lav_pml_fml_dploglik_dimplied(
           Sigma.hat = Sigma.hat[[g]],
           TH = TH[[g]],
           th.idx = th.idx[[g]],
@@ -663,7 +663,7 @@ lav_model_delta_numerical <- function(lavmodel = NULL, GLIST = NULL, g = 1L) {
   if(is.null(GLIST)) GLIST <- lavmodel@GLIST
 
   compute.moments <- function(x) {
-    GLIST <- lav_model_x2GLIST(lavmodel = lavmodel, x = x, type = "free")
+    GLIST <- lav_model_x2glist(lavmodel = lavmodel, x = x, type = "free")
     Sigma.hat <- lav_model_sigma(lavmodel = lavmodel, GLIST = GLIST)
     S.vec <- lav_matrix_vech(Sigma.hat[[g]])
     if(lavmodel@meanstructure) {

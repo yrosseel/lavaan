@@ -682,7 +682,7 @@ lav_model_h1_information_firstorder <- function(lavobject = NULL,
         PI <- NULL
         EXO <- NULL
       }
-      SC <- pml_deriv1(
+      SC <- lav_pml_dploglik_dimplied(
         Sigma.hat = SIGMA,
         Mu.hat = MU,
         TH = TH,

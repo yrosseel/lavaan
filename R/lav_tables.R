@@ -963,14 +963,14 @@ lav_tables_pairwise_model_pi <- function(lavobject = NULL) {
     # shortcut for all ordered - tablewise
     if (all(ov.types == "ordered") && !is.null(lavobject@Cache[[g]]$long)) {
       # FREQ.OBS <- c(FREQ.OBS, lavobject@Cache[[g]]$bifreq)
-      long2 <- LongVecTH.Rho(
+      long2 <- lav_pml_longvec_th_rho(
         no.x = nvar,
         all.thres = TH[[g]],
         index.var.of.thres = th.idx[[g]],
         rho.xixj = cors
       )
       # get expected probability per table, per pair
-      PI[[g]] <- pairwiseExpProbVec(
+      PI[[g]] <- lav_pml_expprob_vec(
         ind.vec = lavobject@Cache[[g]]$long,
         th.rho.vec = long2
       )

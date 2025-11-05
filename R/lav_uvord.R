@@ -460,7 +460,7 @@ lav_uvord_min_hessian <- function(x, cache = NULL) {
 
 # get 'z1' and 'z2' values, given (new) values for the parameters
 # only needed for lav_bvord_cor_scores(), which is called from
-# pml_deriv1() in lav_model_gradient_pml.R
+# lav_pml_dploglik_dimplied() in lav_model_gradient_pml.R
 lav_uvord_update_fit <- function(fit.y = NULL, th.new = NULL, sl.new = NULL) {
   # return fit.y with 'update' z1/z2 values
   if (is.null(th.new) && is.null(sl.new)) {

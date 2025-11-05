@@ -350,10 +350,10 @@ lav_model_test <- function(lavobject = NULL,
   if (lavoptions$estimator == "PML" && test[1] != "none") {
     # attention!
     # if the thresholds are saturated (ie, nuisance parameters)
-    # we should use the ctr_pml_plrt() function.
+    # we should use the lav_pml_plrt() function.
     #
     # BUT, if the thresholds are structured (eg equality constraints)
-    # then we MUST use the ctr_pml_plrt2() function.
+    # then we MUST use the lav_pml_plrt2() function.
     #
     # This was not done automatically < 0.6-6
     #
@@ -378,11 +378,11 @@ lav_model_test <- function(lavobject = NULL,
       }
     }
 
-    # switch between ctr_pml_plrt() and ctr_pml_plrt2()
+    # switch between lav_pml_plrt() and lav_pml_plrt2()
     if (thresholds.structured) {
-      pml_plrt <- ctr_pml_plrt2
+      pml_plrt <- lav_pml_plrt2
     } else {
-      pml_plrt <- ctr_pml_plrt
+      pml_plrt <- lav_pml_plrt
     }
 
     PML <- pml_plrt(

@@ -1,4 +1,4 @@
-ctr_pml_plrt <- function(lavobject = NULL, lavmodel = NULL, lavdata = NULL,
+lav_pml_plrt <- function(lavobject = NULL, lavmodel = NULL, lavdata = NULL,
                          lavsamplestats = NULL, lavpartable = NULL,
                          lavoptions = NULL, x = NULL, VCOV = NULL,
                          lavcache = NULL) {
@@ -355,7 +355,7 @@ ctr_pml_plrt <- function(lavobject = NULL, lavmodel = NULL, lavdata = NULL,
 ############################################################################
 
 
-ctr_pml_aic_bic <- function(lavobject) {
+lav_pml_object_aic_bic <- function(lavobject) {
   ########################## The code for PL version fo AIC and BIC
   # The following should be done because it is not the pl log-likelihood
   # that is maximized but a fit function that should be minimized. So, we
