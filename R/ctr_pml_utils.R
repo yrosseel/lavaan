@@ -241,7 +241,7 @@ univariateExpProbVec <- function(TH = TH, th.idx = th.idx) {
 # The function pc_cor_scores_PL_with_cov computes the derivatives of a bivariate
 # log-likelihood of two ordinal variables casewise with respect to thresholds,
 # slopes (reduced-form regression coefficients for the covariates), and polychoric correlation.
-# The function dbinorm of lavaan is used.
+# The function lav_dbinorm of lavaan is used.
 # The function gives the right result for both listwise and pairwise deletion,
 # and the case of complete data.
 # Input arguments are explained before the function pc_lik_PL_with_cov defined above.
@@ -334,10 +334,10 @@ pc_cor_scores_PL_with_cov <- function(Y1, Y2, eXo, Rho,
 
   # w.r.t. rho
   # derivarive bivariate prob w.r.t. rho, see formula in paper 2012
-  dbivprob.wrt.rho <- (dbinorm(th.y1.z1, th.y2.z1, Rho) -
-    dbinorm(th.y1.z2, th.y2.z1, Rho) -
-    dbinorm(th.y1.z1, th.y2.z2, Rho) +
-    dbinorm(th.y1.z2, th.y2.z2, Rho))
+  dbivprob.wrt.rho <- (lav_dbinorm(th.y1.z1, th.y2.z1, Rho) -
+    lav_dbinorm(th.y1.z2, th.y2.z1, Rho) -
+    lav_dbinorm(th.y1.z1, th.y2.z2, Rho) +
+    lav_dbinorm(th.y1.z2, th.y2.z2, Rho))
   # der of pl w.r.t. rho
   dx.rho <- dbivprob.wrt.rho / lik
   dx.rho[is.na(dx.rho)] <- 0

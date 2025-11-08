@@ -1,4 +1,5 @@
-\name{mplus2lavaan}
+\name{lav_mplus_lavaan}
+\alias{lav_mplus_lavaan}
 \alias{mplus2lavaan}
 \alias{lavImport}
 \title{mplus to lavaan converter}
@@ -6,6 +7,7 @@
 Read in an Mplus input file, convert it to lavaan syntax, and fit
 the model.}
 \usage{
+lav_mplus_lavaan(inpfile, run = TRUE)
 mplus2lavaan(inpfile, run = TRUE)
 }
 \arguments{
@@ -25,7 +27,7 @@ syntax is returned.
 \seealso{\code{\link{lavExport}}}
 \examples{
 \dontrun{
-out <- mplus2lavaan("ex5.1.inp")
+out <- lav_mplus_lavaan("ex5.1.inp")
 summary(out)
 }
 }

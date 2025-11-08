@@ -710,12 +710,12 @@ lav_pml_longvec_th_rho <- function(no.x, all.thres, index.var.of.thres, rho.xixj
   # (-Inf, Inf), (Inf, -Inf), (Inf, Inf) are NOT included. Only the combinations
   # of the middle thresholds (tau_1 to tau_(last-1)).
   # thres.var1.of.pair and thres.var2.of.pair give the first and the second
-  # argument, respectively, in functions pbivnorm and dbinorm
+  # argument, respectively, in functions pbivnorm and lav_dbinorm
   thres.var1.of.pair <- vector("list", no.pairs)
   thres.var2.of.pair <- vector("list", no.pairs)
 
   # Extending the rho.vector accordingly so that it will be the the third
-  # argument in pbivnorm and dbinorm functions. It is of same length as
+  # argument in pbivnorm and lav_dbinorm functions. It is of same length as
   # thres.var1.of.pair and thres.var2.of.pair.
   rho.vector <- vector("list", no.pairs)
 
@@ -880,7 +880,7 @@ lav_pml_dl_drho <- function(ind.vec, th.rho.vec, n.xixj, pi.xixj, no.x) {
     ind.vec$last.thres.var1.of.pair |
     ind.vec$last.thres.var2.of.pair] <- 0
 
-  prob.vec[is.na(prob.vec)] <- dbinorm(th.rho.vec$thres.var1.of.pair,
+  prob.vec[is.na(prob.vec)] <- lav_dbinorm(th.rho.vec$thres.var1.of.pair,
     th.rho.vec$thres.var2.of.pair,
     rho = th.rho.vec$rho.vector
   )
