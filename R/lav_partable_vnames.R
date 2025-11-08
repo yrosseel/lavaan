@@ -119,7 +119,7 @@ lav_partable_vnames <- function(partable, type = NULL, ..., # nolint
   if (type[1L] != "*" && !is.null(attr(partable, "vnames"))) {
     # ----- lav_partable_vnames ---- cached data --------------------------
     # uncomment/comment following line to enable/disable trace
-    # ldw_trace(paste("cached:", paste(type, collapse = ",")))
+    # lav_trace(paste("cached:", paste(type, collapse = ",")))
 
     if (type[1L] == "all") {
       return.value <- attr(partable, "vnames")
@@ -182,7 +182,7 @@ lav_partable_vnames <- function(partable, type = NULL, ..., # nolint
     # ----- lav_partable_vnames ---- no cache ------------------------
 
     # uncomment/comment following line to enable/disable trace
-    # ldw_trace(paste("computed:", paste(type, collapse = ",")))
+    # lav_trace(paste("computed:", paste(type, collapse = ",")))
 
     # random slope names, if any (new in 0.6-7)
     if (!is.null(partable$rv) && any(nchar(partable$rv) > 0L)) {

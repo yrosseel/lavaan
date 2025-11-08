@@ -390,10 +390,10 @@ lav_bvord_noexo_phi_cache <- function(cache = NULL) {
   with(cache, {
     rho <- theta[1L]
 
-    # compute dbinorm for all possible combinations
+    # compute lav_dbinorm for all possible combinations
     t1 <- rep(th.y1, times = nth.y2)
     t2 <- rep(th.y2, each = nth.y1)
-    dbiNorm <- matrix(dbinorm(t1, t2, rho),
+    dbiNorm <- matrix(lav_dbinorm(t1, t2, rho),
       nrow = nth.y1, ncol = nth.y2
     )
 
@@ -516,10 +516,10 @@ lav_bvord_gradient_cache <- function(cache = NULL) {
 
       # exo
     } else {
-      d1 <- dbinorm(fit.y1.z1, fit.y2.z1, rho)
-      d2 <- dbinorm(fit.y1.z2, fit.y2.z1, rho)
-      d3 <- dbinorm(fit.y1.z1, fit.y2.z2, rho)
-      d4 <- dbinorm(fit.y1.z2, fit.y2.z2, rho)
+      d1 <- lav_dbinorm(fit.y1.z1, fit.y2.z1, rho)
+      d2 <- lav_dbinorm(fit.y1.z2, fit.y2.z1, rho)
+      d3 <- lav_dbinorm(fit.y1.z1, fit.y2.z2, rho)
+      d4 <- lav_dbinorm(fit.y1.z2, fit.y2.z2, rho)
       phi <- (d1 - d2 - d3 + d4)
 
       # avoid dividing by very tine numbers (new in 0.6-6)
@@ -685,10 +685,10 @@ lav_bvord_cor_scores_cache <- function(cache = NULL, na.zero = FALSE,
       phi <- lav_bvord_noexo_phi_cache(cache)
       dx <- phi[cbind(Y1, Y2)]
     } else {
-      dx <- (dbinorm(fit.y1.z1, fit.y2.z1, rho) -
-        dbinorm(fit.y1.z2, fit.y2.z1, rho) -
-        dbinorm(fit.y1.z1, fit.y2.z2, rho) +
-        dbinorm(fit.y1.z2, fit.y2.z2, rho))
+      dx <- (lav_dbinorm(fit.y1.z1, fit.y2.z1, rho) -
+        lav_dbinorm(fit.y1.z2, fit.y2.z1, rho) -
+        lav_dbinorm(fit.y1.z1, fit.y2.z2, rho) +
+        lav_dbinorm(fit.y1.z2, fit.y2.z2, rho))
     }
     dx.rho <- dx / lik
     if (na.zero) {

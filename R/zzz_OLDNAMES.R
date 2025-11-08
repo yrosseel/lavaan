@@ -16,8 +16,10 @@ computeExpectedInformation <- lav_model_information_expected
 getParameterLabels <- lav_partable_labels
 
 # standardize function names in lav_utils.R / 31 oct 2025
-getCov <- lav_get_cov
+getCov   <- lav_get_cov
 char2num <- lav_char2num
-cor2cov <- lav_cor2cov
+cor2cov  <- lav_cor2cov
 
-
+# standardize function names in lav_mplu_lavaan / 7 nov 2025
+mplus2lavaan.modelSyntax <- lav_mplus_syntax_model
+mplus2lavaan             <- lav_mplus_lavaan

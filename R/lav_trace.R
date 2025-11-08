@@ -5,12 +5,12 @@ if (!exists("lavaan_cache_env")) lavaan_cache_env <- new.env(parent = emptyenv()
 # tracing possibility in functions defined below, an example of use :
 #
 # in the function where you want to trace add a line
-#     ldw_trace(x)
+#     lav_trace(x)
 # where x is a characterstring you want to show in the trace
 #
 # thereafter execute a script like this:
 # library(lavaan)
-# lavaan:::set_trace(TRUE)
+# lavaan:::lav_trace_set(TRUE)
 # model <- '
 # # latent variable definitions
 #    ind60 =~ x1 + x2 + x3
@@ -30,14 +30,14 @@ if (!exists("lavaan_cache_env")) lavaan_cache_env <- new.env(parent = emptyenv()
 # '
 # fit <- sem(model, data = PoliticalDemocracy)
 # summary(fit)
-# lavaan:::set_trace(FALSE)
-# lavaan:::print_trace("PolDem_trace.txt")
+# lavaan:::lav_trace_set(FALSE)
+# lavaan:::lav_trace_print("PolDem_trace.txt")
 #
 
-ldw_trace <- function(content = "") {
+lav_trace <- function(content = "") {
   ignore.in.stack <- c(
     "eval", "try", "tryCatch", "tryCatchList", "tryCatchOne", "doTryCatch",
-    "which", "unique", "as.list", "as.character", "unlist", "ldw_trace",
+    "which", "unique", "as.list", "as.character", "unlist", "lav_trace",
     "source", "withVisible", "tryCatch.W.E", "withCallingHandlers", "do.call"
   )
   if (!exists("TRACE", lavaan_cache_env)) {
@@ -59,7 +59,7 @@ ldw_trace <- function(content = "") {
   invisible(NULL)
 }
 
-set_trace <- function(state = NULL, silent = FALSE) {
+lav_trace_set <- function(state = NULL, silent = FALSE) {
   traceon <- exists("TRACE", lavaan_cache_env)
   msg <- ""
   if (is.null(state)) {
@@ -86,7 +86,7 @@ set_trace <- function(state = NULL, silent = FALSE) {
   invisible(NULL)
 }
 
-get_trace <- function() {
+lav_trace_get <- function() {
   traceobjects <- ls(lavaan_cache_env, pattern = "^trc")
   if (length(traceobjects) == 0) {
     return(list())
@@ -97,9 +97,9 @@ get_trace <- function() {
   x
 }
 
-print_trace <- function(file = "", clean_after = (file != "")) {
+lav_trace_print <- function(file = "", clean_after = (file != "")) {
   cat("Trace print on ", format(Sys.time(), format = "%F"), "\n\n", file = file)
-  x <- get_trace()
+  x <- lav_trace_get()
   for (x1 in x) {
     cat(format(x1$time, format = "%T"),
       paste(x1$stack, collapse = ">"), ":", x1$content,
@@ -107,11 +107,11 @@ print_trace <- function(file = "", clean_after = (file != "")) {
       sep = " ", file = file, append = TRUE
     )
   }
-  if (clean_after) set_trace(NULL, TRUE)
+  if (clean_after) lav_trace_set(NULL, TRUE)
 }
 
-summary_trace <- function(file = "", clean_after = FALSE) {
-  x <- get_trace()
+lav_trace_summary <- function(file = "", clean_after = FALSE) {
+  x <- lav_trace_get()
   temp <- new.env(parent = emptyenv())
   for (x1 in x) {
     nn <- length(x1$stack)
@@ -122,5 +122,5 @@ summary_trace <- function(file = "", clean_after = FALSE) {
   for (i in seq_along(objects)) {
     cat(objects[i], get(objects[i], temp), "\n", file = file, append = TRUE)
   }
-  if (clean_after) set_trace(NULL, TRUE)
+  if (clean_after) lav_trace_set(NULL, TRUE)
 }

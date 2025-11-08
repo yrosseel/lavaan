@@ -5,7 +5,7 @@
 # then perhaps write export function: parTable2Mplus
 # and/or parTable2lavaan
 
-trimSpace <- function(string) {
+lav_mplus_trim <- function(string) {
   stringTrim <- sapply(string, function(x) {
     x <- sub("^\\s*", "", x, perl = TRUE)
     x <- sub("\\s*$", "", x, perl = TRUE)
@@ -15,7 +15,7 @@ trimSpace <- function(string) {
 }
 
 # small utility function to join strings in a regexp loop
-joinRegexExpand <- function(cmd, argExpand, matches, iterator, matchLength = "match.length") {
+lav_mplus_join_regex <- function(cmd, argExpand, matches, iterator, matchLength = "match.length") {
   if (iterator == 1 && matches[iterator] > 1) {
     pre <- substr(cmd, 1, matches[iterator] - 1)
   } else {
@@ -32,7 +32,7 @@ joinRegexExpand <- function(cmd, argExpand, matches, iterator, matchLength = "ma
 }
 
 # expand Mplus hyphen syntax (will also expand constraints with hyphens)
-expandCmd <- function(cmd, alphaStart = TRUE) {
+lav_mplus_expand_cmd <- function(cmd, alphaStart = TRUE) {
   # use negative lookahead and negative lookbehind to eliminate possibility of hyphen being used as a negative starting value (e.g., x*-1)
   # also avoid match of anything that includes a decimal point, such as a floating-point starting value -10.5*x1
 
@@ -103,7 +103,7 @@ expandCmd <- function(cmd, alphaStart = TRUE) {
       v_expand <- paste(v_post.prefix, v_pre.num:v_post.num, v_post.suffix, sep = "", collapse = " ")
 
       # for first hyphen, there may be non-hyphenated syntax preceding the initial match
-      cmd.expand[ep] <- joinRegexExpand(cmd, v_expand, hyphens, v)
+      cmd.expand[ep] <- lav_mplus_join_regex(cmd, v_expand, hyphens, v)
 
       # This won't really work because the cmd.expand element may contain other variables
       # that are at the beginning or end, prior to hyphen stuff
@@ -136,7 +136,7 @@ expandCmd <- function(cmd, alphaStart = TRUE) {
 
 
 # handle starting values and fixed parameters on rhs
-parseFixStart <- function(cmd) {
+lav_mplus_cmd_fix_start <- function(cmd) {
   cmd.parse <- c()
   ep <- 1L
 
@@ -168,10 +168,10 @@ parseFixStart <- function(cmd) {
       }
 
       if (opchar == "@") {
-        cmd.parse[ep] <- joinRegexExpand(cmd, paste0(val, "*", var, sep = ""), fixed.starts, f)
+        cmd.parse[ep] <- lav_mplus_join_regex(cmd, paste0(val, "*", var, sep = ""), fixed.starts, f)
         ep <- ep + 1L
       } else {
-        cmd.parse[ep] <- joinRegexExpand(cmd, paste0("start(", val, ")*", var, sep = ""), fixed.starts, f)
+        cmd.parse[ep] <- lav_mplus_join_regex(cmd, paste0("start(", val, ")*", var, sep = ""), fixed.starts, f)
         ep <- ep + 1L
       }
     }
@@ -181,7 +181,7 @@ parseFixStart <- function(cmd) {
   }
 }
 
-parseConstraints <- function(cmd) {
+lav_mplus_cmd_constraints <- function(cmd) {
   # Allow cmd to have newlines embedded. In this case, split on newlines, and loop over and parse each chunk
   # Dump leading and trailing newlines, which contain no information about constraints, but may add dummy elements to vector after strsplit
   # Maybe return LHS and RHS parsed command where constraints only appear on the RHS, whereas the LHS contains only parameters.
@@ -214,8 +214,8 @@ parseConstraints <- function(cmd) {
         # string within the constraint parentheses
         constraints <- substr(cmd.split[n], attr(parens, "capture.start")[p], attr(parens, "capture.start")[p] + attr(parens, "capture.length")[p] - 1)
 
-        # Divide constraints on spaces to determine number of constraints to parse. Use trimSpace to avoid problem of user including leading/trailing spaces within parentheses.
-        con.split <- strsplit(trimSpace(constraints), "\\s+", perl = TRUE)[[1]]
+        # Divide constraints on spaces to determine number of constraints to parse. Use lav_mplus_trim to avoid problem of user including leading/trailing spaces within parentheses.
+        con.split <- strsplit(lav_mplus_trim(constraints), "\\s+", perl = TRUE)[[1]]
 
         # if Mplus uses a purely numeric constraint, then add ".con" prefix to be consistent with R naming.
         con.split <- sapply(con.split, function(x) {
@@ -230,8 +230,8 @@ parseConstraints <- function(cmd) {
         prestrStart <- ifelse(p > 1, attr(parens, "capture.start")[p - 1] + attr(parens, "capture.length")[p - 1] + 1, 1)
 
         # obtain the parameters that precede the parentheses, divide into arguments on spaces
-        # use trimSpace here because first char after prestrStart for p > 1 will probably be a space
-        precmd.split <- strsplit(trimSpace(substr(cmd.split[n], prestrStart, parens[p] - 1)), "\\s+", perl = TRUE)[[1]]
+        # use lav_mplus_trim here because first char after prestrStart for p > 1 will probably be a space
+        precmd.split <- strsplit(lav_mplus_trim(substr(cmd.split[n], prestrStart, parens[p] - 1)), "\\s+", perl = TRUE)[[1]]
 
         # peel off any potential LHS arguments, such as F1 BY
         precmdLHSOp <- which(tolower(precmd.split) %in% c("by", "with", "on"))
@@ -331,8 +331,8 @@ parseConstraints <- function(cmd) {
   return(toReturn)
 }
 
-expandGrowthCmd <- function(cmd) {
-  # can assume that any spaces between tscore and variable were stripped by parseFixStart
+lav_mplus_cmd_growth <- function(cmd) {
+  # can assume that any spaces between tscore and variable were stripped by lav_mplus_cmd_fix_start
 
   # verify that this is not a random slope
   if (any(tolower(strsplit(cmd, "\\s+", perl = TRUE)[[1]]) %in% c("on", "at"))) {
@@ -375,7 +375,7 @@ expandGrowthCmd <- function(cmd) {
 }
 
 # function to wrap long lines at a certain width, splitting on + symbols to be consistent with R syntax
-wrapAfterPlus <- function(cmd, width = 90, exdent = 5) {
+lav_mplus_cmd_wrap <- function(cmd, width = 90, exdent = 5) {
   result <- lapply(cmd, function(line) {
     if (nchar(line) > width) {
       split <- c()
@@ -406,7 +406,7 @@ wrapAfterPlus <- function(cmd, width = 90, exdent = 5) {
         }
 
         # remove leading and trailing chars
-        split <- trimSpace(split)
+        split <- lav_mplus_trim(split)
 
         # handle exdent
         split <- sapply(1:length(split), function(x) {
@@ -430,11 +430,11 @@ wrapAfterPlus <- function(cmd, width = 90, exdent = 5) {
   return(unname(do.call(c, result)))
 }
 
-mplus2lavaan.constraintSyntax <- function(syntax) {
+lav_mplus_syntax_constraints <- function(syntax) {
   # should probably pass in model syntax along with some tracking of which parameter labels are defined.
 
   # convert MODEL CONSTRAINT section to lavaan model syntax
-  syntax <- paste(lapply(trimSpace(strsplit(syntax, "\n")), function(x) {
+  syntax <- paste(lapply(lav_mplus_trim(strsplit(syntax, "\n")), function(x) {
     if (length(x) == 0L && is.character(x)) "" else x
   }), collapse = "\n")
 
@@ -459,8 +459,8 @@ mplus2lavaan.constraintSyntax <- function(syntax) {
       if (new.con[1L] == -1)
         lav_msg_stop(gettext("Unable to parse names of new contraints"))
       new.con <- substr(cmd, attr(new.con, "capture.start"), attr(new.con, "capture.start") + attr(new.con, "capture.length") - 1L)
-      new.con <- expandCmd(new.con) # allow for hyphen expansion
-      new.parameters <- c(new.parameters, strsplit(trimSpace(new.con), "\\s+", perl = TRUE)[[1L]])
+      new.con <- lav_mplus_expand_cmd(new.con) # allow for hyphen expansion
+      new.parameters <- c(new.parameters, strsplit(lav_mplus_trim(new.con), "\\s+", perl = TRUE)[[1L]])
     }
 
     syntax.split <- syntax.split[-1L * new.con.lines] # drop out these lines
@@ -485,7 +485,7 @@ mplus2lavaan.constraintSyntax <- function(syntax) {
 
         for (i in 1:length(maths)) {
           operator <- tolower(substr(cmd, attr(maths, "capture.start")[i], attr(maths, "capture.start")[i] + attr(maths, "capture.length")[i] - 1))
-          maths.replace[ep] <- joinRegexExpand(cmd, operator, maths, i, matchLength = "capture.length") # only match operator, not opening (
+          maths.replace[ep] <- lav_mplus_join_regex(cmd, operator, maths, i, matchLength = "capture.length") # only match operator, not opening (
           ep <- ep + 1
         }
         cmd <- paste(maths.replace, collapse = "")
@@ -493,8 +493,8 @@ mplus2lavaan.constraintSyntax <- function(syntax) {
 
       # equating some lhs and rhs: could reflect definition of new parameter
       if ((equals <- regexpr("=", cmd, fixed = TRUE))[1L] > 0) {
-        lhs <- trimSpace(substr(cmd, 1, equals - 1))
-        rhs <- trimSpace(substr(cmd, equals + attr(equals, "match.length"), nchar(cmd)))
+        lhs <- lav_mplus_trim(substr(cmd, 1, equals - 1))
+        rhs <- lav_mplus_trim(substr(cmd, equals + attr(equals, "match.length"), nchar(cmd)))
 
         # possibility of lhs or rhs containing the single variable to be equated
         if (regexpr("\\s+", lhs, perl = TRUE)[1L] > 0L) {
@@ -534,18 +534,18 @@ mplus2lavaan.constraintSyntax <- function(syntax) {
     }
   }
 
-  wrap <- paste(wrapAfterPlus(constraint.out, width = 90, exdent = 5), collapse = "\n")
+  wrap <- paste(lav_mplus_cmd_wrap(constraint.out, width = 90, exdent = 5), collapse = "\n")
   return(wrap)
 }
 
-mplus2lavaan.modelSyntax <- function(syntax) {
+lav_mplus_syntax_model <- function(syntax) {
   if (is.character(syntax)) {
     if (length(syntax) > 1L) {
       syntax <- paste(syntax, collapse = "\n")
     } # concatenate into a long string separated by newlines
   } else {
     lav_msg_stop(gettext(
-      "mplus2lavaan.modelSyntax accepts a single character string or
+      "lav_mplus_syntax_model accepts a single character string or
       character vector containing all model syntax"))
   }
 
@@ -555,12 +555,12 @@ mplus2lavaan.modelSyntax <- function(syntax) {
   inputHeaders <- grep("^\\s*(title:|data.*:|variable:|define:|analysis:|model.*:|output:|savedata:|plot:|montecarlo:)", by_line, ignore.case = TRUE, perl = TRUE)
   con_syntax <- c()
   if (length(inputHeaders) > 0L) {
-    # warning("mplus2lavaan.modelSyntax is intended to accept only the model section, not an entire .inp file. For the .inp file case, use mplus2lavaan")
-    parsed_syntax <- divideInputIntoSections(by_line, "local")
+    # warning("lav_mplus_syntax_model is intended to accept only the model section, not an entire .inp file. For the .inp file case, use lav_mplus_lavaan")
+    parsed_syntax <- lav_mplus_text_sections(by_line, "local")
 
     # handle model constraint
     if ("model.constraint" %in% names(parsed_syntax)) {
-      con_syntax <- strsplit(mplus2lavaan.constraintSyntax(parsed_syntax$model.constraint), "\n")[[1]]
+      con_syntax <- strsplit(lav_mplus_syntax_constraints(parsed_syntax$model.constraint), "\n")[[1]]
     }
 
     # just keep model syntax before continuing
@@ -571,7 +571,7 @@ mplus2lavaan.modelSyntax <- function(syntax) {
   # strsplit generates character(0) for empty strings, which causes problems in paste because paste actually includes it as a literal
   # example: paste(list(character(0), "asdf", character(0)), collapse=" ")
   # thus, use lapply to convert these to empty strings first
-  syntax <- paste(lapply(trimSpace(strsplit(syntax, "\n")), function(x) {
+  syntax <- paste(lapply(lav_mplus_trim(strsplit(syntax, "\n")), function(x) {
     if (length(x) == 0L && is.character(x)) "" else x
   }), collapse = "\n")
 
@@ -588,7 +588,7 @@ mplus2lavaan.modelSyntax <- function(syntax) {
 
   # split into vector of strings
   # syntax.split <- unlist( strsplit(syntax, "\n") )
-  syntax.split <- trimSpace(unlist(strsplit(syntax, ";")))
+  syntax.split <- lav_mplus_trim(unlist(strsplit(syntax, ";")))
 
   # format of parTable to mimic.
   # 'data.frame':	34 obs. of  12 variables:
@@ -610,18 +610,18 @@ mplus2lavaan.modelSyntax <- function(syntax) {
 
   for (cmd in syntax.split) {
     if (grepl("^\\s*#", cmd, perl = TRUE)) { # comment line
-      lavaan.out <- c(lavaan.out, gsub("\n", "", cmd, fixed = TRUE)) # drop any newlines (otherwise done by parseConstraints)
+      lavaan.out <- c(lavaan.out, gsub("\n", "", cmd, fixed = TRUE)) # drop any newlines (otherwise done by lav_mplus_cmd_constraints)
     } else if (grepl("^\\s*$", cmd, perl = TRUE)) {
       # do nothing, just a space or blank line
     } else {
       # hyphen expansion
-      cmd <- expandCmd(cmd)
+      cmd <- lav_mplus_expand_cmd(cmd)
 
       # parse fixed parameters and starting values
-      cmd <- parseFixStart(cmd)
+      cmd <- lav_mplus_cmd_fix_start(cmd)
 
       # parse any constraints here (avoid weird logic below)
-      cmd <- parseConstraints(cmd)
+      cmd <- lav_mplus_cmd_constraints(cmd)
 
       if ((op <- regexpr("\\s+(by|on|with|pwith)\\s+", cmd, ignore.case = TRUE, perl = TRUE))[1L] > 0) { # regressions, factors, covariances
 
@@ -638,13 +638,13 @@ mplus2lavaan.modelSyntax <- function(syntax) {
         }
 
         # handle parameter combinations
-        lhs.split <- strsplit(lhs, "\\s+")[[1]] # trimSpace(
+        lhs.split <- strsplit(lhs, "\\s+")[[1]] # lav_mplus_trim(
 
         # handle pwith syntax
         if (operator == "pwith") {
           # TODO: Figure out if pwith can be paired with constraints?
 
-          rhs.split <- strsplit(rhs, "\\s+")[[1]] # trimSpace(
+          rhs.split <- strsplit(rhs, "\\s+")[[1]] # lav_mplus_trim(
           if (length(lhs.split) != length(rhs.split)) {
             browser()
             lav_msg_stop(gettext(
@@ -676,12 +676,12 @@ mplus2lavaan.modelSyntax <- function(syntax) {
         # obtain parameters with no modifiers specified for LHS
         params.noModifiers <- sub("^\\s*[\\[\\{]([^\\]\\}]+)[\\]\\}]\\s*$", "\\1", attr(cmd, "noModifiers"), perl = TRUE)
 
-        means.scales.split <- strsplit(params, "\\s+")[[1]] # trimSpace(
-        means.scales.noModifiers.split <- strsplit(params.noModifiers, "\\s+")[[1]] # trimSpace(
+        means.scales.split <- strsplit(params, "\\s+")[[1]] # lav_mplus_trim(
+        means.scales.noModifiers.split <- strsplit(params.noModifiers, "\\s+")[[1]] # lav_mplus_trim(
 
         if (operator == "[") {
           # Tricky syntax shift (and corresponding kludge). For means, need to put constraint on RHS as pre-multiplier of 1 (e.g., x1 ~ 5*1).
-          # But parseConstraints returns constraints multiplied by parameters
+          # But lav_mplus_cmd_constraints returns constraints multiplied by parameters
           cmd <- sapply(means.scales.split, function(v) {
             # shift pre-multiplier
             if ((premult <- regexpr("([^\\*]+\\*[^\\*]+)\\*([^\\*]+)", v, perl = TRUE))[1L] > 0) { # double modifier: label and constraint
@@ -704,12 +704,12 @@ mplus2lavaan.modelSyntax <- function(syntax) {
         }
       } else if (grepl("|", cmd, fixed = TRUE)) {
         # expand growth modeling language
-        cmd <- expandGrowthCmd(cmd)
+        cmd <- lav_mplus_cmd_growth(cmd)
       } else { # no operator, no means, must be variance.
         # cat("assuming vars: ", cmd, "\n")
 
-        vars.lhs <- strsplit(attr(cmd, "noModifiers"), "\\s+")[[1]] # trimSpace(
-        vars.rhs <- strsplit(cmd, "\\s+")[[1]] # trimSpace(
+        vars.lhs <- strsplit(attr(cmd, "noModifiers"), "\\s+")[[1]] # lav_mplus_trim(
+        vars.rhs <- strsplit(cmd, "\\s+")[[1]] # lav_mplus_trim(
 
         cmd <- sapply(1:length(vars.lhs), function(v) paste(vars.lhs[v], "~~", vars.rhs[v]))
       }
@@ -770,12 +770,12 @@ mplus2lavaan.modelSyntax <- function(syntax) {
   # tack on constraint syntax, if included
   lavaan.out <- c(lavaan.out, con_syntax)
 
-  # for now, include a final trimSpace call since some arguments have leading/trailing space stripped.
-  wrap <- paste(wrapAfterPlus(lavaan.out, width = 90, exdent = 5), collapse = "\n") # trimSpace(
+  # for now, include a final lav_mplus_trim call since some arguments have leading/trailing space stripped.
+  wrap <- paste(lav_mplus_cmd_wrap(lavaan.out, width = 90, exdent = 5), collapse = "\n") # lav_mplus_trim(
   return(wrap)
 }
 
-mplus2lavaan <- function(inpfile, run = TRUE) {
+lav_mplus_lavaan <- function(inpfile, run = TRUE) {
   stopifnot(length(inpfile) == 1L)
   stopifnot(grepl("\\.inp$", inpfile, ignore.case = TRUE))
   if (!file.exists(inpfile)) {
@@ -792,14 +792,14 @@ mplus2lavaan <- function(inpfile, run = TRUE) {
   #  }
 
   inpfile.text <- scan(inpfile, what = "character", sep = "\n", strip.white = FALSE, blank.lines.skip = FALSE, quiet = TRUE)
-  sections <- divideInputIntoSections(inpfile.text, inpfile)
+  sections <- lav_mplus_text_sections(inpfile.text, inpfile)
 
   mplus.inp <- list()
 
-  mplus.inp$title <- trimSpace(paste(sections$title, collapse = " "))
-  mplus.inp$data <- divideIntoFields(sections$data, required = "file")
-  mplus.inp$variable <- divideIntoFields(sections$variable, required = "names")
-  mplus.inp$analysis <- divideIntoFields(sections$analysis)
+  mplus.inp$title <- lav_mplus_trim(paste(sections$title, collapse = " "))
+  mplus.inp$data <- lav_mplus_text_fields(sections$data, required = "file")
+  mplus.inp$variable <- lav_mplus_text_fields(sections$variable, required = "names")
+  mplus.inp$analysis <- lav_mplus_text_fields(sections$analysis)
 
   meanstructure <- "default" # lavaan default
   if (!is.null(mplus.inp$analysis$model)) {
@@ -831,22 +831,22 @@ mplus2lavaan <- function(inpfile, run = TRUE) {
   }
 
   # expand hyphens in variable names and split into vector that will be the names for read.table
-  mplus.inp$variable$names <- strsplit(expandCmd(mplus.inp$variable$names), "\\s+", perl = TRUE)[[1]]
+  mplus.inp$variable$names <- strsplit(lav_mplus_expand_cmd(mplus.inp$variable$names), "\\s+", perl = TRUE)[[1]]
 
   # expand hyphens in categorical declaration
-  if (!is.null(mplus.inp$variable$categorical)) mplus.inp$variable$categorical <- strsplit(expandCmd(mplus.inp$variable$categorical), "\\s+", perl = TRUE)[[1]]
+  if (!is.null(mplus.inp$variable$categorical)) mplus.inp$variable$categorical <- strsplit(lav_mplus_expand_cmd(mplus.inp$variable$categorical), "\\s+", perl = TRUE)[[1]]
 
   # convert mplus syntax to lavaan syntax
-  mplus.inp$model <- mplus2lavaan.modelSyntax(sections$model)
+  mplus.inp$model <- lav_mplus_syntax_model(sections$model)
 
   # handle model constraint
   if ("model.constraint" %in% names(sections)) {
-    mplus.inp$model.constraint <- mplus2lavaan.constraintSyntax(sections$model.constraint)
+    mplus.inp$model.constraint <- lav_mplus_syntax_constraints(sections$model.constraint)
     mplus.inp$model <- paste(mplus.inp$model, mplus.inp$model.constraint, sep = "\n")
   }
 
   # read mplus data (and handle missing spec)
-  mplus.inp$data <- readMplusInputData(mplus.inp, inpfile)
+  mplus.inp$data <- lav_mplus_path_data(mplus.inp, inpfile)
 
   # handle bootstrapping specification
   se <- "default"
@@ -879,7 +879,7 @@ mplus2lavaan <- function(inpfile, run = TRUE) {
 }
 
 
-divideIntoFields <- function(section.text, required) {
+lav_mplus_text_fields <- function(section.text, required) {
   if (is.null(section.text)) {
     return(NULL)
   }
@@ -900,15 +900,15 @@ divideIntoFields <- function(section.text, required) {
 
     # but if user uses equals sign, then spaces will not always be present (e.g., usevariables=x1-x10)
     if ((leadingEquals <- regexpr("^\\s*[A-Za-z]+[A-Za-z_-]*\\s*(=)", cmd[1L], perl = TRUE))[1L] > 0) {
-      cmdName <- trimSpace(substr(cmd[1L], 1, attr(leadingEquals, "capture.start") - 1))
-      cmdArgs <- trimSpace(substr(cmd[1L], attr(leadingEquals, "capture.start") + 1, nchar(cmd[1L])))
+      cmdName <- lav_mplus_trim(substr(cmd[1L], 1, attr(leadingEquals, "capture.start") - 1))
+      cmdArgs <- lav_mplus_trim(substr(cmd[1L], attr(leadingEquals, "capture.start") + 1, nchar(cmd[1L])))
     } else {
-      cmd.spacesplit <- strsplit(trimSpace(cmd[1L]), "\\s+", perl = TRUE)[[1L]]
+      cmd.spacesplit <- strsplit(lav_mplus_trim(cmd[1L]), "\\s+", perl = TRUE)[[1L]]
 
       if (length(cmd.spacesplit) < 2L) {
         # for future: make room for this function to prase things like just TECH13 (no rhs)
       } else {
-        cmdName <- trimSpace(cmd.spacesplit[1L])
+        cmdName <- lav_mplus_trim(cmd.spacesplit[1L])
         if (length(cmd.spacesplit) > 2L && tolower(cmd.spacesplit[2L]) %in% c("is", "are")) {
           cmdArgs <- paste(cmd.spacesplit[3L:length(cmd.spacesplit)], collapse = " ") # remainder, removing is/are
         } else {
@@ -927,7 +927,7 @@ divideIntoFields <- function(section.text, required) {
 }
 
 # helper function
-splitFilePath <- function(abspath) {
+lav_mplus_path_splitted <- function(abspath) {
   # function to split path into path and filename
   # code adapted from R.utils filePath command
   if (!is.character(abspath)) lav_msg_stop(gettext(
@@ -958,10 +958,10 @@ splitFilePath <- function(abspath) {
   return(list(directory = dirpart, filename = relFilename, absolute = absolute))
 }
 
-readMplusInputData <- function(mplus.inp, inpfile) {
-  # handle issue of mplus2lavaan being called with an absolute path, whereas mplus has only a local data file
-  inpfile.split <- splitFilePath(inpfile)
-  datfile.split <- splitFilePath(mplus.inp$data$file)
+lav_mplus_path_data <- function(mplus.inp, inpfile) {
+  # handle issue of lav_mplus_lavaan being called with an absolute path, whereas mplus has only a local data file
+  inpfile.split <- lav_mplus_path_splitted(inpfile)
+  datfile.split <- lav_mplus_path_splitted(mplus.inp$data$file)
 
   # if inp file target directory is non-empty, but mplus data is without directory, then append
   # inp file directory to mplus data. This ensures that R need not be in the working directory
@@ -1007,7 +1007,7 @@ readMplusInputData <- function(mplus.inp, inpfile) {
     if (missSpec == "." || missSpec == "*") { # case 1: MISSING ARE|=|IS .;
       na.strings <- missSpec
     } else if ((allMatch <- regexpr("\\s*ALL\\s*\\(([^\\)]+)\\)", missSpec, perl = TRUE))[1L] > -1L) { # case 2: use of ALL with parens
-      missStr <- trimSpace(substr(missSpec, attr(allMatch, "capture.start"), attr(allMatch, "capture.start") + attr(allMatch, "capture.length") - 1L))
+      missStr <- lav_mplus_trim(substr(missSpec, attr(allMatch, "capture.start"), attr(allMatch, "capture.start") + attr(allMatch, "capture.length") - 1L))
       na.strings <- expandMissVec(missStr)
     } else { # case 3: specific missing values per variable
       # process each element
@@ -1077,7 +1077,7 @@ readMplusInputData <- function(mplus.inp, inpfile) {
 }
 
 
-divideInputIntoSections <- function(inpfile.text, filename) {
+lav_mplus_text_sections <- function(inpfile.text, filename) {
   inputHeaders <- grep("^\\s*(title:|data.*:|variable:|define:|analysis:|model.*:|output:|savedata:|plot:|montecarlo:)", inpfile.text, ignore.case = TRUE, perl = TRUE)
 
   stopifnot(length(inputHeaders) > 0L)
@@ -1087,7 +1087,7 @@ divideInputIntoSections <- function(inpfile.text, filename) {
   for (h in 1:length(inputHeaders)) {
     sectionEnd <- ifelse(h < length(inputHeaders), inputHeaders[h + 1] - 1, length(inpfile.text))
     section <- inpfile.text[inputHeaders[h]:sectionEnd]
-    sectionName <- trimSpace(sub("^([^:]+):.*$", "\\1", section[1L], perl = TRUE)) # obtain text before the colon
+    sectionName <- lav_mplus_trim(sub("^([^:]+):.*$", "\\1", section[1L], perl = TRUE)) # obtain text before the colon
 
     # dump section name from input syntax
     section[1L] <- sub("^[^:]+:(.*)$", "\\1", section[1L], perl = TRUE)

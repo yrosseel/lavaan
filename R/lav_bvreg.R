@@ -8,7 +8,7 @@
 
 
 # density of a bivariate __standard__ normal
-lav_dbinorm <- dbinorm <- function(u, v, rho, force.zero = FALSE) {
+lav_dbinorm <- lav_dbinorm <- function(u, v, rho, force.zero = FALSE) {
   # dirty hack to handle extreme large values for rho
   # note that u, v, and rho are vectorized!
   RHO.limit <- 0.9999
@@ -34,19 +34,19 @@ lav_dbinorm <- dbinorm <- function(u, v, rho, force.zero = FALSE) {
 # partial derivative - rho
 lav_dbinorm_drho <- function(u, v, rho) {
   R <- 1 - rho * rho
-  dbinorm(u, v, rho) * (u * v * R - rho * (u * u - 2 * rho * u * v + v * v) + rho * R) / (R * R)
+  lav_dbinorm(u, v, rho) * (u * v * R - rho * (u * u - 2 * rho * u * v + v * v) + rho * R) / (R * R)
 }
 
 # partial derivative - u
 lav_dbinorm_du <- function(u, v, rho) {
   R <- 1 - rho * rho
-  -dbinorm(u, v, rho) * (u - rho * v) / R
+  -lav_dbinorm(u, v, rho) * (u - rho * v) / R
 }
 
 # partial derivative - v
 lav_dbinorm_dv <- function(u, v, rho) {
   R <- 1 - rho * rho
-  -dbinorm(u, v, rho) * (v - rho * u) / R
+  -lav_dbinorm(u, v, rho) * (v - rho * u) / R
 }
 
 
@@ -65,7 +65,7 @@ lav_pbinorm_duppery <- function(upper.x, upper.y, rho = 0.0) {
 }
 
 lav_pbinorm_drho <- function(upper.x, upper.y, rho = 0.0) {
-  dbinorm(upper.x, upper.y, rho)
+  lav_dbinorm(upper.x, upper.y, rho)
 }
 
 

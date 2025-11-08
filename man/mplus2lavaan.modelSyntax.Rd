@@ -1,9 +1,11 @@
-\name{mplus2lavaan.modelSyntax}
+\name{lav_mplus_syntax_model}
+\alias{lav_mplus_syntax_model}
 \alias{mplus2lavaan.modelSyntax}
 \title{Convert Mplus model syntax to lavaan}
 \description{
 Converts Mplus model syntax into lavaan model syntax.}
 \usage{
+lav_mplus_syntax_model(syntax)
 mplus2lavaan.modelSyntax(syntax)
 }
 \arguments{
@@ -18,7 +20,7 @@ mplus2lavaan.modelSyntax(syntax)
 A character string of converted \code{lavaan} model syntax.
 }
 \author{Michael Hallquist}
-\seealso{\code{\link{mplus2lavaan}}}
+\seealso{\code{\link{lav_mplus_lavaan}}}
 \examples{
 \dontrun{
 syntax <- '
@@ -27,7 +29,7 @@ syntax <- '
     x3 (1);
     x2 (1);
 '
-lavSyntax <- mplus2lavaan.modelSyntax(syntax)
+lavSyntax <- lav_mplus_syntax_model(syntax)
 cat(lavSyntax)
 }
 }
