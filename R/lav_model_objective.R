@@ -130,7 +130,9 @@ lav_model_objective <- function(lavmodel = NULL,
       if (estimator == "ML" && lavdata@nlevels == 1L) {
         # FIML
         if (!attr(Sigma.hat[[g]], "po")) {
-          return(Inf)
+          fx <- as.numeric(Inf)
+          attr(fx, "fx.group") <- rep(as.numeric(Inf), lavsamplestats@ngroups)
+          return(fx)
         }
         # check if h1 is defined (eg zero coverage)
         if (is.null(lavsamplestats@missing.h1[[g]]$h1)) {
