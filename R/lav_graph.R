@@ -106,25 +106,25 @@ lav_graph_get_connected_nodes <- function(A) {
 
 # contributed by ldw (adapted from function defined by Kss2k, github issue #445)
 lav_graph_order_adj_mat <- function(adj.mat, warn = TRUE) {
-  A <- adj.mat
-  n <- nrow(A)
+  adjmat <- adj.mat
+  n <- nrow(adjmat)
   k <- 0
   testen <- 1:n
   while (TRUE) {
     found <- FALSE
     tests <- testen # which expressions are tested in the next loop
     for (i in tests) {
-      if (all(A[1:n, i] == 0)) { # var defined in expression i doesn't use
+      if (all(adjmat[1:n, i] == 0)) { # var defined in expression i doesn't use
         # vars not already defined, select as next
         k <- k + 1            # increment order counter
-        A[i, ] <- 0           # remove usage indicator of defined variable
-        A[i, i] <- k          # keep order of expressions in diagonal element
+        adjmat[i, ] <- 0           # remove usage indicator of defined variable
+        adjmat[i, i] <- k          # keep order of expressions in diagonal element
         found <- TRUE
         testen <- testen[testen != i] # don't test this i in next loop
       }
     }
-    if (k == n) return (order(diag(A)))  # all done
-    if (!found) {  # no definable var found or all done
+    if (k == n) return (order(diag(adjmat)))  # all done
+    if (!found) {  # no definable var found
         if (warn) {
           lav_msg_warn(gettext("unable to sort `:=` parameters;",
                                "system of defined parameters contains a cycle"))
@@ -134,3 +134,129 @@ lav_graph_order_adj_mat <- function(adj.mat, warn = TRUE) {
   }
 }
 
+  # This function performs the same task as lav_graph_order_adj_mat but
+  # takes as input two vectors (character or integer) of the same length
+  # defining the dependencies:
+  # inputs are vectors defined and definedby of the same length, where
+  # for each index j for these vectors
+  # node definedby[j] is used in the definition of node defined[j].
+  # This routine tries to order all nodes such that all node definitions that
+  # use a certain node come after the definition of that node.
+
+  # contributed by ldw as alternative for lav_graph_order_adj_mat
+  # this function is faster, requires less memory and handles also character vectors
+lav_graph_topological_sort <- function(defined, definedby, warn = TRUE) {
+  nodes <- unique(c(definedby, defined))
+  n <- length(nodes)
+  rv <- vector(mode(definedby), n) 
+  k <- 0L
+  testnodes <- rep(TRUE, n)
+  testedges <- rep(TRUE, length(defined))
+  while (TRUE) {
+    found <- FALSE
+    tests <- which(testnodes)
+    for (i in tests) {
+      tocheck <- nodes[i]
+      if (all(tocheck != defined[testedges])) { 
+        k <- k + 1L
+        testnodes[i] <- FALSE
+        rv[k] <- tocheck  
+        found <- TRUE
+        testedges[definedby == tocheck] <- FALSE
+      }
+    }
+    if (k == n) return(rv)  # all done 
+    if (!found) {  # no definable node found 
+      if (warn) {
+        lav_msg_warn(gettext("unable to sort;", 
+                             "dependencies contain a cycle"))
+      }
+      return(nodes)    # cycle detected; return original order
+    }
+  }
+}
+
+# Topological grouping and placing of nodes in a matrix.
+# This routine returns a data.frame with the nodes and their position in a
+# matrix (rows, cols), as follows :
+# the first column contains all nodes without dependencies
+# the second column contains nodes with only dependency in the first column (*)
+# the third column contains nodes with only dependencies in the first and
+#     second, with at least one in the second column (*)
+# and so on 
+# (*) all nodes which have no successors are moved to the last column
+# the rows in the second to last column are chosen so that they are in the 
+# neighborhood of the mean of the rows from the nodes they depend on.
+lav_graph_topological_matrix <- function(defined, definedby, warn = TRUE) {
+  rv <- lav_graph_topological_sort(defined, definedby, warn)
+  n <- length(rv)
+  rvrow <- integer(n)
+  rvcol <-  integer(n)
+  colmax <- 0L
+  lastcolmax <- 0L
+  for (i in seq.int(n)) {
+    if (i == 1L) {
+      rvrow[i] <- rvcol[i] <- 1L 
+      colmax <- 1L
+    } else {
+      predecessors <- definedby[rv[i] == defined]  
+      followers <- defined[rv[i] == definedby]
+      if (length(predecessors) == 0L) {
+        rvcol[i] <- 1L
+        colmax[1L] <- colmax[1L] + 1L
+        rvrow[i] <- colmax[1L]
+      } else {
+        if (length(followers) == 0) { # put in last column, temporarily -1
+          rvcol[i] <- -1L
+          lastcolmax <- lastcolmax + 1L
+          rvrow[i] <- lastcolmax
+        } else {
+          predecessor.ind <- match(predecessors, rv)
+          rvcol[i] <- max(rvcol[predecessor.ind]) + 1L
+          if (length(colmax) < rvcol[i]) {
+            colmax[rvcol[i]] <- 1L
+          } else {
+            colmax[rvcol[i]] <- colmax[rvcol[i]] + 1L
+          }
+        }
+        rvrow[i] <- colmax[rvcol[i]]
+      }     
+    }
+  }
+  # last column
+  rvcol[rvcol == -1L] <- length(colmax) + 1L
+  colmax[length(colmax) + 1L] <- lastcolmax
+  # adapt rows in columns to match as close as possible the rows of the
+  # connected nodes in the previous column(s) :
+  if (length(colmax) > 1L) {
+    rowmax <- max(colmax)
+    for (c in seq.int(2L, length(colmax))) {
+      cnodes.ind <- which(rvcol == c)
+      optimalrows <- sapply(cnodes.ind, function (ci) {
+        prevnodes.ind <- which(rv[ci] == defined)
+        prevnodes <- definedby[prevnodes.ind]
+        mean(rvrow[match(prevnodes, rv)])
+      })
+      or_order <- order(optimalrows)
+      optimalrows <- optimalrows[or_order]
+      for (j in seq_along(optimalrows)) {
+        if (j == 1L) {
+          optimalrows[j] <- as.integer(optimalrows[j]) 
+        } else {
+          if (as.integer(optimalrows[j]) <= optimalrows[j - 1L]) {
+            optimalrows[j] <- optimalrows[j - 1L] + 1L
+          } else {
+            optimalrows[j] <- as.integer(optimalrows[j]) 
+          }
+        }
+      }
+      optimalrows[or_order] <- optimalrows
+      rvrow[cnodes.ind] <- optimalrows
+    }
+  }
+  # order on column, then row, and return  
+  neworder <- order(rvcol * 1000L + rvrow)
+  data.frame(nodes = rv[neworder], 
+             rows = rvrow[neworder], 
+             cols = rvcol[neworder])
+}
