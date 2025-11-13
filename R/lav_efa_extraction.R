@@ -29,13 +29,13 @@ lav_efa_extraction <- function(S, nfactors = 1L,
 
   # optim.method
   if (method == "uls") {
-    minObjective <- efa_extraction_uls_min_objective
-    minGradient <- efa_extraction_uls_min_gradient
-    cache <- efa_extraction_uls_init_cache(R = R, nfactors = nfactors)
+    minObjective <- lav_efa_uls_min_objective
+    minGradient <- lav_efa_uls_min_gradient
+    cache <- lav_efa_uls_init_cache(R = R, nfactors = nfactors)
   } else if (method == "ml") {
-    minObjective <- efa_extraction_ml_min_objective
-    minGradient <- efa_extraction_ml_min_gradient
-    cache <- efa_extraction_ml_init_cache(R = R, nfactors = nfactors)
+    minObjective <- lav_efa_ml_min_objective
+    minGradient <- lav_efa_ml_min_gradient
+    cache <- lav_efa_ml_init_cache(R = R, nfactors = nfactors)
   } else {
     lav_msg_stop(gettext("method must be uls or ml (for now)"))
   }
@@ -173,7 +173,7 @@ lav_efa_extraction <- function(S, nfactors = 1L,
 
 
 
-efa_extraction_uls_init_cache <- function(R = NULL,
+lav_efa_uls_init_cache <- function(R = NULL,
                                           nfactors = 1L,
                                           parent = parent.frame()) {
   R.inv <- solve(R)
@@ -195,7 +195,7 @@ efa_extraction_uls_init_cache <- function(R = NULL,
 }
 
 # x is here the sqrt() of theta!
-efa_extraction_uls_min_objective <- function(x, cache = NULL) {
+lav_efa_uls_min_objective <- function(x, cache = NULL) {
   cache$theta <- x
   with(cache, {
     A <- R
@@ -208,7 +208,7 @@ efa_extraction_uls_min_objective <- function(x, cache = NULL) {
   })
 }
 
-efa_extraction_uls_min_gradient <- function(x, cache = NULL) {
+lav_efa_uls_min_gradient <- function(x, cache = NULL) {
   # check if x has changed
   if (!all(x == cache$theta)) {
     cache$theta <- x
@@ -228,7 +228,7 @@ efa_extraction_uls_min_gradient <- function(x, cache = NULL) {
 
 
 # ML
-efa_extraction_ml_init_cache <- function(R = NULL,
+lav_efa_ml_init_cache <- function(R = NULL,
                                          nfactors = 1L,
                                          parent = parent.frame()) {
   R.inv <- solve(R)
@@ -252,7 +252,7 @@ efa_extraction_ml_init_cache <- function(R = NULL,
 
 
 # x is here the sqrt of theta
-efa_extraction_ml_min_objective <- function(x, cache = NULL) {
+lav_efa_ml_min_objective <- function(x, cache = NULL) {
   cache$theta <- x
   with(cache, {
     psi <- theta
@@ -266,7 +266,7 @@ efa_extraction_ml_min_objective <- function(x, cache = NULL) {
   })
 }
 
-efa_extraction_ml_min_gradient <- function(x, cache = NULL) {
+lav_efa_ml_min_gradient <- function(x, cache = NULL) {
   # check if x has changed
   if (!all(x == cache$theta)) {
     cache$theta <- x
@@ -333,12 +333,12 @@ lav_efa_extraction_uls_corner <- function(S, nfactors = 1L, reflect = TRUE,
   }
 
   # optim.method
-  minObjective <- efa_extraction_uls_corner_min_objective
-  minGradient <- efa_extraction_uls_corner_min_gradient
+  minObjective <- lav_efa_uls_corner_min_objective
+  minGradient <- lav_efa_uls_corner_min_gradient
   minHessian <- NULL
 
   # create cache environment
-  cache <- efa_extraction_uls_corner_init_cache(
+  cache <- lav_efa_uls_corner_init_cache(
     LAMBDA = LAMBDA,
     lambda.idx = lambda.idx, R = R
   )
@@ -403,7 +403,7 @@ lav_efa_extraction_uls_corner <- function(S, nfactors = 1L, reflect = TRUE,
 }
 
 
-efa_extraction_uls_corner_init_cache <- function(LAMBDA = NULL,
+lav_efa_uls_corner_init_cache <- function(LAMBDA = NULL,
                                                  lambda.idx = NULL,
                                                  R = NULL,
                                                  parent = parent.frame()) {
@@ -420,7 +420,7 @@ efa_extraction_uls_corner_init_cache <- function(LAMBDA = NULL,
   out
 }
 
-efa_extraction_uls_corner_min_objective <- function(x, cache = NULL) {
+lav_efa_uls_corner_min_objective <- function(x, cache = NULL) {
   cache$theta <- x
   with(cache, {
     LAMBDA[lambda.idx] <- theta
@@ -430,7 +430,7 @@ efa_extraction_uls_corner_min_objective <- function(x, cache = NULL) {
   })
 }
 
-efa_extraction_uls_corner_min_gradient <- function(x, cache = NULL) {
+lav_efa_uls_corner_min_gradient <- function(x, cache = NULL) {
   # check if x has changed
   if (!all(x == cache$theta)) {
     cache$theta <- x

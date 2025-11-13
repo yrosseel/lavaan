@@ -15,11 +15,16 @@ computeExpectedInformation <- lav_model_information_expected
 # only for simsem ....
 getParameterLabels <- lav_partable_labels
 
-# standardize function names in lav_utils.R / 31 oct 2025
+# standardize function names in lav_utils.R / 31 Oct 2025
 getCov   <- lav_get_cov
 char2num <- lav_char2num
 cor2cov  <- lav_cor2cov
 
-# standardize function names in lav_mplu_lavaan / 7 nov 2025
+# standardize function names in lav_mplu_lavaan / 7 Nov 2025
 mplus2lavaan.modelSyntax <- lav_mplus_syntax_model
 mplus2lavaan             <- lav_mplus_lavaan
+
+# standardize function names in ctr_estfun.R / 13 Nov 2025
+estfun.lavaan <- lav_scores 
+lavScores <- lav_scores
+
