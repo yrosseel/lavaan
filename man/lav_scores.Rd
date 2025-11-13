@@ -1,4 +1,5 @@
-\name{estfun}
+\name{lav_scores}
+\alias{lav_scores}
 \alias{estfun.lavaan}
 \alias{lavScores}
 \title{Extract Empirical Estimating Functions}
@@ -10,6 +11,8 @@ data. In other words, this function returns the case-wise scores, evaluated
 at the fitted model parameters.
 }
 \usage{
+lav_scores(object, scaling = FALSE, ignore.constraints = FALSE,
+              remove.duplicated = TRUE, remove.empty.cases = TRUE)
 estfun.lavaan(object, scaling = FALSE, ignore.constraints = FALSE,
               remove.duplicated = TRUE, remove.empty.cases = TRUE)
 lavScores(object, scaling = FALSE, ignore.constraints = FALSE,

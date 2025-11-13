@@ -19,7 +19,7 @@
 #                 move ML-specific code to lav_scores_ml() function
 # YR 26 Apr 2025: add lav_scores_gls()
 
-estfun.lavaan <- lavScores <- function(object, scaling = FALSE, # nolint
+lav_scores <- function(object, scaling = FALSE, # nolint
                                        ignore.constraints = FALSE,
                                        remove.duplicated = TRUE,
                                        remove.empty.cases = TRUE) {
