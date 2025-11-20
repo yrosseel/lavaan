@@ -1,5 +1,5 @@
 # fitting function for standard ML
-estimator.ML <- function(Sigma.hat = NULL, Mu.hat = NULL,
+lav_model_objective_ml <- function(Sigma.hat = NULL, Mu.hat = NULL,
                          data.cov = NULL, data.mean = NULL,
                          data.cov.log.det = NULL,
                          meanstructure = FALSE) {
@@ -30,7 +30,7 @@ estimator.ML <- function(Sigma.hat = NULL, Mu.hat = NULL,
 }
 
 # fitting function for standard ML
-estimator.ML_res <- function(Sigma.hat = NULL, Mu.hat = NULL, PI = NULL,
+lav_model_objective_ml_res <- function(Sigma.hat = NULL, Mu.hat = NULL, PI = NULL,
                              res.cov = NULL, res.int = NULL, res.slopes = NULL,
                              res.cov.log.det = NULL,
                              cov.x = NULL, mean.x = NULL) {
@@ -67,7 +67,7 @@ estimator.ML_res <- function(Sigma.hat = NULL, Mu.hat = NULL, PI = NULL,
 
 
 # fitting function for restricted ML
-estimator.REML <- function(Sigma.hat = NULL, Mu.hat = NULL,
+lav_model_objective_reml <- function(Sigma.hat = NULL, Mu.hat = NULL,
                            data.cov = NULL, data.mean = NULL,
                            data.cov.log.det = NULL,
                            meanstructure = FALSE,
@@ -107,14 +107,14 @@ estimator.REML <- function(Sigma.hat = NULL, Mu.hat = NULL,
 }
 
 # 'classic' fitting function for GLS
-# used again since 0.6-10 (we used the much slower estimator.WLS before)
-estimator.GLS <- function(Sigma.hat = NULL, Mu.hat = NULL,
+# used again since 0.6-10 (we used the much slower lav_model_objective_wls before)
+lav_model_objective_gls <- function(Sigma.hat = NULL, Mu.hat = NULL,
                           data.cov = NULL, data.cov.inv = NULL,
 						  data.mean = NULL,
                           meanstructure = FALSE, correlation = FALSE) {
   tmp <- data.cov.inv %*% (data.cov - Sigma.hat)
   # tmp is not perfectly symmetric, so we use t(tmp) on the next line
-  # to obtain the same value as estimator.WLS
+  # to obtain the same value as lav_model_objective_wls
   fx <- 0.5 * sum(tmp * t(tmp))
 
   if (correlation) {
@@ -137,7 +137,7 @@ estimator.GLS <- function(Sigma.hat = NULL, Mu.hat = NULL,
 
 # general WLS estimator (Muthen, Appendix 4, eq 99 single group)
 # full weight (WLS.V) matrix
-estimator.WLS <- function(WLS.est = NULL, WLS.obs = NULL, WLS.V = NULL) {
+lav_model_objective_wls <- function(WLS.est = NULL, WLS.obs = NULL, WLS.V = NULL) {
   # diff <- as.matrix(WLS.obs - WLS.est)
   # fx <- as.numeric( t(diff) %*% WLS.V %*% diff )
 
@@ -153,7 +153,7 @@ estimator.WLS <- function(WLS.est = NULL, WLS.obs = NULL, WLS.V = NULL) {
 }
 
 # diagonally weighted LS (DWLS)
-estimator.DWLS <- function(WLS.est = NULL, WLS.obs = NULL, WLS.VD = NULL) {
+lav_model_objective_dwls <- function(WLS.est = NULL, WLS.obs = NULL, WLS.VD = NULL) {
   diff <- WLS.obs - WLS.est
   fx <- sum(diff * diff * WLS.VD)
 
@@ -164,7 +164,7 @@ estimator.DWLS <- function(WLS.est = NULL, WLS.obs = NULL, WLS.VD = NULL) {
 }
 
 # Full Information ML estimator (FIML) handling the missing values
-estimator.FIML <- function(Sigma.hat = NULL, Mu.hat = NULL, Yp = NULL,
+lav_model_objective_fiml <- function(Sigma.hat = NULL, Mu.hat = NULL, Yp = NULL,
                            h1 = NULL, N = NULL) {
   if (is.null(N)) {
     N <- sum(sapply(Yp, "[[", "freq"))
@@ -198,7 +198,7 @@ estimator.FIML <- function(Sigma.hat = NULL, Mu.hat = NULL, Yp = NULL,
 # - 21/09/2016: added code for missing = doubly.robust (contributed by
 #   Myrsini Katsikatsou)
 # - HJ 18/10/2023: For sampling weights the lavcache$bifreq are weighted
-estimator.PML <- function(Sigma.hat = NULL, # model-based var/cov/cor
+lav_model_objective_pml <- function(Sigma.hat = NULL, # model-based var/cov/cor
                           Mu.hat = NULL, # model-based means
                           TH = NULL, # model-based thresholds + means
                           PI = NULL, # slopes
@@ -318,7 +318,7 @@ estimator.PML <- function(Sigma.hat = NULL, # model-based var/cov/cor
     Fmin <- sum(freq * log(prop / pairwisePI)) # to avoid 'N'
 
     if (missing == "available.cases" || missing == "doubly.robust") {
-      uniPI <- univariateExpProbVec(TH = TH, th.idx = th.idx)
+      uniPI <- lav_pml_th_uni_prob(TH = TH, th.idx = th.idx)
 
       # shortcuts
       unifreq <- lavcache$unifreq
@@ -595,7 +595,7 @@ estimator.PML <- function(Sigma.hat = NULL, # model-based var/cov/cor
         } else if (ov.types[i] == "ordered" &&
                    ov.types[j] == "ordered") {
           LIK[, pstar.idx] <-
-            pc_lik_PL_with_cov(
+            lav_pml_bi_lik_x(
               Y1 = X[, i],
               Y2 = X[, j],
               Rho = Sigma.hat[i, j],
@@ -631,7 +631,7 @@ estimator.PML <- function(Sigma.hat = NULL, # model-based var/cov/cor
       nexo != 0L) {
       uni_LIK <- matrix(0, nrow(X), ncol(X))
       for (i in seq_len(nvar)) {
-        uni_LIK[, i] <- uni_lik(
+        uni_LIK[, i] <- lav_pml_uni_lik(
           Y1 = X[, i],
           th.y1 = TH[th.idx == i],
           eXo = eXo,
@@ -676,7 +676,7 @@ estimator.PML <- function(Sigma.hat = NULL, # model-based var/cov/cor
 # full information maximum likelihood
 # underlying multivariate normal approach (see Joreskog & Moustaki, 2001)
 #
-estimator.FML <- function(Sigma.hat = NULL, # model-based var/cov/cor
+lav_model_objective_fml <- function(Sigma.hat = NULL, # model-based var/cov/cor
                           TH = NULL, # model-based thresholds + means
                           th.idx = NULL, # threshold idx per variable
                           num.idx = NULL, # which variables are numeric
@@ -751,7 +751,7 @@ estimator.FML <- function(Sigma.hat = NULL, # model-based var/cov/cor
   fx
 }
 
-estimator.MML <- function(lavmodel = NULL,
+lav_model_objective_mml <- function(lavmodel = NULL,
                           THETA = NULL,
                           TH = NULL,
                           GLIST = NULL,
@@ -777,7 +777,7 @@ estimator.MML <- function(lavmodel = NULL,
   fx
 }
 
-estimator.2L <- function(lavmodel = NULL,
+lav_model_objective_2l <- function(lavmodel = NULL,
                          GLIST = NULL,
                          Y1 = NULL, # only for missing
                          Lp = NULL,

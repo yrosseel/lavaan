@@ -105,7 +105,7 @@ lav_pml_dploglik_dimplied <- function(Sigma.hat = NULL, # model-based var/cov/co
     # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
     if (missing == "available.cases") {
-      uniPI <- univariateExpProbVec(TH = TH, th.idx = th.idx)
+      uniPI <- lav_pml_th_uni_prob(TH = TH, th.idx = th.idx)
       tmp <- lavcache$uniweights / uniPI
 
       var.idx <- split(th.idx, th.idx)
@@ -325,7 +325,7 @@ lav_pml_dploglik_dimplied <- function(Sigma.hat = NULL, # model-based var/cov/co
             )
         } else {
           SC.COR.UNI <-
-            pc_cor_scores_PL_with_cov(
+            lav_pml_dbilogl_dpar_x(
               Y1 = X[, i],
               Y2 = X[, j],
               eXo = eXo,
@@ -410,7 +410,7 @@ lav_pml_dploglik_dimplied <- function(Sigma.hat = NULL, # model-based var/cov/co
       UNI_SCORES <- matrix(0, nrow(X), N.TH)
       for (i in seq_len(nvar)) {
         th.idx_i <- which(th.idx == i)
-        derY1 <- uni_scores(
+        derY1 <- lav_pml_uni_scores(
           Y1 = X[, i], th.y1 = TH[th.idx == i],
           eXo = NULL, sl.y1 = NULL,
           weights.casewise = lavcache$uniweights.casewise
@@ -422,7 +422,7 @@ lav_pml_dploglik_dimplied <- function(Sigma.hat = NULL, # model-based var/cov/co
       for (i in seq_len(nvar)) {
         th.idx_i <- which(th.idx == i)
         sl.idx_i <- N.TH + seq(i, by = nvar, length.out = nexo)
-        derY1 <- uni_scores(
+        derY1 <- lav_pml_uni_scores(
           Y1 = X[, i], th.y1 = TH[th.idx == i],
           eXo = eXo, sl.y1 = PI[i, ],
           weights.casewise = lavcache$uniweights.casewise

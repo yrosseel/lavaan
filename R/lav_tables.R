@@ -1322,3 +1322,102 @@ lav_tables_cells_format <- function(out, lavdata = lavdata,
 
   OUT
 }
+
+
+
+# The function lav_tables_univariate_freq_cell computes the univariate (one-way) frequency tables.
+# The function closely folows the "logic" of the lavaan function
+# lav_tables_pairwise_freq_cell.
+# The output is either a list or a data.frame depending on the value the logical
+# input argument as.data.frame. Either way, the same information is contained which is:
+# a) the observed (univariate) frequencies f_ia, i=1,...,p (variables),
+#    a=1,...,ci (response categories), with a index running faster than i index.
+# b) an index vector with the name varb which indicates which variable each frequency refers to.
+# c) an index vector with the name group which indicates which group each frequency
+#    refers to when multi-group analysis.
+# d) an index vector with the name level which indicates which level within
+#    each ordinal variable each frequency refers to.
+# e) a vector nobs which gives how many cases where considered to compute the
+#    corresponding frequency. Since we use the available data for each variable
+#    when missing=="available_cases" we expect these numbers to differ when
+#    missing values are present.
+# f) an index vector with the name id indexing each univariate table,
+#    1 goes to first variable in the first group, 2 to 2nd variable in the second
+#    group and so on. The last table has the index equal to (no of groups)*(no of variables).
+
+lav_tables_univariate_freq_cell <- function(lavdata = NULL,
+                                            as.data.frame. = TRUE) {
+  # shortcuts
+  vartable <- as.data.frame(lavdata@ov, stringsAsFactors = FALSE)
+  X <- lavdata@X
+  ov.names <- lavdata@ov.names
+  ngroups <- lavdata@ngroups
+
+  # identify 'categorical' variables
+  cat.idx <- which(vartable$type %in% c("ordered", "factor"))
+
+  # do we have any categorical variables?
+  if (length(cat.idx) == 0L) {
+    lav_msg_stop(gettext("no categorical variables are found"))
+  }
+
+  # univariate tables
+  univariate.tables <- vartable$name[cat.idx]
+  univariate.tables <- rbind(univariate.tables,
+    seq_len(length(univariate.tables)),
+    deparse.level = 0
+  )
+  ntables <- ncol(univariate.tables)
+
+  # for each group, for each pairwise table, collect information
+  UNI_TABLES <- vector("list", length = ngroups)
+  for (g in 1:ngroups) {
+    UNI_TABLES[[g]] <- apply(univariate.tables,
+      MARGIN = 2,
+      FUN = function(x) {
+        idx1 <- which(vartable$name == x[1])
+        id <- (g - 1) * ntables + as.numeric(x[2])
+        ncell <- vartable$nlev[idx1]
+
+        # compute one-way observed frequencies
+        Y1 <- X[[g]][, idx1]
+        UNI_FREQ <- tabulate(Y1, nbins = max(Y1, na.rm = TRUE))
+
+        list(
+          id = rep.int(id, ncell),
+          varb = rep.int(x[1], ncell),
+          group = rep.int(g, ncell),
+          nobs = rep.int(sum(UNI_FREQ), ncell),
+          level = seq_len(ncell),
+          obs.freq = UNI_FREQ
+        )
+      }
+    )
+  }
+
+  if (as.data.frame.) {
+    for (g in 1:ngroups) {
+      UNI_TABLE <- UNI_TABLES[[g]]
+      UNI_TABLE <- lapply(UNI_TABLE, as.data.frame,
+        stringsAsFactors = FALSE
+      )
+      if (g == 1) {
+        out <- do.call(rbind, UNI_TABLE)
+      } else {
+        out <- rbind(out, do.call(rbind, UNI_TABLE))
+      }
+    }
+    if (g == 1) {
+      # remove group column
+      out$group <- NULL
+    }
+  } else {
+    if (ngroups == 1L) {
+      out <- UNI_TABLES[[1]]
+    } else {
+      out <- UNI_TABLES
+    }
+  }
+
+  out
+}
