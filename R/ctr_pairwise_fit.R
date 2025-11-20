@@ -107,7 +107,7 @@ lavTablesFitCf <- function(object) {
   DF <- prod(ov.nlev) - object@optim$npar - 1L
 
   for (g in seq_len(lavdata@ngroups)) {
-    F.group <- estimator.FML(
+    F.group <- lav_model_objective_fml(
       Sigma.hat = Sigma.hat[[g]],
       TH = TH[[g]],
       th.idx = lavmodel@th.idx[[g]],

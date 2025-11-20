@@ -145,7 +145,7 @@ lav_model_objective <- function(lavmodel = NULL,
         } else {
           this.h1 <- lavsamplestats@missing.h1[[g]]$h1
         }
-        group.fx <- estimator.FIML(
+        group.fx <- lav_model_objective_fiml(
           Sigma.hat = Sigma.hat[[g]],
           Mu.hat = Mu.hat[[g]],
           Yp = lavsamplestats@missing[[g]],
@@ -153,7 +153,7 @@ lav_model_objective <- function(lavmodel = NULL,
         )
       } else if (estimator == "ML" && lavdata@nlevels > 1L) {
         # FIML twolevel
-        group.fx <- estimator.2L(
+        group.fx <- lav_model_objective_2l(
           lavmodel = lavmodel,
           GLIST = GLIST,
           Y1 = lavdata@X[[g]],
@@ -176,7 +176,7 @@ lav_model_objective <- function(lavmodel = NULL,
           lav_msg_stop(gettext("multilevel data not supported for estimator"),
                        estimator)
           }
-        group.fx <- estimator.2L(
+        group.fx <- lav_model_objective_2l(
           lavmodel = lavmodel,
           GLIST = GLIST,
           Lp = lavdata@Lp[[g]],
@@ -185,7 +185,7 @@ lav_model_objective <- function(lavmodel = NULL,
           group = g
         )
       } else if (conditional.x) {
-        group.fx <- estimator.ML_res(
+        group.fx <- lav_model_objective_ml_res(
           Sigma.hat        = Sigma.hat[[g]],
           Mu.hat           = Mu.hat[[g]],
           PI               = PI[[g]],
@@ -197,7 +197,7 @@ lav_model_objective <- function(lavmodel = NULL,
           mean.x           = lavsamplestats@mean.x[[g]]
         )
       } else {
-        group.fx <- estimator.ML(
+        group.fx <- lav_model_objective_ml(
           Sigma.hat        = Sigma.hat[[g]],
           Mu.hat           = Mu.hat[[g]],
           data.cov         = lavsamplestats@cov[[g]],
@@ -210,7 +210,7 @@ lav_model_objective <- function(lavmodel = NULL,
 
       ### GLS #### (0.6-10: not using WLS function any longer)
     } else if (estimator == "GLS") {
-      group.fx <- estimator.GLS(
+      group.fx <- lav_model_objective_gls(
         Sigma.hat        = Sigma.hat[[g]],
         Mu.hat           = Mu.hat[[g]],
         data.cov         = lavsamplestats@cov[[g]],
@@ -262,7 +262,7 @@ lav_model_objective <- function(lavmodel = NULL,
         # WLS.V <- 2*WLS.V
       }
 
-      group.fx <- estimator.WLS(
+      group.fx <- lav_model_objective_wls(
         WLS.est = WLS.est[[g]],
         WLS.obs = lavsamplestats@WLS.obs[[g]],
         WLS.V = WLS.V
@@ -270,7 +270,7 @@ lav_model_objective <- function(lavmodel = NULL,
       attr(group.fx, "WLS.est") <- WLS.est[[g]]
     } else if (estimator == "DWLS" || estimator == "ULS") {
       # diagonal weight matrix
-      group.fx <- estimator.DWLS(
+      group.fx <- lav_model_objective_dwls(
         WLS.est = WLS.est[[g]],
         WLS.obs = lavsamplestats@WLS.obs[[g]],
         WLS.VD = lavsamplestats@WLS.VD[[g]]
@@ -279,7 +279,7 @@ lav_model_objective <- function(lavmodel = NULL,
     } else if (estimator == "PML") {
       # Pairwise maximum likelihood
       if (lavdata@nlevels > 1L) {
-        # group.fx <- estimator.PML.2L(lavmodel       = lavmodel,
+        # group.fx <- lav_model_objective_pml.2L(lavmodel       = lavmodel,
         #                             GLIST          = GLIST,
         #                             Lp             = lavdata@Lp[[g]],
         #                             lavsamplestats = lavsamplestats,
@@ -287,7 +287,7 @@ lav_model_objective <- function(lavmodel = NULL,
         group.fx <- 0 # for now
         attr(group.fx, "logl") <- 0
       } else if (conditional.x) {
-        group.fx <- estimator.PML(
+        group.fx <- lav_model_objective_pml(
           Sigma.hat = Sigma.hat[[g]],
           Mu.hat = Mu.hat[[g]],
           TH = TH[[g]],
@@ -301,7 +301,7 @@ lav_model_objective <- function(lavmodel = NULL,
           missing = lavdata@missing
         )
       } else {
-        group.fx <- estimator.PML(
+        group.fx <- lav_model_objective_pml(
           Sigma.hat = Sigma.hat[[g]],
           Mu.hat = Mu.hat[[g]],
           TH = TH[[g]],
@@ -318,7 +318,7 @@ lav_model_objective <- function(lavmodel = NULL,
       logl.group[g] <- attr(group.fx, "logl")
     } else if (estimator == "FML") {
       # Full maximum likelihood (underlying multivariate normal)
-      group.fx <- estimator.FML(
+      group.fx <- lav_model_objective_fml(
         Sigma.hat = Sigma.hat[[g]],
         TH = TH[[g]],
         th.idx = th.idx[[g]],
@@ -328,7 +328,7 @@ lav_model_objective <- function(lavmodel = NULL,
       )
     } else if (estimator == "MML") {
       # marginal maximum likelihood
-      group.fx <- estimator.MML(
+      group.fx <- lav_model_objective_mml(
         lavmodel = lavmodel,
         GLIST = GLIST,
         THETA = THETA[[g]],
@@ -341,7 +341,7 @@ lav_model_objective <- function(lavmodel = NULL,
       )
     } else if (estimator == "REML") {
       # restricted/residual maximum likelihood
-      group.fx <- estimator.REML(
+      group.fx <- lav_model_objective_reml(
         Sigma.hat = Sigma.hat[[g]],
         Mu.hat = Mu.hat[[g]],
         data.cov = lavsamplestats@cov[[g]],

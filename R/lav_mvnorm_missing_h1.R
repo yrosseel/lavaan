@@ -101,7 +101,7 @@ lav_mvnorm_missing_h1_estimate_moments <- function(Y = NULL,
 
   # report
   if (lav_verbose()) {
-    # fx0 <- estimator.FIML(Sigma.hat=Sigma, Mu.hat=Mu, M=Yp)
+    # fx0 <- lav_model_objective_fiml(Sigma.hat=Sigma, Mu.hat=Mu, M=Yp)
     fx0 <- lav_mvnorm_missing_loglik_samplestats(
       Yp = Yp,
       Mu = Mu, Sigma = Sigma,
@@ -149,7 +149,7 @@ lav_mvnorm_missing_h1_estimate_moments <- function(Y = NULL,
 
     # report fx
     if (lav_verbose()) {
-      # fx <- estimator.FIML(Sigma.hat=Sigma, Mu.hat=Mu, M=Yp)
+      # fx <- lav_model_objective_fiml(Sigma.hat=Sigma, Mu.hat=Mu, M=Yp)
       fx <- lav_mvnorm_missing_loglik_samplestats(
         Yp = Yp,
         Mu = Mu, Sigma = Sigma,
@@ -184,7 +184,7 @@ lav_mvnorm_missing_h1_estimate_moments <- function(Y = NULL,
 
   # compute fx if we haven't already
   if (!lav_verbose()) {
-    # fx <- estimator.FIML(Sigma.hat = Sigma, Mu.hat = Mu, M = Yp)
+    # fx <- lav_model_objective_fiml(Sigma.hat = Sigma, Mu.hat = Mu, M = Yp)
     fx <- lav_mvnorm_missing_loglik_samplestats(
       Yp = Yp,
       Mu = Mu, Sigma = Sigma,
