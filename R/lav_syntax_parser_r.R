@@ -30,8 +30,8 @@ lav_parse_sublist <- function(inlist, indexes) {
 # ------------------------ lav_local_msgcode  -------------------------------- #
 # function which stores a warning or error message code + position in a list
 # ---------------------------------------------------------------------------- #
-lav_local_msgcode <- function(isError, msgcode, msgpos, msgenv) {
-    if (isError) {
+lav_local_msgcode <- function(is.error, msgcode, msgpos, msgenv) {
+    if (is.error) {
         assign("error", c(msgcode, msgpos), msgenv)
     } else {
         wrnnum <- 1L + get0("warncount", envir = msgenv, ifnotfound = 0L)
@@ -39,7 +39,7 @@ lav_local_msgcode <- function(isError, msgcode, msgpos, msgenv) {
                c(msgcode, msgpos - 1L), msgenv)  # msgpos - 1L to align with C
         assign("warncount", wrnnum, msgenv)
     }
-    return(invisible(NULL))
+    invisible(NULL)
 }
 
 # ------------------------ lav_parse_step1 ----------------------------------- #
@@ -101,7 +101,7 @@ lav_parse_step1 <- function(modelsrc, types, msgenv) {
       elem.i <- elem.i + 1L
     }
   }
-  # --------------------- handling spaces in operators ------------------------ #
+  # --------------------- handling spaces in operators ---------------------- #
   if (grepl("= +~", modelsrcw)) {
     waar <- regexpr("= +~", modelsrcw)[1]
     modelsrcw <- gsub("=( +)~", "=~\\1", modelsrcw)
@@ -170,7 +170,7 @@ lav_parse_step1 <- function(modelsrc, types, msgenv) {
 
   numliterals <- gregexpr(
     "([ \n][-+][.0-9]|[ \n]\\.[0-9]|[ \n][0-9])[-+\\.0-9eE]*",
-    paste0(" ",modelsrcw)
+    paste0(" ", modelsrcw)
   )[[1]]
   if (numliterals[1L] > -1L) {
     numliteral.lengths <- attr(numliterals, "match.length") - 1L
@@ -283,10 +283,10 @@ lav_parse_step1 <- function(modelsrc, types, msgenv) {
       frm.incremented <- FALSE
     }
   }
-  return(list(
+  list(
     elem.pos = elem.pos, elem.type = elem.type,
     elem.text = elem.text, elem.formula.number = elem.formula.number
-  ))
+  )
 }
 
 # ------------------------ lav_parse_step2 ----------------------------------- #
@@ -394,9 +394,9 @@ lav_parse_check_valid_name <- function(formul1, ind, modelsrc, msgenv) {
     lav_local_msgcode(TRUE, 41L, formul1$elem.pos[ind], msgenv)
     return(msgenv)
   }
-  return(invisible(NULL))
+  invisible(NULL)
 }
-# ------------------------ lav_parse_num_modifier  --------------------------------- #
+# ------------------------ lav_parse_num_modifier  --------------------------- #
 # function for transforming string with numeric values separated by semicolons
 # in a numeric vector (used in lav_parse_get_modifier)
 # ---------------------------------------------------------------------------- #
@@ -406,7 +406,7 @@ lav_parse_num_modifier <- function(txt) {
     if (x == "NA") NA_real_ else as.numeric(x)
   }, 1.0, USE.NAMES = FALSE)
 }
-# ------------------------ lav_parse_unpaste  -------------------------------------- #
+# ------------------------ lav_parse_unpaste  -------------------------------- #
 # function for transforming string with string values separated by semicolons
 # in a vector (used in lav_parse_get_modifier)
 # ---------------------------------------------------------------------------- #
@@ -415,13 +415,13 @@ lav_parse_unpaste <- function(text) {
   if (grepl(";$", text)) out <- c(out, "")
   out
 }
-# ------------------------ lav_parse_evaluate_r_expression ------------------------- #
+# ------------------------ lav_parse_eval_r_expression ------------------- #
 # help function to evaluate the value of an r expression formed by the elements
 # with index 'from' to 'to' of a formula 'formul1'
 # returns "_error_" if evaluation failed
 # used only in lav_parse_get_modifier
 # ---------------------------------------------------------------------------- #
-lav_parse_evaluate_r_expression <- function(formul1, from, to, types) {
+lav_parse_eval_r_expression <- function(formul1, from, to, types) {
   strings <- vapply(seq.int(from, to), function(x) {
     if (formul1$elem.type[x] == types$stringliteral) {
       paste0('"', formul1$elem.text[x], '"')
@@ -437,23 +437,28 @@ lav_parse_evaluate_r_expression <- function(formul1, from, to, types) {
   if (inherits(result, "try-error")) {
     return("_error_")
   }
-  return(result)
+  result
 }
-# ------------------------ lav_parse_adapt_vector_type ----------------------------- #
+# ------------------------ lav_parse_adapt_vector_type ----------------------- #
 # help function to dynamically adapt the type of a vector in a c(...) sequence
-# used only in lav_parse_get_modifier
+# used only in lav_parse_get_modifier, returns typenu if texttoadd == "NA",
+# return -1 (= error) when typenu is numliteral xor typetoadd is numliteral
 # ---------------------------------------------------------------------------- #
 lav_parse_adapt_vector_type <- function(typenu, typetoadd, texttoadd, types) {
-  if (texttoadd != "NA") {
-    if (typenu == 0) {
-      typenu <- typetoadd
-    } else {
-      if (typenu != typetoadd) typenu <- types$stringliteral
+  addtype <- typetoadd
+  if (texttoadd == "NA") addtype <- types$numliteral
+  if (typenu == 0) {
+    typenu <- addtype
+  } else {
+    if (typenu != addtype) {
+      if (typenu == types$numliteral || addtype == types$numliteral) {
+        typenu <- -1 # error !
+      } else {
+        typenu <- types$stringliteral
+      }
     }
-  } else if (typenu == 0) {
-    typenu <- types$numliteral
   }
-  return(typenu)
+  typenu
 }
 # ------------------------ lav_parse_get_modifier ---------------------------- #
 # The function takes a list with tokens belonging to a single 'mono' lavaan
@@ -506,7 +511,7 @@ lav_parse_get_modifier <- function(formul1, lhs, opi, modelsrc, types,
       formul1$elem.text[2L] == "(" &&
       formul1$elem.text[opi - 3L] == ")" &&
       formul1$elem.text[opi - 2L] == "*") {
-      temp <- lav_parse_evaluate_r_expression(formul1, 3L, opi - 4L, types)
+      temp <- lav_parse_eval_r_expression(formul1, 3L, opi - 4L, types)
       if (is.character(temp) && temp[1] != "_error_") {
         return(list(efa = temp))
       }
@@ -533,6 +538,10 @@ lav_parse_get_modifier <- function(formul1, lhs, opi, modelsrc, types,
               vector.type, formul1$elem.type[labnu],
               formul1$elem.text[labnu], types
             )
+            if (vector.type == -1) {
+              lav_local_msgcode(TRUE, 53L, formul1$elem.pos[1], msgenv)
+              return(msgenv)
+            }
           }
           if (vector.type == 0) vector.type <- types$stringliteral
           if (formul1$elem.text[labnu + 1L] == ")") {
@@ -566,6 +575,10 @@ lav_parse_get_modifier <- function(formul1, lhs, opi, modelsrc, types,
               vector.type, formul1$elem.type[labnu],
               formul1$elem.text[labnu], types
             )
+            if (vector.type == -1) {
+              lav_local_msgcode(TRUE, 53L, formul1$elem.pos[1], msgenv)
+              return(msgenv)
+            }
           }
           if (vector.type == 0) vector.type <- types$stringliteral
           if (formul1$elem.text[labnu + 1L] == ")") {
@@ -597,7 +610,7 @@ lav_parse_get_modifier <- function(formul1, lhs, opi, modelsrc, types,
         return(msgenv)
     }
     if (formul1$elem.text[nelem - 1L] == "?") {
-      temp <- lav_parse_evaluate_r_expression(formul1, opi + 1L, nelem - 2L, types)
+      temp <- lav_parse_eval_r_expression(formul1, opi + 1L, nelem - 2L, types)
       if (is.numeric(temp)) {
         return(list(start = temp))
       }
@@ -613,7 +626,8 @@ lav_parse_get_modifier <- function(formul1, lhs, opi, modelsrc, types,
         return(list(label = lav_parse_unpaste(formul1$elem.text[opi + 1L])))
       } else {
         if (formul1$elem.type[opi + 1L] == types$numliteral) {
-          return(list(fixed = lav_parse_num_modifier(formul1$elem.text[opi + 1L])))
+          return(list(fixed = lav_parse_num_modifier(
+            formul1$elem.text[opi + 1L])))
         } else {
           lav_local_msgcode(TRUE, 44L, formul1$elem.pos[opi + 1L], msgenv)
           return(msgenv)
@@ -637,7 +651,8 @@ lav_parse_get_modifier <- function(formul1, lhs, opi, modelsrc, types,
           lav_local_msgcode(TRUE, 45L, formul1$elem.pos[opi + 3L], msgenv)
           return(msgenv)
         }
-        temp <- lav_parse_evaluate_r_expression(formul1, opi + 3L, nelem - 3L, types)
+        temp <- lav_parse_eval_r_expression(formul1,
+         opi + 3L, nelem - 3L, types)
         if (is.numeric(temp)) {
           outje <- list()
           outje[[formul1$elem.text[opi + 1L]]] <- temp
@@ -659,7 +674,8 @@ lav_parse_get_modifier <- function(formul1, lhs, opi, modelsrc, types,
           lav_local_msgcode(TRUE, 46L, formul1$elem.pos[opi + 3L], msgenv)
           return(msgenv)
         }
-        temp <- lav_parse_evaluate_r_expression(formul1, opi + 3L, nelem - 3L, types)
+        temp <- lav_parse_eval_r_expression(formul1, opi + 3L,
+         nelem - 3L, types)
         if (is.character(temp) && temp[1] != "_error_") {
           outje <- list()
           outje[[modname]] <- temp
@@ -669,7 +685,7 @@ lav_parse_get_modifier <- function(formul1, lhs, opi, modelsrc, types,
         return(msgenv)
       }
     }
-    temp <- lav_parse_evaluate_r_expression(formul1, opi + 1L, nelem - 2L, types)
+    temp <- lav_parse_eval_r_expression(formul1, opi + 1L, nelem - 2L, types)
     if (is.numeric(temp)) {
       return(list(fixed = temp))
     }
@@ -681,7 +697,8 @@ lav_parse_get_modifier <- function(formul1, lhs, opi, modelsrc, types,
   }
 }
 # -------------------- main parsing function --------------------------------- #
-lav_parse_model_string_r <- function(model.syntax = "", as.data.frame. = FALSE) {
+lav_parse_model_string_r <- function(model.syntax = "",
+ as.data.frame. = FALSE) {
   stopifnot(length(model.syntax) > 0L)
   # replace 'strange' tildes (in some locales) (new in 0.6-6)
   modelsrc <- gsub(
@@ -695,7 +712,7 @@ lav_parse_model_string_r <- function(model.syntax = "", as.data.frame. = FALSE) 
     "symbol", "lavaanoperator", "newline"
   ))
   modellist <- lav_parse_step1(modelsrc, types, msgenv)
-  if (exists("error", envir = msgenv)) return(msgenv$error);
+  if (exists("error", envir = msgenv)) return(msgenv$error)
   if (lav_debug()) {
     print(data.frame(
       pos = modellist$elem.pos,
@@ -739,14 +756,19 @@ lav_parse_model_string_r <- function(model.syntax = "", as.data.frame. = FALSE) 
         if (formul1$elem.type[j] == types$stringliteral) {
           return(dQuote(formul1$elem.text[j], FALSE))
         }
-        return(formul1$elem.text[j])
+        formul1$elem.text[j]
       }, ""), "\n")
     }
     nelem <- length(formul1$elem.type)
     # where is the operator
-    opi <- match(types$lavaanoperator, formul1$elem.type)
-    # opi <- which(formul1$elem.type == types$lavaanoperator)
-    # if (length(opi) > 1L) opi <- opi[1L]
+    opi <- which(formul1$elem.type == types$lavaanoperator)
+    if (length(opi) > 1L) { # if more then 1 operator skip operators ':'
+      opii <- 1L
+      while (formul1$elem.text[opi[opii]] == ":" && opii < length(opi)) {
+        opii <- opii + 1L
+      }
+      opi <- opi[opii]
+    }
     op <- formul1$elem.text[opi]
     if (any(op == constraint_operators)) { # ----- constraints -------
       lhs <- paste(formul1$elem.text[seq.int(1L, opi - 1L)], collapse = "")
@@ -798,13 +820,13 @@ lav_parse_model_string_r <- function(model.syntax = "", as.data.frame. = FALSE) 
       lav_local_msgcode(FALSE, 102L, formul1$elem.pos[contsp[1L]], msgenv)
     }
     # checks for valid names in lhs and rhs
-    lav_parse_check_valid_name(formul1, opi - 1L, modelsrc, msgenv) # valid name lhs
-    if (exists("error", envir = msgenv)) return(msgenv$error);
+    lav_parse_check_valid_name(formul1, opi - 1L, modelsrc, msgenv) # valid lhs
+    if (exists("error", envir = msgenv)) return(msgenv$error)
     for (j in seq.int(opi + 1L, nelem)) { # valid names rhs
       if (formul1$elem.type[j] == types$identifier &&
         formul1$elem.text[j] != "NA") {
         lav_parse_check_valid_name(formul1, j, modelsrc, msgenv)
-        if (exists("error", envir = msgenv)) return(msgenv$error);
+        if (exists("error", envir = msgenv)) return(msgenv$error)
       }
     }
     if (formul1$elem.type[nelem] != types$identifier &&
@@ -862,7 +884,7 @@ lav_parse_model_string_r <- function(model.syntax = "", as.data.frame. = FALSE) 
     for (j in seq_along(rhsmodelems)) {
       if (sum(formul1$elem.text[seq.int(opi, rhsmodelems[j])] == "(") !=
           sum(formul1$elem.text[seq.int(opi, rhsmodelems[j])] == ")"))
-        rhsmodelems[j] = 0L
+        rhsmodelems[j] <- 0L
     }
     rhsmodelems <- rhsmodelems[rhsmodelems != 0L]
     if (length(rhsmodelems) == 0L) rhsmodelems <- opi
@@ -959,7 +981,8 @@ lav_parse_model_string_r <- function(model.syntax = "", as.data.frame. = FALSE) 
             overwrite <- names(modnu)[names(modnu) %in%
               names(mod[[cur.mod.idx]])]
             if (length(overwrite) > 0) {
-               lav_local_msgcode(FALSE, 104L, formul1$elem.pos[rmeprev + 1L], msgenv)
+               lav_local_msgcode(FALSE, 104L,
+                formul1$elem.pos[rmeprev + 1L], msgenv)
             }
             mod[[cur.mod.idx]] <- modifyList(mod[[cur.mod.idx]], modnu)
           }
@@ -969,7 +992,8 @@ lav_parse_model_string_r <- function(model.syntax = "", as.data.frame. = FALSE) 
     # check for variable regressed on itself
     if (formul1$elem.text[opi] == "~" &&
         formul1$elem.text[opi - 1L] == formul1$elem.text[nelem])
-      if (!grepl("^0\\.?0*$", flat.fixed[idx])) return(c(34L, formul1$elem.pos[opi] - 1L))
+      if (!grepl("^0\\.?0*$", flat.fixed[idx]))
+        return(c(34L, formul1$elem.pos[opi] - 1L))
   }
   # create flat (omit items without operator)
   filled.ones <- which(flat.op != "")
@@ -1055,12 +1079,12 @@ lav_parse_model_string_r <- function(model.syntax = "", as.data.frame. = FALSE) 
     flat <- as.data.frame(flat, stringsAsFactors = FALSE)
   }
   # create output
-  if (exists("error", envir = msgenv)) return(msgenv$error);
+  if (exists("error", envir = msgenv)) return(msgenv$error)
   if (exists("warncount", envir = msgenv)) {
-       warns <- list();
+       warns <- list()
        warncount <- get("warncount", envir = msgenv)
        for (jj in seq.int(warncount)) {
-            warns = c(warns,
+            warns <- c(warns,
             list(get(paste0("warn", sprintf("%03d", jj)), envir = msgenv)))
        }
        attr(flat, "warns") <- warns

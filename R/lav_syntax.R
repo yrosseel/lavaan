@@ -17,7 +17,8 @@ lavParseModelString <- function(model.syntax = "", as.data.frame. = FALSE,
   }
   parser <- tolower(parser)
   if (!parser %in% c("old", "new", "c.r")) {
-    lav_msg_stop(gettext("parser= argument should be \"old\", \"new\" or \"c.r\""))
+    lav_msg_stop(gettext("parser= argument should
+     be \"old\", \"new\" or \"c.r\""))
   }
 
   if (parser == "old") {
@@ -28,13 +29,13 @@ lavParseModelString <- function(model.syntax = "", as.data.frame. = FALSE,
     )
   } else if (parser == "c.r") {
     # new parser
-    out <- ldw_parse_model_string_cr(
+    out <- lav_parse_model_string_cr(
       model.syntax = model.syntax,
       as.data.frame. = as.data.frame.
     )
   } else {
     # new parser
-    out <- ldw_parse_model_string(
+    out <- lav_parse_model_string(
       model.syntax = model.syntax,
       as.data.frame. = as.data.frame.
       )
@@ -123,7 +124,7 @@ lav_parse_model_string_orig <- function(model.syntax = "",
   end.idx <- c(start.idx[-1] - 1, length(model))
   model.orig <- model
   model <- character(length(start.idx))
-  for (i in 1:length(start.idx)) {
+  for (i in seq_along(start.idx)) {
     model[i] <- paste(model.orig[start.idx[i]:end.idx[i]], collapse = "")
   }
 
@@ -174,7 +175,7 @@ lav_parse_model_string_orig <- function(model.syntax = "",
   CON <- vector("list", length = 0L)
   BLOCK <- 1L
   BLOCK_OP <- FALSE
-  for (i in 1:length(model)) {
+  for (i in seq_along(model)) {
     x <- model[i]
     if (lav_debug()) {
       cat("formula to parse:\n")
@@ -397,9 +398,9 @@ other (observed) variable in the model syntax. Problematic term is: "),
     if (lav_debug()) print(out)
 
     # for each lhs element
-    for (l in 1:length(lhs.names)) {
+    for (l in seq_along(lhs.names)) {
       # for each rhs element
-      for (j in 1:length(out)) {
+      for (j in seq_along(out)) {
         # catch intercepts
         if (names(out)[j] == "intercept") {
           if (op == "~") {
@@ -546,7 +547,7 @@ other (observed) variable in the model syntax. Problematic term is: "),
 
   # enumerate modifier indices
   mod.idx <- which(FLAT.rhs.mod.idx > 0L)
-  FLAT.rhs.mod.idx[mod.idx] <- 1:length(mod.idx)
+  FLAT.rhs.mod.idx[mod.idx] <- seq_along(mod.idx)
 
   FLAT <- list(
     lhs = FLAT.lhs, op = FLAT.op, rhs = FLAT.rhs,

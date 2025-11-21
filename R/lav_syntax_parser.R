@@ -1,39 +1,10 @@
 # New version of parser, written by Luc De Wilde in september/october 2023
 
-# ----------------------- ldw_create_enum ------------------------------------ #
-# function to create an Enumerable like structure in R
-#  usage example  mycolors <- ldw_create_enum(c("black", "white",
-#                                     "orange", "green", "red", "blue"))
-#                 xyz <- mycolors$red
-# values are default 1L, ..., number of names, but can be user specified
-# ---------------------------------------------------------------------------- #
-ldw_create_enum <- function(names, values = seq_along(names)) {
-  stopifnot(identical(unique(names), names), is.character(names))
-  stopifnot(length(names) == length(values))
-  res <- as.list(setNames(values, names))
-  res$enum.names <- names
-  res$enum.values <- values
-  res$enum.size <- length(values)
-  res <- as.environment(res)
-  lockEnvironment(res, bindings = TRUE)
-  res
-}
-
-# ------------------------ ldw_parse_sublist --------------------------------- #
-# function to create a list with only some indexes for all members
-# ---------------------------------------------------------------------------- #
-ldw_parse_sublist <- function(inlist, indexes) {
-  for (j in seq_along(inlist)) {
-    inlist[[j]] <- inlist[[j]][indexes]
-  }
-  inlist
-}
-
-# ------------------------ ldw_txtloc  --------------------------------------- #
+# ------------------------ lav_parse_txtloc  --------------------------------- #
 # function which translates a position in the model source string to a
 # user friendly locator (=[1L]) and the line with position (=[2L])
 # ---------------------------------------------------------------------------- #
-ldw_txtloc <- function(modelsrc, position) {
+lav_parse_txtloc <- function(modelsrc, position) {
   txt <- c("", "")
   if (nchar(modelsrc) >= position && position > 0) {
     newlines <- gregexpr("\n", paste0(modelsrc, "\n"), fixed = TRUE)[[1]]
@@ -60,18 +31,18 @@ ldw_txtloc <- function(modelsrc, position) {
   txt
 }
 
-# ------------------------ ldw_parse_step1 ----------------------------------- #
+# ------------------------ lav_parse_text_tokens ----------------------------- #
 # function to split the model source in tokens.
 # Returns a list with tokens with their attributes
 #   elem.pos  : position in source
 #   elem.type : type of token (cf. definition of types
-#               in ldw_parse_model_string)
+#               in lav_parse_model_string)
 #   elem.text : the text of the token
 #   elem.formule.number : sequence number of the 'logical'
 #                         formula where the token occurs
 # the function returns the stored tokens in a list
 # ---------------------------------------------------------------------------- #
-ldw_parse_step1 <- function(modelsrc, types) {
+lav_parse_text_tokens <- function(modelsrc, types) {
   nmax <- nchar(modelsrc)
   elem.pos <- vector("integer", nmax)
   elem.type <- elem.pos
@@ -119,11 +90,11 @@ ldw_parse_step1 <- function(modelsrc, types) {
       elem.i <- elem.i + 1L
     }
   }
-  # --------------------- handling spaces in operators ------------------------ #
+  # --------------------- handling spaces in operators ----------------------- #
   if (grepl("= +~", modelsrcw)) {
     waar <- regexpr("= +~", modelsrcw)[1]
     modelsrcw <- gsub("=( +)~", "=~\\1", modelsrcw)
-    tl <- ldw_txtloc(modelsrc, waar)
+    tl <- lav_parse_txtloc(modelsrc, waar)
     lav_msg_warn(gettext("splitting of '=~' deprecated"),
       tl[1L],
       footer = tl[2L]
@@ -132,7 +103,7 @@ ldw_parse_step1 <- function(modelsrc, types) {
   if (grepl("[^=~]~ +~", modelsrcw)) {
     waar <- regexpr("[^=~]~ +~", modelsrcw)[1]
     modelsrcw <- gsub("([^=~])~( +)~", "\\1~~\\2", modelsrcw)
-    tl <- ldw_txtloc(modelsrc, waar + 1L)
+    tl <- lav_parse_txtloc(modelsrc, waar + 1L)
     lav_msg_warn(gettext("splitting of '~~' deprecated"),
       tl[1L],
       footer = tl[2L]
@@ -196,7 +167,7 @@ ldw_parse_step1 <- function(modelsrc, types) {
 
   numliterals <- gregexpr(
     "([ \n][-+][.0-9]|[ \n]\\.[0-9]|[ \n][0-9])[-+\\.0-9eE]*",
-    paste0(" ",modelsrcw)
+    paste0(" ", modelsrcw)
   )[[1]]
   if (numliterals[1L] > -1L) {
     numliteral.lengths <- attr(numliterals, "match.length") - 1L
@@ -226,7 +197,7 @@ ldw_parse_step1 <- function(modelsrc, types) {
   # check for uninterpreted chars
   wrong <- regexpr("[^\"\n ]", modelsrcw)
   if (wrong != -1L) {
-    tl <- ldw_txtloc(modelsrc, wrong)
+    tl <- lav_parse_txtloc(modelsrc, wrong)
     lav_msg_stop(gettext("unexpected character"),
       tl[1L],
       footer = tl[2L]
@@ -311,13 +282,13 @@ ldw_parse_step1 <- function(modelsrc, types) {
       frm.incremented <- FALSE
     }
   }
-  return(list(
+  list(
     elem.pos = elem.pos, elem.type = elem.type,
     elem.text = elem.text, elem.formula.number = elem.formula.number
-  ))
+  )
 }
 
-# ------------------------ ldw_parse_step2 ----------------------------------- #
+# ------------------------ lav_parse_tokens_formulas ------------------------- #
 # function to group the modellist tokens in 'mono' formulas.
 # mono means that the terms (for formulas other then blocks and constraints)
 #   are split in seperate formula's, e.g.
@@ -329,7 +300,7 @@ ldw_parse_step1 <- function(modelsrc, types) {
 # newlines are removed
 # the function returns a list of formulas
 # ---------------------------------------------------------------------------- #
-ldw_parse_step2 <- function(modellist, modelsrc, types) {
+lav_parse_tokens_formulas <- function(modellist, modelsrc, types) {
   real.operators <- c("=~", "<~", "~*~", "~~", "~", "|", "%")
   welke <- modellist$elem.type != types$newline
   formula.numbers <- unique(modellist$elem.formula.number[welke])
@@ -349,7 +320,7 @@ ldw_parse_step2 <- function(modellist, modelsrc, types) {
     opi <- which(formul1$elem.type == types$lavaanoperator)
     nelem <- length(formul1$elem.type)
     if (length(opi) == 0L) {
-      tl <- ldw_txtloc(modelsrc, formul1$elem.pos[1])
+      tl <- lav_parse_txtloc(modelsrc, formul1$elem.pos[1])
       lav_msg_stop(gettext("formula without valid operator"),
         tl[1L],
         footer = tl[2L]
@@ -404,7 +375,7 @@ ldw_parse_step2 <- function(modellist, modelsrc, types) {
           if (k1 < k0) next # skip empty parts
           welke <- c(seq.int(j0, j1), opi, seq.int(k0, k1))
           realnum <- realnum + 1L
-          outval[[realnum]] <- ldw_parse_sublist(formul1, welke)
+          outval[[realnum]] <- lav_parse_sublist(formul1, welke)
         }
       }
     } else {
@@ -414,15 +385,15 @@ ldw_parse_step2 <- function(modellist, modelsrc, types) {
   }
   outval[seq_len(realnum)]
 }
-# ------------------------ ldw_parse_check_valid_name ------------------------ #
+# ------------------------ lav_parse_check_name ------------------------ #
 # checks if an element of the elem.text member in a list is a valid r-name
 # ---------------------------------------------------------------------------- #
-ldw_parse_check_valid_name <- function(formul1, ind, modelsrc) {
+lav_parse_check_name <- function(formul1, ind, modelsrc) {
   # allow spaces, LDW 22/4/2024
   testitem <- gsub(" ", "_", formul1$elem.text[ind], fixed = TRUE)
 
   if (make.names(testitem) != testitem) {
-    tl <- ldw_txtloc(modelsrc, formul1$elem.pos[ind])
+    tl <- lav_parse_txtloc(modelsrc, formul1$elem.pos[ind])
     lav_msg_stop(
       gettext("identifier is either a reserved word (in R) or
               contains an illegal character"),
@@ -430,68 +401,9 @@ ldw_parse_check_valid_name <- function(formul1, ind, modelsrc) {
       footer = tl[2L]
     )
   }
-  return(invisible(NULL))
+  invisible(NULL)
 }
-# ------------------------ ldw_num_modifier  --------------------------------- #
-# function for transforming string with numeric values separated by semicolons
-# in a numeric vector (used in ldw_parse_get_modifier)
-# ---------------------------------------------------------------------------- #
-ldw_num_modifier <- function(txt) {
-  # help function
-  vapply(strsplit(txt, ";")[[1]], function(x) {
-    if (x == "NA") NA_real_ else as.numeric(x)
-  }, 1.0, USE.NAMES = FALSE)
-}
-# ------------------------ ldw_unpaste  -------------------------------------- #
-# function for transforming string with string values separated by semicolons
-# in a vector (used in ldw_parse_get_modifier)
-# ---------------------------------------------------------------------------- #
-ldw_unpaste <- function(text) {
-  out <- strsplit(text, ";(NA;)*")[[1]]
-  if (grepl(";$", text)) out <- c(out, "")
-  out
-}
-# ------------------------ ldw_evaluate_r_expression ------------------------- #
-# help function to evaluate the value of an r expression formed by the elements
-# with index 'from' to 'to' of a formula 'formul1'
-# returns "_error_" if evaluation failed
-# used only in ldw_parse_get_modifier
-# ---------------------------------------------------------------------------- #
-ldw_evaluate_r_expression <- function(formul1, from, to, types) {
-  strings <- vapply(seq.int(from, to), function(x) {
-    if (formul1$elem.type[x] == types$stringliteral) {
-      paste0('"', formul1$elem.text[x], '"')
-    } else {
-      formul1$elem.text[x]
-    }
-  }, "")
-  txt <- paste(strings, collapse = "")
-  result <- try(eval(parse(text = txt),
-    envir = NULL,
-    enclos = baseenv()
-  ), silent = TRUE)
-  if (inherits(result, "try-error")) {
-    return("_error_")
-  }
-  return(result)
-}
-# ------------------------ ldw_adapt_vector_type ----------------------------- #
-# help function to dynamically adapt the type of a vector in a c(...) sequence
-# used only in ldw_parse_get_modifier
-# ---------------------------------------------------------------------------- #
-ldw_adapt_vector_type <- function(typenu, typetoadd, texttoadd, types) {
-  if (texttoadd != "NA") {
-    if (typenu == 0) {
-      typenu <- typetoadd
-    } else {
-      if (typenu != typetoadd) typenu <- types$stringliteral
-    }
-  } else if (typenu == 0) {
-    typenu <- types$numliteral
-  }
-  return(typenu)
-}
-# ------------------------ ldw_parse_get_modifier ---------------------------- #
+# ------------------------ lav_parse_modifier ---------------------------- #
 # The function takes a list with tokens belonging to a single 'mono' lavaan
 # formula as input. The other arguments are:
 #       lhs : check for lhs or rhs modifier
@@ -508,11 +420,11 @@ ldw_adapt_vector_type <- function(typenu, typetoadd, texttoadd, types) {
 #     rmeprev+1:rme, this is to support multiple modifiers for the same element.
 # An error message is produced when no modifier can be determined.
 # ---------------------------------------------------------------------------- #
-ldw_parse_get_modifier <- function(formul1, lhs, opi, modelsrc, types,
+lav_parse_modifier <- function(formul1, lhs, opi, modelsrc, types,
                                    rme = 0L, rmeprev = 0L) {
   if (rme > rmeprev) {
     welke <- c(seq.int(1L, opi), seq.int(rmeprev + 1L, rme), length(formul1))
-    formul1 <- ldw_parse_sublist(formul1, welke)
+    formul1 <- lav_parse_sublist(formul1, welke)
   }
   nelem <- length(formul1$elem.type)
   # remove unnecessary parentheses (one element between parentheses, previous
@@ -530,7 +442,7 @@ ldw_parse_get_modifier <- function(formul1, lhs, opi, modelsrc, types,
       }
     }
     if (check.more) {
-      formul1 <- ldw_parse_sublist(formul1, which(formul1$elem.type > 0))
+      formul1 <- lav_parse_sublist(formul1, which(formul1$elem.type > 0))
       nelem <- length(formul1$elem.type)
     }
   }
@@ -542,12 +454,12 @@ ldw_parse_get_modifier <- function(formul1, lhs, opi, modelsrc, types,
       formul1$elem.text[2L] == "(" &&
       formul1$elem.text[opi - 3L] == ")" &&
       formul1$elem.text[opi - 2L] == "*") {
-      temp <- ldw_evaluate_r_expression(formul1, 3L, opi - 4L, types)
+      temp <- lav_parse_eval_r_expression(formul1, 3L, opi - 4L, types)
       if (is.character(temp) && temp[1] != "_error_") {
         return(list(efa = temp))
       }
     }
-    tl <- ldw_txtloc(modelsrc, formul1$elem.pos[1L])
+    tl <- lav_parse_txtloc(modelsrc, formul1$elem.pos[1L])
     lav_msg_stop(gettext("invalid left hand side modifier"),
       tl[1L],
       footer = tl[2L]
@@ -561,28 +473,34 @@ ldw_parse_get_modifier <- function(formul1, lhs, opi, modelsrc, types,
           vector.type <- 0
           labnu <- j + 2L
           lab <- formul1$elem.text[labnu]
-          vector.type <- ldw_adapt_vector_type(
+          vector.type <- lav_parse_adapt_vector_type(
             vector.type, formul1$elem.type[labnu],
             formul1$elem.text[labnu], types
           )
           while (formul1$elem.text[labnu + 1L] == ",") {
             labnu <- labnu + 2L
             lab <- c(lab, formul1$elem.text[labnu])
-            vector.type <- ldw_adapt_vector_type(
+            vector.type <- lav_parse_adapt_vector_type(
               vector.type, formul1$elem.type[labnu],
               formul1$elem.text[labnu], types
             )
+            if (vector.type == -1) {
+                tl <- lav_parse_txtloc(modelsrc, formul1$elem.pos[1L])
+                lav_msg_stop(gettext(
+                  "Combining labels and fixed values in multigroup modifiers
+                   isn't allowed!"), tl[1L], footer = tl[2L])
+            }
           }
           if (vector.type == 0) vector.type <- types$stringliteral
           if (formul1$elem.text[labnu + 1L] == ")") {
             formul1$elem.type[seq.int(j, labnu)] <- 0
             formul1$elem.type[labnu + 1L] <- vector.type
             formul1$elem.text[labnu + 1L] <- paste(lab, collapse = ";")
-            formul1 <- ldw_parse_sublist(formul1, which(formul1$elem.type > 0))
+            formul1 <- lav_parse_sublist(formul1, which(formul1$elem.type > 0))
             nelem <- length(formul1$elem.type)
             break
           } else {
-            tl <- ldw_txtloc(modelsrc, formul1$elem.pos[j])
+            tl <- lav_parse_txtloc(modelsrc, formul1$elem.pos[j])
             lav_msg_stop(gettext("invalid vector specification"),
               tl[1L],
               footer = tl[2L]
@@ -597,28 +515,34 @@ ldw_parse_get_modifier <- function(formul1, lhs, opi, modelsrc, types,
           vector.type <- 0
           labnu <- j + 2L
           lab <- formul1$elem.text[labnu]
-          vector.type <- ldw_adapt_vector_type(
+          vector.type <- lav_parse_adapt_vector_type(
             vector.type, formul1$elem.type[labnu],
             formul1$elem.text[labnu], types
           )
           while (formul1$elem.text[labnu + 1L] == ",") {
             labnu <- labnu + 2L
             lab <- c(lab, formul1$elem.text[labnu])
-            vector.type <- ldw_adapt_vector_type(
+            vector.type <- lav_parse_adapt_vector_type(
               vector.type, formul1$elem.type[labnu],
               formul1$elem.text[labnu], types
             )
+            if (vector.type == -1) {
+                tl <- lav_parse_txtloc(modelsrc, formul1$elem.pos[1L])
+                lav_msg_stop(gettext(
+                  "Combining labels and fixed values in multigroup modifiers
+                   isn't allowed!"), tl[1L], footer = tl[2L])
+            }
           }
           if (vector.type == 0) vector.type <- types$stringliteral
           if (formul1$elem.text[labnu + 1L] == ")") {
             formul1$elem.type[seq.int(j + 3L, labnu)] <- 0
             formul1$elem.type[j + 2L] <- vector.type
             formul1$elem.text[j + 2L] <- paste(lab, collapse = ";")
-            formul1 <- ldw_parse_sublist(formul1, which(formul1$elem.type > 0))
+            formul1 <- lav_parse_sublist(formul1, which(formul1$elem.type > 0))
             nelem <- length(formul1$elem.type)
             break
           } else {
-            tl <- ldw_txtloc(modelsrc, formul1$elem.pos[j])
+            tl <- lav_parse_txtloc(modelsrc, formul1$elem.pos[j])
             lav_msg_stop(gettext("invalid vector specification"),
               tl[1L],
               footer = tl[2L]
@@ -638,18 +562,18 @@ ldw_parse_get_modifier <- function(formul1, lhs, opi, modelsrc, types,
     # check on last element being a numliteral or identifier
     #                       already done in calling function
     if (all(formul1$elem.text[nelem - 1L] != c("*", "?"))) {
-      tl <- ldw_txtloc(modelsrc, formul1$elem.pos[nelem - 1L])
+      tl <- lav_parse_txtloc(modelsrc, formul1$elem.pos[nelem - 1L])
       lav_msg_stop(gettext("invalid modifier symbol (should be '*' or '?')"),
         tl[1L],
         footer = tl[2L]
       )
     }
     if (formul1$elem.text[nelem - 1L] == "?") {
-      temp <- ldw_evaluate_r_expression(formul1, opi + 1L, nelem - 2L, types)
+      temp <- lav_parse_eval_r_expression(formul1, opi + 1L, nelem - 2L, types)
       if (is.numeric(temp)) {
         return(list(start = temp))
       }
-      tl <- ldw_txtloc(modelsrc, formul1$elem.pos[opi + 1L])
+      tl <- lav_parse_txtloc(modelsrc, formul1$elem.pos[opi + 1L])
       lav_msg_stop(gettext(
         "invalid start value expression (should be numeric)"),
         tl[1L], footer = tl[2L]
@@ -661,12 +585,13 @@ ldw_parse_get_modifier <- function(formul1, lhs, opi, modelsrc, types,
       }
       if (any(formul1$elem.type[opi + 1L] ==
         c(types$identifier, types$stringliteral))) {
-        return(list(label = ldw_unpaste(formul1$elem.text[opi + 1L])))
+        return(list(label = lav_parse_unpaste(formul1$elem.text[opi + 1L])))
       } else {
         if (formul1$elem.type[opi + 1L] == types$numliteral) {
-          return(list(fixed = ldw_num_modifier(formul1$elem.text[opi + 1L])))
+          return(list(fixed =
+            lav_parse_num_modifier(formul1$elem.text[opi + 1L])))
         } else {
-          tl <- ldw_txtloc(modelsrc, formul1$elem.pos[opi + 1L])
+          tl <- lav_parse_txtloc(modelsrc, formul1$elem.pos[opi + 1L])
           lav_msg_stop(
             gettext("invalid value (should be numeric, identifier or string)"),
             tl[1L],
@@ -686,22 +611,23 @@ ldw_parse_get_modifier <- function(formul1, lhs, opi, modelsrc, types,
           if (formul1$elem.type[opi + 3L] == types$numliteral) {
             outje <- list()
             outje[[formul1$elem.text[opi + 1L]]] <-
-              ldw_num_modifier(formul1$elem.text[opi + 3L])
+              lav_parse_num_modifier(formul1$elem.text[opi + 3L])
             return(outje)
           }
-          tl <- ldw_txtloc(modelsrc, formul1$elem.pos[opi + 3L])
+          tl <- lav_parse_txtloc(modelsrc, formul1$elem.pos[opi + 3L])
           lav_msg_stop(gettext("invalid value (should be numeric)"),
             tl[1L],
             footer = tl[2L]
           )
         }
-        temp <- ldw_evaluate_r_expression(formul1, opi + 3L, nelem - 3L, types)
+        temp <- lav_parse_eval_r_expression(formul1,
+                        opi + 3L, nelem - 3L, types)
         if (is.numeric(temp)) {
           outje <- list()
           outje[[formul1$elem.text[opi + 1L]]] <- temp
           return(outje)
         }
-        tl <- ldw_txtloc(modelsrc, formul1$elem.pos[opi + 3L])
+        tl <- lav_parse_txtloc(modelsrc, formul1$elem.pos[opi + 3L])
         lav_msg_stop(
           gettext("invalid value R-expression (should be numeric)"),
           tl[1L],
@@ -715,22 +641,23 @@ ldw_parse_get_modifier <- function(formul1, lhs, opi, modelsrc, types,
           if (formul1$elem.type[opi + 3L] == types$stringliteral) {
             outje <- list()
             outje[[modname]] <-
-              ldw_unpaste(formul1$elem.text[opi + 3L])
+              lav_parse_unpaste(formul1$elem.text[opi + 3L])
             return(outje)
           }
-          tl <- ldw_txtloc(modelsrc, formul1$elem.pos[opi + 3L])
+          tl <- lav_parse_txtloc(modelsrc, formul1$elem.pos[opi + 3L])
           lav_msg_stop(gettext("invalid value (should be string)"),
             tl[1L],
             footer = tl[2L]
           )
         }
-        temp <- ldw_evaluate_r_expression(formul1, opi + 3L, nelem - 3L, types)
+        temp <- lav_parse_eval_r_expression(formul1, opi + 3L,
+                   nelem - 3L, types)
         if (is.character(temp) && temp[1] != "_error_") {
           outje <- list()
           outje[[modname]] <- temp
           return(outje)
         }
-        tl <- ldw_txtloc(modelsrc, formul1$elem.pos[opi + 3L])
+        tl <- lav_parse_txtloc(modelsrc, formul1$elem.pos[opi + 3L])
         lav_msg_stop(
           gettext("invalid value R-expression (should be a string)"),
           tl[1L],
@@ -738,14 +665,14 @@ ldw_parse_get_modifier <- function(formul1, lhs, opi, modelsrc, types,
         )
       }
     }
-    temp <- ldw_evaluate_r_expression(formul1, opi + 1L, nelem - 2L, types)
+    temp <- lav_parse_eval_r_expression(formul1, opi + 1L, nelem - 2L, types)
     if (is.numeric(temp)) {
       return(list(fixed = temp))
     }
     if (is.character(temp) && temp[1] != "_error_") {
       return(list(label = temp))
     }
-    tl <- ldw_txtloc(modelsrc, formul1$elem.pos[opi + 1L])
+    tl <- lav_parse_txtloc(modelsrc, formul1$elem.pos[opi + 1L])
     lav_msg_stop(gettext("invalid modifier specification"),
       tl[1L],
       footer = tl[2L]
@@ -753,7 +680,7 @@ ldw_parse_get_modifier <- function(formul1, lhs, opi, modelsrc, types,
   }
 }
 # -------------------- main parsing function --------------------------------- #
-ldw_parse_model_string <- function(model.syntax = "", as.data.frame. = FALSE) {
+lav_parse_model_string <- function(model.syntax = "", as.data.frame. = FALSE) {
   stopifnot(length(model.syntax) > 0L)
   # replace 'strange' tildes (in some locales) (new in 0.6-6)
   modelsrc <- gsub(
@@ -761,11 +688,11 @@ ldw_parse_model_string <- function(model.syntax = "", as.data.frame. = FALSE) {
     replacement = "~",
     paste(unlist(model.syntax), "", collapse = "\n")
   )
-  types <- ldw_create_enum(c(
+  types <- lav_create_enum(c(
     "identifier", "numliteral", "stringliteral",
     "symbol", "lavaanoperator", "newline"
   ))
-  modellist <- ldw_parse_step1(modelsrc, types)
+  modellist <- lav_parse_text_tokens(modelsrc, types)
   if (lav_debug()) {
     print(data.frame(
       pos = modellist$elem.pos,
@@ -774,7 +701,7 @@ ldw_parse_model_string <- function(model.syntax = "", as.data.frame. = FALSE) {
       formula = modellist$elem.formula.number
     ))
   }
-  formulalist <- ldw_parse_step2(modellist, modelsrc, types)
+  formulalist <- lav_parse_tokens_formulas(modellist, modelsrc, types)
   #---- analyse syntax formulas and put in flat.-----
   max.mono.formulas <- length(formulalist)
   flat.lhs <- character(max.mono.formulas)
@@ -809,7 +736,7 @@ ldw_parse_model_string <- function(model.syntax = "", as.data.frame. = FALSE) {
         if (formul1$elem.type[j] == types$stringliteral) {
           return(dQuote(formul1$elem.text[j], FALSE))
         }
-        return(formul1$elem.text[j])
+        formul1$elem.text[j]
       }, ""), "\n")
     }
     nelem <- length(formul1$elem.type)
@@ -839,7 +766,7 @@ ldw_parse_model_string <- function(model.syntax = "", as.data.frame. = FALSE) {
     }
     if (op == ":") { # ------------------------- block start ----------------- #
       if (opi == 1L) {
-        tl <- ldw_txtloc(modelsrc, formul1$elem.pos[1])
+        tl <- lav_parse_txtloc(modelsrc, formul1$elem.pos[1])
         lav_msg_stop(
           gettext(
           "Missing block identifier. The correct syntax is: \"LHS: RHS\",
@@ -850,7 +777,7 @@ ldw_parse_model_string <- function(model.syntax = "", as.data.frame. = FALSE) {
       }
       if (opi > 2L || all(tolower(formul1$elem.text[1]) !=
         c("group", "level", "block", "class"))) {
-        tl <- ldw_txtloc(modelsrc, formul1$elem.pos[1])
+        tl <- lav_parse_txtloc(modelsrc, formul1$elem.pos[1])
         lav_msg_stop(
           gettext(
           "Invalid block identifier. The correct syntax is: \"LHS: RHS\",
@@ -862,7 +789,7 @@ ldw_parse_model_string <- function(model.syntax = "", as.data.frame. = FALSE) {
       }
       if (nelem != 3 || all(formul1$elem.type[3] !=
         c(types$stringliteral, types$identifier, types$numliteral))) {
-        tl <- ldw_txtloc(modelsrc, formul1$elem.pos[1])
+        tl <- lav_parse_txtloc(modelsrc, formul1$elem.pos[1])
         lav_msg_stop(
           gettext("syntax contains block identifier \"group\" with missing or
                 invalid number/label.The correct syntax is: \"LHS: RHS\", where
@@ -881,7 +808,7 @@ ldw_parse_model_string <- function(model.syntax = "", as.data.frame. = FALSE) {
         block <- block + 1L
       } else {
         if (flat.idx != 1) {
-          tl <- ldw_txtloc(modelsrc, formul1$elem.pos[1])
+          tl <- lav_parse_txtloc(modelsrc, formul1$elem.pos[1])
           lav_msg_warn(
             gettext("First block defined after other formula's"),
             tl[1L],
@@ -898,7 +825,7 @@ ldw_parse_model_string <- function(model.syntax = "", as.data.frame. = FALSE) {
     contsp <- which(formul1$elem.type == types$identifier &
       grepl(" ", formul1$elem.text, fixed = TRUE))
     if (length(contsp) > 0L) {
-      tl <- ldw_txtloc(modelsrc, formul1$elem.pos[contsp[1L]])
+      tl <- lav_parse_txtloc(modelsrc, formul1$elem.pos[contsp[1L]])
       lav_msg_warn(
         gettextf(
           "having identifiers with spaces ('%s') is deprecated",
@@ -909,17 +836,17 @@ ldw_parse_model_string <- function(model.syntax = "", as.data.frame. = FALSE) {
       )
     }
     # checks for valid names in lhs and rhs
-    ldw_parse_check_valid_name(formul1, opi - 1L, modelsrc) # valid name lhs
+    lav_parse_check_name(formul1, opi - 1L, modelsrc) # valid name lhs
     for (j in seq.int(opi + 1L, nelem)) { # valid names rhs
       if (formul1$elem.type[j] == types$identifier &&
         formul1$elem.text[j] != "NA") {
-        ldw_parse_check_valid_name(formul1, j, modelsrc)
+        lav_parse_check_name(formul1, j, modelsrc)
       }
     }
     if (formul1$elem.type[nelem] != types$identifier &&
         (formul1$elem.type[nelem] != types$numliteral ||
          all(op != c("~", "=~")))) {
-      tl <- ldw_txtloc(modelsrc, formul1$elem.pos[nelem])
+      tl <- lav_parse_txtloc(modelsrc, formul1$elem.pos[nelem])
       lav_msg_stop(
         gettext("Last element of rhs part expected to be an identifier or,
                 for operator ~ or =~, a numeric literal!"),
@@ -960,7 +887,7 @@ ldw_parse_model_string <- function(model.syntax = "", as.data.frame. = FALSE) {
     # check at most 1 colon
     if (length(colons) > 2L ||
         (length(colons) == 2L && (colons[1L] > opi || colons[2L] < opi))) {
-      tl <- ldw_txtloc(modelsrc, formul1$elem.pos[colons[2]])
+      tl <- lav_parse_txtloc(modelsrc, formul1$elem.pos[colons[2]])
       lav_msg_stop(
         gettext(
         "Three-way or higher-order interaction terms (using multiple
@@ -977,7 +904,7 @@ ldw_parse_model_string <- function(model.syntax = "", as.data.frame. = FALSE) {
         paste(formul1$elem.text[seq.int(colons[1L] - 1L, colons[1L] + 1L)],
           collapse = ""
         )
-      formul1 <- ldw_parse_sublist(formul1,
+      formul1 <- lav_parse_sublist(formul1,
           setdiff(seq.int(1L, nelem), seq.int(colons[1L], colons[1L] + 1L)))
       nelem <- length(formul1$elem.type)
       if (colons[1L] < opi) {
@@ -991,7 +918,7 @@ ldw_parse_model_string <- function(model.syntax = "", as.data.frame. = FALSE) {
         paste(formul1$elem.text[seq.int(colons[2L] - 1L, colons[2L] + 1L)],
               collapse = ""
         )
-      formul1 <- ldw_parse_sublist(formul1,
+      formul1 <- lav_parse_sublist(formul1,
           setdiff(seq.int(1L, nelem), seq.int(colons[2L], colons[2L] + 1L)))
       nelem <- length(formul1$elem.type)
     }
@@ -1029,14 +956,14 @@ ldw_parse_model_string <- function(model.syntax = "", as.data.frame. = FALSE) {
       }
       lhsmod <- list()
       if (opi > 2 && rmei == 1L) {
-        lhsmod <- ldw_parse_get_modifier(
+        lhsmod <- lav_parse_modifier(
           formul1,
           TRUE, opi, modelsrc, types
         )
       }
       rhsmod <- list()
       if (nelem - opi > 1) {
-        rhsmod <- ldw_parse_get_modifier(
+        rhsmod <- lav_parse_modifier(
           formul1,
           FALSE, opi, modelsrc, types, rme, rmeprev
         )
@@ -1099,7 +1026,7 @@ ldw_parse_model_string <- function(model.syntax = "", as.data.frame. = FALSE) {
             overwrite <- names(modnu)[names(modnu) %in%
               names(mod[[cur.mod.idx]])]
             if (length(overwrite) > 0) {
-              tl <- ldw_txtloc(modelsrc, formul1$elem.pos[rmeprev + 1L])
+              tl <- lav_parse_txtloc(modelsrc, formul1$elem.pos[rmeprev + 1L])
               lav_msg_warn(
                 gettextf(
                   "modifier %s specified multiple times, overwritten",
@@ -1117,7 +1044,7 @@ ldw_parse_model_string <- function(model.syntax = "", as.data.frame. = FALSE) {
     if (formul1$elem.text[opi] == "~" &&
         formul1$elem.text[opi - 1L] == formul1$elem.text[nelem]) {
       if (!grepl("^0\\.?0*$", flat.fixed[idx])) {
-        tl <- ldw_txtloc(modelsrc, formul1$elem.pos[opi])
+        tl <- lav_parse_txtloc(modelsrc, formul1$elem.pos[opi])
         lav_msg_stop(
           gettext("a variable cannot be regressed on itself"),
           tl[1L],
