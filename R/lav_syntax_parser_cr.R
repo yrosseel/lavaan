@@ -1,5 +1,5 @@
 # -------------------- main parsing function in C or R ----------------------- #
-ldw_parse_model_string_cr <- function(model.syntax = "",
+lav_parse_model_string_cr <- function(model.syntax = "",
                                       as.data.frame. = FALSE) {
   stopifnot(length(model.syntax) > 0L)
   # replace 'strange' tildes (in some locales) (new in 0.6-6)
@@ -25,7 +25,7 @@ ldw_parse_model_string_cr <- function(model.syntax = "",
       lav_msg_stop(gettextf("Internal program error on line %d of C code.",
                             flat[2L]))
     } else {
-      tl <- ldw_txtloc(modelsrc, flat[2L] + 1L)
+      tl <- lav_parse_txtloc(modelsrc, flat[2L] + 1L)
       if (flat[1L] == 21L) { # SPE_ILLNUMLIT
         lav_msg_stop(gettext("Illegal numeric literal"),
                      tl[1L],
@@ -127,12 +127,19 @@ ldw_parse_model_string_cr <- function(model.syntax = "",
                      footer = tl[2L]
         )
       } else if (flat[1L] == 51L) { # SPE_INVALIDEXPRTYP
-        lav_msg_stop(gettext("Incorrrect type for expression!"),
+        lav_msg_stop(gettext("Incorrect type for expression!"),
                      tl[1L],
                      footer = tl[2L]
         )
       } else if (flat[1L] == 52L) { # SPE_LVLGRP
         lav_msg_stop(gettext("groups can not be nested within levels!"),
+                     tl[1L],
+                     footer = tl[2L]
+        )
+      } else if (flat[1L] == 53L) { # SPE_MIXEDMOD
+        lav_msg_stop(gettext(
+          "Combining labels and fixed values in multigroup modifiers
+           isn't allowed!"),
                      tl[1L],
                      footer = tl[2L]
         )
@@ -192,7 +199,7 @@ ldw_parse_model_string_cr <- function(model.syntax = "",
     warns <- attr(flat, "warns")
     attr(flat, "warns") <- NULL
     for (w in warns) {
-      tl <- ldw_txtloc(modelsrc, w[2L] + 1L)
+      tl <- lav_parse_txtloc(modelsrc, w[2L] + 1L)
       if (w[1L] == 101L) { # SPW_OPERATORBLANKS
         lav_msg_warn(gettext("Blancs in lavaan operators are deprecated."),
                      tl[1L],
