@@ -195,7 +195,8 @@ lav_cfa_bentler1982 <- function(S,
     }
   } else {
     # simple version
-    LAMBDA.y <- t(t(S.yx) / diag(PSI)) * B.y
+    #LAMBDA.y <- t(t(S.yx) / diag(PSI)) * B.y # works only if no crossloadings
+    LAMBDA.y <- t(solve(PSI, t(S.yx))) * B.y
   }
 
 

@@ -148,7 +148,7 @@ lav_graph_order_adj_mat <- function(adj.mat, warn = TRUE) {
 lav_graph_topological_sort <- function(defined, definedby, warn = TRUE) {
   nodes <- unique(c(definedby, defined))
   n <- length(nodes)
-  rv <- vector(mode(definedby), n) 
+  rv <- vector(mode(definedby), n)
   k <- 0L
   testnodes <- rep(TRUE, n)
   testedges <- rep(TRUE, length(defined))
@@ -157,18 +157,18 @@ lav_graph_topological_sort <- function(defined, definedby, warn = TRUE) {
     tests <- which(testnodes)
     for (i in tests) {
       tocheck <- nodes[i]
-      if (all(tocheck != defined[testedges])) { 
+      if (all(tocheck != defined[testedges])) {
         k <- k + 1L
         testnodes[i] <- FALSE
-        rv[k] <- tocheck  
+        rv[k] <- tocheck
         found <- TRUE
         testedges[definedby == tocheck] <- FALSE
       }
     }
-    if (k == n) return(rv)  # all done 
-    if (!found) {  # no definable node found 
+    if (k == n) return(rv)  # all done
+    if (!found) {  # no definable node found
       if (warn) {
-        lav_msg_warn(gettext("unable to sort;", 
+        lav_msg_warn(gettext("unable to sort;",
                              "dependencies contain a cycle"))
       }
       return(nodes)    # cycle detected; return original order
@@ -183,9 +183,9 @@ lav_graph_topological_sort <- function(defined, definedby, warn = TRUE) {
 # the second column contains nodes with only dependency in the first column (*)
 # the third column contains nodes with only dependencies in the first and
 #     second, with at least one in the second column (*)
-# and so on 
+# and so on
 # (*) all nodes which have no successors are moved to the last column
-# the rows in the second to last column are chosen so that they are in the 
+# the rows in the second to last column are chosen so that they are in the
 # neighborhood of the mean of the rows from the nodes they depend on.
 lav_graph_topological_matrix <- function(defined, definedby, warn = TRUE) {
   rv <- lav_graph_topological_sort(defined, definedby, warn)
@@ -196,10 +196,10 @@ lav_graph_topological_matrix <- function(defined, definedby, warn = TRUE) {
   lastcolmax <- 0L
   for (i in seq.int(n)) {
     if (i == 1L) {
-      rvrow[i] <- rvcol[i] <- 1L 
+      rvrow[i] <- rvcol[i] <- 1L
       colmax <- 1L
     } else {
-      predecessors <- definedby[rv[i] == defined]  
+      predecessors <- definedby[rv[i] == defined]
       followers <- defined[rv[i] == definedby]
       if (length(predecessors) == 0L) {
         rvcol[i] <- 1L
@@ -220,7 +220,7 @@ lav_graph_topological_matrix <- function(defined, definedby, warn = TRUE) {
           }
         }
         rvrow[i] <- colmax[rvcol[i]]
-      }     
+      }
     }
   }
   # last column
@@ -241,12 +241,12 @@ lav_graph_topological_matrix <- function(defined, definedby, warn = TRUE) {
       optimalrows <- optimalrows[or_order]
       for (j in seq_along(optimalrows)) {
         if (j == 1L) {
-          optimalrows[j] <- as.integer(optimalrows[j]) 
+          optimalrows[j] <- as.integer(optimalrows[j])
         } else {
           if (as.integer(optimalrows[j]) <= optimalrows[j - 1L]) {
             optimalrows[j] <- optimalrows[j - 1L] + 1L
           } else {
-            optimalrows[j] <- as.integer(optimalrows[j]) 
+            optimalrows[j] <- as.integer(optimalrows[j])
           }
         }
       }
@@ -254,9 +254,9 @@ lav_graph_topological_matrix <- function(defined, definedby, warn = TRUE) {
       rvrow[cnodes.ind] <- optimalrows
     }
   }
-  # order on column, then row, and return  
+  # order on column, then row, and return
   neworder <- order(rvcol * 1000L + rvrow)
-  data.frame(nodes = rv[neworder], 
-             rows = rvrow[neworder], 
+  data.frame(nodes = rv[neworder],
+             rows = rvrow[neworder],
              cols = rvcol[neworder])
 }

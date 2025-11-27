@@ -26,6 +26,12 @@ lav_cfa_guttman1952 <- function(S,
   B[lambda.marker.idx] <- 1L
   B[lambda.nonzero.idx] <- 1L
 
+  # this method does not support crossloadings!
+  if (any(rowSums(B) > 1)) {
+    lav_msg_stop(gettext("the guttman1952 procedure does not support ",
+                       "crossloadings; consider fabin or bentler1982 instead"))
+  }
+
   # if we wish to keep SminTheta PD, we must keep theta within bounds
   if (force.pd) {
     theta.bounds <- TRUE

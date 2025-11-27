@@ -25,6 +25,6 @@ mplus2lavaan.modelSyntax <- lav_mplus_syntax_model
 mplus2lavaan             <- lav_mplus_lavaan
 
 # standardize function names in ctr_estfun.R / 13 Nov 2025
-estfun.lavaan <- lav_scores 
+estfun.lavaan <- lav_scores
 lavScores <- lav_scores
 
