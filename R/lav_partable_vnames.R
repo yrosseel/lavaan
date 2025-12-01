@@ -1382,6 +1382,3 @@ lav_partable_vnames <- function(partable, type = NULL, ..., # nolint
   # ----- lav_partable_vnames ---- common ------------------------
   return.value
 }
-
-# alias for backward compatibility
-vnames <- lav_partable_vnames

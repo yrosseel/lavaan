@@ -59,18 +59,18 @@ lav_lisrel <- function(lavpartable = NULL,
   for (g in 1:nblocks) {
     # info from user model per block
     if (gamma) {
-      ov.names <- vnames(lavpartable, "ov.nox", block = g)
+      ov.names <- lav_partable_vnames(lavpartable, "ov.nox", block = g)
     } else {
-      ov.names <- vnames(lavpartable, "ov", block = g)
+      ov.names <- lav_partable_vnames(lavpartable, "ov", block = g)
     }
     nvar <- length(ov.names)
-    lv.names <- vnames(lavpartable, "lv", block = g)
+    lv.names <- lav_partable_vnames(lavpartable, "lv", block = g)
     nfac <- length(lv.names)
-    ov.th <- vnames(lavpartable, "th", block = g)
+    ov.th <- lav_partable_vnames(lavpartable, "th", block = g)
     nth <- length(ov.th)
-    ov.names.x <- vnames(lavpartable, "ov.x", block = g)
+    ov.names.x <- lav_partable_vnames(lavpartable, "ov.x", block = g)
     nexo <- length(ov.names.x)
-    ov.names.nox <- vnames(lavpartable, "ov.nox", block = g)
+    ov.names.nox <- lav_partable_vnames(lavpartable, "ov.nox", block = g)
 
     # in this representation, we need to create 'phantom/dummy' latent
     # variables for all `x' and `y' variables not in lv.names

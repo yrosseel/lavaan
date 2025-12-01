@@ -54,7 +54,8 @@ lav_lavaan_step04_partable <- function(slotParTable = NULL, # nolint
     # if(lavoptions$fixed.x) {
     #    tmp <- lav_partable_vnames(flat.model, type = "ov.x",
     #                               ov.x.fatal = FALSE, warn = TRUE)
-    # tmp <- try(vnames(flat.model, type = "ov.x", ov.x.fatal = TRUE),
+    # tmp <- try(lav_partable_vnames(flat.model, type = "ov.x",
+    #                                         ov.x.fatal = TRUE),
     #           silent = TRUE)
     # if(inherits(tmp, "try-error")) {
     #    warning("lavaan WARNING: syntax contains parameters involving ",
@@ -63,7 +64,7 @@ lav_lavaan_step04_partable <- function(slotParTable = NULL, # nolint
     # }
     # }
     # if(lavoptions$conditional.x) {
-    #    tmp <- vnames(flat.model, type = "ov.x", ov.x.fatal = TRUE)
+    #    tmp <- lav_partable_vnames(flat.model, type = "ov.x", ov.x.fatal = TRUE)
     # }
     tmp.data.ov <- lavdata@ov
     if (lavoptions$estimator == "catML") {

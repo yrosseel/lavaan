@@ -152,9 +152,9 @@ lav_standardize_lv <- function(lavobject = NULL,
   }
 
   for (g in 1:lavmodel@nblocks) {
-    ov.names <- vnames(lavpartable, "ov", block = g) # not user,
+    ov.names <- lav_partable_vnames(lavpartable, "ov", block = g) # not user,
     # which may be incomplete
-    lv.names <- vnames(lavpartable, "lv", block = g)
+    lv.names <- lav_partable_vnames(lavpartable, "lv", block = g)
 
     # shortcut: no latents in this block, nothing to do
     if (length(lv.names) == 0L) {
@@ -370,8 +370,8 @@ lav_standardize_all <- function(lavobject = NULL,
 
 
   for (g in 1:lavmodel@nblocks) {
-    ov.names <- vnames(lavpartable, "ov", block = g) # not user
-    lv.names <- vnames(lavpartable, "lv", block = g)
+    ov.names <- lav_partable_vnames(lavpartable, "ov", block = g) # not user
+    lv.names <- lav_partable_vnames(lavpartable, "lv", block = g)
 
     if (is.null(ov.var)) {
       OV2 <- VY[[g]]
@@ -395,8 +395,8 @@ lav_standardize_all <- function(lavobject = NULL,
 
     if (lavmodel@conditional.x) {
       # extend OV with ov.names.x
-      ov.names.x <- vnames(lavpartable, "ov.x", block = g)
-      ov.names.nox <- vnames(lavpartable, "ov.nox", block = g)
+      ov.names.x <- lav_partable_vnames(lavpartable, "ov.x", block = g)
+      ov.names.nox <- lav_partable_vnames(lavpartable, "ov.nox", block = g)
       ov.names <- c(ov.names.nox, ov.names.x)
       OV2 <- c(OV2, diag(cov.x[[g]]))
       OV <- c(OV, sqrt(diag(cov.x[[g]])))
@@ -607,10 +607,10 @@ lav_standardize_all_nox <- function(lavobject = NULL,
 
 
   for (g in 1:lavmodel@nblocks) {
-    ov.names <- vnames(lavpartable, "ov", block = g)
-    ov.names.x <- vnames(lavpartable, "ov.x", block = g)
-    ov.names.nox <- vnames(lavpartable, "ov.nox", block = g)
-    lv.names <- vnames(lavpartable, "lv", block = g)
+    ov.names <- lav_partable_vnames(lavpartable, "ov", block = g)
+    ov.names.x <- lav_partable_vnames(lavpartable, "ov.x", block = g)
+    ov.names.nox <- lav_partable_vnames(lavpartable, "ov.nox", block = g)
+    lv.names <- lav_partable_vnames(lavpartable, "lv", block = g)
 
     if (is.null(ov.var)) {
       OV2 <- VY[[g]]
@@ -635,7 +635,7 @@ lav_standardize_all_nox <- function(lavobject = NULL,
 
     if (lavmodel@conditional.x) {
       # extend OV with ov.names.x
-      ov.names.x <- vnames(lavpartable, "ov.x", block = g)
+      ov.names.x <- lav_partable_vnames(lavpartable, "ov.x", block = g)
       ov.names <- c(ov.names.nox, ov.names.x)
       OV2 <- c(OV2, diag(cov.x[[g]]))
       OV <- c(OV, sqrt(diag(cov.x[[g]])))
@@ -803,8 +803,8 @@ lav_unstandardize_ov <- function(partable, ov.var = NULL, cov.std = TRUE) {
   }
 
   for (g in 1:nblocks) {
-    ov.names <- vnames(partable, "ov", block = g) # not user
-    lv.names <- vnames(partable, "lv", block = g)
+    ov.names <- lav_partable_vnames(partable, "ov", block = g) # not user
+    lv.names <- lav_partable_vnames(partable, "lv", block = g)
 
     OV <- sqrt(ov.var[[g]])
 

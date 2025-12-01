@@ -1,7 +1,7 @@
 # export go BUGS syntax
 
 # we assume that N1, N2, ... are in data
-lav2bugs <- function(partable, as.function. = FALSE) {
+lav_export_bugs <- function(partable, as.function. = FALSE) {
   # get parameter table attributes
   pta <- lav_partable_attributes(partable = partable)
   vnames <- pta$vnames
@@ -10,7 +10,7 @@ lav2bugs <- function(partable, as.function. = FALSE) {
   nfac <- pta$nfac
 
   # sanity check
-  partable <- lav2check(partable)
+  partable <- lav_export_check(partable)
 
   # tabs
   t1 <- paste(rep(" ", 2L), collapse = "")

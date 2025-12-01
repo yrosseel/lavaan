@@ -198,7 +198,7 @@ lavaanList <- function(model = NULL, # model
     # - starting values will be different
     # - ov.x variances/covariances
     # FIXME: can we not make the changes internally?
-    # if(lavmodel@fixed.x && length(vnames(lavpartable, "ov.x")) > 0L) {
+    # if(lavmodel@fixed.x && length(lav_partable_vnames(lavpartable, "ov.x")) > 0L) {
     # for(g in 1:FIT@Data@ngroups) {
     #
     # }

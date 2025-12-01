@@ -142,11 +142,11 @@ simulateData <- function( # user-specified model
     # so there is no need to make a distinction between numeric/ordered
     # here??
     ngroups <- lav_partable_ngroups(lav)
-    ov.names <- vnames(lav, "ov")
-    ov.nox <- vnames(lav, "ov.nox")
-    lv.names <- vnames(lav, "lv")
-    lv.y <- vnames(lav, "lv.y")
-    lv.nox <- vnames(lav, "lv.nox")
+    ov.names <- lav_partable_vnames(lav, "ov")
+    ov.nox <- lav_partable_vnames(lav, "ov.nox")
+    lv.names <- lav_partable_vnames(lav, "lv")
+    lv.y <- lav_partable_vnames(lav, "lv.y")
+    lv.nox <- lav_partable_vnames(lav, "lv.nox")
     ov.var.idx <- which(lav$op == "~~" & lav$lhs %in% ov.nox &
       lav$rhs == lav$lhs)
     lv.var.idx <- which(lav$op == "~~" & lav$lhs %in% lv.nox &
@@ -321,9 +321,9 @@ simulateData <- function( # user-specified model
     }
 
     # any categorical variables?
-    ov.ord <- vnames(lav, type = "ov.ord", group = group.values[g])
+    ov.ord <- lav_partable_vnames(lav, type = "ov.ord", group = group.values[g])
     if (length(ov.ord) > 0L) {
-      ov.names <- vnames(lav, type = "ov", group = group.values[g])
+      ov.names <- lav_partable_vnames(lav, type = "ov", group = group.values[g])
       # use thresholds to cut
       for (o in ov.ord) {
         o.idx <- which(o == ov.names)
@@ -353,7 +353,7 @@ simulateData <- function( # user-specified model
       }
       Data$group <- rep(1:ngroups, times = sample.nobs)
     }
-    var.names <- vnames(fit@ParTable, type = "ov", group = 1L)
+    var.names <- lav_partable_vnames(fit@ParTable, type = "ov", group = 1L)
     if (ngroups > 1L) var.names <- c(var.names, "group")
     names(Data) <- var.names
     if (return.fit) {
