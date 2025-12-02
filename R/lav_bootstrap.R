@@ -394,7 +394,7 @@ lav_bootstrap_internal <- function(object = NULL,
 
     # do we need to update Model slot? only if we have fixed exogenous
     # covariates, as their variances/covariances are stored in GLIST
-    if (lavmodel@fixed.x && length(vnames(lavpartable, "ov.x")) > 0L) {
+    if (lavmodel@fixed.x && length(lav_partable_vnames(lavpartable, "ov.x")) > 0L) {
       model.boot <- NULL
     } else {
       model.boot <- lavmodel

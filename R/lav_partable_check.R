@@ -9,12 +9,12 @@ lav_partable_check <- function(partable, categorical = FALSE) {
   }
 
   # get observed/latent variables
-  ov.names <- vnames(partable, "ov.nox") # no need to specify exo??
-  lv.names <- vnames(partable, "lv")
-  lv.names.c <- vnames(partable, "lv.composite")
+  ov.names <- lav_partable_vnames(partable, "ov.nox") # no need to specify exo??
+  lv.names <- lav_partable_vnames(partable, "lv")
+  lv.names.c <- lav_partable_vnames(partable, "lv.composite")
   lv.names.noc <- lv.names[!lv.names %in% lv.names.c]
   all.names <- c(ov.names, lv.names.noc)
-  ov.names.ord <- vnames(partable, "ov.ord")
+  ov.names.ord <- lav_partable_vnames(partable, "ov.ord")
 
   nlevels <- lav_partable_nlevels(partable)
 

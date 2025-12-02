@@ -28,3 +28,5 @@ mplus2lavaan             <- lav_mplus_lavaan
 estfun.lavaan <- lav_scores
 lavScores <- lav_scores
 
+# standardize function names in lav_export.R
+lavExport <- lav_export

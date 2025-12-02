@@ -388,7 +388,7 @@ lav_model <- function(lavpartable = NULL,                          # nolint
   }
 
   # which free parameters are observed variances?
-  ov.names <- vnames(lavpartable, "ov")
+  ov.names <- lav_partable_vnames(lavpartable, "ov")
   x.free.var.idx <- lavpartable$free[lavpartable$free &
     # !duplicated(lavpartable$free) &
     lavpartable$lhs %in% ov.names &

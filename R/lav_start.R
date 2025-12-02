@@ -72,7 +72,7 @@ lav_start <- function(start.method = "default",
       #    start[ which(lavpartable$op == "=~") ] <- 1.0
       # }
       start[which(lavpartable$op == "~*~")] <- 1.0
-      ov.names.ord <- vnames(lavpartable, "ov.ord")
+      ov.names.ord <- lav_partable_vnames(lavpartable, "ov.ord")
       var.idx <- which(lavpartable$op == "~~" &
         lavpartable$lhs == lavpartable$rhs &
         !(lavpartable$lhs %in% ov.names.ord))
@@ -139,7 +139,7 @@ lav_start <- function(start.method = "default",
   }
 
   # 2. (residual) lv variances for latent variables
-  lv.names <- vnames(lavpartable, "lv") # all groups
+  lv.names <- lav_partable_vnames(lavpartable, "lv") # all groups
   lv.var.idx <- which(lavpartable$op == "~~" &
     lavpartable$lhs %in% lv.names &
     lavpartable$lhs == lavpartable$rhs)
@@ -168,21 +168,21 @@ lav_start <- function(start.method = "default",
 
     # info from user model for this group
     if (conditional.x) {
-      ov.names <- vnames(lavpartable, "ov.nox", group = group.values[g])
+      ov.names <- lav_partable_vnames(lavpartable, "ov.nox", group = group.values[g])
     } else {
-      ov.names <- vnames(lavpartable, "ov", group = group.values[g])
+      ov.names <- lav_partable_vnames(lavpartable, "ov", group = group.values[g])
     }
     if (categorical) {
-      ov.names.num <- vnames(lavpartable, "ov.num", group = group.values[g])
-      ov.names.ord <- vnames(lavpartable, "ov.ord", group = group.values[g])
+      ov.names.num <- lav_partable_vnames(lavpartable, "ov.num", group = group.values[g])
+      ov.names.ord <- lav_partable_vnames(lavpartable, "ov.ord", group = group.values[g])
     } else {
       ov.names.num <- ov.names
     }
-    lv.names <- vnames(lavpartable, "lv", group = group.values[g])
-    lv.names.efa <- vnames(lavpartable, "lv.efa", group = group.values[g])
-    ov.names.x <- vnames(lavpartable, "ov.x", group = group.values[g])
-    ov.ind.c <- vnames(lavpartable, "ov.cind", group = group.values[g])
-    lv.names.c <- vnames(lavpartable, "lv.composite", group = group.values[g])
+    lv.names <- lav_partable_vnames(lavpartable, "lv", group = group.values[g])
+    lv.names.efa <- lav_partable_vnames(lavpartable, "lv.efa", group = group.values[g])
+    ov.names.x <- lav_partable_vnames(lavpartable, "ov.x", group = group.values[g])
+    ov.ind.c <- lav_partable_vnames(lavpartable, "ov.cind", group = group.values[g])
+    lv.names.c <- lav_partable_vnames(lavpartable, "lv.composite", group = group.values[g])
 
     # just for the nlevels >1 case
     ov.names <- unique(unlist(ov.names))
@@ -532,7 +532,7 @@ lav_start <- function(start.method = "default",
       th.names.sample <-
         lavsamplestats@th.names[[g]][lavsamplestats@th.idx[[g]] > 0L]
       # th.names.sample should identical to
-      # vnames(lavpartable, "th", group = group.values[g])
+      # lav_partable_vnames(lavpartable, "th", group = group.values[g])
       if (conditional.x && nlevels == 1L) {
         th.values <-
           lavsamplestats@res.th[[g]][lavsamplestats@th.idx[[g]] > 0L]
@@ -592,7 +592,7 @@ lav_start <- function(start.method = "default",
     }
 
     # 6b. exogenous lv variances if single indicator -- new in 0.5-21
-    lv.x <- vnames(lavpartable, "lv.x", group = group.values[g])
+    lv.x <- lav_partable_vnames(lavpartable, "lv.x", group = group.values[g])
     # FIXME: also for multilevel?
     lv.x <- unique(unlist(lv.x))
     if (length(lv.x) > 0L) {
@@ -690,8 +690,8 @@ lav_start <- function(start.method = "default",
     }
 
     #  # 8 latent variances (new in 0.6-2)
-    #  lv.names.y <- vnames(lavpartable, "lv.y", group = group.values[g])
-    #  lv.names.x <- vnames(lavpartable, "lv.x", group = group.values[g])
+    #  lv.names.y <- lav_partable_vnames(lavpartable, "lv.y", group = group.values[g])
+    #  lv.names.x <- lav_partable_vnames(lavpartable, "lv.x", group = group.values[g])
     #  # multilevel? take first level only
     #  if(is.list(lv.names.y)) {
     #      lv.names.y <- unlist(lv.names.y) # for now

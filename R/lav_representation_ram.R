@@ -53,13 +53,13 @@ lav_ram <- function(partable = NULL,
 
   for (g in 1:nblocks) {
     # info from user model per block
-    ov.names <- vnames(partable, "ov", block = g)
+    ov.names <- lav_partable_vnames(partable, "ov", block = g)
     nvar <- length(ov.names)
     ov.idx[[g]] <- seq_len(nvar)
     ov.dummy.names.nox[[g]] <- character(0)
     ov.dummy.names.x[[g]] <- character(0)
 
-    lv.names <- vnames(partable, "lv", block = g)
+    lv.names <- lav_partable_vnames(partable, "lv", block = g)
     both.names <- c(ov.names, lv.names)
     nboth <- length(both.names)
 

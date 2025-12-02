@@ -1,11 +1,13 @@
-\name{lavExport}
+\name{lav_export}
+\alias{lav_export}
 \alias{lavExport}
 \title{lavaan Export}
 \description{
 Export a fitted lavaan object to an external program.}
 \usage{
-
-lavExport(object, target = "lavaan", prefix = "sem", dir.name = "lavExport", 
+lav_export(object, target = "lavaan", prefix = "sem", dir.name = "lav_export", 
+          export = TRUE)
+lavExport(object, target = "lavaan", prefix = "sem", dir.name = "lav_export", 
           export = TRUE)
 }
 \arguments{
@@ -22,7 +24,7 @@ input files will be written.}
 character string.}
 }
 \value{
-If \code{export = TRUE}, a directory (called \code{lavExport} by default) will
+If \code{export = TRUE}, a directory (called \code{lav_export} by default) will
 be created, typically containing a data file, and an input file so that the
 same analysis can be run using an external program. If \code{export = FALSE}, a
 character string containing the model syntax only for the target program.
@@ -41,6 +43,6 @@ HS.model <- ' visual  =~ x1 + x2 + x3
               speed   =~ x7 + x8 + x9 '
 
 fit <- cfa(HS.model, data=HolzingerSwineford1939)
-out <- lavExport(fit, target = "Mplus", export=FALSE)
+out <- lav_export(fit, target = "Mplus", export=FALSE)
 cat(out)
 }
