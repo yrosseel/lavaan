@@ -67,7 +67,7 @@ lavTablesFitCp <- function(object, alpha = 0.05) {
   out
 }
 
-print.lavaan.tables.fit.Cp <- function(x, ...) {
+lav_tables_fit_cp_print <- function(x, ...) {
   cat("CP-values that are significant at a Bonferroni adjusted level of significance\n")
   tmp <- x
   class(tmp) <- c("lavaan.data.frame", "data.frame")
@@ -135,7 +135,7 @@ lavTablesFitCf <- function(object) {
   CF
 }
 
-print.lavaan.tables.fit.Cf <- function(x, ...) {
+lav_tables_fit_cf_print <- function(x, ...) {
   cat("Total response patterns: ", attr(x, "rpat.total"), "\n")
   cat("Observed response patterns: ", attr(x, "rpat.observed"), "\n")
   cat("Empty response patterns: ", attr(x, "rpat.empty"), "\n")
@@ -184,7 +184,7 @@ lavTablesFitCm <- function(object) {
 }
 
 
-print.lavaan.tables.fit.Cm <- function(x, ...) {
+lav_tables_fit_cm_print <- function(x, ...) {
   # cat("The percentage of empty cells\n") #weet niet goed want FML werkt niet
   # cat("CM results may be a little biased because of large numbers of empty cells in the multivariate contingency table\n")
   cat("Cm-value, overall:\n")

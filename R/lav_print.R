@@ -5,7 +5,7 @@
 ##
 ## perhaps we should add 0.0005 or something to avoid this?
 
-print.lavaan.data.frame <- function(x, ..., nd = 3L) {
+lav_dataframe_print <- function(x, ..., nd = 3L) {
   ROW.NAMES <- rownames(x)
   y <- as.data.frame(lapply(x, function(x) {
     if (is.numeric(x)) round(x, nd) else x
@@ -25,7 +25,7 @@ print.lavaan.data.frame <- function(x, ..., nd = 3L) {
   invisible(x)
 }
 
-print.lavaan.list <- function(x, ...) {
+lav_lavaanlist_print <- function(x, ...) {
   y <- unclass(x)
   attr(y, "header") <- NULL
 
@@ -45,7 +45,7 @@ print.lavaan.list <- function(x, ...) {
 
 
 # prints only lower triangle of a symmetric matrix
-print.lavaan.matrix.symmetric <- function(x, ..., nd = 3L, shift = 0L,
+lav_matrix_symmetric_print <- function(x, ..., nd = 3L, shift = 0L,
                                           diag.na.dot = TRUE) {
   # print only lower triangle of a symmetric matrix
   # this function was inspired by the `print.correlation' function
@@ -58,7 +58,7 @@ print.lavaan.matrix.symmetric <- function(x, ..., nd = 3L, shift = 0L,
   y[ll] <- format(round(x[ll], digits = nd))
   y[!ll] <- ""
   if (diag.na.dot) {
-    # print a "." instead of NA on the main diagonal (eg summary.efaList)
+    # print a "." instead of NA on the main diagonal (eg lav_efalist_summary)
     diag.idx <- lav_matrix_diag_idx(ncol(x))
     tmp <- x[diag.idx]
     if (all(is.na(tmp))) {
@@ -91,7 +91,7 @@ print.lavaan.matrix.symmetric <- function(x, ..., nd = 3L, shift = 0L,
 }
 
 
-print.lavaan.matrix <- function(x, ..., nd = 3L, shift = 0L) {
+lav_matrix_print <- function(x, ..., nd = 3L, shift = 0L) {
   x <- as.matrix(x) # just in case
   y <- unclass(x)
   attributes(y)[c("header", "footer")] <- NULL
@@ -119,7 +119,7 @@ print.lavaan.matrix <- function(x, ..., nd = 3L, shift = 0L) {
   invisible(x)
 }
 
-print.lavaan.vector <- function(x, ..., nd = 3L, shift = 0L) {
+lav_vector_print <- function(x, ..., nd = 3L, shift = 0L) {
   y <- unclass(x)
   attributes(y)[c("header", "footer")] <- NULL
   # if(!is.null(names(x))) {
@@ -150,7 +150,7 @@ print.lavaan.character <- function(x, ...) {
   invisible(x)
 }
 
-print.lavaan.parameterEstimates <- function(x, ..., nd = 3L) {
+lav_parameterestimates_print <- function(x, ..., nd = 3L) {
   # format for numeric values
   num.format <- paste("%", max(8L, nd + 5L), ".", nd, "f", sep = "")
   int.format <- paste("%", max(8L, nd + 5L), "d", sep = "")
@@ -897,7 +897,7 @@ lav_print_format_constraints <- function(lhs, op, rhs, nd) {
   NAMES
 }
 
-summary.lavaan.fsr <- function(object, ...) {
+lav_fsr_summary <- function(object, ...) {
   dotdotdot <- list(...)
   if (!is.null(dotdotdot$nd)) {
     nd <- dotdotdot$nd
@@ -905,10 +905,10 @@ summary.lavaan.fsr <- function(object, ...) {
     nd <- 3L
   }
 
-  print.lavaan.fsr(x = object, nd = nd, mm = TRUE, struc = TRUE)
+  lav_fsr_print(x = object, nd = nd, mm = TRUE, struc = TRUE)
 }
 
-print.lavaan.fsr <- function(x, ..., nd = 3L, mm = FALSE, struc = FALSE) {
+lav_fsr_print <- function(x, ..., nd = 3L, mm = FALSE, struc = FALSE) {
   y <- unclass(x)
 
   # print header
@@ -938,7 +938,7 @@ print.lavaan.fsr <- function(x, ..., nd = 3L, mm = FALSE, struc = FALSE) {
         ci = FALSE,
         output = "text", header = TRUE
       )
-      print.lavaan.parameterEstimates(PE, ..., nd = nd)
+      lav_parameterestimates_print(PE, ..., nd = nd)
       cat("\n")
     }
   }
@@ -953,7 +953,7 @@ print.lavaan.fsr <- function(x, ..., nd = 3L, mm = FALSE, struc = FALSE) {
     ))
     FIT <- fitMeasures(y$STRUC.FIT, fit.measures = "default")
     if (FIT["df"] > 0) {
-      print.lavaan.fitMeasures(FIT, add.h0 = FALSE)
+      lav_fitmeasures_print(FIT, add.h0 = FALSE)
     }
   }
   PE <- parameterEstimates(y$STRUC.FIT,
@@ -963,13 +963,13 @@ print.lavaan.fsr <- function(x, ..., nd = 3L, mm = FALSE, struc = FALSE) {
     remove.nonfree = FALSE, remove.unused = TRUE,
     output = "text", header = TRUE
   )
-  print.lavaan.parameterEstimates(PE, ..., nd = nd)
+  lav_parameterestimates_print(PE, ..., nd = nd)
 
   invisible(y)
 }
 
 # new in 0.6-12
-print.lavaan.summary <- function(x, ..., nd = 3L) {
+lav_summary_print <- function(x, ..., nd = 3L) {
   y <- unclass(x) # change to ordinary list
 
   # get nd, if it is stored as an attribute
@@ -1332,7 +1332,7 @@ print.lavaan.summary <- function(x, ..., nd = 3L) {
     if (!is.null(attr(y$fit, "add.h0"))) {
       add.h0 <- isTRUE(attr(y$fit, "add.h0"))
     }
-    print.lavaan.fitMeasures(y$fit, nd = nd, add.h0 = add.h0)
+    lav_fitmeasures_print(y$fit, nd = nd, add.h0 = add.h0)
   }
 
   # efa output

@@ -1,7 +1,7 @@
 # user-visible function to extract the fit measures
 # output can be 1) vector (default), 2) list, 3) matrix, or 4) text
 # in the latter case, the result will be of class "lavaan.fitMeasures"
-# for which the printing is done by print.lavaan.fitMeasures()
+# for which the printing is done by lav_fitmeasures_print()
 
 # new in 0.6-13:
 # the big families are computed in dedicated functions:
@@ -77,7 +77,7 @@ setMethod(
 )
 
 # S3 method for efaList
-fitMeasures.efaList <- fitmeasures.efaList <- function(
+lav_efalist_fitmeasures <- function(
     object,
     fit.measures = "all",
     baseline.model = NULL, h1.model = NULL,
@@ -684,7 +684,7 @@ lav_fit_measures <- function(object, fit.measures = "all",
 }
 
 # print a nice summary of the fit measures
-print.lavaan.fitMeasures <- function(x, ..., nd = 3L, add.h0 = TRUE) {
+lav_fitmeasures_print <- function(x, ..., nd = 3L, add.h0 = TRUE) {
   names.x <- names(x)
 
   # scaled?

@@ -86,7 +86,7 @@ efa(data = NULL, nfactors = 1L, sample.cov = NULL, sample.nobs = NULL,
   also work on \code{efaList} objects.
 }
 \seealso{
-    \code{\link{summary.efaList}} for a summary method if the output is
+    \code{\link{lav_efalist_summary}} for a summary method if the output is
     of class \code{efaList}.  
 }
 \examples{

@@ -1,8 +1,8 @@
 # summary information for a single (lavaan) efa model
 #
 # workflow:
-# - summary() first calls summary.efaList()
-# - for each model, summary.efaList() calls lav_object_summary() with
+# - summary() first calls lav_efalist_summary()
+# - for each model, lav_efalist_summary() calls lav_object_summary() with
 #   efa = TRUE and efa.args
 # - for each model, lav_object_summary() calls
 #   lav_efa_summary(object, efa.args = efa.args) to populate the $efa slot
@@ -319,7 +319,7 @@ lav_efa_summary <- function(object,
 
 
 # summary efaList
-summary.efaList <- function(object, nd = 3L, cutoff = 0.3, dot.cutoff = 0.1,
+lav_efalist_summary <- function(object, nd = 3L, cutoff = 0.3, dot.cutoff = 0.1,
                             alpha.level = 0.01,
                             lambda = TRUE, theta = TRUE, psi = TRUE,
                             fit.table = TRUE, fs.determinacy = FALSE,

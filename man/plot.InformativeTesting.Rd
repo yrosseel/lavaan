@@ -1,6 +1,6 @@
 \name{InformativeTesting methods}
-\alias{print.InformativeTesting}
-\alias{plot.InformativeTesting}
+\alias{lav_informativetesting_print}
+\alias{lav_informativetesting_plot}
 \title{Methods for output InformativeTesting()}
 \description{The print function shows the results of hypothesis tests
 Type A and Type B. The plot function plots the distributions of 
@@ -8,9 +8,9 @@ bootstrapped LRT values and plug-in p-values.}
 
 \usage{
     
-\method{print}{InformativeTesting}(x, digits = max(3, getOption("digits") - 3), ...)
+lav_informativetesting_print(x, digits = max(3, getOption("digits") - 3), ...)
   
-\method{plot}{InformativeTesting}(x, ..., type = c("lr","ppv"), 
+lav_informativetesting_plot(x, ..., type = c("lr","ppv"), 
    main = "main", xlab = "xlabel", ylab = "Frequency", freq = TRUE, 
    breaks = 15, cex.main = 1, cex.lab = 1, cex.axis = 1, 
    col = "grey", border = par("fg"), vline = TRUE, 

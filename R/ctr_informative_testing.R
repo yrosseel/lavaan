@@ -102,7 +102,7 @@ InformativeTesting <- function(model = NULL, data, constraints = NULL,
 }
 
 
-print.InformativeTesting <- function(x, digits = max(3, getOption("digits") - 3), ...) {
+lav_informativetesting_print <- function(x, digits = max(3, getOption("digits") - 3), ...) {
   object <- x
   cat("\nInformativeTesting: Order/Inequality Constrained Hypothesis Testing:\n\n")
   cat("  Variable names in model         :", unlist(object$fit.A1@Data@ov.names[1]), "\n")
@@ -243,7 +243,7 @@ print.InformativeTesting <- function(x, digits = max(3, getOption("digits") - 3)
 }
 
 
-plot.InformativeTesting <- function(x, ...,
+lav_informativetesting_plot <- function(x, ...,
                                     type = c("lr", "ppv"),
                                     main = "main",
                                     xlab = "xlabel",
