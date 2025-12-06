@@ -1,26 +1,24 @@
-\name{summary.efaList}
-\alias{summary.efaList}
-\alias{efaList}
-\alias{print.efaList.summary}
+\name{lav_efalist_summary}
+\alias{lav_efalist_summary}
+\alias{lav_efalist_summary_print}
 \title{Summarizing EFA Fits}
 \description{
 S3 summary and print methods for class \code{efaList}.}
 \usage{
-\method{summary}{efaList}(object,
+lav_efalist_summary(object,
         nd = 3L, cutoff = 0.3, dot.cutoff = 0.1, alpha.level = 0.01,
         lambda = TRUE, theta = TRUE, psi = TRUE, fit.table = TRUE,
         fs.determinacy = FALSE, eigenvalues = TRUE, sumsq.table = TRUE, 
         lambda.structure = FALSE, se = FALSE, zstat = FALSE,
         pvalue = FALSE, \dots)
-
-\method{print}{efaList.summary}(x, nd = 3L, cutoff = 0.3, dot.cutoff = 0.1,
+lav_efalist_summary_print(x, nd = 3L, cutoff = 0.3, dot.cutoff = 0.1,
                alpha.level = 0.01, \dots)
 }
 \arguments{
 \item{object}{An object of class \code{efaList}, usually, a result of a call
     to \code{\link{efa}} with (the default) \code{output = "efa"}.}
-\item{x}{An object of class \code{summary.efaList}, usually, a result of a 
-    call to \code{summary.efaList}.}
+\item{x}{An object of class \code{lav_efalist_summary}, usually, a result of a 
+    call to \code{lav_efalist_summary}.}
 \item{nd}{Integer. The number of digits that are printed after the decimal 
     point in the output.}
 \item{cutoff}{Numeric. Factor loadings smaller that this value (in absolute
@@ -73,7 +71,7 @@ S3 summary and print methods for class \code{efaList}.}
 \item{...}{Further arguments passed to or from other methods.}
 }
 \value{
-    The function \code{summary.efaList} computes and returns a list of 
+    The function \code{lav_efalist_summary} computes and returns a list of 
     summary statistics for the list of EFA models in \code{object}.
 }
 \examples{

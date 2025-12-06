@@ -1,7 +1,7 @@
 # inspect a fitted lavaan object
 
 # backward compatibility -- wrapper around lavInspect
-inspect.lavaan <- function(object, what = "free", ...) {
+lav_lavaan_inspect <- function(object, what = "free", ...) {
   dotdotdot <- list(...)
   if (length(dotdotdot) > 0L) {
     for (j in seq_along(dotdotdot)) {
@@ -11,7 +11,7 @@ inspect.lavaan <- function(object, what = "free", ...) {
       )
     }
   }
-  lavInspect.lavaan(object              = object,
+  lav_lavaan_lavinspect(object              = object,
     what                   = what,
     add.labels             = TRUE,
     add.class              = TRUE,
@@ -19,21 +19,21 @@ inspect.lavaan <- function(object, what = "free", ...) {
 }
 
 # the `tech' version: no labels, full matrices, ... for further processing
-lavTech.lavaan <- function(object,
+lav_lavaan_lavtech <- function(object,
                            what                   = "free",
                            add.labels             = FALSE,
                            add.class              = FALSE,
                            list.by.group          = FALSE,
                            drop.list.single.group = FALSE) {
 
-  lavInspect.lavaan(object, what = what,
+  lav_lavaan_lavinspect(object, what = what,
     add.labels = add.labels, add.class = add.class,
     list.by.group = list.by.group,
     drop.list.single.group =  drop.list.single.group)
 }
 
 # the `user' version: with defaults for display only
-lavInspect.lavaan <- function(object,                                # nolint
+lav_lavaan_lavinspect <- function(object,                                # nolint
                               what                   = "free",
                               add.labels             = TRUE,
                               add.class              = TRUE,

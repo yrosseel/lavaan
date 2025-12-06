@@ -1,6 +1,6 @@
 # inspect a lavaanList object
 
-inspect.lavaanList <- function(object, what = "free", ...) {
+lav_lavaanlist_inspect <- function(object, what = "free", ...) {
   dotdotdot <- list(...)
   if (length(dotdotdot) > 0L) {
     for (j in seq_along(dotdotdot)) {
@@ -20,7 +20,7 @@ inspect.lavaanList <- function(object, what = "free", ...) {
 }
 
 # the `tech' version: no labels, full matrices, ... for further processing
-lavTech.lavaanList <- function(object,
+lav_lavaanlist_lavtech <- function(object,
                                what = "free",
                                add.labels = FALSE,
                                add.class = FALSE,
@@ -49,7 +49,7 @@ lavListTech <- function(object,
 }
 
 # just in case some uses lavInspect on a lavaanList object
-lavInspect.lavaanList <- function(object,
+lav_lavaanlist_lavinspect <- function(object,
                                   what = "free",
                                   add.labels = TRUE,
                                   add.class = TRUE,
@@ -84,21 +84,21 @@ lavListInspect <- function(object,
 
   #### model matrices, with different contents ####
   if (what == "free") {
-    lav_lavaanList_inspect_modelmatrices(object,
+    lav_lavaanlist_inspect_modelmatrices(object,
       what = "free",
       type = "free", add.labels = add.labels, add.class = add.class,
       list.by.group = list.by.group,
       drop.list.single.group = drop.list.single.group
     )
   } else if (what == "partable" || what == "user") {
-    lav_lavaanList_inspect_modelmatrices(object,
+    lav_lavaanlist_inspect_modelmatrices(object,
       what = "free",
       type = "partable", add.labels = add.labels, add.class = add.class,
       list.by.group = list.by.group,
       drop.list.single.group = drop.list.single.group
     )
   } else if (what == "start" || what == "starting.values") {
-    lav_lavaanList_inspect_modelmatrices(object,
+    lav_lavaanlist_inspect_modelmatrices(object,
       what = "start",
       add.labels = add.labels, add.class = add.class,
       list.by.group = list.by.group,
@@ -182,7 +182,7 @@ lavListInspect <- function(object,
 
     #### from the model object (but stable) over datasets? ####
   } else if (what == "th.idx") {
-    lav_lavaanList_inspect_th_idx(object,
+    lav_lavaanlist_inspect_th_idx(object,
       add.labels = add.labels, add.class = add.class,
       drop.list.single.group = drop.list.single.group
     )
@@ -214,7 +214,7 @@ lavListInspect <- function(object,
 }
 
 
-lav_lavaanList_inspect_start <- function(object) {
+lav_lavaanlist_inspect_start <- function(object) {
   # from 0.5-19, they are in the partable
   if (!is.null(object@ParTable$start)) {
     OUT <- object@ParTable$start
@@ -226,7 +226,7 @@ lav_lavaanList_inspect_start <- function(object) {
   OUT
 }
 
-lav_lavaanList_inspect_modelmatrices <- function(
+lav_lavaanlist_inspect_modelmatrices <- function(
     object, what = "free",
     type = "free", add.labels = FALSE, add.class = FALSE,
     list.by.group = FALSE,
@@ -259,7 +259,7 @@ lav_lavaanList_inspect_modelmatrices <- function(
       # fill in starting values
       m.user.idx <- object@Model@m.user.idx[[mm]]
       x.user.idx <- object@Model@x.user.idx[[mm]]
-      START <- lav_lavaanList_inspect_start(object)
+      START <- lav_lavaanlist_inspect_start(object)
       GLIST[[mm]][m.user.idx] <- START[x.user.idx]
     }
 
@@ -362,7 +362,7 @@ lav_lavaanList_inspect_modelmatrices <- function(
   OUT
 }
 
-lav_lavaanList_inspect_th_idx <- function(
+lav_lavaanlist_inspect_th_idx <- function(
     object,
     add.labels = FALSE, add.class = FALSE, drop.list.single.group = FALSE) {
   # thresholds idx -- usually, we get it from SampleStats

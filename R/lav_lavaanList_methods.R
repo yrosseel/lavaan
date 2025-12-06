@@ -5,11 +5,11 @@ setMethod(
     # check object
     object <- lav_object_check_version(object)
     # show only basic information
-    lav_lavaanList_short_summary(object, print = TRUE)
+    lav_lavaanlist_short_summary(object, print = TRUE)
   }
 )
 
-lav_lavaanList_short_summary <- function(object, print = TRUE) {
+lav_lavaanlist_short_summary <- function(object, print = TRUE) {
   txt <- sprintf(
     "lavaanList (%s) -- based on %d datasets (%d converged)\n",
     object@version,
@@ -46,14 +46,14 @@ setMethod(
         )
       }
     }
-    lav_lavaanList_summary(object,
+    lav_lavaanlist_summary(object,
       header = header, estimates = estimates,
       print = print, nd = nd, simulate.args = simulate.args
     )
   }
 )
 
-lav_lavaanList_summary <- function(object,
+lav_lavaanlist_summary <- function(object,
                                    header = TRUE,
                                    estimates = TRUE,
                                    simulate.args = list(est.bias = TRUE,
@@ -72,11 +72,11 @@ lav_lavaanList_summary <- function(object,
   out <- list()
 
   if (header) {
-    out$header <- lav_lavaanList_short_summary(object, print = print)
+    out$header <- lav_lavaanlist_short_summary(object, print = print)
 
     # if(print) {
     #    # show only basic information
-    #    lav_lavaanList_short_summary(object)
+    #    lav_lavaanlist_short_summary(object)
     # }
   }
   if (print) {
@@ -119,11 +119,11 @@ lav_lavaanList_summary <- function(object,
       nel <- length(pe$est.true)
 
       # always compute EST
-      EST <- lav_lavaanList_partable(object, what = "est", type = "all")
+      EST <- lav_lavaanlist_partable(object, what = "est", type = "all")
 
       # sometimes compute SE
       if (sim.args$se.bias || sim.args$prop.sig || sim.args$coverage) {
-        SE <- lav_lavaanList_partable(object, what = "se", type = "all")
+        SE <- lav_lavaanlist_partable(object, what = "se", type = "all")
       }
 
       # est.bias?
@@ -205,13 +205,13 @@ lav_lavaanList_summary <- function(object,
       # scenario 2: bootstrap
     } else if (!is.null(object@meta$lavBootstrap)) {
       # print the average value for est
-      EST <- lav_lavaanList_partable(object, what = "est", type = "all")
+      EST <- lav_lavaanlist_partable(object, what = "est", type = "all")
       pe$est.ave <- rowMeans(EST, na.rm = TRUE)
 
       # scenario 3: multiple imputation
     } else if (!is.null(object@meta$lavMultipleImputation)) {
       # pool est: take the mean
-      EST <- lav_lavaanList_partable(object, what = "est", type = "all")
+      EST <- lav_lavaanlist_partable(object, what = "est", type = "all")
       m <- NCOL(EST)
       pe$est <- rowMeans(EST, na.rm = TRUE)
 
@@ -224,7 +224,7 @@ lav_lavaanList_summary <- function(object,
       B.var <- (est2 - est1 * est1) * m / (m - 1)
 
       # within-imputation variance
-      SE <- lav_lavaanList_partable(object, what = "se", type = "all")
+      SE <- lav_lavaanlist_partable(object, what = "se", type = "all")
       W.var <- rowMeans(SE^2, na.rm = TRUE)
 
       # total variance: T.var = W.var + B.var + B.var/m
@@ -241,7 +241,7 @@ lav_lavaanList_summary <- function(object,
       # scenario 4: multiple groups/sets
     } else if (!is.null(object@meta$lavMultipleGroups)) {
       # show individual estimates, for each group
-      EST <- lav_lavaanList_partable(object, what = "est", type = "all")
+      EST <- lav_lavaanlist_partable(object, what = "est", type = "all")
       EST <- as.list(as.data.frame(EST))
       ngroups <- length(EST)
       names(EST) <- object@meta$group.label
@@ -255,7 +255,7 @@ lav_lavaanList_summary <- function(object,
     # scenario 5: just a bunch of fits, using different datasets
     else {
       # print the average value for est
-      EST <- lav_lavaanList_partable(object, what = "est", type = "all")
+      EST <- lav_lavaanlist_partable(object, what = "est", type = "all")
       pe$est.ave <- rowMeans(EST, na.rm = TRUE)
 
       # more?
@@ -295,14 +295,14 @@ setMethod(
         )
       }
     }
-    lav_lavaanList_partable(
+    lav_lavaanlist_partable(
       object = object, what = "est", type = type,
       labels = labels
     )
   }
 )
 
-lav_lavaanList_partable <- function(object, what = "est",
+lav_lavaanlist_partable <- function(object, what = "est",
                                     type = "free", labels = TRUE) {
   # check object
   object <- lav_object_check_version(object)

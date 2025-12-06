@@ -172,7 +172,7 @@ the independence model) (if available).}
       in the model are printed.
       If \code{efa = TRUE}, EFA related information is printed. The related
       \code{efa.args} list allows to set options related to the EFA output.
-      See \code{\link{summary.efaList}} for more details.
+      See \code{\link{lav_efalist_summary}} for more details.
       If \code{modindices = TRUE}, modification indices
       are printed for all fixed parameters.
       The argument \code{nd} determines the number of digits after the

@@ -5,7 +5,7 @@
 # - here, we only collect the necessary ingredients, and store them in a
 #   a list
 # - the result is a S3 class lavaan.summary
-# - the actual printing is done by print.lavaan.summary (see lav_print.R)
+# - the actual printing is done by lav_summary_print (see lav_print.R)
 
 # YR 26 July 2022: add fm.args= argument to change the way (some) fit measures
 #                  are computed

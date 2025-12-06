@@ -32,7 +32,7 @@ setMethod(
 )
 
 # efaList version
-predict.efaList <- function(object, ...) {
+lav_efalist_predict <- function(object, ...) {
   # kill object$loadings if present
   object[["loadings"]] <- NULL
 

@@ -1,5 +1,5 @@
 # print only (standardized) loadings
-print.lavaan.efa <- function(x, nd = 3L, cutoff = 0.3,
+lav_efa_print <- function(x, nd = 3L, cutoff = 0.3,
                              dot.cutoff = 0.1, alpha.level = 0.01, ...) {
   # unclass
   y <- unclass(x)
@@ -29,7 +29,7 @@ print.lavaan.efa <- function(x, nd = 3L, cutoff = 0.3,
 }
 
 # print efaList
-print.efaList <- function(x, nd = 3L, cutoff = 0.3,
+lav_efalist_print <- function(x, nd = 3L, cutoff = 0.3,
                           dot.cutoff = 0.1, alpha.level = 0.01, ...) {
   # unclass
   y <- unclass(x)
@@ -58,7 +58,7 @@ print.efaList <- function(x, nd = 3L, cutoff = 0.3,
         pvalue           = FALSE
       )
     )
-    RES[[ff]] <- print.lavaan.efa(res,
+    RES[[ff]] <- lav_efa_print(res,
       nd = nd, cutoff = cutoff,
       dot.cutoff = dot.cutoff,
       alpha.level = alpha.level, ...
@@ -70,7 +70,7 @@ print.efaList <- function(x, nd = 3L, cutoff = 0.3,
 
 
 # print summary efaList
-print.efaList.summary <- function(x, nd = 3L, cutoff = 0.3,
+lav_efalist_summary_print <- function(x, nd = 3L, cutoff = 0.3,
                                   dot.cutoff = 0.1, alpha.level = 0.01,
                                   ...) {
   # unclass
@@ -260,7 +260,7 @@ print.efaList.summary <- function(x, nd = 3L, cutoff = 0.3,
       }
       cat("Number of factors: ", nfactors[f], "\n")
     }
-    # print.lavaan.summary() prints the $efa element (only) or res
+    # lav_summary_print() prints the $efa element (only) or res
     print(res)
   }
 
