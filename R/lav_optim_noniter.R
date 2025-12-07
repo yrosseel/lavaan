@@ -32,7 +32,7 @@ lav_optim_noniter <- function(lavmodel = NULL, lavsamplestats = NULL,
   }
 
   # no support (yet) for inequality constraints
-  if (!is.null(body(lavmodel@cin.function))) {
+  if (!lavmodel@cin.simple.only && !is.null(body(lavmodel@cin.function))) {
     lav_msg_stop(gettext(
     "inequality constraints not supported (yet) with optim.method = 'NONITER'."
     ))

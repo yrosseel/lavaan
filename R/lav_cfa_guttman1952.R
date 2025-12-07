@@ -147,11 +147,10 @@ lav_cfa_guttman1952 <- function(S,
     }
   } else {
     # default, if no (in)equality constraints
-
-    YS.COR0 <- YS.COR
-    YS.COR0[t(B) != 1] <- 0
-
-    LAMBDA <- t(YS.COR0)
+    LAMBDA <- t(solve(PHI, YS.COR)) # = unconstrained EFA version
+    #YS.COR0 <- YS.COR
+    #YS.COR0[t(B) != 1] <- 0
+    #LAMBDA <- t(YS.COR0)
   }
 
   # rescale LAMBDA, so that 'marker' indicator == 1
@@ -206,6 +205,11 @@ lav_cfa_guttman1952_internal <- function(lavobject = NULL, # convenience
   if (is.null(lavpta)) {
     lavpta <- lav_partable_attributes(lavpartable)
     lavpartable <- lav_partable_set_cache(lavpartable, lavpta)
+  }
+
+  if (missing(zero.after.efa) &&
+    !is.null(lavoptions$estimator.args$zero.after.efa)) {
+    zero.after.efa <- lavoptions$estimator.args$zero.after.efa
   }
 
   if (missing(psi.mapping) &&

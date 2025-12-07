@@ -543,10 +543,14 @@ lav_options_est_fabin <- function(opt) {
   if (lav_options_estimatorgroup(opt$estimator) == "MGM") {
     if (is.null(opt$estimator.args)) {
       opt$estimator.args <- list(
+        zero.after.efa = TRUE,
         psi.mapping = FALSE,
         quadprog = FALSE
       )
     } else {
+      if (is.null(opt$estimator.args$zero.after.efa)) {
+        opt$estimator.args$zero.after.efa <- TRUE
+      }
       if (is.null(opt$estimator.args$psi.mapping)) {
         opt$estimator.args$psi.mapping <- FALSE
       }
