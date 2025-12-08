@@ -52,7 +52,7 @@ edges in the diagram.
 This function \strong{tries} to arrange the nodes and anchor points for the edges in
 a way that gives a not-to-large diagram and taking into account the \code{voorkeur}
 column in the input nodes data.frame. If the result is not what you want, you can
-take a look at the plot via \code{lav_plotinfo_rgraph} or \code{lavplot} functions and
+take a look at the plot via \code{lav_plotinfo_rgraph} or \code{lav_plot} functions and
 decide yourself to place some nodes at another location (\code{placenodes})
 and/or put some edge labels at the other side of the edge (\code{labelsbelow}).
 
@@ -63,7 +63,7 @@ at the top of the diagram and those in block 1 at the bottom. The item
 
 \seealso{
 \code{\link{lav_model_plotinfo}}, \code{\link{lav_plotinfo_rgraph}},
-\code{\link{lavplot}}
+\code{\link{lav_plot}}
 }
 
 \examples{

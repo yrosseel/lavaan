@@ -1,32 +1,7 @@
-\name{lavplot}
-\alias{lavplot}
+\name{lav_plot}
 \alias{lav_plot}
 \title{Creates diagram code for tikz, svg or creates an Rplot}
 \usage{
-lavplot(model = NULL,
-        infile = NULL,
-        varlv = FALSE,
-        placenodes = NULL,
-        edgelabelsbelow = NULL,
-        group.covar.indicators = FALSE,
-        common.opts = list(sloped.labels = TRUE,
-                           mlovcolors = c("lightgreen", "lightblue"),
-                           italic = TRUE,
-                           lightness = 1,
-                           auto.subscript = TRUE),
-        rplot = list(outfile = "",
-                     addgrid = TRUE),
-        tikz = list(outfile = "",
-                    cex = 1.3,
-                    standalone = FALSE),
-        svg = list(outfile = "",
-                   stroke.width = 2L,
-                   font.size = 20L,
-                   idx.font.size = 15L,
-                   dy = 5L,
-                   font.family = "Latin Modern Math, arial, Aerial, sans",
-                   standalone = FALSE)
-        )
 lav_plot(model = NULL,
         infile = NULL,
         varlv = FALSE,
@@ -85,7 +60,7 @@ an R plot is generated, possibly stored in a png file if the outfile member of
 \code{rplot} is set. If \code{tikz} is specified the code for a tikz diagram is
 stored in the specified \code{outfile}, and the same for svg.
 
-The lavplot command \strong{tries} to create a nice plot from the input model, 
+The lav_plot command \strong{tries} to create a nice plot from the input model, 
 but one should keep the names of the variables short and sometimes rearrange the
 nodes in the plot. As an example the (slightly modified) example of the
 \code{sem} function in \code{lavaan} results in the following first plot
@@ -127,8 +102,8 @@ model <- 'alpha11  =~ 1 * x1 + x2 + x3     # latent variable
           alpha11 ~ yy * Theta1 + tt1 * 0.12 * alpha12 + ss * gamma
           Theta1 ~~ alpha12
           '
-lavplot(model)
-lavplot(model,
+lav_plot(model)
+lav_plot(model,
         placenodes=list(Theta_1 = c(2, 2.5)),
         tikz = list(outfile=stdout()))
 modelml <- '
@@ -138,7 +113,7 @@ modelml <- '
         fb =~ y_1 + y_2 + y_3 + y_5
         y_2 ~~ cv24 * y_5
   '
-tikzcodeml <- lavplot(modelml,
+tikzcodeml <- lav_plot(modelml,
               common.opts = list(auto.subscript = FALSE),
               svg = list(outfile=stdout())
               )
@@ -158,13 +133,13 @@ writeLines(c(
   '\\usetikzlibrary {shapes.geometric}',
   '\\begin{document}'),
   zz)
-lavplot(model,
+lav_plot(model,
         tikz = list(outfile = "tmp.tex")
         )
 tmp <- readLines("tmp.tex")
 writeLines(tmp, zz)
 writeLines(" ", zz)
-lavplot(modelml,
+lav_plot(modelml,
         common.opts = list(sloped.labels = FALSE,
                            mlovcolors = c("lightgreen", "lightblue")),
         tikz = list(outfile = "tmp.tex", cex = 1.4)
@@ -193,15 +168,15 @@ writeLines(c(
   '<!DOCTYPE html>',
   '<html>',
   '<body>',
-  '<h2>SVG diagrams created by lavplot R package</h2>'),
+  '<h2>SVG diagrams created by lav_plot R package</h2>'),
   zz)
-lavplot(model,
+lav_plot(model,
         svg =  list(outfile = "temp.svg")
         )
 tmp <- readLines("tmp.svg")
 writeLines(tmp, zz)
 writeLines("<br />", zz)
-lavplot(modelml,
+lav_plot(modelml,
         common.opts = list(sloped.labels = FALSE),
         tikz = list(outfile = "tmp.svg")
         )
