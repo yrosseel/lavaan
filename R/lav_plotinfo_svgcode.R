@@ -146,7 +146,7 @@ lav_plotinfo_svgcode <- function(plotinfo,
       '<!DOCTYPE html>',
       '<html>',
       '<body>',
-      '<h2>SVG diagram created by lavplot R package</h2>'),
+      '<h2>SVG diagram created by lav_plot R package</h2>'),
       zz)
   }
   writeLines(c(

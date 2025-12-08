@@ -78,7 +78,7 @@ writeLines(c(
   '<!DOCTYPE html>',
   '<html>',
   '<body>',
-  '<h2>SVG diagrams created by lavplot R package</h2>'),
+  '<h2>SVG diagrams created by lav_plot R package</h2>'),
   zz)
 lav_plotinfo_svgcode(test, outfile = "temp.svg")
 tmp <- readLines("tmp.svg")

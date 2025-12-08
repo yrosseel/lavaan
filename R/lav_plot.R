@@ -1,4 +1,4 @@
-lavplot <- lav_plot <- function(
+lav_plot <- function(
   model = NULL,
   infile = NULL,
   varlv = FALSE,

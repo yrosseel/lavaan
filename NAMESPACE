@@ -180,8 +180,7 @@ export("lavaan", "cfa", "sem", "growth",
        "lav_plotinfo_tikzcode",
        "lav_plotinfo_rgraph",
        "lav_plotinfo_svgcode",
-       "lav_plot",
-       "lavplot"
+       "lav_plot"
 
        # deprecated functions
        #"vech", "vech.reverse", "vechru", "vechru.reverse", "lower2full",
