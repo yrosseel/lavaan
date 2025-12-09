@@ -26,7 +26,7 @@
 
 # YR 10 Nov 2024: - detect sam object
 
-bootstrapLavaan <- function(object,
+lav_lavaan_bootstrap <- function(object,
                             R = 1000L,
                             type = "ordinary",
                             verbose = FALSE,

@@ -102,7 +102,7 @@ Information about the data:
 \describe{
     \item{\code{"data"}:}{A matrix containing the observed variables
         that have been used to fit the model. No column/row names are provided.
-        Column names correspond to the output of \code{lavNames(object)},
+        Column names correspond to the output of \code{lav_object_vnames(object)},
         while the rows correspond to the output of
         \code{lavInspect(object, "case.idx"}.}
     \item{\code{"ordered"}:}{A character vector. The ordered variables.}

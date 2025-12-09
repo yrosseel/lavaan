@@ -5,7 +5,7 @@
 #
 #
 #
-simulateData <- function( # user-specified model
+lav_data_simulate_old <- function( # user-specified model
                          model = NULL,
                          model.type = "sem",
                          # model modifiers
@@ -47,7 +47,7 @@ simulateData <- function( # user-specified model
   #    runif(1)               # initialize the RNG if necessary
   # RNGstate <- .Random.seed
 
-  # lavaanify
+  # lav_model_partable
   if (is.list(model)) {
     # two possibilities: either model is already lavaanified
     # or it is something else...
@@ -67,7 +67,7 @@ simulateData <- function( # user-specified model
       lav_msg_stop(gettext("model is a list, but not a parameterTable?"))
     }
   } else {
-    lav <- lavaanify(
+    lav <- lav_model_partable(
       model = model,
       meanstructure = meanstructure,
       int.ov.free = int.ov.free,
@@ -297,7 +297,7 @@ simulateData <- function( # user-specified model
       )
     } else {
       # first generate Z
-      Z <- ValeMaurelli1983(
+      Z <- lav_data_valemaurelli1983(
         n = sample.nobs[g],
         COR = cov2cor(COV),
         skewness = skewness, # FIXME: per group?
@@ -370,7 +370,7 @@ simulateData <- function( # user-specified model
   }
 }
 
-Skewness <- function(x., N1 = TRUE) {
+lav_skewness <- function(x., N1 = TRUE) {
   x <- x.
   x <- x[!is.na(x)]
   N <- length(x)
@@ -384,7 +384,7 @@ Skewness <- function(x., N1 = TRUE) {
   skewness
 }
 
-Kurtosis <- function(x., N1 = TRUE) {
+lav_kurtosis <- function(x., N1 = TRUE) {
   x <- x.
   x <- x[!is.na(x)]
   N <- length(x)
@@ -397,50 +397,9 @@ Kurtosis <- function(x., N1 = TRUE) {
   kurtosis
 }
 
-# NOTE: as pointed out in Fleishman (1978), a real solution does not
-# always exist (for a/b/c/d) for all values of skew/kurtosis
-#
-# for example: skew = 3, only valid if kurtosis > 14 (approximately)
-#
-# fleishman eq 21 suggests: skew^2 < 0.0629576*kurtosis + 0.0717247
-# see figure 1 page 527
-#
-# note also that the a/b/c/d solution is not unique, although this seems
-# not to matter for generating the data
 
-# Fleishman (1978) cubic transformation method
-lav_fleishman1978 <- function(n = 100, skewness = 0, kurtosis = 0) {
-  system.function <- function(x, skewness, kurtosis) {
-    b <- x[1L]
-    c <- x[2L]
-    d <- x[3L]
-    eq1 <- b * b + 6 * b * d + 2 * c * c + 15 * d * d - 1
-    eq2 <- 2 * c * (b * b + 24 * b * d + 105 * d * d + 2) - skewness
-    eq3 <- 24 * (b * d + c * c * (1 + b * b + 28 * b * d) +
-      d * d * (12 + 48 * b * d + 141 * c * c + 225 * d * d)) - kurtosis
-    eq <- c(eq1, eq2, eq3)
-    sum(eq * eq) ## SS
-  }
 
-  out <- nlminb(
-    start = c(1, 0, 0), objective = system.function,
-    scale = 10,
-    control = list(trace = ifelse(lav_debug(), 1, 0), rel.tol = 1e-10),
-    skewness = skewness, kurtosis = kurtosis
-  )
-  if (out$convergence != 0 || out$objective > 1e-5)
-    lav_msg_warn(gettext("no convergence"))
-  b <- out$par[1L]
-  c <- out$par[2L]
-  d <- out$par[3L]
-  a <- -c
-
-  Z <- rnorm(n = n)
-  Y <- a + b * Z + c * Z * Z + d * Z * Z * Z
-  Y
-}
-
-ValeMaurelli1983 <- function(n = 100L, COR, skewness, kurtosis) {
+lav_data_valemaurelli1983 <- function(n = 100L, COR, skewness, kurtosis) {
   fleishman1978_abcd <- function(skewness, kurtosis) {
     system.function <- function(x, skewness, kurtosis) {
       b. <- x[1L]
@@ -461,7 +420,7 @@ ValeMaurelli1983 <- function(n = 100L, COR, skewness, kurtosis) {
       skewness = skewness, kurtosis = kurtosis
     )
     if (out$convergence != 0 || out$objective > 1e-5) {
-      lav_msg_warn(gettext("ValeMaurelli1983 method did not convergence,
+      lav_msg_warn(gettext("lav_data_valemaurelli1983 method did not convergence,
                    or it did not find the roots"))
     }
     b. <- out$par[1L]

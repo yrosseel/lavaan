@@ -160,7 +160,7 @@ lavTablesFitCm <- function(object) {
   CF.h0 <- lavTablesFitCf(object)
 
   # fit unrestricted model
-  h1 <- lavCor(lavdata,
+  h1 <- lav_object_cor(lavdata,
     estimator = lavoptions$estimator,
     se = "none", test = "none", output = "lavaan"
   )

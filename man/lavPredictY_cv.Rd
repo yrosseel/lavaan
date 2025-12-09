@@ -6,8 +6,8 @@ This function can be used to determine an optimal lambda value for the
 \code{lavPredictY} function. based on cross-validation.}
 \usage{
 lavPredictY_cv(object, data = NULL,
-              xnames = lavNames(object, "ov.x"),
-              ynames = lavNames(object, "ov.y"),
+              xnames = lav_object_vnames(object, "ov.x"),
+              ynames = lav_object_vnames(object, "ov.y"),
               n.folds = 10L,
               lambda.seq = seq(0, 1, 0.1))
 }

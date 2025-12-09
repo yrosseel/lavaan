@@ -20,7 +20,7 @@ getCov   <- lav_get_cov
 char2num <- lav_char2num
 cor2cov  <- lav_cor2cov
 
-# standardize function names in lav_mplu_lavaan / 7 Nov 2025
+# standardize function names in lav_mplus_lavaan / 7 Nov 2025
 mplus2lavaan.modelSyntax <- lav_mplus_syntax_model
 mplus2lavaan             <- lav_mplus_lavaan
 
@@ -30,3 +30,20 @@ lavScores <- lav_scores
 
 # standardize function names in lav_export.R
 lavExport <- lav_export
+
+# standardize function names in lav_cor.R / 9 December 2025
+lavCor <- lav_object_cor
+
+# standardize function names in lav_partable_vnames.R / 9 December 2025
+lavNames <- lav_object_vnames
+lavaanNames <- lav_object_vnames
+
+# standardize function names in lav_partable.R / 9 December 2025
+lavParTable <- lav_model_partable
+lavaanify <- lav_model_partable
+
+# standardize function names in lav_simulate_old.R / 9 December 2025
+simulateData <- lav_data_simulate_old
+
+# standardize function names in lav_bootstrap.R / 9 December 2025
+bootstrapLavaan <- lav_lavaan_bootstrap

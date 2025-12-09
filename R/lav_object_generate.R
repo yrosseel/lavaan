@@ -137,8 +137,8 @@ lav_object_independence <- function(object = NULL,
   if (any(lavpartable$op == "~1")) lavoptions$meanstructure <- TRUE
 
   # FIXME: it is crucial that the order of the ov's, as returned by
-  # lavNames() remains the same
-  # so lavNames(object) should equal lavNames(lavpartable)
+  # lav_object_vnames() remains the same
+  # so lav_object_vnames(object) should equal lav_object_vnames(lavpartable)
   # otherwise, we will use the wrong sample statistics!!!
   #
   # this seems ok now, because we first generate the covariances in
@@ -280,7 +280,7 @@ lav_object_extended <- function(object, add = NULL,
     ADD <- add
   } else if (is.character(add)) {
     ngroups <- lav_partable_ngroups(partable)
-    ADD.orig <- lavaanify(add, ngroups = ngroups)
+    ADD.orig <- lav_model_partable(add, ngroups = ngroups)
     ADD <- ADD.orig[, c("lhs", "op", "rhs", "user", "label")] # minimum
 
     # always add block/group/level

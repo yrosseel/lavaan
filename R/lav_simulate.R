@@ -1,4 +1,4 @@
-# new version of lavSimulateData (replaced simulateData)
+# new version of lav_data_simulate (replaced lav_data_simulate_old)
 # from lavaan 0.6-1
 # YR 23 March 2018
 #
@@ -7,7 +7,7 @@
 # -
 
 
-lavSimulateData <- function(model = NULL,
+lav_data_simulate <- function(model = NULL,
                             cmd.pop = "sem",
                             ...,
                             # data properties
@@ -263,7 +263,7 @@ lavSimulateData <- function(model = NULL,
     }
 
     # any categorical variables?
-    ov.ord <- lavNames(fit.pop, "ov.ord", group = group.values[g])
+    ov.ord <- lav_object_vnames(fit.pop, "ov.ord", group = group.values[g])
     if (is.list(ov.ord)) {
       # multilvel -> use within level only
       ov.ord <- ov.ord[[1L]]

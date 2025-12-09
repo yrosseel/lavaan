@@ -608,8 +608,8 @@ lav_parameterestimates_print <- function(x, ..., nd = 3L) {
       b <- b + 1L
 
       # ov/lv names
-      ov.names <- lavNames(x, "ov", block = b)
-      lv.names <- lavNames(x, "lv", block = b)
+      ov.names <- lav_object_vnames(x, "ov", block = b)
+      lv.names <- lav_object_vnames(x, "lv", block = b)
 
       # level header
       if (nlevels > 1L) {
@@ -639,9 +639,9 @@ lav_parameterestimates_print <- function(x, ..., nd = 3L) {
           if (length(row.idx) == 0L) next
           # make distinction between residual and plain
           y.names <- unique(c(
-            lavNames(x, "eqs.y"),
-            lavNames(x, "ov.ind"),
-            lavNames(x, "lv.ind")
+            lav_object_vnames(x, "eqs.y"),
+            lav_object_vnames(x, "ov.ind"),
+            lav_object_vnames(x, "lv.ind")
           ))
           PREFIX <- rep("", length(row.idx))
           PREFIX[x$rhs[row.idx] %in% y.names] <- "  ."
@@ -654,9 +654,9 @@ lav_parameterestimates_print <- function(x, ..., nd = 3L) {
           if (length(row.idx) == 0L) next
           # make distinction between intercepts and means
           y.names <- unique(c(
-            lavNames(x, "eqs.y"),
-            lavNames(x, "ov.ind"),
-            lavNames(x, "lv.ind")
+            lav_object_vnames(x, "eqs.y"),
+            lav_object_vnames(x, "ov.ind"),
+            lav_object_vnames(x, "lv.ind")
           ))
           PREFIX <- rep("", length(row.idx))
           PREFIX[x$lhs[row.idx] %in% y.names] <- "  ."
@@ -677,9 +677,9 @@ lav_parameterestimates_print <- function(x, ..., nd = 3L) {
           if (length(row.idx) == 0L) next
           # make distinction between residual and plain
           y.names <- unique(c(
-            lavNames(x, "eqs.y"),
-            lavNames(x, "ov.ind"),
-            lavNames(x, "lv.ind")
+            lav_object_vnames(x, "eqs.y"),
+            lav_object_vnames(x, "ov.ind"),
+            lav_object_vnames(x, "lv.ind")
           ))
           PREFIX <- rep("", length(row.idx))
           PREFIX[x$rhs[row.idx] %in% y.names] <- "  ."
@@ -732,9 +732,9 @@ lav_parameterestimates_print <- function(x, ..., nd = 3L) {
           if (s == "Covariances") {
             # make distinction between residual and plain
             y.names <- unique(c(
-              lavNames(x, "eqs.y"),
-              lavNames(x, "ov.ind"),
-              lavNames(x, "lv.ind")
+              lav_object_vnames(x, "eqs.y"),
+              lav_object_vnames(x, "ov.ind"),
+              lav_object_vnames(x, "lv.ind")
             ))
             PREFIX <- rep("", length(row.idx))
             PREFIX[x$lhs[row.idx] %in% y.names] <- "."
@@ -923,7 +923,7 @@ lav_fsr_print <- function(x, ..., nd = 3L, mm = FALSE, struc = FALSE) {
     for (b in seq_len(nblocks)) {
       cat(
         "Measurement block for latent variable(s):",
-        paste(lavNames(y$MM.FIT[[b]], "lv")), "\n"
+        paste(lav_object_vnames(y$MM.FIT[[b]], "lv")), "\n"
       )
 
       # fit measures?

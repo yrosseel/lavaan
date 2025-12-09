@@ -1,10 +1,10 @@
 # lavSimulate: fit the *same* model, on simulated datasets
 # YR - 4 July 2016: initial version
-# YR - 15 Oct 2024: add iseed (similar to bootstrapLavaan)
+# YR - 15 Oct 2024: add iseed (similar to lav_lavaan_bootstrap)
 # YR - 26 Oct 2024: rm pop.model, add est.true argument
 
 lavSimulate <- function(model = NULL, # user model
-                        dataFunction = simulateData,
+                        dataFunction = lav_data_simulate_old,
                         dataFunction.args = list(),
                         est.true = NULL,
                         ndat = 1000L,

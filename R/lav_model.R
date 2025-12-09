@@ -402,8 +402,8 @@ lav_model <- function(lavpartable = NULL,                          # nolint
     # we should also add splitted-y names (x) to lv.names
     # FIXME: make this work for multiple work multilevel
     level.values <- lav_partable_level_values(lavpartable)
-    ovx1 <- lavNames(lavpartable, "ov.x", level = level.values[1])
-    ovx2 <- lavNames(lavpartable, "ov.x", level = level.values[2])
+    ovx1 <- lav_object_vnames(lavpartable, "ov.x", level = level.values[1])
+    ovx2 <- lav_object_vnames(lavpartable, "ov.x", level = level.values[2])
     ovx12 <- ovx2[ovx2 %in% ovx1]
     lv.names <- c(lv.names, ovx12)
 

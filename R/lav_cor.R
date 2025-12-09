@@ -6,7 +6,7 @@
 # - YR 26 Nov 2013: big change - make it a wrapper around lavaan()
 #                   estimator = "none" means two.step (starting values)
 
-lavCor <- function(object,
+lav_object_cor <- function(object,
                    # lav.data options
                    ordered = NULL,
                    group = NULL,
@@ -32,11 +32,11 @@ lavCor <- function(object,
       for (j in seq_along(dotdotdot)) {
         lav_msg_warn(gettextf(
           "Unknown argument %s for %s", sQuote(names(dotdotdot)[j]),
-          "function lavCor for lavaan-object")
+          "function lav_object_cor for lavaan-object")
         )
       }
     }
-    out <- lav_cor_output(object, output = output)
+    out <- lav_object_cor_output(object, output = output)
     return(out)
   }
 
@@ -57,7 +57,7 @@ lavCor <- function(object,
     }
   }
 
-  # extract sampling.weights.normalization from dots (for lavData() call)
+  # extract sampling.weights.normalization from dots (for lav_lavdata() call)
   dots <- list(...)
   sampling.weights.normalization <- "total"
   if (!is.null(dots$sampling.weights.normalization)) {
@@ -104,7 +104,7 @@ lavCor <- function(object,
           lav_msg_view(ordered[missing.idx])))
       }
     }
-    lav.data <- lavData(
+    lav.data <- lav_lavdata(
       data = object, group = group,
       ov.names = NAMES, ordered = ordered,
       sampling.weights = sampling.weights,
@@ -115,7 +115,7 @@ lavCor <- function(object,
       )
     )
   } else {
-    lav_msg_stop(gettext("lavCor can not handle objects of class"),
+    lav_msg_stop(gettext("lav_object_cor can not handle objects of class"),
       paste(class(object), collapse = " ")
     )
   }
@@ -185,7 +185,7 @@ lavCor <- function(object,
     se = se, test = test, estimator = estimator, ...
   )
 
-  out <- lav_cor_output(FIT, output = output)
+  out <- lav_object_cor_output(FIT, output = output)
 
   # smooth correlation matrix? (only if output = "cor")
   if (output == "cor" && cor.smooth) {
@@ -198,7 +198,7 @@ lavCor <- function(object,
   out
 }
 
-lav_cor_output <- function(object, output = "cor") {
+lav_object_cor_output <- function(object, output = "cor") {
   # check output
   if (output %in% c("cor", "cov")) {
     out <- lavInspect(object, "sampstat")

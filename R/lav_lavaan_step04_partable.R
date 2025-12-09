@@ -17,7 +17,7 @@ lav_lavaan_step04_partable <- function(slotParTable = NULL, # nolint
   #       set meanstructure to FALSE
   #       set the member type in the temporary variable tmp.data.ov to a
   #         numeric vector with all zeroes
-  #     create lavpartable via function lavParTable (=lavaanify)
+  #     create lavpartable via function lavParTable (=lav_model_partable)
   #                     using the temporary variable for parameter varTable
   #   else
   #     if model is lavaan object
@@ -49,7 +49,7 @@ lav_lavaan_step04_partable <- function(slotParTable = NULL, # nolint
       print(as.data.frame(flat.model))
     }
     # catch ~~ of fixed.x covariates if fixed.x = TRUE
-    # --> done inside lavaanify!
+    # --> done inside lav_model_partable!
 
     # if(lavoptions$fixed.x) {
     #    tmp <- lav_partable_vnames(flat.model, type = "ov.x",

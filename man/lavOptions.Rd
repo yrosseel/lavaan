@@ -425,8 +425,8 @@ Parallelization options (currently only used for bootstrapping):
       \code{parallel::detectCores()}) minus one.}
     \item{cl}{An optional \pkg{parallel} or \pkg{snow} cluster for use if
       \code{parallel = "snow"}. If not supplied, a cluster on the local 
-      machine is created for the duration of the \code{bootstrapLavaan} 
-      or \code{bootstrapLRT} call.}
+      machine is created for the duration of the \code{lav_lavaan_bootstrap} 
+      call.}
     \item{iseed}{An integer to set the seed. Or NULL if no reproducible 
       results are needed. This works for both serial (non-parallel) and 
       parallel settings. Internally, \code{RNGkind()} is set to 

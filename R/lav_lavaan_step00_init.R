@@ -99,7 +99,7 @@ lav_lavaan_step00_checkdata <- function(data = NULL,
   #         in the function call to dotdotdot$...
   #             set data to NULL
   #   if it is a function --> ***error***
-  #   TODO: other tests are present in lavData, should we copy them here ???
+  #   TODO: other tests are present in lav_lavdata(), should we copy them here ???
   # if NACOV or WLS.V not NULL, set ov.order to "data"
 
   if (!is.null(data)) {

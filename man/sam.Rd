@@ -20,7 +20,7 @@ sam(model = NULL, data = NULL, cmd = "sem", se = "twostep",
 \item{model}{A description of the user-specified model. Typically, the model
     is described using the lavaan model syntax. See            
     \code{\link{model.syntax}} for more information. Alternatively, a
-    parameter table (eg. the output of the \code{lavaanify()} function) is also
+    parameter table (eg. the output of the \code{lav_model_partable()} function) is also
     accepted.}
 \item{data}{A data frame containing the observed variables used in
     the model.}

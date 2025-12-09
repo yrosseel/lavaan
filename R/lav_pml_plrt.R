@@ -264,14 +264,14 @@ lav_pml_plrt <- function(lavobject = NULL, lavmodel = NULL, lavdata = NULL,
     # lav_model_delta
     # th.names <- lavobject@pta$vnames$th[[g]]
     # ov.names <- lavobject@pta$vnames$ov[[g]]
-    # th.names <- lavNames(lavpartable, "th")
-    # ov.names <- lavNames(lavpartable, "ov.nox")
-    # ov.names.x <- lavNames(lavpartable, "ov.x")
+    # th.names <- lav_object_vnames(lavpartable, "th")
+    # ov.names <- lav_object_vnames(lavpartable, "ov.nox")
+    # ov.names.x <- lav_object_vnames(lavpartable, "ov.x")
     # tmp <- utils::combn(ov.names, 2)
     # cor.names <- paste(tmp[1,], "~~", tmp[2,], sep = "")
 
     # added by YR - 22 Okt 2017 #####################################
-    # ov.names.x <- lavNames(lavpartable, "ov.x")
+    # ov.names.x <- lav_object_vnames(lavpartable, "ov.x")
     # if(length(ov.names.x)) {
     #    slope.names <- apply(expand.grid(ov.names, ov.names.x), 1L,
     #                             paste, collapse = "~")

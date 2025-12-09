@@ -51,7 +51,7 @@ returns the computed values of the defined parameters.
 }
 \examples{
 myModel <- 'x1 ~ a*x2 + b*x3 + c*x4'
-myParTable <- lavaanify(myModel, as.data.frame. = FALSE)
+myParTable <- lav_model_partable(myModel, as.data.frame. = FALSE)
 con <- ' a == 2*b
          b - c == 5 '
 conInfo <- lav_constraints_parse(myParTable, constraints = con)
@@ -59,7 +59,7 @@ conInfo <- lav_constraints_parse(myParTable, constraints = con)
 myModel2 <- 'x1 ~ a*x2 + b*x3 + c*x4
              a == 2*b
              b - c == 5 '
-ceq <- lav_partable_constraints_ceq(partable = lavaanify(myModel2))
+ceq <- lav_partable_constraints_ceq(partable = lav_model_partable(myModel2))
 ceq( c(2,3,4) )
 }
 

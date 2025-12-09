@@ -36,7 +36,7 @@ be useful to create a full model syntax as needed for the \code{lavaan()}
 function. More targets (perhaps for \code{LISREL} or \code{EQS}) will be added
 in future releases.
 }
-\seealso{\code{\link{lavaanify}}, \code{\link{lav_mplus_lavaan}}}
+\seealso{\code{\link{lav_model_partable}}, \code{\link{lav_mplus_lavaan}}}
 \examples{
 HS.model <- ' visual  =~ x1 + x2 + x3
               textual =~ x4 + x5 + x6
