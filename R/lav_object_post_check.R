@@ -9,7 +9,7 @@ lav_object_post_check <- function(object) {
 
   # 1a. check for negative variances ov
   var.idx <- which(lavpartable$op == "~~" &
-    lavpartable$lhs %in% lavNames(object, "ov") &
+    lavpartable$lhs %in% lav_object_vnames(object, "ov") &
     lavpartable$lhs == lavpartable$rhs)
   if (length(var.idx) > 0L && any(lavpartable$est[var.idx] < 0.0)) {
     result.ok <- var.ov.ok <- FALSE
@@ -18,7 +18,7 @@ lav_object_post_check <- function(object) {
 
   # 1b. check for negative variances lv
   var.idx <- which(lavpartable$op == "~~" &
-    lavpartable$lhs %in% lavNames(object, "lv") &
+    lavpartable$lhs %in% lav_object_vnames(object, "lv") &
     lavpartable$lhs == lavpartable$rhs)
   if (length(var.idx) > 0L && any(lavpartable$est[var.idx] < 0.0)) {
     result.ok <- var.lv.ok <- FALSE
@@ -27,7 +27,7 @@ lav_object_post_check <- function(object) {
 
   # 2. is cov.lv (PSI) positive definite? (only if we did not already warn
   # for negative variances)
-  if (var.lv.ok && length(lavNames(lavpartable, type = "lv.regular")) > 0L) {
+  if (var.lv.ok && length(lav_object_vnames(lavpartable, type = "lv.regular")) > 0L) {
     ETA <- lavTech(object, "cov.lv")
     for (g in 1:lavdata@ngroups) {
       if (nrow(ETA[[g]]) == 0L) next

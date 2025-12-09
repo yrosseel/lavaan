@@ -19,7 +19,7 @@ lavaan(model = NULL, data = NULL, ordered = NULL,
 \item{model}{A description of the user-specified model. Typically, the model
     is described using the lavaan model syntax. See            
     \code{\link{model.syntax}} for more information. Alternatively, a
-    parameter table (eg. the output of the \code{lavaanify()} function) is also
+    parameter table (eg. the output of the \code{lav_model_partable()} function) is also
     accepted.}
 \item{data}{An optional data frame containing the observed variables used in
     the model. If some variables are declared as ordered factors, lavaan will
@@ -72,7 +72,7 @@ in a multiple group analysis.}
     argument for information about the order of the elements.}
 \item{ov.order}{Character. If \code{"model"} (the default), the order of
     the observed variable names (as reflected for example in the output of
-    \code{lavNames()}) is determined by the model syntax. If
+    \code{lav_object_vnames()}) is determined by the model syntax. If
     \code{"data"}, the order is determined by the data (either the full
     data.frame or the sample (co)variance matrix). If the \code{WLS.V} 
     and/or \code{NACOV} matrices are provided, this argument is currently 

@@ -16,7 +16,7 @@
 # YR 08 May  2019: sampling weights normalization -> different options
 
 # extract the data we need for this particular model
-lavData <- function(data = NULL, # data.frame
+lav_lavdata <- function(data = NULL, # data.frame
                     group = NULL, # multiple groups?
                     cluster = NULL, # clusters?
                     ov.names = NULL, # variables in model
@@ -68,7 +68,7 @@ lavData <- function(data = NULL, # data.frame
     std.ov <- FALSE
   }
 
-  # missing? (lavCor() does not parse options before calling lavdata...)
+  # missing? (lav_object_cor() does not parse options before calling lavdata...)
   missing <- tolower(lavoptions$missing)
   if (is.null(missing) || missing == "default") {
     missing <- "listwise"

@@ -25,7 +25,7 @@ lav_partable_check <- function(partable, categorical = FALSE) {
   }
 
   # we should have a (residual) variance for *each* ov/lv
-  # note: if lavaanify() has been used, this is always TRUE
+  # note: if lav_model_partable() has been used, this is always TRUE
   var.idx <- which(partable$op == "~~" &
     partable$lhs == partable$rhs & !partable$lhs %in% lv.names.c)
   missing.idx <- which(is.na(match(all.names, partable$lhs[var.idx])))
@@ -41,7 +41,7 @@ lav_partable_check <- function(partable, categorical = FALSE) {
   meanstructure <- any(partable$op == "~1")
 
   # if meanstructure, check for missing intercepts
-  # note if lavaanify() has been used, this is always TRUE
+  # note if lav_model_partable() has been used, this is always TRUE
   if (meanstructure) {
     # we should have a intercept for *each* ov/lv
     int.idx <- which(partable$op == "~1")

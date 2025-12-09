@@ -1,8 +1,20 @@
-\name{simulateData}
+\name{lav_data_simulate_old}
+\alias{lav_data_simulate_old}
 \alias{simulateData}
 \title{Simulate Data From a Lavaan Model Syntax}
 \description{Simulate data starting from a lavaan model syntax.}
 \usage{
+lav_data_simulate_old(model = NULL, model.type = "sem", meanstructure = FALSE, 
+    int.ov.free = TRUE, int.lv.free = FALSE, 
+    marker.int.zero = FALSE, conditional.x = FALSE, 
+    composites = TRUE, fixed.x = FALSE,
+    orthogonal = FALSE, std.lv = TRUE, auto.fix.first = FALSE, 
+    auto.fix.single = FALSE, auto.var = TRUE, auto.cov.lv.x = TRUE, 
+    auto.cov.y = TRUE, ..., sample.nobs = 500L, ov.var = NULL, 
+    group.label = paste("G", 1:ngroups, sep = ""), skewness = NULL, 
+    kurtosis = NULL, seed = NULL, empirical = FALSE, 
+    return.type = "data.frame", return.fit = FALSE,
+    debug = FALSE, standardized = FALSE)
 simulateData(model = NULL, model.type = "sem", meanstructure = FALSE, 
     int.ov.free = TRUE, int.lv.free = FALSE, 
     marker.int.zero = FALSE, conditional.x = FALSE, 
@@ -19,7 +31,7 @@ simulateData(model = NULL, model.type = "sem", meanstructure = FALSE,
 \item{model}{A description of the user-specified model. Typically, the model
     is described using the lavaan model syntax. See
     \code{\link{model.syntax}} for more information. Alternatively, a
-    parameter table (eg. the output of the \code{lavaanify()} function) is also
+    parameter table (eg. the output of the \code{lav_model_partable()} function) is also
     accepted.}
 \item{model.type}{Set the model type: possible values
     are \code{"cfa"}, \code{"sem"} or \code{"growth"}. This may affect
@@ -121,7 +133,7 @@ population.model <- ' f1 =~ x1 + 0.8*x2 + 1.2*x3
 
 # generate data
 set.seed(1234)
-myData <- simulateData(population.model, sample.nobs=100L)
+myData <- lav_data_simulate_old(population.model, sample.nobs=100L)
 
 # population moments
 fitted(sem(population.model))

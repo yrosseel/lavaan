@@ -27,7 +27,7 @@ lav_lavaan_step03_data <- function(slotData = NULL, # nolint
   # if slotData not null
   #   copy slotData to lavdata
   # else
-  #   create lavdata via function lavData, setting ov.names to ov.names.y
+  #   create lavdata via function lav_lavdata, setting ov.names to ov.names.y
   #     if lavoptions$conditional.x
   # if lavdata$data.type is "none"
   #   set lavoptions$do.fit to FALSE
@@ -57,7 +57,7 @@ lav_lavaan_step03_data <- function(slotData = NULL, # nolint
     } else {
       ov.names
     }
-    lavdata <- lavData(
+    lavdata <- lav_lavdata(
       data = data,
       group = group,
       cluster = cluster,

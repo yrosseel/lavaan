@@ -52,7 +52,7 @@ lavTables <- function(object,
   }
 
   # extract or create lavdata
-  lavdata <- lavData(object, ordered = categorical, group = group)
+  lavdata <- lav_lavdata(object, ordered = categorical, group = group)
 
   # is 'object' a lavaan object?
   lavobject <- NULL
@@ -190,7 +190,7 @@ lav_tables_pattern <- function(lavobject = NULL, lavdata = NULL,
   }
   # no support yet for mixture of endogenous ordered + numeric variables
   if (!is.null(lavobject) &&
-    length(lavNames(lavobject, "ov.nox")) > length(cat.idx)) {
+    length(lav_object_vnames(lavobject, "ov.nox")) > length(cat.idx)) {
     lav_msg_warn(gettext("some endogenous variables are not categorical"))
     return(data.frame(
       pattern = character(0L), nobs = integer(0L),
@@ -1017,7 +1017,7 @@ lav_tables_pairwise_sample_pi <- function(lavobject = NULL, lavdata = NULL) {
     }
     TH.IDX <- lavobject@SampleStats@th.idx
   } else if (!is.null(lavdata)) {
-    fit.un <- lavCor(object = lavdata, se = "none", output = "fit")
+    fit.un <- lav_object_cor(object = lavdata, se = "none", output = "fit")
     if (fit.un@Model@conditional.x) {
       COR <- fit.un@SampleStats@res.cov
       TH <- fit.un@SampleStats@res.th
@@ -1105,7 +1105,7 @@ lav_tables_resp_pi <- function(lavobject = NULL, lavdata = NULL,
     TH.IDX <- lavobject@SampleStats@th.idx
   } else {
     if (is.null(lavobject)) {
-      fit.un <- lavCor(object = lavdata, se = "none", output = "fit")
+      fit.un <- lav_object_cor(object = lavdata, se = "none", output = "fit")
       Sigma.hat <- if (fit.un@Model@conditional.x) fit.un@implied$res.cov else fit.un@implied$cov
       TH <- if (fit.un@Model@conditional.x) fit.un@implied$res.th else fit.un@implied$th
       TH.IDX <- fit.un@SampleStats@th.idx

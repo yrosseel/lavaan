@@ -22,7 +22,7 @@ lav_lavaan_step01_ovnames_initflat <- function(slotParTable     = NULL, # nolint
   #     --> ***error***
   #
 
-  # 1a. get ov.names and ov.names.x (per group) -- needed for lavData()
+  # 1a. get ov.names and ov.names.x (per group) -- needed for lav_lavdata()
   if (!is.null(slotParTable)) {
     flat.model <- slotParTable
   } else if (is.character(model)) {
@@ -224,7 +224,7 @@ lav_lavaan_step01_ovnames_group <- function(flat.model = NULL,        # nolint
                                             ngroups    = 1L) {
   # if "group :" appears in flat.model
   #   tmp.group.values: set of names in corresponding right hand sides
-  #   copy flat.model without attributes and call lavaanify,
+  #   copy flat.model without attributes and call lav_model_partable,
   #     store result in tmp.lav
   #   extract ov.names, ov.names.y, ov.names.x, lv.names from tmp.lav
   #     via lav_partable_vnames
@@ -250,7 +250,7 @@ lav_lavaan_step01_ovnames_group <- function(flat.model = NULL,        # nolint
     # - ov's per group
     #
     # - FIXME: we need a more efficient way, avoiding
-    #          lavaanify/lav_partable_vnames
+    #          lav_model_partable/lav_partable_vnames
     #
     group.idx <- which(flat.model$op == ":" &
                        tolower(flat.model$lhs) == "group")
@@ -262,7 +262,7 @@ lav_lavaan_step01_ovnames_group <- function(flat.model = NULL,        # nolint
     flat.model.2 <- flat.model
     attr(flat.model.2, "modifiers") <- NULL
     attr(flat.model.2, "constraints") <- NULL
-    tmp.lav <- lavaanify(flat.model.2, ngroups = tmp.ngroups, warn = FALSE)
+    tmp.lav <- lav_model_partable(flat.model.2, ngroups = tmp.ngroups, warn = FALSE)
     ov.names <- ov.names.y <- ov.names.x <- lv.names <- vector("list",
       length = tmp.ngroups
     )
@@ -417,7 +417,7 @@ lav_lavaan_step01_ovnames_namesl <- function(data         = NULL,  # nolint
   #   if data not NULL, cluster must not be NULL, if it is: *** error ***
   #   compute tmp.group.values and tmp.level.values from flat.model
   #   there should be at least 2 levels, if not *** error ***
-  #   copy flat.model without attributes and lavaanify -> tmp.lav
+  #   copy flat.model without attributes and lav_model_partable -> tmp.lav
   #   check at least 2 levels for tmp.lav, if not *** error ***
   #   compute ov.names.l per group and per level (via lav_partable_vnames
   #     on tmp.lav)
@@ -439,7 +439,7 @@ lav_lavaan_step01_ovnames_namesl <- function(data         = NULL,  # nolint
     # here, we only need to figure out:
     # - nlevels
     # - ov's per level
-    # - FIXME: we need a more efficient way, avoiding lavaanify/vnames
+    # - FIXME: we need a more efficient way, avoiding lav_model_partable/vnames
 
     group.idx <- which(flat.model$op == ":" & flat.model$lhs == "group")
     tmp.group.values <- unique(flat.model$rhs[group.idx])
@@ -464,7 +464,7 @@ lav_lavaan_step01_ovnames_namesl <- function(data         = NULL,  # nolint
     flat.model.2 <- flat.model
     attr(flat.model.2, "modifiers") <- NULL
     attr(flat.model.2, "constraints") <- NULL
-    tmp.lav <- lavaanify(flat.model.2, ngroups = tmp.ngroups, warn = FALSE)
+    tmp.lav <- lav_model_partable(flat.model.2, ngroups = tmp.ngroups, warn = FALSE)
     # check for empty levels
     if (max(tmp.lav$level) < 2L) {
       lav_msg_stop(
@@ -507,8 +507,8 @@ lav_lavaan_step01_ovnames_namesl <- function(data         = NULL,  # nolint
       group.values <- lav_partable_group_values(flat.model)
       ov.names.l <- vector("list", length = ngroups)
       for (g in 1:ngroups) {
-        # note: lavNames() will return a list if any level:
-        ov.names.l[[g]] <- lavNames(flat.model, "ov", group = group.values[g])
+        # note: lav_object_vnames() will return a list if any level:
+        ov.names.l[[g]] <- lav_object_vnames(flat.model, "ov", group = group.values[g])
       }
     } else {
       # no level: in model syntax
@@ -531,7 +531,7 @@ lav_lavaan_step01_ovnames_ordered <- function(ordered    = NULL,  # nolint
   if (!is.null(ordered)) { # new in 0.6-4
     if (is.logical(ordered) && ordered) { # ordered = TRUE
       # assume the user means: ordered = names(Data)
-      ordered <- lavNames(flat.model, "ov.nox") # new in 0.6-6: changed from ov
+      ordered <- lav_object_vnames(flat.model, "ov.nox") # new in 0.6-6: changed from ov
     } else if (is.logical(ordered) && !ordered) {
       ordered <- character(0L)
     } else if (!is.character(ordered)) {
@@ -559,7 +559,7 @@ lav_lavaan_step01_ovnames_ordered <- function(ordered    = NULL,  # nolint
 
   # add the variable names that were treated as ordinal
   # in the model syntax
-  ordered <- unique(c(ordered, lavNames(flat.model, "ov.ord")))
+  ordered <- unique(c(ordered, lav_object_vnames(flat.model, "ov.ord")))
 
   ordered
 }

@@ -186,7 +186,7 @@ lavH1 <- function(object, # nolint
 
   # create lavdata (if needed)
   if (!inherits(object, "lavdata")) {
-    lavdata <- lavData(
+    lavdata <- lav_lavdata(
       data = object, group = group, cluster = cluster,
       ov.names = ov.names, ordered = ordered,
       sampling.weights = sampling.weights,

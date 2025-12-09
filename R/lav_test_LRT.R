@@ -100,7 +100,7 @@ lavTestLRT <- function(object, ..., method = "default", test = "default",
   if (TRUE) {
     # 1. same set of observed variables?
     ov.names <- lapply(mods, function(x) {
-      sort(lavNames(x))
+      sort(lav_object_vnames(x))
     })
     OV <- ov.names[[1L]] # the observed variable names of the first model
     if (!all(sapply(ov.names, function(x) identical(x, OV)))) {

@@ -1,11 +1,12 @@
-\name{lavNames}
+\name{lav_object_vnames}
+\alias{lav_object_vnames}
 \alias{lavNames}
 \alias{lavaanNames}
 \title{lavaan Names}
 \description{
 Extract variables names from a fitted lavaan object.}
 \usage{
-lavNames(object, type = "ov", ...)
+lav_object_vnames(object, type = "ov", ...)
 }
 \arguments{
 \item{object}{An object of class \code{\linkS4class{lavaan}}.}
@@ -16,7 +17,7 @@ See details for a complete list.}
 in the model for the second group.}
 }
 \details{
-The order of the variable names, as returned by \code{lavNames} 
+The order of the variable names, as returned by \code{lav_object_vnames} 
 determines the order in which the variables are listed in the parameter
 table, and therefore also in the summary output.
 
@@ -71,12 +72,12 @@ The following variable types are available:
                         a regression formula
 }
 }
-\seealso{\code{\link{lavaanify}}, \code{\link{parTable}}}
+\seealso{\code{\link{lav_model_partable}}, \code{\link{parTable}}}
 \examples{
 HS.model <- ' visual  =~ x1 + x2 + x3
               textual =~ x4 + x5 + x6
               speed   =~ x7 + x8 + x9 '
 
 fit <- cfa(HS.model, data=HolzingerSwineford1939)
-lavNames(fit, "ov")
+lav_object_vnames(fit, "ov")
 }

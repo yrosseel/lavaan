@@ -41,7 +41,7 @@ lavGamma <- function(object, group = NULL, missing = "listwise",
     if (!is.null(NAMES) && !is.null(group)) {
       NAMES <- NAMES[-match(group, NAMES)]
     }
-    lavdata <- lavData(
+    lavdata <- lav_lavdata(
       data = object, group = group,
       ov.names = NAMES, ordered = NULL,
       ov.names.x = ov.names.x,

@@ -1,18 +1,17 @@
 \name{model.syntax}
 \alias{model.syntax}
+\alias{lav_model_partable}
 \alias{lavaanify}
 \alias{lavParTable}
-\alias{lavpartable}
-\alias{lavPartable}
 \alias{parseModelString}
 \alias{lavParseModelString}
 \title{The Lavaan Model Syntax}
 \description{
 The lavaan model syntax describes a latent variable model. The 
-function \code{lavaanify} turns it into a table that represents the full
+function \code{lav_model_partable} turns it into a table that represents the full
 model as specified by the user. We refer to this table as the parameter table.} 
 \usage{
-lavaanify(model = NULL, meanstructure = FALSE, int.ov.free = FALSE, 
+lav_model_partable(model = NULL, meanstructure = FALSE, int.ov.free = FALSE, 
     int.lv.free = FALSE, marker.int.zero = FALSE,
     orthogonal = FALSE, orthogonal.y = FALSE,
     orthogonal.x = FALSE, orthogonal.efa = FALSE, std.lv = FALSE,
@@ -24,6 +23,21 @@ lavaanify(model = NULL, meanstructure = FALSE, int.ov.free = FALSE,
     auto.cov.lv.x = FALSE, auto.cov.y = FALSE, auto.th = FALSE, 
     auto.delta = FALSE, auto.efa = FALSE, 
     varTable = NULL, ngroups = 1L, nthresholds = NULL, 
+    group.equal = NULL, group.partial = NULL, group.w.free = FALSE,
+    debug = FALSE, warn = TRUE, as.data.frame. = TRUE)
+
+lavaanify(model = NULL, meanstructure = FALSE, int.ov.free = FALSE,
+    int.lv.free = FALSE, marker.int.zero = FALSE,
+    orthogonal = FALSE, orthogonal.y = FALSE, 
+    orthogonal.x = FALSE, orthogonal.efa = FALSE, std.lv = FALSE,
+    correlation = FALSE, composites = TRUE,
+    effect.coding = "", conditional.x = FALSE, 
+    fixed.x = FALSE, parameterization = "delta", constraints = NULL, 
+    ceq.simple = FALSE, auto = FALSE, model.type = "sem",
+    auto.fix.first = FALSE, auto.fix.single = FALSE, auto.var = FALSE,
+    auto.cov.lv.x = FALSE, auto.cov.y = FALSE, auto.th = FALSE,
+    auto.delta = FALSE, auto.efa = FALSE,
+    varTable = NULL, ngroups = 1L, nthresholds = NULL,
     group.equal = NULL, group.partial = NULL, group.w.free = FALSE,
     debug = FALSE, warn = TRUE, as.data.frame. = TRUE)
 

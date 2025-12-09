@@ -16,8 +16,8 @@
 # main function
 lavPredictY <- function(object,
                         newdata = NULL,
-                        ynames = lavNames(object, "ov.y"),
-                        xnames = lavNames(object, "ov.x"),
+                        ynames = lav_object_vnames(object, "ov.y"),
+                        xnames = lav_object_vnames(object, "ov.x"),
                         method = "conditional.mean",
                         label = TRUE,
                         assemble = TRUE,
@@ -55,7 +55,7 @@ lavPredictY <- function(object,
 
     # create lavData object
     OV <- lavdata@ov
-    newData <- lavData(
+    newData <- lav_lavdata(
       data = newdata,
       group = lavdata@group,
       ov.names = lavdata@ov.names,
@@ -342,8 +342,8 @@ lav_predict_y_conditional_mean <- function(
 lavPredictY_cv <- function(
     object,
     data = NULL,
-    xnames = lavNames(object, "ov.x"),
-    ynames = lavNames(object, "ov.y"),
+    xnames = lav_object_vnames(object, "ov.x"),
+    ynames = lav_object_vnames(object, "ov.y"),
     n.folds = 10L,
     lambda.seq = seq(0, 1, 0.1)) {
 

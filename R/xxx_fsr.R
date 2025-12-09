@@ -358,7 +358,7 @@ fsr <- function(model = NULL,
   }
   for (g in seq_len(ngroups)) {
     # full data for structural model
-    struc.names <- lavNames(PT.PA, "ov", group = group.values[g])
+    struc.names <- lav_object_vnames(PT.PA, "ov", group = group.values[g])
     # reorder struc.names, so that order is the same as in MM (new in 0.6-9)
     lv.idx <- which(struc.names %in% lv.names)
     struc.names[lv.idx] <- lv.names
@@ -476,7 +476,7 @@ fsr <- function(model = NULL,
   # STEP 2: fit structural model using (corrected?) factor scores
 
   # free all means/intercepts (of observed variables only)
-  lv.names.pa <- lavNames(PT.PA, "lv")
+  lv.names.pa <- lav_object_vnames(PT.PA, "lv")
   int.idx <- which(PT.PA$op == "~1" & !PT.PA$lhs %in% lv.names.pa)
   PT.PA$free[int.idx] <- 1L
   PT.PA$free[PT.PA$free > 0L] <- seq_len(sum(PT.PA$free > 0L))

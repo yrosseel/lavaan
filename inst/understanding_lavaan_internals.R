@@ -10,38 +10,38 @@ model <- 'f =~ x1 + a*x2 + 3*x3'
 lavParseModelString(model, as.data.frame. = TRUE)
 # creates a 'FLAT' initial parameter table
 FLAT <- lavParseModelString(model)
-lavNames(FLAT)
-lavNames(FLAT, "lv")
+lav_object_vnames(FLAT)
+lav_object_vnames(FLAT, "lv")
 
-# lavaanify()
+# lav_model_partable()
 # - first creates FLAT
 # - needs information from the data (eg number of groups)
 # - builds the initial parameter table
 # - the parameter table is the core representation of the model in lavaan
-lavaanify(model)
+lav_model_partable(model)
 
 # if sem/cfa is used, more parameters are set free
-lavaanify(model, auto = TRUE)
+lav_model_partable(model, auto = TRUE)
 
 # example: equality constraints using labels
 model <- 'f =~ x1 + a*x2 + a*x3'
-lavaanify(model, auto = TRUE)
+lav_model_partable(model, auto = TRUE)
 
 # alternative for 'simple' equality constraints
 # (will become the default soon)
-lavaanify(model, auto = TRUE, ceq.simple = TRUE)
+lav_model_partable(model, auto = TRUE, ceq.simple = TRUE)
 
 # explicit equality constraints
 model <- 'f =~ x1 + a*x2 + b*x3; a == b'
-lavaanify(model, auto = TRUE, ceq.simple = TRUE)
+lav_model_partable(model, auto = TRUE, ceq.simple = TRUE)
 
 # multiple groups/blocks
 model <- 'f =~ x1 + c(a1,a2)*x2 + c(b1, b2)*x3'
-lavaanify(model, auto = TRUE, ngroups = 2)
+lav_model_partable(model, auto = TRUE, ngroups = 2)
 
 # matrix representation: LISREL-all-y
 model <- 'f =~ x1 + x2 + x3'
-PT <- lavaanify(model, auto = TRUE, as.data.frame. = TRUE)
+PT <- lav_model_partable(model, auto = TRUE, as.data.frame. = TRUE)
 PT
 # map every parameter to a matrix element
 MAT <- as.data.frame(lavaan:::lav_lisrel(PT))
@@ -84,8 +84,8 @@ lavaan:::lav_lisrel_sigma(MLIST)
 #   lav_options_set() # lav_options.R
 
 # 3. check the (raw) data, or the sample statistics
-#   lavData()
-lavdata <- lavaan:::lavData(data = HolzingerSwineford1939,
+#   lav_lavdata()
+lavdata <- lavaan:::lav_lavdata(data = HolzingerSwineford1939,
                             ov.names = c("x1", "x2", "x3"))
 slotNames(lavdata)
 lavdata@ov.names
@@ -94,7 +94,7 @@ lavdata@X[[1]] # the raw data in group/block 1
 
 # 4. lavpartable: create the parameter table
 # needs to know: how many groups, how many categories, ...
-lavpartable <- lavaanify(model = FLAT, auto = TRUE)
+lavpartable <- lav_model_partable(model = FLAT, auto = TRUE)
 
 # 4b. compute and store partable attributes (ov.names, ov.names.x, ...)
 lavpta <- lav_partable_attributes(lavpartable)

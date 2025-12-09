@@ -6,8 +6,8 @@ This function can be used to predict the values of (observed) y-variables
 given the values of (observed) x-variables in a structural equation model.}
 \usage{
 lavPredictY(object, newdata = NULL, 
-            ynames = lavNames(object, "ov.y"),
-            xnames = lavNames(object, "ov.x"), 
+            ynames = lav_object_vnames(object, "ov.y"),
+            xnames = lav_object_vnames(object, "ov.x"), 
             method = "conditional.mean",
             label = TRUE, assemble = TRUE,
             force.zero.mean = FALSE,

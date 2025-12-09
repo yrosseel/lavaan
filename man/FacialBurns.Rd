@@ -1,7 +1,7 @@
 \name{FacialBurns}
 \alias{FacialBurns}
 \docType{data}
-\title{Dataset for illustrating the InformativeTesting function.}
+\title{Dataset, originally used for illustrating the InformativeTesting function.}
 
 \description{
 A dataset from the Dutch burn center (http://www.adbc.nl). 

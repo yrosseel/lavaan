@@ -35,7 +35,7 @@ lav_sam_step0 <- function(cmd = "sem", model = NULL, data = NULL,
   }
 
   # any lv interaction terms?
-  if (length(lavNames(flat.model, "lv.interaction")) > 0L) {
+  if (length(lav_object_vnames(flat.model, "lv.interaction")) > 0L) {
     dotdotdot0$meanstructure   <- TRUE
     #dotdotdot0$marker.int.zero <- FALSE # or not?
   }

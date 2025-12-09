@@ -6,7 +6,7 @@
 #    returning them all as a list (or just a vector if only 1 type is needed)
 
 # public version
-lavNames <- function(object, type = "ov", ...) { # nolint
+lav_object_vnames <- function(object, type = "ov", ...) { # nolint
   if (inherits(object, "lavaan") || inherits(object, "lavaanList")) {
     # check object
     object <- lav_object_check_version(object)
@@ -20,9 +20,6 @@ lavNames <- function(object, type = "ov", ...) { # nolint
   }
   lav_partable_vnames(partable, type = type, ...)
 }
-
-# alias for backwards compatibility
-lavaanNames <- lavNames # nolint
 
 # return variable names in a partable
 # - the 'type' argument determines the status of the variable: observed,
@@ -515,7 +512,7 @@ lav_partable_vnames <- function(partable, type = NULL, ..., # nolint
         ))) {
           # correction: is any of these ov.names.x mentioned as a variance,
           #             covariance, or intercept?
-          # this should trigger a warning in lavaanify()
+          # this should trigger a warning in lav_model_partable()
           if (is.null(partable$user)) { # FLAT!
             partable$user <- rep(1L, length(partable$lhs))
           }
@@ -1063,7 +1060,7 @@ lav_partable_vnames <- function(partable, type = NULL, ..., # nolint
         ))) {
           # correction: is any of these ov.names.x mentioned as a variance,
           #             covariance, or intercept?
-          # this should trigger a warning in lavaanify()
+          # this should trigger a warning in lav_model_partable()
           if (is.null(partable$user)) { # FLAT!
             partable$user <- rep(1L, length(partable$lhs))
           }

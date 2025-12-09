@@ -821,7 +821,7 @@ parameterEstimates <- # nolint
     if (is.logical(standardized)) {
       if (standardized) {
         standardized <- c("std.lv", "std.all")
-        if (length(lavNames(object, "ov.x")) && object@Options$fixed.x) {
+        if (length(lav_object_vnames(object, "ov.x")) && object@Options$fixed.x) {
           standardized <- c(standardized, "std.nox")
         }
       } else {
@@ -832,7 +832,7 @@ parameterEstimates <- # nolint
       standardized <- tolower(as.character(standardized))
       if ("std.nox" %in% standardized) {
         # sanity checks
-        if (length(lavNames(object, "ov.x")) == 0) {
+        if (length(lav_object_vnames(object, "ov.x")) == 0) {
           lav_msg_note(gettext(
             "`std.nox' unavailable without fixed exogenous predictors"))
           standardized <- setdiff(standardized, "std.nox")
@@ -1403,7 +1403,7 @@ setMethod(
     if (!(mode(add) %in% c("list", "character"))) {
       lav_msg_stop(
         gettext("'add' argument must be model syntax or parameter table.
-                See ?lavaanify help page.")
+                See ?lav_model_partable help page.")
       )
     }
     tmp.pt <- lav_object_extended(newfit, add = add)@ParTable

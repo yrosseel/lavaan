@@ -155,7 +155,7 @@ lav_data_cluster_patterns <- function(Y = NULL,
   # how many levels?
   nlevels <- length(cluster) + 1L
 
-  # did we get any data (or is this just for simulateData)
+  # did we get any data (or is this just for lav_data_simulate_old)
   if (!is.null(Y) && !is.null(clus)) {
     haveData <- TRUE
   } else {
