@@ -137,12 +137,12 @@ lav_lavaanlist_summary <- function(object,
         AVE[!is.finite(AVE)] <- as.numeric(NA)
         pe$est.ave <- AVE
         pe$est.bias <- pe$est.ave - pe$est.true
- 
+
         # FIXME: should we also add bias^2 and MSE?
         # and what about relative bias?
       }
 
-      
+
       # SE?
       if (sim.args$se.bias) {
         SE.OBS <- apply(EST, 1L, lav_sample_trimmed_sd, na.rm = TRUE,

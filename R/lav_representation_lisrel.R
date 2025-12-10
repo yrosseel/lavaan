@@ -536,7 +536,7 @@ lav_lisrel_eeta <- function(MLIST = NULL, mean.x = NULL,
 
   # BETA?
   if (!is.null(BETA)) {
-    IB.inv <- lav_lisrel_ibinv (MLIST = MLIST)
+    IB.inv <- lav_lisrel_ibinv(MLIST = MLIST)
     # GAMMA?
     if (!is.null(GAMMA)) {
       eeta <- as.vector(IB.inv %*% ALPHA + IB.inv %*% GAMMA %*% mean.x)
@@ -599,7 +599,7 @@ lav_lisrel_eetax <- function(MLIST = NULL, eXo = NULL, N = nrow(eXo),
 
   # BETA?
   if (!is.null(BETA)) {
-    IB.inv <- lav_lisrel_ibinv (MLIST = MLIST)
+    IB.inv <- lav_lisrel_ibinv(MLIST = MLIST)
     EETA <- EETA %*% t(IB.inv)
   }
 
@@ -639,7 +639,7 @@ lav_lisrel_veta <- function(MLIST = NULL) {
   if (is.null(BETA)) {
     VETA <- PSI
   } else {
-    IB.inv <- lav_lisrel_ibinv (MLIST = MLIST)
+    IB.inv <- lav_lisrel_ibinv(MLIST = MLIST)
     VETA <- tcrossprod(IB.inv %*% PSI, IB.inv)
   }
 
@@ -657,7 +657,7 @@ lav_lisrel_vetax <- function(MLIST = NULL, lv.dummy.idx = NULL) {
   if (is.null(BETA)) {
     VETA <- PSI
   } else {
-    IB.inv <- lav_lisrel_ibinv (MLIST = MLIST)
+    IB.inv <- lav_lisrel_ibinv(MLIST = MLIST)
     VETA <- tcrossprod(IB.inv %*% PSI, IB.inv)
   }
 
@@ -994,7 +994,7 @@ lav_lisrel_eyetax3 <- function(MLIST = NULL,
     # (ie. ignore the structural part altogether)
     MLIST2 <- MLIST
     MLIST2$beta[, dummy.idx] <- 0
-    IB.inv <- lav_lisrel_ibinv (MLIST = MLIST2)
+    IB.inv <- lav_lisrel_ibinv(MLIST = MLIST2)
     LAMBDA..IB.inv <- LAMBDA %*% IB.inv
   }
 
@@ -1087,7 +1087,7 @@ lav_lisrel_sigma <- function(MLIST = NULL, delta = TRUE) {
     if (is.null(BETA)) {
       LAMBDA..IB.inv <- LAMBDA
     } else {
-      IB.inv <- lav_lisrel_ibinv (MLIST = MLIST)
+      IB.inv <- lav_lisrel_ibinv(MLIST = MLIST)
       LAMBDA..IB.inv <- LAMBDA %*% IB.inv
     }
     # compute V(Y*|x_i)
@@ -1119,7 +1119,7 @@ lav_lisrel_sigma <- function(MLIST = NULL, delta = TRUE) {
     if (is.null(BETA)) {
       IB.inv <- diag(nrow(PSI))
     } else {
-      IB.inv <- lav_lisrel_ibinv (MLIST = MLIST)
+      IB.inv <- lav_lisrel_ibinv(MLIST = MLIST)
     }
     VETA <- IB.inv %*% PSI %*% t(IB.inv)
     C0 <- VETA; diag(C0)[clv.idx] <- 0
@@ -1179,7 +1179,7 @@ lav_lisrel_mu<- function(MLIST = NULL) {
   if (is.null(BETA)) {
     LAMBDA..IB.inv <- LAMBDA
   } else {
-    IB.inv <- lav_lisrel_ibinv (MLIST = MLIST)
+    IB.inv <- lav_lisrel_ibinv(MLIST = MLIST)
     LAMBDA..IB.inv <- LAMBDA %*% IB.inv
   }
 
@@ -1232,7 +1232,7 @@ lav_lisrel_th <- function(MLIST = NULL, th.idx = NULL, delta = TRUE) {
   if (is.null(BETA)) {
     LAMBDA..IB.inv <- LAMBDA
   } else {
-    IB.inv <- lav_lisrel_ibinv (MLIST = MLIST)
+    IB.inv <- lav_lisrel_ibinv(MLIST = MLIST)
     LAMBDA..IB.inv <- LAMBDA %*% IB.inv
   }
 
@@ -1271,7 +1271,7 @@ lav_lisrel_pi <- function(MLIST = NULL, delta = TRUE) {
   if (is.null(BETA)) {
     LAMBDA..IB.inv <- LAMBDA
   } else {
-    IB.inv <- lav_lisrel_ibinv (MLIST = MLIST)
+    IB.inv <- lav_lisrel_ibinv(MLIST = MLIST)
     LAMBDA..IB.inv <- LAMBDA %*% IB.inv
   }
 
@@ -1409,7 +1409,7 @@ lav_lisrel_alpha0 <- function(MLIST = NULL, sample.mean = NULL,
     # where
     # - LAMBDA..IB.inv only contains 'dummy' variables, and is square
     # - NU elements are not needed (since not in ov.dummy.idx)
-    IB.inv <- lav_lisrel_ibinv (MLIST = MLIST)
+    IB.inv <- lav_lisrel_ibinv(MLIST = MLIST)
     LAMBDA..IB.inv <- LAMBDA %*% IB.inv
     LAMBDA..IB.inv.dummy <- LAMBDA..IB.inv[ov.dummy.idx, lv.dummy.idx]
     ALPHA[lv.dummy.idx] <-
@@ -2036,7 +2036,7 @@ lav_lisrel_cov_both <- function(MLIST = NULL, delta = TRUE) {
   if (is.null(BETA)) {
     LAMBDA..IB.inv <- LAMBDA2
   } else {
-    IB.inv <- lav_lisrel_ibinv (MLIST = MLIST)
+    IB.inv <- lav_lisrel_ibinv(MLIST = MLIST)
     LAMBDA..IB.inv <- LAMBDA2 %*% IB.inv
   }
 
@@ -2090,7 +2090,7 @@ lav_lisrel_df_dmlist <- function(MLIST = NULL, Omega = NULL, Omega.mu = NULL) {
   if (is.null(BETA)) {
     LAMBDA..IB.inv <- LAMBDA
   } else {
-    IB.inv <- lav_lisrel_ibinv (MLIST = MLIST)
+    IB.inv <- lav_lisrel_ibinv(MLIST = MLIST)
     LAMBDA..IB.inv <- LAMBDA %*% IB.inv
   }
 
@@ -2216,7 +2216,7 @@ lav_lisrel_dsigma_dx_old <- function(MLIST = NULL,
   if (!is.null(MLIST$ibeta.inv)) {
     IB.inv <- MLIST$ibeta.inv
   } else {
-    IB.inv <- lav_lisrel_ibinv (MLIST = MLIST)
+    IB.inv <- lav_lisrel_ibinv(MLIST = MLIST)
   }
 
   # pre
@@ -2344,7 +2344,7 @@ lav_lisrel_dsigma_dx <- function(MLIST = NULL,
   if (!is.null(MLIST$ibeta.inv)) {
     IB.inv <- MLIST$ibeta.inv
   } else {
-    IB.inv <- lav_lisrel_ibinv (MLIST = MLIST)
+    IB.inv <- lav_lisrel_ibinv(MLIST = MLIST)
   }
 
   # pre
@@ -2475,7 +2475,7 @@ lav_lisrel_dmu_dx <- function(MLIST = NULL,
   if (!is.null(MLIST$ibeta.inv)) {
     IB.inv <- MLIST$ibeta.inv
   } else {
-    IB.inv <- lav_lisrel_ibinv (MLIST = MLIST)
+    IB.inv <- lav_lisrel_ibinv(MLIST = MLIST)
   }
 
   if (m == "nu") {
@@ -2554,7 +2554,7 @@ lav_lisrel_dth_dx <- function(MLIST = NULL,
   if (!is.null(MLIST$ibeta.inv)) {
     IB.inv <- MLIST$ibeta.inv
   } else {
-    IB.inv <- lav_lisrel_ibinv (MLIST = MLIST)
+    IB.inv <- lav_lisrel_ibinv(MLIST = MLIST)
   }
 
   if (m == "tau") {
@@ -2630,7 +2630,7 @@ lav_lisrel_dpi_dx <- function(MLIST = NULL,
   if (!is.null(MLIST$ibeta.inv)) {
     IB.inv <- MLIST$ibeta.inv
   } else {
-    IB.inv <- lav_lisrel_ibinv (MLIST = MLIST)
+    IB.inv <- lav_lisrel_ibinv(MLIST = MLIST)
   }
 
   if (m == "lambda") {
