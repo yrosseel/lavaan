@@ -41,7 +41,7 @@ efa <- function(data = NULL,
   #}
 
   # if data= argument is used, convert to data.frame (eg matrix, tibble, ...)
-  if (!is.null(data)) {
+  if (!is.null(data) && !inherits(data, "lavMoments")) {
     data <- as.data.frame(data)
   }
 
