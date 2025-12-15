@@ -283,7 +283,7 @@ lav_options_est_dwls <- function(opt) {
       opt$estimator %in% c("wlsm", "wlsmv", "wlsmvs")) {
     lav_msg_stop(gettext("use (D)WLS estimator for bootstrap"))
   } else if (opt$se == "default") {
-    if (opt$estimator == "dwls") {
+    if (opt$estimator == "dwls" && !opt$.categorical) {
       # opt$se <- "standard"
       opt$se <- "robust.sem.nt" # new in 0.6-21
     } else {
@@ -295,14 +295,16 @@ lav_options_est_dwls <- function(opt) {
   # test
   if (!opt$test[1] == "none") {
     if (opt$estimator == "dwls") {
-      if (opt$test[1] == "default") {
+      if (opt$test[1] == "default" && !opt$.categorical) {
         #opt$test <- "standard"
         opt$test <- "browne.residual.nt"
         opt$standard.test <- "browne.residual.nt"
         opt$scaled.test <- "browne.residual.nt"
-      } # else {
-      #  opt$test <- union("standard", opt$test)
-      # }
+      } else if (opt$test[1] == "default" && opt$.categorical) {
+        opt$test <- "standard" # bad choice!
+      } else {
+        opt$test <- union("standard", opt$test)
+      }
     } else if (opt$estimator == "wlsm") {
       if (opt$test[1] == "default") {
         opt$test <- "satorra.bentler"
@@ -333,7 +335,7 @@ lav_options_est_uls <- function(opt) {
       opt$estimator %in% c("ulsm", "ulsmv", "ulsmvs")) {
     lav_msg_stop(gettext("use ULS estimator for bootstrap"))
   } else if (opt$se == "default") {
-    if (opt$estimator == "uls") {
+    if (opt$estimator == "uls" && !opt$.categorical) {
       #opt$se <- "standard"
       opt$se <- "robust.sem.nt" # new in 0.6-21
     } else {
@@ -345,13 +347,15 @@ lav_options_est_uls <- function(opt) {
   # test
   if (!opt$test[1] == "none") {
     if (opt$estimator == "uls") {
-      if (opt$test[1] == "default") {
+      if (opt$test[1] == "default" && !opt$.categorical) {
         opt$test <- "browne.residual.nt" # new in 0.6-21
         opt$standard.test <- "browne.residual.nt"
         opt$scaled.test <- "browne.residual.nt"
-      } # else {
-      #  opt$test <- union("standard", opt$test)
-      # }
+      } else if (opt$test[1] == "default" && opt$.categorical) {
+        opt$test <- "standard"
+      } else {
+        opt$test <- union("standard", opt$test)
+      }
     } else if (opt$estimator == "ulsm") {
       if (opt$test[1] == "default") {
         opt$test <- "satorra.bentler"

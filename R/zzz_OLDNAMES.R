@@ -126,34 +126,34 @@ inspectSampleCov <- function(model, data, ...) {
     sc[[1L]] <- quote(lavaan::lavInspectSampleCov)
     eval(sc, parent.frame())
 }                                                                  # nolint end
-parameterEstimates <- function(object, 
-                   se = TRUE, zstat = TRUE, pvalue = TRUE, ci = TRUE, 
-                   standardized = FALSE, 
+parameterEstimates <- function(object,
+                   se = TRUE, zstat = TRUE, pvalue = TRUE, ci = TRUE,
+                   standardized = FALSE,
                    fmi = FALSE, plabel = FALSE,
-                   level = 0.95, boot.ci.type = "perc", 
-                   cov.std = TRUE, fmi.options = list(), 
-                   rsquare = FALSE, 
-                   remove.system.eq = TRUE, remove.eq = TRUE, 
-                   remove.ineq = TRUE, remove.def = FALSE, 
+                   level = 0.95, boot.ci.type = "perc",
+                   cov.std = TRUE, fmi.options = list(),
+                   rsquare = FALSE,
+                   remove.system.eq = TRUE, remove.eq = TRUE,
+                   remove.ineq = TRUE, remove.def = FALSE,
                    remove.nonfree = FALSE, remove.step1 = TRUE,
-                   remove.unused = FALSE, add.attributes = FALSE, 
+                   remove.unused = FALSE, add.attributes = FALSE,
                    output = "data.frame", header = FALSE) {
   lav_deprecated("lavParameterEstimates", times = 0L) #--> for now no warning
   sc <- sys.call()
   sc[[1L]] <- quote(lavaan::lavParameterEstimates)
   eval(sc, parent.frame())
 }
-parameterestimates <- function(object, 
-                               se = TRUE, zstat = TRUE, pvalue = TRUE, ci = TRUE, 
-                               standardized = FALSE, 
+parameterestimates <- function(object,
+                               se = TRUE, zstat = TRUE, pvalue = TRUE, ci = TRUE,
+                               standardized = FALSE,
                                fmi = FALSE, plabel = FALSE,
-                               level = 0.95, boot.ci.type = "perc", 
-                               cov.std = TRUE, fmi.options = list(), 
-                               rsquare = FALSE, 
-                               remove.system.eq = TRUE, remove.eq = TRUE, 
-                               remove.ineq = TRUE, remove.def = FALSE, 
+                               level = 0.95, boot.ci.type = "perc",
+                               cov.std = TRUE, fmi.options = list(),
+                               rsquare = FALSE,
+                               remove.system.eq = TRUE, remove.eq = TRUE,
+                               remove.ineq = TRUE, remove.def = FALSE,
                                remove.nonfree = FALSE, remove.step1 = TRUE,
-                               remove.unused = FALSE, add.attributes = FALSE, 
+                               remove.unused = FALSE, add.attributes = FALSE,
                                output = "data.frame", header = FALSE) {
   lav_deprecated("lavParameterEstimates", times = 0L) #--> for now no warning
   sc <- sys.call()

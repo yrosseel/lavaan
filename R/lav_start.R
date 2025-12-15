@@ -161,10 +161,10 @@ lav_start <- function(start.method = "default",
     lavpartable$group[lavpartable$block == 0L] <- 0L
   }
 
+  # group values
+  group.values <- lav_partable_group_values(lavpartable)
 
   for (g in 1:ngroups) {
-    # group values (not necessarily 1,2,... anymore)
-    group.values <- lav_partable_group_values(lavpartable)
 
     # info from user model for this group
     if (conditional.x) {
@@ -982,6 +982,27 @@ lav_start <- function(start.method = "default",
   # override fixed values with ustart values
   user.idx <- which(!is.na(lavpartable$ustart) & lavpartable$free == 0L)
   start[user.idx] <- lavpartable$ustart[user.idx]
+
+  # new in 0.6-21
+  # if any thresholds, make sure they are in increasing order
+  # (could be an issue if the first and second were fixed to 0 and 1)
+  for (g in 1:ngroups) {
+    th.idx <- which(lavpartable$group == group.values[g] &
+                    lavpartable$op == "|")
+    if (length(th.idx) > 0L) {
+      # for every ov.ord, check if t1 < t2 < t3 < ...
+      ov.ord <- unique(lavpartable$lhs[th.idx])
+      for (oo in ov.ord) {
+        this.idx <- which(lavpartable$group == group.values[g] &
+                          lavpartable$op == "|" & lavpartable$lhs == oo)
+        item.th <- start[this.idx]
+        if (length(item.th) > 1L && !all(diff(item.th) > 0)) {
+          start[this.idx] <- cumsum(abs(item.th))
+        }
+      }
+    }
+  }
+
 
   # final check: no NaN or other non-finite values
   bad.idx <- which(!is.finite(start))

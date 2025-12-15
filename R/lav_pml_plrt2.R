@@ -114,6 +114,7 @@ lav_pml_plrt2 <- function(lavobject = NULL, lavmodel = NULL, lavdata = NULL,
     H0.inv <- lav_model_information_observed(
       lavmodel = lavmodel,
       lavsamplestats = lavsamplestats, lavdata = lavdata,
+      lavoptions = lavoptions,
       lavcache = lavcache, augmented = TRUE, inverted = TRUE
     )
   } else {
@@ -123,14 +124,14 @@ lav_pml_plrt2 <- function(lavobject = NULL, lavmodel = NULL, lavdata = NULL,
   # first order information ('J')
   if (is.null(VCOV)) {
     J0 <- lav_model_information_firstorder(
-      lavmodel = lavmodel,
+      lavmodel = lavmodel, lavoptions = lavoptions,
       lavsamplestats = lavsamplestats, lavdata = lavdata,
       lavcache = lavcache
     )[, ]
   } else {
     # we do not get J, but J.group, FIXME?
     J0 <- lav_model_information_firstorder(
-      lavmodel = lavmodel,
+      lavmodel = lavmodel, lavoptions = lavoptions,
       lavsamplestats = lavsamplestats, lavdata = lavdata,
       lavcache = lavcache
     )[, ]
