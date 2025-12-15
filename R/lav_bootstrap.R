@@ -26,7 +26,7 @@
 
 # YR 10 Nov 2024: - detect sam object
 
-lav_lavaan_bootstrap <- function(object,
+lavBootstrap <- function(object,
                             R = 1000L,
                             type = "ordinary",
                             verbose = FALSE,
@@ -118,6 +118,7 @@ lav_lavaan_bootstrap <- function(object,
 
   out
 }
+lavBootstrap <- lavBootstrap  # synonym #nolint
 
 # we need an internal version to be called from VCOV and lav_model_test
 # when there is no lavaan object yet!

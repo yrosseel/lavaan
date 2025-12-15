@@ -224,7 +224,7 @@ lav_object_summary <- function(object, header = TRUE,
 
   # main ingredient: the parameter table
   if (estimates) {
-    PE <- parameterEstimates(object,
+    PE <- lavParameterEstimates(object,
       ci = ci, standardized = standardized,
       rsquare = rsquare, fmi = fmi,
       cov.std = cov.std,

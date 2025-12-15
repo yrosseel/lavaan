@@ -369,6 +369,7 @@ lav_data_simulate_old <- function( # user-specified model
     }
   }
 }
+lavSimulateData <- lav_data_simulate_old  # synonym #nolint
 
 lav_skewness <- function(x., N1 = TRUE) {
   x <- x.

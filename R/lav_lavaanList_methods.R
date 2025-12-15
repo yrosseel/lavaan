@@ -86,7 +86,7 @@ lav_lavaanlist_summary <- function(object,
   }
 
   if (estimates && "partable" %in% object@meta$store.slots) {
-    pe <- parameterEstimates(object,
+    pe <- lavParameterEstimates(object,
       se = FALSE,
       remove.system.eq = FALSE, remove.eq = FALSE,
       remove.ineq = FALSE, remove.def = FALSE,

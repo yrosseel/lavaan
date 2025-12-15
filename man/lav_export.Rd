@@ -1,12 +1,9 @@
-\name{lav_export}
-\alias{lav_export}
+\name{lavExport}
 \alias{lavExport}
 \title{lavaan Export}
 \description{
 Export a fitted lavaan object to an external program.}
 \usage{
-lav_export(object, target = "lavaan", prefix = "sem", dir.name = "lav_export", 
-          export = TRUE)
 lavExport(object, target = "lavaan", prefix = "sem", dir.name = "lav_export", 
           export = TRUE)
 }
@@ -36,13 +33,13 @@ be useful to create a full model syntax as needed for the \code{lavaan()}
 function. More targets (perhaps for \code{LISREL} or \code{EQS}) will be added
 in future releases.
 }
-\seealso{\code{\link{lav_model_partable}}, \code{\link{lav_mplus_lavaan}}}
+\seealso{\code{\link{lavParTable}}, \code{\link{lav_mplus_lavaan}}}
 \examples{
 HS.model <- ' visual  =~ x1 + x2 + x3
               textual =~ x4 + x5 + x6
               speed   =~ x7 + x8 + x9 '
 
 fit <- cfa(HS.model, data=HolzingerSwineford1939)
-out <- lav_export(fit, target = "Mplus", export=FALSE)
+out <- lavExport(fit, target = "Mplus", export=FALSE)
 cat(out)
 }

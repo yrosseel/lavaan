@@ -197,6 +197,7 @@ lav_object_cor <- function(object,
 
   out
 }
+lavCor <- lav_object_cor  # synonym #nolint
 
 lav_object_cor_output <- function(object, output = "cor") {
   # check output
@@ -222,7 +223,7 @@ lav_object_cor_output <- function(object, output = "cor") {
       }
     }
   } else if (output %in% c("th", "thresholds")) {
-    out <- inspect(object, "sampstat")
+    out <- lavInspect(object, "sampstat")
     if (object@Data@ngroups == 1L) {
       if (object@Model@conditional.x) {
         out <- out$res.th
@@ -237,7 +238,7 @@ lav_object_cor_output <- function(object, output = "cor") {
       }
     }
   } else if (output %in% c("sampstat")) {
-    out <- inspect(object, "sampstat")
+    out <- lavInspect(object, "sampstat")
   } else if (output %in% c(
     "parameterEstimates", "pe",
     "parameterestimates", "est"

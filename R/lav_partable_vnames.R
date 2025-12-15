@@ -20,6 +20,7 @@ lav_object_vnames <- function(object, type = "ov", ...) { # nolint
   }
   lav_partable_vnames(partable, type = type, ...)
 }
+lavNames <- lav_object_vnames    # synonym #nolint
 
 # return variable names in a partable
 # - the 'type' argument determines the status of the variable: observed,

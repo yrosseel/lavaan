@@ -1,16 +1,10 @@
-\name{lav_object_cor}
-\alias{lav_object_cor}
+\name{lavCor}
 \alias{lavCor}
 \title{Polychoric, polyserial and Pearson correlations}
 \description{
 Fit an unrestricted model to compute polychoric, polyserial and/or Pearson
 correlations.}
 \usage{
-lav_object_cor(object, ordered = NULL, group = NULL, missing = "listwise", 
-       ov.names.x = NULL, sampling.weights = NULL,
-       se = "none", test = "none", 
-       estimator = "two.step", baseline = FALSE, ..., 
-       cor.smooth = FALSE, cor.smooth.tol = 1e-04, output = "cor")
 lavCor(object, ordered = NULL, group = NULL, missing = "listwise", 
        ov.names.x = NULL, sampling.weights = NULL,
        se = "none", test = "none", 
@@ -78,7 +72,7 @@ lavCor(object, ordered = NULL, group = NULL, missing = "listwise",
    the output equals the result of \code{lavInspect(fit, "sampstat")} where
    fit is the unrestricted model. If \code{"est"} or \code{"pe"} or 
    \code{"parameterEstimates"}, the output equals the result of
-   \code{parameterEstimates(fit)}. Finally, if output is \code{"fit"} or
+   \code{lavParameterEstimates(fit)}. Finally, if output is \code{"fit"} or
    \code{"lavaan"}, the function returns an object of class 
    \code{\linkS4class{lavaan}}.}
 }
@@ -113,22 +107,22 @@ HS9 <- HolzingerSwineford1939[,c("x1","x2","x3","x4","x5",
                                  "x6","x7","x8","x9")]
 
 # Pearson correlations
-lav_object_cor(HS9)
+lavCor(HS9)
 
 # ordinal version, with three categories
 HS9ord <- as.data.frame( lapply(HS9, cut, 3, labels = FALSE) )
 
 # polychoric correlations, two-stage estimation
-lav_object_cor(HS9ord, ordered=names(HS9ord))
+lavCor(HS9ord, ordered=names(HS9ord))
 
 # thresholds only
-lav_object_cor(HS9ord, ordered=names(HS9ord), output = "th")
+lavCor(HS9ord, ordered=names(HS9ord), output = "th")
 
 # polychoric correlations, with standard errors
-lav_object_cor(HS9ord, ordered=names(HS9ord), se = "standard", output = "est")
+lavCor(HS9ord, ordered=names(HS9ord), se = "standard", output = "est")
 
 # polychoric correlations, full output
-fit.un <- lav_object_cor(HS9ord, ordered=names(HS9ord), se = "standard", 
+fit.un <- lavCor(HS9ord, ordered=names(HS9ord), se = "standard", 
                  output = "fit")
 summary(fit.un)
 }

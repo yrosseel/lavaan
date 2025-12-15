@@ -65,7 +65,7 @@ lav_efalist_summary_print(x, nd = 3L, cutoff = 0.3, dot.cutoff = 0.1,
 \item{se}{Logical. If \code{TRUE}, include the standard errors of the 
     standardized lambda, theta and psi elements in the summary.}
 \item{zstat}{Logical. If \code{TRUE}, include the Z-statistics of the 
-    standardized lambda, theta and psi elements in the summary.}    
+    standardized lambda, theta and psi elements in the summary.} 
 \item{pvalue}{Logical. If \code{TRUE}, include the P-values of the 
     standardized lambda, theta and psi elements in the summary.}
 \item{...}{Further arguments passed to or from other methods.}

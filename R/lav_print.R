@@ -934,7 +934,7 @@ lav_fsr_print <- function(x, ..., nd = 3L, mm = FALSE, struc = FALSE) {
       }
 
       # parameter estimates
-      PE <- parameterEstimates(y$MM.FIT[[b]],
+      PE <- lavParameterEstimates(y$MM.FIT[[b]],
         ci = FALSE,
         output = "text", header = TRUE
       )
@@ -956,7 +956,7 @@ lav_fsr_print <- function(x, ..., nd = 3L, mm = FALSE, struc = FALSE) {
       lav_fitmeasures_print(FIT, add.h0 = FALSE)
     }
   }
-  PE <- parameterEstimates(y$STRUC.FIT,
+  PE <- lavParameterEstimates(y$STRUC.FIT,
     ci = FALSE,
     remove.eq = FALSE, remove.system.eq = TRUE,
     remove.ineq = FALSE, remove.def = FALSE,

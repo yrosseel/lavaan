@@ -79,7 +79,7 @@ efa(data = NULL, nfactors = 1L, sample.cov = NULL, sample.nobs = NULL,
 \value{
   If \code{output = "lavaan"}, an object of class 
   \code{\linkS4class{lavaan}}. If \code{output = "efa"},
-  a list of class \code{efaList} for which a \code{print()},  
+  a list of class \code{efaList} for which a \code{print()}, 
   \code{summary()} and \code{fitMeasures()} method are available. Because
   we added the (standardized) loadings as an extra element, the \code{loadings}
   function (which is not a generic function) from the stats package will
@@ -87,7 +87,7 @@ efa(data = NULL, nfactors = 1L, sample.cov = NULL, sample.nobs = NULL,
 }
 \seealso{
     \code{\link{lav_efalist_summary}} for a summary method if the output is
-    of class \code{efaList}.  
+    of class \code{efaList}. 
 }
 \examples{
 ## The famous Holzinger and Swineford (1939) example

@@ -1,10 +1,23 @@
-\name{parameterEstimates}
+\name{lavParameterEstimates}
+\alias{lavParameterEstimates}
 \alias{parameterEstimates}
 \alias{parameterestimates}
 \title{Parameter Estimates}
 \description{
 Parameter estimates of a latent variable model.}
 \usage{
+lavParameterEstimates(object, 
+                   se = TRUE, zstat = TRUE, pvalue = TRUE, ci = TRUE, 
+                   standardized = FALSE, 
+                   fmi = FALSE, plabel = FALSE,
+                   level = 0.95, boot.ci.type = "perc", 
+                   cov.std = TRUE, fmi.options = list(), 
+                   rsquare = FALSE, 
+                   remove.system.eq = TRUE, remove.eq = TRUE, 
+                   remove.ineq = TRUE, remove.def = FALSE, 
+                   remove.nonfree = FALSE, remove.step1 = TRUE,
+                   remove.unused = FALSE, add.attributes = FALSE, 
+                   output = "data.frame", header = FALSE)
 parameterEstimates(object, 
                    se = TRUE, zstat = TRUE, pvalue = TRUE, ci = TRUE, 
                    standardized = FALSE, 
@@ -116,6 +129,6 @@ HS.model <- ' visual  =~ x1 + x2 + x3
               speed   =~ x7 + x8 + x9 '
 
 fit <- cfa(HS.model, data=HolzingerSwineford1939)
-parameterEstimates(fit)
-parameterEstimates(fit, output = "text")
+lavParameterEstimates(fit)
+lavParameterEstimates(fit, output = "text")
 }

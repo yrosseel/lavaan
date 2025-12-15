@@ -2,7 +2,7 @@
 # YR - 29 Jun 2016
 # YR - 27 Jan 2017: change lavoptions; add dotdotdot to each call
 # TDJ - 23 Aug 2018: change wrappers to preserve arguments from match.call()
-# YR - 15 Oct 2024: add iseed (as in lav_lavaan_bootstrap)
+# YR - 15 Oct 2024: add iseed (as in lavBootstrap)
 
 lavaanList <- function(model = NULL, # model
                        dataList = NULL, # list of datasets

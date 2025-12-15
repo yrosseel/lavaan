@@ -24,7 +24,7 @@ object in the \code{$mplus.inp} element. If \code{run} is \code{FALSE}, a \code{
 syntax is returned.
 }
 \author{Michael Hallquist}
-\seealso{\code{\link{lav_export}}}
+\seealso{\code{\link{lavExport}}}
 \examples{
 \dontrun{
 out <- lav_mplus_lavaan("ex5.1.inp")

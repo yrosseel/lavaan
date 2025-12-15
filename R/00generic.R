@@ -70,10 +70,6 @@ setGeneric(
 
 
 # S3 generics
-inspect <- function(object, what = "free", ...) {
-  UseMethod("inspect", object)
-}
-
 lavInspect <- function(object, what = "free",
                        add.labels = TRUE,
                        add.class = TRUE,

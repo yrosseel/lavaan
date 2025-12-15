@@ -15,10 +15,10 @@ parTable(object)
 }
 \value{
   A \code{data.frame} containing the model parameters. This is
-  simply the output of the \code{\link{lav_model_partable}} function 
+  simply the output of the \code{\link{lavParTable}} function 
   coerced to a \code{data.frame} (with \code{stringsAsFactors = FALSE}).
 }
-\seealso{\code{\link{lav_model_partable}}.}
+\seealso{\code{\link{lavParTable}}.}
 \examples{
 HS.model <- ' visual  =~ x1 + x2 + x3
               textual =~ x4 + x5 + x6

@@ -14,7 +14,7 @@ mplus2lavaan.modelSyntax(syntax)
   requires correct usage of newline characters. If \code{syntax} is a
   vector of multiple strings, these will be joined with newlines prior
   to conversion. Alternatively, \code{\\n} characters can be included
-  inline in \code{syntax}.}  
+  inline in \code{syntax}.} 
 }
 \value{
 A character string of converted \code{lavaan} model syntax.

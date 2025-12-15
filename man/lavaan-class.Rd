@@ -79,10 +79,10 @@ the independence model) (if available).}
       statistics.
 	  If \code{type = "cor"}, or \code{type = "cor.bollen"}, the observed and
       model implied covariance matrices are first transformed to a correlation 
-      matrix (using \code{cov2cor()}), before the residuals are computed.  
+      matrix (using \code{cov2cor()}), before the residuals are computed. 
 	  If \code{type = "cor.bentler"}, both the observed and model implied
       covariance matrices are rescaled by dividing the elements by the square 
-      roots of the corresponding variances of the observed covariance matrix.  
+      roots of the corresponding variances of the observed covariance matrix. 
       If \code{type="normalized"}, the residuals are divided by the square 
       root of the asymptotic variance of the corresponding summary statistic 
       (the variance estimate depends on the choice for the \code{se} argument).
@@ -90,7 +90,7 @@ the independence model) (if available).}
       correct, and this option is only available for historical interest.
       If \code{type="standardized"}, the residuals are divided by the square 
       root of the asymptotic variance of these residuals. The resulting 
-      standardized residuals elements can be interpreted as z-scores.  
+      standardized residuals elements can be interpreted as z-scores. 
       If \code{type="standardized.mplus"}, the residuals are divided by the 
       square root of the asymptotic variance of these residuals. However, a 
       simplified formula is used (see the Mplus reference below) which often 
@@ -150,7 +150,7 @@ the independence model) (if available).}
       If \code{fmi = TRUE}, add the fmi (fraction of missing information)
       column, if it is available.
       If \code{standardized = TRUE} or a character vector, the standardized 
-      solution is also printed (see \code{\link{parameterEstimates}}).  
+      solution is also printed (see \code{\link{lavParameterEstimates}}). 
       Note that \emph{SE}s and
       tests are still based on unstandardized estimates. Use
       \code{\link{standardizedSolution}} to obtain \emph{SE}s and test
@@ -193,7 +193,7 @@ https://www.statmodel.com/download/StandardizedResiduals.pdf
 \seealso{
 \code{\link{cfa}}, \code{\link{sem}},
 \code{\link{fitMeasures}}, \code{\link{standardizedSolution}},
-\code{\link{parameterEstimates}}, \code{\link{lavInspect}},
+\code{\link{lavParameterEstimates}}, \code{\link{lavInspect}},
 \code{\link{modindices}}
 }
 \examples{
