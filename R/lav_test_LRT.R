@@ -117,7 +117,7 @@ lavTestLRT <- function(object, ..., method = "default", test = "default",
     # TODO!
 
     # 3. all meanstructure?
-    mean.structure <- sapply(mods, inspect, "meanstructure")
+    mean.structure <- sapply(mods, lavInspect, "meanstructure")
     if (sum(mean.structure) > 0L &&
       sum(mean.structure) < length(mean.structure)) {
       lav_msg_warn(gettext("not all models have a meanstructure"))

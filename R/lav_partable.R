@@ -1253,3 +1253,5 @@ lav_model_partable  <- function(
 
   tmp.list
 }
+lavParTable <- lav_model_partable   # synonym #nolint
+lavaanify <- lav_model_partable     # synonym #nolint

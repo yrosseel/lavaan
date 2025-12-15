@@ -1,11 +1,11 @@
-\name{lav_lavaan_bootstrap}
-\alias{lav_lavaan_bootstrap}
+\name{lavBootstrap}
 \alias{bootstrapLavaan}
+\alias{lavBootstrap}
 \title{Bootstrapping a Lavaan Model}
 \description{Bootstrap the LRT, or any other statistic (or vector
 of statistics) you can extract from a fitted lavaan object.}
 \usage{
-lav_lavaan_bootstrap(object, R = 1000L, type = "ordinary", verbose = FALSE, 
+lavBootstrap(object, R = 1000L, type = "ordinary", verbose = FALSE, 
                 FUN = "coef", keep.idx = FALSE,
                 parallel = c("no", "multicore", "snow"),
                 ncpus =  max(1L, parallel::detectCores() - 2L), 
@@ -48,7 +48,7 @@ this is the number of cores (as detected by \code{parallel::detectCores()})
 minus one.} 
 \item{cl}{An optional \pkg{parallel} or \pkg{snow} cluster for use if
 \code{parallel = "snow"}.  If not supplied, a cluster on the local machine is
-created for the duration of the \code{lav_lavaan_bootstrap} call.}
+created for the duration of the \code{lavBootstrap} call.}
 \item{iseed}{An integer to set the seed. Or NULL if no reproducible results are
   needed. This works for both serial (non-parallel) and parallel settings.
   Internally, \code{RNGkind()} is set to \code{"L'Ecuyer-CMRG"} if
@@ -65,7 +65,7 @@ value.}
 Yuan's bootstrap. Improvements to Yuan's bootstrap were contributed
 by Hao Wu and Chuchu Cheng. The handling of iseed was contributed by
 Shu Fai Cheung.}
-\value{For \code{lav_lavaan_bootstrap()}, the bootstrap distribution of the value(s)
+\value{For \code{lavBootstrap()}, the bootstrap distribution of the value(s)
 returned by \code{FUN}, when the object can be simplified to a vector.
 }
 \details{The FUN function can return either a scalar or a numeric vector.
@@ -104,7 +104,7 @@ T.orig <- fitMeasures(fit, "chisq")
 # bootstrap to get bootstrap test statistics
 # we only generate 10 bootstrap sample in this example; in practice
 # you may wish to use a much higher number
-T.boot <- lav_lavaan_bootstrap(fit, R=10, type="bollen.stine",
+T.boot <- lavBootstrap(fit, R=10, type="bollen.stine",
                           FUN=fitMeasures, fit.measures="chisq")
 
 # compute a bootstrap based p-value

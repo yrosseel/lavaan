@@ -1,12 +1,11 @@
-\name{lav_object_vnames}
-\alias{lav_object_vnames}
+\name{lavNames}
 \alias{lavNames}
 \alias{lavaanNames}
 \title{lavaan Names}
 \description{
 Extract variables names from a fitted lavaan object.}
 \usage{
-lav_object_vnames(object, type = "ov", ...)
+lavNames(object, type = "ov", ...)
 }
 \arguments{
 \item{object}{An object of class \code{\linkS4class{lavaan}}.}
@@ -72,12 +71,12 @@ The following variable types are available:
                         a regression formula
 }
 }
-\seealso{\code{\link{lav_model_partable}}, \code{\link{parTable}}}
+\seealso{\code{\link{lavParTable}}, \code{\link{parTable}}}
 \examples{
 HS.model <- ' visual  =~ x1 + x2 + x3
               textual =~ x4 + x5 + x6
               speed   =~ x7 + x8 + x9 '
 
 fit <- cfa(HS.model, data=HolzingerSwineford1939)
-lav_object_vnames(fit, "ov")
+lavNames(fit, "ov")
 }

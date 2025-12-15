@@ -50,7 +50,7 @@ anova(object, ...)
 \details{
     The \code{anova} function for lavaan objects simply calls the
     \code{lavTestLRT} function, which has a few additional arguments.
-    
+ 
     The only \code{test=} options that currently have actual consequences are 
     \code{"satorra.bentler"}, \code{"yuan.bentler"}, or \code{"yuan.bentler.mplus"}
     because \code{"mean.var.adjusted"} and \code{"scaled.shifted"} are
@@ -83,7 +83,7 @@ Satorra, A. (2000). Scaled and adjusted restricted tests in multi-sample
 analysis of moment structures. In Heijmans, R.D.H., Pollock, D.S.G. & Satorra,
 A. (eds.), \emph{Innovations in multivariate statistical analysis}:
 \emph{A Festschrift for Heinz Neudecker} (pp.233-247). 
-London, UK: Kluwer Academic Publishers.     
+London, UK: Kluwer Academic Publishers. 
 
 Satorra, A., & Bentler, P. M. (2001). A scaled difference chi-square test
 statistic for moment structure analysis. \emph{Psychometrika, 66}(4), 507-514.

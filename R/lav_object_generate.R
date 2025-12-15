@@ -261,7 +261,7 @@ lav_object_extended <- function(object, add = NULL,
   }
 
   # replace 'start' column, since lav_model will fill these in in GLIST
-  partable$start <- parameterEstimates(object,
+  partable$start <- lavParameterEstimates(object,
     remove.system.eq = FALSE,
     remove.def = FALSE,
     remove.eq = FALSE,

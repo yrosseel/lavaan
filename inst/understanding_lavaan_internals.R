@@ -13,35 +13,35 @@ FLAT <- lavParseModelString(model)
 lav_object_vnames(FLAT)
 lav_object_vnames(FLAT, "lv")
 
-# lav_model_partable()
+# lavParTable()
 # - first creates FLAT
 # - needs information from the data (eg number of groups)
 # - builds the initial parameter table
 # - the parameter table is the core representation of the model in lavaan
-lav_model_partable(model)
+lavParTable(model)
 
 # if sem/cfa is used, more parameters are set free
-lav_model_partable(model, auto = TRUE)
+lavParTable(model, auto = TRUE)
 
 # example: equality constraints using labels
 model <- 'f =~ x1 + a*x2 + a*x3'
-lav_model_partable(model, auto = TRUE)
+lavParTable(model, auto = TRUE)
 
 # alternative for 'simple' equality constraints
 # (will become the default soon)
-lav_model_partable(model, auto = TRUE, ceq.simple = TRUE)
+lavParTable(model, auto = TRUE, ceq.simple = TRUE)
 
 # explicit equality constraints
 model <- 'f =~ x1 + a*x2 + b*x3; a == b'
-lav_model_partable(model, auto = TRUE, ceq.simple = TRUE)
+lavParTable(model, auto = TRUE, ceq.simple = TRUE)
 
 # multiple groups/blocks
 model <- 'f =~ x1 + c(a1,a2)*x2 + c(b1, b2)*x3'
-lav_model_partable(model, auto = TRUE, ngroups = 2)
+lavParTable(model, auto = TRUE, ngroups = 2)
 
 # matrix representation: LISREL-all-y
 model <- 'f =~ x1 + x2 + x3'
-PT <- lav_model_partable(model, auto = TRUE, as.data.frame. = TRUE)
+PT <- lavParTable(model, auto = TRUE, as.data.frame. = TRUE)
 PT
 # map every parameter to a matrix element
 MAT <- as.data.frame(lavaan:::lav_lisrel(PT))
@@ -94,7 +94,7 @@ lavdata@X[[1]] # the raw data in group/block 1
 
 # 4. lavpartable: create the parameter table
 # needs to know: how many groups, how many categories, ...
-lavpartable <- lav_model_partable(model = FLAT, auto = TRUE)
+lavpartable <- lavParTable(model = FLAT, auto = TRUE)
 
 # 4b. compute and store partable attributes (ov.names, ov.names.x, ...)
 lavpta <- lav_partable_attributes(lavpartable)
@@ -282,10 +282,10 @@ fit.indep <- try(lavaan:::lav_object_independence(object = NULL,
 # PART 3: extractor functions
 fit <- sem(model = 'f =~ x1 + x2 + x3 + x4', data = HolzingerSwineford1939)
 
-parameterEstimates(fit)
+lavParameterEstimates(fit)
 # = subset of parTable(fit), but with additional columsn (z, pvalues, ...)
 
-parameterEstimates(fit, output = "text")
+lavParameterEstimates(fit, output = "text")
 # this is a big part of the summary() output
 
 # summary()

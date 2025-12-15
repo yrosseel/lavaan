@@ -6,7 +6,7 @@
 \description{
 The \code{lavInspect()} and \code{lavTech()} functions can be used to
 inspect/extract information that is stored inside (or can be computed from) a
-fitted lavaan object. Note: the (older) \code{inspect()} function is
+fitted lavaan object. Note: the (older) \code{lavInspect()} function is
 now simply a shortcut for \code{lavInspect()} with default arguments.
 }
 \usage{
@@ -45,7 +45,7 @@ names for multiple groups.}
 The \code{lavInspect()} and \code{lavTech()} functions only differ in the way
 they return the results. The \code{lavInspect()} function will prettify the
 output by default, while the \code{lavTech()} will not attempt to prettify the
-output by default. The (older) \code{inspect()} function is a simplified
+output by default. The (older) \code{lavInspect()} function is a simplified
 version of \code{lavInspect()} with only the first two arguments.
 
 Below is a list of possible values for the \code{what} argument, organized

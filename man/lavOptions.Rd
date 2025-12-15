@@ -209,7 +209,7 @@ Data summary options:
 
 Multiple group options:
 
-\describe{      
+\describe{ 
     \item{\code{group.label}:}{A character vector. The user can specify 
       which group (or factor) levels need to be selected from the grouping 
       variable, and in which order. If missing, all grouping levels are 
@@ -326,7 +326,7 @@ Estimation options:
       the \code{\link{lavTest}} function for a full list. Multiple names
       of test statistics can be provided. If \code{"default"}, the value 
       depends on the values of other arguments. See also the 
-      \code{\link{lavTest}} function to extract (alternative)     
+      \code{\link{lavTest}} function to extract (alternative) 
       test statistics from a fitted lavaan object.}
    \item{\code{standard.test}:}{Character. Choose the test statistic
     that will be used to compute fit measures (like CFI or RSMEA).
@@ -425,7 +425,7 @@ Parallelization options (currently only used for bootstrapping):
       \code{parallel::detectCores()}) minus one.}
     \item{cl}{An optional \pkg{parallel} or \pkg{snow} cluster for use if
       \code{parallel = "snow"}. If not supplied, a cluster on the local 
-      machine is created for the duration of the \code{lav_lavaan_bootstrap} 
+      machine is created for the duration of the \code{lavBootstrap} 
       call.}
     \item{iseed}{An integer to set the seed. Or NULL if no reproducible 
       results are needed. This works for both serial (non-parallel) and 

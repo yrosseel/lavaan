@@ -102,6 +102,7 @@ lav_export <- function(object, target = "lavaan", prefix = "sem",
 
   out
 }
+lavExport <- lav_export     # synonym #nolint
 
 
 lav_export_check <- function(lav) {

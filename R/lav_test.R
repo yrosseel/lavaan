@@ -60,7 +60,7 @@ lavTest <- function(lavobject, test = "standard",
       return(list())
     } else if (any(test %in% c("bootstrap", "bollen.stine"))) {
       lav_msg_stop(gettext(
-      "please use lav_lavaan_bootstrap() to obtain a bootstrap based test statistic."
+      "please use lavBootstrap() to obtain a bootstrap based test statistic."
       ))
     }
 

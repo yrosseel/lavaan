@@ -13,9 +13,9 @@ cfa(model = NULL, data = NULL, ordered = NULL, sampling.weights = NULL,
 }
 \arguments{
 \item{model}{A description of the user-specified model. Typically, the model
-    is described using the lavaan model syntax. See                 
+    is described using the lavaan model syntax. See 
     \code{\link{model.syntax}} for more information. Alternatively, a
-    parameter table (eg. the output of the \code{lav_model_partable()} function) is also
+    parameter table (eg. the output of the \code{lavParTable()} function) is also
     accepted.}
 \item{data}{An optional data frame containing the observed variables used in
     the model. If some variables are declared as ordered factors, lavaan will

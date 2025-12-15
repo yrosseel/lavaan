@@ -1,6 +1,5 @@
 \name{model.syntax}
 \alias{model.syntax}
-\alias{lav_model_partable}
 \alias{lavaanify}
 \alias{lavParTable}
 \alias{parseModelString}
@@ -8,24 +7,9 @@
 \title{The Lavaan Model Syntax}
 \description{
 The lavaan model syntax describes a latent variable model. The 
-function \code{lav_model_partable} turns it into a table that represents the full
+function \code{lavParTable} turns it into a table that represents the full
 model as specified by the user. We refer to this table as the parameter table.} 
 \usage{
-lav_model_partable(model = NULL, meanstructure = FALSE, int.ov.free = FALSE, 
-    int.lv.free = FALSE, marker.int.zero = FALSE,
-    orthogonal = FALSE, orthogonal.y = FALSE,
-    orthogonal.x = FALSE, orthogonal.efa = FALSE, std.lv = FALSE,
-    correlation = FALSE, composites = TRUE,
-    effect.coding = "", conditional.x = FALSE, 
-    fixed.x = FALSE, parameterization = "delta", constraints = NULL, 
-    ceq.simple = FALSE, auto = FALSE, model.type = "sem", 
-    auto.fix.first = FALSE, auto.fix.single = FALSE, auto.var = FALSE, 
-    auto.cov.lv.x = FALSE, auto.cov.y = FALSE, auto.th = FALSE, 
-    auto.delta = FALSE, auto.efa = FALSE, 
-    varTable = NULL, ngroups = 1L, nthresholds = NULL, 
-    group.equal = NULL, group.partial = NULL, group.w.free = FALSE,
-    debug = FALSE, warn = TRUE, as.data.frame. = TRUE)
-
 lavaanify(model = NULL, meanstructure = FALSE, int.ov.free = FALSE,
     int.lv.free = FALSE, marker.int.zero = FALSE,
     orthogonal = FALSE, orthogonal.y = FALSE, 
@@ -101,7 +85,7 @@ the model both for both observed and latent variables.}
 \item{composites}{Logical. If \code{TRUE}, use the new (0.6-20) approach
      to handle composites.}
 \item{effect.coding}{Can be logical or character string. If
-     logical and \code{TRUE}, this implies     
+     logical and \code{TRUE}, this implies 
      \code{effect.coding = c("loadings", "intercepts")}. If logical and 
      \code{FALSE}, it is set equal to the empty string. 
      If \code{"loadings"} is included, equality
@@ -421,7 +405,7 @@ of groups. If you provide a single element, it will be recycled
 for all the groups. This may be dangerous, in particular when the modifier
 is a label. In that case, the (same) label is copied across all groups,
 and this would imply an equality constraint across groups.
-Therefore, when using modifiers in a multiple group setting, it is always  
+Therefore, when using modifiers in a multiple group setting, it is always 
 safer (and cleaner) to specify the same number of 
 elements as the number of groups. Consider this example with two groups:
 \preformatted{
@@ -512,7 +496,7 @@ model <- ' # direct effect
            # mediator
              M ~ a*X
              Y ~ b*M
-             
+ 
 # user defined parameters:
 
     # indirect effect (a*b)

@@ -1532,7 +1532,7 @@ lav_residuals_summary_old <- function(resList = NULL,
 }
 
 
-# x is a list with sample statistics (eg output of inspect(fit, "sampstat")
+# x is a list with sample statistics (eg output of lavInspect(fit, "sampstat")
 # y is another (possibly the same) list with sample statistics
 #
 # to avoid many 'NAs', we set the scale-factor to 1

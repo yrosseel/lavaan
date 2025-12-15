@@ -55,8 +55,8 @@ export("lavaan", "cfa", "sem", "growth",
        #"fsr", "twostep",
        "sam", "efa",
        # new name            # old name
-       "lav_model_partable", "lavParTable", "lavaanify",       
-       "lav_object_vnames",  "lavNames", "lavaanNames",
+       "lavParTable",        "lavaanify",
+       "lavNames",           "lavaanNames",
        "lavParseModelString", # "parseModelString",
        "lavInspect",         "inspect",
        "lavTech",
@@ -65,21 +65,21 @@ export("lavaan", "cfa", "sem", "growth",
        # utilities
        "lav_get_cov", "lav_char2num", "lav_cor2cov",
        "getCov", "char2num", "cor2cov",                 # old names
-       "lavOptions", 
-#     "lav_use_lavaanC",
+       "lavOptions",
+#      "lav_use_lavaanC",
        "modindices", "modificationIndices", "modificationindices",
        "standardizedSolution", "standardizedsolution",
-       "parameterEstimates", "parameterestimates",
+       "lavParameterEstimates",     "parameterEstimates", "parameterestimates",
        "parameterTable", "parametertable", "parTable", "partable",
        "varTable", "vartable",
        "fitMeasures", "fitmeasures",
-       "inspectSampleCov",
-       "lav_lavaan_bootstrap", "bootstrapLavaan",
-       "lav_data_simulate_old", "simulateData",
-       "estfun.lavaan", "lavScores", "lav_scores",
+       "lavInspectSampleCov",                          "inspectSampleCov",
+       "lavBootstrap",       "bootstrapLavaan",
+       "lavSimulateData",    "simulateData",
+       "estfun.lavaan", "lavScores",
        "lavTables",
        "lavTablesFitCp", "lavTablesFitCf", "lavTablesFitCm",
-       "lav_export", "lavExport",
+       "lavExport",
        "lavTest", "lavTestLRT", "lavTestWald", "lavTestScore",
        "lavMatrixRepresentation",
        "lav_mplus_lavaan", "mplus2lavaan",
@@ -88,7 +88,7 @@ export("lavaan", "cfa", "sem", "growth",
        "lavPredict",
        "lavPredictY",
        "lavPredictY_cv",
-       "lav_object_cor", "lavCor",
+       "lavCor",
 
        # API functions
 
@@ -166,13 +166,13 @@ export("lavaan", "cfa", "sem", "growth",
 
        # lav_data
        "lav_data_update",
- 
+
        # lav_samplestats
        "lav_samplestats_from_data",
 
        # estimation
        "lav_export_estimation",
-       
+
        # plotting utilities
        "lav_label_code",
        "lav_model_plotinfo",
@@ -235,5 +235,5 @@ S3method(lavTech,    lavaan, lav_lavaan_lavtech)
 S3method(lavInspect, lavaanList, lav_lavaanlist_lavinspect)
 S3method(lavTech,    lavaanList, lav_lavaanlist_lavtech)
 if(getRversion() >= "3.6.0") {
-    S3method(sandwich::estfun, lavaan, lav_scores)
+    S3method(sandwich::estfun, lavaan)
 }

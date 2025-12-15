@@ -134,6 +134,8 @@ lav_scores <- function(object, scaling = FALSE, # nolint
 
   score_matrix
 }
+lavScores <- lav_scores       # synonym #nolint
+estfun.lavaan <- lav_scores   # synonym
 
 lav_scores_ml <- function(ntab = 0L,
                           ntot = 0L,

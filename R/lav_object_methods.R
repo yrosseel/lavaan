@@ -13,7 +13,7 @@
 
 # lavaan-specific methods:
 #
-# - parameterEstimates()
+# - lavParameterEstimates()
 # - standardizedSolution()
 # - parameterTable()
 # - varTable()
@@ -189,7 +189,7 @@ standardizedSolution <- # nolint
     }
 
     if (is.null(partable)) {
-      tmp.partable <- inspect(object, "list")
+      tmp.partable <- lavInspect(object, "list")
     } else {
       tmp.partable <- partable
     }
@@ -331,8 +331,7 @@ standardizedSolution <- # nolint
     tmp.list
   }
 
-parameterEstimates <- # nolint
-  parameterestimates <- function(object,
+lavParameterEstimates <- function(object,                 # nolint
                                  # select columns
                                  se = TRUE,
                                  zstat = TRUE,
@@ -956,7 +955,7 @@ parameterEstimates <- # nolint
         slotOptions = this.options
       )
 
-      se.comp <- parameterEstimates(fit.complete,
+      se.comp <- lavParameterEstimates(fit.complete,
         ci = FALSE, fmi = FALSE,
         zstat = FALSE, pvalue = FALSE, remove.system.eq = FALSE,
         remove.eq = FALSE, remove.ineq = FALSE,
