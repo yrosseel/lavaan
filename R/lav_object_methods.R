@@ -1113,6 +1113,7 @@ lavParameterEstimates <- function(object,                 # nolint
 
     tmp.list
   }
+parameterEstimates <- lavParameterEstimates     # synonym   # nolint
 
 parameterTable <- parametertable <- parTable <- partable <- # nolint
   function(object) {

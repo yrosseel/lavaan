@@ -177,27 +177,29 @@ lav_graph_topological_sort <- function(defined, definedby, warn = TRUE) {
 }
 
 # Topological grouping and placing of nodes in a matrix.
-# This routine returns a data.frame with the nodes and their position in a
-# matrix (rows, cols), as follows :
+# This routine returns a data.frame with the nodes, their position in a
+# matrix (rows, cols) and an indication of root (no dependencies) or
+# leave (no other nodes depend on this one), as follows :
 # the first column contains all nodes without dependencies
 # the second column contains nodes with only dependency in the first column (*)
 # the third column contains nodes with only dependencies in the first and
-#     second, with at least one in the second column (*)
-# and so on
-# (*) all nodes which have no successors are moved to the last column
-# the rows in the second to last column are chosen so that they are in the
-# neighborhood of the mean of the rows from the nodes they depend on.
+#     second, with at least one in the second column and so on
+# (*) nodes with successors but no successors in the next column are promoted
+# to the column just before the least column of the successors.
+# (**) the rows in the second to last column are chosen so that they are in the
+#      neighborhood of the mean of the rows from the nodes they depend on.
 lav_graph_topological_matrix <- function(defined, definedby, warn = TRUE) {
   rv <- lav_graph_topological_sort(defined, definedby, warn)
   n <- length(rv)
   rvrow <- integer(n)
   rvcol <-  integer(n)
+  rvindic <- character(n)
   colmax <- 0L
-  lastcolmax <- 0L
   for (i in seq.int(n)) {
     if (i == 1L) {
       rvrow[i] <- rvcol[i] <- 1L
       colmax <- 1L
+      rvindic[i] <- "r" # is always a root
     } else {
       predecessors <- definedby[rv[i] == defined]
       followers <- defined[rv[i] == definedby]
@@ -205,37 +207,58 @@ lav_graph_topological_matrix <- function(defined, definedby, warn = TRUE) {
         rvcol[i] <- 1L
         colmax[1L] <- colmax[1L] + 1L
         rvrow[i] <- colmax[1L]
+        rvindic[i] <- "r" # root
       } else {
-        if (length(followers) == 0) { # put in last column, temporarily -1
-          rvcol[i] <- -1L
-          lastcolmax <- lastcolmax + 1L
-          rvrow[i] <- lastcolmax
+        if (length(followers) == 0L) rvindic[i] <- "l"
+        predecessor.ind <- match(predecessors, rv)
+        rvcol[i] <- max(rvcol[predecessor.ind]) + 1L
+        if (length(colmax) < rvcol[i]) {
+          colmax[rvcol[i]] <- 1L
         } else {
-          predecessor.ind <- match(predecessors, rv)
-          rvcol[i] <- max(rvcol[predecessor.ind]) + 1L
-          if (length(colmax) < rvcol[i]) {
-            colmax[rvcol[i]] <- 1L
-          } else {
-            colmax[rvcol[i]] <- colmax[rvcol[i]] + 1L
-          }
+          colmax[rvcol[i]] <- colmax[rvcol[i]] + 1L
         }
         rvrow[i] <- colmax[rvcol[i]]
       }
     }
   }
-  # last column
-  rvcol[rvcol == -1L] <- length(colmax) + 1L
-  colmax[length(colmax) + 1L] <- lastcolmax
+  # increment columns ? (*)
+  incremented <- TRUE
+  while (incremented) {
+    incremented <- FALSE
+    for (i in seq_along(rv)) {
+      if (rvindic[i] != "l") {
+        followers <- defined[rv[i] == definedby]
+        followers.ind <- match(followers, rv)
+        mincol <- min(rvcol[followers.ind])
+        if (rvcol[i] < mincol - 1L) {
+          incremented <- TRUE
+          curcol <- rvcol[i]
+          rvcol[i] <- mincol -1L
+          # adapt rows in curcol
+          rvrow[rvcol == curcol & rvrow > rvrow[i]] <-
+            rvrow[rvcol == curcol & rvrow > rvrow[i]] - 1L
+          colmax[curcol] <- colmax[curcol] - 1L
+          # adapt rows in newcol
+          colmax[mincol - 1L] <- colmax[mincol - 1L] + 1L
+          rvrow[i] <- colmax[mincol - 1L]
+        }
+      }
+    }
+  }
   # adapt rows in columns to match as close as possible the rows of the
-  # connected nodes in the previous column(s) :
+  # connected nodes in the previous column(s) : (**)
   if (length(colmax) > 1L) {
     rowmax <- max(colmax)
     for (c in seq.int(2L, length(colmax))) {
       cnodes.ind <- which(rvcol == c)
       optimalrows <- sapply(cnodes.ind, function (ci) {
         prevnodes.ind <- which(rv[ci] == defined)
-        prevnodes <- definedby[prevnodes.ind]
-        mean(rvrow[match(prevnodes, rv)])
+        if (length(prevnodes.ind) == 0L) {
+          colmax[c] / 2
+        } else {
+          prevnodes <- definedby[prevnodes.ind]
+          mean(rvrow[match(prevnodes, rv)])
+        }
       })
       or_order <- order(optimalrows)
       optimalrows <- optimalrows[or_order]
@@ -258,5 +281,6 @@ lav_graph_topological_matrix <- function(defined, definedby, warn = TRUE) {
   neworder <- order(rvcol * 1000L + rvrow)
   data.frame(nodes = rv[neworder],
              rows = rvrow[neworder],
-             cols = rvcol[neworder])
+             cols = rvcol[neworder],
+             indic = rvindic[neworder])
 }
