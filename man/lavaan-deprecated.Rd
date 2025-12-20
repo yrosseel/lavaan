@@ -8,7 +8,7 @@ be replaced by the calls of the corresponding function in the second column.
 #  bootstrapLavaan \tab lavBootstrap \cr
   char2num \tab lav_char2num \cr
   cor2cov \tab lav_cor2cov \cr
-  getCov \tab lav_get_cov \cr
+  getCov \tab lav_getcov \cr
   inspectSampleCov \tab lavInspectSampleCov \cr
 #  lavaanNames \tab lavNames \cr
   mplus2lavaan.modelSyntax \tab lav_mplus_syntax_model \cr

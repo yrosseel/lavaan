@@ -217,8 +217,8 @@ lav_char2num <- function(s = "") {
 
 # create full matrix based on lower.tri or upper.tri elements; add names
 # always ROW-WISE!!
-lav_get_cov <- function(x, lower = TRUE, diagonal = TRUE, sds = NULL,
-                   names = paste("V", 1:nvar, sep = "")) {
+lav_getcov <- function(x, lower = TRUE, diagonal = TRUE, sds = NULL,
+                       names = paste("V", 1:nvar, sep = "")) {
   # check x and sds
   if (is.character(x)) x <- lav_char2num(x)
   if (is.character(sds)) sds <- lav_char2num(sds)

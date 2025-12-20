@@ -63,7 +63,7 @@ export("lavaan", "cfa", "sem", "growth",
        "lavListInspect",     "lavListTech",
        "lavResiduals",
        # utilities
-       "lav_get_cov", "lav_char2num", "lav_cor2cov",
+       "lav_getcov", "lav_char2num", "lav_cor2cov",
        "getCov", "char2num", "cor2cov",                 # old names
        "lavOptions",
 #      "lav_use_lavaanC",

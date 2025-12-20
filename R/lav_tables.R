@@ -1228,7 +1228,7 @@ lav_tables_table_format <- function(out, lavdata = lavdata,
       STAT <- out[[stat.idx]][out$group == g]
     }
     RN <- lavdata@ov.names[[g]]
-    OUT[[g]] <- lav_get_cov(STAT, diagonal = FALSE, lower = FALSE, names = RN)
+    OUT[[g]] <- lav_getcov(STAT, diagonal = FALSE, lower = FALSE, names = RN)
     # change diagonal elements: replace by univariate stat
     # if possible
     diag(OUT[[g]]) <- as.numeric(NA)

@@ -8,7 +8,7 @@ getParameterLabels <- lav_partable_labels
 # standardize function names in lav_utils.R / 31 Oct 2025
 getCov <- function(x, lower = TRUE, diagonal = TRUE, sds = NULL,
                    names = paste("V", 1:nvar, sep = "")) {
-  lav_deprecated("lav_get_cov")
+  lav_deprecated("lav_getcov")
   if (diagonal) {
     nvar <- (sqrt(1 + 8 * length(x)) - 1)/2
   }
@@ -16,7 +16,7 @@ getCov <- function(x, lower = TRUE, diagonal = TRUE, sds = NULL,
     nvar <- (sqrt(1 + 8 * length(x)) + 1)/2
   }
   sc <- sys.call()
-  sc[[1L]] <- quote(lavaan::lav_get_cov)
+  sc[[1L]] <- quote(lavaan::lav_getcov)
   eval(sc, parent.frame())
 }
 char2num <- function(s = "") {
@@ -141,3 +141,6 @@ inspectSampleCov <- function(model, data, ...) {
 #   eval(sc, parent.frame())
 # }
 parameterestimates <- parameterEstimates # alias
+
+# for tidySEM
+vnames <- lav_partable_vnames

@@ -1,5 +1,5 @@
-\name{lav_get_cov}
-\alias{lav_get_cov}
+\name{lav_getcov}
+\alias{lav_getcov}
 \alias{getCov}
 \alias{lav_cor2cov}
 \alias{cor2cov}
@@ -9,7 +9,7 @@
 \description{Convenience functions to deal with covariance and correlation
 matrices.}
 \usage{
-lav_get_cov(x, lower = TRUE, diagonal = TRUE, sds = NULL,
+lav_getcov(x, lower = TRUE, diagonal = TRUE, sds = NULL,
        names = paste("V", 1:nvar, sep=""))
 getCov(x, lower = TRUE, diagonal = TRUE, sds = NULL,
        names = paste("V", 1:nvar, sep=""))
@@ -38,7 +38,7 @@ are ignored.}
 \item{R}{A correlation matrix, to be scaled into a covariance matrix.}
 }
 \details{
-The \code{lav_get_cov} function is typically used to input the lower 
+The \code{lav_getcov} function is typically used to input the lower 
 (or upper) triangular elements of a (symmetric) covariance matrix. In many 
 examples found in handbooks, only those elements are shown. However, lavaan 
 needs a full matrix to proceed. 
@@ -60,7 +60,7 @@ lower <- '
 -21.899,  -18.831,  -21.748,  -18.775,  35.522,  450.288 '
 
 # convert to a full symmetric covariance matrix with names
-wheaton.cov <- lav_get_cov(lower, names=c("anomia67","powerless67", "anomia71",
+wheaton.cov <- lav_getcov(lower, names=c("anomia67","powerless67", "anomia71",
                                      "powerless71","education","sei"))
 
 # the model
