@@ -10,8 +10,8 @@ model <- 'f =~ x1 + a*x2 + 3*x3'
 lavParseModelString(model, as.data.frame. = TRUE)
 # creates a 'FLAT' initial parameter table
 FLAT <- lavParseModelString(model)
-lav_object_vnames(FLAT)
-lav_object_vnames(FLAT, "lv")
+lavNames(FLAT)
+lavNames(FLAT, "lv")
 
 # lavParTable()
 # - first creates FLAT
