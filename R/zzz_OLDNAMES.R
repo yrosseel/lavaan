@@ -140,3 +140,4 @@ inspectSampleCov <- function(model, data, ...) {
 #   sc[[1L]] <- quote(lavaan::lavParameterEstimates)
 #   eval(sc, parent.frame())
 # }
+parameterestimates <- parameterEstimates # alias
