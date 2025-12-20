@@ -171,9 +171,9 @@ lav_msg_view <- function(x,
 # Like base::.Deprecated but specialised for lavaan
 # parameter times specifies how many times the warning should be generated
 # during one "lavaan-package-session"
-lav_deprecated <- function (new,
-                            old = as.character(sys.call(sys.parent()))[1L],
-                            times = 1L)
+lav_deprecated <- function(new,
+                           old = as.character(sys.call(sys.parent()))[1L],
+                           times = 1L)
 {
   dprmsg <-  get0(paste0("dpr_", old), lavaan_cache_env,
                   ifnotfound = as.integer(times))
@@ -184,9 +184,7 @@ lav_deprecated <- function (new,
          gettext("See help(\"Deprecated\")"))
   msg <- paste(msg, collapse = "")
   warning(warningCondition(msg, old = old, new = new, package = NULL,
-                           class = "deprecatedWarning"),
-          call. = FALSE,
-          domain = NA)
+                           class = "deprecatedWarning"))
 }
 
 #  ---------------  examples of use ----------------------

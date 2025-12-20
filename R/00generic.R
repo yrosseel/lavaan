@@ -78,6 +78,10 @@ lavInspect <- function(object, what = "free",
   UseMethod("lavInspect", object)
 }
 
+inspect <- function(object, what = "free", ...) {
+    UseMethod("inspect", object)
+}
+
 lavTech <- function(object, what = "free",
                     add.labels = FALSE,
                     add.class = FALSE,
