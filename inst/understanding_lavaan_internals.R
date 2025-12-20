@@ -408,15 +408,9 @@ fit@baseline$test$standard
 # 4) xxx_sam.R
 # 5) xxx_fsr.R (only for repro reasons; access via lavaan:::fsr())
 
-# mixture of new, old, and very old code
-# very old code: functions do not start with lav_ prefix
-# for example:
-lavaan::lav_get_cov
-
 # files that start with ctr_  contain contributed code
-# written by others
-# for example: lav_pml_plrt.R (written by Myrsini Katsikatsou)
-# (with only minor edits by YR)
+# written by others (although we are slowly converting them to lav_
+# files)
 
 # 00class.R contains S4 class definitions
 # 00generic.R defines 'generic' functions (that can be specialized)
