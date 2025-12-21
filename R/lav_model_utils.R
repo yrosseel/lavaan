@@ -121,9 +121,9 @@ lav_model_set_parameters <- function(lavmodel = NULL, x = NULL) {
     }
   }
 
-  #if (lavmodel@composites) {
+  if (lavmodel@composites) {
   # for package stdmod only! (vignette stdmod_lavaan uses old fit object)
-  if (.hasSlot(lavmodel, "composites") && lavmodel@composites) {
+  #if (.hasSlot(lavmodel, "composites") && lavmodel@composites) {
     nmat <- lavmodel@nmat
     if (lavmodel@representation == "LISREL") {
       for (g in 1:lavmodel@nblocks) {

@@ -142,5 +142,5 @@ inspectSampleCov <- function(model, data, ...) {
 # }
 parameterestimates <- parameterEstimates # alias
 
-# for tidySEM
-vnames <- lav_partable_vnames
+# for tidySEM in 0.6-21 only
+# vnames <- lav_partable_vnames
