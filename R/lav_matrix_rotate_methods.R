@@ -1,6 +1,7 @@
 # various rotation criteria and their gradients
 # YR 05 April 2019: initial version
 # YR 14 June  2019: add more rotation criteria
+# YR 22 Dec   2025: add multigroup rotation criteria
 
 # references:
 #
@@ -417,9 +418,6 @@ lav_matrix_rotate_tandem2 <- function(LAMBDA, ..., grad = FALSE) {
 }
 
 
-
-
-
 # simplimax
 # Kiers (1994)
 #
@@ -555,6 +553,57 @@ lav_matrix_rotate_bigeomin <- function(LAMBDA, geomin.epsilon = 0.01, ...,
     tmp <- attr(out, "grad")
     attr(out, "grad") <- cbind(0, tmp)
   }
+
+  out
+}
+
+# multiple group rotation + agreement
+lav_matrix_rotation_mg <- function(lambdaList, method.fname = "geomin",
+                                   method.args = list(),
+                                   mg.agreement.method = "procrustes",
+                                   w = 0.5, scale = TRUE) {
+  ngroups <- length(lambdaList)
+
+  # 0. rescale, so all columns have the same (average) sum-of-squares
+  if (scale) {
+    SS.LIST <- lapply(lambdaList, function(x) colSums(x * x))
+    SS.ave <- Reduce("+", SS.LIST) / length(SS.LIST)
+    for (g in seq_len(ngroups)) {
+      lambdaList[[g]] <- t(t(lambdaList[[g]]) / sqrt(SS.LIST[[g]]) * sqrt(SS.ave))
+    }
+  }
+
+  # 1. simple structure crit for each group
+  Q.group <- numeric(ngroups)
+  for (g in seq_len(ngroups)) {
+    Q.group[g] <- do.call(method.fname, c(
+      list(LAMBDA = lambdaList[[g]]),
+      method.args, list(grad = FALSE)
+    ))
+  }
+  # FIXME: should we 'weight' the groups, based on sample size?
+  Q.mg <- sum(Q.group)
+
+  # 2. agreement (generalized procrustes) across all groups
+  if (mg.agreement.method == "procrustes") {
+    A.mg <- 0
+    pairs <- utils:::combn(seq_len(ngroups), 2L)
+    for (p in seq_len(ncol(pairs))) {
+      g1 <- pairs[1L, p]
+      g2 <- pairs[2L, p]
+      diff <- (lambdaList[[g1]] - lambdaList[[g2]])
+      diff2 <- diff * diff
+      # FiXME: should we 'weight' the groups, based on sample size?
+      A.mg <- A.mg + sum(diff2)
+    }
+  } else {
+    lav_msg_stop(gettext("only mg.agreement.method procrustes is supported for now"))
+  }
+
+  out <- (w * A.mg) + ((1 - w) * Q.mg)
+
+  attr(out, "Q.mg") <- Q.mg
+  attr(out, "A.mg") <- A.mg
 
   out
 }

@@ -37,7 +37,7 @@ lav_matrix_rotate <- function(A = NULL, # original matrix
 
   # check A
   if (!inherits(A, "matrix")) {
-    lav_msg_stop(gettext("A does not seem to a matrix"))
+    lav_msg_stop(gettext("A does not seem to be a matrix"))
   }
 
   P <- nrow(A)
@@ -82,8 +82,7 @@ lav_matrix_rotate <- function(A = NULL, # original matrix
         "nrow(init.ROT) = %1$s does not equal ncol(init.ROT) = %2$s",
         nrow(init.ROT), ncol(init.ROT)))
     }
-    # rotation matrix? init.ROT^T %*% init.ROT = I
-    RR <- crossprod(init.ROT)
+    # rotation matrix?
     if (!lav_matrix_rotate_check(init.ROT, orthogonal = orthogonal)) {
       lav_msg_stop(gettext("init.ROT does not look like a rotation matrix"))
     }
@@ -492,7 +491,7 @@ lav_matrix_rotate_gpa <- function(A = NULL, # original matrix
     # if verbose, print
     if (lav_verbose()) {
       cat(
-        "iter = ", sprintf("%4d", iter - 1),
+        "  iter = ", sprintf("%4d", iter - 1),
         " Q = ", sprintf("%9.7f", Q.current),
         " frob.log10 = ", sprintf("%10.7f", log10(frob)),
         " alpha = ", sprintf("%9.7f", alpha), "\n"
@@ -634,7 +633,7 @@ lav_matrix_rotate_pairwise <- function(A = NULL, # original matrix
   # if verbose, print
   if (lav_verbose()) {
     cat(
-      "iter = ", sprintf("%4d", 0),
+      "  iter = ", sprintf("%4d", 0),
       " Q = ", sprintf("%13.11f", Q.current), "\n"
     )
   }
@@ -646,7 +645,6 @@ lav_matrix_rotate_pairwise <- function(A = NULL, # original matrix
     tmp <- utils::combn(M, 2)
     PLANE <- cbind(tmp, tmp[c(2, 1), , drop = FALSE])
   }
-
 
   # define objective function -- orthogonal
   objf_orth <- function(theta = 0, A = NULL, col1 = 0L, col2 = 0L) {
@@ -665,6 +663,7 @@ lav_matrix_rotate_pairwise <- function(A = NULL, # original matrix
       list(LAMBDA = LAMBDA),
       method.args, list(grad = FALSE)
     ))
+
     Q
   }
 
@@ -767,7 +766,7 @@ lav_matrix_rotate_pairwise <- function(A = NULL, # original matrix
     # if verbose, print
     if (lav_verbose()) {
       cat(
-        "iter = ", sprintf("%4d", iter),
+        "  iter = ", sprintf("%4d", iter),
         " Q = ", sprintf("%13.11f", Q.current),
         " change = ", sprintf("%13.11f", diff), "\n"
       )

@@ -551,12 +551,27 @@ lav_object_check_version <- function(object = NULL) {
   if (new_options$estimator.orig == "default") {
     new_options$estimator.orig <- new_options$estimator
   }
+
+  # 0.6-21
   new_options$gamma.vcov.mplus <- new_options$mimic == "Mplus"
   new_options$gamma.wls.mplus <- new_options$mimic == "Mplus"
   new_options$gls.v11.mplus <- new_options$mimic == "Mplus"
   new_options$cinformation.expected.mplus <- new_options$mimic == "Mplus"
   new_options$h1.information.meat <- "structured"
   new_options$mega.h1.information <- "unstructured"
+
+  # 0.6-22
+  if (is.null(new_options$rotation.args$mg.agreement)) {
+    new_options$rotation.args$mg.agreement <- FALSE
+    new_options$rotation.args$mg.agreement.weight <- 0.5
+    new_options$rotation.args$mg.agreement.method <- "pairwise"
+    ew_options$rotation.args$mg.agreement.crit    <- "procrustes"
+
+  }
+  if (is.null(new_options$rotation.args$mg.agreement.weight)) {
+    new_options$rotation.args$mg.agreement.weight <- 0.5
+  }
+
   lavobject@Options <- new_options
 
   lavobject

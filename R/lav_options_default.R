@@ -268,6 +268,12 @@ lav_options_default <- function() {
   elm(c("rotation.args", "verbose"), FALSE, bl = TRUE)
   elm(c("rotation.args", "jac.init.rot"), TRUE, bl = TRUE)
   elm(c("rotation.args", "max.iter"), 10000L, nm = "[0, 1e+12]")
+  elm(c("rotation.args", "mg.agreement"), FALSE, bl = TRUE)
+  elm(c("rotation.args", "mg.agreement.weight"), 0.5, nm = "[0, 1]")
+  elm(c("rotation.args", "mg.agreement.algorithm"), "pairwise",
+    chr = c("pairwise", "lg"))
+  elm(c("rotation.args", "mg.agreement.method"), "procrustes",
+    chr = c("procrustes", "loading.alignment"))
 
   # full data
   elm("std.ov", FALSE, bl = TRUE)

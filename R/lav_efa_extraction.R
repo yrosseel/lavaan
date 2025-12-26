@@ -51,6 +51,10 @@ lav_efa_extraction <- function(S, nfactors = 1L,
     },
     abs.tol = (.Machine$double.eps * 10)
   )
+  if (lav_verbose()) {
+    cat("\n")
+    cat("factor extraction iterations using ", method, ":\n")
+  }
   out <- nlminb(
     start = cache$theta, objective = minObjective,
     gradient = minGradient, hessian = minHessian,

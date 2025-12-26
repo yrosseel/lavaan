@@ -48,3 +48,32 @@ lav_efa_get_loadings <- function(object, ...) {
 
   out
 }
+
+# find the best ordering of the columns in lambda_target, to minimize
+# the difference with the reference lambda matrix (lambda_ref)
+#
+# return the optimal order of the column for lambda_target
+lav_efa_find_best_order <- function(lambda_ref = NULL, lambda_target = NULL,
+                                    crit = "rmse") {
+  M <- ncol(lambda_ref)
+  stopifnot(ncol(lambda_target) == M)
+
+  # all possible permutation
+  # FIXEM:we really need a more elegant way to find the permutations...
+  tmp <- unname(as.matrix(expand.grid(rep(list(seq_len(M)), M))))
+  # select only rows where all numbers appear
+  perm <- tmp[apply(tmp, 1L, function(x) { length(unique(x)) == M }), ,
+              drop = FALSE]
+
+  rmse.perm <- numeric( nrow(perm) )
+  for (p in seq_len(nrow(perm))) {
+    diff <- lambda_ref - lambda_target[,perm[p,], drop = FALSE]
+    diff2 <- diff * diff
+    mse <- mean(diff2)
+    rmse.perm[p] <- sqrt(mse)
+  }
+  best.idx <- which.min(rmse.perm)
+
+  # return 'best' permutation
+  perm[best.idx,]
+}
