@@ -1168,6 +1168,9 @@ lav_matrix_bdiag <- function(...) {
   ccols <- cumsum(ncols)
   trows <- sum(nrows)
   tcols <- sum(ncols)
+  cnames  <- unlist(lapply(mlist, colnames))
+  rnames  <- unlist(lapply(mlist, rownames))
+
   x <- numeric(trows * tcols)
 
   for (m in seq_len(nmat)) {
@@ -1182,6 +1185,7 @@ lav_matrix_bdiag <- function(...) {
   }
 
   attr(x, "dim") <- c(trows, tcols)
+  attr(x, "dimnames") <- list(rnames, cnames)
   x
 }
 
