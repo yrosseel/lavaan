@@ -782,26 +782,39 @@ lav_partable_vnames <- function(partable, type = NULL, ..., # nolint
           for (l in seq_len(length(lv.names))) {
             this.lv.name <- lv.names[l]
             # try to see if we can find a 'marker' indicator for this factor
+            # here defined as: has fixed-to-one factor loading
             marker.idx <- which(block.ind &
               partable$op == "=~" &
               partable$lhs == this.lv.name &
               partable$rhs %in% v.ind &
               partable$ustart == 1L &
               partable$free == 0L)
-            if (length(marker.idx) == 1L) { # unique only!!
-              # check if 'other' loadings are fixed to zero
-              other.idx <- which(block.ind &
-                partable$op == "=~" &
-                partable$lhs != this.lv.name &
-                partable$rhs == partable$rhs[marker.idx] &
-                partable$free == 0L)
-              if (length(other.idx) == 0L) {
-                out[l] <- partable$rhs[marker.idx]
-              } else if (all(partable$ustart[other.idx] == 0)) {
-                out[l] <- partable$rhs[marker.idx]
+            if (length(marker.idx) > 0L) {
+              # we may have multiple potential markers
+              potential.markers <- partable$rhs[marker.idx]
+              valid.markers <- character(0L)
+              for (m in seq_along(potential.markers)) {
+                this.marker.idx <- marker.idx[m]
+                # check if 'other' loadings are fixed to zero
+                other.idx <- which(block.ind &
+                  partable$op == "=~" &
+                  partable$lhs != this.lv.name &
+                  partable$rhs == partable$rhs[this.marker.idx] &
+                  partable$free == 0L)
+                if (length(other.idx) == 0L) {
+                  # simple structure, or one factor
+                  valid.markers <- c(valid.markers,
+                                     partable$rhs[this.marker.idx])
+                } else if (all(partable$ustart[other.idx] == 0)) {
+                  valid.markers <- c(valid.markers,
+                                     partable$rhs[this.marker.idx])
+                }
+              }
+              if (length(valid.markers) > 0L) {
+                out[l] <- valid.markers[1L] # pick the first one
               }
             }
-          }
+          } # l
           return.value$lv.marker[[b]] <- out
         }
       } else {
@@ -1314,26 +1327,39 @@ lav_partable_vnames <- function(partable, type = NULL, ..., # nolint
           for (l in seq_len(length(lv.names))) {
             this.lv.name <- lv.names[l]
             # try to see if we can find a 'marker' indicator for this factor
+            # here defined as: has a fixed-to-one factor loading
             marker.idx <- which(block.ind &
               partable$op == "=~" &
               partable$lhs == this.lv.name &
               partable$rhs %in% v.ind &
               partable$ustart == 1L &
               partable$free == 0L)
-            if (length(marker.idx) == 1L) { # unique only!!
-              # check if 'other' loadings are fixed to zero
-              other.idx <- which(block.ind &
-                partable$op == "=~" &
-                partable$lhs != this.lv.name &
-                partable$rhs == partable$rhs[marker.idx] &
-                partable$free == 0L)
-              if (length(other.idx) == 0L) {
-                out[l] <- partable$rhs[marker.idx]
-              } else if (all(partable$ustart[other.idx] == 0)) {
-                out[l] <- partable$rhs[marker.idx]
+            if (length(marker.idx) > 0L) {
+              # we may have multiple potential markers
+              potential.markers <- partable$rhs[marker.idx]
+              valid.markers <- character(0L)
+              for (m in seq_along(potential.markers)) {
+                this.marker.idx <- marker.idx[m]
+                # check if 'other' loadings are fixed to zero
+                other.idx <- which(block.ind &
+                  partable$op == "=~" &
+                  partable$lhs != this.lv.name &
+                  partable$rhs == partable$rhs[this.marker.idx] &
+                  partable$free == 0L)
+                if (length(other.idx) == 0L) {
+                  # simple structure, or one factor
+                  valid.markers <- c(valid.markers,
+                                     partable$rhs[this.marker.idx])
+                } else if (all(partable$ustart[other.idx] == 0)) {
+                  valid.markers <- c(valid.markers,
+                                     partable$rhs[this.marker.idx])
+                }
+              }
+              if (length(valid.markers) > 0L) {
+                out[l] <- valid.markers[1L] # pick the first one
               }
             }
-          }
+          } # l
           return.value$lv.marker[[b]] <- out
         }
       }
