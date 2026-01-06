@@ -423,7 +423,8 @@ lav_parse_check_name <- function(formul1, ind, modelsrc) {
 lav_parse_modifier <- function(formul1, lhs, opi, modelsrc, types,
                                    rme = 0L, rmeprev = 0L) {
   if (rme > rmeprev) {
-    welke <- c(seq.int(1L, opi), seq.int(rmeprev + 1L, rme), length(formul1))
+    welke <- c(seq.int(1L, opi), seq.int(rmeprev + 1L, rme), 
+               length(formul1$elem.type))
     formul1 <- lav_parse_sublist(formul1, welke)
   }
   nelem <- length(formul1$elem.type)
@@ -467,88 +468,103 @@ lav_parse_modifier <- function(formul1, lhs, opi, modelsrc, types,
   } else {
     # modifier on right hand side
     # check for vectors c(...), start(...), fixed(...), ...
-    for (j in (opi + 1L):(nelem - 2L)) {
-      if (formul1$elem.text[j + 1L] == "(") {
+    j <- opi + 1L
+    if (formul1$elem.text[j + 1L] == "(") {
+      # browser()
+      expect.vector <- (formul1$elem.text[j] == "c")
+      if (any(formul1$elem.text[j] == c("start", "fixed", "label",
+                                        "upper", "lower", "rv", "prior"))) {
+        aanhaakjes <- 0L
+        for (jjj in seq.int(j + 2L, nelem - 3L)) {
+          if (formul1$elem.text[jjj] == "(") {
+            aanhaakjes <- aanhaakjes + 1L
+          } else if (formul1$elem.text[jjj] == ")") {
+            aanhaakjes <- aanhaakjes - 1L
+          } else {
+            if (formul1$elem.text[jjj] == ",") {
+              expect.vector <- TRUE
+              break
+            }
+          }
+        }
+      }
+      if (expect.vector) {
+        vector.type <- 0
+        labnu <- j + 2L
+        repeat {
+          aanhaakjes <- 0L
+          labtot <- labnu
+          for (jjj in seq.int(labnu, nelem - 2L)) {
+            if (formul1$elem.text[jjj] == "(") {
+              aanhaakjes <- aanhaakjes + 1L
+            } else if (formul1$elem.text[jjj] == ")" && aanhaakjes > 0L) {
+              aanhaakjes <- aanhaakjes - 1L
+            } else {
+              if (any(formul1$elem.text[jjj] == c(",", ")"))) {
+                labtot <- jjj
+                break
+              }
+            }
+          }
+          if (labtot == labnu) {
+            tl <- lav_parse_txtloc(modelsrc, formul1$elem.pos[j])
+            lav_msg_stop(gettext("invalid vector specification"),
+                         tl[1L],
+                         footer = tl[2L]
+            )
+          }
+          if (labtot == labnu + 1L) { # 1 item
+            vector.type <- lav_parse_adapt_vector_type(
+              vector.type, formul1$elem.type[labnu],
+              formul1$elem.text[labnu], types
+            )
+            if (vector.type == -1) {
+              tl <- lav_parse_txtloc(modelsrc, formul1$elem.pos[1L])
+              lav_msg_stop(gettext(
+                "Combining labels and fixed values in multigroup modifiers
+                   isn't allowed!"), tl[1L], footer = tl[2L])
+            }
+            if (labnu != j + 2L) {
+              formul1$elem.text[j + 2L] <- paste(formul1$elem.text[j + 2L],
+                                    formul1$elem.text[labnu], sep = ";")
+            }
+          } else { # multiple items
+            temp <- lav_parse_eval_r_expression(formul1,
+                                                labnu, labtot - 1L, types)
+            vector.type <- lav_parse_adapt_vector_type(
+              vector.type, types$numliteral,
+              formul1$elem.text[labnu], types
+            )
+            if (vector.type == -1) {
+              tl <- lav_parse_txtloc(modelsrc, formul1$elem.pos[1L])
+              lav_msg_stop(gettext(
+                "Combining labels and fixed values in multigroup modifiers
+                   isn't allowed!"), tl[1L], footer = tl[2L])
+            }
+            if (labnu == j + 2L) {
+              formul1$elem.text[labnu] <- as.character(temp)
+            } else {
+              formul1$elem.text[j + 2L] <- paste(
+                formul1$elem.text[j + 2L], as.character(temp), sep = ";")
+            }
+          }
+          labnu <- labtot + 1L
+          if (labnu > nelem - 2) {
+            break
+          }
+        }
+        if (vector.type == 0L) vector.type <- types$stringliteral
         if (formul1$elem.text[j] == "c") {
-          vector.type <- 0
-          labnu <- j + 2L
-          lab <- formul1$elem.text[labnu]
-          vector.type <- lav_parse_adapt_vector_type(
-            vector.type, formul1$elem.type[labnu],
-            formul1$elem.text[labnu], types
-          )
-          while (formul1$elem.text[labnu + 1L] == ",") {
-            labnu <- labnu + 2L
-            lab <- c(lab, formul1$elem.text[labnu])
-            vector.type <- lav_parse_adapt_vector_type(
-              vector.type, formul1$elem.type[labnu],
-              formul1$elem.text[labnu], types
-            )
-            if (vector.type == -1) {
-                tl <- lav_parse_txtloc(modelsrc, formul1$elem.pos[1L])
-                lav_msg_stop(gettext(
-                  "Combining labels and fixed values in multigroup modifiers
-                   isn't allowed!"), tl[1L], footer = tl[2L])
-            }
-          }
-          if (vector.type == 0) vector.type <- types$stringliteral
-          if (formul1$elem.text[labnu + 1L] == ")") {
-            formul1$elem.type[seq.int(j, labnu)] <- 0
-            formul1$elem.type[labnu + 1L] <- vector.type
-            formul1$elem.text[labnu + 1L] <- paste(lab, collapse = ";")
-            formul1 <- lav_parse_sublist(formul1, which(formul1$elem.type > 0))
-            nelem <- length(formul1$elem.type)
-            break
+          if (vector.type == types$stringliteral) {
+            formul1$elem.text[j] <- "label"
           } else {
-            tl <- lav_parse_txtloc(modelsrc, formul1$elem.pos[j])
-            lav_msg_stop(gettext("invalid vector specification"),
-              tl[1L],
-              footer = tl[2L]
-            )
+            formul1$elem.text[j] <- "fixed"
           }
         }
-        if (j + 3L < nelem && formul1$elem.text[j + 3L] == "," &&
-          any(formul1$elem.text[j] == c(
-            "start", "fixed", "label",
-            "upper", "lower", "rv", "prior"
-          ))) {
-          vector.type <- 0
-          labnu <- j + 2L
-          lab <- formul1$elem.text[labnu]
-          vector.type <- lav_parse_adapt_vector_type(
-            vector.type, formul1$elem.type[labnu],
-            formul1$elem.text[labnu], types
-          )
-          while (formul1$elem.text[labnu + 1L] == ",") {
-            labnu <- labnu + 2L
-            lab <- c(lab, formul1$elem.text[labnu])
-            vector.type <- lav_parse_adapt_vector_type(
-              vector.type, formul1$elem.type[labnu],
-              formul1$elem.text[labnu], types
-            )
-            if (vector.type == -1) {
-                tl <- lav_parse_txtloc(modelsrc, formul1$elem.pos[1L])
-                lav_msg_stop(gettext(
-                  "Combining labels and fixed values in multigroup modifiers
-                   isn't allowed!"), tl[1L], footer = tl[2L])
-            }
-          }
-          if (vector.type == 0) vector.type <- types$stringliteral
-          if (formul1$elem.text[labnu + 1L] == ")") {
-            formul1$elem.type[seq.int(j + 3L, labnu)] <- 0
-            formul1$elem.type[j + 2L] <- vector.type
-            formul1$elem.text[j + 2L] <- paste(lab, collapse = ";")
-            formul1 <- lav_parse_sublist(formul1, which(formul1$elem.type > 0))
-            nelem <- length(formul1$elem.type)
-            break
-          } else {
-            tl <- lav_parse_txtloc(modelsrc, formul1$elem.pos[j])
-            lav_msg_stop(gettext("invalid vector specification"),
-              tl[1L],
-              footer = tl[2L]
-            )
-          }
-        }
+        formul1$elem.type[seq.int(j + 3L, nelem - 3L)] <- 0
+        formul1$elem.type[j + 2L] <- vector.type
+        formul1 <- lav_parse_sublist(formul1, which(formul1$elem.type > 0))
+        nelem <- length(formul1$elem.type)
       }
     }
     # possibilities
@@ -672,6 +688,7 @@ lav_parse_modifier <- function(formul1, lhs, opi, modelsrc, types,
     if (is.character(temp) && temp[1] != "_error_") {
       return(list(label = temp))
     }
+    browser()
     tl <- lav_parse_txtloc(modelsrc, formul1$elem.pos[opi + 1L])
     lav_msg_stop(gettext("invalid modifier specification"),
       tl[1L],
