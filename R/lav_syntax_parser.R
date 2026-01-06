@@ -423,7 +423,7 @@ lav_parse_check_name <- function(formul1, ind, modelsrc) {
 lav_parse_modifier <- function(formul1, lhs, opi, modelsrc, types,
                                    rme = 0L, rmeprev = 0L) {
   if (rme > rmeprev) {
-    welke <- c(seq.int(1L, opi), seq.int(rmeprev + 1L, rme), 
+    welke <- c(seq.int(1L, opi), seq.int(rmeprev + 1L, rme),
                length(formul1$elem.type))
     formul1 <- lav_parse_sublist(formul1, welke)
   }

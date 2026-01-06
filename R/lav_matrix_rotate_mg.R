@@ -123,7 +123,7 @@ lav_matrix_rotate_mg <- function(Alist = NULL, # original matrices
   if (method == "target.strict" || method == "pst") {
     target <- method.args$target
     if (is.list(target)) {
-      method.args$target <- target <- target[[group]]
+      method.args$target <- target <- target[[1L]] # always take the first group
     }
     # check dimension of target/A
     if (nrow(target) != nrow(A)) {
@@ -136,7 +136,7 @@ lav_matrix_rotate_mg <- function(Alist = NULL, # original matrices
   if (method == "pst") {
     target.mask <- method.args$target.mask
     if (is.list(target.mask)) {
-      method.args$target.mask <- target.mask <- target.mask[[group]]
+      method.args$target.mask <- target.mask <- target.mask[[1L]]
     }
     # check dimension of target.mask/A
     if (nrow(target.mask) != nrow(A)) {
@@ -422,7 +422,7 @@ lav_matrix_rotate_pairwise_mg <- function(Alist = NULL, # original matrices
 
   # using the current LAMBDA, evaluate the user-specified
   # rotation criteron; return Q (the criterion) only
-  Q.current <- lav_matrix_rotation_mg(
+  Q.current <- lav_matrix_rotate_mg_agreement(
     lambdaList = lambdaList, method.fname = method.fname,
     method.args = method.args,
     mg.agreement.method = mg.agreement.method, w = w, scale = scale
@@ -461,7 +461,7 @@ lav_matrix_rotate_pairwise_mg <- function(Alist = NULL, # original matrices
     lambdaList[[g]] <- A %*% ROT
 
     # evaluate criterion
-    Q <- lav_matrix_rotation_mg(
+    Q <- lav_matrix_rotate_mg_agreement(
       lambdaList = lambdaList, method.fname = method.fname,
       method.args = method.args, mg.agreement.method = mg.agreement.method,
       w = w, scale = scale
@@ -488,7 +488,7 @@ lav_matrix_rotate_pairwise_mg <- function(Alist = NULL, # original matrices
     lambdaList[[g]] <- A %*% ROT
 
     # evaluate criterion
-    Q <- lav_matrix_rotation_mg(
+    Q <- lav_matrix_rotate_mg_agreement(
       lambdaList = lambdaList, method.fname = method.fname,
       method.args = method.args, mg.agreement.method = mg.agreement.method,
       w = w, scale = scale
@@ -567,7 +567,7 @@ lav_matrix_rotate_pairwise_mg <- function(Alist = NULL, # original matrices
     } # ngroups
 
     # check for convergence
-    Q.current <- lav_matrix_rotation_mg(
+    Q.current <- lav_matrix_rotate_mg_agreement(
       lambdaList = lambdaList, method.fname = method.fname,
       method.args = method.args, mg.agreement.method = mg.agreement.method,
       w = w, scale = scale

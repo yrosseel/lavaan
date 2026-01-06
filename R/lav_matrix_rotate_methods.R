@@ -15,6 +15,10 @@
 #
 # Mulaik, S. A. (2010). Foundations of factor analysis (Second Edition).
 # Boca Raton: Chapman and Hall/CRC.
+#
+# De Roover, K., & Vermunt, J. K. (2019). On the exploratory road to unraveling
+# factor loading non-invariance: A new multigroup rotation approach. Structural
+# Equation Modeling: A Multidisciplinary Journal, 26(6), 905-923.
 
 # Note: this is YR's implementation, not a copy of the GPArotation
 #       package
@@ -558,7 +562,7 @@ lav_matrix_rotate_bigeomin <- function(LAMBDA, geomin.epsilon = 0.01, ...,
 }
 
 # multiple group rotation + agreement
-lav_matrix_rotation_mg <- function(lambdaList, method.fname = "geomin",
+lav_matrix_rotate_mg_agreement <- function(lambdaList, method.fname = "geomin",
                                    method.args = list(),
                                    mg.agreement.method = "procrustes",
                                    w = 0.5, scale = TRUE) {
@@ -587,7 +591,7 @@ lav_matrix_rotation_mg <- function(lambdaList, method.fname = "geomin",
   # 2. agreement (generalized procrustes) across all groups
   if (mg.agreement.method == "procrustes") {
     A.mg <- 0
-    pairs <- utils:::combn(seq_len(ngroups), 2L)
+    pairs <- utils::combn(seq_len(ngroups), 2L)
     for (p in seq_len(ncol(pairs))) {
       g1 <- pairs[1L, p]
       g2 <- pairs[2L, p]
