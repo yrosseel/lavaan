@@ -9,6 +9,10 @@
 # MODE 2: 'release' (the default)
 #   release existing "==" constraints
 #
+# - YR 8 Jan 2026: use ceq.JAC instead of con.jac (as we do not support
+#                  inequality constraints anyway, and we do not want to
+#                  release the EFA constraints)
+
 lavTestScore <- function(object, add = NULL, release = NULL,
                          univariate = TRUE, cumulative = FALSE,
                          epc = FALSE, standardized = epc, cov.std = epc,
@@ -66,7 +70,7 @@ lavTestScore <- function(object, add = NULL, release = NULL,
     nadd <- FIT@Model@nx.free - npar
 
     # R
-    R.model <- object@Model@con.jac[, , drop = FALSE]
+    R.model <- object@Model@ceq.JAC[, , drop = FALSE]
     if (nrow(R.model) > 0L) {
       R.model <- cbind(R.model, matrix(0, nrow(R.model), ncol = nadd))
       R.add <- cbind(matrix(0, nrow = nadd, ncol = npar), diag(nadd))
@@ -99,7 +103,7 @@ lavTestScore <- function(object, add = NULL, release = NULL,
   } else {
     # MODE 2: releasing constraints
 
-    R <- object@Model@con.jac[, , drop = FALSE]
+    R <- object@Model@ceq.JAC[, , drop = FALSE]
     if (nrow(R) == 0L) {
       lav_msg_stop(gettext("no equality constraints found in model."))
     }
