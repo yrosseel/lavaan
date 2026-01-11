@@ -1,5 +1,98 @@
 # New version of parser, written by Luc De Wilde in september/october 2023
 
+# ----------------------- lav_create_enum ------------------------------------ #
+# function to create an Enumerable like structure in R
+#  usage example  mycolors <- lav_create_enum(c("black", "white",
+#                                     "orange", "green", "red", "blue"))
+#                 xyz <- mycolors$red
+# values are default 1L, ..., number of names, but can be user specified
+# ---------------------------------------------------------------------------- #
+lav_create_enum <- function(names, values = seq_along(names)) {
+  stopifnot(identical(unique(names), names), is.character(names))
+  stopifnot(length(names) == length(values))
+  res <- as.list(setNames(values, names))
+  res$enum.names <- names
+  res$enum.values <- values
+  res$enum.size <- length(values)
+  res <- as.environment(res)
+  lockEnvironment(res, bindings = TRUE)
+  res
+}
+
+# ------------------------ lav_parse_sublist --------------------------------- #
+# function to create a list with only some indexes for all members
+# ---------------------------------------------------------------------------- #
+lav_parse_sublist <- function(inlist, indexes) {
+  for (j in seq_along(inlist)) {
+    inlist[[j]] <- inlist[[j]][indexes]
+  }
+  inlist
+}
+
+# ------------------------ lav_parse_num_modifier  --------------------------- #
+# function for transforming string with numeric values separated by semicolons
+# in a numeric vector (used in lav_parse_modifier)
+# ---------------------------------------------------------------------------- #
+lav_parse_num_modifier <- function(txt) {
+  # help function
+  vapply(strsplit(txt, ";")[[1]], function(x) {
+    if (x == "NA") NA_real_ else as.numeric(x)
+  }, 1.0, USE.NAMES = FALSE)
+}
+# ------------------------ lav_parse_unpaste  -------------------------------- #
+# function for transforming string with string values separated by semicolons
+# in a vector (used in lav_parse_modifier)
+# ---------------------------------------------------------------------------- #
+lav_parse_unpaste <- function(text) {
+  out <- strsplit(text, ";(NA;)*")[[1]]
+  if (grepl(";$", text)) out <- c(out, "")
+  out
+}
+# ------------------------ lav_parse_eval_r_expression ------------------- #
+# help function to evaluate the value of an r expression formed by the elements
+# with index 'from' to 'to' of a formula 'formul1'
+# returns "_error_" if evaluation failed
+# used only in lav_parse_modifier
+# ---------------------------------------------------------------------------- #
+lav_parse_eval_r_expression <- function(formul1, from, to, types) {
+  strings <- vapply(seq.int(from, to), function(x) {
+    if (formul1$elem.type[x] == types$stringliteral) {
+      paste0('"', formul1$elem.text[x], '"')
+    } else {
+      formul1$elem.text[x]
+    }
+  }, "")
+  txt <- paste(strings, collapse = "")
+  result <- try(eval(parse(text = txt),
+    envir = NULL,
+    enclos = baseenv()
+  ), silent = TRUE)
+  if (inherits(result, "try-error")) {
+    return("_error_")
+  }
+  result
+}
+# ------------------------ lav_parse_adapt_vector_type ----------------------- #
+# help function to dynamically adapt the type of a vector in a c(...) sequence
+# used only in lav_parse_modifier, returns typenu if texttoadd == "NA",
+# return -1 (= error) when typenu is numliteral xor typetoadd is numliteral
+# ---------------------------------------------------------------------------- #
+lav_parse_adapt_vector_type <- function(typenu, typetoadd, texttoadd, types) {
+  addtype <- typetoadd
+  if (texttoadd == "NA") addtype <- types$numliteral
+  if (typenu == 0) {
+    typenu <- addtype
+  } else {
+    if (typenu != addtype) {
+      if (typenu == types$numliteral || addtype == types$numliteral) {
+        typenu <- -1 # error !
+      } else {
+        typenu <- types$stringliteral
+      }
+    }
+  }
+  typenu
+}
 # ------------------------ lav_parse_txtloc  --------------------------------- #
 # function which translates a position in the model source string to a
 # user friendly locator (=[1L]) and the line with position (=[2L])
@@ -705,6 +798,11 @@ lav_parse_model_string <- function(model.syntax = "", as.data.frame. = FALSE) {
     replacement = "~",
     paste(unlist(model.syntax), "", collapse = "\n")
   )
+  hashstring <- paste0("mdl_", lav_char2hash(paste0(modelsrc, as.data.frame.)))
+  if (exists(hashstring, envir = lavaan_cache_env)) {
+    return(get(hashstring, envir = lavaan_cache_env))
+  }
+
   types <- lav_create_enum(c(
     "identifier", "numliteral", "stringliteral",
     "symbol", "lavaanoperator", "newline"
@@ -1156,5 +1254,6 @@ lav_parse_model_string <- function(model.syntax = "", as.data.frame. = FALSE) {
   # create output
   attr(flat, "modifiers") <- mod
   attr(flat, "constraints") <- constraints
+  assign(hashstring, flat, envir = lavaan_cache_env)
   flat
 }

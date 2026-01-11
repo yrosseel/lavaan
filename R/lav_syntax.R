@@ -2,6 +2,7 @@
 # YR 14 Jan 2014: move to lav_syntax.R
 # YR 17 Oct 2023: add ldw parser
 # YR 23 Oct 2024: switch to "c.r"
+# LDW 9 Feb 2026: remove c.r option
 
 lavParseModelString <- function(model.syntax = "", as.data.frame. = FALSE,
                                 parser = "new", warn = TRUE, debug = FALSE) {
@@ -16,20 +17,14 @@ lavParseModelString <- function(model.syntax = "", as.data.frame. = FALSE,
       on.exit(lav_warn(current.warn), TRUE)
   }
   parser <- tolower(parser)
-  if (!parser %in% c("old", "new", "c.r")) {
+  if (!parser %in% c("old", "new")) {
     lav_msg_stop(gettext("parser= argument should
-     be \"old\", \"new\" or \"c.r\""))
+     be \"old\" or \"new\""))
   }
 
   if (parser == "old") {
     # original/classic parser
     out <- lav_parse_model_string_orig(
-      model.syntax = model.syntax,
-      as.data.frame. = as.data.frame.
-    )
-  } else if (parser == "c.r") {
-    # new parser
-    out <- lav_parse_model_string_cr(
       model.syntax = model.syntax,
       as.data.frame. = as.data.frame.
     )

@@ -246,3 +246,18 @@ lav_getcov <- function(x, lower = TRUE, diagonal = TRUE, sds = NULL,
 
   COV
 }
+
+lav_char2hash <- function(s = "") {
+  stopifnot(is.character(s))
+  nums <- utf8ToInt(paste(s, collapse = "\n"))
+  rval <- 0x7EDCBA98L
+  for (i in nums) {
+    positions <- 1L + (bitwAnd(i, 15L))
+    bitsR <- bitwShiftL(1L, positions) - 1L
+    wrap1 <- bitwShiftL(bitwAnd(bitsR, rval), 31L - positions)
+    wrap2 <- bitwShiftR(bitwAnd(bitwNot(bitsR), rval), positions)
+    saw <- bitwOr(wrap1, wrap2)
+    rval <- bitwXor(saw, i)
+  }
+  as.hexmode(rval)
+}
