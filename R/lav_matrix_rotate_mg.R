@@ -24,6 +24,9 @@ lav_matrix_rotate_mg <- function(Alist = NULL, # original matrices
                                  # std.ov = FALSE, # rescale ov
                                  # ov.var = NULL, # ov variances
                                  # algorithm = "gpa", # rotation algorithm
+                                 mg.algorithm = "pairwise",
+                                 mg.agreement.method = "procrustes",
+                                 mg.agreement.weight = 0.5,
                                  reflect = TRUE, # refect sign
                                  order.lv.by = "index", # how to order the lv's
                                  # gpa.tol = 0.00001, # stopping tol gpa
@@ -313,6 +316,8 @@ lav_matrix_rotate_mg <- function(Alist = NULL, # original matrices
       random.ROT = FALSE,
       method.fname = method.fname,
       method.args = method.args,
+      mg.agreement.method = mg.agreement.method,
+      mg.agreement.weight = mg.agreement.weight,
       tol = tol,
       max.iter = max.iter
     )
@@ -392,7 +397,7 @@ lav_matrix_rotate_pairwise_mg <- function(Alist = NULL, # original matrices
                                           method.fname = NULL, # crit function
                                           method.args = list(), # method args
                                           tol = 1e-8,
-                                          w = 0.50,
+                                          mg.agreement.weight = 0.50,
                                           mg.agreement.method = "procrustes",
                                           scale = TRUE,
                                           max.iter = 1000L) {
@@ -425,7 +430,8 @@ lav_matrix_rotate_pairwise_mg <- function(Alist = NULL, # original matrices
   Q.current <- lav_matrix_rotate_mg_agreement(
     lambdaList = lambdaList, method.fname = method.fname,
     method.args = method.args,
-    mg.agreement.method = mg.agreement.method, w = w, scale = scale
+    mg.agreement.method = mg.agreement.method,
+    w = mg.agreement.weight, scale = scale
   )
 
   # if verbose, print
@@ -464,7 +470,7 @@ lav_matrix_rotate_pairwise_mg <- function(Alist = NULL, # original matrices
     Q <- lav_matrix_rotate_mg_agreement(
       lambdaList = lambdaList, method.fname = method.fname,
       method.args = method.args, mg.agreement.method = mg.agreement.method,
-      w = w, scale = scale
+      w = mg.agreement.weight, scale = scale
     )
 
     Q
@@ -491,7 +497,7 @@ lav_matrix_rotate_pairwise_mg <- function(Alist = NULL, # original matrices
     Q <- lav_matrix_rotate_mg_agreement(
       lambdaList = lambdaList, method.fname = method.fname,
       method.args = method.args, mg.agreement.method = mg.agreement.method,
-      w = w, scale = scale
+      w = mg.agreement.weight, scale = scale
     )
 
     Q
@@ -570,7 +576,7 @@ lav_matrix_rotate_pairwise_mg <- function(Alist = NULL, # original matrices
     Q.current <- lav_matrix_rotate_mg_agreement(
       lambdaList = lambdaList, method.fname = method.fname,
       method.args = method.args, mg.agreement.method = mg.agreement.method,
-      w = w, scale = scale
+      w = mg.agreement.weight, scale = scale
     )
 
     # absolute change in Q

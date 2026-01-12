@@ -66,7 +66,7 @@ lav_lavaan_step11_estoptim <- function(lavdata = NULL, # nolint
           lavpartable = lavpartable,
           lavoptions = lavoptions
         ),
-        silent = TRUE
+        silent = FALSE
       )
       # EM for multilevel models
     } else if (lavoptions$optim.method == "em") {

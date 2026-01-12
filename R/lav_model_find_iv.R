@@ -11,7 +11,7 @@
 
 lav_model_find_iv <- function(lavobject = NULL, lavmodel = NULL,
                               lavpta = NULL, algorithm = "miivsem",
-                              output = "list", drop.list.single.group = TRUE) {
+                              output = "list", drop.list.single.group = FALSE) {
   # check output
   output <- tolower(output)
   stopifnot(output %in% c("list", "table"))

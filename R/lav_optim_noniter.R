@@ -85,7 +85,7 @@ lav_optim_noniter <- function(lavmodel = NULL, lavsamplestats = NULL,
     ), silent = TRUE)
   } else if (lavoptions$estimator == "MIIV") {
     x <- try(lav_sem_miiv_internal(
-      lavmodel = lavmodel,
+      lavmodel = lavmodel, lavdata = lavdata,
       lavsamplestats = lavsamplestats, lavpartable = lavpartable,
       lavoptions = lavoptions
     ), silent = TRUE)
