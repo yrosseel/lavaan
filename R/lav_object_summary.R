@@ -58,6 +58,28 @@ lav_object_summary <- function(object, header = TRUE,
   # check object
   object <- lav_object_check_version(object)
 
+ # default fm.args
+  default.fm.args <- list(
+    standard.test = "default",
+    scaled.test = "default",
+    rmsea.ci.level = 0.90,
+    rmsea.close.h0 = 0.05,
+    rmsea.notclose.h0 = 0.08,
+    robust = TRUE,
+    cat.check.pd = TRUE
+  )
+  if (!missing(fm.args)) {
+    lav_deprecated_args("fit.measures", "fm.args")
+    fm.args <- modifyList(default.fm.args, fm.args)
+  } else {
+    fm.args <- default.fm.args
+  }
+  if (is.list(fit.measures)) {
+    fm.args <- modifyList(default.fm.args, fit.measures)
+    fit.measures <- fit.measures[[1L]]
+  }
+
+
   # return a list with the main ingredients
   res <- list()
 
@@ -214,10 +236,7 @@ lav_object_summary <- function(object, header = TRUE,
       lav_msg_warn(gettext(
         "fit measures not available if model did not converge"))
     } else {
-      FIT <- lav_fit_measures(object,
-        fit.measures = "default",
-        fm.args = fm.args
-      )
+      FIT <- lav_fit_measures(object, fit.measures = c(list("default"), fm.args))
       res$fit <- FIT
     }
   }

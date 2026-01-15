@@ -37,11 +37,19 @@ setMethod(
       }
     }
     # note: the ... is not used by lavaan
-    lav_fit_measures(
-      object = object, fit.measures = fit.measures,
-      baseline.model = baseline.model, h1.model = h1.model, fm.args = fm.args,
-      output = output
-    )
+    if (missing(fm.args)) {
+      lav_fit_measures(
+        object = object, fit.measures = fit.measures,
+        baseline.model = baseline.model, h1.model = h1.model,
+        output = output
+      )
+    } else {
+      lav_fit_measures(
+        object = object, fit.measures = fit.measures,
+        baseline.model = baseline.model, h1.model = h1.model, fm.args = fm.args,
+        output = output
+      )
+    }
   }
 )
 
@@ -68,11 +76,19 @@ setMethod(
       }
     }
     # note: the ... is not used by lavaan
-    lav_fit_measures(
-      object = object, fit.measures = fit.measures,
-      baseline.model = baseline.model, h1.model = h1.model, fm.args = fm.args,
-      output = output
-    )
+    if (missing(fm.args)) {
+      lav_fit_measures(
+        object = object, fit.measures = fit.measures,
+        baseline.model = baseline.model, h1.model = h1.model,
+        output = output
+      )
+    } else {
+      lav_fit_measures(
+        object = object, fit.measures = fit.measures,
+        baseline.model = baseline.model, h1.model = h1.model, fm.args = fm.args,
+        output = output
+      )
+    }
   }
 )
 
@@ -95,17 +111,33 @@ lav_efalist_fitmeasures <- function(
   object[["loadings"]] <- NULL
 
   # get fit measures for each model
-  res <- simplify2array(lapply(
-    object,
-    function(x) {
-      lav_fit_measures(
-        object = x,
-        fit.measures = fit.measures, h1.model = h1.model,
-        baseline.model = baseline.model, fm.args = fm.args,
-        output = "vector"
-      )
-    }
-  ))
+  if (missing(fm.args)) {
+    res <- simplify2array(lapply(
+      object,
+      function(x) {
+        lav_fit_measures(
+          object = x,
+          fit.measures = fit.measures, h1.model = h1.model,
+          baseline.model = baseline.model,
+          output = "vector"
+        )
+      }
+    )
+    )
+  } else {
+    res <- simplify2array(lapply(
+      object,
+      function(x) {
+        lav_fit_measures(
+          object = x,
+          fit.measures = fit.measures, h1.model = h1.model,
+          baseline.model = baseline.model, fm.args = fm.args,
+          output = "vector"
+        )
+      }
+    )
+    )
+  }
 
   # check if res is a matrix
   if (!is.matrix(res)) {
@@ -157,9 +189,14 @@ lav_fit_measures <- function(object, fit.measures = "all",
     cat.check.pd = TRUE
   )
   if (!missing(fm.args)) {
+    lav_deprecated_args("fit.measures", "fm.args")
     fm.args <- modifyList(default.fm.args, fm.args)
   } else {
     fm.args <- default.fm.args
+  }
+  if (is.list(fit.measures)) {
+    fm.args <- modifyList(default.fm.args, fit.measures)
+    fit.measures <- fit.measures[[1L]]
   }
 
   # standard test
@@ -216,18 +253,18 @@ lav_fit_measures <- function(object, fit.measures = "all",
     rerun.lavtest.flag <- TRUE
   }
   if (!scaled.test %in% c("none", "default", "standard") &&
-    !scaled.test %in% test.names) {
+      !scaled.test %in% test.names) {
     rerun.lavtest.flag <- TRUE
   }
 
   # do we have a scaled test statistic? if so, which one?
   scaled.flag <- FALSE
   if (scaled.test != "none" &&
-    any(test.names %in% c(
-      "satorra.bentler",
-      "yuan.bentler", "yuan.bentler.mplus",
-      "mean.var.adjusted", "scaled.shifted"
-    ))) {
+      any(test.names %in% c(
+        "satorra.bentler",
+        "yuan.bentler", "yuan.bentler.mplus",
+        "mean.var.adjusted", "scaled.shifted"
+      ))) {
     scaled.flag <- TRUE
     if (scaled.test %in% c("standard", "default")) {
       tmp.idx <- which(test.names %in% c(
@@ -246,8 +283,8 @@ lav_fit_measures <- function(object, fit.measures = "all",
       this.test <- unique(this.test, scaled.test)
     }
     TEST <- lavTest(object,
-      test = this.test, scaled.test = standard.test,
-      drop.list.single = FALSE
+                    test = this.test, scaled.test = standard.test,
+                    drop.list.single = FALSE
     )
     # replace in object, if we pass it to lav_fit_* functions
     object@test <- TEST
@@ -262,7 +299,7 @@ lav_fit_measures <- function(object, fit.measures = "all",
   #        3. default h1 model (already in @h1 slot, no update necessary)
 
   user_h1_exists <- FALSE
-    # 1. user-provided h1 model
+  # 1. user-provided h1 model
   if (!is.null(h1.model)) {
     stopifnot(inherits(h1.model, "lavaan"))
     user_h1_exists <- TRUE
@@ -303,14 +340,14 @@ lav_fit_measures <- function(object, fit.measures = "all",
     output <- "text"
   } else {
     lav_msg_stop(gettextf("output should be %s.",
-      lav_msg_view(c("vector", "list", "matrix", "text"), "none", FALSE)
+                          lav_msg_view(c("vector", "list", "matrix", "text"), "none", FALSE)
     ))
   }
 
   # options
   categorical.flag <- object@Model@categorical
   fiml.flag <- (fm.args$robust &&
-    object@Options$missing %in% c("ml", "ml.x"))
+                  object@Options$missing %in% c("ml", "ml.x"))
   estimator <- object@Options$estimator
 
   # basic ingredients
@@ -378,7 +415,7 @@ lav_fit_measures <- function(object, fit.measures = "all",
     )
   }
   if (scaled.flag &&
-    scaled.test %in% c("yuan.bentler", "yuan.bentler.mplus")) {
+      scaled.test %in% c("yuan.bentler", "yuan.bentler.mplus")) {
     fit.logl <- c(fit.logl, "scaling.factor.h1", "scaling.factor.h0")
   }
 
@@ -556,7 +593,7 @@ lav_fit_measures <- function(object, fit.measures = "all",
     rmsea.close.h0 <- 0.05
     rmsea.notclose.h0 <- 0.08
     if (!is.null(fm.args$rmsea.ci.level) &&
-      is.finite(fm.args$rmsea.ci.level)) {
+        is.finite(fm.args$rmsea.ci.level)) {
       rmsea.ci.level <- fm.args$rmsea.ci.level
       if (rmsea.ci.level < 0 || rmsea.ci.level > 1.0) {
         lav_msg_warn(gettextf(
@@ -566,14 +603,14 @@ lav_fit_measures <- function(object, fit.measures = "all",
       }
     }
     if (!is.null(fm.args$rmsea.close.h0) &&
-      is.finite(fm.args$rmsea.close.h0)) {
+        is.finite(fm.args$rmsea.close.h0)) {
       rmsea.close.h0 <- fm.args$rmsea.close.h0
       if (rmsea.close.h0 < 0) {
         rmsea.close.h0 <- 0
       }
     }
     if (!is.null(fm.args$rmsea.notclose.h0) &&
-      is.finite(fm.args$rmsea.notclose.h0)) {
+        is.finite(fm.args$rmsea.notclose.h0)) {
       rmsea.notclose.h0 <- fm.args$rmsea.notclose.h0
       if (rmsea.notclose.h0 < 0) {
         rmsea.notclose.h0 <- 0
@@ -717,21 +754,21 @@ lav_fitmeasures_print <- function(x, ..., nd = 3L, add.h0 = TRUE) {
     c1 <- c(c1, "Test statistic")
     c2 <- c(c2, sprintf(num.format, x["chisq"]))
     c3 <- c(c3, ifelse(scaled.flag,
-      sprintf(num.format, x["chisq.scaled"]), ""
+                       sprintf(num.format, x["chisq.scaled"]), ""
     ))
 
     c1 <- c(c1, "Degrees of freedom")
     c2 <- c(c2, x["df"])
     c3 <- c(c3, ifelse(scaled.flag,
-      ifelse(x["df.scaled"] %% 1 == 0, x["df.scaled"],
-        sprintf(num.format, x["df.scaled"])
-      ), ""
+                       ifelse(x["df.scaled"] %% 1 == 0, x["df.scaled"],
+                              sprintf(num.format, x["df.scaled"])
+                       ), ""
     ))
 
     c1 <- c(c1, "P-value")
     c2 <- c(c2, sprintf(num.format, x["pvalue"]))
     c3 <- c(c3, ifelse(scaled.flag,
-      sprintf(num.format, x["pvalue.scaled"]), ""
+                       sprintf(num.format, x["pvalue.scaled"]), ""
     ))
 
     if (scaled.flag && "chisq.scaling.factor" %in% names.x) {
@@ -805,7 +842,7 @@ lav_fitmeasures_print <- function(x, ..., nd = 3L, add.h0 = TRUE) {
   # (only if "standard.test" is not "standard")
   if (!is.null(attr(x, "standard.test"))) {
     cat("\nNote: fit measures based on the chi-square test statistic\n",
-           "     use", attr(x, "X2.label"),"\n")
+        "     use", attr(x, "X2.label"),"\n")
   }
 
   # independence model
@@ -823,14 +860,14 @@ lav_fitmeasures_print <- function(x, ..., nd = 3L, add.h0 = TRUE) {
     c1 <- c(c1, "Test statistic")
     c2 <- c(c2, sprintf(num.format, x["baseline.chisq"]))
     c3 <- c(c3, ifelse(scaled.flag,
-      sprintf(num.format, x["baseline.chisq.scaled"]), ""
+                       sprintf(num.format, x["baseline.chisq.scaled"]), ""
     ))
 
     c1 <- c(c1, "Degrees of freedom")
     c2 <- c(c2, x["baseline.df"])
     c3 <- c(c3, ifelse(scaled.flag, ifelse(x["baseline.df.scaled"] %% 1 == 0,
-      x["baseline.df.scaled"],
-      sprintf(num.format, x["baseline.df.scaled"])
+                                           x["baseline.df.scaled"],
+                                           sprintf(num.format, x["baseline.df.scaled"])
     ),
     ""
     ))
@@ -838,7 +875,7 @@ lav_fitmeasures_print <- function(x, ..., nd = 3L, add.h0 = TRUE) {
     c1 <- c(c1, "P-value")
     c2 <- c(c2, sprintf(num.format, x["baseline.pvalue"]))
     c3 <- c(c3, ifelse(scaled.flag,
-      sprintf(num.format, x["baseline.pvalue.scaled"]), ""
+                       sprintf(num.format, x["baseline.pvalue.scaled"]), ""
     ))
 
     if (scaled.flag && "baseline.chisq.scaling.factor" %in% names.x) {
@@ -875,7 +912,7 @@ lav_fitmeasures_print <- function(x, ..., nd = 3L, add.h0 = TRUE) {
       c1 <- c(c1, "Comparative Fit Index (CFI)")
       c2 <- c(c2, sprintf(num.format, x["cfi"]))
       c3 <- c(c3, ifelse(scaled.flag,
-        sprintf(num.format, x["cfi.scaled"]), ""
+                         sprintf(num.format, x["cfi.scaled"]), ""
       ))
     }
 
@@ -883,7 +920,7 @@ lav_fitmeasures_print <- function(x, ..., nd = 3L, add.h0 = TRUE) {
       c1 <- c(c1, "Tucker-Lewis Index (TLI)")
       c2 <- c(c2, sprintf(num.format, x["tli"]))
       c3 <- c(c3, ifelse(scaled.flag,
-        sprintf(num.format, x["tli.scaled"]), ""
+                         sprintf(num.format, x["tli.scaled"]), ""
       ))
     }
 
@@ -916,7 +953,7 @@ lav_fitmeasures_print <- function(x, ..., nd = 3L, add.h0 = TRUE) {
       c1 <- c(c1, "Bentler-Bonett Non-normed Fit Index (NNFI)")
       c2 <- c(c2, sprintf(num.format, x["nnfi"]))
       c3 <- c(c3, ifelse(scaled.flag,
-        sprintf(num.format, x["nnfi.robust"]), ""
+                         sprintf(num.format, x["nnfi.robust"]), ""
       ))
     }
 
@@ -924,7 +961,7 @@ lav_fitmeasures_print <- function(x, ..., nd = 3L, add.h0 = TRUE) {
       c1 <- c(c1, "Bentler-Bonett Normed Fit Index (NFI)")
       c2 <- c(c2, sprintf(num.format, x["nfi"]))
       c3 <- c(c3, ifelse(scaled.flag,
-        sprintf(num.format, x["nfi.scaled"]), ""
+                         sprintf(num.format, x["nfi.scaled"]), ""
       ))
     }
 
@@ -932,7 +969,7 @@ lav_fitmeasures_print <- function(x, ..., nd = 3L, add.h0 = TRUE) {
       c1 <- c(c1, "Parsimony Normed Fit Index (PNFI)")
       c2 <- c(c2, sprintf(num.format, x["pnfi"]))
       c3 <- c(c3, ifelse(scaled.flag,
-        sprintf(num.format, x["pnfi.scaled"]), ""
+                         sprintf(num.format, x["pnfi.scaled"]), ""
       ))
     }
 
@@ -940,7 +977,7 @@ lav_fitmeasures_print <- function(x, ..., nd = 3L, add.h0 = TRUE) {
       c1 <- c(c1, "Bollen's Relative Fit Index (RFI)")
       c2 <- c(c2, sprintf(num.format, x["rfi"]))
       c3 <- c(c3, ifelse(scaled.flag,
-        sprintf(num.format, x["rfi.scaled"]), ""
+                         sprintf(num.format, x["rfi.scaled"]), ""
       ))
     }
 
@@ -948,7 +985,7 @@ lav_fitmeasures_print <- function(x, ..., nd = 3L, add.h0 = TRUE) {
       c1 <- c(c1, "Bollen's Incremental Fit Index (IFI)")
       c2 <- c(c2, sprintf(num.format, x["ifi"]))
       c3 <- c(c3, ifelse(scaled.flag,
-        sprintf(num.format, x["ifi.scaled"]), ""
+                         sprintf(num.format, x["ifi.scaled"]), ""
       ))
     }
 
@@ -956,7 +993,7 @@ lav_fitmeasures_print <- function(x, ..., nd = 3L, add.h0 = TRUE) {
       c1 <- c(c1, "Relative Noncentrality Index (RNI)")
       c2 <- c(c2, sprintf(num.format, x["rni"]))
       c3 <- c(c3, ifelse(scaled.flag,
-        sprintf(num.format, x["rni.robust"]), ""
+                         sprintf(num.format, x["rni.robust"]), ""
       ))
     }
 
@@ -1000,7 +1037,7 @@ lav_fitmeasures_print <- function(x, ..., nd = 3L, add.h0 = TRUE) {
       c1 <- c(c1, "Loglikelihood unrestricted model (H1)")
       c2 <- c(c2, sprintf(num.format, x["unrestricted.logl"]))
       c3 <- c(c3, ifelse(scaled.flag,
-        sprintf(num.format, x["unrestricted.logl"]), ""
+                         sprintf(num.format, x["unrestricted.logl"]), ""
       ))
       if (!is.na(x["scaling.factor.h1"])) {
         c1 <- c(c1, "Scaling correction factor")
@@ -1058,7 +1095,7 @@ lav_fitmeasures_print <- function(x, ..., nd = 3L, add.h0 = TRUE) {
     c1 <- c(c1, "RMSEA")
     c2 <- c(c2, sprintf(num.format, x["rmsea"]))
     c3 <- c(c3, ifelse(scaled.flag,
-      sprintf(num.format, x["rmsea.scaled"]), ""
+                       sprintf(num.format, x["rmsea.scaled"]), ""
     ))
 
     ci.level <- NULL
@@ -1076,7 +1113,7 @@ lav_fitmeasures_print <- function(x, ..., nd = 3L, add.h0 = TRUE) {
       }
       c2 <- c(c2, sprintf(num.format, x["rmsea.ci.lower"]))
       c3 <- c(c3, ifelse(scaled.flag,
-        sprintf(num.format, x["rmsea.ci.lower.scaled"]), ""
+                         sprintf(num.format, x["rmsea.ci.lower.scaled"]), ""
       ))
       if (is.null(ci.level)) {
         c1 <- c(c1, "Confidence interval - upper")
@@ -1088,7 +1125,7 @@ lav_fitmeasures_print <- function(x, ..., nd = 3L, add.h0 = TRUE) {
       }
       c2 <- c(c2, sprintf(num.format, x["rmsea.ci.upper"]))
       c3 <- c(c3, ifelse(scaled.flag,
-        sprintf(num.format, x["rmsea.ci.upper.scaled"]), ""
+                         sprintf(num.format, x["rmsea.ci.upper.scaled"]), ""
       ))
     }
 
@@ -1111,7 +1148,7 @@ lav_fitmeasures_print <- function(x, ..., nd = 3L, add.h0 = TRUE) {
       }
       c2 <- c(c2, sprintf(num.format, x["rmsea.pvalue"]))
       c3 <- c(c3, ifelse(scaled.flag,
-        sprintf(num.format, x["rmsea.pvalue.scaled"]), ""
+                         sprintf(num.format, x["rmsea.pvalue.scaled"]), ""
       ))
     }
     if ("rmsea.notclose.pvalue" %in% names.x) {
@@ -1125,7 +1162,7 @@ lav_fitmeasures_print <- function(x, ..., nd = 3L, add.h0 = TRUE) {
       }
       c2 <- c(c2, sprintf(num.format, x["rmsea.notclose.pvalue"]))
       c3 <- c(c3, ifelse(scaled.flag,
-        sprintf(num.format, x["rmsea.notclose.pvalue.scaled"]), ""
+                         sprintf(num.format, x["rmsea.notclose.pvalue.scaled"]), ""
       ))
     }
 
@@ -1251,7 +1288,7 @@ lav_fitmeasures_print <- function(x, ..., nd = 3L, add.h0 = TRUE) {
       c1 <- c(c1, "RMR (No Mean)")
       c2 <- c(c2, sprintf(num.format, x["rmr_nomean"]))
       c3 <- c(c3, ifelse(scaled.flag,
-        sprintf(num.format, x["rmr_nomean"]), ""
+                         sprintf(num.format, x["rmr_nomean"]), ""
       ))
     }
     if ("srmr" %in% names.x) {
@@ -1263,7 +1300,7 @@ lav_fitmeasures_print <- function(x, ..., nd = 3L, add.h0 = TRUE) {
       c1 <- c(c1, "SRMR (No Mean)")
       c2 <- c(c2, sprintf(num.format, x["srmr_nomean"]))
       c3 <- c(c3, ifelse(scaled.flag,
-        sprintf(num.format, x["srmr_nomean"]), ""
+                         sprintf(num.format, x["srmr_nomean"]), ""
       ))
     }
 
@@ -1296,14 +1333,14 @@ lav_fitmeasures_print <- function(x, ..., nd = 3L, add.h0 = TRUE) {
       c1 <- c(c1, "SRMR (within covariance matrix)")
       c2 <- c(c2, sprintf(num.format, x["srmr_within"]))
       c3 <- c(c3, ifelse(scaled.flag,
-        sprintf(num.format, x["srmr_within"]), ""
+                         sprintf(num.format, x["srmr_within"]), ""
       ))
     }
     if ("srmr_between" %in% names.x) {
       c1 <- c(c1, "SRMR (between covariance matrix)")
       c2 <- c(c2, sprintf(num.format, x["srmr_between"]))
       c3 <- c(c3, ifelse(scaled.flag,
-        sprintf(num.format, x["srmr_between"]), ""
+                         sprintf(num.format, x["srmr_between"]), ""
       ))
     }
 
@@ -1365,14 +1402,14 @@ lav_fitmeasures_print <- function(x, ..., nd = 3L, add.h0 = TRUE) {
       c1 <- c(c1, "Hoelter Critical N (CN) alpha = 0.05")
       c2 <- c(c2, sprintf(num.format, x["cn_05"]))
       c3 <- c(c3, ifelse(scaled.flag,
-        sprintf(num.format, x["cn_05"]), ""
+                         sprintf(num.format, x["cn_05"]), ""
       ))
     }
     if ("cn_01" %in% names.x) {
       c1 <- c(c1, "Hoelter Critical N (CN) alpha = 0.01")
       c2 <- c(c2, sprintf(num.format, x["cn_01"]))
       c3 <- c(c3, ifelse(scaled.flag,
-        sprintf(num.format, x["cn_01"]), ""
+                         sprintf(num.format, x["cn_01"]), ""
       ))
     }
     if (any(c("cn_05", "cn_01") %in% names.x)) {
@@ -1384,14 +1421,14 @@ lav_fitmeasures_print <- function(x, ..., nd = 3L, add.h0 = TRUE) {
       c1 <- c(c1, "Goodness of Fit Index (GFI)")
       c2 <- c(c2, sprintf(num.format, x["gfi"]))
       c3 <- c(c3, ifelse(scaled.flag,
-        sprintf(num.format, x["gfi"]), ""
+                         sprintf(num.format, x["gfi"]), ""
       ))
     }
     if ("agfi" %in% names.x) {
       c1 <- c(c1, "Adjusted Goodness of Fit Index (AGFI)")
       c2 <- c(c2, sprintf(num.format, x["agfi"]))
       c3 <- c(c3, ifelse(scaled.flag,
-        sprintf(num.format, x["agfi"]), ""
+                         sprintf(num.format, x["agfi"]), ""
       ))
     }
     if ("pgfi" %in% names.x) {
