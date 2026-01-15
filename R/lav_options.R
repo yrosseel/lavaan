@@ -179,7 +179,7 @@ lav_options_set <- function(opt = NULL) {                     # nolint
       js = ,
       jsa = ,
       bentler1982 = TRUE,
-      miiv = TRUE,
+      iv = TRUE,
       "default"
     )
   }
@@ -573,7 +573,7 @@ lav_options_set <- function(opt = NULL) {                     # nolint
                 js = ,
                 jsa = ,
                 bentler1982 = lav_options_est_fabin(opt),
-                miiv = lav_options_est_miiv(opt),
+                iv = lav_options_est_iv(opt),
                 lav_options_est_none(opt)  # estimator = none
   )
 

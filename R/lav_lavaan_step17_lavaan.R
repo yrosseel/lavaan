@@ -15,6 +15,7 @@ lav_lavaan_step17_lavaan <- function(lavmc = NULL,
                                      lavtest = NULL,
                                      lavh1 = NULL,
                                      lavbaseline = NULL,
+                                     laveqs = NULL,
                                      start.time0 = NULL) {
   # # # # # # # # # #
   # #  17. lavaan # #
@@ -73,6 +74,11 @@ lav_lavaan_step17_lavaan <- function(lavmc = NULL,
 	if (!is.null(std$se)) {
       lavaan@ParTable$se.std <- std$se
     }
+  }
+
+  # eqs?
+  if (length(laveqs) > 0L) {
+    lavaan@internal <- list(eqs = laveqs)
   }
 
   # post-fitting check of parameters

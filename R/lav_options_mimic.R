@@ -21,7 +21,7 @@ lav_options_mimic <- function(opt) {
       }
     }
     if (opt$fixed.x == "default") {
-      if (any(lav_options_estimatorgroup(opt$estimator) == c("MML", "ML")) &&
+      if (any(lav_options_estimatorgroup(opt$estimator) == c("MML", "ML", "IV")) &&
           is.character(opt$start) && opt$start != "simple") { # new in 0.6-12
         opt$fixed.x <- TRUE
       }

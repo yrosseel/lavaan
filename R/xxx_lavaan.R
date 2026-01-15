@@ -358,6 +358,11 @@ lavaan <- function(
   lavmodel <- temp$lavmodel
   lavpartable <- temp$lavpartable
   x <- temp$x
+  # store eqs if present in x
+  laveqs <- list()
+  if (!is.null(attr(x, "eqs"))) {
+    laveqs <- attr(x, "eqs")
+  }
 
   timing <- ldw_add_timing(timing, "optim")
 
@@ -475,6 +480,7 @@ lavaan <- function(
     lavtest        = lavtest,
     lavh1          = lavh1,
     lavbaseline    = lavbaseline,
+    laveqs         = laveqs,
     start.time0    = start.time0
   )
 

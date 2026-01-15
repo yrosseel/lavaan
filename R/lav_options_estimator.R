@@ -569,8 +569,13 @@ lav_options_est_fabin <- function(opt) {
   opt
 }
 
-lav_options_est_miiv <- function(opt) {
-  # MIIV-2SLS and friends                                          ####
+lav_options_est_iv <- function(opt) {
+  # (MI)IV-2SLS and friends                                          ####
+
+  # brute-force override
+  opt$optim.method <- "noniter"
+  opt$marker.int.zero <- TRUE
+
   # se
   if (opt$se == "default") {
     opt$se <- "none" # for now
@@ -594,9 +599,7 @@ lav_options_est_miiv <- function(opt) {
       opt$estimator.args$method <- "2SLS"
     }
   }
-  # brute-force override
-  opt$optim.method <- "noniter"
-  opt$start <- "simple"
+
   opt
 }
 

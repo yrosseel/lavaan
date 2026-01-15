@@ -327,8 +327,8 @@ lav_options_default <- function() {
     gutman = "mgm", gutmann = "mgm", guttman1952 = "mgm",
     js = "js", jsa = "jsa", james.stein = "js",
     james.stein.aggregated = "jsa", bentler = "bentler1982",
-    bentler1982 = "bentler1982", miiv = "miiv", iv = "miiv",
-    miiv.2sls = "miiv"
+    bentler1982 = "bentler1982", miiv = "iv", iv = "iv",
+    miiv.2sls = "iv"
   ))
   elmdup("estimator.orig", "estimator")
 

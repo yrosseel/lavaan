@@ -1,4 +1,4 @@
-# find ALL (eligible) model-implied instrumental variables (no pruning yet)
+# find ALL (eligible) *model-implied* instrumental variables (no pruning yet)
 #
 # two algorithms:
 #   1) using 'total effects' of errors/disturbances, based on Bollen & Curran
@@ -109,6 +109,10 @@ lav_model_find_iv_bc2004 <- function(lavmodel = NULL, lavpta = NULL) {
   beta.idx <- which(names(glist) == "beta")
   psi.idx <- which(names(glist) == "psi")
   theta.idx <- which(names(glist) == "theta")
+  if (lavmodel@meanstructure) {
+    nu.idx <- which(names(glist) == "nu")
+    alpha.idx <- which(names(glist) == "alpha")
+  }
 
   # repeat for every block
   iv_list <- vector("list", length = nblocks)
@@ -121,10 +125,18 @@ lav_model_find_iv_bc2004 <- function(lavmodel = NULL, lavpta = NULL) {
     lv.marker.orig <- lavpta$vnames$lv.marker[[b]]
     lv.ho <- lavpta$vnames$lv.ho[[b]]
 
-
     lv.idx <- lavpta$vidx$lv.regular[[b]]
     lv.x.idx <- lavpta$vidx$lv.x[[b]]
     lv.marker.idx <- lavpta$vidx$lv.marker[[b]]
+
+    # dummy y?
+    if (length(lavmodel@ov.y.dummy.ov.idx[[b]]) > 0L) {
+      lv.idx <- c(lv.idx, lavmodel@ov.y.dummy.lv.idx[[b]])
+      lv.marker <- c(lv.marker.orig, ov.names[lavmodel@ov.y.dummy.ov.idx[[b]]])
+      names(lv.marker) <- c(names(lv.marker.orig),
+        ov.names[lavmodel@ov.y.dummy.ov.idx[[b]]])
+      lv.marker.idx <- c(lv.marker.idx, lavmodel@ov.y.dummy.ov.idx[[b]])
+    }
 
     # keep track of higher order factors
     lv.ho.idx <- which(is.na(lv.marker.idx)) # same as lavpta$vidx$lv.ho
@@ -143,6 +155,10 @@ lav_model_find_iv_bc2004 <- function(lavmodel = NULL, lavpta = NULL) {
     beta <- glist[[beta.idx[b]]]
     theta <- glist[[theta.idx[b]]]
     psi <- glist[[psi.idx[b]]]
+    if (lavmodel@meanstructure) {
+      nu <- glist[[nu.idx[b]]]
+      alpha <- glist[[alpha.idx[b]]]
+    }
 
     # binary model matrices: nonzero = 1, zero = 0
     if (length(lv.idx) == 0L) {
@@ -163,9 +179,15 @@ lav_model_find_iv_bc2004 <- function(lavmodel = NULL, lavpta = NULL) {
     if (length(lv.idx) > 0L) {
       reg_bin <- rbind(lambda_bin, beta_bin)
       pred_orig <- rbind(lambda, beta)
+      if (lavmodel@meanstructure) {
+        int_orig <- rbind(nu, alpha)
+      }
     } else {
       reg_bin <- beta_bin
       pred_orig <- beta
+      if (lavmodel@meanstructure) {
+        int_orig <- alpha
+      }
     }
     pred.idx <- numeric(ncol(reg_bin))
     if (length(lv.marker.idx) > 0L) {
@@ -189,24 +211,37 @@ lav_model_find_iv_bc2004 <- function(lavmodel = NULL, lavpta = NULL) {
     # keep only the 'ov' part
     pred <- tmp[seq_along(ov.names), , drop = FALSE]
     # replace marker rows, with beta entries of their corresponding lv's
+    # dummy y + regular lv's
     if (length(lv.idx) > 0L && !is.null(beta)) {
       tmp_lv <- tmp[length(ov.names) + lv.idx, , drop = FALSE]
       orig_lv <- pred_orig[length(ov.names) + lv.idx, , drop = FALSE]
+      if (lavmodel@meanstructure) {
+        int_lv <- int_orig[length(ov.names) + lv.idx, , drop = FALSE]
+      }
+
       # tmp[lv.marker.idx, ] <- tmp[length(ov.names) + lv.idx, ]
       # careful, lv.marker.idx may contain the same element multiple times!
       zerolv.idx <- which(apply(tmp_lv, 1, function(x) all(x == 0)))
       if (length(zerolv.idx) > 0L) {
         tmp_lv <- tmp_lv[-zerolv.idx, , drop = FALSE]
         orig_lv <- orig_lv[-zerolv.idx, , drop = FALSE]
+        if (lavmodel@meanstructure) {
+          int_lv <- int_lv[-zerolv.idx, , drop = FALSE]
+        }
       }
       r.idx <- match(lv.marker[rownames(tmp_lv)], rownames(pred))
       pred[r.idx, ] <- tmp_lv
       pred_orig[r.idx, ] <- orig_lv
       rownames(pred_orig)[r.idx] <- rownames(tmp_lv)
       pred_orig <- pred_orig[1:nvar, , drop = FALSE]
+      if (lavmodel@meanstructure) {
+        int_orig[r.idx, ] <- int_lv
+        rownames(int_orig)[r.idx] <- rownames(int_lv)
+        int_orig <- int_orig[1:nvar, , drop = FALSE]
+      }
     }
     # non-zero entries of 'pred' contain the marker idx of the latent
-    # predictors
+    # predictors (and perhaps the dummy ov indices)
 
     # construct comp (composite error term)
     # - for each dependent: the corresponding element in Theta/Psi (y_res)
@@ -312,6 +347,9 @@ lav_model_find_iv_bc2004 <- function(lavmodel = NULL, lavpta = NULL) {
       comp <- comp[-empty.idx, , drop = FALSE]
       pred <- pred[-empty.idx, , drop = FALSE]
       pred_orig <- pred_orig[-empty.idx, , drop = FALSE]
+      if (lavmodel@meanstructure) {
+        int_orig <- int_orig[-empty.idx, , drop = FALSE]
+      }
     }
     # replace colnames of pred by marker names
     idx <- match(names(lv.marker), colnames(pred))
@@ -322,12 +360,17 @@ lav_model_find_iv_bc2004 <- function(lavmodel = NULL, lavpta = NULL) {
     for (j in seq_along(eqs)) {
       cet <- colnames(comp)[which(comp[j, ] != 0)]
       x.idx <- which(pred[j, ] != 0)
+      ptint <- integer(0L)
+      if (lavmodel@meanstructure) {
+        ptint <- unname(int_orig[j, 1])
+      }
       eqs[[j]] <- list(
         lhs_new = rownames(pred)[j],
         rhs_new = colnames(pred[j, x.idx, drop = FALSE]),
         lhs = rownames(pred_orig)[j],
         rhs = colnames(pred_orig[j, x.idx, drop = FALSE]),
         pt = unname(pred_orig[j, x.idx]),
+        ptint = ptint,
         cet = cet,
         markers = unique(lv.marker[cet[-1]]),
         miiv = colnames(iv[j, iv[j, ] != 0, drop = FALSE])
@@ -335,7 +378,7 @@ lav_model_find_iv_bc2004 <- function(lavmodel = NULL, lavpta = NULL) {
     }
 
     iv_list[[b]] <- eqs
-  }
+  } # blocks
 
   iv_list
 }
@@ -374,6 +417,10 @@ lav_model_find_iv_miivsem <- function(lavmodel = NULL, lavpta = NULL) {
   beta.idx <- which(names(glist) == "beta")
   psi.idx <- which(names(glist) == "psi")
   theta.idx <- which(names(glist) == "theta")
+  if (lavmodel@meanstructure) {
+    nu.idx <- which(names(glist) == "nu")
+    alpha.idx <- which(names(glist) == "alpha")
+  }
 
   # nblocks
   nblocks <- lavmodel@nblocks
@@ -390,6 +437,12 @@ lav_model_find_iv_miivsem <- function(lavmodel = NULL, lavpta = NULL) {
     beta <- glist[[beta.idx[b]]]
     theta <- glist[[theta.idx[b]]]
     psi <- glist[[psi.idx[b]]]
+    if (lavmodel@meanstructure) {
+      nu <- glist[[nu.idx[b]]]
+      alpha <- glist[[alpha.idx[b]]]
+    }
+
+
 
     # 'exogenous' variables (in beta/psi) (including dummy ov's)
     if (is.null(beta)) {
@@ -400,6 +453,9 @@ lav_model_find_iv_miivsem <- function(lavmodel = NULL, lavpta = NULL) {
 
     # lambda+beta
     lambda_beta <- pred_orig <- rbind(lambda, beta)
+    if (lavmodel@meanstructure) {
+      int_orig <- rbind(nu, alpha)
+    }
     lambda_beta[lambda_beta != 0] <- as.numeric(NA)
     # add markers
     row.idx <- match(lavpta$vnames$lv.marker[[b]], rownames(lambda_beta))
@@ -409,6 +465,9 @@ lav_model_find_iv_miivsem <- function(lavmodel = NULL, lavpta = NULL) {
     if (length(empty.idx) > 0) {
       lambda_beta <- lambda_beta[-empty.idx, , drop = FALSE]
       pred_orig <- pred_orig[-empty.idx, , drop = FALSE]
+      if (lavmodel@meanstructure) {
+        int_orig <- int_orig[-empty.idx, , drop = FALSE]
+      }
     }
 
     # error + zero matrix, to create gamma and beta
@@ -483,6 +542,10 @@ lav_model_find_iv_miivsem <- function(lavmodel = NULL, lavpta = NULL) {
       eq_rhs <- eq_rhs_orig <- colnames(gamma_beta)[c(zero.idx, na.idx)]
       eq_all <- c(eq_lhs, eq_rhs)
       pt <- unname(gamma_beta_orig[eq_lhs, na.idx])
+      ptint <- integer(0L)
+      if (lavmodel@meanstructure) {
+        ptint <- unname(int_orig[eq_lhs,1L])
+      }
 
       # markers + composite error term (cet)
       cet <- paste("e.", eq_lhs, sep = "")
@@ -532,6 +595,7 @@ lav_model_find_iv_miivsem <- function(lavmodel = NULL, lavpta = NULL) {
         lhs = eq_lhs_orig,
         rhs = setdiff(eq_rhs_orig, e_names),
         pt = pt,
+        ptint = ptint,
         cet = cet,
         markers = markers,
         miiv = miivs
