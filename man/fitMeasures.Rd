@@ -34,7 +34,25 @@ fitmeasures(object, fit.measures = "all",
 \item{object}{An object of class \code{\linkS4class{lavaan}}.}
 \item{fit.measures}{If \code{"all"}, all fit measures available will be
   returned. If only a single or a few fit measures are specified by name,
-  only those are computed and returned.}
+  only those are computed and returned.
+  If additional options for certain fit measures are needed, fit.measures
+  should be a list with first element the measures wanted, or \code{"all"},
+  and the options are provided as named elements in this list. The
+  \code{standard.test} option determines the main test statistic (chi-square
+  value) that will be used to compute all the fit measures that depend on this
+  test statistic. Usually this is \code{"standard"}. The \code{scaled.test}
+  option determines which scaling method is to be used for the scaled fit
+  measures (in case multiple scaling methods were requested). The
+  \code{rmsea.ci.level} option, default 0.9, determines the level of the confidence
+  interval for the rmsea value. The \code{rmsea.close.h0} option, default 0.05,
+  is the rmsea value that is used under the null hypothesis that \code{rmsea <= rmsea.close.h0}.
+  The \code{rmsea.notclose.h0} option, default 0.08, is the rmsea value that is used under the
+  null hypothesis that \code{rsmsea >= rmsea.notclose.h0}. The \code{robust} 
+  option, default \code{TRUE}, can be set to \code{FALSE} to avoid computing the so-called robust
+  rmsea/cfi measures (for example if the computations take too long).
+  The \code{cat.check.pd} option, default \code{TRUE}, is only used when data is categorical. If
+  \code{TRUE}, robust values for RMSEA and CFI are only computed if the input
+  correlation matrix is positive-definite (for all groups).}
 \item{baseline.model}{If not NULL, an object of class
   \code{\linkS4class{lavaan}}, representing a user-specified baseline model.
   If a baseline model is provided, all fit indices relying on a
@@ -46,23 +64,8 @@ fitmeasures(object, fit.measures = "all",
   will use the chi-squared \emph{difference} test statistics from 
   \code{\link{lavTestLRT}}, which compare the user-provided \code{h1.model} 
   to \code{object}.}
-\item{fm.args}{List. Additional options for certain fit measures. The
-  \code{standard.test} element determines the main test statistic (chi-square
-  value) that will be used to compute all the fit measures that depend on this
-  test statistic. Usually this is \code{"standard"}. The \code{scaled.test}
-  element determines which scaling method is to be used for the scaled fit
-  measures (in case multiple scaling methods were requested). The
-  \code{rmsea.ci.level} element determines the level of the confidence
-  interval for the rmsea value. The \code{rmsea.close.h0} element
-  is the rmsea value
-  that is used under the null hypothesis that \code{rmsea <= rmsea.close.h0}.
-  The \code{rmsea.notclose.h0} element is the rmsea value that is used under the
-  null hypothesis that \code{rsmsea >= rmsea.notclose.h0}. The \code{robust} 
-  element can be set to \code{FALSE} to avoid computing the so-called robust
-  rmsea/cfi measures (for example if the computations take too long).
-  The \code{cat.check.pd} element is only used when data is categorical. If
-  \code{TRUE}, robust values for RMSEA and CFI are only computed if the input
-  correlation matrix is positive-definite (for all groups).}
+\item{fm.args}{List. Additional options for certain fit measures. DEPRECATED.
+  The options should now be specified in the \code{"fit.measures"} argument!}
 \item{output}{Character. If \code{"vector"} (the default), display the
   output as a named (lavaan-formatted) vector. If \code{"matrix"}, display
   the output as a 1-column matrix. If \code{"text"}, display the

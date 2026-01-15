@@ -173,8 +173,7 @@ lav_msg_view <- function(x,
 # during one "lavaan-package-session"
 lav_deprecated <- function(new,
                            old = as.character(sys.call(sys.parent()))[1L],
-                           times = 1L)
-{
+                           times = 1L) {
   dprmsg <-  get0(paste0("dpr_", old), lavaan_cache_env,
                   ifnotfound = as.integer(times))
   if (dprmsg <= 0L) return(invisible(NULL))
@@ -184,6 +183,24 @@ lav_deprecated <- function(new,
          gettext("See help(\"Deprecated\")"))
   msg <- paste(msg, collapse = "")
   warning(warningCondition(msg, old = old, new = new, package = NULL,
+                           class = "deprecatedWarning"))
+}
+
+# Warning for deprecated arguments-parameter for another parameter in a function
+# method.par specifies the name of the parameter used for a 'method'
+# arg.par specifies the name of the deprecated parameter
+# parameter times specifies how many times the warning should be generated
+# during one "lavaan-package-session"
+lav_deprecated_args <- function(method.par, arg.par, times = 1L) {
+  dprmsg <-  get0(paste0("dpr_", method.par, arg.par), lavaan_cache_env,
+                  ifnotfound = as.integer(times))
+  if (dprmsg <= 0L) return(invisible(NULL))
+  assign(paste0("dpr_", method.par, arg.par), dprmsg - 1L, lavaan_cache_env)
+  msg <- c(gettextf("Argument '%s' is deprecated.\n", arg.par),
+         gettextf("The arguments for '%s' can now be provided in '%s' itself.\n",
+          method.par, method.par))
+  msg <- paste(msg, collapse = "")
+  warning(warningCondition(msg, old = arg.par, new = method.par, package = NULL,
                            class = "deprecatedWarning"))
 }
 

@@ -87,18 +87,33 @@ setMethod(
     # efa?
     efa.flag <- object@Options$model.type == "efa"
 
-    res <- lav_object_summary(
-      object = object, header = header,
-      fit.measures = fit.measures, estimates = estimates,
-      ci = ci, fmi = fmi, std = std, standardized = standardized,
-      remove.system.eq = remove.system.eq,
-      remove.eq = remove.eq, remove.ineq = remove.ineq,
-      remove.def = remove.def, remove.nonfree = remove.nonfree,
-      remove.step1 = remove.step1, remove.unused = remove.unused,
-      plabel = plabel, cov.std = cov.std,
-      rsquare = rsquare, efa = efa.flag,
-      fm.args = fm.args, modindices = modindices
-    )
+    if (missing(fm.args)) {
+      res <- lav_object_summary(
+        object = object, header = header,
+        fit.measures = fit.measures, estimates = estimates,
+        ci = ci, fmi = fmi, std = std, standardized = standardized,
+        remove.system.eq = remove.system.eq,
+        remove.eq = remove.eq, remove.ineq = remove.ineq,
+        remove.def = remove.def, remove.nonfree = remove.nonfree,
+        remove.step1 = remove.step1, remove.unused = remove.unused,
+        plabel = plabel, cov.std = cov.std,
+        rsquare = rsquare, efa = efa.flag,
+        modindices = modindices
+      )
+    } else {
+      res <- lav_object_summary(
+        object = object, header = header,
+        fit.measures = fit.measures, estimates = estimates,
+        ci = ci, fmi = fmi, std = std, standardized = standardized,
+        remove.system.eq = remove.system.eq,
+        remove.eq = remove.eq, remove.ineq = remove.ineq,
+        remove.def = remove.def, remove.nonfree = remove.nonfree,
+        remove.step1 = remove.step1, remove.unused = remove.unused,
+        plabel = plabel, cov.std = cov.std,
+        rsquare = rsquare, efa = efa.flag,
+        fm.args = fm.args, modindices = modindices
+      )
+    }
     # res has class c("lavaan.summary", "list")
 
     # what about nd? only used if we actually print; save as attribute
