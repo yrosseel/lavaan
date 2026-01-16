@@ -22,7 +22,8 @@ efa(data = NULL, nfactors = 1L, sample.cov = NULL, sample.nobs = NULL,
     Unlike sem and CFA, the matrix may be a correlation matrix.}
 \item{sample.nobs}{Number of observations if the full data frame is missing
     and only the sample variance-covariance matrix is given.}
-\item{rotation}{Character. The rotation method to be used. Possible options
+\item{rotation}{Character or a list with first element a character variable.
+    The character variable is the rotation method to be used. Possible options
     are varimax, quartimax, orthomax, oblimin, quartimin, geomin, promax,
     entropy, mccammon, infomax, tandem1, tandem2, oblimax, bentler, simplimax, 
     target.strict, target (alias for pst), pst (=partially specified target), 
@@ -34,8 +35,9 @@ efa(data = NULL, nfactors = 1L, sample.cov = NULL, sample.nobs = NULL,
     been reimplemented for better control. The promax method is taken from the
     stats package. The target.strict method is equal to the target method in
     the GPArotation package. The target method is in fact the pst method where
-    all non-zero elements (in the target matrix) are ignored.}
-\item{rotation.args}{List. Options related to the rotation algorithm. The
+    all non-zero elements (in the target matrix) are ignored.
+    Options for the rotation algorithm can be provided in the list after the method.
+    The
    default options (and their alternatives) are \code{orthogonal = FALSE},
    \code{row.weights = "default"} (or \code{"kaiser"},
    \code{"cureton.mulaik"} or \code{"none"}), \code{std.ov = TRUE},
@@ -47,6 +49,8 @@ efa(data = NULL, nfactors = 1L, sample.cov = NULL, sample.nobs = NULL,
    \code{geomin.epsilon = 0.001}, \code{orthomax.gamma = 1},
    \code{promax.kappa = 4},
    \code{cf.gamma = 0}, and \code{oblimin.gamma = 0}.}
+\item{rotation.args}{List. Options related to the rotation algorithm. DEPRECATED.
+   The options should now be given in the \code{rotation} argument as a list.}
 \item{ov.names}{Character vector. The variables names that are needed for
    the EFA. Should be a subset of the variables names in the data.frame.
    By default (if NULL), all the variables in the data are used.}
@@ -94,8 +98,7 @@ efa(data = NULL, nfactors = 1L, sample.cov = NULL, sample.nobs = NULL,
 fit <- efa(data = HolzingerSwineford1939, 
            ov.names = paste("x", 1:9, sep = ""),
            nfactors = 1:3,
-           rotation = "geomin",
-           rotation.args = list(geomin.epsilon = 0.01, rstarts = 1))
+           rotation = list("geomin", geomin.epsilon = 0.01, rstarts = 1))
 summary(fit, nd = 3L, cutoff = 0.2, dot.cutoff = 0.05)
 fitMeasures(fit, fit.measures = "all")
 
@@ -107,7 +110,6 @@ target[7:9, 3] <- 1
 fit2 <- efa(data = HolzingerSwineford1939,
             ov.names = paste("x", 1:9, sep = ""), 
             nfactors = 3,
-            rotation = "target",
-            rotation.args = list(target = target))
+            rotation = list("target", target = target))
 summary(fit2)
 }
