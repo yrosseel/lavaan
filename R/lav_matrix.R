@@ -1168,6 +1168,7 @@ lav_matrix_bdiag <- function(...) {
   ccols <- cumsum(ncols)
   trows <- sum(nrows)
   tcols <- sum(ncols)
+  # empty names will shorten the c/r-names vector
   cnames  <- unlist(lapply(mlist, colnames))
   rnames  <- unlist(lapply(mlist, rownames))
 
@@ -1185,7 +1186,11 @@ lav_matrix_bdiag <- function(...) {
   }
 
   attr(x, "dim") <- c(trows, tcols)
-  attr(x, "dimnames") <- list(rnames, cnames)
+  # col/row names (only if complete)
+  if (nrow(x) == length(rnames) && ncol(x) == length(cnames)) {
+    attr(x, "dimnames") <- list(rnames, cnames)
+  }
+
   x
 }
 
