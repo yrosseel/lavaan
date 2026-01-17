@@ -19,6 +19,15 @@ efa <- function(data = NULL,
                 bounds = "pos.var",
                 ...,
                 output = "efa") {
+  # rotation.args deprecation handling
+  if (!missing(rotation.args)) {
+    lav_deprecated_args("rotation", "rotation.args")
+  }
+  if (is.list(rotation)) {
+    rotation.args <- modifyList(list(), rotation)
+    rotation <- rotation[[1L]]
+  }
+
   # handle dotdotdot
   dotdotdot <- list(...)
 

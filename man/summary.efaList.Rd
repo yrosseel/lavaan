@@ -79,8 +79,7 @@ lav_efalist_summary_print(x, nd = 3L, cutoff = 0.3, dot.cutoff = 0.1,
 fit <- efa(data = HolzingerSwineford1939, 
            ov.names = paste("x", 1:9, sep = ""),
            nfactors = 1:3,
-           rotation = "geomin",
-           rotation.args = list(geomin.epsilon = 0.01, rstarts = 1))
+           rotation = list("geomin", geomin.epsilon = 0.01, rstarts = 1))
 summary(fit, nd = 3L, cutoff = 0.2, dot.cutoff = 0.05,
         lambda.structure = TRUE, pvalue = TRUE)
 }
