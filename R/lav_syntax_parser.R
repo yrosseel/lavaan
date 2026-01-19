@@ -29,25 +29,6 @@ lav_parse_sublist <- function(inlist, indexes) {
   inlist
 }
 
-# ------------------------ lav_parse_num_modifier  --------------------------- #
-# function for transforming string with numeric values separated by semicolons
-# in a numeric vector (used in lav_parse_modifier)
-# ---------------------------------------------------------------------------- #
-lav_parse_num_modifier <- function(txt) {
-  # help function
-  vapply(strsplit(txt, ";")[[1]], function(x) {
-    if (x == "NA") NA_real_ else as.numeric(x)
-  }, 1.0, USE.NAMES = FALSE)
-}
-# ------------------------ lav_parse_unpaste  -------------------------------- #
-# function for transforming string with string values separated by semicolons
-# in a vector (used in lav_parse_modifier)
-# ---------------------------------------------------------------------------- #
-lav_parse_unpaste <- function(text) {
-  out <- strsplit(text, ";(NA;)*")[[1]]
-  if (grepl(";$", text)) out <- c(out, "")
-  out
-}
 # ------------------------ lav_parse_eval_r_expression ------------------- #
 # help function to evaluate the value of an r expression formed by the elements
 # with index 'from' to 'to' of a formula 'formul1'
@@ -71,27 +52,6 @@ lav_parse_eval_r_expression <- function(formul1, from, to, types) {
     return("_error_")
   }
   result
-}
-# ------------------------ lav_parse_adapt_vector_type ----------------------- #
-# help function to dynamically adapt the type of a vector in a c(...) sequence
-# used only in lav_parse_modifier, returns typenu if texttoadd == "NA",
-# return -1 (= error) when typenu is numliteral xor typetoadd is numliteral
-# ---------------------------------------------------------------------------- #
-lav_parse_adapt_vector_type <- function(typenu, typetoadd, texttoadd, types) {
-  addtype <- typetoadd
-  if (texttoadd == "NA") addtype <- types$numliteral
-  if (typenu == 0) {
-    typenu <- addtype
-  } else {
-    if (typenu != addtype) {
-      if (typenu == types$numliteral || addtype == types$numliteral) {
-        typenu <- -1 # error !
-      } else {
-        typenu <- types$stringliteral
-      }
-    }
-  }
-  typenu
 }
 # ------------------------ lav_parse_txtloc  --------------------------------- #
 # function which translates a position in the model source string to a
@@ -203,7 +163,7 @@ lav_parse_text_tokens <- function(modelsrc, types) {
     )
   }
   # -------------------------------------------------------------------------- #
-  lavops <- gregexpr("=~|<~|~\\*~|~~|~|==|<|>|:=|:|\\||%", modelsrcw)[[1]]
+  lavops <- gregexpr("=~|<~|~\\*~|~~|~|\\|~|==|<|>|:=|:|\\||%", modelsrcw)[[1]]
   if (lavops[1L] > -1L) {
     lavop.lengths <- attr(lavops, "match.length")
     for (i in seq_along(lavops)) {
@@ -394,7 +354,7 @@ lav_parse_text_tokens <- function(modelsrc, types) {
 # the function returns a list of formulas
 # ---------------------------------------------------------------------------- #
 lav_parse_tokens_formulas <- function(modellist, modelsrc, types) {
-  real.operators <- c("=~", "<~", "~*~", "~~", "~", "|", "%")
+  real.operators <- c("=~", "<~", "~*~", "~~", "~", "|~", "|", "%")
   welke <- modellist$elem.type != types$newline
   formula.numbers <- unique(modellist$elem.formula.number[welke])
   formulas <- lapply(formula.numbers, function(s) {
@@ -514,7 +474,7 @@ lav_parse_check_name <- function(formul1, ind, modelsrc) {
 # An error message is produced when no modifier can be determined.
 # ---------------------------------------------------------------------------- #
 lav_parse_modifier <- function(formul1, lhs, opi, modelsrc, types,
-                                   rme = 0L, rmeprev = 0L) {
+                                   rme = 0L, rmeprev = 0L, modenv) {
   if (rme > rmeprev) {
     welke <- c(seq.int(1L, opi), seq.int(rmeprev + 1L, rme),
                length(formul1$elem.type))
@@ -559,236 +519,77 @@ lav_parse_modifier <- function(formul1, lhs, opi, modelsrc, types,
       footer = tl[2L]
     )
   } else {
-    # modifier on right hand side
-    # check for vectors c(...), start(...), fixed(...), ...
-    j <- opi + 1L
-    if (formul1$elem.text[j + 1L] == "(") {
-      # browser()
-      expect.vector <- (formul1$elem.text[j] == "c")
-      if (any(formul1$elem.text[j] == c("start", "fixed", "label",
-                                        "upper", "lower", "rv", "prior"))) {
-        aanhaakjes <- 0L
-        for (jjj in seq.int(j + 2L, nelem - 3L)) {
-          if (formul1$elem.text[jjj] == "(") {
-            aanhaakjes <- aanhaakjes + 1L
-          } else if (formul1$elem.text[jjj] == ")") {
-            aanhaakjes <- aanhaakjes - 1L
-          } else {
-            if (formul1$elem.text[jjj] == ",") {
-              expect.vector <- TRUE
-              break
-            }
-          }
+    getmodifier <- function(s) {
+      if (s %in% c("c", "t")) {
+        tmp <- s
+        attr(tmp, "tiepe") <- "label"
+        return(tmp)
+      }
+      v <- all.vars(str2expression(s))
+      for (v1 in v) {
+        assign(v1, v1, modenv)
+      }
+      tmp <- eval(str2expression(s), modenv)
+      rm(list = v, pos = modenv)
+      if (is.null(attr(tmp, "tiepe"))) {
+        if (is.numeric(tmp) || is.logical(tmp)) {
+          attr(tmp, "tiepe") <- "fixed"
+        } else {
+          attr(tmp, "tiepe") <- "label"
         }
       }
-      if (expect.vector) {
-        vector.type <- 0
-        labnu <- j + 2L
-        repeat {
-          aanhaakjes <- 0L
-          labtot <- labnu
-          for (jjj in seq.int(labnu, nelem - 2L)) {
-            if (formul1$elem.text[jjj] == "(") {
-              aanhaakjes <- aanhaakjes + 1L
-            } else if (formul1$elem.text[jjj] == ")" && aanhaakjes > 0L) {
-              aanhaakjes <- aanhaakjes - 1L
-            } else {
-              if (any(formul1$elem.text[jjj] == c(",", ")"))) {
-                labtot <- jjj
-                break
-              }
-            }
-          }
-          if (labtot == labnu) {
-            tl <- lav_parse_txtloc(modelsrc, formul1$elem.pos[j])
-            lav_msg_stop(gettext("invalid vector specification"),
-                         tl[1L],
-                         footer = tl[2L]
-            )
-          }
-          if (labtot == labnu + 1L) { # 1 item
-            vector.type <- lav_parse_adapt_vector_type(
-              vector.type, formul1$elem.type[labnu],
-              formul1$elem.text[labnu], types
-            )
-            if (vector.type == -1) {
-              tl <- lav_parse_txtloc(modelsrc, formul1$elem.pos[1L])
-              lav_msg_stop(gettext(
-                "Combining labels and fixed values in multigroup modifiers
-                   isn't allowed!"), tl[1L], footer = tl[2L])
-            }
-            if (labnu != j + 2L) {
-              formul1$elem.text[j + 2L] <- paste(formul1$elem.text[j + 2L],
-                                    formul1$elem.text[labnu], sep = ";")
-            }
-          } else { # multiple items
-            temp <- lav_parse_eval_r_expression(formul1,
-                                                labnu, labtot - 1L, types)
-            vector.type <- lav_parse_adapt_vector_type(
-              vector.type, types$numliteral,
-              formul1$elem.text[labnu], types
-            )
-            if (vector.type == -1) {
-              tl <- lav_parse_txtloc(modelsrc, formul1$elem.pos[1L])
-              lav_msg_stop(gettext(
-                "Combining labels and fixed values in multigroup modifiers
-                   isn't allowed!"), tl[1L], footer = tl[2L])
-            }
-            if (labnu == j + 2L) {
-              formul1$elem.text[labnu] <- as.character(temp)
-            } else {
-              formul1$elem.text[j + 2L] <- paste(
-                formul1$elem.text[j + 2L], as.character(temp), sep = ";")
-            }
-          }
-          labnu <- labtot + 1L
-          if (labnu > nelem - 2) {
-            break
-          }
-        }
-        if (vector.type == 0L) vector.type <- types$stringliteral
-        if (formul1$elem.text[j] == "c") {
-          if (vector.type == types$stringliteral) {
-            formul1$elem.text[j] <- "label"
-          } else {
-            formul1$elem.text[j] <- "fixed"
-          }
-        }
-        formul1$elem.type[seq.int(j + 3L, nelem - 3L)] <- 0
-        formul1$elem.type[j + 2L] <- vector.type
-        formul1 <- lav_parse_sublist(formul1, which(formul1$elem.type > 0))
-        nelem <- length(formul1$elem.type)
-      }
+      tmp
     }
-    # possibilities
-    # stringliteral|identifier * identifier|numliteral
-    # numliteral * identifier|numliteral
-    # numliteral ? identifier|numliteral
-    # fixed|start|upper|lower|rv|prior(numliteral) * identifier|numliteral
-    # label|equal (stringliteral|identifier) * identifier|numliteral
-    # ==> literals before * or ? can be replaced by R-expression
-    #     resulting in correct type
-    # check on last element being a numliteral or identifier
-    #                       already done in calling function
-    if (all(formul1$elem.text[nelem - 1L] != c("*", "?"))) {
+    strings <- vapply(seq.int(opi + 1L, nelem - 2L), function(x) {
+      if (formul1$elem.type[x] == types$stringliteral) {
+        paste0('"', formul1$elem.text[x], '"')
+      } else {
+        formul1$elem.text[x]
+      }
+    }, "")
+    txt <- paste(strings, collapse = "")
+    if (formul1$elem.text[nelem - 1L] == "?") {
+      formul1$elem.text[nelem - 1L] <- "*"
+      txt <- paste0("start(", txt, ")")
+    }
+    if (formul1$elem.text[nelem - 1L] != "*") {
       tl <- lav_parse_txtloc(modelsrc, formul1$elem.pos[nelem - 1L])
       lav_msg_stop(gettext("invalid modifier symbol (should be '*' or '?')"),
         tl[1L],
         footer = tl[2L]
       )
     }
-    if (formul1$elem.text[nelem - 1L] == "?") {
-      temp <- lav_parse_eval_r_expression(formul1, opi + 1L, nelem - 2L, types)
-      if (is.numeric(temp)) {
-        return(list(start = temp))
-      }
+    modifier <- try(getmodifier(txt), silent = TRUE)
+    if (inherits(modifier, "try-error")) {
       tl <- lav_parse_txtloc(modelsrc, formul1$elem.pos[opi + 1L])
-      lav_msg_stop(gettext(
-        "invalid start value expression (should be numeric)"),
-        tl[1L], footer = tl[2L]
+      lav_msg_stop(gettext("invalid modifier specification"),
+        tl[1L],
+        footer = tl[2L]
       )
     }
-    if (nelem == opi + 3) {
-      if (formul1$elem.text[opi + 1L] == "NA") {
-        formul1$elem.type[opi + 1L] <- types$numliteral
-      }
-      if (any(formul1$elem.type[opi + 1L] ==
-        c(types$identifier, types$stringliteral))) {
-        return(list(label = lav_parse_unpaste(formul1$elem.text[opi + 1L])))
-      } else {
-        if (formul1$elem.type[opi + 1L] == types$numliteral) {
-          return(list(fixed =
-            lav_parse_num_modifier(formul1$elem.text[opi + 1L])))
-        } else {
-          tl <- lav_parse_txtloc(modelsrc, formul1$elem.pos[opi + 1L])
-          lav_msg_stop(
-            gettext("invalid value (should be numeric, identifier or string)"),
-            tl[1L],
-            footer = tl[2L]
-          )
-        }
-      }
-    }
-    if (formul1$elem.text[opi + 2L] == "(" &&
-      formul1$elem.text[nelem - 2L] == ")") {
-      if (any(formul1$elem.text[opi + 1L] ==
-        c("fixed", "start", "upper", "lower", "prior"))) {
-        if (nelem == opi + 6L) {
-          if (formul1$elem.text[opi + 3L] == "NA") {
-            formul1$elem.type[opi + 3L] <- types$numliteral
-          }
-          if (formul1$elem.type[opi + 3L] == types$numliteral) {
-            outje <- list()
-            outje[[formul1$elem.text[opi + 1L]]] <-
-              lav_parse_num_modifier(formul1$elem.text[opi + 3L])
-            return(outje)
-          }
-          tl <- lav_parse_txtloc(modelsrc, formul1$elem.pos[opi + 3L])
-          lav_msg_stop(gettext("invalid value (should be numeric)"),
-            tl[1L],
-            footer = tl[2L]
-          )
-        }
-        temp <- lav_parse_eval_r_expression(formul1,
-                        opi + 3L, nelem - 3L, types)
-        if (is.numeric(temp)) {
-          outje <- list()
-          outje[[formul1$elem.text[opi + 1L]]] <- temp
-          return(outje)
-        }
-        tl <- lav_parse_txtloc(modelsrc, formul1$elem.pos[opi + 3L])
-        lav_msg_stop(
-          gettext("invalid value R-expression (should be numeric)"),
+    if (attr(modifier, "tiepe") == "label") {
+      if (!is.character(modifier)) {
+        tl <- lav_parse_txtloc(modelsrc, formul1$elem.pos[opi + 1L])
+        lav_msg_stop(gettext("invalid label modifier (should be character)"),
           tl[1L],
           footer = tl[2L]
         )
       }
-      if (any(formul1$elem.text[opi + 1L] == c("equal", "rv", "label"))) {
-        modname <- formul1$elem.text[opi + 1L]
-        if (modname == "equal") modname <- "label"
-        if (nelem == opi + 6L) {
-          if (formul1$elem.type[opi + 3L] == types$stringliteral) {
-            outje <- list()
-            outje[[modname]] <-
-              lav_parse_unpaste(formul1$elem.text[opi + 3L])
-            return(outje)
-          }
-          tl <- lav_parse_txtloc(modelsrc, formul1$elem.pos[opi + 3L])
-          lav_msg_stop(gettext("invalid value (should be string)"),
-            tl[1L],
-            footer = tl[2L]
-          )
-        }
-        temp <- lav_parse_eval_r_expression(formul1, opi + 3L,
-                   nelem - 3L, types)
-        if (is.character(temp) && temp[1] != "_error_") {
-          outje <- list()
-          outje[[modname]] <- temp
-          return(outje)
-        }
-        tl <- lav_parse_txtloc(modelsrc, formul1$elem.pos[opi + 3L])
-        lav_msg_stop(
-          gettext("invalid value R-expression (should be a string)"),
+    } else {
+      if (!is.numeric(modifier) && !is.na(modifier)) {
+        tl <- lav_parse_txtloc(modelsrc, formul1$elem.pos[opi + 1L])
+        lav_msg_stop(gettext("invalid numeric modifier"),
           tl[1L],
           footer = tl[2L]
         )
       }
     }
-    temp <- lav_parse_eval_r_expression(formul1, opi + 1L, nelem - 2L, types)
-    if (is.numeric(temp)) {
-      return(list(fixed = temp))
-    }
-    if (is.character(temp) && temp[1] != "_error_") {
-      return(list(label = temp))
-    }
-    browser()
-    tl <- lav_parse_txtloc(modelsrc, formul1$elem.pos[opi + 1L])
-    lav_msg_stop(gettext("invalid modifier specification"),
-      tl[1L],
-      footer = tl[2L]
-    )
+    modifierlist <- list(as.vector(modifier))
+    names(modifierlist) <- attr(modifier, "tiepe")
+    modifierlist
   }
 }
+
 # -------------------- main parsing function --------------------------------- #
 lav_parse_model_string <- function(model.syntax = "", as.data.frame. = FALSE) {
   stopifnot(length(model.syntax) > 0L)
@@ -802,7 +603,31 @@ lav_parse_model_string <- function(model.syntax = "", as.data.frame. = FALSE) {
   if (exists(hashstring, envir = lavaan_cache_env)) {
     return(get(hashstring, envir = lavaan_cache_env))
   }
-
+  modenv <- new.env()
+assign("label", function(...) {
+    x <- do.call("c", args = list(...)); attr(x, "tiepe") <- "label"; x
+  }, modenv)
+assign("start", function(...) {
+    x <- do.call("c", args = list(...)); attr(x, "tiepe") <- "start"; x
+  }, modenv)
+assign("fixed", function(...) {
+    x <- do.call("c", args = list(...)); attr(x, "tiepe") <- "fixed"; x
+  }, modenv)
+assign("upper", function(...) {
+    x <- do.call("c", args = list(...)); attr(x, "tiepe") <- "upper"; x
+  }, modenv)
+assign("lower", function(...) {
+    x <- do.call("c", args = list(...)); attr(x, "tiepe") <- "lower"; x
+  }, modenv)
+assign("rv", function(...) {
+    x <- do.call("c", args = list(...)); attr(x, "tiepe") <- "rv"; x
+  }, modenv)
+assign("prior", function(...) {
+    x <- do.call("c", args = list(...)); attr(x, "tiepe") <- "prior"; x
+  }, modenv)
+assign("equal", function(...) {
+    x <- do.call("c", args = list(...)); attr(x, "tiepe") <- "label"; x
+  }, modenv)
   types <- lav_create_enum(c(
     "identifier", "numliteral", "stringliteral",
     "symbol", "lavaanoperator", "newline"
@@ -841,8 +666,8 @@ lav_parse_model_string <- function(model.syntax = "", as.data.frame. = FALSE) {
   if (lav_debug()) {
     cat("formula to analyse:\n")
   }
-  #  operators <- c("=~", "<~", "~*~", "~~", "~", "==", "<", ">", ":=",
-  #                 ":", "\\|", "%")
+  #  operators <- c("=~", "<~", "~*~", "~~", "~", "|~", "==", "<", ">", ":=",
+  #                 ":", "|", "%")
   constraint_operators <- c("==", "<", ">", ":=")
   for (s in seq_along(formulalist)) {
     formul1 <- formulalist[[s]]
@@ -960,11 +785,11 @@ lav_parse_model_string <- function(model.syntax = "", as.data.frame. = FALSE) {
     }
     if (formul1$elem.type[nelem] != types$identifier &&
         (formul1$elem.type[nelem] != types$numliteral ||
-         all(op != c("~", "=~")))) {
+         all(op != c("~", "|~", "=~")))) {
       tl <- lav_parse_txtloc(modelsrc, formul1$elem.pos[nelem])
       lav_msg_stop(
         gettext("Last element of rhs part expected to be an identifier or,
-                for operator ~ or =~, a numeric literal!"),
+                for operator ~, |~ or =~, a numeric literal!"),
         tl[1L],
         footer = tl[2L]
       )
@@ -1054,7 +879,7 @@ lav_parse_model_string <- function(model.syntax = "", as.data.frame. = FALSE) {
       rme <- rhsmodelems[rmei]
       rmeprev <- if (rmei == 1L) opi else rhsmodelems[rmei - 1L]
       already <- which(flat.lhs == lhs & flat.op == op & flat.block == block &
-        (flat.rhs == rhs | (flat.rhs == "" & op == "~" &
+        (flat.rhs == rhs | (flat.rhs == "" & (op == "~" | op == "|~") &
           formul1$elem.type[nelem] == types$numliteral)))
       if (length(already) == 1L) {
         idx <- already
@@ -1066,21 +891,21 @@ lav_parse_model_string <- function(model.syntax = "", as.data.frame. = FALSE) {
         flat.rhs[idx] <- rhs
         flat.block[idx] <- block
         if (formul1$elem.type[nelem] == types$numliteral) {
-          if (op == "~") flat.rhs[idx] <- ""
+          if (op == "~" || op == "|~") flat.rhs[idx] <- ""
         }
       }
       lhsmod <- list()
       if (opi > 2 && rmei == 1L) {
         lhsmod <- lav_parse_modifier(
           formul1,
-          TRUE, opi, modelsrc, types
+          TRUE, opi, modelsrc, types, modenv = modenv
         )
       }
       rhsmod <- list()
       if (nelem - opi > 1) {
         rhsmod <- lav_parse_modifier(
           formul1,
-          FALSE, opi, modelsrc, types, rme, rmeprev
+          FALSE, opi, modelsrc, types, rme, rmeprev, modenv = modenv
         )
       }
       flat.fixed[idx] <- if (is.null(rhsmod$fixed)) {
@@ -1189,6 +1014,11 @@ lav_parse_model_string <- function(model.syntax = "", as.data.frame. = FALSE) {
   int.idx <- which(flat.op == "~" & flat.rhs == "")
   if (length(int.idx) > 0L) {
     flat$op[int.idx] <- "~1"
+  }
+  # change op for ininstruments (for convenience only)
+  int.idx <- which(flat.op == "|~" & flat.rhs == "")
+  if (length(int.idx) > 0L) {
+    flat$op[int.idx] <- "|~1"
   }
   # if there are constraints that are simple lower or upper limits, put
   # them in these members, add a modifier and remove constraint
