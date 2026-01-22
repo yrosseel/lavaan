@@ -86,9 +86,16 @@ sam <- function(model = NULL,
                 ),
                 # h1, anova, mean
                 global.options = list(), # not used for now
-                bootstrap.args = list(R = 1000L, type = "ordinary",
+                bootstrap = list(R = 1000L, type = "ordinary",
                                       show.progress = FALSE),
-                output = "lavaan") {
+                output = "lavaan",
+                bootstrap.args = bootstrap) {
+  # "bootstrap" is the new way to specify arguments, replacing bootstrap.args
+  if (!missing(bootstrap.args)) {
+    lav_msg_warn(gettext(
+      "'bootstrap.args' is deprecated; please use 'bootstrap' instead."))
+    bootstrap <- bootstrap.args
+  } 
 
   # check model= argument
   has.sam.object.flag <- FALSE
@@ -270,7 +277,7 @@ sam <- function(model = NULL,
                             blocks (groups, levels) are involved."))
     }
   }
-
+  
   lavoptions <- lavInspect(FIT, "options")
   if (lav_verbose()) {
     cat("This is sam using sam.method = ", sam.method, ".\n", sep = "")
@@ -447,7 +454,7 @@ sam <- function(model = NULL,
     default.args <- list(R = 1000L, type = "ordinary",
                          show.progress = FALSE,
                          check.post = TRUE, keep.idx = FALSE)
-    this.args <- modifyList(default.args, bootstrap.args)
+    this.args <- modifyList(default.args, bootstrap)
     COEF <- lav_bootstrap_internal(object = sam_object,
       R = this.args$R, show.progress = this.args$show.progress,
       type = this.args$type, FUN = "coef",

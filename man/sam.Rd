@@ -13,8 +13,10 @@ sam(model = NULL, data = NULL, cmd = "sem", se = "twostep",
     local.options = list(M.method = "ML", lambda.correction = TRUE, 
                          alpha.correction = 0L, twolevel.method = "h1"), 
     global.options = list(), 
-    bootstrap.args = list(R = 1000L, type = "ordinary", show.progress = FALSE),
-    output = "lavaan")
+    bootstrap = list(R = 1000L, type = "ordinary", show.progress = FALSE),
+    output = "lavaan",
+    bootstrap.args = bootstrap
+)
 }
 \arguments{
 \item{model}{A description of the user-specified model. Typically, the model
@@ -61,13 +63,14 @@ sam(model = NULL, data = NULL, cmd = "sem", se = "twostep",
      predictors in the structural model), P+5, and (N-1)/2.}
 \item{global.options}{List. Options specific for global SAM method (not
      used for now).}
-\item{bootstrap.args}{List. Only used when \code{se = "bootstrap"}. Typical
+\item{bootstrap}{List. Only used when \code{se = "bootstrap"}. Typical
      elements of this list are \code{R}: the number of bootstrap samples, and
      \code{type}, which can be set to \code{"ordinary"} (the default) or
      \code{"parametric"}.}
 \item{output}{Character. If \code{"lavaan"}, a lavaan object returned. If
     \code{"list"}, a list is returned with all the ingredients from the 
     different stages.}
+\item{bootstrap.args}{List. Deprecated, use \code{bootstrap} instead.}
 }
 \details{
     The \code{sam} function tries to automate the SAM approach, by first

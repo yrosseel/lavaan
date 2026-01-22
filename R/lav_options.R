@@ -151,6 +151,14 @@ lav_options_set <- function(opt = NULL) {                     # nolint
     opt$optim.partrace <- TRUE
   }
 
+  # if estimator is a ist split it in estimator + args ####
+  if (is.list(opt$estimator)) {
+    if (length(opt$estimator) > 1L) {
+      opt$estimator.args <- opt$estimator[-1]
+    }
+    opt$estimator <- opt$estimator[[1]]
+  }
+  
   # check options with definitions ####
   opt <- lav_options_check(opt, opt.check, "")
 
@@ -534,12 +542,14 @@ lav_options_set <- function(opt = NULL) {                     # nolint
   }
 
   # bootstrap ####
+  if (is.numeric(opt$bootstrap)) {
+    opt$bootstrap <- list(R = as.integer(opt$bootstrap))
+  }
   if (opt$se == "bootstrap") {
     opt$information[1] <- "observed"
     if (length(opt$information) > 1L && opt$information[2] == "default") {
       opt$information[2] <- "observed"
     }
-    opt$bootstrap <- as.integer(opt$bootstrap)
   }
 
   # specific per estimator (group) ####
