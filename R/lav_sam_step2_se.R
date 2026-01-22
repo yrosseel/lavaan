@@ -81,6 +81,18 @@ lav_sam_step2_se <- function(FIT = NULL, JOINT = NULL,
       FIT.PA@ParTable$free > 0L)
     step2.rm.idx <- PTS.free[id.idx]
   }
+  
+  # Fix for EFA/ESEM: when rotation is used, FIT.PA@Model@con.jac includes
+  # columns for rotation identification constraints that are not part of
+  # step2.free.idx. These extra columns cause dimension mismatch in
+  # lav_model_information_augment_invert(). Remove them via rm.idx.
+  if (nrow(FIT.PA@Model@con.jac) > 0L) {
+    n_jac_cols <- ncol(FIT.PA@Model@con.jac)
+    n_step2 <- length(step2.free.idx)
+    if (n_jac_cols > n_step2) {
+      step2.rm.idx <- union(step2.rm.idx, (n_step2 + 1):n_jac_cols)
+    }
+  }
 
   # invert augmented information, for I.22 block only
   # new in 0.6-16 (otherwise, eq constraints in struc part are ignored)
