@@ -5,7 +5,9 @@
 #      (2004) [algorithm = "bc2004"]
 #   2) treating errors/disturbances as latent variables (as in the
 #      comprehensive RAM model); similar to miivs() in MIIVsem package
-#      [algorithm = "miivsem"] (the default)
+#      [algorithm = "miivsem"]
+#   3) using an explicity expression (due to Albert Maydeu-Olivares) for
+#      cov(u,y) [algorithm = "covuy"] (the default)
 #
 # YR 29 Dec 2025 - first version
 
@@ -51,6 +53,8 @@ lav_model_find_iv <- function(lavobject = NULL, lavmodel = NULL,
     iv_list <- lav_model_find_iv_bc2004(lavmodel = lavmodel, lavpta = lavpta)
   } else if (algorithm == "miivsem") {
     iv_list <- lav_model_find_iv_miivsem(lavmodel = lavmodel, lavpta = lavpta)
+  } else {
+    iv_list <- lav_model_find_iv_covuy(lavmodel = lavmodel, lavpta = lavpta)
   }
 
   if (output == "table") {
@@ -328,15 +332,22 @@ lav_model_find_iv_bc2004 <- function(lavmodel = NULL, lavpta = NULL) {
     # disturbance term
     iv <- piv
     for (i in 1:nvar) {
-      for (p in 1:nvar) {
-        # do check for this iv, if false, set to zero
-        comp.idx <- which(y_res %in% comp[i, ])
-        total.idx <- which(y_res %in% total[piv[i, p], ])
-        cov_values <- theta[as.matrix(expand.grid(comp.idx, total.idx))]
-        if (any(cov_values != 0)) {
-          iv[i, p] <- 0
+      # check if we need instruments at all
+      rhs <- pred[i, pred[i,] != 0, drop = FALSE]
+      if (length(rhs) > 0L && all(comp[i, colnames(rhs)] == 0)) {
+        # no instruments needed
+        iv[i, -rhs] <- 0
+      } else {
+        for (p in 1:nvar) {
+          # do check for this iv, if false, set to zero
+          comp.idx <- which(y_res %in% comp[i, ])
+          total.idx <- which(y_res %in% total[piv[i, p], ])
+          cov_values <- theta[as.matrix(expand.grid(comp.idx, total.idx))]
+          if (any(cov_values != 0)) {
+            iv[i, p] <- 0
+          }
         }
-      }
+      } # instruments needed
     }
 
     # remove 'empty' rows
@@ -376,6 +387,12 @@ lav_model_find_iv_bc2004 <- function(lavmodel = NULL, lavpta = NULL) {
         miiv = colnames(iv[j, iv[j, ] != 0, drop = FALSE])
       )
     }
+
+    # reorder so that ov lhs come first, then lv lhs
+    lhs <- sapply(eqs, "[[", "lhs")
+    ov.idx <- which(lhs %in% ov.names)
+    lv.idx <- seq_along(lhs)[-ov.idx]
+    eqs <- eqs[c(ov.idx, lv.idx)]
 
     iv_list[[b]] <- eqs
   } # blocks
@@ -605,6 +622,189 @@ lav_model_find_iv_miivsem <- function(lavmodel = NULL, lavpta = NULL) {
     iv_list[[b]] <- eqs
   } # nblocks
 
+
+  iv_list
+}
+
+# algorithm 3:
+# - use random data to create sigma (used to check if predictors are correlated
+#   with instruments)
+# - use an explicit expression to compute cov(u,y), where u_j is the disturbance
+#   term of an equation (used to verify that instruments are not correlated
+#   with this disturbance term)
+lav_model_find_iv_covuy <- function(lavmodel = NULL, lavpta = NULL) {
+  # check representation
+  if (lavmodel@representation != "LISREL") {
+    lav_msg_stop(gettext(
+      "this function only works with LISREL representation",
+      " (for now)"
+    ))
+  }
+
+  # create model matrices with 1) 'user/partable' entries, 2) random entries
+  glist <- glistr <- lavmodel@GLIST
+  glist_names <- names(glist)
+  for (mm in seq_along(glist)) {
+    dimnames(glist[[mm]]) <- lavmodel@dimNames[[mm]]
+    m.idx <- lavmodel@m.user.idx[[mm]]
+    x.idx <- lavmodel@x.user.idx[[mm]]
+    # partable entries
+    glist[[mm]][, ] <- 0.0
+    glist[[mm]][m.idx] <- x.idx
+    # random entries (overriding user specified!)
+    f.idx <- lavmodel@m.free.idx[[mm]]
+    glistr[[mm]][f.idx] <- (runif(length(f.idx), min = 0.1, max = 0.5) *
+      sign(runif(length(f.idx), min = -1, max = 1)))
+    if (glist_names[mm] %in% c("theta", "psi")) {
+      tmp <- glistr[[mm]]
+      # make sure diagonal is large enough (but only for nonzero values)
+      zerodiag.idx <- which(diag(tmp) == 0)
+      diag(tmp) <- diag(tmp) + 1.5
+      diag(tmp)[zerodiag.idx] <- 0
+      # make symmetric
+      glistr[[mm]] <- (tmp + t(tmp)) / 2
+    }
+  }
+
+  # generate random sigma per block
+  sigma <- lav_model_sigma(lavmodel, GLIST = glistr, extra = FALSE)
+
+  # number of blocks
+  nblocks <- lavpta$nblocks
+  lambda.idx <- which(glist_names == "lambda")
+  beta.idx <- which(glist_names == "beta")
+
+  # repeat for every block
+  iv_list <- vector("list", length = nblocks)
+  for (b in seq_len(nblocks)) {
+    # extract information to create Bollen & Bauer (2004) matrices
+    ov.names <- lavmodel@dimNames[[lambda.idx[b]]][[1]]
+    lv.names <- lavmodel@dimNames[[lambda.idx[b]]][[2]]
+    nvar <- length(ov.names)
+    nfac <- length(lv.names)
+
+    # model matrices for this block
+    lambda <- glist[[lambda.idx[b]]]
+    beta <- glist[[beta.idx[b]]]
+    this_sigma <- sigma[[b]]
+    rownames(this_sigma) <- colnames(this_sigma) <- ov.names
+
+    lv.marker.idx <- lav_utils_get_marker(glistr[[lambda.idx[b]]])
+    lv.marker <- ov.names[lv.marker.idx]
+    names(lv.marker) <- lv.names
+    lv.marker.orig <- lv.marker
+
+    # keep track of higher order factors
+    #lv.ho.idx <- which(is.na(lv.marker.idx)) # same as lavpta$vidx$lv.ho
+    #if (length(lv.ho.idx) > 0L) {
+    #  # fill in indicators for higher-order factors
+    #  lv.ho <- names(lv.marker[is.na(lv.marker.idx)])
+    #  ho.idx <- match(lv.ho, names(lavpta$vnames$lv.marker[[b]]))
+    #  lv.marker[is.na(lv.marker.idx)] <- lavpta$vnames$lv.marker[[b]][ho.idx]
+
+    #  lv_in_marker <- lv.marker[lv.marker %in% lv.names]
+    #  while (length(lv_in_marker) > 0L) {
+    #    new_markers <- unname(lv.marker[lv_in_marker])
+    #    lv.marker[match(lv_in_marker, lv.marker)] <- new_markers
+    #   lv_in_marker <- lv.marker[lv.marker %in% lv.names]
+    #  }
+    #  lv.marker.idx <- match(lv.marker, ov.names)
+    #}
+    ## what if we still have NAs? (eg growth example)
+    if (anyNA(lv.marker.idx)) {
+      bad <- paste(names(lv.marker)[is.na(lv.marker.idx)], collapse = " ")
+      lav_msg_stop(gettextf("lv.marker.idx contains NAs: no clear marker could
+                             be found for some latent variables: %s", bad))
+    }
+    #lv.marker.idx2 <- unique(lv.marker.idx)
+    #lv.marker.idx <- lv.marker.idx[!is.na(lv.marker.idx)]
+    non.marker.idx <- seq_along(ov.names)[-lv.marker.idx]
+
+    # construct cov_u_y
+    IB <- diag(1, nrow = nfac)
+    lambda2 <- glistr[[lambda.idx[b]]][-lv.marker.idx, , drop = FALSE]
+    if (!is.null(beta)) {
+      IB <- IB - glistr[[beta.idx[b]]]
+    }
+    N <- rbind(
+      cbind(IB, matrix(0, nfac, nvar - nfac)),
+      cbind(-lambda2, diag(1, nrow = nvar - nfac))
+    )
+    colnames(N) <- rownames(N) <- ov.names[c(lv.marker.idx, non.marker.idx)]
+    # permute!
+    idx <- order(c(lv.marker.idx, non.marker.idx))
+    N2 <- N[idx, idx]
+    cov_u_y <- N2 %*% this_sigma
+    # zap small elements to be exactly zero
+    cov_u_y[abs(cov_u_y) < 1e-07] <- 0.0
+
+    # construct pred
+    pred <- rbind(lambda, beta)
+    # remove scaling '1' for markers (if any)
+    if (length(lv.marker.idx) > 0L) {
+      row.idx <- match(lv.marker.orig, rownames(pred))
+      col.idx <- match(names(lv.marker.orig), colnames(pred))
+      pred[cbind(row.idx, col.idx)] <- 0L
+    }
+    pred_orig <- pred
+
+    # replace col/rownames of pred by marker names
+    idx <- match(names(lv.marker), colnames(pred))
+    idx <- idx[!is.na(idx)]
+    colnames(pred)[idx] <- lv.marker
+    idx <- match(names(lv.marker), rownames(pred))
+    idx <- idx[!is.na(idx)]
+    rownames(pred)[idx] <- lv.marker
+
+    # remove 'empty' rows
+    empty.idx <- which(apply(pred, 1L, function(x) all(x == 0)))
+    if (length(empty.idx) > 0L) {
+      pred <- pred[-empty.idx, , drop = FALSE]
+      pred_orig <- pred_orig[-empty.idx, , drop = FALSE]
+    }
+
+    # prepare list
+    eqs <- vector("list", length = nrow(pred))
+    for (j in seq_along(eqs)) {
+      lhs <- rownames(pred)[j]
+      x.idx <- which(pred[j, ] != 0)
+      rhs <- colnames(pred)[x.idx]
+
+      # instruments needed?
+      iv_flag <- TRUE
+      if (all(cov_u_y[lhs, rhs] == 0)) {
+        iv_flag <- FALSE
+        miiv <- rhs
+        cet <- lhs
+      } else {
+         # proxy for cet
+        cet <- colnames(cov_u_y)[which(cov_u_y[lhs, ] != 0)]
+
+        # correlated with at least one predictor
+        correlated_with_pred <- apply(
+          this_sigma[, rhs, drop = FALSE], 1L,
+          function(x) any(x != 0)
+        )
+        # instruments should be uncorrelated with the  term of the eq (u_j)
+        uncorrelated_with_u <- cov_u_y[lhs, ] == 0
+        miiv <- ov.names[correlated_with_pred & uncorrelated_with_u]
+      }
+
+      eqs[[j]] <- list(
+        lhs_new = rownames(pred)[j],
+        rhs_new = colnames(pred[j, x.idx, drop = FALSE]),
+        lhs = rownames(pred_orig)[j],
+        rhs = colnames(pred_orig[j, x.idx, drop = FALSE]),
+        pt = unname(pred_orig[j, x.idx]),
+        cet = cet,
+        markers = cet[!cet %in% lhs],
+        iv_flag = iv_flag,
+        miiv = miiv
+      )
+    }
+
+    iv_list[[b]] <- eqs
+  }
 
   iv_list
 }
