@@ -400,8 +400,8 @@ lav_options_default <- function() {
   elm("ug2.old.approach", FALSE, bl = TRUE)
 
   # bootstrap
-  elm("bootstrap", 1000L, nm = "[1, Inf[", num2int = TRUE)
-
+  elm("bootstrap", list(R = 1000L))
+  
   # gamma
   elm("gamma.n.minus.one", FALSE, bl = TRUE)
   elm("gamma.unbiased", FALSE, bl = TRUE)
