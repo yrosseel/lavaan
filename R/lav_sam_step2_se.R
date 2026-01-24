@@ -81,7 +81,7 @@ lav_sam_step2_se <- function(FIT = NULL, JOINT = NULL,
       FIT.PA@ParTable$free > 0L)
     step2.rm.idx <- PTS.free[id.idx]
   }
-  
+
   # Fix for EFA/ESEM: when rotation is used, FIT.PA@Model@con.jac includes
   # columns for rotation identification constraints that are not part of
   # step2.free.idx. These extra columns cause dimension mismatch in

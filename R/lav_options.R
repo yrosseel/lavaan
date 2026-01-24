@@ -158,7 +158,7 @@ lav_options_set <- function(opt = NULL) {                     # nolint
     }
     opt$estimator <- opt$estimator[[1]]
   }
-  
+
   # check options with definitions ####
   opt <- lav_options_check(opt, opt.check, "")
 

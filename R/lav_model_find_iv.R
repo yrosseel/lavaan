@@ -1,6 +1,6 @@
 # find ALL (eligible) *model-implied* instrumental variables (no pruning yet)
 #
-# two algorithms:
+# three algorithms:
 #   1) using 'total effects' of errors/disturbances, based on Bollen & Curran
 #      (2004) [algorithm = "bc2004"]
 #   2) treating errors/disturbances as latent variables (as in the
@@ -9,10 +9,11 @@
 #   3) using an explicity expression (due to Albert Maydeu-Olivares) for
 #      cov(u,y) [algorithm = "covuy"] (the default)
 #
-# YR 29 Dec 2025 - first version
+# YR 29 Dec 2025 - first version (bc2004 + miivsem)
+# YR 24 Jan 2025 - covuy algorithm (including higher-order factors)
 
 lav_model_find_iv <- function(lavobject = NULL, lavmodel = NULL,
-                              lavpta = NULL, algorithm = "miivsem",
+                              lavpta = NULL, algorithm = "covuy",
                               output = "list", drop.list.single.group = FALSE) {
   # check output
   output <- tolower(output)
@@ -137,8 +138,10 @@ lav_model_find_iv_bc2004 <- function(lavmodel = NULL, lavpta = NULL) {
     if (length(lavmodel@ov.y.dummy.ov.idx[[b]]) > 0L) {
       lv.idx <- c(lv.idx, lavmodel@ov.y.dummy.lv.idx[[b]])
       lv.marker <- c(lv.marker.orig, ov.names[lavmodel@ov.y.dummy.ov.idx[[b]]])
-      names(lv.marker) <- c(names(lv.marker.orig),
-        ov.names[lavmodel@ov.y.dummy.ov.idx[[b]]])
+      names(lv.marker) <- c(
+        names(lv.marker.orig),
+        ov.names[lavmodel@ov.y.dummy.ov.idx[[b]]]
+      )
       lv.marker.idx <- c(lv.marker.idx, lavmodel@ov.y.dummy.ov.idx[[b]])
     }
 
@@ -333,7 +336,7 @@ lav_model_find_iv_bc2004 <- function(lavmodel = NULL, lavpta = NULL) {
     iv <- piv
     for (i in 1:nvar) {
       # check if we need instruments at all
-      rhs <- pred[i, pred[i,] != 0, drop = FALSE]
+      rhs <- pred[i, pred[i, ] != 0, drop = FALSE]
       if (length(rhs) > 0L && all(comp[i, colnames(rhs)] == 0)) {
         # no instruments needed
         iv[i, -rhs] <- 0
@@ -352,7 +355,7 @@ lav_model_find_iv_bc2004 <- function(lavmodel = NULL, lavpta = NULL) {
 
     # remove 'empty' rows
     empty.idx <- which(apply(pred, 1L, function(x) all(x == 0)) &
-                         rownames(pred) %in% ov.names)
+      rownames(pred) %in% ov.names)
     if (length(empty.idx) > 0L) {
       iv <- iv[-empty.idx, , drop = FALSE]
       comp <- comp[-empty.idx, , drop = FALSE]
@@ -460,7 +463,6 @@ lav_model_find_iv_miivsem <- function(lavmodel = NULL, lavpta = NULL) {
     }
 
 
-
     # 'exogenous' variables (in beta/psi) (including dummy ov's)
     if (is.null(beta)) {
       lv.x.idx <- lavpta$vidx$lv.x[[b]]
@@ -561,7 +563,7 @@ lav_model_find_iv_miivsem <- function(lavmodel = NULL, lavpta = NULL) {
       pt <- unname(gamma_beta_orig[eq_lhs, na.idx])
       ptint <- integer(0L)
       if (lavmodel@meanstructure) {
-        ptint <- unname(int_orig[eq_lhs,1L])
+        ptint <- unname(int_orig[eq_lhs, 1L])
       }
 
       # markers + composite error term (cet)
@@ -666,13 +668,20 @@ lav_model_find_iv_covuy <- function(lavmodel = NULL, lavpta = NULL) {
     }
   }
 
+
   # generate random sigma per block
   sigma <- lav_model_sigma(lavmodel, GLIST = glistr, extra = FALSE)
+  sigma_aug <- lav_model_cov_both(lavmodel, GLIST = glistr)
 
   # number of blocks
   nblocks <- lavpta$nblocks
   lambda.idx <- which(glist_names == "lambda")
   beta.idx <- which(glist_names == "beta")
+  if (lavmodel@meanstructure) {
+    nu.idx <- which(names(glist) == "nu")
+    alpha.idx <- which(names(glist) == "alpha")
+  }
+
 
   # repeat for every block
   iv_list <- vector("list", length = nblocks)
@@ -680,87 +689,95 @@ lav_model_find_iv_covuy <- function(lavmodel = NULL, lavpta = NULL) {
     # extract information to create Bollen & Bauer (2004) matrices
     ov.names <- lavmodel@dimNames[[lambda.idx[b]]][[1]]
     lv.names <- lavmodel@dimNames[[lambda.idx[b]]][[2]]
+    both.names <- c(ov.names, lv.names)
     nvar <- length(ov.names)
     nfac <- length(lv.names)
 
     # model matrices for this block
     lambda <- glist[[lambda.idx[b]]]
     beta <- glist[[beta.idx[b]]]
+    if (lavmodel@meanstructure) {
+      nu <- glist[[nu.idx[b]]]
+      alpha <- glist[[alpha.idx[b]]]
+    }
+
+    # sigma + sigma_aug
     this_sigma <- sigma[[b]]
     rownames(this_sigma) <- colnames(this_sigma) <- ov.names
+    this_sigma_aug <- sigma_aug[[b]]
+    rownames(this_sigma_aug) <- colnames(this_sigma_aug) <- both.names
 
-    lv.marker.idx <- lav_utils_get_marker(glistr[[lambda.idx[b]]])
-    lv.marker <- ov.names[lv.marker.idx]
-    names(lv.marker) <- lv.names
-    lv.marker.orig <- lv.marker
-
-    # keep track of higher order factors
-    #lv.ho.idx <- which(is.na(lv.marker.idx)) # same as lavpta$vidx$lv.ho
-    #if (length(lv.ho.idx) > 0L) {
-    #  # fill in indicators for higher-order factors
-    #  lv.ho <- names(lv.marker[is.na(lv.marker.idx)])
-    #  ho.idx <- match(lv.ho, names(lavpta$vnames$lv.marker[[b]]))
-    #  lv.marker[is.na(lv.marker.idx)] <- lavpta$vnames$lv.marker[[b]][ho.idx]
-
-    #  lv_in_marker <- lv.marker[lv.marker %in% lv.names]
-    #  while (length(lv_in_marker) > 0L) {
-    #    new_markers <- unname(lv.marker[lv_in_marker])
-    #    lv.marker[match(lv_in_marker, lv.marker)] <- new_markers
-    #   lv_in_marker <- lv.marker[lv.marker %in% lv.names]
-    #  }
-    #  lv.marker.idx <- match(lv.marker, ov.names)
-    #}
-    ## what if we still have NAs? (eg growth example)
-    if (anyNA(lv.marker.idx)) {
-      bad <- paste(names(lv.marker)[is.na(lv.marker.idx)], collapse = " ")
-      lav_msg_stop(gettextf("lv.marker.idx contains NAs: no clear marker could
-                             be found for some latent variables: %s", bad))
+    lambdar <- glistr[[lambda.idx[b]]]
+    if (is.null(glistr[[beta.idx[b]]])) {
+      betar <- diag(1, nrow = nfac)
+    } else {
+      betar <- glistr[[beta.idx[b]]]
     }
-    #lv.marker.idx2 <- unique(lv.marker.idx)
-    #lv.marker.idx <- lv.marker.idx[!is.na(lv.marker.idx)]
-    non.marker.idx <- seq_along(ov.names)[-lv.marker.idx]
+
+    # all markers (including higher-order)
+    lv.marker <- lv.names
+    names(lv.marker) <- lv.names
+    lv.marker[match(names(lavpta$vnames$lv.marker[[b]]), lv.names)] <-
+      lavpta$vnames$lv.marker[[b]]
+    lv.marker.idx <- match(lv.marker, both.names)
 
     # construct cov_u_y
-    IB <- diag(1, nrow = nfac)
-    lambda2 <- glistr[[lambda.idx[b]]][-lv.marker.idx, , drop = FALSE]
-    if (!is.null(beta)) {
-      IB <- IB - glistr[[beta.idx[b]]]
-    }
-    N <- rbind(
-      cbind(IB, matrix(0, nfac, nvar - nfac)),
-      cbind(-lambda2, diag(1, nrow = nvar - nfac))
-    )
-    colnames(N) <- rownames(N) <- ov.names[c(lv.marker.idx, non.marker.idx)]
-    # permute!
-    idx <- order(c(lv.marker.idx, non.marker.idx))
-    N2 <- N[idx, idx]
-    cov_u_y <- N2 %*% this_sigma
+    pi_mat <- rbind(lambdar, betar)
+    rownames(pi_mat) <- both.names
+    colnames(pi_mat) <- lv.names
+    pi_mat[lv.marker.idx, ] <- betar
+    pi_zero_mat <- matrix(0, nrow = nrow(pi_mat), ncol = nrow(pi_mat))
+    pi_zero_mat[, lv.marker.idx] <- pi_mat
+    cov_u_y_aug <- this_sigma_aug - pi_zero_mat %*% this_sigma_aug
     # zap small elements to be exactly zero
-    cov_u_y[abs(cov_u_y) < 1e-07] <- 0.0
+    cov_u_y_aug[abs(cov_u_y_aug) < 1e-07] <- 0.0
+
+    if (length(lavpta$vnames$lv.ho[[b]]) > 0L) {
+      # 'add' lv marker rows to ov marker rows
+      ov.marker <- lv.marker
+      lv.names.nox <- lv.names[!lv.names %in% ov.names]
+      lv_in_marker <- lv_beta <- ov.marker[ov.marker %in% lv.names.nox]
+      while (length(lv_in_marker) > 0L) {
+        new_markers <- unname(ov.marker[lv_in_marker])
+        ov.marker[match(lv_in_marker, ov.marker)] <- new_markers
+        lv_in_marker <- ov.marker[ov.marker %in% lv.names.nox]
+      }
+      ho.idx <- match(names(lv_beta), both.names)
+      target.idx <- match(ov.marker[names(lv_beta)], both.names)
+      cov_u_y_aug[target.idx, ] <-
+        cov_u_y_aug[target.idx, ] + cov_u_y_aug[ho.idx, ]
+    } else {
+      ov.marker <- lv.marker
+    }
+    cov_u_y <- cov_u_y_aug[seq_len(nvar), seq_len(nvar)]
 
     # construct pred
     pred <- rbind(lambda, beta)
+    if (lavmodel@meanstructure) {
+      int_orig <- rbind(nu, alpha)
+    }
     # remove scaling '1' for markers (if any)
     if (length(lv.marker.idx) > 0L) {
-      row.idx <- match(lv.marker.orig, rownames(pred))
-      col.idx <- match(names(lv.marker.orig), colnames(pred))
-      pred[cbind(row.idx, col.idx)] <- 0L
+      pred[lv.marker.idx, ] <- 0
     }
     pred_orig <- pred
 
     # replace col/rownames of pred by marker names
-    idx <- match(names(lv.marker), colnames(pred))
+    idx <- match(names(ov.marker), colnames(pred))
     idx <- idx[!is.na(idx)]
-    colnames(pred)[idx] <- lv.marker
-    idx <- match(names(lv.marker), rownames(pred))
+    colnames(pred)[idx] <- ov.marker
+    idx <- match(names(ov.marker), rownames(pred))
     idx <- idx[!is.na(idx)]
-    rownames(pred)[idx] <- lv.marker
+    rownames(pred)[idx] <- ov.marker
 
     # remove 'empty' rows
     empty.idx <- which(apply(pred, 1L, function(x) all(x == 0)))
     if (length(empty.idx) > 0L) {
       pred <- pred[-empty.idx, , drop = FALSE]
       pred_orig <- pred_orig[-empty.idx, , drop = FALSE]
+      if (lavmodel@meanstructure) {
+        int_orig <- int_orig[-empty.idx, , drop = FALSE]
+      }
     }
 
     # prepare list
@@ -769,17 +786,17 @@ lav_model_find_iv_covuy <- function(lavmodel = NULL, lavpta = NULL) {
       lhs <- rownames(pred)[j]
       x.idx <- which(pred[j, ] != 0)
       rhs <- colnames(pred)[x.idx]
+      ptint <- integer(0L)
+      if (lavmodel@meanstructure) {
+        ptint <- unname(int_orig[j, 1])
+      }
 
       # instruments needed?
       iv_flag <- TRUE
       if (all(cov_u_y[lhs, rhs] == 0)) {
         iv_flag <- FALSE
         miiv <- rhs
-        cet <- lhs
       } else {
-         # proxy for cet
-        cet <- colnames(cov_u_y)[which(cov_u_y[lhs, ] != 0)]
-
         # correlated with at least one predictor
         correlated_with_pred <- apply(
           this_sigma[, rhs, drop = FALSE], 1L,
@@ -796,8 +813,7 @@ lav_model_find_iv_covuy <- function(lavmodel = NULL, lavpta = NULL) {
         lhs = rownames(pred_orig)[j],
         rhs = colnames(pred_orig[j, x.idx, drop = FALSE]),
         pt = unname(pred_orig[j, x.idx]),
-        cet = cet,
-        markers = cet[!cet %in% lhs],
+        ptint = ptint,
         iv_flag = iv_flag,
         miiv = miiv
       )

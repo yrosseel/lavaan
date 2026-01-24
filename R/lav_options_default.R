@@ -401,7 +401,7 @@ lav_options_default <- function() {
 
   # bootstrap
   elm("bootstrap", list(R = 1000L))
-  
+
   # gamma
   elm("gamma.n.minus.one", FALSE, bl = TRUE)
   elm("gamma.unbiased", FALSE, bl = TRUE)

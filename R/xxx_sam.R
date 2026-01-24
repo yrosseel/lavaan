@@ -95,7 +95,7 @@ sam <- function(model = NULL,
     lav_msg_warn(gettext(
       "'bootstrap.args' is deprecated; please use 'bootstrap' instead."))
     bootstrap <- bootstrap.args
-  } 
+  }
 
   # check model= argument
   has.sam.object.flag <- FALSE
@@ -277,7 +277,7 @@ sam <- function(model = NULL,
                             blocks (groups, levels) are involved."))
     }
   }
-  
+
   lavoptions <- lavInspect(FIT, "options")
   if (lav_verbose()) {
     cat("This is sam using sam.method = ", sam.method, ".\n", sep = "")
