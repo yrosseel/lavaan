@@ -1,15 +1,15 @@
 # find ALL (eligible) *model-implied* instrumental variables (no pruning yet)
 #
 # three algorithms:
-#   1) using 'total effects' of errors/disturbances, based on Bollen & Curran
-#      (2004) [algorithm = "bc2004"]
+#   1) using 'total effects' of errors/disturbances, based on Bollen & Bauer
+#      (2004) [algorithm = "bb2004"]
 #   2) treating errors/disturbances as latent variables (as in the
 #      comprehensive RAM model); similar to miivs() in MIIVsem package
 #      [algorithm = "miivsem"]
 #   3) using an explicity expression (due to Albert Maydeu-Olivares) for
 #      cov(u,y) [algorithm = "covuy"] (the default)
 #
-# YR 29 Dec 2025 - first version (bc2004 + miivsem)
+# YR 29 Dec 2025 - first version (bb2004 + miivsem)
 # YR 24 Jan 2025 - covuy algorithm (including higher-order factors)
 
 lav_model_find_iv <- function(lavobject = NULL, lavmodel = NULL,
@@ -50,8 +50,8 @@ lav_model_find_iv <- function(lavobject = NULL, lavmodel = NULL,
   }
 
   algorithm <- tolower(algorithm)
-  if (algorithm == "bc2004") {
-    iv_list <- lav_model_find_iv_bc2004(lavmodel = lavmodel, lavpta = lavpta)
+  if (algorithm == "bb2004") {
+    iv_list <- lav_model_find_iv_bb2004(lavmodel = lavmodel, lavpta = lavpta)
   } else if (algorithm == "miivsem") {
     iv_list <- lav_model_find_iv_miivsem(lavmodel = lavmodel, lavpta = lavpta)
   } else {
@@ -89,7 +89,7 @@ lav_model_find_iv <- function(lavobject = NULL, lavmodel = NULL,
 # algorithm 1:
 # loosely based on Bollen & Bauer (2004), but with support for higher-order
 # factors
-lav_model_find_iv_bc2004 <- function(lavmodel = NULL, lavpta = NULL) {
+lav_model_find_iv_bb2004 <- function(lavmodel = NULL, lavpta = NULL) {
   # check representation
   if (lavmodel@representation != "LISREL") {
     lav_msg_stop(gettext(
