@@ -1,4 +1,4 @@
-# place-holder for MIIV estimation
+# IV/MIIV estimation
 
 # internal function to be used inside lav_optim_noniter
 # return 'x', the estimated vector of free parameters
@@ -7,6 +7,12 @@ lav_sem_miiv_internal <- function(lavmodel = NULL, lavsamplestats = NULL,
                                   lavdata = NULL, lavoptions = NULL) {
   # this is the entry-point for MIIV estimation
   lav_msg_note(gettext("** Estimator MIIV is still under development! **\n"))
+
+  # IV options
+  iv.method <- toupper(lavoptions$estimator.args$iv.method)
+  stopifnot(iv.method %in% "2SLS")
+  iv.varcov.method <- toupper(lavoptions$estimator.args$iv.varcov.method)
+  stopifnot(iv.varcov.method %in% c("ULS", "GLS", "2RLS", "RLS"))
 
   lavpta <- lav_partable_attributes(lavpartable)
   nblocks <- lavmodel@nblocks
@@ -97,7 +103,7 @@ lav_sem_miiv_internal <- function(lavmodel = NULL, lavsamplestats = NULL,
       } else {
         sse <- sum(weights * res * res)
       }
-      #resvar <- sse / df # what we should do...
+      # resvar <- sse / df # what we should do...
       resvar <- sse / length(res)
 
       # 5. naive cov (for standard errors) (see summary.lm in base R)
@@ -116,7 +122,7 @@ lav_sem_miiv_internal <- function(lavmodel = NULL, lavsamplestats = NULL,
           fit_yres_on_z <- lm.wfit(x = imat, y = res, weights = weights)
           rssr <- sum(weights * (res - weighted.mean(res, weights))^2)
           sse2 <- sum(weights * fit_yres_on_z$residuals *
-                        fit_yres_on_z$residuals)
+            fit_yres_on_z$residuals)
         }
         sargan["stat"] <- length(res) * (1 - sse2 / rssr)
         sargan["pvalue"] <- pchisq(sargan["stat"], sargan["df"],
@@ -130,23 +136,138 @@ lav_sem_miiv_internal <- function(lavmodel = NULL, lavsamplestats = NULL,
       eqs[[b]][[j]]$sargan <- sargan
     } # eqs
 
-    # take care exogenous variables
+    # take care of exogenous latent variable intercepts
     if (lavmodel@meanstructure && lavoptions$marker.int.zero) {
       lv.x <- lavpta$vnames$lv.x[[b]]
       if (length(lv.x) > 0L) {
         target.id <- which(lavpartable$op == "~1" &
-                             lavpartable$block == b &
-                             lavpartable$free != 0 &
-                             lavpartable$lhs %in% lv.x)
+          lavpartable$block == b &
+          lavpartable$free != 0 &
+          lavpartable$lhs %in% lv.x)
         ov.idx <- match(lavpta$vnames$lv.marker[[b]][lv.x], ov.names)
         ov.mean <- colMeans(XY[, ov.idx, drop = FALSE])
         x[lavpartable$free[target.id]] <- ov.mean
       }
     }
-
-    # estimate variances/covariances in this block
-
   } # nblocks
+
+
+  ################
+  # second stage #
+  ################
+
+  # estimate variances/covariances in this block
+  lavmodel.tmp <- lav_model_set_parameters(lavmodel = lavmodel, x = x)
+  delta_block <- lav_model_delta(
+    lavmodel = lavmodel.tmp,
+    ceq.simple = lavoptions$ceq.simple
+  )
+  # across all groups! (possible equality constraints)
+  undirected.idx <- which(lavpartable$free > 0L &
+    !duplicated(lavpartable$free) & # if ceq.simple
+    lavpartable$op == "~~")
+  free.idx <- unique(lavpartable$free[undirected.idx])
+
+  # create block-diagonal W_2 and s
+  w2_block <- vector("list", length = nblocks)
+  s_block <- vector("list", length = nblocks)
+  delta2_block <- vector("list", length = nblocks)
+  for (b in seq_len(nblocks)) {
+    # delta2
+    delta2_block[[b]] <- delta_block[[b]][, free.idx, drop = FALSE]
+    if (iv.varcov.method == "GLS") {
+      S.inv <- lavsamplestats@icov[[b]]
+    } else {
+      S.inv <- diag(1, nrow = nrow(lavsamplestats@cov[[b]]))
+    }
+    w2_22 <- 0.5 * lav_matrix_duplication_pre_post(S.inv %x% S.inv)
+    if (lavmodel@meanstructure) {
+      w2_11 <- S.inv
+      w2_block[[b]] <- lav_matrix_bdiag(w2_11, w2_22)
+      s_block[[b]] <- c(
+        lavsamplestats@mean[[b]],
+        lav_matrix_vech(lavsamplestats@cov[[b]])
+      )
+    } else {
+      w2_block[[b]] <- w2_22
+      s_block[[b]] <- lav_matrix_vech(lavsamplestats@cov[[b]])
+    }
+  }
+  Delta2 <- do.call("rbind", delta2_block)
+  W2 <- lav_matrix_bdiag(w2_block)
+  svech <- unlist(s_block)
+
+  # initial estimate for theta.2
+  # TODO: if any constraints are needed, we need to augment the information
+  theta2 <- drop(solve(
+    t(Delta2) %*% W2 %*% Delta2,
+    t(Delta2) %*% W2 %*% svech
+  ))
+
+  # insert theta2 element in x
+  x[free.idx] <- theta2
+
+  # again, but now with Sigma
+  if (iv.varcov.method == "2RLS") {
+    lavmodel.tmp <- lav_model_set_parameters(lavmodel = lavmodel, x = x)
+    sigma <- lav_model_sigma(lavmodel = lavmodel.tmp, extra = FALSE)
+    w2_block <- vector("list", length = nblocks)
+    for (b in seq_len(nblocks)) {
+      # delta2
+      S.inv <- solve(sigma[[b]])
+      w2_22 <- 0.5 * lav_matrix_duplication_pre_post(S.inv %x% S.inv)
+      if (lavmodel@meanstructure) {
+        w2_11 <- S.inv
+        w2_block[[b]] <- lav_matrix_bdiag(w2_11, w2_22)
+      } else {
+        w2_block[[b]] <- w2_22
+      }
+    }
+    W2 <- lav_matrix_bdiag(w2_block)
+    # final estimate for theta.2
+    # TODO: if any constraints are needed, we need to augment the information
+    theta2 <- drop(solve(
+      t(Delta2) %*% W2 %*% Delta2,
+      t(Delta2) %*% W2 %*% svech
+    ))
+  } else if (iv.varcov.method == "RLS") {
+    for (i in 1:200) {
+      old_x <- theta2
+      lavmodel.tmp <- lav_model_set_parameters(lavmodel = lavmodel, x = x)
+      sigma <- lav_model_sigma(lavmodel = lavmodel.tmp, extra = FALSE)
+      w2_block <- vector("list", length = nblocks)
+      for (b in seq_len(nblocks)) {
+        # delta2
+        S.inv <- solve(sigma[[b]])
+        w2_22 <- 0.5 * lav_matrix_duplication_pre_post(S.inv %x% S.inv)
+        if (lavmodel@meanstructure) {
+          w2_11 <- S.inv
+          w2_block[[b]] <- lav_matrix_bdiag(w2_11, w2_22)
+        } else {
+          w2_block[[b]] <- w2_22
+        }
+      }
+      W2 <- lav_matrix_bdiag(w2_block)
+      # final estimate for theta.2
+      # TODO: if any constraints are needed, we need to augment the information
+      theta2 <- drop(solve(
+        t(Delta2) %*% W2 %*% Delta2,
+        t(Delta2) %*% W2 %*% svech
+      ))
+      x[free.idx] <- theta2
+      sse <- sum((old_x - theta2)^2)
+      # cat("i = ", i, "sse = ", sse, "\n")
+      if (sse < 1e-05) {
+        break
+      } else if (i == 200L) {
+        lav_msg_warn(gettext("RLS for variances/covariances did not converge
+                              after 200 iterations."))
+      }
+    }
+  }
+
+  # insert final theta2 element in x
+  x[free.idx] <- theta2
 
   attr(x, "eqs") <- eqs
   x

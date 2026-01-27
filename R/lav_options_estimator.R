@@ -591,12 +591,23 @@ lav_options_est_iv <- function(opt) {
   }
   # missing
   opt$missing <- "listwise" # for now
+
   # estimator options
   if (is.null(opt$estimator.args)) {
-    opt$estimator.args <- list(method = "2SLS")
+    # create default list
+    opt$estimator.args <- list(iv.method = "2SLS",
+                               iv.varcov.method = "RLS")
   } else {
-    if (is.null(opt$estimator.args$method)) {
-      opt$estimator.args$method <- "2SLS"
+    if (is.null(opt$estimator.args$iv.method)) {
+      opt$estimator.args$iv.method <- "2SLS"
+    } else if (!opt$estimator.args$iv.method %in% "2SLS") {
+      lav_msg_stop(gettext("iv.method should be 2SLS (for now)."))
+    }
+    if (is.null(opt$estimator.args$iv.varcov.method)) {
+      opt$estimator.args$iv.varcov.method <- "RLS"
+    } else if (!opt$estimator.args$iv.varcov.method %in% 
+               c("ULS", "GLS", "2RLS", "RLS")) {
+      lav_msg_stop(gettext("iv.varcov.method should ULS, GLS, 2RLS or RLS."))
     }
   }
 
