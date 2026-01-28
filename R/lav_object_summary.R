@@ -16,6 +16,8 @@
 # create summary of a lavaan object
 lav_object_summary <- function(object, header = TRUE,
                                fit.measures = FALSE,
+                               baseline.model = NULL,
+                               h1.model = NULL,
                                fm.args =
                                  list(
                                    standard.test = "default",
@@ -53,12 +55,13 @@ lav_object_summary <- function(object, header = TRUE,
                                    zstat = FALSE,
                                    pvalue = FALSE
                                  ),
-                               modindices = FALSE) {
+                               modindices = FALSE,
+                               srmr.close.h0 = NULL) {
 
   # check object
   object <- lav_object_check_version(object)
 
- # default fm.args
+  # default fm.args
   default.fm.args <- list(
     standard.test = "default",
     scaled.test = "default",
@@ -68,6 +71,13 @@ lav_object_summary <- function(object, header = TRUE,
     robust = TRUE,
     cat.check.pd = TRUE
   )
+  if (is.logical(fit.measures)) {
+    if (fit.measures) {
+      fit.measures <- "default"
+    } else {
+      fit.measures <- "none"
+    }
+  }
   if (!missing(fm.args)) {
     lav_deprecated_args("fit.measures", "fm.args")
     fm.args <- modifyList(default.fm.args, fm.args)
@@ -75,8 +85,17 @@ lav_object_summary <- function(object, header = TRUE,
     fm.args <- default.fm.args
   }
   if (is.list(fit.measures)) {
+    if (is.null(names(fit.measures)) ||
+        is.null(fit.measures$fit.measures)) {
+      lav_msg_stop(gettextf(
+        "If %s is a list, it must contain a named element %s.",
+        "fit.measures"
+      ))
+    }
+    temp <- fit.measures$fit.measures
+    fit.measures$fit.measures <- NULL
     fm.args <- modifyList(default.fm.args, fit.measures)
-    fit.measures <- fit.measures[[1L]]
+    fit.measures <- temp
   }
 
 
@@ -223,7 +242,7 @@ lav_object_summary <- function(object, header = TRUE,
   } # efa
 
   # only if requested, add the additional fit measures
-  if (fit.measures) {
+  if (fit.measures != "none") {
     # some early warnings (to avoid a hard stop)
     if (object@Data@data.type == "none") {
       lav_msg_warn(gettext(
@@ -236,7 +255,10 @@ lav_object_summary <- function(object, header = TRUE,
       lav_msg_warn(gettext(
         "fit measures not available if model did not converge"))
     } else {
-      FIT <- lav_fit_measures(object, fit.measures = c(list("default"), fm.args))
+      FIT <- lav_fit_measures(object,
+       fit.measures = c(list(fit.measures = fit.measures), fm.args),
+       baseline.model = baseline.model,
+       h1.model = h1.model)
       res$fit <- FIT
     }
   }
@@ -260,8 +282,11 @@ lav_object_summary <- function(object, header = TRUE,
   }
 
   # modification indices?
-  if (modindices) {
-    MI <- modificationIndices(object, standardized = TRUE, cov.std = cov.std)
+  if (is.logical(modindices)) {
+    if (modindices) modindices <- list(standardized = TRUE, cov.std = cov.std)
+  }
+  if (is.list(modindices)) {
+    MI <- do.call("modificationIndices", c(list(object = object), modindices))
     res$mi <- MI
   }
 

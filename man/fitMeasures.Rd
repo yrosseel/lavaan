@@ -36,8 +36,8 @@ fitmeasures(object, fit.measures = "all",
   returned. If only a single or a few fit measures are specified by name,
   only those are computed and returned.
   If additional options for certain fit measures are needed, fit.measures
-  should be a list with first element the measures wanted, or \code{"all"},
-  and the options are provided as named elements in this list. The
+  should be a list with element \code{fit.measures} the measures wanted,
+  and the options are provided as other named elements in this list. The
   \code{standard.test} option determines the main test statistic (chi-square
   value) that will be used to compute all the fit measures that depend on this
   test statistic. Usually this is \code{"standard"}. The \code{scaled.test}
@@ -112,7 +112,7 @@ as \code{NA}.
 Finally, in some situations (especially when the data contains missing values),
 computing these robust fit indices may be computationally intensive. To avoid
 long runtimes, the calculation of robust fit measures can be disabled by
-setting the \code{robust} argument to \code{FALSE} in the \code{fm.args} list.
+setting the \code{robust} argument to \code{FALSE} in the \code{fit.measures} list.
 }
 \references{
 Brosseau-Liard, P. E., Savalei, V., & Li, L. (2012). An investigation of the
@@ -156,6 +156,10 @@ fitMeasures(fit, c("chisq", "df", "pvalue", "cfi", "rmsea"),
             output = "matrix")
 fitMeasures(fit, c("chisq", "df", "pvalue", "cfi", "rmsea"),
             output = "text")
+## specify another threshold for RMSEA confidence interval
+fitMeasures(fit, list(
+  fit.measures = c("cfi", "rmsea"),
+  rmsea.ci.level = 0.95))
 
 ## fit a more restricted model
 fit0 <- cfa(HS.model, data = HolzingerSwineford1939, orthogonal = TRUE)

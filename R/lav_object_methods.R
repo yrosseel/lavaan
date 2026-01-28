@@ -64,6 +64,8 @@ setMethod(
            plabel = FALSE,
            cov.std = TRUE,
            rsquare = FALSE,
+           baseline.model = NULL,
+           h1.model = NULL,
            fm.args = list(
              standard.test = "default",
              scaled.test = "default",
@@ -74,6 +76,7 @@ setMethod(
              cat.check.pd = TRUE
            ),
            modindices = FALSE,
+           srmr.close.h0 = NULL,
            nd = 3L, cutoff = 0.3, dot.cutoff = 0.1, ...) {
     dotdotdot <- list(...)
     if (length(dotdotdot) > 0L) {
@@ -87,33 +90,33 @@ setMethod(
     # efa?
     efa.flag <- object@Options$model.type == "efa"
 
-    if (missing(fm.args)) {
-      res <- lav_object_summary(
-        object = object, header = header,
-        fit.measures = fit.measures, estimates = estimates,
-        ci = ci, fmi = fmi, std = std, standardized = standardized,
-        remove.system.eq = remove.system.eq,
-        remove.eq = remove.eq, remove.ineq = remove.ineq,
-        remove.def = remove.def, remove.nonfree = remove.nonfree,
-        remove.step1 = remove.step1, remove.unused = remove.unused,
-        plabel = plabel, cov.std = cov.std,
-        rsquare = rsquare, efa = efa.flag,
-        modindices = modindices
-      )
-    } else {
-      res <- lav_object_summary(
-        object = object, header = header,
-        fit.measures = fit.measures, estimates = estimates,
-        ci = ci, fmi = fmi, std = std, standardized = standardized,
-        remove.system.eq = remove.system.eq,
-        remove.eq = remove.eq, remove.ineq = remove.ineq,
-        remove.def = remove.def, remove.nonfree = remove.nonfree,
-        remove.step1 = remove.step1, remove.unused = remove.unused,
-        plabel = plabel, cov.std = cov.std,
-        rsquare = rsquare, efa = efa.flag,
-        fm.args = fm.args, modindices = modindices
-      )
+    if (is.logical(fit.measures)) {
+      if (fit.measures) {
+        fit.measures <- "default"
+      } else {
+        fit.measures <- "none"
+      }
     }
+    if (!is.list(fit.measures)) fit.measures <- list(fit.measures = fit.measures)
+    if (!missing(fm.args)) {
+      lav_deprecated_args("fit.measures", "fm.args")
+      fit.measures <- c(fit.measures, fm.args)
+    }
+    res <- lav_object_summary(
+      object = object, header = header,
+      fit.measures = fit.measures, estimates = estimates,
+      baseline.model = baseline.model,
+      h1.model = h1.model,
+      ci = ci, fmi = fmi, std = std, standardized = standardized,
+      remove.system.eq = remove.system.eq,
+      remove.eq = remove.eq, remove.ineq = remove.ineq,
+      remove.def = remove.def, remove.nonfree = remove.nonfree,
+      remove.step1 = remove.step1, remove.unused = remove.unused,
+      plabel = plabel, cov.std = cov.std,
+      rsquare = rsquare, efa = efa.flag,
+      modindices = modindices,
+      srmr.close.h0 = srmr.close.h0
+    )
     # res has class c("lavaan.summary", "list")
 
     # what about nd? only used if we actually print; save as attribute
@@ -709,7 +712,6 @@ lavParameterEstimates <- function(object,                 # nolint
           # we assume that the 'ordinary' (nonparametric) was used
 
           lavoptions <- object@Options
-          ngroups <- object@Data@ngroups
           nobs <- object@SampleStats@nobs
           ntotal <- object@SampleStats@ntotal
 
@@ -1007,7 +1009,7 @@ lavParameterEstimates <- function(object,                 # nolint
         if (!is.null(tmp.partable$id)) {
           tmp.list$plabel <- paste(".p", tmp.list$id, ".", sep = "")
         } else {
-          tmp.list$plabel <- paste(".p", seq_len(length(tmp.list$plabel)),
+          tmp.list$plabel <- paste(".p", seq_along(tmp.list$plabel),
                                    ".", sep = "")
         }
       }
