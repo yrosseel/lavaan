@@ -37,19 +37,13 @@ setMethod(
       }
     }
     # note: the ... is not used by lavaan
-    if (missing(fm.args)) {
-      lav_fit_measures(
-        object = object, fit.measures = fit.measures,
-        baseline.model = baseline.model, h1.model = h1.model,
-        output = output
-      )
-    } else {
-      lav_fit_measures(
-        object = object, fit.measures = fit.measures,
-        baseline.model = baseline.model, h1.model = h1.model, fm.args = fm.args,
-        output = output
-      )
-    }
+    if (!is.list(fit.measures)) fit.measures <- list(fit.measures = fit.measures)
+    if (!missing(fm.args)) fit.measures <- c(fit.measures, fm.args)
+    lav_fit_measures(
+      object = object, fit.measures = fit.measures,
+      baseline.model = baseline.model, h1.model = h1.model,
+      output = output
+    )
   }
 )
 
@@ -76,19 +70,13 @@ setMethod(
       }
     }
     # note: the ... is not used by lavaan
-    if (missing(fm.args)) {
-      lav_fit_measures(
-        object = object, fit.measures = fit.measures,
-        baseline.model = baseline.model, h1.model = h1.model,
-        output = output
-      )
-    } else {
-      lav_fit_measures(
-        object = object, fit.measures = fit.measures,
-        baseline.model = baseline.model, h1.model = h1.model, fm.args = fm.args,
-        output = output
-      )
-    }
+    if (!is.list(fit.measures)) fit.measures <- list(fit.measures = fit.measures)
+    if (!missing(fm.args)) fit.measures <- c(fit.measures, fm.args)
+    lav_fit_measures(
+      object = object, fit.measures = fit.measures,
+      baseline.model = baseline.model, h1.model = h1.model,
+      output = output
+    )
   }
 )
 
@@ -111,33 +99,20 @@ lav_efalist_fitmeasures <- function(
   object[["loadings"]] <- NULL
 
   # get fit measures for each model
-  if (missing(fm.args)) {
-    res <- simplify2array(lapply(
-      object,
-      function(x) {
-        lav_fit_measures(
-          object = x,
-          fit.measures = fit.measures, h1.model = h1.model,
-          baseline.model = baseline.model,
-          output = "vector"
-        )
-      }
-    )
-    )
-  } else {
-    res <- simplify2array(lapply(
-      object,
-      function(x) {
-        lav_fit_measures(
-          object = x,
-          fit.measures = fit.measures, h1.model = h1.model,
-          baseline.model = baseline.model, fm.args = fm.args,
-          output = "vector"
-        )
-      }
-    )
-    )
-  }
+  if (!is.list(fit.measures)) fit.measures <- list(fit.measures = fit.measures)
+  if (!missing(fm.args)) fit.measures <- c(fit.measures, fm.args)
+  res <- simplify2array(lapply(
+    object,
+    function(x) {
+      lav_fit_measures(
+        object = x,
+        fit.measures = fit.measures, h1.model = h1.model,
+        baseline.model = baseline.model,
+        output = "vector"
+      )
+    }
+  )
+  )
 
   # check if res is a matrix
   if (!is.matrix(res)) {
@@ -195,8 +170,17 @@ lav_fit_measures <- function(object, fit.measures = "all",
     fm.args <- default.fm.args
   }
   if (is.list(fit.measures)) {
+    if (is.null(names(fit.measures)) ||
+        is.null(fit.measures$fit.measures)) {
+      lav_msg_stop(gettextf(
+        "If %s is a list, it must contain a named element %s.",
+        "fit.measures"
+      ))
+    }
+    temp <- fit.measures$fit.measures
+    fit.measures$fit.measures <- NULL
     fm.args <- modifyList(default.fm.args, fit.measures)
-    fit.measures <- fit.measures[[1L]]
+    fit.measures <- temp
   }
 
   # standard test
@@ -351,7 +335,6 @@ lav_fit_measures <- function(object, fit.measures = "all",
   estimator <- object@Options$estimator
 
   # basic ingredients
-  G <- object@Data@ngroups
   X2 <- TEST[[test.idx]]$stat
   df <- TEST[[test.idx]]$df
   if (scaled.flag) {

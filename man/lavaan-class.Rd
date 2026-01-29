@@ -136,12 +136,13 @@ the independence model) (if available).}
      remove.def = FALSE, remove.nonfree = FALSE, remove.step1 = TRUE,
      remove.unused = TRUE, plabel = FALSE,
      cov.std = TRUE, rsquare = FALSE,
+     baseline.model = NULL, h1.model = NULL,
      modindices = FALSE, ci = FALSE, nd = 3L)}:
       Print a nice summary of the model estimates.
       If \code{header = TRUE}, the header section (including fit measures) is
       printed.
       If \code{fit.measures = TRUE}, additional fit measures are added to the
-      header section. The related \code{fm.args} list allows to set options
+      header section. \code{fit.measures} can also be a list, which allows to set options
       related to the fit measures. See \code{\link{fitMeasures}} 
       for more details.
       If \code{estimates = TRUE}, print the parameter estimates section.
@@ -173,8 +174,10 @@ the independence model) (if available).}
       If \code{efa = TRUE}, EFA related information is printed. The related
       \code{efa.args} list allows to set options related to the EFA output.
       See \code{\link{lav_efalist_summary}} for more details.
-      If \code{modindices = TRUE}, modification indices
-      are printed for all fixed parameters.
+      \code{baseline.model} and \code{h1.model} allow to specify user-defined
+      baseline and/or h1 models for the fit measures.
+      If \code{modindices = TRUE} or \code{modindices} is a list, 
+      modification indices are printed for all fixed parameters.
       The argument \code{nd} determines the number of digits after the
       decimal point to be printed (currently only in the parameter estimates
       section.) Historically, nothing was returned, but since 0.6-12, a
