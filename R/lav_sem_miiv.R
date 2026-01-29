@@ -149,6 +149,20 @@ lav_sem_miiv_internal <- function(lavmodel = NULL, lavsamplestats = NULL,
         x[lavpartable$free[target.id]] <- ov.mean
       }
     }
+
+    # take care of exogenous observed intercepts (if fixed.x = FALSE)
+    if (lavmodel@meanstructure && !lavoptions$fixed.x) {
+      ov.x <- lavpta$vnames$ov.x[[b]]
+      if (length(ov.x) > 0L) {
+        target.id <- which(lavpartable$op == "~1" &
+          lavpartable$block == b &
+          lavpartable$free != 0 &
+          lavpartable$lhs %in% ov.x)
+        ov.idx <- match(ov.x, ov.names)
+        ov.mean <- colMeans(XY[, ov.idx, drop = FALSE])
+        x[lavpartable$free[target.id]] <- ov.mean
+      }
+    }
   } # nblocks
 
 
@@ -272,3 +286,4 @@ lav_sem_miiv_internal <- function(lavmodel = NULL, lavsamplestats = NULL,
   attr(x, "eqs") <- eqs
   x
 }
+
