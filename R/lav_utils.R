@@ -2,6 +2,83 @@
 #
 # initial version: YR 25/03/2009
 
+# multivariate normal random number generation
+# replacement for MASS::mvrnorm for better cross-machine reproducibility
+# see: https://blog.djnavarro.net/posts/2025-05-18_multivariate-normal-sampling-floating-point/
+#
+# the issue with MASS::mvrnorm is that it uses eigendecomposition with a
+# transformation matrix (sqrt(Lambda) Q') that is NOT invariant to eigenvector
+# sign flips. this leads to irreproducible results across machines even with
+# the same random seed. this implementation follows mvtnorm::rmvnorm which uses:
+# - eigen: Q sqrt(Lambda) Q' which IS invariant to sign flips (default)
+# - svd: similar to eigen, also invariant
+# - chol: unique factorization
+# eigen is the default to match MASS::mvrnorm's approach while fixing the
+# sign-flip issue with the invariant formula
+lav_mvrnorm <- function(n = 1, mu, Sigma, tol = 1e-06, empirical = FALSE,
+                        method = "eigen", checkSymmetry = TRUE) {
+  p <- length(mu)
+
+  # check symmetry (like mvtnorm)
+  if (checkSymmetry && !isSymmetric(Sigma, tol = sqrt(.Machine$double.eps),
+                                     check.attributes = FALSE)) {
+    lav_msg_stop(gettext("'Sigma' must be a symmetric matrix in lav_mvrnorm"))
+  }
+
+  # check dimensions (like mvtnorm)
+  if (p != nrow(Sigma)) {
+    lav_msg_stop(gettext("incompatible arguments in lav_mvrnorm"))
+  }
+
+  # compute transformation matrix R based on method (following mvtnorm exactly)
+  method <- match.arg(method, c("chol", "eigen", "svd"))
+
+  R <- if (method == "eigen") {
+    ev <- eigen(Sigma, symmetric = TRUE)
+    if (!all(ev$values >= -tol * abs(ev$values[1L]))) {
+      warning("sigma is numerically not positive semidefinite")
+    }
+    # Q sqrt(Lambda) Q' - invariant to sign flips
+    t(ev$vectors %*% (t(ev$vectors) * sqrt(pmax(ev$values, 0))))
+  } else if (method == "svd") {
+    s. <- svd(Sigma)
+    if (!all(s.$d >= -tol * abs(s.$d[1L]))) {
+      warning("sigma is numerically not positive semidefinite")
+    }
+    t(s.$v %*% (t(s.$u) * sqrt(pmax(s.$d, 0))))
+  } else if (method == "chol") {
+    R <- chol(Sigma, pivot = TRUE)
+    R[, order(attr(R, "pivot"))]
+  }
+
+  # for names (fallback to dimnames of Sigma if mu has no names)
+  nm <- names(mu)
+  if (is.null(nm) && !is.null(dn <- dimnames(Sigma))) {
+    nm <- dn[[1L]]
+  }
+
+  if (empirical) {
+    # generate standard normal, then apply empirical transformation
+    X <- matrix(stats::rnorm(p * n), n, p)
+    X <- scale(X, center = TRUE, scale = FALSE)   # center
+    X <- X %*% svd(X, nu = 0)$v                   # orthogonalize
+    X <- scale(X, center = FALSE, scale = TRUE)   # unit variance
+
+    # transform by R
+    X <- sweep(X %*% R, 2, mu, "+")
+    colnames(X) <- nm
+
+    if (n == 1) drop(X) else X
+  } else {
+    # generate samples (following mvtnorm exactly)
+    X <- matrix(stats::rnorm(n * p), nrow = n) %*% R
+    X <- sweep(X, 2, mu, "+")
+    colnames(X) <- nm
+
+    if (n == 1) drop(X) else X
+  }
+}
+
 # outlier detection based on inter-quartile range
 # same as boxplot.stats, but returning the indices (not the values)
 lav_sample_outlier_idx <- function (x, coef = 1.5) {

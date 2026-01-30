@@ -352,9 +352,9 @@ lav_bootstrap_internal <- function(object = NULL,
         BOOT.idx = BOOT.idx,
         lavoptions = lavoptions
       )
-    } else { # parametric!
+    } else { # parametric! (using sign-invariant method for reproducibility)
       for (g in 1:lavdata@ngroups) {
-        dataX[[g]] <- MASS::mvrnorm(
+        dataX[[g]] <- lav_mvrnorm(
           n = lavdata@nobs[[g]],
           Sigma = Sigma.hat[[g]],
           mu = Mu.hat[[g]]

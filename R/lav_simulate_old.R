@@ -287,9 +287,9 @@ lav_data_simulate_old <- function( # user-specified model
       COV <- COV * sample.nobs[g] / (sample.nobs[g] - 1)
     }
 
-    # FIXME: change to rmvnorm once we include the library?
+    # Using sign-invariant method for cross-machine reproducibility
     if (is.null(skewness) && is.null(kurtosis)) {
-      X[[g]] <- MASS::mvrnorm(
+      X[[g]] <- lav_mvrnorm(
         n = sample.nobs[g],
         mu = Mu.hat[[g]],
         Sigma = COV,
@@ -505,8 +505,8 @@ lav_data_valemaurelli1983 <- function(n = 100L, COR, skewness, kurtosis) {
     print(eigen(ICOR)$values)
   }
 
-  # generate Z ## FIXME: replace by rmvnorm once we use that package
-  X <- Z <- MASS::mvrnorm(n = n, mu = rep(0, nvar), Sigma = ICOR)
+  # generate Z (using sign-invariant method for cross-machine reproducibility)
+  X <- Z <- lav_mvrnorm(n = n, mu = rep(0, nvar), Sigma = ICOR)
 
   # transform Z using Fleishman constants
   for (i in 1:nvar) {
