@@ -2,7 +2,8 @@
 
 # internal function to be used inside lav_optim_noniter
 # return 'x', the estimated vector of free parameters
-lav_sem_miiv_internal <- function(lavmodel = NULL, lavsamplestats = NULL,
+lav_sem_miiv_internal <- function(lavmodel = NULL, lavh1 = NULL,
+                                  lavsamplestats = NULL,
                                   lavpartable = NULL,
                                   lavdata = NULL, lavoptions = NULL) {
   # this is the entry-point for MIIV estimation
@@ -14,13 +15,46 @@ lav_sem_miiv_internal <- function(lavmodel = NULL, lavsamplestats = NULL,
   iv.varcov.method <- toupper(lavoptions$estimator.args$iv.varcov.method)
   stopifnot(iv.varcov.method %in% c("ULS", "GLS", "2RLS", "RLS"))
 
-  lavpta <- lav_partable_attributes(lavpartable)
-  nblocks <- lavmodel@nblocks
   # we assume the blocks are independent groups for now
   stopifnot(lavdata@nlevels == 1L)
 
-  # find ALL model-implied instrumental variables (miivs) per equation
-  eqs <- lav_model_find_iv(lavmodel = lavmodel, lavpta = lavpta)
+  # parameter vector -> all NA (for the free parameters)
+  x <- lav_model_get_parameters(lavmodel) * as.numeric(NA)
+
+  ###############
+  # first stage #
+  ###############
+  x <- lav_sem_miiv_2sls_rawdata(lavmodel = lavmodel, lavpartable = lavpartable,
+                                 lavdata = lavdata, x = x)
+  eqs <- attr(x, "eqs"); x <- as.numeric(x) # drop attributes
+
+  ################
+  # second stage #
+  ################
+  x <- lav_sem_miiv_varcov(lavmodel = lavmodel, lavpartable = lavpartable,
+                           lavh1 = lavh1,
+                           x = x, iv.varcov.method = iv.varcov.method)
+
+  attr(x, "eqs") <- eqs
+  x
+}
+
+
+lav_sem_miiv_2sls_rawdata <- function(lavmodel = NULL, lavpartable = NULL,
+                                      eqs = NULL, lavdata = NULL, x = NULL) {
+  # get lavpta
+  lavpta <- lav_partable_attributes(lavpartable)
+
+  if (is.null(eqs)) {
+    # find ALL model-implied instrumental variables (miivs) per equation
+    eqs <- lav_model_find_iv(lavmodel = lavmodel, lavpta = lavpta)
+  }
+  if (is.null(x)) {
+    x <- lav_model_get_parameters(lavmodel, type = "free")
+  }
+
+  # number of blocks
+  nblocks <- lavmodel@nblocks
 
   # parameter vector -> all NA (for the free parameters)
   x <- lav_model_get_parameters(lavmodel) * as.numeric(NA)
@@ -165,16 +199,28 @@ lav_sem_miiv_internal <- function(lavmodel = NULL, lavsamplestats = NULL,
     }
   } # nblocks
 
+  # return partially filled in x
+  attr(x, "eqs") <- eqs
+  x
+}
 
-  ################
-  # second stage #
-  ################
+lav_sem_miiv_varcov <- function(lavmodel = NULL, lavpartable = NULL,
+                                lavh1 = NULL,
+                                x = NULL, iv.varcov.method = "RLS") {
+  # get lavpta
+  lavpta <- lav_partable_attributes(lavpartable)
 
-  # estimate variances/covariances in this block
+  # we x
+  stopifnot(!is.null(x))
+
+  # number of blocks
+  nblocks <- lavmodel@nblocks
+
+  # preparations
   lavmodel.tmp <- lav_model_set_parameters(lavmodel = lavmodel, x = x)
   delta_block <- lav_model_delta(
     lavmodel = lavmodel.tmp,
-    ceq.simple = lavoptions$ceq.simple
+    ceq.simple = lavmodel@ceq.simple.only
   )
   # across all groups! (possible equality constraints)
   undirected.idx <- which(lavpartable$free > 0L &
@@ -187,24 +233,24 @@ lav_sem_miiv_internal <- function(lavmodel = NULL, lavsamplestats = NULL,
   s_block <- vector("list", length = nblocks)
   delta2_block <- vector("list", length = nblocks)
   for (b in seq_len(nblocks)) {
+    sample_cov  <- lavh1$implied$cov[[b]]
+    sample_mean <- lavh1$implied$mean[[b]]
+
     # delta2
     delta2_block[[b]] <- delta_block[[b]][, free.idx, drop = FALSE]
     if (iv.varcov.method == "GLS") {
-      S.inv <- lavsamplestats@icov[[b]]
-    } else {
-      S.inv <- diag(1, nrow = nrow(lavsamplestats@cov[[b]]))
+      s.inv <- solve(sample_cov)
+    } else { # ULS, or starting point for 2RLS/RLS
+      s.inv <- diag(1, nrow = nrow(sample_cov))
     }
-    w2_22 <- 0.5 * lav_matrix_duplication_pre_post(S.inv %x% S.inv)
+    w2_22 <- 0.5 * lav_matrix_duplication_pre_post(s.inv %x% s.inv)
     if (lavmodel@meanstructure) {
-      w2_11 <- S.inv
+      w2_11 <- s.inv
       w2_block[[b]] <- lav_matrix_bdiag(w2_11, w2_22)
-      s_block[[b]] <- c(
-        lavsamplestats@mean[[b]],
-        lav_matrix_vech(lavsamplestats@cov[[b]])
-      )
+      s_block[[b]] <- c(sample_mean, lav_matrix_vech(sample_cov))
     } else {
       w2_block[[b]] <- w2_22
-      s_block[[b]] <- lav_matrix_vech(lavsamplestats@cov[[b]])
+      s_block[[b]] <- lav_matrix_vech(sample_cov)
     }
   }
   Delta2 <- do.call("rbind", delta2_block)
@@ -228,10 +274,10 @@ lav_sem_miiv_internal <- function(lavmodel = NULL, lavsamplestats = NULL,
     w2_block <- vector("list", length = nblocks)
     for (b in seq_len(nblocks)) {
       # delta2
-      S.inv <- solve(sigma[[b]])
-      w2_22 <- 0.5 * lav_matrix_duplication_pre_post(S.inv %x% S.inv)
+      s.inv <- solve(sigma[[b]])
+      w2_22 <- 0.5 * lav_matrix_duplication_pre_post(s.inv %x% s.inv)
       if (lavmodel@meanstructure) {
-        w2_11 <- S.inv
+        w2_11 <- s.inv
         w2_block[[b]] <- lav_matrix_bdiag(w2_11, w2_22)
       } else {
         w2_block[[b]] <- w2_22
@@ -252,10 +298,10 @@ lav_sem_miiv_internal <- function(lavmodel = NULL, lavsamplestats = NULL,
       w2_block <- vector("list", length = nblocks)
       for (b in seq_len(nblocks)) {
         # delta2
-        S.inv <- solve(sigma[[b]])
-        w2_22 <- 0.5 * lav_matrix_duplication_pre_post(S.inv %x% S.inv)
+        s.inv <- solve(sigma[[b]])
+        w2_22 <- 0.5 * lav_matrix_duplication_pre_post(s.inv %x% s.inv)
         if (lavmodel@meanstructure) {
-          w2_11 <- S.inv
+          w2_11 <- s.inv
           w2_block[[b]] <- lav_matrix_bdiag(w2_11, w2_22)
         } else {
           w2_block[[b]] <- w2_22
@@ -283,7 +329,6 @@ lav_sem_miiv_internal <- function(lavmodel = NULL, lavsamplestats = NULL,
   # insert final theta2 element in x
   x[free.idx] <- theta2
 
-  attr(x, "eqs") <- eqs
+  # return x
   x
 }
-

@@ -351,6 +351,7 @@ lavaan <- function(
     lavmodel       = lavmodel,
     lavcache       = lavcache,
     lavsamplestats = lavsamplestats,
+    lavh1          = lavh1,
     lavoptions     = lavoptions,
     lavpartable    = lavpartable
   )

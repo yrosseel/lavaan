@@ -2,6 +2,7 @@ lav_lavaan_step11_estoptim <- function(lavdata = NULL, # nolint
                                        lavmodel = NULL,
                                        lavcache = NULL,
                                        lavsamplestats = NULL,
+                                       lavh1 = NULL,
                                        lavoptions = NULL,
                                        lavpartable = NULL) {
   # # # # # # # # # # # # # #
@@ -56,12 +57,13 @@ lav_lavaan_step11_estoptim <- function(lavdata = NULL, # nolint
       cat("lavoptim           ... start:\n")
     }
 
-    # non-iterative methods (fabin, ...)
+    # non-iterative methods (fabin, miiv, ...)
     if (lavoptions$optim.method == "noniter") {
       x <- try(
         lav_optim_noniter(
           lavmodel = lavmodel,
           lavsamplestats = lavsamplestats,
+          lavh1 = lavh1,
           lavdata = lavdata,
           lavpartable = lavpartable,
           lavoptions = lavoptions

@@ -4,7 +4,7 @@
 
 
 lav_optim_noniter <- function(lavmodel = NULL, lavsamplestats = NULL,
-                              lavpartable = NULL,
+                              lavpartable = NULL, lavh1 = NULL,
                               lavdata = NULL, lavoptions = NULL) {
   lavpta <- lav_partable_attributes(lavpartable)
   lavpartable <- lav_partable_set_cache(lavpartable, lavpta)
@@ -85,7 +85,7 @@ lav_optim_noniter <- function(lavmodel = NULL, lavsamplestats = NULL,
     ), silent = TRUE)
   } else if (lavoptions$estimator == "IV") {
     x <- try(lav_sem_miiv_internal(
-      lavmodel = lavmodel, lavdata = lavdata,
+      lavmodel = lavmodel, lavdata = lavdata, lavh1 = lavh1,
       lavsamplestats = lavsamplestats, lavpartable = lavpartable,
       lavoptions = lavoptions
     ), silent = TRUE)

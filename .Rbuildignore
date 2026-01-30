@@ -3,5 +3,6 @@
 ^.*\.Rproj$
 ^\.Rproj\.user$
 ^code_of_conduct.md
+^coding_style_guide.md
 ^contributing.md
 ^LICENSE
