@@ -166,9 +166,9 @@ lav_data_simulate <- function(model = NULL,
       }
     }
 
-    # generate normal data
+    # generate normal data (using sign-invariant method for reproducibility)
     tmp <- try(
-      MASS::mvrnorm(
+      lav_mvrnorm(
         n = sample.nobs[b],
         mu = MU, Sigma = COV, empirical = empirical
       ),
