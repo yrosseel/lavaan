@@ -212,7 +212,7 @@ lav_model_estimate <- function(lavmodel = NULL,
   z.unpack <- x.unpack * parscale
 
   # 2. pack (apply equality constraints)
-  if (lavmodel@eq.constraints) {
+  if (lavmodel@eq.constraints && ncol(lavmodel@eq.constraints.K) > 0L) {
     z.pack <- as.numeric((z.unpack - lavmodel@eq.constraints.k0) %*%
       lavmodel@eq.constraints.K)
   } else {

@@ -144,6 +144,24 @@ lav_constraints_parse <- function(partable = NULL, constraints = NULL,
     cin.theta <- numeric(0L)
   }
 
+  # check for empty/unused constraints (new in 0.6-22)
+  if(nrow(ceq.JAC) > 0L) {
+    if (all(ceq.JAC == 0)) {
+      ceq.JAC <- matrix(0, nrow = 0L, ncol = npar)
+      ceq.rhs <- numeric(0L)
+      ceq.theta <- numeric(0L)
+      ceq.linear.idx <- integer(0L)
+      ceq.nonlinear.idx <- integer(0L)
+    }
+  }
+  if(nrow(cin.JAC) > 0L) {
+    if (all(cin.JAC == 0)) {
+      cin.JAC <- matrix(0, nrow = 0L, ncol = npar)
+      cin.rhs <- numeric(0L)
+      cin.theta <- numeric(0L)
+    }
+  }
+
   # shortcut flags
   ceq.linear.flag <- length(ceq.linear.idx) > 0L
   ceq.nonlinear.flag <- length(ceq.nonlinear.idx) > 0L

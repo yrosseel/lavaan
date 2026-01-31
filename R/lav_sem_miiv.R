@@ -24,16 +24,21 @@ lav_sem_miiv_internal <- function(lavmodel = NULL, lavh1 = NULL,
   ###############
   # first stage #
   ###############
-  x <- lav_sem_miiv_2sls_rawdata(lavmodel = lavmodel, lavpartable = lavpartable,
-                                 lavdata = lavdata, x = x)
-  eqs <- attr(x, "eqs"); x <- as.numeric(x) # drop attributes
+  x <- lav_sem_miiv_2sls_rawdata(
+    lavmodel = lavmodel, lavpartable = lavpartable,
+    lavdata = lavdata, x = x
+  )
+  eqs <- attr(x, "eqs")
+  x <- as.numeric(x) # drop attributes
 
   ################
   # second stage #
   ################
-  x <- lav_sem_miiv_varcov(lavmodel = lavmodel, lavpartable = lavpartable,
-                           lavh1 = lavh1,
-                           x = x, iv.varcov.method = iv.varcov.method)
+  x <- lav_sem_miiv_varcov(
+    lavmodel = lavmodel, lavpartable = lavpartable,
+    lavh1 = lavh1,
+    x = x, iv.varcov.method = iv.varcov.method
+  )
 
   attr(x, "eqs") <- eqs
   x
@@ -233,7 +238,7 @@ lav_sem_miiv_varcov <- function(lavmodel = NULL, lavpartable = NULL,
   s_block <- vector("list", length = nblocks)
   delta2_block <- vector("list", length = nblocks)
   for (b in seq_len(nblocks)) {
-    sample_cov  <- lavh1$implied$cov[[b]]
+    sample_cov <- lavh1$implied$cov[[b]]
     sample_mean <- lavh1$implied$mean[[b]]
 
     # delta2

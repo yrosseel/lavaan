@@ -908,3 +908,46 @@ lav_partable_unrestricted_chol <- function(lavobject = NULL,
 
   LIST
 }
+
+# create a 'baseline' model from an existing object/partable
+# - fix all (free) directed effects (factor loadings, regressions) to zero
+# - fix all (free) covariances to zero
+# - neutralize the (measured) latent variables by fixing their variances
+#   to zero
+# - keep all other (relevant) constraints
+# - this *should* result in a baseline model that is always nested within
+#   the original model
+lav_partable_baseline <- function(lavobject = NULL,
+                                  # if no object is available,
+                                  lavpartable = NULL,
+                                  lavh1 = NULL) {
+
+  # grab everything from lavaan lavobject
+  if (!is.null(lavobject)) {
+    stopifnot(inherits(lavobject, "lavaan"))
+    lavpartable <- lavobject@ParTable
+    lavh1 <- lavobject@h1
+  }
+
+  # remove est/se columns, if present
+  PT <- lavpartable
+  PT$est <- PT$se <- NULL
+
+  # lv.names
+  lv.names <- lavNames(fit, "lv")
+
+  # zero-out all directed effects and covariances
+  directed.idx <- which(PT$op %in% c("=~", "~") & PT$free > 0L)
+  cov.idx <- which(PT$op == "~~" & PT$lhs != PT$rhs & PT$free > 0L)
+  lv.var.idx <- which(PT$op == "~~" & PT$lhs %in% lv.names & PT$lhs == PT$rhs &
+                      PT$free > 0L)
+  zero.idx <- c(directed.idx, cov.idx, lv.var.idx)
+  PT$free[zero.idx] <- 0L
+  PT$start[zero.idx] <- 0
+  PT$ustart[zero.idx] <- 0
+
+  # TODO: fill in variances in PT$start (from lavh1)
+
+  PT <- lav_partable_complete(PT)
+  PT
+}
