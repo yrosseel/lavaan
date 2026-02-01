@@ -5,20 +5,22 @@
 # 4. catML fit based on DWLS fit (for robust RMSEA/CFI)
 
 
-# 1. fit an 'independence' model
+# 1. fit an 'independence/baseline' model
 #    note that for ML (and ULS and DWLS), the 'estimates' of the
 #    independence model are simply the observed variances
 #    but for GLS and WLS, this is not the case!!
-lav_object_independence <- function(object = NULL,
-                                    # or
-                                    lavsamplestats = NULL,
-                                    lavdata = NULL,
-                                    lavcache = NULL,
-                                    lavoptions = NULL,
-                                    lavpartable = NULL,
-                                    lavh1 = NULL,
-                                    # local options
-                                    se = FALSE) {
+#
+#  - YR 01 Feb 2026: allow for baseline.type = "nested"
+lav_object_independence <- lav_object_baseline <- function(object = NULL,
+                                                           # or
+                                                           lavsamplestats = NULL,
+                                                           lavdata = NULL,
+                                                           lavcache = NULL,
+                                                           lavoptions = NULL,
+                                                           lavpartable = NULL,
+                                                           lavh1 = NULL,
+                                                           # local options
+                                                           se = FALSE) {
   # object or slots?
   if (!is.null(object)) {
     stopifnot(inherits(object, "lavaan"))
@@ -29,6 +31,7 @@ lav_object_independence <- function(object = NULL,
     lavdata <- object@Data
     lavcache <- object@Cache
     lavoptions <- object@Options
+    lavpartable <- object@ParTable
     lavpta <- object@pta
     lavh1 <- object@h1
     if (is.null(lavoptions$estimator.args)) {
@@ -45,11 +48,19 @@ lav_object_independence <- function(object = NULL,
   }
 
   # construct parameter table for independence model
-  lavpartable <- lav_partable_indep_or_unrestricted(
-    lavobject = NULL,
-    lavdata = lavdata, lavpta = lavpta, lavoptions = lavoptions,
-    lavsamplestats = lavsamplestats, lavh1 = lavh1, independent = TRUE
-  )
+  if (!is.null(lavoptions$baseline.type) &&
+    lavoptions$baseline.type == "nested") {
+    lavpartable <- lav_partable_baseline(
+      lavobject = NULL,
+      lavpartable = lavpartable, lavh1 = lavh1
+    )
+  } else {
+    lavpartable <- lav_partable_indep_or_unrestricted(
+      lavobject = NULL,
+      lavdata = lavdata, lavpta = lavpta, lavoptions = lavoptions,
+      lavsamplestats = lavsamplestats, lavh1 = lavh1, independent = TRUE
+    )
+  }
 
   # new in 0.6-6: add lower bounds for ov.var
   if (!is.null(lavoptions$optim.bounds)) {
@@ -159,7 +170,6 @@ lav_object_independence <- function(object = NULL,
 
 # 2. unrestricted model
 lav_object_unrestricted <- function(object, se = FALSE) {
-
   object <- lav_object_check_version(object)
   # construct parameter table for unrestricted model
   lavpartable <- lav_partable_unrestricted(object)
@@ -202,7 +212,6 @@ lav_object_extended <- function(object, add = NULL,
                                 remove.duplicated = TRUE,
                                 all.free = FALSE,
                                 do.fit = FALSE) {
-
   object <- lav_object_check_version(object)
   # partable original model
   partable <- object@ParTable[c(
@@ -368,14 +377,16 @@ lav_object_catml <- function(lavobject = NULL) {
   rm.idx <- which(partable.catml$op %in% c("|", "~1"))
   # remove also any constraints that refer to the labels that belong
   # to these intercepts/thresholds (new in 0.6-20)
-  th.int.labels <- unique(partable.catml$label[rm.idx],
-                          partable.catml$plabel[rm.idx])
+  th.int.labels <- unique(
+    partable.catml$label[rm.idx],
+    partable.catml$plabel[rm.idx]
+  )
   if (any(nchar(th.int.labels) == 0L)) {
-    th.int.labels <- th.int.labels[- which(nchar(th.int.labels) == 0L)]
+    th.int.labels <- th.int.labels[-which(nchar(th.int.labels) == 0L)]
   }
   con.idx <- which(partable.catml$op %in% c("==", "<", ">", ":=") &
-                   (partable.catml$lhs %in% th.int.labels |
-                    partable.catml$rhs %in% th.int.labels))
+    (partable.catml$lhs %in% th.int.labels |
+      partable.catml$rhs %in% th.int.labels))
   partable.catml <- partable.catml[-c(rm.idx, con.idx), ]
   # never rotate (new in 0.6-19), as we only need fit measures
   if (!is.null(partable.catml$efa)) {
@@ -416,8 +427,9 @@ lav_object_catml <- function(lavobject = NULL) {
     }
 
     current.warn <- lav_warn()
-    if (lav_warn(FALSE))
+    if (lav_warn(FALSE)) {
       on.exit(lav_warn(current.warn), TRUE)
+    }
     out <- lav_samplestats_icov(
       COV = COV, ridge = 1e-05,
       x.idx = lavsamplestats@x.idx[[g]],

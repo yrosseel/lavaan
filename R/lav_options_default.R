@@ -476,6 +476,8 @@ lav_options_default <- function() {
   # more models/info
   elm("h1", TRUE, bl = TRUE)
   elm("baseline", TRUE, bl = TRUE)
+  elm("baseline.type", "independence", chr = c(indep = "independence",
+    independence = "independence", nested = "nested"))
   elm("baseline.conditional.x.free.slopes", TRUE, bl = TRUE)
   elm("baseline.fixed.x.free.cov", TRUE, bl = TRUE)
   elm("implied", TRUE, bl = TRUE)

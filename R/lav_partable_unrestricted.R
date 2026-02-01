@@ -929,24 +929,70 @@ lav_partable_baseline <- function(lavobject = NULL,
     lavh1 <- lavobject@h1
   }
 
-  # remove est/se columns, if present
+  # number of blocks
+  nblocks <- lav_partable_nblocks(lavpartable)
+
+  # conditional.x ? check res.cov[[1]] slot
+  conditional.x <- FALSE
+  if (!is.null(lavh1) && !is.null(lavh1$implied$res.cov[[1]])) {
+    conditional.x <- TRUE
+  }
+
+  # get sample statistics, all groups
+  if (conditional.x) {
+    sample.cov <- lavh1$implied$res.cov
+    sample.mean <- lavh1$implied$res.int
+  } else {
+    sample.cov <- lavh1$implied$cov
+    sample.mean <- lavh1$implied$mean
+  }
+
+  # shortcut of lavpartable
   PT <- lavpartable
+
+  # keep exo=1 starting values
+  exo.idx <- which(PT$exo == 1L)
+  if (!is.null(PT$est)) {
+    PT$ustart[exo.idx] <- PT$est[exo.idx]
+  } else if (!is.null(PT$start)) {
+    PT$iustart[exo.idx] <- PT$start[exo.idx]
+  }
+
+  # remove est/se columns, if present, but keep start column
   PT$est <- PT$se <- NULL
 
   # lv.names
-  lv.names <- lavNames(fit, "lv")
+  lv.names <- lav_partable_vnames(PT, "lv")
 
   # zero-out all directed effects and covariances
-  directed.idx <- which(PT$op %in% c("=~", "~") & PT$free > 0L)
+  directed.idx <- which(PT$op %in% c("=~", "~") & PT$free > 0L & PT$exo != 1L)
   cov.idx <- which(PT$op == "~~" & PT$lhs != PT$rhs & PT$free > 0L)
+
+  # neutralize latent variables
   lv.var.idx <- which(PT$op == "~~" & PT$lhs %in% lv.names & PT$lhs == PT$rhs &
                       PT$free > 0L)
+  #lv.int.idx <- which(PT$op == "~1" & PT$lhs %in% lv.names & PT$free > 0L)
+  #zero.idx <- c(directed.idx, cov.idx, lv.var.idx, lv.int.idx)
   zero.idx <- c(directed.idx, cov.idx, lv.var.idx)
+
   PT$free[zero.idx] <- 0L
   PT$start[zero.idx] <- 0
   PT$ustart[zero.idx] <- 0
 
-  # TODO: fill in variances in PT$start (from lavh1)
+  # Question: fill in more elements in PT$start? (only ov variances for now)
+  for (b in seq_len(nblocks)) {
+    ov.names.num <- lav_partable_vnames(lavpartable, "ov.num", block = b)
+    if (conditional.x) {
+      ov.names.x <- lav_partable_vnames(lavpartable, "ov.x", block = b)
+      ov.names.num <- ov.names.num[!ov.names.num %in% ov.names.x]
+    }
+    ovar.idx <- which(lavpartable$block == b &
+      lavpartable$op == "~~" &
+      lavpartable$lhs %in% ov.names.num &
+      lavpartable$lhs == lavpartable$rhs)
+    sample.var.idx <- match(lavpartable$lhs[ovar.idx], ov.names.num)
+    PT$ustart[ovar.idx] <- diag(sample.cov[[b]])[sample.var.idx]
+  }
 
   PT <- lav_partable_complete(PT)
   PT

@@ -62,6 +62,13 @@ lav_constraints_parse <- function(partable = NULL, constraints = NULL,
   }
   if (is.null(partable$upper) && is.null(partable$lower)) {
     cin.simple <- FALSE
+  } else {
+    # only check free parameters!
+    free.idx <- which(partable$free > 0L)
+    if (all(partable$lower[free.idx] == -Inf) &&
+        all(partable$upper[free.idx] == +Inf)) {
+      cin.simple <- FALSE
+    }
   }
 
   # variable definitions
@@ -152,6 +159,16 @@ lav_constraints_parse <- function(partable = NULL, constraints = NULL,
       ceq.theta <- numeric(0L)
       ceq.linear.idx <- integer(0L)
       ceq.nonlinear.idx <- integer(0L)
+    } else {
+      zero.idx <- which(apply(ceq.JAC, 1, function(x) all(x == 0)))
+      if (length(zero.idx) > 0L) {
+        ceq.JAC <- ceq.JAC[-zero.idx, , drop = FALSE]
+        ceq.rhs <- ceq.rhs[-zero.idx]
+        ceq.theta <- ceq.theta[-zero.idx]
+        # hm, how to hande these? indices no longer match rows of ceq.JAC!
+        ceq.linear.idx <- ceq.linear.idx[!ceq.linear.idx %in% zero.idx]
+        ceq.nonlinear.idx <- ceq.nonlinear.idx[!ceq.nonlinear.idx %in% zero.idx]
+      }
     }
   }
   if(nrow(cin.JAC) > 0L) {
@@ -159,6 +176,18 @@ lav_constraints_parse <- function(partable = NULL, constraints = NULL,
       cin.JAC <- matrix(0, nrow = 0L, ncol = npar)
       cin.rhs <- numeric(0L)
       cin.theta <- numeric(0L)
+      cin.linear.idx <- integer(0L)
+      cin.nonlinear.idx <- integer(0L)
+    } else {
+      zero.idx <- which(apply(cin.JAC, 1, function(x) all(x == 0)))
+      if (length(zero.idx) > 0L) {
+        cin.JAC <- cin.JAC[-zero.idx, , drop = FALSE]
+        cin.rhs <- cin.rhs[-zero.idx]
+        cin.theta <- cin.theta[-zero.idx]
+        # hm, how to hande these? indices no longer match rows of cin.JAC!
+        cin.linear.idx <- cin.linear.idx[!cin.linear.idx %in% zero.idx]
+        cin.nonlinear.idx <- cin.nonlinear.idx[!cin.nonlinear.idx %in% zero.idx]
+      }
     }
   }
 
