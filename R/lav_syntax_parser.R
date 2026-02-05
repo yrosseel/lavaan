@@ -576,7 +576,7 @@ lav_parse_modifier <- function(formul1, lhs, opi, modelsrc, types,
         )
       }
     } else {
-      if (!is.numeric(modifier) && !is.na(modifier)) {
+      if (!is.numeric(modifier) && !all(is.na(modifier))) {
         tl <- lav_parse_txtloc(modelsrc, formul1$elem.pos[opi + 1L])
         lav_msg_stop(gettext("invalid numeric modifier"),
           tl[1L],
