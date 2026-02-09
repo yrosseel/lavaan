@@ -59,7 +59,7 @@ lav_mvrnorm <- function(n = 1, mu, Sigma, tol = 1e-06, empirical = FALSE,
 
   if (empirical) {
     # generate standard normal, then apply empirical transformation
-    X <- matrix(stats::rnorm(p * n), n, p)
+    X <- matrix(stats::rnorm(p * n), n, p, byrow=TRUE)
     X <- scale(X, center = TRUE, scale = FALSE)   # center
     X <- X %*% svd(X, nu = 0)$v                   # orthogonalize
     X <- scale(X, center = FALSE, scale = TRUE)   # unit variance
@@ -71,7 +71,7 @@ lav_mvrnorm <- function(n = 1, mu, Sigma, tol = 1e-06, empirical = FALSE,
     if (n == 1) drop(X) else X
   } else {
     # generate samples (following mvtnorm exactly)
-    X <- matrix(stats::rnorm(n * p), nrow = n) %*% R
+    X <- matrix(stats::rnorm(n * p), nrow = n, byrow=TRUE) %*% R
     X <- sweep(X, 2, mu, "+")
     colnames(X) <- nm
 
