@@ -7,23 +7,23 @@
 # help function to determine estimator 'group'
 lav_options_estimatorgroup <- function(estimator) {
   goal <- switch(estimator,
-                 ml = ,
-                 mlf = ,
-                 mlm = ,
-                 mlmv = ,
-                 mlmvs = ,
-                 mlr = "ML",
-                 catml = "catML",
-                 dwls = ,
-                 wlsm = ,
-                 wlsmv = ,
-                 wlsmvs = "DWLS",
-                 uls = ,
-                 ulsm = ,
-                 ulsmv = ,
-                 ulsmvs = "ULS",
-                 none = "none",
-                 toupper(estimator)
+    ml = ,
+    mlf = ,
+    mlm = ,
+    mlmv = ,
+    mlmvs = ,
+    mlr = "ML",
+    catml = "catML",
+    dwls = ,
+    wlsm = ,
+    wlsmv = ,
+    wlsmvs = "DWLS",
+    uls = ,
+    ulsm = ,
+    ulsmv = ,
+    ulsmvs = "ULS",
+    none = "none",
+    toupper(estimator)
   )
   goal
 }
@@ -56,7 +56,7 @@ lav_options_checkvalues <- function(optname, optvalue, chr) {
   }
   as.vector(chr[optvalsok])
 }
-lav_options_check <- function(opts, opt.check, subname) {    # nolint
+lav_options_check <- function(opts, opt.check, subname) { # nolint
   opt.names <- names(opts)
   hiddens <- startsWith(opt.names, ".")
   if (any(hiddens)) { # remove hidden options temporarily
@@ -69,39 +69,45 @@ lav_options_check <- function(opts, opt.check, subname) {    # nolint
   if (any(is.na(match.opt))) {
     lav_msg_stop(gettextf(
       "Some option(s) unknown: %s !",
-      lav_msg_view(opt.names[is.na(match.opt)], log.sep = "none")))
+      lav_msg_view(opt.names[is.na(match.opt)], log.sep = "none")
+    ))
   }
   for (j in seq_along(opts)) {
     opt.name <- opt.names[j]
     opt.value <- opts[[j]]
     opt.check1 <- opt.check[[match.opt[j]]]
     if (!is.null(attr(opt.check1, "SUB"))) {
-      opts[[j]] <- lav_options_check(opt.value, opt.check1,
-                                     paste0(opt.name, "$"))
+      opts[[j]] <- lav_options_check(
+        opt.value, opt.check1,
+        paste0(opt.name, "$")
+      )
       next
     }
     # check length of option value
     if (length(opt.value) < opt.check1$oklen[1]) {
       lav_msg_stop(gettextf(
         "Length of option '%1$s' value must be at least %2$s.",
-        paste0(subname, opt.name), opt.check1$oklen[1]))
+        paste0(subname, opt.name), opt.check1$oklen[1]
+      ))
     }
     if (length(opt.value) > abs(opt.check1$oklen[2])) {
       if (opt.check1$oklen[2] > 0L) {
         lav_msg_stop(gettextf(
           "Length of option '%1$s' value must be maximum %2$s.",
-          paste0(subname, opt.name), opt.check1$oklen[2]))
+          paste0(subname, opt.name), opt.check1$oklen[2]
+        ))
       } else {
         lav_msg_warn(gettextf(
           "Length of option '%1$s' value should be maximum %2$s.
           Only first %3$s elements used.",
           paste0(subname, opt.name), -opt.check1$oklen[2],
-          -opt.check1$oklen[2]))
+          -opt.check1$oklen[2]
+        ))
       }
     }
     if (is.null(opt.check1$bl)) opt.check1$bl <- FALSE
-    if (!is.null(opt.check1$chr) || !is.null(opt.check1$nm)          ||
-        opt.check1$bl) {
+    if (!is.null(opt.check1$chr) || !is.null(opt.check1$nm) ||
+      opt.check1$bl) {
       if (!opt.check1$bl || !is.logical(opt.value)) {
         if (!is.null(opt.check1$nm) && is.numeric(opt.value)) {
           num2int <- FALSE
@@ -110,16 +116,21 @@ lav_options_check <- function(opts, opt.check, subname) {    # nolint
             lav_msg_stop(gettextf(
               "Value(s) of option %1$s out of range (%2$s)!",
               paste0(subname, opt.name),
-              paste0(opt.check1$nm$bounds[1],
-                     if (opt.check1$nm$first.in) " <= " else " < ",
-                     "x",
-                     if (opt.check1$nm$last.in) " <= " else " < ",
-                     opt.check1$nm$bounds[2])))
+              paste0(
+                opt.check1$nm$bounds[1],
+                if (opt.check1$nm$first.in) " <= " else " < ",
+                "x",
+                if (opt.check1$nm$last.in) " <= " else " < ",
+                opt.check1$nm$bounds[2]
+              )
+            ))
           }
         }
         if (!is.null(opt.check1$chr) && is.character(opt.value)) {
-          opt.value <- lav_options_checkvalues(opt.name, opt.value,
-                                               opt.check1$chr)
+          opt.value <- lav_options_checkvalues(
+            opt.name, opt.value,
+            opt.check1$chr
+          )
           opts[[j]] <- opt.value
         }
       }
@@ -135,11 +146,14 @@ lav_options_check <- function(opts, opt.check, subname) {    # nolint
 # produce a consistent set of values...
 #
 # returns a list with the named options
-lav_options_set <- function(opt = NULL) {                     # nolint
+lav_options_set <- function(opt = NULL) {
   # check the presence of necessary hidden options ####
   if (is.null(opt$.categorical) || is.null(opt$.multilevel) ||
-      is.null(opt$.clustered)) lav_msg_fixme(
-        ".categorical, .multilevel and .clustered must be present")
+    is.null(opt$.clustered)) {
+    lav_msg_fixme(
+      ".categorical, .multilevel and .clustered must be present"
+    )
+  }
 
   # get opt.default and opt.check ####
   if (!exists("opt.check", lavaan_cache_env)) lav_options_default()
@@ -151,21 +165,35 @@ lav_options_set <- function(opt = NULL) {                     # nolint
     opt$optim.partrace <- TRUE
   }
 
-  # if estimator is a ist split it in estimator + args ####
-  if (is.list(opt$estimator)) {
-    if (length(opt$estimator) > 1L) {
-      opt$estimator.args <- opt$estimator[-1]
+  # options OPT for which there also exist OPT.args and opt$OPT is a list
+  # -> split in opt$OPT and opt$OPT.args
+  welke <- which(paste0(names(opt.check), ".args") %in% names(opt.check))
+  for (j in welke) {
+    optname <- names(opt.check)[j]
+    optname.args <- paste0(optname, ".args")
+    if (is.list(opt[[optname]])) {
+      if (optname == "bootstrap" && !is.null(opt[[optname]][["R"]])) {
+        # special case for bootstrap, instead of "bootstrap" replications
+        # argument can be "R"
+        opt[[optname]][[optname]] <- opt[[optname]][["R"]]
+        opt[[optname]][["R"]] <- NULL
+      }
+      opt[[optname.args]] <- opt[[optname]]
+      opt[[optname.args]][[optname]] <- NULL
+      opt[[optname]] <- opt[[optname]][[optname]]
     }
-    opt$estimator <- opt$estimator[[1]]
   }
 
   # check options with definitions ####
   opt <- lav_options_check(opt, opt.check, "")
 
   # check option 'start'
-  if (is.character(opt$start) && all(opt$start != c("default", "simple")))
+  if (is.character(opt$start) && all(opt$start != c("default", "simple"))) {
     lav_msg_stop(gettext(
-      "start option must be 'default', 'simple', a fitted object, a vector of parameter values, or a parameter table"))
+      "start option must be 'default', 'simple', a fitted object,
+      a vector of parameter values, or a parameter table"
+    ))
+  }
 
   # first of all: set estimator ####
   if (opt$estimator == "default") {
@@ -178,8 +206,7 @@ lav_options_set <- function(opt = NULL) {                     # nolint
 
   # defaults for opt$sample.cov.rescale
   if (opt$sample.cov.rescale == "default") {
-    opt$sample.cov.rescale <- switch(
-      opt$estimator,
+    opt$sample.cov.rescale <- switch(opt$estimator,
       dls = TRUE,
       fabin2 = ,
       fabin3 = ,
@@ -223,13 +250,15 @@ lav_options_set <- function(opt = NULL) {                     # nolint
     opt$meanstructure <- TRUE
     opt$int.ov.free <- TRUE
     if ((is.logical(opt$effect.coding) && opt$effect.coding) ||
-        (is.character(opt$effect.coding) && nchar(opt$effect.coding) > 0L)) {
+      (is.character(opt$effect.coding) && nchar(opt$effect.coding) > 0L)) {
       lav_msg_stop(gettext(
-        "effect coding cannot be combined with marker.int.zero = TRUE option"))
+        "effect coding cannot be combined with marker.int.zero = TRUE option"
+      ))
     }
     if (opt$std.lv) {
       lav_msg_stop(gettext(
-        "std.lv = TRUE cannot be combined with marker.int.zero = TRUE"))
+        "std.lv = TRUE cannot be combined with marker.int.zero = TRUE"
+      ))
     }
   }
 
@@ -252,12 +281,12 @@ lav_options_set <- function(opt = NULL) {                     # nolint
   # if categorical, and group.equal contains "intercepts", also add
   # thresholds (and vice versa)
   # not any longer since 0.6-20
-  #if (opt$.categorical && any("intercepts" == opt$group.equal)) {
+  # if (opt$.categorical && any("intercepts" == opt$group.equal)) {
   #  opt$group.equal <- unique(c(opt$group.equal, "thresholds"))
-  #}
-  #if (opt$.categorical && any("thresholds" == opt$group.equal)) {
+  # }
+  # if (opt$.categorical && any("thresholds" == opt$group.equal)) {
   #  opt$group.equal <- unique(c(opt$group.equal, "intercepts"))
-  #}
+  # }
 
   # clustered ####
   # brute-force override (for now)
@@ -272,7 +301,7 @@ lav_options_set <- function(opt = NULL) {                     # nolint
       opt$estimator <- "ml"
       opt$test <- "satorra.bentler"
       opt$se <- "robust.cluster.sem"
-    } else if (opt$.categorical & opt$estimator != "pml") {
+    } else if (opt$.categorical && opt$estimator != "pml") {
       opt$test <- "satorra.bentler"
       opt$se <- "robust.cluster.sem"
     }
@@ -290,16 +319,23 @@ lav_options_set <- function(opt = NULL) {                     # nolint
       opt$test <- "yuan.bentler.mplus"
     } else {
       lav_msg_stop(
-        gettextf("`test' argument must one of %s in the clustered case",
-                 lav_msg_view(c("none", "yuan.bentler", "yuan.bentler.mplus",
-                                "satorra.bentler"), log.sep = "or")))
+        gettextf(
+          "`test' argument must one of %s in the clustered case",
+          lav_msg_view(c(
+            "none", "yuan.bentler", "yuan.bentler.mplus",
+            "satorra.bentler"
+          ), log.sep = "or")
+        )
+      )
     }
 
     # se ####
     if (opt$se == "default") {
       opt$se <- "robust.cluster"
-    } else if (any(opt$se == c("none", "robust.cluster",
-                               "robust.cluster.sem"))) {
+    } else if (any(opt$se == c(
+      "none", "robust.cluster",
+      "robust.cluster.sem"
+    ))) {
       # nothing to do
     } else if (opt$se == "robust") {
       opt$se <- "robust.cluster"
@@ -330,21 +366,27 @@ lav_options_set <- function(opt = NULL) {                     # nolint
     # test
     if (length(opt$test) == 1L && opt$test == "default") {
       # ok, will be set later
-    } else if (all(opt$test %in% c("none", "standard", "yuan.bentler",
-	                               "yuan.bentler.mplus"))) {
+    } else if (all(opt$test %in% c(
+      "none", "standard", "yuan.bentler",
+      "yuan.bentler.mplus"
+    ))) {
       # nothing to do
     } else {
       lav_msg_stop(gettextf(
         "`test' argument must one of %s in the multilevel case",
-        lav_msg_view(c("none", "standard", "yuan.bentler",
-		               "yuan.bentler.mplus"), log.sep = "or")))
+        lav_msg_view(c(
+          "none", "standard", "yuan.bentler",
+          "yuan.bentler.mplus"
+        ), log.sep = "or")
+      ))
     }
 
     # se
     if (opt$se == "default") {
       # ok, will be set later
     } else if (any(opt$se == c(
-      "none", "standard", "robust.huber.white", "sandwich"))) {
+      "none", "standard", "robust.huber.white", "sandwich"
+    ))) {
       # nothing to do
     } else if (opt$se == "robust") {
       opt$se <- "robust.huber.white"
@@ -352,7 +394,9 @@ lav_options_set <- function(opt = NULL) {                     # nolint
       lav_msg_stop(gettextf(
         "`se' argument must one of %s  in the multilevel case",
         lav_msg_view(c("none", "standard", "robust.huber.white"),
-                     log.sep = "or")))
+          log.sep = "or"
+        )
+      ))
     }
 
     # information
@@ -371,7 +415,8 @@ lav_options_set <- function(opt = NULL) {                     # nolint
     if (opt$.categorical) {
       lav_msg_stop(gettextf(
         "missing = %s not available in the categorical setting",
-        dQuote(opt$missing)))
+        dQuote(opt$missing)
+      ))
     }
     if (any(opt$estimator == c(
       "mlm", "mlmv", "gls", "wls", "wlsm", "wlsmv",
@@ -380,13 +425,15 @@ lav_options_set <- function(opt = NULL) {                     # nolint
       lav_msg_stop(gettextf(
         "missing=%1$s is not allowed for estimator %2$s",
         dQuote(opt$missing),
-        dQuote(lav_options_estimatorgroup(opt$estimator.orig))))
+        dQuote(lav_options_estimatorgroup(opt$estimator.orig))
+      ))
     }
   } else if (opt$missing == "ml.x") {
     if (opt$.categorical) {
       lav_msg_stop(gettextf(
         "missing = %s not available in the categorical setting",
-        dQuote(opt$missing)))
+        dQuote(opt$missing)
+      ))
     }
     if (any(opt$estimator == c(
       "mlm", "mlmv", "gls", "wls", "wlsm", "wlsmv",
@@ -395,13 +442,15 @@ lav_options_set <- function(opt = NULL) {                     # nolint
       lav_msg_stop(gettextf(
         "missing=%1$s is not allowed for estimator %2$s",
         dQuote(opt$missing),
-        dQuote(lav_options_estimatorgroup(opt$estimator.orig))))
+        dQuote(lav_options_estimatorgroup(opt$estimator.orig))
+      ))
     }
   } else if (opt$missing == "two.stage") {
     if (opt$.categorical) {
       lav_msg_stop(gettextf(
         "missing = %s not available in the categorical setting",
-        dQuote(opt$missing)))
+        dQuote(opt$missing)
+      ))
     }
     if (any(opt$estimator == c(
       "mlm", "mlmv", "gls", "wls", "wlsm", "wlsmv",
@@ -410,13 +459,15 @@ lav_options_set <- function(opt = NULL) {                     # nolint
       lav_msg_stop(gettextf(
         "missing=%1$s is not allowed for estimator %2$s",
         dQuote(opt$missing),
-        dQuote(lav_options_estimatorgroup(opt$estimator.orig))))
+        dQuote(lav_options_estimatorgroup(opt$estimator.orig))
+      ))
     }
   } else if (opt$missing == "robust.two.stage") {
     if (opt$.categorical) {
       lav_msg_stop(gettextf(
         "missing = %s not available in the categorical setting",
-        dQuote(opt$missing)))
+        dQuote(opt$missing)
+      ))
     }
     if (any(opt$estimator == c(
       "mlm", "mlmv", "gls", "wls", "wlsm", "wlsmv",
@@ -425,32 +476,36 @@ lav_options_set <- function(opt = NULL) {                     # nolint
       lav_msg_stop(gettextf(
         "missing=%1$s is not allowed for estimator %2$s",
         dQuote(opt$missing),
-        dQuote(lav_options_estimatorgroup(opt$estimator.orig))))
+        dQuote(lav_options_estimatorgroup(opt$estimator.orig))
+      ))
     }
   } else if (opt$missing == "doubly.robust") {
     if (opt$estimator != "pml") {
       lav_msg_stop(gettextf(
         "missing=%s option only available for estimator PML",
-        dQuote(opt$missing)))
+        dQuote(opt$missing)
+      ))
     }
   }
 
   # check missing ####
   if (any(opt$missing == c("ml", "ml.x")) &&
-      opt$se %in% c("robust.sem", "robust.sem.nt")) {
+    opt$se %in% c("robust.sem", "robust.sem.nt")) {
     lav_msg_warn(gettextf(
       "missing will be set to %1$s for se = %2$s.",
-      dQuote("listwise"), dQuote(opt$se)))
+      dQuote("listwise"), dQuote(opt$se)
+    ))
     opt$missing <- "listwise"
   }
   if (any(opt$missing == c("ml", "ml.x")) &&
-      any(opt$test %in% c(
-        "satorra.bentler",
-        "mean.var.adjusted", "scaled.shifted"
-      ))) {
+    any(opt$test %in% c(
+      "satorra.bentler",
+      "mean.var.adjusted", "scaled.shifted"
+    ))) {
     lav_msg_warn(gettextf(
       "missing will be set to %s for satorra.bentler style test",
-      dQuote("listwise")))
+      dQuote("listwise")
+    ))
     opt$missing <- "listwise"
   }
 
@@ -465,15 +520,16 @@ lav_options_set <- function(opt = NULL) {                     # nolint
         opt$se <- "robust.two.stage"
       }
     } else if (opt$missing == "two.stage" &&
-               opt$se == "two.stage") {
+      opt$se == "two.stage") {
       # nothing to do
     } else if (opt$missing == "robust.two.stage" &&
-               opt$se == "robust.two.stage") {
+      opt$se == "robust.two.stage") {
       # nothing to do
     } else {
       lav_msg_warn(gettextf(
         "se will be set to %1$s if missing = %2$s",
-        dQuote(opt$missing), dQuote(opt$missing)))
+        dQuote(opt$missing), dQuote(opt$missing)
+      ))
       opt$se <- opt$missing
     }
     # information
@@ -504,14 +560,16 @@ lav_options_set <- function(opt = NULL) {                     # nolint
     if (length(opt$test) > 1L) {
       lav_msg_warn(gettextf(
         "test= argument can only contain a single element if missing = %s
-        (taking the first)", dQuote(opt$missing)))
+        (taking the first)", dQuote(opt$missing)
+      ))
       opt$test <- opt$test[1]
     }
 
     if (length(opt$test) == 1L && opt$test == "default") {
       opt$test <- "satorra.bentler"
     } else if (length(opt$test) == 1L && any(
-      opt$test == c("satorra", "sb", "satorra.bentler", "satorra-bentler"))) {
+      opt$test == c("satorra", "sb", "satorra.bentler", "satorra-bentler")
+    )) {
       opt$test <- "satorra.bentler"
     } else {
       lav_msg_warn(gettextf(
@@ -528,7 +586,8 @@ lav_options_set <- function(opt = NULL) {                     # nolint
       if (any(opt$missing == c("ml", "ml.x", "two.stage"))) {
         lav_msg_warn(gettextf(
           "missing argument %s forces meanstructure = TRUE",
-          opt$missing))
+          opt$missing
+        ))
       }
     }
   } else if (opt$meanstructure == "default") {
@@ -538,7 +597,6 @@ lav_options_set <- function(opt = NULL) {                     # nolint
     } else {
       opt$meanstructure <- FALSE
     }
-
   }
 
   # bootstrap ####
@@ -554,37 +612,37 @@ lav_options_set <- function(opt = NULL) {                     # nolint
 
   # specific per estimator (group) ####
   opt <- switch(opt$estimator,
-                ml = ,
-                mlf = ,
-                mlm = ,
-                mlmv = ,
-                mlmvs = ,
-                mlr = lav_options_est_ml(opt),
-                gls = lav_options_est_gls(opt),
-                ntrls = lav_options_est_ntrls(opt),
-                catml = lav_options_est_catml(opt),
-                wls = lav_options_est_wls(opt),
-                dls = lav_options_est_dls(opt),
-                dwls = ,
-                wlsm = ,
-                wlsmv = ,
-                wlsmvs = lav_options_est_dwls(opt),
-                uls = ,
-                ulsm = ,
-                ulsmv = ,
-                ulsmvs = lav_options_est_uls(opt),
-                pml = lav_options_est_pml(opt),
-                fml = lav_options_est_fml(opt),
-                reml = lav_options_est_reml(opt),
-                mml = lav_options_est_mml(opt),
-                fabin2 = ,
-                fabin3 = ,
-                mgm = ,
-                js = ,
-                jsa = ,
-                bentler1982 = lav_options_est_fabin(opt),
-                iv = lav_options_est_iv(opt),
-                lav_options_est_none(opt)  # estimator = none
+    ml = ,
+    mlf = ,
+    mlm = ,
+    mlmv = ,
+    mlmvs = ,
+    mlr = lav_options_est_ml(opt),
+    gls = lav_options_est_gls(opt),
+    ntrls = lav_options_est_ntrls(opt),
+    catml = lav_options_est_catml(opt),
+    wls = lav_options_est_wls(opt),
+    dls = lav_options_est_dls(opt),
+    dwls = ,
+    wlsm = ,
+    wlsmv = ,
+    wlsmvs = lav_options_est_dwls(opt),
+    uls = ,
+    ulsm = ,
+    ulsmv = ,
+    ulsmvs = lav_options_est_uls(opt),
+    pml = lav_options_est_pml(opt),
+    fml = lav_options_est_fml(opt),
+    reml = lav_options_est_reml(opt),
+    mml = lav_options_est_mml(opt),
+    fabin2 = ,
+    fabin3 = ,
+    mgm = ,
+    js = ,
+    jsa = ,
+    bentler1982 = lav_options_est_fabin(opt),
+    iv = lav_options_est_iv(opt),
+    lav_options_est_none(opt) # estimator = none
   )
 
   # after code specific to estimator types                          ####
@@ -615,7 +673,7 @@ lav_options_set <- function(opt = NULL) {                     # nolint
 
   # likelihood approach (wishart or normal) + sample.cov.rescale
   if (!any(lav_options_estimatorgroup(opt$estimator) ==
-           c("ML", "REML", "PML", "FML", "NTRLS", "catML"))) {
+    c("ML", "REML", "PML", "FML", "NTRLS", "catML"))) {
     # if(opt$likelihood != "default") {
     #    lav_msg_stop(gettext(
     #    "likelihood argument is only relevant if estimator = ML"))
@@ -644,7 +702,7 @@ lav_options_set <- function(opt = NULL) {                     # nolint
   # se information
   if (opt$information[1] == "default") {
     if (any(opt$missing == c("ml", "ml.x")) ||
-        any(opt$se == c("robust.huber.white", "first.order"))) {
+      any(opt$se == c("robust.huber.white", "first.order"))) {
       # nchar(opt$constraints) > 0L) {
       opt$information[1] <- "observed"
     } else {
@@ -654,10 +712,11 @@ lav_options_set <- function(opt = NULL) {                     # nolint
 
   # first.order information can not be used with robust
   if (opt$information[1] == "first.order" &&
-      any(opt$se == c("robust.huber.white", "robust.sem", "robust.sem.nt"))) {
+    any(opt$se == c("robust.huber.white", "robust.sem", "robust.sem.nt"))) {
     lav_msg_stop(gettextf(
       "information must be either %s if robust standard errors are requested.",
-      lav_msg_view(c("expected", "observed"), log.sep = "or")))
+      lav_msg_view(c("expected", "observed"), log.sep = "or")
+    ))
   }
 
   # test information
@@ -666,7 +725,7 @@ lav_options_set <- function(opt = NULL) {                     # nolint
   }
   if (opt$information[2] == "default") {
     if (any(opt$missing == c("ml", "ml.x")) ||
-        any(opt$se == c("robust.huber.white", "first.order"))) {
+      any(opt$se == c("robust.huber.white", "first.order"))) {
       # nchar(opt$constraints) > 0L) {
       opt$information[2] <- "observed"
     } else {
@@ -676,12 +735,15 @@ lav_options_set <- function(opt = NULL) {                     # nolint
 
   # first.order information cannot be used with robust
   if (opt$information[2] == "first.order" &&
-      any(opt$test %in% c("satorra.bentler", "yuan.bentler",
-                          "yuan.bentler.mplus",
-                          "mean.var.adjusted", "scaled.shifted"))) {
+    any(opt$test %in% c(
+      "satorra.bentler", "yuan.bentler",
+      "yuan.bentler.mplus",
+      "mean.var.adjusted", "scaled.shifted"
+    ))) {
     lav_msg_stop(gettextf(
       "information must be either %s if robust test statistics are requested.",
-      lav_msg_view(c("expected", "observed"), log.sep = "or")))
+      lav_msg_view(c("expected", "observed"), log.sep = "or")
+    ))
   }
 
 
@@ -702,11 +764,12 @@ lav_options_set <- function(opt = NULL) {                     # nolint
           opt$observed.information[2] <- "h1" # CHANGED in 0.6-6!
           if (any(opt$test == "yuan.bentler.mplus")) {
             lav_msg_warn(gettext(
-              "observed.information for ALL test statistics is set to h1."))
+              "observed.information for ALL test statistics is set to h1."
+            ))
           }
         } else {
           if (opt$estimator == "PML" ||
-              opt$test[1] == "yuan.bentler.mplus") {
+            opt$test[1] == "yuan.bentler.mplus") {
             opt$observed.information[2] <- "hessian"
           } else {
             opt$observed.information[2] <- "h1" # CHANGED in 0.6-6!
@@ -729,15 +792,15 @@ lav_options_set <- function(opt = NULL) {                     # nolint
 
   # check information if estimator is uls/wls and friends
   if (any(lav_options_estimatorgroup(opt$estimator) ==
-          c("ULS", "WLS", "DWLS"))) {
+    c("ULS", "WLS", "DWLS"))) {
     if (opt$information[1] != "expected") {
       lav_msg_warn(gettextf(
         "information will be set to %1$s for estimator = %2$s",
-        dQuote("expected"), dQuote(opt$estimator))
-      )
+        dQuote("expected"), dQuote(opt$estimator)
+      ))
       opt$information <- rep.int("expected", 2L)
     }
-    opt$h1.information <- rep.int("unstructured", 2L) #FIXME: allow option?
+    opt$h1.information <- rep.int("unstructured", 2L) # FIXME: allow option?
   }
 
 
@@ -774,11 +837,13 @@ lav_options_set <- function(opt = NULL) {                     # nolint
     # if(opt$conditional.x && opt$fixed.x == FALSE && !opt$.multilevel) {
     if (opt$conditional.x && opt$fixed.x == FALSE) {
       lav_msg_stop(gettext(
-        "fixed.x = FALSE is not supported when conditional.x = TRUE."))
+        "fixed.x = FALSE is not supported when conditional.x = TRUE."
+      ))
     }
     if (opt$fixed.x && is.character(opt$start) && opt$start == "simple") {
       lav_msg_warn(gettextf(
-        "start = %s implies fixed.x = FALSE", dQuote(opt$start)))
+        "start = %s implies fixed.x = FALSE", dQuote(opt$start)
+      ))
       opt$fixed.x <- FALSE
     }
   } else if (opt$fixed.x == "default") {
@@ -849,7 +914,8 @@ lav_options_set <- function(opt = NULL) {                     # nolint
     if (opt$std.lv) {
       lav_msg_stop(gettextf(
         "std.lv is set to FALSE but effect.coding contains %s",
-        dQuote("loadings")))
+        dQuote("loadings")
+      ))
     }
     # shut off auto.fix.first
     opt$auto.fix.first <- FALSE
@@ -914,14 +980,17 @@ lav_options_set <- function(opt = NULL) {                     # nolint
   ))
   if (length(wrong.idx) > 0L) {
     lav_msg_stop(gettextf(
-    "invalid option(s) for test argument: %1$s. Possible options are: %2$s.",
-    lav_msg_view(opt$test[wrong.idx]),
-    lav_msg_view(c("none", "standard", "browne.residual.adf",
-                    "browne.residual.nt", "browne.residual.adf.model",
-                    "browne.residual.nt.model", "satorra.bentler",
-                    "yuan.bentler", "yuan.bentler.mplus",
-                    "mean.var.adjusted", "scaled.shifted",
-                    "bollen.stine"), log.sep = "or")))
+      "invalid option(s) for test argument: %1$s. Possible options are: %2$s.",
+      lav_msg_view(opt$test[wrong.idx]),
+      lav_msg_view(c(
+        "none", "standard", "browne.residual.adf",
+        "browne.residual.nt", "browne.residual.adf.model",
+        "browne.residual.nt.model", "satorra.bentler",
+        "yuan.bentler", "yuan.bentler.mplus",
+        "mean.var.adjusted", "scaled.shifted",
+        "bollen.stine"
+      ), log.sep = "or")
+    ))
   }
 
   # bounds
@@ -961,7 +1030,7 @@ lav_options_set <- function(opt = NULL) {                     # nolint
   } else if (opt$bounds == "user") {
     if (length(opt$optim.bounds) == 0L) {
       lav_msg_stop(gettextf(
-        "bounds= is %s but optim.bounds= argument is empty",  dQuote("user")
+        "bounds= is %s but optim.bounds= argument is empty", dQuote("user")
       ))
     }
   } else if (opt$bounds == "default" || opt$bounds == "wide") {
@@ -1020,8 +1089,10 @@ lav_options_set <- function(opt = NULL) {                     # nolint
   }
 
   # force orthogonal for some rotation algorithms
-  if (any(opt$rotation == c("varimax", "entropy", "mccammon",
-                            "tandem1", "tandem2"))) {
+  if (any(opt$rotation == c(
+    "varimax", "entropy", "mccammon",
+    "tandem1", "tandem2"
+  ))) {
     opt$rotation.args$orthogonal <- TRUE
   }
 
@@ -1039,24 +1110,26 @@ lav_options_set <- function(opt = NULL) {                     # nolint
     } else if (!is.matrix(target)) {
       lav_msg_stop(gettext("rotation target matrix is not a matrix"))
     }
-	opt$rotation.args$order.lv.by <- "none"
+    opt$rotation.args$order.lv.by <- "none"
   }
 
   if (opt$rotation == "pst") {
     target.mask <- opt$rotation.args$target.mask
     if (is.null(target.mask) || length(target.mask) == 0L) {
-      #lav_msg_stop(gettext("rotation target.mask matrix is NULL"))
+      # lav_msg_stop(gettext("rotation target.mask matrix is NULL"))
       if (is.matrix(target)) {
         tmp <- matrix(1L, nrow = nrow(target), ncol = ncol(target))
         tmp[target != 0] <- 0L # ignore these (non-zero) elements
         opt$rotation.args$target.mask <- target.mask <- tmp
       } else if (is.list(target)) {
-        out <- lapply(1:length(target), function(g) {
-                 tmp <- matrix(1L, nrow = nrow(target[[g]]),
-                                   ncol = ncol(target[[g]]))
-                 tmp[target[[g]] != 0] <- 0L # ignore these (non-zero) elements
-                 tmp
-               })
+        out <- lapply(seq_along(target), function(g) {
+          tmp <- matrix(1L,
+            nrow = nrow(target[[g]]),
+            ncol = ncol(target[[g]])
+          )
+          tmp[target[[g]] != 0] <- 0L # ignore these (non-zero) elements
+          tmp
+        })
         opt$rotation.args$target.mask <- target.mask <- out
       }
     }
@@ -1092,26 +1165,30 @@ lav_options_set <- function(opt = NULL) {                     # nolint
       target.mask[is.na(target)] <- 0
       opt$rotation.args$target.mask <- target.mask
 
-    # list
+      # list
     } else if (is.list(target)) {
       ngroups <- length(target)
       for (g in seq_len(ngroups)) {
         if (anyNA(target[[g]])) {
           warn.flag <- TRUE
-		  # is target.mask just a <0 x 0 matrix>? create list!
-		  if (is.matrix(opt$rotation.args$target.mask)) {
-		    opt$rotation.args$target.mask <- vector("list", length = ngroups)
-		  }
+          # is target.mask just a <0 x 0 matrix>? create list!
+          if (is.matrix(opt$rotation.args$target.mask)) {
+            opt$rotation.args$target.mask <- vector("list", length = ngroups)
+          }
           opt$rotation <- "pst"
-          target.mask <- matrix(1, nrow = nrow(target[[g]]),
-                                   ncol = ncol(target[[g]]))
+          target.mask <- matrix(1,
+            nrow = nrow(target[[g]]),
+            ncol = ncol(target[[g]])
+          )
           target.mask[is.na(target[[g]])] <- 0
           opt$rotation.args$target.mask[[g]] <- target.mask
         }
       }
     }
     if (warn.flag) {
-       lav_msg_warn(gettext("switching to PST rotation as target matrix contains NA values"))
+      lav_msg_warn(gettext(
+        "switching to PST rotation as target matrix contains NA values"
+      ))
     }
   }
 
@@ -1127,8 +1204,10 @@ lav_options_set <- function(opt = NULL) {                     # nolint
   }
 
   # override if bifactor
-  if (any(opt$rotation == c("bi-geomin", "bigeomin", "bi-quartimin",
-                            "biquartimin"))) {
+  if (any(opt$rotation == c(
+    "bi-geomin", "bigeomin", "bi-quartimin",
+    "biquartimin"
+  ))) {
     opt$rotation.args$order.lv.by <- "none"
   }
 
@@ -1143,19 +1222,21 @@ lav_options_set <- function(opt = NULL) {                     # nolint
   if (opt$correlation) {
     # standardize
     opt$std.ov <- TRUE
-	# if ML, switch to GLS
-	if(opt$estimator == "ml") {
-	  #lav_msg_warn(gettext(
-	  #        "GLS should be used for correlation structures instead of ML."))
-	  opt$estimator <- "gls"
-	}
+    # if ML, switch to GLS
+    if (opt$estimator == "ml") {
+      # lav_msg_warn(gettext(
+      #        "GLS should be used for correlation structures instead of ML."))
+      opt$estimator <- "gls"
+    }
     if (opt$missing == "ml") {
       lav_msg_stop(gettext(
-        "correlation structures only work for complete data (for now)."))
+        "correlation structures only work for complete data (for now)."
+      ))
     }
     if (opt$.multilevel) {
       lav_msg_stop(gettext(
-        "correlation structures only work for single-level data."))
+        "correlation structures only work for single-level data."
+      ))
     }
     if (opt$conditional.x) {
       lav_msg_stop(gettext(
@@ -1164,11 +1245,13 @@ lav_options_set <- function(opt = NULL) {                     # nolint
     }
     if (opt$representation == "RAM") {
       lav_msg_stop(gettext(
-        "correlation structures only work for representation = \"LISREL\"."))
+        "correlation structures only work for representation = \"LISREL\"."
+      ))
     }
     if (opt$fixed.x) {
       lav_msg_stop(gettext(
-        "correlation structures only work for fixed.x = FALSE (for now)."))
+        "correlation structures only work for fixed.x = FALSE (for now)."
+      ))
     }
   }
 
@@ -1183,24 +1266,29 @@ lav_options_set <- function(opt = NULL) {                     # nolint
   if (opt$sample.cov.robust) {
     if (opt$missing != "listwise") {
       lav_msg_stop(gettext(
-        "sample.cov.robust = TRUE does not work (yet) if data is missing."))
+        "sample.cov.robust = TRUE does not work (yet) if data is missing."
+      ))
     }
     if (opt$.categorical) {
       lav_msg_stop(gettext(
-        "sample.cov.robust = TRUE does not work (yet) if data is categorical"))
+        "sample.cov.robust = TRUE does not work (yet) if data is categorical"
+      ))
     }
     if (opt$.clustered || opt$.multilevel) {
       lav_msg_stop(gettext(
-        "sample.cov.robust = TRUE does not work (yet) if data is clustered"))
+        "sample.cov.robust = TRUE does not work (yet) if data is clustered"
+      ))
     }
     if (opt$conditional.x) {
       lav_msg_stop(gettext(
-        "sample.cov.robust = TRUE does not work (yet) if conditional.x = TRUE"))
+        "sample.cov.robust = TRUE does not work (yet) if conditional.x = TRUE"
+      ))
     }
     if (all(lav_options_estimatorgroup(opt$estimator) != c("ML", "GLS"))) {
       lav_msg_stop(gettext(
         "sample.cov.robust = TRUE does not work (yet)
-        if estimator is not GLS or ML"))
+        if estimator is not GLS or ML"
+      ))
     }
   }
 
