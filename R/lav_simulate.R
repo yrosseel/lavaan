@@ -170,7 +170,7 @@ lav_data_simulate <- function(model = NULL,
     tmp <- try(
       lav_mvrnorm(
         n = sample.nobs[b],
-        mu = MU, Sigma = COV, empirical = empirical
+        mu = MU, Sigma = COV, empirical = empirical, byrow = TRUE
       ),
       silent = TRUE
     )

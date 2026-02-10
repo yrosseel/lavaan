@@ -16,12 +16,14 @@
 # eigen is the default to match MASS::mvrnorm's approach while fixing the
 # sign-flip issue with the invariant formula
 lav_mvrnorm <- function(n = 1, mu, Sigma, tol = 1e-06, empirical = FALSE,
-                        method = "eigen", checkSymmetry = TRUE) {
+                        method = "eigen", checkSymmetry = TRUE, byrow = FALSE) {
   p <- length(mu)
 
   # check symmetry (like mvtnorm)
-  if (checkSymmetry && !isSymmetric(Sigma, tol = sqrt(.Machine$double.eps),
-                                     check.attributes = FALSE)) {
+  if (checkSymmetry && !isSymmetric(Sigma,
+    tol = sqrt(.Machine$double.eps),
+    check.attributes = FALSE
+  )) {
     lav_msg_stop(gettext("'Sigma' must be a symmetric matrix in lav_mvrnorm"))
   }
 
@@ -59,10 +61,10 @@ lav_mvrnorm <- function(n = 1, mu, Sigma, tol = 1e-06, empirical = FALSE,
 
   if (empirical) {
     # generate standard normal, then apply empirical transformation
-    X <- matrix(stats::rnorm(p * n), n, p, byrow=TRUE)
-    X <- scale(X, center = TRUE, scale = FALSE)   # center
-    X <- X %*% svd(X, nu = 0)$v                   # orthogonalize
-    X <- scale(X, center = FALSE, scale = TRUE)   # unit variance
+    X <- matrix(stats::rnorm(p * n), n, p, byrow = byrow)
+    X <- scale(X, center = TRUE, scale = FALSE) # center
+    X <- X %*% svd(X, nu = 0)$v # orthogonalize
+    X <- scale(X, center = FALSE, scale = TRUE) # unit variance
 
     # transform by R
     X <- sweep(X %*% R, 2, mu, "+")
@@ -71,7 +73,7 @@ lav_mvrnorm <- function(n = 1, mu, Sigma, tol = 1e-06, empirical = FALSE,
     if (n == 1) drop(X) else X
   } else {
     # generate samples (following mvtnorm exactly)
-    X <- matrix(stats::rnorm(n * p), nrow = n, byrow=TRUE) %*% R
+    X <- matrix(stats::rnorm(n * p), nrow = n, byrow = byrow) %*% R
     X <- sweep(X, 2, mu, "+")
     colnames(X) <- nm
 
@@ -81,46 +83,52 @@ lav_mvrnorm <- function(n = 1, mu, Sigma, tol = 1e-06, empirical = FALSE,
 
 # outlier detection based on inter-quartile range
 # same as boxplot.stats, but returning the indices (not the values)
-lav_sample_outlier_idx <- function (x, coef = 1.5) {
-  if (coef < 0)
-   lav_msg_stop(gettext("'coef' must not be negative"))
+lav_sample_outlier_idx <- function(x, coef = 1.5) {
+  if (coef < 0) {
+    lav_msg_stop(gettext("'coef' must not be negative"))
+  }
   stats <- stats::fivenum(x, na.rm = TRUE)
   iqr <- diff(stats[c(2, 4)])
-  if (coef == 0)
+  if (coef == 0) {
     return(seq_len(length(x)))
-  else {
+  } else {
     out <- if (!is.na(iqr)) {
       which(x < (stats[2L] - coef * iqr) | x > (stats[4L] + coef * iqr))
+    } else {
+      which(!is.finite(x))
     }
-    else which(!is.finite(x))
   }
   out
 }
 
 # sd with trimming
 lav_sample_trimmed_sd <- function(x, na.rm = TRUE, trim = 0) {
-  if (isTRUE(na.rm))
+  if (isTRUE(na.rm)) {
     x <- x[!is.na(x)]
+  }
   n <- length(x)
   if (trim > 0 && n) {
-      if (is.complex(x))
-          lav_msg_stop(gettext("trimmed means are not defined for complex data"))
-      if (anyNA(x))
-          return(NA_real_)
-      if (trim >= 0.5)
-          return(stats::median(x, na.rm = FALSE))
-      lo <- floor(n * trim) + 1
-      hi <- n + 1 - lo
-      x <- sort.int(x, partial = unique(c(lo, hi)))[lo:hi]
+    if (is.complex(x)) {
+      lav_msg_stop(gettext("trimmed means are not defined for complex data"))
+    }
+    if (anyNA(x)) {
+      return(NA_real_)
+    }
+    if (trim >= 0.5) {
+      return(stats::median(x, na.rm = FALSE))
+    }
+    lo <- floor(n * trim) + 1
+    hi <- n + 1 - lo
+    x <- sort.int(x, partial = unique(c(lo, hi)))[lo:hi]
   }
   sd(x)
 }
 
 # mdist = Mahalanobis distance
 lav_sample_mdist <- function(Y, Mp = NULL, wt = NULL,
-                      Mu = NULL, Sigma = NULL,
-                      Sinv.method = "eigen", ginv = TRUE,
-                      rescale = FALSE) {
+                             Mu = NULL, Sigma = NULL,
+                             Sinv.method = "eigen", ginv = TRUE,
+                             rescale = FALSE) {
   # check input
   Y <- as.matrix(Y)
   P <- NCOL(Y)
@@ -188,7 +196,8 @@ lav_sample_mdist <- function(Y, Mp = NULL, wt = NULL,
       )
     if (inherits(Sigma.inv, "try-error")) {
       lav_msg_warn(gettext(
-        "problem computing distances: could not invert Sigma"))
+        "problem computing distances: could not invert Sigma"
+      ))
       return(DIST)
     }
   }
@@ -256,7 +265,8 @@ lav_cor2cov <- function(R, sds, names = NULL) {
 
   if (any(!is.finite(sds))) {
     lav_msg_warn(gettext(
-      "sds had 0 or NA entries; non-finite result is doubtful"))
+      "sds had 0 or NA entries; non-finite result is doubtful"
+    ))
   }
 
   # if(sum(diag(R)) != p)
