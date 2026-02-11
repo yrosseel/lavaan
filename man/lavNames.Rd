@@ -49,9 +49,9 @@ The following variable types are available:
 
   \item \code{"lv"}: latent variables
 
-  \item \code{"lv.regular"}: latent variables (defined by =~ only)
+  \item \code{"lv.regular"}: measured latent variables (defined by =~ only)
 
-  \item \code{"lv.formative"}: latent variables (defined by <~ only)
+  \item \code{"lv.composite"}: composites (defined by <~ only)
 
   \item \code{"lv.x"}: (pure) exogenous variables
 

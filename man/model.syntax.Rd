@@ -214,7 +214,7 @@ string enclosed by single quotes as in the example below.
     y12 ~*~ y12
     y13 ~*~ y13
 
-  # 7. formative factors
+  # 7. composites
     f5 <~ z1 + z2 + z3 + z4
 '
 }
@@ -269,12 +269,12 @@ There can be seven types of formula-like expressions in the model syntax:
       parameterization, in a multiple group analysis when factor indicators
       are categorical.
 
-    \item Formative factors: The \code{"<~"} operator can be used to define
-      a formative factor (on the right hand side of the operator), in a
-      similar way to how a reflexive factor is defined (using the \code{"=~"}
-      operator). This is just syntax sugar to define a phantom latent
-      variable (equivalent to using \code{"f =~ 0"}). And in addition, the
-      (residual) variance of the formative factor is fixed to zero.
+    \item Composites: The \code{"<~"} operator can be used to define
+      a composite (on the right hand side of the operator).
+      A composite is a weighted linear combination of its composite indicators.
+      The name of the composite variable is on the left of the \code{"<~"} 
+      operator, while the terms on the right, separated by \code{"+"} 
+      operators, are the indicators of the composite variable.
 }
 There are 4 additional operators, also with left- and right-hand sides, that can
 be included in model syntax.  Three of them are used to specify (in)equality
