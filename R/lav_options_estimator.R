@@ -587,8 +587,10 @@ lav_options_est_iv <- function(opt) {
   }
   # test
   if (opt$test == "default") {
-    opt$test <- "none" # for now
+    opt$test <- "browne.residual.nt" # sample-based (especially for baseline)
   }
+  opt$standard.test <- opt$test
+
   # missing
   opt$missing <- "listwise" # for now
 

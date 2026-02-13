@@ -137,7 +137,9 @@ lav_object_independence <- lav_object_baseline <- function(object = NULL,
   npar <- lav_partable_npar(lavpartable)
   if (npar > 0L) {
     lavoptions$do.fit <- TRUE
-    lavoptions$optim.method <- "nlminb"
+    if(lavoptions$optim.method != "noniter") {
+      lavoptions$optim.method <- "nlminb"
+    }
   } else {
     # perhaps a correlation structure?
     lavoptions$optim.method <- "none"

@@ -68,20 +68,50 @@ lav_sem_miiv_2sls_rawdata <- function(lavmodel = NULL, lavpartable = NULL,
   # for now: - no equality constraints (yet)
   #          - only OLS (not robust, no lasso, ...)
   for (b in seq_len(nblocks)) {
+
+    # ov.names for this block
     ov.names <- lavpta$vnames$ov[[b]]
+
+    # raw data for this block
     XY <- lavdata@X[[b]]
+
+    # estimation per equation
     for (j in seq_along(eqs[[b]])) {
+
+      # this equation
       eq <- eqs[[b]][[j]]
 
-      # variable indices
-      y.idx <- match(eq$lhs_new, ov.names)
-      x.idx <- match(eq$rhs_new, ov.names)
-      i.idx <- match(eq$miiv, ov.names)
+      # iv_flag?
+      iv_flag <- TRUE
+      if (!is.null(eq$iv_flag)) {
+        iv_flag <- eq$iv_flag
+      } else {
+        # if rhs_new matches miiv, iv_flag is FALSE
+        if (identical(eq$rhs_new, eq$miiv)) {
+          iv_flag <- FALSE
+        }
+      }
 
-      # matrices
-      imat <- cbind(1, XY[, i.idx, drop = FALSE]) # instruments
-      xmat <- XY[, x.idx, drop = FALSE] # x-variables
+      # Y: there is always an y variable
+      y.idx <- match(eq$lhs_new, ov.names)
       yvec <- XY[, y.idx, drop = TRUE] # y-variable (always scalar)
+
+      # X: usually, there are x variables (apart from the "1")
+      if (identical(eq$rhs_new, "1")) {
+        x.idx <- integer(0L)
+        xmat <- matrix(0, nrow = nrow(XY), ncol = 0L)
+      } else {
+        x.idx <- match(eq$rhs_new, ov.names)
+        xmat <- XY[, x.idx, drop = FALSE]
+      }
+
+      # Z: instruments
+      if (iv_flag) {
+        i.idx <- match(eq$miiv, ov.names)
+        imat <- cbind(1, XY[, i.idx, drop = FALSE]) # instruments
+      }
+
+      # weights
       weights <- lavdata@weights[[b]]
 
       # sargan vector
@@ -89,7 +119,7 @@ lav_sem_miiv_2sls_rawdata <- function(lavmodel = NULL, lavpartable = NULL,
       names(sargan) <- c("stat", "df", "pvalue")
 
       # 0. check
-      if (length(eq$miiv) < length(eq$rhs)) {
+      if (iv_flag && length(eq$miiv) < length(eq$rhs)) {
         # what to do? skip, or proceed anyway?
         eqs[[b]][[j]]$df <- as.integer(NA)
         eqs[[b]][[j]]$vcov <- matrix(0, 0L, 0L)
@@ -98,21 +128,26 @@ lav_sem_miiv_2sls_rawdata <- function(lavmodel = NULL, lavpartable = NULL,
       }
 
       # 1. regress x on instruments
-      if (is.null(weights)) {
-        fit_x_on_z <- lm.fit(x = imat, y = xmat)
+      if (iv_flag) {
+        if (is.null(weights)) {
+          fit_x_on_z <- lm.fit(x = imat, y = xmat)
+        } else {
+          fit_x_on_z <- lm.wfit(x = imat, y = xmat, weights = weights)
+        }
+        # check for NA's
+        if (anyNA(fit_x_on_z$coefficients)) {
+          lav_msg_warn(gettextf(
+            "regression %s on %s failed (NAs);
+                                 redundant instruments?",
+            paste(ov.names[x.idx], collapse = " + "),
+            paste(ov.names[i.idx], collapse = " + ")
+          ))
+        }
+        xhat <- as.matrix(fit_x_on_z$fitted.values)
       } else {
-        fit_x_on_z <- lm.wfit(x = imat, y = xmat, weights = weights)
+        # just plain regression: x == xhat
+        xhat <- xmat
       }
-      # check for NA's
-      if (anyNA(fit_x_on_z$coefficients)) {
-        lav_msg_warn(gettextf(
-          "regression %s on %s failed (NAs);
-                               redundant instruments?",
-          paste(ov.names[x.idx], collapse = " + "),
-          paste(ov.names[i.idx], collapse = " + ")
-        ))
-      }
-      xhat <- as.matrix(fit_x_on_z$fitted.values)
 
       # 2. regress y on xhat
       if (is.null(weights)) {
@@ -125,24 +160,36 @@ lav_sem_miiv_2sls_rawdata <- function(lavmodel = NULL, lavpartable = NULL,
       }
 
       # 3. fill estimates in x
-      x[lavpartable$free[eq$pt]] <- fit_y_on_xhat$coefficients[-1]
-      if (lavmodel@meanstructure) {
-        x[lavpartable$free[eq$ptint]] <- fit_y_on_xhat$coefficients[1]
+      # - eq$pt contains partable/user rows
+      # - lavpartable$free[eq$pt] should give the free idx
+      free.idx <- lavpartable$free[eq$pt]
+      if (length(x.idx) > 0L) {
+        if (all(free.idx > 0L)) {
+          x[free.idx] <- fit_y_on_xhat$coefficients[-1]
+        } else {
+          # remove non-free elements
+          zero.idx <- which(free.idx == 0L)
+          x[free.idx[-zero.idx]] <- fit_y_on_xhat$coefficients[-1][-zero.idx]
+        }
       }
-      # 3b. take care of exogenous variables
-      # TODO
+      if (lavmodel@meanstructure) {
+        free.int.idx <- lavpartable$free[eq$ptint]
+        if (free.int.idx > 0L) {
+          x[free.int.idx] <- fit_y_on_xhat$coefficients[1]
+        }
+      }
 
       # 4. resvar
       notna.idx <- unname(which(!is.na(fit_y_on_xhat$coefficients)))
       ycoef <- fit_y_on_xhat$coefficients[notna.idx]
       res <- yvec - drop(cbind(1, xmat)[, notna.idx, drop = FALSE] %*% ycoef)
-      df <- fit_y_on_xhat$df.residual
+      df_res <- fit_y_on_xhat$df.residual
       if (is.null(weights)) {
         sse <- sum(res * res)
       } else {
         sse <- sum(weights * res * res)
       }
-      # resvar <- sse / df # what we should do...
+      # resvar <- sse / df_res # what we should do...
       resvar <- sse / length(res)
 
       # 5. naive cov (for standard errors) (see summary.lm in base R)
@@ -151,57 +198,32 @@ lav_sem_miiv_2sls_rawdata <- function(lavmodel = NULL, lavpartable = NULL,
       vcov <- R * resvar # scaled (for now)
 
       # 6. Sargan test (see summary.ivreg.R 363--371)
-      sargan["df"] <- length(i.idx) - length(x.idx)
-      if (sargan["df"] > 0L) {
-        if (is.null(weights)) {
-          fit_yres_on_z <- lm.fit(x = imat, y = res)
-          rssr <- sum((res - mean(res))^2)
-          sse2 <- sum(fit_yres_on_z$residuals * fit_yres_on_z$residuals)
-        } else {
-          fit_yres_on_z <- lm.wfit(x = imat, y = res, weights = weights)
-          rssr <- sum(weights * (res - weighted.mean(res, weights))^2)
-          sse2 <- sum(weights * fit_yres_on_z$residuals *
-            fit_yres_on_z$residuals)
+      if (iv_flag) {
+        sargan["df"] <- length(i.idx) - length(x.idx)
+        if (sargan["df"] > 0L) {
+          if (is.null(weights)) {
+            fit_yres_on_z <- lm.fit(x = imat, y = res)
+            rssr <- sum((res - mean(res))^2)
+            sse2 <- sum(fit_yres_on_z$residuals * fit_yres_on_z$residuals)
+          } else {
+            fit_yres_on_z <- lm.wfit(x = imat, y = res, weights = weights)
+            rssr <- sum(weights * (res - weighted.mean(res, weights))^2)
+            sse2 <- sum(weights * fit_yres_on_z$residuals *
+              fit_yres_on_z$residuals)
+          }
+          sargan["stat"] <- length(res) * (1 - sse2 / rssr)
+          sargan["pvalue"] <- pchisq(sargan["stat"], sargan["df"],
+            lower.tail = FALSE
+          )
         }
-        sargan["stat"] <- length(res) * (1 - sse2 / rssr)
-        sargan["pvalue"] <- pchisq(sargan["stat"], sargan["df"],
-          lower.tail = FALSE
-        )
       }
 
       # add info to eqs list
-      eqs[[b]][[j]]$df <- df
+      eqs[[b]][[j]]$df <- df_res
       eqs[[b]][[j]]$vcov <- vcov
       eqs[[b]][[j]]$sargan <- sargan
     } # eqs
 
-    # take care of exogenous latent variable intercepts
-    if (lavmodel@meanstructure && lavoptions$marker.int.zero) {
-      lv.x <- lavpta$vnames$lv.x[[b]]
-      if (length(lv.x) > 0L) {
-        target.id <- which(lavpartable$op == "~1" &
-          lavpartable$block == b &
-          lavpartable$free != 0 &
-          lavpartable$lhs %in% lv.x)
-        ov.idx <- match(lavpta$vnames$lv.marker[[b]][lv.x], ov.names)
-        ov.mean <- colMeans(XY[, ov.idx, drop = FALSE])
-        x[lavpartable$free[target.id]] <- ov.mean
-      }
-    }
-
-    # take care of exogenous observed intercepts (if fixed.x = FALSE)
-    if (lavmodel@meanstructure && !lavoptions$fixed.x) {
-      ov.x <- lavpta$vnames$ov.x[[b]]
-      if (length(ov.x) > 0L) {
-        target.id <- which(lavpartable$op == "~1" &
-          lavpartable$block == b &
-          lavpartable$free != 0 &
-          lavpartable$lhs %in% ov.x)
-        ov.idx <- match(ov.x, ov.names)
-        ov.mean <- colMeans(XY[, ov.idx, drop = FALSE])
-        x[lavpartable$free[target.id]] <- ov.mean
-      }
-    }
   } # nblocks
 
   # return partially filled in x

@@ -63,9 +63,9 @@ lav_model_find_iv <- function(lavobject = NULL, lavmodel = NULL,
     for (b in seq_len(nblocks)) {
       eqs <- iv_list[[b]]
       lhs <- sapply(eqs, "[[", "lhs")
-      rhs <- sapply(lapply(eqs, "[[", "rhs"), paste, collapse = ", ")
+      rhs <- sapply(lapply(eqs, "[[", "rhs"), paste, collapse = " + ")
       lhs_new <- sapply(eqs, "[[", "lhs_new")
-      rhs_new <- sapply(lapply(eqs, "[[", "rhs_new"), paste, collapse = ", ")
+      rhs_new <- sapply(lapply(eqs, "[[", "rhs_new"), paste, collapse = " + ")
       miiv <- sapply(lapply(eqs, "[[", "miiv"), paste, collapse = ", ")
       table[[b]] <- data.frame(
         lhs = lhs, rhs = rhs,
@@ -166,6 +166,10 @@ lav_model_find_iv_bb2004 <- function(lavmodel = NULL, lavpta = NULL) {
       nu <- glist[[nu.idx[b]]]
       alpha <- glist[[alpha.idx[b]]]
     }
+    if (is.null(beta)) {
+      beta <- matrix(0, ncol(lambda), ncol(lambda))
+      colnames(beta) <- rownames(beta) <- colnames(lambda)
+    }
 
     # binary model matrices: nonzero = 1, zero = 0
     if (length(lv.idx) == 0L) {
@@ -173,14 +177,9 @@ lav_model_find_iv_bb2004 <- function(lavmodel = NULL, lavpta = NULL) {
     } else {
       lambda_bin <- (lambda != 0) * 1L
     }
-    if (!is.null(beta)) {
-      beta_bin <- (beta != 0) * 1L
-      ibinv <- solve(diag(nrow(beta_bin)) - beta_bin)
-      ibinv_bin <- (ibinv != 0) * 1L
-    } else {
-      beta_bin <- matrix(0, nrow = 0L, ncol = ncol(lambda))
-      ibinv_bin <- diag(nrow = ncol(lambda_bin))
-    }
+    beta_bin <- (beta != 0) * 1L
+    ibinv <- solve(diag(nrow(beta_bin)) - beta_bin)
+    ibinv_bin <- (ibinv != 0) * 1L
 
     # construct pred
     if (length(lv.idx) > 0L) {
@@ -220,15 +219,16 @@ lav_model_find_iv_bb2004 <- function(lavmodel = NULL, lavpta = NULL) {
     # replace marker rows, with beta entries of their corresponding lv's
     # dummy y + regular lv's
     if (length(lv.idx) > 0L && !is.null(beta)) {
-      tmp_lv <- tmp[length(ov.names) + lv.idx, , drop = FALSE]
+      tmp_lv <- tmp_lv2 <- tmp[length(ov.names) + lv.idx, , drop = FALSE]
       orig_lv <- pred_orig[length(ov.names) + lv.idx, , drop = FALSE]
       if (lavmodel@meanstructure) {
         int_lv <- int_orig[length(ov.names) + lv.idx, , drop = FALSE]
+        tmp_lv2 <- cbind(int_lv, tmp_lv)
       }
 
       # tmp[lv.marker.idx, ] <- tmp[length(ov.names) + lv.idx, ]
       # careful, lv.marker.idx may contain the same element multiple times!
-      zerolv.idx <- which(apply(tmp_lv, 1, function(x) all(x == 0)))
+      zerolv.idx <- which(apply(tmp_lv2, 1, function(x) all(x == 0)))
       if (length(zerolv.idx) > 0L) {
         tmp_lv <- tmp_lv[-zerolv.idx, , drop = FALSE]
         orig_lv <- orig_lv[-zerolv.idx, , drop = FALSE]
@@ -243,6 +243,11 @@ lav_model_find_iv_bb2004 <- function(lavmodel = NULL, lavpta = NULL) {
       pred_orig <- pred_orig[1:nvar, , drop = FALSE]
       if (lavmodel@meanstructure) {
         int_orig[r.idx, ] <- int_lv
+        # also exogenous ov's!
+        lv.x.dummy.idx <- lavmodel@ov.x.dummy.lv.idx[[b]]
+        if (length(lv.x.dummy.idx) > 0L) {
+          int_orig[lavmodel@ov.x.dummy.ov.idx[[b]],1] <- alpha[lv.x.dummy.idx,1]
+        }
         rownames(int_orig)[r.idx] <- rownames(int_lv)
         int_orig <- int_orig[1:nvar, , drop = FALSE]
       }
@@ -353,6 +358,16 @@ lav_model_find_iv_bb2004 <- function(lavmodel = NULL, lavpta = NULL) {
       } # instruments needed
     }
 
+    # add intercepts here
+    if (lavmodel@meanstructure) {
+      colnames(int_orig) <- "1"
+      pred <- cbind(int_orig, pred)
+      pred_orig <- cbind(int_orig, pred_orig)
+
+      idx <- match(names(lv.marker), rownames(pred))
+      rownames(pred)[idx] <- lv.marker
+    }
+
     # remove 'empty' rows
     empty.idx <- which(apply(pred, 1L, function(x) all(x == 0)) &
       rownames(pred) %in% ov.names)
@@ -365,7 +380,7 @@ lav_model_find_iv_bb2004 <- function(lavmodel = NULL, lavpta = NULL) {
         int_orig <- int_orig[-empty.idx, , drop = FALSE]
       }
     }
-    # replace colnames of pred by marker names
+    # replace row/colnames of pred by marker names
     idx <- match(names(lv.marker), colnames(pred))
     colnames(pred)[idx] <- lv.marker
 
@@ -376,24 +391,34 @@ lav_model_find_iv_bb2004 <- function(lavmodel = NULL, lavpta = NULL) {
       x.idx <- which(pred[j, ] != 0)
       ptint <- integer(0L)
       if (lavmodel@meanstructure) {
-        ptint <- unname(int_orig[j, 1])
+        x.idx <- x.idx[-1]
+        ptint <- unname(pred_orig[j, 1])
+      }
+      if (lavmodel@meanstructure && length(x.idx) == 0L) {
+        rhs_new <- "1"
+        rhs <- "1"
+        miiv <- "1"
+      } else {
+        rhs_new <- colnames(pred[j, x.idx, drop = FALSE])
+        rhs <- colnames(pred_orig[j, x.idx, drop = FALSE])
+        miiv <- colnames(iv[j, iv[j, ] != 0, drop = FALSE])
       }
       eqs[[j]] <- list(
         lhs_new = rownames(pred)[j],
-        rhs_new = colnames(pred[j, x.idx, drop = FALSE]),
+        rhs_new = rhs_new,
         lhs = rownames(pred_orig)[j],
-        rhs = colnames(pred_orig[j, x.idx, drop = FALSE]),
+        rhs = rhs,
         pt = unname(pred_orig[j, x.idx]),
         ptint = ptint,
         cet = cet,
         markers = unique(lv.marker[cet[-1]]),
-        miiv = colnames(iv[j, iv[j, ] != 0, drop = FALSE])
+        miiv = miiv
       )
     }
 
     # reorder so that ov lhs come first, then lv lhs
     lhs <- sapply(eqs, "[[", "lhs")
-    ov.idx <- which(lhs %in% ov.names)
+    ov.idx <- match(ov.names[ov.names %in% lhs], lhs)
     lv.idx <- seq_along(lhs)[-ov.idx]
     eqs <- eqs[c(ov.idx, lv.idx)]
 
@@ -471,22 +496,22 @@ lav_model_find_iv_miivsem <- function(lavmodel = NULL, lavpta = NULL) {
     }
 
     # lambda+beta
-    lambda_beta <- pred_orig <- rbind(lambda, beta)
-    if (lavmodel@meanstructure) {
-      int_orig <- rbind(nu, alpha)
+    if (is.null(beta)) {
+      beta <- matrix(0, ncol(lambda), ncol(lambda))
     }
+    lambda_beta <- rbind(lambda, beta)
+    pred_orig <- lambda_beta
     lambda_beta[lambda_beta != 0] <- as.numeric(NA)
     # add markers
     row.idx <- match(lavpta$vnames$lv.marker[[b]], rownames(lambda_beta))
     col.idx <- match(names(lavpta$vnames$lv.marker[[b]]), colnames(lambda_beta))
     lambda_beta[cbind(row.idx, col.idx)] <- 1
+    pred <- lambda_beta
+    pred_orig_full <- pred_orig
     empty.idx <- which(apply(lambda_beta, 1L, function(x) all(x == 0)))
     if (length(empty.idx) > 0) {
       lambda_beta <- lambda_beta[-empty.idx, , drop = FALSE]
       pred_orig <- pred_orig[-empty.idx, , drop = FALSE]
-      if (lavmodel@meanstructure) {
-        int_orig <- int_orig[-empty.idx, , drop = FALSE]
-      }
     }
 
     # error + zero matrix, to create gamma and beta
@@ -540,11 +565,23 @@ lav_model_find_iv_miivsem <- function(lavmodel = NULL, lavpta = NULL) {
     ib_inv <- solve(I - Beta)
     big_sigma <- ib_inv %*% Gamma %*% Phi %*% t(Gamma) %*% t(ib_inv)
     sigma_ov <- big_sigma[ov.names, , drop = FALSE] # only rows with ov.names
+    e_names <- colnames(gamma)[grep("e\\.", colnames(gamma))]
 
-    # matrix of all regressions
-    gamma_beta <- cbind(gamma, beta)
-    gamma_beta_orig <- cbind(gamma_orig, beta_orig)
-    e_names <- colnames(gamma_beta)[grep("e\\.", colnames(gamma_beta))]
+
+    # matrix of all regressions (nothing has been removed yet, here)
+    gamma_beta <- pred
+    gamma_beta_orig <- pred_orig_full
+
+    # add intercepts here
+    if (lavmodel@meanstructure) {
+      int <- rbind(nu, alpha); colnames(int) <- "1"
+      int_orig <- int
+      int[int != 0] <- as.numeric(NA)
+      idx <- match(lv.marker, rownames(int))
+      int[idx, 1] <- 1
+      gamma_beta <- cbind(int, gamma_beta)
+      gamma_beta_orig <- cbind(int_orig, gamma_beta_orig)
+    }
 
     # select only those rows of gamma_beta that have at least one free (NA)
     # element
@@ -555,16 +592,21 @@ lav_model_find_iv_miivsem <- function(lavmodel = NULL, lavpta = NULL) {
       # lhs
       eq_lhs <- eq_lhs_orig <- eqs_y_free[j]
 
+      # index in gamma_beta
+      jj <- free.idx[j]
+
       # lhs + rhs
-      zero.idx <- which(gamma_beta[eq_lhs, ] != 0) # fixed or error term
-      na.idx <- which(is.na(gamma_beta[eq_lhs, ])) # free/NA
+      zero.idx <- which(gamma_beta[jj, ] != 0) # fixed or error term
+      na.idx <- which(is.na(gamma_beta[jj, ])) # free/NA
       eq_rhs <- eq_rhs_orig <- colnames(gamma_beta)[c(zero.idx, na.idx)]
-      eq_all <- c(eq_lhs, eq_rhs)
-      pt <- unname(gamma_beta_orig[eq_lhs, na.idx])
+      pt <- unname(gamma_beta_orig[jj, na.idx])
       ptint <- integer(0L)
       if (lavmodel@meanstructure) {
-        ptint <- unname(int_orig[eq_lhs, 1L])
+        ptint <- unname(int_orig[jj, 1L])
+        eq_rhs <- eq_rhs[-1]
+        eq_rhs_orig <- eq_rhs_orig[-1]
       }
+      eq_all <- c(eq_lhs, eq_rhs)
 
       # markers + composite error term (cet)
       cet <- paste("e.", eq_lhs, sep = "")
@@ -595,24 +637,30 @@ lav_model_find_iv_miivsem <- function(lavmodel = NULL, lavpta = NULL) {
       eq_lhs <- eq_all[1]
       eq_rhs <- eq_all[-1]
 
-      # observed variables that are uncorrelated with all the components of
-      # the composite error term
-      ov_uncorrelated_with_cet <-
-        ov.names[apply(sigma_ov[, cet, drop = FALSE] == 0, 1L, all)]
+      if (length(eq_rhs) > 0L) {
+        # observed variables that are uncorrelated with all the components of
+        # the composite error term
+        ov_uncorrelated_with_cet <-
+          ov.names[apply(sigma_ov[, cet, drop = FALSE] == 0, 1L, all)]
 
-      # observed variables that have at least one non-zero implied correlation
-      # with any of the marker indicators (vector i).
-      ov_correlated_with_markers <-
-        ov.names[apply(sigma_ov[, markers, drop = FALSE] != 0, 1, all)]
+        # observed variables that have at least one non-zero implied correlation
+        # with any of the marker indicators (vector i).
+        ov_correlated_with_markers <-
+          ov.names[apply(sigma_ov[, markers, drop = FALSE] != 0, 1, all)]
 
-      # valid instruments
-      miivs <- intersect(ov_uncorrelated_with_cet, ov_correlated_with_markers)
+        # valid instruments
+        miivs <- intersect(ov_uncorrelated_with_cet, ov_correlated_with_markers)
+     } else {
+        eq_rhs <- "1"
+        eq_rhs_orig <- "1"
+        miivs <- "1"
+     }
 
       eqs[[j]] <- list(
         lhs_new = eq_lhs,
-        rhs_new = setdiff(eq_rhs, e_names),
+        rhs_new = eq_rhs,
         lhs = eq_lhs_orig,
-        rhs = setdiff(eq_rhs_orig, e_names),
+        rhs = eq_rhs_orig,
         pt = pt,
         ptint = ptint,
         cet = cet,
@@ -620,6 +668,12 @@ lav_model_find_iv_miivsem <- function(lavmodel = NULL, lavpta = NULL) {
         miiv = miivs
       )
     }
+
+    # reorder so that ov lhs come first, then lv lhs
+    lhs <- sapply(eqs, "[[", "lhs")
+    ov.idx <- match(ov.names[ov.names %in% lhs], lhs)
+    lv.idx <- seq_along(lhs)[-ov.idx]
+    eqs <- eqs[c(ov.idx, lv.idx)]
 
     iv_list[[b]] <- eqs
   } # nblocks
@@ -668,7 +722,6 @@ lav_model_find_iv_covuy <- function(lavmodel = NULL, lavpta = NULL) {
     }
   }
 
-
   # generate random sigma per block
   sigma <- lav_model_sigma(lavmodel, GLIST = glistr, extra = FALSE)
   sigma_aug <- lav_model_cov_both(lavmodel, GLIST = glistr)
@@ -696,6 +749,9 @@ lav_model_find_iv_covuy <- function(lavmodel = NULL, lavpta = NULL) {
     # model matrices for this block
     lambda <- glist[[lambda.idx[b]]]
     beta <- glist[[beta.idx[b]]]
+    if (is.null(beta)) {
+      beta <- matrix(0, nfac, nfac)
+    }
     if (lavmodel@meanstructure) {
       nu <- glist[[nu.idx[b]]]
       alpha <- glist[[alpha.idx[b]]]
@@ -753,15 +809,15 @@ lav_model_find_iv_covuy <- function(lavmodel = NULL, lavpta = NULL) {
 
     # construct pred
     pred <- rbind(lambda, beta)
-    if (lavmodel@meanstructure) {
-      int_orig <- rbind(nu, alpha)
-    }
-    # remove scaling '1' for markers (if any)
-    if (length(lv.marker.idx) > 0L) {
-      pred[lv.marker.idx, ] <- 0
-    }
-    pred_orig <- pred
 
+    # if meanstructure, add intercepts
+    if (lavmodel@meanstructure) {
+      int <- rbind(nu, alpha)
+      colnames(int) <- "1" # shorter than "intercept"
+      pred <- cbind(int, pred)
+    }
+
+    pred_orig <- pred
     # replace col/rownames of pred by marker names
     idx <- match(names(ov.marker), colnames(pred))
     idx <- idx[!is.na(idx)]
@@ -770,14 +826,16 @@ lav_model_find_iv_covuy <- function(lavmodel = NULL, lavpta = NULL) {
     idx <- idx[!is.na(idx)]
     rownames(pred)[idx] <- ov.marker
 
+    # remove scaling '1' for markers (if any)
+    if (length(lv.marker.idx) > 0L) {
+      pred[lv.marker.idx, ] <- 0
+    }
+
     # remove 'empty' rows
     empty.idx <- which(apply(pred, 1L, function(x) all(x == 0)))
     if (length(empty.idx) > 0L) {
       pred <- pred[-empty.idx, , drop = FALSE]
       pred_orig <- pred_orig[-empty.idx, , drop = FALSE]
-      if (lavmodel@meanstructure) {
-        int_orig <- int_orig[-empty.idx, , drop = FALSE]
-      }
     }
 
     # prepare list
@@ -787,13 +845,18 @@ lav_model_find_iv_covuy <- function(lavmodel = NULL, lavpta = NULL) {
       x.idx <- which(pred[j, ] != 0)
       rhs <- colnames(pred)[x.idx]
       ptint <- integer(0L)
-      if (lavmodel@meanstructure) {
-        ptint <- unname(int_orig[j, 1])
+      if (lavmodel@meanstructure && pred[j, 1] != 0) {
+        ptint <- unname(pred_orig[j, 1])
+        rhs <- rhs[-1]
+        x.idx <- x.idx[-1]
       }
 
       # instruments needed?
       iv_flag <- TRUE
-      if (all(cov_u_y[lhs, rhs] == 0)) {
+      if (lavmodel@meanstructure && length(x.idx) == 0L) {
+        iv_flag <- FALSE
+        miiv <- "1"
+      } else if (all(cov_u_y[lhs, rhs] == 0)) {
         iv_flag <- FALSE
         miiv <- rhs
       } else {
@@ -807,17 +870,34 @@ lav_model_find_iv_covuy <- function(lavmodel = NULL, lavpta = NULL) {
         miiv <- ov.names[correlated_with_pred & uncorrelated_with_u]
       }
 
+      # prepare rhs, rhs_new, pt
+      if (length(x.idx) == 0) {
+        rhs_new <- "1"
+        rhs <- "1"
+        pt <- integer(0L)
+      } else {
+        rhs_new <- colnames(pred[j, x.idx, drop = FALSE])
+        rhs <- colnames(pred_orig[j, x.idx, drop = FALSE])
+        pt <- as.integer(unname(pred_orig[j, x.idx]))
+      }
+
       eqs[[j]] <- list(
         lhs_new = rownames(pred)[j],
-        rhs_new = colnames(pred[j, x.idx, drop = FALSE]),
+        rhs_new = rhs_new,
         lhs = rownames(pred_orig)[j],
-        rhs = colnames(pred_orig[j, x.idx, drop = FALSE]),
-        pt = unname(pred_orig[j, x.idx]),
+        rhs = rhs,
+        pt = pt,
         ptint = ptint,
         iv_flag = iv_flag,
         miiv = miiv
       )
     }
+
+    # reorder so that ov lhs come first, then lv lhs
+    lhs <- sapply(eqs, "[[", "lhs")
+    ov.idx <- match(ov.names[ov.names %in% lhs], lhs)
+    lv.idx <- seq_along(lhs)[-ov.idx]
+    eqs <- eqs[c(ov.idx, lv.idx)]
 
     iv_list[[b]] <- eqs
   }

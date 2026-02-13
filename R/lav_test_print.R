@@ -6,6 +6,8 @@
 
 # this is used by the summary() function and lavTest(, output = "text")
 
+# YR 13 Feb 2026: if test[[1]] has stat = NA, skip if there are other tests
+
 lav_test_print <- function(object, nd = 3L) {
   # object is list of tests
   TEST <- object
@@ -18,6 +20,11 @@ lav_test_print <- function(object, nd = 3L) {
   # test = "none"?
   if (TEST[[1]]$test == "none") {
     return(character(0L))
+  }
+
+  # remove empty first test (stat = NA) if multiple tests are available)
+  if (length(TEST) > 1L && is.na(TEST[[1]]$stat)) {
+    TEST <- TEST[-1]
   }
 
   # meta data

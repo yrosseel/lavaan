@@ -414,6 +414,9 @@ lav_model_test <- function(lavobject = NULL,
     } else {
       chisq.group <- rep(as.numeric(NA), lavdata@ngroups)
     }
+  } else if (lavoptions$estimator %in% c("IV")) {
+    # no 'standard' chi-square statistic
+    chisq.group <- rep(as.numeric(NA), lavdata@ngroups)
   } else {
     # get fx.group
     fx <- attr(x, "fx")
