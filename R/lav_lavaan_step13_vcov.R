@@ -40,16 +40,30 @@ lav_lavaan_step13_vcov_boot <- function(lavoptions = NULL,
     if (lav_verbose()) {
       cat("computing VCOV for      se =", lavoptions$se, "...")
     }
-    VCOV <- lav_model_vcov( # nolint
-      lavmodel = lavmodel,
-      lavsamplestats = lavsamplestats,
-      lavoptions = lavoptions,
-      lavdata = lavdata,
-      lavpartable = lavpartable,
-      lavcache = lavcache,
-      lavimplied = lavimplied,
-      lavh1 = lavh1
-    )
+    # special case: estimator = "IV"
+    if (lavoptions$estimator %in% "IV" && !is.null(attr(x, "eqs"))) {
+      VCOV <- lav_sem_miiv_vcov(
+        lavmodel = lavmodel,
+        lavsamplestats = lavsamplestats,
+        lavoptions = lavoptions,
+        lavpartable = lavpartable,
+        lavimplied = lavimplied,
+        lavh1 = lavh1,
+        eqs = attr(x, "eqs")
+      )
+    } else {
+      # everything else:
+      VCOV <- lav_model_vcov( # nolint
+        lavmodel = lavmodel,
+        lavsamplestats = lavsamplestats,
+        lavoptions = lavoptions,
+        lavdata = lavdata,
+        lavpartable = lavpartable,
+        lavcache = lavcache,
+        lavimplied = lavimplied,
+        lavh1 = lavh1
+      )
+    }
     if (lav_verbose()) {
       cat(" done.\n")
     }

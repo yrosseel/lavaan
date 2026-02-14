@@ -107,6 +107,13 @@ lav_lavaan_step02_options <- function(slotOptions = NULL, # nolint
     # modifyList
     opt <- modifyList(opt, dotdotdot)
 
+    # extract estimator
+    if (is.list(opt$estimator)) {
+      estimator <- opt$estimator$estimator
+    } else {
+      estimator <- opt$estimator
+    }
+
     # no data?
     if (is.null(slotData) && is.null(data) && is.null(sample.cov)) {
       opt$bounds <- FALSE
@@ -146,14 +153,14 @@ lav_lavaan_step02_options <- function(slotOptions = NULL, # nolint
         opt$.categorical <- TRUE
       }
     }
-    if (tolower(opt$estimator) == "catml") {
+    if (tolower(estimator) == "catml") {
       opt$.categorical <- FALSE
     }
 
     # clustered?
     if (length(cluster) > 0L) {
       opt$.clustered <- TRUE
-      if (opt$.categorical && opt$estimator != "PML") {
+      if (opt$.categorical && toupper(estimator) != "PML") {
         lav_msg_stop(gettext("categorical + clustered is not supported yet."))
       }
     } else {
@@ -170,7 +177,7 @@ lav_lavaan_step02_options <- function(slotOptions = NULL, # nolint
     # sampling weights? force MLR
     # HJ 18/10/23: Except for PML
     if (!is.null(sampling.weights) && !opt$.categorical &&
-      opt$estimator %in% c("default", "ML", "PML")) {
+      toupper(estimator) %in% c("DEFAULT", "ML", "PML")) {
       if (opt$se != "none") {
         opt$se <- "robust.huber.white"
       }
@@ -180,7 +187,7 @@ lav_lavaan_step02_options <- function(slotOptions = NULL, # nolint
     }
 
     # constraints
-    if (any(nchar(constraints) > 0L) && opt$estimator %in% c("ML")) {
+    if (any(nchar(constraints) > 0L) && toupper(estimator) %in% c("ML")) {
       opt$information <- c("observed", "observed")
     }
 
@@ -217,7 +224,7 @@ lav_lavaan_step02_options <- function(slotOptions = NULL, # nolint
     }
 
     # allow.empty.cell
-    if (opt$allow.empty.cell && opt$do.fit && opt$estimator != "Bayes") {
+    if (opt$allow.empty.cell && opt$do.fit && toupper(estimator) != "BAYES") {
       lav_msg_warn(
         gettext("allow.empty.cell is not intended to salvage estimation of this model, see ?lavOptions"))
     }

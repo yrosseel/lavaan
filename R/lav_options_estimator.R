@@ -578,7 +578,7 @@ lav_options_est_iv <- function(opt) {
 
   # se
   if (opt$se == "default") {
-    opt$se <- "none" # for now
+    opt$se <- "standard" # for now
   }
   # bounds
   if (!is.null(opt$bounds) && opt$bounds == "default" &&
@@ -598,7 +598,9 @@ lav_options_est_iv <- function(opt) {
   if (is.null(opt$estimator.args)) {
     # create default list
     opt$estimator.args <- list(iv.method = "2SLS",
-                               iv.varcov.method = "RLS")
+                               iv.varcov.method = "RLS",
+                               iv.varcov.se = TRUE,
+                               iv.varcov.modelbased = TRUE)
   } else {
     if (is.null(opt$estimator.args$iv.method)) {
       opt$estimator.args$iv.method <- "2SLS"
@@ -610,6 +612,12 @@ lav_options_est_iv <- function(opt) {
     } else if (!opt$estimator.args$iv.varcov.method %in%
                c("ULS", "GLS", "2RLS", "RLS")) {
       lav_msg_stop(gettext("iv.varcov.method should ULS, GLS, 2RLS or RLS."))
+    }
+    if (is.null(opt$estimator.args$iv.varcov.se)) {
+      opt$estimator.args$iv.varcov.se <- TRUE
+    }
+    if (is.null(opt$estimator.args$iv.varcov.modelbased)) {
+      opt$estimator.args$iv.varcov.modelbased <- TRUE
     }
   }
 

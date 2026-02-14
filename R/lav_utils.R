@@ -348,3 +348,116 @@ lav_char2hash <- function(s = "") {
   }
   as.hexmode(rval)
 }
+
+# vectorize all (h0 or h1) sample statistics, in the same order
+# as Gamma
+lav_implied_to_vec <- function(implied = NULL, lavmodel = NULL,
+                               drop.list = TRUE) {
+  ngroups <- lavmodel@ngroups
+
+  wls_obs <- vector("list", ngroups)
+  for (g in seq_len(ngroups)) {
+
+    var <- NULL
+    res.var <- NULL
+    if (lavmodel@conditional.x) {
+      res.var <- diag(implied$res.cov[[g]])
+      res.var <- res.var[res.var != 1]
+    } else {
+      var <- diag(implied$cov[[g]])
+      var <- var[var != 1]
+    }
+
+    wls_obs[[g]] <- lav_samplestats_wls_obs(
+      # plain
+      mean.g = implied$mean[[g]],
+      cov.g = implied$cov[[g]],
+      var.g = var,
+      th.g = implied$th[[g]],
+      th.idx.g = lavmodel@th.idx[[g]],
+
+      # conditional.x
+      res.int.g = implied$res.int[[g]],
+      res.cov.g = implied$res.cov[[g]],
+      res.var.g = res.var,
+      res.th.g = implied$res.th[[g]],
+      res.slopes.g = implied$res.slopes[[g]],
+      group.w.g = implied$group.w[[g]],
+
+      # flags
+      categorical = lavmodel@categorical,
+      conditional.x = lavmodel@conditional.x,
+      meanstructure = lavmodel@meanstructure,
+      correlation = lavmodel@correlation,
+      slopestructure = lavmodel@conditional.x,
+      group.w.free = lavmodel@group.w.free
+    )
+  }
+
+  if (drop.list) {
+    out <- unlist(wls_obs)
+  } else {
+    out <- wls_obs
+  }
+
+  out
+}
+
+# given a vector of sample statistics, reconstruct implied
+# entries (cov, mean, th, res.cov, ...)
+lav_vec_to_implied <- function(x = NULL, lavmodel) {
+
+  ngroups <- lavmodel@ngroups
+  implied <- list()
+
+  for (g in seq_len(ngroups)) {
+
+    # number of variables
+    nvar <- lavmodel@nvar[g]
+
+    # if group.w.free, always comes first
+    if (lavmodel@group.w.free) {
+      idx <- 1L
+      group.w <- x[idx]
+      x <- x[-idx]
+    } else {
+      group.w <- 1
+    }
+
+    if (lavmodel@categorical) {
+      # TODO
+      cat("\n NOT READY YET! \n")
+    } else {
+      # diag flag
+      diag_flag <- TRUE
+      if (lavmodel@correlation) {
+        diag_flag <- FALSE
+      }
+      if (lavmodel@conditional.x) {
+        # TODO
+        cat("\n NOT READY YET! \n")
+      }
+      if (lavmodel@meanstructure) {
+        idx <- seq_len(nvar)
+        mean_g <- x[idx]
+        x <- x[-idx]
+      }
+      if (diag_flag) {
+        idx <- seq_len( nvar * (nvar + 1) / 2 )
+      } else {
+        idx <- seq_len( nvar * (nvar - 1) / 2 )
+      }
+      cov_g <- lav_matrix_vech_reverse(x[idx], diagonal = diag_flag)
+      x <- x[-idx]
+
+      # fill in
+      implied$cov[[g]] <- cov_g
+      implied$mean[[g]] <- mean_g
+      implied$th[g] <- list(NULL)
+    }
+
+    implied$group.w[[g]] <- group.w
+  }
+
+  implied
+}
