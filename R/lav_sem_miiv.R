@@ -188,7 +188,10 @@ lav_sem_miiv_2sls_rawdata <- function(lavmodel = NULL, lavpartable = NULL,
         } else {
           # remove non-free elements
           zero.idx <- which(free.idx == 0L)
-          x[free.idx[-zero.idx]] <- fit_y_on_xhat$coefficients[-1][-zero.idx]
+          free.idx <- free.idx[-zero.idx]
+          if (length(free.idx) > 0) {
+            x[free.idx] <- fit_y_on_xhat$coefficients[-1][-zero.idx]
+          }
         }
       }
       if (lavmodel@meanstructure) {
@@ -238,7 +241,7 @@ lav_sem_miiv_2sls_rawdata <- function(lavmodel = NULL, lavpartable = NULL,
       }
 
       # add info to eqs list
-      eqs[[b]][[j]]$coef <- fit_y_on_xhat$coefficients
+      eqs[[b]][[j]]$coef <- unname(fit_y_on_xhat$coefficients)
       eqs[[b]][[j]]$nobs <- nrow(xmat)
       eqs[[b]][[j]]$df_res <- df_res
       eqs[[b]][[j]]$resvar <- resvar
@@ -439,8 +442,11 @@ lav_sem_miiv_vcov <- function(lavmodel = NULL, lavsamplestats = NULL,
         } else {
           # remove non-free elements
           zero.idx <- which(free.idx == 0L)
-          vcov[free.idx[-zero.idx], free.idx[-zero.idx]] <-
-            eq_vcov[-1, -1][-zero.idx, -zero.idx, drop = FALSE]
+          free.idx <- free.idx[-zero.idx]
+          if (length(free.idx) > 0L) {
+            vcov[free.idx, free.idx] <-
+              eq_vcov[-1, -1][-zero.idx, -zero.idx, drop = FALSE]
+          }
         }
       }
       if (lavmodel@meanstructure) {

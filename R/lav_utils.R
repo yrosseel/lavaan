@@ -441,6 +441,8 @@ lav_vec_to_implied <- function(x = NULL, lavmodel) {
         idx <- seq_len(nvar)
         mean_g <- x[idx]
         x <- x[-idx]
+      } else {
+        mean_g <- numeric(nvar)
       }
       if (diag_flag) {
         idx <- seq_len( nvar * (nvar + 1) / 2 )
