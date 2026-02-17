@@ -598,6 +598,7 @@ lav_options_est_iv <- function(opt) {
   if (is.null(opt$estimator.args)) {
     # create default list
     opt$estimator.args <- list(iv.method = "2SLS",
+                               iv.samplestats = FALSE,
                                iv.varcov.method = "RLS",
                                iv.varcov.se = TRUE,
                                iv.varcov.modelbased = TRUE)
@@ -606,6 +607,12 @@ lav_options_est_iv <- function(opt) {
       opt$estimator.args$iv.method <- "2SLS"
     } else if (!opt$estimator.args$iv.method %in% "2SLS") {
       lav_msg_stop(gettext("iv.method should be 2SLS (for now)."))
+    }
+    if (is.null(opt$estimator.args$iv.samplestats)) {
+      opt$estimator.args$iv.samplestats <- FALSE
+    }
+    if (opt$.categorical) {
+      opt$estimator.args$iv.samplestats <- TRUE
     }
     if (is.null(opt$estimator.args$iv.varcov.method)) {
       opt$estimator.args$iv.varcov.method <- "RLS"

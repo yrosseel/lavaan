@@ -626,6 +626,17 @@ lav_lavaan_lavinspect <- function(object,                                # nolin
       add.labels = add.labels, add.class = add.class,
       drop.list.single.group = drop.list.single.group)
 
+    # instrumental variables
+  } else if(what %in% c("iv", "ivs", "miiv", "miivs", "instr", "instruments")) {
+    lav_object_inspect_iv(object,
+      drop.list.single.group = drop.list.single.group)
+  } else if(what %in% c("eqs")) {
+    lav_object_inspect_eqs(object,
+      drop.list.single.group = drop.list.single.group)
+  } else if(what %in% c("sargan")) {
+    lav_object_inspect_sargan(object,
+      drop.list.single.group = drop.list.single.group)
+
     # post-checking
   } else if (what == "post.check" || what == "post") {
     lav_object_post_check(object)
@@ -3322,4 +3333,130 @@ lav_object_inspect_ntotal <- function(object) {
 
   N
 }
+
+lav_object_inspect_iv <- function(object, drop.list.single.group = FALSE) {
+  
+  if (is.null(object@internal$eqs)) {
+    lav_msg_stop(gettext("no equations/ivs found"))
+  }
+  lavmodel <- object@Model
+  lavdata <- object@Data
+  
+  # grab equations
+  iv_list <- object@internal$eqs
+
+  # nblocks
+  nblocks <- object@pta$nblocks
+
+  table <- vector("list", length = nblocks)
+  for (b in seq_len(nblocks)) {
+    eqs <- iv_list[[b]]
+    lhs <- sapply(eqs, "[[", "lhs")
+    rhs <- sapply(lapply(eqs, "[[", "rhs"), paste, collapse = " + ")
+    lhs_new <- sapply(eqs, "[[", "lhs_new")
+    rhs_new <- sapply(lapply(eqs, "[[", "rhs_new"), paste, collapse = " + ")
+    miiv <- sapply(lapply(eqs, "[[", "miiv"), paste, collapse = ", ")
+    table[[b]] <- data.frame(
+      lhs = lhs, rhs = rhs,
+      lhs.new = lhs_new, rhs.new = rhs_new, instruments = miiv
+    )
+    class(table[[b]]) <- c("lavaan.data.frame", "data.frame")
+  }
+
+  # return value
+  return.value <- table
+
+  # drop list?
+  if (lavmodel@ngroups == 1L && drop.list.single.group) {
+    return.value <- return.value[[1]]
+  } else if (!is.null(lavdata)) {
+    if (length(lavdata@group.label) > 0L) {
+      names(return.value) <- unlist(lavdata@group.label)
+    }
+  }
+
+  return.value
+}
+
+lav_object_inspect_eqs <- function(object, drop.list.single.group = FALSE) {
+  
+  if (is.null(object@internal$eqs)) {
+    lav_msg_stop(gettext("no equations/ivs found"))
+  }     
+  lavmodel <- object@Model
+  lavdata <- object@Data
+  
+  # grab equations
+  eqs <- object@internal$eqs
+
+  # return value
+  return.value <- eqs
+
+  # drop list?
+  if (lavmodel@ngroups == 1L && drop.list.single.group) {
+    return.value <- return.value[[1]]
+  } else if (!is.null(lavdata)) {
+    if (length(lavdata@group.label) > 0L) {
+      names(return.value) <- unlist(lavdata@group.label)
+    }
+  }
+
+  return.value
+}
+
+lav_object_inspect_sargan <- function(object, drop.list.single.group = FALSE) {
+
+  if (is.null(object@internal$eqs)) {
+    lav_msg_stop(gettext("no equations/ivs found"))
+  }
+  lavmodel <- object@Model
+  lavdata <- object@Data
+
+  # grab equations
+  iv_list <- object@internal$eqs
+
+  # nblocks
+  nblocks <- object@pta$nblocks
+
+  table <- vector("list", length = nblocks)
+  for (b in seq_len(nblocks)) {
+    eqs <- iv_list[[b]]
+    lhs <- sapply(eqs, "[[", "lhs")
+    rhs <- sapply(lapply(eqs, "[[", "rhs"), paste, collapse = " + ")
+    miiv <- sapply(lapply(eqs, "[[", "miiv"), paste, collapse = ", ")
+    sargan.stat <- sapply(seq_along(eqs),
+      function(x) eqs[[x]][["sargan"]]["stat"])
+    sargan.df <- sapply(seq_along(eqs),
+      function(x) eqs[[x]][["sargan"]]["df"])
+    sargan.pvalue <- sapply(seq_along(eqs),
+      function(x) eqs[[x]][["sargan"]]["pvalue"])
+    table[[b]] <- data.frame(
+      lhs = lhs, rhs = rhs, instruments = miiv, 
+      sargan.stat = sargan.stat, df = sargan.df, pvalue = sargan.pvalue
+    )
+
+    # remove rows for which the Sargan statistic is NA
+    na.idx <- which(is.na(sargan.stat))
+    if (length(na.idx) > 0L) {
+      table[[b]] <- table[[b]][-na.idx, , drop = FALSE]
+    }
+
+    class(table[[b]]) <- c("lavaan.data.frame", "data.frame")
+  }
+
+  # return value
+  return.value <- table
+
+  # drop list?
+  if (lavmodel@ngroups == 1L && drop.list.single.group) {
+    return.value <- return.value[[1]]
+  } else if (!is.null(lavdata)) {
+    if (length(lavdata@group.label) > 0L) {
+      names(return.value) <- unlist(lavdata@group.label)
+    }
+  }
+
+  return.value
+}
+
 
