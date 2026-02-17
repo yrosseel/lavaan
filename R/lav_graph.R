@@ -11,7 +11,7 @@
 lav_graph_get_ancestors <- function(B = NULL) {
   B <- abs(B)
   nr <- nrow(B)
-  OUTENV <- new.env(parent = emptyenv())
+  out_env <- new.env(parent = emptyenv())
 
   # container to hold ancestor indices per node
   out.idx <- vector("list", length = nr)
@@ -19,26 +19,26 @@ lav_graph_get_ancestors <- function(B = NULL) {
   get_ancestors <- function(nr, callers) {
     if (any(callers == nr)) {
       lav_msg_warn(gettextf("Cycle detected for element nr %d !", nr))
-      return(integer(0));
+      return(integer(0))
     }
-    x = get0(as.character(nr), envir = OUTENV, ifnotfound = NULL)
-    if (!is.null(x)) return(x);
-    retval <- integer(0L);
-    x.direct.idx <- which(B[nr,] != 0)
+    x <- get0(as.character(nr), envir = out_env, ifnotfound = NULL)
+    if (!is.null(x)) return(x)
+    retval <- integer(0L)
+    x.direct.idx <- which(B[nr, ] != 0)
     for (j in seq_along(x.direct.idx)) {
       thisone <- x.direct.idx[j]
       retval <- c(retval, thisone)
       sub <- get_ancestors(thisone, c(callers, nr))
-      if (all(sub != nr)) retval = c(retval, sub)
+      if (all(sub != nr)) retval <- c(retval, sub)
     }
     retval <- sort.int(unique(retval))
-    assign(as.character(nr), retval, envir = OUTENV)
-    return(retval)
+    assign(as.character(nr), retval, envir = out_env)
+    retval
   }
 
   # run over each node
   for (i in seq_len(nr)) {
-    out.idx[[i]] <- get_ancestors(i, integer(0));
+    out.idx[[i]] <- get_ancestors(i, integer(0))
   } # all nodes
   out.idx
 }
@@ -117,13 +117,13 @@ lav_graph_order_adj_mat <- function(adj.mat, warn = TRUE) {
       if (all(adjmat[1:n, i] == 0)) { # var defined in expression i doesn't use
         # vars not already defined, select as next
         k <- k + 1            # increment order counter
-        adjmat[i, ] <- 0           # remove usage indicator of defined variable
-        adjmat[i, i] <- k          # keep order of expressions in diagonal element
+        adjmat[i, ] <- 0      # remove usage indicator of defined variable
+        adjmat[i, i] <- k     # keep order of expressions in diagonal element
         found <- TRUE
         testen <- testen[testen != i] # don't test this i in next loop
       }
     }
-    if (k == n) return (order(diag(adjmat)))  # all done
+    if (k == n) return(order(diag(adjmat)))  # all done
     if (!found) {  # no definable var found
         if (warn) {
           lav_msg_warn(gettext("unable to sort `:=` parameters;",
@@ -144,7 +144,8 @@ lav_graph_order_adj_mat <- function(adj.mat, warn = TRUE) {
   # use a certain node come after the definition of that node.
 
   # contributed by ldw as alternative for lav_graph_order_adj_mat
-  # this function is faster, requires less memory and handles also character vectors
+  # this function is faster, requires less memory and handles also
+  # character vectors
 lav_graph_topological_sort <- function(defined, definedby, warn = TRUE) {
   nodes <- unique(c(definedby, defined))
   n <- length(nodes)
@@ -177,47 +178,72 @@ lav_graph_topological_sort <- function(defined, definedby, warn = TRUE) {
 }
 
 # Topological grouping and placing of nodes in a matrix.
-# This routine returns a data.frame with the nodes, their position in a
-# matrix (rows, cols) and an indication of root (no dependencies) or
-# leave (no other nodes depend on this one), as follows :
-# the first column contains all nodes without dependencies
-# the second column contains nodes with only dependency in the first column (*)
+# Nodes which need to be placed at a border are given in argument bordernodes.
+# This routine does a topological sort and returns a data.frame with the nodes,
+# their position in a  matrix (rows, cols) and an indication of root
+# (no dependencies, indic == "r") or
+# leave (no other nodes depend on this one, indic == "l"), as follows :
+# the first column contains all nodes without dependencies (*1) (*2)
+# the second column contains nodes with only dependency
+#                                       in the first column (*1)(*3)
 # the third column contains nodes with only dependencies in the first and
-#     second, with at least one in the second column and so on
-# (*) nodes with successors but no successors in the next column are promoted
-# to the column just before the least column of the successors.
-# (**) the rows in the second to last column are chosen so that they are in the
-#      neighborhood of the mean of the rows from the nodes they depend on.
-lav_graph_topological_matrix <- function(defined, definedby, warn = TRUE) {
+#     second, with at least one in the second column and so on (*3)
+# (*1) nodes with successors but no successors in the next column are promoted
+#     to the column just before the least column of the successors, except
+#     the nodes mentioned in bordernodes and in the first column.
+# (*2) the rows in the first column are chosen so that they are in the
+#     neighborhood of the mean of the rows from the nodes depending on them.(*4)
+# (*3) the rows in the second to last column are chosen so that the sum of the
+#     row-distances to connected nodes is minimized
+# (*4) if there are nodes forced to the top border in columns 2 through
+#     maxcol-1, the items in column1s 1 and maxcol cannot occupy the first row;
+#     analogue for the bottom
+lav_graph_topological_matrix <- function(
+  defined,
+  definedby,
+  bordernodes = character(0),
+  warn = TRUE) {
   rv <- lav_graph_topological_sort(defined, definedby, warn)
   n <- length(rv)
   rvrow <- integer(n)
-  rvcol <-  integer(n)
+  rvcol <- integer(n)
   rvindic <- character(n)
+  # position nodes in matrix, column by column, and mark root and leave nodes
+  # rows are assigned but not yet adapted
   colmax <- 0L
+  bordersincol <- 0L
+  topborderfixed <- FALSE
+  bottomborderfixed <- FALSE
   for (i in seq.int(n)) {
-    if (i == 1L) {
-      rvrow[i] <- rvcol[i] <- 1L
-      colmax <- 1L
-      rvindic[i] <- "r" # is always a root
+    predecessors <- definedby[rv[i] == defined]
+    followers <- defined[rv[i] == definedby]
+    if (length(predecessors) == 0L) {
+      rvcol[i] <- 1L
+      colmax[1L] <- colmax[1L] + 1L
+      rvrow[i] <- colmax[1L]
+      rvindic[i] <- "r" # root
     } else {
-      predecessors <- definedby[rv[i] == defined]
-      followers <- defined[rv[i] == definedby]
-      if (length(predecessors) == 0L) {
-        rvcol[i] <- 1L
-        colmax[1L] <- colmax[1L] + 1L
-        rvrow[i] <- colmax[1L]
-        rvindic[i] <- "r" # root
+      if (length(followers) == 0L) {
+        rvindic[i] <- "l"
+      }
+      predecessor.ind <- match(predecessors, rv)
+      rvcol[i] <- max(rvcol[predecessor.ind]) + 1L
+      if (length(colmax) < rvcol[i]) {
+        colmax[rvcol[i]] <- 1L
+        bordersincol <- 0L
       } else {
-        if (length(followers) == 0L) rvindic[i] <- "l"
-        predecessor.ind <- match(predecessors, rv)
-        rvcol[i] <- max(rvcol[predecessor.ind]) + 1L
-        if (length(colmax) < rvcol[i]) {
+        colmax[rvcol[i]] <- colmax[rvcol[i]] + 1L
+      }
+      rvrow[i] <- colmax[rvcol[i]]
+      if (rv[i] %in% bordernodes && rvindic[i] != "l") {
+        bordersincol <- bordersincol + 1L
+        topborderfixed <- TRUE
+        if (bordersincol == 2L) bottomborderfixed <- TRUE
+        if (bordersincol > 2L) {
+          rvcol[i]  <- rvcol[i] + 1L
           colmax[rvcol[i]] <- 1L
-        } else {
-          colmax[rvcol[i]] <- colmax[rvcol[i]] + 1L
+          rvrow[i] <- colmax[rvcol[i]]
         }
-        rvrow[i] <- colmax[rvcol[i]]
       }
     }
   }
@@ -226,14 +252,14 @@ lav_graph_topological_matrix <- function(defined, definedby, warn = TRUE) {
   while (incremented) {
     incremented <- FALSE
     for (i in seq_along(rv)) {
-      if (rvindic[i] != "l") {
+      if (rvindic[i] != "l" && !(rv[i] %in% bordernodes && rvindic[i] == "r")) {
         followers <- defined[rv[i] == definedby]
         followers.ind <- match(followers, rv)
         mincol <- min(rvcol[followers.ind])
         if (rvcol[i] < mincol - 1L) {
           incremented <- TRUE
           curcol <- rvcol[i]
-          rvcol[i] <- mincol -1L
+          rvcol[i] <- mincol - 1L
           # adapt rows in curcol
           rvrow[rvcol == curcol & rvrow > rvrow[i]] <-
             rvrow[rvcol == curcol & rvrow > rvrow[i]] - 1L
@@ -245,42 +271,98 @@ lav_graph_topological_matrix <- function(defined, definedby, warn = TRUE) {
       }
     }
   }
+  # place bordernodes in columns 2 through maxcol-1 in the first or last row
+  for (col in seq.int(2L, length(colmax) - 1L)) {
+    bordernodes.incol <- which(rvcol == col & rv %in% bordernodes)
+    if (length(bordernodes.incol) > 0L) {
+      totop <- bordernodes.incol[1L]
+      if (rvrow[totop] != 1L) {
+        swappie <- which(rvcol == col & rvrow == 1L)
+        rvrow[swappie] <- rvrow[totop]
+        rvrow[totop] <- 1L
+      }
+    }
+    if (length(bordernodes.incol) > 1L) {
+      tobottom <- bordernodes.incol[2L]
+      if (rvrow[tobottom] != colmax[col]) {
+        swappie <- which(rvcol == col & rvrow == colmax[col])
+        rvrow[swappie] <- rvrow[tobottom]
+        rvrow[tobottom] <- max(colmax)
+      }
+    }
+  }
+  # help function to order doubles as integers in a specified range
+  order_doubles_interval <- function(inorder, outrange) {
+    stopifnot(length(inorder) < outrange[2] - outrange[1] + 2)
+    if (length(inorder) == 1) {
+      if (inorder >= outrange[1L] && inorder <= outrange[2L]) {
+        return(as.integer(inorder))
+      }
+      return(as.integer(sum(outrange) / 2))
+    }
+    in.order <- order(inorder)
+    in.order[in.order] <- seq_along(inorder)
+    if (length(inorder) == outrange[2] - outrange[1] + 1) {
+      return(as.integer(outrange[1]) + in.order - 1L)
+    }
+    as.integer(outrange[1] + (in.order - 1L) *
+      (outrange[2] - outrange[1] + 0.99) / (length(in.order) - 1L))
+  }
+  # arrange nodes in first column (***)
+  rowmax <- max(colmax)
+  addrows <- 0L
+  if (topborderfixed) addrows <- 1L
+  if (bottomborderfixed) addrows <- 2L
+  rowmax <- max(colmax, colmax[1L] + addrows, colmax[length(colmax)] + addrows)
+  nodescol1 <- which(rvcol == 1L)
+  optimalrows <- sapply(nodescol1, function(ci) {
+    nextnodes.ind <- which(rv[ci] == definedby)
+    if (length(nextnodes.ind) == 0L) {
+      colmax[1L] / 2
+    } else {
+      nextnodes <- defined[nextnodes.ind]
+      mean(rvrow[match(nextnodes, rv)])
+    }
+  })
+  interval1l <- c(
+    if (topborderfixed) 2L else 1L,
+    if (bottomborderfixed) rowmax - 1L else rowmax
+  )
+  rvrow[nodescol1] <- order_doubles_interval(optimalrows, interval1l)
+
   # adapt rows in columns to match as close as possible the rows of the
-  # connected nodes in the previous column(s) : (**)
+  # connected nodes in prior column(s), except for
+  # borders for all but the last column: (**)
   if (length(colmax) > 1L) {
-    rowmax <- max(colmax)
     for (c in seq.int(2L, length(colmax))) {
-      cnodes.ind <- which(rvcol == c)
-      optimalrows <- sapply(cnodes.ind, function (ci) {
+      if (c == length(colmax)) {
+        cnodes.ind <- which(rvcol == c)
+        interval <- interval1l
+      } else {
+        cnodes.ind <- which(rvcol == c & !(rv %in% bordernodes))
+        if (length(cnodes.ind) == 0L) next
+        interval <- range(rvrow[cnodes.ind])
+        interval[2L] <- max(interval[2L], colmax - 1L)
+      }
+      optimalrows <- sapply(cnodes.ind, function(ci) {
         prevnodes.ind <- which(rv[ci] == defined)
         if (length(prevnodes.ind) == 0L) {
-          colmax[c] / 2
+          rvrow[ci]
         } else {
           prevnodes <- definedby[prevnodes.ind]
           mean(rvrow[match(prevnodes, rv)])
         }
       })
-      or_order <- order(optimalrows)
-      optimalrows <- optimalrows[or_order]
-      for (j in seq_along(optimalrows)) {
-        if (j == 1L) {
-          optimalrows[j] <- as.integer(optimalrows[j])
-        } else {
-          if (as.integer(optimalrows[j]) <= optimalrows[j - 1L]) {
-            optimalrows[j] <- optimalrows[j - 1L] + 1L
-          } else {
-            optimalrows[j] <- as.integer(optimalrows[j])
-          }
-        }
-      }
-      optimalrows[or_order] <- optimalrows
-      rvrow[cnodes.ind] <- optimalrows
+      rvrow[cnodes.ind] <- order_doubles_interval(optimalrows, interval)
     }
   }
   # order on column, then row, and return
   neworder <- order(rvcol * 1000L + rvrow)
-  data.frame(nodes = rv[neworder],
-             rows = rvrow[neworder],
-             cols = rvcol[neworder],
-             indic = rvindic[neworder])
+  stopifnot(length(neworder) == length(unique(neworder)))
+  data.frame(
+    nodes = rv[neworder],
+    rows = rvrow[neworder],
+    cols = rvcol[neworder],
+    indic = rvindic[neworder]
+  )
 }

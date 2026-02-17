@@ -104,7 +104,7 @@ model <- 'alpha11  =~ 1 * x1 + x2 + x3     # latent variable
           '
 lav_plot(model)
 lav_plot(model,
-        placenodes=list(Theta_1 = c(2, 2.5)),
+        placenodes=list(Theta1 = c(2, 2.5)),
         tikz = list(outfile=stdout()))
 modelml <- '
         level: 1

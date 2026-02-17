@@ -3,7 +3,7 @@
 
 importFrom("graphics",
            "abline", "axis", "box", "hist", "lines", "pairs", "par", "plot.default",
-           "polygon", "text",
+           "polygon", "text", "arrows",
            # generics
            "plot")
 
