@@ -24,28 +24,27 @@ a diagram.
 \enumerate{
 \item nodes
   \describe{
-    \item{id}{integer, autoincrement identification of the node.}
+    \item{id}{character, identification of the node consisting of blok and naam.}
     \item{naam}{character, name of the node as specified in the model.
     For intercepts the name is "1vanXXXX", with XXXX the name
     of the regressed variable.}
     \item{tiepe}{character, type of node: ov (observed variable),
     lv (latent variable), varlv (variance as latent variable),
     cv (composite variable), wov (within level variable in multilevel model),
-    bov (between level variable in multilevel model), 
+    bov (between level variable in multilevel model),
     const (intercept of regression).}
     \item{blok}{integer, level (0 if not a multilevel model).}
-    \item{voorkeur}{character, preferred place in the plot, l(left), r(right)
-    or m = (middle).}
-  }
+ }
 \item edges
   \describe{
     \item{id}{integer, autoincrement identification of the edge.}
     \item{label}{character, label for the edge, made from the label specified in
     the model and the fixed (or estimated) value if present.}
-    \item{van}{integer, id of the starting node.}
-    \item{naar}{integer, id of the destination node.}
+    \item{van}{character, id of the starting node.}
+    \item{naar}{character, id of the destination node.}
     \item{tiepe}{character, lavaan operator, except (residual)
-      variance, coded here as '~~~'.}
+      variance, coded here as '~~~' and regressions introduced by varlv = TRUE,
+      coded as '~.'.}
   }
 }
 }

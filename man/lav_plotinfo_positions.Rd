@@ -5,7 +5,8 @@
 lav_plotinfo_positions(plotinfo,
                        placenodes = NULL,
                        edgelabelsbelow = NULL,
-                       group.covar.indicators = FALSE)
+                       group.covar.indicators = FALSE,
+                       debug = FALSE)
 }
 \arguments{
 \item{plotinfo}{The plotinfo structure as returned from \code{lav_model_plotinfo}.}
@@ -16,6 +17,7 @@ lav_plotinfo_positions(plotinfo,
 \item{group.covar.indicators}{logical, should items with indicators which
 have an explicit covariance link be placed in the same group, i.e. forced
 to be on the same side of the diagram?}
+\item{debug}{logical, print debug information?}
 }
 \value{
 A plotinfo strucure with modified \code{nodes} and \code{edges} 
@@ -50,8 +52,9 @@ edges in the diagram.
 }
 \details{
 This function \strong{tries} to arrange the nodes and anchor points for the edges in
-a way that gives a not-to-large diagram and taking into account the \code{voorkeur}
-column in the input nodes data.frame. If the result is not what you want, you can
+a way that gives a not-to-large diagram and trying to put dependent variables in
+a regression to the right of the variables they depend on.
+If the result is not what you want, you can
 take a look at the plot via \code{lav_plotinfo_rgraph} or \code{lav_plot} functions and
 decide yourself to place some nodes at another location (\code{placenodes})
 and/or put some edge labels at the other side of the edge (\code{labelsbelow}).
