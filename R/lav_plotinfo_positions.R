@@ -159,14 +159,14 @@ lav_plotinfo_positions_one <- function(
     }
     groups[[g]] <- group
   }
-  width <- sapply(groups, \(g) g$width.height[1L])
-  height <- sapply(groups, \(g) g$width.height[2L])
-  columns <- sapply(groups, \(g) g$matrixrowcol[2L])
-  rows <- sapply(groups, \(g) g$matrixrowcol[1L])
+  width <- sapply(groups, function(g) g$width.height[1L])
+  height <- sapply(groups, function(g) g$width.height[2L])
+  columns <- sapply(groups, function(g) g$matrixrowcol[2L])
+  rows <- sapply(groups, function(g) g$matrixrowcol[1L])
   colnums <- sort(unique(columns))
   rownums <- sort(unique(rows))
-  colwidths <- sapply(colnums, \(i) max(width[columns == i]))
-  rowheights <- sapply(rownums, \(i) max(height[rows == i]))
+  colwidths <- sapply(colnums, function(i) max(width[columns == i]))
+  rowheights <- sapply(rownums, function(i) max(height[rows == i]))
   for (g in groups) {
     thisrow <- g$matrixrowcol[1L]
     thiscol <- g$matrixrowcol[2L]
@@ -231,8 +231,8 @@ lav_plotinfo_positions_one <- function(
     }
   }
   #### place anchors ####
-  groupmaxcol <- max(sapply(groups, \(g) g$matrixrowcol[2L]))
-  groupmaxrow <- max(sapply(groups, \(g) g$matrixrowcol[1L]))
+  groupmaxcol <- max(sapply(groups, function(g) g$matrixrowcol[2L]))
+  groupmaxrow <- max(sapply(groups, function(g) g$matrixrowcol[1L]))
   for (j in seq_along(edgs$id)) {
     thisedge <- edgs[j, ]
     van <- nods[which(nods$id == thisedge$van), ]
