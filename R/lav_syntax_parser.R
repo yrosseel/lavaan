@@ -303,7 +303,7 @@ lav_parse_text_tokens <- function(modelsrc, types) {
     if (elem.type[i] == types$identifier && elem.text[i] == "efa") {
       frm.hasefa <- TRUE
     }
-    if (any(elem.text[i] == 
+    if (any(elem.text[i] ==
       c("+", "*", "=~", "-", "<~", "~*~", "~~", "~", "|~", "|", "%"))) {
       if (frm.incremented) {
         frm.number <- frm.number - 1L

@@ -29,7 +29,7 @@ lav_sem_miiv_internal <- function(lavmodel = NULL, lavh1 = NULL,
     lavpartable$op == "~~")
   directed.idx <- which(lavpartable$free > 0L &
     !duplicated(lavpartable$free) & # if ceq.simple
-    !lavpartable$op %in% c("~~", "~*~"))
+    lavpartable$op %in% c("=~", "~", "~1"))
   free.directed.idx <- unique(lavpartable$free[directed.idx])
   free.undirected.idx <- unique(lavpartable$free[undirected.idx])
 
@@ -37,7 +37,7 @@ lav_sem_miiv_internal <- function(lavmodel = NULL, lavh1 = NULL,
   eqs <- lav_model_find_iv(lavmodel = lavmodel, lavpta = lavpta)
 
   # parameter vector -> all NA (for the free parameters)
-  x <- lav_model_get_parameters(lavmodel) * as.numeric(NA)
+  x <- lav_model_get_parameters(lavmodel)
 
   ########################################
   # first stage: directed parameter only #
@@ -46,7 +46,7 @@ lav_sem_miiv_internal <- function(lavmodel = NULL, lavh1 = NULL,
   if (length(free.directed.idx) > 0L) {
     if (iv.samplestats) {
       theta1 <- lav_sem_miiv_2sls_samplestats(
-        eqs = eqs,
+        x = NULL, samplestats = FALSE, eqs = eqs,
         lavmodel = lavmodel, lavpartable = lavpartable,
         lavdata = lavdata, lavsamplestats = lavsamplestats,
         lavh1 = lavh1, free.directed.idx = free.directed.idx
@@ -75,6 +75,7 @@ lav_sem_miiv_internal <- function(lavmodel = NULL, lavh1 = NULL,
     theta2 <- lav_sem_miiv_varcov(
       x = theta1,
       lavmodel = lavmodel, lavpartable = lavpartable,
+      lavsamplestats = lavsamplestats,
       lavh1 = lavh1, free.directed.idx = free.directed.idx,
       free.undirected.idx = free.undirected.idx,
       iv.varcov.method = iv.varcov.method
@@ -107,8 +108,8 @@ lav_sem_miiv_2sls <- function(eqs = NULL, lavmodel = NULL, lavpartable = NULL,
   # number of blocks
   nblocks <- lavmodel@nblocks
 
-  # parameter vector -> all NA (for the free parameters)
-  x <- lav_model_get_parameters(lavmodel) * as.numeric(NA)
+  # parameter vector
+  x <- lav_model_get_parameters(lavmodel)
 
   # 2SLS per equation
   # for now: - no equality constraints (yet)
@@ -293,7 +294,10 @@ lav_sem_miiv_2sls <- function(eqs = NULL, lavmodel = NULL, lavpartable = NULL,
 
 # stage 1: use 2SLS to find the regression coefficients of all
 #          directed effects in the model -- samplestats version
-lav_sem_miiv_2sls_samplestats <- function(eqs = NULL, lavmodel = NULL,
+# if samplestats = TRUE, x should contain the sample statistics
+# (taken from lavh1$implied)
+lav_sem_miiv_2sls_samplestats <- function(x = NULL, samplestats = FALSE,
+                                          eqs = NULL, lavmodel = NULL,
                                           lavpartable = NULL, lavdata = NULL,
                                           lavsamplestats = NULL, lavh1 = NULL,
                                           free.directed.idx = NULL) {
@@ -325,6 +329,12 @@ lav_sem_miiv_2sls_samplestats <- function(eqs = NULL, lavmodel = NULL,
     eqs <- lav_model_find_iv(lavmodel = lavmodel, lavpta = lavpta)
   }
 
+  if (samplestats) {
+    implied <- lav_vec_to_implied(x, lavmodel = lavmodel)
+  } else {
+    implied <- lavh1$implied
+  }
+
   # number of blocks
   nblocks <- lavmodel@nblocks
 
@@ -339,8 +349,8 @@ lav_sem_miiv_2sls_samplestats <- function(eqs = NULL, lavmodel = NULL,
     ov.names <- lavpta$vnames$ov[[b]]
 
     # sample statistics for this block
-    sample.cov <- lavh1$implied$cov[[b]]
-    sample.mean <- lavh1$implied$mean[[b]]
+    sample.cov <- implied$cov[[b]]
+    sample.mean <- implied$mean[[b]]
 
     # nobs for this 'block'
     nobs <- lavsamplestats@nobs[[b]]
@@ -461,19 +471,22 @@ lav_sem_miiv_2sls_samplestats <- function(eqs = NULL, lavmodel = NULL,
       resvar_df_res <- resvar * nobs / df_res
 
       # 5. naive cov (for standard errors) (see summary.lm in base R)
-      if (length(x.idx) > 0L) {
-        Ainv <- solve_spd(Amat, diag(x = 1, nrow = nrow(Amat)))
-        vcov.slopes <- (resvar / nobs) * Ainv
-        vcov.beta0 <- (resvar / nobs) + t(x.bar) %*% vcov.slopes %*% x.bar
-        cov.beta0.slopes <- -vcov.slopes %*% x.bar
-        vcov <- matrix(0, length(x.idx) + 1L, length(x.idx) + 1L)
-        vcov[1, 1] <- vcov.beta0
-        vcov[1, -1] <- t(cov.beta0.slopes)
-        vcov[-1, 1] <- cov.beta0.slopes
-        vcov[-1, -1] <- vcov.slopes
-      } else {
-        # only intercept
-        vcov <- matrix(resvar / nobs, 1L, 1L)
+      vcov <- NULL
+      if (!lavmodel@categorical) {
+        if (length(x.idx) > 0L) {
+          Ainv <- solve_spd(Amat, diag(x = 1, nrow = nrow(Amat)))
+          vcov.slopes <- (resvar / nobs) * Ainv
+          vcov.beta0 <- (resvar / nobs) + t(x.bar) %*% vcov.slopes %*% x.bar
+          cov.beta0.slopes <- -vcov.slopes %*% x.bar
+          vcov <- matrix(0, length(x.idx) + 1L, length(x.idx) + 1L)
+          vcov[1, 1] <- vcov.beta0
+          vcov[1, -1] <- t(cov.beta0.slopes)
+          vcov[-1, 1] <- cov.beta0.slopes
+          vcov[-1, -1] <- vcov.slopes
+        } else {
+          # only intercept
+          vcov <- matrix(resvar / nobs, 1L, 1L)
+        }
       }
 
       # 6. Sargan test (see summary.ivreg.R 363--371)
@@ -483,18 +496,23 @@ lav_sem_miiv_2sls_samplestats <- function(eqs = NULL, lavmodel = NULL,
           g <- S_Zy - S_ZX %*% beta_slopes
           w <- solve_spd(S_ZZ, g)
           sargan["stat"] <- as.numeric(nobs * t(g) %*% w / resvar)
-          sargan["pvalue"] <- pchisq(sargan["stat"], sargan["df"],
-            lower.tail = FALSE
-          )
+          if (!lavmodel@categorical) {
+            sargan["pvalue"] <- pchisq(sargan["stat"], sargan["df"],
+              lower.tail = FALSE
+            )
+          }
         }
       }
 
       # XX (needed?)
-      if (length(x.idx) > 0L) {
-        XX <- tcrossprod(c(1, x.bar)) * nobs
-        XX[-1, -1] <- (S_XX + tcrossprod(x.bar)) * nobs
-      } else {
-        XX <- matrix(nobs, 1L, 1L)
+      XX <- NULL
+      if (!lavmodel@categorical) {
+        if (length(x.idx) > 0L) {
+          XX <- tcrossprod(c(1, x.bar)) * nobs
+          XX[-1, -1] <- (S_XX + tcrossprod(x.bar)) * nobs
+        } else {
+          XX <- matrix(nobs, 1L, 1L)
+        }
       }
 
       # add info to eqs list
@@ -513,23 +531,26 @@ lav_sem_miiv_2sls_samplestats <- function(eqs = NULL, lavmodel = NULL,
   theta1 <- x[free.directed.idx]
 
   # add equations as an attribute
-  attr(theta1, "eqs") <- eqs
+  if (!samplestats) {
+    attr(theta1, "eqs") <- eqs
+  }
 
   theta1
 }
 
 
 # by default: input (x) is theta1 (only)
-# BUT if impliedvec is TRUE, then x contains the sample statisics
+# BUT if samplestats is TRUE, then x contains the sample statisics
 # this allows us to compute the jacobian wrt theta1 elements (keeping
 # sample statistics fixed, or the jacobian wrt the sample statistics
 # (keeping theta1 fixed)
-lav_sem_miiv_varcov <- function(x = NULL, impliedvec = FALSE,
+lav_sem_miiv_varcov <- function(x = NULL, samplestats = FALSE,
                                 lavmodel = NULL, lavpartable = NULL,
+                                lavsamplestats = NULL,
                                 lavh1 = NULL, free.directed.idx = NULL,
                                 free.undirected.idx = NULL,
                                 iv.varcov.method = "RLS") {
-  if (impliedvec) {
+  if (samplestats) {
     implied <- lav_vec_to_implied(x, lavmodel = lavmodel)
     x <- lav_model_get_parameters(lavmodel)
     theta1 <- x[free.directed.idx]
@@ -555,36 +576,54 @@ lav_sem_miiv_varcov <- function(x = NULL, impliedvec = FALSE,
   s_block <- vector("list", length = nblocks)
   delta2_block <- vector("list", length = nblocks)
   for (b in seq_len(nblocks)) {
-    sample_cov <- implied$cov[[b]]
-    sample_mean <- implied$mean[[b]]
-
     # delta2
     delta2_block[[b]] <- delta_block[[b]][, free.undirected.idx, drop = FALSE]
-    if (iv.varcov.method == "GLS") {
-      s.inv <- solve(sample_cov)
-    } else { # ULS, or starting point for 2RLS/RLS
-      s.inv <- diag(1, nrow = nrow(sample_cov))
-    }
-    w2_22 <- 0.5 * lav_matrix_duplication_pre_post(s.inv %x% s.inv)
-    if (lavmodel@meanstructure) {
-      w2_11 <- s.inv
-      w2_block[[b]] <- lav_matrix_bdiag(w2_11, w2_22)
-      s_block[[b]] <- c(sample_mean, lav_matrix_vech(sample_cov))
+
+    if (lavmodel@categorical) {
+      # if (iv.varcov.method == "ULS") {
+      w2_block[[b]] <- diag(1, nrow = length(lavsamplestats@WLS.obs[[b]]))
+      # } else {
+      #  w2_block[[b]] <- diag(lavsamplestats@WLS.VD[[b]])
+      # }
+      # s_block[[b]] <- lavsamplestats@WLS.obs[[b]]
+      s_block[[b]] <- lav_implied_to_vec(implied = implied, lavmodel = lavmodel, drop.list = FALSE)[[b]]
     } else {
-      w2_block[[b]] <- w2_22
-      s_block[[b]] <- lav_matrix_vech(sample_cov)
+      # continuous case
+      sample_cov <- implied$cov[[b]]
+      sample_mean <- implied$mean[[b]]
+
+      if (iv.varcov.method == "GLS") {
+        s.inv <- solve(sample_cov)
+      } else { # ULS, or starting point for 2RLS/RLS
+        s.inv <- diag(1, nrow = nrow(sample_cov))
+      }
+      w2_22 <- 0.5 * lav_matrix_duplication_pre_post(s.inv %x% s.inv)
+      if (lavmodel@meanstructure) {
+        w2_11 <- s.inv
+        w2_block[[b]] <- lav_matrix_bdiag(w2_11, w2_22)
+        s_block[[b]] <- c(sample_mean, lav_matrix_vech(sample_cov))
+      } else {
+        w2_block[[b]] <- w2_22
+        s_block[[b]] <- lav_matrix_vech(sample_cov)
+      }
     }
-  }
+  } # blocks
+
   Delta2 <- do.call("rbind", delta2_block)
   W2 <- lav_matrix_bdiag(w2_block)
-  svech <- unlist(s_block)
+  svec <- unlist(s_block)
 
   # initial estimate for theta.2
   # TODO: if any constraints are needed, we need to augment the information
   theta2 <- drop(solve(
     t(Delta2) %*% W2 %*% Delta2,
-    t(Delta2) %*% W2 %*% svech
+    t(Delta2) %*% W2 %*% svec
   ))
+
+  # in the categorical case, we are done
+  if (lavmodel@categorical) {
+    return(theta2)
+  }
 
   # again, but now with Sigma
   if (iv.varcov.method == "2RLS") {
@@ -608,7 +647,7 @@ lav_sem_miiv_varcov <- function(x = NULL, impliedvec = FALSE,
     # TODO: if any constraints are needed, we need to augment the information
     theta2 <- drop(solve(
       t(Delta2) %*% W2 %*% Delta2,
-      t(Delta2) %*% W2 %*% svech
+      t(Delta2) %*% W2 %*% svec
     ))
   } else if (iv.varcov.method == "RLS") {
     for (i in 1:200) {
@@ -633,7 +672,7 @@ lav_sem_miiv_varcov <- function(x = NULL, impliedvec = FALSE,
       # TODO: if any constraints are needed, we need to augment the information
       theta2 <- drop(solve(
         t(Delta2) %*% W2 %*% Delta2,
-        t(Delta2) %*% W2 %*% svech
+        t(Delta2) %*% W2 %*% svec
       ))
       sse <- sum((old_x - theta2)^2)
       # cat("i = ", i, "sse = ", sse, "\n")
@@ -666,14 +705,19 @@ lav_sem_miiv_vcov <- function(lavmodel = NULL, lavsamplestats = NULL,
   # nblocks
   nblocks <- lavmodel@nblocks
 
-  # FIXME: what about scaling parameters (~*~)? (ignored for now)
+  # eqs?
+  if (is.null(eqs)) {
+    lavpta <- lav_partable_attributes(lavpartable)
+    eqs <- lav_model_find_iv(lavmodel = lavmodel, lavpta = lavpta)
+  }
 
+  # directed versus undirected (free) parameters
   undirected.idx <- which(lavpartable$free > 0L &
     !duplicated(lavpartable$free) & # if ceq.simple
     lavpartable$op == "~~")
   directed.idx <- which(lavpartable$free > 0L &
     !duplicated(lavpartable$free) & # if ceq.simple
-    !lavpartable$op %in% c("~~", "~*~"))
+    lavpartable$op %in% c("=~", "~", "~1"))
   free.directed.idx <- unique(lavpartable$free[directed.idx])
   free.undirected.idx <- unique(lavpartable$free[undirected.idx])
 
@@ -681,101 +725,13 @@ lav_sem_miiv_vcov <- function(lavmodel = NULL, lavsamplestats = NULL,
   x <- lav_model_get_parameters(lavmodel, type = "free")
   theta1 <- x[free.directed.idx]
 
-
-  # stage 1: directed effects
-  for (b in seq_len(nblocks)) {
-    neqs <- length(eqs[[b]])
-    for (j in seq_len(neqs)) {
-      eq <- eqs[[b]][[j]]
-
-      if (!is.null(eq$vcov) && nrow(eq$vcov) > 0L) {
-        eq_vcov <- eq$vcov # always includes intercept
-      } else if (!is.null(eq$XX) && !is.null(eq$resvar)) {
-        # reconstruct using XX and resvar (less stable!)
-        eq_vcov <- solve(crossprod(eq$XX)) * eq$resvar # or resvar_df_res
-      }
-
-      # only keep free parameters
-      free.idx <- lavpartable$free[eq$pt]
-      if (length(eq$rhs) > 0L) {
-        if (all(free.idx > 0L)) {
-          vcov[free.idx, free.idx] <- eq_vcov[-1, -1]
-        } else {
-          # remove non-free elements
-          zero.idx <- which(free.idx == 0L)
-          free.idx <- free.idx[-zero.idx]
-          if (length(free.idx) > 0L) {
-            vcov[free.idx, free.idx] <-
-              eq_vcov[-1, -1][-zero.idx, -zero.idx, drop = FALSE]
-          }
-        }
-      }
-      if (lavmodel@meanstructure) {
-        free.int.idx <- lavpartable$free[eq$ptint]
-        if (free.int.idx > 0L) {
-          vcov[free.int.idx, free.int.idx] <- eq_vcov[1, 1]
-        }
-      }
-    } # neqs
-  } # nblocks
-
-  # stage 2: undirected effects (note: intercepts have no effect!)
-
-  if (iv.varcov.se) {
-    # part a: effect of theta1
-    jac_a <- try(lav_func_jacobian_complex(
-      func = lav_sem_miiv_varcov,
-      x = theta1, impliedvec = FALSE, lavmodel = lavmodel,
-      lavpartable = lavpartable, lavh1 = lavh1,
-      free.directed.idx = free.directed.idx,
-      free.undirected.idx = free.undirected.idx,
-      iv.varcov.method = iv.varcov.method
-    ), silent = TRUE)
-    if (inherits(jac_a, "try-error")) {
-      jac_a <- numDeriv::jacobian(
-        func = lav_sem_miiv_varcov,
-        x = theta1, impliedvec = FALSE, lavmodel = lavmodel,
-        lavpartable = lavpartable, lavh1 = lavh1,
-        free.directed.idx = free.directed.idx,
-        free.undirected.idx = free.undirected.idx,
-        iv.varcov.method = iv.varcov.method
-      )
-    }
-    vcov_directed <- vcov[free.directed.idx, free.directed.idx, drop = FALSE]
-    vcov_a <- jac_a %*% vcov_directed %*% t(jac_a)
-
-    # part b: effect of sample statistics
-    # - get jacobian lav_sem_miiv_varcov wrt implied_vec
-    # - get Gamma (NT or ADF)
-    # - vcov_undirected_b <- jac_b %*% gamma_mat %*% t(jac_b)
-    vec <- lav_implied_to_vec(
-      implied = lavh1$implied, lavmodel = lavmodel,
-      drop.list = TRUE
-    )
-    jac_b <- try(lav_func_jacobian_complex(
-      func = lav_sem_miiv_varcov,
-      x = vec, impliedvec = TRUE, lavmodel = lavmodel,
-      lavpartable = lavpartable, lavh1 = lavh1,
-      free.directed.idx = free.directed.idx,
-      free.undirected.idx = free.undirected.idx,
-      iv.varcov.method = iv.varcov.method
-    ), silent = TRUE)
-    if (inherits(jac_b, "try-error")) {
-      jac_b <- numDeriv::jacobian(
-        func = lav_sem_miiv_varcov,
-        x = vec, impliedvec = TRUE, lavmodel = lavmodel,
-        lavpartable = lavpartable, lavh1 = lavh1,
-        free.directed.idx = free.directed.idx,
-        free.undirected.idx = free.undirected.idx,
-        iv.varcov.method = iv.varcov.method
-      )
-    }
-
-    # Gamma matrix per group
+  # do we need gamma_big?
+  if (lavmodel@categorical ||
+    (iv.varcov.se && length(free.undirected.idx) > 0L)) {
     gamma_g <- vector("list", lavmodel@ngroups)
     for (g in seq_len(lavmodel@ngroups)) {
       if (!is.null(lavsamplestats@NACOV[[g]])) {
-        gamma_g <- lavsamplestats@NACOV[[g]]
+        gamma_g[[g]] <- lavsamplestats@NACOV[[g]]
       } else {
         if (iv.varcov.modelbased) {
           mean_g <- lavimplied$mean[[g]]
@@ -785,7 +741,7 @@ lav_sem_miiv_vcov <- function(lavmodel = NULL, lavsamplestats = NULL,
           cov_g <- lavh1$implied$cov[[g]]
         }
         # NT version (for now), model-based
-        gamma_g <- lav_samplestats_Gamma_NT(
+        gamma_g[[g]] <- lav_samplestats_Gamma_NT(
           COV = cov_g,
           MEAN = mean_g,
           x.idx = lavsamplestats@x.idx[[g]],
@@ -795,14 +751,143 @@ lav_sem_miiv_vcov <- function(lavmodel = NULL, lavsamplestats = NULL,
           slopestructure = lavmodel@conditional.x
         )
         # divide by (group) sample size
-        gamma_g <- gamma_g / lavsamplestats@nobs[[g]]
+        gamma_g[[g]] <- gamma_g[[g]] / lavsamplestats@nobs[[g]]
       }
     }
     gamma_big <- lav_matrix_bdiag(gamma_g)
-    vcov_b <- jac_b %*% gamma_big %*% t(jac_b)
+  }
 
-    vcov_ab <- vcov_a + vcov_b
-    vcov[free.undirected.idx, free.undirected.idx] <- vcov_ab
+  # stage 1: directed effects
+  if (length(free.directed.idx) > 0L) {
+    if (lavmodel@categorical) {
+      # compute K matrix
+      vec <- lav_implied_to_vec(
+        implied = lavh1$implied, lavmodel = lavmodel,
+        drop.list = TRUE
+      )
+      jac_k <- numDeriv::jacobian(
+        lav_sem_miiv_2sls_samplestats,
+        x = vec, samplestats = TRUE, eqs = eqs,
+        lavmodel = lavmodel, lavpartable = lavpartable,
+        lavsamplestats = lavsamplestats,
+        lavh1 = lavh1, free.directed.idx = free.directed.idx
+      )
+      vcov[free.directed.idx, free.directed.idx] <-
+        (jac_k %*% gamma_big %*% t(jac_k)) / lavsamplestats@ntotal
+    } else {
+      for (b in seq_len(nblocks)) {
+        neqs <- length(eqs[[b]])
+        for (j in seq_len(neqs)) {
+          eq <- eqs[[b]][[j]]
+
+          eq_vcov <- NULL
+          if (!is.null(eq$vcov) && nrow(eq$vcov) > 0L) {
+            eq_vcov <- eq$vcov # always includes intercept
+          } else if (!is.null(eq$XX) && !is.null(eq$resvar)) {
+            # reconstruct using XX and resvar (less stable!)
+            eq_vcov <- solve(crossprod(eq$XX)) * eq$resvar # or resvar_df_res
+          }
+          if (is.null(eq_vcov)) {
+            next
+          }
+
+          # only keep free parameters
+          free.idx <- lavpartable$free[eq$pt]
+          if (length(eq$rhs) > 0L) {
+            if (all(free.idx > 0L)) {
+              vcov[free.idx, free.idx] <- eq_vcov[-1, -1]
+            } else {
+              # remove non-free elements
+              zero.idx <- which(free.idx == 0L)
+              free.idx <- free.idx[-zero.idx]
+              if (length(free.idx) > 0L) {
+                vcov[free.idx, free.idx] <-
+                  eq_vcov[-1, -1][-zero.idx, -zero.idx, drop = FALSE]
+              }
+            }
+          }
+          if (lavmodel@meanstructure) {
+            free.int.idx <- lavpartable$free[eq$ptint]
+            if (free.int.idx > 0L) {
+              vcov[free.int.idx, free.int.idx] <- eq_vcov[1, 1]
+            }
+          }
+        } # neqs
+      } # nblocks
+    } # continuous/vcov version
+  }
+
+  # stage 2: undirected effects (note: intercepts have no effect!)
+
+  if (iv.varcov.se && length(free.undirected.idx) > 0L) {
+    if (lavmodel@categorical) {
+      delta_list <- lav_model_delta(lavmodel) # per block/group
+      delta <- do.call("rbind", delta_list)
+      delta1 <- delta[, free.directed.idx, drop = FALSE]
+      delta2 <- delta[, free.undirected.idx, drop = FALSE]
+      h2 <- solve(crossprod(delta2), t(delta2))
+      idiag <- diag(1, nrow = nrow(delta1))
+      if (length(free.directed.idx) > 0L) {
+        tmp <- h2 %*% (idiag - delta1 %*% jac_k)
+      } else {
+        tmp <- h2
+      }
+      vcov[free.undirected.idx, free.undirected.idx] <-
+        (tmp %*% gamma_big %*% t(tmp)) / lavsamplestats@ntotal
+    } else {
+      # part a: effect of theta1
+      jac_a <- try(lav_func_jacobian_complex(
+        func = lav_sem_miiv_varcov,
+        x = theta1, samplestats = FALSE, lavmodel = lavmodel,
+        lavpartable = lavpartable, lavsamplestats = lavsamplestats,
+        lavh1 = lavh1, free.directed.idx = free.directed.idx,
+        free.undirected.idx = free.undirected.idx,
+        iv.varcov.method = iv.varcov.method
+      ), silent = TRUE)
+      if (inherits(jac_a, "try-error")) {
+        jac_a <- numDeriv::jacobian(
+          func = lav_sem_miiv_varcov,
+          x = theta1, samplestats = FALSE, lavmodel = lavmodel,
+          lavpartable = lavpartable, lavsamplestats = lavsamplestats,
+          lavh1 = lavh1, free.directed.idx = free.directed.idx,
+          free.undirected.idx = free.undirected.idx,
+          iv.varcov.method = iv.varcov.method
+        )
+      }
+      vcov_directed <- vcov[free.directed.idx, free.directed.idx, drop = FALSE]
+      vcov_a <- jac_a %*% vcov_directed %*% t(jac_a)
+
+      # part b: effect of sample statistics
+      # - get jacobian lav_sem_miiv_varcov wrt implied_vec
+      # - get Gamma (NT or ADF)
+      # - vcov_undirected_b <- jac_b %*% gamma_mat %*% t(jac_b)
+      vec <- lav_implied_to_vec(
+        implied = lavh1$implied, lavmodel = lavmodel,
+        drop.list = TRUE
+      )
+      jac_b <- try(lav_func_jacobian_complex(
+        func = lav_sem_miiv_varcov,
+        x = vec, samplestats = TRUE, lavmodel = lavmodel,
+        lavpartable = lavpartable, lavsamplestats = lavsamplestats,
+        lavh1 = lavh1, free.directed.idx = free.directed.idx,
+        free.undirected.idx = free.undirected.idx,
+        iv.varcov.method = iv.varcov.method
+      ), silent = TRUE)
+      if (inherits(jac_b, "try-error")) {
+        jac_b <- numDeriv::jacobian(
+          func = lav_sem_miiv_varcov,
+          x = vec, samplestats = TRUE, lavmodel = lavmodel,
+          lavpartable = lavpartable, lavsamplestats = lavsamplestats,
+          lavh1 = lavh1, free.directed.idx = free.directed.idx,
+          free.undirected.idx = free.undirected.idx,
+          iv.varcov.method = iv.varcov.method
+        )
+      }
+
+      vcov_b <- (jac_b %*% gamma_big %*% t(jac_b)) / lavsamplestats@ntotal
+      vcov_ab <- vcov_a + vcov_b
+      vcov[free.undirected.idx, free.undirected.idx] <- vcov_ab
+    } # continuous
   } # iv.varcov.se = TRUE
 
   vcov

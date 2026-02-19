@@ -827,7 +827,7 @@ lav_samplestats_from_data <- function(lavdata = NULL,
               Mplus.WLS = FALSE
             )
         }
-      } else if (estimator %in% c("WLS", "DWLS", "ULS", "DLS", "catML")) {
+      } else if (estimator %in% c("WLS", "DWLS", "ULS", "DLS", "catML", "IV")) {
         if (!categorical) {
           # sample size large enough?
           nvar <- ncol(X[[g]])
@@ -839,7 +839,7 @@ lav_samplestats_from_data <- function(lavdata = NULL,
           if (conditional.x && nexo > 0L) {
             pstar <- pstar + (nvar * nexo)
           }
-          if (nrow(X[[g]]) < pstar) {
+          if (nrow(X[[g]]) < pstar && estimator != "IV") {
             if (ngroups > 1L) {
               lav_msg_warn(gettextf(
               "number of observations (%s) too small to compute Gamma",
@@ -867,7 +867,7 @@ lav_samplestats_from_data <- function(lavdata = NULL,
               meanstructure = meanstructure
             )
 		  } else {
-            if (lavoptions$se == "robust.sem.nt") {
+            if (lavoptions$se == "robust.sem.nt" || estimator == "IV") {
               NACOV[[g]] <-
                 lav_samplestats_Gamma_NT(
                   Y = Y,
@@ -996,7 +996,7 @@ lav_samplestats_from_data <- function(lavdata = NULL,
         }
       } else if (estimator == "ML") {
         # no WLS.V here, since function of model-implied moments
-      } else if (estimator %in% c("WLS", "DWLS", "ULS", "DLS")) {
+      } else if (estimator %in% c("WLS", "DWLS", "ULS", "DLS", "IV")) {
         if (!categorical) {
           if (estimator == "WLS" || estimator == "DLS") {
             if (!fixed.x) {
@@ -1078,7 +1078,7 @@ lav_samplestats_from_data <- function(lavdata = NULL,
             # WLS.V[[g]] <- diag(1/dacov, nrow=NROW(CAT$WLS.W),
             #                            ncol=NCOL(CAT$WLS.W))
             WLS.VD[[g]] <- 1 / dacov
-          } else if (estimator == "ULS") {
+          } else if (estimator == "ULS" || estimator == "IV") {
             # WLS.V[[g]] <- diag(length(WLS.obs[[g]]))
             WLS.VD[[g]] <- rep(1, length(WLS.obs[[g]]))
           }

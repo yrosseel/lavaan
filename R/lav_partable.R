@@ -1066,19 +1066,19 @@ lav_model_partable  <- function(
         block = b
       )
       lv.marker <- lav_partable_vnames(tmp.list,
-        type = "lv.regular",
-        block = b
-      )
-
-      if (length(lv.names) == 0L) {
-        next
-      }
-
-      # markers for this block
-      lv.marker <- lav_partable_vnames(tmp.list,
         type = "lv.marker",
         block = b
       )
+      ov.num <- lav_partable_vnames(tmp.list,
+        type = "ov.num",
+        block = b
+      )
+      # new in 0.6-22: only consider ov.num markers
+      lv.marker <- lv.marker[lv.marker %in% ov.num]
+
+      if (length(lv.marker) == 0L) {
+        next
+      }
 
       # fix marker intercepts to zero
       marker.idx <- which(tmp.list$op == "~1" &

@@ -3335,13 +3335,13 @@ lav_object_inspect_ntotal <- function(object) {
 }
 
 lav_object_inspect_iv <- function(object, drop.list.single.group = FALSE) {
-  
+
   if (is.null(object@internal$eqs)) {
     lav_msg_stop(gettext("no equations/ivs found"))
   }
   lavmodel <- object@Model
   lavdata <- object@Data
-  
+
   # grab equations
   iv_list <- object@internal$eqs
 
@@ -3379,13 +3379,13 @@ lav_object_inspect_iv <- function(object, drop.list.single.group = FALSE) {
 }
 
 lav_object_inspect_eqs <- function(object, drop.list.single.group = FALSE) {
-  
+
   if (is.null(object@internal$eqs)) {
     lav_msg_stop(gettext("no equations/ivs found"))
-  }     
+  }
   lavmodel <- object@Model
   lavdata <- object@Data
-  
+
   # grab equations
   eqs <- object@internal$eqs
 
@@ -3431,7 +3431,7 @@ lav_object_inspect_sargan <- function(object, drop.list.single.group = FALSE) {
     sargan.pvalue <- sapply(seq_along(eqs),
       function(x) eqs[[x]][["sargan"]]["pvalue"])
     table[[b]] <- data.frame(
-      lhs = lhs, rhs = rhs, instruments = miiv, 
+      lhs = lhs, rhs = rhs, instruments = miiv,
       sargan.stat = sargan.stat, df = sargan.df, pvalue = sargan.pvalue
     )
 

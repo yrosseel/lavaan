@@ -586,13 +586,20 @@ lav_options_est_iv <- function(opt) {
     opt$bounds <- "standard"
   }
   # test
-  if (opt$test == "default") {
-    opt$test <- "browne.residual.nt" # sample-based (especially for baseline)
+  if (length(opt$test) == 1L && opt$test == "default") {
+    if (opt$.categorical) {
+      opt$test <- "browne.residual.adf" # always sample-based
+    } else {
+      opt$test <- "browne.residual.nt" # sample-based (especially for baseline)
+    }
   }
-  opt$standard.test <- opt$test
+  opt$standard.test <- opt$test[1]
 
   # missing
   opt$missing <- "listwise" # for now
+
+  # sample.icov not needed
+  opt$sample.icov <- FALSE
 
   # estimator options
   if (is.null(opt$estimator.args)) {

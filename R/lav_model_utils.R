@@ -88,10 +88,14 @@ lav_model_set_parameters <- function(lavmodel = NULL, x = NULL) {
         # which mm belong to group g?
         mm.in.group <- 1:nmat[g] + cumsum(c(0L, nmat))[g]
 
-        if (lavmodel@estimator %in% c(
-          "ML", "WLS", "GLS", "DWLS", "ULS", "PML",
-          "catML"
-        )) {
+        if (lavmodel@estimator %in% c("MML", "FML")) {
+          #  ttt <- diag(tmp[mm.in.group]$theta)
+          #  diag(tmp[mm.in.group]$theta) <- as.numeric(NA)
+          #  if(length(lavmodel@num.idx[[g]]) > 0L) {
+          #      diag(tmp[mm.in.group]$theta)[ lavmodel@num.idx[[g]] ] <-
+          #          ttt[ lavmodel@num.idx[[g]] ]
+          #  }
+        } else {
           if (lavmodel@parameterization == "delta") {
             tmp[mm.in.group] <-
               lav_lisrel_residual_variances(
@@ -107,13 +111,6 @@ lav_model_set_parameters <- function(lavmodel = NULL, x = NULL) {
                 num.idx = lavmodel@num.idx[[g]]
               )
           }
-        } else if (lavmodel@estimator %in% c("MML", "FML")) {
-          #  ttt <- diag(tmp[mm.in.group]$theta)
-          #  diag(tmp[mm.in.group]$theta) <- as.numeric(NA)
-          #  if(length(lavmodel@num.idx[[g]]) > 0L) {
-          #      diag(tmp[mm.in.group]$theta)[ lavmodel@num.idx[[g]] ] <-
-          #          ttt[ lavmodel@num.idx[[g]] ]
-          #  }
         }
       }
     } else {
@@ -122,8 +119,8 @@ lav_model_set_parameters <- function(lavmodel = NULL, x = NULL) {
   }
 
   if (lavmodel@composites) {
-  # for package stdmod only! (vignette stdmod_lavaan uses old fit object)
-  #if (.hasSlot(lavmodel, "composites") && lavmodel@composites) {
+    # for package stdmod only! (vignette stdmod_lavaan uses old fit object)
+    # if (.hasSlot(lavmodel, "composites") && lavmodel@composites) {
     nmat <- lavmodel@nmat
     if (lavmodel@representation == "LISREL") {
       for (g in 1:lavmodel@nblocks) {
@@ -267,9 +264,12 @@ lav_model_dmmdpar <- function(lavmodel, target = "theta", group = 1L) {
   # find target model matrix
   mlist.idx <- which(names(MLIST) == target)
   if (length(mlist.idx) == 0L) {
-    lav_msg_stop(gettextf(
-      "model matrix \"%s\" not found. Available model matrices are:", target),
-      paste(names(MLIST), collapse = " "))
+    lav_msg_stop(
+      gettextf(
+        "model matrix \"%s\" not found. Available model matrices are:", target
+      ),
+      paste(names(MLIST), collapse = " ")
+    )
   }
 
   # target idx in GLIST

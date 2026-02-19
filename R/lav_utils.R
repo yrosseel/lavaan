@@ -425,8 +425,41 @@ lav_vec_to_implied <- function(x = NULL, lavmodel) {
     }
 
     if (lavmodel@categorical) {
-      # TODO
-      cat("\n NOT READY YET! \n")
+      if (lavmodel@conditional.x) {
+        # TODO
+        cat("\n NOT READY YET! \n")
+      }
+
+      # th
+      nth <- length(lavmodel@th.idx[[g]])
+      idx <- seq_len(nth)
+      th_g <- x[idx]
+      x <- x[-idx]
+
+      # mean/var ov.num
+      mean_g <- rep(0, nvar)
+      var_g <- rep(1, nvar)
+      if (any(lavmodel@th.idx[[g]] == 0)) {
+        num.idx <- seq_len(nvar)
+        num.idx <- num.idx[!num.idx %in% lavmodel@th.idx[[g]]]
+        idx <- seq_len(length(num.idx))
+        var_g[num.idx] <- x[idx]
+        x <- x[-idx]
+        # FIXME: change sign?
+        mean_g[num.idx] <- th_g[lavmodel@th.idx[[g]] == 0]
+      }
+
+      # cov - lower only
+      idx <- seq_len( nvar * (nvar - 1) / 2 )
+      cov_g <- lav_matrix_vech_reverse(x[idx], diagonal = FALSE)
+      x <- x[-idx]
+      diag(cov_g) <- var_g
+
+      # fill in
+      implied$cov[[g]] <- cov_g
+      implied$mean[[g]] <- mean_g
+      implied$th[[g]] <- th_g
+
     } else {
       # diag flag
       diag_flag <- TRUE
