@@ -174,6 +174,36 @@ lav_standardize_lv <- function(lavobject = NULL,
     ETA2[ETA2 < 0] <- as.numeric(NA)
     ETA <- sqrt(ETA2)
 
+    # Interaction/quadratic term correction (FV)
+    # (based on Kelava & Brandt, 2022; Brandt et al., 2015)
+    # For interaction terms A:B, the standardized coefficient should use
+    # SD(A)*SD(B) instead of SD(A:B) (Eq. 13 in Brandt et al., 2015).
+    lv.int.names <- lav_partable_vnames(lavpartable, "lv.interaction",
+      block = g
+    )
+
+    if (length(lv.int.names) > 0L) {
+      # Replace ETA for interaction terms with SD(A)*SD(B)
+      for (int.name in lv.int.names) {
+        components <- strsplit(int.name, ":", fixed = TRUE)[[1L]]
+        idx.int <- match(int.name, lv.names)
+        idx.a <- match(components[1], lv.names)
+        idx.b <- match(components[2], lv.names)
+        if (is.na(idx.a) || is.na(idx.b) || is.na(idx.int)) next
+        ETA[idx.int] <- ETA[idx.a] * ETA[idx.b]
+        ETA2[idx.int] <- ETA[idx.int]^2
+      }
+
+      # Note: centering adjustments for non-zero latent means
+      # are not yet implemented. LSAM has all the information needed;
+      # Brandt et al., 2015, Eqs. 11-12 not needed.
+      warning("lavaan WARNING: centering adjustments for non-zero ",
+        "latent means are not yet implemented for interaction terms.",
+        call. = FALSE
+      )
+    }
+    # End interaction/quadratic term correction for now (23/02/26;FV)
+
     # 1a. "=~" regular indicators
     idx <- which(partable$op == "=~" & !(partable$rhs %in% lv.names) &
       partable$block == g)
