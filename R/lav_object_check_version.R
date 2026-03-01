@@ -16,7 +16,8 @@ lav_object_check_version <- function(object = NULL) {
   is.lavaan.object <- inherits(object, "lavaan")
   if (!is.lavaan.object) {
     # check if lavaanList object, if not return input object
-    if (!inherits(object, "lavaanList")) return(object)
+    #if (!inherits(object, "lavaanList")) return(object)
+    return(object)
   }
 
   # flag: check or not?

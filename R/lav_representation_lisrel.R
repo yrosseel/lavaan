@@ -32,7 +32,7 @@ lav_lisrel <- function(lavpartable = NULL,
 
   # gamma?only if conditional.x
   if (any(lavpartable$op %in% c("~", "<~") & lavpartable$exo == 1L) &&
-      !composites) {
+    !composites) {
     gamma <- TRUE
   } else {
     gamma <- FALSE
@@ -670,7 +670,6 @@ lav_lisrel_vetax <- function(MLIST = NULL, lv.dummy.idx = NULL) {
 }
 
 
-
 # Y
 # 1) EY
 # 2) EYx
@@ -1093,16 +1092,20 @@ lav_lisrel_sigma <- function(MLIST = NULL, delta = TRUE) {
     # compute V(Y*|x_i)
     VYx <- tcrossprod(LAMBDA..IB.inv %*% PSI, LAMBDA..IB.inv) + THETA
 
-  # composites, or mix of composites and latent variables
+    # composites, or mix of composites and latent variables
   } else {
     # - first join LAMBDA and WMAT
     # - create 'T' matrix: - identity for regular lv's,
     #                      - THETA block-diagonal for composites
     # - create C_0: VETA, but zero diagonal elements for composites
-    cov.idx <- which(apply(LAMBDA, 1L,
-                           function(x) sum(x == 0) == ncol(LAMBDA)))
-    clv.idx <- which(apply(LAMBDA, 2L,
-                           function(x) sum(x == 0) == nrow(LAMBDA)))
+    cov.idx <- which(apply(
+      LAMBDA, 1L,
+      function(x) sum(x == 0) == ncol(LAMBDA)
+    ))
+    clv.idx <- which(apply(
+      LAMBDA, 2L,
+      function(x) sum(x == 0) == nrow(LAMBDA)
+    ))
     # regular latent variables
     rlv.idx <- seq_len(ncol(LAMBDA))[-clv.idx]
 
@@ -1111,7 +1114,7 @@ lav_lisrel_sigma <- function(MLIST = NULL, delta = TRUE) {
 
     Tmat <- diag(nrow(LAMBDA))
     Tmat[cov.idx, cov.idx] <- THETA[cov.idx, cov.idx]
-    wtw <- t(LW[,clv.idx, drop = FALSE]) %*% Tmat %*% LW[,clv.idx, drop = FALSE]
+    wtw <- t(LW[, clv.idx, drop = FALSE]) %*% Tmat %*% LW[, clv.idx, drop = FALSE]
     wtw.inv <- solve(wtw)
     WTW.inv <- diag(ncol(LAMBDA))
     WTW.inv[clv.idx, clv.idx] <- wtw.inv
@@ -1122,7 +1125,8 @@ lav_lisrel_sigma <- function(MLIST = NULL, delta = TRUE) {
       IB.inv <- lav_lisrel_ibinv(MLIST = MLIST)
     }
     VETA <- IB.inv %*% PSI %*% t(IB.inv)
-    C0 <- VETA; diag(C0)[clv.idx] <- 0
+    C0 <- VETA
+    diag(C0)[clv.idx] <- 0
 
     VYx <- Tmat %*% LW %*% WTW.inv %*% C0 %*% t(WTW.inv) %*% t(LW) %*% Tmat + THETA
   }
@@ -1164,7 +1168,7 @@ lav_lisrel_vyetax <- function(MLIST = NULL, delta = TRUE) {
 # this is a special case of E(Y) where
 # - we have no (explicit) eXogenous variables
 # - only continuous
-lav_lisrel_mu<- function(MLIST = NULL) {
+lav_lisrel_mu <- function(MLIST = NULL) {
   NU <- MLIST$nu
   ALPHA <- MLIST$alpha
   LAMBDA <- MLIST$lambda
@@ -1328,11 +1332,11 @@ lav_lisrel_theta <- function(MLIST = NULL,
 }
 
 lav_lisrel_nu <- function(MLIST = NULL,
-                             sample.mean = sample.mean,
-                             ov.y.dummy.ov.idx = NULL,
-                             ov.x.dummy.ov.idx = NULL,
-                             ov.y.dummy.lv.idx = NULL,
-                             ov.x.dummy.lv.idx = NULL) {
+                          sample.mean = sample.mean,
+                          ov.y.dummy.ov.idx = NULL,
+                          ov.x.dummy.ov.idx = NULL,
+                          ov.y.dummy.lv.idx = NULL,
+                          ov.x.dummy.lv.idx = NULL) {
   # get NU, but do not 'fix'
   NU <- lav_lisrel_nu0(
     MLIST = MLIST, sample.mean = sample.mean,
@@ -1363,7 +1367,7 @@ lav_lisrel_nu <- function(MLIST = NULL,
 }
 
 # compute IB.inv
-lav_lisrel_ibinv  <- function(MLIST = NULL) {
+lav_lisrel_ibinv <- function(MLIST = NULL) {
   BETA <- MLIST$beta
   nr <- nrow(MLIST$psi)
 
@@ -1601,8 +1605,8 @@ lav_lisrel_eyetax_old <- function(MLIST = NULL, eXo = NULL, ETA = NULL,
 # create additional matrices (eg GAMMA), and resize
 # remove all ov.x related entries
 lav_lisrel_lisrelx <- function(MLIST = NULL,
-                         ov.x.dummy.ov.idx = NULL,
-                         ov.x.dummy.lv.idx = NULL) {
+                               ov.x.dummy.ov.idx = NULL,
+                               ov.x.dummy.lv.idx = NULL) {
   lv.idx <- ov.x.dummy.lv.idx
   ov.idx <- ov.x.dummy.ov.idx
   if (length(lv.idx) == 0L) {
@@ -1658,10 +1662,10 @@ lav_lisrel_lisrelx <- function(MLIST = NULL,
 
 # create MLIST from MLISTX
 lav_lisrelx_lisrel <- function(MLISTX = NULL,
-                         ov.x.dummy.ov.idx = NULL,
-                         ov.x.dummy.lv.idx = NULL,
-                         mean.x = NULL,
-                         cov.x = NULL) {
+                               ov.x.dummy.ov.idx = NULL,
+                               ov.x.dummy.lv.idx = NULL,
+                               mean.x = NULL,
+                               cov.x = NULL) {
   lv.idx <- ov.x.dummy.lv.idx
   ndum <- length(lv.idx)
   ov.idx <- ov.x.dummy.ov.idx
@@ -1723,14 +1727,14 @@ lav_lisrelx_lisrel <- function(MLISTX = NULL,
 
 # set (total/residual) variances of composites
 # and while we at it, also set intercepts of composites
-lav_lisrel_composites_variances<- function(MLIST = NULL,
-                                           tol = .Machine$double.eps,
-                                           debug = FALSE) {
+lav_lisrel_composites_variances <- function(MLIST = NULL,
+                                            tol = .Machine$double.eps,
+                                            debug = FALSE) {
   LAMBDA <- MLIST$lambda
-  BETA   <- MLIST$beta
-  PSI    <- MLIST$psi
-  WMAT   <- MLIST$wmat
-  THETA  <- MLIST$theta
+  BETA <- MLIST$beta
+  PSI <- MLIST$psi
+  WMAT <- MLIST$wmat
+  THETA <- MLIST$theta
 
   # std.lv or not?
   marker.idx <- lav_utils_get_marker(MLIST$wmat)
@@ -1740,10 +1744,14 @@ lav_lisrel_composites_variances<- function(MLIST = NULL,
   }
 
   # housekeeping
-  ovc.idx <- which(apply(LAMBDA, 1L,
-                         function(x) sum(x == 0) == ncol(LAMBDA)))
-  lvc.idx <- which(apply(LAMBDA, 2L,
-                         function(x) sum(x == 0) == nrow(LAMBDA)))
+  ovc.idx <- which(apply(
+    LAMBDA, 1L,
+    function(x) sum(x == 0) == ncol(LAMBDA)
+  ))
+  lvc.idx <- which(apply(
+    LAMBDA, 2L,
+    function(x) sum(x == 0) == nrow(LAMBDA)
+  ))
   lvc.flag <- logical(nrow(PSI))
   lvc.flag[lvc.idx] <- TRUE
   Tmat <- diag(nrow(LAMBDA))
@@ -1783,8 +1791,10 @@ lav_lisrel_composites_variances<- function(MLIST = NULL,
   # check if IB is acyclic
   if (det(IB) != 1) {
     # damn, we have an cyclic model; use nlminb()
-    PSI <- lav_mlist_target_psi(IB.inv = IB.inv, PSI = PSI,
-                                    target.psi = target.psi, y.idx = y.idx)
+    PSI <- lav_mlist_target_psi(
+      IB.inv = IB.inv, PSI = PSI,
+      target.psi = target.psi, y.idx = y.idx
+    )
   } else {
     # for an acyclic model, we should be able to find the
     # residual analytically; simply by computing the model-based
@@ -1802,7 +1812,7 @@ lav_lisrel_composites_variances<- function(MLIST = NULL,
     # for each y variable, compute IB.inv %*% psi %*% t(IB.inv), without y
     ny <- length(y.idx)
     max_rep <- ny * 4
-    for(rep in seq_len(max_rep)) {
+    for (rep in seq_len(max_rep)) {
       if (debug) {
         cat("rep = ", rep, "\n")
       }
@@ -1834,10 +1844,11 @@ lav_lisrel_composites_variances<- function(MLIST = NULL,
     # don't be too strict here
     if (any(abs(current.diag[y.idx] - target.psi[y.idx]) > sqrt(tol))) {
       # as a last resort, use optimization
-      PSI <- lav_mlist_target_psi(IB.inv = IB.inv, PSI = PSI,
-                                      target.psi = target.psi, y.idx = y.idx)
+      PSI <- lav_mlist_target_psi(
+        IB.inv = IB.inv, PSI = PSI,
+        target.psi = target.psi, y.idx = y.idx
+      )
     }
-
   } # acyclic
 
   # store PSI
@@ -1868,7 +1879,7 @@ lav_lisrel_residual_variances <- function(MLIST = NULL,
                                           tol = .Machine$double.eps,
                                           debug = FALSE) {
   BETA <- MLIST$beta
-  PSI  <- MLIST$psi
+  PSI <- MLIST$psi
   if (is.null(MLIST$delta)) {
     delta <- rep(1, nrow(MLIST$lambda))
   } else {
@@ -1885,7 +1896,7 @@ lav_lisrel_residual_variances <- function(MLIST = NULL,
   }
 
   # if delta, the target may not be unity, but DELTA^(-2)
-  target.all <- 1/(delta * delta) # often the unit vector
+  target.all <- 1 / (delta * delta) # often the unit vector
   target.psi <- rep(1, nrow(PSI))
   if (length(ov.y.dummy.ov.idx) > 0L) {
     target.psi[ov.y.dummy.lv.idx] <- target.all[ov.y.dummy.ov.idx]
@@ -1914,8 +1925,10 @@ lav_lisrel_residual_variances <- function(MLIST = NULL,
     # check if IB is acyclic
     if (det(IB) != 1) {
       # damn, we have an cyclic model; use nlminb()
-      PSI <- lav_mlist_target_psi(IB.inv = IB.inv, PSI = PSI,
-                                      target.psi = target.psi, y.idx = y.idx)
+      PSI <- lav_mlist_target_psi(
+        IB.inv = IB.inv, PSI = PSI,
+        target.psi = target.psi, y.idx = y.idx
+      )
     } else {
       # for an acyclic model, we should be able to find the
       # residual analytically; simply by computing the model-based
@@ -1933,7 +1946,7 @@ lav_lisrel_residual_variances <- function(MLIST = NULL,
       # for each y variable, compute IB.inv %*% psi %*% t(IB.inv), without y
       ny <- length(y.idx)
       max_rep <- ny * 4
-      for(rep in seq_len(max_rep)) {
+      for (rep in seq_len(max_rep)) {
         if (debug) {
           cat("rep = ", rep, "\n")
         }
@@ -1965,10 +1978,11 @@ lav_lisrel_residual_variances <- function(MLIST = NULL,
       # don't be too strict here
       if (any(abs(current.diag[y.idx] - target.psi[y.idx]) > sqrt(tol))) {
         # as a last resort, use optimization
-        PSI <- lav_mlist_target_psi(IB.inv = IB.inv, PSI = PSI,
-                                        target.psi = target.psi, y.idx = y.idx)
+        PSI <- lav_mlist_target_psi(
+          IB.inv = IB.inv, PSI = PSI,
+          target.psi = target.psi, y.idx = y.idx
+        )
       }
-
     } # acyclic
   } # phase 1
 
@@ -2077,14 +2091,14 @@ lav_lisrel_df_dmlist <- function(MLIST = NULL, Omega = NULL, Omega.mu = NULL) {
   ALPHA <- MLIST$alpha
   WMAT <- MLIST$wmat
 
-  LAMBDA.deriv  <- NULL
-  BETA.deriv    <- NULL
-  THETA.deriv   <- NULL
-  PSI.deriv     <- NULL
-  NU.deriv      <- NULL
-  ALPHA.deriv   <- NULL
+  LAMBDA.deriv <- NULL
+  BETA.deriv <- NULL
+  THETA.deriv <- NULL
+  PSI.deriv <- NULL
+  NU.deriv <- NULL
+  ALPHA.deriv <- NULL
   GROUP.W.deriv <- NULL
-  WMAT.deriv    <- NULL
+  WMAT.deriv <- NULL
 
   # beta?
   if (is.null(BETA)) {
@@ -2114,7 +2128,7 @@ lav_lisrel_df_dmlist <- function(MLIST = NULL, Omega = NULL, Omega.mu = NULL) {
   # 1. LAMBDA
   if (!is.null(BETA)) {
     if (meanstructure) {
-    LAMBDA.deriv <- -1.0 * (Omega.mu %*% t(ALPHA) %*% t(IB.inv) +
+      LAMBDA.deriv <- -1.0 * (Omega.mu %*% t(ALPHA) %*% t(IB.inv) +
         Omega..LAMBDA..IB.inv..PSI..tIB.inv)
     } else {
       LAMBDA.deriv <- -1.0 * Omega..LAMBDA..IB.inv..PSI..tIB.inv
@@ -2364,9 +2378,11 @@ lav_lisrel_dsigma_dx <- function(MLIST = NULL,
       (diag(nvar) %x% L1)[, KOL.idx, drop = FALSE]
   } else if (m == "beta") {
     if (composites) {
-      DX <- lav_func_jacobian_complex(func = compute.sigma,
-            x = lav_matrix_vec(MLIST$beta),
-            mm = "beta", MLIST = MLIST)
+      DX <- lav_func_jacobian_complex(
+        func = compute.sigma,
+        x = lav_matrix_vec(MLIST$beta),
+        mm = "beta", MLIST = MLIST
+      )
       DX <- DX[, idx, drop = FALSE]
     } else {
       KOL.idx <- matrix(1:(nfac * nfac), nfac, nfac, byrow = TRUE)[idx]
@@ -2378,9 +2394,11 @@ lav_lisrel_dsigma_dx <- function(MLIST = NULL,
     }
   } else if (m == "psi") {
     if (composites) {
-      tmp <- lav_func_jacobian_complex(func = compute.sigma,
-            x = lav_matrix_vech(MLIST$psi),
-            mm = "psi", MLIST = MLIST)
+      tmp <- lav_func_jacobian_complex(
+        func = compute.sigma,
+        x = lav_matrix_vech(MLIST$psi),
+        mm = "psi", MLIST = MLIST
+      )
       DX <- matrix(0, nrow = nrow(tmp), ncol = length(PSI))
       DX[, lav_matrix_vech_idx(nrow(PSI))] <- tmp
       DX[, lav_matrix_vechu_idx(nrow(PSI), diagonal = FALSE)] <-
@@ -2413,9 +2431,11 @@ lav_lisrel_dsigma_dx <- function(MLIST = NULL,
     DX <- DX[, idx, drop = FALSE]
   } else if (m == "wmat") {
     # just a dummy to get us going
-    DX <- lav_func_jacobian_complex(func = compute.sigma,
-            x = lav_matrix_vec(WMAT),
-            mm = "wmat", MLIST = MLIST)
+    DX <- lav_func_jacobian_complex(
+      func = compute.sigma,
+      x = lav_matrix_vec(WMAT),
+      mm = "wmat", MLIST = MLIST
+    )
     DX <- DX[, idx, drop = FALSE]
 
     # KOL.idx <- matrix(1:(nvar * nfac), nvar, nfac, byrow = TRUE)[idx]
@@ -2819,7 +2839,6 @@ lav_lisrel_dtau_dx <- function(MLIST = NULL,
 }
 
 
-
 # dalpha/dx -- per model matrix
 lav_lisrel_dalpha_dx <- function(MLIST = NULL,
                                  m = "alpha",
@@ -2844,12 +2863,12 @@ lav_lisrel_dalpha_dx <- function(MLIST = NULL,
 # vec <- lavaan:::vec; lav_func_jacobian_complex <- lavaan:::lav_func_jacobian_complex
 # lav_lisrel_sigma <- lavaan:::lav_lisrel_sigma
 # lav_lisrel_delta <- lavaan:::lav_lisrel_delta
-lav_lisrel_test_derivatives  <- function(MLIST = NULL,
-                                         nvar = NULL, nfac = NULL, nexo = NULL,
-                                         th.idx = NULL, num.idx = NULL,
-                                         meanstructure = TRUE,
-                                         th = TRUE, delta = TRUE, pi = TRUE,
-                                         gw = FALSE, theta = FALSE) {
+lav_lisrel_test_derivatives <- function(MLIST = NULL,
+                                        nvar = NULL, nfac = NULL, nexo = NULL,
+                                        th.idx = NULL, num.idx = NULL,
+                                        meanstructure = TRUE,
+                                        th = TRUE, delta = TRUE, pi = TRUE,
+                                        gw = FALSE, theta = FALSE) {
   if (is.null(MLIST)) {
     # create artificial matrices, compare 'numerical' vs 'analytical'
     # derivatives
@@ -3060,7 +3079,7 @@ lav_lisrel_test_derivatives  <- function(MLIST = NULL,
         th.idx = th.idx
       )
       DX2 <- lav_lisrel_dth_dx(
-         MLIST = MLIST, m = mm, idx = seq_len(length(MLIST[[mm]])),
+        MLIST = MLIST, m = mm, idx = seq_len(length(MLIST[[mm]])),
         th.idx = th.idx,
         delta = TRUE
       )
@@ -3245,8 +3264,7 @@ lav_utils_get_marker <- function(LAMBDA = NULL, std.lv = FALSE) {
 # YR 01 Nov 2024: initial version; no bounds for now... (so we may end up
 #                 with negative variances)
 lav_mlist_target_psi <- function(BETA = NULL, IB.inv = NULL, PSI = NULL,
-                                     target.psi = NULL, y.idx = NULL) {
-
+                                 target.psi = NULL, y.idx = NULL) {
   nr <- nrow(PSI)
 
   # IB.inv (if not given)
@@ -3268,7 +3286,7 @@ lav_mlist_target_psi <- function(BETA = NULL, IB.inv = NULL, PSI = NULL,
 
   # cast the problem as a nonlinear optimization problem
   obj <- function(x) {
-    #cat("x = ", x, "\n")
+    # cat("x = ", x, "\n")
     # x are the diagonal elements of PSI
     this.PSI <- PSI
     diag(this.PSI)[y.idx] <- x
@@ -3289,22 +3307,85 @@ lav_mlist_target_psi <- function(BETA = NULL, IB.inv = NULL, PSI = NULL,
   PSI
 }
 
-# get 'test'
-# make sure we return a single element
-lav_utils_get_test <- function(lavobject) {
-  test <- lavobject@Options$test
-  # 0.6.5: for now, we make sure that 'test' is a single element
-  if (length(test) > 1L) {
-    standard.idx <- which(test == "standard")
-    if (length(standard.idx) > 0L) {
-      test <- test[-standard.idx]
-    }
-    if (length(test) > 1L) {
-      # only retain the first one
-      test <- test[1]
+# second-order derivatives of Sigma wrt elements of Lambda/Beta/Psi/Theta
+# (elementwise)
+#
+# work in progress
+lav_lisrel_d2sigma_lambda_psi <- function(MLIST = NULL,
+                                          i = 1L, j = 1L, # lambda
+                                          k = 1L, l = 1L) { # psi
+  # helper functions
+  # elementary matrix: p x q matrix with 1 in position (i,j), 0 elsewhere
+  elem_mat <- function(i, j, p, q) {
+    E <- matrix(0, p, q)
+    E[i, j] <- 1
+    E
+  }
+
+  # elementary symmetric matrix for vech index (k,l) of a q x q symmetric matrix
+  elem_mat_sym <- function(k, l, q) {
+    E <- matrix(0, q, q)
+    E[k, l] <- 1
+    if (k != l) E[l, k] <- 1
+    E
+  }
+
+  LAMBDA <- MLIST$lambda
+  nvar <- nrow(LAMBDA) # p
+  nfac <- ncol(LAMBDA) # q
+  IB.inv <- MLIST$IB.inv
+  if (is.null(IB.inv)) {
+    if (is.null(MLIST$beta)) {
+      IB.inv <- diag(1, nrow = nfac)
+    } else {
+      IB.inv <- lav_lisrel_ibinv(MLIST = MLIST)
     }
   }
 
-  test
+  LIB.inv <- LAMBDA %*% IB.inv
+
+  dLambda <- elem_mat(i, j, nvar, nfac) # p x q,  elementary matrix for Lambda
+  dPsi <- elem_mat_sym(k, l, nfac) # q x q,  elementary symm matrix for Psi
+
+  X <- dLambda %*% IB.inv %*% dPsi %*% t(LIB.inv) # p x p
+  X + t(X) # p x p symmetric matrix
 }
 
+lav_lisrel_d2sigma_beta_psi <- function(MLIST = NULL,
+                                        i = 1L, j = 1L, # beta
+                                        k = 1L, l = 1L) { # psi
+  # helper functions
+  # elementary matrix: p x q matrix with 1 in position (i,j), 0 elsewhere
+  elem_mat <- function(i, j, p, q) {
+    E <- matrix(0, p, q)
+    E[i, j] <- 1
+    E
+  }
+
+  # elementary symmetric matrix for vech index (k,l) of a q x q symmetric matrix
+  elem_mat_sym <- function(k, l, q) {
+    E <- matrix(0, q, q)
+    E[k, l] <- 1
+    if (k != l) E[l, k] <- 1
+    E
+  }
+
+  LAMBDA <- MLIST$lambda
+  nvar <- nrow(LAMBDA) # p
+  nfac <- ncol(LAMBDA) # q
+  IB.inv <- MLIST$IB.inv
+  if (is.null(IB.inv)) {
+    if (is.null(MLIST$beta)) {
+      IB.inv <- diag(1, nrow = nfac)
+    } else {
+      IB.inv <- lav_lisrel_ibinv(MLIST = MLIST)
+    }
+  }
+  LIB.inv <- LAMBDA %*% IB.inv
+
+  dBeta <- elem_mat(i, j, nfac, nfac) # q x q, elementary matrix for Beta
+  dPsi <- elem_mat_sym(k, l, nfac) # q x q, elementary symm matrix for Psi
+
+  X <- LIB.inv %*% dBeta %*% IB.inv %*% dPsi %*% t(LIB.inv) # p x p
+  X + t(X) # p x p symmetric matrix
+}

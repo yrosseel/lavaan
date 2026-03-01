@@ -15,7 +15,7 @@ lav_sem_miiv_internal <- function(lavmodel = NULL, lavh1 = NULL,
   if (lavmodel@categorical) {
     iv.samplestats <- TRUE
   }
-  stopifnot(iv.varcov.method %in% c("ULS", "GLS", "2RLS", "RLS"))
+  stopifnot(iv.varcov.method %in% c("ULS", "GLS", "2RLS", "RLS", "NONE"))
 
   # get lavpta
   lavpta <- lav_partable_attributes(lavpartable)
@@ -36,7 +36,7 @@ lav_sem_miiv_internal <- function(lavmodel = NULL, lavh1 = NULL,
   # find ALL model-implied instrumental variables (miivs) per equation
   eqs <- lav_model_find_iv(lavmodel = lavmodel, lavpta = lavpta)
 
-  # parameter vector -> all NA (for the free parameters)
+  # initial parameter vector
   x <- lav_model_get_parameters(lavmodel)
 
   ########################################
@@ -71,7 +71,7 @@ lav_sem_miiv_internal <- function(lavmodel = NULL, lavh1 = NULL,
 
   # compute theta2 using ULS/GLS/RLS/2RLS
   theta2 <- numeric(0L)
-  if (length(free.undirected.idx) > 0L) {
+  if (length(free.undirected.idx) > 0L && iv.varcov.method != "NONE") {
     theta2 <- lav_sem_miiv_varcov(
       x = theta1,
       lavmodel = lavmodel, lavpartable = lavpartable,
@@ -549,23 +549,25 @@ lav_sem_miiv_varcov <- function(x = NULL, samplestats = FALSE,
                                 lavsamplestats = NULL,
                                 lavh1 = NULL, free.directed.idx = NULL,
                                 free.undirected.idx = NULL,
+                                add.h2 = FALSE,
                                 iv.varcov.method = "RLS") {
   if (samplestats) {
     implied <- lav_vec_to_implied(x, lavmodel = lavmodel)
     x <- lav_model_get_parameters(lavmodel)
     theta1 <- x[free.directed.idx]
+    lavmodel.tmp <- lavmodel # x same as in lavmodel
   } else {
     theta1 <- x
     x <- lav_model_get_parameters(lavmodel)
     x[free.directed.idx] <- theta1
     implied <- lavh1$implied
+    lavmodel.tmp <- lav_model_set_parameters(lavmodel = lavmodel, x = x)
   }
 
   # number of blocks
   nblocks <- lavmodel@nblocks
 
   # preparations
-  lavmodel.tmp <- lav_model_set_parameters(lavmodel = lavmodel, x = x)
   delta_block <- lav_model_delta(
     lavmodel = lavmodel.tmp,
     ceq.simple = lavmodel@ceq.simple.only
@@ -586,7 +588,10 @@ lav_sem_miiv_varcov <- function(x = NULL, samplestats = FALSE,
       #  w2_block[[b]] <- diag(lavsamplestats@WLS.VD[[b]])
       # }
       # s_block[[b]] <- lavsamplestats@WLS.obs[[b]]
-      s_block[[b]] <- lav_implied_to_vec(implied = implied, lavmodel = lavmodel, drop.list = FALSE)[[b]]
+      s_block[[b]] <- lav_implied_to_vec(
+        implied = implied,
+        lavmodel = lavmodel, drop.list = FALSE
+      )[[b]]
     } else {
       # continuous case
       sample_cov <- implied$cov[[b]]
@@ -650,7 +655,8 @@ lav_sem_miiv_varcov <- function(x = NULL, samplestats = FALSE,
       t(Delta2) %*% W2 %*% svec
     ))
   } else if (iv.varcov.method == "RLS") {
-    for (i in 1:200) {
+    # typically, we need 5-15 iterations, so max = 200 should be enough
+    for (i in seq_len(200L)) {
       old_x <- theta2
       x[free.undirected.idx] <- theta2
       lavmodel.tmp <- lav_model_set_parameters(lavmodel = lavmodel, x = x)
@@ -676,13 +682,18 @@ lav_sem_miiv_varcov <- function(x = NULL, samplestats = FALSE,
       ))
       sse <- sum((old_x - theta2)^2)
       # cat("i = ", i, "sse = ", sse, "\n")
-      if (sse < 1e-05) {
+      if (sse < 1e-12 * (1 + sum(theta2^2))) {
         break
       } else if (i == 200L) {
         lav_msg_warn(gettext("RLS for variances/covariances did not converge
                               after 200 iterations."))
       }
     }
+  }
+
+  if (add.h2) {
+    h2 <- solve(t(Delta2) %*% W2 %*% Delta2, t(Delta2) %*% W2)
+    attr(theta2, "h2") <- h2
   }
 
   theta2
@@ -698,6 +709,8 @@ lav_sem_miiv_vcov <- function(lavmodel = NULL, lavsamplestats = NULL,
   iv.varcov.se <- lavoptions$estimator.args$iv.varcov.se
   iv.varcov.modelbased <- lavoptions$estimator.args$iv.varcov.modelbased
   iv.varcov.method <- toupper(lavoptions$estimator.args$iv.varcov.method)
+  iv.varcov.jaca.numerical <- lavoptions$estimator.args$iv.varcov.jaca.numerical
+  iv.varcov.jacb.numerical <- lavoptions$estimator.args$iv.varcov.jacb.numerical
 
   # empty vcov
   vcov <- matrix(0, lavmodel@nx.free, lavmodel@nx.free)
@@ -717,7 +730,7 @@ lav_sem_miiv_vcov <- function(lavmodel = NULL, lavsamplestats = NULL,
     lavpartable$op == "~~")
   directed.idx <- which(lavpartable$free > 0L &
     !duplicated(lavpartable$free) & # if ceq.simple
-    lavpartable$op %in% c("=~", "~", "~1"))
+    lavpartable$op %in% c("=~", "~")) # NO intercepts!!
   free.directed.idx <- unique(lavpartable$free[directed.idx])
   free.undirected.idx <- unique(lavpartable$free[undirected.idx])
 
@@ -819,7 +832,8 @@ lav_sem_miiv_vcov <- function(lavmodel = NULL, lavsamplestats = NULL,
 
   # stage 2: undirected effects (note: intercepts have no effect!)
 
-  if (iv.varcov.se && length(free.undirected.idx) > 0L) {
+  if (iv.varcov.se && length(free.undirected.idx) > 0L &&
+      iv.varcov.method != "NONE") {
     if (lavmodel@categorical) {
       delta_list <- lav_model_delta(lavmodel) # per block/group
       delta <- do.call("rbind", delta_list)
@@ -836,16 +850,29 @@ lav_sem_miiv_vcov <- function(lavmodel = NULL, lavsamplestats = NULL,
         (tmp %*% gamma_big %*% t(tmp)) / lavsamplestats@ntotal
     } else {
       # part a: effect of theta1
-      jac_a <- try(lav_func_jacobian_complex(
-        func = lav_sem_miiv_varcov,
-        x = theta1, samplestats = FALSE, lavmodel = lavmodel,
-        lavpartable = lavpartable, lavsamplestats = lavsamplestats,
-        lavh1 = lavh1, free.directed.idx = free.directed.idx,
-        free.undirected.idx = free.undirected.idx,
-        iv.varcov.method = iv.varcov.method
-      ), silent = TRUE)
-      if (inherits(jac_a, "try-error")) {
-        jac_a <- numDeriv::jacobian(
+
+      if (!iv.varcov.jaca.numerical) {
+        # use analytic expressions
+        if (iv.varcov.method %in% c("ULS", "GLS")) {
+          jac_a <- lav_sem_miiv_utils_jaca_uls_gls(lavmodel = lavmodel,
+            lavpartable = lavpartable, lavh1 = lavh1,
+            free.directed.idx = free.directed.idx,
+            free.undirected.idx = free.undirected.idx,
+            iv.varcov.method = iv.varcov.method)
+        } else if(iv.varcov.method == "2RLS") {
+          jac_a <- lav_sem_miiv_utils_jaca_2rls(lavmodel = lavmodel,
+            lavpartable = lavpartable, lavh1 = lavh1,
+            free.directed.idx = free.directed.idx,
+            free.undirected.idx = free.undirected.idx)
+        } else if(iv.varcov.method == "RLS") {
+          jac_a <- lav_sem_miiv_utils_jaca_rls(lavmodel = lavmodel,
+            lavpartable = lavpartable, lavh1 = lavh1,
+            free.directed.idx = free.directed.idx,
+            free.undirected.idx = free.undirected.idx)
+        }
+      # for checking only: numerical approximation
+      } else {
+        jac_a <- lav_func_jacobian_complex(
           func = lav_sem_miiv_varcov,
           x = theta1, samplestats = FALSE, lavmodel = lavmodel,
           lavpartable = lavpartable, lavsamplestats = lavsamplestats,
@@ -854,27 +881,62 @@ lav_sem_miiv_vcov <- function(lavmodel = NULL, lavsamplestats = NULL,
           iv.varcov.method = iv.varcov.method
         )
       }
+
+      # compute vcov_a (due to theta1)
       vcov_directed <- vcov[free.directed.idx, free.directed.idx, drop = FALSE]
       vcov_a <- jac_a %*% vcov_directed %*% t(jac_a)
 
       # part b: effect of sample statistics
-      # - get jacobian lav_sem_miiv_varcov wrt implied_vec
+      # - get jacobian lav_sem_miiv_varcov wrt samplestats_vec
       # - get Gamma (NT or ADF)
-      # - vcov_undirected_b <- jac_b %*% gamma_mat %*% t(jac_b)
-      vec <- lav_implied_to_vec(
-        implied = lavh1$implied, lavmodel = lavmodel,
-        drop.list = TRUE
-      )
-      jac_b <- try(lav_func_jacobian_complex(
-        func = lav_sem_miiv_varcov,
-        x = vec, samplestats = TRUE, lavmodel = lavmodel,
-        lavpartable = lavpartable, lavsamplestats = lavsamplestats,
-        lavh1 = lavh1, free.directed.idx = free.directed.idx,
-        free.undirected.idx = free.undirected.idx,
-        iv.varcov.method = iv.varcov.method
-      ), silent = TRUE)
-      if (inherits(jac_b, "try-error")) {
-        jac_b <- numDeriv::jacobian(
+      # - vcov_undirected_b <- jac_b %*% (1/N * gamma_mat) %*% t(jac_b)
+
+      if (!iv.varcov.jaca.numerical) {
+        # if ULS, things are simple:
+        if (iv.varcov.method == "ULS") {
+          tmp <- lav_sem_miiv_varcov(
+            x = theta1, lavmodel = lavmodel,
+            lavpartable = lavpartable, lavsamplestats = lavsamplestats,
+            lavh1 = lavh1, free.directed.idx = free.directed.idx,
+            free.undirected.idx = free.undirected.idx, add.h2 = TRUE,
+            iv.varcov.method = iv.varcov.method
+          )
+          jac_b <- attr(tmp, "h2")
+
+        # if GLS, W2 depends entirely on svec
+        # if 2RLS/RLS, W2 depends on Sigma, which depends the ULS estimate
+        # of theta2
+        } else if (iv.varcov.method %in% c("GLS", "2RLS","RLS")) {
+          delta_block <- lav_model_delta(
+            lavmodel = lavmodel,
+            ceq.simple = lavmodel@ceq.simple.only
+          )
+          jac_b_block <- vector("list", length = nblocks)
+          for (b in seq_len(nblocks)) {
+            sample_cov <- lavh1$implied$cov[[b]]
+            this_delta2 <- delta_block[[b]][, free.undirected.idx, drop = FALSE]
+            if (iv.varcov.method == "GLS") {
+              jac_b_block[[b]] <-
+                lav_sem_miiv_utils_jacb_gls(sample_cov, delta2 = this_delta2)
+            } else if (iv.varcov.method == "2RLS") {
+              jac_b_block[[b]] <-
+                lav_sem_miiv_utils_jacb_2rls(sample_cov, delta2 = this_delta2)
+            } else if(iv.varcov.method == "RLS") {
+              jac_b_block[[b]] <-
+                lav_sem_miiv_utils_jacb_rls(sample_cov, delta2 = this_delta2)
+            }
+          }
+          jac_b <- lav_matrix_bdiag(jac_b_block)
+        }
+
+      # for checking only: numerical approximation (very slow!)
+      } else {
+        vec <- lav_implied_to_vec(
+          implied = lavh1$implied, lavmodel = lavmodel,
+          drop.list = TRUE
+        )
+
+        jac_b <- lav_func_jacobian_complex(
           func = lav_sem_miiv_varcov,
           x = vec, samplestats = TRUE, lavmodel = lavmodel,
           lavpartable = lavpartable, lavsamplestats = lavsamplestats,

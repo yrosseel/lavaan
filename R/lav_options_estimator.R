@@ -608,7 +608,9 @@ lav_options_est_iv <- function(opt) {
                                iv.samplestats = FALSE,
                                iv.varcov.method = "RLS",
                                iv.varcov.se = TRUE,
-                               iv.varcov.modelbased = TRUE)
+                               iv.varcov.modelbased = TRUE,
+                               iv.varcov.jaca.numerical = FALSE,
+                               iv.varcov.jacb.numerical = FALSE)
   } else {
     if (is.null(opt$estimator.args$iv.method)) {
       opt$estimator.args$iv.method <- "2SLS"
@@ -623,15 +625,22 @@ lav_options_est_iv <- function(opt) {
     }
     if (is.null(opt$estimator.args$iv.varcov.method)) {
       opt$estimator.args$iv.varcov.method <- "RLS"
-    } else if (!opt$estimator.args$iv.varcov.method %in%
-               c("ULS", "GLS", "2RLS", "RLS")) {
-      lav_msg_stop(gettext("iv.varcov.method should ULS, GLS, 2RLS or RLS."))
+    } else if (!toupper(opt$estimator.args$iv.varcov.method) %in%
+               c("ULS", "GLS", "2RLS", "RLS", "NONE")) {
+      lav_msg_stop(gettext("iv.varcov.method should ULS, GLS, 2RLS, RLS
+                            or NONE."))
     }
     if (is.null(opt$estimator.args$iv.varcov.se)) {
       opt$estimator.args$iv.varcov.se <- TRUE
     }
     if (is.null(opt$estimator.args$iv.varcov.modelbased)) {
       opt$estimator.args$iv.varcov.modelbased <- TRUE
+    }
+    if (is.null(opt$estimator.args$iv.varcov.jaca.numerical)) {
+      opt$estimator.args$iv.varcov.jaca.numerical <- FALSE
+    }
+    if (is.null(opt$estimator.args$iv.varcov.jacb.numerical)) {
+      opt$estimator.args$iv.varcov.jacb.numerical <- FALSE
     }
   }
 

@@ -197,10 +197,9 @@ lav_standardize_lv <- function(lavobject = NULL,
       # Note: centering adjustments for non-zero latent means
       # are not yet implemented. LSAM has all the information needed;
       # Brandt et al., 2015, Eqs. 11-12 not needed.
-      warning("lavaan WARNING: centering adjustments for non-zero ",
-        "latent means are not yet implemented for interaction terms.",
-        call. = FALSE
-      )
+      lav_msg_warn(gettext("centering adjustments for non-zero
+        latent means are not yet implemented for interaction terms."
+      ))
     }
     # End interaction/quadratic term correction for now (23/02/26;FV)
 
