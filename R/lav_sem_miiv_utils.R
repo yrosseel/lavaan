@@ -1,7 +1,6 @@
 # varcov solution is:
 # theta_2 = solve(t(Delta2) %*% W2 %*% Delta2) %*% t(Delta2) %*% W2 %*% s_vech
 
-
 # we need to compute the Jacobian of theta_2 wrt the elements of s_vech
 #
 # four options:
@@ -170,7 +169,7 @@ lav_sem_miiv_utils_jacb_rls <- function(sample_cov = NULL, delta2 = NULL) {
 # - ULS
 # - GLS
 # - 2RLS
-# - RLS (no closed-form is possible)
+# - RLS
 
 # ULS and GLS: only delta2 depends on theta1
 lav_sem_miiv_utils_jaca_uls_gls <- function(lavmodel = NULL,
@@ -541,4 +540,57 @@ lav_sem_miiv_utils_jaca_rls <- function(lavmodel = NULL,
     }
   }
   jac_a
+}
+
+
+# jac_k: d theta1 / d svec
+# see Fisher & Bollen (2020) section 2.4
+
+# per equation, one block only!
+lav_sem_miiv_utils_jack_eqs <- function(eqs = NULL, # one block only
+                                        block = 1L,
+                                        lavmodel = NULL,
+                                        lavpartable = NULL,
+                                        free.directed.idx = integer(0L)) {
+  # continuous data only (for now)
+  nvar <- lavmodel@nvar[block]
+  pstar <- nvar * (nvar + 1L) / 2
+  ntheta1 <- length(free.directed.idx)
+
+  b <- block
+
+  # K matrix
+  if (lavmodel@meanstructure) {
+    K_mat <- matrix(0.0, nrow = ntheta1, ncol = (nvar + pstar))
+  } else {
+    K_mat <- matrix(0.0, nrow = ntheta1, ncol = pstar)
+  }
+
+  # collect k_mat matrices from each equation
+  for (j in seq_along(eqs[[b]])) {
+    # this equation
+    eq <- eqs[[b]][[j]]
+    free.idx <- match(lavpartable$free[eq$pt], free.directed.idx)
+    nx <- nrow(eq$k_mat)
+    if (nx > 0L) {
+      if (all(free.idx > 0L)) {
+        K_mat[free.idx,] <- eq$k_mat
+      } else {
+        # remove non-free elements
+        zero.idx <- which(free.idx == 0L)
+        free.idx <- free.idx[-zero.idx]
+        if (length(free.idx) > 0) {
+          K_mat[free.idx,] <- eq$k_mat[-zero.idx, , drop = FALSE]
+        }
+      }
+    }
+    if (lavmodel@meanstructure) {
+      free.int.idx <- match(lavpartable$free[eq$ptint], free.directed.idx)
+      if (free.int.idx > 0L) {
+        K_mat[free.int.idx,] <- eq$k_mat_int
+      }
+    }
+  } # eq
+
+  K_mat
 }

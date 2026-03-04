@@ -601,16 +601,25 @@ lav_options_est_iv <- function(opt) {
   # sample.icov not needed
   opt$sample.icov <- FALSE
 
+  # no loglik
+  opt$loglik <- FALSE
+
+  # no rescale of vcov
+  opt$sample.cov.rescale <- FALSE
+
   # estimator options
   if (is.null(opt$estimator.args)) {
     # create default list
     opt$estimator.args <- list(iv.method = "2SLS",
                                iv.samplestats = FALSE,
                                iv.varcov.method = "RLS",
-                               iv.varcov.se = TRUE,
-                               iv.varcov.modelbased = TRUE,
-                               iv.varcov.jaca.numerical = FALSE,
-                               iv.varcov.jacb.numerical = FALSE)
+                               iv.sargan = TRUE,
+                               iv.vcov.stage1 <- "lm.vcov.dfres",
+                               iv.vcov.stage2 <- "delta",
+                               iv.vcov.gamma.modelbased = TRUE,
+                               iv.vcov.jack.numerical = FALSE,
+                               iv.vcov.jaca.numerical = FALSE,
+                               iv.vcov.jacb.numerical = FALSE)
   } else {
     if (is.null(opt$estimator.args$iv.method)) {
       opt$estimator.args$iv.method <- "2SLS"
@@ -620,6 +629,49 @@ lav_options_est_iv <- function(opt) {
     if (is.null(opt$estimator.args$iv.samplestats)) {
       opt$estimator.args$iv.samplestats <- FALSE
     }
+    if (is.null(opt$estimator.args$iv.sargan)) {
+      opt$estimator.args$iv.sargan <- TRUE
+    }
+    if (is.null(opt$estimator.args$iv.vcov.stage1)) {
+      if (opt$.categorical) {
+        opt$estimator.args$iv.vcov.stage1 <- "lm.vcov.dfres"
+      } else {
+        opt$estimator.args$iv.vcov.stage1 <- "lm.vcov.dfres"
+      }
+      if (tolower(opt$se[1]) == "none") {
+        opt$estimator.args$iv.vcov.stage1 <- "none"
+      }
+    } else if (!tolower(opt$estimator.args$iv.vcov.stage1) %in%
+               c("lm.vcov", "lm.vcov.dfres", "gamma", "none")) {
+      lav_msg_stop(gettext("iv.vcov.stage1 should be lm.vcov, lm.vcov.dfres,
+                            gamma or none."))
+    } else if (tolower(opt$estimator.args$iv.vcov.stage1) == "gamma" &&
+               !opt$estimator.args$iv.samplestats) {
+      lav_msg_stop(gettext("iv.vcov.stage1 cannot be gamma if
+                            iv.samplestats is FALSE"))
+    }
+    if (opt$.categorical) {
+      opt$estimator.args$iv.samplestats <- TRUE
+    }
+    if (is.null(opt$estimator.args$iv.vcov.stage2)) {
+      if (opt$.categorical ||
+          tolower(opt$estimator.args$iv.vcov.stage1) == "gamma") {
+        opt$estimator.args$iv.vcov.stage2 <- "h2"
+      } else {
+        opt$estimator.args$iv.vcov.stage2 <- "delta"
+      }
+      if (tolower(opt$se[1]) == "none") {
+        opt$estimator.args$iv.vcov.stage2 <- "none"
+      }
+    } else if (!tolower(opt$estimator.args$iv.vcov.stage2) %in%
+               c("h2", "delta", "none")) {
+      lav_msg_stop(gettext("iv.vcov.stage2 should be h2, delta, or none."))
+    } else if (tolower(opt$estimator.args$iv.vcov.stage1) %in%
+                 c("lm.vcov", "lm.vcov.dfres") &&
+               tolower(opt$estimator.args$iv.vcov.stage2) == "h2") {
+      lav_msg_stop(gettext("iv.vcov.stage2 should be delta (or none) if
+                   iv.vcov.stage1 is either lm.vcov or lm.vcov.dfres."))
+    }
     if (opt$.categorical) {
       opt$estimator.args$iv.samplestats <- TRUE
     }
@@ -627,21 +679,27 @@ lav_options_est_iv <- function(opt) {
       opt$estimator.args$iv.varcov.method <- "RLS"
     } else if (!toupper(opt$estimator.args$iv.varcov.method) %in%
                c("ULS", "GLS", "2RLS", "RLS", "NONE")) {
-      lav_msg_stop(gettext("iv.varcov.method should ULS, GLS, 2RLS, RLS
+      lav_msg_stop(gettext("iv.varcov.method should be ULS, GLS, 2RLS, RLS
                             or NONE."))
     }
-    if (is.null(opt$estimator.args$iv.varcov.se)) {
-      opt$estimator.args$iv.varcov.se <- TRUE
+    if (is.null(opt$estimator.args$iv.vcov.gamma.modelbased)) {
+      opt$estimator.args$iv.vcov.gamma.modelbased <- TRUE
     }
-    if (is.null(opt$estimator.args$iv.varcov.modelbased)) {
-      opt$estimator.args$iv.varcov.modelbased <- TRUE
+    if (is.null(opt$estimator.args$iv.vcov.jack.numerical)) {
+      opt$estimator.args$iv.vcov.jack.numerical <- FALSE
     }
-    if (is.null(opt$estimator.args$iv.varcov.jaca.numerical)) {
-      opt$estimator.args$iv.varcov.jaca.numerical <- FALSE
+    if (is.null(opt$estimator.args$iv.vcov.jaca.numerical)) {
+      opt$estimator.args$iv.vcov.jaca.numerical <- FALSE
     }
-    if (is.null(opt$estimator.args$iv.varcov.jacb.numerical)) {
-      opt$estimator.args$iv.varcov.jacb.numerical <- FALSE
+    if (is.null(opt$estimator.args$iv.vcov.jacb.numerical)) {
+      opt$estimator.args$iv.vcov.jacb.numerical <- FALSE
     }
+  }
+
+  # override test if iv.varcov.method is "none"
+  if (toupper(opt$estimator.args$iv.varcov.method) == "NONE") {
+    opt$test <- "none"
+    opt$standard.test <- "none"
   }
 
   opt

@@ -827,7 +827,7 @@ lav_samplestats_from_data <- function(lavdata = NULL,
               Mplus.WLS = FALSE
             )
         }
-      } else if (estimator %in% c("WLS", "DWLS", "ULS", "DLS", "catML", "IV")) {
+      } else if (estimator %in% c("WLS", "DWLS", "ULS", "DLS", "catML")) {
         if (!categorical) {
           # sample size large enough?
           nvar <- ncol(X[[g]])
@@ -867,10 +867,13 @@ lav_samplestats_from_data <- function(lavdata = NULL,
               meanstructure = meanstructure
             )
 		  } else {
-            if (lavoptions$se == "robust.sem.nt" || estimator == "IV") {
+            if ("robust.sem.nt" %in% lavoptions$se ||
+                "browne.residual.nt" %in% lavoptions$test) {
               NACOV[[g]] <-
                 lav_samplestats_Gamma_NT(
                   Y = Y,
+                  COV = cov[[g]],
+                  MEAN = mean[[g]],
                   x.idx = x.idx[[g]],
                   # cluster.idx = cluster.idx, # not available
                   fixed.x = fixed.x,

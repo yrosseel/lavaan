@@ -6,12 +6,16 @@ lav_object_post_check <- function(object) {
   lavdata <- object@Data
 
   var.ov.ok <- var.lv.ok <- result.ok <- TRUE
+  var.na <- FALSE
 
   # 1a. check for negative variances ov
   var.idx <- which(lavpartable$op == "~~" &
     lavpartable$lhs %in% lav_object_vnames(object, "ov") &
     lavpartable$lhs == lavpartable$rhs)
-  if (length(var.idx) > 0L && any(lavpartable$est[var.idx] < 0.0)) {
+  if (any(is.na(lavpartable$est[var.idx]))) {
+    # perhaps estimator = "IV" + stage 1 only
+    var.na <- TRUE
+  } else if (length(var.idx) > 0L && any(lavpartable$est[var.idx] < 0.0)) {
     result.ok <- var.ov.ok <- FALSE
     lav_msg_warn(gettext("some estimated ov variances are negative"))
   }
@@ -20,14 +24,18 @@ lav_object_post_check <- function(object) {
   var.idx <- which(lavpartable$op == "~~" &
     lavpartable$lhs %in% lav_object_vnames(object, "lv") &
     lavpartable$lhs == lavpartable$rhs)
-  if (length(var.idx) > 0L && any(lavpartable$est[var.idx] < 0.0)) {
+  if (any(is.na(lavpartable$est[var.idx]))) {
+    # perhaps estimator = "IV" + stage 1 only
+    var.na <- TRUE
+  } else if (length(var.idx) > 0L && any(lavpartable$est[var.idx] < 0.0)) {
     result.ok <- var.lv.ok <- FALSE
     lav_msg_warn(gettext("some estimated lv variances are negative"))
   }
 
   # 2. is cov.lv (PSI) positive definite? (only if we did not already warn
   # for negative variances)
-  if (var.lv.ok && length(lav_object_vnames(lavpartable, type = "lv.regular")) > 0L) {
+  if (!var.na && var.lv.ok &&
+      length(lav_object_vnames(lavpartable, type = "lv.regular")) > 0L) {
     ETA <- lavTech(object, "cov.lv")
     for (g in 1:lavdata@ngroups) {
       if (nrow(ETA[[g]]) == 0L) next
@@ -45,7 +53,7 @@ lav_object_post_check <- function(object) {
 
   # 3. is THETA positive definite (but only for numeric variables)
   # and if we not already warned for negative ov variances
-  if (var.ov.ok) {
+  if (!var.na && var.ov.ok) {
     THETA <- lavTech(object, "theta")
     for (g in 1:lavdata@ngroups) {
       num.idx <- lavmodel@num.idx[[g]]

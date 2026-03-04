@@ -1505,6 +1505,24 @@ lav_matrix_symmetric_inverse <- function(S, logdet = FALSE,
   S.inv
 }
 
+# solve(A) %*% B, where A is symmetric, and B is vector of matrix
+lav_matrix_symmetric_solve_spd <- function(A, B, tol = 1e-10) {
+  cholA <- try(chol(A), silent = TRUE)
+  if (!inherits(cholA, "try-error")) {
+    # Cholesky solve
+    return(backsolve(cholA, forwardsolve(t(cholA), B)))
+  } else {
+    # Eigen fallback (pseudo-inverse)
+    eig <- eigen(A, symmetric = TRUE)
+    keep <- eig$values > tol * max(eig$values)
+    Ainv <- eig$vectors[, keep, drop = FALSE] %*%
+      diag(1 / eig$values[keep], length(eig$values[keep])) %*%
+      t(eig$vectors[, keep, drop = FALSE])
+    return(Ainv %*% B)
+  }
+}
+
+
 # update inverse of A, after removing 1 or more rows (and corresponding
 # colums) from A
 #
