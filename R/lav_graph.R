@@ -214,10 +214,21 @@ lav_graph_topological_matrix <- function(
   bordersincol <- 0L
   topborderfixed <- FALSE
   bottomborderfixed <- FALSE
+  bordernodefound <- FALSE
   for (i in seq.int(n)) {
     predecessors <- definedby[rv[i] == defined]
     followers <- defined[rv[i] == definedby]
+    isbordernode <- rv[i] %in% bordernodes
+    for (predx in predecessors) {
+      if (predx %in% bordernodes) bordernodefound <- TRUE
+    }
     if (length(predecessors) == 0L) {
+      rvcol[i] <- 1L
+      colmax[1L] <- colmax[1L] + 1L
+      rvrow[i] <- colmax[1L]
+      rvindic[i] <- "r" # root
+      if (isbordernode) bordernodefound <- TRUE
+    } else if (!bordernodefound && isbordernode && length(followers) > 0L) {
       rvcol[i] <- 1L
       colmax[1L] <- colmax[1L] + 1L
       rvrow[i] <- colmax[1L]
@@ -284,7 +295,7 @@ lav_graph_topological_matrix <- function(
     }
     if (length(bordernodes.incol) > 1L) {
       tobottom <- bordernodes.incol[2L]
-      if (rvrow[tobottom] != colmax[col]) {
+      if (rvrow[tobottom] != max(colmax)) {
         swappie <- which(rvcol == col & rvrow == colmax[col])
         rvrow[swappie] <- rvrow[tobottom]
         rvrow[tobottom] <- max(colmax)
@@ -314,6 +325,10 @@ lav_graph_topological_matrix <- function(
   if (topborderfixed) addrows <- 1L
   if (bottomborderfixed) addrows <- 2L
   rowmax <- max(colmax, colmax[1L] + addrows, colmax[length(colmax)] + addrows)
+  if (addrows > 0L) { # adapt rows for nodes in maxrow and inner columns   
+    welke <- which(rvcol > 1L & rvcol < length(colmax) & rvrow == max(colmax))
+    rvrow[welke] <- rowmax
+  }
   nodescol1 <- which(rvcol == 1L)
   optimalrows <- sapply(nodescol1, function(ci) {
     nextnodes.ind <- which(rv[ci] == definedby)
