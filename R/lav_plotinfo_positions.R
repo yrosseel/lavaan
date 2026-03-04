@@ -251,6 +251,8 @@ lav_plotinfo_positions_one <- function(
       } else if (vangroup$matrixrowcol[[1L]] == groupmaxrow) {
         thisedge$vananker <- "s"
         thisedge$naaranker <- "n"
+      } else {
+        lav_msg_fixme(gettext("measurement group in unexpected position"))
       }
     } else if (thisedge$tiepe == "<~") { # define composite variable
       if (vangroup$matrixrowcol[[2L]] == 1L) {
@@ -265,6 +267,8 @@ lav_plotinfo_positions_one <- function(
       } else if (vangroup$matrixrowcol[[1L]] == groupmaxrow) {
         thisedge$vananker <- "n"
         thisedge$naaranker <- "s"
+      } else {
+        lav_msg_fixme(gettext("measurement group in unexpected position"))
       }
     } else if (thisedge$tiepe == "~." || thisedge$tiepe == "~") {
       # regression/varlv
