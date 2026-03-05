@@ -325,7 +325,7 @@ lav_graph_topological_matrix <- function(
   if (topborderfixed) addrows <- 1L
   if (bottomborderfixed) addrows <- 2L
   rowmax <- max(colmax, colmax[1L] + addrows, colmax[length(colmax)] + addrows)
-  if (addrows > 0L) { # adapt rows for nodes in maxrow and inner columns   
+  if (addrows > 0L) { # adapt rows for nodes in maxrow and inner columns
     welke <- which(rvcol > 1L & rvcol < length(colmax) & rvrow == max(colmax))
     rvrow[welke] <- rowmax
   }
