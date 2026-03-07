@@ -2026,3 +2026,105 @@ lav_matrix_inverse_iminus <- function(A = NULL) {
     return(IA.inv)
   }
 }
+
+# let Gamma_NT = 2 * D.plus %*% (S %x% S) %*% t(D.plus), where 
+# D.plus is the elimination matrix: D.plus = ginv(D)
+# we wish to compute R = K %*% Gamma_NT %*% t(K)
+# but without computing the kronecker product explicitly
+# - we allow for meanstructure TRUE/FALSE
+# - we allow for fixed.x = TRUE, if x.idx is not empty
+# - but NOT for conditional.x = TRUE (for now)
+lav_matrix_k_gammant_kt <- function(K, S, meanstructure = FALSE,
+                                    x.idx = integer(0L)) {
+
+  # dimensions of S
+  nvar <- nrow(S)
+  pstar <- nvar * (nvar + 1L) / 2L
+
+  # dimension output
+  q <- nrow(K)
+  
+  # sanity checks
+  expected_q <- if (meanstructure) nvar + pstar else pstar
+  if (ncol(K) != expected_q) {
+    lav_msg_stop(gettextf(
+      "ncol(K) must be %d when meanstructure = %s",
+      expected_q, toupper(meanstructure)
+    ))
+  }   
+  x.idx <- as.integer(x.idx)
+  if (length(x.idx) > 0L && any(x.idx < 1L | x.idx > nvar)) {
+    lav_msg_stop(gettext("x.idx contains indices outside 1:nvar."))
+  } 
+    
+  y.idx <- setdiff(seq_len(nvar), x.idx)
+  nvar_y   <- length(y.idx)
+  nvar_x   <- length(x.idx)
+  if (nvar_y == 0L) {
+    lav_msg_stop(gettextf("No random variables remain after removing x.idx."))
+  }
+  
+  # Cholesky of S (no check: we assume S is pd)
+  L_S <- t(chol(S))
+   
+  # fixed.x: conditional covariance YbarX and low-rank factor Q for R = Q Q'
+  if (nvar_x > 0L) { 
+    A_yy <- S[y.idx, y.idx, drop = FALSE]
+    B_yx <- S[y.idx, x.idx, drop = FALSE]
+    C_xx <- S[x.idx, x.idx, drop = FALSE]
+    L_x <- t(chol(C_xx))
+    
+    BL <- forwardsolve(L_x, t(B_yx))
+    YbarX <- A_yy - t(BL) %*% BL                   
+    
+    F_full <- matrix(0, nvar, nvar_x)
+    F_full[y.idx, ] <- B_yx
+    F_full[x.idx, ] <- C_xx
+    Q <- t(forwardsolve(L_x, t(F_full)))
+  } else {
+    YbarX <- S
+    Q <- matrix(0, nvar, 0L)
+  }
+  L_YbarX <- t(chol(YbarX))
+
+  # build W (d^2 x p) with col j = vec(L' N_j L)
+  # B2 is q x pstar (rows are vech vectors); L is nvar x d
+  build_W <- function(B2, L) {
+    d <- ncol(L)
+    if (d == 0L) return(matrix(0, 0L, q))
+
+    # expand vech row j of B2 into nvar x nvar_q block matrix V_mat
+    V_mat <- matrix(0, nvar, nvar * q)
+    for (j in seq_len(q)) {
+      M <- lav_matrix_vech_reverse(B2[j, ])
+      diag(M)  <- diag(M) * 2
+      V_mat[, (j - 1L) * nvar + seq_len(nvar)] <- M / 2
+    }
+    # batch compute t(L) N_j L via two (d x nvar_q) multiplies + aperm trick
+    LtV <- t(L) %*% V_mat
+    LtV3 <- array(LtV, c(d, nvar, q))
+    # aperm transposes each block: since M_i symmetric, t(L' M_j) = M_j L
+    LtVT <- matrix(aperm(LtV3, c(2L, 1L, 3L)), nvar, d * q)
+    matrix(t(L) %*% LtVT, d^2, q)
+  }
+
+  # assemble result
+  K2 <- if (meanstructure) {
+    K[, nvar + seq_len(pstar), drop = FALSE]
+  } else {
+    K
+  }
+  W_S <- build_W(K2, L_S)
+  W_R <- build_W(K2, Q)
+  out  <- 2 * (crossprod(W_S) - crossprod(W_R))
+
+  if (meanstructure) {
+    K1 <- K[, seq_len(nvar), drop = FALSE]
+    Z  <- K1[, y.idx, drop = FALSE] %*% L_YbarX
+    T1 <- tcrossprod(Z)
+    out <- out + T1
+  }
+
+  out
+}
+

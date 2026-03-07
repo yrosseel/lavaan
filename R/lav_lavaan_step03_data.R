@@ -87,22 +87,26 @@ lav_lavaan_step03_data <- function(slotData = NULL, # nolint
   } else if (lavdata@data.type == "moment") {
     # check user-specified options first
     if (!is.null(dotdotdot$estimator)) {
-      if (any(dotdotdot$estimator == c(
+      if (is.list(dotdotdot$estimator)) {
+        estimator <- toupper(dotdotdot$estimator[[1]])
+      } else {
+        estimator <- toupper(dotdotdot$estimator)
+      }
+      if (any(estimator == c(
         "MLM", "MLMV", "MLR", "MLR",
         "ULSM", "ULSMV", "ULSMVS"
       )) &&
         is.null(NACOV)) {
         lav_msg_stop(gettextf(
-          "estimator %s requires full data or user-provided NACOV",
-          dotdotdot$estimator))
-      } else if (any(dotdotdot$estimator == c(
+          "estimator %s requires full data or user-provided NACOV", estimator))
+      } else if (any(estimator == c(
         "WLS", "WLSM", "WLSMV",
         "WLSMVS", "DWLS"
       )) &&
         is.null(WLS.V)) {
         lav_msg_stop(gettextf(
           "estimator %s requires full data or user-provided WLS.V and NACOV",
-          dotdotdot$estimator))
+          estimator))
       }
     }
     # catch here some options that will not work with moments
