@@ -595,6 +595,9 @@ lav_options_est_iv <- function(opt) {
   }
   opt$standard.test <- opt$test[1]
 
+  # fixed.x
+  opt$fixed.x <- FALSE # for now
+
   # missing
   opt$missing <- "listwise" # for now
 
@@ -674,6 +677,8 @@ lav_options_est_iv <- function(opt) {
     }
     if (opt$.categorical) {
       opt$estimator.args$iv.samplestats <- TRUE
+      opt$estimator.args$iv.varcov.method <- "none"
+      opt$estimator.args$iv.vcov.stage2 <- "none"
     }
     if (is.null(opt$estimator.args$iv.varcov.method)) {
       opt$estimator.args$iv.varcov.method <- "RLS"

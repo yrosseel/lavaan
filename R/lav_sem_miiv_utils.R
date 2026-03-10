@@ -570,9 +570,11 @@ lav_sem_miiv_utils_jack_eqs <- function(eqs = NULL, # one block only
   for (j in seq_along(eqs[[b]])) {
     # this equation
     eq <- eqs[[b]][[j]]
-    free.idx <- match(lavpartable$free[eq$pt], free.directed.idx)
+    tmp <- lavpartable$free[eq$pt] # free index
+    tmp <- tmp[!tmp == 0]
+    free.idx <- match(tmp, free.directed.idx)
     nx <- nrow(eq$k_mat)
-    if (nx > 0L) {
+    if (length(free.idx) > 0L && nx > 0L) {
       if (all(free.idx > 0L)) {
         K_mat[free.idx,] <- eq$k_mat
       } else {
@@ -585,8 +587,10 @@ lav_sem_miiv_utils_jack_eqs <- function(eqs = NULL, # one block only
       }
     }
     if (lavmodel@meanstructure) {
-      free.int.idx <- match(lavpartable$free[eq$ptint], free.directed.idx)
-      if (free.int.idx > 0L) {
+      tmp <- lavpartable$free[eq$ptint]
+      tmp <- tmp[!tmp == 0]
+      free.int.idx <- match(tmp, free.directed.idx)
+      if (length(free.int.idx) > 0L && free.int.idx > 0L) {
         K_mat[free.int.idx,] <- eq$k_mat_int
       }
     }
@@ -604,7 +608,7 @@ lav_sem_miiv_utils_jack_eqs <- function(eqs = NULL, # one block only
 # (keeping theta1 fixed)
 #
 # old/initial version (very slow if nvar is very large!)
-# - still used/needed if numerical approximation of jac_a or jac_b is needed
+# - but more prepapration for multiple groups
 lav_sem_miiv_varcov_old <- function(x = NULL, samplestats = FALSE,
                                     lavmodel = NULL, lavpartable = NULL,
                                     lavsamplestats = NULL,

@@ -942,18 +942,33 @@ lav_sem_miiv_vcov <- function(lavmodel = NULL, lavsamplestats = NULL,
       # w2 <- lav_matrix_bdiag(w2_block)
       # h2 <- solve(t(delta2) %*% w2 %*% delta2, t(delta2) %*% w2)
 
-      tmp <- lav_sem_miiv_varcov(
-        x = NULL, lavmodel = lavmodel,
-        lavpartable = lavpartable, lavsamplestats = lavsamplestats,
-        lavh1 = lavh1, free.directed.idx = free.directed.idx,
-        free.undirected.idx = free.undirected.idx, add.h2 = TRUE,
-        iv.varcov.method = iv.varcov.method
+      # tmp <- lav_sem_miiv_varcov(
+      #   x = NULL, lavmodel = lavmodel,
+      #   lavpartable = lavpartable, lavsamplestats = lavsamplestats,
+      #   lavh1 = lavh1, free.directed.idx = free.directed.idx,
+      #   free.undirected.idx = free.undirected.idx, add.h2 = TRUE,
+      #   iv.varcov.method = iv.varcov.method
+      # )
+      # h2 <- attr(tmp, "H")
+      stopifnot(lavmodel@nblocks == 1L)
+      delta <- lav_model_delta_lisrel(lavmodel, block = 1L)
+      delta2 <- delta[, free.undirected.idx, drop = FALSE]
+      svec <- lav_implied_to_vec(
+          implied = lavh1$implied, lavmodel = lavmodel,
+          drop.list = TRUE
       )
+      if (lavmodel@categorical || iv.varcov.method == "ULS") {
+        s_mat <- diag(lavmodel@nvar[[1]])
+      } else if (iv.varcov.method == "GLS") {
+        s_mat <- lavh1$implied$cov[[1]]
+      } else {
+        s_mat <- lavimplied$cov[[1]]
+      }
+      tmp <- lav_utils_wls_linearization(Delta = delta2, S = s_mat,
+        meanstructure = lavmodel@meanstructure, svec = svec, return_H = TRUE)
       h2 <- attr(tmp, "H")
       if (length(free.directed.idx) > 0L) {
         # assuming a SINGLE block for now
-        stopifnot(lavmodel@nblocks == 1L)
-        delta <- lav_model_delta_lisrel(lavmodel, block = 1L)
         delta1 <- delta[, free.directed.idx, drop = FALSE]
         idiag <- diag(1, nrow = nrow(delta1))
         tmp <- h2 %*% (idiag - delta1 %*% jac_k)
