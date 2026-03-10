@@ -2027,7 +2027,7 @@ lav_matrix_inverse_iminus <- function(A = NULL) {
   }
 }
 
-# let Gamma_NT = 2 * D.plus %*% (S %x% S) %*% t(D.plus), where 
+# let Gamma_NT = 2 * D.plus %*% (S %x% S) %*% t(D.plus), where
 # D.plus is the elimination matrix: D.plus = ginv(D)
 # we wish to compute R = K %*% Gamma_NT %*% t(K)
 # but without computing the kronecker product explicitly
@@ -2043,7 +2043,7 @@ lav_matrix_k_gammant_kt <- function(K, S, meanstructure = FALSE,
 
   # dimension output
   q <- nrow(K)
-  
+
   # sanity checks
   expected_q <- if (meanstructure) nvar + pstar else pstar
   if (ncol(K) != expected_q) {
@@ -2051,32 +2051,32 @@ lav_matrix_k_gammant_kt <- function(K, S, meanstructure = FALSE,
       "ncol(K) must be %d when meanstructure = %s",
       expected_q, toupper(meanstructure)
     ))
-  }   
+  }
   x.idx <- as.integer(x.idx)
   if (length(x.idx) > 0L && any(x.idx < 1L | x.idx > nvar)) {
     lav_msg_stop(gettext("x.idx contains indices outside 1:nvar."))
-  } 
-    
+  }
+
   y.idx <- setdiff(seq_len(nvar), x.idx)
   nvar_y   <- length(y.idx)
   nvar_x   <- length(x.idx)
   if (nvar_y == 0L) {
     lav_msg_stop(gettextf("No random variables remain after removing x.idx."))
   }
-  
+
   # Cholesky of S (no check: we assume S is pd)
   L_S <- t(chol(S))
-   
+
   # fixed.x: conditional covariance YbarX and low-rank factor Q for R = Q Q'
-  if (nvar_x > 0L) { 
+  if (nvar_x > 0L) {
     A_yy <- S[y.idx, y.idx, drop = FALSE]
     B_yx <- S[y.idx, x.idx, drop = FALSE]
     C_xx <- S[x.idx, x.idx, drop = FALSE]
     L_x <- t(chol(C_xx))
-    
+
     BL <- forwardsolve(L_x, t(B_yx))
-    YbarX <- A_yy - t(BL) %*% BL                   
-    
+    YbarX <- A_yy - t(BL) %*% BL
+
     F_full <- matrix(0, nvar, nvar_x)
     F_full[y.idx, ] <- B_yx
     F_full[x.idx, ] <- C_xx

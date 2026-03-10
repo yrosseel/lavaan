@@ -496,3 +496,199 @@ lav_vec_to_implied <- function(x = NULL, lavmodel) {
 
   implied
 }
+
+# compute the 'information' matrix I = t(Delta) %*% W %*% Delta
+#
+# where W is a function of S.inv only, without constructing the kronecker
+# product of S.inv %x% S.inv
+#
+# strategy:
+# - use cholesky to write S.inv = t(U) %*% U
+# - for the cov block: we use the fact that the ij element equals
+#   1/2 * tr(S.inv X_i S.inv X_j) = 1/2 * tr(Z_i Z_j)
+#   where Z_i = U X_i t(U), and X_i = unvech(jac_cov[,i])
+#   since Z_i is symmetric, this equals t(h_i) %*% h_j, where
+#   h_i = sqrt(w) * vech(Z_i), so we can write  I_cov = t(H) %*% H
+# - for the mean block, we use I_mean = t(U J_mu) %*% (U J_mu)
+#
+# FIXME: what if fixed.x = TRUE?
+#
+lav_utils_deltat_w_delta <- function(Delta = NULL, S = NULL,
+                                     meanstructure = FALSE) {
+  nvar <- nrow(S)
+  pstar <- nvar * (nvar + 1L) / 2L
+
+  jac_cov <- Delta
+
+  # split Delta
+  if (meanstructure) {
+    mean_idx <- seq_len(nvar)
+    jac_mean <- Delta[ mean_idx, , drop = FALSE]
+    jac_cov <- Delta[-mean_idx, , drop = FALSE]
+  } else if (nrow(Delta) != pstar) {
+    lav_msg_stop(gettext("nrow(Delta) != pstar"))
+  }
+
+  n_free  <- ncol(jac_cov)
+
+  # vech
+  r_s <- lav_matrix_vech_row_idx(nvar)
+  c_s <- lav_matrix_vech_col_idx(nvar)
+  sqrt_w <- ifelse(r_s == c_s, sqrt(0.5), 1.0)
+
+
+  # special case: S = I (ULS)
+  uls.flag <- isTRUE(all.equal(S, diag(nvar), check.attributes = FALSE))
+  if (uls.flag) {
+    H <- sqrt_w * jac_cov
+    A <- crossprod(H)
+    if (meanstructure) {
+      A <- A + crossprod(jac_mean)
+    }
+  } else {
+    cS <- chol(S); Si <- chol2inv(cS)
+    U  <- chol(Si)
+
+    # build mat_X (nvar^2 x n_free): vec of symmetrized X_i
+    vec_lo  <- r_s + (c_s - 1L) * nvar     # lower-tri vec index
+    vec_up  <- c_s + (r_s - 1L) * nvar     # upper-tri vec index
+    mat_X   <- matrix(0, nvar * nvar, n_free)
+    mat_X[vec_lo, ] <- jac_cov
+    mat_X[vec_up, ] <- jac_cov
+
+    # left-multiply each X_i by U
+    mat_W <- U %*% matrix(mat_X, nvar, nvar * n_free)
+
+    # right-multiply each block by t(U) using array reshape
+    W_13 <- matrix(aperm(array(mat_W, c(nvar, nvar, n_free)), c(1L, 3L, 2L)),
+                   nrow = nvar * n_free, ncol = nvar)
+    mat_Z <- W_13 %*% t(U)
+
+    # extract vech of each Z_i and scale by sqrt_w -> H
+    i_off <- rep((seq_len(n_free) - 1L) * nvar, each = pstar)
+    H <- matrix(mat_Z[cbind(rep(r_s, n_free) + i_off,
+                            rep(c_s, n_free))], pstar, n_free) * sqrt_w
+    A <- crossprod(H)
+
+    if (meanstructure) {
+      # t(jac_mean) %*% Si %*% jac_mean = crossprod(U %*% jac_mean)
+      V <- U %*% jac_mean
+      A <- A + crossprod(V)
+    }
+  }
+
+  A
+}
+
+
+# find the solution of the linear equation:
+#
+# theta = solve(t(Delta) %*% W %*% Delta) %*% t(Delta) %*% W %*% svec
+#
+# where Delta is the Jacobian of Sigma wrt the free parameters,
+# W is lav_matrix_bdiag(S.inv, S22_inv)
+# where S22_inv = 0.5 * lav_matrix_duplication_pre_post(S.inv %x% S.inv)
+#  - S can be I (ULS) (then W = 0.5 * t(D) %*% D)
+#  - S can be sample.cov (GLS)
+#  - S can be Sigma (2RLS or RLS)
+#
+# svec is the vector with sample statistics (first means, then vech(S))
+#
+# strategy:
+# - first we compute Q = W %*% Delta, using the fact that W only contains S.inv
+#   elements (without explicitly constructing the kronecker product)
+#   note that for the cov block:
+#     W %*% Delta = w * vech(S.inv * unvech(v) * S.inv)
+#   where w is 1/2 for diagonal elements, and 1 elsewhere
+# - compute A = t(Delta) %*% Q, and b = Q %*% svec
+# - compute solve(A,b) using cholesky back/forward, as A is symmetric and pd
+#
+# optionally, return H = solve(t(Delta) %*% W %*% Delta) %*% t(Delta) %*% W
+# as an attribute
+lav_utils_wls_linearization <- function(Delta = NULL, S = NULL,
+                                        meanstructure = FALSE,
+                                        #fixed.x = FALSE, # FIXME: needed?
+                                        #x.idx = integer(0L),
+                                        svec = NULL,
+                                        return_H = FALSE) {
+  nvar <- nrow(S)
+  pstar <- nvar * (nvar + 1L) / 2L
+
+  jac_cov <- Delta; nc <- ncol(jac_cov)
+  s_cov <- svec
+
+  # vech
+  w <- rep(1.0, pstar)
+  w[lav_matrix_diagh_idx(nvar)] <- 0.5
+
+  # split Delta/svec
+  if (meanstructure) {
+    mean_idx <- seq_len(nvar)
+    jac_mean <- Delta[ mean_idx, , drop = FALSE]
+    jac_cov <- Delta[-mean_idx, , drop = FALSE]
+    s_mean <- svec[mean_idx]
+    s_cov <- svec[-mean_idx]
+  } else if (nrow(Delta) != pstar) {
+    lav_msg_stop(gettext("nrow(Delta) != pstar"))
+  }
+
+  # special case: S = I (ULS)
+  uls.flag <- isTRUE(all.equal(S, diag(nvar), check.attributes = FALSE))
+  if (uls.flag) {
+    # cov part
+    q_cov <- w * jac_cov
+    A <- crossprod(jac_cov, q_cov)
+    b <- drop(crossprod(q_cov, s_cov))
+
+    # mean part
+    if (meanstructure) {
+      A <- A + crossprod(jac_mean)
+      b <- b + drop(crossprod(jac_mean, s_mean))
+    }
+
+    # tQ only needed if H is requested
+    if (return_H) {
+      tQ <- t(q_cov)
+      if (meanstructure) tQ <- cbind(t(jac_mean), tQ)
+    }
+  } else {
+    # S inverse
+    cS <- chol(S); Si <- chol2inv(cS)
+
+    # cov part
+    q_cov <- matrix(0, pstar, nc)
+    for (j in seq_len(nc)) {
+      vmat <- lav_matrix_vech_reverse(jac_cov[, j])
+      W <- Si %*% vmat %*% Si
+      q_cov[, j] <- w * lav_matrix_vech(W)
+    }
+
+    A <- crossprod(jac_cov, q_cov)
+    b <- drop(crossprod(q_cov, s_cov))
+
+    # mean part
+    if (meanstructure) {
+      q_mean <- backsolve(cS, forwardsolve(t(cS), jac_mean))
+      A <- A + crossprod(jac_mean, q_mean)
+      b <- b + drop(crossprod(q_mean, s_mean))
+    }
+
+    if (return_H) {
+      tQ <- t(q_cov)
+      if (meanstructure) tQ <- cbind(t(q_mean), tQ)
+    }
+  }
+
+  R <- chol(A)
+  if (!return_H) {
+    out <- backsolve(R, forwardsolve(t(R), b))
+  } else {
+    Ainv  <- chol2inv(R)
+    out <- drop(Ainv %*% b)
+    H <- Ainv %*% tQ
+    attr(out, "H") <- H
+  }
+
+  out
+}
+

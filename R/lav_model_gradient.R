@@ -1164,6 +1164,277 @@ lav_model_ddelta_dx <- function(lavmodel = NULL, GLIST = NULL, target = "lambda"
   Delta
 }
 
+# single block, continuous data/LISREL only
+# new approach (0.6-22):
+# - only the free elements per model matrix
+# - in one go
+lav_model_delta_lisrel <- function(lavmodel, block = 1L) {
+
+  stopifnot(lavmodel@representation == "LISREL")
+
+  # model matrices for this block
+  mm.in.group <-
+    seq_len(lavmodel@nmat[block]) + cumsum(c(0, lavmodel@nmat))[block]
+  MLIST <- lavmodel@GLIST[mm.in.group]
+
+  delta.flag <- beta.flag <- meanstructure <- FALSE
+  if (!is.null(MLIST$delta) && any(MLIST$delta[,1] != 1)) {
+    delta.flag <- TRUE
+  }
+  if (!is.null(MLIST$beta)) {
+    beta.flag <- TRUE
+  }
+  if (lavmodel@meanstructure) {
+    meanstructure <- lavmodel@meanstructure
+  }
+
+  # model matrices in this block
+  mnames <- names(MLIST)
+
+  mm.lambda.idx <- which(mnames == "lambda")
+  x.lambda.idx <- lavmodel@x.free.idx[[mm.lambda.idx]]
+  m.lambda.idx <- lavmodel@m.free.idx[[mm.lambda.idx]]
+  n_lam <- length(m.lambda.idx)
+
+  mm.psi.idx <- which(mnames == "psi")
+  tmp <- lavmodel@x.free.idx[[mm.psi.idx]]
+  x.psi.idx <- x.psi.idx <- tmp[!duplicated(tmp)]
+  m.psi.idx <- lavmodel@m.free.idx[[mm.psi.idx]][!duplicated(tmp)]
+  n_psi <- length(m.psi.idx)
+
+
+  mm.theta.idx <- which(mnames == "theta")
+  tmp <- lavmodel@x.free.idx[[mm.theta.idx]]
+  x.theta.idx <- tmp[!duplicated(tmp)]
+  m.theta.idx <- lavmodel@m.free.idx[[mm.theta.idx]][!duplicated(tmp)]
+  n_the <- length(m.theta.idx)
+
+  n_bet <- 0L
+  x.beta.idx <- integer(0L)
+  if (beta.flag) {
+    mm.beta.idx <- which(mnames == "beta")
+    x.beta.idx <- lavmodel@x.free.idx[[mm.beta.idx]]
+    m.beta.idx <- lavmodel@m.free.idx[[mm.beta.idx]]
+    n_bet <- length(m.beta.idx)
+  }
+
+  n_del <- 0L
+  x.delta.idx <- integer(0L)
+  if (delta.flag) {
+    mm.delta.idx <- which(mnames == "delta")
+    x.delta.idx <- lavmodel@x.free.idx[[mm.delta.idx]]
+    m.delta.idx <- lavmodel@m.free.idx[[mm.delta.idx]]
+    n_del <- length(m.delta.idx)
+  }
+
+  if (meanstructure) {
+    mm.nu.idx <- which(mnames == "nu")
+    x.nu.idx <- lavmodel@x.free.idx[[mm.nu.idx]]
+    m.nu.idx <- lavmodel@m.free.idx[[mm.nu.idx]]
+    n_nu <- length(m.nu.idx)
+
+    mm.alpha.idx <- which(mnames == "alpha")
+    x.alpha.idx <- lavmodel@x.free.idx[[mm.alpha.idx]]
+    m.alpha.idx <- lavmodel@m.free.idx[[mm.alpha.idx]]
+    n_alp <- length(m.alpha.idx)
+  }
+
+  nvar <- nrow(MLIST$lambda)
+  nfac <- ncol(MLIST$lambda)
+  pstar <- nvar * (nvar + 1L) / 2L
+
+  # precompute
+  if (beta.flag) {
+    A <- lav_lisrel_ibinv(MLIST)
+    M <- MLIST$lambda %*% A
+    G <- A %*% MLIST$psi %*% t(A)
+    LG <- MLIST$lambda %*% G
+  } else {
+    M <- MLIST$lambda
+    G <- MLIST$psi
+    LG <- MLIST$lambda %*% MLIST$psi
+  }
+
+  if (delta.flag) {
+    delta  <- as.vector(MLIST$delta)
+  }
+
+  # vech structure for Sigma
+  r_s <- lav_matrix_vech_row_idx(nvar)
+  c_s <- lav_matrix_vech_col_idx(nvar)
+  sigma_lut <- lav_matrix_vech_reverse(seq_len(pstar))
+
+  if (delta.flag) {
+    # scaling weights: delta[r] * delta[s] for each vech position
+    delta_weight <- delta[r_s] * delta[c_s]
+  }
+
+  # helper: vec index -> (row, col)
+  vec2rc <- function(idx, nr) {
+    cbind(row = (idx - 1L) %% nr + 1L,
+          col = (idx - 1L) %/% nr + 1L)
+  }
+
+  # prepare output matrix for sigma
+  n_free <- n_lam + n_bet + n_psi + n_the + n_del
+  J <- matrix(0, pstar, n_free)
+
+  col <- 1L
+  # Lambda [i,j]: dS0[r,s] = LG[s,j]*I(r==i) + LG[r,j]*I(s==i)
+  if (n_lam > 0L) {
+    rc  <- vec2rc(m.lambda.idx, nvar);  i_v <- rc[, 1L];  j_v <- rc[, 2L]
+
+    T1 <- LG[c_s, j_v, drop = FALSE] * outer(r_s, i_v, `==`)
+    T2 <- LG[r_s, j_v, drop = FALSE] * outer(c_s, i_v, `==`)
+
+    DX <- T1 + T2
+    if (delta.flag) {
+      DX <- DX * delta_weight
+    }
+    J[, col:(col + n_lam - 1L)] <- DX
+    col <- col + n_lam
+  }
+
+  # Beta [i,j]: dS0[r,s] = M[r,i]*LG[s,j] + LG[r,j]*M[s,i]
+  if (n_bet > 0L) {
+    rc  <- vec2rc(m.beta.idx, nfac);  i_v <- rc[, 1L];  j_v <- rc[, 2L]
+
+    T1 <- M[r_s,  i_v, drop = FALSE] * LG[c_s, j_v, drop = FALSE]
+    T2 <- LG[r_s, j_v, drop = FALSE] * M[c_s,  i_v, drop = FALSE]
+
+    DX <- T1 + T2
+    if (delta.flag) {
+      DX <- DX * delta_weight
+    }
+    J[, col:(col + n_bet - 1L)] <- DX
+    col <- col + n_bet
+  }
+
+  # Psi [k,l] symmetric: dS0[r,s] = M[r,k]*M[s,l] + M[r,l]*M[s,k]
+  # diagonal (k==l): halve
+  if (n_psi > 0L) {
+    rc  <- vec2rc(m.psi.idx, nfac)
+    k_v <- pmax(rc[, 1L], rc[, 2L])
+    l_v <- pmin(rc[, 1L], rc[, 2L])
+
+    T1 <- M[r_s, k_v, drop = FALSE] * M[c_s, l_v, drop = FALSE]
+    T2 <- M[r_s, l_v, drop = FALSE] * M[c_s, k_v, drop = FALSE]
+    DX <- T1 + T2
+
+    diag_mask <- (k_v == l_v)
+    if (any(diag_mask)) {
+      DX[, diag_mask] <- DX[, diag_mask] * 0.5
+    }
+
+    if (delta.flag) {
+      DX <- DX * delta_weight
+    }
+    J[, col:(col + n_psi - 1L)] <- DX
+    col <- col + n_psi
+  }
+
+  # Theta [k,l] symmetric: dS = Delta %*% dTheta %*% Delta
+  #  -> unit vector at vech pos (k,l)
+  # ----------------------------------------------------------
+  if (n_the > 0L) {
+    rc  <- vec2rc(m.theta.idx, nvar)
+    k_v <- pmax(rc[, 1L], rc[, 2L])
+    l_v <- pmin(rc[, 1L], rc[, 2L])
+
+    Jt <- matrix(0, pstar, n_the)
+    vech_pos <- sigma_lut[cbind(k_v, l_v)]
+    if (delta.flag) {
+      Jt[cbind(vech_pos, seq_len(n_the))] <- delta_weight[vech_pos]
+    } else {
+      Jt[cbind(vech_pos, seq_len(n_the))] <- 1
+    }
+
+    J[, col:(col + n_the - 1L)] <- Jt
+    col <- col + n_the
+  }
+
+  # Delta[k] (diagonal only):
+  # dS[r,s] = I(r==k)*Sigma0[k,s]*delta[s] + delta[r]*Sigma0[r,k]*I(s==k)
+  if (n_del > 0L) {
+    Sigma0 <- M %*% MLIST$psi %*% t(M) + MLIST$theta
+    k_v <- m.delta.idx
+    T1 <- Sigma0[c_s, k_v, drop = FALSE] * delta[c_s] * outer(r_s, k_v, `==`)
+    T2 <- delta[r_s] * Sigma0[r_s, k_v, drop = FALSE] * outer(c_s, k_v, `==`)
+    J[, col:(col + n_del - 1L)] <- T1 + T2
+  }
+
+  # meanstructure
+  if (meanstructure) {
+    # precompute
+    if (beta.flag) {
+      a <- drop(A %*% MLIST$alpha)
+    } else {
+      a <- MLIST$alpha
+    }
+
+    n_free <- n_nu + n_lam + n_bet + n_alp
+    Jm <- matrix(0, nvar, n_free)
+
+    col <- 1L
+    # nu[i]:  dmu = e_i
+    # co lumn m is a unit vector with 1 at position nu.idx[m]
+    if (n_nu > 0L) {
+      Jn <- matrix(0, nvar, n_nu)
+      Jn[cbind(m.nu.idx, seq_len(n_nu))] <- 1
+      Jm[, col:(col + n_nu - 1L)] <- Jn
+      col <- col + n_nu
+    }
+
+    # Lambda[i,j]:  dmu[r] = a[j] * I(r == i)
+    # column m is a[j_v[m]] placed at row i_v[m], zero elsewhere
+    if (n_lam > 0L) {
+      rc  <- vec2rc(m.lambda.idx, nvar); i_v <- rc[, 1L];  j_v <- rc[, 2L]
+
+      Jl <- matrix(0, nvar, n_lam)
+      Jl[cbind(i_v, seq_len(n_lam))] <- a[j_v]
+      Jm[, col:(col + n_lam - 1L)] <- Jl
+      col <- col + n_lam
+    }
+
+    # Beta[i,j]:  dmu[r] = M[r,i] * a[j]
+    # column m is M[,i_v[m]] scaled by a[j_v[m]]
+    # ----------------------------------------------------------
+    if (n_bet > 0L) {
+      rc  <- vec2rc(m.beta.idx, nfac); i_v <- rc[, 1L];  j_v <- rc[, 2L]
+
+      Jm[, col:(col + n_bet - 1L)] <-
+        M[, i_v, drop = FALSE] * rep(a[j_v], each = nvar)
+      col <- col + n_bet
+    }
+
+    # alpha[k]:  dmu = M[,k]
+    # column m is the k-th column of M
+    if (n_alp > 0L) {
+      Jm[, col:(col + n_alp - 1L)] <- M[, m.alpha.idx, drop = FALSE]
+    }
+  }
+
+  # right order
+  el.idx <- c(x.lambda.idx, x.beta.idx, x.psi.idx, x.theta.idx, x.delta.idx)
+
+  # sigma
+  out <- matrix(0, nrow = nrow(J), ncol = lavmodel@nx.free)
+  el.idx <- c(x.lambda.idx, x.beta.idx, x.psi.idx, x.theta.idx, x.delta.idx)
+  out[, el.idx] <- J
+
+  # meanstructure
+  if (meanstructure) {
+    # right order
+    el.idx <- c(x.nu.idx, x.lambda.idx, x.beta.idx, x.alpha.idx)
+    outm <- matrix(0, nrow = nrow(Jm), ncol = lavmodel@nx.free)
+    outm[, el.idx] <- Jm
+    out <- rbind(outm, out)
+  }
+
+  out
+}
+
+
 lav_model_omega <- function(Sigma.hat = NULL, Mu.hat = NULL,
                          lavsamplestats = NULL, estimator = "ML",
                          meanstructure = FALSE, conditional.x = FALSE,
