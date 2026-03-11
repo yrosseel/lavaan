@@ -1026,24 +1026,16 @@ lav_model_partable  <- function(
               # 1) fix bottom and top per ov
               trows <- which(tmp.list$lhs[thresholds.idx] == ind)
               plabs <- tmp.list$plabel[thresholds.idx][trows[c(1, length(trows))]]
-
-              tmp.list$free[thresholds.idx][trows[1]] <- 0L
-              tmp.list$ustart[thresholds.idx[trows[1]]] <- round(.5 + Kmax/nlevs[ind], 3)
-              tmp.list$user[thresholds.idx[trows[1]]] <- 2L
-              ## tmp$lhs <- c(tmp$lhs, plabs[1])
-              ## tmp$rhs <- c(tmp$rhs, round(.5 + Kmax/nlevs[ind], 3))
-              ## tmp$op <- c(tmp$op, "==")
-              ## tmp$block <- c(tmp$block, 0L)
-              ## tmp$user <- c(tmp$user, 2L)
-              ## tmp$ustart <- c(tmp$ustart, as.numeric(NA))
+              thisidx <- thresholds.idx[trows[1]]
+              tmp.list$free[thisidx] <- 0L
+              tmp.list$ustart[thisidx] <- round(.5 + Kmax/nlevs[ind], 3)
+              tmp.list$user[thisidx] <- 2L
 
               if (nlevs[ind] > 2L) {
-                tmp$lhs <- c(tmp$lhs, plabs[2])
-                tmp$rhs <- c(tmp$rhs, round(.5 + Kmax * (nlevs[ind] - 1)/nlevs[ind], 3))
-                tmp$op <- c(tmp$op, "==")
-                tmp$block <- c(tmp$block, 0L)
-                tmp$user <- c(tmp$user, 2L)
-                tmp$ustart <- c(tmp$ustart, as.numeric(NA))
+                thisidx <- thresholds.idx[trows[length(trows)]]
+                tmp.list$free[thisidx] <- 0L
+                tmp.list$ustart[thisidx] <- round(.5 + Kmax * (nlevs[ind] - 1)/nlevs[ind], 3)
+                tmp.list$user[thisidx] <- 2L
               }
 
               # 2) free intercepts of variables with > 2 levels, only if automatically fixed
