@@ -455,6 +455,7 @@ lav_model_partable  <- function(
   # check ordinal variables
   categorical <- FALSE
   ov.ord <- lav_object_vnames(tmp.list, "ov.ord")
+  all.ord <- all(lav_object_vnames(tmp.list, "ov") %in% ov.ord)
   if (length(ov.ord) > 0L) {
     categorical <- TRUE
     ord.var.idx <- which(tmp.list$op == "~~" &
@@ -944,6 +945,8 @@ lav_model_partable  <- function(
   } else if (!is.character(effect.coding)) {
     lav_msg_stop(gettext("effect.coding argument must be a character string"))
   }
+  # in ordinal models, do integer coding
+  if (all.ord) effect.coding <- c(effect.coding, "thresholds")  
   if (any(c("loadings", "intercepts") %in% effect.coding)) {
     tmp <- list()
     # for each block
@@ -1008,6 +1011,67 @@ lav_model_partable  <- function(
           }
         } # loadings
 
+        if ("thresholds" %in% effect.coding &
+            (!"thresholds" %in% group.equal || this.group == 1L)) {
+          thresholds.idx <- which(tmp.list$op == "|" &
+            tmp.list$block == b &
+            tmp.list$lhs %in% ind.names)
+
+          # all free?
+          if (length(thresholds.idx) > 0L &&
+            all(tmp.list$free[thresholds.idx] > 0L)) {
+            nlevs <- table(tmp.list$lhs[thresholds.idx]) + 1
+            Kmax <- max(nlevs)
+            for (ind in ind.names) {
+              # 1) fix bottom and top per ov
+              trows <- which(tmp.list$lhs[thresholds.idx] == ind)
+              plabs <- tmp.list$plabel[thresholds.idx][trows[c(1, length(trows))]]
+              thisidx <- thresholds.idx[trows[1]]
+              tmp.list$free[thisidx] <- 0L
+              tmp.list$ustart[thisidx] <- round(.5 + Kmax/nlevs[ind], 3)
+              tmp.list$user[thisidx] <- 2L
+
+              if (nlevs[ind] > 2L) {
+                thisidx <- thresholds.idx[trows[length(trows)]]
+                tmp.list$free[thisidx] <- 0L
+                tmp.list$ustart[thisidx] <- round(.5 + Kmax * (nlevs[ind] - 1)/nlevs[ind], 3)
+                tmp.list$user[thisidx] <- 2L
+              }
+
+              # 2) free intercepts of variables with > 2 levels, only if automatically fixed
+              intercept.idx <- which(tmp.list$op == "~1" &
+                tmp.list$block == b &
+                tmp.list$lhs == ind)
+              if (nlevs[ind] > 2L && length(intercept.idx) > 0L &&
+                  tmp.list$user[intercept.idx] == 0L) {
+                tmp.list$free[intercept.idx] <- 1L
+              }
+
+              # 3) free variances/deltas of variables with > 2 levels, only if automatically fixed
+              varop <- ifelse(parameterization == "delta", "~*~", "~~")
+              var.idx <- which(tmp.list$op == varop &
+                            tmp.list$block == b &
+                            tmp.list$lhs == ind &
+                            tmp.list$lhs == tmp.list$rhs)
+              if (length(var.idx) > 0L &&
+                  tmp.list$user[var.idx] == 0L) {
+                tmp.list$free[var.idx] <- 1L
+              }              
+            }
+            # 4) fix latent variance if all variables have 2 levels
+            if (all(nlevs == 2L)) {
+              lv.var.idx <- which(tmp.list$op == "~~" &
+                              tmp.list$block == b &
+                              tmp.list$lhs == lv &
+                              tmp.list$lhs == tmp.list$rhs)
+              if (length(lv.var.idx) > 0L && tmp.list$user[lv.var.idx] == 0L) {
+                tmp.list$free[lv.var.idx] <- 0L
+                tmp.list$ustart[lv.var.idx] <- 1L
+              }
+            }
+          }
+        } # thresholds
+
         if ("intercepts" %in% effect.coding &
             (!"intercepts" %in% group.equal || this.group == 1L)) {
           # intercepts for indicators of this lv
@@ -1017,7 +1081,7 @@ lav_model_partable  <- function(
 
           # all free?
           if (length(intercepts.idx) > 0L &&
-            all(tmp.list$free[intercepts.idx] > 0L)) {
+            (all(tmp.list$free[intercepts.idx] > 0L) || "thresholds" %in% effect.coding)) {
             # 1) add eq constraint
             plabel <- tmp.list$plabel[intercepts.idx]
 
