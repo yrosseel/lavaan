@@ -1000,7 +1000,7 @@ lav_start <- function(start.method = "default",
                                lavpartable$op == "|" & lavpartable$lhs == oo &
                                lavpartable$free > 0)
         item.th <- start[this.idx]
-        if (length(item.th) > 1L && !all(diff(item.th) > 0)) {
+        if (length(item.th) > 1L && length(this.free.idx) > 0 && !all(diff(item.th) > 0)) {
           start[this.free.idx] <- cumsum(abs(item.th))[match(this.free.idx, this.idx)]
         }
       }
