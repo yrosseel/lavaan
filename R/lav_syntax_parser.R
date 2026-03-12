@@ -191,7 +191,7 @@ lav_parse_text_tokens <- function(modelsrc, types) {
   }
   if (symbols2[1L] > -1L) {
     symbols2.lengths <- attr(symbols2, "match.length")
-    symbols2 <- symbols2 + symbols2.lengths - 2L
+    ymbols2 <- symbols2 + symbols2.lengths - 2L
     if (symbols[1L] == -1L) {
       symbols <- symbols2
     } else {

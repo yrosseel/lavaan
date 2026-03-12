@@ -13,7 +13,7 @@
 # YR 24 Jan 2025 - covuy algorithm (including higher-order factors)
 
 lav_model_find_iv <- function(lavobject = NULL, lavmodel = NULL,
-                              lavpta = NULL, algorithm = "covuy",
+                              lavpartable = NULL, algorithm = "covuy",
                               output = "list", drop.list.single.group = FALSE) {
   # check output
   output <- tolower(output)
@@ -22,8 +22,12 @@ lav_model_find_iv <- function(lavobject = NULL, lavmodel = NULL,
   # lavobject or components?
   if (!is.null(lavobject)) {
     stopifnot(inherits(lavobject, "lavaan"))
+    lavpartable <- lavobject@ParTable
     lavpta <- lavobject@pta
     lavmodel <- lavobject@Model
+  } else {
+    # get lavpta
+    lavpta <- lav_partable_attributes(lavpartable)
   }
 
   # sanity checks
@@ -49,6 +53,7 @@ lav_model_find_iv <- function(lavobject = NULL, lavmodel = NULL,
     }
   }
 
+  # first find all model-implied instruments
   algorithm <- tolower(algorithm)
   if (algorithm == "bb2004") {
     iv_list <- lav_model_find_iv_bb2004(lavmodel = lavmodel, lavpta = lavpta)
@@ -56,6 +61,22 @@ lav_model_find_iv <- function(lavobject = NULL, lavmodel = NULL,
     iv_list <- lav_model_find_iv_miivsem(lavmodel = lavmodel, lavpta = lavpta)
   } else {
     iv_list <- lav_model_find_iv_covuy(lavmodel = lavmodel, lavpta = lavpta)
+  }
+
+  # check for user-specified instruments
+  if (any(lavpartable$op == "|~")) {
+    for (b in seq_len(nblocks)) {
+      iv_list[[b]] <- lapply(iv_list[[b]], function(eq) {
+        lhs <- eq$lhs[1] # we assume a single lhs
+        iv.idx <- which(lavpartable$op == "|~" & lavpartable$lhs == lhs)
+        if (length(iv.idx)) {
+          # override iv
+          eq$iv <- lavpartable$rhs[iv.idx]
+          eq$iv_type <- "user"
+        }
+        eq
+      })
+    } # blocks
   }
 
   if (output == "table") {
@@ -66,10 +87,11 @@ lav_model_find_iv <- function(lavobject = NULL, lavmodel = NULL,
       rhs <- sapply(lapply(eqs, "[[", "rhs"), paste, collapse = " + ")
       lhs_new <- sapply(eqs, "[[", "lhs_new")
       rhs_new <- sapply(lapply(eqs, "[[", "rhs_new"), paste, collapse = " + ")
-      miiv <- sapply(lapply(eqs, "[[", "miiv"), paste, collapse = ", ")
+      iv <- sapply(lapply(eqs, "[[", "iv"), paste, collapse = ", ")
+      type <- sapply(eqs, "[[", "iv_type")
       table[[b]] <- data.frame(
         lhs = lhs, rhs = rhs,
-        lhs_new = lhs_new, rhs_new = rhs_new, miiv = miiv
+        lhs_new = lhs_new, rhs_new = rhs_new, type = type, iv = iv
       )
       class(table[[b]]) <- c("lavaan.data.frame", "data.frame")
     }
@@ -246,7 +268,7 @@ lav_model_find_iv_bb2004 <- function(lavmodel = NULL, lavpta = NULL) {
         # also exogenous ov's!
         lv.x.dummy.idx <- lavmodel@ov.x.dummy.lv.idx[[b]]
         if (length(lv.x.dummy.idx) > 0L) {
-          int_orig[lavmodel@ov.x.dummy.ov.idx[[b]],1] <- alpha[lv.x.dummy.idx,1]
+          int_orig[lavmodel@ov.x.dummy.ov.idx[[b]], 1] <- alpha[lv.x.dummy.idx, 1]
         }
         rownames(int_orig)[r.idx] <- rownames(int_lv)
         int_orig <- int_orig[1:nvar, , drop = FALSE]
@@ -403,6 +425,10 @@ lav_model_find_iv_bb2004 <- function(lavmodel = NULL, lavpta = NULL) {
         rhs <- colnames(pred_orig[j, x.idx, drop = FALSE])
         miiv <- colnames(iv[j, iv[j, ] != 0, drop = FALSE])
       }
+      iv_type <- "miiv"
+      if (identical(rhs_new, miiv)) {
+        iv_type <- "ols"
+      }
       eqs[[j]] <- list(
         lhs_new = rownames(pred)[j],
         rhs_new = rhs_new,
@@ -412,6 +438,8 @@ lav_model_find_iv_bb2004 <- function(lavmodel = NULL, lavpta = NULL) {
         ptint = ptint,
         cet = cet,
         markers = unique(lv.marker[cet[-1]]),
+        iv_type = iv_type,
+        iv = miiv,
         miiv = miiv
       )
     }
@@ -574,7 +602,8 @@ lav_model_find_iv_miivsem <- function(lavmodel = NULL, lavpta = NULL) {
 
     # add intercepts here
     if (lavmodel@meanstructure) {
-      int <- rbind(nu, alpha); colnames(int) <- "1"
+      int <- rbind(nu, alpha)
+      colnames(int) <- "1"
       int_orig <- int
       int[int != 0] <- as.numeric(NA)
       idx <- match(lv.marker, rownames(int))
@@ -650,11 +679,16 @@ lav_model_find_iv_miivsem <- function(lavmodel = NULL, lavpta = NULL) {
 
         # valid instruments
         miivs <- intersect(ov_uncorrelated_with_cet, ov_correlated_with_markers)
-     } else {
+      } else {
         eq_rhs <- "1"
         eq_rhs_orig <- "1"
         miivs <- "1"
-     }
+      }
+
+      iv_type <- "miiv"
+      if (identical(eq_rhs, miivs)) {
+        iv_type <- "ols"
+      }
 
       eqs[[j]] <- list(
         lhs_new = eq_lhs,
@@ -665,6 +699,8 @@ lav_model_find_iv_miivsem <- function(lavmodel = NULL, lavpta = NULL) {
         ptint = ptint,
         cet = cet,
         markers = markers,
+        iv_type = iv_type,
+        iv = miivs,
         miiv = miivs
       )
     }
@@ -881,6 +917,11 @@ lav_model_find_iv_covuy <- function(lavmodel = NULL, lavpta = NULL) {
         pt <- as.integer(unname(pred_orig[j, x.idx]))
       }
 
+      iv_type <- "miiv"
+      if (identical(rhs_new, miiv)) {
+        iv_type <- "ols"
+      }
+
       eqs[[j]] <- list(
         lhs_new = rownames(pred)[j],
         rhs_new = rhs_new,
@@ -889,6 +930,8 @@ lav_model_find_iv_covuy <- function(lavmodel = NULL, lavpta = NULL) {
         pt = pt,
         ptint = ptint,
         iv_flag = iv_flag,
+        iv_type = iv_type,
+        iv = miiv,
         miiv = miiv
       )
     }

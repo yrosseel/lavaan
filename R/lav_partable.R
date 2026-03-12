@@ -946,7 +946,7 @@ lav_model_partable  <- function(
     lav_msg_stop(gettext("effect.coding argument must be a character string"))
   }
   # in ordinal models, do integer coding
-  if (all.ord) effect.coding <- c(effect.coding, "thresholds")  
+  if (all.ord) effect.coding <- c(effect.coding, "thresholds")
   if (any(c("loadings", "intercepts") %in% effect.coding)) {
     tmp <- list()
     # for each block
@@ -1056,7 +1056,7 @@ lav_model_partable  <- function(
               if (length(var.idx) > 0L &&
                   tmp.list$user[var.idx] == 0L) {
                 tmp.list$free[var.idx] <- 1L
-              }              
+              }
             }
             # 4) fix latent variance if all variables have 2 levels
             if (all(nlevs == 2L)) {

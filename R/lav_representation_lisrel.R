@@ -355,6 +355,13 @@ lav_lisrel <- function(lavpartable = NULL,
     tmp.row[idx] <- 1L
     tmp.col[idx] <- 1L
 
+    # new in 0.6-22: instruments
+    idx <- which(target$block == g & target$lhs == "group" &
+      target$op == "|~")
+    tmp.mat[idx] <- "miiv"
+    tmp.row[idx] <- 0L
+    tmp.col[idx] <- 0L
+
     if (extra) {
       # mRows
       mmRows <- list(

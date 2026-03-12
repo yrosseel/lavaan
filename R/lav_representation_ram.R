@@ -109,6 +109,13 @@ lav_ram <- function(partable = NULL,
     tmp.row[idx] <- 1L
     tmp.col[idx] <- 1L
 
+    # 8. instruments
+    idx <- which(target$block == g & target$lhs == "group" &
+      target$op == "|~")
+    tmp.mat[idx] <- "miiv"
+    tmp.row[idx] <- 0L
+    tmp.col[idx] <- 0L
+
     if (extra) {
       # mRows
       mmRows <- list(

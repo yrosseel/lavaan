@@ -40,7 +40,7 @@ lav_sem_miiv_internal <- function(lavmodel = NULL, lavh1 = NULL,
   free.undirected.idx <- unique(lavpartable$free[undirected.idx])
 
   # find ALL model-implied instrumental variables (miivs) per equation
-  eqs <- lav_model_find_iv(lavmodel = lavmodel, lavpta = lavpta)
+  eqs <- lav_model_find_iv(lavmodel = lavmodel, lavpartable = lavpartable)
 
   # initial parameter vector
   x <- lav_model_get_parameters(lavmodel)
@@ -115,7 +115,7 @@ lav_sem_miiv_2sls <- function(eqs = NULL, lavmodel = NULL, lavpartable = NULL,
 
   if (is.null(eqs)) {
     # find ALL model-implied instrumental variables (miivs) per equation
-    eqs <- lav_model_find_iv(lavmodel = lavmodel, lavpta = lavpta)
+    eqs <- lav_model_find_iv(lavmodel = lavmodel, lavpartable = lavpartable)
   }
 
   # number of blocks
@@ -141,8 +141,8 @@ lav_sem_miiv_2sls <- function(eqs = NULL, lavmodel = NULL, lavpartable = NULL,
 
       # iv_flag?
       iv_flag <- TRUE
-      if (!is.null(eq$iv_flag)) {
-        iv_flag <- eq$iv_flag
+      if (!is.null(eq$iv_type)) {
+        iv_flag <- eq$iv_type != "ols"
       } else {
         # if rhs_new matches miiv, iv_flag is FALSE
         if (identical(eq$rhs_new, eq$miiv)) {
@@ -165,7 +165,7 @@ lav_sem_miiv_2sls <- function(eqs = NULL, lavmodel = NULL, lavpartable = NULL,
 
       # Z: instruments
       if (iv_flag) {
-        i.idx <- match(eq$miiv, ov.names)
+        i.idx <- match(eq$iv, ov.names)
         imat <- cbind(1, XY[, i.idx, drop = FALSE]) # instruments
       }
 
@@ -177,7 +177,7 @@ lav_sem_miiv_2sls <- function(eqs = NULL, lavmodel = NULL, lavpartable = NULL,
       names(sargan) <- c("stat", "df", "pvalue")
 
       # 0. check
-      if (iv_flag && length(eq$miiv) < length(eq$rhs)) {
+      if (iv_flag && length(eq$iv) < length(eq$rhs)) {
         # what to do? skip, or proceed anyway?
         eqs[[b]][[j]]$coef <- numeric(0L)
         eqs[[b]][[j]]$nobs <- nrow(xmat)
@@ -337,7 +337,7 @@ lav_sem_miiv_2sls_samplestats <- function(x = NULL, samplestats = FALSE,
 
   if (is.null(eqs)) {
     # find ALL model-implied instrumental variables (miivs) per equation
-    eqs <- lav_model_find_iv(lavmodel = lavmodel, lavpta = lavpta)
+    eqs <- lav_model_find_iv(lavmodel = lavmodel, lavpartable = lavpartable)
   }
 
   if (samplestats) {
@@ -373,8 +373,8 @@ lav_sem_miiv_2sls_samplestats <- function(x = NULL, samplestats = FALSE,
 
       # iv_flag?
       iv_flag <- TRUE
-      if (!is.null(eq$iv_flag)) {
-        iv_flag <- eq$iv_flag
+      if (!is.null(eq$iv_type)) {
+        iv_flag <- eq$iv_type != "ols"
       } else {
         # if rhs_new matches miiv, iv_flag is FALSE
         if (identical(eq$rhs_new, eq$miiv)) {
@@ -401,7 +401,7 @@ lav_sem_miiv_2sls_samplestats <- function(x = NULL, samplestats = FALSE,
       s_yy <- sample.cov[y.idx, y.idx, drop = FALSE]
       nz <- 0L
       if (iv_flag) {
-        i.idx <- match(eq$miiv, ov.names)
+        i.idx <- match(eq$iv, ov.names)
         nz <- length(i.idx)
         S_XZ <- sample.cov[x.idx, i.idx, drop = FALSE]
         S_ZX <- sample.cov[i.idx, x.idx, drop = FALSE]
@@ -414,7 +414,7 @@ lav_sem_miiv_2sls_samplestats <- function(x = NULL, samplestats = FALSE,
       names(sargan) <- c("stat", "df", "pvalue")
 
       # 0. check
-      if (iv_flag && length(eq$miiv) < length(eq$rhs)) {
+      if (iv_flag && length(eq$iv) < length(eq$rhs)) {
         # what to do? skip, or proceed anyway?
         eqs[[b]][[j]]$coef <- numeric(0L)
         eqs[[b]][[j]]$nobs <- nobs
@@ -767,8 +767,7 @@ lav_sem_miiv_vcov <- function(lavmodel = NULL, lavsamplestats = NULL,
 
   # eqs?
   if (is.null(eqs)) {
-    lavpta <- lav_partable_attributes(lavpartable)
-    eqs <- lav_model_find_iv(lavmodel = lavmodel, lavpta = lavpta)
+    eqs <- lav_model_find_iv(lavmodel = lavmodel, lavpartable = lavpartable)
   }
 
   # directed versus undirected (free) parameters

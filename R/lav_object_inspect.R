@@ -3355,10 +3355,11 @@ lav_object_inspect_iv <- function(object, drop.list.single.group = FALSE) {
     rhs <- sapply(lapply(eqs, "[[", "rhs"), paste, collapse = " + ")
     lhs_new <- sapply(eqs, "[[", "lhs_new")
     rhs_new <- sapply(lapply(eqs, "[[", "rhs_new"), paste, collapse = " + ")
-    miiv <- sapply(lapply(eqs, "[[", "miiv"), paste, collapse = ", ")
+    iv <- sapply(lapply(eqs, "[[", "iv"), paste, collapse = ", ")
+    type <- sapply(eqs, "[[", "iv_type")
     table[[b]] <- data.frame(
       lhs = lhs, rhs = rhs,
-      lhs.new = lhs_new, rhs.new = rhs_new, instruments = miiv
+      lhs.new = lhs_new, rhs.new = rhs_new, type = type, instruments = iv
     )
     class(table[[b]]) <- c("lavaan.data.frame", "data.frame")
   }

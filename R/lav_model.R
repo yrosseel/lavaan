@@ -96,8 +96,9 @@ lav_model <- function(lavpartable = NULL,                          # nolint
   if (lav_debug()) print(tmp.rep)
 
   # FIXME: check for non-existing parameters
-  bad.idx <- which((tmp.rep$mat == "" | is.na(tmp.rep$row) | is.na(tmp.rep$col)) &
-    !lavpartable$op %in% c("==", "<", ">", ":="))
+  bad.idx <-
+    which((tmp.rep$mat == "" | is.na(tmp.rep$row) | is.na(tmp.rep$col)) &
+          !lavpartable$op %in% c("==", "<", ">", ":=", "|~"))
 
   if (length(bad.idx) > 0L) {
     this.formula <- paste(lavpartable$lhs[bad.idx[1]],

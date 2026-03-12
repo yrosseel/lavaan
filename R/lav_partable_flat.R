@@ -478,6 +478,10 @@ lav_partable_flat <- function(FLAT = NULL, # nolint
     free[var.idx] <- 0L
   }
 
+  # 0e. instruments: ALWAYS nonfree
+  iv.idx <- which(op == "|~")
+  ustart[iv.idx] <- 0.0
+  free[iv.idx] <- 0L
 
   # 1. fix metric of regular latent variables
   if (std.lv) {
