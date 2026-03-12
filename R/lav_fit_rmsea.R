@@ -94,6 +94,17 @@ lav_fit_rmsea <- function(X2 = NULL, df = NULL, N = NULL,
   RMSEA
 }
 
+# population version (for simulations only)
+# assuming F.val = X2/N
+lav_fit_rmsea_pop <- function(X2 = NULL, df = NULL, N = NULL) {
+
+  F.val <- X2 / N
+  RMSEA <- sqrt(F.val / df)
+
+  RMSEA
+}
+
+
 # note: for 'robust' version, X2 should be SB-X2
 lav_fit_rmsea_ci <- function(X2 = NULL, df = NULL, N = NULL,
                              G = 1L, c.hat = 1, level = 0.90) {
