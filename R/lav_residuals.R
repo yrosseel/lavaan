@@ -258,6 +258,20 @@ lav_residuals <- function(object, type = "raw", h1 = TRUE, custom.rmr = NULL,
     )
   }
 
+  # change options if estimator = "IV" (for now)
+  if(lavmodel@estimator == "IV") {
+    zstat <- se <- FALSE
+    summary <- FALSE
+    summary.options <- list(
+      se = FALSE, zstat = FALSE,
+      pvalue = FALSE, unbiased = FALSE,
+      unbiased.se = FALSE,
+      unbiased.ci = FALSE, unbiased.ci.level = 0.90,
+      unbiased.zstat = FALSE, unbiased.test.val = 0.05,
+      unbiased.pvalue = FALSE
+    )
+  }
+
   # observed and fitted sample statistics
   obsList <- lav_object_inspect_sampstat(object,
     h1 = h1,

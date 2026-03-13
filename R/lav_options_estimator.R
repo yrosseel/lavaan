@@ -591,6 +591,7 @@ lav_options_est_iv <- function(opt) {
       opt$test <- "browne.residual.adf" # always sample-based
     } else {
       opt$test <- "browne.residual.nt" # sample-based (especially for baseline)
+                                       # model-based Sigma is here diagonal!
     }
   }
   opt$standard.test <- opt$test[1]

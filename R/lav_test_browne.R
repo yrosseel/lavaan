@@ -82,6 +82,25 @@ lav_test_browne <- function(lavobject = NULL,
     }
   }
 
+  # linear equality constraints?
+  lineq.flag <- FALSE
+  if (lavmodel@eq.constraints) {
+    lineq.flag <- TRUE
+  } else if (lavmodel@ceq.simple.only) {
+    lineq.flag <- TRUE
+  }
+
+  # can we use the fast version?
+  fast.flag <- FALSE
+  if (!ADF && !lineq.flag && !lavmodel@conditional.x) {
+    fast.flag <- TRUE
+    if (model.based) {
+      implied <- lavimplied
+    } else {
+      implied <- lavh1$implied
+    }
+  }
+
   # ingredients
   Delta <- lav_model_delta(lavmodel)
   if (ADF) {
@@ -115,7 +134,7 @@ lav_test_browne <- function(lavobject = NULL,
         )
       }
     }
-  } else {
+  } else if (!fast.flag) {
     # NT version
     if (!is.null(lavobject)) {
       Gamma <- lav_object_gamma(lavobject,
@@ -140,14 +159,6 @@ lav_test_browne <- function(lavobject = NULL,
   nobs <- lavsamplestats@nobs
   ntotal <- lavsamplestats@ntotal
 
-  # linear equality constraints?
-  lineq.flag <- FALSE
-  if (lavmodel@eq.constraints) {
-    lineq.flag <- TRUE
-  } else if (lavmodel@ceq.simple.only) {
-    lineq.flag <- TRUE
-  }
-
   # compute T.B per group
   ngroups <- length(WLS.obs)
   stat.group <- numeric(ngroups)
@@ -157,18 +168,28 @@ lav_test_browne <- function(lavobject = NULL,
     for (g in seq_len(ngroups)) {
       RES <- WLS.obs[[g]] - WLS.est[[g]]
       Delta.g <- Delta[[g]]
-      Delta.c <- lav_matrix_orthogonal_complement(Delta.g)
-      tDGD <- crossprod(Delta.c, Gamma[[g]]) %*% Delta.c
-      # if fixed.x = TRUE, Gamma[[g]] may contain zero col/rows
-      tDGD.inv <- lav_matrix_symmetric_inverse(tDGD)
       if (n.minus.one) {
         Ng <- nobs[[g]] - 1L
       } else {
         Ng <- nobs[[g]]
       }
-      tResDelta.c <- crossprod(RES, Delta.c)
-      stat.group[g] <-
-        Ng * drop(tResDelta.c %*% tDGD.inv %*% t(tResDelta.c))
+      if (fast.flag) {
+        stat.group[g] <- lav_test_browne_nt_fast(
+          res = RES, Delta = Delta.g,
+          sample.cov = implied$cov[[g]], sample.nobs = Ng,
+          meanstructure = lavmodel@meanstructure,
+          x.idx = lavsamplestats@x.idx[[g]]
+        )
+      } else {
+        # naive formula base computation (slow!)
+        Delta.c <- lav_matrix_orthogonal_complement(Delta.g)
+        tDGD <- crossprod(Delta.c, Gamma[[g]]) %*% Delta.c
+        # if fixed.x = TRUE, Gamma[[g]] may contain zero col/rows
+        tDGD.inv <- lav_matrix_symmetric_inverse(tDGD)
+        tResDelta.c <- crossprod(RES, Delta.c)
+        stat.group[g] <-
+          Ng * drop(tResDelta.c %*% tDGD.inv %*% t(tResDelta.c))
+      }
     }
     STAT <- sum(stat.group)
 
@@ -268,4 +289,66 @@ lav_test_browne <- function(lavobject = NULL,
     label = LABEL
   )
   out
+}
+
+
+# faster version for the NT setting with no constraints
+lav_test_browne_nt_fast <- function(res = NULL, Delta = NULL,
+                                    sample.cov = NULL, sample.nobs = NULL,
+                                    meanstructure = FALSE,
+                                    x.idx = integer(0L)) {
+  nvar <- nrow(sample.cov)
+  pstar <- nvar * (nvar + 1L) / 2L
+  q <- ncol(Delta)
+  nrow_expected <- if (meanstructure) nvar + pstar else pstar
+  stopifnot(length(res) == nrow_expected, nrow(Delta) == nrow_expected)
+
+  # only once
+  S.inv <- solve(sample.cov)
+
+  # handle fixed.x = TRUE
+  if (length(x.idx) > 0L) {
+    S.inv[x.idx, ] <- 0.0
+    S.inv[, x.idx] <- 0.0
+  }
+
+  # vech
+  diag.idx <- lav_matrix_diagh_idx(nvar)
+
+  # applies gamma_cov_inv = 0.5 * t(D) %*% (S.inv %x% S.inv) %*% D
+  # to a pstar-vector 'x'
+  apply_gamma_inv <- function(x) {
+    x_cov <- x
+    if (meanstructure) {
+      x_mean <- x[seq_len(nvar)]
+      x_cov <- x[nvar + seq_len(pstar)]
+      out_mean <- drop(S.inv %*% x_mean)
+    }
+
+    W <- lav_matrix_vech_reverse(x_cov)
+    Z <- S.inv %*% W %*% S.inv
+    out_cov <- lav_matrix_vech(Z)
+    out_cov[diag.idx] <- out_cov[diag.idx] / 2.0
+    out <- out_cov
+    if (meanstructure) {
+      out <- c(out_mean, out_cov)
+    }
+    out
+  }
+
+  u <- apply_gamma_inv(res)
+  gamma_inv_delta <- matrix(0.0, nrow_expected, q)
+  for (j in seq_len(q)) {
+    gamma_inv_delta[, j] <- apply_gamma_inv(Delta[, j])
+  }
+  A <- crossprod(Delta, gamma_inv_delta)
+  b <- crossprod(Delta, u)
+  R_chol <- chol(A)
+  Ab_inv_b <- backsolve(R_chol, forwardsolve(t(R_chol), b))
+
+  term1 <- as.numeric(crossprod(res, u)) # t(res) Ginv res
+  term2 <- as.numeric(crossprod(b, Ab_inv_b)) # t(b) A^{-1} b
+
+  stat <- sample.nobs * (term1 - term2)
+  stat
 }
