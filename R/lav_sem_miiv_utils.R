@@ -9,159 +9,256 @@
 # - 2RLS
 # - RLS
 
-# this is the GLS version where W2 = t(D) %*% (S.inv %x% S.inv) %*% D
-lav_sem_miiv_utils_jacb_gls <- function(sample_cov = NULL, delta2 = NULL) {
+# based on lav_utils_wls_linearization(), but only for ULS and H
+lav_sem_miiv_utils_jacb_uls <- function(sample_cov = NULL, delta2 = NULL) {
   nvar <- nrow(sample_cov)
+  pstar <- nvar * (nvar + 1L) / 2L
+
+  jac_cov <- delta2; nc <- ncol(jac_cov)
+  meanstructure <- FALSE
+  if (nrow(delta2) > pstar) {
+    meanstructure <- TRUE
+  }
+
+  # split delta2/svec
+  if (meanstructure) {
+    mean_idx <- seq_len(nvar)
+    jac_mean <- delta2[ mean_idx, , drop = FALSE]
+    jac_cov <- delta2[-mean_idx, , drop = FALSE]
+  }
+
+  # vech
+  w <- rep(1.0, pstar)
+  w[lav_matrix_diagh_idx(nvar)] <- 0.5
+
+  q_cov <- w * jac_cov
+  A <- crossprod(jac_cov, q_cov)
+  if (meanstructure) {
+    A <- A + crossprod(jac_mean)
+  }
+
+  # tQ only needed if H is requested
+  tQ <- t(q_cov)
+  if (meanstructure) tQ <- cbind(t(jac_mean), tQ)
+
+  R <- chol(A)
+  Ainv  <- chol2inv(R)
+  H <- Ainv %*% tQ
+
+  H
+}
+
+# this is the GLS version where W2 = t(D) %*% (S.inv %x% S.inv) %*% D
+lav_sem_miiv_utils_jacb_gls <- function(sample_cov = NULL, delta2 = NULL,
+                                        theta2 = NULL) {
+  nvar  <- nrow(sample_cov)
+  pstar <- nvar * (nvar + 1L) / 2L
   s_vech <- lav_matrix_vech(sample_cov)
-  s_inv <- solve(sample_cov)
+
+  # vech weights
+  w <- rep(1.0, pstar)
+  w[lav_matrix_diagh_idx(nvar)] <- 0.5
 
   # only covariance block
   meanstructure.flag <- FALSE
-  if (nrow(delta2) > length(s_vech)) {
+  if (nrow(delta2) > pstar) {
     meanstructure.flag <- TRUE
     delta2 <- delta2[-seq_len(nvar), , drop = FALSE]
   }
-  w2 <- lav_matrix_duplication_pre_post(s_inv %x% s_inv)
 
-  # shortcut
-  M <- t(delta2) %*% w2 %*% delta2
+  nc <- ncol(delta2)
+  cS <- chol(sample_cov)
+  Si <- chol2inv(cS)
 
-  # result
-  theta2 <- solve(M, t(delta2) %*% w2 %*% s_vech)
+  # q_cov[,j] = w * vech(Si %*% Vj %*% Si),  Vj = vech_inv(delta2[,j])
+  # equivalent to (1/2) W2 %*% delta2
+  q_cov <- matrix(0.0, pstar, nc)
+  for (j in seq_len(nc)) {
+    V_j <- lav_matrix_vech_reverse(delta2[, j])
+    SiVj <- Si %*% V_j
+    q_cov[, j] <- w * lav_matrix_vech(SiVj %*% Si)
+  }
 
-  # error term
+  # M_half = (1/2) M = t(delta2) %*% q_cov
+  M_half <- crossprod(delta2, q_cov)
+  b_half <- drop(crossprod(q_cov, s_vech))
+
+  # theta2: GLS estimate
+  # (scaling cancels: M_half^{-1} b_half = M^{-1} t(delta2) W2 s_vech)
+  R <- chol(M_half)
+  if (is.null(theta2)) {
+    theta2 <- backsolve(R, forwardsolve(t(R), b_half))
+  }
+
+  # error term and GLS correction q_mat = Si %*% e_mat %*% Si
   e_mat <- lav_matrix_vech_reverse(s_vech - delta2 %*% theta2)
+  q_mat <- Si %*% e_mat %*% Si
 
-  # correction term
-  q_mat <- s_inv %*% e_mat %*% s_inv
-  correction <-
-    lav_matrix_duplication_pre_post(q_mat %x% s_inv + s_inv %x% q_mat)
+  # correction_cov[,j] = w * vech(Tj + t(Tj)),  Tj = Si %*% Vj %*% q_mat
+  # equivalent to (1/2) correction %*% delta2
+  correction_cov <- matrix(0.0, pstar, nc)
+  for (j in seq_len(nc)) {
+    V_j              <- lav_matrix_vech_reverse(delta2[, j])
+    T_j              <- Si %*% V_j %*% q_mat
+    correction_cov[, j] <- w * lav_matrix_vech(T_j + t(T_j))
+  }
 
-  out <- solve(M, t(delta2)) %*% (w2 - correction)
+  # out = M^{-1} %*% t(delta2) %*% (W2 - correction)
+  #     = M_half^{-1} %*% t(q_cov - correction_cov)
+  out <- backsolve(R, forwardsolve(t(R), t(q_cov - correction_cov)))
 
-  # meanstructure?
+  # meanstructure: prepend zero block for mean parameters
   if (meanstructure.flag) {
-    out <- cbind(matrix(0, nrow = nrow(out), ncol = nvar), out)
+    out <- cbind(matrix(0.0, nrow = nrow(out), ncol = nvar), out)
   }
 
   out
 }
 
+
 # 2RLS solution, where W2 = t(D) %*% (Sigma.inv %x% Sigma.inv) %*% D
 # and Sigma is based on the ULS estimate of theta2
-lav_sem_miiv_utils_jacb_2rls <- function(sample_cov = NULL, delta2 = NULL) {
-  nvar <- nrow(sample_cov)
+lav_sem_miiv_utils_jacb_2rls <- function(sample_cov = NULL, delta2 = NULL,
+                                         theta2 = NULL) {
+
+  nvar  <- nrow(sample_cov)
+  pstar <- nvar * (nvar + 1L) / 2L
   s_vech <- lav_matrix_vech(sample_cov)
+
+  # vech weights: 1 for off-diagonal positions, 0.5 for diagonal positions
+  w <- rep(1.0, pstar)
+  w[lav_matrix_diagh_idx(nvar)] <- 0.5
 
   # only covariance block
   meanstructure.flag <- FALSE
-  if (nrow(delta2) > length(s_vech)) {
+  if (nrow(delta2) > pstar) {
     meanstructure.flag <- TRUE
     delta2 <- delta2[-seq_len(nvar), , drop = FALSE]
   }
-  ip <- diag(nvar)
-  w_uls <- 0.5 * lav_matrix_duplication_pre_post(ip %x% ip)
+  nc <- ncol(delta2)
 
-  # Step 1: initial theta2, Sigma
-  m_uls <- t(delta2) %*% w_uls %*% delta2
-  theta2 <- solve(m_uls, t(delta2) %*% w_uls %*% s_vech)
-  sigma <- lav_matrix_vech_reverse(delta2 %*% theta2)
-  sigma_inv <- solve(sigma)
+  # step 1: ULS estimate of theta_uls
+  q_uls <- w * delta2; m_uls <- crossprod(delta2, q_uls); R_uls <- chol(m_uls)
+  theta_uls <-
+    backsolve(R_uls, forwardsolve(t(R_uls), drop(crossprod(q_uls, s_vech))))
 
-  # Step 2: W2, M, theta final
-  w2 <- lav_matrix_duplication_pre_post(sigma_inv %x% sigma_inv)
-  m_sigma <- t(delta2) %*% w2 %*% delta2
-  theta <- solve(m_sigma, t(delta2) %*% w2 %*% s_vech)
+  # sigma to be used for GLS estimate
+  sigma <- lav_matrix_vech_reverse(delta2 %*% theta_uls)
+  cSi <- chol(sigma); sigma_inv <- chol2inv(cSi)
 
-  # Step 3: correction matrix c_mat
-  e_mat <- lav_matrix_vech_reverse(s_vech - delta2 %*% theta)
+  # step 2: GLS estimate of theta using sigma_inv
+  # q_cov[,j] = w * vech(Si Vj Si)  =  (1/2) w2 delta2[,j]
+  q_cov <- matrix(0.0, pstar, nc)
+  for (j in seq_len(nc)) {
+    V_j <- lav_matrix_vech_reverse(delta2[, j])
+    q_cov[, j] <- w * lav_matrix_vech(sigma_inv %*% V_j %*% sigma_inv)
+  }
+  M_sigma_half <- crossprod(delta2, q_cov)
+  R_sigma <- chol(M_sigma_half)
+  if (is.null(theta2)) {
+    theta2 <- backsolve(R_sigma,
+      forwardsolve(t(R_sigma), drop(crossprod(q_cov, s_vech))))
+  }
+
+  # step 3: correction matrix (as column operations, no c_mat formed)
+  # c_cov[,j] = w * vech(Tj + t(Tj)),  Tj = Si Vj q_mat
+  #           = (1/2) c_mat delta2[,j]
+  e_mat <- lav_matrix_vech_reverse(s_vech - delta2 %*% theta2)
   q_mat <- sigma_inv %*% e_mat %*% sigma_inv
-  c_mat <-
-    lav_matrix_duplication_pre_post(q_mat %x% sigma_inv + sigma_inv %x% q_mat)
 
-  # Step 4: Jacobian
-  J_theta2 <- solve(m_uls, t(delta2) %*% w_uls)
-  out <- solve(m_sigma, t(delta2)) %*% (w2 - c_mat %*% delta2 %*% J_theta2)
+  c_cov <- matrix(0.0, pstar, nc)
+  for (j in seq_len(nc)) {
+    V_j <- lav_matrix_vech_reverse(delta2[, j])
+    T_j <- sigma_inv %*% V_j %*% q_mat
+    c_cov[, j] <- w * lav_matrix_vech(T_j + t(T_j))
+  }
 
-  # meanstructure?
+  # step 4: Jacobian
+  #   out = M_sigma_half^{-1} (t(q_cov) - t(c_cov) delta2 m_uls^{-1} t(q_uls))
+  # build rhs = t(q_cov) - t(c_cov) delta2 m_uls^{-1} t(q_uls)  (nc x pstar)
+  # Step A: CtD = t(c_cov) delta2  (nc x nc)
+  CtD  <- crossprod(c_cov, delta2)
+  MiCtD <- backsolve(R_uls, forwardsolve(t(R_uls), t(CtD)))
+  # Step B: rhs = t(q_cov) - MiCtD^T t(q_uls)  (nc x pstar)
+  rhs <- t(q_cov) - t(MiCtD) %*% t(q_uls)
+  # Step C: out = M_sigma_half^{-1} rhs
+  out <- backsolve(R_sigma, forwardsolve(t(R_sigma), rhs))
+
+  # meanstructure: prepend zero block for mean parameters
   if (meanstructure.flag) {
-    out <- cbind(matrix(0, nrow = nrow(out), ncol = nvar), out)
+    out <- cbind(matrix(0.0, nrow = nrow(out), ncol = nvar), out)
   }
 
   out
 }
 
 # RLS solution
-lav_sem_miiv_utils_jacb_rls <- function(sample_cov = NULL, delta2 = NULL) {
-  nvar <- nrow(sample_cov)
+lav_sem_miiv_utils_jacb_rls <- function(sample_cov = NULL, delta2 = NULL,
+                                        theta2 = NULL) {
+  nvar  <- nrow(sample_cov)
+  pstar <- nvar * (nvar + 1L) / 2L
   s_vech <- lav_matrix_vech(sample_cov)
+
+  # vech weights: 0.5 for diagonal positions, 1 for off-diagonal positions
+  w <- rep(1.0, pstar)
+  w[lav_matrix_diagh_idx(nvar)] <- 0.5
 
   # only covariance block
   meanstructure.flag <- FALSE
-  if (nrow(delta2) > length(s_vech)) {
+  if (nrow(delta2) > pstar) {
     meanstructure.flag <- TRUE
     delta2 <- delta2[-seq_len(nvar), , drop = FALSE]
   }
-  ip <- diag(nvar)
-  w_uls <- 0.5 * lav_matrix_duplication_pre_post(ip %x% ip)
 
-  # step 1
-  m_uls <- t(delta2) %*% w_uls %*% delta2
-  theta2_uls <- solve(m_uls, t(delta2) %*% w_uls %*% s_vech)
+  nc <- ncol(delta2)
 
-  # step 2 (iterative)
-  theta2 <- theta2_uls
-  for (i in seq_len(200L)) {
-    old_x <- theta2
-    new_sigma <- lav_matrix_vech_reverse(delta2 %*% theta2)
-    sigma_inv <- solve(new_sigma)
-    w2 <- 0.5 * lav_matrix_duplication_pre_post(sigma_inv %x% sigma_inv)
-    m_mat <- t(delta2) %*% w2 %*% delta2
-    theta2 <- drop(solve(m_mat, t(delta2) %*% w2 %*% s_vech))
-    if (sum((old_x - theta2)^2) < 1e-12 * (1 + sum(theta2^2))) break
-  }
+  # Pre-compute vech_reverse of each column of delta2 once; used in the
+  # final block (and in the loop when theta2 is not supplied).
+  V_list <- vector("list", nc)
+  for (j in seq_len(nc)) V_list[[j]] <- lav_matrix_vech_reverse(delta2[, j])
 
-  # final quantities
+  q_cov <- matrix(0.0, pstar, nc)
+
+  # using final theta2 estimate
   new_sigma <- lav_matrix_vech_reverse(delta2 %*% theta2)
-  sigma_inv <- solve(new_sigma)
-  w2 <- 0.5 * lav_matrix_duplication_pre_post(sigma_inv %x% sigma_inv)
-  m_mat <- t(delta2) %*% w2 %*% delta2
-  m_mat_inv <- solve(m_mat)
-  e2 <- s_vech - delta2 %*% theta2
-  e_mat <- lav_matrix_vech_reverse(e2)
-  sigma_inv_e <- sigma_inv %*% e_mat
-  minv_delta2t <- m_mat_inv %*% t(delta2)
+  cSi       <- chol(new_sigma)
+  sigma_inv <- chol2inv(cSi)
+  for (j in seq_len(nc)) {
+    q_cov[, j] <- w * lav_matrix_vech(sigma_inv %*% V_list[[j]] %*% sigma_inv)
+  }
+  m_mat <- crossprod(delta2, q_cov)
+  R_mat <- chol(m_mat)
 
-  # helper: compute (dW)e2 given d vech(Sigma) as a vector v
-  dW_e2_from_v <- function(v) {
-    dSigma <- lav_matrix_vech_reverse(v)
-    d_sigma_inv <- -sigma_inv %*% dSigma %*% sigma_inv
-    sym_part <- sigma_inv_e %*% d_sigma_inv + d_sigma_inv %*% t(sigma_inv_e)
-    dw2_e2 <-
-      0.5 * drop(lav_matrix_duplication_pre(as.matrix(as.vector(sym_part))))
-    dw2_e2
+  # correction columns: c_cov[,j] = w * vech(Tj + t(Tj)),  Tj = Si Vj q_mat
+  # where q_mat = Si e_mat Si.
+  # JW_theta2 = -c_cov  (dW_e2_from_v(delta2[,j]) = -c_cov[,j], derived above)
+  e_mat <- lav_matrix_vech_reverse(s_vech - delta2 %*% theta2)
+  q_mat <- sigma_inv %*% e_mat %*% sigma_inv
+  c_cov <- matrix(0.0, pstar, nc)
+  for (j in seq_len(nc)) {
+    T_j <- sigma_inv %*% V_list[[j]] %*% q_mat
+    c_cov[, j] <- w * lav_matrix_vech(T_j + t(T_j))
   }
 
-  # A = M2^{-1} delta2^T J_W^(theta2): q2 x q2
-  # column j of J_W^(theta2): dSigma = unvech(delta2[:,j])
-  JW_theta2 <- matrix(0.0, nrow(delta2), ncol(delta2))
-  for (j in seq_len(ncol(delta2))) {
-    JW_theta2[, j] <- dW_e2_from_v(delta2[, j])
-  }
-  A <- minv_delta2t %*% JW_theta2
-  IminusA_inv <- solve(diag(ncol(delta2)) - A)
+  # Jacobian:
+  #   A           = m_mat_inv t(delta2) JW_theta2
+  #               = -solve(m_mat, crossprod(delta2, c_cov))
+  #   IminusA_inv = solve(I - A)
+  #   out         = IminusA_inv %*% solve(m_mat, t(q_cov))
+  DtC <- crossprod(delta2, c_cov)
+  A <- -backsolve(R_mat, forwardsolve(t(R_mat), DtC))
+  IminusA_inv <- solve(diag(nc) - A)
+  Minv_tQ <- backsolve(R_mat, forwardsolve(t(R_mat), t(q_cov)))
+  out     <- IminusA_inv %*% Minv_tQ
 
-  # Jacobian: (I - A)^{-1} M2^{-1} Delta2^T W
-  # (for fixed W case this would just be M2^{-1} Delta2^T W = M2inv_D2t %*% W2)
-  out <- IminusA_inv %*% minv_delta2t %*% w2
-
-  # meanstructure?
+  # meanstructure: prepend zero block for mean parameters
   if (meanstructure.flag) {
-    out <- cbind(matrix(0, nrow = nrow(out), ncol = nvar), out)
+    out <- cbind(matrix(0.0, nrow = nrow(out), ncol = nvar), out)
   }
 
   out
 }
+
 
 # we also need to compute the Jacobian of theta_2 wrt the elements theta_1
 #

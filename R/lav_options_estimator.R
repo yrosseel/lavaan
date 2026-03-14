@@ -615,11 +615,11 @@ lav_options_est_iv <- function(opt) {
   if (is.null(opt$estimator.args)) {
     # create default list
     opt$estimator.args <- list(iv.method = "2SLS",
-                               iv.samplestats = FALSE,
+                               iv.samplestats = TRUE,
                                iv.varcov.method = "RLS",
                                iv.sargan = TRUE,
                                iv.vcov.stage1 <- "lm.vcov.dfres",
-                               iv.vcov.stage2 <- "delta",
+                               iv.vcov.stage2 <- "h2",
                                iv.vcov.gamma.modelbased = TRUE,
                                iv.vcov.jack.numerical = FALSE,
                                iv.vcov.jaca.numerical = FALSE,
@@ -631,7 +631,7 @@ lav_options_est_iv <- function(opt) {
       lav_msg_stop(gettext("iv.method should be 2SLS (for now)."))
     }
     if (is.null(opt$estimator.args$iv.samplestats)) {
-      opt$estimator.args$iv.samplestats <- FALSE
+      opt$estimator.args$iv.samplestats <- TRUE
     }
     if (is.null(opt$estimator.args$iv.sargan)) {
       opt$estimator.args$iv.sargan <- TRUE
@@ -658,23 +658,18 @@ lav_options_est_iv <- function(opt) {
       opt$estimator.args$iv.samplestats <- TRUE
     }
     if (is.null(opt$estimator.args$iv.vcov.stage2)) {
-      if (opt$.categorical ||
-          tolower(opt$estimator.args$iv.vcov.stage1) == "gamma") {
-        opt$estimator.args$iv.vcov.stage2 <- "h2"
-      } else {
-        opt$estimator.args$iv.vcov.stage2 <- "delta"
-      }
       if (tolower(opt$se[1]) == "none") {
         opt$estimator.args$iv.vcov.stage2 <- "none"
+      } else {
+        opt$estimator.args$iv.vcov.stage2 <- "h2"
       }
     } else if (!tolower(opt$estimator.args$iv.vcov.stage2) %in%
                c("h2", "delta", "none")) {
       lav_msg_stop(gettext("iv.vcov.stage2 should be h2, delta, or none."))
-    } else if (tolower(opt$estimator.args$iv.vcov.stage1) %in%
-                 c("lm.vcov", "lm.vcov.dfres") &&
-               tolower(opt$estimator.args$iv.vcov.stage2) == "h2") {
+    } else if (tolower(opt$estimator.args$iv.vcov.stage2) == "h2" &&
+               !iv.samplestats) {
       lav_msg_stop(gettext("iv.vcov.stage2 should be delta (or none) if
-                   iv.vcov.stage1 is either lm.vcov or lm.vcov.dfres."))
+                   iv.samplestats = FALSE."))
     }
     if (opt$.categorical) {
       opt$estimator.args$iv.samplestats <- TRUE
@@ -703,7 +698,7 @@ lav_options_est_iv <- function(opt) {
   }
 
   # override test if iv.varcov.method is "none"
-  if (toupper(opt$estimator.args$iv.varcov.method) == "NONE") {
+  if (tolower(opt$estimator.args$iv.varcov.method) == "none") {
     opt$test <- "none"
     opt$standard.test <- "none"
   }
