@@ -983,6 +983,7 @@ lav_start <- function(start.method = "default",
   user.idx <- which(!is.na(lavpartable$ustart) & lavpartable$free == 0L)
   start[user.idx] <- lavpartable$ustart[user.idx]
 
+
   # new in 0.6-21
   # if any thresholds, make sure they are in increasing order
   # (could be an issue if the first and second were fixed to 0 and 1)
@@ -995,9 +996,12 @@ lav_start <- function(start.method = "default",
       for (oo in ov.ord) {
         this.idx <- which(lavpartable$group == group.values[g] &
                           lavpartable$op == "|" & lavpartable$lhs == oo)
+        this.free.idx <- which(lavpartable$group == group.values[g] &
+                               lavpartable$op == "|" & lavpartable$lhs == oo &
+                               lavpartable$free > 0)
         item.th <- start[this.idx]
-        if (length(item.th) > 1L && !all(diff(item.th) > 0)) {
-          start[this.idx] <- cumsum(abs(item.th))
+        if (length(item.th) > 1L && length(this.free.idx) > 0 && !all(diff(item.th) > 0)) {
+          start[this.free.idx] <- cumsum(abs(item.th))[match(this.free.idx, this.idx)]
         }
       }
     }
