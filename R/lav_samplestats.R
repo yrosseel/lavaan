@@ -474,8 +474,14 @@ lav_samplestats_from_data <- function(lavdata = NULL,
         A <- COV[-x.idx[[g]], -x.idx[[g]], drop = FALSE]
         B <- COV[-x.idx[[g]], x.idx[[g]], drop = FALSE]
         C <- COV[x.idx[[g]], x.idx[[g]], drop = FALSE]
-        # FIXME: make robust against singular C!!!
-        res.cov[[g]] <- A - B %*% solve(C) %*% t(B)
+        C.inv <- try(solve(C), silent = TRUE)
+        if (inherits(C.inv, "try-error")) {
+          lav_msg_warn(gettext(
+            "Exogenous covariance matrix is singular; using generalized inverse."
+          ))
+          C.inv <- MASS::ginv(C)
+        }
+        res.cov[[g]] <- A - B %*% C.inv %*% t(B)
         res.var[[g]] <- diag(cov[[g]])
 
         MY <- MEAN[-x.idx[[g]]]
@@ -485,7 +491,13 @@ lav_samplestats_from_data <- function(lavdata = NULL,
           cbind(MX, C + tcrossprod(MX))
         )
         B3 <- cbind(MY, B + tcrossprod(MY, MX))
-        COEF <- unname(solve(C3, t(B3)))
+        COEF <- try(unname(solve(C3, t(B3))), silent = TRUE)
+        if (inherits(COEF, "try-error")) {
+          lav_msg_warn(gettext(
+            "Augmented exogenous matrix is singular; using generalized inverse."
+          ))
+          COEF <- unname(MASS::ginv(C3) %*% t(B3))
+        }
 
         res.int[[g]] <- COEF[1, ] # intercepts
         res.slopes[[g]] <- t(COEF[-1, , drop = FALSE]) # slopes
