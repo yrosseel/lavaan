@@ -233,6 +233,7 @@ lav_matrix_vech_reverse <- lav_matrix_vechru_reverse <-
     } else {
       p <- (sqrt(1 + 8 * length(x)) + 1) / 2
     }
+    stopifnot(p == round(p, 0))
 
     S <- numeric(p * p)
     S[lav_matrix_vech_idx(p, diagonal = diagonal)] <- x
@@ -381,15 +382,15 @@ lav_matrix_vech_match_idx <- function(n = 1L, diagonal = TRUE,
   lav_matrix_vech(B, diagonal = diagonal)
 }
 
-# check if square matrix is diagonal (no tolerance!)
-lav_matrix_is_diagonal <- function(A = NULL) {
+# check if square matrix is diagonal
+lav_matrix_is_diagonal <- function(A = NULL, tol = .Machine$double.eps) {
   A <- as.matrix.default(A)
   stopifnot(nrow(A) == ncol(A))
   # if (lav_use_lavaanC()) {
   #   return(lavaanC::m_is_diagonal(A))
   # }
   diag(A) <- 0
-  all(A == 0)
+  all(abs(A) <= tol)
 }
 
 
@@ -1647,9 +1648,12 @@ lav_matrix_symmetric_det_update <- function(det.S, S.inv, rm.idx = integer(0L)) 
   # rank-n update
   else if (ndel < NCOL(S.inv)) {
     H <- S.inv[rm.idx, rm.idx, drop = FALSE]
-    cH <- chol.default(H)
-    diag.cH <- diag(cH)
-    det.H <- prod(diag.cH * diag.cH)
+    cH <- try(chol.default(H), silent = TRUE)
+    if (!inherits(cH, "try-error")) {
+      det.H <- prod(diag(cH) * diag(cH))
+    } else {
+      det.H <- abs(det(H))
+    }
     out <- det.S * det.H
 
     # erase all col/rows...
@@ -1670,15 +1674,24 @@ lav_matrix_symmetric_logdet_update <- function(S.logdet, S.inv,
   # rank-1 update
   if (ndel == 1L) {
     h <- S.inv[rm.idx, rm.idx]
-    out <- S.logdet + log(h)
+    if (h > 0) {
+      out <- S.logdet + log(h)
+    } else {
+      out <- as.numeric(NA)
+    }
   }
 
   # rank-n update
   else if (ndel < NCOL(S.inv)) {
     H <- S.inv[rm.idx, rm.idx, drop = FALSE]
-    cH <- chol.default(H)
-    diag.cH <- diag(cH)
-    H.logdet <- sum(log(diag.cH * diag.cH))
+    cH <- try(chol.default(H), silent = TRUE)
+    if (!inherits(cH, "try-error")) {
+      diag.cH <- diag(cH)
+      H.logdet <- sum(log(diag.cH * diag.cH))
+    } else {
+      ev <- eigen(H, symmetric = TRUE, only.values = TRUE)$values
+      H.logdet <- sum(log(abs(ev)))
+    }
     out <- S.logdet + H.logdet
 
     # erase all col/rows...
@@ -1757,7 +1770,7 @@ lav_matrix_symmetric_diff_smallest_root <- function(M = NULL, P = NULL) {
     M.nn <- M[zero.idx, zero.idx, drop = FALSE]
 
     # create Mp.n
-    Mp.n <- M.pp - M.pn %*% solve(M.nn) %*% M.np
+    Mp.n <- M.pp - M.pn %*% lav_matrix_symmetric_solve_spd(M.nn, M.np)
 
     # extract positive part of P
     P.p <- P[-zero.idx, -zero.idx, drop = FALSE]
