@@ -175,6 +175,10 @@ lav_samplestats_from_data <- function(lavdata = NULL,
     ))) {
       NACOV.compute <- TRUE
     }
+    if (estimator == "IV" &&
+        lavoptions$estimator.args$iv.vcov.stage1 == "gamma") {
+      NACOV.compute <- TRUE
+    }
   } else if (is.logical(NACOV)) {
     if (!NACOV) {
       NACOV.compute <- FALSE
@@ -273,9 +277,13 @@ lav_samplestats_from_data <- function(lavdata = NULL,
     if (categorical) {
       # compute CAT
 
-      if (estimator %in% c("ML", "REML", "PML", "FML", "MML", "none", "ULS")) {
+      if (estimator %in% c("ML", "REML", "PML", "FML", "MML", "none", "IV",
+                           "ULS")) {
         WLS.W <- FALSE
         if (estimator == "ULS" && se %in% c("robust.sem", "robust.sem.nt")) {
+          WLS.W <- TRUE
+        } else if(estimator == "IV" &&
+                  lavoptions$estimator.args$iv.vcov.stage1 == "gamma") {
           WLS.W <- TRUE
         }
       } else {
@@ -827,7 +835,7 @@ lav_samplestats_from_data <- function(lavdata = NULL,
               Mplus.WLS = FALSE
             )
         }
-      } else if (estimator %in% c("WLS", "DWLS", "ULS", "DLS", "catML")) {
+      } else if (estimator %in% c("WLS", "DWLS", "ULS", "DLS", "IV", "catML")) {
         if (!categorical) {
           # sample size large enough?
           nvar <- ncol(X[[g]])
@@ -900,9 +908,11 @@ lav_samplestats_from_data <- function(lavdata = NULL,
             }
           }
         } else { # categorical case
-          NACOV[[g]] <- CAT$WLS.W * nobs[[g]]
-          if (lavoptions$gamma.n.minus.one) {
-            NACOV[[g]] <- NACOV[[g]] * (nobs[[g]] / (nobs[[g]] - 1L))
+          if (!is.null(CAT$WLS.W)) {
+            NACOV[[g]] <- CAT$WLS.W * nobs[[g]]
+            if (lavoptions$gamma.n.minus.one) {
+              NACOV[[g]] <- NACOV[[g]] * (nobs[[g]] / (nobs[[g]] - 1L))
+            }
           }
           if (estimator == "catML") {
             # remove all but the correlation part

@@ -607,41 +607,52 @@ lav_utils_deltat_w_delta <- function(Delta = NULL, S = NULL,
 # as an attribute
 lav_utils_wls_linearization <- function(Delta = NULL, S = NULL,
                                         meanstructure = FALSE,
+                                        categorical = FALSE,
                                         #fixed.x = FALSE, # FIXME: needed?
                                         #x.idx = integer(0L),
                                         svec = NULL,
                                         return_H = FALSE) {
   nvar <- nrow(S)
-  pstar <- nvar * (nvar + 1L) / 2L
+  if (categorical) {
+    meanstructure <- FALSE
+    # all ordinal (for now)
+    pstar <- nvar * (nvar - 1L) / 2L
+  } else {
+    pstar <- nvar * (nvar + 1L) / 2L
+  }
 
   jac_cov <- Delta; nc <- ncol(jac_cov)
   s_cov <- svec
 
   # vech
   w <- rep(1.0, pstar)
-  w[lav_matrix_diagh_idx(nvar)] <- 0.5
 
   # split Delta/svec
-  if (meanstructure) {
+  if (categorical) {
+    cov_idx  <- seq(nrow(Delta) - pstar + 1L, nrow(Delta))
+    jac_cov  <- Delta[cov_idx, , drop = FALSE]
+    s_cov    <- svec[cov_idx]
+  } else if (!categorical && meanstructure) {
     mean_idx <- seq_len(nvar)
     jac_mean <- Delta[ mean_idx, , drop = FALSE]
     jac_cov <- Delta[-mean_idx, , drop = FALSE]
     s_mean <- svec[mean_idx]
     s_cov <- svec[-mean_idx]
+    w[lav_matrix_diagh_idx(nvar)] <- 0.5
   } else if (nrow(Delta) != pstar) {
     lav_msg_stop(gettext("nrow(Delta) != pstar"))
   }
 
   # special case: S = I (ULS)
   uls.flag <- isTRUE(all.equal(S, diag(nvar), check.attributes = FALSE))
-  if (uls.flag) {
+  if (uls.flag || categorical) {
     # cov part
     q_cov <- w * jac_cov
     A <- crossprod(jac_cov, q_cov)
     b <- drop(crossprod(q_cov, s_cov))
 
     # mean part
-    if (meanstructure) {
+    if (!categorical && meanstructure) {
       A <- A + crossprod(jac_mean)
       b <- b + drop(crossprod(jac_mean, s_mean))
     }

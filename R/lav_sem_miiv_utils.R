@@ -651,13 +651,20 @@ lav_sem_miiv_utils_jack_eqs <- function(eqs = NULL, # one block only
                                         free.directed.idx = integer(0L)) {
   # continuous data only (for now)
   nvar <- lavmodel@nvar[block]
-  pstar <- nvar * (nvar + 1L) / 2
+  if (lavmodel@categorical) {
+    pstar <- nvar * (nvar - 1L) / 2
+  } else {
+    pstar <- nvar * (nvar + 1L) / 2
+  }
   ntheta1 <- length(free.directed.idx)
 
   b <- block
 
   # K matrix
-  if (lavmodel@meanstructure) {
+  if (lavmodel@categorical) {
+    nc <- ncol(eqs[[1]][[1]]$k_mat)
+    K_mat <- matrix(0.0, nrow = ntheta1, ncol = nc)
+  } else if (lavmodel@meanstructure) {
     K_mat <- matrix(0.0, nrow = ntheta1, ncol = (nvar + pstar))
   } else {
     K_mat <- matrix(0.0, nrow = ntheta1, ncol = pstar)

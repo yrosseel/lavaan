@@ -1170,14 +1170,16 @@ lav_model_ddelta_dx <- function(lavmodel = NULL, GLIST = NULL, target = "lambda"
 # - in one go
 lav_model_delta_lisrel <- function(lavmodel, block = 1L) {
 
-  stopifnot(lavmodel@representation == "LISREL")
+  stopifnot(lavmodel@representation == "LISREL",
+            !lavmodel@conditional.x,
+            lavmodel@parameterization == "delta")
 
   # model matrices for this block
   mm.in.group <-
     seq_len(lavmodel@nmat[block]) + cumsum(c(0, lavmodel@nmat))[block]
   MLIST <- lavmodel@GLIST[mm.in.group]
 
-  delta.flag <- beta.flag <- meanstructure <- FALSE
+  delta.flag <- beta.flag <- meanstructure <- categorical <- FALSE
   if (!is.null(MLIST$delta) && any(MLIST$delta[,1] != 1)) {
     delta.flag <- TRUE
   }
@@ -1186,6 +1188,9 @@ lav_model_delta_lisrel <- function(lavmodel, block = 1L) {
   }
   if (lavmodel@meanstructure) {
     meanstructure <- lavmodel@meanstructure
+  }
+  if (lavmodel@categorical) {
+    categorical <- lavmodel@categorical
   }
 
   # model matrices in this block
@@ -1227,6 +1232,10 @@ lav_model_delta_lisrel <- function(lavmodel, block = 1L) {
     n_del <- length(m.delta.idx)
   }
 
+  # in case !meanstructure or !categorical
+  n_nu  <- 0L;  m.nu.idx    <- integer(0L);  x.nu.idx    <- integer(0L)
+  n_alp <- 0L;  m.alpha.idx <- integer(0L);  x.alpha.idx <- integer(0L)
+
   if (meanstructure) {
     mm.nu.idx <- which(mnames == "nu")
     x.nu.idx <- lavmodel@x.free.idx[[mm.nu.idx]]
@@ -1237,6 +1246,13 @@ lav_model_delta_lisrel <- function(lavmodel, block = 1L) {
     x.alpha.idx <- lavmodel@x.free.idx[[mm.alpha.idx]]
     m.alpha.idx <- lavmodel@m.free.idx[[mm.alpha.idx]]
     n_alp <- length(m.alpha.idx)
+  }
+
+  if (categorical) {
+    mm.th.idx <- which(mnames == "tau")
+    x.th.idx <- lavmodel@x.free.idx[[mm.th.idx]]
+    m.th.idx <- lavmodel@m.free.idx[[mm.th.idx]]
+    n_th <- length(m.th.idx)
   }
 
   nvar <- nrow(MLIST$lambda)
@@ -1277,7 +1293,7 @@ lav_model_delta_lisrel <- function(lavmodel, block = 1L) {
 
   # prepare output matrix for sigma
   n_free <- n_lam + n_bet + n_psi + n_the + n_del
-  J <- matrix(0, pstar, n_free)
+  jac_sigma <- matrix(0, pstar, n_free)
 
   col <- 1L
   # Lambda [i,j]: dS0[r,s] = LG[s,j]*I(r==i) + LG[r,j]*I(s==i)
@@ -1291,7 +1307,7 @@ lav_model_delta_lisrel <- function(lavmodel, block = 1L) {
     if (delta.flag) {
       DX <- DX * delta_weight
     }
-    J[, col:(col + n_lam - 1L)] <- DX
+    jac_sigma[, col:(col + n_lam - 1L)] <- DX
     col <- col + n_lam
   }
 
@@ -1306,7 +1322,7 @@ lav_model_delta_lisrel <- function(lavmodel, block = 1L) {
     if (delta.flag) {
       DX <- DX * delta_weight
     }
-    J[, col:(col + n_bet - 1L)] <- DX
+    jac_sigma[, col:(col + n_bet - 1L)] <- DX
     col <- col + n_bet
   }
 
@@ -1329,13 +1345,12 @@ lav_model_delta_lisrel <- function(lavmodel, block = 1L) {
     if (delta.flag) {
       DX <- DX * delta_weight
     }
-    J[, col:(col + n_psi - 1L)] <- DX
+    jac_sigma[, col:(col + n_psi - 1L)] <- DX
     col <- col + n_psi
   }
 
   # Theta [k,l] symmetric: dS = Delta %*% dTheta %*% Delta
   #  -> unit vector at vech pos (k,l)
-  # ----------------------------------------------------------
   if (n_the > 0L) {
     rc  <- vec2rc(m.theta.idx, nvar)
     k_v <- pmax(rc[, 1L], rc[, 2L])
@@ -1349,7 +1364,7 @@ lav_model_delta_lisrel <- function(lavmodel, block = 1L) {
       Jt[cbind(vech_pos, seq_len(n_the))] <- 1
     }
 
-    J[, col:(col + n_the - 1L)] <- Jt
+    jac_sigma[, col:(col + n_the - 1L)] <- Jt
     col <- col + n_the
   }
 
@@ -1360,75 +1375,210 @@ lav_model_delta_lisrel <- function(lavmodel, block = 1L) {
     k_v <- m.delta.idx
     T1 <- Sigma0[c_s, k_v, drop = FALSE] * delta[c_s] * outer(r_s, k_v, `==`)
     T2 <- delta[r_s] * Sigma0[r_s, k_v, drop = FALSE] * outer(c_s, k_v, `==`)
-    J[, col:(col + n_del - 1L)] <- T1 + T2
+    jac_sigma[, col:(col + n_del - 1L)] <- T1 + T2
   }
 
-  # meanstructure
-  if (meanstructure) {
-    # precompute
-    if (beta.flag) {
-      a <- drop(A %*% MLIST$alpha)
+  # categorical: reorder
+  if (categorical) {
+    # reorder: first variances (of numeric), then covariances
+    cov.idx <- lav_matrix_vech_idx(lavmodel@nvar[block])
+    covd.idx <- lav_matrix_vech_idx(lavmodel@nvar[block], diagonal = FALSE)
+
+    var.idx <- which(is.na(match(
+      cov.idx,
+      covd.idx
+    )))[lavmodel@num.idx[[block]]]
+    cor.idx <- match(covd.idx, cov.idx)
+
+    jac_sigma <- rbind(
+      jac_sigma[var.idx, , drop = FALSE],
+      jac_sigma[cor.idx, , drop = FALSE]
+    )
+  }
+
+  # correlation structure
+  if (!categorical && lavmodel@correlation) {
+    rm.idx <- lav_matrix_diagh_idx(lavmodel@nvar[block])
+    jac_sigma <- jac_sigma[-rm.idx, , drop = FALSE]
+  }
+
+  jac_th   <- NULL
+  nth_full <- 0L
+  if (!categorical) {
+    if (meanstructure) {
+      # precompute: IB.inv * alpha
+      if (beta.flag) {
+        a <- drop(A %*% MLIST$alpha)
+      } else {
+        a <- MLIST$alpha
+      }
+
+      n_free <- n_nu + n_lam + n_bet + n_alp
+      jac_mean <- matrix(0, nvar, n_free)
+
+      col <- 1L
+      # nu[i]:  dmu = e_i
+      if (n_nu > 0L) {
+        Jn <- matrix(0, nvar, n_nu)
+        Jn[cbind(m.nu.idx, seq_len(n_nu))] <- 1
+        jac_mean[, col:(col + n_nu - 1L)] <- Jn
+        col <- col + n_nu
+      }
+
+      # Lambda[i,j]:  dmu[r] = a[j] * I(r == i)
+      if (n_lam > 0L) {
+        rc  <- vec2rc(m.lambda.idx, nvar); i_v <- rc[, 1L];  j_v <- rc[, 2L]
+
+        Jl <- matrix(0, nvar, n_lam)
+        Jl[cbind(i_v, seq_len(n_lam))] <- a[j_v]
+        jac_mean[, col:(col + n_lam - 1L)] <- Jl
+        col <- col + n_lam
+      }
+
+      # Beta[i,j]:  dmu[r] = M[r,i] * a[j]
+      if (n_bet > 0L) {
+        rc  <- vec2rc(m.beta.idx, nfac); i_v <- rc[, 1L];  j_v <- rc[, 2L]
+
+        jac_mean[, col:(col + n_bet - 1L)] <-
+          M[, i_v, drop = FALSE] * rep(a[j_v], each = nvar)
+        col <- col + n_bet
+      }
+
+      # alpha[k]:  dmu = M[,k]
+      if (n_alp > 0L) {
+        jac_mean[, col:(col + n_alp - 1L)] <- M[, m.alpha.idx, drop = FALSE]
+      }
+    } # meanstructure
+
+  # categorical
+  } else if (categorical) {
+
+    th_idx_g <- lavmodel@th.idx[[block]]
+    nth_full  <- length(th_idx_g)
+
+    # v_slot[t] = observed-variable index for TH element t
+    nlev_v <- tabulate(th_idx_g, nbins = nvar)
+    nlev_v[nlev_v == 0L] <- 1L
+    v_slot <- rep(seq_len(nvar), times = nlev_v)
+
+    # per-slot delta scale
+    if (delta.flag) {
+      delta_star <- delta[v_slot]
     } else {
-      a <- MLIST$alpha
+      delta_star <- rep(1, nth_full)
     }
 
-    n_free <- n_nu + n_lam + n_bet + n_alp
-    Jm <- matrix(0, nvar, n_free)
+    # ord_slots[k] = position in TH vector that corresponds to tau row k
+    ord_slots <- which(th_idx_g > 0L)
 
-    col <- 1L
-    # nu[i]:  dmu = e_i
-    # co lumn m is a unit vector with 1 at position nu.idx[m]
+    # a_vec = IB.inv * alpha  (for lambda/beta derivatives)
+    if (!is.null(MLIST$alpha)) {
+      a_vec <- if (beta.flag) {
+        as.vector(A %*% MLIST$alpha)
+      } else {
+        as.vector(MLIST$alpha)
+      }
+    } else {
+      a_vec <- rep(0, nfac)
+    }
+
+    # nu_vec (intercepts; zero for purely ordinal models)
+    nu_vec <- if (!is.null(MLIST$nu)) as.vector(MLIST$nu) else rep(0, nvar)
+
+    # pi0 = nu + Lambda * IB.inv * alpha = nu + M * alpha
+    if (!is.null(MLIST$alpha)) {
+      pi0 <- nu_vec + as.vector(M %*% as.vector(MLIST$alpha))
+    } else {
+      pi0 <- nu_vec
+    }
+
+    # tau_full: tau values at ordinal TH slots, 0 at numeric TH slots
+    tau_full <- numeric(nth_full)
+    if (!is.null(MLIST$tau) && n_th > 0L) {
+      tau_full[ord_slots] <- as.vector(MLIST$tau)
+    }
+
+    # unscaled TH: TH0[t] = tau_full[t] - pi0[v(t)]
+    TH0 <- tau_full - pi0[v_slot]
+
+    # build jac_th  (nth_full rows, n_free_th columns)
+    # column order: tau | delta | nu | lambda | beta | alpha
+    n_free_th <- n_th + n_del + n_nu + n_lam + n_bet + n_alp
+    jac_th <- matrix(0, nth_full, n_free_th)
+    col_th <- 1L
+
+    # tau[k]: delta_star[t] * I(t == ord_slots[k])
+    if (n_th > 0L) {
+      t_slots <- ord_slots[m.th.idx]
+      Jt <- matrix(0, nth_full, n_th)
+      Jt[cbind(t_slots, seq_len(n_th))] <- delta_star[t_slots]
+      jac_th[, col_th:(col_th + n_th - 1L)] <- Jt
+      col_th <- col_th + n_th
+    }
+
+    # delta[k]: I(v_slot[t]==k) * TH0[t]
+    if (n_del > 0L) {
+      jac_th[, col_th:(col_th + n_del - 1L)] <-
+        outer(v_slot, m.delta.idx, `==`) * TH0
+      col_th <- col_th + n_del
+    }
+
+    # nu[i]: -delta_star[t] * I(v_slot[t]==i)
     if (n_nu > 0L) {
-      Jn <- matrix(0, nvar, n_nu)
-      Jn[cbind(m.nu.idx, seq_len(n_nu))] <- 1
-      Jm[, col:(col + n_nu - 1L)] <- Jn
-      col <- col + n_nu
+      jac_th[, col_th:(col_th + n_nu - 1L)] <-
+        -outer(v_slot, m.nu.idx, `==`) * delta_star
+      col_th <- col_th + n_nu
     }
 
-    # Lambda[i,j]:  dmu[r] = a[j] * I(r == i)
-    # column m is a[j_v[m]] placed at row i_v[m], zero elsewhere
+    # lambda[i,j]: -delta_star[t]*I(v_slot[t]==i)*a_vec[j]
     if (n_lam > 0L) {
-      rc  <- vec2rc(m.lambda.idx, nvar); i_v <- rc[, 1L];  j_v <- rc[, 2L]
-
-      Jl <- matrix(0, nvar, n_lam)
-      Jl[cbind(i_v, seq_len(n_lam))] <- a[j_v]
-      Jm[, col:(col + n_lam - 1L)] <- Jl
-      col <- col + n_lam
+      rc  <- vec2rc(m.lambda.idx, nvar); i_v <- rc[, 1L]; j_v <- rc[, 2L]
+      jac_th[, col_th:(col_th + n_lam - 1L)] <-
+        -(outer(v_slot, i_v, `==`) * delta_star) *
+         matrix(a_vec[j_v], nth_full, n_lam, byrow = TRUE)
+      col_th <- col_th + n_lam
     }
 
-    # Beta[i,j]:  dmu[r] = M[r,i] * a[j]
-    # column m is M[,i_v[m]] scaled by a[j_v[m]]
-    # ----------------------------------------------------------
+    # beta[i,j]: -delta_star[t]*M[v_slot[t],i]*a_vec[j]
     if (n_bet > 0L) {
-      rc  <- vec2rc(m.beta.idx, nfac); i_v <- rc[, 1L];  j_v <- rc[, 2L]
-
-      Jm[, col:(col + n_bet - 1L)] <-
-        M[, i_v, drop = FALSE] * rep(a[j_v], each = nvar)
-      col <- col + n_bet
+      rc  <- vec2rc(m.beta.idx, nfac); i_v <- rc[, 1L]; j_v <- rc[, 2L]
+      jac_th[, col_th:(col_th + n_bet - 1L)] <-
+        -delta_star * M[v_slot, i_v, drop = FALSE] *
+         matrix(a_vec[j_v], nth_full, n_bet, byrow = TRUE)
+      col_th <- col_th + n_bet
     }
 
-    # alpha[k]:  dmu = M[,k]
-    # column m is the k-th column of M
+    # alpha[k]: -delta_star[t] * M[v_slot[t], k]
     if (n_alp > 0L) {
-      Jm[, col:(col + n_alp - 1L)] <- M[, m.alpha.idx, drop = FALSE]
+     jac_th[, col_th:(col_th + n_alp - 1L)] <-
+       -delta_star * M[v_slot, m.alpha.idx, drop = FALSE]
     }
   }
-
-  # right order
-  el.idx <- c(x.lambda.idx, x.beta.idx, x.psi.idx, x.theta.idx, x.delta.idx)
 
   # sigma
-  out <- matrix(0, nrow = nrow(J), ncol = lavmodel@nx.free)
+  out <- matrix(0, nrow = nrow(jac_sigma), ncol = lavmodel@nx.free)
   el.idx <- c(x.lambda.idx, x.beta.idx, x.psi.idx, x.theta.idx, x.delta.idx)
-  out[, el.idx] <- J
+  out[, el.idx] <- jac_sigma
 
   # meanstructure
-  if (meanstructure) {
+  if (!categorical && meanstructure) {
     # right order
     el.idx <- c(x.nu.idx, x.lambda.idx, x.beta.idx, x.alpha.idx)
-    outm <- matrix(0, nrow = nrow(Jm), ncol = lavmodel@nx.free)
-    outm[, el.idx] <- Jm
+    outm <- matrix(0, nrow = nrow(jac_mean), ncol = lavmodel@nx.free)
+    outm[, el.idx] <- jac_mean
     out <- rbind(outm, out)
+  } else if (categorical && !is.null(jac_th)) {
+    el.idx_th <- c(
+      if (n_th  > 0L) x.th.idx     else integer(0L),
+      if (n_del > 0L) x.delta.idx  else integer(0L),
+      if (n_nu  > 0L) x.nu.idx     else integer(0L),
+      if (n_lam > 0L) x.lambda.idx else integer(0L),
+      if (n_bet > 0L) x.beta.idx   else integer(0L),
+      if (n_alp > 0L) x.alpha.idx  else integer(0L)
+    )
+    out_th <- matrix(0, nth_full, lavmodel@nx.free)
+    out_th[, el.idx_th] <- jac_th
+    out <- rbind(out_th, out)
   }
 
   out
