@@ -1645,7 +1645,11 @@ lav_model_omega <- function(Sigma.hat = NULL, Mu.hat = NULL,
           nobs <- M[[p]][["freq"]]
           var.idx <- M[[p]][["var.idx"]]
 
-          Sigma.inv <- chol2inv(chol(Sigma.hat[[g]][var.idx, var.idx]))
+          Sigma.inv <- try(chol2inv(chol(Sigma.hat[[g]][var.idx, var.idx])),
+                          silent = TRUE)
+          if (inherits(Sigma.inv, "try-error")) {
+            Sigma.inv <- MASS::ginv(Sigma.hat[[g]][var.idx, var.idx])
+          }
           Mu <- Mu.hat[[g]][var.idx]
           W.tilde <- SX + tcrossprod(MX - Mu)
 

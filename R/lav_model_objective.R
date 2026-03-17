@@ -424,7 +424,7 @@ lav_model_objective <- function(lavmodel = NULL,
     # divide by N (to be consistent with the rest of lavaan)
     fx.w <- fx.w / lavsamplestats@ntotal
 
-    fx.sat <- sum(obs.freq * log(obs.freq) - obs.freq)
+    fx.sat <- sum(ifelse(obs.freq > 0, obs.freq * log(obs.freq), 0) - obs.freq)
     fx.sat <- fx.sat / lavsamplestats@ntotal
 
     # saturated - poisson
