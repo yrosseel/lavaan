@@ -99,8 +99,8 @@ lav_matrix_vech_idx <- function(n = 1L, diagonal = TRUE) {
     if (n == 1L) {
       return(integer(0L))
     }
-    ( sequence((n - 1L):1L) +
-      rep((seq_len(n - 1L) - 1L) * (n + 1L) + 1L, (n - 1L):1L) )
+    (sequence((n - 1L):1L) +
+      rep((seq_len(n - 1L) - 1L) * (n + 1L) + 1L, (n - 1L):1L))
   }
 }
 
@@ -408,10 +408,10 @@ lav_matrix_duplication <- function(n = 1L) {
   x <- numeric(n2 * nstar)
 
   tmp <- matrix(0L, n, n)
-  tmp[lav_matrix_vech_idx(n)] <- 1:nstar
-  tmp[lav_matrix_vechru_idx(n)] <- 1:nstar
+  tmp[lav_matrix_vech_idx(n)] <- seq_len(nstar)
+  tmp[lav_matrix_vechru_idx(n)] <- seq_len(nstar)
 
-  idx <- (1:n2) + (lav_matrix_vec(tmp) - 1L) * n2
+  idx <- seq_len(n2) + (lav_matrix_vec(tmp) - 1L) * n2
 
   x[idx] <- 1.0
 
@@ -443,17 +443,15 @@ lav_matrix_duplication_pre <- function(A = matrix(0, 0, 0)) {
   n2 <- NROW(A)
 
   # square nrow(A) only, n2 = n^2
-  stopifnot(sqrt(n2) == round(sqrt(n2)))
-
-  # dimension
-  n <- sqrt(n2)
+  n <- as.integer(round(sqrt(n2)))
+  stopifnot(n * n == n2)
 
   # dup idx
   idx1 <- lav_matrix_vech_idx(n)
   idx2 <- lav_matrix_vechru_idx(n)
 
   OUT <- A[idx1, , drop = FALSE] + A[idx2, , drop = FALSE]
-  u <- which(idx1 %in% idx2)
+  u <- lav_matrix_diagh_idx(n)
   OUT[u, ] <- OUT[u, ] / 2.0
 
   OUT
@@ -465,17 +463,15 @@ lav_matrix_duplication_dup_pre2 <- function(A = matrix(0, 0, 0)) {
   n2 <- NROW(A)
 
   # square nrow(A) only, n2 = n^2
-  stopifnot(sqrt(n2) == round(sqrt(n2)))
-
-  # dimension
-  n <- sqrt(n2)
+  n <- as.integer(round(sqrt(n2)))
+  stopifnot(n * n == n2)
 
   # dup idx
   idx1 <- lav_matrix_vech_idx(n)
   idx2 <- lav_matrix_vechru_idx(n)
 
   OUT <- A[idx1, , drop = FALSE]
-  u <- which(!idx1 %in% idx2)
+  u <- seq_len(length(idx1))[-lav_matrix_diagh_idx(n)]
   OUT[u, ] <- OUT[u, ] + A[idx2[u], ]
 
   OUT
@@ -493,18 +489,14 @@ lav_matrix_duplication_cor_pre <- function(A = matrix(0, 0, 0)) {
   n2 <- NROW(A)
 
   # square nrow(A) only, n2 = n^2
-  stopifnot(sqrt(n2) == round(sqrt(n2)))
-
-  # dimension
-  n <- sqrt(n2)
+  n <- as.integer(round(sqrt(n2)))
+  stopifnot(n * n == n2)
 
   # dup idx
   idx1 <- lav_matrix_vech_idx(n, diagonal = FALSE)
   idx2 <- lav_matrix_vechru_idx(n, diagonal = FALSE)
 
   OUT <- A[idx1, , drop = FALSE] + A[idx2, , drop = FALSE]
-  u <- which(idx1 %in% idx2)
-  OUT[u, ] <- OUT[u, ] / 2.0
 
   OUT
 }
@@ -520,17 +512,15 @@ lav_matrix_duplication_post <- function(A = matrix(0, 0, 0)) {
   n2 <- NCOL(A)
 
   # square A only, n2 = n^2
-  stopifnot(sqrt(n2) == round(sqrt(n2)))
-
-  # dimension
-  n <- sqrt(n2)
+  n <- as.integer(round(sqrt(n2)))
+  stopifnot(n * n == n2)
 
   # dup idx
   idx1 <- lav_matrix_vech_idx(n)
   idx2 <- lav_matrix_vechru_idx(n)
 
   OUT <- A[, idx1, drop = FALSE] + A[, idx2, drop = FALSE]
-  u <- which(idx1 %in% idx2)
+  u <- lav_matrix_diagh_idx(n)
   OUT[, u] <- OUT[, u] / 2.0
 
   OUT
@@ -548,18 +538,14 @@ lav_matrix_duplication_cor_post <- function(A = matrix(0, 0, 0)) {
   n2 <- NCOL(A)
 
   # square A only, n2 = n^2
-  stopifnot(sqrt(n2) == round(sqrt(n2)))
-
-  # dimension
-  n <- sqrt(n2)
+  n <- as.integer(round(sqrt(n2)))
+  stopifnot(n * n == n2)
 
   # dup idx
   idx1 <- lav_matrix_vech_idx(n, diagonal = FALSE)
   idx2 <- lav_matrix_vechru_idx(n, diagonal = FALSE)
 
   OUT <- A[, idx1, drop = FALSE] + A[, idx2, drop = FALSE]
-  u <- which(idx1 %in% idx2)
-  OUT[, u] <- OUT[, u] / 2.0
 
   OUT
 }
@@ -575,17 +561,15 @@ lav_matrix_duplication_pre_post <- function(A = matrix(0, 0, 0)) {
   n2 <- NCOL(A)
 
   # square A only, n2 = n^2
-  stopifnot(NROW(A) == n2, sqrt(n2) == round(sqrt(n2)))
-
-  # dimension
-  n <- sqrt(n2)
+  n <- as.integer(round(sqrt(n2)))
+  stopifnot(NROW(A) == n2, n * n == n2)
 
   # dup idx
   idx1 <- lav_matrix_vech_idx(n)
   idx2 <- lav_matrix_vechru_idx(n)
 
   OUT <- A[idx1, , drop = FALSE] + A[idx2, , drop = FALSE]
-  u <- which(idx1 %in% idx2)
+  u <- lav_matrix_diagh_idx(n)
   OUT[u, ] <- OUT[u, ] / 2.0
   OUT <- OUT[, idx1, drop = FALSE] + OUT[, idx2, drop = FALSE]
   OUT[, u] <- OUT[, u] / 2.0
@@ -604,20 +588,15 @@ lav_matrix_duplication_cor_pre_post <- function(A = matrix(0, 0, 0)) {
   n2 <- NCOL(A)
 
   # square A only, n2 = n^2
-  stopifnot(NROW(A) == n2, sqrt(n2) == round(sqrt(n2)))
-
-  # dimension
-  n <- sqrt(n2)
+  n <- as.integer(round(sqrt(n2)))
+  stopifnot(NROW(A) == n2, n * n == n2)
 
   # dup idx
   idx1 <- lav_matrix_vech_idx(n, diagonal = FALSE)
   idx2 <- lav_matrix_vechru_idx(n, diagonal = FALSE)
 
   OUT <- A[idx1, , drop = FALSE] + A[idx2, , drop = FALSE]
-  u <- which(idx1 %in% idx2)
-  OUT[u, ] <- OUT[u, ] / 2.0
   OUT <- OUT[, idx1, drop = FALSE] + OUT[, idx2, drop = FALSE]
-  OUT[, u] <- OUT[, u] / 2.0
 
   OUT
 }
@@ -654,10 +633,8 @@ lav_matrix_elimination_pre <- function(A = matrix(0, 0, 0)) {
   n2 <- NROW(A)
 
   # square nrow(A) only, n2 = n^2
-  stopifnot(sqrt(n2) == round(sqrt(n2)))
-
-  # dimension
-  n <- sqrt(n2)
+  n <- as.integer(round(sqrt(n2)))
+  stopifnot(n * n == n2)
 
   # select vech idx rows
   idx <- lav_matrix_vech_idx(n)
@@ -674,10 +651,8 @@ lav_matrix_elimination_post <- function(A = matrix(0, 0, 0)) {
   n2 <- NCOL(A)
 
   # square nrow(A) only, n2 = n^2
-  stopifnot(sqrt(n2) == round(sqrt(n2)))
-
-  # dimension
-  n <- sqrt(n2)
+  n <- as.integer(round(sqrt(n2)))
+  stopifnot(n * n == n2)
 
   # select vech idx rows
   idx <- lav_matrix_vech_idx(n)
@@ -693,10 +668,8 @@ lav_matrix_elimination_pre_post <- function(A = matrix(0, 0, 0)) {
   n2 <- NCOL(A)
 
   # square A only, n2 = n^2
-  stopifnot(NROW(A) == n2, sqrt(n2) == round(sqrt(n2)))
-
-  # dimension
-  n <- sqrt(n2)
+  n <- as.integer(round(sqrt(n2)))
+  stopifnot(NROW(A) == n2, n * n == n2)
 
   # select vech idx rows
   idx <- lav_matrix_vech_idx(n)
@@ -735,8 +708,8 @@ lav_matrix_duplication_ginv <- function(n = 1L) {
   # THIS is the real bottleneck: allocating an ocean of zeroes...
   x <- numeric(nstar * n2)
 
-  x[(lav_matrix_vech_idx(n) - 1L) * nstar + 1:nstar] <- 0.5
-  x[(lav_matrix_vechru_idx(n) - 1L) * nstar + 1:nstar] <- 0.5
+  x[(lav_matrix_vech_idx(n) - 1L) * nstar + seq_len(nstar)] <- 0.5
+  x[(lav_matrix_vechru_idx(n) - 1L) * nstar + seq_len(nstar)] <- 0.5
   x[(lav_matrix_diag_idx(n) - 1L) * nstar + lav_matrix_diagh_idx(n)] <- 1.0
 
   attr(x, "dim") <- c(nstar, n2)
@@ -752,10 +725,8 @@ lav_matrix_duplication_ginv_pre <- function(A = matrix(0, 0, 0)) {
   n2 <- NROW(A)
 
   # square nrow(A) only, n2 = n^2
-  stopifnot(sqrt(n2) == round(sqrt(n2)))
-
-  # dimension
-  n <- sqrt(n2)
+  n <- as.integer(round(sqrt(n2)))
+  stopifnot(n * n == n2)
   nstar <- n * (n + 1) / 2
 
   idx1 <- lav_matrix_vech_idx(n)
@@ -773,10 +744,8 @@ lav_matrix_duplication_ginv_post <- function(A = matrix(0, 0, 0)) {
   n2 <- NCOL(A)
 
   # square A only, n2 = n^2
-  stopifnot(sqrt(n2) == round(sqrt(n2)))
-
-  # dimension
-  n <- sqrt(n2)
+  n <- as.integer(round(sqrt(n2)))
+  stopifnot(n * n == n2)
 
   idx1 <- lav_matrix_vech_idx(n)
   idx2 <- lav_matrix_vechru_idx(n)
@@ -795,10 +764,8 @@ lav_matrix_duplication_ginv_pre_post <- function(A = matrix(0, 0, 0)) {
   n2 <- NCOL(A)
 
   # square A only, n2 = n^2
-  stopifnot(NROW(A) == n2, sqrt(n2) == round(sqrt(n2)))
-
-  # dimension
-  n <- sqrt(n2)
+  n <- as.integer(round(sqrt(n2)))
+  stopifnot(NROW(A) == n2, n * n == n2)
 
   idx1 <- lav_matrix_vech_idx(n)
   idx2 <- lav_matrix_vechru_idx(n)
@@ -817,10 +784,8 @@ lav_matrix_duplication_ginv_cor_pre_post <- function(A = matrix(0, 0, 0)) {
   n2 <- NCOL(A)
 
   # square A only, n2 = n^2
-  stopifnot(NROW(A) == n2, sqrt(n2) == round(sqrt(n2)))
-
-  # dimension
-  n <- sqrt(n2)
+  n <- as.integer(round(sqrt(n2)))
+  stopifnot(NROW(A) == n2, n * n == n2)
 
   idx1 <- lav_matrix_vech_idx(n, diagonal = FALSE)
   idx2 <- lav_matrix_vechru_idx(n, diagonal = FALSE)
@@ -859,7 +824,7 @@ lav_matrix_commutation <- function(m = 1L, n = 1L) {
   # }
 
   if ((m < 1L) || (round(m) != m)) {
-    lav_msg_stop(gettext("n must be a positive integer"))
+    lav_msg_stop(gettext("m must be a positive integer"))
   }
 
   if ((n < 1L) || (round(n) != n)) {
@@ -892,14 +857,12 @@ lav_matrix_commutation_pre <- function(A = matrix(0, 0, 0)) {
   n2 <- nrow(A)
 
   # K_nn only (n2 = m * n)
-  stopifnot(sqrt(n2) == round(sqrt(n2)))
-
-  # dimension
-  n <- sqrt(n2)
+  n <- as.integer(round(sqrt(n2)))
+  stopifnot(n * n == n2)
 
   # compute row indices
   # row.idx <- as.integer(t(matrix(1:n2, n, n)))
-  row.idx <- rep(1:n, each = n) + (0:(n - 1L)) * n
+  row.idx <- rep(seq_len(n), each = n) + (seq_len(n) - 1L) * n
 
   OUT <- A[row.idx, , drop = FALSE]
   OUT
@@ -919,14 +882,12 @@ lav_matrix_commutation_post <- function(A = matrix(0, 0, 0)) {
   n2 <- ncol(A)
 
   # K_nn only (n2 = m * n)
-  stopifnot(sqrt(n2) == round(sqrt(n2)))
-
-  # dimension
-  n <- sqrt(n2)
+  n <- as.integer(round(sqrt(n2)))
+  stopifnot(n * n == n2)
 
   # compute col indices
   # row.idx <- as.integer(t(matrix(1:n2, n, n)))
-  col.idx <- rep(1:n, each = n) + (0:(n - 1L)) * n
+  col.idx <- rep(seq_len(n), each = n) + (seq_len(n) - 1L) * n
 
   OUT <- A[, col.idx, drop = FALSE]
   OUT
@@ -944,13 +905,11 @@ lav_matrix_commutation_pre_post <- function(A = matrix(0, 0, 0)) {
   n2 <- NCOL(A)
 
   # K_nn only (n2 = m * n)
-  stopifnot(sqrt(n2) == round(sqrt(n2)))
-
-  # dimension
-  n <- sqrt(n2)
+  n <- as.integer(round(sqrt(n2)))
+  stopifnot(n * n == n2)
 
   # compute col indices
-  row.idx <- rep(1:n, each = n) + (0:(n - 1L)) * n
+  row.idx <- rep(seq_len(n), each = n) + (seq_len(n) - 1L) * n
   col.idx <- row.idx
 
   OUT <- A[row.idx, col.idx, drop = FALSE]
@@ -967,7 +926,7 @@ lav_matrix_commutation_mn_pre <- function(A, m = 1L, n = 1L) {
 
   # compute row indices
   # row.idx <- as.integer(t(matrix(1:mn, m, n)))
-  row.idx <- rep(1:m, each = n) + (0:(n - 1L)) * m
+  row.idx <- rep(seq_len(m), each = n) + (seq_len(n) - 1L) * m
 
   OUT <- A[row.idx, , drop = FALSE]
   OUT
@@ -1040,7 +999,7 @@ lav_matrix_tS2_SxS_S2 <- function(S2, S, check = TRUE) {
   }
 
   A <- matrix(S %*% matrix(S2, n, ), n * n, )
-  A2 <- A[rep(1:n, each = n) + (0:(n - 1L)) * n, , drop = FALSE]
+  A2 <- A[rep(seq_len(n), each = n) + (seq_len(n) - 1L) * n, , drop = FALSE]
   crossprod(A, A2)
 }
 
@@ -1139,8 +1098,8 @@ lav_matrix_bdiag <- function(...) {
     } else {
       rcoffset <- 0L
     }
-    m.idx <- (rep((0:(ncols[m] - 1L)) * trows, each = nrows[m]) +
-      rep(1:nrows[m], ncols[m]) + rcoffset)
+    m.idx <- (rep((seq_len(ncols[m]) - 1L) * trows, each = nrows[m]) +
+      rep(seq_len(nrows[m]), ncols[m]) + rcoffset)
     x[m.idx] <- mlist[[m]]
   }
 
@@ -1261,7 +1220,7 @@ lav_matrix_crossprod <- function(A, B) {
 lav_matrix_rref <- function(A, tol = sqrt(.Machine$double.eps)) {
   # MATLAB documentation says rref uses: tol = (max(size(A))*eps *norm(A,inf)
   if (missing(tol)) {
-    A.norm <- max(abs(apply(A, 1, sum)))
+    A.norm <- max(rowSums(abs(A)))
     tol <- max(dim(A)) * A.norm * .Machine$double.eps
   }
 
@@ -1499,7 +1458,11 @@ lav_matrix_inverse_update <- function(A.inv, rm.idx = integer(0L)) {
     a <- A.inv[-rm.idx, rm.idx, drop = FALSE]
     b <- A.inv[rm.idx, -rm.idx, drop = FALSE]
     h <- A.inv[rm.idx, rm.idx]
-    out <- A.inv[-rm.idx, -rm.idx, drop = FALSE] - (a %*% b) / h
+    if (h != 0) {
+      out <- A.inv[-rm.idx, -rm.idx, drop = FALSE] - (a %*% b) / h
+    } else {
+      out <- A.inv[-rm.idx, -rm.idx, drop = FALSE]
+    }
   }
 
   # rank-n update
@@ -1507,7 +1470,11 @@ lav_matrix_inverse_update <- function(A.inv, rm.idx = integer(0L)) {
     A <- A.inv[-rm.idx, rm.idx, drop = FALSE]
     B <- A.inv[rm.idx, -rm.idx, drop = FALSE]
     H <- A.inv[rm.idx, rm.idx, drop = FALSE]
-    out <- A.inv[-rm.idx, -rm.idx, drop = FALSE] - A %*% solve.default(H, B)
+    HB <- try(solve.default(H, B), silent = TRUE)
+    if (inherits(HB, "try-error")) {
+      HB <- MASS::ginv(H) %*% B
+    }
+    out <- A.inv[-rm.idx, -rm.idx, drop = FALSE] - A %*% HB
 
     # erase all col/rows...
   } else if (ndel == NCOL(A.inv)) {
@@ -1537,10 +1504,17 @@ lav_matrix_symmetric_inverse_update <- function(S.inv, rm.idx = integer(0L),
   # rank-1 update
   else if (ndel == 1L) {
     h <- S.inv[rm.idx, rm.idx]
-    a <- S.inv[-rm.idx, rm.idx, drop = FALSE] / sqrt(h)
-    out <- S.inv[-rm.idx, -rm.idx, drop = FALSE] - tcrossprod(a)
-    if (logdet) {
-      attr(out, "logdet") <- S.logdet + log(h)
+    if (h > 0) {
+      a <- S.inv[-rm.idx, rm.idx, drop = FALSE] / sqrt(h)
+      out <- S.inv[-rm.idx, -rm.idx, drop = FALSE] - tcrossprod(a)
+      if (logdet) {
+        attr(out, "logdet") <- S.logdet + log(h)
+      }
+    } else {
+      out <- S.inv[-rm.idx, -rm.idx, drop = FALSE]
+      if (logdet) {
+        attr(out, "logdet") <- as.numeric(NA)
+      }
     }
   }
 
@@ -1551,9 +1525,14 @@ lav_matrix_symmetric_inverse_update <- function(S.inv, rm.idx = integer(0L),
     out <- (S.inv[-rm.idx, -rm.idx, drop = FALSE] -
       crossprod(A, solve.default(H, A)))
     if (logdet) {
-      # cH <- chol.default(Re(H)); diag.cH <- diag(cH)
-      # H.logdet <- sum(log(diag.cH * diag.cH))
-      H.logdet <- log(det(H))
+      cH <- try(chol.default(H), silent = TRUE)
+      if (!inherits(cH, "try-error")) {
+        diag.cH <- diag(cH)
+        H.logdet <- sum(log(diag.cH * diag.cH))
+      } else {
+        ev <- eigen(H, symmetric = TRUE, only.values = TRUE)$values
+        H.logdet <- sum(log(abs(ev)))
+      }
       attr(out, "logdet") <- S.logdet + H.logdet
     }
 
@@ -1714,8 +1693,10 @@ lav_matrix_symmetric_diff_smallest_root <- function(M = NULL, P = NULL) {
       Ldiag <- 1 / sqrt(diagP)
       LML <- t(Ldiag * M) * Ldiag
     } else {
-      L <- solve(lav_matrix_symmetric_sqrt(P))
-      LML <- L %*% M %*% t(L)
+      eig.P <- eigen(P, symmetric = TRUE)
+      dP <- pmax(eig.P$values, 0)
+      VtMV <- crossprod(eig.P$vectors, M %*% eig.P$vectors)
+      LML <- t(VtMV / sqrt(dP)) / sqrt(dP)
     }
 
     # compute lambda
@@ -1743,8 +1724,10 @@ lav_matrix_symmetric_diff_smallest_root <- function(M = NULL, P = NULL) {
       Ldiag <- 1 / sqrt(diagPp)
       LML <- t(Ldiag * Mp.n) * Ldiag
     } else {
-      L <- solve(lav_matrix_symmetric_sqrt(P.p))
-      LML <- L %*% Mp.n %*% t(L)
+      eig.Pp <- eigen(P.p, symmetric = TRUE)
+      dPp <- pmax(eig.Pp$values, 0)
+      VtMV <- crossprod(eig.Pp$vectors, Mp.n %*% eig.Pp$vectors)
+      LML <- t(VtMV / sqrt(dPp)) / sqrt(dPp)
     }
     lambda <- eigen(LML,
       symmetric = TRUE,
@@ -1772,8 +1755,9 @@ lav_matrix_symmetric_force_pd <- function(S, tol = 1e-06) {
   # replace small/negative eigen values
   ev[ev / abs(ev[1]) < tol] <- tol * abs(ev[1])
 
-  # reconstruct
-  out <- S.eigen$vectors %*% diag(ev) %*% t(S.eigen$vectors)
+  # reconstruct (scale columns of V, avoid n*n diagonal alloc)
+  n <- ncol(S.eigen$vectors)
+  out <- tcrossprod(S.eigen$vectors * rep(ev, each = n), S.eigen$vectors)
 
   out
 }
@@ -1809,7 +1793,7 @@ lav_matrix_transform_mean_cov <- function(Y,
   target.mean <- as.vector(target.mean)
 
   S <- lav_matrix_cov(Y)
-  S.inv <- solve.default(S)
+  S.inv <- lav_matrix_symmetric_inverse(S)
   S.inv.sqrt <- lav_matrix_symmetric_sqrt(S.inv)
   target.cov.sqrt <- lav_matrix_symmetric_sqrt(target.cov)
 
@@ -1997,7 +1981,11 @@ lav_matrix_inverse_iminus <- function(A = NULL) {
     # naive version (for now)
     tmp <- -A
     tmp[diag.idx] <- tmp[diag.idx] + 1
-    IA.inv <- solve(tmp)
+    IA.inv <- try(solve(tmp), silent = TRUE)
+    if (inherits(IA.inv, "try-error")) {
+      lav_msg_warn(gettext("(I - A) is singular; using generalized inverse."))
+      IA.inv <- MASS::ginv(tmp)
+    }
     return(IA.inv)
   }
 }
