@@ -1373,20 +1373,64 @@ lav_lisrel_nu <- function(MLIST = NULL,
   NU
 }
 
-# compute IB.inv
+# compute (I - BETA)^{-1}
+# new in 0.6-22: check structure of BETA
+#  1. BETA absent / all-zero        -> identity
+#  1b.BETA is complex               -> general solve() 
+#  2. BETA strictly lower triangular-> forwardsolve
+#  3. BETA strictly upper triangular-> backsolve
+#  4. BETA is a DAG in any order    -> Kahn topological sort, permute to
+#                                      lower tri, forwardsolve, unpermute
+#  5. BETA has directed cycles      -> general solve()
 lav_lisrel_ibinv <- function(MLIST = NULL) {
   BETA <- MLIST$beta
-  nr <- nrow(MLIST$psi)
+  nr   <- nrow(MLIST$psi)
 
-  if (!is.null(BETA)) {
-    tmp <- -BETA
-    tmp[lav_matrix_diag_idx(nr)] <- 1
-    IB.inv <- solve(tmp)
-  } else {
-    IB.inv <- diag(nr)
+  # case 1: no BETA, or BETA is identically zero
+  if (is.null(BETA) || all(BETA == 0)) {
+    return(diag(nr))
   }
 
-  IB.inv
+  # forwardsolve/backsolve do not support complex values; solve() does
+  if (is.complex(BETA)) {
+    tmp <- -BETA; diag(tmp) <- 1; return(solve(tmp))
+  }
+
+  # case 2: strictly lower triangular
+  if (all(BETA[upper.tri(BETA)] == 0)) {
+    return(forwardsolve(diag(nr) - BETA, diag(nr)))
+  }
+
+  # case 3: strictly upper triangular
+  if (all(BETA[lower.tri(BETA)] == 0)) {
+    return(backsolve(diag(nr) - BETA, diag(nr)))
+  }
+
+  # case 4: recursive/DAG
+  # BETA[i,j] != 0  <=>  directed edge j -> i
+  indegree <- rowSums(BETA != 0)
+  result <- integer(nr)
+  k <- 0L
+  queue <- which(indegree == 0)
+  while (length(queue) > 0L) {
+    v <- queue[1L]; queue <- queue[-1L]
+    k <- k + 1L;   result[k] <- v
+    for (u in which(BETA[, v] != 0)) {
+      indegree[u] <- indegree[u] - 1L
+      if (indegree[u] == 0L) queue <- c(queue, u)
+    }
+  }
+  if (k == nr) {
+    # recursive model: permute B to strictly lower triangular, solve, unpermute
+    IB.inv <- forwardsolve(diag(nr) - BETA[result, result], diag(nr))
+    inv.order <- order(result)
+    return(IB.inv[inv.order, inv.order])
+  }
+
+  # case 5: non-recursive model
+  tmp <- -BETA
+  diag(tmp) <- 1
+  solve(tmp)
 }
 
 # only if ALPHA=NULL but we need it anyway

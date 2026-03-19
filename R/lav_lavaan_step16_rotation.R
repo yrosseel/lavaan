@@ -82,7 +82,10 @@ lav_lavaan_step16_rotation <- function(lavoptions = NULL,
       attr(con.jac, "inactive.idx") <-
         attr(lavmodel.unrot@con.jac, "inactive.idx")
       attr(con.jac, "cin.idx") <- attr(lavmodel.unrot@con.jac, "cin.idx")
-      attr(con.jac, "ceq.idx") <- attr(lavmodel.unrot@con.jac, "ceq.idx")
+      # use nrow(lavmodel@ceq.JAC), not lavmodel.unrot (which may have had
+      # zero rows removed by lav_constraints_parse for temporarily-fixed
+      # user=7 EFA identification parameters)
+      attr(con.jac, "ceq.idx") <- seq_len(nrow(lavmodel@ceq.JAC))
       lavmodel@con.jac <- con.jac
     }
 
