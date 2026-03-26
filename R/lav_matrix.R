@@ -932,15 +932,6 @@ lav_matrix_commutation_mn_pre <- function(A, m = 1L, n = 1L) {
   OUT
 }
 
-# N_n == 1/2 (I_n^2 + K_nn)
-# see MN page 48
-#
-# N_n == D_n %*% D^+_n
-#
-lav_matrix_commutation_Nn <- function(n = 1L) {
-  lav_msg_stop(gettext("not implemented yet"))
-}
-
 # (simplified) kronecker product for square matrices
 lav_matrix_kronecker_square <- function(A, check = TRUE) {
   dimA <- dim(A)
@@ -990,24 +981,20 @@ lav_matrix_kronecker_symmetric <- function(S, check = TRUE) {
 # where S is symmetric, and the rows of S2 correspond to
 # the elements of S
 # eg - S2 = DELTA (the jacobian dS/dtheta)
-lav_matrix_tS2_SxS_S2 <- function(S2, S, check = TRUE) {
-  # size of S
-  n <- NROW(S)
+lav_matrix_s_kron_s_pre_post <- function(s_mat, s2_mat) {
+  # size of s_mat
+  n <- NROW(s_mat)
 
-  if (check) {
-    stopifnot(NROW(S2) == n * n)
-  }
-
-  A <- matrix(S %*% matrix(S2, n, ), n * n, )
-  A2 <- A[rep(seq_len(n), each = n) + (seq_len(n) - 1L) * n, , drop = FALSE]
-  crossprod(A, A2)
+  a_mat <- matrix(s_mat %*% matrix(s2_mat, n, ), n * n, )
+  a2_mat <- a_mat[rep(seq_len(n), each = n) + (seq_len(n) - 1L) * n, , drop = FALSE]
+  crossprod(a_mat, a2_mat)
 }
 
 # shortcut for the idiom 't(D) %*% (S %x% S) %*% D'
 # where S is symmetric, and D is the duplication matrix
 # lav_matrix_tD_SxS_D <- function(S) {
 
-# TODO!!
+#TODO: continue coding here
 
 # }
 
