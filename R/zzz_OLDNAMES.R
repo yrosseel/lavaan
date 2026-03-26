@@ -1,12 +1,12 @@
 # keep 'old' names for some function names that have been used
 # (or are still being used) by external packages
-# rsem
-computeExpectedInformation <- lav_model_information_expected      # nolint start
-# only for simsem ....
-getParameterLabels <- lav_partable_labels
+# rsem ==> tools::testinstalledpackages succesfull without next line
+# computeExpectedInformation <- lav_model_information_expected      
+# only for simsem ==> tools::testinstalledpackages succesfull without next line
+# getParameterLabels <- lav_partable_labels
 
 # standardize function names in lav_utils.R / 31 Oct 2025
-getCov <- function(x, lower = TRUE, diagonal = TRUE, sds = NULL,
+getCov <- function(x, lower = TRUE, diagonal = TRUE, sds = NULL,    # nolint start
                    names = paste("V", 1:nvar, sep = "")) {
   lav_deprecated("lav_getcov")
   if (diagonal) {
