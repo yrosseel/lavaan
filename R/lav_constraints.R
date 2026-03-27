@@ -389,28 +389,29 @@ lav_constraints_check_simple <- function(lavmodel = NULL) {
   simple
 }
 
-lav_constraints_R2K <- function(lavmodel = NULL, R = NULL) {
+lav_constraints_r2k <- function(lavmodel = NULL) {
   # constraint matrix
+  m_r <- NULL
   if (!is.null(lavmodel)) {
-    R <- lavmodel@ceq.JAC
+    m_r <- lavmodel@ceq.JAC
   }
-  stopifnot(!is.null(R))
+  stopifnot(!is.null(m_r))
 
-  npar.full <- NCOL(R)
-  npar.red <- npar.full - NROW(R)
+  npar_full <- NCOL(m_r)
+  npar_red <- npar_full - NROW(m_r)
 
-  K <- diag(npar.full)
-  for (i in 1:NROW(R)) {
-    idx1 <- which(R[i, ] == 1)
-    idx2 <- which(R[i, ] == -1)
-    K[idx2, idx1] <- 1
+  m_k <- diag(npar_full)
+  for (i in 1:NROW(m_r)) {
+    idx1 <- which(m_r[i, ] == 1)
+    idx2 <- which(m_r[i, ] == -1)
+    m_k[idx2, idx1] <- 1
   }
 
   # remove redundant columns
-  neg.idx <- which(colSums(R) < 0)
-  K <- K[, -neg.idx]
+  neg_idx <- which(colSums(m_r) < 0)
+  m_k <- m_k[, -neg_idx]
 
-  K
+  m_k
 }
 
 lav_constraints_lambda_pre <- function(lavobject = NULL, method = "Don") {

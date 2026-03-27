@@ -23,8 +23,8 @@ in Snake Case, e.g. `lav_fit_cfi_lavobject`.
 
 ## Names for function arguments and variables.
 
-The names for function arguments and variables should be lowercase and dotted,
-e.g. `categorical.flag`.
+The names for function arguments and variables should be snake_case,
+e.g. `categorical_flag`.
 
 ## Warnings, errors and notes.
 

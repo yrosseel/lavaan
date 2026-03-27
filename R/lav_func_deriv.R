@@ -188,24 +188,24 @@ lav_func_hessian_complex <- function(func, x,
   H
 }
 
-lav_deriv_cov2corB <- function(COV = NULL) {
-  nvar <- nrow(COV)
-  dS.inv <- 1 / diag(COV)
-  R <- cov2cor(COV)
-  A <- -R %x% (0.5 * diag(dS.inv))
-  B <- (0.5 * diag(dS.inv)) %x% -R
-  DD <- diag(lav_matrix_vec(diag(nvar)))
-  A2 <- A %*% DD
-  B2 <- B %*% DD
-  out <- A2 + B2 + diag(lav_matrix_vec(tcrossprod(sqrt(dS.inv))))
-  D <- lav_matrix_duplication(nvar)
-  out.vech <- 0.5 * (t(D) %*% out %*% D)
-  out.vech
+lav_deriv_cov2cor_b <- function(m_cov = NULL) {
+  nvar <- nrow(m_cov)
+  ds_inv <- 1 / diag(m_cov)
+  m_r <- cov2cor(m_cov)
+  m_a <- -m_r %x% (0.5 * diag(ds_inv))
+  m_b <- (0.5 * diag(ds_inv)) %x% -m_r
+  m_dd <- diag(lav_matrix_vec(diag(nvar)))
+  a2 <- m_a %*% m_dd
+  b2 <- m_b %*% m_dd
+  out <- a2 + b2 + diag(lav_matrix_vec(tcrossprod(sqrt(ds_inv))))
+  m_d <- lav_matrix_duplication(nvar)
+  out_vech <- 0.5 * (t(m_d) %*% out %*% m_d)
+  out_vech
 }
 
 # quick and dirty (FIXME!!!) way to get
 # surely there must be a more elegant way?
-# see lav_deriv_cov2corB, if no num.idx...
+# see lav_deriv_cov2cor_b, if no num.idx...
 # dCor/dCov
 lav_deriv_cov2cor <- function(COV = NULL, num.idx = NULL) {
   # dCor/dvar1 = - cov / (2*var1 * sqrt(var1) * sqrt(var2))

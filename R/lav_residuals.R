@@ -597,7 +597,7 @@ lav_residuals_acov <- function(object, type = "raw", z.type = "standardized",
           } else {
             sampstat[[g]][["cov"]]
           }
-          F1 <- lav_deriv_cov2corB(COV)
+          F1 <- lav_deriv_cov2cor_b(COV)
           if (lavmodel@meanstructure) {
             SS <- 1 / sqrt(diag(COV))
             FF <- lav_matrix_bdiag(diag(SS, nrow = length(SS)), F1)

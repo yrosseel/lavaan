@@ -123,7 +123,7 @@ lav_scores <- function(object, scaling = FALSE, # nolint
   if (remove.duplicated && lavmodel@eq.constraints) {
     simple.flag <- lav_constraints_check_simple(lavmodel)
     if (simple.flag) {
-      k_matrix <- lav_constraints_R2K(lavmodel)
+      k_matrix <- lav_constraints_r2k(lavmodel)
       score_matrix <- score_matrix %*% k_matrix
     } else {
       lav_msg_warn(gettext(

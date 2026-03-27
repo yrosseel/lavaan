@@ -590,12 +590,12 @@ lav_lavaan_lavinspect <- function(object,                                # nolin
       add.labels = add.labels, add.class = add.class)
 
   } else if (what == "ugamma" || what == "ug" || what == "u.gamma") {
-    lav_object_inspect_UGamma(object,
-      add.labels = add.labels, add.class = add.class)
+    lav_object_inspect_ugamma(object,
+      add_labels = add.labels, add_class = add.class)
   } else if (what == "ufromugamma" || what == "u") {
-    lav_object_inspect_UfromUGamma(object,
-      add.labels = add.labels, add.class = add.class,
-      drop.list.single.group = drop.list.single.group)
+    lav_object_inspect_u_from_ugamma(object,
+      add_labels = add.labels, add_class = add.class,
+      drop_list_single_group = drop.list.single.group)
 
     ### jacobians ####
   } else if (what == "delta") {
@@ -2742,46 +2742,46 @@ lav_object_inspect_vcov_def <- function(object, joint = FALSE,
   return.value
 }
 
-lav_object_inspect_UGamma <- function(object,                  # nolint
-    add.labels = FALSE, add.class = FALSE) {
+lav_object_inspect_ugamma <- function(object,                  # nolint
+    add_labels = FALSE, add_class = FALSE) {
 
-  out <- lav_test_satorra_bentler(lavobject     = object,
-    method        = "original",
+  out <- lav_test_satorra_bentler(lavobject = object,
+    method = "original",
     return.ugamma = TRUE)
-  return.value <- out$UGamma
+  return_value <- out$UGamma
 
   # labels
-  # if(add.labels) {
+  # if (add_labels) {
   # colnames(return.value) <- rownames(return.value) <-
   # }
 
   # class
-  if (add.class) {
-    class(return.value) <- c("lavaan.matrix.symmetric", "matrix")
+  if (add_class) {
+    class(return_value) <- c("lavaan.matrix.symmetric", "matrix")
   }
 
-  return.value
+  return_value
 }
 
-lav_object_inspect_UfromUGamma <- function(object,            # nolint
-    add.labels = FALSE, add.class = FALSE, drop.list.single.group = FALSE) {
+lav_object_inspect_u_from_ugamma <- function(object,            # nolint
+    add_labels = FALSE, add_class = FALSE, drop_list_single_group = FALSE) {
 
   out <- lav_test_satorra_bentler(lavobject     = object,
     method        = "original",
     return.u      = TRUE)
-  return.value <- out$UfromUGamma
+  return_value <- out$UfromUGamma
 
   # labels
-  # if(add.labels) {
+  # if (add_labels) {
   # colnames(return.value) <- rownames(return.value) <-
   # }
 
   # class
-  if (add.class) {
-    class(return.value) <- c("lavaan.matrix.symmetric", "matrix")
+  if (add_class) {
+    class(return_value) <- c("lavaan.matrix.symmetric", "matrix")
   }
 
-  return.value
+  return_value
 }
 
 
