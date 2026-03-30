@@ -112,13 +112,13 @@ lav_model_nvcov_robust_sem <- function(lavmodel = NULL,
     # - Gamma is not identical to what is used for WLS; closer to EQS
     # - N/N-1 bug in G11 for NVarCov (but not test statistic)
     # - we divide by N-1! (just like EQS)
-    E.inv <- lav_model_information_expected_MLM(
+    E.inv <- lav_model_information_expected_mlm(
       lavmodel = lavmodel,
       lavsamplestats = lavsamplestats,
       extra = TRUE,
       augmented = TRUE,
       inverted = TRUE,
-      use.ginv = use.ginv
+      use_ginv = use.ginv
     )
   } else {
     E.inv <- lav_model_information(

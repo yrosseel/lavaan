@@ -201,28 +201,28 @@ lav_model_information_expected <- function(lavmodel = NULL,
 }
 
 # only for Mplus MLM
-lav_model_information_expected_MLM <- function(lavmodel = NULL,
+lav_model_information_expected_mlm <- function(lavmodel = NULL,
                                                lavsamplestats = NULL,
-                                               Delta = NULL,
+                                               m_delta = NULL,
                                                extra = FALSE,
                                                augmented = FALSE,
                                                inverted = FALSE,
-                                               use.ginv = FALSE) {
+                                               use_ginv = FALSE) {
   if (inverted) {
     augmented <- TRUE
   }
 
-  if (is.null(Delta)) {
-    Delta <- lav_model_delta(lavmodel = lavmodel)
+  if (is.null(m_delta)) {
+    m_delta <- lav_model_delta(lavmodel = lavmodel)
   }
 
   # compute A1
-  A1 <- vector("list", length = lavsamplestats@ngroups)
+  a1 <- vector("list", length = lavsamplestats@ngroups)
   if (lavmodel@group.w.free) {
-    GW <- unlist(lav_model_gw(lavmodel = lavmodel))
+    gw <- unlist(lav_model_gw(lavmodel = lavmodel))
   }
   for (g in 1:lavsamplestats@ngroups) {
-    A1[[g]] <- lav_mvnorm_h1_information_expected(
+    a1[[g]] <- lav_mvnorm_h1_information_expected(
       sample.cov     = lavsamplestats@cov[[g]],
       sample.cov.inv = lavsamplestats@icov[[g]],
       x.idx          = lavsamplestats@x.idx[[g]]
@@ -230,45 +230,45 @@ lav_model_information_expected_MLM <- function(lavmodel = NULL,
     # the same as GLS... (except for the N/N-1 scaling)
     if (lavmodel@group.w.free) {
       # unweight!!
-      a <- exp(GW[g]) / lavsamplestats@nobs[[g]]
-      # a <- exp(GW[g]) * lavsamplestats@ntotal / lavsamplestats@nobs[[g]]
-      A1[[g]] <- lav_matrix_bdiag(matrix(a, 1, 1), A1[[g]])
+      a <- exp(gw[g]) / lavsamplestats@nobs[[g]]
+      # a <- exp(gw[g]) * lavsamplestats@ntotal / lavsamplestats@nobs[[g]]
+      a1[[g]] <- lav_matrix_bdiag(matrix(a, 1, 1), a1[[g]])
     }
   }
 
   # compute Information per group
-  Info.group <- vector("list", length = lavsamplestats@ngroups)
+  info_group <- vector("list", length = lavsamplestats@ngroups)
   for (g in 1:lavsamplestats@ngroups) {
     fg <- lavsamplestats@nobs[[g]] / lavsamplestats@ntotal
     # compute information for this group
-    Info.group[[g]] <- fg * (t(Delta[[g]]) %*% A1[[g]] %*% Delta[[g]])
+    info_group[[g]] <- fg * (t(m_delta[[g]]) %*% a1[[g]] %*% m_delta[[g]])
   }
 
   # assemble over groups
-  Information <- Info.group[[1]]
+  information <- info_group[[1]]
   if (lavsamplestats@ngroups > 1) {
     for (g in 2:lavsamplestats@ngroups) {
-      Information <- Information + Info.group[[g]]
+      information <- information + info_group[[g]]
     }
   }
 
   # augmented information?
   if (augmented) {
-    Information <-
+    information <-
       lav_model_information_augment_invert(
         lavmodel = lavmodel,
-        information = Information,
+        information = information,
         inverted = inverted,
-        use.ginv = use.ginv
+        use.ginv = use_ginv
       )
   }
 
   if (extra) {
-    attr(Information, "Delta") <- Delta
-    attr(Information, "WLS.V") <- A1 # unweighted
+    attr(information, "Delta") <- m_delta
+    attr(information, "WLS.V") <- a1 # unweighted
   }
 
-  Information
+  information
 }
 
 

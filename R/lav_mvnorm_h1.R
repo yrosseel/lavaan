@@ -416,15 +416,15 @@ lav_mvnorm_h1_information_firstorder <- function(
   # FIXME: what about the 'unbiased = TRUE' option?
   if (is.null(Gamma)) {
     if (length(x.idx) > 0L) {
-      Gamma <- lav_samplestats_Gamma(Y,
-        x.idx = x.idx, fixed.x = TRUE,
-        cluster.idx = cluster.idx,
+      Gamma <- lav_samplestats_gamma(Y,
+        x_idx = x.idx, fixed_x = TRUE,
+        cluster_idx = cluster.idx,
         meanstructure = meanstructure
       )
     } else {
-      Gamma <- lav_samplestats_Gamma(Y,
+      Gamma <- lav_samplestats_gamma(Y,
         meanstructure = meanstructure,
-        cluster.idx = cluster.idx
+        cluster_idx = cluster.idx
       )
     }
   }
@@ -477,11 +477,11 @@ lav_mvnorm_h1_inverted_information_observed <- function(
   }
 
   if (length(x.idx) > 0L) {
-    Gamma.NT <- lav_samplestats_Gamma_NT(
-      Y = Y, wt = wt, x.idx = x.idx,
-      COV = sample.cov,
+    Gamma.NT <- lav_samplestats_gamma_nt(
+      m_y = Y, wt = wt, x_idx = x.idx,
+      m_cov = sample.cov,
       meanstructure = TRUE,
-      fixed.x = TRUE
+      fixed_x = TRUE
     )
   } else {
     I11 <- sample.cov
@@ -509,7 +509,7 @@ lav_mvnorm_h1_inverted_information_firstorder <- function(
     sample.cov.inv = NULL,
     Gamma = NULL) {
 
-  # lav_samplestats_Gamma() has no wt argument (yet)
+  # lav_samplestats_gamma() has no wt argument (yet)
   if (!is.null(wt)) {
     lav_msg_stop(gettext("function not supported if wt is not NULL"))
   }
@@ -518,12 +518,12 @@ lav_mvnorm_h1_inverted_information_firstorder <- function(
   # what about the 'unbiased = TRUE' option?
   if (is.null(Gamma)) {
     if (length(x.idx) > 0L) {
-      Gamma <- lav_samplestats_Gamma(Y,
-        x.idx = x.idx, fixed.x = TRUE,
+      Gamma <- lav_samplestats_gamma(Y,
+        x_idx = x.idx, fixed_x = TRUE,
         meanstructure = TRUE
       )
     } else {
-      Gamma <- lav_samplestats_Gamma(Y, meanstructure = TRUE)
+      Gamma <- lav_samplestats_gamma(Y, meanstructure = TRUE)
     }
   }
 
@@ -607,7 +607,7 @@ lav_mvnorm_h1_acov_sandwich <- function(
     x.idx = integer(0L),
     Gamma = NULL) {
 
-  # lav_samplestats_Gamma() has no wt argument (yet)
+  # lav_samplestats_gamma() has no wt argument (yet)
   if (!is.null(wt)) {
     lav_msg_stop(gettext("function not supported if wt is not NULL"))
   }
@@ -621,12 +621,12 @@ lav_mvnorm_h1_acov_sandwich <- function(
   # Gamma
   if (is.null(Gamma)) {
     if (length(x.idx) > 0L) {
-      Gamma <- lav_samplestats_Gamma(Y,
-        x.idx = x.idx, fixed.x = TRUE,
+      Gamma <- lav_samplestats_gamma(Y,
+        x_idx = x.idx, fixed_x = TRUE,
         meanstructure = TRUE
       )
     } else {
-      Gamma <- lav_samplestats_Gamma(Y, meanstructure = TRUE)
+      Gamma <- lav_samplestats_gamma(Y, meanstructure = TRUE)
     }
   }
 

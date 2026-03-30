@@ -258,13 +258,13 @@ lav_model_gradient <- function(lavmodel = NULL,
             WLS.V <- lavsamplestats@WLS.V[[g]] # for now
           } else {
             dls.a <- estimator.args$dls.a
-            GammaNT <- lav_samplestats_Gamma_NT(
-              COV            = Sigma.hat[[g]],
-              MEAN           = Mu.hat[[g]],
+            GammaNT <- lav_samplestats_gamma_nt(
+              m_cov          = Sigma.hat[[g]],
+              m_mean         = Mu.hat[[g]],
               rescale        = FALSE,
-              x.idx          = lavsamplestats@x.idx[[g]],
-              fixed.x        = lavmodel@fixed.x,
-              conditional.x  = lavmodel@conditional.x,
+              x_idx          = lavsamplestats@x.idx[[g]],
+              fixed_x        = lavmodel@fixed.x,
+              conditional_x  = lavmodel@conditional.x,
               meanstructure  = lavmodel@meanstructure,
               slopestructure = lavmodel@conditional.x
             )
@@ -277,13 +277,13 @@ lav_model_gradient <- function(lavmodel = NULL,
           )
         } else if (estimator == "NTRLS") {
           stopifnot(!conditional.x)
-          # WLS.V <- lav_samplestats_Gamma_inverse_NT(
-          #         ICOV = attr(Sigma.hat[[g]],"inv")[,,drop=FALSE],
-          #         COV            = Sigma.hat[[g]][,,drop=FALSE],
-          #         MEAN           = Mu.hat[[g]],
-          #         x.idx          = lavsamplestats@x.idx[[g]],
-          #         fixed.x        = fixed.x,
-          #         conditional.x  = conditional.x,
+          # WLS.V <- lav_samplestats_gamma_inverse_nt(
+          #         m_icov = attr(Sigma.hat[[g]],"inv")[,,drop=FALSE],
+          #         m_cov            = Sigma.hat[[g]][,,drop=FALSE],
+          #         m_mean           = Mu.hat[[g]],
+          #         x_idx          = lavsamplestats@x.idx[[g]],
+          #         fixed_x        = fixed.x,
+          #         conditional_x  = conditional.x,
           #         meanstructure  = meanstructure,
           #         slopestructure = conditional.x)
 
@@ -1690,114 +1690,128 @@ lav_model_omega <- function(Sigma.hat = NULL, Mu.hat = NULL,
   Omega
 }
 
-lav_model_gradient_DD <- function(lavmodel, GLIST = NULL, group = 1L) {
-  if (is.null(GLIST)) GLIST <- lavmodel@GLIST
+lav_model_gradient_dd <- function(lavmodel, g_list = NULL, group = 1L) {
+  if (is.null(g_list)) g_list <- lavmodel@GLIST
 
   #### FIX th + mu!!!!!
-  Delta.lambda <- lav_model_ddelta_dx(lavmodel, GLIST = GLIST, target = "lambda")[[group]]
-  Delta.tau <- lav_model_ddelta_dx(lavmodel, GLIST = GLIST, target = "tau")[[group]]
-  Delta.nu <- lav_model_ddelta_dx(lavmodel, GLIST = GLIST, target = "nu")[[group]]
-  Delta.theta <- lav_model_ddelta_dx(lavmodel, GLIST = GLIST, target = "theta")[[group]]
-  Delta.beta <- lav_model_ddelta_dx(lavmodel, GLIST = GLIST, target = "beta")[[group]]
-  Delta.psi <- lav_model_ddelta_dx(lavmodel, GLIST = GLIST, target = "psi")[[group]]
-  Delta.alpha <- lav_model_ddelta_dx(lavmodel, GLIST = GLIST, target = "alpha")[[group]]
-  Delta.gamma <- lav_model_ddelta_dx(lavmodel, GLIST = GLIST, target = "gamma")[[group]]
+  delta_lambda <-
+    lav_model_ddelta_dx(lavmodel, GLIST = g_list, target = "lambda")[[group]]
+  delta_tau <-
+    lav_model_ddelta_dx(lavmodel, GLIST = g_list, target = "tau")[[group]]
+  delta_nu <-
+    lav_model_ddelta_dx(lavmodel, GLIST = g_list, target = "nu")[[group]]
+  delta_theta <-
+    lav_model_ddelta_dx(lavmodel, GLIST = g_list, target = "theta")[[group]]
+  delta_beta <-
+    lav_model_ddelta_dx(lavmodel, GLIST = g_list, target = "beta")[[group]]
+  delta_psi <-
+    lav_model_ddelta_dx(lavmodel, GLIST = g_list, target = "psi")[[group]]
+  delta_alpha <-
+    lav_model_ddelta_dx(lavmodel, GLIST = g_list, target = "alpha")[[group]]
+  delta_gamma <-
+    lav_model_ddelta_dx(lavmodel, GLIST = g_list, target = "gamma")[[group]]
 
-  ov.y.dummy.ov.idx <- lavmodel@ov.y.dummy.ov.idx[[group]]
-  ov.x.dummy.ov.idx <- lavmodel@ov.x.dummy.ov.idx[[group]]
-  ov.y.dummy.lv.idx <- lavmodel@ov.y.dummy.lv.idx[[group]]
-  ov.x.dummy.lv.idx <- lavmodel@ov.x.dummy.lv.idx[[group]]
-  ov.dummy.idx <- c(ov.y.dummy.ov.idx, ov.x.dummy.ov.idx)
-  lv.dummy.idx <- c(ov.y.dummy.lv.idx, ov.x.dummy.lv.idx)
-  th.idx <- lavmodel@th.idx[[group]]
-  num.idx <- lavmodel@num.idx[[group]]
-  ord.idx <- unique(th.idx[th.idx > 0L])
+  ov_y_dummy_ov_idx <- lavmodel@ov.y.dummy.ov.idx[[group]]
+  ov_x_dummy_ov_idx <- lavmodel@ov.x.dummy.ov.idx[[group]]
+  ov_y_dummy_lv_idx <- lavmodel@ov.y.dummy.lv.idx[[group]]
+  ov_x_dummy_lv_idx <- lavmodel@ov.x.dummy.lv.idx[[group]]
+  ov_dummy_idx <- c(ov_y_dummy_ov_idx, ov_x_dummy_ov_idx)
+  lv_dummy_idx <- c(ov_y_dummy_lv_idx, ov_x_dummy_lv_idx)
+  num_idx <- lavmodel@num.idx[[group]]
 
   # fix Delta's...
-  mm.in.group <- 1:lavmodel@nmat[group] + cumsum(c(0, lavmodel@nmat))[group]
-  MLIST <- GLIST[mm.in.group]
+  mm_in_group <- 1:lavmodel@nmat[group] + cumsum(c(0, lavmodel@nmat))[group]
+  m_list <- g_list[mm_in_group]
 
-  DD <- list()
+  dd <- list()
   nvar <- lavmodel@nvar
-  nfac <- ncol(MLIST$lambda) - length(lv.dummy.idx)
+  nfac <- ncol(m_list$lambda) - length(lv_dummy_idx)
 
-  # DD$theta
-  theta.idx <- lav_matrix_diagh_idx(nvar)
-  DD$theta <- Delta.theta[theta.idx, , drop = FALSE]
-  if (length(ov.dummy.idx) > 0L) {
-    psi.idx <- lav_matrix_diagh_idx(ncol(MLIST$psi))[lv.dummy.idx]
-    DD$theta[ov.dummy.idx, ] <- Delta.psi[psi.idx, , drop = FALSE]
+  # dd$theta
+  theta_idx <- lav_matrix_diagh_idx(nvar)
+  dd$theta <- delta_theta[theta_idx, , drop = FALSE]
+  if (length(ov_dummy_idx) > 0L) {
+    psi_idx <- lav_matrix_diagh_idx(ncol(m_list$psi))[lv_dummy_idx]
+    dd$theta[ov_dummy_idx, ] <- delta_psi[psi_idx, , drop = FALSE]
   }
   # num only? FIXME or just all of them?
-  DD$theta <- DD$theta[num.idx, , drop = FALSE]
+  dd$theta <- dd$theta[num_idx, , drop = FALSE]
 
-  # DD$nu
-  DD$nu <- Delta.nu
-  if (length(ov.dummy.idx) > 0L) {
-    DD$nu[ov.dummy.idx, ] <- Delta.alpha[lv.dummy.idx, ]
+  # dd$nu
+  dd$nu <- delta_nu
+  if (length(ov_dummy_idx) > 0L) {
+    dd$nu[ov_dummy_idx, ] <- delta_alpha[lv_dummy_idx, ]
   }
-  DD$nu <- DD$nu[num.idx, , drop = FALSE] # needed?
+  dd$nu <- dd$nu[num_idx, , drop = FALSE] # needed?
 
-  # DD$lambda
+  # dd$lambda
   nr <- nvar
   nc <- nfac
-  lambda.idx <- nr * ((1:nc) - 1L) + rep(1:nvar, each = nc)
-  DD$lambda <- Delta.lambda[lambda.idx, , drop = FALSE]
-  if (length(ov.dummy.idx) > 0L) {
-    nr <- nrow(MLIST$beta)
+  lambda_idx <- nr * ((1:nc) - 1L) + rep(1:nvar, each = nc)
+  dd$lambda <- delta_lambda[lambda_idx, , drop = FALSE]
+  if (length(ov_dummy_idx) > 0L) {
+    nr <- nrow(m_list$beta)
     nc <- nfac # only the first 1:nfac columns
-    # beta.idx <- rep(nr*((1:nc) - 1L), each=length(lv.dummy.idx)) + rep(lv.dummy.idx, times=nc) ## FIXME
-    beta.idx <- rep(nr * ((1:nc) - 1L), times = length(lv.dummy.idx)) + rep(lv.dummy.idx, each = nc)
+    # beta_idx <- rep(nr*((1:nc) - 1L), each=length(lv_dummy_idx)) +
+    #                                 rep(lv_dummy_idx, times=nc) ## FIXME
+    beta_idx <- rep(nr * ((1:nc) - 1L),
+           times = length(lv_dummy_idx)) + rep(lv_dummy_idx, each = nc)
 
-    # l.idx <- inr*((1:nc) - 1L) + rep(ov.dummy.idx, each=nc) ## FIXME
-    # l.idx <- rep(nr*((1:nc) - 1L), each=length(ov.dummy.idx)) + rep(ov.dummy.idx, times=nc)
-    l.idx <- rep(nr * ((1:nc) - 1L), times = length(ov.dummy.idx)) + rep(ov.dummy.idx, each = nc)
-    DD$lambda[match(l.idx, lambda.idx), ] <- Delta.beta[beta.idx, , drop = FALSE]
+    # l_idx <- inr*((1:nc) - 1L) + rep(ov_dummy_idx, each=nc) ## FIXME
+    # l_idx <- rep(nr*((1:nc) - 1L), each=length(ov_dummy_idx)) +
+    #                                rep(ov_dummy_idx, times=nc)
+    l_idx <- rep(nr * ((1:nc) - 1L),
+                times = length(ov_dummy_idx)) + rep(ov_dummy_idx, each = nc)
+    dd$lambda[match(l_idx, lambda_idx), ] <-
+                delta_beta[beta_idx, , drop = FALSE]
   }
 
-  # DD$KAPPA
-  DD$kappa <- Delta.gamma
-  if (length(ov.dummy.idx) > 0L) {
-    nr <- nrow(MLIST$gamma)
-    nc <- ncol(MLIST$gamma)
-    kappa.idx <- nr * ((1:nc) - 1L) + rep(lv.dummy.idx, each = nc)
-    DD$kappa <- DD$kappa[kappa.idx, , drop = FALSE]
+  # dd$KAPPA
+  dd$kappa <- delta_gamma
+  if (length(ov_dummy_idx) > 0L) {
+    nr <- nrow(m_list$gamma)
+    nc <- ncol(m_list$gamma)
+    kappa_idx <- nr * ((1:nc) - 1L) + rep(lv_dummy_idx, each = nc)
+    dd$kappa <- dd$kappa[kappa_idx, , drop = FALSE]
   }
 
-  # DD$GAMMA
-  if (!is.null(MLIST$gamma)) {
-    nr <- nrow(MLIST$gamma)
-    nc <- ncol(MLIST$gamma)
-    lv.idx <- 1:nfac
+  # dd$GAMMA
+  if (!is.null(m_list$gamma)) {
+    nr <- nrow(m_list$gamma)
+    nc <- ncol(m_list$gamma)
+    lv_idx <- 1:nfac
     # MUST BE ROWWISE!
-    gamma.idx <- rep(nr * ((1:nc) - 1L), times = length(lv.idx)) + rep(lv.idx, each = nc)
-    DD$gamma <- Delta.gamma[gamma.idx, , drop = FALSE]
+    gamma_idx <- rep(nr * ((1:nc) - 1L),
+                 times = length(lv_idx)) + rep(lv_idx, each = nc)
+    dd$gamma <- delta_gamma[gamma_idx, , drop = FALSE]
   }
 
-  # DD$BETA
-  if (!is.null(MLIST$beta)) {
-    nr <- nc <- nrow(MLIST$beta)
-    lv.idx <- 1:nfac
+  # dd$BETA
+  if (!is.null(m_list$beta)) {
+    nr <- nc <- nrow(m_list$beta)
+    lv_idx <- 1:nfac
     # MUST BE ROWWISE!
-    beta.idx <- rep(nr * ((1:nfac) - 1L), times = nfac) + rep(lv.idx, each = nfac)
-    DD$beta <- Delta.beta[beta.idx, , drop = FALSE]
+    beta_idx <- rep(nr * ((1:nfac) - 1L),
+                times = nfac) + rep(lv_idx, each = nfac)
+    dd$beta <- delta_beta[beta_idx, , drop = FALSE]
   }
 
-  ## DD$psi
-  DD$psi <- Delta.psi
-  if (length(lv.dummy.idx) > 0L) {
-    nr <- nc <- nrow(MLIST$psi)
-    lv.idx <- 1:nfac
+  ## dd$psi
+  dd$psi <- delta_psi
+  if (length(lv_dummy_idx) > 0L) {
+    nr <- nc <- nrow(m_list$psi)
+    lv_idx <- 1:nfac
     # MUST BE ROWWISE!
-    psi.idx <- rep(nr * ((1:nfac) - 1L), times = nfac) + rep(lv.idx, each = nfac)
+    psi_idx <- rep(nr * ((1:nfac) - 1L),
+               times = nfac) + rep(lv_idx, each = nfac)
 
-    DD$psi <- DD$psi[psi.idx, , drop = FALSE]
+    dd$psi <- dd$psi[psi_idx, , drop = FALSE]
   }
 
-  ## DD$tau
-  if (!is.null(MLIST$tau)) {
-    DD$tau <- Delta.tau
+  ## dd$tau
+  if (!is.null(m_list$tau)) {
+    dd$tau <- delta_tau
   }
 
-  DD
+  dd
 }

@@ -354,7 +354,7 @@ lav_lavaan_step10_cache <- function(slotCache = NULL, # nolint
           mean = 0, sd = 1,
           ndim = nfac
         )
-      # lavcache[[g]]$DD <- lav_model_gradient_DD(lavmodel, group = g)
+      # lavcache[[g]]$DD <- lav_model_gradient_dd(lavmodel, group = g)
     }
   }
 

@@ -440,99 +440,99 @@ lav_mvnorm_missing_dlogl_dmu_samplestats <- function(Yp = NULL,
 
 
 # 2b: derivative logl with respect to Sigma (full matrix, ignoring symmetry)
-lav_mvnorm_missing_dlogl_dSigma <- function(Y = NULL,
-                                            Mp = NULL,
+lav_mvnorm_missing_dlogl_dsigma <- function(m_y = NULL,
+                                            l_mp = NULL,
                                             wt = NULL,
-                                            Mu = NULL,
-                                            Sigma = NULL,
-                                            x.idx = integer(0L),
-                                            Sigma.inv = NULL,
-                                            Sinv.method = "eigen") {
-  P <- NCOL(Y)
-  Mu <- as.numeric(Mu)
+                                            m_mu = NULL,
+                                            m_sigma = NULL,
+                                            x_idx = integer(0L),
+                                            sigma_inv = NULL,
+                                            sinv_method = "eigen") {
+  p <- NCOL(m_y)
+  m_mu <- as.numeric(m_mu)
   if (!is.null(wt)) {
-    N <- sum(wt)
+    n <- sum(wt)
   } else {
-    N <- NROW(Y)
+    n <- NROW(m_y)
   }
-  NY <- NROW(Y)
+  ny <- NROW(m_y)
 
-  if (is.null(Sigma.inv)) {
+  if (is.null(sigma_inv)) {
     # invert Sigma
-    Sigma.inv <- lav_matrix_symmetric_inverse(
-      S = Sigma, logdet = FALSE,
-      Sinv.method = Sinv.method
+    sigma_inv <- lav_matrix_symmetric_inverse(
+      S = m_sigma, logdet = FALSE,
+      Sinv.method = sinv_method
     )
   }
 
   # subtract Mu
-  Yc <- t(t(Y) - Mu)
+  m_yc <- t(t(m_y) - m_mu)
 
   # dvechSigma
-  dSigma <- matrix(0, P, P)
+  dsigma <- matrix(0, p, p)
 
   # missing patterns
-  if (is.null(Mp)) {
-    Mp <- lav_data_missing_patterns(Y)
+  if (is.null(l_mp)) {
+    l_mp <- lav_data_missing_patterns(m_y)
   }
 
   # for each pattern
-  for (p in seq_len(Mp$npatterns)) {
+  for (p in seq_len(l_mp$npatterns)) {
     # observed values for this pattern
-    var.idx <- Mp$pat[p, ]
+    var_idx <- l_mp$pat[p, ]
 
     # missing values for this pattern
-    na.idx <- which(!var.idx)
+    na_idx <- which(!var_idx)
 
     # cases with this pattern
-    case.idx <- Mp$case.idx[[p]]
+    case.idx <- l_mp$case.idx[[p]]
 
     # invert Sigma for this pattern
-    if (length(na.idx) > 0L) {
-      sigma.inv <- lav_matrix_symmetric_inverse_update(
-        S.inv = Sigma.inv,
-        rm.idx = na.idx, logdet = FALSE
+    if (length(na_idx) > 0L) {
+      local_sigma_inv <- lav_matrix_symmetric_inverse_update(
+        S.inv = sigma_inv,
+        rm.idx = na_idx, logdet = FALSE
       )
     } else {
-      sigma.inv <- Sigma.inv
+      local_sigma_inv <- sigma_inv
     }
 
     if (!is.null(wt)) {
-      FREQ <- sum(wt[case.idx])
+      freq <- sum(wt[case.idx])
     } else {
-      FREQ <- Mp$freq[p]
+      freq <- l_mp$freq[p]
     }
 
     if (length(case.idx) > 1L) {
       if (!is.null(wt)) {
-        out <- stats::cov.wt(Y[case.idx, var.idx, drop = FALSE],
-          wt = wt[Mp$case.idx[[p]]], method = "ML"
+        out <- stats::cov.wt(m_y[case.idx, var_idx, drop = FALSE],
+          wt = wt[l_mp$case.idx[[p]]], method = "ML"
         )
-        SY <- out$cov
-        MY <- out$center
-        W.tilde <- SY + tcrossprod(MY - Mu[var.idx])
+        m_sy <- out$cov
+        m_my <- out$center
+        w_tilde <- m_sy + tcrossprod(m_my - m_mu[var_idx])
       } else {
-        W.tilde <- crossprod(Yc[case.idx, var.idx, drop = FALSE]) / FREQ
+        w_tilde <- crossprod(m_yc[case.idx, var_idx, drop = FALSE]) / freq
       }
     } else {
-      W.tilde <- tcrossprod(Yc[case.idx, var.idx])
+      w_tilde <- tcrossprod(m_yc[case.idx, var_idx])
     }
 
     # dSigma for this pattern
-    dSigma.pattern <- matrix(0, P, P)
-    dSigma.pattern[var.idx, var.idx] <- -(1 / 2) * (sigma.inv -
-      (sigma.inv %*% W.tilde %*% sigma.inv))
+    dsigma_pattern <- matrix(0, p, p)
+    dsigma_pattern[var_idx, var_idx] <- -(1 / 2) * (local_sigma_inv -
+      (local_sigma_inv %*% w_tilde %*% local_sigma_inv))
 
     # update dSigma
-    dSigma <- dSigma + (dSigma.pattern * FREQ)
+    dsigma <- dsigma + (dsigma_pattern * freq)
   }
 
   # fixed.x?
-  if (length(x.idx) > 0L) {
-    dSigma[x.idx, x.idx] <- 0
+  if (length(x_idx) > 0L) {
+    dsigma[x_idx, x_idx] <- 0
   }
 
-  dSigma
+  dsigma
 }
 
 # 2bbis: using samplestats
@@ -602,10 +602,10 @@ lav_mvnorm_missing_dlogl_dvechSigma <- function(Y = NULL,
                                                 Sigma = NULL,
                                                 Sigma.inv = NULL,
                                                 Sinv.method = "eigen") {
-  dSigma <- lav_mvnorm_missing_dlogl_dSigma(
-    Y = Y, wt = wt, Mu = Mu,
-    Sigma = Sigma, x.idx = x.idx, Sigma.inv = Sigma.inv,
-    Sinv.method = Sinv.method
+  dSigma <- lav_mvnorm_missing_dlogl_dsigma(
+    m_y = Y, wt = wt, m_mu = Mu,
+    m_sigma = Sigma, x_idx = x.idx, sigma_inv = Sigma.inv,
+    sinv_method = Sinv.method
   )
 
   dvechSigma <- as.numeric(lav_matrix_duplication_pre(

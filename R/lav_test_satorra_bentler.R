@@ -91,7 +91,7 @@ lav_test_satorra_bentler <- function(lavobject = NULL,
   if (npar > 0L &&
     (is.null(E.inv) || is.null(Delta) || is.null(WLS.V) || E.inv.recompute)) {
     if (lavoptions$information.expected.mplus && lavoptions$estimator == "ML") {
-      E <- lav_model_information_expected_MLM(
+      E <- lav_model_information_expected_mlm(
         lavmodel = lavmodel,
         augmented = FALSE, inverted = FALSE,
         lavsamplestats = lavsamplestats, extra = TRUE

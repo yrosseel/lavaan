@@ -82,13 +82,13 @@ lav_object_independence <- lav_object_baseline <- function(object = NULL,
       lavoptions$estimator.args$dls.GammaNT <- "sample"
       dls.a <- lavoptions$estimator.args$dls.a
       for (g in 1:lavsamplestats@ngroups) {
-        GammaNT <- lav_samplestats_Gamma_NT(
-          COV            = lavsamplestats@cov[[g]],
-          MEAN           = lavsamplestats@mean[[g]],
+        GammaNT <- lav_samplestats_gamma_nt(
+          m_cov          = lavsamplestats@cov[[g]],
+          m_mean         = lavsamplestats@mean[[g]],
           rescale        = FALSE,
-          x.idx          = lavsamplestats@x.idx[[g]],
-          fixed.x        = lavoptions$fixed.x,
-          conditional.x  = lavoptions$conditional.x,
+          x_idx          = lavsamplestats@x.idx[[g]],
+          fixed_x        = lavoptions$fixed.x,
+          conditional_x  = lavoptions$conditional.x,
           meanstructure  = lavoptions$meanstructure,
           slopestructure = lavoptions$conditional.x
         )

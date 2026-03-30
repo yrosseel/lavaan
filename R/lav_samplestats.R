@@ -827,24 +827,24 @@ lav_samplestats_from_data <- function(lavdata = NULL,
         }
 
         if (correlation) {
-		  NACOV[[g]] <- lav_samplestats_cor_Gamma(
-		    Y = Y,
-			meanstructure = meanstructure
+		  NACOV[[g]] <- lav_samplestats_cor_gamma(
+		    m_y = Y,
+			  meanstructure = meanstructure
 		  )
 		} else {
           NACOV[[g]] <-
-            lav_samplestats_Gamma(
-              Y = Y,
-              x.idx = x.idx[[g]],
-              cluster.idx = cluster.idx,
-              fixed.x = fixed.x,
-              conditional.x = conditional.x,
+            lav_samplestats_gamma(
+              m_y = Y,
+              x_idx = x.idx[[g]],
+              cluster_idx = cluster.idx,
+              fixed_x = fixed.x,
+              conditional_x = conditional.x,
               meanstructure = meanstructure,
               slopestructure = conditional.x,
-              gamma.n.minus.one =
+              gamma_n_minus_one =
                 lavoptions$gamma.n.minus.one,
               unbiased = lavoptions$gamma.unbiased,
-              Mplus.WLS = FALSE
+              mplus_wls = FALSE
             )
         }
       } else if (estimator %in% c("WLS", "DWLS", "ULS", "DLS", "IV", "catML")) {
@@ -882,40 +882,40 @@ lav_samplestats_from_data <- function(lavdata = NULL,
             cluster.idx <- NULL
           }
 		  if (correlation) {
-            NACOV[[g]] <- lav_samplestats_cor_Gamma(
-              Y = Y,
+            NACOV[[g]] <- lav_samplestats_cor_gamma(
+              m_y = Y,
               meanstructure = meanstructure
             )
 		  } else {
             if ("robust.sem.nt" %in% lavoptions$se ||
                 "browne.residual.nt" %in% lavoptions$test) {
               NACOV[[g]] <-
-                lav_samplestats_Gamma_NT(
-                  Y = Y,
-                  COV = cov[[g]],
-                  MEAN = mean[[g]],
-                  x.idx = x.idx[[g]],
+                lav_samplestats_gamma_nt(
+                  m_y = Y,
+                  m_cov = cov[[g]],
+                  m_mean = mean[[g]],
+                  x_idx = x.idx[[g]],
                   # cluster.idx = cluster.idx, # not available
-                  fixed.x = fixed.x,
-                  conditional.x = conditional.x,
+                  fixed_x = fixed.x,
+                  conditional_x = conditional.x,
                   meanstructure = meanstructure,
                   slopestructure = conditional.x
                 )
             } else {
               NACOV[[g]] <-
-                lav_samplestats_Gamma(
-                  Y = Y,
-                  x.idx = x.idx[[g]],
-                  cluster.idx = cluster.idx,
-                  fixed.x = fixed.x,
-                  conditional.x = conditional.x,
+                lav_samplestats_gamma(
+                  m_y = Y,
+                  x_idx = x.idx[[g]],
+                  cluster_idx = cluster.idx,
+                  fixed_x = fixed.x,
+                  conditional_x = conditional.x,
                   meanstructure = meanstructure,
                   slopestructure = conditional.x,
-                  gamma.n.minus.one =
+                  gamma_n_minus_one =
                     lavoptions$gamma.n.minus.one,
                   unbiased =
                     lavoptions$gamma.unbiased,
-                  Mplus.WLS = lavoptions$gamma.wls.mplus
+                  mplus_wls = lavoptions$gamma.wls.mplus
                 )
             }
           }
@@ -957,24 +957,24 @@ lav_samplestats_from_data <- function(lavdata = NULL,
       if (estimator == "DLS" && dls.GammaNT == "sample" && dls.a < 1.0) {
         # compute GammaNT here
         if (correlation) {
-          GammaNT <- lav_samplestats_cor_Gamma_NT(
-            COV            = cov[[g]],
-            MEAN           = mean[[g]],
+          GammaNT <- lav_samplestats_cor_gamma_nt(
+            m_cov          = cov[[g]],
+            m_mean         = mean[[g]],
             rescale        = FALSE,
-            x.idx          = x.idx[[g]],     # not used yet
-            fixed.x        = fixed.x,        # not used yet
-            conditional.x  = conditional.x,  # not used yet
+            x_idx          = x.idx[[g]],     # not used yet
+            fixed_x        = fixed.x,        # not used yet
+            conditional_x  = conditional.x,  # not used yet
             meanstructure  = meanstructure,  # not used yet
             slopestructure = conditional.x   # not used yet
           )
         } else {
-          GammaNT <- lav_samplestats_Gamma_NT(
-            COV            = cov[[g]],
-            MEAN           = mean[[g]],
+          GammaNT <- lav_samplestats_gamma_nt(
+            m_cov          = cov[[g]],
+            m_mean         = mean[[g]],
             rescale        = FALSE,
-            x.idx          = x.idx[[g]],
-            fixed.x        = fixed.x,
-            conditional.x  = conditional.x,
+            x_idx          = x.idx[[g]],
+            fixed_x        = fixed.x,
+            conditional_x  = conditional.x,
             meanstructure  = meanstructure,
             slopestructure = conditional.x
           )
@@ -987,26 +987,26 @@ lav_samplestats_from_data <- function(lavdata = NULL,
         # Note: we need the 'original' COV/MEAN/ICOV
         #        sample statistics; not the 'residual' version
         if (correlation) {
-          GammaNT <- lav_samplestats_cor_Gamma_NT(
-            COV            = cov[[g]],
-            MEAN           = mean[[g]],
+          GammaNT <- lav_samplestats_cor_gamma_nt(
+            m_cov          = cov[[g]],
+            m_mean         = mean[[g]],
             #rescale        = FALSE,
-            x.idx          = x.idx[[g]],     # not used yet
-            fixed.x        = fixed.x,        # not used yet
-            conditional.x  = conditional.x,  # not used yet
+            x_idx          = x.idx[[g]],     # not used yet
+            fixed_x        = fixed.x,        # not used yet
+            conditional_x  = conditional.x,  # not used yet
             meanstructure  = meanstructure,  # not used yet
             slopestructure = conditional.x   # not used yet
           )
           WLS.V[[g]] <- lav_matrix_symmetric_inverse(GammaNT)
         } else {
-          WLS.V[[g]] <- lav_samplestats_Gamma_inverse_NT(
-            ICOV           = icov[[g]],
-            COV            = cov[[g]],
-            MEAN           = mean[[g]],
+          WLS.V[[g]] <- lav_samplestats_gamma_inverse_nt(
+            m_icov         = icov[[g]],
+            m_cov          = cov[[g]],
+            m_mean         = mean[[g]],
             rescale        = FALSE,
-            x.idx          = x.idx[[g]],
-            fixed.x        = fixed.x,
-            conditional.x  = conditional.x,
+            x_idx          = x.idx[[g]],
+            fixed_x        = fixed.x,
+            conditional_x  = conditional.x,
             meanstructure  = meanstructure,
             slopestructure = conditional.x
           )
@@ -1690,26 +1690,26 @@ lav_samplestats_from_moments <- function(sample.cov = NULL,
         #        V11 <- V11 * nobs[[g]]/(nobs[[g]]-1)
         #    }
         if (correlation) {
-          GammaNT <- lav_samplestats_cor_Gamma_NT(
-            COV            = cov[[g]],
-            MEAN           = mean[[g]],
+          GammaNT <- lav_samplestats_cor_gamma_nt(
+            m_cov          = cov[[g]],
+            m_mean         = mean[[g]],
             #rescale        = FALSE,
-            x.idx          = x.idx[[g]],     # not used yet
-            fixed.x        = fixed.x,        # not used yet
-            conditional.x  = conditional.x,  # not used yet
+            x_idx          = x.idx[[g]],     # not used yet
+            fixed_x        = fixed.x,        # not used yet
+            conditional_x  = conditional.x,  # not used yet
             meanstructure  = meanstructure,  # not used yet
             slopestructure = conditional.x   # not used yet
           )
           WLS.V[[g]] <- lav_matrix_symmetric_inverse(GammaNT)
         } else {
-          WLS.V[[g]] <- lav_samplestats_Gamma_inverse_NT(
-            ICOV = icov[[g]],
-            COV = cov[[g]],
-            MEAN = mean[[g]],
+          WLS.V[[g]] <- lav_samplestats_gamma_inverse_nt(
+            m_icov = icov[[g]],
+            m_cov = cov[[g]],
+            m_mean = mean[[g]],
             rescale = FALSE,
-            x.idx = x.idx[[g]],
-            fixed.x = fixed.x,
-            conditional.x = conditional.x,
+            x_idx = x.idx[[g]],
+            fixed_x = fixed.x,
+            conditional_x = conditional.x,
             meanstructure = meanstructure,
             slopestructure = conditional.x
           )
