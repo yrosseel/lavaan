@@ -469,56 +469,56 @@ lav_mvnorm_dlogl_dvechSigma <- function(Y = NULL,
 }
 
 # 2d: : derivative logl with respect to Mu and vech(Sigma)
-lav_mvnorm_dlogl_dmu_dvechSigma <- function(Y = NULL,
+lav_mvnorm_dlogl_dmu_dvechsigma <- function(m_y = NULL,
                                             wt = NULL,
-                                            Mu = NULL,
-                                            Sigma = NULL,
-                                            x.idx = integer(0L),
-                                            Sinv.method = "eigen",
-                                            Sigma.inv = NULL) {
+                                            m_mu = NULL,
+                                            m_sigma = NULL,
+                                            x_idx = integer(0L),
+                                            sinv_method = "eigen",
+                                            sigma_inv = NULL) {
   if (!is.null(wt)) {
-    N <- sum(wt)
+    n <- sum(wt)
   } else {
-    N <- NROW(Y)
+    n <- NROW(m_y)
   }
 
-  Mu <- as.numeric(Mu)
+  m_mu <- as.numeric(m_mu)
 
-  if (is.null(Sigma.inv)) {
+  if (is.null(sigma_inv)) {
     # invert Sigma
-    Sigma.inv <- lav_matrix_symmetric_inverse(
-      S = Sigma, logdet = FALSE,
-      Sinv.method = Sinv.method
+    sigma_inv <- lav_matrix_symmetric_inverse(
+      S = m_sigma, logdet = FALSE,
+      Sinv.method = sinv_method
     )
   }
 
   # substract Mu
-  Yc <- t(t(Y) - Mu)
+  m_yc <- t(t(m_y) - m_mu)
 
-  # W.tilde
+  # m_w_tilde
   if (!is.null(wt)) {
-    out <- stats::cov.wt(Y, wt = wt, method = "ML")
-    SY <- out$cov
-    MY <- out$center
-    W.tilde <- SY + tcrossprod(MY - Mu)
-    dmu <- as.numeric(Sigma.inv %*% colSums(Yc * wt))
+    out <- stats::cov.wt(m_y, wt = wt, method = "ML")
+    m_sy <- out$cov
+    m_my <- out$center
+    m_w_tilde <- m_sy + tcrossprod(m_my - m_mu)
+    dmu <- as.numeric(sigma_inv %*% colSums(m_yc * wt))
   } else {
-    W.tilde <- lav_matrix_cov(Y, Mu = Mu)
-    dmu <- as.numeric(Sigma.inv %*% colSums(Yc))
+    m_w_tilde <- lav_matrix_cov(m_y, Mu = m_mu)
+    dmu <- as.numeric(sigma_inv %*% colSums(m_yc))
   }
 
   # derivative (avoiding kronecker product)
-  dSigma <- -(N / 2) * (Sigma.inv - (Sigma.inv %*% W.tilde %*% Sigma.inv))
+  m_dsigma <- -(n / 2) * (sigma_inv - (sigma_inv %*% m_w_tilde %*% sigma_inv))
 
   # fixed.x?
-  if (length(x.idx) > 0L) {
-    dSigma[x.idx, x.idx] <- 0
-    dmu[x.idx] <- 0
+  if (length(x_idx) > 0L) {
+    m_dsigma[x_idx, x_idx] <- 0
+    dmu[x_idx] <- 0
   }
 
   # vech
   dvechSigma <- as.numeric(lav_matrix_duplication_pre(
-    as.matrix(lav_matrix_vec(dSigma))
+    as.matrix(lav_matrix_vec(m_dsigma))
   ))
 
   c(dmu, dvechSigma)
@@ -683,9 +683,9 @@ lav_mvnorm_logl_hessian_data <- function(Y = NULL,
                                          Sigma.inv = NULL,
                                          meanstructure = TRUE) {
   if (!is.null(wt)) {
-    N <- sum(wt)
+    n <- sum(wt)
   } else {
-    N <- NROW(Y)
+    n <- NROW(Y)
   }
 
   # observed information
@@ -696,7 +696,7 @@ lav_mvnorm_logl_hessian_data <- function(Y = NULL,
     meanstructure = meanstructure
   )
 
-  -N * observed
+  -n * observed
 }
 
 # 4b: hessian Mu and vech(Sigma) from samplestats
@@ -925,7 +925,7 @@ lav_mvnorm_information_firstorder <- function(Y = NULL,
 
 # 6a: inverted unit expected information h0 Mu and vech(Sigma)
 #
-#     Note: this is the same as lav_samplestats_Gamma_NT()
+#     Note: this is the same as lav_samplestats_gamma_nt()
 #           but where COV=Sigma and MEAN=Mu
 #
 lav_mvnorm_inverted_information_expected <- function(Y = NULL, # unused!

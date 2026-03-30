@@ -835,12 +835,12 @@ lav_sem_miiv_vcov <- function(lavmodel = NULL, lavsamplestats = NULL,
           cov_g <- lavh1$implied$cov[[g]]
         }
 #         # NT version (for now), model-based
-#         gamma_g[[g]] <- lav_samplestats_Gamma_NT(
-#           COV = cov_g,
-#           MEAN = mean_g,
-#           x.idx = lavsamplestats@x.idx[[g]],
-#           fixed.x = lavmodel@fixed.x,
-#           conditional.x = lavmodel@conditional.x,
+#         gamma_g[[g]] <- lav_samplestats_gamma_nt(
+#           m_cov = cov_g,
+#           m_mean = mean_g,
+#           x_idx = lavsamplestats@x.idx[[g]],
+#           fixed_x = lavmodel@fixed.x,
+#           conditional_x = lavmodel@conditional.x,
 #           meanstructure = lavmodel@meanstructure,
 #           slopestructure = lavmodel@conditional.x
 #         )

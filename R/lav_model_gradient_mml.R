@@ -142,7 +142,7 @@ lav_model_gradient_mml <- function(lavmodel = NULL,
 
   # Delta
   ## DD <- lavcache[[group]]$DD
-  DD <- lav_model_gradient_DD(lavmodel, GLIST = GLIST, group = group)
+  DD <- lav_model_gradient_dd(lavmodel, g_list = GLIST, group = group)
 
   ## FIXME!!! do this analytically...
   x <- lav_model_get_parameters(lavmodel = lavmodel, GLIST = MLIST)

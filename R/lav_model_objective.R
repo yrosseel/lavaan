@@ -230,13 +230,13 @@ lav_model_objective <- function(lavmodel = NULL,
           WLS.V <- lavsamplestats@WLS.V[[g]]
         } else {
           dls.a <- estimator.args$dls.a
-          GammaNT <- lav_samplestats_Gamma_NT(
-            COV            = Sigma.hat[[g]],
-            MEAN           = Mu.hat[[g]],
+          GammaNT <- lav_samplestats_gamma_nt(
+            m_cov          = Sigma.hat[[g]],
+            m_mean         = Mu.hat[[g]],
             rescale        = FALSE,
-            x.idx          = lavsamplestats@x.idx[[g]],
-            fixed.x        = lavmodel@fixed.x,
-            conditional.x  = lavmodel@conditional.x,
+            x_idx          = lavsamplestats@x.idx[[g]],
+            fixed_x        = lavmodel@fixed.x,
+            conditional_x  = lavmodel@conditional.x,
             meanstructure  = lavmodel@meanstructure,
             slopestructure = lavmodel@conditional.x
           )
@@ -244,13 +244,13 @@ lav_model_objective <- function(lavmodel = NULL,
           WLS.V <- lav_matrix_symmetric_inverse(W.DLS)
         }
       } else if (estimator == "NTRLS") {
-        # WLS.V <- lav_samplestats_Gamma_inverse_NT(
-        #             ICOV = attr(Sigma.hat[[g]],"inv")[,,drop=FALSE],
-        #             COV            = Sigma.hat[[g]][,,drop=FALSE],
-        #             MEAN           = Mu.hat[[g]],
-        #             x.idx          = c(10000,10001), ### FIXME!!!!
-        #             fixed.x        = fixed.x,
-        #             conditional.x  = conditional.x,
+        # WLS.V <- lav_samplestats_gamma_inverse_nt(
+        #             m_icov = attr(Sigma.hat[[g]],"inv")[,,drop=FALSE],
+        #             m_cov            = Sigma.hat[[g]][,,drop=FALSE],
+        #             m_mean           = Mu.hat[[g]],
+        #             x_idx          = c(10000,10001), ### FIXME!!!!
+        #             fixed_x        = fixed.x,
+        #             conditional_x  = conditional.x,
         #             meanstructure  = meanstructure,
         #             slopestructure = conditional.x)
         WLS.V <- lav_mvnorm_information_expected(

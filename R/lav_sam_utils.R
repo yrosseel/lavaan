@@ -473,7 +473,7 @@ lav_sam_veta2 <- function(FS = NULL, M = NULL,
   FS.mean <- FS.mean[lv.keep]
 
   # compute Gamma for FS2[,lv.keep]
-  #FS.gamma <- lav_samplestats_Gamma(FS2[,lv.keep, drop  = FALSE],
+  #FS.gamma <- lav_samplestats_gamma(FS2[,lv.keep, drop  = FALSE],
   #                                  meanstructure = TRUE)
 
   # apply small sample correction (if requested)

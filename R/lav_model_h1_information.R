@@ -142,13 +142,13 @@ lav_model_h1_information_expected <- function(lavobject = NULL,
       A1 <- vector("list", length = lavsamplestats@ngroups)
       for (g in seq_len(lavsamplestats@ngroups)) {
         dls.a <- lavmodel@estimator.args$dls.a
-        GammaNT <- lav_samplestats_Gamma_NT(
-          COV            = lavimplied$cov[[g]],
-          MEAN           = lavimplied$mean[[g]],
+        GammaNT <- lav_samplestats_gamma_nt(
+          m_cov          = lavimplied$cov[[g]],
+          m_mean         = lavimplied$mean[[g]],
           rescale        = FALSE,
-          x.idx          = lavsamplestats@x.idx[[g]],
-          fixed.x        = lavmodel@fixed.x,
-          conditional.x  = lavmodel@conditional.x,
+          x_idx          = lavsamplestats@x.idx[[g]],
+          fixed_x        = lavmodel@fixed.x,
+          conditional_x  = lavmodel@conditional.x,
           meanstructure  = lavmodel@meanstructure,
           slopestructure = lavmodel@conditional.x
         )
@@ -379,13 +379,13 @@ lav_model_h1_information_observed <- function(lavobject = NULL,
       A1 <- vector("list", length = lavsamplestats@ngroups)
       for (g in seq_len(lavsamplestats@ngroups)) {
         dls.a <- lavmodel@estimator.args$dls.a
-        GammaNT <- lav_samplestats_Gamma_NT(
-          COV            = lavimplied$cov[[g]],
-          MEAN           = lavimplied$mean[[g]],
+        GammaNT <- lav_samplestats_gamma_nt(
+          m_cov          = lavimplied$cov[[g]],
+          m_mean         = lavimplied$mean[[g]],
           rescale        = FALSE,
-          x.idx          = lavsamplestats@x.idx[[g]],
-          fixed.x        = lavmodel@fixed.x,
-          conditional.x  = lavmodel@conditional.x,
+          x_idx          = lavsamplestats@x.idx[[g]],
+          fixed_x        = lavmodel@fixed.x,
+          conditional_x  = lavmodel@conditional.x,
           meanstructure  = lavmodel@meanstructure,
           slopestructure = lavmodel@conditional.x
         )

@@ -16,7 +16,7 @@
 
 # objective function, plus 'extra' information
 # needed for a Gauss Newton step
-lav_objective_GN <- function(x, lavsamplestats = NULL, lavmodel = NULL,
+lav_objective_gn <- function(x, lavsamplestats = NULL, lavmodel = NULL,
                              lavoptions = NULL, lavdata = NULL,
                              extra = FALSE, lambda = NULL) {
   # evaluate objective function
@@ -180,7 +180,7 @@ lav_optim_gn <- function(lavmodel = NULL, lavsamplestats = NULL,
 
   # start Gauss-Newton steps
   for (iter in seq_len(iter.max)) {
-    old.out <- lav_objective_GN(
+    old.out <- lav_objective_gn(
       x = old.x, lavsamplestats = lavsamplestats,
       lavoptions = lavoptions, lavdata = lavdata,
       lavmodel = lavmodel, extra = TRUE
@@ -218,7 +218,7 @@ lav_optim_gn <- function(lavmodel = NULL, lavsamplestats = NULL,
         }
       }
 
-      new.obj <- lav_objective_GN(
+      new.obj <- lav_objective_gn(
         x = new.x,
         lavsamplestats = lavsamplestats,
         lavdata = lavdata, lavoptions = lavoptions,

@@ -12,7 +12,7 @@
 
 # - YR  3 Dec 2015: allow for conditional.x = TRUE
 # - YR 22 Jan 2023: add model.based= argument (if object is lavaan object)
-# - YR 30 May 2024: add lav_samplestats_cor_Gamma(_NT)
+# - YR 30 May 2024: add lav_samplestats_cor_gamma(_NT)
 
 # generic public function (not exported yet)
 # input for lavGamma can be lavobject, lavdata, data.frame, or matrix
@@ -84,28 +84,28 @@ lavGamma <- function(object, group = NULL, missing = "listwise",
       cluster.idx <- NULL
     }
     if (ADF) {
-      out <- lav_samplestats_Gamma(
-        Y = Y[[g]],
-        Mu = NULL,
-        Sigma = NULL,
-        x.idx = x.idx[[g]],
-        cluster.idx = cluster.idx,
-        fixed.x = fixed.x,
-        conditional.x = conditional.x,
+      out <- lav_samplestats_gamma(
+        m_y = Y[[g]],
+        m_mu = NULL,
+        m_sigma = NULL,
+        x_idx = x.idx[[g]],
+        cluster_idx = cluster.idx,
+        fixed_x = fixed.x,
+        conditional_x = conditional.x,
         meanstructure = meanstructure,
         slopestructure = conditional.x,
-        gamma.n.minus.one = gamma.n.minus.one,
+        gamma_n_minus_one = gamma.n.minus.one,
         unbiased = gamma.unbiased,
-        Mplus.WLS = Mplus.WLS
+        mplus_wls = Mplus.WLS
       )
     } else {
-      out <- lav_samplestats_Gamma_NT(
-        Y = Y[[g]],
+      out <- lav_samplestats_gamma_nt(
+        m_y = Y[[g]],
         wt = NULL, # for now
         rescale = NT.rescale,
-        x.idx = x.idx[[g]],
-        fixed.x = fixed.x,
-        conditional.x = conditional.x,
+        x_idx = x.idx[[g]],
+        fixed_x = fixed.x,
+        conditional_x = conditional.x,
         meanstructure = meanstructure,
         slopestructure = conditional.x
       )
@@ -200,27 +200,27 @@ lav_object_gamma <- function(lavobject = NULL,
       } else {
         cluster.idx <- NULL
       }
-      OUT[[g]] <- lav_samplestats_Gamma(
-        Y = Y,
-        Mu = MEAN,
-        Sigma = COV,
-        x.idx = x.idx,
-        cluster.idx = cluster.idx,
-        fixed.x = fixed.x,
-        conditional.x = conditional.x,
+      OUT[[g]] <- lav_samplestats_gamma(
+        m_y = Y,
+        m_mu = MEAN,
+        m_sigma = COV,
+        x_idx = x.idx,
+        cluster_idx = cluster.idx,
+        fixed_x = fixed.x,
+        conditional_x = conditional.x,
         meanstructure = meanstructure,
         slopestructure = conditional.x,
-        gamma.n.minus.one = gamma.n.minus.one,
+        gamma_n_minus_one = gamma.n.minus.one,
         unbiased = gamma.unbiased,
-        Mplus.WLS = Mplus.WLS
+        mplus_wls = Mplus.WLS
       )
     } else {
-      OUT[[g]] <- lav_samplestats_Gamma_NT(
-        COV = COV, # joint!
-        MEAN = MEAN, # joint!
-        x.idx = x.idx,
-        fixed.x = fixed.x,
-        conditional.x = conditional.x,
+      OUT[[g]] <- lav_samplestats_gamma_nt(
+        m_cov = COV, # joint!
+        m_mean = MEAN, # joint!
+        x_idx = x.idx,
+        fixed_x = fixed.x,
+        conditional_x = conditional.x,
         meanstructure = meanstructure,
         slopestructure = conditional.x
       )
@@ -249,110 +249,113 @@ lav_object_gamma <- function(lavobject = NULL,
 #  - if conditional.x = TRUE, we ignore fixed.x (can be TRUE or FALSE)
 
 # NORMAL-THEORY
-lav_samplestats_Gamma_NT <- function(Y = NULL, # should include
+lav_samplestats_gamma_nt <- function(m_y = NULL, # should include
                                      # eXo if
                                      # conditional.x=TRUE
                                      wt = NULL,
-                                     COV = NULL, # joint!
-                                     MEAN = NULL, # joint!
+                                     m_cov = NULL, # joint!
+                                     m_mean = NULL, # joint!
                                      rescale = FALSE,
-                                     x.idx = integer(0L),
-                                     fixed.x = FALSE,
-                                     conditional.x = FALSE,
+                                     x_idx = integer(0L),
+                                     fixed_x = FALSE,
+                                     conditional_x = FALSE,
                                      meanstructure = FALSE,
                                      slopestructure = FALSE) {
   # check arguments
-  if (length(x.idx) == 0L) {
-    conditional.x <- FALSE
-    fixed.x <- FALSE
+  if (length(x_idx) == 0L) {
+    conditional_x <- FALSE
+    fixed_x <- FALSE
   }
 
-  # compute COV from Y
-  if (is.null(COV)) {
-    stopifnot(!is.null(Y))
+  # compute m_cov from m_y
+  if (is.null(m_cov)) {
+    stopifnot(!is.null(m_y))
 
     # coerce to matrix
-    Y <- unname(as.matrix(Y))
-    N <- nrow(Y)
+    m_y <- unname(as.matrix(m_y))
+    n <- nrow(m_y)
     if (is.null(wt)) {
-      COV <- cov(Y)
+      m_cov <- cov(m_y)
       if (rescale) {
-        COV <- COV * (N - 1) / N # (normal) ML version
+        m_cov <- m_cov * (n - 1) / n # (normal) ML version
       }
     } else {
-      out <- stats::cov.wt(Y, wt = wt, method = "ML")
-      COV <- out$cov
+      out <- stats::cov.wt(m_y, wt = wt, method = "ML")
+      m_cov <- out$cov
     }
   } else {
     if (!missing(rescale)) {
-      lav_msg_warn(gettext("rescale= argument has no effect if COV is given"))
+      lav_msg_warn(gettext("rescale= argument has no effect if m_cov is given"))
     }
     if (!missing(wt)) {
-      lav_msg_warn(gettext("wt= argument has no effect if COV is given"))
+      lav_msg_warn(gettext("wt= argument has no effect if m_cov is given"))
     }
   }
 
-  # if needed, compute MEAN from Y
-  if (conditional.x && length(x.idx) > 0L && is.null(MEAN) &&
+  # if needed, compute m_mean from m_y
+  if (conditional_x && length(x_idx) > 0L && is.null(m_mean) &&
     (meanstructure || slopestructure)) {
-    stopifnot(!is.null(Y))
+    stopifnot(!is.null(m_y))
     if (is.null(wt)) {
-      MEAN <- colMeans(Y, na.rm = TRUE)
+      m_mean <- colMeans(m_y, na.rm = TRUE)
     } else {
-      MEAN <- out$center
+      m_mean <- out$center
     }
   }
 
   # rename
-  S <- COV
-  M <- MEAN
+  m_s <- m_cov
+  m_m <- m_mean
 
   # unconditional
-  if (!conditional.x) {
+  if (!conditional_x) {
     # unconditional - stochastic x
-    if (!fixed.x) {
+    if (!fixed_x) {
       # if (lav_use_lavaanC()) {
-      #   Gamma <- lavaanC::m_kronecker_dup_ginv_pre_post(S, multiplicator = 2.0)
+      #   m_gamma <- lavaanC::m_kronecker_dup_ginv_pre_post(m_s, 
+      #                                              multiplicator = 2.0)
       # } else {
-        Gamma <- 2 * lav_matrix_duplication_ginv_pre_post(S %x% S)
+        m_gamma <- 2 * lav_matrix_duplication_ginv_pre_post(m_s %x% m_s)
       # }
       if (meanstructure) {
-        Gamma <- lav_matrix_bdiag(S, Gamma)
+        m_gamma <- lav_matrix_bdiag(m_s, m_gamma)
       }
 
       # unconditional - fixed x
     } else {
-      # handle fixed.x = TRUE
+      # handle fixed_x = TRUE
 
-      # cov(Y|X) = A - B C^{-1} B'
-      # where A = cov(Y), B = cov(Y,X), C = cov(X)
-      A <- S[-x.idx, -x.idx, drop = FALSE]
-      B <- S[-x.idx, x.idx, drop = FALSE]
-      C <- S[x.idx, x.idx, drop = FALSE]
-      YbarX <- A - B %*% solve(C, t(B))
+      # cov(m_y|X) = m_a - m_b m_c^{-1} m_b'
+      # where m_a = cov(m_y), m_b = cov(m_y,X), m_c = cov(X)
+      m_a <- m_s[-x_idx, -x_idx, drop = FALSE]
+      m_b <- m_s[-x_idx, x_idx, drop = FALSE]
+      m_c <- m_s[x_idx, x_idx, drop = FALSE]
+      ybarx <- m_a - m_b %*% solve(m_c, t(m_b))
 
-      # reinsert YbarX in Y+X (residual) covariance matrix
-      YbarX.aug <- matrix(0, nrow = NROW(S), ncol = NCOL(S))
-      YbarX.aug[-x.idx, -x.idx] <- YbarX
+      # reinsert ybarx in m_y+X (residual) covariance matrix
+      ybarx_aug <- matrix(0, nrow = NROW(m_s), ncol = NCOL(m_s))
+      ybarx_aug[-x_idx, -x_idx] <- ybarx
 
       # take difference
-      R <- S - YbarX.aug
+      m_r <- m_s - ybarx_aug
 
       # if (lav_use_lavaanC()) {
-      #   Gamma.S <- lavaanC::m_kronecker_dup_ginv_pre_post(S, multiplicator = 2.0)
-      #   Gamma.R <- lavaanC::m_kronecker_dup_ginv_pre_post(R, multiplicator = 2.0)
+      #   gamma_s <- lavaanC::m_kronecker_dup_ginv_pre_post(m_s, 
+      #                                               multiplicator = 2.0)
+      #   gamma_r <- lavaanC::m_kronecker_dup_ginv_pre_post(m_r, 
+      #                                               multiplicator = 2.0)
       # } else {
-        Gamma.S <- 2 * lav_matrix_duplication_ginv_pre_post(S %x% S)
-        Gamma.R <- 2 * lav_matrix_duplication_ginv_pre_post(R %x% R)
+        gamma_s <- 2 * lav_matrix_duplication_ginv_pre_post(m_s %x% m_s)
+        gamma_r <- 2 * lav_matrix_duplication_ginv_pre_post(m_r %x% m_r)
       # }
-      Gamma <- Gamma.S - Gamma.R
+      m_gamma <- gamma_s - gamma_r
 
       if (meanstructure) {
-        Gamma <- lav_matrix_bdiag(YbarX.aug, Gamma)
+        m_gamma <- lav_matrix_bdiag(ybarx_aug, m_gamma)
       }
     }
   } else {
-    # conditional.x
+    # conditional_x
 
     # 4 possibilities:
     # - no meanstructure, no slopes
@@ -360,250 +363,251 @@ lav_samplestats_Gamma_NT <- function(Y = NULL, # should include
     # - no meanstructure, slopes
     # -    meanstructure, slopes
 
-    # regress Y on X, and compute covariance of residuals 'R'
-    A <- S[-x.idx, -x.idx, drop = FALSE]
-    B <- S[-x.idx, x.idx, drop = FALSE]
-    C <- S[x.idx, x.idx, drop = FALSE]
-    Cov.YbarX <- A - B %*% solve(C) %*% t(B)
+    # regress m_y on X, and compute covariance of residuals 'm_r'
+    m_a <- m_s[-x_idx, -x_idx, drop = FALSE]
+    m_b <- m_s[-x_idx, x_idx, drop = FALSE]
+    m_c <- m_s[x_idx, x_idx, drop = FALSE]
+    cov_ybarx <- m_a - m_b %*% solve(m_c) %*% t(m_b)
     # if (lav_use_lavaanC()) {
-    #   Gamma <- lavaanC::m_kronecker_dup_ginv_pre_post(Cov.YbarX, multiplicator = 2.0)
+    #   m_gamma <- lavaanC::m_kronecker_dup_ginv_pre_post(cov_ybarx, 
+    #                                                  multiplicator = 2.0)
     # } else {
-      Gamma <- 2 * lav_matrix_duplication_ginv_pre_post(Cov.YbarX %x% Cov.YbarX)
+      m_gamma <- 2 * 
+               lav_matrix_duplication_ginv_pre_post(cov_ybarx %x% cov_ybarx)
     # }
 
     if (meanstructure || slopestructure) {
-      MY <- M[-x.idx]
-      MX <- M[x.idx]
-      C3 <- rbind(
-        c(1, MX),
-        cbind(MX, C + tcrossprod(MX))
+      m_mx <- m_m[x_idx]
+      c3 <- rbind(
+        c(1, m_mx),
+        cbind(m_mx, m_c + tcrossprod(m_mx))
       )
-      # B3 <- cbind(MY, B + tcrossprod(MY,MX))
+      # B3 <- cbind(m_my, m_b + tcrossprod(m_my,m_mx))
     }
 
     if (meanstructure) {
       if (slopestructure) {
-        # A11 <- solve(C3) %x% Cov.YbarX
-        A11 <- Cov.YbarX %x% solve(C3)
+        # a11 <- solve(c3) %x% cov_ybarx
+        a11 <- cov_ybarx %x% solve(c3)
       } else {
-        # A11 <- solve(C3)[1, 1, drop=FALSE] %x% Cov.YbarX
-        A11 <- Cov.YbarX %x% solve(C3)[1, 1, drop = FALSE]
+        # a11 <- solve(c3)[1, 1, drop=FALSE] %x% cov_ybarx
+        a11 <- cov_ybarx %x% solve(c3)[1, 1, drop = FALSE]
       }
     } else {
       if (slopestructure) {
-        # A11 <- solve(C3)[-1, -1, drop=FALSE] %x% Cov.YbarX
-        A11 <- Cov.YbarX %x% solve(C3)[-1, -1, drop = FALSE]
+        # a11 <- solve(c3)[-1, -1, drop=FALSE] %x% cov_ybarx
+        a11 <- cov_ybarx %x% solve(c3)[-1, -1, drop = FALSE]
       } else {
-        A11 <- matrix(0, 0, 0)
+        a11 <- matrix(0, 0, 0)
       }
     }
 
-    Gamma <- lav_matrix_bdiag(A11, Gamma)
+    m_gamma <- lav_matrix_bdiag(a11, m_gamma)
   }
 
-  Gamma
+  m_gamma
 }
 
 # NOTE:
 #  - three types:
-#       1) plain         (conditional.x = FALSE, fixed.x = FALSE)
-#       2) fixed.x       (conditional.x = FALSE, fixed.x = TRUE)
-#       3) conditional.x (conditional.x = TRUE)
-#  - if conditional.x = TRUE, we ignore fixed.x (can be TRUE or FALSE)
+#       1) plain         (conditional_x = FALSE, fixed_x = FALSE)
+#       2) fixed_x       (conditional_x = FALSE, fixed_x = TRUE)
+#       3) conditional_x (conditional_x = TRUE)
+#  - if conditional_x = TRUE, we ignore fixed_x (can be TRUE or FALSE)
 #
 #  - new in 0.6-1: if Mu/Sigma is provided, compute 'model-based' Gamma
-#                  (only if conditional.x = FALSE, for now)
+#                  (only if conditional_x = FALSE, for now)
 #  - new in 0.6-2: if cluster.idx is not NULL, correct for clustering
 #  - new in 0.6-13: add unbiased = TRUE (for the 'plain' setting only)
 
 # ADF THEORY
-lav_samplestats_Gamma <- function(Y, # Y+X if cond!
-                                  Mu = NULL,
-                                  Sigma = NULL,
-                                  x.idx = integer(0L),
-                                  cluster.idx = NULL,
-                                  fixed.x = FALSE,
-                                  conditional.x = FALSE,
+lav_samplestats_gamma <- function(m_y, # Y+X if cond!
+                                  m_mu = NULL,
+                                  m_sigma = NULL,
+                                  x_idx = integer(0L),
+                                  cluster_idx = NULL,
+                                  fixed_x = FALSE,
+                                  conditional_x = FALSE,
                                   meanstructure = FALSE,
                                   slopestructure = FALSE,
-                                  gamma.n.minus.one = FALSE,
+                                  gamma_n_minus_one = FALSE,
                                   unbiased = FALSE,
-                                  Mplus.WLS = FALSE) {
+                                  mplus_wls = FALSE) {
   # coerce to matrix
-  Y <- unname(as.matrix(Y))
-  N <- nrow(Y)
-  p <- ncol(Y)
+  m_y <- unname(as.matrix(m_y))
+  n <- nrow(m_y)
+  p <- ncol(m_y)
 
   # unbiased?
   if (unbiased) {
-    if (conditional.x || fixed.x || !is.null(Sigma) ||
-      !is.null(cluster.idx)) {
+    if (conditional_x || fixed_x || !is.null(m_sigma) ||
+      !is.null(cluster_idx)) {
       lav_msg_stop(
         gettext("unbiased Gamma only available for the simple
-        (not conditional.x or fixed.x or model-based or clustered) setting."))
+        (not conditional_x or fixed_x or model-based or clustered) setting."))
     } else {
-	  # data really should be complete
-      COV <- COV.unbiased <- stats::cov(Y, use = "pairwise.complete.obs")
-      COV <- COV * (N - 1) / N
-      cov.vech <- lav_matrix_vech(COV)
+    # data really should be complete
+      m_cov <- stats::cov(m_y, use = "pairwise.complete.obs")
+      m_cov <- m_cov * (n - 1) / n
+      cov_vech <- lav_matrix_vech(m_cov)
     }
   }
 
   # model-based?
-  if (!is.null(Sigma)) {
-    stopifnot(!conditional.x)
-    model.based <- TRUE
+  if (!is.null(m_sigma)) {
+    stopifnot(!conditional_x)
+    model_based <- TRUE
     if (meanstructure) {
-      stopifnot(!is.null(Mu))
-      sigma <- c(as.numeric(Mu), lav_matrix_vech(Sigma))
+      stopifnot(!is.null(m_mu))
+      sigma <- c(as.numeric(m_mu), lav_matrix_vech(m_sigma))
     } else {
-      Mu <- colMeans(Y, na.rm = TRUE) # for centering!
-      sigma <- lav_matrix_vech(Sigma)
+      m_mu <- colMeans(m_y, na.rm = TRUE) # for centering!
+      sigma <- lav_matrix_vech(m_sigma)
     }
   } else {
-    model.based <- FALSE
+    model_based <- FALSE
   }
 
   # denominator
-  if (gamma.n.minus.one) {
-    N <- N - 1
+  if (gamma_n_minus_one) {
+    n <- n - 1
   }
 
   # check arguments
-  if (length(x.idx) == 0L) {
-    conditional.x <- FALSE
-    fixed.x <- FALSE
+  if (length(x_idx) == 0L) {
+    conditional_x <- FALSE
+    fixed_x <- FALSE
   }
-  if (Mplus.WLS) {
-    stopifnot(!conditional.x, !fixed.x)
+  if (mplus_wls) {
+    stopifnot(!conditional_x, !fixed_x)
   }
 
-  if (!conditional.x && !fixed.x) {
+  if (!conditional_x && !fixed_x) {
     # center, so we can use crossprod instead of cov
-    if (model.based) {
-      Yc <- t(t(Y) - as.numeric(Mu))
+    if (model_based) {
+      m_yc <- t(t(m_y) - as.numeric(m_mu))
     } else {
-      Yc <- t(t(Y) - colMeans(Y, na.rm = TRUE))
+      m_yc <- t(t(m_y) - colMeans(m_y, na.rm = TRUE))
     }
 
-    # create Z where the rows_i contain the following elements:
+    # create z where the rows_i contain the following elements:
     #  - Y_i (if meanstructure is TRUE)
     #  - vech(Yc_i' %*% Yc_i) where Yc_i are the residuals
     idx1 <- lav_matrix_vech_col_idx(p)
     idx2 <- lav_matrix_vech_row_idx(p)
     if (meanstructure) {
-      Z <- cbind(Y, Yc[, idx1, drop = FALSE] *
-        Yc[, idx2, drop = FALSE])
+      z <- cbind(m_y, m_yc[, idx1, drop = FALSE] *
+        m_yc[, idx2, drop = FALSE])
     } else {
-      Z <- (Yc[, idx1, drop = FALSE] *
-        Yc[, idx2, drop = FALSE])
+      z <- (m_yc[, idx1, drop = FALSE] *
+        m_yc[, idx2, drop = FALSE])
     }
 
-    if (model.based) {
+    if (model_based) {
       if (meanstructure) {
-        stopifnot(!is.null(Mu))
-        sigma <- c(as.numeric(Mu), lav_matrix_vech(Sigma))
+        stopifnot(!is.null(m_mu))
+        sigma <- c(as.numeric(m_mu), lav_matrix_vech(m_sigma))
       } else {
-        sigma <- lav_matrix_vech(Sigma)
+        sigma <- lav_matrix_vech(m_sigma)
       }
-      Zc <- t(t(Z) - sigma)
+      zc <- t(t(z) - sigma)
     } else {
-      Zc <- t(t(Z) - colMeans(Z, na.rm = TRUE))
+      zc <- t(t(z) - colMeans(z, na.rm = TRUE))
     }
 
     # clustered?
-    if (length(cluster.idx) > 0L) {
-      Zc <- rowsum(Zc, cluster.idx)
+    if (length(cluster_idx) > 0L) {
+      zc <- rowsum(zc, cluster_idx)
     }
 
-    if (anyNA(Zc)) {
-      Gamma <- lav_matrix_crossprod(Zc) / N
+    if (anyNA(zc)) {
+      m_gamma <- lav_matrix_crossprod(zc) / n
     } else {
-      Gamma <- base::crossprod(Zc) / N
+      m_gamma <- base::crossprod(zc) / n
     }
-  } else if (!conditional.x && fixed.x) {
-    if (model.based) {
-      Yc <- t(t(Y) - as.numeric(Mu))
-      Y.bar <- colMeans(Y, na.rm = TRUE)
-      res.cov <- (Sigma[-x.idx, -x.idx, drop = FALSE] -
-        Sigma[-x.idx, x.idx, drop = FALSE] %*%
-        solve(Sigma[x.idx, x.idx, drop = FALSE]) %*%
-        Sigma[x.idx, -x.idx, drop = FALSE])
-      res.slopes <- (solve(Sigma[x.idx, x.idx, drop = FALSE]) %*%
-        Sigma[x.idx, -x.idx, drop = FALSE])
-      res.int <- (Y.bar[-x.idx] -
-        as.numeric(colMeans(Y[, x.idx, drop = FALSE],
+  } else if (!conditional_x && fixed_x) {
+    if (model_based) {
+      m_yc <- t(t(m_y) - as.numeric(m_mu))
+      y_bar <- colMeans(m_y, na.rm = TRUE)
+      res_cov <- (m_sigma[-x_idx, -x_idx, drop = FALSE] -
+        m_sigma[-x_idx, x_idx, drop = FALSE] %*%
+        solve(m_sigma[x_idx, x_idx, drop = FALSE]) %*%
+        m_sigma[x_idx, -x_idx, drop = FALSE])
+      res_slopes <- (solve(m_sigma[x_idx, x_idx, drop = FALSE]) %*%
+        m_sigma[x_idx, -x_idx, drop = FALSE])
+      res_int <- (y_bar[-x_idx] -
+        as.numeric(colMeans(m_y[, x_idx, drop = FALSE],
           na.rm = TRUE
-        ) %*% res.slopes))
-      x.bar <- Y.bar[x.idx]
-      yhat.bar <- as.numeric(res.int + as.numeric(x.bar) %*% res.slopes)
-      YHAT.bar <- numeric(p)
-      YHAT.bar[-x.idx] <- yhat.bar
-      YHAT.bar[x.idx] <- x.bar
-      YHAT.cov <- Sigma
-      YHAT.cov[-x.idx, -x.idx] <- Sigma[-x.idx, -x.idx] - res.cov
+        ) %*% res_slopes))
+      x_bar <- y_bar[x_idx]
+      yhat__bar <- as.numeric(res_int + as.numeric(x_bar) %*% res_slopes)
+      yhat_bar <- numeric(p)
+      yhat_bar[-x_idx] <- yhat__bar
+      yhat_bar[x_idx] <- x_bar
+      yhat_cov <- m_sigma
+      yhat_cov[-x_idx, -x_idx] <- m_sigma[-x_idx, -x_idx] - res_cov
 
 
-      yhat <- cbind(1, Y[, x.idx]) %*% rbind(res.int, res.slopes)
-      YHAT <- Y
-      YHAT[, -x.idx] <- yhat
-      # YHAT <- cbind(yhat, Y[,x.idx])
-      YHATc <- t(t(YHAT) - YHAT.bar)
+      yhat <- cbind(1, m_y[, x_idx]) %*% rbind(res_int, res_slopes)
+      y_hat <- m_y
+      y_hat[, -x_idx] <- yhat
+      # y_hat <- cbind(yhat, m_y[,x_idx])
+      y_hatc <- t(t(y_hat) - yhat_bar)
       idx1 <- lav_matrix_vech_col_idx(p)
       idx2 <- lav_matrix_vech_row_idx(p)
       if (meanstructure) {
-        Z <- (cbind(Y, Yc[, idx1, drop = FALSE] *
-          Yc[, idx2, drop = FALSE]) -
-          cbind(YHAT, YHATc[, idx1, drop = FALSE] *
-            YHATc[, idx2, drop = FALSE]))
-        sigma1 <- c(Mu, lav_matrix_vech(Sigma))
-        sigma2 <- c(YHAT.bar, lav_matrix_vech(YHAT.cov))
+        z <- (cbind(m_y, m_yc[, idx1, drop = FALSE] *
+          m_yc[, idx2, drop = FALSE]) -
+          cbind(y_hat, y_hatc[, idx1, drop = FALSE] *
+            y_hatc[, idx2, drop = FALSE]))
+        sigma1 <- c(m_mu, lav_matrix_vech(m_sigma))
+        sigma2 <- c(yhat_bar, lav_matrix_vech(yhat_cov))
       } else {
-        Z <- (Yc[, idx1, drop = FALSE] *
-          Yc[, idx2, drop = FALSE] -
-          YHATc[, idx1, drop = FALSE] *
-            YHATc[, idx2, drop = FALSE])
-        sigma1 <- lav_matrix_vech(Sigma)
-        sigma2 <- lav_matrix_vech(YHAT.cov)
+        z <- (m_yc[, idx1, drop = FALSE] *
+          m_yc[, idx2, drop = FALSE] -
+          y_hatc[, idx1, drop = FALSE] *
+            y_hatc[, idx2, drop = FALSE])
+        sigma1 <- lav_matrix_vech(m_sigma)
+        sigma2 <- lav_matrix_vech(yhat_cov)
       }
-      Zc <- t(t(Z) - (sigma1 - sigma2))
+      zc <- t(t(z) - (sigma1 - sigma2))
     } else {
-      QR <- qr(cbind(1, Y[, x.idx, drop = FALSE]))
-      yhat <- qr.fitted(QR, Y[, -x.idx, drop = FALSE])
-      # YHAT <- cbind(yhat, Y[,x.idx])
-      YHAT <- Y
-      YHAT[, -x.idx] <- yhat
+      m_qr <- qr(cbind(1, m_y[, x_idx, drop = FALSE]))
+      yhat <- qr.fitted(m_qr, m_y[, -x_idx, drop = FALSE])
+      # y_hat <- cbind(yhat, m_y[,x_idx])
+      y_hat <- m_y
+      y_hat[, -x_idx] <- yhat
 
-      Yc <- t(t(Y) - colMeans(Y, na.rm = TRUE))
-      YHATc <- t(t(YHAT) - colMeans(YHAT, na.rm = TRUE))
+      m_yc <- t(t(m_y) - colMeans(m_y, na.rm = TRUE))
+      y_hatc <- t(t(y_hat) - colMeans(y_hat, na.rm = TRUE))
       idx1 <- lav_matrix_vech_col_idx(p)
       idx2 <- lav_matrix_vech_row_idx(p)
       if (meanstructure) {
-        Z <- (cbind(Y, Yc[, idx1, drop = FALSE] *
-          Yc[, idx2, drop = FALSE]) -
-          cbind(YHAT, YHATc[, idx1, drop = FALSE] *
-            YHATc[, idx2, drop = FALSE]))
+        z <- (cbind(m_y, m_yc[, idx1, drop = FALSE] *
+          m_yc[, idx2, drop = FALSE]) -
+          cbind(y_hat, y_hatc[, idx1, drop = FALSE] *
+            y_hatc[, idx2, drop = FALSE]))
       } else {
-        Z <- (Yc[, idx1, drop = FALSE] *
-          Yc[, idx2, drop = FALSE] -
-          YHATc[, idx1, drop = FALSE] *
-            YHATc[, idx2, drop = FALSE])
+        z <- (m_yc[, idx1, drop = FALSE] *
+          m_yc[, idx2, drop = FALSE] -
+          y_hatc[, idx1, drop = FALSE] *
+            y_hatc[, idx2, drop = FALSE])
       }
-      Zc <- t(t(Z) - colMeans(Z, na.rm = TRUE))
+      zc <- t(t(z) - colMeans(z, na.rm = TRUE))
     }
 
     # clustered?
-    if (length(cluster.idx) > 0L) {
-      Zc <- rowsum(Zc, cluster.idx)
+    if (length(cluster_idx) > 0L) {
+      zc <- rowsum(zc, cluster_idx)
     }
 
-    if (anyNA(Zc)) {
-      Gamma <- lav_matrix_crossprod(Zc) / N
+    if (anyNA(zc)) {
+      m_gamma <- lav_matrix_crossprod(zc) / n
     } else {
-      Gamma <- base::crossprod(Zc) / N
+      m_gamma <- base::crossprod(zc) / n
     }
   } else {
-    # conditional.x
+    # conditional_x
 
     # 4 possibilities:
     # - no meanstructure, no slopes
@@ -611,267 +615,266 @@ lav_samplestats_Gamma <- function(Y, # Y+X if cond!
     # - no meanstructure, slopes
     # -    meanstructure, slopes
 
-    # regress Y on X, and compute residuals
-    X <- cbind(1, Y[, x.idx, drop = FALSE])
-    QR <- qr(X)
-    RES <- qr.resid(QR, Y[, -x.idx, drop = FALSE])
-    p <- ncol(RES)
+    # regress m_y on m_x, and compute residuals
+    m_x <- cbind(1, m_y[, x_idx, drop = FALSE])
+    m_qr <- qr(m_x)
+    m_res <- qr.resid(m_qr, m_y[, -x_idx, drop = FALSE])
+    p <- ncol(m_res)
 
     idx1 <- lav_matrix_vech_col_idx(p)
     idx2 <- lav_matrix_vech_row_idx(p)
 
     if (meanstructure || slopestructure) {
-      XtX.inv <- unname(solve(crossprod(X)))
-      Xi <- (X %*% XtX.inv) * N ## FIXME, shorter way?
-      ncX <- NCOL(X)
-      ncY <- NCOL(RES)
+      xtx_inv <- unname(solve(crossprod(m_x)))
+      xi <- (m_x %*% xtx_inv) * n ## FIXME, shorter way?
+      nc_x <- NCOL(m_x)
+      nc_y <- NCOL(m_res)
     }
 
     if (meanstructure) {
       if (slopestructure) {
-        # Xi.idx <- rep(seq_len(ncX), each  = ncY)
-        # Res.idx <- rep(seq_len(ncY), times = ncX)
-        Xi.idx <- rep(seq_len(ncX), times = ncY)
-        Res.idx <- rep(seq_len(ncY), each = ncX)
-        Z <- cbind(
-          Xi[, Xi.idx, drop = FALSE] *
-            RES[, Res.idx, drop = FALSE],
-          RES[, idx1, drop = FALSE] *
-            RES[, idx2, drop = FALSE]
+        # xi_idx <- rep(seq_len(nc_x), each  = nc_y)
+        # res_idx <- rep(seq_len(nc_y), times = nc_x)
+        xi_idx <- rep(seq_len(nc_x), times = nc_y)
+        res_idx <- rep(seq_len(nc_y), each = nc_x)
+        z <- cbind(
+          xi[, xi_idx, drop = FALSE] *
+            m_res[, res_idx, drop = FALSE],
+          m_res[, idx1, drop = FALSE] *
+            m_res[, idx2, drop = FALSE]
         )
       } else {
-        Xi.idx <- rep(1L, each = ncY)
-        Z <- cbind(
-          Xi[, Xi.idx, drop = FALSE] *
-            RES,
-          RES[, idx1, drop = FALSE] *
-            RES[, idx2, drop = FALSE]
+        xi_idx <- rep(1L, each = nc_y)
+        z <- cbind(
+          xi[, xi_idx, drop = FALSE] *
+            m_res,
+          m_res[, idx1, drop = FALSE] *
+            m_res[, idx2, drop = FALSE]
         )
       }
     } else {
       if (slopestructure) {
-        # Xi.idx <- rep(seq_len(ncX), each  = ncY)
-        # Xi.idx <- Xi.idx[ -seq_len(ncY) ]
-        Xi.idx <- rep(seq(2, ncX), times = ncY)
-        # Res.idx <- rep(seq_len(ncY), times = (ncX - 1L))
-        Res.idx <- rep(seq_len(ncY), each = (ncX - 1L))
-        Z <- cbind(
-          Xi[, Xi.idx, drop = FALSE] *
-            RES[, Res.idx, drop = FALSE],
-          RES[, idx1, drop = FALSE] *
-            RES[, idx2, drop = FALSE]
+        # xi_idx <- rep(seq_len(nc_x), each  = nc_y)
+        # xi_idx <- xi_idx[ -seq_len(nc_y) ]
+        xi_idx <- rep(seq(2, nc_x), times = nc_y)
+        # res_idx <- rep(seq_len(nc_y), times = (nc_x - 1L))
+        res_idx <- rep(seq_len(nc_y), each = (nc_x - 1L))
+        z <- cbind(
+          xi[, xi_idx, drop = FALSE] *
+            m_res[, res_idx, drop = FALSE],
+          m_res[, idx1, drop = FALSE] *
+            m_res[, idx2, drop = FALSE]
         )
       } else {
-        Z <- RES[, idx1, drop = FALSE] * RES[, idx2, drop = FALSE]
+        z <- m_res[, idx1, drop = FALSE] * m_res[, idx2, drop = FALSE]
       }
     }
 
-    if (model.based) {
-      Zc <- t(t(Z) - sigma)
+    if (model_based) {
+      zc <- t(t(z) - sigma)
     } else {
-      Zc <- t(t(Z) - colMeans(Z, na.rm = TRUE))
+      zc <- t(t(z) - colMeans(z, na.rm = TRUE))
     }
 
     # clustered?
-    if (length(cluster.idx) > 0L) {
-      Zc <- rowsum(Zc, cluster.idx)
+    if (length(cluster_idx) > 0L) {
+      zc <- rowsum(zc, cluster_idx)
     }
 
-    if (anyNA(Zc)) {
-      Gamma <- lav_matrix_crossprod(Zc) / N
+    if (anyNA(zc)) {
+      m_gamma <- lav_matrix_crossprod(zc) / n
     } else {
-      Gamma <- base::crossprod(Zc) / N
+      m_gamma <- base::crossprod(zc) / n
     }
   }
 
 
   # only to mimic Mplus when estimator = "WLS"
-  if (Mplus.WLS && !fixed.x && !conditional.x) {
+  if (mplus_wls && !fixed_x && !conditional_x) {
     # adjust G_22 (the varcov part)
-    S <- cov(Y, use = "pairwise")
-    w <- lav_matrix_vech(S)
-    w.biased <- (N - 1) / N * w
-    diff <- outer(w, w) - outer(w.biased, w.biased)
+    m_s <- cov(m_y, use = "pairwise")
+    w <- lav_matrix_vech(m_s)
+    w_biased <- (n - 1) / n * w
+    diff <- outer(w, w) - outer(w_biased, w_biased)
     if (meanstructure) {
-      Gamma[-seq_len(p), -seq_len(p)] <-
-        Gamma[-seq_len(p), -seq_len(p), drop = FALSE] - diff
+      m_gamma[-seq_len(p), -seq_len(p)] <-
+        m_gamma[-seq_len(p), -seq_len(p), drop = FALSE] - diff
     } else {
-      Gamma <- Gamma - diff
+      m_gamma <- m_gamma - diff
     }
 
     if (meanstructure) {
       # adjust G_12/G_21 (third-order)
       # strange rescaling?
-      N1 <- (N - 1) / N
-      Gamma[seq_len(p), -seq_len(p)] <- Gamma[seq_len(p), -seq_len(p)] * N1
-      Gamma[-seq_len(p), seq_len(p)] <- Gamma[-seq_len(p), seq_len(p)] * N1
+      n1 <- (n - 1) / n
+      m_gamma[seq_len(p), -seq_len(p)] <- m_gamma[seq_len(p), -seq_len(p)] * n1
+      m_gamma[-seq_len(p), seq_len(p)] <- m_gamma[-seq_len(p), seq_len(p)] * n1
     }
   }
 
   # clustered?
-  if (length(cluster.idx) > 0L) {
-    nC <- nrow(Zc)
-    Gamma <- Gamma * nC / (nC - 1)
+  if (length(cluster_idx) > 0L) {
+    nc <- nrow(zc)
+    m_gamma <- m_gamma * nc / (nc - 1)
   }
 
   # unbiased?
   if (unbiased) {
-    # normal-theory Gamma (cov only)
+    # normal-theory m_gamma (cov only)
     # if (lav_use_lavaanC()) {
-    #   GammaNT.cov <- lavaanC::m_kronecker_dup_ginv_pre_post(COV,
-    #                                                         multiplicator = 2.0)
+    #   gammant_cov <- lavaanC::m_kronecker_dup_ginv_pre_post(m_cov,
+    #                                               multiplicator = 2.0)
     # } else {
-      GammaNT.cov <- 2 * lav_matrix_duplication_ginv_pre_post(COV %x% COV)
+      gammant_cov <- 2 * lav_matrix_duplication_ginv_pre_post(m_cov %x% m_cov)
     # }
 
     if (meanstructure) {
-      Gamma.cov <- Gamma[-(1:p), -(1:p), drop = FALSE]
-      Gamma.mean.cov <- Gamma[1:p, -(1:p), drop = FALSE]
+      gamma_cov <- m_gamma[-(1:p), -(1:p), drop = FALSE]
+      gamma_mean_cov <- m_gamma[1:p, -(1:p), drop = FALSE]
     } else {
-      Gamma.cov <- Gamma
+      gamma_cov <- m_gamma
     }
 
-    # Browne's unbiased DF estimator (COV part)
-    Gamma.u <- (N * (N - 1) / (N - 2) / (N - 3) * Gamma.cov -
-      N / (N - 2) / (N - 3) * (GammaNT.cov -
-        2 / (N - 1) * tcrossprod(cov.vech)))
+    # Browne's unbiased DF estimator (m_cov part)
+    gamma_u <- (n * (n - 1) / (n - 2) / (n - 3) * gamma_cov -
+      n / (n - 2) / (n - 3) * (gammant_cov -
+        2 / (n - 1) * tcrossprod(cov_vech)))
     if (meanstructure) {
-      Gamma <- lav_matrix_bdiag(COV, Gamma.u)
+      m_gamma <- lav_matrix_bdiag(m_cov, gamma_u)
 
       # 3-rd order:
-      Gamma[1:p, (p + 1):ncol(Gamma)] <- Gamma.mean.cov * N / (N - 2)
-      Gamma[(p + 1):ncol(Gamma), 1:p] <- t(Gamma.mean.cov * N / (N - 2))
+      m_gamma[1:p, (p + 1):ncol(m_gamma)] <- gamma_mean_cov * n / (n - 2)
+      m_gamma[(p + 1):ncol(m_gamma), 1:p] <- t(gamma_mean_cov * n / (n - 2))
     } else {
-      Gamma <- Gamma.u
+      m_gamma <- gamma_u
     }
   } # unbiased
 
-  Gamma
+  m_gamma
 }
 
 # ADF Gamma for correlations
 #
-# 30 May 2024: basic version: fixed.x=FALSE, conditional.x=FALSE, ...
-lav_samplestats_cor_Gamma <- function(Y, meanstructure = FALSE) {
+# 30 May 2024: basic version: fixed_x=FALSE, conditional_x=FALSE, ...
+lav_samplestats_cor_gamma <- function(m_y, meanstructure = FALSE) {
 
   # coerce to matrix
-  Y <- unname(as.matrix(Y))
-  N <- nrow(Y)
-  P <- ncol(Y)
+  m_y <- unname(as.matrix(m_y))
+  n <- nrow(m_y)
+  p <- ncol(m_y)
 
-  # compute S and R
-  S <- cov(Y) * (N - 1) / N
-  R <- cov2cor(S)
+  # compute m_s and m_r
+  m_s <- cov(m_y) * (n - 1) / n
+  m_r <- cov2cor(m_s)
 
   # create z-scores
-  SD <- sqrt(diag(S))
-  Yz <- t( (t(Y) - colMeans(Y))/SD )
+  s_sd <- sqrt(diag(m_s))
+  yz <- t((t(m_y) - colMeans(m_y)) / s_sd)
 
   # create squared z-scores
-  Yz2 <- Yz*Yz
+  yz2 <- yz * yz
 
   # find indices so we avoid 1) double subscripts (diagonal!), and
   #                          2) duplicated subscripts (symmetric!)
-  idx1 <- lav_matrix_vech_col_idx(P, diagonal = FALSE)
-  idx2 <- lav_matrix_vech_row_idx(P, diagonal = FALSE)
+  idx1 <- lav_matrix_vech_col_idx(p, diagonal = FALSE)
+  idx2 <- lav_matrix_vech_row_idx(p, diagonal = FALSE)
 
-  ZR1 <- (Yz[, idx1, drop = FALSE] * Yz[, idx2, drop = FALSE])
-  ZR2 <- (Yz2[, idx1, drop = FALSE] + Yz2[, idx2, drop = FALSE])
-  ZR2 <- t( t(ZR2) * lav_matrix_vech(R, diagonal = FALSE) )
-  ZRR <- ZR1 - 0.5*ZR2
-  if(meanstructure) {
-      ZRR <- cbind(Yz, ZRR)
+  zr1 <- (yz[, idx1, drop = FALSE] * yz[, idx2, drop = FALSE])
+  zr2 <- (yz2[, idx1, drop = FALSE] + yz2[, idx2, drop = FALSE])
+  zr2 <- t(t(zr2) * lav_matrix_vech(m_r, diagonal = FALSE))
+  zrr <- zr1 - 0.5 * zr2
+  if (meanstructure) {
+      zrr <- cbind(yz, zrr)
   }
-  Gamma <- crossprod(ZRR)/N
+  m_gamma <- crossprod(zrr) / n
 
-  Gamma
+  m_gamma
 }
 
 # normal theory version
-# 30 May 2024: basic version: fixed.x=FALSE, conditional.x=FALSE, ...
-lav_samplestats_cor_Gamma_NT <- function(Y = NULL,
+# 30 May 2024: basic version: fixed_x=FALSE, conditional_x=FALSE, ...
+lav_samplestats_cor_gamma_nt <- function(m_y = NULL,
                                          wt = NULL,
-                                         COV = NULL, # joint!
-                                         MEAN = NULL, # joint!
+                                         m_cov = NULL, # joint!
+                                         m_mean = NULL, # joint!
                                          rescale = FALSE,
-                                         x.idx = integer(0L),
-                                         fixed.x = FALSE,
-                                         conditional.x = FALSE,
+                                         x_idx = integer(0L),
+                                         fixed_x = FALSE,
+                                         conditional_x = FALSE,
                                          meanstructure = FALSE,
                                          slopestructure = FALSE) {
   # check arguments
-  if (length(x.idx) == 0L) {
-    conditional.x <- FALSE
-    fixed.x <- FALSE
+  if (length(x_idx) == 0L) {
+    conditional_x <- FALSE
+    fixed_x <- FALSE
   } else {
-    lav_msg_stop(gettext("x.idx not supported (yet) for correlations; use
-                          fixed.x = FALSE (for now)"))
+    lav_msg_stop(gettext("x_idx not supported (yet) for correlations; use
+                          fixed_x = FALSE (for now)"))
   }
-  if(conditional.x) {
-    lav_msg_stop(gettext("conditional.x = TRUE not supported (yet) for
+  if (conditional_x) {
+    lav_msg_stop(gettext("conditional_x = TRUE not supported (yet) for
                           correlations"))
   }
 
-  # compute COV from Y
-  if (is.null(COV)) {
-    stopifnot(!is.null(Y))
+  # compute m_cov from m_y
+  if (is.null(m_cov)) {
+    stopifnot(!is.null(m_y))
 
     # coerce to matrix
-    Y <- unname(as.matrix(Y))
-    N <- nrow(Y)
+    m_y <- unname(as.matrix(m_y))
+    n <- nrow(m_y)
     if (is.null(wt)) {
-      COV <- cov(Y)
+      m_cov <- cov(m_y)
       if (rescale) {
-        COV <- COV * (N - 1) / N # (normal) ML version
+        m_cov <- m_cov * (n - 1) / n # (normal) ML version
       }
     } else {
-      out <- stats::cov.wt(Y, wt = wt, method = "ML")
-      COV <- out$cov
+      out <- stats::cov.wt(m_y, wt = wt, method = "ML")
+      m_cov <- out$cov
     }
   } else {
     if (!missing(rescale)) {
-      lav_msg_warn(gettext("rescale= argument has no effect if COV is given"))
+      lav_msg_warn(gettext("rescale= argument has no effect if m_cov is given"))
     }
     if (!missing(wt)) {
-      lav_msg_warn(gettext("wt= argument has no effect if COV is given"))
+      lav_msg_warn(gettext("wt= argument has no effect if m_cov is given"))
     }
   }
 
-  # if needed, compute MEAN from Y
-  if (conditional.x && length(x.idx) > 0L && is.null(MEAN) &&
+  # if needed, compute m_mean from m_y
+  if (conditional_x && length(x_idx) > 0L && is.null(m_mean) &&
     (meanstructure || slopestructure)) {
-    stopifnot(!is.null(Y))
+    stopifnot(!is.null(m_y))
     if (is.null(wt)) {
-      MEAN <- colMeans(Y, na.rm = TRUE)
+      m_mean <- colMeans(m_y, na.rm = TRUE)
     } else {
-      MEAN <- out$center
+      m_mean <- out$center
     }
   }
 
   # rename
-  S <- COV
-  R <- cov2cor(S)
-  M <- MEAN
-  P <- nrow(S)
+  m_s <- m_cov
+  m_r <- cov2cor(m_s)
+  s_p <- nrow(m_s)
 
   # unconditional
-  if (!conditional.x) {
+  if (!conditional_x) {
     # unconditional - stochastic x
-    if (!fixed.x) {
-      IP <- diag(P) %x% R
-      RR <- R %x% R
-      Gamma.Z.NT <- RR + lav_matrix_commutation_pre(RR)
-      tmp <- (IP + lav_matrix_commutation_pre(IP))/2
-      zero.idx <- seq_len(P*P)[-lav_matrix_diag_idx(P)]
-      tmp[, zero.idx] <- 0
-      A <- -tmp
-      diag(A) <- 1 - diag(tmp)
-      Gamma.NT.big <- A %*% Gamma.Z.NT %*% t(A)
-      r.idx <- lav_matrix_vech_idx(P, diagonal = FALSE)
-      Gamma <- Gamma.NT.big[r.idx, r.idx]
+    if (!fixed_x) {
+      m_ip <- diag(s_p) %x% m_r
+      m_rr <- m_r %x% m_r
+      gamma_z_nt <- m_rr + lav_matrix_commutation_pre(m_rr)
+      tmp <- (m_ip + lav_matrix_commutation_pre(m_ip)) / 2
+      zero_idx <- seq_len(s_p * s_p)[-lav_matrix_diag_idx(s_p)]
+      tmp[, zero_idx] <- 0
+      m_a <- -tmp
+      diag(m_a) <- 1 - diag(tmp)
+      gamma_nt_big <- m_a %*% gamma_z_nt %*% t(m_a)
+      r_idx <- lav_matrix_vech_idx(s_p, diagonal = FALSE)
+      v_gamma <- gamma_nt_big[r_idx, r_idx]
 
       if (meanstructure) {
-        Gamma <- lav_matrix_bdiag(R, Gamma)
+        v_gamma <- lav_matrix_bdiag(m_r, v_gamma)
       }
 
       # unconditional - fixed x
@@ -879,9 +882,9 @@ lav_samplestats_cor_Gamma_NT <- function(Y = NULL,
       # TODO
     }
   } else {
-    # conditional.x
+    # conditional_x
     # TODO
   }
 
-  Gamma
+  v_gamma
 }

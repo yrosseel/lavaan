@@ -6,111 +6,113 @@
 
 # NOTE:
 #  - three types:
-#       1) plain         (conditional.x = FALSE, fixed.x = FALSE)
-#       2) fixed.x       (conditional.x = FALSE, fixed.x = TRUE)
-#       3) conditional.x (conditional.x = TRUE)
-#  - if conditional.x = TRUE, we ignore fixed.x (can be TRUE or FALSE)
+#       1) plain         (conditional_x = FALSE, fixed_x = FALSE)
+#       2) fixed_x       (conditional_x = FALSE, fixed_x = TRUE)
+#       3) conditional_x (conditional_x = TRUE)
+#  - if conditional_x = TRUE, we ignore fixed_x (can be TRUE or FALSE)
 
 # NORMAL-THEORY
-lav_samplestats_Gamma_inverse_NT <- function(Y = NULL,
-                                             COV = NULL,
-                                             ICOV = NULL,
-                                             MEAN = NULL,
+lav_samplestats_gamma_inverse_nt <- function(m_y = NULL,
+                                             m_cov = NULL,
+                                             m_icov = NULL,
+                                             m_mean = NULL,
                                              rescale = TRUE,
-                                             x.idx = integer(0L),
-                                             fixed.x = FALSE,
-                                             conditional.x = FALSE,
+                                             x_idx = integer(0L),
+                                             fixed_x = FALSE,
+                                             conditional_x = FALSE,
                                              meanstructure = FALSE,
                                              slopestructure = FALSE) {
   # check arguments
-  if (length(x.idx) == 0L) {
-    conditional.x <- FALSE
-    fixed.x <- FALSE
+  if (length(x_idx) == 0L) {
+    conditional_x <- FALSE
+    fixed_x <- FALSE
   }
 
-  if (is.null(ICOV)) {
-    if (is.null(COV)) {
-      stopifnot(!is.null(Y))
+  if (is.null(m_icov)) {
+    if (is.null(m_cov)) {
+      stopifnot(!is.null(m_y))
 
       # coerce to matrix
-      Y <- unname(as.matrix(Y))
-      N <- nrow(Y)
-      COV <- cov(Y)
+      m_y <- unname(as.matrix(m_y))
+      n <- nrow(m_y)
+      m_cov <- cov(m_y)
       if (rescale) {
-        COV <- COV * (N - 1) / N # ML version
+        m_cov <- m_cov * (n - 1) / n # ML version
       }
     }
 
-    ICOV <- solve(COV)
+    m_icov <- solve(m_cov)
   }
 
-  # if conditional.x, we may also need COV and MEAN
-  if (conditional.x && length(x.idx) > 0L &&
+  # if conditional_x, we may also need m_cov and m_mean
+  if (conditional_x && length(x_idx) > 0L &&
     (meanstructure || slopestructure)) {
-    if (is.null(COV)) {
-      stopifnot(!is.null(Y))
+    if (is.null(m_cov)) {
+      stopifnot(!is.null(m_y))
 
       # coerce to matrix
-      Y <- unname(as.matrix(Y))
-      N <- nrow(Y)
-      COV <- cov(Y)
+      m_y <- unname(as.matrix(m_y))
+      n <- nrow(m_y)
+      m_cov <- cov(m_y)
 
       if (rescale) {
-        COV <- COV * (N - 1) / N # ML version
+        m_cov <- m_cov * (n - 1) / n # ML version
       }
     }
 
-    if (is.null(MEAN)) {
-      stopifnot(!is.null(Y))
-      MEAN <- unname(colMeans(Y))
+    if (is.null(m_mean)) {
+      stopifnot(!is.null(m_y))
+      m_mean <- unname(colMeans(m_y))
     }
   }
 
   # rename
-  S.inv <- ICOV
-  S <- COV
-  M <- MEAN
+  s_inv <- m_icov
+  m_s <- m_cov
+  m_m <- m_mean
 
   # unconditional
-  if (!conditional.x) {
+  if (!conditional_x) {
     # unconditional - stochastic x
-    if (!fixed.x) {
+    if (!fixed_x) {
       # if (lav_use_lavaanC()) {
-      #   Gamma.inv <- lavaanC::m_kronecker_dup_pre_post(S.inv, multiplicator = 0.5)
+      #   gamma_inv <- lavaanC::m_kronecker_dup_pre_post(s_inv,
+      #                                                multiplicator = 0.5)
       # } else {
-        Gamma.inv <- 0.5 * lav_matrix_duplication_pre_post(S.inv %x% S.inv)
+        gamma_inv <- 0.5 * lav_matrix_duplication_pre_post(s_inv %x% s_inv)
       # }
       if (meanstructure) {
-        Gamma.inv <- lav_matrix_bdiag(S.inv, Gamma.inv)
+        gamma_inv <- lav_matrix_bdiag(s_inv, gamma_inv)
       }
 
       # unconditional - fixed x
     } else {
-      # handle fixed.x = TRUE
+      # handle fixed_x = TRUE
       # if (lav_use_lavaanC()) {
-      #   Gamma.inv <- lavaanC::m_kronecker_dup_pre_post(S.inv, multiplicator = 0.5)
+      #   gamma_inv <- lavaanC::m_kronecker_dup_pre_post(s_inv,
+      #                                                multiplicator = 0.5)
       # } else {
-        Gamma.inv <- 0.5 * lav_matrix_duplication_pre_post(S.inv %x% S.inv)
+        gamma_inv <- 0.5 * lav_matrix_duplication_pre_post(s_inv %x% s_inv)
       # }
 
       # zero rows/cols corresponding with x/x combinations
-      nvar <- NROW(ICOV)
+      nvar <- NROW(m_icov)
       pstar <- nvar * (nvar + 1) / 2
-      M <- matrix(0, nvar, nvar)
-      M[lav_matrix_vech_idx(nvar)] <- seq_len(pstar)
-      zero.idx <- lav_matrix_vech(M[x.idx, x.idx, drop = FALSE])
-      Gamma.inv[zero.idx, ] <- 0
-      Gamma.inv[, zero.idx] <- 0
+      m_m <- matrix(0, nvar, nvar)
+      m_m[lav_matrix_vech_idx(nvar)] <- seq_len(pstar)
+      zero_idx <- lav_matrix_vech(m_m[x_idx, x_idx, drop = FALSE])
+      gamma_inv[zero_idx, ] <- 0
+      gamma_inv[, zero_idx] <- 0
 
       if (meanstructure) {
-        S.inv.nox <- S.inv
-        S.inv.nox[x.idx, ] <- 0
-        S.inv.nox[, x.idx] <- 0
-        Gamma.inv <- lav_matrix_bdiag(S.inv.nox, Gamma.inv)
+        s_inv_nox <- s_inv
+        s_inv_nox[x_idx, ] <- 0
+        s_inv_nox[, x_idx] <- 0
+        gamma_inv <- lav_matrix_bdiag(s_inv_nox, gamma_inv)
       }
     }
   } else {
-    # conditional.x
+    # conditional_x
 
     # 4 possibilities:
     # - no meanstructure, no slopes
@@ -118,43 +120,42 @@ lav_samplestats_Gamma_inverse_NT <- function(Y = NULL,
     # - no meanstructure, slopes
     # -    meanstructure, slopes
 
-    S11 <- S.inv[-x.idx, -x.idx, drop = FALSE]
+    s11 <- s_inv[-x_idx, -x_idx, drop = FALSE]
 
     # if (lav_use_lavaanC()) {
-    #   Gamma.inv <- lavaanC::m_kronecker_dup_pre_post(S11, multiplicator = 0.5)
+    #   gamma_inv <- lavaanC::m_kronecker_dup_pre_post(s11, multiplicator = 0.5)
     # } else {
-      Gamma.inv <- 0.5 * lav_matrix_duplication_pre_post(S11 %x% S11)
+      gamma_inv <- 0.5 * lav_matrix_duplication_pre_post(s11 %x% s11)
     # }
 
     if (meanstructure || slopestructure) {
-      C <- S[x.idx, x.idx, drop = FALSE]
-      MY <- M[-x.idx]
-      MX <- M[x.idx]
-      C3 <- rbind(
-        c(1, MX),
-        cbind(MX, C + tcrossprod(MX))
+      m_c <- m_s[x_idx, x_idx, drop = FALSE]
+      m_mx <- m_m[x_idx]
+      c3 <- rbind(
+        c(1, m_mx),
+        cbind(m_mx, m_c + tcrossprod(m_mx))
       )
     }
 
     if (meanstructure) {
       if (slopestructure) {
-        A11 <- C3 %x% S11
+        a11 <- c3 %x% s11
       } else {
-        c11 <- 1 / solve(C3)[1, 1, drop = FALSE]
-        A11 <- c11 %x% S11
+        c11 <- 1 / solve(c3)[1, 1, drop = FALSE]
+        a11 <- c11 %x% s11
       }
     } else {
       if (slopestructure) {
-        A11 <- C %x% S11
+        a11 <- m_c %x% s11
       } else {
-        A11 <- matrix(0, 0, 0)
+        a11 <- matrix(0, 0, 0)
       }
     }
 
     if (meanstructure || slopestructure) {
-      Gamma.inv <- lav_matrix_bdiag(A11, Gamma.inv)
+      gamma_inv <- lav_matrix_bdiag(a11, gamma_inv)
     }
   }
 
-  Gamma.inv
+  gamma_inv
 }
