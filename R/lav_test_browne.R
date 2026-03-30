@@ -92,7 +92,7 @@ lav_test_browne <- function(lavobject = NULL,
 
   # can we use the fast version?
   fast.flag <- FALSE
-  if (!ADF && !lineq.flag && !lavmodel@conditional.x && 
+  if (!ADF && !lineq.flag && !lavmodel@conditional.x &&
       !lavmodel@group.w.free) {
     fast.flag <- TRUE
     if (model.based) {

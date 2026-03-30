@@ -8,7 +8,7 @@ lav_model_nvcov_bootstrap <- function(lavmodel = NULL,
                                       lavcache = NULL,
                                       lavpartable = NULL) {
   # number of bootstrap draws
-  if (!is.null(lavoptions$bootstrap) && 
+  if (!is.null(lavoptions$bootstrap) &&
       !is.null(lavoptions$bootstrap$R)) {
     R <- as.integer(lavoptions$bootstrap$R)
     stopifnot(R > 0L)

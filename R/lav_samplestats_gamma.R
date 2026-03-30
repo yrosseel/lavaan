@@ -312,7 +312,7 @@ lav_samplestats_gamma_nt <- function(m_y = NULL, # should include
     # unconditional - stochastic x
     if (!fixed_x) {
       # if (lav_use_lavaanC()) {
-      #   m_gamma <- lavaanC::m_kronecker_dup_ginv_pre_post(m_s, 
+      #   m_gamma <- lavaanC::m_kronecker_dup_ginv_pre_post(m_s,
       #                                              multiplicator = 2.0)
       # } else {
         m_gamma <- 2 * lav_matrix_duplication_ginv_pre_post(m_s %x% m_s)
@@ -340,9 +340,9 @@ lav_samplestats_gamma_nt <- function(m_y = NULL, # should include
       m_r <- m_s - ybarx_aug
 
       # if (lav_use_lavaanC()) {
-      #   gamma_s <- lavaanC::m_kronecker_dup_ginv_pre_post(m_s, 
+      #   gamma_s <- lavaanC::m_kronecker_dup_ginv_pre_post(m_s,
       #                                               multiplicator = 2.0)
-      #   gamma_r <- lavaanC::m_kronecker_dup_ginv_pre_post(m_r, 
+      #   gamma_r <- lavaanC::m_kronecker_dup_ginv_pre_post(m_r,
       #                                               multiplicator = 2.0)
       # } else {
         gamma_s <- 2 * lav_matrix_duplication_ginv_pre_post(m_s %x% m_s)
@@ -369,10 +369,10 @@ lav_samplestats_gamma_nt <- function(m_y = NULL, # should include
     m_c <- m_s[x_idx, x_idx, drop = FALSE]
     cov_ybarx <- m_a - m_b %*% solve(m_c) %*% t(m_b)
     # if (lav_use_lavaanC()) {
-    #   m_gamma <- lavaanC::m_kronecker_dup_ginv_pre_post(cov_ybarx, 
+    #   m_gamma <- lavaanC::m_kronecker_dup_ginv_pre_post(cov_ybarx,
     #                                                  multiplicator = 2.0)
     # } else {
-      m_gamma <- 2 * 
+      m_gamma <- 2 *
                lav_matrix_duplication_ginv_pre_post(cov_ybarx %x% cov_ybarx)
     # }
 

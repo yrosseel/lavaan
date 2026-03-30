@@ -1376,7 +1376,7 @@ lav_lisrel_nu <- function(MLIST = NULL,
 # compute (I - BETA)^{-1}
 # new in 0.6-22: check structure of BETA
 #  1. BETA absent / all-zero        -> identity
-#  1b.BETA is complex               -> general solve() 
+#  1b.BETA is complex               -> general solve()
 #  2. BETA strictly lower triangular-> forwardsolve
 #  3. BETA strictly upper triangular-> backsolve
 #  4. BETA is a DAG in any order    -> Kahn topological sort, permute to

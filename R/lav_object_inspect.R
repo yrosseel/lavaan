@@ -2699,6 +2699,9 @@ lav_object_inspect_vcov_def <- function(object, joint = FALSE,
       } else {
         tmp.boot.def <- t(tmp.boot.def)
       }
+      if (joint) {
+        tmp.boot.def <- cbind(tmp.boot, tmp.boot.def)
+      }
       return.value <- cov(tmp.boot.def)
     } else {
       # tmp.vcov

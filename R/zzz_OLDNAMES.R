@@ -1,7 +1,7 @@
 # keep 'old' names for some function names that have been used
 # (or are still being used) by external packages
 # rsem ==> tools::testinstalledpackages succesfull without next line
-# computeExpectedInformation <- lav_model_information_expected      
+# computeExpectedInformation <- lav_model_information_expected
 # only for simsem ==> tools::testinstalledpackages succesfull without next line
 # getParameterLabels <- lav_partable_labels
 
