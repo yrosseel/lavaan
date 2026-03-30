@@ -690,6 +690,16 @@ lav_model_delta <- function(lavmodel = NULL, GLIST. = NULL,
                          m.el.idx. = NULL, x.el.idx. = NULL,
                          ceq.simple = FALSE,
                          force.conditional.x.false = FALSE) {
+
+  # temporary fix
+  if (lavmodel@composites) {
+    Delta <- vector("list", length = lavmodel@nblocks)
+    for (b in seq_len(lavmodel@nblocks)) {
+      Delta[[b]] <- lav_model_delta_numerical(lavmodel = lavmodel, g = b)  
+    }  
+    return(Delta)
+  }
+
   representation <- lavmodel@representation
   categorical <- lavmodel@categorical
   correlation <- lavmodel@correlation
