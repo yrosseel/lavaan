@@ -2,22 +2,22 @@
 
 # - 0.6-13: fix multiple-group UG^2 bug in Satorra.2000 (reported by
 #           Gronneberg, Foldnes and Moss) when Satterthwaite = TRUE and
-#           ngroups > 1L (use old.approach = TRUE to get the old result)
+#           ngroups > 1L (use old_approach = TRUE to get the old result)
 
-lav_test_diff_Satorra2000 <- function(m1, m0, H1 = TRUE, A.method = "delta",
-                                      A = NULL,
-                                      Satterthwaite = FALSE,
-                                      scaled.shifted = FALSE,
-                                      old.approach = FALSE) {
-  if (scaled.shifted) {
-    Satterthwaite <- TRUE
+lav_test_diff_satorra2000 <- function(m1, m0, h1 = TRUE, a_method = "delta",
+                                      m_a = NULL,
+                                      satterthwaite = FALSE,
+                                      scaled_shifted = FALSE,
+                                      old_approach = FALSE) {
+  if (scaled_shifted) {
+    satterthwaite <- TRUE
   }
 
   # extract information from m1 and m2
-  T1 <- m1@test[[1]]$stat
+  t1 <- m1@test[[1]]$stat
   r1 <- m1@test[[1]]$df
 
-  T0 <- m0@test[[1]]$stat
+  t0 <- m0@test[[1]]$stat
   r0 <- m0@test[[1]]$df
 
   # m = difference between the df's
@@ -26,13 +26,13 @@ lav_test_diff_Satorra2000 <- function(m1, m0, H1 = TRUE, A.method = "delta",
   # check for identical df setting
   if (m == 0L) {
     return(list(
-      T.delta = (T0 - T1), scaling.factor = as.numeric(NA),
-      df.delta = m, a = as.numeric(NA), b = as.numeric(NA)
+      t_delta = (t0 - t1), scaling.factor = as.numeric(NA),
+      df_delta = m, a = as.numeric(NA), b = as.numeric(NA)
     ))
   }
 
   # check for (near) identical test statistics (despite m > 0)
-  if (abs(T1 - T0) < sqrt(.Machine$double.eps)) {
+  if (abs(t1 - t0) < sqrt(.Machine$double.eps)) {
     lav_msg_warn(gettext("the test statistic of the restriced model is (nearly)
                          identical to the test statistic of the full model;
                          check your models."))
@@ -49,165 +49,165 @@ lav_test_diff_Satorra2000 <- function(m1, m0, H1 = TRUE, A.method = "delta",
   #            stop(lav_txt2message(txt, header = "lavaan ERROR:"))
   # }
 
-  Gamma <- lavTech(m1, "Gamma") # the same for m1 and m0
+  m_gamma <- lavTech(m1, "Gamma") # the same for m1 and m0
   # check for NULL
-  if (is.null(Gamma)) {
+  if (is.null(m_gamma)) {
     lav_msg_stop(gettext(
       "can not compute Gamma matrix; perhaps missing = \"ml\"?"))
   }
 
-  if (H1) {
-    WLS.V <- lavTech(m1, "WLS.V")
-    PI <- lav_model_delta(m1@Model)
-    P <- lavTech(m1, "information")
-    # needed? (yes, if H1 already has eq constraints)
-    P.inv <- lav_model_information_augment_invert(m1@Model,
-      information = P,
+  if (h1) {
+    wls_v <- lavTech(m1, "WLS.V")
+    m_pi <- lav_model_delta(m1@Model)
+    p <- lavTech(m1, "information")
+    # needed? (yes, if h1 already has eq constraints)
+    p_inv <- lav_model_information_augment_invert(m1@Model,
+      information = p,
       inverted = TRUE
     )
     # compute 'A' matrix
-    # NOTE: order of parameters may change between H1 and H0, so be
+    # NOTE: order of parameters may change between h1 and H0, so be
     # careful!
-    if (is.null(A)) {
-      A <- lav_test_diff_A(m1, m0, method = A.method, reference = "H1")
+    if (is.null(m_a)) {
+      m_a <- lav_test_diff_a(m1, m0, method = a_method, reference = "H1")
       # take into account equality constraints m1
-      if (A.method == "delta") {
+      if (a_method == "delta") {
         if (m1@Model@eq.constraints) {
-          A <- A %*% t(m1@Model@eq.constraints.K)
+          m_a <- m_a %*% t(m1@Model@eq.constraints.K)
         } else if (m1@Model@ceq.simple.only) {
-          A <- A %*% t(m1@Model@ceq.simple.K)
+          m_a <- m_a %*% t(m1@Model@ceq.simple.K)
         }
       }
-      if (lav_debug()) print(A)
+      if (lav_debug()) print(m_a)
     }
   } else {
     lav_msg_stop(gettext("not ready yet"))
 
-    WLS.V <- lavTech(m0, "WLS.V")
-    PI <- lav_model_delta(m0@Model)
-    P <- lavTech(m0, "information")
+    wls_v <- lavTech(m0, "WLS.V")
+    m_pi <- lav_model_delta(m0@Model)
+    p <- lavTech(m0, "information")
     # needed?
-    P.inv <- lav_model_information_augment_invert(m0@Model,
-      information = P,
+    p_inv <- lav_model_information_augment_invert(m0@Model,
+      information = p,
       inverted = TRUE
     )
 
     # compute 'A' matrix
     # NOTE: order of parameters may change between H1 and H0, so be
     # careful!
-    if (is.null(A)) {
+    if (is.null(m_a)) {
       # m1, m0 OR m0, m1 (works for delta, but not for exact)
-      A <- lav_test_diff_A(m1, m0, method = A.method, reference = "H0")
+      m_a <- lav_test_diff_a(m1, m0, method = a_method, reference = "H0")
       # take into account equality constraints m1
       if (m0@Model@eq.constraints) {
-        A <- A %*% t(m0@Model@eq.constraints.K)
+        m_a <- m_a %*% t(m0@Model@eq.constraints.K)
       } else if (m0@Model@ceq.simple.only) {
-        A <- A %*% t(m0@Model@ceq.simple.K)
+        m_a <- m_a %*% t(m0@Model@ceq.simple.K)
       }
-      if (lav_debug()) print(A)
+      if (lav_debug()) print(m_a)
     }
   }
 
   # compute tr UG per group
   ngroups <- m1@SampleStats@ngroups
-  UG.group <- vector("list", length = ngroups)
+  ug_group <- vector("list", length = ngroups)
 
-  # safety check: A %*% P.inv %*% t(A) should NOT contain all-zero
+  # safety check: m_a %*% p_inv %*% t(m_a) should NOT contain all-zero
   # rows/columns
   # FIXME: is this really needed? As we use ginv later on
-  APA <- A %*% P.inv %*% t(A)
-  cSums <- colSums(APA)
-  rSums <- rowSums(APA)
-  empty.idx <- which(abs(cSums) < .Machine$double.eps^0.5 &
-    abs(rSums) < .Machine$double.eps^0.5)
+  apa <- m_a %*% p_inv %*% t(m_a)
+  c_sums <- colSums(apa)
+  r_sums <- rowSums(apa)
+  empty.idx <- which(abs(c_sums) < .Machine$double.eps^0.5 &
+    abs(r_sums) < .Machine$double.eps^0.5)
   if (length(empty.idx) > 0) {
-    A <- A[-empty.idx, , drop = FALSE]
+    m_a <- m_a[-empty.idx, , drop = FALSE]
   }
-  if (nrow(A) == 0L) {
+  if (nrow(m_a) == 0L) {
     # oops... abort!
     return(list(
-      T.delta = (T0 - T1), scaling.factor = as.numeric(NA),
-      df.delta = m, a = as.numeric(NA), b = as.numeric(NA)
+      t_delta = (t0 - t1), scaling.factor = as.numeric(NA),
+      df_delta = m, a = as.numeric(NA), b = as.numeric(NA)
     ))
   }
 
-  # PAAPAAP
-  PAAPAAP <- P.inv %*% t(A) %*% MASS::ginv(A %*% P.inv %*% t(A)) %*% A %*% P.inv
+  # paapaap
+  paapaap <- p_inv %*% t(m_a) %*% MASS::ginv(m_a %*% p_inv %*% t(m_a)) %*% m_a %*% p_inv
 
   # compute scaling factor
   fg <- unlist(m1@SampleStats@nobs) / m1@SampleStats@ntotal
 
 
   # this is what we did <0.6-13
-  if (old.approach) {
-    trace.UGamma <- numeric(ngroups)
-    trace.UGamma2 <- numeric(ngroups)
+  if (old_approach) {
+    trace_ugamma <- numeric(ngroups)
+    trace_ugamma2 <- numeric(ngroups)
     for (g in 1:ngroups) {
-      UG.group <- WLS.V[[g]] %*% Gamma[[g]] %*% WLS.V[[g]] %*%
-        PI[[g]] %*% PAAPAAP %*% t(PI[[g]])
-      trace.UGamma[g] <- sum(diag(UG.group))
-      if (Satterthwaite) {
-        trace.UGamma2[g] <- sum(diag(UG.group %*% UG.group))
+      ug_group <- wls_v[[g]] %*% m_gamma[[g]] %*% wls_v[[g]] %*%
+        m_pi[[g]] %*% paapaap %*% t(m_pi[[g]])
+      trace_ugamma[g] <- sum(diag(ug_group))
+      if (satterthwaite) {
+        trace_ugamma2[g] <- sum(diag(ug_group %*% ug_group))
       }
     }
 
-    trace.UGamma <- sum(fg * trace.UGamma)
-    if (Satterthwaite) {
-      trace.UGamma2 <- sum(fg * trace.UGamma2)
+    trace_ugamma <- sum(fg * trace_ugamma)
+    if (satterthwaite) {
+      trace_ugamma2 <- sum(fg * trace_ugamma2)
     }
   } else {
-    # for trace.UGamma, we can compute the trace per group
+    # for trace_ugamma, we can compute the trace per group
     # as in Satorra (2000) eq. 23
-    trace.UGamma <- numeric(ngroups)
+    trace_ugamma <- numeric(ngroups)
     for (g in 1:ngroups) {
-      UG.group <- WLS.V[[g]] %*% Gamma[[g]] %*% WLS.V[[g]] %*%
-        PI[[g]] %*% PAAPAAP %*% t(PI[[g]])
-      trace.UGamma[g] <- sum(diag(UG.group))
+      ug_group <- wls_v[[g]] %*% m_gamma[[g]] %*% wls_v[[g]] %*%
+        m_pi[[g]] %*% paapaap %*% t(m_pi[[g]])
+      trace_ugamma[g] <- sum(diag(ug_group))
     }
-    trace.UGamma <- sum(fg * trace.UGamma)
+    trace_ugamma <- sum(fg * trace_ugamma)
 
-    # but for trace.UGamma2, we can no longer compute the trace per group
-    trace.UGamma2 <- as.numeric(NA)
-    if (Satterthwaite) {
+    # but for trace_ugamma2, we can no longer compute the trace per group
+    trace_ugamma2 <- as.numeric(NA)
+    if (satterthwaite) {
       # global approach (not group-specific)
-      Gamma.f <- Gamma
-      for (g in seq_along(Gamma)) {
-        Gamma.f[[g]] <- fg[g] * Gamma[[g]]
+      gamma_f <- m_gamma
+      for (g in seq_along(m_gamma)) {
+        gamma_f[[g]] <- fg[g] * m_gamma[[g]]
       }
-      Gamma.all <- lav_matrix_bdiag(Gamma.f)
-      V.all <- lav_matrix_bdiag(WLS.V)
-      PI.all <- do.call(rbind, PI)
-      U.all <- V.all %*% PI.all %*% PAAPAAP %*% t(PI.all) %*% V.all
-      UG.all <- U.all %*% Gamma.all
-      UG.all2 <- UG.all %*% UG.all
-      trace.UGamma2 <- sum(diag(UG.all2))
+      gamma_all <- lav_matrix_bdiag(gamma_f)
+      v_all <- lav_matrix_bdiag(wls_v)
+      pi_all <- do.call(rbind, m_pi)
+      u_all <- v_all %*% pi_all %*% paapaap %*% t(pi_all) %*% v_all
+      ug_all <- u_all %*% gamma_all
+      ug_all2 <- ug_all %*% ug_all
+      trace_ugamma2 <- sum(diag(ug_all2))
     }
   }
 
-  if (Satterthwaite && !scaled.shifted) {
-    cd <- trace.UGamma2 / trace.UGamma
-    df.delta <- trace.UGamma^2 / trace.UGamma2
-    T.delta <- (T0 - T1) / cd
+  if (satterthwaite && !scaled_shifted) {
+    cd <- trace_ugamma2 / trace_ugamma
+    df_delta <- trace_ugamma^2 / trace_ugamma2
+    t_delta <- (t0 - t1) / cd
     a <- as.numeric(NA)
     b <- as.numeric(NA)
-  } else if (Satterthwaite && scaled.shifted) {
-    a <- sqrt(m / trace.UGamma2)
-    # b <- m - sqrt(m * trace.UGamma^2 / trace.UGamma2)
-    b <- m - a * trace.UGamma
-    df.delta <- m
-    T.delta <- (T0 - T1) * a + b
+  } else if (satterthwaite && scaled_shifted) {
+    a <- sqrt(m / trace_ugamma2)
+    # b <- m - sqrt(m * trace_ugamma^2 / trace_ugamma2)
+    b <- m - a * trace_ugamma
+    df_delta <- m
+    t_delta <- (t0 - t1) * a + b
     cd <- as.numeric(NA)
   } else {
-    cd <- 1 / m * trace.UGamma
-    df.delta <- m
-    T.delta <- (T0 - T1) / cd
+    cd <- 1 / m * trace_ugamma
+    df_delta <- m
+    t_delta <- (t0 - t1) / cd
     a <- as.numeric(NA)
     b <- as.numeric(NA)
   }
 
   list(
-    T.delta = T.delta, scaling.factor = cd, df.delta = df.delta,
-    trace.UGamma = trace.UGamma, trace.UGamma2 = trace.UGamma2,
+    T.delta = t_delta, scaling.factor = cd, df.delta = df_delta,
+    trace.ugamma = trace_ugamma, trace.ugamma2 = trace_ugamma2,
     a = a, b = b
   )
 }
@@ -415,7 +415,7 @@ lav_test_diff_m10 <- function(m1, m0, test = FALSE) {
 #
 #
 #
-lav_test_diff_A <- function(m1, m0, method = "delta", reference = "H1") {
+lav_test_diff_a <- function(m1, m0, method = "delta", reference = "H1") {
   # FIXME!!!!
 
   if (method == "exact") {
@@ -427,9 +427,9 @@ lav_test_diff_A <- function(m1, m0, method = "delta", reference = "H1") {
       # af <- .test_compute_partable_A_diff_h0(m1 = m1, m0 = m0)
       xx <- m0@optim$x
     }
-    A <- try(lav_func_jacobian_complex(func = af, x = xx), silent = TRUE)
-    if (inherits(A, "try-error")) {
-      A <- lav_func_jacobian_simple(func = af, x = xx)
+    m_a <- try(lav_func_jacobian_complex(func = af, x = xx), silent = TRUE)
+    if (inherits(m_a, "try-error")) {
+      m_a <- lav_func_jacobian_simple(func = af, x = xx)
     }
   } else if (method == "delta") {
     # use a numeric approximation of `A'
@@ -454,10 +454,10 @@ lav_test_diff_A <- function(m1, m0, method = "delta", reference = "H1") {
 
     # H <- solve(t(Delta1) %*% Delta1) %*% t(Delta1) %*% Delta0
     H <- MASS::ginv(Delta1) %*% Delta0
-    A <- t(lav_matrix_orthogonal_complement(H))
+    m_a <- t(lav_matrix_orthogonal_complement(H))
   }
 
-  A
+  m_a
 }
 
 

@@ -9,17 +9,17 @@
 # YR. 15 April 2014 -- first version
 
 # compute higher-order joint moments (Teugels 1991)
-# PROP must be an array, with dim = rep(2L, nitems)
-lav_tables_mvb_getPiDot <- function(PROP, order. = nitems) {
+# prop must be an array, with dim = rep(2L, nitems)
+lav_tables_mvb_prop_pidot <- function(prop, n_order = nitems) {
   # number of items/dimensions
-  nitems <- length(dim(PROP))
+  nitems <- length(dim(prop))
 
-  # compute 'pi dot' up to order = order.
+  # compute 'pi dot' up to order = n_order
   pidot <- unlist(
-    lapply(1:order., function(Order) {
-      IDX <- utils::combn(1:nitems, Order)
-      tmp <- apply(IDX, 2L, function(idx) {
-        as.numeric(apply(PROP, idx, sum))[1L]
+    lapply(1:n_order, function(order1) {
+      idx <- utils::combn(1:nitems, order1)
+      tmp <- apply(idx, 2L, function(idx1) {
+        as.numeric(apply(prop, idx1, sum))[1L]
       })
       tmp
     })
@@ -29,32 +29,33 @@ lav_tables_mvb_getPiDot <- function(PROP, order. = nitems) {
 }
 
 # compute 'T' matrix, so that pidot = T %*% prop
-lav_tables_mvb_getT <- function(nitems = 3L, order. = nitems, rbind. = FALSE) {
+lav_tables_mvb_gett <- function(nitems = 3L, n_order = nitems,
+                                l_rbind = FALSE) {
   # index matrix
-  INDEX <- array(1:(2^nitems), dim = rep(2L, nitems))
+  index <- array(1:(2 ^ nitems), dim = rep(2L, nitems))
 
-  T.r <- lapply(1:order., function(Order) {
-    IDX <- utils::combn(1:nitems, Order)
-    TT <- matrix(0L, ncol(IDX), 2^nitems)
-    TT <- do.call(
+  t_r <- lapply(1:n_order, function(order1) {
+    idx <- utils::combn(1:nitems, order1)
+    m_tt <- matrix(0L, ncol(idx), 2 ^ nitems)
+    m_tt <- do.call(
       "rbind",
-      lapply(1:ncol(IDX), function(i) {
-        TRue <- as.list(rep(TRUE, nitems))
-        TRue[IDX[, i]] <- 1L
-        ARGS <- c(list(INDEX), TRue)
-        T1 <- integer(2^nitems)
-        T1[as.vector(do.call("[", ARGS))] <- 1L
-        T1
+      lapply(seq_len(ncol(idx)), function(i) {
+        l_true <- as.list(rep(TRUE, nitems))
+        l_true[idx[, i]] <- 1L
+        v_args <- c(list(index), l_true)
+        t1 <- integer(2 ^ nitems)
+        t1[as.vector(do.call("[", v_args))] <- 1L
+        t1
       })
     )
-    TT
+    m_tt
   })
 
-  if (rbind.) {
-    T.r <- do.call("rbind", T.r)
+  if (l_rbind) {
+    t_r <- do.call("rbind", t_r)
   }
 
-  T.r
+  t_r
 }
 
 # simple test function to check that  pidot = T %*% prop
@@ -66,8 +67,8 @@ lav_tables_mvb_test <- function(nitems = 3L) {
   # note: freq is always as.numeric(TABLE)
   #       prop is always as.numeric(PROP)
 
-  pidot <- lav_tables_mvb_getPiDot(PROP)
-  T.r <- lav_tables_mvb_getT(nitems = nitems, order. = nitems, rbind. = TRUE)
+  pidot <- lav_tables_mvb_prop_pidot(PROP)
+  T.r <- lav_tables_mvb_gett(nitems = nitems, n_order = nitems, l_rbind = TRUE)
 
   if (lav_verbose()) {
     out <- cbind(as.numeric(T.r %*% prop), pidot)
@@ -81,17 +82,17 @@ lav_tables_mvb_test <- function(nitems = 3L) {
 # L_r test of Maydeu-Olivares & Joe (2005) eq (4)
 lav_tables_mvb_Lr <- function(nitems = 0L,
                               obs.prop = NULL, est.prop = NULL, nobs = 0L,
-                              order. = 2L) {
+                              n_order = 2L) {
   # recreate tables
   obs.PROP <- array(obs.prop, dim = rep(2L, nitems))
   est.PROP <- array(est.prop, dim = rep(2L, nitems))
 
   # compute {obs,est}.prop.dot
-  obs.prop.dot <- lav_tables_mvb_getPiDot(obs.PROP, order. = order.)
-  est.prop.dot <- lav_tables_mvb_getPiDot(est.PROP, order. = order.)
+  obs.prop.dot <- lav_tables_mvb_prop_pidot(obs.PROP, n_order = n_order)
+  est.prop.dot <- lav_tables_mvb_prop_pidot(est.PROP, n_order = n_order)
 
   # compute T.r
-  T.r <- lav_tables_mvb_getT(nitems = nitems, order. = order., rbind. = TRUE)
+  T.r <- lav_tables_mvb_gett(nitems = nitems, n_order = n_order, l_rbind = TRUE)
 
   # compute GAMMA based on est.prop
   GAMMA <- diag(est.prop) - tcrossprod(est.prop)

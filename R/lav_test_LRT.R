@@ -347,11 +347,11 @@ lavTestLRT <- function(object, ..., method = "default", test = "default",
         } else {
           Satterthwaite <- TRUE
          }
-        out <- lav_test_diff_Satorra2000(mods[[m]], mods[[m + 1]],
-          H1 = TRUE,
-          Satterthwaite = Satterthwaite,
-          scaled.shifted = scaled.shifted,
-          A.method = A.method
+        out <- lav_test_diff_satorra2000(mods[[m]], mods[[m + 1]],
+          h1 = TRUE,
+          satterthwaite = Satterthwaite,
+          scaled_shifted = scaled.shifted,
+          a_method = A.method
         )
         STAT.delta[m + 1] <- out$T.delta
         Df.delta[m + 1] <- out$df.delta

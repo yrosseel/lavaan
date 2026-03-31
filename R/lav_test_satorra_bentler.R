@@ -221,14 +221,14 @@ lav_test_satorra_bentler <- function(lavobject = NULL,
       Satterthwaite = Satterthwaite
     )
   } else if (method == "ABA") {
-    out <- lav_test_satorra_bentler_trace_ABA(
-      Gamma = Gamma,
-      Delta = Delta, WLS.V = WLS.V, E.inv = E.inv,
+    out <- lav_test_satorra_bentler_trace_aba(
+      m_gamma = Gamma,
+      m_delta = Delta, wls_v = WLS.V, e_inv = E.inv,
       ngroups = ngroups, nobs = lavsamplestats@nobs,
       ntotal = lavsamplestats@ntotal,
-      return.ugamma = return.ugamma,
-      ug2.old.approach = ug2.old.approach,
-      Satterthwaite = Satterthwaite
+      return_ugamma = return.ugamma,
+      ug2_old_approach = ug2.old.approach,
+      satterthwaite = Satterthwaite
     )
   } else {
     lav_msg_stop(gettextf("method `%s' not supported", method))
@@ -626,123 +626,123 @@ lav_test_satorra_bentler_trace_complement <- function(Gamma = NULL,
 
 # we write it like this to highlight the connection with MLR
 #
-lav_test_satorra_bentler_trace_ABA <- function(Gamma = NULL,
-                                               Delta = NULL,
-                                               WLS.V = NULL,
-                                               E.inv = NULL,
+lav_test_satorra_bentler_trace_aba <- function(m_gamma = NULL,
+                                               m_delta = NULL,
+                                               wls_v = NULL,
+                                               e_inv = NULL,
                                                ngroups = NULL,
                                                nobs = NULL,
                                                ntotal = NULL,
-                                               return.ugamma = FALSE,
-                                               ug2.old.approach = FALSE,
-                                               Satterthwaite = FALSE) {
+                                               return_ugamma = FALSE,
+                                               ug2_old_approach = FALSE,
+                                               satterthwaite = FALSE) {
   # this is what we did <0.6-13: everything per group
-  if (ug2.old.approach) {
-    UfromUGamma <- UG <- vector("list", ngroups)
-    trace.UGamma <- trace.UGamma2 <- rep(as.numeric(NA), ngroups)
+  if (ug2_old_approach) {
+    ufromugamma <- ug <- vector("list", ngroups)
+    trace_ugamma <- trace_ugamma2 <- rep(as.numeric(NA), ngroups)
 
     for (g in 1:ngroups) {
       fg <- nobs[[g]] / ntotal
-      Gamma.g <- Gamma[[g]] / fg ## ?? check this
-      Delta.g <- Delta[[g]]
+      gamma_g <- m_gamma[[g]] / fg ## ?? check this
+      delta_g <- m_delta[[g]]
 
-      # diagonal WLS.V? we check for this since 0.5-17
+      # diagonal wls_v? we check for this since 0.5-17
       diagonal <- FALSE
-      if (is.matrix(WLS.V[[g]])) {
-        A1 <- WLS.V[[g]] * fg
-        AGA1 <- A1 %*% Gamma.g %*% A1
+      if (is.matrix(wls_v[[g]])) {
+        aa1 <- wls_v[[g]] * fg
+        aga1 <- aa1 %*% gamma_g %*% aa1
       } else {
         diagonal <- TRUE
-        a1 <- WLS.V[[g]] * fg # numeric vector!
-        AGA1 <- Gamma.g * tcrossprod(a1)
+        a1 <- wls_v[[g]] * fg # numeric vector!
+        aga1 <- gamma_g * tcrossprod(a1)
       }
 
-      # note: we have AGA1 at the end, to avoid ending up with
+      # note: we have aga1 at the end, to avoid ending up with
       # a transposed matrix (both parts are non-symmetric)
       if (diagonal) {
-        UG <- t(Gamma.g * a1) -
-          (Delta.g %*% tcrossprod(E.inv, Delta.g) %*% AGA1)
+        ug <- t(gamma_g * a1) -
+          (delta_g %*% tcrossprod(e_inv, delta_g) %*% aga1)
       } else {
-        UG <- (Gamma.g %*% A1) -
-          (Delta.g %*% tcrossprod(E.inv, Delta.g) %*% AGA1)
+        ug <- (gamma_g %*% aa1) -
+          (delta_g %*% tcrossprod(e_inv, delta_g) %*% aga1)
       }
 
-      trace.UGamma[g] <- sum(diag(UG))
-      if (Satterthwaite) {
-        trace.UGamma2[g] <- sum(UG * t(UG))
+      trace_ugamma[g] <- sum(diag(ug))
+      if (satterthwaite) {
+        trace_ugamma2[g] <- sum(ug * t(ug))
       }
     }
     # sum over groups
-    trace.UGamma <- sum(trace.UGamma)
-    trace.UGamma2 <- sum(trace.UGamma2)
+    trace_ugamma <- sum(trace_ugamma)
+    trace_ugamma2 <- sum(trace_ugamma2)
   } else {
-    trace.UGamma <- trace.UGamma2 <- UG <- as.numeric(NA)
+    trace_ugamma <- trace_ugamma2 <- ug <- as.numeric(NA)
     fg <- unlist(nobs) / ntotal
-    if (Satterthwaite || return.ugamma) {
-      # for trace.UGamma2, we can no longer compute the trace per group
-      V.g <- WLS.V
+    if (satterthwaite || return_ugamma) {
+      # for trace_ugamma2, we can no longer compute the trace per group
+      V.g <- wls_v
       for (g in 1:ngroups) {
-        if (is.matrix(WLS.V[[g]])) {
-          V.g[[g]] <- fg[g] * WLS.V[[g]]
+        if (is.matrix(wls_v[[g]])) {
+          V.g[[g]] <- fg[g] * wls_v[[g]]
         } else {
-          V.g[[g]] <- fg[g] * diag(WLS.V[[g]])
+          V.g[[g]] <- fg[g] * diag(wls_v[[g]])
         }
       }
       V.all <- lav_matrix_bdiag(V.g)
-      Gamma.f <- Gamma
+      Gamma.f <- m_gamma
       for (g in 1:ngroups) {
-        Gamma.f[[g]] <- 1 / fg[g] * Gamma[[g]]
+        Gamma.f[[g]] <- 1 / fg[g] * m_gamma[[g]]
       }
       Gamma.all <- lav_matrix_bdiag(Gamma.f)
-      Delta.all <- do.call("rbind", Delta)
+      Delta.all <- do.call("rbind", m_delta)
 
-      AGA1 <- V.all %*% Gamma.all %*% V.all
+      aga1 <- V.all %*% Gamma.all %*% V.all
 
-      UG <- (Gamma.all %*% V.all) -
-        (Delta.all %*% tcrossprod(E.inv, Delta.all) %*% AGA1)
+      ug <- (Gamma.all %*% V.all) -
+        (Delta.all %*% tcrossprod(e_inv, Delta.all) %*% aga1)
 
-      trace.UGamma <- sum(diag(UG))
-      trace.UGamma2 <- sum(UG * t(UG))
+      trace_ugamma <- sum(diag(ug))
+      trace_ugamma2 <- sum(ug * t(ug))
     } else {
-      trace.UGamma.group <- numeric(ngroups)
+      trace_ugamma_group <- numeric(ngroups)
       for (g in 1:ngroups) {
         fg <- nobs[[g]] / ntotal
-        Gamma.g <- Gamma[[g]] / fg ## ?? check this
-        Delta.g <- Delta[[g]]
+        gamma_g <- m_gamma[[g]] / fg ## ?? check this
+        delta_g <- m_delta[[g]]
 
-        # diagonal WLS.V? we check for this since 0.5-17
+        # diagonal wls_v? we check for this since 0.5-17
         diagonal <- FALSE
-        if (is.matrix(WLS.V[[g]])) {
-          A1 <- WLS.V[[g]] * fg
-          AGA1 <- A1 %*% Gamma.g %*% A1
+        if (is.matrix(wls_v[[g]])) {
+          aa1 <- wls_v[[g]] * fg
+          aga1 <- aa1 %*% gamma_g %*% aa1
         } else {
           diagonal <- TRUE
-          a1 <- WLS.V[[g]] * fg # numeric vector!
-          AGA1 <- Gamma.g * tcrossprod(a1)
+          a1 <- wls_v[[g]] * fg # numeric vector!
+          aga1 <- gamma_g * tcrossprod(a1)
         }
 
-        # note: we have AGA1 at the end, to avoid ending up with
+        # note: we have aga1 at the end, to avoid ending up with
         # a transposed matrix (both parts are non-symmetric)
         if (diagonal) {
-          UG <- t(Gamma.g * a1) -
-            (Delta.g %*% tcrossprod(E.inv, Delta.g) %*% AGA1)
+          ug <- t(gamma_g * a1) -
+            (delta_g %*% tcrossprod(e_inv, delta_g) %*% aga1)
         } else {
-          UG <- (Gamma.g %*% A1) -
-            (Delta.g %*% tcrossprod(E.inv, Delta.g) %*% AGA1)
+          ug <- (gamma_g %*% aa1) -
+            (delta_g %*% tcrossprod(e_inv, delta_g) %*% aga1)
         }
 
-        trace.UGamma.group[g] <- sum(diag(UG))
+        trace_ugamma_group[g] <- sum(diag(ug))
       } # g
-      trace.UGamma <- sum(trace.UGamma.group)
+      trace_ugamma <- sum(trace_ugamma_group)
     }
   }
 
-  if (!return.ugamma) {
-    UG <- NULL
+  if (!return_ugamma) {
+    ug <- NULL
   }
 
   list(
-    trace.UGamma = trace.UGamma, trace.UGamma2 = trace.UGamma2,
-    UGamma = UG
+    trace.UGamma = trace_ugamma, trace.UGamma2 = trace_ugamma2,
+    UGamma = ug
   )
 }

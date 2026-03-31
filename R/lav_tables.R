@@ -257,13 +257,13 @@ lav_tables_pattern <- function(lavobject = NULL, lavdata = NULL,
 
     out$est.prop.un <- unlist(PI)
     if ("G2.un" %in% statistic) {
-      out$G2.un <- lav_tables_stat_G2(
+      out$G2.un <- lav_tables_stat_g2(
         out$obs.prop, out$est.prop.un,
         out$nobs
       )
     }
     if ("X2.un" %in% statistic) {
-      out$X2.un <- lav_tables_stat_X2(
+      out$X2.un <- lav_tables_stat_x2(
         out$obs.prop, out$est.prop.un,
         out$nobs
       )
@@ -289,13 +289,13 @@ lav_tables_pattern <- function(lavobject = NULL, lavdata = NULL,
 
     out$est.prop <- unlist(PI)
     if ("G2" %in% statistic) {
-      out$G2 <- lav_tables_stat_G2(
+      out$G2 <- lav_tables_stat_g2(
         out$obs.prop, out$est.prop,
         out$nobs
       )
     }
     if ("X2" %in% statistic) {
-      out$X2 <- lav_tables_stat_X2(
+      out$X2 <- lav_tables_stat_x2(
         out$obs.prop, out$est.prop,
         out$nobs
       )
@@ -363,13 +363,13 @@ lav_tables_pairwise_cells <- function(lavobject = NULL, lavdata = NULL,
     )
     out$est.prop.un <- unlist(PI)
     if ("G2.un" %in% statistic) {
-      out$G2.un <- lav_tables_stat_G2(
+      out$G2.un <- lav_tables_stat_g2(
         out$obs.prop, out$est.prop.un,
         out$nobs
       )
     }
     if ("X2.un" %in% statistic) {
-      out$X2.un <- lav_tables_stat_X2(
+      out$X2.un <- lav_tables_stat_x2(
         out$obs.prop, out$est.prop.un,
         out$nobs
       )
@@ -387,13 +387,13 @@ lav_tables_pairwise_cells <- function(lavobject = NULL, lavdata = NULL,
     PI <- lav_tables_pairwise_model_pi(lavobject = lavobject)
     out$est.prop <- unlist(PI)
     if ("G2" %in% statistic) {
-      out$G2 <- lav_tables_stat_G2(
+      out$G2 <- lav_tables_stat_g2(
         out$obs.prop, out$est.prop,
         out$nobs
       )
     }
     if ("X2" %in% statistic) {
-      out$X2 <- lav_tables_stat_X2(
+      out$X2 <- lav_tables_stat_x2(
         out$obs.prop, out$est.prop,
         out$nobs
       )
@@ -411,22 +411,22 @@ lav_tables_pairwise_cells <- function(lavobject = NULL, lavdata = NULL,
 }
 
 # G2 statistic
-lav_tables_stat_G2 <- function(obs.prop = NULL, est.prop = NULL, nobs = NULL) {
-  # not defined if out$obs.prop is (close to) zero
-  zero.idx <- which(obs.prop < .Machine$double.eps)
-  if (length(zero.idx)) {
-    obs.prop[zero.idx] <- as.numeric(NA)
+lav_tables_stat_g2 <- function(obs_prop = NULL, est_prop = NULL, nobs = NULL) {
+  # not defined if out$obs_prop is (close to) zero
+  zero_idx <- which(obs_prop < .Machine$double.eps)
+  if (length(zero_idx)) {
+    obs_prop[zero_idx] <- as.numeric(NA)
   }
   # the usual G2 formula
-  G2 <- 2 * nobs * (obs.prop * log(obs.prop / est.prop))
-  G2
+  g2 <- 2 * nobs * (obs_prop * log(obs_prop / est_prop))
+  g2
 }
 
 # X2 (aka X2) statistic
-lav_tables_stat_X2 <- function(obs.prop = NULL, est.prop = NULL, nobs = NULL) {
-  res.prop <- obs.prop - est.prop
-  X2 <- nobs * (res.prop * res.prop) / est.prop
-  X2
+lav_tables_stat_x2 <- function(obs_prop = NULL, est_prop = NULL, nobs = NULL) {
+  res_prop <- obs_prop - est_prop
+  x2 <- nobs * (res_prop * res_prop) / est_prop
+  x2
 }
 
 # pairwise tables, rows = tables
@@ -806,13 +806,13 @@ lav_tables_oneway <- function(lavobject = NULL, lavdata = NULL,
         out$th <- th.h0
       }
       if ("G2" %in% statistic) {
-        out$G2 <- lav_tables_stat_G2(
+        out$G2 <- lav_tables_stat_g2(
           out$obs.prop, out$est.prop,
           out$nobs
         )
       }
       if ("X2" %in% statistic) {
-        out$X2 <- lav_tables_stat_X2(
+        out$X2 <- lav_tables_stat_x2(
           out$obs.prop, out$est.prop,
           out$nobs
         )
