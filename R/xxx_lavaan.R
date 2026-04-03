@@ -16,7 +16,7 @@
 # LDW 26 Feb 2024: split lavaan in smaller steps
 #
 lavaan <- function(
-    # user specified model: can be syntax, parameter Table, ...
+    # user specified model: can be syntax, parameter Table, ... # nolint start
     model = NULL,
     # data (second argument, most used)
     data = NULL,
@@ -36,24 +36,24 @@ lavaan <- function(
     # constraints
     constraints = "",
     # user-specified variance matrices
-    WLS.V = NULL, # nolint
-    NACOV = NULL, # nolint
+    WLS.V = NULL,
+    NACOV = NULL,
     # internal order of ov.names
     ov.order = "model",
     # full slots from previous fits
-    slotOptions = NULL, # nolint
-    slotParTable = NULL, # nolint
-    slotSampleStats = NULL, # nolint
-    slotData = NULL, # nolint
-    slotModel = NULL, # nolint
-    slotCache = NULL, # nolint
+    slotOptions = NULL,
+    slotParTable = NULL,
+    slotSampleStats = NULL,
+    slotData = NULL,
+    slotModel = NULL,
+    slotCache = NULL,
     sloth1 = NULL,
     # options (dotdotdot)
-    ...) {
+    ...) {                                                     # nolint end
   # start timer
-  start.time0 <- proc.time()[3]
+  start_time0 <- proc.time()[3]
   timing <- list()
-  timing$start.time <- start.time0
+  timing$start.time <- start_time0
 
   # ------------- adapt parameters -----------------
   mc <- match.call(expand.dots = TRUE)
@@ -69,16 +69,16 @@ lavaan <- function(
 
   # store current random seed (if any)
   if (exists(".Random.seed", envir = .GlobalEnv, inherits = FALSE)) {
-    temp.seed <- get(".Random.seed", envir = .GlobalEnv, inherits = FALSE)
+    temp_seed <- get(".Random.seed", envir = .GlobalEnv, inherits = FALSE)
   } else {
-    temp.seed <- NULL
+    temp_seed <- NULL
   }
 
   # ------------- handling of warn/debug/verbose switches ----------
   if (!is.null(dotdotdot$debug)) {
-    current.debug <- lav_debug()
+    current_debug <- lav_debug()
     if (lav_debug(dotdotdot$debug))
-      on.exit(lav_debug(current.debug), TRUE)
+      on.exit(lav_debug(current_debug), TRUE)
     dotdotdot$debug <- NULL
     if (lav_debug()) {
       dotdotdot$warn <- TRUE       # force warnings if debug
@@ -86,15 +86,15 @@ lavaan <- function(
     }
   }
   if (!is.null(dotdotdot$warn)) {
-    current.warn <- lav_warn()
+    current_warn <- lav_warn()
     if (lav_warn(dotdotdot$warn))
-      on.exit(lav_warn(current.warn), TRUE)
+      on.exit(lav_warn(current_warn), TRUE)
     dotdotdot$warn <- NULL
   }
   if (!is.null(dotdotdot$verbose)) {
-    current.verbose <- lav_verbose()
+    current_verbose <- lav_verbose()
     if (lav_verbose(dotdotdot$verbose))
-      on.exit(lav_verbose(current.verbose), TRUE)
+      on.exit(lav_verbose(current_verbose), TRUE)
     dotdotdot$verbose <- NULL
   }
 
@@ -112,26 +112,26 @@ lavaan <- function(
   )
   data <- temp$data
   dotdotdot <- temp$dotdotdot
-  sample.cov <- temp$sample.cov
-  sample.nobs <- temp$sample.nobs
-  sample.mean <- temp$sample.mean
-  sample.th <- temp$sample.th
-  NACOV <- temp$NACOV # nolint
-  WLS.V <- temp$WLS.V # nolint
-  ov.order <- temp$ov.order
+  sample_cov <- temp$sample.cov
+  sample_nobs <- temp$sample.nobs
+  sample_mean <- temp$sample.mean
+  sample_th <- temp$sample.th
+  nacov <- temp$NACOV
+  wls_v <- temp$WLS.V
+  ov_order <- temp$ov.order
 
   timing <- ldw_add_timing(timing, "init")
 
   # ------------ ov.names 1 -----  initial flat model --------------------
   # if parser not specified, take default one
   if (is.null(dotdotdot$parser)) {
-    opt.default <- lav_options_default()
-    useparser <- opt.default$parser
+    opt_default <- lav_options_default()
+    useparser <- opt_default$parser
   } else {
     useparser <- dotdotdot$parser
   }
 
-  flat.model <- lav_lavaan_step01_ovnames_initflat(
+  flat_model <- lav_lavaan_step01_ovnames_initflat(
     slotParTable     = slotParTable,
     model            = model,
     dotdotdot.parser = useparser
@@ -139,39 +139,39 @@ lavaan <- function(
 
   # ------------ ov.names 1b ----- handle 'old way' for composites -------
   if (!is.null(dotdotdot$composites) && !dotdotdot$composites &&
-     any(flat.model$op == "<~")) {
-    flat.model <- lav_lavaan_step01_ovnames_composites(flat.model)
+     any(flat_model$op == "<~")) {
+    flat_model <- lav_lavaan_step01_ovnames_composites(flat_model)
   }
 
   # ------------ ov.names 2 ------ handle ov.order -----------------------
-  flat.model <- lav_lavaan_step01_ovnames_ovorder(
-    flat.model = flat.model,
-    ov.order   = ov.order,
+  flat_model <- lav_lavaan_step01_ovnames_ovorder(
+    flat.model = flat_model,
+    ov.order   = ov_order,
     data       = data,
-    sample.cov = sample.cov,
+    sample.cov = sample_cov,
     slotData   = slotData
   )
 
   # ------------ ov.names 3 ------- group blocks ------------------
   ngroups <- 1L # default value
   temp <- lav_lavaan_step01_ovnames_group(
-    flat.model = flat.model,
+    flat.model = flat_model,
     ngroups    = ngroups
   )
-  flat.model <- temp$flat.model
-  ov.names <- temp$ov.names
-  ov.names.x <- temp$ov.names.x
-  ov.names.y <- temp$ov.names.y
-  lv.names <- temp$lv.names
-  group.values <- temp$group.values
+  flat_model <- temp$flat.model
+  ov_names <- temp$ov.names
+  ov_names_x <- temp$ov.names.x
+  ov_names_y <- temp$ov.names.y
+  lv_names <- temp$lv.names
+  group_values <- temp$group.values
   ngroups <- temp$ngroups
 
   # ------------ ov.names 4 ------ sanity checks ------------------
   lav_lavaan_step01_ovnames_checklv(
-    lv.names    = lv.names,
-    ov.names    = ov.names,
+    lv.names    = lv_names,
+    ov.names    = ov_names,
     data        = data,
-    sample.cov  = sample.cov,
+    sample.cov  = sample_cov,
     dotdotdot   = dotdotdot,
     slotOptions = slotOptions
   )
@@ -180,17 +180,17 @@ lavaan <- function(
   temp <- lav_lavaan_step01_ovnames_namesl(
     data         = data,
     cluster      = cluster,
-    flat.model   = flat.model,
-    group.values = group.values,
+    flat.model   = flat_model,
+    group.values = group_values,
     ngroups      = ngroups
   )
-  flat.model <- temp$flat.model
-  ov.names.l <- temp$ov.names.l
+  flat_model <- temp$flat.model
+  ov_names_l <- temp$ov.names.l
 
   # ------------ ov.names 6 ------ sanity check ordered --------------
   ordered <- lav_lavaan_step01_ovnames_ordered(
     ordered    = ordered,
-    flat.model = flat.model,
+    flat.model = flat_model,
     data       = data
   )
   timing <- ldw_add_timing(timing, "ov.names")
@@ -199,26 +199,26 @@ lavaan <- function(
   lavoptions <- lav_lavaan_step02_options(
     slotOptions      = slotOptions,
     slotData         = slotData,
-    flat.model       = flat.model,
+    flat.model       = flat_model,
     ordered          = ordered,
-    sample.cov       = sample.cov,
-    sample.mean      = sample.mean,
-    sample.th        = sample.th,
-    sample.nobs      = sample.nobs,
-    ov.names.l       = ov.names.l,
+    sample.cov       = sample_cov,
+    sample.mean      = sample_mean,
+    sample.th        = sample_th,
+    sample.nobs      = sample_nobs,
+    ov.names.l       = ov_names_l,
     sampling.weights = sampling.weights,
     constraints      = constraints,
     group            = group,
-    ov.names.x       = ov.names.x,
-    ov.names.y       = ov.names.y,
+    ov.names.x       = ov_names_x,
+    ov.names.y       = ov_names_y,
     dotdotdot        = dotdotdot,
     cluster          = cluster,
     data             = data
   )
-  # fixed.x = FALSE? set ov.names.x = character(0L)
+  # fixed.x = FALSE? set ov_names_x = character(0L)
   # new in 0.6-1
   if (!lavoptions$fixed.x) {
-    ov.names.x <- character(0L)
+    ov_names_x <- character(0L)
   }
 
   timing <- ldw_add_timing(timing, "Options")
@@ -227,26 +227,26 @@ lavaan <- function(
   temp <- lav_lavaan_step03_data(
     slotData         = slotData,
     lavoptions       = lavoptions,
-    ov.names         = ov.names,
-    ov.names.y       = ov.names.y,
+    ov.names         = ov_names,
+    ov.names.y       = ov_names_y,
     group            = group,
     data             = data,
     cluster          = cluster,
-    ov.names.x       = ov.names.x,
-    ov.names.l       = ov.names.l,
+    ov.names.x       = ov_names_x,
+    ov.names.l       = ov_names_l,
     ordered          = ordered,
     sampling.weights = sampling.weights,
-    sample.cov       = sample.cov,
-    sample.mean      = sample.mean,
-    sample.th        = sample.th,
-    sample.nobs      = sample.nobs,
+    sample.cov       = sample_cov,
+    sample.mean      = sample_mean,
+    sample.th        = sample_th,
+    sample.nobs      = sample_nobs,
     slotParTable     = slotParTable,
     ngroups          = ngroups,
     dotdotdot        = dotdotdot,
-    flat.model       = flat.model,
+    flat.model       = flat_model,
     model            = model, # in case model is a lavaan object
-    NACOV            = NACOV,
-    WLS.V            = WLS.V
+    NACOV            = nacov,
+    WLS.V            = wls_v
   )
   lavdata <- temp$lavdata
   lavoptions <- temp$lavoptions
@@ -257,7 +257,7 @@ lavaan <- function(
   temp <- lav_lavaan_step04_partable(
     slotParTable = slotParTable,
     model        = model,
-    flat.model   = flat.model,
+    flat.model   = flat_model,
     lavoptions   = lavoptions,
     lavdata      = lavdata,
     constraints  = constraints
@@ -278,14 +278,14 @@ lavaan <- function(
     slotSampleStats = slotSampleStats,
     lavdata         = lavdata,
     lavoptions      = lavoptions,
-    WLS.V           = WLS.V,
-    NACOV           = NACOV,
-    sample.cov      = sample.cov,
-    sample.mean     = sample.mean,
-    sample.th       = sample.th,
-    sample.nobs     = sample.nobs,
-    ov.names        = ov.names,
-    ov.names.x      = ov.names.x,
+    WLS.V           = wls_v,
+    NACOV           = nacov,
+    sample.cov      = sample_cov,
+    sample.mean     = sample_mean,
+    sample.th       = sample_th,
+    sample.nobs     = sample_nobs,
+    ov.names        = ov_names,
+    ov.names.x      = ov_names_x,
     lavpartable     = lavpartable
   )
   timing <- ldw_add_timing(timing, "SampleStats")
@@ -398,7 +398,7 @@ lavaan <- function(
   )
   lavpartable <- temp$lavpartable
   lavvcov <- temp$lavvcov
-  VCOV <- temp$VCOV # nolint
+  vcov <- temp$VCOV
   lavmodel <- temp$lavmodel
   lavboot <- temp$lavboot
 
@@ -415,7 +415,7 @@ lavaan <- function(
     lavimplied     = lavimplied,
     lavh1          = lavh1,
     x              = x,
-    VCOV           = VCOV,
+    VCOV           = vcov,
     lavloglik      = lavloglik
   )
   timing <- ldw_add_timing(timing, "test")
@@ -426,7 +426,7 @@ lavaan <- function(
     lavmodel    = lavmodel,
     lavimplied  = lavimplied,
     x           = x,
-    VCOV        = VCOV,
+    VCOV        = vcov,
     lavtest     = lavtest
   )
   timing <- ldw_add_timing(timing, "Fit")
@@ -451,7 +451,7 @@ lavaan <- function(
     lavdata        = lavdata,
     x              = x,
     lavvcov        = lavvcov,
-    VCOV           = VCOV,
+    VCOV           = vcov,
     lavcache       = lavcache,
     lavimplied     = lavimplied,
     lavsamplestats = lavsamplestats
@@ -482,12 +482,12 @@ lavaan <- function(
     lavh1          = lavh1,
     lavbaseline    = lavbaseline,
     laveqs         = laveqs,
-    start.time0    = start.time0
+    start.time0    = start_time0
   )
 
   # restore random seed
-  if (!is.null(temp.seed)) {
-    assign(".Random.seed", temp.seed, envir = .GlobalEnv)
+  if (!is.null(temp_seed)) {
+    assign(".Random.seed", temp_seed, envir = .GlobalEnv)                   # nolint
   } else if (exists(".Random.seed", envir = .GlobalEnv, inherits = FALSE)) {
     # initially there was no .Random.seed, but we created one along the way
     # clean up
@@ -500,7 +500,7 @@ lavaan <- function(
 # # cfa # #
 # # # # # #
 cfa <- function(
-  model = NULL,
+  model = NULL,                        # nolint start
   data = NULL,
   ordered = NULL,
   sampling.weights = NULL,
@@ -511,10 +511,10 @@ cfa <- function(
   group = NULL,
   cluster = NULL,
   constraints = "",
-  WLS.V = NULL, # nolint
-  NACOV = NULL, # nolint
+  WLS.V = NULL,
+  NACOV = NULL,
   ov.order = "model",
-  ...) {
+  ...) {                              # nolint end
   sc <- sys.call()
   sc[["model.type"]] <- quote("cfa")
   # call mother function
@@ -525,7 +525,7 @@ cfa <- function(
 # # sem # #
 # # # # # #
 sem <- function(
-    model = NULL,
+    model = NULL,                      # nolint start
     data = NULL,
     ordered = NULL,
     sampling.weights = NULL,
@@ -536,10 +536,10 @@ sem <- function(
     group = NULL,
     cluster = NULL,
     constraints = "",
-    WLS.V = NULL, # nolint
-    NACOV = NULL, # nolint
+    WLS.V = NULL,
+    NACOV = NULL,
     ov.order = "model",
-    ...) {
+    ...) {                             # nolint end
   sc <- sys.call()
   sc[["model.type"]] <- quote("sem")
   # call mother function
@@ -550,7 +550,7 @@ sem <- function(
 # # growth  # #
 # # # # # # # #
 growth <- function(
-    model = NULL,
+    model = NULL,                      # nolint start
     data = NULL,
     ordered = NULL,
     sampling.weights = NULL,
@@ -561,10 +561,10 @@ growth <- function(
     group = NULL,
     cluster = NULL,
     constraints = "",
-    WLS.V = NULL, # nolint
-    NACOV = NULL, # nolint
+    WLS.V = NULL,
+    NACOV = NULL,
     ov.order = "model",
-    ...) {
+    ...) {                             # nolint end
   sc <- sys.call()
   sc[["model.type"]] <- quote("growth")
   # call mother function
