@@ -2603,12 +2603,19 @@ lav_object_inspect_vcov <- function(object, standardized = FALSE,
     # tmp.jac contains *all* parameters in the parameter table
     if (free.only) {
       if (object@Model@ceq.simple.only) {
-        free.idx <- which(object@ParTable$free > 0L &
+        pt.free.idx <- which(object@ParTable$free > 0L &
           !duplicated(object@ParTable$free))
       } else {
-        free.idx <- which(object@ParTable$free > 0L)
+        pt.free.idx <- which(object@ParTable$free > 0L)
       }
-      tmp.jac <- tmp.jac[free.idx, , drop = FALSE]
+      tmp.jac <- tmp.jac[pt.free.idx, , drop = FALSE]
+    } else if (object@Model@ceq.simple.only) {
+      pt.free.idx <- which(object@ParTable$free > 0L &
+        !duplicated(object@ParTable$free))
+      if (length(pt.free.idx) > 0L) {
+        free.idx <- object@ParTable$free[pt.free.idx]
+        return.value <- return.value[free.idx, free.idx, drop = FALSE]
+      }
     }
 
     return.value <- tmp.jac %*% return.value %*% t(tmp.jac)

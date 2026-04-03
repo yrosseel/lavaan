@@ -1174,6 +1174,7 @@ lav_model_ddelta_dx <- function(lavmodel = NULL, GLIST = NULL, target = "lambda"
   Delta
 }
 
+
 # single block, continuous data/LISREL only
 # new approach (0.6-22):
 # - only the free elements per model matrix
@@ -1242,9 +1243,24 @@ lav_model_delta_lisrel <- function(lavmodel, block = 1L) {
     n_del <- length(m.delta.idx)
   }
 
+  # composite: wmat
+  n_wmat <- 0L
+  x.wmat.idx <- integer(0L)
+  m.wmat.idx <- integer(0L)
+  wmat.flag <- !is.null(MLIST$wmat)
+  if (wmat.flag) {
+    mm.wmat.idx <- which(mnames == "wmat")
+    if (length(mm.wmat.idx) > 0L) {
+      x.wmat.idx <- lavmodel@x.free.idx[[mm.wmat.idx]]
+      m.wmat.idx <- lavmodel@m.free.idx[[mm.wmat.idx]]
+      n_wmat <- length(m.wmat.idx)
+    }
+  }
+
   # in case !meanstructure or !categorical
   n_nu  <- 0L;  m.nu.idx    <- integer(0L);  x.nu.idx    <- integer(0L)
   n_alp <- 0L;  m.alpha.idx <- integer(0L);  x.alpha.idx <- integer(0L)
+
 
   if (meanstructure) {
     mm.nu.idx <- which(mnames == "nu")
@@ -1285,6 +1301,7 @@ lav_model_delta_lisrel <- function(lavmodel, block = 1L) {
     delta  <- as.vector(MLIST$delta)
   }
 
+
   # vech structure for Sigma
   r_s <- lav_matrix_vech_row_idx(nvar)
   c_s <- lav_matrix_vech_col_idx(nvar)
@@ -1302,91 +1319,245 @@ lav_model_delta_lisrel <- function(lavmodel, block = 1L) {
   }
 
   # prepare output matrix for sigma
-  n_free <- n_lam + n_bet + n_psi + n_the + n_del
+  n_free <- n_lam + n_wmat + n_bet + n_psi + n_the + n_del
   jac_sigma <- matrix(0, pstar, n_free)
 
   col <- 1L
-  # Lambda [i,j]: dS0[r,s] = LG[s,j]*I(r==i) + LG[r,j]*I(s==i)
-  if (n_lam > 0L) {
-    rc  <- vec2rc(m.lambda.idx, nvar);  i_v <- rc[, 1L];  j_v <- rc[, 2L]
 
-    T1 <- LG[c_s, j_v, drop = FALSE] * outer(r_s, i_v, `==`)
-    T2 <- LG[r_s, j_v, drop = FALSE] * outer(c_s, i_v, `==`)
 
-    DX <- T1 + T2
-    if (delta.flag) {
-      DX <- DX * delta_weight
-    }
-    jac_sigma[, col:(col + n_lam - 1L)] <- DX
-    col <- col + n_lam
-  }
+  if (!wmat.flag) {
+    # Lambda [i,j]: dS0[r,s] = LG[s,j]*I(r==i) + LG[r,j]*I(s==i)
+    if (n_lam > 0L) {
+      rc  <- vec2rc(m.lambda.idx, nvar);  i_v <- rc[, 1L];  j_v <- rc[, 2L]
 
-  # Beta [i,j]: dS0[r,s] = M[r,i]*LG[s,j] + LG[r,j]*M[s,i]
-  if (n_bet > 0L) {
-    rc  <- vec2rc(m.beta.idx, nfac);  i_v <- rc[, 1L];  j_v <- rc[, 2L]
+      T1 <- LG[c_s, j_v, drop = FALSE] * outer(r_s, i_v, `==`)
+      T2 <- LG[r_s, j_v, drop = FALSE] * outer(c_s, i_v, `==`)
 
-    T1 <- M[r_s,  i_v, drop = FALSE] * LG[c_s, j_v, drop = FALSE]
-    T2 <- LG[r_s, j_v, drop = FALSE] * M[c_s,  i_v, drop = FALSE]
-
-    DX <- T1 + T2
-    if (delta.flag) {
-      DX <- DX * delta_weight
-    }
-    jac_sigma[, col:(col + n_bet - 1L)] <- DX
-    col <- col + n_bet
-  }
-
-  # Psi [k,l] symmetric: dS0[r,s] = M[r,k]*M[s,l] + M[r,l]*M[s,k]
-  # diagonal (k==l): halve
-  if (n_psi > 0L) {
-    rc  <- vec2rc(m.psi.idx, nfac)
-    k_v <- pmax(rc[, 1L], rc[, 2L])
-    l_v <- pmin(rc[, 1L], rc[, 2L])
-
-    T1 <- M[r_s, k_v, drop = FALSE] * M[c_s, l_v, drop = FALSE]
-    T2 <- M[r_s, l_v, drop = FALSE] * M[c_s, k_v, drop = FALSE]
-    DX <- T1 + T2
-
-    diag_mask <- (k_v == l_v)
-    if (any(diag_mask)) {
-      DX[, diag_mask] <- DX[, diag_mask] * 0.5
+      DX <- T1 + T2
+      if (delta.flag) {
+        DX <- DX * delta_weight
+      }
+      jac_sigma[, col:(col + n_lam - 1L)] <- DX
+      col <- col + n_lam
     }
 
-    if (delta.flag) {
-      DX <- DX * delta_weight
+    # Beta [i,j]: dS0[r,s] = M[r,i]*LG[s,j] + LG[r,j]*M[s,i]
+    if (n_bet > 0L) {
+      rc  <- vec2rc(m.beta.idx, nfac);  i_v <- rc[, 1L];  j_v <- rc[, 2L]
+
+      T1 <- M[r_s,  i_v, drop = FALSE] * LG[c_s, j_v, drop = FALSE]
+      T2 <- LG[r_s, j_v, drop = FALSE] * M[c_s,  i_v, drop = FALSE]
+
+      DX <- T1 + T2
+      if (delta.flag) {
+        DX <- DX * delta_weight
+      }
+      jac_sigma[, col:(col + n_bet - 1L)] <- DX
+      col <- col + n_bet
     }
-    jac_sigma[, col:(col + n_psi - 1L)] <- DX
-    col <- col + n_psi
-  }
+   # Psi [k,l] symmetric: dS0[r,s] = M[r,k]*M[s,l] + M[r,l]*M[s,k]
+    # diagonal (k==l): halve
+    if (n_psi > 0L) {
+      rc  <- vec2rc(m.psi.idx, nfac)
+      k_v <- pmax(rc[, 1L], rc[, 2L])
+      l_v <- pmin(rc[, 1L], rc[, 2L])
 
-  # Theta [k,l] symmetric: dS = Delta %*% dTheta %*% Delta
-  #  -> unit vector at vech pos (k,l)
-  if (n_the > 0L) {
-    rc  <- vec2rc(m.theta.idx, nvar)
-    k_v <- pmax(rc[, 1L], rc[, 2L])
-    l_v <- pmin(rc[, 1L], rc[, 2L])
+      T1 <- M[r_s, k_v, drop = FALSE] * M[c_s, l_v, drop = FALSE]
+      T2 <- M[r_s, l_v, drop = FALSE] * M[c_s, k_v, drop = FALSE]
+      DX <- T1 + T2
 
-    Jt <- matrix(0, pstar, n_the)
-    vech_pos <- sigma_lut[cbind(k_v, l_v)]
-    if (delta.flag) {
-      Jt[cbind(vech_pos, seq_len(n_the))] <- delta_weight[vech_pos]
-    } else {
-      Jt[cbind(vech_pos, seq_len(n_the))] <- 1
+      diag_mask <- (k_v == l_v)
+      if (any(diag_mask)) {
+        DX[, diag_mask] <- DX[, diag_mask] * 0.5
+      }
+
+      if (delta.flag) {
+        DX <- DX * delta_weight
+      }
+      jac_sigma[, col:(col + n_psi - 1L)] <- DX
+      col <- col + n_psi
     }
 
-    jac_sigma[, col:(col + n_the - 1L)] <- Jt
-    col <- col + n_the
-  }
+    # Theta [k,l] symmetric: dS = Delta %*% dTheta %*% Delta
+    #  -> unit vector at vech pos (k,l)
+    if (n_the > 0L) {
+      rc  <- vec2rc(m.theta.idx, nvar)
+      k_v <- pmax(rc[, 1L], rc[, 2L])
+      l_v <- pmin(rc[, 1L], rc[, 2L])
 
-  # Delta[k] (diagonal only):
-  # dS[r,s] = I(r==k)*Sigma0[k,s]*delta[s] + delta[r]*Sigma0[r,k]*I(s==k)
-  if (n_del > 0L) {
-    Sigma0 <- M %*% MLIST$psi %*% t(M) + MLIST$theta
-    k_v <- m.delta.idx
-    T1 <- Sigma0[c_s, k_v, drop = FALSE] * delta[c_s] * outer(r_s, k_v, `==`)
-    T2 <- delta[r_s] * Sigma0[r_s, k_v, drop = FALSE] * outer(c_s, k_v, `==`)
-    jac_sigma[, col:(col + n_del - 1L)] <- T1 + T2
-  }
+      Jt <- matrix(0, pstar, n_the)
+      vech_pos <- sigma_lut[cbind(k_v, l_v)]
+      if (delta.flag) {
+        Jt[cbind(vech_pos, seq_len(n_the))] <- delta_weight[vech_pos]
+      } else {
+        Jt[cbind(vech_pos, seq_len(n_the))] <- 1
+      }
+
+      jac_sigma[, col:(col + n_the - 1L)] <- Jt
+      col <- col + n_the
+    }
+
+    # Delta[k] (diagonal only):
+    # dS[r,s] = I(r==k)*Sigma0[k,s]*delta[s] + delta[r]*Sigma0[r,k]*I(s==k)
+    if (n_del > 0L) {
+      Sigma0 <- M %*% MLIST$psi %*% t(M) + MLIST$theta
+      k_v <- m.delta.idx
+      T1 <- Sigma0[c_s, k_v, drop = FALSE] * delta[c_s] * outer(r_s, k_v, `==`)
+      T2 <- delta[r_s] * Sigma0[r_s, k_v, drop = FALSE] * outer(c_s, k_v, `==`)
+      jac_sigma[, col:(col + n_del - 1L)] <- T1 + T2
+    }
+
+  } else {
+    # composite ov (cov) and composite lv (clv)
+    cov.idx <- which(apply(
+      MLIST$lambda, 1L,
+      function(x) sum(x == 0) == ncol(MLIST$lambda)
+    ))
+    clv.idx <- which(apply(
+      MLIST$lambda, 2L,
+      function(x) sum(x == 0) == nrow(MLIST$lambda)
+    ))
+
+    LW  <- MLIST$lambda + MLIST$wmat
+    Tmat <- diag(nvar); Tmat[cov.idx, cov.idx] <- MLIST$theta[cov.idx, cov.idx]
+    wtw <- t(LW[, clv.idx, drop = FALSE]) %*% Tmat %*%
+             LW[, clv.idx, drop = FALSE]
+    wtw.inv <- solve(wtw)
+    WTW.inv <- diag(nfac)
+    WTW.inv[clv.idx, clv.idx] <- wtw.inv
+
+    if (!beta.flag) {
+      A <- diag(nfac)
+    }
+
+    # C0: V(eta) with composite diagonal entries zeroed
+    C0 <- G; diag(C0)[clv.idx] <- 0
+
+    # precompute
+    Lambdafull <- Tmat %*% LW %*% WTW.inv
+    LG_c <- Lambdafull %*% C0 %*% WTW.inv
+    H_c <- Lambdafull %*% A
+    F_c <- Lambdafull %*% G
+    Sig0s <- Lambdafull %*% C0 %*% t(Lambdafull)
+    LAMc <- Tmat %*% LW[, clv.idx, drop = FALSE] %*% wtw.inv
+    Pmat1 <- Tmat - LAMc %*% t(LAMc)
+    Pmat2 <- LAMc %*% wtw.inv
+
+    # Beta/Psi correction matrices
+    XrsXss <- Lambdafull[r_s, clv.idx, drop = FALSE] *
+              Lambdafull[c_s, clv.idx, drop = FALSE]
+    A_sub  <- A[clv.idx, , drop = FALSE]
+    G_sub  <- G[clv.idx, , drop = FALSE]
+    # lambda
+    if (n_lam > 0L) {
+      rc  <- vec2rc(m.lambda.idx, nvar);  i_v <- rc[, 1L];  j_v <- rc[, 2L]
+
+      T1 <- LG_c[c_s, j_v, drop = FALSE] * outer(r_s, i_v, `==`)
+      T2 <- LG_c[r_s, j_v, drop = FALSE] * outer(c_s, i_v, `==`)
+
+      DX <- T1 + T2
+      if (delta.flag) {
+        DX <- DX * delta_weight
+      }
+      jac_sigma[, col:(col + n_lam - 1L)] <- DX
+      col <- col + n_lam
+    }
+
+    # wmat
+    if (n_wmat > 0L) {
+      rc <- vec2rc(m.wmat.idx, nvar)
+      i_v <- rc[, 1L]
+      j_v <- rc[, 2L]
+      j_loc <- match(j_v, clv.idx)
+
+      # path 1: xi_i terms
+      T1 <- Pmat1[r_s, i_v, drop = FALSE] * LG_c[c_s, j_v, drop = FALSE]
+      T2 <- Pmat1[c_s, i_v, drop = FALSE] * LG_c[r_s, j_v, drop = FALSE]
+
+      # path 2: phi_j * sigma_i correction
+      T3 <- Pmat2[r_s, j_loc, drop = FALSE] * Sig0s[c_s, i_v, drop = FALSE]
+      T4 <- Pmat2[c_s, j_loc, drop = FALSE] * Sig0s[r_s, i_v, drop = FALSE]
+
+      DX <- T1 + T2 - T3 - T4
+      if (delta.flag) {
+        DX <- DX * delta_weight
+      }
+      jac_sigma[, col:(col + n_wmat - 1L)] <- DX
+      col <- col + n_wmat
+    }
+
+    # beta
+    if (n_bet > 0L) {
+      rc  <- vec2rc(m.beta.idx, nfac);  i_v <- rc[, 1L];  j_v <- rc[, 2L]
+
+      T1 <- H_c[r_s, i_v, drop = FALSE] * F_c[c_s, j_v, drop = FALSE]
+      T2 <- F_c[r_s, j_v, drop = FALSE] * H_c[c_s, i_v, drop = FALSE]
+
+      AG     <- A_sub[, i_v, drop = FALSE] * G_sub[, j_v, drop = FALSE]
+      R_corr <- 2 * XrsXss %*% AG
+
+      DX <- T1 + T2 - R_corr
+      if (delta.flag) {
+        DX <- DX * delta_weight
+      }
+      jac_sigma[, col:(col + n_bet - 1L)] <- DX
+      col <- col + n_bet
+    }
+
+    # psi
+    if (n_psi > 0L) {
+      rc <- vec2rc(m.psi.idx, nfac)
+      k_v <- pmax(rc[, 1L], rc[, 2L])
+      l_v <- pmin(rc[, 1L], rc[, 2L])
+
+      T1 <- H_c[r_s, k_v, drop = FALSE] * H_c[c_s, l_v, drop = FALSE]
+      T2 <- H_c[r_s, l_v, drop = FALSE] * H_c[c_s, k_v, drop = FALSE]
+
+      A_kl <- A_sub[, k_v, drop = FALSE] * A_sub[, l_v, drop = FALSE]
+      R_corr <- 2 * XrsXss %*% A_kl
+
+      DX <- T1 + T2 - R_corr
+
+      diag_mask <- (k_v == l_v)
+      if (any(diag_mask)) {
+        DX[, diag_mask] <- DX[, diag_mask] * 0.5
+      }
+
+      if (delta.flag) {
+        DX <- DX * delta_weight
+      }
+      jac_sigma[, col:(col + n_psi - 1L)] <- DX
+      col <- col + n_psi
+    }
+
+    # theta
+    if (n_the > 0L) {
+      rc  <- vec2rc(m.theta.idx, nvar)
+      k_v <- pmax(rc[, 1L], rc[, 2L])
+      l_v <- pmin(rc[, 1L], rc[, 2L])
+
+      Jt <- matrix(0, pstar, n_the)
+      vech_pos <- sigma_lut[cbind(k_v, l_v)]
+      if (delta.flag) {
+        Jt[cbind(vech_pos, seq_len(n_the))] <- delta_weight[vech_pos]
+      } else {
+        Jt[cbind(vech_pos, seq_len(n_the))] <- 1
+      }
+
+      jac_sigma[, col:(col + n_the - 1L)] <- Jt
+      col <- col + n_the
+    }
+
+    # delta
+    if (n_del > 0L) {
+      Sigma0_c <- Sig0s + MLIST$theta
+      k_v      <- m.delta.idx
+      T1 <- Sigma0_c[c_s, k_v, drop = FALSE] * delta[c_s] * outer(r_s, k_v, `==`)
+      T2 <- delta[r_s] * Sigma0_c[r_s, k_v, drop = FALSE] * outer(c_s, k_v, `==`)
+      jac_sigma[, col:(col + n_del - 1L)] <- T1 + T2
+    }
+
+  } # wmat.flag
 
   # categorical: reorder
   if (categorical) {
@@ -1459,6 +1630,7 @@ lav_model_delta_lisrel <- function(lavmodel, block = 1L) {
         jac_mean[, col:(col + n_alp - 1L)] <- M[, m.alpha.idx, drop = FALSE]
       }
     } # meanstructure
+
 
   # categorical
   } else if (categorical) {
@@ -1555,6 +1727,7 @@ lav_model_delta_lisrel <- function(lavmodel, block = 1L) {
       jac_th[, col_th:(col_th + n_bet - 1L)] <-
         -delta_star * M[v_slot, i_v, drop = FALSE] *
          matrix(a_vec[j_v], nth_full, n_bet, byrow = TRUE)
+         matrix(a_vec[j_v], nth_full, n_bet, byrow = TRUE)
       col_th <- col_th + n_bet
     }
 
@@ -1567,7 +1740,11 @@ lav_model_delta_lisrel <- function(lavmodel, block = 1L) {
 
   # sigma
   out <- matrix(0, nrow = nrow(jac_sigma), ncol = lavmodel@nx.free)
-  el.idx <- c(x.lambda.idx, x.beta.idx, x.psi.idx, x.theta.idx, x.delta.idx)
+  el.idx <- if (!wmat.flag) {
+    c(x.lambda.idx, x.beta.idx, x.psi.idx, x.theta.idx, x.delta.idx)
+  } else {
+    c(x.lambda.idx, x.wmat.idx, x.beta.idx, x.psi.idx, x.theta.idx, x.delta.idx)
+  }
   out[, el.idx] <- jac_sigma
 
   # meanstructure
@@ -1593,6 +1770,9 @@ lav_model_delta_lisrel <- function(lavmodel, block = 1L) {
 
   out
 }
+
+                                                                                                  
+
 
 
 lav_model_omega <- function(Sigma.hat = NULL, Mu.hat = NULL,
