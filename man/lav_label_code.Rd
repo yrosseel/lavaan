@@ -3,8 +3,8 @@
 \title{Provides formatted label for use in tikz, svg or rplot}
 \usage{
 lav_label_code(label = "", value = "", show =FALSE,
-               idx.font.size = 20L, dy = 7L,
-               italic = TRUE, auto.subscript = TRUE)
+               idx_font_size = 20L, dy = 7L,
+               italic = TRUE, auto_subscript = TRUE)
 }
 \arguments{
 \item{label}{A character string in one of the formats
@@ -18,13 +18,13 @@ If \var{value} is specified in parameter \code{label} and parameter
 \code{value} is empty, the value in \code{label} will be used.}
 \item{value}{A character string specifying a value or empty.}
 \item{show}{A logical indicating that the result should be plotted in an Rplot.}
-\item{idx.font.size}{An integer specifying font size to use for the
+\item{idx_font_size}{An integer specifying font size to use for the
 subscript in svg.}
 \item{dy}{An integer specifying the distance to move the baseline of
 the subscript in svg.}
 \item{italic}{A logical to indicate if the labels font should be cursive.
 Only used for tikz output and in shown Rplot if result isn't an expression.}
-\item{auto.subscript}{Logical, if TRUE and \code{label} starts with one or more
+\item{auto_subscript}{Logical, if TRUE and \code{label} starts with one or more
 alhabetic chars followed by one or more digits, an underscore will be
 inserted between these parts.}
 }
@@ -49,7 +49,7 @@ If \var{name} in \code{label} is a Greek character or \code{varepsilon},
 it is attempted to generate code which shows the Greek symbol. If there is an
 \var{index} part in \code{label}, it is attempted to generate code which
 displays this value as a subscript. In the svg code the values
-\code{idx.font.size} and \code{dy} are used for the subscript in the
+\code{idx_font_size} and \code{dy} are used for the subscript in the
 generated code. If a \var{value} is present, it is attempted
 to show this value after the label, with an equal sign in between both.
 }

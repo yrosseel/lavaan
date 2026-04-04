@@ -4,23 +4,23 @@ lav_plot <- function(
   varlv = FALSE,
   placenodes = NULL,
   edgelabelsbelow = NULL,
-  group.covar.indicators = FALSE,
-  common.opts = list(sloped.labels = TRUE,
+  group_covar_indicators = FALSE,
+  common_opts = list(sloped_labels = TRUE,
                      mlovcolors = c("lightgreen", "lightblue"),
                      italic = TRUE,
                      lightness = 1,
-                     auto.subscript = TRUE),
+                     auto_subscript = TRUE),
   rplot = list(outfile = "",
                addgrid = TRUE),
   tikz = list(outfile = "",
               cex = 1.3,
               standalone = FALSE),
   svg = list(outfile = "",
-             stroke.width = 2L,
-             font.size = 20L,
-             idx.font.size = 15L,
+             stroke_width = 2L,
+             font_size = 20L,
+             idx_font_size = 15L,
              dy = 5L,
-             font.family = "Latin Modern Math, arial, Aerial, sans",
+             font_family = "Latin Modern Math, arial, Aerial, sans",
              standalone = FALSE)
 ) {
   tmp <- lav_model_plotinfo(model,
@@ -29,19 +29,19 @@ lav_plot <- function(
   tmp <- lav_plotinfo_positions(tmp,
                             placenodes = placenodes,
                             edgelabelsbelow = edgelabelsbelow,
-                            group.covar.indicators = group.covar.indicators)
+                            group_covar_indicators = group_covar_indicators)
   mc <- match.call()
   create_rplot <- !is.null(mc$rplot) || (is.null(mc$tikz) && is.null(mc$svg))
   if (create_rplot)
     do.call(lav_plotinfo_rgraph, c(list(plotinfo = tmp),
-                                   common.opts,
+                                   common_opts,
                                    rplot))
   if (!is.null(mc$tikz))
     do.call(lav_plotinfo_tikzcode, c(list(plotinfo = tmp),
-                             common.opts,
+                             common_opts,
                              tikz))
   if (!is.null(mc$svg))
     do.call(lav_plotinfo_svgcode, c(list(plotinfo = tmp),
-                             common.opts,
+                             common_opts,
                              svg))
 }

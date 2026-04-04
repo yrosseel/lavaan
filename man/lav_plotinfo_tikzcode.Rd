@@ -5,26 +5,26 @@
 lav_plotinfo_tikzcode(plotinfo,
                       outfile = "",
                       cex = 1.3,
-                      sloped.labels = TRUE,
+                      sloped_labels = TRUE,
                       standalone = FALSE,
                       mlovcolors = c("lightgreen", "lightblue"),
                       lightness = 1,
                       italic = TRUE,
-                      auto.subscript = TRUE
+                      auto_subscript = TRUE
                      )
 }
 \arguments{
 \item{plotinfo}{A plotinfo structure as returned from \code{lav_plotinfo_positions}.}
 \item{outfile}{A connection or a character string, the file to store the code.}
 \item{cex}{Minimum distance between nodes in cm.}
-\item{sloped.labels}{logical, sloped labels for the edges.}
+\item{sloped_labels}{logical, sloped labels for the edges.}
 \item{standalone}{logical, add code to make teX file standalone?}
 \item{mlovcolors}{Array of two colors for distinguishing ov nodes with same name
 between the levels in a  multilevel model.}
 \item{lightness}{A scalar factor to modify the distances between nodes.}
 \item{italic}{Are labels to be in italic font? If FALSE the labels will be
 shown in mathrm font.}
-\item{auto.subscript}{Logical, see \code{\link{lav_label_code}}.}
+\item{auto_subscript}{Logical, see \code{\link{lav_label_code}}.}
 }
 \value{
 NULL, invisible
@@ -57,8 +57,8 @@ modelml <- '
 testml <- lav_model_plotinfo(modelml)
 testml <- lav_plotinfo_positions(testml)
 # in the line hereunder no file is given, so output to R console
-lav_plotinfo_tikzcode(testml, cex = 1.4, sloped.labels = FALSE,
-        standalone = TRUE, auto.subscript = FALSE)
+lav_plotinfo_tikzcode(testml, cex = 1.4, sloped_labels = FALSE,
+        standalone = TRUE, auto_subscript = FALSE)
 \dontrun{
 # example creating tex file with the above diagrams
 zz <- file("testtikz.tex", open="w")
@@ -79,7 +79,7 @@ tmp <- readLines("tmp.tex")
 writeLines(tmp, zz)
 writeLines(" ", zz)
 lav_plotinfo_tikzcode(testml, outfile = "temp.tex", cex = 1.4,
-              sloped.labels = FALSE, auto.subscript = FALSE)
+              sloped_labels = FALSE, auto_subscript = FALSE)
 tmp <- readLines("tmp.tex")
 writeLines(tmp, zz)
 writeLines("\\end{document}", zz)

@@ -31,8 +31,8 @@ lavParseModelString <- function(model.syntax = "", as.data.frame. = FALSE,
   } else {
     # new parser
     out <- lav_parse_model_string(
-      model.syntax = model.syntax,
-      as.data.frame. = as.data.frame.
+      model_syntax = model.syntax,
+      as_data_frame = as.data.frame.
       )
   }
 

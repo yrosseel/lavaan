@@ -202,7 +202,7 @@ fsr <- function(model = NULL,
         lav_msg_stop(
           gettextf("mm.list contains unknown latent variable(s): %s",
             lav_msg_view(mm.list[[b]][mm.list[[b]] %in% lv.names],
-                         log.sep = "none")))
+                         log_sep = "none")))
       }
     }
   } else {
