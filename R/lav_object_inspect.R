@@ -2542,7 +2542,8 @@ lav_object_inspect_vcov <- function(object, standardized = FALSE,
     # tmp <- try(slot(object, "vcov"), silent = TRUE)
     # if( !inherits(tmp, "try-error") && !is.null(object@vcov$vcov)
     #   && !(rotation && standardized)) {
-    if (!is.null(object@vcov$vcov)) {
+    if (!is.null(object@vcov$vcov) &&
+        !(standardized && lavmodel@ceq.simple.only)) {
       return.value <- object@vcov$vcov # if this changes, tag @TDJorgensen in commit message
     } else {
       # compute it again
@@ -2552,7 +2553,16 @@ lav_object_inspect_vcov <- function(object, standardized = FALSE,
       #    lavoptions <- object@Options
       #    lavoptions$rotation.se <- "delta"
       # }
-      return.value <- lav_model_vcov(lavmodel       = lavmodel,
+
+      # special case: ceq.simple.only + standardized
+      if (standardized && lavmodel@ceq.simple.only) {
+        # create 'compact' vcov (compatible with tmp.jac later)
+        lavmodel@ceq.simple.only <- FALSE
+        lavmodel@con.jac <- matrix(0, 0L, 0L)
+      }
+
+      return.value <- lav_model_vcov(
+        lavmodel       = lavmodel,
         lavsamplestats = object@SampleStats,
         lavoptions     = lavoptions,
         lavdata        = object@Data,
@@ -2600,7 +2610,12 @@ lav_object_inspect_vcov <- function(object, standardized = FALSE,
     }
     # }
 
-    # tmp.jac contains *all* parameters in the parameter table
+    # handle ceq.simple.only
+    #if (object@Model@ceq.simple.only) {
+    #  tmp.jac <- tmp.jac %*% t(object@Model@ceq.simple.K)
+    #}
+
+    # rows of tmp.jac contain *all* the parameters in the parameter table
     if (free.only) {
       if (object@Model@ceq.simple.only) {
         pt.free.idx <- which(object@ParTable$free > 0L &
@@ -2609,15 +2624,9 @@ lav_object_inspect_vcov <- function(object, standardized = FALSE,
         pt.free.idx <- which(object@ParTable$free > 0L)
       }
       tmp.jac <- tmp.jac[pt.free.idx, , drop = FALSE]
-    } else if (object@Model@ceq.simple.only) {
-      pt.free.idx <- which(object@ParTable$free > 0L &
-        !duplicated(object@ParTable$free))
-      if (length(pt.free.idx) > 0L) {
-        free.idx <- object@ParTable$free[pt.free.idx]
-        return.value <- return.value[free.idx, free.idx, drop = FALSE]
-      }
     }
 
+    # apply Delta method
     return.value <- tmp.jac %*% return.value %*% t(tmp.jac)
 
     # force return.value to be symmetric and pd
