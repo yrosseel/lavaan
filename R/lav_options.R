@@ -599,6 +599,11 @@ lav_options_set <- function(opt = NULL) {
     }
   }
 
+  # force meanstructure = TRUE if either int.lv.free or int.ov.free is TRUE
+  if (opt$int.lv.free || opt$int.ov.free) {
+    opt$meanstructure <- TRUE
+  }
+
   # bootstrap ####
   if (is.numeric(opt$bootstrap)) {
     opt$bootstrap <- list(R = as.integer(opt$bootstrap))

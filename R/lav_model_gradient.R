@@ -683,8 +683,8 @@ lav_model_delta <- function(lavmodel = NULL, GLIST. = NULL,
   if (lavmodel@composites) {
     Delta <- vector("list", length = lavmodel@nblocks)
     for (b in seq_len(lavmodel@nblocks)) {
-      Delta[[b]] <- lav_model_delta_numerical(lavmodel = lavmodel, g = b)  
-    }  
+      Delta[[b]] <- lav_model_delta_numerical(lavmodel = lavmodel, g = b)
+    }
     return(Delta)
   }
 
@@ -1759,7 +1759,7 @@ lav_model_delta_lisrel <- function(lavmodel, block = 1L) {
   out
 }
 
-                                                                                                  
+
 
 
 

@@ -2553,7 +2553,7 @@ lav_object_inspect_vcov <- function(object, standardized = FALSE,
       #    lavoptions <- object@Options
       #    lavoptions$rotation.se <- "delta"
       # }
-      
+
       # special case: ceq.simple.only + standardized
       if (standardized && lavmodel@ceq.simple.only) {
         # create 'compact' vcov (compatible with tmp.jac later)
