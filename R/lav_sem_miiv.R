@@ -1101,10 +1101,7 @@ lav_sem_miiv_vcov <- function(lavmodel = NULL, lavsamplestats = NULL,
       # - vcov_undirected_b <- jac_b %*% (1/N * gamma_mat) %*% t(jac_b)
 
       if (!iv.vcov.jaca.numerical) {
-        delta_block <- lav_model_delta(
-          lavmodel = lavmodel,
-          ceq.simple = lavmodel@ceq.simple.only
-        )
+        delta_block <- lav_model_delta(lavmodel = lavmodel)
         jac_b_block <- vector("list", length = nblocks)
         for (b in seq_len(nblocks)) {
           sample_cov <- lavh1$implied$cov[[b]]

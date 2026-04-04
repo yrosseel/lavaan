@@ -278,10 +278,7 @@ lav_sem_miiv_utils_jaca_uls_gls <- function(lavmodel = NULL,
   nblocks <- lavmodel@nblocks
 
   # delta across all blocks
-  delta_block <- lav_model_delta(
-    lavmodel = lavmodel,
-    ceq.simple = lavmodel@ceq.simple.only
-  )
+  delta_block <- lav_model_delta(lavmodel = lavmodel)
 
   # augment lavpartable to include model matrices and row/col indices
   mm_info <- lav_lisrel(lavpartable, target = NULL, extra = FALSE)
@@ -374,10 +371,7 @@ lav_sem_miiv_utils_jaca_2rls <- function(lavmodel = NULL,
   nblocks <- lavmodel@nblocks
 
   # delta across all blocks
-  delta_block <- lav_model_delta(
-    lavmodel = lavmodel,
-    ceq.simple = lavmodel@ceq.simple.only
-  )
+  delta_block <- lav_model_delta(lavmodel = lavmodel)
 
   # augment lavpartable to include model matrices and row/col indices
   mm_info <- lav_lisrel(lavpartable, target = NULL, extra = FALSE)
@@ -507,10 +501,7 @@ lav_sem_miiv_utils_jaca_rls <- function(lavmodel = NULL,
   nblocks <- lavmodel@nblocks
 
   # delta across all blocks
-  delta_block <- lav_model_delta(
-    lavmodel = lavmodel,
-    ceq.simple = lavmodel@ceq.simple.only
-  )
+  delta_block <- lav_model_delta(lavmodel = lavmodel)
 
   # augment lavpartable to include model matrices and row/col indices
   mm_info <- lav_lisrel(lavpartable, target = NULL, extra = FALSE)

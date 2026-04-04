@@ -229,10 +229,7 @@ lav_model_gradient <- function(lavmodel = NULL,
       }
       # stop("FIXME: WLS gradient with type != free needs fixing!")
     } else {
-      Delta <- lav_model_delta(
-        lavmodel = lavmodel, GLIST. = GLIST,
-        ceq.simple = ceq.simple
-      )
+      Delta <- lav_model_delta(lavmodel = lavmodel, GLIST. = GLIST)
     }
 
     for (g in 1:lavmodel@nblocks) {
@@ -353,10 +350,7 @@ lav_model_gradient <- function(lavmodel = NULL,
       }
       # stop("FIXME: WLS gradient with type != free needs fixing!")
     } else {
-      Delta <- lav_model_delta(
-        lavmodel = lavmodel, GLIST. = GLIST,
-        ceq.simple = ceq.simple
-      )
+      Delta <- lav_model_delta(lavmodel = lavmodel, GLIST. = GLIST)
     }
 
     for (g in 1:lavmodel@nblocks) {
@@ -452,10 +446,7 @@ lav_model_gradient <- function(lavmodel = NULL,
       lav_msg_fixme("type != free in lav_model_gradient for
                     estimator ML for nlevels > 1")
     } else {
-      Delta <- lav_model_delta(
-        lavmodel = lavmodel, GLIST. = GLIST,
-        ceq.simple = ceq.simple
-      )
+      Delta <- lav_model_delta(lavmodel = lavmodel, GLIST. = GLIST)
     }
 
     # for each upper-level group....
@@ -527,10 +518,7 @@ lav_model_gradient <- function(lavmodel = NULL,
     if (type != "free") {
       lav_msg_fixme("type != free in lav_model_gradient for estimator PML")
     } else {
-      Delta <- lav_model_delta(
-        lavmodel = lavmodel, GLIST. = GLIST,
-        ceq.simple = ceq.simple
-      )
+      Delta <- lav_model_delta(lavmodel = lavmodel, GLIST. = GLIST)
     }
 
     for (g in 1:lavmodel@nblocks) {
@@ -688,7 +676,7 @@ lav_model_delta_numerical <- function(lavmodel = NULL, GLIST = NULL, g = 1L) {
 ###        - handle equality constraints? (yes, for now)
 lav_model_delta <- function(lavmodel = NULL, GLIST. = NULL,
                          m.el.idx. = NULL, x.el.idx. = NULL,
-                         ceq.simple = FALSE,
+                         #ceq.simple = FALSE,
                          force.conditional.x.false = FALSE) {
 
   # temporary fix
@@ -1009,9 +997,9 @@ lav_model_delta <- function(lavmodel = NULL, GLIST. = NULL,
     } # mm
 
     # if type == "free" take care of equality constraints
-    if (type == "free" && ceq.simple && lavmodel@ceq.simple.only) {
-      Delta.group <- Delta.group %*% lavmodel@ceq.simple.K
-    }
+    #if (type == "free" && ceq.simple && lavmodel@ceq.simple.only) {
+    #  Delta.group <- Delta.group %*% lavmodel@ceq.simple.K
+    #}
 
     Delta[[g]] <- Delta.group
   } # g
