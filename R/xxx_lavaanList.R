@@ -89,7 +89,8 @@ lavaanList <- function(model = NULL, # model
     FIT <- do.call(cmd,
       args = c(list(
         model = model,
-        data = firstData
+        data = firstData,
+        cmd = cmd
       ), dotdotdot)
     )
   }

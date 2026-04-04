@@ -272,12 +272,13 @@ lav_options_est_dls <- function(opt) {
 lav_options_est_dwls <- function(opt) {
   # DWLS, WLSM, WLSMV, WLSMVS                                      ####
   # new in 0.6-17: if !categorical, give a warning
-  if (!opt$.categorical) {
-    lav_msg_warn(gettextf(
-      "estimator %s is not recommended for continuous data.
-      Did you forget to set the ordered= argument?",
-      dQuote(lav_options_estimatorgroup(opt$estimator))))
-  }
+  # changed in 0.6-22: catch this earlier
+  #if (!opt$.categorical) {
+  #  lav_msg_warn(gettextf(
+  #    "estimator %s is not recommended for continuous data.
+  #    Did you forget to set the ordered= argument?",
+  #    dQuote(lav_options_estimatorgroup(opt$estimator))))
+  #}
   # se
   if (opt$se == "bootstrap" &&
       opt$estimator %in% c("wlsm", "wlsmv", "wlsmvs")) {

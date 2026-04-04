@@ -188,6 +188,7 @@ lavaan <- function(
   ov_names_l <- temp$ov.names.l
 
   # ------------ ov.names 6 ------ sanity check ordered --------------
+  ordered_orig <- ordered
   ordered <- lav_lavaan_step01_ovnames_ordered(
     ordered    = ordered,
     flat.model = flat_model,
@@ -201,6 +202,7 @@ lavaan <- function(
     slotData         = slotData,
     flat.model       = flat_model,
     ordered          = ordered,
+    ordered_orig     = ordered_orig,
     sample.cov       = sample_cov,
     sample.mean      = sample_mean,
     sample.th        = sample_th,
@@ -220,7 +222,6 @@ lavaan <- function(
   if (!lavoptions$fixed.x) {
     ov_names_x <- character(0L)
   }
-
   timing <- ldw_add_timing(timing, "Options")
 
   # ------------ lavdata ------------------------
@@ -517,6 +518,7 @@ cfa <- function(
   ...) {                              # nolint end
   sc <- sys.call()
   sc[["model.type"]] <- quote("cfa")
+  sc[["cmd"]] <- quote("cfa")
   # call mother function
   sc[[1L]] <- quote(lavaan::lavaan)
   eval(sc, parent.frame())
@@ -542,6 +544,7 @@ sem <- function(
     ...) {                             # nolint end
   sc <- sys.call()
   sc[["model.type"]] <- quote("sem")
+  sc[["cmd"]] <- quote("sem")
   # call mother function
   sc[[1L]] <- quote(lavaan::lavaan)
   eval(sc, parent.frame())
@@ -567,6 +570,7 @@ growth <- function(
     ...) {                             # nolint end
   sc <- sys.call()
   sc[["model.type"]] <- quote("growth")
+  sc[["cmd"]] <- quote("growth")
   # call mother function
   sc[[1L]] <- quote(lavaan::lavaan)
   eval(sc, parent.frame())

@@ -2,6 +2,7 @@ lav_lavaan_step02_options <- function(slotOptions = NULL, # nolint
                                       slotData = NULL, # nolint
                                       flat.model = NULL,
                                       ordered = NULL,
+                                      ordered_orig = NULL,
                                       sample.cov = NULL,
                                       sample.mean = NULL,
                                       sample.th = NULL,
@@ -155,6 +156,20 @@ lav_lavaan_step02_options <- function(slotOptions = NULL, # nolint
     }
     if (tolower(estimator) == "catml") {
       opt$.categorical <- FALSE
+    }
+
+    # check for WLSMV estimator with NULL ordered= argument (new in 0.6-22)
+    # to avoid unintentional use of WLSMV
+    # we do this here, because we need the value of opt$.categorical
+    if (!opt$.categorical && is.null(ordered_orig) && !estimator == "default") {
+      estimator <- toupper(estimator)
+      if (estimator %in% c("WLSM", "WLSMV", "DWLS")) {
+        lav_msg_stop(gettextf(
+        "Estimator %s is typically used with categorical data only. To use it
+         with continuous data, please explicitly set the ordered= argument
+         to FALSE.",
+        dQuote(lav_options_estimatorgroup(estimator))))
+      }
     }
 
     # clustered?

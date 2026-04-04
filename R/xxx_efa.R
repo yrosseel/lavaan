@@ -150,7 +150,8 @@ efa <- function(data = NULL,
           sample.nobs = sample.nobs,
           rotation = rotation,
           rotation.args = rotation.args,
-          bounds = bounds
+          bounds = bounds,
+          cmd = "efa"
         ),
         dotdotdot
       )

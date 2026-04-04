@@ -360,7 +360,7 @@ fit@Model@m.free.idx # parameter index in model matrix
 # 12. boot (list)
 # only used if bootstrapping was used
 fitb <- sem(model = 'f =~ x1 + x2 + x3 + x4', data = HolzingerSwineford1939,
-            se = "bootstrap", bootstrap = 100L, verbose = TRUE)
+            se = "bootstrap", bootstrap = 100L, iseed = 1234, verbose = TRUE)
 head(fitb@boot$coef)
 
 # 13. optim -- info about (iterative) optimization process
