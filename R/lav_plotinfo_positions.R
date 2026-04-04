@@ -26,7 +26,7 @@ lav_plotinfo_positions <- function(
   plotinfo,
   placenodes = NULL,
   edgelabelsbelow = NULL,
-  group.covar.indicators = FALSE,
+  group_covar_indicators = FALSE,
   debug = FALSE
 ) {
   # add new columns to nodes and edges data.frames
@@ -71,14 +71,14 @@ lav_plotinfo_positions <- function(
       list(nodes = nodes1, edges = edges1),
       placenodes,
       edgelabelsbelow,
-      group.covar.indicators,
+      group_covar_indicators,
       debug
     )
     result2 <- lav_plotinfo_positions_one(
       list(nodes = nodes2, edges = edges2),
       placenodes,
       edgelabelsbelow,
-      group.covar.indicators,
+      group_covar_indicators,
       debug
     )
     rijen1 <- max(result1$nodes$rij)
@@ -103,7 +103,7 @@ lav_plotinfo_positions <- function(
     plotinfo,
     placenodes,
     edgelabelsbelow,
-    group.covar.indicators,
+    group_covar_indicators,
     debug
   )
 }
@@ -114,7 +114,7 @@ lav_plotinfo_positions_one <- function(
   plotinfo,
   placenodes,
   edgelabelsbelow,
-  group.covar.indicators,
+  group_covar_indicators,
   debug
 ) {
   nods <- plotinfo$nodes
@@ -122,7 +122,7 @@ lav_plotinfo_positions_one <- function(
   # assign groupnumbers to the nodes, i.e. partition the nodes in groups
   # which belong together, e.g. indicators and the corresponding latent
   # variable
-  nods <- lav_plotinfo_nodes_groups(plotinfo, group.covar.indicators)
+  nods <- lav_plotinfo_nodes_groups(plotinfo, group_covar_indicators)
   plotinfo <- list(nodes = nods, edges = edgs)
   # compute the information for the groups
   groups <- lav_plotinfo_groups(plotinfo)
@@ -331,7 +331,7 @@ lav_plotinfo_positions_one <- function(
   list(nodes = nods, edges = edgs, mlrij = 0L)
 }
 
-lav_plotinfo_nodes_groups <- function(plotinfo, group.covar.indicators) {
+lav_plotinfo_nodes_groups <- function(plotinfo, group_covar_indicators) {
   nodes <- plotinfo$nodes
   edges <- plotinfo$edges
   nodes$group <- seq.int(nrow(nodes)) # each node in its own group
@@ -339,36 +339,36 @@ lav_plotinfo_nodes_groups <- function(plotinfo, group.covar.indicators) {
     group[group == group[i1]] <- group[i2]
     group
   }
-  indicator.ids <- lav_plotinfo_indicator_ids(nodes, edges)
+  indicator_ids <- lav_plotinfo_indicator_ids(nodes, edges)
   # process edges to form groups
   for (j in seq.int(nrow(edges))) {
-    van.id <- which(nodes$id == edges$van[j])
-    naar.id <- which(nodes$id == edges$naar[j])
-    merge.them <- FALSE
+    van_id <- which(nodes$id == edges$van[j])
+    naar_id <- which(nodes$id == edges$naar[j])
+    merge_them <- FALSE
     if (edges$tiepe[j] == "=~") {
-      if (nodes$tiepe[naar.id] != "lv" && nodes$tiepe[naar.id] != "cv") {
-        merge.them <- TRUE
+      if (nodes$tiepe[naar_id] != "lv" && nodes$tiepe[naar_id] != "cv") {
+        merge_them <- TRUE
       }
     } else if (edges$tiepe[j] == "<~") {
-      if (nodes$tiepe[van.id] != "lv" && nodes$tiepe[van.id] != "cv") {
-        merge.them <- TRUE
+      if (nodes$tiepe[van_id] != "lv" && nodes$tiepe[van_id] != "cv") {
+        merge_them <- TRUE
       }
     } else if (edges$tiepe[j] == "~.") {
-      merge.them <- TRUE
+      merge_them <- TRUE
     } else if (edges$tiepe[j] == "~~") {
-      if (group.covar.indicators &&
-        any(edges$van[j] == indicator.ids) &&
-        any(edges$naar[j] == indicator.ids)
+      if (group_covar_indicators &&
+        any(edges$van[j] == indicator_ids) &&
+        any(edges$naar[j] == indicator_ids)
       ) {
-        merge.them <- TRUE
+        merge_them <- TRUE
       }
     } else if (edges$tiepe[j] == "~") {
-      if (nodes$tiepe[van.id] == "varlv") {
-        merge.them <- TRUE
+      if (nodes$tiepe[van_id] == "varlv") {
+        merge_them <- TRUE
       }
     }
-    if (merge.them) {
-      nodes$group <- merge_groups(nodes$group, naar.id, van.id)
+    if (merge_them) {
+      nodes$group <- merge_groups(nodes$group, naar_id, van_id)
     }
   }
   nodes$group <- match(nodes$group, unique(nodes$group)) # renumber 1:n
@@ -376,28 +376,28 @@ lav_plotinfo_nodes_groups <- function(plotinfo, group.covar.indicators) {
 }
 lav_plotinfo_indicator_ids <- function(nodes, edges) {
   # compute ids of observed indicators
-  indicator.ids <- unique(c(
+  indicator_ids <- unique(c(
     edges$naar[edges$tiepe == "=~"],
     edges$van[edges$tiepe == "<~"]
   ))
-  for (i in seq_along(indicator.ids)) {
-    indicator.id <- which(nodes$id == indicator.ids[i])
+  for (i in seq_along(indicator_ids)) {
+    indicator_id <- which(nodes$id == indicator_ids[i])
     if (
-      nodes$tiepe[indicator.id] == "lv" ||
-        nodes$tiepe[indicator.id] == "cv"
+      nodes$tiepe[indicator_id] == "lv" ||
+        nodes$tiepe[indicator_id] == "cv"
     ) {
-      indicator.ids[i] <- 0L
+      indicator_ids[i] <- 0L
     }
   }
-  indicator.ids <- indicator.ids[indicator.ids != 0L]
-  indicator.ids
+  indicator_ids <- indicator_ids[indicator_ids != 0L]
+  indicator_ids
 }
 lav_plotinfo_groups <- function(plotinfo) {
   nodes <- plotinfo$nodes
   edges <- plotinfo$edges
-  nb.of.groups <- max(nodes$group)
-  indicator.ids <- lav_plotinfo_indicator_ids(nodes, edges)
-  groups <- lapply(seq_len(nb.of.groups), function(g) {
+  nb_of_groups <- max(nodes$group)
+  indicator_ids <- lav_plotinfo_indicator_ids(nodes, edges)
+  groups <- lapply(seq_len(nb_of_groups), function(g) {
     group <- list(
       id = g,
       nodes.id = integer(),
@@ -420,7 +420,7 @@ lav_plotinfo_groups <- function(plotinfo) {
     group$edges.id <- edges$id[group$edges.id]
     group$nb.nodes <- length(group$nodes.id)
     group$nb.indicators <-
-      as.integer(sum(nodes$group[nodes$id %in% indicator.ids] == g))
+      as.integer(sum(nodes$group[nodes$id %in% indicator_ids] == g))
     group$measurement <- (group$nb.indicators > 0L)
     group
   })
@@ -447,9 +447,9 @@ lav_groups_matrix <- function(groups) {
 }
 
  # internal ordering of a group
- lav_group_order <- function(group.object, plotinfo) {
+ lav_group_order <- function(group_object, plotinfo) {
   edges <- plotinfo$edges
-  group <- group.object
+  group <- group_object
   group$offsets.out <- rep(0L, group$nb.nodes)
   group$offsets.lin <- rep(0L, group$nb.nodes)
   if (group$nb.nodes > 1L) {
@@ -516,32 +516,32 @@ lav_groups_order <- function(groups, plotinfo) {
     rbind(depends, data.frame(defined = def, definedby = defby))
   }
   for (j in seq_along(edges$id)) {
-    van.id <- which(nodes$id == edges$van[j])
-    naar.id <- which(nodes$id == edges$naar[j])
-    if (nodes$group[van.id] == nodes$group[naar.id]) {
+    van_id <- which(nodes$id == edges$van[j])
+    naar_id <- which(nodes$id == edges$naar[j])
+    if (nodes$group[van_id] == nodes$group[naar_id]) {
       next
     }
     if (edges$tiepe[j] == "=~") {
-      if (nodes$tiepe[naar.id] == "lv" || nodes$tiepe[naar.id] == "cv") {
+      if (nodes$tiepe[naar_id] == "lv" || nodes$tiepe[naar_id] == "cv") {
         dependencies <- add_dependency(
           dependencies,
-          nodes$group[van.id],
-          nodes$group[naar.id]
+          nodes$group[van_id],
+          nodes$group[naar_id]
         )
       }
     } else if (edges$tiepe[j] == "<~") {
-      if (nodes$tiepe[van.id] == "lv" || nodes$tiepe[van.id] == "cv") {
+      if (nodes$tiepe[van_id] == "lv" || nodes$tiepe[van_id] == "cv") {
         dependencies <- add_dependency(
           dependencies,
-          nodes$group[naar.id],
-          nodes$group[van.id]
+          nodes$group[naar_id],
+          nodes$group[van_id]
         )
       }
     } else if (edges$tiepe[j] == "~") {
       dependencies <- add_dependency(
         dependencies,
-        nodes$group[naar.id],
-        nodes$group[van.id]
+        nodes$group[naar_id],
+        nodes$group[van_id]
       )
     }
   }
@@ -575,8 +575,8 @@ lav_groups_order <- function(groups, plotinfo) {
   #                               not first or last column.
   # Set loc = "b" for measurement groups in another row and
   #                               not first or last column.
-  group.matrix <- lav_groups_matrix(groups)
-  gmcols <- ncol(group.matrix)
+  group_matrix <- lav_groups_matrix(groups)
+  gmcols <- ncol(group_matrix)
   for (g in seq_along(groups)) {
     group <- groups[[g]]
     if (group$measurement) {

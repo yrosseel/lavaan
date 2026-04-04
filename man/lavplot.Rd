@@ -7,23 +7,23 @@ lav_plot(model = NULL,
         varlv = FALSE,
         placenodes = NULL,
         edgelabelsbelow = NULL,
-        group.covar.indicators = FALSE,
-        common.opts = list(sloped.labels = TRUE,
+        group_covar_indicators = FALSE,
+        common_opts = list(sloped_labels = TRUE,
                            mlovcolors = c("lightgreen", "lightblue"),
                            italic = TRUE,
                            lightness = 1,
-                           auto.subscript = TRUE),
+                           auto_subscript = TRUE),
         rplot = list(outfile = "",
                      addgrid = TRUE),
         tikz = list(outfile = "",
                     cex = 1.3,
                     standalone = FALSE),
         svg = list(outfile = "",
-                   stroke.width = 2L,
-                   font.size = 20L,
-                   idx.font.size = 15L,
+                   stroke_width = 2L,
+                   font_size = 20L,
+                   idx_font_size = 15L,
                    dy = 5L,
-                   font.family = "Latin Modern Math, arial, Aerial, sans",
+                   font_family = "Latin Modern Math, arial, Aerial, sans",
                    standalone = FALSE)
         )
 }
@@ -43,10 +43,10 @@ will be plotted as covariance between the latent variables for the variance.}
 \code{row} and \code{column} don't have to be integers.}
 \item{edgelabelsbelow}{optional list with members \code{c(\var{nodename1},
 \var{nodename2})}.}
-\item{group.covar.indicators}{logical, should items with indicators which
+\item{group_covar_indicators}{logical, should items with indicators which
 have an explicit covariance link be placed in the same group, i.e. forced
 to be on the same side of the diagram?}
-\item{common.opts}{options common to the three types of generated plots.}
+\item{common_opts}{options common to the three types of generated plots.}
 \item{rplot}{options for creating Rplot,
 see \code{\link{lav_plotinfo_rgraph}}.}
 \item{tikz}{options for creating code for tikz plot,
@@ -114,7 +114,7 @@ modelml <- '
         y_2 ~~ cv24 * y_5
   '
 tikzcodeml <- lav_plot(modelml,
-              common.opts = list(auto.subscript = FALSE),
+              common_opts = list(auto_subscript = FALSE),
               svg = list(outfile=stdout())
               )
 
@@ -140,7 +140,7 @@ tmp <- readLines("tmp.tex")
 writeLines(tmp, zz)
 writeLines(" ", zz)
 lav_plot(modelml,
-        common.opts = list(sloped.labels = FALSE,
+        common_opts = list(sloped_labels = FALSE,
                            mlovcolors = c("lightgreen", "lightblue")),
         tikz = list(outfile = "tmp.tex", cex = 1.4)
         )
@@ -177,7 +177,7 @@ tmp <- readLines("tmp.svg")
 writeLines(tmp, zz)
 writeLines("<br />", zz)
 lav_plot(modelml,
-        common.opts = list(sloped.labels = FALSE),
+        common_opts = list(sloped_labels = FALSE),
         tikz = list(outfile = "tmp.svg")
         )
 tmp <- readLines("tmp.svg")

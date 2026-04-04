@@ -202,7 +202,7 @@ lav_test_rename <- function(test, check = FALSE) {
           "invalid value in %1$s argument: %2$s.",
           "invalid values in %1$s argument: %2$s."
         ),
-        "test", lav_msg_view(test[bad.idx], log.sep = "none")
+        "test", lav_msg_view(test[bad.idx], log_sep = "none")
       ))
     }
 

@@ -1,6 +1,6 @@
 # Displays a message (... concatenated with spaces in between) with header
 # 'lavaan(function):', except when showheader == FALSE, and formatted to have
-# a maximum line length of 'txt.width' while all but the first line start with
+# a maximum line length of 'txt_width' while all but the first line start with
 # 'indent' spaces. If a footer is specified it is appended to the formatted text
 # 'as is'. The message is shown via R function 'message()'.
 lav_msg_note <- function(..., showheader = FALSE, footer = "") {
@@ -41,22 +41,22 @@ lav_msg_fixme <- function(...) {
 }
 
 # subroutine for above functions
-lav_msg <- function(wat, txt.width = getOption("width", 80L),
+lav_msg <- function(wat, txt_width = getOption("width", 80L),
                     indent = 3L, showheader = TRUE) {
   if (showheader) {
-    ignore.in.stack <- c(
+    ignore_in_stack <- c(
       "^eval$", "^try", "^doTryCatch", "^lav_msg", "^stop$", "^warning$",
       "^which$", "^unique$", "^as\\.", "^unlist$", "^message$",
       "^source$", "^withVisible$", "^tryCatch.W.E$", "^withCallingHandlers$",
       "^do.call$", "^paste"
     )
     sc <- sys.calls()
-    sc.i <- length(sc)
-    sc.naam <- ""
-    while (sc.i > 0L) {
+    sc_i <- length(sc)
+    sc_naam <- ""
+    while (sc_i > 0L) {
       x <- tryCatch(
-        as.character(sc[[sc.i]][[1L]]),
-        error = function(e) {"unknown"}
+        as.character(sc[[sc_i]][[1L]]),
+        error = function(e) "unknown"
       )
       if (length(x) == 3L) {
         # needed if a function specified in namespace, e.g.
@@ -64,51 +64,51 @@ lav_msg <- function(wat, txt.width = getOption("width", 80L),
         x <- x[[3L]]
       }
       skip <- FALSE
-      for (re in ignore.in.stack) {
+      for (re in ignore_in_stack) {
         if (grepl(re, x)) {
           skip <- TRUE
           break
         }
       }
       if (!skip) {
-        sc.naam <- x
+        sc_naam <- x
         break
       }
-      sc.i <- sc.i - 1L
+      sc_i <- sc_i - 1L
     }
-    if (sc.naam == "") {
+    if (sc_naam == "") {
       header <- "lavaan: ___"
     } else {
-      header <- paste0("lavaan->", sc.naam, "(): ___")
+      header <- paste0("lavaan->", sc_naam, "(): ___")
     }
   } else {
     header <- ""
   }
-  txt.width <- txt.width - indent # whitespace at the right
+  txt_width <- txt_width - indent # whitespace at the right
   # make sure we only have a single string
   txt <- paste(wat, collapse = " ")
   # split the txt in little chunks
   chunks <- strsplit(paste(header, txt), "\\s+", fixed = FALSE)[[1]]
 
   # chunk size (number of characters)
-  chunk.size <- nchar(chunks)
+  chunk_size <- nchar(chunks)
 
   # remove empty chunk in position 1 (if txt starts with whitespace)
-  if (chunk.size[1L] == 0L) {
+  if (chunk_size[1L] == 0L) {
     chunks <- chunks[-1L]
-    chunk.size <- chunk.size[-1]
+    chunk_size <- chunk_size[-1]
   }
 
   nstart <- 1L
   nstop <- 1L
-  corr.line1 <- 7L # first line possibly contains "error: "
+  corr_line1 <- 7L # first line possibly contains "error: "
   while (nstart <= length(chunks)) {
     while (nstop < length(chunks) &&
-           sum(chunk.size[seq.int(nstart, nstop + 1L)]) + corr.line1 +
-           nstop - nstart + indent < txt.width && chunks[nstop + 1L] != "___") {
+           sum(chunk_size[seq.int(nstart, nstop + 1L)]) + corr_line1 +
+           nstop - nstart + indent < txt_width && chunks[nstop + 1L] != "___") {
       nstop <- nstop + 1
     }
-    corr.line1 <- 0L
+    corr_line1 <- 0L
     if (nstop < length(chunks) && chunks[nstop + 1L] == "___") {
       # forced line break
       chunks[nstop + 1L] <-  ""
@@ -135,12 +135,12 @@ lav_msg <- function(wat, txt.width = getOption("width", 80L),
 # If the object has names, the names will be prepended with a colon before the
 # value, e.g. c(x = 2.3, y = 4) --> (x : 2.3, y : 4).
 lav_msg_view <- function(x,
-                         log.sep = c("array", "none", "and", "or"),
+                         log_sep = c("array", "none", "and", "or"),
                          qd = TRUE) {
   if (missing(x)) {
     return("NULL")
   }
-  log.sep <- match.arg(log.sep)
+  log_sep <- match.arg(log_sep)
   xn <- names(x)
   if (is.list(x)) {
     xx <- sapply(x, lav_msg_view)
@@ -160,10 +160,12 @@ lav_msg_view <- function(x,
   if (length(xx) == 1) {
     rv <- xx
   } else {
-    if (log.sep == "array") rv <- paste0("(", paste(xx, collapse = ", "), ")")
-    if (log.sep == "none") rv <- paste(xx, collapse = ", ")
-    if (log.sep == "and") rv <- paste(paste(xx[-length(xx)], collapse = ", "), gettext("and"), xx[length(xx)])
-    if (log.sep == "or") rv <- paste(paste(xx[-length(xx)], collapse = ", "), gettext("or"), xx[length(xx)])
+    if (log_sep == "array") rv <- paste0("(", paste(xx, collapse = ", "), ")")
+    if (log_sep == "none") rv <- paste(xx, collapse = ", ")
+    if (log_sep == "and") rv <- paste(paste(xx[-length(xx)], collapse = ", "),
+     gettext("and"), xx[length(xx)])
+    if (log_sep == "or") rv <- paste(paste(xx[-length(xx)], collapse = ", "),
+     gettext("or"), xx[length(xx)])
   }
   rv
 }
@@ -187,20 +189,20 @@ lav_deprecated <- function(new,
 }
 
 # Warning for deprecated arguments-parameter for another parameter in a function
-# method.par specifies the name of the parameter used for a 'method'
-# arg.par specifies the name of the deprecated parameter
+# method_par specifies the name of the parameter used for a 'method'
+# arg_par specifies the name of the deprecated parameter
 # parameter times specifies how many times the warning should be generated
 # during one "lavaan-package-session"
-lav_deprecated_args <- function(method.par, arg.par, times = 1L) {
-  dprmsg <-  get0(paste0("dpr_", method.par, arg.par), lavaan_cache_env,
+lav_deprecated_args <- function(method_par, arg_par, times = 1L) {
+  dprmsg <-  get0(paste0("dpr_", method_par, arg_par), lavaan_cache_env,
                   ifnotfound = as.integer(times))
   if (dprmsg <= 0L) return(invisible(NULL))
-  assign(paste0("dpr_", method.par, arg.par), dprmsg - 1L, lavaan_cache_env)
-  msg <- c(gettextf("Argument '%s' is deprecated.\n", arg.par),
-         gettextf("The arguments for '%s' can now be provided in '%s' itself.\n",
-          method.par, method.par))
+  assign(paste0("dpr_", method_par, arg_par), dprmsg - 1L, lavaan_cache_env)
+  msg <- c(gettextf("Argument '%s' is deprecated.\n", arg_par),
+      gettextf("The arguments for '%s' can now be provided in '%s' itself.\n",
+      method_par, method_par))
   msg <- paste(msg, collapse = "")
-  warning(warningCondition(msg, old = arg.par, new = method.par, package = NULL,
+  warning(warningCondition(msg, old = arg_par, new = method_par, package = NULL,
                            class = "deprecatedWarning"))
 }
 
@@ -241,5 +243,5 @@ lav_deprecated_args <- function(method.par, arg.par, times = 1L) {
 #       "invalid value in %1$s argument: %2$s.",
 #       "invalid values in %1$s argument: %2$s."
 #     ),
-#     x, lav_msg_view(invalids, log.sep = "none")
+#     x, lav_msg_view(invalids, log_sep = "none")
 #   ))

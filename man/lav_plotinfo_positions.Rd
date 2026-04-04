@@ -5,7 +5,7 @@
 lav_plotinfo_positions(plotinfo,
                        placenodes = NULL,
                        edgelabelsbelow = NULL,
-                       group.covar.indicators = FALSE,
+                       group_covar_indicators = FALSE,
                        debug = FALSE)
 }
 \arguments{
@@ -14,7 +14,7 @@ lav_plotinfo_positions(plotinfo,
 \code{row} and \code{column} don't have to be integers.}
 \item{edgelabelsbelow}{optional list with members \code{c(\var{nodename1},
 \var{nodename2})}.}
-\item{group.covar.indicators}{logical, should items with indicators which
+\item{group_covar_indicators}{logical, should items with indicators which
 have an explicit covariance link be placed in the same group, i.e. forced
 to be on the same side of the diagram?}
 \item{debug}{logical, print debug information?}

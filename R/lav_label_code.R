@@ -1,6 +1,6 @@
 lav_label_code <- function(label = "", value = "", show = FALSE,
-                           idx.font.size = 20L, dy = 7L,
-                           italic = TRUE, auto.subscript = TRUE) {
+                           idx_font_size = 20L, dy = 7L,
+                           italic = TRUE, auto_subscript = TRUE) {
   latexsymbols <- c("varepsilon",
     "Alpha", "Beta", "Gamma", "Delta", "Epsilon", "Zeta", "Eta", "Theta",
     "Iota", "Kappa", "Lambda", "Mu", "Nu", "Xi", "Omicron", "Pi",
@@ -18,7 +18,7 @@ lav_label_code <- function(label = "", value = "", show = FALSE,
     "961", "963", "964", "965", "966", "967", "968", "969"
   )
   if (label == "" && value == "") return(list(svg = "", tikz = "", r = ""))
-  if (auto.subscript) {
+  if (auto_subscript) {
     label <- gsub("^([a-zA-Z]+)([0-9]+)", "\\1_\\2", label)
   }
   rexpression <- FALSE
@@ -56,8 +56,8 @@ lav_label_code <- function(label = "", value = "", show = FALSE,
     }
     if (length(splitunderscore) > 1L) {
       rexpression <- TRUE
-      svgpart[2L] <- paste0("<tspan dy=\"", dy  ,"\" font-size=\"",
-                     idx.font.size, "\">", splitunderscore[2L], "</tspan>")
+      svgpart[2L] <- paste0("<tspan dy=\"", dy, "\" font-size=\"",
+                     idx_font_size, "\">", splitunderscore[2L], "</tspan>")
       if (svgpart[3L] != "") {
         svgpart[3L] <- paste0("<tspan dy=\"-", dy, "\">",
                                svgpart[3L], "</tspan>")
@@ -68,7 +68,7 @@ lav_label_code <- function(label = "", value = "", show = FALSE,
     if (!italic) tikzpart <- c("\\mathrm{", tikzpart, "}")
   }
   if (show) {
-    plot(c(0,3), c(0,2), type = "n")
+    plot(c(0, 3), c(0, 2), type = "n")
     if (rexpression) {
       text(1, 1, str2expression(paste(rpart, collapse = "")))
     } else {

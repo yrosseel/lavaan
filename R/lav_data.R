@@ -542,7 +542,7 @@ lav_data_full <- function(data = NULL, # data.frame
       if (any(is.na(idx))) {
         lav_msg_warn(gettextf(
           "some group.labels do not appear in the grouping variable: %s",
-          lav_msg_view(group.label[which(is.na(idx))], log.sep = "none"))
+          lav_msg_view(group.label[which(is.na(idx))], log_sep = "none"))
         )
       }
       group.label <- group.label[!is.na(idx)]
@@ -751,7 +751,7 @@ lav_data_full <- function(data = NULL, # data.frame
     if (any(f.names %in% unlist(ov.names.x))) {
       lav_msg_warn(gettextf(
         "exogenous variable(s) declared as ordered in data: %s",
-        lav_msg_view(f.names, log.sep = "none")))
+        lav_msg_view(f.names, log_sep = "none")))
     }
   }
   # check for ordered endogenous variables with more than 12 levels
@@ -762,7 +762,7 @@ lav_data_full <- function(data = NULL, # data.frame
     if (length(f.names) > 0L) {
       lav_msg_warn(gettextf(
         "some ordered categorical variable(s) have more than 12 levels: %s",
-        lav_msg_view(f.names, log.sep = "none")))
+        lav_msg_view(f.names, log_sep = "none")))
     }
   }
   # check for zero-cases
