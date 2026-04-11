@@ -4,40 +4,40 @@
 \usage{
 lav_plotinfo_svgcode(plotinfo,
                      outfile = "",
-                     sloped.labels = TRUE,
+                     sloped_labels = TRUE,
                      standalone = FALSE,
-                     stroke.width = 2L,
-                     font.size = 20L,
-                     idx.font.size = 15L,
+                     stroke_width = 2L,
+                     font_size = 20L,
+                     idx_font_size = 15L,
                      dy = 5L,
                      mlovcolors = c("lightgreen", "lightblue"),
                      lightness= 1,
-                     font.family = "Latin Modern Math, arial, Aerial, sans",
+                     font_family = "Latin Modern Math, arial, Aerial, sans",
                      italic = TRUE,
-                     auto.subscript = TRUE
+                     auto_subscript = TRUE
                      )
 }
 \arguments{
 \item{plotinfo}{A plotinfo structure as returned from \code{lav_plotinfo_positions}.}
 \item{outfile}{A connection or a character string, the file to store the code.}
-\item{sloped.labels}{logical, sloped labels for the edges.}
+\item{sloped_labels}{logical, sloped labels for the edges.}
 \item{standalone}{logical, add code to make a html file with svg in it? If
 FALSE (default) the outfile - if specified - must have a file extension
 'svg', if TRUE the file extension must be 'htm' or 'html'.}
-\item{stroke.width}{Value for stroke-width parameter in svg.}
-\item{font.size}{An integer specifying normal font size to use.}
-\item{idx.font.size}{An integer specifying font size to use for a subscript.}
+\item{stroke_width}{Value for stroke-width parameter in svg.}
+\item{font_size}{An integer specifying normal font size to use.}
+\item{idx_font_size}{An integer specifying font size to use for a subscript.}
 \item{dy}{An integer specifying the distance to move the baseline of the subscript.}
 \item{mlovcolors}{Array of two colors for distinguishing ov nodes with same name
 between the levels in a  multilevel model.}
 \item{lightness}{A scalar factor to modify the distances between nodes.}
-\item{font.family}{Fonts to be tried for rendering the labels. The first one,
+\item{font_family}{Fonts to be tried for rendering the labels. The first one,
 Latin Modern Math, is close to the default font used in tikz for mathematical
 expressions and can be downloaded from
 \href{https://ctan.org/tex-archive/fonts/lm-math}{CTAN}.}
 \item{italic}{Are labels to be in italic font? If FALSE the labels will be
 shown in mathrm font.}
-\item{auto.subscript}{Logical, see \code{\link{lav_label_code}}.}
+\item{auto_subscript}{Logical, see \code{\link{lav_label_code}}.}
 }
 \value{
 NULL (invisible)}
@@ -69,8 +69,8 @@ modelml <- '
 testml <- lav_model_plotinfo(modelml)
 testml <- lav_plotinfo_positions(testml)
 # in the line hereunder no file is given, so output to R console
-lav_plotinfo_svgcode(testml, sloped.labels = FALSE, standalone = TRUE,
-            auto.subscript = FALSE)
+lav_plotinfo_svgcode(testml, sloped_labels = FALSE, standalone = TRUE,
+            auto_subscript = FALSE)
 \dontrun{
 # example creating html file with the above diagrams
 zz <- file("demosvg.html", open="w")
@@ -84,7 +84,7 @@ lav_plotinfo_svgcode(test, outfile = "temp.svg")
 tmp <- readLines("tmp.svg")
 writeLines(tmp, zz)
 writeLines("<br />", zz)
-lav_plotinfo_svgcode(testml, outfile = "temp.svg", sloped.labels = FALSE,
+lav_plotinfo_svgcode(testml, outfile = "temp.svg", sloped_labels = FALSE,
              standalone = TRUE)
 tmp <- readLines("tmp.svg")
 writeLines(tmp, zz)

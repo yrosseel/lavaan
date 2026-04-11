@@ -1,24 +1,24 @@
 lav_plotinfo_svgcode <- function(plotinfo,
                          outfile = "",
-                         sloped.labels = TRUE,
+                         sloped_labels = TRUE,
                          standalone = FALSE,
-                         stroke.width = 2L,
-                         font.size = 20L,
-                         idx.font.size = 15L,
+                         stroke_width = 2L,
+                         font_size = 20L,
+                         idx_font_size = 15L,
                          dy = 5L,
                          mlovcolors = c("lightgreen", "lightblue"),
                          lightness = 1,
-                         font.family = "Latin Modern Math, arial, Aerial, sans",
+                         font_family = "Latin Modern Math, arial, Aerial, sans",
                          italic = TRUE,
-                         auto.subscript = TRUE
+                         auto_subscript = TRUE
                          ) {
-  textattr <- paste0('fill="black" font-size="', font.size,
-              '" font-family="', font.family, '" ',
-              ifelse(italic, 'font-style="italic"',''))
+  textattr <- paste0('fill="black" font-size="', font_size,
+              '" font-family="', font_family, '" ',
+              ifelse(italic, 'font-style="italic"', ''))
   tmpcol <- col2rgb(mlovcolors)
   wovcol <- paste(as.hexmode(tmpcol[, 1L]), collapse = "")
   bovcol <- paste(as.hexmode(tmpcol[, 2L]), collapse = "")
-  node_elements_svg <- function(nodetiepe, noderadius, waar, stroke.width) {
+  node_elements_svg <- function(nodetiepe, noderadius, waar, stroke_width) {
     # define form, color and anchors for a node
     localradius <- noderadius
     if (nodetiepe == "varlv") localradius <- noderadius * .8
@@ -29,23 +29,23 @@ lav_plotinfo_svgcode <- function(plotinfo,
                      lv = ,
                      varlv = paste0('<circle cx="', waar[1], '" cy="', waar[2],
                                     '" r="', localradius,
-                                    '" stroke-width="', stroke.width,
+                                    '" stroke-width="', stroke_width,
                                     '" stroke="black" fill="white"/>'),
                      ov = paste0('<rect width="', 2 * ovxy, '" height="',
                                  2 * ovxy, '" x="', waar[1] - ovxy, '" y="',
                                  waar[2] - ovxy,
-                                 '" stroke-width="', stroke.width,
+                                 '" stroke-width="', stroke_width,
                                  '" stroke="black" fill="white" />'),
                      wov =  paste0('<rect width="', 2 * ovxy, '" height="',
                                    2 * ovxy, '" x="', waar[1] - ovxy, '" y="',
                                    waar[2] - ovxy, '" rx="', ovxy / 3, '" ry="',
-                                   ovxy / 3, '" stroke-width="', stroke.width,
+                                   ovxy / 3, '" stroke-width="', stroke_width,
                                    '" stroke="black" fill="#', wovcol,
                                    '" />'),
                      bov =  paste0('<rect width="', 2 * ovxy, '" height="',
                                    2 * ovxy, '" x="', waar[1] - ovxy, '" y="',
                                    waar[2] - ovxy, '" rx="', ovxy / 3, '" ry="',
-                                   ovxy / 3, '" stroke-width="', stroke.width,
+                                   ovxy / 3, '" stroke-width="', stroke_width,
                                    '" stroke="black" fill="#', bovcol,
                                    '" />'),
                      cv = paste0('<polygon points="',
@@ -55,13 +55,15 @@ lav_plotinfo_svgcode <- function(plotinfo,
                                  waar[1] + cvxy[1], ',', waar[2] + cvxy[2], ' ',
                                  waar[1] - cvxy[1], ',', waar[2] + cvxy[2], ' ',
                                  waar[1] - localradius, ',', waar[2],
-                                 '" stroke-width="', stroke.width,
+                                 '" stroke-width="', stroke_width,
                                  '" stroke="black" fill="none" />'),
                      const = paste0('<polygon points="',
                                     waar[1], ',', waar[2] - localradius, ' ',
-                                    waar[1] + constxy[2], ',', waar[2] + constxy[1], ' ',
-                                    waar[1] - constxy[2], ',', waar[2] + constxy[1],
-                                    '" stroke-width="', stroke.width,
+                                    waar[1] + constxy[2], ',',
+                                    waar[2] + constxy[1], ' ',
+                                    waar[1] - constxy[2], ',',
+                                    waar[2] + constxy[1],
+                                    '" stroke-width="', stroke_width,
                                     '" stroke="black" fill="none" />')
     )
     n <- c(waar[1], switch(nodetiepe,
@@ -108,7 +110,7 @@ lav_plotinfo_svgcode <- function(plotinfo,
     if (path == "") return("")
     delen <- strsplit(path, ".", fixed = TRUE)[[1]]
     if (length(delen) > 1L) return(tolower(delen[length(delen)]))
-    return("")
+    ""
   }
   if (is.character(outfile) && outfile != "") {
     stopifnot(standalone || get_file_extension(outfile) == "svg",
@@ -170,23 +172,22 @@ lav_plotinfo_svgcode <- function(plotinfo,
                         control = NA_real_, below = FALSE,
                         id = 0) {
     labele <- lav_label_code(label,
-                               idx.font.size = idx.font.size,
+                               idx_font_size = idx_font_size,
                                dy = dy,
-                               auto.subscript = auto.subscript)$svg
-    dirvec <- naar - van
+                               auto_subscript = auto_subscript)$svg
     theta <- atan2(naar[2] - van[2], naar[1] - van[1])
     if (is.na(control[1L])) { # line
       if (van[1L] <= naar[1L]) {
         writeLines(paste0('<path id="L', id, '" d="M ', van[1L],
                           ' ', van[2L], ' L ', naar[1L], " ", naar[2L],
-                        '" stroke-width="', stroke.width, '" stroke="black" ',
-                        ifelse(dubbel,'marker-start="url(#sarr)" ', ''),
+                        '" stroke-width="', stroke_width, '" stroke="black" ',
+                        ifelse(dubbel, 'marker-start="url(#sarr)" ', ''),
                         'marker-end="url(#arr)" />'), zz)
       } else {
         writeLines(paste0('<path d="M ', van[1L],
                           ' ', van[2L], ' L ', naar[1L], " ", naar[2L],
-                          '" stroke-width="', stroke.width, '" stroke="black" ',
-                          ifelse(dubbel,'marker-start="url(#sarr)" ', ''),
+                          '" stroke-width="', stroke_width, '" stroke="black" ',
+                          ifelse(dubbel, 'marker-start="url(#sarr)" ', ''),
                           'marker-end="url(#arr)" />'), zz)
         writeLines(paste0('<path id="L', id, '" d="M ', naar[1L],
                           ' ', naar[2L], ' L ', van[1L], " ", van[2L],
@@ -199,15 +200,17 @@ lav_plotinfo_svgcode <- function(plotinfo,
         writeLines(paste0('<path id="L', id, '" d="M ', van[1L], ' ',
                           van[2L], ' Q ', control[1L], ' ', control[2L],
                           ' ', naar[1L], " ", naar[2L],
-                          '" stroke-width="', stroke.width, '" stroke="black" fill="none" ',
-                          ifelse(dubbel,'marker-start="url(#sarr)" ', ''),
+                          '" stroke-width="', stroke_width,
+                          '" stroke="black" fill="none" ',
+                          ifelse(dubbel, 'marker-start="url(#sarr)" ', ''),
                           'marker-end="url(#arr)" />'), zz)
       } else {
         writeLines(paste0('<path d="M ', van[1L], ' ',
                           van[2L], ' Q ', control[1L], ' ', control[2L],
                           ' ', naar[1L], " ", naar[2L],
-                          '" stroke-width="', stroke.width, '" stroke="black" fill="none" ',
-                          ifelse(dubbel,'marker-start="url(#sarr)" ', ''),
+                          '" stroke-width="', stroke_width,
+                          '" stroke="black" fill="none" ',
+                          ifelse(dubbel, 'marker-start="url(#sarr)" ', ''),
                           'marker-end="url(#arr)" />'), zz)
         writeLines(paste0('<path id="L', id, '" d="M ', naar[1L], ' ',
                           naar[2L], ' Q ', control[1L], ' ', control[2L],
@@ -218,7 +221,7 @@ lav_plotinfo_svgcode <- function(plotinfo,
       midden <- 0.25 * (van + naar) + 0.5 * control
     }
     if (label != "") {
-      if (sloped.labels) {
+      if (sloped_labels) {
         writeLines(
           c(paste0('<text ', textattr, ' text-anchor="middle">'),
             paste0('<textPath xlink:href="#L', id, '" startOffset="50%">',
@@ -230,7 +233,7 @@ lav_plotinfo_svgcode <- function(plotinfo,
           extra <- 'dy="30"'
         } else if (theta >= pi / 2) {
           extra <- 'dy="30" text-anchor="end"'
-        } else if (theta < -pi/2) {
+        } else if (theta < -pi / 2) {
           extra <- 'dy="30"'
         } else {
           extra <- 'dy="0" text-anchor="end"'
@@ -240,7 +243,7 @@ lav_plotinfo_svgcode <- function(plotinfo,
           extra <- 'text-anchor="end"'
         } else if (theta >= pi / 2) {
           extra <- ' '
-        } else if (theta < -pi/2) {
+        } else if (theta < -pi / 2) {
           extra <- 'text-anchor="end"'
         } else {
           extra <- ' '
@@ -254,9 +257,9 @@ lav_plotinfo_svgcode <- function(plotinfo,
   }
   plot_var <- function(waar, noderadius, label = "", side = "n") {
     labele <- lav_label_code(label,
-                               idx.font.size = idx.font.size,
+                               idx_font_size = idx_font_size,
                                dy = dy,
-                               auto.subscript = auto.subscript)$svg
+                               auto_subscript = auto_subscript)$svg
     thetarange <- c(pi / 6, 11 * pi / 6)
     if (side == "s") thetarange <- thetarange + 3 * pi / 2
     if (side == "e") thetarange <- thetarange + pi
@@ -273,24 +276,24 @@ lav_plotinfo_svgcode <- function(plotinfo,
     xs <- middelpt[1] + cos(thetarange) * straal
     ys <- middelpt[2] + sin(thetarange) * straal
     writeLines(paste0(
-      '<path d="M ', xs[1L], ' ', ys[1L], ' A ', straal, ' ', straal ,
-      ' 0 1,1 ', xs[2L], ' ', ys[2L] , '" stroke-width="', stroke.width,
+      '<path d="M ', xs[1L], ' ', ys[1L], ' A ', straal, ' ', straal,
+      ' 0 1,1 ', xs[2L], ' ', ys[2L], '" stroke-width="', stroke_width,
       '" stroke="black" fill="none" ',
       'marker-start="url(#sarr)" marker-end="url(#arr)" />'
     ), zz)
     # label
     if (label != "") {
       writeLines(paste0('<text x="', middelpt[1L], '" y="', middelpt[2L],
-                        '" text-anchor="middle" ',textattr, '>', labele,
+                        '" text-anchor="middle" ', textattr, '>', labele,
                         '</text>'), zz)
     }
   }
   plot_node <- function(waar, tiepe, label = "") {
     labele <- lav_label_code(label,
-                               idx.font.size = idx.font.size,
+                               idx_font_size = idx_font_size,
                                dy = dy,
-                               auto.subscript = auto.subscript)$svg
-    elems <- node_elements_svg(tiepe, nodedist * noderadius, waar, stroke.width)
+                               auto_subscript = auto_subscript)$svg
+    elems <- node_elements_svg(tiepe, nodedist * noderadius, waar, stroke_width)
     writeLines(c(
       elems$drawit,
       paste0('<text x="', waar[1], '" y="', waar[2], '" ',
@@ -306,20 +309,17 @@ lav_plotinfo_svgcode <- function(plotinfo,
                       ' ', mlrij * nodedist, '" stroke="black"/>'),
                zz)
   }
-  yrange <- nodedist * range(nodes$rij)
-  xrange <- nodedist * range(nodes$kolom)
-  midxy <- c(mean(xrange), mean(yrange))
   for (j in seq.int(nrow(edges))) {
     if (edges$naar[j] != edges$van[j]) {
       van <- which(nodes$id == edges$van[j])
       naar <- which(nodes$id == edges$naar[j])
       adrvan <- c(nodedist * nodes$kolom[van], nodedist * nodes$rij[van])
       elems <- node_elements_svg(nodes$tiepe[van], nodedist * noderadius,
-                                 adrvan, stroke.width)
+                                 adrvan, stroke_width)
       adrvan <- elems[[edges$vananker[j]]]
       adrnaar <- c(nodedist * nodes$kolom[naar], nodedist * nodes$rij[naar])
       elems <- node_elements_svg(nodes$tiepe[naar], nodedist * noderadius,
-                                 adrnaar, stroke.width)
+                                 adrnaar, stroke_width)
       adrnaar <- elems[[edges$naaranker[j]]]
       if (is.na(edges$controlpt.rij[j])) {
         plot_edge(adrvan, adrnaar, edges$label[j],
@@ -338,7 +338,8 @@ lav_plotinfo_svgcode <- function(plotinfo,
     } else {
       van <- which(nodes$id == edges$van[j])
       adrvan <- c(nodedist * nodes$kolom[van], nodedist * nodes$rij[van])
-      elems <- node_elements_svg(nodes$tiepe[van], nodedist * noderadius, adrvan, stroke.width)
+      elems <- node_elements_svg(nodes$tiepe[van], nodedist * noderadius,
+        adrvan, stroke_width)
       adrvan <- elems[[edges$vananker[j]]]
       plot_var(adrvan, noderadius * nodedist, edges$label[j], edges$vananker[j])
     }
@@ -351,5 +352,5 @@ lav_plotinfo_svgcode <- function(plotinfo,
   writeLines("</svg>", zz)
   if (standalone) writeLines(c("</body>", "</html>"), zz)
   if (closezz) close(zz)
-  return(invisible(NULL))
+  invisible(NULL)
 }

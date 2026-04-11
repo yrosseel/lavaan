@@ -51,7 +51,7 @@ lav_options_checkvalues <- function(optname, optvalue, chr) {
         "invalid values in %1$s option: %2$s."
       ),
       optname,
-      lav_msg_view(optvalue[is.na(optvalsok)], log.sep = "none")
+      lav_msg_view(optvalue[is.na(optvalsok)], log_sep = "none")
     ))
   }
   as.vector(chr[optvalsok])
@@ -69,7 +69,7 @@ lav_options_check <- function(opts, opt.check, subname) { # nolint
   if (any(is.na(match.opt))) {
     lav_msg_stop(gettextf(
       "Some option(s) unknown: %s !",
-      lav_msg_view(opt.names[is.na(match.opt)], log.sep = "none")
+      lav_msg_view(opt.names[is.na(match.opt)], log_sep = "none")
     ))
   }
   for (j in seq_along(opts)) {
@@ -324,7 +324,7 @@ lav_options_set <- function(opt = NULL) {
           lav_msg_view(c(
             "none", "yuan.bentler", "yuan.bentler.mplus",
             "satorra.bentler"
-          ), log.sep = "or")
+          ), log_sep = "or")
         )
       )
     }
@@ -377,7 +377,7 @@ lav_options_set <- function(opt = NULL) {
         lav_msg_view(c(
           "none", "standard", "yuan.bentler",
           "yuan.bentler.mplus"
-        ), log.sep = "or")
+        ), log_sep = "or")
       ))
     }
 
@@ -394,7 +394,7 @@ lav_options_set <- function(opt = NULL) {
       lav_msg_stop(gettextf(
         "`se' argument must one of %s  in the multilevel case",
         lav_msg_view(c("none", "standard", "robust.huber.white"),
-          log.sep = "or"
+          log_sep = "or"
         )
       ))
     }
@@ -721,7 +721,7 @@ lav_options_set <- function(opt = NULL) {
     any(opt$se == c("robust.huber.white", "robust.sem", "robust.sem.nt"))) {
     lav_msg_stop(gettextf(
       "information must be either %s if robust standard errors are requested.",
-      lav_msg_view(c("expected", "observed"), log.sep = "or")
+      lav_msg_view(c("expected", "observed"), log_sep = "or")
     ))
   }
 
@@ -748,7 +748,7 @@ lav_options_set <- function(opt = NULL) {
     ))) {
     lav_msg_stop(gettextf(
       "information must be either %s if robust test statistics are requested.",
-      lav_msg_view(c("expected", "observed"), log.sep = "or")
+      lav_msg_view(c("expected", "observed"), log_sep = "or")
     ))
   }
 
@@ -995,7 +995,7 @@ lav_options_set <- function(opt = NULL) {
         "yuan.bentler", "yuan.bentler.mplus",
         "mean.var.adjusted", "scaled.shifted",
         "bollen.stine"
-      ), log.sep = "or")
+      ), log_sep = "or")
     ))
   }
 

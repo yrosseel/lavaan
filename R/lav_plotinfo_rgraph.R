@@ -30,13 +30,13 @@ lav_points_beziers <- function(x,
 }
 
 lav_plotinfo_rgraph <- function(plotinfo,
-                                sloped.labels = TRUE,
+                                sloped_labels = TRUE,
                                 outfile = "",
                                 addgrid = TRUE,
                                 mlovcolors = c("lightgreen", "lightblue"),
                                 lightness = 1,
                                 italic = TRUE,
-                                auto.subscript = TRUE) {
+                                auto_subscript = TRUE) {
   font <- ifelse(italic, 3L, 1L)
   node_elements <- function(nodetiepe, noderadius) {
     # define form, color and anchors for a node type
@@ -142,10 +142,10 @@ lav_plotinfo_rgraph <- function(plotinfo,
   }
   plot_edge <- function(van, naar, label = "", dubbel = FALSE,
                         control = NA_real_, below = FALSE, txtcex = 0.9) {
-    labele <- lav_label_code(label, auto.subscript = auto.subscript)$r
+    labele <- lav_label_code(label, auto_subscript = auto_subscript)$r
     dirvec <- naar - van
     theta <- atan2(naar[2] - van[2], naar[1] - van[1])
-    srt <- ifelse(sloped.labels, 180 * theta / pi, 0)
+    srt <- ifelse(sloped_labels, 180 * theta / pi, 0)
     if (srt > 90) srt <- srt - 180
     if (srt < -90) srt <- srt + 180
     if (is.na(control[1L])) {
@@ -210,7 +210,7 @@ lav_plotinfo_rgraph <- function(plotinfo,
     }
   }
   plot_var <- function(waar, noderadius, label = "", side = "n", txtcex = 0.9) {
-    labele <- lav_label_code(label, auto.subscript = auto.subscript)$r
+    labele <- lav_label_code(label, auto_subscript = auto_subscript)$r
     thetarange <- c(pi / 6, 11 * pi / 6)
     if (side == "s") thetarange <- thetarange + pi / 2
     if (side == "e") thetarange <- thetarange + pi
@@ -241,7 +241,7 @@ lav_plotinfo_rgraph <- function(plotinfo,
     }
   }
   plot_node <- function(waar, tiepe, label = "", txtcex = 0.9) {
-    labele <- lav_label_code(label, auto.subscript = auto.subscript)$r
+    labele <- lav_label_code(label, auto_subscript = auto_subscript)$r
     elems <- node_elements(tiepe, noderadius)
     x <- waar[1] + elems$drawx
     y <- waar[2] + elems$drawy

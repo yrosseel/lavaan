@@ -4,8 +4,8 @@ lav_beziersq_beziersc <- function(x) {
   # returns rtval which contains P1, C1, C2, P2 so that the cubic beziers
   # with control points C1 and C2 is as 'high' as the quadratic one
   # rtval is a matrix with 2 rows and 4 columns
-  matrix(c(x[ , 1L], x[ , 1L] / 3 + 2 * x[ ,2L] / 3,
-         x[ , 3L] / 3 + 2 * x[ ,2L] / 3, x [ ,3L]), nrow = 2)
+  matrix(c(x[, 1L], x[, 1L] / 3 + 2 * x[, 2L] / 3,
+         x[, 3L] / 3 + 2 * x[, 2L] / 3, x [, 3L]), nrow = 2)
 }
 lav_node_coordinates <- function(nodeid, anker, nodes, maxrij) {
   nodenr <- which(nodes$id == nodeid)
@@ -18,20 +18,20 @@ lav_node_coordinates <- function(nodeid, anker, nodes, maxrij) {
 lav_plotinfo_tikzcode <- function(plotinfo,
                           outfile = "",
                           cex = 1.3,
-                          sloped.labels = TRUE,
+                          sloped_labels = TRUE,
                           standalone = FALSE,
                           mlovcolors = c("lightgreen", "lightblue"),
                           lightness = 1,
                           italic = TRUE,
-                          auto.subscript = TRUE
+                          auto_subscript = TRUE
                           ) {
   tmpcol <- col2rgb(mlovcolors)
-  wovcol <- paste(round(tmpcol[, 1L]/255, 2), collapse = ",")
-  bovcol <- paste(round(tmpcol[, 2L]/255, 2), collapse = ",")
+  wovcol <- paste(round(tmpcol[, 1L] / 255, 2), collapse = ",")
+  bovcol <- paste(round(tmpcol[, 2L] / 255, 2), collapse = ",")
   nodenaam <- function(nm, blk) {
     if (blk > 0L) return(gsub("_", "", paste0("B", blk, nm)))
-    return(gsub("_", "", nm))
-    }
+    gsub("_", "", nm)
+  }
   mlrij <- plotinfo$mlrij
   if (is.null(mlrij))
     lav_msg_stop(gettext(
@@ -61,7 +61,7 @@ lav_plotinfo_tikzcode <- function(plotinfo,
     "\\usepackage{color}",
     "\\usepackage{tikz}"), zz)
   commstyle <- paste0("draw, minimum size=", round(6 * cex), "mm")
-  writeLines (c(
+  writeLines(c(
     "\\usetikzlibrary {shapes.geometric}",
     paste0("\\definecolor{wovcol}{rgb}{", wovcol, "}"),
     paste0("\\definecolor{bovcol}{rgb}{", bovcol, "}"),
@@ -69,38 +69,44 @@ lav_plotinfo_tikzcode <- function(plotinfo,
     ">=stealth,",
     paste0("x={(", cex, "cm,0cm)}, y={(0cm,", cex, "cm)},"),
     paste0("lv/.style={circle, ", commstyle, ", thick},"),
-    paste0("varlv/.style={circle, draw, minimum size=", round(4 * cex), "mm, semithick},"),
-    paste0("cv/.style={regular polygon, regular polygon sides=6, ", commstyle, ", thick},"),
-    paste0("ov/.style={rectangle, ", commstyle,", thick},"),
-    paste0("wov/.style={rectangle, rounded corners, fill=wovcol, ", commstyle, ", thick},"),
-    paste0("bov/.style={rectangle, rounded corners, fill=bovcol, ", commstyle, ", thick},"),
-    paste0("const/.style={regular polygon, regular polygon sides=3, ", commstyle, ", thick}"),
+    paste0("varlv/.style={circle, draw, minimum size=",
+     round(4 * cex), "mm, semithick},"),
+    paste0("cv/.style={regular polygon, regular polygon sides=6, ",
+     commstyle, ", thick},"),
+    paste0("ov/.style={rectangle, ", commstyle, ", thick},"),
+    paste0("wov/.style={rectangle, rounded corners, fill=wovcol, ",
+     commstyle, ", thick},"),
+    paste0("bov/.style={rectangle, rounded corners, fill=bovcol, ",
+     commstyle, ", thick},"),
+    paste0("const/.style={regular polygon, regular polygon sides=3, ",
+     commstyle, ", thick}"),
     "}"), zz)
   if (standalone) writeLines("\\begin{document}", zz)
   writeLines("\\begin{tikzpicture}", zz)
   maxrij <- max(nodes$rij)
   maxcol <- max(nodes$kolom)
   if (mlrij > 0L) {
-    writeLines(paste("\\draw (0, ", maxrij - mlrij, ") -- (", maxcol, ",", maxrij - mlrij,
-    ");", sep = ""), zz)
+    writeLines(paste("\\draw (0, ", maxrij - mlrij, ") -- (",
+     maxcol, ",", maxrij - mlrij, ");", sep = ""), zz)
   }
   for (j in seq.int(nrow(nodes))) {
     xpos <- nodes$kolom[j]
     ypos <- maxrij - nodes$rij[j]
     writeLines(paste(
-      "\\node[", nodes$tiepe[j], "] (", nodenaam(nodes$naam[j], nodes$blok[j]),
+      "\\node[", nodes$tiepe[j], "] (",
+      nodenaam(nodes$naam[j], nodes$blok[j]),
       ") at (", xpos, ",", ypos, ") {",
       lav_label_code(nodes$naam[j], italic = italic,
-                    auto.subscript = auto.subscript)$tikz, "};", sep = ""), zz)
+                    auto_subscript = auto_subscript)$tikz,
+                    "};", sep = ""), zz)
   }
-  varlv <-any(nodes$tiepe == "varlv")
   for (j in seq.int(nrow(edges))) {
     van <- which(nodes$id == edges$van[j])
     vannaam <- nodenaam(nodes$naam[van], nodes$blok[van])
     naar <- which(nodes$id == edges$naar[j])
     naarnaam <- nodenaam(nodes$naam[naar], nodes$blok[naar])
     nodelabel <- lav_label_code(edges$label[j], italic = italic,
-                                  auto.subscript = auto.subscript)$tikz
+                                  auto_subscript = auto_subscript)$tikz
     if (van == naar) { # self
       if (nodes$kolom[van] == 1L) {
         writeLines(paste("\\path[<->] (", vannaam,
@@ -135,22 +141,24 @@ lav_plotinfo_tikzcode <- function(plotinfo,
       if (is.na(edges$controlpt.kol[j])) {
         pathtype <- " -- "
       } else {
-        vanadr <- lav_node_coordinates(edges$van[j], edges$vananker[j], nodes, maxrij)
-        naaradr <- lav_node_coordinates(edges$naar[j], edges$naaranker[j], nodes, maxrij)
+        vanadr <- lav_node_coordinates(edges$van[j], edges$vananker[j],
+          nodes, maxrij)
+        naaradr <- lav_node_coordinates(edges$naar[j], edges$naaranker[j],
+          nodes, maxrij)
         controlq <- c(edges$controlpt.kol[j], maxrij - edges$controlpt.rij[j])
         beziersc <- lav_beziersq_beziersc(
           matrix(c(vanadr, controlq, naaradr), nrow = 2L)
         )
-        pathtype <- paste0(" .. controls (", beziersc[1L, 2L] , ",",
-                           beziersc[2L, 2L], ") and (", beziersc[1L, 3L] , ",",
+        pathtype <- paste0(" .. controls (", beziersc[1L, 2L], ",",
+                           beziersc[2L, 2L], ") and (", beziersc[1L, 3L], ",",
                            beziersc[2L, 3L], ") .. ")
       }
       thelabel <- lav_label_code(edges$label[j], italic = italic,
-                                   auto.subscript = auto.subscript)$tikz
+                                   auto_subscript = auto_subscript)$tikz
       if (thelabel != "") {
         thelabel <- paste0("node[pos=0.5,",
                            ifelse(edges$labelbelow[j], "below", "above"),
-                           ifelse(sloped.labels, ",sloped", ""),
+                           ifelse(sloped_labels, ",sloped", ""),
                            "] {", thelabel, "} ")
       }
       pijl <- ifelse(edges$tiepe[j] %in% c("~~", "~~~"), "<->", "->")
@@ -160,7 +168,7 @@ lav_plotinfo_tikzcode <- function(plotinfo,
     }
   }
   writeLines("\\end{tikzpicture}", zz)
-  if(standalone) writeLines("\\end{document}", zz)
+  if (standalone) writeLines("\\end{document}", zz)
   if (closezz) close(zz)
-  return(invisible(NULL))
+  invisible(NULL)
 }

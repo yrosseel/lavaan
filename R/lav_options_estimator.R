@@ -236,7 +236,7 @@ lav_options_est_dls <- function(opt) {
       if (!opt$estimator.args$dls.GammaNT %in% c("sample", "model")) {
         lav_msg_stop(gettextf(
           "dls.GammaNT value in estimator.args must be either %s.",
-          lav_msg_view(c("sample", "model"), log.sep = "or")))
+          lav_msg_view(c("sample", "model"), log_sep = "or")))
       }
     }
     if (is.null(opt$estimator.args$dls.FtimesNminus1)) {

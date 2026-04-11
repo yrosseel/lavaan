@@ -3,18 +3,18 @@
 \title{Plots a graph in R.}
 \usage{
 lav_plotinfo_rgraph(plotinfo,
-                    sloped.labels = TRUE,
+                    sloped_labels = TRUE,
                     outfile = "",
                     addgrid = TRUE,
                     mlovcolors = c("lightgreen", "lightblue"),
                     lightness = 1,
                     italic = TRUE,
-                    auto.subscript = TRUE
+                    auto_subscript = TRUE
                    )
 }
 \arguments{
 \item{plotinfo}{A plotinfo structure as returned from \code{lav_plotinfo_positions}.}
-\item{sloped.labels}{Logical, sloped labels above (or under) the edges.}
+\item{sloped_labels}{Logical, sloped labels above (or under) the edges.}
 \item{outfile}{Character string naming the file to store the diagram in PNG or
   NA to show the plot in R.}
 \item{addgrid}{Logical, add a grid with indicated 'positions' to the graph?}
@@ -23,7 +23,7 @@ between the levels in a  multilevel model.}
 \item{lightness}{A scalar factor to modify the distances between nodes.}
 \item{italic}{Are labels to be in italic font? \strong{Attention:} The switch 
 to an italic font will only be possible if the label value isn't an expression!}
-\item{auto.subscript}{Logical, see \code{\link{lav_label_code}}.}
+\item{auto_subscript}{Logical, see \code{\link{lav_label_code}}.}
 }
 \value{
 NULL (invisible)}
@@ -57,11 +57,11 @@ modelml <- '
   '
 test <- lav_model_plotinfo(modelml)
 test <- lav_plotinfo_positions(test)
-lav_plotinfo_rgraph(test, sloped.labels = FALSE, addgrid = FALSE, 
-                auto.subscript = FALSE)
+lav_plotinfo_rgraph(test, sloped_labels = FALSE, addgrid = FALSE, 
+                auto_subscript = FALSE)
 \dontrun{
 # example where plot is stored in a PNG file
-lav_plotinfo_rgraph(test, sloped.labels = FALSE, addgrid = FALSE,
-                auto.subscript = FALSE, outfile="demo_rplot.png")
+lav_plotinfo_rgraph(test, sloped_labels = FALSE, addgrid = FALSE,
+                auto_subscript = FALSE, outfile="demo_rplot.png")
 }
 }
