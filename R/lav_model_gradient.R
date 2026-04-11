@@ -676,7 +676,8 @@ lav_model_delta_numerical <- function(lavmodel = NULL, GLIST = NULL, g = 1L) {
 ###        - handle equality constraints? (yes, for now)
 lav_model_delta <- function(lavmodel = NULL, GLIST. = NULL,
                          m.el.idx. = NULL, x.el.idx. = NULL,
-                         #ceq.simple = FALSE,
+                         ceq.simple = FALSE, # unused, but expected in
+                            # INLAvaan:::lavaan___lav_model_gradient()
                          force.conditional.x.false = FALSE) {
 
   # temporary fix

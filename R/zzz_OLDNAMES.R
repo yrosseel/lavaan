@@ -3,7 +3,9 @@
 # rsem ==> tools::testinstalledpackages succesfull without next line
 # computeExpectedInformation <- lav_model_information_expected
 # only for simsem ==> tools::testinstalledpackages succesfull without next line
-# getParameterLabels <- lav_partable_labels
+
+# used in bain
+getParameterLabels <- lav_partable_labels
 
 # standardize function names in lav_utils.R / 31 Oct 2025
 getCov <- function(x, lower = TRUE, diagonal = TRUE, sds = NULL,    # nolint start

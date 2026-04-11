@@ -566,7 +566,7 @@ lav_object_check_version <- function(object = NULL) {
     new_options$rotation.args$mg.agreement <- FALSE
     new_options$rotation.args$mg.agreement.weight <- 0.5
     new_options$rotation.args$mg.agreement.method <- "pairwise"
-    ew_options$rotation.args$mg.agreement.crit    <- "procrustes"
+    new_options$rotation.args$mg.agreement.crit <- "procrustes"
 
   }
   if (is.null(new_options$rotation.args$mg.agreement.weight)) {
