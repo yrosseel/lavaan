@@ -2494,35 +2494,6 @@ lav_object_inspect_h1_information <- function(object,            # nolint
   return.value
 }
 
-# only to provide a direct function to the old 'getVariability()' function
-lav_object_inspect_firstorder <- function(object,
-    add.labels = FALSE, add.class = FALSE) {
-
-  tmp.b0 <- lav_model_information_firstorder(lavmodel =  object@Model,
-    lavsamplestats = object@SampleStats,
-    lavdata        = object@Data,
-    lavcache       = object@Cache,
-    lavoptions     = object@Options,
-    check.pd       = FALSE,
-    augmented      = FALSE,
-    inverted       = FALSE)
-  attr(tmp.b0, "B0.group") <- NULL
-  return.value <- tmp.b0
-
-  # labels
-  if (add.labels) {
-    colnames(return.value) <- rownames(return.value) <-
-      lav_partable_labels(object@ParTable, type = "free")
-  }
-
-  # class
-  if (add.class) {
-    class(return.value) <- c("lavaan.matrix.symmetric", "matrix")
-  }
-
-  return.value
-}
-
 lav_object_inspect_vcov <- function(object, standardized = FALSE,
     type = "std.all", free.only = TRUE,
     add.labels = FALSE, add.class = FALSE, remove.duplicated = FALSE) {

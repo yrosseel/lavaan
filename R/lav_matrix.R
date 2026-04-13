@@ -419,19 +419,6 @@ lav_matrix_duplication <- function(n = 1L) {
   x
 }
 
-# duplication matrix for correlation matrices:
-# - it returns a matrix of size p^2 * (p*(p-1))/2
-# - the columns corresponding to the diagonal elements have been removed
-lav_matrix_duplication_cor <- function(n = 1L) {
-  n <- as.integer(n)
-  # if (lav_use_lavaanC()) {
-  #   return(lavaanC::m_duplication_cor(n))
-  # }
-  out <- lav_matrix_duplication(n = n)
-  diag.idx <- lav_matrix_diagh_idx(n = n)
-  out[, -diag.idx, drop = FALSE]
-}
-
 # compute t(D) %*% A (without explicitly computing D)
 # sqrt(nrow(A)) is an integer
 # A is not symmetric, and not even square, only n^2 ROWS
@@ -457,50 +444,6 @@ lav_matrix_duplication_pre <- function(A = matrix(0, 0, 0)) {
   OUT
 }
 
-# dupr_pre is faster...
-lav_matrix_duplication_dup_pre2 <- function(A = matrix(0, 0, 0)) {
-  # number of rows
-  n2 <- NROW(A)
-
-  # square nrow(A) only, n2 = n^2
-  n <- as.integer(round(sqrt(n2)))
-  stopifnot(n * n == n2)
-
-  # dup idx
-  idx1 <- lav_matrix_vech_idx(n)
-  idx2 <- lav_matrix_vechru_idx(n)
-
-  OUT <- A[idx1, , drop = FALSE]
-  u <- seq_len(length(idx1))[-lav_matrix_diagh_idx(n)]
-  OUT[u, ] <- OUT[u, ] + A[idx2[u], ]
-
-  OUT
-}
-
-# compute t(D) %*% A (without explicitly computing D)
-# sqrt(nrow(A)) is an integer
-# A is not symmetric, and not even square, only n^2 ROWS
-# correlation version: ignoring diagonal elements
-lav_matrix_duplication_cor_pre <- function(A = matrix(0, 0, 0)) {
-  # if (lav_use_lavaanC()) {
-  #   return(lavaanC::m_duplication_cor_pre(A))
-  # }
-  # number of rows
-  n2 <- NROW(A)
-
-  # square nrow(A) only, n2 = n^2
-  n <- as.integer(round(sqrt(n2)))
-  stopifnot(n * n == n2)
-
-  # dup idx
-  idx1 <- lav_matrix_vech_idx(n, diagonal = FALSE)
-  idx2 <- lav_matrix_vechru_idx(n, diagonal = FALSE)
-
-  OUT <- A[idx1, , drop = FALSE] + A[idx2, , drop = FALSE]
-
-  OUT
-}
-
 # compute A %*% D (without explicitly computing D)
 # sqrt(ncol(A)) must be an integer
 # A is not symmetric, and not even square, only n^2 COLUMNS
@@ -522,30 +465,6 @@ lav_matrix_duplication_post <- function(A = matrix(0, 0, 0)) {
   OUT <- A[, idx1, drop = FALSE] + A[, idx2, drop = FALSE]
   u <- lav_matrix_diagh_idx(n)
   OUT[, u] <- OUT[, u] / 2.0
-
-  OUT
-}
-
-# compute A %*% D (without explicitly computing D)
-# sqrt(ncol(A)) must be an integer
-# A is not symmetric, and not even square, only n^2 COLUMNS
-# correlation version: ignoring the diagonal elements
-lav_matrix_duplication_cor_post <- function(A = matrix(0, 0, 0)) {
-  # if (lav_use_lavaanC()) {
-  #   return(lavaanC::m_duplication_cor_post(A))
-  # }
-  # number of columns
-  n2 <- NCOL(A)
-
-  # square A only, n2 = n^2
-  n <- as.integer(round(sqrt(n2)))
-  stopifnot(n * n == n2)
-
-  # dup idx
-  idx1 <- lav_matrix_vech_idx(n, diagonal = FALSE)
-  idx2 <- lav_matrix_vechru_idx(n, diagonal = FALSE)
-
-  OUT <- A[, idx1, drop = FALSE] + A[, idx2, drop = FALSE]
 
   OUT
 }
@@ -597,83 +516,6 @@ lav_matrix_duplication_cor_pre_post <- function(A = matrix(0, 0, 0)) {
 
   OUT <- A[idx1, , drop = FALSE] + A[idx2, , drop = FALSE]
   OUT <- OUT[, idx1, drop = FALSE] + OUT[, idx2, drop = FALSE]
-
-  OUT
-}
-
-# create the elimination matrix L_n:
-# it removes the duplicated elements in vec(A) to create vech(A)
-# even if A is not symmetric
-#
-# L %*% vec(A) == vech(A)
-lav_matrix_elimination <- function(n = 1L) {
-  if ((n < 1L) || (round(n) != n)) {
-    lav_msg_stop(gettext("n must be a positive integer"))
-  }
-
-  if (n > 255L) {
-    lav_msg_stop(gettext("n is too large"))
-  }
-
-  nstar <- n * (n + 1) / 2
-  n2 <- n * n
-
-  # THIS is the real bottleneck: allocating an ocean of zeroes...
-  L <- matrix(0, nrow = nstar, ncol = n2)
-  L[cbind(seq_len(nstar), lav_matrix_vech_idx(n))] <- 1
-
-  L
-}
-
-# compute L %*% A (without explicitly computing L)
-# sqrt(nrow(A)) is an integer
-# A is not symmetric, and not even square, only n^2 ROWS
-lav_matrix_elimination_pre <- function(A = matrix(0, 0, 0)) {
-  # number of rows
-  n2 <- NROW(A)
-
-  # square nrow(A) only, n2 = n^2
-  n <- as.integer(round(sqrt(n2)))
-  stopifnot(n * n == n2)
-
-  # select vech idx rows
-  idx <- lav_matrix_vech_idx(n)
-  OUT <- A[idx, , drop = FALSE]
-
-  OUT
-}
-
-# compute A  %*% t(L)(without explicitly computing L)
-# sqrt(nrow(A)) is an integer
-# A is not symmetric, and not even square, only n^2 COLS
-lav_matrix_elimination_post <- function(A = matrix(0, 0, 0)) {
-  # number of rows
-  n2 <- NCOL(A)
-
-  # square nrow(A) only, n2 = n^2
-  n <- as.integer(round(sqrt(n2)))
-  stopifnot(n * n == n2)
-
-  # select vech idx rows
-  idx <- lav_matrix_vech_idx(n)
-  OUT <- A[, idx, drop = FALSE]
-
-  OUT
-}
-
-# compute L %*% A %*% t(L) (without explicitly computing L)
-# A must be a square matrix and sqrt(ncol) an integer
-lav_matrix_elimination_pre_post <- function(A = matrix(0, 0, 0)) {
-  # number of rows
-  n2 <- NCOL(A)
-
-  # square A only, n2 = n^2
-  n <- as.integer(round(sqrt(n2)))
-  stopifnot(NROW(A) == n2, n * n == n2)
-
-  # select vech idx rows
-  idx <- lav_matrix_vech_idx(n)
-  OUT <- A[idx, idx, drop = FALSE]
 
   OUT
 }
@@ -769,26 +611,6 @@ lav_matrix_duplication_ginv_pre_post <- function(A = matrix(0, 0, 0)) {
 
   idx1 <- lav_matrix_vech_idx(n)
   idx2 <- lav_matrix_vechru_idx(n)
-  OUT <- (A[idx1, , drop = FALSE] + A[idx2, , drop = FALSE]) / 2
-  OUT <- (OUT[, idx1, drop = FALSE] + OUT[, idx2, drop = FALSE]) / 2
-  OUT
-}
-
-# pre AND post-multiply with D^+: D^+ %*% A %*% t(D^+)
-# for square matrices only, with ncol = nrow = n^2
-# - ignoring diagonal elements
-lav_matrix_duplication_ginv_cor_pre_post <- function(A = matrix(0, 0, 0)) {
-  A <- as.matrix.default(A)
-
-  # number of columns
-  n2 <- NCOL(A)
-
-  # square A only, n2 = n^2
-  n <- as.integer(round(sqrt(n2)))
-  stopifnot(NROW(A) == n2, n * n == n2)
-
-  idx1 <- lav_matrix_vech_idx(n, diagonal = FALSE)
-  idx2 <- lav_matrix_vechru_idx(n, diagonal = FALSE)
   OUT <- (A[idx1, , drop = FALSE] + A[idx2, , drop = FALSE]) / 2
   OUT <- (OUT[, idx1, drop = FALSE] + OUT[, idx2, drop = FALSE]) / 2
   OUT
@@ -930,64 +752,6 @@ lav_matrix_commutation_mn_pre <- function(A, m = 1L, n = 1L) {
 
   OUT <- A[row.idx, , drop = FALSE]
   OUT
-}
-
-# (simplified) kronecker product for square matrices
-lav_matrix_kronecker_square <- function(A, check = TRUE) {
-  dimA <- dim(A)
-  n <- dimA[1L]
-  n2 <- n * n
-  if (check) {
-    stopifnot(dimA[2L] == n)
-  }
-
-  # all possible combinations
-  out <- tcrossprod(as.vector(A))
-
-  # break up in n*n pieces, and rearrange
-  dim(out) <- c(n, n, n, n)
-  out <- aperm(out, perm = c(3, 1, 4, 2))
-
-  # reshape again, to form n2 x n2 matrix
-  dim(out) <- c(n2, n2)
-
-  out
-}
-
-# (simplified) faster kronecker product for symmetric matrices
-# note: not faster, but the logic extends to vech versions
-lav_matrix_kronecker_symmetric <- function(S, check = TRUE) {
-  dimS <- dim(S)
-  n <- dimS[1L]
-  n2 <- n * n
-  if (check) {
-    stopifnot(dimS[2L] == n)
-  }
-
-  # all possible combinations
-  out <- tcrossprod(as.vector(S))
-
-  # break up in n*(n*n) pieces, and rearrange
-  dim(out) <- c(n, n * n, n)
-  out <- aperm(out, perm = c(3L, 2L, 1L))
-
-  # reshape again, to form n2 x n2 matrix
-  dim(out) <- c(n2, n2)
-
-  out
-}
-
-# shortcut for the idiom 't(S2) %*% (S %x% S) %*% S2'
-# where S is symmetric, and the rows of S2 correspond to
-# the elements of S
-# eg - S2 = DELTA (the jacobian dS/dtheta)
-lav_matrix_s_kron_s_pre_post <- function(s_mat, s2_mat) {
-  # size of s_mat
-  n <- NROW(s_mat)
-
-  a_mat <- matrix(s_mat %*% matrix(s2_mat, n, ), n * n, )
-  a2_mat <- a_mat[rep(seq_len(n), each = n) + (seq_len(n) - 1L) * n, , drop = FALSE]
-  crossprod(a_mat, a2_mat)
 }
 
 # shortcut for the idiom 't(D) %*% (S %x% S) %*% D'
@@ -1269,41 +1033,6 @@ lav_matrix_rref <- function(A, tol = sqrt(.Machine$double.eps)) {
   list(R = A, pivot = pivot[seq_len(pivot.n)])
 }
 
-# non-orthonoramal (left) null space basis, using rref
-lav_matrix_orthogonal_complement2 <- function(
-  A,
-  tol = sqrt(.Machine$double.eps)
-) {
-  # left
-  A <- t(A)
-
-  # compute rref
-  out <- lav_matrix_rref(A = A, tol = tol)
-
-  # number of free columns in R (if any)
-  nfree <- NCOL(A) - length(out$pivot)
-
-  if (nfree) {
-    R <- out$R
-
-    # remove all-zero rows
-    zero.idx <- which(apply(R, 1, function(x) {
-      all(abs(x) < tol)
-    }))
-    if (length(zero.idx) > 0) {
-      R <- R[-zero.idx, , drop = FALSE]
-    }
-
-    FREE <- R[, -out$pivot, drop = FALSE]
-    I <- diag(nfree)
-    N <- rbind(-FREE, I)
-  } else {
-    N <- matrix(0, nrow = NCOL(A), ncol = 0L)
-  }
-
-  N
-}
-
 
 # inverse of a non-singular (not necessarily positive-definite) symmetric matrix
 # FIXME: error handling?
@@ -1430,47 +1159,6 @@ lav_matrix_symmetric_solve_spd <- function(A, B, tol = 1e-10) {
   }
 }
 
-
-# update inverse of A, after removing 1 or more rows (and corresponding
-# colums) from A
-#
-# - this is just an application of the inverse of partitioned matrices
-# - only removal for now
-#
-lav_matrix_inverse_update <- function(A.inv, rm.idx = integer(0L)) {
-  ndel <- length(rm.idx)
-
-  # rank-1 update
-  if (ndel == 1L) {
-    a <- A.inv[-rm.idx, rm.idx, drop = FALSE]
-    b <- A.inv[rm.idx, -rm.idx, drop = FALSE]
-    h <- A.inv[rm.idx, rm.idx]
-    if (h != 0) {
-      out <- A.inv[-rm.idx, -rm.idx, drop = FALSE] - (a %*% b) / h
-    } else {
-      out <- A.inv[-rm.idx, -rm.idx, drop = FALSE]
-    }
-  }
-
-  # rank-n update
-  else if (ndel < NCOL(A.inv)) {
-    A <- A.inv[-rm.idx, rm.idx, drop = FALSE]
-    B <- A.inv[rm.idx, -rm.idx, drop = FALSE]
-    H <- A.inv[rm.idx, rm.idx, drop = FALSE]
-    HB <- try(solve.default(H, B), silent = TRUE)
-    if (inherits(HB, "try-error")) {
-      HB <- MASS::ginv(H) %*% B
-    }
-    out <- A.inv[-rm.idx, -rm.idx, drop = FALSE] - A %*% HB
-
-    # erase all col/rows...
-  } else if (ndel == NCOL(A.inv)) {
-    out <- matrix(0, 0, 0)
-  }
-
-  out
-}
-
 # update inverse of S, after removing 1 or more rows (and corresponding
 # colums) from S, a symmetric matrix
 #
@@ -1528,102 +1216,6 @@ lav_matrix_symmetric_inverse_update <- function(S.inv, rm.idx = integer(0L),
     out <- matrix(0, 0, 0)
   } else {
     lav_msg_stop(gettext("column indices exceed number of columns in S.inv"))
-  }
-
-  out
-}
-
-
-# update determinant of A, after removing 1 or more rows (and corresponding
-# colums) from A
-#
-lav_matrix_det_update <- function(det.A, A.inv, rm.idx = integer(0L)) {
-  ndel <- length(rm.idx)
-
-  # rank-1 update
-  if (ndel == 1L) {
-    h <- A.inv[rm.idx, rm.idx]
-    out <- det.A * h
-  }
-
-  # rank-n update
-  else if (ndel < NCOL(A.inv)) {
-    H <- A.inv[rm.idx, rm.idx, drop = FALSE]
-    det.H <- det(H)
-    out <- det.A * det.H
-
-    # erase all col/rows...
-  } else if (ndel == NCOL(A.inv)) {
-    out <- matrix(0, 0, 0)
-  }
-
-  out
-}
-
-# update determinant of S, after removing 1 or more rows (and corresponding
-# colums) from S, a symmetric matrix
-#
-lav_matrix_symmetric_det_update <- function(det.S, S.inv, rm.idx = integer(0L)) {
-  ndel <- length(rm.idx)
-
-  # rank-1 update
-  if (ndel == 1L) {
-    h <- S.inv[rm.idx, rm.idx]
-    out <- det.S * h
-  }
-
-  # rank-n update
-  else if (ndel < NCOL(S.inv)) {
-    H <- S.inv[rm.idx, rm.idx, drop = FALSE]
-    cH <- try(chol.default(H), silent = TRUE)
-    if (!inherits(cH, "try-error")) {
-      det.H <- prod(diag(cH) * diag(cH))
-    } else {
-      det.H <- abs(det(H))
-    }
-    out <- det.S * det.H
-
-    # erase all col/rows...
-  } else if (ndel == NCOL(S.inv)) {
-    out <- numeric(0L)
-  }
-
-  out
-}
-
-# update log determinant of S, after removing 1 or more rows (and corresponding
-# colums) from S, a symmetric matrix
-#
-lav_matrix_symmetric_logdet_update <- function(S.logdet, S.inv,
-                                               rm.idx = integer(0L)) {
-  ndel <- length(rm.idx)
-
-  # rank-1 update
-  if (ndel == 1L) {
-    h <- S.inv[rm.idx, rm.idx]
-    if (h > 0) {
-      out <- S.logdet + log(h)
-    } else {
-      out <- as.numeric(NA)
-    }
-  }
-
-  # rank-n update
-  else if (ndel < NCOL(S.inv)) {
-    H <- S.inv[rm.idx, rm.idx, drop = FALSE]
-    cH <- try(chol.default(H), silent = TRUE)
-    if (!inherits(cH, "try-error")) {
-      diag.cH <- diag(cH)
-      H.logdet <- sum(log(diag.cH * diag.cH))
-    } else {
-      ev <- eigen(H, symmetric = TRUE, only.values = TRUE)$values
-      H.logdet <- sum(log(abs(ev)))
-    }
-    out <- S.logdet + H.logdet
-
-    # erase all col/rows...
-  } else if (ndel == NCOL(S.inv)) {
-    out <- numeric(0L)
   }
 
   out
@@ -1794,32 +1386,6 @@ lav_matrix_transform_mean_cov <- function(Y,
   X
 }
 
-# weighted column means
-#
-# for each column in Y: mean = sum(wt * Y)/sum(wt)
-#
-# if we have missing values, we use only the observations and weights
-# that are NOT missing
-#
-lav_matrix_mean_wt <- function(Y, wt = NULL) {
-  Y <- unname(as.matrix.default(Y))
-  DIM <- dim(Y)
-
-  if (is.null(wt)) {
-    return(colMeans(Y, na.rm = TRUE))
-  }
-
-  if (anyNA(Y)) {
-    WT <- wt * !is.na(Y)
-    wN <- .colSums(WT, m = DIM[1], n = DIM[2])
-    out <- .colSums(wt * Y, m = DIM[1], n = DIM[2], na.rm = TRUE) / wN
-  } else {
-    out <- .colSums(wt * Y, m = DIM[1], n = DIM[2]) / sum(wt)
-  }
-
-  out
-}
-
 # weighted column variances
 #
 # for each column in Y: var = sum(wt * (Y - w.mean(Y))^2) / N
@@ -1859,42 +1425,6 @@ lav_matrix_var_wt <- function(Y, wt = NULL, method = c("unbiased", "ML")) {
       unbiased = tmp / (sum(wt) - 1),
       ML = tmp / sum(wt)
     )
-  }
-
-  out
-}
-
-# weighted variance-covariance matrix
-#
-# always dividing by sum(wt) (for now) (=ML version)
-#
-# if we have missing values, we use only the observations and weights
-# that are NOT missing
-#
-# same as cov.wt(Y, wt, method = "ML")
-#
-lav_matrix_cov_wt <- function(Y, wt = NULL) {
-  Y <- unname(as.matrix.default(Y))
-  DIM <- dim(Y)
-
-  if (is.null(wt)) {
-    wt <- rep(1, nrow(Y))
-  }
-
-  if (anyNA(Y)) {
-    tmp <- na.omit(cbind(Y, wt))
-    Y <- tmp[, seq_len(DIM[2]), drop = FALSE]
-    wt <- tmp[, DIM[2] + 1L]
-    DIM[1] <- nrow(Y)
-    w.mean <- .colSums(wt * Y, m = DIM[1], n = DIM[2]) / sum(wt)
-    Ytc <- t(t(Y) - w.mean)
-    tmp <- crossprod(sqrt(wt) * Ytc)
-    out <- tmp / sum(wt)
-  } else {
-    w.mean <- .colSums(wt * Y, m = DIM[1], n = DIM[2]) / sum(wt)
-    Ytc <- t(t(Y) - w.mean)
-    tmp <- crossprod(sqrt(wt) * Ytc)
-    out <- tmp / sum(wt)
   }
 
   out

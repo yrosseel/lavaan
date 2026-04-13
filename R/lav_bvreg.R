@@ -31,43 +31,6 @@ lav_dbinorm <- lav_dbinorm <- function(u, v, rho, force.zero = FALSE) {
   out
 }
 
-# partial derivative - rho
-lav_dbinorm_drho <- function(u, v, rho) {
-  R <- 1 - rho * rho
-  lav_dbinorm(u, v, rho) * (u * v * R - rho * (u * u - 2 * rho * u * v + v * v) + rho * R) / (R * R)
-}
-
-# partial derivative - u
-lav_dbinorm_du <- function(u, v, rho) {
-  R <- 1 - rho * rho
-  -lav_dbinorm(u, v, rho) * (u - rho * v) / R
-}
-
-# partial derivative - v
-lav_dbinorm_dv <- function(u, v, rho) {
-  R <- 1 - rho * rho
-  -lav_dbinorm(u, v, rho) * (v - rho * u) / R
-}
-
-
-# CDF of bivariate standard normal
-# function pbinorm(upper.x, upper.y, rho)
-
-# partial derivative pbinorm - upper.x
-lav_pbinorm_dupperx <- function(upper.x, upper.y, rho = 0.0) {
-  R <- 1 - rho * rho
-  dnorm(upper.x) * pnorm((upper.y - rho * upper.x) / sqrt(R))
-}
-
-lav_pbinorm_duppery <- function(upper.x, upper.y, rho = 0.0) {
-  R <- 1 - rho * rho
-  dnorm(upper.y) * pnorm((upper.x - rho * upper.y) / sqrt(R))
-}
-
-lav_pbinorm_drho <- function(upper.x, upper.y, rho = 0.0) {
-  lav_dbinorm(upper.x, upper.y, rho)
-}
-
 
 # switch between pbivnorm, mnormt, ...
 pbinorm <- function(upper.x = NULL, upper.y = NULL, rho = 0.0,

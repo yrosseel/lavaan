@@ -371,33 +371,6 @@ lav_data_simulate_old <- function( # user-specified model
 }
 lavSimulateData <- lav_data_simulate_old  # synonym #nolint
 
-lav_skewness <- function(x., N1 = TRUE) {
-  x <- x.
-  x <- x[!is.na(x)]
-  N <- length(x)
-  mean.x <- mean(x)
-  xc <- x - mean.x
-  var.x <- var(x)
-  if (!N1) var.x <- var.x * (N - 1) / N
-  sd.x <- sqrt(var.x)
-  sk <- sum(xc * xc * xc) / (sd.x * sd.x * sd.x)
-  skewness <- N * sk / ((N - 1) * (N - 2))
-  skewness
-}
-
-lav_kurtosis <- function(x., N1 = TRUE) {
-  x <- x.
-  x <- x[!is.na(x)]
-  N <- length(x)
-  mean.x <- mean(x)
-  xc <- x - mean.x
-  var.x <- var(x)
-  if (!N1) var.x <- var.x * (N - 1) / N
-  k <- sum(xc * xc * xc * xc) / (var.x * var.x)
-  kurtosis <- N * (N + 1) * k / ((N - 1) * (N - 2) * (N - 3)) - 3 * (N - 1) * (N - 1) / ((N - 2) * (N - 3))
-  kurtosis
-}
-
 
 
 lav_data_valemaurelli1983 <- function(n = 100L, COR, skewness, kurtosis) {

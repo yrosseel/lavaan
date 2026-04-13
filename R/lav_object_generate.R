@@ -170,45 +170,6 @@ lav_object_independence <- lav_object_baseline <- function(object = NULL,
 }
 
 
-# 2. unrestricted model
-lav_object_unrestricted <- function(object, se = FALSE) {
-  object <- lav_object_check_version(object)
-  # construct parameter table for unrestricted model
-  lavpartable <- lav_partable_unrestricted(object)
-
-  # adapt options
-  lavoptions <- object@Options
-
-  # se
-  if (se) {
-    if (lavoptions$se == "none") {
-      lavoptions$se <- "standard"
-    }
-  } else {
-    ## FIXME: if test = scaled, we need it anyway?
-    lavoptions$se <- "none"
-  }
-
-  # ALWAYS do.fit
-  lavoptions$do.fit <- TRUE
-
-  # needed?
-  if (any(lavpartable$op == "~1")) lavoptions$meanstructure <- TRUE
-
-  lavh1 <- object@h1
-
-  FIT <- lavaan(lavpartable,
-    slotOptions     = lavoptions,
-    slotSampleStats = object@SampleStats,
-    slotData        = object@Data,
-    slotCache       = object@Cache,
-    sloth1          = lavh1
-  )
-
-  FIT
-}
-
-
 # 3. extended model (used for modification indices)
 lav_object_extended <- function(object, add = NULL,
                                 remove.duplicated = TRUE,
