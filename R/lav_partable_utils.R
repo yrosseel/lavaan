@@ -406,16 +406,3 @@ lav_partable_map_id_p1_in_p2 <- function(p1, p2, stopifnotfound = TRUE,
 
   p2.id
 }
-lav_partable_da2ovda <- function(partable) {
-  # convert handling of ov.order = "data" with "da-operator elements"
-  #         to "ovda attribute"
-  if (any(partable$op == "da")) {
-    da.idx <- which(partable$op == "da")
-    ov.names.data <- partable$lhs[da.idx]
-    temp <- lapply(partable, function(x) x[-da.idx])
-    # names(temp) <- names(partable)
-    attr(temp, "ovda") <- ov.names.data
-    return(temp)
-  }
-  return(partable)
-}

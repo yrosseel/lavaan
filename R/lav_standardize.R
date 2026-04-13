@@ -97,16 +97,6 @@ lav_standardize_all_nox_x <- function(x, lavobject, partable = NULL,
   x.stand.user
 }
 
-lav_unstandardize_ov_x <- function(x, lavobject) {
-  partable <- lavobject@ParTable
-  partable$ustart <- x
-  lav_unstandardize_ov(
-    partable = partable,
-    ov.var = lavobject@SampleStats@var,
-    cov.std = TRUE
-  )
-}
-
 
 lav_standardize_lv <- function(lavobject = NULL,
                                partable = NULL, est = NULL, GLIST = NULL,

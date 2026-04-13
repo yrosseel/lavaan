@@ -143,51 +143,6 @@ lav_func_jacobian_simple <- function(func, x,
   dx
 }
 
-# this is based on the Ridout (2009) paper, and the code snippet for 'h4'
-lav_func_hessian_complex <- function(func, x,
-                                     h = .Machine$double.eps, ...) {
-  f0 <- try(func(x * (0 + 1i), ...), silent = TRUE)
-  if (!is.complex(f0)) {
-    lav_msg_stop(gettext(
-      "function does not return a complex value")) # eg abs()
-  }
-  if (inherits(f0, "try-error")) {
-    lav_msg_stop(gettext(
-      "function does not support non-numeric (complex) argument"))
-  }
-  if (length(f0) != 1L) {
-    lav_msg_stop(gettext(
-      "function is not scalar and returns more than one element"))
-  }
-
-  nvar <- length(x)
-
-  # determine 'h' per element of x
-  # delta1 <- pmax(h^(1/3), abs(h^(1/3)*x))
-  # delta2 <- pmax(h^(1/5), abs(h^(1/5)*x))
-  delta1 <- h^(1 / 3)
-  delta2 <- h^(1 / 5)
-
-  H <- matrix(as.numeric(NA), nvar, nvar)
-  for (i in seq_len(nvar)) {
-    for (j in 1:i) {
-      if (i == j) {
-        delta <- delta2
-      } else {
-        delta <- delta1
-      }
-      H[i, j] <- H[j, i] <-
-        Im(func(x + delta * 1i * (seq.int(nvar) == i) * x +
-          delta * (seq.int(nvar) == j) * x, ...) -
-          func(x + delta * 1i * (seq.int(nvar) == i) * x -
-            delta * (seq.int(nvar) == j) * x, ...)) /
-          (2 * delta * delta * x[i] * x[j])
-    }
-  }
-
-  H
-}
-
 lav_deriv_cov2cor_b <- function(m_cov = NULL) {
   nvar <- nrow(m_cov)
   ds_inv <- 1 / diag(m_cov)
@@ -240,25 +195,4 @@ lav_deriv_cov2cor <- function(COV = NULL, num.idx = NULL) {
   OUT[var.idx, var.idx] <- 0
 
   OUT
-}
-
-
-lav_deriv_cov2cor_numerical <- function(COV, num.idx = integer(0)) {
-  compute.R <- function(x) {
-    S <- lav_matrix_vech_reverse(x)
-    diagS <- diag(S)
-    delta <- 1 / sqrt(diagS)
-    if (length(num.idx) > 0L) {
-      delta[num.idx] <- 1.0
-    }
-    R <- diag(delta) %*% S %*% diag(delta)
-    # R <- cov2cor(S)
-    R.vec <- lav_matrix_vech(R, diagonal = TRUE)
-    R.vec
-  }
-
-  x <- lav_matrix_vech(COV, diagonal = TRUE)
-  dx <- lav_func_jacobian_complex(func = compute.R, x = x)
-
-  dx
 }

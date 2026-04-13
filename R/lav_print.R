@@ -145,11 +145,6 @@ lav_vector_print <- function(x, ..., nd = 3L, shift = 0L) {
   invisible(x)
 }
 
-print.lavaan.character <- function(x, ...) {
-  cat(x)
-  invisible(x)
-}
-
 lav_parameterestimates_print <- function(x, ..., nd = 3L) {
   # format for numeric values
   num.format <- paste("%", max(8L, nd + 5L), ".", nd, "f", sep = "")

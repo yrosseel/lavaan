@@ -731,45 +731,6 @@ lav_model_theta <- function(lavmodel = NULL, GLIST = NULL, fix = TRUE) {
   THETA
 }
 
-# NU: observed intercepts
-lav_model_nu <- function(lavmodel = NULL, GLIST = NULL,
-                         lavsamplestats = NULL) {
-  # state or final?
-  if (is.null(GLIST)) GLIST <- lavmodel@GLIST
-
-  nblocks <- lavmodel@nblocks
-  nmat <- lavmodel@nmat
-  representation <- lavmodel@representation
-
-  # return a list
-  NU <- vector("list", length = nblocks)
-
-  # compute NU for each group
-  for (g in 1:nblocks) {
-    # which mm belong to group g?
-    mm.in.group <- 1:nmat[g] + cumsum(c(0, nmat))[g]
-    MLIST <- GLIST[mm.in.group]
-
-    if (representation == "LISREL") {
-      NU.g <- lav_lisrel_nu(
-        MLIST = MLIST,
-        sample.mean = lavsamplestats@mean[[g]],
-        ov.y.dummy.ov.idx = lavmodel@ov.y.dummy.ov.idx[[g]],
-        ov.x.dummy.ov.idx = lavmodel@ov.x.dummy.ov.idx[[g]],
-        ov.y.dummy.lv.idx = lavmodel@ov.y.dummy.lv.idx[[g]],
-        ov.x.dummy.lv.idx = lavmodel@ov.x.dummy.lv.idx[[g]]
-      )
-    } else {
-      lav_msg_stop(gettext(
-        "only representation LISREL has been implemented for now"))
-    }
-
-    NU[[g]] <- as.matrix(NU.g)
-  }
-
-  NU
-}
-
 # E(Y): expectation (mean) of observed variables
 # returns vector 1 x nvar
 lav_model_ey <- function(lavmodel = NULL, GLIST = NULL, lavsamplestats = NULL,
@@ -810,48 +771,6 @@ lav_model_ey <- function(lavmodel = NULL, GLIST = NULL, lavsamplestats = NULL,
   }
 
   EY
-}
-
-# E(Y|x_i): conditional expectation (mean) of observed variables
-# returns matrix N x nvar
-lav_model_eyx <- function(lavmodel = NULL, GLIST = NULL, lavsamplestats = NULL,
-                          eXo = NULL, delta = TRUE) {
-  # state or final?
-  if (is.null(GLIST)) GLIST <- lavmodel@GLIST
-
-  nblocks <- lavmodel@nblocks
-  nmat <- lavmodel@nmat
-  representation <- lavmodel@representation
-
-  # return a list
-  EYx <- vector("list", length = nblocks)
-
-  # compute E(Y) for each group
-  for (g in 1:nblocks) {
-    # which mm belong to group g?
-    mm.in.group <- 1:nmat[g] + cumsum(c(0, nmat))[g]
-    MLIST <- GLIST[mm.in.group]
-
-    if (representation == "LISREL") {
-      EYx.g <- lav_lisrel_eyx(
-        MLIST = MLIST,
-		eXo = eXo[[g]],
-        sample.mean = lavsamplestats@mean[[g]],
-        ov.y.dummy.ov.idx = lavmodel@ov.y.dummy.ov.idx[[g]],
-        ov.x.dummy.ov.idx = lavmodel@ov.x.dummy.ov.idx[[g]],
-        ov.y.dummy.lv.idx = lavmodel@ov.y.dummy.lv.idx[[g]],
-        ov.x.dummy.lv.idx = lavmodel@ov.x.dummy.lv.idx[[g]],
-        delta = delta
-      )
-    } else {
-      lav_msg_stop(gettext(
-        "only representation LISREL has been implemented for now"))
-    }
-
-    EYx[[g]] <- EYx.g
-  }
-
-  EYx
 }
 
 

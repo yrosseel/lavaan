@@ -624,21 +624,3 @@ lav_model_information_augment_invert <- function(lavmodel = NULL,
   # augmented/inverted information
   information
 }
-
-lav_model_information_expected_2l <- function(lavmodel = NULL,
-                                              lavsamplestats = NULL,
-                                              lavdata = NULL,
-                                              lavoptions = NULL,
-                                              lavimplied = NULL,
-                                              lavh1 = NULL,
-                                              g = 1L) {
-  # see Yuan & Bentler (2002), p.549 top line
-  # I.j = nj. Delta.mu' sigma.j.inv +
-  #       Delta.sigma.j' W.j Delta.sigma.j +
-  #       (nj-1) Delta.sigma.w' W.w Delta.sigma.w
-  #
-  # where
-  # - sigma.j = sigma.w + n.j * sigma.b
-  # - W.w = 1/2 * D'(sigma.w.inv %x% sigma.w.inv) D
-  # - W.j = 1/2 * D'(sigma.j.inv %x% sigma.j.inv) D
-}
