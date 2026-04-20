@@ -45,3 +45,20 @@ or `ngettext` to make them suitable for translation.
   argument name to make clear it is an argument; for example, when the message
   concerns the `data` argument in the function `sem()`, the message could
   start with `data= argument is not a data.frame, ...`
+
+## Checking the style
+
+Elements of the style can be checked using [the `lintr` package](https::https://github.com/r-lib/lintr)  with the following instructions:
+
+```R
+linters: linters_with_defaults(
+    cyclocomp_linter(complexity_limit = 50L),
+    line_length_linter(80L), 
+    object_name_linter(c("snake_case", "symbols")),
+    commented_code_linter = NULL,
+    indentation_linter = NULL,
+    quotes_linter = NULL
+ )
+```
+
+When modifying existing code to comply with the style guide, the name and signature of exported functions must naturally be retained. To this end, these should be marked where necessary with "# nolint" or with pairs "# nolint start", "# nolint end".
