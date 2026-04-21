@@ -231,7 +231,7 @@ lav_bvmix_lik_cache <- function(cache = NULL) {
     # lik
     lik <- py1 * py2y1
 
-    # catch very small values
+    # catch very small values -- TODO: sqrt() too aggressive?
     lik.toosmall.idx <- which(lik < sqrt(.Machine$double.eps))
     lik[lik.toosmall.idx] <- as.numeric(NA)
 

@@ -292,7 +292,7 @@ lav_bvreg_lik_cache <- function(cache = NULL) {
       Mu = c(0, 0), Sigma = sigma,
       casewise = TRUE
     ))
-    # catch very small values
+    # catch very small values -- TODO: sqrt() too aggressive?
     lik.toosmall.idx <- which(lik < sqrt(.Machine$double.eps))
     lik[lik.toosmall.idx] <- as.numeric(NA)
 

@@ -379,7 +379,7 @@ lav_bvord_noexo_pi_cache <- function(cache = NULL) {
     PI <- BI[-1L, -1L] - BI[-1L, -nc] - BI[-nr, -1L] + BI[-nr, -nc]
 
     # all elements should be strictly positive
-    PI[PI < sqrt(.Machine$double.eps)] <- sqrt(.Machine$double.eps)
+    PI[PI < .Machine$double.eps^(2/3)] <- .Machine$double.eps^(2/3)
 
     return(PI)
   })
@@ -470,7 +470,7 @@ lav_bvord_lik_cache <- function(cache = NULL) {
         lik[missing.idx] <- NA
       }
       # catch very small values
-      lik.toosmall.idx <- which(lik < sqrt(.Machine$double.eps))
+      lik.toosmall.idx <- which(lik < .Machine$double.eps^(2/3))
       lik[lik.toosmall.idx] <- as.numeric(NA)
     }
 
@@ -508,7 +508,7 @@ lav_bvord_gradient_cache <- function(cache = NULL) {
     # no exo
     if (nexo == 0L) {
       phi <- lav_bvord_noexo_phi_cache(cache)
-      bad.idx <- which(PI <= sqrt(.Machine$double.eps))
+      bad.idx <- which(PI < .Machine$double.eps^(2/3))
       if (length(bad.idx) > 0L) {
         PI[bad.idx] <- as.numeric(NA)
       }
@@ -548,7 +548,7 @@ lav_bvord_hessian_cache <- function(cache = NULL) {
 
     # no exo
     if (nexo == 0L) {
-      bad.idx <- which(PI <= sqrt(.Machine$double.eps))
+      bad.idx <- which(PI < .Machine$double.eps^(2/3))
       if (length(bad.idx) > 0L) {
         PI[bad.idx] <- as.numeric(NA)
       }
@@ -624,7 +624,7 @@ lav_bvord_cor_scores_cache <- function(cache = NULL, na.zero = FALSE,
 
     # lik
     lik <- lav_bvord_lik_cache(cache = cache)
-    bad.idx <- which(lik <= sqrt(.Machine$double.eps))
+    bad.idx <- which(lik < .Machine$double.eps^(2/3))
     if (length(bad.idx) > 0L) {
       lik[bad.idx] <- as.numeric(NA)
     }
@@ -859,6 +859,6 @@ lav_bvord_noexo_pi <- function(rho = NULL, th.y1 = NULL, th.y2 = NULL) {
   PI <- BI[-1L, -1L] - BI[-1L, -nc] - BI[-nr, -1L] + BI[-nr, -nc]
 
   # all elements should be strictly positive
-  PI[PI < sqrt(.Machine$double.eps)] <- sqrt(.Machine$double.eps)
+  PI[PI < .Machine$double.eps^(2/3)] <- .Machine$double.eps^(2/3)
   PI
 }
