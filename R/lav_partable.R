@@ -16,7 +16,7 @@
 # - 23 May   2020: support for random slopes
 
 lav_model_partable  <- function(
-                                model = NULL,
+                                model = NULL,            # nolint start
                                 meanstructure = FALSE,
                                 int.ov.free = FALSE,
                                 int.lv.free = FALSE,
@@ -44,7 +44,7 @@ lav_model_partable  <- function(
                                 auto.th = FALSE,
                                 auto.delta = FALSE,
                                 auto.efa = FALSE,
-                                varTable = NULL, # nolint
+                                varTable = NULL,
                                 ngroups = 1L,
                                 nthresholds = NULL,
                                 group.equal = NULL,
@@ -52,17 +52,33 @@ lav_model_partable  <- function(
                                 group.w.free = FALSE,
                                 debug = FALSE,
                                 warn = TRUE,
-                                as.data.frame. = TRUE) { # nolint
+                                as.data.frame. = TRUE) {  # nolint end
   if (!missing(debug)) {
-    current.debug <- lav_debug()
+    current_debug <- lav_debug()
     if (lav_debug(debug))
-      on.exit(lav_debug(current.debug), TRUE)
+      on.exit(lav_debug(current_debug), TRUE)
   }
   if (!missing(warn)) {
-    current.warn <- lav_warn()
+    current_warn <- lav_warn()
     if (lav_warn(warn))
-      on.exit(lav_warn(current.warn), TRUE)
+      on.exit(lav_warn(current_warn), TRUE)
   }
+
+  # copy arguments which are not snake_case and modified within function
+  int_ov_free <- int.ov.free
+  int_lv_free <- int.lv.free
+  effect_coding <- effect.coding
+  ceq_simple <- ceq.simple
+  auto_fix_first <- auto.fix.first
+  auto_fix_single <- auto.fix.single
+  auto_var <- auto.var
+  auto_cov_lv_x <- auto.cov.lv.x
+  auto_cov_y <- auto.cov.y
+  auto_th <- auto.th
+  auto_delta <- auto.delta
+  auto_efa <- auto.efa
+  var_table <- varTable
+
   # check if model is already flat or a full parameter table
   if (is.list(model) && !is.null(model$lhs)) {
     if (is.null(model$mod.idx)) {
@@ -79,55 +95,54 @@ lav_model_partable  <- function(
     )
   }
   # user-specified *modifiers* are returned as an attribute
-  tmp.mod <- attr(flat, "modifiers")
+  tmp_mod <- attr(flat, "modifiers")
   attr(flat, "modifiers") <- NULL
   # user-specified *constraints* are returned as an attribute
-  tmp.con <- attr(flat, "constraints")
+  tmp_con <- attr(flat, "constraints")
   attr(flat, "constraints") <- NULL
 
-  # ov.names.data?
-  ov.names.data <- attr(flat, "ovda")
+  # ov_names_data?
+  ov_names_data <- attr(flat, "ovda")
 
   # extra constraints?
   if (!is.null(constraints) && any(nchar(constraints) > 0L)) {
     flat2 <- lavParseModelString(model.syntax = constraints, warn = lav_warn())
     con2 <- attr(flat2, "constraints")
     rm(flat2)
-    tmp.con <- c(tmp.con, con2)
+    tmp_con <- c(tmp_con, con2)
   }
-  if (length(tmp.con) > 0L) {
+  if (length(tmp_con) > 0L) {
     # add 'user' column
-    tmp.con <- lapply(tmp.con, function(x) {
+    tmp_con <- lapply(tmp_con, function(x) {
       x$user <- 1L
       x
     })
     # any explicit (in)equality constraints? (ignoring := definitions)
-    tmp.con.nondef.flag <- (sum(sapply(tmp.con, "[[", "op")
-    %in% c("==", "<", ">")) > 0L)
+    tmp_con_nondef_flag <- (sum(sapply(tmp_con, "[[", "op")
+                            %in% c("==", "<", ">")) > 0L)
     # any explicit equality constraints?
-    tmp.con.eq.flag <- (sum(sapply(tmp.con, "[[", "op") == "==") > 0L)
-    if (tmp.con.nondef.flag) {
-      ceq.simple <- FALSE
+    if (tmp_con_nondef_flag) {
+      ceq_simple <- FALSE
     }
   }
 
   if (lav_debug()) {
     cat("[lavaan DEBUG]: flat (flattened user model):\n")
     print(flat)
-    cat("[lavaan DEBUG]: tmp.mod (modifiers):\n")
-    print(str(tmp.mod))
-    cat("[lavaan DEBUG]: tmp.con (constraints):\n")
-    print(str(tmp.con))
+    cat("[lavaan DEBUG]: tmp_mod (modifiers):\n")
+    print(str(tmp_mod))
+    cat("[lavaan DEBUG]: tmp_con (constraints):\n")
+    print(str(tmp_con))
   }
 
-  # bogus varTable? (if data.type == "none")
-  if (!is.null(varTable)) {
-    if (!is.list(varTable) || is.null(varTable$name)) {
+  # bogus var_table? (if data.type == "none")
+  if (!is.null(var_table)) {
+    if (!is.list(var_table) || is.null(var_table$name)) {
       lav_msg_stop(gettext(
         "varTable is not a list or does not contain variable names."))
     }
-    if (all(varTable$nobs == 0)) {
-      varTable <- NULL # nolint
+    if (all(var_table$nobs == 0)) {
+      var_table <- NULL
     }
   }
 
@@ -149,28 +164,27 @@ lav_model_partable  <- function(
   # auto=TRUE?
   if (auto) { # mimic sem/cfa auto behavior
     if (model.type == "sem") {
-      int.ov.free <- TRUE
-      int.lv.free <- FALSE
-      auto.fix.first <- !std.lv
-      auto.fix.single <- TRUE
-      auto.var <- TRUE
-      auto.cov.lv.x <- TRUE
-      auto.cov.y <- TRUE
-      auto.th <- TRUE
-      auto.delta <- TRUE
-      auto.efa <- TRUE
+      int_ov_free <- TRUE
+      int_lv_free <- FALSE
+      auto_fix_first <- !std.lv
+      auto_fix_single <- TRUE
+      auto_var <- TRUE
+      auto_cov_lv_x <- TRUE
+      auto_cov_y <- TRUE
+      auto_th <- TRUE
+      auto_delta <- TRUE
+      auto_efa <- TRUE
     } else if (model.type == "growth") {
-      model.type <- "growth"
-      int.ov.free <- FALSE
-      int.lv.free <- TRUE
-      auto.fix.first <- !std.lv
-      auto.fix.single <- TRUE
-      auto.var <- TRUE
-      auto.cov.lv.x <- TRUE
-      auto.cov.y <- TRUE
-      auto.th <- TRUE
-      auto.delta <- TRUE
-      auto.efa <- TRUE
+      int_ov_free <- FALSE
+      int_lv_free <- TRUE
+      auto_fix_first <- !std.lv
+      auto_fix_single <- TRUE
+      auto_var <- TRUE
+      auto_cov_lv_x <- TRUE
+      auto_cov_y <- TRUE
+      auto_th <- TRUE
+      auto_delta <- TRUE
+      auto_efa <- TRUE
     }
   }
 
@@ -180,139 +194,139 @@ lav_model_partable  <- function(
   }
 
   # check for block identifiers in the syntax (op = ":")
-  n.block.flat <- length(which(flat$op == ":"))
+  n_block_flat <- length(which(flat$op == ":"))
   # this is NOT the number of blocks (eg group 1: level 1: -> 1 block)
 
-  # for each non-empty `block' in n.block.flat, produce a USER
-  if (n.block.flat > 0L) {
+  # for each non-empty `block' in n_block_flat, produce a USER
+  if (n_block_flat > 0L) {
     # make sure flat is a data.frame
     flat <- as.data.frame(flat, stringsAsFactors = FALSE)
 
     # what are the block lhs labels?
-    blocks.lhs.all <- tolower(flat$lhs[flat$op == ":"])
-    tmp.block.lhs <- unique(blocks.lhs.all)
+    blocks_lhs_all <- tolower(flat$lhs[flat$op == ":"])
+    tmp_blocks_lhs <- unique(blocks_lhs_all)
 
     # if we have group and level, check that group comes first!
-    if ("group" %in% tmp.block.lhs && "level" %in% tmp.block.lhs) {
-      group.idx <- which(tmp.block.lhs == "group")
-      level.idx <- which(tmp.block.lhs == "level")
-      if (group.idx > level.idx) {
+    if ("group" %in% tmp_blocks_lhs && "level" %in% tmp_blocks_lhs) {
+      group_idx <- which(tmp_blocks_lhs == "group")
+      level_idx <- which(tmp_blocks_lhs == "level")
+      if (group_idx > level_idx) {
         lav_msg_stop(gettext(
           "levels must be nested within groups (not the other way around)."))
       }
     }
 
     # block op == ":" indices
-    block.op.idx <- which(flat$op == ":")
+    block_op_idx <- which(flat$op == ":")
 
     # check for wrong spelled 'group' lhs
-    if (length(grep("group", tmp.block.lhs)) > 1L) {
+    if (length(grep("group", tmp_blocks_lhs)) > 1L) {
       lav_msg_warn(gettext("ambiguous block identifiers for group:"),
-        lav_msg_view(tmp.block.lhs[grep("group", tmp.block.lhs)], "none"))
+        lav_msg_view(tmp_blocks_lhs[grep("group", tmp_blocks_lhs)], "none"))
     }
 
     # no empty :rhs fields allowed!
-    if (any(nchar(flat$rhs[block.op.idx]) == 0L)) {
-      empty.idx <- nchar(flat$rhs[block.op.idx]) == 0L
-      txt <- paste(flat$lhs[block.op.idx][empty.idx], ":")
+    if (any(nchar(flat$rhs[block_op_idx]) == 0L)) {
+      empty_idx <- nchar(flat$rhs[block_op_idx]) == 0L
+      txt <- paste(flat$lhs[block_op_idx][empty_idx], ":")
       lav_msg_stop(gettext(
         "syntax contains block identifiers with missing numbers/labels: "), txt)
     }
 
     # check for ngroups (ngroups is based on the data!)
-    if ("group" %in% tmp.block.lhs) {
+    if ("group" %in% tmp_blocks_lhs) {
       # how many group blocks?
-      group.block.idx <- flat$op == ":" & flat$lhs == "group"
-      n.group.flat <- length(unique(flat$rhs[group.block.idx]))
+      group_block_idx <- flat$op == ":" & flat$lhs == "group"
+      n_group_flat <- length(unique(flat$rhs[group_block_idx]))
 
-      if (n.group.flat > 0L && n.group.flat != ngroups) {
+      if (n_group_flat > 0L && n_group_flat != ngroups) {
         lav_msg_stop(gettextf(
           "syntax defines %1$s groups; data (or argument ngroups)
-          suggests %2$s groups", n.group.flat, ngroups))
+          suggests %2$s groups", n_group_flat, ngroups))
       }
     }
 
-    # figure out how many 'blocks' we have, and store indices/block.labels
-    tmp.block.rhs <- rep("0", length(tmp.block.lhs))
-    block.id <- 0L
-    block.info <- vector("list", length = n.block.flat) # too large
-    block.op.idx1 <- c(block.op.idx, nrow(flat) + 1L) # add addition row
-    for (block.op in seq_len(n.block.flat)) {
-      # fill block.rhs value(s)
-      block.lhs <- flat$lhs[block.op.idx1[block.op]]
-      block.rhs <- flat$rhs[block.op.idx1[block.op]]
-      tmp.block.rhs[which(block.lhs == tmp.block.lhs)] <- block.rhs
+    # figure out how many 'blocks' we have, and store indices/block_labels
+    tmp_block_rhs <- rep("0", length(tmp_blocks_lhs))
+    block_id <- 0L
+    block_info <- vector("list", length = n_block_flat) # too large
+    block_op_idx1 <- c(block_op_idx, nrow(flat) + 1L) # add addition row
+    for (block_op in seq_len(n_block_flat)) {
+      # fill block_rhs value(s)
+      block_lhs <- flat$lhs[block_op_idx1[block_op]]
+      block_rhs <- flat$rhs[block_op_idx1[block_op]]
+      tmp_block_rhs[which(block_lhs == tmp_blocks_lhs)] <- block_rhs
 
       # another block identifier?
-      if (block.op.idx1[block.op + 1L] - block.op.idx1[block.op] == 1L) {
+      if (block_op_idx1[block_op + 1L] - block_op_idx1[block_op] == 1L) {
         next
       }
 
       # we have a 'block'
-      block.id <- block.id + 1L
+      block_id <- block_id + 1L
 
       # select flat rows for this block
-      tmp.idx <- seq.int(
-        block.op.idx1[block.op] + 1L,
-        block.op.idx1[block.op + 1L] - 1L
+      tmp_idx <- seq.int(
+        block_op_idx1[block_op] + 1L,
+        block_op_idx1[block_op + 1L] - 1L
       )
 
-      # store info in block.info
-      block.info[[block.id]] <- list(
-        lhs = tmp.block.lhs, # always the same
-        rhs = tmp.block.rhs, # for this block
-        idx = tmp.idx
+      # store info in block_info
+      block_info[[block_id]] <- list(
+        lhs = tmp_blocks_lhs, # always the same
+        rhs = tmp_block_rhs, # for this block
+        idx = tmp_idx
       )
     }
-    block.info <- block.info[seq_len(block.id)]
+    block_info <- block_info[seq_len(block_id)]
 
     # new in 0.6-12
-    # check for blocks with the same block.rhs combination
+    # check for blocks with the same block_rhs combination
     # (perhaps added later?)
     # - merge the indices
     # - remove the duplicated blocks
-    block.labels <- sapply(lapply(block.info, "[[", "rhs"),
+    block_labels <- sapply(lapply(block_info, "[[", "rhs"),
       paste,
       collapse = "."
     )
-    nblocks <- length(unique(block.labels))
-    if (nblocks < length(block.labels)) {
-      # it would appear we have duplicated block.labels -> merge
-      dup.idx <- which(duplicated(block.labels))
-      for (i in seq_along(dup.idx)) {
-        this.dup.idx <- dup.idx[i]
-        orig.idx <- which(block.labels == block.labels[this.dup.idx])[1]
-        block.info[[orig.idx]]$idx <- c(
-          block.info[[orig.idx]]$idx,
-          block.info[[this.dup.idx]]$idx
+    nblocks <- length(unique(block_labels))
+    if (nblocks < length(block_labels)) {
+      # it would appear we have duplicated block_labels -> merge
+      dup_idx <- which(duplicated(block_labels))
+      for (i in seq_along(dup_idx)) {
+        this_dup_idx <- dup_idx[i]
+        orig_idx <- which(block_labels == block_labels[this_dup_idx])[1]
+        block_info[[orig_idx]]$idx <- c(
+          block_info[[orig_idx]]$idx,
+          block_info[[this_dup_idx]]$idx
         )
       }
-      block.info <- block.info[-dup.idx]
+      block_info <- block_info[-dup_idx]
     }
 
-    # split the flat data.frame per `block', create tmp.list
+    # split the flat data.frame per `block', create tmp_list
     # for each `block', and rbind them together, adding block columns
     for (block in seq_len(nblocks)) {
-      tmp.block.rhs <- block.info[[block]]$rhs
-      block.lhs <- block.info[[block]]$lhs[length(tmp.block.lhs)] # last one
-      block.idx <- block.info[[block]]$idx
+      tmp_block_rhs <- block_info[[block]]$rhs
+      block_lhs <- block_info[[block]]$lhs[length(tmp_blocks_lhs)] # last one
+      block_idx <- block_info[[block]]$idx
 
-      flat.block <- flat[block.idx, ]
-      # rm 'block' column (if any) in flat.block
-      flat.block$block <- NULL
+      flat_block <- flat[block_idx, ]
+      # rm 'block' column (if any) in flat_block
+      flat_block$block <- NULL
 
       # new in 0.6-7: check for random slopes, add them here
-      if (block.lhs == "level" &&
+      if (block_lhs == "level" &&
         block > 1L && # FIXME: multigroup, multilevel
         !is.null(flat$rv) &&
         any(nchar(flat$rv) > 0L)) {
-        lv.names.rv <- unique(flat$rv[nchar(flat$rv) > 0L])
-        for (i in seq_along(lv.names.rv)) {
+        lv_names_rv <- unique(flat$rv[nchar(flat$rv) > 0L])
+        for (i in seq_along(lv_names_rv)) {
           # add phantom latent variable
-          tmp <- flat.block[1, ]
-          tmp$lhs <- lv.names.rv[i]
+          tmp <- flat_block[1, ]
+          tmp$lhs <- lv_names_rv[i]
           tmp$op <- "=~"
-          tmp$rhs <- lv.names.rv[i]
+          tmp$rhs <- lv_names_rv[i]
           tmp$mod.idx <- max(flat$mod.idx) + i
           tmp$fixed <- "0"
           tmp$start <- ""
@@ -321,18 +335,18 @@ lav_model_partable  <- function(
           tmp$label <- ""
           tmp$prior <- ""
           tmp$efa <- ""
-          tmp$rv <- lv.names.rv[i]
-          flat.block <- rbind(flat.block, tmp, deparse.level = 0L)
-          tmp.mod <- c(tmp.mod, list(list(fixed = 0)))
+          tmp$rv <- lv_names_rv[i]
+          flat_block <- rbind(flat_block, tmp, deparse.level = 0L)
+          tmp_mod <- c(tmp_mod, list(list(fixed = 0)))
         }
       }
 
       # new in 0.6-8: if multilevel, use 'global' ov.names.x
-      if (fixed.x && block.lhs == "level") {
-        tmp.ov.names.x <- lav_partable_vnames(flat, "ov.x") # global
-        ov.names.x.block <- lav_partable_vnames(flat.block, "ov.x")
-        if (length(ov.names.x.block) > 0L) {
-          idx <- which(!ov.names.x.block %in% tmp.ov.names.x)
+      if (fixed.x && block_lhs == "level") {
+        tmp_ov_names_x <- lav_partable_vnames(flat, "ov.x") # global
+        ov_names_x_block <- lav_partable_vnames(flat_block, "ov.x")
+        if (length(ov_names_x_block) > 0L) {
+          idx <- which(!ov_names_x_block %in% tmp_ov_names_x)
           if (length(idx) > 0L) {
             # warn!
             lav_msg_warn(gettextf(
@@ -340,183 +354,179 @@ lav_model_partable  <- function(
               at another level. These variables will be treated as endogenous,
               and their variances/intercepts will be freely estimated.
               To remove this warning, use fixed.x = FALSE.",
-              lav_msg_view(ov.names.x.block[idx], "none")))
-            ov.names.x.block <- ov.names.x.block[-idx]
+              lav_msg_view(ov_names_x_block[idx], "none")))
+            ov_names_x_block <- ov_names_x_block[-idx]
           }
         }
       } else {
-        ov.names.x.block <- NULL
+        ov_names_x_block <- NULL
       }
 
       # new in 0.6-12: if multilevel and conditional.x, make sure
       # that 'splitted' exogenous covariates become 'y' variables
-      if (conditional.x && block.lhs == "level") {
+      if (conditional.x && block_lhs == "level") {
         if (ngroups == 1L) {
-          other.block.names <- lav_partable_vnames(flat, "ov",
+          other_block_names <- lav_partable_vnames(flat, "ov",
             block = seq_len(nblocks)[-block]
           )
         } else {
           # TEST ME
-          this.group <- ceiling(block / nlevels)
-          blocks.within.group <- (this.group - 1L) * nlevels + seq_len(nlevels)
-          other.block.names <- lav_partable_vnames(flat, "ov",
-            block = blocks.within.group[-block]
+          this_group <- ceiling(block / nlevels)
+          blocks_within_group <- (this_group - 1L) * nlevels + seq_len(nlevels)
+          other_block_names <- lav_partable_vnames(flat, "ov",
+            block = blocks_within_group[-block]
           )
         }
-        ov.names.x.block <- lav_partable_vnames(flat.block, "ov.x")
-        if (length(ov.names.x.block) > 0L) {
-          idx <- which(ov.names.x.block %in% other.block.names)
+        ov_names_x_block <- lav_partable_vnames(flat_block, "ov.x")
+        if (length(ov_names_x_block) > 0L) {
+          idx <- which(ov_names_x_block %in% other_block_names)
           if (length(idx) > 0L) {
-            ov.names.x.block <- ov.names.x.block[-idx]
+            ov_names_x_block <- ov_names_x_block[-idx]
           }
         }
       } else {
-        ov.names.x.block <- NULL
+        ov_names_x_block <- NULL
       }
 
-      list.block <- lav_partable_flat(flat.block,
-        blocks = tmp.block.lhs,
+      list_block <- lav_partable_flat(flat_block,
+        blocks = tmp_blocks_lhs,
         block.id = block,
         meanstructure = meanstructure,
-        int.ov.free = int.ov.free, int.lv.free = int.lv.free,
+        int.ov.free = int_ov_free, int.lv.free = int_lv_free,
         orthogonal = orthogonal, orthogonal.y = orthogonal.y,
         orthogonal.x = orthogonal.x, orthogonal.efa = orthogonal.efa,
         std.lv = std.lv, correlation = correlation, composites = composites,
         conditional.x = conditional.x, fixed.x = fixed.x,
         parameterization = parameterization,
-        auto.fix.first = auto.fix.first,
-        auto.fix.single = auto.fix.single,
-        auto.var = auto.var, auto.cov.lv.x = auto.cov.lv.x,
-        auto.cov.y = auto.cov.y, auto.th = auto.th,
-        auto.delta = auto.delta, auto.efa = auto.efa,
-        varTable = varTable, group.equal = NULL,
+        auto.fix.first = auto_fix_first,
+        auto.fix.single = auto_fix_single,
+        auto.var = auto_var, auto.cov.lv.x = auto_cov_lv_x,
+        auto.cov.y = auto_cov_y, auto.th = auto_th,
+        auto.delta = auto_delta, auto.efa = auto_efa,
+        varTable = var_table, group.equal = NULL,
         group.w.free = group.w.free, ngroups = 1L,
         nthresholds = nthresholds,
-        ov.names.x.block = ov.names.x.block
+        ov.names.x.block = ov_names_x_block
       )
-      list.block <- as.data.frame(list.block, stringsAsFactors = FALSE)
+      list_block <- as.data.frame(list_block, stringsAsFactors = FALSE)
 
-      # add block columns with current values in block.rhs
-      for (b in seq_len(length(tmp.block.lhs))) {
-        block.lhs <- tmp.block.lhs[b]
-        block.rhs <- tmp.block.rhs[b]
-        list.block[block.lhs] <- rep(block.rhs, length(list.block$lhs))
+      # add block columns with current values in block_rhs
+      for (b in seq_along(tmp_blocks_lhs)) {
+        block_lhs <- tmp_blocks_lhs[b]
+        block_rhs <- tmp_block_rhs[b]
+        list_block[block_lhs] <- rep(block_rhs, length(list_block$lhs))
       }
 
-      if (!exists("tmp.list")) {
-        tmp.list <- list.block
+      if (!exists("tmp_list")) {
+        tmp_list <- list_block
       } else {
-        list.block$id <- list.block$id + max(tmp.list$id)
-        tmp.list <- rbind(tmp.list, list.block)
+        list_block$id <- list_block$id + max(tmp_list$id)
+        tmp_list <- rbind(tmp_list, list_block)
       }
     }
-    tmp.list <- as.list(tmp.list)
+    tmp_list <- as.list(tmp_list)
 
     # convert block columns to integers if possible
-    for (b in seq_len(length(tmp.block.lhs))) {
-      block.lhs <- tmp.block.lhs[b]
-      block.rhs <- tmp.block.rhs[b]
+    for (b in seq_along(tmp_blocks_lhs)) {
+      block_lhs <- tmp_blocks_lhs[b]
+      block_rhs <- tmp_block_rhs[b]
       tmp <- try(scan(
-        text = tmp.list[[block.lhs]], what = integer(),
+        text = tmp_list[[block_lhs]], what = integer(),
         quiet = TRUE
       ), silent = TRUE)
       if (inherits(tmp, "integer")) {
-        tmp.list[[block.lhs]] <- tmp
+        tmp_list[[block_lhs]] <- tmp
       }
     }
   } else {
-    tmp.list <- lav_partable_flat(flat,
+    tmp_list <- lav_partable_flat(flat,
       blocks = "group",
       meanstructure = meanstructure,
-      int.ov.free = int.ov.free, int.lv.free = int.lv.free,
+      int.ov.free = int_ov_free, int.lv.free = int_lv_free,
       orthogonal = orthogonal, orthogonal.y = orthogonal.y,
       orthogonal.x = orthogonal.x, orthogonal.efa = orthogonal.efa,
       std.lv = std.lv, correlation = correlation, composites = composites,
       conditional.x = conditional.x, fixed.x = fixed.x,
       parameterization = parameterization,
-      auto.fix.first = auto.fix.first, auto.fix.single = auto.fix.single,
-      auto.var = auto.var, auto.cov.lv.x = auto.cov.lv.x,
-      auto.cov.y = auto.cov.y, auto.th = auto.th,
-      auto.delta = auto.delta, auto.efa = auto.efa,
-      varTable = varTable, group.equal = group.equal,
+      auto.fix.first = auto_fix_first, auto.fix.single = auto_fix_single,
+      auto.var = auto_var, auto.cov.lv.x = auto_cov_lv_x,
+      auto.cov.y = auto_cov_y, auto.th = auto_th,
+      auto.delta = auto_delta, auto.efa = auto_efa,
+      varTable = var_table, group.equal = group.equal,
       group.w.free = group.w.free,
       ngroups = ngroups, nthresholds = nthresholds
     )
   }
   if (lav_debug()) {
-    cat("[lavaan DEBUG]: parameter tmp.list without MODIFIERS:\n")
-    print(as.data.frame(tmp.list, stringsAsFactors = FALSE))
+    cat("[lavaan DEBUG]: parameter tmp_list without MODIFIERS:\n")
+    print(as.data.frame(tmp_list, stringsAsFactors = FALSE))
   }
-
-  # check for auto-regressions
-  auto.reg.idx <- which(tmp.list$op == "~" &
-                        tmp.list$lhs == tmp.list$rhs)
 
   # check ordinal variables
   categorical <- FALSE
-  ov.ord <- lav_object_vnames(tmp.list, "ov.ord")
-  all.ord <- all(lav_object_vnames(tmp.list, "ov") %in% ov.ord)
-  if (length(ov.ord) > 0L) {
+  ov_ord <- lav_object_vnames(tmp_list, "ov.ord")
+  all_ord <- all(lav_object_vnames(tmp_list, "ov") %in% ov_ord)
+  if (length(ov_ord) > 0L) {
     categorical <- TRUE
-    ord.var.idx <- which(tmp.list$op == "~~" &
-                         tmp.list$lhs == tmp.list$rhs &
-                         tmp.list$lhs %in% ov.ord &
-                         tmp.list$user == 1L)
-    if (parameterization == "delta" && length(ord.var.idx) > 0L) {
+    ord_var_idx <- which(tmp_list$op == "~~" &
+                         tmp_list$lhs == tmp_list$rhs &
+                         tmp_list$lhs %in% ov_ord &
+                         tmp_list$user == 1L)
+    if (parameterization == "delta" && length(ord_var_idx) > 0L) {
       lav_msg_warn(gettextf("variances of ordered variables are ignored when
       parameterization = \"delta\"; please remove them from the model syntax
       or use parameterization = \"theta\"; variables involved are: %s",
-      paste(tmp.list$lhs[ord.var.idx], collapse = " ")))
+      paste(tmp_list$lhs[ord_var_idx], collapse = " ")))
       # force them to be nonfree and set ustart to 1 (new in 0.6-20)
       # later, after we have processes the modifiers
     }
-  } # ov.ord
+  } # ov_ord
 
   # handle multilevel-specific constraints
   multilevel <- FALSE
   nlevels <- 1L
-  if (!is.null(tmp.list$level)) {
-    nlevels <- lav_partable_nlevels(tmp.list)
+  if (!is.null(tmp_list$level)) {
+    nlevels <- lav_partable_nlevels(tmp_list)
     if (nlevels > 1L) {
       multilevel <- TRUE
     }
   }
-  if (multilevel && any(tmp.list$op == "~1")) {
+  if (multilevel && any(tmp_list$op == "~1")) {
     # fix ov intercepts for all within ov that also appear at level 2
     # FIXME: not tested with > 2 levels
-    ov.names <- lav_partable_vnames(tmp.list, "ov") ## all names
-    level.values <- lav_partable_level_values(tmp.list)
-    other.names <- tmp.list$lhs[tmp.list$op == "~1" &
-      tmp.list$level %in% level.values[-1L] &
-      tmp.list$lhs %in% ov.names]
-    fix.names.idx <- which(tmp.list$op == "~1" &
-      tmp.list$level %in% level.values[1L] &
-      tmp.list$lhs %in% other.names)
-    if (length(fix.names.idx) > 0L) {
-      tmp.list$free[fix.names.idx] <- 0L
-      tmp.list$ustart[fix.names.idx] <- 0
+    ov_names <- lav_partable_vnames(tmp_list, "ov") ## all names
+    level_values <- lav_partable_level_values(tmp_list)
+    other_names <- tmp_list$lhs[tmp_list$op == "~1" &
+      tmp_list$level %in% level_values[-1L] &
+      tmp_list$lhs %in% ov_names]
+    fix_names_idx <- which(tmp_list$op == "~1" &
+      tmp_list$level %in% level_values[1L] &
+      tmp_list$lhs %in% other_names)
+    if (length(fix_names_idx) > 0L) {
+      tmp_list$free[fix_names_idx] <- 0L
+      tmp_list$ustart[fix_names_idx] <- 0
     }
   }
-  if (multilevel && any(tmp.list$op == "|")) {
+  if (multilevel && any(tmp_list$op == "|")) {
     # fix ALL thresholds at level 1
-    level.values <- lav_partable_level_values(tmp.list)
-    th.idx <- which(tmp.list$op == "|" &
-      tmp.list$level %in% level.values[1L])
-    tmp.list$free[th.idx] <- 0L
-    tmp.list$ustart[th.idx] <- 0
+    level_values <- lav_partable_level_values(tmp_list)
+    th_idx <- which(tmp_list$op == "|" &
+      tmp_list$level %in% level_values[1L])
+    tmp_list$free[th_idx] <- 0L
+    tmp_list$ustart[th_idx] <- 0
 
     # fix ALL scaling parmaters at higher levels
-    scale.idx <- which(tmp.list$op == "~*~" &
-      tmp.list$level %in% level.values[-1L])
-    tmp.list$free[scale.idx] <- 0L
-    tmp.list$ustart[scale.idx] <- 1
+    scale_idx <- which(tmp_list$op == "~*~" &
+      tmp_list$level %in% level_values[-1L])
+    tmp_list$free[scale_idx] <- 0L
+    tmp_list$ustart[scale_idx] <- 1
   }
 
   # apply user-specified modifiers
-  warn.about.single.label <- FALSE
-  if (length(tmp.mod)) {
-    for (el in seq_along(tmp.mod)) {
-      idx <- which(tmp.list$mod.idx == el) # for each group
+  warn_about_single_label <- FALSE
+  if (length(tmp_mod)) {
+    for (el in seq_along(tmp_mod)) {
+      idx <- which(tmp_list$mod.idx == el) # for each group
 
       # 0.5-21: check if idx exists
       # perhaps the corresponding element was duplicated, and removed
@@ -524,49 +534,49 @@ lav_model_partable  <- function(
         next
       }
 
-      tmp.mod.fixed <- tmp.mod[[el]]$fixed
-      tmp.mod.start <- tmp.mod[[el]]$start
-      tmp.mod.lower <- tmp.mod[[el]]$lower
-      tmp.mod.upper <- tmp.mod[[el]]$upper
-      tmp.mod.label <- tmp.mod[[el]]$label
-      tmp.mod.prior <- tmp.mod[[el]]$prior
-      tmp.mod.efa <- tmp.mod[[el]]$efa
-      tmp.mod.rv <- tmp.mod[[el]]$rv
+      tmp_mod_fixed <- tmp_mod[[el]]$fixed
+      tmp_mod_start <- tmp_mod[[el]]$start
+      tmp_mod_lower <- tmp_mod[[el]]$lower
+      tmp_mod_upper <- tmp_mod[[el]]$upper
+      tmp_mod_label <- tmp_mod[[el]]$label
+      tmp_mod_prior <- tmp_mod[[el]]$prior
+      tmp_mod_efa <- tmp_mod[[el]]$efa
+      tmp_mod_rv <- tmp_mod[[el]]$rv
 
       # check for single argument if multiple groups
       if (ngroups > 1L && length(idx) > 1L) {
         # Ok, this is not very consistent:
         # A) here we force same behavior across groups
-        if (length(tmp.mod.fixed) == 1L) {
-          tmp.mod.fixed <- rep(tmp.mod.fixed, ngroups)
+        if (length(tmp_mod_fixed) == 1L) {
+          tmp_mod_fixed <- rep(tmp_mod_fixed, ngroups)
         }
-        if (length(tmp.mod.start) == 1L) {
-          tmp.mod.start <- rep(tmp.mod.start, ngroups)
+        if (length(tmp_mod_start) == 1L) {
+          tmp_mod_start <- rep(tmp_mod_start, ngroups)
         }
-        if (length(tmp.mod.lower) == 1L) {
-          tmp.mod.lower <- rep(tmp.mod.lower, ngroups)
+        if (length(tmp_mod_lower) == 1L) {
+          tmp_mod_lower <- rep(tmp_mod_lower, ngroups)
         }
-        if (length(tmp.mod.upper) == 1L) {
-          tmp.mod.upper <- rep(tmp.mod.upper, ngroups)
+        if (length(tmp_mod_upper) == 1L) {
+          tmp_mod_upper <- rep(tmp_mod_upper, ngroups)
         }
-        if (length(tmp.mod.prior) == 1L) {
-          tmp.mod.prior <- rep(tmp.mod.prior, ngroups)
+        if (length(tmp_mod_prior) == 1L) {
+          tmp_mod_prior <- rep(tmp_mod_prior, ngroups)
         }
-        if (length(tmp.mod.efa) == 1L) {
-          tmp.mod.efa <- rep(tmp.mod.efa, ngroups)
+        if (length(tmp_mod_efa) == 1L) {
+          tmp_mod_efa <- rep(tmp_mod_efa, ngroups)
         }
-        if (length(tmp.mod.rv) == 1L) {
-          tmp.mod.rv <- rep(tmp.mod.rv, ngroups)
+        if (length(tmp_mod_rv) == 1L) {
+          tmp_mod_rv <- rep(tmp_mod_rv, ngroups)
         }
 
         # new in 0.6-7 (proposal):
         # - always recycle modifiers, including labels
         # - if ngroups > 1 AND group.label= is empty, produce a warning
         #   (as this is a break from < 0.6-6)
-        if (length(tmp.mod.label) == 1L) {
-          tmp.mod.label <- rep(tmp.mod.label, ngroups)
+        if (length(tmp_mod_label) == 1L) {
+          tmp_mod_label <- rep(tmp_mod_label, ngroups)
           if (is.null(group.equal) || length(group.equal) == 0L) {
-            warn.about.single.label <- TRUE
+            warn_about_single_label <- TRUE
           }
         }
 
@@ -574,114 +584,114 @@ lav_model_partable  <- function(
         # B) here we do NOT! otherwise, it would imply an equality
         #                    constraint...
         #    except if group.equal="loadings"!
-        # if(length(tmp.mod.label) == 1L) {
+        # if(length(tmp_mod_label) == 1L) {
         #    if("loadings" %in% group.equal ||
         #       "composite.loadings" %in% group.equal) {
-        #        tmp.mod.label <- rep(tmp.mod.label, ngroups)
+        #        tmp_mod_label <- rep(tmp_mod_label, ngroups)
         #    } else {
-        #        tmp.mod.label <- c(tmp.mod.label, rep("", (ngroups-1L)) )
+        #        tmp_mod_label <- c(tmp_mod_label, rep("", (ngroups-1L)) )
         #    }
         # }
       }
 
       # check for wrong number of arguments if multiple groups
       nidx <- length(idx)
-      if ((!is.null(tmp.mod.fixed) && nidx != length(tmp.mod.fixed)) ||
-        (!is.null(tmp.mod.start) && nidx != length(tmp.mod.start)) ||
-        (!is.null(tmp.mod.lower) && nidx != length(tmp.mod.lower)) ||
-        (!is.null(tmp.mod.upper) && nidx != length(tmp.mod.upper)) ||
-        (!is.null(tmp.mod.prior) && nidx != length(tmp.mod.prior)) ||
-        (!is.null(tmp.mod.efa) && nidx != length(tmp.mod.efa)) ||
-        (!is.null(tmp.mod.rv) && nidx != length(tmp.mod.rv)) ||
-        (!is.null(tmp.mod.label) && nidx != length(tmp.mod.label))) {
-        el.idx <- which(tmp.list$mod.idx == el)[1L]
+      if ((!is.null(tmp_mod_fixed) && nidx != length(tmp_mod_fixed)) ||
+        (!is.null(tmp_mod_start) && nidx != length(tmp_mod_start)) ||
+        (!is.null(tmp_mod_lower) && nidx != length(tmp_mod_lower)) ||
+        (!is.null(tmp_mod_upper) && nidx != length(tmp_mod_upper)) ||
+        (!is.null(tmp_mod_prior) && nidx != length(tmp_mod_prior)) ||
+        (!is.null(tmp_mod_efa) && nidx != length(tmp_mod_efa)) ||
+        (!is.null(tmp_mod_rv) && nidx != length(tmp_mod_rv)) ||
+        (!is.null(tmp_mod_label) && nidx != length(tmp_mod_label))) {
+        el_idx <- which(tmp_list$mod.idx == el)[1L]
         lav_msg_stop(gettextf(
           "wrong number of arguments in modifier (%s) of element",
-          lav_msg_view(tmp.mod.label, "none")),
-          tmp.list$lhs[el.idx], tmp.list$op[el.idx], tmp.list$rhs[el.idx]
+          lav_msg_view(tmp_mod_label, "none")),
+          tmp_list$lhs[el_idx], tmp_list$op[el_idx], tmp_list$rhs[el_idx]
         )
       }
 
       # apply modifiers
-      if (!is.null(tmp.mod.fixed)) {
+      if (!is.null(tmp_mod_fixed)) {
         # two options: constant or NA
-        na.idx <- which(is.na(tmp.mod.fixed))
-        not.na.idx <- which(!is.na(tmp.mod.fixed))
+        na_idx <- which(is.na(tmp_mod_fixed))
+        not_na_idx <- which(!is.na(tmp_mod_fixed))
 
         # constant
-        tmp.list$ustart[idx][not.na.idx] <- tmp.mod.fixed[not.na.idx]
-        tmp.list$free[idx][not.na.idx] <- 0L
+        tmp_list$ustart[idx][not_na_idx] <- tmp_mod_fixed[not_na_idx]
+        tmp_list$free[idx][not_na_idx] <- 0L
 
         # NA* modifier
-        tmp.list$free[idx][na.idx] <- 1L # eg factor loading
-        tmp.list$ustart[idx][na.idx] <- as.numeric(NA)
+        tmp_list$free[idx][na_idx] <- 1L # eg factor loading
+        tmp_list$ustart[idx][na_idx] <- as.numeric(NA)
       }
-      if (!is.null(tmp.mod.start)) {
-        tmp.list$ustart[idx] <- tmp.mod.start
+      if (!is.null(tmp_mod_start)) {
+        tmp_list$ustart[idx] <- tmp_mod_start
       }
-      if (!is.null(tmp.mod.prior)) {
+      if (!is.null(tmp_mod_prior)) {
         # do we already have a `prior' column? if not, create one
-        if (is.null(tmp.list$prior)) {
-          tmp.list$prior <- character(length(tmp.list$lhs))
+        if (is.null(tmp_list$prior)) {
+          tmp_list$prior <- character(length(tmp_list$lhs))
         }
-        tmp.list$prior[idx] <- tmp.mod.prior
+        tmp_list$prior[idx] <- tmp_mod_prior
       }
-      if (!is.null(tmp.mod.efa)) {
+      if (!is.null(tmp_mod_efa)) {
         # do we already have a `efa' column? if not, create one
-        if (is.null(tmp.list$efa)) {
-          tmp.list$efa <- character(length(tmp.list$lhs))
+        if (is.null(tmp_list$efa)) {
+          tmp_list$efa <- character(length(tmp_list$lhs))
         }
-        tmp.list$efa[idx] <- tmp.mod.efa
+        tmp_list$efa[idx] <- tmp_mod_efa
       }
-      if (!is.null(tmp.mod.rv)) {
+      if (!is.null(tmp_mod_rv)) {
         # do we already have a `rv' column? if not, create one
-        if (is.null(tmp.list$rv)) {
-          tmp.list$rv <- character(length(tmp.list$lhs))
+        if (is.null(tmp_list$rv)) {
+          tmp_list$rv <- character(length(tmp_list$lhs))
         }
-        tmp.list$rv[idx] <- tmp.mod.rv
+        tmp_list$rv[idx] <- tmp_mod_rv
 
-        tmp.list$free[idx] <- 0L
-        tmp.list$ustart[idx] <- as.numeric(NA) #
+        tmp_list$free[idx] <- 0L
+        tmp_list$ustart[idx] <- as.numeric(NA) #
       }
-      if (!is.null(tmp.mod.lower)) {
+      if (!is.null(tmp_mod_lower)) {
         # do we already have a `lower' column? if not, create one
-        if (is.null(tmp.list$lower)) {
-          tmp.list$lower <- rep(-Inf, length(tmp.list$lhs))
+        if (is.null(tmp_list$lower)) {
+          tmp_list$lower <- rep(-Inf, length(tmp_list$lhs))
         }
-        tmp.list$lower[idx] <- as.numeric(tmp.mod.lower)
+        tmp_list$lower[idx] <- as.numeric(tmp_mod_lower)
       }
-      if (!is.null(tmp.mod.upper)) {
+      if (!is.null(tmp_mod_upper)) {
         # do we already have a `upper' column? if not, create one
-        if (is.null(tmp.list$upper)) {
-          tmp.list$upper <- rep(Inf, length(tmp.list$lhs))
+        if (is.null(tmp_list$upper)) {
+          tmp_list$upper <- rep(Inf, length(tmp_list$lhs))
         }
-        tmp.list$upper[idx] <- as.numeric(tmp.mod.upper)
+        tmp_list$upper[idx] <- as.numeric(tmp_mod_upper)
       }
-      if (!is.null(tmp.mod.label)) {
-        tmp.list$label[idx] <- tmp.mod.label
+      if (!is.null(tmp_mod_label)) {
+        tmp_list$label[idx] <- tmp_mod_label
       }
     }
   }
   # remove mod.idx column
-  tmp.list$mod.idx <- NULL
+  tmp_list$mod.idx <- NULL
 
   # categorical: check for nonfree variances if parameterization = "delta"
   # we already gave warning; here, we force them to be nonfree
   if (categorical && parameterization == "delta") {
-    ord.var.idx <- which(tmp.list$op == "~~" &
-                         tmp.list$lhs == tmp.list$rhs &
-                         tmp.list$lhs %in% ov.ord &
-                         tmp.list$user == 1L)
-    if (length(ord.var.idx) > 0L) {
+    ord_var_idx <- which(tmp_list$op == "~~" &
+                         tmp_list$lhs == tmp_list$rhs &
+                         tmp_list$lhs %in% ov_ord &
+                         tmp_list$user == 1L)
+    if (length(ord_var_idx) > 0L) {
       # force them to be nonfree and set ustart to 1 (new in 0.6-20)
-      tmp.list$free[ord.var.idx]   <- rep(0L, length(ord.var.idx))
-      tmp.list$ustart[ord.var.idx] <- rep(1,  length(ord.var.idx))
+      tmp_list$free[ord_var_idx]   <- rep(0L, length(ord_var_idx))
+      tmp_list$ustart[ord_var_idx] <- rep(1,  length(ord_var_idx))
     }
   } # categorical
 
 
   # warning about single label in multiple group setting?
-  if (warn.about.single.label) {
+  if (warn_about_single_label) {
     lav_msg_warn(gettext(
       "using a single label per parameter in a multiple group setting implies
       imposing equality constraints across all the groups; If this is not
@@ -693,50 +703,50 @@ lav_model_partable  <- function(
 
   # if lower/upper values were added, fix non-free values to ustart values
   # new in 0.6-6
-  if (!is.null(tmp.list$lower)) {
-    fixed.idx <- which(tmp.list$free == 0L)
-    if (length(fixed.idx) > 0L) {
-      tmp.list$lower[fixed.idx] <- tmp.list$ustart[fixed.idx]
+  if (!is.null(tmp_list$lower)) {
+    fixed_idx <- which(tmp_list$free == 0L)
+    if (length(fixed_idx) > 0L) {
+      tmp_list$lower[fixed_idx] <- tmp_list$ustart[fixed_idx]
     }
   }
-  if (!is.null(tmp.list$upper)) {
-    fixed.idx <- which(tmp.list$free == 0L)
-    if (length(fixed.idx) > 0L) {
-      tmp.list$upper[fixed.idx] <- tmp.list$ustart[fixed.idx]
+  if (!is.null(tmp_list$upper)) {
+    fixed_idx <- which(tmp_list$free == 0L)
+    if (length(fixed_idx) > 0L) {
+      tmp_list$upper[fixed_idx] <- tmp_list$ustart[fixed_idx]
     }
   }
 
-  # if rv column is present, add rv.names to ALL rows where they are used
-  if (!is.null(tmp.list$rv)) {
-    rv.names <- unique(tmp.list$rv[nchar(tmp.list$rv) > 0L])
-    for (i in seq_len(length(rv.names))) {
-      lhs.idx <- which(tmp.list$lhs == rv.names[i] &
-        tmp.list$op == "=~")
-      tmp.list$rv[lhs.idx] <- rv.names[i]
+  # if rv column is present, add rv_names to ALL rows where they are used
+  if (!is.null(tmp_list$rv)) {
+    rv_names <- unique(tmp_list$rv[nchar(tmp_list$rv) > 0L])
+    for (i in seq_along(rv_names)) {
+      lhs_idx <- which(tmp_list$lhs == rv_names[i] &
+        tmp_list$op == "=~")
+      tmp_list$rv[lhs_idx] <- rv_names[i]
     }
   }
 
   if (lav_debug()) {
-    cat("[lavaan DEBUG]: parameter tmp.list with MODIFIERS:\n")
-    print(as.data.frame(tmp.list, stringsAsFactors = FALSE))
+    cat("[lavaan DEBUG]: parameter tmp_list with MODIFIERS:\n")
+    print(as.data.frame(tmp_list, stringsAsFactors = FALSE))
   }
 
   # get 'virtual' parameter labels
-  if (n.block.flat > 1L) {
-    blocks <- tmp.block.lhs
+  if (n_block_flat > 1L) {
+    blocks <- tmp_blocks_lhs
   } else {
     blocks <- "group"
   }
   label <- lav_partable_labels(
-    partable = tmp.list,
+    partable = tmp_list,
     blocks = blocks,
     group.equal = group.equal,
     group.partial = group.partial
   )
 
   if (lav_debug()) {
-    cat("[lavaan DEBUG]: parameter tmp.list with LABELS:\n")
-    tmp <- tmp.list
+    cat("[lavaan DEBUG]: parameter tmp_list with LABELS:\n")
+    tmp <- tmp_list
     tmp$label <- label
     print(as.data.frame(tmp, stringsAsFactors = FALSE))
   }
@@ -748,13 +758,13 @@ lav_model_partable  <- function(
   #       eg., if all the factor-loadings of the 'second' set (time/group)
   #       are constrained to be equal to the factor-loadings of the first
   #       set, no further constraints are needed
-  if (auto.efa && !is.null(tmp.list$efa)) {
-    tmp.list <- lav_partable_efa_constraints(
-      LIST = tmp.list,
+  if (auto_efa && !is.null(tmp_list$efa)) {
+    tmp_list <- lav_partable_efa_constraints(
+      LIST = tmp_list,
       orthogonal.efa = orthogonal.efa,
       group.equal = group.equal
     )
-  } # auto.efa
+  } # auto_efa
 
   # handle user-specified equality constraints
   # lavaan 0.6-11:
@@ -763,96 +773,96 @@ lav_model_partable  <- function(
   #          duplicate 'free' numbers; no longer explicit == rows with plabels
   #       2) mixture of simple and other (explicit) constraints
   #          treat them together as we did in <0.6-11
-  tmp.list$plabel <- paste(".p", tmp.list$id, ".", sep = "")
-  eq.labels <- unique(label[duplicated(label)])
-  eq.id <- integer(length(tmp.list$lhs))
-  for (eq.label in eq.labels) {
-    tmp.con.idx <- length(tmp.con)
-    all.idx <- which(label == eq.label) # all same-label parameters
-    ref.idx <- all.idx[1L] # the first one only
-    other.idx <- all.idx[-1L] # the others
-    eq.id[all.idx] <- ref.idx
+  tmp_list$plabel <- paste(".p", tmp_list$id, ".", sep = "")
+  eq_labels <- unique(label[duplicated(label)])
+  eq_id <- integer(length(tmp_list$lhs))
+  for (eq.label in eq_labels) {
+    tmp_con_idx <- length(tmp_con)
+    all_idx <- which(label == eq.label) # all same-label parameters
+    ref_idx <- all_idx[1L] # the first one only
+    other_idx <- all_idx[-1L] # the others
+    eq_id[all_idx] <- ref_idx
 
     # new in 0.6-6: make sure lower/upper constraints are equal too
-    if (!is.null(tmp.list$lower) &&
-      length(unique(tmp.list$lower[all.idx])) > 0L) {
-      non.inf <- which(is.finite(tmp.list$lower[all.idx]))
-      if (length(non.inf) > 0L) {
-        smallest.val <- min(tmp.list$lower[all.idx][non.inf])
-        tmp.list$lower[all.idx] <- smallest.val
+    if (!is.null(tmp_list$lower) &&
+      length(unique(tmp_list$lower[all_idx])) > 0L) {
+      non_inf <- which(is.finite(tmp_list$lower[all_idx]))
+      if (length(non_inf) > 0L) {
+        smalles_val <- min(tmp_list$lower[all_idx][non_inf])
+        tmp_list$lower[all_idx] <- smalles_val
       }
     }
-    if (!is.null(tmp.list$upper) &&
-      length(unique(tmp.list$upper[all.idx])) > 0L) {
-      non.inf <- which(is.finite(tmp.list$upper[all.idx]))
-      if (length(non.inf) > 0L) {
-        largest.val <- max(tmp.list$upper[all.idx][non.inf])
-        tmp.list$upper[all.idx] <- largest.val
+    if (!is.null(tmp_list$upper) &&
+      length(unique(tmp_list$upper[all_idx])) > 0L) {
+      non_inf <- which(is.finite(tmp_list$upper[all_idx]))
+      if (length(non_inf) > 0L) {
+        largest_val <- max(tmp_list$upper[all_idx][non_inf])
+        tmp_list$upper[all_idx] <- largest_val
       }
     }
 
     # two possibilities:
-    #   1. all.idx contains a fixed parameter: in this case,
+    #   1. all_idx contains a fixed parameter: in this case,
     #      we fix them all (hopefully to the same value)
-    #   2. all.idx contains only free parameters
+    #   2. all_idx contains only free parameters
 
-    # 1. all.idx contains a fixed parameter
-    if (any(tmp.list$free[all.idx] == 0L)) {
+    # 1. all_idx contains a fixed parameter
+    if (any(tmp_list$free[all_idx] == 0L)) {
       # which one is fixed?
-      fixed.all <- all.idx[tmp.list$free[all.idx] == 0L]
+      fixed_all <- all_idx[tmp_list$free[all_idx] == 0L]
       # only pick the first
-      fixed.idx <- fixed.all[1]
+      fixed_idx <- fixed_all[1]
 
       # sanity check: are all ustart values equal?
-      ustart1 <- tmp.list$ustart[fixed.idx]
-      if (all(is.na(tmp.list$ustart[fixed.all]))) {
+      ustart1 <- tmp_list$ustart[fixed_idx]
+      if (all(is.na(tmp_list$ustart[fixed_all]))) {
         # nothing to do; ustart values have not been set yet
-      } else if (!all(ustart1 == tmp.list$ustart[fixed.all])) {
+      } else if (!all(ustart1 == tmp_list$ustart[fixed_all])) {
         lav_msg_warn(gettext(
           "equality constraints involve fixed parameters with different values;
           only the first one will be used"))
       }
 
       # make them all fixed
-      tmp.list$ustart[all.idx] <- tmp.list$ustart[fixed.idx]
-      tmp.list$free[all.idx] <- 0L # not free anymore, since it must
+      tmp_list$ustart[all_idx] <- tmp_list$ustart[fixed_idx]
+      tmp_list$free[all_idx] <- 0L # not free anymore, since it must
       # be equal to the 'fixed' parameter
       # (Note: Mplus ignores this)
-      eq.id[all.idx] <- 0L # remove from eq.id list
+      eq_id[all_idx] <- 0L # remove from eq_id list
 
       # new in 0.6-8 (for efa + user-specified eq constraints)
-      if (any(tmp.list$user[all.idx] %in% c(7L, 77L))) {
-        # if involved in an efa block, store in tmp.con anyway
+      if (any(tmp_list$user[all_idx] %in% c(7L, 77L))) {
+        # if involved in an efa block, store in tmp_con anyway
         # we may need it for the rotated solution
-        for (o in other.idx) {
-          tmp.con.idx <- tmp.con.idx + 1L
-          tmp.con[[tmp.con.idx]] <- list(
+        for (o in other_idx) {
+          tmp_con_idx <- tmp_con_idx + 1L
+          tmp_con[[tmp_con_idx]] <- list(
             op = "==",
-            lhs = tmp.list$plabel[ref.idx],
-            rhs = tmp.list$plabel[o],
+            lhs = tmp_list$plabel[ref_idx],
+            rhs = tmp_list$plabel[o],
             user = 2L
           )
         }
       }
     } else {
-      # 2. all.idx contains only free parameters
+      # 2. all_idx contains only free parameters
       # old system:
-      # - add tmp.con entry
-      # - in 0.6-11: only if tmp.con is not empty
-      if (!ceq.simple) {
-        for (o in other.idx) {
-          tmp.con.idx <- tmp.con.idx + 1L
-          tmp.con[[tmp.con.idx]] <- list(
+      # - add tmp_con entry
+      # - in 0.6-11: only if tmp_con is not empty
+      if (!ceq_simple) {
+        for (o in other_idx) {
+          tmp_con_idx <- tmp_con_idx + 1L
+          tmp_con[[tmp_con_idx]] <- list(
             op = "==",
-            lhs = tmp.list$plabel[ref.idx],
-            rhs = tmp.list$plabel[o],
+            lhs = tmp_list$plabel[ref_idx],
+            rhs = tmp_list$plabel[o],
             user = 2L
           )
         }
       } else {
         # new system:
         # - set $free elements to zero, and later to ref id
-        tmp.list$free[other.idx] <- 0L # all but the first are non-free
+        tmp_list$free[other_idx] <- 0L # all but the first are non-free
         # but will get a duplicated number
       }
 
@@ -860,130 +870,129 @@ lav_model_partable  <- function(
       # colum, *if* it is empty
       # update: 0.6-11 we keep this, because it shows the plabels
       #         when eg group.equal = "loadings"
-      for (i in all.idx) {
-        if (nchar(tmp.list$label[i]) == 0L) {
-          tmp.list$label[i] <- tmp.list$plabel[ref.idx]
+      for (i in all_idx) {
+        if (nchar(tmp_list$label[i]) == 0L) {
+          tmp_list$label[i] <- tmp_list$plabel[ref_idx]
         }
       }
     } # all free
-  } # eq in eq.labels
+  } # eq in eq_labels
   if (lav_debug()) {
-    print(tmp.con)
+    print(tmp_con)
   }
 
 
 
   # handle constraints (if any) (NOT per group, but overall - 0.4-11)
-  if (length(tmp.con) > 0L) {
-    n.con <- length(tmp.con)
-    tmp.idx <- length(tmp.list$id) + seq_len(n.con)
-    # grow tmp.list with length(tmp.con) extra rows
-    tmp.list <- lapply(tmp.list, function(x) {
+  if (length(tmp_con) > 0L) {
+    n_con <- length(tmp_con)
+    tmp_idx <- length(tmp_list$id) + seq_len(n_con)
+    # grow tmp_list with length(tmp_con) extra rows
+    tmp_list <- lapply(tmp_list, function(x) {
       if (is.character(x)) {
-        c(x, rep("", n.con))
+        c(x, rep("", n_con))
       } else {
-        c(x, rep(NA, n.con))
+        c(x, rep(NA, n_con))
       }
     })
 
     # fill in some columns
-    tmp.list$id[tmp.idx] <- tmp.idx
-    tmp.list$lhs[tmp.idx] <- unlist(lapply(tmp.con, "[[", "lhs"))
-    tmp.list$op[tmp.idx] <- unlist(lapply(tmp.con, "[[", "op"))
-    tmp.list$rhs[tmp.idx] <- unlist(lapply(tmp.con, "[[", "rhs"))
-    tmp.list$user[tmp.idx] <- unlist(lapply(tmp.con, "[[", "user"))
+    tmp_list$id[tmp_idx] <- tmp_idx
+    tmp_list$lhs[tmp_idx] <- unlist(lapply(tmp_con, "[[", "lhs"))
+    tmp_list$op[tmp_idx] <- unlist(lapply(tmp_con, "[[", "op"))
+    tmp_list$rhs[tmp_idx] <- unlist(lapply(tmp_con, "[[", "rhs"))
+    tmp_list$user[tmp_idx] <- unlist(lapply(tmp_con, "[[", "user"))
 
     # zero is nicer?
-    tmp.list$free[tmp.idx] <- rep(0L, n.con)
-    tmp.list$exo[tmp.idx] <- rep(0L, n.con)
-    tmp.list$block[tmp.idx] <- rep(0L, n.con)
+    tmp_list$free[tmp_idx] <- rep(0L, n_con)
+    tmp_list$exo[tmp_idx] <- rep(0L, n_con)
+    tmp_list$block[tmp_idx] <- rep(0L, n_con)
 
-    if (!is.null(tmp.list$group)) {
-      if (is.character(tmp.list$group)) {
-        tmp.list$group[tmp.idx] <- rep("", n.con)
+    if (!is.null(tmp_list$group)) {
+      if (is.character(tmp_list$group)) {
+        tmp_list$group[tmp_idx] <- rep("", n_con)
       } else {
-        tmp.list$group[tmp.idx] <- rep(0L, n.con)
+        tmp_list$group[tmp_idx] <- rep(0L, n_con)
       }
     }
-    if (!is.null(tmp.list$level)) {
-      if (is.character(tmp.list$level)) {
-        tmp.list$level[tmp.idx] <- rep("", n.con)
+    if (!is.null(tmp_list$level)) {
+      if (is.character(tmp_list$level)) {
+        tmp_list$level[tmp_idx] <- rep("", n_con)
       } else {
-        tmp.list$level[tmp.idx] <- rep(0L, n.con)
+        tmp_list$level[tmp_idx] <- rep(0L, n_con)
       }
     }
-    if (!is.null(tmp.list$class)) {
-      if (is.character(tmp.list$class)) {
-        tmp.list$class[tmp.idx] <- rep("", n.con)
+    if (!is.null(tmp_list$class)) {
+      if (is.character(tmp_list$class)) {
+        tmp_list$class[tmp_idx] <- rep("", n_con)
       } else {
-        tmp.list$class[tmp.idx] <- rep(0L, n.con)
+        tmp_list$class[tmp_idx] <- rep(0L, n_con)
       }
     }
   }
 
   # check defined variables (:=)
-  def.idx <- which(tmp.list$op == ":=")
-  if (length(def.idx) > 0L) {
+  def_idx <- which(tmp_list$op == ":=")
+  if (length(def_idx) > 0L) {
     # check if the lhs is unique (new in 0.6-20)
-    def.lhs <- tmp.list$lhs[def.idx]
-    dup.idx <- which(duplicated(def.lhs))
-    if (length(dup.idx) > 0L) {
+    def_lhs <- tmp_list$lhs[def_idx]
+    dup_idx <- which(duplicated(def_lhs))
+    if (length(dup_idx) > 0L) {
       # warn or stop? warn for now
       lav_msg_warn(gettextf("at least one defined variable (using the :=
                              operator) has been duplicated, and will be
                              overwritten by the last one: %s",
-                            paste(def.lhs[dup.idx], collapse = " ")))
+                            paste(def_lhs[dup_idx], collapse = " ")))
     }
     # put lhs of := elements in label column
-    tmp.list$label[def.idx] <- def.lhs
+    tmp_list$label[def_idx] <- def_lhs
   }
 
 
-  # handle effect.coding related equality constraints
-  if (is.logical(effect.coding) && effect.coding) {
-    effect.coding <- c("loadings", "intercepts")
-  } else if (!is.character(effect.coding)) {
+  # handle effect_coding related equality constraints
+  if (is.logical(effect_coding) && effect_coding) {
+    effect_coding <- c("loadings", "intercepts")
+  } else if (!is.character(effect_coding)) {
     lav_msg_stop(gettext("effect.coding argument must be a character string"))
   }
   # in ordinal models, do integer coding
-  if (all.ord) effect.coding <- c(effect.coding, "thresholds")
-  if (any(c("loadings", "intercepts") %in% effect.coding)) {
+  if (all_ord) effect_coding <- c(effect_coding, "thresholds")
+  if (any(c("loadings", "intercepts") %in% effect_coding)) {
     tmp <- list()
     # for each block
-    nblocks <- lav_partable_nblocks(tmp.list)
+    nblocks <- lav_partable_nblocks(tmp_list)
     for (b in seq_len(nblocks)) {
 
       # which group?
-      this.group <- floor(b / nlevels + 0.5)
+      this_group <- floor(b / nlevels + 0.5)
 
       # lv's for this block/set
-      lv.names <- unique(tmp.list$lhs[tmp.list$op == "=~" &
-        tmp.list$block == b])
+      lv_names <- unique(tmp_list$lhs[tmp_list$op == "=~" &
+        tmp_list$block == b])
 
-      if (length(lv.names) == 0L) {
+      if (length(lv_names) == 0L) {
         next
       }
 
-      int.plabel <- character(0L)
-      for (lv in lv.names) {
-        # ind.names
-        ind.names <- tmp.list$rhs[tmp.list$op == "=~" &
-          tmp.list$block == b &
-          tmp.list$lhs == lv]
+      for (lv in lv_names) {
+        # ind_names
+        ind_names <- tmp_list$rhs[tmp_list$op == "=~" &
+          tmp_list$block == b &
+          tmp_list$lhs == lv]
 
-        if ("loadings" %in% effect.coding &
-            (!"loadings" %in% group.equal || this.group == 1L)) {
+        if ("loadings" %in% effect_coding &&
+            (!"loadings" %in% group.equal || this_group == 1L)) {
           # factor loadings indicators of this lv
-          loadings.idx <- which(tmp.list$op == "=~" &
-            tmp.list$block == b &
-            tmp.list$rhs %in% ind.names &
-            tmp.list$lhs == lv)
+          loadings_idx <- which(tmp_list$op == "=~" &
+            tmp_list$block == b &
+            tmp_list$rhs %in% ind_names &
+            tmp_list$lhs == lv)
 
           # all free?
-          if (length(loadings.idx) > 0L &&
-            all(tmp.list$free[loadings.idx] > 0L)) {
+          if (length(loadings_idx) > 0L &&
+            all(tmp_list$free[loadings_idx] > 0L)) {
             # add eq constraint
-            plabel <- tmp.list$plabel[loadings.idx]
+            plabel <- tmp_list$plabel[loadings_idx]
 
             # Note:  we write them as
             # .p1. == 3 - .p2. - .p3.
@@ -992,330 +1001,333 @@ lav_model_partable  <- function(
             # as this makes it easier to translate things to
             # JAGS/stan
 
-            tmp.lhs <- plabel[1]
-            if (length(loadings.idx) > 1L) {
-              tmp.rhs <- paste(length(loadings.idx), "-",
+            tmp_lhs <- plabel[1]
+            if (length(loadings_idx) > 1L) {
+              tmp_rhs <- paste(length(loadings_idx), "-",
                 paste(plabel[-1], collapse = "-"),
                 sep = ""
               )
             } else {
-              tmp.rhs <- length(loadings.idx)
+              tmp_rhs <- length(loadings_idx)
             }
 
-            tmp$lhs <- c(tmp$lhs, tmp.lhs)
+            tmp$lhs <- c(tmp$lhs, tmp_lhs)
             tmp$op <- c(tmp$op, "==")
-            tmp$rhs <- c(tmp$rhs, tmp.rhs)
+            tmp$rhs <- c(tmp$rhs, tmp_rhs)
             tmp$block <- c(tmp$block, 0L)
             tmp$user <- c(tmp$user, 2L)
             tmp$ustart <- c(tmp$ustart, as.numeric(NA))
           }
         } # loadings
 
-        if ("thresholds" %in% effect.coding &
-            (!"thresholds" %in% group.equal || this.group == 1L)) {
-          thresholds.idx <- which(tmp.list$op == "|" &
-            tmp.list$block == b &
-            tmp.list$lhs %in% ind.names)
+        if ("thresholds" %in% effect_coding &&
+            (!"thresholds" %in% group.equal || this_group == 1L)) {
+          thresholds_idx <- which(tmp_list$op == "|" &
+            tmp_list$block == b &
+            tmp_list$lhs %in% ind_names)
 
           # all free?
-          if (length(thresholds.idx) > 0L &&
-            all(tmp.list$free[thresholds.idx] > 0L)) {
-            nlevs <- table(tmp.list$lhs[thresholds.idx]) + 1
-            Kmax <- max(nlevs)
-            for (ind in ind.names) {
+          if (length(thresholds_idx) > 0L &&
+            all(tmp_list$free[thresholds_idx] > 0L)) {
+            nlevs <- table(tmp_list$lhs[thresholds_idx]) + 1
+            kmax <- max(nlevs)
+            for (ind in ind_names) {
               # 1) fix bottom and top per ov
-              trows <- which(tmp.list$lhs[thresholds.idx] == ind)
-              plabs <- tmp.list$plabel[thresholds.idx][trows[c(1, length(trows))]]
-              thisidx <- thresholds.idx[trows[1]]
-              tmp.list$free[thisidx] <- 0L
-              tmp.list$ustart[thisidx] <- round(.5 + Kmax/nlevs[ind], 3)
-              tmp.list$user[thisidx] <- 2L
+              trows <- which(tmp_list$lhs[thresholds_idx] == ind)
+              thisidx <- thresholds_idx[trows[1]]
+              tmp_list$free[thisidx] <- 0L
+              tmp_list$ustart[thisidx] <- round(.5 + kmax / nlevs[ind], 3)
+              tmp_list$user[thisidx] <- 2L
 
               if (nlevs[ind] > 2L) {
-                thisidx <- thresholds.idx[trows[length(trows)]]
-                tmp.list$free[thisidx] <- 0L
-                tmp.list$ustart[thisidx] <- round(.5 + Kmax * (nlevs[ind] - 1)/nlevs[ind], 3)
-                tmp.list$user[thisidx] <- 2L
+                thisidx <- thresholds_idx[trows[length(trows)]]
+                tmp_list$free[thisidx] <- 0L
+                tmp_list$ustart[thisidx] <- round(.5 + kmax * (nlevs[ind] - 1) /
+                    nlevs[ind], 3)
+                tmp_list$user[thisidx] <- 2L
               }
 
-              # 2) free intercepts of variables with > 2 levels, only if automatically fixed
-              intercept.idx <- which(tmp.list$op == "~1" &
-                tmp.list$block == b &
-                tmp.list$lhs == ind)
-              if (nlevs[ind] > 2L && length(intercept.idx) > 0L &&
-                  tmp.list$user[intercept.idx] == 0L) {
-                tmp.list$free[intercept.idx] <- 1L
+              # 2) free intercepts of variables with > 2 levels,
+              #                     only if automatically fixed
+              intercept_idx <- which(tmp_list$op == "~1" &
+                tmp_list$block == b &
+                tmp_list$lhs == ind)
+              if (nlevs[ind] > 2L && length(intercept_idx) > 0L &&
+                  tmp_list$user[intercept_idx] == 0L) {
+                tmp_list$free[intercept_idx] <- 1L
               }
 
-              # 3) free variances/deltas of variables with > 2 levels, only if automatically fixed
+              # 3) free variances/deltas of variables with > 2 levels,
+              #                           only if automatically fixed
               varop <- ifelse(parameterization == "delta", "~*~", "~~")
-              var.idx <- which(tmp.list$op == varop &
-                            tmp.list$block == b &
-                            tmp.list$lhs == ind &
-                            tmp.list$lhs == tmp.list$rhs)
-              if (length(var.idx) > 0L &&
-                  tmp.list$user[var.idx] == 0L) {
-                tmp.list$free[var.idx] <- 1L
+              var_idx <- which(tmp_list$op == varop &
+                            tmp_list$block == b &
+                            tmp_list$lhs == ind &
+                            tmp_list$lhs == tmp_list$rhs)
+              if (length(var_idx) > 0L &&
+                  tmp_list$user[var_idx] == 0L) {
+                tmp_list$free[var_idx] <- 1L
               }
             }
             # 4) fix latent variance if all variables have 2 levels
             if (all(nlevs == 2L)) {
-              lv.var.idx <- which(tmp.list$op == "~~" &
-                              tmp.list$block == b &
-                              tmp.list$lhs == lv &
-                              tmp.list$lhs == tmp.list$rhs)
-              if (length(lv.var.idx) > 0L && tmp.list$user[lv.var.idx] == 0L) {
-                tmp.list$free[lv.var.idx] <- 0L
-                tmp.list$ustart[lv.var.idx] <- 1L
+              lv_var_idx <- which(tmp_list$op == "~~" &
+                              tmp_list$block == b &
+                              tmp_list$lhs == lv &
+                              tmp_list$lhs == tmp_list$rhs)
+              if (length(lv_var_idx) > 0L && tmp_list$user[lv_var_idx] == 0L) {
+                tmp_list$free[lv_var_idx] <- 0L
+                tmp_list$ustart[lv_var_idx] <- 1L
               }
             }
           }
         } # thresholds
 
-        if ("intercepts" %in% effect.coding &
-            (!"intercepts" %in% group.equal || this.group == 1L)) {
+        if ("intercepts" %in% effect_coding &&
+            (!"intercepts" %in% group.equal || this_group == 1L)) {
           # intercepts for indicators of this lv
-          intercepts.idx <- which(tmp.list$op == "~1" &
-            tmp.list$block == b &
-            tmp.list$lhs %in% ind.names)
+          intercepts_idx <- which(tmp_list$op == "~1" &
+            tmp_list$block == b &
+            tmp_list$lhs %in% ind_names)
 
           # all free?
-          if (length(intercepts.idx) > 0L &&
-            (all(tmp.list$free[intercepts.idx] > 0L) || "thresholds" %in% effect.coding)) {
+          if (length(intercepts_idx) > 0L &&
+            (all(tmp_list$free[intercepts_idx] > 0L) ||
+              "thresholds" %in% effect_coding)) {
             # 1) add eq constraint
-            plabel <- tmp.list$plabel[intercepts.idx]
+            plabel <- tmp_list$plabel[intercepts_idx]
 
-            tmp.lhs <- plabel[1]
-            if (length(intercepts.idx) > 1L) {
-              tmp.rhs <- paste("0-",
+            tmp_lhs <- plabel[1]
+            if (length(intercepts_idx) > 1L) {
+              tmp_rhs <- paste("0-",
                 paste(plabel[-1], collapse = "-"),
                 sep = ""
               )
             } else {
-              tmp.rhs <- 0L
+              tmp_rhs <- 0L
             }
 
-            tmp$lhs <- c(tmp$lhs, tmp.lhs)
+            tmp$lhs <- c(tmp$lhs, tmp_lhs)
             tmp$op <- c(tmp$op, "==")
-            tmp$rhs <- c(tmp$rhs, tmp.rhs)
+            tmp$rhs <- c(tmp$rhs, tmp_rhs)
             tmp$block <- c(tmp$block, 0L)
             tmp$user <- c(tmp$user, 2L)
             tmp$ustart <- c(tmp$ustart, as.numeric(NA))
 
             # 2) release latent mean
-            lv.int.idx <- which(tmp.list$op == "~1" &
-              tmp.list$block == b &
-              tmp.list$lhs == lv)
+            lv_int_idx <- which(tmp_list$op == "~1" &
+              tmp_list$block == b &
+              tmp_list$lhs == lv)
             # free only if automatically added
-            if (length(lv.int.idx) > 0L &&
-              tmp.list$user[lv.int.idx] == 0L) {
-              tmp.list$free[lv.int.idx] <- 1L
+            if (length(lv_int_idx) > 0L &&
+              tmp_list$user[lv_int_idx] == 0L) {
+              tmp_list$free[lv_int_idx] <- 1L
             }
           }
         } # intercepts
       } # lv
     } # blocks
 
-    tmp.list <- lav_partable_merge(tmp.list, tmp)
+    tmp_list <- lav_partable_merge(tmp_list, tmp)
   }
 
   # marker.int.zero
   if (meanstructure && marker.int.zero) {
     # for each block
-    nblocks <- lav_partable_nblocks(tmp.list)
+    nblocks <- lav_partable_nblocks(tmp_list)
     for (b in seq_len(nblocks)) {
       # lv's for this block/set
-      lv.names <- lav_partable_vnames(tmp.list,
+      lv_names <- lav_partable_vnames(tmp_list,
         type = "lv.regular",
         block = b
       )
-      lv.marker <- lav_partable_vnames(tmp.list,
+      lv_marker <- lav_partable_vnames(tmp_list,
         type = "lv.marker",
         block = b
       )
-      ov.num <- lav_partable_vnames(tmp.list,
+      ov_num <- lav_partable_vnames(tmp_list,
         type = "ov.num",
         block = b
       )
-      # new in 0.6-22: only consider ov.num markers
-      lv.marker <- lv.marker[lv.marker %in% ov.num]
+      # new in 0.6-22: only consider ov_num markers
+      lv_marker <- lv_marker[lv_marker %in% ov_num]
 
-      if (length(lv.marker) == 0L) {
+      if (length(lv_marker) == 0L) {
         next
       }
 
       # fix marker intercepts to zero
-      marker.idx <- which(tmp.list$op == "~1" &
-        tmp.list$lhs %in% lv.marker & tmp.list$block == b &
-        tmp.list$user == 0L)
-      tmp.list$free[marker.idx] <- 0L
-      tmp.list$ustart[marker.idx] <- 0
+      marker_idx <- which(tmp_list$op == "~1" &
+        tmp_list$lhs %in% lv_marker & tmp_list$block == b &
+        tmp_list$user == 0L)
+      tmp_list$free[marker_idx] <- 0L
+      tmp_list$ustart[marker_idx] <- 0
 
       # free latent means
-      lv.idx <- which(tmp.list$op == "~1" &
-        tmp.list$lhs %in% lv.names & tmp.list$block == b &
-        tmp.list$user == 0L)
-      tmp.list$free[lv.idx] <- 1L
-      tmp.list$ustart[lv.idx] <- as.numeric(NA)
+      lv_idx <- which(tmp_list$op == "~1" &
+        tmp_list$lhs %in% lv_names & tmp_list$block == b &
+        tmp_list$user == 0L)
+      tmp_list$free[lv_idx] <- 1L
+      tmp_list$ustart[lv_idx] <- as.numeric(NA)
     } # block
   }
 
 
   # mg.lv.variances
-  if (ngroups > 1L && "mg.lv.variances" %in% effect.coding) {
+  if (ngroups > 1L && "mg.lv.variances" %in% effect_coding) {
     tmp <- list()
 
     # do not include 'EFA' lv's
-    if (!is.null(tmp.list$efa)) {
-      lv.names <- unique(tmp.list$lhs[tmp.list$op == "=~" &
-        !nchar(tmp.list$efa) > 0L])
+    if (!is.null(tmp_list$efa)) {
+      lv_names <- unique(tmp_list$lhs[tmp_list$op == "=~" &
+        !nchar(tmp_list$efa) > 0L])
     } else {
-      lv.names <- unique(tmp.list$lhs[tmp.list$op == "=~"])
+      lv_names <- unique(tmp_list$lhs[tmp_list$op == "=~"])
     }
-    group.values <- lav_partable_group_values(tmp.list)
+    group_values <- lav_partable_group_values(tmp_list)
 
-    for (lv in lv.names) {
+    for (lv in lv_names) {
       # factor variances
-      lv.var.idx <- which(tmp.list$op == "~~" &
-        tmp.list$lhs == lv &
-        tmp.list$rhs == tmp.list$lhs &
-        tmp.list$lhs == lv)
+      lv_var_idx <- which(tmp_list$op == "~~" &
+        tmp_list$lhs == lv &
+        tmp_list$rhs == tmp_list$lhs &
+        tmp_list$lhs == lv)
 
       # all free (but the first?)
-      if (length(lv.var.idx) > 0L &&
-        all(tmp.list$free[lv.var.idx][-1] > 0L)) {
+      if (length(lv_var_idx) > 0L &&
+        all(tmp_list$free[lv_var_idx][-1] > 0L)) {
         # 1) add eq constraint
-        plabel <- tmp.list$plabel[lv.var.idx]
+        plabel <- tmp_list$plabel[lv_var_idx]
 
-        tmp.lhs <- plabel[1]
-        if (length(lv.var.idx) > 1L) {
-          tmp.rhs <- paste(length(lv.var.idx), "-",
+        tmp_lhs <- plabel[1]
+        if (length(lv_var_idx) > 1L) {
+          tmp_rhs <- paste(length(lv_var_idx), "-",
             paste(plabel[-1], collapse = "-"),
             sep = ""
           )
         } else {
-          tmp.rhs <- length(lv.var.idx)
+          tmp_rhs <- length(lv_var_idx)
         }
 
-        tmp$lhs <- c(tmp$lhs, tmp.lhs)
+        tmp$lhs <- c(tmp$lhs, tmp_lhs)
         tmp$op <- c(tmp$op, "==")
-        tmp$rhs <- c(tmp$rhs, tmp.rhs)
+        tmp$rhs <- c(tmp$rhs, tmp_rhs)
         tmp$block <- c(tmp$block, 0L)
         tmp$user <- c(tmp$user, 2L)
         tmp$ustart <- c(tmp$ustart, as.numeric(NA))
 
         # 2) free lv variances first group
-        lv.var.g1.idx <- which(tmp.list$op == "~~" &
-          tmp.list$group == group.values[1] &
-          tmp.list$lhs == lv &
-          tmp.list$rhs == tmp.list$lhs &
-          tmp.list$lhs == lv)
+        lv_var_g1_idx <- which(tmp_list$op == "~~" &
+          tmp_list$group == group_values[1] &
+          tmp_list$lhs == lv &
+          tmp_list$rhs == tmp_list$lhs &
+          tmp_list$lhs == lv)
         # free only if automatically added
-        if (length(lv.var.g1.idx) > 0L &&
-          tmp.list$user[lv.var.g1.idx] == 0L) {
-          tmp.list$free[lv.var.g1.idx] <- 1L
+        if (length(lv_var_g1_idx) > 0L &&
+          tmp_list$user[lv_var_g1_idx] == 0L) {
+          tmp_list$free[lv_var_g1_idx] <- 1L
         }
       }
     } # lv
 
-    tmp.list <- lav_partable_merge(tmp.list, tmp)
+    tmp_list <- lav_partable_merge(tmp_list, tmp)
   }
 
   # mg.lv.efa.variances
-  if (ngroups > 1L && "mg.lv.efa.variances" %in% effect.coding) {
+  if (ngroups > 1L && "mg.lv.efa.variances" %in% effect_coding) {
     tmp <- list()
 
     # only 'EFA' lv's
-    if (!is.null(tmp.list$efa)) {
-      lv.names <- unique(tmp.list$lhs[tmp.list$op == "=~" &
-        nchar(tmp.list$efa) > 0L])
+    if (!is.null(tmp_list$efa)) {
+      lv_names <- unique(tmp_list$lhs[tmp_list$op == "=~" &
+        nchar(tmp_list$efa) > 0L])
     } else {
-      lv.names <- character(0L)
+      lv_names <- character(0L)
     }
-    group.values <- lav_partable_group_values(tmp.list)
+    group_values <- lav_partable_group_values(tmp_list)
 
-    for (lv in lv.names) {
+    for (lv in lv_names) {
       # factor variances
-      lv.var.idx <- which(tmp.list$op == "~~" &
-        tmp.list$lhs == lv &
-        tmp.list$rhs == tmp.list$lhs &
-        tmp.list$lhs == lv)
+      lv_var_idx <- which(tmp_list$op == "~~" &
+        tmp_list$lhs == lv &
+        tmp_list$rhs == tmp_list$lhs &
+        tmp_list$lhs == lv)
 
       # all free (but the first?)
-      if (length(lv.var.idx) > 0L &&
-        all(tmp.list$free[lv.var.idx][-1] > 0L)) {
+      if (length(lv_var_idx) > 0L &&
+        all(tmp_list$free[lv_var_idx][-1] > 0L)) {
         # 1) add eq constraint
-        plabel <- tmp.list$plabel[lv.var.idx]
+        plabel <- tmp_list$plabel[lv_var_idx]
 
-        tmp.lhs <- plabel[1]
-        if (length(lv.var.idx) > 1L) {
-          tmp.rhs <- paste(length(lv.var.idx), "-",
+        tmp_lhs <- plabel[1]
+        if (length(lv_var_idx) > 1L) {
+          tmp_rhs <- paste(length(lv_var_idx), "-",
             paste(plabel[-1], collapse = "-"),
             sep = ""
           )
         } else {
-          tmp.rhs <- length(lv.var.idx)
+          tmp_rhs <- length(lv_var_idx)
         }
 
-        tmp$lhs <- c(tmp$lhs, tmp.lhs)
+        tmp$lhs <- c(tmp$lhs, tmp_lhs)
         tmp$op <- c(tmp$op, "==")
-        tmp$rhs <- c(tmp$rhs, tmp.rhs)
+        tmp$rhs <- c(tmp$rhs, tmp_rhs)
         tmp$block <- c(tmp$block, 0L)
         tmp$user <- c(tmp$user, 2L)
         tmp$ustart <- c(tmp$ustart, as.numeric(NA))
 
         # 2) free lv variances first group
-        lv.var.g1.idx <- which(tmp.list$op == "~~" &
-          tmp.list$group == group.values[1] &
-          tmp.list$lhs == lv &
-          tmp.list$rhs == tmp.list$lhs &
-          tmp.list$lhs == lv)
+        lv_var_g1_idx <- which(tmp_list$op == "~~" &
+          tmp_list$group == group_values[1] &
+          tmp_list$lhs == lv &
+          tmp_list$rhs == tmp_list$lhs &
+          tmp_list$lhs == lv)
         # free only if automatically added
-        if (length(lv.var.g1.idx) > 0L &&
-          tmp.list$user[lv.var.g1.idx] == 0L) {
-          tmp.list$free[lv.var.g1.idx] <- 1L
+        if (length(lv_var_g1_idx) > 0L &&
+          tmp_list$user[lv_var_g1_idx] == 0L) {
+          tmp_list$free[lv_var_g1_idx] <- 1L
         }
       }
     } # lv
 
-    tmp.list <- lav_partable_merge(tmp.list, tmp)
+    tmp_list <- lav_partable_merge(tmp_list, tmp)
   }
 
 
   # count free parameters
-  idx.free <- which(tmp.list$free > 0L)
-  tmp.list$free[idx.free] <- seq_along(idx.free)
+  idx_free <- which(tmp_list$free > 0L)
+  tmp_list$free[idx_free] <- seq_along(idx_free)
 
   # new in 0.6-11: add free counter to this element (as in < 0.5-18)
   # unless we have other constraints
-  if (ceq.simple) {
-    idx.equal <- which(eq.id > 0)
-    tmp.list$free[idx.equal] <- tmp.list$free[eq.id[idx.equal]]
+  if (ceq_simple) {
+    idx_equal <- which(eq_id > 0)
+    tmp_list$free[idx_equal] <- tmp_list$free[eq_id[idx_equal]]
   }
 
   # new in 0.6-14: add 'da' entries to reflect data-based order of ov's
   # now via attribute "ovda"
-  attr(tmp.list, "ovda") <- ov.names.data
+  attr(tmp_list, "ovda") <- ov_names_data
 
   # backwards compatibility...
-  if (!is.null(tmp.list$unco)) {
-    tmp.list$unco[idx.free] <- seq_along(sum(tmp.list$free > 0L))
+  if (!is.null(tmp_list$unco)) {
+    tmp_list$unco[idx_free] <- seq_along(sum(tmp_list$free > 0L))
   }
 
   if (lav_debug()) {
     cat("[lavaan DEBUG] lavParTable\n")
-    print(as.data.frame(tmp.list))
+    print(as.data.frame(tmp_list))
   }
 
   # data.frame?
   if (as.data.frame.) {
-    tmp.list <- as.data.frame(tmp.list, stringsAsFactors = FALSE)
-    attr(tmp.list, "ovda") <- ov.names.data
+    tmp_list <- as.data.frame(tmp_list, stringsAsFactors = FALSE)
+    attr(tmp_list, "ovda") <- ov_names_data
   } else {
-    tmp.list <- lav_partable_set_cache(tmp.list) # add cached "pta" data
+    tmp_list <- lav_partable_set_cache(tmp_list) # add cached "pta" data
   }
 
-  tmp.list
+  tmp_list
 }
 lavParTable <- lav_model_partable   # synonym #nolint
-lavaanify <- lav_model_partable     # synonym #nolint
+lavaanify <- lav_model_partable     # synonym
