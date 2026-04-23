@@ -287,8 +287,8 @@ lav_start <- function(start.method = "default",
 
           # fabin for 1-factor
           fabin <- lav_cfa_1fac_fabin(COV,
-            std.lv = std.lv,
-            lambda.only = TRUE,
+            std_lv = std.lv,
+            lambda_only = TRUE,
             method = "fabin3"
           )
 

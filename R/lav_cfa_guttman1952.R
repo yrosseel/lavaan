@@ -5,175 +5,176 @@
 #
 # YR 02 Feb 2023: - first version in lavaan, using quadprog (no std.lv yet)
 
-lav_cfa_guttman1952 <- function(S,
-                                marker.idx = NULL,
-                                lambda.nonzero.idx = NULL,
+lav_cfa_guttman1952 <- function(s,
+                                marker_idx = NULL,
+                                lambda_nonzero_idx = NULL,
                                 theta = NULL, # vector!
-                                theta.bounds = FALSE,
-                                force.pd = FALSE,
-                                zero.after.efa = FALSE,
+                                theta_bounds = FALSE,
+                                force_pd = FALSE,
+                                zero_after_efa = FALSE,
                                 quadprog = FALSE,
-                                psi.mapping = FALSE,
+                                psi_mapping = FALSE,
                                 nobs = 20L) { # for cutoff
   # dimensions
-  nvar <- ncol(S)
-  nfac <- length(marker.idx)
+  nvar <- ncol(s)
+  nfac <- length(marker_idx)
   stopifnot(length(theta) == nvar)
 
   # overview of lambda structure
-  B <- matrix(0, nvar, nfac)
-  lambda.marker.idx <- (seq_len(nfac) - 1L) * nvar + marker.idx
-  B[lambda.marker.idx] <- 1L
-  B[lambda.nonzero.idx] <- 1L
+  m_b <- matrix(0, nvar, nfac)
+  lambda_marker_idx <- (seq_len(nfac) - 1L) * nvar + marker_idx
+  m_b[lambda_marker_idx] <- 1L
+  m_b[lambda_nonzero_idx] <- 1L
 
   # this method does not support crossloadings!
-  if (any(rowSums(B) > 1)) {
+  if (any(rowSums(m_b) > 1)) {
     lav_msg_stop(gettext("the guttman1952 procedure does not support ",
                        "crossloadings; consider fabin or bentler1982 instead"))
   }
 
   # if we wish to keep SminTheta PD, we must keep theta within bounds
-  if (force.pd) {
-    theta.bounds <- TRUE
+  if (force_pd) {
+    theta_bounds <- TRUE
   }
-  if (psi.mapping) {
-    theta.bounds <- TRUE
-    force.pd <- TRUE
+  if (psi_mapping) {
+    theta_bounds <- TRUE
+    force_pd <- TRUE
   }
 
   # do we first 'clip' the theta values so they are within standard bounds?
   # (Question: do we need the 0.01 and 0.99 multipliers?)
-  diagS <- diag(S)
-  if (theta.bounds) {
+  diag_s <- diag(s)
+  if (theta_bounds) {
     # lower bound
-    lower.bound <- diagS * 0 # * 0.01
-    too.small.idx <- which(theta < lower.bound)
-    if (length(too.small.idx) > 0L) {
-      theta[too.small.idx] <- lower.bound[too.small.idx]
+    lower_bound <- diag_s * 0 # * 0.01
+    too_small_idx <- which(theta < lower_bound)
+    if (length(too_small_idx) > 0L) {
+      theta[too_small_idx] <- lower_bound[too_small_idx]
     }
 
     # upper bound
-    upper.bound <- diagS * 1 # * 0.99
-    too.large.idx <- which(theta > upper.bound)
-    if (length(too.large.idx) > 0L) {
-      theta[too.large.idx] <- upper.bound[too.large.idx]
+    upper_bound <- diag_s * 1 # * 0.99
+    too_large_idx <- which(theta > upper_bound)
+    if (length(too_large_idx) > 0L) {
+      theta[too_large_idx] <- upper_bound[too_large_idx]
     }
   }
 
   # compute SminTheta: S where we replace diagonal with 'communalities'
-  diag.theta <- diag(theta, nvar)
-  SminTheta <- S - diag.theta
-  if (force.pd) {
-    lambda <- try(lav_matrix_symmetric_diff_smallest_root(S, diag.theta),
+  diag_theta <- diag(theta, nvar)
+  s_min_theta <- s - diag_theta
+  if (force_pd) {
+    lambda <- try(lav_matrix_symmetric_diff_smallest_root(s, diag_theta),
       silent = TRUE
     )
     if (inherits(lambda, "try-error")) {
       lav_msg_warn(gettext("failed to compute lambda"))
-      SminTheta <- S - diag.theta # and hope for the best
+      s_min_theta <- s - diag_theta # and hope for the best
     } else {
       cutoff <- 1 + 1 / (nobs - 1)
       if (lambda < cutoff) {
-        lambda.star <- lambda - 1 / (nobs - 1)
-        SminTheta <- S - lambda.star * diag.theta
+        lambda_star <- lambda - 1 / (nobs - 1)
+        s_min_theta <- s - lambda_star * diag_theta
       } else {
-        SminTheta <- S - diag.theta
+        s_min_theta <- s - diag_theta
       }
     }
   } else {
     # at least we force the diagonal elements of SminTheta to be nonnegative
-    lower.bound <- diagS * 0.001
-    too.small.idx <- which(diag(SminTheta) < lower.bound)
-    if (length(too.small.idx) > 0L) {
-      diag(SminTheta)[too.small.idx] <- lower.bound[too.small.idx]
+    lower_bound <- diag_s * 0.001
+    too_small_idx <- which(diag(s_min_theta) < lower_bound)
+    if (length(too_small_idx) > 0L) {
+      diag(s_min_theta)[too_small_idx] <- lower_bound[too_small_idx]
     }
   }
 
   # compute covariances among 1) (corrected) variables, and
   #                           2) (corrected) sum-scores
-  YS.COV <- SminTheta %*% B
+  ys_cov <- s_min_theta %*% m_b
 
   # compute covariance matrix of corrected sum-scores
   # SS.COV <- t(B) %*% SminTheta %*% B
-  SS.COV <- crossprod(B, YS.COV)
+  ss_cov <- crossprod(m_b, ys_cov)
 
   # scaling factors
   # D.inv.sqrt <- diag(1/sqrt(diag(SS.COV)))
-  d.inv.sqrt <- 1 / sqrt(diag(SS.COV))
+  d_inv_sqrt <- 1 / sqrt(diag(ss_cov))
 
   # factor correlation matrix
   # PHI <- D.inv.sqrt %*% SS.COV %*% D.inv.sqrt
-  PHI <- t(SS.COV * d.inv.sqrt) * d.inv.sqrt
+  phi <- t(ss_cov * d_inv_sqrt) * d_inv_sqrt
 
   # factor *structure* matrix
   # (covariances corrected Y & corrected normalized sum-scores)
   # YS.COR <- YS.COV %*% D.inv.sqrt
-  YS.COR <- t(YS.COV) * d.inv.sqrt # transposed!
+  ys_cor <- t(ys_cov) * d_inv_sqrt # transposed!
 
-  if (zero.after.efa) {
+  if (zero_after_efa) {
     # we initially assume a saturated LAMBDA (like EFA)
     # then, we just fix the zero-elements to zero
 
-    LAMBDA <- t(solve(PHI, YS.COR)) # = unconstrained EFA version
+    mm_lambda <- t(solve(phi, ys_cor)) # = unconstrained EFA version
     # force zeroes
-    LAMBDA <- LAMBDA * B
+    mm_lambda <- mm_lambda * m_b
   } else if (quadprog) {
     # constained version using quadprog
     # only useful if (in)equality constraints are needed (TODo)
 
     # PHI MUST be positive-definite
-    PHI <- cov2cor(lav_matrix_symmetric_force_pd(PHI,
+    phi <- cov2cor(lav_matrix_symmetric_force_pd(phi,
       tol = 1e-04
     )) # option?
-    Dmat <- lav_matrix_bdiag(rep(list(PHI), nvar))
-    dvec <- as.vector(YS.COR)
-    eq.idx <- which(t(B) != 1) # these must be zero (row-wise!)
-    Rmat <- diag(nrow(Dmat))[eq.idx, , drop = FALSE]
-    bvec <- rep(0, length(eq.idx)) # optional, 0=default
+    dmat <- lav_matrix_bdiag(rep(list(phi), nvar))
+    dvec <- as.vector(ys_cor)
+    eq_idx <- which(t(m_b) != 1) # these must be zero (row-wise!)
+    rmat <- diag(nrow(dmat))[eq_idx, , drop = FALSE]
+    bvec <- rep(0, length(eq_idx)) # optional, 0=default
     out <- try(quadprog::solve.QP(
-      Dmat = Dmat, dvec = dvec, Amat = t(Rmat),
-      meq = length(eq.idx), bvec = bvec
+      Dmat = dmat, dvec = dvec, Amat = t(rmat),
+      meq = length(eq_idx), bvec = bvec
     ), silent = TRUE)
     if (inherits(out, "try-error")) {
       lav_msg_warn(gettext("solve.QP failed to find a solution"))
-      Lambda <- B
-      Lambda[lambda.nonzero.idx] <- as.numeric(NA)
-      Theta <- diag(rep(as.numeric(NA), nvar), nvar)
-      Psi <- matrix(as.numeric(NA), nfac, nfac)
-      return(list(lambda = Lambda, theta = Theta, psi = Psi))
+      lambda_1 <- m_b
+      lambda_1[lambda_nonzero_idx] <- as.numeric(NA)
+      theta_1 <- diag(rep(as.numeric(NA), nvar), nvar)
+      psi <- matrix(as.numeric(NA), nfac, nfac)
+      return(list(lambda = lambda_1, theta = theta_1, psi = psi))
     } else {
-      LAMBDA <- matrix(out$solution, nrow = nvar, ncol = nfac, byrow = TRUE)
+      mm_lambda <- matrix(out$solution, nrow = nvar, ncol = nfac, byrow = TRUE)
       # zap almost zero elements
-      LAMBDA[abs(LAMBDA) < sqrt(.Machine$double.eps)] <- 0
+      mm_lambda[abs(mm_lambda) < sqrt(.Machine$double.eps)] <- 0
     }
   } else {
     # default, if no (in)equality constraints
-    LAMBDA <- t(solve(PHI, YS.COR)) # = unconstrained EFA version
+    mm_lambda <- t(solve(phi, ys_cor)) # = unconstrained EFA version
     #YS.COR0 <- YS.COR
     #YS.COR0[t(B) != 1] <- 0
     #LAMBDA <- t(YS.COR0)
   }
 
   # rescale LAMBDA, so that 'marker' indicator == 1
-  marker.lambda <- LAMBDA[lambda.marker.idx]
-  Lambda <- t(t(LAMBDA) * (1 / marker.lambda))
+  marker_lambda <- mm_lambda[lambda_marker_idx]
+  lambda_1 <- t(t(mm_lambda) * (1 / marker_lambda))
 
   # rescale PHI, covariance metric
-  Psi <- t(PHI * marker.lambda) * marker.lambda
+  psi <- t(phi * marker_lambda) * marker_lambda
 
   # redo psi using ML mapping function?
-  if (psi.mapping) {
-    Ti <- 1 / theta
-    zero.theta.idx <- which(abs(theta) < 0.01) # be conservative
-    if (length(zero.theta.idx) > 0L) {
-      Ti[zero.theta.idx] <- 1
+  if (psi_mapping) {
+    ti <- 1 / theta
+    zero_theta_idx <- which(abs(theta) < 0.01) # be conservative
+    if (length(zero_theta_idx) > 0L) {
+      ti[zero_theta_idx] <- 1
     }
 
     # ML mapping function
-    M <- solve(t(Lambda) %*% diag(Ti, nvar) %*% Lambda) %*% t(Lambda) %*% diag(Ti, nvar)
-    Psi <- M %*% SminTheta %*% t(M)
+    m <- solve(t(lambda_1) %*% diag(ti, nvar) %*% lambda_1) %*%
+         t(lambda_1) %*% diag(ti, nvar)
+    psi <- m %*% s_min_theta %*% t(m)
   }
 
-  list(lambda = Lambda, theta = theta, psi = Psi)
+  list(lambda = lambda_1, theta = theta, psi = psi)
 }
 
 # internal function to be used inside lav_optim_noniter
@@ -185,11 +186,11 @@ lav_cfa_guttman1952_internal <- function(lavobject = NULL, # convenience
                                          lavpartable = NULL,
                                          lavdata = NULL,
                                          lavoptions = NULL,
-                                         theta.bounds = TRUE,
-                                         force.pd = TRUE,
-                                         zero.after.efa = FALSE,
+                                         theta_bounds = TRUE,
+                                         force_pd = TRUE,
+                                         zero_after_efa = FALSE,
                                          quadprog = FALSE,
-                                         psi.mapping = TRUE) {
+                                         psi_mapping = TRUE) {
   lavpta <- NULL
   if (!is.null(lavobject)) {
     stopifnot(inherits(lavobject, "lavaan"))
@@ -207,14 +208,14 @@ lav_cfa_guttman1952_internal <- function(lavobject = NULL, # convenience
     lavpartable <- lav_partable_set_cache(lavpartable, lavpta)
   }
 
-  if (missing(zero.after.efa) &&
+  if (missing(zero_after_efa) &&
     !is.null(lavoptions$estimator.args$zero.after.efa)) {
-    zero.after.efa <- lavoptions$estimator.args$zero.after.efa
+    zero_after_efa <- lavoptions$estimator.args$zero.after.efa
   }
 
-  if (missing(psi.mapping) &&
+  if (missing(psi_mapping) &&
     !is.null(lavoptions$estimator.args$psi.mapping)) {
-    psi.mapping <- lavoptions$estimator.args$psi.mapping
+    psi_mapping <- lavoptions$estimator.args$psi.mapping
   }
 
   if (missing(quadprog) &&
@@ -240,77 +241,77 @@ lav_cfa_guttman1952_internal <- function(lavobject = NULL, # convenience
   nblocks <- lav_partable_nblocks(lavpartable)
   stopifnot(nblocks == 1L) # for now
   b <- 1L
-  sample.cov <- lavsamplestats@cov[[b]]
-  nvar <- nrow(sample.cov)
-  lv.names <- lavpta$vnames$lv.regular[[b]]
-  nfac <- length(lv.names)
-  marker.idx <- lavpta$vidx$lv.marker[[b]]
-  lambda.idx <- which(names(lavmodel@GLIST) == "lambda")
-  lambda.nonzero.idx <- lavmodel@m.free.idx[[lambda.idx]]
+  sample_cov <- lavsamplestats@cov[[b]]
+  nvar <- nrow(sample_cov)
+  lv_names <- lavpta$vnames$lv.regular[[b]]
+  nfac <- length(lv_names)
+  marker_idx <- lavpta$vidx$lv.marker[[b]]
+  lambda_idx <- which(names(lavmodel@GLIST) == "lambda")
+  lambda_nonzero_idx <- lavmodel@m.free.idx[[lambda_idx]]
   # only diagonal THETA for now...
   # because if we have correlated residuals, we should remove the
   # corresponding variables as instruments before we estimate lambda...
   # (see MIIV)
-  theta.idx <- which(names(lavmodel@GLIST) == "theta") # usually '2'
-  m.theta <- lavmodel@m.free.idx[[theta.idx]]
-  nondiag.idx <- m.theta[!m.theta %in% lav_matrix_diag_idx(nvar)]
-  if (length(nondiag.idx) > 0L) {
+  theta_idx <- which(names(lavmodel@GLIST) == "theta") # usually '2'
+  m_theta <- lavmodel@m.free.idx[[theta_idx]]
+  nondiag_idx <- m_theta[!m_theta %in% lav_matrix_diag_idx(nvar)]
+  if (length(nondiag_idx) > 0L) {
     lav_msg_warn(gettext(
       "this implementation of FABIN does not handle correlated residuals yet!"))
   }
 
   # 1. obtain estimate for (diagonal elements of) THETA
   #    for now we use Spearman per factor
-  B <- matrix(0, nvar, nfac)
-  lambda.marker.idx <- (seq_len(nfac) - 1L) * nvar + marker.idx
-  B[lambda.marker.idx] <- 1L
-  B[lambda.nonzero.idx] <- 1L
+  m_b <- matrix(0, nvar, nfac)
+  lambda_marker_idx <- (seq_len(nfac) - 1L) * nvar + marker_idx
+  m_b[lambda_marker_idx] <- 1L
+  m_b[lambda_nonzero_idx] <- 1L
   theta <- numeric(nvar)
   for (f in seq_len(nfac)) {
-    ov.idx <- which(B[, f] == 1L)
-    S.fac <- sample.cov[ov.idx, ov.idx, drop = FALSE]
-    theta[ov.idx] <- lav_cfa_theta_spearman(S.fac, bounds = "wide")
+    ov_idx <- which(m_b[, f] == 1L)
+    s_fac <- sample_cov[ov_idx, ov_idx, drop = FALSE]
+    theta[ov_idx] <- lav_cfa_theta_spearman(s_fac, bounds = "wide")
   }
 
   # 2. run Guttman1952 'Multiple Groups' algorithm
   out <- lav_cfa_guttman1952(
-    S = sample.cov, marker.idx = marker.idx,
-    lambda.nonzero.idx = lambda.nonzero.idx,
+    s = sample_cov, marker_idx = marker_idx,
+    lambda_nonzero_idx = lambda_nonzero_idx,
     theta = theta,
     # experimental
-    theta.bounds = theta.bounds,
-    force.pd = force.pd,
-    zero.after.efa = zero.after.efa,
+    theta_bounds = theta_bounds,
+    force_pd = force_pd,
+    zero_after_efa = zero_after_efa,
     quadprog = quadprog,
-    psi.mapping = psi.mapping,
+    psi_mapping = psi_mapping,
     #
     nobs = lavsamplestats@ntotal
   )
-  LAMBDA <- out$lambda
-  THETA <- diag(out$theta, nvar)
-  PSI <- out$psi
+  mm_lambda <- out$lambda
+  mm_theta <- diag(out$theta, nvar)
+  mm_psi <- out$psi
 
   # store matrices in lavmodel@GLIST
-  lavmodel@GLIST$lambda <- LAMBDA
-  lavmodel@GLIST$theta <- THETA
-  lavmodel@GLIST$psi <- PSI
+  lavmodel@GLIST$lambda <- mm_lambda
+  lavmodel@GLIST$theta <- mm_theta
+  lavmodel@GLIST$psi <- mm_psi
 
   # extract free parameters only
   x <- lav_model_get_parameters(lavmodel)
 
   # apply bounds (if any)
   if (!is.null(lavpartable$lower)) {
-    lower.x <- lavpartable$lower[lavpartable$free > 0]
-    too.small.idx <- which(x < lower.x)
-    if (length(too.small.idx) > 0L) {
-      x[too.small.idx] <- lower.x[too.small.idx]
+    lower_x <- lavpartable$lower[lavpartable$free > 0]
+    too_small_idx <- which(x < lower_x)
+    if (length(too_small_idx) > 0L) {
+      x[too_small_idx] <- lower_x[too_small_idx]
     }
   }
   if (!is.null(lavpartable$upper)) {
-    upper.x <- lavpartable$upper[lavpartable$free > 0]
-    too.large.idx <- which(x > upper.x)
-    if (length(too.large.idx) > 0L) {
-      x[too.large.idx] <- upper.x[too.large.idx]
+    upper_x <- lavpartable$upper[lavpartable$free > 0]
+    too_large_idx <- which(x > upper_x)
+    if (length(too_large_idx) > 0L) {
+      x[too_large_idx] <- upper_x[too_large_idx]
     }
   }
 
