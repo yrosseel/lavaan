@@ -14,7 +14,7 @@
 # YR 31 Jan 2023: we always 'force' meanstructure = TRUE (for now)
 
 # main function
-lavPredictY <- function(object,
+lavPredictY <- function(object,                                    # nolint start
                         newdata = NULL,
                         ynames = lav_object_vnames(object, "ov.y"),
                         xnames = lav_object_vnames(object, "ov.x"),
@@ -22,7 +22,7 @@ lavPredictY <- function(object,
                         label = TRUE,
                         assemble = TRUE,
                         force.zero.mean = FALSE,
-                        lambda = 0) {
+                        lambda = 0) {                              # nolint end
   stopifnot(inherits(object, "lavaan"))
   # check object
   object <- lav_object_check_version(object)
@@ -46,21 +46,21 @@ lavPredictY <- function(object,
     } else if (is.null(lavdata@X[[1]])) {
       lav_msg_stop(gettext("no local copy of data; FIXME!"))
     } else {
-      data.obs <- lavdata@X
-      ov.names <- lavdata@ov.names
+      data_obs <- lavdata@X
+      ov_names <- lavdata@ov.names
     }
     # eXo <- lavdata@eXo
   } else {
     # newdata is given!
 
     # create lavData object
-    OV <- lavdata@ov
-    newData <- lav_lavdata(
+    ov <- lavdata@ov
+    new_data <- lav_lavdata(
       data = newdata,
       group = lavdata@group,
       ov.names = lavdata@ov.names,
       ov.names.x = lavdata@ov.names.x,
-      ordered = OV$name[OV$type == "ordered"],
+      ordered = ov$name[ov$type == "ordered"],
       lavoptions = list(
         std.ov = lavdata@std.ov,
         group.label = lavdata@group.label,
@@ -71,14 +71,14 @@ lavPredictY <- function(object,
     )
     # if ordered, check if number of levels is still the same (new in 0.6-7)
     if (lavmodel@categorical) {
-      orig.ordered.idx <- which(lavdata@ov$type == "ordered")
-      orig.ordered.lev <- lavdata@ov$nlev[orig.ordered.idx]
-      match.new.idx <- match(
-        lavdata@ov$name[orig.ordered.idx],
-        newData@ov$name
+      orig_ordered_idx <- which(lavdata@ov$type == "ordered")
+      orig_ordered_lev <- lavdata@ov$nlev[orig_ordered_idx]
+      match_new_idx <- match(
+        lavdata@ov$name[orig_ordered_idx],
+        new_data@ov$name
       )
-      new.ordered.lev <- newData@ov$nlev[match.new.idx]
-      if (any(orig.ordered.lev - new.ordered.lev != 0)) {
+      new_ordered_lev <- new_data@ov$nlev[match_new_idx]
+      if (any(orig_ordered_lev - new_ordered_lev != 0)) {
         lav_msg_stop(gettext(
           "mismatch number of categories for some ordered variables in
           newdata compared to original data."
@@ -86,9 +86,9 @@ lavPredictY <- function(object,
       }
     }
 
-    data.obs <- newData@X
+    data_obs <- new_data@X
     # eXo <- newData@eXo
-    ov.names <- newData@ov.names
+    ov_names <- new_data@ov.names
   } # newdata
 
   # check ynames
@@ -126,32 +126,32 @@ lavPredictY <- function(object,
   }
 
   # create y.idx and x.idx
-  y.idx <- x.idx <- vector("list", lavdata@ngroups)
+  y_idx <- x_idx <- vector("list", lavdata@ngroups)
   for (g in seq_len(lavdata@ngroups)) {
     # ynames in ov.names for this group?
-    missing.idx <- which(!ynames[[g]] %in% ov.names[[g]])
-    if (length(missing.idx) > 0L) {
+    missing_idx <- which(!ynames[[g]] %in% ov_names[[g]])
+    if (length(missing_idx) > 0L) {
       lav_msg_stop(
         gettext(
           "some variable names in ynames do not appear in the dataset:"
         ),
-        lav_msg_view(ynames[[g]][missing.idx], "none")
+        lav_msg_view(ynames[[g]][missing_idx], "none")
       )
     } else {
-      y.idx[[g]] <- match(ynames[[g]], ov.names[[g]])
+      y_idx[[g]] <- match(ynames[[g]], ov_names[[g]])
     }
 
     # xnames in ov.names for this group?
-    missing.idx <- which(!xnames[[g]] %in% ov.names[[g]])
-    if (length(missing.idx) > 0L) {
+    missing_idx <- which(!xnames[[g]] %in% ov_names[[g]])
+    if (length(missing_idx) > 0L) {
       lav_msg_stop(
         gettext(
           "some variable names in xnames do not appear in the dataset:"
         ),
-        lav_msg_view(xnames[[g]][missing.idx], "none")
+        lav_msg_view(xnames[[g]][missing_idx], "none")
       )
     } else {
-      x.idx[[g]] <- match(xnames[[g]], ov.names[[g]])
+      x_idx[[g]] <- match(xnames[[g]], ov_names[[g]])
     }
   }
 
@@ -162,8 +162,8 @@ lavPredictY <- function(object,
       lavobject = NULL,
       lavmodel = lavmodel, lavdata = lavdata,
       lavimplied = lavimplied,
-      data.obs = data.obs, y.idx = y.idx, x.idx = x.idx,
-      force.zero.mean = force.zero.mean,
+      data_obs = data_obs, y_idx = y_idx, x_idx = x_idx,
+      force_zero_mean = force.zero.mean,
       lambda = lambda
     )
   } else {
@@ -195,34 +195,34 @@ lavPredictY <- function(object,
   # assemble multiple groups into a single data.frame?
   if (lavdata@ngroups > 1L && assemble) {
     if (!is.null(newdata)) {
-      lavdata <- newData
+      lavdata <- new_data
     }
-    DATA <- matrix(as.numeric(NA),
+    data_1 <- matrix(as.numeric(NA),
       nrow = sum(unlist(lavdata@norig)),
       ncol = ncol(out[[1L]])
     ) # assume == per g
-    colnames(DATA) <- colnames(out[[1L]])
+    colnames(data_1) <- colnames(out[[1L]])
     for (g in seq_len(lavdata@ngroups)) {
-      DATA[lavdata@case.idx[[g]], ] <- out[[g]]
+      data_1[lavdata@case.idx[[g]], ] <- out[[g]]
     }
-    DATA <- as.data.frame(DATA, stringsAsFactors = FALSE)
+    data_1 <- as.data.frame(data_1, stringsAsFactors = FALSE)
 
     if (!is.null(newdata)) {
-      DATA[, lavdata@group] <- newdata[, lavdata@group]
+      data_1[, lavdata@group] <- newdata[, lavdata@group]
     } else {
       # add group
-      DATA[, lavdata@group] <- rep(as.character(NA), nrow(DATA))
+      data_1[, lavdata@group] <- rep(as.character(NA), nrow(data_1))
       if (lavdata@missing == "listwise") {
         # we will loose the group label of omitted variables!
-        DATA[unlist(lavdata@case.idx), lavdata@group] <-
+        data_1[unlist(lavdata@case.idx), lavdata@group] <-
           rep(lavdata@group.label, unlist(lavdata@nobs))
       } else {
-        DATA[unlist(lavdata@case.idx), lavdata@group] <-
+        data_1[unlist(lavdata@case.idx), lavdata@group] <-
           rep(lavdata@group.label, unlist(lavdata@norig))
       }
     }
 
-    res <- DATA
+    res <- data_1
   }
 
   res
@@ -237,12 +237,12 @@ lav_predict_y_conditional_mean <- function(
     lavdata = NULL,
     lavimplied = NULL,
     # new data
-    data.obs = NULL,
+    data_obs = NULL,
     # y and x
-    y.idx = NULL,
-    x.idx = NULL,
+    y_idx = NULL,
+    x_idx = NULL,
     # options
-    force.zero.mean = FALSE,
+    force_zero_mean = FALSE,
     lambda = lambda,
     level = 1L) { # not used for now
 
@@ -261,8 +261,8 @@ lav_predict_y_conditional_mean <- function(
   }
 
   # data.obs?
-  if (is.null(data.obs)) {
-    data.obs <- lavdata@X
+  if (is.null(data_obs)) {
+    data_obs <- lavdata@X
   }
 
   # checks
@@ -275,17 +275,17 @@ lav_predict_y_conditional_mean <- function(
 
   # conditional.x?
   if (lavmodel@conditional.x) {
-    SigmaHat <- lav_model_cond2joint_sigma(lavmodel)
+    sigma_hat <- lav_model_cond2joint_sigma(lavmodel)
     if (lavmodel@meanstructure) {
-      MuHat <- lav_model_cond2joint_mu(lavmodel)
+      mu_hat <- lav_model_cond2joint_mu(lavmodel)
     }
   } else {
-    SigmaHat <- lavimplied$cov
-    MuHat <- lavimplied$mean
+    sigma_hat <- lavimplied$cov
+    mu_hat <- lavimplied$mean
   }
 
   # output container
-  YPRED <- vector("list", length = lavdata@ngroups)
+  ypred <- vector("list", length = lavdata@ngroups)
 
   # run over all groups
   for (g in 1:lavdata@ngroups) {
@@ -294,58 +294,58 @@ lav_predict_y_conditional_mean <- function(
       # TODO!
       lav_msg_stop(gettext("no support for multilevel data (yet)!"))
     } else {
-      data.obs.g <- data.obs[[g]]
+      data_obs_g <- data_obs[[g]]
 
       # model-implied variance-covariance matrix for this group
-      cov.g <- SigmaHat[[g]]
+      cov_g <- sigma_hat[[g]]
 
       # model-implied mean vector for this group
-      if (force.zero.mean) {
-        mean.g <- rep(0, ncol(data.obs.g))
+      if (force_zero_mean) {
+        mean_g <- rep(0, ncol(data_obs_g))
       } else {
-        mean.g <- as.numeric(MuHat[[g]])
+        mean_g <- as.numeric(mu_hat[[g]])
       }
 
       # indices (in ov.names)
-      y.idx.g <- y.idx[[g]]
-      x.idx.g <- x.idx[[g]]
+      y_idx_g <- y_idx[[g]]
+      x_idx_g <- x_idx[[g]]
 
       # partition y/x
-      Sxx <- cov.g[x.idx.g, x.idx.g, drop = FALSE]
-      Sxy <- cov.g[x.idx.g, y.idx.g, drop = FALSE]
+      sxx <- cov_g[x_idx_g, x_idx_g, drop = FALSE]
+      sxy <- cov_g[x_idx_g, y_idx_g, drop = FALSE]
 
       # x-data only
-      Xtest <- data.obs.g[, x.idx.g, drop = FALSE]
+      xtest <- data_obs_g[, x_idx_g, drop = FALSE]
 
       # mx/my
-      mx <- mean.g[x.idx.g]
-      my <- mean.g[y.idx.g]
+      mx <- mean_g[x_idx_g]
+      my <- mean_g[y_idx_g]
 
       # center using mx
-      Xtest <- t(t(Xtest) - mx)
+      xtest <- t(t(xtest) - mx)
 
       # Apply regularization
-      Sxx <- Sxx + lambda * diag(nrow(Sxx))
+      sxx <- sxx + lambda * diag(nrow(sxx))
 
       # prediction rule
-      tmp <- Xtest %*% solve(Sxx, Sxy)
-      YPRED[[g]] <- t(t(tmp) + my)
+      tmp <- xtest %*% solve(sxx, sxy)
+      ypred[[g]] <- t(t(tmp) + my)
     } # single level
   } # g
 
-  YPRED
+  ypred
 }
 
 
 # Takes a sequence of lambdas and performs k-fold cross-validation to determine
 # the best lambda
-lavPredictY_cv <- function(
+lavPredictY_cv <- function(                    # nolint start
     object,
     data = NULL,
     xnames = lav_object_vnames(object, "ov.x"),
     ynames = lav_object_vnames(object, "ov.y"),
     n.folds = 10L,
-    lambda.seq = seq(0, 1, 0.1)) {
+    lambda.seq = seq(0, 1, 0.1)) {             # nolint end
 
   # object should be (or inherit from) a lavaan object
   stopifnot(inherits(object, "lavaan"))
@@ -363,30 +363,30 @@ lavPredictY_cv <- function(
   folds <- sample(rep(1:n.folds, length.out = nrow(data)))
 
   # extract Y-data
-  Y <- as.matrix(data[, ynames, drop = FALSE])
+  y <- as.matrix(data[, ynames, drop = FALSE])
 
   j <- 0L
   for (i in 1:n.folds) {
     indis <- which(folds == i)
-    fold.fit <- try(update(object,
+    fold_fit <- try(update(object,
       data = data[-indis, , drop = FALSE],
       warn = FALSE
     ), silent = TRUE)
-	if (inherits(fold.fit, "try-error")) {
-	  lav_msg_warn(gettext("failed fit in fold %s", i))
-	  next
-	}
+    if (inherits(fold_fit, "try-error")) {
+      lav_msg_warn(gettextf("failed fit in fold %s", i))
+      next
+    }
     for (l in lambda.seq) {
       j <- j + 1L
       yhat <- lavPredictY(
-        fold.fit,
+        fold_fit,
         newdata = data[indis, , drop = FALSE],
         xnames = xnames,
         ynames = ynames,
         lambda = l
       )
-      y.error <- Y[indis, , drop = FALSE] - yhat
-      mse <- mean(y.error * y.error)
+      y_error <- y[indis, , drop = FALSE] - yhat
+      mse <- mean(y_error * y_error)
       results[j, ] <- c(mse, l)
     }
   }
@@ -398,7 +398,7 @@ lavPredictY_cv <- function(
   )
   avg <- avg[order(avg[, 2]), ]
   names(avg) <- c("lambda", "mse")
-  lambda.min <- avg[1L, "lambda"]
+  lambda_min <- avg[1L, "lambda"]
 
-  list(results = avg, lambda.min = lambda.min)
+  list(results = avg, lambda.min = lambda_min)
 }

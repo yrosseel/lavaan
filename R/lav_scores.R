@@ -19,10 +19,10 @@
 #                 move ML-specific code to lav_scores_ml() function
 # YR 26 Apr 2025: add lav_scores_gls()
 
-lav_scores <- function(object, scaling = FALSE, # nolint
+lav_scores <- function(object, scaling = FALSE,                    # nolint start
                                        ignore.constraints = FALSE,
                                        remove.duplicated = TRUE,
-                                       remove.empty.cases = TRUE) {
+                                       remove.empty.cases = TRUE) { # nolint end
   stopifnot(inherits(object, "lavaan"))
 
   # check object
@@ -65,9 +65,9 @@ lav_scores <- function(object, scaling = FALSE, # nolint
     )
   } else if (object@Options$estimator == "WLS" && lavmodel@categorical) {
     # check if ALL observed variables are ordered
-    ov.names <- unlist(lavdata@ov.names)
-    ov.idx <- which(lavdata@ov$name %in% ov.names)
-    if (!all(lavdata@ov$type[ov.idx] == "ordered")) {
+    ov_names <- unlist(lavdata@ov.names)
+    ov_idx <- which(lavdata@ov$name %in% ov_names)
+    if (!all(lavdata@ov$type[ov_idx] == "ordered")) {
       lav_msg_stop(gettext(
         "WLS scores only available if all observed variables are ordered."))
     }
@@ -95,9 +95,9 @@ lav_scores <- function(object, scaling = FALSE, # nolint
   if (remove.empty.cases) {
     # empty.idx <- which( apply(score_matrix, 1L,
     #                        function(x) sum(is.na(x))) == ncol(score_matrix) )
-    empty.idx <- unlist(lapply(lavdata@Mp, "[[", "empty.idx"))
-    if (length(empty.idx) > 0L) {
-      score_matrix <- score_matrix[-empty.idx, , drop = FALSE]
+    empty_idx <- unlist(lapply(lavdata@Mp, "[[", "empty.idx"))
+    if (length(empty_idx) > 0L) {
+      score_matrix <- score_matrix[-empty_idx, , drop = FALSE]
     }
   }
 
@@ -121,8 +121,8 @@ lav_scores <- function(object, scaling = FALSE, # nolint
 
   # handle simple equality constraints
   if (remove.duplicated && lavmodel@eq.constraints) {
-    simple.flag <- lav_constraints_check_simple(lavmodel)
-    if (simple.flag) {
+    simple_flag <- lav_constraints_check_simple(lavmodel)
+    if (simple_flag) {
       k_matrix <- lav_constraints_r2k(lavmodel)
       score_matrix <- score_matrix %*% k_matrix
     } else {
@@ -149,14 +149,14 @@ lav_scores_ml <- function(ntab = 0L,
   score_matrix <- matrix(NA, ntot, npar)
 
   # Delta matrix
-  Delta <- lav_model_delta(lavmodel = lavmodel)
+  delta <- lav_model_delta(lavmodel = lavmodel)
 
   # rename moments
-  moments.groups <- moments
+  moments_groups <- moments
 
   for (g in 1:lavsamplestats@ngroups) {
     if (lavsamplestats@ngroups > 1) {
-      moments <- moments.groups[[g]]
+      moments <- moments_groups[[g]]
     }
     sigma_hat <- moments$cov
 
@@ -170,36 +170,36 @@ lav_scores_ml <- function(ntab = 0L,
       # if(lavmodel@meanstructure) { # mean structure
       nvar <- ncol(lavsamplestats@cov[[g]])
       mu_hat <- moments$mean
-      X <- lavdata@X[[g]]
+      x_1 <- lavdata@X[[g]]
       sigma_inv <- chol2inv(chol(sigma_hat)) # FIXME: check for pd?
-      group.w <- (unlist(lavsamplestats@nobs) / lavsamplestats@ntotal)
+      group_w <- (unlist(lavsamplestats@nobs) / lavsamplestats@ntotal)
 
-      J <- matrix(1, 1L, ntab[g]) ## FIXME: needed? better maybe rowSums/colSums?
-      J2 <- matrix(1, nvar, nvar)
-      diag(J2) <- 0.5
+      j <- matrix(1, 1L, ntab[g]) ## FIXME: needed?better maybe rowSums/colSums?
+      j2 <- matrix(1, nvar, nvar)
+      diag(j2) <- 0.5
 
       if (lavmodel@meanstructure) {
         ## scores_h1 (H1 = saturated model)
-        mean.diff <- t(t(X) - mu_hat %*% J)
-        dx_mu <- -1 * mean.diff %*% sigma_inv
+        mean_diff <- t(t(x_1) - mu_hat %*% j)
+        dx_mu <- -1 * mean_diff %*% sigma_inv
         dx_sigma <- t(matrix(apply(
-          mean.diff, 1L,
+          mean_diff, 1L,
           function(x) {
-            lav_matrix_vech(-J2 *
+            lav_matrix_vech(-j2 *
               (sigma_inv %*% (tcrossprod(x) * nobs1 - sigma_hat) %*% sigma_inv))
           }
-        ), ncol = nrow(mean.diff)))
+        ), ncol = nrow(mean_diff)))
 
         scores_h1 <- cbind(dx_mu, dx_sigma)
       } else {
-        mean.diff <- t(t(X) - lavsamplestats@mean[[g]] %*% J)
+        mean_diff <- t(t(x_1) - lavsamplestats@mean[[g]] %*% j)
         dx_sigma <- t(matrix(apply(
-          mean.diff, 1L,
+          mean_diff, 1L,
           function(x) {
-            lav_matrix_vech(-J2 *
+            lav_matrix_vech(-j2 *
               (sigma_inv %*% (tcrossprod(x) * nobs1 - sigma_hat) %*% sigma_inv))
           }
-        ), ncol = nrow(mean.diff)))
+        ), ncol = nrow(mean_diff)))
         scores_h1 <- dx_sigma
       }
       ## FIXME? Seems like we would need group.w even in the
@@ -214,52 +214,52 @@ lav_scores_ml <- function(ntab = 0L,
       # }
     } else { # incomplete data
       nsub <- ntab[g]
-      M <- lavsamplestats@missing[[g]]
-      Mp <- lavdata@Mp[[g]]
+      m <- lavsamplestats@missing[[g]]
+      mp <- lavdata@Mp[[g]]
       # pat.idx <- match(MP1$id, MP1$order)
-      group.w <- (unlist(lavsamplestats@nobs) / lavsamplestats@ntotal)
+      group_w <- (unlist(lavsamplestats@nobs) / lavsamplestats@ntotal)
 
       mu_hat <- moments$mean
       nvar <- ncol(lavsamplestats@cov[[g]])
-      score.sigma <- matrix(0, nsub, nvar * (nvar + 1) / 2)
-      score.mu <- matrix(0, nsub, nvar)
+      score_sigma <- matrix(0, nsub, nvar * (nvar + 1) / 2)
+      score_mu <- matrix(0, nsub, nvar)
 
-      for (p in seq_len(length(M))) {
+      for (p in seq_along(m)) {
         ## Data
         # X <- M[[p]][["X"]]
-        case.idx <- Mp$case.idx[[p]]
-        var.idx <- M[[p]][["var.idx"]]
-        X <- lavdata@X[[g]][case.idx, var.idx, drop = FALSE]
-        nobs <- M[[p]][["freq"]]
+        case_idx <- mp$case.idx[[p]]
+        var_idx <- m[[p]][["var.idx"]]
+        x_1 <- lavdata@X[[g]][case_idx, var_idx, drop = FALSE]
+        nobs <- m[[p]][["freq"]]
         ## Which unique entries of covariance matrix are estimated?
         ## (Used to keep track of scores in score.sigma)
-        var.idx.mat <- tcrossprod(var.idx)
-        sigma.idx <-
-          which(var.idx.mat[lower.tri(var.idx.mat, diag = TRUE)] == 1)
+        var_idx_mat <- tcrossprod(var_idx)
+        sigma_idx <-
+          which(var_idx_mat[lower.tri(var_idx_mat, diag = TRUE)] == 1)
 
-        J <- matrix(1, 1L, nobs) # [var.idx]
-        J2 <- matrix(1, nvar, nvar)[var.idx, var.idx, drop = FALSE]
-        diag(J2) <- 0.5
+        j <- matrix(1, 1L, nobs) # [var.idx]
+        j2 <- matrix(1, nvar, nvar)[var_idx, var_idx, drop = FALSE]
+        diag(j2) <- 0.5
         # FIXME: check for pd?
-        sigma_inv <- chol2inv(chol(sigma_hat[var.idx, var.idx, drop = FALSE]))
-        Mu <- mu_hat[var.idx]
-        mean.diff <- t(t(X) - Mu %*% J)
+        sigma_inv <- chol2inv(chol(sigma_hat[var_idx, var_idx, drop = FALSE]))
+        mu <- mu_hat[var_idx]
+        mean_diff <- t(t(x_1) - mu %*% j)
 
         ## Scores for missing pattern p within group g
-        score.mu[case.idx, var.idx] <- -1 * mean.diff %*% sigma_inv
-        score.sigma[case.idx, sigma.idx] <- t(matrix(apply(
-          mean.diff, 1L,
+        score_mu[case_idx, var_idx] <- -1 * mean_diff %*% sigma_inv
+        score_sigma[case_idx, sigma_idx] <- t(matrix(apply(
+          mean_diff, 1L,
           function(x) {
-            lav_matrix_vech(-J2 *
+            lav_matrix_vech(-j2 *
               (sigma_inv %*% (tcrossprod(x) -
-                sigma_hat[var.idx, var.idx, drop = FALSE]) %*% sigma_inv))
+                sigma_hat[var_idx, var_idx, drop = FALSE]) %*% sigma_inv))
           }
-        ), ncol = nrow(mean.diff)))
+        ), ncol = nrow(mean_diff)))
       }
 
-      scores_h1 <- cbind(score.mu, score.sigma)
+      scores_h1 <- cbind(score_mu, score_sigma)
       if (scaling) {
-        scores_h1 <- group.w[g] * scores_h1
+        scores_h1 <- group_w[g] * scores_h1
       }
     } # missing
 
@@ -269,7 +269,7 @@ lav_scores_ml <- function(ntab = 0L,
     #    #                lavmodel@eq.constraints.k0
     # }
     wi <- lavdata@case.idx[[g]]
-    score_matrix[wi, ] <- -scores_h1 %*% Delta[[g]]
+    score_matrix[wi, ] <- -scores_h1 %*% delta[[g]]
     if (scaling) {
       score_matrix[wi, ] <- (-1 / ntot) * score_matrix[wi, ]
     }
@@ -288,51 +288,51 @@ lav_scores_wls <- function(ntab = 0L,
                            lavmodel = NULL,
                            lavoptions = NULL) {
   # internal function
-  doDummySingleVar <- function(X, lv, ntot, num) {
-    Xd <- matrix(NA, nrow = ntot, ncol = lv[num] - 1)
-    x <- X[, num]
+  do_dummy_single_var <- function(x_1, lv, ntot, num) {
+    xd <- matrix(NA, nrow = ntot, ncol = lv[num] - 1)
+    x <- x_1[, num]
     minx <- min(x)
     categ <- minx - 1
     v <- 1
     while (categ < lv[num] - 1) {
       categ <- categ + 1
-      Xd[, v] <- ifelse(x > categ, 1, 0)
+      xd[, v] <- ifelse(x > categ, 1, 0)
       v <- v + 1
     }
 
-    Xd
+    xd
   }
 
   # containere for scores
   score_matrix <- matrix(NA, ntot, npar)
 
   # Delta matrix
-  Delta <- lav_model_delta(lavmodel = lavmodel)
+  delta <- lav_model_delta(lavmodel = lavmodel)
 
   # shortcuts
   lv <- lavdata@ov[["nlev"]]
 
   for (g in 1:lavsamplestats@ngroups) {
     nvar <- ncol(lavsamplestats@cov[[g]])
-    X <- lavdata@X[[g]]
+    x_1 <- lavdata@X[[g]]
 
     # convert categorical data to dummy variables
     # FIXME: skip continuous variables
-    Xd <- do.call(
+    xd <- do.call(
       cbind,
       lapply(
         1:nvar,
-        function(i) doDummySingleVar(X, lv, ntot, i)
+        function(i) do_dummy_single_var(x_1, lv, ntot, i)
       )
     )
 
     # e1
-    musd <- colMeans(Xd)
-    e1 <- t(t(Xd) - musd)
+    musd <- colMeans(xd)
+    e1 <- t(t(xd) - musd)
 
     # e2
-    mus <- colMeans(X)
-    y_minus_mu <- t(apply(X, 1L, function(x) x - mus))
+    mus <- colMeans(x_1)
+    y_minus_mu <- t(apply(x_1, 1L, function(x) x - mus))
     s_vech <- t(apply(y_minus_mu, 1L, function(i) {
       lavaan::lav_matrix_vech(tcrossprod(i), diagonal = FALSE)
     })) # s=c( (y1-mu1)(y2-mu2)....
@@ -343,11 +343,11 @@ lav_scores_wls <- function(ntab = 0L,
     e <- cbind(e1, e2)
 
     # weight matrix
-    W <- lavsamplestats@WLS.V[[g]]
+    m_w <- lavsamplestats@WLS.V[[g]]
 
     # combine matrices
     wi <- lavdata@case.idx[[g]]
-    score_matrix[wi, ] <- t(t(Delta[[g]]) %*% W %*% t(e))
+    score_matrix[wi, ] <- t(t(delta[[g]]) %*% m_w %*% t(e))
   } # g
 
   score_matrix
@@ -370,7 +370,7 @@ lav_scores_ls <- function(ntab = 0L,
   estimator <- lavoptions$estimator
 
   # Delta matrix
-  Delta <- lav_model_delta(lavmodel = lavmodel)
+  delta <- lav_model_delta(lavmodel = lavmodel)
 
   # implied stats
   implied <- lav_model_implied(lavmodel)
@@ -378,10 +378,10 @@ lav_scores_ls <- function(ntab = 0L,
   for (g in 1:lavsamplestats@ngroups) {
     nvar <- ncol(lavsamplestats@cov[[g]])
     nobs <- lavsamplestats@nobs[[g]]
-    Y <- lavdata@X[[g]]
+    y <- lavdata@X[[g]]
 
     # center (not using model-implied!)
-    Yc <- t(t(Y) - colMeans(Y, na.rm = TRUE))
+    yc <- t(t(y) - colMeans(y, na.rm = TRUE))
 
     # create Z where the rows_i contain the following elements:
     #  - Y_i (if meanstructure is TRUE)
@@ -389,9 +389,9 @@ lav_scores_ls <- function(ntab = 0L,
     idx1 <- lav_matrix_vech_col_idx(nvar)
     idx2 <- lav_matrix_vech_row_idx(nvar)
     if (lavmodel@meanstructure) {
-      Z <- cbind(Y, Yc[, idx1, drop = FALSE] * Yc[, idx2, drop = FALSE])
+      z <- cbind(y, yc[, idx1, drop = FALSE] * yc[, idx2, drop = FALSE])
     } else {
-      Z <- (Yc[, idx1, drop = FALSE] * Yc[, idx2, drop = FALSE])
+      z <- (yc[, idx1, drop = FALSE] * yc[, idx2, drop = FALSE])
     }
 
     # model-based sample statistics
@@ -405,24 +405,25 @@ lav_scores_ls <- function(ntab = 0L,
     # adjust sigma for N-1, so that colMeans(scores) == gradient
     # (not for the means)
     if (lavmodel@meanstructure) {
-      Z[,-seq_len(nvar)] <- Z[,-seq_len(nvar), drop = FALSE] * nobs / (nobs - 1)
+      z[, -seq_len(nvar)] <-
+                z[, -seq_len(nvar), drop = FALSE] * nobs / (nobs - 1)
     } else {
-      Z <- Z * nobs / (nobs - 1)
+      z <- z * nobs / (nobs - 1)
     }
 
     # compute Zc
-    Zc <- t(t(Z) - sigma)
+    zc <- t(t(z) - sigma)
 
     # weight matrix
     if (estimator == "ULS") {
-      W <- diag(ncol(Z))
+      m_w <- diag(ncol(z))
     } else {
-      W <- lavsamplestats@WLS.V[[g]]
+      m_w <- lavsamplestats@WLS.V[[g]]
     }
 
     # combine matrices
     wi <- lavdata@case.idx[[g]]
-    score_matrix[wi, ] <- Zc %*% W %*% Delta[[g]]
+    score_matrix[wi, ] <- zc %*% m_w %*% delta[[g]]
   } # g
 
   score_matrix

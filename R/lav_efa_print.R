@@ -1,6 +1,6 @@
 # print only (standardized) loadings
 lav_efa_print <- function(x, nd = 3L, cutoff = 0.3,
-                             dot.cutoff = 0.1, alpha.level = 0.01, ...) {
+                             dot.cutoff = 0.1, alpha.level = 0.01, ...) {  # nolint
   # unclass
   y <- unclass(x)
 
@@ -15,8 +15,8 @@ lav_efa_print <- function(x, nd = 3L, cutoff = 0.3,
     if (length(y$efa$block.label) > 0L) {
       cat(y$efa$block.label[[b]], ":\n\n", sep = "")
     }
-    LAMBDA <- unclass(y$efa$lambda[[b]])
-    lav_print_loadings(LAMBDA,
+    mm_lambda <- unclass(y$efa$lambda[[b]])
+    lav_print_loadings(mm_lambda,
       nd = nd, cutoff = cutoff,
       dot.cutoff = dot.cutoff,
       alpha.level = alpha.level,
@@ -25,12 +25,12 @@ lav_efa_print <- function(x, nd = 3L, cutoff = 0.3,
     cat("\n")
   }
 
-  invisible(LAMBDA)
+  invisible(mm_lambda)
 }
 
 # print efaList
 lav_efalist_print <- function(x, nd = 3L, cutoff = 0.3,
-                          dot.cutoff = 0.1, alpha.level = 0.01, ...) {
+                          dot.cutoff = 0.1, alpha.level = 0.01, ...) {   # nolint
   # unclass
   y <- unclass(x)
 
@@ -38,7 +38,7 @@ lav_efalist_print <- function(x, nd = 3L, cutoff = 0.3,
   y[["loadings"]] <- NULL
 
   nfits <- length(y)
-  RES <- vector("list", nfits)
+  res_1 <- vector("list", nfits)
   for (ff in seq_len(nfits)) {
     res <- lav_object_summary(y[[ff]],
       fit.measures = FALSE,
@@ -58,43 +58,47 @@ lav_efalist_print <- function(x, nd = 3L, cutoff = 0.3,
         pvalue           = FALSE
       )
     )
-    RES[[ff]] <- lav_efa_print(res,
+    res_1[[ff]] <- lav_efa_print(res,
       nd = nd, cutoff = cutoff,
       dot.cutoff = dot.cutoff,
       alpha.level = alpha.level, ...
     )
   }
 
-  invisible(RES)
+  invisible(res_1)
 }
 
 
 # print summary efaList
 lav_efalist_summary_print <- function(x, nd = 3L, cutoff = 0.3,
-                                  dot.cutoff = 0.1, alpha.level = 0.01,
+                                  dot.cutoff = 0.1, alpha.level = 0.01, # nolint
                                   ...) {
   # unclass
   y <- unclass(x)
 
+  # rename arguments which are modified inside the function
+  dot_cutoff <- dot.cutoff
+  alpha_level <- alpha.level
+
   # get nd, if it is stored as an attribute
-  ND <- attr(y, "nd")
-  if (!is.null(ND) && is.numeric(ND)) {
-    nd <- as.integer(ND)
+  nd_1 <- attr(y, "nd")
+  if (!is.null(nd_1) && is.numeric(nd_1)) {
+    nd <- as.integer(nd_1)
   }
   # get cutoff, if it is stored as an attribute
-  CT <- attr(y, "cutoff")
-  if (!is.null(CT) && is.numeric(CT)) {
-    cutoff <- CT
+  ct <- attr(y, "cutoff")
+  if (!is.null(ct) && is.numeric(ct)) {
+    cutoff <- ct
   }
   # get dot.cutoff, if it is stored as an attribute
-  DC <- attr(y, "dot.cutoff")
-  if (!is.null(DC) && is.numeric(DC)) {
-    dot.cutoff <- DC
+  dc <- attr(y, "dot.cutoff")
+  if (!is.null(dc) && is.numeric(dc)) {
+    dot_cutoff <- dc
   }
   # get alpha.level, if it is stored as an attribute
-  AL <- attr(y, "alpha.level")
-  if (!is.null(AL) && is.numeric(AL)) {
-    alpha.level <- AL
+  al <- attr(y, "alpha.level")
+  if (!is.null(al) && is.numeric(al)) {
+    alpha_level <- al
   }
 
   cat("This is ",
@@ -113,15 +117,15 @@ lav_efalist_summary_print <- function(x, nd = 3L, cutoff = 0.3,
   # estimator
   c1 <- c("Estimator")
   # second column
-  tmp.est <- toupper(x$estimator)
-  if (tmp.est == "DLS") {
-    dls.first.letter <- substr(
+  tmp_est <- toupper(x$estimator)
+  if (tmp_est == "DLS") {
+    dls_first_letter <- substr(
       x$estimator.args$dls.GammaNT,
       1L, 1L
     )
-    tmp.est <- paste("DLS-", toupper(dls.first.letter), sep = "")
+    tmp_est <- paste("DLS-", toupper(dls_first_letter), sep = "")
   }
-  c2 <- tmp.est
+  c2 <- tmp_est
 
   # additional estimator args
   if (!is.null(x$estimator.args) &&
@@ -135,17 +139,17 @@ lav_efalist_summary_print <- function(x, nd = 3L, cutoff = 0.3,
   # rotation method
   c1 <- c(c1, "Rotation method")
   if (x$rotation == "none") {
-    MM <- toupper(x$rotation)
+    mm <- toupper(x$rotation)
   } else if (x$rotation.args$orthogonal) {
-    MM <- paste(toupper(x$rotation), " ", "ORTHOGONAL",
+    mm <- paste(toupper(x$rotation), " ", "ORTHOGONAL",
       sep = ""
     )
   } else {
-    MM <- paste(toupper(x$rotation), " ", "OBLIQUE",
+    mm <- paste(toupper(x$rotation), " ", "OBLIQUE",
       sep = ""
     )
   }
-  c2 <- c(c2, MM)
+  c2 <- c(c2, mm)
 
   if (x$rotation != "none") {
     # method options
@@ -184,9 +188,9 @@ lav_efalist_summary_print <- function(x, nd = 3L, cutoff = 0.3,
 
     # Row weights
     c1 <- c(c1, "Row weights")
-    tmp.txt <- x$rotation.args$row.weights
-    c2 <- c(c2, paste(toupper(substring(tmp.txt, 1, 1)),
-      substring(tmp.txt, 2),
+    tmp_txt <- x$rotation.args$row.weights
+    c2 <- c(c2, paste(toupper(substring(tmp_txt, 1, 1)),
+      substring(tmp_txt, 2),
       sep = ""
     ))
   }
@@ -199,12 +203,12 @@ lav_efalist_summary_print <- function(x, nd = 3L, cutoff = 0.3,
   )
 
   # create character matrix
-  M <- cbind(c1, c2, deparse.level = 0)
-  colnames(M) <- rep("", ncol(M))
-  rownames(M) <- rep(" ", nrow(M))
+  m <- cbind(c1, c2, deparse.level = 0)
+  colnames(m) <- rep("", ncol(m))
+  rownames(m) <- rep(" ", nrow(m))
 
   # print
-  write.table(M, row.names = TRUE, col.names = FALSE, quote = FALSE)
+  write.table(m, row.names = TRUE, col.names = FALSE, quote = FALSE)
 
   # data
   if (!is.null(x$lavdata)) {
@@ -251,8 +255,8 @@ lav_efalist_summary_print <- function(x, nd = 3L, cutoff = 0.3,
     res <- x$model.list[[f]]
     attr(res, "nd") <- nd
     attr(res, "cutoff") <- cutoff
-    attr(res, "dot.cutoff") <- dot.cutoff
-    attr(res, "alpha.level") <- alpha.level
+    attr(res, "dot.cutoff") <- dot_cutoff
+    attr(res, "alpha.level") <- alpha_level
 
     if (nfits > 1L) {
       if (f == 1L) {

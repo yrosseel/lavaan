@@ -5,10 +5,10 @@
 # only for simsem ==> tools::testinstalledpackages succesfull without next line
 
 # used in bain
-getParameterLabels <- lav_partable_labels
+getParameterLabels <- lav_partable_labels                           # nolint start
 
 # standardize function names in lav_utils.R / 31 Oct 2025
-getCov <- function(x, lower = TRUE, diagonal = TRUE, sds = NULL,    # nolint start
+getCov <- function(x, lower = TRUE, diagonal = TRUE, sds = NULL,
                    names = paste("V", 1:nvar, sep = "")) {
   lav_deprecated("lav_getcov")
   if (diagonal) {

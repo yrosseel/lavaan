@@ -3,14 +3,14 @@
 # NOTE: does not handle redundant constraints yet!
 #
 
-lavTestWald <- function(object, constraints = NULL, verbose = FALSE) {
+lavTestWald <- function(object, constraints = NULL, verbose = FALSE) { # nolint
   # check object
   object <- lav_object_check_version(object)
 
   if (!missing(verbose)) {
-    current.verbose <- lav_verbose()
+    current_verbose <- lav_verbose()
     if (lav_verbose(verbose))
-      on.exit(lav_verbose(current.verbose), TRUE)
+      on.exit(lav_verbose(current_verbose), TRUE)
   }
   if (object@optim$npar > 0L && !object@optim$converged) {
     lav_msg_stop(gettext("model did not converge"))
@@ -26,23 +26,23 @@ lavTestWald <- function(object, constraints = NULL, verbose = FALSE) {
   lavpartable <- data.frame(object@ParTable)
 
   # remove == constraints from parTable
-  eq.idx <- which(lavpartable$op == "==")
-  if (length(eq.idx) > 0L) {
-    lavpartable <- lavpartable[-eq.idx, ]
+  eq_idx <- which(lavpartable$op == "==")
+  if (length(eq_idx) > 0L) {
+    lavpartable <- lavpartable[-eq_idx, ]
   }
   partable <- as.list(lavpartable)
 
   # parse constraints
-  FLAT <- lavParseModelString(constraints, parser = lavoptions$parser)
-  CON <- attr(FLAT, "constraints")
-  LIST <- list()
-  if (length(CON) > 0L) {
-    lhs <- unlist(lapply(CON, "[[", "lhs"))
-    op <- unlist(lapply(CON, "[[", "op"))
-    rhs <- unlist(lapply(CON, "[[", "rhs"))
-    LIST$lhs <- c(LIST$lhs, lhs)
-    LIST$op <- c(LIST$op, op)
-    LIST$rhs <- c(LIST$rhs, rhs)
+  flat <- lavParseModelString(constraints, parser = lavoptions$parser)
+  con <- attr(flat, "constraints")
+  list_1 <- list()
+  if (length(con) > 0L) {
+    lhs <- unlist(lapply(con, "[[", "lhs"))
+    op <- unlist(lapply(con, "[[", "op"))
+    rhs <- unlist(lapply(con, "[[", "rhs"))
+    list_1$lhs <- c(list_1$lhs, lhs)
+    list_1$op <- c(list_1$op, op)
+    list_1$rhs <- c(list_1$rhs, rhs)
   } else {
     lav_msg_stop(gettext(
       "no equality constraints found in constraints argument"))
@@ -52,46 +52,48 @@ lavTestWald <- function(object, constraints = NULL, verbose = FALSE) {
   theta <- lav_model_get_parameters(lavmodel)
 
   # build constraint function
-  ceq.function <- lav_partable_constraints_ceq(
+  ceq_function <- lav_partable_constraints_ceq(
     partable = partable,
-    con = LIST, debug = FALSE
+    con = list_1, debug = FALSE
   )
   # compute jacobian restrictions
-  JAC <- try(lav_func_jacobian_complex(func = ceq.function, x = theta),
+  jac <- try(lav_func_jacobian_complex(func = ceq_function, x = theta),
     silent = TRUE
   )
-  if (inherits(JAC, "try-error")) { # eg. pnorm()
-    JAC <- lav_func_jacobian_simple(func = ceq.function, x = theta)
+  if (inherits(jac, "try-error")) { # eg. pnorm()
+    jac <- lav_func_jacobian_simple(func = ceq_function, x = theta)
   }
 
   # check for linear redundant rows in JAC
-  out <- lav_matrix_rref(t(JAC))
-  ranK <- length(out$pivot)
-  if (ranK < nrow(JAC)) {
-    lav_msg_warn(gettext("Jacobian of constraints is rank deficient. Some constraints may be redundant, and have been removed."))
+  out <- lav_matrix_rref(t(jac))
+  ran_k <- length(out$pivot)
+  if (ran_k < nrow(jac)) {
+    lav_msg_warn(gettext(
+      "Jacobian of constraints is rank deficient. Some constraints",
+      " may be redundant, and have been removed."))
   }
-  JAC <- JAC[out$pivot, , drop = FALSE]
+  jac <- jac[out$pivot, , drop = FALSE]
 
   if (lav_verbose()) {
     cat("Restriction matrix (jacobian):\n")
-    print(JAC)
+    print(jac)
     cat("\n")
   }
 
   # linear restriction
-  theta.r <- ceq.function(theta)
-  theta.r <- theta.r[out$pivot]
+  theta_r <- ceq_function(theta)
+  theta_r <- theta_r[out$pivot]
 
   if (lav_verbose()) {
     cat("Restricted theta values:\n")
-    print(theta.r)
+    print(theta_r)
     cat("\n")
   }
 
   # get VCOV
   # VCOV <- vcov(object, labels = FALSE)
   # avoid S4 dispatch
-  VCOV <- lav_object_inspect_vcov(object,
+  vcov_1 <- lav_object_inspect_vcov(object,
     standardized = FALSE,
     free.only = TRUE,
     add.labels = FALSE,
@@ -100,21 +102,21 @@ lavTestWald <- function(object, constraints = NULL, verbose = FALSE) {
   )
 
   # restricted vcov
-  VCOV.r <- JAC %*% VCOV %*% t(JAC)
+  vcov_r <- jac %*% vcov_1 %*% t(jac)
 
   # fixme: what if VCOV.r is singular?
   # Wald test statistic
-  Wald <- as.numeric(t(theta.r) %*% solve(VCOV.r) %*% theta.r)
+  wald <- as.numeric(t(theta_r) %*% solve(vcov_r) %*% theta_r)
 
   # df
-  Wald.df <- ranK
+  wald_df <- ran_k
 
   # p-value based on chisq
-  Wald.pvalue <- 1 - pchisq(Wald, df = Wald.df)
+  wald_pvalue <- 1 - pchisq(wald, df = wald_df)
 
   # prepare output
   out <- list(
-    stat = Wald, df = Wald.df, p.value = Wald.pvalue,
+    stat = wald, df = wald_df, p.value = wald_pvalue,
     se = lavoptions$se
   )
 

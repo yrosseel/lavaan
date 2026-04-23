@@ -1,13 +1,13 @@
 # merge two parameter tables
 # - but allow different number of columns
-lav_partable_merge <- function(pt1 = NULL, pt2 = NULL,
+lav_partable_merge <- function(pt1 = NULL, pt2 = NULL,        # nolint start
                                remove.duplicated = FALSE,
                                fromLast = FALSE,
-                               warn = TRUE) {
+                               warn = TRUE) {                 # nolint end
   if (!missing(warn)) {
-    current.warn <- lav_warn()
+    current_warn <- lav_warn()
     if (lav_warn(warn))
-      on.exit(lav_warn(current.warn), TRUE)
+      on.exit(lav_warn(current_warn), TRUE)
   }
   # check for empty pt2
   if (is.null(pt2) || length(pt2) == 0L) {
@@ -27,7 +27,7 @@ lav_partable_merge <- function(pt1 = NULL, pt2 = NULL,
   if (is.null(pt1$block) && is.null(pt2$block)) {
     pt1$block <- rep(1L, length(pt1$lhs))
     pt2$block <- rep(1L, length(pt2$lhs))
-    TMP <- rbind(
+    tmp <- rbind(
       pt1[, c("lhs", "op", "rhs", "block")],
       pt2[, c("lhs", "op", "rhs", "block")]
     )
@@ -37,7 +37,7 @@ lav_partable_merge <- function(pt1 = NULL, pt2 = NULL,
     } else if (is.null(pt2$block) && !is.null(pt1$block)) {
       pt2$block <- rep(1L, length(pt2$lhs))
     }
-    TMP <- rbind(
+    tmp <- rbind(
       pt1[, c("lhs", "op", "rhs", "block")],
       pt2[, c("lhs", "op", "rhs", "block")]
     )
@@ -128,12 +128,12 @@ lav_partable_merge <- function(pt1 = NULL, pt2 = NULL,
   if (remove.duplicated) {
     # if fromLast = TRUE, idx is in pt1
     # if fromLast = FALSE, idx is in pt2
-    idx <- which(duplicated(TMP, fromLast = fromLast))
+    idx <- which(duplicated(tmp, fromLast = fromLast))
 
     if (length(idx)) {
       lav_msg_warn(
         gettext("duplicated parameters are ignored:"),
-        paste(apply(TMP[idx, c("lhs", "op", "rhs")], 1,
+        paste(apply(tmp[idx, c("lhs", "op", "rhs")], 1,
           paste,
           collapse = " "
         ), collapse = "\n")
@@ -147,7 +147,7 @@ lav_partable_merge <- function(pt1 = NULL, pt2 = NULL,
     }
   } else if (!is.null(pt1$start) && !is.null(pt2$start)) {
     # copy start values from pt1 to pt2
-    for (i in 1:length(pt1$lhs)) {
+    for (i in seq_along(pt1$lhs)) {
       idx <- which(pt2$lhs == pt1$lhs[i] &
         pt2$op == pt1$op[i] &
         pt2$rhs == pt1$rhs[i] &
@@ -166,31 +166,31 @@ lav_partable_merge <- function(pt1 = NULL, pt2 = NULL,
     pt2$id <- (nid + 1L):(nid + nrow(pt2))
   }
 
-  NEW <- base::merge(pt1, pt2, all = TRUE, sort = FALSE)
+  new_1 <- base::merge(pt1, pt2, all = TRUE, sort = FALSE)
 
   # make sure group/block/level are zero (or "") if
   # op %in% c("==", "<", ">", ":=")
-  op.idx <- which(NEW$op %in% c("==", "<", ">", ":="))
-  if (length(op.idx) > 0L) {
-    if (!is.null(NEW$block)) {
+  op_idx <- which(new_1$op %in% c("==", "<", ">", ":="))
+  if (length(op_idx) > 0L) {
+    if (!is.null(new_1$block)) {
       # ALWAYS integer
-      NEW$block[op.idx] <- 0L
+      new_1$block[op_idx] <- 0L
     }
-    if (!is.null(NEW$group)) {
-      if (is.character(NEW$level)) {
-        NEW$group[op.idx] <- ""
+    if (!is.null(new_1$group)) {
+      if (is.character(new_1$level)) {
+        new_1$group[op_idx] <- ""
       } else {
-        NEW$group[op.idx] <- 0L
+        new_1$group[op_idx] <- 0L
       }
     }
-    if (!is.null(NEW$level)) {
-      if (is.character(NEW$level)) {
-        NEW$level[op.idx] <- ""
+    if (!is.null(new_1$level)) {
+      if (is.character(new_1$level)) {
+        new_1$level[op_idx] <- ""
       } else {
-        NEW$level[op.idx] <- 0L
+        new_1$level[op_idx] <- 0L
       }
     }
   }
 
-  NEW
+  new_1
 }

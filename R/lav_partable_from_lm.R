@@ -4,30 +4,30 @@
 #     fixed again Apr 29, 2025.
 
 lav_partable_from_lm <- function(object, est = FALSE, label = FALSE,
-                                 as.data.frame. = FALSE) {
+                                 as.data.frame. = FALSE) {           # nolint
   # sanity check
   if (!inherits(object, "lm")) {
     lav_msg_stop(gettext("object must be of class lm"))
   }
 
-  objectTerms <- terms(object)
+  object_terms <- terms(object)
 
-  responseIndex <- attr(objectTerms, "response")
-  varNames <- as.character(attr(objectTerms, "variables"))[-1]
-  responseName <- varNames[responseIndex]
+  response_index <- attr(object_terms, "response")
+  var_names <- as.character(attr(object_terms, "variables"))[-1]
+  response_name <- var_names[response_index]
 
-  predCoef <- coef(object)
-  predNames <- names(predCoef)
+  pred_coef <- coef(object)
+  pred_names <- names(pred_coef)
 
-  lhs <- rep(responseName, length(predNames))
-  op <- rep("~", length(predNames))
-  rhs <- predNames
+  lhs <- rep(response_name, length(pred_names))
+  op <- rep("~", length(pred_names))
+  rhs <- pred_names
 
   # intercept?
-  if (attr(objectTerms, "intercept")) {
-    int.idx <- which(rhs == "(Intercept)")
-    op[int.idx] <- "~1"
-    rhs[int.idx] <- ""
+  if (attr(object_terms, "intercept")) {
+    int_idx <- which(rhs == "(Intercept)")
+    op[int_idx] <- "~1"
+    rhs[int_idx] <- ""
   }
 
   # always add residual variance?
@@ -42,13 +42,13 @@ lav_partable_from_lm <- function(object, est = FALSE, label = FALSE,
   if (est) {
     # partable$est <- c(as.numeric(predCoef),
     #                  sum(resid(object)^2) / object$df.residual)
-    partable$est <- as.numeric(predCoef)
+    partable$est <- as.numeric(pred_coef)
   }
 
   # include 'label' column?
   if (label) {
     # partable$label <- c(predNames, responseName)
-    partable$label <- predNames
+    partable$label <- pred_names
 
     # convert all ':' to '.'
     partable$label <- gsub("[:()]", ".", partable$label)

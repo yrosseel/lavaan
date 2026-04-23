@@ -4,17 +4,17 @@
 # YR 23 Oct 2024: switch to "c.r"
 # LDW 9 Jan 2026: remove c.r option
 
-lavParseModelString <- function(model.syntax = "", as.data.frame. = FALSE,
+lavParseModelString <- function(model.syntax = "", as.data.frame. = FALSE,   # nolint
                                 parser = "new", warn = TRUE, debug = FALSE) {
   if (!missing(debug)) {
-    current.debug <- lav_debug()
+    current_debug <- lav_debug()
     if (lav_debug(debug))
-      on.exit(lav_debug(current.debug), TRUE)
+      on.exit(lav_debug(current_debug), TRUE)
   }
   if (!missing(warn)) {
-    current.warn <- lav_warn()
+    current_warn <- lav_warn()
     if (lav_warn(warn))
-      on.exit(lav_warn(current.warn), TRUE)
+      on.exit(lav_warn(current_warn), TRUE)
   }
   parser <- tolower(parser)
   if (!parser %in% c("old", "new")) {
@@ -25,8 +25,8 @@ lavParseModelString <- function(model.syntax = "", as.data.frame. = FALSE,
   if (parser == "old") {
     # original/classic parser
     out <- lav_parse_model_string_orig(
-      model.syntax = model.syntax,
-      as.data.frame. = as.data.frame.
+      model_syntax = model.syntax,
+      as_data_frame = as.data.frame.
     )
   } else {
     # new parser
@@ -35,112 +35,111 @@ lavParseModelString <- function(model.syntax = "", as.data.frame. = FALSE,
       as_data_frame = as.data.frame.
       )
   }
-
   out
 }
 
 # the 'original' parser (up to 0.6-17)
-lav_parse_model_string_orig <- function(model.syntax = "",
-                                        as.data.frame. = FALSE) {
+lav_parse_model_string_orig <- function(model_syntax = "",
+                                        as_data_frame = FALSE) {
   # check for empty syntax
-  if (length(model.syntax) == 0) {
+  if (length(model_syntax) == 0) {
     lav_msg_stop(gettextf("lavaan ERROR: empty model syntax"))
   }
 
   # remove comments prior to split:
   # match from comment character to newline, but don't eliminate newline
-  model.syntax <- gsub("[#!].*(?=\n)", "", model.syntax, perl = TRUE)
+  model_syntax <- gsub("[#!].*(?=\n)", "", model_syntax, perl = TRUE)
 
   # replace semicolons with newlines prior to split
-  model.syntax <- gsub(";", "\n", model.syntax, fixed = TRUE)
+  model_syntax <- gsub(";", "\n", model_syntax, fixed = TRUE)
 
   # remove all whitespace prior to split
-  model.syntax <- gsub("[ \t]+", "", model.syntax, perl = TRUE)
+  model_syntax <- gsub("[ \t]+", "", model_syntax, perl = TRUE)
   # remove any occurrence of >= 2 consecutive newlines to eliminate
   # blank statements; this retains a blank newline at the beginning,
   # if such exists, but parser will not choke because of start.idx
-  model.syntax <- gsub("\n{2,}", "\n", model.syntax, perl = TRUE)
+  model_syntax <- gsub("\n{2,}", "\n", model_syntax, perl = TRUE)
 
   # replace 'strange' tildes (in some locales) (new in 0.6-6)
-  model.syntax <- gsub(pattern = "\u02dc", replacement = "~", model.syntax)
+  model_syntax <- gsub(pattern = "\u02dc", replacement = "~", model_syntax)
 
   # break up in lines
-  model <- unlist(strsplit(model.syntax, "\n"))
+  model <- unlist(strsplit(model_syntax, "\n"))
 
   # check for multi-line formulas: they contain no operator symbol
   # but before we do that, we remove all strings between double quotes
   # to avoid confusion with for example equal("f1=~x1") statements
   # model.simple <- gsub("\\(.*\\)\\*", "MODIFIER*", model)
-  model.simple <- gsub("\\\".[^\\\"]*\\\"", "LABEL", model)
+  model_simple <- gsub("\\\".[^\\\"]*\\\"", "LABEL", model)
 
   # start.idx <- grep("[~=<>:|%]", model.simple)
   operators <- c(
     "=~", "<~", "~*~", "~~", "~", "==", "<", ">", ":=",
     ":", "\\|", "%"
   )
-  lhs.modifiers <- c("efa")
-  operators.extra <- c(operators, lhs.modifiers)
-  start.idx <- grep(paste(operators.extra, collapse = "|"), model.simple)
+  lhs_modifiers <- c("efa")
+  operators_extra <- c(operators, lhs_modifiers)
+  start_idx <- grep(paste(operators_extra, collapse = "|"), model_simple)
 
   # check for empty start.idx: no operator found (new in 0.6-1)
-  if (length(start.idx) == 0L) {
+  if (length(start_idx) == 0L) {
     lav_msg_stop(gettext("lavaan ERROR: model does not contain lavaan
                           syntax (no operators found)"))
   }
 
   # check for lonely lhs modifiers (only efa() for now):
   # if found, remove the following start.idx
-  efa.idx <- grep("efa\\(", model.simple)
-  op.idx <- grep(paste(operators, collapse = "|"), model.simple)
-  both.idx <- which(efa.idx %in% op.idx)
-  if (length(both.idx) > 0L) {
-    efa.idx <- efa.idx[-which(efa.idx %in% op.idx)]
+  efa_idx <- grep("efa\\(", model_simple)
+  op_idx <- grep(paste(operators, collapse = "|"), model_simple)
+  both_idx <- which(efa_idx %in% op_idx)
+  if (length(both_idx) > 0L) {
+    efa_idx <- efa_idx[-which(efa_idx %in% op_idx)]
   }
-  if (length(efa.idx) > 0L) {
-    start.idx <- start.idx[-(match(efa.idx, start.idx) + 1L)]
+  if (length(efa_idx) > 0L) {
+    start_idx <- start_idx[-(match(efa_idx, start_idx) + 1L)]
   }
 
   # check for non-empty string, without an operator in the first lines
   # (new in 0.6-1)
-  if (start.idx[1] > 1L) {
+  if (start_idx[1] > 1L) {
     # two possibilities:
     # - we have an empty line (ok)
     # - the element contains no operator (warn!)
-    for (el in 1:(start.idx[1] - 1L)) {
+    for (el in 1:(start_idx[1] - 1L)) {
       # not empty?
-      if (nchar(model.simple[el]) > 0L) {
+      if (nchar(model_simple[el]) > 0L) {
         lav_msg_warn(gettextf("lavaan WARNING: no operator found in this
-                               syntax line: ", model.simple[el], "\n",
+                               syntax line: ", model_simple[el], "\n",
                               "     This syntax line will be ignored!"))
       }
     }
   }
 
-  end.idx <- c(start.idx[-1] - 1, length(model))
-  model.orig <- model
-  model <- character(length(start.idx))
-  for (i in seq_along(start.idx)) {
-    model[i] <- paste(model.orig[start.idx[i]:end.idx[i]], collapse = "")
+  end_idx <- c(start_idx[-1] - 1, length(model))
+  model_orig <- model
+  model <- character(length(start_idx))
+  for (i in seq_along(start_idx)) {
+    model[i] <- paste(model_orig[start_idx[i]:end_idx[i]], collapse = "")
   }
 
   # ok, in all remaining lines, we should have an operator outside the ""
-  model.simple <- gsub("\\\".[^\\\"]*\\\"", "LABEL", model)
-  idx.wrong <- which(!grepl(
+  model_simple <- gsub("\\\".[^\\\"]*\\\"", "LABEL", model)
+  idx_wrong <- which(!grepl(
     paste(operators, collapse = "|"),
-    model.simple
+    model_simple
   ))
   # idx.wrong <- which(!grepl("[~=<>:|%]", model.simple))
-  if (length(idx.wrong) > 0) {
+  if (length(idx_wrong) > 0) {
     cat("lavaan: missing operator in formula(s):\n")
-    print(model[idx.wrong])
+    print(model[idx_wrong])
     lav_msg_stop(gettext("lavaan ERROR: syntax error in lavaan model syntax"))
   }
 
   # but perhaps we have a '+' as the first character?
-  idx.wrong <- which(grepl("^\\+", model))
-  if (length(idx.wrong) > 0) {
+  idx_wrong <- which(grepl("^\\+", model))
+  if (length(idx_wrong) > 0) {
     cat("lavaan: some formula(s) start with a plus (+) sign:\n")
-    print(model[idx.wrong])
+    print(model[idx_wrong])
     lav_msg_stop(gettext("lavaan ERROR: syntax error in lavaan model syntax"))
   }
 
@@ -149,27 +148,27 @@ lav_parse_model_string_orig <- function(model.syntax = "",
   # with a left-hand-side (lhs), an operator (eg "=~"), and a
   # right-hand-side (rhs)
   # both lhs and rhs can have a modifier
-  FLAT.lhs <- character(0)
-  FLAT.op <- character(0)
-  FLAT.rhs <- character(0)
-  FLAT.rhs.mod.idx <- integer(0)
-  FLAT.block <- integer(0) # keep track of groups using ":" operator
+  flat_lhs <- character(0)
+  flat_op <- character(0)
+  flat_rhs <- character(0)
+  flat_rhs_mod_idx <- integer(0)
+  flat_block <- integer(0) # keep track of groups using ":" operator
 
-  FLAT.fixed <- character(0) # only for display purposes!
-  FLAT.start <- character(0) # only for display purposes!
-  FLAT.lower <- character(0) # only for display purposes!
-  FLAT.upper <- character(0) # only for display purposes!
-  FLAT.label <- character(0) # only for display purposes!
-  FLAT.prior <- character(0)
-  FLAT.efa <- character(0)
-  FLAT.rv <- character(0)
-  FLAT.idx <- 0L
-  MOD.idx <- 0L
-  CON.idx <- 0L
-  MOD <- vector("list", length = 0L)
-  CON <- vector("list", length = 0L)
-  BLOCK <- 1L
-  BLOCK_OP <- FALSE
+  flat_fixed <- character(0) # only for display purposes!
+  flat_start <- character(0) # only for display purposes!
+  flat_lower <- character(0) # only for display purposes!
+  flat_upper <- character(0) # only for display purposes!
+  flat_label <- character(0) # only for display purposes!
+  flat_prior <- character(0)
+  flat_efa <- character(0)
+  flat_rv <- character(0)
+  flat_idx <- 0L
+  mod_idx_1 <- 0L
+  con_idx <- 0L
+  mod_1 <- vector("list", length = 0L)
+  con <- vector("list", length = 0L)
+  block <- 1L
+  block_op <- FALSE
   for (i in seq_along(model)) {
     x <- model[i]
     if (lav_debug()) {
@@ -179,41 +178,41 @@ lav_parse_model_string_orig <- function(model.syntax = "",
     }
 
     # 1. which operator is used?
-    line.simple <- gsub("\\\".[^\\\"]*\\\"", "LABEL", x)
+    line_simple <- gsub("\\\".[^\\\"]*\\\"", "LABEL", x)
     # "=~" operator?
-    if (grepl("=~", line.simple, fixed = TRUE)) {
+    if (grepl("=~", line_simple, fixed = TRUE)) {
       op <- "=~"
       # "<~" operator?
-    } else if (grepl("<~", line.simple, fixed = TRUE)) {
+    } else if (grepl("<~", line_simple, fixed = TRUE)) {
       op <- "<~"
-    } else if (grepl("~*~", line.simple, fixed = TRUE)) {
+    } else if (grepl("~*~", line_simple, fixed = TRUE)) {
       op <- "~*~"
       # "~~" operator?
-    } else if (grepl("~~", line.simple, fixed = TRUE)) {
+    } else if (grepl("~~", line_simple, fixed = TRUE)) {
       op <- "~~"
       # "~" operator?
-    } else if (grepl("~", line.simple, fixed = TRUE)) {
+    } else if (grepl("~", line_simple, fixed = TRUE)) {
       op <- "~"
       # "==" operator?
-    } else if (grepl("==", line.simple, fixed = TRUE)) {
+    } else if (grepl("==", line_simple, fixed = TRUE)) {
       op <- "=="
       # "<" operator?
-    } else if (grepl("<", line.simple, fixed = TRUE)) {
+    } else if (grepl("<", line_simple, fixed = TRUE)) {
       op <- "<"
       # ">" operator?
-    } else if (grepl(">", line.simple, fixed = TRUE)) {
+    } else if (grepl(">", line_simple, fixed = TRUE)) {
       op <- ">"
       # ":=" operator?
-    } else if (grepl(":=", line.simple, fixed = TRUE)) {
+    } else if (grepl(":=", line_simple, fixed = TRUE)) {
       op <- ":="
       # ":" operator?
-    } else if (grepl(":", line.simple, fixed = TRUE)) {
+    } else if (grepl(":", line_simple, fixed = TRUE)) {
       op <- ":"
       # "|" operator?
-    } else if (grepl("|", line.simple, fixed = TRUE)) {
+    } else if (grepl("|", line_simple, fixed = TRUE)) {
       op <- "|"
       # "%" operator?
-    } else if (grepl("%", line.simple, fixed = TRUE)) {
+    } else if (grepl("%", line_simple, fixed = TRUE)) {
       op <- "%"
     } else {
       lav_msg_stop(gettext("unknown operator in ", model[i]))
@@ -222,19 +221,20 @@ lav_parse_model_string_orig <- function(model.syntax = "",
     # 2. split by operator (only the *first* occurence!)
     # check first if equal/label modifier has been used on the LEFT!
     if (substr(x, 1, 6) == "label(") {
-      lav_msg_stop(gettext("label modifier can not be used on the left-hand side of the operator"))
+      lav_msg_stop(gettext("label modifier can not be used on the",
+            "left-hand side of the operator"))
     }
     if (op == "|") {
-      op.idx <- regexpr("\\|", x)
+      op_idx <- regexpr("\\|", x)
     } else if (op == "~*~") {
-      op.idx <- regexpr("~\\*~", x)
+      op_idx <- regexpr("~\\*~", x)
     } else {
-      op.idx <- regexpr(op, x)
+      op_idx <- regexpr(op, x)
     }
-    lhs <- substr(x, 1L, op.idx - 1L)
+    lhs <- substr(x, 1L, op_idx - 1L)
 
     # right-hand side string
-    rhs <- substr(x, op.idx + attr(op.idx, "match.length"), nchar(x))
+    rhs <- substr(x, op_idx + attr(op_idx, "match.length"), nchar(x))
 
     # check if first character of rhs is '+'; if so, remove silently
     # (for those who copied multiline R input from a website/pdf)
@@ -247,8 +247,8 @@ lav_parse_model_string_orig <- function(model.syntax = "",
       # remove quotes, if any
       lhs <- gsub("\\\"", "", lhs)
       rhs <- gsub("\\\"", "", rhs)
-      CON.idx <- CON.idx + 1L
-      CON[[CON.idx]] <- list(op = op, lhs = lhs, rhs = rhs, user = 1L)
+      con_idx <- con_idx + 1L
+      con[[con_idx]] <- list(op = op, lhs = lhs, rhs = rhs, user = 1L)
       next
     }
 
@@ -265,33 +265,33 @@ lav_parse_model_string_orig <- function(model.syntax = "",
       }
 
       # check lhs (new in 0.6-4) - note: class is for nlsem
-      lhs.orig <- lhs
+      lhs_orig <- lhs
       lhs <- tolower(lhs)
       if (!lhs %in% c("group", "level", "block", "class")) {
         lav_msg_stop(gettextf(
           "unknown block identifier: %s. Block identifier should be
-           group, level or block.", dQuote(lhs.orig))
+           group, level or block.", dQuote(lhs_orig))
         )
       }
 
-      FLAT.idx <- FLAT.idx + 1L
-      FLAT.lhs[FLAT.idx] <- lhs
-      FLAT.op[FLAT.idx] <- op
-      FLAT.rhs[FLAT.idx] <- rhs
-      FLAT.fixed[FLAT.idx] <- ""
-      FLAT.start[FLAT.idx] <- ""
-      FLAT.lower[FLAT.idx] <- ""
-      FLAT.upper[FLAT.idx] <- ""
-      FLAT.label[FLAT.idx] <- ""
-      FLAT.prior[FLAT.idx] <- ""
-      FLAT.efa[FLAT.idx] <- ""
-      FLAT.rv[FLAT.idx] <- ""
-      FLAT.rhs.mod.idx[FLAT.idx] <- 0L
-      if (BLOCK_OP) {
-        BLOCK <- BLOCK + 1L
+      flat_idx <- flat_idx + 1L
+      flat_lhs[flat_idx] <- lhs
+      flat_op[flat_idx] <- op
+      flat_rhs[flat_idx] <- rhs
+      flat_fixed[flat_idx] <- ""
+      flat_start[flat_idx] <- ""
+      flat_lower[flat_idx] <- ""
+      flat_upper[flat_idx] <- ""
+      flat_label[flat_idx] <- ""
+      flat_prior[flat_idx] <- ""
+      flat_efa[flat_idx] <- ""
+      flat_rv[flat_idx] <- ""
+      flat_rhs_mod_idx[flat_idx] <- 0L
+      if (block_op) {
+        block <- block + 1L
       }
-      FLAT.block[FLAT.idx] <- BLOCK
-      BLOCK_OP <- TRUE
+      flat_block[flat_idx] <- block
+      block_op <- TRUE
       next
     }
 
@@ -304,29 +304,30 @@ lav_parse_model_string_orig <- function(model.syntax = "",
     # this usually only happens for latent variable names
     #
     # check should not come earlier, as we do not need it for :,==,<,>,:=
-    LHS <- strsplit(lhs, split = "+", fixed = TRUE)[[1]]
+    lhs_1 <- strsplit(lhs, split = "+", fixed = TRUE)[[1]]
     # remove modifiers
-    LHS <- gsub("^\\S*\\*", "", LHS)
-    if (!all(make.names(LHS) == LHS)) {
+    lhs_1 <- gsub("^\\S*\\*", "", lhs_1)
+    if (!all(make.names(lhs_1) == lhs_1)) {
       lav_msg_stop(gettextf(
         "lavaan ERROR: left hand side (lhs) of this formula: %1$s %2$s %3$s
         contains either a reserved word (in R) or an illegal character: %4$s.
         See ?reserved for a list of reserved words in R. Please use a variable
         name that is not a reserved word in R and use only characters, digits,
         or the dot symbol.",
-        lhs, op, rhs, dQuote(LHS[!make.names(LHS) == LHS])
+        lhs, op, rhs, dQuote(lhs_1[!make.names(lhs_1) == lhs_1])
       ))
     }
 
-    lhs.formula <- as.formula(paste("~", lhs))
-    lhs.out <- lav_syntax_parse_rhs(rhs = lhs.formula[[2L]], op = op)
-    lhs.names <- names(lhs.out)
+    lhs_formula <- as.formula(paste("~", lhs))
+    lhs_out <- lav_syntax_parse_rhs(rhs = lhs_formula[[2L]], op = op)
+    lhs_names <- names(lhs_out)
 
 
     # new in 0.6-4
     # handle LHS modifiers (if any)
     # if(sum(sapply(lhs.out, length)) > 0L) {
-    # warning("lavaan WARNING: left-hand side of formula below contains modifier:\n", x,"\n")
+    # warning("lavaan WARNING: left-hand side of formula ",
+    #         "below contains modifier:\n", x,"\n")
     # }
 
     # 4. lav_syntax_parse_rhs (as rhs of a single-sided formula)
@@ -340,15 +341,16 @@ lav_parse_model_string_orig <- function(model.syntax = "",
 
     # new in 0.6-6, check for rhs NAMES that are reserved names
     # like in foo =~ in + out
-    RHS <- strsplit(rhs, split = "+", fixed = TRUE)[[1]]
-    RHS.names <- gsub("^\\S*\\*", "", RHS)
-    BAD <- c("if", "else", "repeat", "while", "function", "for", "in")
-    if (any(RHS.names %in% c(BAD, "NA"))) { # "NA" added in 0.6-8
+    rhs_1 <- strsplit(rhs, split = "+", fixed = TRUE)[[1]]
+    rhs_names <- gsub("^\\S*\\*", "", rhs_1)
+    bad <- c("if", "else", "repeat", "while", "function", "for", "in")
+    if (any(rhs_names %in% c(bad, "NA"))) { # "NA" added in 0.6-8
       lav_msg_stop(gettextf(
-        "lavaan ERROR: right hand side (rhs) of this formula:\n    ",
+        "Right hand side (rhs) of this formula:\n    ",
         lhs, " ", op, " ", rhs,
-        "\n    contains either a reserved word (in R) or an illegal character: ",
-        dQuote(RHS.names[which(RHS.names %in% BAD)[1]]),
+        "\n    contains either a reserved word (in R) ",
+        "or an illegal character: ",
+        dQuote(rhs_names[which(rhs_names %in% bad)[1]]),
         "\n    See ?reserved for a list of reserved words in R",
         "\n    Please use a variable name that is not a reserved word in R",
         "\n    and use only characters, digits, or the dot symbol."
@@ -356,14 +358,15 @@ lav_parse_model_string_orig <- function(model.syntax = "",
     }
     # new in 0.6-6, check for rhs LABELS that are reserved names
     # like in foo =~ in*bar
-    RHS <- strsplit(rhs, split = "+", fixed = TRUE)[[1]]
-    RHS.labels <- gsub("\\*\\S*$", "", RHS)
-    if (any(RHS.labels %in% BAD)) {
+    rhs_1 <- strsplit(rhs, split = "+", fixed = TRUE)[[1]]
+    rhs_labels <- gsub("\\*\\S*$", "", rhs_1)
+    if (any(rhs_labels %in% bad)) {
       lav_msg_stop(gettextf(
-        "lavaan ERROR: right hand side (rhs) of this formula:\n    ",
+        "Right hand side (rhs) of this formula:\n    ",
         lhs, " ", op, " ", rhs,
-        "\n    contains either a reserved word (in R) or an illegal character: ",
-        dQuote(RHS.names[which(RHS.labels %in% BAD)[1]]),
+        "\n    contains either a reserved word (in R) ",
+        "or an illegal character: ",
+        dQuote(rhs_names[which(rhs_labels %in% bad)[1]]),
         "\n    See ?reserved for a list of reserved words in R",
         "\n    Please use a variable name that is not a reserved word in R",
         "\n    and use only characters, digits, or the dot symbol."
@@ -371,8 +374,8 @@ lav_parse_model_string_orig <- function(model.syntax = "",
     }
     # new in 0.6-12: check for three-way interaction terms (which we do
     # NOT support)
-    if (any(grepl(":", RHS.names))) {
-      ncolon <- sapply(gregexpr(":", RHS.names), length)
+    if (any(grepl(":", rhs_names))) {
+      ncolon <- sapply(gregexpr(":", rhs_names), length)
       if (any(ncolon > 1L)) {
         idx <- which(ncolon > 1L)
         lav_msg_stop(gettext(
@@ -381,36 +384,36 @@ multiple colons) are not supported in the lavaan syntax; please manually
 construct the product terms yourself in the data.frame, give them an
 appropriate name, and then you can use these interaction variables as any
 other (observed) variable in the model syntax. Problematic term is: "),
-          RHS.names[idx[1]]
+          rhs_names[idx[1]]
         )
       }
     }
 
 
-    rhs.formula <- as.formula(paste("~", rhs))
-    out <- lav_syntax_parse_rhs(rhs = rhs.formula[[2L]], op = op)
+    rhs_formula <- as.formula(paste("~", rhs))
+    out <- lav_syntax_parse_rhs(rhs = rhs_formula[[2L]], op = op)
 
     if (lav_debug()) print(out)
 
     # for each lhs element
-    for (l in seq_along(lhs.names)) {
+    for (l in seq_along(lhs_names)) {
       # for each rhs element
       for (j in seq_along(out)) {
         # catch intercepts
         if (names(out)[j] == "intercept") {
           if (op == "~") {
-            rhs.name <- ""
+            rhs_name <- ""
           } else {
             # either number (1), or reserved name?
-            lav_msg_stop(gettextf("lavaan ERROR: right-hand side of
+            lav_msg_stop(gettextf("Right-hand side of
              formula contains an invalid variable name:\n    %s", x))
           }
         } else if (names(out)[j] == "..zero.." && op == "~") {
-          rhs.name <- ""
+          rhs_name <- ""
         } else if (names(out)[j] == "..constant.." && op == "~") {
-          rhs.name <- ""
+          rhs_name <- ""
         } else {
-          rhs.name <- names(out)[j]
+          rhs_name <- names(out)[j]
         }
 
         # move this 'check' to post-parse
@@ -425,98 +428,102 @@ other (observed) variable in the model syntax. Problematic term is: "),
         # }
 
         # catch lhs = rhs and op = "=~"
-        if (op == "=~" && lhs.names[l] == names(out)[j]) {
-          lav_msg_stop(gettextf("lavaan ERROR: latent variable `", lhs.names[l], "' can not be measured by itself"))
+        if (op == "=~" && lhs_names[l] == names(out)[j]) {
+          lav_msg_stop(gettextf(
+            "Latent variable `%s` can not be measured by itself",
+              lhs_names[l]))
         }
 
         # check if we not already have this combination (in this group)
         # 1. asymmetric (=~, ~, ~1)
         if (op != "~~") {
-          idx <- which(FLAT.lhs == lhs.names[l] &
-            FLAT.op == op &
-            FLAT.block == BLOCK &
-            FLAT.rhs == rhs.name)
+          idx <- which(flat_lhs == lhs_names[l] &
+            flat_op == op &
+            flat_block == block &
+            flat_rhs == rhs_name)
           if (length(idx) > 0L) {
-            lav_msg_stop(gettextf("lavaan ERROR: duplicate model element in: ", model[i]))
+            lav_msg_stop(gettextf(
+              "Duplicate model element in: %s.", model[i]))
           }
         } else {
           # 2. symmetric (~~)
-          idx <- which(FLAT.lhs == rhs.name &
-            FLAT.op == "~~" &
-            FLAT.block == BLOCK &
-            FLAT.rhs == lhs.names[l])
+          idx <- which(flat_lhs == rhs_name &
+            flat_op == "~~" &
+            flat_block == block &
+            flat_rhs == lhs_names[l])
           if (length(idx) > 0L) {
-            lav_msg_stop(gettextf("lavaan ERROR: duplicate model element in: ", model[i]))
+            lav_msg_stop(gettextf(
+              "Duplicate model element in: %s.", model[i]))
           }
         }
 
         # check if we have a self-loop (y ~ y)
-        if (op %in% c("~", "<~") && rhs.name == lhs.names[l]) {
+        if (op %in% c("~", "<~") && rhs_name == lhs_names[l]) {
           # stop("lavaan ERROR: lhs and rhs are the same in: ",
           #     model[i])
           # this breaks pompom package, example uSEM
           lav_msg_warn(gettextf(
-            "lavaan WARNING: lhs and rhs are the same in: ",
+            "Lhs and rhs are the same in: %s.",
             model[i]
           ))
         }
 
 
-        FLAT.idx <- FLAT.idx + 1L
-        FLAT.lhs[FLAT.idx] <- lhs.names[l]
-        FLAT.op[FLAT.idx] <- op
-        FLAT.rhs[FLAT.idx] <- rhs.name
-        FLAT.block[FLAT.idx] <- BLOCK
-        FLAT.fixed[FLAT.idx] <- ""
-        FLAT.start[FLAT.idx] <- ""
-        FLAT.label[FLAT.idx] <- ""
-        FLAT.lower[FLAT.idx] <- ""
-        FLAT.upper[FLAT.idx] <- ""
-        FLAT.prior[FLAT.idx] <- ""
-        FLAT.efa[FLAT.idx] <- ""
-        FLAT.rv[FLAT.idx] <- ""
+        flat_idx <- flat_idx + 1L
+        flat_lhs[flat_idx] <- lhs_names[l]
+        flat_op[flat_idx] <- op
+        flat_rhs[flat_idx] <- rhs_name
+        flat_block[flat_idx] <- block
+        flat_fixed[flat_idx] <- ""
+        flat_start[flat_idx] <- ""
+        flat_label[flat_idx] <- ""
+        flat_lower[flat_idx] <- ""
+        flat_upper[flat_idx] <- ""
+        flat_prior[flat_idx] <- ""
+        flat_efa[flat_idx] <- ""
+        flat_rv[flat_idx] <- ""
 
         mod <- list()
-        rhs.mod <- 0L
-        if (length(lhs.out[[l]]$efa) > 0L) {
-          mod$efa <- lhs.out[[l]]$efa
-          FLAT.efa[FLAT.idx] <- paste(mod$efa, collapse = ";")
-          rhs.mod <- 1L # despite being a LHS modifier
+        rhs_mod <- 0L
+        if (length(lhs_out[[l]]$efa) > 0L) {
+          mod$efa <- lhs_out[[l]]$efa
+          flat_efa[flat_idx] <- paste(mod$efa, collapse = ";")
+          rhs_mod <- 1L # despite being a LHS modifier
         }
         if (length(out[[j]]$fixed) > 0L) {
           mod$fixed <- out[[j]]$fixed
-          FLAT.fixed[FLAT.idx] <- paste(mod$fixed, collapse = ";")
-          rhs.mod <- 1L
+          flat_fixed[flat_idx] <- paste(mod$fixed, collapse = ";")
+          rhs_mod <- 1L
         }
         if (length(out[[j]]$start) > 0L) {
           mod$start <- out[[j]]$start
-          FLAT.start[FLAT.idx] <- paste(mod$start, collapse = ";")
-          rhs.mod <- 1L
+          flat_start[flat_idx] <- paste(mod$start, collapse = ";")
+          rhs_mod <- 1L
         }
         if (length(out[[j]]$lower) > 0L) {
           mod$lower <- out[[j]]$lower
-          FLAT.lower[FLAT.idx] <- paste(mod$lower, collapse = ";")
-          rhs.mod <- 1L
+          flat_lower[flat_idx] <- paste(mod$lower, collapse = ";")
+          rhs_mod <- 1L
         }
         if (length(out[[j]]$upper) > 0L) {
           mod$upper <- out[[j]]$upper
-          FLAT.upper[FLAT.idx] <- paste(mod$upper, collapse = ";")
-          rhs.mod <- 1L
+          flat_upper[flat_idx] <- paste(mod$upper, collapse = ";")
+          rhs_mod <- 1L
         }
         if (length(out[[j]]$label) > 0L) {
           mod$label <- out[[j]]$label
-          FLAT.label[FLAT.idx] <- paste(mod$label, collapse = ";")
-          rhs.mod <- 1L
+          flat_label[flat_idx] <- paste(mod$label, collapse = ";")
+          rhs_mod <- 1L
         }
         if (length(out[[j]]$rv) > 0L) {
           mod$rv <- out[[j]]$rv
-          FLAT.rv[FLAT.idx] <- paste(mod$rv, collapse = ";")
-          rhs.mod <- 1L
+          flat_rv[flat_idx] <- paste(mod$rv, collapse = ";")
+          rhs_mod <- 1L
         }
         if (length(out[[j]]$prior) > 0L) {
           mod$prior <- out[[j]]$prior
-          FLAT.prior[FLAT.idx] <- paste(mod$prior, collapse = ";")
-          rhs.mod <- 1L
+          flat_prior[flat_idx] <- paste(mod$prior, collapse = ";")
+          rhs_mod <- 1L
         }
         # if(op == "~1" && rhs == "0") {
         #    mod$fixed <- 0
@@ -525,67 +532,70 @@ other (observed) variable in the model syntax. Problematic term is: "),
         # }
         if (op == "=~" && rhs == "0") {
           mod$fixed <- 0
-          FLAT.rhs[FLAT.idx] <- FLAT.lhs[FLAT.idx]
-          FLAT.fixed[FLAT.idx] <- paste(mod$fixed, collapse = ";")
-          rhs.mod <- 1L
+          flat_rhs[flat_idx] <- flat_lhs[flat_idx]
+          flat_fixed[flat_idx] <- paste(mod$fixed, collapse = ";")
+          rhs_mod <- 1L
         }
 
-        FLAT.rhs.mod.idx[FLAT.idx] <- rhs.mod
+        flat_rhs_mod_idx[flat_idx] <- rhs_mod
 
-        if (rhs.mod > 0L) {
-          MOD.idx <- MOD.idx + 1L
-          MOD[[MOD.idx]] <- mod
+        if (rhs_mod > 0L) {
+          mod_idx_1 <- mod_idx_1 + 1L
+          mod_1[[mod_idx_1]] <- mod
         }
       } # rhs elements
     } # lhs elements
   } # model elements
 
   # enumerate modifier indices
-  mod.idx <- which(FLAT.rhs.mod.idx > 0L)
-  FLAT.rhs.mod.idx[mod.idx] <- seq_along(mod.idx)
+  mod_idx <- which(flat_rhs_mod_idx > 0L)
+  flat_rhs_mod_idx[mod_idx] <- seq_along(mod_idx)
 
-  FLAT <- list(
-    lhs = FLAT.lhs, op = FLAT.op, rhs = FLAT.rhs,
-    mod.idx = FLAT.rhs.mod.idx, block = FLAT.block,
-    fixed = FLAT.fixed, start = FLAT.start,
-    lower = FLAT.lower, upper = FLAT.upper,
-    label = FLAT.label, prior = FLAT.prior,
-    efa = FLAT.efa, rv = FLAT.rv
+  flat <- list(
+    lhs = flat_lhs, op = flat_op, rhs = flat_rhs,
+    mod.idx = flat_rhs_mod_idx, block = flat_block,
+    fixed = flat_fixed, start = flat_start,
+    lower = flat_lower, upper = flat_upper,
+    label = flat_label, prior = flat_prior,
+    efa = flat_efa, rv = flat_rv
   )
 
   # change op for intercepts (for convenience only)
-  int.idx <- which(FLAT$op == "~" & FLAT$rhs == "")
-  if (length(int.idx) > 0L) {
-    FLAT$op[int.idx] <- "~1"
+  int_idx <- which(flat$op == "~" & flat$rhs == "")
+  if (length(int_idx) > 0L) {
+    flat$op[int_idx] <- "~1"
   }
 
   # new in 0.6, reorder covariances here!
-  FLAT <- lav_partable_covariance_reorder(FLAT)
+  flat <- lav_partable_covariance_reorder(flat)
 
-  if (as.data.frame.) {
-    FLAT <- as.data.frame(FLAT, stringsAsFactors = FALSE)
+  if (as_data_frame) {
+    flat <- as.data.frame(flat, stringsAsFactors = FALSE)
   }
 
   # new in 0.6-4: check for 'group' within 'level'
-  if (any(FLAT$op == ":")) {
-    op.idx <- which(FLAT$op == ":")
-    if (length(op.idx) < 2L) {
+  if (any(flat$op == ":")) {
+    op_idx <- which(flat$op == ":")
+    if (length(op_idx) < 2L) {
       # only 1 block identifier? this is weird -> give warning
-      lav_msg_warn(gettextf("lavaan WARNING: syntax contains only a single block identifier: ", FLAT$lhs[op.idx]))
+      lav_msg_warn(gettextf(
+        "Syntax contains only a single block identifier: %s",
+         flat$lhs[op_idx]))
     } else {
-      first.block <- FLAT$lhs[op.idx[1L]]
-      second.block <- FLAT$lhs[op.idx[2L]]
-      if (first.block == "level" &&
-        second.block == "group") {
-        lav_msg_stop(gettextf("lavaan ERROR: groups can not be nested within levels"))
+      first_block <- flat$lhs[op_idx[1L]]
+      second_block <- flat$lhs[op_idx[2L]]
+      if (first_block == "level" &&
+        second_block == "group") {
+        lav_msg_stop(gettext(
+          "Groups can not be nested within levels."))
       }
     }
   }
 
-  attr(FLAT, "modifiers") <- MOD
-  attr(FLAT, "constraints") <- CON
+  attr(flat, "modifiers") <- mod_1
+  attr(flat, "constraints") <- con
 
-  FLAT
+  flat
 }
 
 lav_syntax_parse_rhs <- function(rhs, op = "") {
@@ -599,9 +609,9 @@ lav_syntax_parse_rhs <- function(rhs, op = "") {
   repeat {
     if (length(rhs) == 1L) { # last one and only a single element
       out <- c(vector("list", 1L), out)
-      NAME <- all.vars(rhs)
-      if (length(NAME) > 0L) {
-        names(out)[1L] <- NAME
+      name <- all.vars(rhs)
+      if (length(name) > 0L) {
+        names(out)[1L] <- name
       } else { # intercept or zero?
         if (as.character(rhs) == "1") {
           names(out)[1L] <- "intercept"
@@ -616,26 +626,26 @@ lav_syntax_parse_rhs <- function(rhs, op = "") {
       break
     } else if (rhs[[1L]] == "*") { # last one, but with modifier
       out <- c(vector("list", 1L), out)
-      NAME <- all.vars(rhs[[3L]])
+      name <- all.vars(rhs[[3L]])
 
-      if (length(NAME) > 0L) { # not an intercept
+      if (length(name) > 0L) { # not an intercept
         # catch interaction term
-        rhs3.names <- all.names(rhs[[3L]])
-        if (rhs3.names[1L] == ":") {
-          if (length(NAME) == 1) {
-            NAME <- paste(NAME[1L], ":", NAME[1L], sep = "")
+        rhs3_names <- all.names(rhs[[3L]])
+        if (rhs3_names[1L] == ":") {
+          if (length(name) == 1) {
+            name <- paste(name[1L], ":", name[1L], sep = "")
           } else {
-            NAME <- paste(NAME[1L], ":", NAME[2L], sep = "")
+            name <- paste(name[1L], ":", name[2L], sep = "")
           }
         }
-        names(out)[1L] <- NAME
+        names(out)[1L] <- name
       } else { # intercept
         names(out)[1L] <- "intercept"
       }
-      i.var <- all.vars(rhs[[2L]], unique = FALSE)
-      if (length(i.var) > 0L) {
+      i_var <- all.vars(rhs[[2L]], unique = FALSE)
+      if (length(i_var) > 0L) {
         # modifier are unquoted labels
-        out[[1L]]$label <- i.var
+        out[[1L]]$label <- i_var
       } else {
         # modifer is something else
         out[[1L]] <- lav_syntax_get_modifier(rhs[[2L]])
@@ -643,13 +653,13 @@ lav_syntax_parse_rhs <- function(rhs, op = "") {
       break
     } else if (rhs[[1L]] == ":") { # last one, but interaction term
       out <- c(vector("list", 1L), out)
-      NAME <- all.vars(rhs)
-      if (length(NAME) == 1) {
-        NAME <- paste(NAME[1L], ":", NAME[1L], sep = "")
+      name <- all.vars(rhs)
+      if (length(name) == 1) {
+        name <- paste(name[1L], ":", name[1L], sep = "")
       } else {
-        NAME <- paste(NAME[1L], ":", NAME[2L], sep = "")
+        name <- paste(name[1L], ":", name[2L], sep = "")
       }
-      names(out)[1L] <- NAME
+      names(out)[1L] <- name
       break
     } else if (rhs[[1L]] == "+") { # not last one!
 
@@ -663,26 +673,26 @@ lav_syntax_parse_rhs <- function(rhs, op = "") {
       # modifier or not?
       if (length(rhs[[3L]]) == 3L && rhs[[3L]][[1]] == "*") {
         # modifier!!
-        NAME <- all.vars(rhs[[3L]][[3]])
+        name <- all.vars(rhs[[3L]][[3]])
 
-        if (length(NAME) > 0L) { # not an intercept
+        if (length(name) > 0L) { # not an intercept
           # catch interaction term
-          rhs3.names <- all.names(rhs[[3L]][[3]])
-          if (rhs3.names[1L] == ":") {
-            if (length(NAME) == 1) {
-              NAME <- paste(NAME[1L], ":", NAME[1L], sep = "")
+          rhs3_names <- all.names(rhs[[3L]][[3]])
+          if (rhs3_names[1L] == ":") {
+            if (length(name) == 1) {
+              name <- paste(name[1L], ":", name[1L], sep = "")
             } else {
-              NAME <- paste(NAME[1L], ":", NAME[2L], sep = "")
+              name <- paste(name[1L], ":", name[2L], sep = "")
             }
           }
-          names(out)[1L] <- NAME
+          names(out)[1L] <- name
         } else { # intercept
           names(out)[1L] <- "intercept"
         }
-        i.var <- all.vars(rhs[[3]][[2L]], unique = FALSE)
-        if (length(i.var) > 0L) {
+        i_var <- all.vars(rhs[[3]][[2L]], unique = FALSE)
+        if (length(i_var) > 0L) {
           # modifier are unquoted labels
-          out[[1L]]$label <- i.var
+          out[[1L]]$label <- i_var
         } else {
           # modifer is something else
           out[[1L]] <- lav_syntax_get_modifier(rhs[[3]][[2L]])
@@ -691,17 +701,17 @@ lav_syntax_parse_rhs <- function(rhs, op = "") {
         # interaction term?
       } else if (length(rhs[[3L]]) == 3L && rhs[[3L]][[1]] == ":") {
         # interaction term, without modifier
-        NAME <- all.vars(rhs[[3L]])
-        if (length(NAME) == 1) {
-          NAME <- paste(NAME[1L], ":", NAME[1L], sep = "")
+        name <- all.vars(rhs[[3L]])
+        if (length(name) == 1) {
+          name <- paste(name[1L], ":", name[1L], sep = "")
         } else {
-          NAME <- paste(NAME[1L], ":", NAME[2L], sep = "")
+          name <- paste(name[1L], ":", name[2L], sep = "")
         }
-        names(out)[1L] <- NAME
+        names(out)[1L] <- name
       } else { # no modifier!!
-        NAME <- all.vars(rhs[[3]])
-        if (length(NAME) > 0L) {
-          names(out)[1L] <- NAME
+        name <- all.vars(rhs[[3]])
+        if (length(name) > 0L) {
+          names(out)[1L] <- name
         } else { # intercept or zero?
           if (as.character(rhs[[3]]) == "1") {
             names(out)[1L] <- "intercept"
@@ -719,22 +729,23 @@ lav_syntax_parse_rhs <- function(rhs, op = "") {
       # next element
       rhs <- rhs[[2L]]
     } else {
-      lav_msg_stop(gettextf("lavaan ERROR: I'm confused parsing this line: ", rhs, "\n"))
+      lav_msg_stop(gettextf(
+        "lavaan ERROR: I'm confused parsing this line: ", rhs, "\n"))
     }
   }
 
   # if multiple elements, check for duplicated elements and merge if found
   if (length(out) > 1L) {
-    rhs.names <- names(out)
-    while (!is.na(idx <- which(duplicated(rhs.names))[1L])) {
-      dup.name <- rhs.names[idx]
-      orig.idx <- match(dup.name, rhs.names)
-      merged <- c(out[[orig.idx]], out[[idx]])
+    rhs_names <- names(out)
+    while (!is.na(idx <- which(duplicated(rhs_names))[1L])) {
+      dup_name <- rhs_names[idx]
+      orig_idx <- match(dup_name, rhs_names)
+      merged <- c(out[[orig_idx]], out[[idx]])
       if (!is.null(merged)) { # be careful, NULL will delete element
-        out[[orig.idx]] <- merged
+        out[[orig_idx]] <- merged
       }
       out <- out[-idx]
-      rhs.names <- names(out)
+      rhs_names <- names(out)
     }
   }
 
@@ -759,39 +770,39 @@ lav_syntax_get_modifier <- function(mod) {
       return(list(fixed = as.numeric(NA)))
     }
     if (is.character(mod)) {
-      return(list(label = mod))
+      list(label = mod)
     }
   } else if (mod[[1L]] == "start") {
     cof <- unlist(lapply(as.list(mod)[-1],
       eval,
       envir = NULL, enclos = NULL
     ))
-    return(list(start = cof))
+    list(start = cof)
   } else if (mod[[1L]] == "lower") {
     cof <- unlist(lapply(as.list(mod)[-1],
       eval,
       envir = NULL, enclos = NULL
     ))
-    return(list(lower = cof))
+    list(lower = cof)
   } else if (mod[[1L]] == "upper") {
     cof <- unlist(lapply(as.list(mod)[-1],
       eval,
       envir = NULL, enclos = NULL
     ))
-    return(list(upper = cof))
+    list(upper = cof)
   } else if (mod[[1L]] == "equal") {
     label <- unlist(lapply(as.list(mod)[-1],
       eval,
       envir = NULL, enclos = NULL
     ))
-    return(list(label = label))
+    list(label = label)
   } else if (mod[[1L]] == "label") {
     label <- unlist(lapply(as.list(mod)[-1],
       eval,
       envir = NULL, enclos = NULL
     ))
     label[is.na(label)] <- "" # catch 'NA' elements in a label
-    return(list(label = label))
+    list(label = label)
   } else if (mod[[1L]] == "rv") {
     rv <- unlist(lapply(as.list(mod)[-1],
       eval,
@@ -800,19 +811,19 @@ lav_syntax_get_modifier <- function(mod) {
     if (anyNA(rv)) {
       lav_msg_stop(gettextf("lavaan ERROR: some rv() labels are NA"))
     }
-    return(list(rv = rv))
+    list(rv = rv)
   } else if (mod[[1L]] == "prior") {
     prior <- unlist(lapply(as.list(mod)[-1],
       eval,
       envir = NULL, enclos = NULL
     ))
-    return(list(prior = prior))
+    list(prior = prior)
   } else if (mod[[1L]] == "efa") {
     efa <- unlist(lapply(as.list(mod)[-1],
       eval,
       envir = NULL, enclos = NULL
     ))
-    return(list(efa = efa))
+    list(efa = efa)
   } else if (mod[[1L]] == "c") {
     # vector: we allow numeric and character only!
     cof <- unlist(lapply(as.list(mod)[-1],
@@ -820,12 +831,12 @@ lav_syntax_get_modifier <- function(mod) {
       envir = NULL, enclos = NULL
     ))
     if (all(is.na(cof))) {
-      return(list(fixed = rep(as.numeric(NA), length(cof))))
+      list(fixed = rep(as.numeric(NA), length(cof)))
     } else if (is.numeric(cof)) {
-      return(list(fixed = cof))
+      list(fixed = cof)
     } else if (is.character(cof)) {
       cof[is.na(cof)] <- "" # catch 'NA' elements in a label
-      return(list(label = cof))
+      list(label = cof)
     } else {
       lav_msg_stop(gettextf("lavaan ERROR: can not parse modifier:", mod, "\n"))
     }
@@ -840,9 +851,9 @@ lav_syntax_get_modifier <- function(mod) {
         paste(as.character(mod)[[1]], "()*", sep = ""), "\n"
       ))
     } else if (is.numeric(cof)) {
-      return(list(fixed = cof))
+      list(fixed = cof)
     } else if (is.character(cof)) {
-      return(list(label = cof))
+      list(label = cof)
     } else {
       lav_msg_stop(gettextf(
         "lavaan ERROR: can not parse modifier: ",

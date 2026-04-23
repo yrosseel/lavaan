@@ -1,6 +1,7 @@
 # create (if not already created) an environment to put cached objects in
 # this is executed when the package is 'compiled' !
-if (!exists("lavaan_cache_env")) lavaan_cache_env <- new.env(parent = emptyenv())
+if (!exists("lavaan_cache_env"))
+    lavaan_cache_env <- new.env(parent = emptyenv())
 
 # tracing possibility in functions defined below, an example of use :
 #
@@ -35,47 +36,50 @@ if (!exists("lavaan_cache_env")) lavaan_cache_env <- new.env(parent = emptyenv()
 #
 
 lav_trace <- function(content = "") {
-  ignore.in.stack <- c(
+  ignore_in_stack <- c(
     "eval", "try", "tryCatch", "tryCatchList", "tryCatchOne", "doTryCatch",
     "which", "unique", "as.list", "as.character", "unlist", "lav_trace",
     "source", "withVisible", "tryCatch.W.E", "withCallingHandlers", "do.call"
   )
-  if (!exists("TRACE", lavaan_cache_env)) {
+  if (!exists("trace", lavaan_cache_env)) {
     return(invisible(NULL))
   }
-  if (!exists("TRACENR", lavaan_cache_env)) assign("TRACENR", 1L, lavaan_cache_env)
-  tracenr <- get("TRACENR", lavaan_cache_env)
+  if (!exists("tracenr", lavaan_cache_env))
+              assign("tracenr", 1L, lavaan_cache_env)
+  tracenr <- get("tracenr", lavaan_cache_env)
   x <- sub("[() ].*$", "", as.character(sys.calls()))
   if (length(x) == 0) {
     return(invisible(NULL))
   }
   a <- paste0("trc", formatC(tracenr, format = "d", width = 5, flag = "0"))
-  x <- x[!(x %in% ignore.in.stack)]
+  x <- x[!(x %in% ignore_in_stack)]
   if (length(x) > 0) {
-    assign(a, list(stack = x, content = content, time = Sys.time()), lavaan_cache_env)
-    assign("TRACENR", tracenr + 1L, lavaan_cache_env)
+    assign(a, list(stack = x, content = content, time = Sys.time()),
+                        lavaan_cache_env)
+    assign("tracenr", tracenr + 1L, lavaan_cache_env)
   }
 
   invisible(NULL)
 }
 
 lav_trace_set <- function(state = NULL, silent = FALSE) {
-  traceon <- exists("TRACE", lavaan_cache_env)
+  traceon <- exists("trace", lavaan_cache_env)
   msg <- ""
   if (is.null(state)) {
     rm(list = ls(lavaan_cache_env, pattern = "^trc"), envir = lavaan_cache_env)
-    if (exists("TRACENR", lavaan_cache_env)) rm("TRACENR", envir = lavaan_cache_env)
+    if (exists("tracenr", lavaan_cache_env))
+        rm("tracenr", envir = lavaan_cache_env)
     msg <- "Traces removed."
   } else if (state) {
     if (traceon) {
       msg <- "Trace already active!"
     } else {
-      assign("TRACE", TRUE, lavaan_cache_env)
+      assign("trace", TRUE, lavaan_cache_env)
       msg <- "Trace on."
     }
   } else {
     if (traceon) {
-      rm("TRACE", envir = lavaan_cache_env)
+      rm("trace", envir = lavaan_cache_env)
       msg <- "Trace off."
     } else {
       msg <- "Trace not active!"
@@ -115,7 +119,8 @@ lav_trace_summary <- function(file = "", clean_after = FALSE) {
   temp <- new.env(parent = emptyenv())
   for (x1 in x) {
     nn <- length(x1$stack)
-    mm <- paste(x1$stack[nn], paste(x1$stack[seq_len(nn - 1L)], collapse = ">"), sep = "\t")
+    mm <- paste(x1$stack[nn], paste(x1$stack[seq_len(nn - 1L)],
+          collapse = ">"), sep = "\t")
     assign(mm, 1L + get0(mm, temp, ifnotfound = 0L), temp)
   }
   objects <- sort(ls(temp))

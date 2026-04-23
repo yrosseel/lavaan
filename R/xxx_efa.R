@@ -9,7 +9,7 @@
 
 # YR 20 Sept 2022 - first version
 
-efa <- function(data = NULL,
+efa <- function(data = NULL,              # nolint start
                 nfactors = 1L,
                 sample.cov = NULL,
                 sample.nobs = NULL,
@@ -18,13 +18,16 @@ efa <- function(data = NULL,
                 ov.names = NULL,
                 bounds = "pos.var",
                 ...,
-                output = "efa") {
+                output = "efa") {        # nolint end
   # rotation.args deprecation handling
   if (!missing(rotation.args)) {
     lav_deprecated_args("rotation", "rotation.args")
   }
+  rotation_args <- rotation.args
+  ov_names <- ov.names
+
   if (is.list(rotation)) {
-    rotation.args <- modifyList(list(), rotation)
+    rotation_args <- modifyList(list(), rotation)
     rotation <- rotation[[1L]]
   }
 
@@ -32,10 +35,10 @@ efa <- function(data = NULL,
   dotdotdot <- list(...)
 
   # twolevel?
-  twolevel.flag <- !is.null(dotdotdot$cluster)
+  twolevel_flag <- !is.null(dotdotdot$cluster)
 
   # sampling weights?
-  sampling.weights.flag <- !is.null(dotdotdot$sampling.weights)
+  sampling_weights_flag <- !is.null(dotdotdot$sampling.weights)
 
   # check for unallowed arguments
   if (!is.null(dotdotdot$group)) {
@@ -54,12 +57,12 @@ efa <- function(data = NULL,
     data <- as.data.frame(data)
   }
 
-  # handle ov.names
+  # handle ov_names
   if (!is.null(data) && inherits(data, "lavMoments")) {
     if ("sample.cov" %in% names(data)) {
-      ov.names <- rownames(data$sample.cov)
-      if (is.null(ov.names)) {
-        ov.names <- colnames(data$sample.cov)
+      ov_names <- rownames(data$sample.cov)
+      if (is.null(ov_names)) {
+        ov_names <- colnames(data$sample.cov)
       }
     } else {
       lav_msg_stop(gettext(
@@ -67,32 +70,32 @@ efa <- function(data = NULL,
     }
 
   } else if (!is.null(data) && inherits(data, "data.frame")) {
-    if (length(ov.names) > 0L) {
-      NAMES <- ov.names
-      if (twolevel.flag) {
-        NAMES <- c(NAMES, dotdotdot$cluster)
+    if (length(ov_names) > 0L) {
+      names_1 <- ov_names
+      if (twolevel_flag) {
+        names_1 <- c(names_1, dotdotdot$cluster)
       }
-      if (sampling.weights.flag) {
-        NAMES <- c(NAMES, dotdotdot$sampling.weights)
+      if (sampling_weights_flag) {
+        names_1 <- c(names_1, dotdotdot$sampling.weights)
       }
-      data <- data[, NAMES, drop = FALSE]
+      data <- data[, names_1, drop = FALSE]
     } else {
-      ov.names <- names(data)
-      if (twolevel.flag) {
-        ov.names <- ov.names[-which(ov.names == dotdotdot$cluster)]
+      ov_names <- names(data)
+      if (twolevel_flag) {
+        ov_names <- ov_names[-which(ov_names == dotdotdot$cluster)]
       }
-      if( sampling.weights.flag) {
-        ov.names <- ov.names[-which(ov.names == dotdotdot$sampling.weights)]
+      if (sampling_weights_flag) {
+        ov_names <- ov_names[-which(ov_names == dotdotdot$sampling.weights)]
       }
     }
   } else if (!is.null(sample.cov)) {
-    ov.names <- rownames(sample.cov)
-    if (is.null(ov.names)) {
-      ov.names <- colnames(sample.cov)
+    ov_names <- rownames(sample.cov)
+    if (is.null(ov_names)) {
+      ov_names <- colnames(sample.cov)
     }
   }
-  # ov.names?
-  if (length(ov.names) == 0L) {
+  # ov_names?
+  if (length(ov_names) == 0L) {
     lav_msg_stop(gettext(
       "could not extract variable names from data or sample.cov"))
   }
@@ -103,20 +106,20 @@ efa <- function(data = NULL,
   } else {
     # check for maximum number of factors
     # Fixme: can we do this more efficiently? also holds for categorical?
-    nvar <- length(ov.names)
-    p.star <- nvar * (nvar + 1) / 2
-    nfac.max <- 0L
+    nvar <- length(ov_names)
+    p_star <- nvar * (nvar + 1) / 2
+    nfac_max <- 0L
     for (nfac in seq_len(nvar)) {
       # compute number of free parameters
       npar <- nfac * nvar + nfac * (nfac + 1L) / 2 + nvar - nfac^2
-      if (npar > p.star) {
-        nfac.max <- nfac - 1L
+      if (npar > p_star) {
+        nfac_max <- nfac - 1L
         break
       }
     }
-    if (any(nfactors > nfac.max)) {
+    if (any(nfactors > nfac_max)) {
       lav_msg_stop(gettextf("when nvar = %1$s the maximum number of factors
-                            is %2$s", nvar, nfac.max))
+                            is %2$s", nvar, nfac_max))
     }
   }
 
@@ -135,21 +138,21 @@ efa <- function(data = NULL,
   out <- vector("list", length = nfits)
   for (f in seq_len(nfits)) {
     # generate model syntax
-    model.syntax <- lav_syntax_efa(
-      ov.names = ov.names,
+    model_syntax <- lav_syntax_efa(
+      ov.names = ov_names,
       nfactors = nfactors[f],
-      twolevel = twolevel.flag
+      twolevel = twolevel_flag
     )
     # call lavaan (using sem())
-    FIT <- do.call("sem",
+    fit <- do.call("sem",
       args = c(
         list(
-          model = model.syntax,
+          model = model_syntax,
           data = data,
           sample.cov = sample.cov,
           sample.nobs = sample.nobs,
           rotation = rotation,
-          rotation.args = rotation.args,
+          rotation.args = rotation_args,
           bounds = bounds,
           cmd = "efa"
         ),
@@ -158,10 +161,10 @@ efa <- function(data = NULL,
     )
 
     if (output == "efa") {
-      FIT@Options$model.type <- "efa"
+      fit@Options$model.type <- "efa"
     }
 
-    out[[f]] <- FIT
+    out[[f]] <- fit
   }
 
   # class
