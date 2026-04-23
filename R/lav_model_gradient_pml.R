@@ -105,7 +105,7 @@ lav_pml_dploglik_dimplied <- function(Sigma.hat = NULL, # model-based var/cov/co
     # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
     if (missing == "available.cases") {
-      uniPI <- lav_pml_th_uni_prob(TH = TH, th.idx = th.idx)
+      uniPI <- lav_pml_th_uni_prob(th = TH, th_idx = th.idx)
       tmp <- lavcache$uniweights / uniPI
 
       var.idx <- split(th.idx, th.idx)
@@ -326,15 +326,15 @@ lav_pml_dploglik_dimplied <- function(Sigma.hat = NULL, # model-based var/cov/co
         } else {
           SC.COR.UNI <-
             lav_pml_dbilogl_dpar_x(
-              Y1 = X[, i],
-              Y2 = X[, j],
-              eXo = eXo,
-              Rho = Sigma.hat[i, j],
-              th.y1 = TH[th.idx == i],
-              th.y2 = TH[th.idx == j],
-              sl.y1 = PI[i, ],
-              sl.y2 = PI[j, ],
-              missing.ind = missing
+              y1 = X[, i],
+              y2 = X[, j],
+              exo = eXo,
+              rho = Sigma.hat[i, j],
+              th_y1 = TH[th.idx == i],
+              th_y2 = TH[th.idx == j],
+              sl_y1 = PI[i, ],
+              sl_y2 = PI[j, ],
+              missing_ind = missing
             )
         }
 
@@ -411,9 +411,9 @@ lav_pml_dploglik_dimplied <- function(Sigma.hat = NULL, # model-based var/cov/co
       for (i in seq_len(nvar)) {
         th.idx_i <- which(th.idx == i)
         derY1 <- lav_pml_uni_scores(
-          Y1 = X[, i], th.y1 = TH[th.idx == i],
-          eXo = NULL, sl.y1 = NULL,
-          weights.casewise = lavcache$uniweights.casewise
+          y1 = X[, i], th_y1 = TH[th.idx == i],
+          exo = NULL, sl_y1 = NULL,
+          weights_casewise = lavcache$uniweights.casewise
         )
         UNI_SCORES[, th.idx_i] <- derY1$dx.th.y1
       }
@@ -423,9 +423,9 @@ lav_pml_dploglik_dimplied <- function(Sigma.hat = NULL, # model-based var/cov/co
         th.idx_i <- which(th.idx == i)
         sl.idx_i <- N.TH + seq(i, by = nvar, length.out = nexo)
         derY1 <- lav_pml_uni_scores(
-          Y1 = X[, i], th.y1 = TH[th.idx == i],
-          eXo = eXo, sl.y1 = PI[i, ],
-          weights.casewise = lavcache$uniweights.casewise
+          y1 = X[, i], th_y1 = TH[th.idx == i],
+          exo = eXo, sl_y1 = PI[i, ],
+          weights_casewise = lavcache$uniweights.casewise
         )
         UNI_SCORES[, th.idx_i] <- derY1$dx.th.y1
         UNI_SCORES[, sl.idx_i] <- derY1$dx.sl.y1
