@@ -318,7 +318,7 @@ lav_model_objective_pml <- function(Sigma.hat = NULL, # model-based var/cov/cor
     Fmin <- sum(freq * log(prop / pairwisePI)) # to avoid 'N'
 
     if (missing == "available.cases" || missing == "doubly.robust") {
-      uniPI <- lav_pml_th_uni_prob(TH = TH, th.idx = th.idx)
+      uniPI <- lav_pml_th_uni_prob(th = TH, th_idx = th.idx)
 
       # shortcuts
       unifreq <- lavcache$unifreq
@@ -392,13 +392,13 @@ lav_model_objective_pml <- function(Sigma.hat = NULL, # model-based var/cov/cor
       # For the function lav_pml_bivprob_unicondprob see the .r file
       # with the same name.
       ModProbY1Gy2 <- lav_pml_bivprob_unicondprob(
-        bivProb = pairwisePI_orig,
+        biv_prob = pairwisePI_orig,
         nvar = nvar,
-        idx.pairs = idx.pairs,
-        idx.Y1 = idx.Y1,
-        idx.Gy2 = idx.Gy2,
-        idx.cat.y1.split = idx.cat.y1.split,
-        idx.cat.y2.split = idx.cat.y2.split
+        idx_pairs = idx.pairs,
+        idx_y1 = idx.Y1,
+        idx_gy2 = idx.Gy2,
+        idx_cat_y1_split = idx.cat.y1.split,
+        idx_cat_y2_split = idx.cat.y2.split
       )
 
       log_ModProbY1Gy2 <- log(ModProbY1Gy2)
@@ -596,15 +596,15 @@ lav_model_objective_pml <- function(Sigma.hat = NULL, # model-based var/cov/cor
                    ov.types[j] == "ordered") {
           LIK[, pstar.idx] <-
             lav_pml_bi_lik_x(
-              Y1 = X[, i],
-              Y2 = X[, j],
-              Rho = Sigma.hat[i, j],
-              th.y1 = TH[th.idx == i],
-              th.y2 = TH[th.idx == j],
-              eXo = eXo,
-              PI.y1 = PI[i, ],
-              PI.y2 = PI[j, ],
-              missing.ind = missing
+              y1 = X[, i],
+              y2 = X[, j],
+              rho = Sigma.hat[i, j],
+              th_y1 = TH[th.idx == i],
+              th_y2 = TH[th.idx == j],
+              exo = eXo,
+              pi_y1 = PI[i, ],
+              pi_y2 = PI[j, ],
+              missing_ind = missing
             )
         }
       }
@@ -632,10 +632,10 @@ lav_model_objective_pml <- function(Sigma.hat = NULL, # model-based var/cov/cor
       uni_LIK <- matrix(0, nrow(X), ncol(X))
       for (i in seq_len(nvar)) {
         uni_LIK[, i] <- lav_pml_uni_lik(
-          Y1 = X[, i],
-          th.y1 = TH[th.idx == i],
-          eXo = eXo,
-          PI.y1 = PI[i, ]
+          y1 = X[, i],
+          th_y1 = TH[th.idx == i],
+          exo = eXo,
+          pi_y1 = PI[i, ]
         )
       }
 

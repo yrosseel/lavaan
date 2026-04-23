@@ -1,6 +1,6 @@
 lav_pml_plrt <- function(lavobject = NULL, lavmodel = NULL, lavdata = NULL,
                          lavsamplestats = NULL, lavpartable = NULL,
-                         lavoptions = NULL, x = NULL, VCOV = NULL,
+                         lavoptions = NULL, x = NULL, vcov_1 = NULL,
                          lavcache = NULL) {
   lavpta <- NULL
   if (!is.null(lavobject)) {
@@ -26,15 +26,15 @@ lav_pml_plrt <- function(lavobject = NULL, lavmodel = NULL, lavdata = NULL,
       lavdata = lavdata,
       lavcache = lavcache
     )
-    H0.fx <- as.numeric(fx)
-    H0.fx.group <- attr(fx, "fx.group")
+    h0_fx <- as.numeric(fx)
+    h0_fx_group <- attr(fx, "fx.group")
   } else {
-    H0.fx <- attr(attr(x, "fx"), "fx.pml")
-    H0.fx.group <- attr(attr(x, "fx"), "fx.group")
+    h0_fx <- attr(attr(x, "fx"), "fx.pml")
+    h0_fx_group <- attr(attr(x, "fx"), "fx.group")
   }
 
   # fit a saturated model 'fittedSat'
-  ModelSat <- lav_partable_unrestricted(
+  model_sat <- lav_partable_unrestricted(
     lavobject = NULL,
     lavdata = lavdata,
     lavoptions = lavoptions,
@@ -43,28 +43,28 @@ lav_pml_plrt <- function(lavobject = NULL, lavmodel = NULL, lavdata = NULL,
   )
 
   # FIXME: se="none", test="none"??
-  Options <- lavoptions
-  Options$se <- "none"
-  Options$test <- "none"
-  Options$baseline <- FALSE
-  Options$h1 <- FALSE
-  fittedSat <- lavaan(ModelSat,
-    slotOptions = Options, verbose = FALSE,
+  options_1 <- lavoptions
+  options_1$se <- "none"
+  options_1$test <- "none"
+  options_1$baseline <- FALSE
+  options_1$h1 <- FALSE
+  fitted_sat <- lavaan(model_sat,
+    slotOptions = options_1, verbose = FALSE,
     slotSampleStats = lavsamplestats,
     slotData = lavdata, slotCache = lavcache
   )
   fx <- lav_model_objective(
-    lavmodel = fittedSat@Model,
-    lavsamplestats = fittedSat@SampleStats,
-    lavdata = fittedSat@Data,
-    lavcache = fittedSat@Cache
+    lavmodel = fitted_sat@Model,
+    lavsamplestats = fitted_sat@SampleStats,
+    lavdata = fitted_sat@Data,
+    lavcache = fitted_sat@Cache
   )
-  SAT.fx <- as.numeric(fx)
-  SAT.fx.group <- attr(fx, "fx.group")
+  sat_fx <- as.numeric(fx)
+  sat_fx_group <- attr(fx, "fx.group")
 
   # we also need a `saturated model', but where the moments are based
   # on the model-implied sample statistics under H0
-  ModelSat2 <-
+  model_sat2 <-
     lav_partable_unrestricted(
       lavobject = NULL,
       lavdata = lavdata,
@@ -76,15 +76,15 @@ lav_pml_plrt <- function(lavobject = NULL, lavmodel = NULL, lavdata = NULL,
       sample.th.idx = lavsamplestats@th.idx
     )
 
-  Options2 <- Options
-  Options2$optim.method <- "none"
-  Options2$optim.force.converged <- TRUE
-  Options2$check.start <- FALSE
-  Options2$check.gradient <- FALSE
-  Options2$check.post <- FALSE
-  Options2$check.vcov <- FALSE
-  fittedSat2 <- lavaan(ModelSat2,
-    slotOptions = Options2, verbose = FALSE,
+  options2 <- options_1
+  options2$optim.method <- "none"
+  options2$optim.force.converged <- TRUE
+  options2$check.start <- FALSE
+  options2$check.gradient <- FALSE
+  options2$check.post <- FALSE
+  options2$check.vcov <- FALSE
+  fitted_sat2 <- lavaan(model_sat2,
+    slotOptions = options2, verbose = FALSE,
     slotSampleStats = lavsamplestats,
     slotData = lavdata, slotCache = lavcache
   )
@@ -106,19 +106,19 @@ lav_pml_plrt <- function(lavobject = NULL, lavmodel = NULL, lavdata = NULL,
   # }
 
   # select `free' parameters (excluding thresholds) from fittedSat2 model
-  PT.Sat2 <- fittedSat2@ParTable
-  dSat.idx <- PT.Sat2$free[PT.Sat2$free > 0L & PT.Sat2$op != "|"]
+  pt_sat2 <- fitted_sat2@ParTable
+  d_sat_idx <- pt_sat2$free[pt_sat2$free > 0L & pt_sat2$op != "|"]
                                                         # remove thresholds
 
   # Secondly, we need to specify the indices of the rows/columns of vcov(),
   # hessian, and variability matrix that refer to all SEM parameters
   # except thresholds.
-  PT <- lavpartable
-  index.par <- PT$free[PT$free > 0L & PT$op != "|"]
+  pt_1 <- lavpartable
+  index_par <- pt_1$free[pt_1$free > 0L & pt_1$op != "|"]
 
   # Thirdly, specify the sample size.
   # nsize <- lavdata@nobs[[g]]
-  nsize <- lavsamplestats@ntotal
+  nsize <- lavsamplestats@ntotal #TODO: check if var nsize needed ?? # nolint
 
   # Now we can proceed to the computation of the quantities needed for PLRT.
   # Briefly, to say that PLRT is equal to the difference of two quadratic forms.
@@ -132,9 +132,9 @@ lav_pml_plrt <- function(lavobject = NULL, lavmodel = NULL, lavdata = NULL,
   # vcov(lavobject) can be substituted by VCOV object insed lavaan function
   # defined at lines 703 -708. But what is the object inside lavaan function
   # for getHessian(lavobject)?
-  if (is.null(VCOV)) {
+  if (is.null(vcov_1)) {
     lavoptions$se <- "robust.huber.white"
-    VCOV <- lav_model_vcov(
+    vcov_1 <- lav_model_vcov(
       lavmodel = lavmodel,
       lavsamplestats = lavsamplestats,
       lavoptions = lavoptions,
@@ -143,58 +143,58 @@ lav_pml_plrt <- function(lavobject = NULL, lavmodel = NULL, lavdata = NULL,
       lavcache = lavcache
     )
   }
-  InvG_to_psipsi_attheta0 <- (lavsamplestats@ntotal * VCOV)[index.par,
-                             index.par, drop = FALSE] # G^psipsi(theta0)
+  inv_g_to_psipsi_attheta0 <- (lavsamplestats@ntotal * vcov_1)[index_par,
+                             index_par, drop = FALSE] # G^psipsi(theta0)
   # below the lavaan function getHessian is used
   # Hattheta0 <- (-1) * H0.Hessian
   # Hattheta0 <- H0.Hessian
   # InvHattheta0 <- solve(Hattheta0)
-  InvHattheta0 <- attr(VCOV, "E.inv")
-  InvH_to_psipsi_attheta0 <- InvHattheta0[index.par, index.par, drop = FALSE]
+  inv_hattheta0 <- attr(vcov_1, "E.inv")
+  inv_h_to_psipsi_attheta0 <- inv_hattheta0[index_par, index_par, drop = FALSE]
                                                            # H^psipsi(theta0)
   if (lavmodel@eq.constraints) {
-    IN <- InvH_to_psipsi_attheta0
-    IN.npar <- ncol(IN)
+    in_1 <- inv_h_to_psipsi_attheta0
+    in_npar <- ncol(in_1)
 
     # create `bordered' matrix
     if (nrow(lavmodel@con.jac) > 0L) {
-      H <- lavmodel@con.jac[, index.par, drop = FALSE]
-      inactive.idx <- attr(H, "inactive.idx")
+      h <- lavmodel@con.jac[, index_par, drop = FALSE]
+      inactive_idx <- attr(h, "inactive.idx")
       lambda <- lavmodel@con.lambda # lagrangean coefs
-      if (length(inactive.idx) > 0L) {
-        H <- H[-inactive.idx, , drop = FALSE]
-        lambda <- lambda[-inactive.idx]
+      if (length(inactive_idx) > 0L) {
+        h <- h[-inactive_idx, , drop = FALSE]
+        lambda <- lambda[-inactive_idx]
       }
-      if (nrow(H) > 0L) {
-        H0 <- matrix(0, nrow(H), nrow(H))
-        H10 <- matrix(0, ncol(IN), nrow(H))
-        DL <- 2 * diag(lambda, nrow(H), nrow(H))
+      if (nrow(h) > 0L) {
+        h0 <- matrix(0, nrow(h), nrow(h))
+        h10 <- matrix(0, ncol(in_1), nrow(h))
+        dl <- 2 * diag(lambda, nrow(h), nrow(h))
         # FIXME: better include inactive + slacks??
-        E3 <- rbind(
-          cbind(IN, H10, t(H)),
-          cbind(t(H10), DL, H0),
-          cbind(H, H0, H0)
+        e3 <- rbind( #TODO: check if var e3 needed ???  # nolint
+          cbind(in_1, h10, t(h)),
+          cbind(t(h10), dl, h0),
+          cbind(h, h0, h0)
         )
-        Inv_of_InvH_to_psipsi_attheta0 <-
-          MASS::ginv(IN)[1:IN.npar, 1:IN.npar, drop = FALSE]
+        inv_of_inv_h_to_psipsi_attheta0 <-               # nolint
+          MASS::ginv(in_1)[1:in_npar, 1:in_npar, drop = FALSE]
       } else {
-        Inv_of_InvH_to_psipsi_attheta0 <- solve(IN)
+        inv_of_inv_h_to_psipsi_attheta0 <- solve(in_1)   # nolint
       }
     }
   } else {
     # YR 26 June 2018: check for empty index.par (eg independence model)
-    if (length(index.par) > 0L) {
-      Inv_of_InvH_to_psipsi_attheta0 <-
-        solve(InvH_to_psipsi_attheta0) # [H^psipsi(theta0)]^(-1)
+    if (length(index_par) > 0L) {
+      inv_of_inv_h_to_psipsi_attheta0 <-                   # nolint
+        solve(inv_h_to_psipsi_attheta0) # [H^psipsi(theta0)]^(-1)
     } else {
-      Inv_of_InvH_to_psipsi_attheta0 <- matrix(0, 0, 0)
+      inv_of_inv_h_to_psipsi_attheta0 <- matrix(0, 0, 0)   # nolint
     }
   }
 
-  H0tmp_prod1 <- Inv_of_InvH_to_psipsi_attheta0 %*% InvG_to_psipsi_attheta0
-  H0tmp_prod2 <- H0tmp_prod1 %*% H0tmp_prod1
-  E_tww <- sum(diag(H0tmp_prod1)) # expected mean of first quadratic quantity
-  var_tww <- 2 * sum(diag(H0tmp_prod2)) # variance of first quadratic quantity
+  h0tmp_prod1 <- inv_of_inv_h_to_psipsi_attheta0 %*% inv_g_to_psipsi_attheta0
+  h0tmp_prod2 <- h0tmp_prod1 %*% h0tmp_prod1
+  e_tww <- sum(diag(h0tmp_prod1)) # expected mean of first quadratic quantity
+  var_tww <- 2 * sum(diag(h0tmp_prod2)) # variance of first quadratic quantity
 
   ##### Section 2: Compute the asymptotic mean and variance
   #####            of the second quadratic quantity.
@@ -203,43 +203,45 @@ lav_pml_plrt <- function(lavobject = NULL, lavmodel = NULL, lavdata = NULL,
   # which is the model of the null hypothesis. We also need to compute the
   # vcov matrix of these estimates (estimates of polychoric correlations)
   # as well as the related hessian and variability matrix.
-  tmp.options <- fittedSat2@Options
-  tmp.options$se <- lavoptions$se
-  VCOV.Sat2 <- lav_model_vcov(
-    lavmodel = fittedSat2@Model,
-    lavsamplestats = fittedSat2@SampleStats,
-    lavoptions = tmp.options,
-    lavdata = fittedSat2@Data,
-    lavpartable = fittedSat2@ParTable,
-    lavcache = fittedSat2@Cache,
+  tmp_options <- fitted_sat2@Options
+  tmp_options$se <- lavoptions$se
+  vcov_sat2 <- lav_model_vcov(
+    lavmodel = fitted_sat2@Model,
+    lavsamplestats = fitted_sat2@SampleStats,
+    lavoptions = tmp_options,
+    lavdata = fitted_sat2@Data,
+    lavpartable = fitted_sat2@ParTable,
+    lavcache = fitted_sat2@Cache,
     use.ginv = TRUE
   )
-  InvG_to_sigmasigma_attheta0 <- lavsamplestats@ntotal * VCOV.Sat2[dSat.idx,
-                                dSat.idx, drop = FALSE] # G^sigmasigma(theta0)
+  inv_g_to_sigmasigma_attheta0 <- lavsamplestats@ntotal * vcov_sat2[d_sat_idx,
+                                d_sat_idx, drop = FALSE] # G^sigmasigma(theta0)
   # Hattheta0 <- (-1)* getHessian(fittedSat2)
   # Hattheta0 <- getHessian(fittedSat2)
   # InvHattheta0 <- solve(Hattheta0)
-  InvHattheta0 <- attr(VCOV.Sat2, "E.inv")
-  InvH_to_sigmasigma_attheta0 <- InvHattheta0[dSat.idx, dSat.idx, drop = FALSE]
-                                                          # H^sigmasigma(theta0)
+  inv_hattheta0 <- attr(vcov_sat2, "E.inv")
+  inv_h_to_sigmasigma_attheta0 <-
+              inv_hattheta0[d_sat_idx, d_sat_idx, drop = FALSE]
+                                                    # H^sigmasigma(theta0)
   # Inv_of_InvH_to_sigmasigma_attheta0 <- solve(InvH_to_sigmasigma_attheta0)
   #                                                 #[H^sigmasigma(theta0)]^(-1)
-  Inv_of_InvH_to_sigmasigma_attheta0 <- MASS::ginv(InvH_to_sigmasigma_attheta0,
-    tol = .Machine$double.eps^(3 / 4)
+  inv_of_inv_h_to_sigmasigma_attheta0 <- MASS::ginv(       # nolint
+    inv_h_to_sigmasigma_attheta0,
+    tol = .Machine$double.eps ^ (3 / 4)
   )
-  H1tmp_prod1 <- Inv_of_InvH_to_sigmasigma_attheta0 %*%
-                            InvG_to_sigmasigma_attheta0
-  H1tmp_prod2 <- H1tmp_prod1 %*% H1tmp_prod1
-  E_tzz <- sum(diag(H1tmp_prod1)) # expected mean of the second
+  h1tmp_prod1 <- inv_of_inv_h_to_sigmasigma_attheta0 %*%
+                            inv_g_to_sigmasigma_attheta0
+  h1tmp_prod2 <- h1tmp_prod1 %*% h1tmp_prod1
+  e_tzz <- sum(diag(h1tmp_prod1)) # expected mean of the second
                                   # quadratic quantity
-  var_tzz <- 2 * sum(diag(H1tmp_prod2)) # variance of the second
+  var_tzz <- 2 * sum(diag(h1tmp_prod2)) # variance of the second
                                         # quadratic quantity
 
   ##### Section 3: Compute the asymptotic covariance of
   #####            the two quadratic quantities
 
-  drhodpsi_MAT <- vector("list", length = lavsamplestats@ngroups)
-  group.values <- lav_partable_group_values(fittedSat2@ParTable)
+  drhodpsi_mat_1 <- vector("list", length = lavsamplestats@ngroups)
+  group_values <- lav_partable_group_values(fitted_sat2@ParTable)
   for (g in 1:lavsamplestats@ngroups) {
     # delta.g <- lav_model_delta(lavmodel)[[g]] # [[1]] to be substituted by g?
     # The above gives the derivatives of thresholds and polychoric correlations
@@ -252,10 +254,11 @@ lav_pml_plrt <- function(lavobject = NULL, lavmodel = NULL, lavdata = NULL,
     # we need to map the rows of delta.g to the rows/cols of H_at_vartheta0
     # of H1
 
-    PT <- fittedSat2@ParTable
-    PT$label <- lav_partable_labels(PT)
-    free.idx <- which(PT$free > 0 & PT$op != "|" & PT$group == group.values[g])
-    PARLABEL <- PT$label[free.idx]
+    pt_1 <- fitted_sat2@ParTable
+    pt_1$label <- lav_partable_labels(pt_1)
+    free_idx <- which(pt_1$free > 0 & pt_1$op != "|" &
+                       pt_1$group == group_values[g])
+    parlabel <- pt_1$label[free_idx]
 
     # for now, we can assume that lav_model_delta will always return
     # the thresholds first, then the correlations
@@ -284,72 +287,72 @@ lav_pml_plrt <- function(lavobject = NULL, lavmodel = NULL, lavdata = NULL,
 
     # added by YR - 26 April 2018, for 0.6-1
     # we now can get 'labelled' delta rownames
-    delta.g <- lav_object_inspect_delta_internal(
+    delta_g <- lav_object_inspect_delta_internal(
       lavmodel = lavmodel,
       lavdata = lavdata, lavpartable = lavpartable,
       add.labels = TRUE, add.class = FALSE,
       drop.list.single.group = FALSE
     )[[g]]
-    NAMES <- rownames(delta.g)
+    names_1 <- rownames(delta_g)
     if (g > 1L) {
-      NAMES <- paste(NAMES, ".g", g, sep = "")
+      names_1 <- paste(names_1, ".g", g, sep = "")
     }
 
-    par.idx <- match(PARLABEL, NAMES)
-    if (any(is.na(par.idx))) {
+    par_idx <- match(parlabel, names_1)
+    if (any(is.na(par_idx))) {
       lav_msg_warn(gettextf(
         "mismatch between DELTA labels and PAR labels!
-        PARLABEL: %1$s, DELTA LABELS: %2$s", lav_msg_view(PARLABEL),
-         lav_msg_view(NAMES)))
+        PARLABEL: %1$s, DELTA LABELS: %2$s", lav_msg_view(parlabel),
+         lav_msg_view(names_1)))
     }
 
-    drhodpsi_MAT[[g]] <- delta.g[par.idx, index.par, drop = FALSE]
+    drhodpsi_mat_1[[g]] <- delta_g[par_idx, index_par, drop = FALSE]
   }
-  drhodpsi_mat <- do.call(rbind, drhodpsi_MAT)
+  drhodpsi_mat <- do.call(rbind, drhodpsi_mat_1)
 
-  tmp_prod <- t(drhodpsi_mat) %*% Inv_of_InvH_to_sigmasigma_attheta0 %*%
-    drhodpsi_mat %*% InvG_to_psipsi_attheta0 %*% H0tmp_prod1
+  tmp_prod <- t(drhodpsi_mat) %*% inv_of_inv_h_to_sigmasigma_attheta0 %*%
+    drhodpsi_mat %*% inv_g_to_psipsi_attheta0 %*% h0tmp_prod1
   cov_tzztww <- 2 * sum(diag(tmp_prod))
 
   ##### Section 4: compute the adjusted PLRT and its p-value
   # PLRTH0Sat <- 2*nsize*(lavfit@fx - fittedSat@Fit@fx)
-  PLRTH0Sat <- 2 * (H0.fx - SAT.fx)
-  PLRTH0Sat.group <- 2 * (H0.fx.group - SAT.fx.group)
-  asym_mean_PLRTH0Sat <- E_tzz - E_tww
+  plrth0sat <- 2 * (h0_fx - sat_fx)
+  plrth0sat_group <- 2 * (h0_fx_group - sat_fx_group)
+  asym_mean_plrth0sat <- e_tzz - e_tww
   # catch zero value for asym_mean_PLRTH0Sat
-  if (asym_mean_PLRTH0Sat == 0) {
-    asym_var_PLRTH0Sat <- 0
-    scaling.factor <- as.numeric(NA)
-    FSA_PLRT_SEM <- as.numeric(NA)
+  if (asym_mean_plrth0sat == 0) {
+    asym_var_plrth0sat <- 0
+    scaling_factor <- as.numeric(NA)
+    fsa_plrt_sem <- as.numeric(NA)
     adjusted_df <- as.integer(NA)
     pvalue <- as.numeric(NA)
   } else if (any(is.na(c(var_tzz, var_tww, cov_tzztww)))) {
-    asym_var_PLRTH0Sat <- as.numeric(NA)
-    scaling.factor <- as.numeric(NA)
-    FSA_PLRT_SEM <- as.numeric(NA)
+    asym_var_plrth0sat <- as.numeric(NA)
+    scaling_factor <- as.numeric(NA)
+    fsa_plrt_sem <- as.numeric(NA)
     adjusted_df <- as.integer(NA)
     pvalue <- as.numeric(NA)
   } else {
-    asym_var_PLRTH0Sat <- var_tzz + var_tww - 2 * cov_tzztww
-    scaling.factor <- (asym_mean_PLRTH0Sat / (asym_var_PLRTH0Sat / 2))
-    FSA_PLRT_SEM <- (asym_mean_PLRTH0Sat / (asym_var_PLRTH0Sat / 2)) * PLRTH0Sat
-    adjusted_df <- (asym_mean_PLRTH0Sat * asym_mean_PLRTH0Sat) /
-      (asym_var_PLRTH0Sat / 2)
+    asym_var_plrth0sat <- var_tzz + var_tww - 2 * cov_tzztww
+    scaling_factor <- (asym_mean_plrth0sat / (asym_var_plrth0sat / 2))
+    fsa_plrt_sem <- (asym_mean_plrth0sat / (asym_var_plrth0sat / 2)) * plrth0sat
+    adjusted_df <- (asym_mean_plrth0sat * asym_mean_plrth0sat) /
+      (asym_var_plrth0sat / 2)
     # In some very few cases (simulations show very few cases in small
     # sample sizes) the adjusted_df is a negative number, we should then
     # print a warning like: "The adjusted df is computed to be a negative number
     # and for this the first and second moment adjusted PLRT is not computed."
-    if (scaling.factor > 0) {
-      pvalue <- 1 - pchisq(FSA_PLRT_SEM, df = adjusted_df)
+    if (scaling_factor > 0) {
+      pvalue <- 1 - pchisq(fsa_plrt_sem, df = adjusted_df)
     } else {
       pvalue <- as.numeric(NA)
     }
   }
 
   list(
-    PLRTH0Sat = PLRTH0Sat, PLRTH0Sat.group = PLRTH0Sat.group,
-    stat = FSA_PLRT_SEM, df = adjusted_df, p.value = pvalue,
-    scaling.factor = scaling.factor
+    PLRTH0Sat = plrth0sat, PLRTH0Sat.group = plrth0sat_group,
+    stat = fsa_plrt_sem, df = adjusted_df, p.value = pvalue,
+    scaling.factor = scaling_factor
   )
 }
 ############################################################################
@@ -364,22 +367,22 @@ lav_pml_object_aic_bic <- function(lavobject) {
   # The following may need to be updated if we change the fit function
   # so that it is correct for the case of missing values as well.
 
-  logPL <- lavobject@optim$logl
+  log_pl <- lavobject@optim$logl
   nsize <- lavobject@SampleStats@ntotal
 
   # inverted observed unit information
-  H.inv <- lavTech(lavobject, "inverted.information.observed")
+  h_inv <- lavTech(lavobject, "inverted.information.observed")
 
   # first order unit information
-  J <- lavTech(lavobject, "information.first.order")
+  j <- lavTech(lavobject, "information.first.order")
 
   # trace (J %*% H.inv) = sum (J * t(H.inv))
-  dimTheta <- sum(J * H.inv)
+  dim_theta <- sum(j * h_inv)
 
 
   # computations of PL versions of AIC and BIC
-  PL_AIC <- (-2) * logPL + 2 * dimTheta
-  PL_BIC <- (-2) * logPL + dimTheta * log(nsize)
+  pl_aic <- (-2) * log_pl + 2 * dim_theta
+  pl_bic <- (-2) * log_pl + dim_theta * log(nsize)
 
-  list(logPL = logPL, PL_AIC = PL_AIC, PL_BIC = PL_BIC)
+  list(logPL = log_pl, PL_AIC = pl_aic, PL_BIC = pl_bic)
 }
