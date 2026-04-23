@@ -776,9 +776,9 @@ lav_model_partable  <- function(
   tmp_list$plabel <- paste(".p", tmp_list$id, ".", sep = "")
   eq_labels <- unique(label[duplicated(label)])
   eq_id <- integer(length(tmp_list$lhs))
-  for (eq.label in eq_labels) {
+  for (eq_label in eq_labels) {
     tmp_con_idx <- length(tmp_con)
-    all_idx <- which(label == eq.label) # all same-label parameters
+    all_idx <- which(label == eq_label) # all same-label parameters
     ref_idx <- all_idx[1L] # the first one only
     other_idx <- all_idx[-1L] # the others
     eq_id[all_idx] <- ref_idx

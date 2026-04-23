@@ -1,7 +1,7 @@
 # univariate modification indices
 #
 
-modindices <- function(object,
+modindices <- function(object,                         # nolint start
                        standardized = TRUE,
                        cov.std = TRUE,
                        information = "expected",
@@ -13,10 +13,13 @@ modindices <- function(object,
                        # customize output
                        sort. = FALSE,
                        minimum.value = 0.0,
-                       maximum.number = nrow(LIST),
+                       maximum.number = nrow(list_1),
                        free.remove = TRUE,
                        na.remove = TRUE,
-                       op = NULL) {
+                       op = NULL) {                    # nolint end
+  # rename modified argument
+  high_power <- high.power
+
   # check object
   object <- lav_object_check_version(object)
 
@@ -46,37 +49,37 @@ modindices <- function(object,
   }
 
   # extended list (fixed-to-zero parameters)
-  strict.exo <- FALSE
+  strict_exo <- FALSE
   if (object@Model@conditional.x) {
-    strict.exo <- TRUE
+    strict_exo <- TRUE
   }
-  FULL <- lav_partable_full(
+  full <- lav_partable_full(
     partable = lav_partable_set_cache(object@ParTable, object@pta),
     free = TRUE, start = TRUE,
-    strict.exo = strict.exo
+    strict.exo = strict_exo
   )
-  FULL$free <- rep(1L, nrow(FULL))
-  FULL$user <- rep(10L, nrow(FULL))
+  full$free <- rep(1L, nrow(full))
+  full$user <- rep(10L, nrow(full))
 
-  FIT <- lav_object_extended(object, add = FULL, all.free = TRUE)
-  LIST <- FIT@ParTable
+  fit <- lav_object_extended(object, add = full, all.free = TRUE)
+  list_1 <- fit@ParTable
 
 
   # compute information matrix 'extended model'
   # ALWAYS use *expected* information (for now)
-  Information <- lavTech(FIT, paste("information", information, sep = "."))
+  information_1 <- lavTech(fit, paste("information", information, sep = "."))
 
   # compute gradient 'extended model'
-  score <- lavTech(FIT, "gradient.logl")
+  score <- lavTech(fit, "gradient.logl")
 
   # Saris, Satorra & Sorbom 1987
   # partition Q into Q_11, Q_22 and Q_12/Q_21
   # which elements of Q correspond with 'free' and 'nonfree' parameters?
-  model.idx <- LIST$free[LIST$free > 0L & LIST$user != 10L]
-  extra.idx <- LIST$free[LIST$free > 0L & LIST$user == 10L]
+  model_idx <- list_1$free[list_1$free > 0L & list_1$user != 10L]
+  extra_idx <- list_1$free[list_1$free > 0L & list_1$user == 10L]
 
   # catch empty extra.idx (no modification indices!)
-  if (length(extra.idx) == 0L) {
+  if (length(extra_idx) == 0L) {
     # 2 possibilities: either model is saturated, or we have constraints
     if (object@test[[1]]$df == 0) {
       lav_msg_warn(gettext(
@@ -86,24 +89,24 @@ modindices <- function(object,
         "list with extra parameters is empty; to release equality
         constraints, use lavTestScore()"))
     }
-    LIST <- data.frame(
+    list_1 <- data.frame(
       lhs = character(0), op = character(0),
       rhs = character(0), group = integer(0),
       mi = numeric(0), epc = numeric(0),
       sepc.lv = numeric(0), sepc.all = numeric(0),
       sepc.nox = numeric(0)
     )
-    return(LIST)
+    return(list_1)
   }
 
   # partition
-  I11 <- Information[extra.idx, extra.idx, drop = FALSE]
-  I12 <- Information[extra.idx, model.idx, drop = FALSE]
-  I21 <- Information[model.idx, extra.idx, drop = FALSE]
-  I22 <- Information[model.idx, model.idx, drop = FALSE]
+  i11 <- information_1[extra_idx, extra_idx, drop = FALSE]
+  i12 <- information_1[extra_idx, model_idx, drop = FALSE]
+  i21 <- information_1[model_idx, extra_idx, drop = FALSE]
+  i22 <- information_1[model_idx, model_idx, drop = FALSE]
 
   # ALWAYS use *expected* information (for now)
-  I22.inv <- try(
+  i22_inv <- try(
     lavTech(object, paste("inverted.information",
       information,
       sep = "."
@@ -111,43 +114,43 @@ modindices <- function(object,
     silent = TRUE
   )
   # just in case...
-  if (inherits(I22.inv, "try-error")) {
+  if (inherits(i22_inv, "try-error")) {
     lav_msg_stop(gettext(
       "could not compute modification indices; information matrix is singular"))
   }
 
-  V <- I11 - I12 %*% I22.inv %*% I21
-  V.diag <- diag(V)
+  v <- i11 - i12 %*% i22_inv %*% i21
+  v_diag <- diag(v)
   # dirty hack: catch very small or negative values in diag(V)
   # this is needed eg when parameters are not identified if freed-up;
-  idx <- which(V.diag < .Machine$double.eps^(1 / 3)) # was 1/2 <0.6-14
+  idx <- which(v_diag < .Machine$double.eps^(1 / 3)) # was 1/2 <0.6-14
   if (length(idx) > 0L) {
-    V.diag[idx] <- as.numeric(NA)
+    v_diag[idx] <- as.numeric(NA)
   }
 
   # create and fill in mi
   if (object@Data@nlevels == 1L) {
-    N <- object@SampleStats@ntotal
+    n <- object@SampleStats@ntotal
     #if (object@Model@estimator %in% ("ML")) {
       score <- -1 * score # due to gradient.logl
     #}
   } else {
     # total number of clusters (over groups)
-    N <- 0
+    n <- 0
     for (g in 1:object@SampleStats@ngroups) {
-      N <- N + object@Data@Lp[[g]]$nclusters[[2]]
+      n <- n + object@Data@Lp[[g]]$nclusters[[2]]
     }
     # score <- score * (2 * object@SampleStats@ntotal) / N
     score <- score / 2 # -2 * LRT
   }
   mi <- numeric(length(score))
-  mi[extra.idx] <- N * (score[extra.idx] * score[extra.idx]) / V.diag
-  if (length(model.idx) > 0L) {
-    mi[model.idx] <- N * (score[model.idx] * score[model.idx]) / diag(I22)
+  mi[extra_idx] <- n * (score[extra_idx] * score[extra_idx]) / v_diag
+  if (length(model_idx) > 0L) {
+    mi[model_idx] <- n * (score[model_idx] * score[model_idx]) / diag(i22)
   }
 
-  LIST$mi <- rep(as.numeric(NA), length(LIST$lhs))
-  LIST$mi[LIST$free > 0] <- mi
+  list_1$mi <- rep(as.numeric(NA), length(list_1$lhs))
+  list_1$mi[list_1$free > 0] <- mi
 
   # handle equality constraints (if any)
   # eq.idx <- which(LIST$op == "==")
@@ -162,21 +165,21 @@ modindices <- function(object,
   # }
 
   # EPC
-  d <- (-1 * N) * score
+  d <- (-1 * n) * score
   # needed? probably not; just in case
   d[which(abs(d) < 1e-15)] <- 1.0
-  LIST$epc[LIST$free > 0] <- mi / d
+  list_1$epc[list_1$free > 0] <- mi / d
 
 
   # standardize?
   if (standardized) {
-    EPC <- LIST$epc
+    epc <- list_1$epc
 
     if (cov.std) {
       # replace epc values for variances by est values
-      var.idx <- which(LIST$op == "~~" & LIST$lhs == LIST$rhs &
-        LIST$exo == 0L)
-      EPC[var.idx] <- LIST$est[var.idx]
+      var_idx <- which(list_1$op == "~~" & list_1$lhs == list_1$rhs &
+        list_1$exo == 0L)
+      epc[var_idx] <- list_1$est[var_idx]
     }
 
     # two problems:
@@ -184,74 +187,74 @@ modindices <- function(object,
     #     perfectly legal
     #   - EPC (of variances) can be tiny (near-zero), and we should
     #     not divide by tiny variables
-    small.idx <- which(LIST$op == "~~" &
-      LIST$lhs == LIST$rhs &
-      abs(EPC) < sqrt(.Machine$double.eps))
-    if (length(small.idx) > 0L) {
-      EPC[small.idx] <- as.numeric(NA)
+    small_idx <- which(list_1$op == "~~" &
+      list_1$lhs == list_1$rhs &
+      abs(epc) < sqrt(.Machine$double.eps))
+    if (length(small_idx) > 0L) {
+      epc[small_idx] <- as.numeric(NA)
     }
 
     # get the sign
-    EPC.sign <- sign(LIST$epc)
+    epc_sign <- sign(list_1$epc)
 
-    LIST$sepc.lv <- EPC.sign * lav_standardize_lv(object,
-      partable = LIST,
-      est = abs(EPC),
+    list_1$sepc.lv <- epc_sign * lav_standardize_lv(object,
+      partable = list_1,
+      est = abs(epc),
       cov.std = cov.std
     )
-    if (length(small.idx) > 0L) {
-      LIST$sepc.lv[small.idx] <- 0
+    if (length(small_idx) > 0L) {
+      list_1$sepc.lv[small_idx] <- 0
     }
-    LIST$sepc.all <- EPC.sign * lav_standardize_all(object,
-      partable = LIST,
-      est = abs(EPC),
+    list_1$sepc.all <- epc_sign * lav_standardize_all(object,
+      partable = list_1,
+      est = abs(epc),
       cov.std = cov.std
     )
-    if (length(small.idx) > 0L) {
-      LIST$sepc.all[small.idx] <- 0
+    if (length(small_idx) > 0L) {
+      list_1$sepc.all[small_idx] <- 0
     }
-    LIST$sepc.nox <- EPC.sign * lav_standardize_all_nox(object,
-      partable = LIST,
-      est = abs(EPC),
+    list_1$sepc.nox <- epc_sign * lav_standardize_all_nox(object,
+      partable = list_1,
+      est = abs(epc),
       cov.std = cov.std
     )
-    if (length(small.idx) > 0L) {
-      LIST$sepc.nox[small.idx] <- 0
+    if (length(small_idx) > 0L) {
+      list_1$sepc.nox[small_idx] <- 0
     }
   }
 
   # power?
   if (power) {
-    LIST$delta <- delta
+    list_1$delta <- delta
     # FIXME: this is using epc in unstandardized metric
     #        this would be much more useful in standardized metric
     #        we need a lav_standardize_all.reverse function...
-    LIST$ncp <- (LIST$mi / (LIST$epc * LIST$epc)) * (delta * delta)
-    LIST$power <- 1 - pchisq(qchisq((1.0 - alpha), df = 1),
-      df = 1, ncp = LIST$ncp
+    list_1$ncp <- (list_1$mi / (list_1$epc * list_1$epc)) * (delta * delta)
+    list_1$power <- 1 - pchisq(qchisq((1.0 - alpha), df = 1),
+      df = 1, ncp = list_1$ncp
     )
-    LIST$decision <- character(length(LIST$power))
+    list_1$decision <- character(length(list_1$power))
 
     # five possibilities (Table 6 in Saris, Satorra, van der Veld, 2009)
-    mi.significant <- ifelse(1 - pchisq(LIST$mi, df = 1) < alpha,
+    mi_significant <- ifelse(1 - pchisq(list_1$mi, df = 1) < alpha,
       TRUE, FALSE
     )
-    high.power <- LIST$power > high.power
+    high_power <- list_1$power > high_power
     # FIXME: sepc.all or epc??
     # epc.high <- abs(LIST$sepc.all) > LIST$delta
-    epc.high <- abs(LIST$epc) > LIST$delta
+    epc_high <- abs(list_1$epc) > list_1$delta
 
-    LIST$decision[which(!mi.significant & !high.power)] <- "(i)"
-    LIST$decision[which(mi.significant & !high.power)] <- "**(m)**"
-    LIST$decision[which(!mi.significant & high.power)] <- "(nm)"
-    LIST$decision[which(mi.significant & high.power &
-      !epc.high)] <- "epc:nm"
-    LIST$decision[which(mi.significant & high.power &
-      epc.high)] <- "*epc:m*"
+    list_1$decision[which(!mi_significant & !high_power)] <- "(i)"
+    list_1$decision[which(mi_significant & !high_power)] <- "**(m)**"
+    list_1$decision[which(!mi_significant & high_power)] <- "(nm)"
+    list_1$decision[which(mi_significant & high_power &
+      !epc_high)] <- "epc:nm"
+    list_1$decision[which(mi_significant & high_power &
+      epc_high)] <- "*epc:m*"
 
-    # LIST$decision[ which(mi.significant &  high.power) ] <- "epc"
-    # LIST$decision[ which(mi.significant & !high.power) ] <- "***"
-    # LIST$decision[ which(!mi.significant & !high.power) ] <- "(i)"
+    # LIST$decision[ which(mi.significant &  high_power) ] <- "epc"
+    # LIST$decision[ which(mi.significant & !high_power) ] <- "***"
+    # LIST$decision[ which(!mi.significant & !high_power) ] <- "(i)"
   }
 
   # remove rows corresponding to 'fixed.x' exogenous parameters
@@ -261,62 +264,64 @@ modindices <- function(object,
   # }
 
   # remove some columns
-  LIST$id <- LIST$ustart <- LIST$exo <- LIST$label <- LIST$plabel <- NULL
-  LIST$start <- LIST$free <- LIST$est <- LIST$se <- LIST$prior <- NULL
-  LIST$upper <- LIST$lower <- NULL
+  list_1$id <- list_1$ustart <- list_1$exo <- list_1$label <-
+                                              list_1$plabel <- NULL
+  list_1$start <- list_1$free <- list_1$est <- list_1$se <-
+                                               list_1$prior <- NULL
+  list_1$upper <- list_1$lower <- NULL
 
   if (power) {
-    LIST$sepc.lv <- LIST$sepc.nox <- NULL
+    list_1$sepc.lv <- list_1$sepc.nox <- NULL
   }
 
   # create data.frame
-  LIST <- as.data.frame(LIST, stringsAsFactors = FALSE)
-  class(LIST) <- c("lavaan.data.frame", "data.frame")
+  list_1 <- as.data.frame(list_1, stringsAsFactors = FALSE)
+  class(list_1) <- c("lavaan.data.frame", "data.frame")
 
   # remove rows corresponding to 'old' free parameters
   if (free.remove) {
-    old.idx <- which(LIST$user != 10L)
-    if (length(old.idx) > 0L) {
-      LIST <- LIST[-old.idx, ]
+    old_idx <- which(list_1$user != 10L)
+    if (length(old_idx) > 0L) {
+      list_1 <- list_1[-old_idx, ]
     }
   }
 
   # remove rows corresponding to 'equality' constraints
-  eq.idx <- which(LIST$op == "==")
-  if (length(eq.idx) > 0L) {
-    LIST <- LIST[-eq.idx, ]
+  eq_idx <- which(list_1$op == "==")
+  if (length(eq_idx) > 0L) {
+    list_1 <- list_1[-eq_idx, ]
   }
 
   # remove even more columns
-  LIST$user <- NULL
+  list_1$user <- NULL
 
   # remove block/group/level is only single block
-  if (lav_partable_nblocks(LIST) == 1L) {
-    LIST$block <- NULL
-    LIST$group <- NULL
-    LIST$level <- NULL
+  if (lav_partable_nblocks(list_1) == 1L) {
+    list_1$block <- NULL
+    list_1$group <- NULL
+    list_1$level <- NULL
   }
 
   # sort?
   if (sort.) {
-    LIST <- LIST[order(LIST$mi, decreasing = TRUE), ]
+    list_1 <- list_1[order(list_1$mi, decreasing = TRUE), ]
   }
   if (minimum.value > 0.0) {
-    LIST <- LIST[!is.na(LIST$mi) & LIST$mi > minimum.value, ]
+    list_1 <- list_1[!is.na(list_1$mi) & list_1$mi > minimum.value, ]
   }
-  if (maximum.number < nrow(LIST)) {
-    LIST <- LIST[seq_len(maximum.number), ]
+  if (maximum.number < nrow(list_1)) {
+    list_1 <- list_1[seq_len(maximum.number), ]
   }
   if (na.remove) {
-    idx <- which(is.na(LIST$mi))
+    idx <- which(is.na(list_1$mi))
     if (length(idx) > 0) {
-      LIST <- LIST[-idx, ]
+      list_1 <- list_1[-idx, ]
     }
   }
   if (!is.null(op)) {
-    idx <- LIST$op %in% op
+    idx <- list_1$op %in% op
     if (length(idx) > 0) {
-      LIST <- LIST[idx, ]
+      list_1 <- list_1[idx, ]
     }
   }
 
@@ -327,8 +332,8 @@ modindices <- function(object,
   #   "see the effects of releasing equality constraints, use the\n",
   #   "lavTestScore() function")
 
-  LIST
+  list_1
 }
 
 # aliases
-modificationIndices <- modificationindices <- modindices
+modificationIndices <- modificationindices <- modindices     # nolint

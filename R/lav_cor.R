@@ -6,7 +6,7 @@
 # - YR 26 Nov 2013: big change - make it a wrapper around lavaan()
 #                   estimator = "none" means two.step (starting values)
 
-lav_object_cor <- function(object,
+lav_object_cor <- function(object,                 # nolint start
                    # lav.data options
                    ordered = NULL,
                    group = NULL,
@@ -22,7 +22,7 @@ lav_object_cor <- function(object,
                    ...,
                    cor.smooth = FALSE,
                    cor.smooth.tol = 1e-04, # was 1e-06 in <0.6-14
-                   output = "cor") {
+                   output = "cor") {             # nolint end
   # shortcut if object = lavaan object
   if (inherits(object, "lavaan")) {
     # check object
@@ -59,29 +59,29 @@ lav_object_cor <- function(object,
 
   # extract sampling.weights.normalization from dots (for lav_lavdata() call)
   dots <- list(...)
-  sampling.weights.normalization <- "total"
+  sampling_weights_normalization <- "total"
   if (!is.null(dots$sampling.weights.normalization)) {
-    sampling.weights.normalization <- dots$sampling.weights.normalization
+    sampling_weights_normalization <- dots$sampling.weights.normalization
   }
 
 
   # check object class
   if (inherits(object, "lavData")) {
-    lav.data <- object
+    lav_data <- object
   } else if (inherits(object, "data.frame") ||
     inherits(object, "matrix")) {
     object <- as.data.frame(object)
-    NAMES <- names(object)
+    names_1 <- names(object)
     if (!is.null(group)) {
-      NAMES <- NAMES[-match(group, NAMES)]
+      names_1 <- names_1[-match(group, names_1)]
     }
     if (!is.null(sampling.weights)) {
-      NAMES <- NAMES[-match(sampling.weights, NAMES)]
+      names_1 <- names_1[-match(sampling.weights, names_1)]
     }
     if (is.logical(ordered)) {
-      ordered.flag <- ordered
-      if (ordered.flag) {
-        ordered <- NAMES
+      ordered_flag <- ordered
+      if (ordered_flag) {
+        ordered <- names_1
         if (length(ov.names.x) > 0L) {
           ordered <- ordered[-which(ordered %in% ov.names.x)]
         }
@@ -96,22 +96,22 @@ lav_object_cor <- function(object,
       ordered <- character(0L)
     } else {
       # check if all names in "ordered" occur in the dataset?
-      missing.idx <- which(!ordered %in% NAMES)
-      if (length(missing.idx) > 0L) {
+      missing_idx <- which(!ordered %in% names_1)
+      if (length(missing_idx) > 0L) {
         lav_msg_warn(gettextf(
           "ordered variable(s): %s could not be found
           in the data and will be ignored",
-          lav_msg_view(ordered[missing.idx])))
+          lav_msg_view(ordered[missing_idx])))
       }
     }
-    lav.data <- lav_lavdata(
+    lav_data <- lav_lavdata(
       data = object, group = group,
-      ov.names = NAMES, ordered = ordered,
+      ov.names = names_1, ordered = ordered,
       sampling.weights = sampling.weights,
       ov.names.x = ov.names.x,
       lavoptions = list(
         missing = missing,
-        sampling.weights.normalization = sampling.weights.normalization
+        sampling.weights.normalization = sampling_weights_normalization
       )
     )
   } else {
@@ -121,7 +121,7 @@ lav_object_cor <- function(object,
   }
 
   # set default estimator if se != "none"
-  categorical <- any(lav.data@ov$type == "ordered")
+  categorical <- any(lav_data@ov$type == "ordered")
   if (se != "none" && estimator == "none") {
     if (categorical) {
       estimator <- "WLSMV"
@@ -132,23 +132,24 @@ lav_object_cor <- function(object,
 
   # extract more partable options from dots
   meanstructure <- FALSE
-  fixed.x <- FALSE
+  fixed_x <- FALSE
   mimic <- "lavaan"
-  conditional.x <- FALSE
+  conditional_x <- FALSE
   if (!is.null(dots$meanstructure)) {
     meanstructure <- dots$meanstructure
   }
-  if (lav.data@ngroups > 1L || categorical || tolower(missing) %in% c("ml", "fiml", "direct")) {
+  if (lav_data@ngroups > 1L || categorical ||
+      tolower(missing) %in% c("ml", "fiml", "direct")) {
     meanstructure <- TRUE
   }
   if (!is.null(dots$fixed.x)) {
-    fixed.x <- dots$fixed.x
+    fixed_x <- dots$fixed.x
   }
   if (!is.null(dots$mimic)) {
     mimic <- dots$mimic
   }
   if (!is.null(dots$conditional.x)) {
-    conditional.x <- dots$conditional.x
+    conditional_x <- dots$conditional.x
   }
 
   # override, only for backwards compatibility (eg moments() in JWileymisc)
@@ -157,14 +158,14 @@ lav_object_cor <- function(object,
   # }
 
   # generate partable for unrestricted model
-  PT.un <-
+  pt_un <-
     lav_partable_unrestricted(
       lavobject = NULL,
-      lavdata = lav.data,
+      lavdata = lav_data,
       lavoptions = list(
         meanstructure = meanstructure,
-        fixed.x = fixed.x,
-        conditional.x = conditional.x,
+        fixed.x = fixed_x,
+        conditional.x = conditional_x,
         # sampling.weights.normalization = sampling.weights.normalization,
         group.w.free = FALSE,
         missing = missing,
@@ -177,22 +178,22 @@ lav_object_cor <- function(object,
     )
 
 
-  FIT <- lavaan(
-    slotParTable = PT.un, slotData = lav.data,
+  fit <- lavaan(
+    slotParTable = pt_un, slotData = lav_data,
     model.type = "unrestricted",
     missing = missing,
     baseline = baseline, h1 = TRUE, # must be TRUE!
     se = se, test = test, estimator = estimator, ...
   )
 
-  out <- lav_object_cor_output(FIT, output = output)
+  out <- lav_object_cor_output(fit, output = output)
 
   # smooth correlation matrix? (only if output = "cor")
   if (output == "cor" && cor.smooth) {
-    tmp.attr <- attributes(out)
+    tmp_attr <- attributes(out)
     out <- cov2cor(lav_matrix_symmetric_force_pd(out, tol = cor.smooth.tol))
     # we lost most of the attributes
-    attributes(out) <- tmp.attr
+    attributes(out) <- tmp_attr
   }
 
   out

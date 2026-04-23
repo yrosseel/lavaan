@@ -3,7 +3,7 @@
 
 # suggested by JEB
 lav_lavaan_pairs <- function(x, group = 1L, ...) {
-  X <- x@Data@X[[group]]
-  colnames(X) <- x@Data@ov.names[[group]]
-  pairs(X, ...)
+  m_x <- x@Data@X[[group]]
+  colnames(m_x) <- x@Data@ov.names[[group]]
+  pairs(m_x, ...)
 }

@@ -9,7 +9,7 @@
 # update 3 june 2011 YR: removed se="none" (since now implied by do.fit=FALSE)
 # update 13 dec 2011 YR: changed name (to avoid confusion with the
 #                        model-implied cov)
-lavInspectSampleCov <- function(model, data, ...) {
+lavInspectSampleCov <- function(model, data, ...) {        # nolint
   fit <- sem(model, data = data, ..., do.fit = FALSE)
   lavInspect(fit, "sampstat")
 }

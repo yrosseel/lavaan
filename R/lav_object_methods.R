@@ -23,16 +23,16 @@ setMethod(
   "show", "lavaan",
   function(object) {
     # efa?
-    efa.flag <- object@Options$model.type == "efa"
+    efa_flag <- object@Options$model.type == "efa"
 
     # show only basic information
     res <- lav_object_summary(object,
       fit.measures = FALSE,
       estimates = FALSE,
       modindices = FALSE,
-      efa = efa.flag
+      efa = efa_flag
     )
-    if (efa.flag) {
+    if (efa_flag) {
       # print (standardized) loadings only
       class(res) <- c("lavaan.efa", "list")
       print(res)
@@ -46,7 +46,7 @@ setMethod(
 
 setMethod(
   "summary", "lavaan",
-  function(object, header = TRUE,
+  function(object, header = TRUE,                                # nolint start
            fit.measures = FALSE,
            estimates = TRUE,
            ci = FALSE,
@@ -77,7 +77,7 @@ setMethod(
            ),
            modindices = FALSE,
            srmr.close.h0 = NULL,
-           nd = 3L, cutoff = 0.3, dot.cutoff = 0.1, ...) {
+           nd = 3L, cutoff = 0.3, dot.cutoff = 0.1, ...) {      # nolint end
     dotdotdot <- list(...)
     if (length(dotdotdot) > 0L) {
       for (j in seq_along(dotdotdot)) {
@@ -87,24 +87,28 @@ setMethod(
         )
       }
     }
-    # efa?
-    efa.flag <- object@Options$model.type == "efa"
+    # rename modified argument(s)
+    fit_measures <- fit.measures
 
-    if (is.logical(fit.measures)) {
-      if (fit.measures) {
-        fit.measures <- "default"
+    # efa?
+    efa_flag <- object@Options$model.type == "efa"
+
+    if (is.logical(fit_measures)) {
+      if (fit_measures) {
+        fit_measures <- "default"
       } else {
-        fit.measures <- "none"
+        fit_measures <- "none"
       }
     }
-    if (!is.list(fit.measures)) fit.measures <- list(fit.measures = fit.measures)
+    if (!is.list(fit_measures))
+        fit_measures <- list(fit.measures = fit_measures)
     if (!missing(fm.args)) {
       lav_deprecated_args("fit.measures", "fm.args")
-      fit.measures <- c(fit.measures, fm.args)
+      fit_measures <- c(fit_measures, fm.args)
     }
     res <- lav_object_summary(
       object = object, header = header,
-      fit.measures = fit.measures, estimates = estimates,
+      fit.measures = fit_measures, estimates = estimates,
       baseline.model = baseline.model,
       h1.model = h1.model,
       ci = ci, fmi = fmi, std = std, standardized = standardized,
@@ -113,7 +117,7 @@ setMethod(
       remove.def = remove.def, remove.nonfree = remove.nonfree,
       remove.step1 = remove.step1, remove.unused = remove.unused,
       plabel = plabel, cov.std = cov.std,
-      rsquare = rsquare, efa = efa.flag,
+      rsquare = rsquare, efa = efa_flag,
       modindices = modindices,
       srmr.close.h0 = srmr.close.h0
     )
@@ -123,7 +127,7 @@ setMethod(
     attr(res, "nd") <- nd
 
     # if efa, add cutoff and dot.cutoff, and change class
-    if (efa.flag) {
+    if (efa_flag) {
       # class(res) <- c("lavaan.summary.efa", "list")
       attr(res, "cutoff") <- cutoff
       attr(res, "dot.cutoff") <- dot.cutoff
@@ -156,8 +160,8 @@ setMethod(
   }
 )
 
-standardizedSolution <- # nolint
-  standardizedsolution <- function(object, # nolint
+standardizedSolution <-                                      # nolint start
+  standardizedsolution <- function(object,
                                    type = "std.all",
                                    se = TRUE,
                                    zstat = TRUE,
@@ -169,9 +173,9 @@ standardizedSolution <- # nolint
                                    remove.ineq = TRUE,
                                    remove.def = FALSE,
                                    partable = NULL,
-                                   GLIST = NULL, # nolint
+                                   GLIST = NULL,
                                    est = NULL,
-                                   output = "data.frame") {
+                                   output = "data.frame") { # nolint end
 
     # check object
     object <- lav_object_check_version(object)
@@ -207,34 +211,34 @@ standardizedSolution <- # nolint
     }
 
     if (is.null(partable)) {
-      tmp.partable <- lavInspect(object, "list")
+      tmp_partable <- lavInspect(object, "list")
     } else {
-      tmp.partable <- partable
+      tmp_partable <- partable
     }
-    tmp.list <- tmp.partable[, c("lhs", "op", "rhs", "exo")]
-    if (!is.null(tmp.partable$group)) {
-      tmp.list$group <- tmp.partable$group
+    tmp_list <- tmp_partable[, c("lhs", "op", "rhs", "exo")]
+    if (!is.null(tmp_partable$group)) {
+      tmp_list$group <- tmp_partable$group
     }
-    if (!is.null(tmp.partable$block)) {
-      tmp.list$block <- tmp.partable$block
+    if (!is.null(tmp_partable$block)) {
+      tmp_list$block <- tmp_partable$block
     }
-    if (sum(nchar(tmp.partable$label)) != 0L) {
-      tmp.list$label <- tmp.partable$label
+    if (sum(nchar(tmp_partable$label)) != 0L) {
+      tmp_list$label <- tmp_partable$label
     }
 
     # add std and std.all columns
     if (type == "std.lv") {
-      tmp.list$est.std <- lav_standardize_lv(object,
+      tmp_list$est.std <- lav_standardize_lv(object,
         est = est, GLIST = GLIST,
         partable = partable, cov.std = cov.std
       )
     } else if (type == "std.all") {
-      tmp.list$est.std <- lav_standardize_all(object,
+      tmp_list$est.std <- lav_standardize_all(object,
         est = est, GLIST = GLIST,
         partable = partable, cov.std = cov.std
       )
     } else if (type == "std.nox") {
-      tmp.list$est.std <- lav_standardize_all_nox(object,
+      tmp_list$est.std <- lav_standardize_all_nox(object,
         est = est, GLIST = GLIST,
         partable = partable, cov.std = cov.std
       )
@@ -242,45 +246,45 @@ standardizedSolution <- # nolint
 
     if (object@Options$se != "none" && se) {
       # add 'se' for standardized parameters
-      tmp.vcov <- try(lav_object_inspect_vcov(object,
+      tmp_vcov <- try(lav_object_inspect_vcov(object,
         standardized = TRUE,
         type = type, free.only = FALSE,
         add.labels = FALSE,
         add.class = FALSE
       ))
-      if (inherits(tmp.vcov, "try-error") || is.null(tmp.vcov)) {
-        tmp.list$se <- rep(NA, length(tmp.list$lhs))
+      if (inherits(tmp_vcov, "try-error") || is.null(tmp_vcov)) {
+        tmp_list$se <- rep(NA, length(tmp_list$lhs))
         if (zstat) {
-          tmp.list$z <- rep(NA, length(tmp.list$lhs))
+          tmp_list$z <- rep(NA, length(tmp_list$lhs))
         }
         if (pvalue) {
-          tmp.list$pvalue <- rep(NA, length(tmp.list$lhs))
+          tmp_list$pvalue <- rep(NA, length(tmp_list$lhs))
         }
       } else {
-        tmp <- diag(tmp.vcov)
+        tmp <- diag(tmp_vcov)
         # catch negative values
-        min.idx <- which(tmp < 0)
-        if (length(min.idx) > 0L) {
-          tmp[min.idx] <- as.numeric(NA)
+        min_idx <- which(tmp < 0)
+        if (length(min_idx) > 0L) {
+          tmp[min_idx] <- as.numeric(NA)
         }
         # now, we can safely take the square root
         tmp <- sqrt(tmp)
 
         # catch near-zero SEs
-        zero.idx <- which(tmp < .Machine$double.eps^(1 / 4)) # was 1/2 < 0.6
+        zero_idx <- which(tmp < .Machine$double.eps^(1 / 4)) # was 1/2 < 0.6
         # was 1/3 < 0.6-9
-        if (length(zero.idx) > 0L) {
-          tmp[zero.idx] <- 0.0
+        if (length(zero_idx) > 0L) {
+          tmp[zero_idx] <- 0.0
         }
-        tmp.list$se <- tmp
+        tmp_list$se <- tmp
 
         # add 'z' column
         if (zstat) {
-          tmp.se <- ifelse(tmp.list$se == 0.0, NA, tmp.list$se)
-          tmp.list$z <- tmp.list$est.std / tmp.se
+          tmp_se <- ifelse(tmp_list$se == 0.0, NA, tmp_list$se)
+          tmp_list$z <- tmp_list$est.std / tmp_se
         }
         if (zstat && pvalue) {
-          tmp.list$pvalue <- 2 * (1 - pnorm(abs(tmp.list$z)))
+          tmp_list$pvalue <- 2 * (1 - pnorm(abs(tmp_list$z)))
         }
       }
     }
@@ -292,64 +296,64 @@ standardizedSolution <- # nolint
       a <- c(a, 1 - a)
       fac <- qnorm(a)
       # if(object@Options$se != "bootstrap") {
-      ci <- tmp.list$est.std + tmp.list$se %o% fac
+      ci <- tmp_list$est.std + tmp_list$se %o% fac
       # } else {
-      #    ci <- rep(as.numeric(NA), length(tmp.list$est.std)) +
-      #              tmp.list$se %o% fac
+      #    ci <- rep(as.numeric(NA), length(tmp_list$est.std)) +
+      #              tmp_list$se %o% fac
       # }
 
-      tmp.list$ci.lower <- ci[, 1]
-      tmp.list$ci.upper <- ci[, 2]
+      tmp_list$ci.lower <- ci[, 1]
+      tmp_list$ci.upper <- ci[, 2]
     }
 
 
     # if single group, remove group column
-    if (object@Data@ngroups == 1L) tmp.list$group <- NULL
+    if (object@Data@ngroups == 1L) tmp_list$group <- NULL
 
     # remove == rows?
     if (remove.eq) {
-      eq.idx <- which(tmp.list$op == "==")
-      if (length(eq.idx) > 0L) {
-        tmp.list <- tmp.list[-eq.idx, ]
+      eq_idx <- which(tmp_list$op == "==")
+      if (length(eq_idx) > 0L) {
+        tmp_list <- tmp_list[-eq_idx, ]
       }
     }
     # remove <> rows?
     if (remove.ineq) {
-      ineq.idx <- which(tmp.list$op %in% c("<", ">"))
-      if (length(ineq.idx) > 0L) {
-        tmp.list <- tmp.list[-ineq.idx, ]
+      ineq_idx <- which(tmp_list$op %in% c("<", ">"))
+      if (length(ineq_idx) > 0L) {
+        tmp_list <- tmp_list[-ineq_idx, ]
       }
     }
     # remove := rows?
     if (remove.def) {
-      def.idx <- which(tmp.list$op == ":=")
-      if (length(def.idx) > 0L) {
-        tmp.list <- tmp.list[-def.idx, ]
+      def_idx <- which(tmp_list$op == ":=")
+      if (length(def_idx) > 0L) {
+        tmp_list <- tmp_list[-def_idx, ]
       }
     }
 
     # remove attribute for data order
-    attr(tmp.list, "ovda") <- NULL
+    attr(tmp_list, "ovda") <- NULL
 
     if (output == "text") {
-      class(tmp.list) <- c(
+      class(tmp_list) <- c(
         "lavaan.parameterEstimates", "lavaan.data.frame",
         "data.frame"
       )
-      # tmp.list$exo is needed for printing, don't remove it
-      attr(tmp.list, "group.label") <- object@Data@group.label
-      attr(tmp.list, "level.label") <- object@Data@level.label
-      # attr(tmp.list, "header") <- FALSE
+      # tmp_list$exo is needed for printing, don't remove it
+      attr(tmp_list, "group.label") <- object@Data@group.label
+      attr(tmp_list, "level.label") <- object@Data@level.label
+      # attr(tmp_list, "header") <- FALSE
     } else {
-      tmp.list$exo <- NULL
-      tmp.list$block <- NULL
-      class(tmp.list) <- c("lavaan.data.frame", "data.frame")
+      tmp_list$exo <- NULL
+      tmp_list$block <- NULL
+      class(tmp_list) <- c("lavaan.data.frame", "data.frame")
     }
 
-    tmp.list
+    tmp_list
   }
 
-lavParameterEstimates <- function(object,                 # nolint
+lavParameterEstimates <- function(object,                      # nolint start
                                  # select columns
                                  se = TRUE,
                                  zstat = TRUE,
@@ -376,7 +380,7 @@ lavParameterEstimates <- function(object,                 # nolint
                                  # output
                                  add.attributes = FALSE,
                                  output = "data.frame",
-                                 header = FALSE) {
+                                 header = FALSE) {           # nolint end
 
     # lavaan.fsr?
     if (inherits(object, "lavaan.fsr")) {
@@ -449,92 +453,92 @@ lavParameterEstimates <- function(object,                 # nolint
       zstat <- pvalue <- FALSE
     }
 
-    tmp.partable <- as.data.frame(object@ParTable, stringsAsFactors = FALSE)
-    tmp.list <- tmp.partable[, c("lhs", "op", "rhs", "free")]
-    if (!is.null(tmp.partable$user)) {
-      tmp.list$user <- tmp.partable$user
+    tmp_partable <- as.data.frame(object@ParTable, stringsAsFactors = FALSE)
+    tmp_list <- tmp_partable[, c("lhs", "op", "rhs", "free")]
+    if (!is.null(tmp_partable$user)) {
+      tmp_list$user <- tmp_partable$user
     }
-    if (!is.null(tmp.partable$block)) {
-      tmp.list$block <- tmp.partable$block
+    if (!is.null(tmp_partable$block)) {
+      tmp_list$block <- tmp_partable$block
     } else {
-      tmp.list$block <- rep(1L, length(tmp.list$lhs))
+      tmp_list$block <- rep(1L, length(tmp_list$lhs))
     }
-    if (!is.null(tmp.partable$level)) {
-      tmp.list$level <- tmp.partable$level
+    if (!is.null(tmp_partable$level)) {
+      tmp_list$level <- tmp_partable$level
     } else {
-      tmp.list$level <- rep(1L, length(tmp.list$lhs))
+      tmp_list$level <- rep(1L, length(tmp_list$lhs))
     }
-    if (!is.null(tmp.partable$group)) {
-      tmp.list$group <- tmp.partable$group
+    if (!is.null(tmp_partable$group)) {
+      tmp_list$group <- tmp_partable$group
     } else {
-      tmp.list$group <- rep(1L, length(tmp.list$lhs))
+      tmp_list$group <- rep(1L, length(tmp_list$lhs))
     }
-    if (!is.null(tmp.partable$step)) {
-      tmp.list$step <- tmp.partable$step
+    if (!is.null(tmp_partable$step)) {
+      tmp_list$step <- tmp_partable$step
     }
-    if (!is.null(tmp.partable$efa)) {
-      tmp.list$efa <- tmp.partable$efa
+    if (!is.null(tmp_partable$efa)) {
+      tmp_list$efa <- tmp_partable$efa
     }
-    if (!is.null(tmp.partable$label)) {
-      tmp.list$label <- tmp.partable$label
+    if (!is.null(tmp_partable$label)) {
+      tmp_list$label <- tmp_partable$label
     } else {
-      tmp.list$label <- rep("", length(tmp.list$lhs))
+      tmp_list$label <- rep("", length(tmp_list$lhs))
     }
-    if (!is.null(tmp.partable$exo)) {
-      tmp.list$exo <- tmp.partable$exo
+    if (!is.null(tmp_partable$exo)) {
+      tmp_list$exo <- tmp_partable$exo
     } else {
-      tmp.list$exo <- rep(0L, length(tmp.list$lhs))
+      tmp_list$exo <- rep(0L, length(tmp_list$lhs))
     }
     if (inherits(object, "lavaanList")) {
       # per default: nothing!
       # if("partable" %in% object@meta$store.slots) {
       #    COF <- sapply(object@ParTableList, "[[", "est")
-      #    tmp.list$est <- rowMeans(COF)
+      #    tmp_list$est <- rowMeans(COF)
       # }
-      tmp.list$est <- NULL
-    } else if (!is.null(tmp.partable$est)) {
-      tmp.list$est <- tmp.partable$est
+      tmp_list$est <- NULL
+    } else if (!is.null(tmp_partable$est)) {
+      tmp_list$est <- tmp_partable$est
     } else {
-      tmp.list$est <- lav_model_get_parameters(object@Model,
+      tmp_list$est <- lav_model_get_parameters(object@Model,
         type = "user",
         extra = TRUE
       )
     }
-    if (!is.null(tmp.partable$lower)) {
-      tmp.list$lower <- tmp.partable$lower
+    if (!is.null(tmp_partable$lower)) {
+      tmp_list$lower <- tmp_partable$lower
     }
-    if (!is.null(tmp.partable$upper)) {
-      tmp.list$upper <- tmp.partable$upper
+    if (!is.null(tmp_partable$upper)) {
+      tmp_list$upper <- tmp_partable$upper
     }
 
 
     # add se, zstat, pvalue
     if (se && object@Options$se != "none") {
-      tmp.list$se <- lav_object_inspect_se(object)
+      tmp_list$se <- lav_object_inspect_se(object)
       # handle tiny SEs
-      tmp.list$se <- ifelse(tmp.list$se < sqrt(.Machine$double.eps),
-        0, tmp.list$se
+      tmp_list$se <- ifelse(tmp_list$se < sqrt(.Machine$double.eps),
+        0, tmp_list$se
       )
-      tmp.se <- ifelse(tmp.list$se < sqrt(.Machine$double.eps), NA, tmp.list$se)
+      tmp_se <- ifelse(tmp_list$se < sqrt(.Machine$double.eps), NA, tmp_list$se)
       if (zstat) {
-        tmp.list$z <- tmp.list$est / tmp.se
+        tmp_list$z <- tmp_list$est / tmp_se
         if (pvalue) {
-          tmp.list$pvalue <- 2 * (1 - pnorm(abs(tmp.list$z)))
+          tmp_list$pvalue <- 2 * (1 - pnorm(abs(tmp_list$z)))
           # remove p-value if bounds have been used
-          if (!is.null(tmp.partable$lower)) {
-            b.idx <- which(abs(tmp.partable$lower - tmp.partable$est) <
+          if (!is.null(tmp_partable$lower)) {
+            b_idx <- which(abs(tmp_partable$lower - tmp_partable$est) <
               sqrt(.Machine$double.eps) &
-              tmp.partable$free > 0L)
-            if (length(b.idx) > 0L) {
-              tmp.list$pvalue[b.idx] <- as.numeric(NA)
+              tmp_partable$free > 0L)
+            if (length(b_idx) > 0L) {
+              tmp_list$pvalue[b_idx] <- as.numeric(NA)
             }
           }
-          if (!is.null(tmp.partable$upper)) {
-            b.idx <- which(abs(tmp.partable$upper - tmp.partable$est) <
+          if (!is.null(tmp_partable$upper)) {
+            b_idx <- which(abs(tmp_partable$upper - tmp_partable$est) <
               sqrt(.Machine$double.eps) &
-              tmp.partable$free > 0L)
-            if (length(b.idx) > 0L) {
-              tmp.list$pvalue[b.idx] <- as.numeric(NA)
+              tmp_partable$free > 0L)
+            if (length(b_idx) > 0L) {
+              tmp_list$pvalue[b_idx] <- as.numeric(NA)
             }
           }
         }
@@ -545,17 +549,17 @@ lavParameterEstimates <- function(object,                 # nolint
     if (object@Options$se == "bootstrap" ||
       "bootstrap" %in% object@Options$test ||
       "bollen.stine" %in% object@Options$test) {
-      tmp.boot <- lav_object_inspect_boot(object)
-      bootstrap.seed <- attr(tmp.boot, "seed") # for bca
-      error.idx <- attr(tmp.boot, "error.idx")
-      if (length(error.idx) > 0L) {
-        tmp.boot <- tmp.boot[-error.idx, , drop = FALSE] # drops attributes
+      tmp_boot <- lav_object_inspect_boot(object)
+      bootstrap_seed <- attr(tmp_boot, "seed") # for bca
+      error_idx <- attr(tmp_boot, "error.idx")
+      if (length(error_idx) > 0L) {
+        tmp_boot <- tmp_boot[-error_idx, , drop = FALSE] # drops attributes
       }
     } else {
-      tmp.boot <- NULL
+      tmp_boot <- NULL
     }
 
-    bootstrap.successful <- NROW(tmp.boot) # should be zero if NULL
+    bootstrap_successful <- NROW(tmp_boot) # should be zero if NULL
 
     # confidence interval
     if (se && object@Options$se != "none" && ci) {
@@ -564,97 +568,97 @@ lavParameterEstimates <- function(object,                 # nolint
       a <- c(a, 1 - a)
       if (object@Options$se != "bootstrap") {
         fac <- qnorm(a)
-        ci <- tmp.list$est + tmp.list$se %o% fac
+        ci <- tmp_list$est + tmp_list$se %o% fac
       } else if (object@Options$se == "bootstrap") {
         # local copy of 'norm.inter' from boot package (not exported!)
-        norm.inter <- function(t, alpha) {
+        norm_inter <- function(t, alpha) {
           t <- t[is.finite(t)]
-          tmp.r <- length(t)
-          rk <- (tmp.r + 1) * alpha
-          if (!all(rk > 1 & rk < tmp.r)) {
+          tmp_r <- length(t)
+          rk <- (tmp_r + 1) * alpha
+          if (!all(rk > 1 & rk < tmp_r)) {
             lav_msg_warn(gettext("extreme order statistics used as endpoints"))
           }
           k <- trunc(rk)
           inds <- seq_along(k)
           out <- inds
-          kvs <- k[k > 0 & k < tmp.r]
-          tstar <- sort(t, partial = sort(union(c(1, tmp.r), c(kvs, kvs + 1))))
+          kvs <- k[k > 0 & k < tmp_r]
+          tstar <- sort(t, partial = sort(union(c(1, tmp_r), c(kvs, kvs + 1))))
           ints <- (k == rk)
           if (any(ints)) out[inds[ints]] <- tstar[k[inds[ints]]]
           out[k == 0] <- tstar[1L]
-          out[k == tmp.r] <- tstar[tmp.r]
+          out[k == tmp_r] <- tstar[tmp_r]
           not <- function(v) xor(rep(TRUE, length(v)), v)
-          temp <- inds[not(ints) & k != 0 & k != tmp.r]
+          temp <- inds[not(ints) & k != 0 & k != tmp_r]
           temp1 <- qnorm(alpha[temp])
-          temp2 <- qnorm(k[temp] / (tmp.r + 1))
-          temp3 <- qnorm((k[temp] + 1) / (tmp.r + 1))
+          temp2 <- qnorm(k[temp] / (tmp_r + 1))
+          temp3 <- qnorm((k[temp] + 1) / (tmp_r + 1))
           tk <- tstar[k[temp]]
           tk1 <- tstar[k[temp] + 1L]
           out[temp] <- tk + (temp1 - temp2) / (temp3 - temp2) * (tk1 - tk)
           cbind(round(rk, 2), out)
         }
 
-        stopifnot(!is.null(tmp.boot))
+        stopifnot(!is.null(tmp_boot))
         stopifnot(boot.ci.type %in% c(
           "norm", "basic", "perc",
           "bca.simple", "bca"
         ))
         if (boot.ci.type == "norm") {
           fac <- qnorm(a)
-          boot.x <- colMeans(tmp.boot, na.rm = TRUE)
-          boot.est <-
+          boot_x <- colMeans(tmp_boot, na.rm = TRUE)
+          boot_est <-
             lav_model_get_parameters(object@Model,
-              GLIST = lav_model_x2glist(object@Model, boot.x),
+              GLIST = lav_model_x2glist(object@Model, boot_x),
               type = "user", extra = TRUE
             )
-          bias.est <- (boot.est - tmp.list$est)
-          ci <- (tmp.list$est - bias.est) + tmp.list$se %o% fac
+          bias_est <- (boot_est - tmp_list$est)
+          ci <- (tmp_list$est - bias_est) + tmp_list$se %o% fac
         } else if (boot.ci.type == "basic") {
-          ci <- cbind(tmp.list$est, tmp.list$est)
+          ci <- cbind(tmp_list$est, tmp_list$est)
           alpha <- (1 + c(level, -level)) / 2
 
-          # free.idx only
-          qq <- apply(tmp.boot, 2, norm.inter, alpha)
-          free.idx <- which(object@ParTable$free &
+          # free_idx only
+          qq <- apply(tmp_boot, 2, norm_inter, alpha)
+          free_idx <- which(object@ParTable$free &
             !duplicated(object@ParTable$free))
-          ci[free.idx, ] <- 2 * ci[free.idx, ] - t(qq[c(3, 4), ])
+          ci[free_idx, ] <- 2 * ci[free_idx, ] - t(qq[c(3, 4), ])
 
-          # def.idx
-          def.idx <- which(object@ParTable$op == ":=")
-          if (length(def.idx) > 0L) {
-            boot.def <- apply(tmp.boot, 1, object@Model@def.function)
-            if (length(def.idx) == 1L) {
-              boot.def <- as.matrix(boot.def)
+          # def_idx
+          def_idx <- which(object@ParTable$op == ":=")
+          if (length(def_idx) > 0L) {
+            boot_def <- apply(tmp_boot, 1, object@Model@def.function)
+            if (length(def_idx) == 1L) {
+              boot_def <- as.matrix(boot_def)
             } else {
-              boot.def <- t(boot.def)
+              boot_def <- t(boot_def)
             }
-            qq <- apply(boot.def, 2, norm.inter, alpha)
-            ci[def.idx, ] <- 2 * ci[def.idx, ] - t(qq[c(3, 4), ])
+            qq <- apply(boot_def, 2, norm_inter, alpha)
+            ci[def_idx, ] <- 2 * ci[def_idx, ] - t(qq[c(3, 4), ])
           }
 
           # TODO: add cin/ceq?
         } else if (boot.ci.type == "perc") {
-          ci <- cbind(tmp.list$est, tmp.list$est)
+          ci <- cbind(tmp_list$est, tmp_list$est)
           alpha <- (1 + c(-level, level)) / 2
 
-          # free.idx only
-          qq <- apply(tmp.boot, 2, norm.inter, alpha)
-          free.idx <- which(object@ParTable$free &
+          # free_idx only
+          qq <- apply(tmp_boot, 2, norm_inter, alpha)
+          free_idx <- which(object@ParTable$free &
             !duplicated(object@ParTable$free))
-          ci[free.idx, ] <- t(qq[c(3, 4), ])
+          ci[free_idx, ] <- t(qq[c(3, 4), ])
 
-          # def.idx
-          def.idx <- which(object@ParTable$op == ":=")
-          if (length(def.idx) > 0L) {
-            boot.def <- apply(tmp.boot, 1, object@Model@def.function)
-            if (length(def.idx) == 1L) {
-              boot.def <- as.matrix(boot.def)
+          # def_idx
+          def_idx <- which(object@ParTable$op == ":=")
+          if (length(def_idx) > 0L) {
+            boot_def <- apply(tmp_boot, 1, object@Model@def.function)
+            if (length(def_idx) == 1L) {
+              boot_def <- as.matrix(boot_def)
             } else {
-              boot.def <- t(boot.def)
+              boot_def <- t(boot_def)
             }
-            qq <- apply(boot.def, 2, norm.inter, alpha)
-            def.idx <- which(object@ParTable$op == ":=")
-            ci[def.idx, ] <- t(qq[c(3, 4), ])
+            qq <- apply(boot_def, 2, norm_inter, alpha)
+            def_idx <- which(object@ParTable$op == ":=")
+            ci[def_idx, ] <- t(qq[c(3, 4), ])
           }
 
           # TODO:  add cin/ceq?
@@ -662,14 +666,14 @@ lavParameterEstimates <- function(object,                 # nolint
           # no adjustment for scale!! only bias!!
           alpha <- (1 + c(-level, level)) / 2
           zalpha <- qnorm(alpha)
-          ci <- cbind(tmp.list$est, tmp.list$est)
+          ci <- cbind(tmp_list$est, tmp_list$est)
 
-          # free.idx only
-          free.idx <- which(object@ParTable$free &
+          # free_idx only
+          free_idx <- which(object@ParTable$free &
             !duplicated(object@ParTable$free))
-          x <- tmp.list$est[free.idx]
-          for (i in seq_along(free.idx)) {
-            t <- tmp.boot[, i]
+          x <- tmp_list$est[free_idx]
+          for (i in seq_along(free_idx)) {
+            t <- tmp_boot[, i]
             t <- t[is.finite(t)]
             t0 <- x[i]
             # check if we have variance (perhaps constrained to 0?)
@@ -679,30 +683,30 @@ lavParameterEstimates <- function(object,                 # nolint
             }
             w <- qnorm(sum(t < t0) / length(t))
             a <- 0.0 #### !!! ####
-            adj.alpha <- pnorm(w + (w + zalpha) / (1 - a * (w + zalpha)))
-            qq <- norm.inter(t, adj.alpha)
-            ci[free.idx[i], ] <- qq[, 2]
+            adj_alpha <- pnorm(w + (w + zalpha) / (1 - a * (w + zalpha)))
+            qq <- norm_inter(t, adj_alpha)
+            ci[free_idx[i], ] <- qq[, 2]
           }
 
-          # def.idx
-          def.idx <- which(object@ParTable$op == ":=")
-          if (length(def.idx) > 0L) {
-            x.def <- object@Model@def.function(x)
-            boot.def <- apply(tmp.boot, 1, object@Model@def.function)
-            if (length(def.idx) == 1L) {
-              boot.def <- as.matrix(boot.def)
+          # def_idx
+          def_idx <- which(object@ParTable$op == ":=")
+          if (length(def_idx) > 0L) {
+            x_def <- object@Model@def.function(x)
+            boot_def <- apply(tmp_boot, 1, object@Model@def.function)
+            if (length(def_idx) == 1L) {
+              boot_def <- as.matrix(boot_def)
             } else {
-              boot.def <- t(boot.def)
+              boot_def <- t(boot_def)
             }
-            for (i in seq_along(def.idx)) {
-              t <- boot.def[, i]
+            for (i in seq_along(def_idx)) {
+              t <- boot_def[, i]
               t <- t[is.finite(t)]
-              t0 <- x.def[i]
+              t0 <- x_def[i]
               w <- qnorm(sum(t < t0) / length(t))
               a <- 0.0 #### !!! ####
-              adj.alpha <- pnorm(w + (w + zalpha) / (1 - a * (w + zalpha)))
-              qq <- norm.inter(t, adj.alpha)
-              ci[def.idx[i], ] <- qq[, 2]
+              adj_alpha <- pnorm(w + (w + zalpha) / (1 - a * (w + zalpha)))
+              qq <- norm_inter(t, adj_alpha)
+              ci[def_idx[i], ] <- qq[, 2]
             }
           }
 
@@ -716,11 +720,11 @@ lavParameterEstimates <- function(object,                 # nolint
           ntotal <- object@SampleStats@ntotal
 
           # we need enough bootstrap runs
-          if (nrow(tmp.boot) < ntotal) {
+          if (nrow(tmp_boot) < ntotal) {
             lav_msg_stop(gettextf(
             "BCa confidence intervals require more (successful) bootstrap runs
             (%1$s) than the number of observations (%2$s).",
-            nrow(tmp.boot), ntotal))
+            nrow(tmp_boot), ntotal))
           }
 
           # does not work with sampling weights (yet)
@@ -731,49 +735,49 @@ lavParameterEstimates <- function(object,                 # nolint
           }
 
           # check if we have a seed
-          if (is.null(bootstrap.seed)) {
+          if (is.null(bootstrap_seed)) {
             lav_msg_stop(gettext("seed not available in tmp.boot object."))
           }
 
           # compute 'X' matrix with frequency indices (to compute
           # the empirical influence values using regression)
-          tmp.freq <- lav_bootstrap_indices(
+          tmp_freq <- lav_bootstrap_indices(
             R = lavoptions$bootstrap,
             nobs = nobs, parallel = lavoptions$parallel[1],
             ncpus = lavoptions$ncpus, cl = lavoptions[["cl"]],
-            iseed = bootstrap.seed, return.freq = TRUE,
+            iseed = bootstrap_seed, return.freq = TRUE,
             merge.groups = TRUE
           )
-          if (length(error.idx) > 0L) {
-            tmp.freq <- tmp.freq[-error.idx, , drop = FALSE]
+          if (length(error_idx) > 0L) {
+            tmp_freq <- tmp_freq[-error_idx, , drop = FALSE]
           }
-          stopifnot(nrow(tmp.freq) == nrow(tmp.boot))
+          stopifnot(nrow(tmp_freq) == nrow(tmp_boot))
 
           # compute empirical influence values (using regression)
           # remove first column per group
-          first.idx <- sapply(object@Data@case.idx, "[[", 1L)
-          tmp.lm <- lm.fit(x = cbind(1, tmp.freq[, -first.idx]), y = tmp.boot)
-          tmp.beta <- unname(tmp.lm$coefficients)[-1, , drop = FALSE]
-          tmp.ll <- rbind(0, tmp.beta)
+          first_idx <- sapply(object@Data@case.idx, "[[", 1L)
+          tmp_lm <- lm.fit(x = cbind(1, tmp_freq[, -first_idx]), y = tmp_boot)
+          tmp_beta <- unname(tmp_lm$coefficients)[-1, , drop = FALSE]
+          tmp_ll <- rbind(0, tmp_beta)
 
           # compute 'a' for all parameters at once
-          tmp.aa <- apply(tmp.ll, 2L, function(x) {
-            tmp.l <- x - mean(x)
-            sum(tmp.l^3) / (6 * sum(tmp.l^2)^1.5)
+          tmp_aa <- apply(tmp_ll, 2L, function(x) {
+            tmp_l <- x - mean(x)
+            sum(tmp_l^3) / (6 * sum(tmp_l^2)^1.5)
           })
 
           # adjustment for both bias AND scale
           alpha <- (1 + c(-level, level)) / 2
           zalpha <- qnorm(alpha)
-          ci <- cbind(tmp.list$est, tmp.list$est)
+          ci <- cbind(tmp_list$est, tmp_list$est)
 
-          # free.idx only
-          free.idx <- which(object@ParTable$free &
+          # free_idx only
+          free_idx <- which(object@ParTable$free &
             !duplicated(object@ParTable$free))
-          stopifnot(length(free.idx) == ncol(tmp.boot))
-          x <- tmp.list$est[free.idx]
-          for (i in seq_along(free.idx)) {
-            t <- tmp.boot[, i]
+          stopifnot(length(free_idx) == ncol(tmp_boot))
+          x <- tmp_list$est[free_idx]
+          for (i in seq_along(free_idx)) {
+            t <- tmp_boot[, i]
             t <- t[is.finite(t)]
             t0 <- x[i]
             # check if we have variance (perhaps constrained to 0?)
@@ -782,44 +786,44 @@ lavParameterEstimates <- function(object,                 # nolint
               next
             }
             w <- qnorm(sum(t < t0) / length(t))
-            a <- tmp.aa[i]
-            adj.alpha <- pnorm(w + (w + zalpha) / (1 - a * (w + zalpha)))
-            qq <- norm.inter(t, adj.alpha)
-            ci[free.idx[i], ] <- qq[, 2]
+            a <- tmp_aa[i]
+            adj_alpha <- pnorm(w + (w + zalpha) / (1 - a * (w + zalpha)))
+            qq <- norm_inter(t, adj_alpha)
+            ci[free_idx[i], ] <- qq[, 2]
           }
 
-          # def.idx
-          def.idx <- which(object@ParTable$op == ":=")
-          if (length(def.idx) > 0L) {
-            x.def <- object@Model@def.function(x)
-            boot.def <- apply(tmp.boot, 1, object@Model@def.function)
-            if (length(def.idx) == 1L) {
-              boot.def <- as.matrix(boot.def)
+          # def_idx
+          def_idx <- which(object@ParTable$op == ":=")
+          if (length(def_idx) > 0L) {
+            x_def <- object@Model@def.function(x)
+            boot_def <- apply(tmp_boot, 1, object@Model@def.function)
+            if (length(def_idx) == 1L) {
+              boot_def <- as.matrix(boot_def)
             } else {
-              boot.def <- t(boot.def)
+              boot_def <- t(boot_def)
             }
 
             # recompute empirical influence values
-            tmp.lm <- lm.fit(x = cbind(1, tmp.freq[, -1]), y = boot.def)
-            tmp.beta <- unname(tmp.lm$coefficients)[-1, , drop = FALSE]
-            tmp.ll <- rbind(0, tmp.beta)
+            tmp_lm <- lm.fit(x = cbind(1, tmp_freq[, -1]), y = boot_def)
+            tmp_beta <- unname(tmp_lm$coefficients)[-1, , drop = FALSE]
+            tmp_ll <- rbind(0, tmp_beta)
 
-            # compute 'a' values for all def.idx parameters
-            tmp.aa <- apply(tmp.ll, 2L, function(x) {
-              tmp.l <- x - mean(x)
-              sum(tmp.l^3) / (6 * sum(tmp.l^2)^1.5)
+            # compute 'a' values for all def_idx parameters
+            tmp_aa <- apply(tmp_ll, 2L, function(x) {
+              tmp_l <- x - mean(x)
+              sum(tmp_l^3) / (6 * sum(tmp_l^2)^1.5)
             })
 
             # compute bca ci
-            for (i in seq_along(def.idx)) {
-              t <- boot.def[, i]
+            for (i in seq_along(def_idx)) {
+              t <- boot_def[, i]
               t <- t[is.finite(t)]
-              t0 <- x.def[i]
+              t0 <- x_def[i]
               w <- qnorm(sum(t < t0) / length(t))
-              a <- tmp.aa[i]
-              adj.alpha <- pnorm(w + (w + zalpha) / (1 - a * (w + zalpha)))
-              qq <- norm.inter(t, adj.alpha)
-              ci[def.idx[i], ] <- qq[, 2]
+              a <- tmp_aa[i]
+              adj_alpha <- pnorm(w + (w + zalpha) / (1 - a * (w + zalpha)))
+              qq <- norm_inter(t, adj_alpha)
+              ci[def_idx[i], ] <- qq[, 2]
             }
           }
 
@@ -828,8 +832,8 @@ lavParameterEstimates <- function(object,                 # nolint
         }
       }
 
-      tmp.list$ci.lower <- ci[, 1]
-      tmp.list$ci.upper <- ci[, 2]
+      tmp_list$ci.lower <- ci[, 1]
+      tmp_list$ci.upper <- ci[, 2]
     }
 
     # standardized estimates?
@@ -837,7 +841,8 @@ lavParameterEstimates <- function(object,                 # nolint
     if (is.logical(standardized)) {
       if (standardized) {
         standardized <- c("std.lv", "std.all")
-        if (length(lav_object_vnames(object, "ov.x")) && object@Options$fixed.x) {
+        if (length(lav_object_vnames(object, "ov.x")) &&
+                                 object@Options$fixed.x) {
           standardized <- c(standardized, "std.nox")
         }
       } else {
@@ -861,17 +866,17 @@ lavParameterEstimates <- function(object,                 # nolint
     # Then add each requested type
     # (original source code, but now independently conditional)
     if ("std.lv" %in% standardized) {
-      tmp.list$std.lv <- lav_standardize_lv(object, cov.std = cov.std)
+      tmp_list$std.lv <- lav_standardize_lv(object, cov.std = cov.std)
     }
     if ("std.all" %in% standardized) {
-      tmp.list$std.all <- lav_standardize_all(object,
-        est.std = tmp.list$est.std,
+      tmp_list$std.all <- lav_standardize_all(object,
+        est.std = tmp_list$est.std,
         cov.std = cov.std
       )
     }
     if ("std.nox" %in% standardized) {
-      tmp.list$std.nox <- lav_standardize_all_nox(object,
-        est.std = tmp.list$est.std,
+      tmp_list$std.nox <- lav_standardize_all_nox(object,
+        est.std = tmp_list$est.std,
         cov.std = cov.std
       )
     }
@@ -879,17 +884,17 @@ lavParameterEstimates <- function(object,                 # nolint
     # rsquare?
     if (rsquare) {
       r2 <- lavTech(object, "rsquare", add.labels = TRUE)
-      tmp.names <- unlist(lapply(r2, names))
-      nel <- length(tmp.names)
+      tmp_names <- unlist(lapply(r2, names))
+      nel <- length(tmp_names)
       if (nel == 0L) {
         lav_msg_warn(
           gettext("rsquare = TRUE, but there are no dependent variables"))
       } else {
-        if (lav_partable_nlevels(tmp.list) == 1L) {
+        if (lav_partable_nlevels(tmp_list) == 1L) {
           block <- rep(seq_along(r2), sapply(r2, length))
-          first.block.idx <- which(!duplicated(tmp.list$block) &
-            tmp.list$block > 0L)
-          gval <- tmp.list$group[first.block.idx]
+          first_block_idx <- which(!duplicated(tmp_list$block) &
+            tmp_list$block > 0L)
+          gval <- tmp_list$group[first_block_idx]
           if (length(gval) > 0L) {
             group <- rep(gval, sapply(r2, length))
           } else {
@@ -897,82 +902,82 @@ lavParameterEstimates <- function(object,                 # nolint
             group <- rep(1L, length(block))
           }
           r2 <- data.frame(
-            lhs = tmp.names, op = rep("r2", nel),
-            rhs = tmp.names, block = block, group = group,
+            lhs = tmp_names, op = rep("r2", nel),
+            rhs = tmp_names, block = block, group = group,
             est = unlist(r2), stringsAsFactors = FALSE
           )
         } else {
           # add level column
           block <- rep(seq_along(r2), sapply(r2, length))
-          first.block.idx <- which(!duplicated(tmp.list$block) &
-            tmp.list$block > 0L)
+          first_block_idx <- which(!duplicated(tmp_list$block) &
+            tmp_list$block > 0L)
           # always at least two blocks
-          gval <- tmp.list$group[first.block.idx]
+          gval <- tmp_list$group[first_block_idx]
           group <- rep(gval, sapply(r2, length))
-          lval <- tmp.list$level[first.block.idx]
+          lval <- tmp_list$level[first_block_idx]
           level <- rep(lval, sapply(r2, length))
           r2 <- data.frame(
-            lhs = tmp.names, op = rep("r2", nel),
-            rhs = tmp.names,
+            lhs = tmp_names, op = rep("r2", nel),
+            rhs = tmp_names,
             block = block, group = group,
             level = level,
             est = unlist(r2), stringsAsFactors = FALSE
           )
         }
         # add step column if needed
-        if (!is.null(tmp.list$step)) {
+        if (!is.null(tmp_list$step)) {
           r2$step <- 2L # per default
           # simplification: we assume that only the
           # observed indicators of latent variables are step 1
-          ov.ind <- unlist(object@pta$vnames$ov.ind)
-          step1.idx <- which(r2$lhs %in% ov.ind)
-          r2$step[step1.idx] <- 1L
+          ov_ind <- unlist(object@pta$vnames$ov.ind)
+          step1_idx <- which(r2$lhs %in% ov_ind)
+          r2$step[step1_idx] <- 1L
         }
-        tmp.list <- lav_partable_merge(pt1 = tmp.list, pt2 = r2, warn = FALSE)
+        tmp_list <- lav_partable_merge(pt1 = tmp_list, pt2 = r2, warn = FALSE)
       }
     }
 
     # fractional missing information (if estimator="fiml")
     if (fmi) {
-      se.orig <- tmp.list$se
+      se_orig <- tmp_list$se
 
       # new in 0.6-6, use 'EM' based (unstructured) sample statistics
       # otherwise, it would be as if we use expected info, while the
       # original use observed, producing crazy results
       if (object@Data@ngroups > 1L) {
-        em.cov <- lapply(lavInspect(object, "sampstat.h1"), "[[", "cov")
-        em.mean <- lapply(lavInspect(object, "sampstat.h1"), "[[", "mean")
+        em_cov <- lapply(lavInspect(object, "sampstat.h1"), "[[", "cov")
+        em_mean <- lapply(lavInspect(object, "sampstat.h1"), "[[", "mean")
       } else {
-        em.cov <- lavInspect(object, "sampstat.h1")$cov
-        em.mean <- lavInspect(object, "sampstat.h1")$mean
+        em_cov <- lavInspect(object, "sampstat.h1")$cov
+        em_mean <- lavInspect(object, "sampstat.h1")$mean
       }
 
-      tmp.pt <- parTable(object)
-      tmp.pt$ustart <- tmp.pt$est
-      tmp.pt$start <- tmp.pt$est <- NULL
+      tmp_pt <- parTable(object)
+      tmp_pt$ustart <- tmp_pt$est
+      tmp_pt$start <- tmp_pt$est <- NULL
 
-      this.options <- object@Options
+      this_options <- object@Options
       if (!is.null(fmi.options) && is.list(fmi.options)) {
         # modify original options
-        this.options <- modifyList(this.options, fmi.options)
+        this_options <- modifyList(this_options, fmi.options)
       }
       # override
-      this.options$optim.method <- "none"
-      this.options$sample.cov.rescale <- FALSE
-      this.options$check.gradient <- FALSE
-      this.options$baseline <- FALSE
-      this.options$h1 <- FALSE
-      this.options$test <- FALSE
+      this_options$optim.method <- "none"
+      this_options$sample.cov.rescale <- FALSE
+      this_options$check.gradient <- FALSE
+      this_options$baseline <- FALSE
+      this_options$h1 <- FALSE
+      this_options$test <- FALSE
 
-      fit.complete <- lavaan(
-        model = tmp.pt,
-        sample.cov = em.cov,
-        sample.mean = em.mean,
+      fit_complete <- lavaan(
+        model = tmp_pt,
+        sample.cov = em_cov,
+        sample.mean = em_mean,
         sample.nobs = lavInspect(object, "nobs"),
-        slotOptions = this.options
+        slotOptions = this_options
       )
 
-      se.comp <- lavParameterEstimates(fit.complete,
+      se_comp <- lavParameterEstimates(fit_complete,
         ci = FALSE, fmi = FALSE,
         zstat = FALSE, pvalue = FALSE, remove.system.eq = FALSE,
         remove.eq = FALSE, remove.ineq = FALSE,
@@ -980,36 +985,36 @@ lavParameterEstimates <- function(object,                 # nolint
         rsquare = rsquare, add.attributes = FALSE
       )$se
 
-      se.comp <- ifelse(se.comp == 0.0, as.numeric(NA), se.comp)
-      tmp.list$fmi <- 1 - (se.comp * se.comp) / (se.orig * se.orig)
+      se_comp <- ifelse(se_comp == 0.0, as.numeric(NA), se_comp)
+      tmp_list$fmi <- 1 - (se_comp * se_comp) / (se_orig * se_orig)
     }
 
     # if single level, remove level column
-    if (object@Data@nlevels == 1L) tmp.list$level <- NULL
+    if (object@Data@nlevels == 1L) tmp_list$level <- NULL
 
     # if single group, remove group column
-    if (object@Data@ngroups == 1L) tmp.list$group <- NULL
+    if (object@Data@ngroups == 1L) tmp_list$group <- NULL
 
     # if single everything, remove block column
     if (object@Data@nlevels == 1L &&
       object@Data@ngroups == 1L) {
-      tmp.list$block <- NULL
+      tmp_list$block <- NULL
     }
 
     # if no user-defined labels, remove label column
     if (sum(nchar(object@ParTable$label)) == 0L) {
-      tmp.list$label <- NULL
+      tmp_list$label <- NULL
     }
 
     # if plabel = TRUE, add it (new in 0.6-20)
     if (plabel) {
-      if (!is.null(tmp.partable$plabel)) {
-        tmp.list$plabel <- tmp.partable$plabel
+      if (!is.null(tmp_partable$plabel)) {
+        tmp_list$plabel <- tmp_partable$plabel
       } else {
-        if (!is.null(tmp.partable$id)) {
-          tmp.list$plabel <- paste(".p", tmp.list$id, ".", sep = "")
+        if (!is.null(tmp_partable$id)) {
+          tmp_list$plabel <- paste(".p", tmp_list$id, ".", sep = "")
         } else {
-          tmp.list$plabel <- paste(".p", seq_along(tmp.list$plabel),
+          tmp_list$plabel <- paste(".p", seq_along(tmp_list$plabel),
                                    ".", sep = "")
         }
       }
@@ -1017,10 +1022,10 @@ lavParameterEstimates <- function(object,                 # nolint
 
     # remove non-free parameters? (but keep ==, >, < and :=)
     if (remove.nonfree) {
-      nonfree.idx <- which(tmp.list$free == 0L &
-        !tmp.list$op %in% c("==", ">", "<", ":="))
-      if (length(nonfree.idx) > 0L) {
-        tmp.list <- tmp.list[-nonfree.idx, ]
+      nonfree_idx <- which(tmp_list$free == 0L &
+        !tmp_list$op %in% c("==", ">", "<", ":="))
+      if (length(nonfree_idx) > 0L) {
+        tmp_list <- tmp_list[-nonfree_idx, ]
       }
     }
 
@@ -1032,103 +1037,103 @@ lavParameterEstimates <- function(object,                 # nolint
     # should we also remove fixed-to-1 variances? (parameterization = theta)?
     if (remove.unused) {
       # intercepts
-      int.idx <- which(tmp.list$op == "~1" &
-        tmp.list$user == 0L &
-        tmp.list$free == 0L &
-        tmp.list$est == 0)
-      if (length(int.idx) > 0L) {
-        tmp.list <- tmp.list[-int.idx, ]
+      int_idx <- which(tmp_list$op == "~1" &
+        tmp_list$user == 0L &
+        tmp_list$free == 0L &
+        tmp_list$est == 0)
+      if (length(int_idx) > 0L) {
+        tmp_list <- tmp_list[-int_idx, ]
       }
 
       # scaling factors
-      scaling.idx <- which(tmp.list$op == "~*~" &
-        tmp.list$user == 0L &
-        tmp.list$free == 0L &
-        tmp.list$est == 1)
-      if (length(scaling.idx) > 0L) {
-        tmp.list <- tmp.list[-scaling.idx, ]
+      scaling_idx <- which(tmp_list$op == "~*~" &
+        tmp_list$user == 0L &
+        tmp_list$free == 0L &
+        tmp_list$est == 1)
+      if (length(scaling_idx) > 0L) {
+        tmp_list <- tmp_list[-scaling_idx, ]
       }
     }
 
 
     # remove 'free' column
-    tmp.list$free <- NULL
+    tmp_list$free <- NULL
 
     # remove == rows?
     if (remove.eq) {
-      eq.idx <- which(tmp.list$op == "==" & tmp.list$user == 1L)
-      if (length(eq.idx) > 0L) {
-        tmp.list <- tmp.list[-eq.idx, ]
+      eq_idx <- which(tmp_list$op == "==" & tmp_list$user == 1L)
+      if (length(eq_idx) > 0L) {
+        tmp_list <- tmp_list[-eq_idx, ]
       }
     }
     if (remove.system.eq) {
-      eq.idx <- which(tmp.list$op == "==" & tmp.list$user != 1L)
-      if (length(eq.idx) > 0L) {
-        tmp.list <- tmp.list[-eq.idx, ]
+      eq_idx <- which(tmp_list$op == "==" & tmp_list$user != 1L)
+      if (length(eq_idx) > 0L) {
+        tmp_list <- tmp_list[-eq_idx, ]
       }
     }
     # remove <> rows?
     if (remove.ineq) {
-      ineq.idx <- which(tmp.list$op %in% c("<", ">"))
-      if (length(ineq.idx) > 0L) {
-        tmp.list <- tmp.list[-ineq.idx, ]
+      ineq_idx <- which(tmp_list$op %in% c("<", ">"))
+      if (length(ineq_idx) > 0L) {
+        tmp_list <- tmp_list[-ineq_idx, ]
       }
     }
     # remove := rows?
     if (remove.def) {
-      def.idx <- which(tmp.list$op == ":=")
-      if (length(def.idx) > 0L) {
-        tmp.list <- tmp.list[-def.idx, ]
+      def_idx <- which(tmp_list$op == ":=")
+      if (length(def_idx) > 0L) {
+        tmp_list <- tmp_list[-def_idx, ]
       }
     }
 
     # remove step 1 rows?
-    if (remove.step1 && !is.null(tmp.list$step)) {
-      step1.idx <- which(tmp.list$step == 1L)
-      if (length(step1.idx) > 0L) {
-        tmp.list <- tmp.list[-step1.idx, ]
+    if (remove.step1 && !is.null(tmp_list$step)) {
+      step1_idx <- which(tmp_list$step == 1L)
+      if (length(step1_idx) > 0L) {
+        tmp_list <- tmp_list[-step1_idx, ]
       }
       # remove step column
-      tmp.list$step <- NULL
+      tmp_list$step <- NULL
     }
 
     # remove attribute for data order
-    attr(tmp.list, "ovda") <- NULL
+    attr(tmp_list, "ovda") <- NULL
 
-    # remove tmp.list$user
-    tmp.list$user <- NULL
+    # remove tmp_list$user
+    tmp_list$user <- NULL
 
     if (output == "text") {
-      class(tmp.list) <- c(
+      class(tmp_list) <- c(
         "lavaan.parameterEstimates", "lavaan.data.frame",
         "data.frame"
       )
       if (header) {
-        attr(tmp.list, "categorical") <- object@Model@categorical
-        attr(tmp.list, "parameterization") <- object@Model@parameterization
-        attr(tmp.list, "information") <- object@Options$information[1]
-        attr(tmp.list, "information.meat") <- object@Options$information.meat
-        attr(tmp.list, "se") <- object@Options$se
-        attr(tmp.list, "group.label") <- object@Data@group.label
-        attr(tmp.list, "level.label") <- object@Data@level.label
-        attr(tmp.list, "bootstrap") <- object@Options$bootstrap
-        attr(tmp.list, "bootstrap.successful") <- bootstrap.successful
-        attr(tmp.list, "missing") <- object@Options$missing
-        attr(tmp.list, "observed.information") <-
+        attr(tmp_list, "categorical") <- object@Model@categorical
+        attr(tmp_list, "parameterization") <- object@Model@parameterization
+        attr(tmp_list, "information") <- object@Options$information[1]
+        attr(tmp_list, "information.meat") <- object@Options$information.meat
+        attr(tmp_list, "se") <- object@Options$se
+        attr(tmp_list, "group.label") <- object@Data@group.label
+        attr(tmp_list, "level.label") <- object@Data@level.label
+        attr(tmp_list, "bootstrap") <- object@Options$bootstrap
+        attr(tmp_list, "bootstrap.successful") <- bootstrap_successful
+        attr(tmp_list, "missing") <- object@Options$missing
+        attr(tmp_list, "observed.information") <-
           object@Options$observed.information[1]
-        attr(tmp.list, "h1.information") <- object@Options$h1.information[1]
-        attr(tmp.list, "h1.information.meat") <-
+        attr(tmp_list, "h1.information") <- object@Options$h1.information[1]
+        attr(tmp_list, "h1.information.meat") <-
           object@Options$h1.information.meat
-        attr(tmp.list, "header") <- header
+        attr(tmp_list, "header") <- header
         # FIXME: add more!!
       }
     } else {
-      tmp.list$exo <- NULL
-      tmp.list$lower <- tmp.list$upper <- NULL
-      class(tmp.list) <- c("lavaan.data.frame", "data.frame")
+      tmp_list$exo <- NULL
+      tmp_list$lower <- tmp_list$upper <- NULL
+      class(tmp_list) <- c("lavaan.data.frame", "data.frame")
     }
 
-    tmp.list
+    tmp_list
   }
 parameterEstimates <- lavParameterEstimates     # synonym   # nolint
 
@@ -1144,19 +1149,19 @@ parameterTable <- parametertable <- parTable <- partable <- # nolint
     out
   }
 
-varTable <- vartable <- function(object, ov.names = names(object), # nolint
+varTable <- vartable <- function(object, ov.names = names(object),  # nolint start
                                  ov.names.x = NULL,
                                  ordered = NULL, factor = NULL,
-                                 as.data.frame. = TRUE) { # nolint
+                                 as.data.frame. = TRUE) {           # nolint end
 
   if (inherits(object, "lavaan")) {
     # check object
     object <- lav_object_check_version(object)
-    tmp.var <- object@Data@ov
+    tmp_var <- object@Data@ov
   } else if (inherits(object, "lavData")) {
-    tmp.var <- object@ov
+    tmp_var <- object@ov
   } else if (inherits(object, "data.frame")) {
-    tmp.var <- lav_dataframe_vartable(
+    tmp_var <- lav_dataframe_vartable(
       frame = object, ov.names = ov.names,
       ov.names.x = ov.names.x,
       ordered = ordered, factor = factor,
@@ -1167,14 +1172,14 @@ varTable <- vartable <- function(object, ov.names = names(object), # nolint
   }
 
   if (as.data.frame.) {
-    tmp.var <- as.data.frame(tmp.var,
+    tmp_var <- as.data.frame(tmp_var,
       stringsAsFactors = FALSE,
-      row.names = seq_along(tmp.var$name)
+      row.names = seq_along(tmp_var$name)
     )
-    class(tmp.var) <- c("lavaan.data.frame", "data.frame")
+    class(tmp_var) <- c("lavaan.data.frame", "data.frame")
   }
 
-  tmp.var
+  tmp_var
 }
 
 
@@ -1227,8 +1232,8 @@ setMethod(
 
 setMethod(
   "vcov", "lavaan",
-  function(object, type = "free", labels = TRUE, remove.duplicated = FALSE,
-           standardized = NULL, free.only = TRUE, ...) {
+  function(object, type = "free", labels = TRUE, remove.duplicated = FALSE, # nolint start
+           standardized = NULL, free.only = TRUE, ...) {                    # nolint end
     dotdotdot <- list(...)
     if (length(dotdotdot) > 0L) {
       for (j in seq_along(dotdotdot)) {
@@ -1258,7 +1263,7 @@ setMethod(
 
     if (!is.null(standardized)) {
       standardized <- tolower(standardized[1])
-      stopifnot(standardized %in% c("std.lv","std.all","std.nox"))
+      stopifnot(standardized %in% c("std.lv", "std.all", "std.nox"))
     }
 
     if (type == "user" || type == "joint" || type == "all" || type == "full" ||
@@ -1268,7 +1273,7 @@ setMethod(
           "argument \"remove.duplicated\" not supported if type = \"user\""
         ))
       }
-      tmp.varcov <- lav_object_inspect_vcov_def(object,
+      tmp_varcov <- lav_object_inspect_vcov_def(object,
         joint = TRUE,
         standardized = !is.null(standardized),
         type = ifelse(is.null(standardized), "std.all", standardized),
@@ -1276,7 +1281,7 @@ setMethod(
         add.class = TRUE
       )
     } else if (type == "free") {
-      tmp.varcov <- lav_object_inspect_vcov(object,
+      tmp_varcov <- lav_object_inspect_vcov(object,
         standardized = !is.null(standardized),
         type = ifelse(is.null(standardized), "std.all", standardized),
         free.only = free.only,
@@ -1288,7 +1293,7 @@ setMethod(
       lav_msg_stop(gettext("type argument should be \"user\" or \"free\""))
     }
 
-    tmp.varcov
+    tmp_varcov
   }
 )
 
@@ -1317,10 +1322,10 @@ setMethod(
     }
 
     # new in 0.6-1: we use the @loglik slot (instead of fitMeasures)
-    tmp.logl <- object@loglik
-    logl <- tmp.logl$loglik
-    attr(logl, "df") <- tmp.logl$npar ### note: must be npar, not df!!
-    attr(logl, "nobs") <- tmp.logl$ntotal
+    tmp_logl <- object@loglik
+    logl <- tmp_logl$loglik
+    attr(logl, "df") <- tmp_logl$npar ### note: must be npar, not df!!
+    attr(logl, "nobs") <- tmp_logl$ntotal
     class(logl) <- "logLik"
     logl
   }
@@ -1380,8 +1385,8 @@ setMethod(
     if (length(extras) > 0) {
       ## check for call$slotOptions conflicts
       if (!is.null(call$slotOptions)) {
-        same.names <- intersect(names(lavOptions()), names(extras))
-        for (i in same.names) {
+        same_names <- intersect(names(lavOptions()), names(extras))
+        for (i in same_names) {
           call$slotOptions[[i]] <- extras[[i]]
           extras[i] <- NULL # not needed if they are in slotOptions
         }
@@ -1401,17 +1406,17 @@ setMethod(
 
     ## Check if "add" and "model" are both strings; combine them
     if (missing(add)) {
-      add.allready.in.partable <- TRUE # because nothing to add
+      add_allready_in_partable <- TRUE # because nothing to add
     } else {
       if (is.character(add) && is.character(call$model)) {
         call$model <- c(call$model, add)
-        add.allready.in.partable <- TRUE
+        add_allready_in_partable <- TRUE
       } else {
-        add.allready.in.partable <- FALSE
+        add_allready_in_partable <- FALSE
       }
     }
     newfit <- eval(call, parent.frame())
-    if (add.allready.in.partable && evaluate) {
+    if (add_allready_in_partable && evaluate) {
       return(newfit)
     }
 
@@ -1423,14 +1428,14 @@ setMethod(
                 See ?lav_model_partable help page.")
       )
     }
-    tmp.pt <- lav_object_extended(newfit, add = add)@ParTable
-    tmp.pt$user <- NULL # get rid of "10" category used in lavTestScore()
+    tmp_pt <- lav_object_extended(newfit, add = add)@ParTable
+    tmp_pt$user <- NULL # get rid of "10" category used in lavTestScore()
     ## group == 0L in new rows
-    tmp.pt$group[tmp.pt$group == 0L] <- tmp.pt$block[tmp.pt$group == 0L]
-    # tmp.pt$plabel == "" in new rows.  Consequences?
-    tmp.pt$est <- NULL
-    tmp.pt$se <- NULL
-    call$model <- tmp.pt
+    tmp_pt$group[tmp_pt$group == 0L] <- tmp_pt$block[tmp_pt$group == 0L]
+    # tmp_pt$plabel == "" in new rows.  Consequences?
+    tmp_pt$est <- NULL
+    tmp_pt$se <- NULL
+    call$model <- tmp_pt
 
     if (evaluate) {
       eval(call, parent.frame())
@@ -1457,8 +1462,8 @@ setMethod(
     } else {
       logical(0)
     }
-    tmp.names <- sapply(as.list(mcall)[c(FALSE, TRUE, modp)], deparse)
+    tmp_names <- sapply(as.list(mcall)[c(FALSE, TRUE, modp)], deparse)
 
-    lavTestLRT(object = object, ..., model.names = tmp.names)
+    lavTestLRT(object = object, ..., model.names = tmp_names)
   }
 )

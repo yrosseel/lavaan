@@ -16,27 +16,27 @@ lav_partable_attributes <- function(partable, pta = NULL) {
   pta$vnames <- lav_partable_vnames(partable, type = "*")
 
   # vidx
-  tmp.ov <- pta$vnames$ov
-  tmp.lv <- pta$vnames$lv
+  tmp_ov <- pta$vnames$ov
+  tmp_lv <- pta$vnames$lv
   nblocks <- length(pta$vnames$ov)
   pta$vidx <- lapply(names(pta$vnames), function(v) {
     lapply(seq_len(nblocks), function(b) {
       if (v == "lv.marker") {
-        match(pta$vnames[[v]][[b]], tmp.ov[[b]])
+        match(pta$vnames[[v]][[b]], tmp_ov[[b]])
       } else if (grepl("lv", v)) {
-        match(pta$vnames[[v]][[b]], tmp.lv[[b]])
+        match(pta$vnames[[v]][[b]], tmp_lv[[b]])
       } else if (grepl("th", v)) {
         # thresholds have '|t' pattern
-        tmp.th <- sapply(strsplit(pta$vnames[[v]][[b]],
+        tmp_th <- sapply(strsplit(pta$vnames[[v]][[b]],
           "|t",
           fixed = TRUE
         ), "[[", 1L)
-        match(tmp.th, tmp.ov[[b]])
+        match(tmp_th, tmp_ov[[b]])
       } else if (grepl("eqs", v)) {
         # mixture of tmp.ov/tmp.lv
         integer(0L)
       } else {
-        match(pta$vnames[[v]][[b]], tmp.ov[[b]])
+        match(pta$vnames[[v]][[b]], tmp_ov[[b]])
       }
     })
   })

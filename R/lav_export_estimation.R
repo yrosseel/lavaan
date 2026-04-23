@@ -1,11 +1,11 @@
 #' lav_export_estimation
 #'
-#' lavaan provides a range of optimization methods with the optim.method argument
-#' (nlminb, BFGS, L-BFGS-B, GN, and nlminb.constr). `lav_export_estimation`
-#' allows exporting objects and functions necessary to pass a lavaan model into
-#' any optimizer that takes a combination of (1) starting values, (2) fit-function,
-#' (3) gradient-function, and (4) upper and lower bounds. This allows testing new
-#' optimization frameworks.
+#' lavaan provides a range of optimization methods with the optim.method
+#' argument (nlminb, BFGS, L-BFGS-B, GN, and nlminb.constr).
+#' `lav_export_estimation` allows exporting objects and functions necessary
+#' to pass a lavaan model into any optimizer that takes a combination of
+#' (1) starting values, (2) fit-function, (3) gradient-function, and (4) upper
+#' and lower bounds. This allows testing new optimization frameworks.
 #'
 #' @param lavaan_model a fitted lavaan model
 #' @returns List with:
@@ -14,10 +14,10 @@
 #'   uses some transformations. get_coef is a functions that recreates the coef
 #'   function for the parameters.
 #'   \item starting_values - starting_values to be used in the optimization
-#'   \item objective_function - objective function, expecting the current parameter
-#'   values and the lavaan model
-#'   \item gradient_function - gradient function, expecting the current parameter
-#'   values and the lavaan model
+#'   \item objective_function - objective function, expecting the current
+#'    parameter values and the lavaan model
+#'   \item gradient_function - gradient function, expecting the current
+#'    parameter values and the lavaan model
 #'   \item lower - lower bounds for parameters
 #'   \item upper - upper bound for parameters
 #' }
@@ -53,20 +53,23 @@
 #'   lavaan_model = fit
 #' )
 #'
-#' # The objective function can be used to compute the fit at the current estimates:
+#' # The objective function can be used to compute the fit at the
+#' # current estimates:
 #' est$objective_function(
 #'   parameter_values = est$starting_values,
 #'   lavaan_model = fit
 #' )
 #'
-#' # The gradient function can be used to compute the gradients at the current estimates:
+#' # The gradient function can be used to compute the gradients at
+#' # the current estimates:
 #' est$gradient_function(
 #'   parameter_values = est$starting_values,
 #'   lavaan_model = fit
 #' )
 #'
-#' # Together, these elements provide the means to estimate the parameters with a large
-#' # range of optimizers. For simplicity, here is an example using optim:
+#' # Together, these elements provide the means to estimate the parameters
+#' # with a large range of optimizers. For simplicity, here is an example
+#' # using optim:
 #' est_fit <- optim(
 #'   par = est$starting_values,
 #'   fn = est$objective_function,
@@ -109,16 +112,17 @@ lav_export_estimation <- function(lavaan_model) {
   objective_function <- function(parameter_values,
                                  lavaan_model) {
     if (lavaan_model@Model@eq.constraints) {
-      parameter_values <- as.numeric(lavaan_model@Model@eq.constraints.K %*% parameter_values) +
+      parameter_values <-
+        as.numeric(lavaan_model@Model@eq.constraints.K %*% parameter_values) +
         lavaan_model@Model@eq.constraints.k0
     }
 
     # create group list
-    GLIST <- lav_model_x2glist(lavaan_model@Model, x = parameter_values)
+    glist <- lav_model_x2glist(lavaan_model@Model, x = parameter_values)
     # get objective function **value**
     fx <- lav_model_objective(
       lavmodel = lavaan_model@Model,
-      GLIST = GLIST,
+      GLIST = glist,
       lavsamplestats = lavaan_model@SampleStats,
       lavdata = lavaan_model@Data,
       lavcache = list()
@@ -129,38 +133,40 @@ lav_export_estimation <- function(lavaan_model) {
     }
 
     if (!is.finite(fx)) {
-      fx.group <- attr(fx, "fx.group")
+      fx_group <- attr(fx, "fx.group")
       fx <- 1e+20
-      attr(fx, "fx.group") <- fx.group
+      attr(fx, "fx.group") <- fx_group
     }
-    return(fx)
+    fx
   }
 
   # define gradient function
   gradient_function <- function(parameter_values,
                                 lavaan_model) {
     if (lavaan_model@Model@eq.constraints) {
-      parameter_values <- as.numeric(lavaan_model@Model@eq.constraints.K %*% parameter_values) +
+      parameter_values <-
+        as.numeric(lavaan_model@Model@eq.constraints.K %*% parameter_values) +
         lavaan_model@Model@eq.constraints.k0
     }
 
-    GLIST <- lav_model_x2glist(lavaan_model@Model,
+    glist <- lav_model_x2glist(lavaan_model@Model,
       x = parameter_values
     )
-    current.verbose <- lav_verbose()
+    current_verbose <- lav_verbose()
     if (lav_verbose(FALSE))
-      on.exit(lav_verbose(current.verbose), TRUE)
+      on.exit(lav_verbose(current_verbose), TRUE)
     dx <- lav_model_gradient(
       lavmodel = lavaan_model@Model,
-      GLIST = GLIST,
+      GLIST = glist,
       lavsamplestats = lavaan_model@SampleStats,
       lavdata = lavaan_model@Data,
       lavcache = list(),
       type = "free",
-      group.weight = !(lavaan_model@SampleStats@missing.flag || lavaan_model@Options$estimator == "PML"),
+      group.weight = !(lavaan_model@SampleStats@missing.flag ||
+                      lavaan_model@Options$estimator == "PML"),
       ceq.simple = lavaan_model@Model@ceq.simple.only
     )
-    lav_verbose(current.verbose)
+    lav_verbose(current_verbose)
 
     if (lavaan_model@Model@eq.constraints) {
       dx <- as.numeric(dx %*% lavaan_model@Model@eq.constraints.K)
@@ -168,7 +174,7 @@ lav_export_estimation <- function(lavaan_model) {
     if (lavaan_model@Options$estimator == "PML") {
       dx <- dx / lavaan_model@SampleStats@ntotal
     }
-    return(dx)
+    dx
   }
 
   # extract bounds
@@ -178,34 +184,34 @@ lav_export_estimation <- function(lavaan_model) {
   # get starting values
   starting_values <- lav_model_get_parameters(lavaan_model@Model)
   if (lavaan_model@Model@eq.constraints) {
-    starting_values <- as.numeric((starting_values - lavaan_model@Model@eq.constraints.k0) %*%
-      lavaan_model@Model@eq.constraints.K)
+    starting_values <-
+      as.numeric((starting_values - lavaan_model@Model@eq.constraints.k0) %*%
+                  lavaan_model@Model@eq.constraints.K)
   }
 
   # lavaan internally uses transformations when there are equality constraints.
   # As a result, the parameters are not necessarily those one would expect when
-  # fitting the model. The parameters can be translated with the following function:
+  # fitting the model.
+  # The parameters can be translated with the following function:
   get_coef <- function(parameter_values,
                        lavaan_model) {
     if (lavaan_model@Model@eq.constraints) {
-      parameter_values <- as.numeric(lavaan_model@Model@eq.constraints.K %*% parameter_values) +
-        lavaan_model@Model@eq.constraints.k0
+      parameter_values <- as.numeric(lavaan_model@Model@eq.constraints.K %*%
+                  parameter_values) + lavaan_model@Model@eq.constraints.k0
     }
     names(parameter_values) <- lav_partable_labels(lavaan_model@ParTable,
       type = "free"
     )
-    return(parameter_values)
+    parameter_values
   }
 
   # Now we just return everything so that the user can use their own optimizer
-  return(
-    list(
-      get_coef = get_coef,
-      starting_values = starting_values,
-      objective_function = objective_function,
-      gradient_function = gradient_function,
-      lower = lower,
-      upper = upper
-    )
+  list(
+    get_coef = get_coef,
+    starting_values = starting_values,
+    objective_function = objective_function,
+    gradient_function = gradient_function,
+    lower = lower,
+    upper = upper
   )
 }

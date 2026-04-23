@@ -12,12 +12,12 @@ modificationIndices(object, standardized = TRUE, cov.std = TRUE,
                     information = "expected",
                     power = FALSE, delta = 0.1, alpha = 0.05,
                     high.power = 0.75, sort. = FALSE, minimum.value = 0,
-                    maximum.number = nrow(LIST), free.remove = TRUE,
+                    maximum.number = nrow(list_1), free.remove = TRUE,
                     na.remove = TRUE, op = NULL)
 modindices(object, standardized = TRUE, cov.std = TRUE, information = "expected",
                     power = FALSE, delta = 0.1, alpha = 0.05, high.power = 0.75,
                     sort. = FALSE, minimum.value = 0,
-                    maximum.number = nrow(LIST), free.remove = TRUE,
+                    maximum.number = nrow(list_1), free.remove = TRUE,
                     na.remove = TRUE, op = NULL)
 }
 \arguments{

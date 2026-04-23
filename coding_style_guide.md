@@ -48,7 +48,7 @@ or `ngettext` to make them suitable for translation.
 
 ## Checking the style
 
-Elements of the style can be checked using [the `lintr` package](https::https://github.com/r-lib/lintr)  with the following instructions:
+Elements of the style can be checked using [the `lintr` package](https://github.com/r-lib/lintr)  with the following instructions:
 
 ```R
 linters: linters_with_defaults(
