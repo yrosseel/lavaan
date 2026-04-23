@@ -11,51 +11,49 @@
 # YR 23 Apr 2023: - quadprog is not needed if we have no (in)equality
 #                   constraints
 
-lav_cfa_bentler1982 <- function(S,
-                                marker.idx = NULL,
-                                lambda.nonzero.idx = NULL,
-                                GLS = FALSE,
+lav_cfa_bentler1982 <- function(s,
+                                marker_idx = NULL,
+                                lambda_nonzero_idx = NULL,
+                                gls = FALSE,
                                 bounds = TRUE,
-                                min.reliability.marker = 0.1,
+                                min_reliability_marker = 0.1,
                                 quadprog = FALSE,
                                 nobs = 20L) { # for cutoff
   # dimensions
-  nvar <- ncol(S)
-  nfac <- length(marker.idx)
+  nvar <- ncol(s)
+  nfac <- length(marker_idx)
 
   # lambda structure
-  B <- matrix(0, nvar, nfac)
-  lambda.marker.idx <- (seq_len(nfac) - 1L) * nvar + marker.idx
-  B[lambda.marker.idx] <- 1L
-  B[lambda.nonzero.idx] <- 1L
+  m_b <- matrix(0, nvar, nfac)
+  lambda_marker_idx <- (seq_len(nfac) - 1L) * nvar + marker_idx
+  m_b[lambda_marker_idx] <- 1L
+  m_b[lambda_nonzero_idx] <- 1L
 
   # partition sample covariance matrix: marker vs non-marker
-  S.xx <- S[marker.idx, marker.idx, drop = FALSE]
-  S.yx <- S[-marker.idx, marker.idx, drop = FALSE]
-  S.xy <- S[marker.idx, -marker.idx, drop = FALSE]
-  S.yy <- S[-marker.idx, -marker.idx, drop = FALSE]
+  s_xx <- s[marker_idx, marker_idx, drop = FALSE]
+  s_yx <- s[-marker_idx, marker_idx, drop = FALSE]
+  s_yy <- s[-marker_idx, -marker_idx, drop = FALSE]
   p <- nvar - nfac
-  B.y <- B[-marker.idx, , drop = FALSE]
+  b_y <- m_b[-marker_idx, , drop = FALSE]
 
   # check for p = 0?
 
   # phase 1: initial estimate for Sigma.yx
-  Sigma.yx.hat <- S.yx
 
   # phase 2: using GLS/ULS to obtain PSI and Theta
-  if (GLS) {
-    W <- try(solve(S.yy), silent = TRUE)
-    if (inherits(W, "try-error")) {
+  if (gls) {
+    m_w <- try(solve(s_yy), silent = TRUE)
+    if (inherits(m_w, "try-error")) {
       lav_msg_warn(gettext("could not inverte S.yy; switching to ULS"))
-      W <- diag(p)
+      m_w <- diag(p)
     }
-    WS.yx <- W %*% S.yx
-    xy.SWS.yx <- crossprod(S.yx, WS.yx)
-    G <- WS.yx %*% solve(xy.SWS.yx) %*% t(WS.yx)
+    ws_yx <- m_w %*% s_yx
+    xy_sws_yx <- crossprod(s_yx, ws_yx)
+    g <- ws_yx %*% solve(xy_sws_yx) %*% t(ws_yx)
   } else {
-    Ip <- diag(p)
-    xy.SS.yx <- crossprod(S.yx)
-    G <- S.yx %*% solve(xy.SS.yx) %*% t(S.yx)
+    ip <- diag(p)
+    xy_ss_yx <- crossprod(s_yx)
+    g <- s_yx %*% solve(xy_ss_yx) %*% t(s_yx)
   }
 
   # only needed if theta.y is not diagonal:
@@ -73,139 +71,138 @@ lav_cfa_bentler1982 <- function(S,
   # NOTE:
   # if only the 'diagonal' element of Theta are free (as usual), then we
   # can write tmp1 as
-  if (GLS) {
-    tmp1 <- W * W - G * G
+  if (gls) {
+    tmp1 <- m_w * m_w - g * g
   } else {
-    tmp1 <- Ip - G * G
+    tmp1 <- ip - g * g
   }
 
   # only needed if fixed values
   # Theta.F <- matrix(0, p, p) # all free
   # tmp2 <- W %*% (S.yy - Theta.F) %*% W - G %*% (S.yy - Theta.F) %*% G
-  if (GLS) {
-    tmp2 <- W %*% S.yy %*% W - G %*% S.yy %*% G
+  if (gls) {
+    tmp2 <- m_w %*% s_yy %*% m_w - g %*% s_yy %*% g
   } else {
-    tmp2 <- S.yy - G %*% S.yy %*% G
+    tmp2 <- s_yy - g %*% s_yy %*% g
   }
 
   # Theta.f    <- as.numeric(solve(tmp1) %*% P %*% lav_matrix_vec(tmp2))
   # Note:
   # if only the 'diagonal' element of Theta are free (as usual), then we
   # can write Theta.f as
-  Theta.f <- solve(tmp1, diag(tmp2))
-  Theta.f.nobounds <- Theta.f # store unbounded Theta.f values
+  theta_f <- solve(tmp1, diag(tmp2))
+  theta_f_nobounds <- theta_f # store unbounded Theta.f values
 
   # ALWAYS apply standard bounds to proceed
-  too.small.idx <- which(Theta.f < 0)
-  if (length(too.small.idx) > 0L) {
-    Theta.f[too.small.idx] <- 0
+  too_small_idx <- which(theta_f < 0)
+  if (length(too_small_idx) > 0L) {
+    theta_f[too_small_idx] <- 0
   }
-  too.large.idx <- which(Theta.f > diag(S.yy))
-  if (length(too.large.idx) > 0L) {
-    Theta.f[too.large.idx] <- diag(S.yy)[too.large.idx] * 1
+  too_large_idx <- which(theta_f > diag(s_yy))
+  if (length(too_large_idx) > 0L) {
+    theta_f[too_large_idx] <- diag(s_yy)[too_large_idx] * 1
   }
 
   # create diagonal matrix with Theta.f elements on diagonal
-  Theta.yhat <- diag(Theta.f, p)
+  theta_yhat <- diag(theta_f, p)
 
   # force (S.yy - Theta.yhat) to be positive definite
-  lambda <- try(lav_matrix_symmetric_diff_smallest_root(S.yy, Theta.yhat),
+  lambda <- try(lav_matrix_symmetric_diff_smallest_root(s_yy, theta_yhat),
     silent = TRUE
   )
   if (inherits(lambda, "try-error")) {
     lav_msg_warn(gettext("failed to compute lambda"))
-    SminTheta <- S.yy - Theta.yhat # and hope for the best
+    s_min_theta <- s_yy - theta_yhat # and hope for the best
   } else {
     cutoff <- 1 + 1 / (nobs - 1)
     if (lambda < cutoff) {
-      lambda.star <- lambda - 1 / (nobs - 1)
-      SminTheta <- S.yy - lambda.star * Theta.yhat
+      lambda_star <- lambda - 1 / (nobs - 1)
+      s_min_theta <- s_yy - lambda_star * theta_yhat
     } else {
-      SminTheta <- S.yy - Theta.yhat
+      s_min_theta <- s_yy - theta_yhat
     }
   }
 
   # estimate Phi
-  if (GLS) {
-    tmp1 <- xy.SWS.yx
-    tmp2 <- t(WS.yx) %*% SminTheta %*% WS.yx
+  if (gls) {
+    tmp1 <- xy_sws_yx
+    tmp2 <- t(ws_yx) %*% s_min_theta %*% ws_yx
   } else {
-    tmp1 <- xy.SS.yx
-    tmp2 <- t(S.yx) %*% SminTheta %*% S.yx
+    tmp1 <- xy_ss_yx
+    tmp2 <- t(s_yx) %*% s_min_theta %*% s_yx
   }
-  PSI <- tmp1 %*% solve(tmp2, tmp1)
-  PSI.nobounds <- PSI
+  mm_psi <- tmp1 %*% solve(tmp2, tmp1)
+  psi_nobounds <- mm_psi
 
   # ALWAYS apply bounds to proceed
-  lower.bounds.psi <- diag(S.xx) - (1 - min.reliability.marker) * diag(S.xx)
-  toolow.idx <- which(diag(PSI) < lower.bounds.psi)
-  if (length(toolow.idx) > 0L) {
-    diag(PSI)[toolow.idx] <- lower.bounds.psi[toolow.idx]
+  lower_bounds_psi <- diag(s_xx) - (1 - min_reliability_marker) * diag(s_xx)
+  toolow_idx <- which(diag(mm_psi) < lower_bounds_psi)
+  if (length(toolow_idx) > 0L) {
+    diag(mm_psi)[toolow_idx] <- lower_bounds_psi[toolow_idx]
   }
-  too.large.idx <- which(diag(PSI) > diag(S.xx))
-  if (length(too.large.idx) > 0L) {
-    diag(PSI)[too.large.idx] <- diag(S.xx)[too.large.idx] * 1
+  too_large_idx <- which(diag(mm_psi) > diag(s_xx))
+  if (length(too_large_idx) > 0L) {
+    diag(mm_psi)[too_large_idx] <- diag(s_xx)[too_large_idx] * 1
   }
 
   # in addition, force PSI to be PD
-  PSI <- lav_matrix_symmetric_force_pd(PSI, tol = 1e-04)
+  mm_psi <- lav_matrix_symmetric_force_pd(mm_psi, tol = 1e-04)
 
   # residual variances markers
-  Theta.x <- diag(S.xx - PSI)
+  theta_x <- diag(s_xx - mm_psi)
 
   # create theta vector
-  theta.nobounds <- numeric(nvar)
-  theta.nobounds[marker.idx] <- Theta.x
-  theta.nobounds[-marker.idx] <- Theta.f.nobounds
+  theta_nobounds <- numeric(nvar)
+  theta_nobounds[marker_idx] <- theta_x
+  theta_nobounds[-marker_idx] <- theta_f_nobounds
 
   # compute LAMBDA for non-marker items
 
   if (quadprog) {
     # only really needed if we need to impose (in)equality constraints
     # (TODO)
-    Dmat <- lav_matrix_bdiag(rep(list(PSI), p))
-    dvec <- as.vector(t(S.yx))
-    eq.idx <- which(t(B.y) != 1) # these must be zero (row-wise!)
-    Rmat <- diag(nrow(Dmat))[eq.idx, , drop = FALSE]
-    bvec <- rep(0, length(eq.idx)) # optional, 0=default
+    dmat <- lav_matrix_bdiag(rep(list(mm_psi), p))
+    dvec <- as.vector(t(s_yx))
+    eq_idx <- which(t(b_y) != 1) # these must be zero (row-wise!)
+    rmat <- diag(nrow(dmat))[eq_idx, , drop = FALSE]
+    bvec <- rep(0, length(eq_idx)) # optional, 0=default
     out <- try(quadprog::solve.QP(
-      Dmat = Dmat, dvec = dvec, Amat = t(Rmat),
-      meq = length(eq.idx), bvec = bvec
+      Dmat = dmat, dvec = dvec, Amat = t(rmat),
+      meq = length(eq_idx), bvec = bvec
     ), silent = TRUE)
     if (inherits(out, "try-error")) {
       lav_msg_warn(gettext("solve.QP failed to find a solution"))
-      Lambda <- matrix(0, nvar, nfac)
-      Lambda[marker.idx, ] <- diag(nfac)
-      Lambda[lambda.nonzero.idx] <- as.numeric(NA)
-      Theta <- numeric(nvar)
-      Theta[marker.idx] <- Theta.x
-      Theta[-marker.idx] <- Theta.f
-      Psi <- PSI
+      lambda_1 <- matrix(0, nvar, nfac)
+      lambda_1[marker_idx, ] <- diag(nfac)
+      lambda_1[lambda_nonzero_idx] <- as.numeric(NA)
+      theta <- numeric(nvar)
+      theta[marker_idx] <- theta_x
+      theta[-marker_idx] <- theta_f
       return(list(
-        lambda = Lambda, theta = theta.nobounds,
-        psi = PSI.nobounds
+        lambda = lambda_1, theta = theta_nobounds,
+        psi = psi_nobounds
       ))
     } else {
-      LAMBDA.y <- matrix(out$solution,
+      lambda_y <- matrix(out$solution,
         nrow = p, ncol = nfac,
         byrow = TRUE
       )
       # zap almost zero elements
-      LAMBDA.y[abs(LAMBDA.y) < sqrt(.Machine$double.eps)] <- 0
+      lambda_y[abs(lambda_y) < sqrt(.Machine$double.eps)] <- 0
     }
   } else {
     # simple version
     #LAMBDA.y <- t(t(S.yx) / diag(PSI)) * B.y # works only if no crossloadings
-    LAMBDA.y <- t(solve(PSI, t(S.yx))) * B.y
+    lambda_y <- t(solve(mm_psi, t(s_yx))) * b_y
   }
 
 
   # assemble matrices
-  LAMBDA <- matrix(0, nvar, nfac)
-  LAMBDA[marker.idx, ] <- diag(nfac)
-  LAMBDA[-marker.idx, ] <- LAMBDA.y
+  mm_lambda <- matrix(0, nvar, nfac)
+  mm_lambda[marker_idx, ] <- diag(nfac)
+  mm_lambda[-marker_idx, ] <- lambda_y
 
-  list(lambda = LAMBDA, theta = theta.nobounds, psi = PSI.nobounds)
+  list(lambda = mm_lambda, theta = theta_nobounds, psi = psi_nobounds)
 }
 
 # internal function to be used inside lav_optim_noniter
@@ -217,8 +214,8 @@ lav_cfa_bentler1982_internal <- function(lavobject = NULL, # convenience
                                          lavpartable = NULL,
                                          lavdata = NULL,
                                          lavoptions = NULL,
-                                         GLS = TRUE,
-                                         min.reliability.marker = 0.1,
+                                         gls = TRUE,
+                                         min_reliability_marker = 0.1,
                                          quadprog = FALSE,
                                          nobs = 20L) {
   lavpta <- NULL
@@ -254,32 +251,30 @@ lav_cfa_bentler1982_internal <- function(lavobject = NULL, # convenience
   nblocks <- lav_partable_nblocks(lavpartable)
   stopifnot(nblocks == 1L) # for now
   b <- 1L
-  sample.cov <- lavsamplestats@cov[[b]]
-  nvar <- nrow(sample.cov)
-  lv.names <- lavpta$vnames$lv.regular[[b]]
-  nfac <- length(lv.names)
-  marker.idx <- lavpta$vidx$lv.marker[[b]]
-  lambda.idx <- which(names(lavmodel@GLIST) == "lambda")
-  lambda.nonzero.idx <- lavmodel@m.free.idx[[lambda.idx]]
+  sample_cov <- lavsamplestats@cov[[b]]
+  nvar <- nrow(sample_cov)
+  marker_idx <- lavpta$vidx$lv.marker[[b]]
+  lambda_idx <- which(names(lavmodel@GLIST) == "lambda")
+  lambda_nonzero_idx <- lavmodel@m.free.idx[[lambda_idx]]
   # only diagonal THETA for now...
   # because if we have correlated residuals, we should remove the
   # corresponding variables as instruments before we estimate lambda...
   # (see MIIV)
-  theta.idx <- which(names(lavmodel@GLIST) == "theta") # usually '2'
-  m.theta <- lavmodel@m.free.idx[[theta.idx]]
-  nondiag.idx <- m.theta[!m.theta %in% lav_matrix_diag_idx(nvar)]
-  if (length(nondiag.idx) > 0L) {
+  theta_idx <- which(names(lavmodel@GLIST) == "theta") # usually '2'
+  m_theta <- lavmodel@m.free.idx[[theta_idx]]
+  nondiag_idx <- m_theta[!m_theta %in% lav_matrix_diag_idx(nvar)]
+  if (length(nondiag_idx) > 0L) {
     lav_msg_warn(gettext(
       "this implementation of FABIN does not handle correlated residuals yet!"))
   }
 
-  if (!missing(GLS)) {
-    GLS.flag <- GLS
+  if (!missing(gls)) {
+    gls_flag <- gls
   } else {
-    GLS.flag <- FALSE
+    gls_flag <- FALSE
     if (!is.null(lavoptions$estimator.args$GLS) &&
       lavoptions$estimator.args$GLS) {
-      GLS.flag <- TRUE
+      gls_flag <- TRUE
     }
   }
 
@@ -290,38 +285,38 @@ lav_cfa_bentler1982_internal <- function(lavobject = NULL, # convenience
 
   # run bentler1982 non-iterative CFA algorithm
   out <- lav_cfa_bentler1982(
-    S = sample.cov, marker.idx = marker.idx,
-    lambda.nonzero.idx = lambda.nonzero.idx,
-    GLS = GLS.flag,
-    min.reliability.marker = 0.1,
+    s = sample_cov, marker_idx = marker_idx,
+    lambda_nonzero_idx = lambda_nonzero_idx,
+    gls = gls_flag,
+    min_reliability_marker = 0.1,
     quadprog = quadprog,
     nobs = lavsamplestats@ntotal
   )
-  LAMBDA <- out$lambda
-  THETA <- diag(out$theta, nvar)
-  PSI <- out$psi
+  mm_lambda <- out$lambda
+  mm_theta <- diag(out$theta, nvar)
+  mm_psi <- out$psi
 
   # store matrices in lavmodel@GLIST
-  lavmodel@GLIST$lambda <- LAMBDA
-  lavmodel@GLIST$theta <- THETA
-  lavmodel@GLIST$psi <- PSI
+  lavmodel@GLIST$lambda <- mm_lambda
+  lavmodel@GLIST$theta <- mm_theta
+  lavmodel@GLIST$psi <- mm_psi
 
   # extract free parameters only
   x <- lav_model_get_parameters(lavmodel)
 
   # apply bounds (if any)
   if (!is.null(lavpartable$lower)) {
-    lower.x <- lavpartable$lower[lavpartable$free > 0]
-    too.small.idx <- which(x < lower.x)
-    if (length(too.small.idx) > 0L) {
-      x[too.small.idx] <- lower.x[too.small.idx]
+    lower_x <- lavpartable$lower[lavpartable$free > 0]
+    too_small_idx <- which(x < lower_x)
+    if (length(too_small_idx) > 0L) {
+      x[too_small_idx] <- lower_x[too_small_idx]
     }
   }
   if (!is.null(lavpartable$upper)) {
-    upper.x <- lavpartable$upper[lavpartable$free > 0]
-    too.large.idx <- which(x > upper.x)
-    if (length(too.large.idx) > 0L) {
-      x[too.large.idx] <- upper.x[too.large.idx]
+    upper_x <- lavpartable$upper[lavpartable$free > 0]
+    too_large_idx <- which(x > upper_x)
+    if (length(too_large_idx) > 0L) {
+      x[too_large_idx] <- upper_x[too_large_idx]
     }
   }
 

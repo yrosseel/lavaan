@@ -27,14 +27,14 @@
 #
 # (note: all eigenvalues are positive)
 
-lav_cfa_1fac_3ind <- function(sample.cov, std.lv = FALSE,
-                              warn.neg.triad = TRUE, bounds = TRUE) {
+lav_cfa_1fac_3ind <- function(sample_cov, std_lv = FALSE,
+                              warn_neg_triad = TRUE, bounds = TRUE) {
   # check sample cov
-  stopifnot(is.matrix(sample.cov))
-  nRow <- NROW(sample.cov)
-  nCol <- NCOL(sample.cov)
-  stopifnot(nRow == nCol, nRow < 4L, nCol < 4L)
-  nvar <- nRow
+  stopifnot(is.matrix(sample_cov))
+  n_row <- NROW(sample_cov)
+  n_col <- NCOL(sample_cov)
+  stopifnot(n_row == n_col, n_row < 4L, n_col < 4L)
+  nvar <- n_row
 
   # we expect a 3x3 sample covariance matrix
   # however, if we get a 2x2 (or 1x1 covariance matrix), do something
@@ -42,35 +42,35 @@ lav_cfa_1fac_3ind <- function(sample.cov, std.lv = FALSE,
   if (nvar == 1L) {
     # lambda = 1, theta = 0, psi = sample.cov[1,1]
     # lambda = 1, theta = 0, psi = 1 (for now, until NlsyLinks is fixed)
-    sample.cov <- matrix(1, 3L, 3L) * 1.0
+    sample_cov <- matrix(1, 3L, 3L) * 1.0
   } else if (nvar == 2L) {
     # hm, we could force both lambda's to be 1, but if the second
     # one is negative, this will surely lead to non-convergence issues
     #
     # just like lavaan < 0.6.2, we will use the regression of y=marker
     # on x=item2
-    mean.2var <- mean(diag(sample.cov))
-    max.var <- max(diag(sample.cov))
-    extra <- c(mean.2var, sample.cov[2, 1])
-    sample.cov <- rbind(cbind(sample.cov, extra, deparse.level = 0),
-      c(extra, max.var),
+    mean_2var <- mean(diag(sample_cov))
+    max_var <- max(diag(sample_cov))
+    extra <- c(mean_2var, sample_cov[2, 1])
+    sample_cov <- rbind(cbind(sample_cov, extra, deparse.level = 0),
+      c(extra, max_var),
       deparse.level = 0
     )
   }
 
-  s11 <- sample.cov[1, 1]
-  s22 <- sample.cov[2, 2]
-  s33 <- sample.cov[3, 3]
+  s11 <- sample_cov[1, 1]
+  s22 <- sample_cov[2, 2]
+  s33 <- sample_cov[3, 3]
   stopifnot(s11 > 0, s22 > 0, s33 > 0)
 
-  s21 <- sample.cov[2, 1]
-  s31 <- sample.cov[3, 1]
-  s32 <- sample.cov[3, 2]
+  s21 <- sample_cov[2, 1]
+  s31 <- sample_cov[3, 1]
+  s32 <- sample_cov[3, 2]
   # note: s21*s31*s32 should be positive!
-  neg.triad <- FALSE
+  neg_triad <- FALSE
   if (s21 * s31 * s32 < 0) {
-    neg.triad <- TRUE
-    if (warn.neg.triad) {
+    neg_triad <- TRUE
+    if (warn_neg_triad) {
       lav_msg_warn(gettext("product of the three covariances is negative!"))
     }
   }
@@ -86,13 +86,13 @@ lav_cfa_1fac_3ind <- function(sample.cov, std.lv = FALSE,
 
   # sanity check (new in 0.6-11): apply standard bounds
   if (bounds) {
-    lower.psi <- s11 - (1 - 0.1) * s11 # we assume REL(y1) >= 0.1
-    psi <- min(max(psi, lower.psi), s11)
+    lower_psi <- s11 - (1 - 0.1) * s11 # we assume REL(y1) >= 0.1
+    psi <- min(max(psi, lower_psi), s11)
 
-    l2.bound <- sqrt(s22 / lower.psi)
-    l2 <- min(max(-l2.bound, l2), l2.bound)
-    l3.bound <- sqrt(s33 / lower.psi)
-    l3 <- min(max(-l3.bound, l3), l3.bound)
+    l2_bound <- sqrt(s22 / lower_psi)
+    l2 <- min(max(-l2_bound, l2), l2_bound)
+    l3_bound <- sqrt(s33 / lower_psi)
+    l3 <- min(max(-l3_bound, l3), l3_bound)
 
     theta1 <- min(max(theta1, 0), s11)
     theta2 <- min(max(theta2, 0), s22)
@@ -104,7 +104,7 @@ lav_cfa_1fac_3ind <- function(sample.cov, std.lv = FALSE,
 
 
   # std.lv?
-  if (std.lv) {
+  if (std_lv) {
     # we allow for negative psi (if bounds = FALSE)
     lambda <- lambda * sign(psi) * sqrt(abs(psi))
     psi <- 1
@@ -120,25 +120,25 @@ lav_cfa_1fac_3ind <- function(sample.cov, std.lv = FALSE,
     psi <- psi / 2 # smaller works better?
   }
 
-  list(lambda = lambda, theta = theta, psi = psi, neg.triad = neg.triad)
+  list(lambda = lambda, theta = theta, psi = psi, neg.triad = neg_triad)
 }
 
 # FABIN (Hagglund, 1982)
 # 1-factor only
-lav_cfa_1fac_fabin <- function(S, lambda.only = FALSE, method = "fabin3",
-                               std.lv = FALSE, bounds = TRUE) {
+lav_cfa_1fac_fabin <- function(s, lambda_only = FALSE, method = "fabin3",
+                               std_lv = FALSE, bounds = TRUE) {
   # check arguments
-  if (std.lv) {
-    lambda.only <- FALSE # we need psi
+  if (std_lv) {
+    lambda_only <- FALSE # we need psi
   }
 
-  nvar <- NCOL(S)
+  nvar <- NCOL(s)
 
   # catch nvar < 4
   if (nvar < 4L) {
     out <- lav_cfa_1fac_3ind(
-      sample.cov = S, std.lv = std.lv,
-      warn.neg.triad = FALSE
+      sample_cov = s, std_lv = std_lv,
+      warn_neg_triad = FALSE
     )
     return(out)
   }
@@ -148,33 +148,33 @@ lav_cfa_1fac_fabin <- function(S, lambda.only = FALSE, method = "fabin3",
   lambda[1L] <- 1.0
   for (i in 2:nvar) {
     idx3 <- (1:nvar)[-c(i, 1L)]
-    s23 <- S[i, idx3]
-    S31 <- S13 <- S[idx3, 1L]
+    s23 <- s[i, idx3]
+    s31 <- s13 <- s[idx3, 1L]
     if (method == "fabin3") {
-      S33 <- S[idx3, idx3]
-      tmp <- try(solve(S33, S31), silent = TRUE) # GaussJordanPivot is
+      s33 <- s[idx3, idx3]
+      tmp <- try(solve(s33, s31), silent = TRUE) # GaussJordanPivot is
       # slighty more efficient
       if (inherits(tmp, "try-error")) {
-        lambda[i] <- sum(s23 * S31) / sum(S13^2)
+        lambda[i] <- sum(s23 * s31) / sum(s13^2)
       } else {
-        lambda[i] <- sum(s23 * tmp) / sum(S13 * tmp)
+        lambda[i] <- sum(s23 * tmp) / sum(s13 * tmp)
       }
     } else {
-      lambda[i] <- sum(s23 * S31) / sum(S13^2)
+      lambda[i] <- sum(s23 * s31) / sum(s13^2)
     }
   }
 
   # bounds? (new in 0.6-11)
   if (bounds) {
-    s11 <- S[1, 1]
-    lower.psi <- s11 - (1 - 0.1) * s11 # we assume REL(y1) >= 0.1
+    s11 <- s[1, 1]
+    lower_psi <- s11 - (1 - 0.1) * s11 # we assume REL(y1) >= 0.1
     for (i in 2:nvar) {
-      l.bound <- sqrt(S[i, i] / lower.psi)
-      lambda[i] <- min(max(-l.bound, lambda[i]), l.bound)
+      l_bound <- sqrt(s[i, i] / lower_psi)
+      lambda[i] <- min(max(-l_bound, lambda[i]), l_bound)
     }
   }
 
-  if (lambda.only) {
+  if (lambda_only) {
     return(list(
       lambda = lambda, psi = as.numeric(NA),
       theta = rep(as.numeric(NA), nvar)
@@ -194,16 +194,16 @@ lav_cfa_1fac_fabin <- function(S, lambda.only = FALSE, method = "fabin3",
   # theta.diag <- solve(tmp1, tmp2)
 
   # 'least squares' version, assuming W = I
-  D <- tcrossprod(lambda) / sum(lambda^2)
-  theta <- solve(diag(nvar) - D * D, diag(S - (D %*% S %*% D)))
+  d <- tcrossprod(lambda) / sum(lambda^2)
+  theta <- solve(diag(nvar) - d * d, diag(s - (d %*% s %*% d)))
 
   # 3. psi (W=I)
-  S1 <- S - diag(theta)
+  s1 <- s - diag(theta)
   l2 <- sum(lambda^2)
-  psi <- sum(colSums(as.numeric(lambda) * S1) * lambda) / (l2 * l2)
+  psi <- sum(colSums(as.numeric(lambda) * s1) * lambda) / (l2 * l2)
 
   # std.lv?
-  if (std.lv) {
+  if (std_lv) {
     # we allow for negative psi
     lambda <- lambda * sign(psi) * sqrt(abs(psi))
     psi <- 1

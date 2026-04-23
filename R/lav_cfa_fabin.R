@@ -1,87 +1,87 @@
 # FABIN = factor analysis by instrumental variables
 # Hagglund 1982 (efa), 1986 (cfa)
 
-lav_cfa_fabin2 <- function(S, marker.idx = NULL, lambda.nonzero.idx = NULL) {
-  nvar <- ncol(S)
-  nfac <- length(marker.idx)
+lav_cfa_fabin2 <- function(s, marker_idx = NULL, lambda_nonzero_idx = NULL) {
+  nvar <- ncol(s)
+  nfac <- length(marker_idx)
 
   # overview of free/fixed
-  LAMBDA <- matrix(0, nvar, nfac)
-  LAMBDA[lambda.nonzero.idx] <- -1L
+  mm_lambda <- matrix(0, nvar, nfac)
+  mm_lambda[lambda_nonzero_idx] <- -1L
 
   lambda <- matrix(0, nvar, nfac)
   for (i in 1:nvar) {
-    if (i %in% marker.idx) {
-      lambda[i, marker.idx == i] <- 1.0
+    if (i %in% marker_idx) {
+      lambda[i, marker_idx == i] <- 1.0
       next
     }
-    free.idx <- LAMBDA[i, ] == -1L
-    idx3 <- (1:nvar)[-c(i, marker.idx)]
-    s23 <- S[i, idx3]
-    fac.idx <- marker.idx[free.idx]
+    free_idx <- mm_lambda[i, ] == -1L
+    idx3 <- (1:nvar)[-c(i, marker_idx)]
+    s23 <- s[i, idx3]
+    fac_idx <- marker_idx[free_idx]
 
-    if (length(fac.idx) == 1L) { # most common scenario in CFA
-      S31 <- S13 <- S[idx3, fac.idx]
-      lambda[i, free.idx] <- sum(s23 * S31) / sum(S13 * S13)
+    if (length(fac_idx) == 1L) { # most common scenario in CFA
+      s31 <- s13 <- s[idx3, fac_idx]
+      lambda[i, free_idx] <- sum(s23 * s31) / sum(s13 * s13)
     } else {
-      S31 <- S[idx3, fac.idx, drop = FALSE]
-      S13 <- S[fac.idx, idx3, drop = FALSE]
-      lambda[i, free.idx] <- solve(S13 %*% S31, drop(s23 %*% S31))
+      s31 <- s[idx3, fac_idx, drop = FALSE]
+      s13 <- s[fac_idx, idx3, drop = FALSE]
+      lambda[i, free_idx] <- solve(s13 %*% s31, drop(s23 %*% s31))
     }
   }
 
   lambda
 }
 
-lav_cfa_fabin3 <- function(S, marker.idx = NULL, lambda.nonzero.idx = NULL) {
-  nvar <- ncol(S)
-  nfac <- length(marker.idx)
+lav_cfa_fabin3 <- function(s, marker_idx = NULL, lambda_nonzero_idx = NULL) {
+  nvar <- ncol(s)
+  nfac <- length(marker_idx)
 
   # overview of free/fixed
-  LAMBDA <- matrix(0, nvar, nfac)
-  LAMBDA[lambda.nonzero.idx] <- -1L
+  mm_lambda <- matrix(0, nvar, nfac)
+  mm_lambda[lambda_nonzero_idx] <- -1L
 
-  S33.inv <- try(solve(S[-marker.idx, -marker.idx, drop = FALSE]),
+  s33_inv_1 <- try(solve(s[-marker_idx, -marker_idx, drop = FALSE]),
     silent = TRUE
   )
-  if (inherits(S33.inv, "try-error")) {
+  if (inherits(s33_inv_1, "try-error")) {
     lav_msg_warn(gettext("fabin3 failed; switching to fabin2"))
     return(lav_cfa_fabin2(
-      S = S, marker.idx = marker.idx,
-      lambda.nonzero.idx = lambda.nonzero.idx
+      s = s, marker_idx = marker_idx,
+      lambda_nonzero_idx = lambda_nonzero_idx
     ))
   }
 
   lambda <- matrix(0, nvar, nfac)
-  rm3.idx <- 0L
+  rm3_idx <- 0L
   for (i in 1:nvar) {
-    if (i %in% marker.idx) {
-      lambda[i, marker.idx == i] <- 1.0
+    if (i %in% marker_idx) {
+      lambda[i, marker_idx == i] <- 1.0
       next
     }
-    free.idx <- LAMBDA[i, ] == -1L
-    idx3 <- (1:nvar)[-c(i, marker.idx)]
-    S33 <- S[idx3, idx3, drop = FALSE]
-    s23 <- S[i, idx3]
-    fac.idx <- marker.idx[free.idx]
-    rm3.idx <- rm3.idx + 1L
+    free_idx <- mm_lambda[i, ] == -1L
+    idx3 <- (1:nvar)[-c(i, marker_idx)]
+    # s33 <- s[idx3, idx3, drop = FALSE]
+    s23 <- s[i, idx3]
+    fac_idx <- marker_idx[free_idx]
+    rm3_idx <- rm3_idx + 1L
     # update inverse
-    s33.inv <- lav_matrix_symmetric_inverse_update(
-      S.inv = S33.inv,
-      rm.idx = rm3.idx
+    s33_inv <- lav_matrix_symmetric_inverse_update(
+      S.inv = s33_inv_1,
+      rm.idx = rm3_idx
     )
 
-    if (length(fac.idx) == 1L) { # most common scenario in CFA
-      S31 <- S13 <- S[idx3, fac.idx]
-      tmp <- s33.inv %*% S31 # or colSums(s33.inv * S31)
-      lambda[i, free.idx] <- sum(s23 * tmp) / sum(S13 * tmp)
+    if (length(fac_idx) == 1L) { # most common scenario in CFA
+      s31 <- s13 <- s[idx3, fac_idx]
+      tmp <- s33_inv %*% s31 # or colSums(s33.inv * S31)
+      lambda[i, free_idx] <- sum(s23 * tmp) / sum(s13 * tmp)
     } else {
-      S31 <- S[idx3, fac.idx, drop = FALSE]
-      S13 <- S[fac.idx, idx3, drop = FALSE]
-      tmp <- s33.inv %*% S31
+      s31 <- s[idx3, fac_idx, drop = FALSE]
+      s13 <- s[fac_idx, idx3, drop = FALSE]
+      tmp <- s33_inv %*% s31
       # lambda[i, free.idx] <- ( s23 %*% solve(S33) %*% S31 %*%
       #                          solve(S13 %*% solve(S33) %*% S31) )
-      lambda[i, free.idx] <- solve(S13 %*% tmp, drop(s23 %*% tmp))
+      lambda[i, free_idx] <- solve(s13 %*% tmp, drop(s23 %*% tmp))
     }
   }
 
@@ -113,21 +113,19 @@ lav_cfa_fabin_internal <- function(lavmodel = NULL, lavsamplestats = NULL,
   nblocks <- lav_partable_nblocks(lavpartable)
   stopifnot(nblocks == 1L) # for now
   b <- 1L
-  sample.cov <- lavsamplestats@cov[[b]]
-  nvar <- nrow(sample.cov)
-  lv.names <- lavpta$vnames$lv.regular[[b]]
-  nfac <- length(lv.names)
-  marker.idx <- lavpta$vidx$lv.marker[[b]]
-  lambda.idx <- which(names(lavmodel@GLIST) == "lambda")
-  lambda.nonzero.idx <- lavmodel@m.free.idx[[lambda.idx]]
+  sample_cov <- lavsamplestats@cov[[b]]
+  nvar <- nrow(sample_cov)
+  marker_idx <- lavpta$vidx$lv.marker[[b]]
+  lambda_idx <- which(names(lavmodel@GLIST) == "lambda")
+  lambda_nonzero_idx <- lavmodel@m.free.idx[[lambda_idx]]
   # only diagonal THETA for now...
   # because if we have correlated residuals, we should remove the
   # corresponding variables as instruments before we estimate lambda...
   # (see MIIV)
-  theta.idx <- which(names(lavmodel@GLIST) == "theta") # usually '2'
-  m.theta <- lavmodel@m.free.idx[[theta.idx]]
-  nondiag.idx <- m.theta[!m.theta %in% lav_matrix_diag_idx(nvar)]
-  if (length(nondiag.idx) > 0L) {
+  theta_idx <- which(names(lavmodel@GLIST) == "theta") # usually '2'
+  m_theta <- lavmodel@m.free.idx[[theta_idx]]
+  nondiag_idx <- m_theta[!m_theta %in% lav_matrix_diag_idx(nvar)]
+  if (length(nondiag_idx) > 0L) {
     lav_msg_warn(gettext(
       "this implementation of FABIN does not handle correlated residuals yet!"
       ))
@@ -135,37 +133,37 @@ lav_cfa_fabin_internal <- function(lavmodel = NULL, lavsamplestats = NULL,
 
   # 1. estimate LAMBDA
   if (lavoptions$estimator == "FABIN2") {
-    LAMBDA <- lav_cfa_fabin2(
-      S = sample.cov, marker.idx = marker.idx,
-      lambda.nonzero.idx = lambda.nonzero.idx
+    mm_lambda <- lav_cfa_fabin2(
+      s = sample_cov, marker_idx = marker_idx,
+      lambda_nonzero_idx = lambda_nonzero_idx
     )
   } else {
-    LAMBDA <- lav_cfa_fabin3(
-      S = sample.cov, marker.idx = marker.idx,
-      lambda.nonzero.idx = lambda.nonzero.idx
+    mm_lambda <- lav_cfa_fabin3(
+      s = sample_cov, marker_idx = marker_idx,
+      lambda_nonzero_idx = lambda_nonzero_idx
     )
   }
 
   # 2. simple ULS method to get THETA and PSI (for now)
-  GLS.flag <- FALSE
-  psi.mapping.ML.flag <- FALSE
+  gls_flag <- FALSE
+  psi_mapping_ml_flag <- FALSE
   if (!is.null(lavoptions$estimator.args$thetapsi.method) &&
     lavoptions$estimator.args$thetapsi.method %in% c("GLS", "GLS.ML")) {
-    GLS.flag <- TRUE
+    gls_flag <- TRUE
   }
   if (!is.null(lavoptions$estimator.args$thetapsi.method) &&
     lavoptions$estimator.args$thetapsi.method %in% c("ULS.ML", "GLS.ML")) {
-    psi.mapping.ML.flag <- TRUE
+    psi_mapping_ml_flag <- TRUE
   }
   out <- lav_cfa_lambda2thetapsi(
-    lambda = LAMBDA, S = sample.cov,
-    S.inv = lavsamplestats@icov[[b]],
-    GLS = GLS.flag,
-    psi.mapping.ML = psi.mapping.ML.flag,
+    lambda = mm_lambda, s = sample_cov,
+    s_inv = lavsamplestats@icov[[b]],
+    gls = gls_flag,
+    psi_mapping_ml = psi_mapping_ml_flag,
     nobs = lavsamplestats@ntotal
   )
-  THETA <- diag(out$theta)
-  PSI <- out$psi
+  mm_theta <- diag(out$theta)
+  mm_psi <- out$psi
 
   # 3. correlated residuals (if any) are just the difference between
   #    Sigma and S
@@ -175,26 +173,26 @@ lav_cfa_fabin_internal <- function(lavmodel = NULL, lavsamplestats = NULL,
   # }
 
   # store matrices in lavmodel@GLIST
-  lavmodel@GLIST$lambda <- LAMBDA
-  lavmodel@GLIST$theta <- THETA
-  lavmodel@GLIST$psi <- PSI
+  lavmodel@GLIST$lambda <- mm_lambda
+  lavmodel@GLIST$theta <- mm_theta
+  lavmodel@GLIST$psi <- mm_psi
 
   # extract free parameters only
   x <- lav_model_get_parameters(lavmodel)
 
   # apply bounds (if any)
   if (!is.null(lavpartable$lower)) {
-    lower.x <- lavpartable$lower[lavpartable$free > 0]
-    too.small.idx <- which(x < lower.x)
-    if (length(too.small.idx) > 0L) {
-      x[too.small.idx] <- lower.x[too.small.idx]
+    lower_x <- lavpartable$lower[lavpartable$free > 0]
+    too_small_idx <- which(x < lower_x)
+    if (length(too_small_idx) > 0L) {
+      x[too_small_idx] <- lower_x[too_small_idx]
     }
   }
   if (!is.null(lavpartable$upper)) {
-    upper.x <- lavpartable$upper[lavpartable$free > 0]
-    too.large.idx <- which(x > upper.x)
-    if (length(too.large.idx) > 0L) {
-      x[too.large.idx] <- upper.x[too.large.idx]
+    upper_x <- lavpartable$upper[lavpartable$free > 0]
+    too_large_idx <- which(x > upper_x)
+    if (length(too_large_idx) > 0L) {
+      x[too_large_idx] <- upper_x[too_large_idx]
     }
   }
 
