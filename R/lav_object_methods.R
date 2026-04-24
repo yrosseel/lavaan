@@ -742,11 +742,11 @@ lavParameterEstimates <- function(object,                      # nolint start
           # compute 'X' matrix with frequency indices (to compute
           # the empirical influence values using regression)
           tmp_freq <- lav_bootstrap_indices(
-            R = lavoptions$bootstrap,
+            r = lavoptions$bootstrap,
             nobs = nobs, parallel = lavoptions$parallel[1],
             ncpus = lavoptions$ncpus, cl = lavoptions[["cl"]],
-            iseed = bootstrap_seed, return.freq = TRUE,
-            merge.groups = TRUE
+            iseed = bootstrap_seed, return_freq = TRUE,
+            merge_groups = TRUE
           )
           if (length(error_idx) > 0L) {
             tmp_freq <- tmp_freq[-error_idx, , drop = FALSE]

@@ -408,9 +408,9 @@ sam <- function(model = NULL,                      # nolint start
                          check.post = TRUE, keep.idx = FALSE)
     this_args <- modifyList(default_args, bootstrap)
     coef_1 <- lav_bootstrap_internal(object = sam_object,
-      R = this_args$R, show.progress = this_args$show.progress,
-      type = this_args$type, FUN = "coef",
-      check.post = this_args$check.post, keep.idx = this_args$keep.idx)
+      r = this_args$R, show_progress = this_args$show.progress,
+      type = this_args$type, fun = "coef",
+      check_post = this_args$check.post, keep_idx = this_args$keep.idx)
     coef_orig <- coef_1
     error_idx <- attr(coef_1, "error.idx")
     nfailed <- length(error_idx) # zero if NULL
