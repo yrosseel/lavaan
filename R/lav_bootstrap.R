@@ -26,7 +26,7 @@
 
 # YR 10 Nov 2024: - detect sam object
 
-lavBootstrap <- function(object,
+lavBootstrap <- function(object,                                   # nolint start
                             R = 1000L,
                             type = "ordinary",
                             verbose = FALSE,
@@ -39,27 +39,27 @@ lavBootstrap <- function(object,
                             cl = NULL,
                             iseed = NULL,
                             h0.rmsea = NULL,
-                            ...) {
+                            ...) {                                 # nolint end
 
   # check object
   object <- lav_object_check_version(object)
 
   # checks
-  type. <- tolower(type) # overwritten if nonparametric
+  type_1 <- tolower(type) # overwritten if nonparametric
   stopifnot(
     inherits(object, "lavaan"),
-    type. %in% c(
+    type_1 %in% c(
       "nonparametric", "ordinary",
       "bollen.stine", "parametric", "yuan"
     )
   )
   if (!missing(verbose)) {
-    current.verbose <- lav_verbose()
+    current_verbose <- lav_verbose()
     if (lav_verbose(verbose))
-      on.exit(lav_verbose(current.verbose), TRUE)
+      on.exit(lav_verbose(current_verbose), TRUE)
   }
-  if (type. == "nonparametric") {
-    type. <- "ordinary"
+  if (type_1 == "nonparametric") {
+    type_1 <- "ordinary"
   }
   if (missing(parallel)) {
     parallel <- "no"
@@ -82,24 +82,24 @@ lavBootstrap <- function(object,
       "this function is not (yet) available if conditional.x = TRUE"))
   }
 
-  lavoptions. <- list(
+  lavoptions <- list(
     parallel = parallel, ncpus = ncpus, cl = cl,
     iseed = iseed
   )
 
   out <- lav_bootstrap_internal(
     object = object,
-    lavdata. = NULL,
-    lavmodel. = NULL,
-    lavsamplestats. = NULL,
-    lavoptions. = lavoptions.,
-    lavpartable. = NULL,
-    R = R,
-    show.progress = verbose,
-    type = type.,
-    FUN = FUN,
-    keep.idx = keep.idx,
-    h0.rmsea = h0.rmsea,
+    lavdata = NULL,
+    lavmodel = NULL,
+    lavsamplestats = NULL,
+    lavoptions = lavoptions,
+    lavpartable = NULL,
+    r = R,
+    show_progress = verbose,
+    type = type_1,
+    fun = FUN,
+    keep_idx = keep.idx,
+    h0_rmsea = h0.rmsea,
     ...
   )
 
@@ -118,141 +118,139 @@ lavBootstrap <- function(object,
 
   out
 }
-lavBootstrap <- lavBootstrap  # synonym #nolint
+lavBootstrap <- lavBootstrap  # synonym                                  #nolint
 
 # we need an internal version to be called from VCOV and lav_model_test
 # when there is no lavaan object yet!
 lav_bootstrap_internal <- function(object = NULL,
-                                   lavdata. = NULL,
-                                   lavmodel. = NULL,
-                                   lavsamplestats. = NULL,
-                                   lavoptions. = NULL,
-                                   lavpartable. = NULL,
-                                   R = 1000L,
-                                   show.progress = FALSE,
+                                   lavdata = NULL,
+                                   lavmodel = NULL,
+                                   lavsamplestats = NULL,
+                                   lavoptions = NULL,
+                                   lavpartable = NULL,
+                                   r = 1000L,
+                                   show_progress = FALSE,
                                    type = "ordinary",
-                                   FUN = "coef",
-                                   check.post = TRUE,
-                                   keep.idx = FALSE,
+                                   fun = "coef",
+                                   check_post = TRUE,
+                                   keep_idx = FALSE,
                                    # return.boot     = FALSE,
-                                   h0.rmsea = NULL,
+                                   h0_rmsea = NULL,
                                    ...) {
   # warning: avoid use of 'options', 'sample' (both are used as functions
   # below...
   # options -> opt
   # sample -> samp
 
-  mc <- match.call()
-
   # object slots
-  FUN.orig <- FUN
-  has.sam.object.flag <- FALSE
+  fun_orig <- fun
+  has_sam_object_flag <- FALSE
   if (!is.null(object)) {
     stopifnot(inherits(object, "lavaan"))
     # check for sam object
     if (!is.null(object@internal$sam.method)) {
-      has.sam.object.flag <- TRUE
+      has_sam_object_flag <- TRUE
     }
-    lavdata <- object@Data
-    lavmodel <- object@Model
-    lavsamplestats <- object@SampleStats
-    lavoptions <- object@Options
-    if (!is.null(lavoptions.)) {
-      lavoptions$parallel <- lavoptions.$parallel
-      lavoptions$ncpus <- lavoptions.$ncpus
-      lavoptions$cl <- lavoptions.$cl
-      lavoptions$iseed <- lavoptions.$iseed
+    lavdata_1 <- object@Data
+    lavmodel_1 <- object@Model
+    lavsamplestats_1 <- object@SampleStats
+    lavoptions_1 <- object@Options
+    if (!is.null(lavoptions)) {
+      lavoptions_1$parallel <- lavoptions$parallel
+      lavoptions_1$ncpus <- lavoptions$ncpus
+      lavoptions_1$cl <- lavoptions$cl
+      lavoptions_1$iseed <- lavoptions$iseed
     }
-    lavpartable <- object@ParTable
-    FUN <- match.fun(FUN)
-    t0 <- FUN(object, ...)
-    t.star <- matrix(as.numeric(NA), R, length(t0))
-    colnames(t.star) <- names(t0)
+    lavpartable_1 <- object@ParTable
+    fun <- match.fun(fun)
+    t0 <- fun(object, ...)
+    t_star <- matrix(as.numeric(NA), r, length(t0))
+    colnames(t_star) <- names(t0)
   } else {
     # internal version!
-    lavdata <- lavdata.
-    lavmodel <- lavmodel.
-    lavsamplestats <- lavsamplestats.
-    lavoptions <- lavoptions.
-    lavpartable <- lavpartable.
-    if (FUN == "coef") {
-      t.star <- matrix(as.numeric(NA), R, lavmodel@nx.free)
-      lavoptions$test <- "none"
-    } else if (FUN == "test") {
-      t.star <- matrix(as.numeric(NA), R, 1L)
-      lavoptions$test <- "standard"
-    } else if (FUN == "coeftest") {
-      t.star <- matrix(as.numeric(NA), R, lavmodel@nx.free + 1L)
-      lavoptions$test <- "standard"
+    lavdata_1 <- lavdata
+    lavmodel_1 <- lavmodel
+    lavsamplestats_1 <- lavsamplestats
+    lavoptions_1 <- lavoptions
+    lavpartable_1 <- lavpartable
+    if (fun == "coef") {
+      t_star <- matrix(as.numeric(NA), r, lavmodel_1@nx.free)
+      lavoptions_1$test <- "none"
+    } else if (fun == "test") {
+      t_star <- matrix(as.numeric(NA), r, 1L)
+      lavoptions_1$test <- "standard"
+    } else if (fun == "coeftest") {
+      t_star <- matrix(as.numeric(NA), r, lavmodel_1@nx.free + 1L)
+      lavoptions_1$test <- "standard"
     }
   }
 
   # always shut off some options:
-  current.verbose <- lav_verbose()
-  if (missing(show.progress)) {
-    show.progress <- current.verbose
+  current_verbose <- lav_verbose()
+  if (missing(show_progress)) {
+    show_progress <- current_verbose
   }
-  if (lav_verbose(FALSE)) on.exit(lav_verbose(current.verbose))
-  lavoptions$check.start <- FALSE
-  lavoptions$check.post <- FALSE
-  lavoptions$optim.attempts <- 1L # can save a lot of time
+  if (lav_verbose(FALSE)) on.exit(lav_verbose(current_verbose))
+  lavoptions_1$check.start <- FALSE
+  lavoptions_1$check.post <- FALSE
+  lavoptions_1$optim.attempts <- 1L # can save a lot of time
 
-  # if internal or FUN == "coef", we can shut off even more
-  if (is.null(object) || (is.character(FUN.orig) && FUN.orig == "coef")) {
-    lavoptions$baseline <- FALSE
-    lavoptions$h1 <- FALSE
-    lavoptions$loglik <- FALSE
-    lavoptions$implied <- FALSE
-    lavoptions$store.vcov <- FALSE
-    lavoptions$se <- "none"
-    if (FUN.orig == "coef") {
-      lavoptions$test <- "none"
+  # if internal or fun == "coef", we can shut off even more
+  if (is.null(object) || (is.character(fun_orig) && fun_orig == "coef")) {
+    lavoptions_1$baseline <- FALSE
+    lavoptions_1$h1 <- FALSE
+    lavoptions_1$loglik <- FALSE
+    lavoptions_1$implied <- FALSE
+    lavoptions_1$store.vcov <- FALSE
+    lavoptions_1$se <- "none"
+    if (fun_orig == "coef") {
+      lavoptions_1$test <- "none"
     }
   }
 
   # bollen.stine, yuan, or parametric: we need the Sigma.hat values
   if (type == "bollen.stine" || type == "parametric" || type == "yuan") {
-    Sigma.hat <- lav_model_sigma(lavmodel = lavmodel)
-    Mu.hat <- lav_model_mu(lavmodel = lavmodel)
+    sigma_hat <- lav_model_sigma(lavmodel = lavmodel_1)
+    mu_hat <- lav_model_mu(lavmodel = lavmodel_1)
   }
 
   # can we use the original data, or do we need to transform it first?
   if (type == "bollen.stine" || type == "yuan") {
     # check if data is continuous
-    if (lavmodel@categorical) {
+    if (lavmodel_1@categorical) {
       lav_msg_stop(gettext(
         "bollen.stine/yuan bootstrap not available for categorical/ordinal data"
         ))
     }
     # check if data is complete
-    if (lavoptions$missing != "listwise") {
+    if (lavoptions_1$missing != "listwise") {
       lav_msg_stop(gettext(
         "bollen.stine/yuan bootstrap not available for missing data"))
     }
-    dataX <- vector("list", length = lavdata@ngroups)
+    data_x <- vector("list", length = lavdata_1@ngroups)
   } else {
-    dataX <- lavdata@X
+    data_x <- lavdata_1@X
   }
 
   # if bollen.stine, transform data here
   if (type == "bollen.stine") {
-    for (g in 1:lavsamplestats@ngroups) {
-      sigma.sqrt <- lav_matrix_symmetric_sqrt(Sigma.hat[[g]])
-      S.inv.sqrt <- lav_matrix_symmetric_sqrt(lavsamplestats@icov[[g]])
+    for (g in 1:lavsamplestats_1@ngroups) {
+      sigma_sqrt <- lav_matrix_symmetric_sqrt(sigma_hat[[g]])
+      s_inv_sqrt <- lav_matrix_symmetric_sqrt(lavsamplestats_1@icov[[g]])
 
       # center (needed???)
-      X <- scale(lavdata@X[[g]], center = TRUE, scale = FALSE)
+      x_1 <- scale(lavdata_1@X[[g]], center = TRUE, scale = FALSE)
 
       # transform
-      X <- X %*% S.inv.sqrt %*% sigma.sqrt
+      x_1 <- x_1 %*% s_inv_sqrt %*% sigma_sqrt
 
       # add model-based mean
-      if (lavmodel@meanstructure) {
-        X <- scale(X, center = (-1 * Mu.hat[[g]]), scale = FALSE)
+      if (lavmodel_1@meanstructure) {
+        x_1 <- scale(x_1, center = (-1 * mu_hat[[g]]), scale = FALSE)
       }
 
       # transformed data
-      dataX[[g]] <- X
+      data_x[[g]] <- x_1
     }
 
     # if yuan, transform data here
@@ -260,25 +258,25 @@ lav_bootstrap_internal <- function(object = NULL,
     # page numbers refer to Yuan et al, 2007
     # Define a function to find appropriate value of a
     # (p. 272); code supplied 16 jun 2016 by Cheng & Wu
-    search.a <- function(F0, d, p) {
-      if (F0 == 0) {
+    search_a <- function(f0, d, p) {
+      if (f0 == 0) {
         a0 <- 0
         return(a0)
       }
-      max.a <- 1 / (1 - min(d)) - 1e-3
+      max_a <- 1 / (1 - min(d)) - 1e-3
       # starting value; Yuan p. 272
-      a0 <- min(sqrt(2 * F0 / sum((d - 1)^2)), max.a)
+      a0 <- min(sqrt(2 * f0 / sum((d - 1)^2)), max_a)
 
       # See Yuan p. 280
       for (i in 1:50) {
         dia <- a0 * d + (1 - a0)
         g1 <- -sum(log(dia)) + sum(dia) - p
-        dif <- g1 - F0
+        dif <- g1 - f0
         if (abs(dif) < 1e-6) {
           return(a0)
         }
         g2 <- a0 * sum((d - 1)^2 / dia)
-        a0 <- min(max(a0 - dif / g2, 0), max.a)
+        a0 <- min(max(a0 - dif / g2, 0), max_a)
       }
       # if search fails to converge in 50 iterations
       lav_msg_warn(gettext("yuan bootstrap search for `a` did not converge.
@@ -287,49 +285,49 @@ lav_bootstrap_internal <- function(object = NULL,
     }
 
     # Now use g.a within each group
-    for (g in 1:lavsamplestats@ngroups) {
-      S <- lavsamplestats@cov[[g]]
+    for (g in 1:lavsamplestats_1@ngroups) {
+      s <- lavsamplestats_1@cov[[g]]
       # test is in Fit slot
       ghat <- object@test[[1]]$stat.group[[g]]
       df <- object@test[[1]]$df
-      Sigmahat <- Sigma.hat[[g]]
-      nmv <- nrow(Sigmahat)
-      n <- nrow(lavdata@X[[g]])
+      sigmahat <- sigma_hat[[g]]
+      nmv <- nrow(sigmahat)
+      n <- nrow(lavdata_1@X[[g]])
 
       # Calculate tauhat_1, middle p. 267.
       # Yuan et al note that tauhat_1 could be negative;
       # if so, we need to let S.a = Sigmahat. (see middle p 275)
-      ifelse(length(h0.rmsea) == 0,
-        tau.hat <- (ghat - df) / (n - 1), # middle p 267
-        tau.hat <- df * (h0.rmsea * h0.rmsea)
+      ifelse(length(h0_rmsea) == 0,
+        tau_hat <- (ghat - df) / (n - 1), # middle p 267
+        tau_hat <- df * (h0_rmsea * h0_rmsea)
       ) # middle p 273
 
-      if (tau.hat >= 0) {
+      if (tau_hat >= 0) {
         # from Cheng and Wu
-        EL <- t(chol(Sigmahat))
-        ESE <- forwardsolve(EL, t(forwardsolve(EL, S)))
-        d <- eigen(ESE, symmetric = TRUE, only.values = TRUE)$values
+        el_1 <- t(chol(sigmahat))
+        ese <- forwardsolve(el_1, t(forwardsolve(el_1, s)))
+        d <- eigen(ese, symmetric = TRUE, only.values = TRUE)$values
         if ("a" %in% names(list(...))) {
           a <- list(...)$a
         } else {
           # Find a to minimize g.a
-          a <- search.a(tau.hat, d, nmv)
+          a <- search_a(tau_hat, d, nmv)
         }
         # Calculate S_a (p. 267)
-        S.a <- a * S + (1 - a) * Sigmahat
+        s_a <- a * s + (1 - a) * sigmahat
       } else {
-        S.a <- Sigmahat
+        s_a <- sigmahat
       }
 
       # Transform the data (p. 263)
-      S.a.sqrt <- lav_matrix_symmetric_sqrt(S.a)
-      S.inv.sqrt <- lav_matrix_symmetric_sqrt(lavsamplestats@icov[[g]])
+      s_a_sqrt <- lav_matrix_symmetric_sqrt(s_a)
+      s_inv_sqrt <- lav_matrix_symmetric_sqrt(lavsamplestats_1@icov[[g]])
 
-      X <- lavdata@X[[g]]
-      X <- X %*% S.inv.sqrt %*% S.a.sqrt
+      x_1 <- lavdata_1@X[[g]]
+      x_1 <- x_1 %*% s_inv_sqrt %*% s_a_sqrt
 
       # transformed data
-      dataX[[g]] <- X
+      data_x[[g]] <- x_1
     }
   }
 
@@ -338,167 +336,173 @@ lav_bootstrap_internal <- function(object = NULL,
     # create bootstrap sample, and generate new 'data' object
     if (type == "bollen.stine" || type == "ordinary" || type == "yuan") {
       # take a bootstrap sample for each group
-      BOOT.idx <- vector("list", length = lavdata@ngroups)
+      boot_idx_1 <- vector("list", length = lavdata_1@ngroups)
       # Note: we generate the bootstrap indices separately for each
       #       group, in order to ensure the group sizes do not change!
-      for (g in 1:lavdata@ngroups) {
-        stopifnot(nrow(lavdata@X[[g]]) > 1L)
-        boot.idx <- sample.int(nrow(lavdata@X[[g]]), replace = TRUE)
-        BOOT.idx[[g]] <- boot.idx
-        dataX[[g]] <- dataX[[g]][boot.idx, , drop = FALSE]
+      for (g in 1:lavdata_1@ngroups) {
+        stopifnot(nrow(lavdata_1@X[[g]]) > 1L)
+        boot_idx <- sample.int(nrow(lavdata_1@X[[g]]), replace = TRUE)
+        boot_idx_1[[g]] <- boot_idx
+        data_x[[g]] <- data_x[[g]][boot_idx, , drop = FALSE]
       }
-      newData <- lav_data_update(
-        lavdata = lavdata, newX = dataX,
-        BOOT.idx = BOOT.idx,
-        lavoptions = lavoptions
+      new_data <- lav_data_update(
+        lavdata = lavdata_1, newX = data_x,
+        BOOT.idx = boot_idx_1,
+        lavoptions = lavoptions_1
       )
     } else { # parametric! (using sign-invariant method for reproducibility)
-      for (g in 1:lavdata@ngroups) {
-        dataX[[g]] <- lav_mvrnorm(
-          n = lavdata@nobs[[g]],
-          Sigma = Sigma.hat[[g]],
-          mu = Mu.hat[[g]]
+      for (g in 1:lavdata_1@ngroups) {
+        data_x[[g]] <- lav_mvrnorm(
+          n = lavdata_1@nobs[[g]],
+          Sigma = sigma_hat[[g]],
+          mu = mu_hat[[g]]
         )
       }
-      newData <- lav_data_update(
-        lavdata = lavdata, newX = dataX,
-        lavoptions = lavoptions
+      new_data <- lav_data_update(
+        lavdata = lavdata_1, newX = data_x,
+        lavoptions = lavoptions_1
       )
     }
 
     # show progress?
-    if (show.progress) {
-      cat("  ... bootstrap draw number:", sprintf("%4d", b))
+    if (show_progress) {
+      cat(if (interactive()) "\r" else "",
+          "  ... bootstrap draw number:", sprintf("%4d", b))
     }
-    bootSampleStats <- try(lav_samplestats_from_data(
-      lavdata       = newData,
-      lavoptions    = lavoptions
+    boot_sample_stats <- try(lav_samplestats_from_data(
+      lavdata       = new_data,
+      lavoptions    = lavoptions_1
     ), silent = TRUE)
-    if (inherits(bootSampleStats, "try-error")) {
-      if (show.progress) {
+    if (inherits(boot_sample_stats, "try-error")) {
+      if (show_progress) {
         cat("     FAILED: creating sample statistics\n")
-        cat(bootSampleStats[1])
+        cat(boot_sample_stats[1])
       }
       out <- as.numeric(NA)
       attr(out, "nonadmissible.flag") <- TRUE
-      if (keep.idx) {
-        attr(out, "BOOT.idx") <- BOOT.idx
+      if (keep_idx) {
+        attr(out, "BOOT.idx") <- boot_idx_1
       }
       return(out)
     }
-    if (has.sam.object.flag) {
+    if (has_sam_object_flag) {
       # also need h1
-      booth1 <- lav_h1_implied_logl(lavdata = newData,
-        lavsamplestats = bootSampleStats, lavpartable = lavpartable,
-        lavoptions = lavoptions)
+      booth1 <- lav_h1_implied_logl(lavdata = new_data,
+        lavsamplestats = boot_sample_stats, lavpartable = lavpartable_1,
+        lavoptions = lavoptions_1)
     }
 
     # do we need to update Model slot? only if we have fixed exogenous
     # covariates, as their variances/covariances are stored in GLIST
-    if (lavmodel@fixed.x && length(lav_partable_vnames(lavpartable, "ov.x")) > 0L) {
-      model.boot <- NULL
+    if (lavmodel_1@fixed.x &&
+        length(lav_partable_vnames(lavpartable_1, "ov.x")) > 0L) {
+      model_boot <- NULL
     } else {
-      model.boot <- lavmodel
+      model_boot <- lavmodel_1
     }
 
     # fit model on bootstrap sample
-    if (has.sam.object.flag) {
+    if (has_sam_object_flag) {
       new_object <- object
-      new_object@Data <- newData
-      new_object@SampleStats <- bootSampleStats
+      new_object@Data <- new_data
+      new_object@SampleStats <- boot_sample_stats
       new_object@h1 <- booth1
       # what about lavoptions?
-      fit.boot <- suppressWarnings(try(sam(new_object, se = "none"),
+      fit_boot <- suppressWarnings(try(sam(new_object, se = "none"),
                                        silent = FALSE)) # show what is wrong
     } else {
-      fit.boot <- suppressWarnings(try(lavaan(
-        slotOptions = lavoptions,
-        slotParTable = lavpartable,
-        slotModel = model.boot,
-        slotSampleStats = bootSampleStats,
-        slotData = newData
+      fit_boot <- suppressWarnings(try(lavaan(
+        slotOptions = lavoptions_1,
+        slotParTable = lavpartable_1,
+        slotModel = model_boot,
+        slotSampleStats = boot_sample_stats,
+        slotData = new_data
       ), silent = FALSE))
     }
-    if (inherits(fit.boot, "try-error")) {
-      if (show.progress) {
+    if (inherits(fit_boot, "try-error")) {
+      if (show_progress) {
         cat("     FAILED: with ERROR message\n")
       }
       out <- as.numeric(NA)
       attr(out, "nonadmissible.flag") <- TRUE
-      if (keep.idx) {
-        attr(out, "BOOT.idx") <- BOOT.idx
+      if (keep_idx) {
+        attr(out, "BOOT.idx") <- boot_idx_1
       }
       return(out)
     }
-    if (!fit.boot@optim$converged) {
-      if (show.progress) {
+    if (!fit_boot@optim$converged) {
+      if (show_progress) {
         cat("     FAILED: no convergence\n")
       }
       out <- as.numeric(NA)
       attr(out, "nonadmissible.flag") <- TRUE
-      if (keep.idx) {
-        attr(out, "BOOT.idx") <- BOOT.idx
+      if (keep_idx) {
+        attr(out, "BOOT.idx") <- boot_idx_1
       }
       return(out)
     }
 
     # extract information we need
     if (is.null(object)) { # internal use only!
-      if (FUN == "coef") {
-        out <- fit.boot@optim$x
-      } else if (FUN == "test") {
-        out <- fit.boot@test[[1L]]$stat
-      } else if (FUN == "coeftest") {
-        out <- c(fit.boot@optim$x, fit.boot@test[[1L]]$stat)
+      if (fun == "coef") {
+        out <- fit_boot@optim$x
+      } else if (fun == "test") {
+        out <- fit_boot@test[[1L]]$stat
+      } else if (fun == "coeftest") {
+        out <- c(fit_boot@optim$x, fit_boot@test[[1L]]$stat)
       }
     } else { # general use
-      out <- try(as.numeric(FUN(fit.boot, ...)), silent = TRUE)
+      out <- try(as.numeric(fun(fit_boot, ...)), silent = TRUE)
     }
     if (inherits(out, "try-error")) {
-      if (show.progress) {
-        cat("     FAILED: applying FUN to fit.boot\n")
+      if (show_progress) {
+        cat("     FAILED: applying fun to fit.boot\n")
       }
       out <- as.numeric(NA)
       attr(out, "nonadmissible.flag") <- TRUE
-      if (keep.idx) {
-        attr(out, "BOOT.idx") <- BOOT.idx
+      if (keep_idx) {
+        attr(out, "BOOT.idx") <- boot_idx_1
       }
       return(out)
     }
 
     # check if the solution is admissible
-    admissible.flag <- suppressWarnings(lavInspect(fit.boot, "post.check"))
-    attr(out, "nonadmissible.flag") <- !admissible.flag
+    admissible_flag <- suppressWarnings(lavInspect(fit_boot, "post.check"))
+    attr(out, "nonadmissible.flag") <- !admissible_flag
 
-    if (show.progress) {
+    if (show_progress) {
       cat(
         "   OK -- niter = ",
-        sprintf("%3d", fit.boot@optim$iterations), " fx = ",
-        sprintf("%11.9f", fit.boot@optim$fx),
-        if (admissible.flag) " " else "n", "\n"
+        sprintf("%3d", fit_boot@optim$iterations), " fx = ",
+        sprintf("%11.9f", fit_boot@optim$fx),
+        # proposed by issue #519 Shu Fai Cheung
+        if (admissible_flag) " " else "n", "",
+        if (interactive()) "" else "\n"
       )
     }
 
-    if (keep.idx) {
+    if (keep_idx) {
       # add BOOT.idx (for all groups)
-      attr(out, "BOOT.idx") <- BOOT.idx
+      attr(out, "BOOT.idx") <- boot_idx_1
     }
 
     out
   } # end-of-fn
 
   # get parallelization options
-  parallel <- lavoptions$parallel[1]
-  ncpus <- lavoptions$ncpus
-  cl <- lavoptions[["cl"]] # often NULL
-  iseed <- lavoptions[["iseed"]] # often NULL
+  parallel <- lavoptions_1$parallel[1]
+  ncpus <- lavoptions_1$ncpus
+  cl <- lavoptions_1[["cl"]] # often NULL
+  iseed <- lavoptions_1[["iseed"]] # often NULL
 
   # the next 8 lines are borrowed from the boot package
   have_mc <- have_snow <- FALSE
   if (parallel != "no" && ncpus > 1L) {
     if (parallel == "multicore") {
       have_mc <- .Platform$OS.type != "windows"
-    } else if (parallel == "snow") have_snow <- TRUE
+    } else if (parallel == "snow") {
+      have_snow <- TRUE
+    }
     if (!have_mc && !have_snow) ncpus <- 1L
     loadNamespace("parallel") # before recording seed!
   }
@@ -516,17 +520,17 @@ lav_bootstrap_internal <- function(object = NULL,
       runif(1)
     }
     # identical(temp.seed, NA): Will not change .Random.seed in GlobalEnv
-    temp.seed <- NA
+    temp_seed <- NA
     iseed <- runif(1, 0, 999999999)
   } else {
     if (exists(".Random.seed", envir = .GlobalEnv, inherits = FALSE)) {
-      temp.seed <-
+      temp_seed <-
         get(".Random.seed", envir = .GlobalEnv, inherits = FALSE)
     } else {
       # is.null(temp.seed): Will remove .Random.seed in GlobalEnv
       #                     if serial.
       #                     If parallel, .Random.seed will not be touched.
-      temp.seed <- NULL
+      temp_seed <- NULL
     }
   }
   if (!(ncpus > 1L && (have_mc || have_snow))) { # Only for serial
@@ -535,16 +539,16 @@ lav_bootstrap_internal <- function(object = NULL,
 
 
   # this is adapted from the boot function in package boot
-  RR <- R
-  if (show.progress) {
+  rr <- r
+  if (show_progress) {
     cat("\n")
   }
   res <- if (ncpus > 1L && (have_mc || have_snow)) {
     if (have_mc) {
-      RNGkind_old <- RNGkind() # store current kind
+      rngkind_old <- RNGkind() # store current kind
       RNGkind("L'Ecuyer-CMRG") # to allow for reproducible results
       set.seed(iseed)
-      parallel::mclapply(seq_len(RR), fn, mc.cores = ncpus)
+      parallel::mclapply(seq_len(rr), fn, mc.cores = ncpus)
     } else if (have_snow) {
       list(...) # evaluate any promises
       if (is.null(cl)) {
@@ -553,63 +557,65 @@ lav_bootstrap_internal <- function(object = NULL,
         # if(RNGkind()[1L] == "L'Ecuyer-CMRG")
         # clusterSetRNGStream() always calls `RNGkind("L'Ecuyer-CMRG")`
         parallel::clusterSetRNGStream(cl, iseed = iseed)
-        res <- parallel::parLapply(cl, seq_len(RR), fn)
+        res <- parallel::parLapply(cl, seq_len(rr), fn)
         parallel::stopCluster(cl)
         res
       } else {
-        parallel::parLapply(cl, seq_len(RR), fn)
+        parallel::parLapply(cl, seq_len(rr), fn)
       }
     }
   } else {
-    lapply(seq_len(RR), fn)
+    lapply(seq_len(rr), fn)
   }
-
+  if (show_progress) {
+    cat("\n")
+  }
   # restore old RNGkind()
   if (ncpus > 1L && have_mc) {
-    RNGkind(RNGkind_old[1], RNGkind_old[2], RNGkind_old[3])
+    RNGkind(rngkind_old[1], rngkind_old[2], rngkind_old[3])
   }
 
   # fill in container
-  t.star[] <- do.call("rbind", res)
+  t_star[] <- do.call("rbind", res)
 
   # handle errors
-  error.idx <- which(sapply(res, function(x) is.na(x[1L])))
-  attr(t.star, "error.idx") <- error.idx # could be integer(0L)
+  error_idx <- which(sapply(res, function(x) is.na(x[1L])))
+  attr(t_star, "error.idx") <- error_idx # could be integer(0L)
 
   # handle nonadmissible solutions
-  if (check.post) {
+  if (check_post) {
     notok <- which(sapply(res, attr, "nonadmissible.flag"))
-    if (length(error.idx) > 0L) {
-      notok <- notok[-which(notok %in% error.idx)]
+    if (length(error_idx) > 0L) {
+      notok <- notok[-which(notok %in% error_idx)]
     }
-    attr(t.star, "nonadmissible") <- notok
+    attr(t_star, "nonadmissible") <- notok
   }
 
   # store iseed
-  attr(t.star, "seed") <- iseed
+  attr(t_star, "seed") <- iseed
 
   # handle temp.seed
-  if (!is.null(temp.seed) && !identical(temp.seed, NA)) {
-    assign(".Random.seed", temp.seed, envir = .GlobalEnv)
-  } else if (is.null(temp.seed) && !(ncpus > 1L && (have_mc || have_snow))) {
+  if (!is.null(temp_seed) && !identical(temp_seed, NA)) {
+    assign(".Random.seed", temp_seed, envir = .GlobalEnv)                   # nolint start
+  } else if (is.null(temp_seed) && !(ncpus > 1L && (have_mc || have_snow))) {
     # serial
     rm(.Random.seed, pos = 1)
-  } else if (is.null(temp.seed) && (ncpus > 1L && have_mc)) {
+  } else if (is.null(temp_seed) && (ncpus > 1L && have_mc)) {
     # parallel/multicore only
-    rm(.Random.seed, pos = 1) # because set used set.seed()
+    rm(.Random.seed, pos = 1) # because set used set.seed()                 # nolint end
   }
 
   # store BOOT.idx per group
-  if (keep.idx) {
-    BOOT.idx <- vector("list", length = lavsamplestats@ngroups)
-    for (g in 1:lavsamplestats@ngroups) {
+  if (keep_idx) {
+    boot_idx_1 <- vector("list", length = lavsamplestats_1@ngroups)
+    for (g in 1:lavsamplestats_1@ngroups) {
       # note that failed runs (NULL) are removed (for now)
-      BOOT.idx[[g]] <- do.call(
+      boot_idx_1[[g]] <- do.call(
         "rbind",
         lapply(res, function(x) attr(x, "BOOT.idx")[[g]])
       )
     }
-    attr(t.star, "boot.idx") <- BOOT.idx
+    attr(t_star, "boot.idx") <- boot_idx_1
   }
 
   #    # No use, as boot package stores the sample indices differently
@@ -618,14 +624,16 @@ lav_bootstrap_internal <- function(object = NULL,
   #        # mimic output boot function
   #
   #        if(is.null(object)) {
-  #            stop("lavaan ERROR: return.boot = TRUE requires a full lavaan object")
+  #            stop("lavaan ERROR: return.boot = TRUE requires a full
+  #                  lavaan object")
   #        }
   #
   #        # we start with ordinary only for now
   #        stopifnot(type == "ordinary")
   #
   #        if(! type %in% c("ordinary", "parametric")) {
-  #            stop("lavaan ERROR: only ordinary and parametric bootstrap are supported if return.boot = TRUE")
+  #            stop("lavaan ERROR: only ordinary and parametric bootstrap are
+  #                  supported if return.boot = TRUE")
   #        } else {
   #            sim <- type
   #        }
@@ -633,7 +641,7 @@ lav_bootstrap_internal <- function(object = NULL,
   #        statistic. <- function(data, idx) {
   #                         data.boot <- data[idx,]
   #                         fit.boot <- update(object, data = data.boot)
-  #                         out <- try(FUN(fit.boot, ...), silent = TRUE)
+  #                         out <- try(fun(fit.boot, ...), silent = TRUE)
   #                         if(inherits(out, "try-error")) {
   #                             out <- rep(as.numeric(NA), length(t0))
   #                         }
@@ -661,7 +669,7 @@ lav_bootstrap_internal <- function(object = NULL,
   #        return(out)
   #    }
   #
-  t.star
+  t_star
 }
 
 # create matrix with indices to reconstruct the bootstrap samples
@@ -673,18 +681,18 @@ lav_bootstrap_internal <- function(object = NULL,
 #
 # simple version: no strata, no weights
 #
-lav_bootstrap_indices <- function(R = 0L,
-                                        nobs = list(0L), # per group
-                                        parallel = "no",
-                                        ncpus = 1L,
-                                        cl = NULL,
-                                        iseed = NULL,
-                                        merge.groups = FALSE,
-                                        return.freq = FALSE) {
+lav_bootstrap_indices <- function(r = 0L,
+                                  nobs = list(0L), # per group
+                                  parallel = "no",
+                                  ncpus = 1L,
+                                  cl = NULL,
+                                  iseed = NULL,
+                                  merge_groups = FALSE,
+                                  return_freq = FALSE) {
   # iseed must be set!
   stopifnot(!is.null(iseed))
 
-  if (return.freq && !merge.groups) {
+  if (return_freq && !merge_groups) {
     lav_msg_stop(gettext("return.freq only available if merge.groups = TRUE"))
   }
 
@@ -703,13 +711,15 @@ lav_bootstrap_indices <- function(R = 0L,
   if (parallel != "no" && ncpus > 1L) {
     if (parallel == "multicore") {
       have_mc <- .Platform$OS.type != "windows"
-    } else if (parallel == "snow") have_snow <- TRUE
+    } else {
+      if (parallel == "snow") have_snow <- TRUE
+    }
     if (!have_mc && !have_snow) ncpus <- 1L
     loadNamespace("parallel") # before recording seed!
   }
-  temp.seed <- NULL
+  temp_seed <- NULL
   if (exists(".Random.seed", envir = .GlobalEnv, inherits = FALSE)) {
-    temp.seed <- get(".Random.seed", envir = .GlobalEnv, inherits = FALSE)
+    temp_seed <- get(".Random.seed", envir = .GlobalEnv, inherits = FALSE)
   }
   if (!(ncpus > 1L && (have_mc || have_snow))) { # Only for serial
     set.seed(iseed)
@@ -717,72 +727,72 @@ lav_bootstrap_indices <- function(R = 0L,
 
   # fn() returns indices per group
   fn <- function(b) {
-    BOOT.idx <- vector("list", length = ngroups)
-    OFFSet <- cumsum(c(0, unlist(nobs)))
+    boot_idx_1 <- vector("list", length = ngroups)
+    offset_1 <- cumsum(c(0, unlist(nobs)))
     for (g in 1:ngroups) {
       stopifnot(nobs[[g]] > 1L)
-      boot.idx <- sample.int(nobs[[g]], replace = TRUE)
-      if (merge.groups) {
-        BOOT.idx[[g]] <- boot.idx + OFFSet[g]
+      boot_idx <- sample.int(nobs[[g]], replace = TRUE)
+      if (merge_groups) {
+        boot_idx_1[[g]] <- boot_idx + offset_1[g]
       } else {
-        BOOT.idx[[g]] <- boot.idx
+        boot_idx_1[[g]] <- boot_idx
       }
     }
-    BOOT.idx
+    boot_idx_1
   }
 
-  RR <- R
+  rr <- r
   res <- if (ncpus > 1L && (have_mc || have_snow)) {
     if (have_mc) {
-      RNGkind_old <- RNGkind() # store current kind
+      rngkind_old <- RNGkind() # store current kind
       RNGkind("L'Ecuyer-CMRG") # to allow for reproducible results
       set.seed(iseed)
-      parallel::mclapply(seq_len(RR), fn, mc.cores = ncpus)
+      parallel::mclapply(seq_len(rr), fn, mc.cores = ncpus)
     } else if (have_snow) {
       # list(...) # evaluate any promises
       if (is.null(cl)) {
         cl <- parallel::makePSOCKcluster(rep("localhost", ncpus))
         parallel::clusterSetRNGStream(cl, iseed = iseed)
-        res <- parallel::parLapply(cl, seq_len(RR), fn)
+        res <- parallel::parLapply(cl, seq_len(rr), fn)
         parallel::stopCluster(cl)
         res
       } else {
-        parallel::parLapply(cl, seq_len(RR), fn)
+        parallel::parLapply(cl, seq_len(rr), fn)
       }
     }
   } else {
-    lapply(seq_len(RR), fn)
+    lapply(seq_len(rr), fn)
   }
 
   # restore old RNGkind()
   if (ncpus > 1L && have_mc) {
-    RNGkind(RNGkind_old[1], RNGkind_old[2], RNGkind_old[3])
+    RNGkind(rngkind_old[1], rngkind_old[2], rngkind_old[3])
   }
 
   # handle temp.seed
-  if (!is.null(temp.seed) && !identical(temp.seed, NA)) {
-    assign(".Random.seed", temp.seed, envir = .GlobalEnv)
-  } else if (is.null(temp.seed) && !(ncpus > 1L && (have_mc || have_snow))) {
+  if (!is.null(temp_seed) && !identical(temp_seed, NA)) {            # nolint start
+    assign(".Random.seed", temp_seed, envir = .GlobalEnv)
+  } else if (is.null(temp_seed) && !(ncpus > 1L && (have_mc || have_snow))) {
     # serial
     rm(.Random.seed, pos = 1)
-  } else if (is.null(temp.seed) && (ncpus > 1L && have_mc)) {
+  } else if (is.null(temp_seed) && (ncpus > 1L && have_mc)) {
     # parallel/multicore only
-    rm(.Random.seed, pos = 1) # because set used set.seed()
+    rm(.Random.seed, pos = 1) # because set used set.seed()          # nolint end
   }
 
 
   # assemble IDX
-  BOOT.idx <- vector("list", length = ngroups)
+  boot_idx_1 <- vector("list", length = ngroups)
   for (g in 1:ngroups) {
     # FIXME: handle failed runs
-    BOOT.idx[[g]] <- do.call("rbind", lapply(res, "[[", g))
+    boot_idx_1[[g]] <- do.call("rbind", lapply(res, "[[", g))
   }
 
   # merge groups
-  if (merge.groups) {
-    out <- do.call("cbind", BOOT.idx)
+  if (merge_groups) {
+    out <- do.call("cbind", boot_idx_1)
   } else {
-    out <- BOOT.idx
+    out <- boot_idx_1
   }
 
   # NOTE: the order of the indices is different from the boot package!
@@ -792,10 +802,9 @@ lav_bootstrap_indices <- function(R = 0L,
   # despite using the same iseed
 
   # return frequencies instead?
-  if (return.freq && merge.groups) {
+  if (return_freq && merge_groups) {
     out <- t(apply(out, 1L, tabulate, ncol(out)))
   }
 
   out
 }
-

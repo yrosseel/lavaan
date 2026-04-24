@@ -24,15 +24,15 @@ lav_model_nvcov_bootstrap <- function(lavmodel = NULL,
   TEST <- NULL
   COEF <- lav_bootstrap_internal(
     object = NULL,
-    lavmodel. = lavmodel,
-    lavsamplestats. = lavsamplestats,
-    lavpartable. = lavpartable,
-    lavoptions. = lavoptions,
-    lavdata. = lavdata,
-    R = R,
-    check.post = lavoptions$check.post,
+    lavmodel = lavmodel,
+    lavsamplestats = lavsamplestats,
+    lavpartable = lavpartable,
+    lavoptions = lavoptions,
+    lavdata = lavdata,
+    r = R,
+    check_post = lavoptions$check.post,
     type = boot.type,
-    FUN = ifelse(boot.type == "bollen.stine",
+    fun = ifelse(boot.type == "bollen.stine",
       "coeftest", "coef"
     )
   )

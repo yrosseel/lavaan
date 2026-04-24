@@ -649,14 +649,14 @@ lav_model_test <- function(lavobject = NULL,
         BOOT.TEST <-
           lav_bootstrap_internal(
             object = NULL,
-            lavmodel. = lavmodel,
-            lavsamplestats. = lavsamplestats,
-            lavpartable. = lavpartable,
-            lavoptions. = lavoptions,
-            lavdata. = lavdata,
-            R = R,
+            lavmodel = lavmodel,
+            lavsamplestats = lavsamplestats,
+            lavpartable = lavpartable,
+            lavoptions = lavoptions,
+            lavdata = lavdata,
+            r = R,
             type = boot.type,
-            FUN = "test"
+            fun = "test"
           )
 
         # new in 0.6-12: always warn for failed and nonadmissible
