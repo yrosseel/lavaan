@@ -7,7 +7,7 @@ lav_lavaan_step14_test <- function(lavoptions = NULL,
                                    lavimplied = NULL,
                                    lavh1 = NULL,
                                    x = NULL,
-                                   VCOV = NULL, # nolint
+                                   vcov = NULL, # nolint
                                    lavloglik = NULL) {
   # # # # # # # # # # #
   # #  14. lavtest # #
@@ -33,7 +33,7 @@ lav_lavaan_step14_test <- function(lavoptions = NULL,
       lavh1 = lavh1,
       lavoptions = lavoptions,
       x = x,
-      VCOV = VCOV,
+      VCOV = vcov,
       lavdata = lavdata,
       lavcache = lavcache,
       lavloglik = lavloglik
@@ -56,7 +56,7 @@ lav_lavaan_step14_fit <- function(lavpartable = NULL,
                                   lavmodel = NULL,
                                   lavimplied = NULL,
                                   x = NULL,
-                                  VCOV = NULL, # nolint
+                                  vcov = NULL, # nolint
                                   lavtest = NULL) {
   # # # # # # # # # # # #
   # #  14bis. lavfit  # # -> remove if the offending packages are fixed!!
@@ -67,7 +67,7 @@ lav_lavaan_step14_fit <- function(lavpartable = NULL,
     lavmodel = lavmodel,
     lavimplied = lavimplied,
     x = x,
-    VCOV = VCOV,
+    VCOV = vcov,
     TEST = lavtest
   )
   # lavfit <- new("Fit")

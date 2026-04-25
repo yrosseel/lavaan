@@ -1,9 +1,9 @@
-lav_lavaan_step10_cache <- function(slotCache = NULL, # nolint
+lav_lavaan_step10_cache <- function(slot_cache = NULL, # nolint
                                     lavdata = NULL,
                                     lavmodel = NULL,
                                     lavpartable = NULL,
                                     lavoptions = NULL,
-                                    sampling.weights = NULL) {
+                                    sampling_weights = NULL) {
   # # # # # # # # # # #
   # #  10. lavcache # #
   # # # # # # # # # # #
@@ -60,21 +60,21 @@ lav_lavaan_step10_cache <- function(slotCache = NULL, # nolint
   #
   # (*) !!! computations too complicated to summarize here !!!
 
-  if (!is.null(slotCache)) {
-    lavcache <- slotCache
+  if (!is.null(slot_cache)) {
+    lavcache <- slot_cache
   } else {
     # prepare cache -- stuff needed for estimation, but also post-estimation
     lavcache <- vector("list", length = lavdata@ngroups)
 
     # ov.types? (for PML check)
-    tmp.ov.types <- lavdata@ov$type
+    tmp_ov_types <- lavdata@ov$type
     if (lavmodel@conditional.x && sum(lavmodel@nexo) > 0L) {
       # remove ov.x
-      tmp.ov.x.idx <- unlist(attr(lavpartable, "vidx")$ov.x)
-      tmp.ov.types <- tmp.ov.types[-tmp.ov.x.idx]
+      tmp_ov_x_idx <- unlist(attr(lavpartable, "vidx")$ov_x)
+      tmp_ov_types <- tmp_ov_types[-tmp_ov_x_idx]
     }
 
-    if (lavoptions$estimator == "PML" && all(tmp.ov.types == "ordered")) {
+    if (lavoptions$estimator == "PML" && all(tmp_ov_types == "ordered")) {
       th <- lav_model_th(lavmodel)
       bi <- lav_tables_pairwise_freq_cell(lavdata)
 
@@ -126,7 +126,7 @@ lav_lavaan_step10_cache <- function(slotCache = NULL, # nolint
         # total sum of weights over all observation over all groups,
         # this substitutes the total sample size of SRS.
 
-        if (!is.null(sampling.weights)) {
+        if (!is.null(sampling_weights)) {
           # Keep track of indices of the response categories (a,b) of a
           # pair of ordinal variables (xi,xj) appearing in the data as
           # well as the index of the pair.
@@ -138,11 +138,11 @@ lav_lavaan_step10_cache <- function(slotCache = NULL, # nolint
           lavcache[[g]]$idx_ab_of_xixj_ab <- idx_ab_of_xixj_ab
 
           # Raw data for group g
-          X.g <- lavdata@X[[g]] # nolint
+          x_g <- lavdata@X[[g]] # nolint
 
           # I assume that X.g includes only the ordinal indicators nvar
           # gives the number of ordinal indicators
-          nvar <- ncol(X.g)
+          nvar <- ncol(x_g)
 
           # pstar gives the number of pairs formed by the nvar ordinal
           # indicators
@@ -177,11 +177,11 @@ lav_lavaan_step10_cache <- function(slotCache = NULL, # nolint
               y[idx_ab_of_xixj_ab$idx_pairs == x]
             })
             tmp_idx_cols <- idx_vars_in_pair[, x]
-            tmp_var1 <- factor(X.g[, tmp_idx_cols[1]],
+            tmp_var1 <- factor(x_g[, tmp_idx_cols[1]],
               levels =
                 as.character(unique(tmp_idx_ab$idx_a))
             )
-            tmp_var2 <- factor(X.g[, tmp_idx_cols[2]],
+            tmp_var2 <- factor(x_g[, tmp_idx_cols[2]],
               levels =
                 as.character(unique(tmp_idx_ab$idx_b))
             )
@@ -233,26 +233,26 @@ lav_lavaan_step10_cache <- function(slotCache = NULL, # nolint
           lavcache[[g]]$unifreq <- unifreq
           lavcache[[g]]$uninobs <- uninobs
 
-          uniweights.casewise <- rowSums(is.na(lavdata@X[[g]]))
-          lavcache[[g]]$uniweights.casewise <- uniweights.casewise
+          uniweights_casewise <- rowSums(is.na(lavdata@X[[g]]))
+          lavcache[[g]]$uniweights.casewise <- uniweights_casewise
 
           # weights per response category per variable in the same
           # order as unifreq; i.e. w_ia, i = 1,...,p, (p variables),
           # a = 1,...,Ci, (Ci response categories for variable i),
           # a running faster than i
-          tmp.uniweights <- apply(
+          tmp_uniweights <- apply(
             lavdata@X[[g]], 2,
             function(x) {
-              tapply(uniweights.casewise, as.factor(x), sum,
+              tapply(uniweights_casewise, as.factor(x), sum,
                 na.rm = TRUE
               )
             }
           )
-          if (is.matrix(tmp.uniweights)) {
-            lavcache[[g]]$uniweights <- c(tmp.uniweights)
+          if (is.matrix(tmp_uniweights)) {
+            lavcache[[g]]$uniweights <- c(tmp_uniweights)
           }
-          if (is.list(tmp.uniweights)) {
-            lavcache[[g]]$uniweights <- unlist(tmp.uniweights)
+          if (is.list(tmp_uniweights)) {
+            lavcache[[g]]$uniweights <- unlist(tmp_uniweights)
           }
         } # "available.cases" or "double.robust"
 
@@ -266,19 +266,19 @@ lav_lavaan_step10_cache <- function(slotCache = NULL, # nolint
             lavoptions$control$univariateProbGivObs[[g]]
           # compute different indices vectors that will help to do
           # calculations
-          ind.vec <- as.data.frame(long[1:5])
-          ind.vec <-
-            ind.vec[((ind.vec$index.thres.var1.of.pair != 0) &
-              (ind.vec$index.thres.var2.of.pair != 0)), ]
-          idx.cat.y1 <- ind.vec$index.thres.var1.of.pair
-          idx.cat.y2 <- ind.vec$index.thres.var2.of.pair
-          idx.pairs <- ind.vec$index.pairs.extended
-          lavcache[[g]]$idx.pairs <- idx.pairs
+          ind_vec <- as.data.frame(long[1:5])
+          ind_vec <-
+            ind_vec[((ind_vec$index.thres.var1.of.pair != 0) &
+              (ind_vec$index.thres.var2.of.pair != 0)), ]
+          idx_cat_y1 <- ind_vec$index.thres.var1.of.pair
+          idx_cat_y2 <- ind_vec$index.thres.var2.of.pair
+          idx_pairs <- ind_vec$index.pairs.extended
+          lavcache[[g]]$idx.pairs <- idx_pairs
 
-          idx.cat.y1.split <- split(idx.cat.y1, idx.pairs)
-          idx.cat.y2.split <- split(idx.cat.y2, idx.pairs)
-          lavcache[[g]]$idx.cat.y1.split <- idx.cat.y1.split
-          lavcache[[g]]$idx.cat.y2.split <- idx.cat.y2.split
+          idx_cat_y1_split <- split(idx_cat_y1, idx_pairs)
+          idx_cat_y2_split <- split(idx_cat_y2, idx_pairs)
+          lavcache[[g]]$idx.cat.y1.split <- idx_cat_y1_split
+          lavcache[[g]]$idx.cat.y2.split <- idx_cat_y2_split
 
           # generate the variables, categories indices vector which
           # keep track to which variables and categories the
@@ -286,41 +286,41 @@ lav_lavaan_step10_cache <- function(slotCache = NULL, # nolint
           nlev <- lavdata@ov$nlev
           nvar <- length(nlev)
 
-          idx.var.matrix <- matrix(1:nvar, nrow = nvar, ncol = nvar)
-          idx.diag <- diag(matrix(1:(nvar * nvar),
+          idx_var_matrix <- matrix(1:nvar, nrow = nvar, ncol = nvar)
+          idx_diag <- diag(matrix(1:(nvar * nvar),
             nrow = nvar,
             ncol = nvar
           ))
-          idx.y1gy2.matrix <- rbind(
-            t(idx.var.matrix)[-idx.diag],
-            idx.var.matrix[-idx.diag]
+          idx_y1gy2_matrix <- rbind(
+            t(idx_var_matrix)[-idx_diag],
+            idx_var_matrix[-idx_diag]
           )
-          no.pairs.y1gy2 <- ncol(idx.y1gy2.matrix)
-          idx.cat.y1 <- unlist(lapply(1:no.pairs.y1gy2, function(x) {
-            rep(1:nlev[idx.y1gy2.matrix[1, x]],
-              times = nlev[idx.y1gy2.matrix[2, x]]
+          no_pairs_y1gy2 <- ncol(idx_y1gy2_matrix)
+          idx_cat_y1 <- unlist(lapply(1:no_pairs_y1gy2, function(x) {
+            rep(1:nlev[idx_y1gy2_matrix[1, x]],
+              times = nlev[idx_y1gy2_matrix[2, x]]
             )
           }))
-          idx.cat.gy2 <- unlist(lapply(1:no.pairs.y1gy2, function(x) {
-            rep(1:nlev[idx.y1gy2.matrix[2, x]],
-              each = nlev[idx.y1gy2.matrix[1, x]]
+          idx_cat_gy2 <- unlist(lapply(1:no_pairs_y1gy2, function(x) {
+            rep(1:nlev[idx_y1gy2_matrix[2, x]],
+              each = nlev[idx_y1gy2_matrix[1, x]]
             )
           }))
-          dim.pairs <- unlist(lapply(1:no.pairs.y1gy2, function(x) {
-            nlev[idx.y1gy2.matrix[1, x]] *
-              nlev[idx.y1gy2.matrix[2, x]]
+          dim_pairs <- unlist(lapply(1:no_pairs_y1gy2, function(x) {
+            nlev[idx_y1gy2_matrix[1, x]] *
+              nlev[idx_y1gy2_matrix[2, x]]
           }))
-          idx.y1 <- unlist(mapply(rep, idx.y1gy2.matrix[1, ],
-            each = dim.pairs
+          idx_y1 <- unlist(mapply(rep, idx_y1gy2_matrix[1, ],
+            each = dim_pairs
           ))
-          idx.gy2 <- unlist(mapply(rep, idx.y1gy2.matrix[2, ],
-            each = dim.pairs
+          idx_gy2 <- unlist(mapply(rep, idx_y1gy2_matrix[2, ],
+            each = dim_pairs
           ))
 
-          lavcache[[g]]$idx.Y1 <- idx.y1
-          lavcache[[g]]$idx.Gy2 <- idx.gy2
-          lavcache[[g]]$idx.cat.Y1 <- idx.cat.y1
-          lavcache[[g]]$idx.cat.Gy2 <- idx.cat.gy2
+          lavcache[[g]]$idx.Y1 <- idx_y1
+          lavcache[[g]]$idx.Gy2 <- idx_gy2
+          lavcache[[g]]$idx.cat.Y1 <- idx_cat_y1
+          lavcache[[g]]$idx.cat.Gy2 <- idx_cat_gy2
 
           # the vector below keeps track of the variable each column
           # of the matrix univariateProbGivObs refers to

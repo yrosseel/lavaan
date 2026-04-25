@@ -1,4 +1,4 @@
-lav_lavaan_step09_model <- function(slotModel = NULL, # nolint
+lav_lavaan_step09_model <- function(slot_model = NULL, # nolint
                                     lavoptions = NULL,
                                     lavpartable = NULL,
                                     lavsamplestats = NULL,
@@ -20,8 +20,8 @@ lav_lavaan_step09_model <- function(slotModel = NULL, # nolint
   #       if lavmodel$parameterization == "theta"
   #         if user specified theta values : ** warning **
 
-  if (!is.null(slotModel)) {
-    lavmodel <- slotModel
+  if (!is.null(slot_model)) {
+    lavmodel <- slot_model
   } else {
     if (lav_verbose()) {
       cat("lavmodel           ...")
@@ -48,11 +48,11 @@ lav_lavaan_step09_model <- function(slotModel = NULL, # nolint
       if (!all(lavpartable$start == lavpartable$ustart)) {
         if (lavmodel@parameterization == "delta") {
           # did the user specify theta values?
-          user.var.idx <- which(lavpartable$op == "~~" &
+          user_var_idx <- which(lavpartable$op == "~~" &
             lavpartable$lhs == lavpartable$rhs &
-            lavpartable$lhs %in% unlist(attr(lavpartable, "vnames")$ov.ord) &
+            lavpartable$lhs %in% unlist(attr(lavpartable, "vnames")$ov_ord) &
             lavpartable$user == 1L)
-          if (length(user.var.idx)) {
+          if (length(user_var_idx)) {
             lav_msg_warn(
               gettextf("variance (theta) values for categorical variables
                        are ignored if parameterization = %s!",
@@ -61,11 +61,11 @@ lav_lavaan_step09_model <- function(slotModel = NULL, # nolint
           }
         } else if (lavmodel@parameterization == "theta") {
           # did the user specify theta values?
-          user.delta.idx <- which(lavpartable$op == "~*~" &
+          user_delta_idx <- which(lavpartable$op == "~*~" &
             lavpartable$lhs == lavpartable$rhs &
-            lavpartable$lhs %in% unlist(attr(lavpartable, "vnames")$ov.ord) &
+            lavpartable$lhs %in% unlist(attr(lavpartable, "vnames")$ov_ord) &
             lavpartable$user == 1L)
-          if (length(user.delta.idx)) {
+          if (length(user_delta_idx)) {
             lav_msg_warn(
               gettextf("scaling (~*~) values for categorical variables
                        are ignored if parameterization = %s!",
@@ -103,46 +103,54 @@ lav_lavaan_step09_model <- function(slotModel = NULL, # nolint
 #       lavmodel@representation == "LISREL" &&
 #       lavmodel@parameterization == "delta") {
 #     # get idx BETA matrices
-# 	beta.idx   <- which(names(lavmodel@GLIST) == "beta")
-# 	# for every block
-# 	for (i in seq_len(length(beta.idx))) {
-# 	  this.beta <- abs(lavmodel@GLIST[[beta.idx[i]]])
+#   beta.idx   <- which(names(lavmodel@GLIST) == "beta")
+#   # for every block
+#   for (i in seq_len(length(beta.idx))) {
+#     this.beta <- abs(lavmodel@GLIST[[beta.idx[i]]])
 #       this.beta[lavmodel@m.free.idx[[beta.idx[i]]]] <- 1.0
-# 	  # exogenous variables:       have zero rows
-# 	  # endogenous variables:      have non-zero rows
-# 	  # endogenous-only variables: have non-zero rows and zero columns
-# 	  # mediators:                 have non-zero rows and non-zero columns
-# 	  m.idx <- which(apply(this.beta, 1, sum) != 0 &
+#     # exogenous variables:       have zero rows
+#     # endogenous variables:      have non-zero rows
+#     # endogenous-only variables: have non-zero rows and zero columns
+#     # mediators:                 have non-zero rows and non-zero columns
+#     m.idx <- which(apply(this.beta, 1, sum) != 0 &
 #                      apply(this.beta, 2, sum) != 0)
-# 	  if (length(m.idx) > 0L) {
-# 	    # we have (at least) one mediator
-# 	    # is one of them an observed variable? -> warn
+#     if (length(m.idx) > 0L) {
+#       # we have (at least) one mediator
+#       # is one of them an observed variable? -> warn
 #         m.names <- lavmodel@dimNames[[beta.idx[i]]][[1]][m.idx]
-# 		ov.names   <- unlist(lavdata@ov.names)
+#     ov.names   <- unlist(lavdata@ov.names)
 #         ov.ordered <- unlist(lavdata@ordered)
 #         # correlation model
-# 		if (lavmodel@correlation && any(m.names %in% ov.names)) {
-# 		  bad.names <- m.names[m.names %in% ov.names]
-# 		  if (length(beta.idx) == 1L) {
-#             lav_msg_warn(gettextf("model contains at least one observed mediator: [%s]; consider switching to parameterization = \"theta\"",
+#     if (lavmodel@correlation && any(m.names %in% ov.names)) {
+#       bad.names <- m.names[m.names %in% ov.names]
+#       if (length(beta.idx) == 1L) {
+#             lav_msg_warn(gettextf("model contains at least one observed
+#                 mediator: [%s]; consider switching to parameterization =
+#                 \"theta\"",
 #             paste(bad.names, collapse = " ")))
-# 		  } else {
-#             lav_msg_warn(gettextf("model contains at least one observed mediator in block %i: [%s]; consider switching to parameterization = \"theta\"", i,
+#       } else {
+#             lav_msg_warn(gettextf("model contains at least one observed
+#             mediator in block %i: [%s]; consider switching to parameterization
+#             = \"theta\"", i,
 #             paste(bad.names, collapse = " ")))
-# 		  }
+#       }
 #         # categorical mode
-# 		} else if (lavmodel@categorical && any(m.names %in% ov.ordered)) {
+#     } else if (lavmodel@categorical && any(m.names %in% ov.ordered)) {
 #           bad.names <- m.names[m.names %in% ov.ordered]
 #           if (length(beta.idx) == 1L) {
-#             lav_msg_warn(gettextf("model contains at least one observed categorical mediator: [%s]; consider switching to parameterization = \"theta\"",
+#             lav_msg_warn(gettextf("model contains at least one observed
+#             categorical mediator: [%s]; consider switching to parameterization
+#             = \"theta\"",
 #             paste(bad.names, collapse = " ")))
 #           } else {
-#             lav_msg_warn(gettextf("model contains at least one observed categorical mediator in block %i: [%s]; consider switching to parameterization = \"theta\"", i,
+#             lav_msg_warn(gettextf("model contains at least one observed
+#                     categorical mediator in block %i: [%s]; consider
+#                     switching to parameterization = \"theta\"", i,
 #             paste(bad.names, collapse = " ")))
 #           }
 #         }
-# 	  } # mediators
-# 	} # block
+#     } # mediators
+#   } # block
 #   } # delta parameterization
 
   list(
@@ -150,4 +158,3 @@ lav_lavaan_step09_model <- function(slotModel = NULL, # nolint
     lavmodel    = lavmodel
   )
 }
-

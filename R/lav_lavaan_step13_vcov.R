@@ -28,7 +28,7 @@ lav_lavaan_step13_vcov_boot <- function(lavoptions = NULL,
   # if lavpartable not "external" or "none" or "twostep"
   #     lavpartable$se <- lav_model_vcov_se(...)
 
-  VCOV <- NULL # nolint
+  vcov_1 <- NULL # nolint
   if (lavoptions$se != "none" && lavoptions$se != "external" &&
     lavoptions$se != "twostep" &&
     (lavmodel@nefa == 0L ||
@@ -42,7 +42,7 @@ lav_lavaan_step13_vcov_boot <- function(lavoptions = NULL,
     }
     # special case: estimator = "IV"
     if (lavoptions$estimator %in% "IV" && !is.null(attr(x, "eqs"))) {
-      VCOV <- lav_sem_miiv_vcov(
+      vcov_1 <- lav_sem_miiv_vcov(
         lavmodel = lavmodel,
         lavsamplestats = lavsamplestats,
         lavoptions = lavoptions,
@@ -53,7 +53,7 @@ lav_lavaan_step13_vcov_boot <- function(lavoptions = NULL,
       )
     } else {
       # everything else:
-      VCOV <- lav_model_vcov( # nolint
+      vcov_1 <- lav_model_vcov( # nolint
         lavmodel = lavmodel,
         lavsamplestats = lavsamplestats,
         lavoptions = lavoptions,
@@ -70,34 +70,34 @@ lav_lavaan_step13_vcov_boot <- function(lavoptions = NULL,
   } # VCOV
 
   # extract bootstrap results (if any)
-  if (!is.null(attr(VCOV, "BOOT.COEF"))) {
+  if (!is.null(attr(vcov_1, "BOOT.COEF"))) {
     lavboot <- list()
-    lavboot$coef <- attr(VCOV, "BOOT.COEF")
+    lavboot$coef <- attr(vcov_1, "BOOT.COEF")
   } else {
     lavboot <- list()
   }
 
   # store VCOV in vcov
   # strip all attributes but 'dim'
-  tmp.attr <- attributes(VCOV)
-  VCOV1 <- VCOV # nolint
-  attributes(VCOV1) <- tmp.attr["dim"] # nolint
+  tmp_attr <- attributes(vcov_1)
+  vcov1 <- vcov_1 # nolint
+  attributes(vcov1) <- tmp_attr["dim"] # nolint
   # store vcov? new in 0.6-6
-  if (!is.null(lavoptions$store.vcov) && !is.null(VCOV1)) {
+  if (!is.null(lavoptions$store.vcov) && !is.null(vcov1)) {
     if (is.logical(lavoptions$store.vcov) && !lavoptions$store.vcov) {
-      VCOV1 <- NULL # nolint
+      vcov1 <- NULL # nolint
     }
     if (is.character(lavoptions$store.vcov) &&
       lavoptions$rotation == "none" &&
       lavoptions$store.vcov == "default" &&
-      ncol(VCOV1) > 200L) {
-      VCOV1 <- NULL # nolint
+      ncol(vcov1) > 200L) {
+      vcov1 <- NULL # nolint
     }
   }
   lavvcov <- list(
     se = lavoptions$se,
     information = lavoptions$information[1],
-    vcov = VCOV1
+    vcov = vcov1
   )
 
   # store se in partable
@@ -117,7 +117,7 @@ lav_lavaan_step13_vcov_boot <- function(lavoptions = NULL,
     lavpartable$se <- lav_model_vcov_se(
       lavmodel = lavmodel,
       lavpartable = lavpartable,
-      VCOV = VCOV,
+      VCOV = vcov_1,
       BOOT = lavboot$coef
     )
   }
@@ -125,7 +125,7 @@ lav_lavaan_step13_vcov_boot <- function(lavoptions = NULL,
   list(
     lavpartable = lavpartable,
     lavvcov     = lavvcov,
-    VCOV        = VCOV,
+    VCOV        = vcov_1,
     lavmodel    = lavmodel,
     lavboot     = lavboot
   )

@@ -1,6 +1,6 @@
-lav_lavaan_step04_partable <- function(slotParTable = NULL, # nolint
+lav_lavaan_step04_partable <- function(slot_par_table = NULL, # nolint
                                        model = NULL,
-                                       flat.model = NULL,
+                                       flat_model = NULL,
                                        lavoptions = NULL,
                                        lavdata = NULL,
                                        constraints = NULL) {
@@ -34,19 +34,19 @@ lav_lavaan_step04_partable <- function(slotParTable = NULL, # nolint
   #    starting value ustart 0, set ustart for these variances to
   #    lavoptions$em.zerovar.offset
 
-  if (!is.null(slotParTable)) {
-    lavpartable <- lav_partable_set_cache(slotParTable)
+  if (!is.null(slot_par_table)) {
+    lavpartable <- lav_partable_set_cache(slot_par_table)
   } else if (is.character(model) ||
     inherits(model, "formula") ||
-	# model was already a flat.model
-	(is.list(model) && !is.null(model$mod.idx) &&
-	 !is.null(attr(model, "modifiers")))) {
+  # model was already a flat.model
+  (is.list(model) && !is.null(model$mod.idx) &&
+   !is.null(attr(model, "modifiers")))) {
     if (lav_verbose()) {
       cat("lavpartable        ...")
     }
     # check flat.model before we proceed
     if (lav_debug()) {
-      print(as.data.frame(flat.model))
+      print(as.data.frame(flat_model))
     }
     # catch ~~ of fixed.x covariates if fixed.x = TRUE
     # --> done inside lav_model_partable!
@@ -64,18 +64,19 @@ lav_lavaan_step04_partable <- function(slotParTable = NULL, # nolint
     # }
     # }
     # if(lavoptions$conditional.x) {
-    #    tmp <- lav_partable_vnames(flat.model, type = "ov.x", ov.x.fatal = TRUE)
+    #    tmp <- lav_partable_vnames(flat.model, 
+    #                  type = "ov.x", ov.x.fatal = TRUE)
     # }
-    tmp.data.ov <- lavdata@ov
+    tmp_data_ov <- lavdata@ov
     if (lavoptions$estimator == "catML") {
       lavoptions$meanstructure <- FALSE
-      tmp.data.ov$type <- rep("numeric", length(tmp.data.ov$type))
+      tmp_data_ov$type <- rep("numeric", length(tmp_data_ov$type))
     }
     lavpartable <-
       lavParTable(
-        model = flat.model,
+        model = flat_model,
         constraints = constraints,
-        varTable = tmp.data.ov,
+        varTable = tmp_data_ov,
         ngroups = lavdata@ngroups,
         meanstructure = lavoptions$meanstructure,
         int.ov.free = lavoptions$int.ov.free,
@@ -115,7 +116,7 @@ lav_lavaan_step04_partable <- function(slotParTable = NULL, # nolint
   } else if (is.list(model)) {
     # we already checked this when creating flat.model
     # but we may need to complete it
-    lavpartable <- as.list(flat.model) # in case model is a data.frame
+    lavpartable <- as.list(flat_model) # in case model is a data.frame
     # complete table
     lavpartable <- as.list(lav_partable_complete(lavpartable))
     lavpartable <- lav_partable_set_cache(lavpartable)
@@ -130,7 +131,7 @@ lav_lavaan_step04_partable <- function(slotParTable = NULL, # nolint
   # at this point, we should check if the partable is complete
   # or not; this is especially relevant if the lavaan() function
   # was used, but the user has forgotten some variances/intercepts...
-  if (is.null(slotParTable)) {
+  if (is.null(slot_par_table)) {
     junk <- lav_partable_check(lavpartable,
       categorical = lavoptions$.categorical
     )
@@ -140,12 +141,12 @@ lav_lavaan_step04_partable <- function(slotParTable = NULL, # nolint
   # for EM only (for now), force fixed-to-zero (residual) variances
   # to be slightly larger than zero
   if (lavoptions$optim.method == "em") {
-    zero.var.idx <- which(lavpartable$op == "~~" &
+    zero_var_idx <- which(lavpartable$op == "~~" &
       lavpartable$lhs == lavpartable$rhs &
       lavpartable$free == 0L &
       lavpartable$ustart == 0)
-    if (length(zero.var.idx) > 0L) {
-      lavpartable$ustart[zero.var.idx] <- lavoptions$em.zerovar.offset
+    if (length(zero_var_idx) > 0L) {
+      lavpartable$ustart[zero_var_idx] <- lavoptions$em.zerovar.offset
     }
     lavpartable <- lav_partable_set_cache(lavpartable, NULL, force = TRUE)
   }
