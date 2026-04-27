@@ -1124,6 +1124,24 @@ lav_model_partable  <- function(
               tmp_list$free[lv_int_idx] <- 1L
             }
           }
+        } else if ("intercepts" %in% effect_coding &&
+                   "intercepts" %in% group.equal &&
+                   this_group > 1L) {
+          ## add equality constraints of the newly-freed intercepts
+          intercepts_idx <- which(tmp_list$op == "~1" &
+                                  tmp_list$block == b &
+                                  tmp_list$lhs %in% ind_names)
+          intercepts_idx_g1 <- which(tmp_list$op == "~1" &
+                                     tmp_list$block == (1L + b%%2) &
+                                     tmp_list$lhs %in% ind_names)
+          ncon <- length(intercepts_idx)
+
+          tmp$lhs <- c(tmp$lhs, tmp_list$plabel[intercepts_idx_g1])
+          tmp$op <- c(tmp$op, rep("==", ncon))
+          tmp$rhs <- c(tmp$rhs, tmp_list$plabel[intercepts_idx])
+          tmp$block <- c(tmp$block, rep(0L, ncon))
+          tmp$user <- c(tmp$user, rep(2L, ncon))
+          tmp$ustart <- c(tmp$ustart, rep(as.numeric(NA), ncon))
         } # intercepts
       } # lv
     } # blocks
