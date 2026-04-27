@@ -77,17 +77,17 @@ lav_options_est_gls <- function(opt) {
   if (opt$test[1] == "default") {
     opt$test <- "standard"
   }
-  bad.idx <- which(!opt$test %in% c(
+  bad_idx <- which(!opt$test %in% c(
     "standard", "none",
     "browne.residual.nt", # == standard
     "browne.residual.nt.model",
     "browne.residual.adf",
     "browne.residual.adf.model"
   ))
-  if (length(bad.idx) > 0L) {
+  if (length(bad_idx) > 0L) {
     lav_msg_stop(gettextf(
       "invalid value(s) in test= argument when estimator is GLS: %s.",
-      paste(opt$test[bad.idx], collapse = " ")))
+      paste(opt$test[bad_idx], collapse = " ")))
   }
   # missing
   opt$missing <- "listwise" # also pairwise?
@@ -106,17 +106,17 @@ lav_options_est_ntrls <- function(opt) {
   if (opt$test[1] == "default") {
     opt$test <- "standard"
   }
-  bad.idx <- which(!opt$test %in% c(
+  bad_idx <- which(!opt$test %in% c(
     "standard", "none",
     "browne.residual.nt",
     "browne.residual.nt.model",
     "browne.residual.adf",
     "browne.residual.adf.model"
   ))
-  if (length(bad.idx) > 0L) {
+  if (length(bad_idx) > 0L) {
     lav_msg_stop(gettextf(
       "invalid value(s) in test= argument when estimator is NTRLS: %s.",
-      paste(opt$test[bad.idx], collapse = " ")))
+      paste(opt$test[bad_idx], collapse = " ")))
   }
   # missing
   opt$missing <- "listwise"
@@ -160,17 +160,17 @@ lav_options_est_wls <- function(opt) {
   if (opt$test[1] == "default") {
     opt$test <- "standard"
   }
-  bad.idx <- which(!opt$test %in% c(
+  bad_idx <- which(!opt$test %in% c(
     "standard", "none",
     "browne.residual.nt",
     "browne.residual.nt.model",
     "browne.residual.adf", # == standard
     "browne.residual.adf.model"
   ))
-  if (length(bad.idx) > 0L) {
+  if (length(bad_idx) > 0L) {
     lav_msg_stop(gettextf(
       "invalid value(s) in test= argument when estimator is WLS: %s.",
-      paste(opt$test[bad.idx], collapse = " ")))
+      paste(opt$test[bad_idx], collapse = " ")))
   }
   # missing
   # opt$missing <- "listwise" (could be pairwise)
@@ -187,7 +187,7 @@ lav_options_est_dls <- function(opt) {
   if (opt$test[1] == "default") {
     opt$test <- "satorra.bentler"
   }
-  bad.idx <- which(!opt$test %in% c(
+  bad_idx <- which(!opt$test %in% c(
     "standard", "none",
     "satorra.bentler",
     "browne.residual.nt", # == standard
@@ -195,10 +195,10 @@ lav_options_est_dls <- function(opt) {
     "browne.residual.adf",
     "browne.residual.adf.model"
   ))
-  if (length(bad.idx) > 0L) {
+  if (length(bad_idx) > 0L) {
     lav_msg_stop(gettextf(
       "invalid value(s) in test= argument when estimator is DLS: %s.",
-      paste(opt$test[bad.idx], collapse = " ")))
+      paste(opt$test[bad_idx], collapse = " ")))
   }
   # always include "satorra.bentler"
   if (opt$test[1] %in% c(
@@ -619,8 +619,8 @@ lav_options_est_iv <- function(opt) {
                                iv.samplestats = TRUE,
                                iv.varcov.method = "RLS",
                                iv.sargan = TRUE,
-                               iv.vcov.stage1 <- "lm.vcov.dfres",
-                               iv.vcov.stage2 <- "h2",
+                               iv.vcov.stage1 = "lm.vcov.dfres",
+                               iv.vcov.stage2 = "h2",
                                iv.vcov.gamma.modelbased = TRUE,
                                iv.vcov.jack.numerical = FALSE,
                                iv.vcov.jaca.numerical = FALSE,

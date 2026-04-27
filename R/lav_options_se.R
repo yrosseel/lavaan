@@ -44,48 +44,40 @@ lav_options_check_se <- function(opt = NULL) {
   # }
 
   # GLS, NTRLS, FML, UMN
-  ok.flag <- TRUE
+  ok_flag <- TRUE
   if (any(opt$estimator == c("gls", "ntrls", "fml"))) {
-    ok.flag <- any(opt$se == c(
+    ok_flag <- any(opt$se == c(
       "default", "none", "standard",
       "bootstrap", "external"
     ))
-  }
-
   # WLS, DLS, DWLS, WLSM, WLSMV, WLSMVS, ULS, ULSM, ULSMV, ULSMVS
-  else if (any(opt$estimator == c(
+  } else if (any(opt$estimator == c(
     "wls", "dls",
     "dwls", "wlsm", "wlsmv", "wlsmvs",
     "uls", "ulsm", "ulsmv", "ulsmvs"
   ))) {
-    ok.flag <- any(opt$se == c(
+    ok_flag <- any(opt$se == c(
       "default", "none", "standard",
       "bootstrap", "external",
       "robust", "robust.sem", "robust.sem.nt"
     ))
-  }
-
   # PML
-  else if (opt$estimator == "pml") {
-    ok.flag <- any(opt$se == c(
+  } else if (opt$estimator == "pml") {
+    ok_flag <- any(opt$se == c(
       "default", "none", "standard",
       "bootstrap", "external",
       "robust.huber.white"
     ))
-  }
-
   # FABIN, GUTTMAN1952, BENTLER1982, ...
-  else if (any(opt$estimator == c(
+  } else if (any(opt$estimator == c(
     "fabin2", "fabin3", "mgm"))) {
-    ok.flag <- any(opt$se == c("default", "none", "bootstrap", "external"))
-  }
-
+    ok_flag <- any(opt$se == c("default", "none", "bootstrap", "external"))
   # OTHERS
-  else if (any(opt$estimator == c("fml", "mml", "reml"))) {
-    ok.flag <- any(opt$se == c("default", "none", "standard", "external"))
+  } else if (any(opt$estimator == c("fml", "mml", "reml"))) {
+    ok_flag <- any(opt$se == c("default", "none", "standard", "external"))
   }
 
-  if (!ok.flag) {
+  if (!ok_flag) {
     lav_msg_stop(gettextf(
       "invalid value (%1$s) in se= argument for estimator %2$s.",
       opt$se, toupper(opt$estimator)))

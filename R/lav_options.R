@@ -56,88 +56,88 @@ lav_options_checkvalues <- function(optname, optvalue, chr) {
   }
   as.vector(chr[optvalsok])
 }
-lav_options_check <- function(opts, opt.check, subname) { # nolint
-  opt.names <- names(opts)
-  hiddens <- startsWith(opt.names, ".")
+lav_options_check <- function(opts, opt_check, subname) { # nolint
+  opt_names <- names(opts)
+  hiddens <- startsWith(opt_names, ".")
   if (any(hiddens)) { # remove hidden options temporarily
-    opts.hidden <- opts[hiddens]
+    opts_hidden <- opts[hiddens]
     opts <- opts[!hiddens]
-    opt.names <- opt.names[!hiddens]
+    opt_names <- opt_names[!hiddens]
   }
-  check.names <- names(opt.check)
-  match.opt <- match(opt.names, check.names)
-  if (any(is.na(match.opt))) {
+  check_names <- names(opt_check)
+  match_opt <- match(opt_names, check_names)
+  if (any(is.na(match_opt))) {
     lav_msg_stop(gettextf(
       "Some option(s) unknown: %s !",
-      lav_msg_view(opt.names[is.na(match.opt)], log_sep = "none")
+      lav_msg_view(opt_names[is.na(match_opt)], log_sep = "none")
     ))
   }
   for (j in seq_along(opts)) {
-    opt.name <- opt.names[j]
-    opt.value <- opts[[j]]
-    opt.check1 <- opt.check[[match.opt[j]]]
-    if (!is.null(attr(opt.check1, "SUB"))) {
+    opt_name <- opt_names[j]
+    opt_value <- opts[[j]]
+    opt_check1 <- opt_check[[match_opt[j]]]
+    if (!is.null(attr(opt_check1, "SUB"))) {
       opts[[j]] <- lav_options_check(
-        opt.value, opt.check1,
-        paste0(opt.name, "$")
+        opt_value, opt_check1,
+        paste0(opt_name, "$")
       )
       next
     }
     # check length of option value
-    if (length(opt.value) < opt.check1$oklen[1]) {
+    if (length(opt_value) < opt_check1$oklen[1]) {
       lav_msg_stop(gettextf(
         "Length of option '%1$s' value must be at least %2$s.",
-        paste0(subname, opt.name), opt.check1$oklen[1]
+        paste0(subname, opt_name), opt_check1$oklen[1]
       ))
     }
-    if (length(opt.value) > abs(opt.check1$oklen[2])) {
-      if (opt.check1$oklen[2] > 0L) {
+    if (length(opt_value) > abs(opt_check1$oklen[2])) {
+      if (opt_check1$oklen[2] > 0L) {
         lav_msg_stop(gettextf(
           "Length of option '%1$s' value must be maximum %2$s.",
-          paste0(subname, opt.name), opt.check1$oklen[2]
+          paste0(subname, opt_name), opt_check1$oklen[2]
         ))
       } else {
         lav_msg_warn(gettextf(
           "Length of option '%1$s' value should be maximum %2$s.
           Only first %3$s elements used.",
-          paste0(subname, opt.name), -opt.check1$oklen[2],
-          -opt.check1$oklen[2]
+          paste0(subname, opt_name), -opt_check1$oklen[2],
+          -opt_check1$oklen[2]
         ))
       }
     }
-    if (is.null(opt.check1$bl)) opt.check1$bl <- FALSE
-    if (!is.null(opt.check1$chr) || !is.null(opt.check1$nm) ||
-      opt.check1$bl) {
-      if (!opt.check1$bl || !is.logical(opt.value)) {
-        if (!is.null(opt.check1$nm) && is.numeric(opt.value)) {
+    if (is.null(opt_check1$bl)) opt_check1$bl <- FALSE
+    if (!is.null(opt_check1$chr) || !is.null(opt_check1$nm) ||
+      opt_check1$bl) {
+      if (!opt_check1$bl || !is.logical(opt_value)) {
+        if (!is.null(opt_check1$nm) && is.numeric(opt_value)) {
           num2int <- FALSE
-          if (!is.null(opt.check1$num2int)) num2int <- opt.check1$num2int
-          if (!lav_options_checkinterval(opt.value, opt.check1$nm, num2int)) {
+          if (!is.null(opt_check1$num2int)) num2int <- opt_check1$num2int
+          if (!lav_options_checkinterval(opt_value, opt_check1$nm, num2int)) {
             lav_msg_stop(gettextf(
               "Value(s) of option %1$s out of range (%2$s)!",
-              paste0(subname, opt.name),
+              paste0(subname, opt_name),
               paste0(
-                opt.check1$nm$bounds[1],
-                if (opt.check1$nm$first.in) " <= " else " < ",
+                opt_check1$nm$bounds[1],
+                if (opt_check1$nm$first.in) " <= " else " < ",
                 "x",
-                if (opt.check1$nm$last.in) " <= " else " < ",
-                opt.check1$nm$bounds[2]
+                if (opt_check1$nm$last.in) " <= " else " < ",
+                opt_check1$nm$bounds[2]
               )
             ))
           }
         }
-        if (!is.null(opt.check1$chr) && is.character(opt.value)) {
-          opt.value <- lav_options_checkvalues(
-            opt.name, opt.value,
-            opt.check1$chr
+        if (!is.null(opt_check1$chr) && is.character(opt_value)) {
+          opt_value <- lav_options_checkvalues(
+            opt_name, opt_value,
+            opt_check1$chr
           )
-          opts[[j]] <- opt.value
+          opts[[j]] <- opt_value
         }
       }
     }
   }
   if (any(hiddens)) { # add hidden options
-    opts <- modifyList(opts, opts.hidden)
+    opts <- modifyList(opts, opts_hidden)
   }
   opts
 }
@@ -155,9 +155,9 @@ lav_options_set <- function(opt = NULL) {
     )
   }
 
-  # get opt.default and opt.check ####
-  if (!exists("opt.check", lavaan_cache_env)) lav_options_default()
-  opt.check <- get("opt.check", lavaan_cache_env)
+  # get opt_default and opt_check ####
+  if (!exists("opt_check", lavaan_cache_env)) lav_options_default()
+  opt_check <- get("opt_check", lavaan_cache_env)
 
   if (lav_debug()) {
     cat("lavaan DEBUG: lavaanOptions IN\n")
@@ -167,10 +167,10 @@ lav_options_set <- function(opt = NULL) {
 
   # options OPT for which there also exist OPT.args and opt$OPT is a list
   # -> split in opt$OPT and opt$OPT.args
-  welke <- which(paste0(names(opt.check), ".args") %in% names(opt.check))
+  welke <- which(paste0(names(opt_check), ".args") %in% names(opt_check))
   for (j in welke) {
-    optname <- names(opt.check)[j]
-    optname.args <- paste0(optname, ".args")
+    optname <- names(opt_check)[j]
+    optname_args <- paste0(optname, ".args")
     if (is.list(opt[[optname]])) {
       if (optname == "bootstrap" && !is.null(opt[[optname]][["R"]])) {
         # special case for bootstrap, instead of "bootstrap" replications
@@ -178,14 +178,14 @@ lav_options_set <- function(opt = NULL) {
         opt[[optname]][[optname]] <- opt[[optname]][["R"]]
         opt[[optname]][["R"]] <- NULL
       }
-      opt[[optname.args]] <- opt[[optname]]
-      opt[[optname.args]][[optname]] <- NULL
+      opt[[optname_args]] <- opt[[optname]]
+      opt[[optname_args]][[optname]] <- NULL
       opt[[optname]] <- opt[[optname]][[optname]]
     }
   }
 
   # check options with definitions ####
-  opt <- lav_options_check(opt, opt.check, "")
+  opt <- lav_options_check(opt, opt_check, "")
 
   # check option 'start'
   if (is.character(opt$start) && all(opt$start != c("default", "simple"))) {
@@ -963,19 +963,19 @@ lav_options_set <- function(opt = NULL) {
 
   # where does "standard" appear in the opt$test vector?
   if (opt$test[1] != "none") {
-    standard.idx <- which(opt$test == "standard")[1]
-    if (is.na(standard.idx)) {
+    standard_idx <- which(opt$test == "standard")[1]
+    if (is.na(standard_idx)) {
       # "standard" is not in the opt$test vector at all,
       # so add it
       opt$test <- c("standard", opt$test)
-    } else if (length(standard.idx) > 0L && standard.idx != 1L) {
+    } else if (length(standard_idx) > 0L && standard_idx != 1L) {
       # make sure "standard" comes first
-      opt$test <- c("standard", opt$test[-standard.idx])
+      opt$test <- c("standard", opt$test[-standard_idx])
     }
   }
 
   # final check
-  wrong.idx <- which(!opt$test %in% c(
+  wrong_idx <- which(!opt$test %in% c(
     "none", "standard", "satorra.bentler",
     "yuan.bentler", "yuan.bentler.mplus",
     "mean.var.adjusted", "scaled.shifted",
@@ -984,10 +984,10 @@ lav_options_set <- function(opt = NULL) {
     "browne.residual.adf.model",
     "bollen.stine"
   ))
-  if (length(wrong.idx) > 0L) {
+  if (length(wrong_idx) > 0L) {
     lav_msg_stop(gettextf(
       "invalid option(s) for test argument: %1$s. Possible options are: %2$s.",
-      lav_msg_view(opt$test[wrong.idx]),
+      lav_msg_view(opt$test[wrong_idx]),
       lav_msg_view(c(
         "none", "standard", "browne.residual.adf",
         "browne.residual.nt", "browne.residual.adf.model",
@@ -1120,13 +1120,13 @@ lav_options_set <- function(opt = NULL) {
   }
 
   if (opt$rotation == "pst") {
-    target.mask <- opt$rotation.args$target.mask
-    if (is.null(target.mask) || length(target.mask) == 0L) {
+    target_mask <- opt$rotation.args$target.mask
+    if (is.null(target_mask) || length(target_mask) == 0L) {
       # lav_msg_stop(gettext("rotation target.mask matrix is NULL"))
       if (is.matrix(target)) {
         tmp <- matrix(1L, nrow = nrow(target), ncol = ncol(target))
         tmp[target != 0] <- 0L # ignore these (non-zero) elements
-        opt$rotation.args$target.mask <- target.mask <- tmp
+        opt$rotation.args$target.mask <- target_mask <- tmp
       } else if (is.list(target)) {
         out <- lapply(seq_along(target), function(g) {
           tmp <- matrix(1L,
@@ -1136,25 +1136,25 @@ lav_options_set <- function(opt = NULL) {
           tmp[target[[g]] != 0] <- 0L # ignore these (non-zero) elements
           tmp
         })
-        opt$rotation.args$target.mask <- target.mask <- out
+        opt$rotation.args$target.mask <- target_mask <- out
       }
     }
-    if (is.list(target.mask)) {
-      if (!all(sapply(target.mask, is.matrix))) {
+    if (is.list(target_mask)) {
+      if (!all(sapply(target_mask, is.matrix))) {
         lav_msg_stop(gettext("the target.mask list contains
                               elements that are not a matrix"))
       }
-    } else if (!is.matrix(target.mask)) {
+    } else if (!is.matrix(target_mask)) {
       lav_msg_stop(gettext("rotation target.mask matrix is not a matrix"))
     }
-    if (is.list(target) && !is.list(target.mask)) {
+    if (is.list(target) && !is.list(target_mask)) {
       lav_msg_stop(gettext("target is a list, but target.mask is not a list"))
     }
-    if (is.list(target.mask) && !is.list(target)) {
+    if (is.list(target_mask) && !is.list(target)) {
       lav_msg_stop(gettext("target.mask is a list, but target is not a list"))
     }
-    if (is.list(target) && is.list(target.mask)) {
-      if (length(target) != length(target.mask)) {
+    if (is.list(target) && is.list(target_mask)) {
+      if (length(target) != length(target_mask)) {
         lav_msg_stop(gettext("length(target) != length(target.mask)"))
       }
     }
@@ -1163,35 +1163,35 @@ lav_options_set <- function(opt = NULL) {
   # if NAs, force opt$rotation to be 'pst' and create target.mask
   if (opt$rotation == "target.strict") {
     # matrix
-    warn.flag <- FALSE
+    warn_flag <- FALSE
     if (is.matrix(target) && anyNA(target)) {
-      warn.flag <- TRUE
+      warn_flag <- TRUE
       opt$rotation <- "pst"
-      target.mask <- matrix(1, nrow = nrow(target), ncol = ncol(target))
-      target.mask[is.na(target)] <- 0
-      opt$rotation.args$target.mask <- target.mask
+      target_mask <- matrix(1, nrow = nrow(target), ncol = ncol(target))
+      target_mask[is.na(target)] <- 0
+      opt$rotation.args$target.mask <- target_mask
 
       # list
     } else if (is.list(target)) {
       ngroups <- length(target)
       for (g in seq_len(ngroups)) {
         if (anyNA(target[[g]])) {
-          warn.flag <- TRUE
+          warn_flag <- TRUE
           # is target.mask just a <0 x 0 matrix>? create list!
           if (is.matrix(opt$rotation.args$target.mask)) {
             opt$rotation.args$target.mask <- vector("list", length = ngroups)
           }
           opt$rotation <- "pst"
-          target.mask <- matrix(1,
+          target_mask <- matrix(1,
             nrow = nrow(target[[g]]),
             ncol = ncol(target[[g]])
           )
-          target.mask[is.na(target[[g]])] <- 0
-          opt$rotation.args$target.mask[[g]] <- target.mask
+          target_mask[is.na(target[[g]])] <- 0
+          opt$rotation.args$target.mask[[g]] <- target_mask
         }
       }
     }
-    if (warn.flag) {
+    if (warn_flag) {
       lav_msg_warn(gettext(
         "switching to PST rotation as target matrix contains NA values"
       ))

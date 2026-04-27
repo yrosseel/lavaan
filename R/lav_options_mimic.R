@@ -1,7 +1,7 @@
 # LDW 11/4/24 : overwrite defaults depending on mimic in separate function
 #
 lav_options_mimic <- function(opt) {
-  mlr.test <- "yuan.bentler.mplus" # for now
+  mlr_test <- "yuan.bentler.mplus" # for now
   if (opt$gls.v11.mplus == "default") {
     opt$gls.v11.mplus <- (opt$mimic == "Mplus")
   }
@@ -21,7 +21,8 @@ lav_options_mimic <- function(opt) {
       }
     }
     if (opt$fixed.x == "default") {
-      if (any(lav_options_estimatorgroup(opt$estimator) == c("MML", "ML", "IV")) &&
+      if (any(lav_options_estimatorgroup(opt$estimator) ==
+                                                     c("MML", "ML", "IV")) &&
           is.character(opt$start) && opt$start != "simple") { # new in 0.6-12
         opt$fixed.x <- TRUE
       }
@@ -42,8 +43,7 @@ lav_options_mimic <- function(opt) {
       }
     }
     if (opt$missing == "default") {
-      if (!opt$.categorical && any(opt$estimator == c("ml", "mlr")))
-      {
+      if (!opt$.categorical && any(opt$estimator == c("ml", "mlr"))) {
         # since version 5?
         opt$missing <- "ml"
         # check later if this is ok
@@ -52,7 +52,7 @@ lav_options_mimic <- function(opt) {
     if (opt$estimator != "pml") {
       if (opt$meanstructure == "default") opt$meanstructure <- TRUE
     }
-    if (opt$estimator == "mlr") mlr.test <- "yuan.bentler.mplus"
+    if (opt$estimator == "mlr") mlr_test <- "yuan.bentler.mplus"
     if (any(lav_options_estimatorgroup(opt$estimator) ==
             c("ML", "REML", "NTRLS", "catML"))) {
       }
@@ -73,7 +73,7 @@ lav_options_mimic <- function(opt) {
     opt$baseline.conditional.x.free.slopes <- FALSE
   } else if (opt$mimic == "EQS") {
     opt$baseline.fixed.x.free.cov <- FALSE
-    if (opt$estimator == "mlr") mlr.test <- "yuan.bentler"
+    if (opt$estimator == "mlr") mlr_test <- "yuan.bentler"
     if (any(lav_options_estimatorgroup(opt$estimator) ==
             c("ML", "REML", "NTRLS", "catML"))) {
       if (opt$likelihood == "default") opt$likelihood <- "wishart"
@@ -87,9 +87,9 @@ lav_options_mimic <- function(opt) {
   }
   if (opt$estimator == "mlr") {
     if (opt$test[1] == "default") {
-      opt$test <- mlr.test
+      opt$test <- mlr_test
     } else {
-      opt$test <- union(mlr.test, opt$test)
+      opt$test <- union(mlr_test, opt$test)
     }
   }
   opt
