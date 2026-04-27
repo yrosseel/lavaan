@@ -22,9 +22,9 @@ lav_lavaan_step15_baseline <- function(lavoptions = NULL,
     if (lav_verbose()) {
       cat("lavbaseline ...")
     }
-	current.verbose <- lav_verbose()
-	lav_verbose(FALSE)
-    fit.indep <- try(lav_object_independence(
+  current_verbose <- lav_verbose()
+  lav_verbose(FALSE)
+    fit_indep <- try(lav_object_independence(
       object = NULL,
       lavsamplestats = lavsamplestats,
       lavdata = lavdata,
@@ -33,8 +33,8 @@ lav_lavaan_step15_baseline <- function(lavoptions = NULL,
       lavpartable = lavpartable,
       lavh1 = lavh1
     ), silent = TRUE)
-	lav_verbose(current.verbose)
-    if (inherits(fit.indep, "try-error") || !fit.indep@optim$converged) {
+  lav_verbose(current_verbose)
+    if (inherits(fit_indep, "try-error") || !fit_indep@optim$converged) {
       lav_msg_warn(gettext("estimation of the baseline model failed."))
       lavbaseline <- list()
       if (lav_verbose()) {
@@ -43,8 +43,8 @@ lav_lavaan_step15_baseline <- function(lavoptions = NULL,
     } else {
       # store relevant information
       lavbaseline <- list(
-        partable = fit.indep@ParTable,
-        test = fit.indep@test
+        partable = fit_indep@ParTable,
+        test = fit_indep@test
       )
       if (lav_verbose()) {
         cat(" done.\n")

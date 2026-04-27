@@ -53,7 +53,7 @@ lavaan <- function(
   # start timer
   start_time0 <- proc.time()[3]
   timing <- list()
-  timing$start.time <- start_time0
+  timing$start_time <- start_time0
 
   # ------------- adapt parameters -----------------
   mc <- match.call(expand.dots = TRUE)
@@ -102,13 +102,13 @@ lavaan <- function(
   temp <- lav_lavaan_step00_checkdata(
     data        = data,
     dotdotdot   = dotdotdot,
-    sample.cov  = sample.cov,
-    sample.nobs = sample.nobs,
-    sample.mean = sample.mean,
-    sample.th   = sample.th,
-    NACOV       = NACOV,
-    WLS.V       = WLS.V,
-    ov.order    = ov.order
+    sample_cov  = sample.cov,
+    sample_nobs = sample.nobs,
+    sample_mean = sample.mean,
+    sample_th   = sample.th,
+    nacov       = NACOV,
+    wls_v       = WLS.V,
+    ov_order    = ov.order
   )
   data <- temp$data
   dotdotdot <- temp$dotdotdot
@@ -120,7 +120,7 @@ lavaan <- function(
   wls_v <- temp$WLS.V
   ov_order <- temp$ov.order
 
-  timing <- ldw_add_timing(timing, "init")
+  timing <- lav_add_timing(timing, "init")
 
   # ------------ ov.names 1 -----  initial flat model --------------------
   # if parser not specified, take default one
@@ -132,9 +132,9 @@ lavaan <- function(
   }
 
   flat_model <- lav_lavaan_step01_ovnames_initflat(
-    slotParTable     = slotParTable,
+    slot_par_table   = slotParTable,
     model            = model,
-    dotdotdot.parser = useparser
+    dotdotdot_parser = useparser
   )
 
   # ------------ ov.names 1b ----- handle 'old way' for composites -------
@@ -145,17 +145,17 @@ lavaan <- function(
 
   # ------------ ov.names 2 ------ handle ov.order -----------------------
   flat_model <- lav_lavaan_step01_ovnames_ovorder(
-    flat.model = flat_model,
-    ov.order   = ov_order,
+    flat_model = flat_model,
+    ov_order   = ov_order,
     data       = data,
-    sample.cov = sample_cov,
-    slotData   = slotData
+    sample_cov = sample_cov,
+    slot_data  = slotData
   )
 
   # ------------ ov.names 3 ------- group blocks ------------------
   ngroups <- 1L # default value
   temp <- lav_lavaan_step01_ovnames_group(
-    flat.model = flat_model,
+    flat_model = flat_model,
     ngroups    = ngroups
   )
   flat_model <- temp$flat.model
@@ -168,20 +168,20 @@ lavaan <- function(
 
   # ------------ ov.names 4 ------ sanity checks ------------------
   lav_lavaan_step01_ovnames_checklv(
-    lv.names    = lv_names,
-    ov.names    = ov_names,
-    data        = data,
-    sample.cov  = sample_cov,
-    dotdotdot   = dotdotdot,
-    slotOptions = slotOptions
+    lv_names     = lv_names,
+    ov_names     = ov_names,
+    data         = data,
+    sample_cov   = sample_cov,
+    dotdotdot    = dotdotdot,
+    slot_options = slotOptions
   )
 
   # ------------ ov.names 5 ------ handle ov.names.l --------------
   temp <- lav_lavaan_step01_ovnames_namesl(
     data         = data,
     cluster      = cluster,
-    flat.model   = flat_model,
-    group.values = group_values,
+    flat_model   = flat_model,
+    group_values = group_values,
     ngroups      = ngroups
   )
   flat_model <- temp$flat.model
@@ -191,28 +191,28 @@ lavaan <- function(
   ordered_orig <- ordered
   ordered <- lav_lavaan_step01_ovnames_ordered(
     ordered    = ordered,
-    flat.model = flat_model,
+    flat_model = flat_model,
     data       = data
   )
-  timing <- ldw_add_timing(timing, "ov.names")
+  timing <- lav_add_timing(timing, "ov.names")
 
   # ------------ lavoptions --------------------
   lavoptions <- lav_lavaan_step02_options(
-    slotOptions      = slotOptions,
-    slotData         = slotData,
-    flat.model       = flat_model,
+    slot_options      = slotOptions,
+    slot_data         = slotData,
+    flat_model       = flat_model,
     ordered          = ordered,
     ordered_orig     = ordered_orig,
-    sample.cov       = sample_cov,
-    sample.mean      = sample_mean,
-    sample.th        = sample_th,
-    sample.nobs      = sample_nobs,
-    ov.names.l       = ov_names_l,
-    sampling.weights = sampling.weights,
+    sample_cov       = sample_cov,
+    sample_mean      = sample_mean,
+    sample_th        = sample_th,
+    sample_nobs      = sample_nobs,
+    ov_names_l       = ov_names_l,
+    sampling_weights = sampling.weights,
     constraints      = constraints,
     group            = group,
-    ov.names.x       = ov_names_x,
-    ov.names.y       = ov_names_y,
+    ov_names_x       = ov_names_x,
+    ov_names_y       = ov_names_y,
     dotdotdot        = dotdotdot,
     cluster          = cluster,
     data             = data
@@ -222,74 +222,74 @@ lavaan <- function(
   if (!lavoptions$fixed.x) {
     ov_names_x <- character(0L)
   }
-  timing <- ldw_add_timing(timing, "Options")
+  timing <- lav_add_timing(timing, "Options")
 
   # ------------ lavdata ------------------------
   temp <- lav_lavaan_step03_data(
-    slotData         = slotData,
+    slot_data         = slotData,
     lavoptions       = lavoptions,
-    ov.names         = ov_names,
-    ov.names.y       = ov_names_y,
+    ov_names         = ov_names,
+    ov_names_y       = ov_names_y,
     group            = group,
     data             = data,
     cluster          = cluster,
-    ov.names.x       = ov_names_x,
-    ov.names.l       = ov_names_l,
+    ov_names_x       = ov_names_x,
+    ov_names_l       = ov_names_l,
     ordered          = ordered,
-    sampling.weights = sampling.weights,
-    sample.cov       = sample_cov,
-    sample.mean      = sample_mean,
-    sample.th        = sample_th,
-    sample.nobs      = sample_nobs,
-    slotParTable     = slotParTable,
+    sampling_weights = sampling.weights,
+    sample_cov       = sample_cov,
+    sample_mean      = sample_mean,
+    sample_th        = sample_th,
+    sample_nobs      = sample_nobs,
+    slot_par_table   = slotParTable,
     ngroups          = ngroups,
     dotdotdot        = dotdotdot,
-    flat.model       = flat_model,
+    flat_model       = flat_model,
     model            = model, # in case model is a lavaan object
-    NACOV            = nacov,
-    WLS.V            = wls_v
+    nacov            = nacov,
+    wls_v            = wls_v
   )
   lavdata <- temp$lavdata
   lavoptions <- temp$lavoptions
 
-  timing <- ldw_add_timing(timing, "Data")
+  timing <- lav_add_timing(timing, "Data")
 
   # ------------ lavpartable -------------------
   temp <- lav_lavaan_step04_partable(
-    slotParTable = slotParTable,
-    model        = model,
-    flat.model   = flat_model,
-    lavoptions   = lavoptions,
-    lavdata      = lavdata,
-    constraints  = constraints
+    slot_par_table = slotParTable,
+    model          = model,
+    flat_model     = flat_model,
+    lavoptions     = lavoptions,
+    lavdata        = lavdata,
+    constraints    = constraints
   )
   lavoptions <- temp$lavoptions
   lavpartable <- temp$lavpartable
-  timing <- ldw_add_timing(timing, "ParTable")
+  timing <- lav_add_timing(timing, "ParTable")
 
   # ------------ lavpta ------------------------
   # lavpta <- lav_lavaan_step04_pta(
   #   lavpartable = lavpartable,
   #   lavoptions  = lavoptions
   # )
-  # timing <- ldw_add_timing(timing, "lavpta")
+  # timing <- lav_add_timing(timing, "lavpta")
 
   # ------------ lavsamplestats ---------------
   lavsamplestats <- lav_lavaan_step05_samplestats(
-    slotSampleStats = slotSampleStats,
-    lavdata         = lavdata,
-    lavoptions      = lavoptions,
-    WLS.V           = wls_v,
-    NACOV           = nacov,
-    sample.cov      = sample_cov,
-    sample.mean     = sample_mean,
-    sample.th       = sample_th,
-    sample.nobs     = sample_nobs,
-    ov.names        = ov_names,
-    ov.names.x      = ov_names_x,
-    lavpartable     = lavpartable
+    slot_sample_stats = slotSampleStats,
+    lavdata           = lavdata,
+    lavoptions        = lavoptions,
+    wls_v             = wls_v,
+    nacov             = nacov,
+    sample_cov        = sample_cov,
+    sample_mean       = sample_mean,
+    sample_th         = sample_th,
+    sample_nobs       = sample_nobs,
+    ov_names          = ov_names,
+    ov_names_x        = ov_names_x,
+    lavpartable       = lavpartable
   )
-  timing <- ldw_add_timing(timing, "SampleStats")
+  timing <- lav_add_timing(timing, "SampleStats")
 
   # ------------ lavh1 ------------------------
   lavh1 <- lav_lavaan_step06_h1(
@@ -299,7 +299,7 @@ lavaan <- function(
     lavdata        = lavdata,
     lavpartable    = lavpartable
   )
-  timing <- ldw_add_timing(timing, "h1")
+  timing <- lav_add_timing(timing, "h1")
 
   # ------------ bounds ------------------------
   lavpartable <- lav_lavaan_step07_bounds(
@@ -309,22 +309,22 @@ lavaan <- function(
     lavsamplestats = lavsamplestats,
     lavpartable    = lavpartable
   )
-  timing <- ldw_add_timing(timing, "bounds")
+  timing <- lav_add_timing(timing, "bounds")
 
   # ------------ lavstart ----------------------
   lavpartable <- lav_lavaan_step08_start(
-    slotModel      = slotModel,
-    lavoptions     = lavoptions,
-    lavpartable    = lavpartable,
-    lavsamplestats = lavsamplestats,
-    lavh1          = lavh1
+    slot_model      = slotModel,
+    lavoptions      = lavoptions,
+    lavpartable     = lavpartable,
+    lavsamplestats  = lavsamplestats,
+    lavh1           = lavh1
   )
 
-  timing <- ldw_add_timing(timing, "start")
+  timing <- lav_add_timing(timing, "start")
 
   # ------------ model -------------------------
   temp <- lav_lavaan_step09_model(
-    slotModel      = slotModel,
+    slot_model     = slotModel,
     lavoptions     = lavoptions,
     lavpartable    = lavpartable,
     lavsamplestats = lavsamplestats,
@@ -333,18 +333,18 @@ lavaan <- function(
   lavpartable <- temp$lavpartable
   lavmodel <- temp$lavmodel
 
-  timing <- ldw_add_timing(timing, "Model")
+  timing <- lav_add_timing(timing, "Model")
 
   # -------- lavcache ----------------------------------
   lavcache <- lav_lavaan_step10_cache(
-    slotCache        = slotCache,
+    slot_cache       = slotCache,
     lavdata          = lavdata,
     lavmodel         = lavmodel,
     lavpartable      = lavpartable,
     lavoptions       = lavoptions,
-    sampling.weights = sampling.weights
+    sampling_weights = sampling.weights
   )
-  timing <- ldw_add_timing(timing, "cache")
+  timing <- lav_add_timing(timing, "cache")
 
   # -------- est + lavoptim ----------------------------
   temp <- lav_lavaan_step11_estoptim(
@@ -366,14 +366,14 @@ lavaan <- function(
     laveqs <- attr(x, "eqs")
   }
 
-  timing <- ldw_add_timing(timing, "optim")
+  timing <- lav_add_timing(timing, "optim")
 
   # -------- lavimplied + lavloglik --------------------
   lavimplied <- lav_lavaan_step12_implied(
     lavoptions = lavoptions,
     lavmodel   = lavmodel
   )
-  timing <- ldw_add_timing(timing, "implied")
+  timing <- lav_add_timing(timing, "implied")
 
   lavloglik <- lav_lavaan_step12_loglik(
     lavoptions     = lavoptions,
@@ -383,7 +383,7 @@ lavaan <- function(
     lavimplied     = lavimplied,
     lavmodel       = lavmodel
   )
-  timing <- ldw_add_timing(timing, "loglik")
+  timing <- lav_add_timing(timing, "loglik")
 
   # ----------- lavvcov + lavboot -------------------
   temp <- lav_lavaan_step13_vcov_boot(
@@ -403,7 +403,7 @@ lavaan <- function(
   lavmodel <- temp$lavmodel
   lavboot <- temp$lavboot
 
-  timing <- ldw_add_timing(timing, "vcov")
+  timing <- lav_add_timing(timing, "vcov")
 
   # ----------- lavtest ----------
   lavtest <- lav_lavaan_step14_test(
@@ -416,10 +416,10 @@ lavaan <- function(
     lavimplied     = lavimplied,
     lavh1          = lavh1,
     x              = x,
-    VCOV           = vcov,
+    vcov           = vcov,
     lavloglik      = lavloglik
   )
-  timing <- ldw_add_timing(timing, "test")
+  timing <- lav_add_timing(timing, "test")
 
   # ----------- lavfit ----------
   lavfit <- lav_lavaan_step14_fit(
@@ -427,21 +427,21 @@ lavaan <- function(
     lavmodel    = lavmodel,
     lavimplied  = lavimplied,
     x           = x,
-    VCOV        = vcov,
+    vcov        = vcov,
     lavtest     = lavtest
   )
-  timing <- ldw_add_timing(timing, "Fit")
+  timing <- lav_add_timing(timing, "Fit")
 
   # ----------- baseline ----------------------------
   lavbaseline <- lav_lavaan_step15_baseline(
-    lavoptions = lavoptions,
+    lavoptions     = lavoptions,
     lavsamplestats = lavsamplestats,
-    lavdata = lavdata,
-    lavcache = lavcache,
-    lavh1 = lavh1,
-    lavpartable = lavpartable
+    lavdata        = lavdata,
+    lavcache       = lavcache,
+    lavh1          = lavh1,
+    lavpartable    = lavpartable
   )
-  timing <- ldw_add_timing(timing, "baseline")
+  timing <- lav_add_timing(timing, "baseline")
 
   # ----------- rotation ---------------------------
   temp <- lav_lavaan_step16_rotation(
@@ -452,7 +452,7 @@ lavaan <- function(
     lavdata        = lavdata,
     x              = x,
     lavvcov        = lavvcov,
-    VCOV           = vcov,
+    vcov           = vcov,
     lavcache       = lavcache,
     lavimplied     = lavimplied,
     lavsamplestats = lavsamplestats
@@ -461,7 +461,7 @@ lavaan <- function(
   lavmodel <- temp$lavmodel
   lavvcov <- temp$lavvcov
 
-  timing <- ldw_add_timing(timing, "rotation")
+  timing <- lav_add_timing(timing, "rotation")
 
   # ------ lavaan result  ----------------
   out <- lav_lavaan_step17_lavaan(
@@ -483,12 +483,12 @@ lavaan <- function(
     lavh1          = lavh1,
     lavbaseline    = lavbaseline,
     laveqs         = laveqs,
-    start.time0    = start_time0
+    start_time0    = start_time0
   )
 
   # restore random seed
   if (!is.null(temp_seed)) {
-    assign(".Random.seed", temp_seed, envir = .GlobalEnv)                   # nolint
+    assign(".Random.seed", temp_seed, envir = .GlobalEnv)             # nolint
   } else if (exists(".Random.seed", envir = .GlobalEnv, inherits = FALSE)) {
     # initially there was no .Random.seed, but we created one along the way
     # clean up
@@ -577,17 +577,17 @@ growth <- function(
 }
 
 # # # # # # # # # # # # # # # # # # #
-# # help function ldw_add_timing  # #
+# # help function lav_add_timing  # #
 # # # # # # # # # # # # # # # # # # #
-ldw_add_timing <- function(timing, part) {
-  # timing is a list with element start.time
+lav_add_timing <- function(timing, part) {
+  # timing is a list with element start_time
   # this function adds an element with name as specified in parameter part
-  # and the duration of the interval from start.time upto now
-  # thereafter the element start.time is set to now (prepare for next call)
+  # and the duration of the interval from start_time upto now
+  # thereafter the element start_time is set to now (prepare for next call)
   # the adapted list is returned
   timenow <- proc.time()[3]
-  timing[[part]] <- (timenow - timing$start.time)
-  timing$start.time <- timenow
+  timing[[part]] <- (timenow - timing$start_time)
+  timing$start_time <- timenow
 
   timing
 }

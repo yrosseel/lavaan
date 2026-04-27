@@ -202,7 +202,7 @@ lav_lavaan_step11_estoptim <- function(lavdata = NULL, # nolint
       # run this even if we already have a converged solution
       # perhaps we find a better solution?
       if (lavoptions$rstarts > 0L) {
-        x.rstarts <- vector("list", length = lavoptions$rstarts)
+        x_rstarts <- vector("list", length = lavoptions$rstarts)
         if (lav_verbose()) {
           str(x)
           cat("trying again with random starts (", lavoptions$rstarts,
@@ -214,7 +214,7 @@ lav_lavaan_step11_estoptim <- function(lavdata = NULL, # nolint
           if (lav_verbose()) {
             cat("-- random start run: ", i, "\n")
           }
-          x.rstarts[[i]] <-
+          x_rstarts[[i]] <-
             try(
               lav_model_estimate(
                 lavmodel = lavmodel,
@@ -230,51 +230,51 @@ lav_lavaan_step11_estoptim <- function(lavdata = NULL, # nolint
         }
 
         # pick best solution (if any)
-        x.converged <- vector("list", length = 0L)
-        fx.rstarts <- numeric(0L)
-        ok.flag <- sapply(x.rstarts, function(x) {
+        x_converged <- vector("list", length = 0L)
+        fx_rstarts <- numeric(0L)
+        ok_flag <- sapply(x_rstarts, function(x) {
             if (inherits(x, "try-error")) {
-              return(FALSE)
+              FALSE
             } else {
-              return(attr(x, "converged"))
+              attr(x, "converged")
             }
           })
-        if (sum(ok.flag) > 0L) {
-          x.converged <- x.rstarts[ok.flag]
+        if (sum(ok_flag) > 0L) {
+          x_converged <- x_rstarts[ok_flag]
         }
-        if (length(x.converged) > 0L) {
-          fx.rstarts <- sapply(x.converged, "attr", "fx")
-          x.best <- x.converged[[which.min(fx.rstarts)]]
-          fx.best <- attr(x.best, "fx")[1]
+        if (length(x_converged) > 0L) {
+          fx_rstarts <- sapply(x_converged, "attr", "fx")
+          x_best <- x_converged[[which.min(fx_rstarts)]]
+          fx_best <- attr(x_best, "fx")[1]
 
           # if we did not find a converged solution, use x.best
           if (inherits(x, "try-error") || !attr(x, "converged")) {
-            x <- x.best
+            x <- x_best
 
 
             # if we already had a converged solution, only replace
             # if fx.best is better than attr(x, "fx")[1]
           } else {
-            if (fx.best < attr(x, "fx")[1]) {
-              x <- x.best
+            if (fx_best < attr(x, "fx")[1]) {
+              x <- x_best
             }
           }
         }
 
-        attr(x, "x.rstarts") <- x.rstarts
+        attr(x, "x.rstarts") <- x_rstarts
       } # random starts
     }
 
     # optimization failed with error
     if (inherits(x, "try-error")) {
-      warn.txt <- gettext("Model estimation FAILED! Returning starting values.")
+      warn_txt <- gettext("Model estimation FAILED! Returning starting values.")
       x <- lav_model_get_parameters(
         lavmodel = lavmodel,
         type = "free"
       ) # starting values
       attr(x, "iterations") <- 0L
       attr(x, "converged") <- FALSE
-      attr(x, "warn.txt") <- warn.txt
+      attr(x, "warn.txt") <- warn_txt
       attr(x, "control") <- lavoptions$control
       attr(x, "dx") <- numeric(0L)
       fx <- as.numeric(NA)
@@ -283,9 +283,9 @@ lav_lavaan_step11_estoptim <- function(lavdata = NULL, # nolint
     }
 
     # if a warning was produced, say it here
-    warn.txt <- attr(x, "warn.txt")
-    if (!is.null(warn.txt) && nchar(warn.txt) > 0L) {
-      lav_msg_warn(gettext(warn.txt))
+    warn_txt <- attr(x, "warn.txt")
+    if (!is.null(warn_txt) && nchar(warn_txt) > 0L) {
+      lav_msg_warn(gettext(warn_txt))
     }
 
     # in case of non-linear constraints: store final con.jac and con.lambda
@@ -350,12 +350,12 @@ lav_lavaan_step11_estoptim <- function(lavdata = NULL, # nolint
   lavoptim$warn.txt <- attr(x, "warn.txt")
   lavoptim$parscale <- attr(x, "parscale")
   lavoptim$partrace <- attr(x, "partrace")
-  fx.copy <- fx <- attr(x, "fx")
+  fx_copy <- fx <- attr(x, "fx")
   attributes(fx) <- NULL
   lavoptim$fx <- fx
-  lavoptim$fx.group <- attr(fx.copy, "fx.group")
-  if (!is.null(attr(fx.copy, "logl.group"))) {
-    lavoptim$logl.group <- attr(fx.copy, "logl.group")
+  lavoptim$fx.group <- attr(fx_copy, "fx.group")
+  if (!is.null(attr(fx_copy, "logl.group"))) {
+    lavoptim$logl.group <- attr(fx_copy, "logl.group")
     lavoptim$logl <- sum(lavoptim$logl.group)
   } else {
     lavoptim$logl.group <- as.numeric(NA)

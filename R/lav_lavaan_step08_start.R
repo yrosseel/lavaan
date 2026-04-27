@@ -1,4 +1,4 @@
-lav_lavaan_step08_start <- function(slotModel = NULL, # nolint
+lav_lavaan_step08_start <- function(slot_model = NULL, # nolint
                                     lavoptions = NULL,
                                     lavpartable = NULL,
                                     lavsamplestats = NULL,
@@ -17,13 +17,13 @@ lav_lavaan_step08_start <- function(slotModel = NULL, # nolint
   #     compute start column via lav_start and
   #       check via lav_start_check_cov if demanded (lavoptions$check.start)
 
-  samplestats.flag <- TRUE
+  samplestats_flag <- TRUE
   if (!is.null(lavoptions$samplestats) &&
       !lavoptions$samplestats) {
-    samplestats.flag <- FALSE
+    samplestats_flag <- FALSE
   }
 
-  if (is.null(slotModel)) {
+  if (is.null(slot_model)) {
     # check if we have provided a full parameter table as model = input
     if (!is.null(lavpartable$est) && is.character(lavoptions$start) &&
       lavoptions$start == "default") {
@@ -36,27 +36,27 @@ lav_lavaan_step08_start <- function(slotModel = NULL, # nolint
 
       # check for zero free variances and NA values
       if (is.null(lavpartable$lower)) {
-        zero.idx <- which(lavpartable$free > 0L &
+        zero_idx <- which(lavpartable$free > 0L &
           lavpartable$op == "~~" &
           lavpartable$lhs == lavpartable$rhs &
           lavpartable$est == 0)
       } else {
         # ignore zero variances on the boundary; new in 0.6-21
-        zero.idx <- which(lavpartable$free > 0L &
+        zero_idx <- which(lavpartable$free > 0L &
           lavpartable$op == "~~" &
           lavpartable$lhs == lavpartable$rhs &
           lavpartable$est == 0 &
           lavpartable$lower != 0)
       }
 
-      if (length(zero.idx) > 0L || any(is.na(lavpartable$est))) {
+      if (length(zero_idx) > 0L || any(is.na(lavpartable$est))) {
         lavpartable$start <- lav_start(
           start.method = lavoptions$start,
           lavpartable = lavpartable,
           lavsamplestats = lavsamplestats,
           model.type = lavoptions$model.type,
           reflect = FALSE,
-		      samplestats.flag = samplestats.flag,
+          samplestats.flag = samplestats_flag,
           # order.lv.by  = lavoptions$rotation.args$order.lv.by,
           order.lv.by = "none"
           )
@@ -93,27 +93,27 @@ lav_lavaan_step08_start <- function(slotModel = NULL, # nolint
       if (lav_verbose()) {
         cat("lavstart           ...")
       }
-      start.values <- lav_start(
+      start_values <- lav_start(
         start.method = lavoptions$start,
         lavpartable = lavpartable,
         lavsamplestats = lavsamplestats,
         lavh1 = lavh1,
         model.type = lavoptions$model.type,
         reflect = FALSE,
-        samplestats.flag = samplestats.flag,
+        samplestats.flag = samplestats_flag,
         # order.lv.by  = lavoptions$rotation.args$order.lv.by,
         order.lv.by = "none"
       )
 
       # sanity check
       if (!is.null(lavoptions$check.start) && lavoptions$check.start) {
-        start.values <- lav_start_check_cov(
+        start_values <- lav_start_check_cov(
           lavpartable = lavpartable,
-          start = start.values
+          start = start_values
         )
       }
 
-      lavpartable$start <- start.values
+      lavpartable$start <- start_values
       if (lav_verbose()) {
         cat(" done.\n")
       }

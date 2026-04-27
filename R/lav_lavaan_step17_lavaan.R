@@ -16,7 +16,7 @@ lav_lavaan_step17_lavaan <- function(lavmc = NULL,
                                      lavh1 = NULL,
                                      lavbaseline = NULL,
                                      laveqs = NULL,
-                                     start.time0 = NULL) {
+                                     start_time0 = NULL) {
   # # # # # # # # # #
   # #  17. lavaan # #
   # # # # # # # # # #
@@ -28,7 +28,7 @@ lav_lavaan_step17_lavaan <- function(lavmc = NULL,
   # if post-checking demanded and converged, execute
   #   lavInspect(lavaan, "post.check")
   #
-  timing$total <- (proc.time()[3] - start.time0)
+  timing$total <- (proc.time()[3] - start_time0)
   timing$start.time <- NULL
   lavpta <- lav_partable_attributes(lavpartable)
   lavpartable <- lav_partable_remove_cache(lavpartable)
@@ -71,7 +71,7 @@ lav_lavaan_step17_lavaan <- function(lavmc = NULL,
       cat(" done.\n")
     }
     lavaan@ParTable$est.std <- std$est.std
-	if (!is.null(std$se)) {
+  if (!is.null(std$se)) {
       lavaan@ParTable$se.std <- std$se
     }
   }

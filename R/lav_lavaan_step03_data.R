@@ -1,25 +1,25 @@
-lav_lavaan_step03_data <- function(slotData = NULL, # nolint
+lav_lavaan_step03_data <- function(slot_data = NULL, # nolint
                                    lavoptions = NULL,
-                                   ov.names = NULL,
-                                   ov.names.y = NULL,
+                                   ov_names = NULL,
+                                   ov_names_y = NULL,
                                    group = NULL,
                                    data = NULL,
                                    cluster = NULL,
-                                   ov.names.x = NULL,
-                                   ov.names.l = NULL,
+                                   ov_names_x = NULL,
+                                   ov_names_l = NULL,
                                    ordered = NULL,
-                                   sampling.weights = NULL,
-                                   sample.cov = NULL,
-                                   sample.mean = NULL,
-                                   sample.th = NULL,
-                                   sample.nobs = NULL,
-                                   slotParTable = NULL, # nolint
+                                   sampling_weights = NULL,
+                                   sample_cov = NULL,
+                                   sample_mean = NULL,
+                                   sample_th = NULL,
+                                   sample_nobs = NULL,
+                                   slot_par_table = NULL, # nolint
                                    ngroups = NULL,
                                    dotdotdot = NULL,
-                                   flat.model = NULL,
+                                   flat_model = NULL,
                                    model = NULL,
-                                   NACOV = NULL, # nolint
-                                   WLS.V = NULL) { # nolint
+                                   nacov = NULL, # nolint
+                                   wls_v = NULL) { # nolint
   # # # # # # # # # # #
   # #  3. lavdata  # #
   # # # # # # # # # # #
@@ -45,31 +45,31 @@ lav_lavaan_step03_data <- function(slotData = NULL, # nolint
   #   ngroups and lavdata$ngroups
   #                                       --> *** error *** if not
 
-  if (!is.null(slotData)) {
-    lavdata <- slotData
+  if (!is.null(slot_data)) {
+    lavdata <- slot_data
   } else {
     if (lav_verbose()) {
       cat("lavdata            ...")
     }
     # FIXME: ov.names should always contain both y and x!
-    tmp.ov.names <- if (lavoptions$conditional.x) {
-      ov.names.y
+    tmp_ov_names <- if (lavoptions$conditional.x) {
+      ov_names_y
     } else {
-      ov.names
+      ov_names
     }
     lavdata <- lav_lavdata(
       data = data,
       group = group,
       cluster = cluster,
-      ov.names = tmp.ov.names,
-      ov.names.x = ov.names.x,
-      ov.names.l = ov.names.l,
+      ov.names = tmp_ov_names,
+      ov.names.x = ov_names_x,
+      ov.names.l = ov_names_l,
       ordered = ordered,
-      sampling.weights = sampling.weights,
-      sample.cov = sample.cov,
-      sample.mean = sample.mean,
-      sample.th = sample.th,
-      sample.nobs = sample.nobs,
+      sampling.weights = sampling_weights,
+      sample.cov = sample_cov,
+      sample.mean = sample_mean,
+      sample.th = sample_th,
+      sample.nobs = sample_nobs,
       lavoptions = lavoptions
     )
 
@@ -81,7 +81,7 @@ lav_lavaan_step03_data <- function(slotData = NULL, # nolint
   if (lavdata@data.type == "none") {
     lavoptions$do.fit <- FALSE
     # check if 'model' was a fitted parameter table
-    lavoptions$start <- ifelse(is.null(flat.model$est), "simple", "est")
+    lavoptions$start <- ifelse(is.null(flat_model$est), "simple", "est")
     lavoptions$se <- "none"
     lavoptions$test <- "none"
   } else if (lavdata@data.type == "moment") {
@@ -96,14 +96,14 @@ lav_lavaan_step03_data <- function(slotData = NULL, # nolint
         "MLM", "MLMV", "MLR", "MLR",
         "ULSM", "ULSMV", "ULSMVS"
       )) &&
-        is.null(NACOV)) {
+        is.null(nacov)) {
         lav_msg_stop(gettextf(
           "estimator %s requires full data or user-provided NACOV", estimator))
       } else if (any(estimator == c(
         "WLS", "WLSM", "WLSMV",
         "WLSMVS", "DWLS"
       )) &&
-        is.null(WLS.V)) {
+        is.null(wls_v)) {
         lav_msg_stop(gettextf(
           "estimator %s requires full data or user-provided WLS.V and NACOV",
           estimator))
@@ -116,7 +116,7 @@ lav_lavaan_step03_data <- function(slotData = NULL, # nolint
     # more needed?
   }
   # sanity check
-  if (!is.null(slotParTable) || inherits(model, "lavaan")) {
+  if (!is.null(slot_par_table) || inherits(model, "lavaan")) {
     if (ngroups != lavdata@ngroups) {
       lav_msg_stop(gettext(
         "mismatch between number of groups in data

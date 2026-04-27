@@ -40,11 +40,11 @@ lav_lavaan_step00_parameters <- function(matchcall = NULL,
       auto.delta      = TRUE,
       auto.efa        = TRUE
     )
-    for (dflt.i in seq_along(defaults)) {
-      argname <- names(defaults)[dflt.i]
+    for (dflt_i in seq_along(defaults)) {
+      argname <- names(defaults)[dflt_i]
       if (is.null(mc[[argname]])) {
-        mc[[argname]] <- defaults[[dflt.i]]
-        ddd[[argname]] <- defaults[[dflt.i]]
+        mc[[argname]] <- defaults[[dflt_i]]
+        ddd[[argname]] <- defaults[[dflt_i]]
       }
     }
   }
@@ -81,13 +81,13 @@ lav_lavaan_step00_parameters <- function(matchcall = NULL,
 
 lav_lavaan_step00_checkdata <- function(data = NULL,
                                         dotdotdot = NULL,
-                                        sample.cov = NULL,
-                                        sample.nobs = NULL,
-                                        sample.mean = NULL,
-                                        sample.th = NULL,
-                                        NACOV = NULL, # nolint
-                                        WLS.V = NULL, # nolint
-                                        ov.order = NULL) {
+                                        sample_cov = NULL,
+                                        sample_nobs = NULL,
+                                        sample_mean = NULL,
+                                        sample_th = NULL,
+                                        nacov = NULL, # nolint
+                                        wls_v = NULL, # nolint
+                                        ov_order = NULL) {
   # if data not NULL:
   #   if it is an 'enriched' data.frame (e.g. a tibble), simplify to an
   #   ordinary data.frame
@@ -99,7 +99,7 @@ lav_lavaan_step00_checkdata <- function(data = NULL,
   #         in the function call to dotdotdot$...
   #             set data to NULL
   #   if it is a function --> ***error***
-  #   TODO: other tests are present in lav_lavdata(), should we copy them here ???
+  #   TODO: other tests are present in lav_lavdata(), should we copy them here?
   # if NACOV or WLS.V not NULL, set ov.order to "data"
 
   if (!is.null(data)) {
@@ -112,24 +112,24 @@ lav_lavaan_step00_checkdata <- function(data = NULL,
 
       # set required-data arguments
       if ("sample.cov" %in% names(data)) {
-        sample.cov <- data$sample.cov
+        sample_cov <- data$sample.cov
       } else {
         lav_msg_stop(gettext(
           "When data= is of class lavMoments, it must contain sample.cov"))
       }
 
       if ("sample.nobs" %in% names(data)) {
-        sample.nobs <- data$sample.nobs
+        sample_nobs <- data$sample.nobs
       } else {
         lav_msg_stop(gettext(
           "When data= is of class lavMoments, it must contain sample.nobs"))
       }
 
       # check for optional-data arguments
-      if ("sample.mean" %in% names(data)) sample.mean <- data$sample.mean
-      if ("sample.th" %in% names(data)) sample.th <- data$sample.th
-      if ("NACOV" %in% names(data)) NACOV <- data$NACOV # nolint
-      if ("WLS.V" %in% names(data)) WLS.V <- data$WLS.V # nolint
+      if ("sample.mean" %in% names(data)) sample_mean <- data$sample.mean
+      if ("sample.th" %in% names(data)) sample_th <- data$sample.th
+      if ("NACOV" %in% names(data)) nacov <- data$NACOV # nolint
+      if ("WLS.V" %in% names(data)) wls_v <- data$WLS.V # nolint
 
       # set other args not included in dotdotdot
       if (length(data$lavOptions)) {
@@ -163,17 +163,17 @@ lav_lavaan_step00_checkdata <- function(data = NULL,
   # ov.order="data" for now
   # until we have reliable code to re-arrange/select col/rows for
   # of NACOV/WLS.V based on the model-based ov.names
-  if (!is.null(NACOV) || !is.null(WLS.V)) {
-    if (ov.order != "force.model") { # used by sam()
-      ov.order <- "data"
+  if (!is.null(nacov) || !is.null(wls_v)) {
+    if (ov_order != "force.model") { # used by sam()
+      ov_order <- "data"
     } else {
-      ov.order <- "model"
+      ov_order <- "model"
     }
   }
 
   list(
-    data = data, dotdotdot = dotdotdot, sample.cov = sample.cov,
-    sample.nobs = sample.nobs, sample.mean = sample.mean,
-    sample.th = sample.th, NACOV = NACOV, WLS.V = WLS.V, ov.order = ov.order
+    data = data, dotdotdot = dotdotdot, sample.cov = sample_cov,
+    sample.nobs = sample_nobs, sample.mean = sample_mean,
+    sample.th = sample_th, NACOV = nacov, WLS.V = wls_v, ov.order = ov_order
   )
 }
