@@ -1,12 +1,21 @@
 # LDW 26 Mar 2024: use option settings and store in cache environment
 
 lavaan_cache_env <- new.env(parent = emptyenv())
+# The variables stored in lavaan_cache_env environment all have a prefix
+# to avoid conflicts. The prefixes used at the moment of writing 
+# (April 2026) are:
+#                      for options: opt_
+#    for trace debugging functions: trc_ and trace_
+#     for the lavaan syntax parser: mdl_
+# for tracking deprecated warnings: dpr_
+
 
 # # function to get or set the switch to use c++ code in lavaanC
 # lav_use_lavaanC <- uselavaanC <- function(x) {
 #   if (missing(x)) {
 #     if (!exists("opt.lavaanC", lavaan_cache_env)) {
-#       assign("opt.lavaanC", requireNamespace("lavaanC", quietly = TRUE), lavaan_cache_env)
+#       assign("opt.lavaanC", requireNamespace("lavaanC", quietly = TRUE),
+#               lavaan_cache_env)
 #     }
 #     return(get("opt.lavaanC", lavaan_cache_env))
 #   } else {
@@ -26,77 +35,77 @@ lavaan_cache_env <- new.env(parent = emptyenv())
 
 # functions to handle warn/debug/verbose options
 #             (no longer in 'standard' options)
-# if x not present returns the current value of opt.warn/debug/verbose
+# if x not present returns the current value of opt_warn/debug/verbose
 # if x present
 #   if x different from current value, assign x to current value and return TRUE
 #   else return FALSE
 lav_warn <- function(x) {
-  optwarn <- get0("opt.warn", lavaan_cache_env, ifnotfound = TRUE)
+  optwarn <- get0("opt_warn", lavaan_cache_env, ifnotfound = TRUE)
   if (missing(x)) {
-    return(optwarn)
+    optwarn
   } else {
     setwarn <- as.logical(x)
     if (setwarn != optwarn) {
       if (setwarn) {
         # because default TRUE, removing value is the same as setting to TRUE
-        rm("opt.warn", envir = lavaan_cache_env)
+        rm("opt_warn", envir = lavaan_cache_env)
       } else {
-        assign("opt.warn", FALSE, lavaan_cache_env)
+        assign("opt_warn", FALSE, lavaan_cache_env)
       }
-      return(TRUE)
+      TRUE
     } else {
-      return(FALSE)
+      FALSE
     }
   }
 }
 lav_debug <- function(x) {
-  optdebug <- get0("opt.debug", lavaan_cache_env, ifnotfound = FALSE)
+  optdebug <- get0("opt_debug", lavaan_cache_env, ifnotfound = FALSE)
   if (missing(x)) {
-    return(optdebug)
+    optdebug
   } else {
     setdebug <- as.logical(x)
     if (setdebug != optdebug) {
       if (setdebug) {
-        assign("opt.debug", TRUE, lavaan_cache_env)
+        assign("opt_debug", TRUE, lavaan_cache_env)
       } else {
         # because default FALSE, removing value is the same as setting to FALSE
-        rm("opt.debug", envir = lavaan_cache_env)
+        rm("opt_debug", envir = lavaan_cache_env)
       }
-      return(TRUE)
+      TRUE
     } else {
-      return(FALSE)
+      FALSE
     }
   }
 }
 lav_verbose <- function(x) {
-  optverbose <- get0("opt.verbose", lavaan_cache_env, ifnotfound = FALSE)
+  optverbose <- get0("opt_verbose", lavaan_cache_env, ifnotfound = FALSE)
   if (missing(x)) {
-    return(optverbose)
+    optverbose
   } else {
     setverbose <- as.logical(x)
     if (setverbose != optverbose) {
       if (setverbose) {
-        assign("opt.verbose", TRUE, lavaan_cache_env)
+        assign("opt_verbose", TRUE, lavaan_cache_env)
       } else {
         # because default FALSE, removing value is the same as setting to FALSE
-        rm("opt.verbose", envir = lavaan_cache_env)
+        rm("opt_verbose", envir = lavaan_cache_env)
       }
-      return(TRUE)
+      TRUE
     } else {
-      return(FALSE)
+      FALSE
     }
   }
 }
 
 # set the default options (including unspecified values "default")
 lav_options_default <- function() {
-  if (exists("opt.default", lavaan_cache_env)) {
-    opt <- get("opt.default", lavaan_cache_env)
+  if (exists("opt_default", lavaan_cache_env)) {
+    opt <- get("opt_default", lavaan_cache_env)
     return(opt)
   }
   # ---------------- preparation -----------------
-  opt.default <- list()
-  opt.check <- list()
+  opt_default <- list()
+  opt_check <- list()
   elm <- function(
     name = NULL,          # name of option, if length 2 first is sublist name
     dflt = NULL,          # default value
@@ -121,8 +130,8 @@ lav_options_default <- function() {
       list2store$chr <- chr
     }
     if (!is.null(nm)) {
-      first.in <- grepl("^\\[", nm)
-      last.in <- grepl("\\]$", nm)
+      first_in <- grepl("^\\[", nm)
+      last_in <- grepl("\\]$", nm)
       elems <- as.numeric(strsplit(gsub("[][ ]", "", nm), ",")[[1]])
       if (num2int) {
         elems[elems == -Inf] <- -2e9
@@ -130,7 +139,7 @@ lav_options_default <- function() {
         elems <- as.integer(elems)
       }
       list2store$nm <- list(bounds = elems,
-                            first.in = first.in, last.in = last.in)
+                            first.in = first_in, last.in = last_in)
     }
     if (bl) list2store$bl <- TRUE
     if (num2int) list2store$num2int <- TRUE
@@ -138,19 +147,19 @@ lav_options_default <- function() {
     # store default and list for checking
     if (length(name) == 1) name <- c("", name)
     if (name[1] != "") {
-      if (is.null(opt.default[[name[1]]])) { # make sure sublists exist
-        opt.default[[name[1]]] <<- list()
+      if (is.null(opt_default[[name[1]]])) { # make sure sublists exist
+        opt_default[[name[1]]] <<- list()
         sublist <- list()
         attr(sublist, "SUB") <- TRUE # indicate as sublist
-        opt.check[[name[1]]] <<- sublist
+        opt_check[[name[1]]] <<- sublist
       }
-      opt.default[[name[1]]][[name[2]]] <<- dflt
-      if (is.null(dflt)) opt.default[[name[1]]][name[2]] <<- list(NULL)
-      opt.check[[name[1]]][[name[2]]] <<- list2store
+      opt_default[[name[1]]][[name[2]]] <<- dflt
+      if (is.null(dflt)) opt_default[[name[1]]][name[2]] <<- list(NULL)
+      opt_check[[name[1]]][[name[2]]] <<- list2store
     } else {
-      opt.default[[name[2]]] <<- dflt
-      if (is.null(dflt)) opt.default[name[2]] <<- list(NULL)
-      opt.check[[name[2]]] <<- list2store
+      opt_default[[name[2]]] <<- dflt
+      if (is.null(dflt)) opt_default[name[2]] <<- list(NULL)
+      opt_check[[name[2]]] <<- list2store
     }
     NULL
   }
@@ -161,24 +170,24 @@ lav_options_default <- function() {
     if (length(name) == 1) name <- c("", name)
     if (length(from) == 1) from <- c("", from)
     if (from[1] != "") {
-      from.default <- opt.default[[from[1]]][[from[2]]]
-      from.check <- opt.check[[from[1]]][[from[2]]]
+      from_default <- opt_default[[from[1]]][[from[2]]]
+      from_check <- opt_check[[from[1]]][[from[2]]]
     } else {
-      from.default <- opt.default[[from[2]]]
-      from.check <- opt.check[[from[2]]]
+      from_default <- opt_default[[from[2]]]
+      from_check <- opt_check[[from[2]]]
     }
     if (name[1] != "") {
-      if (is.null(opt.default[[name[1]]])) { # make sure sublists exist
-        opt.default[[name[1]]] <<- list()
+      if (is.null(opt_default[[name[1]]])) { # make sure sublists exist
+        opt_default[[name[1]]] <<- list()
         sublist <- list()
         attr(sublist, "SUB") <- TRUE # indicate as sublist
-        opt.check[[name[1]]] <<- sublist
+        opt_check[[name[1]]] <<- sublist
       }
-      opt.default[[name[1]]][[name[2]]] <<- from.default
-      opt.check[[name[1]]][[name[2]]] <<- from.check
+      opt_default[[name[1]]][[name[2]]] <<- from_default
+      opt_check[[name[1]]][[name[2]]] <<- from_check
     } else {
-      opt.default[[name[2]]] <<- from.default
-      opt.check[[name[2]]] <<- from.check
+      opt_default[[name[2]]] <<- from_default
+      opt_check[[name[2]]] <<- from_check
     }
   }
   # ------------------------- store options --------------------------
@@ -496,18 +505,18 @@ lav_options_default <- function() {
   elm("categorical", "default", chr = "default", bl = TRUE)
 
   # sort list and sublists
-  for (nm in names(opt.default)) {
-      if (is.list(opt.default[[nm]]))
-        opt.default[[nm]] <- opt.default[[nm]][sort(names(opt.default[[nm]]))]
+  for (nm in names(opt_default)) {
+      if (is.list(opt_default[[nm]]))
+        opt_default[[nm]] <- opt_default[[nm]][sort(names(opt_default[[nm]]))]
     }
-  opt.default <- opt.default[sort(names(opt.default))]
+  opt_default <- opt_default[sort(names(opt_default))]
   # ------------- store info in lavaan environment ---------------
-  assign("opt.default", opt.default, lavaan_cache_env)
-  assign("opt.check", opt.check, lavaan_cache_env)
-  assign("opt.check.sigma.pd", "chol", lavaan_cache_env)
+  assign("opt_default", opt_default, lavaan_cache_env)
+  assign("opt_check", opt_check, lavaan_cache_env)
+  assign("opt_check_sigma_pd", "chol", lavaan_cache_env)
 
   # return defaults
-  return(opt.default)
+  opt_default
 }
 
 # public function
@@ -521,17 +530,17 @@ lavOptions <- function(x = NULL, default = NULL, mimic = "lavaan") { # nolint
       x <- tolower(x)
 
       # check if x is in names(lavoptions)
-      not.ok <- which(!x %in% names(lavoptions))
-      if (length(not.ok) > 0L) {
+      not_ok <- which(!x %in% names(lavoptions))
+      if (length(not_ok) > 0L) {
         lav_msg_warn(gettextf(
-          "option(s) %s not available", lav_msg_view(x[not.ok]))
+          "option(s) %s not available", lav_msg_view(x[not_ok]))
         )
-        x <- x[-not.ok]
+        x <- x[-not_ok]
       }
 
       # return requested option(s)
       if (length(x) == 0L) {
-        return(default)
+        default
       } else {
         lavoptions[x]
       }
