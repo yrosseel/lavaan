@@ -64,7 +64,7 @@ lav_lavaan_step04_partable <- function(slot_par_table = NULL, # nolint
     # }
     # }
     # if(lavoptions$conditional.x) {
-    #    tmp <- lav_partable_vnames(flat.model, 
+    #    tmp <- lav_partable_vnames(flat.model,
     #                  type = "ov.x", ov.x.fatal = TRUE)
     # }
     tmp_data_ov <- lavdata@ov

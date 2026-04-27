@@ -2,7 +2,7 @@
 
 lavaan_cache_env <- new.env(parent = emptyenv())
 # The variables stored in lavaan_cache_env environment all have a prefix
-# to avoid conflicts. The prefixes used at the moment of writing 
+# to avoid conflicts. The prefixes used at the moment of writing
 # (April 2026) are:
 #                      for options: opt_
 #    for trace debugging functions: trc_ and trace_

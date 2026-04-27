@@ -70,7 +70,7 @@ lav_lavaan_step10_cache <- function(slot_cache = NULL, # nolint
     tmp_ov_types <- lavdata@ov$type
     if (lavmodel@conditional.x && sum(lavmodel@nexo) > 0L) {
       # remove ov.x
-      tmp_ov_x_idx <- unlist(attr(lavpartable, "vidx")$ov_x)
+      tmp_ov_x_idx <- unlist(attr(lavpartable, "vidx")$ov.x)
       tmp_ov_types <- tmp_ov_types[-tmp_ov_x_idx]
     }
 
