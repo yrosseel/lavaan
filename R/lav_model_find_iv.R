@@ -6,7 +6,7 @@
 #   2) treating errors/disturbances as latent variables (as in the
 #      comprehensive RAM model); similar to miivs() in MIIVsem package
 #      [algorithm = "miivsem"]
-#   3) using an explicity expression (due to Albert Maydeu-Olivares) for
+#   3) using an explicit expression (due to Albert Maydeu-Olivares) for
 #      cov(u,y) [algorithm = "covuy"] (the default)
 #
 # YR 29 Dec 2025 - first version (bb2004 + miivsem)

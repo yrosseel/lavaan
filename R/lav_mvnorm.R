@@ -351,7 +351,7 @@ lav_mvnorm_dlogl_dmu <- function(Y = NULL,
     )
   }
 
-  # substract 'Mu' from Y
+  # subtract 'Mu' from Y
   Yc <- t(t(Y) - Mu)
 
   # weights
@@ -401,7 +401,7 @@ lav_mvnorm_dlogl_dSigma <- function(Y = NULL,
     MY <- out$center
     W.tilde <- SY + tcrossprod(MY - Mu)
   } else {
-    # substract 'Mu' from Y
+    # subtract 'Mu' from Y
     # Yc <- t( t(Y) - Mu )
     # W.tilde <- crossprod(Yc) / N
     W.tilde <- lav_matrix_cov(Y, Mu = Mu)
@@ -492,7 +492,7 @@ lav_mvnorm_dlogl_dmu_dvechsigma <- function(m_y = NULL,
     )
   }
 
-  # substract Mu
+  # subtract Mu
   m_yc <- t(t(m_y) - m_mu)
 
   # m_w_tilde
@@ -544,7 +544,7 @@ lav_mvnorm_scores_mu <- function(Y = NULL,
     )
   }
 
-  # substract Mu
+  # subtract Mu
   Yc <- t(t(Y) - Mu)
 
   # postmultiply with Sigma.inv
@@ -585,7 +585,7 @@ lav_mvnorm_scores_vech_sigma <- function(Y = NULL,
   # vech(Sigma.inv)
   isigma <- lav_matrix_vech(Sigma.inv)
 
-  # substract Mu
+  # subtract Mu
   Yc <- t(t(Y) - Mu)
 
   # postmultiply with Sigma.inv
@@ -596,7 +596,7 @@ lav_mvnorm_scores_vech_sigma <- function(Y = NULL,
   idx2 <- lav_matrix_vech_row_idx(P)
   Z <- Yc[, idx1] * Yc[, idx2]
 
-  # substract isigma from each row
+  # subtract isigma from each row
   SC <- t(t(Z) - isigma)
 
   # adjust for vech
@@ -637,7 +637,7 @@ lav_mvnorm_scores_mu_vech_sigma <- function(Y = NULL,
   # vech(Sigma.inv)
   isigma <- lav_matrix_vech(Sigma.inv)
 
-  # substract Mu
+  # subtract Mu
   Yc <- t(t(Y) - Mu)
 
   # postmultiply with Sigma.inv
@@ -648,7 +648,7 @@ lav_mvnorm_scores_mu_vech_sigma <- function(Y = NULL,
   idx2 <- lav_matrix_vech_row_idx(P)
   Z <- Yc[, idx1] * Yc[, idx2]
 
-  # substract isigma from each row
+  # subtract isigma from each row
   SC <- t(t(Z) - isigma)
 
   # adjust for lav_matrix_duplication_pre (not vech!)

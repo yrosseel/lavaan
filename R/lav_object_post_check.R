@@ -52,7 +52,7 @@ lav_object_post_check <- function(object) {
   }
 
   # 3. is THETA positive definite (but only for numeric variables)
-  # and if we not already warned for negative ov variances
+  # and if we have not already warned for negative ov variances
   if (!var.na && var.ov.ok) {
     THETA <- lavTech(object, "theta")
     for (g in 1:lavdata@ngroups) {

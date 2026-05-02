@@ -1,5 +1,5 @@
 # the multivariate normal distribution, unrestricted (h1)
-# - everything is evalued under the MLEs: Mu = ybar, Sigma = S
+# - everything is evaluated under the MLEs: Mu = ybar, Sigma = S
 
 # 1) loglikelihood h1 (from raw data, or sample statistics)
 # 4) hessian h1 around MLEs

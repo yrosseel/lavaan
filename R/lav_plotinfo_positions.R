@@ -11,7 +11,7 @@
 # The data.frames have new columns defined as follows:
 # nodes:
 #   rij: index of the row where the node will be placed.
-#   kolom: ndex of the column where the node will be placed.
+#   kolom: index of the column where the node will be placed.
 # edges
 #   vananker: character, anchor point for starting node.
 #   naaranker: character, anchor point for destination node.
@@ -20,7 +20,7 @@
 #   controlpt.row: real, row position of control point if the
 #     edge has to be drawn as a quadratic Beziers curve.
 #   labelbelow: logical, TRUE if label has to be positioned under
-#     the line, initalized FALSE.
+#     the line, initialized FALSE.
 #
 lav_plotinfo_positions <- function(
   plotinfo,

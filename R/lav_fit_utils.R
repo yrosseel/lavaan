@@ -1,6 +1,6 @@
 # utility functions needed to compute various (robust) fit measures:
 #
-# - lav_fit_catml_dwls (for 'robust' RMSEA/CFI if data is cateogrical)
+# - lav_fit_catml_dwls (for 'robust' RMSEA/CFI if data is categorical)
 # - lav_fit_fiml_corrected (correct RMSEA/CFI if data is incomplete)
 
 # compute scaling-factor (c.hat3) for fit.dwls, using fit.catml ingredients

@@ -182,7 +182,7 @@ lav_model_mu <- function(lavmodel = NULL, GLIST = NULL) {
     #
     # the logic is: Mu.hat is about 'y', not 'y-star'
     # the non-free intercepts (in TAU) are used when computing the
-    # model-implied thresholds, but the do not say anything about the
+    # model-implied thresholds, but they do not say anything about the
     # 'observed' mean of 'y'
     if (lavmodel@categorical) {
       ord.idx <- unique(lavmodel@th.idx[[g]][lavmodel@th.idx[[g]] > 0L])

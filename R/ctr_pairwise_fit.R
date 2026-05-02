@@ -15,7 +15,7 @@
 #
 #    out <- lavTablesFit(object, statistic = "G2", p.value = TRUE)
 #
-#    # Bonferonni adjusted p-value
+#    # Bonferroni adjusted p-value
 #    ntests <- length(out$lhs)
 #    out$alpha.adj <- alpha / ntests
 #    #out$pval <- pchisq(out$G2, df=out$df, lower.tail = FALSE)
@@ -41,7 +41,7 @@ lavTablesFitCp <- function(object, alpha = 0.05) {   # nolint
     statistic = "G2", p.value = TRUE
   )
 
-  # Bonferonni adjusted p-value
+  # Bonferroni adjusted p-value
   ntests <- length(tf$lhs)
   tf$alpha.adj <- alpha / ntests
 

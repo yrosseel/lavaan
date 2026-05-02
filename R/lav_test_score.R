@@ -3,7 +3,7 @@
 # this function can run in two modes:
 #
 # MODE 1: 'add'
-#   add new parameters that are currently not included in de model
+#   add new parameters that are currently not included in the model
 #   (aka fixed to zero), but should be released
 #
 # MODE 2: 'release' (the default)

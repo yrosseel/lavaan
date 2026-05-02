@@ -400,7 +400,7 @@ lav_model <- function(lavpartable = NULL,                          # nolint
   if (multilevel) {
     # store information about random slopes (if any)
     lv.names <- lav_partable_vnames(lavpartable, "lv")
-    # we should also add splitted-y names (x) to lv.names
+    # we should also add split-y names (x) to lv.names
     # FIXME: make this work for multiple work multilevel
     level.values <- lav_partable_level_values(lavpartable)
     ovx1 <- lav_object_vnames(lavpartable, "ov.x", level = level.values[1])

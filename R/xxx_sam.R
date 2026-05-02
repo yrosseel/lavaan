@@ -41,7 +41,7 @@ sam <- function(model = NULL,                      # nolint start
   sam_method <- tolower(sam.method)
   if (!sam_method %in% c("local", "global", "fsr", "cfsr")) {
     lav_msg_stop(gettextf("unknown option for sam_method: [%s]",
-                          "available options are local, global, fsr and cfs."))
+                          "available options are local, global, fsr and cfsr."))
   }
 
   # ------------- handling of warn/debug/verbose switches ----------
@@ -141,7 +141,7 @@ sam <- function(model = NULL,                      # nolint start
     fit <- model
     # restore options
     fit@Options <- fit@internal$sam.lavoptions
-    # extract other argments from FIT@internal, unless specified as arguments
+    # extract other arguments from FIT@internal, unless specified as arguments
     if (missing(mm.list)) {
       mm_list <- fit@internal$sam.mm.list
     } else {

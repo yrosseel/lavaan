@@ -17,7 +17,7 @@ lav_matrix_vec <- function(A) {          # nolint
 
 # vecr operator
 #
-# the vecr operator ransforms a matrix into
+# the vecr operator transforms a matrix into
 # a vector by stacking the *rows* of the matrix one underneath the other
 lav_matrix_vecr <- function(A) {         # nolint
   # faster way??
@@ -229,7 +229,7 @@ lav_matrix_vech_reverse <- lav_matrix_vechru_reverse <-
   }
 
 
-# vechr.reverse vechu.reversie (aka `lower2full')
+# vechr.reverse vechu.reverse (aka `lower2full')
 #
 # given the output of vechr(S) --or vechu(S) which is identical--
 # reconstruct S
@@ -271,7 +271,7 @@ lav_matrix_diag_idx <- function(n = 1L) {
 
 
 # return the *vector* indices of the diagonal elements of the LOWER part
-# of a symmatrix matrix of size 'n'
+# of a symmetric matrix of size 'n'
 lav_matrix_diagh_idx <- function(n = 1L) {
   n <- as.integer(n)
   if (n < 1L) {

@@ -116,7 +116,7 @@ lav_start <- function(start.method = "default",
       # no est column, but we use the start column
       start.user$est <- start.user$start
     } else if (!is.null(start.user$ustart)) {
-      # no ideal, but better than nothing
+      # not ideal, but better than nothing
       start.user$est <- start.user$ustart
     } else {
      lav_msg_stop(gettext(
@@ -127,7 +127,7 @@ lav_start <- function(start.method = "default",
 
 
   # global settings
-  # 0. everyting is zero
+  # 0. everything is zero
   start <- numeric(length(lavpartable$ustart))
 
   # 1. =~ factor loadings:
@@ -194,7 +194,7 @@ lav_start <- function(start.method = "default",
     lv.names.c <- unique(unlist(lv.names.c))
     lv.names.noc <- lv.names[!lv.names %in% lv.names.c]
 
-    # residual ov variances (including exo/ind, to be overriden)
+    # residual ov variances (including exo/ind, to be overridden)
     ov.var.idx <- which(lavpartable$group == group.values[g] &
       lavpartable$op == "~~" &
       lavpartable$lhs %in% ov.names.num &
@@ -824,12 +824,12 @@ lav_start <- function(start.method = "default",
 
           # new in 0.6-12
           # very special case: conditional.x with a combination of
-          # splitted-x and regular-x
+          # split-x and regular-x
           # here, we must:
-          # 1) replace var/cov of splitted-x by *residual* varcov
+          # 1) replace var/cov of split-x by *residual* varcov
           #    after regressing out regular-x
-          # 2) replace means of splitted-x by intercepts
-          # 3) fill splitted-x ~ regular-x regression coefficients
+          # 2) replace means of split-x by intercepts
+          # 3) fill split-x ~ regular-x regression coefficients
           if (conditional.x) {
             if (is.null(lavh1$implied$cov[[l]])) {
              lav_msg_stop(gettext(
@@ -845,7 +845,7 @@ lav_start <- function(start.method = "default",
             }
             ov.names.x1 <- this.block.x[!this.block.x %in% ov.names.x.block]
             ov.names.x2 <- ov.names.x.block
-            nx1 <- length(ov.names.x1) # splitted x
+            nx1 <- length(ov.names.x1) # split x
             nx2 <- length(ov.names.x2) # regular  x
             if (nx1 > 0L && nx2 > 0L) {
               # COV

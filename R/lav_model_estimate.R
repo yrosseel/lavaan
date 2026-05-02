@@ -433,7 +433,7 @@ lav_model_estimate <- function(lavmodel = NULL,
   }
 
   gradient_function_numerical <- function(x, verbose = FALSE, debug = FALSE) {
-    # NOTE: no need to 'tranform' anything here (var/eq)
+    # NOTE: no need to 'transform' anything here (var/eq)
     # this is done anyway in objective_function
 
     # numerical approximation using the Richardson method

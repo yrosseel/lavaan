@@ -934,7 +934,7 @@ lav_mvnorm_cluster_information_firstorder <- function(Y1 = NULL,
 
 # expected information 'h1' model
 # order: mu.w within, vech(sigma.w) within, mu.b between, vech(sigma.b) between
-# mu.w rows/cols that are splitted within/between are forced to zero
+# mu.w rows/cols that are split within/between are forced to zero
 lav_mvnorm_cluster_information_expected <- function(Lp = NULL,
                                                     Mu.W = NULL,
                                                     Sigma.W = NULL,
@@ -1209,7 +1209,7 @@ lav_mvnorm_cluster_information_expected_delta <- function(Lp = NULL,
 
 # observed information
 # order: mu.w within, vech(sigma.w) within, mu.b between, vech(sigma.b) between
-# mu.w rows/cols that are splitted within/between are forced to zero
+# mu.w rows/cols that are split within/between are forced to zero
 #
 # numerical approximation (for now)
 lav_mvnorm_cluster_information_observed <- function(Lp = NULL,
@@ -1584,7 +1584,7 @@ lav_mvnorm_cluster_em_h0 <- function(lavsamplestats = NULL,
 
     # fit two-group model
     local.partable <- lavpartable
-    # if a group column exists, delete it (it will be overriden anyway)
+    # if a group column exists, delete it (it will be overridden anyway)
     local.partable$group <- NULL
     level.idx <- which(names(local.partable) == "level")
     names(local.partable)[level.idx] <- "group"

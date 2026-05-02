@@ -29,7 +29,7 @@ lav_options_check_se <- function(opt = NULL) {
     }
   }
 
-  # handle generic 'robust' (except clustered/multilvel)
+  # handle generic 'robust' (except clustered/multilevel)
   # else if(opt$se == "robust" && !opt$.clustered && !opt$.multilevel) {
   #    if(opt$missing %in% c("ml", "ml.x")) {
   #        opt$se <- "robust.huber.white"

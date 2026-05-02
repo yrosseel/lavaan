@@ -27,7 +27,7 @@ lav_matrix_rotate <- function(a = NULL, # original matrix
                               std_ov = FALSE, # rescale ov
                               ov_var = NULL, # ov variances
                               algorithm = "gpa", # rotation algorithm
-                              reflect = TRUE, # refect sign
+                              reflect = TRUE, # reflect sign
                               order_lv_by = "index", # how to order the lv's
                               gpa_tol = 0.00001, # stopping tol gpa
                               tol = 1e-07, # stopping tol others
@@ -452,7 +452,7 @@ lav_matrix_rotate_gpa <- function(a = NULL, # original matrix
   }
 
   # using the current mm_lambda, evaluate the user-specified
-  # rotation criteron; return Q (the criterion) and its gradient Gq
+  # rotation criterion; return Q (the criterion) and its gradient Gq
   q_1 <- do.call(
     method_fname,
     c(list(mm_lambda = mm_lambda), method_args, list(grad = TRUE))
@@ -462,7 +462,7 @@ lav_matrix_rotate_gpa <- function(a = NULL, # original matrix
   q_current <- q_1
 
   # compute gradient GRAD of f() at ROT from the gradient Gq of Q at mm_lambda
-  # in a manner appropiate for orthogonal or oblique rotation
+  # in a manner appropriate for orthogonal or oblique rotation
   if (orthogonal) {
     grad <- crossprod(a, gq)
   } else {
@@ -624,7 +624,7 @@ lav_matrix_rotate_pairwise <- function(a = NULL, # original matrix
   }
 
   # using the current mm_lambda, evaluate the user-specified
-  # rotation criteron; return Q (the criterion) only
+  # rotation criterion; return Q (the criterion) only
   q_current <- do.call(method_fname, c(
     list(mm_lambda = mm_lambda),
     method_args, list(grad = FALSE)

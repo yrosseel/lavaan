@@ -1217,7 +1217,7 @@ lav_data_full <- function(data = NULL, # data.frame
     } # missing
   } # groups, at first level
 
-  # sampling weigths, again
+  # sampling weights, again
   if (is.null(sampling.weights)) {
     sampling.weights <- character(0L)
   } else {

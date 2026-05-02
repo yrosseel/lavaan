@@ -1,7 +1,7 @@
 # the multivariate normal distribution + missing values
 #  (so-called 'FIML')
 
-# 1) loglikelihood (from raw data, or sample statitics)
+# 1) loglikelihood (from raw data, or sample statistics)
 # 2) derivatives with respect to mu, Sigma, vech(Sigma)
 # 3) casewise scores with respect to mu, vech(Sigma), mu + vech(Sigma)
 # 4) hessian of mu + vech(Sigma)
@@ -834,7 +834,7 @@ lav_mvnorm_missing_scores_vech_sigma <- function(Y = NULL,
     # tcrossprod
     SC[case.idx, ] <- Yc[case.idx, idx1] * Yc[case.idx, idx2]
 
-    # substract isigma from each row
+    # subtract isigma from each row
     SC[case.idx, ] <- t(t(SC[case.idx, , drop = FALSE]) - isigma)
   }
 
@@ -936,7 +936,7 @@ lav_mvnorm_missing_scores_mu_vech_sigma <- function(Y = NULL,
     # tcrossprod
     SC[case.idx, ] <- Yc[case.idx, idx1] * Yc[case.idx, idx2]
 
-    # substract isigma from each row
+    # subtract isigma from each row
     SC[case.idx, ] <- t(t(SC[case.idx, , drop = FALSE]) - isigma)
   }
 
@@ -1411,7 +1411,7 @@ lav_mvnorm_missing_information_both <- function(Y = NULL,
     # tcrossprod
     SC[case.idx, ] <- Yc[case.idx, idx1] * Yc[case.idx, idx2]
 
-    # substract isigma from each row
+    # subtract isigma from each row
     SC[case.idx, ] <- t(t(SC[case.idx, , drop = FALSE]) - isigma)
   }
 

@@ -3,7 +3,7 @@
 # given a parameter table (PT), extract a part of the model:
 # eg.:
 # - only the measurement model (with saturated latent variables)
-# - only the stuctural part
+# - only the structural part
 # - a single measurement block
 # ...
 
@@ -148,7 +148,7 @@ lav_partable_subset_measurement_model <- function(PT = NULL,
     if (any(PT$op %in% c("==", "<", ">", ":="))) {
       # get the 'id' numbers and the labels involved in def/constraints
       PT2 <- PT
-      PT2$free <- PT$id # us 'id' numbers instead of 'free' indices
+      PT2$free <- PT$id # use 'id' numbers instead of 'free' indices
       ID <- lav_partable_constraints_label_id(PT2, def = TRUE)
       LABEL <- names(ID)
 
@@ -444,7 +444,7 @@ lav_partable_subset_structural_model <- function(PT = NULL,
     if (any(PT$op %in% c("==", "<", ">", ":="))) {
       # get the 'id' numbers and the labels involved in def/constraints
       PT2 <- PT
-      PT2$free <- PT$id # us 'id' numbers instead of 'free' indices
+      PT2$free <- PT$id # use 'id' numbers instead of 'free' indices
       ID <- lav_partable_constraints_label_id(PT2, def = TRUE)
       LABEL <- names(ID)
 
@@ -593,7 +593,7 @@ lav_partable_subset_structural_model <- function(PT = NULL,
           PT$user %in% c(0L, 3L)
       )
       if (length(exo.var.idx) > 0L) {
-        PT$ustart[exo.var.idx] <- as.numeric(NA) # to be overriden
+        PT$ustart[exo.var.idx] <- as.numeric(NA) # to be overridden
         PT$free[exo.var.idx] <- 0L
         PT$exo[exo.var.idx] <- 1L
         PT$user[exo.var.idx] <- 3L
@@ -607,7 +607,7 @@ lav_partable_subset_structural_model <- function(PT = NULL,
           PT$user == 0L
       )
       if (length(exo.int.idx) > 0L) {
-        PT$ustart[exo.int.idx] <- as.numeric(NA) # to be overriden
+        PT$ustart[exo.int.idx] <- as.numeric(NA) # to be overridden
         PT$free[exo.int.idx] <- 0L
         PT$exo[exo.int.idx] <- 1L
         PT$user[exo.int.idx] <- 3L

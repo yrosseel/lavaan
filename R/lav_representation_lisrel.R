@@ -3,7 +3,7 @@
 # - lav_model_mu
 # - derivative.F
 
-# initital version: YR 2011-01-21: LISREL stuff
+# initial version: YR 2011-01-21: LISREL stuff
 # updates:          YR 2011-12-01: group specific extraction
 #                   YR 2012-05-17: thresholds
 #                   YR 2021-10-04: rename representation.LISREL -> lav_lisrel
@@ -30,7 +30,7 @@ lav_lisrel <- function(lavpartable = NULL,
   composites <- any(lavpartable$op == "<~") && allow.composites
   group.w.free <- any(lavpartable$lhs == "group" & lavpartable$op == "%")
 
-  # gamma?only if conditional.x
+  # gamma? only if conditional.x
   if (any(lavpartable$op %in% c("~", "<~") & lavpartable$exo == 1L) &&
     !composites) {
     gamma <- TRUE
@@ -82,7 +82,7 @@ lav_lisrel <- function(lavpartable = NULL,
         unique(lavpartable$lhs[(lavpartable$op == "~" |
           lavpartable$op == "<~") &
           lavpartable$block == g])
-      # new in 0.6-12: fix for multilevel + conditional.x: splitted ov.x
+      # new in 0.6-12: fix for multilevel + conditional.x: split ov.x
       # are removed from ov.x
       if (nlevels > 1L) {
         if (ngroups == 1L) {
@@ -1326,7 +1326,7 @@ lav_lisrel_nu0 <- function(MLIST = NULL, sample.mean = NULL,
     return(MLIST$nu)
   }
 
-  # if nexo > 0, substract lambda %*% EETA
+  # if nexo > 0, subtract lambda %*% EETA
   if (length(ov.x.dummy.ov.idx) > 0L) {
     EETA <- lav_lisrel_eeta(MLIST,
       mean.x = NULL,
@@ -1415,7 +1415,7 @@ lav_lisrel_composites_variances <- function(MLIST = NULL,
 
   # check if IB is acyclic
   if (det(IB) != 1) {
-    # damn, we have an cyclic model; use nlminb()
+    # damn, we have a cyclic model; use nlminb()
     PSI <- lav_mlist_target_psi(
       IB.inv = IB.inv, PSI = PSI,
       target.psi = target.psi, y.idx = y.idx
@@ -1425,7 +1425,7 @@ lav_lisrel_composites_variances <- function(MLIST = NULL,
     # residual analytically; simply by computing the model-based
     # total variances of the RHS of each regression, and set the
     # residual of the y variable so that it is exactly equal to unity
-    # (yes, this will result in negative resdidual variances if needed)
+    # (yes, this will result in negative residual variances if needed)
 
     # ideally, we first sort the variables 'in topological order'; then
     # we need only one run; but here we are somewhat lazy, and we
@@ -1495,7 +1495,7 @@ lav_lisrel_composites_variances <- function(MLIST = NULL,
 #
 # new version YR 29 Oct 2024: try harder for psi elements (but this only works
 #                             for acyclic models)
-#             YR 01 Noc 2024: for non-acyclic models: use optimization
+#             YR 01 Nov 2024: for non-acyclic models: use optimization
 lav_lisrel_residual_variances <- function(MLIST = NULL,
                                           num.idx = NULL,
                                           ov.y.dummy.ov.idx = NULL,
@@ -1549,7 +1549,7 @@ lav_lisrel_residual_variances <- function(MLIST = NULL,
 
     # check if IB is acyclic
     if (det(IB) != 1) {
-      # damn, we have an cyclic model; use nlminb()
+      # damn, we have a cyclic model; use nlminb()
       PSI <- lav_mlist_target_psi(
         IB.inv = IB.inv, PSI = PSI,
         target.psi = target.psi, y.idx = y.idx
@@ -1559,7 +1559,7 @@ lav_lisrel_residual_variances <- function(MLIST = NULL,
       # residual analytically; simply by computing the model-based
       # total variances of the RHS of each regression, and set the
       # residual of the y variable so that it is exactly equal to unity
-      # (yes, this will result in negative resdidual variances if needed)
+      # (yes, this will result in negative residual variances if needed)
 
       # ideally, we first sort the variables 'in topological order'; then
       # we need only one run; but here we are somewhat lazy, and we

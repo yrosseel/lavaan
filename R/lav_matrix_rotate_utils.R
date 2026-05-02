@@ -81,7 +81,7 @@ lav_matrix_rotate_kaiser_weights <- function(a = NULL) {    # nolint
 # standardization
 # see also Browne (2001) page 128-129
 #
-# Note: the 'final' weights are mutliplied by the Kaiser weights (see CEFA)
+# Note: the 'final' weights are multiplied by the Kaiser weights (see CEFA)
 #
 lav_matrix_rotate_cm_weights <- function(a = NULL) {
   p <- nrow(a)
@@ -128,7 +128,7 @@ lav_matrix_rotate_promax <- function(x, m = 4, varimax_rot = NULL) {
   # 4. create rotated factor matrix
   z <- x %*% u
 
-  # 5. update rotation amtrix
+  # 5. update rotation matrix
   u <- varimax_rot %*% u # here we plugin the rotation matrix from varimax
 
   list(loadings = z, rotmat = u)

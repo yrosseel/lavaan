@@ -123,7 +123,7 @@ lav_mplus_expand_cmd <- function(cmd, alpha_start = TRUE) {
                       v_post, perl = TRUE)
       stopifnot(v_post_match[1L] > 0)
 
-      # match mat be under capture[1] or capture[2]
+      # match may be under capture[1] or capture[2]
       # because of alternation above
       which_capture <- which(attr(v_post_match, "capture.start") > 0)
 
@@ -1130,7 +1130,7 @@ lav_mplus_text_fields <- function(section_text, required) {
         strsplit(lav_mplus_trim(cmd[1L]), "\\s+", perl = TRUE)[[1L]]
 
       if (length(cmd_spacesplit) < 2L) {
-        # for future: make room for this function to prase things
+        # for future: make room for this function to parse things
         #     like just TECH13 (no rhs)
       } else {
         cmd_name <- lav_mplus_trim(cmd_spacesplit[1L])

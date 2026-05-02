@@ -1456,7 +1456,7 @@ setMethod(
     # anova() function anymore, and match.call will be screwed up
 
     # NOTE: we need to extract the names of the models from match.call here,
-    #       otherwise, we loose them in the call stack
+    #       otherwise, we lose them in the call stack
 
     mcall <- match.call(expand.dots = TRUE)
     dots <- list(...)

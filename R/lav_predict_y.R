@@ -213,7 +213,7 @@ lavPredictY <- function(object,                                    # nolint star
       # add group
       data_1[, lavdata@group] <- rep(as.character(NA), nrow(data_1))
       if (lavdata@missing == "listwise") {
-        # we will loose the group label of omitted variables!
+        # we will lose the group label of omitted variables!
         data_1[unlist(lavdata@case.idx), lavdata@group] <-
           rep(lavdata@group.label, unlist(lavdata@nobs))
       } else {

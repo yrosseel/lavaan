@@ -196,7 +196,7 @@ lav_predict_internal <- function(lavmodel = NULL,
       ), # was FALSE before?
       allow.single.case = TRUE
     )
-    # if ordered, check if number of levels is till the same (new in 0.6-7)
+    # if ordered, check if number of levels is still the same (new in 0.6-7)
     if (lavmodel@categorical) {
       orig.ordered.idx <- which(lavdata@ov$type == "ordered")
       orig.ordered.lev <- lavdata@ov$nlev[orig.ordered.idx]
@@ -380,7 +380,7 @@ lav_predict_internal <- function(lavmodel = NULL,
           fs.cov <- A %*% Sigma %*% t(A)
         }
         fs.cov.inv <- solve(fs.cov)
-        # Mahalobis distance
+        # Mahalanobis distance
         fs.c <- t(t(out[[g]]) - EETA[[g]]) # center
         df.squared <- rowSums((fs.c %*% fs.cov.inv) * fs.c)
         ret <- df.squared # squared!
@@ -594,7 +594,7 @@ lav_predict_internal <- function(lavmodel = NULL,
         # }
         outA.cov <- t(A) %*% Omega.e %*% A
         outA.cov.inv <- solve(outA.cov)
-        # Mahalobis distance
+        # Mahalanobis distance
         # outA.c <- t( t(outA) - outA.mean ) # center
         outA.c <- outA
         df.squared <- rowSums((outA.c %*% outA.cov.inv) * outA.c)
@@ -654,7 +654,7 @@ lav_predict_internal <- function(lavmodel = NULL,
       # add group
       DATA[, lavdata@group] <- rep(as.character(NA), nrow(DATA))
       if (lavdata@missing == "listwise") {
-        # we will loose the group label of omitted variables!
+        # we will lose the group label of omitted variables!
         DATA[unlist(lavdata@case.idx), lavdata@group] <-
           rep(lavdata@group.label, unlist(lavdata@nobs))
       } else {

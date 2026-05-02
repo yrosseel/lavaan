@@ -74,7 +74,7 @@ lav_sam_step2_se <- function(FIT = NULL, JOINT = NULL,
     PTS.free <- FIT.PA@ParTable$free
   }
 
-  # do we have 'extra' free parameter in FIT.PA that are not free in JOINT?
+  # do we have 'extra' free parameters in FIT.PA that are not free in JOINT?
   step2.rm.idx <- integer(0L)
   if (length(extra.id) > 0L) {
     id.idx <- which(FIT.PA@ParTable$id %in% extra.id &

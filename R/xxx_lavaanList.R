@@ -122,7 +122,7 @@ lavaanList <- function(model = NULL, # model                   # nolint start
     h1list <- loglik_list <- baseline_list <-
     implied_list <- fun_list <- list()
 
-  # prepare store.slotsd slots
+  # prepare store.slots slots
   if ("timing" %in% store_slots) {
     timing_list <- vector("list", length = ndat)
   }

@@ -132,7 +132,7 @@ lav_fsr_pa2si <- function(PT = NULL, LVINFO) {
     }
   }
 
-  # ree counter
+  # free counter
   idx.free <- which(free > 0)
   free[idx.free] <- max(PT$free) + 1:length(idx.free)
 

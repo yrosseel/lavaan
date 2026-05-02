@@ -1,7 +1,7 @@
 # handle bare-minimum partables
 # add some additional columns
 lav_partable_complete <- function(partable = NULL, start = TRUE) { # nolint
-  # check if we hava a data.frame
+  # check if we have a data.frame
   # if so, check for columns that are 'factor' and convert them to 'character'
   ovda <- attr(partable, "ovda")
   if (is.data.frame(partable)) {

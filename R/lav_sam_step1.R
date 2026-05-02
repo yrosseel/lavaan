@@ -111,14 +111,14 @@ lav_sam_step1 <- function(cmd = "sem", mm.list = NULL, mm.args = list(),
     } else if (lavoptions$estimator.orig == "PML") {
       lavoptions.mm$se <- "robust.huber.white"
     } else {
-      lavoptions.mm$se <- "standard" # may be overriden later
+      lavoptions.mm$se <- "standard" # may be overridden later
     }
   }
   # if(sam.method == "global") {
   #    lavoptions.mm$test <- "none"
   # }
   # we need the tests to create summary info about MM
-  lavoptions.mm$check.post <- FALSE # neg lv variances may be overriden
+  lavoptions.mm$check.post <- FALSE # neg lv variances may be overridden
   lavoptions.mm$check.gradient <- FALSE # too sensitive in large model (global)
   lavoptions.mm$baseline <- FALSE
   lavoptions.mm$bounds <- "wide.zerovar"

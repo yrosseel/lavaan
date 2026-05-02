@@ -71,7 +71,7 @@ lav_lavaan_step08_start <- function(slot_model = NULL, # nolint
       #
       # if (any(lavpartable$exo == 1L)) {
       #     # FIXME: there should be an easier way just to
-      #     # (re)initialize the the exogenous part of the model
+      #     # (re)initialize the exogenous part of the model
       #     tmp <- lav_start(start.method   = "lavaan", # not "simple"
       #                                                 # if fixed.x = TRUE
       #                    lavpartable    = lavpartable,

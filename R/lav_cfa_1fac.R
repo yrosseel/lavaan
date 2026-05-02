@@ -153,7 +153,7 @@ lav_cfa_1fac_fabin <- function(s, lambda_only = FALSE, method = "fabin3",
     if (method == "fabin3") {
       s33 <- s[idx3, idx3]
       tmp <- try(solve(s33, s31), silent = TRUE) # GaussJordanPivot is
-      # slighty more efficient
+      # slightly more efficient
       if (inherits(tmp, "try-error")) {
         lambda[i] <- sum(s23 * s31) / sum(s13^2)
       } else {

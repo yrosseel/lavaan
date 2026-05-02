@@ -143,7 +143,7 @@ lav_efa_pace <- function(S, nfactors = 1L, p.idx = seq_len(ncol(S)),
   gamma.m <- EV$values[1L + nvar - seq_len(nfactors)]
   Gamma.m <- diag(gamma.m, nrow = nfactors, ncol = nfactors)
 
-  # Cuceck 1991 page 37 bottom of the page:
+  # Cudeck 1991 page 37 bottom of the page:
   LAMBDA.dot <- S.sqrt %*% Omega.m %*% sqrt(diag(nfactors) - Gamma.m)
 
   if (use.R) {

@@ -267,7 +267,7 @@ lav_cfa_jamesstein_ce <- function(y = NULL,
   mean_1 <- colMeans(y_marker, na.rm = TRUE)
   var_1 <- apply(y_marker, 2, var, na.rm = TRUE)
 
-  # 1 - R per maker
+  # 1 - R per marker
   onemin_r <- n3 * resvars_markers / (n1 * var_1)
 
   # R per marker

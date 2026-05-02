@@ -37,7 +37,7 @@ lav_integration_gauss_hermite_xw <- function(n = 21L, revert = FALSE) {
     # Jn[(didx-1)[-1]] <- u # only lower matrix is used anyway
 
     # eigen decomposition
-    # FIXME: use specialized function for tridiagonal symmetrix matrix
+    # FIXME: use specialized function for tridiagonal symmetric matrix
     ev <- eigen(Jn, symmetric = TRUE)
     x <- ev$values
     tmp <- ev$vectors[1L, ]

@@ -33,7 +33,7 @@ lavTables <- function(object,
                       X2.min = 3.0, # needed for X2.{p/n}large
                       # pvalues for statistics?
                       p.value = FALSE,
-                      # Bonferonni
+                      # Bonferroni
                       # alpha.adj    = FALSE,
                       # output format
                       output = "data.frame",
@@ -879,7 +879,7 @@ lav_tables_pairwise_freq_cell <- function(lavdata = NULL,
         # compute two-way observed frequencies
         Y1 <- X[[g]][, idx1]
         Y2 <- X[[g]][, idx2]
-        # FREQ <- table(Y1, Y2) # we loose missings; useNA is ugly
+        # FREQ <- table(Y1, Y2) # we lose missings; useNA is ugly
         FREQ <- lav_bvord_freq(Y1, Y2)
 
         # >>>>>>>> HJ/MK PML CODE >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
@@ -1326,7 +1326,7 @@ lav_tables_cells_format <- function(out, lavdata = lavdata,
 
 
 # The function lav_tables_univariate_freq_cell computes the univariate (one-way) frequency tables.
-# The function closely folows the "logic" of the lavaan function
+# The function closely follows the "logic" of the lavaan function
 # lav_tables_pairwise_freq_cell.
 # The output is either a list or a data.frame depending on the value the logical
 # input argument as.data.frame. Either way, the same information is contained which is:
@@ -1337,7 +1337,7 @@ lav_tables_cells_format <- function(out, lavdata = lavdata,
 #    refers to when multi-group analysis.
 # d) an index vector with the name level which indicates which level within
 #    each ordinal variable each frequency refers to.
-# e) a vector nobs which gives how many cases where considered to compute the
+# e) a vector nobs which gives how many cases were considered to compute the
 #    corresponding frequency. Since we use the available data for each variable
 #    when missing=="available_cases" we expect these numbers to differ when
 #    missing values are present.

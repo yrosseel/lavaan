@@ -22,7 +22,7 @@ lav_constraints_parse <- function(partable = NULL, constraints = NULL,
     theta <- rep(0, length(partable$lhs))
   }
 
-  # number of free (but possibliy constrained) parameters
+  # number of free (but possibly constrained) parameters
   npar <- length(theta)
 
   # parse the constraints
@@ -165,7 +165,7 @@ lav_constraints_parse <- function(partable = NULL, constraints = NULL,
         ceq.JAC <- ceq.JAC[-zero.idx, , drop = FALSE]
         ceq.rhs <- ceq.rhs[-zero.idx]
         ceq.theta <- ceq.theta[-zero.idx]
-        # hm, how to hande these? indices no longer match rows of ceq.JAC!
+        # hm, how to handle these? indices no longer match rows of ceq.JAC!
         ceq.linear.idx <- ceq.linear.idx[!ceq.linear.idx %in% zero.idx]
         ceq.nonlinear.idx <- ceq.nonlinear.idx[!ceq.nonlinear.idx %in% zero.idx]
       }
@@ -184,7 +184,7 @@ lav_constraints_parse <- function(partable = NULL, constraints = NULL,
         cin.JAC <- cin.JAC[-zero.idx, , drop = FALSE]
         cin.rhs <- cin.rhs[-zero.idx]
         cin.theta <- cin.theta[-zero.idx]
-        # hm, how to hande these? indices no longer match rows of cin.JAC!
+        # hm, how to handle these? indices no longer match rows of cin.JAC!
         cin.linear.idx <- cin.linear.idx[!cin.linear.idx %in% zero.idx]
         cin.nonlinear.idx <- cin.nonlinear.idx[!cin.nonlinear.idx %in% zero.idx]
       }
@@ -232,7 +232,7 @@ lav_constraints_parse <- function(partable = NULL, constraints = NULL,
     ## we write eq.constraints.K = Q2
     ##          eq.constraints.k0 = b %*% qr.coef(QR, diag(npar)))
 
-    # compute range+null space of the jacobion (JAC) of the constraint
+    # compute range+null space of the jacobian (JAC) of the constraint
     # matrix
     # JAC <- lav_func_jacobian_complex(func = ceq.function,
     #           x = lavpartable$start[lavpartable$free > 0L]

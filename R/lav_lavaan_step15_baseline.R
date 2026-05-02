@@ -10,7 +10,7 @@ lav_lavaan_step15_baseline <- function(lavoptions = NULL,
 
   # if options$do.fit and options$test not "none" and options$baseline = TRUE
   #   try fit.indep <- lav_object_independence(...)
-  #   if not succesfull or not converged
+  #   if not successful or not converged
   #     ** warning **
   #     lavbaseline < list()
   #   else

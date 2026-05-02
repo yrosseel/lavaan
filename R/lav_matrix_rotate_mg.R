@@ -27,7 +27,7 @@ lav_matrix_rotate_mg <- function(a_list = NULL, # original matrices
                                  mg_algorithm = "pairwise",
                                  mg_agreement_method = "procrustes",
                                  mg_agreement_weight = 0.5,
-                                 reflect = TRUE, # refect sign
+                                 reflect = TRUE, # reflect sign
                                  order_lv_by = "index", # how to order the lv's
                                  # gpa.tol = 0.00001, # stopping tol gpa
                                  tol = 1e-07, # stopping tol others
@@ -427,7 +427,7 @@ lav_matrix_rotate_pairwise_mg <- function(a_list = NULL, # original matrices
   }
 
   # using the current LAMBDA, evaluate the user-specified
-  # rotation criteron; return Q (the criterion) only
+  # rotation criterion; return Q (the criterion) only
   q_current <- lav_matrix_rotate_mg_agreement(
     lambda_list = lambda_list, method_fname = method_fname,
     method_args = method_args,

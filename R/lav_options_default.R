@@ -112,7 +112,7 @@ lav_options_default <- function() {
     chr = NULL,           # valid strings (names) and replacement values
     nm = NULL,            # valid numeric interval
     bl = FALSE,           # logical OK?
-    oklen = c(1L, 1L),    # lengte > 1 OK, second negative to have a warning
+    oklen = c(1L, 1L),    # length > 1 OK, second negative to have a warning
     #                and not an error when length greater then abs(oklen[2])
     num2int = FALSE       # should numerical values be converted to int?
   ) {
@@ -165,7 +165,7 @@ lav_options_default <- function() {
   }
   elmdup <- function(
     name = NULL, # name(s) of option
-    from = NULL  # name(s) of option to duplicatie
+    from = NULL  # name(s) of option to duplicate
   ) {
     if (length(name) == 1) name <- c("", name)
     if (length(from) == 1) from <- c("", from)
@@ -211,7 +211,7 @@ lav_options_default <- function() {
   elm("meanstructure", "default", chr = "default", bl = TRUE)
   elm("int.ov.free", FALSE, bl = TRUE)
   elm("int.lv.free", FALSE, bl = TRUE)
-  elm("marker.int.zero", FALSE, bl = TRUE) # fix maker intercepts
+  elm("marker.int.zero", FALSE, bl = TRUE) # fix marker intercepts
   # free lv means
   elm("conditional.x", "default", chr = "default", bl = TRUE)
   elm("fixed.x", "default", chr = "default", bl = TRUE)

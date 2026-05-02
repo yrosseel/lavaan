@@ -90,7 +90,7 @@ lav_mvnorm_cluster_missing_loglik_samplestats_2l <- function(Y1 = NULL,
     GZ <- Z.c %*% sigma.zz.inv # for complete cases only
   }
 
-  # containters per cluster
+  # containers per cluster
   q.yy.b <- q.zy <- q.zz.b <- numeric(nclusters)
   IBZA.j.logdet <- numeric(nclusters)
   ALIST <- rep(list(matrix(
@@ -316,7 +316,7 @@ lav_mvnorm_cluster_missing_dlogl_2l_samplestats <- function(
     GZ <- Z.c %*% sigma.zz.inv # for complete cases only
   }
 
-  # containters per cluster
+  # containers per cluster
   # ALIST <- rep(list(matrix(0, length(both.idx),
   #                             length(both.idx))), nclusters)
   ALIST <- rep(list(matrix(0, ny, ny)), nclusters)
@@ -665,7 +665,7 @@ lav_mvnorm_cluster_missing_scores_2l <- function(
     GZ <- Z.c %*% sigma.zz.inv # for complete cases only
   }
 
-  # containters per cluster
+  # containers per cluster
   # ALIST <- rep(list(matrix(0, length(both.idx),
   #                             length(both.idx))), nclusters)
   ALIST <- rep(list(matrix(0, ny, ny)), nclusters)
@@ -1101,7 +1101,7 @@ lav_mvnorm_cluster_missing_information_firstorder <- function(
 
 # observed information
 # order: mu.w within, vech(sigma.w) within, mu.b between, vech(sigma.b) between
-# mu.w rows/cols that are splitted within/between are forced to zero
+# mu.w rows/cols that are split within/between are forced to zero
 #
 # numerical approximation (for now)
 lav_mvnorm_cluster_missing_information_observed <- function(

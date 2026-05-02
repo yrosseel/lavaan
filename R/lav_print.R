@@ -1528,7 +1528,7 @@ lav_print_loadings <- function(x, nd = 3L, cutoff = 0.3, dot.cutoff = 0.1,
   # unclass
   y <- unclass(x)
 
-  # round, and create a character matriy
+  # round, and create a character matrix
   y <- format(round(y, nd), width = 3L + nd, justify = "right")
 
   # right-align column names
@@ -1580,7 +1580,7 @@ lav_print_psi <- function(x, nd = 3L, alpha.level = 0.01, x.se = NULL) {
   # unclass
   y <- unclass(x)
 
-  # round, and create a character matriy
+  # round, and create a character matrix
   y <- format(round(y, nd), width = 3L + nd, justify = "right")
 
   # right-align column names

@@ -19,7 +19,7 @@
 # for the first variable, Y1, the length of the vector is the no of covariates;
 # to obtain this vector apply the function
 #                                   lav_model_pi()[row_correspondin_to_Y1, ]
-# PI.y2 is similar to PI.y2
+# PI.y2 is similar to PI.y1
 # missing.ind is of "character" value, taking the values listwise, pairwise,
 # available_cases; to obtain a value use lavdata@missing
 
@@ -119,7 +119,7 @@ lav_pml_uni_lik <- function(y1, th_y1, exo = NULL, pi_y1 = NULL) {
 #      namely which variable each thresholds refers to. This can be obtained by
 #      lavmodel@th.idx .
 # Output:
-# It is a vector, lenght= Sum_i(ci), i.e. the sum of the response categories of
+# It is a vector, length= Sum_i(ci), i.e. the sum of the response categories of
 # all ordinal variables. The vector contains the model-based univariate
 # probabilities pi(xi=a).
 
@@ -201,10 +201,10 @@ lav_pml_dbilogl_dpar_x <- function(y1, y2, exo, rho,
 
 
   # w.r.t. th.y1, mean tau tilde
-  # derivarive bivariate prob w.r.t. tau^xi_ci, see formula in paper 2012
+  # derivative bivariate prob w.r.t. tau^xi_ci, see formula in paper 2012
   y1_z1 <- dnorm(th_y1_z1) * (pnorm((th_y2_z1 - rho * th_y1_z1) / r) -
     pnorm((th_y2_z2 - rho * th_y1_z1) / r))
-  # derivarive bivariate prob w.r.t. tau^xi_(ci-1),
+  # derivative bivariate prob w.r.t. tau^xi_(ci-1),
   y1_z2 <- (-1) * (dnorm(th_y1_z2) * (pnorm((th_y2_z1 - rho * th_y1_z2) / r) -
     pnorm((th_y2_z2 - rho * th_y1_z2) / r)))
 
@@ -221,10 +221,10 @@ lav_pml_dbilogl_dpar_x <- function(y1, y2, exo, rho,
   dx_th_tilde_y1[is.na(dx_th_tilde_y1)] <- 0
 
   # w.r.t. th.y2, mean tau tilde
-  # derivarive bivariate prob w.r.t. tau^xi_ci, see formula in paper 2012
+  # derivative bivariate prob w.r.t. tau^xi_ci, see formula in paper 2012
   y2_z1 <- dnorm(th_y2_z1) * (pnorm((th_y1_z1 - rho * th_y2_z1) / r) -
     pnorm((th_y1_z2 - rho * th_y2_z1) / r))
-  # derivarive bivariate prob w.r.t. tau^xi_(ci-1),
+  # derivative bivariate prob w.r.t. tau^xi_(ci-1),
   y2_z2 <- (-1) * (dnorm(th_y2_z2) * (pnorm((th_y1_z1 - rho * th_y2_z2) / r) -
     pnorm((th_y1_z2 - rho * th_y2_z2) / r)))
   # allocate the derivatives at the right column casewise
@@ -241,7 +241,7 @@ lav_pml_dbilogl_dpar_x <- function(y1, y2, exo, rho,
 
 
   # w.r.t. rho
-  # derivarive bivariate prob w.r.t. rho, see formula in paper 2012
+  # derivative bivariate prob w.r.t. rho, see formula in paper 2012
   dbivprob_wrt_rho <- (lav_dbinorm(th_y1_z1, th_y2_z1, rho) -
     lav_dbinorm(th_y1_z2, th_y2_z1, rho) -
     lav_dbinorm(th_y1_z1, th_y2_z2, rho) +
@@ -314,9 +314,9 @@ lav_pml_uni_scores <- function(y1, th_y1, exo = NULL, sl_y1 = NULL,
   )
 
   # w.r.t. th.y1
-  # derivarive of the univariate prob w.r.t. to the upper limit threshold
+  # derivative of the univariate prob w.r.t. to the upper limit threshold
   y1_z1 <- dnorm(th_y1_z1)
-  # derivarive of the univariate prob w.r.t. to the lower limit threshold
+  # derivative of the univariate prob w.r.t. to the lower limit threshold
   y1_z2 <- (-1) * dnorm(th_y1_z2)
 
   # allocate the derivatives at the right column casewise

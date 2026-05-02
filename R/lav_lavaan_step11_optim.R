@@ -20,18 +20,18 @@ lav_lavaan_step11_estoptim <- function(lavdata = NULL, # nolint
   #   case "gn"
   #     try x <- lav_optim_gn(...)
   #   case else
-  #     set 1 in lavoptions$optim.attempts is it wasn't specified
+  #     set 1 in lavoptions$optim.attempts if it wasn't specified
   #     try x <- lav_model_estimate(...)
-  #     if not successfull and optim.attempts > 1L
+  #     if not successful and optim.attempts > 1L
   #       try x <- lav_optim_estimate(...) with
   #         options$optim.parscale = "standardized"
-  #       if not successfull and optim.attempts > 2L
+  #       if not successful and optim.attempts > 2L
   #         try x <- lav_optim_estimate(...) with start = "simple"
-  #         if not successfull and optim.attempts > 3L
+  #         if not successful and optim.attempts > 3L
   #           try x <- lav_optim_estimate(...) with
   #             options$optim.parscale = "standardized" and start = "simple"
   #   end select
-  #   if x not succesfully computed
+  #   if x not successfully computed
   #     ** warning **
   #     set starting values and appropriate attributes in x
   #   in case of non-linear constraints: store final con.jac and
@@ -42,7 +42,7 @@ lav_lavaan_step11_estoptim <- function(lavdata = NULL, # nolint
   #   initialize x and attributes (iterations, converged, warn.txt,
   #     control, dx) of x
   #   try fx <- lav_model_objective
-  #   if not successfull
+  #   if not successful
   #     fx = NA_real_
   #     attribute fx.group of fx = NA_real_
   #   store fx in attribute "fx" of x

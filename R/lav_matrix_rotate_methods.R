@@ -384,7 +384,7 @@ lav_matrix_rotate_bentler <- function(mm_lambda = NULL, ..., grad = FALSE) { # n
 # only for sequential use:
 # - tandem1 is used to determine the number of factors
 #   (it removes the minor factors)
-# - tandomII is used for final rotation
+# - tandem2 is used for final rotation
 #
 lav_matrix_rotate_tandem1 <- function(mm_lambda, ..., grad = FALSE) { # nolint
   l2 <- mm_lambda * mm_lambda
@@ -597,7 +597,7 @@ lav_matrix_rotate_mg_agreement <- function(lambda_list, method_fname = "geomin",
       g2 <- pairs[2L, p]
       diff <- (lambda_list[[g1]] - lambda_list[[g2]])
       diff2 <- diff * diff
-      # FiXME: should we 'weight' the groups, based on sample size?
+      # FIXME: should we 'weight' the groups, based on sample size?
       a_mg <- a_mg + sum(diff2)
     }
   } else {

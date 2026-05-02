@@ -477,7 +477,7 @@ muthen1984 <- function(Data = NULL,
   if (any("numeric" %in% ov.types)) {
     COV <- lav_cor2cov(R = COR, sds = sqrt(unlist(VAR)))
 
-    # construct H matrix to apply delta rule (for the tranformation
+    # construct H matrix to apply delta rule (for the transformation
     # of rho_ij to cov_ij)
     H11 <- diag(NROW(A11))
     H12 <- matrix(0, NROW(A11), NCOL(A22))

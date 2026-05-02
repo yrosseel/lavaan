@@ -170,7 +170,7 @@ lav_mvreg_dlogl_dbeta <- function(Y = NULL,
     )
   }
 
-  # substract 'X %*% Beta' from Y
+  # subtract 'X %*% Beta' from Y
   RES <- Y - X %*% Beta
 
   # derivative
@@ -206,7 +206,7 @@ lav_mvreg_dlogl_drescov <- function(Y = NULL,
     )
   }
 
-  # substract 'X %*% Beta' from Y
+  # subtract 'X %*% Beta' from Y
   RES <- Y - X %*% Beta
 
   # W.tilde
@@ -245,7 +245,7 @@ lav_mvreg_dlogl_dvechrescov <- function(Y = NULL,
     )
   }
 
-  # substract 'X %*% Beta' from Y
+  # subtract 'X %*% Beta' from Y
   RES <- Y - X %*% Beta
 
   # W.tilde
@@ -292,7 +292,7 @@ lav_mvreg_scores_beta <- function(Y = NULL,
     )
   }
 
-  # substract Mu
+  # subtract Mu
   RES <- Y - X %*% Beta
 
   # post-multiply with res.cov.inv
@@ -335,7 +335,7 @@ lav_mvreg_scores_vech_sigma <- function(Y = NULL,
   # vech(res.cov.inv)
   isigma <- lav_matrix_vech(res.cov.inv)
 
-  # substract X %*% Beta
+  # subtract X %*% Beta
   RES <- Y - X %*% Beta
 
   # postmultiply with res.cov.inv
@@ -346,7 +346,7 @@ lav_mvreg_scores_vech_sigma <- function(Y = NULL,
   idx2 <- lav_matrix_vech_row_idx(Q)
   Z <- RES[, idx1] * RES[, idx2]
 
-  # substract isigma from each row
+  # subtract isigma from each row
   SC <- t(t(Z) - isigma)
 
   # adjust for vech (and avoiding the 1/2 factor)
@@ -387,7 +387,7 @@ lav_mvreg_scores_beta_vech_sigma <- function(Y = NULL,
   # vech(res.cov.inv)
   isigma <- lav_matrix_vech(res.cov.inv)
 
-  # substract X %*% Beta
+  # subtract X %*% Beta
   RES <- Y - X %*% Beta
 
   # postmultiply with res.cov.inv
@@ -401,7 +401,7 @@ lav_mvreg_scores_beta_vech_sigma <- function(Y = NULL,
   idx2 <- lav_matrix_vech_row_idx(Q)
   Z <- RES[, idx1] * RES[, idx2]
 
-  # substract isigma from each row
+  # subtract isigma from each row
   SC <- t(t(Z) - isigma)
 
   # adjust for vech (and avoiding the 1/2 factor)

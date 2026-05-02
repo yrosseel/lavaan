@@ -25,7 +25,7 @@ lav_cfa_lambda2thetapsi <- function(lambda = NULL, s = NULL, s_inv = NULL,
     }
     t_lw <- crossprod(mm_lambda, m_w)
     m <- solve(t_lw %*% mm_lambda, t_lw) # GLS mapping
-    # d <- W %*% mm_lambda %*% M # symmmetric
+    # d <- W %*% mm_lambda %*% M # symmetric
     d <- crossprod(m, t_lw)
     # theta <- solve(W*W - d*d, diag(W %*% S %*% W - d %*% S %*% d))
     theta <- try(solve(m_w * m_w - d * d, diag(m_w - d)), # because W == S^{-1}
@@ -53,7 +53,7 @@ lav_cfa_lambda2thetapsi <- function(lambda = NULL, s = NULL, s_inv = NULL,
   }
   theta_nobounds <- theta
 
-  # ALWAYS check bounds for theta (only to to compute PSI)!
+  # ALWAYS check bounds for theta (only to compute PSI)!
   theta_bounds <- TRUE
   if (theta_bounds) {
     diag_s <- diag(s)
@@ -197,8 +197,8 @@ lav_cfa_theta_spearman <- function(s, bounds = "wide") {
       h2[h2 < 0] <- 0
       h2[h2 > 1] <- 1
     } else if (bounds == "wide") {
-      h2[h2 < -0.05] <- -0.05 # correponds to lower bound ov.var "wide"
-      h2[h2 > +1.20] <- +1.20 # correponds to upper bound ov.var "wide"
+      h2[h2 < -0.05] <- -0.05 # corresponds to lower bound ov.var "wide"
+      h2[h2 > +1.20] <- +1.20 # corresponds to upper bound ov.var "wide"
     }
     out[p_idx] <- (1 - h2) * s[p_idx, p_idx]
   }

@@ -233,7 +233,7 @@ lav_partable_indep_or_unrestricted <- function(lavobject = NULL,
       # only for multilevel, overwrite sample.cov and sample.mean
       if (nlevels > 1L) {
         if (independent) {
-          # beter use lavdata@Lp[[g]]$ov.x.idx??
+          # better use lavdata@Lp[[g]]$ov.x.idx??
           # in case we have x/y mismatch across levels?
           ov.x.idx <- lavpta$vidx$ov.x[[b]]
           ov.names.x <- lavpta$vnames$ov.x[[b]]

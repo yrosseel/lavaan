@@ -129,7 +129,7 @@ lav_pml_plrt <- function(lavobject = NULL, lavmodel = NULL, lavdata = NULL,
   ##### Section 1. Compute the asymptotic mean and variance
   #####            of the first quadratic quantity
   # Below I assume that lavobject is the output of lavaan function. I guess
-  # vcov(lavobject) can be substituted by VCOV object insed lavaan function
+  # vcov(lavobject) can be substituted by VCOV object inside lavaan function
   # defined at lines 703 -708. But what is the object inside lavaan function
   # for getHessian(lavobject)?
   if (is.null(vcov_1)) {

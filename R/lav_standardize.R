@@ -227,7 +227,7 @@ lav_standardize_lv <- function(lavobject = NULL,
     # 3b. "~~" lv
     # ATTENTION: in Mplus 4.1, the off-diagonal residual covariances
     #            were computed by the formula cov(i,j) / sqrt(i.var*j.var)
-    #            were i.var and j.var where diagonal elements of ETA
+    #            where i.var and j.var were diagonal elements of ETA
     #
     #            in Mplus 6.1 (but also AMOS and EQS), the i.var and j.var
     #            elements are the 'PSI' diagonal elements!!
@@ -447,7 +447,7 @@ lav_standardize_all <- function(lavobject = NULL,
     # 3a. "~~" ov
     # ATTENTION: in Mplus 4.1, the off-diagonal residual covariances
     #            were computed by the formula cov(i,j) / sqrt(i.var*j.var)
-    #            were i.var and j.var where diagonal elements of OV
+    #            where i.var and j.var were diagonal elements of OV
     #
     #            in Mplus 6.1 (but also AMOS and EQS), the i.var and j.var
     #            elements are the 'THETA' diagonal elements!!
@@ -686,7 +686,7 @@ lav_standardize_all_nox <- function(lavobject = NULL,
     # 3a. "~~" ov
     # ATTENTION: in Mplus 4.1, the off-diagonal residual covariances
     #            were computed by the formula cov(i,j) / sqrt(i.var*j.var)
-    #            were i.var and j.var where diagonal elements of OV
+    #            where i.var and j.var were diagonal elements of OV
     #
     #            in Mplus 6.1 (but also AMOS and EQS), the i.var and j.var
     #            elements are the 'THETA' diagonal elements!!
@@ -853,7 +853,7 @@ lav_unstandardize_ov <- function(partable, ov.var = NULL, cov.std = TRUE) {
     # 3a. "~~" ov
     # ATTENTION: in Mplus 4.1, the off-diagonal residual covariances
     #            were computed by the formula cov(i,j) / sqrt(i.var*j.var)
-    #            were i.var and j.var where diagonal elements of OV
+    #            where i.var and j.var were diagonal elements of OV
     #
     #            in Mplus 6.1 (but also AMOS and EQS), the i.var and j.var
     #            elements are the 'THETA' diagonal elements!!

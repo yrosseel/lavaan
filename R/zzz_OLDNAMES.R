@@ -1,8 +1,8 @@
 # keep 'old' names for some function names that have been used
 # (or are still being used) by external packages
-# rsem ==> tools::testinstalledpackages succesfull without next line
+# rsem ==> tools::testinstalledpackages successful without next line
 # computeExpectedInformation <- lav_model_information_expected
-# only for simsem ==> tools::testinstalledpackages succesfull without next line
+# only for simsem ==> tools::testinstalledpackages successful without next line
 
 # used in bain
 getParameterLabels <- lav_partable_labels                           # nolint start

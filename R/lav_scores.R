@@ -303,7 +303,7 @@ lav_scores_wls <- function(ntab = 0L,
     xd
   }
 
-  # containere for scores
+  # container for scores
   score_matrix <- matrix(NA, ntot, npar)
 
   # Delta matrix
@@ -363,7 +363,7 @@ lav_scores_ls <- function(ntab = 0L,
                           lavmodel = NULL,
                           lavoptions = NULL) {
 
-  # containere for scores
+  # container for scores
   score_matrix <- matrix(NA, ntot, npar)
 
   # estimator

@@ -239,7 +239,7 @@ lav_partable_flat <- function(FLAT = NULL, # nolint
       # but we add 'regressions' instead (see below)
       ov.names.x1 <- ov.names.x[!ov.names.x %in% ov.names.x.block]
       ov.names.x2 <- ov.names.x.block
-      nx1 <- length(ov.names.x1) # splitted x
+      nx1 <- length(ov.names.x1) # split x
       nx2 <- length(ov.names.x2) # regular  x
       if (nx1 > 0L) {
         idx <- lower.tri(matrix(0, nx1, nx1), diag = TRUE)
@@ -341,10 +341,10 @@ lav_partable_flat <- function(FLAT = NULL, # nolint
     # but we add 'regressions' instead!
     ov.names.x1 <- ov.names.x[!ov.names.x %in% ov.names.x.block]
     ov.names.x2 <- ov.names.x.block
-    nx1 <- length(ov.names.x1) # splitted x
+    nx1 <- length(ov.names.x1) # split x
     nx2 <- length(ov.names.x2) # regular  x
     if (nx1 > 0L && nx2 > 0L) {
-      # add regressions for splitted-x ~ regular-x
+      # add regressions for split-x ~ regular-x
       lhs <- c(lhs, rep(ov.names.x1, times = nx2))
       op <- c(op, rep("~", nx2 * nx1))
       rhs <- c(rhs, rep(ov.names.x2, each = nx1))
@@ -431,7 +431,7 @@ lav_partable_flat <- function(FLAT = NULL, # nolint
   )
   mod.idx <- c(tmp.user$mod.idx, tmp.default$mod.idx)
 
-  # by default: everyting is free!
+  # by default: everything is free!
   free <- rep(1L, length(lhs))
   ustart <- rep(as.numeric(NA), length(lhs))
   # label   <- paste(lhs, op, rhs, sep="")
@@ -637,7 +637,7 @@ lav_partable_flat <- function(FLAT = NULL, # nolint
 
   # 5. handle exogenous `x' covariates
   # usually, ov.names.x.block == ov.names.x
-  # except if multilevel, where 'splitted' ov.x are treated as endogenous
+  # except if multilevel, where 'split' ov.x are treated as endogenous
 
   # 5a conditional.x = FALSE
   if (!conditional.x && fixed.x && length(ov.names.x.block) > 0) {
@@ -646,7 +646,7 @@ lav_partable_flat <- function(FLAT = NULL, # nolint
       rhs %in% ov.names.x.block &
       lhs %in% ov.names.x.block &
       user == 0L)
-    ustart[exo.var.idx] <- as.numeric(NA) # should be overriden later!
+    ustart[exo.var.idx] <- as.numeric(NA) # should be overridden later!
     free[exo.var.idx] <- 0L
     exo[exo.var.idx] <- 1L
 
@@ -654,7 +654,7 @@ lav_partable_flat <- function(FLAT = NULL, # nolint
     exo.int.idx <- which(op == "~1" &
       lhs %in% ov.names.x.block &
       user == 0L)
-    ustart[exo.int.idx] <- as.numeric(NA) # should be overriden later!
+    ustart[exo.int.idx] <- as.numeric(NA) # should be overridden later!
     free[exo.int.idx] <- 0L
     exo[exo.int.idx] <- 1L
   }
@@ -667,7 +667,7 @@ lav_partable_flat <- function(FLAT = NULL, # nolint
       lhs %in% ov.names.x &
       user == 0L)
     if (fixed.x) {
-      ustart[exo.var.idx] <- as.numeric(NA) # should be overriden later!
+      ustart[exo.var.idx] <- as.numeric(NA) # should be overridden later!
       free[exo.var.idx] <- 0L
     }
     exo[exo.var.idx] <- 1L
@@ -677,7 +677,7 @@ lav_partable_flat <- function(FLAT = NULL, # nolint
       lhs %in% ov.names.x &
       user == 0L)
     if (fixed.x) {
-      ustart[exo.int.idx] <- as.numeric(NA) # should be overriden later!
+      ustart[exo.int.idx] <- as.numeric(NA) # should be overridden later!
       free[exo.int.idx] <- 0L
     }
     exo[exo.int.idx] <- 1L
@@ -688,12 +688,12 @@ lav_partable_flat <- function(FLAT = NULL, # nolint
       rhs %in% ov.names.x)
     exo[exo.reg.idx] <- 1L
 
-    # 3b regression splitted.x ~ regular.x
+    # 3b regression split.x ~ regular.x
     exo.reg2.idx <- which(op %in% c("~", "<~") &
       lhs %in% ov.names.x &
       rhs %in% ov.names.x)
     if (fixed.x) {
-      ustart[exo.reg2.idx] <- as.numeric(NA) # should be overriden later!
+      ustart[exo.reg2.idx] <- as.numeric(NA) # should be overridden later!
       free[exo.reg2.idx] <- 0L
     }
     exo[exo.reg2.idx] <- 1L
@@ -750,7 +750,7 @@ lav_partable_flat <- function(FLAT = NULL, # nolint
   if (ngroups > 1) {
 
     # only if "loadings" in group.equal and !std.lv:
-    # construct tempory tmp.list to obtain lv.marker
+    # construct temporary tmp.list to obtain lv.marker
     if (!std.lv & "loadings" %in% group.equal) {
       tmp.list <- list(
         id          = seq_along(lhs),

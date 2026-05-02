@@ -48,7 +48,7 @@ lavListTech <- function(object,                                          # nolin
   )
 }
 
-# just in case some uses lavInspect on a lavaanList object
+# just in case someone uses lavInspect on a lavaanList object
 lav_lavaanlist_lavinspect <- function(object,
                                   what = "free",
                                   add.labels = TRUE,                     # nolint start

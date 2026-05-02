@@ -1,7 +1,7 @@
 # efa related functions
 # YR - April 2019
 #
-# the lav_model_efa_rotate_x() function was based on a script orginally
+# the lav_model_efa_rotate_x() function was based on a script originally
 # written by Florian Scharf (Muenster University, Germany)
 
 # rotate solution
@@ -12,7 +12,7 @@ lav_model_efa_rotate <- function(lavmodel = NULL, lavoptions = NULL) {
     return(lavmodel)
   }
 
-  # save warn and verbos settings
+  # save warn and verbose settings
   current_warn <- lav_warn()
   current_verbose <- lav_verbose()
 

@@ -48,7 +48,7 @@ lav_sam_mapping_matrix <- function(LAMBDA = NULL, THETA = NULL,
       tLSinvL <- tLSinv %*% LAMBDA
       M <- try(solve(tLSinvL, tLSinv), silent = TRUE)
       if (inherits(M, "try-error")) {
-        lav_msg_warn(gettext("problem contructing mapping matrix;
+        lav_msg_warn(gettext("problem constructing mapping matrix;
                               switching to generalized inverse"))
         M <- MASS::ginv(tLSinvL) %*% tLSinv
       }
@@ -109,7 +109,7 @@ lav_sam_mapping_matrix <- function(LAMBDA = NULL, THETA = NULL,
       M <- try(solve(tLTiL, tLTi), silent = TRUE)
       if (inherits(M, "try-error")) {
         lav_msg_warn(gettext(
-          "problem contructing ML mapping matrix; switching to ULS"))
+          "problem constructing ML mapping matrix; switching to ULS"))
         M <- lav_sam_mapping_matrix(LAMBDA = LAMBDA, method = "ULS")
       }
     } else {
@@ -120,7 +120,7 @@ lav_sam_mapping_matrix <- function(LAMBDA = NULL, THETA = NULL,
       ), silent = TRUE)
       if (inherits(M, "try-error")) {
         lav_msg_warn(gettext(
-          "problem contructing ML mapping matrix; switching to ULS"))
+          "problem constructing ML mapping matrix; switching to ULS"))
         M <- lav_sam_mapping_matrix(LAMBDA = LAMBDA, method = "ULS")
       }
     }

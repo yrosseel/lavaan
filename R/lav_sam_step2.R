@@ -71,7 +71,7 @@ lav_sam_step2 <- function(STEP1 = NULL, FIT = NULL,
 
     # any 'extra' parameters: not (free) in PT, but free in PTS (user == 3)
     #  - fixed.x in PT, but fixed.x = FALSE is PTS
-    #  - fixed-to-zero interceps in PT, but free in PTS
+    #  - fixed-to-zero intercepts in PT, but free in PTS
     #  - add.exo.cov: absent/fixed-to-zero in PT, but add/free in PTS
     extra.id <- which(PTS$user == 3L)
 

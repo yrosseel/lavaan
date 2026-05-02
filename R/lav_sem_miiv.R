@@ -102,7 +102,7 @@ lav_sem_miiv_internal <- function(lavmodel = NULL, lavh1 = NULL,
 
 
 # stage 1: use 2SLS to find the regression coefficients of all
-#          directed effects in the model -- continous/raw-data version
+#          directed effects in the model -- continuous/raw-data version
 lav_sem_miiv_2sls <- function(eqs = NULL, lavmodel = NULL, lavpartable = NULL,
                               lavdata = NULL, free.directed.idx = NULL,
                               iv.vcov.stage1 = "lm.vcov.dfres",

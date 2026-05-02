@@ -117,7 +117,7 @@ lav_cfa_guttman1952 <- function(s,
     # force zeroes
     mm_lambda <- mm_lambda * m_b
   } else if (quadprog) {
-    # constained version using quadprog
+    # constrained version using quadprog
     # only useful if (in)equality constraints are needed (TODo)
 
     # PHI MUST be positive-definite

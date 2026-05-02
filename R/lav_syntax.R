@@ -218,7 +218,7 @@ lav_parse_model_string_orig <- function(model_syntax = "",
       lav_msg_stop(gettext("unknown operator in ", model[i]))
     }
 
-    # 2. split by operator (only the *first* occurence!)
+    # 2. split by operator (only the *first* occurrence!)
     # check first if equal/label modifier has been used on the LEFT!
     if (substr(x, 1, 6) == "label(") {
       lav_msg_stop(gettext("label modifier can not be used on the",
@@ -647,7 +647,7 @@ lav_syntax_parse_rhs <- function(rhs, op = "") {
         # modifier are unquoted labels
         out[[1L]]$label <- i_var
       } else {
-        # modifer is something else
+        # modifier is something else
         out[[1L]] <- lav_syntax_get_modifier(rhs[[2L]])
       }
       break
@@ -694,7 +694,7 @@ lav_syntax_parse_rhs <- function(rhs, op = "") {
           # modifier are unquoted labels
           out[[1L]]$label <- i_var
         } else {
-          # modifer is something else
+          # modifier is something else
           out[[1L]] <- lav_syntax_get_modifier(rhs[[3]][[2L]])
         }
 
@@ -762,7 +762,7 @@ lav_syntax_parse_rhs <- function(rhs, op = "") {
 
 lav_syntax_get_modifier <- function(mod) {
   if (length(mod) == 1L) {
-    # three possibilites: 1) numeric, 2) NA, or 3) quoted character
+    # three possibilities: 1) numeric, 2) NA, or 3) quoted character
     if (is.numeric(mod)) {
       return(list(fixed = mod))
     }

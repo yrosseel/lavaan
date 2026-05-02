@@ -345,8 +345,8 @@ lav_parse_text_tokens <- function(modelsrc, types) {
 
 # ------------------------ lav_parse_tokens_formulas ------------------------- #
 # function to group the modellist tokens in 'mono' formulas.
-# mono means that the terms (for formulas other then blocks and constraints)
-#   are split in seperate formula's, e.g.
+# mono means that the terms (for formulas other than blocks and constraints)
+#   are split in separate formulas, e.g.
 #   a1 + a2 =~ b1 + b2  becomes
 #     /  a1 =~ b1
 #     |  a1 =~ b2
@@ -700,7 +700,7 @@ assign("equal", function(...) {
     nelem <- length(formul1$elem_type)
     # where is the operator
     opi <- which(formul1$elem_type == types$lavaanoperator)
-    if (length(opi) > 1L) { # if more then 1 operator skip operators ':'
+    if (length(opi) > 1L) { # if more than 1 operator skip operators ':'
       opii <- 1L
       while (formul1$elem_text[opi[opii]] == ":" && opii < length(opi)) {
         opii <- opii + 1L
@@ -768,7 +768,7 @@ assign("equal", function(...) {
         if (flat_idx != 1) {
           tl <- lav_parse_txtloc(modelsrc, formul1$elem_pos[1])
           lav_msg_warn(
-            gettext("First block defined after other formula's"),
+            gettext("First block defined after other formulas"),
             tl[1L],
             footer = tl[2L]
           )
@@ -1033,7 +1033,7 @@ assign("equal", function(...) {
   if (length(int_idx) > 0L) {
     flat$op[int_idx] <- "~1"
   }
-  # change op for ininstruments (for convenience only)
+  # change op for instruments (for convenience only)
   int_idx <- which(flat_op == "|~" & flat_rhs == "")
   if (length(int_idx) > 0L) {
     flat$op[int_idx] <- "|~1"

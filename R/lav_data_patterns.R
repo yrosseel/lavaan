@@ -28,7 +28,7 @@ lav_data_missing_patterns <- function(Y, sort.freq = FALSE, coverage = FALSE,
     case.id.nonempty <- case.id
   }
 
-  # sort non-empty patterns (from high occurence to low occurence)
+  # sort non-empty patterns (from high occurrence to low occurrence)
   if (sort.freq) {
     TABLE <- sort(table(case.id.nonempty), decreasing = TRUE)
   } else {
@@ -69,7 +69,7 @@ lav_data_missing_patterns <- function(Y, sort.freq = FALSE, coverage = FALSE,
     # Mp$coverage <- crossprod(OBS) / NROW(Y)
   }
 
-  # additional info in we have two-level data
+  # additional info if we have two-level data
   if (!is.null(Lp)) {
     Mp$j.idx <- lapply(
       seq_len(pat.npatterns),
@@ -106,7 +106,7 @@ lav_data_resp_patterns <- function(Y) {
   # empty cases
   empty.idx <- which(rowSums(OBS) == 0L)
 
-  # removeYempty cases
+  # remove empty cases
   if (length(empty.idx) > 0L) {
     Y <- Y[-empty.idx, , drop = FALSE]
   }
@@ -117,7 +117,7 @@ lav_data_resp_patterns <- function(Y) {
   # identify, label and sort response patterns
   id <- apply(Y, MARGIN = 1, paste, collapse = "")
 
-  # sort patterns (from high occurence to low occurence)
+  # sort patterns (from high occurrence to low occurrence)
   TABLE <- sort(table(id), decreasing = TRUE)
   order <- names(TABLE)
   npatterns <- length(TABLE)
@@ -207,7 +207,7 @@ lav_data_cluster_patterns <- function(Y = NULL,
       cluster.id[[l]] <- unique(CLUS)
 
 	  # cluster.idx: internal cluster idx (always an integer from 1 to J
-	  # for every obervation;
+	  # for every observation;
 	  # the first cluster id we observe is '1', the second '2', etc...)
       cluster.idx[[l]] <- match(CLUS, cluster.id[[l]])
 
@@ -278,7 +278,7 @@ lav_data_cluster_patterns <- function(Y = NULL,
   # fixed.x wrt variable index
   if (multilevel && length(ov.names.x) > 0L) {
     for (l in 1:nlevels) {
-      # some ov.names.x could be 'splitted', and end up in both.names
+      # some ov.names.x could be 'split', and end up in both.names
       # they should NOT be part ov.x.idx (as they become latent variables)
       idx <- which(ov.names %in% ov.names.x &
         ov.names %in% ov.names.l[[l]] &
@@ -289,7 +289,7 @@ lav_data_cluster_patterns <- function(Y = NULL,
       # ov.x.idx[[l]] <- which( ov.names %in% ov.names.x &
       #                        ov.names %in% ov.names.l[[l]] )
 
-      # if some ov.names.x have been 'splitted', and end up in both.names,
+      # if some ov.names.x have been 'split', and end up in both.names,
       # they should become part of ov.y.idx (despite being exogenous)
       # as they are now latent variables
       idx <- which(ov.names %in% ov.names.l[[l]] &

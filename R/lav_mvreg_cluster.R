@@ -100,8 +100,8 @@ lav_mvreg_cluster_implied22l <- function(Lp = NULL,
   }
 
 
-  # beta.wb # FIXme: not correct if some 'x' are splitted (overlap)
-  # but because we ALWAYS treat splitted-x as 'y', this is not a problem
+  # beta.wb # FIXME: not correct if some 'x' are split (overlap)
+  # but because we ALWAYS treat split-x as 'y', this is not a problem
   beta.wb <- rbind(beta.w, beta.b[-1, , drop = FALSE])
   beta.wb[1, ] <- beta.wb[1, , drop = FALSE] + beta.b[1, , drop = FALSE]
 
@@ -568,7 +568,7 @@ lav_mvreg_cluster_dlogl_2l_samplestats <- function(YLp = NULL,
     d.sigma.yz <- matrix(colSums(G.sigma.yz), nrow(sigma.yz), ncol(sigma.yz))
   } # between.y.idx
 
-  else { # no beween.y.idx
+  else { # no between.y.idx
 
     for (clz in seq_len(ncluster.sizes)) {
       # cluster size
@@ -877,7 +877,7 @@ lav_mvreg_cluster_scores_2l <- function(Y1 = NULL,
     } # cl
   } # between.y.idx
 
-  else { # no beween.y.idx
+  else { # no between.y.idx
 
     for (cl in seq_len(nclusters)) {
       # cluster size

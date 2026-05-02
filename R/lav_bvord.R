@@ -522,7 +522,7 @@ lav_bvord_gradient_cache <- function(cache = NULL) {
       d4 <- lav_dbinorm(fit.y1.z2, fit.y2.z2, rho)
       phi <- (d1 - d2 - d3 + d4)
 
-      # avoid dividing by very tine numbers (new in 0.6-6)
+      # avoid dividing by very tiny numbers (new in 0.6-6)
       # -> done automatically: lik == NA in this case
       # bad.idx <- which(lik <= sqrt(.Machine$double.eps))
       # if(length(bad.idx) > 0L) {

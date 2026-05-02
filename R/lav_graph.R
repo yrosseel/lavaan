@@ -1,5 +1,5 @@
 # miscellaneous functions related to graphs
-# often using an adjancency matrix as input
+# often using an adjacency matrix as input
 #
 # collecting functions that were in lav_utils.R
 # YR 15 Oct 2025

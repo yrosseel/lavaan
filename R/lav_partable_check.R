@@ -3,7 +3,7 @@
 lav_partable_check <- function(partable, categorical = FALSE) {
   check <- TRUE
 
-  # check for empy table - or should we WARN?
+  # check for empty table - or should we WARN?
   if (length(partable$lhs) == 0) {
     return(check)
   }
@@ -43,7 +43,7 @@ lav_partable_check <- function(partable, categorical = FALSE) {
   # if meanstructure, check for missing intercepts
   # note if lav_model_partable() has been used, this is always TRUE
   if (meanstructure) {
-    # we should have a intercept for *each* ov/lv
+    # we should have an intercept for *each* ov/lv
     int.idx <- which(partable$op == "~1")
     missing.idx <- which(is.na(match(all.names, partable$lhs[int.idx])))
     if (length(missing.idx) > 0L) {

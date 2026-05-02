@@ -72,7 +72,7 @@ lav_samplestats_step1 <- function(Y,
       }
     } else if (ov.types[i] == "ordered") {
       # check if we have enough categories in this group
-      # FIXME: should we more tolerant here???
+      # FIXME: should we be more tolerant here???
       y.freq <- tabulate(Y[, i], nbins = ov.levels[i])
       if (length(y.freq) != ov.levels[i] & !allow.empty.cell) {
         lav_msg_stop(gettextf(

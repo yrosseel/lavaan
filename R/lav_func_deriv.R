@@ -3,7 +3,7 @@
 # or Ridout, MS (2009), the american statistician 63(1) 66-74
 
 # it would seem that you can choose h to be fairly small, without
-# sacrifycing accuracy due to rounding errors
+# sacrificing accuracy due to rounding errors
 
 # YR 17 July 2012
 

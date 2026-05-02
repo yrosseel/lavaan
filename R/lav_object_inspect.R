@@ -606,7 +606,7 @@ lav_lavaan_lavinspect <- function(object,                                # nolin
     lav_object_inspect_delta_rownames(object,
       drop.list.single.group = drop.list.single.group)
 
-    ### casewise loglikehoods ###
+    ### casewise loglikelihoods ###
   } else if (what == "loglik.casewise") {
     lav_object_inspect_loglik_casewise(object, log. = TRUE,
       add.labels = add.labels, add.class = add.class,
@@ -3184,13 +3184,13 @@ lav_object_inspect_loglik_casewise <- function(object, log. = TRUE, # nolint
   # multilevel?
   if (lavdata@nlevels > 1L) {
     lav_msg_stop(gettext(
-  "casewise (log)likeloods contributions not yet available for clustered data"))
+  "casewise (log)likelihoods contributions not yet available for clustered data"))
   }
 
   # estimator ML?
   if (object@Options$estimator != "ML") {
     lav_msg_stop(gettextf(
-      "casewise (log)likeloods contributions only available for estimator = %s",
+      "casewise (log)likelihoods contributions only available for estimator = %s",
       dQuote("ML")))
   }
 

@@ -363,7 +363,7 @@ lav_model_partable  <- function(
       }
 
       # new in 0.6-12: if multilevel and conditional.x, make sure
-      # that 'splitted' exogenous covariates become 'y' variables
+      # that 'split' exogenous covariates become 'y' variables
       if (conditional.x && block_lhs == "level") {
         if (ngroups == 1L) {
           other_block_names <- lav_partable_vnames(flat, "ov",
@@ -515,7 +515,7 @@ lav_model_partable  <- function(
     tmp_list$free[th_idx] <- 0L
     tmp_list$ustart[th_idx] <- 0
 
-    # fix ALL scaling parmaters at higher levels
+    # fix ALL scaling parameters at higher levels
     scale_idx <- which(tmp_list$op == "~*~" &
       tmp_list$level %in% level_values[-1L])
     tmp_list$free[scale_idx] <- 0L

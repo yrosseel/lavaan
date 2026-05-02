@@ -582,7 +582,7 @@ growth <- function(
 lav_add_timing <- function(timing, part) {
   # timing is a list with element start_time
   # this function adds an element with name as specified in parameter part
-  # and the duration of the interval from start_time upto now
+  # and the duration of the interval from start_time up to now
   # thereafter the element start_time is set to now (prepare for next call)
   # the adapted list is returned
   timenow <- proc.time()[3]

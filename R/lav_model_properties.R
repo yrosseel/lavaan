@@ -1,5 +1,5 @@
 # collect information about the model that we can use
-# (eg. is theta diagonal or not, is the structurual model recursive or not,
+# (eg. is theta diagonal or not, is the structural model recursive or not,
 #  is the model just a regression model, etc)
 #
 # initial version: YR 15 March 2021

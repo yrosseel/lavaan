@@ -228,7 +228,7 @@ lav_lavaan_step01_ovnames_group <- function(flat_model = NULL,        # nolint
   #   extract ov.names, ov.names.y, ov.names.x, lv.names from tmp.lav
   #     via lav_partable_vnames
   # else
-  #   if flat.model$group not NULL and more then 1 group.value
+  #   if flat.model$group not NULL and more than 1 group.value
   #     extract group.values via lav_partable_group_values
   #     extract, for each group.value,
   #       ov.names, ov.names.y, ov.names.x, lv.names from flat.model
@@ -550,7 +550,7 @@ lav_lavaan_step01_ovnames_ordered <- function(ordered    = NULL,  # nolint
           data_names <- colnames(data)
         }
         missing_idx <- which(!ordered %in% data_names)
-        if (length(missing_idx) > 0L) { # FIXme: warn = FALSE has no eff
+        if (length(missing_idx) > 0L) { # FIXME: warn = FALSE has no eff
           lav_msg_warn(gettextf(
             "ordered variable(s): %s could not be found
             in the data and will be ignored",

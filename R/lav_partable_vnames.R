@@ -42,7 +42,7 @@ lav_partable_vnames <- function(partable, type = NULL, ..., # nolint
   # This function derives the names of some types of variable (as specified
   # in type) from a 'partable'. The 'warn' parameter needs no explanation.
   # The ov.x.fatal parameter implies, when set to TRUE, that the function
-  # issues a 'stop' when there are exogenious variables present in variance/
+  # issues a 'stop' when there are exogenous variables present in variance/
   # covariance or intercept formulas.
   # The call of this function can also contain extra parameters (...) which
   # have to be the name(s) of blockvariable(s) to be used to select names.
@@ -56,7 +56,7 @@ lav_partable_vnames <- function(partable, type = NULL, ..., # nolint
   # ----- lav_partable_vnames ---- common ----------------------------------
   # sanity check
   stopifnot(is.list(partable), !missing(type))
-  # this is a special fuunction where the default is to suppress warnings,
+  # this is a special function where the default is to suppress warnings,
   # overwritten if parameter force.warn TRUE (used in lav_partable function)
   current.warn <- lav_warn()
   if (force.warn) {
@@ -482,7 +482,7 @@ lav_partable_vnames <- function(partable, type = NULL, ..., # nolint
 
               # two scenario's:
               # - both variables are in ov.names.noint (ok)
-              # - at least one variables is NOT in ov.names.noint (ignore)
+              # - at least one variable is NOT in ov.names.noint (ignore)
               if (all(tmp.names %in% ov.names.noint)) {
                 ok.idx[iv] <- TRUE
               }
@@ -579,7 +579,7 @@ lav_partable_vnames <- function(partable, type = NULL, ..., # nolint
           next
         }
 
-        # ov's withouth ov.x
+        # ov's without ov.x
         if (any(type == c(
           "ov.nox", "ov.model",
           "th.mean", "lv.nonnormal"
@@ -688,7 +688,7 @@ lav_partable_vnames <- function(partable, type = NULL, ..., # nolint
               tmp.th2 <- as.character(sort(as.integer(sapply(
                 strsplit(tmp.th, split = "\\|t"), "[[", 2
               ))))
-              # paste back togehter in the right order
+              # paste back together in the right order
               paste(tmp.th1, tmp.th2, sep = "|t")
             }), use.names = FALSE)
           } else {
@@ -729,7 +729,7 @@ lav_partable_vnames <- function(partable, type = NULL, ..., # nolint
                 tmp.th2 <- as.character(sort(as.integer(sapply(
                   strsplit(tmp.th, split = "\\|t"), "[[", 2
                 ))))
-                # paste back togehter in the right order
+                # paste back together in the right order
                 paste(tmp.th1, tmp.th2, sep = "|t")
               } else {
                 x
@@ -1045,7 +1045,7 @@ lav_partable_vnames <- function(partable, type = NULL, ..., # nolint
 
               # two scenario's:
               # - both variables are in ov.names.noint (ok)
-              # - at least one variables is NOT in ov.names.noint (ignore)
+              # - at least one variable is NOT in ov.names.noint (ignore)
               if (all(tmp.names %in% ov.names.noint)) {
                 ok.idx[iv] <- TRUE
               }
@@ -1138,7 +1138,7 @@ lav_partable_vnames <- function(partable, type = NULL, ..., # nolint
           return.value$ov.orphan[[b]] <- ov.extra
         }
 
-        # ov's withouth ov.x
+        # ov's without ov.x
         if (any(type %in% c(
           "ov.nox", "ov.model",
           "th.mean", "lv.nonnormal"
@@ -1242,7 +1242,7 @@ lav_partable_vnames <- function(partable, type = NULL, ..., # nolint
               tmp.th2 <- as.character(sort(as.integer(sapply(
                 strsplit(tmp.th, split = "\\|t"), "[[", 2
               ))))
-              # paste back togehter in the right order
+              # paste back together in the right order
               paste(tmp.th1, tmp.th2, sep = "|t")
             }), use.names = FALSE)
           } else {
@@ -1279,7 +1279,7 @@ lav_partable_vnames <- function(partable, type = NULL, ..., # nolint
                 tmp.th2 <- as.character(sort(as.integer(sapply(
                   strsplit(tmp.th, split = "\\|t"), "[[", 2
                 ))))
-                # paste back togehter in the right order
+                # paste back together in the right order
                 paste(tmp.th1, tmp.th2, sep = "|t")
               } else {
                 x

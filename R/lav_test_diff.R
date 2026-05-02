@@ -33,7 +33,7 @@ lav_test_diff_satorra2000 <- function(m1, m0, h1 = TRUE, a_method = "delta",
 
   # check for (near) identical test statistics (despite m > 0)
   if (abs(t1 - t0) < sqrt(.Machine$double.eps)) {
-    lav_msg_warn(gettext("the test statistic of the restriced model is (nearly)
+    lav_msg_warn(gettext("the test statistic of the restricted model is (nearly)
                          identical to the test statistic of the full model;
                          check your models."))
   }
@@ -621,7 +621,7 @@ lav_test_diff_af_h1 <- function(m1, m0) {
       }
     } else {
       if (p0$free[p0.idx] == 0L) {
-        # match, this is a contrained parameter in H0
+        # match, this is a constrained parameter in H0
         ncon <- ncon + 1L
         BODY.txt <- paste(BODY.txt,
           "out[", ncon, "] = .x.[", p1$free[i], "] - ",

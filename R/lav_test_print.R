@@ -1,7 +1,7 @@
 # print 'blocks' of test statistics
 # - blocks with 'scaling.factors' come first (in 'two columns')
 # - then come the 'single-column' test statistics (eg browne.residual.adf)
-# - print additional informatiation (eg information matrix, h1.information, ...)
+# - print additional information (eg information matrix, h1.information, ...)
 #   if they deviate from what is used for the standard errors
 
 # this is used by the summary() function and lavTest(, output = "text")

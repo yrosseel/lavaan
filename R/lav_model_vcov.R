@@ -722,7 +722,7 @@ lav_model_vcov_se <- function(lavmodel, lavpartable, VCOV = NULL,
       } else {
         BOOT.def <- t(BOOT.def)
       }
-      # new in 0.6-20: check for outliers, big difference betwen sd() and mad()
+      # new in 0.6-20: check for outliers, big difference between sd() and mad()
       # see github issue 347
       sd_mad_ratio <- ( apply(BOOT.def, 2,  sd, na.rm = TRUE) /
                         apply(BOOT.def, 2, mad, na.rm = TRUE) )

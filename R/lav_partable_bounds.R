@@ -328,7 +328,7 @@ lav_partable_add_bounds <- function(partable = NULL,
       partable$lhs == partable$rhs)
 
     if (length(par.idx) > 0L) {
-      # adjust for endogenenous lv
+      # adjust for endogenous lv
       LV.VAR.LB2 <- LV.VAR.LB
       endo.idx <- which(lv.names %in% lv.names.endo)
       if (length(endo.idx) > 0L) {
