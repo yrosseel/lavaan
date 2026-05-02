@@ -1704,7 +1704,7 @@ lav_mvnorm_cluster_em_h0 <- function(lavsamplestats = NULL,
     attr(x, "warn.txt") <- ""
   } else {
     attr(x, "converged") <- FALSE
-    attr(x, "warn.txt") <- paste("maxmimum number of iterations (",
+    attr(x, "warn.txt") <- paste("maximum number of iterations (",
       max.iter, ") ",
       "was reached without convergence.\n",
       sep = ""

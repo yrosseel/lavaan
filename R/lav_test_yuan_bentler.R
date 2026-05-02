@@ -111,7 +111,7 @@ lav_test_yuan_bentler <- function(lavobject = NULL,
           shift.parameter = as.numeric(NA),
           label = character(0)
         )
-        lav_msg_warn(gettext("could not invert information [matrix needed for
+        lav_msg_warn(gettext("could not invert information matrix needed for
                              robust test statistic"))
         TEST[[test[1]]]$test <- test[1] # to prevent lavTestLRT error when robust test is detected for some but not all models
         return(TEST)

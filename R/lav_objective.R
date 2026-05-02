@@ -525,7 +525,7 @@ lav_model_objective_pml <- function(Sigma.hat = NULL, # model-based var/cov/cor
 
     na.idx <- which(is.na(logLikPair))
     if (length(na.idx) > 0L) {
-      lav_msg_warn(gettext("some pairs produces NA values for logl:"),
+      lav_msg_warn(gettext("some pairs produce NA values for logl:"),
         lav_msg_view(round(logLikPair, 3), "none")
       )
     }

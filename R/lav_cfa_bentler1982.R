@@ -44,7 +44,7 @@ lav_cfa_bentler1982 <- function(s,
   if (gls) {
     m_w <- try(solve(s_yy), silent = TRUE)
     if (inherits(m_w, "try-error")) {
-      lav_msg_warn(gettext("could not inverte S.yy; switching to ULS"))
+      lav_msg_warn(gettext("could not invert S.yy; switching to ULS"))
       m_w <- diag(p)
     }
     ws_yx <- m_w %*% s_yx

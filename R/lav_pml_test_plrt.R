@@ -591,7 +591,7 @@ lav_pml_model_vcov_firstorder <- function(lavmodel, lavsamplestats = NULL,
   if (any(eigvals < -1 * .Machine$double.eps^(3 / 4))) {
     lav_msg_warn(gettext(
       "matrix based on first order outer product of the derivatives is not
-      positive definite; the standard errors may not be thrustworthy"))
+      positive definite; the standard errors may not be trustworthy"))
   }
   nvar_cov <- MASS::ginv(m_e)
 

@@ -74,7 +74,7 @@ lav_model_nvcov_bootstrap <- function(lavmodel = NULL,
     NAMES <- lav_partable_labels(lavpartable, type = "free")
     params_w_outliers <- paste(NAMES[sd_mad_ratio > crit.ratio], collapse = " ")
     lav_msg_warn(gettextf(
-      "The following boostrapped free parameters have a high (>5)
+      "The following bootstrapped free parameters have a high (>5)
       ratio of standard deviation to median absolute deviation: %s.
       P-values and confidence intervals may not match.", params_w_outliers))
   }
@@ -732,7 +732,7 @@ lav_model_vcov_se <- function(lavmodel, lavpartable, VCOV = NULL,
         def_w_outliers <- paste(NAMES[sd_mad_ratio > crit.ratio],
                                 collapse = " ")
         lav_msg_warn(gettextf(
-          "The following boostrapped defined parameters have a high (>5)
+          "The following bootstrapped defined parameters have a high (>5)
           ratio of standard deviation to median absolute deviation: %s.
           P-values and confidence intervals may not match.", def_w_outliers))
       }

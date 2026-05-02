@@ -1143,8 +1143,8 @@ lav_data_full <- function(data = NULL, # data.frame
             "."
           }
           lav_msg_warn(gettextf(
-            "Level-2 variable %1$ss has non-zero variance at the within
-            level %2$s in one cluster with id: %3$ss. Please double-check
+            "Level-2 variable %1$s has non-zero variance at the within
+            level %2$s in one cluster with id: %3$s. Please double-check
             if this is a between only variable.",
             dQuote(ov.names[[g]][v]), gtxt,
             Lp[[g]]$cluster.id[[2]][non.zero.var]))

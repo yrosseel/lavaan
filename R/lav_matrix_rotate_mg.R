@@ -72,7 +72,7 @@ lav_matrix_rotate_mg <- function(a_list = NULL, # original matrices
     for (g in seq_len(ngroups)) {
       init_rot <- init_rot_list[[g]]
       if (!inherits(init_rot, "matrix")) {
-        lav_msg_stop(gettext("init.ROT does not seem to a matrix"))
+        lav_msg_stop(gettext("init.ROT does not seem to be a matrix"))
       }
       if (nrow(init_rot) != m) {
         lav_msg_stop(gettextf(

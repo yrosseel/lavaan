@@ -92,7 +92,7 @@ lav_export <- function(object, target = "lavaan", prefix = "sem",
         )
       }
     } else {
-      lav_msg_warn(gettext("not data available"))
+      lav_msg_warn(gettext("no data available"))
     }
     return(invisible(out))
   } else {

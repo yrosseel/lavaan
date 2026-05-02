@@ -750,7 +750,7 @@ lav_residuals_summary <- function(object, type = c("rmr", "srmr", "crmr"),
       }
       if (!all(names(custom.rmr[[i]]) %in% c("cov", "mean"))) {
         lav_msg_stop(gettext(
-          'Elements in custom.rmr must be names "cov" and/or "mean"'))
+          'Elements in custom.rmr must be named "cov" and/or "mean"'))
       }
       ## below, verify dimensions match rmsList.g
     }

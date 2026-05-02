@@ -141,7 +141,7 @@ lav_uvord_init_cache <- function(y = NULL,
     if (!anyNA(X)) {
       if (qr(X)$rank < ncol(X)) {
         lav_msg_stop(gettext(
-          "matrix of exogenous covariates is rank deficient!(i.e., some x
+          "matrix of exogenous covariates is rank deficient! (i.e., some x
           variables contain redundant information)"))
       }
     }

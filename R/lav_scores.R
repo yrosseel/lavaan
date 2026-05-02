@@ -31,7 +31,7 @@ lav_scores <- function(object, scaling = FALSE,                    # nolint star
   # what if estimator is not ML or WLS?
   # avoid hard error (using stop); throw a warning, and return an empty matrix
   if (!object@Options$estimator %in% c("ML", "WLS", "GLS", "ULS")) {
-    lav_msg_warn(gettext("scores only availalbe if estimator is ML"))
+    lav_msg_warn(gettext("scores only available if estimator is ML"))
     return(matrix(0, 0, 0))
   }
 

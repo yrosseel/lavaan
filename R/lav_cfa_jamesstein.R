@@ -160,7 +160,7 @@ lav_cfa_jamesstein_internal <- function(lavobject = NULL, # convenience
   }
   # no std.lv = TRUE for now
   if (lavoptions$std.lv) {
-    lav_msg_stop(gettext("S(A) estimator not available if std.lv = TRUE"))
+    lav_msg_stop(gettext("JS(A) estimator not available if std.lv = TRUE"))
   }
 
   nblocks <- lav_partable_nblocks(lavpartable)

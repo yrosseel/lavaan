@@ -577,7 +577,7 @@ lav_mplus_syntax_constraints <- function(syntax) {
       new_con <- regexpr("^\\s*NEW\\s*\\(([^\\)]+)\\)", cmd,
         perl = TRUE, ignore.case = TRUE)
       if (new_con[1L] == -1)
-        lav_msg_stop(gettext("Unable to parse names of new contraints"))
+        lav_msg_stop(gettext("Unable to parse names of new constraints"))
       new_con <- substr(cmd, attr(new_con, "capture.start"),
        attr(new_con, "capture.start") + attr(new_con, "capture.length") - 1L)
       new_con <- lav_mplus_expand_cmd(new_con) # allow for hyphen expansion
@@ -644,7 +644,7 @@ lav_mplus_syntax_constraints <- function(syntax) {
         }
 
         # must decide whether this is a new parameter (:=)
-        #      or equation of exising labels (==)
+        #      or equation of existing labels (==)
         # alternatively, could be zero, as in  0 = x + y
         # this is tricky, because mplus doesn't differentiate
         #  definition from equation

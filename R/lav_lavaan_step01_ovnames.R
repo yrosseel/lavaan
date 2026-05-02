@@ -135,7 +135,7 @@ lav_lavaan_step01_ovnames_composites <- function(flat_model = NULL) {  # nolint
   max_block <- max(flat_model$block)
   if (max_block > 1L) {
     lav_msg_stop(gettext(
-      "composites = FALSE is not support when multiple blocks are supported;",
+      "composites = FALSE is not supported when multiple blocks are present;",
       " manually replace f <~ rhs by f =~ 0; f ~~ 0*f; f ~ rhs"))
   }
 

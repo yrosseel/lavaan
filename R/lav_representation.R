@@ -13,7 +13,7 @@ lavMatrixRepresentation <- function(partable, representation = "LISREL", # nolin
   } else if (representation == "RAM") {
     rep_1 <- lav_ram(partable, target = NULL, extra = add.attributes)
   } else {
-    lav_msg_stop(gettext("representation must either \"LISREL\" or \"RAM\"."))
+    lav_msg_stop(gettext("representation must be either \"LISREL\" or \"RAM\"."))
   }
 
   partable$mat <- rep_1$mat

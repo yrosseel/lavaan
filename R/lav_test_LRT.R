@@ -296,7 +296,7 @@ lavTestLRT <- function(object, ..., method = "default", test = "default",   # no
     lav_msg_warn(gettextf(
       "Some restricted models fit better than less restricted models; either
       these models are not nested, or the less restricted model failed to reach
-      a global optimum.Smallest difference = %s.", min(stat_delta[-1])))
+      a global optimum. Smallest difference = %s.", min(stat_delta[-1])))
   }
 
   # prepare for scaling versions

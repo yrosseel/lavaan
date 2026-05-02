@@ -75,7 +75,7 @@ lavListInspect <- function(object,                                       # nolin
   # only a single argument
   if (length(what) > 1) {
     lav_msg_stop(gettext(
-      "`what' arguments contains multiple arguments; only one is allowed"))
+      "`what' argument contains multiple arguments; only one is allowed"))
   }
 
   # be case insensitive

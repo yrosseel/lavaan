@@ -324,7 +324,7 @@ lav_options_set <- function(opt = NULL) {
     } else {
       lav_msg_stop(
         gettextf(
-          "`test' argument must one of %s in the clustered case",
+          "`test' argument must be one of %s in the clustered case",
           lav_msg_view(c(
             "none", "yuan.bentler", "yuan.bentler.mplus",
             "satorra.bentler"
@@ -377,7 +377,7 @@ lav_options_set <- function(opt = NULL) {
       # nothing to do
     } else {
       lav_msg_stop(gettextf(
-        "`test' argument must one of %s in the multilevel case",
+        "`test' argument must be one of %s in the multilevel case",
         lav_msg_view(c(
           "none", "standard", "yuan.bentler",
           "yuan.bentler.mplus"
@@ -396,7 +396,7 @@ lav_options_set <- function(opt = NULL) {
       opt$se <- "robust.huber.white"
     } else {
       lav_msg_stop(gettextf(
-        "`se' argument must one of %s  in the multilevel case",
+        "`se' argument must be one of %s in the multilevel case",
         lav_msg_view(c("none", "standard", "robust.huber.white"),
           log_sep = "or"
         )
@@ -1095,7 +1095,7 @@ lav_options_set <- function(opt = NULL) {
 
   # rotations.args
   if (!is.list(opt$rotation.args)) {
-    lav_msg_stop(gettext("rotation.args should be be list."))
+    lav_msg_stop(gettext("rotation.args should be a list."))
   }
 
   # transform names rotation.args to snake_case

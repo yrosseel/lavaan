@@ -141,7 +141,7 @@ lav_plotinfo_positions_one <- function(
     })
     print(edgs1)
     rm(edgs1, nods1)
-    cat("matrix with groups after ordening\n")
+    cat("matrix with groups after ordering\n")
     print(lav_groups_matrix(groups))
     cat("debug end\n")
   }

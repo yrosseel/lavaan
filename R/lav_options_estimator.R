@@ -401,7 +401,7 @@ lav_options_est_pml <- function(opt) {
   # test
   if (length(opt$test) > 1L) {
     lav_msg_stop(gettext(
-      "only a single test statistic is allow when estimator is PML."))
+      "only a single test statistic is allowed when estimator is PML."))
   }
   if (!opt$test[1] == "none") {
     opt$test <- "mean.var.adjusted"

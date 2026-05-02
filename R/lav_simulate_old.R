@@ -394,7 +394,7 @@ lav_data_valemaurelli1983 <- function(n = 100L, COR, skewness, kurtosis) {
       skewness = skewness, kurtosis = kurtosis
     )
     if (out$convergence != 0 || out$objective > 1e-5) {
-      lav_msg_warn(gettext("lav_data_valemaurelli1983 method did not convergence,
+      lav_msg_warn(gettext("lav_data_valemaurelli1983 method did not converge,
                    or it did not find the roots"))
     }
     b. <- out$par[1L]

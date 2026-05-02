@@ -28,7 +28,7 @@ lav_model_gradient <- function(lavmodel = NULL,
   if (is.null(GLIST)) GLIST <- lavmodel@GLIST
 
   if (estimator == "REML") lav_msg_warn(gettext(
-    "analytical gradient not implement; use numerical approximation"))
+    "analytical gradient not implemented; use numerical approximation"))
 
   # group.weight
   # FIXME --> block.weight

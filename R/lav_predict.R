@@ -743,7 +743,7 @@ lav_predict_eta <- function(lavobject = NULL, # for convenience
         transform = transform
       )
     } else {
-      lav_msg_stop(gettextf("unkown method: %s.", method))
+      lav_msg_stop(gettextf("unknown method: %s.", method))
     }
   } else {
     if (method == "ebm") {
@@ -763,7 +763,7 @@ lav_predict_eta <- function(lavobject = NULL, # for convenience
         ML = TRUE, optim.method = optim.method
       )
     } else {
-      lav_msg_stop(gettextf("unkown method: %s.", method))
+      lav_msg_stop(gettextf("unknown method: %s.", method))
     }
   }
 

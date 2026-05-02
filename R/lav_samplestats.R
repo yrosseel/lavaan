@@ -1952,7 +1952,7 @@ lav_samplestats_cluster_patterns <- function(Y = NULL, Lp = NULL,
       zero.idx <- which(diag(S.b)[both.idx] < 0.0001)
       if (length(zero.idx) > 0L && !anyNA(Y2)) {
         lav_msg_warn(gettext(
-          "(near) zero variance at between level for splitted variable:"),
+          "(near) zero variance at between level for split variable:"),
           paste(Lp$both.names[[l]][zero.idx], collapse = " ")
         )
       }

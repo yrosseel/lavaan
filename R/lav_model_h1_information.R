@@ -845,7 +845,7 @@ lav_model_h1_information_firstorder <- function(lavobject = NULL,
             # NOTE: the information matrix will be the same (minus
             # the meanstructure block), but once INVERTED, the
             # standard errors will be (slightly) smaller!!!
-            # This is only visibile when estimator = "MLF"
+            # This is only visible when estimator = "MLF"
             # (or information = "first.order")
             MEAN <- lavsamplestats@mean[[g]] # saturated
           }
