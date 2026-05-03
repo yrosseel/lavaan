@@ -258,7 +258,6 @@ lav_model_gradient <- function(lavmodel = NULL,
             GammaNT <- lav_samplestats_gamma_nt(
               m_cov          = Sigma.hat[[g]],
               m_mean         = Mu.hat[[g]],
-              rescale        = FALSE,
               x_idx          = lavsamplestats@x.idx[[g]],
               fixed_x        = lavmodel@fixed.x,
               conditional_x  = lavmodel@conditional.x,

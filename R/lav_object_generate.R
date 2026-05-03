@@ -85,7 +85,6 @@ lav_object_independence <- lav_object_baseline <- function(object = NULL,
         GammaNT <- lav_samplestats_gamma_nt(
           m_cov          = lavsamplestats@cov[[g]],
           m_mean         = lavsamplestats@mean[[g]],
-          rescale        = FALSE,
           x_idx          = lavsamplestats@x.idx[[g]],
           fixed_x        = lavoptions$fixed.x,
           conditional_x  = lavoptions$conditional.x,
