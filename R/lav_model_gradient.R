@@ -533,13 +533,13 @@ lav_model_gradient <- function(lavmodel = NULL,
           )
         } else {
           DX <- lav_mvnorm_cluster_dlogl_2l_samplestats(
-            YLp = lavsamplestats@YLp[[g]],
-            Lp = lavdata@Lp[[g]],
-            Mu.W = Mu.hat[[(g - 1) * 2 + 1]],
-            Sigma.W = Sigma.hat[[(g - 1) * 2 + 1]],
-            Mu.B = Mu.hat[[(g - 1) * 2 + 2]],
-            Sigma.B = Sigma.hat[[(g - 1) * 2 + 2]],
-            Sinv.method = "eigen"
+            ylp = lavsamplestats@YLp[[g]],
+            lp = lavdata@Lp[[g]],
+            mu_w = Mu.hat[[(g - 1) * 2 + 1]],
+            sigma_w = Sigma.hat[[(g - 1) * 2 + 1]],
+            mu_b = Mu.hat[[(g - 1) * 2 + 2]],
+            sigma_b = Sigma.hat[[(g - 1) * 2 + 2]],
+            sinv_method = "eigen"
           )
         }
       } else {
@@ -549,15 +549,15 @@ lav_model_gradient <- function(lavmodel = NULL,
                   is not ready; use optim.gradient = \"numerical\""))
         } else {
           DX <- lav_mvnorm_cluster_missing_dlogl_2l_samplestats(
-            Y1 = lavdata@X[[g]],
-            Y2 = lavsamplestats@YLp[[g]][[2]]$Y2,
-            Lp = lavdata@Lp[[g]],
-            Mp = lavdata@Mp[[g]],
-            Mu.W = Mu.hat[[(g - 1) * 2 + 1]],
-            Sigma.W = Sigma.hat[[(g - 1) * 2 + 1]],
-            Mu.B = Mu.hat[[(g - 1) * 2 + 2]],
-            Sigma.B = Sigma.hat[[(g - 1) * 2 + 2]],
-            Sinv.method = "eigen"
+            y1 = lavdata@X[[g]],
+            y2 = lavsamplestats@YLp[[g]][[2]]$Y2,
+            lp = lavdata@Lp[[g]],
+            mp = lavdata@Mp[[g]],
+            mu_w = Mu.hat[[(g - 1) * 2 + 1]],
+            sigma_w = Sigma.hat[[(g - 1) * 2 + 1]],
+            mu_b = Mu.hat[[(g - 1) * 2 + 2]],
+            sigma_b = Sigma.hat[[(g - 1) * 2 + 2]],
+            sinv_method = "eigen"
           )
         }
       }

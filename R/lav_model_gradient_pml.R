@@ -177,8 +177,8 @@ lav_pml_dploglik_dimplied <- function(Sigma.hat = NULL, # model-based var/cov/co
         }
 
         SC <- lav_mvnorm_scores_mu_vech_sigma(
-          Y = X[, c(i, j)],
-          Mu = Mu.hat[c(i, j)], Sigma = Sigma.hat[c(i, j), c(i, j)]
+          y = X[, c(i, j)],
+          mu = Mu.hat[c(i, j)], sigma_1 = Sigma.hat[c(i, j), c(i, j)]
         )
 
         if (scores) {

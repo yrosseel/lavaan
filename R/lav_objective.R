@@ -172,10 +172,10 @@ lav_model_objective_fiml <- function(Sigma.hat = NULL, Mu.hat = NULL, Yp = NULL,
 
   # Note: we ignore x.idx (if any)
   fx <- lav_mvnorm_missing_loglik_samplestats(
-    Yp = Yp,
-    Mu = Mu.hat, Sigma = Sigma.hat,
+    yp = Yp,
+    mu = Mu.hat, sigma_1 = Sigma.hat,
     log2pi = FALSE,
-    minus.two = TRUE
+    minus_two = TRUE
   ) / N
 
   # ajust for h1
@@ -477,8 +477,8 @@ lav_model_objective_pml <- function(Sigma.hat = NULL, # model-based var/cov/cor
         if (ov.types[i] == "numeric" &&
           ov.types[j] == "numeric") {
           logLIK <- lav_mvnorm_loglik_data(
-            Y = X[, c(i, j)], wt = wt, Mu = Mu.hat[c(i, j)],
-            Sigma = Sigma.hat[c(i, j), c(i, j)], casewise = TRUE
+            y = X[, c(i, j)], wt = wt, mu = Mu.hat[c(i, j)],
+            sigma_1 = Sigma.hat[c(i, j), c(i, j)], casewise = TRUE
           )
           logLikPair[pstar.idx] <- sum(logLIK, na.rm = TRUE)
         } else if (ov.types[i] == "numeric" &&
@@ -820,11 +820,11 @@ lav_model_objective_2l <- function(lavmodel = NULL,
     Y2 <- lavsamplestats@YLp[[group]][[2]]$Y2
     Yp <- lavsamplestats@missing[[group]]
     loglik <- lav_mvnorm_cluster_missing_loglik_samplestats_2l(
-      Y1 = Y1,
-      Y2 = Y2, Lp = Lp, Mp = Mp,
-      Mu.W = Mu.W, Sigma.W = Sigma.W,
-      Mu.B = Mu.B, Sigma.B = Sigma.B,
-      log2pi = FALSE, minus.two = TRUE
+      y1 = Y1,
+      y2 = Y2, lp = Lp, mp = Mp,
+      mu_w = Mu.W, sigma_w = Sigma.W,
+      mu_b = Mu.B, sigma_b = Sigma.B,
+      log2pi = FALSE, minus_two = TRUE
     )
   } else {
     YLp <- lavsamplestats@YLp[[group]]
@@ -839,10 +839,10 @@ lav_model_objective_2l <- function(lavmodel = NULL,
       )
     } else {
       loglik <- lav_mvnorm_cluster_loglik_samplestats_2l(
-        YLp = YLp, Lp = Lp,
-        Mu.W = Mu.W, Sigma.W = Sigma.W,
-        Mu.B = Mu.B, Sigma.B = Sigma.B,
-        log2pi = FALSE, minus.two = TRUE
+        ylp = YLp, lp = Lp,
+        mu_w = Mu.W, sigma_w = Sigma.W,
+        mu_b = Mu.B, sigma_b = Sigma.B,
+        log2pi = FALSE, minus_two = TRUE
       )
     }
   }

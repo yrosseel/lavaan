@@ -190,25 +190,25 @@ lav_model_h1_information_expected <- function(lavobject = NULL,
         if (structured) {
           A1[[g]] <-
             lav_mvnorm_missing_information_expected(
-              Y = lavdata@X[[g]],
-              Mp = lavdata@Mp[[g]],
+              y = lavdata@X[[g]],
+              mp = lavdata@Mp[[g]],
               wt = WT,
-              Mu = MEAN,
+              mu = MEAN,
               # meanstructure = lavmodel@meanstructure,
-              Sigma = lavimplied$cov[[g]],
-              x.idx = lavsamplestats@x.idx[[g]]
+              sigma_1 = lavimplied$cov[[g]],
+              x_idx = lavsamplestats@x.idx[[g]]
             )
         } else {
           A1[[g]] <-
             lav_mvnorm_missing_information_expected(
-              Y = lavdata@X[[g]],
-              Mp = lavdata@Mp[[g]],
+              y = lavdata@X[[g]],
+              mp = lavdata@Mp[[g]],
               wt = WT,
-              Mu = MEAN,
+              mu = MEAN,
               # meanstructure = lavmodel@meanstructure,
               #Sigma = lavsamplestats@missing.h1[[g]]$sigma,
-              Sigma = lavh1$implied$cov[[g]],
-              x.idx = lavsamplestats@x.idx[[g]]
+              sigma_1 = lavh1$implied$cov[[g]],
+              x_idx = lavsamplestats@x.idx[[g]]
             )
         }
       } else {
@@ -258,17 +258,17 @@ lav_model_h1_information_expected <- function(lavobject = NULL,
 
           if (structured) {
             A1[[g]] <- lav_mvnorm_information_expected(
-              Sigma         = lavimplied$cov[[g]],
+              sigma_1         = lavimplied$cov[[g]],
               # wt = WT, # not needed
-              x.idx         = lavsamplestats@x.idx[[g]],
+              x_idx         = lavsamplestats@x.idx[[g]],
               meanstructure = lavmodel@meanstructure,
               correlation   = correlation.flag
             )
           } else {
             A1[[g]] <- lav_mvnorm_h1_information_expected(
-              sample.cov.inv = lavsamplestats@icov[[g]],
+              sample_cov_inv = lavsamplestats@icov[[g]],
               # wt = WT, not needed
-              x.idx          = lavsamplestats@x.idx[[g]],
+              x_idx          = lavsamplestats@x.idx[[g]],
               meanstructure  = lavmodel@meanstructure,
               correlation    = correlation.flag
             )
@@ -309,12 +309,12 @@ lav_model_h1_information_expected <- function(lavobject = NULL,
 
       # clustered data
       A1[[g]] <- lav_mvnorm_cluster_information_expected(
-        Lp           = lavdata@Lp[[g]],
-        Mu.W         = MU.W,
-        Sigma.W      = SIGMA.W,
-        Mu.B         = MU.B,
-        Sigma.B      = SIGMA.B,
-        x.idx        = lavsamplestats@x.idx[[g]]
+        lp           = lavdata@Lp[[g]],
+        mu_w         = MU.W,
+        sigma_w      = SIGMA.W,
+        mu_b         = MU.B,
+        sigma_b      = SIGMA.B,
+        x_idx        = lavsamplestats@x.idx[[g]]
       )
     } # g
   } # ML + multilevel
@@ -423,23 +423,23 @@ lav_model_h1_information_observed <- function(lavobject = NULL,
         if (structured) {
           A1[[g]] <-
             lav_mvnorm_missing_information_observed_samplestats(
-              Yp = lavsamplestats@missing[[g]],
+              yp = lavsamplestats@missing[[g]],
               # wt not needed
-              Mu = MEAN,
+              mu = MEAN,
               # meanstructure = lavmodel@meanstructure,
-              Sigma = lavimplied$cov[[g]],
-              x.idx = lavsamplestats@x.idx[[g]]
+              sigma_1 = lavimplied$cov[[g]],
+              x_idx = lavsamplestats@x.idx[[g]]
             )
         } else {
           A1[[g]] <-
             lav_mvnorm_missing_information_observed_samplestats(
-              Yp = lavsamplestats@missing[[g]],
+              yp = lavsamplestats@missing[[g]],
               # wt not needed
-              Mu = MEAN,
+              mu = MEAN,
               # meanstructure = lavmodel@meanstructure,
               #Sigma = lavsamplestats@missing.h1[[g]]$sigma,
-              Sigma = lavh1$implied$cov[[g]],
-              x.idx = lavsamplestats@x.idx[[g]]
+              sigma_1 = lavh1$implied$cov[[g]],
+              x_idx = lavsamplestats@x.idx[[g]]
             )
         }
       } else {
@@ -491,21 +491,21 @@ lav_model_h1_information_observed <- function(lavobject = NULL,
 
           if (structured) {
             A1[[g]] <- lav_mvnorm_information_observed_samplestats(
-              sample.mean   = lavsamplestats@mean[[g]],
-              sample.cov    = lavsamplestats@cov[[g]],
-              Mu            = MEAN,
-              Sigma         = lavimplied$cov[[g]],
+              sample_mean   = lavsamplestats@mean[[g]],
+              sample_cov    = lavsamplestats@cov[[g]],
+              mu            = MEAN,
+              sigma_1       = lavimplied$cov[[g]],
               # wt           = WT, # not needed
-              x.idx         = lavsamplestats@x.idx[[g]],
+              x_idx         = lavsamplestats@x.idx[[g]],
               meanstructure = lavmodel@meanstructure
             )
           } else {
             A1[[g]] <- lav_mvnorm_h1_information_observed_samplestats(
-              sample.mean    = lavsamplestats@mean[[g]],
-              sample.cov     = lavsamplestats@cov[[g]],
-              sample.cov.inv = lavsamplestats@icov[[g]],
+              sample_mean    = lavsamplestats@mean[[g]],
+              sample_cov     = lavsamplestats@cov[[g]],
+              sample_cov_inv = lavsamplestats@icov[[g]],
               # wt            = WT, not needed
-              x.idx          = lavsamplestats@x.idx[[g]],
+              x_idx          = lavsamplestats@x.idx[[g]],
               meanstructure  = lavmodel@meanstructure
             )
           }
@@ -545,25 +545,25 @@ lav_model_h1_information_observed <- function(lavobject = NULL,
 
       if (lavdata@missing == "ml") {
           A1[[g]] <- lav_mvnorm_cluster_missing_information_observed(
-            Y1            = lavdata@X[[g]],
-            Y2            = lavsamplestats@YLp[[g]][[2]]$Y2,
-            Lp            = lavdata@Lp[[g]],
-            Mp            = lavdata@Mp[[g]],
-            Mu.W          = MU.W,
-            Sigma.W       = SIGMA.W,
-            Mu.B          = MU.B,
-            Sigma.B       = SIGMA.B,
-            x.idx         = lavsamplestats@x.idx[[g]]
+            y1            = lavdata@X[[g]],
+            y2            = lavsamplestats@YLp[[g]][[2]]$Y2,
+            lp            = lavdata@Lp[[g]],
+            mp            = lavdata@Mp[[g]],
+            mu_w          = MU.W,
+            sigma_w       = SIGMA.W,
+            mu_b          = MU.B,
+            sigma_b       = SIGMA.B,
+            x_idx         = lavsamplestats@x.idx[[g]]
           )
       } else {
         A1[[g]] <- lav_mvnorm_cluster_information_observed(
-          Lp           = lavdata@Lp[[g]],
-          YLp          = lavsamplestats@YLp[[g]],
-          Mu.W         = MU.W,
-          Sigma.W      = SIGMA.W,
-          Mu.B         = MU.B,
-          Sigma.B      = SIGMA.B,
-          x.idx        = lavsamplestats@x.idx[[g]]
+          lp           = lavdata@Lp[[g]],
+          ylp          = lavsamplestats@YLp[[g]],
+          mu_w         = MU.W,
+          sigma_w      = SIGMA.W,
+          mu_b         = MU.B,
+          sigma_b      = SIGMA.B,
+          x_idx        = lavsamplestats@x.idx[[g]]
         )
       }
     } # g
@@ -761,29 +761,29 @@ lav_model_h1_information_firstorder <- function(lavobject = NULL,
         SIGMA.B <- implied$cov[[(g - 1) * lavdata@nlevels + 2L]]
 		if (lavdata@missing == "ml") {
           B1[[g]] <- lav_mvnorm_cluster_missing_information_firstorder(
-            Y1            = lavdata@X[[g]],
-            Y2            = lavsamplestats@YLp[[g]][[2]]$Y2,
-            Lp            = lavdata@Lp[[g]],
-            Mp            = lavdata@Mp[[g]],
-            Mu.W          = MU.W,
-            Sigma.W       = SIGMA.W,
-            Mu.B          = MU.B,
-            Sigma.B       = SIGMA.B,
-            x.idx         = lavsamplestats@x.idx[[g]],
-            divide.by.two = TRUE
+            y1            = lavdata@X[[g]],
+            y2            = lavsamplestats@YLp[[g]][[2]]$Y2,
+            lp            = lavdata@Lp[[g]],
+            mp            = lavdata@Mp[[g]],
+            mu_w          = MU.W,
+            sigma_w       = SIGMA.W,
+            mu_b          = MU.B,
+            sigma_b       = SIGMA.B,
+            x_idx         = lavsamplestats@x.idx[[g]],
+            divide_by_two = TRUE
           )
 		} else {
 		  # no missing values
           B1[[g]] <- lav_mvnorm_cluster_information_firstorder(
-            Y1            = lavdata@X[[g]],
-            YLp           = lavsamplestats@YLp[[g]],
-            Lp            = lavdata@Lp[[g]],
-            Mu.W          = MU.W,
-            Sigma.W       = SIGMA.W,
-            Mu.B          = MU.B,
-            Sigma.B       = SIGMA.B,
-            x.idx         = lavsamplestats@x.idx[[g]],
-            divide.by.two = TRUE
+            y1            = lavdata@X[[g]],
+            ylp           = lavsamplestats@YLp[[g]],
+            lp            = lavdata@Lp[[g]],
+            mu_w          = MU.W,
+            sigma_w       = SIGMA.W,
+            mu_b          = MU.B,
+            sigma_b       = SIGMA.B,
+            x_idx         = lavsamplestats@x.idx[[g]],
+            divide_by_two = TRUE
           )
 		}
       }
@@ -806,13 +806,13 @@ lav_model_h1_information_firstorder <- function(lavobject = NULL,
         }
 
         B1[[g]] <- lav_mvnorm_missing_information_firstorder(
-          Y = lavdata@X[[g]],
-          Mp = lavdata@Mp[[g]], wt = WT,
-          cluster.idx = cluster.idx,
-          Mu = MEAN,
+          y = lavdata@X[[g]],
+          mp = lavdata@Mp[[g]], wt = WT,
+          cluster_idx = cluster.idx,
+          mu = MEAN,
           # meanstructure = lavmodel@meanstructure,
-          Sigma = implied$cov[[g]],
-          x.idx = lavsamplestats@x.idx[[g]]
+          sigma_1 = implied$cov[[g]],
+          x_idx = lavsamplestats@x.idx[[g]]
         )
       } else {
         if (lavmodel@conditional.x) {
@@ -850,21 +850,21 @@ lav_model_h1_information_firstorder <- function(lavobject = NULL,
 
           if (structured) {
             B1[[g]] <- lav_mvnorm_information_firstorder(
-              Y = lavdata@X[[g]],
-              Mu = MEAN, Sigma = lavimplied$cov[[g]],
+              y = lavdata@X[[g]],
+              mu = MEAN, sigma_1 = lavimplied$cov[[g]],
               wt = WT,
-              cluster.idx = cluster.idx,
-              x.idx = lavsamplestats@x.idx[[g]],
+              cluster_idx = cluster.idx,
+              x_idx = lavsamplestats@x.idx[[g]],
               meanstructure = lavmodel@meanstructure
             )
           } else {
             B1[[g]] <- lav_mvnorm_h1_information_firstorder(
-              Y = lavdata@X[[g]],
-              sample.cov.inv = lavsamplestats@icov[[g]],
-              Gamma = lavsamplestats@NACOV[[g]],
+              y = lavdata@X[[g]],
+              sample_cov_inv = lavsamplestats@icov[[g]],
+              gamma_1 = lavsamplestats@NACOV[[g]],
               wt = WT,
-              cluster.idx = cluster.idx, # only if wt
-              x.idx = lavsamplestats@x.idx[[g]],
+              cluster_idx = cluster.idx, # only if wt
+              x_idx = lavsamplestats@x.idx[[g]],
               meanstructure = lavmodel@meanstructure
             )
           }

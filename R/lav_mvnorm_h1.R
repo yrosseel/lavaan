@@ -4,17 +4,17 @@
 # 1) loglikelihood h1 (from raw data, or sample statistics)
 # 4) hessian h1 around MLEs
 # 5) information h1 (restricted Sigma/mu)
-#    5a: (unit)    expected information h1 (A1 = Gamma.NT^{-1})
-#    5b: (unit)    observed information h1 (A1 = Gamma.NT^{-1})
+#    5a: (unit)    expected information h1 (A1 = gamma_nt^{-1})
+#    5b: (unit)    observed information h1 (A1 = gamma_nt^{-1})
 #    5c: (unit) first.order information h1 (B1 = A1 %*% Gamma %*% A1)
 # 6) inverted information h1 mu + vech(Sigma)
-#    6a: (unit) inverted expected information (A1.inv = Gamma.NT)
-#    6b: (unit) inverted observed information (A1.inv = Gamma.NT)
+#    6a: (unit) inverted expected information (A1.inv = gamma_nt)
+#    6b: (unit) inverted observed information (A1.inv = gamma_nt)
 #    6c: (unit) inverted first-order information (B1.inv)
 # 7) ACOV h1 mu + vech(Sigma)
-#    7a: 1/N * Gamma.NT
-#    7b: 1/N * Gamma.NT
-#    7c: 1/N * (Gamma.NT * Gamma^{-1} * Gamma.NT)
+#    7a: 1/N * gamma_nt
+#    7b: 1/N * gamma_nt
+#    7c: 1/N * (gamma_nt * Gamma^{-1} * gamma_nt)
 #    7d: 1/N * Gamma (sandwich)
 
 
@@ -28,82 +28,82 @@
 
 # 1a: input is raw data
 lav_mvnorm_h1_loglik_data <- function(
-    Y = NULL,
-    x.idx = integer(0L),
+    y = NULL,
+    x_idx = integer(0L),
     casewise = FALSE,
     wt = NULL,
-    Sinv.method = "eigen") {
+    sinv_method = "eigen") {
 
   if (!is.null(wt)) {
-    N <- sum(wt)
+    n <- sum(wt)
   } else {
-    N <- NROW(Y)
+    n <- NROW(y)
   }
-  P <- NCOL(Y)
+  p <- NCOL(y)
 
   # sample statistics
   if (!is.null(wt)) {
-    out <- stats::cov.wt(Y, wt = wt, method = "ML")
-    sample.mean <- out$center
-    sample.cov <- out$cov
+    out <- stats::cov.wt(y, wt = wt, method = "ML")
+    sample_mean <- out$center
+    sample_cov <- out$cov
   } else {
-    sample.mean <- base::.colMeans(Y, m = N, n = P)
-    sample.cov <- lav_matrix_cov(Y)
+    sample_mean <- base::.colMeans(y, m = n, n = p)
+    sample_cov <- lav_matrix_cov(y)
   }
 
   if (casewise) {
-    LOG.2PI <- log(2 * pi)
+    log_2pi <- log(2 * pi)
 
-    # invert sample.cov
-    if (Sinv.method == "chol") {
-      cS <- chol(sample.cov)
-      icS <- backsolve(cS, diag(P))
-      Yc <- t(t(Y) - sample.mean)
-      DIST <- rowSums((Yc %*% icS)^2)
-      logdet <- -2 * sum(log(diag(icS)))
+    # invert sample_cov
+    if (sinv_method == "chol") {
+      c_s <- chol(sample_cov)
+      ic_s <- backsolve(c_s, diag(p))
+      yc <- t(t(y) - sample_mean)
+      dist_1 <- rowSums((yc %*% ic_s)^2)
+      logdet <- -2 * sum(log(diag(ic_s)))
     } else {
-      sample.cov.inv <- lav_matrix_symmetric_inverse(
-        s = sample.cov,
-        logdet = TRUE, sinv_method = Sinv.method
+      sample_cov_inv <- lav_matrix_symmetric_inverse(
+        s = sample_cov,
+        logdet = TRUE, sinv_method = sinv_method
       )
-      logdet <- attr(sample.cov.inv, "logdet")
+      logdet <- attr(sample_cov_inv, "logdet")
       # mahalanobis distance
-      Yc <- t(t(Y) - sample.mean)
-      DIST <- rowSums(Yc %*% sample.cov.inv * Yc)
+      yc <- t(t(y) - sample_mean)
+      dist_1 <- rowSums(yc %*% sample_cov_inv * yc)
     }
 
-    loglik <- -(P * LOG.2PI + logdet + DIST) / 2
+    loglik <- -(p * log_2pi + logdet + dist_1) / 2
 
     # weights
     if (!is.null(wt)) {
       loglik <- loglik * wt
     }
   } else {
-    # invert sample.cov
-    sample.cov.inv <- lav_matrix_symmetric_inverse(
-      s = sample.cov,
-      logdet = TRUE, sinv_method = Sinv.method
+    # invert sample_cov
+    sample_cov_inv <- lav_matrix_symmetric_inverse(
+      s = sample_cov,
+      logdet = TRUE, sinv_method = sinv_method
     )
-    logdet <- attr(sample.cov.inv, "logdet")
+    logdet <- attr(sample_cov_inv, "logdet")
 
     loglik <-
       lav_mvnorm_h1_loglik_samplestats(
-        sample.cov.logdet = logdet,
-        sample.nvar = P,
-        sample.nobs = N
+        sample_cov_logdet = logdet,
+        sample_nvar = p,
+        sample_nobs = n
       )
   }
 
   # fixed.x?
-  if (length(x.idx) > 0L) {
-    loglik.x <- lav_mvnorm_h1_loglik_data(
-      Y = Y[, x.idx, drop = FALSE],
-      wt = wt, x.idx = integer(0L),
+  if (length(x_idx) > 0L) {
+    loglik_x <- lav_mvnorm_h1_loglik_data(
+      y = y[, x_idx, drop = FALSE],
+      wt = wt, x_idx = integer(0L),
       casewise = casewise,
-      Sinv.method = Sinv.method
+      sinv_method = sinv_method
     )
     # subtract logl.X
-    loglik <- loglik - loglik.x
+    loglik <- loglik - loglik_x
   }
 
   loglik
@@ -112,63 +112,63 @@ lav_mvnorm_h1_loglik_data <- function(
 
 
 # 1b: input are sample statistics only (logdet, N and P)
-lav_mvnorm_h1_loglik_samplestats <- function(
-    sample.cov.logdet = NULL,
-    sample.nvar = NULL,
-    sample.nobs = NULL,
+lav_mvnorm_h1_loglik_samplestats <- function( # nolint
+    sample_cov_logdet = NULL,
+    sample_nvar = NULL,
+    sample_nobs = NULL,
     # or
-    sample.cov = NULL,
-    x.idx = integer(0L),
-    x.cov = NULL,
-    Sinv.method = "eigen") {
+    sample_cov = NULL,
+    x_idx = integer(0L),
+    x_cov = NULL,
+    sinv_method = "eigen") {
 
-  if (is.null(sample.nvar)) {
-    P <- NCOL(sample.cov)
+  if (is.null(sample_nvar)) {
+    p <- NCOL(sample_cov)
   } else {
-    P <- sample.nvar # number of variables
+    p <- sample_nvar # number of variables
   }
 
-  N <- sample.nobs
-  stopifnot(!is.null(P), !is.null(N))
+  n <- sample_nobs
+  stopifnot(!is.null(p), !is.null(n))
 
-  LOG.2PI <- log(2 * pi)
+  log_2pi <- log(2 * pi)
 
   # all we need is the logdet
-  if (is.null(sample.cov.logdet)) {
-    sample.cov.inv <- lav_matrix_symmetric_inverse(
-      s = sample.cov,
-      logdet = TRUE, sinv_method = Sinv.method
+  if (is.null(sample_cov_logdet)) {
+    sample_cov_inv <- lav_matrix_symmetric_inverse(
+      s = sample_cov,
+      logdet = TRUE, sinv_method = sinv_method
     )
-    logdet <- attr(sample.cov.inv, "logdet")
+    logdet <- attr(sample_cov_inv, "logdet")
   } else {
-    logdet <- sample.cov.logdet
+    logdet <- sample_cov_logdet
   }
 
-  loglik <- -N / 2 * (P * LOG.2PI + logdet + P)
+  loglik <- -n / 2 * (p * log_2pi + logdet + p)
 
   # fixed.x?
-  if (length(x.idx) > 0L) {
-    if (is.null(sample.cov)) {
-      if (is.null(x.cov)) {
+  if (length(x_idx) > 0L) {
+    if (is.null(sample_cov)) {
+      if (is.null(x_cov)) {
         lav_msg_stop(gettext(
-          "when x.idx is not empty, we need sample.cov or x.cov"
+          "when x_idx is not empty, we need sample_cov or x.cov"
         ))
       } else {
-        sample.cov.x <- x.cov
+        sample_cov_x <- x_cov
       }
     } else {
-      sample.cov.x <- sample.cov[x.idx, x.idx, drop = FALSE]
+      sample_cov_x <- sample_cov[x_idx, x_idx, drop = FALSE]
     }
 
-    loglik.x <-
+    loglik_x <-
       lav_mvnorm_h1_loglik_samplestats(
-        sample.cov = sample.cov.x,
-        sample.nobs = sample.nobs,
-        x.idx = integer(0L),
-        Sinv.method = Sinv.method
+        sample_cov = sample_cov_x,
+        sample_nobs = sample_nobs,
+        x_idx = integer(0L),
+        sinv_method = sinv_method
       )
     # subtract logl.X
-    loglik <- loglik - loglik.x
+    loglik <- loglik - loglik_x
   }
 
   loglik
@@ -178,53 +178,53 @@ lav_mvnorm_h1_loglik_samplestats <- function(
 # 4. hessian of logl (around MLEs of Mu and Sigma)
 
 # 4a: hessian logl Mu and vech(Sigma) from raw data
-lav_mvnorm_h1_logl_hessian_data <- function(
-    Y = NULL,
+lav_mvnorm_h1_logl_hessian_data <- function(   # nolint
+    y = NULL,
     wt = NULL,
-    x.idx = integer(0L),
-    Sinv.method = "eigen",
-    sample.cov.inv = NULL,
+    x_idx = integer(0L),
+    sinv_method = "eigen",
+    sample_cov_inv = NULL,
     meanstructure = TRUE) {
 
   if (!is.null(wt)) {
-    N <- sum(wt)
+    n <- sum(wt)
   } else {
-    N <- NROW(Y)
+    n <- NROW(y)
   }
 
   # observed information
   observed <- lav_mvnorm_h1_information_observed_data(
-    Y = Y, wt = wt,
-    x.idx = x.idx,
-	Sinv.method = Sinv.method,
-    sample.cov.inv = sample.cov.inv,
+    y = y, wt = wt,
+    x_idx = x_idx,
+    sinv_method = sinv_method,
+    sample_cov_inv = sample_cov_inv,
     meanstructure = meanstructure
   )
 
-  -N * observed
+  -n * observed
 }
 
 # 4b: hessian Mu and vech(Sigma) from samplestats
-lav_mvnorm_h1_logl_hessian_samplestats <- function(
-    sample.mean = NULL, # unused!
-    sample.cov = NULL,
-    sample.nobs = NULL,
-    x.idx = integer(0L),
-    Sinv.method = "eigen",
-    sample.cov.inv = NULL,
+lav_mvnorm_h1_logl_hessian_samplestats <- function( # nolint
+    sample_mean = NULL, # unused!
+    sample_cov = NULL,
+    sample_nobs = NULL,
+    x_idx = integer(0L),
+    sinv_method = "eigen",
+    sample_cov_inv = NULL,
     meanstructure = TRUE) {
 
-  N <- sample.nobs
+  n <- sample_nobs
 
   # observed information
   observed <- lav_mvnorm_h1_information_observed_samplestats(
-    sample.mean = sample.mean, sample.cov = sample.cov,
-    x.idx = x.idx,
-    Sinv.method = Sinv.method, sample.cov.inv = sample.cov.inv,
+    sample_mean = sample_mean, sample_cov = sample_cov,
+    x_idx = x_idx,
+    sinv_method = sinv_method, sample_cov_inv = sample_cov_inv,
     meanstructure = meanstructure
   )
 
-  -N * observed
+  -n * observed
 }
 
 
@@ -232,138 +232,138 @@ lav_mvnorm_h1_logl_hessian_samplestats <- function(
 # 5) Information h1 (note: expected == observed if data is complete!)
 
 # 5a: unit expected information h1
-lav_mvnorm_h1_information_expected <- function(
-    Y = NULL,
+lav_mvnorm_h1_information_expected <- function( # nolint
+    y = NULL,
     wt = NULL,
-    sample.cov = NULL,
-    x.idx = integer(0L),
-    Sinv.method = "eigen",
-    sample.cov.inv = NULL,
+    sample_cov = NULL,
+    x_idx = integer(0L),
+    sinv_method = "eigen",
+    sample_cov_inv = NULL,
     meanstructure = TRUE,
-	correlation = FALSE) {
+  correlation = FALSE) {
 
-  if (is.null(sample.cov.inv)) {
-    if (is.null(sample.cov)) {
+  if (is.null(sample_cov_inv)) {
+    if (is.null(sample_cov)) {
       if (is.null(wt)) {
-        sample.mean <- base::.colMeans(Y, m = NROW(Y), n = NCOL(Y))
-        sample.cov <- lav_matrix_cov(Y)
+        sample_mean <- base::.colMeans(y, m = NROW(y), n = NCOL(y))
+        sample_cov <- lav_matrix_cov(y)
       } else {
-        out <- stats::cov.wt(Y, wt = wt, method = "ML")
-        sample.cov <- out$cov
+        out <- stats::cov.wt(y, wt = wt, method = "ML")
+        sample_cov <- out$cov
       }
     }
 
-    # invert sample.cov
-    sample.cov.inv <- lav_matrix_symmetric_inverse(
-      s = sample.cov,
-      logdet = FALSE, sinv_method = Sinv.method
+    # invert sample_cov
+    sample_cov_inv <- lav_matrix_symmetric_inverse(
+      s = sample_cov,
+      logdet = FALSE, sinv_method = sinv_method
     )
   }
 
-  I11 <- sample.cov.inv
-  if(correlation) {
+  i11 <- sample_cov_inv
+  if (correlation) {
     # if (lav_use_lavaanC()) {
-    #   I22 <- lavaanC::m_kronecker_dup_cor_pre_post(sample.cov.inv,
+    #   i22 <- lavaanC::m_kronecker_dup_cor_pre_post(sample.cov.inv,
     #                                                multiplicator = 0.5)
     # } else {
-      I22 <- 0.5 * lav_matrix_duplication_cor_pre_post(sample.cov.inv %x%
-                                                     sample.cov.inv)
+      i22 <- 0.5 * lav_matrix_duplication_cor_pre_post(sample_cov_inv %x%
+                                                     sample_cov_inv)
     # }
   } else {
     # if (lav_use_lavaanC()) {
-    #   I22 <- lavaanC::m_kronecker_dup_pre_post(sample.cov.inv,
+    #   i22 <- lavaanC::m_kronecker_dup_pre_post(sample.cov.inv,
     #                                            multiplicator = 0.5)
     # } else {
-      I22 <- 0.5 * lav_matrix_duplication_pre_post(sample.cov.inv %x%
-                                                   sample.cov.inv)
+      i22 <- 0.5 * lav_matrix_duplication_pre_post(sample_cov_inv %x%
+                                                   sample_cov_inv)
     # }
   }
 
   # fixed.x?
-  if (length(x.idx) > 0L) {
-    pstar.x <- lav_matrix_vech_which_idx(
-      n = NCOL(sample.cov.inv), idx = x.idx
+  if (length(x_idx) > 0L) {
+    pstar_x <- lav_matrix_vech_which_idx(
+      n = NCOL(sample_cov_inv), idx = x_idx
     )
-    I22[pstar.x, ] <- 0
-    I22[, pstar.x] <- 0
+    i22[pstar_x, ] <- 0
+    i22[, pstar_x] <- 0
   }
 
   if (meanstructure) {
     # fixed.x?
-    if (length(x.idx) > 0L) {
-      I11[x.idx, ] <- 0
-      I11[, x.idx] <- 0
+    if (length(x_idx) > 0L) {
+      i11[x_idx, ] <- 0
+      i11[, x_idx] <- 0
     }
-    out <- lav_matrix_bdiag(I11, I22)
+    out <- lav_matrix_bdiag(i11, i22)
   } else {
-    out <- I22
+    out <- i22
   }
 
   out
 }
 
 # 5b: unit observed information h1
-lav_mvnorm_h1_information_observed_data <- function(
-    Y = NULL,
+lav_mvnorm_h1_information_observed_data <- function( # nolint
+    y = NULL,
     wt = NULL,
-    x.idx = integer(0L),
-    Sinv.method = "eigen",
-    sample.cov.inv = NULL,
+    x_idx = integer(0L),
+    sinv_method = "eigen",
+    sample_cov_inv = NULL,
     meanstructure = TRUE) {
 
   lav_mvnorm_h1_information_expected(
-    Y = Y, Sinv.method = Sinv.method,
-    wt = wt, x.idx = x.idx,
-    sample.cov.inv = sample.cov.inv,
+    y = y, sinv_method = sinv_method,
+    wt = wt, x_idx = x_idx,
+    sample_cov_inv = sample_cov_inv,
     meanstructure = meanstructure
   )
 }
 
 # 5b-bis: observed information h1 from sample statistics
-lav_mvnorm_h1_information_observed_samplestats <- function(
-    sample.mean = NULL, # unused!
-    sample.cov = NULL,
-    x.idx = integer(0L),
-    Sinv.method = "eigen",
-    sample.cov.inv = NULL,
+lav_mvnorm_h1_information_observed_samplestats <- function( # nolint
+    sample_mean = NULL, # unused!
+    sample_cov = NULL,
+    x_idx = integer(0L),
+    sinv_method = "eigen",
+    sample_cov_inv = NULL,
     meanstructure = TRUE) {
 
-  if (is.null(sample.cov.inv)) {
-    # invert sample.cov
-    sample.cov.inv <- lav_matrix_symmetric_inverse(
-      s = sample.cov,
-      logdet = FALSE, sinv_method = Sinv.method
+  if (is.null(sample_cov_inv)) {
+    # invert sample_cov
+    sample_cov_inv <- lav_matrix_symmetric_inverse(
+      s = sample_cov,
+      logdet = FALSE, sinv_method = sinv_method
     )
   }
 
-  I11 <- sample.cov.inv
+  i11 <- sample_cov_inv
   # fixed.x?
-  if (length(x.idx) > 0L) {
-    I11[x.idx, ] <- 0
-    I11[, x.idx] <- 0
+  if (length(x_idx) > 0L) {
+    i11[x_idx, ] <- 0
+    i11[, x_idx] <- 0
   }
 
   # if (lav_use_lavaanC()) {
-  #   I22 <- lavaanC::m_kronecker_dup_pre_post(sample.cov.inv,
+  #   i22 <- lavaanC::m_kronecker_dup_pre_post(sample.cov.inv,
   #                                            multiplicator = 0.5)
   # } else {
-    I22 <- 0.5 * lav_matrix_duplication_pre_post(sample.cov.inv %x%
-    sample.cov.inv)
+    i22 <- 0.5 * lav_matrix_duplication_pre_post(sample_cov_inv %x%
+    sample_cov_inv)
   # }
 
   # fixed.x?
-  if (length(x.idx) > 0L) {
-    pstar.x <- lav_matrix_vech_which_idx(
-      n = NCOL(sample.cov.inv), idx = x.idx
+  if (length(x_idx) > 0L) {
+    pstar_x <- lav_matrix_vech_which_idx(
+      n = NCOL(sample_cov_inv), idx = x_idx
     )
-    I22[pstar.x, ] <- 0
-    I22[, pstar.x] <- 0
+    i22[pstar_x, ] <- 0
+    i22[, pstar_x] <- 0
   }
 
   if (meanstructure) {
-    out <- lav_matrix_bdiag(I11, I22)
+    out <- lav_matrix_bdiag(i11, i22)
   } else {
-    out <- I22
+    out <- i22
   }
 
   out
@@ -372,142 +372,142 @@ lav_mvnorm_h1_information_observed_samplestats <- function(
 # 5c: unit first-order information h1
 #     note: first order information h1 == A1 %*% Gamma %*% A1
 #           (where A1 = obs/exp information h1)
-lav_mvnorm_h1_information_firstorder <- function(
-    Y = NULL,
+lav_mvnorm_h1_information_firstorder <- function( # nolint
+    y = NULL,
     wt = NULL,
-    sample.cov = NULL,
-    x.idx = integer(0L),
-    cluster.idx = NULL,
-    Sinv.method = "eigen",
-    sample.cov.inv = NULL,
-    Gamma = NULL,
+    sample_cov = NULL,
+    x_idx = integer(0L),
+    cluster_idx = NULL,
+    sinv_method = "eigen",
+    sample_cov_inv = NULL,
+    gamma_1 = NULL,
     meanstructure = TRUE) {
 
   if (!is.null(wt)) {
-    out <- stats::cov.wt(Y, wt = wt, method = "ML")
+    out <- stats::cov.wt(y, wt = wt, method = "ML")
     res <- lav_mvnorm_information_firstorder(
-      Y = Y, wt = wt,
-      cluster.idx = cluster.idx,
-      Mu = out$center, Sigma = out$cov, x.idx = x.idx,
+      y = y, wt = wt,
+      cluster_idx = cluster_idx,
+      mu = out$center, sigma_1 = out$cov, x_idx = x_idx,
       meanstructure = meanstructure
     )
     return(res)
   }
 
    # sample.cov.inv
-  if (is.null(sample.cov.inv)) {
-    # invert sample.cov
-    if (is.null(sample.cov)) {
-      sample.mean <- base::.colMeans(Y, m = NROW(Y), n = NCOL(Y))
-      sample.cov <- lav_matrix_cov(Y)
+  if (is.null(sample_cov_inv)) {
+    # invert sample_cov
+    if (is.null(sample_cov)) {
+      sample_mean <- base::.colMeans(y, m = NROW(y), n = NCOL(y))
+      sample_cov <- lav_matrix_cov(y)
     }
-    sample.cov.inv <- lav_matrix_symmetric_inverse(
-      s = sample.cov,
-      logdet = FALSE, sinv_method = Sinv.method
+    sample_cov_inv <- lav_matrix_symmetric_inverse(
+      s = sample_cov,
+      logdet = FALSE, sinv_method = sinv_method
     )
   }
 
   # question: is there any benefit computing Gamma/A1 instead of just
   # calling lav_mvnorm_information_firstorder()?
   # answer (2014): probably not; it is just reassuring that the expression
-  # J = A1 %*% Gamma %*% A1 seems to hold
+  # J = A1 %*% gamma_1 %*% A1 seems to hold
 
   # Gamma
   # FIXME: what about the 'unbiased = TRUE' option?
-  if (is.null(Gamma)) {
-    if (length(x.idx) > 0L) {
-      Gamma <- lav_samplestats_gamma(Y,
-        x_idx = x.idx, fixed_x = TRUE,
-        cluster_idx = cluster.idx,
+  if (is.null(gamma_1)) {
+    if (length(x_idx) > 0L) {
+      gamma_1 <- lav_samplestats_gamma(y,
+        x_idx = x_idx, fixed_x = TRUE,
+        cluster_idx = cluster_idx,
         meanstructure = meanstructure
       )
     } else {
-      Gamma <- lav_samplestats_gamma(Y,
+      gamma_1 <- lav_samplestats_gamma(y,
         meanstructure = meanstructure,
-        cluster_idx = cluster.idx
+        cluster_idx = cluster_idx
       )
     }
   }
 
   # sample.cov.inv
-  if (is.null(sample.cov.inv)) {
-    # invert sample.cov
-    if (is.null(sample.cov)) {
-      sample.mean <- base::.colMeans(Y, m = NROW(Y), n = NCOL(Y))
-      sample.cov <- lav_matrix_cov(Y)
+  if (is.null(sample_cov_inv)) {
+    # invert sample_cov
+    if (is.null(sample_cov)) {
+      sample_mean <- base::.colMeans(y, m = NROW(y), n = NCOL(y))
+      sample_cov <- lav_matrix_cov(y)
     }
-    sample.cov.inv <- lav_matrix_symmetric_inverse(
-      s = sample.cov,
-      logdet = FALSE, sinv_method = Sinv.method
+    sample_cov_inv <- lav_matrix_symmetric_inverse(
+      s = sample_cov,
+      logdet = FALSE, sinv_method = sinv_method
     )
   }
 
   # A1
-  A1 <- lav_mvnorm_h1_information_expected(
-    Y = Y, Sinv.method = Sinv.method,
-    sample.cov.inv = sample.cov.inv,
-    x.idx = x.idx,
+  a1 <- lav_mvnorm_h1_information_expected(
+    y = y, sinv_method = sinv_method,
+    sample_cov_inv = sample_cov_inv,
+    x_idx = x_idx,
     meanstructure = meanstructure
   )
 
-  A1 %*% Gamma %*% A1
+  a1 %*% gamma_1 %*% a1
 }
 
 # 6) inverted information h1 mu + vech(Sigma) (not used?)
 
-#    6a: (unit) inverted expected information (A1.inv = Gamma.NT)
-#    6b: (unit) inverted observed information (A1.inv = Gamma.NT)
+#    6a: (unit) inverted expected information (A1.inv = gamma_nt)
+#    6b: (unit) inverted observed information (A1.inv = gamma_nt)
 
-lav_mvnorm_h1_inverted_information_expected <-
-lav_mvnorm_h1_inverted_information_observed <- function(
-  Y = NULL,
+lav_mvnorm_h1_inverted_information_expected <-              # nolint
+lav_mvnorm_h1_inverted_information_observed <- function(    # nolint
+  y = NULL,
   wt = NULL,
-  sample.cov = NULL,
-  x.idx = integer(0L)) {
+  sample_cov = NULL,
+  x_idx = integer(0L)) {
 
-  # sample.cov
-  if (is.null(sample.cov)) {
+  # sample_cov
+  if (is.null(sample_cov)) {
     if (is.null(wt)) {
-      sample.mean <- base::.colMeans(Y, m = NROW(Y), n = NCOL(Y))
-      sample.cov <- lav_matrix_cov(Y)
+      sample_mean <- base::.colMeans(y, m = NROW(y), n = NCOL(y))
+      sample_cov <- lav_matrix_cov(y)
     } else {
-      out <- stats::cov.wt(Y, wt = wt, method = "ML")
-      sample.cov <- out$cov
+      out <- stats::cov.wt(y, wt = wt, method = "ML")
+      sample_cov <- out$cov
     }
   }
 
-  if (length(x.idx) > 0L) {
-    Gamma.NT <- lav_samplestats_gamma_nt(
-      m_y = Y, wt = wt, x_idx = x.idx,
-      m_cov = sample.cov,
+  if (length(x_idx) > 0L) {
+    gamma_nt <- lav_samplestats_gamma_nt(
+      m_y = y, wt = wt, x_idx = x_idx,
+      m_cov = sample_cov,
       meanstructure = TRUE,
       fixed_x = TRUE
     )
   } else {
-    I11 <- sample.cov
+    i11 <- sample_cov
     # if (lav_use_lavaanC()) {
-    #   I22 <- lavaanC::m_kronecker_dup_ginv_pre_post(sample.cov,
+    #   i22 <- lavaanC::m_kronecker_dup_ginv_pre_post(sample_cov,
     #                                                 multiplicator = 2.0)
     # } else {
-      I22 <- 2 * lav_matrix_duplication_ginv_pre_post(sample.cov %x% sample.cov)
+      i22 <- 2 * lav_matrix_duplication_ginv_pre_post(sample_cov %x% sample_cov)
     # }
-    Gamma.NT <- lav_matrix_bdiag(I11, I22)
+    gamma_nt <- lav_matrix_bdiag(i11, i22)
   }
 
-  Gamma.NT
+  gamma_nt
 }
 
 #    6c: (unit) inverted first-order information (B1.inv) (not used?)
-#        J1.inv = Gamma.NT %*% solve(Gamma) %*%  Gamma.NT
+#        J1.inv = gamma_nt %*% solve(Gamma) %*%  gamma_nt
 #
-lav_mvnorm_h1_inverted_information_firstorder <- function(
-    Y = NULL,
+lav_mvnorm_h1_inverted_information_firstorder <- function( # nolint
+    y = NULL,
     wt = NULL,
-    sample.cov = NULL,
-    x.idx = integer(0L),
-    Sinv.method = "eigen",
-    sample.cov.inv = NULL,
-    Gamma = NULL) {
+    sample_cov = NULL,
+    x_idx = integer(0L),
+    sinv_method = "eigen",
+    sample_cov_inv = NULL,
+    gamma_1 = NULL) {
 
   # lav_samplestats_gamma() has no wt argument (yet)
   if (!is.null(wt)) {
@@ -516,29 +516,29 @@ lav_mvnorm_h1_inverted_information_firstorder <- function(
 
   # Gamma
   # what about the 'unbiased = TRUE' option?
-  if (is.null(Gamma)) {
-    if (length(x.idx) > 0L) {
-      Gamma <- lav_samplestats_gamma(Y,
-        x_idx = x.idx, fixed_x = TRUE,
+  if (is.null(gamma_1)) {
+    if (length(x_idx) > 0L) {
+      gamma_1 <- lav_samplestats_gamma(y,
+        x_idx = x_idx, fixed_x = TRUE,
         meanstructure = TRUE
       )
     } else {
-      Gamma <- lav_samplestats_gamma(Y, meanstructure = TRUE)
+      gamma_1 <- lav_samplestats_gamma(y, meanstructure = TRUE)
     }
   }
 
-  # Gamma.NT
-  Gamma.NT <-
+  # gamma_nt
+  gamma_nt <-
     lav_mvnorm_h1_inverted_information_expected(
-      Y = Y,
-      sample.cov = sample.cov,
-      x.idx = x.idx
+      y = y,
+      sample_cov = sample_cov,
+      x_idx = x_idx
     )
-  if (length(x.idx) > 0L) {
+  if (length(x_idx) > 0L) {
     # FIXME: surely there is better way
-    out <- Gamma.NT %*% MASS::ginv(Gamma) %*% Gamma.NT
+    out <- gamma_nt %*% MASS::ginv(gamma_1) %*% gamma_nt
   } else {
-    out <- Gamma.NT %*% solve(Gamma, Gamma.NT)
+    out <- gamma_nt %*% solve(gamma_1, gamma_nt)
   }
 
   out
@@ -547,65 +547,65 @@ lav_mvnorm_h1_inverted_information_firstorder <- function(
 
 # 7) ACOV h1 mu + vech(Sigma) (not used?)
 
-#    7a: 1/N * Gamma.NT
-#    7b: 1/N * Gamma.NT
+#    7a: 1/N * gamma_nt
+#    7b: 1/N * gamma_nt
 lav_mvnorm_h1_acov_expected <-
 lav_mvnorm_h1_acov_observed <- function(
-    Y = NULL,
+    y = NULL,
     wt = NULL,
-    sample.cov = NULL,
-    x.idx = integer(0L)) {
+    sample_cov = NULL,
+    x_idx = integer(0L)) {
 
   if (!is.null(wt)) {
-    N <- sum(wt)
+    n <- sum(wt)
   } else {
-    N <- NROW(Y)
+    n <- NROW(y)
   }
 
-  Gamma.NT <-
+  gamma_nt <-
     lav_mvnorm_h1_inverted_information_expected(
-      Y = Y,
+      y = y,
       wt = wt,
-      sample.cov = sample.cov,
-      x.idx = x.idx
+      sample_cov = sample_cov,
+      x_idx = x_idx
     )
 
-  (1 / N) * Gamma.NT
+  (1 / n) * gamma_nt
 }
 
-#    7c: 1/N * (Gamma.NT * Gamma^{-1} * Gamma.NT)
+#    7c: 1/N * (gamma_nt * Gamma^{-1} * gamma_nt)
 lav_mvnorm_h1_acov_firstorder <- function(
-    Y = NULL,
+    y = NULL,
     wt = NULL,
-    sample.cov = NULL,
-    Sinv.method = "eigen",
-    x.idx = integer(0L),
-    sample.cov.inv = NULL,
-    Gamma = NULL) {
+    sample_cov = NULL,
+    sinv_method = "eigen",
+    x_idx = integer(0L),
+    sample_cov_inv = NULL,
+    gamma_1 = NULL) {
 
   if (!is.null(wt)) {
-    N <- sum(wt)
+    n <- sum(wt)
   } else {
-    N <- NROW(Y)
+    n <- NROW(y)
   }
 
-  J1.inv <- lav_mvnorm_h1_inverted_information_firstorder(
-    Y = Y, wt = wt,
-    sample.cov = sample.cov,
-    x.idx = x.idx, Sinv.method = Sinv.method,
-    sample.cov.inv = sample.cov.inv, Gamma = Gamma
+  j1_inv <- lav_mvnorm_h1_inverted_information_firstorder(
+    y = y, wt = wt,
+    sample_cov = sample_cov,
+    x_idx = x_idx, sinv_method = sinv_method,
+    sample_cov_inv = sample_cov_inv, gamma_1 = gamma_1
   )
 
-  (1 / N) * J1.inv
+  (1 / n) * j1_inv
 }
 
 #    7d: 1/N * Gamma (sandwich)
 lav_mvnorm_h1_acov_sandwich <- function(
-    Y = NULL,
+    y = NULL,
     wt = NULL,
-    sample.cov = NULL,
-    x.idx = integer(0L),
-    Gamma = NULL) {
+    sample_cov = NULL,
+    x_idx = integer(0L),
+    gamma_1 = NULL) {
 
   # lav_samplestats_gamma() has no wt argument (yet)
   if (!is.null(wt)) {
@@ -615,20 +615,20 @@ lav_mvnorm_h1_acov_sandwich <- function(
   # if(!is.null(wt)) {
   #    N <- sum(wt)
   # } else {
-  N <- NROW(Y)
+  n <- NROW(y)
   # }
 
   # Gamma
-  if (is.null(Gamma)) {
-    if (length(x.idx) > 0L) {
-      Gamma <- lav_samplestats_gamma(Y,
-        x_idx = x.idx, fixed_x = TRUE,
+  if (is.null(gamma_1)) {
+    if (length(x_idx) > 0L) {
+      gamma_1 <- lav_samplestats_gamma(y,
+        x_idx = x_idx, fixed_x = TRUE,
         meanstructure = TRUE
       )
     } else {
-      Gamma <- lav_samplestats_gamma(Y, meanstructure = TRUE)
+      gamma_1 <- lav_samplestats_gamma(y, meanstructure = TRUE)
     }
   }
 
-  (1 / N) * Gamma
+  (1 / n) * gamma_1
 }

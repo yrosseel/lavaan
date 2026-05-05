@@ -3136,11 +3136,11 @@ lav_object_inspect_ranef <- function(object, add.labels = FALSE,
     implied.group <- lapply(lavimplied, function(x) x[group.idx])
 
     # random effects (=random intercepts or cluster means)
-    out <- lav_mvnorm_cluster_implied22l(Lp = tmp.lp, implied = implied.group)
-    mb.j <- lav_mvnorm_cluster_em_estep_ranef(YLp = tmp.ylp, Lp = tmp.lp,
-      sigma.w = out$sigma.w, sigma.b = out$sigma.b,
-      sigma.zz = out$sigma.zz, sigma.yz = out$sigma.yz,
-      mu.z = out$mu.z, mu.w = out$mu.w, mu.b = out$mu.b,
+    out <- lav_mvnorm_cluster_implied22l(lp = tmp.lp, implied = implied.group)
+    mb.j <- lav_mvnorm_cluster_em_estep_ranef(ylp = tmp.ylp, lp = tmp.lp,
+      sigma_w = out$sigma.w, sigma_b = out$sigma.b,
+      sigma_zz = out$sigma.zz, sigma_yz = out$sigma.yz,
+      mu_z = out$mu.z, mu_w = out$mu.w, mu_b = out$mu.b,
       se = FALSE)
     return.value[[g]] <- mb.j
 
@@ -3198,11 +3198,11 @@ lav_object_inspect_loglik_casewise <- function(object, log. = TRUE, # nolint
 
     if (lavsamplestats@missing.flag) {
       return.value[[g]] <-
-        lav_mvnorm_missing_llik_casewise(Y = lavdata@X[[g]],
+        lav_mvnorm_missing_llik_casewise(y = lavdata@X[[g]],
           wt = lavdata@weights[[g]],
-          Mu = lavimplied$mean[[g]],
-          Sigma = lavimplied$cov[[g]],
-          x.idx  = lavsamplestats@x.idx[[g]])
+          mu = lavimplied$mean[[g]],
+          sigma_1 = lavimplied$cov[[g]],
+          x_idx  = lavsamplestats@x.idx[[g]])
     } else { # single-level, complete data
       if (lavoptions$conditional.x) {
         if (!is.null(lavdata@weights[[g]])) {
@@ -3224,11 +3224,11 @@ lav_object_inspect_loglik_casewise <- function(object, log. = TRUE, # nolint
           tmp.mean <- lavsamplestats@mean[[g]]
         }
         return.value[[g]] <-
-          lav_mvnorm_loglik_data(Y  = lavdata@X[[g]],
+          lav_mvnorm_loglik_data(y = lavdata@X[[g]],
             wt = lavdata@weights[[g]],
-            Mu = tmp.mean,
-            Sigma = lavimplied$cov[[g]],
-            x.idx = lavsamplestats@x.idx[[g]],
+            mu = tmp.mean,
+            sigma_1 = lavimplied$cov[[g]],
+            x_idx = lavsamplestats@x.idx[[g]],
             casewise = TRUE)
       }
     } # single-level, complete data
