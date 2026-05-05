@@ -128,7 +128,7 @@ lav_model_set_parameters <- function(lavmodel = NULL, x = NULL) {
         mm.in.group <- 1:nmat[g] + cumsum(c(0L, nmat))[g]
 
         tmp[mm.in.group] <-
-          lav_lisrel_composites_variances(MLIST = tmp[mm.in.group])
+          lav_lisrel_comp_set_intresvar(MLIST = tmp[mm.in.group])
       }
     } else {
       cat("FIXME: deal with Composites if representation = RAM")
@@ -234,7 +234,7 @@ lav_model_x2glist <- function(lavmodel = NULL, x = NULL,
         mm.in.group <- 1:nmat[g] + cumsum(c(0L, nmat))[g]
 
         GLIST[mm.in.group] <-
-          lav_lisrel_composites_variances(MLIST = GLIST[mm.in.group])
+          lav_lisrel_comp_set_intresvar(MLIST = GLIST[mm.in.group])
       }
     } else {
       cat("FIXME: deal with Composites when representation = RAM")

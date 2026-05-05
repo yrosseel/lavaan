@@ -1,5 +1,5 @@
 # check if the partable is complete/consistent
-# we may have added intercepts/variances (user = 0), fixed to zero
+# for example, we may have added intercepts/variances (user = 0), fixed to zero
 lav_partable_check <- function(partable, categorical = FALSE) {
   check <- TRUE
 
@@ -90,7 +90,9 @@ lav_partable_check <- function(partable, categorical = FALSE) {
     # do not include ordered variables
     !partable$lhs %in% ov.names.ord &
     # do not include indicators
-    !partable$lhs %in% ov.ind)
+    !partable$lhs %in% ov.ind &
+    # do not include lv composites
+    !partable$lhs %in% lv.names.c)
 
   if (length(int.fixed) > 0L) {
     check <- FALSE

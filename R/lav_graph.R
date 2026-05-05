@@ -4,6 +4,26 @@
 # collecting functions that were in lav_utils.R
 # YR 15 Oct 2025
 
+# check if adjacency matrix B represents an acyclic graph (DAG)
+# B[i,j] != 0 means directed edge j -> i
+# uses Kahn's topological sort: acyclic iff all nodes can be visited
+lav_graph_is_acyclic <- function(B = NULL) {
+  if (is.null(B) || all(B == 0)) return(TRUE)
+  nr <- nrow(B)
+  indegree <- rowSums(B != 0)
+  k <- 0L
+  queue <- which(indegree == 0L)
+  while (length(queue) > 0L) {
+    v <- queue[1L]; queue <- queue[-1L]
+    k <- k + 1L
+    for (u in which(B[, v] != 0)) {
+      indegree[u] <- indegree[u] - 1L
+      if (indegree[u] == 0L) queue <- c(queue, u)
+    }
+  }
+  k == nr
+}
+
 # find index of 'ancestors' (predictors) for all nodes in a DAG
 # given an adjacency matrix B (rows are y's, columns are x's)
 #

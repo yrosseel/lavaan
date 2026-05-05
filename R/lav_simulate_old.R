@@ -157,7 +157,7 @@ lav_data_simulate_old <- function( # user-specified model
     }
 
     # new in 0.6-20: - use lav_lisrel_residual_variances
-    #                - use lav_lisrel_composites_variances
+    #                - use lav_lisrel_comp_set_intresvar
     dotdotdot <- list(...)
     dotdotdot$sample.nobs <- sample.nobs
     dotdotdot$fixed.x <- FALSE # for now

@@ -1352,9 +1352,9 @@ lav_lisrel_nu0 <- function(MLIST = NULL, sample.mean = NULL,
 
 # set (total/residual) variances of composites
 # and while we at it, also set intercepts of composites
-lav_lisrel_composites_variances <- function(MLIST = NULL,
-                                            tol = .Machine$double.eps,
-                                            debug = FALSE) {
+lav_lisrel_comp_set_intresvar <- function(MLIST = NULL,
+                                          tol = .Machine$double.eps,
+                                          debug = FALSE) {
   LAMBDA <- MLIST$lambda
   BETA <- MLIST$beta
   PSI <- MLIST$psi
@@ -1399,6 +1399,12 @@ lav_lisrel_composites_variances <- function(MLIST = NULL,
     # store PSI
     MLIST$psi <- PSI
 
+    # fix intercept (if needed)
+    if (!is.null(MLIST$alpha)) {
+      tmp <- t(WMAT) %*% MLIST$nu
+      MLIST$alpha[lvc.idx, 1L] <- tmp[lvc.idx, 1L]
+    }
+
     return(MLIST)
   }
 
@@ -1407,14 +1413,11 @@ lav_lisrel_composites_variances <- function(MLIST = NULL,
   x.idx <- which(apply(abs.beta, 1L, sum) == 0 & lvc.flag)
   y.idx <- which(apply(abs.beta, 1L, sum) != 0 & lvc.flag)
 
-  nr <- nrow(BETA)
-  IB <- -BETA
-  IB[lav_matrix_diag_idx(nr)] <- 1
-  IB.inv <- solve(IB)
+  # compute IB.inv
+  IB.inv <- lav_lisrel_ibinv(MLIST)
 
-
-  # check if IB is acyclic
-  if (det(IB) != 1) {
+  # check if BETA is acyclic
+  if (!lav_graph_is_acyclic(BETA)) {
     # damn, we have a cyclic model; use nlminb()
     PSI <- lav_mlist_target_psi(
       IB.inv = IB.inv, PSI = PSI,
@@ -1481,8 +1484,14 @@ lav_lisrel_composites_variances <- function(MLIST = NULL,
 
   # fix composite mean (if needed)
   if (!is.null(MLIST$alpha)) {
-    tmp <- t(WMAT) %*% MLIST$nu
+    tmp <- t(WMAT) %*% MLIST$nu # total means
+    # step 1: set exogenous alpha values
     MLIST$alpha[lvc.idx, 1L] <- tmp[lvc.idx, 1L]
+    # step 2: set endogenous alpha values
+    exo_only <- MLIST$alpha; exo_only[y.idx] <- 0
+    # compensate alpha so that total mean stays the same
+    tmp2 <- IB.inv %*% exo_only
+    MLIST$alpha[y.idx, 1L] <- MLIST$alpha[y.idx, 1L] - tmp2[y.idx, 1L]
   }
 
   MLIST
@@ -1547,8 +1556,8 @@ lav_lisrel_residual_variances <- function(MLIST = NULL,
     IB.inv <- solve(IB)
 
 
-    # check if IB is acyclic
-    if (det(IB) != 1) {
+    # check if BETA is acyclic
+    if (!lav_graph_is_acyclic(BETA)) {
       # damn, we have a cyclic model; use nlminb()
       PSI <- lav_mlist_target_psi(
         IB.inv = IB.inv, PSI = PSI,

@@ -40,14 +40,7 @@ lav_model_properties <- function(GLIST, lavpartable = NULL,
       B <- GLIST[[beta.idx]]
       # keep fixed values (if any); fill in 1 in all 'free' positions
       B[m.free.idx[[beta.idx]]] <- 1
-      IminB <- diag(nrow(B)) - B
-      # if B is acyclic, we should be able to permute the rows/cols of B
-      # so that B is upper/lower triangular, and so det(I-B) = 1
-      if (det(IminB) == 1) {
-        acyclic[g] <- TRUE
-      } else {
-        acyclic[g] <- FALSE
-      }
+      acyclic[g] <- lav_graph_is_acyclic(B)
 
       # 2. bow-free?
       B.one <- as.integer(B != 0)
