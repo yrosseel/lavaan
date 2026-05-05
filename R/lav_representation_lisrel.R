@@ -2910,3 +2910,703 @@ lav_lisrel_d2sigma_beta_psi <- function(MLIST = NULL,
   X <- LIB.inv %*% dBeta %*% IB.inv %*% dPsi %*% t(LIB.inv) # p x p
   X + t(X) # p x p symmetric matrix
 }
+
+
+# Jacobian of the model-implied moments wrt the free parameters
+# (single block, LISREL representation).
+#
+# Inputs:
+#   MLIST         : named list of model matrices for the block (lambda, psi,
+#                   theta, [beta], [delta], [wmat], [nu], [alpha], [tau])
+#   m.free.idx    : list of length(MLIST); m.free.idx[[mm]] holds the
+#                   matrix-element indices of the free elements of MLIST[[mm]]
+#   x.free.idx    : list of length(MLIST); x.free.idx[[mm]] holds the
+#                   parameter-vector positions of those free elements
+#   nx.free       : total number of free parameters (column dimension of out)
+#   meanstructure : logical
+#   categorical   : logical
+#   correlation   : logical (continuous correlation structure)
+#   num.idx       : integer vector of numeric-variable indices (block)
+#   th.idx        : integer vector of threshold indices (block)
+#   group.w.free  : logical; if TRUE, prepend a row for the free group weight
+#
+# Output: a matrix with nx.free columns, rows are the model-implied moments
+# in the order used elsewhere in lavaan:
+# [group weight (if group.w.free) | thresholds | means] then [vech(Sigma)].
+lav_lisrel_dimplied_dx <- function(MLIST         = NULL,
+                                   m.free.idx    = NULL,
+                                   x.free.idx    = NULL,
+                                   nx.free       = NULL,
+                                   meanstructure = FALSE,
+                                   categorical   = FALSE,
+                                   correlation   = FALSE,
+                                   num.idx       = integer(0L),
+                                   th.idx        = integer(0L),
+                                   group.w.free  = FALSE) {
+
+  delta.flag <- beta.flag <- FALSE
+  if (!is.null(MLIST$delta) && any(MLIST$delta[,1] != 1)) {
+    delta.flag <- TRUE
+  }
+  if (!is.null(MLIST$beta)) {
+    beta.flag <- TRUE
+  }
+
+  # model matrices in this block
+  mnames <- names(MLIST)
+
+  mm.lambda.idx <- which(mnames == "lambda")
+  x.lambda.idx <- x.free.idx[[mm.lambda.idx]]
+  m.lambda.idx <- m.free.idx[[mm.lambda.idx]]
+  n_lam <- length(m.lambda.idx)
+
+  mm.psi.idx <- which(mnames == "psi")
+  tmp <- x.free.idx[[mm.psi.idx]]
+  x.psi.idx <- x.psi.idx <- tmp[!duplicated(tmp)]
+  m.psi.idx <- m.free.idx[[mm.psi.idx]][!duplicated(tmp)]
+  n_psi <- length(m.psi.idx)
+
+
+  mm.theta.idx <- which(mnames == "theta")
+  tmp <- x.free.idx[[mm.theta.idx]]
+  x.theta.idx <- tmp[!duplicated(tmp)]
+  m.theta.idx <- m.free.idx[[mm.theta.idx]][!duplicated(tmp)]
+  n_the <- length(m.theta.idx)
+
+  n_bet <- 0L
+  x.beta.idx <- integer(0L)
+  if (beta.flag) {
+    mm.beta.idx <- which(mnames == "beta")
+    x.beta.idx <- x.free.idx[[mm.beta.idx]]
+    m.beta.idx <- m.free.idx[[mm.beta.idx]]
+    n_bet <- length(m.beta.idx)
+  }
+
+  n_del <- 0L
+  x.delta.idx <- integer(0L)
+  if (delta.flag) {
+    mm.delta.idx <- which(mnames == "delta")
+    x.delta.idx <- x.free.idx[[mm.delta.idx]]
+    m.delta.idx <- m.free.idx[[mm.delta.idx]]
+    n_del <- length(m.delta.idx)
+  }
+
+  # composite: wmat
+  n_wmat <- 0L
+  x.wmat.idx <- integer(0L)
+  m.wmat.idx <- integer(0L)
+  wmat.flag <- !is.null(MLIST$wmat)
+  if (wmat.flag) {
+    mm.wmat.idx <- which(mnames == "wmat")
+    if (length(mm.wmat.idx) > 0L) {
+      x.wmat.idx <- x.free.idx[[mm.wmat.idx]]
+      m.wmat.idx <- m.free.idx[[mm.wmat.idx]]
+      n_wmat <- length(m.wmat.idx)
+    }
+  }
+
+  # in case !meanstructure or !categorical
+  n_nu  <- 0L;  m.nu.idx    <- integer(0L);  x.nu.idx    <- integer(0L)
+  n_alp <- 0L;  m.alpha.idx <- integer(0L);  x.alpha.idx <- integer(0L)
+
+
+  if (meanstructure) {
+    mm.nu.idx <- which(mnames == "nu")
+    x.nu.idx <- x.free.idx[[mm.nu.idx]]
+    m.nu.idx <- m.free.idx[[mm.nu.idx]]
+    n_nu <- length(m.nu.idx)
+
+    mm.alpha.idx <- which(mnames == "alpha")
+    x.alpha.idx <- x.free.idx[[mm.alpha.idx]]
+    m.alpha.idx <- m.free.idx[[mm.alpha.idx]]
+    n_alp <- length(m.alpha.idx)
+  }
+
+  if (categorical) {
+    mm.th.idx <- which(mnames == "tau")
+    x.th.idx <- x.free.idx[[mm.th.idx]]
+    m.th.idx <- m.free.idx[[mm.th.idx]]
+    n_th <- length(m.th.idx)
+  }
+
+  nvar <- nrow(MLIST$lambda)
+  nfac <- ncol(MLIST$lambda)
+  pstar <- nvar * (nvar + 1L) / 2L
+
+  # precompute
+  if (beta.flag) {
+    A <- lav_lisrel_ibinv(MLIST)
+    M <- MLIST$lambda %*% A
+    G <- A %*% MLIST$psi %*% t(A)
+    LG <- MLIST$lambda %*% G
+  } else {
+    M <- MLIST$lambda
+    G <- MLIST$psi
+    LG <- MLIST$lambda %*% MLIST$psi
+  }
+
+  if (delta.flag) {
+    delta  <- as.vector(MLIST$delta)
+  }
+
+
+  # vech structure for Sigma
+  r_s <- lav_matrix_vech_row_idx(nvar)
+  c_s <- lav_matrix_vech_col_idx(nvar)
+  sigma_lut <- lav_matrix_vech_reverse(seq_len(pstar))
+
+  if (delta.flag) {
+    # scaling weights: delta[r] * delta[s] for each vech position
+    delta_weight <- delta[r_s] * delta[c_s]
+  }
+
+  # helper: vec index -> (row, col)
+  vec2rc <- function(idx, nr) {
+    cbind(row = (idx - 1L) %% nr + 1L,
+          col = (idx - 1L) %/% nr + 1L)
+  }
+
+  # prepare output matrix for sigma
+  n_free <- n_lam + n_wmat + n_bet + n_psi + n_the + n_del
+  jac_sigma <- matrix(0, pstar, n_free)
+
+  col <- 1L
+
+
+  if (!wmat.flag) {
+    # Lambda [i,j]: dS0[r,s] = LG[s,j]*I(r==i) + LG[r,j]*I(s==i)
+    if (n_lam > 0L) {
+      rc  <- vec2rc(m.lambda.idx, nvar);  i_v <- rc[, 1L];  j_v <- rc[, 2L]
+
+      T1 <- LG[c_s, j_v, drop = FALSE] * outer(r_s, i_v, `==`)
+      T2 <- LG[r_s, j_v, drop = FALSE] * outer(c_s, i_v, `==`)
+
+      DX <- T1 + T2
+      if (delta.flag) {
+        DX <- DX * delta_weight
+      }
+      jac_sigma[, col:(col + n_lam - 1L)] <- DX
+      col <- col + n_lam
+    }
+
+    # Beta [i,j]: dS0[r,s] = M[r,i]*LG[s,j] + LG[r,j]*M[s,i]
+    if (n_bet > 0L) {
+      rc  <- vec2rc(m.beta.idx, nfac);  i_v <- rc[, 1L];  j_v <- rc[, 2L]
+
+      T1 <- M[r_s,  i_v, drop = FALSE] * LG[c_s, j_v, drop = FALSE]
+      T2 <- LG[r_s, j_v, drop = FALSE] * M[c_s,  i_v, drop = FALSE]
+
+      DX <- T1 + T2
+      if (delta.flag) {
+        DX <- DX * delta_weight
+      }
+      jac_sigma[, col:(col + n_bet - 1L)] <- DX
+      col <- col + n_bet
+    }
+   # Psi [k,l] symmetric: dS0[r,s] = M[r,k]*M[s,l] + M[r,l]*M[s,k]
+    # diagonal (k==l): halve
+    if (n_psi > 0L) {
+      rc  <- vec2rc(m.psi.idx, nfac)
+      k_v <- pmax(rc[, 1L], rc[, 2L])
+      l_v <- pmin(rc[, 1L], rc[, 2L])
+
+      T1 <- M[r_s, k_v, drop = FALSE] * M[c_s, l_v, drop = FALSE]
+      T2 <- M[r_s, l_v, drop = FALSE] * M[c_s, k_v, drop = FALSE]
+      DX <- T1 + T2
+
+      diag_mask <- (k_v == l_v)
+      if (any(diag_mask)) {
+        DX[, diag_mask] <- DX[, diag_mask] * 0.5
+      }
+
+      if (delta.flag) {
+        DX <- DX * delta_weight
+      }
+      jac_sigma[, col:(col + n_psi - 1L)] <- DX
+      col <- col + n_psi
+    }
+
+    # Theta [k,l] symmetric: dS = Delta %*% dTheta %*% Delta
+    #  -> unit vector at vech pos (k,l)
+    if (n_the > 0L) {
+      rc  <- vec2rc(m.theta.idx, nvar)
+      k_v <- pmax(rc[, 1L], rc[, 2L])
+      l_v <- pmin(rc[, 1L], rc[, 2L])
+
+      Jt <- matrix(0, pstar, n_the)
+      vech_pos <- sigma_lut[cbind(k_v, l_v)]
+      if (delta.flag) {
+        Jt[cbind(vech_pos, seq_len(n_the))] <- delta_weight[vech_pos]
+      } else {
+        Jt[cbind(vech_pos, seq_len(n_the))] <- 1
+      }
+
+      jac_sigma[, col:(col + n_the - 1L)] <- Jt
+      col <- col + n_the
+    }
+
+    # Delta[k] (diagonal only):
+    # dS[r,s] = I(r==k)*Sigma0[k,s]*delta[s] + delta[r]*Sigma0[r,k]*I(s==k)
+    if (n_del > 0L) {
+      Sigma0 <- M %*% MLIST$psi %*% t(M) + MLIST$theta
+      k_v <- m.delta.idx
+      T1 <- Sigma0[c_s, k_v, drop = FALSE] * delta[c_s] * outer(r_s, k_v, `==`)
+      T2 <- delta[r_s] * Sigma0[r_s, k_v, drop = FALSE] * outer(c_s, k_v, `==`)
+      jac_sigma[, col:(col + n_del - 1L)] <- T1 + T2
+    }
+
+  } else {
+    # composite ov (cov) and composite lv (clv)
+    cov.idx <- which(apply(
+      MLIST$lambda, 1L,
+      function(x) sum(x == 0) == ncol(MLIST$lambda)
+    ))
+    clv.idx <- which(apply(
+      MLIST$lambda, 2L,
+      function(x) sum(x == 0) == nrow(MLIST$lambda)
+    ))
+
+    LW  <- MLIST$lambda + MLIST$wmat
+    Tmat <- diag(nvar); Tmat[cov.idx, cov.idx] <- MLIST$theta[cov.idx, cov.idx]
+    wtw <- t(LW[, clv.idx, drop = FALSE]) %*% Tmat %*%
+             LW[, clv.idx, drop = FALSE]
+    wtw.inv <- solve(wtw)
+    WTW.inv <- diag(nfac)
+    WTW.inv[clv.idx, clv.idx] <- wtw.inv
+
+    if (!beta.flag) {
+      A <- diag(nfac)
+    }
+
+    # C0: V(eta) with composite diagonal entries zeroed
+    C0 <- G; diag(C0)[clv.idx] <- 0
+
+    # precompute
+    Lambdafull <- Tmat %*% LW %*% WTW.inv
+    LG_c <- Lambdafull %*% C0 %*% WTW.inv
+    H_c <- Lambdafull %*% A
+    F_c <- Lambdafull %*% G
+    Sig0s <- Lambdafull %*% C0 %*% t(Lambdafull)
+    LAMc <- Tmat %*% LW[, clv.idx, drop = FALSE] %*% wtw.inv
+    # dLambdafull/dW[i,j] for i in ovc, j in clv expands to
+    #   wtw.inv[j_loc,c_loc]*(Tmat - LAMc %*% wtw %*% t(LAMc))[r,i]
+    #   - LAMc[i,c_loc]*LAMc[r,j_loc].
+    # The "Pmat1" and "Pmat2" multipliers below feed into the wmat-block
+    # T1+T2-T3-T4 expansion. Earlier versions used Tmat - LAMc %*% t(LAMc)
+    # and LAMc %*% wtw.inv respectively, which are correct only when
+    # wtw == I; the generally correct forms use the wtw factor explicitly:
+    Pmat1 <- Tmat - LAMc %*% wtw %*% t(LAMc)
+    Pmat2 <- LAMc
+
+    # Beta/Psi correction matrices
+    XrsXss <- Lambdafull[r_s, clv.idx, drop = FALSE] *
+              Lambdafull[c_s, clv.idx, drop = FALSE]
+    A_sub  <- A[clv.idx, , drop = FALSE]
+    G_sub  <- G[clv.idx, , drop = FALSE]
+    # lambda
+    if (n_lam > 0L) {
+      rc  <- vec2rc(m.lambda.idx, nvar);  i_v <- rc[, 1L];  j_v <- rc[, 2L]
+
+      T1 <- LG_c[c_s, j_v, drop = FALSE] * outer(r_s, i_v, `==`)
+      T2 <- LG_c[r_s, j_v, drop = FALSE] * outer(c_s, i_v, `==`)
+
+      DX <- T1 + T2
+      if (delta.flag) {
+        DX <- DX * delta_weight
+      }
+      jac_sigma[, col:(col + n_lam - 1L)] <- DX
+      col <- col + n_lam
+    }
+
+    # wmat
+    if (n_wmat > 0L) {
+      rc <- vec2rc(m.wmat.idx, nvar)
+      i_v <- rc[, 1L]
+      j_v <- rc[, 2L]
+      j_loc <- match(j_v, clv.idx)
+
+      # path 1: xi_i terms
+      T1 <- Pmat1[r_s, i_v, drop = FALSE] * LG_c[c_s, j_v, drop = FALSE]
+      T2 <- Pmat1[c_s, i_v, drop = FALSE] * LG_c[r_s, j_v, drop = FALSE]
+
+      # path 2: phi_j * sigma_i correction
+      T3 <- Pmat2[r_s, j_loc, drop = FALSE] * Sig0s[c_s, i_v, drop = FALSE]
+      T4 <- Pmat2[c_s, j_loc, drop = FALSE] * Sig0s[r_s, i_v, drop = FALSE]
+
+      DX <- T1 + T2 - T3 - T4
+      if (delta.flag) {
+        DX <- DX * delta_weight
+      }
+      jac_sigma[, col:(col + n_wmat - 1L)] <- DX
+      col <- col + n_wmat
+    }
+
+    # beta
+    if (n_bet > 0L) {
+      rc  <- vec2rc(m.beta.idx, nfac);  i_v <- rc[, 1L];  j_v <- rc[, 2L]
+
+      T1 <- H_c[r_s, i_v, drop = FALSE] * F_c[c_s, j_v, drop = FALSE]
+      T2 <- F_c[r_s, j_v, drop = FALSE] * H_c[c_s, i_v, drop = FALSE]
+
+      AG     <- A_sub[, i_v, drop = FALSE] * G_sub[, j_v, drop = FALSE]
+      R_corr <- 2 * XrsXss %*% AG
+
+      DX <- T1 + T2 - R_corr
+      if (delta.flag) {
+        DX <- DX * delta_weight
+      }
+      jac_sigma[, col:(col + n_bet - 1L)] <- DX
+      col <- col + n_bet
+    }
+
+    # psi
+    if (n_psi > 0L) {
+      rc <- vec2rc(m.psi.idx, nfac)
+      k_v <- pmax(rc[, 1L], rc[, 2L])
+      l_v <- pmin(rc[, 1L], rc[, 2L])
+
+      T1 <- H_c[r_s, k_v, drop = FALSE] * H_c[c_s, l_v, drop = FALSE]
+      T2 <- H_c[r_s, l_v, drop = FALSE] * H_c[c_s, k_v, drop = FALSE]
+
+      A_kl <- A_sub[, k_v, drop = FALSE] * A_sub[, l_v, drop = FALSE]
+      R_corr <- 2 * XrsXss %*% A_kl
+
+      DX <- T1 + T2 - R_corr
+
+      diag_mask <- (k_v == l_v)
+      if (any(diag_mask)) {
+        DX[, diag_mask] <- DX[, diag_mask] * 0.5
+      }
+
+      if (delta.flag) {
+        DX <- DX * delta_weight
+      }
+      jac_sigma[, col:(col + n_psi - 1L)] <- DX
+      col <- col + n_psi
+    }
+
+    # theta
+    if (n_the > 0L) {
+      rc  <- vec2rc(m.theta.idx, nvar)
+      k_v <- pmax(rc[, 1L], rc[, 2L])
+      l_v <- pmin(rc[, 1L], rc[, 2L])
+
+      Jt <- matrix(0, pstar, n_the)
+      vech_pos <- sigma_lut[cbind(k_v, l_v)]
+      if (delta.flag) {
+        Jt[cbind(vech_pos, seq_len(n_the))] <- delta_weight[vech_pos]
+      } else {
+        Jt[cbind(vech_pos, seq_len(n_the))] <- 1
+      }
+
+      jac_sigma[, col:(col + n_the - 1L)] <- Jt
+      col <- col + n_the
+    }
+
+    # delta
+    if (n_del > 0L) {
+      Sigma0_c <- Sig0s + MLIST$theta
+      k_v      <- m.delta.idx
+      T1 <- Sigma0_c[c_s, k_v, drop = FALSE] * delta[c_s] * outer(r_s, k_v, `==`)
+      T2 <- delta[r_s] * Sigma0_c[r_s, k_v, drop = FALSE] * outer(c_s, k_v, `==`)
+      jac_sigma[, col:(col + n_del - 1L)] <- T1 + T2
+    }
+
+  } # wmat.flag
+
+  # categorical: reorder
+  if (categorical) {
+    # reorder: first variances (of numeric), then covariances
+    cov.idx <- lav_matrix_vech_idx(nvar)
+    covd.idx <- lav_matrix_vech_idx(nvar, diagonal = FALSE)
+
+    var.idx <- which(is.na(match(
+      cov.idx,
+      covd.idx
+    )))[num.idx]
+    cor.idx <- match(covd.idx, cov.idx)
+
+    jac_sigma <- rbind(
+      jac_sigma[var.idx, , drop = FALSE],
+      jac_sigma[cor.idx, , drop = FALSE]
+    )
+  }
+
+  # correlation structure
+  if (!categorical && correlation) {
+    rm.idx <- lav_matrix_diagh_idx(nvar)
+    jac_sigma <- jac_sigma[-rm.idx, , drop = FALSE]
+  }
+
+  jac_th   <- NULL
+  nth_full <- 0L
+  if (!categorical) {
+    if (meanstructure) {
+      # precompute: IB.inv * alpha
+      if (beta.flag) {
+        a <- drop(A %*% MLIST$alpha)
+      } else {
+        a <- MLIST$alpha
+      }
+
+      n_free <- n_nu + n_lam + n_bet + n_alp
+      jac_mean <- matrix(0, nvar, n_free)
+
+      col <- 1L
+      # nu[i]:  dmu = e_i
+      if (n_nu > 0L) {
+        Jn <- matrix(0, nvar, n_nu)
+        Jn[cbind(m.nu.idx, seq_len(n_nu))] <- 1
+        jac_mean[, col:(col + n_nu - 1L)] <- Jn
+        col <- col + n_nu
+      }
+
+      # Lambda[i,j]:  dmu[r] = a[j] * I(r == i)
+      if (n_lam > 0L) {
+        rc  <- vec2rc(m.lambda.idx, nvar); i_v <- rc[, 1L];  j_v <- rc[, 2L]
+
+        Jl <- matrix(0, nvar, n_lam)
+        Jl[cbind(i_v, seq_len(n_lam))] <- a[j_v]
+        jac_mean[, col:(col + n_lam - 1L)] <- Jl
+        col <- col + n_lam
+      }
+
+      # Beta[i,j]:  dmu[r] = M[r,i] * a[j]
+      if (n_bet > 0L) {
+        rc  <- vec2rc(m.beta.idx, nfac); i_v <- rc[, 1L];  j_v <- rc[, 2L]
+
+        jac_mean[, col:(col + n_bet - 1L)] <-
+          M[, i_v, drop = FALSE] * rep(a[j_v], each = nvar)
+        col <- col + n_bet
+      }
+
+      # alpha[k]:  dmu = M[,k]
+      if (n_alp > 0L) {
+        jac_mean[, col:(col + n_alp - 1L)] <- M[, m.alpha.idx, drop = FALSE]
+      }
+    } # meanstructure
+
+
+  # categorical
+  } else if (categorical) {
+
+    th_idx_g <- th.idx
+    nth_full  <- length(th_idx_g)
+
+    # v_slot[t] = observed-variable index for TH element t
+    nlev_v <- tabulate(th_idx_g, nbins = nvar)
+    nlev_v[nlev_v == 0L] <- 1L
+    v_slot <- rep(seq_len(nvar), times = nlev_v)
+
+    # per-slot delta scale
+    if (delta.flag) {
+      delta_star <- delta[v_slot]
+    } else {
+      delta_star <- rep(1, nth_full)
+    }
+
+    # ord_slots[k] = position in TH vector that corresponds to tau row k
+    ord_slots <- which(th_idx_g > 0L)
+
+    # a_vec = IB.inv * alpha  (for lambda/beta derivatives)
+    if (!is.null(MLIST$alpha)) {
+      a_vec <- if (beta.flag) {
+        as.vector(A %*% MLIST$alpha)
+      } else {
+        as.vector(MLIST$alpha)
+      }
+    } else {
+      a_vec <- rep(0, nfac)
+    }
+
+    # nu_vec (intercepts; zero for purely ordinal models)
+    nu_vec <- if (!is.null(MLIST$nu)) as.vector(MLIST$nu) else rep(0, nvar)
+
+    # pi0 = nu + Lambda * IB.inv * alpha = nu + M * alpha
+    if (!is.null(MLIST$alpha)) {
+      pi0 <- nu_vec + as.vector(M %*% as.vector(MLIST$alpha))
+    } else {
+      pi0 <- nu_vec
+    }
+
+    # tau_full: tau values at ordinal TH slots, 0 at numeric TH slots
+    tau_full <- numeric(nth_full)
+    if (!is.null(MLIST$tau) && n_th > 0L) {
+      tau_full[ord_slots] <- as.vector(MLIST$tau)
+    }
+
+    # unscaled TH: TH0[t] = tau_full[t] - pi0[v(t)]
+    TH0 <- tau_full - pi0[v_slot]
+
+    # build jac_th  (nth_full rows, n_free_th columns)
+    # column order: tau | delta | nu | lambda | beta | alpha
+    n_free_th <- n_th + n_del + n_nu + n_lam + n_bet + n_alp
+    jac_th <- matrix(0, nth_full, n_free_th)
+    col_th <- 1L
+
+    # tau[k]: delta_star[t] * I(t == ord_slots[k])
+    if (n_th > 0L) {
+      t_slots <- ord_slots[m.th.idx]
+      Jt <- matrix(0, nth_full, n_th)
+      Jt[cbind(t_slots, seq_len(n_th))] <- delta_star[t_slots]
+      jac_th[, col_th:(col_th + n_th - 1L)] <- Jt
+      col_th <- col_th + n_th
+    }
+
+    # delta[k]: I(v_slot[t]==k) * TH0[t]
+    if (n_del > 0L) {
+      jac_th[, col_th:(col_th + n_del - 1L)] <-
+        outer(v_slot, m.delta.idx, `==`) * TH0
+      col_th <- col_th + n_del
+    }
+
+    # nu[i]: -delta_star[t] * I(v_slot[t]==i)
+    if (n_nu > 0L) {
+      jac_th[, col_th:(col_th + n_nu - 1L)] <-
+        -outer(v_slot, m.nu.idx, `==`) * delta_star
+      col_th <- col_th + n_nu
+    }
+
+    # lambda[i,j]: -delta_star[t]*I(v_slot[t]==i)*a_vec[j]
+    if (n_lam > 0L) {
+      rc  <- vec2rc(m.lambda.idx, nvar); i_v <- rc[, 1L]; j_v <- rc[, 2L]
+      jac_th[, col_th:(col_th + n_lam - 1L)] <-
+        -(outer(v_slot, i_v, `==`) * delta_star) *
+         matrix(a_vec[j_v], nth_full, n_lam, byrow = TRUE)
+      col_th <- col_th + n_lam
+    }
+
+    # beta[i,j]: -delta_star[t]*M[v_slot[t],i]*a_vec[j]
+    if (n_bet > 0L) {
+      rc  <- vec2rc(m.beta.idx, nfac); i_v <- rc[, 1L]; j_v <- rc[, 2L]
+      jac_th[, col_th:(col_th + n_bet - 1L)] <-
+        -delta_star * M[v_slot, i_v, drop = FALSE] *
+         matrix(a_vec[j_v], nth_full, n_bet, byrow = TRUE)
+         matrix(a_vec[j_v], nth_full, n_bet, byrow = TRUE)
+      col_th <- col_th + n_bet
+    }
+
+    # alpha[k]: -delta_star[t] * M[v_slot[t], k]
+    if (n_alp > 0L) {
+     jac_th[, col_th:(col_th + n_alp - 1L)] <-
+       -delta_star * M[v_slot, m.alpha.idx, drop = FALSE]
+    }
+  }
+
+  # sigma
+  out <- matrix(0, nrow = nrow(jac_sigma), ncol = nx.free)
+  el.idx <- if (!wmat.flag) {
+    c(x.lambda.idx, x.beta.idx, x.psi.idx, x.theta.idx, x.delta.idx)
+  } else {
+    c(x.lambda.idx, x.wmat.idx, x.beta.idx, x.psi.idx, x.theta.idx, x.delta.idx)
+  }
+  out[, el.idx] <- jac_sigma
+
+  # meanstructure
+  if (!categorical && meanstructure) {
+    # right order
+    el.idx <- c(x.nu.idx, x.lambda.idx, x.beta.idx, x.alpha.idx)
+    outm <- matrix(0, nrow = nrow(jac_mean), ncol = nx.free)
+    outm[, el.idx] <- jac_mean
+    out <- rbind(outm, out)
+  } else if (categorical && !is.null(jac_th)) {
+    el.idx_th <- c(
+      if (n_th  > 0L) x.th.idx     else integer(0L),
+      if (n_del > 0L) x.delta.idx  else integer(0L),
+      if (n_nu  > 0L) x.nu.idx     else integer(0L),
+      if (n_lam > 0L) x.lambda.idx else integer(0L),
+      if (n_bet > 0L) x.beta.idx   else integer(0L),
+      if (n_alp > 0L) x.alpha.idx  else integer(0L)
+    )
+    out_th <- matrix(0, nth_full, nx.free)
+    out_th[, el.idx_th] <- jac_th
+    out <- rbind(out_th, out)
+  }
+
+  # composite chain-rule correction.
+  # lav_lisrel_comp_set_intresvar() implicitly reparameterizes psi[clv,clv]
+  # diagonal (and alpha[clv] when meanstructure is present) as a function of
+  # the other free parameters (wmat / nu / theta / beta / lambda). The
+  # analytical jac_sigma / jac_mean above were computed treating psi*/alpha*
+  # as inputs; we add the chain term:
+  #   chain[, j] = sum_{k in clv} dSigma/dpsi*[k,k] * dpsi*[k,k]/dphi_j
+  #              + sum_{k in clv} dMu/dalpha*[k]   * dalpha*[k]/dphi_j
+  # The closed-form dSigma/dpsi*[k,k] is the same expression used for free
+  # psi[k,k] (T1+T2-R_corr halved), reused with k ranging over clv.idx;
+  # dMu/dalpha*[k] = M[r,k] (zero for composite-OV rows by construction).
+  # dpsi*/dphi and dalpha*/dphi are obtained by complex-step differentiation
+  # through lav_lisrel_comp_set_intresvar() itself.
+  if (wmat.flag && length(clv.idx) > 0L) {
+    n_lvc <- length(clv.idx)
+
+    # current free parameter vector
+    x0_chain <- numeric(nx.free)
+    for (mm in seq_along(MLIST)) {
+      if (length(m.free.idx[[mm]])) {
+        x0_chain[x.free.idx[[mm]]] <- MLIST[[mm]][m.free.idx[[mm]]]
+      }
+    }
+
+    ML.tmpl    <- MLIST
+    m.free.cap <- m.free.idx
+    x.free.cap <- x.free.idx
+    clv.cap    <- clv.idx
+    meanstr.cap <- meanstructure
+    compute_lvc <- function(xx) {
+      ML <- ML.tmpl
+      for (mm in seq_along(ML)) {
+        if (length(m.free.cap[[mm]])) {
+          ML[[mm]][m.free.cap[[mm]]] <- xx[x.free.cap[[mm]]]
+        }
+      }
+      ML <- lav_lisrel_comp_set_intresvar(ML)
+      o <- ML$psi[cbind(clv.cap, clv.cap)]
+      if (meanstr.cap && !is.null(ML$alpha)) {
+        o <- c(o, ML$alpha[clv.cap, 1L])
+      }
+      o
+    }
+    J_lvc <- lav_func_jacobian_complex(func = compute_lvc, x = x0_chain)
+    J_psi <- J_lvc[seq_len(n_lvc), , drop = FALSE]
+
+    # dSigma/dpsi*[k,k] for k in clv.idx (closed form):
+    #   H_c[r,k]*H_c[s,k] - sum_{k' in clv} Lambdafull[r,k']*Lambdafull[s,k']*A[k',k]^2
+    H_c.lvc <- H_c[, clv.idx, drop = FALSE]
+    M_psi   <- H_c.lvc[r_s, , drop = FALSE] *
+                 H_c.lvc[c_s, , drop = FALSE]
+    A_lvc_lvc <- A[clv.idx, clv.idx, drop = FALSE]
+    M_psi   <- M_psi - XrsXss %*% (A_lvc_lvc^2)
+
+    sigma_chain <- M_psi %*% J_psi
+
+    if (!categorical && meanstructure) {
+      sigma.row.offset <- nvar
+    } else if (categorical && !is.null(jac_th)) {
+      sigma.row.offset <- nth_full
+    } else {
+      sigma.row.offset <- 0L
+    }
+    sig.rows <- sigma.row.offset + seq_len(nrow(jac_sigma))
+    out[sig.rows, ] <- out[sig.rows, , drop = FALSE] + sigma_chain
+
+    # dMu/dalpha*[k] for k in clv.idx: column M[, k]
+    if (meanstructure && !categorical) {
+      J_alpha  <- J_lvc[n_lvc + seq_len(n_lvc), , drop = FALSE]
+      mu_chain <- M[, clv.idx, drop = FALSE] %*% J_alpha
+      out[seq_len(nvar), ] <- out[seq_len(nvar), , drop = FALSE] + mu_chain
+    }
+  }
+
+  # group weight: prepend a row with 1.0 at the gw column
+  if (group.w.free) {
+    mm.gw.idx <- which(mnames == "gw")
+    if (length(mm.gw.idx) > 0L) {
+      x.gw.idx <- x.free.idx[[mm.gw.idx]]
+      out_gw <- matrix(0, nrow = 1L, ncol = nx.free)
+      out_gw[1L, x.gw.idx] <- 1.0
+      out <- rbind(out_gw, out)
+    }
+  }
+
+  out
+}

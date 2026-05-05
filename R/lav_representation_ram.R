@@ -387,3 +387,159 @@ lav_ram_df <- function(MLIST = NULL, Omega = NULL, Omega.mu = NULL) {
     m = m.deriv
   )
 }
+
+
+# Jacobian of the model-implied moments wrt the free parameters
+# (single block, RAM representation, classical continuous case only:
+# no categorical, no correlation structure, no conditional.x).
+#
+# Inputs:
+#   MLIST         : named list of model matrices for the block
+#                   (ov.idx, A, S, [m])
+#   m.free.idx    : list of length(MLIST); m.free.idx[[mm]] holds the
+#                   matrix-element indices of the free elements of MLIST[[mm]]
+#   x.free.idx    : list of length(MLIST); x.free.idx[[mm]] holds the
+#                   parameter-vector positions of those free elements
+#   nx.free       : total number of free parameters (column dim of out)
+#   meanstructure : logical
+#   group.w.free  : logical; if TRUE, prepend a row for the free group weight
+#
+# Output: a matrix with nx.free columns; rows are
+# [group weight (if group.w.free) | Mu (if meanstructure)] then [vech(Sigma)].
+lav_ram_dimplied_dx <- function(MLIST         = NULL,
+                                m.free.idx    = NULL,
+                                x.free.idx    = NULL,
+                                nx.free       = NULL,
+                                meanstructure = FALSE,
+                                group.w.free  = FALSE) {
+
+  ov.idx <- as.integer(MLIST$ov.idx[1L, ])
+  nvar   <- length(ov.idx)
+  nboth  <- nrow(MLIST$A)
+  pstar  <- nvar * (nvar + 1L) / 2L
+
+  mnames <- names(MLIST)
+
+  # A (asymmetric)
+  mm.A.idx <- which(mnames == "A")
+  x.A.idx  <- x.free.idx[[mm.A.idx]]
+  m.A.idx  <- m.free.idx[[mm.A.idx]]
+  n_A      <- length(m.A.idx)
+
+  # S (symmetric)
+  mm.S.idx <- which(mnames == "S")
+  tmp      <- x.free.idx[[mm.S.idx]]
+  x.S.idx  <- tmp[!duplicated(tmp)]
+  m.S.idx  <- m.free.idx[[mm.S.idx]][!duplicated(tmp)]
+  n_S      <- length(m.S.idx)
+
+  # m (only if meanstructure)
+  n_m     <- 0L
+  x.m.idx <- integer(0L)
+  m.m.idx <- integer(0L)
+  if (meanstructure) {
+    mm.m.idx <- which(mnames == "m")
+    x.m.idx  <- x.free.idx[[mm.m.idx]]
+    m.m.idx  <- m.free.idx[[mm.m.idx]]
+    n_m      <- length(m.m.idx)
+  }
+
+  # precompute
+  IA.inv <- lav_matrix_inverse_iminus(MLIST$A)            # nboth x nboth
+  Fobs   <- IA.inv[ov.idx, , drop = FALSE]                # nvar  x nboth
+  W      <- IA.inv %*% MLIST$S %*% t(Fobs)                # nboth x nvar
+  WT     <- t(W)                                          # nvar  x nboth
+  if (meanstructure) {
+    a <- as.vector(IA.inv %*% MLIST$m)                    # nboth
+  }
+
+  # vech structure for Sigma
+  r_s <- lav_matrix_vech_row_idx(nvar)
+  c_s <- lav_matrix_vech_col_idx(nvar)
+
+  # helper: vec index -> (row, col)
+  vec2rc <- function(idx, nr) {
+    cbind(row = (idx - 1L) %% nr + 1L,
+          col = (idx - 1L) %/% nr + 1L)
+  }
+
+  # ---- jac_sigma ----
+  n_free    <- n_A + n_S
+  jac_sigma <- matrix(0, pstar, n_free)
+  col       <- 1L
+
+  # A[k,l]: dSigma[r,s] = Fobs[r,k]*W[l,s] + Fobs[s,k]*W[l,r]
+  if (n_A > 0L) {
+    rc  <- vec2rc(m.A.idx, nboth);  k_v <- rc[, 1L];  l_v <- rc[, 2L]
+
+    T1 <- Fobs[r_s, k_v, drop = FALSE] * WT[c_s, l_v, drop = FALSE]
+    T2 <- Fobs[c_s, k_v, drop = FALSE] * WT[r_s, l_v, drop = FALSE]
+
+    jac_sigma[, col:(col + n_A - 1L)] <- T1 + T2
+    col <- col + n_A
+  }
+
+  # S[k,l] symmetric: dSigma[r,s] = Fobs[r,k]*Fobs[s,l] + Fobs[r,l]*Fobs[s,k]
+  # diagonal (k==l): halve (formula double-counts the single parameter)
+  if (n_S > 0L) {
+    rc  <- vec2rc(m.S.idx, nboth)
+    k_v <- pmax(rc[, 1L], rc[, 2L])
+    l_v <- pmin(rc[, 1L], rc[, 2L])
+
+    T1 <- Fobs[r_s, k_v, drop = FALSE] * Fobs[c_s, l_v, drop = FALSE]
+    T2 <- Fobs[r_s, l_v, drop = FALSE] * Fobs[c_s, k_v, drop = FALSE]
+    DX <- T1 + T2
+
+    diag_mask <- (k_v == l_v)
+    if (any(diag_mask)) {
+      DX[, diag_mask] <- DX[, diag_mask] * 0.5
+    }
+
+    jac_sigma[, col:(col + n_S - 1L)] <- DX
+  }
+
+  # ---- jac_mean (if meanstructure) ----
+  if (meanstructure) {
+    n_free_mu <- n_A + n_m
+    jac_mean  <- matrix(0, nvar, n_free_mu)
+    col       <- 1L
+
+    # A[k,l]:  dMu[r] = Fobs[r,k] * a[l]
+    if (n_A > 0L) {
+      rc  <- vec2rc(m.A.idx, nboth);  k_v <- rc[, 1L];  l_v <- rc[, 2L]
+      jac_mean[, col:(col + n_A - 1L)] <-
+        Fobs[, k_v, drop = FALSE] * rep(a[l_v], each = nvar)
+      col <- col + n_A
+    }
+
+    # m[k]:  dMu[r] = Fobs[r, k]
+    if (n_m > 0L) {
+      jac_mean[, col:(col + n_m - 1L)] <- Fobs[, m.m.idx, drop = FALSE]
+    }
+  }
+
+  # ---- assemble output ----
+  out    <- matrix(0, nrow = pstar, ncol = nx.free)
+  el.idx <- c(x.A.idx, x.S.idx)
+  out[, el.idx] <- jac_sigma
+
+  if (meanstructure) {
+    el.idx_mu      <- c(x.A.idx, x.m.idx)
+    outm           <- matrix(0, nrow = nvar, ncol = nx.free)
+    outm[, el.idx_mu] <- jac_mean
+    out <- rbind(outm, out)
+  }
+
+  # group weight: prepend a row with 1.0 at the gw column
+  if (group.w.free) {
+    mm.gw.idx <- which(mnames == "gw")
+    if (length(mm.gw.idx) > 0L) {
+      x.gw.idx <- x.free.idx[[mm.gw.idx]]
+      out_gw <- matrix(0, nrow = 1L, ncol = nx.free)
+      out_gw[1L, x.gw.idx] <- 1.0
+      out <- rbind(out_gw, out)
+    }
+  }
+
+  out
+}

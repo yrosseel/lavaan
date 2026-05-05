@@ -687,7 +687,7 @@ lav_sem_miiv_varcov <- function(x = NULL, samplestats = FALSE,
   nblocks <- b <- 1L # for now
 
   # delta2
-  tmp <- lav_model_delta_lisrel(lavmodel.tmp, block = b)
+  tmp <- lav_model_delta(lavmodel.tmp)[[b]]
   delta2 <- tmp[, free.undirected.idx, drop = FALSE]
 
   # svec
@@ -986,7 +986,7 @@ lav_sem_miiv_vcov <- function(lavmodel = NULL, lavsamplestats = NULL,
       # )
       # h2 <- attr(tmp, "H")
       stopifnot(lavmodel@nblocks == 1L)
-      delta <- lav_model_delta_lisrel(lavmodel, block = 1L)
+      delta <- lav_model_delta(lavmodel)[[1L]]
       delta2 <- delta[, free.undirected.idx, drop = FALSE]
       svec <- lav_implied_to_vec(
           implied = lavh1$implied, lavmodel = lavmodel,
