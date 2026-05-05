@@ -221,6 +221,74 @@ lav_model_gradient <- function(lavmodel = NULL,
     }
   } else # ML
 
+  # 1a. ML approach for composites: use Delta directly. The existing
+  # per-matrix lav_lisrel_df_dmlist() path does not handle composites
+  # (it ignores wmat / WTW.inv). We reuse the standard ML "POST" trick:
+  #   dF/dphi = crossprod(Delta, POST)  where
+  #     POST = c(-2 * Omega.mu, -D' vec(Omega))
+  # This works for any model where lav_model_delta() can produce an
+  # analytical Jacobian -- including composites since 0.6-23.
+  if ((estimator == "ML" || estimator == "REML" || estimator == "catML") &&
+      lavdata@nlevels == 1L && composites.flag &&
+      !lavmodel@conditional.x) {
+    correlation <- lavmodel@correlation
+    if (meanstructure) {
+      Omega <- lav_model_omega(
+        Sigma.hat = Sigma.hat, Mu.hat = Mu.hat,
+        lavsamplestats = lavsamplestats,
+        estimator = estimator,
+        meanstructure = TRUE,
+        conditional.x = conditional.x,
+        correlation = correlation
+      )
+      Omega.mu <- attr(Omega, "mu")
+    } else {
+      Omega <- lav_model_omega(
+        Sigma.hat = Sigma.hat, Mu.hat = NULL,
+        lavsamplestats = lavsamplestats,
+        estimator = estimator,
+        meanstructure = FALSE,
+        conditional.x = conditional.x,
+        correlation = correlation
+      )
+      Omega.mu <- vector("list", length = lavmodel@nblocks)
+    }
+
+    Delta <- lav_model_delta(lavmodel = lavmodel, GLIST. = GLIST)
+
+    if (lavmodel@ceq.simple.only) {
+      dx <- numeric(lavmodel@nx.unco)
+    } else {
+      dx <- numeric(nx.free)
+    }
+
+    # lavaan's ML objective is 0.5 * F_ML (lav_model_objective.R: group.fx
+     # <- 0.5 * group.fx for ML/REML/NTRLS/catML), so dF/dphi has a 0.5
+     # factor relative to the textbook ML loss.
+    for (g in 1:lavmodel@nblocks) {
+      POST.Sigma <- -0.5 * lav_matrix_duplication_pre(
+        matrix(Omega[[g]], ncol = 1L))
+      if (meanstructure) {
+        POST.Mu <- -1 * as.numeric(Omega.mu[[g]])
+        POST <- c(POST.Mu, POST.Sigma)
+      } else {
+        POST <- POST.Sigma
+      }
+      # Delta rows: [gw (if group.w.free) | mu (if meanstructure) | vech(Sigma)]
+      # group weight is overwritten below via the explicit Poisson term, so
+      # pad POST with a leading zero when needed (gradient there is set later)
+      if (lavmodel@group.w.free) {
+        POST <- c(0, POST)
+      }
+      group.dx <- as.numeric(crossprod(Delta[[g]], POST))
+      dx <- dx + group.w[g] * group.dx
+    }
+
+    if (lavmodel@ceq.simple.only && ceq.simple) {
+      dx <- drop(crossprod(lavmodel@ceq.simple.K, dx))
+    }
+  } else # ML + composites
+
   # 2. using Delta - *LS family
   if (estimator %in% c("WLS", "DWLS", "ULS", "GLS", "NTGLS", "DLS")) {
     if (type != "free") {
@@ -1272,7 +1340,7 @@ lav_model_delta <- function(lavmodel = NULL, GLIST. = NULL,
       Delta_tmp[[g]] <- rbind(
         Delta[[(g - 1) * 2 + 1]],
         Delta[[(g - 1) * 2 + 2]]
-      )         
+      )
     }
     Delta <- Delta_tmp
   }
