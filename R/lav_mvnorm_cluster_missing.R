@@ -6,43 +6,43 @@
 
 
 # Mu.W, Mu.B, Sigma.W, Sigma.B are the model-implied statistics
-lav_mvnorm_cluster_missing_loglik_samplestats_2l <- function(Y1 = NULL,
-                                                             Y2 = NULL,
-                                                             Lp = NULL,
-                                                             Mp = NULL,
-                                                             Mu.W = NULL,
-                                                             Sigma.W = NULL,
-                                                             Mu.B = NULL,
-                                                             Sigma.B = NULL,
-                                                             Sinv.method = "eigen",
-                                                             log2pi = FALSE,
-                                                             loglik.x = 0,
-                                                             minus.two = TRUE) {
+lav_mvnorm_cluster_missing_loglik_samplestats_2l <- function(y1 = NULL, # nolint
+                                                         y2 = NULL,
+                                                         lp = NULL,
+                                                         mp = NULL,
+                                                         mu_w = NULL,
+                                                         sigma_w = NULL,
+                                                         mu_b = NULL,
+                                                         sigma_b = NULL,
+                                                         sinv_method = "eigen",
+                                                         log2pi = FALSE,
+                                                         loglik_x = 0,
+                                                         minus_two = TRUE) {
   # map implied to 2l matrices
   out <- lav_mvnorm_cluster_implied22l(
-    Lp = Lp, Mu.W = Mu.W, Mu.B = Mu.B,
-    Sigma.W = Sigma.W, Sigma.B = Sigma.B
+    lp = lp, mu_w = mu_w, mu_b = mu_b,
+    sigma_w = sigma_w, sigma_b = sigma_b
   )
-  mu.y <- out$mu.y
-  mu.z <- out$mu.z
-  sigma.w <- out$sigma.w
-  sigma.b <- out$sigma.b
-  sigma.zz <- out$sigma.zz
-  sigma.yz <- out$sigma.yz
+  mu_y <- out$mu.y
+  mu_z <- out$mu.z
+  sigma_w_1 <- out$sigma.w
+  sigma_b_1 <- out$sigma.b
+  sigma_zz <- out$sigma.zz
+  sigma_yz <- out$sigma.yz
 
   # Lp
-  nclusters <- Lp$nclusters[[2]]
-  between.idx <- Lp$between.idx[[2]]
-  both.idx <- Lp$both.idx[[2]]
-  cluster.idx <- Lp$cluster.idx[[2]]
+  nclusters <- lp$nclusters[[2]]
+  between_idx <- lp$between.idx[[2]]
+  both_idx <- lp$both.idx[[2]]
+  cluster_idx <- lp$cluster.idx[[2]]
 
   # sanity checks
-  if (any(diag(sigma.w) < 0) || any(diag(sigma.b) < 0)) {
+  if (any(diag(sigma_w_1) < 0) || any(diag(sigma_b_1) < 0)) {
     return(+Inf)
   }
 
   # check is both.idx part of sigma.b is 'too' negative; if so, return +Inf
-  ev <- eigen(sigma.b[both.idx, both.idx, drop = FALSE],
+  ev <- eigen(sigma_b_1[both_idx, both_idx, drop = FALSE],
     symmetric = TRUE,
     only.values = TRUE
   )$values
@@ -55,548 +55,548 @@ lav_mvnorm_cluster_missing_loglik_samplestats_2l <- function(Y1 = NULL,
   # cat("mu.y = \n"); print(mu.y)
 
   # global
-  sigma.w.inv <- solve.default(sigma.w)
-  sigma.w.logdet <- log(det(sigma.w))
-  sigma.b <- sigma.b[both.idx, both.idx] # only both part
+  sigma_w_inv <- solve.default(sigma_w_1)
+  sigma_w_logdet <- log(det(sigma_w_1))
+  sigma_b_1 <- sigma_b_1[both_idx, both_idx] # only both part
 
   # y
-  ny <- ncol(sigma.w)
-  if (length(between.idx) > 0L) {
-    Y1w <- Y1[, -between.idx, drop = FALSE]
+  ny <- ncol(sigma_w_1)
+  if (length(between_idx) > 0L) {
+    y1w <- y1[, -between_idx, drop = FALSE]
   } else {
-    Y1w <- Y1
+    y1w <- y1
   }
-  Y1w.c <- t(t(Y1w) - mu.y)
-  PIJ <- matrix(0, nrow(Y1w.c), ny)
+  y1w_c <- t(t(y1w) - mu_y)
+  pij <- matrix(0, nrow(y1w_c), ny)
 
   # z
-  nz <- length(between.idx)
+  nz <- length(between_idx)
   if (nz > 0L) {
-    # check is sigma.zz is PD; if not, return +Inf
-    ev <- eigen(sigma.zz, symmetric = TRUE, only.values = TRUE)$values
+    # check is sigma_zz is PD; if not, return +Inf
+    ev <- eigen(sigma_zz, symmetric = TRUE, only.values = TRUE)$values
     if (any(ev < sqrt(.Machine$double.eps))) {
       return(+Inf)
     }
 
-    Z <- Y2[, between.idx, drop = FALSE]
-    Z.c <- t(t(Z) - mu.z)
+    z <- y2[, between_idx, drop = FALSE]
+    z_c <- t(t(z) - mu_z)
 
-    sigma.yz <- sigma.yz[both.idx, , drop = FALSE] # only both part
-    sigma.zy <- t(sigma.yz)
-    sigma.zz.inv <- solve.default(sigma.zz)
-    sigma.zz.logdet <- log(det(sigma.zz))
-    sigma.zi.zy <- sigma.zz.inv %*% sigma.zy
-    sigma.b.z <- sigma.b - sigma.yz %*% sigma.zi.zy
-    GZ <- Z.c %*% sigma.zz.inv # for complete cases only
+    sigma_yz <- sigma_yz[both_idx, , drop = FALSE] # only both part
+    sigma_zy <- t(sigma_yz)
+    sigma_zz_inv <- solve.default(sigma_zz)
+    sigma_zz_logdet <- log(det(sigma_zz))
+    sigma_zi_zy <- sigma_zz_inv %*% sigma_zy
+    sigma_b_z <- sigma_b_1 - sigma_yz %*% sigma_zi_zy
+    gz <- z_c %*% sigma_zz_inv # for complete cases only
   }
 
-  # containers per cluster
-  q.yy.b <- q.zy <- q.zz.b <- numeric(nclusters)
-  IBZA.j.logdet <- numeric(nclusters)
-  ALIST <- rep(list(matrix(
-    0, length(both.idx),
-    length(both.idx)
+  # containters per cluster
+  q_yy_b <- q_zy <- q_zz_b <- numeric(nclusters)
+  ibza_j_logdet <- numeric(nclusters)
+  alist_1 <- rep(list(matrix(
+    0, length(both_idx),
+    length(both_idx)
   )), nclusters)
 
   # Z per missing pattern
   if (nz > 0L) {
-    Zp <- Mp$Zp
-    ZPAT2J <- integer(nclusters) # which sigma.b.z per cluster
-    SIGMA.B.Z <- vector("list", length = Zp$npatterns + 1L)
+    zp_1 <- mp$Zp
+    zpat2j <- integer(nclusters) # which sigma.b.z per cluster
+    sigma_b_z_1 <- vector("list", length = zp_1$npatterns + 1L)
 
-    sigma.j.zz.logdet <- q.zz.a <- 0
-    for (p in seq_len(Zp$npatterns)) {
-      freq <- Zp$freq[p]
-      z.na.idx <- which(!Zp$pat[p, ])
-      j.idx <- Zp$case.idx[[p]] # cluster indices with this pattern
-      ZPAT2J[j.idx] <- p
+    sigma_j_zz_logdet <- q_zz_a <- 0
+    for (p in seq_len(zp_1$npatterns)) {
+      freq <- zp_1$freq[p]
+      z_na_idx <- which(!zp_1$pat[p, ])
+      j_idx <- zp_1$case.idx[[p]] # cluster indices with this pattern
+      zpat2j[j_idx] <- p
 
-      if (length(z.na.idx) > 0L) {
-        zp <- sigma.zz[-z.na.idx, -z.na.idx, drop = FALSE]
-        zp.inv <- lav_matrix_symmetric_inverse_update(
-          s_inv = sigma.zz.inv, rm_idx = z.na.idx,
-          logdet = TRUE, s_logdet = sigma.zz.logdet
+      if (length(z_na_idx) > 0L) {
+        # zp <- sigma_zz[-z_na_idx, -z_na_idx, drop = FALSE]
+        zp_inv <- lav_matrix_symmetric_inverse_update(
+          s_inv = sigma_zz_inv, rm_idx = z_na_idx,
+          logdet = TRUE, s_logdet = sigma_zz_logdet
         )
-        zp.logdet <- attr(zp.inv, "logdet")
-        sigma.j.zz.logdet <- sigma.j.zz.logdet + (zp.logdet * freq)
+        zp_logdet <- attr(zp_inv, "logdet")
+        sigma_j_zz_logdet <- sigma_j_zz_logdet + (zp_logdet * freq)
 
-        GZ[j.idx, -z.na.idx] <- Z.c[j.idx, -z.na.idx] %*% zp.inv
+        gz[j_idx, -z_na_idx] <- z_c[j_idx, -z_na_idx] %*% zp_inv
 
-        yziy <- (sigma.yz[, -z.na.idx, drop = FALSE] %*% zp.inv %*%
-          sigma.zy[-z.na.idx, , drop = FALSE])
-        SIGMA.B.Z[[p]] <- (sigma.b - yziy)
+        yziy <- (sigma_yz[, -z_na_idx, drop = FALSE] %*% zp_inv %*%
+          sigma_zy[-z_na_idx, , drop = FALSE])
+        sigma_b_z_1[[p]] <- (sigma_b_1 - yziy)
       } else {
         # complete case
-        sigma.j.zz.logdet <-
-          sigma.j.zz.logdet + (sigma.zz.logdet * freq)
-        SIGMA.B.Z[[p]] <- sigma.b.z
+        sigma_j_zz_logdet <-
+          sigma_j_zz_logdet + (sigma_zz_logdet * freq)
+        sigma_b_z_1[[p]] <- sigma_b_z
       }
     } # p
 
     # add empty patterns (if any)
-    if (length(Zp$empty.idx) > 0L) {
-      ZPAT2J[Zp$empty.idx] <- p + 1L
-      SIGMA.B.Z[[p + 1L]] <- sigma.b
+    if (length(zp_1$empty.idx) > 0L) {
+      zpat2j[zp_1$empty.idx] <- p + 1L
+      sigma_b_z_1[[p + 1L]] <- sigma_b_1
     }
 
-    q.zz.a <- sum(GZ * Z.c, na.rm = TRUE)
-    GZ0 <- GZ
-    GZ0[is.na(GZ0)] <- 0
-    GJ <- GZ0 %*% sigma.zy # only both part
+    q_zz_a <- sum(gz * z_c, na.rm = TRUE)
+    gz0 <- gz
+    gz0[is.na(gz0)] <- 0
+    gj <- gz0 %*% sigma_zy # only both part
   }
 
   # Y per missing pattern
-  W.logdet <- 0
+  w_logdet <- 0
   #MPi <- integer(nrow(Y1))
-  for (p in seq_len(Mp$npatterns)) {
-    freq <- Mp$freq[p]
-    na.idx <- which(!Mp$pat[p, ])
-    j.idx <- Mp$j.idx[[p]]
-    j1.idx <- Mp$j1.idx[[p]]
-    TAB <- integer(nclusters)
-    TAB[j1.idx] <- Mp$j.freq[[p]]
+  for (p in seq_len(mp$npatterns)) {
+    freq <- mp$freq[p]
+    na_idx <- which(!mp$pat[p, ])
+    j_idx <- mp$j.idx[[p]]
+    j1_idx <- mp$j1.idx[[p]]
+    tab <- integer(nclusters)
+    tab[j1_idx] <- mp$j.freq[[p]]
 
     # compute sigma.w.inv for this pattern
-    if (length(na.idx) > 0L) {
+    if (length(na_idx) > 0L) {
       #MPi[Mp$case.idx[[p]]] <- p
-      wp <- sigma.w[-na.idx, -na.idx, drop = FALSE]
-      wp.inv <- lav_matrix_symmetric_inverse_update(
-        s_inv = sigma.w.inv, rm_idx = na.idx,
-        logdet = TRUE, s_logdet = sigma.w.logdet
+      # wp <- sigma_w_1[-na_idx, -na_idx, drop = FALSE]
+      wp_inv <- lav_matrix_symmetric_inverse_update(
+        s_inv = sigma_w_inv, rm_idx = na_idx,
+        logdet = TRUE, s_logdet = sigma_w_logdet
       )
-      wp.logdet <- attr(wp.inv, "logdet")
-      W.logdet <- W.logdet + (wp.logdet * freq)
+      wp_logdet <- attr(wp_inv, "logdet")
+      w_logdet <- w_logdet + (wp_logdet * freq)
 
-      PIJ[Mp$case.idx[[p]], -na.idx] <-
-        Y1w.c[Mp$case.idx[[p]], -na.idx] %*% wp.inv
+      pij[mp$case.idx[[p]], -na_idx] <-
+        y1w_c[mp$case.idx[[p]], -na_idx] %*% wp_inv
 
-      A.j <- matrix(0, ny, ny)
-      A.j[-na.idx, -na.idx] <- wp.inv
-      for (j in j1.idx) {
-        ALIST[[j]] <- ALIST[[j]] + (A.j[both.idx, both.idx] * TAB[j])
+      a_j <- matrix(0, ny, ny)
+      a_j[-na_idx, -na_idx] <- wp_inv
+      for (j in j1_idx) {
+        alist_1[[j]] <- alist_1[[j]] + (a_j[both_idx, both_idx] * tab[j])
       }
       # WIP[[p]][-na.idx, -na.idx] <- wp.inv
     } else {
       # complete case
-      W.logdet <- W.logdet + (sigma.w.logdet * freq)
-      PIJ[Mp$case.idx[[p]], ] <-
-        Y1w.c[Mp$case.idx[[p]], ] %*% sigma.w.inv
-      for (j in j1.idx) {
-        ALIST[[j]] <-
-          ALIST[[j]] + (sigma.w.inv[both.idx, both.idx] * TAB[j])
+      w_logdet <- w_logdet + (sigma_w_logdet * freq)
+      pij[mp$case.idx[[p]], ] <-
+        y1w_c[mp$case.idx[[p]], ] %*% sigma_w_inv
+      for (j in j1_idx) {
+        alist_1[[j]] <-
+          alist_1[[j]] + (sigma_w_inv[both_idx, both_idx] * tab[j])
       }
     }
   } # p
-  q.yy.a <- sum(PIJ * Y1w.c, na.rm = TRUE)
-  PJ <- rowsum.default(PIJ[, both.idx], cluster.idx,
+  q_yy_a <- sum(pij * y1w_c, na.rm = TRUE)
+  pj <- rowsum.default(pij[, both_idx], cluster_idx,
     reorder = FALSE,
     na.rm = TRUE
   ) # only both part is needed
 
   # per cluster
-  both.diag.idx <- lav_matrix_diag_idx(length(both.idx))
+  both_diag_idx <- lav_matrix_diag_idx(length(both_idx))
   for (j in seq_len(nclusters)) {
     # we only need the 'both.idx' part of A.j, sigma.b.z, p.j, g.j ,...
-    A.j <- ALIST[[j]]
-    p.j <- PJ[j, ]
+    a_j <- alist_1[[j]]
+    p_j <- pj[j, ]
     if (nz > 0L) {
-      sigma.b.z <- SIGMA.B.Z[[ZPAT2J[j]]]
+      sigma_b_z <- sigma_b_z_1[[zpat2j[j]]]
     } else {
-      sigma.b.z <- sigma.b
+      sigma_b_z <- sigma_b_1
     }
-    IBZA.j <- sigma.b.z %*% A.j
-    IBZA.j[both.diag.idx] <- IBZA.j[both.diag.idx] + 1
+    ibza_j <- sigma_b_z %*% a_j
+    ibza_j[both_diag_idx] <- ibza_j[both_diag_idx] + 1
     # logdet IBZA.j
-    tmp <- determinant.matrix(IBZA.j, logarithm = TRUE)
-    IBZA.j.logdet[j] <- tmp$modulus * tmp$sign
+    tmp <- determinant.matrix(ibza_j, logarithm = TRUE)
+    ibza_j_logdet[j] <- tmp$modulus * tmp$sign
     # IBZA.j.inv.BZ.p
-    IBZA.j.inv.BZ.p <- solve.default(IBZA.j, drop(sigma.b.z %*% p.j))
-    q.yy.b[j] <- sum(p.j * IBZA.j.inv.BZ.p)
+    ibza_j_inv_bz_p <- solve.default(ibza_j, drop(sigma_b_z %*% p_j))
+    q_yy_b[j] <- sum(p_j * ibza_j_inv_bz_p)
 
     if (nz > 0L) {
-      g.j <- GJ[j, ]
-      IBZA.j.inv.g <- solve.default(IBZA.j, g.j)
-      A.IBZA.j.inv.g <- A.j %*% IBZA.j.inv.g
+      g_j <- gj[j, ]
+      ibza_j_inv_g <- solve.default(ibza_j, g_j)
+      a_ibza_j_inv_g <- a_j %*% ibza_j_inv_g
 
-      q.zz.b[j] <- sum(g.j * A.IBZA.j.inv.g)
-      q.zy[j] <- -sum(p.j * IBZA.j.inv.g)
+      q_zz_b[j] <- sum(g_j * a_ibza_j_inv_g)
+      q_zy[j] <- -sum(p_j * ibza_j_inv_g)
     }
   }
 
 
   if (nz > 0L) {
-    P <- Mp$nel + Zp$nel
-    DIST <- (q.yy.a - sum(q.yy.b)) + 2 * sum(q.zy) + (q.zz.a + sum(q.zz.b))
-    LOGDET <- W.logdet + sum(IBZA.j.logdet) + sigma.j.zz.logdet
+    p_1 <- mp$nel + zp_1$nel
+    dist_1 <- (q_yy_a - sum(q_yy_b)) + 2 * sum(q_zy) + (q_zz_a + sum(q_zz_b))
+    logdet <- w_logdet + sum(ibza_j_logdet) + sigma_j_zz_logdet
   } else {
-    P <- Mp$nel
-    DIST <- (q.yy.a - sum(q.yy.b))
-    LOGDET <- W.logdet + sum(IBZA.j.logdet)
+    p_1 <- mp$nel
+    dist_1 <- (q_yy_a - sum(q_yy_b))
+    logdet <- w_logdet + sum(ibza_j_logdet)
   }
 
   # loglik?
-  if (log2pi && !minus.two) {
-    LOG.2PI <- log(2 * pi)
-    loglik <- -(P * LOG.2PI + LOGDET + DIST) / 2
+  if (log2pi && !minus_two) {
+    log_2pi <- log(2 * pi)
+    loglik <- -(p_1 * log_2pi + logdet + dist_1) / 2
   } else {
-    loglik <- DIST + LOGDET
+    loglik <- dist_1 + logdet
   }
 
   # loglik.x (only if loglik is requested)
-  if (length(unlist(Lp$ov.x.idx)) > 0L && log2pi && !minus.two) {
-    loglik <- loglik - loglik.x
+  if (length(unlist(lp$ov.x.idx)) > 0L && log2pi && !minus_two) {
+    loglik <- loglik - loglik_x
   }
 
   loglik
 }
 
 # Mu.W, Mu.B, Sigma.W, Sigma.B are the model-implied statistics
-lav_mvnorm_cluster_missing_dlogl_2l_samplestats <- function(
-    Y1 = NULL,
-    Y2 = NULL,
-    Lp = NULL,
-    Mp = NULL,
-    Mu.W = NULL,
-    Sigma.W = NULL,
-    Mu.B = NULL,
-    Sigma.B = NULL,
-    Sinv.method = "eigen",
-    return.list = FALSE) {
+lav_mvnorm_cluster_missing_dlogl_2l_samplestats <- function( # nolint
+    y1 = NULL,
+    y2 = NULL,
+    lp = NULL,
+    mp = NULL,
+    mu_w = NULL,
+    sigma_w = NULL,
+    mu_b = NULL,
+    sigma_b = NULL,
+    sinv_method = "eigen",
+    return_list = FALSE) {
   # map implied to 2l matrices
   out <- lav_mvnorm_cluster_implied22l(
-    Lp = Lp, Mu.W = Mu.W, Mu.B = Mu.B,
-    Sigma.W = Sigma.W, Sigma.B = Sigma.B
+    lp = lp, mu_w = mu_w, mu_b = mu_b,
+    sigma_w = sigma_w, sigma_b = sigma_b
   )
-  mu.y <- out$mu.y
-  mu.z <- out$mu.z
-  sigma.w <- out$sigma.w
-  sigma.b <- out$sigma.b
-  sigma.zz <- out$sigma.zz
-  sigma.yz <- out$sigma.yz
+  mu_y <- out$mu.y
+  mu_z <- out$mu.z
+  sigma_w_1 <- out$sigma.w
+  sigma_b_1 <- out$sigma.b
+  sigma_zz <- out$sigma.zz
+  sigma_yz <- out$sigma.yz
 
   # containers for dx
-  dx.mu.y <- numeric(length(mu.y))
-  dx.mu.z <- numeric(length(mu.z))
-  dx.sigma.zz <- matrix(0, nrow(sigma.zz), ncol(sigma.zz))
-  dx.sigma.yz <- matrix(0, nrow(sigma.yz), ncol(sigma.yz))
-  dx.sigma.b <- matrix(0, nrow(sigma.b), ncol(sigma.b))
-  dx.sigma.w <- matrix(0, nrow(sigma.w), ncol(sigma.w))
+  dx_mu_y <- numeric(length(mu_y))
+  dx_mu_z <- numeric(length(mu_z))
+  dx_sigma_zz <- matrix(0, nrow(sigma_zz), ncol(sigma_zz))
+  dx_sigma_yz <- matrix(0, nrow(sigma_yz), ncol(sigma_yz))
+  dx_sigma_b <- matrix(0, nrow(sigma_b_1), ncol(sigma_b_1))
+  dx_sigma_w <- matrix(0, nrow(sigma_w_1), ncol(sigma_w_1))
 
   # Lp
-  nclusters <- Lp$nclusters[[2]]
-  between.idx <- Lp$between.idx[[2]]
-  cluster.idx <- Lp$cluster.idx[[2]]
-  both.idx <- Lp$both.idx[[2]]
+  nclusters <- lp$nclusters[[2]]
+  between_idx <- lp$between.idx[[2]]
+  cluster_idx <- lp$cluster.idx[[2]]
+  both_idx <- lp$both.idx[[2]]
 
   # sigma.w
-  sigma.w.inv <- solve.default(sigma.w)
-  sigma.b <- sigma.b[both.idx, both.idx] # only both part
+  sigma_w_inv <- solve.default(sigma_w_1)
+  sigma_b_1 <- sigma_b_1[both_idx, both_idx] # only both part
 
   # y
-  ny <- ncol(sigma.w)
-  if (length(between.idx) > 0L) {
-    Y1w <- Y1[, -between.idx, drop = FALSE]
+  ny <- ncol(sigma_w_1)
+  if (length(between_idx) > 0L) {
+    y1w <- y1[, -between_idx, drop = FALSE]
   } else {
-    Y1w <- Y1
+    y1w <- y1
   }
-  Y1w.c <- t(t(Y1w) - mu.y)
-  PIJ <- matrix(0, nrow(Y1w.c), ny)
+  y1w_c <- t(t(y1w) - mu_y)
+  pij_1 <- matrix(0, nrow(y1w_c), ny)
 
   # z
-  nz <- length(between.idx)
+  nz <- length(between_idx)
   if (nz > 0L) {
-    Z <- Y2[, between.idx, drop = FALSE]
-    Z.c <- t(t(Z) - mu.z)
-    sigma.yz <- sigma.yz[both.idx, , drop = FALSE] # only both part
-    sigma.zy <- t(sigma.yz)
-    sigma.zz.inv <- solve.default(sigma.zz)
-    sigma.zz.logdet <- log(det(sigma.zz))
-    sigma.zi.zy <- sigma.zz.inv %*% sigma.zy
-    sigma.b.z <- sigma.b - sigma.yz %*% sigma.zi.zy
-    GZ <- Z.c %*% sigma.zz.inv # for complete cases only
+    z <- y2[, between_idx, drop = FALSE]
+    z_c <- t(t(z) - mu_z)
+    sigma_yz <- sigma_yz[both_idx, , drop = FALSE] # only both part
+    sigma_zy <- t(sigma_yz)
+    sigma_zz_inv <- solve.default(sigma_zz)
+    # sigma_zz_logdet <- log(det(sigma_zz))
+    sigma_zi_zy <- sigma_zz_inv %*% sigma_zy
+    sigma_b_z <- sigma_b_1 - sigma_yz %*% sigma_zi_zy
+    gz <- z_c %*% sigma_zz_inv # for complete cases only
   }
 
-  # containers per cluster
+  # containters per cluster
   # ALIST <- rep(list(matrix(0, length(both.idx),
   #                             length(both.idx))), nclusters)
-  ALIST <- rep(list(matrix(0, ny, ny)), nclusters)
+  alist_1 <- rep(list(matrix(0, ny, ny)), nclusters)
 
   # Z per missing pattern
   if (nz > 0L) {
-    Zp <- Mp$Zp
-    ZPAT2J <- integer(nclusters) # which pattern per cluster
-    SIGMA.B.Z <- vector("list", length = Zp$npatterns + 1L) # +1 for empty
-    ZIZY <- rep(list(matrix(
-      0, nrow(sigma.zy),
-      ncol(sigma.zy)
-    )), Zp$npatterns + 1L)
-    ZIP <- rep(list(matrix(
-      0, nrow(sigma.zz),
-      ncol(sigma.zz)
-    )), Zp$npatterns + 1L)
-    for (p in seq_len(Zp$npatterns)) {
-      freq <- Zp$freq[p]
-      z.na.idx <- which(!Zp$pat[p, ])
-      j.idx <- Zp$case.idx[[p]] # cluster indices with this pattern
-      ZPAT2J[j.idx] <- p
+    zp_1 <- mp$Zp
+    zpat2j <- integer(nclusters) # which pattern per cluster
+    sigma_b_z_1 <- vector("list", length = zp_1$npatterns + 1L) # +1 for empty
+    zizy_1 <- rep(list(matrix(
+      0, nrow(sigma_zy),
+      ncol(sigma_zy)
+    )), zp_1$npatterns + 1L)
+    zip_1 <- rep(list(matrix(
+      0, nrow(sigma_zz),
+      ncol(sigma_zz)
+    )), zp_1$npatterns + 1L)
+    for (p in seq_len(zp_1$npatterns)) {
+      # freq <- zp_1$freq[p]
+      z_na_idx <- which(!zp_1$pat[p, ])
+      j_idx <- zp_1$case.idx[[p]] # cluster indices with this pattern
+      zpat2j[j_idx] <- p
 
-      if (length(z.na.idx) > 0L) {
-        zp <- sigma.zz[-z.na.idx, -z.na.idx, drop = FALSE]
-        zp.inv <- lav_matrix_symmetric_inverse_update(
-          s_inv = sigma.zz.inv, rm_idx = z.na.idx,
+      if (length(z_na_idx) > 0L) {
+        # zp <- sigma_zz[-z_na_idx, -z_na_idx, drop = FALSE]
+        zp_inv <- lav_matrix_symmetric_inverse_update(
+          s_inv = sigma_zz_inv, rm_idx = z_na_idx,
           logdet = FALSE
         )
-        ZIP[[p]][-z.na.idx, -z.na.idx] <- zp.inv
-        GZ[j.idx, -z.na.idx] <- Z.c[j.idx, -z.na.idx] %*% zp.inv
-        Z.G.ZY <- zp.inv %*% sigma.zy[-z.na.idx, , drop = FALSE]
-        ZIZY[[p]][-z.na.idx, ] <-
-          zp.inv %*% sigma.zy[-z.na.idx, , drop = FALSE]
-        yziy <- sigma.yz[, -z.na.idx, drop = FALSE] %*% Z.G.ZY
-        SIGMA.B.Z[[p]] <- (sigma.b - yziy)
+        zip_1[[p]][-z_na_idx, -z_na_idx] <- zp_inv
+        gz[j_idx, -z_na_idx] <- z_c[j_idx, -z_na_idx] %*% zp_inv
+        z_g_zy <- zp_inv %*% sigma_zy[-z_na_idx, , drop = FALSE]
+        zizy_1[[p]][-z_na_idx, ] <-
+          zp_inv %*% sigma_zy[-z_na_idx, , drop = FALSE]
+        yziy <- sigma_yz[, -z_na_idx, drop = FALSE] %*% z_g_zy
+        sigma_b_z_1[[p]] <- (sigma_b_1 - yziy)
       } else {
         # complete case
-        ZIZY[[p]] <- sigma.zi.zy
-        ZIP[[p]] <- sigma.zz.inv
-        SIGMA.B.Z[[p]] <- sigma.b.z
+        zizy_1[[p]] <- sigma_zi_zy
+        zip_1[[p]] <- sigma_zz_inv
+        sigma_b_z_1[[p]] <- sigma_b_z
       }
     } # p
 
     # add empty patterns (if any)
-    if (length(Zp$empty.idx) > 0L) {
-      ZPAT2J[Zp$empty.idx] <- p + 1L
-      SIGMA.B.Z[[p + 1L]] <- sigma.b
+    if (length(zp_1$empty.idx) > 0L) {
+      zpat2j[zp_1$empty.idx] <- p + 1L
+      sigma_b_z_1[[p + 1L]] <- sigma_b_1
     }
 
-    GZ[is.na(GZ)] <- 0
-    GJ <- GZ %*% sigma.zy
+    gz[is.na(gz)] <- 0
+    gj <- gz %*% sigma_zy
   }
 
   # Y per missing pattern
-  WIP <- rep(list(matrix(0, ny, ny)), Mp$npatterns)
-  MPi <- integer(nrow(Y1))
-  for (p in seq_len(Mp$npatterns)) {
-    freq <- Mp$freq[p]
-    na.idx <- which(!Mp$pat[p, ])
-    j.idx <- Mp$j.idx[[p]]
-    j1.idx <- Mp$j1.idx[[p]]
-    TAB <- integer(nclusters)
-    TAB[j1.idx] <- Mp$j.freq[[p]]
+  wip <- rep(list(matrix(0, ny, ny)), mp$npatterns)
+  mpi <- integer(nrow(y1))
+  for (p in seq_len(mp$npatterns)) {
+    # freq <- mp$freq[p]
+    na_idx <- which(!mp$pat[p, ])
+    j_idx <- mp$j.idx[[p]]
+    j1_idx <- mp$j1.idx[[p]]
+    tab <- integer(nclusters)
+    tab[j1_idx] <- mp$j.freq[[p]]
 
-    if (length(na.idx) > 0L) {
-      MPi[Mp$case.idx[[p]]] <- p
-      wp.inv <- lav_matrix_symmetric_inverse_update(
-        s_inv = sigma.w.inv, rm_idx = na.idx,
+    if (length(na_idx) > 0L) {
+      mpi[mp$case.idx[[p]]] <- p
+      wp_inv <- lav_matrix_symmetric_inverse_update(
+        s_inv = sigma_w_inv, rm_idx = na_idx,
         logdet = FALSE
       )
-      WIP[[p]][-na.idx, -na.idx] <- wp.inv
-      PIJ[Mp$case.idx[[p]], -na.idx] <-
-        Y1w.c[Mp$case.idx[[p]], -na.idx] %*% wp.inv
+      wip[[p]][-na_idx, -na_idx] <- wp_inv
+      pij_1[mp$case.idx[[p]], -na_idx] <-
+        y1w_c[mp$case.idx[[p]], -na_idx] %*% wp_inv
 
-      for (j in j1.idx) {
-        ALIST[[j]] <-
+      for (j in j1_idx) {
+        alist_1[[j]] <-
           # ALIST[[j]] + (WIP[[p]][both.idx, both.idx] * TAB[j])
-          ALIST[[j]] + (WIP[[p]] * TAB[j])
+          alist_1[[j]] + (wip[[p]] * tab[j])
       }
     } else {
       # complete case
-      PIJ[Mp$case.idx[[p]], ] <-
-        Y1w.c[Mp$case.idx[[p]], ] %*% sigma.w.inv
-      WIP[[p]] <- sigma.w.inv
-      for (j in j1.idx) {
-        ALIST[[j]] <-
+      pij_1[mp$case.idx[[p]], ] <-
+        y1w_c[mp$case.idx[[p]], ] %*% sigma_w_inv
+      wip[[p]] <- sigma_w_inv
+      for (j in j1_idx) {
+        alist_1[[j]] <-
           # ALIST[[j]] + (sigma.w.inv[both.idx, both.idx] * TAB[j])
-          ALIST[[j]] + (sigma.w.inv * TAB[j])
+          alist_1[[j]] + (sigma_w_inv * tab[j])
       }
     }
   } # p
-  PJ <- rowsum.default(PIJ[, , drop = FALSE],
-    cluster.idx,
+  pj <- rowsum.default(pij_1[, , drop = FALSE],
+    cluster_idx,
     reorder = FALSE, na.rm = TRUE
   )
 
   # per cluster
-  both.diag.idx <- lav_matrix_diag_idx(length(both.idx))
+  both_diag_idx <- lav_matrix_diag_idx(length(both_idx))
   for (j in seq_len(nclusters)) {
-    A.j.full <- ALIST[[j]]
-    A.j <- A.j.full[both.idx, both.idx, drop = FALSE]
-    p.j <- as.matrix(PJ[j, ])
-    pb.j <- as.matrix(PJ[j, both.idx]) # only both.idx part
+    a_j_full <- alist_1[[j]]
+    a_j <- a_j_full[both_idx, both_idx, drop = FALSE]
+    p_j <- as.matrix(pj[j, ])
+    pb_j <- as.matrix(pj[j, both_idx]) # only both.idx part
     if (nz > 0L) {
-      sigma.b.z <- SIGMA.B.Z[[ZPAT2J[j]]]
+      sigma_b_z <- sigma_b_z_1[[zpat2j[j]]]
     } else {
-      sigma.b.z <- sigma.b
+      sigma_b_z <- sigma_b_1
     }
 
-    IBZA.j <- sigma.b.z %*% A.j
-    IBZA.j[both.diag.idx] <- IBZA.j[both.diag.idx] + 1
+    ibza_j <- sigma_b_z %*% a_j
+    ibza_j[both_diag_idx] <- ibza_j[both_diag_idx] + 1
 
-    IBZA.j.inv.BZ <- solve.default(IBZA.j, sigma.b.z)
-    IBZA.j.inv.BZ.p <- IBZA.j.inv.BZ %*% pb.j
-    A.IBZA.j.inv.BZ <- A.j %*% IBZA.j.inv.BZ
-    A.IBZA.j.inv.BZ.p <- A.IBZA.j.inv.BZ %*% pb.j
+    ibza_j_inv_bz <- solve.default(ibza_j, sigma_b_z)
+    ibza_j_inv_bz_p <- ibza_j_inv_bz %*% pb_j
+    a_ibza_j_inv_bz <- a_j %*% ibza_j_inv_bz
+    a_ibza_j_inv_bz_p <- a_ibza_j_inv_bz %*% pb_j
 
-    IBZA.j.inv <- solve.default(IBZA.j)
-    A.IBZA.j.inv <- A.j %*% IBZA.j.inv
-    p.IBZA.j.inv <- t(crossprod(pb.j, IBZA.j.inv))
+    ibza_j_inv <- solve.default(ibza_j)
+    a_ibza_j_inv <- a_j %*% ibza_j_inv
+    p_ibza_j_inv <- t(crossprod(pb_j, ibza_j_inv))
 
     # only if we have between-only variables
     if (nz > 0L) {
-      g.j <- as.matrix(GJ[j, ])
-      zij <- as.matrix(GZ[j, ])
-      zizy <- ZIZY[[ZPAT2J[j]]]
-      zip <- ZIP[[ZPAT2J[j]]]
+      g_j <- as.matrix(gj[j, ])
+      zij <- as.matrix(gz[j, ])
+      zizy <- zizy_1[[zpat2j[j]]]
+      zip <- zip_1[[zpat2j[j]]]
 
-      IBZA.j.inv.zizy <- solve.default(IBZA.j, t(zizy))
-      IBZA.j.inv.g <- IBZA.j.inv %*% g.j
-      IBZA.j.inv.p <- IBZA.j.inv %*% pb.j
-      A.IBZA.j.inv.g <- A.j %*% IBZA.j.inv.g
-      A.IBZA.j.inv.zizy <- A.j %*% IBZA.j.inv.zizy
-      zizy.A.IBZA.j.inv.g <- zizy %*% A.IBZA.j.inv.g
-      p.IBZA.j.inv.zizy <- crossprod(pb.j, IBZA.j.inv.zizy)
-      ggbzpp <- 2 * A.IBZA.j.inv.g + A.IBZA.j.inv.BZ.p - pb.j
-      ZIJzizyp <- (2 * zij - zizy %*% pb.j)
+      ibza_j_inv_zizy <- solve.default(ibza_j, t(zizy))
+      ibza_j_inv_g <- ibza_j_inv %*% g_j
+      # ibza_j_inv_p <- ibza_j_inv %*% pb_j
+      a_ibza_j_inv_g <- a_j %*% ibza_j_inv_g
+      a_ibza_j_inv_zizy <- a_j %*% ibza_j_inv_zizy
+      zizy_a_ibza_j_inv_g <- zizy %*% a_ibza_j_inv_g
+      p_ibza_j_inv_zizy <- crossprod(pb_j, ibza_j_inv_zizy)
+      ggbzpp <- 2 * a_ibza_j_inv_g + a_ibza_j_inv_bz_p - pb_j
+      zijzizyp <- (2 * zij - zizy %*% pb_j)
 
       ###########
       # dx.mu.z #
       ###########
-      tmp <- 2 * (t(p.IBZA.j.inv.zizy) - zij - zizy.A.IBZA.j.inv.g)
-      dx.mu.z <- dx.mu.z + drop(tmp)
+      tmp <- 2 * (t(p_ibza_j_inv_zizy) - zij - zizy_a_ibza_j_inv_g)
+      dx_mu_z <- dx_mu_z + drop(tmp)
 
       ###############
       # dx.sigma.zz #
       ###############
-      tmp1 <- (zip + zizy %*% A.IBZA.j.inv.zizy # logdet
+      tmp1 <- (zip + zizy %*% a_ibza_j_inv_zizy # logdet
         - tcrossprod(zij) # ZA
-        - tcrossprod(zizy.A.IBZA.j.inv.g)) # ZB-1
+        - tcrossprod(zizy_a_ibza_j_inv_g)) # ZB-1
 
-      d <- (t((2 * zizy.A.IBZA.j.inv.g + zizy %*% A.IBZA.j.inv.BZ.p)
-      %*% p.IBZA.j.inv.zizy)
-      + ZIJzizyp %*% p.IBZA.j.inv.zizy
-        - 2 * tcrossprod(zizy.A.IBZA.j.inv.g, zij))
+      d <- (t((2 * zizy_a_ibza_j_inv_g + zizy %*% a_ibza_j_inv_bz_p)
+      %*% p_ibza_j_inv_zizy)
+      + zijzizyp %*% p_ibza_j_inv_zizy
+        - 2 * tcrossprod(zizy_a_ibza_j_inv_g, zij))
       tmp2 <- (d + t(d)) / 2
       tmp <- tmp1 + tmp2
       # symmetry correction
-      ZZ <- 2 * tmp
-      diag(ZZ) <- diag(tmp)
-      dx.sigma.zz <- dx.sigma.zz + ZZ
+      zz <- 2 * tmp
+      diag(zz) <- diag(tmp)
+      dx_sigma_zz <- dx_sigma_zz + zz
 
       ###############
       # dx.sigma.yz #
       ###############
-      t0 <- -2 * A.IBZA.j.inv.zizy
+      t0 <- -2 * a_ibza_j_inv_zizy
 
-      t1 <- (-2 * tcrossprod(p.IBZA.j.inv, g.j)
-        - 1 * tcrossprod(p.IBZA.j.inv, sigma.b.z %*% pb.j)
-        + 2 * tcrossprod(A.IBZA.j.inv.g, g.j)) %*% A.IBZA.j.inv.zizy
-      t2 <- -ggbzpp %*% p.IBZA.j.inv.zizy
-      t3 <- -tcrossprod(p.IBZA.j.inv, ZIJzizyp)
-      t4 <- 2 * tcrossprod(A.IBZA.j.inv.g, zij)
+      t1 <- (-2 * tcrossprod(p_ibza_j_inv, g_j)
+        - 1 * tcrossprod(p_ibza_j_inv, sigma_b_z %*% pb_j)
+        + 2 * tcrossprod(a_ibza_j_inv_g, g_j)) %*% a_ibza_j_inv_zizy
+      t2 <- -ggbzpp %*% p_ibza_j_inv_zizy
+      t3 <- -tcrossprod(p_ibza_j_inv, zijzizyp)
+      t4 <- 2 * tcrossprod(a_ibza_j_inv_g, zij)
       tmp <- t0 + t1 + t2 + t3 + t4
-      dx.sigma.yz[both.idx, ] <- dx.sigma.yz[both.idx, , drop = FALSE] + tmp
+      dx_sigma_yz[both_idx, ] <- dx_sigma_yz[both_idx, , drop = FALSE] + tmp
 
       ##############
       # dx.sigma.b #
       ##############
-      c <- tcrossprod(ggbzpp, p.IBZA.j.inv)
-      tmp <- t(A.IBZA.j.inv) - tcrossprod(A.IBZA.j.inv.g) + (c + t(c)) / 2
+      c <- tcrossprod(ggbzpp, p_ibza_j_inv)
+      tmp <- t(a_ibza_j_inv) - tcrossprod(a_ibza_j_inv_g) + (c + t(c)) / 2
       # symmetry correction
-      ZZ <- 2 * tmp
-      diag(ZZ) <- diag(tmp)
-      dx.sigma.b[both.idx, both.idx] <-
-        dx.sigma.b[both.idx, both.idx, drop = FALSE] + ZZ
+      zz <- 2 * tmp
+      diag(zz) <- diag(tmp)
+      dx_sigma_b[both_idx, both_idx] <-
+        dx_sigma_b[both_idx, both_idx, drop = FALSE] + zz
 
       # for dx.sigma.w
-      PART1.b <- -1 * (IBZA.j.inv.g %*%
-        (2 * t(IBZA.j.inv.BZ.p) + t(g.j) -
-          t(g.j) %*% A.IBZA.j.inv.BZ)
-        + IBZA.j.inv.BZ + tcrossprod(IBZA.j.inv.BZ.p))
-      PART2.b <- 2 * (IBZA.j.inv.g + IBZA.j.inv.BZ.p) # vector
+      part1_b <- -1 * (ibza_j_inv_g %*%
+        (2 * t(ibza_j_inv_bz_p) + t(g_j) -
+          t(g_j) %*% a_ibza_j_inv_bz)
+        + ibza_j_inv_bz + tcrossprod(ibza_j_inv_bz_p))
+      part2_b <- 2 * (ibza_j_inv_g + ibza_j_inv_bz_p) # vector
     } else {
       ##############
       # dx.sigma.b #
       ##############
-      bzpp <- A.IBZA.j.inv.BZ.p - pb.j
-      c <- tcrossprod(bzpp, p.IBZA.j.inv)
-      tmp <- t(A.IBZA.j.inv) + (c + t(c)) / 2
+      bzpp <- a_ibza_j_inv_bz_p - pb_j
+      c <- tcrossprod(bzpp, p_ibza_j_inv)
+      tmp <- t(a_ibza_j_inv) + (c + t(c)) / 2
       # symmetry correction
-      ZZ <- 2 * tmp
-      diag(ZZ) <- diag(tmp)
-      dx.sigma.b[both.idx, both.idx] <-
-        dx.sigma.b[both.idx, both.idx, drop = FALSE] + ZZ
+      zz <- 2 * tmp
+      diag(zz) <- diag(tmp)
+      dx_sigma_b[both_idx, both_idx] <-
+        dx_sigma_b[both_idx, both_idx, drop = FALSE] + zz
 
-      PART1.b <- -1 * (IBZA.j.inv.BZ + tcrossprod(IBZA.j.inv.BZ.p))
-      PART2.b <- 2 * IBZA.j.inv.BZ.p # vector
+      part1_b <- -1 * (ibza_j_inv_bz + tcrossprod(ibza_j_inv_bz_p))
+      part2_b <- 2 * ibza_j_inv_bz_p # vector
     }
 
     ##############
     # dx.sigma.w #
     ##############
 
-    PART1 <- matrix(0, ny, ny)
-    PART1[both.idx, both.idx] <- PART1.b
+    part1 <- matrix(0, ny, ny)
+    part1[both_idx, both_idx] <- part1_b
 
-    PART2 <- matrix(0, ny, 1L)
-    PART2[both.idx, 1L] <- PART2.b
+    part2 <- matrix(0, ny, 1L)
+    part2[both_idx, 1L] <- part2_b
 
-    ij.index <- which(cluster.idx == j)
-    pij <- PIJ[ij.index, , drop = FALSE]
+    ij_index <- which(cluster_idx == j)
+    pij <- pij_1[ij_index, , drop = FALSE]
 
-    which.compl <- which(MPi[ij.index] == 0L)
-    which.incompl <- which(MPi[ij.index] != 0L)
+    which_compl <- which(mpi[ij_index] == 0L)
+    which_incompl <- which(mpi[ij_index] != 0L)
 
-    AP2 <- rep(list(sigma.w.inv %*% PART2), length(ij.index))
-    AP1A.a <- AP1A.b <- matrix(0, ny, ny)
+    ap2 <- rep(list(sigma_w_inv %*% part2), length(ij_index))
+    ap1a_a <- ap1a_b <- matrix(0, ny, ny)
     # A.j.full <- matrix(0, ny, ny)
-    if (length(which.compl) > 0L) {
-      tmp <- (sigma.w.inv %*% PART1 %*% sigma.w.inv)
-      AP1A.a <- tmp * length(which.compl)
+    if (length(which_compl) > 0L) {
+      tmp <- (sigma_w_inv %*% part1 %*% sigma_w_inv)
+      ap1a_a <- tmp * length(which_compl)
       # A.j.full <- A.j.full + sigma.w.inv * length(which.compl)
     }
-    if (length(which.incompl) > 0L) {
-      p.idx <- MPi[ij.index][which.incompl]
-      tmp <- lapply(WIP[p.idx], function(x) {
-        x %*% PART1 %*% x
+    if (length(which_incompl) > 0L) {
+      p_idx <- mpi[ij_index][which_incompl]
+      tmp <- lapply(wip[p_idx], function(x) {
+        x %*% part1 %*% x
       })
-      AP1A.b <- Reduce("+", tmp)
-      AP2[which.incompl] <-
-        lapply(WIP[p.idx], function(x) {
-          x %*% PART2
+      ap1a_b <- Reduce("+", tmp)
+      ap2[which_incompl] <-
+        lapply(wip[p_idx], function(x) {
+          x %*% part2
         })
       # A.j.full <- A.j.full + Reduce("+", WIP[ p.idx ])
     }
-    t1 <- AP1A.a + AP1A.b
-    t2 <- (do.call("cbind", AP2) - t(pij)) %*% pij
+    t1 <- ap1a_a + ap1a_b
+    t2 <- (do.call("cbind", ap2) - t(pij)) %*% pij
 
-    AA.wj <- t1 + t2
+    aa_wj <- t1 + t2
 
-    tmp <- A.j.full + (AA.wj + t(AA.wj)) / 2
+    tmp <- a_j_full + (aa_wj + t(aa_wj)) / 2
     # symmetry correction
-    ZZ <- 2 * tmp
-    diag(ZZ) <- diag(tmp)
-    dx.sigma.w <- dx.sigma.w + ZZ
+    zz <- 2 * tmp
+    diag(zz) <- diag(tmp)
+    dx_sigma_w <- dx_sigma_w + zz
 
     ###########
     # dx.mu.y #
     ###########
     tmp <- numeric(ny)
     if (nz > 0L) {
-      tmp[both.idx] <- IBZA.j.inv.g + IBZA.j.inv.BZ.p
+      tmp[both_idx] <- ibza_j_inv_g + ibza_j_inv_bz_p
     } else {
-      tmp[both.idx] <- IBZA.j.inv.BZ.p
+      tmp[both_idx] <- ibza_j_inv_bz_p
     }
-    gbzpp <- A.j.full %*% tmp - p.j
-    dx.mu.y <- dx.mu.y + drop(2 * gbzpp)
+    gbzpp <- a_j_full %*% tmp - p_j
+    dx_mu_y <- dx_mu_y + drop(2 * gbzpp)
   } # j
 
   # rearrange
   dout <- lav_mvnorm_cluster_2l2implied(
-    Lp = Lp,
-    sigma.w = dx.sigma.w, sigma.b = dx.sigma.b,
-    sigma.yz = dx.sigma.yz, sigma.zz = dx.sigma.zz,
-    mu.y = dx.mu.y, mu.z = dx.mu.z
+    lp = lp,
+    sigma_w = dx_sigma_w, sigma_b = dx_sigma_b,
+    sigma_yz = dx_sigma_yz, sigma_zz = dx_sigma_zz,
+    mu_y = dx_mu_y, mu_z = dx_mu_z
   )
 
-  if (return.list) {
+  if (return_list) {
     out <- dout
   } else {
     out <- c(
@@ -609,337 +609,337 @@ lav_mvnorm_cluster_missing_dlogl_2l_samplestats <- function(
 }
 
 # cluster-wise scores -2*logl wrt Mu.W, Mu.B, Sigma.W, Sigma.B
-lav_mvnorm_cluster_missing_scores_2l <- function(
-    Y1 = NULL,
-    Y2 = NULL,
-    Lp = NULL,
-    Mp = NULL,
-    Mu.W = NULL,
-    Sigma.W = NULL,
-    Mu.B = NULL,
-    Sigma.B = NULL,
-    Sinv.method = "eigen") {
+lav_mvnorm_cluster_missing_scores_2l <- function(             # nolint
+    y1 = NULL,
+    y2 = NULL,
+    lp = NULL,
+    mp = NULL,
+    mu_w = NULL,
+    sigma_w = NULL,
+    mu_b = NULL,
+    sigma_b = NULL,
+    sinv_method = "eigen") {
   # map implied to 2l matrices
   out <- lav_mvnorm_cluster_implied22l(
-    Lp = Lp, Mu.W = Mu.W, Mu.B = Mu.B,
-    Sigma.W = Sigma.W, Sigma.B = Sigma.B
+    lp = lp, mu_w = mu_w, mu_b = mu_b,
+    sigma_w = sigma_w, sigma_b = sigma_b
   )
-  mu.y <- out$mu.y
-  mu.z <- out$mu.z
-  sigma.w <- out$sigma.w
-  sigma.b <- out$sigma.b
-  sigma.zz <- out$sigma.zz
-  sigma.yz <- out$sigma.yz
+  mu_y <- out$mu.y
+  mu_z <- out$mu.z
+  sigma_w_1 <- out$sigma.w
+  sigma_b_1 <- out$sigma.b
+  sigma_zz <- out$sigma.zz
+  sigma_yz <- out$sigma.yz
 
   # Lp
-  nclusters <- Lp$nclusters[[2]]
-  between.idx <- Lp$between.idx[[2]]
-  cluster.idx <- Lp$cluster.idx[[2]]
-  both.idx <- Lp$both.idx[[2]]
+  nclusters <- lp$nclusters[[2]]
+  between_idx <- lp$between.idx[[2]]
+  cluster_idx <- lp$cluster.idx[[2]]
+  both_idx <- lp$both.idx[[2]]
 
   # sigma.w
-  sigma.w.inv <- solve.default(sigma.w)
-  sigma.b <- sigma.b[both.idx, both.idx] # only both part
+  sigma_w_inv <- solve.default(sigma_w_1)
+  sigma_b_1 <- sigma_b_1[both_idx, both_idx] # only both part
 
   # y
-  ny <- ncol(sigma.w)
-  if (length(between.idx) > 0L) {
-    Y1w <- Y1[, -between.idx, drop = FALSE]
+  ny <- ncol(sigma_w_1)
+  if (length(between_idx) > 0L) {
+    y1w <- y1[, -between_idx, drop = FALSE]
   } else {
-    Y1w <- Y1
+    y1w <- y1
   }
-  Y1w.c <- t(t(Y1w) - mu.y)
-  PIJ <- matrix(0, nrow(Y1w.c), ny)
+  y1w_c <- t(t(y1w) - mu_y)
+  pij_1 <- matrix(0, nrow(y1w_c), ny)
 
   # z
-  nz <- length(between.idx)
+  nz <- length(between_idx)
   if (nz > 0L) {
-    Z <- Y2[, between.idx, drop = FALSE]
-    Z.c <- t(t(Z) - mu.z)
-    sigma.yz <- sigma.yz[both.idx, , drop = FALSE] # only both part
-    sigma.zy <- t(sigma.yz)
-    sigma.zz.inv <- solve.default(sigma.zz)
-    sigma.zz.logdet <- log(det(sigma.zz))
-    sigma.zi.zy <- sigma.zz.inv %*% sigma.zy
-    sigma.b.z <- sigma.b - sigma.yz %*% sigma.zi.zy
-    GZ <- Z.c %*% sigma.zz.inv # for complete cases only
+    z <- y2[, between_idx, drop = FALSE]
+    z_c <- t(t(z) - mu_z)
+    sigma_yz <- sigma_yz[both_idx, , drop = FALSE] # only both part
+    sigma_zy <- t(sigma_yz)
+    sigma_zz_inv <- solve.default(sigma_zz)
+    # sigma_zz_logdet <- log(det(sigma_zz))
+    sigma_zi_zy <- sigma_zz_inv %*% sigma_zy
+    sigma_b_z <- sigma_b_1 - sigma_yz %*% sigma_zi_zy
+    gz <- z_c %*% sigma_zz_inv # for complete cases only
   }
 
-  # containers per cluster
+  # containters per cluster
   # ALIST <- rep(list(matrix(0, length(both.idx),
   #                             length(both.idx))), nclusters)
-  ALIST <- rep(list(matrix(0, ny, ny)), nclusters)
+  alist_1 <- rep(list(matrix(0, ny, ny)), nclusters)
 
   # both level-1 and level-2
-  G.muy <- matrix(0, nclusters, length(mu.y))
-  G.Sigma.w <- matrix(0, nclusters, length(lav_matrix_vech(sigma.w)))
-  G.Sigma.b <- matrix(0, nclusters, length(lav_matrix_vech(out$sigma.b)))
-  G.muz <- matrix(0, nclusters, length(mu.z))
-  G.Sigma.zz <- matrix(0, nclusters, length(lav_matrix_vech(sigma.zz)))
-  G.Sigma.yz <- matrix(0, nclusters, length(lav_matrix_vec(out$sigma.yz)))
+  g_muy <- matrix(0, nclusters, length(mu_y))
+  g_sigma_w <- matrix(0, nclusters, length(lav_matrix_vech(sigma_w_1)))
+  g_sigma_b <- matrix(0, nclusters, length(lav_matrix_vech(out$sigma.b)))
+  g_muz <- matrix(0, nclusters, length(mu_z))
+  g_sigma_zz <- matrix(0, nclusters, length(lav_matrix_vech(sigma_zz)))
+  g_sigma_yz <- matrix(0, nclusters, length(lav_matrix_vec(out$sigma.yz)))
 
   # Z per missing pattern
   if (nz > 0L) {
-    Zp <- Mp$Zp
-    ZPAT2J <- integer(nclusters) # which pattern per cluster
-    SIGMA.B.Z <- vector("list", length = Zp$npatterns + 1L) # +1 for empty
-    ZIZY <- rep(list(matrix(
-      0, nrow(sigma.zy),
-      ncol(sigma.zy)
-    )), Zp$npatterns + 1L)
-    ZIP <- rep(list(matrix(
-      0, nrow(sigma.zz),
-      ncol(sigma.zz)
-    )), Zp$npatterns + 1L)
-    for (p in seq_len(Zp$npatterns)) {
-      freq <- Zp$freq[p]
-      z.na.idx <- which(!Zp$pat[p, ])
-      j.idx <- Zp$case.idx[[p]] # cluster indices with this pattern
-      ZPAT2J[j.idx] <- p
+    zp_1 <- mp$Zp
+    zpat2j <- integer(nclusters) # which pattern per cluster
+    sigma_b_z_1 <- vector("list", length = zp_1$npatterns + 1L) # +1 for empty
+    zizy_1 <- rep(list(matrix(
+      0, nrow(sigma_zy),
+      ncol(sigma_zy)
+    )), zp_1$npatterns + 1L)
+    zip_1 <- rep(list(matrix(
+      0, nrow(sigma_zz),
+      ncol(sigma_zz)
+    )), zp_1$npatterns + 1L)
+    for (p in seq_len(zp_1$npatterns)) {
+      # freq <- zp_1$freq[p]
+      z_na_idx <- which(!zp_1$pat[p, ])
+      j_idx <- zp_1$case.idx[[p]] # cluster indices with this pattern
+      zpat2j[j_idx] <- p
 
-      if (length(z.na.idx) > 0L) {
-        zp <- sigma.zz[-z.na.idx, -z.na.idx, drop = FALSE]
-        zp.inv <- lav_matrix_symmetric_inverse_update(
-          s_inv = sigma.zz.inv, rm_idx = z.na.idx,
+      if (length(z_na_idx) > 0L) {
+        # zp <- sigma_zz[-z_na_idx, -z_na_idx, drop = FALSE]
+        zp_inv <- lav_matrix_symmetric_inverse_update(
+          s_inv = sigma_zz_inv, rm_idx = z_na_idx,
           logdet = FALSE
         )
-        ZIP[[p]][-z.na.idx, -z.na.idx] <- zp.inv
-        GZ[j.idx, -z.na.idx] <- Z.c[j.idx, -z.na.idx] %*% zp.inv
-        Z.G.ZY <- zp.inv %*% sigma.zy[-z.na.idx, , drop = FALSE]
-        ZIZY[[p]][-z.na.idx, ] <-
-          zp.inv %*% sigma.zy[-z.na.idx, , drop = FALSE]
-        yziy <- sigma.yz[, -z.na.idx, drop = FALSE] %*% Z.G.ZY
-        SIGMA.B.Z[[p]] <- (sigma.b - yziy)
+        zip_1[[p]][-z_na_idx, -z_na_idx] <- zp_inv
+        gz[j_idx, -z_na_idx] <- z_c[j_idx, -z_na_idx] %*% zp_inv
+        z_g_zy <- zp_inv %*% sigma_zy[-z_na_idx, , drop = FALSE]
+        zizy_1[[p]][-z_na_idx, ] <-
+          zp_inv %*% sigma_zy[-z_na_idx, , drop = FALSE]
+        yziy <- sigma_yz[, -z_na_idx, drop = FALSE] %*% z_g_zy
+        sigma_b_z_1[[p]] <- (sigma_b_1 - yziy)
       } else {
         # complete case
-        ZIZY[[p]] <- sigma.zi.zy
-        ZIP[[p]] <- sigma.zz.inv
-        SIGMA.B.Z[[p]] <- sigma.b.z
+        zizy_1[[p]] <- sigma_zi_zy
+        zip_1[[p]] <- sigma_zz_inv
+        sigma_b_z_1[[p]] <- sigma_b_z
       }
     } # p
 
     # add empty patterns (if any)
-    if (length(Zp$empty.idx) > 0L) {
-      ZPAT2J[Zp$empty.idx] <- p + 1L
-      SIGMA.B.Z[[p + 1L]] <- sigma.b
+    if (length(zp_1$empty.idx) > 0L) {
+      zpat2j[zp_1$empty.idx] <- p + 1L
+      sigma_b_z_1[[p + 1L]] <- sigma_b_1
     }
 
-    GZ[is.na(GZ)] <- 0
-    GJ <- GZ %*% sigma.zy
+    gz[is.na(gz)] <- 0
+    gj <- gz %*% sigma_zy
   }
 
   # Y per missing pattern
-  WIP <- rep(list(matrix(0, ny, ny)), Mp$npatterns)
-  MPi <- integer(nrow(Y1))
-  for (p in seq_len(Mp$npatterns)) {
-    freq <- Mp$freq[p]
-    na.idx <- which(!Mp$pat[p, ])
-    j.idx <- Mp$j.idx[[p]]
-    j1.idx <- Mp$j1.idx[[p]]
-    TAB <- integer(nclusters)
-    TAB[j1.idx] <- Mp$j.freq[[p]]
+  wip <- rep(list(matrix(0, ny, ny)), mp$npatterns)
+  mpi <- integer(nrow(y1))
+  for (p in seq_len(mp$npatterns)) {
+    # freq <- mp$freq[p]
+    na_idx <- which(!mp$pat[p, ])
+    j_idx <- mp$j.idx[[p]]
+    j1_idx <- mp$j1.idx[[p]]
+    tab <- integer(nclusters)
+    tab[j1_idx] <- mp$j.freq[[p]]
 
-    if (length(na.idx) > 0L) {
-      MPi[Mp$case.idx[[p]]] <- p
-      wp.inv <- lav_matrix_symmetric_inverse_update(
-        s_inv = sigma.w.inv, rm_idx = na.idx,
+    if (length(na_idx) > 0L) {
+      mpi[mp$case.idx[[p]]] <- p
+      wp_inv <- lav_matrix_symmetric_inverse_update(
+        s_inv = sigma_w_inv, rm_idx = na_idx,
         logdet = FALSE
       )
-      WIP[[p]][-na.idx, -na.idx] <- wp.inv
-      PIJ[Mp$case.idx[[p]], -na.idx] <-
-        Y1w.c[Mp$case.idx[[p]], -na.idx] %*% wp.inv
+      wip[[p]][-na_idx, -na_idx] <- wp_inv
+      pij_1[mp$case.idx[[p]], -na_idx] <-
+        y1w_c[mp$case.idx[[p]], -na_idx] %*% wp_inv
 
-      for (j in j1.idx) {
-        ALIST[[j]] <-
+      for (j in j1_idx) {
+        alist_1[[j]] <-
           # ALIST[[j]] + (WIP[[p]][both.idx, both.idx] * TAB[j])
-          ALIST[[j]] + (WIP[[p]] * TAB[j])
+          alist_1[[j]] + (wip[[p]] * tab[j])
       }
     } else {
       # complete case
-      PIJ[Mp$case.idx[[p]], ] <-
-        Y1w.c[Mp$case.idx[[p]], ] %*% sigma.w.inv
-      WIP[[p]] <- sigma.w.inv
-      for (j in j1.idx) {
-        ALIST[[j]] <-
+      pij_1[mp$case.idx[[p]], ] <-
+        y1w_c[mp$case.idx[[p]], ] %*% sigma_w_inv
+      wip[[p]] <- sigma_w_inv
+      for (j in j1_idx) {
+        alist_1[[j]] <-
           # ALIST[[j]] + (sigma.w.inv[both.idx, both.idx] * TAB[j])
-          ALIST[[j]] + (sigma.w.inv * TAB[j])
+          alist_1[[j]] + (sigma_w_inv * tab[j])
       }
     }
   } # p
 
-  PJ <- rowsum.default(PIJ[, , drop = FALSE],
-    cluster.idx,
+  pj <- rowsum.default(pij_1[, , drop = FALSE],
+    cluster_idx,
     reorder = FALSE, na.rm = TRUE
   )
 
   # per cluster
-  both.diag.idx <- lav_matrix_diag_idx(length(both.idx))
+  both_diag_idx <- lav_matrix_diag_idx(length(both_idx))
   for (j in seq_len(nclusters)) {
-    A.j.full <- ALIST[[j]]
-    A.j <- A.j.full[both.idx, both.idx, drop = FALSE]
-    p.j <- as.matrix(PJ[j, ])
-    pb.j <- as.matrix(PJ[j, both.idx]) # only both.idx part
+    a_j_full <- alist_1[[j]]
+    a_j <- a_j_full[both_idx, both_idx, drop = FALSE]
+    p_j <- as.matrix(pj[j, ])
+    pb_j <- as.matrix(pj[j, both_idx]) # only both.idx part
     if (nz > 0L) {
-      sigma.b.z <- SIGMA.B.Z[[ZPAT2J[j]]]
+      sigma_b_z <- sigma_b_z_1[[zpat2j[j]]]
     } else {
-      sigma.b.z <- sigma.b
+      sigma_b_z <- sigma_b_1
     }
 
-    IBZA.j <- sigma.b.z %*% A.j
-    IBZA.j[both.diag.idx] <- IBZA.j[both.diag.idx] + 1
+    ibza_j <- sigma_b_z %*% a_j
+    ibza_j[both_diag_idx] <- ibza_j[both_diag_idx] + 1
 
-    IBZA.j.inv.BZ <- solve.default(IBZA.j, sigma.b.z)
-    IBZA.j.inv.BZ.p <- IBZA.j.inv.BZ %*% pb.j
-    A.IBZA.j.inv.BZ <- A.j %*% IBZA.j.inv.BZ
-    A.IBZA.j.inv.BZ.p <- A.IBZA.j.inv.BZ %*% pb.j
+    ibza_j_inv_bz <- solve.default(ibza_j, sigma_b_z)
+    ibza_j_inv_bz_p <- ibza_j_inv_bz %*% pb_j
+    a_ibza_j_inv_bz <- a_j %*% ibza_j_inv_bz
+    a_ibza_j_inv_bz_p <- a_ibza_j_inv_bz %*% pb_j
 
-    IBZA.j.inv <- solve.default(IBZA.j)
-    A.IBZA.j.inv <- A.j %*% IBZA.j.inv
-    p.IBZA.j.inv <- t(crossprod(pb.j, IBZA.j.inv))
+    ibza_j_inv <- solve.default(ibza_j)
+    a_ibza_j_inv <- a_j %*% ibza_j_inv
+    p_ibza_j_inv <- t(crossprod(pb_j, ibza_j_inv))
 
     # only if we have between-only variables
     if (nz > 0L) {
-      g.j <- as.matrix(GJ[j, ])
-      zij <- as.matrix(GZ[j, ])
-      zizy <- ZIZY[[ZPAT2J[j]]]
-      zip <- ZIP[[ZPAT2J[j]]]
+      g_j <- as.matrix(gj[j, ])
+      zij <- as.matrix(gz[j, ])
+      zizy <- zizy_1[[zpat2j[j]]]
+      zip <- zip_1[[zpat2j[j]]]
 
-      IBZA.j.inv.zizy <- solve.default(IBZA.j, t(zizy))
-      IBZA.j.inv.g <- IBZA.j.inv %*% g.j
-      IBZA.j.inv.p <- IBZA.j.inv %*% pb.j
-      A.IBZA.j.inv.g <- A.j %*% IBZA.j.inv.g
-      A.IBZA.j.inv.zizy <- A.j %*% IBZA.j.inv.zizy
-      zizy.A.IBZA.j.inv.g <- zizy %*% A.IBZA.j.inv.g
-      p.IBZA.j.inv.zizy <- crossprod(pb.j, IBZA.j.inv.zizy)
-      ggbzpp <- 2 * A.IBZA.j.inv.g + A.IBZA.j.inv.BZ.p - pb.j
-      ZIJzizyp <- (2 * zij - zizy %*% pb.j)
+      ibza_j_inv_zizy <- solve.default(ibza_j, t(zizy))
+      ibza_j_inv_g <- ibza_j_inv %*% g_j
+      # ibza_j_inv_p <- ibza_j_inv %*% pb_j
+      a_ibza_j_inv_g <- a_j %*% ibza_j_inv_g
+      a_ibza_j_inv_zizy <- a_j %*% ibza_j_inv_zizy
+      zizy_a_ibza_j_inv_g <- zizy %*% a_ibza_j_inv_g
+      p_ibza_j_inv_zizy <- crossprod(pb_j, ibza_j_inv_zizy)
+      ggbzpp <- 2 * a_ibza_j_inv_g + a_ibza_j_inv_bz_p - pb_j
+      zijzizyp <- (2 * zij - zizy %*% pb_j)
 
       ###########
       # dx.mu.z #
       ###########
-      tmp <- 2 * (t(p.IBZA.j.inv.zizy) - zij - zizy.A.IBZA.j.inv.g)
-      G.muz[j, ] <- drop(tmp)
+      tmp <- 2 * (t(p_ibza_j_inv_zizy) - zij - zizy_a_ibza_j_inv_g)
+      g_muz[j, ] <- drop(tmp)
 
       ###############
       # dx.sigma.zz #
       ###############
-      tmp1 <- (zip + zizy %*% A.IBZA.j.inv.zizy # logdet
+      tmp1 <- (zip + zizy %*% a_ibza_j_inv_zizy # logdet
         - tcrossprod(zij) # ZA
-        - tcrossprod(zizy.A.IBZA.j.inv.g)) # ZB-1
+        - tcrossprod(zizy_a_ibza_j_inv_g)) # ZB-1
 
-      d <- (t((2 * zizy.A.IBZA.j.inv.g + zizy %*% A.IBZA.j.inv.BZ.p)
-      %*% p.IBZA.j.inv.zizy)
-      + ZIJzizyp %*% p.IBZA.j.inv.zizy
-        - 2 * tcrossprod(zizy.A.IBZA.j.inv.g, zij))
+      d <- (t((2 * zizy_a_ibza_j_inv_g + zizy %*% a_ibza_j_inv_bz_p)
+      %*% p_ibza_j_inv_zizy)
+      + zijzizyp %*% p_ibza_j_inv_zizy
+        - 2 * tcrossprod(zizy_a_ibza_j_inv_g, zij))
       tmp2 <- (d + t(d)) / 2
       tmp <- tmp1 + tmp2
       # symmetry correction
-      ZZ <- 2 * tmp
-      diag(ZZ) <- diag(tmp)
-      G.Sigma.zz[j, ] <- lav_matrix_vech(ZZ)
+      zz <- 2 * tmp
+      diag(zz) <- diag(tmp)
+      g_sigma_zz[j, ] <- lav_matrix_vech(zz)
 
       ###############
       # dx.sigma.yz #
       ###############
-      t0 <- -2 * A.IBZA.j.inv.zizy
+      t0 <- -2 * a_ibza_j_inv_zizy
 
-      t1 <- (-2 * tcrossprod(p.IBZA.j.inv, g.j)
-        - 1 * tcrossprod(p.IBZA.j.inv, sigma.b.z %*% pb.j)
-        + 2 * tcrossprod(A.IBZA.j.inv.g, g.j)) %*% A.IBZA.j.inv.zizy
-      t2 <- -ggbzpp %*% p.IBZA.j.inv.zizy
-      t3 <- -tcrossprod(p.IBZA.j.inv, ZIJzizyp)
-      t4 <- 2 * tcrossprod(A.IBZA.j.inv.g, zij)
+      t1 <- (-2 * tcrossprod(p_ibza_j_inv, g_j)
+        - 1 * tcrossprod(p_ibza_j_inv, sigma_b_z %*% pb_j)
+        + 2 * tcrossprod(a_ibza_j_inv_g, g_j)) %*% a_ibza_j_inv_zizy
+      t2 <- -ggbzpp %*% p_ibza_j_inv_zizy
+      t3 <- -tcrossprod(p_ibza_j_inv, zijzizyp)
+      t4 <- 2 * tcrossprod(a_ibza_j_inv_g, zij)
       tmp <- t0 + t1 + t2 + t3 + t4
       tmp2 <- matrix(0, nrow(out$sigma.yz), ncol(out$sigma.yz))
-      tmp2[both.idx, ] <- tmp
-      G.Sigma.yz[j, ] <- lav_matrix_vec(tmp2)
+      tmp2[both_idx, ] <- tmp
+      g_sigma_yz[j, ] <- lav_matrix_vec(tmp2)
 
       ##############
       # dx.sigma.b #
       ##############
-      c <- tcrossprod(ggbzpp, p.IBZA.j.inv)
-      tmp <- t(A.IBZA.j.inv) - tcrossprod(A.IBZA.j.inv.g) + (c + t(c)) / 2
+      c <- tcrossprod(ggbzpp, p_ibza_j_inv)
+      tmp <- t(a_ibza_j_inv) - tcrossprod(a_ibza_j_inv_g) + (c + t(c)) / 2
       # symmetry correction
-      ZZ <- 2 * tmp
-      diag(ZZ) <- diag(tmp)
-      ZZ2 <- matrix(0, nrow(out$sigma.b), ncol(out$sigma.b))
-      ZZ2[both.idx, both.idx] <- ZZ
-      G.Sigma.b[j, ] <- lav_matrix_vech(ZZ2)
+      zz <- 2 * tmp
+      diag(zz) <- diag(tmp)
+      zz2 <- matrix(0, nrow(out$sigma.b), ncol(out$sigma.b))
+      zz2[both_idx, both_idx] <- zz
+      g_sigma_b[j, ] <- lav_matrix_vech(zz2)
       # dx.sigma.b[both.idx, both.idx] <-
       #  dx.sigma.b[both.idx, both.idx, drop = FALSE] + ZZ
 
       # for dx.sigma.w
-      PART1.b <- -1 * (IBZA.j.inv.g %*%
-        (2 * t(IBZA.j.inv.BZ.p) + t(g.j) -
-          t(g.j) %*% A.IBZA.j.inv.BZ)
-        + IBZA.j.inv.BZ + tcrossprod(IBZA.j.inv.BZ.p))
-      PART2.b <- 2 * (IBZA.j.inv.g + IBZA.j.inv.BZ.p) # vector
+      part1_b <- -1 * (ibza_j_inv_g %*%
+        (2 * t(ibza_j_inv_bz_p) + t(g_j) -
+          t(g_j) %*% a_ibza_j_inv_bz)
+        + ibza_j_inv_bz + tcrossprod(ibza_j_inv_bz_p))
+      part2_b <- 2 * (ibza_j_inv_g + ibza_j_inv_bz_p) # vector
     } else {
       ##############
       # dx.sigma.b #
       ##############
-      bzpp <- A.IBZA.j.inv.BZ.p - pb.j
-      c <- tcrossprod(bzpp, p.IBZA.j.inv)
-      tmp <- t(A.IBZA.j.inv) + (c + t(c)) / 2
+      bzpp <- a_ibza_j_inv_bz_p - pb_j
+      c <- tcrossprod(bzpp, p_ibza_j_inv)
+      tmp <- t(a_ibza_j_inv) + (c + t(c)) / 2
       # symmetry correction
-      ZZ <- 2 * tmp
-      diag(ZZ) <- diag(tmp)
-      ZZ2 <- matrix(0, nrow(out$sigma.b), ncol(out$sigma.b))
-      ZZ2[both.idx, both.idx] <- ZZ
-      G.Sigma.b[j, ] <- lav_matrix_vech(ZZ2)
+      zz <- 2 * tmp
+      diag(zz) <- diag(tmp)
+      zz2 <- matrix(0, nrow(out$sigma.b), ncol(out$sigma.b))
+      zz2[both_idx, both_idx] <- zz
+      g_sigma_b[j, ] <- lav_matrix_vech(zz2)
       # dx.sigma.b[both.idx, both.idx] <-
       #  dx.sigma.b[both.idx, both.idx, drop = FALSE] + ZZ
 
-      PART1.b <- -1 * (IBZA.j.inv.BZ + tcrossprod(IBZA.j.inv.BZ.p))
-      PART2.b <- 2 * IBZA.j.inv.BZ.p # vector
+      part1_b <- -1 * (ibza_j_inv_bz + tcrossprod(ibza_j_inv_bz_p))
+      part2_b <- 2 * ibza_j_inv_bz_p # vector
     }
 
     ##############
     # dx.sigma.w #
     ##############
 
-    PART1 <- matrix(0, ny, ny)
-    PART1[both.idx, both.idx] <- PART1.b
+    part1 <- matrix(0, ny, ny)
+    part1[both_idx, both_idx] <- part1_b
 
-    PART2 <- matrix(0, ny, 1L)
-    PART2[both.idx, 1L] <- PART2.b
+    part2 <- matrix(0, ny, 1L)
+    part2[both_idx, 1L] <- part2_b
 
-    ij.index <- which(cluster.idx == j)
-    pij <- PIJ[ij.index, , drop = FALSE]
+    ij_index <- which(cluster_idx == j)
+    pij <- pij_1[ij_index, , drop = FALSE]
 
-    which.compl <- which(MPi[ij.index] == 0L)
-    which.incompl <- which(MPi[ij.index] != 0L)
+    which_compl <- which(mpi[ij_index] == 0L)
+    which_incompl <- which(mpi[ij_index] != 0L)
 
-    AP2 <- rep(list(sigma.w.inv %*% PART2), length(ij.index))
-    AP1A.a <- AP1A.b <- matrix(0, ny, ny)
+    ap2 <- rep(list(sigma_w_inv %*% part2), length(ij_index))
+    ap1a_a <- ap1a_b <- matrix(0, ny, ny)
     # A.j.full <- matrix(0, ny, ny)
-    if (length(which.compl) > 0L) {
-      tmp <- (sigma.w.inv %*% PART1 %*% sigma.w.inv)
-      AP1A.a <- tmp * length(which.compl)
+    if (length(which_compl) > 0L) {
+      tmp <- (sigma_w_inv %*% part1 %*% sigma_w_inv)
+      ap1a_a <- tmp * length(which_compl)
       # A.j.full <- A.j.full + sigma.w.inv * length(which.compl)
     }
-    if (length(which.incompl) > 0L) {
-      p.idx <- MPi[ij.index][which.incompl]
-      tmp <- lapply(WIP[p.idx], function(x) {
-        x %*% PART1 %*% x
+    if (length(which_incompl) > 0L) {
+      p_idx <- mpi[ij_index][which_incompl]
+      tmp <- lapply(wip[p_idx], function(x) {
+        x %*% part1 %*% x
       })
-      AP1A.b <- Reduce("+", tmp)
-      AP2[which.incompl] <-
-        lapply(WIP[p.idx], function(x) {
-          x %*% PART2
+      ap1a_b <- Reduce("+", tmp)
+      ap2[which_incompl] <-
+        lapply(wip[p_idx], function(x) {
+          x %*% part2
         })
       # A.j.full <- A.j.full + Reduce("+", WIP[ p.idx ])
     }
-    t1 <- AP1A.a + AP1A.b
-    t2 <- (do.call("cbind", AP2) - t(pij)) %*% pij
+    t1 <- ap1a_a + ap1a_b
+    t2 <- (do.call("cbind", ap2) - t(pij)) %*% pij
 
-    AA.wj <- t1 + t2
+    aa_wj <- t1 + t2
 
-    tmp <- A.j.full + (AA.wj + t(AA.wj)) / 2
+    tmp <- a_j_full + (aa_wj + t(aa_wj)) / 2
     # symmetry correction
-    ZZ <- 2 * tmp
-    diag(ZZ) <- diag(tmp)
-    G.Sigma.w[j, ] <- lav_matrix_vech(ZZ)
+    zz <- 2 * tmp
+    diag(zz) <- diag(tmp)
+    g_sigma_w[j, ] <- lav_matrix_vech(zz)
     # dx.sigma.w <- dx.sigma.w + ZZ
 
     ###########
@@ -947,153 +947,152 @@ lav_mvnorm_cluster_missing_scores_2l <- function(
     ###########
     tmp <- numeric(ny)
     if (nz > 0L) {
-      tmp[both.idx] <- IBZA.j.inv.g + IBZA.j.inv.BZ.p
+      tmp[both_idx] <- ibza_j_inv_g + ibza_j_inv_bz_p
     } else {
-      tmp[both.idx] <- IBZA.j.inv.BZ.p
+      tmp[both_idx] <- ibza_j_inv_bz_p
     }
-    gbzpp <- A.j.full %*% tmp - p.j
+    gbzpp <- a_j_full %*% tmp - p_j
     # dx.mu.y <- dx.mu.y + drop(2 * gbzpp)
-    G.muy[j, ] <- drop(2 * gbzpp)
+    g_muy[j, ] <- drop(2 * gbzpp)
   } # j
 
   # browser()
 
   # rearrange columns to Mu.W, Mu.B, Sigma.W, Sigma.B
-  ov.idx <- Lp$ov.idx
-  p.tilde <- length(unique(c(ov.idx[[1]], ov.idx[[2]])))
+  ov_idx <- lp$ov.idx
+  p_tilde <- length(unique(c(ov_idx[[1]], ov_idx[[2]])))
 
   # Mu.W (for within-only)
-  Mu.W.tilde <- matrix(0, nclusters, p.tilde)
-  Mu.W.tilde[, ov.idx[[1]]] <- G.muy
-  Mu.W.tilde[, Lp$both.idx[[2]]] <- 0 # ZERO!!!
-  Mu.W <- Mu.W.tilde[, ov.idx[[1]], drop = FALSE]
+  mu_w_tilde <- matrix(0, nclusters, p_tilde)
+  mu_w_tilde[, ov_idx[[1]]] <- g_muy
+  mu_w_tilde[, lp$both.idx[[2]]] <- 0 # ZERO!!!
+  mu_w <- mu_w_tilde[, ov_idx[[1]], drop = FALSE]
 
   # Mu.B
-  Mu.B.tilde <- matrix(0, nclusters, p.tilde)
-  Mu.B.tilde[, ov.idx[[1]]] <- G.muy
-  if (length(between.idx) > 0L) {
-    Mu.B.tilde[, between.idx] <- G.muz
+  mu_b_tilde <- matrix(0, nclusters, p_tilde)
+  mu_b_tilde[, ov_idx[[1]]] <- g_muy
+  if (length(between_idx) > 0L) {
+    mu_b_tilde[, between_idx] <- g_muz
   }
-  Mu.B <- Mu.B.tilde[, ov.idx[[2]], drop = FALSE]
+  mu_b <- mu_b_tilde[, ov_idx[[2]], drop = FALSE]
 
   # Sigma.W
-  Sigma.W <- G.Sigma.w
+  sigma_w <- g_sigma_w
 
   # Sigma.B
-  if (length(between.idx) > 0L) {
-    p.tilde.star <- p.tilde * (p.tilde + 1) / 2
-    B.tilde <- lav_matrix_vech_reverse(seq_len(p.tilde.star))
+  if (length(between_idx) > 0L) {
+    p_tilde_star <- p_tilde * (p_tilde + 1) / 2
+    b_tilde <- lav_matrix_vech_reverse(seq_len(p_tilde_star))
 
-    Sigma.B.tilde <- matrix(0, nclusters, p.tilde.star)
+    sigma_b_tilde <- matrix(0, nclusters, p_tilde_star)
 
-    col.idx <- lav_matrix_vech(B.tilde[ov.idx[[1]], ov.idx[[1]],
+    col_idx <- lav_matrix_vech(b_tilde[ov_idx[[1]], ov_idx[[1]],
       drop = FALSE
     ])
-    Sigma.B.tilde[, col.idx] <- G.Sigma.b
+    sigma_b_tilde[, col_idx] <- g_sigma_b
 
-    col.idx <- lav_matrix_vec(B.tilde[ov.idx[[1]], between.idx,
+    col_idx <- lav_matrix_vec(b_tilde[ov_idx[[1]], between_idx,
       drop = FALSE
     ])
-    Sigma.B.tilde[, col.idx] <- G.Sigma.yz
+    sigma_b_tilde[, col_idx] <- g_sigma_yz
 
-    col.idx <- lav_matrix_vech(B.tilde[between.idx, between.idx,
+    col_idx <- lav_matrix_vech(b_tilde[between_idx, between_idx,
       drop = FALSE
     ])
-    Sigma.B.tilde[, col.idx] <- G.Sigma.zz
+    sigma_b_tilde[, col_idx] <- g_sigma_zz
 
-    col.idx <- lav_matrix_vech(B.tilde[ov.idx[[2]], ov.idx[[2]],
+    col_idx <- lav_matrix_vech(b_tilde[ov_idx[[2]], ov_idx[[2]],
       drop = FALSE
     ])
-    Sigma.B <- Sigma.B.tilde[, col.idx, drop = FALSE]
+    sigma_b <- sigma_b_tilde[, col_idx, drop = FALSE]
   } else {
-    p.tilde.star <- p.tilde * (p.tilde + 1) / 2
-    B.tilde <- lav_matrix_vech_reverse(seq_len(p.tilde.star))
+    p_tilde_star <- p_tilde * (p_tilde + 1) / 2
+    b_tilde <- lav_matrix_vech_reverse(seq_len(p_tilde_star))
 
-    Sigma.B.tilde <- matrix(0, nclusters, p.tilde.star)
+    sigma_b_tilde <- matrix(0, nclusters, p_tilde_star)
 
-    col.idx <- lav_matrix_vech(B.tilde[ov.idx[[1]], ov.idx[[1]],
+    col_idx <- lav_matrix_vech(b_tilde[ov_idx[[1]], ov_idx[[1]],
       drop = FALSE
     ])
-    Sigma.B.tilde[, col.idx] <- G.Sigma.b
+    sigma_b_tilde[, col_idx] <- g_sigma_b
 
-    col.idx <- lav_matrix_vech(B.tilde[ov.idx[[2]], ov.idx[[2]],
+    col_idx <- lav_matrix_vech(b_tilde[ov_idx[[2]], ov_idx[[2]],
       drop = FALSE
     ])
-    Sigma.B <- Sigma.B.tilde[, col.idx, drop = FALSE]
+    sigma_b <- sigma_b_tilde[, col_idx, drop = FALSE]
     # Sigma.B <- G.Sigma.b
   }
 
-  SCORES <- cbind(Mu.W, Sigma.W, Mu.B, Sigma.B)
+  scores <- cbind(mu_w, sigma_w, mu_b, sigma_b)
 
-  SCORES
+  scores
 }
 
 # first-order information: outer crossprod of scores per cluster
-lav_mvnorm_cluster_missing_information_firstorder <- function(
-    Y1 = NULL,
-    Y2 = NULL,
-    Lp = NULL,
-    Mp = NULL,
-    Mu.W = NULL,
-    Sigma.W = NULL,
-    Mu.B = NULL,
-    Sigma.B = NULL,
-    x.idx = NULL,
-    divide.by.two = FALSE,
-    Sinv.method = "eigen") {
-  N <- NROW(Y1)
+lav_mvnorm_cluster_missing_information_firstorder <- function( # nolint
+    y1 = NULL,
+    y2 = NULL,
+    lp = NULL,
+    mp = NULL,
+    mu_w = NULL,
+    sigma_w = NULL,
+    mu_b = NULL,
+    sigma_b = NULL,
+    x_idx = NULL,
+    divide_by_two = FALSE,
+    sinv_method = "eigen") {
 
-  SCORES <- lav_mvnorm_cluster_missing_scores_2l(
-    Y1 = Y1,
-    Y2 = Y2,
-    Lp = Lp,
-    Mp = Mp,
-    Mu.W = Mu.W,
-    Sigma.W = Sigma.W,
-    Mu.B = Mu.B,
-    Sigma.B = Sigma.B,
-    Sinv.method = Sinv.method
+  scores <- lav_mvnorm_cluster_missing_scores_2l(
+    y1 = y1,
+    y2 = y2,
+    lp = lp,
+    mp = mp,
+    mu_w = mu_w,
+    sigma_w = sigma_w,
+    mu_b = mu_b,
+    sigma_b = sigma_b,
+    sinv_method = sinv_method
   )
 
   # divide by 2 (if we want scores wrt objective function)
-  if (divide.by.two) {
-    SCORES <- SCORES / 2
+  if (divide_by_two) {
+    scores <- scores / 2
   }
 
   # unit information
-  information <- crossprod(SCORES) / Lp$nclusters[[2]]
+  information <- crossprod(scores) / lp$nclusters[[2]]
 
 
   # if x.idx, set rows/cols to zero
-  if (length(x.idx) > 0L) {
-    nw <- length(as.vector(Mu.W))
-    nw.star <- nw * (nw + 1) / 2
-    nb <- length(as.vector(Mu.B))
-    ov.idx <- Lp$ov.idx
+  if (length(x_idx) > 0L) {
+    nw <- length(as.vector(mu_w))
+    nw_star <- nw * (nw + 1) / 2
+    nb <- length(as.vector(mu_b))
+    ov_idx <- lp$ov.idx
 
-    x.idx.w <- which(ov.idx[[1]] %in% x.idx)
-    if (length(x.idx.w) > 0L) {
-      xw.idx <- c(
-        x.idx.w,
-        nw + lav_matrix_vech_which_idx(n = nw, idx = x.idx.w)
+    x_idx_w <- which(ov_idx[[1]] %in% x_idx)
+    if (length(x_idx_w) > 0L) {
+      xw_idx <- c(
+        x_idx_w,
+        nw + lav_matrix_vech_which_idx(n = nw, idx = x_idx_w)
       )
     } else {
-      xw.idx <- integer(0L)
+      xw_idx <- integer(0L)
     }
-    x.idx.b <- which(ov.idx[[2]] %in% x.idx)
-    if (length(x.idx.b) > 0L) {
-      xb.idx <- c(
-        x.idx.b,
-        nb + lav_matrix_vech_which_idx(n = nb, idx = x.idx.b)
+    x_idx_b <- which(ov_idx[[2]] %in% x_idx)
+    if (length(x_idx_b) > 0L) {
+      xb_idx <- c(
+        x_idx_b,
+        nb + lav_matrix_vech_which_idx(n = nb, idx = x_idx_b)
       )
     } else {
-      xb.idx <- integer(0L)
+      xb_idx <- integer(0L)
     }
 
-    all.idx <- c(xw.idx, nw + nw.star + xb.idx)
+    all_idx <- c(xw_idx, nw + nw_star + xb_idx)
 
-    information[all.idx, ] <- 0
-    information[, all.idx] <- 0
+    information[all_idx, ] <- 0
+    information[, all_idx] <- 0
   }
 
   information
@@ -1101,54 +1100,52 @@ lav_mvnorm_cluster_missing_information_firstorder <- function(
 
 # observed information
 # order: mu.w within, vech(sigma.w) within, mu.b between, vech(sigma.b) between
-# mu.w rows/cols that are split within/between are forced to zero
+# mu.w rows/cols that are splitted within/between are forced to zero
 #
 # numerical approximation (for now)
-lav_mvnorm_cluster_missing_information_observed <- function(
-    Y1 = NULL,
-    Y2 = NULL,
-    Lp = NULL,
-    Mp = NULL,
-    YLp = NULL,
-    Mu.W = NULL,
-    Sigma.W = NULL,
-    Mu.B = NULL,
-    Sigma.B = NULL,
-    x.idx = integer(0L),
-    Sinv.method = "eigen") {
+lav_mvnorm_cluster_missing_information_observed <- function( # nolint
+    y1 = NULL,
+    y2 = NULL,
+    lp = NULL,
+    mp = NULL,
+    ylp = NULL,
+    mu_w = NULL,
+    sigma_w = NULL,
+    mu_b = NULL,
+    sigma_b = NULL,
+    x_idx = integer(0L),
+    sinv_method = "eigen") {
 
-  nobs <- Lp$nclusters[[1]]
+  nw <- length(as.vector(mu_w))
+  nw_star <- nw * (nw + 1) / 2
+  nb <- length(as.vector(mu_b))
+  nb_star <- nb * (nb + 1) / 2
 
-  nw <- length(as.vector(Mu.W))
-  nw.star <- nw * (nw + 1) / 2
-  nb <- length(as.vector(Mu.B))
-  nb.star <- nb * (nb + 1) / 2
-
-  ov.idx <- Lp$ov.idx
-  p.tilde <- length(unique(c(ov.idx[[1]], ov.idx[[2]])))
+  ov_idx <- lp$ov.idx
+  p_tilde <- length(unique(c(ov_idx[[1]], ov_idx[[2]])))
 
   # Mu.W (for within-only)
-  Mu.W.tilde <- numeric(p.tilde)
-  Mu.W.tilde[ov.idx[[1]]] <- Mu.W
+  mu_w_tilde <- numeric(p_tilde)
+  mu_w_tilde[ov_idx[[1]]] <- mu_w
 
   # local function -- gradient
-  GRAD <- function(x) {
+  grad <- function(x) {
     # Mu.W (for within-only)
-    Mu.W.tilde2 <- numeric(p.tilde)
-    Mu.W.tilde2[ov.idx[[1]]] <- x[1:nw]
-    Mu.W.tilde2[Lp$both.idx[[2]]] <- Mu.W.tilde[Lp$both.idx[[2]]]
-    Mu.W2 <- Mu.W.tilde2[ov.idx[[1]]]
+    mu_w_tilde2 <- numeric(p_tilde)
+    mu_w_tilde2[ov_idx[[1]]] <- x[1:nw]
+    mu_w_tilde2[lp$both.idx[[2]]] <- mu_w_tilde[lp$both.idx[[2]]]
+    mu_w2 <- mu_w_tilde2[ov_idx[[1]]]
 
-    Sigma.W2 <- lav_matrix_vech_reverse(x[nw + 1:nw.star])
-    Mu.B2 <- x[nw + nw.star + 1:nb]
-    Sigma.B2 <- lav_matrix_vech_reverse(x[nw + nw.star + nb + 1:nb.star])
+    sigma_w2 <- lav_matrix_vech_reverse(x[nw + 1:nw_star])
+    mu_b2 <- x[nw + nw_star + 1:nb]
+    sigma_b2 <- lav_matrix_vech_reverse(x[nw + nw_star + nb + 1:nb_star])
 
     dx <- lav_mvnorm_cluster_missing_dlogl_2l_samplestats(
-      Y1 = Y1, Y2 = Y2, Lp = Lp, Mp = Mp,
-      Mu.W = Mu.W2, Sigma.W = Sigma.W2,
-      Mu.B = Mu.B2, Sigma.B = Sigma.B2,
-      return.list = FALSE,
-      Sinv.method = Sinv.method
+      y1 = y1, y2 = y2, lp = lp, mp = mp,
+      mu_w = mu_w2, sigma_w = sigma_w2,
+      mu_b = mu_b2, sigma_b = sigma_b2,
+      return_list = FALSE,
+      sinv_method = sinv_method
     )
 
     # dx is for -2*logl
@@ -1156,43 +1153,43 @@ lav_mvnorm_cluster_missing_information_observed <- function(
   }
 
   # start.x
-  start.x <- c(
-    as.vector(Mu.W), lav_matrix_vech(Sigma.W),
-    as.vector(Mu.B), lav_matrix_vech(Sigma.B)
+  start_x <- c(
+    as.vector(mu_w), lav_matrix_vech(sigma_w),
+    as.vector(mu_b), lav_matrix_vech(sigma_b)
   )
 
   # total information
-  information <- -1 * numDeriv::jacobian(func = GRAD, x = start.x)
+  information <- -1 * numDeriv::jacobian(func = grad, x = start_x)
 
   # unit information
-  information <- information / Lp$nclusters[[2]]
+  information <- information / lp$nclusters[[2]]
 
 
   # if x.idx, set rows/cols to zero
-  if (length(x.idx) > 0L) {
-    x.idx.w <- which(ov.idx[[1]] %in% x.idx)
-    if (length(x.idx.w) > 0L) {
-      xw.idx <- c(
-        x.idx.w,
-        nw + lav_matrix_vech_which_idx(n = nw, idx = x.idx.w)
+  if (length(x_idx) > 0L) {
+    x_idx_w <- which(ov_idx[[1]] %in% x_idx)
+    if (length(x_idx_w) > 0L) {
+      xw_idx <- c(
+        x_idx_w,
+        nw + lav_matrix_vech_which_idx(n = nw, idx = x_idx_w)
       )
     } else {
-      xw.idx <- integer(0L)
+      xw_idx <- integer(0L)
     }
-    x.idx.b <- which(ov.idx[[2]] %in% x.idx)
-    if (length(x.idx.b) > 0L) {
-      xb.idx <- c(
-        x.idx.b,
-        nb + lav_matrix_vech_which_idx(n = nb, idx = x.idx.b)
+    x_idx_b <- which(ov_idx[[2]] %in% x_idx)
+    if (length(x_idx_b) > 0L) {
+      xb_idx <- c(
+        x_idx_b,
+        nb + lav_matrix_vech_which_idx(n = nb, idx = x_idx_b)
       )
     } else {
-      xb.idx <- integer(0L)
+      xb_idx <- integer(0L)
     }
 
-    all.idx <- c(xw.idx, nw + nw.star + xb.idx)
+    all_idx <- c(xw_idx, nw + nw_star + xb_idx)
 
-    information[all.idx, ] <- 0
-    information[, all.idx] <- 0
+    information[all_idx, ] <- 0
+    information[, all_idx] <- 0
   }
 
   information

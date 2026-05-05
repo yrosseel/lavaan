@@ -48,11 +48,11 @@ lav_h1_logl <- function(lavdata = NULL,
         if (lav_verbose(FALSE))
             on.exit(lav_verbose(current.verbose), TRUE)
         OUT <- lav_mvnorm_cluster_em_sat(
-          YLp = lavsamplestats@YLp[[g]],
-          Lp = lavdata@Lp[[g]],
+          ylp = lavsamplestats@YLp[[g]],
+          lp = lavdata@Lp[[g]],
           tol = 1e-04, # option?
-          min.variance = 1e-05, # option?
-          max.iter = 5000L
+          min_variance = 1e-05, # option?
+          max_iter = 5000L
         ) # option?
         lav_verbose(current.verbose)
         # store logl per group
@@ -60,34 +60,34 @@ lav_h1_logl <- function(lavdata = NULL,
       } else if (lavsamplestats@missing.flag) {
         logl.group[g] <-
           lav_mvnorm_missing_loglik_samplestats(
-            Yp     = lavsamplestats@missing[[g]],
+            yp     = lavsamplestats@missing[[g]],
             #Mu     = lavsamplestats@missing.h1[[g]]$mu,
-            Mu     = h1.implied$mean[[g]],
+            mu     = h1.implied$mean[[g]],
             #Sigma  = lavsamplestats@missing.h1[[g]]$sigma,
-            Sigma  = h1.implied$cov[[g]],
-            x.idx  = lavsamplestats@x.idx[[g]],
-            x.mean = lavsamplestats@mean.x[[g]],
-            x.cov  = lavsamplestats@cov.x[[g]]
+            sigma_1  = h1.implied$cov[[g]],
+            x_idx  = lavsamplestats@x.idx[[g]],
+            x_mean = lavsamplestats@mean.x[[g]],
+            x_cov  = lavsamplestats@cov.x[[g]]
           )
       } else { # single-level, complete data
         # all we need is: logdet of covariance matrix, nobs and nvar
         if (lavoptions$conditional.x) {
           logl.group[g] <-
             lav_mvnorm_h1_loglik_samplestats(
-              sample.cov.logdet =
+              sample_cov_logdet =
                 lavsamplestats@res.cov.log.det[[g]],
-              sample.nvar =
+              sample_nvar =
                 NCOL(lavsamplestats@res.cov[[g]]),
-              sample.nobs = lavsamplestats@nobs[[g]]
+              sample_nobs = lavsamplestats@nobs[[g]]
             )
         } else {
           logl.group[g] <-
             lav_mvnorm_h1_loglik_samplestats(
-              sample.cov.logdet = lavsamplestats@cov.log.det[[g]],
-              sample.nvar       = NCOL(lavsamplestats@cov[[g]]),
-              sample.nobs       = lavsamplestats@nobs[[g]],
-              x.idx             = lavsamplestats@x.idx[[g]],
-              x.cov             = lavsamplestats@cov.x[[g]]
+              sample_cov_logdet = lavsamplestats@cov.log.det[[g]],
+              sample_nvar       = NCOL(lavsamplestats@cov[[g]]),
+              sample_nobs       = lavsamplestats@nobs[[g]],
+              x_idx             = lavsamplestats@x.idx[[g]],
+              x_cov             = lavsamplestats@cov.x[[g]]
             )
         }
       } # complete

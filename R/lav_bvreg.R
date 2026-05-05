@@ -288,8 +288,8 @@ lav_bvreg_lik_cache <- function(cache = NULL) {
     cov.y12 <- rho * sqrt(evar.y1) * sqrt(evar.y2)
     sigma <- matrix(c(evar.y1, cov.y12, cov.y12, evar.y2), 2L, 2L)
     lik <- exp(lav_mvnorm_loglik_data(
-      Y = cbind(Y1c, Y2c), wt = NULL,
-      Mu = c(0, 0), Sigma = sigma,
+      y = cbind(Y1c, Y2c), wt = NULL,
+      mu = c(0, 0), sigma_1 = sigma,
       casewise = TRUE
     ))
     # catch very small values -- TODO: sqrt() too aggressive?

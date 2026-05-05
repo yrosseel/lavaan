@@ -598,10 +598,10 @@ lav_samplestats_from_data <- function(lavdata = NULL,
         if (lav_warn(lavoptions$em.h1.warn))
           on.exit(lav_warn(current.warn), TRUE)
         out <- lav_mvnorm_missing_h1_estimate_moments(
-          Y = X[[g]],
+          y = X[[g]],
           wt = WT[[g]],
-          Mp = Mp[[g]], Yp = missing.[[g]],
-          max.iter = lavoptions$em.h1.iter.max,
+          mp = Mp[[g]], yp = missing.[[g]],
+          max_iter = lavoptions$em.h1.iter.max,
           tol = lavoptions$em.h1.tol,
         )
         lav_warn(current.warn)
@@ -639,10 +639,10 @@ lav_samplestats_from_data <- function(lavdata = NULL,
             #missing.h1.[[g]]$h1 <- out$fx
           } else {
             out <- lav_mvnorm_missing_h1_estimate_moments(
-              Y = X[[g]],
+              y = X[[g]],
               wt = WT[[g]],
-              Mp = Mp[[g]], Yp = missing.[[g]],
-              max.iter = lavoptions$em.h1.iter.max,
+              mp = Mp[[g]], yp = missing.[[g]],
+              max_iter = lavoptions$em.h1.iter.max,
               tol = lavoptions$em.h1.tol
             )
             missing.h1.[[g]]$sigma <- out$Sigma
@@ -1967,8 +1967,8 @@ lav_samplestats_cluster_patterns <- function(Y = NULL, Lp = NULL,
     wx.idx <- Lp$ov.x.idx[[1]]
     if (length(wx.idx) > 0L) {
       loglik.x.w <- lav_mvnorm_h1_loglik_samplestats(
-        sample.nobs = Lp$nclusters[[1]],
-        sample.cov  = S[wx.idx, wx.idx, drop = FALSE]
+        sample_nobs = Lp$nclusters[[1]],
+        sample_cov  = S[wx.idx, wx.idx, drop = FALSE]
       )
     } else {
       loglik.x.w <- 0
@@ -1978,8 +1978,8 @@ lav_samplestats_cluster_patterns <- function(Y = NULL, Lp = NULL,
     if (length(bx.idx) > 0L) {
       COVB <- cov(Y2[, bx.idx, drop = FALSE]) * (nclusters - 1) / nclusters
       loglik.x.b <- lav_mvnorm_h1_loglik_samplestats(
-        sample.nobs = Lp$nclusters[[2]],
-        sample.cov  = COVB
+        sample_nobs = Lp$nclusters[[2]],
+        sample_cov  = COVB
       )
     } else {
       loglik.x.b <- 0

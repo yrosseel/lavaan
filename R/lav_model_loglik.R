@@ -83,14 +83,14 @@ lav_model_loglik <- function(lavdata = NULL,
           } else {
             logl.group[g] <-
               lav_mvnorm_cluster_missing_loglik_samplestats_2l(
-                Y1 = lavdata@X[[g]],
-                Y2 = lavsamplestats@YLp[[g]][[2]]$Y2,
-                Lp = lavdata@Lp[[g]],
-                Mp = lavdata@Mp[[g]],
-                Mu.W = Mu.W, Sigma.W = Sigma.W,
-                Mu.B = Mu.B, Sigma.B = Sigma.B,
-                loglik.x = lavsamplestats@YLp[[g]][[2]]$loglik.x,
-                log2pi = TRUE, minus.two = FALSE
+                y1 = lavdata@X[[g]],
+                y2 = lavsamplestats@YLp[[g]][[2]]$Y2,
+                lp = lavdata@Lp[[g]],
+                mp = lavdata@Mp[[g]],
+                mu_w = Mu.W, sigma_w = Sigma.W,
+                mu_b = Mu.B, sigma_b = Sigma.B,
+                loglik_x = lavsamplestats@YLp[[g]][[2]]$loglik.x,
+                log2pi = TRUE, minus_two = FALSE
               )
           }
         } else {
@@ -113,15 +113,15 @@ lav_model_loglik <- function(lavdata = NULL,
           } else {
             logl.group[g] <-
               lav_mvnorm_cluster_loglik_samplestats_2l(
-                YLp          = lavsamplestats@YLp[[g]],
-                Lp           = lavdata@Lp[[g]],
-                Mu.W         = Mu.W,
-                Sigma.W      = Sigma.W,
-                Mu.B         = Mu.B,
-                Sigma.B      = Sigma.B,
-                Sinv.method  = "eigen",
+                ylp          = lavsamplestats@YLp[[g]],
+                lp           = lavdata@Lp[[g]],
+                mu_w         = Mu.W,
+                sigma_w      = Sigma.W,
+                mu_b         = Mu.B,
+                sigma_b      = Sigma.B,
+                sinv_method  = "eigen",
                 log2pi       = TRUE,
-                minus.two    = FALSE
+                minus_two    = FALSE
               )
           }
         } # complete
@@ -134,12 +134,12 @@ lav_model_loglik <- function(lavdata = NULL,
           X.COV <- lavh1$implied$cov[[g]][x.idx, x.idx, drop = FALSE]
         }
         logl.group[g] <- lav_mvnorm_missing_loglik_samplestats(
-          Yp     = lavsamplestats@missing[[g]],
-          Mu     = lavimplied$mean[[g]],
-          Sigma  = lavimplied$cov[[g]],
-          x.idx  = lavsamplestats@x.idx[[g]],
-          x.mean = X.MEAN, # not needed? should be part of Sigma
-          x.cov  = X.COV
+          yp     = lavsamplestats@missing[[g]],
+          mu     = lavimplied$mean[[g]],
+          sigma_1  = lavimplied$cov[[g]],
+          x_idx  = lavsamplestats@x.idx[[g]],
+          x_mean = X.MEAN, # not needed? should be part of Sigma
+          x_cov  = X.COV
         ) # not needed at all!
       } else { # single-level, complete data
         if (lavoptions$conditional.x) {
@@ -163,16 +163,16 @@ lav_model_loglik <- function(lavdata = NULL,
             Mu <- lavsamplestats@mean[[g]]
           }
           logl.group[g] <- lav_mvnorm_loglik_samplestats(
-            sample.mean = lavsamplestats@mean[[g]],
-            sample.cov  = lavsamplestats@cov[[g]],
-            sample.nobs = lavsamplestats@nobs[[g]],
-            Mu          = Mu,
-            Sigma       = lavimplied$cov[[g]],
-            x.idx       = lavsamplestats@x.idx[[g]],
-            x.mean      = lavsamplestats@mean.x[[g]],
-            x.cov       = lavsamplestats@cov.x[[g]],
-            Sinv.method = "eigen",
-            Sigma.inv   = NULL
+            sample_mean = lavsamplestats@mean[[g]],
+            sample_cov  = lavsamplestats@cov[[g]],
+            sample_nobs = lavsamplestats@nobs[[g]],
+            mu          = Mu,
+            sigma_1     = lavimplied$cov[[g]],
+            x_idx       = lavsamplestats@x.idx[[g]],
+            x_mean      = lavsamplestats@mean.x[[g]],
+            x_cov       = lavsamplestats@cov.x[[g]],
+            sinv_method = "eigen",
+            sigma_inv   = NULL
           )
         }
       } # complete

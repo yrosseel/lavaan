@@ -402,17 +402,17 @@ lav_model_nvcov_two_stage <- function(lavmodel = NULL,
       # this is Savalei & Bentler (2009)
       if (lavoptions$information[1] == "expected") {
         Info <- lav_mvnorm_missing_information_expected(
-          Y = lavdata@X[[g]], Mp = lavdata@Mp[[g]],
+          y = lavdata@X[[g]], mp = lavdata@Mp[[g]],
           wt = lavdata@weights[[g]],
-          Mu = MU, Sigma = SIGMA,
-          x.idx = lavsamplestats@x.idx[[g]]
+          mu = MU, sigma_1 = SIGMA,
+          x_idx = lavsamplestats@x.idx[[g]]
         )
       } else {
         Info <- lav_mvnorm_missing_information_observed_samplestats(
-          Yp = lavsamplestats@missing[[g]],
+          yp = lavsamplestats@missing[[g]],
           # wt not needed
-          Mu = MU, Sigma = SIGMA,
-          x.idx = lavsamplestats@x.idx[[g]]
+          mu = MU, sigma_1 = SIGMA,
+          x_idx = lavsamplestats@x.idx[[g]]
         )
       }
       Gamma[[g]] <- lav_matrix_symmetric_inverse(Info)
@@ -426,13 +426,13 @@ lav_model_nvcov_two_stage <- function(lavmodel = NULL,
         cluster.idx <- NULL
       }
       Gamma[[g]] <- lav_mvnorm_missing_h1_omega_sw(
-        Y =
-          lavdata@X[[g]], Mp = lavdata@Mp[[g]],
-        Yp = lavsamplestats@missing[[g]],
+        y = lavdata@X[[g]],
+        mp = lavdata@Mp[[g]],
+        yp = lavsamplestats@missing[[g]],
         wt = lavdata@weights[[g]],
-        cluster.idx = cluster.idx,
-        Mu = MU, Sigma = SIGMA,
-        x.idx = lavsamplestats@x.idx[[g]],
+        cluster_idx = cluster.idx,
+        mu = MU, sigma_1 = SIGMA,
+        x_idx = lavsamplestats@x.idx[[g]],
         information = lavoptions$information[1]
       )
     }

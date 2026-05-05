@@ -167,11 +167,11 @@ lav_h1_implied_logl <- function(lavdata = NULL,
       } else {
         # complete data
         OUT <- lav_mvnorm_cluster_em_sat(
-          YLp = lavsamplestats@YLp[[g]],
-          Lp = lavdata@Lp[[g]],
+          ylp = lavsamplestats@YLp[[g]],
+          lp = lavdata@Lp[[g]],
           tol = 1e-04, # option?
-          min.variance = 1e-05, # option?
-          max.iter = 5000L
+          min_variance = 1e-05, # option?
+          max_iter = 5000L
         ) # option?
       }
       if (lav_verbose()) {

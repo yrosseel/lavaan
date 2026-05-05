@@ -139,13 +139,13 @@ lav_model_information_expected <- function(lavmodel = NULL,
 
       Info.g <-
         lav_mvnorm_cluster_information_expected_delta(
-          Lp = Lp,
-          Delta = Delta[[g]],
-          Mu.W = Mu.W,
-          Sigma.W = Sigma.W,
-          Mu.B = Mu.B,
-          Sigma.B = Sigma.B,
-          Sinv.method = "eigen"
+          lp = Lp,
+          delta = Delta[[g]],
+          mu_w = Mu.W,
+          sigma_w = Sigma.W,
+          mu_b = Mu.B,
+          sigma_b = Sigma.B,
+          sinv_method = "eigen"
         )
       Info.group[[g]] <- fg * Info.g
     } else {
@@ -223,9 +223,9 @@ lav_model_information_expected_mlm <- function(lavmodel = NULL,
   }
   for (g in 1:lavsamplestats@ngroups) {
     a1[[g]] <- lav_mvnorm_h1_information_expected(
-      sample.cov     = lavsamplestats@cov[[g]],
-      sample.cov.inv = lavsamplestats@icov[[g]],
-      x.idx          = lavsamplestats@x.idx[[g]]
+      sample_cov     = lavsamplestats@cov[[g]],
+      sample_cov_inv = lavsamplestats@icov[[g]],
+      x_idx          = lavsamplestats@x.idx[[g]]
     )
     # the same as GLS... (except for the N/N-1 scaling)
     if (lavmodel@group.w.free) {

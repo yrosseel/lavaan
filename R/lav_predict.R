@@ -871,14 +871,14 @@ lav_predict_eta_normal <- function(lavobject = NULL, # for convenience
 
       # random effects (=random intercepts or cluster means)
       out <- lav_mvnorm_cluster_implied22l(
-        Lp = Lp,
+        lp = Lp,
         implied = implied.group
       )
       MB.j <- lav_mvnorm_cluster_em_estep_ranef(
-        YLp = YLp, Lp = Lp,
-        sigma.w = out$sigma.w, sigma.b = out$sigma.b,
-        sigma.zz = out$sigma.zz, sigma.yz = out$sigma.yz,
-        mu.z = out$mu.z, mu.w = out$mu.w, mu.b = out$mu.b,
+        ylp = YLp, lp = Lp,
+        sigma_w = out$sigma.w, sigma_b = out$sigma.b,
+        sigma_zz = out$sigma.zz, sigma_yz = out$sigma.yz,
+        mu_z = out$mu.z, mu_w = out$mu.w, mu_b = out$mu.b,
         se = FALSE
       )
 
@@ -1204,14 +1204,14 @@ lav_predict_eta_bartlett <- function(lavobject = NULL, # for convenience
       # NOTE: is the 'ML' way not simply using the observed cluster
       #       means?
       out <- lav_mvnorm_cluster_implied22l(
-        Lp = Lp,
+        lp = Lp,
         implied = implied.group
       )
       MB.j <- lav_mvnorm_cluster_em_estep_ranef(
-        YLp = YLp, Lp = Lp,
-        sigma.w = out$sigma.w, sigma.b = out$sigma.b,
-        sigma.zz = out$sigma.zz, sigma.yz = out$sigma.yz,
-        mu.z = out$mu.z, mu.w = out$mu.w, mu.b = out$mu.b,
+        ylp = YLp, lp = Lp,
+        sigma_w = out$sigma.w, sigma_b = out$sigma.b,
+        sigma_zz = out$sigma.zz, sigma_yz = out$sigma.yz,
+        mu_z = out$mu.z, mu_w = out$mu.w, mu_b = out$mu.b,
         se = FALSE
       )
 

@@ -253,8 +253,8 @@ lav_model_objective <- function(lavmodel = NULL,
         #             meanstructure  = meanstructure,
         #             slopestructure = conditional.x)
         WLS.V <- lav_mvnorm_information_expected(
-          Sigma = Sigma.hat[[g]],
-          x.idx = lavsamplestats@x.idx[[g]],
+          sigma_1 = Sigma.hat[[g]],
+          x_idx = lavsamplestats@x.idx[[g]],
           meanstructure = lavmodel@meanstructure
         )
         # DEBUG!!!!
