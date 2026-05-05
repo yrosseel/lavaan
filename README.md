@@ -11,7 +11,7 @@ The long-term goal of lavaan is to implement all the state-of-the-art
 capabilities that are currently available in commercial packages. However,
 lavaan is still under development, and much work still needs to be done.
 
-## News:
+## Job ad
 
 As part of an NWO-funded project for Dutch open-science infrastructural development, we are looking for a **post-doc/programmer for the lavaan project**. The position is initially for 1 year, but conditional on positive first-year review, it is designed to be extended to as many as 4 years.
 The job ad can be found on the University of [Amsterdam (UVA) website](https://werkenbij.uva.nl/en/vacancies/researcher-in-methods-and-statistics-specializing-in-programming-and-structural-equation-modeling-netherlands-15033),
