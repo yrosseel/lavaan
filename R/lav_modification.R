@@ -56,7 +56,7 @@ modindices <- function(object,                         # nolint start
   full <- lav_partable_full(
     partable = lav_partable_set_cache(object@ParTable, object@pta),
     free = TRUE, start = TRUE,
-    strict.exo = strict_exo
+    strict_exo = strict_exo
   )
   full$free <- rep(1L, nrow(full))
   full$user <- rep(10L, nrow(full))

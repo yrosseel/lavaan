@@ -245,9 +245,9 @@ fsr <- function(model = NULL,
     # create parameter table for this measurement block only
     PT.block <-
       lav_partable_subset_measurement_model(
-        PT = PT,
-        add.lv.cov = TRUE,
-        lv.names = mm.list[[b]]
+        pt_1 = PT,
+        add_lv_cov = TRUE,
+        lv_names = mm.list[[b]]
       )
     # fit 1-factor model
     fit.block <- do.call("lavaan",

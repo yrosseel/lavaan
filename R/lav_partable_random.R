@@ -39,57 +39,57 @@ lav_partable_random <- function(lavpartable = NULL,
   )
 
   # replace -Inf/Inf by -1/1 * .Machine$double.eps (for runif)
-  inf.idx <- which(lavpartable$lower < -1e+16)
-  if (length(inf.idx) > 0L) {
-    lavpartable$lower[inf.idx] <- -1e+16
+  inf_idx <- which(lavpartable$lower < -1e+16)
+  if (length(inf_idx) > 0L) {
+    lavpartable$lower[inf_idx] <- -1e+16
   }
-  inf.idx <- which(lavpartable$upper > 1e+16)
-  if (length(inf.idx) > 0L) {
-    lavpartable$upper[inf.idx] <- 1e+16
+  inf_idx <- which(lavpartable$upper > 1e+16)
+  if (length(inf_idx) > 0L) {
+    lavpartable$upper[inf_idx] <- 1e+16
   }
 
   # empty lavpartable$start?
   if (is.null(lavpartable$start)) {
-    START <- numeric(length(lavpartable$lhs))
+    start_1 <- numeric(length(lavpartable$lhs))
     # set loadings to 0.7
-    loadings.idx <- which(lavpartable$free > 0L &
+    loadings_idx <- which(lavpartable$free > 0L &
       lavpartable$op == "=~")
-    if (length(loadings.idx) > 0L) {
-      START[loadings.idx] <- 0.7
+    if (length(loadings_idx) > 0L) {
+      start_1[loadings_idx] <- 0.7
     }
     # set (only) variances to 1
-    var.idx <- which(lavpartable$free > 0L &
+    var_idx <- which(lavpartable$free > 0L &
       lavpartable$op == "~~" &
       lavpartable$lhs == lavpartable$rhs)
-    if (length(var.idx) > 0L) {
-      START[var.idx] <- 1
+    if (length(var_idx) > 0L) {
+      start_1[var_idx] <- 1
     }
 
-    lavpartable$start <- START
+    lavpartable$start <- start_1
   }
 
   # initial values
-  START <- lavpartable$start
+  start_1 <- lavpartable$start
 
   nblocks <- lav_partable_nblocks(lavpartable)
-  block.values <- lav_partable_block_values(lavpartable)
+  block_values <- lav_partable_block_values(lavpartable)
   for (b in 1:nblocks) {
-    ov.names <- lavpta$vnames$ov[[b]]
-    lv.names <- lavpta$vnames$lv[[b]]
-    ov.ind.names <- lavpta$vnames$ov.ind[[b]]
+    ov_names <- lavpta$vnames$ov[[b]]
+    lv_names <- lavpta$vnames$lv[[b]]
+    ov_ind_names <- lavpta$vnames$ov.ind[[b]]
 
     # start with the lv (residual) variances
-    lv.var.idx <- which(lavpartable$block == block.values[b] &
+    lv_var_idx <- which(lavpartable$block == block_values[b] &
       lavpartable$op == "~~" &
-      lavpartable$lhs %in% lv.names &
-      lavpartable$rhs %in% lv.names &
+      lavpartable$lhs %in% lv_names &
+      lavpartable$rhs %in% lv_names &
       lavpartable$lhs == lavpartable$rhs)
 
-    if (length(lv.var.idx) > 0L) {
-      for (i in lv.var.idx) {
+    if (length(lv_var_idx) > 0L) {
+      for (i in lv_var_idx) {
         if (lavpartable$free[i] > 0L &&
           (lavpartable$lower[i] < lavpartable$upper[i])) {
-          START[i] <- runif(
+          start_1[i] <- runif(
             n = 1L, min = lavpartable$lower[i],
             max = lavpartable$upper[i]
           )
@@ -98,42 +98,43 @@ lav_partable_random <- function(lavpartable = NULL,
     }
 
     # first, we generate lv correlations, and then rescale to covariances
-    lv.cov.idx <- which(lavpartable$block == block.values[b] &
+    lv_cov_idx <- which(lavpartable$block == block_values[b] &
       lavpartable$op == "~~" &
-      lavpartable$lhs %in% lv.names &
-      lavpartable$rhs %in% lv.names &
+      lavpartable$lhs %in% lv_names &
+      lavpartable$rhs %in% lv_names &
       lavpartable$lhs != lavpartable$rhs)
 
-    if (length(lv.cov.idx) > 0L) {
-      for (i in lv.cov.idx) {
+    if (length(lv_cov_idx) > 0L) {
+      for (i in lv_cov_idx) {
         if (lavpartable$free[i] > 0L &&
           (lavpartable$lower[i] < lavpartable$upper[i])) {
-          cor.val <- runif(n = 1L, -0.5, +0.5)
-          var1.idx <- which(lavpartable$block == block.values[b] &
+          cor_val <- runif(n = 1L, -0.5, +0.5)
+          var1_idx <- which(lavpartable$block == block_values[b] &
             lavpartable$op == "~~" &
             lavpartable$lhs == lavpartable$lhs[i] &
             lavpartable$lhs == lavpartable$rhs)
-          var2.idx <- which(lavpartable$block == block.values[b] &
+          var2_idx <- which(lavpartable$block == block_values[b] &
             lavpartable$op == "~~" &
             lavpartable$lhs == lavpartable$rhs[i] &
             lavpartable$lhs == lavpartable$rhs)
-          START[i] <- cor.val * sqrt(START[var1.idx]) * sqrt(START[var2.idx])
+          start_1[i] <- cor_val * sqrt(start_1[var1_idx]) *
+                                  sqrt(start_1[var2_idx])
         }
       }
     }
 
     # next, (residual) ov variances
-    ov.var.idx <- which(lavpartable$block == block.values[b] &
+    ov_var_idx <- which(lavpartable$block == block_values[b] &
       lavpartable$op == "~~" &
-      lavpartable$lhs %in% ov.names &
-      lavpartable$rhs %in% ov.names &
+      lavpartable$lhs %in% ov_names &
+      lavpartable$rhs %in% ov_names &
       lavpartable$lhs == lavpartable$rhs)
 
-    if (length(ov.var.idx) > 0L) {
-      for (i in ov.var.idx) {
+    if (length(ov_var_idx) > 0L) {
+      for (i in ov_var_idx) {
         if (lavpartable$free[i] > 0L &&
           (lavpartable$lower[i] < lavpartable$upper[i])) {
-          START[i] <- runif(
+          start_1[i] <- runif(
             n = 1L, min = lavpartable$lower[i],
             max = lavpartable$upper[i]
           )
@@ -142,26 +143,27 @@ lav_partable_random <- function(lavpartable = NULL,
     }
 
     # (residual) ov covariances (if any)
-    ov.cov.idx <- which(lavpartable$block == block.values[b] &
+    ov_cov_idx <- which(lavpartable$block == block_values[b] &
       lavpartable$op == "~~" &
-      lavpartable$lhs %in% ov.names &
-      lavpartable$rhs %in% ov.names &
+      lavpartable$lhs %in% ov_names &
+      lavpartable$rhs %in% ov_names &
       lavpartable$lhs != lavpartable$rhs)
 
-    if (length(ov.cov.idx) > 0L) {
-      for (i in ov.cov.idx) {
+    if (length(ov_cov_idx) > 0L) {
+      for (i in ov_cov_idx) {
         if (lavpartable$free[i] > 0L &&
           (lavpartable$lower[i] < lavpartable$upper[i])) {
-          cor.val <- runif(n = 1L, -0.5, +0.5)
-          var1.idx <- which(lavpartable$block == block.values[b] &
+          cor_val <- runif(n = 1L, -0.5, +0.5)
+          var1_idx <- which(lavpartable$block == block_values[b] &
             lavpartable$op == "~~" &
             lavpartable$lhs == lavpartable$lhs[i] &
             lavpartable$lhs == lavpartable$rhs)
-          var2.idx <- which(lavpartable$block == block.values[b] &
+          var2_idx <- which(lavpartable$block == block_values[b] &
             lavpartable$op == "~~" &
             lavpartable$lhs == lavpartable$rhs[i] &
             lavpartable$lhs == lavpartable$rhs)
-          START[i] <- cor.val * sqrt(START[var1.idx]) * sqrt(START[var2.idx])
+          start_1[i] <- cor_val * sqrt(start_1[var1_idx]) *
+                                  sqrt(start_1[var2_idx])
         }
       }
     }
@@ -169,37 +171,37 @@ lav_partable_random <- function(lavpartable = NULL,
     # finally, the lambda values, keeping in mind that
     # lambda_p^(u) = sqrt( upper(res.var.indicators_p) /
     #                      lower(var.factor) )
-    lambda.idx <- which(lavpartable$block == block.values[b] &
+    lambda_idx <- which(lavpartable$block == block_values[b] &
       lavpartable$op == "=~" &
-      lavpartable$lhs %in% lv.names &
-      lavpartable$rhs %in% ov.ind.names)
+      lavpartable$lhs %in% lv_names &
+      lavpartable$rhs %in% ov_ind_names)
 
-    if (length(lambda.idx)) {
-      for (i in lambda.idx) {
+    if (length(lambda_idx)) {
+      for (i in lambda_idx) {
         if (lavpartable$free[i] > 0L &&
           (lavpartable$lower[i] < lavpartable$upper[i])) {
-          varov.idx <- which(lavpartable$block == block.values[b] &
+          varov_idx <- which(lavpartable$block == block_values[b] &
             lavpartable$op == "~~" &
             lavpartable$lhs == lavpartable$rhs[i] &
             lavpartable$lhs == lavpartable$rhs)
-          varlv.idx <- which(lavpartable$block == block.values[b] &
+          varlv_idx <- which(lavpartable$block == block_values[b] &
             lavpartable$op == "~~" &
             lavpartable$lhs == lavpartable$lhs[i] &
             lavpartable$lhs == lavpartable$rhs)
-          lambda.u <- sqrt(START[varov.idx] / START[varlv.idx])
-          START[i] <- runif(n = 1, -lambda.u, lambda.u)
+          lambda_u <- sqrt(start_1[varov_idx] / start_1[varlv_idx])
+          start_1[i] <- runif(n = 1, -lambda_u, lambda_u)
         }
       }
     }
   }
 
   # sanity check; needed?
-  current.warn <- lav_warn()
+  current_warn <- lav_warn()
   if (lav_warn(TRUE))
-      on.exit(lav_warn(current.warn), TRUE)
-  START <- lav_start_check_cov(
-    lavpartable = lavpartable, start = START
+      on.exit(lav_warn(current_warn), TRUE)
+  start_1 <- lav_start_check_cov(
+    lavpartable = lavpartable, start = start_1
   )
 
-  START
+  start_1
 }

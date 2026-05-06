@@ -201,8 +201,8 @@ lav_lavaan_step01_ovnames_ovorder <- function(flat_model = NULL,       # nolint
     try(
       flat_model <- lav_partable_ov_from_data(flat_model,
         data = data,
-        sample.cov = sample_cov,
-        slotData = slot_data
+        sample_cov = sample_cov,
+        slot_data = slot_data
       ),
       silent = TRUE
     )

@@ -150,7 +150,7 @@ lav_model_partable  <- function(
   # of exogenous variables in model syntax (if fixed.x=TRUE)
   if (fixed.x && lav_warn()) { # we ignore the groups here!
     # we only call this function for the warning message
-    tmp <- lav_partable_vnames(flat, "ov.x", force.warn = TRUE)
+    tmp <- lav_partable_vnames(flat, "ov.x", force_warn = TRUE)
     rm(tmp)
   }
 
@@ -390,23 +390,23 @@ lav_model_partable  <- function(
 
       list_block <- lav_partable_flat(flat_block,
         blocks = tmp_blocks_lhs,
-        block.id = block,
+        block_id = block,
         meanstructure = meanstructure,
-        int.ov.free = int_ov_free, int.lv.free = int_lv_free,
-        orthogonal = orthogonal, orthogonal.y = orthogonal.y,
-        orthogonal.x = orthogonal.x, orthogonal.efa = orthogonal.efa,
-        std.lv = std.lv, correlation = correlation, composites = composites,
-        conditional.x = conditional.x, fixed.x = fixed.x,
+        int_ov_free = int_ov_free, int_lv_free = int_lv_free,
+        orthogonal = orthogonal, orthogonal_y = orthogonal.y,
+        orthogonal_x = orthogonal.x, orthogonal_efa = orthogonal.efa,
+        std_lv = std.lv, correlation = correlation, composites = composites,
+        conditional_x = conditional.x, fixed_x = fixed.x,
         parameterization = parameterization,
-        auto.fix.first = auto_fix_first,
-        auto.fix.single = auto_fix_single,
-        auto.var = auto_var, auto.cov.lv.x = auto_cov_lv_x,
-        auto.cov.y = auto_cov_y, auto.th = auto_th,
-        auto.delta = auto_delta, auto.efa = auto_efa,
-        varTable = var_table, group.equal = NULL,
-        group.w.free = group.w.free, ngroups = 1L,
+        auto_fix_first = auto_fix_first,
+        auto_fix_single = auto_fix_single,
+        auto_var = auto_var, auto_cov_lv_x = auto_cov_lv_x,
+        auto_cov_y = auto_cov_y, auto_th = auto_th,
+        auto_delta = auto_delta, auto_efa = auto_efa,
+        var_table = var_table, group_equal = NULL,
+        group_w_free = group.w.free, ngroups = 1L,
         nthresholds = nthresholds,
-        ov.names.x.block = ov_names_x_block
+        ov_names_x_block = ov_names_x_block
       )
       list_block <- as.data.frame(list_block, stringsAsFactors = FALSE)
 
@@ -442,18 +442,18 @@ lav_model_partable  <- function(
     tmp_list <- lav_partable_flat(flat,
       blocks = "group",
       meanstructure = meanstructure,
-      int.ov.free = int_ov_free, int.lv.free = int_lv_free,
-      orthogonal = orthogonal, orthogonal.y = orthogonal.y,
-      orthogonal.x = orthogonal.x, orthogonal.efa = orthogonal.efa,
-      std.lv = std.lv, correlation = correlation, composites = composites,
-      conditional.x = conditional.x, fixed.x = fixed.x,
+      int_ov_free = int_ov_free, int_lv_free = int_lv_free,
+      orthogonal = orthogonal, orthogonal_y = orthogonal.y,
+      orthogonal_x = orthogonal.x, orthogonal_efa = orthogonal.efa,
+      std_lv = std.lv, correlation = correlation, composites = composites,
+      conditional_x = conditional.x, fixed_x = fixed.x,
       parameterization = parameterization,
-      auto.fix.first = auto_fix_first, auto.fix.single = auto_fix_single,
-      auto.var = auto_var, auto.cov.lv.x = auto_cov_lv_x,
-      auto.cov.y = auto_cov_y, auto.th = auto_th,
-      auto.delta = auto_delta, auto.efa = auto_efa,
-      varTable = var_table, group.equal = group.equal,
-      group.w.free = group.w.free,
+      auto_fix_first = auto_fix_first, auto_fix_single = auto_fix_single,
+      auto_var = auto_var, auto_cov_lv_x = auto_cov_lv_x,
+      auto_cov_y = auto_cov_y, auto_th = auto_th,
+      auto_delta = auto_delta, auto_efa = auto_efa,
+      var_table = var_table, group_equal = group.equal,
+      group_w_free = group.w.free,
       ngroups = ngroups, nthresholds = nthresholds
     )
   }
@@ -760,9 +760,9 @@ lav_model_partable  <- function(
   #       set, no further constraints are needed
   if (auto_efa && !is.null(tmp_list$efa)) {
     tmp_list <- lav_partable_efa_constraints(
-      LIST = tmp_list,
-      orthogonal.efa = orthogonal.efa,
-      group.equal = group.equal
+      list_1 = tmp_list,
+      orthogonal_efa = orthogonal.efa,
+      group_equal = group.equal
     )
   } # auto_efa
 
