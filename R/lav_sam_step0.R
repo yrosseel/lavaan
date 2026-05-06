@@ -1,18 +1,18 @@
 # STEP 0: process full model, without fitting
 lav_sam_step0 <- function(cmd = "sem", model = NULL, data = NULL,
-                          se = "twostep", sam.method = "local",
+                          se = "twostep", sam_method = "local",
                           dotdotdot = NULL) {
 
   # create dotdotdot0 for dummy fit
   dotdotdot0 <- dotdotdot
 
   # parse model, so we can inspect a few features
-  flat.model <- lavParseModelString(model)
+  flat_model <- lavParseModelString(model)
 
   # remove do.fit option if present
   dotdotdot0$do.fit <- NULL
 
-  if (sam.method %in% c("local", "fsr", "cfsr")) {
+  if (sam_method %in% c("local", "fsr", "cfsr")) {
     dotdotdot0$sample.icov <- FALSE # if N < nvar
   }
   dotdotdot0$se                   <- "none"
@@ -35,15 +35,15 @@ lav_sam_step0 <- function(cmd = "sem", model = NULL, data = NULL,
   }
 
   # any lv interaction terms?
-  if (length(lav_object_vnames(flat.model, "lv.interaction")) > 0L) {
+  if (length(lav_object_vnames(flat_model, "lv.interaction")) > 0L) {
     dotdotdot0$meanstructure   <- TRUE
     #dotdotdot0$marker.int.zero <- FALSE # or not?
   }
 
   # initial processing of the model, no fitting
-  FIT <- do.call(cmd,
+  fit <- do.call(cmd,
     args = c(list(
-      model  = flat.model,
+      model  = flat_model,
       data   = data,
       do.fit = FALSE
     ), dotdotdot0)
@@ -52,49 +52,49 @@ lav_sam_step0 <- function(cmd = "sem", model = NULL, data = NULL,
   # restore options
 
   # do.fit
-  FIT@Options$do.fit <- TRUE
+  fit@Options$do.fit <- TRUE
   # FIT@Options$cat.wls.w <- TRUE
 
   # sample.icov
-  if (sam.method %in% c("local", "fsr", "cfsr")) {
-    FIT@Options$sample.icov <- TRUE
+  if (sam_method %in% c("local", "fsr", "cfsr")) {
+    fit@Options$sample.icov <- TRUE
   }
 
   # se
-  if (FIT@Model@categorical && se == "twostep") {
+  if (fit@Model@categorical && se == "twostep") {
     # FIXME!
     # should do this for global too, but we need the 'P' matrix, which
     # we only have for local (for now)
-    if (sam.method == "local") {
+    if (sam_method == "local") {
       se <- "twostep.robust"
     }
   }
-  FIT@Options$se <- se
+  fit@Options$se <- se
 
   # test
   if (!is.null(dotdotdot$test)) {
-    FIT@Options$test <- dotdotdot$test
+    fit@Options$test <- dotdotdot$test
   } else {
-    FIT@Options$test <- "standard"
+    fit@Options$test <- "standard"
   }
 
   # adjust parameter table:
-  PT <- FIT@ParTable
+  pt_1 <- fit@ParTable
 
   # check parameter table
-  PT$est <- PT$se <- NULL
+  pt_1$est <- pt_1$se <- NULL
   # est equals ustart by default (except exo values)
-  PT$est <- PT$ustart
-  if (any(PT$exo > 0L)) {
-    PT$est[PT$exo > 0L] <- PT$start[PT$exo > 0L]
+  pt_1$est <- pt_1$ustart
+  if (any(pt_1$exo > 0L)) {
+    pt_1$est[pt_1$exo > 0L] <- pt_1$start[pt_1$exo > 0L]
   }
 
   # clear se values (needed here?) only for global approach to compute SE
-  PT$se <- rep(as.numeric(NA), length(PT$lhs))
-  PT$se[PT$free == 0L & !is.na(PT$ustart)] <- 0.0
+  pt_1$se <- rep(as.numeric(NA), length(pt_1$lhs))
+  pt_1$se[pt_1$free == 0L & !is.na(pt_1$ustart)] <- 0.0
 
-  FIT@ParTable <- PT
+  fit@ParTable <- pt_1
 
 
-  FIT
+  fit
 }

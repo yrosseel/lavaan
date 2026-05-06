@@ -191,7 +191,7 @@ sam <- function(model = NULL,                      # nolint start
     sam_method <- sam.method
     fit <- lav_sam_step0(
       cmd = cmd, model = model, data = data, se = se,
-      sam.method = sam_method, dotdotdot = dotdotdot
+      sam_method = sam_method, dotdotdot = dotdotdot
     )
 
     # check for data.type == "none"
@@ -242,8 +242,8 @@ sam <- function(model = NULL,                      # nolint start
     cat("Fitting the measurement part:\n")
   }
   step1 <- lav_sam_step1(
-    cmd = cmd, mm.list = mm_list, mm.args = mm_args,
-    FIT = fit, sam.method = sam_method
+    cmd = cmd, mm_list = mm_list, mm_args = mm_args,
+    fit = fit, sam_method = sam_method
   )
 
   ##################################################
@@ -263,16 +263,16 @@ sam <- function(model = NULL,                      # nolint start
     )
 
     # collect COV/YBAR sample statistics per block from FIT
-    out <- lav_sam_get_cov_ybar(FIT = fit, local.options = local_options)
+    out <- lav_sam_get_cov_ybar(fit = fit, local_options = local_options)
     step1$COV  <- out$COV
     step1$YBAR <- out$YBAR
 
     # compute EETA/VETA
     step1 <- lav_sam_step1_local(
-      STEP1 = step1, FIT = fit,
-      sam.method = sam_method,
-      local.options = local_options,
-      return.cov.iveta2 = (se %in% c("local", "local.nt"))
+      step1 = step1, fit = fit,
+      sam_method = sam_method,
+      local_options = local_options,
+      return_cov_iveta2 = (se %in% c("local", "local.nt"))
     )
   }
 
@@ -288,11 +288,11 @@ sam <- function(model = NULL,                      # nolint start
         # initial Gamma.eta
         gamma_eta_init <- step1$COV.IVETA2[[g]]
         # compute 'additional variability' due to step1
-        gamma_eta_add <- lav_sam_gamma_add(STEP1 = step1, FIT = fit, group = g)
+        gamma_eta_add <- lav_sam_gamma_add(step1 = step1, fit = fit, group = g)
         gamma_eta[[g]] <- gamma_eta_init + gamma_eta_add
       }
     } else {
-      jac <- lav_sam_step1_local_jac(STEP1 = step1, FIT = fit)
+      jac <- lav_sam_step1_local_jac(step1 = step1, fit = fit)
       if (se == "local") {
         gamma <- fit@SampleStats@NACOV
       } else if (se == "local.nt") {
@@ -317,8 +317,8 @@ sam <- function(model = NULL,                      # nolint start
   ####################################
 
   step2 <- lav_sam_step2(
-    STEP1 = step1, FIT = fit,
-    sam.method = sam_method, struc.args = struc_args
+    step1 = step1, fit = fit,
+    sam_method = sam_method, struc_args = struc_args
   )
 
   # make sure step1.free.idx and step2.free.idx are disjoint
@@ -343,8 +343,8 @@ sam <- function(model = NULL,                      # nolint start
     cat("Creating JOINT lavaan object ... ")
   }
   joint <- lav_sam_step3_joint(
-    FIT = fit, PT = step2$PT,
-    sam.method = sam_method
+    fit = fit, pt_1 = step2$PT,
+    sam_method = sam_method
   )
   # fill information from FIT.PA
   joint@Options$optim.method <- step2$FIT.PA@Options$optim.method
@@ -392,14 +392,14 @@ sam <- function(model = NULL,                      # nolint start
     # construct temporary sam object, so that lav_bootstrap_internal() can
     # use it
     sam_1 <- lav_sam_table(
-      JOINT = joint, STEP1 = step1,
-      FIT.PA = step2$FIT.PA,
+      joint = joint, step1 = step1,
+      fit_pa = step2$FIT.PA,
       cmd = cmd, lavoptions = fit@Options,
-      mm.args = mm_args,
-      struc.args = struc_args,
-      sam.method = sam_method,
-      local.options = local_options,
-      global.options = global_options
+      mm_args = mm_args,
+      struc_args = struc_args,
+      sam_method = sam_method,
+      local_options = local_options,
+      global_options = global_options
     )
     sam_object <- joint
     sam_object@internal <- sam_1
@@ -441,8 +441,8 @@ sam <- function(model = NULL,                      # nolint start
   # analytic twostep/standard/naive/local
   } else {
     vcov_1 <- lav_sam_step2_se(
-      FIT = fit, JOINT = joint, STEP1 = step1,
-      STEP2 = step2, local.options = local_options
+      fit = fit, joint = joint, step1 = step1,
+      step2 = step2, local_options = local_options
     )
   }
 
@@ -476,14 +476,14 @@ sam <- function(model = NULL,                      # nolint start
       cat("Assembling results for output ... ")
     }
     sam_1 <- lav_sam_table(
-      JOINT = joint, STEP1 = step1,
-      FIT.PA = step2$FIT.PA,
+      joint = joint, step1 = step1,
+      fit_pa = step2$FIT.PA,
       cmd = cmd, lavoptions = fit@Options,
-      mm.args = mm_args,
-      struc.args = struc_args,
-      sam.method = sam_method,
-      local.options = local_options,
-      global.options = global_options
+      mm_args = mm_args,
+      struc_args = struc_args,
+      sam_method = sam_method,
+      local_options = local_options,
+      global_options = global_options
     )
     res <- joint
     res@internal <- sam_1
