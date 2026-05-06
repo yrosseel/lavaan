@@ -180,6 +180,8 @@ lav_test_rename <- function(test, check = FALSE) {
 
   # check?
   if (check) {
+    fmg.idx <- which(vapply(test, lav_test_fmg_is_fmg, logical(1L)))
+
     # report unknown values
     bad.idx <- which(!test %in% c(
       "standard", "none", "default",
@@ -195,6 +197,7 @@ lav_test_rename <- function(test, check = FALSE) {
       "browne.residual.adf",
       "browne.residual.adf.model"
     ))
+    bad.idx <- setdiff(bad.idx, fmg.idx)
     if (length(bad.idx) > 0L) {
       lav_msg_stop(sprintf(
         ngettext(
@@ -238,7 +241,8 @@ lav_test_rename <- function(test, check = FALSE) {
     "mean.var.adjusted",
     "scaled.shifted"
   ))
-  test <- c(test[nonscaled.idx], test[scaled.idx])
+  fmg.idx <- which(vapply(test, lav_test_fmg_is_fmg, logical(1L)))
+  test <- c(test[nonscaled.idx], test[scaled.idx], test[fmg.idx])
 
   test
 }
@@ -509,7 +513,34 @@ lav_model_test <- function(lavobject = NULL,
   ######################
 
   for (this.test in test) {
-    if (lavoptions$estimator == "PML") {
+    if (lav_test_fmg_is_fmg(this.test)) {
+      parsed <- lav_test_fmg_parse(this.test)
+      chisq <- lav_test_fmg_resolve_chisq(parsed, lavoptions = lavoptions)
+      unscaled.TEST <- TEST[[1]]
+      if (chisq == "rls") {
+        unscaled.TEST <- lav_test_fmg_browne_nt_model(
+          lavobject = lavobject,
+          lavdata = lavdata,
+          lavsamplestats = lavsamplestats,
+          lavmodel = lavmodel,
+          lavpartable = lavpartable,
+          lavoptions = lavoptions,
+          lavh1 = lavh1,
+          lavimplied = lavimplied
+        )
+        TEST[[unscaled.TEST$test]] <- unscaled.TEST
+      }
+
+      TEST[[this.test]] <- lav_test_fmg(
+        lavobject = lavobject,
+        lavsamplestats = lavsamplestats,
+        lavmodel = lavmodel,
+        lavoptions = lavoptions,
+        lavimplied = lavimplied,
+        TEST.chisq = unscaled.TEST,
+        test = this.test
+      )
+    } else if (lavoptions$estimator == "PML") {
       if (this.test == "mean.var.adjusted") {
         LABEL <- "mean+var adjusted correction (PML)"
         TEST[[this.test]] <-

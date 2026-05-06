@@ -30,7 +30,14 @@ the model.}
     If \code{"boot"} or \code{"bootstrap"} or \code{"Bollen.Stine"} is 
     included, the
     Bollen-Stine bootstrap is used to compute the bootstrap probability value
-    of the (regular) test statistic.}
+    of the (regular) test statistic. FMG p-value tests can be requested using
+    names such as \code{"peba4"}, \code{"pols3"}, \code{"pall"}, or
+    \code{"all"}. Suffixless FMG names use the standard ML chi-square statistic
+    by default; set \code{scaled.test = "Browne.residual.nt.model"} or
+    \code{scaled.test = "RLS"} to use the Browne residual normal-theory
+    model-based statistic. Suffixes such as \code{"_ml"}, \code{"_rls"},
+    and \code{"_ug"} can be used for explicit control, for example
+    \code{"peba4_ug_rls"} or \code{"pols3_ml"}.}
 \item{scaled.test}{Character. Choose the test statistic 
     that will be scaled (if a scaled test statistic is requested). 
     The default is \code{"standard"}, but it could also be (for example)
@@ -61,4 +68,6 @@ HS.model <- '
 '
 fit <- cfa(HS.model, data = HolzingerSwineford1939)
 lavTest(fit, test = "browne.residual.adf")
+lavTest(fit, test = "peba4", output = "text")
+lavTest(fit, test = "pols3", scaled.test = "RLS", output = "text")
 }

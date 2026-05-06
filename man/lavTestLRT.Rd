@@ -22,7 +22,8 @@ anova(object, ...)
   \code{"satorra.2000"}, and \code{"standard"}. See details.}
 \item{test}{Character string specifying which scaled test statistics to use,
   in case multiple scaled \code{test=} options were requested when fitting the
-  model(s). See details.}
+  model(s). See details. FMG nested tests can be requested using names such as
+  \code{"pall"}, \code{"all"}, \code{"peba4"}, or \code{"pols3"}.}
 \item{A.method}{Character string. The possible options are \code{"exact"}
   and \code{"delta"}. This is only used when method = \code{"satorra.2000"}.
   It determines how the Jacobian of the constraint function (the matrix A)
@@ -73,6 +74,14 @@ anova(object, ...)
     Even when test statistics are scaled in \code{object} or \code{...},
     users may request the  \code{method="standard"} test statistic,
     without a robust adjustment.
+
+    FMG nested tests are available when \code{type = "Chisq"} and
+    \code{test} is an FMG test name. The supported nested FMG methods are
+    \code{"pall"}, \code{"all"}, \code{"peba"} and \code{"pols"} variants.
+    They use the Satorra (2000) UGamma projection; \code{method} may be left
+    at \code{"default"} or set to \code{"standard"} or
+    \code{"satorra.2000"}. Other nested LRT methods are not used for FMG
+    tests.
 }
 \note{
   If there is a \code{\linkS4class{lavaan}} model stored in 
@@ -92,6 +101,14 @@ statistic for moment structure analysis. \emph{Psychometrika, 66}(4), 507-514.
 Satorra, A., & Bentler, P. M. (2010). Ensuring postiveness of the scaled
 difference chi-square test statistic. \emph{Psychometrika, 75}(2), 243-248.
 \doi{10.1007/s11336-009-9135-y}
+
+Foldnes, N., Moss, J., & Gronneberg, S. (2024). Improved goodness of fit
+procedures for structural equation models. \emph{Structural Equation Modeling:
+A Multidisciplinary Journal}, 1-13. \doi{10.1080/10705511.2024.2372028}
+
+Foldnes, N., Gronneberg, S., & Moss, J. (2026). Penalized eigenvalue block
+averaging: Extension to nested model comparison and Monte Carlo evaluations.
+\emph{Behavior Research Methods, 58}(4). \doi{10.3758/s13428-026-02968-4}
 }
 \examples{
 HS.model <- '
@@ -153,5 +170,8 @@ lavTestLRT(t6.1, t6.0, type = "browne.residual.adf")
 ## the standard chi-squared difference test (i.e., without a robust correction)
 lavTestLRT(t6.1, t6.0, method = "standard")
 ## == lavTestLRT(update(t6.1, test = "standard"), update(t6.0, test = "standard"))
+
+## FMG nested p-values use the Satorra (2000) UGamma projection
+lavTestLRT(fit1, fit0, method = "satorra.2000", test = "pall")
 
 }
