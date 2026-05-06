@@ -27,6 +27,7 @@ lavTestLRT <- function(object, ..., method = "default", test = "default",   # no
                        type = "Chisq", model.names = NULL) {                # nolint end
   type <- tolower(type[1])
   test <- tolower(test[1])
+  method.orig <- method[1]
   method <- tolower(gsub("[-_\\.]", "", method[1]))
   if (type %in% c("browne", "browne.residual.adf", "browne.residual.nt")) {
     if (type == "browne") {
@@ -127,6 +128,19 @@ lavTestLRT <- function(object, ..., method = "default", test = "default",   # no
     if (!all(sapply(mods, lavInspect, "converged"))) {
       lav_msg_warn(gettext("not all models converged"))
     }
+  }
+
+  if (type == "chisq" && lav_test_fmg_is_fmg(test)) {
+    return(lav_test_lrt_fmg(
+      mods = mods,
+      test = test,
+      method = method,
+      method.orig = method.orig,
+      estimator = estimator,
+      ntotal = ntotal,
+      ngroups = ngroups,
+      missing = object@Options$missing
+    ))
   }
 
   mods_scaled <- unlist(lapply(mods, function(x) {
@@ -586,6 +600,129 @@ lav_test_lrt_single_model <- function(object, method = "default",
                                    "\n")
   }
 
+  class(val) <- c("anova", class(val))
+
+  val
+}
+
+lav_test_lrt_fmg <- function(mods, test = "pall_ug_ml", method = "default",
+                             method.orig = method,
+                             estimator = "ML", ntotal = NULL,
+                             ngroups = NULL, missing = "listwise") {
+  if (!method %in% c("default", "standard", "satorra2000")) {
+    lav_msg_stop(gettextf(
+      "FMG nested tests require method= %1$s, %2$s, or %3$s; found %4$s.",
+      dQuote("default"), dQuote("standard"), dQuote("satorra.2000"),
+      dQuote(method.orig)
+    ))
+  }
+  invisible(lapply(
+    mods,
+    function(x) {
+      lav_test_fmg_check_estimator(x@Options, context = "FMG nested tests")
+      lav_test_fmg_check_missing(x@Options, context = "FMG nested tests")
+    }
+  ))
+  estimators <- vapply(mods, function(x) x@Options$estimator.orig,
+                       character(1L))
+  if (length(unique(estimators)) > 1L) {
+    lav_msg_stop(gettextf(
+      "FMG nested tests require all models to use the same estimator; found %1$s.",
+      lav_msg_view(unique(estimators), "and")
+    ))
+  }
+
+  parsed <- lav_test_fmg_parse(test)
+  chisq <- lav_test_fmg_resolve_chisq(parsed, lavoptions = mods[[1]]@Options)
+
+  if (chisq == "rls") {
+    TESTlist <- lapply(
+      mods,
+      function(x) lav_test_fmg_browne_nt_model(lavobject = x)
+    )
+    Df <- sapply(TESTlist, function(x) x$df)
+    STAT <- sapply(TESTlist, function(x) x$stat)
+  } else {
+    Df <- sapply(mods, function(x) slot(x, "test")[[1]]$df)
+    STAT <- sapply(mods, function(x) slot(x, "test")[[1]]$stat)
+  }
+
+  STAT.delta <- STAT.delta.orig <- c(NA, diff(STAT))
+  Df.delta <- Df.delta.orig <- c(NA, diff(Df))
+  Pvalue.delta <- rep(as.numeric(NA), length(mods))
+
+  if (length(mods) > 1L) {
+    for (m in seq_len(length(mods) - 1L)) {
+      out <- lav_test_fmg_nested(
+        m0 = mods[[m + 1L]],
+        m1 = mods[[m]],
+        test = test
+      )
+      STAT.delta[m + 1L] <- out$stat
+      Df.delta[m + 1L] <- out$df
+      Pvalue.delta[m + 1L] <- out$pvalue
+    }
+  }
+
+  STAT.delta <- round(unname(STAT.delta), 10)
+  Df.delta <- unname(Df.delta)
+  STAT.delta.orig <- unname(STAT.delta.orig)
+  Df.delta.orig <- unname(Df.delta.orig)
+
+  aic <- bic <- rep(NA, length(mods))
+  if (estimator == "ML") {
+    aic <- sapply(mods, FUN = AIC)
+    bic <- sapply(mods, FUN = BIC)
+  } else if (estimator == "PML") {
+    OUT <- lapply(mods, lav_pml_object_aic_bic)
+    aic <- sapply(OUT, "[[", "PL_AIC")
+    bic <- sapply(OUT, "[[", "PL_BIC")
+  }
+
+  if (missing == "listwise") {
+    RMSEA.delta <- c(NA, lav_fit_rmsea(
+      X2 = STAT.delta.orig[-1],
+      df = Df.delta.orig[-1],
+      N = ntotal,
+      G = ngroups,
+      c.hat = rep(1, length(STAT.delta.orig) - 1L)
+    ))
+
+    val <- data.frame(
+      Df = Df,
+      AIC = aic,
+      BIC = bic,
+      Chisq = STAT,
+      "Chisq diff" = STAT.delta,
+      "RMSEA" = RMSEA.delta,
+      "Df diff" = Df.delta,
+      "Pr(>Chisq)" = Pvalue.delta,
+      row.names = names(mods),
+      check.names = FALSE
+    )
+  } else {
+    val <- data.frame(
+      Df = Df,
+      AIC = aic,
+      BIC = bic,
+      Chisq = STAT,
+      "Chisq diff" = STAT.delta,
+      "Df diff" = Df.delta,
+      "Pr(>Chisq)" = Pvalue.delta,
+      row.names = names(mods),
+      check.names = FALSE
+    )
+  }
+
+  idx <- which(val[, "Df diff"] == 0)
+  if (length(idx) > 0L) {
+    val[idx, "Pr(>Chisq)"] <- as.numeric(NA)
+    lav_msg_warn(gettext("some models have the same degrees of freedom"))
+  }
+
+  attr(val, "heading") <- paste0(
+    "\nFMG Chi-Squared Difference Test (test = ", dQuote(test), ")\n"
+  )
   class(val) <- c("anova", class(val))
 
   val

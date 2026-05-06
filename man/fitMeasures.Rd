@@ -40,7 +40,9 @@ fitmeasures(object, fit.measures = "all",
   and the options are provided as other named elements in this list. The
   \code{standard.test} option determines the main test statistic (chi-square
   value) that will be used to compute all the fit measures that depend on this
-  test statistic. Usually this is \code{"standard"}. The \code{scaled.test}
+  test statistic. Usually this is \code{"standard"}. FMG p-value tests can be
+  selected here using names such as \code{"peba4"}, \code{"pols3"},
+  \code{"pall"}, or \code{"all"}. The \code{scaled.test}
   option determines which scaling method is to be used for the scaled fit
   measures (in case multiple scaling methods were requested). The
   \code{rmsea.ci.level} option, default 0.9, determines the level of the confidence
@@ -113,6 +115,11 @@ Finally, in some situations (especially when the data contains missing values),
 computing these robust fit indices may be computationally intensive. To avoid
 long runtimes, the calculation of robust fit measures can be disabled by
 setting the \code{robust} argument to \code{FALSE} in the \code{fit.measures} list.
+
+FMG p-values can be selected through the existing \code{standard.test}
+mechanism, for example
+\code{fitMeasures(fit, "pvalue", fm.args = list(standard.test = "peba4"))}.
+No separate FMG-specific fit-measure names are needed.
 }
 \references{
 Brosseau-Liard, P. E., Savalei, V., & Li, L. (2012). An investigation of the
@@ -141,6 +148,14 @@ Psychological Methods.
 Zhang, X., & Savalei, V. (2023). New computations for RMSEA and CFI following
 FIML and TS estimation with missing data. Psychological Methods, 28(2),
 263-283. \doi{https://doi.org/10.1037/met0000445}
+
+Foldnes, N., Moss, J., & Gronneberg, S. (2024). Improved goodness of fit
+procedures for structural equation models. \emph{Structural Equation Modeling:
+A Multidisciplinary Journal}, 1-13. \doi{https://doi.org/10.1080/10705511.2024.2372028}
+
+Foldnes, N., Gronneberg, S., & Moss, J. (2026). Penalized eigenvalue block
+averaging: Extension to nested model comparison and Monte Carlo evaluations.
+\emph{Behavior Research Methods, 58}(4). \doi{https://doi.org/10.3758/s13428-026-02968-4}
 }
 
 \examples{
@@ -156,6 +171,7 @@ fitMeasures(fit, c("chisq", "df", "pvalue", "cfi", "rmsea"),
             output = "matrix")
 fitMeasures(fit, c("chisq", "df", "pvalue", "cfi", "rmsea"),
             output = "text")
+fitMeasures(fit, "pvalue", fm.args = list(standard.test = "peba4"))
 ## specify another threshold for RMSEA confidence interval
 fitMeasures(fit, list(
   fit.measures = c("cfi", "rmsea"),

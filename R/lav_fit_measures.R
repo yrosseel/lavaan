@@ -225,6 +225,7 @@ lav_fit_measures <- function(object, fit.measures = "all",
 
   # check standard.test
   standard.test <- lav_test_rename(standard.test, check = TRUE)[1] # only 1
+  fmg.standard.test <- lav_test_fmg_is_fmg(standard.test)
 
   # check scaled.test
   if (!scaled.test %in% c("none", "default", "standard")) {
@@ -243,7 +244,8 @@ lav_fit_measures <- function(object, fit.measures = "all",
 
   # do we have a scaled test statistic? if so, which one?
   scaled.flag <- FALSE
-  if (scaled.test != "none" &&
+  if (!fmg.standard.test &&
+      scaled.test != "none" &&
       any(test.names %in% c(
         "satorra.bentler",
         "yuan.bentler", "yuan.bentler.mplus",
@@ -266,8 +268,12 @@ lav_fit_measures <- function(object, fit.measures = "all",
     if (scaled.flag) {
       this.test <- unique(this.test, scaled.test)
     }
+    lavtest.scaled.test <- standard.test
+    if (fmg.standard.test) {
+      lavtest.scaled.test <- scaled.test
+    }
     TEST <- lavTest(object,
-                    test = this.test, scaled.test = standard.test,
+                    test = this.test, scaled.test = lavtest.scaled.test,
                     drop.list.single = FALSE
     )
     # replace in object, if we pass it to lav_fit_* functions

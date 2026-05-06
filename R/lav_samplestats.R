@@ -175,6 +175,10 @@ lav_samplestats_from_data <- function(lavdata = NULL,
     ))) {
       NACOV.compute <- TRUE
     }
+    if (missing == "listwise" &&
+        any(vapply(test, lav_test_fmg_is_fmg, logical(1L)))) {
+      NACOV.compute <- TRUE
+    }
     if (estimator == "IV" &&
         lavoptions$estimator.args$iv.vcov.stage1 == "gamma") {
       NACOV.compute <- TRUE

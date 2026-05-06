@@ -327,11 +327,14 @@ Estimation options:
       of test statistics can be provided. If \code{"default"}, the value 
       depends on the values of other arguments. See also the 
       \code{\link{lavTest}} function to extract (alternative) 
-      test statistics from a fitted lavaan object.}
+      test statistics from a fitted lavaan object. FMG test names such as
+      \code{"peba4"}, \code{"pols3"}, \code{"pall"}, and \code{"all"} can be
+      requested here for supported ML-family models.}
    \item{\code{standard.test}:}{Character. Choose the test statistic
     that will be used to compute fit measures (like CFI or RSMEA).
     The default is \code{"standard"}, but it could also be (for example)
-    \code{"Browne.residual.nt"}.}
+    \code{"Browne.residual.nt"}, or an FMG test name such as
+    \code{"peba4"}.}
    \item{\code{scaled.test}:}{Character. Choose the test statistic
     that will be scaled (if a scaled test statistic is requested).
     The default is \code{"standard"}, but it could also be (for example)
@@ -341,7 +344,8 @@ Estimation options:
    \item{\code{gamma.unbiased}}{Logical. If \code{TRUE}, we compute an
      unbiased version for the Gamma matrix. Only available for single-level
      complete data and when \code{conditional.x = FALSE} and 
-     \code{fixed.x = FALSE} (for now).}
+     \code{fixed.x = FALSE} (for now). Suffixless FMG test names use this
+     option to choose between biased and unbiased Gamma.}
    \item{\code{bootstrap}:}{Number of bootstrap draws, if bootstrapping is 
      used.}
    \item{\code{do.fit}:}{If \code{FALSE}, the model is not fit, and the 
