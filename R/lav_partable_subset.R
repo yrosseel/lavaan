@@ -17,36 +17,36 @@
 #   add them here? (no for now, unless add.ind.predictors = TRUE)
 # - new in 0.6-20: - check for 2nd, 3rd order lv.names...
 #                  - allow for conditional.x (global SAM)
-lav_partable_subset_measurement_model <- function(PT = NULL,
-                                                  lv.names = NULL,
-                                                  add.lv.cov = TRUE,
-                                                  add.ind.predictors = FALSE,
-                                                  add.idx = FALSE,
-                                                  idx.only = FALSE) {
+lav_partable_subset_measurement_model <- function(pt_1 = NULL,       # nolint
+                                                  lv_names = NULL,
+                                                  add_lv_cov = TRUE,
+                                                  add_ind_predictors = FALSE,
+                                                  add_idx = FALSE,
+                                                  idx_only = FALSE) {
   # PT
-  PT <- as.data.frame(PT, stringsAsFactors = FALSE)
+  pt_1 <- as.data.frame(pt_1, stringsAsFactors = FALSE)
 
   # check if we have free.unrotated column (rotation!)
-  if (!is.null(PT$free.unrotated)) {
-    PT$free.orig <- PT$free
-    PT$free <- PT$free.unrotated
-    PT$est.unrotated <- NULL
-    PT$free.unrotated <- NULL
-    PT$est.std <- NULL
+  if (!is.null(pt_1$free.unrotated)) {
+    pt_1$free.orig <- pt_1$free
+    pt_1$free <- pt_1$free.unrotated
+    pt_1$est.unrotated <- NULL
+    pt_1$free.unrotated <- NULL
+    pt_1$est.std <- NULL
   }
 
   # lavpta
-  lavpta <- lav_partable_attributes(PT)
+  lavpta <- lav_partable_attributes(pt_1)
 
   # nblocks
   nblocks <- lavpta$nblocks
-  block.values <- lav_partable_block_values(PT)
+  block_values <- lav_partable_block_values(pt_1)
 
   # lv.names: list with element per block
-  if (is.null(lv.names)) {
-    lv.names <- lavpta$vnames$lv.regular
-  } else if (!is.list(lv.names)) {
-    lv.names <- rep(list(lv.names), nblocks)
+  if (is.null(lv_names)) {
+    lv_names <- lavpta$vnames$lv.regular
+  } else if (!is.list(lv_names)) {
+    lv_names <- rep(list(lv_names), nblocks)
   }
 
   # if lv.names contains a higher-order latent variable,
@@ -56,241 +56,241 @@ lav_partable_subset_measurement_model <- function(PT = NULL,
       next
     }
     # ALL lv names
-    LV.names <- lavpta$vnames$lv[[g]]
+    lv_names_1 <- lavpta$vnames$lv[[g]]
 
     # lv.names in this block
-    this.lv <- lv.names[[g]]
+    this_lv <- lv_names[[g]]
 
-    all.ind.are.observed.flag <- FALSE
-    new.lv <- character(0L)
-    while (!all.ind.are.observed.flag) {
+    all_ind_are_observed_flag <- FALSE
+    new_lv <- character(0L)
+    while (!all_ind_are_observed_flag) {
       # check indicators of all this.lv
-      RHS <- PT$rhs[which(PT$op == "=~" & PT$block == g &
-                          PT$lhs %in% this.lv)]
-      lv.idx <- which(RHS %in% LV.names)
-      if (length(lv.idx) > 0L) {
+      rhs <- pt_1$rhs[which(pt_1$op == "=~" & pt_1$block == g &
+                          pt_1$lhs %in% this_lv)]
+      lv_idx <- which(rhs %in% lv_names_1)
+      if (length(lv_idx) > 0L) {
         # add these 'new' ones to new.lv
-        new.lv <- c(new.lv, RHS[lv.idx])
-        this.lv <- RHS[lv.idx]
+        new_lv <- c(new_lv, rhs[lv_idx])
+        this_lv <- rhs[lv_idx]
       } else {
-        all.ind.are.observed.flag <- TRUE
+        all_ind_are_observed_flag <- TRUE
       }
     }
 
     # update lv.names for this block
-    lv.names[[g]] <- unique(c(lv.names[[g]], new.lv))
+    lv_names[[g]] <- unique(c(lv_names[[g]], new_lv))
   }
 
   # keep rows idx
-  keep.idx <- integer(0L)
+  keep_idx <- integer(0L)
 
   # remove not-needed measurement models
   for (g in 1:nblocks) {
     # indicators for latent variables we keep
-    IND.idx <- which(PT$op == "=~" &
-      PT$lhs %in% lv.names[[g]] &
-      PT$block == block.values[g])
-    IND <- PT$rhs[IND.idx]
-    IND.plabel <- PT$plabel[IND.idx]
+    ind_idx <- which(pt_1$op == "=~" &
+      pt_1$lhs %in% lv_names[[g]] &
+      pt_1$block == block_values[g])
+    ind <- pt_1$rhs[ind_idx]
+    # ind_plabel <- pt_1$plabel[ind_idx]
 
     # keep =~
-    keep.idx <- c(keep.idx, IND.idx)
+    keep_idx <- c(keep_idx, ind_idx)
 
     # new in 0.6-17: indicators regressed on predictors
-    if (add.ind.predictors) {
-      PRED.idx <- which(PT$op == "~" &
-        PT$lhs %in% IND &
-        PT$block == block.values[g])
-      EXTRA <- unique(PT$rhs[PRED.idx])
-      keep.idx <- c(keep.idx, PRED.idx)
+    if (add_ind_predictors) {
+      pred_idx <- which(pt_1$op == "~" &
+        pt_1$lhs %in% ind &
+        pt_1$block == block_values[g])
+      extra <- unique(pt_1$rhs[pred_idx])
+      keep_idx <- c(keep_idx, pred_idx)
       # add them to IND, so we include their variances/intercepts
-      IND <- c(IND, EXTRA)
+      ind <- c(ind, extra)
     }
 
     # keep ~~
-    OV.VAR.idx <- which(PT$op == "~~" &
-      PT$lhs %in% IND &
-      PT$rhs %in% IND &
-      PT$block == block.values[g])
-    keep.idx <- c(keep.idx, OV.VAR.idx)
+    ov_var_idx <- which(pt_1$op == "~~" &
+      pt_1$lhs %in% ind &
+      pt_1$rhs %in% ind &
+      pt_1$block == block_values[g])
+    keep_idx <- c(keep_idx, ov_var_idx)
 
-    LV.VAR.idx <- which(PT$op == "~~" &
-      PT$lhs %in% lv.names[[g]] &
-      PT$rhs %in% lv.names[[g]] &
-      PT$block == block.values[g])
-    keep.idx <- c(keep.idx, LV.VAR.idx)
+    lv_var_idx <- which(pt_1$op == "~~" &
+      pt_1$lhs %in% lv_names[[g]] &
+      pt_1$rhs %in% lv_names[[g]] &
+      pt_1$block == block_values[g])
+    keep_idx <- c(keep_idx, lv_var_idx)
 
     # intercepts indicators
-    OV.INT.idx <- which(PT$op == "~1" &
-      PT$lhs %in% IND &
-      PT$block == block.values[g])
-    keep.idx <- c(keep.idx, OV.INT.idx)
+    ov_int_idx <- which(pt_1$op == "~1" &
+      pt_1$lhs %in% ind &
+      pt_1$block == block_values[g])
+    keep_idx <- c(keep_idx, ov_int_idx)
 
     # intercepts latent variables
-    LV.INT.idx <- which(PT$op == "~1" &
-      PT$lhs %in% lv.names[[g]] &
-      PT$block == block.values[g])
-    keep.idx <- c(keep.idx, LV.INT.idx)
+    lv_int_idx <- which(pt_1$op == "~1" &
+      pt_1$lhs %in% lv_names[[g]] &
+      pt_1$block == block_values[g])
+    keep_idx <- c(keep_idx, lv_int_idx)
 
     # thresholds
-    TH.idx <- which(PT$op == "|" &
-      PT$lhs %in% IND &
-      PT$block == block.values[g])
-    keep.idx <- c(keep.idx, TH.idx)
+    th_idx <- which(pt_1$op == "|" &
+      pt_1$lhs %in% ind &
+      pt_1$block == block_values[g])
+    keep_idx <- c(keep_idx, th_idx)
 
     # scaling factors
-    SC.idx <- which(PT$op == "~*~" &
-      PT$lhs %in% IND &
-      PT$block == block.values[g])
-    keep.idx <- c(keep.idx, SC.idx)
+    sc_idx <- which(pt_1$op == "~*~" &
+      pt_1$lhs %in% ind &
+      pt_1$block == block_values[g])
+    keep_idx <- c(keep_idx, sc_idx)
 
     # defined/constraints
-    if (any(PT$op %in% c("==", "<", ">", ":="))) {
+    if (any(pt_1$op %in% c("==", "<", ">", ":="))) {
       # get the 'id' numbers and the labels involved in def/constraints
-      PT2 <- PT
-      PT2$free <- PT$id # use 'id' numbers instead of 'free' indices
-      ID <- lav_partable_constraints_label_id(PT2, def = TRUE)
-      LABEL <- names(ID)
+      pt2 <- pt_1
+      pt2$free <- pt_1$id # use 'id' numbers instead of 'free' indices
+      id <- lav_partable_constraints_label_id(pt2, def = TRUE)
+      label <- names(id)
 
       # what are the row indices that we currently keep?
-      FREE.id <- PT$id[keep.idx]
+      free_id <- pt_1$id[keep_idx]
     }
 
     # defined parameters
-    def.idx <- which(PT$op == ":=")
-    if (length(def.idx) > 0L) {
-      def.keep <- logical(length(def.idx))
-      for (def in seq_len(length(def.idx))) {
+    def_idx <- which(pt_1$op == ":=")
+    if (length(def_idx) > 0L) {
+      def_keep <- logical(length(def_idx))
+      for (def in seq_along(def_idx)) {
         # rhs
-        RHS.labels <- all.vars(as.formula(paste(
+        rhs_labels <- all.vars(as.formula(paste(
           "~",
-          PT[def.idx[def], "rhs"]
+          pt_1[def_idx[def], "rhs"]
         )))
-        if (length(RHS.labels) > 0L) {
+        if (length(rhs_labels) > 0L) {
           # par id
-          RHS.freeid <- ID[match(RHS.labels, LABEL)]
+          rhs_freeid <- id[match(rhs_labels, label)]
 
           # keep?
-          if (all(RHS.freeid %in% FREE.id)) {
-            def.keep[def] <- TRUE
+          if (all(rhs_freeid %in% free_id)) {
+            def_keep[def] <- TRUE
           }
         } else { # only constants?
-          def.keep[def] <- TRUE
+          def_keep[def] <- TRUE
         }
       }
-      keep.idx <- c(keep.idx, def.idx[def.keep])
+      keep_idx <- c(keep_idx, def_idx[def_keep])
       # add 'id' numbers of := definitions that we keep
-      FREE.id <- c(FREE.id, PT$id[def.idx[def.keep]])
+      free_id <- c(free_id, pt_1$id[def_idx[def_keep]])
     }
 
     # (in)equality constraints
-    con.idx <- which(PT$op %in% c("==", "<", ">"))
-    if (length(con.idx) > 0L) {
-      con.keep <- logical(length(con.idx))
-      for (con in seq_len(length(con.idx))) {
-        lhs.keep <- FALSE
-        rhs.keep <- FALSE
+    con_idx <- which(pt_1$op %in% c("==", "<", ">"))
+    if (length(con_idx) > 0L) {
+      con_keep <- logical(length(con_idx))
+      for (con in seq_along(con_idx)) {
+        lhs_keep <- FALSE
+        rhs_keep <- FALSE
 
         # lhs
-        LHS.labels <- all.vars(as.formula(paste(
+        lhs_labels <- all.vars(as.formula(paste(
           "~",
-          PT[con.idx[con], "lhs"]
+          pt_1[con_idx[con], "lhs"]
         )))
-        if (length(LHS.labels) > 0L) {
+        if (length(lhs_labels) > 0L) {
           # par id
-          LHS.freeid <- ID[match(LHS.labels, LABEL)]
+          lhs_freeid <- id[match(lhs_labels, label)]
 
           # keep?
-          if (all(LHS.freeid %in% FREE.id)) {
-            lhs.keep <- TRUE
+          if (all(lhs_freeid %in% free_id)) {
+            lhs_keep <- TRUE
           }
         } else {
-          lhs.keep <- TRUE
+          lhs_keep <- TRUE
         }
 
         # rhs
-        RHS.labels <- all.vars(as.formula(paste(
+        rhs_labels <- all.vars(as.formula(paste(
           "~",
-          PT[con.idx[con], "rhs"]
+          pt_1[con_idx[con], "rhs"]
         )))
-        if (length(RHS.labels) > 0L) {
+        if (length(rhs_labels) > 0L) {
           # par id
-          RHS.freeid <- ID[match(RHS.labels, LABEL)]
+          rhs_freeid <- id[match(rhs_labels, label)]
 
           # keep?
-          if (all(RHS.freeid %in% FREE.id)) {
-            rhs.keep <- TRUE
+          if (all(rhs_freeid %in% free_id)) {
+            rhs_keep <- TRUE
           }
         } else {
-          rhs.keep <- TRUE
+          rhs_keep <- TRUE
         }
 
-        if (lhs.keep && rhs.keep) {
-          con.keep[con] <- TRUE
+        if (lhs_keep && rhs_keep) {
+          con_keep[con] <- TRUE
         }
       }
 
-      keep.idx <- c(keep.idx, con.idx[con.keep])
+      keep_idx <- c(keep_idx, con_idx[con_keep])
     } # con
   } # block
 
   # remove any duplicated (only with higher-order factors)
-  keep.idx <- keep.idx[!duplicated(keep.idx)]
+  keep_idx <- keep_idx[!duplicated(keep_idx)]
 
-  if (idx.only) {
-    return(keep.idx)
+  if (idx_only) {
+    return(keep_idx)
   }
 
-  PT <- PT[keep.idx, , drop = FALSE]
+  pt_1 <- pt_1[keep_idx, , drop = FALSE]
 
   # check if we have enough indicators?
   # TODO
 
   # add covariances among latent variables?
-  if (add.lv.cov) {
-    PT <- lav_partable_add_lv_cov(
-      PT = PT,
-      lv.names = lv.names
+  if (add_lv_cov) {
+    pt_1 <- lav_partable_add_lv_cov(
+      pt_1 = pt_1,
+      lv_names = lv_names
     )
   }
 
   # clean up
-  PT <- lav_partable_complete(PT)
+  pt_1 <- lav_partable_complete(pt_1)
 
-  if (add.idx) {
-    attr(PT, "idx") <- keep.idx
+  if (add_idx) {
+    attr(pt_1, "idx") <- keep_idx
   }
 
-  PT
+  pt_1
 }
 
 # NOTE: only within same level
-lav_partable_add_lv_cov <- function(PT, lv.names = NULL) {
+lav_partable_add_lv_cov <- function(pt_1, lv_names = NULL) {
   # PT
-  if (!is.data.frame(PT)) {
-    PT <- as.data.frame(PT, stringsAsFactors = FALSE)
+  if (!is.data.frame(pt_1)) {
+    pt_1 <- as.data.frame(pt_1, stringsAsFactors = FALSE)
   }
 
   # lavpta
-  lavpta <- lav_partable_attributes(PT)
+  lavpta <- lav_partable_attributes(pt_1)
 
   # nblocks
   nblocks <- lavpta$nblocks
-  block.values <- lav_partable_block_values(PT)
+  block_values <- lav_partable_block_values(pt_1)
 
   # lv.names: list with element per block
-  if (is.null(lv.names)) {
-    lv.names <- lavpta$vnames$lv.regular
-  } else if (!is.list(lv.names)) {
-    lv.names <- rep(list(lv.names), nblocks)
+  if (is.null(lv_names)) {
+    lv_names <- lavpta$vnames$lv.regular
+  } else if (!is.list(lv_names)) {
+    lv_names <- rep(list(lv_names), nblocks)
   }
 
   # check for higher-order models (new in 0.6-20)
   for (b in seq_len(nblocks)) {
     if (length(lavpta$vnames$lv.ind[[b]]) > 0L) {
-      ind.idx <- which(lv.names[[b]] %in% lavpta$vnames$lv.ind[[b]])
-      if (length(ind.idx) > 0L) {
-        lv.names[[b]] <- lv.names[[b]][-ind.idx]
+      ind_idx <- which(lv_names[[b]] %in% lavpta$vnames$lv.ind[[b]])
+      if (length(ind_idx) > 0L) {
+        lv_names[[b]] <- lv_names[[b]][-ind_idx]
       }
     }
   }
@@ -298,59 +298,59 @@ lav_partable_add_lv_cov <- function(PT, lv.names = NULL) {
   # remove lv.names if not present at same level/block
   if (nblocks > 1L) {
     for (b in seq_len(nblocks)) {
-      rm.idx <- which(!lv.names[[b]] %in% lavpta$vnames$lv.regular[[b]])
-      if (length(rm.idx) > 0L) {
-        lv.names[[b]] <- lv.names[[b]][-rm.idx]
+      rm_idx <- which(!lv_names[[b]] %in% lavpta$vnames$lv.regular[[b]])
+      if (length(rm_idx) > 0L) {
+        lv_names[[b]] <- lv_names[[b]][-rm_idx]
       }
     } # b
   }
 
   # add covariances among latent variables
   for (b in seq_len(nblocks)) {
-    if (length(lv.names[[b]]) > 1L) {
-      tmp <- utils::combn(lv.names[[b]], 2L)
+    if (length(lv_names[[b]]) > 1L) {
+      tmp <- utils::combn(lv_names[[b]], 2L)
       for (i in seq_len(ncol(tmp))) {
         # already present?
-        cov1.idx <- which(PT$op == "~~" &
-          PT$block == block.values[b] &
-          PT$lhs == tmp[1, i] & PT$rhs == tmp[2, i])
-        cov2.idx <- which(PT$op == "~~" &
-          PT$block == block.values[b] &
-          PT$lhs == tmp[2, i] & PT$rhs == tmp[1, i])
+        cov1_idx <- which(pt_1$op == "~~" &
+          pt_1$block == block_values[b] &
+          pt_1$lhs == tmp[1, i] & pt_1$rhs == tmp[2, i])
+        cov2_idx <- which(pt_1$op == "~~" &
+          pt_1$block == block_values[b] &
+          pt_1$lhs == tmp[2, i] & pt_1$rhs == tmp[1, i])
 
         # if not, add
-        if (length(c(cov1.idx, cov2.idx)) == 0L) {
-          ADD <- list(
+        if (length(c(cov1_idx, cov2_idx)) == 0L) {
+          add <- list(
             lhs = tmp[1, i],
             op = "~~",
             rhs = tmp[2, i],
             user = 3L,
-            free = max(PT$free) + 1L,
+            free = max(pt_1$free) + 1L,
             block = b
           )
           # add group column
-          if (!is.null(PT$group)) {
-            ADD$group <- unique(PT$block[PT$block == b])
+          if (!is.null(pt_1$group)) {
+            add$group <- unique(pt_1$block[pt_1$block == b])
           }
           # add level column
-          if (!is.null(PT$level)) {
-            ADD$level <- unique(PT$level[PT$block == b])
+          if (!is.null(pt_1$level)) {
+            add$level <- unique(pt_1$level[pt_1$block == b])
           }
           # add lower column
-          if (!is.null(PT$lower)) {
-            ADD$lower <- as.numeric(-Inf)
+          if (!is.null(pt_1$lower)) {
+            add$lower <- as.numeric(-Inf)
           }
           # add upper column
-          if (!is.null(PT$upper)) {
-            ADD$upper <- as.numeric(+Inf)
+          if (!is.null(pt_1$upper)) {
+            add$upper <- as.numeric(+Inf)
           }
-          PT <- lav_partable_add(PT, add = ADD)
+          pt_1 <- lav_partable_add(pt_1, add = add)
         }
       }
     } # lv.names
   } # blocks
 
-  PT
+  pt_1
 }
 
 # this function takes a 'full' SEM (measurement models + structural part)
@@ -359,56 +359,56 @@ lav_partable_add_lv_cov <- function(PT, lv.names = NULL) {
 # - what to do if we have no regressions among the latent variables?
 #   -> we return all covariances among the latent variables
 #
-lav_partable_subset_structural_model <- function(PT = NULL,
-                                                 add.idx = FALSE,
-                                                 idx.only = FALSE,
-                                                 add.exo.cov = FALSE,
-                                                 fixed.x = FALSE,
-                                                 conditional.x = FALSE,
-                                                 free.fixed.var = FALSE,
+lav_partable_subset_structural_model <- function(pt_1 = NULL,          # nolint
+                                                 add_idx = FALSE,
+                                                 idx_only = FALSE,
+                                                 add_exo_cov = FALSE,
+                                                 fixed_x = FALSE,
+                                                 conditional_x = FALSE,
+                                                 free_fixed_var = FALSE,
                                                  meanstructure = FALSE) {
   # PT
-  PT <- PT.orig <- as.data.frame(PT, stringsAsFactors = FALSE)
+  pt_1 <- as.data.frame(pt_1, stringsAsFactors = FALSE)
 
   # remove any EFA related information -- new in 0.6-18
-  if (!is.null(PT$efa)) {
-    PT$efa <- NULL
-    PT$est.unrotated <- NULL
-    seven.idx <- which(PT$user == 7L & PT$op == "~~")
-    if (length(seven.idx) > 0L) {
-      PT$user[seven.idx] <- 0L
-      PT$free[seven.idx] <- 1L
-      PT$ustart[seven.idx] <- as.numeric(NA)
-      PT$est[seven.idx] <- PT$est.std[seven.idx]
+  if (!is.null(pt_1$efa)) {
+    pt_1$efa <- NULL
+    pt_1$est.unrotated <- NULL
+    seven_idx <- which(pt_1$user == 7L & pt_1$op == "~~")
+    if (length(seven_idx) > 0L) {
+      pt_1$user[seven_idx] <- 0L
+      pt_1$free[seven_idx] <- 1L
+      pt_1$ustart[seven_idx] <- as.numeric(NA)
+      pt_1$est[seven_idx] <- pt_1$est.std[seven_idx]
     }
-    PT$est.std <- NULL
+    pt_1$est.std <- NULL
   }
 
   # lavpta
-  lavpta <- lav_partable_attributes(PT)
+  lavpta <- lav_partable_attributes(pt_1)
 
   # nblocks
   nblocks <- lavpta$nblocks
-  block.values <- lav_partable_block_values(PT)
+  block_values <- lav_partable_block_values(pt_1)
 
   # eqs.names
-  eqs.x.names <- lavpta$vnames$eqs.x
-  eqs.y.names <- lavpta$vnames$eqs.y
-  lv.names <- lavpta$vnames$lv.regular
+  # eqs_x_names <- lavpta$vnames$eqs.x
+  # eqs_y_names <- lavpta$vnames$eqs.y
+  lv_names <- lavpta$vnames$lv.regular
 
   # keep rows idx
-  keep.idx <- integer(0L)
+  keep_idx <- integer(0L)
 
   # remove not-needed measurement models
   for (g in 1:nblocks) {
 
     # eqs.names
-    eqs.names <- unique(c(
+    eqs_names <- unique(c(
       lavpta$vnames$eqs.x[[g]],
       lavpta$vnames$eqs.y[[g]]
     ))
-    if (length(eqs.names) == 0L) { # no structural model
-      eqs.names <- lv.names[[g]]
+    if (length(eqs_names) == 0L) { # no structural model
+      eqs_names <- lv_names[[g]]
     }
     # all.names <- unique(c(
     #   eqs.names,
@@ -416,161 +416,161 @@ lav_partable_subset_structural_model <- function(PT = NULL,
     # ))
 
     # regressions
-    reg.idx <- which(PT$op == "~" & PT$block == block.values[g] &
-      PT$lhs %in% eqs.names &
-      PT$rhs %in% eqs.names)
+    reg_idx <- which(pt_1$op == "~" & pt_1$block == block_values[g] &
+      pt_1$lhs %in% eqs_names &
+      pt_1$rhs %in% eqs_names)
 
     # the variances
-    var.idx <- which(PT$op == "~~" & PT$block == block.values[g] &
-      PT$lhs %in% eqs.names &
-      PT$rhs %in% eqs.names &
-      PT$lhs == PT$rhs)
+    var_idx <- which(pt_1$op == "~~" & pt_1$block == block_values[g] &
+      pt_1$lhs %in% eqs_names &
+      pt_1$rhs %in% eqs_names &
+      pt_1$lhs == pt_1$rhs)
 
     # optionally covariances (exo!)
-    cov.idx <- which(PT$op == "~~" & PT$block == block.values[g] &
-      PT$lhs %in% eqs.names &
-      PT$rhs %in% eqs.names &
-      PT$lhs != PT$rhs)
+    cov_idx <- which(pt_1$op == "~~" & pt_1$block == block_values[g] &
+      pt_1$lhs %in% eqs_names &
+      pt_1$rhs %in% eqs_names &
+      pt_1$lhs != pt_1$rhs)
 
     # means/intercepts
-    int.idx <- which(PT$op == "~1" & PT$block == block.values[g] &
-      PT$lhs %in% eqs.names)
+    int_idx <- which(pt_1$op == "~1" & pt_1$block == block_values[g] &
+      pt_1$lhs %in% eqs_names)
 
-    keep.idx <- c(
-      keep.idx, reg.idx, var.idx, cov.idx, int.idx
+    keep_idx <- c(
+      keep_idx, reg_idx, var_idx, cov_idx, int_idx
     )
 
     # defined/constraints
-    if (any(PT$op %in% c("==", "<", ">", ":="))) {
+    if (any(pt_1$op %in% c("==", "<", ">", ":="))) {
       # get the 'id' numbers and the labels involved in def/constraints
-      PT2 <- PT
-      PT2$free <- PT$id # use 'id' numbers instead of 'free' indices
-      ID <- lav_partable_constraints_label_id(PT2, def = TRUE)
-      LABEL <- names(ID)
+      pt2 <- pt_1
+      pt2$free <- pt_1$id # use 'id' numbers instead of 'free' indices
+      id <- lav_partable_constraints_label_id(pt2, def = TRUE)
+      label <- names(id)
 
       # what are the row indices that we currently keep?
-      FREE.id <- PT$id[keep.idx]
+      free_id <- pt_1$id[keep_idx]
     }
 
     # defined parameters
-    def.idx <- which(PT$op == ":=")
-    if (length(def.idx) > 0L) {
-      def.keep <- logical(length(def.idx))
-      for (def in seq_len(length(def.idx))) {
+    def_idx <- which(pt_1$op == ":=")
+    if (length(def_idx) > 0L) {
+      def_keep <- logical(length(def_idx))
+      for (def in seq_along(def_idx)) {
         # rhs
-        RHS.labels <- all.vars(as.formula(paste(
+        rhs_labels <- all.vars(as.formula(paste(
           "~",
-          PT[def.idx[def], "rhs"]
+          pt_1[def_idx[def], "rhs"]
         )))
-        if (length(RHS.labels) > 0L) {
+        if (length(rhs_labels) > 0L) {
           # par id
-          RHS.freeid <- ID[match(RHS.labels, LABEL)]
+          rhs_freeid <- id[match(rhs_labels, label)]
 
           # keep?
-          if (all(RHS.freeid %in% FREE.id)) {
-            def.keep[def] <- TRUE
+          if (all(rhs_freeid %in% free_id)) {
+            def_keep[def] <- TRUE
           }
         } else { # only constants?
-          def.keep[def] <- TRUE
+          def_keep[def] <- TRUE
         }
       }
-      keep.idx <- c(keep.idx, def.idx[def.keep])
+      keep_idx <- c(keep_idx, def_idx[def_keep])
       # add 'id' numbers of := definitions that we keep
-      FREE.id <- c(FREE.id, PT$id[def.idx[def.keep]])
+      free_id <- c(free_id, pt_1$id[def_idx[def_keep]])
     }
 
     # (in)equality constraints
-    con.idx <- which(PT$op %in% c("==", "<", ">"))
-    if (length(con.idx) > 0L) {
-      con.keep <- logical(length(con.idx))
-      for (con in seq_len(length(con.idx))) {
-        lhs.keep <- FALSE
-        rhs.keep <- FALSE
+    con_idx <- which(pt_1$op %in% c("==", "<", ">"))
+    if (length(con_idx) > 0L) {
+      con_keep <- logical(length(con_idx))
+      for (con in seq_along(con_idx)) {
+        lhs_keep <- FALSE
+        rhs_keep <- FALSE
 
         # lhs
-        LHS.labels <- all.vars(as.formula(paste(
+        lhs_labels <- all.vars(as.formula(paste(
           "~",
-          PT[con.idx[con], "lhs"]
+          pt_1[con_idx[con], "lhs"]
         )))
-        if (length(LHS.labels) > 0L) {
+        if (length(lhs_labels) > 0L) {
           # par id
-          LHS.freeid <- ID[match(LHS.labels, LABEL)]
+          lhs_freeid <- id[match(lhs_labels, label)]
 
           # keep?
-          if (all(LHS.freeid %in% FREE.id)) {
-            lhs.keep <- TRUE
+          if (all(lhs_freeid %in% free_id)) {
+            lhs_keep <- TRUE
           }
         } else {
-          lhs.keep <- TRUE
+          lhs_keep <- TRUE
         }
 
         # rhs
-        RHS.labels <- all.vars(as.formula(paste(
+        rhs_labels <- all.vars(as.formula(paste(
           "~",
-          PT[con.idx[con], "rhs"]
+          pt_1[con_idx[con], "rhs"]
         )))
-        if (length(RHS.labels) > 0L) {
+        if (length(rhs_labels) > 0L) {
           # par id
-          RHS.freeid <- ID[match(RHS.labels, LABEL)]
+          rhs_freeid <- id[match(rhs_labels, label)]
 
           # keep?
-          if (all(RHS.freeid %in% FREE.id)) {
-            rhs.keep <- TRUE
+          if (all(rhs_freeid %in% free_id)) {
+            rhs_keep <- TRUE
           }
         } else {
-          rhs.keep <- TRUE
+          rhs_keep <- TRUE
         }
 
-        if (lhs.keep && rhs.keep) {
-          con.keep[con] <- TRUE
+        if (lhs_keep && rhs_keep) {
+          con_keep[con] <- TRUE
         }
       }
 
-      keep.idx <- c(keep.idx, con.idx[con.keep])
+      keep_idx <- c(keep_idx, con_idx[con_keep])
     } # con
   } # block
 
-  if (idx.only) {
-    return(keep.idx)
+  if (idx_only) {
+    return(keep_idx)
   }
 
-  PT <- PT[keep.idx, , drop = FALSE]
+  pt_1 <- pt_1[keep_idx, , drop = FALSE]
 
   # add any missing covariances among exogenous variables
-  if (add.exo.cov) {
-    if (conditional.x) {
-      PT <- lav_partable_add_exo_cov(PT, ov.names.x = lavpta$vnames$ov.x)
+  if (add_exo_cov) {
+    if (conditional_x) {
+      pt_1 <- lav_partable_add_exo_cov(pt_1, ov_names_x = lavpta$vnames$ov.x)
     } else {
-      PT <- lav_partable_add_exo_cov(PT)
+      pt_1 <- lav_partable_add_exo_cov(pt_1)
     }
   }
 
   # if meanstructure, 'free' user=0 intercepts
   if (meanstructure) {
-    int.idx <- which(PT$op == "~1" & PT$user == 0L & PT$free == 0L)
-    if (length(int.idx) > 0L) {
-      PT$free[int.idx] <- max(PT$free) + seq_len(length(int.idx))
-      PT$ustart[int.idx] <- as.numeric(NA)
-      PT$user[int.idx] <- 3L
+    int_idx <- which(pt_1$op == "~1" & pt_1$user == 0L & pt_1$free == 0L)
+    if (length(int_idx) > 0L) {
+      pt_1$free[int_idx] <- max(pt_1$free) + seq_along(int_idx)
+      pt_1$ustart[int_idx] <- as.numeric(NA)
+      pt_1$user[int_idx] <- 3L
     }
   }
 
   # if fixed.x = FALSE, remove all remaining (free) exo=1 elements
-  if (!fixed.x) {
-    exo.idx <- which(PT$exo != 0L)
-    if (length(exo.idx) > 0L) {
-      PT$exo[exo.idx] <- 0L
-      PT$user[exo.idx] <- 3L
-      PT$free[exo.idx] <- max(PT$free) + seq_len(length(exo.idx))
+  if (!fixed_x) {
+    exo_idx <- which(pt_1$exo != 0L)
+    if (length(exo_idx) > 0L) {
+      pt_1$exo[exo_idx] <- 0L
+      pt_1$user[exo_idx] <- 3L
+      pt_1$free[exo_idx] <- max(pt_1$free) + seq_along(exo_idx)
     }
 
-  } else if (conditional.x) {
+  } else if (conditional_x) {
     # don't change exo column!
   } else {
     # first, wipe out exo column
-    exo.idx <- which(PT$exo != 0L)
-    if (length(exo.idx) > 0L) {
-      PT$exo[exo.idx] <- 0L
+    exo_idx <- which(pt_1$exo != 0L)
+    if (length(exo_idx) > 0L) {
+      pt_1$exo[exo_idx] <- 0L
     }
 
     # keep ov.x as in global model!
@@ -579,58 +579,58 @@ lav_partable_subset_structural_model <- function(PT = NULL,
       #   type = "ov.x",
       #   block = block.values[g]
       # )
-      ov.names.x <- lavpta$vnames$ov.x[[g]]
-      if (length(ov.names.x) == 0L) {
+      ov_names_x <- lavpta$vnames$ov.x[[g]]
+      if (length(ov_names_x) == 0L) {
         next
       }
 
       # 1. variances/covariances
-      exo.var.idx <- which(
-        PT$op == "~~" &
-          PT$block == block.values[g] &
-          PT$rhs %in% ov.names.x &
-          PT$lhs %in% ov.names.x &
-          PT$user %in% c(0L, 3L)
+      exo_var_idx <- which(
+        pt_1$op == "~~" &
+          pt_1$block == block_values[g] &
+          pt_1$rhs %in% ov_names_x &
+          pt_1$lhs %in% ov_names_x &
+          pt_1$user %in% c(0L, 3L)
       )
-      if (length(exo.var.idx) > 0L) {
-        PT$ustart[exo.var.idx] <- as.numeric(NA) # to be overridden
-        PT$free[exo.var.idx] <- 0L
-        PT$exo[exo.var.idx] <- 1L
-        PT$user[exo.var.idx] <- 3L
+      if (length(exo_var_idx) > 0L) {
+        pt_1$ustart[exo_var_idx] <- as.numeric(NA) # to be overridden
+        pt_1$free[exo_var_idx] <- 0L
+        pt_1$exo[exo_var_idx] <- 1L
+        pt_1$user[exo_var_idx] <- 3L
       }
 
       # 2. intercepts
-      exo.int.idx <- which(
-        PT$op == "~1" &
-          PT$block == block.values[g] &
-          PT$lhs %in% ov.names.x &
-          PT$user == 0L
+      exo_int_idx <- which(
+        pt_1$op == "~1" &
+          pt_1$block == block_values[g] &
+          pt_1$lhs %in% ov_names_x &
+          pt_1$user == 0L
       )
-      if (length(exo.int.idx) > 0L) {
-        PT$ustart[exo.int.idx] <- as.numeric(NA) # to be overridden
-        PT$free[exo.int.idx] <- 0L
-        PT$exo[exo.int.idx] <- 1L
-        PT$user[exo.int.idx] <- 3L
+      if (length(exo_int_idx) > 0L) {
+        pt_1$ustart[exo_int_idx] <- as.numeric(NA) # to be overridden
+        pt_1$free[exo_int_idx] <- 0L
+        pt_1$exo[exo_int_idx] <- 1L
+        pt_1$user[exo_int_idx] <- 3L
       }
     } # blocks
   } # fixed.x
 
   # if conditional.x, check if we have 'additional' ov.x variables
   # that were not ov.x in the global model
-  if (conditional.x) {
+  if (conditional_x) {
     for (b in 1:nblocks) {
-      global.ov.x <- lavpta$vnames$ov.x[[b]]
-      local.ov.x <- lav_partable_vnames(PT, type = "ov.x",
-        block = block.values[b]
+      global_ov_x <- lavpta$vnames$ov.x[[b]]
+      local_ov_x <- lav_partable_vnames(pt_1, type = "ov.x",
+        block = block_values[b]
       )
-      extra.idx <- which(!local.ov.x %in% global.ov.x)
-      if (length(extra.idx) > 0L) {
-        extra.ov.names <- local.ov.x[extra.idx]
-        for (i in seq_len(length(extra.idx))) {
-          ADD <- list(
-            lhs = extra.ov.names[i],
+      extra_idx <- which(!local_ov_x %in% global_ov_x)
+      if (length(extra_idx) > 0L) {
+        extra_ov_names <- local_ov_x[extra_idx]
+        for (i in seq_along(extra_idx)) {
+          add <- list(
+            lhs = extra_ov_names[i],
             op = "~",
-            rhs = global.ov.x[1],
+            rhs = global_ov_x[1],
             user = 3L,
             free = 0L,
             block = b,
@@ -638,122 +638,122 @@ lav_partable_subset_structural_model <- function(PT = NULL,
             exo = 1L
           )
           # add group column
-          if (!is.null(PT$group)) {
-            ADD$group <- unique(PT$block[PT$block == b])
+          if (!is.null(pt_1$group)) {
+            add$group <- unique(pt_1$block[pt_1$block == b])
           }
           # add level column
-          if (!is.null(PT$level)) {
-            ADD$level <- unique(PT$level[PT$block == b])
+          if (!is.null(pt_1$level)) {
+            add$level <- unique(pt_1$level[pt_1$block == b])
           }
           # add lower column
-          if (!is.null(PT$lower)) {
-            ADD$lower <- as.numeric(-Inf)
+          if (!is.null(pt_1$lower)) {
+            add$lower <- as.numeric(-Inf)
           }
           # add upper column
-          if (!is.null(PT$upper)) {
-            ADD$upper <- as.numeric(+Inf)
+          if (!is.null(pt_1$upper)) {
+            add$upper <- as.numeric(+Inf)
           }
-          PT <- lav_partable_add(PT, add = ADD)
+          pt_1 <- lav_partable_add(pt_1, add = add)
         } # i
       } # extra.idx
     } # b
   } # conditional.x
 
   # if free.fixed.var, free up all 'fixed (to unity)' variances
-  if (free.fixed.var) {
-    fixed.var.idx <- which(PT$op == "~~" & PT$lhs == PT$rhs & PT$free == 0 &
-                           PT$user == 0L & PT$ustart == 1)
-    if (length(fixed.var.idx) > 0L) {
-      PT$free[  fixed.var.idx] <- max(PT$free) + seq_len(length(fixed.var.idx))
-      PT$ustart[fixed.var.idx] <- as.numeric(NA)
+  if (free_fixed_var) {
+    fixed_var_idx <- which(pt_1$op == "~~" & pt_1$lhs == pt_1$rhs &
+                       pt_1$free == 0 & pt_1$user == 0L & pt_1$ustart == 1)
+    if (length(fixed_var_idx) > 0L) {
+      pt_1$free[fixed_var_idx] <- max(pt_1$free) + seq_along(fixed_var_idx)
+      pt_1$ustart[fixed_var_idx] <- as.numeric(NA)
     }
   }
 
   # clean up
-  PT <- lav_partable_complete(PT)
+  pt_1 <- lav_partable_complete(pt_1)
 
-  if (add.idx) {
-    attr(PT, "idx") <- keep.idx
+  if (add_idx) {
+    attr(pt_1, "idx") <- keep_idx
   }
 
-  PT
+  pt_1
 }
 
 # NOTE: only within same level
-lav_partable_add_exo_cov <- function(PT, ov.names.x = NULL) {
+lav_partable_add_exo_cov <- function(pt_1, ov_names_x = NULL) {
   # PT
-  PT <- as.data.frame(PT, stringsAsFactors = FALSE)
+  pt_1 <- as.data.frame(pt_1, stringsAsFactors = FALSE)
 
   # lavpta
-  lavpta <- lav_partable_attributes(PT)
+  lavpta <- lav_partable_attributes(pt_1)
 
   # nblocks
   nblocks <- lavpta$nblocks
-  block.values <- lav_partable_block_values(PT)
+  block_values <- lav_partable_block_values(pt_1)
 
 
   # ov.names.x: list with element per block
-  if (is.null(ov.names.x)) {
-    ov.names.x <- lavpta$vnames$ov.x
-  } else if (!is.list(ov.names.x)) {
-    ov.names.x <- rep(list(ov.names.x), nblocks)
+  if (is.null(ov_names_x)) {
+    ov_names_x <- lavpta$vnames$ov.x
+  } else if (!is.list(ov_names_x)) {
+    ov_names_x <- rep(list(ov_names_x), nblocks)
   }
 
   # remove ov.names.x if not present at same level/block
   if (nblocks > 1L) {
     for (b in seq_len(nblocks)) {
-      rm.idx <- which(!ov.names.x[[b]] %in% lavpta$vnames$ov.x[[b]])
-      if (length(rm.idx) > 0L) {
-        ov.names.x[[b]] <- ov.names.x[[b]][-rm.idx]
+      rm_idx <- which(!ov_names_x[[b]] %in% lavpta$vnames$ov.x[[b]])
+      if (length(rm_idx) > 0L) {
+        ov_names_x[[b]] <- ov_names_x[[b]][-rm_idx]
       }
     } # b
   }
 
   # add covariances among latent variables
   for (b in seq_len(nblocks)) {
-    if (length(ov.names.x[[b]]) > 1L) {
-      tmp <- utils::combn(ov.names.x[[b]], 2L)
+    if (length(ov_names_x[[b]]) > 1L) {
+      tmp <- utils::combn(ov_names_x[[b]], 2L)
       for (i in seq_len(ncol(tmp))) {
         # already present?
-        cov1.idx <- which(PT$op == "~~" &
-          PT$block == block.values[b] &
-          PT$lhs == tmp[1, i] & PT$rhs == tmp[2, i])
-        cov2.idx <- which(PT$op == "~~" &
-          PT$block == block.values[b] &
-          PT$lhs == tmp[2, i] & PT$rhs == tmp[1, i])
+        cov1_idx <- which(pt_1$op == "~~" &
+          pt_1$block == block_values[b] &
+          pt_1$lhs == tmp[1, i] & pt_1$rhs == tmp[2, i])
+        cov2_idx <- which(pt_1$op == "~~" &
+          pt_1$block == block_values[b] &
+          pt_1$lhs == tmp[2, i] & pt_1$rhs == tmp[1, i])
 
         # if not, add
-        if (length(c(cov1.idx, cov2.idx)) == 0L) {
-          ADD <- list(
+        if (length(c(cov1_idx, cov2_idx)) == 0L) {
+          add <- list(
             lhs = tmp[1, i],
             op = "~~",
             rhs = tmp[2, i],
             user = 3L,
-            free = max(PT$free) + 1L,
+            free = max(pt_1$free) + 1L,
             block = b,
             ustart = as.numeric(NA)
           )
           # add group column
-          if (!is.null(PT$group)) {
-            ADD$group <- unique(PT$block[PT$block == b])
+          if (!is.null(pt_1$group)) {
+            add$group <- unique(pt_1$block[pt_1$block == b])
           }
           # add level column
-          if (!is.null(PT$level)) {
-            ADD$level <- unique(PT$level[PT$block == b])
+          if (!is.null(pt_1$level)) {
+            add$level <- unique(pt_1$level[pt_1$block == b])
           }
           # add lower column
-          if (!is.null(PT$lower)) {
-            ADD$lower <- as.numeric(-Inf)
+          if (!is.null(pt_1$lower)) {
+            add$lower <- as.numeric(-Inf)
           }
           # add upper column
-          if (!is.null(PT$upper)) {
-            ADD$upper <- as.numeric(+Inf)
+          if (!is.null(pt_1$upper)) {
+            add$upper <- as.numeric(+Inf)
           }
-          PT <- lav_partable_add(PT, add = ADD)
+          pt_1 <- lav_partable_add(pt_1, add = add)
         }
       }
     } # ov.names.x
   } # blocks
 
-  PT
+  pt_1
 }

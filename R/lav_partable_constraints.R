@@ -1,13 +1,13 @@
 # build def function from partable
-lav_partable_constraints_def <- function(partable, con = NULL, debug = FALSE,
-                                         txtOnly = FALSE, warn = TRUE) {
+lav_partable_constraints_def <- function(partable, con = NULL, debug = FALSE, # nolint start
+                                         txtOnly = FALSE, warn = TRUE) {      # nolint end
   if (!missing(debug)) {
-    current.debug <- lav_debug()
+    current_debug <- lav_debug()
     if (lav_debug(debug))
-      on.exit(lav_debug(current.debug), TRUE)
+      on.exit(lav_debug(current_debug), TRUE)
   }
   # empty function
-  def.function <- function() NULL
+  def_function <- function() NULL
 
   # if 'con', merge partable + con
   if (!is.null(con)) {
@@ -17,99 +17,99 @@ lav_partable_constraints_def <- function(partable, con = NULL, debug = FALSE,
   }
 
   # get := definitions
-  def.idx <- which(partable$op == ":=")
+  def_idx <- which(partable$op == ":=")
 
   # catch empty def
-  if (length(def.idx) == 0L) {
+  if (length(def_idx) == 0L) {
     if (txtOnly) {
       return(character(0L))
     } else {
-      return(def.function)
+      return(def_function)
     }
   }
 
   # sort order of def.idx by dependencies
-  deps <- lapply(partable$rhs[def.idx], FUN = function(x) {
-                                                all.vars(parse(text=x)) })
-  lab.unsorted <- partable$lhs[def.idx]
-  adj.mat <- matrix(0L, nrow = length(def.idx), ncol = length(def.idx))
-  for (i in seq_along(lab.unsorted)) {
-    adj.mat[lab.unsorted %in% deps[[i]], i] <- 1L
+  deps <- lapply(partable$rhs[def_idx], FUN = function(x) {
+                                            all.vars(parse(text = x)) })
+  lab_unsorted <- partable$lhs[def_idx]
+  adj_mat <- matrix(0L, nrow = length(def_idx), ncol = length(def_idx))
+  for (i in seq_along(lab_unsorted)) {
+    adj_mat[lab_unsorted %in% deps[[i]], i] <- 1L
   }
-  def.idx <- def.idx[lav_graph_order_adj_mat(adj.mat, warn = warn)]
+  def_idx <- def_idx[lav_graph_order_adj_mat(adj_mat, warn = warn)]
 
   # create function
-  formals(def.function) <- alist(.x. = , ... = )
+  formals(def_function) <- alist(.x. = , ... = )
   if (txtOnly) {
-    BODY.txt <- ""
+    body_txt <- ""
   } else {
-    BODY.txt <- paste("{\n# parameter definitions\n\n")
+    body_txt <- paste("{\n# parameter definitions\n\n")
   }
 
-  lhs.names <- partable$lhs[def.idx]
-  def.labels <- all.vars(parse(file = "", text = partable$rhs[def.idx]))
+  lhs_names <- partable$lhs[def_idx]
+  def_labels <- all.vars(parse(file = "", text = partable$rhs[def_idx]))
   # remove the ones in lhs.names
-  idx <- which(def.labels %in% lhs.names)
-  if (length(idx) > 0L) def.labels <- def.labels[-idx]
+  idx <- which(def_labels %in% lhs_names)
+  if (length(idx) > 0L) def_labels <- def_labels[-idx]
 
   # get corresponding 'x' indices
-  def.x.idx <- partable$free[match(def.labels, partable$label)]
-  if (any(is.na(def.x.idx))) {
+  def_x_idx <- partable$free[match(def_labels, partable$label)]
+  if (any(is.na(def_x_idx))) {
     lav_msg_stop(gettext(
       "unknown label(s) in variable definition(s):"),
-      lav_msg_view(def.labels[which(is.na(def.x.idx))], "none")
+      lav_msg_view(def_labels[which(is.na(def_x_idx))], "none")
     )
   }
-  if (any(def.x.idx == 0)) {
+  if (any(def_x_idx == 0)) {
     lav_msg_stop(gettext(
       "non-free parameter(s) in variable definition(s):"),
-      lav_msg_view(def.labels[which(def.x.idx == 0)], "none")
+      lav_msg_view(def_labels[which(def_x_idx == 0)], "none")
     )
   }
-  def.x.lab <- paste(".x.[", def.x.idx, "]", sep = "")
+  def_x_lab <- paste(".x.[", def_x_idx, "]", sep = "")
   # put both the labels the function BODY
-  if (length(def.x.idx) > 0L) {
-    BODY.txt <- paste(BODY.txt, "# parameter labels\n",
-      paste(def.labels, " <- ", def.x.lab, collapse = "\n"),
+  if (length(def_x_idx) > 0L) {
+    body_txt <- paste(body_txt, "# parameter labels\n",
+      paste(def_labels, " <- ", def_x_lab, collapse = "\n"),
       "\n",
       sep = ""
     )
   }
 
   # write the definitions literally
-  BODY.txt <- paste(BODY.txt, "\n# parameter definitions\n", sep = "")
-  for (i in 1:length(def.idx)) {
-    BODY.txt <- paste(BODY.txt,
-      lhs.names[i], " <- ", partable$rhs[def.idx[i]], "\n",
+  body_txt <- paste(body_txt, "\n# parameter definitions\n", sep = "")
+  for (i in seq_along(def_idx)) {
+    body_txt <- paste(body_txt,
+      lhs_names[i], " <- ", partable$rhs[def_idx[i]], "\n",
       sep = ""
     )
   }
 
   if (txtOnly) {
-    return(BODY.txt)
+    return(body_txt)
   }
 
   # put the results in 'out'
-  BODY.txt <- paste(BODY.txt, "\nout <- ",
-    paste("c(", paste(lhs.names, collapse = ","), ")\n", sep = ""),
+  body_txt <- paste(body_txt, "\nout <- ",
+    paste("c(", paste(lhs_names, collapse = ","), ")\n", sep = ""),
     sep = ""
   )
   # what to do with NA values? -> return +Inf???
-  BODY.txt <- paste(BODY.txt, "out[is.na(out)] <- Inf\n", sep = "")
-  BODY.txt <- paste(BODY.txt, "names(out) <- ",
-    paste("c(\"", paste(lhs.names, collapse = "\",\""), "\")\n", sep = ""),
+  body_txt <- paste(body_txt, "out[is.na(out)] <- Inf\n", sep = "")
+  body_txt <- paste(body_txt, "names(out) <- ",
+    paste("c(\"", paste(lhs_names, collapse = "\",\""), "\")\n", sep = ""),
     sep = ""
   )
-  BODY.txt <- paste(BODY.txt, "return(out)\n}\n", sep = "")
+  body_txt <- paste(body_txt, "return(out)\n}\n", sep = "")
 
-  body(def.function) <- parse(file = "", text = BODY.txt)
+  body(def_function) <- parse(file = "", text = body_txt)
   if (lav_debug()) {
     cat("def.function = \n")
-    print(def.function)
+    print(def_function)
     cat("\n")
   }
 
-  def.function
+  def_function
 }
 
 # build ceq function from partable
@@ -123,15 +123,15 @@ lav_partable_constraints_def <- function(partable, con = NULL, debug = FALSE,
 #             b1 = x[10]; b2 = x[17]
 #             out[1] <- b1 + b2 - 2
 #         }
-lav_partable_constraints_ceq <- function(partable, con = NULL, debug = FALSE,
-                                         txtOnly = FALSE) {
+lav_partable_constraints_ceq <- function(partable, con = NULL, debug = FALSE, # nolint start
+                                         txtOnly = FALSE) {                   # nolint end
   if (!missing(debug)) {
-    current.debug <- lav_debug()
+    current_debug <- lav_debug()
     if (lav_debug(debug))
-      on.exit(lav_debug(current.debug), TRUE)
+      on.exit(lav_debug(current_debug), TRUE)
   }
   # empty function
-  ceq.function <- function() NULL
+  ceq_function <- function() NULL
 
   # if 'con', merge partable + con
   if (!is.null(con)) {
@@ -141,127 +141,128 @@ lav_partable_constraints_ceq <- function(partable, con = NULL, debug = FALSE,
   }
 
   # get equality constraints
-  eq.idx <- which(partable$op == "==")
+  eq_idx <- which(partable$op == "==")
 
   # catch empty ceq
-  if (length(eq.idx) == 0L) {
+  if (length(eq_idx) == 0L) {
     if (txtOnly) {
       return(character(0L))
     } else {
-      return(ceq.function)
+      return(ceq_function)
     }
   }
 
   # create function
-  formals(ceq.function) <- alist(.x. = , ... = )
+  formals(ceq_function) <- alist(.x. = , ... = )
   if (txtOnly) {
-    BODY.txt <- ""
+    body_txt <- ""
   } else {
-    BODY.txt <- paste("{\nout <- rep(NA, ", length(eq.idx), ")\n", sep = "")
+    body_txt <- paste("{\nout <- rep(NA, ", length(eq_idx), ")\n", sep = "")
   }
 
   # first come the variable definitions
-  DEF.txt <- lav_partable_constraints_def(partable, txtOnly = TRUE,
+  def_txt <- lav_partable_constraints_def(partable, txtOnly = TRUE,
                                           warn = FALSE)
-  def.idx <- which(partable$op == ":=")
-  BODY.txt <- paste(BODY.txt, DEF.txt, "\n", sep = "")
+  def_idx <- which(partable$op == ":=")
+  body_txt <- paste(body_txt, def_txt, "\n", sep = "")
 
 
   # extract labels
-  lhs.labels <- all.vars(parse(file = "", text = partable$lhs[eq.idx]))
-  rhs.labels <- all.vars(parse(file = "", text = partable$rhs[eq.idx]))
-  eq.labels <- unique(c(lhs.labels, rhs.labels))
+  lhs_labels <- all.vars(parse(file = "", text = partable$lhs[eq_idx]))
+  rhs_labels <- all.vars(parse(file = "", text = partable$rhs[eq_idx]))
+  eq_labels <- unique(c(lhs_labels, rhs_labels))
   # remove def.names from eq.labels
-  if (length(def.idx) > 0L) {
-    def.names <- as.character(partable$lhs[def.idx])
-    d.idx <- which(eq.labels %in% def.names)
-    if (length(d.idx) > 0) eq.labels <- eq.labels[-d.idx]
+  if (length(def_idx) > 0L) {
+    def_names <- as.character(partable$lhs[def_idx])
+    d_idx <- which(eq_labels %in% def_names)
+    if (length(d_idx) > 0) eq_labels <- eq_labels[-d_idx]
   }
-  eq.x.idx <- rep(as.integer(NA), length(eq.labels))
+  eq_x_idx <- rep(as.integer(NA), length(eq_labels))
   # get user-labels ids
-  ulab.idx <- which(eq.labels %in% partable$label)
-  if (length(ulab.idx) > 0L) {
-    eq.x.idx[ulab.idx] <- partable$free[match(
-      eq.labels[ulab.idx],
+  ulab_idx <- which(eq_labels %in% partable$label)
+  if (length(ulab_idx) > 0L) {
+    eq_x_idx[ulab_idx] <- partable$free[match(
+      eq_labels[ulab_idx],
       partable$label
     )]
   }
   # get plabels ids
-  plab.idx <- which(eq.labels %in% partable$plabel)
-  if (length(plab.idx) > 0L) {
-    eq.x.idx[plab.idx] <- partable$free[match(
-      eq.labels[plab.idx],
+  plab_idx <- which(eq_labels %in% partable$plabel)
+  if (length(plab_idx) > 0L) {
+    eq_x_idx[plab_idx] <- partable$free[match(
+      eq_labels[plab_idx],
       partable$plabel
     )]
   }
 
   # check if we have found the label
-  if (any(is.na(eq.x.idx))) {
+  if (any(is.na(eq_x_idx))) {
     lav_msg_stop(gettext("unknown label(s) in equality constraint(s):"),
-      lav_msg_view(eq.labels[which(is.na(eq.x.idx))], "none")
+      lav_msg_view(eq_labels[which(is.na(eq_x_idx))], "none")
     )
   }
   # check if they are all 'free'
-  if (any(eq.x.idx == 0)) {
-    fixed.eq.idx <- which(eq.x.idx == 0)
+  if (any(eq_x_idx == 0)) {
+    fixed_eq_idx <- which(eq_x_idx == 0)
     # FIXME: what should we do here? we used to stop with an error
     # from 0.5.18, we give a warning, and replace the non-free label
     # with its fixed value in ustart
-    # warning("lavaan WARNING: non-free parameter(s) in equality constraint(s): ",
+    # warning(
+    #    "lavaan WARNING: non-free parameter(s) in equality constraint(s): ",
     #    paste(eq.labels[fixed.eq.idx], collapse=" "))
 
-    fixed.lab.lhs <- eq.labels[fixed.eq.idx]
-    fixed.lab.rhs <- numeric(length(fixed.lab.lhs))
+    fixed_lab_lhs <- eq_labels[fixed_eq_idx]
+    fixed_lab_rhs <- numeric(length(fixed_lab_lhs))
 
-    for (i in 1:length(fixed.lab.lhs)) {
+    for (i in seq_along(fixed_lab_lhs)) {
       # first try label
-      idx <- match(fixed.lab.lhs[i], partable$label)
+      idx <- match(fixed_lab_lhs[i], partable$label)
       # then try plabel
       if (is.na(idx)) {
-        idx <- match(fixed.lab.lhs[i], partable$plabel)
+        idx <- match(fixed_lab_lhs[i], partable$plabel)
       }
       if (is.na(idx)) {
         # hm, not found? fill in zero, or NA?
       } else {
-        fixed.lab.rhs[i] <- partable$ustart[idx]
+        fixed_lab_rhs[i] <- partable$ustart[idx]
       }
     }
 
-    BODY.txt <- paste(BODY.txt, "# non-free parameter labels\n",
-      paste(fixed.lab.lhs, "<-", fixed.lab.rhs, collapse = "\n"),
+    body_txt <- paste(body_txt, "# non-free parameter labels\n",
+      paste(fixed_lab_lhs, "<-", fixed_lab_rhs, collapse = "\n"),
       "\n",
       sep = ""
     )
 
-    eq.x.idx <- eq.x.idx[-fixed.eq.idx]
-    eq.labels <- eq.labels[-fixed.eq.idx]
+    eq_x_idx <- eq_x_idx[-fixed_eq_idx]
+    eq_labels <- eq_labels[-fixed_eq_idx]
   }
 
   # put the labels the function BODY
-  eq.x.lab <- paste(".x.[", eq.x.idx, "]", sep = "")
-  if (length(eq.x.idx) > 0L) {
-    BODY.txt <- paste(BODY.txt, "# parameter labels\n",
-      paste(eq.labels, "<-", eq.x.lab, collapse = "\n"),
+  eq_x_lab <- paste(".x.[", eq_x_idx, "]", sep = "")
+  if (length(eq_x_idx) > 0L) {
+    body_txt <- paste(body_txt, "# parameter labels\n",
+      paste(eq_labels, "<-", eq_x_lab, collapse = "\n"),
       "\n",
       sep = ""
     )
   }
 
   # write the equality constraints literally
-  BODY.txt <- paste(BODY.txt, "\n# equality constraints\n", sep = "")
-  for (i in 1:length(eq.idx)) {
-    lhs <- partable$lhs[eq.idx[i]]
-    rhs <- partable$rhs[eq.idx[i]]
+  body_txt <- paste(body_txt, "\n# equality constraints\n", sep = "")
+  for (i in seq_along(eq_idx)) {
+    lhs <- partable$lhs[eq_idx[i]]
+    rhs <- partable$rhs[eq_idx[i]]
     if (rhs == "0") {
-      eq.string <- lhs
+      eq_string <- lhs
     } else {
-      eq.string <- paste(lhs, " - (", rhs, ")", sep = "")
+      eq_string <- paste(lhs, " - (", rhs, ")", sep = "")
     }
-    BODY.txt <- paste(BODY.txt, "out[", i, "] <- ", eq.string, "\n", sep = "")
+    body_txt <- paste(body_txt, "out[", i, "] <- ", eq_string, "\n", sep = "")
   }
 
   if (txtOnly) {
-    return(BODY.txt)
+    return(body_txt)
   }
 
   # put the results in 'out'
@@ -269,16 +270,16 @@ lav_partable_constraints_ceq <- function(partable, con = NULL, debug = FALSE,
   #    paste("c(", paste(lhs.names, collapse=","),")\n", sep=""), sep="")
 
   # what to do with NA values? -> return +Inf???
-  BODY.txt <- paste(BODY.txt, "\n", "out[is.na(out)] <- Inf\n", sep = "")
-  BODY.txt <- paste(BODY.txt, "return(out)\n}\n", sep = "")
-  body(ceq.function) <- parse(file = "", text = BODY.txt)
+  body_txt <- paste(body_txt, "\n", "out[is.na(out)] <- Inf\n", sep = "")
+  body_txt <- paste(body_txt, "return(out)\n}\n", sep = "")
+  body(ceq_function) <- parse(file = "", text = body_txt)
   if (lav_debug()) {
     cat("ceq.function = \n")
-    print(ceq.function)
+    print(ceq_function)
     cat("\n")
   }
 
-  ceq.function
+  ceq_function
 }
 
 
@@ -298,15 +299,15 @@ lav_partable_constraints_ceq <- function(partable, con = NULL, debug = FALSE,
 #
 # NOTE: very similar, but not identitical to ceq, because we need to take
 #       care of the difference between '<' and '>'
-lav_partable_constraints_ciq <- function(partable, con = NULL, debug = FALSE,
-                                         txtOnly = FALSE) {
+lav_partable_constraints_ciq <- function(partable, con = NULL, debug = FALSE, # nolint start
+                                         txtOnly = FALSE) {                   # nolint end
   if (!missing(debug)) {
-    current.debug <- lav_debug()
+    current_debug <- lav_debug()
     if (lav_debug(debug))
-      on.exit(lav_debug(current.debug), TRUE)
+      on.exit(lav_debug(current_debug), TRUE)
   }
   # empty function
-  cin.function <- function() NULL
+  cin_function <- function() NULL
 
   # if 'con', merge partable + con
   if (!is.null(con)) {
@@ -316,108 +317,108 @@ lav_partable_constraints_ciq <- function(partable, con = NULL, debug = FALSE,
   }
 
   # get explicit inequality constraints
-  ineq.idx <- which(partable$op == ">" | partable$op == "<")
+  ineq_idx <- which(partable$op == ">" | partable$op == "<")
 
   # get lower/upper bounds
-  upper.idx <- integer(0L)
-  lower.idx <- integer(0L)
+  upper_idx <- integer(0L)
+  lower_idx <- integer(0L)
   if (!is.null(partable$upper)) {
-    upper.idx <- which(partable$free > 0L  & is.finite(partable$upper))
+    upper_idx <- which(partable$free > 0L  & is.finite(partable$upper))
   }
   if (!is.null(partable$lower)) {
-    lower.idx <- which(partable$free > 0L & is.finite(partable$lower))
+    lower_idx <- which(partable$free > 0L & is.finite(partable$lower))
   }
 
   # add them to ineq.idx
-  ineq.only.idx <- ineq.idx
-  ineq.idx <- c(upper.idx, lower.idx, ineq.idx)
+  ineq_only_idx <- ineq_idx
+  ineq_idx <- c(upper_idx, lower_idx, ineq_idx)
 
   # catch empty ciq
-  if (length(ineq.idx) == 0L) {
+  if (length(ineq_idx) == 0L) {
     if (txtOnly) {
       return(character(0L))
     } else {
-      return(cin.function)
+      return(cin_function)
     }
   }
 
   # create function
-  formals(cin.function) <- alist(.x. = , ... = )
+  formals(cin_function) <- alist(.x. = , ... = )
   if (txtOnly) {
-    BODY.txt <- ""
+    body_txt <- ""
   } else {
-    BODY.txt <- paste("{\nout <- rep(NA, ", length(ineq.idx), ")\n", sep = "")
+    body_txt <- paste("{\nout <- rep(NA, ", length(ineq_idx), ")\n", sep = "")
   }
 
   # first come the variable definitions
-  DEF.txt <- lav_partable_constraints_def(partable, txtOnly = TRUE,
+  def_txt <- lav_partable_constraints_def(partable, txtOnly = TRUE,
                                           warn = FALSE)
-  def.idx <- which(partable$op == ":=")
-  BODY.txt <- paste(BODY.txt, DEF.txt, "\n", sep = "")
+  def_idx <- which(partable$op == ":=")
+  body_txt <- paste(body_txt, def_txt, "\n", sep = "")
 
   # extract labels
-  lhs.labels <- all.vars(parse(file = "", text = partable$lhs[ineq.only.idx]))
-  rhs.labels <- all.vars(parse(file = "", text = partable$rhs[ineq.only.idx]))
-  ineq.labels <- unique(c(lhs.labels, rhs.labels))
+  lhs_labels <- all.vars(parse(file = "", text = partable$lhs[ineq_only_idx]))
+  rhs_labels <- all.vars(parse(file = "", text = partable$rhs[ineq_only_idx]))
+  ineq_labels <- unique(c(lhs_labels, rhs_labels))
   # remove def.names from ineq.labels
-  if (length(def.idx) > 0L) {
-    def.names <- as.character(partable$lhs[def.idx])
-    d.idx <- which(ineq.labels %in% def.names)
-    if (length(d.idx) > 0) ineq.labels <- ineq.labels[-d.idx]
+  if (length(def_idx) > 0L) {
+    def_names <- as.character(partable$lhs[def_idx])
+    d_idx <- which(ineq_labels %in% def_names)
+    if (length(d_idx) > 0) ineq_labels <- ineq_labels[-d_idx]
   }
-  ineq.x.idx <- rep(as.integer(NA), length(ineq.labels))
+  ineq_x_idx <- rep(as.integer(NA), length(ineq_labels))
   # get user-labels ids
-  ulab.idx <- which(ineq.labels %in% partable$label)
-  if (length(ulab.idx) > 0L) {
-    ineq.x.idx[ulab.idx] <- partable$free[match(
-      ineq.labels[ulab.idx],
+  ulab_idx <- which(ineq_labels %in% partable$label)
+  if (length(ulab_idx) > 0L) {
+    ineq_x_idx[ulab_idx] <- partable$free[match(
+      ineq_labels[ulab_idx],
       partable$label
     )]
   }
   # get plabels ids
-  plab.idx <- which(ineq.labels %in% partable$plabel)
-  if (length(plab.idx) > 0L) {
-    ineq.x.idx[plab.idx] <- partable$free[match(
-      ineq.labels[plab.idx],
+  plab_idx <- which(ineq_labels %in% partable$plabel)
+  if (length(plab_idx) > 0L) {
+    ineq_x_idx[plab_idx] <- partable$free[match(
+      ineq_labels[plab_idx],
       partable$plabel
     )]
   }
 
   # check if we have found the label
-  if (length(ineq.x.idx) > 0L && any(is.na(ineq.x.idx))) {
+  if (length(ineq_x_idx) > 0L && any(is.na(ineq_x_idx))) {
     lav_msg_stop(gettext("unknown label(s) in inequality constraint(s):"),
-      lav_msg_view(ineq.labels[which(is.na(ineq.x.idx))], "none")
+      lav_msg_view(ineq_labels[which(is.na(ineq_x_idx))], "none")
     )
   }
 
   # check if they are all 'free'
-  if (length(ineq.x.idx) > 0L && any(ineq.x.idx == 0)) {
-    fixed.ineq.idx <- which(ineq.x.idx == 0)
+  if (length(ineq_x_idx) > 0L && any(ineq_x_idx == 0)) {
+    fixed_ineq_idx <- which(ineq_x_idx == 0)
     # FIXME: what should we do here? we used to stop with an error
     # from 0.5.18, we give a warning, and replace the non-free label
     # with its fixed value in ustart
     lav_msg_warn(gettext("non-free parameter(s) in inequality constraint(s):"),
-      lav_msg_view(ineq.labels[fixed.ineq.idx],"none")
+      lav_msg_view(ineq_labels[fixed_ineq_idx], "none")
     )
 
-    fixed.lab.lhs <- ineq.labels[fixed.ineq.idx]
-    fixed.lab.rhs <- partable$ustart[match(fixed.lab.lhs, partable$label)]
-    BODY.txt <- paste(BODY.txt, "# non-free parameter labels\n",
-      paste(fixed.lab.lhs, "<-", fixed.lab.rhs, collapse = "\n"),
+    fixed_lab_lhs <- ineq_labels[fixed_ineq_idx]
+    fixed_lab_rhs <- partable$ustart[match(fixed_lab_lhs, partable$label)]
+    body_txt <- paste(body_txt, "# non-free parameter labels\n",
+      paste(fixed_lab_lhs, "<-", fixed_lab_rhs, collapse = "\n"),
       "\n",
       sep = ""
     )
 
-    ineq.x.idx <- ineq.x.idx[-fixed.ineq.idx]
-    ineq.labels <- ineq.labels[-fixed.ineq.idx]
+    ineq_x_idx <- ineq_x_idx[-fixed_ineq_idx]
+    ineq_labels <- ineq_labels[-fixed_ineq_idx]
   }
 
   # put the labels the function BODY
-  if (length(ineq.x.idx) > 0L) {
-    ineq.x.lab <- paste(".x.[", ineq.x.idx, "]", sep = "")
-    if (length(ineq.x.idx) > 0L) {
-      BODY.txt <- paste(BODY.txt, "# parameter labels\n",
-        paste(ineq.labels, "<-", ineq.x.lab, collapse = "\n"),
+  if (length(ineq_x_idx) > 0L) {
+    ineq_x_lab <- paste(".x.[", ineq_x_idx, "]", sep = "")
+    if (length(ineq_x_idx) > 0L) {
+      body_txt <- paste(body_txt, "# parameter labels\n",
+        paste(ineq_labels, "<-", ineq_x_lab, collapse = "\n"),
         "\n",
         sep = ""
       )
@@ -425,68 +426,68 @@ lav_partable_constraints_ciq <- function(partable, con = NULL, debug = FALSE,
   }
 
   # write the constraints literally
-  BODY.txt <- paste(BODY.txt, "\n# inequality constraints\n", sep = "")
-  FREE <- partable$free
-  FREE[FREE > 0] <- seq_len(length(FREE[FREE > 0]))
-  for (i in 1:length(ineq.idx)) {
-    lhs <- partable$lhs[ineq.idx[i]]
-    op <- partable$op[ineq.idx[i]]
-    rhs <- partable$rhs[ineq.idx[i]]
+  body_txt <- paste(body_txt, "\n# inequality constraints\n", sep = "")
+  free <- partable$free
+  free[free > 0] <- seq_along(free[free > 0])
+  for (i in seq_along(ineq_idx)) {
+    lhs <- partable$lhs[ineq_idx[i]]
+    op <- partable$op[ineq_idx[i]]
+    rhs <- partable$rhs[ineq_idx[i]]
 
-    if (ineq.idx[i] %in% ineq.only.idx) {
+    if (ineq_idx[i] %in% ineq_only_idx) {
       # EXPLICIT inequality constraints
       # note,this is different from ==, because we have < AND >
       if (rhs == "0" && op == ">") {
-        ineq.string <- lhs
+        ineq_string <- lhs
       } else if (rhs == "0" && op == "<") {
-        ineq.string <- paste(rhs, " - (", lhs, ")", sep = "")
+        ineq_string <- paste(rhs, " - (", lhs, ")", sep = "")
       } else if (rhs != "0" && op == ">") {
-        ineq.string <- paste(lhs, " - (", rhs, ")", sep = "")
+        ineq_string <- paste(lhs, " - (", rhs, ")", sep = "")
       } else if (rhs != "0" && op == "<") {
-        ineq.string <- paste(rhs, " - (", lhs, ")", sep = "")
+        ineq_string <- paste(rhs, " - (", lhs, ")", sep = "")
       }
-    } else if (ineq.idx[i] %in% upper.idx) {
+    } else if (ineq_idx[i] %in% upper_idx) {
       # simple upper bound
-      val <- partable$upper[ineq.idx[i]]
-      xlab <- paste(".x.[", FREE[ineq.idx[i]], "]", sep = "")
-      ineq.string <- paste(val, " - (", xlab, ")", sep = "")
-    } else if (ineq.idx[i] %in% lower.idx) {
+      val <- partable$upper[ineq_idx[i]]
+      xlab <- paste(".x.[", free[ineq_idx[i]], "]", sep = "")
+      ineq_string <- paste(val, " - (", xlab, ")", sep = "")
+    } else if (ineq_idx[i] %in% lower_idx) {
       # simple lower bound
-      val <- partable$lower[ineq.idx[i]]
-      xlab <- paste(".x.[", FREE[ineq.idx[i]], "]", sep = "")
-      ineq.string <- paste(xlab, " - (", val, ")", sep = "")
+      val <- partable$lower[ineq_idx[i]]
+      xlab <- paste(".x.[", free[ineq_idx[i]], "]", sep = "")
+      ineq_string <- paste(xlab, " - (", val, ")", sep = "")
     }
 
-    BODY.txt <- paste(BODY.txt, "out[", i, "] <- ", ineq.string, "\n", sep = "")
+    body_txt <- paste(body_txt, "out[", i, "] <- ", ineq_string, "\n", sep = "")
   }
 
   if (txtOnly) {
-    return(BODY.txt)
+    return(body_txt)
   }
 
   # put the results in 'out'
-  BODY.txt <- paste(BODY.txt, "\n", "out[is.na(out)] <- Inf\n", sep = "")
-  if (length(upper.idx) > 0L || length(lower.idx) > 0L) {
-    bound.idx <- which(ineq.idx %in% c(upper.idx, lower.idx))
-    bound.txt <- paste("c(", paste(bound.idx, collapse = ", "), ")", sep = "")
-    BODY.txt <- paste(BODY.txt, "attr(out, \"bound.idx\") <- ", bound.txt,
+  body_txt <- paste(body_txt, "\n", "out[is.na(out)] <- Inf\n", sep = "")
+  if (length(upper_idx) > 0L || length(lower_idx) > 0L) {
+    bound_idx <- which(ineq_idx %in% c(upper_idx, lower_idx))
+    bound_txt <- paste("c(", paste(bound_idx, collapse = ", "), ")", sep = "")
+    body_txt <- paste(body_txt, "attr(out, \"bound.idx\") <- ", bound_txt,
                       "\n", sep = "")
   }
-  BODY.txt <- paste(BODY.txt, "return(out)\n}\n", sep = "")
-  body(cin.function) <- parse(file = "", text = BODY.txt)
+  body_txt <- paste(body_txt, "return(out)\n}\n", sep = "")
+  body(cin_function) <- parse(file = "", text = body_txt)
   if (lav_debug()) {
     cat("cin.function = \n")
-    print(cin.function)
+    print(cin_function)
     cat("\n")
   }
 
-  cin.function
+  cin_function
 }
 
 # return a named vector of the 'free' indices, for the labels that
 # are used in a constrained (or optionally a definition)
 # (always 0 for definitions)
-lav_partable_constraints_label_id <- function(partable, con = NULL,
+lav_partable_constraints_label_id <- function(partable, con = NULL, # nolint
                                               def = TRUE) {
   # if 'con', merge partable + con
   if (!is.null(con)) {
@@ -497,59 +498,59 @@ lav_partable_constraints_label_id <- function(partable, con = NULL,
 
   # get constraints
   if (def) {
-    con.idx <- which(partable$op %in% c("==", "<", ">", ":="))
+    con_idx <- which(partable$op %in% c("==", "<", ">", ":="))
   } else {
-    con.idx <- which(partable$op %in% c("==", "<", ">"))
+    con_idx <- which(partable$op %in% c("==", "<", ">"))
   }
 
   # catch empty con
-  if (length(con.idx) == 0L) {
+  if (length(con_idx) == 0L) {
     return(integer(0L))
   }
 
-  def.idx <- which(partable$op == ":=")
+  def_idx <- which(partable$op == ":=")
 
   # extract labels
-  lhs.labels <- all.vars(parse(file = "", text = partable$lhs[con.idx]))
-  rhs.labels <- all.vars(parse(file = "", text = partable$rhs[con.idx]))
-  con.labels <- unique(c(lhs.labels, rhs.labels))
+  lhs_labels <- all.vars(parse(file = "", text = partable$lhs[con_idx]))
+  rhs_labels <- all.vars(parse(file = "", text = partable$rhs[con_idx]))
+  con_labels <- unique(c(lhs_labels, rhs_labels))
 
   # remove def.names from con.labels (unless def = TRUE)
-  if (!def && length(def.idx) > 0L) {
-    def.names <- as.character(partable$lhs[def.idx])
-    d.idx <- which(con.labels %in% def.names)
-    if (length(d.idx) > 0) {
-      con.labels <- con.labels[-d.idx]
+  if (!def && length(def_idx) > 0L) {
+    def_names <- as.character(partable$lhs[def_idx])
+    d_idx <- which(con_labels %in% def_names)
+    if (length(d_idx) > 0) {
+      con_labels <- con_labels[-d_idx]
     }
   }
-  con.x.idx <- rep(as.integer(NA), length(con.labels))
+  con_x_idx <- rep(as.integer(NA), length(con_labels))
 
   # get user-labels ids
-  ulab.idx <- which(con.labels %in% partable$label)
-  if (length(ulab.idx) > 0L) {
-    con.x.idx[ulab.idx] <- partable$free[match(
-      con.labels[ulab.idx],
+  ulab_idx <- which(con_labels %in% partable$label)
+  if (length(ulab_idx) > 0L) {
+    con_x_idx[ulab_idx] <- partable$free[match(
+      con_labels[ulab_idx],
       partable$label
     )]
   }
   # get plabels ids
-  plab.idx <- which(con.labels %in% partable$plabel)
-  if (length(plab.idx) > 0L) {
-    con.x.idx[plab.idx] <- partable$free[match(
-      con.labels[plab.idx],
+  plab_idx <- which(con_labels %in% partable$plabel)
+  if (length(plab_idx) > 0L) {
+    con_x_idx[plab_idx] <- partable$free[match(
+      con_labels[plab_idx],
       partable$plabel
     )]
   }
 
   # check if we have found the label
-  if (any(is.na(con.x.idx))) {
+  if (any(is.na(con_x_idx))) {
     lav_msg_warn(gettext("unknown label(s) in equality constraint(s):"),
-      lav_msg_view(con.labels[which(is.na(con.x.idx))], "none")
+      lav_msg_view(con_labels[which(is.na(con_x_idx))], "none")
     )
   }
 
   # return named integer vector
-  names(con.x.idx) <- con.labels
+  names(con_x_idx) <- con_labels
 
-  con.x.idx
+  con_x_idx
 }

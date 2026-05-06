@@ -9,32 +9,32 @@ lav_partable_check <- function(partable, categorical = FALSE) {
   }
 
   # get observed/latent variables
-  ov.names <- lav_partable_vnames(partable, "ov.nox") # no need to specify exo??
-  lv.names <- lav_partable_vnames(partable, "lv")
-  lv.names.c <- lav_partable_vnames(partable, "lv.composite")
-  lv.names.noc <- lv.names[!lv.names %in% lv.names.c]
-  all.names <- c(ov.names, lv.names.noc)
-  ov.names.ord <- lav_partable_vnames(partable, "ov.ord")
+  ov_names <- lav_partable_vnames(partable, "ov.nox") # no need to specify exo??
+  lv_names <- lav_partable_vnames(partable, "lv")
+  lv_names_c <- lav_partable_vnames(partable, "lv.composite")
+  lv_names_noc <- lv_names[!lv_names %in% lv_names_c]
+  all.names <- c(ov_names, lv_names_noc)
+  ov_names_ord <- lav_partable_vnames(partable, "ov.ord")
 
   nlevels <- lav_partable_nlevels(partable)
 
   # if categorical, we should have some ov.names.ord
-  if (categorical && length(ov.names.ord) == 0L) {
+  if (categorical && length(ov_names_ord) == 0L) {
     check <- FALSE
     lav_msg_warn(gettext("parameter table does not contain thresholds"))
   }
 
   # we should have a (residual) variance for *each* ov/lv
   # note: if lav_model_partable() has been used, this is always TRUE
-  var.idx <- which(partable$op == "~~" &
-    partable$lhs == partable$rhs & !partable$lhs %in% lv.names.c)
-  missing.idx <- which(is.na(match(all.names, partable$lhs[var.idx])))
-  if (length(missing.idx) > 0L) {
+  var_idx <- which(partable$op == "~~" &
+    partable$lhs == partable$rhs & !partable$lhs %in% lv_names_c)
+  missing_idx <- which(is.na(match(all.names, partable$lhs[var_idx])))
+  if (length(missing_idx) > 0L) {
     check <- FALSE
     lav_msg_warn(gettextf(
       "parameter table does not contain (residual) variances for
       one or more variables: %s",
-      lav_msg_view(all.names[missing.idx])))
+      lav_msg_view(all.names[missing_idx])))
   }
 
   # meanstructure?
@@ -44,14 +44,14 @@ lav_partable_check <- function(partable, categorical = FALSE) {
   # note if lav_model_partable() has been used, this is always TRUE
   if (meanstructure) {
     # we should have an intercept for *each* ov/lv
-    int.idx <- which(partable$op == "~1")
-    missing.idx <- which(is.na(match(all.names, partable$lhs[int.idx])))
-    if (length(missing.idx) > 0L) {
+    int_idx <- which(partable$op == "~1")
+    missing_idx <- which(is.na(match(all.names, partable$lhs[int_idx])))
+    if (length(missing_idx) > 0L) {
       check <- FALSE
       lav_msg_warn(gettextf(
         "parameter table does not contain intercepts
         for one or more variables: %s",
-        lav_msg_view(all.names[missing.idx])))
+        lav_msg_view(all.names[missing_idx])))
     }
   }
 
@@ -77,27 +77,27 @@ lav_partable_check <- function(partable, categorical = FALSE) {
   # do we have added intercepts (user = 0) that are fixed to zero?
   # this is not necessarily problematic; perhaps only for
   # exogenous variables?
-  ov.ind <- unique(partable$rhs[partable$op == "=~"])
-  lv.names <- unique(partable$lhs[partable$op == "=~"])
-  int.fixed <- which(partable$op == "~1" &
+  ov_ind <- unique(partable$rhs[partable$op == "=~"])
+  lv_names <- unique(partable$lhs[partable$op == "=~"])
+  int_fixed <- which(partable$op == "~1" &
     partable$user == 0L &
     partable$free == 0L &
     partable$ustart == 0L &
     # ignore block/group 1 -- typically within level exo
     !(partable$block %% nlevels == 1L) &
     # do not include factors
-    !partable$lhs %in% lv.names &
+    !partable$lhs %in% lv_names &
     # do not include ordered variables
-    !partable$lhs %in% ov.names.ord &
+    !partable$lhs %in% ov_names_ord &
     # do not include indicators
-    !partable$lhs %in% ov.ind &
+    !partable$lhs %in% ov_ind &
     # do not include lv composites
-    !partable$lhs %in% lv.names.c)
+    !partable$lhs %in% lv_names_c)
 
-  if (length(int.fixed) > 0L) {
+  if (length(int_fixed) > 0L) {
     check <- FALSE
     lav_msg_warn(gettext("automatically added intercepts are set to zero:"),
-                 lav_msg_view(partable$lhs[int.fixed]))
+                 lav_msg_view(partable$lhs[int_fixed]))
   }
 
   # return check code

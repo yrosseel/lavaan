@@ -167,10 +167,10 @@ lav_sam_step1 <- function(cmd = "sem", mm.list = NULL, mm.args = list(),
 
     # create parameter table for this measurement block only
     PTM <- lav_partable_subset_measurement_model(
-      PT = PT,
-      add.lv.cov = add.lv.cov,
-      add.idx = TRUE,
-      lv.names = mm.list[[mm]],
+      pt_1 = PT,
+      add_lv_cov = add.lv.cov,
+      add_idx = TRUE,
+      lv_names = mm.list[[mm]],
     )
     mm.idx <- attr(PTM, "idx")
     attr(PTM, "idx") <- NULL

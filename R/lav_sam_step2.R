@@ -61,11 +61,11 @@ lav_sam_step2 <- function(STEP1 = NULL, FIT = NULL,
   if (sam.method %in% c("local", "fsr", "cfsr")) {
     # extract structural part
     PTS <- lav_partable_subset_structural_model(PT,
-      add.idx = TRUE,
-      add.exo.cov = TRUE,
-      fixed.x = lavoptions.PA$fixed.x,
-      conditional.x = lavoptions.PA$conditional.x,
-      free.fixed.var = TRUE,
+      add_idx = TRUE,
+      add_exo_cov = TRUE,
+      fixed_x = lavoptions.PA$fixed.x,
+      conditional_x = lavoptions.PA$conditional.x,
+      free_fixed_var = TRUE,
       meanstructure = lavoptions.PA$meanstructure
     )
 
@@ -115,8 +115,8 @@ lav_sam_step2 <- function(STEP1 = NULL, FIT = NULL,
     PT$ustart[PT$free > 0] <- PT$est[PT$free > 0]
 
     reg.idx <- lav_partable_subset_structural_model(
-      PT = PT,
-      idx.only = TRUE
+      pt_1 = PT,
+      idx_only = TRUE
     )
 
     # remove 'exogenous' factor variances (if any) from reg.idx
@@ -211,7 +211,7 @@ lav_sam_step2 <- function(STEP1 = NULL, FIT = NULL,
   # find corresponding rows in PT
   PTS2 <- as.data.frame(PTS, stringsAsFactors = FALSE)
   pt.idx <- lav_partable_map_id_p1_in_p2(PTS2[pts.idx, ], PT,
-    exclude.nonpar = FALSE
+    exclude_nonpar = FALSE
   )
   # fill in
   PT$est[pt.idx] <- FIT.PA@ParTable$est[pts.idx]
