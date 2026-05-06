@@ -2940,6 +2940,7 @@ lav_lisrel_dimplied_dx <- function(MLIST           = NULL,
                                    meanstructure   = FALSE,
                                    categorical     = FALSE,
                                    correlation     = FALSE,
+                                   conditional.x   = FALSE,
                                    num.idx         = integer(0L),
                                    th.idx          = integer(0L),
                                    group.w.free    = FALSE,
@@ -3009,6 +3010,7 @@ lav_lisrel_dimplied_dx <- function(MLIST           = NULL,
   # in case !meanstructure or !categorical
   n_nu  <- 0L;  m.nu.idx    <- integer(0L);  x.nu.idx    <- integer(0L)
   n_alp <- 0L;  m.alpha.idx <- integer(0L);  x.alpha.idx <- integer(0L)
+  n_gam <- 0L;  m.gamma.idx <- integer(0L);  x.gamma.idx <- integer(0L)
 
 
   if (meanstructure) {
@@ -3021,6 +3023,15 @@ lav_lisrel_dimplied_dx <- function(MLIST           = NULL,
     x.alpha.idx <- x.free.idx[[mm.alpha.idx]]
     m.alpha.idx <- m.free.idx[[mm.alpha.idx]]
     n_alp <- length(m.alpha.idx)
+  }
+
+  if (conditional.x) {
+    mm.gamma.idx <- which(mnames == "gamma")
+    if (length(mm.gamma.idx) > 0L) {
+      x.gamma.idx <- x.free.idx[[mm.gamma.idx]]
+      m.gamma.idx <- m.free.idx[[mm.gamma.idx]]
+      n_gam <- length(m.gamma.idx)
+    }
   }
 
   if (categorical) {
@@ -3352,6 +3363,19 @@ lav_lisrel_dimplied_dx <- function(MLIST           = NULL,
     diag_pos <- lav_matrix_diagh_idx(nvar)
     jac_diag_theta <- jac_sigma[diag_pos, , drop = FALSE]
 
+    # If Delta itself is in the (compact) column block (e.g. the modindices
+    # "extended" model where every model-matrix element is free), Sigma*
+    # does not depend on Delta -- so dSigma*_jj/d(Delta_k) = 0. The chain
+    # rule below uses jac_sigma's diagonal rows as a proxy for
+    # (1/Sigma*_jj) * dSigma*_jj/dphi (correct for lambda/beta/psi/theta
+    # columns), but those rows pick up the delta-block contribution of
+    # jac_sigma[(r,r),:], which would spuriously feed back into the chain.
+    # Zero those columns so the chain term at the delta columns is zero.
+    if (n_del > 0L) {
+      jac_diag_theta[,
+        (ncol(jac_diag_theta) - n_del + 1L):ncol(jac_diag_theta)] <- 0
+    }
+
     is_ord <- rep(TRUE, nvar)
     if (length(num.idx) > 0L) {
       is_ord[num.idx] <- FALSE
@@ -3390,9 +3414,93 @@ lav_lisrel_dimplied_dx <- function(MLIST           = NULL,
   }
 
   jac_th   <- NULL
+  jac_beta <- NULL
   nth_full <- 0L
+  nexo_g   <- 0L
+  if (conditional.x && !is.null(MLIST$gamma)) {
+    nexo_g <- ncol(MLIST$gamma)
+  }
   if (!categorical) {
-    if (meanstructure) {
+    if (conditional.x) {
+      # conditional.x continuous case: implied moments are
+      #   mu_i  = nu_i + (LAMBDA(I-B)^{-1} alpha)_i
+      #   pi_{i,k} = (LAMBDA(I-B)^{-1} GAMMA)_{i,k}
+      #   Sigma = LAMBDA(I-B)^{-1} PSI (I-B)^{-T} LAMBDA' + THETA
+      # The Beta-style row layout is interleaved column-major of a
+      # (nexo+1) x nvar matrix (intercept first, then nexo slopes),
+      # matching what lav_mvreg_scores_* expects.
+      if (beta.flag) {
+        a <- drop(A %*% MLIST$alpha)
+      } else {
+        a <- if (!is.null(MLIST$alpha)) as.numeric(MLIST$alpha) else
+             rep(0, nfac)
+      }
+      gamma_IB <- if (nexo_g > 0L) {
+        if (beta.flag) A %*% MLIST$gamma else MLIST$gamma
+      } else {
+        matrix(0, nfac, 0L)
+      }
+
+      n_beta_rows <- (nexo_g + 1L) * nvar
+      mu_slots    <- (seq_len(nvar) - 1L) * (nexo_g + 1L) + 1L
+
+      n_free_beta <- n_nu + n_lam + n_bet + n_alp + n_gam
+      jac_beta <- matrix(0, n_beta_rows, n_free_beta)
+
+      col <- 1L
+      # nu[i]: only affects mu_i (intercept slot for variable i).
+      if (n_nu > 0L) {
+        jac_beta[cbind(mu_slots[m.nu.idx], col + seq_len(n_nu) - 1L)] <- 1
+        col <- col + n_nu
+      }
+
+      # lambda[i,j]: dmu_i = a[j] * I(r==i); dpi_{i,k} = gamma_IB[j,k] * I(r==i).
+      if (n_lam > 0L) {
+        rc <- vec2rc(m.lambda.idx, nvar); i_v <- rc[, 1L]; j_v <- rc[, 2L]
+        # mu-row: a[j_v] at row mu_slots[i_v]
+        jac_beta[cbind(mu_slots[i_v], col + seq_len(n_lam) - 1L)] <- a[j_v]
+        # pi-rows (k = 1..nexo)
+        if (nexo_g > 0L) {
+          for (k in seq_len(nexo_g)) {
+            jac_beta[cbind(mu_slots[i_v] + k,
+                           col + seq_len(n_lam) - 1L)] <- gamma_IB[j_v, k]
+          }
+        }
+        col <- col + n_lam
+      }
+
+      # beta[i,j]: dmu_r = M[r,i]*a[j]; dpi_{r,k} = M[r,i]*gamma_IB[j,k].
+      if (n_bet > 0L) {
+        rc <- vec2rc(m.beta.idx, nfac); i_v <- rc[, 1L]; j_v <- rc[, 2L]
+        # mu rows
+        jac_beta[mu_slots, col:(col + n_bet - 1L)] <-
+          M[, i_v, drop = FALSE] * rep(a[j_v], each = nvar)
+        # pi rows
+        if (nexo_g > 0L) {
+          for (k in seq_len(nexo_g)) {
+            jac_beta[mu_slots + k, col:(col + n_bet - 1L)] <-
+              M[, i_v, drop = FALSE] *
+                rep(gamma_IB[j_v, k], each = nvar)
+          }
+        }
+        col <- col + n_bet
+      }
+
+      # alpha[k]: only affects mu (dmu = M[,k]).
+      if (n_alp > 0L) {
+        jac_beta[mu_slots, col:(col + n_alp - 1L)] <-
+          M[, m.alpha.idx, drop = FALSE]
+        col <- col + n_alp
+      }
+
+      # gamma[i,k]: only affects pi_{r,k} -> M[r,i].
+      if (n_gam > 0L) {
+        rc <- vec2rc(m.gamma.idx, nfac); i_v <- rc[, 1L]; k_v <- rc[, 2L]
+        for (c2 in seq_len(n_gam)) {
+          jac_beta[mu_slots + k_v[c2], col + c2 - 1L] <- M[, i_v[c2]]
+        }
+      }
+    } else if (meanstructure) {
       # precompute: IB.inv * alpha
       if (beta.flag) {
         a <- drop(A %*% MLIST$alpha)
@@ -3544,6 +3652,67 @@ lav_lisrel_dimplied_dx <- function(MLIST           = NULL,
     }
   }
 
+  # categorical + conditional.x: build jac_pi (slope rows).
+  #   pi_obs[r, k] = Delta[r] * (LAMBDA(I-B)^{-1} GAMMA)[r, k]
+  # vec(PI) row layout is column-major: index (r, k) -> (k-1)*nvar + r.
+  # Free params (in this column order): lambda | beta | gamma | delta.
+  jac_pi <- NULL
+  n_pi_rows <- 0L
+  if (categorical && conditional.x && nexo_g > 0L) {
+    n_pi_rows <- nvar * nexo_g
+
+    gamma_IB <- if (beta.flag) A %*% MLIST$gamma else MLIST$gamma
+    delta_var <- if (delta.flag) delta else rep(1, nvar)
+
+    n_free_pi <- n_lam + n_bet + n_gam + n_del
+    jac_pi <- matrix(0, n_pi_rows, n_free_pi)
+    col_pi <- 1L
+
+    # lambda[i,j]: dpi[r,k] = Delta[r] * I(r==i) * gamma_IB[j, k]
+    if (n_lam > 0L) {
+      rc <- vec2rc(m.lambda.idx, nvar); i_v <- rc[, 1L]; j_v <- rc[, 2L]
+      for (k in seq_len(nexo_g)) {
+        jac_pi[cbind((k - 1L) * nvar + i_v,
+                     col_pi + seq_len(n_lam) - 1L)] <-
+          delta_var[i_v] * gamma_IB[j_v, k]
+      }
+      col_pi <- col_pi + n_lam
+    }
+
+    # beta[i,j]: dpi[r,k] = Delta[r] * M[r,i] * gamma_IB[j, k]
+    if (n_bet > 0L) {
+      rc <- vec2rc(m.beta.idx, nfac); i_v <- rc[, 1L]; j_v <- rc[, 2L]
+      for (k in seq_len(nexo_g)) {
+        rows_k <- ((k - 1L) * nvar + 1L):(k * nvar)
+        jac_pi[rows_k, col_pi:(col_pi + n_bet - 1L)] <-
+          delta_var * M[, i_v, drop = FALSE] *
+            rep(gamma_IB[j_v, k], each = nvar)
+      }
+      col_pi <- col_pi + n_bet
+    }
+
+    # gamma[i,k']: dpi[r,k] = Delta[r] * M[r,i] * I(k==k')
+    if (n_gam > 0L) {
+      rc <- vec2rc(m.gamma.idx, nfac); i_v <- rc[, 1L]; k_v <- rc[, 2L]
+      for (c2 in seq_len(n_gam)) {
+        rows_k <- ((k_v[c2] - 1L) * nvar + 1L):(k_v[c2] * nvar)
+        jac_pi[rows_k, col_pi + c2 - 1L] <- delta_var * M[, i_v[c2]]
+      }
+      col_pi <- col_pi + n_gam
+    }
+
+    # delta[r] (delta-parameterization free): dpi[r,k] = (M GAMMA)[r, k] (unscaled).
+    if (n_del > 0L) {
+      M_GAMMA <- M %*% MLIST$gamma  # nvar x nexo
+      for (c2 in seq_len(n_del)) {
+        kd <- m.delta.idx[c2]
+        for (k in seq_len(nexo_g)) {
+          jac_pi[(k - 1L) * nvar + kd, col_pi + c2 - 1L] <- M_GAMMA[kd, k]
+        }
+      }
+    }
+  }
+
   # sigma
   out <- matrix(0, nrow = nrow(jac_sigma), ncol = nx.free)
   el.idx_sigma <- if (!wmat.flag) {
@@ -3553,8 +3722,14 @@ lav_lisrel_dimplied_dx <- function(MLIST           = NULL,
   }
   out[, el.idx_sigma] <- jac_sigma
 
-  # meanstructure
-  if (!categorical && meanstructure) {
+  # meanstructure / conditional.x
+  if (!categorical && conditional.x && !is.null(jac_beta)) {
+    el.idx_beta <- c(x.nu.idx, x.lambda.idx, x.beta.idx, x.alpha.idx,
+                     x.gamma.idx)
+    outm <- matrix(0, nrow = nrow(jac_beta), ncol = nx.free)
+    outm[, el.idx_beta] <- jac_beta
+    out <- rbind(outm, out)
+  } else if (!categorical && meanstructure) {
     # right order
     el.idx <- c(x.nu.idx, x.lambda.idx, x.beta.idx, x.alpha.idx)
     outm <- matrix(0, nrow = nrow(jac_mean), ncol = nx.free)
@@ -3572,6 +3747,18 @@ lav_lisrel_dimplied_dx <- function(MLIST           = NULL,
     out_th <- matrix(0, nth_full, nx.free)
     out_th[, el.idx_th] <- jac_th
 
+    # jac_diag_full only needed under theta parameterization (cached for
+    # tau- and pi-side chain corrections).
+    jac_diag_full <- NULL
+    is_ord_v <- rep(TRUE, nvar)
+    if (length(num.idx) > 0L) {
+      is_ord_v[num.idx] <- FALSE
+    }
+    if (parameterization == "theta" && !is.null(jac_diag_theta)) {
+      jac_diag_full <- matrix(0, nvar, nx.free)
+      jac_diag_full[, el.idx_sigma] <- jac_diag_theta
+    }
+
     # theta parameterization: chain rule for tau-side moments.
     #   TH_obs[t] = (tau - nu - lambda*alpha) / s_{v(t)},  v(t) ordinal,
     # was filled treating Delta as a constant. The implicit dependence
@@ -3582,20 +3769,50 @@ lav_lisrel_dimplied_dx <- function(MLIST           = NULL,
     #   chain[t, :] = -0.5 * TH_obs[t] * jac_diag_full[v_slot[t], :]
     # Numeric phantom slots get no correction (Delta_num = 1 by construction,
     # so it does not depend on the free parameters).
-    if (parameterization == "theta" && !is.null(jac_diag_theta) &&
-        nth_full > 0L) {
-      jac_diag_full <- matrix(0, nvar, nx.free)
-      jac_diag_full[, el.idx_sigma] <- jac_diag_theta
-      is_ord_v <- rep(TRUE, nvar)
-      if (length(num.idx) > 0L) {
-        is_ord_v[num.idx] <- FALSE
-      }
+    if (!is.null(jac_diag_full) && nth_full > 0L) {
       th_obs <- delta_star * TH0 * is_ord_v[v_slot]
       out_th <- out_th +
                 (-0.5 * th_obs) * jac_diag_full[v_slot, , drop = FALSE]
     }
 
     out <- rbind(out_th, out)
+
+    # categorical + conditional.x: insert pi rows between th and sigma.
+    if (!is.null(jac_pi)) {
+      el.idx_pi <- c(
+        if (n_lam > 0L) x.lambda.idx else integer(0L),
+        if (n_bet > 0L) x.beta.idx   else integer(0L),
+        if (n_gam > 0L) x.gamma.idx  else integer(0L),
+        if (n_del > 0L) x.delta.idx  else integer(0L)
+      )
+      out_pi <- matrix(0, n_pi_rows, nx.free)
+      out_pi[, el.idx_pi] <- jac_pi
+
+      # theta parameterization: chain rule for pi-side moments.
+      #   pi_obs[r, k] = Delta_r * unscaled_pi[r, k], with Delta_r = 1/s_r
+      #   d pi_obs[r, k] / dphi += -0.5 * pi_obs[r, k] / Sigma*_rr * dSigma*_rr
+      # only for ordinal r. Numeric variables have Delta_r = 1 (constant).
+      if (!is.null(jac_diag_full)) {
+        # construct vec(PI_obs) following the column-major row layout
+        unscaled_pi <- M %*% MLIST$gamma
+        pi_obs_mat  <- if (delta.flag) {
+          unscaled_pi * delta
+        } else unscaled_pi
+        pi_obs_v <- as.numeric(pi_obs_mat)              # nvar*nexo, vec
+        r_pi     <- rep.int(seq_len(nvar), nexo_g)      # variable per row
+        out_pi <- out_pi +
+                  (-0.5 * pi_obs_v * is_ord_v[r_pi]) *
+                    jac_diag_full[r_pi, , drop = FALSE]
+      }
+
+      # row order: out_th already on top; pi between th and sigma.
+      # 'out' currently is rbind(out_th, sigma); reassemble:
+      n_th_rows <- nrow(out_th)
+      n_sig_rows <- nrow(out) - n_th_rows
+      out <- rbind(out[seq_len(n_th_rows), , drop = FALSE],
+                   out_pi,
+                   out[n_th_rows + seq_len(n_sig_rows), , drop = FALSE])
+    }
   }
 
   # composite chain-rule correction.

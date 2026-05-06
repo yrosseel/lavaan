@@ -738,360 +738,6 @@ lav_model_delta_numerical <- function(lavmodel = NULL, GLIST = NULL, g = 1L) {
 }
 
 
-### FIXME: should we here also:
-###        - weight for groups? (no, for now)
-###        - handle equality constraints? (yes, for now)
-#
-# Fallback path for lav_model_delta(): used when the new analytical
-# dispatcher cannot handle the model -- i.e., LISREL with
-# conditional.x = TRUE or parameterization = "theta", and the non-free
-# derivative API (m.el.idx./x.el.idx.).
-lav_model_delta_old <- function(lavmodel = NULL, GLIST. = NULL,
-                         m.el.idx. = NULL, x.el.idx. = NULL,
-                         ceq.simple = FALSE, # unused, but expected in
-                            # INLAvaan:::lavaan___lav_model_gradient()
-                         force.conditional.x.false = FALSE) {
-
-  # temporary fix
-  if (lavmodel@composites) {
-    Delta <- vector("list", length = lavmodel@nblocks)
-    for (b in seq_len(lavmodel@nblocks)) {
-      Delta[[b]] <- lav_model_delta_numerical(lavmodel = lavmodel, g = b)
-    }
-    return(Delta)
-  }
-
-  representation <- lavmodel@representation
-  categorical <- lavmodel@categorical
-  correlation <- lavmodel@correlation
-  conditional.x <- lavmodel@conditional.x
-  group.w.free <- lavmodel@group.w.free
-  nmat <- lavmodel@nmat
-  nblocks <- lavmodel@nblocks
-  nvar <- lavmodel@nvar
-  num.idx <- lavmodel@num.idx
-  th.idx <- lavmodel@th.idx
-  nexo <- lavmodel@nexo
-  parameterization <- lavmodel@parameterization
-
-  # number of thresholds per group (if any)
-  nth <- sapply(th.idx, function(x) sum(x > 0L))
-
-  # state or final?
-  if (is.null(GLIST.)) {
-    GLIST <- lavmodel@GLIST
-  } else {
-    GLIST <- GLIST.
-  }
-
-  # type = "free" or something else?
-  type <- "nonfree"
-  m.el.idx <- m.el.idx.
-  x.el.idx <- x.el.idx.
-  if (is.null(m.el.idx) && is.null(x.el.idx)) {
-    type <- "free"
-  }
-
-  # number of rows in DELTA.group
-  pstar <- integer(nblocks)
-  for (g in 1:nblocks) {
-    pstar[g] <- as.integer(nvar[g] * (nvar[g] + 1) / 2)
-    if (lavmodel@meanstructure) {
-      pstar[g] <- nvar[g] + pstar[g] # first the means, then sigma
-    }
-    if (categorical) {
-      pstar[g] <- pstar[g] - nvar[g] # remove variances
-      pstar[g] <- pstar[g] - nvar[g] # remove means
-
-      pstar[g] <- pstar[g] + nth[g] # add thresholds
-      pstar[g] <- pstar[g] + length(num.idx[[g]]) # add num means
-      pstar[g] <- pstar[g] + length(num.idx[[g]]) # add num vars
-    } else if (correlation) {
-      pstar[g] <- pstar[g] - nvar[g] # remove variances
-    }
-    if (conditional.x && nexo[g] > 0L) {
-      pstar[g] <- pstar[g] + (nvar[g] * nexo[g]) # add slopes
-    }
-    if (group.w.free) {
-      pstar[g] <- pstar[g] + 1L # add group weight
-    }
-  }
-
-
-  # number of columns in DELTA + m.el.idx/x.el.idx
-  if (type == "free") {
-    if (lavmodel@ceq.simple.only) {
-      NCOL <- lavmodel@nx.unco
-    } else {
-      NCOL <- lavmodel@nx.free
-    }
-    m.el.idx <- x.el.idx <- vector("list", length = length(GLIST))
-    for (mm in 1:length(GLIST)) {
-      m.el.idx[[mm]] <- lavmodel@m.free.idx[[mm]]
-      if (lavmodel@ceq.simple.only) {
-        x.el.idx[[mm]] <- lavmodel@x.unco.idx[[mm]]
-      } else {
-        x.el.idx[[mm]] <- lavmodel@x.free.idx[[mm]]
-      }
-      # handle symmetric matrices
-      if (lavmodel@isSymmetric[mm]) {
-        # since we use 'x.free.idx', only symmetric elements
-        # are duplicated (not the equal ones, only in x.free.free)
-        dix <- duplicated(x.el.idx[[mm]])
-        if (any(dix)) {
-          m.el.idx[[mm]] <- m.el.idx[[mm]][!dix]
-          x.el.idx[[mm]] <- x.el.idx[[mm]][!dix]
-        }
-      }
-    }
-  } else {
-    ## FIXME: this does *not* take into account symmetric
-    ##        matrices; hence NCOL will be too large, and empty
-    ##        columns will be added
-    ##        this is ugly, but it doesn't hurt
-    ## alternative could be:
-    ## NCOL <- sum(unlist(lapply(x.el.idx, function(x) length(unique(x)))))
-    # NCOL <- sum(unlist(lapply(m.el.idx, length)))
-    NCOL <- sum(unlist(lapply(x.el.idx, function(x) length(unique(x)))))
-    # sanity check
-    # nx <- sum(unlist(lapply(x.el.idx, length)))
-    # stopifnot(NCOL == nx)
-  }
-
-
-  # compute Delta
-  Delta <- vector("list", length = nblocks)
-  for (g in 1:nblocks) {
-    Delta.group <- matrix(0, nrow = pstar[g], ncol = NCOL)
-
-    # which mm belong to group g?
-    mm.in.group <- 1:nmat[g] + cumsum(c(0, nmat))[g]
-
-    # label rows of Delta.group --- FIXME!!!
-    # if(categorical) {
-    #    # 1. th (means interleaved?)
-    #    # 2. pi
-    #    # 3. var num + cor
-    # } else {
-    #    if(meanstructure) {
-    #    }
-    # }
-    # if(group.w.free) {
-    # }
-
-    # if theta, do some preparation
-    if (representation == "LISREL" && parameterization == "theta") {
-      sigma.hat <- lav_lisrel_sigma(
-        MLIST = GLIST[mm.in.group],
-        delta = FALSE
-      )
-      dsigma <- diag(sigma.hat)
-      # dcor/dcov for sigma
-      R <- lav_deriv_cov2cor(sigma.hat, num.idx = lavmodel@num.idx[[g]])
-      theta.var.idx <- lav_matrix_diagh_idx(nvar[g])
-    }
-
-    for (mm in mm.in.group) {
-      mname <- names(lavmodel@GLIST)[mm]
-
-      # skip empty ones
-      if (!length(m.el.idx[[mm]])) next
-
-      # get Delta columns for this model matrix
-      if (representation == "LISREL") {
-        # Sigma
-        DELTA <- dxSigma <-
-          lav_lisrel_dsigma_dx(
-            MLIST = GLIST[mm.in.group],
-            m = mname,
-            idx = m.el.idx[[mm]],
-            delta = parameterization == "delta"
-          )
-        if (categorical && parameterization == "theta") {
-          DELTA <- R %*% DELTA
-        }
-
-        if (categorical) {
-          # reorder: first variances (of numeric), then covariances
-          cov.idx <- lav_matrix_vech_idx(nvar[g])
-          covd.idx <- lav_matrix_vech_idx(nvar[g], diagonal = FALSE)
-
-          var.idx <- which(is.na(match(
-            cov.idx,
-            covd.idx
-          )))[num.idx[[g]]]
-          cor.idx <- match(covd.idx, cov.idx)
-
-          DELTA <- rbind(
-            DELTA[var.idx, , drop = FALSE],
-            DELTA[cor.idx, , drop = FALSE]
-          )
-        }
-
-        # correlation structure?
-        if (!categorical && correlation) {
-          rm.idx <- lav_matrix_diagh_idx(nvar[g])
-          DELTA <- DELTA[-rm.idx, , drop = FALSE]
-        }
-
-        if (!categorical) {
-          if (conditional.x) {
-            # means/intercepts
-            DELTA.mu <- lav_lisrel_dmu_dx(
-              MLIST = GLIST[mm.in.group],
-              m = mname,
-              idx = m.el.idx[[mm]]
-            )
-
-            # slopes
-            if (lavmodel@nexo[g] > 0L) {
-              DELTA.pi <- lav_lisrel_dpi_dx(
-                 MLIST = GLIST[mm.in.group],
-                m = mname,
-                idx = m.el.idx[[mm]]
-              )
-
-              if (lavmodel@multilevel) {
-                DELTA <- rbind(DELTA.mu, DELTA.pi, DELTA)
-              } else {
-                # ATTENTION: we need to change the order here
-                # lav_mvreg_scores_* uses 'Beta' where the
-                # the intercepts are just the first row
-                # using the col-major approach, we need to
-                # interweave the intercepts with the slopes!
-
-                nEls <- NROW(DELTA.mu) + NROW(DELTA.pi)
-                # = (nexo + 1 int) * nvar
-
-                # intercepts on top
-                tmp <- rbind(DELTA.mu, DELTA.pi)
-                # change row index
-                row.idx <- lav_matrix_vec(matrix(seq.int(nEls),
-                  nrow = lavmodel@nexo[g] + 1L,
-                  ncol = lavmodel@nvar[g], byrow = TRUE
-                ))
-                DELTA.beta <- tmp[row.idx, , drop = FALSE]
-                DELTA <- rbind(DELTA.beta, DELTA)
-              }
-            } else {
-              DELTA <- rbind(DELTA.mu, DELTA)
-            }
-          } else if (!conditional.x && lavmodel@meanstructure) {
-            DELTA.mu <- lav_lisrel_dmu_dx(
-               MLIST = GLIST[mm.in.group],
-              m = mname,
-              idx = m.el.idx[[mm]]
-            )
-            DELTA <- rbind(DELTA.mu, DELTA)
-          }
-        } else if (categorical) {
-          DELTA.th <- lav_lisrel_dth_dx(
-            MLIST = GLIST[mm.in.group],
-            m = mname,
-            idx = m.el.idx[[mm]],
-            th.idx = th.idx[[g]],
-            delta = TRUE
-          )
-          if (parameterization == "theta") {
-            # dy/ddsigma = -0.5/(ddsigma*sqrt(ddsigma))
-            dDelta.dx <-
-              (dxSigma[theta.var.idx, , drop = FALSE] *
-                -0.5 / (dsigma * sqrt(dsigma)))
-            dth.dDelta <-
-              lav_lisrel_dth_dx(
-                MLIST = GLIST[mm.in.group],
-                m = "delta",
-                idx = 1:nvar[g],
-                th.idx = th.idx[[g]]
-              )
-            # add dth.dDelta %*% dDelta.dx
-            no.num.idx <- which(th.idx[[g]] > 0)
-            DELTA.th[no.num.idx, ] <-
-              DELTA.th[no.num.idx, , drop = FALSE] +
-              (dth.dDelta %*% dDelta.dx)[no.num.idx, , drop = FALSE]
-          }
-          if (conditional.x && lavmodel@nexo[g] > 0L) {
-            DELTA.pi <-
-              lav_lisrel_dpi_dx(
-                MLIST = GLIST[mm.in.group],
-                m = mname,
-                idx = m.el.idx[[mm]]
-              )
-            if (parameterization == "theta") {
-              dpi.dDelta <-
-                lav_lisrel_dpi_dx(
-                  MLIST = GLIST[mm.in.group],
-                  m = "delta",
-                  idx = 1:nvar[g]
-                )
-              # add dpi.dDelta %*% dDelta.dx
-              no.num.idx <-
-                which(!seq.int(1L, nvar[g]) %in% num.idx[[g]])
-              no.num.idx <- rep(seq.int(0, nexo[g] - 1) * nvar[g],
-                each = length(no.num.idx)
-              ) + no.num.idx
-              DELTA.pi[no.num.idx, ] <-
-                DELTA.pi[no.num.idx, , drop = FALSE] +
-                (dpi.dDelta %*% dDelta.dx)[no.num.idx, , drop = FALSE]
-            }
-            DELTA <- rbind(DELTA.th, DELTA.pi, DELTA)
-          } else {
-            DELTA <- rbind(DELTA.th, DELTA)
-          }
-        }
-        if (group.w.free) {
-          DELTA.gw <- lav_lisrel_dgw_dx(
-            MLIST = GLIST[mm.in.group],
-            m = mname,
-            idx = m.el.idx[[mm]]
-          )
-          DELTA <- rbind(DELTA.gw, DELTA)
-        }
-      } else if (representation == "RAM") {
-        DELTA <- dxSigma <-
-          lav_ram_dsigma(
-            m = mname,
-            idx = m.el.idx[[mm]],
-            MLIST = GLIST[mm.in.group]
-          )
-        if (lavmodel@meanstructure) {
-          DELTA.mu <- lav_ram_dmu(
-            m = mname,
-            idx = m.el.idx[[mm]],
-            MLIST = GLIST[mm.in.group]
-          )
-          DELTA <- rbind(DELTA.mu, DELTA)
-        }
-      } else {
-        lav_msg_stop(gettextf("representation %s not implemented yet",
-                              representation))
-      }
-      Delta.group[, x.el.idx[[mm]]] <- DELTA
-    } # mm
-
-    # if type == "free" take care of equality constraints
-    #if (type == "free" && ceq.simple && lavmodel@ceq.simple.only) {
-    #  Delta.group <- Delta.group %*% lavmodel@ceq.simple.K
-    #}
-
-    Delta[[g]] <- Delta.group
-  } # g
-
-  # if multilevel, rbind levels within group
-  if (lavmodel@multilevel) {
-    DELTA <- vector("list", length = lavmodel@ngroups)
-    for (g in 1:lavmodel@ngroups) {
-      DELTA[[g]] <- rbind(
-        Delta[[(g - 1) * 2 + 1]],
-        Delta[[(g - 1) * 2 + 2]]
-      )
-    }
-    Delta <- DELTA
-  }
-
-  Delta
-}
-
 lav_model_ddelta_dx <- function(lavmodel = NULL, GLIST = NULL, target = "lambda",
                            ceq.simple = FALSE) {
   # state or final?
@@ -1239,15 +885,15 @@ lav_model_ddelta_dx <- function(lavmodel = NULL, GLIST = NULL, target = "lambda"
 # Compute the Delta matrix: Jacobian of the model-implied moments wrt the
 # free parameters, per block.
 #
-# Currently supported (handled by the new analytical path):
-#   - LISREL representation (continuous + categorical + correlation),
-#     conditional.x = FALSE, parameterization = "delta" or "theta"
-#   - RAM representation, classical mean- and covariance structures
-#     (no categorical, no correlation, no conditional.x, no composites)
-#
-# Anything else (LISREL with conditional.x = TRUE, the non-free derivative
-# API m.el.idx./x.el.idx., or any other representation) is forwarded to
-# lav_model_delta_old() until the new path catches up.
+# Supported:
+#   - LISREL representation, full surface: continuous + categorical +
+#     correlation, conditional.x on/off, parameterization "delta" or
+#     "theta", composites, group.w.free. Both the standard "free" indexing
+#     and caller-supplied m.el.idx./x.el.idx. (e.g. lav_pml_test_plrt(),
+#     modindices()) are handled.
+#   - RAM representation, classical mean- and covariance structures only.
+#     RAM with categorical / correlation / conditional.x / composites is
+#     not supported and produces an error.
 #
 # This is the housekeeping wrapper: it loops over blocks, extracts the
 # block-specific MLIST and free-element indices, and dispatches the actual
@@ -1256,29 +902,18 @@ lav_model_delta <- function(lavmodel = NULL, GLIST. = NULL,
                             m.el.idx. = NULL, x.el.idx. = NULL,
                             ceq.simple = FALSE) {
 
-  # decide whether the new analytical path can handle this model
   representation <- lavmodel@representation
-  use.old <- !is.null(m.el.idx.) || !is.null(x.el.idx.)
-  if (!use.old) {
-    if (representation == "LISREL") {
-      use.old <- lavmodel@conditional.x
-    } else if (representation == "RAM") {
-      # RAM doesn't support composites in the analytical worker yet
-      use.old <- lavmodel@conditional.x ||
-                 lavmodel@categorical   ||
-                 lavmodel@correlation   ||
-                 lavmodel@composites
-    } else {
-      use.old <- TRUE
+  if (representation == "RAM") {
+    if (lavmodel@conditional.x || lavmodel@categorical ||
+        lavmodel@correlation   || lavmodel@composites) {
+      lav_msg_stop(gettext(
+        "lav_model_delta(): RAM representation does not support
+         conditional.x, categorical, correlation, or composites."))
     }
-  }
-
-  if (use.old) {
-    return(lav_model_delta_old(
-      lavmodel = lavmodel, GLIST. = GLIST.,
-      m.el.idx. = m.el.idx., x.el.idx. = x.el.idx.,
-      ceq.simple = ceq.simple
-    ))
+  } else if (representation != "LISREL") {
+    lav_msg_stop(gettextf(
+      "lav_model_delta(): representation %s not supported.",
+      representation))
   }
 
   # state or final?
@@ -1288,18 +923,26 @@ lav_model_delta <- function(lavmodel = NULL, GLIST. = NULL,
     GLIST <- GLIST.
   }
 
-  # simple equality constraints? if so, the worker writes Delta with
-  # nx.unco columns indexed by x.unco.idx (i.e. one column per
-  # unconstrained parameter, including duplicated ones). Matches the
-  # convention used by lav_model_delta_old(); the caller (e.g.
-  # lav_model_information_augment_invert()) maps to nx.free via
-  # ceq.simple.K when needed.
-  if (lavmodel@ceq.simple.only) {
-    nx_    <- lavmodel@nx.unco
+  # which (model element, x column) lists do we use?
+  #  - 'free' (default): use lavmodel@m.free.idx + x.free.idx (or x.unco.idx
+  #     when ceq.simple.only); NCOL = nx.free (or nx.unco). The worker writes
+  #     Delta with nx.unco columns when ceq.simple.only; the caller maps to
+  #     nx.free via ceq.simple.K.
+  #  - 'custom': caller passes m.el.idx./x.el.idx. directly (e.g. modindices
+  #     after lav_object_extended()); NCOL = max column index.
+  use.custom <- !is.null(m.el.idx.) || !is.null(x.el.idx.)
+  if (use.custom) {
+    m.idx_ <- m.el.idx.
+    x.idx_ <- x.el.idx.
+    nx_    <- max(unlist(x.idx_), 0L)
+  } else if (lavmodel@ceq.simple.only) {
+    m.idx_ <- lavmodel@m.free.idx
     x.idx_ <- lavmodel@x.unco.idx
+    nx_    <- lavmodel@nx.unco
   } else {
-    nx_    <- lavmodel@nx.free
+    m.idx_ <- lavmodel@m.free.idx
     x.idx_ <- lavmodel@x.free.idx
+    nx_    <- lavmodel@nx.free
   }
 
   Delta <- vector("list", length = lavmodel@nblocks)
@@ -1310,12 +953,13 @@ lav_model_delta <- function(lavmodel = NULL, GLIST. = NULL,
     if (representation == "LISREL") {
       Delta[[b]] <- lav_lisrel_dimplied_dx(
         MLIST            = GLIST[mm.in.group],
-        m.free.idx       = lavmodel@m.free.idx[mm.in.group],
+        m.free.idx       = m.idx_[mm.in.group],
         x.free.idx       = x.idx_[mm.in.group],
         nx.free          = nx_,
         meanstructure    = lavmodel@meanstructure,
         categorical      = lavmodel@categorical,
         correlation      = lavmodel@correlation,
+        conditional.x    = lavmodel@conditional.x,
         num.idx          = lavmodel@num.idx[[b]],
         th.idx           = lavmodel@th.idx[[b]],
         group.w.free     = lavmodel@group.w.free,
@@ -1324,7 +968,7 @@ lav_model_delta <- function(lavmodel = NULL, GLIST. = NULL,
     } else { # RAM
       Delta[[b]] <- lav_ram_dimplied_dx(
         MLIST         = GLIST[mm.in.group],
-        m.free.idx    = lavmodel@m.free.idx[mm.in.group],
+        m.free.idx    = m.idx_[mm.in.group],
         x.free.idx    = x.idx_[mm.in.group],
         nx.free       = nx_,
         meanstructure = lavmodel@meanstructure,
