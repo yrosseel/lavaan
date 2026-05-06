@@ -2933,16 +2933,17 @@ lav_lisrel_d2sigma_beta_psi <- function(MLIST = NULL,
 # Output: a matrix with nx.free columns, rows are the model-implied moments
 # in the order used elsewhere in lavaan:
 # [group weight (if group.w.free) | thresholds | means] then [vech(Sigma)].
-lav_lisrel_dimplied_dx <- function(MLIST         = NULL,
-                                   m.free.idx    = NULL,
-                                   x.free.idx    = NULL,
-                                   nx.free       = NULL,
-                                   meanstructure = FALSE,
-                                   categorical   = FALSE,
-                                   correlation   = FALSE,
-                                   num.idx       = integer(0L),
-                                   th.idx        = integer(0L),
-                                   group.w.free  = FALSE) {
+lav_lisrel_dimplied_dx <- function(MLIST           = NULL,
+                                   m.free.idx      = NULL,
+                                   x.free.idx      = NULL,
+                                   nx.free         = NULL,
+                                   meanstructure   = FALSE,
+                                   categorical     = FALSE,
+                                   correlation     = FALSE,
+                                   num.idx         = integer(0L),
+                                   th.idx          = integer(0L),
+                                   group.w.free    = FALSE,
+                                   parameterization = "delta") {
 
   delta.flag <- beta.flag <- FALSE
   if (!is.null(MLIST$delta) && any(MLIST$delta[,1] != 1)) {
@@ -3314,6 +3315,56 @@ lav_lisrel_dimplied_dx <- function(MLIST         = NULL,
 
   } # wmat.flag
 
+  # theta parameterization (categorical / correlation only).
+  #
+  # In the "theta" approach (Muthen & Asparouhov, Mplus Web Note 4), the
+  # diagonal of THETA is a free parameter and the diagonal scaling factor
+  # Delta is *not* a free parameter; it is determined implicitly by
+  #     Delta_j^{-2} = Sigma*_jj   (j ordinal),     Delta_j = 1   (j numeric).
+  # The implied moments are
+  #     Sigma_obs[r,s] = Sigma*[r,s] / (s_r * s_s),    s_j = sqrt(Sigma*_jj),
+  #     TH_obs[t]     = (tau - nu - lambda * alpha) / s_{v(t)}.
+  #
+  # Up to this point, jac_sigma has been built using the prepopulated
+  # MLIST$delta (= 1/s_j) values, i.e. it equals
+  #     d(Delta * Sigma* * Delta) / dphi
+  # treating Delta as a *constant*. The implicit dependence of Delta on
+  # the other free parameters is added directly here, by writing
+  #     d Sigma_obs / dphi
+  #         =  (1/(s_r s_s)) * dSigma*_rs/dphi
+  #          - 0.5 * Sigma_obs[r,s]/Sigma*_rr * dSigma*_rr/dphi   (r ordinal)
+  #          - 0.5 * Sigma_obs[r,s]/Sigma*_ss * dSigma*_ss/dphi   (s ordinal)
+  # The first term is already in jac_sigma (the Delta=const value). The two
+  # correction terms are added below using jac_sigma diagonal rows
+  # (which equal (1/Sigma*_jj) * dSigma*_jj/dphi for ordinal j and
+  #  dSigma*_jj/dphi for numeric j -- both consistent with the formula
+  #  above when combined with sigma_obs_v as the multiplier).
+  jac_diag_theta <- NULL
+  if (parameterization == "theta" && (categorical || correlation)) {
+    Sigma_star <- lav_lisrel_sigma(MLIST = MLIST, delta = FALSE)
+    s_diag <- sqrt(diag(Sigma_star))
+    if (length(num.idx) > 0L) {
+      s_diag[num.idx] <- 1.0
+    }
+    Sigma_obs <- Sigma_star / tcrossprod(s_diag)
+    sigma_obs_v <- lav_matrix_vech(Sigma_obs)
+
+    diag_pos <- lav_matrix_diagh_idx(nvar)
+    jac_diag_theta <- jac_sigma[diag_pos, , drop = FALSE]
+
+    is_ord <- rep(TRUE, nvar)
+    if (length(num.idx) > 0L) {
+      is_ord[num.idx] <- FALSE
+    }
+
+    coef_r <- -0.5 * sigma_obs_v * is_ord[r_s]
+    coef_s <- -0.5 * sigma_obs_v * is_ord[c_s]
+
+    jac_sigma <- jac_sigma +
+                 coef_r * jac_diag_theta[r_s, , drop = FALSE] +
+                 coef_s * jac_diag_theta[c_s, , drop = FALSE]
+  }
+
   # categorical: reorder
   if (categorical) {
     # reorder: first variances (of numeric), then covariances
@@ -3495,12 +3546,12 @@ lav_lisrel_dimplied_dx <- function(MLIST         = NULL,
 
   # sigma
   out <- matrix(0, nrow = nrow(jac_sigma), ncol = nx.free)
-  el.idx <- if (!wmat.flag) {
+  el.idx_sigma <- if (!wmat.flag) {
     c(x.lambda.idx, x.beta.idx, x.psi.idx, x.theta.idx, x.delta.idx)
   } else {
     c(x.lambda.idx, x.wmat.idx, x.beta.idx, x.psi.idx, x.theta.idx, x.delta.idx)
   }
-  out[, el.idx] <- jac_sigma
+  out[, el.idx_sigma] <- jac_sigma
 
   # meanstructure
   if (!categorical && meanstructure) {
@@ -3520,6 +3571,30 @@ lav_lisrel_dimplied_dx <- function(MLIST         = NULL,
     )
     out_th <- matrix(0, nth_full, nx.free)
     out_th[, el.idx_th] <- jac_th
+
+    # theta parameterization: chain rule for tau-side moments.
+    #   TH_obs[t] = (tau - nu - lambda*alpha) / s_{v(t)},  v(t) ordinal,
+    # was filled treating Delta as a constant. The implicit dependence
+    # of Delta on the other free parameters adds
+    #   d TH_obs[t] / dphi += -0.5 * TH_obs[t] / Sigma*_v(t),v(t)
+    #                              * dSigma*_v(t),v(t) / dphi
+    # which, in nx.free column space, is
+    #   chain[t, :] = -0.5 * TH_obs[t] * jac_diag_full[v_slot[t], :]
+    # Numeric phantom slots get no correction (Delta_num = 1 by construction,
+    # so it does not depend on the free parameters).
+    if (parameterization == "theta" && !is.null(jac_diag_theta) &&
+        nth_full > 0L) {
+      jac_diag_full <- matrix(0, nvar, nx.free)
+      jac_diag_full[, el.idx_sigma] <- jac_diag_theta
+      is_ord_v <- rep(TRUE, nvar)
+      if (length(num.idx) > 0L) {
+        is_ord_v[num.idx] <- FALSE
+      }
+      th_obs <- delta_star * TH0 * is_ord_v[v_slot]
+      out_th <- out_th +
+                (-0.5 * th_obs) * jac_diag_full[v_slot, , drop = FALSE]
+    }
+
     out <- rbind(out_th, out)
   }
 

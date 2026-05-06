@@ -1240,14 +1240,14 @@ lav_model_ddelta_dx <- function(lavmodel = NULL, GLIST = NULL, target = "lambda"
 # free parameters, per block.
 #
 # Currently supported (handled by the new analytical path):
-#   - LISREL representation (continuous + categorical),
-#     conditional.x = FALSE, parameterization = "delta"
+#   - LISREL representation (continuous + categorical + correlation),
+#     conditional.x = FALSE, parameterization = "delta" or "theta"
 #   - RAM representation, classical mean- and covariance structures
 #     (no categorical, no correlation, no conditional.x, no composites)
 #
-# Anything else (LISREL with conditional.x = TRUE, parameterization = "theta",
-# the non-free derivative API m.el.idx./x.el.idx., or any other representation)
-# is forwarded to lav_model_delta_old() until the new path catches up.
+# Anything else (LISREL with conditional.x = TRUE, the non-free derivative
+# API m.el.idx./x.el.idx., or any other representation) is forwarded to
+# lav_model_delta_old() until the new path catches up.
 #
 # This is the housekeeping wrapper: it loops over blocks, extracts the
 # block-specific MLIST and free-element indices, and dispatches the actual
@@ -1261,8 +1261,7 @@ lav_model_delta <- function(lavmodel = NULL, GLIST. = NULL,
   use.old <- !is.null(m.el.idx.) || !is.null(x.el.idx.)
   if (!use.old) {
     if (representation == "LISREL") {
-      use.old <- lavmodel@conditional.x ||
-                 lavmodel@parameterization != "delta"
+      use.old <- lavmodel@conditional.x
     } else if (representation == "RAM") {
       # RAM doesn't support composites in the analytical worker yet
       use.old <- lavmodel@conditional.x ||
@@ -1310,16 +1309,17 @@ lav_model_delta <- function(lavmodel = NULL, GLIST. = NULL,
 
     if (representation == "LISREL") {
       Delta[[b]] <- lav_lisrel_dimplied_dx(
-        MLIST         = GLIST[mm.in.group],
-        m.free.idx    = lavmodel@m.free.idx[mm.in.group],
-        x.free.idx    = x.idx_[mm.in.group],
-        nx.free       = nx_,
-        meanstructure = lavmodel@meanstructure,
-        categorical   = lavmodel@categorical,
-        correlation   = lavmodel@correlation,
-        num.idx       = lavmodel@num.idx[[b]],
-        th.idx        = lavmodel@th.idx[[b]],
-        group.w.free  = lavmodel@group.w.free
+        MLIST            = GLIST[mm.in.group],
+        m.free.idx       = lavmodel@m.free.idx[mm.in.group],
+        x.free.idx       = x.idx_[mm.in.group],
+        nx.free          = nx_,
+        meanstructure    = lavmodel@meanstructure,
+        categorical      = lavmodel@categorical,
+        correlation      = lavmodel@correlation,
+        num.idx          = lavmodel@num.idx[[b]],
+        th.idx           = lavmodel@th.idx[[b]],
+        group.w.free     = lavmodel@group.w.free,
+        parameterization = lavmodel@parameterization
       )
     } else { # RAM
       Delta[[b]] <- lav_ram_dimplied_dx(
