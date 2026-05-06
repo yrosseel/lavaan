@@ -1,92 +1,93 @@
 # SAM step 2: estimate structural part
 
-lav_sam_step2 <- function(STEP1 = NULL, FIT = NULL,
-                          sam.method = "local", struc.args = list()) {
-  lavoptions <- FIT@Options
-  lavpta <- FIT@pta
+lav_sam_step2 <- function(step1 = NULL, fit = NULL,
+                          sam_method = "local", struc_args = list()) {
+  lavoptions <- fit@Options
+  lavpta <- fit@pta
   nlevels <- lavpta$nlevels
-  PT <- STEP1$PT
+  pt_1 <- step1$PT
 
   # Gamma available?
-  gamma.flag <- FALSE
-  if (sam.method %in% c("local", "fsr", "cfsr") &&
-      !is.null(STEP1$Gamma.eta[[1]])) {
-    gamma.flag <- TRUE
+  gamma_flag <- FALSE
+  if (sam_method %in% c("local", "fsr", "cfsr") &&
+      !is.null(step1$Gamma.eta[[1]])) {
+    gamma_flag <- TRUE
   }
 
-  LV.names <- unique(unlist(FIT@pta$vnames$lv.regular))
+  lv_names <- unique(unlist(fit@pta$vnames$lv.regular))
 
   # adjust options
-  lavoptions.PA <- lavoptions
-  if (lavoptions.PA$se == "naive") {
-    lavoptions.PA$se <- "standard"
-  } else if (gamma.flag) {
-    lavoptions.PA$se <- "robust.sem"
-    lavoptions.PA$test <- "satorra.bentler"
+  lavoptions_pa <- lavoptions
+  if (lavoptions_pa$se == "naive") {
+    lavoptions_pa$se <- "standard"
+  } else if (gamma_flag) {
+    lavoptions_pa$se <- "robust.sem"
+    lavoptions_pa$test <- "satorra.bentler"
   } else {
     # twostep or none -> none
-    lavoptions.PA$se <- "none"
+    lavoptions_pa$se <- "none"
   }
   # lavoptions.PA$fixed.x <- TRUE # may be false if indicator is predictor
-  if (!lavoptions.PA$conditional.x) {
-    lavoptions.PA$fixed.x <- FALSE # until we fix this...
+  if (!lavoptions_pa$conditional.x) {
+    lavoptions_pa$fixed.x <- FALSE # until we fix this...
   }
-  lavoptions.PA$categorical <- FALSE
-  lavoptions.PA$.categorical <- FALSE
-  lavoptions.PA$rotation <- "none"
-  lavoptions.PA <- modifyList(lavoptions.PA, struc.args)
+  lavoptions_pa$categorical <- FALSE
+  lavoptions_pa$.categorical <- FALSE
+  lavoptions_pa$rotation <- "none"
+  lavoptions_pa <- modifyList(lavoptions_pa, struc_args)
 
-  if (gamma.flag) {
-    lavoptions.PA$check.vcov <- FALSE # always non-pd if interactions + fixed.x = FALSE
+  if (gamma_flag) {
+    lavoptions_pa$check.vcov <- FALSE # always non-pd
+                                      # if interactions + fixed.x = FALSE
   }
 
   # override, no matter what
-  lavoptions.PA$do.fit <- TRUE
+  lavoptions_pa$do.fit <- TRUE
 
-  if (sam.method %in% c("local", "fsr", "cfsr")) {
-    lavoptions.PA$missing <- "listwise"
-    lavoptions.PA$sample.cov.rescale <- FALSE
+  if (sam_method %in% c("local", "fsr", "cfsr")) {
+    lavoptions_pa$missing <- "listwise"
+    lavoptions_pa$sample.cov.rescale <- FALSE
     # lavoptions.PA$baseline <- FALSE
     # lavoptions.PA$h1 <- FALSE
     # lavoptions.PA$implied <- FALSE
-    lavoptions.PA$loglik <- FALSE
+    lavoptions_pa$loglik <- FALSE
   } else {
-    lavoptions.PA$h1 <- FALSE
+    lavoptions_pa$h1 <- FALSE
     # lavoptions.PA$implied <- FALSE
-    lavoptions.PA$loglik <- FALSE
+    lavoptions_pa$loglik <- FALSE
   }
 
 
   # construct PTS
-  if (sam.method %in% c("local", "fsr", "cfsr")) {
+  if (sam_method %in% c("local", "fsr", "cfsr")) {
     # extract structural part
-    PTS <- lav_partable_subset_structural_model(PT,
+    pts <- lav_partable_subset_structural_model(pt_1,
       add_idx = TRUE,
       add_exo_cov = TRUE,
-      fixed_x = lavoptions.PA$fixed.x,
-      conditional_x = lavoptions.PA$conditional.x,
+      fixed_x = lavoptions_pa$fixed.x,
+      conditional_x = lavoptions_pa$conditional.x,
       free_fixed_var = TRUE,
-      meanstructure = lavoptions.PA$meanstructure
+      meanstructure = lavoptions_pa$meanstructure
     )
 
     # any 'extra' parameters: not (free) in PT, but free in PTS (user == 3)
     #  - fixed.x in PT, but fixed.x = FALSE is PTS
     #  - fixed-to-zero intercepts in PT, but free in PTS
     #  - add.exo.cov: absent/fixed-to-zero in PT, but add/free in PTS
-    extra.id <- which(PTS$user == 3L)
+    extra_id <- which(pts$user == 3L)
 
     # remove est/se/start columns
-    PTS$est <- NULL
-    PTS$se <- NULL
-    PTS$start <- NULL
+    pts$est <- NULL
+    pts$se <- NULL
+    pts$start <- NULL
 
     if (nlevels > 1L) {
-      PTS$level <- NULL
-      PTS$group <- NULL
-      PTS$group <- PTS$block
-      NOBS <- FIT@Data@Lp[[1]]$nclusters
+      pts$level <- NULL
+      pts$group <- NULL
+      pts$group <- pts$block
+      nobs_1 <- fit@Data@Lp[[1]]$nclusters
     } else {
-      NOBS <- FIT@Data@nobs
+      nobs_1 <- fit@Data@nobs
     }
 
     # if meanstructure, 'free' user=0 intercepts?
@@ -106,94 +107,94 @@ lav_sam_step2 <- function(STEP1 = NULL, FIT = NULL,
     # }
     # extra.id <- c(extra.id, extra.int.idx)
 
-    reg.idx <- attr(PTS, "idx")
-    attr(PTS, "idx") <- NULL
+    reg_idx <- attr(pts, "idx")
+    attr(pts, "idx") <- NULL
   } else {
     # global SAM
 
     # the measurement model parameters now become fixed ustart values
-    PT$ustart[PT$free > 0] <- PT$est[PT$free > 0]
+    pt_1$ustart[pt_1$free > 0] <- pt_1$est[pt_1$free > 0]
 
-    reg.idx <- lav_partable_subset_structural_model(
-      pt_1 = PT,
+    reg_idx <- lav_partable_subset_structural_model(
+      pt_1 = pt_1,
       idx_only = TRUE
     )
 
     # remove 'exogenous' factor variances (if any) from reg.idx
-    lv.names.x <- LV.names[LV.names %in% unlist(lavpta$vnames$eqs.x) &
-      !LV.names %in% unlist(lavpta$vnames$eqs.y)]
-    if ((lavoptions.PA$fixed.x || lavoptions.PA$std.lv) &&
-        length(lv.names.x) > 0L) {
-      var.idx <- which(PT$lhs %in% lv.names.x &
-        PT$op == "~~" &
-        PT$lhs == PT$rhs)
-      rm.idx <- which(reg.idx %in% var.idx)
-      if (length(rm.idx) > 0L) {
-        reg.idx <- reg.idx[-rm.idx]
+    lv_names_x <- lv_names[lv_names %in% unlist(lavpta$vnames$eqs.x) &
+      !lv_names %in% unlist(lavpta$vnames$eqs.y)]
+    if ((lavoptions_pa$fixed.x || lavoptions_pa$std.lv) &&
+        length(lv_names_x) > 0L) {
+      var_idx <- which(pt_1$lhs %in% lv_names_x &
+        pt_1$op == "~~" &
+        pt_1$lhs == pt_1$rhs)
+      rm_idx <- which(reg_idx %in% var_idx)
+      if (length(rm_idx) > 0L) {
+        reg_idx <- reg_idx[-rm_idx]
       }
     }
 
     # adapt parameter table for structural part
-    PTS <- PT
+    pts <- pt_1
 
     # remove constraints we don't need
-    con.idx <- which(PTS$op %in% c("==", "<", ">", ":="))
-    if (length(con.idx) > 0L) {
-      needed.idx <- which(con.idx %in% reg.idx)
-      if (length(needed.idx) > 0L) {
-        con.idx <- con.idx[-needed.idx]
+    con_idx <- which(pts$op %in% c("==", "<", ">", ":="))
+    if (length(con_idx) > 0L) {
+      needed_idx <- which(con_idx %in% reg_idx)
+      if (length(needed_idx) > 0L) {
+        con_idx <- con_idx[-needed_idx]
       }
-      if (length(con.idx) > 0L) {
-        PTS <- as.data.frame(PTS, stringsAsFactors = FALSE)
-        PTS <- PTS[-con.idx, ]
+      if (length(con_idx) > 0L) {
+        pts <- as.data.frame(pts, stringsAsFactors = FALSE)
+        pts <- pts[-con_idx, ]
       }
     }
-    PTS$est <- NULL
-    PTS$se <- NULL
+    pts$est <- NULL
+    pts$se <- NULL
 
     # 'fix' step 1 parameters
-    PTS$free[!PTS$id %in% reg.idx & PTS$free > 0L] <- 0L
+    pts$free[!pts$id %in% reg_idx & pts$free > 0L] <- 0L
 
     # but free up residual variances if fixed (eg std.lv = TRUE) (new in 0.6-20)
-    var.idx <- reg.idx[which(PT$free[reg.idx] == 0L &
-                             PT$user[reg.idx] != 1L &
-                             PT$op[reg.idx] == "~~")] # FIXME: more?
-    PTS$free[var.idx] <- max(PTS$free) + seq_len(length(var.idx))
+    var_idx <- reg_idx[which(pt_1$free[reg_idx] == 0L &
+                             pt_1$user[reg_idx] != 1L &
+                             pt_1$op[reg_idx] == "~~")] # FIXME: more?
+    pts$free[var_idx] <- max(pts$free) + seq_along(var_idx)
 
     # set 'ustart' values for free FIT.PA parameter to NA
-    PTS$ustart[PTS$free > 0L] <- as.numeric(NA)
+    pts$ustart[pts$free > 0L] <- as.numeric(NA)
 
-    PTS <- lav_partable_complete(PTS)
+    pts <- lav_partable_complete(pts)
 
-    extra.id <- extra.int.idx <- integer(0L)
+    extra_id <- integer(0L)
   } # global
 
   # fit structural model
   if (lav_verbose()) {
     cat("Fitting the structural part ... \n")
   }
-  if (sam.method %in% c("local", "fsr", "cfsr")) {
-    if (gamma.flag) {
-      NACOV <- STEP1$Gamma.eta
-      ov.order <- "data"
+  if (sam_method %in% c("local", "fsr", "cfsr")) {
+    if (gamma_flag) {
+      nacov <- step1$Gamma.eta
+      # ov_order <- "data"
     } else {
-      NACOV <- NULL
-      ov.order <- "model"
+      nacov <- NULL
+      # ov_order <- "model"
     }
-    FIT.PA <- lavaan::lavaan(PTS,
-      sample.cov  = STEP1$VETA,
-      sample.mean = STEP1$EETA,
-      sample.nobs = NOBS,
-      NACOV       = NACOV,
-      slotOptions = lavoptions.PA,
+    fit_pa <- lavaan::lavaan(pts,
+      sample.cov  = step1$VETA,
+      sample.mean = step1$EETA,
+      sample.nobs = nobs_1,
+      NACOV       = nacov,
+      slotOptions = lavoptions_pa,
       verbose     = FALSE
     )
   } else {
-    FIT.PA <- lavaan::lavaan(
-      model = PTS,
-      slotData = FIT@Data,
-      slotSampleStats = FIT@SampleStats,
-      slotOptions = lavoptions.PA,
+    fit_pa <- lavaan::lavaan(
+      model = pts,
+      slotData = fit@Data,
+      slotSampleStats = fit@SampleStats,
+      slotOptions = lavoptions_pa,
       verbose = FALSE
     )
   }
@@ -205,30 +206,30 @@ lav_sam_step2 <- function(STEP1 = NULL, FIT = NULL,
   # - all 'free' parameters
   # - :=, <, > (if any)
   # - and NOT element with user=3 (add.exo.cov = TRUE, extra.int.idx)
-  pts.idx <- which((PTS$free > 0L | (PTS$op %in% c(":=", "<", ">"))) &
-    !PTS$user == 3L)
+  pts_idx <- which((pts$free > 0L | (pts$op %in% c(":=", "<", ">"))) &
+    !pts$user == 3L)
 
   # find corresponding rows in PT
-  PTS2 <- as.data.frame(PTS, stringsAsFactors = FALSE)
-  pt.idx <- lav_partable_map_id_p1_in_p2(PTS2[pts.idx, ], PT,
+  pts2 <- as.data.frame(pts, stringsAsFactors = FALSE)
+  pt_idx <- lav_partable_map_id_p1_in_p2(pts2[pts_idx, ], pt_1,
     exclude_nonpar = FALSE
   )
   # fill in
-  PT$est[pt.idx] <- FIT.PA@ParTable$est[pts.idx]
+  pt_1$est[pt_idx] <- fit_pa@ParTable$est[pts_idx]
 
   # create step2.free.idx
-  p2.idx <- seq_len(length(PT$lhs)) %in% pt.idx & PT$free > 0 # no def!
-  step2.free.idx <- STEP1$PT.free[p2.idx]
+  p2_idx <- seq_along(pt_1$lhs) %in% pt_idx & pt_1$free > 0 # no def!
+  step2_free_idx <- step1$PT.free[p2_idx]
 
   # add 'step' column in PT
-  PT$step <- rep(1L, length(PT$lhs))
-  PT$step[seq_len(length(PT$lhs)) %in% reg.idx] <- 2L
+  pt_1$step <- rep(1L, length(pt_1$lhs))
+  pt_1$step[seq_along(pt_1$lhs) %in% reg_idx] <- 2L
 
-  STEP2 <- list(
-    FIT.PA = FIT.PA, PT = PT, reg.idx = reg.idx,
-    step2.free.idx = step2.free.idx, extra.id = extra.id,
-    pt.idx = pt.idx, pts.idx = pts.idx
+  step2 <- list(
+    FIT.PA = fit_pa, PT = pt_1, reg.idx = reg_idx,
+    step2.free.idx = step2_free_idx, extra.id = extra_id,
+    pt.idx = pt_idx, pts.idx = pts_idx
   )
 
-  STEP2
+  step2
 }
