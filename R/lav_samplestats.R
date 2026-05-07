@@ -228,7 +228,7 @@ lav_samplestats_from_data <- function(lavdata = NULL,
           } else {
             lav_msg_stop(gettext("data contains no observations"))
           }
-        } else {
+        } else if (!allow.empty.cell) {
           if (ngroups > 1L) {
             lav_msg_stop(gettextf("data contains only a single observation
                                    in group %s", g))
@@ -641,7 +641,7 @@ lav_samplestats_from_data <- function(lavdata = NULL,
             #missing.h1.[[g]]$sigma <- out$Sigma
             #missing.h1.[[g]]$mu <- out$Mu
             #missing.h1.[[g]]$h1 <- out$fx
-          } else {
+          } else if (!allow.empty.cell) {
             out <- lav_mvnorm_missing_h1_estimate_moments(
               y = X[[g]],
               wt = WT[[g]],
