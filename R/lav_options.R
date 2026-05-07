@@ -803,14 +803,14 @@ lav_options_set <- function(opt = NULL) {
   # check information if estimator is uls/wls and friends
   if (any(lav_options_estimatorgroup(opt$estimator) ==
     c("ULS", "WLS", "DWLS"))) {
-    if (opt$information[1] != "expected") {
-      lav_msg_warn(gettextf(
-        "information will be set to %1$s for estimator = %2$s",
-        dQuote("expected"), dQuote(opt$estimator)
-      ))
-      opt$information <- rep.int("expected", 2L)
-    }
-    opt$h1.information <- rep.int("unstructured", 2L) # FIXME: allow option?
+    #if (opt$information[1] != "expected") {
+    #  lav_msg_warn(gettextf(
+    #    "information will be set to %1$s for estimator = %2$s",
+    #    dQuote("expected"), dQuote(opt$estimator)
+    #  ))
+    #  opt$information <- rep.int("expected", 2L)
+    #}
+    opt$h1.information <- rep.int("unstructured", 2L) # should always be fixed
   }
 
 

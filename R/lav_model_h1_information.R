@@ -727,6 +727,9 @@ lav_model_h1_information_firstorder <- function(lavobject = NULL,
           B1[[g]] <- crossprod(WT * SC)
         }
       }
+
+
+    # ML
     } else if (estimator == "ML" && lavdata@nlevels > 1L) {
       # if not-structured, we use lavh1, and that is always
       # 'unconditional' (for now)
