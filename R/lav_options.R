@@ -666,7 +666,7 @@ lav_options_set <- function(opt = NULL) {
     opt$meanstructure <- TRUE # Mplus style
     if (lav_options_estimatorgroup(opt$estimator) == "ML") {
       lav_msg_stop(gettext(
-        "estimator ML for ordered data is not supported yet. Use WLSMV instead."
+        "estimator ML for ordered data is not supported yet; use WLSMV instead."
       ))
     }
   }

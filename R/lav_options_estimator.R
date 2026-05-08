@@ -68,7 +68,11 @@ lav_options_est_ml <- function(opt) {
 
 lav_options_est_gls <- function(opt) {
   # GLS                                                            ####
-  # FIXME: catch categorical, clustered, ...
+  # FIXME: catch clustered, ...
+  if (opt$.categorical) {
+    lav_msg_stop(gettext(
+      "ordered categorical data is not supported when estimator is GLS."))
+  }
   # se
   if (opt$se == "default") {
     opt$se <- "standard"
@@ -179,6 +183,11 @@ lav_options_est_wls <- function(opt) {
 
 lav_options_est_dls <- function(opt) {
   # DLS                                                            ####
+  # no categorical
+  if (opt$.categorical) {
+    lav_msg_stop(gettext(
+      "ordered categorical data is not supported when estimator is DLS."))
+  }
   # se
   if (opt$se == "default") {
     opt$se <- "robust.sem"
@@ -297,10 +306,15 @@ lav_options_est_dwls <- function(opt) {
   if (!opt$test[1] == "none") {
     if (opt$estimator == "dwls") {
       if (opt$test[1] == "default" && !opt$.categorical) {
-        #opt$test <- "standard"
-        opt$test <- "browne.residual.nt"
-        opt$standard.test <- "browne.residual.nt"
-        opt$scaled.test <- "browne.residual.nt"
+        if (opt$se == "robust.sem") { # user-specified?
+          opt$test <- "browne.residual.adf" # new in 0.6-22
+          opt$standard.test <- "browne.residual.adf"
+          opt$scaled.test <- "browne.residual.adf"
+        } else {
+          opt$test <- "browne.residual.nt" # new in 0.6-21
+          opt$standard.test <- "browne.residual.nt"
+          opt$scaled.test <- "browne.residual.nt"
+        }
       } else if (opt$test[1] == "default" && opt$.categorical) {
         opt$test <- "standard" # bad choice!
       } else {
@@ -349,9 +363,15 @@ lav_options_est_uls <- function(opt) {
   if (!opt$test[1] == "none") {
     if (opt$estimator == "uls") {
       if (opt$test[1] == "default" && !opt$.categorical) {
-        opt$test <- "browne.residual.nt" # new in 0.6-21
-        opt$standard.test <- "browne.residual.nt"
-        opt$scaled.test <- "browne.residual.nt"
+        if (opt$se == "robust.sem") { # user-specified?
+          opt$test <- "browne.residual.adf" # new in 0.6-22
+          opt$standard.test <- "browne.residual.adf"
+          opt$scaled.test <- "browne.residual.adf"
+        } else {
+          opt$test <- "browne.residual.nt" # new in 0.6-21
+          opt$standard.test <- "browne.residual.nt"
+          opt$scaled.test <- "browne.residual.nt"
+        }
       } else if (opt$test[1] == "default" && opt$.categorical) {
         opt$test <- "standard"
       } else {

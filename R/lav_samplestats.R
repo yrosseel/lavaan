@@ -164,7 +164,7 @@ lav_samplestats_from_data <- function(lavdata = NULL,
   if (is.null(NACOV)) {
     NACOV <- vector("list", length = ngroups)
     NACOV.user <- FALSE
-    if (se %in% c("robust.sem", "robust.sem.nt") && missing == "listwise") {
+    if (se %in% c("robust.sem", "robust.sem.nt", "robust.cluster.sem") && missing == "listwise") {
       NACOV.compute <- TRUE
     }
     # note: test can be a vector...
