@@ -139,6 +139,11 @@ lav_standardize_lv <- function(lavobject = NULL,
       lavmodel = lavmodel,
       GLIST = GLIST
     )
+
+    LV.EETA <- lav_model_eeta(
+      lavmodel = lavmodel,
+      GLIST = GLIST
+    )
   }
 
   for (g in 1:lavmodel@nblocks) {
@@ -163,6 +168,7 @@ lav_standardize_lv <- function(lavobject = NULL,
     # change negative values to NA
     ETA2[ETA2 < 0] <- as.numeric(NA)
     ETA <- sqrt(ETA2)
+    EETA <- LV.EETA[[g]]
 
     # Interaction/quadratic term correction (FV)
     # (based on Kelava & Brandt, 2022; Brandt et al., 2015)
@@ -176,22 +182,54 @@ lav_standardize_lv <- function(lavobject = NULL,
       # Replace ETA for interaction terms with SD(A)*SD(B)
       for (int.name in lv.int.names) {
         components <- strsplit(int.name, ":", fixed = TRUE)[[1L]]
+        a <- components[1]
+        b <- components[2]
+
         idx.int <- match(int.name, lv.names)
-        idx.a <- match(components[1], lv.names)
-        idx.b <- match(components[2], lv.names)
+        idx.a   <- match(a, lv.names)
+        idx.b   <- match(b, lv.names)
+
+        # Need a, b and interaction term before moving on
         if (is.na(idx.a) || is.na(idx.b) || is.na(idx.int)) next
+
+        exp.a <- EETA[idx.a]
+        exp.b <- EETA[idx.b]
+
+        # Do we need to shift simple main effects?
+        if (exp.a != 0 || exp.b != 0) {
+
+          # Find dependent variables
+          lv.int.dep <- unique(partable$lhs[
+            partable$op == "~" & partable$rhs == int.name
+          ])
+
+          for (dep in lv.int.dep) {
+            idx.beta.a <- which(
+              partable$lhs == dep & partable$op == "~" & partable$rhs == a
+            )
+
+            idx.beta.b <- which(
+              partable$lhs == dep & partable$op == "~" & partable$rhs == b
+            )
+
+            beta.ab <- partable$est[
+              partable$lhs == dep & partable$op == "~" &
+              partable$rhs == int.name
+            ]
+
+            out[idx.beta.a] <- out[idx.beta.a] + beta.ab * exp.b
+            out[idx.beta.b] <- out[idx.beta.b] + beta.ab * exp.a
+          }
+        }
+
         ETA[idx.int] <- ETA[idx.a] * ETA[idx.b]
         ETA2[idx.int] <- ETA[idx.int]^2
       }
-
-      # Note: centering adjustments for non-zero latent means
-      # are not yet implemented. LSAM has all the information needed;
-      # Brandt et al., 2015, Eqs. 11-12 not needed.
-      lav_msg_warn(gettext("centering adjustments for non-zero
-        latent means are not yet implemented for interaction terms."
-      ))
     }
-    # End interaction/quadratic term correction for now (23/02/26;FV)
+
+    # End interaction/quadratic term correction for now (08/05/26;KS)
+    # The next step is to correctly scale the variances of the interaction
+    # terms
 
     # 1a. "=~" regular indicators
     idx <- which(partable$op == "=~" & !(partable$rhs %in% lv.names) &
