@@ -266,7 +266,6 @@ lav_standardize_lv <- function(lavobject = NULL,
 
         # Replace ETA for interaction terms with SD(A)*SD(B)
         ETA[idx.int] <- ETA[idx.a] * ETA[idx.b]
-        ETA2[idx.int] <- ETA[idx.int]^2 # idk what the point of this is (08/05/25;KS)
       }
     }
 
