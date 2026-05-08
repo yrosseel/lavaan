@@ -205,16 +205,18 @@ lav_standardize_lv <- function(lavobject = NULL,
 
           for (dep in lv.int.dep) {
             idx.beta.a <- which(
-              partable$lhs == dep & partable$op == "~" & partable$rhs == a
+              partable$lhs == dep & partable$op == "~" &
+              partable$rhs == a & partable$group == g
             )
 
             idx.beta.b <- which(
-              partable$lhs == dep & partable$op == "~" & partable$rhs == b
+              partable$lhs == dep & partable$op == "~" &
+              partable$rhs == b & partable$group == g
             )
 
             beta.ab <- partable$est[
               partable$lhs == dep & partable$op == "~" &
-              partable$rhs == int.name
+              partable$rhs == int.name & partable$group == g
             ]
 
             out[idx.beta.a] <- out[idx.beta.a] + beta.ab * exp.b
