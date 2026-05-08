@@ -46,7 +46,7 @@ lav_samplestats_step1 <- function(Y,
     th.idx <- th.start.idx[i]:th.end.idx[i]
     sl.idx <- seq(i, by = nvar, length.out = nexo)
     if (ov.types[i] == "numeric") {
-      fit <- lav_uvreg_fit(y = Y[, i], X = eXo, wt = wt)
+      fit <- lav_uvreg_fit(y = Y[, i], x = eXo, wt = wt)
       if (any(is.na(fit$theta))) {
         lav_msg_stop(gettextf(
           "linear regression failed for %1$s;
@@ -55,18 +55,18 @@ lav_samplestats_step1 <- function(Y,
       FIT[[i]] <- fit
       # compute mean and variance
       TH[[i]] <- TH.NOX[[i]] <- fit$theta[1L]
-      VAR[i] <- fit$theta[fit$var.idx]
+      VAR[i] <- fit$theta[fit$var_idx]
       TH.NAMES[[i]] <- ov.names[i]
       TH.IDX[[i]] <- 0L
       if (scores.flag) {
-        scores <- lav_uvreg_scores(y = Y[, i], X = eXo, wt = wt)
+        scores <- lav_uvreg_scores(y = Y[, i], x = eXo, wt = wt)
         SC.TH[, th.idx] <- scores[, 1L]
-        SC.VAR[, i] <- scores[, fit$var.idx]
+        SC.VAR[, i] <- scores[, fit$var_idx]
       }
       if (nexo > 0L) {
-        SLOPES[i, ] <- fit$theta[-c(1L, fit$var.idx)]
+        SLOPES[i, ] <- fit$theta[-c(1L, fit$var_idx)]
         if (scores.flag) {
-          SC.SL[, sl.idx] <- scores[, -c(1L, fit$var.idx), drop = FALSE]
+          SC.SL[, sl.idx] <- scores[, -c(1L, fit$var_idx), drop = FALSE]
         }
         TH.NOX[[i]] <- mean(Y[, i], na.rm = TRUE)
       }
@@ -86,18 +86,18 @@ lav_samplestats_step1 <- function(Y,
           frequencies are [%3$s]", ov.names[i], group,
           lav_msg_view(y.freq, "none")))
       }
-      fit <- lav_uvord_fit(y = Y[, i], X = eXo, wt = wt)
+      fit <- lav_uvord_fit(y = Y[, i], x = eXo, wt = wt)
       if (any(is.na(fit$theta))) {
         lav_msg_stop(gettextf(
           "probit regression failed for %1$s; X may not be of full rank
           in group %2$s", ov.names[i], group))
       }
       FIT[[i]] <- fit
-      TH[[i]] <- fit$theta[fit$th.idx]
+      TH[[i]] <- fit$theta[fit$th_idx]
       fit.nox <- lav_uvord_th(y = Y[, i], wt = wt)
       TH.NOX[[i]] <- fit.nox
       if (scores.flag) {
-        scores <- lav_uvord_scores(y = Y[, i], X = eXo, wt = wt)
+        scores <- lav_uvord_scores(y = Y[, i], x = eXo, wt = wt)
       }
 
       if (allow.empty.cell) {
@@ -124,7 +124,7 @@ lav_samplestats_step1 <- function(Y,
             misidx[1:nlow] <- TRUE
           }
           TH[[i]] <- TH.NOX[[i]] <- rep(0, ov.levels[i] - 1)
-          TH[[i]][exidx] <- fit$theta[fit$th.idx]
+          TH[[i]][exidx] <- fit$theta[fit$th_idx]
           TH.NOX[[i]][exidx] <- fit.nox[exidx]
           for (k in which(misidx)) {
             if (k == 1) {
@@ -138,19 +138,19 @@ lav_samplestats_step1 <- function(Y,
               TH.NOX[[i]][k] <- TH.NOX[[i]][(k - 1)] + .01
             }
           }
-          if (scores.flag) SC.TH[, th.idx[!misidx]] <- scores[, fit$th.idx, drop = FALSE]
+          if (scores.flag) SC.TH[, th.idx[!misidx]] <- scores[, fit$th_idx, drop = FALSE]
         } else if (length(y.freq) != ov.levels[i]) {
           nz <- ov.levels[i] - length(y.freq)
           TH[[i]] <- c(TH[[i]], TH[[i]][length(y.freq)] + (1:nz) * .01)
-          if (scores.flag) SC.TH[, th.idx[1:length(y.freq)]] <- scores[, fit$th.idx, drop = FALSE]
+          if (scores.flag) SC.TH[, th.idx[1:length(y.freq)]] <- scores[, fit$th_idx, drop = FALSE]
         }
-        fit$th.idx <- 1:nTH[i]
+        fit$th_idx <- 1:nTH[i]
       } else {
-        if (scores.flag) SC.TH[, th.idx] <- scores[, fit$th.idx, drop = FALSE]
+        if (scores.flag) SC.TH[, th.idx] <- scores[, fit$th_idx, drop = FALSE]
       }
-      SLOPES[i, ] <- fit$theta[fit$slope.idx]
+      SLOPES[i, ] <- fit$theta[fit$slope_idx]
       if (scores.flag) {
-        SC.SL[, sl.idx] <- scores[, fit$slope.idx, drop = FALSE]
+        SC.SL[, sl.idx] <- scores[, fit$slope_idx, drop = FALSE]
       }
       VAR[i] <- 1.0
       TH.NAMES[[i]] <- paste(ov.names[i], "|t", 1:length(TH[[i]]),

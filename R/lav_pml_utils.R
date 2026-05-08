@@ -260,11 +260,11 @@ lav_pml_dbilogl_dpar_x <- function(y1, y2, exo, rho,
 
 
   list(
-    dx.th.y1 = dx_th_tilde_y1, # note that dx.th.tilde=dx.th
-    dx.th.y2 = dx_th_tilde_y2,
-    dx.sl.y1 = dx_sl_y1,
-    dx.sl.y2 = dx_sl_y2,
-    dx.rho = dx_rho
+    dx_th_y1 = dx_th_tilde_y1, # note that dx.th.tilde=dx.th
+    dx_th_y2 = dx_th_tilde_y2,
+    dx_sl_y1 = dx_sl_y1,
+    dx_sl_y2 = dx_sl_y2,
+    dx_rho = dx_rho
   )
 }
 

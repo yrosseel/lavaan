@@ -306,37 +306,37 @@ lav_samplestats_from_data <- function(lavdata = NULL,
         on.exit(lav_verbose(current.verbose), TRUE)
       if (conditional.x) {
         CAT <- muthen1984(
-          Data = X[[g]],
+          data_1 = X[[g]],
           wt = WT[[g]],
-          ov.names = ov.names[[g]],
-          ov.types = ov.types,
-          ov.levels = ov.levels,
-          ov.names.x = ov.names.x[[g]],
-          eXo = eXo[[g]],
+          ov_names = ov.names[[g]],
+          ov_types = ov.types,
+          ov_levels = ov.levels,
+          ov_names_x = ov.names.x[[g]],
+          exo = eXo[[g]],
           group = g, # for error messages only
-          WLS.W = WLS.W,
-          zero.add = zero.add,
-          zero.keep.margins = zero.keep.margins,
-          zero.cell.warn = FALSE,
-          zero.cell.tables = TRUE,
-          allow.empty.cell = allow.empty.cell
+          wls_w = WLS.W,
+          zero_add = zero.add,
+          zero_keep_margins = zero.keep.margins,
+          zero_cell_warn = FALSE,
+          zero_cell_tables = TRUE,
+          allow_empty_cell = allow.empty.cell
         )
       } else {
         CAT <- muthen1984(
-          Data = X[[g]],
+          data_1 = X[[g]],
           wt = WT[[g]],
-          ov.names = ov.names[[g]],
-          ov.types = ov.types,
-          ov.levels = ov.levels,
-          ov.names.x = NULL,
-          eXo = NULL,
+          ov_names = ov.names[[g]],
+          ov_types = ov.types,
+          ov_levels = ov.levels,
+          ov_names_x = NULL,
+          exo = NULL,
           group = g, # for error messages only
-          WLS.W = WLS.W,
-          zero.add = zero.add,
-          zero.keep.margins = zero.keep.margins,
-          zero.cell.warn = FALSE,
-          zero.cell.tables = TRUE,
-          allow.empty.cell = allow.empty.cell
+          wls_w = WLS.W,
+          zero_add = zero.add,
+          zero_keep_margins = zero.keep.margins,
+          zero_cell_warn = FALSE,
+          zero_cell_tables = TRUE,
+          allow_empty_cell = allow.empty.cell
         )
       }
       lav_verbose(current.verbose)

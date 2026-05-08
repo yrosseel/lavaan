@@ -225,42 +225,42 @@ lav_pml_dploglik_dimplied <- function(Sigma.hat = NULL, # model-based var/cov/co
         }
 
         SC.COR.UNI <- lav_bvmix_cor_scores(
-          Y1 = X[, i], Y2 = X[, j],
-          eXo = NULL, wt = wt,
-          evar.y1 = Sigma.hat[i, i],
-          beta.y1 = Mu.hat[i],
-          th.y2 = TH[th.idx == j],
-          sl.y2 = NULL,
+          y1 = X[, i], y2 = X[, j],
+          exo = NULL, wt = wt,
+          evar_y1 = Sigma.hat[i, i],
+          beta_y1 = Mu.hat[i],
+          th_y2 = TH[th.idx == j],
+          sl_y2 = NULL,
           rho = Cor.hat[i, j],
-          sigma.correction = TRUE
+          sigma_correction = TRUE
         )
 
         if (scores) {
           # MU
           SCORES[, th.idx_i] <- (SCORES[, th.idx_i] +
-            -1 * SC.COR.UNI$dx.mu.y1)
+            -1 * SC.COR.UNI$dx_mu_y1)
           # TH
           SCORES[, th.idx_j] <- (SCORES[, th.idx_j] +
-            SC.COR.UNI$dx.th.y2)
+            SC.COR.UNI$dx_th_y2)
           # VAR
           SCORES[, var.idx_i] <- (SCORES[, var.idx_i] +
-            SC.COR.UNI$dx.var.y1)
+            SC.COR.UNI$dx_var_y1)
           # COR
           SCORES[, cor.idx] <- (SCORES[, cor.idx] +
-            SC.COR.UNI$dx.rho)
+            SC.COR.UNI$dx_rho)
         } else {
           # MU
           GRAD[pstar.idx, th.idx_i] <-
-            -1 * sum(SC.COR.UNI$dx.mu.y1, na.rm = TRUE)
+            -1 * sum(SC.COR.UNI$dx_mu_y1, na.rm = TRUE)
           # TH
           GRAD[pstar.idx, th.idx_j] <-
-            colSums(SC.COR.UNI$dx.th.y2, na.rm = TRUE)
+            colSums(SC.COR.UNI$dx_th_y2, na.rm = TRUE)
           # VAR
           GRAD[pstar.idx, var.idx_i] <-
-            sum(SC.COR.UNI$dx.var.y1, na.rm = TRUE)
+            sum(SC.COR.UNI$dx_var_y1, na.rm = TRUE)
           # COR
           GRAD[pstar.idx, cor.idx] <-
-            sum(SC.COR.UNI$dx.rho, na.rm = TRUE)
+            sum(SC.COR.UNI$dx_rho, na.rm = TRUE)
         } # grad only
       } else if (ov.types[j] == "numeric" && ov.types[i] == "ordered") {
         # polyserial correlation
@@ -271,57 +271,57 @@ lav_pml_dploglik_dimplied <- function(Sigma.hat = NULL, # model-based var/cov/co
         }
 
         SC.COR.UNI <- lav_bvmix_cor_scores(
-          Y1 = X[, j], Y2 = X[, i],
-          eXo = NULL, wt = wt,
-          evar.y1 = Sigma.hat[j, j],
-          beta.y1 = Mu.hat[j],
-          th.y2 = TH[th.idx == i],
+          y1 = X[, j], y2 = X[, i],
+          exo = NULL, wt = wt,
+          evar_y1 = Sigma.hat[j, j],
+          beta_y1 = Mu.hat[j],
+          th_y2 = TH[th.idx == i],
           rho = Cor.hat[i, j],
-          sigma.correction = TRUE
+          sigma_correction = TRUE
         )
 
         if (scores) {
           # MU
           SCORES[, th.idx_j] <- (SCORES[, th.idx_j] +
-            -1 * SC.COR.UNI$dx.mu.y1)
+            -1 * SC.COR.UNI$dx_mu_y1)
           # TH
           SCORES[, th.idx_i] <- (SCORES[, th.idx_i] +
-            SC.COR.UNI$dx.th.y2)
+            SC.COR.UNI$dx_th_y2)
           # VAR
           SCORES[, var.idx_j] <- (SCORES[, var.idx_j] +
-            SC.COR.UNI$dx.var.y1)
+            SC.COR.UNI$dx_var_y1)
           # COR
           SCORES[, cor.idx] <- (SCORES[, cor.idx] +
-            SC.COR.UNI$dx.rho)
+            SC.COR.UNI$dx_rho)
         } else {
           # MU
           GRAD[pstar.idx, th.idx_j] <-
-            -1 * sum(SC.COR.UNI$dx.mu.y1, na.rm = TRUE)
+            -1 * sum(SC.COR.UNI$dx_mu_y1, na.rm = TRUE)
           # TH
           GRAD[pstar.idx, th.idx_i] <-
-            colSums(SC.COR.UNI$dx.th.y2, na.rm = TRUE)
+            colSums(SC.COR.UNI$dx_th_y2, na.rm = TRUE)
           # VAR
           GRAD[pstar.idx, var.idx_j] <-
-            sum(SC.COR.UNI$dx.var.y1, na.rm = TRUE)
+            sum(SC.COR.UNI$dx_var_y1, na.rm = TRUE)
           # COR
           GRAD[pstar.idx, cor.idx] <-
-            sum(SC.COR.UNI$dx.rho, na.rm = TRUE)
+            sum(SC.COR.UNI$dx_rho, na.rm = TRUE)
         } # grad only
       } else if (ov.types[i] == "ordered" && ov.types[j] == "ordered") {
         # polychoric correlation
         if (nexo == 0L) {
           SC.COR.UNI <-
             lav_bvord_cor_scores(
-              Y1 = X[, i], Y2 = X[, j],
-              eXo = NULL, wt = wt,
+              y1 = X[, i], y2 = X[, j],
+              exo = NULL, wt = wt,
               rho = Sigma.hat[i, j],
-              fit.y1 = NULL, # fixme
-              fit.y2 = NULL, # fixme
-              th.y1 = TH[th.idx == i],
-              th.y2 = TH[th.idx == j],
-              sl.y1 = NULL,
-              sl.y2 = NULL,
-              na.zero = TRUE
+              fit_y1 = NULL, # fixme
+              fit_y2 = NULL, # fixme
+              th_y1 = TH[th.idx == i],
+              th_y2 = TH[th.idx == j],
+              sl_y1 = NULL,
+              sl_y2 = NULL,
+              na_zero = TRUE
             )
         } else {
           SC.COR.UNI <-
@@ -340,56 +340,56 @@ lav_pml_dploglik_dimplied <- function(Sigma.hat = NULL, # model-based var/cov/co
 
         if (scores) {
           # TH
-          SCORES[, th.idx_i] <- SCORES[, th.idx_i] + SC.COR.UNI$dx.th.y1
-          SCORES[, th.idx_j] <- SCORES[, th.idx_j] + SC.COR.UNI$dx.th.y2
+          SCORES[, th.idx_i] <- SCORES[, th.idx_i] + SC.COR.UNI$dx_th_y1
+          SCORES[, th.idx_j] <- SCORES[, th.idx_j] + SC.COR.UNI$dx_th_y2
 
           # SL
           if (nexo > 0L) {
-            SCORES[, sl.idx_i] <- SCORES[, sl.idx_i] + SC.COR.UNI$dx.sl.y1
-            SCORES[, sl.idx_j] <- SCORES[, sl.idx_j] + SC.COR.UNI$dx.sl.y2
+            SCORES[, sl.idx_i] <- SCORES[, sl.idx_i] + SC.COR.UNI$dx_sl_y1
+            SCORES[, sl.idx_j] <- SCORES[, sl.idx_j] + SC.COR.UNI$dx_sl_y2
           }
           # NO VAR
           # RHO
-          SCORES[, cor.idx] <- SCORES[, cor.idx] + SC.COR.UNI$dx.rho
+          SCORES[, cor.idx] <- SCORES[, cor.idx] + SC.COR.UNI$dx_rho
         } else {
           # TH
           if (length(th.idx_i) > 1L) {
             GRAD[pstar.idx, th.idx_i] <-
-              colSums(SC.COR.UNI$dx.th.y1, na.rm = TRUE)
+              colSums(SC.COR.UNI$dx_th_y1, na.rm = TRUE)
           } else {
             GRAD[pstar.idx, th.idx_i] <-
-              sum(SC.COR.UNI$dx.th.y1, na.rm = TRUE)
+              sum(SC.COR.UNI$dx_th_y1, na.rm = TRUE)
           }
           if (length(th.idx_j) > 1L) {
             GRAD[pstar.idx, th.idx_j] <-
-              colSums(SC.COR.UNI$dx.th.y2, na.rm = TRUE)
+              colSums(SC.COR.UNI$dx_th_y2, na.rm = TRUE)
           } else {
             GRAD[pstar.idx, th.idx_j] <-
-              sum(SC.COR.UNI$dx.th.y2, na.rm = TRUE)
+              sum(SC.COR.UNI$dx_th_y2, na.rm = TRUE)
           }
 
           # SL
           if (nexo > 0L) {
             if (length(sl.idx_i) > 1L) {
               GRAD[pstar.idx, sl.idx_i] <-
-                colSums(SC.COR.UNI$dx.sl.y1, na.rm = TRUE)
+                colSums(SC.COR.UNI$dx_sl_y1, na.rm = TRUE)
             } else {
               GRAD[pstar.idx, sl.idx_i] <-
-                sum(SC.COR.UNI$dx.sl.y1, na.rm = TRUE)
+                sum(SC.COR.UNI$dx_sl_y1, na.rm = TRUE)
             }
             if (length(sl.idx_j) > 1L) {
               GRAD[pstar.idx, sl.idx_j] <-
-                colSums(SC.COR.UNI$dx.sl.y2, na.rm = TRUE)
+                colSums(SC.COR.UNI$dx_sl_y2, na.rm = TRUE)
             } else {
               GRAD[pstar.idx, sl.idx_j] <-
-                sum(SC.COR.UNI$dx.sl.y2, na.rm = TRUE)
+                sum(SC.COR.UNI$dx_sl_y2, na.rm = TRUE)
             }
           }
           # NO VAR
 
           # RHO
           GRAD[pstar.idx, cor.idx] <-
-            sum(SC.COR.UNI$dx.rho, na.rm = TRUE)
+            sum(SC.COR.UNI$dx_rho, na.rm = TRUE)
         }
 
         # GRAD2 <- numDeriv::grad(func = pc_logl_x,
