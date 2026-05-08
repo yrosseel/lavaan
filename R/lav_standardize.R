@@ -142,7 +142,8 @@ lav_standardize_lv <- function(lavobject = NULL,
 
     LV.EETA <- lav_model_eeta(
       lavmodel = lavmodel,
-      GLIST = GLIST
+      GLIST = GLIST,
+      lavsamplestats = lavobject@SampleStats
     )
   }
 
