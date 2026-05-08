@@ -18,51 +18,51 @@ lav_samplestats_step2 <- function(UNI = NULL,
   # one-by-one (for now)
   for (j in seq_len(nvar - 1L)) {
     for (i in (j + 1L):nvar) {
-      if (is.null(UNI[[i]]$th.idx) &&
-        is.null(UNI[[j]]$th.idx)) {
+      if (is.null(UNI[[i]]$th_idx) &&
+        is.null(UNI[[j]]$th_idx)) {
         rho <- lav_bvreg_cor_twostep_fit(
-          fit.y1 = UNI[[i]], # linear
-          fit.y2 = UNI[[j]], # linear
+          fit_y1 = UNI[[i]], # linear
+          fit_y2 = UNI[[j]], # linear
           wt = wt,
-          Y1.name = ov.names[i],
-          Y2.name = ov.names[j]
+          y1_name = ov.names[i],
+          y2_name = ov.names[j]
         )
         COR[i, j] <- COR[j, i] <- rho
-      } else if (is.null(UNI[[i]]$th.idx) &&
-        !is.null(UNI[[j]]$th.idx)) {
+      } else if (is.null(UNI[[i]]$th_idx) &&
+        !is.null(UNI[[j]]$th_idx)) {
         # polyserial
         rho <- lav_bvmix_cor_twostep_fit(
-          fit.y1 = UNI[[i]], # linear
-          fit.y2 = UNI[[j]], # ordinal
+          fit_y1 = UNI[[i]], # linear
+          fit_y2 = UNI[[j]], # ordinal
           wt = wt,
-          Y1.name = ov.names[i],
-          Y2.name = ov.names[j]
+          y1_name = ov.names[i],
+          y2_name = ov.names[j]
         )
         COR[i, j] <- COR[j, i] <- rho
-      } else if (is.null(UNI[[j]]$th.idx) &&
-        !is.null(UNI[[i]]$th.idx)) {
+      } else if (is.null(UNI[[j]]$th_idx) &&
+        !is.null(UNI[[i]]$th_idx)) {
         # polyserial
         rho <- lav_bvmix_cor_twostep_fit(
-          fit.y1 = UNI[[j]], # linear
-          fit.y2 = UNI[[i]], # ordinal
+          fit_y1 = UNI[[j]], # linear
+          fit_y2 = UNI[[i]], # ordinal
           wt = wt,
-          Y1.name = ov.names[j],
-          Y2.name = ov.names[i]
+          y1_name = ov.names[j],
+          y2_name = ov.names[i]
         )
         COR[i, j] <- COR[j, i] <- rho
-      } else if (!is.null(UNI[[i]]$th.idx) &&
-        !is.null(UNI[[j]]$th.idx)) {
+      } else if (!is.null(UNI[[i]]$th_idx) &&
+        !is.null(UNI[[j]]$th_idx)) {
         # polychoric correlation
         rho <- lav_bvord_cor_twostep_fit(
-          fit.y1 = UNI[[j]], # ordinal
-          fit.y2 = UNI[[i]], # ordinal
+          fit_y1 = UNI[[j]], # ordinal
+          fit_y2 = UNI[[i]], # ordinal
           wt = wt,
-          zero.add = zero.add,
-          zero.keep.margins = zero.keep.margins,
-          zero.cell.warn = zero.cell.warn,
-          zero.cell.flag = zero.cell.tables,
-          Y1.name = ov.names[i],
-          Y2.name = ov.names[j]
+          zero_add = zero.add,
+          zero_keep_margins = zero.keep.margins,
+          zero_cell_warn = zero.cell.warn,
+          zero_cell_flag = zero.cell.tables,
+          y1_name = ov.names[i],
+          y2_name = ov.names[j]
         )
         if (zero.cell.tables) {
           if (attr(rho, "zero.cell.flag")) {

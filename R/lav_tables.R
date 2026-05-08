@@ -982,8 +982,8 @@ lav_tables_pairwise_model_pi <- function(lavobject = NULL) {
           if (ov.types[i] == "ordered" && ov.types[j] == "ordered") {
             PI.table <- lav_bvord_noexo_pi(
               rho = Sigmahat[i, j],
-              th.y1 = TH[[g]][th.idx[[g]] == i],
-              th.y2 = TH[[g]][th.idx[[g]] == j]
+              th_y1 = TH[[g]][th.idx[[g]] == i],
+              th_y2 = TH[[g]][th.idx[[g]] == j]
             )
             PI.group <- c(PI.group, lav_matrix_vec(PI.table))
           }
@@ -1064,8 +1064,8 @@ lav_tables_pairwise_sample_pi_cor <- function(COR = NULL, TH = NULL,
         if (ov.types[i] == "ordered" && ov.types[j] == "ordered") {
           PI.table <- lav_bvord_noexo_pi(
             rho = Sigmahat[i, j],
-            th.y1 = TH[[g]][th.idx == i],
-            th.y2 = TH[[g]][th.idx == j]
+            th_y1 = TH[[g]][th.idx == i],
+            th_y2 = TH[[g]][th.idx == j]
           )
           PI.group <- c(PI.group, lav_matrix_vec(PI.table))
         }

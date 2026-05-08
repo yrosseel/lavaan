@@ -485,24 +485,24 @@ lav_model_objective_pml <- function(Sigma.hat = NULL, # model-based var/cov/cor
           ov.types[j] == "ordered") {
           # polyserial correlation
           logLIK <- lav_bvmix_lik(
-            Y1 = X[, i], Y2 = X[, j],
+            y1 = X[, i], y2 = X[, j],
             wt = wt,
-            evar.y1 = Sigma.hat[i, i],
-            beta.y1 = Mu.hat[i],
-            th.y2 = TH[th.idx == j],
-            rho = Cor.hat[i, j], .log = TRUE
+            evar_y1 = Sigma.hat[i, i],
+            beta_y1 = Mu.hat[i],
+            th_y2 = TH[th.idx == j],
+            rho = Cor.hat[i, j], take_log = TRUE
           )
           logLikPair[pstar.idx] <- sum(logLIK, na.rm = TRUE)
         } else if (ov.types[j] == "numeric" &&
           ov.types[i] == "ordered") {
           # polyserial correlation
           logLIK <- lav_bvmix_lik(
-            Y1 = X[, j], Y2 = X[, i],
+            y1 = X[, j], y2 = X[, i],
             wt = wt,
-            evar.y1 = Sigma.hat[j, j],
-            beta.y1 = Mu.hat[j],
-            th.y2 = TH[th.idx == i],
-            rho = Cor.hat[i, j], .log = TRUE
+            evar_y1 = Sigma.hat[j, j],
+            beta_y1 = Mu.hat[j],
+            th_y2 = TH[th.idx == i],
+            rho = Cor.hat[i, j], take_log = TRUE
           )
           logLikPair[pstar.idx] <- sum(logLIK, na.rm = TRUE)
         } else if (ov.types[i] == "ordered" &&
@@ -510,8 +510,8 @@ lav_model_objective_pml <- function(Sigma.hat = NULL, # model-based var/cov/cor
           # polychoric correlation
           pairwisePI <- lav_bvord_noexo_pi(
             rho = Cor.hat[i, j],
-            th.y1 = TH[th.idx == i],
-            th.y2 = TH[th.idx == j]
+            th_y1 = TH[th.idx == i],
+            th_y2 = TH[th.idx == j]
           )
           # avoid zeroes
           pairwisePI[pairwisePI < .Machine$double.eps] <-
@@ -556,12 +556,12 @@ lav_model_objective_pml <- function(Sigma.hat = NULL, # model-based var/cov/cor
           # ordinary pearson correlation
           LIK[, pstar.idx] <-
             lav_bvreg_lik(
-              Y1 = X[, i], Y2 = X[, j], eXo = eXo,
+              y1 = X[, i], y2 = X[, j], exo = eXo,
               wt = wt,
-              evar.y1 = Sigma.hat[i, i],
-              beta.y1 = c(Mu.hat[i], PI[i, ]),
-              evar.y2 = Sigma.hat[j, j],
-              beta.y2 = c(Mu.hat[j], PI[j, ]),
+              evar_y1 = Sigma.hat[i, i],
+              beta_y1 = c(Mu.hat[i], PI[i, ]),
+              evar_y2 = Sigma.hat[j, j],
+              beta_y2 = c(Mu.hat[j], PI[j, ]),
               rho = Cor.hat[i, j]
             )
         } else if (ov.types[i] == "numeric" &&
@@ -570,12 +570,12 @@ lav_model_objective_pml <- function(Sigma.hat = NULL, # model-based var/cov/cor
           ### FIXME: th.y2 should go into ps_lik!!!
           LIK[, pstar.idx] <-
             lav_bvmix_lik(
-              Y1 = X[, i], Y2 = X[, j], eXo = eXo,
+              y1 = X[, i], y2 = X[, j], exo = eXo,
               wt = wt,
-              evar.y1 = Sigma.hat[i, i],
-              beta.y1 = c(Mu.hat[i], PI[i, ]),
-              th.y2 = TH[th.idx == j],
-              sl.y2 = PI[j, ],
+              evar_y1 = Sigma.hat[i, i],
+              beta_y1 = c(Mu.hat[i], PI[i, ]),
+              th_y2 = TH[th.idx == j],
+              sl_y2 = PI[j, ],
               rho = Cor.hat[i, j]
             )
         } else if (ov.types[j] == "numeric" &&
@@ -584,12 +584,12 @@ lav_model_objective_pml <- function(Sigma.hat = NULL, # model-based var/cov/cor
           ### FIXME: th.y1 should go into ps_lik!!!
           LIK[, pstar.idx] <-
             lav_bvmix_lik(
-              Y1 = X[, j], Y2 = X[, i], eXo = eXo,
+              y1 = X[, j], y2 = X[, i], exo = eXo,
               wt = wt,
-              evar.y1 = Sigma.hat[j, j],
-              beta.y1 = c(Mu.hat[j], PI[j, ]),
-              th.y2 = TH[th.idx == i],
-              sl.y2 = PI[i, ],
+              evar_y1 = Sigma.hat[j, j],
+              beta_y1 = c(Mu.hat[j], PI[j, ]),
+              th_y2 = TH[th.idx == i],
+              sl_y2 = PI[i, ],
               rho = Cor.hat[i, j]
             )
         } else if (ov.types[i] == "ordered" &&
