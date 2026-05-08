@@ -180,7 +180,7 @@ lav_standardize_lv <- function(lavobject = NULL,
     )
 
     if (length(lv.int.names) > 0L) {
-      # Replace ETA for interaction terms with SD(A)*SD(B)
+
       for (int.name in lv.int.names) {
         components <- strsplit(int.name, ":", fixed = TRUE)[[1L]]
         a <- components[1]
@@ -198,6 +198,45 @@ lav_standardize_lv <- function(lavobject = NULL,
 
         # Do we need to shift simple main effects?
         if (exp.a != 0 || exp.b != 0) {
+          # KS, 08/05/26
+          #
+          # This covers the general case of y ~ x + z + w + x:z + x:x
+          # This should naturally extend to other conditions with more
+          # interaction terms. e.g., y ~ x + z + w + x:z + x:x + w:z
+          #
+          # For y = b0 + b1*x + b2*z + b3*xz + b4x^2
+          # b1 and b2 are the slope at the x=0 and z=0. When mean-centering
+          # we have to re-define b1 and b2 to the expected slopes
+          # (i.e., the partial derivatives) at x=mean(x), z=mean(z).
+          #
+          # Computing the partial derivatives we get
+          #
+          #   dy/dx = b1 + b3*z + 2*b4*x
+          #   dy/dz = b2 + b3*x
+          #
+          # With x=mean(x) and z=mean(x), we get
+          #
+          #   dy/dx = b1 + b3 * mean(z) + 2 * b4 * mean(x)
+          #   dy/dz = b2 + b3 * mean(x)
+          #
+          # Since we iteratively update out[<idx>] for b1 and b2, we carry
+          # out all the necessary conditions, by the end of the loop.
+          #
+          # Iteration: 1, interaction term: x:z
+          #   b1 <- b1 + b3 * mean(z)
+          #   b2 <- b2 + b3 * mean(x)
+          #
+          # Iteration: 2, quadratic term: x:x
+          #   b1 <- b1 + b4 * mean(x)
+          #   b1 <- b1 + b4 * mean(x)
+          #
+          #   The above is thus equivalent to b1 + 2 * b4 * mean(x)
+          #
+          # Putting it all together we get
+          #
+          #   b1 <- b1 + b3 * mean(z) + 2 * b4 * mean(x)
+          #   b2 <- b2 + b3 * mean(x)
+          #
 
           # Find dependent variables
           lv.int.dep <- unique(partable$lhs[
@@ -225,14 +264,14 @@ lav_standardize_lv <- function(lavobject = NULL,
           }
         }
 
+        # Replace ETA for interaction terms with SD(A)*SD(B)
         ETA[idx.int] <- ETA[idx.a] * ETA[idx.b]
-        ETA2[idx.int] <- ETA[idx.int]^2
+        ETA2[idx.int] <- ETA[idx.int]^2 # idk what the point of this is (08/05/25;KS)
       }
     }
 
     # End interaction/quadratic term correction for now (08/05/26;KS)
-    # The next step is to correctly scale the variances of the interaction
-    # terms
+    # The next step is to correctly scale the variances of the interaction terms
 
     # 1a. "=~" regular indicators
     idx <- which(partable$op == "=~" & !(partable$rhs %in% lv.names) &
