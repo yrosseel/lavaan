@@ -1,3 +1,44 @@
+lav_model_group_mm_indices <- function(nmat) {
+  nmat.cumsum <- cumsum(c(0L, nmat))
+  lapply(seq_along(nmat), function(g) {
+    seq_len(nmat[g]) + nmat.cumsum[g]
+  })
+}
+
+lav_model_sigma_extra <- function(Sigma.hat.g = NULL,
+                                  check.sigma.pd = "chol") {
+  # check if matrix is positive definite
+  if (check.sigma.pd == "chol") {
+    # fast path: try Cholesky directly
+    cS <- tryCatch(chol(Sigma.hat.g), error = function(e) NULL)
+    is_pd <- !is.null(cS)
+  } else {
+    # slow path: eigenvalue-based PD check
+    ev <- eigen(Sigma.hat.g, symmetric = TRUE, only.values = TRUE)$values
+    is_pd <- !(any(ev < sqrt(.Machine$double.eps)) || sum(ev) == 0)
+  }
+
+  if (!is_pd) {
+    Sigma.hat.inv <- MASS::ginv(Sigma.hat.g)
+    Sigma.hat.log.det <- log(.Machine$double.eps)
+    attr(Sigma.hat.g, "po") <- FALSE
+    attr(Sigma.hat.g, "inv") <- Sigma.hat.inv
+    attr(Sigma.hat.g, "log.det") <- Sigma.hat.log.det
+  } else {
+    if (check.sigma.pd != "chol") {
+      cS <- chol(Sigma.hat.g)
+    }
+    Sigma.hat.inv <- chol2inv(cS)
+    d <- diag(cS)
+    Sigma.hat.log.det <- 2 * sum(log(d))
+    attr(Sigma.hat.g, "po") <- TRUE
+    attr(Sigma.hat.g, "inv") <- Sigma.hat.inv
+    attr(Sigma.hat.g, "log.det") <- Sigma.hat.log.det
+  }
+
+  Sigma.hat.g
+}
+
 lav_model_sigma <- function(lavmodel = NULL, GLIST = NULL, extra = FALSE,
                             delta = TRUE) {
   # state or final?
@@ -10,13 +51,14 @@ lav_model_sigma <- function(lavmodel = NULL, GLIST = NULL, extra = FALSE,
   nmat <- lavmodel@nmat
   nblocks <- lavmodel@nblocks
   representation <- lavmodel@representation
+  mm.idx <- lav_model_group_mm_indices(nmat)
 
   # return a list
   Sigma.hat <- vector("list", length = nblocks)
 
-  for (g in 1:nblocks) {
+  for (g in seq_len(nblocks)) {
     # which mm belong to group g?
-    mm.in.group <- 1:nmat[g] + cumsum(c(0, nmat))[g]
+    mm.in.group <- mm.idx[[g]]
     MLIST <- GLIST[mm.in.group]
 
     if (representation == "LISREL") {
@@ -33,33 +75,10 @@ lav_model_sigma <- function(lavmodel = NULL, GLIST = NULL, extra = FALSE,
     if (lav_debug()) print(Sigma.hat[[g]])
 
     if (extra) {
-      # check if matrix is positive definite
-      if (check.sigma.pd == "chol") {
-        # fast path: try Cholesky directly
-        cS <- tryCatch(chol(Sigma.hat[[g]]), error = function(e) NULL)
-        is_pd <- !is.null(cS)
-      } else {
-        # slow path: eigenvalue-based PD check
-        ev <- eigen(Sigma.hat[[g]], symmetric = TRUE, only.values = TRUE)$values
-        is_pd <- !(any(ev < sqrt(.Machine$double.eps)) || sum(ev) == 0)
-      }
-      if (!is_pd) {
-        Sigma.hat.inv <- MASS::ginv(Sigma.hat[[g]])
-        Sigma.hat.log.det <- log(.Machine$double.eps)
-        attr(Sigma.hat[[g]], "po") <- FALSE
-        attr(Sigma.hat[[g]], "inv") <- Sigma.hat.inv
-        attr(Sigma.hat[[g]], "log.det") <- Sigma.hat.log.det
-      } else {
-        if (check.sigma.pd != "chol") {
-          cS <- chol(Sigma.hat[[g]])
-        }
-        Sigma.hat.inv <- chol2inv(cS)
-        d <- diag(cS)
-        Sigma.hat.log.det <- 2 * sum(log(d))
-        attr(Sigma.hat[[g]], "po") <- TRUE
-        attr(Sigma.hat[[g]], "inv") <- Sigma.hat.inv
-        attr(Sigma.hat[[g]], "log.det") <- Sigma.hat.log.det
-      }
+      Sigma.hat[[g]] <- lav_model_sigma_extra(
+        Sigma.hat.g = Sigma.hat[[g]],
+        check.sigma.pd = check.sigma.pd
+      )
     }
   } # nblocks
   Sigma.hat
@@ -88,13 +107,14 @@ lav_model_cond2joint_sigma <- function(lavmodel = NULL, GLIST = NULL,
   nmat <- lavmodel@nmat
   nblocks <- lavmodel@nblocks
   representation <- lavmodel@representation
+  mm.idx <- lav_model_group_mm_indices(nmat)
 
   # return a list
   Sigma.hat <- vector("list", length = nblocks)
 
-  for (g in 1:nblocks) {
+  for (g in seq_len(nblocks)) {
     # which mm belong to group g?
-    mm.in.group <- 1:nmat[g] + cumsum(c(0, nmat))[g]
+    mm.in.group <- mm.idx[[g]]
     MLIST <- GLIST[mm.in.group]
 
     if (representation == "LISREL") {
@@ -115,33 +135,10 @@ lav_model_cond2joint_sigma <- function(lavmodel = NULL, GLIST = NULL,
     if (lav_debug()) print(Sigma.hat[[g]])
 
     if (extra) {
-      # check if matrix is positive definite
-      if (check.sigma.pd == "chol") {
-        # fast path: try Cholesky directly
-        cS <- tryCatch(chol(Sigma.hat[[g]]), error = function(e) NULL)
-        is_pd <- !is.null(cS)
-      } else {
-        # slow path: eigenvalue-based PD check
-        ev <- eigen(Sigma.hat[[g]], symmetric = TRUE, only.values = TRUE)$values
-        is_pd <- !(any(ev < sqrt(.Machine$double.eps)) || sum(ev) == 0)
-      }
-      if (!is_pd) {
-        Sigma.hat.inv <- MASS::ginv(Sigma.hat[[g]])
-        Sigma.hat.log.det <- log(.Machine$double.eps)
-        attr(Sigma.hat[[g]], "po") <- FALSE
-        attr(Sigma.hat[[g]], "inv") <- Sigma.hat.inv
-        attr(Sigma.hat[[g]], "log.det") <- Sigma.hat.log.det
-      } else {
-        if (check.sigma.pd != "chol") {
-          cS <- chol(Sigma.hat[[g]])
-        }
-        Sigma.hat.inv <- chol2inv(cS)
-        d <- diag(cS)
-        Sigma.hat.log.det <- 2 * sum(log(d))
-        attr(Sigma.hat[[g]], "po") <- TRUE
-        attr(Sigma.hat[[g]], "inv") <- Sigma.hat.inv
-        attr(Sigma.hat[[g]], "log.det") <- Sigma.hat.log.det
-      }
+      Sigma.hat[[g]] <- lav_model_sigma_extra(
+        Sigma.hat.g = Sigma.hat[[g]],
+        check.sigma.pd = check.sigma.pd
+      )
     }
   } # nblocks
 
@@ -156,13 +153,14 @@ lav_model_mu <- function(lavmodel = NULL, GLIST = NULL) {
   nblocks <- lavmodel@nblocks
   representation <- lavmodel@representation
   meanstructure <- lavmodel@meanstructure
+  mm.idx <- lav_model_group_mm_indices(nmat)
 
   # return a list
   Mu.hat <- vector("list", length = nblocks)
 
-  for (g in 1:nblocks) {
+  for (g in seq_len(nblocks)) {
     # which mm belong to group g?
-    mm.in.group <- 1:nmat[g] + cumsum(c(0, nmat))[g]
+    mm.in.group <- mm.idx[[g]]
     MLIST <- GLIST[mm.in.group]
 
     if (!meanstructure) {
@@ -203,21 +201,18 @@ lav_model_cond2joint_mu <- function(lavmodel = NULL, GLIST = NULL) {
   # state or final?
   if (is.null(GLIST)) GLIST <- lavmodel@GLIST
 
-  # check.sigma.pd -- new in 0.6-21
-  check.sigma.pd <- get0("opt_check_sigma_pd", lavaan_cache_env,
-                         ifnotfound = "chol")
-
   nmat <- lavmodel@nmat
   nblocks <- lavmodel@nblocks
   representation <- lavmodel@representation
   meanstructure <- lavmodel@meanstructure
+  mm.idx <- lav_model_group_mm_indices(nmat)
 
   # return a list
   Mu.hat <- vector("list", length = nblocks)
 
-  for (g in 1:nblocks) {
+  for (g in seq_len(nblocks)) {
     # which mm belong to group g?
-    mm.in.group <- 1:nmat[g] + cumsum(c(0, nmat))[g]
+    mm.in.group <- mm.idx[[g]]
 
     if (!meanstructure) {
       Mu.hat[[g]] <- numeric(lavmodel@nvar[g])
@@ -249,19 +244,20 @@ lav_model_th <- function(lavmodel = NULL, GLIST = NULL, delta = TRUE) {
   nmat <- lavmodel@nmat
   representation <- lavmodel@representation
   th.idx <- lavmodel@th.idx
+  mm.idx <- lav_model_group_mm_indices(nmat)
 
   # return a list
   TH <- vector("list", length = nblocks)
 
   # compute TH for each group
-  for (g in 1:nblocks) {
+  for (g in seq_len(nblocks)) {
     if (length(th.idx[[g]]) == 0) {
       TH[[g]] <- numeric(0L)
       next
     }
 
     # which mm belong to group g?
-    mm.in.group <- 1:nmat[g] + cumsum(c(0, nmat))[g]
+    mm.in.group <- mm.idx[[g]]
 
     if (representation == "LISREL") {
       TH[[g]] <- lav_lisrel_th(
@@ -287,14 +283,15 @@ lav_model_pi <- function(lavmodel = NULL, GLIST = NULL, delta = TRUE) {
   nmat <- lavmodel@nmat
   representation <- lavmodel@representation
   conditional.x <- lavmodel@conditional.x
+  mm.idx <- lav_model_group_mm_indices(nmat)
 
   # return a list
   PI <- vector("list", length = nblocks)
 
   # compute TH for each group
-  for (g in 1:nblocks) {
+  for (g in seq_len(nblocks)) {
     # which mm belong to group g?
-    mm.in.group <- 1:nmat[g] + cumsum(c(0, nmat))[g]
+    mm.in.group <- mm.idx[[g]]
     MLIST <- GLIST[mm.in.group]
 
     if (!conditional.x) {
@@ -322,14 +319,15 @@ lav_model_gw <- function(lavmodel = NULL, GLIST = NULL) {
   nmat <- lavmodel@nmat
   representation <- lavmodel@representation
   group.w.free <- lavmodel@group.w.free
+  mm.idx <- lav_model_group_mm_indices(nmat)
 
   # return a list
   GW <- vector("list", length = nblocks)
 
   # compute GW for each group
-  for (g in 1:nblocks) {
+  for (g in seq_len(nblocks)) {
     # which mm belong to group g?
-    mm.in.group <- 1:nmat[g] + cumsum(c(0, nmat))[g]
+    mm.in.group <- mm.idx[[g]]
     MLIST <- GLIST[mm.in.group]
 
     if (!group.w.free) {
@@ -364,14 +362,15 @@ lav_model_vy <- function(lavmodel = NULL, GLIST = NULL, diagonal.only = FALSE) {
   nblocks <- lavmodel@nblocks
   nmat <- lavmodel@nmat
   representation <- lavmodel@representation
+  mm.idx <- lav_model_group_mm_indices(nmat)
 
   # return a list
   VY <- vector("list", length = nblocks)
 
   # compute TH for each group
-  for (g in 1:nblocks) {
+  for (g in seq_len(nblocks)) {
     # which mm belong to group g?
-    mm.in.group <- 1:nmat[g] + cumsum(c(0, nmat))[g]
+    mm.in.group <- mm.idx[[g]]
     MLIST <- GLIST[mm.in.group]
 
     if (representation == "LISREL") {
@@ -406,14 +405,15 @@ lav_model_veta <- function(lavmodel = NULL, GLIST = NULL,
   nblocks <- lavmodel@nblocks
   nmat <- lavmodel@nmat
   representation <- lavmodel@representation
+  mm.idx <- lav_model_group_mm_indices(nmat)
 
   # return a list
   VETA <- vector("list", length = nblocks)
 
   # compute VETA for each group
-  for (g in 1:nblocks) {
+  for (g in seq_len(nblocks)) {
     # which mm belong to group g?
-    mm.in.group <- 1:nmat[g] + cumsum(c(0, nmat))[g]
+    mm.in.group <- mm.idx[[g]]
     MLIST <- GLIST[mm.in.group]
 
     if (representation == "LISREL") {
@@ -451,14 +451,15 @@ lav_model_vetax <- function(lavmodel = NULL, GLIST = NULL) {
   nblocks <- lavmodel@nblocks
   nmat <- lavmodel@nmat
   representation <- lavmodel@representation
+  mm.idx <- lav_model_group_mm_indices(nmat)
 
   # return a list
   ETA <- vector("list", length = nblocks)
 
   # compute ETA for each group
-  for (g in 1:nblocks) {
+  for (g in seq_len(nblocks)) {
     # which mm belong to group g?
-    mm.in.group <- 1:nmat[g] + cumsum(c(0, nmat))[g]
+    mm.in.group <- mm.idx[[g]]
     MLIST <- GLIST[mm.in.group]
 
     if (representation == "LISREL") {
@@ -490,14 +491,15 @@ lav_model_cov_both <- function(lavmodel = NULL, GLIST = NULL,
   nblocks <- lavmodel@nblocks
   nmat <- lavmodel@nmat
   representation <- lavmodel@representation
+  mm.idx <- lav_model_group_mm_indices(nmat)
 
   # return a list
   COV <- vector("list", length = nblocks)
 
   # compute COV for each group
-  for (g in 1:nblocks) {
+  for (g in seq_len(nblocks)) {
     # which mm belong to group g?
-    mm.in.group <- 1:nmat[g] + cumsum(c(0, nmat))[g]
+    mm.in.group <- mm.idx[[g]]
     MLIST <- GLIST[mm.in.group]
 
     if (representation == "LISREL") {
@@ -538,14 +540,15 @@ lav_model_eeta <- function(lavmodel = NULL, GLIST = NULL, lavsamplestats = NULL,
   nblocks <- lavmodel@nblocks
   nmat <- lavmodel@nmat
   representation <- lavmodel@representation
+  mm.idx <- lav_model_group_mm_indices(nmat)
 
   # return a list
   EETA <- vector("list", length = nblocks)
 
   # compute E(ETA) for each group
-  for (g in 1:nblocks) {
+  for (g in seq_len(nblocks)) {
     # which mm belong to group g?
-    mm.in.group <- 1:nmat[g] + cumsum(c(0, nmat))[g]
+    mm.in.group <- mm.idx[[g]]
     MLIST <- GLIST[mm.in.group]
 
     if (representation == "LISREL") {
@@ -589,14 +592,15 @@ lav_model_eetax <- function(lavmodel = NULL, GLIST = NULL,
   nblocks <- lavmodel@nblocks
   nmat <- lavmodel@nmat
   representation <- lavmodel@representation
+  mm.idx <- lav_model_group_mm_indices(nmat)
 
   # return a list
   EETAx <- vector("list", length = nblocks)
 
   # compute E(ETA) for each group
-  for (g in 1:nblocks) {
+  for (g in seq_len(nblocks)) {
     # which mm belong to group g?
-    mm.in.group <- 1:nmat[g] + cumsum(c(0, nmat))[g]
+    mm.in.group <- mm.idx[[g]]
     MLIST <- GLIST[mm.in.group]
 
     EXO <- eXo[[g]]
@@ -646,14 +650,15 @@ lav_model_lambda <- function(lavmodel = NULL, GLIST = NULL,
   nblocks <- lavmodel@nblocks
   nmat <- lavmodel@nmat
   representation <- lavmodel@representation
+  mm.idx <- lav_model_group_mm_indices(nmat)
 
   # return a list
   LAMBDA <- vector("list", length = nblocks)
 
   # compute LAMBDA for each group
-  for (g in 1:nblocks) {
+  for (g in seq_len(nblocks)) {
     # which mm belong to group g?
-    mm.in.group <- 1:nmat[g] + cumsum(c(0, nmat))[g]
+    mm.in.group <- mm.idx[[g]]
     MLIST <- GLIST[mm.in.group]
 
     if (representation == "LISREL") {
@@ -695,14 +700,15 @@ lav_model_theta <- function(lavmodel = NULL, GLIST = NULL, fix = TRUE) {
   nblocks <- lavmodel@nblocks
   nmat <- lavmodel@nmat
   representation <- lavmodel@representation
+  mm.idx <- lav_model_group_mm_indices(nmat)
 
   # return a list
   THETA <- vector("list", length = nblocks)
 
   # compute THETA for each group
-  for (g in 1:nblocks) {
+  for (g in seq_len(nblocks)) {
     # which mm belong to group g?
-    mm.in.group <- 1:nmat[g] + cumsum(c(0, nmat))[g]
+    mm.in.group <- mm.idx[[g]]
     MLIST <- GLIST[mm.in.group]
 
     if (representation == "LISREL") {
@@ -741,14 +747,15 @@ lav_model_ey <- function(lavmodel = NULL, GLIST = NULL, lavsamplestats = NULL,
   nblocks <- lavmodel@nblocks
   nmat <- lavmodel@nmat
   representation <- lavmodel@representation
+  mm.idx <- lav_model_group_mm_indices(nmat)
 
   # return a list
   EY <- vector("list", length = nblocks)
 
   # compute E(Y) for each group
-  for (g in 1:nblocks) {
+  for (g in seq_len(nblocks)) {
     # which mm belong to group g?
-    mm.in.group <- 1:nmat[g] + cumsum(c(0, nmat))[g]
+    mm.in.group <- mm.idx[[g]]
     MLIST <- GLIST[mm.in.group]
 
     if (representation == "LISREL") {
@@ -784,6 +791,7 @@ lav_model_yhat <- function(lavmodel = NULL, GLIST = NULL, lavsamplestats = NULL,
 
   # ngroups, not nblocks!
   ngroups <- lavsamplestats@ngroups
+  mm.idx <- lav_model_group_mm_indices(lavmodel@nmat)
 
   # return a list
   YHAT <- vector("list", length = ngroups)
@@ -792,7 +800,7 @@ lav_model_yhat <- function(lavmodel = NULL, GLIST = NULL, lavsamplestats = NULL,
   for (g in seq_len(ngroups)) {
     # which mm belong to group g?
     # FIXME: what if more than g blocks???
-    mm.in.group <- 1:lavmodel@nmat[g] + cumsum(c(0L, lavmodel@nmat))[g]
+    mm.in.group <- mm.idx[[g]]
     MLIST <- GLIST[mm.in.group]
 
     if (is.null(eXo[[g]]) && duplicate) {

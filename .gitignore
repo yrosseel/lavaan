@@ -6,3 +6,6 @@ lavaan.Rproj
 .DS_Store
 .claude
 CLAUDE.md
+settings.json
+tmp/
+tools/
