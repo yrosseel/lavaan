@@ -57,12 +57,22 @@ lav_test_browne <- function(lavobject = NULL,
     lavimplied <- lavobject@implied
   }
 
-  if (!ADF && lavmodel@categorical) {
-    lav_msg_stop(gettext("normal theory version not available in the categorical
-                         setting."))
+  if (lavmodel@categorical) {
+    if (!ADF) {
+      lav_msg_warn(gettext("normal theory version of Browne's residual test
+        not available in the categorical setting; switching to ADF."))
+      ADF <- TRUE
+    }
+    if (model.based) {
+      lav_msg_stop(gettext("model-based version of Browne's residual test not
+        available in the categorical setting; switching to sample-based."))
+      model.based <- FALSE
+    }
   }
   if (lavdata@missing != "listwise" && !model.based) {
-    lav_msg_stop(gettext("Browne's test is not available when data is missing"))
+    lav_msg_stop(gettext("sample-based version of Browne's test is not
+      available when data is missing; switching to model-based."))
+    model.based <- TRUE
   }
   if (lavdata@nlevels > 1L) {
     lav_msg_stop(gettext("Browne's test is not available when data is

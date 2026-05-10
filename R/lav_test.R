@@ -162,11 +162,13 @@ lav_test_rename <- function(test, check = FALSE) {
     test[target.idx] <- "browne.residual.adf"
   }
   if (length(target.idx <- which(test %in%
-    c("browne.residuals.nt", "browne.residual.nt"))) > 0L) {
+    c("browne.residuals.nt", "browne.residual.nt",
+      "browne.nt.residuals", "browne.nt.residual"))) > 0L) {
     test[target.idx] <- "browne.residual.nt"
   }
   if (length(target.idx <- which(test %in%
-    c("browne.residual.adf.model"))) > 0L) {
+    c("browne.residual.adf.model", "browne.residuals.adf.model",
+      "browne.residual.model.adf", "browne.residuals.model.adf"))) > 0L) {
     test[target.idx] <- "browne.residual.adf.model"
   }
   if (length(target.idx <- which(test %in%
