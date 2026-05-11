@@ -6,6 +6,7 @@ lavaan.Rproj
 .DS_Store
 .claude
 CLAUDE.md
+AGENTS.md
 settings.json
 tmp/
 tools/

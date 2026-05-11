@@ -9,4 +9,6 @@
 ^LICENSE
 .claude
 ^CLAUDE.md
+^AGENTS.md$
 ^tmp$
+^benchmarks$
