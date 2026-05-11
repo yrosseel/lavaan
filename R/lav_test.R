@@ -289,7 +289,7 @@ lav_model_test <- function(lavobject = NULL,
     lavoptions$scaled.test <- "standard"
   }
 
-  test <- test.orig <- lavoptions$test
+  test <- lavoptions$test
 
   TEST <- list()
 
@@ -510,12 +510,21 @@ lav_model_test <- function(lavobject = NULL,
     }
   }
 
-
-
-
   ######################
   ## additional tests ## # new in 0.6-5
   ######################
+
+  # first: sort tests, so that the unscaled tests come first, and then the
+  # scaled (otherwise, we don't find the base test)
+  unscaled.idx <- which(test %in% c(
+      "browne.residual.adf",
+      "browne.residual.adf.model",
+      "browne.residual.nt",
+      "browne.residual.nt.model"
+    ))
+  if (length(unscaled.idx) > 0L) {
+    test <- c(test[unscaled.idx], test[-unscaled.idx])
+  }
 
   for (this.test in test) {
     if (lav_test_fmg_is_fmg(this.test)) {
@@ -615,7 +624,7 @@ lav_model_test <- function(lavobject = NULL,
       # which test statistic shall we scale?
       unscaled.TEST <- TEST[[1]]
       if (lavoptions$scaled.test != "standard") {
-        idx <- which(test.orig == lavoptions$scaled.test)
+        idx <- which(names(TEST) == lavoptions$scaled.test)
         if (length(idx) > 0L) {
           unscaled.TEST <- TEST[[idx[1]]]
         } else {
@@ -650,7 +659,7 @@ lav_model_test <- function(lavobject = NULL,
       # which test statistic shall we scale?
       unscaled.TEST <- TEST[[1]]
       if (lavoptions$scaled.test != "standard") {
-        idx <- which(test.orig == lavoptions$scaled.test)
+        idx <- which(names(TEST) == lavoptions$scaled.test)
         if (length(idx) > 0L) {
           unscaled.TEST <- TEST[[idx[1]]]
         } else {
