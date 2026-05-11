@@ -116,7 +116,8 @@ lav_test_browne <- function(lavobject = NULL,
   Delta <- lav_model_delta(lavmodel)
   if (ADF) {
     # ADF version
-    if (!is.null(lavsamplestats@NACOV[[1]])) {
+    if (!is.null(lavsamplestats@NACOV[[1]]) &&
+        !lavoptions$se == "robust.sem.nt") { # eg, estimator = "ULS"/"DWLS"
       Gamma <- lavsamplestats@NACOV
     } else {
       if (!is.null(lavobject)) {

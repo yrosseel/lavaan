@@ -19,6 +19,7 @@ lavTest <- function(lavobject, test = "standard",
         "output", lav_msg_view(output.valid, "or")
       ))
   }
+
   # extract 'test' slot
   TEST <- lavobject@test
 
@@ -35,6 +36,8 @@ lavTest <- function(lavobject, test = "standard",
         gettextf("%s should be a character string.", "test"))
     } else {
       test <- lav_test_rename(test, check = TRUE)
+      # always include "standard"
+      test <- unique(c("standard", test))
     }
 
     # check scaled.test
@@ -48,12 +51,12 @@ lavTest <- function(lavobject, test = "standard",
 
       # merge
       test <- unique(c(test, scaled.test))
+    }
 
-      # but "standard" must always be first
-      standard.idx <- which(test == "standard")
-      if (length(standard.idx) > 0L && standard.idx != 1L) {
-        test <- c("standard", test[-standard.idx])
-      }
+    # "standard" must always be first
+    standard.idx <- which(test == "standard")
+    if (length(standard.idx) > 0L && standard.idx != 1L) {
+      test <- c("standard", test[-standard.idx])
     }
 
     if (test[1] == "none") {
@@ -680,7 +683,7 @@ lav_model_test <- function(lavobject = NULL,
       BOOT.TEST <- attr(VCOV, "BOOT.TEST")
       if (is.null(BOOT.TEST)) {
         if (!is.null(lavoptions$bootstrap)) {
-          R <- lavoptions$bootstrap
+          R <- as.integer(lavoptions$bootstrap$R)
         } else {
           R <- 1000L
         }
