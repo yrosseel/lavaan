@@ -1,15 +1,15 @@
 # utility function related to EFA
 
 # generate 'efa' syntax for a single block of factors
-lav_syntax_efa <- function(ov.names = NULL, nfactors = 1L, twolevel = FALSE) {
+lav_syntax_efa <- function(ov_names = NULL, nfactors = 1L, twolevel = FALSE) {
   if (twolevel) {
-    tmp <- lav_syntax_efa(ov.names = ov.names, nfactors = nfactors)
+    tmp <- lav_syntax_efa(ov_names = ov_names, nfactors = nfactors)
     model <- c("level: 1", tmp, "level: 2", tmp)
   } else {
     model <- character(nfactors)
     for (f in seq_len(nfactors)) {
       txt <- paste('efa("efa")*f', f, " =~ ",
-        paste(ov.names, collapse = " + "),
+        paste(ov_names, collapse = " + "),
         sep = ""
       )
       model[f] <- txt
@@ -25,20 +25,20 @@ lav_efa_get_loadings <- function(object, ...) {
   object[["loadings"]] <- NULL
 
   out <- lapply(object, function(x) {
-    STD <- lavTech(x, "std",
+    std <- lavTech(x, "std",
       add.class = TRUE, add.labels = TRUE,
       list.by.group = FALSE
     )
-    lambda.idx <- which(names(STD) == "lambda")
-    LAMBDA <- STD[lambda.idx]
-    names(LAMBDA) <- NULL
+    lambda_idx <- which(names(std) == "lambda")
+    mm_lambda <- std[lambda_idx]
+    names(mm_lambda) <- NULL
     # if only single block, drop list
-    if (length(LAMBDA) == 1L) {
-      LAMBDA <- LAMBDA[[1]]
+    if (length(mm_lambda) == 1L) {
+      mm_lambda <- mm_lambda[[1]]
     } else {
-      names(LAMBDA) <- x@Data@block.label
+      names(mm_lambda) <- x@Data@block.label
     }
-    LAMBDA
+    mm_lambda
   })
 
   # drop list if only a single model
@@ -55,25 +55,25 @@ lav_efa_get_loadings <- function(object, ...) {
 # return the optimal order of the column for lambda_target
 lav_efa_find_best_order <- function(lambda_ref = NULL, lambda_target = NULL,
                                     crit = "rmse") {
-  M <- ncol(lambda_ref)
-  stopifnot(ncol(lambda_target) == M)
+  m <- ncol(lambda_ref)
+  stopifnot(ncol(lambda_target) == m)
 
   # all possible permutation
   # FIXEM:we really need a more elegant way to find the permutations...
-  tmp <- unname(as.matrix(expand.grid(rep(list(seq_len(M)), M))))
+  tmp <- unname(as.matrix(expand.grid(rep(list(seq_len(m)), m))))
   # select only rows where all numbers appear
-  perm <- tmp[apply(tmp, 1L, function(x) { length(unique(x)) == M }), ,
+  perm <- tmp[apply(tmp, 1L, function(x) {length(unique(x)) == m}), ,
               drop = FALSE]
 
-  rmse.perm <- numeric( nrow(perm) )
+  rmse_perm <- numeric(nrow(perm))
   for (p in seq_len(nrow(perm))) {
-    diff <- lambda_ref - lambda_target[,perm[p,], drop = FALSE]
+    diff <- lambda_ref - lambda_target[, perm[p, ], drop = FALSE]
     diff2 <- diff * diff
     mse <- mean(diff2)
-    rmse.perm[p] <- sqrt(mse)
+    rmse_perm[p] <- sqrt(mse)
   }
-  best.idx <- which.min(rmse.perm)
+  best_idx <- which.min(rmse_perm)
 
   # return 'best' permutation
-  perm[best.idx,]
+  perm[best_idx, ]
 }

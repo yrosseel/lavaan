@@ -13,9 +13,9 @@
 # YR Jan 2023: catml_dwls should check if the input 'correlation' matrix
 #              is positive-definite (or not)
 
-lav_fit_catml_dwls <- function(lavobject, check.pd = TRUE) {
+lav_fit_catml_dwls <- function(lavobject, check_pd = TRUE) {
   # empty list
-  empty.list <- list(
+  empty_list <- list(
     XX3 = as.numeric(NA), df3 = as.numeric(NA),
     c.hat3 = as.numeric(NA), XX3.scaled = as.numeric(NA),
     XX3.null = as.numeric(NA), df3.null = as.numeric(NA),
@@ -26,7 +26,7 @@ lav_fit_catml_dwls <- function(lavobject, check.pd = TRUE) {
   if (!lavobject@Model@categorical ||
     lavobject@Options$conditional.x ||
     length(unlist(lavobject@pta$vnames$ov.num)) > 0L) {
-    return(empty.list)
+    return(empty_list)
   } else {
     lavdata <- lavobject@Data
     lavsamplestats <- lavobject@SampleStats
@@ -34,92 +34,94 @@ lav_fit_catml_dwls <- function(lavobject, check.pd = TRUE) {
 
   # check if input matrix (or matrices) are all positive definite
   # (perhaps later, we can rely on 'smoothing', but not for now
-  pd.flag <- TRUE
-  if (check.pd) {
+  # pd_flag <- TRUE
+  if (check_pd) {
     for (g in seq_len(lavdata@ngroups)) {
-      COR <- lavsamplestats@cov[[g]]
-      ev <- eigen(COR, symmetric = TRUE, only.values = TRUE)$values
+      cor_1 <- lavsamplestats@cov[[g]]
+      ev <- eigen(cor_1, symmetric = TRUE, only.values = TRUE)$values
       if (any(ev < .Machine$double.eps^(1 / 2))) {
         # non-pd!
-        pd.flag <- FALSE
+        # pd_flag <- FALSE
         # should we give a warning here? (not for now)
-        # warning("lavaan WARNING: robust RMSEA/CFI could not be computed because the input correlation matrix is not positive-definite")
+        # warning("lavaan WARNING: robust RMSEA/CFI could not be computed
+        #   because the input correlation matrix is not positive-definite")
         # what should we do? return NA (for now)
-        return(empty.list)
+        return(empty_list)
       }
     }
   }
 
   # 'refit' using estimator = "catML"
-  fit.catml <- try(lav_object_catml(lavobject), silent = TRUE)
-  if (inherits(fit.catml, "try-error")) {
-    return(empty.list)
+  fit_catml <- try(lav_object_catml(lavobject), silent = TRUE)
+  if (inherits(fit_catml, "try-error")) {
+    return(empty_list)
   }
 
-  XX3 <- fit.catml@test[[1]]$stat
-  df3 <- fit.catml@test[[1]]$df
+  xx3 <- fit_catml@test[[1]]$stat
+  df3 <- fit_catml@test[[1]]$df
 
 
   # compute 'k'
-  V <- lavTech(fit.catml, "wls.v") # NT-ML weight matrix
+  v <- lavTech(fit_catml, "wls.v") # NT-ML weight matrix
 
-  W.dwls <- lavTech(lavobject, "wls.v") # DWLS weight matrix
-  Gamma <- lavTech(lavobject, "gamma") # acov of polychorics
-  Delta <- lavTech(lavobject, "delta")
-  E.inv <- lavTech(lavobject, "inverted.information")
+  w_dwls <- lavTech(lavobject, "wls.v") # DWLS weight matrix
+  gamma <- lavTech(lavobject, "gamma") # acov of polychorics
+  delta <- lavTech(lavobject, "delta")
+  e_inv <- lavTech(lavobject, "inverted.information")
 
   fg <- unlist(lavsamplestats@nobs) / lavsamplestats@ntotal
 
   # Fixme: as we only need the trace, perhaps we could do this
   # group-specific? (see lav_test_satorra_bentler_trace_original)
-  V.g <- V
-  W.dwls.g <- W.dwls
-  Gamma.f <- Gamma
-  Delta.g <- Delta
+  v_g <- v
+  w_dwls_g <- w_dwls
+  gamma_f <- gamma
+  delta_g <- delta
   for (g in seq_len(lavdata@ngroups)) {
-    ntotal <- nrow(Gamma[[g]])
+    ntotal <- nrow(gamma[[g]])
     nvar <- lavobject@Model@nvar[[g]]
     pstar <- nvar * (nvar - 1) / 2
-    rm.idx <- seq_len(ntotal - pstar)
+    rm_idx <- seq_len(ntotal - pstar)
 
     # reduce
-    Delta.g[[g]] <- Delta[[g]][-rm.idx, , drop = FALSE]
+    delta_g[[g]] <- delta[[g]][-rm_idx, , drop = FALSE]
     # reduce and weight
-    W.dwls.g[[g]] <- fg[g] * W.dwls[[g]][-rm.idx, -rm.idx]
-    V.g[[g]] <- fg[g] * V[[g]] # should already have the right dims
-    Gamma.f[[g]] <- 1 / fg[g] * Gamma[[g]][-rm.idx, -rm.idx]
+    w_dwls_g[[g]] <- fg[g] * w_dwls[[g]][-rm_idx, -rm_idx]
+    v_g[[g]] <- fg[g] * v[[g]] # should already have the right dims
+    gamma_f[[g]] <- 1 / fg[g] * gamma[[g]][-rm_idx, -rm_idx]
   }
   # create 'big' matrices
-  W.dwls.all <- lav_matrix_bdiag(W.dwls.g)
-  V.all <- lav_matrix_bdiag(V.g)
-  Gamma.all <- lav_matrix_bdiag(Gamma.f)
-  Delta.all <- do.call("rbind", Delta.g)
+  w_dwls_all <- lav_matrix_bdiag(w_dwls_g)
+  v_all <- lav_matrix_bdiag(v_g)
+  gamma_all <- lav_matrix_bdiag(gamma_f)
+  delta_all <- do.call("rbind", delta_g)
 
   # compute trace
-  WiU.all <- diag(nrow(W.dwls.all)) - Delta.all %*% E.inv %*% t(Delta.all) %*% W.dwls.all
-  ks <- sum(diag(t(WiU.all) %*% V.all %*% WiU.all %*% Gamma.all))
+  wi_u_all <- diag(nrow(w_dwls_all)) -
+              delta_all %*% e_inv %*% t(delta_all) %*% w_dwls_all
+  ks <- sum(diag(t(wi_u_all) %*% v_all %*% wi_u_all %*% gamma_all))
 
   # convert to lavaan 'scaling.factor'
-  c.hat3 <- ks / df3
-  XX3.scaled <- XX3 / c.hat3
+  c_hat3 <- ks / df3
+  xx3_scaled <- xx3 / c_hat3
 
   # baseline model
-  XX3.null <- fit.catml@baseline$test[[1]]$stat
-  if (is.null(XX3.null)) {
-    XX3.null <- as.numeric(NA)
-    df3.null <- as.numeric(NA)
+  xx3_null <- fit_catml@baseline$test[[1]]$stat
+  if (is.null(xx3_null)) {
+    xx3_null <- as.numeric(NA)
+    df3_null <- as.numeric(NA)
     kbs <- as.numeric(NA)
-    c.hat3.null <- as.numeric(NA)
+    c_hat3_null <- as.numeric(NA)
   } else {
-    df3.null <- fit.catml@baseline$test[[1]]$df
-    kbs <- sum(diag(Gamma.all))
-    c.hat3.null <- kbs / df3.null
+    df3_null <- fit_catml@baseline$test[[1]]$df
+    kbs <- sum(diag(gamma_all))
+    c_hat3_null <- kbs / df3_null
   }
 
   # return values
   list(
-    XX3 = XX3, df3 = df3, c.hat3 = c.hat3, XX3.scaled = XX3.scaled,
-    XX3.null = XX3.null, df3.null = df3.null, c.hat3.null = c.hat3.null
+    XX3 = xx3, df3 = df3, c.hat3 = c_hat3, XX3.scaled = xx3_scaled,
+    XX3.null = xx3_null, df3.null = df3_null, c.hat3.null = c_hat3_null
   )
 }
 
@@ -129,7 +131,7 @@ lav_fit_catml_dwls <- function(lavobject, check.pd = TRUE) {
 #     Zhang X, Savalei V. (2022). New computations for RMSEA and CFI
 #     following FIML and TS estimation with missing data. Psychological Methods.
 
-lav_fit_fiml_corrected <- function(lavobject, baseline.model,
+lav_fit_fiml_corrected <- function(lavobject, baseline_model,
                                    version = "V3") {
   version <- toupper(version)
   if (!version %in% c("V3", "V6")) {
@@ -137,7 +139,7 @@ lav_fit_fiml_corrected <- function(lavobject, baseline.model,
   }
 
   # empty list
-  empty.list <- list(
+  empty_list <- list(
     XX3 = as.numeric(NA), df3 = as.numeric(NA),
     c.hat3 = as.numeric(NA), XX3.scaled = as.numeric(NA),
     XX3.null = as.numeric(NA), df3.null = as.numeric(NA),
@@ -148,23 +150,23 @@ lav_fit_fiml_corrected <- function(lavobject, baseline.model,
   if (lavobject@Options$conditional.x ||
     lavobject@Data@nlevels > 1L ||
     is.null(lavobject@h1$implied$cov[[1]])) {
-    return(empty.list)
+    return(empty_list)
   } else {
     lavdata <- lavobject@Data
     lavsamplestats <- lavobject@SampleStats
 
     h1 <- lavTech(lavobject, "h1", add.labels = TRUE)
-    COV.tilde <- lapply(h1, "[[", "cov")
-    MEAN.tilde <- lapply(h1, "[[", "mean")
-    sample.nobs <- unlist(lavsamplestats@nobs)
+    cov_tilde <- lapply(h1, "[[", "cov")
+    mean_tilde <- lapply(h1, "[[", "mean")
+    sample_nobs <- unlist(lavsamplestats@nobs)
   }
 
   # 'refit' using 'tilde' (=EM/saturated) sample statistics
-  fit.tilde <- try(lavaan(
+  fit_tilde <- try(lavaan(
     model = parTable(lavobject),
-    sample.cov = COV.tilde,
-    sample.mean = MEAN.tilde,
-    sample.nobs = sample.nobs,
+    sample.cov = cov_tilde,
+    sample.mean = mean_tilde,
+    sample.nobs = sample_nobs,
     sample.cov.rescale = FALSE,
     information = "observed",
     optim.method = "none",
@@ -173,35 +175,35 @@ lav_fit_fiml_corrected <- function(lavobject, baseline.model,
     baseline = FALSE,
     check.post = FALSE
   ), silent = TRUE)
-  if (inherits(fit.tilde, "try-error")) {
-    return(empty.list)
+  if (inherits(fit_tilde, "try-error")) {
+    return(empty_list)
   }
 
-  XX3 <- fit.tilde@test[[1]]$stat
-  df3 <- fit.tilde@test[[1]]$df
+  xx3 <- fit_tilde@test[[1]]$stat
+  df3 <- fit_tilde@test[[1]]$df
 
   # compute 'k'
 
   # V3/V6: always use h1.information = "unstructured"!!
   lavobject@Options$h1.information <- c("unstructured", "unstructured")
   lavobject@Options$observed.information <- c("h1", "h1")
-  fit.tilde@Options$h1.information <- c("unstructured", "unstructured")
-  fit.tilde@Options$observed.information <- c("h1", "h1")
+  fit_tilde@Options$h1.information <- c("unstructured", "unstructured")
+  fit_tilde@Options$observed.information <- c("h1", "h1")
 
-  Wm <- Wm.g <- lav_model_h1_information_observed(lavobject)
-  Wc <- Wc.g <- lav_model_h1_information_observed(fit.tilde)
+  wm <- wm_g <- lav_model_h1_information_observed(lavobject)
+  wc <- wc_g <- lav_model_h1_information_observed(fit_tilde)
 
   if (version == "V3") {
-    Jm <- Jm.g <- lav_model_h1_information_firstorder(lavobject)
-    Gamma.f <- vector("list", length = lavdata@ngroups)
+    jm <- jm_g <- lav_model_h1_information_firstorder(lavobject)
+    gamma_f <- vector("list", length = lavdata@ngroups)
   }
-  Delta <- lavTech(lavobject, "delta")
-  E.inv <- lavTech(lavobject, "inverted.information")
-  Wmi <- Wmi.g <- try(lapply(Wm, lav_matrix_symmetric_inverse),
+  delta <- lavTech(lavobject, "delta")
+  e_inv <- lavTech(lavobject, "inverted.information")
+  wmi <- wmi_g <- try(lapply(wm, lav_matrix_symmetric_inverse),
     silent = TRUE
   )
-  if (inherits(Wmi, "try-error")) {
-    return(empty.list)
+  if (inherits(wmi, "try-error")) {
+    return(empty_list)
   }
 
   fg <- unlist(lavsamplestats@nobs) / lavsamplestats@ntotal
@@ -209,75 +211,79 @@ lav_fit_fiml_corrected <- function(lavobject, baseline.model,
   # group-specific? (see lav_test_satorra_bentler_trace_original)
   for (g in seq_len(lavdata@ngroups)) {
     # group weight
-    Wc.g[[g]] <- fg[g] * Wc[[g]]
-    Wm.g[[g]] <- fg[g] * Wm[[g]]
-    Wmi.g[[g]] <- 1 / fg[g] * Wmi[[g]]
+    wc_g[[g]] <- fg[g] * wc[[g]]
+    wm_g[[g]] <- fg[g] * wm[[g]]
+    wmi_g[[g]] <- 1 / fg[g] * wmi[[g]]
 
-    # Gamma
+    # gamma
     if (version == "V3") {
-      Jm.g[[g]] <- fg[g] * Jm[[g]]
-      Gamma.g <- Wmi[[g]] %*% Jm[[g]] %*% Wmi[[g]]
-      Gamma.f[[g]] <- 1 / fg[g] * Gamma.g
+      jm_g[[g]] <- fg[g] * jm[[g]]
+      gamma_g <- wmi[[g]] %*% jm[[g]] %*% wmi[[g]]
+      gamma_f[[g]] <- 1 / fg[g] * gamma_g
     }
   }
   # create 'big' matrices
-  Wc.all <- lav_matrix_bdiag(Wc.g)
-  Wm.all <- lav_matrix_bdiag(Wm.g)
-  Wmi.all <- lav_matrix_bdiag(Wmi.g)
-  Delta.all <- do.call("rbind", Delta)
+  wc_all <- lav_matrix_bdiag(wc_g)
+  wm_all <- lav_matrix_bdiag(wm_g)
+  wmi_all <- lav_matrix_bdiag(wmi_g)
+  delta_all <- do.call("rbind", delta)
 
-  E.comp <- t(Delta.all) %*% Wc.all %*% Delta.all # VS: or grab from fit.tilde, with observed.info="h1"
+  e_comp <- t(delta_all) %*% wc_all %*% delta_all
+               # VS: or grab from fit.tilde, with observed.info="h1"
 
 
   # compute trace
   if (version == "V3") {
-    Gamma.all <- lav_matrix_bdiag(Gamma.f)
-    # VS: Simplification of k.fimlc to minimize matrix multiplication of big matrices
-    Jm.all <- lav_matrix_bdiag(Jm.g)
+    gamma_all <- lav_matrix_bdiag(gamma_f)
+    # VS: Simplification of k.fimlc to minimize matrix multiplication
+    #                                                 of big matrices
+    jm_all <- lav_matrix_bdiag(jm_g)
 
     # VS: tr11 is also used for baseline
     # VS: tr(AB) = sum(A*t(B)) is more efficient
 
-    tr11 <- sum(Wc.all * Gamma.all)
-    tr12 <- sum((t(Delta.all) %*% Jm.all %*% Wmi.all %*% Wc.all %*% Delta.all) * E.inv)
-    tr22 <- sum((t(Delta.all) %*% Jm.all %*% Delta.all %*% E.inv) * t(t(Delta.all) %*% Wc.all %*% Delta.all %*% E.inv))
+    tr11 <- sum(wc_all * gamma_all)
+    tr12 <- sum((t(delta_all) %*% jm_all %*% wmi_all %*%
+                 wc_all %*% delta_all) * e_inv)
+    tr22 <- sum((t(delta_all) %*% jm_all %*% delta_all %*% e_inv)
+             * t(t(delta_all) %*% wc_all %*% delta_all %*% e_inv))
 
-    k.fimlc <- tr11 - 2 * tr12 + tr22
+    k_fimlc <- tr11 - 2 * tr12 + tr22
   } else {
     # V6
-    tr1 <- sum(Wc.all * Wmi.all)
-    k.fimlc <- tr1 - sum(E.comp * E.inv)
+    tr1 <- sum(wc_all * wmi_all)
+    k_fimlc <- tr1 - sum(e_comp * e_inv)
   }
 
   # convert to lavaan 'scaling.factor'
-  c.hat3 <- k.fimlc / df3
-  XX3.scaled <- XX3 / c.hat3
+  c_hat3 <- k_fimlc / df3
+  xx3_scaled <- xx3 / c_hat3
 
   # collect temp results
   out <- list(
-    XX3 = XX3, df3 = df3,
-    c.hat3 = c.hat3, XX3.scaled = XX3.scaled,
+    XX3 = xx3, df3 = df3,
+    c.hat3 = c_hat3, XX3.scaled = xx3_scaled,
     XX3.null = as.numeric(NA), df3.null = as.numeric(NA),
     c.hat3.null = as.numeric(NA)
   )
 
   # baseline model
-  if (!is.null(baseline.model)) {
-    fitB <- baseline.model
+  if (!is.null(baseline_model)) {
+    fit_b <- baseline_model
   } else {
-    fitB <- try(lav_object_independence(lavobject), silent = TRUE)
+    fit_b <- try(lav_object_independence(lavobject), silent = TRUE)
   }
 
-  if (inherits(fitB, "try-error")) {
+  if (inherits(fit_b, "try-error")) {
     return(out)
   }
 
   # 'refit' using 'tilde' (=EM/saturated) sample statistics
-  fitB.tilde <- try(lavaan(
-    model = parTable(fitB),
-    sample.cov = COV.tilde,
-    sample.mean = MEAN.tilde,
-    sample.nobs = sample.nobs,
+  fit_b_tilde <- try(lavaan(
+    model = parTable(fit_b),
+    sample.cov = cov_tilde,
+    sample.mean = mean_tilde,
+    sample.nobs = sample_nobs,
     sample.cov.rescale = FALSE,
     information = "observed",
     optim.method = "none",
@@ -286,40 +292,44 @@ lav_fit_fiml_corrected <- function(lavobject, baseline.model,
     baseline = FALSE,
     check.post = FALSE
   ), silent = TRUE)
-  if (inherits(fitB.tilde, "try-error")) {
+  if (inherits(fit_b_tilde, "try-error")) {
     return(out)
   }
 
-  XX3.null <- fitB.tilde@test[[1]]$stat
-  df3.null <- fitB.tilde@test[[1]]$df
+  xx3_null <- fit_b_tilde@test[[1]]$stat
+  df3_null <- fit_b_tilde@test[[1]]$df
 
-  fitB@Options$h1.information <- c("unstructured", "unstructured")
-  fitB@Options$observed.information <- c("h1", "h1")
-  fitB.tilde@Options$h1.information <- c("unstructured", "unstructured")
-  fitB.tilde@Options$observed.information <- c("h1", "h1")
+  fit_b@Options$h1.information <- c("unstructured", "unstructured")
+  fit_b@Options$observed.information <- c("h1", "h1")
+  fit_b_tilde@Options$h1.information <- c("unstructured", "unstructured")
+  fit_b_tilde@Options$observed.information <- c("h1", "h1")
 
-  E.invB <- lavTech(fitB, "inverted.information")
-  DeltaB <- lavTech(fitB, "Delta")
-  DeltaB.all <- do.call("rbind", DeltaB)
+  e_inv_b <- lavTech(fit_b, "inverted.information")
+  delta_b <- lavTech(fit_b, "Delta")
+  delta_b_all <- do.call("rbind", delta_b)
 
-  E.compB <- t(DeltaB.all) %*% Wc.all %*% DeltaB.all # or grab from fitB.tilde
+  e_comp_b <- t(delta_b_all) %*% wc_all %*% delta_b_all #or grab from fitB.tilde
 
   # V3 or V6?
   if (version == "V3") {
-    tr12B <- sum((t(DeltaB.all) %*% Jm.all %*% Wmi.all %*% Wc.all %*% DeltaB.all) * E.invB)
-    tr22B <- sum((t(DeltaB.all) %*% Jm.all %*% DeltaB.all %*% E.invB) * t(t(DeltaB.all) %*% Wc.all %*% DeltaB.all %*% E.invB))
-    kb.fimlc <- tr11 - 2 * tr12B + tr22B
+    tr12b <-
+      sum((t(delta_b_all) %*% jm_all %*% wmi_all %*% wc_all %*% delta_b_all) *
+        e_inv_b)
+    tr22b <-
+      sum((t(delta_b_all) %*% jm_all %*% delta_b_all %*% e_inv_b) *
+        t(t(delta_b_all) %*% wc_all %*% delta_b_all %*% e_inv_b))
+    kb_fimlc <- tr11 - 2 * tr12b + tr22b
   } else {
     # V6
-    kb.fimlc <- tr1 - sum(E.compB * E.invB)
+    kb_fimlc <- tr1 - sum(e_comp_b * e_inv_b)
   }
 
   # convert to lavaan 'scaling.factor'
-  c.hat3.null <- kb.fimlc / df3.null
+  c_hat3_null <- kb_fimlc / df3_null
 
   # return values
   list(
-    XX3 = XX3, df3 = df3, c.hat3 = c.hat3, XX3.scaled = XX3.scaled,
-    XX3.null = XX3.null, df3.null = df3.null, c.hat3.null = c.hat3.null
+    XX3 = xx3, df3 = df3, c.hat3 = c_hat3, XX3.scaled = xx3_scaled,
+    XX3.null = xx3_null, df3.null = df3_null, c.hat3.null = c_hat3_null
   )
 }

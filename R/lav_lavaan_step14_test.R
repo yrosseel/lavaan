@@ -67,8 +67,8 @@ lav_lavaan_step14_fit <- function(lavpartable = NULL,
     lavmodel = lavmodel,
     lavimplied = lavimplied,
     x = x,
-    VCOV = vcov,
-    TEST = lavtest
+    vcov_1 = vcov,
+    test = lavtest
   )
   # lavfit <- new("Fit")
 

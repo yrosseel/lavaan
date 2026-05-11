@@ -413,11 +413,11 @@ lavTestLRT <- function(object, ..., method = "default", test = "default",   # no
       c_hat <- rep(1, length(stat_delta_orig) - 1L)
     }
     rmsea_delta <- c(NA, lav_fit_rmsea(
-      X2 = stat_delta_orig[-1],
+      x2 = stat_delta_orig[-1],
       df = df_delta_orig[-1],
-      N = ntotal,
-      G = ngroups,
-      c.hat = c_hat
+      n = ntotal,
+      g = ngroups,
+      c_hat = c_hat
     ))
   }
 
@@ -681,11 +681,11 @@ lav_test_lrt_fmg <- function(mods, test = "pall_ug_ml", method = "default",
 
   if (missing == "listwise") {
     RMSEA.delta <- c(NA, lav_fit_rmsea(
-      X2 = STAT.delta.orig[-1],
+      x2 = STAT.delta.orig[-1],
       df = Df.delta.orig[-1],
-      N = ntotal,
-      G = ngroups,
-      c.hat = rep(1, length(STAT.delta.orig) - 1L)
+      n = ntotal,
+      g = ngroups,
+      c_hat = rep(1, length(STAT.delta.orig) - 1L)
     ))
 
     val <- data.frame(

@@ -1,133 +1,133 @@
 # get missing patterns
-lav_data_missing_patterns <- function(Y, sort.freq = FALSE, coverage = FALSE,
-                                      Lp = NULL) {
+lav_data_missing_patterns <- function(y, sort_freq = FALSE, coverage = FALSE,
+                                      lp = NULL) {
   # handle two-level data
-  if (!is.null(Lp)) {
-    Y.orig <- Y
-    Z <- NULL
-    if (length(Lp$between.idx[[2]]) > 0L) {
-      Y <- Y[, -Lp$between.idx[[2]], drop = FALSE]
-      z.idx <- which(!duplicated(Lp$cluster.idx[[2]]))
-      Z <- Y.orig[z.idx, Lp$between.idx[[2]], drop = FALSE]
+  if (!is.null(lp)) {
+    y_orig <- y
+    z <- NULL
+    if (length(lp$between.idx[[2]]) > 0L) {
+      y <- y[, -lp$between.idx[[2]], drop = FALSE]
+      z_idx <- which(!duplicated(lp$cluster.idx[[2]]))
+      z <- y_orig[z_idx, lp$between.idx[[2]], drop = FALSE]
     }
   }
 
   # construct TRUE/FALSE matrix: TRUE if value is observed
-  OBS <- !is.na(Y)
+  obs <- !is.na(y)
 
   # empty cases
-  empty.idx <- which(rowSums(OBS) == 0L)
+  empty_idx <- which(rowSums(obs) == 0L)
 
   # pattern of observed values per observation
-  case.id <- apply(1L * OBS, 1L, paste, collapse = "")
+  case_id <- apply(1L * obs, 1L, paste, collapse = "")
 
   # remove empty patterns
-  if (length(empty.idx)) {
-    case.id.nonempty <- case.id[-empty.idx]
+  if (length(empty_idx)) {
+    case_id_nonempty <- case_id[-empty_idx]
   } else {
-    case.id.nonempty <- case.id
+    case_id_nonempty <- case_id
   }
 
   # sort non-empty patterns (from high occurrence to low occurrence)
-  if (sort.freq) {
-    TABLE <- sort(table(case.id.nonempty), decreasing = TRUE)
+  if (sort_freq) {
+    table_1 <- sort(table(case_id_nonempty), decreasing = TRUE)
   } else {
-    TABLE <- table(case.id.nonempty)
+    table_1 <- table(case_id_nonempty)
   }
 
   # unique pattern ids
-  pat.id <- names(TABLE)
+  pat_id <- names(table_1)
 
   # number of patterns
-  pat.npatterns <- length(pat.id)
+  pat_npatterns <- length(pat_id)
 
   # case idx per pattern
-  pat.case.idx <- lapply(
-    seq_len(pat.npatterns),
-    function(p) which(case.id == pat.id[p])
+  pat_case_idx <- lapply(
+    seq_len(pat_npatterns),
+    function(p) which(case_id == pat_id[p])
   )
 
   # unique pattern frequencies
-  pat.freq <- as.integer(TABLE)
+  pat_freq <- as.integer(table_1)
 
   # first occurrence of each pattern
-  pat.first <- match(pat.id, case.id)
+  pat_first <- match(pat_id, case_id)
 
   # TRUE/FALSE for each pattern
-  pat.obs <- OBS[pat.first, , drop = FALSE] # observed per pattern
+  pat_obs <- obs[pat_first, , drop = FALSE] # observed per pattern
 
-  Mp <- list(
-    npatterns = pat.npatterns, id = pat.id, freq = pat.freq,
-    case.idx = pat.case.idx, pat = pat.obs, empty.idx = empty.idx,
-    nel = sum(OBS)
+  mp <- list(
+    npatterns = pat_npatterns, id = pat_id, freq = pat_freq,
+    case.idx = pat_case_idx, pat = pat_obs, empty.idx = empty_idx,
+    nel = sum(obs)
   )
 
   if (coverage) {
     # FIXME: if we have empty cases, include them in N?
     # no for now
-    Mp$coverage <- crossprod(OBS) / sum(pat.freq)
+    mp$coverage <- crossprod(obs) / sum(pat_freq)
     # Mp$coverage <- crossprod(OBS) / NROW(Y)
   }
 
   # additional info if we have two-level data
-  if (!is.null(Lp)) {
-    Mp$j.idx <- lapply(
-      seq_len(pat.npatterns),
-      function(p) Lp$cluster.idx[[2]][Mp$case.idx[[p]]]
+  if (!is.null(lp)) {
+    mp$j.idx <- lapply(
+      seq_len(pat_npatterns),
+      function(p) lp$cluster.idx[[2]][mp$case.idx[[p]]]
     )
-    Mp$j1.idx <- lapply(
-      seq_len(pat.npatterns),
-      function(p) sort(unique.default(Mp$j.idx[[p]])) # new in 0.6-19: sort!!
-	                                                  # because table/tabulate
-													  # also sorts...
+    mp$j1.idx <- lapply(
+      seq_len(pat_npatterns),
+      function(p) sort(unique.default(mp$j.idx[[p]])) # new in 0.6-19: sort!!
+                                                    # because table/tabulate
+                            # also sorts...
     )
-    Mp$j.freq <- lapply(
-      seq_len(pat.npatterns),
-      function(p) as.integer(unname(table(sort(Mp$j.idx[[p]])))) # sort not needed?
+    mp$j.freq <- lapply(
+      seq_len(pat_npatterns),
+      function(p) as.integer(unname(table(sort(mp$j.idx[[p]])))) # sort needed?
     )
 
     # between-level patterns
-    if (!is.null(Z)) {
-      Mp$Zp <- lav_data_missing_patterns(Z,
-        sort.freq = FALSE,
-        coverage = FALSE, Lp = NULL
+    if (!is.null(z)) {
+      mp$Zp <- lav_data_missing_patterns(z,
+        sort_freq = FALSE,
+        coverage = FALSE, lp = NULL
       )
     }
   }
 
-  Mp
+  mp
 }
 
 # get response patterns (ignore empty cases!)
-lav_data_resp_patterns <- function(Y) {
+lav_data_resp_patterns <- function(y) {
   # construct TRUE/FALSE matrix: TRUE if value is observed
-  OBS <- !is.na(Y)
+  obs <- !is.na(y)
 
   # empty cases
-  empty.idx <- which(rowSums(OBS) == 0L)
+  empty_idx <- which(rowSums(obs) == 0L)
 
   # remove empty cases
-  if (length(empty.idx) > 0L) {
-    Y <- Y[-empty.idx, , drop = FALSE]
+  if (length(empty_idx) > 0L) {
+    y <- y[-empty_idx, , drop = FALSE]
   }
 
-  ntotal <- nrow(Y)
-  nvar <- ncol(Y)
+  # ntotal <- nrow(y)
+  # nvar <- ncol(y)
 
   # identify, label and sort response patterns
-  id <- apply(Y, MARGIN = 1, paste, collapse = "")
+  id <- apply(y, MARGIN = 1, paste, collapse = "")
 
   # sort patterns (from high occurrence to low occurrence)
-  TABLE <- sort(table(id), decreasing = TRUE)
-  order <- names(TABLE)
-  npatterns <- length(TABLE)
-  pat <- Y[match(order, id), , drop = FALSE]
-  row.names(pat) <- as.character(TABLE)
+  table_1 <- sort(table(id), decreasing = TRUE)
+  order <- names(table_1)
+  npatterns <- length(table_1)
+  pat <- y[match(order, id), , drop = FALSE]
+  row.names(pat) <- as.character(table_1)
 
   # handle NA?
-  Y[is.na(Y)] <- -9
-  total.patterns <- prod(apply(Y, 2, function(x) length(unique(x))))
-  empty.patterns <- total.patterns - npatterns
+  y[is.na(y)] <- -9
+  total_patterns <- prod(apply(y, 2, function(x) length(unique(x))))
+  empty_patterns <- total_patterns - npatterns
   # return a list
   # out <- list(nobs=ntotal, nvar=nvar,
   #            id=id, npatterns=npatterns,
@@ -135,8 +135,8 @@ lav_data_resp_patterns <- function(Y) {
 
   # only return pat
   out <- list(
-    npatterns = npatterns, pat = pat, total.patterns = total.patterns,
-    empty.patterns = empty.patterns
+    npatterns = npatterns, pat = pat, total.patterns = total_patterns,
+    empty.patterns = empty_patterns
   )
 
   out
@@ -145,97 +145,97 @@ lav_data_resp_patterns <- function(Y) {
 # get cluster information
 # - cluster can be a vector!
 # - clus can contain multiple columns!
-lav_data_cluster_patterns <- function(Y = NULL,
+lav_data_cluster_patterns <- function(y = NULL,
                                       clus = NULL, # the cluster ids
                                       cluster = NULL, # the cluster 'names'
                                       multilevel = FALSE,
-                                      ov.names = NULL,
-                                      ov.names.x = NULL,
-                                      ov.names.l = NULL) {
+                                      ov_names = NULL,
+                                      ov_names_x = NULL,
+                                      ov_names_l = NULL) {
   # how many levels?
   nlevels <- length(cluster) + 1L
 
   # did we get any data (or is this just for lav_data_simulate_old)
-  if (!is.null(Y) && !is.null(clus)) {
-    haveData <- TRUE
+  if (!is.null(y) && !is.null(clus)) {
+    have_data <- TRUE
   } else {
-    haveData <- FALSE
+    have_data <- FALSE
   }
 
   # check clus
-  if (haveData) {
-    stopifnot(ncol(clus) == (nlevels - 1L), nrow(Y) == nrow(clus))
+  if (have_data) {
+    stopifnot(ncol(clus) == (nlevels - 1L), nrow(y) == nrow(clus))
   }
 
-  cluster.size    <- vector("list", length = nlevels)
-  cluster.id      <- vector("list", length = nlevels)
-  cluster.idx     <- vector("list", length = nlevels)
+  cluster_size    <- vector("list", length = nlevels)
+  cluster_id      <- vector("list", length = nlevels)
+  cluster_idx     <- vector("list", length = nlevels)
   nclusters       <- vector("list", length = nlevels)
-  cluster.sizes   <- vector("list", length = nlevels)
-  ncluster.sizes  <- vector("list", length = nlevels)
-  cluster.size.ns <- vector("list", length = nlevels)
+  cluster_sizes   <- vector("list", length = nlevels)
+  ncluster_sizes  <- vector("list", length = nlevels)
+  cluster_size_ns <- vector("list", length = nlevels)
 
-  ov.idx          <- vector("list", length = nlevels)
-  ov.x.idx        <- vector("list", length = nlevels)
-  ov.y.idx        <- vector("list", length = nlevels)
-  both.idx        <- vector("list", length = nlevels)
-  within.idx      <- vector("list", length = nlevels)
-  within.x.idx    <- vector("list", length = nlevels)
-  within.y.idx    <- vector("list", length = nlevels)
-  between.idx     <- vector("list", length = nlevels)
-  between.x.idx   <- vector("list", length = nlevels)
-  between.y.idx   <- vector("list", length = nlevels)
-  both.names      <- vector("list", length = nlevels)
-  within.names    <- vector("list", length = nlevels)
-  within.x.names  <- vector("list", length = nlevels)
-  within.y.names  <- vector("list", length = nlevels)
-  between.names   <- vector("list", length = nlevels)
-  between.x.names <- vector("list", length = nlevels)
-  between.y.names <- vector("list", length = nlevels)
+  ov_idx          <- vector("list", length = nlevels)
+  ov_x_idx        <- vector("list", length = nlevels)
+  ov_y_idx        <- vector("list", length = nlevels)
+  both_idx        <- vector("list", length = nlevels)
+  within_idx      <- vector("list", length = nlevels)
+  within_x_idx    <- vector("list", length = nlevels)
+  within_y_idx    <- vector("list", length = nlevels)
+  between_idx     <- vector("list", length = nlevels)
+  between_x_idx   <- vector("list", length = nlevels)
+  between_y_idx   <- vector("list", length = nlevels)
+  both_names      <- vector("list", length = nlevels)
+  within_names    <- vector("list", length = nlevels)
+  within_x_names  <- vector("list", length = nlevels)
+  within_y_names  <- vector("list", length = nlevels)
+  between_names   <- vector("list", length = nlevels)
+  between_x_names <- vector("list", length = nlevels)
+  between_y_names <- vector("list", length = nlevels)
 
   # level-1 is special
-  if (haveData) {
-    nclusters[[1]] <- NROW(Y)
+  if (have_data) {
+    nclusters[[1]] <- NROW(y)
   }
 
   # higher levels:
   for (l in 2:nlevels) {
-    if (haveData) {
-      CLUS <- clus[, (l - 1L)]
+    if (have_data) {
+      clus_1 <- clus[, (l - 1L)]
 
-	  # cluster.id: original cluster identifier
-      cluster.id[[l]] <- unique(CLUS)
+    # cluster.id: original cluster identifier
+      cluster_id[[l]] <- unique(clus_1)
 
-	  # cluster.idx: internal cluster idx (always an integer from 1 to J
-	  # for every observation;
-	  # the first cluster id we observe is '1', the second '2', etc...)
-      cluster.idx[[l]] <- match(CLUS, cluster.id[[l]])
+    # cluster.idx: internal cluster idx (always an integer from 1 to J
+    # for every observation;
+    # the first cluster id we observe is '1', the second '2', etc...)
+      cluster_idx[[l]] <- match(clus_1, cluster_id[[l]])
 
-      cluster.size[[l]] <- tabulate(cluster.idx[[l]])
-      nclusters[[l]] <- length(cluster.size[[l]])
+      cluster_size[[l]] <- tabulate(cluster_idx[[l]])
+      nclusters[[l]] <- length(cluster_size[[l]])
       # check if we have more observations than clusters
       if (nclusters[[1]] == nclusters[[l]]) {
         lav_msg_stop(gettext("every cluster contains only one observation."))
       }
-      mean.cluster.size <- mean(cluster.size[[l]])
-      if (mean.cluster.size < 1.5) {
+      mean_cluster_size <- mean(cluster_size[[l]])
+      if (mean_cluster_size < 1.5) {
         lav_msg_warn(gettextf(
           "mean cluster size is %s. This means that many clusters only
-          contain a single observation.", mean.cluster.size))
+          contain a single observation.", mean_cluster_size))
         }
-      cluster.sizes[[l]] <- unique(cluster.size[[l]])
-      ncluster.sizes[[l]] <- length(cluster.sizes[[l]])
-      cluster.size.ns[[l]] <- as.integer(table(factor(cluster.size[[l]],
-        levels = as.character(cluster.sizes[[l]])
+      cluster_sizes[[l]] <- unique(cluster_size[[l]])
+      ncluster_sizes[[l]] <- length(cluster_sizes[[l]])
+      cluster_size_ns[[l]] <- as.integer(table(factor(cluster_size[[l]],
+        levels = as.character(cluster_sizes[[l]])
       )))
     } else {
-      cluster.id[[l]] <- integer(0L)
-      cluster.idx[[l]] <- integer(0L)
-      cluster.size[[l]] <- integer(0L)
+      cluster_id[[l]] <- integer(0L)
+      cluster_idx[[l]] <- integer(0L)
+      cluster_size[[l]] <- integer(0L)
       nclusters[[l]] <- integer(0L)
-      cluster.sizes[[l]] <- integer(0L)
-      ncluster.sizes[[l]] <- integer(0L)
-      cluster.size.ns[[l]] <- integer(0L)
+      cluster_sizes[[l]] <- integer(0L)
+      ncluster_sizes[[l]] <- integer(0L)
+      cluster_size_ns[[l]] <- integer(0L)
     }
   }
 
@@ -243,24 +243,24 @@ lav_data_cluster_patterns <- function(Y = NULL,
   if (multilevel) {
     for (l in 1:nlevels) {
       # index of ov.names for this level
-      ov.idx[[l]] <- match(ov.names.l[[l]], ov.names)
+      ov_idx[[l]] <- match(ov_names_l[[l]], ov_names)
 
       # new in 0.6-12: always preserve the order of ov.idx[[l]]
-      idx <- which(ov.names %in% ov.names.l[[1]] &
-        ov.names %in% ov.names.l[[2]])
-      both.idx[[l]] <- ov.idx[[l]][ov.idx[[l]] %in% idx]
+      idx <- which(ov_names %in% ov_names_l[[1]] &
+        ov_names %in% ov_names_l[[2]])
+      both_idx[[l]] <- ov_idx[[l]][ov_idx[[l]] %in% idx]
 
-      idx <- which(ov.names %in% ov.names.l[[1]] &
-        !ov.names %in% ov.names.l[[2]])
-      within.idx[[l]] <- ov.idx[[l]][ov.idx[[l]] %in% idx]
+      idx <- which(ov_names %in% ov_names_l[[1]] &
+        !ov_names %in% ov_names_l[[2]])
+      within_idx[[l]] <- ov_idx[[l]][ov_idx[[l]] %in% idx]
       # backwards compatibility: also store in within.idx[[2]]
       if (l == 2) {
-        within.idx[[l]] <- within.idx[[1]]
+        within_idx[[l]] <- within_idx[[1]]
       }
 
-      idx <- which(!ov.names %in% ov.names.l[[1]] &
-        ov.names %in% ov.names.l[[2]])
-      between.idx[[l]] <- ov.idx[[l]][ov.idx[[l]] %in% idx]
+      idx <- which(!ov_names %in% ov_names_l[[1]] &
+        ov_names %in% ov_names_l[[2]])
+      between_idx[[l]] <- ov_idx[[l]][ov_idx[[l]] %in% idx]
 
       # names
       # both.names[[l]]     <- ov.names[ ov.names %in% ov.names.l[[1]] &
@@ -269,21 +269,21 @@ lav_data_cluster_patterns <- function(Y = NULL,
       #                                !ov.names %in% ov.names.l[[2]] ]
       # between.names[[l]]  <- ov.names[!ov.names %in% ov.names.l[[1]] &
       #                                 ov.names %in% ov.names.l[[2]] ]
-      both.names[[l]] <- ov.names[both.idx[[l]]]
-      within.names[[l]] <- ov.names[within.idx[[l]]]
-      between.names[[l]] <- ov.names[between.idx[[l]]]
+      both_names[[l]] <- ov_names[both_idx[[l]]]
+      within_names[[l]] <- ov_names[within_idx[[l]]]
+      between_names[[l]] <- ov_names[between_idx[[l]]]
     }
   }
 
   # fixed.x wrt variable index
-  if (multilevel && length(ov.names.x) > 0L) {
+  if (multilevel && length(ov_names_x) > 0L) {
     for (l in 1:nlevels) {
       # some ov.names.x could be 'split', and end up in both.names
       # they should NOT be part ov.x.idx (as they become latent variables)
-      idx <- which(ov.names %in% ov.names.x &
-        ov.names %in% ov.names.l[[l]] &
-        !ov.names %in% unlist(both.names))
-      ov.x.idx[[l]] <- ov.idx[[l]][ov.idx[[l]] %in% idx]
+      idx <- which(ov_names %in% ov_names_x &
+        ov_names %in% ov_names_l[[l]] &
+        !ov_names %in% unlist(both_names))
+      ov_x_idx[[l]] <- ov_idx[[l]][ov_idx[[l]] %in% idx]
 
       # not any longer, we split them, but still treat them as 'fixed'
       # ov.x.idx[[l]] <- which( ov.names %in% ov.names.x &
@@ -292,9 +292,9 @@ lav_data_cluster_patterns <- function(Y = NULL,
       # if some ov.names.x have been 'split', and end up in both.names,
       # they should become part of ov.y.idx (despite being exogenous)
       # as they are now latent variables
-      idx <- which(ov.names %in% ov.names.l[[l]] &
-        !ov.names %in% ov.names.x[!ov.names.x %in% unlist(both.names)])
-      ov.y.idx[[l]] <- ov.idx[[l]][ov.idx[[l]] %in% idx]
+      idx <- which(ov_names %in% ov_names_l[[l]] &
+        !ov_names %in% ov_names_x[!ov_names_x %in% unlist(both_names)])
+      ov_y_idx[[l]] <- ov_idx[[l]][ov_idx[[l]] %in% idx]
 
       # not any longer, ov.x stays ov.x (even if we split)
       # ov.y.idx[[l]] <- which( ov.names %in% ov.names.l[[l]] &
@@ -306,33 +306,33 @@ lav_data_cluster_patterns <- function(Y = NULL,
       # }
       # below, we only fill in the [[2]] element (and higher)
 
-      idx <- which(ov.names %in% ov.names.l[[1]] &
-        !ov.names %in% ov.names.l[[2]] &
-        ov.names %in% ov.names.x)
-      within.x.idx[[l]] <- ov.idx[[l]][ov.idx[[l]] %in% idx]
+      idx <- which(ov_names %in% ov_names_l[[1]] &
+        !ov_names %in% ov_names_l[[2]] &
+        ov_names %in% ov_names_x)
+      within_x_idx[[l]] <- ov_idx[[l]][ov_idx[[l]] %in% idx]
       # backwards compatibility: also store in within.x.idx[[2]]
       if (l == 2) {
-        within.x.idx[[l]] <- within.x.idx[[1]]
+        within_x_idx[[l]] <- within_x_idx[[1]]
       }
 
-      idx <- which(ov.names %in% ov.names.l[[1]] &
-        !ov.names %in% ov.names.l[[2]] &
-        !ov.names %in% ov.names.x)
-      within.y.idx[[l]] <- ov.idx[[l]][ov.idx[[l]] %in% idx]
+      idx <- which(ov_names %in% ov_names_l[[1]] &
+        !ov_names %in% ov_names_l[[2]] &
+        !ov_names %in% ov_names_x)
+      within_y_idx[[l]] <- ov_idx[[l]][ov_idx[[l]] %in% idx]
       # backwards compatibility: also store in within.y.idx[[2]]
       if (l == 2) {
-        within.y.idx[[l]] <- within.y.idx[[1]]
+        within_y_idx[[l]] <- within_y_idx[[1]]
       }
 
-      idx <- which(!ov.names %in% ov.names.l[[1]] &
-        ov.names %in% ov.names.l[[2]] &
-        ov.names %in% ov.names.x)
-      between.x.idx[[l]] <- ov.idx[[l]][ov.idx[[l]] %in% idx]
+      idx <- which(!ov_names %in% ov_names_l[[1]] &
+        ov_names %in% ov_names_l[[2]] &
+        ov_names %in% ov_names_x)
+      between_x_idx[[l]] <- ov_idx[[l]][ov_idx[[l]] %in% idx]
 
-      idx <- which(!ov.names %in% ov.names.l[[1]] &
-        ov.names %in% ov.names.l[[2]] &
-        !ov.names %in% ov.names.x)
-      between.y.idx[[l]] <- ov.idx[[l]][ov.idx[[l]] %in% idx]
+      idx <- which(!ov_names %in% ov_names_l[[1]] &
+        ov_names %in% ov_names_l[[2]] &
+        !ov_names %in% ov_names_x)
+      between_y_idx[[l]] <- ov_idx[[l]][ov_idx[[l]] %in% idx]
 
       # within.x.names[[l]]   <- ov.names[ ov.names %in% ov.names.l[[1]] &
       #                                   ov.names %in% ov.names.x &
@@ -346,35 +346,35 @@ lav_data_cluster_patterns <- function(Y = NULL,
       # between.y.names[[l]]  <- ov.names[!ov.names %in% ov.names.l[[1]] &
       #                                  !ov.names %in% ov.names.x &
       #                                   ov.names %in% ov.names.l[[2]] ]
-      within.x.names[[l]] <- ov.names[within.x.idx[[l]]]
-      within.y.names[[l]] <- ov.names[within.y.idx[[l]]]
-      between.x.names[[l]] <- ov.names[between.x.idx[[l]]]
-      between.y.names[[l]] <- ov.names[between.y.idx[[l]]]
+      within_x_names[[l]] <- ov_names[within_x_idx[[l]]]
+      within_y_names[[l]] <- ov_names[within_y_idx[[l]]]
+      between_x_names[[l]] <- ov_names[between_x_idx[[l]]]
+      between_y_names[[l]] <- ov_names[between_y_idx[[l]]]
     }
   } else {
-    ov.y.idx <- ov.idx
+    ov_y_idx <- ov_idx
   }
 
   out <- list(
-    ov.names = ov.names, ov.names.x = ov.names.x, # for this group
+    ov.names = ov_names, ov.names.x = ov_names_x, # for this group
     cluster = cluster, # clus = clus,
     # per level
     nclusters = nclusters,
-    cluster.size = cluster.size, cluster.id = cluster.id,
-    cluster.idx = cluster.idx, cluster.sizes = cluster.sizes,
-    ncluster.sizes = ncluster.sizes,
-    cluster.size.ns = cluster.size.ns,
-    ov.idx = ov.idx, ov.x.idx = ov.x.idx, ov.y.idx = ov.y.idx,
-    both.idx = both.idx, within.idx = within.idx,
-    within.x.idx = within.x.idx, within.y.idx = within.y.idx,
-    between.idx = between.idx,
-    between.x.idx = between.x.idx, between.y.idx = between.y.idx,
-    both.names = both.names, within.names = within.names,
-    within.x.names = within.x.names,
-    within.y.names = within.y.names,
-    between.names = between.names,
-    between.x.names = between.x.names,
-    between.y.names = between.y.names
+    cluster.size = cluster_size, cluster.id = cluster_id,
+    cluster.idx = cluster_idx, cluster.sizes = cluster_sizes,
+    ncluster.sizes = ncluster_sizes,
+    cluster.size.ns = cluster_size_ns,
+    ov.idx = ov_idx, ov.x.idx = ov_x_idx, ov.y.idx = ov_y_idx,
+    both.idx = both_idx, within.idx = within_idx,
+    within.x.idx = within_x_idx, within.y.idx = within_y_idx,
+    between.idx = between_idx,
+    between.x.idx = between_x_idx, between.y.idx = between_y_idx,
+    both.names = both_names, within.names = within_names,
+    within.x.names = within_x_names,
+    within.y.names = within_y_names,
+    between.names = between_names,
+    between.x.names = between_x_names,
+    between.y.names = between_y_names
   )
 
   out

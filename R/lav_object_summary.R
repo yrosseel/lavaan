@@ -238,7 +238,7 @@ lav_object_summary <- function(object, header = TRUE,
 
   # efa-related info
   if (efa) {
-    res$efa <- lav_efa_summary(object, efa.args = efa.args)
+    res$efa <- lav_efa_summary(object, efa_args = efa.args)
   } # efa
 
   # only if requested, add the additional fit measures
@@ -256,9 +256,9 @@ lav_object_summary <- function(object, header = TRUE,
         "fit measures not available if model did not converge"))
     } else {
       FIT <- lav_fit_measures(object,
-       fit.measures = c(list(fit.measures = fit.measures), fm.args),
-       baseline.model = baseline.model,
-       h1.model = h1.model)
+       fit_measures = c(list(fit.measures = fit.measures), fm.args),
+       baseline_model = baseline.model,
+       h1_model = h1.model)
       res$fit <- FIT
     }
   }

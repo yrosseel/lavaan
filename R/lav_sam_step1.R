@@ -189,7 +189,7 @@ lav_sam_step1 <- function(cmd = "sem", mm_list = NULL, mm_args = list(),
       unique(unlist(lav_partable_vnames(ptm, type = "ov", group = g)))
     })
     slot_data_block <- lav_data_update_subset(fit@Data,
-      ov.names = ov_names_block
+      ov_names = ov_names_block
     )
     # get rid of ov.names.x
     if (!slot_options_mm$conditional.x) {

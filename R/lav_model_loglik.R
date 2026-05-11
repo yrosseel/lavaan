@@ -205,12 +205,12 @@ lav_model_loglik <- function(lavdata = NULL,
     AIC <- lav_fit_aic(logl = logl, npar = npar)
 
     # BIC
-    BIC <- lav_fit_bic(logl = logl, npar = npar, N = lavsamplestats@ntotal)
+    BIC <- lav_fit_bic(logl = logl, npar = npar, n = lavsamplestats@ntotal)
 
     # BIC2
     BIC2 <- lav_fit_sabic(
       logl = logl, npar = npar,
-      N = lavsamplestats@ntotal
+      n = lavsamplestats@ntotal
     )
   } else {
     AIC <- BIC <- BIC2 <- as.numeric(NA)

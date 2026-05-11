@@ -140,7 +140,7 @@ efa <- function(data = NULL,              # nolint start
   for (f in seq_len(nfits)) {
     # generate model syntax
     model_syntax <- lav_syntax_efa(
-      ov.names = ov_names,
+      ov_names = ov_names,
       nfactors = nfactors[f],
       twolevel = twolevel_flag
     )

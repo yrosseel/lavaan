@@ -8,35 +8,35 @@
 # Y.R. 21 July 2022
 
 # Hoelter Critical N (CN)
-lav_fit_cn <- function(X2 = NULL, df = NULL, N = NULL, alpha = 0.05) {
+lav_fit_cn <- function(x2 = NULL, df = NULL, n = NULL, alpha = 0.05) {
   # catch df=0, X2=0
-  if (df == 0 && X2 < sqrt(.Machine$double.eps)) { # added sqrt() in 0.6-21
-    CN <- as.numeric(NA)
+  if (df == 0 && x2 < sqrt(.Machine$double.eps)) { # added sqrt() in 0.6-21
+    cn <- as.numeric(NA)
   } else {
-    CN <- qchisq(p = (1 - alpha), df = df) / (X2 / N) + 1
+    cn <- qchisq(p = (1 - alpha), df = df) / (x2 / n) + 1
   }
 
-  CN
+  cn
 }
 
 # WRMR
 # we use the definition: wrmr = sqrt ( 2*N*F / nel )
 # Note: when multiple groups, 'nel' only seems to correspond to the
 # first group???
-lav_fit_wrmr <- function(X2 = NULL, nel = NULL) {
+lav_fit_wrmr <- function(x2 = NULL, nel = NULL) {
   if (nel > 0) {
-    WRMR <- sqrt(X2 / nel)
+    wrmr <- sqrt(x2 / nel)
   } else {
-    WRMR <- as.numeric(NA)
+    wrmr <- as.numeric(NA)
   }
 
-  WRMR
+  wrmr
 }
 
 # MFI - McDonald Fit Index (McDonald, 1989)
-lav_fit_mfi <- function(X2 = NULL, df = NULL, N = NULL) {
-  MFI <- exp(-0.5 * (X2 - df) / N)
-  MFI
+lav_fit_mfi <- function(x2 = NULL, df = NULL, n = NULL) {
+  mfi <- exp(-0.5 * (x2 - df) / n)
+  mfi
 }
 
 # ECVI - cross-validation index (Brown & Cudeck, 1989, eq 5)
@@ -53,7 +53,7 @@ lav_fit_mfi <- function(X2 = NULL, df = NULL, N = NULL) {
 #      And I think the lack of mean structure in Brown & Cudeck (1989)
 #      was a matter of habitual simplification back then, not necessity.
 # YR: - why does Dudgeon eq 22 use (df + 2*npar) instead of (2*npar)??
-lav_fit_ecvi <- function(X2 = NULL, npar = npar, N = N) {
-  ECVI <- X2 / N + (2 * npar) / N
-  ECVI
+lav_fit_ecvi <- function(x2 = NULL, npar = npar, n = n) {
+  ecvi <- x2 / n + (2 * npar) / n
+  ecvi
 }
