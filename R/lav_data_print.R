@@ -98,7 +98,7 @@ lav_data_print_short <- function(object, nd = 3L) {
   }
   datasummary <- object
 
-  num.format <- paste("%", max(8L, nd + 5L), ".", nd, "f", sep = "")
+  # num_format <- paste("%", max(8L, nd + 5L), ".", nd, "f", sep = "")
 
   # threecolumn
   threecolumn <- !is.null(datasummary$norig)
@@ -264,15 +264,15 @@ lav_data_print_short <- function(object, nd = 3L) {
 
   # create character matrix
   if (threecolumn) {
-    M <- cbind(c1, c2, c3, deparse.level = 0)
+    m <- cbind(c1, c2, c3, deparse.level = 0)
   } else {
-    M <- cbind(c1, c2, deparse.level = 0)
+    m <- cbind(c1, c2, deparse.level = 0)
   }
-  colnames(M) <- rep("", ncol(M))
-  rownames(M) <- rep(" ", nrow(M))
+  colnames(m) <- rep("", ncol(m))
+  rownames(m) <- rep(" ", nrow(m))
 
   # print
-  write.table(M, row.names = TRUE, col.names = FALSE, quote = FALSE)
+  write.table(m, row.names = TRUE, col.names = FALSE, quote = FALSE)
 
-  invisible(M)
+  invisible(m)
 }

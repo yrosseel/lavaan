@@ -186,15 +186,15 @@ lav_predict_internal <- function(lavmodel = NULL,
     newData <- lav_lavdata(
       data = newdata,
       group = lavdata@group,
-      ov.names = lavdata@ov.names,
-      ov.names.x = lavdata@ov.names.x,
+      ov_names = lavdata@ov.names,
+      ov_names_x = lavdata@ov.names.x,
       ordered = OV$name[OV$type == "ordered"],
       lavoptions = list(
         std.ov = lavdata@std.ov,
         group.label = lavdata@group.label,
         missing = lavdata@missing
       ), # was FALSE before?
-      allow.single.case = TRUE
+      allow_single_case = TRUE
     )
     # if ordered, check if number of levels is still the same (new in 0.6-7)
     if (lavmodel@categorical) {

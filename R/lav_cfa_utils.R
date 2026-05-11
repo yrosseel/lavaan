@@ -35,7 +35,7 @@ lav_cfa_lambda2thetapsi <- function(lambda = NULL, s = NULL, s_inv = NULL,
       # what to do?
       lav_msg_warn(gettext(
         "problem computing THETA values; trying pace algorithm"))
-      theta <- lav_efa_pace(S = s, nfactors = nfac, theta.only = TRUE)
+      theta <- lav_efa_pace(s = s, nfactors = nfac, theta_only = TRUE)
     }
   } else {
     # see Hagglund 1982, section 4
@@ -48,7 +48,7 @@ lav_cfa_lambda2thetapsi <- function(lambda = NULL, s = NULL, s_inv = NULL,
       # what to do?
       lav_msg_warn(gettext(
         "problem computing THETA values; trying pace algorithm"))
-      theta <- lav_efa_pace(S = s, nfactors = nfac, theta.only = TRUE)
+      theta <- lav_efa_pace(s = s, nfactors = nfac, theta_only = TRUE)
     }
   }
   theta_nobounds <- theta

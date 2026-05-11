@@ -61,15 +61,15 @@ lav_lavaan_step03_data <- function(slot_data = NULL, # nolint
       data = data,
       group = group,
       cluster = cluster,
-      ov.names = tmp_ov_names,
-      ov.names.x = ov_names_x,
-      ov.names.l = ov_names_l,
+      ov_names = tmp_ov_names,
+      ov_names_x = ov_names_x,
+      ov_names_l = ov_names_l,
       ordered = ordered,
-      sampling.weights = sampling_weights,
-      sample.cov = sample_cov,
-      sample.mean = sample_mean,
-      sample.th = sample_th,
-      sample.nobs = sample_nobs,
+      sampling_weights = sampling_weights,
+      sample_cov = sample_cov,
+      sample_mean = sample_mean,
+      sample_th = sample_th,
+      sample_nobs = sample_nobs,
       lavoptions = lavoptions
     )
 

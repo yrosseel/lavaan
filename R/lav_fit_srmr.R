@@ -19,150 +19,152 @@ lav_fit_srmr_mplus <- function(lavobject) {
   lavh1 <- lavobject@h1
 
   # ngroups
-  G <- lavobject@Data@ngroups
+  g_1 <- lavobject@Data@ngroups
 
   # container per group
-  srmr_mplus.group <- numeric(G)
-  srmr_mplus_nomean.group <- numeric(G)
+  srmr_mplus_group <- numeric(g_1)
+  srmr_mplus_nomean_group <- numeric(g_1)
 
   # If you change how any of the observed/estimated moments below are retrieved,
   # please tag @TDJorgensen at the end of the commit message.
-  for (g in 1:G) {
+  for (g in 1:g_1) {
     # observed
     if (!lavsamplestats@missing.flag) {
       if (lavobject@Model@conditional.x) {
-        S <- lavsamplestats@res.cov[[g]]
-        M <- lavsamplestats@res.int[[g]]
+        s <- lavsamplestats@res.cov[[g]]
+        m <- lavsamplestats@res.int[[g]]
       } else {
-        S <- lavsamplestats@cov[[g]]
-        M <- lavsamplestats@mean[[g]]
+        s <- lavsamplestats@cov[[g]]
+        m <- lavsamplestats@mean[[g]]
       }
     } else {
       # EM estimates
       if (!is.null(lavh1$implied$cov[[g]])) {
-        S <- lavh1$implied$cov[[g]]
+        s <- lavh1$implied$cov[[g]]
       } else {
-        S <- lavsamplestats@missing.h1[[g]]$sigma
+        s <- lavsamplestats@missing.h1[[g]]$sigma
       }
       if (!is.null(lavh1$implied$mean[[g]])) {
-        M <- lavh1$implied$mean[[g]]
+        m <- lavh1$implied$mean[[g]]
       } else {
-        M <- lavsamplestats@missing.h1[[g]]$mu
+        m <- lavsamplestats@missing.h1[[g]]$mu
       }
     }
-    nvar <- ncol(S)
+    nvar <- ncol(s)
 
     # estimated
     implied <- lavobject@implied
     lavmodel <- lavobject@Model
-    Sigma.hat <- if (lavmodel@conditional.x) {
+    sigma_hat <- if (lavmodel@conditional.x) {
       implied$res.cov[[g]]
     } else {
       implied$cov[[g]]
     }
-    Mu.hat <- if (lavmodel@conditional.x) {
+    mu_hat <- if (lavmodel@conditional.x) {
       implied$res.int[[g]]
     } else {
       implied$mean[[g]]
     }
 
     # Bollen approach: simply using cov2cor ('correlation residuals')
-    S.cor <- cov2cor(S)
-    Sigma.cor <- cov2cor(Sigma.hat)
-    R.cor <- (S.cor - Sigma.cor)
+    s_cor <- cov2cor(s)
+    sigma_cor <- cov2cor(sigma_hat)
+    r_cor <- (s_cor - sigma_cor)
 
     # meanstructure
     if (lavobject@Model@meanstructure) {
       # standardized residual mean vector
-      R.cor.mean <- M / sqrt(diag(S)) - Mu.hat / sqrt(diag(Sigma.hat))
+      r_cor_mean <- m / sqrt(diag(s)) - mu_hat / sqrt(diag(sigma_hat))
 
       e <- nvar * (nvar + 1) / 2 + nvar
-      srmr_mplus.group[g] <-
-        sqrt((sum(R.cor[lower.tri(R.cor, diag = FALSE)]^2) +
-          sum(R.cor.mean^2) +
-          sum(((diag(S) - diag(Sigma.hat)) / diag(S))^2)) / e)
+      srmr_mplus_group[g] <-
+        sqrt((sum(r_cor[lower.tri(r_cor, diag = FALSE)]^2) +
+          sum(r_cor_mean^2) +
+          sum(((diag(s) - diag(sigma_hat)) / diag(s))^2)) / e)
 
       e <- nvar * (nvar + 1) / 2
-      srmr_mplus_nomean.group[g] <-
-        sqrt((sum(R.cor[lower.tri(R.cor, diag = FALSE)]^2) +
-          sum(((diag(S) - diag(Sigma.hat)) / diag(S))^2)) / e)
+      srmr_mplus_nomean_group[g] <-
+        sqrt((sum(r_cor[lower.tri(r_cor, diag = FALSE)]^2) +
+          sum(((diag(s) - diag(sigma_hat)) / diag(s))^2)) / e)
     } else {
       e <- nvar * (nvar + 1) / 2
-      srmr_mplus_nomean.group[g] <- srmr_mplus.group[g] <-
-        sqrt((sum(R.cor[lower.tri(R.cor, diag = FALSE)]^2) +
-          sum(((diag(S) - diag(Sigma.hat)) / diag(S))^2)) / e)
+      srmr_mplus_nomean_group[g] <- srmr_mplus_group[g] <-
+        sqrt((sum(r_cor[lower.tri(r_cor, diag = FALSE)]^2) +
+          sum(((diag(s) - diag(sigma_hat)) / diag(s))^2)) / e)
     }
   } # G
 
-  attr(srmr_mplus.group, "nomean") <- srmr_mplus_nomean.group
-  srmr_mplus.group
+  attr(srmr_mplus_group, "nomean") <- srmr_mplus_nomean_group
+  srmr_mplus_group
 }
 
 lav_fit_srmr_twolevel <- function(lavobject = NULL) {
   nlevels <- lavobject@Data@nlevels
-  G <- lavobject@Data@ngroups
+  g_1 <- lavobject@Data@ngroups
 
-  SRMR.within <- numeric(G)
-  SRMR.between <- numeric(G)
-  for (g in 1:G) {
-    b.within <- (g - 1L) * nlevels + 1L
-    b.between <- (g - 1L) * nlevels + 2L
+  srmr_within <- numeric(g_1)
+  srmr_between <- numeric(g_1)
+  for (g in 1:g_1) {
+    b_within <- (g - 1L) * nlevels + 1L
+    b_between <- (g - 1L) * nlevels + 2L
 
     # OBSERVED        # if these change, tag @TDJorgensen in commit message
-    S.within <- lavobject@h1$implied$cov[[b.within]]
-    M.within <- lavobject@h1$implied$mean[[b.within]]
-    S.between <- lavobject@h1$implied$cov[[b.between]]
-    M.between <- lavobject@h1$implied$mean[[b.between]]
+    s_within <- lavobject@h1$implied$cov[[b_within]]
+    # m_within <- lavobject@h1$implied$mean[[b_within]]
+    s_between <- lavobject@h1$implied$cov[[b_between]]
+    # m_between <- lavobject@h1$implied$mean[[b_between]]
 
     # ESTIMATED       # if these change, tag @TDJorgensen in commit message
     implied <- lav_model_implied_cond2uncond(lavobject@implied)
-    Sigma.within <- implied$cov[[b.within]]
-    Mu.within <- implied$mean[[b.within]]
-    Sigma.between <- implied$cov[[b.between]]
-    Mu.between <- implied$mean[[b.between]]
+    sigma_within <- implied$cov[[b_within]]
+    # mu_within <- implied$mean[[b_within]]
+    sigma_between <- implied$cov[[b_between]]
+    # mu_between <- implied$mean[[b_between]]
 
     # force pd for between
     #    S.between <- lav_matrix_symmetric_force_pd(S.between)
-    Sigma.between <- lav_matrix_symmetric_force_pd(Sigma.between)
+    sigma_between <- lav_matrix_symmetric_force_pd(sigma_between)
 
     # Bollen approach: simply using cov2cor ('residual correlations')
-    S.within.cor <- cov2cor(S.within)
-    S.between.cor <- cov2cor(S.between)
-    Sigma.within.cor <- cov2cor(Sigma.within)
-    if (all(diag(Sigma.between) > 0)) {
-      Sigma.between.cor <- cov2cor(Sigma.between)
+    s_within_cor <- cov2cor(s_within)
+    s_between_cor <- cov2cor(s_between)
+    sigma_within_cor <- cov2cor(sigma_within)
+    if (all(diag(sigma_between) > 0)) {
+      sigma_between_cor <- cov2cor(sigma_between)
     } else {
-      Sigma.between.cor <- matrix(as.numeric(NA),
-        nrow = nrow(Sigma.between),
-        ncol = ncol(Sigma.between)
+      sigma_between_cor <- matrix(as.numeric(NA),
+        nrow = nrow(sigma_between),
+        ncol = ncol(sigma_between)
       )
     }
-    R.within.cor <- (S.within.cor - Sigma.within.cor)
-    R.between.cor <- (S.between.cor - Sigma.between.cor)
+    r_within_cor <- (s_within_cor - sigma_within_cor)
+    r_between_cor <- (s_between_cor - sigma_between_cor)
 
-    nvar.within <- NCOL(S.within)
-    nvar.between <- NCOL(S.between)
-    pstar.within <- nvar.within * (nvar.within + 1) / 2
-    pstar.between <- nvar.between * (nvar.between + 1) / 2
+    nvar_within <- NCOL(s_within)
+    nvar_between <- NCOL(s_between)
+    pstar_within <- nvar_within * (nvar_within + 1) / 2
+    pstar_between <- nvar_between * (nvar_between + 1) / 2
 
     # SRMR
-    SRMR.within[g] <- sqrt(sum(lav_matrix_vech(R.within.cor)^2) /
-      pstar.within)
-    SRMR.between[g] <- sqrt(sum(lav_matrix_vech(R.between.cor)^2) /
-      pstar.between)
+    srmr_within[g] <- sqrt(sum(lav_matrix_vech(r_within_cor)^2) /
+      pstar_within)
+    srmr_between[g] <- sqrt(sum(lav_matrix_vech(r_between_cor)^2) /
+      pstar_between)
   }
 
   # adjust for group sizes
-  ng <- unlist(lavobject@SampleStats@nobs)  # if this changes, tag @TDJorgensen in commit message
-  ntotal <- lavobject@SampleStats@ntotal    # if this changes, tag @TDJorgensen in commit message
-  SRMR_WITHIN <- sum(ng / ntotal * SRMR.within)
-  SRMR_BETWEEN <- sum(ng / ntotal * SRMR.between)
-  SRMR_TOTAL <- SRMR_WITHIN + SRMR_BETWEEN
+  ng <- unlist(lavobject@SampleStats@nobs)
+              # if this changes, tag @TDJorgensen in commit message
+  ntotal <- lavobject@SampleStats@ntotal
+              # if this changes, tag @TDJorgensen in commit message
+  srmr_within_1 <- sum(ng / ntotal * srmr_within)
+  srmr_between_1 <- sum(ng / ntotal * srmr_between)
+  srmr_total <- srmr_within_1 + srmr_between_1
 
-  c(SRMR_TOTAL, SRMR_WITHIN, SRMR_BETWEEN)
+  c(srmr_total, srmr_within_1, srmr_between_1)
 }
 
-lav_fit_srmr_lavobject <- function(lavobject = NULL, fit.measures = "rmsea") {
+lav_fit_srmr_lavobject <- function(lavobject = NULL, fit_measures = "rmsea") {
   # check lavobject
   stopifnot(inherits(lavobject, "lavaan"))
 
@@ -171,8 +173,8 @@ lav_fit_srmr_lavobject <- function(lavobject = NULL, fit.measures = "rmsea") {
 
   # supported fit measures in this function
   if (categorical) {
-    fit.srmr <- c("srmr")
-    fit.srmr2 <- c(
+    fit_srmr <- c("srmr")
+    fit_srmr2 <- c(
       "rmr", "rmr_nomean",
       "srmr", # per default equal to srmr_bentler_nomean
       "srmr_bentler", "srmr_bentler_nomean",
@@ -181,11 +183,11 @@ lav_fit_srmr_lavobject <- function(lavobject = NULL, fit.measures = "rmsea") {
     )
   } else {
     if (lavobject@Data@nlevels > 1L) {
-      fit.srmr <- c("srmr", "srmr_within", "srmr_between")
-      fit.srmr2 <- c("srmr", "srmr_within", "srmr_between")
+      fit_srmr <- c("srmr", "srmr_within", "srmr_between")
+      fit_srmr2 <- c("srmr", "srmr_within", "srmr_between")
     } else {
-      fit.srmr <- c("srmr")
-      fit.srmr2 <- c(
+      fit_srmr <- c("srmr")
+      fit_srmr2 <- c(
         "rmr", "rmr_nomean",
         "srmr", # the default
         "srmr_bentler", "srmr_bentler_nomean",
@@ -196,16 +198,16 @@ lav_fit_srmr_lavobject <- function(lavobject = NULL, fit.measures = "rmsea") {
   }
 
   # which one do we need?
-  if (missing(fit.measures)) {
+  if (missing(fit_measures)) {
     # default set
-    fit.measures <- fit.srmr
+    fit_measures <- fit_srmr
   } else {
     # remove any not-SRMR related index from fit.measures
-    rm.idx <- which(!fit.measures %in% fit.srmr2)
-    if (length(rm.idx) > 0L) {
-      fit.measures <- fit.measures[-rm.idx]
+    rm_idx <- which(!fit_measures %in% fit_srmr2)
+    if (length(rm_idx) > 0L) {
+      fit_measures <- fit_measures[-rm_idx]
     }
-    if (length(fit.measures) == 0L) {
+    if (length(fit_measures) == 0L) {
       return(list())
     }
   }
@@ -218,73 +220,75 @@ lav_fit_srmr_lavobject <- function(lavobject = NULL, fit.measures = "rmsea") {
     # RMR/SRMR/CRMR: we get it from lav_residuals_summary()
     out <- lav_residuals_summary(lavobject, se = FALSE, unbiased = FALSE)
 
-    cov.cor <- "cov"
+    cov_cor <- "cov"
     if (categorical) {
-      cov.cor <- "cor"
+      cov_cor <- "cor"
     }
 
     # only cov
-    rmr_nomean.group <- sapply(lapply(out, "[[", "rmr"), "[[", cov.cor)
-    srmr_nomean.group <- sapply(lapply(out, "[[", "srmr"), "[[", cov.cor)
-    crmr_nomean.group <- sapply(lapply(out, "[[", "crmr"), "[[", cov.cor)
+    rmr_nomean_group <- sapply(lapply(out, "[[", "rmr"), "[[", cov_cor)
+    srmr_nomean_group <- sapply(lapply(out, "[[", "srmr"), "[[", cov_cor)
+    crmr_nomean_group <- sapply(lapply(out, "[[", "crmr"), "[[", cov_cor)
 
     # total
     if (lavobject@Model@meanstructure) {
-      rmr.group <- sapply(lapply(out, "[[", "rmr"), "[[", "total")
-      srmr.group <- sapply(lapply(out, "[[", "srmr"), "[[", "total")
-      crmr.group <- sapply(lapply(out, "[[", "crmr"), "[[", "total")
+      rmr_group <- sapply(lapply(out, "[[", "rmr"), "[[", "total")
+      srmr_group <- sapply(lapply(out, "[[", "srmr"), "[[", "total")
+      crmr_group <- sapply(lapply(out, "[[", "crmr"), "[[", "total")
     } else {
       # no 'total', only 'cov'
-      rmr.group <- rmr_nomean.group
-      srmr.group <- srmr_nomean.group
-      crmr.group <- crmr_nomean.group
+      rmr_group <- rmr_nomean_group
+      srmr_group <- srmr_nomean_group
+      crmr_group <- crmr_nomean_group
     }
 
     # the Mplus versions
-    srmr_mplus.group <- lav_fit_srmr_mplus(lavobject = lavobject)
-    srmr_mplus_nomean.group <- attr(srmr_mplus.group, "nomean")
-    attr(srmr_mplus.group, "nomean") <- NULL
+    srmr_mplus_group <- lav_fit_srmr_mplus(lavobject = lavobject)
+    srmr_mplus_nomean_group <- attr(srmr_mplus_group, "nomean")
+    attr(srmr_mplus_group, "nomean") <- NULL
 
     # adjust for group sizes
-    ng <- unlist(lavobject@SampleStats@nobs)  # if this changes, tag @TDJorgensen in commit message
-    ntotal <- lavobject@SampleStats@ntotal    # if this changes, tag @TDJorgensen in commit message
-    RMR <- sum(ng / ntotal * rmr.group)
-    RMR_NOMEAN <- sum(ng / ntotal * rmr_nomean.group)
-    SRMR_BENTLER <- sum(ng / ntotal * srmr.group)
-    SRMR_BENTLER_NOMEAN <- sum(ng / ntotal * srmr_nomean.group)
-    CRMR <- sum(ng / ntotal * crmr.group)
-    CRMR_NOMEAN <- sum(ng / ntotal * crmr_nomean.group)
-    SRMR_MPLUS <- sum(ng / ntotal * srmr_mplus.group)
-    SRMR_MPLUS_NOMEAN <- sum(ng / ntotal * srmr_mplus_nomean.group)
+    ng <- unlist(lavobject@SampleStats@nobs)
+              # if this changes, tag @TDJorgensen in commit message
+    ntotal <- lavobject@SampleStats@ntotal
+              # if this changes, tag @TDJorgensen in commit message
+    rmr <- sum(ng / ntotal * rmr_group)
+    rmr_nomean <- sum(ng / ntotal * rmr_nomean_group)
+    srmr_bentler <- sum(ng / ntotal * srmr_group)
+    srmr_bentler_nomean <- sum(ng / ntotal * srmr_nomean_group)
+    crmr <- sum(ng / ntotal * crmr_group)
+    crmr_nomean <- sum(ng / ntotal * crmr_nomean_group)
+    srmr_mplus <- sum(ng / ntotal * srmr_mplus_group)
+    srmr_mplus_nomean <- sum(ng / ntotal * srmr_mplus_nomean_group)
 
     # srmr
     if (lavobject@Options$mimic %in% c("lavaan", "EQS")) {
       if (categorical) {
-        indices["srmr"] <- SRMR_BENTLER_NOMEAN
+        indices["srmr"] <- srmr_bentler_nomean
       } else {
-        indices["srmr"] <- SRMR_BENTLER
+        indices["srmr"] <- srmr_bentler
       }
     } else if (lavobject@Options$mimic == "Mplus") {
       if (lavobject@Options$information[1] == "expected") {
         if (categorical) {
-          indices["srmr"] <- SRMR_BENTLER_NOMEAN
+          indices["srmr"] <- srmr_bentler_nomean
         } else {
-          indices["srmr"] <- SRMR_BENTLER
+          indices["srmr"] <- srmr_bentler
         }
       } else {
         if (categorical) {
-          indices["srmr"] <- SRMR_MPLUS_NOMEAN
+          indices["srmr"] <- srmr_mplus_nomean
         } else {
-          indices["srmr"] <- SRMR_MPLUS
+          indices["srmr"] <- srmr_mplus
         }
       }
     } # Mplus only
 
     # the others
-    indices["srmr_bentler"] <- SRMR_BENTLER
-    indices["srmr_bentler_nomean"] <- SRMR_BENTLER_NOMEAN
-    indices["crmr"] <- CRMR
-    indices["crmr_nomean"] <- CRMR_NOMEAN
+    indices["srmr_bentler"] <- srmr_bentler
+    indices["srmr_bentler_nomean"] <- srmr_bentler_nomean
+    indices["crmr"] <- crmr
+    indices["crmr_nomean"] <- crmr_nomean
 
     # only correct for non-categorical:
     if (lavobject@Model@categorical) {
@@ -294,11 +298,11 @@ lav_fit_srmr_lavobject <- function(lavobject = NULL, fit.measures = "rmsea") {
       indices["srmr_mplus"] <- as.numeric(NA)
       indices["srmr_mplus_nomean"] <- as.numeric(NA)
     } else {
-      indices["srmr_mplus"] <- SRMR_MPLUS
-      indices["srmr_mplus_nomean"] <- SRMR_MPLUS_NOMEAN
+      indices["srmr_mplus"] <- srmr_mplus
+      indices["srmr_mplus_nomean"] <- srmr_mplus_nomean
     }
-    indices["rmr"] <- RMR
-    indices["rmr_nomean"] <- RMR_NOMEAN
+    indices["rmr"] <- rmr
+    indices["rmr_nomean"] <- rmr_nomean
   } else {
     # 2. twolevel setting
     out <- lav_fit_srmr_twolevel(lavobject = lavobject)
@@ -308,5 +312,5 @@ lav_fit_srmr_lavobject <- function(lavobject = NULL, fit.measures = "rmsea") {
   } # twolevel
 
   # return only those that were requested
-  indices[fit.measures]
+  indices[fit_measures]
 }

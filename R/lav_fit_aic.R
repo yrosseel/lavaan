@@ -11,24 +11,24 @@
 # Y.R. 21 July 2022
 
 lav_fit_aic <- function(logl = NULL, npar = NULL) {
-  AIC <- (-2 * logl) + (2 * npar)
-  AIC
+  aic <- (-2 * logl) + (2 * npar)
+  aic
 }
 
-lav_fit_bic <- function(logl = NULL, npar = NULL, N = NULL) {
-  BIC <- (-2 * logl) + (npar * log(N))
-  BIC
+lav_fit_bic <- function(logl = NULL, npar = NULL, n = NULL) {
+  bic <- (-2 * logl) + (npar * log(n))
+  bic
 }
 
-lav_fit_sabic <- function(logl = NULL, npar = NULL, N = NULL) {
-  N.star <- (N + 2) / 24
-  SABIC <- (-2 * logl) + (npar * log(N.star))
-  SABIC
+lav_fit_sabic <- function(logl = NULL, npar = NULL, n = NULL) {
+  n_star <- (n + 2) / 24
+  sabic <- (-2 * logl) + (npar * log(n_star))
+  sabic
 }
 
-lav_fit_aic_lavobject <- function(lavobject = NULL, fit.measures = "aic",
-                                  standard.test = "standard",
-                                  scaled.test = "none",
+lav_fit_aic_lavobject <- function(lavobject = NULL, fit_measures = "aic",
+                                  standard_test = "standard",
+                                  scaled_test = "none",
                                   estimator = "ML") {
   # check lavobject
   stopifnot(inherits(lavobject, "lavaan"))
@@ -36,22 +36,22 @@ lav_fit_aic_lavobject <- function(lavobject = NULL, fit.measures = "aic",
   lavobject <- lav_object_check_version(lavobject)
 
   # tests
-  TEST <- lavobject@test
-  test.names <- sapply(lavobject@test, "[[", "test")
-  if (test.names[1] == "none" || standard.test == "none") {
+  test <- lavobject@test
+  test_names <- sapply(lavobject@test, "[[", "test")
+  if (test_names[1] == "none" || standard_test == "none") {
     return(list())
   }
-  test.idx <- which(test.names == standard.test)[1]
-  if (length(test.idx) == 0L) {
+  test_idx <- which(test_names == standard_test)[1]
+  if (length(test_idx) == 0L) {
     return(list())
   }
 
-  scaled.flag <- FALSE
-  if (!scaled.test %in% c("none", "standard", "default")) {
-    scaled.idx <- which(test.names == scaled.test)
-    if (length(scaled.idx) > 0L) {
-      scaled.idx <- scaled.idx[1] # only the first one
-      scaled.flag <- TRUE
+  scaled_flag <- FALSE
+  if (!scaled_test %in% c("none", "standard", "default")) {
+    scaled_idx <- which(test_names == scaled_test)
+    if (length(scaled_idx) > 0L) {
+      scaled_idx <- scaled_idx[1] # only the first one
+      scaled_flag <- TRUE
     }
   }
 
@@ -62,29 +62,29 @@ lav_fit_aic_lavobject <- function(lavobject = NULL, fit.measures = "aic",
 
   # supported fit measures in this function
   if (estimator == "MML") {
-    fit.logl <- c("logl", "aic", "bic", "ntotal", "bic2")
+    fit_logl <- c("logl", "aic", "bic", "ntotal", "bic2")
   } else {
-    fit.logl <- c(
+    fit_logl <- c(
       "logl", "unrestricted.logl", "aic", "bic",
       "ntotal", "bic2"
     )
   }
-  if (scaled.flag &&
-    scaled.test %in% c("yuan.bentler", "yuan.bentler.mplus")) {
-    fit.logl <- c(fit.logl, "scaling.factor.h1", "scaling.factor.h0")
+  if (scaled_flag &&
+    scaled_test %in% c("yuan.bentler", "yuan.bentler.mplus")) {
+    fit_logl <- c(fit_logl, "scaling.factor.h1", "scaling.factor.h0")
   }
 
   # which one do we need?
-  if (missing(fit.measures)) {
+  if (missing(fit_measures)) {
     # default set
-    fit.measures <- fit.logl
+    fit_measures <- fit_logl
   } else {
     # remove any not-CFI related index from fit.measures
-    rm.idx <- which(!fit.measures %in% fit.logl)
-    if (length(rm.idx) > 0L) {
-      fit.measures <- fit.measures[-rm.idx]
+    rm_idx <- which(!fit_measures %in% fit_logl)
+    if (length(rm_idx) > 0L) {
+      fit_measures <- fit_measures[-rm_idx]
     }
-    if (length(fit.measures) == 0L) {
+    if (length(fit_measures) == 0L) {
       return(list())
     }
   }
@@ -122,12 +122,12 @@ lav_fit_aic_lavobject <- function(lavobject = NULL, fit.measures = "aic",
     indices["bic2"] <- loglik$BIC2
 
     # scaling factor for MLR
-    if (scaled.test %in% c("yuan.bentler", "yuan.bentler.mplus")) {
-      indices["scaling.factor.h1"] <- TEST[[scaled.idx]]$scaling.factor.h1
-      indices["scaling.factor.h0"] <- TEST[[scaled.idx]]$scaling.factor.h0
+    if (scaled_test %in% c("yuan.bentler", "yuan.bentler.mplus")) {
+      indices["scaling.factor.h1"] <- test[[scaled_idx]]$scaling.factor.h1
+      indices["scaling.factor.h0"] <- test[[scaled_idx]]$scaling.factor.h0
     }
   } # ML
 
   # return only those that were requested
-  indices[fit.measures]
+  indices[fit_measures]
 }

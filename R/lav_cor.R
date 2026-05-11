@@ -106,9 +106,9 @@ lav_object_cor <- function(object,                 # nolint start
     }
     lav_data <- lav_lavdata(
       data = object, group = group,
-      ov.names = names_1, ordered = ordered,
-      sampling.weights = sampling.weights,
-      ov.names.x = ov.names.x,
+      ov_names = names_1, ordered = ordered,
+      sampling_weights = sampling.weights,
+      ov_names_x = ov.names.x,
       lavoptions = list(
         missing = missing,
         sampling.weights.normalization = sampling_weights_normalization

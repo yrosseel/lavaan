@@ -2,13 +2,13 @@ lav_constraints_parse <- function(partable = NULL, constraints = NULL,
                                   theta = NULL,
                                   debug = FALSE) {
   if (!missing(debug)) {
-    current.debug <- lav_debug()
+    current_debug <- lav_debug()
     if (lav_debug(debug))
-      on.exit(lav_debug(current.debug), TRUE)
+      on.exit(lav_debug(current_debug), TRUE)
   }
   # just in case we do not have a $free column in partable
   if (is.null(partable$free)) {
-    partable$free <- seq_len(length(partable$lhs))
+    partable$free <- seq_along(partable$lhs)
   }
 
   # from the partable: free parameters
@@ -27,194 +27,194 @@ lav_constraints_parse <- function(partable = NULL, constraints = NULL,
 
   # parse the constraints
   if (is.null(constraints)) {
-    LIST <- NULL
+    list_1 <- NULL
   } else if (!is.character(constraints)) {
     lav_msg_stop(gettext("constraints should be a string"))
   } else {
-    FLAT <- lavParseModelString(constraints)
-    CON <- attr(FLAT, "constraints")
-    LIST <- list()
-    if (length(CON) > 0L) {
-      lhs <- unlist(lapply(CON, "[[", "lhs"))
-      op <- unlist(lapply(CON, "[[", "op"))
-      rhs <- unlist(lapply(CON, "[[", "rhs"))
-      LIST$lhs <- c(LIST$lhs, lhs)
-      LIST$op <- c(LIST$op, op)
-      LIST$rhs <- c(LIST$rhs, rhs)
+    flat <- lavParseModelString(constraints)
+    con <- attr(flat, "constraints")
+    list_1 <- list()
+    if (length(con) > 0L) {
+      lhs <- unlist(lapply(con, "[[", "lhs"))
+      op <- unlist(lapply(con, "[[", "op"))
+      rhs <- unlist(lapply(con, "[[", "rhs"))
+      list_1$lhs <- c(list_1$lhs, lhs)
+      list_1$op <- c(list_1$op, op)
+      list_1$rhs <- c(list_1$rhs, rhs)
     } else {
       lav_msg_stop(gettext("no constraints found in constraints argument"))
     }
   }
 
   # simple equality constraints?
-  ceq.simple <- FALSE
+  ceq_simple <- FALSE
   if (!is.null(partable$unco)) {
-    ceq.simple <- TRUE
+    ceq_simple <- TRUE
   }
 
   # simple inequality constraints?
-  cin.simple <- TRUE
+  cin_simple <- TRUE
   if (any(partable$op %in% c(">", "<"))) {
-    cin.simple <- FALSE
+    cin_simple <- FALSE
   }
-  if (!is.null(LIST) && any(LIST$op %in% c(">", "<"))) {
-    cin.simple <- FALSE
+  if (!is.null(list_1) && any(list_1$op %in% c(">", "<"))) {
+    cin_simple <- FALSE
   }
   if (is.null(partable$upper) && is.null(partable$lower)) {
-    cin.simple <- FALSE
+    cin_simple <- FALSE
   } else {
     # only check free parameters!
-    free.idx <- which(partable$free > 0L)
-    if (all(partable$lower[free.idx] == -Inf) &&
-        all(partable$upper[free.idx] == +Inf)) {
-      cin.simple <- FALSE
+    free_idx <- which(partable$free > 0L)
+    if (all(partable$lower[free_idx] == -Inf) &&
+        all(partable$upper[free_idx] == +Inf)) {
+      cin_simple <- FALSE
     }
   }
 
   # variable definitions
-  def.function <- lav_partable_constraints_def(partable,
-    con = LIST,
+  def_function <- lav_partable_constraints_def(partable,
+    con = list_1,
     debug = debug
   )
 
   # construct ceq/ciq functions
-  ceq.function <- lav_partable_constraints_ceq(partable,
-    con = LIST,
+  ceq_function <- lav_partable_constraints_ceq(partable,
+    con = list_1,
     debug = debug
   )
   # linear or nonlinear?
-  ceq.linear.idx <- lav_constraints_linear_idx(
-    func = ceq.function,
+  ceq_linear_idx <- lav_constraints_linear_idx(
+    func = ceq_function,
     npar = npar
   )
-  ceq.nonlinear.idx <- lav_constraints_nonlinear_idx(
-    func = ceq.function,
+  ceq_nonlinear_idx <- lav_constraints_nonlinear_idx(
+    func = ceq_function,
     npar = npar
   )
 
   # inequalities
-  cin.function <- lav_partable_constraints_ciq(partable,
-    con = LIST,
+  cin_function <- lav_partable_constraints_ciq(partable,
+    con = list_1,
     debug = debug
   )
 
   # linear or nonlinear?
-  cin.linear.idx <- lav_constraints_linear_idx(
-    func = cin.function,
+  cin_linear_idx <- lav_constraints_linear_idx(
+    func = cin_function,
     npar = npar
   )
-  cin.nonlinear.idx <- lav_constraints_nonlinear_idx(
-    func = cin.function,
+  cin_nonlinear_idx <- lav_constraints_nonlinear_idx(
+    func = cin_function,
     npar = npar
   )
 
   # Jacobians
-  if (!is.null(body(ceq.function))) {
-    ceq.JAC <- try(lav_func_jacobian_complex(
-      func = ceq.function,
+  if (!is.null(body(ceq_function))) {
+    ceq_jac <- try(lav_func_jacobian_complex(
+      func = ceq_function,
       x = theta
     ), silent = TRUE)
-    if (inherits(ceq.JAC, "try-error")) { # eg. pnorm()
-      ceq.JAC <- lav_func_jacobian_simple(func = ceq.function, x = theta)
+    if (inherits(ceq_jac, "try-error")) { # eg. pnorm()
+      ceq_jac <- lav_func_jacobian_simple(func = ceq_function, x = theta)
     }
 
     # constants
     # do we have a non-zero 'rhs' elements? FIXME!!! is this reliable??
-    ceq.rhs <- -1 * ceq.function(numeric(npar))
+    ceq_rhs <- -1 * ceq_function(numeric(npar))
 
     # evaluate constraints
-    ceq.theta <- ceq.function(theta)
+    ceq_theta <- ceq_function(theta)
   } else {
-    ceq.JAC <- matrix(0, nrow = 0L, ncol = npar)
-    ceq.rhs <- numeric(0L)
-    ceq.theta <- numeric(0L)
+    ceq_jac <- matrix(0, nrow = 0L, ncol = npar)
+    ceq_rhs <- numeric(0L)
+    ceq_theta <- numeric(0L)
   }
 
-  if (!is.null(body(cin.function))) {
-    cin.JAC <- try(lav_func_jacobian_complex(
-      func = cin.function,
+  if (!is.null(body(cin_function))) {
+    cin_jac <- try(lav_func_jacobian_complex(
+      func = cin_function,
       x = theta
     ), silent = TRUE)
-    if (inherits(cin.JAC, "try-error")) { # eg. pnorm()
-      cin.JAC <- lav_func_jacobian_simple(func = cin.function, x = theta)
+    if (inherits(cin_jac, "try-error")) { # eg. pnorm()
+      cin_jac <- lav_func_jacobian_simple(func = cin_function, x = theta)
     }
 
     # constants
     # do we have a non-zero 'rhs' elements? FIXME!!! is this reliable??
-    cin.rhs <- -1 * cin.function(numeric(npar))
+    cin_rhs <- -1 * cin_function(numeric(npar))
 
     # evaluate constraints
-    cin.theta <- cin.function(theta)
+    cin_theta <- cin_function(theta)
   } else {
-    cin.JAC <- matrix(0, nrow = 0L, ncol = npar)
-    cin.rhs <- numeric(0L)
-    cin.theta <- numeric(0L)
+    cin_jac <- matrix(0, nrow = 0L, ncol = npar)
+    cin_rhs <- numeric(0L)
+    cin_theta <- numeric(0L)
   }
 
   # check for empty/unused constraints (new in 0.6-22)
-  if(nrow(ceq.JAC) > 0L) {
-    if (all(ceq.JAC == 0)) {
-      ceq.JAC <- matrix(0, nrow = 0L, ncol = npar)
-      ceq.rhs <- numeric(0L)
-      ceq.theta <- numeric(0L)
-      ceq.linear.idx <- integer(0L)
-      ceq.nonlinear.idx <- integer(0L)
+  if (nrow(ceq_jac) > 0L) {
+    if (all(ceq_jac == 0)) {
+      ceq_jac <- matrix(0, nrow = 0L, ncol = npar)
+      ceq_rhs <- numeric(0L)
+      ceq_theta <- numeric(0L)
+      ceq_linear_idx <- integer(0L)
+      ceq_nonlinear_idx <- integer(0L)
     } else {
-      zero.idx <- which(apply(ceq.JAC, 1, function(x) all(x == 0)))
-      if (length(zero.idx) > 0L) {
-        ceq.JAC <- ceq.JAC[-zero.idx, , drop = FALSE]
-        ceq.rhs <- ceq.rhs[-zero.idx]
-        ceq.theta <- ceq.theta[-zero.idx]
+      zero_idx <- which(apply(ceq_jac, 1, function(x) all(x == 0)))
+      if (length(zero_idx) > 0L) {
+        ceq_jac <- ceq_jac[-zero_idx, , drop = FALSE]
+        ceq_rhs <- ceq_rhs[-zero_idx]
+        ceq_theta <- ceq_theta[-zero_idx]
         # hm, how to handle these? indices no longer match rows of ceq.JAC!
-        ceq.linear.idx <- ceq.linear.idx[!ceq.linear.idx %in% zero.idx]
-        ceq.nonlinear.idx <- ceq.nonlinear.idx[!ceq.nonlinear.idx %in% zero.idx]
+        ceq_linear_idx <- ceq_linear_idx[!ceq_linear_idx %in% zero_idx]
+        ceq_nonlinear_idx <- ceq_nonlinear_idx[!ceq_nonlinear_idx %in% zero_idx]
       }
     }
   }
-  if(nrow(cin.JAC) > 0L) {
-    if (all(cin.JAC == 0)) {
-      cin.JAC <- matrix(0, nrow = 0L, ncol = npar)
-      cin.rhs <- numeric(0L)
-      cin.theta <- numeric(0L)
-      cin.linear.idx <- integer(0L)
-      cin.nonlinear.idx <- integer(0L)
+  if (nrow(cin_jac) > 0L) {
+    if (all(cin_jac == 0)) {
+      cin_jac <- matrix(0, nrow = 0L, ncol = npar)
+      cin_rhs <- numeric(0L)
+      cin_theta <- numeric(0L)
+      cin_linear_idx <- integer(0L)
+      cin_nonlinear_idx <- integer(0L)
     } else {
-      zero.idx <- which(apply(cin.JAC, 1, function(x) all(x == 0)))
-      if (length(zero.idx) > 0L) {
-        cin.JAC <- cin.JAC[-zero.idx, , drop = FALSE]
-        cin.rhs <- cin.rhs[-zero.idx]
-        cin.theta <- cin.theta[-zero.idx]
+      zero_idx <- which(apply(cin_jac, 1, function(x) all(x == 0)))
+      if (length(zero_idx) > 0L) {
+        cin_jac <- cin_jac[-zero_idx, , drop = FALSE]
+        cin_rhs <- cin_rhs[-zero_idx]
+        cin_theta <- cin_theta[-zero_idx]
         # hm, how to handle these? indices no longer match rows of cin.JAC!
-        cin.linear.idx <- cin.linear.idx[!cin.linear.idx %in% zero.idx]
-        cin.nonlinear.idx <- cin.nonlinear.idx[!cin.nonlinear.idx %in% zero.idx]
+        cin_linear_idx <- cin_linear_idx[!cin_linear_idx %in% zero_idx]
+        cin_nonlinear_idx <- cin_nonlinear_idx[!cin_nonlinear_idx %in% zero_idx]
       }
     }
   }
 
   # shortcut flags
-  ceq.linear.flag <- length(ceq.linear.idx) > 0L
-  ceq.nonlinear.flag <- length(ceq.nonlinear.idx) > 0L
-  ceq.flag <- ceq.linear.flag || ceq.nonlinear.flag
+  ceq_linear_flag <- length(ceq_linear_idx) > 0L
+  ceq_nonlinear_flag <- length(ceq_nonlinear_idx) > 0L
+  ceq_flag <- ceq_linear_flag || ceq_nonlinear_flag
 
-  cin.linear.flag <- length(cin.linear.idx) > 0L
-  cin.nonlinear.flag <- length(cin.nonlinear.idx) > 0L
-  cin.flag <- cin.linear.flag || cin.nonlinear.flag
-  if (cin.simple) {
-    cin.flag <- FALSE
+  cin_linear_flag <- length(cin_linear_idx) > 0L
+  cin_nonlinear_flag <- length(cin_nonlinear_idx) > 0L
+  cin_flag <- cin_linear_flag || cin_nonlinear_flag
+  if (cin_simple) {
+    cin_flag <- FALSE
   }
 
-  ceq.only.flag <- ceq.flag && !cin.flag
-  cin.only.flag <- cin.flag && !ceq.flag
+  # ceq_only_flag <- ceq_flag && !cin_flag
+  cin_only_flag <- cin_flag && !ceq_flag
 
-  ceq.linear.only.flag <- (ceq.linear.flag &&
-    !ceq.nonlinear.flag &&
-    !cin.flag && !cin.simple)
+  ceq_linear_only_flag <- (ceq_linear_flag &&
+    !ceq_nonlinear_flag &&
+    !cin_flag && !cin_simple)
 
-  ceq.simple.only <- ceq.simple && !ceq.flag && !cin.flag
-  cin.simple.only <- cin.simple && !ceq.linear.flag
+  ceq_simple_only <- ceq_simple && !ceq_flag && !cin_flag
+  cin_simple_only <- cin_simple && !ceq_linear_flag
 
   # additional info if ceq.linear.flag
-  if (ceq.linear.only.flag) {
+  if (ceq_linear_only_flag) {
     ## NEW: 18 nov 2014: handle general *linear* constraints
     ##
     ## see Nocedal & Wright (2006) 15.3
@@ -236,82 +236,82 @@ lav_constraints_parse <- function(partable = NULL, constraints = NULL,
     # matrix
     # JAC <- lav_func_jacobian_complex(func = ceq.function,
     #           x = lavpartable$start[lavpartable$free > 0L]
-    QR <- qr(t(ceq.JAC))
-    ranK <- QR$rank
-    Q <- qr.Q(QR, complete = TRUE)
+    qr_1 <- qr(t(ceq_jac))
+    ran_k <- qr_1$rank
+    q_1 <- qr.Q(qr_1, complete = TRUE)
     # Q1 <- Q[,1:ranK, drop = FALSE]         # range space
     # Q2 <- Q[,-seq_len(ranK), drop = FALSE] # null space
     # R <- qr.R(QR)
-    ceq.JAC.NULL <- Q[, -seq_len(ranK), drop = FALSE]
+    ceq_jac_null <- q_1[, -seq_len(ran_k), drop = FALSE]
 
-    if (all(ceq.rhs == 0)) {
-      ceq.rhs.NULL <- numeric(npar)
+    if (all(ceq_rhs == 0)) {
+      ceq_rhs_null <- numeric(npar)
     } else {
-      tmp <- qr.coef(QR, diag(npar))
-      NA.idx <- which(is.na(rowSums(tmp))) # catch NAs
-      if (length(NA.idx) > 0L) {
-        tmp[NA.idx, ] <- 0
+      tmp <- qr.coef(qr_1, diag(npar))
+      na_idx <- which(is.na(rowSums(tmp))) # catch NAs
+      if (length(na_idx) > 0L) {
+        tmp[na_idx, ] <- 0
       }
-      ceq.rhs.NULL <- as.numeric(ceq.rhs %*% tmp)
+      ceq_rhs_null <- as.numeric(ceq_rhs %*% tmp)
     }
   } else {
-    ceq.JAC.NULL <- matrix(0, 0L, 0L)
-    ceq.rhs.NULL <- numeric(0L)
+    ceq_jac_null <- matrix(0, 0L, 0L)
+    ceq_rhs_null <- numeric(0L)
   }
 
   # if simple equalities only, create 'K' matrix
-  ceq.simple.K <- matrix(0, 0, 0)
-  if (ceq.simple.only) {
-    n.unco <- max(partable$unco)
-    n.free <- max(partable$free)
-    ceq.simple.K <- matrix(0, nrow = n.unco, ncol = n.free)
+  ceq_simple_k <- matrix(0, 0, 0)
+  if (ceq_simple_only) {
+    n_unco <- max(partable$unco)
+    n_free <- max(partable$free)
+    ceq_simple_k <- matrix(0, nrow = n_unco, ncol = n_free)
     #####
     #####     FIXME !
     #####
-    idx.free <- partable$free[partable$free > 0]
-    for (k in 1:n.unco) {
-      c <- idx.free[k]
-      ceq.simple.K[k, c] <- 1
+    idx_free <- partable$free[partable$free > 0]
+    for (k in 1:n_unco) {
+      c <- idx_free[k]
+      ceq_simple_k[k, c] <- 1
     }
   }
 
   # dummy jacobian 'function'
-  ceq.jacobian <- function() NULL
-  cin.jacobian <- function() NULL
+  ceq_jacobian <- function() NULL
+  cin_jacobian <- function() NULL
 
 
-  OUT <- list(
-    def.function = def.function,
-    ceq.function = ceq.function,
-    ceq.JAC = ceq.JAC,
-    ceq.jacobian = ceq.jacobian,
-    ceq.rhs = ceq.rhs,
-    ceq.theta = ceq.theta,
-    ceq.linear.idx = ceq.linear.idx,
-    ceq.nonlinear.idx = ceq.nonlinear.idx,
-    ceq.linear.flag = ceq.linear.flag,
-    ceq.nonlinear.flag = ceq.nonlinear.flag,
-    ceq.flag = ceq.flag,
-    ceq.linear.only.flag = ceq.linear.only.flag,
-    ceq.JAC.NULL = ceq.JAC.NULL,
-    ceq.rhs.NULL = ceq.rhs.NULL,
-    ceq.simple.only = ceq.simple.only,
-    ceq.simple.K = ceq.simple.K,
-    cin.function = cin.function,
-    cin.JAC = cin.JAC,
-    cin.jacobian = cin.jacobian,
-    cin.rhs = cin.rhs,
-    cin.theta = cin.theta,
-    cin.linear.idx = cin.linear.idx,
-    cin.nonlinear.idx = cin.nonlinear.idx,
-    cin.linear.flag = cin.linear.flag,
-    cin.nonlinear.flag = cin.nonlinear.flag,
-    cin.flag = cin.flag,
-    cin.only.flag = cin.only.flag,
-    cin.simple.only = cin.simple.only
+  out <- list(
+    def.function = def_function,
+    ceq.function = ceq_function,
+    ceq.JAC = ceq_jac,
+    ceq.jacobian = ceq_jacobian,
+    ceq.rhs = ceq_rhs,
+    ceq.theta = ceq_theta,
+    ceq.linear.idx = ceq_linear_idx,
+    ceq.nonlinear.idx = ceq_nonlinear_idx,
+    ceq.linear.flag = ceq_linear_flag,
+    ceq.nonlinear.flag = ceq_nonlinear_flag,
+    ceq.flag = ceq_flag,
+    ceq.linear.only.flag = ceq_linear_only_flag,
+    ceq.JAC.NULL = ceq_jac_null,
+    ceq.rhs.NULL = ceq_rhs_null,
+    ceq.simple.only = ceq_simple_only,
+    ceq.simple.K = ceq_simple_k,
+    cin.function = cin_function,
+    cin.JAC = cin_jac,
+    cin.jacobian = cin_jacobian,
+    cin.rhs = cin_rhs,
+    cin.theta = cin_theta,
+    cin.linear.idx = cin_linear_idx,
+    cin.nonlinear.idx = cin_nonlinear_idx,
+    cin.linear.flag = cin_linear_flag,
+    cin.nonlinear.flag = cin_nonlinear_flag,
+    cin.flag = cin_flag,
+    cin.only.flag = cin_only_flag,
+    cin.simple.only = cin_simple_only
   )
 
-  OUT
+  out
 }
 
 lav_constraints_linear_idx <- function(func = NULL, npar = NULL) {
@@ -320,13 +320,13 @@ lav_constraints_linear_idx <- function(func = NULL, npar = NULL) {
   }
 
   # seed 1: rnorm
-  A0 <- lav_func_jacobian_complex(func = func, x = rnorm(npar))
+  a0 <- lav_func_jacobian_complex(func = func, x = rnorm(npar))
 
   # seed 2: rnorm
-  A1 <- lav_func_jacobian_complex(func = func, x = rnorm(npar))
+  a1 <- lav_func_jacobian_complex(func = func, x = rnorm(npar))
 
-  A0minA1 <- A0 - A1
-  linear <- apply(A0minA1, 1, function(x) all(x == 0))
+  a0min_a1 <- a0 - a1
+  linear <- apply(a0min_a1, 1, function(x) all(x == 0))
   which(linear)
 }
 
@@ -336,13 +336,13 @@ lav_constraints_nonlinear_idx <- function(func = NULL, npar = NULL) {
   }
 
   # seed 1: rnorm
-  A0 <- lav_func_jacobian_complex(func = func, x = rnorm(npar))
+  a0 <- lav_func_jacobian_complex(func = func, x = rnorm(npar))
 
   # seed 2: rnorm
-  A1 <- lav_func_jacobian_complex(func = func, x = rnorm(npar))
+  a1 <- lav_func_jacobian_complex(func = func, x = rnorm(npar))
 
-  A0minA1 <- A0 - A1
-  linear <- apply(A0minA1, 1, function(x) all(x == 0))
+  a0min_a1 <- a0 - a1
+  linear <- apply(a0min_a1, 1, function(x) all(x == 0))
   which(!linear)
 }
 
@@ -367,10 +367,11 @@ lav_constraints_r2k <- function(lavmodel = NULL) {
   stopifnot(!is.null(m_r))
 
   npar_full <- NCOL(m_r)
-  npar_red <- npar_full - NROW(m_r)
+  # npar_red <-
+  npar_full - NROW(m_r)
 
   m_k <- diag(npar_full)
-  for (i in 1:NROW(m_r)) {
+  for (i in seq_len(NROW(m_r))) {
     idx1 <- which(m_r[i, ] == 1)
     idx2 <- which(m_r[i, ] == -1)
     m_k[idx2, idx1] <- 1
@@ -387,32 +388,32 @@ lav_constraints_lambda_pre <- function(lavobject = NULL, method = "Don") {
   # compute factor 'pre' so that pre %*% g = lambda
   method <- tolower(method)
 
-  R <- lavobject@Model@con.jac[, ]
-  if (is.null(R) || length(R) == 0L) {
+  r <- lavobject@Model@con.jac[, ]
+  if (is.null(r) || length(r) == 0L) {
     return(numeric(0L))
   }
 
-  INFO <- lavTech(lavobject, "information.first.order")
-  npar <- nrow(INFO)
+  info <- lavTech(lavobject, "information.first.order")
+  npar <- nrow(info)
 
   # Don 1985
   if (method == "don") {
-    R.plus <- MASS::ginv(R)
+    r_plus <- MASS::ginv(r)
 
     # construct augmented matrix
-    Z <- rbind(
-      cbind(INFO, t(R)),
-      cbind(R, matrix(0, nrow = nrow(R), ncol = nrow(R)))
+    z <- rbind(
+      cbind(info, t(r)),
+      cbind(r, matrix(0, nrow = nrow(r), ncol = nrow(r)))
     )
-    Z.plus <- MASS::ginv(Z)
-    P.star <- Z.plus[1:npar, 1:npar]
-    PRE <- t(R.plus) %*% (diag(npar) - INFO %*% P.star)
+    z_plus <- MASS::ginv(z)
+    p_star <- z_plus[1:npar, 1:npar]
+    pre <- t(r_plus) %*% (diag(npar) - info %*% p_star)
 
     # Bentler EQS manual
   } else if (method == "bentler") {
-    INFO.inv <- solve(INFO)
-    PRE <- solve(R %*% INFO.inv %*% t(R)) %*% R %*% INFO.inv
+    info_inv <- solve(info)
+    pre <- solve(r %*% info_inv %*% t(r)) %*% r %*% info_inv
   }
 
-  PRE
+  pre
 }

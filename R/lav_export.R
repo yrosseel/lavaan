@@ -1,8 +1,8 @@
 # export `lavaan' lav model description to third-party software
 #
 
-lav_export <- function(object, target = "lavaan", prefix = "sem",
-                      dir.name = "lav_export", export = TRUE) {
+lav_export <- function(object, target = "lavaan", prefix = "sem", # nolint start
+                      dir.name = "lav_export", export = TRUE) {   # nolint end
   stopifnot(inherits(object, "lavaan"))
   # check object
   object <- lav_object_check_version(object)
@@ -10,16 +10,17 @@ lav_export <- function(object, target = "lavaan", prefix = "sem",
 
   # check for conditional.x = TRUE
   # if(object@Model@conditional.x) {
-  #    stop("lavaan ERROR: this function is not (yet) available if conditional.x = TRUE")
+  #    stop("lavaan ERROR: this function is not (yet)
+  #           available if conditional.x = TRUE")
   # }
 
   ngroups <- object@Data@ngroups
   if (ngroups > 1L) {
-    group.label2 <- paste(".", object@Data@group.label, sep = "")
+    group_label2 <- paste(".", object@Data@group.label, sep = "")
   } else {
-    group.label2 <- ""
+    group_label2 <- ""
   }
-  data.file <- paste(prefix, group.label2, ".", target, ".raw", sep = "")
+  data_file <- paste(prefix, group_label2, ".", target, ".raw", sep = "")
 
   # 2. create syntax file
   if (target == "lavaan") {
@@ -29,22 +30,22 @@ lav_export <- function(object, target = "lavaan", prefix = "sem",
     out <- paste(header, syntax, footer, sep = "")
   } else if (target == "mplus") {
     header <- lav_mplus_header(
-      data.file = data.file,
-      group.label = object@Data@group.label,
-      ov.names = c(
+      data_file = data_file,
+      group_label = object@Data@group.label,
+      ov_names = c(
         lav_partable_vnames(object@ParTable, "ov"),
         object@Data@sampling.weights
       ),
-      ov.ord.names = lav_partable_vnames(object@ParTable, "ov.ord"),
-      weight.name = object@Data@sampling.weights,
+      ov_ord_names = lav_partable_vnames(object@ParTable, "ov.ord"),
+      weight_name = object@Data@sampling.weights,
       listwise = lavInspect(object, "options")$missing == "listwise",
       estimator = lav_mplus_estimator(object),
       information = lavInspect(object, "options")$information,
       meanstructure = lavInspect(object, "meanstructure"),
-      data.type = object@Data@data.type,
+      data_type = object@Data@data.type,
       nobs = object@Data@nobs[[1L]]
     )
-    syntax <- lav_export_mplus(object, group.label = object@Data@group.label)
+    syntax <- lav_export_mplus(object, group_label = object@Data@group.label)
     footer <- paste("OUTPUT:\n  sampstat standardized tech1;\n")
     out <- paste(header, syntax, footer, sep = "")
   } else if (target == "lisrel") {
@@ -62,31 +63,31 @@ lav_export <- function(object, target = "lavaan", prefix = "sem",
   # export to file?
   if (export) {
     dir.create(path = dir.name)
-    input.file <- paste(dir.name, "/", prefix, ".", target, ".in", sep = "")
-    cat(out, file = input.file, sep = "")
+    input_file <- paste(dir.name, "/", prefix, ".", target, ".in", sep = "")
+    cat(out, file = input_file, sep = "")
 
     # write data (if available)
     if (identical(object@Data@data.type, "full")) {
       for (g in 1:ngroups) {
         if (is.null(object@Data@eXo[[g]])) {
-          DATA <- object@Data@X[[g]]
+          data_1 <- object@Data@X[[g]]
         } else {
-          DATA <- cbind(object@Data@X[[g]], object@Data@eXo[[g]])
+          data_1 <- cbind(object@Data@X[[g]], object@Data@eXo[[g]])
         }
         if (!is.null(object@Data@weights[[g]])) {
-          DATA <- cbind(DATA, object@Data@weights[[g]])
+          data_1 <- cbind(data_1, object@Data@weights[[g]])
         }
-        write.table(DATA,
-          file = paste(dir.name, "/", data.file[g], sep = ""),
+        write.table(data_1,
+          file = paste(dir.name, "/", data_file[g], sep = ""),
           na = "-999999",
           col.names = FALSE, row.names = FALSE, quote = FALSE
         )
       }
     } else if (identical(object@Data@data.type, "moment")) {
       for (g in 1:ngroups) {
-        DATA <- object@SampleStats@cov[[g]]
-        write.table(DATA,
-          file = paste(dir.name, "/", data.file[g], sep = ""),
+        data_1 <- object@SampleStats@cov[[g]]
+        write.table(data_1,
+          file = paste(dir.name, "/", data_file[g], sep = ""),
           na = "-999999",
           col.names = FALSE, row.names = FALSE, quote = FALSE
         )
@@ -142,9 +143,9 @@ lav_export_lavaan <- function(lav) {
   footer <- "\n"
 
   # intercepts
-  int.idx <- which(lav$op == "~1")
-  lav$op[int.idx] <- "~"
-  lav$rhs[int.idx] <- "1"
+  int_idx <- which(lav$op == "~1")
+  lav$op[int_idx] <- "~"
+  lav$rhs[int_idx] <- "1"
 
   # spacing around operator
   lav$op <- paste(" ", lav$op, " ", sep = "")

@@ -10,7 +10,7 @@
 
 # efa summary for a single lavaan object
 lav_efa_summary <- function(object,
-                            efa.args = list(
+                            efa_args = list(
                               lambda = TRUE,
                               theta = TRUE,
                               psi = TRUE,
@@ -25,88 +25,88 @@ lav_efa_summary <- function(object,
   stopifnot(inherits(object, "lavaan"))
 
   nblocks <- object@Model@nblocks
-  orthogonal.flag <- object@Options$rotation.args$orthogonal
+  orthogonal_flag <- object@Options$rotation.args$orthogonal
 
   # get standardized solution
-  LAMBDA <- THETA <- PSI <- NULL
-  STD <- lavTech(object, "std",
+  mm_lambda <- mm_theta <- mm_psi <- NULL
+  std <- lavTech(object, "std",
     add.class = TRUE, add.labels = TRUE,
     list.by.group = FALSE
   )
-  lambda.idx <- which(names(STD) == "lambda")
-  theta.idx <- which(names(STD) == "theta")
-  psi.idx <- which(names(STD) == "psi")
+  lambda_idx <- which(names(std) == "lambda")
+  theta_idx <- which(names(std) == "theta")
+  psi_idx <- which(names(std) == "psi")
 
   # LAMBDA
-  LAMBDA <- STD[lambda.idx]
-  names(LAMBDA) <- NULL
+  mm_lambda <- std[lambda_idx]
+  names(mm_lambda) <- NULL
 
   # THETA
-  THETA <- STD[theta.idx]
+  mm_theta <- std[theta_idx]
   # make THETA diagonal
-  THETA <- lapply(seq_len(nblocks), function(b) {
-    tmp <- diag(THETA[[b]])
+  mm_theta <- lapply(seq_len(nblocks), function(b) {
+    tmp <- diag(mm_theta[[b]])
     class(tmp) <- c("lavaan.vector", "numeric")
     tmp
   })
 
   # PSI
-  PSI <- STD[psi.idx]
-  names(PSI) <- NULL
+  mm_psi <- std[psi_idx]
+  names(mm_psi) <- NULL
 
   # eigenvalues correlation matrix
   std_ov <- object@Options$rotation.args$std_ov
-  COV <- object@h1$implied$cov # h1
+  cov_1 <- object@h1$implied$cov # h1
   if (std_ov) {
-    COV <- lapply(COV, cov2cor)
+    cov_1 <- lapply(cov_1, cov2cor)
   }
   eigvals <- NULL
-  if (efa.args$eigenvalues) {
+  if (efa_args$eigenvalues) {
     eigvals <- lapply(seq_len(nblocks), function(b) {
-      tmp <- eigen(COV[[b]], only.values = TRUE)$values
-      names(tmp) <- paste("ev", 1:nrow(LAMBDA[[b]]), sep = "")
+      tmp <- eigen(cov_1[[b]], only.values = TRUE)$values
+      names(tmp) <- paste("ev", seq_len(nrow(mm_lambda[[b]])), sep = "")
       class(tmp) <- c("lavaan.vector", "numeric")
       tmp
     })
   }
 
-  fs.determinacy <- NULL
+  fs_determinacy <- NULL
   # Note: these 'determinacy' values are only properly defined for the
   #       'regression' factor scores! (If we would apply the same formulas
   #       for Bartlett factor scores, we would obtain 1's!
-  if (efa.args$fs.determinacy) {
-    fs.determinacy <- lapply(seq_len(nblocks), function(b) {
-      COR <- cov2cor(COV[[b]]) # just in case
-      COR.inv <- try(solve(COR), silent = TRUE)
-      if (inherits(COR.inv, "try-error")) {
-        return(rep(as.numeric(NA), nrow(PSI[[b]])))
+  if (efa_args$fs.determinacy) {
+    fs_determinacy <- lapply(seq_len(nblocks), function(b) {
+      cor_1 <- cov2cor(cov_1[[b]]) # just in case
+      cor_inv <- try(solve(cor_1), silent = TRUE)
+      if (inherits(cor_inv, "try-error")) {
+        return(rep(as.numeric(NA), nrow(mm_psi[[b]])))
       }
-      fs <- LAMBDA[[b]] %*% PSI[[b]] # factor structure
-      out <- sqrt(diag(t(fs) %*% COR.inv %*% fs))
+      fs <- mm_lambda[[b]] %*% mm_psi[[b]] # factor structure
+      out <- sqrt(diag(t(fs) %*% cor_inv %*% fs))
       class(out) <- c("lavaan.vector", "numeric")
       out
     })
   }
 
   # sum-of-squares table
-  sumsq.table <- NULL
-  if (efa.args$sumsq.table) {
-    sumsq.table <- lapply(seq_len(nblocks), function(b) {
-      nvar <- nrow(LAMBDA[[b]])
-      nfactor <- ncol(LAMBDA[[b]])
+  sumsq_table <- NULL
+  if (efa_args$sumsq.table) {
+    sumsq_table <- lapply(seq_len(nblocks), function(b) {
+      # nvar <- nrow(mm_lambda[[b]])
+      nfactor <- ncol(mm_lambda[[b]])
 
       # sum of squares:
       # - if orthogonal, this is really the sum of the squared factor
       #   loadings
       # - if oblique, we need to take the correlation into account
-      sumsq <- diag(PSI[[b]] %*% crossprod(LAMBDA[[b]]))
+      sumsq <- diag(mm_psi[[b]] %*% crossprod(mm_lambda[[b]]))
 
       # reorder
       if (nfactor > 1L) {
         # determine order
-        order.idx <- sort.int(sumsq, decreasing = TRUE, index.return = TRUE)$ix
+        order_idx <- sort.int(sumsq, decreasing = TRUE, index.return = TRUE)$ix
         # re-order from large to small
-        sumsq <- sumsq[order.idx]
+        sumsq <- sumsq[order_idx]
       }
 
       # Proportion 'explained' (= proportion of total sumsq)
@@ -114,7 +114,7 @@ lav_efa_summary <- function(object,
       propexpl <- sumsq / sum(sumsq)
 
       # Proportion var (= sumsq/nvar)
-      propvar <- sumsq / nrow(LAMBDA[[b]])
+      propvar <- sumsq / nrow(mm_lambda[[b]])
 
       # Cumulative var
       cumvar <- cumsum(propvar)
@@ -129,23 +129,23 @@ lav_efa_summary <- function(object,
         tmp[4, ncol(tmp)] <- tmp[3, ncol(tmp)]
         colnames(tmp) <-
           c(
-            colnames(LAMBDA[[b]])[order.idx],
+            colnames(mm_lambda[[b]])[order_idx],
             "total"
           )
       } else {
-        colnames(tmp) <- colnames(LAMBDA[[b]])[1]
+        colnames(tmp) <- colnames(mm_lambda[[b]])[1]
       }
 
       # rownames
       if (nfactor == 1L) {
-        ssq.label <- "Sum of squared loadings"
-      } else if (orthogonal.flag) {
-        ssq.label <- "Sum of sq (ortho) loadings"
+        ssq_label <- "Sum of squared loadings"
+      } else if (orthogonal_flag) {
+        ssq_label <- "Sum of sq (ortho) loadings"
       } else {
-        ssq.label <- "Sum of sq (obliq) loadings"
+        ssq_label <- "Sum of sq (obliq) loadings"
       }
       rownames(tmp) <- c(
-        ssq.label,
+        ssq_label,
         "Proportion of total",
         "Proportion var",
         "Cumulative var"
@@ -159,79 +159,79 @@ lav_efa_summary <- function(object,
   } # sumsq.table
 
   # (factor) structure coefficients
-  if (efa.args$lambda.structure) {
-    lambda.structure <- lapply(seq_len(nblocks), function(b) {
-      tmp <- LAMBDA[[b]] %*% PSI[[b]]
+  if (efa_args$lambda.structure) {
+    lambda_structure <- lapply(seq_len(nblocks), function(b) {
+      tmp <- mm_lambda[[b]] %*% mm_psi[[b]]
       class(tmp) <- c("lavaan.matrix", "matrix")
       tmp
     })
   } else {
-    lambda.structure <- NULL
+    lambda_structure <- NULL
   }
 
   # standard errors (if any)
-  lambda.se <- theta.se <- psi.se <- NULL
-  lambda.zstat <- theta.zstat <- psi.zstat <- NULL
-  lambda.pval <- theta.pval <- psi.pval <- NULL
+  lambda_se <- theta_se <- psi_se <- NULL
+  lambda_zstat <- theta_zstat <- psi_zstat <- NULL
+  lambda_pval <- theta_pval <- psi_pval <- NULL
   if (object@Options$se != "none") {
-    SE <- lavTech(object, "std.se",
+    se <- lavTech(object, "std.se",
       add.class = TRUE, add.labels = TRUE,
       list.by.group = FALSE
     )
 
-    se.flag <- (efa.args$se || efa.args$zstat || efa.args$pvalue)
+    se_flag <- (efa_args$se || efa_args$zstat || efa_args$pvalue)
 
     # ALWAYS use lambda.se
-    if (efa.args$lambda) {
-      lambda.se <- SE[lambda.idx]
-      names(lambda.se) <- NULL
+    if (efa_args$lambda) {
+      lambda_se <- se[lambda_idx]
+      names(lambda_se) <- NULL
     }
 
     # theta.se
-    if (se.flag && efa.args$theta) {
-      theta.se <- SE[theta.idx]
+    if (se_flag && efa_args$theta) {
+      theta_se <- se[theta_idx]
       # make theta.se diagonal
-      theta.se <- lapply(seq_len(nblocks), function(b) {
-        tmp <- diag(theta.se[[b]])
+      theta_se <- lapply(seq_len(nblocks), function(b) {
+        tmp <- diag(theta_se[[b]])
         class(tmp) <- c("lavaan.vector", "numeric")
         tmp
       })
     }
 
     # ALWAYS use psi.se
-    if (efa.args$psi) {
-      psi.se <- SE[psi.idx]
-      names(psi.se) <- NULL
+    if (efa_args$psi) {
+      psi_se <- se[psi_idx]
+      names(psi_se) <- NULL
     }
 
     # compute zstat
-    if (efa.args$zstat || efa.args$pvalue) {
-      if (efa.args$lambda) {
-        lambda.zstat <- lapply(seq_len(nblocks), function(b) {
-          tmp.se <- lambda.se[[b]]
-          tmp.se[tmp.se < sqrt(.Machine$double.eps)] <-
+    if (efa_args$zstat || efa_args$pvalue) {
+      if (efa_args$lambda) {
+        lambda_zstat <- lapply(seq_len(nblocks), function(b) {
+          tmp_se <- lambda_se[[b]]
+          tmp_se[tmp_se < sqrt(.Machine$double.eps)] <-
             as.numeric(NA)
-          tmp <- LAMBDA[[b]] / tmp.se
+          tmp <- mm_lambda[[b]] / tmp_se
           class(tmp) <- c("lavaan.matrix", "matrix")
           tmp
         })
       }
-      if (efa.args$theta) {
-        theta.zstat <- lapply(seq_len(nblocks), function(b) {
-          tmp.se <- theta.se[[b]]
-          tmp.se[tmp.se < sqrt(.Machine$double.eps)] <-
+      if (efa_args$theta) {
+        theta_zstat <- lapply(seq_len(nblocks), function(b) {
+          tmp_se <- theta_se[[b]]
+          tmp_se[tmp_se < sqrt(.Machine$double.eps)] <-
             as.numeric(NA)
-          tmp <- THETA[[b]] / tmp.se
+          tmp <- mm_theta[[b]] / tmp_se
           class(tmp) <- c("lavaan.vector", "numeric")
           tmp
         })
       }
-      if (efa.args$psi) {
-        psi.zstat <- lapply(seq_len(nblocks), function(b) {
-          tmp.se <- psi.se[[b]]
-          tmp.se[tmp.se < sqrt(.Machine$double.eps)] <-
+      if (efa_args$psi) {
+        psi_zstat <- lapply(seq_len(nblocks), function(b) {
+          tmp_se <- psi_se[[b]]
+          tmp_se[tmp_se < sqrt(.Machine$double.eps)] <-
             as.numeric(NA)
-          tmp <- PSI[[b]] / tmp.se
+          tmp <- mm_psi[[b]] / tmp_se
           class(tmp) <- c(
             "lavaan.matrix.symmetric",
             "matrix"
@@ -242,24 +242,24 @@ lav_efa_summary <- function(object,
     }
 
     # compute pval
-    if (efa.args$pvalue) {
-      if (efa.args$lambda) {
-        lambda.pval <- lapply(seq_len(nblocks), function(b) {
-          tmp <- 2 * (1 - pnorm(abs(lambda.zstat[[b]])))
+    if (efa_args$pvalue) {
+      if (efa_args$lambda) {
+        lambda_pval <- lapply(seq_len(nblocks), function(b) {
+          tmp <- 2 * (1 - pnorm(abs(lambda_zstat[[b]])))
           class(tmp) <- c("lavaan.matrix", "matrix")
           tmp
         })
       }
-      if (efa.args$theta) {
-        theta.pval <- lapply(seq_len(nblocks), function(b) {
-          tmp <- 2 * (1 - pnorm(abs(theta.zstat[[b]])))
+      if (efa_args$theta) {
+        theta_pval <- lapply(seq_len(nblocks), function(b) {
+          tmp <- 2 * (1 - pnorm(abs(theta_zstat[[b]])))
           class(tmp) <- c("lavaan.vector", "numeric")
           tmp
         })
       }
-      if (efa.args$psi) {
-        psi.pval <- lapply(seq_len(nblocks), function(b) {
-          tmp <- 2 * (1 - pnorm(abs(psi.zstat[[b]])))
+      if (efa_args$psi) {
+        psi_pval <- lapply(seq_len(nblocks), function(b) {
+          tmp <- 2 * (1 - pnorm(abs(psi_zstat[[b]])))
           class(tmp) <- c(
             "lavaan.matrix.symmetric",
             "matrix"
@@ -271,47 +271,47 @@ lav_efa_summary <- function(object,
   } # se/zstat/pvalue
 
   # block.label
-  block.label <- object@Data@block.label
+  block_label <- object@Data@block.label
 
   # we remove them here; we may have needed them for other parts
-  if (!efa.args$lambda) {
-    LAMBDA <- NULL
+  if (!efa_args$lambda) {
+    mm_lambda <- NULL
   }
-  if (!efa.args$theta) {
-    THETA <- NULL
+  if (!efa_args$theta) {
+    mm_theta <- NULL
   }
-  if (!efa.args$psi) {
-    PSI <- NULL
+  if (!efa_args$psi) {
+    mm_psi <- NULL
   }
-  if (!efa.args$se) {
+  if (!efa_args$se) {
     # always keep lambda.se and psi.se (for the signif stars)
-    theta.se <- NULL
+    theta_se <- NULL
   }
-  if (!efa.args$zstat) {
-    lambda.zstat <- theta.zstat <- psi.zstat <- NULL
+  if (!efa_args$zstat) {
+    lambda_zstat <- theta_zstat <- psi_zstat <- NULL
   }
 
   res <- list(
     nblocks = nblocks,
-    block.label = block.label,
+    block.label = block_label,
     std_ov = std_ov,
     eigvals = eigvals,
-    sumsq.table = sumsq.table,
+    sumsq.table = sumsq_table,
     orthogonal = object@Options$rotation.args$orthogonal,
-    lambda.structure = lambda.structure,
-    fs.determinacy = fs.determinacy,
-    lambda = LAMBDA,
-    theta = THETA,
-    psi = PSI,
-    lambda.se = lambda.se,
-    lambda.zstat = lambda.zstat,
-    lambda.pvalue = lambda.pval,
-    psi.se = psi.se,
-    psi.zstat = psi.zstat,
-    psi.pvalue = psi.pval,
-    theta.se = theta.se,
-    theta.zstat = theta.zstat,
-    theta.pvalue = theta.pval
+    lambda.structure = lambda_structure,
+    fs.determinacy = fs_determinacy,
+    lambda = mm_lambda,
+    theta = mm_theta,
+    psi = mm_psi,
+    lambda.se = lambda_se,
+    lambda.zstat = lambda_zstat,
+    lambda.pvalue = lambda_pval,
+    psi.se = psi_se,
+    psi.zstat = psi_zstat,
+    psi.pvalue = psi_pval,
+    theta.se = theta_se,
+    theta.zstat = theta_zstat,
+    theta.pvalue = theta_pval
   )
 
   res
@@ -319,13 +319,13 @@ lav_efa_summary <- function(object,
 
 
 # summary efaList
-lav_efalist_summary <- function(object, nd = 3L, cutoff = 0.3, dot.cutoff = 0.1,
+lav_efalist_summary <- function(object, nd = 3L, cutoff = 0.3, dot.cutoff = 0.1, # nolint start
                             alpha.level = 0.01,
                             lambda = TRUE, theta = TRUE, psi = TRUE,
                             fit.table = TRUE, fs.determinacy = FALSE,
                             eigenvalues = TRUE, sumsq.table = TRUE,
                             lambda.structure = FALSE, se = FALSE,
-                            zstat = FALSE, pvalue = FALSE, ...) {
+                            zstat = FALSE, pvalue = FALSE, ...) {               # nolint end
   # kill object$loadings if present
   object[["loadings"]] <- NULL
 
@@ -333,7 +333,7 @@ lav_efalist_summary <- function(object, nd = 3L, cutoff = 0.3, dot.cutoff = 0.1,
   y <- unclass(object)
 
   # construct efa.args
-  efa.args <- list(
+  efa_args <- list(
     lambda = lambda, theta = theta, psi = psi,
     eigenvalues = eigenvalues, sumsq.table = sumsq.table,
     lambda.structure = lambda.structure,
@@ -348,113 +348,113 @@ lav_efalist_summary <- function(object, nd = 3L, cutoff = 0.3, dot.cutoff = 0.1,
   )
 
   # header information
-  lavaan.version <- out$header$lavaan.version
-  converged.flag <- all(sapply(y, lavInspect, "converged"))
+  lavaan_version <- out$header$lavaan.version
+  converged_flag <- all(sapply(y, lavInspect, "converged"))
 
   # estimator
   estimator <- out$optim$estimator
-  estimator.args <- out$optim$estimator.args
+  estimator_args <- out$optim$estimator.args
 
   # rotation
   rotation <- out$rotation$rotation
-  rotation.args <- out$rotation$rotation.args
+  rotation_args <- out$rotation$rotation.args
 
   # data
   lavdata <- out$data
 
   # main part: lav_object_summary information per model
-  RES <- lapply(y, lav_object_summary,
+  res <- lapply(y, lav_object_summary,
     header = FALSE,
     fit.measures = FALSE, estimates = TRUE, efa = TRUE,
-    efa.args = efa.args
+    efa.args = efa_args
   )
 
   # number of factors (for ALL blocks)
   nfactors <- sapply(y, function(x) x@pta$nfac[[1]])
 
   # fit.measures
-  Table <- NULL
+  table_1 <- NULL
   if (fit.table) {
     # first, create standard table
-    FIT <- fitMeasures(object, fit.measures = "default")
-    NAMES <- rownames(FIT)
+    fit <- fitMeasures(object, fit.measures = "default")
+    names_1 <- rownames(fit)
     idx <- integer(0L)
 
     # AIC/BIC
-    if (all(c("aic", "bic", "bic2") %in% NAMES)) {
-      this.idx <- match(c("aic", "bic", "bic2"), NAMES)
-      idx <- c(idx, this.idx)
+    if (all(c("aic", "bic", "bic2") %in% names_1)) {
+      this_idx <- match(c("aic", "bic", "bic2"), names_1)
+      idx <- c(idx, this_idx)
     }
 
     # chi-square
-    if (all(c("chisq.scaled", "df.scaled", "pvalue.scaled") %in% NAMES)) {
-      this.idx <- match(
+    if (all(c("chisq.scaled", "df.scaled", "pvalue.scaled") %in% names_1)) {
+      this_idx <- match(
         c("chisq.scaled", "df.scaled", "pvalue.scaled"),
-        NAMES
+        names_1
       )
-      idx <- c(idx, this.idx)
+      idx <- c(idx, this_idx)
     } else {
-      this.idx <- match(c("chisq", "df", "pvalue"), NAMES)
-      idx <- c(idx, this.idx)
+      this_idx <- match(c("chisq", "df", "pvalue"), names_1)
+      idx <- c(idx, this_idx)
     }
 
     # CFI
-    if ("cfi.robust" %in% NAMES && !all(is.na(FIT["cfi.robust", ]))) {
-      this.idx <- match("cfi.robust", NAMES)
-      idx <- c(idx, this.idx)
-    } else if ("cfi.scaled" %in% NAMES) {
-      this.idx <- match("cfi.scaled", NAMES)
-      idx <- c(idx, this.idx)
-    } else if ("cfi" %in% NAMES) {
-      this.idx <- match("cfi", NAMES)
-      idx <- c(idx, this.idx)
+    if ("cfi.robust" %in% names_1 && !all(is.na(fit["cfi.robust", ]))) {
+      this_idx <- match("cfi.robust", names_1)
+      idx <- c(idx, this_idx)
+    } else if ("cfi.scaled" %in% names_1) {
+      this_idx <- match("cfi.scaled", names_1)
+      idx <- c(idx, this_idx)
+    } else if ("cfi" %in% names_1) {
+      this_idx <- match("cfi", names_1)
+      idx <- c(idx, this_idx)
     }
 
     # RMSEA
-    if ("rmsea.robust" %in% NAMES && !all(is.na(FIT["rmsea.robust", ]))) {
-      this.idx <- match("rmsea.robust", NAMES)
-      idx <- c(idx, this.idx)
-    } else if ("rmsea.scaled" %in% NAMES) {
-      this.idx <- match("rmsea.scaled", NAMES)
-      idx <- c(idx, this.idx)
-    } else if ("rmsea" %in% NAMES) {
-      this.idx <- match("rmsea", NAMES)
-      idx <- c(idx, this.idx)
+    if ("rmsea.robust" %in% names_1 && !all(is.na(fit["rmsea.robust", ]))) {
+      this_idx <- match("rmsea.robust", names_1)
+      idx <- c(idx, this_idx)
+    } else if ("rmsea.scaled" %in% names_1) {
+      this_idx <- match("rmsea.scaled", names_1)
+      idx <- c(idx, this_idx)
+    } else if ("rmsea" %in% names_1) {
+      this_idx <- match("rmsea", names_1)
+      idx <- c(idx, this_idx)
     }
 
     # table with fitmeasures
     if (length(idx) > 0L) {
-      Table <- t(FIT[idx, , drop = FALSE])
-      tmp <- NAMES[idx]
+      table_1 <- t(fit[idx, , drop = FALSE])
+      tmp <- names_1[idx]
       # strip '.scaled'
       tmp <- gsub(".scaled", "", tmp)
       # replace 'robust' by 'r' (if any)
       tmp <- gsub(".robust", "", tmp)
       # rename "bic2" -> "sabic"
-      bic2.idx <- which(tmp == "bic2")
-      if (length(bic2.idx) > 0L) {
-        tmp[bic2.idx] <- "sabic"
+      bic2_idx <- which(tmp == "bic2")
+      if (length(bic2_idx) > 0L) {
+        tmp[bic2_idx] <- "sabic"
       }
-      colnames(Table) <- tmp
+      colnames(table_1) <- tmp
     } else {
-      Table <- matrix(0, nrow = nfactors, ncol = 0L)
+      table_1 <- matrix(0, nrow = nfactors, ncol = 0L)
     }
-    rownames(Table) <- paste("nfactors = ", nfactors, sep = "")
-    class(Table) <- c("lavaan.matrix", "matrix")
+    rownames(table_1) <- paste("nfactors = ", nfactors, sep = "")
+    class(table_1) <- c("lavaan.matrix", "matrix")
   }
 
   # create return object
   out <- list(
-    lavaan.version = lavaan.version,
-    converged.flag = converged.flag,
+    lavaan.version = lavaan_version,
+    converged.flag = converged_flag,
     estimator = estimator,
-    estimator.args = estimator.args,
+    estimator.args = estimator_args,
     rotation = rotation,
-    rotation.args = rotation.args,
+    rotation.args = rotation_args,
     lavdata = lavdata,
-    fit.table = Table,
+    fit.table = table_1,
     nfactors = nfactors,
-    model.list = RES
+    model.list = res
   )
 
   # add nd, cutoff, dot.cutoff, ... as attributes (for printing)

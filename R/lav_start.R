@@ -404,10 +404,10 @@ lav_start <- function(start.method = "default",
 
             # EFA solution with zero upper-right corner
             EFA <- lav_efa_extraction(
-              S = COV,
+              s = COV,
               nfactors = length(lv.efa),
               method = "ML",
-              order.lv.by = order.lv.by,
+              order_lv_by = order.lv.by,
               # order.lv.by = "none",
               # reflect = reflect,
               reflect = FALSE,

@@ -58,8 +58,8 @@ lavPredictY <- function(object,                                    # nolint star
     new_data <- lav_lavdata(
       data = newdata,
       group = lavdata@group,
-      ov.names = lavdata@ov.names,
-      ov.names.x = lavdata@ov.names.x,
+      ov_names = lavdata@ov.names,
+      ov_names_x = lavdata@ov.names.x,
       ordered = ov$name[ov$type == "ordered"],
       lavoptions = list(
         std.ov = lavdata@std.ov,
@@ -67,7 +67,7 @@ lavPredictY <- function(object,                                    # nolint star
         missing = "ml.x", # always!
         warn = TRUE
       ),
-      allow.single.case = TRUE
+      allow_single_case = TRUE
     )
     # if ordered, check if number of levels is still the same (new in 0.6-7)
     if (lavmodel@categorical) {

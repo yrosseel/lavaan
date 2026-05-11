@@ -1813,8 +1813,8 @@ lav_samplestats_missing_patterns <- function(Y = NULL, Mp = NULL, wt = NULL,
 
   if (is.null(Mp)) {
     Mp <- lav_data_missing_patterns(Y,
-      sort.freq = FALSE, coverage = FALSE,
-      Lp = Lp
+      sort_freq = FALSE, coverage = FALSE,
+      lp = Lp
     )
   }
 

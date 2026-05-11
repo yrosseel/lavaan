@@ -1166,10 +1166,10 @@ varTable <- vartable <- function(object, ov.names = names(object),  # nolint sta
     tmp_var <- object@ov
   } else if (inherits(object, "data.frame")) {
     tmp_var <- lav_dataframe_vartable(
-      frame = object, ov.names = ov.names,
-      ov.names.x = ov.names.x,
+      frame = object, ov_names = ov.names,
+      ov_names_x = ov.names.x,
       ordered = ordered, factor = factor,
-      as.data.frame. = FALSE
+      as_data_frame = FALSE
     )
   } else {
     lav_msg_stop(gettext("object must of class lavaan or a data.frame"))

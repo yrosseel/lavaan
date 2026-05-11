@@ -8,58 +8,58 @@
 
 # construct vartable, but allow 'ordered/factor' argument to intervene
 # we do NOT change the data.frame
-lav_dataframe_vartable <- function(frame = NULL, ov.names = NULL,
-                                   ov.names.x = NULL,
+lav_dataframe_vartable <- function(frame = NULL, ov_names = NULL,
+                                   ov_names_x = NULL,
                                    ordered = NULL,
                                    factor = NULL,
-                                   as.data.frame. = FALSE,
-                                   allow.empty.cell = FALSE) {
-  if (missing(ov.names)) {
-    var.names <- names(frame)
+                                   as_data_frame = FALSE,
+                                   allow_empty_cell = FALSE) {
+  if (missing(ov_names)) {
+    var_names <- names(frame)
   } else {
-    ov.names <- unlist(ov.names, use.names = FALSE)
-    ov.names.x <- unlist(ov.names.x, use.names = FALSE)
-    var.names <- unique(c(ov.names, ov.names.x))
+    ov_names <- unlist(ov_names, use.names = FALSE)
+    ov_names_x <- unlist(ov_names_x, use.names = FALSE)
+    var_names <- unique(c(ov_names, ov_names_x))
   }
-  nvar <- length(var.names)
-  var.idx <- match(var.names, names(frame))
+  nvar <- length(var_names)
+  var_idx <- match(var_names, names(frame))
 
 
   nobs <- integer(nvar)
   type <- character(nvar)
   user <- integer(nvar)
-  exo <- ifelse(var.names %in% ov.names.x, 1L, 0L)
+  exo <- ifelse(var_names %in% ov_names_x, 1L, 0L)
   mean <- numeric(nvar)
   var <- numeric(nvar)
   nlev <- integer(nvar)
   lnam <- character(nvar)
   for (i in seq_len(nvar)) {
-    x <- frame[[var.idx[i]]]
+    x <- frame[[var_idx[i]]]
 
-    type.x <- class(x)[1L]
+    type_x <- class(x)[1L]
 
     # correct for matrix with 1 column
     if (inherits(x, "matrix") && (is.null(dim(x)) ||
       (!is.null(dim) && ncol(x) == 1L))) {
-      type.x <- "numeric"
+      type_x <- "numeric"
     }
 
     # correct for integers
     if (inherits(x, "integer")) {
-      type.x <- "numeric"
+      type_x <- "numeric"
     }
 
     # handle the 'labelled' type from the haven package
     # - if the variable name is not in 'ordered', we assume
     #   it is numeric (for now) 11 March 2018
-    if (inherits(x, "labelled") && !(var.names[i] %in% ordered)) {
-      type.x <- "numeric"
+    if (inherits(x, "labelled") && !(var_names[i] %in% ordered)) {
+      type_x <- "numeric"
     }
 
     # handle ordered/factor
-    if (!is.null(ordered) && var.names[i] %in% ordered) {
-      type.x <- "ordered"
-      if (allow.empty.cell) {
+    if (!is.null(ordered) && var_names[i] %in% ordered) {
+      type_x <- "ordered"
+      if (allow_empty_cell) {
         if (inherits(x, 'factor')) {
           nlev[i] <- nlevels(x)
           lnam[i] <- paste(levels(x), collapse = "|")
@@ -73,8 +73,8 @@ lav_dataframe_vartable <- function(frame = NULL, ov.names = NULL,
         lnam[i] <- paste(lev, collapse = "|")
       }
       user[i] <- 1L
-    } else if (!is.null(factor) && var.names[i] %in% factor) {
-      type.x <- "factor"
+    } else if (!is.null(factor) && var_names[i] %in% factor) {
+      type_x <- "factor"
       lev <- sort(unique(x)) # we assume integers!
       nlev[i] <- length(lev)
       lnam[i] <- paste(lev, collapse = "|")
@@ -84,28 +84,28 @@ lav_dataframe_vartable <- function(frame = NULL, ov.names = NULL,
       lnam[i] <- paste(levels(x), collapse = "|")
     }
 
-    type[i] <- type.x
+    type[i] <- type_x
     nobs[i] <- sum(!is.na(x))
-    mean[i] <- ifelse(type.x == "numeric", mean(x, na.rm = TRUE),
+    mean[i] <- ifelse(type_x == "numeric", mean(x, na.rm = TRUE),
       as.numeric(NA)
     )
-    var[i] <- ifelse(type.x == "numeric", var(x, na.rm = TRUE),
+    var[i] <- ifelse(type_x == "numeric", var(x, na.rm = TRUE),
       as.numeric(NA)
     )
   }
 
-  VAR <- list(
-    name = var.names, idx = var.idx, nobs = nobs, type = type, exo = exo,
+  var_1 <- list(
+    name = var_names, idx = var_idx, nobs = nobs, type = type, exo = exo,
     user = user, mean = mean, var = var, nlev = nlev, lnam = lnam
   )
 
-  if (as.data.frame.) {
-    VAR <- as.data.frame(VAR,
+  if (as_data_frame) {
+    var_1 <- as.data.frame(var_1,
       stringsAsFactors = FALSE,
-      row.names = 1:length(VAR$name)
+      row.names = seq_along(var_1$name)
     )
-    class(VAR) <- c("lavaan.data.frame", "data.frame")
+    class(var_1) <- c("lavaan.data.frame", "data.frame")
   }
 
-  VAR
+  var_1
 }
