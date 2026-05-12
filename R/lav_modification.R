@@ -61,7 +61,7 @@ modindices <- function(object,                         # nolint start
   full$free <- rep(1L, nrow(full))
   full$user <- rep(10L, nrow(full))
 
-  fit <- lav_object_extended(object, add = full, all.free = TRUE)
+  fit <- lav_object_extended(object, add = full, all_free = TRUE)
   list_1 <- fit@ParTable
 
 

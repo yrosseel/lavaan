@@ -47,84 +47,84 @@ lav_model_h1_omega <- function(lavobject = NULL,
   }
 
   # set options for A
-  A1.options <- lavoptions
-  A1.options$information <- lavoptions$omega.information
-  A1.options$h1.information <- lavoptions$omega.h1.information
+  a1_options <- lavoptions
+  a1_options$information <- lavoptions$omega.information
+  a1_options$h1.information <- lavoptions$omega.h1.information
 
-  B1.options <- lavoptions
-  B1.options$information <- lavoptions$omega.information.meat # unused
-  B1.options$h1.information <- lavoptions$omega.h1.information.meat
+  b1_options <- lavoptions
+  b1_options$information <- lavoptions$omega.information.meat # unused
+  b1_options$h1.information <- lavoptions$omega.h1.information.meat
 
   # information
   information <- lavoptions$omega.information
 
   # compute A1 (per group)
   if (information == "observed") {
-    A1 <- lav_model_h1_information_observed(
+    a1_1 <- lav_model_h1_information_observed(
       lavmodel = lavmodel,
       lavsamplestats = lavsamplestats, lavdata = lavdata,
       lavimplied = lavimplied, lavh1 = lavh1,
-      lavcache = lavcache, lavoptions = A1.options
+      lavcache = lavcache, lavoptions = a1_options
     )
   } else if (information == "expected") {
-    A1 <- lav_model_h1_information_expected(
+    a1_1 <- lav_model_h1_information_expected(
       lavmodel = lavmodel,
       lavsamplestats = lavsamplestats, lavdata = lavdata,
       lavimplied = lavimplied, lavh1 = lavh1,
-      lavcache = lavcache, lavoptions = A1.options
+      lavcache = lavcache, lavoptions = a1_options
     )
   } else if (information == "first.order") { # not needed?
-    A1 <- lav_model_h1_information_firstorder(
+    a1_1 <- lav_model_h1_information_firstorder(
       lavmodel = lavmodel,
       lavsamplestats = lavsamplestats, lavdata = lavdata,
       lavimplied = lavimplied, lavh1 = lavh1,
-      lavcache = lavcache, lavoptions = A1.options
+      lavcache = lavcache, lavoptions = a1_options
     )
   }
 
   # compute B1 (per group)
-  B1 <- lav_model_h1_information_firstorder(
+  b1 <- lav_model_h1_information_firstorder(
     lavmodel = lavmodel,
     lavsamplestats = lavsamplestats, lavdata = lavdata,
     lavimplied = lavimplied, lavh1 = lavh1,
-    lavcache = lavcache, lavoptions = B1.options
+    lavcache = lavcache, lavoptions = b1_options
   )
 
   # return Omega per group
-  Omega <- vector("list", length = lavdata@ngroups)
-  trace.h1 <- numeric(lavdata@ngroups)
-  h1.ndat <- numeric(lavdata@ngroups)
+  omega <- vector("list", length = lavdata@ngroups)
+  trace_h1 <- numeric(lavdata@ngroups)
+  h1_ndat <- numeric(lavdata@ngroups)
   for (g in seq_len(lavdata@ngroups)) {
-    A1.g <- A1[[g]]
-    B1.g <- B1[[g]]
+    a1_g <- a1_1[[g]]
+    b1_g <- b1[[g]]
 
     # mask independent 'fixed-x' variables
-    zero.idx <- which(diag(A1.g) == 0)
-    if (length(zero.idx) > 0L) {
-      A1.inv <- matrix(0, nrow(A1.g), ncol(A1.g))
-      a1 <- A1.g[-zero.idx, -zero.idx, drop = FALSE]
-      a1.inv <- solve(a1)
-      A1.inv[-zero.idx, -zero.idx] <- a1.inv
+    zero_idx <- which(diag(a1_g) == 0)
+    if (length(zero_idx) > 0L) {
+      a1_inv_1 <- matrix(0, nrow(a1_g), ncol(a1_g))
+      a1 <- a1_g[-zero_idx, -zero_idx, drop = FALSE]
+      a1_inv <- solve(a1)
+      a1_inv_1[-zero_idx, -zero_idx] <- a1_inv
     } else {
-      A1.inv <- solve(A1.g)
+      a1_inv_1 <- solve(a1_g)
     }
-    trace.h1[g] <- sum(B1.g * t(A1.inv))
-    h1.ndat[g] <- ncol(A1.g) - length(zero.idx)
+    trace_h1[g] <- sum(b1_g * t(a1_inv_1))
+    h1_ndat[g] <- ncol(a1_g) - length(zero_idx)
 
-    Omega[[g]] <- A1.inv %*% B1.g %*% A1.inv
+    omega[[g]] <- a1_inv_1 %*% b1_g %*% a1_inv_1
   }
 
   # store trace.h1 as an attribute (to be used in yuan-bentler)
-  attr(Omega, "trace.h1") <- trace.h1
-  attr(Omega, "h1.ndat") <- h1.ndat
-  attr(Omega, "A.information") <- paste(A1.options$information,
-    A1.options$h1.information,
+  attr(omega, "trace.h1") <- trace_h1
+  attr(omega, "h1.ndat") <- h1_ndat
+  attr(omega, "A.information") <- paste(a1_options$information,
+    a1_options$h1.information,
     sep = "."
   )
-  attr(Omega, "B.information") <- paste(B1.options$information,
-    B1.options$h1.information,
+  attr(omega, "B.information") <- paste(b1_options$information,
+    b1_options$h1.information,
     sep = "."
   )
 
-  Omega
+  omega
 }

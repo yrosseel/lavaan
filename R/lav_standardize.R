@@ -137,12 +137,12 @@ lav_standardize_lv <- function(lavobject = NULL,
   if (is.null(lv.var)) {
     LV.ETA <- lav_model_veta(
       lavmodel = lavmodel,
-      GLIST = GLIST
+      glist = GLIST
     )
 
     LV.EETA <- lav_model_eeta(
       lavmodel = lavmodel,
-      GLIST = GLIST,
+      glist = GLIST,
       lavsamplestats = lavobject@SampleStats
     )
   }
@@ -462,8 +462,8 @@ lav_standardize_all <- function(lavobject = NULL,
   stopifnot(N == length(partable$lhs))
 
   VY <- lav_model_vy(
-    lavmodel = lavmodel, GLIST = GLIST,
-    diagonal.only = TRUE
+    lavmodel = lavmodel, glist = GLIST,
+    diagonal_only = TRUE
   )
 
 
@@ -699,8 +699,8 @@ lav_standardize_all_nox <- function(lavobject = NULL,
   stopifnot(N == length(partable$lhs))
 
   VY <- lav_model_vy(
-    lavmodel = lavmodel, GLIST = GLIST,
-    diagonal.only = TRUE
+    lavmodel = lavmodel, glist = GLIST,
+    diagonal_only = TRUE
   )
 
 

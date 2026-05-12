@@ -109,11 +109,11 @@ lavTablesFitCf <- function(object) {    # nolint
 
   for (g in seq_len(lavdata@ngroups)) {
     f_group <- lav_model_objective_fml(
-      Sigma.hat = sigma_hat[[g]],
-      TH = th[[g]],
-      th.idx = lavmodel@th.idx[[g]],
-      num.idx = lavmodel@num.idx[[g]],
-      X = lavdata@X[[g]],
+      sigma_hat = sigma_hat[[g]],
+      th = th[[g]],
+      th_idx = lavmodel@th.idx[[g]],
+      num_idx = lavmodel@num.idx[[g]],
+      x = lavdata@X[[g]],
       lavcache = lavcache[[g]]
     )
     cf_group[g] <- 2 * lavdata@nobs[[g]] * f_group

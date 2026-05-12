@@ -198,9 +198,9 @@ lav_pml_object_uni_pairwise_prob <- function(lavobject) {  # nolint
             tmp_th <- th[th_idx %in% idx_miss_var]
 
             tmp_ind_vec <- lav_pml_longvec_ind(
-              no.x = no_miss_var,
-              all.thres = tmp_th,
-              index.var.of.thres = tmp_th_idx_recoded
+              no_x = no_miss_var,
+              all_thres = tmp_th,
+              index_var_of_thres = tmp_th_idx_recoded
             )
 
             tmp_th_rho_vec <- lav_pml_th_rho_generalised(
@@ -213,8 +213,8 @@ lav_pml_object_uni_pairwise_prob <- function(lavobject) {  # nolint
             )
 
             tmp_biv_prob <- lav_pml_expprob_vec(
-              ind.vec = tmp_ind_vec,
-              th.rho.vec = tmp_th_rho_vec
+              ind_vec = tmp_ind_vec,
+              th_rho_vec = tmp_th_rho_vec
             )
 
             pairwise_prob[[g]][i, idx_columns] <- tmp_biv_prob
@@ -245,10 +245,10 @@ lav_pml_th_rho_generalised <- function(no_x, th, th_idx,
   cor_xixj <- cov_xixj / (stddev_x[id_pairs[1, ]] * stddev_x[id_pairs[2, ]])
 
   lav_pml_longvec_th_rho(
-    no.x = no_x,
-    all.thres = all_std_thres,
-    index.var.of.thres = th_idx,
-    rho.xixj = cor_xixj
+    no_x = no_x,
+    all_thres = all_std_thres,
+    index_var_of_thres = th_idx,
+    rho_xixj = cor_xixj
   )
 }
 

@@ -27,7 +27,7 @@ setMethod(
 
     # show only basic information
     res <- lav_object_summary(object,
-      fit.measures = FALSE,
+      fit_measures = FALSE,
       estimates = FALSE,
       modindices = FALSE,
       efa = efa_flag
@@ -108,18 +108,18 @@ setMethod(
     }
     res <- lav_object_summary(
       object = object, header = header,
-      fit.measures = fit_measures, estimates = estimates,
-      baseline.model = baseline.model,
-      h1.model = h1.model,
+      fit_measures = fit_measures, estimates = estimates,
+      baseline_model = baseline.model,
+      h1_model = h1.model,
       ci = ci, fmi = fmi, std = std, standardized = standardized,
-      remove.system.eq = remove.system.eq,
-      remove.eq = remove.eq, remove.ineq = remove.ineq,
-      remove.def = remove.def, remove.nonfree = remove.nonfree,
-      remove.step1 = remove.step1, remove.unused = remove.unused,
-      plabel = plabel, cov.std = cov.std,
+      remove_system_eq = remove.system.eq,
+      remove_eq = remove.eq, remove_ineq = remove.ineq,
+      remove_def = remove.def, remove_nonfree = remove.nonfree,
+      remove_step1 = remove.step1, remove_unused = remove.unused,
+      plabel = plabel, cov_std = cov.std,
       rsquare = rsquare, efa = efa_flag,
       modindices = modindices,
-      srmr.close.h0 = srmr.close.h0
+      srmr_close_h0 = srmr.close.h0
     )
     # res has class c("lavaan.summary", "list")
 
@@ -155,7 +155,7 @@ setMethod(
 
     lav_object_inspect_coef(
       object = object, type = type,
-      add.labels = labels, add.class = TRUE
+      add_labels = labels, add_class = TRUE
     )
   }
 )
@@ -248,9 +248,9 @@ standardizedSolution <-                                      # nolint start
       # add 'se' for standardized parameters
       tmp_vcov <- try(lav_object_inspect_vcov(object,
         standardized = TRUE,
-        type = type, free.only = FALSE,
-        add.labels = FALSE,
-        add.class = FALSE
+        type = type, free_only = FALSE,
+        add_labels = FALSE,
+        add_class = FALSE
       ))
       if (inherits(tmp_vcov, "try-error") || is.null(tmp_vcov)) {
         tmp_list$se <- rep(NA, length(tmp_list$lhs))
@@ -1211,8 +1211,8 @@ setMethod(
     }
 
     lav_object_inspect_implied(object,
-      add.labels = labels, add.class = TRUE,
-      drop.list.single.group = TRUE
+      add_labels = labels, add_class = TRUE,
+      drop_list_single_group = TRUE
     )
   }
 )
@@ -1281,17 +1281,17 @@ setMethod(
         joint = TRUE,
         standardized = !is.null(standardized),
         type = ifelse(is.null(standardized), "std.all", standardized),
-        add.labels = labels,
-        add.class = TRUE
+        add_labels = labels,
+        add_class = TRUE
       )
     } else if (type == "free") {
       tmp_varcov <- lav_object_inspect_vcov(object,
         standardized = !is.null(standardized),
         type = ifelse(is.null(standardized), "std.all", standardized),
-        free.only = free.only,
-        add.labels = labels,
-        add.class = TRUE,
-        remove.duplicated = remove.duplicated
+        free_only = free.only,
+        add_labels = labels,
+        add_class = TRUE,
+        remove_duplicated = remove.duplicated
       )
     } else {
       lav_msg_stop(gettext("type argument should be \"user\" or \"free\""))

@@ -10,13 +10,13 @@ lav_model_information <- function(lavmodel = NULL,
                                   lavdata = NULL,
                                   lavimplied = NULL,
                                   lavh1 = NULL,
-                                  Delta = NULL,
+                                  delta = NULL,
                                   lavcache = NULL,
                                   lavoptions = NULL,
                                   extra = FALSE,
                                   augmented = FALSE,
                                   inverted = FALSE,
-                                  use.ginv = FALSE) {
+                                  use_ginv = FALSE) {
 
   information <- lavoptions$information[1] # ALWAYS used the first one
   # caller can control it
@@ -37,39 +37,39 @@ lav_model_information <- function(lavmodel = NULL,
   # compute information matrix
   if (information == "observed") {
     if (lavsamplestats@missing.flag || lavdata@nlevels > 1L) {
-      group.weight <- FALSE
+      group_weight <- FALSE
     } else {
-      group.weight <- TRUE
+      group_weight <- TRUE
     }
-    E <- lav_model_information_observed(
+    m_e <- lav_model_information_observed(
       lavmodel = lavmodel,
       lavsamplestats = lavsamplestats, lavdata = lavdata,
       lavimplied = lavimplied, lavh1 = lavh1,
-      lavcache = lavcache, group.weight = group.weight,
+      lavcache = lavcache, group_weight = group_weight,
       lavoptions = lavoptions, extra = extra,
-      augmented = augmented, inverted = inverted, use.ginv = use.ginv
+      augmented = augmented, inverted = inverted, use_ginv = use_ginv
     )
   } else if (information == "expected") {
-    E <- lav_model_information_expected(
+    m_e <- lav_model_information_expected(
       lavmodel = lavmodel,
       lavsamplestats = lavsamplestats, lavdata = lavdata,
       lavimplied = lavimplied, lavh1 = lavh1,
       lavcache = lavcache, lavoptions = lavoptions, extra = extra,
-      augmented = augmented, inverted = inverted, use.ginv = use.ginv
+      augmented = augmented, inverted = inverted, use_ginv = use_ginv
     )
   } else if (information == "first.order") {
-    E <- lav_model_information_firstorder(
+    m_e <- lav_model_information_firstorder(
       lavmodel = lavmodel,
       lavsamplestats = lavsamplestats, lavdata = lavdata,
       lavimplied = lavimplied, lavh1 = lavh1,
       lavcache = lavcache, lavoptions = lavoptions, # extra = extra,
-      check.pd = FALSE,
-      augmented = augmented, inverted = inverted, use.ginv = use.ginv
+      check_pd = FALSE,
+      augmented = augmented, inverted = inverted, use_ginv = use_ginv
     )
   }
 
   # information, augmented information, or inverted information
-  E
+  m_e
 }
 
 # fisher/expected information
@@ -83,25 +83,25 @@ lav_model_information_expected <- function(lavmodel = NULL,
                                            lavoptions = NULL,
                                            lavimplied = NULL,
                                            lavh1 = NULL,
-                                           Delta = NULL,
+                                           delta = NULL,
                                            lavcache = NULL,
                                            extra = FALSE,
                                            augmented = FALSE,
                                            inverted = FALSE,
-                                           use.ginv = FALSE) {
+                                           use_ginv = FALSE) {
   if (inverted) {
     augmented <- TRUE
   }
 
   # 1. Delta
-  if (is.null(Delta)) {
-    Delta <- lav_model_delta(lavmodel = lavmodel)
+  if (is.null(delta)) {
+    delta <- lav_model_delta(lavmodel = lavmodel)
   }
 
 
   # 2. H1 information (single level)
   if (lavdata@nlevels == 1L) {
-    A1 <- lav_model_h1_information_expected(
+    a1 <- lav_model_h1_information_expected(
       lavmodel = lavmodel,
       lavsamplestats = lavsamplestats,
       lavdata = lavdata,
@@ -116,7 +116,7 @@ lav_model_information_expected <- function(lavmodel = NULL,
   }
 
   # 3. compute Information per group
-  Info.group <- vector("list", length = lavsamplestats@ngroups)
+  info_group <- vector("list", length = lavsamplestats@ngroups)
   for (g in 1:lavsamplestats@ngroups) {
     # note LISREL documentation suggests (Ng - 1) instead of Ng...
     fg <- lavsamplestats@nobs[[g]] / lavsamplestats@ntotal
@@ -125,35 +125,35 @@ lav_model_information_expected <- function(lavmodel = NULL,
     if (lavdata@nlevels > 1L) {
       # here, we assume only 2 levels, at [[1]] and [[2]]
       if (lavoptions$h1.information[1] == "structured") {
-        Sigma.W <- lavimplied$cov[[(g - 1) * 2 + 1]]
-        Mu.W <- lavimplied$mean[[(g - 1) * 2 + 1]]
-        Sigma.B <- lavimplied$cov[[(g - 1) * 2 + 2]]
-        Mu.B <- lavimplied$mean[[(g - 1) * 2 + 2]]
+        sigma_w <- lavimplied$cov[[(g - 1) * 2 + 1]]
+        mu_w <- lavimplied$mean[[(g - 1) * 2 + 1]]
+        sigma_b <- lavimplied$cov[[(g - 1) * 2 + 2]]
+        mu_b <- lavimplied$mean[[(g - 1) * 2 + 2]]
       } else {
-        Sigma.W <- lavh1$implied$cov[[(g - 1) * 2 + 1]]
-        Mu.W <- lavh1$implied$mean[[(g - 1) * 2 + 1]]
-        Sigma.B <- lavh1$implied$cov[[(g - 1) * 2 + 2]]
-        Mu.B <- lavh1$implied$mean[[(g - 1) * 2 + 2]]
+        sigma_w <- lavh1$implied$cov[[(g - 1) * 2 + 1]]
+        mu_w <- lavh1$implied$mean[[(g - 1) * 2 + 1]]
+        sigma_b <- lavh1$implied$cov[[(g - 1) * 2 + 2]]
+        mu_b <- lavh1$implied$mean[[(g - 1) * 2 + 2]]
       }
-      Lp <- lavdata@Lp[[g]]
+      lp <- lavdata@Lp[[g]]
 
-      Info.g <-
+      info_g <-
         lav_mvnorm_cluster_information_expected_delta(
-          lp = Lp,
-          delta = Delta[[g]],
-          mu_w = Mu.W,
-          sigma_w = Sigma.W,
-          mu_b = Mu.B,
-          sigma_b = Sigma.B,
+          lp = lp,
+          delta = delta[[g]],
+          mu_w = mu_w,
+          sigma_w = sigma_w,
+          mu_b = mu_b,
+          sigma_b = sigma_b,
           sinv_method = "eigen"
         )
-      Info.group[[g]] <- fg * Info.g
+      info_group[[g]] <- fg * info_g
     } else {
       # compute information for this group
       if (lavmodel@estimator %in% c("DWLS", "ULS")) {
         # diagonal weight matrix
-        Delta2 <- sqrt(A1[[g]]) * Delta[[g]]
-        Info.group[[g]] <- fg * crossprod(Delta2)
+        delta2 <- sqrt(a1[[g]]) * delta[[g]]
+        info_group[[g]] <- fg * crossprod(delta2)
       } else {
         # full weight matrix
         # if (lav_use_lavaanC()) {
@@ -161,43 +161,44 @@ lav_model_information_expected <- function(lavmodel = NULL,
         # # Info.group[[g]] <- fg * lavaanC::m_crossprod(Delta[[g]],
         # #                     lavaanC::m_prod(A1[[g]], Delta[[g]], "R"), "L")
         # #
-        # # (ii) use of m_prod on transposed sparse first matrix, faster than (i):
+        # # (ii) use of m_prod on transposed sparse first matrix,
+        # #                                                 faster than (i):
         #   Info.group[[g]] <- fg * lavaanC::m_prod(t(Delta[[g]]),
         #                       lavaanC::m_prod(A1[[g]], Delta[[g]], "R"), "L")
         # } else {
-          Info.group[[g]] <-
-            fg * (crossprod(Delta[[g]], A1[[g]]) %*% Delta[[g]])
+          info_group[[g]] <-
+            fg * (crossprod(delta[[g]], a1[[g]]) %*% delta[[g]])
         # }
       }
     }
   } # g
 
   # 4. assemble over groups
-  Information <- Info.group[[1]]
+  information <- info_group[[1]]
   if (lavsamplestats@ngroups > 1) {
     for (g in 2:lavsamplestats@ngroups) {
-      Information <- Information + Info.group[[g]]
+      information <- information + info_group[[g]]
     }
   }
 
   # 5. augmented information?
   if (augmented) {
-    Information <-
+    information <-
       lav_model_information_augment_invert(
         lavmodel = lavmodel,
-        information = Information,
+        information = information,
         inverted = inverted,
-        use.ginv = use.ginv
+        use_ginv = use_ginv
       )
   }
 
   if (extra) {
-    attr(Information, "Delta") <- Delta
-    attr(Information, "WLS.V") <- A1 # unweighted
+    attr(information, "Delta") <- delta
+    attr(information, "WLS.V") <- a1 # unweighted
   }
 
   # possibly augmented/inverted
-  Information
+  information
 }
 
 # only for Mplus MLM
@@ -259,7 +260,7 @@ lav_model_information_expected_mlm <- function(lavmodel = NULL,
         lavmodel = lavmodel,
         information = information,
         inverted = inverted,
-        use.ginv = use_ginv
+        use_ginv = use_ginv
       )
   }
 
@@ -280,10 +281,10 @@ lav_model_information_observed <- function(lavmodel = NULL,
                                            lavcache = NULL,
                                            lavoptions = NULL,
                                            extra = FALSE,
-                                           group.weight = TRUE,
+                                           group_weight = TRUE,
                                            augmented = FALSE,
                                            inverted = FALSE,
-                                           use.ginv = FALSE) {
+                                           use_ginv = FALSE) {
   if (inverted) {
     augmented <- TRUE
   }
@@ -298,21 +299,21 @@ lav_model_information_observed <- function(lavmodel = NULL,
   if (!is.null(lavoptions) &&
     !is.null(lavoptions$observed.information[1]) &&
     lavoptions$observed.information[1] == "h1") {
-    observed.information <- "h1"
+    observed_information <- "h1"
   } else {
-    observed.information <- "hessian"
+    observed_information <- "hessian"
   }
 
   # HESSIAN based
-  if (observed.information == "hessian") {
-    Hessian <- lav_model_hessian(
+  if (observed_information == "hessian") {
+    hessian <- lav_model_hessian(
       lavmodel = lavmodel,
       lavsamplestats = lavsamplestats,
       lavdata = lavdata,
       lavoptions = lavoptions,
       lavcache = lavcache,
-      group.weight = group.weight,
-      ceq.simple = FALSE
+      group_weight = group_weight,
+      ceq_simple = FALSE
     )
 
     # NOTE! What is the relationship between the Hessian of the objective
@@ -321,34 +322,34 @@ lav_model_information_observed <- function(lavmodel = NULL,
     # 1. in lavaan, we ALWAYS minimize, so the Hessian is already pos def
     # 2. currently, all estimators give unit information, except MML and PML
     #    so, no need to divide by N
-    Information <- Hessian
+    information <- hessian
 
     # divide by 'N' for MML and PML
     if (lavmodel@estimator == "PML" || lavmodel@estimator == "MML") {
-      Information <- Information / lavsamplestats@ntotal
+      information <- information / lavsamplestats@ntotal
       # HJ: Does this need to be divided by sum of weights instead?
     }
 
     # if multilevel, we should divide by 'J', the number of clusters
     if (lavdata@nlevels > 1L) {
-      NC <- 0
+      nc <- 0
       for (g in 1:lavsamplestats@ngroups) {
-        NC <- NC + lavdata@Lp[[g]]$nclusters[[2]]
+        nc <- nc + lavdata@Lp[[g]]$nclusters[[2]]
       }
-      Information <- Information * lavsamplestats@ntotal / NC
+      information <- information * lavsamplestats@ntotal / nc
     }
   }
 
   # using 'observed h1 information'
   # we need DELTA and 'WLS.V' (=A1)
 
-  if (observed.information == "h1" || extra) {
+  if (observed_information == "h1" || extra) {
     # 1. Delta
-    Delta <- lav_model_delta(lavmodel = lavmodel)
+    delta <- lav_model_delta(lavmodel = lavmodel)
 
     # 2. H1 information
 
-    A1 <- lav_model_h1_information_observed(
+    a1 <- lav_model_h1_information_observed(
       lavmodel = lavmodel,
       lavsamplestats = lavsamplestats,
       lavdata = lavdata,
@@ -359,66 +360,66 @@ lav_model_information_observed <- function(lavmodel = NULL,
     )
   }
 
-  if (observed.information == "h1") {
+  if (observed_information == "h1") {
     # compute Information per group
-    Info.group <- vector("list", length = lavsamplestats@ngroups)
+    info_group <- vector("list", length = lavsamplestats@ngroups)
     for (g in 1:lavsamplestats@ngroups) {
       fg <- lavsamplestats@nobs[[g]] / lavsamplestats@ntotal
       # compute information for this group
       if (lavmodel@estimator %in% c("DWLS", "ULS")) {
         # diagonal weight matrix
-        Delta2 <- sqrt(A1[[g]]) * Delta[[g]]
-        Info.group[[g]] <- fg * crossprod(Delta2)
+        delta2 <- sqrt(a1[[g]]) * delta[[g]]
+        info_group[[g]] <- fg * crossprod(delta2)
       } else {
         # full weight matrix
-        Info.group[[g]] <-
-          fg * (crossprod(Delta[[g]], A1[[g]]) %*% Delta[[g]])
+        info_group[[g]] <-
+          fg * (crossprod(delta[[g]], a1[[g]]) %*% delta[[g]])
       }
     }
 
     # assemble over groups
-    Information <- Info.group[[1]]
+    information <- info_group[[1]]
     if (lavsamplestats@ngroups > 1) {
       for (g in 2:lavsamplestats@ngroups) {
-        Information <- Information + Info.group[[g]]
+        information <- information + info_group[[g]]
       }
     }
   }
 
   # augmented information?
   if (augmented) {
-    Information <-
+    information <-
       lav_model_information_augment_invert(
         lavmodel = lavmodel,
-        information = Information,
+        information = information,
         inverted = inverted,
-        use.ginv = use.ginv
+        use_ginv = use_ginv
       )
   }
 
   if (extra) {
-    attr(Information, "Delta") <- Delta
-    attr(Information, "WLS.V") <- A1
+    attr(information, "Delta") <- delta
+    attr(information, "WLS.V") <- a1
   }
 
-  Information
+  information
 }
 
 # outer product of the case-wise scores (gradients)
 # HJ 18/10/23: Need to divide sum of crossproduct of individual log-likelihoods
 # by sum of weights rather than sample size.
-lav_model_information_firstorder <- function(lavmodel = NULL,
+lav_model_information_firstorder <- function(lavmodel = NULL,           # nolint
                                              lavsamplestats = NULL,
                                              lavdata = NULL,
                                              lavimplied = NULL,
                                              lavh1 = NULL,
                                              lavcache = NULL,
                                              lavoptions = NULL,
-                                             check.pd = FALSE,
+                                             check_pd = FALSE,
                                              extra = FALSE,
                                              augmented = FALSE,
                                              inverted = FALSE,
-                                             use.ginv = FALSE) {
+                                             use_ginv = FALSE) {
   if (!lavmodel@estimator %in% c("ML", "PML")) {
     lav_msg_stop(gettext(
       "information = \"first.order\" not available for estimator"),
@@ -429,13 +430,13 @@ lav_model_information_firstorder <- function(lavmodel = NULL,
     augmented <- TRUE
   }
 
-  B0.group <- vector("list", lavsamplestats@ngroups)
+  b0_group <- vector("list", lavsamplestats@ngroups)
 
   # 1. Delta
-  Delta <- lav_model_delta(lavmodel = lavmodel)
+  delta <- lav_model_delta(lavmodel = lavmodel)
 
   # 2. H1 information
-  B1 <- lav_model_h1_information_firstorder(
+  b1 <- lav_model_h1_information_firstorder(
     lavmodel = lavmodel,
     lavsamplestats = lavsamplestats,
     lavdata = lavdata,
@@ -446,10 +447,10 @@ lav_model_information_firstorder <- function(lavmodel = NULL,
   )
 
   # 3. compute Information per group
-  Info.group <- vector("list", length = lavsamplestats@ngroups)
+  info_group <- vector("list", length = lavsamplestats@ngroups)
   for (g in 1:lavsamplestats@ngroups) {
     # unweighted (needed in lav_test?)
-    B0.group[[g]] <- t(Delta[[g]]) %*% B1[[g]] %*% Delta[[g]]
+    b0_group[[g]] <- t(delta[[g]]) %*% b1[[g]] %*% delta[[g]]
 
     # >>>>>>>> HJ/MK PML CODE >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
@@ -466,14 +467,14 @@ lav_model_information_firstorder <- function(lavmodel = NULL,
     # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
     # compute information for this group
-    Info.group[[g]] <- fg * B0.group[[g]]
+    info_group[[g]] <- fg * b0_group[[g]]
   }
 
   # 4. assemble over groups
-  Information <- Info.group[[1]]
+  information <- info_group[[1]]
   if (lavsamplestats@ngroups > 1) {
     for (g in 2:lavsamplestats@ngroups) {
-      Information <- Information + Info.group[[g]]
+      information <- information + info_group[[g]]
     }
   }
 
@@ -485,36 +486,36 @@ lav_model_information_firstorder <- function(lavmodel = NULL,
 
   if (lavmodel@estimator == "PML" || lavmodel@estimator == "MML") {
     if (length(lavdata@sampling.weights) == 0) {
-      the_N <- lavsamplestats@ntotal
+      the_n <- lavsamplestats@ntotal
     } else {
-      the_N <- sum(unlist(lavdata@weights))
+      the_n <- sum(unlist(lavdata@weights))
     }
-    Information <- Information / the_N
+    information <- information / the_n
     for (g in 1:lavsamplestats@ngroups) {
-      B0.group[[g]] <- B0.group[[g]] / the_N
+      b0_group[[g]] <- b0_group[[g]] / the_n
     }
   }
   # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
   # augmented information?
   if (augmented) {
-    Information <-
+    information <-
       lav_model_information_augment_invert(
         lavmodel = lavmodel,
-        information = Information,
-        check.pd = check.pd,
+        information = information,
+        check_pd = check_pd,
         inverted = inverted,
-        use.ginv = use.ginv
+        use_ginv = use_ginv
       )
   }
 
   if (extra) {
-    attr(Information, "B0.group") <- B0.group
-    attr(Information, "Delta") <- Delta
-    attr(Information, "WLS.V") <- B1
+    attr(information, "B0.group") <- b0_group
+    attr(information, "Delta") <- delta
+    attr(information, "WLS.V") <- b1
   }
 
-  Information
+  information
 }
 
 
@@ -525,62 +526,62 @@ lav_model_information_firstorder <- function(lavmodel = NULL,
 # contains more parameters than the joint model; therefore, information
 # will be 'too small', and we need to remove some columns in H
 #
-lav_model_information_augment_invert <- function(lavmodel = NULL,
+lav_model_information_augment_invert <- function(lavmodel = NULL,   # nolint
                                                  information = NULL,
                                                  inverted = FALSE,
-                                                 check.pd = FALSE,
-                                                 use.ginv = FALSE,
-                                                 rm.idx = integer(0L)) {
+                                                 check_pd = FALSE,
+                                                 use_ginv = FALSE,
+                                                 rm_idx = integer(0L)) {
   npar <- nrow(information)
-  is.augmented <- FALSE
+  is_augmented <- FALSE
 
   # handle constraints
   if (nrow(lavmodel@con.jac) > 0L) {
-    H <- lavmodel@con.jac
-    if (length(rm.idx) > 0L) {
-      H <- H[, -rm.idx, drop = FALSE]
+    h <- lavmodel@con.jac
+    if (length(rm_idx) > 0L) {
+      h <- h[, -rm_idx, drop = FALSE]
     }
-    inactive.idx <- attr(H, "inactive.idx")
+    inactive_idx <- attr(h, "inactive.idx")
     lambda <- lavmodel@con.lambda # lagrangean coefs
-    if (length(inactive.idx) > 0L) {
-      H <- H[-inactive.idx, , drop = FALSE]
-      lambda <- lambda[-inactive.idx]
+    if (length(inactive_idx) > 0L) {
+      h <- h[-inactive_idx, , drop = FALSE]
+      lambda <- lambda[-inactive_idx]
     }
-    if (nrow(H) > 0L) {
-      is.augmented <- TRUE
-      H0 <- matrix(0, nrow(H), nrow(H))
-      H10 <- matrix(0, ncol(information), nrow(H))
-      DL <- 2 * diag(lambda, nrow(H), nrow(H))
+    if (nrow(h) > 0L) {
+      is_augmented <- TRUE
+      h0 <- matrix(0, nrow(h), nrow(h))
+      h10 <- matrix(0, ncol(information), nrow(h))
+      dl <- 2 * diag(lambda, nrow(h), nrow(h))
       # FIXME: better include inactive + slacks??
       # INFO <- information
       # or
-      INFO <- information + crossprod(H)
-      E3 <- rbind(
-        cbind(INFO, H10, t(H)),
-        cbind(t(H10), DL, H0),
-        cbind(H, H0, H0)
+      info <- information + crossprod(h)
+      e3 <- rbind(
+        cbind(info, h10, t(h)),
+        cbind(t(h10), dl, h0),
+        cbind(h, h0, h0)
       )
-      information <- E3
+      information <- e3
     }
   } else if (lavmodel@ceq.simple.only) {
-    H <- t(lav_matrix_orthogonal_complement(lavmodel@ceq.simple.K))
-    if (length(rm.idx) > 0L) {
-      H <- H[, -rm.idx, drop = FALSE]
+    h <- t(lav_matrix_orthogonal_complement(lavmodel@ceq.simple.K))
+    if (length(rm_idx) > 0L) {
+      h <- h[, -rm_idx, drop = FALSE]
     }
-    if (nrow(H) > 0L) {
-      is.augmented <- TRUE
-      H0 <- matrix(0, nrow(H), nrow(H))
-      H10 <- matrix(0, ncol(information), nrow(H))
-      INFO <- information + crossprod(H)
-      E2 <- rbind(
-        cbind(INFO, t(H)),
-        cbind(H, H0)
+    if (nrow(h) > 0L) {
+      is_augmented <- TRUE
+      h0 <- matrix(0, nrow(h), nrow(h))
+      h10 <- matrix(0, ncol(information), nrow(h))
+      info <- information + crossprod(h)
+      e2 <- rbind(
+        cbind(info, t(h)),
+        cbind(h, h0)
       )
-      information <- E2
+      information <- e2
     }
   }
 
-  if (check.pd) {
+  if (check_pd) {
     eigvals <- eigen(information,
       symmetric = TRUE,
       only.values = TRUE
@@ -593,7 +594,7 @@ lav_model_information_augment_invert <- function(lavmodel = NULL,
   }
 
   if (inverted) {
-    if (is.augmented) {
+    if (is_augmented) {
       # note: default tol in MASS::ginv is sqrt(.Machine$double.eps)
       #       which seems a bit too conservative
       #       from 0.5-20, we changed this to .Machine$double.eps^(3/4)
@@ -608,7 +609,7 @@ lav_model_information_augment_invert <- function(lavmodel = NULL,
           silent = TRUE
         )
     } else {
-      if (use.ginv) {
+      if (use_ginv) {
         information <- try(
           MASS::ginv(information,
             tol = .Machine$double.eps^(3 / 4)

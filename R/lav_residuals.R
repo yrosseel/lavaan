@@ -275,12 +275,12 @@ lav_residuals <- function(object, type = "raw", h1 = TRUE, custom.rmr = NULL,
   # observed and fitted sample statistics
   obsList <- lav_object_inspect_sampstat(object,
     h1 = h1,
-    add.labels = add.labels, add.class = add.class,
-    drop.list.single.group = FALSE
+    add_labels = add.labels, add_class = add.class,
+    drop_list_single_group = FALSE
   )
   estList <- lav_object_inspect_implied(object,
-    add.labels = add.labels, add.class = add.class,
-    drop.list.single.group = FALSE
+    add_labels = add.labels, add_class = add.class,
+    drop_list_single_group = FALSE
   )
   # blocks
   nblocks <- length(obsList)
@@ -485,7 +485,7 @@ lav_residuals_acov <- function(object, type = "raw", z.type = "standardized",
   } else {
     ACOV.obs <- lav_model_h1_acov(
       lavobject = object,
-      h1.information = h1.acov
+      h1_information = h1.acov
     )
   }
 
@@ -541,7 +541,7 @@ lav_residuals_acov <- function(object, type = "raw", z.type = "standardized",
         extra = FALSE,
         augmented = TRUE,
         inverted = TRUE,
-        use.ginv = TRUE
+        use_ginv = TRUE
       )
 
       ACOV.est.g <- gw * (DELTA[[g]] %*% A0.g.inv %*% t(DELTA[[g]]))

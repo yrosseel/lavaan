@@ -103,7 +103,7 @@ lav_scores <- function(object, scaling = FALSE,                    # nolint star
 
   # provide column names
   colnames(score_matrix) <- names(lav_object_inspect_coef(object,
-    type = "free", add.labels = TRUE
+    type = "free", add_labels = TRUE
   ))
 
   # handle general constraints, so that the sum of the columns equals zero

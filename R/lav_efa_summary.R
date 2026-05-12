@@ -365,8 +365,8 @@ lav_efalist_summary <- function(object, nd = 3L, cutoff = 0.3, dot.cutoff = 0.1,
   # main part: lav_object_summary information per model
   res <- lapply(y, lav_object_summary,
     header = FALSE,
-    fit.measures = FALSE, estimates = TRUE, efa = TRUE,
-    efa.args = efa_args
+    fit_measures = FALSE, estimates = TRUE, efa = TRUE,
+    efa_args = efa_args
   )
 
   # number of factors (for ALL blocks)

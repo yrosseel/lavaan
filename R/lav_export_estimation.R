@@ -122,7 +122,7 @@ lav_export_estimation <- function(lavaan_model) {
     # get objective function **value**
     fx <- lav_model_objective(
       lavmodel = lavaan_model@Model,
-      GLIST = glist,
+      glist = glist,
       lavsamplestats = lavaan_model@SampleStats,
       lavdata = lavaan_model@Data,
       lavcache = list()
@@ -157,14 +157,14 @@ lav_export_estimation <- function(lavaan_model) {
       on.exit(lav_verbose(current_verbose), TRUE)
     dx <- lav_model_gradient(
       lavmodel = lavaan_model@Model,
-      GLIST = glist,
+      glist = glist,
       lavsamplestats = lavaan_model@SampleStats,
       lavdata = lavaan_model@Data,
       lavcache = list(),
       type = "free",
-      group.weight = !(lavaan_model@SampleStats@missing.flag ||
+      group_weight = !(lavaan_model@SampleStats@missing.flag ||
                       lavaan_model@Options$estimator == "PML"),
-      ceq.simple = lavaan_model@Model@ceq.simple.only
+      ceq_simple = lavaan_model@Model@ceq.simple.only
     )
     lav_verbose(current_verbose)
 

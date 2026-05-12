@@ -95,10 +95,10 @@ lavTestWald <- function(object, constraints = NULL, verbose = FALSE) { # nolint
   # avoid S4 dispatch
   vcov_1 <- lav_object_inspect_vcov(object,
     standardized = FALSE,
-    free.only = TRUE,
-    add.labels = FALSE,
-    add.class = FALSE,
-    remove.duplicated = FALSE
+    free_only = TRUE,
+    add_labels = FALSE,
+    add_class = FALSE,
+    remove_duplicated = FALSE
   )
 
   # restricted vcov

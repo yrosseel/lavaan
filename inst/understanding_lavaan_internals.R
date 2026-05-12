@@ -86,7 +86,7 @@ lavaan:::lav_lisrel_sigma(MLIST)
 # 3. check the (raw) data, or the sample statistics
 #   lav_lavdata()
 lavdata <- lavaan:::lav_lavdata(data = HolzingerSwineford1939,
-                                ov.names = c("x1", "x2", "x3"))
+                            ov_names = c("x1", "x2", "x3"))
 slotNames(lavdata)
 lavdata@ov.names
 lavdata@ngroups
@@ -474,7 +474,7 @@ fit@baseline$test$standard
         GLIST <- lav_model_x2glist(lavmodel, x = x)
 
         fx <- lav_model_objective(lavmodel       = lavmodel,
-                                  GLIST          = GLIST,
+                                  glist          = GLIST,
                                   lavsamplestats = lavsamplestats,
                                   lavdata        = lavdata,
                                   lavcache       = lavcache,

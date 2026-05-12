@@ -212,7 +212,7 @@ lav_pml_plrt <- function(lavobject = NULL, lavmodel = NULL, lavdata = NULL,
     lavdata = fitted_sat2@Data,
     lavpartable = fitted_sat2@ParTable,
     lavcache = fitted_sat2@Cache,
-    use.ginv = TRUE
+    use_ginv = TRUE
   )
   inv_g_to_sigmasigma_attheta0 <- lavsamplestats@ntotal * vcov_sat2[d_sat_idx,
                                 d_sat_idx, drop = FALSE] # G^sigmasigma(theta0)
@@ -290,8 +290,8 @@ lav_pml_plrt <- function(lavobject = NULL, lavmodel = NULL, lavdata = NULL,
     delta_g <- lav_object_inspect_delta_internal(
       lavmodel = lavmodel,
       lavdata = lavdata, lavpartable = lavpartable,
-      add.labels = TRUE, add.class = FALSE,
-      drop.list.single.group = FALSE
+      add_labels = TRUE, add_class = FALSE,
+      drop_list_single_group = FALSE
     )[[g]]
     names_1 <- rownames(delta_g)
     if (g > 1L) {
