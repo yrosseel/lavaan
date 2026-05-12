@@ -41,11 +41,11 @@ lav_efalist_print <- function(x, nd = 3L, cutoff = 0.3,
   res_1 <- vector("list", nfits)
   for (ff in seq_len(nfits)) {
     res <- lav_object_summary(y[[ff]],
-      fit.measures = FALSE,
+      fit_measures = FALSE,
       estimates = FALSE,
       modindices = FALSE,
       efa = TRUE,
-      efa.args = list(
+      efa_args = list(
         lambda           = TRUE,
         theta            = FALSE,
         psi              = FALSE,

@@ -29,7 +29,7 @@ lav_lavaan_step09_model <- function(slot_model = NULL, # nolint
     lavmodel <- lav_model(
       lavpartable = lavpartable,
       lavoptions = lavoptions,
-      th.idx = lavsamplestats@th.idx
+      th_idx = lavsamplestats@th.idx
     )
     # no longer needed: x values are in start
     # cov.x            = lavsamplestats@cov.x,

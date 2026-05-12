@@ -4,35 +4,37 @@
 # - YR 14 Jan 2014: rename object -> lavmodel, all functions as lav_model_*
 # - YR 20 Nov 2021: add lav_model_dmmdpar
 
-lav_model_get_parameters <- function(lavmodel = NULL, GLIST = NULL,
-                                     type = "free", extra = TRUE) {
+lav_model_get_parameters <- function(lavmodel = NULL, GLIST = NULL,   # nolint start
+                                     type = "free", extra = TRUE) {   # nolint end
   # type == "free": only non-redundant free parameters (x)
   # type == "user": all parameters listed in User model
 
   # state or final?
-  if (is.null(GLIST)) GLIST <- lavmodel@GLIST # if this changes, tag @TDJorgensen in commit message
+  glist <- GLIST
+  if (is.null(glist)) glist <- lavmodel@GLIST 
+                  # if this changes, tag @TDJorgensen in commit message
 
   if (type == "free") {
-    N <- lavmodel@nx.free
+    n <- lavmodel@nx.free
     # } else if(type == "unco") {
     #    N <- lavmodel@nx.unco
   } else if (type == "user") {
-    N <- lavmodel@nx.user
+    n <- lavmodel@nx.user
   }
-  x <- numeric(N)
+  x <- numeric(n)
 
-  for (mm in 1:length(lavmodel@GLIST)) {
+  for (mm in seq_along(lavmodel@GLIST)) {
     if (type == "free") {
-      m.idx <- lavmodel@m.free.idx[[mm]]
-      x.idx <- lavmodel@x.free.idx[[mm]]
+      m_idx <- lavmodel@m.free.idx[[mm]]
+      x_idx <- lavmodel@x.free.idx[[mm]]
       # } else if(type == "unco") {
       #    m.idx <- lavmodel@m.unco.idx[[mm]]
       #    x.idx <- lavmodel@x.unco.idx[[mm]]
     } else if (type == "user") {
-      m.idx <- lavmodel@m.user.idx[[mm]]
-      x.idx <- lavmodel@x.user.idx[[mm]]
+      m_idx <- lavmodel@m.user.idx[[mm]]
+      x_idx <- lavmodel@x.user.idx[[mm]]
     }
-    x[x.idx] <- GLIST[[mm]][m.idx]
+    x[x_idx] <- glist[[mm]][m_idx]
   }
 
   if (type == "user" && extra && sum(
@@ -41,22 +43,22 @@ lav_model_get_parameters <- function(lavmodel = NULL, GLIST = NULL,
     lavmodel@x.cin.idx
   ) > 0L) {
     # we need 'free' x
-    x.free <- lav_model_get_parameters(
-      lavmodel = lavmodel, GLIST = GLIST,
+    x_free <- lav_model_get_parameters(
+      lavmodel = lavmodel, GLIST = glist,
       type = "free"
     )
     if (length(lavmodel@x.def.idx) > 0L) {
-      x[lavmodel@x.def.idx] <- lavmodel@def.function(x.free)
+      x[lavmodel@x.def.idx] <- lavmodel@def.function(x_free)
     }
     if (length(lavmodel@x.ceq.idx) > 0L) {
-      x[lavmodel@x.ceq.idx] <- lavmodel@ceq.function(x.free)
+      x[lavmodel@x.ceq.idx] <- lavmodel@ceq.function(x_free)
     }
     if (length(lavmodel@x.cin.idx) > 0L) {
-      tmp <- lavmodel@cin.function(x.free)
+      tmp <- lavmodel@cin.function(x_free)
       # remove lower/upper bound values (if any)
-      bound.idx <- attr(tmp, "bound.idx")
-      if (length(bound.idx) > 0L) {
-        tmp <- tmp[-bound.idx]
+      bound_idx <- attr(tmp, "bound.idx")
+      if (length(bound_idx) > 0L) {
+        tmp <- tmp[-bound_idx]
       }
       x[lavmodel@x.cin.idx] <- tmp
     }
@@ -72,10 +74,10 @@ lav_model_get_parameters <- function(lavmodel = NULL, GLIST = NULL,
 #          Note: fixed in 0.6-20 for recursive models
 lav_model_set_parameters <- function(lavmodel = NULL, x = NULL) {
   tmp <- lavmodel@GLIST
-  for (mm in 1:length(lavmodel@GLIST)) {
-    m.free.idx <- lavmodel@m.free.idx[[mm]]
-    x.free.idx <- lavmodel@x.free.idx[[mm]]
-    tmp[[mm]][m.free.idx] <- x[x.free.idx]
+  for (mm in seq_along(lavmodel@GLIST)) {
+    m_free_idx <- lavmodel@m.free.idx[[mm]]
+    x_free_idx <- lavmodel@x.free.idx[[mm]]
+    tmp[[mm]][m_free_idx] <- x[x_free_idx]
   }
 
   correlation <- lavmodel@correlation
@@ -86,7 +88,7 @@ lav_model_set_parameters <- function(lavmodel = NULL, x = NULL) {
     if (lavmodel@representation == "LISREL") {
       for (g in 1:lavmodel@nblocks) {
         # which mm belong to group g?
-        mm.in.group <- 1:nmat[g] + cumsum(c(0L, nmat))[g]
+        mm_in_group <- 1:nmat[g] + cumsum(c(0L, nmat))[g]
 
         if (lavmodel@estimator %in% c("MML", "FML")) {
           #  ttt <- diag(tmp[mm.in.group]$theta)
@@ -97,17 +99,17 @@ lav_model_set_parameters <- function(lavmodel = NULL, x = NULL) {
           #  }
         } else {
           if (lavmodel@parameterization == "delta") {
-            tmp[mm.in.group] <-
+            tmp[mm_in_group] <-
               lav_lisrel_residual_variances(
-                MLIST = tmp[mm.in.group],
+                MLIST = tmp[mm_in_group],
                 num.idx = lavmodel@num.idx[[g]],
                 ov.y.dummy.ov.idx = lavmodel@ov.y.dummy.ov.idx[[g]],
                 ov.y.dummy.lv.idx = lavmodel@ov.y.dummy.lv.idx[[g]]
               )
           } else if (lavmodel@parameterization == "theta") {
-            tmp[mm.in.group] <-
+            tmp[mm_in_group] <-
               lav_lisrel_delta(
-                MLIST = tmp[mm.in.group],
+                MLIST = tmp[mm_in_group],
                 num.idx = lavmodel@num.idx[[g]]
               )
           }
@@ -125,10 +127,10 @@ lav_model_set_parameters <- function(lavmodel = NULL, x = NULL) {
     if (lavmodel@representation == "LISREL") {
       for (g in 1:lavmodel@nblocks) {
         # which mm belong to group g?
-        mm.in.group <- 1:nmat[g] + cumsum(c(0L, nmat))[g]
+        mm_in_group <- 1:nmat[g] + cumsum(c(0L, nmat))[g]
 
-        tmp[mm.in.group] <-
-          lav_lisrel_comp_set_intresvar(MLIST = tmp[mm.in.group])
+        tmp[mm_in_group] <-
+          lav_lisrel_comp_set_intresvar(MLIST = tmp[mm_in_group])
       }
     } else {
       cat("FIXME: deal with Composites if representation = RAM")
@@ -143,44 +145,44 @@ lav_model_set_parameters <- function(lavmodel = NULL, x = NULL) {
 # create a standalone GLIST, filled with (new) x values
 # (avoiding a copy of lavmodel)
 lav_model_x2glist <- function(lavmodel = NULL, x = NULL,
-                              type = "free", setDelta = TRUE,
-                              m.el.idx = NULL, x.el.idx = NULL) {
+                              type = "free", set_delta = TRUE,
+                              m_el_idx = NULL, x_el_idx = NULL) {
   correlation <- lavmodel@correlation
 
-  GLIST <- lavmodel@GLIST
-  for (mm in 1:length(GLIST)) {
+  glist <- lavmodel@GLIST
+  for (mm in seq_along(glist)) {
     # skip empty matrix
-    if (nrow(GLIST[[mm]]) == 0L) {
+    if (nrow(glist[[mm]]) == 0L) {
       next
     }
     if (type == "free") {
-      M.EL.IDX <- lavmodel@m.free.idx[[mm]]
-      X.EL.IDX <- lavmodel@x.free.idx[[mm]]
+      m_el_idx_1 <- lavmodel@m.free.idx[[mm]]
+      x_el_idx_1 <- lavmodel@x.free.idx[[mm]]
     } else if (type == "unco") {
-      M.EL.IDX <- lavmodel@m.free.idx[[mm]]
-      X.EL.IDX <- lavmodel@x.unco.idx[[mm]]
+      m_el_idx_1 <- lavmodel@m.free.idx[[mm]]
+      x_el_idx_1 <- lavmodel@x.unco.idx[[mm]]
     } else if (type == "full") {
       if (lavmodel@isSymmetric[mm]) {
-        N <- ncol(GLIST[[mm]])
-        M.EL.IDX <- lav_matrix_vech_idx(N)
+        n <- ncol(glist[[mm]])
+        m_el_idx_1 <- lav_matrix_vech_idx(n)
       } else {
-        M.EL.IDX <- seq_len(length(GLIST[[mm]]))
+        m_el_idx_1 <- seq_along(glist[[mm]])
       }
-      X.EL.IDX <- seq_len(length(m.el.idx))
-      if (mm > 1) X.EL.IDX <- X.EL.IDX + sum(lavmodel@mmSize[1:(mm - 1)])
+      x_el_idx_1 <- seq_along(m_el_idx)
+      if (mm > 1) x_el_idx_1 <- x_el_idx_1 + sum(lavmodel@mmSize[1:(mm - 1)])
     } else if (type == "custom") {
       # nothing to do, m.el.idx and x.el.idx should be given
-      M.EL.IDX <- m.el.idx[[mm]]
-      X.EL.IDX <- x.el.idx[[mm]]
+      m_el_idx_1 <- m_el_idx[[mm]]
+      x_el_idx_1 <- x_el_idx[[mm]]
     }
 
     # assign
-    GLIST[[mm]][M.EL.IDX] <- x[X.EL.IDX]
+    glist[[mm]][m_el_idx_1] <- x[x_el_idx_1]
 
     # make symmetric (if full)
     if (type == "full" && lavmodel@isSymmetric[mm]) {
-      T <- t(GLIST[[mm]])
-      GLIST[[mm]][upper.tri(GLIST[[mm]])] <- T[upper.tri(T)]
+      t_1 <- t(glist[[mm]])
+      glist[[mm]][upper.tri(glist[[mm]])] <- t_1[upper.tri(t_1)]
     }
   }
 
@@ -198,25 +200,25 @@ lav_model_x2glist <- function(lavmodel = NULL, x = NULL,
   #    }
 
   # in 0.6-13: we always set theta/delta
-  if ((lavmodel@categorical || correlation) && setDelta) {
+  if ((lavmodel@categorical || correlation) && set_delta) {
     nmat <- lavmodel@nmat
     if (lavmodel@representation == "LISREL") {
       for (g in 1:lavmodel@nblocks) {
         # which mm belong to group g?
-        mm.in.group <- 1:nmat[g] + cumsum(c(0L, nmat))[g]
+        mm_in_group <- 1:nmat[g] + cumsum(c(0L, nmat))[g]
 
         if (lavmodel@parameterization == "delta") {
-          GLIST[mm.in.group] <-
+          glist[mm_in_group] <-
             lav_lisrel_residual_variances(
-              MLIST = GLIST[mm.in.group],
+              MLIST = glist[mm_in_group],
               num.idx = lavmodel@num.idx[[g]],
               ov.y.dummy.ov.idx = lavmodel@ov.y.dummy.ov.idx[[g]],
               ov.y.dummy.lv.idx = lavmodel@ov.y.dummy.lv.idx[[g]]
             )
         } else if (lavmodel@parameterization == "theta") {
-          GLIST[mm.in.group] <-
+          glist[mm_in_group] <-
             lav_lisrel_delta(
-              MLIST = GLIST[mm.in.group],
+              MLIST = glist[mm_in_group],
               num.idx = lavmodel@num.idx[[g]]
             )
         }
@@ -231,17 +233,17 @@ lav_model_x2glist <- function(lavmodel = NULL, x = NULL,
     if (lavmodel@representation == "LISREL") {
       for (g in 1:lavmodel@nblocks) {
         # which mm belong to group g?
-        mm.in.group <- 1:nmat[g] + cumsum(c(0L, nmat))[g]
+        mm_in_group <- 1:nmat[g] + cumsum(c(0L, nmat))[g]
 
-        GLIST[mm.in.group] <-
-          lav_lisrel_comp_set_intresvar(MLIST = GLIST[mm.in.group])
+        glist[mm_in_group] <-
+          lav_lisrel_comp_set_intresvar(MLIST = glist[mm_in_group])
       }
     } else {
       cat("FIXME: deal with Composites when representation = RAM")
     }
   }
 
-  GLIST
+  glist
 }
 
 # backwards compatibility

@@ -1,12 +1,12 @@
 # model objective
 
 lav_model_objective <- function(lavmodel = NULL,
-                                GLIST = NULL,
+                                glist = NULL,
                                 lavsamplestats = NULL,
                                 lavdata = NULL,
                                 lavcache = NULL) {
   # state or final?
-  if (is.null(GLIST)) GLIST <- lavmodel@GLIST
+  if (is.null(glist)) glist <- lavmodel@GLIST
 
   # shortcut for data.type == "none" or estimator == "none"
   if (lavmodel@estimator == "none" || length(lavsamplestats@cov) == 0L) {
@@ -19,51 +19,51 @@ lav_model_objective <- function(lavmodel = NULL,
   estimator <- lavmodel@estimator
   categorical <- lavmodel@categorical
   correlation <- lavmodel@correlation
-  group.w.free <- lavmodel@group.w.free
+  group_w_free <- lavmodel@group.w.free
   # fixed.x <- lavmodel@fixed.x
-  conditional.x <- lavmodel@conditional.x
-  num.idx <- lavmodel@num.idx
-  th.idx <- lavmodel@th.idx
-  estimator.args <- lavmodel@estimator.args
+  conditional_x <- lavmodel@conditional.x
+  num_idx <- lavmodel@num.idx
+  th_idx <- lavmodel@th.idx
+  estimator_args <- lavmodel@estimator.args
 
   # do we need WLS.est?
   if (estimator %in% c("ULS", "WLS", "DWLS", "NTRLS", "DLS")) {
-    lavimplied <- lav_model_implied(lavmodel, GLIST = GLIST)
+    lavimplied <- lav_model_implied(lavmodel, GLIST = glist)
     # check for COV with negative diagonal elements?
     for (g in 1:lavsamplestats@ngroups) {
-      COV <- if (lavmodel@conditional.x) {
+      cov_1 <- if (lavmodel@conditional.x) {
         lavimplied$res.cov[[g]]
       } else {
         lavimplied$cov[[g]]
       }
-      dCOV <- diag(COV)
-      if (anyNA(COV) || any(dCOV < 0)) {
+      d_cov <- diag(cov_1)
+      if (anyNA(cov_1) || any(d_cov < 0)) {
         # return NA
         fx <- as.numeric(NA)
         attr(fx, "fx.group") <- rep(as.numeric(NA), lavsamplestats@ngroups)
         return(fx)
       }
     }
-    WLS.est <- lav_model_wls_est(
-      lavmodel = lavmodel, GLIST = GLIST,
+    wls_est <- lav_model_wls_est(
+      lavmodel = lavmodel, glist = glist,
       lavimplied = lavimplied
     ) # ,
     # cov.x = lavsamplestats@cov.x)
     if (estimator == "NTRLS") {
-      Sigma.hat <- lav_model_sigma(
-        lavmodel = lavmodel, GLIST = GLIST,
+      sigma_hat <- lav_model_sigma(
+        lavmodel = lavmodel, glist = glist,
         extra = TRUE
       )
-      Mu.hat <- lav_model_mu(lavmodel = lavmodel, GLIST = GLIST)
+      mu_hat <- lav_model_mu(lavmodel = lavmodel, glist = glist)
     }
-    if (estimator == "DLS" && estimator.args$dls.GammaNT == "model") {
-      Sigma.hat <- lav_model_sigma(
-        lavmodel = lavmodel, GLIST = GLIST,
+    if (estimator == "DLS" && estimator_args$dls.GammaNT == "model") {
+      sigma_hat <- lav_model_sigma(
+        lavmodel = lavmodel, glist = glist,
         extra = FALSE
       )
-      Mu.hat <- lav_model_mu(lavmodel = lavmodel, GLIST = GLIST)
+      mu_hat <- lav_model_mu(lavmodel = lavmodel, glist = glist)
     }
-    if (lav_debug()) print(WLS.est)
+    if (lav_debug()) print(wls_est)
   } else if (estimator %in% c("ML", "GLS", "PML", "FML", "REML", "catML") &&
     lavdata@nlevels == 1L) {
     # compute moments for all groups
@@ -72,8 +72,8 @@ lav_model_objective <- function(lavmodel = NULL,
     #                     GLIST = GLIST, lavsamplestats = lavsamplestats,
     #                     extra = (estimator %in% c("ML", "REML","NTRLS")))
     # } else {
-    Sigma.hat <- lav_model_sigma(
-      lavmodel = lavmodel, GLIST = GLIST,
+    sigma_hat <- lav_model_sigma(
+      lavmodel = lavmodel, glist = glist,
       extra = (estimator %in% c(
         "ML", "REML",
         "NTRLS", "catML"
@@ -88,48 +88,48 @@ lav_model_objective <- function(lavmodel = NULL,
     # ridge?
     if (lavsamplestats@ridge > 0.0) {
       for (g in 1:lavsamplestats@ngroups) {
-        diag(Sigma.hat[[g]]) <- diag(Sigma.hat[[g]]) +
+        diag(sigma_hat[[g]]) <- diag(sigma_hat[[g]]) +
           lavsamplestats@ridge
       }
     }
-    if (lav_debug()) print(Sigma.hat)
+    if (lav_debug()) print(sigma_hat)
 
     if (meanstructure) {
       # if(conditional.x) {
       #    Mu.hat <- lav_model_cond2joint_mu(lavmodel = lavmodel, GLIST = GLIST,
       #                           lavsamplestats = lavsamplestats)
       # } else {
-      Mu.hat <- lav_model_mu(lavmodel = lavmodel, GLIST = GLIST)
+      mu_hat <- lav_model_mu(lavmodel = lavmodel, glist = glist)
       # }
     }
 
     if (categorical) {
-      TH <- lav_model_th(lavmodel = lavmodel, GLIST = GLIST)
+      th <- lav_model_th(lavmodel = lavmodel, glist = glist)
     }
 
-    if (conditional.x) {
-      PI <- lav_model_pi(lavmodel = lavmodel, GLIST = GLIST)
+    if (conditional_x) {
+      pi0 <- lav_model_pi(lavmodel = lavmodel, glist = glist)
     }
 
-    if (group.w.free) {
-      GW <- lav_model_gw(lavmodel = lavmodel, GLIST = GLIST)
+    if (group_w_free) {
+      gw <- lav_model_gw(lavmodel = lavmodel, glist = glist)
     }
   } else if (estimator == "MML") {
-    TH <- lav_model_th(lavmodel = lavmodel, GLIST = GLIST)
-    THETA <- lav_model_theta(lavmodel = lavmodel, GLIST = GLIST)
-    GW <- lav_model_gw(lavmodel = lavmodel, GLIST = GLIST)
+    th <- lav_model_th(lavmodel = lavmodel, glist = glist)
+    mm_theta <- lav_model_theta(lavmodel = lavmodel, glist = glist)
+    gw <- lav_model_gw(lavmodel = lavmodel, glist = glist)
   }
 
   fx <- 0.0
-  fx.group <- numeric(lavsamplestats@ngroups)
-  logl.group <- rep(as.numeric(NA), lavsamplestats@ngroups)
+  fx_group <- numeric(lavsamplestats@ngroups)
+  logl_group <- rep(as.numeric(NA), lavsamplestats@ngroups)
 
   for (g in 1:lavsamplestats@ngroups) {
     # incomplete data and fiml?
     if (lavsamplestats@missing.flag && estimator != "Bayes") {
       if (estimator == "ML" && lavdata@nlevels == 1L) {
         # FIML
-        if (!attr(Sigma.hat[[g]], "po")) {
+        if (!attr(sigma_hat[[g]], "po")) {
           fx <- as.numeric(Inf)
           attr(fx, "fx.group") <- rep(as.numeric(Inf), lavsamplestats@ngroups)
           return(fx)
@@ -141,24 +141,24 @@ lav_model_objective <- function(lavmodel = NULL,
           #  Mu = Mu.hat[[g]], Sigma = Sigma.hat[[g]],
           #  log2pi = FALSE, minus.two = TRUE) / lavsamplestats@nobs[[g]]
           #this.h1 <- this.h1 * 0.9999999 # avoid perfect fit
-          this.h1 <- NULL #for now
+          this_h1 <- NULL #for now
         } else {
-          this.h1 <- lavsamplestats@missing.h1[[g]]$h1
+          this_h1 <- lavsamplestats@missing.h1[[g]]$h1
         }
-        group.fx <- lav_model_objective_fiml(
-          Sigma.hat = Sigma.hat[[g]],
-          Mu.hat = Mu.hat[[g]],
-          Yp = lavsamplestats@missing[[g]],
-          h1 = this.h1, N = lavsamplestats@nobs[[g]]
+        group_fx <- lav_model_objective_fiml(
+          sigma_hat = sigma_hat[[g]],
+          mu_hat = mu_hat[[g]],
+          yp = lavsamplestats@missing[[g]],
+          h1 = this_h1, n = lavsamplestats@nobs[[g]]
         )
       } else if (estimator == "ML" && lavdata@nlevels > 1L) {
         # FIML twolevel
-        group.fx <- lav_model_objective_2l(
+        group_fx <- lav_model_objective_2l(
           lavmodel = lavmodel,
-          GLIST = GLIST,
-          Y1 = lavdata@X[[g]],
-          Lp = lavdata@Lp[[g]],
-          Mp = lavdata@Mp[[g]],
+          glist = glist,
+          y1 = lavdata@X[[g]],
+          lp = lavdata@Lp[[g]],
+          mp = lavdata@Mp[[g]],
           lavsamplestats = lavsamplestats,
           group = g
         )
@@ -176,33 +176,33 @@ lav_model_objective <- function(lavmodel = NULL,
           lav_msg_stop(gettext("multilevel data not supported for estimator"),
                        estimator)
           }
-        group.fx <- lav_model_objective_2l(
+        group_fx <- lav_model_objective_2l(
           lavmodel = lavmodel,
-          GLIST = GLIST,
-          Lp = lavdata@Lp[[g]],
-          Mp = NULL, # complete data
+          glist = glist,
+          lp = lavdata@Lp[[g]],
+          mp = NULL, # complete data
           lavsamplestats = lavsamplestats,
           group = g
         )
-      } else if (conditional.x) {
-        group.fx <- lav_model_objective_ml_res(
-          Sigma.hat        = Sigma.hat[[g]],
-          Mu.hat           = Mu.hat[[g]],
-          PI               = PI[[g]],
-          res.cov          = lavsamplestats@res.cov[[g]],
-          res.int          = lavsamplestats@res.int[[g]],
-          res.slopes       = lavsamplestats@res.slopes[[g]],
-          res.cov.log.det  = lavsamplestats@res.cov.log.det[[g]],
-          cov.x            = lavsamplestats@cov.x[[g]],
-          mean.x           = lavsamplestats@mean.x[[g]]
+      } else if (conditional_x) {
+        group_fx <- lav_model_objective_ml_res(
+          sigma_hat        = sigma_hat[[g]],
+          mu_hat           = mu_hat[[g]],
+          pi0              = pi0[[g]],
+          res_cov          = lavsamplestats@res.cov[[g]],
+          res_int          = lavsamplestats@res.int[[g]],
+          res_slopes       = lavsamplestats@res.slopes[[g]],
+          res_cov_log_det  = lavsamplestats@res.cov.log.det[[g]],
+          cov_x            = lavsamplestats@cov.x[[g]],
+          mean_x           = lavsamplestats@mean.x[[g]]
         )
       } else {
-        group.fx <- lav_model_objective_ml(
-          Sigma.hat        = Sigma.hat[[g]],
-          Mu.hat           = Mu.hat[[g]],
-          data.cov         = lavsamplestats@cov[[g]],
-          data.mean        = lavsamplestats@mean[[g]],
-          data.cov.log.det = lavsamplestats@cov.log.det[[g]],
+        group_fx <- lav_model_objective_ml(
+          sigma_hat        = sigma_hat[[g]],
+          mu_hat           = mu_hat[[g]],
+          data_cov         = lavsamplestats@cov[[g]],
+          data_mean        = lavsamplestats@mean[[g]],
+          data_cov_log_det = lavsamplestats@cov.log.det[[g]],
           meanstructure    = meanstructure
         )
       }
@@ -210,37 +210,37 @@ lav_model_objective <- function(lavmodel = NULL,
 
       ### GLS #### (0.6-10: not using WLS function any longer)
     } else if (estimator == "GLS") {
-      group.fx <- lav_model_objective_gls(
-        Sigma.hat        = Sigma.hat[[g]],
-        Mu.hat           = Mu.hat[[g]],
-        data.cov         = lavsamplestats@cov[[g]],
-        data.cov.inv     = lavsamplestats@icov[[g]],
-        data.mean        = lavsamplestats@mean[[g]],
+      group_fx <- lav_model_objective_gls(
+        sigma_hat        = sigma_hat[[g]],
+        mu_hat           = mu_hat[[g]],
+        data_cov         = lavsamplestats@cov[[g]],
+        data_cov_inv     = lavsamplestats@icov[[g]],
+        data_mean        = lavsamplestats@mean[[g]],
         meanstructure    = meanstructure,
-		correlation      = correlation
+    correlation      = correlation
       )
     } else if (estimator == "WLS" ||
       estimator == "DLS" ||
       estimator == "NTRLS") {
       # full weight matrix
       if (estimator == "WLS") {
-        WLS.V <- lavsamplestats@WLS.V[[g]]
+        wls_v <- lavsamplestats@WLS.V[[g]]
       } else if (estimator == "DLS") {
-        if (estimator.args$dls.GammaNT == "sample") {
-          WLS.V <- lavsamplestats@WLS.V[[g]]
+        if (estimator_args$dls.GammaNT == "sample") {
+          wls_v <- lavsamplestats@WLS.V[[g]]
         } else {
-          dls.a <- estimator.args$dls.a
-          GammaNT <- lav_samplestats_gamma_nt(
-            m_cov          = Sigma.hat[[g]],
-            m_mean         = Mu.hat[[g]],
+          dls_a <- estimator_args$dls.a
+          gamma_nt <- lav_samplestats_gamma_nt(
+            m_cov          = sigma_hat[[g]],
+            m_mean         = mu_hat[[g]],
             x_idx          = lavsamplestats@x.idx[[g]],
             fixed_x        = lavmodel@fixed.x,
             conditional_x  = lavmodel@conditional.x,
             meanstructure  = lavmodel@meanstructure,
             slopestructure = lavmodel@conditional.x
           )
-          W.DLS <- (1 - dls.a) * lavsamplestats@NACOV[[g]] + dls.a * GammaNT
-          WLS.V <- lav_matrix_symmetric_inverse(W.DLS)
+          w_dls <- (1 - dls_a) * lavsamplestats@NACOV[[g]] + dls_a * gamma_nt
+          wls_v <- lav_matrix_symmetric_inverse(w_dls)
         }
       } else if (estimator == "NTRLS") {
         # WLS.V <- lav_samplestats_gamma_inverse_nt(
@@ -252,8 +252,8 @@ lav_model_objective <- function(lavmodel = NULL,
         #             conditional_x  = conditional.x,
         #             meanstructure  = meanstructure,
         #             slopestructure = conditional.x)
-        WLS.V <- lav_mvnorm_information_expected(
-          sigma_1 = Sigma.hat[[g]],
+        wls_v <- lav_mvnorm_information_expected(
+          sigma_1 = sigma_hat[[g]],
           x_idx = lavsamplestats@x.idx[[g]],
           meanstructure = lavmodel@meanstructure
         )
@@ -261,20 +261,20 @@ lav_model_objective <- function(lavmodel = NULL,
         # WLS.V <- 2*WLS.V
       }
 
-      group.fx <- lav_model_objective_wls(
-        WLS.est = WLS.est[[g]],
-        WLS.obs = lavsamplestats@WLS.obs[[g]],
-        WLS.V = WLS.V
+      group_fx <- lav_model_objective_wls(
+        wls_est = wls_est[[g]],
+        wls_obs = lavsamplestats@WLS.obs[[g]],
+        wls_v = wls_v
       )
-      attr(group.fx, "WLS.est") <- WLS.est[[g]]
+      attr(group_fx, "WLS.est") <- wls_est[[g]]
     } else if (estimator == "DWLS" || estimator == "ULS") {
       # diagonal weight matrix
-      group.fx <- lav_model_objective_dwls(
-        WLS.est = WLS.est[[g]],
-        WLS.obs = lavsamplestats@WLS.obs[[g]],
-        WLS.VD = lavsamplestats@WLS.VD[[g]]
+      group_fx <- lav_model_objective_dwls(
+        wls_est = wls_est[[g]],
+        wls_obs = lavsamplestats@WLS.obs[[g]],
+        wls_vd = lavsamplestats@WLS.VD[[g]]
       )
-      attr(group.fx, "WLS.est") <- WLS.est[[g]]
+      attr(group_fx, "WLS.est") <- wls_est[[g]]
     } else if (estimator == "PML") {
       # Pairwise maximum likelihood
       if (lavdata@nlevels > 1L) {
@@ -283,69 +283,69 @@ lav_model_objective <- function(lavmodel = NULL,
         #                             Lp             = lavdata@Lp[[g]],
         #                             lavsamplestats = lavsamplestats,
         #                             group          = g)
-        group.fx <- 0 # for now
-        attr(group.fx, "logl") <- 0
-      } else if (conditional.x) {
-        group.fx <- lav_model_objective_pml(
-          Sigma.hat = Sigma.hat[[g]],
-          Mu.hat = Mu.hat[[g]],
-          TH = TH[[g]],
-          PI = PI[[g]],
-          th.idx = th.idx[[g]],
-          num.idx = num.idx[[g]],
-          X = lavdata@X[[g]],
-          eXo = lavdata@eXo[[g]],
+        group_fx <- 0 # for now
+        attr(group_fx, "logl") <- 0
+      } else if (conditional_x) {
+        group_fx <- lav_model_objective_pml(
+          sigma_hat = sigma_hat[[g]],
+          mu_hat = mu_hat[[g]],
+          th = th[[g]],
+          pi0 = pi0[[g]],
+          th_idx = th_idx[[g]],
+          num_idx = num_idx[[g]],
+          x = lavdata@X[[g]],
+          exo = lavdata@eXo[[g]],
           wt = lavdata@weights[[g]],
           lavcache = lavcache[[g]],
           missing = lavdata@missing
         )
       } else {
-        group.fx <- lav_model_objective_pml(
-          Sigma.hat = Sigma.hat[[g]],
-          Mu.hat = Mu.hat[[g]],
-          TH = TH[[g]],
-          PI = NULL,
-          th.idx = th.idx[[g]],
-          num.idx = num.idx[[g]],
-          X = lavdata@X[[g]],
-          eXo = NULL,
+        group_fx <- lav_model_objective_pml(
+          sigma_hat = sigma_hat[[g]],
+          mu_hat = mu_hat[[g]],
+          th = th[[g]],
+          pi0 = NULL,
+          th_idx = th_idx[[g]],
+          num_idx = num_idx[[g]],
+          x = lavdata@X[[g]],
+          exo = NULL,
           wt = lavdata@weights[[g]],
           lavcache = lavcache[[g]],
           missing = lavdata@missing
         )
       }
-      logl.group[g] <- attr(group.fx, "logl")
+      logl_group[g] <- attr(group_fx, "logl")
     } else if (estimator == "FML") {
       # Full maximum likelihood (underlying multivariate normal)
-      group.fx <- lav_model_objective_fml(
-        Sigma.hat = Sigma.hat[[g]],
-        TH = TH[[g]],
-        th.idx = th.idx[[g]],
-        num.idx = num.idx[[g]],
-        X = lavdata@X[[g]],
+      group_fx <- lav_model_objective_fml(
+        sigma_hat = sigma_hat[[g]],
+        th = th[[g]],
+        th_idx = th_idx[[g]],
+        num_idx = num_idx[[g]],
+        x = lavdata@X[[g]],
         lavcache = lavcache[[g]]
       )
     } else if (estimator == "MML") {
       # marginal maximum likelihood
-      group.fx <- lav_model_objective_mml(
+      group_fx <- lav_model_objective_mml(
         lavmodel = lavmodel,
-        GLIST = GLIST,
-        THETA = THETA[[g]],
-        TH = TH[[g]],
+        glist = glist,
+        mm_theta = mm_theta[[g]],
+        th = th[[g]],
         group = g,
         lavdata = lavdata,
-        sample.mean = lavsamplestats@mean[[g]],
-        sample.mean.x = lavsamplestats@mean.x[[g]],
+        sample_mean = lavsamplestats@mean[[g]],
+        sample_mean_x = lavsamplestats@mean.x[[g]],
         lavcache = lavcache
       )
     } else if (estimator == "REML") {
       # restricted/residual maximum likelihood
-      group.fx <- lav_model_objective_reml(
-        Sigma.hat = Sigma.hat[[g]],
-        Mu.hat = Mu.hat[[g]],
-        data.cov = lavsamplestats@cov[[g]],
-        data.mean = lavsamplestats@mean[[g]],
-        data.cov.log.det = lavsamplestats@cov.log.det[[g]],
+      group_fx <- lav_model_objective_reml(
+        sigma_hat = sigma_hat[[g]],
+        mu_hat = mu_hat[[g]],
+        data_cov = lavsamplestats@cov[[g]],
+        data_mean = lavsamplestats@mean[[g]],
+        data_cov_log_det = lavsamplestats@cov.log.det[[g]],
         meanstructure = meanstructure,
         group = g,
         lavmodel = lavmodel,
@@ -358,22 +358,24 @@ lav_model_objective <- function(lavmodel = NULL,
 
     if (estimator %in% c("ML", "REML", "NTRLS", "catML")) {
       if (lavdata@nlevels == 1L) {
-        group.fx <- 0.5 * group.fx ## FIXME
+        group_fx <- 0.5 * group_fx ## FIXME
       }
     } else if (estimator == "PML" || estimator == "FML" ||
       estimator == "MML") {
       # do nothing
     } else if (estimator == "DLS") {
-      if (estimator.args$dls.FtimesNminus1) {
-        group.fx <- 0.5 * (lavsamplestats@nobs[[g]] - 1) / lavsamplestats@nobs[[g]] * group.fx
+      if (estimator_args$dls.FtimesNminus1) {
+        group_fx <- 0.5 * (lavsamplestats@nobs[[g]] - 1) /
+            lavsamplestats@nobs[[g]] * group_fx
       } else {
-        group.fx <- 0.5 * group.fx
+        group_fx <- 0.5 * group_fx
       }
     } else {
-      group.fx <- 0.5 * (lavsamplestats@nobs[[g]] - 1) / lavsamplestats@nobs[[g]] * group.fx
+      group_fx <- 0.5 * (lavsamplestats@nobs[[g]] - 1) /
+          lavsamplestats@nobs[[g]] * group_fx
     }
 
-    fx.group[g] <- group.fx
+    fx_group[g] <- group_fx
   } # g
 
   if (lavsamplestats@ngroups > 1) {
@@ -387,21 +389,21 @@ lav_model_objective <- function(lavmodel = NULL,
     # } else {
     if (estimator == "PML") {
       # no weighting needed! (since N_g is part of the logl per group)
-      fx <- sum(fx.group)
-	} else if(lavdata@nlevels > 1L) {
-	  # no weighting needed! (implicit in obj, which is based on loglik)
-	  fx <- sum(fx.group)
+      fx <- sum(fx_group)
+  } else if (lavdata@nlevels > 1L) {
+    # no weighting needed! (implicit in obj, which is based on loglik)
+    fx <- sum(fx_group)
     } else {
       nobs <- unlist(lavsamplestats@nobs)
       # }
-      fx <- weighted.mean(fx.group, w = nobs)
+      fx <- weighted.mean(fx_group, w = nobs)
     }
   } else { # single group
-    fx <- fx.group[1]
+    fx <- fx_group[1]
   }
 
   # penalty for group.w + ML
-  if (group.w.free && estimator %in% c(
+  if (group_w_free && estimator %in% c(
     "ML", "MML", "FML", "PML",
     "REML", "catML"
   )) {
@@ -417,28 +419,28 @@ lav_model_objective <- function(lavmodel = NULL,
     # }
 
     # poisson kernel
-    obs.freq <- unlist(lavsamplestats@group.w) * lavsamplestats@ntotal
-    est.freq <- exp(unlist(GW))
-    fx.w <- -1 * sum(obs.freq * log(est.freq) - est.freq)
+    obs_freq <- unlist(lavsamplestats@group.w) * lavsamplestats@ntotal
+    est_freq <- exp(unlist(gw))
+    fx_w <- -1 * sum(obs_freq * log(est_freq) - est_freq)
     # divide by N (to be consistent with the rest of lavaan)
-    fx.w <- fx.w / lavsamplestats@ntotal
+    fx_w <- fx_w / lavsamplestats@ntotal
 
-    fx.sat <- sum(ifelse(obs.freq > 0, obs.freq * log(obs.freq), 0) - obs.freq)
-    fx.sat <- fx.sat / lavsamplestats@ntotal
+    fx_sat <- sum(ifelse(obs_freq > 0, obs_freq * log(obs_freq), 0) - obs_freq)
+    fx_sat <- fx_sat / lavsamplestats@ntotal
 
     # saturated - poisson
     # fx.w <- sum(obs.freq * log(obs.freq/est.freq))
     # does not work without constraints? --> need lagrange multiplier
 
-    fx <- fx + (fx.w + fx.sat)
+    fx <- fx + (fx_w + fx_sat)
   }
 
-  fx.value <- as.numeric(fx)
+  fx_value <- as.numeric(fx)
 
-  attr(fx, "fx.group") <- fx.group
+  attr(fx, "fx.group") <- fx_group
   if (estimator == "PML") {
-    attr(fx, "logl.group") <- logl.group
-    attr(fx, "fx.pml") <- fx.value
+    attr(fx, "logl.group") <- logl_group
+    attr(fx, "fx.pml") <- fx_value
   }
 
   fx

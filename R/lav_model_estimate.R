@@ -18,7 +18,7 @@ lav_model_estimate <- function(lavmodel = NULL,
                                lavoptions = NULL,
                                lavcache = list(),
                                start = "model",
-                               do.fit = TRUE) {
+                               do_fit = TRUE) {
   lavpartable <- lav_partable_set_cache(lavpartable)
   estimator <- lavoptions$estimator
   verbose <- lav_verbose()
@@ -27,9 +27,9 @@ lav_model_estimate <- function(lavmodel = NULL,
 
   if (lavsamplestats@missing.flag || estimator == "PML" ||
       lavdata@nlevels > 1L) {
-    group.weight <- FALSE
+    group_weight <- FALSE
   } else {
-    group.weight <- TRUE
+    group_weight <- TRUE
   }
 
   # backwards compatibility < 0.6-11
@@ -39,40 +39,40 @@ lav_model_estimate <- function(lavmodel = NULL,
 
   if (lavoptions$optim.partrace) {
     # fx + parameter values
-    PENV <- new.env()
-    PENV$PARTRACE <- matrix(NA, nrow = 0, ncol = lavmodel@nx.free + 1L)
+    penv <- new.env()
+    penv$PARTRACE <- matrix(NA, nrow = 0, ncol = lavmodel@nx.free + 1L)
   }
 
   # starting values (ignoring equality constraints)
-  x.unpack <- lav_model_get_parameters(lavmodel)
+  x_unpack <- lav_model_get_parameters(lavmodel)
 
   # override? use simple instead? (new in 0.6-7)
   if (start == "simple") {
-    START <- numeric(length(lavpartable$lhs))
+    start_1 <- numeric(length(lavpartable$lhs))
     # set loadings to 0.7
-    loadings.idx <- which(lavpartable$free > 0L &
+    loadings_idx <- which(lavpartable$free > 0L &
       lavpartable$op == "=~")
-    if (length(loadings.idx) > 0L) {
-      START[loadings.idx] <- 0.7
+    if (length(loadings_idx) > 0L) {
+      start_1[loadings_idx] <- 0.7
     }
     # set (only) variances to 1
-    var.idx <- which(lavpartable$free > 0L &
+    var_idx <- which(lavpartable$free > 0L &
       lavpartable$op == "~~" &
       lavpartable$lhs == lavpartable$rhs)
-    if (length(var.idx) > 0L) {
-      START[var.idx] <- 1
+    if (length(var_idx) > 0L) {
+      start_1[var_idx] <- 1
     }
 
     if (lavmodel@ceq.simple.only) {
-      x.unpack <- START[lavpartable$free > 0L &
+      x_unpack <- start_1[lavpartable$free > 0L &
         !duplicated(lavpartable$free)]
     } else {
-      x.unpack <- START[lavpartable$free > 0L]
+      x_unpack <- start_1[lavpartable$free > 0L]
     }
 
     # override? use random starting values instead? (new in 0.6-18)
   } else if (start == "random") {
-    START <- lav_partable_random(
+    start_1 <- lav_partable_random(
       lavpartable = lavpartable,
       # needed if we still need to compute bounds:
       lavh1 = lavh1,
@@ -82,16 +82,16 @@ lav_model_estimate <- function(lavmodel = NULL,
     )
 
     if (lavmodel@ceq.simple.only) {
-      x.unpack <- START[lavpartable$free > 0L &
+      x_unpack <- start_1[lavpartable$free > 0L &
         !duplicated(lavpartable$free)]
     } else {
-      x.unpack <- START[lavpartable$free > 0L]
+      x_unpack <- start_1[lavpartable$free > 0L]
     }
   }
 
 
   # 1. parameter scaling (to handle data scaling, not parameter scaling)
-  parscale <- rep(1.0, length(x.unpack))
+  parscale <- rep(1.0, length(x_unpack))
 
   # for < 0.6 compatibility
   if (is.null(lavoptions$optim.parscale)) {
@@ -127,18 +127,18 @@ lav_model_estimate <- function(lavmodel = NULL,
 
     if (lavdata@nlevels > 1L) {
       if (length(lavh1) > 0L) {
-        OV.VAR <- lapply(lavh1$implied$cov, diag)
+        ov_var <- lapply(lavh1$implied$cov, diag)
       } else {
-        OV.VAR <- lapply(
+        ov_var <- lapply(
           do.call(c, lapply(lavdata@Lp, "[[", "ov.idx")),
           function(x) rep(1, length(x))
         )
       }
     } else {
       if (lavoptions$conditional.x) {
-        OV.VAR <- lavsamplestats@res.var
+        ov_var <- lavsamplestats@res.var
       } else {
-        OV.VAR <- lavsamplestats@var
+        ov_var <- lavsamplestats@var
       }
     }
 
@@ -147,7 +147,7 @@ lav_model_estimate <- function(lavmodel = NULL,
         lavobject = NULL,
         est = rep(1, length(lavpartable$lhs)),
         est.std = rep(1, length(lavpartable$lhs)),
-        cov.std = FALSE, ov.var = OV.VAR,
+        cov.std = FALSE, ov.var = ov_var,
         lavmodel = lavmodel, lavpartable = lavpartable,
         cov.x = lavsamplestats@cov.x
       )
@@ -161,13 +161,13 @@ lav_model_estimate <- function(lavmodel = NULL,
       # TODO: USE Bentler's 1982 approach to get an estimate of
       # VETA; use those diagonal elements...
       # but only if we have 'marker' indicators for each LV
-      LV.VAR <- vector("list", lavmodel@ngroups)
+      lv_var <- vector("list", lavmodel@ngroups)
       for (g in seq_len(lavmodel@ngroups)) {
-        mm.in.group <- 1:lavmodel@nmat[g] + cumsum(c(0, lavmodel@nmat))[g]
-        MLIST <- lavmodel@GLIST[mm.in.group]
-        LAMBDA <- MLIST$lambda
-        n.lv <- ncol(LAMBDA)
-        LV.VAR[[g]] <- rep(1.0, n.lv)
+        mm_in_group <- 1:lavmodel@nmat[g] + cumsum(c(0, lavmodel@nmat))[g]
+        mlist <- lavmodel@GLIST[mm_in_group]
+        mm_lambda <- mlist$lambda
+        n_lv <- ncol(mm_lambda)
+        lv_var[[g]] <- rep(1.0, n_lv)
       }
 
       parscale <- lav_standardize_all(
@@ -176,18 +176,18 @@ lav_model_estimate <- function(lavmodel = NULL,
         # est.std = rep(1, length(lavpartable$lhs)),
         # here, we use whatever the starting values are
         # for the latent variances...
-        cov.std = FALSE, ov.var = OV.VAR,
-        lv.var = LV.VAR,
+        cov.std = FALSE, ov.var = ov_var,
+        lv.var = lv_var,
         lavmodel = lavmodel, lavpartable = lavpartable,
         cov.x = lavsamplestats@cov.x
       )
     }
 
     # in addition, take sqrt for variance parameters
-    var.idx <- which(lavpartable$op == "~~" &
+    var_idx <- which(lavpartable$op == "~~" &
       lavpartable$lhs == lavpartable$rhs)
-    if (length(var.idx) > 0L) {
-      parscale[var.idx] <- sqrt(abs(parscale[var.idx]))
+    if (length(var_idx) > 0L) {
+      parscale[var_idx] <- sqrt(abs(parscale[var_idx]))
     }
 
     if (lavmodel@ceq.simple.only) {
@@ -200,23 +200,23 @@ lav_model_estimate <- function(lavmodel = NULL,
   # parscale should obey the equality constraints
   if (lavmodel@eq.constraints && lavoptions$optim.parscale != "none") {
     # pack
-    p.pack <- as.numeric((parscale - lavmodel@eq.constraints.k0) %*%
+    p_pack <- as.numeric((parscale - lavmodel@eq.constraints.k0) %*%
       lavmodel@eq.constraints.K)
     # unpack
-    parscale <- as.numeric(lavmodel@eq.constraints.K %*% p.pack) +
+    parscale <- as.numeric(lavmodel@eq.constraints.K %*% p_pack) +
       lavmodel@eq.constraints.k0
   }
   if (debug) {
     cat("parscale = ", parscale, "\n")
   }
-  z.unpack <- x.unpack * parscale
+  z_unpack <- x_unpack * parscale
 
   # 2. pack (apply equality constraints)
   if (lavmodel@eq.constraints && ncol(lavmodel@eq.constraints.K) > 0L) {
-    z.pack <- as.numeric((z.unpack - lavmodel@eq.constraints.k0) %*%
+    z_pack <- as.numeric((z_unpack - lavmodel@eq.constraints.k0) %*%
       lavmodel@eq.constraints.K)
   } else {
-    z.pack <- z.unpack
+    z_pack <- z_unpack
   }
 
   # 3. transform (already constrained) variances to standard deviations?
@@ -232,9 +232,9 @@ lav_model_estimate <- function(lavmodel = NULL,
   # }
 
   # final starting values for optimizer
-  start.x <- z.pack
+  start_x <- z_pack
   if (debug) {
-    cat("start.x = ", start.x, "\n")
+    cat("start.x = ", start_x, "\n")
   }
 
   # user-specified bounds? (new in 0.6-2)
@@ -242,14 +242,15 @@ lav_model_estimate <- function(lavmodel = NULL,
     lower <- -Inf
   } else {
     if (lavmodel@ceq.simple.only) {
-      free.idx <- which(lavpartable$free > 0L &
+      free_idx <- which(lavpartable$free > 0L &
         !duplicated(lavpartable$free))
-      lower <- lavpartable$lower[free.idx]
+      lower <- lavpartable$lower[free_idx]
     } else if (lavmodel@eq.constraints) {
       # bounds have no effect any longer....
       # 0.6-19 -> we switch to constrained estimation
       #lav_msg_warn(gettext(
-      #  "bounds have no effect in the presence of linear equality constraints"))
+      #  "bounds have no effect in the presence of linear
+      #          equality constraints"))
       lower <- -Inf
     } else {
       lower <- lavpartable$lower[lavpartable$free > 0L]
@@ -259,16 +260,17 @@ lav_model_estimate <- function(lavmodel = NULL,
     upper <- +Inf
   } else {
     if (lavmodel@ceq.simple.only) {
-      free.idx <- which(lavpartable$free > 0L &
+      free_idx <- which(lavpartable$free > 0L &
         !duplicated(lavpartable$free))
-      upper <- lavpartable$upper[free.idx]
+      upper <- lavpartable$upper[free_idx]
     } else if (lavmodel@eq.constraints) {
       # bounds have no effect any longer....
       if (is.null(lavpartable$lower)) {
         # bounds have no effect any longer....
         # 0.6-19 -> we switch to constrained estimation
         #lav_msg_warn(gettext(
-        #"bounds have no effect in the presence of linear equality constraints"))
+        # "bounds have no effect in the presence of linear
+        #          equality constraints"))
       }
       upper <- +Inf
     } else {
@@ -279,18 +281,18 @@ lav_model_estimate <- function(lavmodel = NULL,
   # check for inconsistent lower/upper bounds
   # this may happen if we have equality constraints; qr() may switch
   # the sign...
-  bad.idx <- which(lower > upper)
-  if (length(bad.idx) > 0L) {
+  bad_idx <- which(lower > upper)
+  if (length(bad_idx) > 0L) {
     # switch
     # tmp <- lower[bad.idx]
     # lower[bad.idx] <- upper[bad.idx]
     # upper[bad.idx] <- tmp
-    lower[bad.idx] <- -Inf
-    upper[bad.idx] <- +Inf
+    lower[bad_idx] <- -Inf
+    upper[bad_idx] <- +Inf
   }
 
   # function to be minimized
-  objective_function <- function(x, verbose = FALSE, infToMax = FALSE,
+  objective_function <- function(x, verbose = FALSE, inf_to_max = FALSE,
                                  debug = FALSE) {
     # 3. standard deviations to variances
     # WARNING: x is still packed here!
@@ -312,11 +314,11 @@ lav_model_estimate <- function(lavmodel = NULL,
     x <- x / parscale
 
     # update GLIST (change `state') and make a COPY!
-    GLIST <- lav_model_x2glist(lavmodel, x = x)
+    glist <- lav_model_x2glist(lavmodel, x = x)
 
     fx <- lav_model_objective(
       lavmodel = lavmodel,
-      GLIST = GLIST,
+      glist = glist,
       lavsamplestats = lavsamplestats,
       lavdata = lavdata,
       lavcache = lavcache
@@ -345,21 +347,21 @@ lav_model_estimate <- function(lavmodel = NULL,
     }
 
     if (lavoptions$optim.partrace) {
-      PENV$PARTRACE <- rbind(PENV$PARTRACE, c(fx, x))
+      penv$PARTRACE <- rbind(penv$PARTRACE, c(fx, x))
     }
 
     # for L-BFGS-B
     # if(infToMax && is.infinite(fx)) fx <- 1e20
     if (!is.finite(fx)) {
-      fx.group <- attr(fx, "fx.group")
+      fx_group <- attr(fx, "fx.group")
       fx <- 1e20
-      attr(fx, "fx.group") <- fx.group # only for lav_model_fit()
+      attr(fx, "fx.group") <- fx_group # only for lav_model_fit()
     }
 
     fx
   }
 
-  gradient_function <- function(x, verbose = FALSE, infToMax = FALSE,
+  gradient_function <- function(x, verbose = FALSE, inf_to_max = FALSE,
                                 debug = FALSE) {
     # transform variances back
     # if(lavoptions$optim.var.transform == "sqrt" &&
@@ -380,17 +382,17 @@ lav_model_estimate <- function(lavmodel = NULL,
     x <- x / parscale
 
     # update GLIST (change `state') and make a COPY!
-    GLIST <- lav_model_x2glist(lavmodel, x = x)
+    glist <- lav_model_x2glist(lavmodel, x = x)
 
     dx <- lav_model_gradient(
       lavmodel = lavmodel,
-      GLIST = GLIST,
+      glist = glist,
       lavsamplestats = lavsamplestats,
       lavdata = lavdata,
       lavcache = lavcache,
       type = "free",
-      group.weight = group.weight, ### check me!!
-      ceq.simple = lavmodel@ceq.simple.only
+      group_weight = group_weight, ### check me!!
+      ceq_simple = lavmodel@ceq.simple.only
     )
 
     if (debug) {
@@ -443,16 +445,16 @@ lav_model_estimate <- function(lavmodel = NULL,
 
     ## FIXME: call lav_model_objective directly!!
     for (i in 1:npar) {
-      x.left <- x.left2 <- x.right <- x.right2 <- x
-      x.left[i] <- x[i] - h
-      x.left2[i] <- x[i] - 2 * h
-      x.right[i] <- x[i] + h
-      x.right2[i] <- x[i] + 2 * h
-      fx.left <- objective_function(x.left, verbose = FALSE, debug = FALSE)
-      fx.left2 <- objective_function(x.left2, verbose = FALSE, debug = FALSE)
-      fx.right <- objective_function(x.right, verbose = FALSE, debug = FALSE)
-      fx.right2 <- objective_function(x.right2, verbose = FALSE, debug = FALSE)
-      dx[i] <- (fx.left2 - 8 * fx.left + 8 * fx.right - fx.right2) / (12 * h)
+      x_left <- x_left2 <- x_right <- x_right2 <- x
+      x_left[i] <- x[i] - h
+      x_left2[i] <- x[i] - 2 * h
+      x_right[i] <- x[i] + h
+      x_right2[i] <- x[i] + 2 * h
+      fx_left <- objective_function(x_left, verbose = FALSE, debug = FALSE)
+      fx_left2 <- objective_function(x_left2, verbose = FALSE, debug = FALSE)
+      fx_right <- objective_function(x_right, verbose = FALSE, debug = FALSE)
+      fx_right2 <- objective_function(x_right2, verbose = FALSE, debug = FALSE)
+      dx[i] <- (fx_left2 - 8 * fx_left + 8 * fx_right - fx_right2) / (12 * h)
     }
 
     # dx <- lavGradientC(func=objective_function, x=x)
@@ -467,7 +469,7 @@ lav_model_estimate <- function(lavmodel = NULL,
     dx
   }
 
-  gradient_function_numerical_complex <- function(x, verbose = FALSE, debug = FALSE) {
+  gradient_function_numerical_complex <- function(x, verbose = FALSE, debug = FALSE) { # nolint
     dx <- Re(lav_func_gradient_complex(
       func = objective_function, x = x,
       h = sqrt(.Machine$double.eps)
@@ -487,18 +489,18 @@ lav_model_estimate <- function(lavmodel = NULL,
   # check if the initial values produce a positive definite Sigma
   # to begin with -- but only for estimator="ML"
   if (estimator %in% c("ML", "FML", "MML")) {
-    Sigma.hat <- lav_model_sigma(lavmodel, extra = TRUE)
+    sigma_hat <- lav_model_sigma(lavmodel, extra = TRUE)
     for (g in 1:ngroups) {
-      if (!attr(Sigma.hat[[g]], "po")) {
-        group.txt <-
-          if(ngroups > 1) gettextf(" in group %s.", g) else "."
+      if (!attr(sigma_hat[[g]], "po")) {
+        group_txt <-
+          if (ngroups > 1) gettextf(" in group %s.", g) else "."
         if (debug) {
-          print(Sigma.hat[[g]][, ])
+          print(sigma_hat[[g]][, ])
         }
         lav_msg_warn(gettext(
           "initial model-implied matrix (Sigma) is not positive definite;
-          check your model and/or starting parameters"), group.txt)
-        x <- start.x
+          check your model and/or starting parameters"), group_txt)
+        x <- start_x
         fx <- as.numeric(NA)
         attr(fx, "fx.group") <- rep(as.numeric(NA), ngroups)
         attr(x, "converged") <- FALSE
@@ -515,51 +517,51 @@ lav_model_estimate <- function(lavmodel = NULL,
   # FIXME: what is the best way to set the scale??
   # current strategy: if startx > 1.0, we rescale by using
   # 1/startx
-  SCALE <- rep(1.0, length(start.x))
+  scale_1 <- rep(1.0, length(start_x))
   if (lavoptions$optim.parscale == "none") {
-    idx <- which(abs(start.x) > 1.0)
+    idx <- which(abs(start_x) > 1.0)
     if (length(idx) > 0L) {
-      SCALE[idx] <- abs(1.0 / start.x[idx])
+      scale_1[idx] <- abs(1.0 / start_x[idx])
     }
   }
   if (debug) {
-    cat("SCALE = ", SCALE, "\n")
+    cat("SCALE = ", scale_1, "\n")
   }
 
 
   # first try: check if starting values return a finite value
-  fx <- objective_function(start.x, verbose = verbose, debug = debug)
+  fx <- objective_function(start_x, verbose = verbose, debug = debug)
   if (!is.finite(fx)) {
     # emergency change of start.x
-    start.x <- start.x / 10
+    start_x <- start_x / 10
   }
 
 
 
   # first some nelder mead steps? (default = FALSE)
-  INIT_NELDER_MEAD <- lavoptions$optim.init_nelder_mead
+  init_nelder_mead <- lavoptions$optim.init_nelder_mead
 
   # gradient: analytic, numerical or NULL?
   if (is.character(lavoptions$optim.gradient)) {
     if (lavoptions$optim.gradient %in% c("analytic", "analytical")) {
-      GRADIENT <- gradient_function
+      gradient <- gradient_function
     } else if (lavoptions$optim.gradient %in% c("numerical", "numeric")) {
-      GRADIENT <- gradient_function_numerical
+      gradient <- gradient_function_numerical
     } else if (lavoptions$optim.gradient %in% c("numeric.complex", "complex")) {
-      GRADIENT <- gradient_function_numerical_complex
+      gradient <- gradient_function_numerical_complex
     } else if (lavoptions$optim.gradient %in% c("NULL", "null")) {
-      GRADIENT <- NULL
+      gradient <- NULL
     } else {
       lav_msg_warn(gettext("gradient should be analytic, numerical or NULL"))
     }
   } else if (is.logical(lavoptions$optim.gradient)) {
     if (lavoptions$optim.gradient) {
-      GRADIENT <- gradient_function
+      gradient <- gradient_function
     } else {
-      GRADIENT <- NULL
+      gradient <- NULL
     }
   } else if (is.null(lavoptions$optim.gradient)) {
-    GRADIENT <- gradient_function
+    gradient <- gradient_function
   }
 
 
@@ -569,37 +571,37 @@ lav_model_estimate <- function(lavmodel = NULL,
                                     length(lavmodel@cin.nonlinear.idx) == 0L))
      ) {
     if (is.null(lavoptions$optim.method)) {
-      OPTIMIZER <- "NLMINB"
+      optimizer <- "NLMINB"
       # OPTIMIZER <- "BFGS"  # slightly slower, no bounds; better scaling!
       # OPTIMIZER <- "L-BFGS-B"  # trouble with Inf values for fx!
     } else {
-      OPTIMIZER <- toupper(lavoptions$optim.method)
-      stopifnot(OPTIMIZER %in% c(
+      optimizer <- toupper(lavoptions$optim.method)
+      stopifnot(optimizer %in% c(
         "NLMINB0", "NLMINB1", "NLMINB2",
         "NLMINB", "BFGS", "L.BFGS.B", "NONE"
       ))
-      if (OPTIMIZER == "NLMINB1") {
-        OPTIMIZER <- "NLMINB"
+      if (optimizer == "NLMINB1") {
+        optimizer <- "NLMINB"
       }
     }
   } else {
     if (is.null(lavoptions$optim.method)) {
-      OPTIMIZER <- "NLMINB.CONSTR"
+      optimizer <- "NLMINB.CONSTR"
     } else {
-      OPTIMIZER <- toupper(lavoptions$optim.method)
-      stopifnot(OPTIMIZER %in% c("NLMINB.CONSTR", "NLMINB", "NONE"))
+      optimizer <- toupper(lavoptions$optim.method)
+      stopifnot(optimizer %in% c("NLMINB.CONSTR", "NLMINB", "NONE"))
     }
-    if (OPTIMIZER == "NLMINB") {
-      OPTIMIZER <- "NLMINB.CONSTR"
+    if (optimizer == "NLMINB") {
+      optimizer <- "NLMINB.CONSTR"
     }
   }
 
-  if (INIT_NELDER_MEAD) {
+  if (init_nelder_mead) {
     if (verbose) cat("  initial Nelder-Mead step:\n")
-    trace <- 0L
-    if (verbose) trace <- 1L
-    optim.out <- optim(
-      par = start.x,
+    # trace <- 0L
+    # if (verbose) trace <- 1L
+    optim_out <- optim(
+      par = start_x,
       fn = objective_function,
       method = "Nelder-Mead",
       # control=list(maxit=10L,
@@ -609,15 +611,16 @@ lav_model_estimate <- function(lavmodel = NULL,
       verbose = verbose, debug = debug
     )
     cat("\n")
-    start.x <- optim.out$par
+    start_x <- optim_out$par
   }
 
 
 
-  if (OPTIMIZER == "NLMINB0") {
-    if (verbose) cat("  quasi-Newton steps using NLMINB0 (no analytic gradient):\n")
+  if (optimizer == "NLMINB0") {
+    if (verbose) 
+      cat("  quasi-Newton steps using NLMINB0 (no analytic gradient):\n")
     # if(debug) control$trace <- 1L;
-    control.nlminb <- list(
+    control_nlminb <- list(
       eval.max = 20000L,
       iter.max = 10000L,
       trace = 0L,
@@ -630,58 +633,58 @@ lav_model_estimate <- function(lavmodel = NULL,
       x.tol = 1.5e-8,
       xf.tol = 2.2e-14
     )
-    control.nlminb <- modifyList(control.nlminb, lavoptions$control)
-    control <- control.nlminb[c(
+    control_nlminb <- modifyList(control_nlminb, lavoptions$control)
+    control <- control_nlminb[c(
       "eval.max", "iter.max", "trace",
       "step.min", "step.max",
       "abs.tol", "rel.tol", "x.tol", "xf.tol"
     )]
     # cat("DEBUG: control = "); print(str(control.nlminb)); cat("\n")
-    optim.out <- nlminb(
-      start = start.x,
+    optim_out <- nlminb(
+      start = start_x,
       objective = objective_function,
       gradient = NULL,
       lower = lower,
       upper = upper,
       control = control,
-      scale = SCALE,
+      scale = scale_1,
       verbose = verbose, debug = debug
     )
     if (verbose) {
-      cat("  convergence status (0=ok): ", optim.out$convergence, "\n")
-      cat("  nlminb message says: ", optim.out$message, "\n")
-      cat("  number of iterations: ", optim.out$iterations, "\n")
+      cat("  convergence status (0=ok): ", optim_out$convergence, "\n")
+      cat("  nlminb message says: ", optim_out$message, "\n")
+      cat("  number of iterations: ", optim_out$iterations, "\n")
       cat(
         "  number of function evaluations [objective, gradient]: ",
-        optim.out$evaluations, "\n"
+        optim_out$evaluations, "\n"
       )
     }
 
     # try again
-    if (optim.out$convergence != 0L) {
-      optim.out <- nlminb(
-        start = start.x,
+    if (optim_out$convergence != 0L) {
+      optim_out <- nlminb(
+        start = start_x,
         objective = objective_function,
         gradient = NULL,
         lower = lower,
         upper = upper,
         control = control,
-        scale = SCALE,
+        scale = scale_1,
         verbose = verbose, debug = debug
       )
     }
 
-    iterations <- optim.out$iterations
-    x <- optim.out$par
-    if (optim.out$convergence == 0L) {
+    iterations <- optim_out$iterations
+    x <- optim_out$par
+    if (optim_out$convergence == 0L) {
       converged <- TRUE
     } else {
       converged <- FALSE
     }
-  } else if (OPTIMIZER == "NLMINB") {
+  } else if (optimizer == "NLMINB") {
     if (verbose) cat("  quasi-Newton steps using NLMINB:\n")
     # if(debug) control$trace <- 1L;
-    control.nlminb <- list(
+    control_nlminb <- list(
       eval.max = 20000L,
       iter.max = 10000L,
       trace = 0L,
@@ -694,93 +697,93 @@ lav_model_estimate <- function(lavmodel = NULL,
       x.tol = 1.5e-8,
       xf.tol = 2.2e-14
     )
-    control.nlminb <- modifyList(control.nlminb, lavoptions$control)
-    control <- control.nlminb[c(
+    control_nlminb <- modifyList(control_nlminb, lavoptions$control)
+    control <- control_nlminb[c(
       "eval.max", "iter.max", "trace",
       "step.min", "step.max",
       "abs.tol", "rel.tol", "x.tol", "xf.tol"
     )]
     # cat("DEBUG: control = "); print(str(control.nlminb)); cat("\n")
-    optim.out <- nlminb(
-      start = start.x,
+    optim_out <- nlminb(
+      start = start_x,
       objective = objective_function,
-      gradient = GRADIENT,
+      gradient = gradient,
       lower = lower,
       upper = upper,
       control = control,
-      scale = SCALE,
+      scale = scale_1,
       verbose = verbose, debug = debug
     )
     if (verbose) {
-      cat("  convergence status (0=ok): ", optim.out$convergence, "\n")
-      cat("  nlminb message says: ", optim.out$message, "\n")
-      cat("  number of iterations: ", optim.out$iterations, "\n")
+      cat("  convergence status (0=ok): ", optim_out$convergence, "\n")
+      cat("  nlminb message says: ", optim_out$message, "\n")
+      cat("  number of iterations: ", optim_out$iterations, "\n")
       cat(
         "  number of function evaluations [objective, gradient]: ",
-        optim.out$evaluations, "\n"
+        optim_out$evaluations, "\n"
       )
     }
 
-    iterations <- optim.out$iterations
-    x <- optim.out$par
-    if (optim.out$convergence == 0L) {
+    iterations <- optim_out$iterations
+    x <- optim_out$par
+    if (optim_out$convergence == 0L) {
       converged <- TRUE
     } else {
       converged <- FALSE
     }
-  } else if (OPTIMIZER == "BFGS") {
+  } else if (optimizer == "BFGS") {
     # warning: Bollen example with estimator=GLS does NOT converge!
     # (but WLS works!)
     # - BB.ML works too
 
-    control.bfgs <- list(
+    control_bfgs <- list(
       trace = 0L, fnscale = 1,
-      parscale = SCALE, ## or not?
+      parscale = scale_1, ## or not?
       ndeps = 1e-3,
       maxit = 10000,
       abstol = 1e-20,
       reltol = 1e-10,
       REPORT = 1L
     )
-    control.bfgs <- modifyList(control.bfgs, lavoptions$control)
-    control <- control.bfgs[c(
+    control_bfgs <- modifyList(control_bfgs, lavoptions$control)
+    control <- control_bfgs[c(
       "trace", "fnscale", "parscale", "ndeps",
       "maxit", "abstol", "reltol", "REPORT"
     )]
     # trace <- 0L; if(verbose) trace <- 1L
-    optim.out <- optim(
-      par = start.x,
+    optim_out <- optim(
+      par = start_x,
       fn = objective_function,
-      gr = GRADIENT,
+      gr = gradient,
       method = "BFGS",
       control = control,
       hessian = FALSE,
       verbose = verbose, debug = debug
     )
     if (verbose) {
-      cat("  convergence status (0=ok): ", optim.out$convergence, "\n")
-      cat("  optim BFGS message says: ", optim.out$message, "\n")
+      cat("  convergence status (0=ok): ", optim_out$convergence, "\n")
+      cat("  optim BFGS message says: ", optim_out$message, "\n")
       # cat("number of iterations: ", optim.out$iterations, "\n")
       cat(
         "  number of function evaluations [objective, gradient]: ",
-        optim.out$counts, "\n"
+        optim_out$counts, "\n"
       )
     }
 
     # iterations <- optim.out$iterations
-    iterations <- optim.out$counts[1]
-    x <- optim.out$par
-    if (optim.out$convergence == 0L) {
+    iterations <- optim_out$counts[1]
+    x <- optim_out$par
+    if (optim_out$convergence == 0L) {
       converged <- TRUE
     } else {
       converged <- FALSE
     }
-  } else if (OPTIMIZER == "L.BFGS.B") {
+  } else if (optimizer == "L.BFGS.B") {
     # warning, does not cope with Inf values!!
 
-    control.lbfgsb <- list(
+    control_lbfgsb <- list(
       trace = 0L, fnscale = 1,
-      parscale = SCALE, ## or not?
+      parscale = scale_1, ## or not?
       ndeps = 1e-3,
       maxit = 10000,
       REPORT = 1L,
@@ -788,48 +791,48 @@ lav_model_estimate <- function(lavmodel = NULL,
       factr = 1e7,
       pgtol = 0
     )
-    control.lbfgsb <- modifyList(control.lbfgsb, lavoptions$control)
-    control <- control.lbfgsb[c(
+    control_lbfgsb <- modifyList(control_lbfgsb, lavoptions$control)
+    control <- control_lbfgsb[c(
       "trace", "fnscale", "parscale",
       "ndeps", "maxit", "REPORT", "lmm",
       "factr", "pgtol"
     )]
-    optim.out <- optim(
-      par = start.x,
+    optim_out <- optim(
+      par = start_x,
       fn = objective_function,
-      gr = GRADIENT,
+      gr = gradient,
       method = "L-BFGS-B",
       lower = lower,
       upper = upper,
       control = control,
       hessian = FALSE,
       verbose = verbose, debug = debug,
-      infToMax = TRUE
+      inf_to_max = TRUE
     )
     if (verbose) {
-      cat("  convergence status (0=ok): ", optim.out$convergence, "\n")
-      cat("  optim L-BFGS-B message says: ", optim.out$message, "\n")
+      cat("  convergence status (0=ok): ", optim_out$convergence, "\n")
+      cat("  optim L-BFGS-B message says: ", optim_out$message, "\n")
       # cat("number of iterations: ", optim.out$iterations, "\n")
       cat(
         "  number of function evaluations [objective, gradient]: ",
-        optim.out$counts, "\n"
+        optim_out$counts, "\n"
       )
     }
 
     # iterations <- optim.out$iterations
-    iterations <- optim.out$counts[1]
-    x <- optim.out$par
-    if (optim.out$convergence == 0L) {
+    iterations <- optim_out$counts[1]
+    x <- optim_out$par
+    if (optim_out$convergence == 0L) {
       converged <- TRUE
     } else {
       converged <- FALSE
     }
-  } else if (OPTIMIZER == "NLMINB.CONSTR") {
+  } else if (optimizer == "NLMINB.CONSTR") {
     ocontrol <- list(verbose = verbose)
     if (!is.null(lavoptions$control$control.outer)) {
       ocontrol <- c(lavoptions$control$control.outer, verbose = verbose)
     }
-    control.nlminb <- list(
+    control_nlminb <- list(
       eval.max = 20000L,
       iter.max = 10000L,
       trace = 0L,
@@ -841,51 +844,51 @@ lav_model_estimate <- function(lavmodel = NULL,
       x.tol = 1.5e-8,
       xf.tol = 2.2e-14
     )
-    control.nlminb <- modifyList(control.nlminb, lavoptions$control)
-    control <- control.nlminb[c(
+    control_nlminb <- modifyList(control_nlminb, lavoptions$control)
+    control <- control_nlminb[c(
       "eval.max", "iter.max", "trace",
       "abs.tol", "rel.tol"
     )]
-    cin <- cin.jac <- ceq <- ceq.jac <- NULL
+    cin <- cin_jac <- ceq <- ceq_jac <- NULL
     if (!is.null(body(lavmodel@cin.function))) cin <- lavmodel@cin.function
-    if (!is.null(body(lavmodel@cin.jacobian))) cin.jac <- lavmodel@cin.jacobian
+    if (!is.null(body(lavmodel@cin.jacobian))) cin_jac <- lavmodel@cin.jacobian
     if (!is.null(body(lavmodel@ceq.function))) ceq <- lavmodel@ceq.function
-    if (!is.null(body(lavmodel@ceq.jacobian))) ceq.jac <- lavmodel@ceq.jacobian
+    if (!is.null(body(lavmodel@ceq.jacobian))) ceq_jac <- lavmodel@ceq.jacobian
     trace <- FALSE
     if (verbose) trace <- TRUE
-    optim.out <- nlminb.constr(
-      start = start.x,
+    optim_out <- nlminb.constr(
+      start = start_x,
       objective = objective_function,
-      gradient = GRADIENT,
+      gradient = gradient,
       control = control,
-      scale = SCALE,
+      scale = scale_1,
       verbose = verbose, debug = debug,
       lower = lower,
       upper = upper,
-      cin = cin, cin.jac = cin.jac,
-      ceq = ceq, ceq.jac = ceq.jac,
+      cin = cin, cin.jac = cin_jac,
+      ceq = ceq, ceq.jac = ceq_jac,
       control.outer = ocontrol
     )
     if (verbose) {
-      cat("  convergence status (0=ok): ", optim.out$convergence, "\n")
-      cat("  nlminb.constr message says: ", optim.out$message, "\n")
-      cat("  number of outer iterations: ", optim.out$outer.iterations, "\n")
-      cat("  number of inner iterations: ", optim.out$iterations, "\n")
+      cat("  convergence status (0=ok): ", optim_out$convergence, "\n")
+      cat("  nlminb.constr message says: ", optim_out$message, "\n")
+      cat("  number of outer iterations: ", optim_out$outer.iterations, "\n")
+      cat("  number of inner iterations: ", optim_out$iterations, "\n")
       cat(
         "  number of function evaluations [objective, gradient]: ",
-        optim.out$evaluations, "\n"
+        optim_out$evaluations, "\n"
       )
     }
 
-    iterations <- optim.out$iterations
-    x <- optim.out$par
-    if (optim.out$convergence == 0) {
+    iterations <- optim_out$iterations
+    x <- optim_out$par
+    if (optim_out$convergence == 0) {
       converged <- TRUE
     } else {
       converged <- FALSE
     }
-  } else if (OPTIMIZER == "NONE") {
-    x <- start.x
+  } else if (optimizer == "NONE") {
+    x <- start_x
     iterations <- 0L
     converged <- TRUE
     control <- list()
@@ -896,84 +899,84 @@ lav_model_estimate <- function(lavmodel = NULL,
         (lavmodel@cin.simple.only ||
          (length(lavmodel@cin.linear.idx) == 0L &&
           length(lavmodel@cin.nonlinear.idx) == 0L))) {
-      optim.out <- list()
+      optim_out <- list()
     } else {
       # if inequality constraints, add con.jac/lambda
       # needed for df!
 
-      optim.out <- list()
+      optim_out <- list()
       if (is.null(body(lavmodel@ceq.function))) {
         ceq <- function(x, ...) {
-          return(numeric(0))
+          numeric(0)
         }
       } else {
         ceq <- lavmodel@ceq.function
       }
       if (is.null(body(lavmodel@cin.function))) {
         cin <- function(x, ...) {
-          return(numeric(0))
+          numeric(0)
         }
       } else {
         cin <- lavmodel@cin.function
       }
-      ceq0 <- ceq(start.x)
-      cin0 <- cin(start.x)
+      ceq0 <- ceq(start_x)
+      cin0 <- cin(start_x)
       con0 <- c(ceq0, cin0)
-      JAC <- rbind(
-        numDeriv::jacobian(ceq, x = start.x),
-        numDeriv::jacobian(cin, x = start.x)
+      jac <- rbind(
+        numDeriv::jacobian(ceq, x = start_x),
+        numDeriv::jacobian(cin, x = start_x)
       )
-      nceq <- length(ceq(start.x))
-      ncin <- length(cin(start.x))
+      nceq <- length(ceq(start_x))
+      ncin <- length(cin(start_x))
       ncon <- nceq + ncin
-      ceq.idx <- cin.idx <- integer(0)
-      if (nceq > 0L) ceq.idx <- 1:nceq
-      if (ncin > 0L) cin.idx <- nceq + 1:ncin
-      cin.flag <- rep(FALSE, length(ncon))
-      if (ncin > 0L) cin.flag[cin.idx] <- TRUE
+      ceq_idx <- cin_idx <- integer(0)
+      if (nceq > 0L) ceq_idx <- 1:nceq
+      if (ncin > 0L) cin_idx <- nceq + 1:ncin
+      cin_flag <- rep(FALSE, length(ncon))
+      if (ncin > 0L) cin_flag[cin_idx] <- TRUE
 
-      inactive.idx <- integer(0L)
-      cin.idx <- which(cin.flag)
+      inactive_idx <- integer(0L)
+      cin_idx <- which(cin_flag)
       if (ncin > 0L) {
         slack <- 1e-05
-        inactive.idx <- which(cin.flag & con0 > slack)
+        inactive_idx <- which(cin_flag & con0 > slack)
       }
-      attr(JAC, "inactive.idx") <- inactive.idx
-      attr(JAC, "cin.idx") <- cin.idx
-      attr(JAC, "ceq.idx") <- ceq.idx
+      attr(jac, "inactive.idx") <- inactive_idx
+      attr(jac, "cin.idx") <- cin_idx
+      attr(jac, "ceq.idx") <- ceq_idx
 
-      optim.out$con.jac <- JAC
-      optim.out$lambda <- rep(0, ncon)
+      optim_out$con.jac <- jac
+      optim_out$lambda <- rep(0, ncon)
     }
   }
 
   # new in 0.6-19
   # if NLMINB() + cin.simple.only, add con.jac and lambda to optim.out
-  if (OPTIMIZER %in% c("NLMINB", "NLMINB0", "L.BFGS.B") &&
+  if (optimizer %in% c("NLMINB", "NLMINB0", "L.BFGS.B") &&
       (lavmodel@cin.simple.only || lavmodel@ceq.simple.only)) {
 
     if (lavmodel@cin.simple.only && nrow(lavmodel@cin.JAC) > 0L) {
       # JAC
-      cin.JAC <- lavmodel@cin.JAC
+      cin_jac_1 <- lavmodel@cin.JAC
       con0 <- lavmodel@cin.function(x)
       slack <- 1e-05
-      inactive.idx <- which(abs(con0) > slack)
+      inactive_idx <- which(abs(con0) > slack)
 
       # lambda
       # FIXME! HOW to compute this (post-hoc)?
-      dx <- GRADIENT(x)
-      if(lavmodel@ceq.simple.only) {
-        dx.unpack <- numeric(ncol(cin.JAC))
-        dx.unpack <- dx[lavpartable$free[lavpartable$free > 0]]
+      dx <- gradient(x)
+      if (lavmodel@ceq.simple.only) {
+        dx_unpack <- numeric(ncol(cin_jac_1))
+        dx_unpack <- dx[lavpartable$free[lavpartable$free > 0]]
       } else if (lavmodel@eq.constraints) {
         # this should not happen!
         cat("\n DEBUG: NLMINB + cin.simple.only + lavmodel@eq.constraints \n")
-        dx.unpack <- as.numeric(lavmodel@eq.constraints.K %*% dx)
+        dx_unpack <- as.numeric(lavmodel@eq.constraints.K %*% dx)
       } else {
-        dx.unpack <- dx
+        dx_unpack <- dx
       }
-      cin.lambda <- drop(cin.JAC %*% dx.unpack)
-      cin.lambda[inactive.idx] <- 0
+      cin_lambda <- drop(cin_jac_1 %*% dx_unpack)
+      cin_lambda[inactive_idx] <- 0
 
       # remove all inactive rows
       #if (length(inactive.idx) > 0L) {
@@ -983,70 +986,70 @@ lav_model_estimate <- function(lavmodel = NULL,
       #}
     } else {
       npar <- length(lavpartable$free[lavpartable$free > 0])
-      cin.JAC <- matrix(0, nrow = 0L, ncol = npar)
-      inactive.idx <- integer(0L)
-      cin.lambda <- numeric(0L)
+      cin_jac_1 <- matrix(0, nrow = 0L, ncol = npar)
+      inactive_idx <- integer(0L)
+      cin_lambda <- numeric(0L)
     }
 
     if (lavmodel@ceq.simple.only && nrow(lavmodel@ceq.simple.K) > 0L) {
-      ceq.JAC <- t(lav_matrix_orthogonal_complement(lavmodel@ceq.simple.K))
-      ceq.lambda <- numeric(nrow(ceq.JAC))
+      ceq_jac_1 <- t(lav_matrix_orthogonal_complement(lavmodel@ceq.simple.K))
+      ceq_lambda <- numeric(nrow(ceq_jac_1))
     } else {
       npar <- length(lavpartable$free[lavpartable$free > 0])
-      ceq.JAC <- matrix(0, nrow = 0L, ncol = npar)
-      ceq.lambda <- numeric(0L)
+      ceq_jac_1 <- matrix(0, nrow = 0L, ncol = npar)
+      ceq_lambda <- numeric(0L)
     }
 
     # combine
-    JAC <- rbind(cin.JAC, ceq.JAC)
-    attr(JAC, "inactive.idx") <- inactive.idx
-    attr(JAC, "cin.idx") <- seq_len(nrow(cin.JAC))
-    attr(JAC, "ceq.idx") <- nrow(cin.JAC) + seq_len(nrow(ceq.JAC))
-    lambda <- c(cin.lambda, ceq.lambda)
+    jac <- rbind(cin_jac_1, ceq_jac_1)
+    attr(jac, "inactive.idx") <- inactive_idx
+    attr(jac, "cin.idx") <- seq_len(nrow(cin_jac_1))
+    attr(jac, "ceq.idx") <- nrow(cin_jac_1) + seq_len(nrow(ceq_jac_1))
+    lambda <- c(cin_lambda, ceq_lambda)
 
-    optim.out$con.jac <- JAC
-    optim.out$lambda <- lambda
+    optim_out$con.jac <- jac
+    optim_out$lambda <- lambda
   }
 
 
   fx <- objective_function(x) # to get "fx.group" attribute
 
   # check convergence
-  warn.txt <- ""
+  warn_txt <- ""
   if (converged) {
     # check.gradient
-    if (!is.null(GRADIENT) &&
-      OPTIMIZER %in% c("NLMINB", "BFGS", "L.BFGS.B")) {
+    if (!is.null(gradient) &&
+      optimizer %in% c("NLMINB", "BFGS", "L.BFGS.B")) {
       # compute unscaled gradient
-      dx <- GRADIENT(x)
+      dx <- gradient(x)
 
       # NOTE: unscaled gradient!!!
       if (converged && lavoptions$check.gradient &&
         any(abs(dx) > lavoptions$optim.dx.tol)) {
         # ok, identify the non-zero elements
-        non.zero <- which(abs(dx) > lavoptions$optim.dx.tol)
+        non_zero <- which(abs(dx) > lavoptions$optim.dx.tol)
 
         # which ones are 'boundary' points, defined by lower/upper?
-        bound.idx <- integer(0L)
+        bound_idx <- integer(0L)
         if (!is.null(lavpartable$lower)) {
-          bound.idx <- c(bound.idx, which(lower == x))
+          bound_idx <- c(bound_idx, which(lower == x))
         }
         if (!is.null(lavpartable$upper)) {
-          bound.idx <- c(bound.idx, which(upper == x))
+          bound_idx <- c(bound_idx, which(upper == x))
         }
-        if (length(bound.idx) > 0L) {
-          non.zero <- non.zero[-which(non.zero %in% bound.idx)]
+        if (length(bound_idx) > 0L) {
+          non_zero <- non_zero[-which(non_zero %in% bound_idx)]
         }
 
         # this has many implications ... so should be careful to
         # avoid false alarm
-        if (length(non.zero) > 0L) {
+        if (length(non_zero) > 0L) {
           converged <- FALSE
-          warn.txt <- paste("the optimizer (", OPTIMIZER, ") ",
+          warn_txt <- paste("the optimizer (", optimizer, ") ",
             "claimed the model converged,\n",
-            "                      but not all elements of the gradient are (near) zero;\n",
-            "                      the optimizer may not have found a local solution\n",
-            "                      use check.gradient = FALSE to skip this check.",
+            "       but not all elements of the gradient are (near) zero;\n",
+            "       the optimizer may not have found a local solution\n",
+            "       use check.gradient = FALSE to skip this check.",
             sep = ""
           )
         }
@@ -1056,7 +1059,7 @@ lav_model_estimate <- function(lavmodel = NULL,
     }
   } else {
     dx <- numeric(0L)
-    warn.txt <- "the optimizer warns that a solution has NOT been found!"
+    warn_txt <- "the optimizer warns that a solution has NOT been found!"
   }
 
   # transform back
@@ -1079,17 +1082,17 @@ lav_model_estimate <- function(lavmodel = NULL,
   x <- x / parscale
 
   attr(x, "converged") <- converged
-  attr(x, "start") <- start.x
-  attr(x, "warn.txt") <- warn.txt
+  attr(x, "start") <- start_x
+  attr(x, "warn.txt") <- warn_txt
   attr(x, "iterations") <- iterations
   attr(x, "control") <- control
   attr(x, "fx") <- fx
   attr(x, "dx") <- dx
   attr(x, "parscale") <- parscale
-  if (!is.null(optim.out$con.jac)) attr(x, "con.jac") <- optim.out$con.jac
-  if (!is.null(optim.out$lambda)) attr(x, "con.lambda") <- optim.out$lambda
+  if (!is.null(optim_out$con.jac)) attr(x, "con.jac") <- optim_out$con.jac
+  if (!is.null(optim_out$lambda)) attr(x, "con.lambda") <- optim_out$lambda
   if (lavoptions$optim.partrace) {
-    attr(x, "partrace") <- PENV$PARTRACE
+    attr(x, "partrace") <- penv$PARTRACE
   }
 
   x

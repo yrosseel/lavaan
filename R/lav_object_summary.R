@@ -11,14 +11,15 @@
 #                  are computed
 # YR 24 Sept 2022: add efa= argument
 # YR 19 Nov  2023: add remove.unused= argument
-# TDJ 28 March 2024: deprecate std.nox= argument ("std.nox" can be %in% standardized=)
+# TDJ 28 March 2024: deprecate std.nox= argument ("std.nox" can be %in%
+#                                                          standardized=)
 
 # create summary of a lavaan object
 lav_object_summary <- function(object, header = TRUE,
-                               fit.measures = FALSE,
-                               baseline.model = NULL,
-                               h1.model = NULL,
-                               fm.args =
+                               fit_measures = FALSE,
+                               baseline_model = NULL,
+                               h1_model = NULL,
+                               fm_args =
                                  list(
                                    standard.test = "default",
                                    scaled.test = "default",
@@ -31,18 +32,18 @@ lav_object_summary <- function(object, header = TRUE,
                                fmi = FALSE,
                                standardized = FALSE,
                                std = standardized,
-                               remove.system.eq = TRUE,
-                               remove.eq = TRUE,
-                               remove.ineq = TRUE,
-                               remove.def = FALSE,
-                               remove.nonfree = FALSE,
-                               remove.step1 = TRUE,
-                               remove.unused = TRUE,
+                               remove_system_eq = TRUE,
+                               remove_eq = TRUE,
+                               remove_ineq = TRUE,
+                               remove_def = FALSE,
+                               remove_nonfree = FALSE,
+                               remove_step1 = TRUE,
+                               remove_unused = TRUE,
                                plabel = FALSE,
-                               cov.std = TRUE,
+                               cov_std = TRUE,
                                rsquare = FALSE,
                                efa = FALSE,
-                               efa.args =
+                               efa_args =
                                  list(
                                    lambda = TRUE,
                                    theta = TRUE,
@@ -56,13 +57,13 @@ lav_object_summary <- function(object, header = TRUE,
                                    pvalue = FALSE
                                  ),
                                modindices = FALSE,
-                               srmr.close.h0 = NULL) {
+                               srmr_close_h0 = NULL) {
 
   # check object
   object <- lav_object_check_version(object)
 
   # default fm.args
-  default.fm.args <- list(
+  default_fm_args <- list(
     standard.test = "default",
     scaled.test = "default",
     rmsea.ci.level = 0.90,
@@ -71,31 +72,31 @@ lav_object_summary <- function(object, header = TRUE,
     robust = TRUE,
     cat.check.pd = TRUE
   )
-  if (is.logical(fit.measures)) {
-    if (fit.measures) {
-      fit.measures <- "default"
+  if (is.logical(fit_measures)) {
+    if (fit_measures) {
+      fit_measures <- "default"
     } else {
-      fit.measures <- "none"
+      fit_measures <- "none"
     }
   }
-  if (!missing(fm.args)) {
+  if (!missing(fm_args)) {
     lav_deprecated_args("fit.measures", "fm.args")
-    fm.args <- modifyList(default.fm.args, fm.args)
+    fm_args <- modifyList(default_fm_args, fm_args)
   } else {
-    fm.args <- default.fm.args
+    fm_args <- default_fm_args
   }
-  if (is.list(fit.measures)) {
-    if (is.null(names(fit.measures)) ||
-        is.null(fit.measures$fit.measures)) {
+  if (is.list(fit_measures)) {
+    if (is.null(names(fit_measures)) ||
+        is.null(fit_measures$fit.measures)) {
       lav_msg_stop(gettextf(
         "If %s is a list, it must contain a named element %s.",
         "fit.measures"
       ))
     }
-    temp <- fit.measures$fit.measures
-    fit.measures$fit.measures <- NULL
-    fm.args <- modifyList(default.fm.args, fit.measures)
-    fit.measures <- temp
+    temp <- fit_measures$fit.measures
+    fit_measures$fit.measures <- NULL
+    fm_args <- modifyList(default_fm_args, fit_measures)
+    fit_measures <- temp
   }
 
 
@@ -108,16 +109,16 @@ lav_object_summary <- function(object, header = TRUE,
   } else {
     # At least 1 is not logical. Retain only valid standardization options.
     standardized <- intersect(union(tolower(std), tolower(standardized)),
-                              c("std.lv","std.all","std.nox"))
+                              c("std.lv", "std.all", "std.nox"))
   }
 
   # create the 'short' summary
   if (header) {
     # 1. collect header information
-    VERSION <- object@version
+    version <- object@version
 
     res$header <- list(
-      lavaan.version = VERSION,
+      lavaan.version = version,
       sam.approach = !is.null(object@internal$sam.method),
       optim.method = object@Options$optim.method,
       optim.iterations = object@optim$iterations,
@@ -164,25 +165,25 @@ lav_object_summary <- function(object, header = TRUE,
       # SEM version
 
       # 2. summarize optim info (including estimator)
-      nrow.ceq.jac <- nrow(object@Model@ceq.JAC)
+      nrow_ceq_jac <- nrow(object@Model@ceq.JAC)
       #if (object@Model@ceq.simple.only) {
         # not needed, as nrow.ceq.jac is already zero
       #  nrow.ceq.jac <- 0L
       #}
-      cin.simple.only <- FALSE
-      ceq.simple.only <- FALSE
-      cin.simple.only <- object@Model@cin.simple.only
-      ceq.simple.only <- object@Model@ceq.simple.only
-      nrow.cin.jac <- nrow(object@Model@cin.JAC)
-      if (cin.simple.only) {
-        nrow.cin.jac <- 0L
+      cin_simple_only <- FALSE
+      ceq_simple_only <- FALSE
+      cin_simple_only <- object@Model@cin.simple.only
+      ceq_simple_only <- object@Model@ceq.simple.only
+      nrow_cin_jac <- nrow(object@Model@cin.JAC)
+      if (cin_simple_only) {
+        nrow_cin_jac <- 0L
       }
-      if (ceq.simple.only && cin.simple.only) {
-        nrow.con.jac <- 0L
-        con.jac.rank <- 0L
+      if (ceq_simple_only && cin_simple_only) {
+        nrow_con_jac <- 0L
+        con_jac_rank <- 0L
       } else {
-        nrow.con.jac <- nrow(object@Model@con.jac)
-        con.jac.rank <- qr(object@Model@con.jac)$rank
+        nrow_con_jac <- nrow(object@Model@con.jac)
+        con_jac_rank <- qr(object@Model@con.jac)$rank
       }
 
       res$optim <- list(
@@ -191,10 +192,10 @@ lav_object_summary <- function(object, header = TRUE,
         optim.method = object@Options$optim.method,
         npar = object@Model@nx.free,
         eq.constraints = object@Model@eq.constraints,
-        nrow.ceq.jac = nrow.ceq.jac,
-        nrow.cin.jac = nrow.cin.jac,
-        nrow.con.jac = nrow.con.jac,
-        con.jac.rank = con.jac.rank
+        nrow.ceq.jac = nrow_ceq_jac,
+        nrow.cin.jac = nrow_cin_jac,
+        nrow.con.jac = nrow_con_jac,
+        con.jac.rank = con_jac_rank
       )
 
 
@@ -211,19 +212,19 @@ lav_object_summary <- function(object, header = TRUE,
       res$data <- lav_data_summary_short(object@Data)
 
       # 5. test statistics
-      TEST <- object@test
+      test <- object@test
       # TDJ: check for user-supplied h1 model
       if (!is.null(object@external$h1.model)) {
         stopifnot(inherits(object@external$h1.model, "lavaan"))
         ## update @test slot
-        TEST <- lav_update_test_custom_h1(lav_obj_h0 = object,
-                                          lav_obj_h1 = object@external$h1.model)@test
+        test <- lav_update_test_custom_h1(
+          lav_obj_h0 = object, lav_obj_h1 = object@external$h1.model)@test
       }
       # double check if we have attr(TEST, "info") (perhaps old object?)
-      if (is.null(attr(TEST, "info"))) {
+      if (is.null(attr(test, "info"))) {
         lavdata <- object@Data
         lavoptions <- object@Options
-        attr(TEST, "info") <-
+        attr(test, "info") <-
           list(
             ngroups = lavdata@ngroups,
             group.label = lavdata@group.label,
@@ -232,17 +233,17 @@ lav_object_summary <- function(object, header = TRUE,
             observed.information = lavoptions$observed.information
           )
       }
-      res$test <- TEST
+      res$test <- test
     } # regular sem
   } # header
 
   # efa-related info
   if (efa) {
-    res$efa <- lav_efa_summary(object, efa_args = efa.args)
+    res$efa <- lav_efa_summary(object, efa_args = efa_args)
   } # efa
 
   # only if requested, add the additional fit measures
-  if (fit.measures != "none") {
+  if (fit_measures != "none") {
     # some early warnings (to avoid a hard stop)
     if (object@Data@data.type == "none") {
       lav_msg_warn(gettext(
@@ -255,39 +256,39 @@ lav_object_summary <- function(object, header = TRUE,
       lav_msg_warn(gettext(
         "fit measures not available if model did not converge"))
     } else {
-      FIT <- lav_fit_measures(object,
-       fit_measures = c(list(fit.measures = fit.measures), fm.args),
-       baseline_model = baseline.model,
-       h1_model = h1.model)
-      res$fit <- FIT
+      fit <- lav_fit_measures(object,
+       fit_measures = c(list(fit.measures = fit_measures), fm_args),
+       baseline_model = baseline_model,
+       h1_model = h1_model)
+      res$fit <- fit
     }
   }
 
   # main ingredient: the parameter table
   if (estimates) {
-    PE <- lavParameterEstimates(object,
+    pe <- lavParameterEstimates(object,
       ci = ci, standardized = standardized,
       rsquare = rsquare, fmi = fmi,
-      cov.std = cov.std,
-      remove.eq = remove.eq, remove.system.eq = remove.system.eq,
-      remove.ineq = remove.ineq, remove.def = remove.def,
-      remove.nonfree = remove.nonfree,
-      remove.step1 = remove.step1,
-      remove.unused = remove.unused,
+      cov.std = cov_std,
+      remove.eq = remove_eq, remove.system.eq = remove_system_eq,
+      remove.ineq = remove_ineq, remove.def = remove_def,
+      remove.nonfree = remove_nonfree,
+      remove.step1 = remove_step1,
+      remove.unused = remove_unused,
       plabel = plabel,
       output = "text",
       header = TRUE
     )
-    res$pe <- as.data.frame(PE)
+    res$pe <- as.data.frame(pe)
   }
 
   # modification indices?
   if (is.logical(modindices)) {
-    if (modindices) modindices <- list(standardized = TRUE, cov.std = cov.std)
+    if (modindices) modindices <- list(standardized = TRUE, cov.std = cov_std)
   }
   if (is.list(modindices)) {
-    MI <- do.call("modificationIndices", c(list(object = object), modindices))
-    res$mi <- MI
+    mi <- do.call("modificationIndices", c(list(object = object), modindices))
+    res$mi <- mi
   }
 
   # create lavaan.summary S3 class

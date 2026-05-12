@@ -1,87 +1,87 @@
 lav_model_group_mm_indices <- function(nmat) {
-  nmat.cumsum <- cumsum(c(0L, nmat))
+  nmat_cumsum <- cumsum(c(0L, nmat))
   lapply(seq_along(nmat), function(g) {
-    seq_len(nmat[g]) + nmat.cumsum[g]
+    seq_len(nmat[g]) + nmat_cumsum[g]
   })
 }
 
-lav_model_sigma_extra <- function(Sigma.hat.g = NULL,
-                                  check.sigma.pd = "chol") {
+lav_model_sigma_extra <- function(sigma_hat_g = NULL,
+                                  check_sigma_pd = "chol") {
   # check if matrix is positive definite
-  if (check.sigma.pd == "chol") {
+  if (check_sigma_pd == "chol") {
     # fast path: try Cholesky directly
-    cS <- tryCatch(chol(Sigma.hat.g), error = function(e) NULL)
-    is_pd <- !is.null(cS)
+    c_s <- tryCatch(chol(sigma_hat_g), error = function(e) NULL)
+    is_pd <- !is.null(c_s)
   } else {
     # slow path: eigenvalue-based PD check
-    ev <- eigen(Sigma.hat.g, symmetric = TRUE, only.values = TRUE)$values
+    ev <- eigen(sigma_hat_g, symmetric = TRUE, only.values = TRUE)$values
     is_pd <- !(any(ev < sqrt(.Machine$double.eps)) || sum(ev) == 0)
   }
 
   if (!is_pd) {
-    Sigma.hat.inv <- MASS::ginv(Sigma.hat.g)
-    Sigma.hat.log.det <- log(.Machine$double.eps)
-    attr(Sigma.hat.g, "po") <- FALSE
-    attr(Sigma.hat.g, "inv") <- Sigma.hat.inv
-    attr(Sigma.hat.g, "log.det") <- Sigma.hat.log.det
+    sigma_hat_inv <- MASS::ginv(sigma_hat_g)
+    sigma_hat_log_det <- log(.Machine$double.eps)
+    attr(sigma_hat_g, "po") <- FALSE
+    attr(sigma_hat_g, "inv") <- sigma_hat_inv
+    attr(sigma_hat_g, "log.det") <- sigma_hat_log_det
   } else {
-    if (check.sigma.pd != "chol") {
-      cS <- chol(Sigma.hat.g)
+    if (check_sigma_pd != "chol") {
+      c_s <- chol(sigma_hat_g)
     }
-    Sigma.hat.inv <- chol2inv(cS)
-    d <- diag(cS)
-    Sigma.hat.log.det <- 2 * sum(log(d))
-    attr(Sigma.hat.g, "po") <- TRUE
-    attr(Sigma.hat.g, "inv") <- Sigma.hat.inv
-    attr(Sigma.hat.g, "log.det") <- Sigma.hat.log.det
+    sigma_hat_inv <- chol2inv(c_s)
+    d <- diag(c_s)
+    sigma_hat_log_det <- 2 * sum(log(d))
+    attr(sigma_hat_g, "po") <- TRUE
+    attr(sigma_hat_g, "inv") <- sigma_hat_inv
+    attr(sigma_hat_g, "log.det") <- sigma_hat_log_det
   }
 
-  Sigma.hat.g
+  sigma_hat_g
 }
 
-lav_model_sigma <- function(lavmodel = NULL, GLIST = NULL, extra = FALSE,
+lav_model_sigma <- function(lavmodel = NULL, glist = NULL, extra = FALSE,
                             delta = TRUE) {
   # state or final?
-  if (is.null(GLIST)) GLIST <- lavmodel@GLIST
+  if (is.null(glist)) glist <- lavmodel@GLIST
 
   # check.sigma.pd -- new in 0.6-21
-  check.sigma.pd <- get0("opt_check_sigma_pd", lavaan_cache_env,
+  check_sigma_pd <- get0("opt_check_sigma_pd", lavaan_cache_env,
                          ifnotfound = "chol")
 
   nmat <- lavmodel@nmat
   nblocks <- lavmodel@nblocks
   representation <- lavmodel@representation
-  mm.idx <- lav_model_group_mm_indices(nmat)
+  mm_idx <- lav_model_group_mm_indices(nmat)
 
   # return a list
-  Sigma.hat <- vector("list", length = nblocks)
+  sigma_hat <- vector("list", length = nblocks)
 
   for (g in seq_len(nblocks)) {
     # which mm belong to group g?
-    mm.in.group <- mm.idx[[g]]
-    MLIST <- GLIST[mm.in.group]
+    mm_in_group <- mm_idx[[g]]
+    mlist <- glist[mm_in_group]
 
     if (representation == "LISREL") {
-      Sigma.hat[[g]] <- lav_lisrel_sigma(
-        MLIST = MLIST,
+      sigma_hat[[g]] <- lav_lisrel_sigma(
+        MLIST = mlist,
         delta = delta
       )
     } else if (representation == "RAM") {
-      Sigma.hat[[g]] <- lav_ram_sigmahat(MLIST = MLIST, delta = delta)
+      sigma_hat[[g]] <- lav_ram_sigmahat(MLIST = mlist, delta = delta)
     } else {
       lav_msg_stop(gettext(
         "only LISREL and RAM representation has been implemented for now"))
     }
-    if (lav_debug()) print(Sigma.hat[[g]])
+    if (lav_debug()) print(sigma_hat[[g]])
 
     if (extra) {
-      Sigma.hat[[g]] <- lav_model_sigma_extra(
-        Sigma.hat.g = Sigma.hat[[g]],
-        check.sigma.pd = check.sigma.pd
+      sigma_hat[[g]] <- lav_model_sigma_extra(
+        sigma_hat_g = sigma_hat[[g]],
+        check_sigma_pd = check_sigma_pd
       )
     }
   } # nblocks
-  Sigma.hat
+  sigma_hat
 }
 
 ## only if conditional.x = TRUE
@@ -93,82 +93,82 @@ lav_model_sigma <- function(lavmodel = NULL, GLIST = NULL, extra = FALSE,
 ##     S12 = PI %*% cov.x
 ##     S21 = cov.x %*% t(PI)
 ##     S22 = cov.x
-lav_model_cond2joint_sigma <- function(lavmodel = NULL, GLIST = NULL,
+lav_model_cond2joint_sigma <- function(lavmodel = NULL, glist = NULL,
                                        extra = FALSE, delta = TRUE) {
   stopifnot(lavmodel@conditional.x)
 
   # state or final?
-  if (is.null(GLIST)) GLIST <- lavmodel@GLIST
+  if (is.null(glist)) glist <- lavmodel@GLIST
 
   # check.sigma.pd -- new in 0.6-21
-  check.sigma.pd <- get0("opt_check_sigma_pd", lavaan_cache_env,
+  check_sigma_pd <- get0("opt_check_sigma_pd", lavaan_cache_env,
                          ifnotfound = "chol")
 
   nmat <- lavmodel@nmat
   nblocks <- lavmodel@nblocks
   representation <- lavmodel@representation
-  mm.idx <- lav_model_group_mm_indices(nmat)
+  mm_idx <- lav_model_group_mm_indices(nmat)
 
   # return a list
-  Sigma.hat <- vector("list", length = nblocks)
+  sigma_hat <- vector("list", length = nblocks)
 
   for (g in seq_len(nblocks)) {
     # which mm belong to group g?
-    mm.in.group <- mm.idx[[g]]
-    MLIST <- GLIST[mm.in.group]
+    mm_in_group <- mm_idx[[g]]
+    mlist <- glist[mm_in_group]
 
     if (representation == "LISREL") {
-      res.Sigma <- lav_lisrel_sigma(MLIST = MLIST, delta = delta)
+      res_sigma <- lav_lisrel_sigma(MLIST = mlist, delta = delta)
       # res.int <- lav_lisrel_mu(MLIST = MLIST)
-      res.slopes <- lav_lisrel_pi(MLIST = MLIST)
-      S.xx <- MLIST$cov.x
+      res_slopes <- lav_lisrel_pi(MLIST = mlist)
+      s_xx <- mlist$cov.x
 
-      S.yy <- res.Sigma + res.slopes %*% S.xx %*% t(res.slopes)
-      S.yx <- res.slopes %*% S.xx
-      S.xy <- S.xx %*% t(res.slopes)
+      s_yy <- res_sigma + res_slopes %*% s_xx %*% t(res_slopes)
+      s_yx <- res_slopes %*% s_xx
+      s_xy <- s_xx %*% t(res_slopes)
 
-      Sigma.hat[[g]] <- rbind(cbind(S.yy, S.yx), cbind(S.xy, S.xx))
+      sigma_hat[[g]] <- rbind(cbind(s_yy, s_yx), cbind(s_xy, s_xx))
     } else {
       lav_msg_stop(gettext(
         "only representation LISREL has been implemented for now"))
     }
-    if (lav_debug()) print(Sigma.hat[[g]])
+    if (lav_debug()) print(sigma_hat[[g]])
 
     if (extra) {
-      Sigma.hat[[g]] <- lav_model_sigma_extra(
-        Sigma.hat.g = Sigma.hat[[g]],
-        check.sigma.pd = check.sigma.pd
+      sigma_hat[[g]] <- lav_model_sigma_extra(
+        sigma_hat_g = sigma_hat[[g]],
+        check_sigma_pd = check_sigma_pd
       )
     }
   } # nblocks
 
-  Sigma.hat
+  sigma_hat
 }
 
-lav_model_mu <- function(lavmodel = NULL, GLIST = NULL) {
+lav_model_mu <- function(lavmodel = NULL, glist = NULL) {
   # state or final?
-  if (is.null(GLIST)) GLIST <- lavmodel@GLIST
+  if (is.null(glist)) glist <- lavmodel@GLIST
 
   nmat <- lavmodel@nmat
   nblocks <- lavmodel@nblocks
   representation <- lavmodel@representation
   meanstructure <- lavmodel@meanstructure
-  mm.idx <- lav_model_group_mm_indices(nmat)
+  mm_idx <- lav_model_group_mm_indices(nmat)
 
   # return a list
-  Mu.hat <- vector("list", length = nblocks)
+  mu_hat <- vector("list", length = nblocks)
 
   for (g in seq_len(nblocks)) {
     # which mm belong to group g?
-    mm.in.group <- mm.idx[[g]]
-    MLIST <- GLIST[mm.in.group]
+    mm_in_group <- mm_idx[[g]]
+    mlist <- glist[mm_in_group]
 
     if (!meanstructure) {
-      Mu.hat[[g]] <- numeric(lavmodel@nvar[g])
+      mu_hat[[g]] <- numeric(lavmodel@nvar[g])
     } else if (representation == "LISREL") {
-      Mu.hat[[g]] <- lav_lisrel_mu(MLIST = MLIST)
+      mu_hat[[g]] <- lav_lisrel_mu(MLIST = mlist)
     } else if (representation == "RAM") {
-      Mu.hat[[g]] <- lav_ram_muhat(MLIST = MLIST)
+      mu_hat[[g]] <- lav_ram_muhat(MLIST = mlist)
     } else {
       lav_msg_stop(gettext(
         "only RAM and LISREL representation has been implemented for now"))
@@ -183,12 +183,12 @@ lav_model_mu <- function(lavmodel = NULL, GLIST = NULL) {
     # model-implied thresholds, but they do not say anything about the
     # 'observed' mean of 'y'
     if (lavmodel@categorical) {
-      ord.idx <- unique(lavmodel@th.idx[[g]][lavmodel@th.idx[[g]] > 0L])
-      Mu.hat[[g]][ord.idx] <- 0
+      ord_idx <- unique(lavmodel@th.idx[[g]][lavmodel@th.idx[[g]] > 0L])
+      mu_hat[[g]][ord_idx] <- 0
     }
   } # nblocks
 
-  Mu.hat
+  mu_hat
 }
 
 ## only if conditional.x = TRUE
@@ -197,72 +197,72 @@ lav_model_mu <- function(lavmodel = NULL, GLIST = NULL) {
 ## Mu (Joint ) = [ Mu.y, Mu.x ] where
 ##     Mu.y = res.int + PI %*% M.x
 ##     Mu.x = M.x
-lav_model_cond2joint_mu <- function(lavmodel = NULL, GLIST = NULL) {
+lav_model_cond2joint_mu <- function(lavmodel = NULL, glist = NULL) {
   # state or final?
-  if (is.null(GLIST)) GLIST <- lavmodel@GLIST
+  if (is.null(glist)) glist <- lavmodel@GLIST
 
   nmat <- lavmodel@nmat
   nblocks <- lavmodel@nblocks
   representation <- lavmodel@representation
   meanstructure <- lavmodel@meanstructure
-  mm.idx <- lav_model_group_mm_indices(nmat)
+  mm_idx <- lav_model_group_mm_indices(nmat)
 
   # return a list
-  Mu.hat <- vector("list", length = nblocks)
+  mu_hat <- vector("list", length = nblocks)
 
   for (g in seq_len(nblocks)) {
     # which mm belong to group g?
-    mm.in.group <- mm.idx[[g]]
+    mm_in_group <- mm_idx[[g]]
 
     if (!meanstructure) {
-      Mu.hat[[g]] <- numeric(lavmodel@nvar[g])
+      mu_hat[[g]] <- numeric(lavmodel@nvar[g])
     } else if (representation == "LISREL") {
-      MLIST <- GLIST[mm.in.group]
-      res.int <- lav_lisrel_mu(MLIST = MLIST)
-      res.slopes <- lav_lisrel_pi(MLIST = MLIST)
-      M.x <- MLIST$mean.x
+      mlist <- glist[mm_in_group]
+      res_int <- lav_lisrel_mu(MLIST = mlist)
+      res_slopes <- lav_lisrel_pi(MLIST = mlist)
+      m_x <- mlist$mean.x
 
-      Mu.y <- res.int + res.slopes %*% M.x
-      Mu.x <- M.x
-      Mu.hat[[g]] <- c(Mu.y, Mu.x)
+      mu_y <- res_int + res_slopes %*% m_x
+      mu_x <- m_x
+      mu_hat[[g]] <- c(mu_y, mu_x)
     } else {
       lav_msg_stop(gettext(
         "only representation LISREL has been implemented for now"))
     }
   } # nblocks
 
-  Mu.hat
+  mu_hat
 }
 
 # TH.star = DELTA.star * (th.star - pi0.star)
 # see Muthen 1984 eq 11
-lav_model_th <- function(lavmodel = NULL, GLIST = NULL, delta = TRUE) {
+lav_model_th <- function(lavmodel = NULL, glist = NULL, delta = TRUE) {
   # state or final?
-  if (is.null(GLIST)) GLIST <- lavmodel@GLIST
+  if (is.null(glist)) glist <- lavmodel@GLIST
 
   nblocks <- lavmodel@nblocks
   nmat <- lavmodel@nmat
   representation <- lavmodel@representation
-  th.idx <- lavmodel@th.idx
-  mm.idx <- lav_model_group_mm_indices(nmat)
+  th_idx <- lavmodel@th.idx
+  mm_idx <- lav_model_group_mm_indices(nmat)
 
   # return a list
-  TH <- vector("list", length = nblocks)
+  th <- vector("list", length = nblocks)
 
   # compute TH for each group
   for (g in seq_len(nblocks)) {
-    if (length(th.idx[[g]]) == 0) {
-      TH[[g]] <- numeric(0L)
+    if (length(th_idx[[g]]) == 0) {
+      th[[g]] <- numeric(0L)
       next
     }
 
     # which mm belong to group g?
-    mm.in.group <- mm.idx[[g]]
+    mm_in_group <- mm_idx[[g]]
 
     if (representation == "LISREL") {
-      TH[[g]] <- lav_lisrel_th(
-        MLIST = GLIST[mm.in.group],
-        th.idx = th.idx[[g]], delta = delta
+      th[[g]] <- lav_lisrel_th(
+        MLIST = glist[mm_in_group],
+        th.idx = th_idx[[g]], delta = delta
       )
     } else {
       lav_msg_stop(gettext(
@@ -270,76 +270,76 @@ lav_model_th <- function(lavmodel = NULL, GLIST = NULL, delta = TRUE) {
     }
   }
 
-  TH
+  th
 }
 
 # PI = slope structure
 # see Muthen 1984 eq 12
-lav_model_pi <- function(lavmodel = NULL, GLIST = NULL, delta = TRUE) {
+lav_model_pi <- function(lavmodel = NULL, glist = NULL, delta = TRUE) {
   # state or final?
-  if (is.null(GLIST)) GLIST <- lavmodel@GLIST
+  if (is.null(glist)) glist <- lavmodel@GLIST
 
   nblocks <- lavmodel@nblocks
   nmat <- lavmodel@nmat
   representation <- lavmodel@representation
-  conditional.x <- lavmodel@conditional.x
-  mm.idx <- lav_model_group_mm_indices(nmat)
+  conditional_x <- lavmodel@conditional.x
+  mm_idx <- lav_model_group_mm_indices(nmat)
 
   # return a list
-  PI <- vector("list", length = nblocks)
+  pi0 <- vector("list", length = nblocks)
 
   # compute TH for each group
   for (g in seq_len(nblocks)) {
     # which mm belong to group g?
-    mm.in.group <- mm.idx[[g]]
-    MLIST <- GLIST[mm.in.group]
+    mm_in_group <- mm_idx[[g]]
+    mlist <- glist[mm_in_group]
 
-    if (!conditional.x) {
-      PI.g <- numeric(lavmodel@nvar[g])
+    if (!conditional_x) {
+      pi_g <- numeric(lavmodel@nvar[g])
     } else if (representation == "LISREL") {
-      PI.g <- lav_lisrel_pi(MLIST = MLIST, delta = delta)
+      pi_g <- lav_lisrel_pi(MLIST = mlist, delta = delta)
     } else {
       lav_msg_stop(gettext(
         "only representation LISREL has been implemented for now"))
     }
 
-    PI[[g]] <- PI.g
+    pi0[[g]] <- pi_g
   }
 
-  PI
+  pi0
 }
 
 
 # GW = group weight
-lav_model_gw <- function(lavmodel = NULL, GLIST = NULL) {
+lav_model_gw <- function(lavmodel = NULL, glist = NULL) {
   # state or final?
-  if (is.null(GLIST)) GLIST <- lavmodel@GLIST
+  if (is.null(glist)) glist <- lavmodel@GLIST
 
   nblocks <- lavmodel@nblocks
   nmat <- lavmodel@nmat
   representation <- lavmodel@representation
-  group.w.free <- lavmodel@group.w.free
-  mm.idx <- lav_model_group_mm_indices(nmat)
+  group_w_free <- lavmodel@group.w.free
+  mm_idx <- lav_model_group_mm_indices(nmat)
 
   # return a list
-  GW <- vector("list", length = nblocks)
+  gw <- vector("list", length = nblocks)
 
   # compute GW for each group
   for (g in seq_len(nblocks)) {
     # which mm belong to group g?
-    mm.in.group <- mm.idx[[g]]
-    MLIST <- GLIST[mm.in.group]
+    mm_in_group <- mm_idx[[g]]
+    mlist <- glist[mm_in_group]
 
-    if (!group.w.free) {
-      GW.g <- 0.0 # FIXME
+    if (!group_w_free) {
+      gw_g <- 0.0 # FIXME
     } else if (representation == "LISREL") {
-      GW.g <- as.numeric(MLIST$gw[1, 1])
+      gw_g <- as.numeric(mlist$gw[1, 1])
     } else {
       lav_msg_stop(gettext(
         "only representation LISREL has been implemented for now"))
     }
 
-    GW[[g]] <- GW.g
+    gw[[g]] <- gw_g
   }
 
   # transform to proportions
@@ -349,174 +349,174 @@ lav_model_gw <- function(lavmodel = NULL, GLIST = NULL) {
   #    GW[[g]] <- gw[g]
   # }
 
-  GW
+  gw
 }
 
 # *unconditional* variance/covariance matrix of Y
 #  - same as Sigma.hat if all Y are continuous)
 #  - if also Gamma, cov.x is used (only if categorical)
-lav_model_vy <- function(lavmodel = NULL, GLIST = NULL, diagonal.only = FALSE) {
+lav_model_vy <- function(lavmodel = NULL, glist = NULL, diagonal_only = FALSE) {
   # state or final?
-  if (is.null(GLIST)) GLIST <- lavmodel@GLIST
+  if (is.null(glist)) glist <- lavmodel@GLIST
 
   nblocks <- lavmodel@nblocks
   nmat <- lavmodel@nmat
   representation <- lavmodel@representation
-  mm.idx <- lav_model_group_mm_indices(nmat)
+  mm_idx <- lav_model_group_mm_indices(nmat)
 
   # return a list
-  VY <- vector("list", length = nblocks)
+  vy <- vector("list", length = nblocks)
 
   # compute TH for each group
   for (g in seq_len(nblocks)) {
     # which mm belong to group g?
-    mm.in.group <- mm.idx[[g]]
-    MLIST <- GLIST[mm.in.group]
+    mm_in_group <- mm_idx[[g]]
+    mlist <- glist[mm_in_group]
 
     if (representation == "LISREL") {
-      VY.g <- lav_lisrel_vy(MLIST = MLIST)
+      vy_g <- lav_lisrel_vy(MLIST = mlist)
     } else if (representation == "RAM") {
       # does not work for categorical setting yet
       stopifnot(!lavmodel@categorical)
       # does not work if conditional.x = TRUE
       stopifnot(!lavmodel@conditional.x)
-      VY.g <- lav_ram_sigmahat(MLIST = MLIST)
+      vy_g <- lav_ram_sigmahat(MLIST = mlist)
     } else {
       lav_msg_stop(gettext(
         "only RAM and LISREL representation has been implemented for now"))
     }
 
-    if (diagonal.only) {
-      VY[[g]] <- diag(VY.g)
+    if (diagonal_only) {
+      vy[[g]] <- diag(vy_g)
     } else {
-      VY[[g]] <- VY.g
+      vy[[g]] <- vy_g
     }
   }
 
-  VY
+  vy
 }
 
 # V(ETA): latent variances variances/covariances
-lav_model_veta <- function(lavmodel = NULL, GLIST = NULL,
-                           remove.dummy.lv = FALSE) {
+lav_model_veta <- function(lavmodel = NULL, glist = NULL,
+                           remove_dummy_lv = FALSE) {
   # state or final?
-  if (is.null(GLIST)) GLIST <- lavmodel@GLIST
+  if (is.null(glist)) glist <- lavmodel@GLIST
 
   nblocks <- lavmodel@nblocks
   nmat <- lavmodel@nmat
   representation <- lavmodel@representation
-  mm.idx <- lav_model_group_mm_indices(nmat)
+  mm_idx <- lav_model_group_mm_indices(nmat)
 
   # return a list
-  VETA <- vector("list", length = nblocks)
+  veta <- vector("list", length = nblocks)
 
   # compute VETA for each group
   for (g in seq_len(nblocks)) {
     # which mm belong to group g?
-    mm.in.group <- mm.idx[[g]]
-    MLIST <- GLIST[mm.in.group]
+    mm_in_group <- mm_idx[[g]]
+    mlist <- glist[mm_in_group]
 
     if (representation == "LISREL") {
-      VETA.g <- lav_lisrel_veta(MLIST = MLIST)
+      veta_g <- lav_lisrel_veta(MLIST = mlist)
 
-      if (remove.dummy.lv) {
+      if (remove_dummy_lv) {
         # remove all dummy latent variables
-        lv.idx <- c(
+        lv_idx <- c(
           lavmodel@ov.y.dummy.lv.idx[[g]],
           lavmodel@ov.x.dummy.lv.idx[[g]]
         )
-        if (!is.null(lv.idx)) {
-          VETA.g <- VETA.g[-lv.idx, -lv.idx, drop = FALSE]
+        if (!is.null(lv_idx)) {
+          veta_g <- veta_g[-lv_idx, -lv_idx, drop = FALSE]
         }
       }
     } else if (representation == "RAM") {
-      VETA.g <- lav_ram_veta(MLIST = MLIST)
+      veta_g <- lav_ram_veta(MLIST = mlist)
     } else {
       lav_msg_stop(gettext(
         "only LISREL and RAM representation has been implemented for now"))
     }
 
-    VETA[[g]] <- VETA.g
+    veta[[g]] <- veta_g
   }
 
-  VETA
+  veta
 }
 
 # V(ETA|x_i): latent variances variances/covariances, conditional on x_
 # - this is always (I-B)^-1 PSI (I-B)^-T, after REMOVING lv dummies
-lav_model_vetax <- function(lavmodel = NULL, GLIST = NULL) {
+lav_model_vetax <- function(lavmodel = NULL, glist = NULL) {
   # state or final?
-  if (is.null(GLIST)) GLIST <- lavmodel@GLIST
+  if (is.null(glist)) glist <- lavmodel@GLIST
 
   nblocks <- lavmodel@nblocks
   nmat <- lavmodel@nmat
   representation <- lavmodel@representation
-  mm.idx <- lav_model_group_mm_indices(nmat)
+  mm_idx <- lav_model_group_mm_indices(nmat)
 
   # return a list
-  ETA <- vector("list", length = nblocks)
+  eta <- vector("list", length = nblocks)
 
   # compute ETA for each group
   for (g in seq_len(nblocks)) {
     # which mm belong to group g?
-    mm.in.group <- mm.idx[[g]]
-    MLIST <- GLIST[mm.in.group]
+    mm_in_group <- mm_idx[[g]]
+    mlist <- glist[mm_in_group]
 
     if (representation == "LISREL") {
-      lv.idx <- c(
+      lv_idx <- c(
         lavmodel@ov.y.dummy.lv.idx[[g]],
         lavmodel@ov.x.dummy.lv.idx[[g]]
       )
-      ETA.g <- lav_lisrel_vetax(
-        MLIST = MLIST,
-        lv.dummy.idx = lv.idx
+      eta_g <- lav_lisrel_vetax(
+        MLIST = mlist,
+        lv.dummy.idx = lv_idx
       )
     } else {
       lav_msg_stop(gettext(
         "only representation LISREL has been implemented for now"))
     }
 
-    ETA[[g]] <- ETA.g
+    eta[[g]] <- eta_g
   }
 
-  ETA
+  eta
 }
 
 # COV: observed+latent variances variances/covariances
-lav_model_cov_both <- function(lavmodel = NULL, GLIST = NULL,
-                               remove.dummy.lv = FALSE, delta = TRUE) {
+lav_model_cov_both <- function(lavmodel = NULL, glist = NULL,
+                               remove_dummy_lv = FALSE, delta = TRUE) {
   # state or final?
-  if (is.null(GLIST)) GLIST <- lavmodel@GLIST
+  if (is.null(glist)) glist <- lavmodel@GLIST
 
   nblocks <- lavmodel@nblocks
   nmat <- lavmodel@nmat
   representation <- lavmodel@representation
-  mm.idx <- lav_model_group_mm_indices(nmat)
+  mm_idx <- lav_model_group_mm_indices(nmat)
 
   # return a list
-  COV <- vector("list", length = nblocks)
+  cov_1 <- vector("list", length = nblocks)
 
   # compute COV for each group
   for (g in seq_len(nblocks)) {
     # which mm belong to group g?
-    mm.in.group <- mm.idx[[g]]
-    MLIST <- GLIST[mm.in.group]
+    mm_in_group <- mm_idx[[g]]
+    mlist <- glist[mm_in_group]
 
     if (representation == "LISREL") {
-      COV.g <- lav_lisrel_cov_both(MLIST = MLIST, delta = delta)
+      cov_g <- lav_lisrel_cov_both(MLIST = mlist, delta = delta)
 
-      if (remove.dummy.lv) {
+      if (remove_dummy_lv) {
         # remove all dummy latent variables
-        lv.idx <- c(
+        lv_idx <- c(
           lavmodel@ov.y.dummy.lv.idx[[g]],
           lavmodel@ov.x.dummy.lv.idx[[g]]
         )
-        if (!is.null(lv.idx)) {
+        if (!is.null(lv_idx)) {
           # offset for ov
-          lambda.names <-
-            lavmodel@dimNames[[which(names(GLIST) == "lambda")[g]]][[1L]]
-          lv.idx <- lv.idx + length(lambda.names)
-          COV.g <- COV.g[-lv.idx, -lv.idx, drop = FALSE]
+          lambda_names <-
+            lavmodel@dimNames[[which(names(glist) == "lambda")[g]]][[1L]]
+          lv_idx <- lv_idx + length(lambda_names)
+          cov_g <- cov_g[-lv_idx, -lv_idx, drop = FALSE]
         }
       }
     } else {
@@ -524,35 +524,35 @@ lav_model_cov_both <- function(lavmodel = NULL, GLIST = NULL,
         "only representation LISREL has been implemented for now"))
     }
 
-    COV[[g]] <- COV.g
+    cov_1[[g]] <- cov_g
   }
 
-  COV
+  cov_1
 }
 
 
 # E(ETA): expectation (means) of latent variables (return vector)
-lav_model_eeta <- function(lavmodel = NULL, GLIST = NULL, lavsamplestats = NULL,
-                           remove.dummy.lv = FALSE) {
+lav_model_eeta <- function(lavmodel = NULL, glist = NULL, lavsamplestats = NULL,
+                           remove_dummy_lv = FALSE) {
   # state or final?
-  if (is.null(GLIST)) GLIST <- lavmodel@GLIST
+  if (is.null(glist)) glist <- lavmodel@GLIST
 
   nblocks <- lavmodel@nblocks
   nmat <- lavmodel@nmat
   representation <- lavmodel@representation
-  mm.idx <- lav_model_group_mm_indices(nmat)
+  mm_idx <- lav_model_group_mm_indices(nmat)
 
   # return a list
-  EETA <- vector("list", length = nblocks)
+  eeta <- vector("list", length = nblocks)
 
   # compute E(ETA) for each group
   for (g in seq_len(nblocks)) {
     # which mm belong to group g?
-    mm.in.group <- mm.idx[[g]]
-    MLIST <- GLIST[mm.in.group]
+    mm_in_group <- mm_idx[[g]]
+    mlist <- glist[mm_in_group]
 
     if (representation == "LISREL") {
-      EETA.g <- lav_lisrel_eeta(MLIST,
+      eeta_g <- lav_lisrel_eeta(mlist,
         mean.x = lavsamplestats@mean.x[[g]],
         sample.mean = lavsamplestats@mean[[g]],
         ov.y.dummy.lv.idx = lavmodel@ov.y.dummy.lv.idx[[g]],
@@ -560,14 +560,14 @@ lav_model_eeta <- function(lavmodel = NULL, GLIST = NULL, lavsamplestats = NULL,
         ov.y.dummy.ov.idx = lavmodel@ov.y.dummy.ov.idx[[g]],
         ov.x.dummy.ov.idx = lavmodel@ov.x.dummy.ov.idx[[g]]
       )
-      if (remove.dummy.lv) {
+      if (remove_dummy_lv) {
         # remove dummy
-        lv.dummy.idx <- c(
+        lv_dummy_idx <- c(
           lavmodel@ov.y.dummy.lv.idx[[g]],
           lavmodel@ov.x.dummy.lv.idx[[g]]
         )
-        if (length(lv.dummy.idx) > 0L) {
-          EETA.g <- EETA.g[-lv.dummy.idx]
+        if (length(lv_dummy_idx) > 0L) {
+          eeta_g <- eeta_g[-lv_dummy_idx]
         }
       }
     } else {
@@ -575,43 +575,43 @@ lav_model_eeta <- function(lavmodel = NULL, GLIST = NULL, lavsamplestats = NULL,
         "only representation LISREL has been implemented for now"))
     }
 
-    EETA[[g]] <- EETA.g
+    eeta[[g]] <- eeta_g
   }
 
-  EETA
+  eeta
 }
 
 # E(ETA|x_i): conditional expectation (means) of latent variables
 # for a given value of x_i (instead of E(x_i))
-lav_model_eetax <- function(lavmodel = NULL, GLIST = NULL,
-                            lavsamplestats = NULL, eXo = NULL,
-                            nobs = NULL, remove.dummy.lv = FALSE) {
+lav_model_eetax <- function(lavmodel = NULL, glist = NULL,
+                            lavsamplestats = NULL, exo = NULL,
+                            nobs = NULL, remove_dummy_lv = FALSE) {
   # state or final?
-  if (is.null(GLIST)) GLIST <- lavmodel@GLIST
+  if (is.null(glist)) glist <- lavmodel@GLIST
 
   nblocks <- lavmodel@nblocks
   nmat <- lavmodel@nmat
   representation <- lavmodel@representation
-  mm.idx <- lav_model_group_mm_indices(nmat)
+  mm_idx <- lav_model_group_mm_indices(nmat)
 
   # return a list
-  EETAx <- vector("list", length = nblocks)
+  eetax <- vector("list", length = nblocks)
 
   # compute E(ETA) for each group
   for (g in seq_len(nblocks)) {
     # which mm belong to group g?
-    mm.in.group <- mm.idx[[g]]
-    MLIST <- GLIST[mm.in.group]
+    mm_in_group <- mm_idx[[g]]
+    mlist <- glist[mm_in_group]
 
-    EXO <- eXo[[g]]
-    if (is.null(EXO)) {
+    exo_1 <- exo[[g]]
+    if (is.null(exo_1)) {
       # create empty matrix
-      EXO <- matrix(0, nobs[[g]], 0L)
+      exo_1 <- matrix(0, nobs[[g]], 0L)
     }
 
     if (representation == "LISREL") {
-      EETAx.g <- lav_lisrel_eetax(MLIST,
-        eXo = EXO, N = nobs[[g]],
+      eetax_g <- lav_lisrel_eetax(mlist,
+        eXo = exo_1, N = nobs[[g]],
         sample.mean = lavsamplestats@mean[[g]],
         ov.y.dummy.lv.idx = lavmodel@ov.y.dummy.lv.idx[[g]],
         ov.x.dummy.lv.idx = lavmodel@ov.x.dummy.lv.idx[[g]],
@@ -619,14 +619,14 @@ lav_model_eetax <- function(lavmodel = NULL, GLIST = NULL,
         ov.x.dummy.ov.idx = lavmodel@ov.x.dummy.ov.idx[[g]]
       )
 
-      if (remove.dummy.lv) {
+      if (remove_dummy_lv) {
         # remove dummy
-        lv.dummy.idx <- c(
+        lv_dummy_idx <- c(
           lavmodel@ov.y.dummy.lv.idx[[g]],
           lavmodel@ov.x.dummy.lv.idx[[g]]
         )
-        if (length(lv.dummy.idx) > 0L) {
-          EETAx.g <- EETAx.g[, -lv.dummy.idx, drop = FALSE]
+        if (length(lv_dummy_idx) > 0L) {
+          eetax_g <- eetax_g[, -lv_dummy_idx, drop = FALSE]
         }
       }
     } else {
@@ -634,133 +634,133 @@ lav_model_eetax <- function(lavmodel = NULL, GLIST = NULL,
         "only representation LISREL has been implemented for now"))
     }
 
-    EETAx[[g]] <- EETAx.g
+    eetax[[g]] <- eetax_g
   }
 
-  EETAx
+  eetax
 }
 
 # return 'regular' LAMBDA
-lav_model_lambda <- function(lavmodel = NULL, GLIST = NULL,
-                             handle.dummy.lv = TRUE,
-                             remove.dummy.lv = FALSE) {
+lav_model_lambda <- function(lavmodel = NULL, glist = NULL,
+                             handle_dummy_lv = TRUE,
+                             remove_dummy_lv = FALSE) {
   # state or final?
-  if (is.null(GLIST)) GLIST <- lavmodel@GLIST
+  if (is.null(glist)) glist <- lavmodel@GLIST
 
   nblocks <- lavmodel@nblocks
   nmat <- lavmodel@nmat
   representation <- lavmodel@representation
-  mm.idx <- lav_model_group_mm_indices(nmat)
+  mm_idx <- lav_model_group_mm_indices(nmat)
 
   # return a list
-  LAMBDA <- vector("list", length = nblocks)
+  mm_lambda <- vector("list", length = nblocks)
 
   # compute LAMBDA for each group
   for (g in seq_len(nblocks)) {
     # which mm belong to group g?
-    mm.in.group <- mm.idx[[g]]
-    MLIST <- GLIST[mm.in.group]
+    mm_in_group <- mm_idx[[g]]
+    mlist <- glist[mm_in_group]
 
     if (representation == "LISREL") {
-      if (handle.dummy.lv) {
-        ov.y.dummy.ov.idx <- lavmodel@ov.y.dummy.ov.idx[[g]]
-        ov.x.dummy.ov.idx <- lavmodel@ov.x.dummy.ov.idx[[g]]
-        ov.y.dummy.lv.idx <- lavmodel@ov.y.dummy.lv.idx[[g]]
-        ov.x.dummy.lv.idx <- lavmodel@ov.x.dummy.lv.idx[[g]]
+      if (handle_dummy_lv) {
+        ov_y_dummy_ov_idx <- lavmodel@ov.y.dummy.ov.idx[[g]]
+        ov_x_dummy_ov_idx <- lavmodel@ov.x.dummy.ov.idx[[g]]
+        ov_y_dummy_lv_idx <- lavmodel@ov.y.dummy.lv.idx[[g]]
+        ov_x_dummy_lv_idx <- lavmodel@ov.x.dummy.lv.idx[[g]]
       } else {
-        ov.y.dummy.ov.idx <- NULL
-        ov.x.dummy.ov.idx <- NULL
-        ov.y.dummy.lv.idx <- NULL
-        ov.x.dummy.lv.idx <- NULL
+        ov_y_dummy_ov_idx <- NULL
+        ov_x_dummy_ov_idx <- NULL
+        ov_y_dummy_lv_idx <- NULL
+        ov_x_dummy_lv_idx <- NULL
       }
-      LAMBDA.g <- lav_lisrel_lambda(
-        MLIST = MLIST,
-        ov.y.dummy.ov.idx = ov.y.dummy.ov.idx,
-        ov.x.dummy.ov.idx = ov.x.dummy.ov.idx,
-        ov.y.dummy.lv.idx = ov.y.dummy.lv.idx,
-        ov.x.dummy.lv.idx = ov.x.dummy.lv.idx,
-        remove.dummy.lv = remove.dummy.lv
+      lambda_g <- lav_lisrel_lambda(
+        MLIST = mlist,
+        ov.y.dummy.ov.idx = ov_y_dummy_ov_idx,
+        ov.x.dummy.ov.idx = ov_x_dummy_ov_idx,
+        ov.y.dummy.lv.idx = ov_y_dummy_lv_idx,
+        ov.x.dummy.lv.idx = ov_x_dummy_lv_idx,
+        remove.dummy.lv = remove_dummy_lv
       )
     } else {
       lav_msg_stop(gettext(
         "only representation LISREL has been implemented for now"))
     }
 
-    LAMBDA[[g]] <- LAMBDA.g
+    mm_lambda[[g]] <- lambda_g
   }
 
-  LAMBDA
+  mm_lambda
 }
 
 # THETA: observed (residual) variances
-lav_model_theta <- function(lavmodel = NULL, GLIST = NULL, fix = TRUE) {
+lav_model_theta <- function(lavmodel = NULL, glist = NULL, fix = TRUE) {
   # state or final?
-  if (is.null(GLIST)) GLIST <- lavmodel@GLIST
+  if (is.null(glist)) glist <- lavmodel@GLIST
 
   nblocks <- lavmodel@nblocks
   nmat <- lavmodel@nmat
   representation <- lavmodel@representation
-  mm.idx <- lav_model_group_mm_indices(nmat)
+  mm_idx <- lav_model_group_mm_indices(nmat)
 
   # return a list
-  THETA <- vector("list", length = nblocks)
+  mm_theta <- vector("list", length = nblocks)
 
   # compute THETA for each group
   for (g in seq_len(nblocks)) {
     # which mm belong to group g?
-    mm.in.group <- mm.idx[[g]]
-    MLIST <- GLIST[mm.in.group]
+    mm_in_group <- mm_idx[[g]]
+    mlist <- glist[mm_in_group]
 
     if (representation == "LISREL") {
       if (fix) {
-        THETA.g <- lav_lisrel_theta(
-          MLIST = MLIST,
+        theta_g <- lav_lisrel_theta(
+          MLIST = mlist,
           ov.y.dummy.ov.idx = lavmodel@ov.y.dummy.ov.idx[[g]],
           ov.x.dummy.ov.idx = lavmodel@ov.x.dummy.ov.idx[[g]],
           ov.y.dummy.lv.idx = lavmodel@ov.y.dummy.lv.idx[[g]],
           ov.x.dummy.lv.idx = lavmodel@ov.x.dummy.lv.idx[[g]]
         )
       } else {
-        THETA.g <- lav_lisrel_theta(MLIST = MLIST)
+        theta_g <- lav_lisrel_theta(MLIST = mlist)
       }
     } else if (representation == "RAM") {
-      ov.idx <- as.integer(MLIST$ov.idx[1, ])
-      THETA.g <- MLIST$S[ov.idx, ov.idx, drop = FALSE]
+      ov_idx <- as.integer(mlist$ov.idx[1, ])
+      theta_g <- mlist$S[ov_idx, ov_idx, drop = FALSE]
     } else {
       lav_msg_stop(gettext(
         "only LISREL and RAM representation has been implemented for now"))
     }
 
-    THETA[[g]] <- THETA.g
+    mm_theta[[g]] <- theta_g
   }
 
-  THETA
+  mm_theta
 }
 
 # E(Y): expectation (mean) of observed variables
 # returns vector 1 x nvar
-lav_model_ey <- function(lavmodel = NULL, GLIST = NULL, lavsamplestats = NULL,
+lav_model_ey <- function(lavmodel = NULL, glist = NULL, lavsamplestats = NULL,
                          delta = TRUE) {
   # state or final?
-  if (is.null(GLIST)) GLIST <- lavmodel@GLIST
+  if (is.null(glist)) glist <- lavmodel@GLIST
 
   nblocks <- lavmodel@nblocks
   nmat <- lavmodel@nmat
   representation <- lavmodel@representation
-  mm.idx <- lav_model_group_mm_indices(nmat)
+  mm_idx <- lav_model_group_mm_indices(nmat)
 
   # return a list
-  EY <- vector("list", length = nblocks)
+  ey <- vector("list", length = nblocks)
 
   # compute E(Y) for each group
   for (g in seq_len(nblocks)) {
     # which mm belong to group g?
-    mm.in.group <- mm.idx[[g]]
-    MLIST <- GLIST[mm.in.group]
+    mm_in_group <- mm_idx[[g]]
+    mlist <- glist[mm_in_group]
 
     if (representation == "LISREL") {
-      EY.g <- lav_lisrel_ey(
-        MLIST = MLIST,
+      ey_g <- lav_lisrel_ey(
+        MLIST = mlist,
         mean.x = lavsamplestats@mean.x[[g]],
         sample.mean = lavsamplestats@mean[[g]],
         ov.y.dummy.ov.idx = lavmodel@ov.y.dummy.ov.idx[[g]],
@@ -774,46 +774,46 @@ lav_model_ey <- function(lavmodel = NULL, GLIST = NULL, lavsamplestats = NULL,
         "only representation LISREL has been implemented for now"))
     }
 
-    EY[[g]] <- EY.g
+    ey[[g]] <- ey_g
   }
 
-  EY
+  ey
 }
 
 
 # E(Y | ETA, x_i): conditional expectation (means) of observed variables
 # for a given value of x_i AND eta_i
-lav_model_yhat <- function(lavmodel = NULL, GLIST = NULL, lavsamplestats = NULL,
-                           eXo = NULL, nobs = NULL, ETA = NULL,
+lav_model_yhat <- function(lavmodel = NULL, glist = NULL, lavsamplestats = NULL,
+                           exo = NULL, nobs = NULL, eta = NULL,
                            duplicate = FALSE, delta = TRUE) {
   # state or final?
-  if (is.null(GLIST)) GLIST <- lavmodel@GLIST
+  if (is.null(glist)) glist <- lavmodel@GLIST
 
   # ngroups, not nblocks!
   ngroups <- lavsamplestats@ngroups
-  mm.idx <- lav_model_group_mm_indices(lavmodel@nmat)
+  mm_idx <- lav_model_group_mm_indices(lavmodel@nmat)
 
   # return a list
-  YHAT <- vector("list", length = ngroups)
+  yhat <- vector("list", length = ngroups)
 
   # compute YHAT for each group
   for (g in seq_len(ngroups)) {
     # which mm belong to group g?
     # FIXME: what if more than g blocks???
-    mm.in.group <- mm.idx[[g]]
-    MLIST <- GLIST[mm.in.group]
+    mm_in_group <- mm_idx[[g]]
+    mlist <- glist[mm_in_group]
 
-    if (is.null(eXo[[g]]) && duplicate) {
-      Nobs <- nobs[[g]]
+    if (is.null(exo[[g]]) && duplicate) {
+      nobs_1 <- nobs[[g]]
     } else {
-      Nobs <- 1L
+      nobs_1 <- 1L
     }
 
     if (lavmodel@representation == "LISREL") {
       if (lavmodel@conditional.x) {
-        YHAT[[g]] <- lav_lisrel_eyetax(
-          MLIST = MLIST,
-          eXo = eXo[[g]], ETA = ETA[[g]], N = Nobs,
+        yhat[[g]] <- lav_lisrel_eyetax(
+          MLIST = mlist,
+          eXo = exo[[g]], ETA = eta[[g]], N = nobs_1,
           sample.mean = lavsamplestats@mean[[g]],
           ov.y.dummy.ov.idx = lavmodel@ov.y.dummy.ov.idx[[g]],
           ov.x.dummy.ov.idx = lavmodel@ov.x.dummy.ov.idx[[g]],
@@ -823,9 +823,9 @@ lav_model_yhat <- function(lavmodel = NULL, GLIST = NULL, lavsamplestats = NULL,
         )
       } else {
         # unconditional case
-        YHAT[[g]] <- lav_lisrel_eyetax3(
-          MLIST = MLIST,
-          ETA = ETA[[g]],
+        yhat[[g]] <- lav_lisrel_eyetax3(
+          MLIST = mlist,
+          ETA = eta[[g]],
           sample.mean = lavsamplestats@mean[[g]],
           mean.x = lavsamplestats@mean.x[[g]],
           ov.y.dummy.ov.idx = lavmodel@ov.y.dummy.ov.idx[[g]],
@@ -842,5 +842,5 @@ lav_model_yhat <- function(lavmodel = NULL, GLIST = NULL, lavsamplestats = NULL,
     }
   }
 
-  YHAT
+  yhat
 }

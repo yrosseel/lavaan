@@ -107,9 +107,9 @@ lav_lavaan_step10_cache <- function(slot_cache = NULL, # nolint
           binobs <- bi$nobs[idx]
         }
         long <- lav_pml_longvec_ind(
-          no.x = ncol(lavdata@X[[g]]),
-          all.thres = th[[g]],
-          index.var.of.thres = lavmodel@th.idx[[g]]
+          no_x = ncol(lavdata@X[[g]]),
+          all_thres = th[[g]],
+          index_var_of_thres = lavmodel@th.idx[[g]]
         )
         lavcache[[g]] <- list(
           bifreq = bifreq,

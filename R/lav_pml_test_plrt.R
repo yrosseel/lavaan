@@ -454,23 +454,23 @@ lav_pml_object_inspect_gradient <-                  # nolint
     glist <- object@GLIST
   }
   sigma_hat <-
-    lav_model_sigma(object, GLIST = glist, extra = (estimator == "ML"))
-  mu_hat <- lav_model_mu(object, GLIST = glist)
-  th <- lav_model_th(object, GLIST = glist)
+    lav_model_sigma(object, glist = glist, extra = (estimator == "ML"))
+  mu_hat <- lav_model_mu(object, glist = glist)
+  th <- lav_model_th(object, glist = glist)
   g <- 1
   d1 <- lav_pml_dploglik_dimplied(
-    Sigma.hat = sigma_hat[[g]], Mu.hat = mu_hat[[g]],
-    TH = th[[g]], th.idx = th_idx[[g]], num.idx = num_idx[[g]],
-    X = x[[g]], lavcache = lavcache[[g]]
+    sigma_hat = sigma_hat[[g]], mu_hat = mu_hat[[g]],
+    th = th[[g]], th_idx = th_idx[[g]], num_idx = num_idx[[g]],
+    x = x[[g]], lavcache = lavcache[[g]]
   )
 
   # !?  if(equal_constr) { #delete the following three commented lines, wrong
   #     Delta <- lavaan:::lav_model_delta (lavmodel= object, GLIST. = GLIST)
   #  } else {
   delta <- lav_model_delta(
-    lavmodel = object, GLIST. = glist,
-    m.el.idx. = my_m_el_idx,
-    x.el.idx. = my_x_el_idx
+    lavmodel = object, glist = glist,
+    m_el_idx = my_m_el_idx,
+    x_el_idx = my_x_el_idx
   )
   # }
 
@@ -561,9 +561,9 @@ lav_pml_model_vcov_firstorder <- function(lavmodel, lavsamplestats = NULL,
   #      Delta <- lavaan:::lav_model_delta(lavmodel, GLIST. = NULL)
   #   } else {
   delta <- lav_model_delta(lavmodel,
-    GLIST. = NULL,
-    m.el.idx. = my_m_el_idx, # !!!!! different here and below
-    x.el.idx. = my_x_el_idx
+    glist = NULL,
+    m_el_idx = my_m_el_idx, # !!!!! different here and below
+    x_el_idx = my_x_el_idx
   )
   #  }
   sigma_hat <- lav_model_sigma(lavmodel)
@@ -572,10 +572,10 @@ lav_pml_model_vcov_firstorder <- function(lavmodel, lavsamplestats = NULL,
   g <- 1
 
   sc <- lav_pml_dploglik_dimplied(
-    Sigma.hat = sigma_hat[[g]], TH = th[[g]],
-    Mu.hat = mu_hat[[g]], th.idx = lavmodel@th.idx[[g]],
-    num.idx = lavmodel@num.idx[[g]],
-    X = lavdata@X[[g]], lavcache = lavcache,
+    sigma_hat = sigma_hat[[g]], th = th[[g]],
+    mu_hat = mu_hat[[g]], th_idx = lavmodel@th.idx[[g]],
+    num_idx = lavmodel@num.idx[[g]],
+    x = lavdata@X[[g]], lavcache = lavcache,
     scores = TRUE, negative = FALSE
   )
   group_sc <- sc %*% delta[[g]]

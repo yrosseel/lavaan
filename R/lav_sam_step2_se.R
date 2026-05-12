@@ -102,8 +102,8 @@ lav_sam_step2_se <- function(fit = NULL, joint = NULL,
         lavmodel = fit_pa@Model,
         information = i_22,
         inverted = TRUE,
-        use.ginv = FALSE, # if interaction, SEs end up smaller than naive...
-        rm.idx = step2_rm_idx
+        use_ginv = FALSE, # if interaction, SEs end up smaller than naive...
+        rm_idx = step2_rm_idx
       )
     if (inherits(i_22_inv, "try-error")) {
       # hm, not good
@@ -175,9 +175,9 @@ lav_sam_step2_se <- function(fit = NULL, joint = NULL,
         lavmodel = joint@Model, lavsamplestats = joint@SampleStats,
         lavcache = joint@cache, lavdata = joint@Data,
         lavimplied = joint@implied, lavh1 = joint@h1,
-        lavoptions = joint@Options, use.ginv = FALSE,
-        attr.Delta = TRUE, attr.tDVGVD = TRUE, attr.E.inv = TRUE,
-        attr.WLS.V = TRUE)
+        lavoptions = joint@Options, use_ginv = FALSE,
+        attr_delta = TRUE, attr_t_dvgvd = TRUE, attr_e_inv = TRUE,
+        attr_wls_v = TRUE)
       # nvar_cov <- tmp[, ] # remove attributes
       delta <- attr(tmp, "Delta")
       # e_inv <- attr(tmp, "E.inv")

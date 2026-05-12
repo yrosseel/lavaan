@@ -1,26 +1,26 @@
 # fitting function for standard ML
-lav_model_objective_ml <- function(Sigma.hat = NULL, Mu.hat = NULL,
-                         data.cov = NULL, data.mean = NULL,
-                         data.cov.log.det = NULL,
+lav_model_objective_ml <- function(sigma_hat = NULL, mu_hat = NULL,
+                         data_cov = NULL, data_mean = NULL,
+                         data_cov_log_det = NULL,
                          meanstructure = FALSE) {
   # FIXME: WHAT IS THE BEST THING TO DO HERE??
   # CURRENTLY: return Inf  (at least for nlminb, this works well)
-  if (!attr(Sigma.hat, "po")) {
+  if (!attr(sigma_hat, "po")) {
     return(Inf)
   }
 
 
-  Sigma.hat.inv <- attr(Sigma.hat, "inv")
-  Sigma.hat.log.det <- attr(Sigma.hat, "log.det")
-  nvar <- ncol(Sigma.hat)
+  sigma_hat_inv <- attr(sigma_hat, "inv")
+  sigma_hat_log_det <- attr(sigma_hat, "log.det")
+  nvar <- ncol(sigma_hat)
 
   if (!meanstructure) {
-    fx <- (Sigma.hat.log.det + sum(data.cov * Sigma.hat.inv) -
-      data.cov.log.det - nvar)
+    fx <- (sigma_hat_log_det + sum(data_cov * sigma_hat_inv) -
+      data_cov_log_det - nvar)
   } else {
-    W.tilde <- data.cov + tcrossprod(data.mean - Mu.hat)
-    fx <- (Sigma.hat.log.det + sum(W.tilde * Sigma.hat.inv) -
-      data.cov.log.det - nvar)
+    w_tilde <- data_cov + tcrossprod(data_mean - mu_hat)
+    fx <- (sigma_hat_log_det + sum(w_tilde * sigma_hat_inv) -
+      data_cov_log_det - nvar)
   }
 
   # no negative values
@@ -30,34 +30,35 @@ lav_model_objective_ml <- function(Sigma.hat = NULL, Mu.hat = NULL,
 }
 
 # fitting function for standard ML
-lav_model_objective_ml_res <- function(Sigma.hat = NULL, Mu.hat = NULL, PI = NULL,
-                             res.cov = NULL, res.int = NULL, res.slopes = NULL,
-                             res.cov.log.det = NULL,
-                             cov.x = NULL, mean.x = NULL) {
-  if (!attr(Sigma.hat, "po")) {
+lav_model_objective_ml_res <- function(sigma_hat = NULL, mu_hat = NULL, 
+                                       pi0 = NULL, res_cov = NULL,
+                                       res_int = NULL, res_slopes = NULL,
+                                       res_cov_log_det = NULL,
+                                       cov_x = NULL, mean_x = NULL) {
+  if (!attr(sigma_hat, "po")) {
     return(Inf)
   }
 
   # augmented mean.x + cov.x matrix
-  C3 <- rbind(
-    c(1, mean.x),
-    cbind(mean.x, cov.x + tcrossprod(mean.x))
+  c3 <- rbind(
+    c(1, mean_x),
+    cbind(mean_x, cov_x + tcrossprod(mean_x))
   )
 
-  Sigma.hat.inv <- attr(Sigma.hat, "inv")
-  Sigma.hat.log.det <- attr(Sigma.hat, "log.det")
-  nvar <- ncol(Sigma.hat)
+  sigma_hat_inv <- attr(sigma_hat, "inv")
+  sigma_hat_log_det <- attr(sigma_hat, "log.det")
+  nvar <- ncol(sigma_hat)
 
   # sigma
-  objective.sigma <- (Sigma.hat.log.det + sum(res.cov * Sigma.hat.inv) -
-    res.cov.log.det - nvar)
+  objective_sigma <- (sigma_hat_log_det + sum(res_cov * sigma_hat_inv) -
+    res_cov_log_det - nvar)
   # beta
-  OBS <- t(cbind(res.int, res.slopes))
-  EST <- t(cbind(Mu.hat, PI))
-  Diff <- OBS - EST
-  objective.beta <- sum(Sigma.hat.inv * crossprod(Diff, C3) %*% Diff)
+  obs <- t(cbind(res_int, res_slopes))
+  est <- t(cbind(mu_hat, pi0))
+  diff_1 <- obs - est
+  objective_beta <- sum(sigma_hat_inv * crossprod(diff_1, c3) %*% diff_1)
 
-  fx <- objective.sigma + objective.beta
+  fx <- objective_sigma + objective_beta
 
   # no negative values
   if (is.finite(fx) && fx < 0.0) fx <- 0.0
@@ -67,38 +68,39 @@ lav_model_objective_ml_res <- function(Sigma.hat = NULL, Mu.hat = NULL, PI = NUL
 
 
 # fitting function for restricted ML
-lav_model_objective_reml <- function(Sigma.hat = NULL, Mu.hat = NULL,
-                           data.cov = NULL, data.mean = NULL,
-                           data.cov.log.det = NULL,
+lav_model_objective_reml <- function(sigma_hat = NULL, mu_hat = NULL,
+                           data_cov = NULL, data_mean = NULL,
+                           data_cov_log_det = NULL,
                            meanstructure = FALSE,
                            group = 1L, lavmodel = NULL,
                            lavsamplestats = NULL, lavdata = NULL) {
-  if (!attr(Sigma.hat, "po")) {
+  if (!attr(sigma_hat, "po")) {
     return(Inf)
   }
 
-  Sigma.hat.inv <- attr(Sigma.hat, "inv")
-  Sigma.hat.log.det <- attr(Sigma.hat, "log.det")
-  nvar <- ncol(Sigma.hat)
+  sigma_hat_inv <- attr(sigma_hat, "inv")
+  sigma_hat_log_det <- attr(sigma_hat, "log.det")
+  nvar <- ncol(sigma_hat)
 
   if (!meanstructure) {
-    fx <- (Sigma.hat.log.det + sum(data.cov * Sigma.hat.inv) -
-      data.cov.log.det - nvar)
+    fx <- (sigma_hat_log_det + sum(data_cov * sigma_hat_inv) -
+      data_cov_log_det - nvar)
   } else {
-    W.tilde <- data.cov + tcrossprod(data.mean - Mu.hat)
-    fx <- (Sigma.hat.log.det + sum(W.tilde * Sigma.hat.inv) -
-      data.cov.log.det - nvar)
+    w_tilde <- data_cov + tcrossprod(data_mean - mu_hat)
+    fx <- (sigma_hat_log_det + sum(w_tilde * sigma_hat_inv) -
+      data_cov_log_det - nvar)
   }
 
-  lambda.idx <- which(names(lavmodel@GLIST) == "lambda")
-  LAMBDA <- lavmodel@GLIST[[lambda.idx[group]]]
-  data.cov.inv <- lavsamplestats@icov[[group]]
-  reml.h0 <- log(det(t(LAMBDA) %*% Sigma.hat.inv %*% LAMBDA))
-  reml.h1 <- log(det(t(LAMBDA) %*% data.cov.inv %*% LAMBDA))
+  lambda_idx <- which(names(lavmodel@GLIST) == "lambda")
+  mm_lambda <- lavmodel@GLIST[[lambda_idx[group]]]
+  data_cov_inv <- lavsamplestats@icov[[group]]
+  reml_h0 <- log(det(t(mm_lambda) %*% sigma_hat_inv %*% mm_lambda))
+  reml_h1 <- log(det(t(mm_lambda) %*% data_cov_inv %*% mm_lambda))
   nobs <- lavsamplestats@nobs[[group]]
 
-  # fx <- (Sigma.hat.log.det + tmp - data.cov.log.det - nvar) + 1/Ng * (reml.h0  - reml.h1)
-  fx <- fx + (1 / nobs * (reml.h0 - reml.h1))
+  # fx <- (Sigma.hat.log.det + tmp - data.cov.log.det - nvar) +
+  #                        1/Ng * (reml.h0  - reml.h1)
+  fx <- fx + (1 / nobs * (reml_h0 - reml_h1))
 
   # no negative values
   if (is.finite(fx) && fx < 0.0) fx <- 0.0
@@ -108,24 +110,27 @@ lav_model_objective_reml <- function(Sigma.hat = NULL, Mu.hat = NULL,
 
 # 'classic' fitting function for GLS
 # used again since 0.6-10 (we used the much slower lav_model_objective_wls before)
-lav_model_objective_gls <- function(Sigma.hat = NULL, Mu.hat = NULL,
-                          data.cov = NULL, data.cov.inv = NULL,
-						  data.mean = NULL,
-                          meanstructure = FALSE, correlation = FALSE) {
-  tmp <- data.cov.inv %*% (data.cov - Sigma.hat)
+lav_model_objective_gls <- function(sigma_hat = NULL,
+                                    mu_hat = NULL,
+                                    data_cov = NULL,
+                                    data_cov_inv = NULL,
+                                    data_mean = NULL,
+                                    meanstructure = FALSE,
+                                    correlation = FALSE) {
+  tmp <- data_cov_inv %*% (data_cov - sigma_hat)
   # tmp is not perfectly symmetric, so we use t(tmp) on the next line
   # to obtain the same value as lav_model_objective_wls
   fx <- 0.5 * sum(tmp * t(tmp))
 
   if (correlation) {
     # Bentler & Savalei (2010) eq 1.31
-    DD <- as.matrix(diag(tmp))
-    TT <- diag(nrow(data.cov)) + data.cov * data.cov.inv
-    fx <- fx - drop(t(DD) %*% solve(TT) %*% DD)
+    dd <- as.matrix(diag(tmp))
+    tt <- diag(nrow(data_cov)) + data_cov * data_cov_inv
+    fx <- fx - drop(t(dd) %*% solve(tt) %*% dd)
   }
 
   if (meanstructure) {
-    tmp2 <- sum(data.cov.inv * tcrossprod(data.mean - Mu.hat))
+    tmp2 <- sum(data_cov_inv * tcrossprod(data_mean - mu_hat))
     fx <- fx + tmp2
   }
 
@@ -137,13 +142,14 @@ lav_model_objective_gls <- function(Sigma.hat = NULL, Mu.hat = NULL,
 
 # general WLS estimator (Muthen, Appendix 4, eq 99 single group)
 # full weight (WLS.V) matrix
-lav_model_objective_wls <- function(WLS.est = NULL, WLS.obs = NULL, WLS.V = NULL) {
+lav_model_objective_wls <- function(wls_est = NULL,
+                                 wls_obs = NULL, wls_v = NULL) {
   # diff <- as.matrix(WLS.obs - WLS.est)
   # fx <- as.numeric( t(diff) %*% WLS.V %*% diff )
 
   # since 0.5-17, we use crossprod twice
-  diff <- WLS.obs - WLS.est
-  fx <- as.numeric(crossprod(crossprod(WLS.V, diff), diff))
+  diff <- wls_obs - wls_est
+  fx <- as.numeric(crossprod(crossprod(wls_v, diff), diff))
   # todo alternative: using chol(WLS.V)
 
   # no negative values
@@ -153,9 +159,10 @@ lav_model_objective_wls <- function(WLS.est = NULL, WLS.obs = NULL, WLS.V = NULL
 }
 
 # diagonally weighted LS (DWLS)
-lav_model_objective_dwls <- function(WLS.est = NULL, WLS.obs = NULL, WLS.VD = NULL) {
-  diff <- WLS.obs - WLS.est
-  fx <- sum(diff * diff * WLS.VD)
+lav_model_objective_dwls <- function(wls_est = NULL,
+                            wls_obs = NULL, wls_vd = NULL) {
+  diff <- wls_obs - wls_est
+  fx <- sum(diff * diff * wls_vd)
 
   # no negative values
   if (is.finite(fx) && fx < 0.0) fx <- 0.0
@@ -164,19 +171,19 @@ lav_model_objective_dwls <- function(WLS.est = NULL, WLS.obs = NULL, WLS.VD = NU
 }
 
 # Full Information ML estimator (FIML) handling the missing values
-lav_model_objective_fiml <- function(Sigma.hat = NULL, Mu.hat = NULL, Yp = NULL,
-                           h1 = NULL, N = NULL) {
-  if (is.null(N)) {
-    N <- sum(sapply(Yp, "[[", "freq"))
+lav_model_objective_fiml <- function(sigma_hat = NULL, mu_hat = NULL, yp = NULL,
+                           h1 = NULL, n = NULL) {
+  if (is.null(n)) {
+    n <- sum(sapply(yp, "[[", "freq"))
   }
 
   # Note: we ignore x.idx (if any)
   fx <- lav_mvnorm_missing_loglik_samplestats(
-    yp = Yp,
-    mu = Mu.hat, sigma_1 = Sigma.hat,
+    yp = yp,
+    mu = mu_hat, sigma_1 = sigma_hat,
     log2pi = FALSE,
     minus_two = TRUE
-  ) / N
+  ) / n
 
   # ajust for h1
   if (!is.null(h1)) {
@@ -198,14 +205,14 @@ lav_model_objective_fiml <- function(Sigma.hat = NULL, Mu.hat = NULL, Yp = NULL,
 # - 21/09/2016: added code for missing = doubly.robust (contributed by
 #   Myrsini Katsikatsou)
 # - HJ 18/10/2023: For sampling weights the lavcache$bifreq are weighted
-lav_model_objective_pml <- function(Sigma.hat = NULL, # model-based var/cov/cor
-                          Mu.hat = NULL, # model-based means
-                          TH = NULL, # model-based thresholds + means
-                          PI = NULL, # slopes
-                          th.idx = NULL, # threshold idx per variable
-                          num.idx = NULL, # which variables are numeric
-                          X = NULL, # raw data
-                          eXo = NULL, # eXo data
+lav_model_objective_pml <- function(sigma_hat = NULL, # model-based var/cov/cor
+                          mu_hat = NULL, # model-based means
+                          th = NULL, # model-based thresholds + means
+                          pi0 = NULL, # slopes
+                          th_idx = NULL, # threshold idx per variable
+                          num_idx = NULL, # which variables are numeric
+                          x = NULL, # raw data
+                          exo = NULL, # eXo data
                           wt = NULL, # case weights
                           lavcache = NULL, # housekeeping stuff
                           missing = NULL) { # how to deal with missings?
@@ -223,39 +230,39 @@ lav_model_objective_pml <- function(Sigma.hat = NULL, # model-based var/cov/cor
   # if not, return Inf; (at least with nlminb, this works well)
 
   # diagonal of Sigma.hat is not necessarily 1, even for categorical vars
-  Sigma.hat2 <- Sigma.hat
-  if (length(num.idx) > 0L) {
-    diag(Sigma.hat2)[-num.idx] <- 1
+  sigma_hat2 <- sigma_hat
+  if (length(num_idx) > 0L) {
+    diag(sigma_hat2)[-num_idx] <- 1
   } else {
-    diag(Sigma.hat2) <- 1
+    diag(sigma_hat2) <- 1
   }
   # all positive variances? (for continuous variables)
-  if (any(diag(Sigma.hat2) < 0)) {
-    OUT <- +Inf
-    attr(OUT, "logl") <- as.numeric(NA)
-    return(OUT)
+  if (any(diag(sigma_hat2) < 0)) {
+    out <- +Inf
+    attr(out, "logl") <- as.numeric(NA)
+    return(out)
   }
-  Cor.hat <- cov2cor(Sigma.hat2) # to get correlations (rho!)
-  cors <- lav_matrix_vech(Cor.hat, diagonal = FALSE)
+  cor_hat <- cov2cor(sigma_hat2) # to get correlations (rho!)
+  cors <- lav_matrix_vech(cor_hat, diagonal = FALSE)
 
   if (length(cors) > 0L && (any(abs(cors) > 1) ||
     any(is.na(cors)))) {
     # question: what is the best approach here??
-    OUT <- +Inf
-    attr(OUT, "logl") <- as.numeric(NA)
-    return(OUT)
+    out <- +Inf
+    attr(out, "logl") <- as.numeric(NA)
+    return(out)
   }
 
-  nvar <- nrow(Sigma.hat)
-  if (is.null(eXo)) {
+  nvar <- nrow(sigma_hat)
+  if (is.null(exo)) {
     nexo <- 0L
   } else {
-    nexo <- NCOL(eXo)
+    nexo <- NCOL(exo)
   }
   pstar <- nvar * (nvar - 1) / 2
-  ov.types <- rep("ordered", nvar)
-  if (length(num.idx) > 0L) {
-    ov.types[num.idx] <- "numeric"
+  ov_types <- rep("ordered", nvar)
+  if (length(num_idx) > 0L) {
+    ov_types[num_idx] <- "numeric"
   }
 
 
@@ -271,29 +278,29 @@ lav_model_objective_pml <- function(Sigma.hat = NULL, # model-based var/cov/cor
   #####  all ordered
   #####  no exogenous covariates
   #####
-  if (all(ov.types == "ordered") && nexo == 0L) {
+  if (all(ov_types == "ordered") && nexo == 0L) {
     # prepare for Myrsini's vectorization scheme
     long2 <- lav_pml_longvec_th_rho(
-      no.x = nvar,
-      all.thres = TH,
-      index.var.of.thres = th.idx,
-      rho.xixj = cors
+      no_x = nvar,
+      all_thres = th,
+      index_var_of_thres = th_idx,
+      rho_xixj = cors
     )
     # get expected probability per table, per pair
-    pairwisePI <- lav_pml_expprob_vec(
-      ind.vec = lavcache$long,
-      th.rho.vec = long2
+    pairwise_pi <- lav_pml_expprob_vec(
+      ind_vec = lavcache$long,
+      th_rho_vec = long2
     )
-    pairwisePI_orig <- pairwisePI # for doubly.robust
+    pairwise_pi_orig <- pairwise_pi # for doubly.robust
 
     # get frequency per table, per pair
-    logl <- sum(lavcache$bifreq * log(pairwisePI))
+    logl <- sum(lavcache$bifreq * log(pairwise_pi))
 
     # >>>>>>>> HJ/MK PML CODE >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
     # FYI the bifreq are already weighted so this will work. Alternatively:
     if (!is.null(wt)) {
-      logl <- sum(lavcache$sum_obs_weights_xixj_ab_vec * log(pairwisePI))
+      logl <- sum(lavcache$sum_obs_weights_xixj_ab_vec * log(pairwise_pi))
     }
 
     # more convenient fit function
@@ -308,37 +315,37 @@ lav_model_objective_pml <- function(Sigma.hat = NULL, # model-based var/cov/cor
 
     # remove zero props # FIXME!!! or add 0.5???
     # zero.idx <- which(prop == 0.0)
-    zero.idx <- which((prop == 0.0) | !is.finite(prop))
-    if (length(zero.idx) > 0L) {
-      freq <- freq[-zero.idx]
-      prop <- prop[-zero.idx]
-      pairwisePI <- pairwisePI[-zero.idx]
+    zero_idx <- which((prop == 0.0) | !is.finite(prop))
+    if (length(zero_idx) > 0L) {
+      freq <- freq[-zero_idx]
+      prop <- prop[-zero_idx]
+      pairwise_pi <- pairwise_pi[-zero_idx]
     }
     ## Fmin <- sum( prop*log(prop/pairwisePI) )
-    Fmin <- sum(freq * log(prop / pairwisePI)) # to avoid 'N'
+    fmin <- sum(freq * log(prop / pairwise_pi)) # to avoid 'N'
 
     if (missing == "available.cases" || missing == "doubly.robust") {
-      uniPI <- lav_pml_th_uni_prob(th = TH, th_idx = th.idx)
+      uni_pi <- lav_pml_th_uni_prob(th = th, th_idx = th_idx)
 
       # shortcuts
       unifreq <- lavcache$unifreq
       uninobs <- lavcache$uninobs
       uniweights <- lavcache$uniweights
 
-      logl <- logl + sum(uniweights * log(uniPI))
+      logl <- logl + sum(uniweights * log(uni_pi))
 
       uniprop <- unifreq / uninobs
 
       # remove zero props
       # uni.zero.idx <- which(uniprop == 0.0)
-      uni.zero.idx <- which((uniprop == 0.0) | !is.finite(uniprop))
-      if (length(uni.zero.idx) > 0L) {
-        uniprop <- uniprop[-uni.zero.idx]
-        uniPI <- uniPI[-uni.zero.idx]
-        uniweights <- uniweights[-uni.zero.idx]
+      uni_zero_idx <- which((uniprop == 0.0) | !is.finite(uniprop))
+      if (length(uni_zero_idx) > 0L) {
+        uniprop <- uniprop[-uni_zero_idx]
+        uni_pi <- uni_pi[-uni_zero_idx]
+        uniweights <- uniweights[-uni_zero_idx]
       }
 
-      Fmin <- Fmin + sum(uniweights * log(uniprop / uniPI))
+      fmin <- fmin + sum(uniweights * log(uniprop / uni_pi))
     }
 
     if (missing == "doubly.robust") {
@@ -350,14 +357,14 @@ lav_model_objective_pml <- function(Sigma.hat = NULL, # model-based var/cov/cor
       # one of the variables is observed (hence not contributing to the summand)
       # there is no need to construct an index vector for summing appropriately
       # within each individual.
-      log_pairwisePI_orig <- log(pairwisePI_orig)
-      pairwiseProbGivObs <- lavcache$pairwiseProbGivObs
-      tmp_prod <- t(t(pairwiseProbGivObs) * log_pairwisePI_orig)
+      log_pairwise_pi_orig <- log(pairwise_pi_orig)
+      pairwise_prob_giv_obs <- lavcache$pairwiseProbGivObs
+      tmp_prod <- t(t(pairwise_prob_giv_obs) * log_pairwise_pi_orig)
 
-      SumElnfijCasewise <- apply(tmp_prod, 1, sum)
-      SumElnfij <- sum(SumElnfijCasewise)
-      logl <- logl + SumElnfij
-      Fmin <- Fmin - SumElnfij
+      sum_elnfij_casewise <- apply(tmp_prod, 1, sum)
+      sum_elnfij <- sum(sum_elnfij_casewise)
+      logl <- logl + sum_elnfij
+      fmin <- fmin - sum_elnfij
 
       # COMPUTE THE THE SUM OF THE EXPECTED UNIVARIATE CONDITIONAL LIKELIHOODS
       # SUM_{i,j} [ E_{Yj|y^o}(lnf(Yj|yi))) ]
@@ -368,40 +375,41 @@ lav_model_objective_pml <- function(Sigma.hat = NULL, # model-based var/cov/cor
       # are listed in the vector ModProbY1Gy2 is as follows:
       # y1|y2, y1|y3, ..., y1|yp, y2|y1, y2|y3, ..., y2|yp,
       # ..., yp|y1, yp|y2, ..., yp|y(p-1). Within each pair of variables the
-      # index "a" which represents the response category of variable yi runs faster than
-      # "b" which represents the response category of the given variable yj.
+      # index "a" which represents the response category of variable yi runs
+      # faster than "b" which represents the response category of the given
+      # variable yj.
       # The computation of these probabilities are based on the model-implied
       # bivariate probabilities p(y_i=a,y_j=b). To do the appropriate summations
-      # and divisions we need some index vectors to keep track of the index i, j,
+      # and divisions we need some index vectors to keep track of the index i,j,
       # a, and b, as well as the pair index. These index vectors should be
       # computed once and stored in lavcache. About where in the lavaan code
       # we will add the computations and how they will be done please see the
       # file "new objects in lavcache for DR-PL.r"
 
-      idx.pairs <- lavcache$idx.pairs
-      idx.cat.y2.split <- lavcache$idx.cat.y2.split
-      idx.cat.y1.split <- lavcache$idx.cat.y1.split
-      idx.Y1 <- lavcache$idx.Y1
-      idx.Gy2 <- lavcache$idx.Gy2
-      idx.cat.Y1 <- lavcache$idx.cat.Y1
-      idx.cat.Gy2 <- lavcache$idx.cat.Gy2
-      id.uniPrGivObs <- lavcache$id.uniPrGivObs
+      idx_pairs <- lavcache$idx.pairs
+      idx_cat_y2_split <- lavcache$idx.cat.y2.split
+      idx_cat_y1_split <- lavcache$idx.cat.y1.split
+      idx_y1 <- lavcache$idx.Y1
+      idx_gy2 <- lavcache$idx.Gy2
+      # idx_cat_y1 <- lavcache$idx.cat.Y1
+      idx_cat_gy2 <- lavcache$idx.cat.Gy2
+      id_uni_pr_giv_obs <- lavcache$id.uniPrGivObs
       # the latter keeps track which variable each column of the matrix
       # univariateProbGivObs refers to
 
       # For the function lav_pml_bivprob_unicondprob see the .r file
       # with the same name.
-      ModProbY1Gy2 <- lav_pml_bivprob_unicondprob(
-        biv_prob = pairwisePI_orig,
+      mod_prob_y1gy2 <- lav_pml_bivprob_unicondprob(
+        biv_prob = pairwise_pi_orig,
         nvar = nvar,
-        idx_pairs = idx.pairs,
-        idx_y1 = idx.Y1,
-        idx_gy2 = idx.Gy2,
-        idx_cat_y1_split = idx.cat.y1.split,
-        idx_cat_y2_split = idx.cat.y2.split
+        idx_pairs = idx_pairs,
+        idx_y1 = idx_y1,
+        idx_gy2 = idx_gy2,
+        idx_cat_y1_split = idx_cat_y1_split,
+        idx_cat_y2_split = idx_cat_y2_split
       )
 
-      log_ModProbY1Gy2 <- log(ModProbY1Gy2)
+      log_mod_prob_y1gy2 <- log(mod_prob_y1gy2)
 
       # Let univariateProbGivObs be the matrix of the conditional univariate
       # probabilities Pr(y_i=a|y^o) that has been computed in advance and are
@@ -416,45 +424,45 @@ lav_model_objective_pml <- function(Sigma.hat = NULL, # model-based var/cov/cor
 
       # Compute for each case the product  Pr(y_i=a|y^o) * log[ p(y_i=a|y_j=b) ]
       # i.e. univariateProbGivObs * log_ModProbY1Gy2
-      univariateProbGivObs <- lavcache$univariateProbGivObs
-      nobs <- nrow(X)
-      uniweights.casewise <- lavcache$uniweights.casewise
-      id.cases.with.missing <- which(uniweights.casewise > 0)
-      no.cases.with.missing <- length(id.cases.with.missing)
-      no.obs.casewise <- nvar - uniweights.casewise
-      idx.missing.var <- apply(X, 1, function(x) {
+      univariate_prob_giv_obs <- lavcache$univariateProbGivObs
+      nobs <- nrow(x)
+      uniweights_casewise <- lavcache$uniweights.casewise
+      id_cases_with_missing <- which(uniweights_casewise > 0)
+      no_cases_with_missing <- length(id_cases_with_missing)
+      no_obs_casewise <- nvar - uniweights_casewise
+      idx_missing_var <- apply(x, 1, function(x) {
         which(is.na(x))
       })
-      idx.observed.var <- lapply(idx.missing.var, function(x) {
+      idx_observed_var <- lapply(idx_missing_var, function(x) {
         c(1:nvar)[-x]
       })
-      idx.cat.observed.var <- sapply(1:nobs, function(i) {
-        X[i, idx.observed.var[[i]]]
+      idx_cat_observed_var <- sapply(1:nobs, function(i) {
+        x[i, idx_observed_var[[i]]]
       })
-      ElnyiGivyjbCasewise <- sapply(1:no.cases.with.missing, function(i) {
-        tmp.id.case <- id.cases.with.missing[i]
-        tmp.no.mis <- uniweights.casewise[tmp.id.case]
-        tmp.idx.mis <- idx.missing.var[[tmp.id.case]]
-        tmp.idx.obs <- idx.observed.var[[tmp.id.case]]
-        tmp.no.obs <- no.obs.casewise[tmp.id.case]
-        tmp.idx.cat.obs <- idx.cat.observed.var[[tmp.id.case]]
-        tmp.uniProbGivObs.i <- univariateProbGivObs[tmp.id.case, ]
-        sapply(1:tmp.no.mis, function(k) {
-          tmp.idx.mis.var <- tmp.idx.mis[k]
-          tmp.uniProbGivObs.ik <-
-            tmp.uniProbGivObs.i[id.uniPrGivObs == tmp.idx.mis.var]
-          tmp.log_ModProbY1Gy2 <- sapply(1:tmp.no.obs, function(z) {
-            log_ModProbY1Gy2[idx.Y1 == tmp.idx.mis.var &
-              idx.Gy2 == tmp.idx.obs[z] &
-              idx.cat.Gy2 == tmp.idx.cat.obs[z]]
+      elnyi_givyjb_casewise <- sapply(1:no_cases_with_missing, function(i) {
+        tmp_id_case <- id_cases_with_missing[i]
+        tmp_no_mis <- uniweights_casewise[tmp_id_case]
+        tmp_idx_mis <- idx_missing_var[[tmp_id_case]]
+        tmp_idx_obs <- idx_observed_var[[tmp_id_case]]
+        tmp_no_obs <- no_obs_casewise[tmp_id_case]
+        tmp_idx_cat_obs <- idx_cat_observed_var[[tmp_id_case]]
+        tmp_uni_prob_giv_obs_i <- univariate_prob_giv_obs[tmp_id_case, ]
+        sapply(1:tmp_no_mis, function(k) {
+          tmp_idx_mis_var <- tmp_idx_mis[k]
+          tmp_uni_prob_giv_obs_ik <-
+            tmp_uni_prob_giv_obs_i[id_uni_pr_giv_obs == tmp_idx_mis_var]
+          tmp_log_mod_prob_y1gy2 <- sapply(1:tmp_no_obs, function(z) {
+            log_mod_prob_y1gy2[idx_y1 == tmp_idx_mis_var &
+              idx_gy2 == tmp_idx_obs[z] &
+              idx_cat_gy2 == tmp_idx_cat_obs[z]]
           })
-          sum(tmp.log_ModProbY1Gy2 * tmp.uniProbGivObs.ik)
+          sum(tmp_log_mod_prob_y1gy2 * tmp_uni_prob_giv_obs_ik)
         })
       })
-      ElnyiGivyjb <- sum(unlist(ElnyiGivyjbCasewise))
-      logl <- logl + ElnyiGivyjb
+      elnyi_givyjb <- sum(unlist(elnyi_givyjb_casewise))
+      logl <- logl + elnyi_givyjb
       # for the Fmin function
-      Fmin <- Fmin - ElnyiGivyjb
+      fmin <- fmin - elnyi_givyjb
     } # end of if (missing =="doubly.robust")
 
 
@@ -466,75 +474,75 @@ lav_model_objective_pml <- function(Sigma.hat = NULL, # model-based var/cov/cor
     # mixed ordered/numeric variables, but no exogenous covariates
     # - no need to compute 'casewise' (log)likelihoods
 
-    PSTAR <- matrix(0, nvar, nvar) # utility matrix, to get indices
-    PSTAR[lav_matrix_vech_idx(nvar, diagonal = FALSE)] <- 1:pstar
-    N <- NROW(X)
+    pstar_1 <- matrix(0, nvar, nvar) # utility matrix, to get indices
+    pstar_1[lav_matrix_vech_idx(nvar, diagonal = FALSE)] <- 1:pstar
+    # n <- NROW(x)
 
-    logLikPair <- numeric(pstar) # logl per pair (summed over cases)
+    log_lik_pair <- numeric(pstar) # logl per pair (summed over cases)
     for (j in seq_len(nvar - 1L)) {
       for (i in (j + 1L):nvar) {
-        pstar.idx <- PSTAR[i, j]
-        if (ov.types[i] == "numeric" &&
-          ov.types[j] == "numeric") {
-          logLIK <- lav_mvnorm_loglik_data(
-            y = X[, c(i, j)], wt = wt, mu = Mu.hat[c(i, j)],
-            sigma_1 = Sigma.hat[c(i, j), c(i, j)], casewise = TRUE
+        pstar_idx <- pstar_1[i, j]
+        if (ov_types[i] == "numeric" &&
+          ov_types[j] == "numeric") {
+          log_lik <- lav_mvnorm_loglik_data(
+            y = x[, c(i, j)], wt = wt, mu = mu_hat[c(i, j)],
+            sigma_1 = sigma_hat[c(i, j), c(i, j)], casewise = TRUE
           )
-          logLikPair[pstar.idx] <- sum(logLIK, na.rm = TRUE)
-        } else if (ov.types[i] == "numeric" &&
-          ov.types[j] == "ordered") {
+          log_lik_pair[pstar_idx] <- sum(log_lik, na.rm = TRUE)
+        } else if (ov_types[i] == "numeric" &&
+          ov_types[j] == "ordered") {
           # polyserial correlation
-          logLIK <- lav_bvmix_lik(
-            y1 = X[, i], y2 = X[, j],
+          log_lik <- lav_bvmix_lik(
+            y1 = x[, i], y2 = x[, j],
             wt = wt,
-            evar_y1 = Sigma.hat[i, i],
-            beta_y1 = Mu.hat[i],
-            th_y2 = TH[th.idx == j],
-            rho = Cor.hat[i, j], take_log = TRUE
+            evar_y1 = sigma_hat[i, i],
+            beta_y1 = mu_hat[i],
+            th_y2 = th[th_idx == j],
+            rho = cor_hat[i, j], take_log = TRUE
           )
-          logLikPair[pstar.idx] <- sum(logLIK, na.rm = TRUE)
-        } else if (ov.types[j] == "numeric" &&
-          ov.types[i] == "ordered") {
+          log_lik_pair[pstar_idx] <- sum(log_lik, na.rm = TRUE)
+        } else if (ov_types[j] == "numeric" &&
+          ov_types[i] == "ordered") {
           # polyserial correlation
-          logLIK <- lav_bvmix_lik(
-            y1 = X[, j], y2 = X[, i],
+          log_lik <- lav_bvmix_lik(
+            y1 = x[, j], y2 = x[, i],
             wt = wt,
-            evar_y1 = Sigma.hat[j, j],
-            beta_y1 = Mu.hat[j],
-            th_y2 = TH[th.idx == i],
-            rho = Cor.hat[i, j], take_log = TRUE
+            evar_y1 = sigma_hat[j, j],
+            beta_y1 = mu_hat[j],
+            th_y2 = th[th_idx == i],
+            rho = cor_hat[i, j], take_log = TRUE
           )
-          logLikPair[pstar.idx] <- sum(logLIK, na.rm = TRUE)
-        } else if (ov.types[i] == "ordered" &&
-          ov.types[j] == "ordered") {
+          log_lik_pair[pstar_idx] <- sum(log_lik, na.rm = TRUE)
+        } else if (ov_types[i] == "ordered" &&
+          ov_types[j] == "ordered") {
           # polychoric correlation
-          pairwisePI <- lav_bvord_noexo_pi(
-            rho = Cor.hat[i, j],
-            th_y1 = TH[th.idx == i],
-            th_y2 = TH[th.idx == j]
+          pairwise_pi <- lav_bvord_noexo_pi(
+            rho = cor_hat[i, j],
+            th_y1 = th[th_idx == i],
+            th_y2 = th[th_idx == j]
           )
           # avoid zeroes
-          pairwisePI[pairwisePI < .Machine$double.eps] <-
+          pairwise_pi[pairwise_pi < .Machine$double.eps] <-
             .Machine$double.eps
           # note: missing values are just not counted
-          FREQ <- lav_bvord_freq(X[, i], X[, j], wt = wt)
-          logLikPair[pstar.idx] <- sum(FREQ * log(pairwisePI))
+          freq_1 <- lav_bvord_freq(x[, i], x[, j], wt = wt)
+          log_lik_pair[pstar_idx] <- sum(freq_1 * log(pairwise_pi))
         }
       }
     } # all pairs
 
-    na.idx <- which(is.na(logLikPair))
-    if (length(na.idx) > 0L) {
+    na_idx <- which(is.na(log_lik_pair))
+    if (length(na_idx) > 0L) {
       lav_msg_warn(gettext("some pairs produce NA values for logl:"),
-        lav_msg_view(round(logLikPair, 3), "none")
+        lav_msg_view(round(log_lik_pair, 3), "none")
       )
     }
 
     # sum over pairs
-    logl <- sum(logLikPair)
+    logl <- sum(log_lik_pair)
 
     # Fmin
-    Fmin <- (-1) * logl
+    fmin <- (-1) * logl
 
 
     ##### Case 3:
@@ -542,68 +550,68 @@ lav_model_objective_pml <- function(Sigma.hat = NULL, # model-based var/cov/cor
     #####  exogenous covariates
     #####  (conditional.x = TRUE)
   } else {
-    LIK <- matrix(0, nrow(X), pstar) # likelihood per case, per pair
-    PSTAR <- matrix(0, nvar, nvar) # utility matrix, to get indices
-    PSTAR[lav_matrix_vech_idx(nvar, diagonal = FALSE)] <- 1:pstar
-    N <- NROW(X)
+    lik <- matrix(0, nrow(x), pstar) # likelihood per case, per pair
+    pstar_1 <- matrix(0, nvar, nvar) # utility matrix, to get indices
+    pstar_1[lav_matrix_vech_idx(nvar, diagonal = FALSE)] <- 1:pstar
+    # n <- NROW(x)
 
     for (j in seq_len(nvar - 1L)) {
       for (i in (j + 1L):nvar) {
-        pstar.idx <- PSTAR[i, j]
+        pstar_idx <- pstar_1[i, j]
         # cat("pstar.idx =", pstar.idx, "i = ", i, " j = ", j, "\n")
-        if (ov.types[i] == "numeric" &&
-            ov.types[j] == "numeric") {
+        if (ov_types[i] == "numeric" &&
+            ov_types[j] == "numeric") {
           # ordinary pearson correlation
-          LIK[, pstar.idx] <-
+          lik[, pstar_idx] <-
             lav_bvreg_lik(
-              y1 = X[, i], y2 = X[, j], exo = eXo,
+              y1 = x[, i], y2 = x[, j], exo = exo,
               wt = wt,
-              evar_y1 = Sigma.hat[i, i],
-              beta_y1 = c(Mu.hat[i], PI[i, ]),
-              evar_y2 = Sigma.hat[j, j],
-              beta_y2 = c(Mu.hat[j], PI[j, ]),
-              rho = Cor.hat[i, j]
+              evar_y1 = sigma_hat[i, i],
+              beta_y1 = c(mu_hat[i], pi0[i, ]),
+              evar_y2 = sigma_hat[j, j],
+              beta_y2 = c(mu_hat[j], pi0[j, ]),
+              rho = cor_hat[i, j]
             )
-        } else if (ov.types[i] == "numeric" &&
-                   ov.types[j] == "ordered") {
+        } else if (ov_types[i] == "numeric" &&
+                   ov_types[j] == "ordered") {
           # polyserial correlation
           ### FIXME: th.y2 should go into ps_lik!!!
-          LIK[, pstar.idx] <-
+          lik[, pstar_idx] <-
             lav_bvmix_lik(
-              y1 = X[, i], y2 = X[, j], exo = eXo,
+              y1 = x[, i], y2 = x[, j], exo = exo,
               wt = wt,
-              evar_y1 = Sigma.hat[i, i],
-              beta_y1 = c(Mu.hat[i], PI[i, ]),
-              th_y2 = TH[th.idx == j],
-              sl_y2 = PI[j, ],
-              rho = Cor.hat[i, j]
+              evar_y1 = sigma_hat[i, i],
+              beta_y1 = c(mu_hat[i], pi0[i, ]),
+              th_y2 = th[th_idx == j],
+              sl_y2 = pi0[j, ],
+              rho = cor_hat[i, j]
             )
-        } else if (ov.types[j] == "numeric" &&
-                   ov.types[i] == "ordered") {
+        } else if (ov_types[j] == "numeric" &&
+                   ov_types[i] == "ordered") {
           # polyserial correlation
           ### FIXME: th.y1 should go into ps_lik!!!
-          LIK[, pstar.idx] <-
+          lik[, pstar_idx] <-
             lav_bvmix_lik(
-              y1 = X[, j], y2 = X[, i], exo = eXo,
+              y1 = x[, j], y2 = x[, i], exo = exo,
               wt = wt,
-              evar_y1 = Sigma.hat[j, j],
-              beta_y1 = c(Mu.hat[j], PI[j, ]),
-              th_y2 = TH[th.idx == i],
-              sl_y2 = PI[i, ],
-              rho = Cor.hat[i, j]
+              evar_y1 = sigma_hat[j, j],
+              beta_y1 = c(mu_hat[j], pi0[j, ]),
+              th_y2 = th[th_idx == i],
+              sl_y2 = pi0[i, ],
+              rho = cor_hat[i, j]
             )
-        } else if (ov.types[i] == "ordered" &&
-                   ov.types[j] == "ordered") {
-          LIK[, pstar.idx] <-
+        } else if (ov_types[i] == "ordered" &&
+                   ov_types[j] == "ordered") {
+          lik[, pstar_idx] <-
             lav_pml_bi_lik_x(
-              y1 = X[, i],
-              y2 = X[, j],
-              rho = Sigma.hat[i, j],
-              th_y1 = TH[th.idx == i],
-              th_y2 = TH[th.idx == j],
-              exo = eXo,
-              pi_y1 = PI[i, ],
-              pi_y2 = PI[j, ],
+              y1 = x[, i],
+              y2 = x[, j],
+              rho = sigma_hat[i, j],
+              th_y1 = th[th_idx == i],
+              th_y2 = th[th_idx == j],
+              exo = exo,
+              pi_y1 = pi0[i, ],
+              pi_y2 = pi0[j, ],
               missing_ind = missing
             )
         }
@@ -612,60 +620,60 @@ lav_model_objective_pml <- function(Sigma.hat = NULL, # model-based var/cov/cor
 
     # check for zero likelihoods/probabilities
     # FIXME: or should we replace them with a tiny number?
-    if (any(LIK == 0.0, na.rm = TRUE)) {
-      OUT <- +Inf
-      attr(OUT, "logl") <- as.numeric(NA)
-      return(OUT)
+    if (any(lik == 0.0, na.rm = TRUE)) {
+      out <- +Inf
+      attr(out, "logl") <- as.numeric(NA)
+      return(out)
     }
 
     # loglikelihood
-    LogLIK.cases <- log(LIK)
+    log_lik_cases <- log(lik)
 
     # sum over cases
-    LogLIK.pairs <- colSums(LogLIK.cases, na.rm = TRUE)
+    log_lik_pairs <- colSums(log_lik_cases, na.rm = TRUE)
 
     # sum over pairs
-    logl <- logl_pairs <- sum(LogLIK.pairs)
+    logl <- logl_pairs <- sum(log_lik_pairs)
 
-    if (missing == "available.cases" && all(ov.types == "ordered") &&
+    if (missing == "available.cases" && all(ov_types == "ordered") &&
       nexo != 0L) {
-      uni_LIK <- matrix(0, nrow(X), ncol(X))
+      uni_lik <- matrix(0, nrow(x), ncol(x))
       for (i in seq_len(nvar)) {
-        uni_LIK[, i] <- lav_pml_uni_lik(
-          y1 = X[, i],
-          th_y1 = TH[th.idx == i],
-          exo = eXo,
-          pi_y1 = PI[i, ]
+        uni_lik[, i] <- lav_pml_uni_lik(
+          y1 = x[, i],
+          th_y1 = th[th_idx == i],
+          exo = exo,
+          pi_y1 = pi0[i, ]
         )
       }
 
-      if (any(uni_LIK == 0.0, na.rm = TRUE)) {
-        OUT <- +Inf
-        attr(OUT, "logl") <- as.numeric(NA)
-        return(OUT)
+      if (any(uni_lik == 0.0, na.rm = TRUE)) {
+        out <- +Inf
+        attr(out, "logl") <- as.numeric(NA)
+        return(out)
       }
 
-      uni_logLIK_cases <- log(uni_LIK) * lavcache$uniweights.casewise
+      uni_log_lik_cases <- log(uni_lik) * lavcache$uniweights.casewise
 
       # sum over cases
-      uni_logLIK_varwise <- colSums(uni_logLIK_cases)
+      uni_log_lik_varwise <- colSums(uni_log_lik_cases)
 
       # sum over variables
-      uni_logLIK <- sum(uni_logLIK_varwise)
+      uni_log_lik <- sum(uni_log_lik_varwise)
 
       # add with the pairwise part of LogLik
-      logl <- logl_pairs + uni_logLIK
+      logl <- logl_pairs + uni_log_lik
     }
 
     # we minimise
-    Fmin <- (-1) * logl
+    fmin <- (-1) * logl
   }
 
 
   # here, we should have two quantities: logl and Fmin
 
   # function value as returned to the minimizer
-  fx <- Fmin
+  fx <- fmin
 
   # attach 'loglikelihood'
   attr(fx, "logl") <- logl
@@ -676,11 +684,11 @@ lav_model_objective_pml <- function(Sigma.hat = NULL, # model-based var/cov/cor
 # full information maximum likelihood
 # underlying multivariate normal approach (see Joreskog & Moustaki, 2001)
 #
-lav_model_objective_fml <- function(Sigma.hat = NULL, # model-based var/cov/cor
-                          TH = NULL, # model-based thresholds + means
-                          th.idx = NULL, # threshold idx per variable
-                          num.idx = NULL, # which variables are numeric
-                          X = NULL, # raw data
+lav_model_objective_fml <- function(sigma_hat = NULL, # model-based var/cov/cor
+                          th = NULL, # model-based thresholds + means
+                          th_idx = NULL, # threshold idx per variable
+                          num_idx = NULL, # which variables are numeric
+                          x = NULL, # raw data
                           lavcache = NULL) { # patterns
 
   # YR 27 aug 2013
@@ -688,36 +696,36 @@ lav_model_objective_fml <- function(Sigma.hat = NULL, # model-based var/cov/cor
 
   # first of all: check if all correlations are within [-1,1]
   # if not, return Inf; (at least with nlminb, this works well)
-  cors <- Sigma.hat[lower.tri(Sigma.hat)]
+  cors <- sigma_hat[lower.tri(sigma_hat)]
 
   if (any(abs(cors) > 1)) {
     return(+Inf)
   }
 
-  nvar <- nrow(Sigma.hat)
-  pstar <- nvar * (nvar - 1) / 2
-  ov.types <- rep("ordered", nvar)
-  if (length(num.idx) > 0L) ov.types[num.idx] <- "numeric"
-  MEAN <- rep(0, nvar)
+  nvar <- nrow(sigma_hat)
+  # pstar <- nvar * (nvar - 1) / 2
+  ov_types <- rep("ordered", nvar)
+  if (length(num_idx) > 0L) ov_types[num_idx] <- "numeric"
+  mean_1 <- rep(0, nvar)
 
   # shortcut for all ordered - per pattern
-  if (all(ov.types == "ordered")) {
-    PAT <- lavcache$pat
-    npatterns <- nrow(PAT)
-    freq <- as.numeric(rownames(PAT))
-    PI <- numeric(npatterns)
-    TH.VAR <- lapply(1:nvar, function(x) c(-Inf, TH[th.idx == x], +Inf))
+  if (all(ov_types == "ordered")) {
+    pat <- lavcache$pat
+    npatterns <- nrow(pat)
+    freq <- as.numeric(rownames(pat))
+    pi0 <- numeric(npatterns)
+    th_var <- lapply(1:nvar, function(x) c(-Inf, th[th_idx == x], +Inf))
     # FIXME!!! ok to set diagonal to 1.0?
-    diag(Sigma.hat) <- 1.0
+    diag(sigma_hat) <- 1.0
     for (r in 1:npatterns) {
       # compute probability for each pattern
-      lower <- sapply(1:nvar, function(x) TH.VAR[[x]][PAT[r, x]])
-      upper <- sapply(1:nvar, function(x) TH.VAR[[x]][PAT[r, x] + 1L])
+      lower <- sapply(1:nvar, function(x) th_var[[x]][pat[r, x]])
+      upper <- sapply(1:nvar, function(x) th_var[[x]][pat[r, x] + 1L])
 
 
       # how accurate must we be here???
-      PI[r] <- sadmvn(lower, upper,
-        mean = MEAN, varcov = Sigma.hat,
+      pi0[r] <- sadmvn(lower, upper,
+        mean = mean_1, varcov = sigma_hat,
         maxpts = 10000 * nvar, abseps = 1e-07
       )
     }
@@ -727,44 +735,44 @@ lav_model_objective_fml <- function(Sigma.hat = NULL, # model-based var/cov/cor
     # more convenient fit function
     prop <- freq / sum(freq)
     # remove zero props # FIXME!!! or add 0.5???
-    zero.idx <- which(prop == 0.0)
-    if (length(zero.idx) > 0L) {
-      prop <- prop[-zero.idx]
-      PI <- PI[-zero.idx]
+    zero_idx <- which(prop == 0.0)
+    if (length(zero_idx) > 0L) {
+      prop <- prop[-zero_idx]
+      pi0 <- pi0[-zero_idx]
     }
-    Fmin <- sum(prop * log(prop / PI))
+    fmin <- sum(prop * log(prop / pi0))
   } else { # case-wise
-    PI <- numeric(nobs)
+    pi0 <- numeric(nobs)
     for (i in 1:nobs) {
       # compute probability for each case
-      PI[i] <- lav_msg_stop(gettext("not implemented"))
+      pi0[i] <- lav_msg_stop(gettext("not implemented"))
     }
     # sum (log)likelihood over all observations
-    LogLik <- sum(log(PI))
+    # log_lik <- sum(log(pi0))
     lav_msg_stop(gettext("not implemented"))
   }
 
   # function value as returned to the minimizer
   # fx <- -1 * LogLik
-  fx <- Fmin
+  fx <- fmin
 
   fx
 }
 
 lav_model_objective_mml <- function(lavmodel = NULL,
-                          THETA = NULL,
-                          TH = NULL,
-                          GLIST = NULL,
+                          mm_theta = NULL,
+                          th = NULL,
+                          glist = NULL,
                           group = 1L,
                           lavdata = NULL,
-                          sample.mean = NULL,
-                          sample.mean.x = NULL,
+                          sample_mean = NULL,
+                          sample_mean_x = NULL,
                           lavcache = NULL) {
   # compute case-wise likelihoods
   lik <- lav_model_lik_mml(
-    lavmodel = lavmodel, THETA = THETA, TH = TH,
-    GLIST = GLIST, group = group, lavdata = lavdata,
-    sample.mean = sample.mean, sample.mean.x = sample.mean.x,
+    lavmodel = lavmodel, mm_theta = mm_theta, th = th,
+    glist = glist, group = group, lavdata = lavdata,
+    sample_mean = sample_mean, sample_mean_x = sample_mean_x,
     lavcache = lavcache
   )
 
@@ -778,29 +786,29 @@ lav_model_objective_mml <- function(lavmodel = NULL,
 }
 
 lav_model_objective_2l <- function(lavmodel = NULL,
-                         GLIST = NULL,
-                         Y1 = NULL, # only for missing
-                         Lp = NULL,
-                         Mp = NULL,
+                         glist = NULL,
+                         y1 = NULL, # only for missing
+                         lp = NULL,
+                         mp = NULL,
                          lavsamplestats = NULL,
                          group = 1L) {
   # compute model-implied statistics for all blocks
-  implied <- lav_model_implied(lavmodel, GLIST = GLIST)
+  implied <- lav_model_implied(lavmodel, GLIST = glist)
 
   # here, we assume only 2!!! levels, at [[1]] and [[2]]
   if (lavmodel@conditional.x) {
-    Res.Sigma.W <- implied$res.cov[[   (group - 1) * 2 + 1]]
-    Res.Int.W   <- implied$res.int[[   (group - 1) * 2 + 1]]
-    Res.Pi.W    <- implied$res.slopes[[(group - 1) * 2 + 1]]
+    res_sigma_w <- implied$res.cov[[(group - 1) * 2 + 1]]
+    res_int_w   <- implied$res.int[[(group - 1) * 2 + 1]]
+    res_pi_w    <- implied$res.slopes[[(group - 1) * 2 + 1]]
 
-    Res.Sigma.B <- implied$res.cov[[   (group - 1) * 2 + 2]]
-    Res.Int.B   <- implied$res.int[[   (group - 1) * 2 + 2]]
-    Res.Pi.B    <- implied$res.slopes[[(group - 1) * 2 + 2]]
+    res_sigma_b <- implied$res.cov[[(group - 1) * 2 + 2]]
+    res_int_b   <- implied$res.int[[(group - 1) * 2 + 2]]
+    res_pi_b    <- implied$res.slopes[[(group - 1) * 2 + 2]]
   } else {
-    Sigma.W <- implied$cov[[( group - 1) * 2 + 1]]
-    Mu.W    <- implied$mean[[(group - 1) * 2 + 1]]
-    Sigma.B <- implied$cov[[ (group - 1) * 2 + 2]]
-    Mu.B    <- implied$mean[[(group - 1) * 2 + 2]]
+    sigma_w <- implied$cov[[(group - 1) * 2 + 1]]
+    mu_w    <- implied$mean[[(group - 1) * 2 + 1]]
+    sigma_b <- implied$cov[[(group - 1) * 2 + 2]]
+    mu_b    <- implied$mean[[(group - 1) * 2 + 2]]
   }
 
   if (lavsamplestats@missing.flag) {
@@ -817,31 +825,31 @@ lav_model_objective_2l <- function(lavmodel = NULL,
     #   return(+Inf)
     # }
 
-    Y2 <- lavsamplestats@YLp[[group]][[2]]$Y2
-    Yp <- lavsamplestats@missing[[group]]
+    y2 <- lavsamplestats@YLp[[group]][[2]]$Y2
+    # yp <- lavsamplestats@missing[[group]]
     loglik <- lav_mvnorm_cluster_missing_loglik_samplestats_2l(
-      y1 = Y1,
-      y2 = Y2, lp = Lp, mp = Mp,
-      mu_w = Mu.W, sigma_w = Sigma.W,
-      mu_b = Mu.B, sigma_b = Sigma.B,
+      y1 = y1,
+      y2 = y2, lp = lp, mp = mp,
+      mu_w = mu_w, sigma_w = sigma_w,
+      mu_b = mu_b, sigma_b = sigma_b,
       log2pi = FALSE, minus_two = TRUE
     )
   } else {
-    YLp <- lavsamplestats@YLp[[group]]
+    ylp <- lavsamplestats@YLp[[group]]
     if (lavmodel@conditional.x) {
       loglik <- lav_mvreg_cluster_loglik_samplestats_2l(
-        YLp = YLp, Lp = Lp,
-        Res.Sigma.W = Res.Sigma.W,
-        Res.Int.W = Res.Int.W, Res.Pi.W = Res.Pi.W,
-        Res.Sigma.B = Res.Sigma.B,
-        Res.Int.B = Res.Int.B, Res.Pi.B = Res.Pi.B,
+        YLp = ylp, Lp = lp,
+        Res.Sigma.W = res_sigma_w,
+        Res.Int.W = res_int_w, Res.Pi.W = res_pi_w,
+        Res.Sigma.B = res_sigma_b,
+        Res.Int.B = res_int_b, Res.Pi.B = res_pi_b,
         log2pi = FALSE, minus.two = TRUE
       )
     } else {
       loglik <- lav_mvnorm_cluster_loglik_samplestats_2l(
-        ylp = YLp, lp = Lp,
-        mu_w = Mu.W, sigma_w = Sigma.W,
-        mu_b = Mu.B, sigma_b = Sigma.B,
+        ylp = ylp, lp = lp,
+        mu_w = mu_w, sigma_w = sigma_w,
+        mu_b = mu_b, sigma_b = sigma_b,
         log2pi = FALSE, minus_two = TRUE
       )
     }

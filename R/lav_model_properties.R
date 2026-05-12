@@ -9,8 +9,8 @@
 
 
 # note: there is no 'lavmodel' yet, because we call this in lav_model.R
-lav_model_properties <- function(GLIST, lavpartable = NULL,
-                                 nmat = NULL, m.free.idx = NULL) {
+lav_model_properties <- function(glist, lavpartable = NULL,
+                                 nmat = NULL, m_free_idx = NULL) {
   lavpta <- lav_partable_attributes(lavpartable)
   nblocks <- lavpta$nblocks
 
@@ -30,26 +30,26 @@ lav_model_properties <- function(GLIST, lavpartable = NULL,
     }
 
     # find beta index for this block
-    mm.in.block <- 1:nmat[g] + cumsum(c(0L, nmat))[g]
-    MLIST <- GLIST[mm.in.block]
-    beta.idx <- which(names(MLIST) == "beta") + cumsum(c(0L, nmat))[g]
-    psi.idx <- which(names(MLIST) == "psi") + cumsum(c(0L, nmat))[g]
+    mm_in_block <- 1:nmat[g] + cumsum(c(0L, nmat))[g]
+    mlist <- glist[mm_in_block]
+    beta_idx <- which(names(mlist) == "beta") + cumsum(c(0L, nmat))[g]
+    psi_idx <- which(names(mlist) == "psi") + cumsum(c(0L, nmat))[g]
 
-    if (length(beta.idx) > 0L) {
+    if (length(beta_idx) > 0L) {
       # 1. acyclic?
-      B <- GLIST[[beta.idx]]
+      m_b <- glist[[beta_idx]]
       # keep fixed values (if any); fill in 1 in all 'free' positions
-      B[m.free.idx[[beta.idx]]] <- 1
-      acyclic[g] <- lav_graph_is_acyclic(B)
+      m_b[m_free_idx[[beta_idx]]] <- 1
+      acyclic[g] <- lav_graph_is_acyclic(m_b)
 
       # 2. bow-free?
-      B.one <- as.integer(B != 0)
-      Psi <- GLIST[[psi.idx]]
+      b_one <- as.integer(m_b != 0)
+      psi <- glist[[psi_idx]]
       # keep fixed values (if any); fill in 1 in all 'free' positions
-      Psi[m.free.idx[[psi.idx]]] <- 1
-      Psi.one <- as.integer(Psi != 0)
-      Both.one <- B.one + Psi.one
-      if (any(Both.one > 1)) {
+      psi[m_free_idx[[psi_idx]]] <- 1
+      psi_one <- as.integer(psi != 0)
+      both_one <- b_one + psi_one
+      if (any(both_one > 1)) {
         bowfree[g] <- FALSE
       } else {
         bowfree[g] <- TRUE

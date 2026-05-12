@@ -4,76 +4,77 @@
 # YR 7 May 2022: add cov.x and mean.x if conditional.x (so that we do
 #                no longer depend on SampleStats)
 
-lav_model_implied <- function(lavmodel = NULL, GLIST = NULL, delta = TRUE) {
+lav_model_implied <- function(lavmodel = NULL, GLIST = NULL, delta = TRUE) { # nolint
   stopifnot(inherits(lavmodel, "lavModel"))
 
   # state or final?
-  if (is.null(GLIST)) GLIST <- lavmodel@GLIST
+  glist <- GLIST
+  if (is.null(glist)) glist <- lavmodel@GLIST
 
   # model-implied variance/covariance matrix ('sigma hat')
-  Sigma.hat <- lav_model_sigma(
-    lavmodel = lavmodel, GLIST = GLIST,
+  sigma_hat <- lav_model_sigma(
+    lavmodel = lavmodel, glist = glist,
     delta = delta
   )
 
   # model-implied mean structure ('mu hat')
   if (lavmodel@meanstructure) {
-    Mu.hat <- lav_model_mu(lavmodel = lavmodel, GLIST = GLIST)
+    mu_hat <- lav_model_mu(lavmodel = lavmodel, glist = glist)
   } else {
-    Mu.hat <- vector("list", length = lavmodel@nblocks)
+    mu_hat <- vector("list", length = lavmodel@nblocks)
   }
 
   # if conditional.x, slopes, cov.x, mean.x
   if (lavmodel@conditional.x) {
-    SLOPES <- lav_model_pi(lavmodel = lavmodel, GLIST = GLIST)
+    slopes <- lav_model_pi(lavmodel = lavmodel, glist = glist)
 
     # per block, because for some blocks, cov.x may not exist
-    COV.X <- vector("list", lavmodel@nblocks)
-    MEAN.X <- vector("list", lavmodel@nblocks)
+    cov_x <- vector("list", lavmodel@nblocks)
+    mean_x <- vector("list", lavmodel@nblocks)
     for (b in seq_len(lavmodel@nblocks)) {
-      mm.in.block <- (seq_len(lavmodel@nmat[b]) +
+      mm_in_block <- (seq_len(lavmodel@nmat[b]) +
         cumsum(c(0, lavmodel@nmat))[b])
-      MLIST <- lavmodel@GLIST[mm.in.block]
-      cov.x.idx <- which(names(MLIST) == "cov.x")
-      if (length(cov.x.idx) > 0L) {
-        COV.X[[b]] <- MLIST[[cov.x.idx]]
+      mlist <- lavmodel@GLIST[mm_in_block]
+      cov_x_idx <- which(names(mlist) == "cov.x")
+      if (length(cov_x_idx) > 0L) {
+        cov_x[[b]] <- mlist[[cov_x_idx]]
       } else {
-        COV.X[[b]] <- matrix(0, 0L, 0L)
+        cov_x[[b]] <- matrix(0, 0L, 0L)
       }
-      mean.x.idx <- which(names(MLIST) == "mean.x")
-      if (length(mean.x.idx) > 0L) {
-        MEAN.X[[b]] <- MLIST[[mean.x.idx]]
+      mean_x_idx <- which(names(mlist) == "mean.x")
+      if (length(mean_x_idx) > 0L) {
+        mean_x[[b]] <- mlist[[mean_x_idx]]
       } else {
-        MEAN.X[[b]] <- matrix(0, 0L, 1L)
+        mean_x[[b]] <- matrix(0, 0L, 1L)
       }
     }
   } else {
-    SLOPES <- vector("list", length = lavmodel@nblocks)
+    slopes <- vector("list", length = lavmodel@nblocks)
   }
 
   # if categorical, model-implied thresholds
   if (lavmodel@categorical) {
-    TH <- lav_model_th(lavmodel = lavmodel, GLIST = GLIST)
+    th <- lav_model_th(lavmodel = lavmodel, glist = glist)
   } else {
-    TH <- vector("list", length = lavmodel@nblocks)
+    th <- vector("list", length = lavmodel@nblocks)
   }
 
   if (lavmodel@group.w.free) {
-    w.idx <- which(names(lavmodel@GLIST) == "gw")
-    GW <- unname(GLIST[w.idx])
-    GW <- lapply(GW, as.numeric)
+    w_idx <- which(names(lavmodel@GLIST) == "gw")
+    gw <- unname(glist[w_idx])
+    gw <- lapply(gw, as.numeric)
   } else {
-    GW <- vector("list", length = lavmodel@nblocks)
+    gw <- vector("list", length = lavmodel@nblocks)
   }
 
   if (lavmodel@conditional.x) {
     implied <- list(
-      res.cov = Sigma.hat, res.int = Mu.hat,
-      res.slopes = SLOPES, cov.x = COV.X, mean.x = MEAN.X,
-      res.th = TH, group.w = GW
+      res.cov = sigma_hat, res.int = mu_hat,
+      res.slopes = slopes, cov.x = cov_x, mean.x = mean_x,
+      res.th = th, group.w = gw
     )
   } else {
-    implied <- list(cov = Sigma.hat, mean = Mu.hat, th = TH, group.w = GW)
+    implied <- list(cov = sigma_hat, mean = mu_hat, th = th, group.w = gw)
   }
 
   implied
@@ -89,31 +90,31 @@ lav_model_implied_cond2uncond <- function(lavimplied) {
     nblocks <- length(lavimplied$res.cov)
   }
 
-  COV <- vector("list", length = nblocks)
-  MEAN <- vector("list", length = nblocks)
+  cov_1 <- vector("list", length = nblocks)
+  mean_1 <- vector("list", length = nblocks)
 
   # reconstruct COV/MEAN per block
   for (b in seq_len(nblocks)) {
-    res.Sigma <- lavimplied$res.cov[[b]]
-    res.slopes <- lavimplied$res.slopes[[b]]
-    res.int <- lavimplied$res.int[[b]]
-    S.xx <- lavimplied$cov.x[[b]]
-    M.x <- lavimplied$mean.x[[b]]
+    res_sigma <- lavimplied$res.cov[[b]]
+    res_slopes <- lavimplied$res.slopes[[b]]
+    res_int <- lavimplied$res.int[[b]]
+    s_xx <- lavimplied$cov.x[[b]]
+    m_x <- lavimplied$mean.x[[b]]
 
-    S.yx <- res.slopes %*% S.xx
-    S.xy <- t(S.yx)
-    S.yy <- res.Sigma + tcrossprod(S.yx, res.slopes)
-    COV[[b]] <- rbind(cbind(S.yy, S.yx), cbind(S.xy, S.xx))
+    s_yx <- res_slopes %*% s_xx
+    s_xy <- t(s_yx)
+    s_yy <- res_sigma + tcrossprod(s_yx, res_slopes)
+    cov_1[[b]] <- rbind(cbind(s_yy, s_yx), cbind(s_xy, s_xx))
 
-    Mu.y <- as.vector(res.int + res.slopes %*% M.x)
-    Mu.x <- as.vector(M.x)
-    MEAN[[b]] <- matrix(c(Mu.y, Mu.x), ncol = 1L)
+    mu_y <- as.vector(res_int + res_slopes %*% m_x)
+    mu_x <- as.vector(m_x)
+    mean_1[[b]] <- matrix(c(mu_y, mu_x), ncol = 1L)
   }
 
   # we ignore res.th for now, as we do not support categorical data
   # in the two-level setting anyway
   implied <- list(
-    cov = COV, mean = MEAN, th = lavimplied$res.th,
+    cov = cov_1, mean = mean_1, th = lavimplied$res.th,
     group.w = lavimplied$group.w
   )
 

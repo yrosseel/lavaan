@@ -13,8 +13,8 @@
 
 lav_object_check_version <- function(object = NULL) {
 
-  is.lavaan.object <- inherits(object, "lavaan")
-  if (!is.lavaan.object) {
+  is_lavaan_object <- inherits(object, "lavaan")
+  if (!is_lavaan_object) {
     # check if lavaanList object, if not return input object
     #if (!inherits(object, "lavaanList")) return(object)
     return(object)
@@ -59,7 +59,7 @@ lav_object_check_version <- function(object = NULL) {
     }
 
     # 0.5-11 (19 dec 2012)
-    if (is.lavaan.object) {
+    if (is_lavaan_object) {
       if (!.hasSlot(lavobject@SampleStats, "bifreq")) {
         lavobject@SampleStats@bifreq <- vector("list", length = ngroups)
       }
@@ -69,14 +69,14 @@ lav_object_check_version <- function(object = NULL) {
     }
 
     # 0.5-12 (8 March 2013)
-    if (is.lavaan.object) {
+    if (is_lavaan_object) {
       if (!.hasSlot(lavobject@SampleStats, "ridge")) {
         lavobject@SampleStats@ridge <- 0
       }
     }
 
     # 0.5-14 (21 July 2013)
-    if (is.lavaan.object) {
+    if (is_lavaan_object) {
       if (!.hasSlot(lavobject@Model, "ov.x.dummy.ov.idx")) {
         lavobject@Model@ov.x.dummy.ov.idx <- vector("list", length = nblocks)
         lavobject@Model@ov.x.dummy.lv.idx <- vector("list", length = nblocks)
@@ -98,14 +98,14 @@ lav_object_check_version <- function(object = NULL) {
     }
 
     # 0.5-15 (15 Nov 2013)
-    if (is.lavaan.object) {
+    if (is_lavaan_object) {
       if (!.hasSlot(lavobject@Data, "Rp")) {
         lavobject@Data@Rp <- vector("list", length = ngroups)
       }
     }
 
     # 0.5-16 (7 March 2014)
-    if (is.lavaan.object) {
+    if (is_lavaan_object) {
       if (!.hasSlot(lavobject@SampleStats, "group.w")) {
         lavobject@SampleStats@group.w <-  vector("list", length = ngroups)
         for (g in seq_len(ngroups)) {
@@ -125,14 +125,14 @@ lav_object_check_version <- function(object = NULL) {
     }
 
     # 0.5-17 (30 Sept 2014)
-    if (is.lavaan.object) {
+    if (is_lavaan_object) {
       if (!.hasSlot(lavobject@SampleStats, "WLS.VD")) {
         lavobject@SampleStats@WLS.VD <- vector("list", length = ngroups)
       }
     }
 
     # 0.5-18 (18 Nov 2014)
-    if (is.lavaan.object) {
+    if (is_lavaan_object) {
       if (!.hasSlot(lavobject@Model, "eq.constraints.k0")) {
         lavobject@Model@eq.constraints.k0 <- numeric(0L)
       }
@@ -145,7 +145,7 @@ lav_object_check_version <- function(object = NULL) {
     }
 
     # 0.5-18 (13 Jan 2015)
-    if (is.lavaan.object) {
+    if (is_lavaan_object) {
       if (!.hasSlot(lavobject@Model, "ceq.JAC")) {
         lavobject@Model@ceq.JAC <- matrix(0, nrow = 0L,
                                             ncol = lavobject@Model@nx.free)
@@ -157,7 +157,7 @@ lav_object_check_version <- function(object = NULL) {
     }
 
     # 0.5-19 (30 Jul 2015)
-    if (is.lavaan.object) {
+    if (is_lavaan_object) {
       if (!.hasSlot(lavobject, "boot")) {
         # construct partial optim list
         optim_list <- list(x = lavobject@Fit@x,
@@ -192,21 +192,21 @@ lav_object_check_version <- function(object = NULL) {
 
 
     # 0.5-21 (16 Dec 2015)
-    if (is.lavaan.object) {
+    if (is_lavaan_object) {
       if (!.hasSlot(lavobject@Model, "conditional.x")) {
         lavobject@Model@conditional.x <- FALSE
       }
     }
 
     # 0.5-21 (5 Jan 2016)
-    if (is.lavaan.object) {
+    if (is_lavaan_object) {
       if (!.hasSlot(lavobject@SampleStats, "x.idx")) {
         lavobject@SampleStats@x.idx <- rep(list(integer(0L)), ngroups)
       }
     }
 
     # 0.5-21 (8 Jan 2016)
-    if (is.lavaan.object) {
+    if (is_lavaan_object) {
       if (!.hasSlot(lavobject@SampleStats, "res.cov")) {
         lavobject@SampleStats@res.cov <- vector("list", ngroups)
         lavobject@SampleStats@res.var <- vector("list", ngroups)
@@ -220,7 +220,7 @@ lav_object_check_version <- function(object = NULL) {
     }
 
     # 0.5-21 (28 Mar 2016)
-    if (is.lavaan.object) {
+    if (is_lavaan_object) {
       if (!.hasSlot(lavobject@SampleStats, "NACOV.user")) {
         lavobject@SampleStats@NACOV.user <- FALSE
       }
@@ -234,7 +234,7 @@ lav_object_check_version <- function(object = NULL) {
     }
 
     # 0.5-23 (30 Jan 2017)
-    if (is.lavaan.object) {
+    if (is_lavaan_object) {
       if (!.hasSlot(lavobject@Data, "cluster")) {
         lavobject@Data@cluster <- character(0L)
         lavobject@Data@ordered <- character(0L)
@@ -249,14 +249,15 @@ lav_object_check_version <- function(object = NULL) {
     }
 
     # 0.5-23 (7 Feb 2017)
-    if (is.lavaan.object) {
+    if (is_lavaan_object) {
       if (!.hasSlot(lavobject@SampleStats, "zero.cell.tables")) {
         lavobject@SampleStats@zero.cell.tables <- vector("list", ngroups)
       }
     } else {
       for (j in seq_along(lavobject@SampleStatsList)) {
         if (!.hasSlot(lavobject@SampleStatsList[[j]], "zero.cell.tables")) {
-          lavobject@SampleStatsList[[j]]@zero.cell.tables <- vector("list", ngroups)
+          lavobject@SampleStatsList[[j]]@zero.cell.tables <-
+                                                   vector("list", ngroups)
         }
       }
     }
@@ -265,7 +266,7 @@ lav_object_check_version <- function(object = NULL) {
     if (!.hasSlot(lavobject@Model, "nblocks")) {
       lavobject@Model@nblocks <- nblocks
     }
-    if (is.lavaan.object) {
+    if (is_lavaan_object) {
       if (!.hasSlot(lavobject@Data, "level.label")) {
         lavobject@Data@level.label <- as.character(seq.int(nlevels))
       }
@@ -276,7 +277,7 @@ lav_object_check_version <- function(object = NULL) {
         }
       }
     }
-    if (is.lavaan.object) {
+    if (is_lavaan_object) {
       if (!.hasSlot(lavobject@Data, "block.label")) {
         if (nlevels <= 1L) {
           if (ngroups <= 1L) {
@@ -327,7 +328,7 @@ lav_object_check_version <- function(object = NULL) {
     }
 
     # 0.5-23 (24 Feb 2017)
-    if (is.lavaan.object) {
+    if (is_lavaan_object) {
       if (!.hasSlot(lavobject@Data, "nlevels")) {
         lavobject@Data@nlevels <- nlevels
         lavobject@Data@Lp <- vector("list", ngroups)
@@ -340,7 +341,7 @@ lav_object_check_version <- function(object = NULL) {
         }
       }
     }
-    if (is.lavaan.object) {
+    if (is_lavaan_object) {
       if (!.hasSlot(lavobject@SampleStats, "YLp")) {
         lavobject@SampleStats@YLp <- vector("list", ngroups)
       }
@@ -353,7 +354,7 @@ lav_object_check_version <- function(object = NULL) {
     }
 
     # 0.6-1 (8 Mar 2017)
-    if (is.lavaan.object) {
+    if (is_lavaan_object) {
       if (!.hasSlot(lavobject, "h1")) {
         lavobject@h1 <- lav_h1_implied_logl(lavdata = lavobject@Data,
           lavsamplestats = lavobject@SampleStats,
@@ -384,7 +385,7 @@ lav_object_check_version <- function(object = NULL) {
     }
 
     # 0.6-1 (19 Mar 2017)
-    if (is.lavaan.object) {
+    if (is_lavaan_object) {
       if (!.hasSlot(lavobject, "loglik")) {
         lavobject@Model@ceq.simple.only <- FALSE
         lavobject@Model@cin.simple.only <- FALSE
@@ -399,7 +400,7 @@ lav_object_check_version <- function(object = NULL) {
     }
 
     # 0.6-1 (1 Oct 2017)
-    if (is.lavaan.object) {
+    if (is_lavaan_object) {
       if (!.hasSlot(lavobject@Data, "weights")) {
         lavobject@Data@weights <- vector("list", ngroups)
       }
@@ -412,7 +413,7 @@ lav_object_check_version <- function(object = NULL) {
     }
 
     # 0.6-1 (3 Oct 2017)
-    if (is.lavaan.object) {
+    if (is_lavaan_object) {
       if (!.hasSlot(lavobject@Data, "sampling.weights")) {
         lavobject@Data@sampling.weights <- character(0L)
       }
@@ -425,7 +426,7 @@ lav_object_check_version <- function(object = NULL) {
     }
 
     # 0.6-1 (2 May 2018)
-    if (is.lavaan.object) {
+    if (is_lavaan_object) {
       if (!.hasSlot(lavobject, "version")) lavobject@version <- "PRE 0.6"
     }
   } # no-version-flag (pre 0.6)
@@ -444,7 +445,7 @@ lav_object_check_version <- function(object = NULL) {
   }
 
   # 0.6-3 (17 Sep 2018)
-  if (!is.lavaan.object) {
+  if (!is_lavaan_object) {
     if (!.hasSlot(lavobject, "h1List")) {
       lavobject@h1List <- vector("list", 0L)
       lavobject@loglikList <- vector("list", 0L)
@@ -474,7 +475,7 @@ lav_object_check_version <- function(object = NULL) {
   }
 
   # 0.6-5 (7 Jul 2019)
-  if (!is.lavaan.object) {
+  if (!is_lavaan_object) {
     if (!.hasSlot(lavobject, "baselineList")) {
       lavobject@baselineList <- vector("list", 0L)
     }
@@ -494,15 +495,15 @@ lav_object_check_version <- function(object = NULL) {
   # 0.6-9 (15 Mar 2021)
   if (!.hasSlot(lavobject@Model, "modprop")) {
     lavobject@Model@modprop = lav_model_properties(
-      GLIST = lavobject@Model@GLIST,
+      glist = lavobject@Model@GLIST,
       lavpartable = lavobject@ParTable,
       nmat = lavobject@Model@nmat,
-      m.free.idx = lavobject@Model@m.free.idx
+      m_free_idx = lavobject@Model@m.free.idx
     )
   }
 
   # 0.6-9 (22 Jun 2021)
-  if (is.lavaan.object) {
+  if (is_lavaan_object) {
     if (!.hasSlot(lavobject, "internal")) {
       lavobject@internal <- vector("list", 0L)
     }
@@ -527,7 +528,7 @@ lav_object_check_version <- function(object = NULL) {
   }
 
   # 0.6-18 (25 Apr 2024)
-  if (!is.lavaan.object) {
+  if (!is_lavaan_object) {
     if (!.hasSlot(lavobject, "version")) {
       lavobject@version <- "PRE 0.6.18"
     }
@@ -546,8 +547,8 @@ lav_object_check_version <- function(object = NULL) {
   # check missing options
   object_options <- lavobject@Options
   all_options <- lavOptions()
-  missing.idx <- which(!names(all_options) %in% names(object_options))
-  new_options <- c(object_options, all_options[missing.idx])
+  missing_idx <- which(!names(all_options) %in% names(object_options))
+  new_options <- c(object_options, all_options[missing_idx])
   # fill in some "default" values
   if (new_options$estimator.orig == "default") {
     new_options$estimator.orig <- new_options$estimator

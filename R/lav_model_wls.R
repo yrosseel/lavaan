@@ -1,19 +1,19 @@
 # compute WLS.est (as a list per group)
-lav_model_wls_est <- function(lavmodel = NULL, GLIST = NULL,
+lav_model_wls_est <- function(lavmodel = NULL, glist = NULL,
                               lavimplied = NULL) {
   nblocks <- lavmodel@nblocks
   meanstructure <- lavmodel@meanstructure
   correlation <- lavmodel@correlation
   categorical <- lavmodel@categorical
-  group.w.free <- lavmodel@group.w.free
-  num.idx <- lavmodel@num.idx
+  group_w_free <- lavmodel@group.w.free
+  num_idx <- lavmodel@num.idx
 
   # model-implied statistics
   if (is.null(lavimplied)) {
-    lavimplied <- lav_model_implied(lavmodel, GLIST = GLIST)
+    lavimplied <- lav_model_implied(lavmodel, GLIST = glist)
   }
 
-  WLS.est <- vector("list", length = nblocks)
+  wls_est_1 <- vector("list", length = nblocks)
   for (g in 1:nblocks) {
     if (categorical) {
       # order of elements is important here:
@@ -22,18 +22,18 @@ lav_model_wls_est <- function(lavmodel = NULL, GLIST = NULL,
       # 3. variances (if any)
       # 4. correlations (no diagonal!)
       if (lavmodel@conditional.x) {
-        wls.est <- c(
+        wls_est <- c(
           lavimplied$res.th[[g]],
           lav_matrix_vec(lavimplied$res.slopes[[g]]),
-          diag(lavimplied$res.cov[[g]])[num.idx[[g]]],
+          diag(lavimplied$res.cov[[g]])[num_idx[[g]]],
           lav_matrix_vech(lavimplied$res.cov[[g]],
             diagonal = FALSE
           )
         )
       } else {
-        wls.est <- c(
+        wls_est <- c(
           lavimplied$th[[g]],
-          diag(lavimplied$cov[[g]])[num.idx[[g]]],
+          diag(lavimplied$cov[[g]])[num_idx[[g]]],
           lav_matrix_vech(lavimplied$cov[[g]],
             diagonal = FALSE
           )
@@ -41,9 +41,9 @@ lav_model_wls_est <- function(lavmodel = NULL, GLIST = NULL,
       }
     } else {
       # CONTINUOUS
-      DIAG <- TRUE
+      diag_1 <- TRUE
       if (correlation) {
-        DIAG <- FALSE
+        diag_1 <- FALSE
       }
 
       if (lavmodel@conditional.x && lavmodel@nexo[g] > 0L) {
@@ -51,7 +51,7 @@ lav_model_wls_est <- function(lavmodel = NULL, GLIST = NULL,
         # cbind(res.int, res.slopes) is t(Beta)
         # so we need vecr
         if (meanstructure) {
-          wls.est <- c(
+          wls_est <- c(
             lav_matrix_vecr(
               cbind(
                 lavimplied$res.int[[g]],
@@ -59,41 +59,41 @@ lav_model_wls_est <- function(lavmodel = NULL, GLIST = NULL,
               )
             ),
             lav_matrix_vech(lavimplied$res.cov[[g]],
-              diagonal = DIAG
+              diagonal = diag_1
             )
           )
         } else {
-          wls.est <- c(
+          wls_est <- c(
             lav_matrix_vecr(lavimplied$res.slopes[[g]]),
             lav_matrix_vech(lavimplied$res.cov[[g]],
-              diagonal = DIAG
+              diagonal = diag_1
             )
           )
         }
       } else {
         if (meanstructure) {
-          wls.est <- c(
+          wls_est <- c(
             lavimplied$mean[[g]],
             lav_matrix_vech(lavimplied$cov[[g]],
-              diagonal = DIAG
+              diagonal = diag_1
             )
           )
         } else {
-          wls.est <- lav_matrix_vech(lavimplied$cov[[g]],
-            diagonal = DIAG
+          wls_est <- lav_matrix_vech(lavimplied$cov[[g]],
+            diagonal = diag_1
           )
         }
       } # conditional.x = FALSE
     } # categorical = FALSE
 
-    if (group.w.free) {
-      wls.est <- c(lavimplied$group.w[[g]], wls.est)
+    if (group_w_free) {
+      wls_est <- c(lavimplied$group.w[[g]], wls_est)
     }
 
-    WLS.est[[g]] <- wls.est
+    wls_est_1[[g]] <- wls_est
   }
 
-  WLS.est
+  wls_est_1
 }
 
 # Note: lav_model_wls_v() is replaced by lav_model_h1_information() in 0.6-1

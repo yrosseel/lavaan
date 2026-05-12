@@ -10,69 +10,70 @@ lav_model_nvcov_bootstrap <- function(lavmodel = NULL,
   # number of bootstrap draws
   if (!is.null(lavoptions$bootstrap) &&
       !is.null(lavoptions$bootstrap$R)) {
-    R <- as.integer(lavoptions$bootstrap$R)
-    stopifnot(R > 0L)
+    r <- as.integer(lavoptions$bootstrap$R)
+    stopifnot(r > 0L)
   } else {
-    R <- 1000L
+    r <- 1000L
   }
 
-  boot.type <- "ordinary"
+  boot_type <- "ordinary"
   if ("bollen.stine" %in% lavoptions$test) {
-    boot.type <- "bollen.stine"
+    boot_type <- "bollen.stine"
   }
 
-  TEST <- NULL
-  COEF <- lav_bootstrap_internal(
+  test <- NULL
+  coef_1 <- lav_bootstrap_internal(
     object = NULL,
     lavmodel = lavmodel,
     lavsamplestats = lavsamplestats,
     lavpartable = lavpartable,
     lavoptions = lavoptions,
     lavdata = lavdata,
-    r = R,
+    r = r,
     check_post = lavoptions$check.post,
-    type = boot.type,
-    fun = ifelse(boot.type == "bollen.stine",
+    type = boot_type,
+    fun = ifelse(boot_type == "bollen.stine",
       "coeftest", "coef"
     )
   )
   # warn            = -1L)
-  COEF.orig <- COEF
+  coef_orig <- coef_1
 
   # new in 0.6-12: always warn for failed and nonadmissible
-  error.idx <- attr(COEF, "error.idx")
-  nfailed <- length(error.idx) # zero if NULL
+  error_idx <- attr(coef_1, "error.idx")
+  nfailed <- length(error_idx) # zero if NULL
   if (nfailed > 0L) {
     lav_msg_warn(gettextf(
       "%s bootstrap runs failed or did not converge.", nfailed))
   }
 
-  notok <- length(attr(COEF, "nonadmissible")) # zero if NULL
+  notok <- length(attr(coef_1, "nonadmissible")) # zero if NULL
   if (notok > 0L) {
     lav_msg_warn(gettextf(
       "%s bootstrap runs resulted in nonadmissible solutions.", notok))
   }
 
-  if (length(error.idx) > 0L) {
+  if (length(error_idx) > 0L) {
     # new in 0.6-13: we must still remove them!
-    COEF <- COEF[-error.idx, , drop = FALSE]
+    coef_1 <- coef_1[-error_idx, , drop = FALSE]
     # this also drops the attributes
   }
 
-  if (boot.type == "bollen.stine") {
-    nc <- ncol(COEF)
-    TEST <- COEF[, nc]
-    COEF <- COEF[, -nc, drop = FALSE]
+  if (boot_type == "bollen.stine") {
+    nc <- ncol(coef_1)
+    test <- coef_1[, nc]
+    coef_1 <- coef_1[, -nc, drop = FALSE]
   }
 
   # new in 0.6-20: check for outliers, ie big difference between sd() and mad()
   # see github issue 347
-  sd_mad_ratio <- ( apply(COEF, 2,  sd, na.rm = TRUE) /
-                    apply(COEF, 2, mad, na.rm = TRUE) )
-  crit.ratio <- 5
-  if (any(sd_mad_ratio > crit.ratio)) {
-    NAMES <- lav_partable_labels(lavpartable, type = "free")
-    params_w_outliers <- paste(NAMES[sd_mad_ratio > crit.ratio], collapse = " ")
+  sd_mad_ratio <- (apply(coef_1, 2,  sd, na.rm = TRUE) /
+                   apply(coef_1, 2, mad, na.rm = TRUE))
+  crit_ratio <- 5
+  if (any(sd_mad_ratio > crit_ratio)) {
+    names_1 <- lav_partable_labels(lavpartable, type = "free")
+    params_w_outliers <- paste(names_1[sd_mad_ratio > crit_ratio],
+                               collapse = " ")
     lav_msg_warn(gettextf(
       "The following bootstrapped free parameters have a high (>5)
       ratio of standard deviation to median absolute deviation: %s.
@@ -80,14 +81,14 @@ lav_model_nvcov_bootstrap <- function(lavmodel = NULL,
   }
 
   # FIXME: cov rescale? Yes for now
-  nboot <- nrow(COEF)
-  NVarCov <- lavsamplestats@ntotal * (cov(COEF) * (nboot - 1) / nboot)
+  nboot <- nrow(coef_1)
+  nvar_cov <- lavsamplestats@ntotal * (cov(coef_1) * (nboot - 1) / nboot)
 
   # save COEF and TEST (if any)
-  attr(NVarCov, "BOOT.COEF") <- COEF.orig # including attributes
-  attr(NVarCov, "BOOT.TEST") <- TEST
+  attr(nvar_cov, "BOOT.COEF") <- coef_orig # including attributes
+  attr(nvar_cov, "BOOT.TEST") <- test
 
-  NVarCov
+  nvar_cov
 }
 
 
@@ -99,29 +100,29 @@ lav_model_nvcov_robust_sem <- function(lavmodel = NULL,
                                        lavimplied = NULL,
                                        lavh1 = NULL,
                                        lavoptions = NULL,
-                                       use.ginv = FALSE,
-                                       attr.Delta = TRUE,
-                                       attr.tDVGVD = FALSE,
-                                       attr.E.inv = FALSE,
-                                       attr.WLS.V = FALSE) {
+                                       use_ginv = FALSE,
+                                       attr_delta = TRUE,
+                                       attr_t_dvgvd = FALSE,
+                                       attr_e_inv = FALSE,
+                                       attr_wls_v = FALSE) {
   # compute inverse of the expected(!) information matrix
   if (lavmodel@estimator == "ML" && lavoptions$information.expected.mplus) {
     # YR - 11 aug 2010 - what Mplus seems to do is (see Muthen apx 4 eq102)
     # - A1 is not based on Sigma.hat and Mu.hat,
     # but on lavsamplestats@cov and lavsamplestats@mean... ('unstructured')
-    # - Gamma is not identical to what is used for WLS; closer to EQS
+    # - gamma is not identical to what is used for WLS; closer to EQS
     # - N/N-1 bug in G11 for NVarCov (but not test statistic)
     # - we divide by N-1! (just like EQS)
-    E.inv <- lav_model_information_expected_mlm(
+    e_inv <- lav_model_information_expected_mlm(
       lavmodel = lavmodel,
       lavsamplestats = lavsamplestats,
       extra = TRUE,
       augmented = TRUE,
       inverted = TRUE,
-      use_ginv = use.ginv
+      use_ginv = use_ginv
     )
   } else {
-    E.inv <- lav_model_information(
+    e_inv <- lav_model_information(
       lavmodel = lavmodel,
       lavsamplestats = lavsamplestats,
       lavdata = lavdata,
@@ -131,24 +132,24 @@ lav_model_nvcov_robust_sem <- function(lavmodel = NULL,
       extra = TRUE,
       augmented = TRUE,
       inverted = TRUE,
-      use.ginv = use.ginv
+      use_ginv = use_ginv
     )
   }
 
   # check if E.inv is ok
-  if (inherits(E.inv, "try-error")) {
-    return(E.inv)
+  if (inherits(e_inv, "try-error")) {
+    return(e_inv)
   }
 
-  Delta <- attr(E.inv, "Delta")
-  WLS.V <- attr(E.inv, "WLS.V")
-  attr(E.inv, "Delta") <- NULL
-  attr(E.inv, "WLS.V") <- NULL
-  # Gamma
-  Gamma <- lavsamplestats@NACOV
+  delta <- attr(e_inv, "Delta")
+  wls_v <- attr(e_inv, "WLS.V")
+  attr(e_inv, "Delta") <- NULL
+  attr(e_inv, "WLS.V") <- NULL
+  # gamma
+  gamma <- lavsamplestats@NACOV
   if (lavmodel@estimator == "ML" &&
     lavoptions$gamma.vcov.mplus && !lavsamplestats@NACOV.user) {
-    # 'fix' G11 part of Gamma (NOTE: this is NOT needed for SB test
+    # 'fix' G11 part of gamma (NOTE: this is NOT needed for SB test
     # statistic
     for (g in 1:lavsamplestats@ngroups) {
       gg1 <- (lavsamplestats@nobs[[g]] - 1) / lavsamplestats@nobs[[g]]
@@ -157,13 +158,13 @@ lav_model_nvcov_robust_sem <- function(lavmodel = NULL,
       } else {
         nvar <- NCOL(lavsamplestats@cov[[g]])
       }
-      G11 <- Gamma[[g]][1:nvar, 1:nvar, drop = FALSE]
-      Gamma[[g]][1:nvar, 1:nvar] <- G11 * gg1
+      g11 <- gamma[[g]][1:nvar, 1:nvar, drop = FALSE]
+      gamma[[g]][1:nvar, 1:nvar] <- g11 * gg1
     } # g
   }
 
 
-  tDVGVD <- matrix(0, ncol = ncol(E.inv), nrow = nrow(E.inv))
+  t_dvgvd <- matrix(0, ncol = ncol(e_inv), nrow = nrow(e_inv))
   for (g in 1:lavsamplestats@ngroups) {
     fg <- lavsamplestats@nobs[[g]] / lavsamplestats@ntotal
     if (lavoptions$gamma.vcov.mplus) {
@@ -175,25 +176,25 @@ lav_model_nvcov_robust_sem <- function(lavmodel = NULL,
     }
     # fg twice for WLS.V, 1/fg1 once for GaMMA
     # if fg==fg1, there would be only one fg, as in Satorra 1999 p.8
-    # t(Delta) * WLS.V %*% Gamma %*% WLS.V %*% Delta
+    # t(Delta) * WLS.V %*% gamma %*% WLS.V %*% Delta
     if (lavmodel@estimator == "DWLS" || lavmodel@estimator == "ULS") {
       # diagonal weight matrix
-      WD <- WLS.V[[g]] * Delta[[g]]
+      wd <- wls_v[[g]] * delta[[g]]
     } else {
       # full weight matrix
-      WD <- WLS.V[[g]] %*% Delta[[g]]
+      wd <- wls_v[[g]] %*% delta[[g]]
     }
-    tDVGVD <- tDVGVD + fg * fg / fg1 * crossprod(WD, Gamma[[g]] %*% WD)
+    t_dvgvd <- t_dvgvd + fg * fg / fg1 * crossprod(wd, gamma[[g]] %*% wd)
   } # g
-  NVarCov <- (E.inv %*% tDVGVD %*% E.inv)
+  nvar_cov <- (e_inv %*% t_dvgvd %*% e_inv)
 
   # to be reused by lav_test()
-  if (attr.Delta) {
-    attr(NVarCov, "Delta") <- Delta
+  if (attr_delta) {
+    attr(nvar_cov, "Delta") <- delta
   }
   # for twostep.robust in sam()
-  if (attr.tDVGVD) {
-    attr(NVarCov, "tDVGVD") <- tDVGVD
+  if (attr_t_dvgvd) {
+    attr(nvar_cov, "tDVGVD") <- t_dvgvd
   }
 
   if ((lavoptions$information[1] == lavoptions$information[2]) &&
@@ -202,35 +203,35 @@ lav_model_nvcov_robust_sem <- function(lavmodel = NULL,
       lavoptions$observed.information[1] ==
         lavoptions$observed.information[2])) {
     # only when same type of information is used # new in 0.6-6
-    attr(NVarCov, "E.inv") <- E.inv
-    attr(NVarCov, "WLS.V") <- WLS.V
+    attr(nvar_cov, "E.inv") <- e_inv
+    attr(nvar_cov, "WLS.V") <- wls_v
   }
 
   # user override
-  if (attr.E.inv && is.null(attr(NVarCov, "E.inv"))) {
-    attr(NVarCov, "E.inv") <- E.inv
+  if (attr_e_inv && is.null(attr(nvar_cov, "E.inv"))) {
+    attr(nvar_cov, "E.inv") <- e_inv
   }
-  if (attr.WLS.V && is.null(attr(NVarCov, "WLS.V"))) {
-    attr(NVarCov, "WLS.V") <- WLS.V
+  if (attr_wls_v && is.null(attr(nvar_cov, "WLS.V"))) {
+    attr(nvar_cov, "WLS.V") <- wls_v
   }
 
-  NVarCov
+  nvar_cov
 }
 
-lav_model_nvcov_robust_sandwich <- function(lavmodel = NULL,
+lav_model_nvcov_robust_sandwich <- function(lavmodel = NULL,    # nolint
                                             lavsamplestats = NULL,
                                             lavdata = NULL,
                                             lavoptions = NULL,
                                             lavimplied = NULL,
                                             lavh1 = NULL,
                                             lavcache = NULL,
-                                            use.ginv = FALSE) {
+                                            use_ginv = FALSE) {
   # sandwich estimator: A.inv %*% B %*% t(A.inv)
   # where A.inv == E.inv
   #       B == outer product of case-wise scores
 
   # inverse observed/expected information matrix
-  E.inv <- lav_model_information(
+  e_inv <- lav_model_information(
     lavmodel = lavmodel,
     lavsamplestats = lavsamplestats,
     lavdata = lavdata,
@@ -241,12 +242,12 @@ lav_model_nvcov_robust_sandwich <- function(lavmodel = NULL,
     extra = FALSE,
     augmented = TRUE,
     inverted = TRUE,
-    use.ginv = use.ginv
+    use_ginv = use_ginv
   )
 
   # check if E.inv is ok
-  if (inherits(E.inv, "try-error")) {
-    return(E.inv)
+  if (inherits(e_inv, "try-error")) {
+    return(e_inv)
   }
 
   # new in 0.6-6, check for h1.information.meat
@@ -259,7 +260,7 @@ lav_model_nvcov_robust_sandwich <- function(lavmodel = NULL,
   }
 
   # outer product of case-wise scores
-  B0 <-
+  b0 <-
     lav_model_information_firstorder(
       lavmodel = lavmodel,
       lavsamplestats = lavsamplestats,
@@ -269,16 +270,16 @@ lav_model_nvcov_robust_sandwich <- function(lavmodel = NULL,
       lavh1 = lavh1,
       lavoptions = lavoptions2,
       extra = TRUE,
-      check.pd = FALSE,
+      check_pd = FALSE,
       augmented = FALSE,
       inverted = FALSE,
-      use.ginv = use.ginv
+      use_ginv = use_ginv
     )
 
   # compute sandwich estimator
-  NVarCov <- E.inv %*% B0 %*% E.inv
+  nvar_cov <- e_inv %*% b0 %*% e_inv
 
-  attr(NVarCov, "B0.group") <- attr(B0, "B0.group")
+  attr(nvar_cov, "B0.group") <- attr(b0, "B0.group")
 
   if ((lavoptions$information[1] == lavoptions$information[2]) &&
     (lavoptions$h1.information[1] == lavoptions$h1.information[2]) &&
@@ -286,15 +287,15 @@ lav_model_nvcov_robust_sandwich <- function(lavmodel = NULL,
       lavoptions$observed.information[1] ==
         lavoptions$observed.information[2])) {
     # only when same type of information is used # new in 0.6-6
-    attr(NVarCov, "E.inv") <- E.inv
+    attr(nvar_cov, "E.inv") <- e_inv
   }
 
-  NVarCov
+  nvar_cov
 }
 
 # two stage
-# - two.stage: Gamma = I_1^{-1}
-# - robust.two.stage: Gamma = incomplete Gamma (I_1^{-1} J_1 I_1^{-1})
+# - two.stage: gamma = I_1^{-1}
+# - robust.two.stage: gamma = incomplete gamma (I_1^{-1} J_1 I_1^{-1})
 # where I_1 and J_1 are based on the (saturated) model h1
 # (either unstructured, or structured)
 #
@@ -309,7 +310,7 @@ lav_model_nvcov_two_stage <- function(lavmodel = NULL,
                                       lavimplied = NULL,
                                       lavh1 = NULL,
                                       lavdata = NULL,
-                                      use.ginv = FALSE) {
+                                      use_ginv = FALSE) {
   # expected OR observed, depending on lavoptions$information
   if (is.null(lavoptions) && is.null(lavoptions$information[1])) {
     lavoptions <- list(
@@ -341,7 +342,7 @@ lav_model_nvcov_two_stage <- function(lavmodel = NULL,
 
 
   # information matrix
-  E.inv <- lav_model_information(
+  e_inv <- lav_model_information(
     lavmodel = lavmodel,
     lavsamplestats = lavsamplestats,
     lavdata = lavdata,
@@ -351,36 +352,36 @@ lav_model_nvcov_two_stage <- function(lavmodel = NULL,
     extra = TRUE,
     augmented = TRUE,
     inverted = TRUE,
-    use.ginv = use.ginv
+    use_ginv = use_ginv
   )
-  Delta <- attr(E.inv, "Delta")
-  WLS.V <- attr(E.inv, "WLS.V") # this is 'H' or 'A1' in the literature
-  attr(E.inv, "Delta") <- NULL
-  attr(E.inv, "WLS.V") <- NULL
+  delta <- attr(e_inv, "Delta")
+  wls_v <- attr(e_inv, "WLS.V") # this is 'H' or 'A1' in the literature
+  attr(e_inv, "Delta") <- NULL
+  attr(e_inv, "WLS.V") <- NULL
 
   # check if E.inv is ok
-  if (inherits(E.inv, "try-error")) {
-    return(E.inv)
+  if (inherits(e_inv, "try-error")) {
+    return(e_inv)
   }
 
   # check WLS.V = A1
-  if (is.null(WLS.V)) {
+  if (is.null(wls_v)) {
     lav_msg_stop(gettext("WLS.V/H/A1 is NULL, observed.information = hessian?"))
   }
 
-  # Gamma
-  Gamma <- vector("list", length = lavsamplestats@ngroups)
+  # gamma
+  gamma <- vector("list", length = lavsamplestats@ngroups)
 
   # handle multiple groups
-  tDVGVD <- matrix(0, ncol = ncol(E.inv), nrow = nrow(E.inv))
+  t_dvgvd <- matrix(0, ncol = ncol(e_inv), nrow = nrow(e_inv))
   for (g in 1:lavsamplestats@ngroups) {
     fg <- lavsamplestats@nobs[[g]] / lavsamplestats@ntotal
     # fg1 <- (lavsamplestats@nobs[[g]]-1)/lavsamplestats@ntotal
     fg1 <- fg
     # fg twice for WLS.V, 1/fg1 once for GaMMA
     # if fg==fg1, there would be only one fg, as in Satorra 1999 p.8
-    # t(Delta) * WLS.V %*% Gamma %*% WLS.V %*% Delta
-    WD <- WLS.V[[g]] %*% Delta[[g]]
+    # t(Delta) * WLS.V %*% gamma %*% WLS.V %*% Delta
+    wd <- wls_v[[g]] %*% delta[[g]]
 
     # to compute (incomplete) GAMMA, should we use
     # structured or unstructured mean/sigma?
@@ -390,73 +391,73 @@ lav_model_nvcov_two_stage <- function(lavmodel = NULL,
     if (lavoptions$h1.information[1] == "unstructured") {
       #MU <- lavsamplestats@missing.h1[[g]]$mu
       #SIGMA <- lavsamplestats@missing.h1[[g]]$sigma
-      MU <- lavh1$implied$mean[[g]]
-      SIGMA <- lavh1$implied$cov[[g]]
+      mu <- lavh1$implied$mean[[g]]
+      sigma_1 <- lavh1$implied$cov[[g]]
     } else {
-      MU <- lavimplied$mean[[g]]
-      SIGMA <- lavimplied$cov[[g]]
+      mu <- lavimplied$mean[[g]]
+      sigma_1 <- lavimplied$cov[[g]]
     }
 
-    # compute 'Gamma' (or Omega.beta)
+    # compute 'gamma' (or Omega.beta)
     if (lavoptions$se == "two.stage") {
       # this is Savalei & Bentler (2009)
       if (lavoptions$information[1] == "expected") {
-        Info <- lav_mvnorm_missing_information_expected(
+        info <- lav_mvnorm_missing_information_expected(
           y = lavdata@X[[g]], mp = lavdata@Mp[[g]],
           wt = lavdata@weights[[g]],
-          mu = MU, sigma_1 = SIGMA,
+          mu = mu, sigma_1 = sigma_1,
           x_idx = lavsamplestats@x.idx[[g]]
         )
       } else {
-        Info <- lav_mvnorm_missing_information_observed_samplestats(
+        info <- lav_mvnorm_missing_information_observed_samplestats(
           yp = lavsamplestats@missing[[g]],
           # wt not needed
-          mu = MU, sigma_1 = SIGMA,
+          mu = mu, sigma_1 = sigma_1,
           x_idx = lavsamplestats@x.idx[[g]]
         )
       }
-      Gamma[[g]] <- lav_matrix_symmetric_inverse(Info)
+      gamma[[g]] <- lav_matrix_symmetric_inverse(info)
     } else { # we assume "robust.two.stage"
-      # NACOV is here incomplete Gamma
+      # NACOV is here incomplete gamma
       # Savalei & Falk (2014)
       #
       if (length(lavdata@cluster) > 0L) {
-        cluster.idx <- lavdata@Lp[[g]]$cluster.idx[[2]]
+        cluster_idx <- lavdata@Lp[[g]]$cluster.idx[[2]]
       } else {
-        cluster.idx <- NULL
+        cluster_idx <- NULL
       }
-      Gamma[[g]] <- lav_mvnorm_missing_h1_omega_sw(
+      gamma[[g]] <- lav_mvnorm_missing_h1_omega_sw(
         y = lavdata@X[[g]],
         mp = lavdata@Mp[[g]],
         yp = lavsamplestats@missing[[g]],
         wt = lavdata@weights[[g]],
-        cluster_idx = cluster.idx,
-        mu = MU, sigma_1 = SIGMA,
+        cluster_idx = cluster_idx,
+        mu = mu, sigma_1 = sigma_1,
         x_idx = lavsamplestats@x.idx[[g]],
         information = lavoptions$information[1]
       )
     }
 
     # compute
-    tDVGVD <- tDVGVD + fg * fg / fg1 * crossprod(WD, Gamma[[g]] %*% WD)
+    t_dvgvd <- t_dvgvd + fg * fg / fg1 * crossprod(wd, gamma[[g]] %*% wd)
   } # g
 
-  NVarCov <- (E.inv %*% tDVGVD %*% E.inv)
+  nvar_cov <- (e_inv %*% t_dvgvd %*% e_inv)
 
   # to be reused by lavaanTest
-  attr(NVarCov, "Delta") <- Delta
-  attr(NVarCov, "Gamma") <- Gamma
+  attr(nvar_cov, "Delta") <- delta
+  attr(nvar_cov, "Gamma") <- gamma
   if ((lavoptions$information[1] == lavoptions$information[2]) &&
     (lavoptions$h1.information[1] == lavoptions$h1.information[2]) &&
     (lavoptions$information[2] == "expected" ||
       lavoptions$observed.information[1] ==
         lavoptions$observed.information[2])) {
     # only when same type of information is used # new in 0.6-6
-    attr(NVarCov, "E.inv") <- E.inv
-    attr(NVarCov, "WLS.V") <- WLS.V
+    attr(nvar_cov, "E.inv") <- e_inv
+    attr(nvar_cov, "WLS.V") <- wls_v
   }
 
-  NVarCov
+  nvar_cov
 }
 
 
@@ -469,7 +470,7 @@ lav_model_vcov <- function(lavmodel = NULL,
                            lavcache = NULL,
                            lavimplied = NULL,
                            lavh1 = NULL,
-                           use.ginv = FALSE) {
+                           use_ginv = FALSE) {
   likelihood <- lavoptions$likelihood
 #  information <- lavoptions$information[1] # first one is for vcov
   se <- lavoptions$se
@@ -481,7 +482,7 @@ lav_model_vcov <- function(lavmodel = NULL,
   }
 
   if (se == "standard") {
-    NVarCov <- lav_model_information(
+    nvar_cov <- lav_model_information(
       lavmodel = lavmodel,
       lavsamplestats = lavsamplestats,
       lavdata = lavdata,
@@ -492,10 +493,10 @@ lav_model_vcov <- function(lavmodel = NULL,
       extra = FALSE,
       augmented = TRUE,
       inverted = TRUE,
-      use.ginv = use.ginv
+      use_ginv = use_ginv
     )
   } else if (se == "first.order") {
-    NVarCov <-
+    nvar_cov <-
       lav_model_information_firstorder(
         lavmodel = lavmodel,
         lavsamplestats = lavsamplestats,
@@ -505,13 +506,13 @@ lav_model_vcov <- function(lavmodel = NULL,
         lavh1 = lavh1,
         lavoptions = lavoptions,
         extra = TRUE,
-        check.pd = FALSE,
+        check_pd = FALSE,
         augmented = TRUE,
         inverted = TRUE,
-        use.ginv = use.ginv
+        use_ginv = use_ginv
       )
   } else if (se %in% c("robust.sem", "robust.sem.nt", "robust.cluster.sem")) {
-    NVarCov <-
+    nvar_cov <-
       lav_model_nvcov_robust_sem(
         lavmodel = lavmodel,
         lavsamplestats = lavsamplestats,
@@ -520,10 +521,10 @@ lav_model_vcov <- function(lavmodel = NULL,
         lavimplied = lavimplied,
         lavh1 = lavh1,
         lavoptions = lavoptions,
-        use.ginv = use.ginv
+        use_ginv = use_ginv
       )
   } else if (se == "robust.huber.white" || se == "robust.cluster") {
-    NVarCov <-
+    nvar_cov <-
       lav_model_nvcov_robust_sandwich(
         lavmodel = lavmodel,
         lavsamplestats = lavsamplestats,
@@ -532,10 +533,10 @@ lav_model_vcov <- function(lavmodel = NULL,
         lavimplied = lavimplied,
         lavh1 = lavh1,
         lavoptions = lavoptions,
-        use.ginv = use.ginv
+        use_ginv = use_ginv
       )
   } else if (se %in% c("two.stage", "robust.two.stage")) {
-    NVarCov <-
+    nvar_cov <-
       lav_model_nvcov_two_stage(
         lavmodel = lavmodel,
         lavsamplestats = lavsamplestats,
@@ -543,10 +544,10 @@ lav_model_vcov <- function(lavmodel = NULL,
         lavdata = lavdata,
         lavimplied = lavimplied,
         lavh1 = lavh1,
-        use.ginv = use.ginv
+        use_ginv = use_ginv
       )
   } else if (se == "bootstrap") {
-    NVarCov <- try(
+    nvar_cov <- try(
       lav_model_nvcov_bootstrap(
         lavmodel = lavmodel,
         lavsamplestats = lavsamplestats,
@@ -563,39 +564,39 @@ lav_model_vcov <- function(lavmodel = NULL,
     lav_msg_warn(gettextf("unknown se type: %s", se))
   }
 
-  if (!inherits(NVarCov, "try-error")) {
+  if (!inherits(nvar_cov, "try-error")) {
     # denominator!
     if (lavmodel@estimator %in% c("ML", "PML", "FML") &&
       likelihood == "normal") {
       if (lavdata@nlevels == 1L) {
-        N <- lavsamplestats@ntotal
+        n <- lavsamplestats@ntotal
         # new in 0.6-9 (to mimic method="lm" in effectLite)
         # special case: univariate regression in each group
         if (lavoptions$mimic == "lm" &&
           all(lavmodel@modprop$uvreg)) {
-          N <- sum(unlist(lavsamplestats@nobs) -
+          n <- sum(unlist(lavsamplestats@nobs) -
             (unlist(lavmodel@modprop$nexo) + 1L))
           # always adding the intercept (for now)
         }
       } else {
         # total number of clusters (over groups)
-        N <- 0
+        n <- 0
         for (g in 1:lavsamplestats@ngroups) {
-          N <- N + lavdata@Lp[[g]]$nclusters[[2]]
+          n <- n + lavdata@Lp[[g]]$nclusters[[2]]
         }
       }
     } else {
-      N <- lavsamplestats@ntotal - lavsamplestats@ngroups
+      n <- lavsamplestats@ntotal - lavsamplestats@ngroups
     }
 
-    VarCov <- 1 / N * NVarCov
+    var_cov <- 1 / n * nvar_cov
 
     # check if VarCov is pd -- new in 0.6-2
     # mostly important if we have (in)equality constraints (MASS::ginv!)
     if (lavmodel@ceq.simple.only) {
       # do nothing
     } else if (!is.null(lavoptions$check.vcov) && lavoptions$check.vcov) {
-      eigvals <- eigen(VarCov,
+      eigvals <- eigen(var_cov,
         symmetric = TRUE,
         only.values = TRUE
       )$values
@@ -603,14 +604,14 @@ lav_model_vcov <- function(lavmodel = NULL,
       neq <- 0L
       niq <- 0L
       if (nrow(lavmodel@con.jac) > 0L) {
-        ceq.idx <- attr(lavmodel@con.jac, "ceq.idx")
-        cin.idx <- attr(lavmodel@con.jac, "cin.idx")
-        ina.idx <- attr(lavmodel@con.jac, "inactive.idx")
-        if (length(ceq.idx) > 0L) {
-          neq <- qr(lavmodel@con.jac[ceq.idx, , drop = FALSE])$rank
+        ceq_idx <- attr(lavmodel@con.jac, "ceq.idx")
+        cin_idx <- attr(lavmodel@con.jac, "cin.idx")
+        ina_idx <- attr(lavmodel@con.jac, "inactive.idx")
+        if (length(ceq_idx) > 0L) {
+          neq <- qr(lavmodel@con.jac[ceq_idx, , drop = FALSE])$rank
         }
-        if (length(cin.idx) > 0L) {
-          niq <- length(cin.idx) - length(ina.idx) # only active
+        if (length(cin_idx) > 0L) {
+          niq <- length(cin_idx) - length(ina_idx) # only active
         }
         # total number of relevant constraints
         neiq <- neq + niq
@@ -618,9 +619,9 @@ lav_model_vcov <- function(lavmodel = NULL,
           eigvals <- rev(eigvals)[-seq_len(neiq)]
         }
       }
-      min.val <- min(eigvals)
+      min_val <- min(eigvals)
       # if(any(eigvals < -1 * sqrt(.Machine$double.eps)) &&
-      if (min.val < .Machine$double.eps^(3 / 4)) {
+      if (min_val < .Machine$double.eps^(3 / 4)) {
         # VarCov.chol <- suppressWarnings(try(chol(VarCov,
         #                   pivot = TRUE), silent = TRUE))
         # VarCov.rank <- attr(VarCov.chol, "rank")
@@ -639,20 +640,20 @@ lav_model_vcov <- function(lavmodel = NULL,
         #                         lavpartable$level[pt.idx])
         # }
 
-        if (min.val > 0) {
+        if (min_val > 0) {
           lav_msg_warn(
             gettextf("The variance-covariance matrix of the estimated
                     parameters (vcov) does not appear to be positive
                     definite! The smallest eigenvalue (= %e) is close
                      to zero. This may be a symptom that the model is
-                     not identified.", min(min.val)))
+                     not identified.", min(min_val)))
         } else {
           lav_msg_warn(
             gettextf("The variance-covariance matrix of the estimated parameters
-                     (vcov) does not appear to be positive definite! The smallest
-                     eigenvalue (= %e) is smaller than zero. This may be a
-                     symptom that the model is not identified.",
-                     min(min.val)))
+                  (vcov) does not appear to be positive definite! The smallest
+                  eigenvalue (= %e) is smaller than zero. This may be a
+                  symptom that the model is not identified.",
+                  min(min_val)))
         }
       }
     }
@@ -662,14 +663,14 @@ lav_model_vcov <- function(lavmodel = NULL,
              could not be inverted. This may be a symptom that the model
              is not identified.")
     )
-    VarCov <- NULL
+    var_cov <- NULL
   } # could not invert
 
-  VarCov
+  var_cov
 }
 
-lav_model_vcov_se <- function(lavmodel, lavpartable, VCOV = NULL,
-                              BOOT = NULL) {
+lav_model_vcov_se <- function(lavmodel, lavpartable, VCOV = NULL, # nolint start
+                              BOOT = NULL) {                      # nolint end
   # 0. special case
   if (is.null(VCOV)) {
     se <- rep(as.numeric(NA), lavmodel@nx.user)
@@ -678,18 +679,18 @@ lav_model_vcov_se <- function(lavmodel, lavpartable, VCOV = NULL,
   }
 
   # 1. free parameters only
-  x.var <- diag(VCOV)
+  x_var <- diag(VCOV)
   # check for negative values (what to do: NA or 0.0?)
-  x.var[x.var < 0] <- as.numeric(NA)
-  x.se <- sqrt(x.var)
+  x_var[x_var < 0] <- as.numeric(NA)
+  x_se <- sqrt(x_var)
   if (lavmodel@ceq.simple.only) {
-    GLIST <- lav_model_x2glist(
-      lavmodel = lavmodel, x = x.se,
+    glist <- lav_model_x2glist(
+      lavmodel = lavmodel, x = x_se,
       type = "unco"
     )
   } else {
-    GLIST <- lav_model_x2glist(
-      lavmodel = lavmodel, x = x.se,
+    glist <- lav_model_x2glist(
+      lavmodel = lavmodel, x = x_se,
       type = "free"
     )
   }
@@ -697,7 +698,7 @@ lav_model_vcov_se <- function(lavmodel, lavpartable, VCOV = NULL,
   # se for full parameter table, but with 0.0 entries for def/ceq/cin
   # elements
   se <- lav_model_get_parameters(
-    lavmodel = lavmodel, GLIST = GLIST,
+    lavmodel = lavmodel, GLIST = glist,
     type = "user", extra = FALSE
   )
 
@@ -707,55 +708,56 @@ lav_model_vcov_se <- function(lavmodel, lavpartable, VCOV = NULL,
 
 
   # 3. defined parameters:
-  def.idx <- which(lavpartable$op == ":=")
-  if (length(def.idx) > 0L) {
+  def_idx <- which(lavpartable$op == ":=")
+  if (length(def_idx) > 0L) {
     if (!is.null(BOOT)) {
       # we must remove the NA rows (and hope we have something left)
-      error.idx <- attr(BOOT, "error.idx")
-      if (length(error.idx) > 0L) {
-        BOOT <- BOOT[-error.idx, , drop = FALSE] # drops attributes
+      error_idx <- attr(BOOT, "error.idx")
+      boot <- BOOT
+      if (length(error_idx) > 0L) {
+        boot <- BOOT[-error_idx, , drop = FALSE] # drops attributes
       }
 
-      BOOT.def <- apply(BOOT, 1L, lavmodel@def.function)
-      if (length(def.idx) == 1L) {
-        BOOT.def <- as.matrix(BOOT.def)
+      boot_def <- apply(boot, 1L, lavmodel@def.function)
+      if (length(def_idx) == 1L) {
+        boot_def <- as.matrix(boot_def)
       } else {
-        BOOT.def <- t(BOOT.def)
+        boot_def <- t(boot_def)
       }
       # new in 0.6-20: check for outliers, big difference between sd() and mad()
       # see github issue 347
-      sd_mad_ratio <- ( apply(BOOT.def, 2,  sd, na.rm = TRUE) /
-                        apply(BOOT.def, 2, mad, na.rm = TRUE) )
-      crit.ratio <- 5
-      if (any(sd_mad_ratio > crit.ratio)) {
-        NAMES <- colnames(BOOT.def)
-        def_w_outliers <- paste(NAMES[sd_mad_ratio > crit.ratio],
+      sd_mad_ratio <- (apply(boot_def, 2,  sd, na.rm = TRUE) /
+                       apply(boot_def, 2, mad, na.rm = TRUE))
+      crit_ratio <- 5
+      if (any(sd_mad_ratio > crit_ratio)) {
+        names_1 <- colnames(boot_def)
+        def_w_outliers <- paste(names_1[sd_mad_ratio > crit_ratio],
                                 collapse = " ")
         lav_msg_warn(gettextf(
           "The following bootstrapped defined parameters have a high (>5)
           ratio of standard deviation to median absolute deviation: %s.
           P-values and confidence intervals may not match.", def_w_outliers))
       }
-      nboot <- nrow(BOOT.def)
-      def.cov <- cov(BOOT.def) * (nboot - 1) / nboot
+      nboot <- nrow(boot_def)
+      def_cov <- cov(boot_def) * (nboot - 1) / nboot
     } else {
       # regular delta method
       x <- lav_model_get_parameters(lavmodel = lavmodel, type = "free")
-      JAC <- try(lav_func_jacobian_complex(func = lavmodel@def.function, x = x),
+      jac <- try(lav_func_jacobian_complex(func = lavmodel@def.function, x = x),
         silent = TRUE
       )
-      if (inherits(JAC, "try-error")) { # eg. pnorm()
-        JAC <- lav_func_jacobian_simple(func = lavmodel@def.function, x = x)
+      if (inherits(jac, "try-error")) { # eg. pnorm()
+        jac <- lav_func_jacobian_simple(func = lavmodel@def.function, x = x)
       }
       if (lavmodel@ceq.simple.only) {
-        JAC <- JAC %*% t(lavmodel@ceq.simple.K)
+        jac <- jac %*% t(lavmodel@ceq.simple.K)
       }
-      def.cov <- JAC %*% VCOV %*% t(JAC)
+      def_cov <- jac %*% VCOV %*% t(jac)
     }
     # check for negative se's
-    diag.def.cov <- diag(def.cov)
-    diag.def.cov[diag.def.cov < 0] <- as.numeric(NA)
-    se[def.idx] <- sqrt(diag.def.cov)
+    diag_def_cov <- diag(def_cov)
+    diag_def_cov[diag_def_cov < 0] <- as.numeric(NA)
+    se[def_idx] <- sqrt(diag_def_cov)
   }
 
   se

@@ -67,7 +67,7 @@ lav_lavaan_step16_rotation <- function(lavoptions = NULL,
     lavmodel <- lav_model(
       lavpartable = lavpartable,
       lavoptions = lavoptions,
-      th.idx = lavmodel@th.idx
+      th_idx = lavmodel@th.idx
     )
 
     # add rotated information

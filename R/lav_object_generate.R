@@ -12,15 +12,15 @@
 #
 #  - YR 01 Feb 2026: allow for baseline.type = "nested"
 lav_object_independence <- lav_object_baseline <- function(object = NULL,
-                                                           # or
-                                                           lavsamplestats = NULL,
-                                                           lavdata = NULL,
-                                                           lavcache = NULL,
-                                                           lavoptions = NULL,
-                                                           lavpartable = NULL,
-                                                           lavh1 = NULL,
-                                                           # local options
-                                                           se = FALSE) {
+                                                         # or
+                                                         lavsamplestats = NULL,
+                                                         lavdata = NULL,
+                                                         lavcache = NULL,
+                                                         lavoptions = NULL,
+                                                         lavpartable = NULL,
+                                                         lavh1 = NULL,
+                                                         # local options
+                                                         se = FALSE) {
   # object or slots?
   if (!is.null(object)) {
     stopifnot(inherits(object, "lavaan"))
@@ -80,9 +80,9 @@ lav_object_independence <- lav_object_baseline <- function(object = NULL,
       # nothing to do
     } else {
       lavoptions$estimator.args$dls.GammaNT <- "sample"
-      dls.a <- lavoptions$estimator.args$dls.a
+      dls_a <- lavoptions$estimator.args$dls.a
       for (g in 1:lavsamplestats@ngroups) {
-        GammaNT <- lav_samplestats_gamma_nt(
+        gamma_nt <- lav_samplestats_gamma_nt(
           m_cov          = lavsamplestats@cov[[g]],
           m_mean         = lavsamplestats@mean[[g]],
           x_idx          = lavsamplestats@x.idx[[g]],
@@ -91,9 +91,9 @@ lav_object_independence <- lav_object_baseline <- function(object = NULL,
           meanstructure  = lavoptions$meanstructure,
           slopestructure = lavoptions$conditional.x
         )
-        W.DLS <- (1 - dls.a) * lavsamplestats@NACOV[[g]] + dls.a * GammaNT
+        w_dls <- (1 - dls_a) * lavsamplestats@NACOV[[g]] + dls_a * gamma_nt
         # overwrite
-        lavsamplestats@WLS.V[[g]] <- lav_matrix_symmetric_inverse(W.DLS)
+        lavsamplestats@WLS.V[[g]] <- lav_matrix_symmetric_inverse(w_dls)
       }
     }
   }
@@ -136,7 +136,7 @@ lav_object_independence <- lav_object_baseline <- function(object = NULL,
   npar <- lav_partable_npar(lavpartable)
   if (npar > 0L) {
     lavoptions$do.fit <- TRUE
-    if(lavoptions$optim.method != "noniter") {
+    if (lavoptions$optim.method != "noniter") {
       lavoptions$optim.method <- "nlminb"
     }
   } else {
@@ -157,7 +157,7 @@ lav_object_independence <- lav_object_baseline <- function(object = NULL,
   # lavpartable, and they should be in the right order (unlike the
   # intercepts)
 
-  FIT <- lavaan(lavpartable,
+  fit <- lavaan(lavpartable,
     slotOptions     = lavoptions,
     slotSampleStats = lavsamplestats,
     slotData        = lavdata,
@@ -165,15 +165,15 @@ lav_object_independence <- lav_object_baseline <- function(object = NULL,
     sloth1          = lavh1
   )
 
-  FIT
+  fit
 }
 
 
 # 3. extended model (used for modification indices)
 lav_object_extended <- function(object, add = NULL,
-                                remove.duplicated = TRUE,
-                                all.free = FALSE,
-                                do.fit = FALSE) {
+                                remove_duplicated = TRUE,
+                                all_free = FALSE,
+                                do_fit = FALSE) {
   object <- lav_object_check_version(object)
   # partable original model
   partable <- object@ParTable[c(
@@ -182,31 +182,31 @@ lav_object_extended <- function(object, add = NULL,
   )]
 
   # new in 0.6-3: check for non-parameters
-  nonpar.idx <- which(partable$op %in% c("==", ":=", "<", ">"))
+  nonpar_idx <- which(partable$op %in% c("==", ":=", "<", ">"))
 
   # always add block/group/level
   if (!is.null(object@ParTable$group)) {
     partable$group <- object@ParTable$group
   } else {
     partable$group <- rep(1L, length(partable$lhs))
-    if (length(nonpar.idx) > 0L) {
-      partable$group[nonpar.idx] <- 0L
+    if (length(nonpar_idx) > 0L) {
+      partable$group[nonpar_idx] <- 0L
     }
   }
   if (!is.null(object@ParTable$level)) {
     partable$level <- object@ParTable$level
   } else {
     partable$level <- rep(1L, length(partable$lhs))
-    if (length(nonpar.idx) > 0L) {
-      partable$level[nonpar.idx] <- 0L
+    if (length(nonpar_idx) > 0L) {
+      partable$level[nonpar_idx] <- 0L
     }
   }
   if (!is.null(object@ParTable$block)) {
     partable$block <- object@ParTable$block
   } else {
     partable$block <- rep(1L, length(partable$lhs))
-    if (length(nonpar.idx) > 0L) {
-      partable$block[nonpar.idx] <- 0L
+    if (length(nonpar_idx) > 0L) {
+      partable$block[nonpar_idx] <- 0L
     }
   }
 
@@ -222,13 +222,13 @@ lav_object_extended <- function(object, add = NULL,
     partable[empties] <- NULL
   }
 
-  if (all.free) {
+  if (all_free) {
     partable$user <- rep(1L, length(partable$lhs))
-    non.free.idx <- which(partable$free == 0L & partable$op != "==" &
+    non_free_idx <- which(partable$free == 0L & partable$op != "==" &
       partable$op != ":=" & partable$op != "<" &
       partable$op != ">")
-    partable$free[non.free.idx] <- 1L
-    partable$user[non.free.idx] <- 10L
+    partable$free[non_free_idx] <- 1L
+    partable$user[non_free_idx] <- 10L
   }
 
   # replace 'start' column, since lav_model will fill these in in GLIST
@@ -248,41 +248,41 @@ lav_object_extended <- function(object, add = NULL,
       !is.null(add$op),
       !is.null(add$rhs)
     )
-    ADD <- add
+    add_1 <- add
   } else if (is.character(add)) {
     ngroups <- lav_partable_ngroups(partable)
-    ADD.orig <- lav_model_partable(add, ngroups = ngroups)
-    ADD <- ADD.orig[, c("lhs", "op", "rhs", "user", "label")] # minimum
+    add_orig <- lav_model_partable(add, ngroups = ngroups)
+    add_1 <- add_orig[, c("lhs", "op", "rhs", "user", "label")] # minimum
 
     # always add block/group/level
-    if (!is.null(ADD.orig$group)) {
-      ADD$group <- ADD.orig$group
+    if (!is.null(add_orig$group)) {
+      add_1$group <- add_orig$group
     } else {
-      ADD$group <- rep(1L, length(ADD$lhs))
+      add_1$group <- rep(1L, length(add_1$lhs))
     }
-    if (!is.null(ADD.orig$level)) {
-      ADD$level <- ADD.orig$level
+    if (!is.null(add_orig$level)) {
+      add_1$level <- add_orig$level
     } else {
-      ADD$level <- rep(1L, length(ADD$lhs))
+      add_1$level <- rep(1L, length(add_1$lhs))
     }
-    if (!is.null(ADD.orig$block)) {
-      ADD$block <- ADD.orig$block
+    if (!is.null(add_orig$block)) {
+      add_1$block <- add_orig$block
     } else {
-      ADD$block <- rep(1L, length(ADD$lhs))
+      add_1$block <- rep(1L, length(add_1$lhs))
     }
 
-    remove.idx <- which(ADD$user == 0)
-    if (length(remove.idx) > 0L) {
-      ADD <- ADD[-remove.idx, ]
+    remove_idx <- which(add_1$user == 0)
+    if (length(remove_idx) > 0L) {
+      add_1 <- add_1[-remove_idx, ]
     }
-    ADD$start <- rep(0, nrow(ADD))
-    ADD$free <- rep(1, nrow(ADD))
-    ADD$user <- rep(10, nrow(ADD))
+    add_1$start <- rep(0, nrow(add_1))
+    add_1$free <- rep(1, nrow(add_1))
+    add_1$user <- rep(10, nrow(add_1))
   }
 
   # merge
-  LIST <- lav_partable_merge(partable, ADD,
-    remove.duplicated = remove.duplicated,
+  list_1 <- lav_partable_merge(partable, add_1,
+    remove.duplicated = remove_duplicated,
     warn = FALSE
   )
 
@@ -295,23 +295,23 @@ lav_object_extended <- function(object, add = NULL,
   # }
 
   # redo 'free'
-  free.idx <- which(LIST$free > 0)
-  LIST$free[free.idx] <- 1:length(free.idx)
+  free_idx <- which(list_1$free > 0)
+  list_1$free[free_idx] <- seq_along(free_idx)
 
   # adapt options
   lavoptions <- object@Options
 
   # do.fit?
-  lavoptions$do.fit <- do.fit
+  lavoptions$do.fit <- do_fit
 
   # needed?
-  if (any(LIST$op == "~1")) lavoptions$meanstructure <- TRUE
+  if (any(list_1$op == "~1")) lavoptions$meanstructure <- TRUE
 
   # switch off 'consider switching to parameterization = theta' warning
   # (modindices!)
   lavoptions$check.delta.cat.mediator <- FALSE
 
-  FIT <- lavaan(LIST,
+  fit <- lavaan(list_1,
     slotOptions     = lavoptions,
     slotSampleStats = object@SampleStats,
     slotData        = object@Data,
@@ -319,7 +319,7 @@ lav_object_extended <- function(object, add = NULL,
     sloth1          = object@h1
   )
 
-  FIT
+  fit
 }
 
 # 4. catml model
@@ -335,69 +335,69 @@ lav_object_catml <- function(lavobject = NULL) {
 
   # if only categorical variables: remove thresholds and intercepts
   refit <- FALSE
-  partable.catml <- parTable(lavobject)
-  rm.idx <- which(partable.catml$op %in% c("|", "~1"))
+  partable_catml <- parTable(lavobject)
+  rm_idx <- which(partable_catml$op %in% c("|", "~1"))
   # remove also any constraints that refer to the labels that belong
   # to these intercepts/thresholds (new in 0.6-20)
-  th.int.labels <- unique(
-    partable.catml$label[rm.idx],
-    partable.catml$plabel[rm.idx]
+  th_int_labels <- unique(
+    partable_catml$label[rm_idx],
+    partable_catml$plabel[rm_idx]
   )
-  if (any(nchar(th.int.labels) == 0L)) {
-    th.int.labels <- th.int.labels[-which(nchar(th.int.labels) == 0L)]
+  if (any(nchar(th_int_labels) == 0L)) {
+    th_int_labels <- th_int_labels[-which(nchar(th_int_labels) == 0L)]
   }
-  con.idx <- which(partable.catml$op %in% c("==", "<", ">", ":=") &
-    (partable.catml$lhs %in% th.int.labels |
-      partable.catml$rhs %in% th.int.labels))
-  partable.catml <- partable.catml[-c(rm.idx, con.idx), ]
+  con_idx <- which(partable_catml$op %in% c("==", "<", ">", ":=") &
+    (partable_catml$lhs %in% th_int_labels |
+      partable_catml$rhs %in% th_int_labels))
+  partable_catml <- partable_catml[-c(rm_idx, con_idx), ]
   # never rotate (new in 0.6-19), as we only need fit measures
-  if (!is.null(partable.catml$efa)) {
-    partable.catml$efa <- NULL
-    partable.catml$free <- partable.catml$free.unrotated
+  if (!is.null(partable_catml$efa)) {
+    partable_catml$efa <- NULL
+    partable_catml$free <- partable_catml$free.unrotated
   }
 
   if (!all(lavdata@ov$type == "ordered")) {
     refit <- TRUE
-    partable.catml$start <- partable.catml$est
-    partable.catml$se <- NULL
-    partable.catml$ustart <- partable.catml$est
+    partable_catml$start <- partable_catml$est
+    partable_catml$se <- NULL
+    partable_catml$ustart <- partable_catml$est
     for (b in seq_len(lavpta$nblocks)) {
-      ov.names.num <- lavpta$vnames$ov.num[[b]]
-      ov.var.idx <- which(partable.catml$op == "~~" &
-        partable.catml$lhs %in% ov.names.num &
-        partable.catml$lhs == partable.catml$rhs)
-      partable.catml$free[ov.var.idx] <- 0L
+      ov_names_num <- lavpta$vnames$ov.num[[b]]
+      ov_var_idx <- which(partable_catml$op == "~~" &
+        partable_catml$lhs %in% ov_names_num &
+        partable_catml$lhs == partable_catml$rhs)
+      partable_catml$free[ov_var_idx] <- 0L
     }
   }
-  partable.catml <- lav_partable_complete(partable.catml)
+  partable_catml <- lav_partable_complete(partable_catml)
 
   # adapt lavsamplestats
   for (g in seq_len(lavdata@ngroups)) {
     lavsamplestats@WLS.V[[g]] <- NULL
     lavsamplestats@WLS.VD[[g]] <- NULL
-    COR <- lavsamplestats@cov[[g]]
+    cor_1 <- lavsamplestats@cov[[g]]
     # check if COV is pd or not
-    ev <- eigen(COR, symmetric = TRUE, only.values = TRUE)$values
+    ev <- eigen(cor_1, symmetric = TRUE, only.values = TRUE)$values
     if (any(ev < .Machine$double.eps^(1 / 2))) {
       # not PD!
-      COV <- cov2cor(lav_matrix_symmetric_force_pd(COR, tol = 1e-04))
-      lavsamplestats@cov[[g]] <- COV
-      lavsamplestats@var[[g]] <- diag(COV)
+      cov_1 <- cov2cor(lav_matrix_symmetric_force_pd(cor_1, tol = 1e-04))
+      lavsamplestats@cov[[g]] <- cov_1
+      lavsamplestats@var[[g]] <- diag(cov_1)
       refit <- TRUE
     } else {
-      COV <- COR
+      cov_1 <- cor_1
     }
 
-    current.warn <- lav_warn()
+    current_warn <- lav_warn()
     if (lav_warn(FALSE)) {
-      on.exit(lav_warn(current.warn), TRUE)
+      on.exit(lav_warn(current_warn), TRUE)
     }
     out <- lav_samplestats_icov(
-      COV = COV, ridge = 1e-05,
+      COV = cov_1, ridge = 1e-05,
       x.idx = lavsamplestats@x.idx[[g]],
       ngroups = lavdata@ngroups, g = g
     )
-    lav_warn(current.warn)
+    lav_warn(current_warn)
     lavsamplestats@icov[[g]] <- out$icov
     lavsamplestats@cov.log.det[[g]] <- out$cov.log.det
 
@@ -433,12 +433,12 @@ lav_object_catml <- function(lavobject = NULL) {
   }
 
   # dummy fit
-  FIT <- lavaan(
-    slotParTable = partable.catml,
+  fit <- lavaan(
+    slotParTable = partable_catml,
     slotSampleStats = lavsamplestats,
     slotData = lavdata,
     slotOptions = lavoptions
   )
 
-  FIT
+  fit
 }

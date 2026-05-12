@@ -366,10 +366,10 @@ lav_predict_internal <- function(lavmodel = NULL,
 
     # new in 0.6-17
     if (mdist) {
-      VETA <- lav_model_veta(lavmodel = lavmodel, remove.dummy.lv = TRUE)
+      VETA <- lav_model_veta(lavmodel = lavmodel, remove_dummy_lv = TRUE)
       EETA <- lav_model_eeta(
         lavmodel = lavmodel,
-        lavsamplestats = lavsamplestats, remove.dummy.lv = TRUE
+        lavsamplestats = lavsamplestats, remove_dummy_lv = TRUE
       )
       MDIST <- lapply(seq_len(lavdata@ngroups), function(g) {
         A <- FSM[[g]]
@@ -554,7 +554,7 @@ lav_predict_internal <- function(lavmodel = NULL,
     if (mdist) {
       LAMBDA <- lav_model_lambda(
         lavmodel = lavmodel,
-        remove.dummy.lv = FALSE
+        remove_dummy_lv = FALSE
       )
       MDIST <- lapply(seq_len(lavdata@ngroups), function(g) {
         Sigma <- lavimplied$cov[[g]]
@@ -817,7 +817,7 @@ lav_predict_eta_normal <- function(lavobject = NULL, # for convenience
     }
   }
 
-  LAMBDA <- lav_model_lambda(lavmodel = lavmodel, remove.dummy.lv = FALSE)
+  LAMBDA <- lav_model_lambda(lavmodel = lavmodel, remove_dummy_lv = FALSE)
   Sigma.hat <- lavimplied$cov
   Sigma.inv <- lapply(Sigma.hat, MASS::ginv)
   VETA <- lav_model_veta(lavmodel = lavmodel)
@@ -1150,7 +1150,7 @@ lav_predict_eta_bartlett <- function(lavobject = NULL, # for convenience
     }
   }
 
-  LAMBDA <- lav_model_lambda(lavmodel = lavmodel, remove.dummy.lv = FALSE)
+  LAMBDA <- lav_model_lambda(lavmodel = lavmodel, remove_dummy_lv = FALSE)
   Sigma.hat <- lavimplied$cov
   Sigma.inv <- lapply(lavimplied$cov, MASS::ginv)
   VETA <- lav_model_veta(lavmodel = lavmodel) # for se only
@@ -1513,8 +1513,8 @@ lav_predict_eta_ebm_ml <- function(lavobject = NULL, # for convenience
   }
   EETAx <- lav_model_eetax(
     lavmodel = lavmodel, lavsamplestats = lavsamplestats,
-    eXo = eXo, nobs = lapply(data.obs, NROW),
-    remove.dummy.lv = TRUE
+    exo = eXo, nobs = lapply(data.obs, NROW),
+    remove_dummy_lv = TRUE
   ) ## FIXME?
   TH <- lav_model_th(lavmodel = lavmodel, delta = FALSE)
   THETA <- lav_model_theta(lavmodel = lavmodel)
@@ -1750,10 +1750,10 @@ lav_predict_yhat <- function(lavobject = NULL, # for convience
   }
 
   YHAT <- lav_model_yhat(
-    lavmodel = lavmodel, GLIST = NULL,
-    lavsamplestats = lavsamplestats, eXo = eXo,
+    lavmodel = lavmodel, glist = NULL,
+    lavsamplestats = lavsamplestats, exo = eXo,
     nobs = lapply(data.obs, NROW),
-    ETA = ETA, duplicate = duplicate
+    eta = ETA, duplicate = duplicate
   )
 
   # if conditional.x, paste eXo
@@ -2030,8 +2030,8 @@ lav_predict_tmat_green <- function(lavobject = NULL,
     lavimplied <- lav_model_implied_cond2uncond(lavimplied)
   }
   Sigma <- lavimplied$cov
-  VETA <- lav_model_veta(lavmodel = lavmodel, remove.dummy.lv = FALSE)
-  LAMBDA <- lav_model_lambda(lavmodel, remove.dummy.lv = FALSE)
+  VETA <- lav_model_veta(lavmodel = lavmodel, remove_dummy_lv = FALSE)
+  LAMBDA <- lav_model_lambda(lavmodel, remove_dummy_lv = FALSE)
 
   nblocks <- lavmodel@nblocks
   tmat <- vector("list", length = nblocks)
@@ -2069,8 +2069,8 @@ lav_predict_tmat_det <- function(lavobject = NULL,
     lavimplied <- lav_model_implied_cond2uncond(lavimplied)
   }
   Sigma <- lavimplied$cov
-  VETA <- lav_model_veta(lavmodel = lavmodel, remove.dummy.lv = FALSE)
-  LAMBDA <- lav_model_lambda(lavmodel, remove.dummy.lv = FALSE)
+  VETA <- lav_model_veta(lavmodel = lavmodel, remove_dummy_lv = FALSE)
+  LAMBDA <- lav_model_lambda(lavmodel, remove_dummy_lv = FALSE)
 
   nblocks <- lavmodel@nblocks
   tmat <- vector("list", length = nblocks)

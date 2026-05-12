@@ -173,7 +173,7 @@ lav_test_yuan_bentler <- function(lavobject = NULL,
         lavh1 = lavh1,
         lavoptions = lavoptions,
         extra = TRUE,
-        check.pd = FALSE,
+        check_pd = FALSE,
         augmented = FALSE,
         inverted = FALSE
       )

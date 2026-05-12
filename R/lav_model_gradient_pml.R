@@ -1,12 +1,13 @@
 # utility functions for pairwise maximum likelihood
 
 # stub for lav_pml_fml_dploglik_dimplied
-lav_pml_fml_dploglik_dimplied <- function(Sigma.hat = NULL, # model-based var/cov/cor
-                       TH = NULL, # model-based thresholds + means
-                       th.idx = NULL, # threshold idx per variable
-                       num.idx = NULL, # which variables are numeric
-                       X = NULL, # data
-                       eXo = NULL, # external covariates
+lav_pml_fml_dploglik_dimplied <- function(
+                       sigma_hat = NULL, # model-based var/cov/cor
+                       th = NULL, # model-based thresholds + means
+                       th_idx = NULL, # threshold idx per variable
+                       num_idx = NULL, # which variables are numeric
+                       x = NULL, # data
+                       exo = NULL, # external covariates
                        lavcache = NULL, # housekeeping stuff
                        scores = FALSE, # return case-wise scores
                        negative = TRUE) {
@@ -21,29 +22,30 @@ lav_pml_fml_dploglik_dimplied <- function(Sigma.hat = NULL, # model-based var/co
 # HJ 18/10/23: Modification for complex design and completely observed data (no
 # missing) with only ordinal indicators to get the right gradient for the
 # optimisation and Hessian computation.
-lav_pml_dploglik_dimplied <- function(Sigma.hat = NULL, # model-based var/cov/cor
-                       Mu.hat = NULL, # model-based means
-                       TH = NULL, # model-based thresholds + means
-                       th.idx = NULL, # threshold idx per variable
-                       num.idx = NULL, # which variables are numeric
-                       X = NULL, # data
-                       eXo = NULL, # external covariates
+lav_pml_dploglik_dimplied <- function(
+                       sigma_hat = NULL, # model-based var/cov/cor
+                       mu_hat = NULL, # model-based means
+                       th = NULL, # model-based thresholds + means
+                       th_idx = NULL, # threshold idx per variable
+                       num_idx = NULL, # which variables are numeric
+                       x = NULL, # data
+                       exo = NULL, # external covariates
                        wt = NULL, # case weights (not used yet)
                        lavcache = NULL, # housekeeping stuff
-                       PI = NULL, # slopes
+                       pi0 = NULL, # slopes
                        missing = "listwise", # how to deal with missings
                        scores = FALSE, # return case-wise scores
                        negative = TRUE) { # multiply by -1
 
   # diagonal of Sigma.hat is not necessarily 1, even for categorical vars
-  Sigma.hat2 <- Sigma.hat
-  if (length(num.idx) > 0L) {
-    diag(Sigma.hat2)[-num.idx] <- 1
+  sigma_hat2 <- sigma_hat
+  if (length(num_idx) > 0L) {
+    diag(sigma_hat2)[-num_idx] <- 1
   } else {
-    diag(Sigma.hat2) <- 1
+    diag(sigma_hat2) <- 1
   }
-  Cor.hat <- cov2cor(Sigma.hat2) # to get correlations (rho!)
-  cors <- lav_matrix_vech(Cor.hat, diagonal = FALSE)
+  cor_hat <- cov2cor(sigma_hat2) # to get correlations (rho!)
+  cors <- lav_matrix_vech(cor_hat, diagonal = FALSE)
 
   if (any(abs(cors) > 1)) {
     # what should we do now... force cov2cor?
@@ -57,76 +59,76 @@ lav_pml_dploglik_dimplied <- function(Sigma.hat = NULL, # model-based var/cov/co
     # cat("CLIPPING!\n")
   }
 
-  nvar <- nrow(Sigma.hat)
+  nvar <- nrow(sigma_hat)
   pstar <- nvar * (nvar - 1) / 2
-  ov.types <- rep("ordered", nvar)
-  if (length(num.idx) > 0L) ov.types[num.idx] <- "numeric"
-  if (!is.null(eXo)) {
-    nexo <- ncol(eXo)
+  ov_types <- rep("ordered", nvar)
+  if (length(num_idx) > 0L) ov_types[num_idx] <- "numeric"
+  if (!is.null(exo)) {
+    nexo <- ncol(exo)
   } else {
     nexo <- 0
   }
 
 
-  if (all(ov.types == "numeric")) {
-    N.TH <- nvar
+  if (all(ov_types == "numeric")) {
+    n_th <- nvar
   } else {
-    N.TH <- length(th.idx)
+    n_th <- length(th_idx)
   }
-  N.SL <- nvar * nexo
-  N.VAR <- length(num.idx)
-  N.COR <- pstar
+  n_sl <- nvar * nexo
+  n_var <- length(num_idx)
+  n_cor <- pstar
 
   # add num.idx to th.idx
-  if (length(num.idx) > 0L) {
-    th.idx[th.idx == 0] <- num.idx
+  if (length(num_idx) > 0L) {
+    th_idx[th_idx == 0] <- num_idx
   }
 
   # print(Sigma.hat); print(TH); print(th.idx); print(num.idx); print(str(X))
 
   # shortcut for ordinal-only/no-exo case
-  if (!scores && all(ov.types == "ordered") && nexo == 0L) {
+  if (!scores && all(ov_types == "ordered") && nexo == 0L) {
     # >>>>>>>> HJ/MK PML CODE >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
     if (is.null(wt)) {
-      n.xixj.vec <- lavcache$bifreq
+      n_xixj_vec <- lavcache$bifreq
     } else {
-      n.xixj.vec <- lavcache$sum_obs_weights_xixj_ab_vec
+      n_xixj_vec <- lavcache$sum_obs_weights_xixj_ab_vec
     }
     gradient <- lav_pml_grad_tau_rho(
-      no.x = nvar,
-      all.thres = TH,
-      index.var.of.thres = th.idx,
-      rho.xixj = cors,
-      n.xixj.vec = n.xixj.vec,
-      out.lav_pml_longvec_ind = lavcache$long
+      no_x = nvar,
+      all_thres = th,
+      index_var_of_thres = th_idx,
+      rho_xixj = cors,
+      n_xixj_vec = n_xixj_vec,
+      out_lav_pml_longvec_ind = lavcache$long
     )
 
     # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
     if (missing == "available.cases") {
-      uniPI <- lav_pml_th_uni_prob(th = TH, th_idx = th.idx)
-      tmp <- lavcache$uniweights / uniPI
+      uni_pi <- lav_pml_th_uni_prob(th = th, th_idx = th_idx)
+      tmp <- lavcache$uniweights / uni_pi
 
-      var.idx <- split(th.idx, th.idx)
-      var.idx <- unlist(lapply(var.idx, function(x) {
-        c(x, x[1])
+      var_idx <- split(th_idx, th_idx)
+      var_idx <- unlist(lapply(var_idx, function(x_1) {
+        c(x_1, x_1[1])
       }))
 
-      tmp.varwise <- split(tmp, var.idx)
+      tmp_varwise <- split(tmp, var_idx)
       tmp1 <- unlist(lapply(
-        tmp.varwise,
-        function(x) {
-          c(x[-length(x)])
+        tmp_varwise,
+        function(x_1) {
+          c(x_1[-length(x_1)])
         }
       ))
-      tmp2 <- unlist(lapply(tmp.varwise, function(x) {
-        c(x[-1])
+      tmp2 <- unlist(lapply(tmp_varwise, function(x_1) {
+        c(x_1[-1])
       }))
 
-      uni.der.tau <- dnorm(TH) * (tmp1 - tmp2)
-      nTH <- length(TH)
-      gradient[1:nTH] <- gradient[1:nTH] + uni.der.tau
+      uni_der_tau <- dnorm(th) * (tmp1 - tmp2)
+      n_th_1 <- length(th)
+      gradient[1:n_th_1] <- gradient[1:n_th_1] + uni_der_tau
     }
 
     if (negative) {
@@ -136,87 +138,87 @@ lav_pml_dploglik_dimplied <- function(Sigma.hat = NULL, # model-based var/cov/co
   }
 
   # in this order: TH/MEANS + SLOPES + VAR + COR
-  GRAD.size <- N.TH + N.SL + N.VAR + N.COR
+  grad_size <- n_th + n_sl + n_var + n_cor
 
   # scores or gradient?
   if (scores) {
-    SCORES <- matrix(0, nrow(X), GRAD.size) # we will sum up over all pairs
+    scores_1 <- matrix(0, nrow(x), grad_size) # we will sum up over all pairs
   } else {
-    GRAD <- matrix(0, pstar, GRAD.size) # each pair is a row
+    grad <- matrix(0, pstar, grad_size) # each pair is a row
   }
-  PSTAR <- matrix(0, nvar, nvar) # utility matrix, to get indices
-  PSTAR[lav_matrix_vech_idx(nvar, diagonal = FALSE)] <- 1:pstar
-  N <- length(X[, 1])
+  pstar_1 <- matrix(0, nvar, nvar) # utility matrix, to get indices
+  pstar_1[lav_matrix_vech_idx(nvar, diagonal = FALSE)] <- 1:pstar
+  # n <- length(x[, 1])
 
   for (j in seq_len(nvar - 1L)) {
     for (i in (j + 1L):nvar) {
       # cat(" i = ", i, " j = ", j, "\n") # debug only
-      pstar.idx <- PSTAR[i, j]
-      cor.idx <- N.TH + N.SL + N.VAR + PSTAR[i, j]
-      th.idx_i <- which(th.idx == i)
-      th.idx_j <- which(th.idx == j)
+      pstar_idx <- pstar_1[i, j]
+      cor_idx <- n_th + n_sl + n_var + pstar_1[i, j]
+      th_idx_i <- which(th_idx == i)
+      th_idx_j <- which(th_idx == j)
       if (nexo > 0L) {
-        sl.idx_i <- N.TH + seq(i, by = nvar, length.out = nexo)
-        sl.idx_j <- N.TH + seq(j, by = nvar, length.out = nexo)
+        sl_idx_i <- n_th + seq(i, by = nvar, length.out = nexo)
+        sl_idx_j <- n_th + seq(j, by = nvar, length.out = nexo)
 
-        if (length(num.idx) > 0L) {
-          var.idx_i <- N.TH + N.SL + match(i, num.idx)
-          var.idx_j <- N.TH + N.SL + match(j, num.idx)
+        if (length(num_idx) > 0L) {
+          var_idx_i <- n_th + n_sl + match(i, num_idx)
+          var_idx_j <- n_th + n_sl + match(j, num_idx)
         }
       } else {
-        if (length(num.idx) > 0L) {
-          var.idx_i <- N.TH + match(i, num.idx)
-          var.idx_j <- N.TH + match(j, num.idx)
+        if (length(num_idx) > 0L) {
+          var_idx_i <- n_th + match(i, num_idx)
+          var_idx_j <- n_th + match(j, num_idx)
         }
       }
-      if (ov.types[i] == "numeric" && ov.types[j] == "numeric") {
+      if (ov_types[i] == "numeric" && ov_types[j] == "numeric") {
         if (nexo > 1L) {
           lav_msg_stop(gettext(
             "mixed + exo in PML not implemented;
             try optim.gradient = \"numerical\""))
         }
 
-        SC <- lav_mvnorm_scores_mu_vech_sigma(
-          y = X[, c(i, j)],
-          mu = Mu.hat[c(i, j)], sigma_1 = Sigma.hat[c(i, j), c(i, j)]
+        sc <- lav_mvnorm_scores_mu_vech_sigma(
+          y = x[, c(i, j)],
+          mu = mu_hat[c(i, j)], sigma_1 = sigma_hat[c(i, j), c(i, j)]
         )
 
         if (scores) {
-          if (all(ov.types == "numeric") && nexo == 0L) {
+          if (all(ov_types == "numeric") && nexo == 0L) {
             # MU1 + MU2
-            SCORES[, c(i, j)] <- SCORES[, c(i, j)] + SC[, c(1, 2)]
+            scores_1[, c(i, j)] <- scores_1[, c(i, j)] + sc[, c(1, 2)]
             # VAR1 + COV_12 + VAR2
-            var.idx <- (nvar +
+            var_idx <- (nvar +
               lav_matrix_vech_match_idx(nvar, idx = c(i, j)))
-            SCORES[, var.idx] <- SCORES[, var.idx] + SC[, c(3, 4, 5)]
+            scores_1[, var_idx] <- scores_1[, var_idx] + sc[, c(3, 4, 5)]
           } else { # mixed ordered/continuous
             # MU
-            mu.idx <- c(th.idx_i, th.idx_j)
-            SCORES[, mu.idx] <- SCORES[, mu.idx] + (-1) * SC[, c(1, 2)]
+            mu_idx <- c(th_idx_i, th_idx_j)
+            scores_1[, mu_idx] <- scores_1[, mu_idx] + (-1) * sc[, c(1, 2)]
             # VAR+COV
-            var.idx <- c(var.idx_i, cor.idx, var.idx_j)
-            SCORES[, var.idx] <- SCORES[, var.idx] + SC[, c(3, 4, 5)]
+            var_idx <- c(var_idx_i, cor_idx, var_idx_j)
+            scores_1[, var_idx] <- scores_1[, var_idx] + sc[, c(3, 4, 5)]
           }
         } else {
-          if (all(ov.types == "numeric") && nexo == 0L) {
-            mu.idx <- c(i, j)
-            sigma.idx <- (nvar +
+          if (all(ov_types == "numeric") && nexo == 0L) {
+            mu_idx <- c(i, j)
+            sigma_idx <- (nvar +
               lav_matrix_vech_match_idx(nvar, idx = c(i, j)))
             # MU1 + MU2
-            GRAD[pstar.idx, mu.idx] <-
-              colSums(SC[, c(1, 2)], na.rm = TRUE)
+            grad[pstar_idx, mu_idx] <-
+              colSums(sc[, c(1, 2)], na.rm = TRUE)
           } else {
-            mu.idx <- c(th.idx_i, th.idx_j)
-            sigma.idx <- c(var.idx_i, cor.idx, var.idx_j)
+            mu_idx <- c(th_idx_i, th_idx_j)
+            sigma_idx <- c(var_idx_i, cor_idx, var_idx_j)
             # MU (reverse sign!)
-            GRAD[pstar.idx, mu.idx] <-
-              -1 * colSums(SC[, c(1, 2)], na.rm = TRUE)
+            grad[pstar_idx, mu_idx] <-
+              -1 * colSums(sc[, c(1, 2)], na.rm = TRUE)
           }
           # SIGMA
-          GRAD[pstar.idx, sigma.idx] <-
-            colSums(SC[, c(3, 4, 5)], na.rm = TRUE)
+          grad[pstar_idx, sigma_idx] <-
+            colSums(sc[, c(3, 4, 5)], na.rm = TRUE)
         } # gradient only
-      } else if (ov.types[i] == "numeric" && ov.types[j] == "ordered") {
+      } else if (ov_types[i] == "numeric" && ov_types[j] == "ordered") {
         # polyserial correlation
         if (nexo > 1L) {
           lav_msg_stop(gettext(
@@ -224,45 +226,45 @@ lav_pml_dploglik_dimplied <- function(Sigma.hat = NULL, # model-based var/cov/co
             try optim.gradient = \"numerical\""))
         }
 
-        SC.COR.UNI <- lav_bvmix_cor_scores(
-          y1 = X[, i], y2 = X[, j],
+        sc_cor_uni <- lav_bvmix_cor_scores(
+          y1 = x[, i], y2 = x[, j],
           exo = NULL, wt = wt,
-          evar_y1 = Sigma.hat[i, i],
-          beta_y1 = Mu.hat[i],
-          th_y2 = TH[th.idx == j],
+          evar_y1 = sigma_hat[i, i],
+          beta_y1 = mu_hat[i],
+          th_y2 = th[th_idx == j],
           sl_y2 = NULL,
-          rho = Cor.hat[i, j],
+          rho = cor_hat[i, j],
           sigma_correction = TRUE
         )
 
         if (scores) {
           # MU
-          SCORES[, th.idx_i] <- (SCORES[, th.idx_i] +
-            -1 * SC.COR.UNI$dx_mu_y1)
+          scores_1[, th_idx_i] <- (scores_1[, th_idx_i] +
+            -1 * sc_cor_uni$dx_mu_y1)
           # TH
-          SCORES[, th.idx_j] <- (SCORES[, th.idx_j] +
-            SC.COR.UNI$dx_th_y2)
+          scores_1[, th_idx_j] <- (scores_1[, th_idx_j] +
+            sc_cor_uni$dx_th_y2)
           # VAR
-          SCORES[, var.idx_i] <- (SCORES[, var.idx_i] +
-            SC.COR.UNI$dx_var_y1)
+          scores_1[, var_idx_i] <- (scores_1[, var_idx_i] +
+            sc_cor_uni$dx_var_y1)
           # COR
-          SCORES[, cor.idx] <- (SCORES[, cor.idx] +
-            SC.COR.UNI$dx_rho)
+          scores_1[, cor_idx] <- (scores_1[, cor_idx] +
+            sc_cor_uni$dx_rho)
         } else {
           # MU
-          GRAD[pstar.idx, th.idx_i] <-
-            -1 * sum(SC.COR.UNI$dx_mu_y1, na.rm = TRUE)
+          grad[pstar_idx, th_idx_i] <-
+            -1 * sum(sc_cor_uni$dx_mu_y1, na.rm = TRUE)
           # TH
-          GRAD[pstar.idx, th.idx_j] <-
-            colSums(SC.COR.UNI$dx_th_y2, na.rm = TRUE)
+          grad[pstar_idx, th_idx_j] <-
+            colSums(sc_cor_uni$dx_th_y2, na.rm = TRUE)
           # VAR
-          GRAD[pstar.idx, var.idx_i] <-
-            sum(SC.COR.UNI$dx_var_y1, na.rm = TRUE)
+          grad[pstar_idx, var_idx_i] <-
+            sum(sc_cor_uni$dx_var_y1, na.rm = TRUE)
           # COR
-          GRAD[pstar.idx, cor.idx] <-
-            sum(SC.COR.UNI$dx_rho, na.rm = TRUE)
+          grad[pstar_idx, cor_idx] <-
+            sum(sc_cor_uni$dx_rho, na.rm = TRUE)
         } # grad only
-      } else if (ov.types[j] == "numeric" && ov.types[i] == "ordered") {
+      } else if (ov_types[j] == "numeric" && ov_types[i] == "ordered") {
         # polyserial correlation
         if (nexo > 1L) {
           lav_msg_stop(gettext(
@@ -270,126 +272,126 @@ lav_pml_dploglik_dimplied <- function(Sigma.hat = NULL, # model-based var/cov/co
             try optim.gradient = \"numerical\""))
         }
 
-        SC.COR.UNI <- lav_bvmix_cor_scores(
-          y1 = X[, j], y2 = X[, i],
+        sc_cor_uni <- lav_bvmix_cor_scores(
+          y1 = x[, j], y2 = x[, i],
           exo = NULL, wt = wt,
-          evar_y1 = Sigma.hat[j, j],
-          beta_y1 = Mu.hat[j],
-          th_y2 = TH[th.idx == i],
-          rho = Cor.hat[i, j],
+          evar_y1 = sigma_hat[j, j],
+          beta_y1 = mu_hat[j],
+          th_y2 = th[th_idx == i],
+          rho = cor_hat[i, j],
           sigma_correction = TRUE
         )
 
         if (scores) {
           # MU
-          SCORES[, th.idx_j] <- (SCORES[, th.idx_j] +
-            -1 * SC.COR.UNI$dx_mu_y1)
+          scores_1[, th_idx_j] <- (scores_1[, th_idx_j] +
+            -1 * sc_cor_uni$dx_mu_y1)
           # TH
-          SCORES[, th.idx_i] <- (SCORES[, th.idx_i] +
-            SC.COR.UNI$dx_th_y2)
+          scores_1[, th_idx_i] <- (scores_1[, th_idx_i] +
+            sc_cor_uni$dx_th_y2)
           # VAR
-          SCORES[, var.idx_j] <- (SCORES[, var.idx_j] +
-            SC.COR.UNI$dx_var_y1)
+          scores_1[, var_idx_j] <- (scores_1[, var_idx_j] +
+            sc_cor_uni$dx_var_y1)
           # COR
-          SCORES[, cor.idx] <- (SCORES[, cor.idx] +
-            SC.COR.UNI$dx_rho)
+          scores_1[, cor_idx] <- (scores_1[, cor_idx] +
+            sc_cor_uni$dx_rho)
         } else {
           # MU
-          GRAD[pstar.idx, th.idx_j] <-
-            -1 * sum(SC.COR.UNI$dx_mu_y1, na.rm = TRUE)
+          grad[pstar_idx, th_idx_j] <-
+            -1 * sum(sc_cor_uni$dx_mu_y1, na.rm = TRUE)
           # TH
-          GRAD[pstar.idx, th.idx_i] <-
-            colSums(SC.COR.UNI$dx_th_y2, na.rm = TRUE)
+          grad[pstar_idx, th_idx_i] <-
+            colSums(sc_cor_uni$dx_th_y2, na.rm = TRUE)
           # VAR
-          GRAD[pstar.idx, var.idx_j] <-
-            sum(SC.COR.UNI$dx_var_y1, na.rm = TRUE)
+          grad[pstar_idx, var_idx_j] <-
+            sum(sc_cor_uni$dx_var_y1, na.rm = TRUE)
           # COR
-          GRAD[pstar.idx, cor.idx] <-
-            sum(SC.COR.UNI$dx_rho, na.rm = TRUE)
+          grad[pstar_idx, cor_idx] <-
+            sum(sc_cor_uni$dx_rho, na.rm = TRUE)
         } # grad only
-      } else if (ov.types[i] == "ordered" && ov.types[j] == "ordered") {
+      } else if (ov_types[i] == "ordered" && ov_types[j] == "ordered") {
         # polychoric correlation
         if (nexo == 0L) {
-          SC.COR.UNI <-
+          sc_cor_uni <-
             lav_bvord_cor_scores(
-              y1 = X[, i], y2 = X[, j],
+              y1 = x[, i], y2 = x[, j],
               exo = NULL, wt = wt,
-              rho = Sigma.hat[i, j],
+              rho = sigma_hat[i, j],
               fit_y1 = NULL, # fixme
               fit_y2 = NULL, # fixme
-              th_y1 = TH[th.idx == i],
-              th_y2 = TH[th.idx == j],
+              th_y1 = th[th_idx == i],
+              th_y2 = th[th_idx == j],
               sl_y1 = NULL,
               sl_y2 = NULL,
               na_zero = TRUE
             )
         } else {
-          SC.COR.UNI <-
+          sc_cor_uni <-
             lav_pml_dbilogl_dpar_x(
-              y1 = X[, i],
-              y2 = X[, j],
-              exo = eXo,
-              rho = Sigma.hat[i, j],
-              th_y1 = TH[th.idx == i],
-              th_y2 = TH[th.idx == j],
-              sl_y1 = PI[i, ],
-              sl_y2 = PI[j, ],
+              y1 = x[, i],
+              y2 = x[, j],
+              exo = exo,
+              rho = sigma_hat[i, j],
+              th_y1 = th[th_idx == i],
+              th_y2 = th[th_idx == j],
+              sl_y1 = pi0[i, ],
+              sl_y2 = pi0[j, ],
               missing_ind = missing
             )
         }
 
         if (scores) {
           # TH
-          SCORES[, th.idx_i] <- SCORES[, th.idx_i] + SC.COR.UNI$dx_th_y1
-          SCORES[, th.idx_j] <- SCORES[, th.idx_j] + SC.COR.UNI$dx_th_y2
+          scores_1[, th_idx_i] <- scores_1[, th_idx_i] + sc_cor_uni$dx_th_y1
+          scores_1[, th_idx_j] <- scores_1[, th_idx_j] + sc_cor_uni$dx_th_y2
 
           # SL
           if (nexo > 0L) {
-            SCORES[, sl.idx_i] <- SCORES[, sl.idx_i] + SC.COR.UNI$dx_sl_y1
-            SCORES[, sl.idx_j] <- SCORES[, sl.idx_j] + SC.COR.UNI$dx_sl_y2
+            scores_1[, sl_idx_i] <- scores_1[, sl_idx_i] + sc_cor_uni$dx_sl_y1
+            scores_1[, sl_idx_j] <- scores_1[, sl_idx_j] + sc_cor_uni$dx_sl_y2
           }
           # NO VAR
           # RHO
-          SCORES[, cor.idx] <- SCORES[, cor.idx] + SC.COR.UNI$dx_rho
+          scores_1[, cor_idx] <- scores_1[, cor_idx] + sc_cor_uni$dx_rho
         } else {
           # TH
-          if (length(th.idx_i) > 1L) {
-            GRAD[pstar.idx, th.idx_i] <-
-              colSums(SC.COR.UNI$dx_th_y1, na.rm = TRUE)
+          if (length(th_idx_i) > 1L) {
+            grad[pstar_idx, th_idx_i] <-
+              colSums(sc_cor_uni$dx_th_y1, na.rm = TRUE)
           } else {
-            GRAD[pstar.idx, th.idx_i] <-
-              sum(SC.COR.UNI$dx_th_y1, na.rm = TRUE)
+            grad[pstar_idx, th_idx_i] <-
+              sum(sc_cor_uni$dx_th_y1, na.rm = TRUE)
           }
-          if (length(th.idx_j) > 1L) {
-            GRAD[pstar.idx, th.idx_j] <-
-              colSums(SC.COR.UNI$dx_th_y2, na.rm = TRUE)
+          if (length(th_idx_j) > 1L) {
+            grad[pstar_idx, th_idx_j] <-
+              colSums(sc_cor_uni$dx_th_y2, na.rm = TRUE)
           } else {
-            GRAD[pstar.idx, th.idx_j] <-
-              sum(SC.COR.UNI$dx_th_y2, na.rm = TRUE)
+            grad[pstar_idx, th_idx_j] <-
+              sum(sc_cor_uni$dx_th_y2, na.rm = TRUE)
           }
 
           # SL
           if (nexo > 0L) {
-            if (length(sl.idx_i) > 1L) {
-              GRAD[pstar.idx, sl.idx_i] <-
-                colSums(SC.COR.UNI$dx_sl_y1, na.rm = TRUE)
+            if (length(sl_idx_i) > 1L) {
+              grad[pstar_idx, sl_idx_i] <-
+                colSums(sc_cor_uni$dx_sl_y1, na.rm = TRUE)
             } else {
-              GRAD[pstar.idx, sl.idx_i] <-
-                sum(SC.COR.UNI$dx_sl_y1, na.rm = TRUE)
+              grad[pstar_idx, sl_idx_i] <-
+                sum(sc_cor_uni$dx_sl_y1, na.rm = TRUE)
             }
-            if (length(sl.idx_j) > 1L) {
-              GRAD[pstar.idx, sl.idx_j] <-
-                colSums(SC.COR.UNI$dx_sl_y2, na.rm = TRUE)
+            if (length(sl_idx_j) > 1L) {
+              grad[pstar_idx, sl_idx_j] <-
+                colSums(sc_cor_uni$dx_sl_y2, na.rm = TRUE)
             } else {
-              GRAD[pstar.idx, sl.idx_j] <-
-                sum(SC.COR.UNI$dx_sl_y2, na.rm = TRUE)
+              grad[pstar_idx, sl_idx_j] <-
+                sum(sc_cor_uni$dx_sl_y2, na.rm = TRUE)
             }
           }
           # NO VAR
 
           # RHO
-          GRAD[pstar.idx, cor.idx] <-
-            sum(SC.COR.UNI$dx_rho, na.rm = TRUE)
+          grad[pstar_idx, cor_idx] <-
+            sum(sc_cor_uni$dx_rho, na.rm = TRUE)
         }
 
         # GRAD2 <- numDeriv::grad(func = pc_logl_x,
@@ -405,42 +407,42 @@ lav_pml_dploglik_dimplied <- function(Sigma.hat = NULL, # model-based var/cov/co
     }
   }
 
-  if (missing == "available.cases" && all(ov.types == "ordered")) {
+  if (missing == "available.cases" && all(ov_types == "ordered")) {
     if (nexo == 0L) {
-      UNI_SCORES <- matrix(0, nrow(X), N.TH)
+      uni_scores <- matrix(0, nrow(x), n_th)
       for (i in seq_len(nvar)) {
-        th.idx_i <- which(th.idx == i)
-        derY1 <- lav_pml_uni_scores(
-          y1 = X[, i], th_y1 = TH[th.idx == i],
+        th_idx_i <- which(th_idx == i)
+        der_y1 <- lav_pml_uni_scores(
+          y1 = x[, i], th_y1 = th[th_idx == i],
           exo = NULL, sl_y1 = NULL,
           weights_casewise = lavcache$uniweights.casewise
         )
-        UNI_SCORES[, th.idx_i] <- derY1$dx.th.y1
+        uni_scores[, th_idx_i] <- der_y1$dx.th.y1
       }
     } else {
-      UNI_SCORES <- matrix(0, nrow(X), ncol = (N.TH + N.SL))
+      uni_scores <- matrix(0, nrow(x), ncol = (n_th + n_sl))
       for (i in seq_len(nvar)) {
-        th.idx_i <- which(th.idx == i)
-        sl.idx_i <- N.TH + seq(i, by = nvar, length.out = nexo)
-        derY1 <- lav_pml_uni_scores(
-          y1 = X[, i], th_y1 = TH[th.idx == i],
-          exo = eXo, sl_y1 = PI[i, ],
+        th_idx_i <- which(th_idx == i)
+        sl_idx_i <- n_th + seq(i, by = nvar, length.out = nexo)
+        der_y1 <- lav_pml_uni_scores(
+          y1 = x[, i], th_y1 = th[th_idx == i],
+          exo = exo, sl_y1 = pi0[i, ],
           weights_casewise = lavcache$uniweights.casewise
         )
-        UNI_SCORES[, th.idx_i] <- derY1$dx.th.y1
-        UNI_SCORES[, sl.idx_i] <- derY1$dx.sl.y1
+        uni_scores[, th_idx_i] <- der_y1$dx.th.y1
+        uni_scores[, sl_idx_i] <- der_y1$dx.sl.y1
       }
       if (scores) {
-        SCORES <- SCORES[, 1:(N.TH + N.SL)] + UNI_SCORES
+        scores_1 <- scores_1[, 1:(n_th + n_sl)] + uni_scores
       } else {
-        uni_gradient <- colSums(UNI_SCORES)
+        uni_gradient <- colSums(uni_scores)
       }
     }
   }
 
   # do we need scores?
   if (scores) {
-    return(SCORES)
+    return(scores_1)
   }
 
   # DEBUG
@@ -450,13 +452,13 @@ lav_pml_dploglik_dimplied <- function(Sigma.hat = NULL, # model-based var/cov/co
 
 
   # gradient is sum over all pairs
-  gradient <- colSums(GRAD, na.rm = TRUE)
+  gradient <- colSums(grad, na.rm = TRUE)
 
-  if (missing == "available.cases" && all(ov.types == "ordered")) {
+  if (missing == "available.cases" && all(ov_types == "ordered")) {
     if (nexo == 0L) {
-      gradient[1:N.TH] <- gradient + uni_gradient
+      gradient[1:n_th] <- gradient + uni_gradient
     } else {
-      gradient[1:(N.TH + N.SL)] <- gradient + uni_gradient
+      gradient[1:(n_th + n_sl)] <- gradient + uni_gradient
     }
   }
 
@@ -511,33 +513,33 @@ lav_pml_dploglik_dimplied <- function(Sigma.hat = NULL, # model-based var/cov/co
 #              }
 
 
-lav_pml_grad_tau_rho <- function(no.x, all.thres, index.var.of.thres, rho.xixj,
-                         n.xixj.vec, out.lav_pml_longvec_ind) {
-  out.lav_pml_longvec_th_rho <- lav_pml_longvec_th_rho(
-    no.x = no.x, all.thres = all.thres,
-    index.var.of.thres = index.var.of.thres,
-    rho.xixj = rho.xixj
+lav_pml_grad_tau_rho <- function(no_x, all_thres, index_var_of_thres, rho_xixj,
+                         n_xixj_vec, out_lav_pml_longvec_ind) {
+  out_lav_pml_longvec_th_rho <- lav_pml_longvec_th_rho(
+    no_x = no_x, all_thres = all_thres,
+    index_var_of_thres = index_var_of_thres,
+    rho_xixj = rho_xixj
   )
-  pi.xixj <- lav_pml_expprob_vec(
-    ind.vec = out.lav_pml_longvec_ind,
-    th.rho.vec = out.lav_pml_longvec_th_rho
-  )
-
-  out.lav_pml_dl_drho <- lav_pml_dl_drho(
-    ind.vec = out.lav_pml_longvec_ind,
-    th.rho.vec = out.lav_pml_longvec_th_rho,
-    n.xixj = n.xixj.vec, pi.xixj = pi.xixj, no.x = no.x
+  pi_xixj <- lav_pml_expprob_vec(
+    ind_vec = out_lav_pml_longvec_ind,
+    th_rho_vec = out_lav_pml_longvec_th_rho
   )
 
-  out.lav_pml_dl_dtau <- lav_pml_dl_dtau(
-    ind.vec = out.lav_pml_longvec_ind,
-    th.rho.vec = out.lav_pml_longvec_th_rho,
-    n.xixj = n.xixj.vec, pi.xixj = pi.xixj,
-    no.x = no.x
+  out_lav_pml_dl_drho <- lav_pml_dl_drho(
+    ind_vec = out_lav_pml_longvec_ind,
+    th_rho_vec = out_lav_pml_longvec_th_rho,
+    n_xixj = n_xixj_vec, pi_xixj = pi_xixj, no_x = no_x
   )
 
-  grad <- c(out.lav_pml_dl_dtau, out.lav_pml_dl_drho)
-  attr(grad, "pi.xixj") <- pi.xixj
+  out_lav_pml_dl_dtau <- lav_pml_dl_dtau(
+    ind_vec = out_lav_pml_longvec_ind,
+    th_rho_vec = out_lav_pml_longvec_th_rho,
+    n_xixj = n_xixj_vec, pi_xixj = pi_xixj,
+    no_x = no_x
+  )
+
+  grad <- c(out_lav_pml_dl_dtau, out_lav_pml_dl_drho)
+  attr(grad, "pi.xixj") <- pi_xixj
 
   grad
 }
@@ -566,21 +568,22 @@ lav_pml_grad_tau_rho <- function(no.x, all.thres, index.var.of.thres, rho.xixj,
 # these for all pairs of variables. All are needed for the
 # computation of expected probabilities, der.L.to.rho, and der.L.to.tau
 
-# all duplications of indices are done as follows: within each pair of variables,
-# xi-xj, if for example we want to duplicate the indices of the thresholds,
-# tau^xi_a and tau^xj_b, then index a runs faster than b, i.e. for each b we
-# take all different tau^xi's, and then we proceed to the next b and do the
-# same. In other words if it was tabulated we fill the table columnwise.
+# all duplications of indices are done as follows: within each pair of 
+# variables,  xi-xj, if for example we want to duplicate the indices of 
+# the thresholds, tau^xi_a and tau^xj_b, then index a runs faster than b,
+# i.e. for each b we take all different tau^xi's, and then we proceed to
+# the next b and do the same. In other words if it was tabulated we fill
+# the table columnwise.
 
 # All pairs xi-xj are taken with index j running faster than i.
 
 # Note that each variable may have a different number of categories, that's why
 # for example we take lists below.
 
-lav_pml_longvec_ind <- function(no.x, all.thres, index.var.of.thres) {
-  no.thres.of.each.var <- tapply(all.thres, index.var.of.thres, length)
-  index.pairs <- utils::combn(no.x, 2)
-  no.pairs <- ncol(index.pairs)
+lav_pml_longvec_ind <- function(no_x, all_thres, index_var_of_thres) {
+  no_thres_of_each_var <- tapply(all_thres, index_var_of_thres, length)
+  index_pairs <- utils::combn(no_x, 2)
+  no_pairs <- ncol(index_pairs)
 
   # index.thres.var1.of.pair and index.thres.var2.of.pair contain the indices of
   # of all thresholds (from tau_0 which is -Inf to tau_last which is Inf)
@@ -588,56 +591,56 @@ lav_pml_longvec_ind <- function(no.x, all.thres, index.var.of.thres) {
   # together give all possible combinations of thresholds indices
   # Since here the threshold indices 0 and "last" are included, the vectors are
   # longer than the vectors thres.var1.of.pair and thres.var2.of.pair above.
-  index.thres.var1.of.pair <- vector("list", no.pairs)
-  index.thres.var2.of.pair <- vector("list", no.pairs)
+  index_thres_var1_of_pair <- vector("list", no_pairs)
+  index_thres_var2_of_pair <- vector("list", no_pairs)
 
   # index.var1.of.pair and index.var2.of.pair keep track the index of the
   # variable that the thresholds in index.thres.var1.of.pair and
   # index.thres.var2.of.pair belong to, respectively. So, these two variables
   # are of same length as that of index.thres.var1.of.pair and
   # index.thres.var2.of.pair
-  index.var1.of.pair <- vector("list", no.pairs)
-  index.var2.of.pair <- vector("list", no.pairs)
+  index_var1_of_pair <- vector("list", no_pairs)
+  index_var2_of_pair <- vector("list", no_pairs)
 
   # index.pairs.extended gives the index of the pair for each pair of variables
   # e.g. pair of variables 1-2 has index 1, variables 1-3 has index 2, etc.
   # The vector is of the same length as index.thres.var1.of.pair,
   # index.thres.var2.of.pair, index.var1.of.pair, and index.var2.of.pair
-  index.pairs.extended <- vector("list", no.pairs)
+  index_pairs_extended <- vector("list", no_pairs)
 
-  for (i in 1:no.pairs) {
-    no.thres.var1.of.pair <- no.thres.of.each.var[index.pairs[1, i]]
-    no.thres.var2.of.pair <- no.thres.of.each.var[index.pairs[2, i]]
+  for (i in 1:no_pairs) {
+    no_thres_var1_of_pair <- no_thres_of_each_var[index_pairs[1, i]]
+    no_thres_var2_of_pair <- no_thres_of_each_var[index_pairs[2, i]]
 
-    index.thres.var1.of.pair[[i]] <- rep(0:(no.thres.var1.of.pair + 1),
-      times = (no.thres.var2.of.pair + 2)
+    index_thres_var1_of_pair[[i]] <- rep(0:(no_thres_var1_of_pair + 1),
+      times = (no_thres_var2_of_pair + 2)
     )
-    index.thres.var2.of.pair[[i]] <- rep(0:(no.thres.var2.of.pair + 1),
-      each = (no.thres.var1.of.pair + 2)
+    index_thres_var2_of_pair[[i]] <- rep(0:(no_thres_var2_of_pair + 1),
+      each = (no_thres_var1_of_pair + 2)
     )
-    length.vec <- length(index.thres.var1.of.pair[[i]])
-    index.var1.of.pair[[i]] <- rep(index.pairs[1, i], length.vec)
-    index.var2.of.pair[[i]] <- rep(index.pairs[2, i], length.vec)
-    index.pairs.extended[[i]] <- rep(i, length.vec)
+    length_vec <- length(index_thres_var1_of_pair[[i]])
+    index_var1_of_pair[[i]] <- rep(index_pairs[1, i], length_vec)
+    index_var2_of_pair[[i]] <- rep(index_pairs[2, i], length_vec)
+    index_pairs_extended[[i]] <- rep(i, length_vec)
   }
 
-  index.thres.var1.of.pair <- unlist(index.thres.var1.of.pair)
-  index.thres.var2.of.pair <- unlist(index.thres.var2.of.pair)
-  index.var1.of.pair <- unlist(index.var1.of.pair)
-  index.var2.of.pair <- unlist(index.var2.of.pair)
-  index.pairs.extended <- unlist(index.pairs.extended)
+  index_thres_var1_of_pair <- unlist(index_thres_var1_of_pair)
+  index_thres_var2_of_pair <- unlist(index_thres_var2_of_pair)
+  index_var1_of_pair <- unlist(index_var1_of_pair)
+  index_var2_of_pair <- unlist(index_var2_of_pair)
+  index_pairs_extended <- unlist(index_pairs_extended)
 
   # indicator vector (T/F) showing which elements of index.thres.var1.of.pair
   # correspond to the last thresholds of variables. The length is the same as
   # that of index.thres.var1.of.pair.
-  last.thres.var1.of.pair <- index.var1.of.pair == 1 &
-    index.thres.var1.of.pair == (no.thres.of.each.var[1] + 1)
+  last_thres_var1_of_pair <- index_var1_of_pair == 1 &
+    index_thres_var1_of_pair == (no_thres_of_each_var[1] + 1)
   # we consider up to variable (no.x-1) because in pairs xi-xj where j runs
   # faster than i, the last variable is not included in the column of xi's
-  for (i in 2:(no.x - 1)) {
-    new.condition <- index.var1.of.pair == i &
-      index.thres.var1.of.pair == (no.thres.of.each.var[i] + 1)
-    last.thres.var1.of.pair <- last.thres.var1.of.pair | new.condition
+  for (i in 2:(no_x - 1)) {
+    new_condition <- index_var1_of_pair == i &
+      index_thres_var1_of_pair == (no_thres_of_each_var[i] + 1)
+    last_thres_var1_of_pair <- last_thres_var1_of_pair | new_condition
   }
 
   # indicator vector (T/F) showing which elements of index.thres.var2.of.pair
@@ -645,22 +648,22 @@ lav_pml_longvec_ind <- function(no.x, all.thres, index.var.of.thres) {
   # where j runs faster than i, the first variable is not included in the column
   # of xj's. That's why we start with variable 2. The length is the same as
   # that of index.thres.var1.of.pair.
-  last.thres.var2.of.pair <- index.var2.of.pair == 2 &
-    index.thres.var2.of.pair == (no.thres.of.each.var[2] + 1)
-  for (i in 3:no.x) {
-    new.condition <- index.var2.of.pair == i &
-      index.thres.var2.of.pair == (no.thres.of.each.var[i] + 1)
-    last.thres.var2.of.pair <- last.thres.var2.of.pair | new.condition
+  last_thres_var2_of_pair <- index_var2_of_pair == 2 &
+    index_thres_var2_of_pair == (no_thres_of_each_var[2] + 1)
+  for (i in 3:no_x) {
+    new_condition <- index_var2_of_pair == i &
+      index_thres_var2_of_pair == (no_thres_of_each_var[i] + 1)
+    last_thres_var2_of_pair <- last_thres_var2_of_pair | new_condition
   }
 
   list(
-    index.thres.var1.of.pair = index.thres.var1.of.pair,
-    index.thres.var2.of.pair = index.thres.var2.of.pair,
-    index.var1.of.pair = index.var1.of.pair,
-    index.var2.of.pair = index.var2.of.pair,
-    index.pairs.extended = index.pairs.extended,
-    last.thres.var1.of.pair = last.thres.var1.of.pair,
-    last.thres.var2.of.pair = last.thres.var2.of.pair
+    index.thres.var1.of.pair = index_thres_var1_of_pair,
+    index.thres.var2.of.pair = index_thres_var2_of_pair,
+    index.var1.of.pair = index_var1_of_pair,
+    index.var2.of.pair = index_var2_of_pair,
+    index.pairs.extended = index_pairs_extended,
+    last.thres.var1.of.pair = last_thres_var1_of_pair,
+    last.thres.var2.of.pair = last_thres_var2_of_pair
   )
 }
 ################################################################################
@@ -698,10 +701,11 @@ lav_pml_longvec_ind <- function(no.x, all.thres, index.var.of.thres) {
 # Note that each variable may have a different number of categories, that's why
 # for example we take lists below.
 
-lav_pml_longvec_th_rho <- function(no.x, all.thres, index.var.of.thres, rho.xixj) {
-  no.thres.of.each.var <- tapply(all.thres, index.var.of.thres, length)
-  index.pairs <- utils::combn(no.x, 2)
-  no.pairs <- ncol(index.pairs)
+lav_pml_longvec_th_rho <- function(no_x, all_thres, 
+                                   index_var_of_thres, rho_xixj) {
+  no_thres_of_each_var <- tapply(all_thres, index_var_of_thres, length)
+  index_pairs <- utils::combn(no_x, 2)
+  no_pairs <- ncol(index_pairs)
 
   # create the long vectors needed for the computation of expected probabilities
   # for each cell and each pair of variables. The vectors thres.var1.of.pair and
@@ -711,13 +715,13 @@ lav_pml_longvec_th_rho <- function(no.x, all.thres, index.var.of.thres, rho.xixj
   # of the middle thresholds (tau_1 to tau_(last-1)).
   # thres.var1.of.pair and thres.var2.of.pair give the first and the second
   # argument, respectively, in functions pbivnorm and lav_dbinorm
-  thres.var1.of.pair <- vector("list", no.pairs)
-  thres.var2.of.pair <- vector("list", no.pairs)
+  thres_var1_of_pair <- vector("list", no_pairs)
+  thres_var2_of_pair <- vector("list", no_pairs)
 
   # Extending the rho.vector accordingly so that it will be the the third
   # argument in pbivnorm and lav_dbinorm functions. It is of same length as
   # thres.var1.of.pair and thres.var2.of.pair.
-  rho.vector <- vector("list", no.pairs)
+  rho_vector <- vector("list", no_pairs)
 
   # thres.var1.for.dnorm.in.der.pi.to.tau.xi and
   # thres.var2.for.dnorm.in.der.pi.to.tau.xj give the thresholds of almost
@@ -727,39 +731,41 @@ lav_pml_longvec_th_rho <- function(no.x, all.thres, index.var.of.thres, rho.xixj
   # thres.var1.for.dnorm.in.der.pi.to.tau.xi does not contain the thresholds of
   # the last variable and thres.var2.for.dnorm.in.der.pi.to.tau.xj those of
   # the first variable
-  thres.var1.for.dnorm.in.der.pi.to.tau.xi <- vector("list", no.pairs)
-  thres.var2.for.dnorm.in.der.pi.to.tau.xj <- vector("list", no.pairs)
+  thres_var1_for_dnorm_in_der_pi_to_tau_xi <- vector("list", no_pairs) # nolint
+  thres_var2_for_dnorm_in_der_pi_to_tau_xj <- vector("list", no_pairs) # nolint
 
-  for (i in 1:no.pairs) {
-    single.thres.var1.of.pair <- all.thres[index.var.of.thres == index.pairs[1, i]]
-    single.thres.var2.of.pair <- all.thres[index.var.of.thres == index.pairs[2, i]]
+  for (i in 1:no_pairs) {
+    single_thres_var1_of_pair <-
+       all_thres[index_var_of_thres == index_pairs[1, i]]
+    single_thres_var2_of_pair <-
+       all_thres[index_var_of_thres == index_pairs[2, i]]
     # remember that the first (-Inf) and last (Inf) thresholds are not included
     # so no.thres.var1.of.pair is equal to number of categories of var1 minus 1
     # similarly for no.thres.var2.of.pair
-    no.thres.var1.of.pair <- no.thres.of.each.var[index.pairs[1, i]]
-    no.thres.var2.of.pair <- no.thres.of.each.var[index.pairs[2, i]]
+    no_thres_var1_of_pair <- no_thres_of_each_var[index_pairs[1, i]]
+    no_thres_var2_of_pair <- no_thres_of_each_var[index_pairs[2, i]]
 
-    thres.var1.of.pair[[i]] <- rep(single.thres.var1.of.pair,
-      times = no.thres.var2.of.pair
+    thres_var1_of_pair[[i]] <- rep(single_thres_var1_of_pair,
+      times = no_thres_var2_of_pair
     )
-    thres.var2.of.pair[[i]] <- rep(single.thres.var2.of.pair,
-      each = no.thres.var1.of.pair
+    thres_var2_of_pair[[i]] <- rep(single_thres_var2_of_pair,
+      each = no_thres_var1_of_pair
     )
-    rho.vector[[i]] <- rep(rho.xixj[i], length(thres.var1.of.pair[[i]]))
+    rho_vector[[i]] <- rep(rho_xixj[i], length(thres_var1_of_pair[[i]]))
 
-    thres.var1.for.dnorm.in.der.pi.to.tau.xi[[i]] <-
-      rep(single.thres.var1.of.pair, times = (no.thres.var2.of.pair + 1))
-    thres.var2.for.dnorm.in.der.pi.to.tau.xj[[i]] <-
-      rep(single.thres.var2.of.pair, each = (no.thres.var1.of.pair + 1))
+    thres_var1_for_dnorm_in_der_pi_to_tau_xi[[i]] <-   # nolint
+      rep(single_thres_var1_of_pair, times = (no_thres_var2_of_pair + 1))
+    thres_var2_for_dnorm_in_der_pi_to_tau_xj[[i]] <-   # nolint
+      rep(single_thres_var2_of_pair, each = (no_thres_var1_of_pair + 1))
   }
 
-  thres.var1.of.pair <- unlist(thres.var1.of.pair)
-  thres.var2.of.pair <- unlist(thres.var2.of.pair)
-  rho.vector <- unlist(rho.vector)
-  thres.var1.for.dnorm.in.der.pi.to.tau.xi <-
-    unlist(thres.var1.for.dnorm.in.der.pi.to.tau.xi)
-  thres.var2.for.dnorm.in.der.pi.to.tau.xj <-
-    unlist(thres.var2.for.dnorm.in.der.pi.to.tau.xj)
+  thres_var1_of_pair <- unlist(thres_var1_of_pair)
+  thres_var2_of_pair <- unlist(thres_var2_of_pair)
+  rho_vector <- unlist(rho_vector)
+  thres_var1_for_dnorm_in_der_pi_to_tau_xi <-          # nolint
+    unlist(thres_var1_for_dnorm_in_der_pi_to_tau_xi)
+  thres_var2_for_dnorm_in_der_pi_to_tau_xj <-          # nolint
+    unlist(thres_var2_for_dnorm_in_der_pi_to_tau_xj)
 
   # thres.var2.for.last.cat.var1 and thres.var1.for.last.cat.var2 are needed
   # for the computation of expected probabilities. In the computation of
@@ -770,31 +776,31 @@ lav_pml_longvec_th_rho <- function(no.x, all.thres, index.var.of.thres, rho.xixj
   # pnorm(thres.var2.for.last.cat.var1). Similarly, when the second variable of
   # the pair has tau_last=Inf and the first a non-infite threshold we compute
   # pnorm(thres.var1.for.last.cat.var2).
-  thres.var2.for.last.cat.var1 <- vector("list", (no.x - 1))
-  thres.var1.for.last.cat.var2 <- vector("list", (no.x - 1))
-  for (i in 1:(no.x - 1)) {
-    thres.var2.for.last.cat.var1[[i]] <-
-      c(all.thres[index.var.of.thres %in% (i + 1):no.x])
-    thres.var1.for.last.cat.var2[[i]] <- rep(all.thres[index.var.of.thres == i],
-      times = (no.x - i)
+  thres_var2_for_last_cat_var1 <- vector("list", (no_x - 1))
+  thres_var1_for_last_cat_var2 <- vector("list", (no_x - 1))
+  for (i in 1:(no_x - 1)) {
+    thres_var2_for_last_cat_var1[[i]] <-
+      c(all_thres[index_var_of_thres %in% (i + 1):no_x])
+    thres_var1_for_last_cat_var2[[i]] <- rep(all_thres[index_var_of_thres == i],
+      times = (no_x - i)
     )
   }
-  thres.var2.for.last.cat.var1 <- unlist(thres.var2.for.last.cat.var1)
-  thres.var1.for.last.cat.var2 <- unlist(thres.var1.for.last.cat.var2)
+  thres_var2_for_last_cat_var1 <- unlist(thres_var2_for_last_cat_var1)
+  thres_var1_for_last_cat_var2 <- unlist(thres_var1_for_last_cat_var2)
 
 
   list(
-    thres.var1.of.pair = thres.var1.of.pair, # these 3 of same length
-    thres.var2.of.pair = thres.var2.of.pair,
-    rho.vector = rho.vector,
+    thres.var1.of.pair = thres_var1_of_pair, # these 3 of same length
+    thres.var2.of.pair = thres_var2_of_pair,
+    rho.vector = rho_vector,
 
     # the following of length dependning on the number of categories
     thres.var1.for.dnorm.in.der.pi.to.tau.xi =
-      thres.var1.for.dnorm.in.der.pi.to.tau.xi,
+      thres_var1_for_dnorm_in_der_pi_to_tau_xi,
     thres.var2.for.dnorm.in.der.pi.to.tau.xj =
-      thres.var2.for.dnorm.in.der.pi.to.tau.xj,
-    thres.var2.for.last.cat.var1 = thres.var2.for.last.cat.var1,
-    thres.var1.for.last.cat.var2 = thres.var1.for.last.cat.var2
+      thres_var2_for_dnorm_in_der_pi_to_tau_xj,
+    thres.var2.for.last.cat.var1 = thres_var2_for_last_cat_var1,
+    thres.var1.for.last.cat.var2 = thres_var1_for_last_cat_var2
   )
 }
 #########################################################
@@ -812,51 +818,51 @@ lav_pml_longvec_th_rho <- function(no.x, all.thres, index.var.of.thres, rho.xixj
 # and categories a and b, then index a runs the fastest of all, followed by b,
 # then by j, and lastly by i.
 
-lav_pml_expprob_vec <- function(ind.vec, th.rho.vec) {
-  prob.vec <- rep(NA, length(ind.vec$index.thres.var1.of.pair))
+lav_pml_expprob_vec <- function(ind_vec, th_rho_vec) {
+  prob_vec <- rep(NA, length(ind_vec$index.thres.var1.of.pair))
 
-  prob.vec[ind.vec$index.thres.var1.of.pair == 0 |
-    ind.vec$index.thres.var2.of.pair == 0] <- 0
+  prob_vec[ind_vec$index.thres.var1.of.pair == 0 |
+    ind_vec$index.thres.var2.of.pair == 0] <- 0
 
-  prob.vec[ind.vec$last.thres.var1.of.pair &
-    ind.vec$last.thres.var2.of.pair] <- 1
+  prob_vec[ind_vec$last.thres.var1.of.pair &
+    ind_vec$last.thres.var2.of.pair] <- 1
 
-  prob.vec[ind.vec$last.thres.var1.of.pair &
-    ind.vec$index.thres.var2.of.pair != 0 &
-    !ind.vec$last.thres.var2.of.pair] <-
-    pnorm(th.rho.vec$thres.var2.for.last.cat.var1)
+  prob_vec[ind_vec$last.thres.var1.of.pair &
+    ind_vec$index.thres.var2.of.pair != 0 &
+    !ind_vec$last.thres.var2.of.pair] <-
+    pnorm(th_rho_vec$thres.var2.for.last.cat.var1)
 
-  prob.vec[ind.vec$last.thres.var2.of.pair &
-    ind.vec$index.thres.var1.of.pair != 0 &
-    !ind.vec$last.thres.var1.of.pair] <-
-    pnorm(th.rho.vec$thres.var1.for.last.cat.var2)
+  prob_vec[ind_vec$last.thres.var2.of.pair &
+    ind_vec$index.thres.var1.of.pair != 0 &
+    !ind_vec$last.thres.var1.of.pair] <-
+    pnorm(th_rho_vec$thres.var1.for.last.cat.var2)
 
-  prob.vec[is.na(prob.vec)] <- pbivnorm(
-    th.rho.vec$thres.var1.of.pair,
-    th.rho.vec$thres.var2.of.pair,
-    th.rho.vec$rho.vector
+  prob_vec[is.na(prob_vec)] <- pbivnorm(
+    th_rho_vec$thres.var1.of.pair,
+    th_rho_vec$thres.var2.of.pair,
+    th_rho_vec$rho.vector
   )
 
-  cum.term1 <- prob.vec[ind.vec$index.thres.var1.of.pair != 0 &
-    ind.vec$index.thres.var2.of.pair != 0]
+  cum_term1 <- prob_vec[ind_vec$index.thres.var1.of.pair != 0 &
+    ind_vec$index.thres.var2.of.pair != 0]
 
-  cum.term2 <- prob.vec[ind.vec$index.thres.var1.of.pair != 0 &
-    !ind.vec$last.thres.var2.of.pair]
+  cum_term2 <- prob_vec[ind_vec$index.thres.var1.of.pair != 0 &
+    !ind_vec$last.thres.var2.of.pair]
 
-  cum.term3 <- prob.vec[ind.vec$index.thres.var2.of.pair != 0 &
-    !ind.vec$last.thres.var1.of.pair]
+  cum_term3 <- prob_vec[ind_vec$index.thres.var2.of.pair != 0 &
+    !ind_vec$last.thres.var1.of.pair]
 
-  cum.term4 <- prob.vec[!ind.vec$last.thres.var1.of.pair &
-    !ind.vec$last.thres.var2.of.pair]
+  cum_term4 <- prob_vec[!ind_vec$last.thres.var1.of.pair &
+    !ind_vec$last.thres.var2.of.pair]
 
-  PI <- cum.term1 - cum.term2 - cum.term3 + cum.term4
+  pi0 <- cum_term1 - cum_term2 - cum_term3 + cum_term4
 
   # added by YR 11 nov 2012 to avoid Nan/-Inf
   # log(.Machine$double.eps) = -36.04365
   # all elements should be strictly positive
-  PI[PI < .Machine$double.eps] <- .Machine$double.eps
+  pi0[pi0 < .Machine$double.eps] <- .Machine$double.eps
 
-  PI
+  pi0
 }
 
 
@@ -872,45 +878,45 @@ lav_pml_expprob_vec <- function(ind.vec, th.rho.vec) {
 # output: the vector of der.L.to.rho, each element corresponds to
 #         der.Lxixj.to.rho.xixj where j runs faster than i
 
-lav_pml_dl_drho <- function(ind.vec, th.rho.vec, n.xixj, pi.xixj, no.x) {
-  prob.vec <- rep(NA, length(ind.vec$index.thres.var1.of.pair))
+lav_pml_dl_drho <- function(ind_vec, th_rho_vec, n_xixj, pi_xixj, no_x) {
+  prob_vec <- rep(NA, length(ind_vec$index.thres.var1.of.pair))
 
-  prob.vec[ind.vec$index.thres.var1.of.pair == 0 |
-    ind.vec$index.thres.var2.of.pair == 0 |
-    ind.vec$last.thres.var1.of.pair |
-    ind.vec$last.thres.var2.of.pair] <- 0
+  prob_vec[ind_vec$index.thres.var1.of.pair == 0 |
+    ind_vec$index.thres.var2.of.pair == 0 |
+    ind_vec$last.thres.var1.of.pair |
+    ind_vec$last.thres.var2.of.pair] <- 0
 
-  prob.vec[is.na(prob.vec)] <- lav_dbinorm(th.rho.vec$thres.var1.of.pair,
-    th.rho.vec$thres.var2.of.pair,
-    rho = th.rho.vec$rho.vector
+  prob_vec[is.na(prob_vec)] <- lav_dbinorm(th_rho_vec$thres.var1.of.pair,
+    th_rho_vec$thres.var2.of.pair,
+    rho = th_rho_vec$rho.vector
   )
 
-  den.term1 <- prob.vec[ind.vec$index.thres.var1.of.pair != 0 &
-    ind.vec$index.thres.var2.of.pair != 0]
+  den_term1 <- prob_vec[ind_vec$index.thres.var1.of.pair != 0 &
+    ind_vec$index.thres.var2.of.pair != 0]
 
-  den.term2 <- prob.vec[ind.vec$index.thres.var1.of.pair != 0 &
-    !ind.vec$last.thres.var2.of.pair]
+  den_term2 <- prob_vec[ind_vec$index.thres.var1.of.pair != 0 &
+    !ind_vec$last.thres.var2.of.pair]
 
-  den.term3 <- prob.vec[ind.vec$index.thres.var2.of.pair != 0 &
-    !ind.vec$last.thres.var1.of.pair]
+  den_term3 <- prob_vec[ind_vec$index.thres.var2.of.pair != 0 &
+    !ind_vec$last.thres.var1.of.pair]
 
-  den.term4 <- prob.vec[!ind.vec$last.thres.var1.of.pair &
-    !ind.vec$last.thres.var2.of.pair]
+  den_term4 <- prob_vec[!ind_vec$last.thres.var1.of.pair &
+    !ind_vec$last.thres.var2.of.pair]
 
-  der.pi.xixj.to.rho.xixj <- den.term1 - den.term2 - den.term3 + den.term4
-  prod.terms <- (n.xixj / pi.xixj) * der.pi.xixj.to.rho.xixj
+  der_pi_xixj_to_rho_xixj <- den_term1 - den_term2 - den_term3 + den_term4
+  prod_terms <- (n_xixj / pi_xixj) * der_pi_xixj_to_rho_xixj
 
   # to get der.Lxixj.to.rho.xixj we should all the elements of
   # der.pi.xixj.to.rho.xixj which correspond to the pair xi-xj, to do so:
   xnew <- lapply(
-    ind.vec[c("index.pairs.extended")],
+    ind_vec[c("index.pairs.extended")],
     function(y) {
-      y[ind.vec$index.thres.var1.of.pair != 0 &
-        ind.vec$index.thres.var2.of.pair != 0]
+      y[ind_vec$index.thres.var1.of.pair != 0 &
+        ind_vec$index.thres.var2.of.pair != 0]
     }
   )
   # der.L.to.rho is:
-  tapply(prod.terms, xnew$index.pairs.extended, sum)
+  tapply(prod_terms, xnew$index.pairs.extended, sum)
 }
 ###########################################################################
 
@@ -929,109 +935,109 @@ lav_pml_dl_drho <- function(ind.vec, th.rho.vec, n.xixj, pi.xixj, no.x) {
 #         each variable the thresholds in ascending order.
 
 
-lav_pml_dl_dtau <- function(ind.vec, th.rho.vec, n.xixj, pi.xixj, no.x = 0L) {
+lav_pml_dl_dtau <- function(ind_vec, th_rho_vec, n_xixj, pi_xixj, no_x = 0L) {
   # to compute der.pi.xixj.to.tau.xi
   xi <- lapply(
-    ind.vec[c(
+    ind_vec[c(
       "index.thres.var2.of.pair",
       "last.thres.var2.of.pair"
     )],
     function(y) {
-      y[!(ind.vec$index.thres.var1.of.pair == 0 |
-        ind.vec$last.thres.var1.of.pair)]
+      y[!(ind_vec$index.thres.var1.of.pair == 0 |
+        ind_vec$last.thres.var1.of.pair)]
     }
   )
 
-  cum.prob.vec <- rep(NA, length(xi$index.thres.var2.of.pair))
-  cum.prob.vec[xi$index.thres.var2.of.pair == 0] <- 0
-  cum.prob.vec[xi$last.thres.var2.of.pair] <- 1
-  denom <- sqrt(1 - (th.rho.vec$rho.vector * th.rho.vec$rho.vector))
-  cum.prob.vec[is.na(cum.prob.vec)] <-
-    pnorm((th.rho.vec$thres.var2.of.pair -
-      th.rho.vec$rho.vector * th.rho.vec$thres.var1.of.pair) /
+  cum_prob_vec <- rep(NA, length(xi$index.thres.var2.of.pair))
+  cum_prob_vec[xi$index.thres.var2.of.pair == 0] <- 0
+  cum_prob_vec[xi$last.thres.var2.of.pair] <- 1
+  denom <- sqrt(1 - (th_rho_vec$rho.vector * th_rho_vec$rho.vector))
+  cum_prob_vec[is.na(cum_prob_vec)] <-
+    pnorm((th_rho_vec$thres.var2.of.pair -
+      th_rho_vec$rho.vector * th_rho_vec$thres.var1.of.pair) /
       denom)
-  den.prob.vec <- dnorm(th.rho.vec$thres.var1.for.dnorm.in.der.pi.to.tau.xi)
-  der.pi.xixj.to.tau.xi <- den.prob.vec *
-    (cum.prob.vec[xi$index.thres.var2.of.pair != 0] -
-      cum.prob.vec[!xi$last.thres.var2.of.pair])
+  den_prob_vec <- dnorm(th_rho_vec$thres.var1.for.dnorm.in.der.pi.to.tau.xi)
+  der_pi_xixj_to_tau_xi <- den_prob_vec *
+    (cum_prob_vec[xi$index.thres.var2.of.pair != 0] -
+      cum_prob_vec[!xi$last.thres.var2.of.pair])
 
   # to compute der.pi.xixj.to.tau.xj
   xj <- lapply(
-    ind.vec[c(
+    ind_vec[c(
       "index.thres.var1.of.pair",
       "last.thres.var1.of.pair"
     )],
     function(y) {
-      y[!(ind.vec$index.thres.var2.of.pair == 0 |
-        ind.vec$last.thres.var2.of.pair)]
+      y[!(ind_vec$index.thres.var2.of.pair == 0 |
+        ind_vec$last.thres.var2.of.pair)]
     }
   )
 
-  cum.prob.vec <- rep(NA, length(xj$index.thres.var1.of.pair))
-  cum.prob.vec[xj$index.thres.var1.of.pair == 0] <- 0
-  cum.prob.vec[xj$last.thres.var1.of.pair] <- 1
-  denom <- sqrt(1 - (th.rho.vec$rho.vector * th.rho.vec$rho.vector))
-  cum.prob.vec[is.na(cum.prob.vec)] <-
-    pnorm((th.rho.vec$thres.var1.of.pair -
-      th.rho.vec$rho.vector * th.rho.vec$thres.var2.of.pair) /
+  cum_prob_vec <- rep(NA, length(xj$index.thres.var1.of.pair))
+  cum_prob_vec[xj$index.thres.var1.of.pair == 0] <- 0
+  cum_prob_vec[xj$last.thres.var1.of.pair] <- 1
+  denom <- sqrt(1 - (th_rho_vec$rho.vector * th_rho_vec$rho.vector))
+  cum_prob_vec[is.na(cum_prob_vec)] <-
+    pnorm((th_rho_vec$thres.var1.of.pair -
+      th_rho_vec$rho.vector * th_rho_vec$thres.var2.of.pair) /
       denom)
-  den.prob.vec <- dnorm(th.rho.vec$thres.var2.for.dnorm.in.der.pi.to.tau.xj)
-  der.pi.xixj.to.tau.xj <- den.prob.vec *
-    (cum.prob.vec[xj$index.thres.var1.of.pair != 0] -
-      cum.prob.vec[!xj$last.thres.var1.of.pair])
+  den_prob_vec <- dnorm(th_rho_vec$thres.var2.for.dnorm.in.der.pi.to.tau.xj)
+  der_pi_xixj_to_tau_xj <- den_prob_vec *
+    (cum_prob_vec[xj$index.thres.var1.of.pair != 0] -
+      cum_prob_vec[!xj$last.thres.var1.of.pair])
 
   # to compute der.Lxixj.tau.xi and der.Lxixj.tau.xi
-  n.over.pi <- n.xixj / pi.xixj
+  n_over_pi <- n_xixj / pi_xixj
   # get the appropriate differences of n.over.pi for der.Lxixj.to.tau.xi  and
   # der.Lxixj.to.tau.xj
-  x3a <- lapply(ind.vec, function(y) {
-    y[!(ind.vec$index.thres.var1.of.pair == 0 |
-      ind.vec$index.thres.var2.of.pair == 0)]
+  x3a <- lapply(ind_vec, function(y) {
+    y[!(ind_vec$index.thres.var1.of.pair == 0 |
+      ind_vec$index.thres.var2.of.pair == 0)]
   })
-  diff.n.over.pi.to.xi <- n.over.pi[!x3a$last.thres.var1.of.pair] -
-    n.over.pi[x3a$index.thres.var1.of.pair != 1]
-  diff.n.over.pi.to.xj <- n.over.pi[!x3a$last.thres.var2.of.pair] -
-    n.over.pi[x3a$index.thres.var2.of.pair != 1]
+  diff_n_over_pi_to_xi <- n_over_pi[!x3a$last.thres.var1.of.pair] -
+    n_over_pi[x3a$index.thres.var1.of.pair != 1]
+  diff_n_over_pi_to_xj <- n_over_pi[!x3a$last.thres.var2.of.pair] -
+    n_over_pi[x3a$index.thres.var2.of.pair != 1]
   # terms.der.Lxixj.to.tau.xi  and terms.der.Lxixj.to.tau.xj
-  terms.der.Lxixj.to.tau.xi <- diff.n.over.pi.to.xi * der.pi.xixj.to.tau.xi
-  terms.der.Lxixj.to.tau.xj <- diff.n.over.pi.to.xj * der.pi.xixj.to.tau.xj
+  terms_der_lxixj_to_tau_xi <- diff_n_over_pi_to_xi * der_pi_xixj_to_tau_xi
+  terms_der_lxixj_to_tau_xj <- diff_n_over_pi_to_xj * der_pi_xixj_to_tau_xj
   # to add appropriately elements of terms.der.Lxixj.to.tau.xi
   x3b <- lapply(
-    ind.vec[c(
+    ind_vec[c(
       "index.pairs.extended",
       "index.thres.var1.of.pair"
     )],
     function(y) {
-      y[!(ind.vec$index.thres.var1.of.pair == 0 |
-        ind.vec$last.thres.var1.of.pair |
-        ind.vec$index.thres.var2.of.pair == 0)]
+      y[!(ind_vec$index.thres.var1.of.pair == 0 |
+        ind_vec$last.thres.var1.of.pair |
+        ind_vec$index.thres.var2.of.pair == 0)]
     }
   )
   # to add appropriately elements of terms.der.Lxixj.to.tau.xj
   x4b <- lapply(
-    ind.vec[c(
+    ind_vec[c(
       "index.pairs.extended",
       "index.thres.var2.of.pair"
     )],
     function(y) {
-      y[!(ind.vec$index.thres.var2.of.pair == 0 |
-        ind.vec$last.thres.var2.of.pair |
-        ind.vec$index.thres.var1.of.pair == 0)]
+      y[!(ind_vec$index.thres.var2.of.pair == 0 |
+        ind_vec$last.thres.var2.of.pair |
+        ind_vec$index.thres.var1.of.pair == 0)]
     }
   )
-  ind.pairs <- utils::combn(no.x, 2)
+  ind_pairs <- utils::combn(no_x, 2)
   # der.Lxixj.to.tau.xi is a matrix, nrow=no.pairs, ncol=max(no.of.free.thres)
   # thus, there are NA's, similarly for der.Lxixj.to.tau.xj
-  der.Lxixj.to.tau.xi <- tapply(
-    terms.der.Lxixj.to.tau.xi,
+  der_lxixj_to_tau_xi <- tapply(
+    terms_der_lxixj_to_tau_xi,
     list(
       x3b$index.pairs.extended,
       x3b$index.thres.var1.of.pair
     ),
     sum
   )
-  der.Lxixj.to.tau.xj <- tapply(
-    terms.der.Lxixj.to.tau.xj,
+  der_lxixj_to_tau_xj <- tapply(
+    terms_der_lxixj_to_tau_xj,
     list(
       x4b$index.pairs.extended,
       x4b$index.thres.var2.of.pair
@@ -1041,12 +1047,12 @@ lav_pml_dl_dtau <- function(ind.vec, th.rho.vec, n.xixj, pi.xixj, no.x = 0L) {
 
   # to add appropriately the terms of der.Lxixj.to.tau.xi and
   # der.Lxixj.to.tau.xj
-  split.der.Lxixj.to.tau.xi <- split(
-    as.data.frame(der.Lxixj.to.tau.xi),
-    ind.pairs[1, ]
+  split_der_lxixj_to_tau_xi <- split(
+    as.data.frame(der_lxixj_to_tau_xi),
+    ind_pairs[1, ]
   )
-  sums.der.Lxixj.to.tau.xi <- lapply(
-    split.der.Lxixj.to.tau.xi,
+  sums_der_lxixj_to_tau_xi <- lapply(
+    split_der_lxixj_to_tau_xi,
     function(x) {
       y <- apply(x, 2, sum)
       y[!is.na(y)]
@@ -1054,12 +1060,12 @@ lav_pml_dl_dtau <- function(ind.vec, th.rho.vec, n.xixj, pi.xixj, no.x = 0L) {
   )
   # Note: NA exist in the case where the ordinal variables have different
   # number of response categories
-  split.der.Lxixj.to.tau.xj <- split(
-    as.data.frame(der.Lxixj.to.tau.xj),
-    ind.pairs[2, ]
+  split_der_lxixj_to_tau_xj <- split(
+    as.data.frame(der_lxixj_to_tau_xj),
+    ind_pairs[2, ]
   )
-  sums.der.Lxixj.to.tau.xj <- lapply(
-    split.der.Lxixj.to.tau.xj,
+  sums_der_lxixj_to_tau_xj <- lapply(
+    split_der_lxixj_to_tau_xj,
     function(x) {
       y <- apply(x, 2, sum)
       y[!is.na(y)]
@@ -1067,9 +1073,9 @@ lav_pml_dl_dtau <- function(ind.vec, th.rho.vec, n.xixj, pi.xixj, no.x = 0L) {
   )
   # to get der.L.to.tau
   c(
-    sums.der.Lxixj.to.tau.xi[[1]],
-    c(unlist(sums.der.Lxixj.to.tau.xi[2:(no.x - 1)]) +
-      unlist(sums.der.Lxixj.to.tau.xj[1:(no.x - 2)])),
-    sums.der.Lxixj.to.tau.xj[[no.x - 1]]
+    sums_der_lxixj_to_tau_xi[[1]],
+    c(unlist(sums_der_lxixj_to_tau_xi[2:(no_x - 1)]) +
+      unlist(sums_der_lxixj_to_tau_xj[1:(no_x - 2)])),
+    sums_der_lxixj_to_tau_xj[[no_x - 1]]
   )
 }
