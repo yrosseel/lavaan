@@ -173,7 +173,7 @@ muthen1984 <- function(data_1 = NULL,
           fit_y2 = fit[[j]],
           wt = wt
         )
-        
+
         # RHO
         if (is.null(wt)) {
           sc_cor[, pstar_idx] <- sc_cor_uni$dx_rho

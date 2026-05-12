@@ -419,7 +419,7 @@ lav_mvnorm_dlogl_dsigma <- function(y = NULL,
 }
 
 # 2c: derivative logl with respect to vech(Sigma)
-lav_mvnorm_dlogl_dvechsigma <- function(y = NULL, 
+lav_mvnorm_dlogl_dvechsigma <- function(y = NULL,
                                         wt = NULL,
                                         mu = NULL,
                                         sigma_1 = NULL,
@@ -966,7 +966,7 @@ lav_mvnorm_inverted_information_expected <- function(y = NULL, # unused! # nolin
     }
   } else {
     # if (lav_use_lavaanC()) {
-    #   I22 <- 
+    #   I22 <-
     #      lavaanC::m_kronecker_dup_ginv_pre_post(Sigma, multiplicator = 2.0)
     # } else {
       i22 <- 2 * lav_matrix_duplication_ginv_pre_post(sigma_1 %x% sigma_1)

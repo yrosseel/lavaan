@@ -432,7 +432,7 @@ lav_bvord_noexo_gnorm_cache <- function(cache = NULL) {
     # phi_2(y1,y2;rho) * guv(y1,y2;rho), where guv() is defined below:
     guv <- function(u, v, rho) {
       r <- (1 - rho * rho)
-      (u * v * r - 
+      (u * v * r -
         rho * ((u * u) - 2 * rho * u * v + (v * v)) + rho * r) / (r * r)
     }
 
@@ -570,7 +570,7 @@ lav_bvord_hessian_cache <- function(cache = NULL) {
     } else {
       guv <- function(u, v, rho) {
         r <- (1 - rho * rho)
-        (u * v * r - 
+        (u * v * r -
           rho * ((u * u) - 2 * rho * u * v + (v * v)) + rho * r) / (r * r)
       }
 

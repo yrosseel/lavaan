@@ -194,10 +194,12 @@ lavTestLRT <- function(object, ..., method = "default", test = "default",   # no
     lav_msg_stop(gettext(
       "some models (but not all) have scaled test statistics"))
   }
+
   if (type %in% c("browne.residual.adf", "browne.residual.nt")) {
     scaled <- FALSE
     method <- "standard"
   }
+
   if (method == "standard") {
     scaled <- FALSE
   }
@@ -281,17 +283,19 @@ lavTestLRT <- function(object, ..., method = "default", test = "default",   # no
   } else if (type == "browne.residual.nt") {
     testlist <- lapply(
       mods,
-      function(x) lavTest(x, test = "browne.residual.nt")
+      function(x) lavTest(x, test = "browne.residual.nt",
+                          drop.list.single = FALSE)
     )
-    df_1 <- sapply(testlist, function(x) x$df)
-    stat_1 <- sapply(testlist, function(x) x$stat)
+    df_1 <- sapply(testlist, function(x) x[[type]]$df)
+    stat_1 <- sapply(testlist, function(x) x[[type]]$stat)
   } else if (type == "browne.residual.adf") {
     testlist <- lapply(
       mods,
-      function(x) lavTest(x, test = "browne.residual.adf")
+      function(x) lavTest(x, test = "browne.residual.adf",
+                          drop.list.single = FALSE)
     )
-    df_1 <- sapply(testlist, function(x) x$df)
-    stat_1 <- sapply(testlist, function(x) x$stat)
+    df_1 <- sapply(testlist, function(x) x[[type]]$df)
+    stat_1 <- sapply(testlist, function(x) x[[type]]$stat)
   } else if (type == "cf") {
     tmp <- lapply(mods, lavTablesFitCf)
     stat_1 <- unlist(tmp)

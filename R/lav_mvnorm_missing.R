@@ -1368,7 +1368,7 @@ lav_mvnorm_missing_information_both <- function(y = NULL, # nolint
 
     if (information == "expected") {
       # if (lav_use_lavaanC()) {
-      #   S2.inv <- 
+      #   S2.inv <-
       #         lavaanC::m_kronecker_dup_pre_post(S.inv, multiplicator = 0.5)
       # } else {
         s2_inv <- 0.5 * lav_matrix_duplication_pre_post(s_inv %x% s_inv)
