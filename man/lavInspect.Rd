@@ -254,8 +254,12 @@ Model-implied sample statistics:
        Bartlett factor scores). They represent the (estimated) correlation
        between the factor scores and the latent variables scores.}
     \item{\code{"fs.reliability.Bartlett"}:}{The factor reliabilities (based on
-       Bartlett factor scores). They are the square of the factor 
+       Bartlett factor scores). They are the square of the factor
        determinacies.}
+    \item{\code{"icc"}:}{The intraclass correlation coefficients for clustered
+       data with multilevel models. Computed from the model-implied (H1)
+       within-group and between-group covariance matrices. Only available
+       for models with clustered data and multiple levels.}
 }
 
 Diagnostics:
