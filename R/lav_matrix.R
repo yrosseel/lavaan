@@ -30,6 +30,52 @@ lav_matrix_vecr <- function(A) {         # nolint
 }
 
 
+# Delta' A Delta product used by information-matrix calculations.
+lav_matrix_delta_A_delta <- function(delta, a1) {
+  crossprod(delta, a1) %*% delta
+}
+
+
+# Return matrix vector indices and values from row/column/value triples.
+lav_matrix_rowcol_idx <- function(row, col, value, nrow, ncol, symmetric = FALSE) {
+  if (length(row) == 0L) {
+    return(list(m.idx = integer(0L), x.idx = value[integer(0L)]))
+  }
+
+  row <- as.integer(row)
+  col <- as.integer(col)
+  nrow <- as.integer(nrow)
+  ncol <- as.integer(ncol)
+
+  if (symmetric) {
+    upper_idx <- row <= col
+    row <- row[upper_idx]
+    col <- col[upper_idx]
+    value <- value[upper_idx]
+  }
+
+  m_idx <- row + (col - 1L) * nrow
+  keep_idx <- !duplicated(m_idx, fromLast = TRUE)
+  m_idx <- m_idx[keep_idx]
+  row <- row[keep_idx]
+  col <- col[keep_idx]
+  value <- value[keep_idx]
+
+  if (symmetric) {
+    offdiag_idx <- row != col
+    m_idx <- c(m_idx, col[offdiag_idx] + (row[offdiag_idx] - 1L) * nrow)
+    value <- c(value, value[offdiag_idx])
+  }
+
+  keep_idx <- value > 0
+  m_idx <- m_idx[keep_idx]
+  value <- value[keep_idx]
+
+  order_idx <- order(m_idx)
+  list(m.idx = m_idx[order_idx], x.idx = value[order_idx])
+}
+
+
 # vech
 #
 # the vech operator (for 'half vectorization') transforms a *symmetric* matrix

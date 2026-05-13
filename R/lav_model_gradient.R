@@ -63,29 +63,34 @@ lav_model_gradient <- function(lavmodel = NULL,
     #                     GLIST = GLIST,
     #                     extra = (estimator %in% c("ML", "REML","NTRLS")))
     # } else {
-    sigma_hat <- lav_model_sigma(
+    implied_fast <- lav_model_implied_fast(
       lavmodel = lavmodel, glist = glist,
+      need_sigma = TRUE,
+      need_mu = meanstructure,
+      need_th = categorical,
+      need_pi = conditional_x,
       extra = (estimator %in% c(
         "ML", "REML",
         "NTRLS", "catML"
       ))
     )
+    sigma_hat <- implied_fast$sigma
     # }
 
     if (meanstructure) {
       # if(conditional.x) {
       #    Mu.hat <- lav_model_mu(lavmodel = lavmodel, GLIST = GLIST)
       # } else {
-      mu_hat <- lav_model_mu(lavmodel = lavmodel, glist = glist)
+      mu_hat <- implied_fast$mu
       # }
     }
 
     if (categorical) {
-      th <- lav_model_th(lavmodel = lavmodel, glist = glist)
+      th <- implied_fast$th
     }
 
     if (conditional_x) {
-      pi0 <- lav_model_pi(lavmodel = lavmodel, glist = glist)
+      pi0 <- implied_fast$pi
     } else if (estimator == "PML") {
       pi0 <- vector("list", length = lavmodel@nblocks)
     }
@@ -94,11 +99,14 @@ lav_model_gradient <- function(lavmodel = NULL,
     #   gw <- lav_model_gw(lavmodel = lavmodel, glist = glist)
     # }
   } else if (estimator == "DLS" && estimator_args$dls.GammaNT == "model") {
-    sigma_hat <- lav_model_sigma(
+    implied_fast <- lav_model_implied_fast(
       lavmodel = lavmodel, glist = glist,
+      need_sigma = TRUE,
+      need_mu = TRUE,
       extra = FALSE
     )
-    mu_hat <- lav_model_mu(lavmodel = lavmodel, glist = glist)
+    sigma_hat <- implied_fast$sigma
+    mu_hat <- implied_fast$mu
   } else if (estimator == "MML") {
     th <- lav_model_th(lavmodel = lavmodel, glist = glist)
     mm_theta <- lav_model_theta(lavmodel = lavmodel, glist = glist)

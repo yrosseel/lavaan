@@ -1032,6 +1032,175 @@ lav_lisrel_sigma <- function(mlist = NULL, delta = TRUE) {
   vyx
 }
 
+lav_lisrel_implied_fast <- function(mlist = NULL, th_idx = NULL,
+                                    need_sigma = FALSE,
+                                    need_mu = FALSE,
+                                    need_th = FALSE,
+                                    need_pi = FALSE,
+                                    delta = TRUE) {
+  mm_lambda <- mlist$lambda
+  nvar <- nrow(mm_lambda)
+  mm_beta <- mlist$beta
+  mm_wmat <- mlist$wmat
+
+  out <- list()
+
+  # sigma, mu, thresholds, and slopes all use LAMBDA %*% (I - BETA)^-1
+  # in the common LISREL path. Compute it once for this block.
+  need_lambda_ib_inv <- (need_sigma && is.null(mm_wmat)) ||
+    need_mu || need_th || need_pi
+  ib_inv <- NULL
+  lambda__ib_inv <- NULL
+  if (need_lambda_ib_inv) {
+    if (is.null(mm_beta)) {
+      lambda__ib_inv <- mm_lambda
+    } else {
+      ib_inv <- lav_lisrel_ibinv(mlist = mlist)
+      lambda__ib_inv <- mm_lambda %*% ib_inv
+    }
+  }
+
+  if (need_sigma) {
+    mm_psi <- mlist$psi
+    mm_theta <- mlist$theta
+
+    # standard: no composites
+    if (is.null(mm_wmat)) {
+      vyx <- tcrossprod(lambda__ib_inv %*% mm_psi, lambda__ib_inv) + mm_theta
+
+      # composites, or mix of composites and latent variables
+    } else {
+      cov_idx <- which(apply(
+        mm_lambda, 1L,
+        function(x) sum(x == 0) == ncol(mm_lambda)
+      ))
+      clv_idx <- which(apply(
+        mm_lambda, 2L,
+        function(x) sum(x == 0) == nrow(mm_lambda)
+      ))
+
+      # combine LAMBDA and WMAT
+      lw <- mm_lambda + mm_wmat
+
+      tmat <- diag(nrow(mm_lambda))
+      tmat[cov_idx, cov_idx] <- mm_theta[cov_idx, cov_idx]
+      wtw <- t(lw[, clv_idx, drop = FALSE]) %*% tmat %*%
+                                 lw[, clv_idx, drop = FALSE]
+      wtw_inv <- solve(wtw)
+      wtw_inv_1 <- diag(ncol(mm_lambda))
+      wtw_inv_1[clv_idx, clv_idx] <- wtw_inv
+
+      if (is.null(mm_beta)) {
+        ib_inv_sigma <- diag(nrow(mm_psi))
+      } else {
+        if (is.null(ib_inv)) {
+          ib_inv <- lav_lisrel_ibinv(mlist = mlist)
+        }
+        ib_inv_sigma <- ib_inv
+      }
+      veta <- ib_inv_sigma %*% mm_psi %*% t(ib_inv_sigma)
+      c0 <- veta
+      diag(c0)[clv_idx] <- 0
+
+      vyx <- tmat %*% lw %*% wtw_inv_1 %*% c0 %*%
+                         t(wtw_inv_1) %*% t(lw) %*% tmat + mm_theta
+    }
+
+    # if delta, scale
+    if (delta && !is.null(mlist$delta)) {
+      mm_delta <- diag(mlist$delta[, 1L], nrow = nvar, ncol = nvar)
+      vyx <- mm_delta %*% vyx %*% mm_delta
+    }
+
+    out$sigma <- vyx
+  }
+
+  if (need_mu) {
+    mm_nu <- mlist$nu
+    mm_alpha <- mlist$alpha
+
+    # shortcut
+    if (is.null(mm_alpha) || is.null(mm_nu)) {
+      out$mu <- matrix(0, nrow(mm_lambda), 1L)
+    } else {
+      out$mu <- mm_nu + lambda__ib_inv %*% mm_alpha
+    }
+  }
+
+  if (need_th) {
+    mm_tau <- mlist$tau
+    nth <- nrow(mm_tau)
+
+    # missing alpha
+    if (is.null(mlist$alpha)) {
+      mm_alpha <- matrix(0, ncol(mm_lambda), 1L)
+    } else {
+      mm_alpha <- mlist$alpha
+    }
+
+    # missing nu
+    if (is.null(mlist$nu)) {
+      mm_nu <- matrix(0, nvar, 1L)
+    } else {
+      mm_nu <- mlist$nu
+    }
+
+    if (is.null(th_idx)) {
+      th_idx <- seq_len(nth)
+      nlev <- rep(1L, nvar)
+      k_nu <- diag(nvar)
+    } else {
+      nlev <- tabulate(th_idx, nbins = nvar)
+      nlev[nlev == 0L] <- 1L
+      k_nu <- matrix(0, sum(nlev), nvar)
+      k_nu[cbind(seq_len(sum(nlev)), rep(seq_len(nvar), times = nlev))] <- 1.0
+    }
+
+    # shortcut
+    if (is.null(mm_tau)) {
+      out$th <- matrix(0, length(th_idx), 1L)
+    } else {
+      pi0 <- mm_nu + lambda__ib_inv %*% mm_alpha
+
+      # interleave th's with zeros where we have numeric variables
+      th <- numeric(length(th_idx))
+      th[th_idx > 0L] <- mm_tau[, 1L]
+
+      th_1 <- th - (k_nu %*% pi0)
+
+      # if delta, scale
+      if (delta && !is.null(mlist$delta)) {
+        delta_diag <- mlist$delta[, 1L]
+        delta_star_diag <- rep(delta_diag, times = nlev)
+        th_1 <- th_1 * delta_star_diag
+      }
+
+      out$th <- as.vector(th_1)
+    }
+  }
+
+  if (need_pi) {
+    mm_gamma <- mlist$gamma
+
+    # shortcut
+    if (is.null(mm_gamma)) {
+      out$pi <- matrix(0, nrow(mm_lambda), 0L)
+    } else {
+      pi0 <- lambda__ib_inv %*% mm_gamma
+
+      # if delta, scale
+      if (delta && !is.null(mlist$delta)) {
+        delta_diag <- mlist$delta[, 1L]
+        pi0 <- pi0 * delta_diag
+      }
+
+      out$pi <- pi0
+    }
+  }
+
+  out
+}
+
 
 ### compute model-implied sample statistics
 #

@@ -551,6 +551,11 @@ lav_object_check_version <- function(object = NULL) {
     lavobject@Model@composites <- any(lavobject@ParTable$op == "<~")
   }
 
+  # 0.6-22
+  if (!.hasSlot(lavobject@Model, "mm.idx")) {
+    lavobject@Model@mm.idx <- lav_model_group_mm_indices(lavobject@Model@nmat)
+  }
+
   # check missing options
   object_options <- lavobject@Options
   all_options <- lavOptions()

@@ -11,22 +11,27 @@ lav_model_implied <- function(lavmodel = NULL, GLIST = NULL, delta = TRUE) { # n
   glist <- GLIST
   if (is.null(glist)) glist <- lavmodel@GLIST
 
-  # model-implied variance/covariance matrix ('sigma hat')
-  sigma_hat <- lav_model_sigma(
+  implied_fast <- lav_model_implied_fast(
     lavmodel = lavmodel, glist = glist,
+    need_sigma = TRUE,
+    need_mu = lavmodel@meanstructure,
+    need_pi = lavmodel@conditional.x,
+    need_th = lavmodel@categorical,
     delta = delta
   )
+  # model-implied variance/covariance matrix ('sigma hat')
+  sigma_hat <- implied_fast$sigma
 
   # model-implied mean structure ('mu hat')
   if (lavmodel@meanstructure) {
-    mu_hat <- lav_model_mu(lavmodel = lavmodel, glist = glist)
+    mu_hat <- implied_fast$mu
   } else {
     mu_hat <- vector("list", length = lavmodel@nblocks)
   }
 
   # if conditional.x, slopes, cov.x, mean.x
   if (lavmodel@conditional.x) {
-    slopes <- lav_model_pi(lavmodel = lavmodel, glist = glist)
+    slopes <- implied_fast$pi
 
     # per block, because for some blocks, cov.x may not exist
     cov_x <- vector("list", lavmodel@nblocks)
@@ -54,7 +59,7 @@ lav_model_implied <- function(lavmodel = NULL, GLIST = NULL, delta = TRUE) { # n
 
   # if categorical, model-implied thresholds
   if (lavmodel@categorical) {
-    th <- lav_model_th(lavmodel = lavmodel, glist = glist)
+    th <- implied_fast$th
   } else {
     th <- vector("list", length = lavmodel@nblocks)
   }

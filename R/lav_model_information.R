@@ -167,7 +167,7 @@ lav_model_information_expected <- function(lavmodel = NULL,
         #                       lavaanC::m_prod(A1[[g]], Delta[[g]], "R"), "L")
         # } else {
           info_group[[g]] <-
-            fg * (crossprod(delta[[g]], a1[[g]]) %*% delta[[g]])
+            fg * lav_matrix_delta_A_delta(delta[[g]], a1[[g]])
         # }
       }
     }
@@ -373,7 +373,7 @@ lav_model_information_observed <- function(lavmodel = NULL,
       } else {
         # full weight matrix
         info_group[[g]] <-
-          fg * (crossprod(delta[[g]], a1[[g]]) %*% delta[[g]])
+          fg * lav_matrix_delta_A_delta(delta[[g]], a1[[g]])
       }
     }
 

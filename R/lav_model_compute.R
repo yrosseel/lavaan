@@ -5,8 +5,16 @@ lav_model_group_mm_indices <- function(nmat) {
   })
 }
 
+lav_model_get_mm_idx <- function(lavmodel) {
+  if (.hasSlot(lavmodel, "mm.idx") && length(lavmodel@mm.idx) > 0L) {
+    return(lavmodel@mm.idx)
+  }
+
+  lav_model_group_mm_indices(lavmodel@nmat)
+}
+
 lav_model_sigma_extra <- function(sigma_hat_g = NULL,
-                                  check_sigma_pd = "chol") {
+                                   check_sigma_pd = "chol") {
   # check if matrix is positive definite
   if (check_sigma_pd == "chol") {
     # fast path: try Cholesky directly
@@ -39,8 +47,13 @@ lav_model_sigma_extra <- function(sigma_hat_g = NULL,
   sigma_hat_g
 }
 
-lav_model_sigma <- function(lavmodel = NULL, glist = NULL, extra = FALSE,
-                            delta = TRUE) {
+lav_model_implied_fast <- function(lavmodel = NULL, glist = NULL,
+                                   need_sigma = FALSE,
+                                   need_mu = FALSE,
+                                   need_th = FALSE,
+                                   need_pi = FALSE,
+                                   extra = FALSE,
+                                   delta = TRUE) {
   # state or final?
   if (is.null(glist)) glist <- lavmodel@GLIST
 
@@ -48,40 +61,108 @@ lav_model_sigma <- function(lavmodel = NULL, glist = NULL, extra = FALSE,
   check_sigma_pd <- get0("opt_check_sigma_pd", lavaan_cache_env,
                          ifnotfound = "chol")
 
-  nmat <- lavmodel@nmat
   nblocks <- lavmodel@nblocks
   representation <- lavmodel@representation
-  mm_idx <- lav_model_group_mm_indices(nmat)
+  meanstructure <- lavmodel@meanstructure
+  categorical <- lavmodel@categorical
+  conditional_x <- lavmodel@conditional.x
+  mm_idx <- lav_model_get_mm_idx(lavmodel)
 
-  # return a list
-  sigma_hat <- vector("list", length = nblocks)
+  out <- list()
+  if (need_sigma) out$sigma <- vector("list", length = nblocks)
+  if (need_mu) out$mu <- vector("list", length = nblocks)
+  if (need_th) out$th <- vector("list", length = nblocks)
+  if (need_pi) out$pi <- vector("list", length = nblocks)
 
   for (g in seq_len(nblocks)) {
-    # which mm belong to group g?
-    mm_in_group <- mm_idx[[g]]
-    mlist <- glist[mm_in_group]
+    mlist <- glist[mm_idx[[g]]]
+
+    block_need_mu <- need_mu && meanstructure
+    block_need_th <- need_th && categorical && length(lavmodel@th.idx[[g]]) > 0L
+    block_need_pi <- need_pi && conditional_x
 
     if (representation == "LISREL") {
-      sigma_hat[[g]] <- lav_lisrel_sigma(
+      block <- lav_lisrel_implied_fast(
         mlist = mlist,
+        th_idx = lavmodel@th.idx[[g]],
+        need_sigma = need_sigma,
+        need_mu = block_need_mu,
+        need_th = block_need_th,
+        need_pi = block_need_pi,
         delta = delta
       )
     } else if (representation == "RAM") {
-      sigma_hat[[g]] <- lav_ram_sigmahat(mlist = mlist, delta = delta)
+      block <- lav_ram_implied_fast(
+        mlist = mlist,
+        need_sigma = need_sigma,
+        need_mu = block_need_mu,
+        delta = delta
+      )
+      if (block_need_th || block_need_pi) {
+        lav_msg_stop(gettext(
+          "only LISREL representation supports thresholds and slopes"))
+      }
     } else {
       lav_msg_stop(gettext(
         "only LISREL and RAM representation has been implemented for now"))
     }
-    if (lav_debug()) print(sigma_hat[[g]])
 
-    if (extra) {
-      sigma_hat[[g]] <- lav_model_sigma_extra(
-        sigma_hat_g = sigma_hat[[g]],
-        check_sigma_pd = check_sigma_pd
-      )
+    if (need_sigma) {
+      out$sigma[[g]] <- block$sigma
+      if (lav_debug()) print(out$sigma[[g]])
+      if (extra) {
+        out$sigma[[g]] <- lav_model_sigma_extra(
+          sigma_hat_g = out$sigma[[g]],
+          check_sigma_pd = check_sigma_pd
+        )
+      }
+    }
+
+    if (need_mu) {
+      if (meanstructure) {
+        out$mu[[g]] <- block$mu
+      } else {
+        out$mu[[g]] <- numeric(lavmodel@nvar[g])
+      }
+
+      # new in 0.6-20: if a variable is ordinal, set its mean to zero
+      # (even if NU is not all zero, as in a multiple group analysis with
+      # group.equal = "thresholds")
+      if (categorical) {
+        ord_idx <- unique(lavmodel@th.idx[[g]][lavmodel@th.idx[[g]] > 0L])
+        out$mu[[g]][ord_idx] <- 0
+      }
+    }
+
+    if (need_th) {
+      if (length(lavmodel@th.idx[[g]]) == 0L) {
+        out$th[[g]] <- numeric(0L)
+      } else {
+        out$th[[g]] <- block$th
+      }
+    }
+
+    if (need_pi) {
+      if (conditional_x) {
+        out$pi[[g]] <- block$pi
+      } else {
+        out$pi[[g]] <- numeric(lavmodel@nvar[g])
+      }
     }
   } # nblocks
-  sigma_hat
+
+  out
+}
+
+lav_model_sigma <- function(lavmodel = NULL, glist = NULL, extra = FALSE,
+                            delta = TRUE) {
+  lav_model_implied_fast(
+    lavmodel = lavmodel,
+    glist = glist,
+    need_sigma = TRUE,
+    extra = extra,
+    delta = delta
+  )$sigma
 }
 
 ## only if conditional.x = TRUE
@@ -107,7 +188,7 @@ lav_model_cond2joint_sigma <- function(lavmodel = NULL, glist = NULL,
   nmat <- lavmodel@nmat
   nblocks <- lavmodel@nblocks
   representation <- lavmodel@representation
-  mm_idx <- lav_model_group_mm_indices(nmat)
+  mm_idx <- lav_model_get_mm_idx(lavmodel)
 
   # return a list
   sigma_hat <- vector("list", length = nblocks)
@@ -146,49 +227,11 @@ lav_model_cond2joint_sigma <- function(lavmodel = NULL, glist = NULL,
 }
 
 lav_model_mu <- function(lavmodel = NULL, glist = NULL) {
-  # state or final?
-  if (is.null(glist)) glist <- lavmodel@GLIST
-
-  nmat <- lavmodel@nmat
-  nblocks <- lavmodel@nblocks
-  representation <- lavmodel@representation
-  meanstructure <- lavmodel@meanstructure
-  mm_idx <- lav_model_group_mm_indices(nmat)
-
-  # return a list
-  mu_hat <- vector("list", length = nblocks)
-
-  for (g in seq_len(nblocks)) {
-    # which mm belong to group g?
-    mm_in_group <- mm_idx[[g]]
-    mlist <- glist[mm_in_group]
-
-    if (!meanstructure) {
-      mu_hat[[g]] <- numeric(lavmodel@nvar[g])
-    } else if (representation == "LISREL") {
-      mu_hat[[g]] <- lav_lisrel_mu(mlist = mlist)
-    } else if (representation == "RAM") {
-      mu_hat[[g]] <- lav_ram_muhat(mlist = mlist)
-    } else {
-      lav_msg_stop(gettext(
-        "only RAM and LISREL representation has been implemented for now"))
-    }
-
-    # new in 0.6-20: if a variable is ordinal, set its mean to zero
-    # (even if NU is not all zero, as in a multiple group analysis with
-    # group.equal = "thresholds")
-    #
-    # the logic is: Mu.hat is about 'y', not 'y-star'
-    # the non-free intercepts (in TAU) are used when computing the
-    # model-implied thresholds, but they do not say anything about the
-    # 'observed' mean of 'y'
-    if (lavmodel@categorical) {
-      ord_idx <- unique(lavmodel@th.idx[[g]][lavmodel@th.idx[[g]] > 0L])
-      mu_hat[[g]][ord_idx] <- 0
-    }
-  } # nblocks
-
-  mu_hat
+  lav_model_implied_fast(
+    lavmodel = lavmodel,
+    glist = glist,
+    need_mu = TRUE
+  )$mu
 }
 
 ## only if conditional.x = TRUE
@@ -205,7 +248,7 @@ lav_model_cond2joint_mu <- function(lavmodel = NULL, glist = NULL) {
   nblocks <- lavmodel@nblocks
   representation <- lavmodel@representation
   meanstructure <- lavmodel@meanstructure
-  mm_idx <- lav_model_group_mm_indices(nmat)
+  mm_idx <- lav_model_get_mm_idx(lavmodel)
 
   # return a list
   mu_hat <- vector("list", length = nblocks)
@@ -237,76 +280,23 @@ lav_model_cond2joint_mu <- function(lavmodel = NULL, glist = NULL) {
 # TH.star = DELTA.star * (th.star - pi0.star)
 # see Muthen 1984 eq 11
 lav_model_th <- function(lavmodel = NULL, glist = NULL, delta = TRUE) {
-  # state or final?
-  if (is.null(glist)) glist <- lavmodel@GLIST
-
-  nblocks <- lavmodel@nblocks
-  nmat <- lavmodel@nmat
-  representation <- lavmodel@representation
-  th_idx <- lavmodel@th.idx
-  mm_idx <- lav_model_group_mm_indices(nmat)
-
-  # return a list
-  th <- vector("list", length = nblocks)
-
-  # compute TH for each group
-  for (g in seq_len(nblocks)) {
-    if (length(th_idx[[g]]) == 0) {
-      th[[g]] <- numeric(0L)
-      next
-    }
-
-    # which mm belong to group g?
-    mm_in_group <- mm_idx[[g]]
-
-    if (representation == "LISREL") {
-      th[[g]] <- lav_lisrel_th(
-        mlist = glist[mm_in_group],
-        th_idx = th_idx[[g]], delta = delta
-      )
-    } else {
-      lav_msg_stop(gettext(
-        "only representation LISREL has been implemented for now"))
-    }
-  }
-
-  th
+  lav_model_implied_fast(
+    lavmodel = lavmodel,
+    glist = glist,
+    need_th = TRUE,
+    delta = delta
+  )$th
 }
 
 # PI = slope structure
 # see Muthen 1984 eq 12
 lav_model_pi <- function(lavmodel = NULL, glist = NULL, delta = TRUE) {
-  # state or final?
-  if (is.null(glist)) glist <- lavmodel@GLIST
-
-  nblocks <- lavmodel@nblocks
-  nmat <- lavmodel@nmat
-  representation <- lavmodel@representation
-  conditional_x <- lavmodel@conditional.x
-  mm_idx <- lav_model_group_mm_indices(nmat)
-
-  # return a list
-  pi0 <- vector("list", length = nblocks)
-
-  # compute TH for each group
-  for (g in seq_len(nblocks)) {
-    # which mm belong to group g?
-    mm_in_group <- mm_idx[[g]]
-    mlist <- glist[mm_in_group]
-
-    if (!conditional_x) {
-      pi_g <- numeric(lavmodel@nvar[g])
-    } else if (representation == "LISREL") {
-      pi_g <- lav_lisrel_pi(mlist = mlist, delta = delta)
-    } else {
-      lav_msg_stop(gettext(
-        "only representation LISREL has been implemented for now"))
-    }
-
-    pi0[[g]] <- pi_g
-  }
-
-  pi0
+  lav_model_implied_fast(
+    lavmodel = lavmodel,
+    glist = glist,
+    need_pi = TRUE,
+    delta = delta
+  )$pi
 }
 
 
@@ -319,7 +309,7 @@ lav_model_gw <- function(lavmodel = NULL, glist = NULL) {
   nmat <- lavmodel@nmat
   representation <- lavmodel@representation
   group_w_free <- lavmodel@group.w.free
-  mm_idx <- lav_model_group_mm_indices(nmat)
+  mm_idx <- lav_model_get_mm_idx(lavmodel)
 
   # return a list
   gw <- vector("list", length = nblocks)
@@ -362,7 +352,7 @@ lav_model_vy <- function(lavmodel = NULL, glist = NULL, diagonal_only = FALSE) {
   nblocks <- lavmodel@nblocks
   nmat <- lavmodel@nmat
   representation <- lavmodel@representation
-  mm_idx <- lav_model_group_mm_indices(nmat)
+  mm_idx <- lav_model_get_mm_idx(lavmodel)
 
   # return a list
   vy <- vector("list", length = nblocks)
@@ -405,7 +395,7 @@ lav_model_veta <- function(lavmodel = NULL, glist = NULL,
   nblocks <- lavmodel@nblocks
   nmat <- lavmodel@nmat
   representation <- lavmodel@representation
-  mm_idx <- lav_model_group_mm_indices(nmat)
+  mm_idx <- lav_model_get_mm_idx(lavmodel)
 
   # return a list
   veta <- vector("list", length = nblocks)
@@ -451,7 +441,7 @@ lav_model_vetax <- function(lavmodel = NULL, glist = NULL) {
   nblocks <- lavmodel@nblocks
   nmat <- lavmodel@nmat
   representation <- lavmodel@representation
-  mm_idx <- lav_model_group_mm_indices(nmat)
+  mm_idx <- lav_model_get_mm_idx(lavmodel)
 
   # return a list
   eta <- vector("list", length = nblocks)
@@ -491,7 +481,7 @@ lav_model_cov_both <- function(lavmodel = NULL, glist = NULL,
   nblocks <- lavmodel@nblocks
   nmat <- lavmodel@nmat
   representation <- lavmodel@representation
-  mm_idx <- lav_model_group_mm_indices(nmat)
+  mm_idx <- lav_model_get_mm_idx(lavmodel)
 
   # return a list
   cov_1 <- vector("list", length = nblocks)
@@ -540,7 +530,7 @@ lav_model_eeta <- function(lavmodel = NULL, glist = NULL, lavsamplestats = NULL,
   nblocks <- lavmodel@nblocks
   nmat <- lavmodel@nmat
   representation <- lavmodel@representation
-  mm_idx <- lav_model_group_mm_indices(nmat)
+  mm_idx <- lav_model_get_mm_idx(lavmodel)
 
   # return a list
   eeta <- vector("list", length = nblocks)
@@ -592,7 +582,7 @@ lav_model_eetax <- function(lavmodel = NULL, glist = NULL,
   nblocks <- lavmodel@nblocks
   nmat <- lavmodel@nmat
   representation <- lavmodel@representation
-  mm_idx <- lav_model_group_mm_indices(nmat)
+  mm_idx <- lav_model_get_mm_idx(lavmodel)
 
   # return a list
   eetax <- vector("list", length = nblocks)
@@ -650,7 +640,7 @@ lav_model_lambda <- function(lavmodel = NULL, glist = NULL,
   nblocks <- lavmodel@nblocks
   nmat <- lavmodel@nmat
   representation <- lavmodel@representation
-  mm_idx <- lav_model_group_mm_indices(nmat)
+  mm_idx <- lav_model_get_mm_idx(lavmodel)
 
   # return a list
   mm_lambda <- vector("list", length = nblocks)
@@ -700,7 +690,7 @@ lav_model_theta <- function(lavmodel = NULL, glist = NULL, fix = TRUE) {
   nblocks <- lavmodel@nblocks
   nmat <- lavmodel@nmat
   representation <- lavmodel@representation
-  mm_idx <- lav_model_group_mm_indices(nmat)
+  mm_idx <- lav_model_get_mm_idx(lavmodel)
 
   # return a list
   mm_theta <- vector("list", length = nblocks)
@@ -747,7 +737,7 @@ lav_model_ey <- function(lavmodel = NULL, glist = NULL, lavsamplestats = NULL,
   nblocks <- lavmodel@nblocks
   nmat <- lavmodel@nmat
   representation <- lavmodel@representation
-  mm_idx <- lav_model_group_mm_indices(nmat)
+  mm_idx <- lav_model_get_mm_idx(lavmodel)
 
   # return a list
   ey <- vector("list", length = nblocks)
@@ -791,7 +781,7 @@ lav_model_yhat <- function(lavmodel = NULL, glist = NULL, lavsamplestats = NULL,
 
   # ngroups, not nblocks!
   ngroups <- lavsamplestats@ngroups
-  mm_idx <- lav_model_group_mm_indices(lavmodel@nmat)
+  mm_idx <- lav_model_get_mm_idx(lavmodel)
 
   # return a list
   yhat <- vector("list", length = ngroups)

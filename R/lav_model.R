@@ -135,6 +135,7 @@ lav_model <- function(lavpartable = NULL,                          # nolint
   # prepare nblocks-sized slots
   nvar <- integer(nblocks)
   nmat <- unlist(attr(tmp_rep, "mmNumber"))
+  mm_idx <- lav_model_group_mm_indices(nmat)
   num_idx <- vector("list", length = nblocks)
   nexo <- integer(nblocks)
   ov_x_dummy_ov_idx <- vector(mode = "list", length = nblocks)
@@ -224,52 +225,48 @@ lav_model <- function(lavpartable = NULL,                          # nolint
       # select elements for this matrix
       idx <- which(lavpartable$block == g & tmp_rep$mat == mm_names[mm])
 
-      # create empty `pattern' matrix
-      # FIXME: one day, we may want to use sparse matrices...
-      #        but they should not slow things down!
-      tmp <- matrix(0L,
-        nrow = mm_rows[mm],
-        ncol = mm_cols[mm]
-      )
-
       # 1. first assign free values only, to get vector index
       #    -> to be used in lav_model_objective
-      tmp[cbind(tmp_rep$row[idx], tmp_rep$col[idx])] <- lavpartable$free[idx]
-      if (mm_symmetric[mm]) {
-        # NOTE: we assume everything is in the UPPER tri!
-        tmp_tt <- t(tmp)
-        tmp[lower.tri(tmp)] <- tmp_tt[lower.tri(tmp_tt)]
-      }
-      m_free_idx[[offset]] <- which(tmp > 0)
-      x_free_idx[[offset]] <- tmp[which(tmp > 0)]
+      free_idx <- lav_matrix_rowcol_idx(
+        row = tmp_rep$row[idx],
+        col = tmp_rep$col[idx],
+        value = lavpartable$free[idx],
+        nrow = mm_rows[mm],
+        ncol = mm_cols[mm],
+        symmetric = mm_symmetric[mm]
+      )
+      m_free_idx[[offset]] <- free_idx$m.idx
+      x_free_idx[[offset]] <- free_idx$x.idx
 
       # 2. if simple equality constraints, unconstrained free parameters
       #    -> to be used in lav_model_gradient
       if (eq_simple) {
-        tmp[cbind(
-          tmp_rep$row[idx],
-          tmp_rep$col[idx]
-        )] <- lavpartable$unco[idx]
-        if (mm_symmetric[mm]) {
-          # NOTE: we assume everything is in the UPPER tri!
-          tmp_tt <- t(tmp)
-          tmp[lower.tri(tmp)] <- tmp_tt[lower.tri(tmp_tt)]
-        }
+        unco_idx <- lav_matrix_rowcol_idx(
+          row = tmp_rep$row[idx],
+          col = tmp_rep$col[idx],
+          value = lavpartable$unco[idx],
+          nrow = mm_rows[mm],
+          ncol = mm_cols[mm],
+          symmetric = mm_symmetric[mm]
+        )
         # m.unco.idx[[offset]] <-     which(tmp > 0)
-        x_unco_idx[[offset]] <- tmp[which(tmp > 0)]
+        x_unco_idx[[offset]] <- unco_idx$x.idx
       } else {
         # m.unco.idx[[offset]] <- m.free.idx[[offset]]
         x_unco_idx[[offset]] <- x_free_idx[[offset]]
       }
 
       # 3. general mapping between user and tmp.glist
-      tmp[cbind(tmp_rep$row[idx], tmp_rep$col[idx])] <- lavpartable$id[idx]
-      if (mm_symmetric[mm]) {
-        tmp_tt <- t(tmp)
-        tmp[lower.tri(tmp)] <- tmp_tt[lower.tri(tmp_tt)]
-      }
-      m_user_idx[[offset]] <- which(tmp > 0)
-      x_user_idx[[offset]] <- tmp[which(tmp > 0)]
+      user_idx <- lav_matrix_rowcol_idx(
+        row = tmp_rep$row[idx],
+        col = tmp_rep$col[idx],
+        value = lavpartable$id[idx],
+        nrow = mm_rows[mm],
+        ncol = mm_cols[mm],
+        symmetric = mm_symmetric[mm]
+      )
+      m_user_idx[[offset]] <- user_idx$m.idx
+      x_user_idx[[offset]] <- user_idx$x.idx
 
       # 4. now assign starting/fixed values
       # create empty matrix
@@ -360,7 +357,7 @@ lav_model <- function(lavpartable = NULL,                          # nolint
 
     # set variances composites (new in 0.6-20)
     if (composites) {
-      mm_in_group <- 1:nmat[g] + cumsum(c(0L, nmat))[g]
+      mm_in_group <- mm_idx[[g]]
       tmp_glist[mm_in_group] <-
         lav_lisrel_comp_set_intresvar(tmp_glist[mm_in_group])
     }
@@ -457,6 +454,7 @@ lav_model <- function(lavpartable = NULL,                          # nolint
     nefa = nefa,
     group.w.free = group_w_free,
     nmat = nmat,
+    mm.idx = mm_idx,
     nvar = nvar,
     num.idx = num_idx,
     th.idx = th_idx,
