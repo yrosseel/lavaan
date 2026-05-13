@@ -87,7 +87,7 @@ lav_sam_mapping_matrix <- function(mm_lambda = NULL, mm_theta = NULL,
       }
     } else {
       # see if we can use marker method
-      marker_idx <- lav_utils_get_marker(LAMBDA = mm_lambda, std.lv = TRUE)
+      marker_idx <- lav_utils_get_marker(mm_lambda = mm_lambda, std_lv = TRUE)
       if (any(is.na(marker_idx))) {
         theta_inv <- try(lav_matrix_symmetric_inverse(mm_theta), silent = TRUE)
         if (inherits(theta_inv, "try-error")) {
@@ -168,7 +168,7 @@ lav_sam_mapping_matrix_tmat <- function(mm_lambda = NULL,
   # do we have marker.idx?
   if (is.null(marker_idx)) {
     # 'marker' indicator has a single non-zero element in a row
-    marker_idx <- lav_utils_get_marker(LAMBDA = mm_lambda, std.lv = TRUE)
+    marker_idx <- lav_utils_get_marker(mm_lambda = mm_lambda, std_lv = TRUE)
     if (any(is.na(marker_idx))) {
       lav_msg_stop(gettext("no clear markers in LAMBDA matrix"))
     }
@@ -231,7 +231,7 @@ lav_sam_tmat <- function(mm_lambda = NULL,
   # do we have marker.idx?
   if (is.null(marker_idx)) {
     # 'marker' indicator has a single 1 element in a row
-    marker_idx <- lav_utils_get_marker(LAMBDA = mm_lambda, std.lv = FALSE)
+    marker_idx <- lav_utils_get_marker(mm_lambda = mm_lambda, std_lv = FALSE)
     if (any(is.na(marker_idx))) {
       lav_msg_stop(gettext("no clear markers in LAMBDA matrix"))
     }

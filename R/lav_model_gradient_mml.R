@@ -40,7 +40,7 @@ lav_model_gradient_mml <- function(lavmodel = NULL,
 
   # compute VETAx (latent lv only)
   # VETAx <- lav_lisrel_vetax(MLIST = MLIST, lv.dummy.idx = lv.dummy.idx)
-  vetax <- lav_lisrel_vetax(MLIST = mlist)
+  vetax <- lav_lisrel_vetax(mlist = mlist)
   # check for negative values?
   if (any(diag(vetax) < 0)) {
     lav_msg_warn(gettext("--- VETAx contains negative values"))
@@ -72,12 +72,12 @@ lav_model_gradient_mml <- function(lavmodel = NULL,
     }
     if (!is.null(mlist$alpha) || !is.null(mlist$gamma)) {
       eetax <- lav_lisrel_eetax(
-        MLIST = mlist, eXo = exo, N = nobs,
-        sample.mean = sample_mean,
-        ov.y.dummy.ov.idx = ov_y_dummy_ov_idx,
-        ov.x.dummy.ov.idx = ov_x_dummy_ov_idx,
-        ov.y.dummy.lv.idx = ov_y_dummy_lv_idx,
-        ov.x.dummy.lv.idx = ov_x_dummy_lv_idx
+        mlist = mlist, exo = exo, n = nobs,
+        sample_mean = sample_mean,
+        ov_y_dummy_ov_idx = ov_y_dummy_ov_idx,
+        ov_x_dummy_ov_idx = ov_x_dummy_ov_idx,
+        ov_y_dummy_lv_idx = ov_y_dummy_lv_idx,
+        ov_x_dummy_lv_idx = ov_x_dummy_lv_idx
       )
       # if(length(lv.dummy.idx) > 0L) {
       #    EETAx <- EETAx[,-lv.dummy.idx,drop=FALSE]
@@ -88,11 +88,11 @@ lav_model_gradient_mml <- function(lavmodel = NULL,
   # prepare common stuff
   # fix Lambda?
   mm_lambda <- lav_lisrel_lambda(
-    MLIST = mlist,
-    ov.y.dummy.ov.idx = ov_y_dummy_ov_idx,
-    ov.x.dummy.ov.idx = ov_x_dummy_ov_idx,
-    ov.y.dummy.lv.idx = ov_y_dummy_lv_idx,
-    ov.x.dummy.lv.idx = ov_x_dummy_lv_idx
+    mlist = mlist,
+    ov_y_dummy_ov_idx = ov_y_dummy_ov_idx,
+    ov_x_dummy_ov_idx = ov_x_dummy_ov_idx,
+    ov_y_dummy_lv_idx = ov_y_dummy_lv_idx,
+    ov_x_dummy_lv_idx = ov_x_dummy_lv_idx
   )
 
   # fix ALPHA
@@ -190,22 +190,22 @@ lav_model_gradient_mml <- function(lavmodel = NULL,
     # again, compute yhat for this node (eta)
     if (lavmodel@conditional.x) {
       yhat <- lav_lisrel_eyetax(
-        MLIST = mlist, eXo = exo,
-        ETA = eta, sample.mean = sample_mean,
-        ov.y.dummy.ov.idx = ov_y_dummy_ov_idx,
-        ov.x.dummy.ov.idx = ov_x_dummy_ov_idx,
-        ov.y.dummy.lv.idx = ov_y_dummy_lv_idx,
-        ov.x.dummy.lv.idx = ov_x_dummy_lv_idx
+        mlist = mlist, exo = exo,
+        eta = eta, sample_mean = sample_mean,
+        ov_y_dummy_ov_idx = ov_y_dummy_ov_idx,
+        ov_x_dummy_ov_idx = ov_x_dummy_ov_idx,
+        ov_y_dummy_lv_idx = ov_y_dummy_lv_idx,
+        ov_x_dummy_lv_idx = ov_x_dummy_lv_idx
       )
     } else {
       yhat <- lav_lisrel_eyetax3(
-        MLIST = mlist,
-        ETA = eta, sample.mean = sample_mean,
-        mean.x = sample_mean_x,
-        ov.y.dummy.ov.idx = lavmodel@ov.y.dummy.ov.idx[[group]],
-        ov.x.dummy.ov.idx = lavmodel@ov.x.dummy.ov.idx[[group]],
-        ov.y.dummy.lv.idx = lavmodel@ov.y.dummy.lv.idx[[group]],
-        ov.x.dummy.lv.idx = lavmodel@ov.x.dummy.lv.idx[[group]]
+        mlist = mlist,
+        eta = eta, sample_mean = sample_mean,
+        mean_x = sample_mean_x,
+        ov_y_dummy_ov_idx = lavmodel@ov.y.dummy.ov.idx[[group]],
+        ov_x_dummy_ov_idx = lavmodel@ov.x.dummy.ov.idx[[group]],
+        ov_y_dummy_lv_idx = lavmodel@ov.y.dummy.lv.idx[[group]],
+        ov_x_dummy_lv_idx = lavmodel@ov.x.dummy.lv.idx[[group]]
       )
     }
 

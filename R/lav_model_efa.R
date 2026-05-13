@@ -84,20 +84,20 @@ lav_model_efa_rotate_x <- function(x, lavmodel = NULL, lavoptions = NULL,
 
       # reconstruct full mm_lambda (in case of dummy ov's)
       lambda_g <- lav_lisrel_lambda(
-        MLIST = mlist,
-        ov.y.dummy.ov.idx = lavmodel@ov.y.dummy.ov.idx[[g]],
-        ov.x.dummy.ov.idx = lavmodel@ov.x.dummy.ov.idx[[g]],
-        ov.y.dummy.lv.idx = lavmodel@ov.y.dummy.lv.idx[[g]],
-        ov.x.dummy.lv.idx = lavmodel@ov.x.dummy.lv.idx[[g]],
-        remove.dummy.lv = TRUE
+        mlist = mlist,
+        ov_y_dummy_ov_idx = lavmodel@ov.y.dummy.ov.idx[[g]],
+        ov_x_dummy_ov_idx = lavmodel@ov.x.dummy.ov.idx[[g]],
+        ov_y_dummy_lv_idx = lavmodel@ov.y.dummy.lv.idx[[g]],
+        ov_x_dummy_lv_idx = lavmodel@ov.x.dummy.lv.idx[[g]],
+        remove_dummy_lv = TRUE
       )
       # reconstruct full THETA (in case of dummy ov's)
       theta_g <- lav_lisrel_theta(
-        MLIST = mlist,
-        ov.y.dummy.ov.idx = lavmodel@ov.y.dummy.ov.idx[[g]],
-        ov.x.dummy.ov.idx = lavmodel@ov.x.dummy.ov.idx[[g]],
-        ov.y.dummy.lv.idx = lavmodel@ov.y.dummy.lv.idx[[g]],
-        ov.x.dummy.lv.idx = lavmodel@ov.x.dummy.lv.idx[[g]]
+        mlist = mlist,
+        ov_y_dummy_ov_idx = lavmodel@ov.y.dummy.ov.idx[[g]],
+        ov_x_dummy_ov_idx = lavmodel@ov.x.dummy.ov.idx[[g]],
+        ov_y_dummy_lv_idx = lavmodel@ov.y.dummy.lv.idx[[g]],
+        ov_x_dummy_lv_idx = lavmodel@ov.x.dummy.lv.idx[[g]]
       )
 
       # fill in optimal rotation for each set
@@ -262,12 +262,12 @@ lav_model_efa_rotate_x <- function(x, lavmodel = NULL, lavoptions = NULL,
 
       # reconstruct full mm_lambda (in case of dummy ov's)
       lambda_g <- lav_lisrel_lambda(
-        MLIST = mlist,
-        ov.y.dummy.ov.idx = lavmodel@ov.y.dummy.ov.idx[[g]],
-        ov.x.dummy.ov.idx = lavmodel@ov.x.dummy.ov.idx[[g]],
-        ov.y.dummy.lv.idx = lavmodel@ov.y.dummy.lv.idx[[g]],
-        ov.x.dummy.lv.idx = lavmodel@ov.x.dummy.lv.idx[[g]],
-        remove.dummy.lv = TRUE
+        mlist = mlist,
+        ov_y_dummy_ov_idx = lavmodel@ov.y.dummy.ov.idx[[g]],
+        ov_x_dummy_ov_idx = lavmodel@ov.x.dummy.ov.idx[[g]],
+        ov_y_dummy_lv_idx = lavmodel@ov.y.dummy.lv.idx[[g]],
+        ov_x_dummy_lv_idx = lavmodel@ov.x.dummy.lv.idx[[g]],
+        remove_dummy_lv = TRUE
       )
 
       lambda_list[[g]] <- lambda_g
@@ -494,20 +494,20 @@ lav_model_efa_rotate_border_x <- function(x, lavmodel = NULL,
 
     # reconstruct full mm_lambda (in case of dummy ov's)
     lambda_g <- lav_lisrel_lambda(
-      MLIST = mlist,
-      ov.y.dummy.ov.idx = lavmodel@ov.y.dummy.ov.idx[[g]],
-      ov.x.dummy.ov.idx = lavmodel@ov.x.dummy.ov.idx[[g]],
-      ov.y.dummy.lv.idx = lavmodel@ov.y.dummy.lv.idx[[g]],
-      ov.x.dummy.lv.idx = lavmodel@ov.x.dummy.lv.idx[[g]],
-      remove.dummy.lv = TRUE
+      mlist = mlist,
+      ov_y_dummy_ov_idx = lavmodel@ov.y.dummy.ov.idx[[g]],
+      ov_x_dummy_ov_idx = lavmodel@ov.x.dummy.ov.idx[[g]],
+      ov_y_dummy_lv_idx = lavmodel@ov.y.dummy.lv.idx[[g]],
+      ov_x_dummy_lv_idx = lavmodel@ov.x.dummy.lv.idx[[g]],
+      remove_dummy_lv = TRUE
     )
     # reconstruct full THETA (in case of dummy ov's)
     theta_g <- lav_lisrel_theta(
-      MLIST = mlist,
-      ov.y.dummy.ov.idx = lavmodel@ov.y.dummy.ov.idx[[g]],
-      ov.x.dummy.ov.idx = lavmodel@ov.x.dummy.ov.idx[[g]],
-      ov.y.dummy.lv.idx = lavmodel@ov.y.dummy.lv.idx[[g]],
-      ov.x.dummy.lv.idx = lavmodel@ov.x.dummy.lv.idx[[g]]
+      mlist = mlist,
+      ov_y_dummy_ov_idx = lavmodel@ov.y.dummy.ov.idx[[g]],
+      ov_x_dummy_ov_idx = lavmodel@ov.x.dummy.ov.idx[[g]],
+      ov_y_dummy_lv_idx = lavmodel@ov.y.dummy.lv.idx[[g]],
+      ov_x_dummy_lv_idx = lavmodel@ov.x.dummy.lv.idx[[g]]
     )
 
     # setnames

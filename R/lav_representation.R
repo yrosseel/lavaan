@@ -9,7 +9,7 @@ lavMatrixRepresentation <- function(partable, representation = "LISREL", # nolin
   # get model matrices
   if (representation == "LISREL") {
     rep_1 <- lav_lisrel(partable, target = NULL, extra = add.attributes,
-                      allow.composites = allow.composites)
+                      allow_composites = allow.composites)
   } else if (representation == "RAM") {
     rep_1 <- lav_ram(partable, target = NULL, extra = add.attributes)
   } else {
