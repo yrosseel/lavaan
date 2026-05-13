@@ -792,67 +792,67 @@ lav_model_ddelta_dx <- function(lavmodel = NULL, glist = NULL,
       if (representation == "LISREL") {
         if (target == "lambda") {
          mm_delta <- lav_lisrel_dlambda_dx(
-            MLIST = glist[mm_in_group],
+            mlist = glist[mm_in_group],
             m = mname,
             idx = m_el_idx[[mm]]
           )
         } else if (target == "th") {
           mm_delta <- lav_lisrel_dth_dx(
-             MLIST = glist[mm_in_group], m = mname, th.idx = th_idx[[g]],
+             mlist = glist[mm_in_group], m = mname, th_idx = th_idx[[g]],
             idx = m_el_idx[[mm]],
             delta = TRUE
           )
         } else if (target == "mu") {
           mm_delta <- lav_lisrel_dmu_dx(
-            MLIST = glist[mm_in_group],
+            mlist = glist[mm_in_group],
             m = mname,
             idx = m_el_idx[[mm]]
           )
         } else if (target == "nu") {
           mm_delta <- lav_lisrel_dnu_dx(
-            MLIST = glist[mm_in_group],
+            mlist = glist[mm_in_group],
             m = mname,
             idx = m_el_idx[[mm]]
           )
         } else if (target == "tau") {
           mm_delta <- lav_lisrel_dtau_dx(
-            MLIST = glist[mm_in_group],
+            mlist = glist[mm_in_group],
             m = mname,
             idx = m_el_idx[[mm]]
           )
         } else if (target == "theta") {
           mm_delta <- lav_lisrel_dtheta_dx(
-            MLIST = glist[mm_in_group],
+            mlist = glist[mm_in_group],
             m = mname,
             idx = m_el_idx[[mm]]
           )
         } else if (target == "gamma") {
           mm_delta <- lav_lisrel_dgamma_dx(
-            MLIST = glist[mm_in_group],
+            mlist = glist[mm_in_group],
             m = mname,
             idx = m_el_idx[[mm]]
           )
         } else if (target == "beta") {
           mm_delta <- lav_lisrel_dbeta_dx(
-            MLIST = glist[mm_in_group],
+            mlist = glist[mm_in_group],
             m = mname,
             idx = m_el_idx[[mm]]
           )
         } else if (target == "alpha") {
           mm_delta <- lav_lisrel_dalpha_dx(
-            MLIST = glist[mm_in_group],
+            mlist = glist[mm_in_group],
             m = mname,
             idx = m_el_idx[[mm]]
           )
         } else if (target == "psi") {
           mm_delta <- lav_lisrel_dpsi_dx(
-            MLIST = glist[mm_in_group],
+            mlist = glist[mm_in_group],
             m = mname,
             idx = m_el_idx[[mm]]
           )
         } else if (target == "sigma") {
           mm_delta <- lav_lisrel_dsigma_dx(
-            MLIST = glist[mm_in_group],
+            mlist = glist[mm_in_group],
             m = mname,
             idx = m_el_idx[[mm]],
             delta = TRUE
@@ -950,27 +950,27 @@ lav_model_delta <- function(lavmodel = NULL, glist = NULL,
 
     if (representation == "LISREL") {
       delta[[b]] <- lav_lisrel_dimplied_dx(
-        MLIST            = glist_1[mm_in_group],
-        m.free.idx       = m_idx[mm_in_group],
-        x.free.idx       = x_idx[mm_in_group],
-        nx.free          = nx,
+        mlist            = glist_1[mm_in_group],
+        m_free_idx       = m_idx[mm_in_group],
+        x_free_idx       = x_idx[mm_in_group],
+        nx_free          = nx,
         meanstructure    = lavmodel@meanstructure,
         categorical      = lavmodel@categorical,
         correlation      = lavmodel@correlation,
-        conditional.x    = lavmodel@conditional.x,
-        num.idx          = lavmodel@num.idx[[b]],
-        th.idx           = lavmodel@th.idx[[b]],
-        group.w.free     = lavmodel@group.w.free,
+        conditional_x    = lavmodel@conditional.x,
+        num_idx          = lavmodel@num.idx[[b]],
+        th_idx           = lavmodel@th.idx[[b]],
+        group_w_free     = lavmodel@group.w.free,
         parameterization = lavmodel@parameterization
       )
     } else { # RAM
       delta[[b]] <- lav_ram_dimplied_dx(
-        MLIST         = glist_1[mm_in_group],
-        m.free.idx    = m_idx[mm_in_group],
-        x.free.idx    = x_idx[mm_in_group],
-        nx.free       = nx,
+        mlist         = glist_1[mm_in_group],
+        m_free_idx    = m_idx[mm_in_group],
+        x_free_idx    = x_idx[mm_in_group],
+        nx_free       = nx,
         meanstructure = lavmodel@meanstructure,
-        group.w.free  = lavmodel@group.w.free
+        group_w_free  = lavmodel@group.w.free
       )
     }
   }

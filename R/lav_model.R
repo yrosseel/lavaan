@@ -85,7 +85,7 @@ lav_model <- function(lavpartable = NULL,                          # nolint
   # select model matrices
   if (lavoptions$representation == "LISREL") {
     tmp_rep <- lav_lisrel(lavpartable, target = NULL, extra = TRUE,
-                          allow.composites = composites)
+                          allow_composites = composites)
   } else if (lavoptions$representation == "RAM") {
     tmp_rep <- lav_ram(lavpartable, target = NULL, extra = TRUE)
   } else {

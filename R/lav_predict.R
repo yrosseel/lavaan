@@ -1958,14 +1958,14 @@ lav_predict_fy_eta.i <- function(lavmodel = NULL, lavdata = NULL,
   # linear predictor for all items
   YHAT <-
     lav_lisrel_eyetax(
-      MLIST = MLIST,
-      eXo = x.i,
-      ETA = eta.i,
-      sample.mean = lavsamplestats@mean[[g]],
-      ov.y.dummy.ov.idx = lavmodel@ov.y.dummy.ov.idx[[g]],
-      ov.x.dummy.ov.idx = lavmodel@ov.x.dummy.ov.idx[[g]],
-      ov.y.dummy.lv.idx = lavmodel@ov.y.dummy.lv.idx[[g]],
-      ov.x.dummy.lv.idx = lavmodel@ov.x.dummy.lv.idx[[g]],
+      mlist = MLIST,
+      exo = x.i,
+      eta = eta.i,
+      sample_mean = lavsamplestats@mean[[g]],
+      ov_y_dummy_ov_idx = lavmodel@ov.y.dummy.ov.idx[[g]],
+      ov_x_dummy_ov_idx = lavmodel@ov.x.dummy.ov.idx[[g]],
+      ov_y_dummy_lv_idx = lavmodel@ov.y.dummy.lv.idx[[g]],
+      ov_x_dummy_lv_idx = lavmodel@ov.x.dummy.lv.idx[[g]],
       delta = FALSE
     )
 

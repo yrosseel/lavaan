@@ -1,0 +1,6 @@
+# zorg dat tekstbestanden LF gebruiken
+*.R text eol=lf
+*.md text eol=lf
+*.Rd text eol=lf
+*.pdf binary
+*.svg text eol=lf

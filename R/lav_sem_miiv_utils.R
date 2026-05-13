@@ -342,12 +342,12 @@ lav_sem_miiv_utils_jaca_uls_gls <- function(lavmodel = NULL,
 
         if (d_mat == "lambda") {
           tmp <- lav_lisrel_d2sigma_lambda_psi(
-            MLIST = MLIST,
+            mlist = MLIST,
             i = d_row, j = d_col, k = un_row, l = un_col
           )
         } else if (d_mat == "beta") {
           tmp <- lav_lisrel_d2sigma_beta_psi(
-            MLIST = MLIST,
+            mlist = MLIST,
             i = d_row, j = d_col, k = un_row, l = un_col
           )
         }
@@ -451,12 +451,12 @@ lav_sem_miiv_utils_jaca_2rls <- function(lavmodel = NULL,
 
         if (d_mat == "lambda") {
           tmp <- lav_lisrel_d2sigma_lambda_psi(
-            MLIST = MLIST,
+            mlist = MLIST,
             i = d_row, j = d_col, k = un_row, l = un_col
           )
         } else if (d_mat == "beta") {
           tmp <- lav_lisrel_d2sigma_beta_psi(
-            MLIST = MLIST,
+            mlist = MLIST,
             i = d_row, j = d_col, k = un_row, l = un_col
           )
         }
@@ -603,12 +603,12 @@ lav_sem_miiv_utils_jaca_rls <- function(lavmodel = NULL,
 
         if (d_mat == "lambda") {
           tmp <- lav_lisrel_d2sigma_lambda_psi(
-            MLIST = MLIST,
+            mlist = MLIST,
             i = d_row, j = d_col, k = un_row, l = un_col
           )
         } else if (d_mat == "beta") {
           tmp <- lav_lisrel_d2sigma_beta_psi(
-            MLIST = MLIST,
+            mlist = MLIST,
             i = d_row, j = d_col, k = un_row, l = un_col
           )
         }

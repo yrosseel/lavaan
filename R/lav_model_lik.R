@@ -33,8 +33,8 @@ lav_model_lik_mml <- function(lavmodel = NULL,
     lavmodel@ov.x.dummy.lv.idx[[group]]
   )
   vetax <- lav_lisrel_vetax(
-    MLIST = mlist,
-    lv.dummy.idx = lv_dummy_idx
+    mlist = mlist,
+    lv_dummy_idx = lv_dummy_idx
   )
   # VETAx <- lav_lisrel_vetax(MLIST = MLIST)
   # check for negative values?
@@ -68,22 +68,22 @@ lav_model_lik_mml <- function(lavmodel = NULL,
     if (!is.null(mlist$alpha) || !is.null(mlist$gamma)) {
       if (conditional_x) {
         eetax <- lav_lisrel_eetax(
-          MLIST = mlist, eXo = exo, N = nobs,
-          sample.mean = sample_mean,
-          ov.y.dummy.ov.idx = lavmodel@ov.y.dummy.ov.idx[[group]],
-          ov.x.dummy.ov.idx = lavmodel@ov.x.dummy.ov.idx[[group]],
-          ov.y.dummy.lv.idx = lavmodel@ov.y.dummy.lv.idx[[group]],
-          ov.x.dummy.lv.idx = lavmodel@ov.x.dummy.lv.idx[[group]]
+          mlist = mlist, exo = exo, n = nobs,
+          sample_mean = sample_mean,
+          ov_y_dummy_ov_idx = lavmodel@ov.y.dummy.ov.idx[[group]],
+          ov_x_dummy_ov_idx = lavmodel@ov.x.dummy.ov.idx[[group]],
+          ov_y_dummy_lv_idx = lavmodel@ov.y.dummy.lv.idx[[group]],
+          ov_x_dummy_lv_idx = lavmodel@ov.x.dummy.lv.idx[[group]]
         )
       } else {
         eeta <- lav_lisrel_eeta(
-          MLIST = mlist,
-          mean.x = sample_mean_x,
-          sample.mean = sample_mean,
-          ov.y.dummy.ov.idx = lavmodel@ov.y.dummy.ov.idx[[group]],
-          ov.x.dummy.ov.idx = lavmodel@ov.x.dummy.ov.idx[[group]],
-          ov.y.dummy.lv.idx = lavmodel@ov.y.dummy.lv.idx[[group]],
-          ov.x.dummy.lv.idx = lavmodel@ov.x.dummy.lv.idx[[group]]
+          mlist = mlist,
+          mean_x = sample_mean_x,
+          sample_mean = sample_mean,
+          ov_y_dummy_ov_idx = lavmodel@ov.y.dummy.ov.idx[[group]],
+          ov_x_dummy_ov_idx = lavmodel@ov.x.dummy.ov.idx[[group]],
+          ov_y_dummy_lv_idx = lavmodel@ov.y.dummy.lv.idx[[group]],
+          ov_x_dummy_lv_idx = lavmodel@ov.x.dummy.lv.idx[[group]]
         )
       }
       # if(length(lv.dummy.idx) > 0L) {
@@ -133,22 +133,22 @@ lav_model_lik_mml <- function(lavmodel = NULL,
     # compute yhat for this node (eta)
     if (lavmodel@conditional.x) {
       yhat <- lav_lisrel_eyetax(
-        MLIST = mlist, eXo = exo,
-        ETA = eta, sample.mean = sample_mean,
-        ov.y.dummy.ov.idx = lavmodel@ov.y.dummy.ov.idx[[group]],
-        ov.x.dummy.ov.idx = lavmodel@ov.x.dummy.ov.idx[[group]],
-        ov.y.dummy.lv.idx = lavmodel@ov.y.dummy.lv.idx[[group]],
-        ov.x.dummy.lv.idx = lavmodel@ov.x.dummy.lv.idx[[group]]
+        mlist = mlist, exo = exo,
+        eta = eta, sample_mean = sample_mean,
+        ov_y_dummy_ov_idx = lavmodel@ov.y.dummy.ov.idx[[group]],
+        ov_x_dummy_ov_idx = lavmodel@ov.x.dummy.ov.idx[[group]],
+        ov_y_dummy_lv_idx = lavmodel@ov.y.dummy.lv.idx[[group]],
+        ov_x_dummy_lv_idx = lavmodel@ov.x.dummy.lv.idx[[group]]
       )
     } else {
       yhat <- lav_lisrel_eyetax3(
-        MLIST = mlist,
-        ETA = eta, sample.mean = sample_mean,
-        mean.x = sample_mean_x,
-        ov.y.dummy.ov.idx = lavmodel@ov.y.dummy.ov.idx[[group]],
-        ov.x.dummy.ov.idx = lavmodel@ov.x.dummy.ov.idx[[group]],
-        ov.y.dummy.lv.idx = lavmodel@ov.y.dummy.lv.idx[[group]],
-        ov.x.dummy.lv.idx = lavmodel@ov.x.dummy.lv.idx[[group]]
+        mlist = mlist,
+        eta = eta, sample_mean = sample_mean,
+        mean_x = sample_mean_x,
+        ov_y_dummy_ov_idx = lavmodel@ov.y.dummy.ov.idx[[group]],
+        ov_x_dummy_ov_idx = lavmodel@ov.x.dummy.ov.idx[[group]],
+        ov_y_dummy_lv_idx = lavmodel@ov.y.dummy.lv.idx[[group]],
+        ov_x_dummy_lv_idx = lavmodel@ov.x.dummy.lv.idx[[group]]
       )
     }
 

@@ -63,11 +63,11 @@ lav_model_sigma <- function(lavmodel = NULL, glist = NULL, extra = FALSE,
 
     if (representation == "LISREL") {
       sigma_hat[[g]] <- lav_lisrel_sigma(
-        MLIST = mlist,
+        mlist = mlist,
         delta = delta
       )
     } else if (representation == "RAM") {
-      sigma_hat[[g]] <- lav_ram_sigmahat(MLIST = mlist, delta = delta)
+      sigma_hat[[g]] <- lav_ram_sigmahat(mlist = mlist, delta = delta)
     } else {
       lav_msg_stop(gettext(
         "only LISREL and RAM representation has been implemented for now"))
@@ -118,9 +118,9 @@ lav_model_cond2joint_sigma <- function(lavmodel = NULL, glist = NULL,
     mlist <- glist[mm_in_group]
 
     if (representation == "LISREL") {
-      res_sigma <- lav_lisrel_sigma(MLIST = mlist, delta = delta)
+      res_sigma <- lav_lisrel_sigma(mlist = mlist, delta = delta)
       # res.int <- lav_lisrel_mu(MLIST = MLIST)
-      res_slopes <- lav_lisrel_pi(MLIST = mlist)
+      res_slopes <- lav_lisrel_pi(mlist = mlist)
       s_xx <- mlist$cov.x
 
       s_yy <- res_sigma + res_slopes %*% s_xx %*% t(res_slopes)
@@ -166,9 +166,9 @@ lav_model_mu <- function(lavmodel = NULL, glist = NULL) {
     if (!meanstructure) {
       mu_hat[[g]] <- numeric(lavmodel@nvar[g])
     } else if (representation == "LISREL") {
-      mu_hat[[g]] <- lav_lisrel_mu(MLIST = mlist)
+      mu_hat[[g]] <- lav_lisrel_mu(mlist = mlist)
     } else if (representation == "RAM") {
-      mu_hat[[g]] <- lav_ram_muhat(MLIST = mlist)
+      mu_hat[[g]] <- lav_ram_muhat(mlist = mlist)
     } else {
       lav_msg_stop(gettext(
         "only RAM and LISREL representation has been implemented for now"))
@@ -218,8 +218,8 @@ lav_model_cond2joint_mu <- function(lavmodel = NULL, glist = NULL) {
       mu_hat[[g]] <- numeric(lavmodel@nvar[g])
     } else if (representation == "LISREL") {
       mlist <- glist[mm_in_group]
-      res_int <- lav_lisrel_mu(MLIST = mlist)
-      res_slopes <- lav_lisrel_pi(MLIST = mlist)
+      res_int <- lav_lisrel_mu(mlist = mlist)
+      res_slopes <- lav_lisrel_pi(mlist = mlist)
       m_x <- mlist$mean.x
 
       mu_y <- res_int + res_slopes %*% m_x
@@ -261,8 +261,8 @@ lav_model_th <- function(lavmodel = NULL, glist = NULL, delta = TRUE) {
 
     if (representation == "LISREL") {
       th[[g]] <- lav_lisrel_th(
-        MLIST = glist[mm_in_group],
-        th.idx = th_idx[[g]], delta = delta
+        mlist = glist[mm_in_group],
+        th_idx = th_idx[[g]], delta = delta
       )
     } else {
       lav_msg_stop(gettext(
@@ -297,7 +297,7 @@ lav_model_pi <- function(lavmodel = NULL, glist = NULL, delta = TRUE) {
     if (!conditional_x) {
       pi_g <- numeric(lavmodel@nvar[g])
     } else if (representation == "LISREL") {
-      pi_g <- lav_lisrel_pi(MLIST = mlist, delta = delta)
+      pi_g <- lav_lisrel_pi(mlist = mlist, delta = delta)
     } else {
       lav_msg_stop(gettext(
         "only representation LISREL has been implemented for now"))
@@ -374,13 +374,13 @@ lav_model_vy <- function(lavmodel = NULL, glist = NULL, diagonal_only = FALSE) {
     mlist <- glist[mm_in_group]
 
     if (representation == "LISREL") {
-      vy_g <- lav_lisrel_vy(MLIST = mlist)
+      vy_g <- lav_lisrel_vy(mlist = mlist)
     } else if (representation == "RAM") {
       # does not work for categorical setting yet
       stopifnot(!lavmodel@categorical)
       # does not work if conditional.x = TRUE
       stopifnot(!lavmodel@conditional.x)
-      vy_g <- lav_ram_sigmahat(MLIST = mlist)
+      vy_g <- lav_ram_sigmahat(mlist = mlist)
     } else {
       lav_msg_stop(gettext(
         "only RAM and LISREL representation has been implemented for now"))
@@ -417,7 +417,7 @@ lav_model_veta <- function(lavmodel = NULL, glist = NULL,
     mlist <- glist[mm_in_group]
 
     if (representation == "LISREL") {
-      veta_g <- lav_lisrel_veta(MLIST = mlist)
+      veta_g <- lav_lisrel_veta(mlist = mlist)
 
       if (remove_dummy_lv) {
         # remove all dummy latent variables
@@ -430,7 +430,7 @@ lav_model_veta <- function(lavmodel = NULL, glist = NULL,
         }
       }
     } else if (representation == "RAM") {
-      veta_g <- lav_ram_veta(MLIST = mlist)
+      veta_g <- lav_ram_veta(mlist = mlist)
     } else {
       lav_msg_stop(gettext(
         "only LISREL and RAM representation has been implemented for now"))
@@ -468,8 +468,8 @@ lav_model_vetax <- function(lavmodel = NULL, glist = NULL) {
         lavmodel@ov.x.dummy.lv.idx[[g]]
       )
       eta_g <- lav_lisrel_vetax(
-        MLIST = mlist,
-        lv.dummy.idx = lv_idx
+        mlist = mlist,
+        lv_dummy_idx = lv_idx
       )
     } else {
       lav_msg_stop(gettext(
@@ -503,7 +503,7 @@ lav_model_cov_both <- function(lavmodel = NULL, glist = NULL,
     mlist <- glist[mm_in_group]
 
     if (representation == "LISREL") {
-      cov_g <- lav_lisrel_cov_both(MLIST = mlist, delta = delta)
+      cov_g <- lav_lisrel_cov_both(mlist = mlist, delta = delta)
 
       if (remove_dummy_lv) {
         # remove all dummy latent variables
@@ -553,12 +553,12 @@ lav_model_eeta <- function(lavmodel = NULL, glist = NULL, lavsamplestats = NULL,
 
     if (representation == "LISREL") {
       eeta_g <- lav_lisrel_eeta(mlist,
-        mean.x = lavsamplestats@mean.x[[g]],
-        sample.mean = lavsamplestats@mean[[g]],
-        ov.y.dummy.lv.idx = lavmodel@ov.y.dummy.lv.idx[[g]],
-        ov.x.dummy.lv.idx = lavmodel@ov.x.dummy.lv.idx[[g]],
-        ov.y.dummy.ov.idx = lavmodel@ov.y.dummy.ov.idx[[g]],
-        ov.x.dummy.ov.idx = lavmodel@ov.x.dummy.ov.idx[[g]]
+        mean_x = lavsamplestats@mean.x[[g]],
+        sample_mean = lavsamplestats@mean[[g]],
+        ov_y_dummy_lv_idx = lavmodel@ov.y.dummy.lv.idx[[g]],
+        ov_x_dummy_lv_idx = lavmodel@ov.x.dummy.lv.idx[[g]],
+        ov_y_dummy_ov_idx = lavmodel@ov.y.dummy.ov.idx[[g]],
+        ov_x_dummy_ov_idx = lavmodel@ov.x.dummy.ov.idx[[g]]
       )
       if (remove_dummy_lv) {
         # remove dummy
@@ -611,12 +611,12 @@ lav_model_eetax <- function(lavmodel = NULL, glist = NULL,
 
     if (representation == "LISREL") {
       eetax_g <- lav_lisrel_eetax(mlist,
-        eXo = exo_1, N = nobs[[g]],
-        sample.mean = lavsamplestats@mean[[g]],
-        ov.y.dummy.lv.idx = lavmodel@ov.y.dummy.lv.idx[[g]],
-        ov.x.dummy.lv.idx = lavmodel@ov.x.dummy.lv.idx[[g]],
-        ov.y.dummy.ov.idx = lavmodel@ov.y.dummy.ov.idx[[g]],
-        ov.x.dummy.ov.idx = lavmodel@ov.x.dummy.ov.idx[[g]]
+        exo = exo_1, n = nobs[[g]],
+        sample_mean = lavsamplestats@mean[[g]],
+        ov_y_dummy_lv_idx = lavmodel@ov.y.dummy.lv.idx[[g]],
+        ov_x_dummy_lv_idx = lavmodel@ov.x.dummy.lv.idx[[g]],
+        ov_y_dummy_ov_idx = lavmodel@ov.y.dummy.ov.idx[[g]],
+        ov_x_dummy_ov_idx = lavmodel@ov.x.dummy.ov.idx[[g]]
       )
 
       if (remove_dummy_lv) {
@@ -674,12 +674,12 @@ lav_model_lambda <- function(lavmodel = NULL, glist = NULL,
         ov_x_dummy_lv_idx <- NULL
       }
       lambda_g <- lav_lisrel_lambda(
-        MLIST = mlist,
-        ov.y.dummy.ov.idx = ov_y_dummy_ov_idx,
-        ov.x.dummy.ov.idx = ov_x_dummy_ov_idx,
-        ov.y.dummy.lv.idx = ov_y_dummy_lv_idx,
-        ov.x.dummy.lv.idx = ov_x_dummy_lv_idx,
-        remove.dummy.lv = remove_dummy_lv
+        mlist = mlist,
+        ov_y_dummy_ov_idx = ov_y_dummy_ov_idx,
+        ov_x_dummy_ov_idx = ov_x_dummy_ov_idx,
+        ov_y_dummy_lv_idx = ov_y_dummy_lv_idx,
+        ov_x_dummy_lv_idx = ov_x_dummy_lv_idx,
+        remove_dummy_lv = remove_dummy_lv
       )
     } else {
       lav_msg_stop(gettext(
@@ -714,14 +714,14 @@ lav_model_theta <- function(lavmodel = NULL, glist = NULL, fix = TRUE) {
     if (representation == "LISREL") {
       if (fix) {
         theta_g <- lav_lisrel_theta(
-          MLIST = mlist,
-          ov.y.dummy.ov.idx = lavmodel@ov.y.dummy.ov.idx[[g]],
-          ov.x.dummy.ov.idx = lavmodel@ov.x.dummy.ov.idx[[g]],
-          ov.y.dummy.lv.idx = lavmodel@ov.y.dummy.lv.idx[[g]],
-          ov.x.dummy.lv.idx = lavmodel@ov.x.dummy.lv.idx[[g]]
+          mlist = mlist,
+          ov_y_dummy_ov_idx = lavmodel@ov.y.dummy.ov.idx[[g]],
+          ov_x_dummy_ov_idx = lavmodel@ov.x.dummy.ov.idx[[g]],
+          ov_y_dummy_lv_idx = lavmodel@ov.y.dummy.lv.idx[[g]],
+          ov_x_dummy_lv_idx = lavmodel@ov.x.dummy.lv.idx[[g]]
         )
       } else {
-        theta_g <- lav_lisrel_theta(MLIST = mlist)
+        theta_g <- lav_lisrel_theta(mlist = mlist)
       }
     } else if (representation == "RAM") {
       ov_idx <- as.integer(mlist$ov.idx[1, ])
@@ -760,13 +760,13 @@ lav_model_ey <- function(lavmodel = NULL, glist = NULL, lavsamplestats = NULL,
 
     if (representation == "LISREL") {
       ey_g <- lav_lisrel_ey(
-        MLIST = mlist,
-        mean.x = lavsamplestats@mean.x[[g]],
-        sample.mean = lavsamplestats@mean[[g]],
-        ov.y.dummy.ov.idx = lavmodel@ov.y.dummy.ov.idx[[g]],
-        ov.x.dummy.ov.idx = lavmodel@ov.x.dummy.ov.idx[[g]],
-        ov.y.dummy.lv.idx = lavmodel@ov.y.dummy.lv.idx[[g]],
-        ov.x.dummy.lv.idx = lavmodel@ov.x.dummy.lv.idx[[g]],
+        mlist = mlist,
+        mean_x = lavsamplestats@mean.x[[g]],
+        sample_mean = lavsamplestats@mean[[g]],
+        ov_y_dummy_ov_idx = lavmodel@ov.y.dummy.ov.idx[[g]],
+        ov_x_dummy_ov_idx = lavmodel@ov.x.dummy.ov.idx[[g]],
+        ov_y_dummy_lv_idx = lavmodel@ov.y.dummy.lv.idx[[g]],
+        ov_x_dummy_lv_idx = lavmodel@ov.x.dummy.lv.idx[[g]],
         delta = delta
       )
     } else {
@@ -812,26 +812,26 @@ lav_model_yhat <- function(lavmodel = NULL, glist = NULL, lavsamplestats = NULL,
     if (lavmodel@representation == "LISREL") {
       if (lavmodel@conditional.x) {
         yhat[[g]] <- lav_lisrel_eyetax(
-          MLIST = mlist,
-          eXo = exo[[g]], ETA = eta[[g]], N = nobs_1,
-          sample.mean = lavsamplestats@mean[[g]],
-          ov.y.dummy.ov.idx = lavmodel@ov.y.dummy.ov.idx[[g]],
-          ov.x.dummy.ov.idx = lavmodel@ov.x.dummy.ov.idx[[g]],
-          ov.y.dummy.lv.idx = lavmodel@ov.y.dummy.lv.idx[[g]],
-          ov.x.dummy.lv.idx = lavmodel@ov.x.dummy.lv.idx[[g]],
+          mlist = mlist,
+          exo = exo[[g]], eta = eta[[g]], n = nobs_1,
+          sample_mean = lavsamplestats@mean[[g]],
+          ov_y_dummy_ov_idx = lavmodel@ov.y.dummy.ov.idx[[g]],
+          ov_x_dummy_ov_idx = lavmodel@ov.x.dummy.ov.idx[[g]],
+          ov_y_dummy_lv_idx = lavmodel@ov.y.dummy.lv.idx[[g]],
+          ov_x_dummy_lv_idx = lavmodel@ov.x.dummy.lv.idx[[g]],
           delta = delta
         )
       } else {
         # unconditional case
         yhat[[g]] <- lav_lisrel_eyetax3(
-          MLIST = mlist,
-          ETA = eta[[g]],
-          sample.mean = lavsamplestats@mean[[g]],
-          mean.x = lavsamplestats@mean.x[[g]],
-          ov.y.dummy.ov.idx = lavmodel@ov.y.dummy.ov.idx[[g]],
-          ov.x.dummy.ov.idx = lavmodel@ov.x.dummy.ov.idx[[g]],
-          ov.y.dummy.lv.idx = lavmodel@ov.y.dummy.lv.idx[[g]],
-          ov.x.dummy.lv.idx = lavmodel@ov.x.dummy.lv.idx[[g]],
+          mlist = mlist,
+          eta = eta[[g]],
+          sample_mean = lavsamplestats@mean[[g]],
+          mean_x = lavsamplestats@mean.x[[g]],
+          ov_y_dummy_ov_idx = lavmodel@ov.y.dummy.ov.idx[[g]],
+          ov_x_dummy_ov_idx = lavmodel@ov.x.dummy.ov.idx[[g]],
+          ov_y_dummy_lv_idx = lavmodel@ov.y.dummy.lv.idx[[g]],
+          ov_x_dummy_lv_idx = lavmodel@ov.x.dummy.lv.idx[[g]],
           delta = delta
         )
         # impute back ov.y values that are NOT indicators

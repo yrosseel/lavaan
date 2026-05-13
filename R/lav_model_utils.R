@@ -101,16 +101,16 @@ lav_model_set_parameters <- function(lavmodel = NULL, x = NULL) {
           if (lavmodel@parameterization == "delta") {
             tmp[mm_in_group] <-
               lav_lisrel_residual_variances(
-                MLIST = tmp[mm_in_group],
-                num.idx = lavmodel@num.idx[[g]],
-                ov.y.dummy.ov.idx = lavmodel@ov.y.dummy.ov.idx[[g]],
-                ov.y.dummy.lv.idx = lavmodel@ov.y.dummy.lv.idx[[g]]
+                mlist = tmp[mm_in_group],
+                num_idx = lavmodel@num.idx[[g]],
+                ov_y_dummy_ov_idx = lavmodel@ov.y.dummy.ov.idx[[g]],
+                ov_y_dummy_lv_idx = lavmodel@ov.y.dummy.lv.idx[[g]]
               )
           } else if (lavmodel@parameterization == "theta") {
             tmp[mm_in_group] <-
               lav_lisrel_delta(
-                MLIST = tmp[mm_in_group],
-                num.idx = lavmodel@num.idx[[g]]
+                mlist = tmp[mm_in_group],
+                num_idx = lavmodel@num.idx[[g]]
               )
           }
         }
@@ -130,7 +130,7 @@ lav_model_set_parameters <- function(lavmodel = NULL, x = NULL) {
         mm_in_group <- 1:nmat[g] + cumsum(c(0L, nmat))[g]
 
         tmp[mm_in_group] <-
-          lav_lisrel_comp_set_intresvar(MLIST = tmp[mm_in_group])
+          lav_lisrel_comp_set_intresvar(mlist = tmp[mm_in_group])
       }
     } else {
       cat("FIXME: deal with Composites if representation = RAM")
@@ -210,16 +210,16 @@ lav_model_x2glist <- function(lavmodel = NULL, x = NULL,
         if (lavmodel@parameterization == "delta") {
           glist[mm_in_group] <-
             lav_lisrel_residual_variances(
-              MLIST = glist[mm_in_group],
-              num.idx = lavmodel@num.idx[[g]],
-              ov.y.dummy.ov.idx = lavmodel@ov.y.dummy.ov.idx[[g]],
-              ov.y.dummy.lv.idx = lavmodel@ov.y.dummy.lv.idx[[g]]
+              mlist = glist[mm_in_group],
+              num_idx = lavmodel@num.idx[[g]],
+              ov_y_dummy_ov_idx = lavmodel@ov.y.dummy.ov.idx[[g]],
+              ov_y_dummy_lv_idx = lavmodel@ov.y.dummy.lv.idx[[g]]
             )
         } else if (lavmodel@parameterization == "theta") {
           glist[mm_in_group] <-
             lav_lisrel_delta(
-              MLIST = glist[mm_in_group],
-              num.idx = lavmodel@num.idx[[g]]
+              mlist = glist[mm_in_group],
+              num_idx = lavmodel@num.idx[[g]]
             )
         }
       } # blocks
@@ -236,7 +236,7 @@ lav_model_x2glist <- function(lavmodel = NULL, x = NULL,
         mm_in_group <- 1:nmat[g] + cumsum(c(0L, nmat))[g]
 
         glist[mm_in_group] <-
-          lav_lisrel_comp_set_intresvar(MLIST = glist[mm_in_group])
+          lav_lisrel_comp_set_intresvar(mlist = glist[mm_in_group])
       }
     } else {
       cat("FIXME: deal with Composites when representation = RAM")
