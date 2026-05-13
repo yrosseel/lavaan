@@ -393,8 +393,8 @@ lav_object_catml <- function(lavobject = NULL) {
       on.exit(lav_warn(current_warn), TRUE)
     }
     out <- lav_samplestats_icov(
-      COV = cov_1, ridge = 1e-05,
-      x.idx = lavsamplestats@x.idx[[g]],
+      cov_1 = cov_1, ridge = 1e-05,
+      x_idx = lavsamplestats@x.idx[[g]],
       ngroups = lavdata@ngroups, g = g
     )
     lav_warn(current_warn)

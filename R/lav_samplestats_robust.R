@@ -7,61 +7,61 @@
 # https://www.nd.edu/~kyuan/SEMdiagnosis
 # see file CFA.r lines 46--96
 #
-lav_cov_huber <- function(Y = NULL, prob = 0.95, max.it = 200L, tol = 1e-07) {
-  Y <- as.matrix(Y)
-  NAMES <- colnames(Y)
-  Y <- unname(Y)
-  N <- nrow(Y)
-  P <- ncol(Y)
+lav_cov_huber <- function(y = NULL, prob = 0.95, max_it = 200L, tol = 1e-07) {
+  y <- as.matrix(y)
+  names_1 <- colnames(y)
+  y <- unname(y)
+  n <- nrow(y)
+  p <- ncol(y)
 
   # tuning parameters for Huber's weight
-  chip <- qchisq(prob, P)
+  chip <- qchisq(prob, p)
   ck <- sqrt(chip)
-  cbeta <- (P * pchisq(chip, P + 2L) + chip * (1 - prob)) / P
+  cbeta <- (p * pchisq(chip, p + 2L) + chip * (1 - prob)) / p
 
   # initial values
-  this.mu <- colMeans(Y, na.rm = TRUE)
-  this.sigma <- cov(Y, use = "pairwise.complete.obs")
+  this_mu <- colMeans(y, na.rm = TRUE)
+  this_sigma <- cov(y, use = "pairwise.complete.obs")
 
-  for (i in seq_len(max.it)) {
+  for (i in seq_len(max_it)) {
     # store old
-    old.mu <- this.mu
-    old.sigma <- this.sigma
+    old_mu <- this_mu
+    old_sigma <- this_sigma
 
     # squared Mahalanobis distance
-    inv.sigma <- solve(this.sigma)
-    Y.c <- t(t(Y) - this.mu)
-    mdist2 <- rowSums((Y.c %*% inv.sigma) * Y.c)
+    inv_sigma <- solve(this_sigma)
+    y_c <- t(t(y) - this_mu)
+    mdist2 <- rowSums((y_c %*% inv_sigma) * y_c)
     mdist <- sqrt(mdist2)
 
     # Huber weights
     wt <- ifelse(mdist <= ck, 1, ck / mdist)
 
     # weighted mean
-    this.mu <- apply(Y, 2L, weighted.mean, w = wt, na.rm = TRUE)
+    this_mu <- apply(y, 2L, weighted.mean, w = wt, na.rm = TRUE)
 
     # weighted cov
-    Y.c <- t(t(Y) - this.mu)
-    this.sigma <- crossprod(Y.c * wt) / (N * cbeta)
+    y_c <- t(t(y) - this_mu)
+    this_sigma <- crossprod(y_c * wt) / (n * cbeta)
     # question: why N, and not sum(wt)?
 
     # check progress
-    diff.mu <- abs(this.mu - old.mu)
-    diff.sigma <- abs(this.sigma - old.sigma)
-    crit <- max(c(max(diff.mu), max(diff.sigma)))
+    diff_mu <- abs(this_mu - old_mu)
+    diff_sigma <- abs(this_sigma - old_sigma)
+    crit <- max(c(max(diff_mu), max(diff_sigma)))
     if (crit < tol) {
       break
     }
-    if (i == max.it) {
+    if (i == max_it) {
       lav_msg_warn(gettext(
         "maximum number of iterations has been reached, without convergence."))
     }
   }
 
-  names(this.mu) <- NAMES
-  colnames(this.sigma) <- rownames(this.sigma) <- NAMES
+  names(this_mu) <- names_1
+  colnames(this_sigma) <- rownames(this_sigma) <- names_1
 
-  res <- list(Mu = this.mu, Sigma = this.sigma, niter = i, wt = wt)
+  res <- list(Mu = this_mu, Sigma = this_sigma, niter = i, wt = wt)
 
   res
 }

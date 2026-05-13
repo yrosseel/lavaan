@@ -282,8 +282,8 @@ lav_test_fmg_browne_nt_model <- function(lavobject = NULL,
     lavsamplestats = lavsamplestats,
     lavh1 = lavh1,
     lavimplied = lavimplied,
-    ADF = FALSE,
-    model.based = TRUE
+    adf = FALSE,
+    model_based = TRUE
   )
   WLS.obs <- lavsamplestats@WLS.obs
   WLS.est <- lav_model_wls_est(lavmodel)
@@ -583,8 +583,8 @@ lav_test_fmg_ugamma <- function(lavobject = NULL,
         lavsamplestats = lavsamplestats,
         lavh1 = NULL,
         lavimplied = lavimplied,
-        ADF = TRUE,
-        model.based = FALSE
+        adf = TRUE,
+        model_based = FALSE
       )
     }
   }
