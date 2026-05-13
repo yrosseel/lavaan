@@ -11,6 +11,16 @@
 
 # YR 16 Oct 2025 + LDW 22 Oct 2025
 
+lav_version <- local({
+  version <- NULL
+  function() {
+    if (is.null(version)) {
+      version <<- packageDescription("lavaan", fields = "Version")
+    }
+    version
+  }
+})
+
 lav_object_check_version <- function(object = NULL) {
 
   is_lavaan_object <- inherits(object, "lavaan")
@@ -27,10 +37,7 @@ lav_object_check_version <- function(object = NULL) {
   if (.hasSlot(object, "version")) {
     has_version_flag <- TRUE
     lavobject_version <- object@version[1] # lavaan.mi has two
-    lavaanpkg_version <- read.dcf(
-      file = system.file("DESCRIPTION", package = "lavaan"),
-      fields = "Version"
-    )[1]
+    lavaanpkg_version <- lav_version()
     if (lavobject_version != lavaanpkg_version) {
       check_not_needed_flag <- FALSE
     }

@@ -34,7 +34,7 @@ lav_lavaan_step17_lavaan <- function(lavmc = NULL,
   lavpartable <- lav_partable_remove_cache(lavpartable)
   lavaan <- new("lavaan", # type_of_slot - where created or modified ?
     # ------------   ------------------------- -
-    version = packageDescription("lavaan", fields = "Version"),
+    version = lav_version(),
     call = lavmc, # match.call - ldw_adapt_match_call
     timing = timing, # list - ldw_add_timing
     Options = lavoptions, # list - options (2) / data (3) / partable (4)
@@ -83,11 +83,11 @@ lav_lavaan_step17_lavaan <- function(lavmc = NULL,
 
   # post-fitting check of parameters
   if (!is.null(lavoptions$check.post) && lavoptions$check.post &&
-    lavTech(lavaan, "converged")) {
+    lavaan@optim$converged) {
     if (lav_verbose()) {
       cat("post check  ...")
     }
-    lavInspect(lavaan, "post.check")
+    lav_object_post_check(lavaan)
     if (lav_verbose()) {
       cat(" done.\n")
     }

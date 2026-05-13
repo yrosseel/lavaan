@@ -71,6 +71,105 @@ lav_constraints_parse <- function(partable = NULL, constraints = NULL,
     }
   }
 
+  no_explicit_constraints <- is.null(list_1) &&
+    !any(partable$op %in% c(":=", "==", "<", ">")) &&
+    !ceq_simple
+  if (no_explicit_constraints) {
+    def_function <- function() NULL
+    ceq_function <- function() NULL
+    cin_function <- function() NULL
+    ceq_jacobian <- function() NULL
+    cin_jacobian <- function() NULL
+    ceq_jac <- matrix(0, nrow = 0L, ncol = npar)
+    ceq_rhs <- numeric(0L)
+    ceq_theta <- numeric(0L)
+    ceq_linear_idx <- integer(0L)
+    ceq_nonlinear_idx <- integer(0L)
+    ceq_jac_null <- matrix(0, 0L, 0L)
+    ceq_rhs_null <- numeric(0L)
+    ceq_simple_k <- matrix(0, 0, 0)
+
+    upper_idx <- if (is.null(partable$upper)) {
+      integer(0L)
+    } else {
+      which(partable$free > 0L & is.finite(partable$upper))
+    }
+    lower_idx <- if (is.null(partable$lower)) {
+      integer(0L)
+    } else {
+      which(partable$free > 0L & is.finite(partable$lower))
+    }
+    bound_idx <- c(upper_idx, lower_idx)
+    if (length(bound_idx) > 0L) {
+      free <- partable$free
+      free[free > 0L] <- seq_along(free[free > 0L])
+      cin_jac <- matrix(0, nrow = length(bound_idx), ncol = npar)
+      upper_rows <- seq_along(upper_idx)
+      lower_rows <- length(upper_idx) + seq_along(lower_idx)
+      if (length(upper_idx) > 0L) {
+        cin_jac[cbind(upper_rows, free[upper_idx])] <- -1
+      }
+      if (length(lower_idx) > 0L) {
+        cin_jac[cbind(lower_rows, free[lower_idx])] <- 1
+      }
+      cin_rhs <- c(-partable$upper[upper_idx], partable$lower[lower_idx])
+      cin_theta <- c(
+        partable$upper[upper_idx] - theta[free[upper_idx]],
+        theta[free[lower_idx]] - partable$lower[lower_idx]
+      )
+      attr(cin_rhs, "bound.idx") <- seq_along(bound_idx)
+      attr(cin_theta, "bound.idx") <- seq_along(bound_idx)
+      cin_linear_idx <- seq_along(bound_idx)
+      cin_function <- local({
+        upper_free <- free[upper_idx]
+        lower_free <- free[lower_idx]
+        upper <- partable$upper[upper_idx]
+        lower <- partable$lower[lower_idx]
+        function(.x., ...) {
+          out <- c(upper - .x.[upper_free], .x.[lower_free] - lower)
+          attr(out, "bound.idx") <- seq_along(out)
+          out
+        }
+      })
+    } else {
+      cin_jac <- matrix(0, nrow = 0L, ncol = npar)
+      cin_rhs <- numeric(0L)
+      cin_theta <- numeric(0L)
+      cin_linear_idx <- integer(0L)
+    }
+
+    return(list(
+      def.function = def_function,
+      ceq.function = ceq_function,
+      ceq.JAC = ceq_jac,
+      ceq.jacobian = ceq_jacobian,
+      ceq.rhs = ceq_rhs,
+      ceq.theta = ceq_theta,
+      ceq.linear.idx = ceq_linear_idx,
+      ceq.nonlinear.idx = ceq_nonlinear_idx,
+      ceq.linear.flag = FALSE,
+      ceq.nonlinear.flag = FALSE,
+      ceq.flag = FALSE,
+      ceq.linear.only.flag = FALSE,
+      ceq.JAC.NULL = ceq_jac_null,
+      ceq.rhs.NULL = ceq_rhs_null,
+      ceq.simple.only = FALSE,
+      ceq.simple.K = ceq_simple_k,
+      cin.function = cin_function,
+      cin.JAC = cin_jac,
+      cin.jacobian = cin_jacobian,
+      cin.rhs = cin_rhs,
+      cin.theta = cin_theta,
+      cin.linear.idx = cin_linear_idx,
+      cin.nonlinear.idx = integer(0L),
+      cin.linear.flag = length(cin_linear_idx) > 0L,
+      cin.nonlinear.flag = FALSE,
+      cin.flag = FALSE,
+      cin.only.flag = FALSE,
+      cin.simple.only = length(cin_linear_idx) > 0L
+    ))
+  }
+
   # variable definitions
   def_function <- lav_partable_constraints_def(partable,
     con = list_1,

@@ -10,7 +10,7 @@ lav_object_post_check <- function(object) {
 
   # 1a. check for negative variances ov
   var_idx <- which(lavpartable$op == "~~" &
-    lavpartable$lhs %in% lav_object_vnames(object, "ov") &
+    lavpartable$lhs %in% lav_partable_vnames(lavpartable, "ov") &
     lavpartable$lhs == lavpartable$rhs)
   if (any(is.na(lavpartable$est[var_idx]))) {
     # perhaps estimator = "IV" + stage 1 only
@@ -22,7 +22,7 @@ lav_object_post_check <- function(object) {
 
   # 1b. check for negative variances lv
   var_idx <- which(lavpartable$op == "~~" &
-    lavpartable$lhs %in% lav_object_vnames(object, "lv") &
+    lavpartable$lhs %in% lav_partable_vnames(lavpartable, "lv") &
     lavpartable$lhs == lavpartable$rhs)
   if (any(is.na(lavpartable$est[var_idx]))) {
     # perhaps estimator = "IV" + stage 1 only
