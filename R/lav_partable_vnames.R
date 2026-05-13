@@ -70,6 +70,7 @@ lav_partable_vnames <- function(partable, type = NULL, ..., # nolint
   }
   # dotdotdot
   dotdotdot <- list(...)
+  ndotdotdot <- length(dotdotdot)
   type_list <- c(
     "ov", # observed variables (ov)
     "ov.x", # (pure) exogenous observed variables
@@ -124,6 +125,19 @@ lav_partable_vnames <- function(partable, type = NULL, ..., # nolint
     } else {
       return_value <- attr(partable, "vnames")[type]
     }
+    if (ndotdotdot == 0L) {
+      if (type[1L] == "all") {
+        return(return_value)
+      } else if (length(type) == 1L) {
+        if (type == "lv.marker") {
+          return(unlist(return_value[[type]]))
+        } else {
+          return(unique(unlist(return_value[[type]])))
+        }
+      } else {
+        return(return_value)
+      }
+    }
   }
   # ----- lav_partable_vnames ---- common ----------------------------------
   if (type[1L] == "all" || type[1L] == "*") {
@@ -136,7 +150,6 @@ lav_partable_vnames <- function(partable, type = NULL, ..., # nolint
   # per default, use full partable
   block_select <- lav_partable_block_values(partable)
   # check for ... selection argument(s)
-  ndotdotdot <- length(dotdotdot)
   if (ndotdotdot > 0L) {
     dot_names <- names(dotdotdot)
     row_select <- rep(TRUE, length(partable$lhs))

@@ -104,7 +104,9 @@ lav_object_independence <- lav_object_baseline <- function(object = NULL,
       lavoptions$se <- "standard"
     }
   } else {
-    # 0.6-18: slower, but safer to just keep it
+    if (identical(lavoptions$test, "standard")) {
+      lavoptions$se <- "none"
+    }
 
     # 0.6-20 -- except if se = "bootstrap" -> "none"
     if (lavoptions$se == "bootstrap") {
