@@ -19,7 +19,7 @@ lav_samplestats_icov <- function(cov_1 = NULL, ridge = 0.0, x_idx = integer(0L),
         lav_msg_stop(gettext(
           "sample covariance matrix is not positive-definite"))
       } else {
-        # cov <- chol2inv(c_s)
+        icov <- chol2inv(c_s)
         d <- diag(c_s)
         cov_log_det <- 2 * sum(log(d))
         # give a warning
