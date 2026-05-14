@@ -972,7 +972,7 @@ lav_mvnorm_missing_logl_hessian_data <- function(y = NULL, # nolint
                                                  sinv_method = "eigen",
                                                  sigma_inv = NULL) {
   # missing patterns
-  yp <- lav_samplestats_missing_patterns(Y = y, Mp = mp, wt = wt)
+  yp <- lav_samplestats_missing_patterns(y = y, mp = mp, wt = wt)
 
   lav_mvnorm_missing_logl_hessian_samplestats(
     yp = yp, mu = mu,
@@ -1301,7 +1301,7 @@ lav_mvnorm_missing_information_both <- function(y = NULL, # nolint
   }
 
   if (information == "observed") {
-    yp <- lav_samplestats_missing_patterns(Y = y, Mp = mp, wt = wt)
+    yp <- lav_samplestats_missing_patterns(y = y, mp = mp, wt = wt)
   }
 
   # N

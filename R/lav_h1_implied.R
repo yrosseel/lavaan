@@ -67,7 +67,7 @@ lav_h1_implied_logl <- function(lavdata = NULL,
     logl <- lav_h1_logl(
       lavdata = lavdata,
       lavsamplestats = lavsamplestats,
-      h1.implied = implied,
+      h1_implied = implied,
       lavoptions = lavoptions
     )
   } else {
@@ -78,7 +78,7 @@ lav_h1_implied_logl <- function(lavdata = NULL,
       cov = vector("list", length = ngroups * nlevels),
       mean = vector("list", length = ngroups * nlevels)
     )
-    loglik.group <- numeric(lavdata@ngroups)
+    loglik_group <- numeric(lavdata@ngroups)
 
     for (g in 1:lavdata@ngroups) {
       if (lav_verbose()) {
@@ -109,8 +109,8 @@ lav_h1_implied_logl <- function(lavdata = NULL,
         #    min.variance = 1e-05,
         #    max.iter = 5L)
         ## create tmp lav1, only for this group
-        # implied$cov[[ (g-1)*nlevels + 1L]] <- OUT$Sigma.W
-        # implied$cov[[ (g-1)*nlevels + 2L]] <- OUT$Sigma.B
+        # implied$cov[[(g-1)*nlevels + 1L]] <- OUT$Sigma.W
+        # implied$cov[[(g-1)*nlevels + 2L]] <- OUT$Sigma.B
         # implied$mean[[(g-1)*nlevels + 1L]] <- OUT$Mu.W
         # implied$mean[[(g-1)*nlevels + 2L]] <- OUT$Mu.B
         # loglik.group[g] <- OUT$logl
@@ -130,14 +130,14 @@ lav_h1_implied_logl <- function(lavdata = NULL,
         )
 
         lavoptions2 <- lavoptions
-		lavoptions2$estimator <- "ML"
+    lavoptions2$estimator <- "ML"
         lavoptions2$se <- "none"
         lavoptions2$test <- "none"
         lavoptions2$do.fit <- TRUE
-		lavoptions2$optim.method <- "nlminb"
+    lavoptions2$optim.method <- "nlminb"
         lavoptions2$h1 <- FALSE
-		lavoptions2$implied <- TRUE
-		lavoptions2$loglik <- TRUE
+    lavoptions2$implied <- TRUE
+    lavoptions2$loglik <- TRUE
         lavoptions2$baseline <- FALSE
         lavoptions2$fixed.x <- FALSE # even if model uses fixed.x=TRUE
         lavoptions2$model.type <- "unrestricted"
@@ -148,25 +148,25 @@ lav_h1_implied_logl <- function(lavdata = NULL,
         # FIT <- lavaan(lavpartable, slotOptions = lavoptions2,
         #          slotSampleStats = lavsamplestats,
         #          slotData = lavdata, sloth1 = lavh1)
-        FIT <- lavaan(lavpartable,
+        fit <- lavaan(lavpartable,
           slotOptions = lavoptions2,
           slotSampleStats = lavsamplestats,
           slotData = lavdata,
           warn = FALSE
         )
-        OUT <- list(
-          Sigma.W = FIT@implied$cov[[1]],
-          Sigma.B = FIT@implied$cov[[2]],
-          Mu.W = FIT@implied$mean[[1]],
-          Mu.B = FIT@implied$mean[[2]],
-          logl = FIT@loglik$loglik
+        out_1 <- list(
+          Sigma.W = fit@implied$cov[[1]],
+          Sigma.B = fit@implied$cov[[2]],
+          Mu.W = fit@implied$mean[[1]],
+          Mu.B = fit@implied$mean[[2]],
+          logl = fit@loglik$loglik
         )
         # if(lavoptions$fixed.x) {
         #   OUT$logl <- OUT$logl - lavsamplestats@YLp[[g]][[2]]$loglik.x
         # }
       } else {
         # complete data
-        OUT <- lav_mvnorm_cluster_em_sat(
+        out_1 <- lav_mvnorm_cluster_em_sat(
           ylp = lavsamplestats@YLp[[g]],
           lp = lavdata@Lp[[g]],
           tol = 1e-04, # option?
@@ -179,8 +179,8 @@ lav_h1_implied_logl <- function(lavdata = NULL,
       }
 
       # if any near-zero within variance(s), produce warning here
-      zero.var <- which(diag(OUT$Sigma.W) <= 1e-05)
-      if (length(zero.var)) {
+      zero_var <- which(diag(out_1$Sigma.W) <= 1e-05)
+      if (length(zero_var)) {
         gtxt <- if (ngroups > 1L) {
           gettextf(" in group %s.", g)
         } else {
@@ -189,36 +189,36 @@ lav_h1_implied_logl <- function(lavdata = NULL,
         lav_msg_warn(gettextf(
           "H1 estimation resulted in a within covariance matrix %1$s with
           (near) zero variances for some of the level-1 variables: %2$s",
-            gtxt, lav_msg_view(lavdata@ov.names.l[[g]][[1]][zero.var]))
+            gtxt, lav_msg_view(lavdata@ov.names.l[[g]][[1]][zero_var]))
         )
       }
 
       # new in 0.6-18: ensure Mu.W[both.idx] is zero (post-estimation!)
       # (not correctly; fixed in 0.6-19...)
-      both.idx   <- lavdata@Lp[[g]]$both.idx[[2]]
-      within.idx <- lavdata@Lp[[g]]$within.idx[[2]]
-      ov.idx     <- lavdata@Lp[[g]]$ov.idx
-      p.tilde <- length(unique(c(ov.idx[[1]], ov.idx[[2]])))
-      Mu.W.tilde <- Mu.B.tilde <- Mu.WB.tilde <- numeric(p.tilde)
-      Mu.W.tilde[ov.idx[[1]]] <- OUT$Mu.W
-      Mu.B.tilde[ov.idx[[2]]] <- OUT$Mu.B
-      Mu.WB.tilde[both.idx  ] <- (Mu.B.tilde[both.idx] + Mu.W.tilde[both.idx])
-      Mu.W.tilde[both.idx] <- 0
-      Mu.B.tilde[both.idx] <- Mu.WB.tilde[both.idx]
-      OUT$Mu.W <- Mu.W.tilde[ ov.idx[[1]] ]
-      OUT$Mu.B <- Mu.B.tilde[ ov.idx[[2]] ]
+      both_idx   <- lavdata@Lp[[g]]$both.idx[[2]]
+      within_idx <- lavdata@Lp[[g]]$within.idx[[2]]
+      ov_idx     <- lavdata@Lp[[g]]$ov.idx
+      p_tilde <- length(unique(c(ov_idx[[1]], ov_idx[[2]])))
+      mu_w_tilde <- mu_b_tilde <- mu_wb_tilde <- numeric(p_tilde)
+      mu_w_tilde[ov_idx[[1]]] <- out_1$Mu.W
+      mu_b_tilde[ov_idx[[2]]] <- out_1$Mu.B
+      mu_wb_tilde[both_idx] <- (mu_b_tilde[both_idx] + mu_w_tilde[both_idx])
+      mu_w_tilde[both_idx] <- 0
+      mu_b_tilde[both_idx] <- mu_wb_tilde[both_idx]
+      out_1$Mu.W <- mu_w_tilde[ov_idx[[1]]]
+      out_1$Mu.B <- mu_b_tilde[ov_idx[[2]]]
 
       # store in implied
-      implied$cov[[ (g - 1) * nlevels + 1L]] <- OUT$Sigma.W
-      implied$cov[[ (g - 1) * nlevels + 2L]] <- OUT$Sigma.B
-      implied$mean[[(g - 1) * nlevels + 1L]] <- OUT$Mu.W
-      implied$mean[[(g - 1) * nlevels + 2L]] <- OUT$Mu.B
+      implied$cov[[(g - 1) * nlevels + 1L]] <- out_1$Sigma.W
+      implied$cov[[(g - 1) * nlevels + 2L]] <- out_1$Sigma.B
+      implied$mean[[(g - 1) * nlevels + 1L]] <- out_1$Mu.W
+      implied$mean[[(g - 1) * nlevels + 2L]] <- out_1$Mu.B
 
       # store logl per group
-      loglik.group[g] <- OUT$logl
+      loglik_group[g] <- out_1$logl
     }
 
-    logl <- list(loglik = sum(loglik.group), loglik.group = loglik.group)
+    logl <- list(loglik = sum(loglik_group), loglik.group = loglik_group)
   }
 
   list(implied = implied, logl = logl)

@@ -10,8 +10,8 @@ lav_object_gamma <- function(lavobject = NULL,
                              lavh1 = NULL,
                              lavimplied = NULL,
                              # other options
-                             ADF = TRUE, model.based = FALSE,
-                             Mplus.WLS = FALSE) {
+                             adf = TRUE, model_based = FALSE,
+                             mplus_wls = FALSE) {
   # extract slots
   if (!is.null(lavobject)) {
     lavdata <- lavobject@Data
@@ -23,99 +23,99 @@ lav_object_gamma <- function(lavobject = NULL,
 
   missing <- lavoptions$missing
   if (!missing %in% c("listwise", "pairwise")) {
-    model.based <- TRUE
+    model_based <- TRUE
   }
-  fixed.x <- lavoptions$fixed.x
-  conditional.x <- lavoptions$conditional.x
+  fixed_x <- lavoptions$fixed.x
+  conditional_x <- lavoptions$conditional.x
   meanstructure <- lavoptions$meanstructure
-  gamma.n.minus.one <- lavoptions$gamma.n.minus.one
-  gamma.unbiased <- lavoptions$gamma.unbiased
+  gamma_n_minus_one <- lavoptions$gamma.n.minus.one
+  gamma_unbiased <- lavoptions$gamma.unbiased
 
-  if (ADF && model.based && conditional.x) {
+  if (adf && model_based && conditional_x) {
     lav_msg_stop(gettext(
       "ADF + model.based + conditional.x is not supported yet."))
   }
 
   # output container
-  OUT <- vector("list", length = lavdata@ngroups)
+  out <- vector("list", length = lavdata@ngroups)
 
   # compute Gamma matrix for each group
   for (g in seq_len(lavdata@ngroups)) {
-    x.idx <- lavsamplestats@x.idx[[g]]
-    COV <- MEAN <- NULL
-    if (!ADF || model.based) {
+    x_idx <- lavsamplestats@x.idx[[g]]
+    cov_1 <- mean_1 <- NULL
+    if (!adf || model_based) {
       implied <- lavh1$implied # saturated/unstructured
-      if (model.based) {
+      if (model_based) {
         implied <- lavimplied # model-based/structured
       }
-      if (conditional.x) {
+      if (conditional_x) {
         # convert to joint COV/MEAN
-        res.S <- implied$res.cov[[g]]
-        res.slopes <- implied$res.slopes[[g]]
-        res.int <- implied$res.int[[g]]
-        S.xx <- implied$cov.x[[g]]
-        M.x <- implied$mean.x[[g]]
+        res_s <- implied$res.cov[[g]]
+        res_slopes <- implied$res.slopes[[g]]
+        res_int <- implied$res.int[[g]]
+        s_xx <- implied$cov.x[[g]]
+        m_x <- implied$mean.x[[g]]
 
-        S.yy <- res.S + res.slopes %*% S.xx %*% t(res.slopes)
-        S.yx <- res.slopes %*% S.xx
-        S.xy <- S.xx %*% t(res.slopes)
-        M.y <- res.int + res.slopes %*% M.x
+        s_yy <- res_s + res_slopes %*% s_xx %*% t(res_slopes)
+        s_yx <- res_slopes %*% s_xx
+        s_xy <- s_xx %*% t(res_slopes)
+        m_y <- res_int + res_slopes %*% m_x
 
-        COV <- rbind(cbind(S.yy, S.yx), cbind(S.xy, S.xx))
-        MEAN <- c(M.y, M.x)
+        cov_1 <- rbind(cbind(s_yy, s_yx), cbind(s_xy, s_xx))
+        mean_1 <- c(m_y, m_x)
       } else {
         # not conditional.x
-        COV <- implied$cov[[g]]
-        MEAN <- implied$mean[[g]]
+        cov_1 <- implied$cov[[g]]
+        mean_1 <- implied$mean[[g]]
       }
     } # COV/MEAN
 
-    if (ADF) {
-      if (conditional.x) {
-        Y <- cbind(lavdata@X[[g]], lavdata@eXo[[g]])
+    if (adf) {
+      if (conditional_x) {
+        y <- cbind(lavdata@X[[g]], lavdata@eXo[[g]])
       } else {
-        Y <- lavdata@X[[g]]
+        y <- lavdata@X[[g]]
       }
       if (length(lavdata@cluster) > 0L) {
-        cluster.idx <- lavdata@Lp[[g]]$cluster.idx[[2]]
+        cluster_idx <- lavdata@Lp[[g]]$cluster.idx[[2]]
       } else {
-        cluster.idx <- NULL
+        cluster_idx <- NULL
       }
-      OUT[[g]] <- lav_samplestats_gamma(
-        m_y = Y,
-        m_mu = MEAN,
-        m_sigma = COV,
-        x_idx = x.idx,
-        cluster_idx = cluster.idx,
-        fixed_x = fixed.x,
-        conditional_x = conditional.x,
+      out[[g]] <- lav_samplestats_gamma(
+        m_y = y,
+        m_mu = mean_1,
+        m_sigma = cov_1,
+        x_idx = x_idx,
+        cluster_idx = cluster_idx,
+        fixed_x = fixed_x,
+        conditional_x = conditional_x,
         meanstructure = meanstructure,
-        slopestructure = conditional.x,
-        gamma_n_minus_one = gamma.n.minus.one,
-        unbiased = gamma.unbiased,
-        mplus_wls = Mplus.WLS
+        slopestructure = conditional_x,
+        gamma_n_minus_one = gamma_n_minus_one,
+        unbiased = gamma_unbiased,
+        mplus_wls = mplus_wls
       )
     } else {
-      OUT[[g]] <- lav_samplestats_gamma_nt(
-        m_cov = COV, # joint!
-        m_mean = MEAN, # joint!
-        x_idx = x.idx,
-        fixed_x = fixed.x,
-        conditional_x = conditional.x,
+      out[[g]] <- lav_samplestats_gamma_nt(
+        m_cov = cov_1, # joint!
+        m_mean = mean_1, # joint!
+        x_idx = x_idx,
+        fixed_x = fixed_x,
+        conditional_x = conditional_x,
         meanstructure = meanstructure,
-        slopestructure = conditional.x
+        slopestructure = conditional_x
       )
     }
 
     # group.w.free
     if (lavoptions$group.w.free) {
       # checkme!
-      OUT[[g]] <- lav_matrix_bdiag(matrix(1, 1, 1), OUT[[g]])
+      out[[g]] <- lav_matrix_bdiag(matrix(1, 1, 1), out[[g]])
     }
 
   } # g
 
-  OUT
+  out
 }
 
 

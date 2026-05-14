@@ -126,8 +126,8 @@ lav_test_browne <- function(lavobject = NULL,
                                user-provided Gamma/NACOV matrix"))
         }
         Gamma <- lav_object_gamma(lavobject,
-          ADF = TRUE,
-          model.based = model.based
+          adf = TRUE,
+          model_based = model.based
         )
       } else {
         if (lavdata@data.type != "full") {
@@ -141,8 +141,8 @@ lav_test_browne <- function(lavobject = NULL,
           lavsamplestats = lavsamplestats,
           lavh1 = lavh1,
           lavimplied = lavimplied,
-          ADF = TRUE,
-          model.based = model.based
+          adf = TRUE,
+          model_based = model.based
         )
       }
     }
@@ -150,8 +150,8 @@ lav_test_browne <- function(lavobject = NULL,
     # NT version
     if (!is.null(lavobject)) {
       Gamma <- lav_object_gamma(lavobject,
-        ADF = FALSE,
-        model.based = model.based
+        adf = FALSE,
+        model_based = model.based
       )
     } else {
       Gamma <- lav_object_gamma(
@@ -161,8 +161,8 @@ lav_test_browne <- function(lavobject = NULL,
         lavsamplestats = lavsamplestats,
         lavh1 = lavh1,
         lavimplied = lavimplied,
-        ADF = FALSE,
-        model.based = model.based
+        adf = FALSE,
+        model_based = model.based
       )
     }
   }

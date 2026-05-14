@@ -152,7 +152,7 @@ lav_test_satorra_bentler <- function(lavobject = NULL,
     # still NULL? (perhaps estimator = ML)
     if (is.null(Gamma[[1]])) {
       if (!is.null(lavobject)) {
-        Gamma <- lav_object_gamma(lavobject, model.based = FALSE)
+        Gamma <- lav_object_gamma(lavobject, model_based = FALSE)
       } else {
         Gamma <- lav_object_gamma(
           lavobject = NULL,
@@ -161,8 +161,8 @@ lav_test_satorra_bentler <- function(lavobject = NULL,
           lavsamplestats = lavsamplestats,
           lavh1 = NULL,
           lavimplied = NULL,
-          ADF = TRUE,
-          model.based = FALSE
+          adf = TRUE,
+          model_based = FALSE
         )
       }
     }

@@ -296,7 +296,7 @@ sam <- function(model = NULL,                      # nolint start
       if (se == "local") {
         gamma <- fit@SampleStats@NACOV
       } else if (se == "local.nt") {
-        gamma <- lav_object_gamma(lavobject = fit, ADF = FALSE)
+        gamma <- lav_object_gamma(lavobject = fit, adf = FALSE)
       }
 
       for (g in seq_len(fit@Data@ngroups)) {

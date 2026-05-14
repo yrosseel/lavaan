@@ -57,9 +57,9 @@ muthen1984 <- function(data_1 = NULL,
   }
 
   step1 <- lav_samplestats_step1(
-    Y = data_1, wt = wt, ov.names = ov_names,
-    ov.types = ov_types, ov.levels = ov_levels, ov.names.x = ov_names_x,
-    eXo = exo, scores.flag = wls_w, allow.empty.cell = allow_empty_cell,
+    y = data_1, wt = wt, ov_names = ov_names,
+    ov_types = ov_types, ov_levels = ov_levels, ov_names_x = ov_names_x,
+    exo = exo, scores_flag = wls_w, allow_empty_cell = allow_empty_cell,
     group = group
   )
 
@@ -101,11 +101,11 @@ muthen1984 <- function(data_1 = NULL,
 
   if (lav_verbose()) cat("\n\nSTEP 2: covariances/correlations:\n")
   cor_1 <- lav_samplestats_step2(
-    UNI = fit, wt = wt, ov.names = ov_names,
-    zero.add = zero_add,
-    zero.keep.margins = zero_keep_margins,
-    zero.cell.warn = zero_cell_warn,
-    zero.cell.tables = zero_cell_tables
+    uni = fit, wt = wt, ov_names = ov_names,
+    zero_add = zero_add,
+    zero_keep_margins = zero_keep_margins,
+    zero_cell_warn = zero_cell_warn,
+    zero_cell_tables = zero_cell_tables
   )
   empty_cell_tables <- attr(cor_1, "zero.cell.tables")
   attr(cor_1, "zero.cell.tables") <- NULL

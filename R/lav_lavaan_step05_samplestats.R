@@ -54,14 +54,14 @@ lav_lavaan_step05_samplestats <- function(slot_sample_stats = NULL, # nolint
                 mean/intercept parameters."))
     }
     lavsamplestats <- lav_samplestats_from_moments(
-      sample.cov    = sample_cov,
-      sample.mean   = sample_mean,
-      sample.th     = sample_th,
-      sample.nobs   = sample_nobs,
-      ov.names      = ov_names,
-      ov.names.x    = ov_names_x,
-      WLS.V         = wls_v,
-      NACOV         = nacov,
+      sample_cov    = sample_cov,
+      sample_mean   = sample_mean,
+      sample_th     = sample_th,
+      sample_nobs   = sample_nobs,
+      ov_names      = ov_names,
+      ov_names_x    = ov_names_x,
+      wls_v         = wls_v,
+      nacov         = nacov,
       lavoptions    = lavoptions
     )
     if (lav_verbose()) {

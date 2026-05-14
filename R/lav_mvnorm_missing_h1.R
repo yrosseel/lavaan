@@ -29,7 +29,7 @@ lav_mvnorm_missing_h1_estimate_moments <- function(y = NULL,    # nolint
     mp <- lav_data_missing_patterns(y)
   }
   if (is.null(yp)) {
-    yp <- lav_samplestats_missing_patterns(Y = y, Mp = mp, wt = wt)
+    yp <- lav_samplestats_missing_patterns(y = y, mp = mp, wt = wt)
   }
 
   # covariances with zero coverage (perhaps planned?)
@@ -288,7 +288,7 @@ lav_mvnorm_missing_h1_omega_sw <- function(y = NULL,
 
   # sample stats per pattern
   if (is.null(yp) && (information == "observed" || is.null(sigma_1))) {
-    yp <- lav_samplestats_missing_patterns(Y = y, Mp = mp, wt = wt)
+    yp <- lav_samplestats_missing_patterns(y = y, mp = mp, wt = wt)
   }
 
   # Sigma and Mu

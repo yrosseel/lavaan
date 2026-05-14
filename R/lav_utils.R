@@ -218,27 +218,27 @@ lav_implied_to_vec <- function(implied = NULL, lavmodel = NULL,
 
     wls_obs[[g]] <- lav_samplestats_wls_obs(
       # plain
-      mean.g = implied$mean[[g]],
-      cov.g = implied$cov[[g]],
-      var.g = var,
-      th.g = implied$th[[g]],
-      th.idx.g = lavmodel@th.idx[[g]],
+      mean_g = implied$mean[[g]],
+      cov_g = implied$cov[[g]],
+      var_g = var,
+      th_g = implied$th[[g]],
+      th_idx_g = lavmodel@th.idx[[g]],
 
       # conditional.x
-      res.int.g = implied$res.int[[g]],
-      res.cov.g = implied$res.cov[[g]],
-      res.var.g = res_var,
-      res.th.g = implied$res.th[[g]],
-      res.slopes.g = implied$res.slopes[[g]],
-      group.w.g = implied$group.w[[g]],
+      res_int_g = implied$res.int[[g]],
+      res_cov_g = implied$res.cov[[g]],
+      res_var_g = res_var,
+      res_th_g = implied$res.th[[g]],
+      res_slopes_g = implied$res.slopes[[g]],
+      group_w_g = implied$group.w[[g]],
 
       # flags
       categorical = lavmodel@categorical,
-      conditional.x = lavmodel@conditional.x,
+      conditional_x = lavmodel@conditional.x,
       meanstructure = lavmodel@meanstructure,
       correlation = lavmodel@correlation,
       slopestructure = lavmodel@conditional.x,
-      group.w.free = lavmodel@group.w.free
+      group_w_free = lavmodel@group.w.free
     )
   }
 
