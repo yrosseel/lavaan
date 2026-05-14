@@ -1189,7 +1189,7 @@ lav_lisrel_lambda <- function(mlist = NULL,
   }
 
   # should we transform lambda for composites?
-  if (use_wmat) {
+  if (use_wmat && !is.null(mlist$wmat) && !is.null(mlist$theta)) {
     mm_wmat <- mlist$wmat
     mm_theta <- mlist$theta
 
@@ -1219,7 +1219,7 @@ lav_lisrel_theta <- function(mlist = NULL,
   }
 
   # should we transform theta for composites?
-  if (use_wmat) {
+  if (use_wmat && !is.null(mlist$wmat) && !is.null(mlist$lambda)) {
     mm_wmat <- mlist$wmat
     mm_lambda <- mlist$lambda
 
