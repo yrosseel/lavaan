@@ -1177,16 +1177,8 @@ lav_lisrel_lambda <- function(mlist = NULL,
                               use_wmat = FALSE) {
   lv_dummy_idx <- c(ov_y_dummy_lv_idx, ov_x_dummy_lv_idx)
 
-  # fix LAMBDA
+  # get lambda
   mm_lambda <- mlist$lambda
-  if (length(ov_y_dummy_ov_idx) > 0L && !is.null(mlist$beta)) {
-    mm_lambda[ov_y_dummy_ov_idx, ] <- mlist$beta[ov_y_dummy_lv_idx, ]
-  }
-
-  # remove dummy lv?
-  if (remove_dummy_lv && length(lv_dummy_idx) > 0L) {
-    mm_lambda <- mm_lambda[, -lv_dummy_idx, drop = FALSE]
-  }
 
   # should we transform lambda for composites?
   if (use_wmat && !is.null(mlist$wmat) && !is.null(mlist$theta)) {
@@ -1197,6 +1189,16 @@ lav_lisrel_lambda <- function(mlist = NULL,
       mm_lambda + mm_theta %*% mm_wmat %*%
       MASS::ginv(t(mm_wmat) %*% mm_theta %*% mm_wmat)
     )
+  }
+
+  # dummy ovs?
+  if (length(ov_y_dummy_ov_idx) > 0L && !is.null(mlist$beta)) {
+    mm_lambda[ov_y_dummy_ov_idx, ] <- mlist$beta[ov_y_dummy_lv_idx, ]
+  }
+
+  # remove dummy lv?
+  if (remove_dummy_lv && length(lv_dummy_idx) > 0L) {
+    mm_lambda <- mm_lambda[, -lv_dummy_idx, drop = FALSE]
   }
 
   mm_lambda
@@ -1211,12 +1213,8 @@ lav_lisrel_theta <- function(mlist = NULL,
   ov_dummy_idx <- c(ov_y_dummy_ov_idx, ov_x_dummy_ov_idx)
   lv_dummy_idx <- c(ov_y_dummy_lv_idx, ov_x_dummy_lv_idx)
 
-  # fix THETA
+  # get theta
   mm_theta <- mlist$theta
-  if (length(ov_dummy_idx) > 0L) {
-    mm_theta[ov_dummy_idx, ov_dummy_idx] <-
-      mlist$psi[lv_dummy_idx, lv_dummy_idx]
-  }
 
   # should we transform theta for composites?
   if (use_wmat && !is.null(mlist$wmat) && !is.null(mlist$lambda)) {
@@ -1232,6 +1230,12 @@ lav_lisrel_theta <- function(mlist = NULL,
       mm_theta -
       mm_lambda %*% t(mm_wmat) %*% mm_theta %*% mm_wmat %*% t(mm_lambda)
     )
+  }
+
+  # dummy ovs?
+  if (length(ov_dummy_idx) > 0L) {
+    mm_theta[ov_dummy_idx, ov_dummy_idx] <-
+      mlist$psi[lv_dummy_idx, lv_dummy_idx]
   }
 
   mm_theta
