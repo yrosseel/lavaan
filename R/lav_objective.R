@@ -838,12 +838,12 @@ lav_model_objective_2l <- function(lavmodel = NULL,
     ylp <- lavsamplestats@YLp[[group]]
     if (lavmodel@conditional.x) {
       loglik <- lav_mvreg_cluster_loglik_samplestats_2l(
-        YLp = ylp, Lp = lp,
-        Res.Sigma.W = res_sigma_w,
-        Res.Int.W = res_int_w, Res.Pi.W = res_pi_w,
-        Res.Sigma.B = res_sigma_b,
-        Res.Int.B = res_int_b, Res.Pi.B = res_pi_b,
-        log2pi = FALSE, minus.two = TRUE
+        ylp = ylp, lp = lp,
+        res_sigma_w = res_sigma_w,
+        res_int_w = res_int_w, res_pi_w = res_pi_w,
+        res_sigma_b = res_sigma_b,
+        res_int_b = res_int_b, res_pi_b = res_pi_b,
+        log2pi = FALSE, minus_two = TRUE
       )
     } else {
       loglik <- lav_mvnorm_cluster_loglik_samplestats_2l(

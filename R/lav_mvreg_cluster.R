@@ -12,355 +12,355 @@
 # - beta.w: beta y within part
 # - beta.b: beta y between part
 # - beta.z: beta z (between-only)
-lav_mvreg_cluster_implied22l <- function(Lp = NULL,
+lav_mvreg_cluster_implied22l <- function(lp = NULL,
                                          implied = NULL,
-                                         Res.Int.W = NULL,
-                                         Res.Int.B = NULL,
-                                         Res.Pi.W = NULL,
-                                         Res.Pi.B = NULL,
-                                         Res.Sigma.W = NULL,
-                                         Res.Sigma.B = NULL) {
+                                         res_int_w = NULL,
+                                         res_int_b = NULL,
+                                         res_pi_w = NULL,
+                                         res_pi_b = NULL,
+                                         res_sigma_w = NULL,
+                                         res_sigma_b = NULL) {
   if (!is.null(implied)) {
     # FIXME: only for single-group analysis!
-    Res.Sigma.W <- implied$res.cov[[1]]
-    Res.Int.W <- implied$res.int[[1]]
-    Res.Pi.W <- implied$res.slopes[[1]]
+    res_sigma_w <- implied$res.cov[[1]]
+    res_int_w <- implied$res.int[[1]]
+    res_pi_w <- implied$res.slopes[[1]]
 
-    Res.Sigma.B <- implied$res.cov[[2]]
-    Res.Int.B <- implied$res.int[[2]]
-    Res.Pi.B <- implied$res.slopes[[2]]
+    res_sigma_b <- implied$res.cov[[2]]
+    res_int_b <- implied$res.int[[2]]
+    res_pi_b <- implied$res.slopes[[2]]
   }
 
   # within/between idx
-  within.x.idx <- Lp$within.x.idx[[1]]
-  between.y.idx <- Lp$between.y.idx[[2]]
-  between.x.idx <- Lp$between.x.idx[[2]]
+  within_x_idx <- lp$within.x.idx[[1]]
+  between_y_idx <- lp$between.y.idx[[2]]
+  between_x_idx <- lp$between.x.idx[[2]]
 
   # ov.idx per level
-  ov.idx <- Lp$ov.idx
+  ov_idx <- lp$ov.idx
 
   # 'tilde' matrices: ALL variables within and between
-  p.tilde <- length(unique(c(ov.idx[[1]], ov.idx[[2]])))
+  p_tilde <- length(unique(c(ov_idx[[1]], ov_idx[[2]])))
 
   # only 'y'
-  ov.y.idx <- Lp$ov.y.idx
+  ov_y_idx <- lp$ov.y.idx
 
   # two levels only (for now)
-  ov.y.idx1 <- ov.y.idx[[1]]
-  ov.y.idx2 <- ov.y.idx[[2]]
+  ov_y_idx1 <- ov_y_idx[[1]]
+  ov_y_idx2 <- ov_y_idx[[2]]
 
   # Sigma.W.tilde
-  Sigma.W.tilde <- matrix(0, p.tilde, p.tilde)
-  Sigma.W.tilde[ov.y.idx1, ov.y.idx1] <- Res.Sigma.W
+  sigma_w_tilde <- matrix(0, p_tilde, p_tilde)
+  sigma_w_tilde[ov_y_idx1, ov_y_idx1] <- res_sigma_w
 
   # INT.W.tilde
-  INT.W.tilde <- matrix(0, p.tilde, 1L)
-  INT.W.tilde[ov.y.idx1, 1L] <- Res.Int.W
+  int_w_tilde <- matrix(0, p_tilde, 1L)
+  int_w_tilde[ov_y_idx1, 1L] <- res_int_w
 
   # PI.W.tilde
-  PI.W.tilde <- matrix(0, p.tilde, ncol(Res.Pi.W))
-  PI.W.tilde[ov.y.idx1, ] <- Res.Pi.W
+  pi_w_tilde <- matrix(0, p_tilde, ncol(res_pi_w))
+  pi_w_tilde[ov_y_idx1, ] <- res_pi_w
 
-  BETA.W.tilde <- rbind(t(INT.W.tilde), t(PI.W.tilde))
+  beta_w_tilde <- rbind(t(int_w_tilde), t(pi_w_tilde))
 
 
 
   # Sigma.B.tilde
-  Sigma.B.tilde <- matrix(0, p.tilde, p.tilde)
-  Sigma.B.tilde[ov.y.idx2, ov.y.idx2] <- Res.Sigma.B
+  sigma_b_tilde <- matrix(0, p_tilde, p_tilde)
+  sigma_b_tilde[ov_y_idx2, ov_y_idx2] <- res_sigma_b
 
   # INT.B.tilde
-  INT.B.tilde <- matrix(0, p.tilde, 1L)
-  INT.B.tilde[ov.y.idx2, 1L] <- Res.Int.B
+  int_b_tilde <- matrix(0, p_tilde, 1L)
+  int_b_tilde[ov_y_idx2, 1L] <- res_int_b
 
   # PI.B.tilde
-  PI.B.tilde <- matrix(0, p.tilde, ncol(Res.Pi.B))
-  PI.B.tilde[ov.y.idx2, ] <- Res.Pi.B
+  pi_b_tilde <- matrix(0, p_tilde, ncol(res_pi_b))
+  pi_b_tilde[ov_y_idx2, ] <- res_pi_b
 
-  BETA.B.tilde <- rbind(t(INT.B.tilde), t(PI.B.tilde))
+  beta_b_tilde <- rbind(t(int_b_tilde), t(pi_b_tilde))
 
-  if (length(between.y.idx) > 0L) {
-    rm.idx <- c(within.x.idx, between.x.idx, between.y.idx) # between AND x
-    beta.z <- BETA.B.tilde[, between.y.idx, drop = FALSE]
-    beta.b <- BETA.B.tilde[, -rm.idx, drop = FALSE]
-    beta.w <- BETA.W.tilde[, -rm.idx, drop = FALSE]
-    sigma.zz <- Sigma.B.tilde[between.y.idx, between.y.idx, drop = FALSE]
-    sigma.yz <- Sigma.B.tilde[-rm.idx, between.y.idx, drop = FALSE]
-    sigma.b <- Sigma.B.tilde[-rm.idx, -rm.idx, drop = FALSE]
-    sigma.w <- Sigma.W.tilde[-rm.idx, -rm.idx, drop = FALSE]
+  if (length(between_y_idx) > 0L) {
+    rm_idx <- c(within_x_idx, between_x_idx, between_y_idx) # between AND x
+    beta_z <- beta_b_tilde[, between_y_idx, drop = FALSE]
+    beta_b <- beta_b_tilde[, -rm_idx, drop = FALSE]
+    beta_w <- beta_w_tilde[, -rm_idx, drop = FALSE]
+    sigma_zz <- sigma_b_tilde[between_y_idx, between_y_idx, drop = FALSE]
+    sigma_yz <- sigma_b_tilde[-rm_idx, between_y_idx, drop = FALSE]
+    sigma_b <- sigma_b_tilde[-rm_idx, -rm_idx, drop = FALSE]
+    sigma_w <- sigma_w_tilde[-rm_idx, -rm_idx, drop = FALSE]
   } else {
-    rm.idx <- c(within.x.idx, between.x.idx) # all 'x'
-    beta.z <- matrix(0, 0L, 0L)
-    sigma.zz <- matrix(0, 0L, 0L)
-    beta.b <- BETA.B.tilde[, -rm.idx, drop = FALSE]
-    beta.w <- BETA.W.tilde[, -rm.idx, drop = FALSE]
-    sigma.b <- Sigma.B.tilde[-rm.idx, -rm.idx, drop = FALSE]
-    sigma.w <- Sigma.W.tilde[-rm.idx, -rm.idx, drop = FALSE]
-    sigma.yz <- matrix(0, nrow(sigma.w), 0L)
+    rm_idx <- c(within_x_idx, between_x_idx) # all 'x'
+    beta_z <- matrix(0, 0L, 0L)
+    sigma_zz <- matrix(0, 0L, 0L)
+    beta_b <- beta_b_tilde[, -rm_idx, drop = FALSE]
+    beta_w <- beta_w_tilde[, -rm_idx, drop = FALSE]
+    sigma_b <- sigma_b_tilde[-rm_idx, -rm_idx, drop = FALSE]
+    sigma_w <- sigma_w_tilde[-rm_idx, -rm_idx, drop = FALSE]
+    sigma_yz <- matrix(0, nrow(sigma_w), 0L)
   }
 
 
   # beta.wb # FIXME: not correct if some 'x' are split (overlap)
   # but because we ALWAYS treat split-x as 'y', this is not a problem
-  beta.wb <- rbind(beta.w, beta.b[-1, , drop = FALSE])
-  beta.wb[1, ] <- beta.wb[1, , drop = FALSE] + beta.b[1, , drop = FALSE]
+  beta_wb <- rbind(beta_w, beta_b[-1, , drop = FALSE])
+  beta_wb[1, ] <- beta_wb[1, , drop = FALSE] + beta_b[1, , drop = FALSE]
 
   list(
-    sigma.w = sigma.w, sigma.b = sigma.b, sigma.zz = sigma.zz,
-    sigma.yz = sigma.yz, beta.w = beta.w, beta.b = beta.b, beta.z = beta.z,
-    beta.wb = beta.wb
+    sigma.w = sigma_w, sigma.b = sigma_b, sigma.zz = sigma_zz,
+    sigma.yz = sigma_yz, beta.w = beta_w, beta.b = beta_b, beta.z = beta_z,
+    beta.wb = beta_wb
   )
 }
 
 
 # recreate implied matrices from 2L matrices
-lav_mvreg_cluster_2l2implied <- function(Lp,
-                                         sigma.w = NULL,
-                                         sigma.b = NULL,
-                                         sigma.zz = NULL,
-                                         sigma.yz = NULL,
-                                         beta.w = NULL,
-                                         beta.b = NULL,
-                                         beta.z = NULL) {
+lav_mvreg_cluster_2l2implied <- function(lp,
+                                         sigma_w = NULL,
+                                         sigma_b = NULL,
+                                         sigma_zz = NULL,
+                                         sigma_yz = NULL,
+                                         beta_w = NULL,
+                                         beta_b = NULL,
+                                         beta_z = NULL) {
   # within/between idx
-  within.x.idx <- Lp$within.x.idx[[1]]
-  between.y.idx <- Lp$between.y.idx[[2]]
-  between.x.idx <- Lp$between.x.idx[[2]]
+  # within_x_idx <- lp$within.x.idx[[1]]
+  between_y_idx <- lp$between.y.idx[[2]]
+  # between_x_idx <- lp$between.x.idx[[2]]
 
   # ov.idx per level
-  ov.idx <- Lp$ov.idx
+  ov_idx <- lp$ov.idx
 
   # 'tilde' matrices: ALL variables within and between
-  p.tilde <- length(unique(c(ov.idx[[1]], ov.idx[[2]])))
+  p_tilde <- length(unique(c(ov_idx[[1]], ov_idx[[2]])))
 
   # only 'y'
-  ov.y.idx <- Lp$ov.y.idx
+  ov_y_idx <- lp$ov.y.idx
 
   # two levels only (for now)
-  ov.y.idx1 <- ov.y.idx[[1]]
-  ov.y.idx2 <- ov.y.idx[[2]]
+  ov_y_idx1 <- ov_y_idx[[1]]
+  ov_y_idx2 <- ov_y_idx[[2]]
 
   # Sigma.W.tilde
-  Sigma.W.tilde <- matrix(0, p.tilde, p.tilde)
-  Sigma.W.tilde[ov.y.idx1, ov.y.idx1] <- sigma.w
+  sigma_w_tilde <- matrix(0, p_tilde, p_tilde)
+  sigma_w_tilde[ov_y_idx1, ov_y_idx1] <- sigma_w
 
   # INT.W.tilde
-  INT.W.tilde <- matrix(0, p.tilde, 1L)
-  INT.W.tilde[ov.y.idx1, 1L] <- beta.w[1L, ]
+  int_w_tilde <- matrix(0, p_tilde, 1L)
+  int_w_tilde[ov_y_idx1, 1L] <- beta_w[1L, ]
 
   # PI.W.tilde
-  PI.W.tilde <- matrix(0, p.tilde, nrow(beta.w) - 1L)
-  PI.W.tilde[ov.y.idx1, ] <- t(beta.w[-1L, ])
+  pi_w_tilde <- matrix(0, p_tilde, nrow(beta_w) - 1L)
+  pi_w_tilde[ov_y_idx1, ] <- t(beta_w[-1L, ])
 
   # Sigma.B.tilde
-  Sigma.B.tilde <- matrix(0, p.tilde, p.tilde)
-  Sigma.B.tilde[ov.y.idx1, ov.y.idx1] <- sigma.b
+  sigma_b_tilde <- matrix(0, p_tilde, p_tilde)
+  sigma_b_tilde[ov_y_idx1, ov_y_idx1] <- sigma_b
 
   # INT.B.tilde
-  INT.B.tilde <- matrix(0, p.tilde, 1L)
-  INT.B.tilde[ov.y.idx1, 1L] <- beta.b[1L, ]
+  int_b_tilde <- matrix(0, p_tilde, 1L)
+  int_b_tilde[ov_y_idx1, 1L] <- beta_b[1L, ]
 
   # PI.B.tilde
-  PI.B.tilde <- matrix(0, p.tilde, nrow(beta.b) - 1L)
-  PI.B.tilde[ov.y.idx1, ] <- t(beta.b[-1L, ])
+  pi_b_tilde <- matrix(0, p_tilde, nrow(beta_b) - 1L)
+  pi_b_tilde[ov_y_idx1, ] <- t(beta_b[-1L, ])
 
-  if (length(between.y.idx) > 0L) {
-    INT.B.tilde[between.y.idx, 1L] <- beta.z[1L, ]
-    PI.B.tilde[between.y.idx, ] <- t(beta.z[-1L, ])
-    Sigma.B.tilde[between.y.idx, between.y.idx] <- sigma.zz
-    Sigma.B.tilde[ov.y.idx1, between.y.idx] <- sigma.yz
-    Sigma.B.tilde[between.y.idx, ov.y.idx1] <- t(sigma.yz)
+  if (length(between_y_idx) > 0L) {
+    int_b_tilde[between_y_idx, 1L] <- beta_z[1L, ]
+    pi_b_tilde[between_y_idx, ] <- t(beta_z[-1L, ])
+    sigma_b_tilde[between_y_idx, between_y_idx] <- sigma_zz
+    sigma_b_tilde[ov_y_idx1, between_y_idx] <- sigma_yz
+    sigma_b_tilde[between_y_idx, ov_y_idx1] <- t(sigma_yz)
   }
 
-  Res.Sigma.W <- Sigma.W.tilde[ov.y.idx1, ov.y.idx1, drop = FALSE]
-  Res.Int.W <- INT.W.tilde[ov.y.idx1, , drop = FALSE]
-  Res.Pi.W <- PI.W.tilde[ov.y.idx1, , drop = FALSE]
+  res_sigma_w <- sigma_w_tilde[ov_y_idx1, ov_y_idx1, drop = FALSE]
+  res_int_w <- int_w_tilde[ov_y_idx1, , drop = FALSE]
+  res_pi_w <- pi_w_tilde[ov_y_idx1, , drop = FALSE]
 
-  Res.Sigma.B <- Sigma.B.tilde[ov.y.idx2, ov.y.idx2, drop = FALSE]
-  Res.Int.B <- INT.B.tilde[ov.y.idx2, , drop = FALSE]
-  Res.Pi.B <- PI.B.tilde[ov.y.idx2, , drop = FALSE]
+  res_sigma_b <- sigma_b_tilde[ov_y_idx2, ov_y_idx2, drop = FALSE]
+  res_int_b <- int_b_tilde[ov_y_idx2, , drop = FALSE]
+  res_pi_b <- pi_b_tilde[ov_y_idx2, , drop = FALSE]
 
   implied <- list(
-    res.cov = list(Res.Sigma.W, Res.Sigma.B),
-    res.int = list(Res.Int.W, Res.Int.B),
-    res.slopes = list(Res.Pi.W, Res.Pi.B)
+    res.cov = list(res_sigma_w, res_sigma_b),
+    res.int = list(res_int_w, res_int_b),
+    res.slopes = list(res_pi_w, res_pi_b)
   )
 
   # Note: cov.x and mean.x must be added by the caller
   implied
 }
 
-lav_mvreg_cluster_loglik_samplestats_2l <- function(YLp = NULL,
-                                                    Lp = NULL,
-                                                    Res.Sigma.W = NULL,
-                                                    Res.Int.W = NULL,
-                                                    Res.Pi.W = NULL,
-                                                    Res.Sigma.B = NULL,
-                                                    Res.Int.B = NULL,
-                                                    Res.Pi.B = NULL,
+lav_mvreg_cluster_loglik_samplestats_2l <- function(ylp = NULL,   # nolint
+                                                    lp = NULL,
+                                                    res_sigma_w = NULL,
+                                                    res_int_w = NULL,
+                                                    res_pi_w = NULL,
+                                                    res_sigma_b = NULL,
+                                                    res_int_b = NULL,
+                                                    res_pi_b = NULL,
                                                     out = NULL, # 2l
-                                                    Sinv.method = "eigen",
+                                                    sinv_method = "eigen",
                                                     log2pi = FALSE,
-                                                    minus.two = TRUE) {
+                                                    minus_two = TRUE) {
   # map implied to 2l matrices
   if (is.null(out)) {
     out <- lav_mvreg_cluster_implied22l(
-      Lp = Lp, implied = NULL,
-      Res.Sigma.W = Res.Sigma.W,
-      Res.Int.W = Res.Int.W, Res.Pi.W = Res.Pi.W,
-      Res.Sigma.B = Res.Sigma.B,
-      Res.Int.B = Res.Int.B, Res.Pi.B = Res.Pi.B
+      lp = lp, implied = NULL,
+      res_sigma_w = res_sigma_w,
+      res_int_w = res_int_w, res_pi_w = res_pi_w,
+      res_sigma_b = res_sigma_b,
+      res_int_b = res_int_b, res_pi_b = res_pi_b
     )
   }
-  sigma.w <- out$sigma.w
-  sigma.b <- out$sigma.b
-  sigma.zz <- out$sigma.zz
-  sigma.yz <- out$sigma.yz
-  beta.w <- out$beta.w
-  beta.b <- out$beta.b
-  beta.z <- out$beta.z
-  beta.wb <- out$beta.wb
+  sigma_w <- out$sigma.w
+  sigma_b <- out$sigma.b
+  sigma_zz <- out$sigma.zz
+  sigma_yz <- out$sigma.yz
+  beta_w <- out$beta.w
+  beta_b <- out$beta.b
+  beta_z <- out$beta.z
+  beta_wb <- out$beta.wb
 
   # check for beta.wb
   if (is.null(out$beta.wb)) {
-    beta.wb <- rbind(beta.w, beta.b[-1, , drop = FALSE])
-    beta.wb[1, ] <- beta.wb[1, , drop = FALSE] + beta.b[1, , drop = FALSE]
+    beta_wb <- rbind(beta_w, beta_b[-1, , drop = FALSE])
+    beta_wb[1, ] <- beta_wb[1, , drop = FALSE] + beta_b[1, , drop = FALSE]
   }
 
   # log 2*pi
-  LOG.2PI <- log(2 * pi)
+  log_2pi <- log(2 * pi)
 
   # Lp
-  nclusters <- Lp$nclusters[[2]]
-  cluster.size <- Lp$cluster.size[[2]]
-  cluster.sizes <- Lp$cluster.sizes[[2]]
-  ncluster.sizes <- Lp$ncluster.sizes[[2]]
-  n.s <- Lp$cluster.size.ns[[2]]
+  # nclusters <- lp$nclusters[[2]]
+  cluster_size <- lp$cluster.size[[2]]
+  cluster_sizes <- lp$cluster.sizes[[2]]
+  ncluster_sizes <- lp$ncluster.sizes[[2]]
+  n_s <- lp$cluster.size.ns[[2]]
 
   # dependent 'y' level-2 ('Z') only variables?
-  between.y.idx <- Lp$between.y.idx[[2]]
+  between_y_idx <- lp$between.y.idx[[2]]
 
   # extract (the many) sample statistics from YLp
-  sample.wb <- YLp[[2]]$sample.wb
-  sample.YYres.wb1 <- YLp[[2]]$sample.YYres.wb1
-  sample.XX.wb1 <- YLp[[2]]$sample.XX.wb1
-  sample.wb2 <- YLp[[2]]$sample.wb2
-  sample.YYres.wb2 <- YLp[[2]]$sample.YYres.wb2
-  sample.YresX.wb2 <- YLp[[2]]$sample.YresX.wb2
-  sample.XX.wb2 <- YLp[[2]]$sample.XX.wb2
-  sample.clz.Y2.res <- YLp[[2]]$sample.clz.Y2.res
-  sample.clz.Y2.XX <- YLp[[2]]$sample.clz.Y2.XX
-  sample.clz.Y2.B <- YLp[[2]]$sample.clz.Y2.B
-  if (length(between.y.idx) > 0L) {
-    sample.clz.ZZ.res <- YLp[[2]]$sample.clz.ZZ.res
-    sample.clz.ZZ.XX <- YLp[[2]]$sample.clz.ZZ.XX
-    sample.clz.ZZ.B <- YLp[[2]]$sample.clz.ZZ.B
-    sample.clz.YZ.res <- YLp[[2]]$sample.clz.YZ.res
-    sample.clz.YZ.XX <- YLp[[2]]$sample.clz.YZ.XX
-    sample.clz.YresXZ <- YLp[[2]]$sample.clz.YresXZ # zero?
-    sample.clz.XWZres <- YLp[[2]]$sample.clz.XWZres
+  sample_wb <- ylp[[2]]$sample.wb
+  sample_yyres_wb1 <- ylp[[2]]$sample.YYres.wb1
+  sample_xx_wb1 <- ylp[[2]]$sample.XX.wb1
+  sample_wb2 <- ylp[[2]]$sample.wb2
+  sample_yyres_wb2 <- ylp[[2]]$sample.YYres.wb2
+  sample_yres_x_wb2 <- ylp[[2]]$sample.YresX.wb2
+  sample_xx_wb2 <- ylp[[2]]$sample.XX.wb2
+  sample_clz_y2_res <- ylp[[2]]$sample.clz.Y2.res
+  sample_clz_y2_xx <- ylp[[2]]$sample.clz.Y2.XX
+  sample_clz_y2_b <- ylp[[2]]$sample.clz.Y2.B
+  if (length(between_y_idx) > 0L) {
+    sample_clz_zz_res <- ylp[[2]]$sample.clz.ZZ.res
+    sample_clz_zz_xx <- ylp[[2]]$sample.clz.ZZ.XX
+    sample_clz_zz_b <- ylp[[2]]$sample.clz.ZZ.B
+    sample_clz_yz_res <- ylp[[2]]$sample.clz.YZ.res
+    sample_clz_yz_xx <- ylp[[2]]$sample.clz.YZ.XX
+    sample_clz_yres_xz <- ylp[[2]]$sample.clz.YresXZ # zero?
+    sample_clz_xwzres <- ylp[[2]]$sample.clz.XWZres
   }
 
   # reconstruct S.PW
-  wb1.diff <- sample.wb - beta.wb
-  Y1Y1.wb.res <- (sample.YYres.wb1 +
-    t(wb1.diff) %*% sample.XX.wb1 %*% (wb1.diff))
+  wb1_diff <- sample_wb - beta_wb
+  y1y1_wb_res <- (sample_yyres_wb1 +
+    t(wb1_diff) %*% sample_xx_wb1 %*% (wb1_diff))
 
   # this one is weighted -- not the same as crossprod(Y2w.res)
-  wb2.diff <- sample.wb2 - beta.wb
-  Y2Y2w.res <- (sample.YYres.wb2 +
-    sample.YresX.wb2 %*% (wb2.diff) +
-    t(wb2.diff) %*% t(sample.YresX.wb2) +
-    t(wb2.diff) %*% sample.XX.wb2 %*% (wb2.diff))
-  S.PW <- (Y1Y1.wb.res - Y2Y2w.res) / sum(cluster.size - 1)
+  wb2_diff <- sample_wb2 - beta_wb
+  y2y2w_res <- (sample_yyres_wb2 +
+    sample_yres_x_wb2 %*% (wb2_diff) +
+    t(wb2_diff) %*% t(sample_yres_x_wb2) +
+    t(wb2_diff) %*% sample_xx_wb2 %*% (wb2_diff))
+  s_pw <- (y1y1_wb_res - y2y2w_res) / sum(cluster_size - 1)
 
   # common parts:
-  sigma.w.inv <- lav_matrix_symmetric_inverse(
-    s = sigma.w,
+  sigma_w_inv <- lav_matrix_symmetric_inverse(
+    s = sigma_w,
     logdet = TRUE
   )
-  sigma.w.logdet <- attr(sigma.w.inv, "logdet")
-  if (length(between.y.idx) > 0L) {
-    sigma.zz.inv <- lav_matrix_symmetric_inverse(
-      s = sigma.zz,
+  sigma_w_logdet <- attr(sigma_w_inv, "logdet")
+  if (length(between_y_idx) > 0L) {
+    sigma_zz_inv <- lav_matrix_symmetric_inverse(
+      s = sigma_zz,
       logdet = TRUE
     )
-    sigma.zz.logdet <- attr(sigma.zz.inv, "logdet")
-    sigma.yz.zi <- sigma.yz %*% sigma.zz.inv
-    sigma.zi.zy <- t(sigma.yz.zi)
-    sigma.b.z <- sigma.b - sigma.yz %*% sigma.zi.zy
+    sigma_zz_logdet <- attr(sigma_zz_inv, "logdet")
+    sigma_yz_zi <- sigma_yz %*% sigma_zz_inv
+    sigma_zi_zy <- t(sigma_yz_zi)
+    sigma_b_z <- sigma_b - sigma_yz %*% sigma_zi_zy
   } else {
-    sigma.b.z <- sigma.b
+    sigma_b_z <- sigma_b
   }
 
   # min 2* logliklihood
-  DIST <- numeric(ncluster.sizes)
-  LOGDET <- numeric(ncluster.sizes)
-  CONST <- numeric(ncluster.sizes)
-  for (clz in seq_len(ncluster.sizes)) {
+  dist_1 <- numeric(ncluster_sizes)
+  logdet <- numeric(ncluster_sizes)
+  const <- numeric(ncluster_sizes)
+  for (clz in seq_len(ncluster_sizes)) {
     # cluster size
-    nj <- cluster.sizes[clz]
+    nj <- cluster_sizes[clz]
 
     # data between
-    nj.idx <- which(cluster.size == nj)
-    y2.diff <- sample.clz.Y2.B[[clz]] - beta.wb
-    Y2Yc.yy <- (sample.clz.Y2.res[[clz]] +
-      t(y2.diff) %*% sample.clz.Y2.XX[[clz]] %*% (y2.diff))
-    if (length(between.y.idx) > 0L) {
-      zz.diff <- sample.clz.ZZ.B[[clz]] - beta.z
-      Y2Yc.zz <- (sample.clz.ZZ.res[[clz]] +
-        t(zz.diff) %*% sample.clz.ZZ.XX[[clz]] %*% (zz.diff))
-      Y2Yc.yz <- (sample.clz.YZ.res[[clz]] +
-        sample.clz.YresXZ[[clz]] %*% zz.diff + # zero?
-        t(y2.diff) %*% sample.clz.XWZres[[clz]] +
-        t(y2.diff) %*% sample.clz.YZ.XX[[clz]] %*% zz.diff)
+    # nj_idx <- which(cluster_size == nj)
+    y2_diff <- sample_clz_y2_b[[clz]] - beta_wb
+    y2yc_yy <- (sample_clz_y2_res[[clz]] +
+      t(y2_diff) %*% sample_clz_y2_xx[[clz]] %*% (y2_diff))
+    if (length(between_y_idx) > 0L) {
+      zz_diff <- sample_clz_zz_b[[clz]] - beta_z
+      y2yc_zz <- (sample_clz_zz_res[[clz]] +
+        t(zz_diff) %*% sample_clz_zz_xx[[clz]] %*% (zz_diff))
+      y2yc_yz <- (sample_clz_yz_res[[clz]] +
+        sample_clz_yres_xz[[clz]] %*% zz_diff + # zero?
+        t(y2_diff) %*% sample_clz_xwzres[[clz]] +
+        t(y2_diff) %*% sample_clz_yz_xx[[clz]] %*% zz_diff)
     }
 
     # construct sigma.j
-    sigma.j <- (nj * sigma.b.z) + sigma.w
-    sigma.j.inv <- lav_matrix_symmetric_inverse(
-      s = sigma.j,
+    sigma_j <- (nj * sigma_b_z) + sigma_w
+    sigma_j_inv <- lav_matrix_symmetric_inverse(
+      s = sigma_j,
       logdet = TRUE
     )
-    sigma.j.logdet <- attr(sigma.j.inv, "logdet")
+    sigma_j_logdet <- attr(sigma_j_inv, "logdet")
 
-    if (length(between.y.idx) > 0L) {
-      sigma.ji.yz.zi <- sigma.j.inv %*% sigma.yz.zi
+    if (length(between_y_idx) > 0L) {
+      sigma_ji_yz_zi <- sigma_j_inv %*% sigma_yz_zi
 
       # part 1 -- zz
-      Vinv.11 <- sigma.zz.inv + nj * (sigma.zi.zy %*% sigma.ji.yz.zi)
-      q.zz <- sum(Vinv.11 * Y2Yc.zz)
+      vinv_11 <- sigma_zz_inv + nj * (sigma_zi_zy %*% sigma_ji_yz_zi)
+      q_zz <- sum(vinv_11 * y2yc_zz)
 
       # part 2 -- yz
-      q.yz <- -nj * sum(sigma.ji.yz.zi * Y2Yc.yz)
+      q_yz <- -nj * sum(sigma_ji_yz_zi * y2yc_yz)
     } else {
-      q.zz <- q.yz <- sigma.zz.logdet <- 0
+      q_zz <- q_yz <- sigma_zz_logdet <- 0
     }
 
     # part 5 -- yyc
-    q.yyc <- -nj * sum(sigma.j.inv * Y2Yc.yy)
+    q_yyc <- -nj * sum(sigma_j_inv * y2yc_yy)
 
     if (log2pi) {
-      P <- nj * nrow(sigma.w) + nrow(sigma.zz)
-      CONST[clz] <- P * LOG.2PI
+      p <- nj * nrow(sigma_w) + nrow(sigma_zz)
+      const[clz] <- p * log_2pi
     }
-    LOGDET[clz] <- sigma.zz.logdet + sigma.j.logdet
-    DIST[clz] <- q.zz + 2 * q.yz - q.yyc
+    logdet[clz] <- sigma_zz_logdet + sigma_j_logdet
+    dist_1[clz] <- q_zz + 2 * q_yz - q_yyc
   }
   # q.yya + q.yyb
-  q.W <- sum(cluster.size - 1) * sum(sigma.w.inv * S.PW)
+  q_w <- sum(cluster_size - 1) * sum(sigma_w_inv * s_pw)
   # logdet within part
-  L.W <- sum(cluster.size - 1) * sigma.w.logdet
+  l_w <- sum(cluster_size - 1) * sigma_w_logdet
 
   # -2*times logl (without the constant) (for optimization)
-  loglik <- sum(LOGDET * n.s) + sum(DIST) + q.W + L.W
+  loglik <- sum(logdet * n_s) + sum(dist_1) + q_w + l_w
 
   if (log2pi) {
-    loglik <- loglik + sum(CONST * n.s)
+    loglik <- loglik + sum(const * n_s)
   }
 
   # functions below compute -2 * logl
-  if (!minus.two) {
+  if (!minus_two) {
     loglik <- loglik / (-2)
   }
 
@@ -368,277 +368,278 @@ lav_mvreg_cluster_loglik_samplestats_2l <- function(YLp = NULL,
 }
 
 # first derivative -2*logl wrt Beta.W, Beta.B, Sigma.W, Sigma.B
-lav_mvreg_cluster_dlogl_2l_samplestats <- function(YLp = NULL,
-                                                   Lp = NULL,
-                                                   Res.Sigma.W = NULL,
-                                                   Res.Int.W = NULL,
-                                                   Res.Pi.W = NULL,
-                                                   Res.Sigma.B = NULL,
-                                                   Res.Int.B = NULL,
-                                                   Res.Pi.B = NULL,
+lav_mvreg_cluster_dlogl_2l_samplestats <- function(ylp = NULL,          # nolint
+                                                   lp = NULL,
+                                                   res_sigma_w = NULL,
+                                                   res_int_w = NULL,
+                                                   res_pi_w = NULL,
+                                                   res_sigma_b = NULL,
+                                                   res_int_b = NULL,
+                                                   res_pi_b = NULL,
                                                    out = NULL, # 2l
-                                                   return.list = FALSE,
-                                                   Sinv.method = "eigen") {
+                                                   return_list = FALSE,
+                                                   sinv_method = "eigen") {
   # map implied to 2l matrices
   if (is.null(out)) {
     out <- lav_mvreg_cluster_implied22l(
-      Lp = Lp, implied = NULL,
-      Res.Sigma.W = Res.Sigma.W,
-      Res.Int.W = Res.Int.W, Res.Pi.W = Res.Pi.W,
-      Res.Sigma.B = Res.Sigma.B,
-      Res.Int.B = Res.Int.B, Res.Pi.B = Res.Pi.B
+      lp = lp, implied = NULL,
+      res_sigma_w = res_sigma_w,
+      res_int_w = res_int_w, res_pi_w = res_pi_w,
+      res_sigma_b = res_sigma_b,
+      res_int_b = res_int_b, res_pi_b = res_pi_b
     )
   }
-  sigma.w <- out$sigma.w
-  sigma.b <- out$sigma.b
-  sigma.zz <- out$sigma.zz
-  sigma.yz <- out$sigma.yz
-  beta.w <- out$beta.w
-  beta.b <- out$beta.b
-  beta.z <- out$beta.z
-  beta.wb <- out$beta.wb
+  sigma_w <- out$sigma.w
+  sigma_b <- out$sigma.b
+  sigma_zz <- out$sigma.zz
+  sigma_yz <- out$sigma.yz
+  beta_w <- out$beta.w
+  beta_b <- out$beta.b
+  beta_z <- out$beta.z
+  beta_wb <- out$beta.wb
 
   # check for beta.wb
   if (is.null(out$beta.wb)) {
-    beta.wb <- rbind(beta.w, beta.b[-1, , drop = FALSE])
-    beta.wb[1, ] <- beta.wb[1, , drop = FALSE] + beta.b[1, , drop = FALSE]
+    beta_wb <- rbind(beta_w, beta_b[-1, , drop = FALSE])
+    beta_wb[1, ] <- beta_wb[1, , drop = FALSE] + beta_b[1, , drop = FALSE]
   }
 
   # Lp
-  nclusters <- Lp$nclusters[[2]]
-  cluster.size <- Lp$cluster.size[[2]]
-  cluster.sizes <- Lp$cluster.sizes[[2]]
-  ncluster.sizes <- Lp$ncluster.sizes[[2]]
-  n.s <- Lp$cluster.size.ns[[2]]
+  # nclusters <- lp$nclusters[[2]]
+  cluster_size <- lp$cluster.size[[2]]
+  cluster_sizes <- lp$cluster.sizes[[2]]
+  ncluster_sizes <- lp$ncluster.sizes[[2]]
+  n_s <- lp$cluster.size.ns[[2]]
 
-  within.x.idx <- Lp$within.x.idx[[1]]
-  between.y.idx <- Lp$between.y.idx[[2]]
+  within_x_idx <- lp$within.x.idx[[1]]
+  between_y_idx <- lp$between.y.idx[[2]]
 
-  w1.idx <- seq_len(length(within.x.idx) + 1L)
-  b1.idx <- c(1L, seq_len(nrow(beta.wb))[-w1.idx])
+  w1_idx <- seq_len(length(within_x_idx) + 1L)
+  b1_idx <- c(1L, seq_len(nrow(beta_wb))[-w1_idx])
 
   # extract (the many) sample statistics from YLp
-  sample.wb <- YLp[[2]]$sample.wb
-  sample.YYres.wb1 <- YLp[[2]]$sample.YYres.wb1
-  sample.XX.wb1 <- YLp[[2]]$sample.XX.wb1
-  sample.wb2 <- YLp[[2]]$sample.wb2
-  sample.YYres.wb2 <- YLp[[2]]$sample.YYres.wb2
-  sample.YresX.wb2 <- YLp[[2]]$sample.YresX.wb2
-  sample.XX.wb2 <- YLp[[2]]$sample.XX.wb2
-  sample.clz.Y2.res <- YLp[[2]]$sample.clz.Y2.res
-  sample.clz.Y2.XX <- YLp[[2]]$sample.clz.Y2.XX
-  sample.clz.Y2.B <- YLp[[2]]$sample.clz.Y2.B
-  if (length(between.y.idx) > 0L) {
-    sample.clz.ZZ.res <- YLp[[2]]$sample.clz.ZZ.res
-    sample.clz.ZZ.XX <- YLp[[2]]$sample.clz.ZZ.XX
-    sample.clz.ZZ.B <- YLp[[2]]$sample.clz.ZZ.B
-    sample.clz.YZ.res <- YLp[[2]]$sample.clz.YZ.res
-    sample.clz.YZ.XX <- YLp[[2]]$sample.clz.YZ.XX
-    sample.clz.YresXZ <- YLp[[2]]$sample.clz.YresXZ # zero?
-    sample.clz.XWZres <- YLp[[2]]$sample.clz.XWZres
+  sample_wb <- ylp[[2]]$sample.wb
+  sample_yyres_wb1 <- ylp[[2]]$sample.YYres.wb1
+  sample_xx_wb1 <- ylp[[2]]$sample.XX.wb1
+  sample_wb2 <- ylp[[2]]$sample.wb2
+  sample_yyres_wb2 <- ylp[[2]]$sample.YYres.wb2
+  sample_yres_x_wb2 <- ylp[[2]]$sample.YresX.wb2
+  sample_xx_wb2 <- ylp[[2]]$sample.XX.wb2
+  sample_clz_y2_res <- ylp[[2]]$sample.clz.Y2.res
+  sample_clz_y2_xx <- ylp[[2]]$sample.clz.Y2.XX
+  sample_clz_y2_b <- ylp[[2]]$sample.clz.Y2.B
+  if (length(between_y_idx) > 0L) {
+    sample_clz_zz_res <- ylp[[2]]$sample.clz.ZZ.res
+    sample_clz_zz_xx <- ylp[[2]]$sample.clz.ZZ.XX
+    sample_clz_zz_b <- ylp[[2]]$sample.clz.ZZ.B
+    sample_clz_yz_res <- ylp[[2]]$sample.clz.YZ.res
+    sample_clz_yz_xx <- ylp[[2]]$sample.clz.YZ.XX
+    sample_clz_yres_xz <- ylp[[2]]$sample.clz.YresXZ # zero?
+    sample_clz_xwzres <- ylp[[2]]$sample.clz.XWZres
   }
 
   # reconstruct S.PW
-  wb1.diff <- sample.wb - beta.wb
-  Y1Y1.wb.res <- (sample.YYres.wb1 +
-    t(wb1.diff) %*% sample.XX.wb1 %*% (wb1.diff))
+  wb1_diff <- sample_wb - beta_wb
+  y1y1_wb_res <- (sample_yyres_wb1 +
+    t(wb1_diff) %*% sample_xx_wb1 %*% (wb1_diff))
 
   # this one is weighted -- not the same as crossprod(Y2w.res)
-  wb2.diff <- sample.wb2 - beta.wb
-  Y2Y2w.res <- (sample.YYres.wb2 +
-    sample.YresX.wb2 %*% (wb2.diff) +
-    t(wb2.diff) %*% t(sample.YresX.wb2) +
-    t(wb2.diff) %*% sample.XX.wb2 %*% (wb2.diff))
-  S.PW <- (Y1Y1.wb.res - Y2Y2w.res) / sum(cluster.size - 1)
+  wb2_diff <- sample_wb2 - beta_wb
+  y2y2w_res <- (sample_yyres_wb2 +
+    sample_yres_x_wb2 %*% (wb2_diff) +
+    t(wb2_diff) %*% t(sample_yres_x_wb2) +
+    t(wb2_diff) %*% sample_xx_wb2 %*% (wb2_diff))
+  s_pw <- (y1y1_wb_res - y2y2w_res) / sum(cluster_size - 1)
 
   # common parts:
-  sigma.w.inv <- lav_matrix_symmetric_inverse(s = sigma.w)
+  sigma_w_inv <- lav_matrix_symmetric_inverse(s = sigma_w)
 
-  G.beta.w <- matrix(0, ncluster.sizes, length(beta.w))
-  G.beta.b <- matrix(0, ncluster.sizes, length(beta.b))
-  G.beta.wb <- matrix(0, ncluster.sizes, length(beta.wb))
-  G.sigma.w1 <- matrix(0, ncluster.sizes, length(lav_matrix_vech(sigma.w)))
-  G.sigma.b <- matrix(0, ncluster.sizes, length(lav_matrix_vech(sigma.b)))
+  g_beta_w <- matrix(0, ncluster_sizes, length(beta_w))
+  g_beta_b <- matrix(0, ncluster_sizes, length(beta_b))
+  # g_beta_wb <- matrix(0, ncluster_sizes, length(beta_wb))
+  g_sigma_w1_1 <- matrix(0, ncluster_sizes, length(lav_matrix_vech(sigma_w)))
+  g_sigma_b_1 <- matrix(0, ncluster_sizes, length(lav_matrix_vech(sigma_b)))
 
-  if (length(between.y.idx) > 0L) {
-    G.beta.z <- matrix(0, ncluster.sizes, length(beta.z))
-    G.sigma.zz <- matrix(0, ncluster.sizes, length(lav_matrix_vech(sigma.zz)))
-    G.sigma.yz <- matrix(0, ncluster.sizes, length(sigma.yz))
+  if (length(between_y_idx) > 0L) {
+    g_beta_z <- matrix(0, ncluster_sizes, length(beta_z))
+    g_sigma_zz_1 <- matrix(0, ncluster_sizes, length(lav_matrix_vech(sigma_zz)))
+    g_sigma_yz_1 <- matrix(0, ncluster_sizes, length(sigma_yz))
 
-    sigma.zz.inv <- lav_matrix_symmetric_inverse(s = sigma.zz)
-    sigma.yz.zi <- sigma.yz %*% sigma.zz.inv
-    sigma.zi.zy <- t(sigma.yz.zi)
-    sigma.b.z <- sigma.b - sigma.yz %*% sigma.zi.zy
+    sigma_zz_inv <- lav_matrix_symmetric_inverse(s = sigma_zz)
+    sigma_yz_zi <- sigma_yz %*% sigma_zz_inv
+    sigma_zi_zy <- t(sigma_yz_zi)
+    sigma_b_z <- sigma_b - sigma_yz %*% sigma_zi_zy
 
-    for (clz in seq_len(ncluster.sizes)) {
+    for (clz in seq_len(ncluster_sizes)) {
       # cluster size
-      nj <- cluster.sizes[clz]
+      nj <- cluster_sizes[clz]
 
-      y2.diff <- sample.clz.Y2.B[[clz]] - beta.wb
-      XX.y2.diff <- sample.clz.Y2.XX[[clz]] %*% y2.diff
-      Y2Yc.yy <- sample.clz.Y2.res[[clz]] + crossprod(y2.diff, XX.y2.diff)
+      y2_diff <- sample_clz_y2_b[[clz]] - beta_wb
+      xx_y2_diff <- sample_clz_y2_xx[[clz]] %*% y2_diff
+      y2yc_yy <- sample_clz_y2_res[[clz]] + crossprod(y2_diff, xx_y2_diff)
 
-      zz.diff <- sample.clz.ZZ.B[[clz]] - beta.z
-      Y2Yc.zz <- (sample.clz.ZZ.res[[clz]] +
-        t(zz.diff) %*% sample.clz.ZZ.XX[[clz]] %*% (zz.diff))
-      Y2Yc.yz <- (sample.clz.YZ.res[[clz]] +
-        sample.clz.YresXZ[[clz]] %*% zz.diff + # zero?
-        t(y2.diff) %*% sample.clz.XWZres[[clz]] +
-        t(y2.diff) %*% sample.clz.YZ.XX[[clz]] %*% zz.diff)
+      zz_diff <- sample_clz_zz_b[[clz]] - beta_z
+      y2yc_zz <- (sample_clz_zz_res[[clz]] +
+        t(zz_diff) %*% sample_clz_zz_xx[[clz]] %*% (zz_diff))
+      y2yc_yz <- (sample_clz_yz_res[[clz]] +
+        sample_clz_yres_xz[[clz]] %*% zz_diff + # zero?
+        t(y2_diff) %*% sample_clz_xwzres[[clz]] +
+        t(y2_diff) %*% sample_clz_yz_xx[[clz]] %*% zz_diff)
 
       # construct sigma.j
-      sigma.j <- (nj * sigma.b.z) + sigma.w
-      sigma.j.inv <- lav_matrix_symmetric_inverse(s = sigma.j)
-      sigma.ji.yz.zi <- sigma.j.inv %*% sigma.yz.zi
-      sigma.zi.zy.ji <- t(sigma.ji.yz.zi)
-      sigma.ji.yz <- sigma.j.inv %*% sigma.yz
-      ns.sigma.j.inv <- n.s[clz] * sigma.j.inv
-      ns.sigma.zz.inv <- n.s[clz] * sigma.zz.inv
-      ns.sigma.yz <- n.s[clz] * sigma.yz
-      ns.sigma.ji.yz.zi <- n.s[clz] * sigma.ji.yz.zi
+      sigma_j <- (nj * sigma_b_z) + sigma_w
+      sigma_j_inv <- lav_matrix_symmetric_inverse(s = sigma_j)
+      sigma_ji_yz_zi <- sigma_j_inv %*% sigma_yz_zi
+      sigma_zi_zy_ji <- t(sigma_ji_yz_zi)
+      sigma_ji_yz <- sigma_j_inv %*% sigma_yz
+      ns_sigma_j_inv <- n_s[clz] * sigma_j_inv
+      ns_sigma_zz_inv <- n_s[clz] * sigma_zz_inv
+      # ns_sigma_yz <- n_s[clz] * sigma_yz
+      ns_sigma_ji_yz_zi <- n_s[clz] * sigma_ji_yz_zi
 
       # common parts
-      ZZ.zi.yz.ji <- Y2Yc.zz %*% sigma.zi.zy.ji
-      ji.YZ.zi <- sigma.j.inv %*% Y2Yc.yz %*% sigma.zz.inv
+      zz_zi_yz_ji <- y2yc_zz %*% sigma_zi_zy_ji
+      ji_yz_zi <- sigma_j_inv %*% y2yc_yz %*% sigma_zz_inv
 
-      jYZj.yy <- sigma.j.inv %*% Y2Yc.yy %*% sigma.j.inv
-      jYZj.yz <- tcrossprod(ji.YZ.zi, sigma.ji.yz)
-      jYZj.zz <- sigma.ji.yz.zi %*% ZZ.zi.yz.ji
+      j_yzj_yy <- sigma_j_inv %*% y2yc_yy %*% sigma_j_inv
+      j_yzj_yz <- tcrossprod(ji_yz_zi, sigma_ji_yz)
+      j_yzj_zz <- sigma_ji_yz_zi %*% zz_zi_yz_ji
 
-      jYZj <- nj * (jYZj.yy + jYZj.zz - jYZj.yz - t(jYZj.yz))
+      j_yzj <- nj * (j_yzj_yy + j_yzj_zz - j_yzj_yz - t(j_yzj_yz))
 
       # SIGMA.W (between part)
-      g.sigma.w1 <- ns.sigma.j.inv - jYZj
-      tmp <- g.sigma.w1 * 2
-      diag(tmp) <- diag(g.sigma.w1)
-      G.sigma.w1[clz, ] <- lav_matrix_vech(tmp)
+      g_sigma_w1 <- ns_sigma_j_inv - j_yzj
+      tmp <- g_sigma_w1 * 2
+      diag(tmp) <- diag(g_sigma_w1)
+      g_sigma_w1_1[clz, ] <- lav_matrix_vech(tmp)
 
       # SIGMA.B
-      g.sigma.b <- nj * g.sigma.w1
-      tmp <- g.sigma.b * 2
-      diag(tmp) <- diag(g.sigma.b)
-      G.sigma.b[clz, ] <- lav_matrix_vech(tmp)
+      g_sigma_b <- nj * g_sigma_w1
+      tmp <- g_sigma_b * 2
+      diag(tmp) <- diag(g_sigma_b)
+      g_sigma_b_1[clz, ] <- lav_matrix_vech(tmp)
 
       # SIGMA.ZZ
-      YZ1 <- ZZ.zi.yz.ji %*% sigma.yz
-      YZ2 <- crossprod(Y2Yc.yz, sigma.ji.yz)
-      tmp <- (t(sigma.yz) %*% g.sigma.w1 %*% sigma.yz
-        - 1 / nj * Y2Yc.zz - t(YZ1) - YZ1 + t(YZ2) + YZ2)
-      g.sigma.zz <- (ns.sigma.zz.inv +
-        nj * sigma.zz.inv %*% tmp %*% sigma.zz.inv)
-      tmp <- g.sigma.zz * 2
-      diag(tmp) <- diag(g.sigma.zz)
-      G.sigma.zz[clz, ] <- lav_matrix_vech(tmp)
+      yz1 <- zz_zi_yz_ji %*% sigma_yz
+      yz2 <- crossprod(y2yc_yz, sigma_ji_yz)
+      tmp <- (t(sigma_yz) %*% g_sigma_w1 %*% sigma_yz
+        - 1 / nj * y2yc_zz - t(yz1) - yz1 + t(yz2) + yz2)
+      g_sigma_zz <- (ns_sigma_zz_inv +
+        nj * sigma_zz_inv %*% tmp %*% sigma_zz_inv)
+      tmp <- g_sigma_zz * 2
+      diag(tmp) <- diag(g_sigma_zz)
+      g_sigma_zz_1[clz, ] <- lav_matrix_vech(tmp)
 
       # SIGMA.ZY
-      tmp1 <- crossprod(ZZ.zi.yz.ji, sigma.zz.inv)
-      tmp2 <- ns.sigma.ji.yz.zi
-      tmp3 <- ji.YZ.zi
-      tmp4 <- jYZj %*% sigma.yz.zi
-      g.sigma.yz <- 2 * nj * (tmp1 - tmp2 - tmp3 + tmp4)
-      G.sigma.yz[clz, ] <- lav_matrix_vec(g.sigma.yz)
+      tmp1 <- crossprod(zz_zi_yz_ji, sigma_zz_inv)
+      tmp2 <- ns_sigma_ji_yz_zi
+      tmp3 <- ji_yz_zi
+      tmp4 <- j_yzj %*% sigma_yz_zi
+      g_sigma_yz <- 2 * nj * (tmp1 - tmp2 - tmp3 + tmp4)
+      g_sigma_yz_1[clz, ] <- lav_matrix_vec(g_sigma_yz)
 
       # BETA.Z
-      A <- (sigma.zz.inv + nj * (sigma.zi.zy.ji %*% sigma.yz.zi)) # symm!
-      B <- nj * (sigma.zi.zy.ji)
-      tmp.z <- (sample.clz.ZZ.XX[[clz]] %*% zz.diff %*% A -
-        (t(sample.clz.YresXZ[[clz]]) +
-          t(sample.clz.YZ.XX[[clz]]) %*% y2.diff) %*% t(B))
-      G.beta.z[clz, ] <- as.vector(-2 * tmp.z)
+      a <- (sigma_zz_inv + nj * (sigma_zi_zy_ji %*% sigma_yz_zi)) # symm!
+      m_b <- nj * (sigma_zi_zy_ji)
+      tmp_z <- (sample_clz_zz_xx[[clz]] %*% zz_diff %*% a -
+        (t(sample_clz_yres_xz[[clz]]) +
+          t(sample_clz_yz_xx[[clz]]) %*% y2_diff) %*% t(m_b))
+      g_beta_z[clz, ] <- as.vector(-2 * tmp_z)
 
       # BETA.W (between part only) + BETA.B
-      tmp <- (sample.clz.XWZres[[clz]] +
-        sample.clz.YZ.XX[[clz]] %*% zz.diff)
-      out.b <- tmp %*% sigma.zi.zy.ji - XX.y2.diff %*% sigma.j.inv
-      out.w <- out.b + XX.y2.diff %*% sigma.w.inv
-      tmp.b <- out.b[b1.idx, , drop = FALSE]
-      tmp.w <- out.w[w1.idx, , drop = FALSE]
-      G.beta.b[clz, ] <- as.vector(2 * nj * tmp.b)
-      G.beta.w[clz, ] <- as.vector(2 * nj * tmp.w)
+      tmp <- (sample_clz_xwzres[[clz]] +
+        sample_clz_yz_xx[[clz]] %*% zz_diff)
+      out_b <- tmp %*% sigma_zi_zy_ji - xx_y2_diff %*% sigma_j_inv
+      out_w <- out_b + xx_y2_diff %*% sigma_w_inv
+      tmp_b <- out_b[b1_idx, , drop = FALSE]
+      tmp_w <- out_w[w1_idx, , drop = FALSE]
+      g_beta_b[clz, ] <- as.vector(2 * nj * tmp_b)
+      g_beta_w[clz, ] <- as.vector(2 * nj * tmp_w)
     } # clz
 
-    d.beta.w1 <- matrix(colSums(G.beta.w), nrow(beta.w), ncol(beta.w))
-    d.beta.b <- matrix(colSums(G.beta.b), nrow(beta.b), ncol(beta.b))
-    d.sigma.w1 <- lav_matrix_vech_reverse(colSums(G.sigma.w1))
-    d.sigma.b <- lav_matrix_vech_reverse(colSums(G.sigma.b))
+    d_beta_w1 <- matrix(colSums(g_beta_w), nrow(beta_w), ncol(beta_w))
+    d_beta_b <- matrix(colSums(g_beta_b), nrow(beta_b), ncol(beta_b))
+    d_sigma_w1 <- lav_matrix_vech_reverse(colSums(g_sigma_w1_1))
+    d_sigma_b <- lav_matrix_vech_reverse(colSums(g_sigma_b_1))
 
     # z
-    d.beta.z <- matrix(colSums(G.beta.z), nrow(beta.z), ncol(beta.z))
-    d.sigma.zz <- lav_matrix_vech_reverse(colSums(G.sigma.zz))
-    d.sigma.yz <- matrix(colSums(G.sigma.yz), nrow(sigma.yz), ncol(sigma.yz))
-  } # between.y.idx
+    d_beta_z <- matrix(colSums(g_beta_z), nrow(beta_z), ncol(beta_z))
+    d_sigma_zz <- lav_matrix_vech_reverse(colSums(g_sigma_zz_1))
+    d_sigma_yz <- matrix(colSums(g_sigma_yz_1), nrow(sigma_yz), ncol(sigma_yz))
+  # between.y.idx
 
-  else { # no between.y.idx
+  } else { # no between.y.idx
 
-    for (clz in seq_len(ncluster.sizes)) {
+    for (clz in seq_len(ncluster_sizes)) {
       # cluster size
-      nj <- cluster.sizes[clz]
+      nj <- cluster_sizes[clz]
 
-      y2.diff <- sample.clz.Y2.B[[clz]] - beta.wb
-      XX.y2.diff <- sample.clz.Y2.XX[[clz]] %*% y2.diff
-      Y2Yc.yy <- sample.clz.Y2.res[[clz]] + crossprod(y2.diff, XX.y2.diff)
+      y2_diff <- sample_clz_y2_b[[clz]] - beta_wb
+      xx_y2_diff <- sample_clz_y2_xx[[clz]] %*% y2_diff
+      y2yc_yy <- sample_clz_y2_res[[clz]] + crossprod(y2_diff, xx_y2_diff)
 
       # construct sigma.j
-      sigma.j <- (nj * sigma.b) + sigma.w
-      sigma.j.inv <- lav_matrix_symmetric_inverse(s = sigma.j)
+      sigma_j <- (nj * sigma_b) + sigma_w
+      sigma_j_inv <- lav_matrix_symmetric_inverse(s = sigma_j)
 
       # common part
-      jYYj <- nj * sigma.j.inv %*% Y2Yc.yy %*% sigma.j.inv
+      j_yyj <- nj * sigma_j_inv %*% y2yc_yy %*% sigma_j_inv
 
       # SIGMA.W (between part)
-      g.sigma.w1 <- (n.s[clz] * sigma.j.inv) - jYYj
-      tmp <- g.sigma.w1 * 2
-      diag(tmp) <- diag(g.sigma.w1)
-      G.sigma.w1[clz, ] <- lav_matrix_vech(tmp)
+      g_sigma_w1 <- (n_s[clz] * sigma_j_inv) - j_yyj
+      tmp <- g_sigma_w1 * 2
+      diag(tmp) <- diag(g_sigma_w1)
+      g_sigma_w1_1[clz, ] <- lav_matrix_vech(tmp)
 
       # SIGMA.B
-      g.sigma.b <- nj * g.sigma.w1
-      tmp <- g.sigma.b * 2
-      diag(tmp) <- diag(g.sigma.b)
-      G.sigma.b[clz, ] <- lav_matrix_vech(tmp)
+      g_sigma_b <- nj * g_sigma_w1
+      tmp <- g_sigma_b * 2
+      diag(tmp) <- diag(g_sigma_b)
+      g_sigma_b_1[clz, ] <- lav_matrix_vech(tmp)
 
       # BETA.W (between part only) + BETA.B
-      out.b <- -1 * XX.y2.diff %*% sigma.j.inv
-      out.w <- out.b + XX.y2.diff %*% sigma.w.inv
-      tmp.b <- out.b[b1.idx, , drop = FALSE]
-      tmp.w <- out.w[w1.idx, , drop = FALSE]
-      G.beta.b[clz, ] <- as.vector(2 * nj * tmp.b)
-      G.beta.w[clz, ] <- as.vector(2 * nj * tmp.w)
+      out_b <- -1 * xx_y2_diff %*% sigma_j_inv
+      out_w <- out_b + xx_y2_diff %*% sigma_w_inv
+      tmp_b <- out_b[b1_idx, , drop = FALSE]
+      tmp_w <- out_w[w1_idx, , drop = FALSE]
+      g_beta_b[clz, ] <- as.vector(2 * nj * tmp_b)
+      g_beta_w[clz, ] <- as.vector(2 * nj * tmp_w)
     } # cl
 
-    d.beta.w1 <- matrix(colSums(G.beta.w), nrow(beta.w), ncol(beta.w))
-    d.beta.b <- matrix(colSums(G.beta.b), nrow(beta.b), ncol(beta.b))
-    d.sigma.w1 <- lav_matrix_vech_reverse(colSums(G.sigma.w1))
-    d.sigma.b <- lav_matrix_vech_reverse(colSums(G.sigma.b))
+    d_beta_w1 <- matrix(colSums(g_beta_w), nrow(beta_w), ncol(beta_w))
+    d_beta_b <- matrix(colSums(g_beta_b), nrow(beta_b), ncol(beta_b))
+    d_sigma_w1 <- lav_matrix_vech_reverse(colSums(g_sigma_w1_1))
+    d_sigma_b <- lav_matrix_vech_reverse(colSums(g_sigma_b_1))
 
     # z
-    d.beta.z <- matrix(0, 0L, 0L)
-    d.sigma.zz <- matrix(0, 0L, 0L)
-    d.sigma.yz <- matrix(0, 0L, 0L)
+    d_beta_z <- matrix(0, 0L, 0L)
+    d_sigma_zz <- matrix(0, 0L, 0L)
+    d_sigma_yz <- matrix(0, 0L, 0L)
   } # no-between-y
 
   # Sigma.W (bis)
-  d.sigma.w2 <- sum(cluster.size - 1) * (sigma.w.inv
-  - sigma.w.inv %*% S.PW %*% sigma.w.inv)
-  tmp <- d.sigma.w2 * 2
-  diag(tmp) <- diag(d.sigma.w2)
-  d.sigma.w2 <- tmp
+  d_sigma_w2 <- sum(cluster_size - 1) * (sigma_w_inv
+  - sigma_w_inv %*% s_pw %*% sigma_w_inv)
+  tmp <- d_sigma_w2 * 2
+  diag(tmp) <- diag(d_sigma_w2)
+  d_sigma_w2 <- tmp
 
-  d.sigma.w <- d.sigma.w1 + d.sigma.w2
+  d_sigma_w <- d_sigma_w1 + d_sigma_w2
 
   # beta.w (bis)
-  d.beta.w2 <- -2 * (sample.XX.wb1 %*% (sample.wb - beta.wb))[w1.idx, , drop = FALSE] %*% sigma.w.inv
+  d_beta_w2 <- -2 * (sample_xx_wb1 %*%
+      (sample_wb - beta_wb))[w1_idx, , drop = FALSE] %*% sigma_w_inv
 
-  d.beta.w <- d.beta.w1 + d.beta.w2
+  d_beta_w <- d_beta_w1 + d_beta_w2
 
   # rearrange
-  dimplied <- lav_mvreg_cluster_2l2implied(Lp,
-    sigma.w = d.sigma.w, sigma.b = d.sigma.b,
-    sigma.zz = d.sigma.zz, sigma.yz = d.sigma.yz,
-    beta.w = d.beta.w, beta.b = d.beta.b, beta.z = d.beta.z
+  dimplied <- lav_mvreg_cluster_2l2implied(lp,
+    sigma_w = d_sigma_w, sigma_b = d_sigma_b,
+    sigma_zz = d_sigma_zz, sigma_yz = d_sigma_yz,
+    beta_w = d_beta_w, beta_b = d_beta_b, beta_z = d_beta_z
   )
 
-  if (return.list) {
+  if (return_list) {
     return(dimplied)
   }
 
@@ -655,82 +656,82 @@ lav_mvreg_cluster_dlogl_2l_samplestats <- function(YLp = NULL,
 }
 
 # cluster-wise scores -2*logl wrt Beta.W, Beta.B, Sigma.W, Sigma.B
-lav_mvreg_cluster_scores_2l <- function(Y1 = NULL,
-                                        YLp = NULL,
-                                        Lp = NULL,
-                                        Res.Sigma.W = NULL,
-                                        Res.Int.W = NULL,
-                                        Res.Pi.W = NULL,
-                                        Res.Sigma.B = NULL,
-                                        Res.Int.B = NULL,
-                                        Res.Pi.B = NULL,
+lav_mvreg_cluster_scores_2l <- function(y1 = NULL,
+                                        ylp = NULL,
+                                        lp = NULL,
+                                        res_sigma_w = NULL,
+                                        res_int_w = NULL,
+                                        res_pi_w = NULL,
+                                        res_sigma_b = NULL,
+                                        res_int_b = NULL,
+                                        res_pi_b = NULL,
                                         out = NULL, # 2l
-                                        Sinv.method = "eigen") {
+                                        sinv_method = "eigen") {
   # map implied to 2l matrices
   if (is.null(out)) {
     out <- lav_mvreg_cluster_implied22l(
-      Lp = Lp, implied = NULL,
-      Res.Sigma.W = Res.Sigma.W,
-      Res.Int.W = Res.Int.W, Res.Pi.W = Res.Pi.W,
-      Res.Sigma.B = Res.Sigma.B,
-      Res.Int.B = Res.Int.B, Res.Pi.B = Res.Pi.B
+      lp = lp, implied = NULL,
+      res_sigma_w = res_sigma_w,
+      res_int_w = res_int_w, res_pi_w = res_pi_w,
+      res_sigma_b = res_sigma_b,
+      res_int_b = res_int_b, res_pi_b = res_pi_b
     )
   }
-  sigma.w <- out$sigma.w
-  sigma.b <- out$sigma.b
-  sigma.zz <- out$sigma.zz
-  sigma.yz <- out$sigma.yz
-  beta.w <- out$beta.w
-  beta.b <- out$beta.b
-  beta.z <- out$beta.z
-  beta.wb <- out$beta.wb
+  sigma_w <- out$sigma.w
+  sigma_b <- out$sigma.b
+  sigma_zz <- out$sigma.zz
+  sigma_yz <- out$sigma.yz
+  beta_w <- out$beta.w
+  beta_b <- out$beta.b
+  beta_z <- out$beta.z
+  beta_wb <- out$beta.wb
 
   # check for beta.wb
   if (is.null(out$beta.wb)) {
-    beta.wb <- rbind(beta.w, beta.b[-1, , drop = FALSE])
-    beta.wb[1, ] <- beta.wb[1, , drop = FALSE] + beta.b[1, , drop = FALSE]
+    beta_wb <- rbind(beta_w, beta_b[-1, , drop = FALSE])
+    beta_wb[1, ] <- beta_wb[1, , drop = FALSE] + beta_b[1, , drop = FALSE]
   }
 
   # Lp
-  nclusters <- Lp$nclusters[[2]]
-  cluster.size <- Lp$cluster.size[[2]]
-  cluster.idx <- Lp$cluster.idx[[2]]
+  nclusters <- lp$nclusters[[2]]
+  cluster_size <- lp$cluster.size[[2]]
+  cluster_idx <- lp$cluster.idx[[2]]
 
-  within.x.idx <- Lp$within.x.idx[[1]]
-  between.idx <- Lp$between.idx[[2]]
-  between.y.idx <- Lp$between.y.idx[[2]]
-  between.x.idx <- Lp$between.x.idx[[2]]
+  within_x_idx <- lp$within.x.idx[[1]]
+  # between_idx <- lp$between.idx[[2]]
+  between_y_idx <- lp$between.y.idx[[2]]
+  between_x_idx <- lp$between.x.idx[[2]]
 
-  y1.idx <- Lp$ov.y.idx[[1]]
-  x1.idx <- c(within.x.idx, between.x.idx) # in that order
+  y1_idx <- lp$ov.y.idx[[1]]
+  x1_idx <- c(within_x_idx, between_x_idx) # in that order
 
   # residuals for 'Y'
-  Y1.wb <- Y1[, y1.idx, drop = FALSE]
+  y1_wb <- y1[, y1_idx, drop = FALSE]
 
-  if (length(x1.idx) > 0L) {
-    EXO.wb <- cbind(1, Y1[, x1.idx, drop = FALSE])
-    Y1.wb.hat <- EXO.wb %*% beta.wb
-    Y1.wb.res <- Y1.wb - Y1.wb.hat
+  if (length(x1_idx) > 0L) {
+    exo_wb <- cbind(1, y1[, x1_idx, drop = FALSE])
+    y1_wb_hat <- exo_wb %*% beta_wb
+    y1_wb_res <- y1_wb - y1_wb_hat
   } else {
-    Y1.wb.res <- Y1.wb
+    y1_wb_res <- y1_wb
   }
 
   # residuals 'Y' (level 2)
-  Y2 <- YLp[[2]]$Y2
-  if (length(x1.idx) > 0L) {
-    EXO.wb2 <- cbind(1, Y2[, x1.idx, drop = FALSE])
-    Y2w.res <- Y2[, y1.idx, drop = FALSE] - EXO.wb2 %*% beta.wb
+  y2 <- ylp[[2]]$Y2
+  if (length(x1_idx) > 0L) {
+    exo_wb2 <- cbind(1, y2[, x1_idx, drop = FALSE])
+    y2w_res <- y2[, y1_idx, drop = FALSE] - exo_wb2 %*% beta_wb
   } else {
-    EXO.wb2 <- matrix(1, nrow(Y2), 1L)
-    Y2w.res <- Y2[, y1.idx, drop = FALSE]
+    exo_wb2 <- matrix(1, nrow(y2), 1L)
+    y2w_res <- y2[, y1_idx, drop = FALSE]
   }
 
   # residual 'Z' (level 2)
-  if (length(between.y.idx) > 0L) {
-    if (length(between.x.idx) > 0L) {
-      EXO.z <- cbind(1, Y2[, between.x.idx, drop = FALSE])
-      Y2.z <- Y2[, between.y.idx, drop = FALSE]
-      Y2z.res <- Y2.z - EXO.z %*% beta.z
+  if (length(between_y_idx) > 0L) {
+    if (length(between_x_idx) > 0L) {
+      exo_z_1 <- cbind(1, y2[, between_x_idx, drop = FALSE])
+      y2_z <- y2[, between_y_idx, drop = FALSE]
+      y2z_res <- y2_z - exo_z_1 %*% beta_z
       # sample.z
       # XX.z <- crossprod(EXO.z)
       # sample.z <- try(solve(XX.z, crossprod(EXO.z, Y2.z)))
@@ -741,66 +742,66 @@ lav_mvreg_cluster_scores_2l <- function(Y1 = NULL,
       # sample.wb2
       # sample.wb2 <- YLp[[2]]$sample.wb2
     } else {
-      Y2z.res <- Y2[, between.y.idx, drop = FALSE]
+      y2z_res <- y2[, between_y_idx, drop = FALSE]
     }
   }
 
   # common parts:
-  sigma.w.inv <- lav_matrix_symmetric_inverse(s = sigma.w)
+  sigma_w_inv <- lav_matrix_symmetric_inverse(s = sigma_w)
 
-  G.beta.w1 <- matrix(0, nclusters, length(beta.w))
-  G.beta.b <- matrix(0, nclusters, length(beta.b))
-  G.beta.wb <- matrix(0, nclusters, length(beta.wb))
-  G.sigma.w1 <- matrix(0, nclusters, length(lav_matrix_vech(sigma.w)))
-  G.sigma.b <- matrix(0, nclusters, length(lav_matrix_vech(sigma.b)))
+  g_beta_w1 <- matrix(0, nclusters, length(beta_w))
+  g_beta_b <- matrix(0, nclusters, length(beta_b))
+  # g_beta_wb <- matrix(0, nclusters, length(beta_wb))
+  g_sigma_w1_1 <- matrix(0, nclusters, length(lav_matrix_vech(sigma_w)))
+  g_sigma_b_1 <- matrix(0, nclusters, length(lav_matrix_vech(sigma_b)))
 
 
-  if (length(between.y.idx) > 0L) {
-    G.beta.z <- matrix(0, nclusters, length(beta.z))
-    G.sigma.zz <- matrix(0, nclusters, length(lav_matrix_vech(sigma.zz)))
-    G.sigma.yz <- matrix(0, nclusters, length(sigma.yz))
+  if (length(between_y_idx) > 0L) {
+    g_beta_z <- matrix(0, nclusters, length(beta_z))
+    g_sigma_zz_1 <- matrix(0, nclusters, length(lav_matrix_vech(sigma_zz)))
+    g_sigma_yz_1 <- matrix(0, nclusters, length(sigma_yz))
 
-    sigma.zz.inv <- lav_matrix_symmetric_inverse(s = sigma.zz)
-    sigma.yz.zi <- sigma.yz %*% sigma.zz.inv
-    sigma.zi.zy <- t(sigma.yz.zi)
-    sigma.b.z <- sigma.b - sigma.yz %*% sigma.zi.zy
+    sigma_zz_inv <- lav_matrix_symmetric_inverse(s = sigma_zz)
+    sigma_yz_zi <- sigma_yz %*% sigma_zz_inv
+    sigma_zi_zy <- t(sigma_yz_zi)
+    sigma_b_z <- sigma_b - sigma_yz %*% sigma_zi_zy
 
     for (cl in seq_len(nclusters)) {
       # cluster size
-      nj <- cluster.size[cl]
+      nj <- cluster_size[cl]
 
       # data within for the cluster (centered)
-      Y1m <- Y1.wb.res[cluster.idx == cl, , drop = FALSE]
-      yc <- Y2w.res[cl, ]
+      # y1m <- y1_wb_res[cluster_idx == cl, , drop = FALSE]
+      yc <- y2w_res[cl, ]
 
       # data between
-      zc <- Y2z.res[cl, ]
-      Y2Yc.yy <- tcrossprod(Y2w.res[cl, ])
-      Y2Yc.zz <- tcrossprod(Y2z.res[cl, ])
-      Y2Yc.yz <- tcrossprod(Y2w.res[cl, ], Y2z.res[cl, ])
+      zc <- y2z_res[cl, ]
+      y2yc_yy <- tcrossprod(y2w_res[cl, ])
+      y2yc_zz <- tcrossprod(y2z_res[cl, ])
+      y2yc_yz <- tcrossprod(y2w_res[cl, ], y2z_res[cl, ])
 
       # construct sigma.j
-      sigma.j <- (nj * sigma.b.z) + sigma.w
-      sigma.j.inv <- lav_matrix_symmetric_inverse(s = sigma.j)
-      sigma.ji.yz.zi <- sigma.j.inv %*% sigma.yz.zi
-      sigma.zi.zy.ji <- t(sigma.ji.yz.zi)
-      sigma.ji.yz <- sigma.j.inv %*% sigma.yz
+      sigma_j <- (nj * sigma_b_z) + sigma_w
+      sigma_j_inv <- lav_matrix_symmetric_inverse(s = sigma_j)
+      sigma_ji_yz_zi <- sigma_j_inv %*% sigma_yz_zi
+      sigma_zi_zy_ji <- t(sigma_ji_yz_zi)
+      sigma_ji_yz <- sigma_j_inv %*% sigma_yz
 
       # common parts
-      ZZ.zi.yz.ji <- Y2Yc.zz %*% sigma.zi.zy.ji
-      ji.YZ.zi <- sigma.j.inv %*% Y2Yc.yz %*% sigma.zz.inv
+      zz_zi_yz_ji <- y2yc_zz %*% sigma_zi_zy_ji
+      ji_yz_zi <- sigma_j_inv %*% y2yc_yz %*% sigma_zz_inv
 
-      jYZj.yy <- sigma.j.inv %*% Y2Yc.yy %*% sigma.j.inv
-      jYZj.yz <- tcrossprod(ji.YZ.zi, sigma.ji.yz)
-      jYZj.zz <- sigma.ji.yz.zi %*% ZZ.zi.yz.ji
+      j_yzj_yy <- sigma_j_inv %*% y2yc_yy %*% sigma_j_inv
+      j_yzj_yz <- tcrossprod(ji_yz_zi, sigma_ji_yz)
+      j_yzj_zz <- sigma_ji_yz_zi %*% zz_zi_yz_ji
 
-      jYZj <- nj * (jYZj.yy + jYZj.zz - jYZj.yz - t(jYZj.yz))
+      j_yzj <- nj * (j_yzj_yy + j_yzj_zz - j_yzj_yz - t(j_yzj_yz))
 
       # SIGMA.W (between part)
-      g.sigma.w1 <- sigma.j.inv - jYZj
-      tmp <- g.sigma.w1 * 2
-      diag(tmp) <- diag(g.sigma.w1)
-      G.sigma.w1[cl, ] <- lav_matrix_vech(tmp)
+      g_sigma_w1 <- sigma_j_inv - j_yzj
+      tmp <- g_sigma_w1 * 2
+      diag(tmp) <- diag(g_sigma_w1)
+      g_sigma_w1_1[cl, ] <- lav_matrix_vech(tmp)
 
       # SIGMA.W (within part)
       # g.sigma.w2 <- ( (nj-1) * sigma.w.inv
@@ -810,57 +811,57 @@ lav_mvreg_cluster_scores_2l <- function(Y1 = NULL,
       # G.sigma.w[cl,] <- G.sigma.w1[cl,] + G.sigma.w2[cl,]
 
       # SIGMA.B
-      g.sigma.b <- nj * g.sigma.w1
-      tmp <- g.sigma.b * 2
-      diag(tmp) <- diag(g.sigma.b)
-      G.sigma.b[cl, ] <- lav_matrix_vech(tmp)
+      g_sigma_b <- nj * g_sigma_w1
+      tmp <- g_sigma_b * 2
+      diag(tmp) <- diag(g_sigma_b)
+      g_sigma_b_1[cl, ] <- lav_matrix_vech(tmp)
 
       # SIGMA.ZZ
-      YZ1 <- ZZ.zi.yz.ji %*% sigma.yz
-      YZ2 <- crossprod(Y2Yc.yz, sigma.ji.yz)
-      tmp <- (t(sigma.yz) %*% g.sigma.w1 %*% sigma.yz
-        - (1 / nj * Y2Yc.zz + t(YZ1) + YZ1 - t(YZ2) - YZ2))
-      g.sigma.zz <- (sigma.zz.inv +
-        nj * sigma.zz.inv %*% tmp %*% sigma.zz.inv)
-      tmp <- g.sigma.zz * 2
-      diag(tmp) <- diag(g.sigma.zz)
-      G.sigma.zz[cl, ] <- lav_matrix_vech(tmp)
+      yz1 <- zz_zi_yz_ji %*% sigma_yz
+      yz2 <- crossprod(y2yc_yz, sigma_ji_yz)
+      tmp <- (t(sigma_yz) %*% g_sigma_w1 %*% sigma_yz
+        - (1 / nj * y2yc_zz + t(yz1) + yz1 - t(yz2) - yz2))
+      g_sigma_zz <- (sigma_zz_inv +
+        nj * sigma_zz_inv %*% tmp %*% sigma_zz_inv)
+      tmp <- g_sigma_zz * 2
+      diag(tmp) <- diag(g_sigma_zz)
+      g_sigma_zz_1[cl, ] <- lav_matrix_vech(tmp)
 
       # SIGMA.ZY
       # g.sigma.yz <- 2 * nj * (
       #              (sigma.j.inv %*%
       #                  (sigma.yz.zi %*% Y2Yc.zz - sigma.yz - Y2Yc.yz)
       #                   + jYZj %*% sigma.yz) %*% sigma.zz.inv )
-      tmp1 <- crossprod(ZZ.zi.yz.ji, sigma.zz.inv)
-      tmp2 <- sigma.ji.yz.zi
-      tmp3 <- ji.YZ.zi
-      tmp4 <- jYZj %*% sigma.yz.zi
-      g.sigma.yz <- 2 * nj * (tmp1 - tmp2 - tmp3 + tmp4)
-      G.sigma.yz[cl, ] <- lav_matrix_vec(g.sigma.yz)
+      tmp1 <- crossprod(zz_zi_yz_ji, sigma_zz_inv)
+      tmp2 <- sigma_ji_yz_zi
+      tmp3 <- ji_yz_zi
+      tmp4 <- j_yzj %*% sigma_yz_zi
+      g_sigma_yz <- 2 * nj * (tmp1 - tmp2 - tmp3 + tmp4)
+      g_sigma_yz_1[cl, ] <- lav_matrix_vec(g_sigma_yz)
 
       # BETA.Z
       # here, we avoid the (sample.z - beta.z) approach
-      exo.z <- cbind(1, Y2[cl, between.x.idx, drop = FALSE])
-      tmp1 <- (sigma.zz.inv + nj * (sigma.zi.zy.ji %*% sigma.yz.zi)) %*% zc
-      tmp2 <- nj * (sigma.zi.zy.ji) %*% yc
-      tmp.z <- crossprod(exo.z, drop(tmp1 - tmp2))
-      G.beta.z[cl, ] <- as.vector(-2 * tmp.z)
+      exo_z <- cbind(1, y2[cl, between_x_idx, drop = FALSE])
+      tmp1 <- (sigma_zz_inv + nj * (sigma_zi_zy_ji %*% sigma_yz_zi)) %*% zc
+      tmp2 <- nj * (sigma_zi_zy_ji) %*% yc
+      tmp_z <- crossprod(exo_z, drop(tmp1 - tmp2))
+      g_beta_z[cl, ] <- as.vector(-2 * tmp_z)
 
       # BETA.W
-      #            exo.w <- cbind(1,
-      #                           Y1[cluster.idx == cl, within.x.idx, drop = FALSE])
-      #            G.beta.w[cl,] <- as.vector( 2 * t(exo.w) %*% (
-      #                                 matrix(1, nj, 1) %x% (zc %*% sigma.zi.zy.ji -
-      #                                                       yc %*% sigma.j.inv +
-      #                                                       yc %*% sigma.w.inv) -
-      #                                 Y1m %*% sigma.w.inv) )
+      #       exo.w <- cbind(1,
+      #                Y1[cluster.idx == cl, within.x.idx, drop = FALSE])
+      #       G.beta.w[cl,] <- as.vector( 2 * t(exo.w) %*% (
+      #                        matrix(1, nj, 1) %x% (zc %*% sigma.zi.zy.ji -
+      #                                              yc %*% sigma.j.inv +
+      #                                              yc %*% sigma.w.inv) -
+      #                            Y1m %*% sigma.w.inv) )
 
       # BETA.W (between part only)
-      exo2.w <- cbind(1, Y2[cl, within.x.idx, drop = FALSE])
-      tmp2 <- (zc %*% sigma.zi.zy.ji -
-        yc %*% sigma.j.inv +
-        yc %*% sigma.w.inv)
-      G.beta.w1[cl, ] <- as.vector(2 * nj * crossprod(exo2.w, tmp2))
+      exo2_w <- cbind(1, y2[cl, within_x_idx, drop = FALSE])
+      tmp2 <- (zc %*% sigma_zi_zy_ji -
+        yc %*% sigma_j_inv +
+        yc %*% sigma_w_inv)
+      g_beta_w1[cl, ] <- as.vector(2 * nj * crossprod(exo2_w, tmp2))
 
       # BETA.W (within part only)
       # exo.w <- cbind(1,
@@ -871,31 +872,31 @@ lav_mvreg_cluster_scores_2l <- function(Y1 = NULL,
       # G.beta.w2[cl,] <- G.beta.ww
 
       # BETA.B
-      exo2.b <- cbind(1, Y2[cl, between.x.idx, drop = FALSE])
-      tmp <- (zc %*% sigma.zi.zy.ji - yc %*% sigma.j.inv)
-      G.beta.b[cl, ] <- as.vector(2 * nj * crossprod(exo2.b, tmp))
+      exo2_b <- cbind(1, y2[cl, between_x_idx, drop = FALSE])
+      tmp <- (zc %*% sigma_zi_zy_ji - yc %*% sigma_j_inv)
+      g_beta_b[cl, ] <- as.vector(2 * nj * crossprod(exo2_b, tmp))
     } # cl
-  } # between.y.idx
+  # between.y.idx
 
-  else { # no between.y.idx
+  } else { # no between.y.idx
 
     for (cl in seq_len(nclusters)) {
       # cluster size
-      nj <- cluster.size[cl]
+      nj <- cluster_size[cl]
 
       # data within for the cluster (centered)
-      Y1m <- Y1.wb.res[cluster.idx == cl, , drop = FALSE]
-      yc <- Y2w.res[cl, ]
+      # y1m <- y1_wb_res[cluster_idx == cl, , drop = FALSE]
+      yc <- y2w_res[cl, ]
 
       # data between
-      Y2Yc.yy <- tcrossprod(Y2w.res[cl, ])
+      y2yc_yy <- tcrossprod(y2w_res[cl, ])
 
       # construct sigma.j
-      sigma.j <- (nj * sigma.b) + sigma.w
-      sigma.j.inv <- lav_matrix_symmetric_inverse(s = sigma.j)
+      sigma_j <- (nj * sigma_b) + sigma_w
+      sigma_j_inv <- lav_matrix_symmetric_inverse(s = sigma_j)
 
       # common part
-      jYYj <- nj * sigma.j.inv %*% Y2Yc.yy %*% sigma.j.inv
+      j_yyj <- nj * sigma_j_inv %*% y2yc_yy %*% sigma_j_inv
 
       # SIGMA.W
       # g.sigma.w <- ( (nj-1) * sigma.w.inv
@@ -905,43 +906,44 @@ lav_mvreg_cluster_scores_2l <- function(Y1 = NULL,
       # G.sigma.w[cl,] <- lav_matrix_vech(tmp)
 
       # SIGMA.W (between part)
-      g.sigma.w1 <- sigma.j.inv - jYYj
-      tmp <- g.sigma.w1 * 2
-      diag(tmp) <- diag(g.sigma.w1)
-      G.sigma.w1[cl, ] <- lav_matrix_vech(tmp)
+      g_sigma_w1 <- sigma_j_inv - j_yyj
+      tmp <- g_sigma_w1 * 2
+      diag(tmp) <- diag(g_sigma_w1)
+      g_sigma_w1_1[cl, ] <- lav_matrix_vech(tmp)
 
       # SIGMA.B
-      g.sigma.b <- nj * (sigma.j.inv - jYYj)
-      tmp <- g.sigma.b * 2
-      diag(tmp) <- diag(g.sigma.b)
-      G.sigma.b[cl, ] <- lav_matrix_vech(tmp)
+      g_sigma_b <- nj * (sigma_j_inv - j_yyj)
+      tmp <- g_sigma_b * 2
+      diag(tmp) <- diag(g_sigma_b)
+      g_sigma_b_1[cl, ] <- lav_matrix_vech(tmp)
 
       # BETA.W (between part only)
-      exo2.w <- cbind(1, Y2[cl, within.x.idx, drop = FALSE])
-      tmp2 <- (-yc %*% sigma.j.inv + yc %*% sigma.w.inv)
-      G.beta.w1[cl, ] <- as.vector(2 * nj * crossprod(exo2.w, tmp2))
+      exo2_w <- cbind(1, y2[cl, within_x_idx, drop = FALSE])
+      tmp2 <- (-yc %*% sigma_j_inv + yc %*% sigma_w_inv)
+      g_beta_w1[cl, ] <- as.vector(2 * nj * crossprod(exo2_w, tmp2))
 
       # BETA.B
-      exo2.b <- cbind(1, Y2[cl, between.x.idx, drop = FALSE])
-      tmp <- -yc %*% sigma.j.inv
-      G.beta.b[cl, ] <- as.vector(2 * nj * crossprod(exo2.b, tmp))
+      exo2_b <- cbind(1, y2[cl, between_x_idx, drop = FALSE])
+      tmp <- -yc %*% sigma_j_inv
+      g_beta_b[cl, ] <- as.vector(2 * nj * crossprod(exo2_b, tmp))
     } # cl
   } # no-between-y
 
   # beta.w (bis)
 
-  #    d.beta.w2 <- -2 * t(EXO.wb[,1:(length(within.x.idx) + 1L), drop = FALSE]) %*% Y1.wb.res %*% sigma.w.inv
+  #    d.beta.w2 <- -2 * t(EXO.wb[,1:(length(within.x.idx) + 1L), drop = FALSE])
+  #                                                %*% Y1.wb.res %*% sigma.w.inv
 
-  Y1.wb.res.i <- Y1.wb.res %*% sigma.w.inv
-  w1.idx <- seq_len(length(within.x.idx) + 1L)
-  a1.idx <- rep(w1.idx, times = ncol(Y1.wb.res.i))
-  b1.idx <- rep(seq_len(ncol(Y1.wb.res.i)), each = length(w1.idx))
-  TMP <- EXO.wb[, a1.idx, drop = FALSE] * Y1.wb.res.i[, b1.idx, drop = FALSE]
-  G.beta.w2 <- -2 * rowsum.default(TMP, cluster.idx,
+  y1_wb_res_i <- y1_wb_res %*% sigma_w_inv
+  w1_idx <- seq_len(length(within_x_idx) + 1L)
+  a1_idx <- rep(w1_idx, times = ncol(y1_wb_res_i))
+  b1_idx <- rep(seq_len(ncol(y1_wb_res_i)), each = length(w1_idx))
+  tmp_1 <- exo_wb[, a1_idx, drop = FALSE] * y1_wb_res_i[, b1_idx, drop = FALSE]
+  g_beta_w2 <- -2 * rowsum.default(tmp_1, cluster_idx,
     reorder = FALSE,
     na.rm = TRUE
   )
-  G.beta.w <- G.beta.w1 + G.beta.w2
+  g_beta_w <- g_beta_w1 + g_beta_w2
 
   # Sigma.W (bis)
   # d.sigma.w2 <- sum(cluster.size - 1) * ( sigma.w.inv
@@ -952,21 +954,21 @@ lav_mvreg_cluster_scores_2l <- function(Y1 = NULL,
   # g.sigma.w2 <- ( (nj-1) * sigma.w.inv
   #        - sigma.w.inv %*% (crossprod(Y1m) - nj*Y2Yc.yy) %*% sigma.w.inv )
 
-  Y1a.res <- Y1.wb.res - Y2w.res[cluster.idx, , drop = FALSE]
-  Y1a.res.i <- Y1a.res %*% sigma.w.inv
-  idx1 <- lav_matrix_vech_col_idx(nrow(sigma.w))
-  idx2 <- lav_matrix_vech_row_idx(nrow(sigma.w))
-  SW2 <- matrix(lav_matrix_vech(sigma.w.inv),
+  y1a_res <- y1_wb_res - y2w_res[cluster_idx, , drop = FALSE]
+  y1a_res_i <- y1a_res %*% sigma_w_inv
+  idx1 <- lav_matrix_vech_col_idx(nrow(sigma_w))
+  idx2 <- lav_matrix_vech_row_idx(nrow(sigma_w))
+  sw2 <- matrix(lav_matrix_vech(sigma_w_inv),
     nrow = nclusters,
-    length(lav_matrix_vech(sigma.w.inv)), byrow = TRUE
+    length(lav_matrix_vech(sigma_w_inv)), byrow = TRUE
   )
-  SW2 <- SW2 * (cluster.size - 1)
-  TMP <- Y1a.res.i[, idx1, drop = FALSE] * Y1a.res.i[, idx2, drop = FALSE]
-  TMP2 <- rowsum.default(TMP, cluster.idx, reorder = FALSE, na.rm = TRUE)
-  G.sigma.w2 <- 2 * (SW2 - TMP2)
-  diagh.idx <- lav_matrix_diagh_idx(nrow(sigma.w))
-  G.sigma.w2[, diagh.idx] <- G.sigma.w2[, diagh.idx, drop = FALSE] / 2
-  G.sigma.w <- G.sigma.w1 + G.sigma.w2
+  sw2 <- sw2 * (cluster_size - 1)
+  tmp_1 <- y1a_res_i[, idx1, drop = FALSE] * y1a_res_i[, idx2, drop = FALSE]
+  tmp2_1 <- rowsum.default(tmp_1, cluster_idx, reorder = FALSE, na.rm = TRUE)
+  g_sigma_w2 <- 2 * (sw2 - tmp2_1)
+  diagh_idx <- lav_matrix_diagh_idx(nrow(sigma_w))
+  g_sigma_w2[, diagh_idx] <- g_sigma_w2[, diagh_idx, drop = FALSE] / 2
+  g_sigma_w <- g_sigma_w1_1 + g_sigma_w2
 
 
 
@@ -974,113 +976,114 @@ lav_mvreg_cluster_scores_2l <- function(Y1 = NULL,
   #                      Res.Int.B, Res.Pi.B, Res.Sigma.B
 
   # ov.idx per level
-  ov.idx <- Lp$ov.idx
+  ov_idx <- lp$ov.idx
 
   # 'tilde' matrices: ALL variables within and between
-  p.tilde <- length(unique(c(ov.idx[[1]], ov.idx[[2]])))
-  p.tilde.star <- p.tilde * (p.tilde + 1) / 2
-  B.tilde <- lav_matrix_vech_reverse(seq_len(p.tilde.star))
+  p_tilde <- length(unique(c(ov_idx[[1]], ov_idx[[2]])))
+  p_tilde_star <- p_tilde * (p_tilde + 1) / 2
+  b_tilde <- lav_matrix_vech_reverse(seq_len(p_tilde_star))
 
   # only 'y'
-  ov.y.idx <- Lp$ov.y.idx
+  ov_y_idx <- lp$ov.y.idx
 
   # two levels only (for now)
-  ov.y.idx1 <- ov.y.idx[[1]]
-  ov.y.idx2 <- ov.y.idx[[2]]
+  ov_y_idx1 <- ov_y_idx[[1]]
+  ov_y_idx2 <- ov_y_idx[[2]]
 
   # WITHIN (is easy)
-  BETA.W.idx <- matrix(seq_len(length(beta.w)), nrow(beta.w), ncol(beta.w))
-  BETA.B.idx <- matrix(seq_len(length(beta.b)), nrow(beta.b), ncol(beta.b))
+  beta_w_idx <- matrix(seq_along(beta_w), nrow(beta_w), ncol(beta_w))
+  beta_b_idx <- matrix(seq_along(beta_b), nrow(beta_b), ncol(beta_b))
 
-  Res.Int.W <- G.beta.w[, BETA.W.idx[1L, ], drop = FALSE]
-  Res.Pi.W <- G.beta.w[, lav_matrix_vecr(BETA.W.idx[-1L, ]), drop = FALSE]
-  Res.Sigma.W <- G.sigma.w
+  res_int_w <- g_beta_w[, beta_w_idx[1L, ], drop = FALSE]
+  res_pi_w <- g_beta_w[, lav_matrix_vecr(beta_w_idx[-1L, ]), drop = FALSE]
+  res_sigma_w <- g_sigma_w
 
   # Sigma.B
-  Sigma.B.tilde <- matrix(0, nclusters, p.tilde.star)
-  col.idx <- lav_matrix_vech(B.tilde[ov.y.idx1, ov.y.idx1, drop = FALSE])
-  Sigma.B.tilde[, col.idx] <- G.sigma.b
+  sigma_b_tilde <- matrix(0, nclusters, p_tilde_star)
+  col_idx <- lav_matrix_vech(b_tilde[ov_y_idx1, ov_y_idx1, drop = FALSE])
+  sigma_b_tilde[, col_idx] <- g_sigma_b_1
 
   # Int.B
-  BETA.B.tilde <- matrix(seq_len(nrow(beta.b) * p.tilde), nrow(beta.b), p.tilde)
-  Int.B <- matrix(0, nclusters, p.tilde)
-  Int.B[, ov.y.idx1] <- G.beta.b[, BETA.B.idx[1L, ]]
+  beta_b_tilde <- matrix(seq_len(nrow(beta_b) * p_tilde), nrow(beta_b), p_tilde)
+  int_b <- matrix(0, nclusters, p_tilde)
+  int_b[, ov_y_idx1] <- g_beta_b[, beta_b_idx[1L, ]]
 
   # Pi.B
-  Pi.B <- matrix(0, nclusters, p.tilde * (nrow(beta.b) - 1L))
-  col.idx <- lav_matrix_vecr(BETA.B.tilde[-1L, ov.y.idx1, drop = FALSE])
-  Pi.B[, col.idx] <- G.beta.b[, lav_matrix_vecr(BETA.B.idx[-1L, ]), drop = FALSE]
+  pi_b <- matrix(0, nclusters, p_tilde * (nrow(beta_b) - 1L))
+  col_idx <- lav_matrix_vecr(beta_b_tilde[-1L, ov_y_idx1, drop = FALSE])
+  pi_b[, col_idx] <- g_beta_b[, lav_matrix_vecr(beta_b_idx[-1L, ]),
+                                                                drop = FALSE]
 
-  if (length(between.y.idx) > 0L) {
+  if (length(between_y_idx) > 0L) {
     # Sigma.B: add yz/zz parts
-    col.idx <- lav_matrix_vec(B.tilde[ov.y.idx1, between.y.idx, drop = FALSE])
-    Sigma.B.tilde[, col.idx] <- G.sigma.yz
-    col.idx <- lav_matrix_vech(B.tilde[between.y.idx, between.y.idx,
+    col_idx <- lav_matrix_vec(b_tilde[ov_y_idx1, between_y_idx, drop = FALSE])
+    sigma_b_tilde[, col_idx] <- g_sigma_yz_1
+    col_idx <- lav_matrix_vech(b_tilde[between_y_idx, between_y_idx,
       drop = FALSE
     ])
-    Sigma.B.tilde[, col.idx] <- G.sigma.zz
+    sigma_b_tilde[, col_idx] <- g_sigma_zz_1
 
     # Int.B: add z-part
-    BETA.Z.idx <- matrix(seq_len(length(beta.z)), nrow(beta.z), ncol(beta.z))
-    Int.B[, between.y.idx] <- G.beta.z[, BETA.Z.idx[1L, ], drop = FALSE]
+    beta_z_idx <- matrix(seq_along(beta_z), nrow(beta_z), ncol(beta_z))
+    int_b[, between_y_idx] <- g_beta_z[, beta_z_idx[1L, ], drop = FALSE]
 
     # Pi.B: add beta.z
-    col.idx <- lav_matrix_vecr(BETA.B.tilde[-1L, between.y.idx, drop = FALSE])
-    Pi.B[, col.idx] <-
-      G.beta.z[, lav_matrix_vecr(BETA.Z.idx[-1L, ]), drop = FALSE]
+    col_idx <- lav_matrix_vecr(beta_b_tilde[-1L, between_y_idx, drop = FALSE])
+    pi_b[, col_idx] <-
+      g_beta_z[, lav_matrix_vecr(beta_z_idx[-1L, ]), drop = FALSE]
   }
 
   # only extract ov.y.idx2 for BETWEEN
-  col.idx <- lav_matrix_vech(B.tilde[ov.y.idx2, ov.y.idx2, drop = FALSE])
-  Res.Sigma.B <- Sigma.B.tilde[, col.idx, drop = FALSE]
+  col_idx <- lav_matrix_vech(b_tilde[ov_y_idx2, ov_y_idx2, drop = FALSE])
+  res_sigma_b <- sigma_b_tilde[, col_idx, drop = FALSE]
 
-  Res.Int.B <- Int.B[, ov.y.idx2, drop = FALSE]
+  res_int_b <- int_b[, ov_y_idx2, drop = FALSE]
 
-  col.idx <- lav_matrix_vecr(BETA.B.tilde[-1, ov.y.idx2])
-  Res.Pi.B <- Pi.B[, col.idx, drop = FALSE]
+  col_idx <- lav_matrix_vecr(beta_b_tilde[-1, ov_y_idx2])
+  res_pi_b <- pi_b[, col_idx, drop = FALSE]
 
-  SCORES <- cbind(
-    Res.Int.W, Res.Pi.W, Res.Sigma.W,
-    Res.Int.B, Res.Pi.B, Res.Sigma.B
+  scores <- cbind(
+    res_int_w, res_pi_w, res_sigma_w,
+    res_int_b, res_pi_b, res_sigma_b
   )
 
-  SCORES
+  scores
 }
 
 # first-order information: outer crossprod of scores per cluster
-lav_mvreg_cluster_information_firstorder <- function(Y1 = NULL,
-                                                     YLp = NULL,
-                                                     Lp = NULL,
-                                                     Res.Sigma.W = NULL,
-                                                     Res.Int.W = NULL,
-                                                     Res.Pi.W = NULL,
-                                                     Res.Sigma.B = NULL,
-                                                     Res.Int.B = NULL,
-                                                     Res.Pi.B = NULL,
-                                                     divide.by.two = FALSE,
-                                                     Sinv.method = "eigen") {
-  N <- NROW(Y1)
+lav_mvreg_cluster_information_firstorder <- function(y1 = NULL,     # nolint
+                                                     ylp = NULL,
+                                                     lp = NULL,
+                                                     res_sigma_w = NULL,
+                                                     res_int_w = NULL,
+                                                     res_pi_w = NULL,
+                                                     res_sigma_b = NULL,
+                                                     res_int_b = NULL,
+                                                     res_pi_b = NULL,
+                                                     divide_by_two = FALSE,
+                                                     sinv_method = "eigen") {
+  # n <- NROW(y1)
 
-  SCORES <- lav_mvreg_cluster_scores_2l(
-    Y1 = Y1,
-    YLp = YLp,
-    Lp = Lp,
-    Res.Sigma.W = Res.Sigma.W,
-    Res.Int.W = Res.Int.W,
-    Res.Pi.W = Res.Pi.W,
-    Res.Sigma.B = Res.Sigma.B,
-    Res.Int.B = Res.Int.B,
-    Res.Pi.B = Res.Pi.B,
-    Sinv.method = Sinv.method
+  scores <- lav_mvreg_cluster_scores_2l(
+    y1 = y1,
+    ylp = ylp,
+    lp = lp,
+    res_sigma_w = res_sigma_w,
+    res_int_w = res_int_w,
+    res_pi_w = res_pi_w,
+    res_sigma_b = res_sigma_b,
+    res_int_b = res_int_b,
+    res_pi_b = res_pi_b,
+    sinv_method = sinv_method
   )
 
   # divide by 2 (if we want scores wrt objective function)
-  if (divide.by.two) {
-    SCORES <- SCORES / 2
+  if (divide_by_two) {
+    scores <- scores / 2
   }
 
   # unit information
-  information <- crossprod(SCORES) / Lp$nclusters[[2]]
+  information <- crossprod(scores) / lp$nclusters[[2]]
 
   information
 }

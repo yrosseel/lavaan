@@ -21,11 +21,11 @@ lav_optim_noniter <- function(lavmodel = NULL, lavsamplestats = NULL,
   }
 
   # no support (yet) for nonlinear constraints
-  nonlinear.idx <- c(
+  nonlinear_idx <- c(
     lavmodel@ceq.nonlinear.idx,
     lavmodel@cin.nonlinear.idx
   )
-  if (length(nonlinear.idx) > 0L) {
+  if (length(nonlinear_idx) > 0L) {
     lav_msg_stop(gettext(
       "nonlinear constraints not supported (yet) with optim.method = 'NONITER'."
       ))
@@ -46,12 +46,12 @@ lav_optim_noniter <- function(lavmodel = NULL, lavsamplestats = NULL,
   }
 
   # extract current set of free parameters
-  x.old <- lav_model_get_parameters(lavmodel)
-  npar <- length(x.old)
+  x_old <- lav_model_get_parameters(lavmodel)
+  # npar <- length(x_old)
 
 
   # fabin?
-  ok.flag <- FALSE
+  ok_flag <- FALSE
   if (lavoptions$estimator %in% c("FABIN2", "FABIN3")) {
     x <- try(lav_cfa_fabin_internal(
       lavmodel = lavmodel,
@@ -96,15 +96,15 @@ lav_optim_noniter <- function(lavmodel = NULL, lavsamplestats = NULL,
     )
   }
   if (inherits(x, "try-error")) {
-    x <- x.old
+    x <- x_old
   } else {
-    ok.flag <- TRUE
+    ok_flag <- TRUE
   }
 
   # closing
   fx <- 0
   attr(fx, "fx.group") <- rep(0, lavmodel@ngroups)
-  if (ok.flag) {
+  if (ok_flag) {
     attr(x, "converged") <- TRUE
     attr(x, "warn.txt") <- ""
   } else {

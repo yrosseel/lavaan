@@ -221,25 +221,25 @@ lav_model_h1_information_expected <- function(lavobject = NULL, # nolint
 
           if (structured) {
             a1[[g]] <- lav_mvreg_information_expected(
-              sample.mean.x     = lavsamplestats@mean.x[[g]],
-              sample.cov.x      = lavsamplestats@cov.x[[g]],
-              sample.nobs       = lavsamplestats@nobs[[g]],
-              res.int           = res_int,
-              res.slopes        = res_slopes,
+              sample_mean_x     = lavsamplestats@mean.x[[g]],
+              sample_cov_x      = lavsamplestats@cov.x[[g]],
+              sample_nobs       = lavsamplestats@nobs[[g]],
+              res_int           = res_int,
+              res_slopes        = res_slopes,
               # wt               = WT,
               # meanstructure    = lavmodel@meanstructure,
-              res.cov           = lavimplied$res.cov[[g]]
+              res_cov           = lavimplied$res.cov[[g]]
             )
           } else {
             a1[[g]] <- lav_mvreg_information_expected(
-              sample.mean.x     = lavsamplestats@mean.x[[g]],
-              sample.cov.x      = lavsamplestats@cov.x[[g]],
-              sample.nobs       = lavsamplestats@nobs[[g]],
-              res.int           = lavsamplestats@res.int[[g]],
-              res.slopes        = lavsamplestats@res.slopes[[g]],
+              sample_mean_x     = lavsamplestats@mean.x[[g]],
+              sample_cov_x      = lavsamplestats@cov.x[[g]],
+              sample_nobs       = lavsamplestats@nobs[[g]],
+              res_int           = lavsamplestats@res.int[[g]],
+              res_slopes        = lavsamplestats@res.slopes[[g]],
               # wt               = WT,
               # meanstructure    = lavmodel@meanstructure,
-              res.cov           = lavsamplestats@res.cov[[g]]
+              res_cov           = lavsamplestats@res.cov[[g]]
             )
           }
         } else {
@@ -446,29 +446,29 @@ lav_model_h1_information_observed <- function(lavobject = NULL, # nolint
 
           if (structured) {
             a1[[g]] <- lav_mvreg_information_observed_samplestats(
-              sample.res.int    = lavsamplestats@res.int[[g]],
-              sample.res.slopes = lavsamplestats@res.slopes[[g]],
-              sample.res.cov    = lavsamplestats@res.cov[[g]],
-              sample.mean.x     = lavsamplestats@mean.x[[g]],
-              sample.cov.x      = lavsamplestats@cov.x[[g]],
-              res.int           = res_int,
-              res.slopes        = res_slopes,
+              sample_res_int    = lavsamplestats@res.int[[g]],
+              sample_res_slopes = lavsamplestats@res.slopes[[g]],
+              sample_res_cov    = lavsamplestats@res.cov[[g]],
+              sample_mean_x     = lavsamplestats@mean.x[[g]],
+              sample_cov_x      = lavsamplestats@cov.x[[g]],
+              res_int           = res_int,
+              res_slopes        = res_slopes,
               # wt               = WT,
               # meanstructure    = lavmodel@meanstructure,
-              res.cov           = lavimplied$res.cov[[g]]
+              res_cov           = lavimplied$res.cov[[g]]
             )
           } else {
             a1[[g]] <- lav_mvreg_information_observed_samplestats(
-              sample.res.int    = lavsamplestats@res.int[[g]],
-              sample.res.slopes = lavsamplestats@res.slopes[[g]],
-              sample.res.cov    = lavsamplestats@res.cov[[g]],
-              sample.mean.x     = lavsamplestats@mean.x[[g]],
-              sample.cov.x      = lavsamplestats@cov.x[[g]],
-              res.int           = lavsamplestats@res.int[[g]],
-              res.slopes        = lavsamplestats@res.slopes[[g]],
+              sample_res_int    = lavsamplestats@res.int[[g]],
+              sample_res_slopes = lavsamplestats@res.slopes[[g]],
+              sample_res_cov    = lavsamplestats@res.cov[[g]],
+              sample_mean_x     = lavsamplestats@mean.x[[g]],
+              sample_cov_x      = lavsamplestats@cov.x[[g]],
+              res_int           = lavsamplestats@res.int[[g]],
+              res_slopes        = lavsamplestats@res.slopes[[g]],
               # wt               = WT,
               # meanstructure    = lavmodel@meanstructure,
-              res.cov           = lavsamplestats@res.cov[[g]]
+              res_cov           = lavsamplestats@res.cov[[g]]
             )
           }
         } else {
@@ -739,16 +739,16 @@ lav_model_h1_information_firstorder <- function(lavobject = NULL,     # nolint
         res_int_b <- implied$res.int[[(g - 1) * lavdata@nlevels + 2L]]
         res_pi_b <- implied$res.slopes[[(g - 1) * lavdata@nlevels + 2L]]
         b1[[g]] <- lav_mvreg_cluster_information_firstorder(
-          Y1            = lavdata@X[[g]],
-          YLp           = lavsamplestats@YLp[[g]],
-          Lp            = lavdata@Lp[[g]],
-          Res.Sigma.W   = res_sigma_w,
-          Res.Int.W     = res_int_w,
-          Res.Pi.W      = res_pi_w,
-          Res.Sigma.B   = res_sigma_b,
-          Res.Int.B     = res_int_b,
-          Res.Pi.B      = res_pi_b,
-          divide.by.two = TRUE
+          y1            = lavdata@X[[g]],
+          ylp           = lavsamplestats@YLp[[g]],
+          lp            = lavdata@Lp[[g]],
+          res_sigma_w   = res_sigma_w,
+          res_int_w     = res_int_w,
+          res_pi_w      = res_pi_w,
+          res_sigma_b   = res_sigma_b,
+          res_int_b     = res_int_b,
+          res_pi_b      = res_pi_b,
+          divide_by_two = TRUE
         )
       } else {
         mu_w <- implied$mean[[(g - 1) * lavdata@nlevels + 1L]]
@@ -822,13 +822,13 @@ lav_model_h1_information_firstorder <- function(lavobject = NULL,     # nolint
           }
 
           b1[[g]] <- lav_mvreg_information_firstorder(
-            Y              = lavdata@X[[g]],
-            eXo            = lavdata@eXo[[g]],
-            res.int        = res_int,
-            res.slopes     = res_slopes,
+            y              = lavdata@X[[g]],
+            exo            = lavdata@eXo[[g]],
+            res_int        = res_int,
+            res_slopes     = res_slopes,
             # wt            = WT,
             # meanstructure = lavmodel@meanstructure,
-            res.cov        = implied$res.cov[[g]]
+            res_cov        = implied$res.cov[[g]]
           )
         } else {
           # conditional.x = FALSE
