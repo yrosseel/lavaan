@@ -643,7 +643,8 @@ lav_model_eetax <- function(lavmodel = NULL, glist = NULL,
 # return 'regular' LAMBDA
 lav_model_lambda <- function(lavmodel = NULL, glist = NULL,
                              handle_dummy_lv = TRUE,
-                             remove_dummy_lv = FALSE) {
+                             remove_dummy_lv = FALSE,
+                             use_wmat = FALSE) {
   # state or final?
   if (is.null(glist)) glist <- lavmodel@GLIST
 
@@ -679,7 +680,8 @@ lav_model_lambda <- function(lavmodel = NULL, glist = NULL,
         ov_x_dummy_ov_idx = ov_x_dummy_ov_idx,
         ov_y_dummy_lv_idx = ov_y_dummy_lv_idx,
         ov_x_dummy_lv_idx = ov_x_dummy_lv_idx,
-        remove_dummy_lv = remove_dummy_lv
+        remove_dummy_lv = remove_dummy_lv,
+        use_wmat = use_wmat
       )
     } else {
       lav_msg_stop(gettext(
@@ -693,7 +695,8 @@ lav_model_lambda <- function(lavmodel = NULL, glist = NULL,
 }
 
 # THETA: observed (residual) variances
-lav_model_theta <- function(lavmodel = NULL, glist = NULL, fix = TRUE) {
+lav_model_theta <- function(lavmodel = NULL, glist = NULL, fix = TRUE,
+                            use_wmat = FALSE) {
   # state or final?
   if (is.null(glist)) glist <- lavmodel@GLIST
 
@@ -718,7 +721,8 @@ lav_model_theta <- function(lavmodel = NULL, glist = NULL, fix = TRUE) {
           ov_y_dummy_ov_idx = lavmodel@ov.y.dummy.ov.idx[[g]],
           ov_x_dummy_ov_idx = lavmodel@ov.x.dummy.ov.idx[[g]],
           ov_y_dummy_lv_idx = lavmodel@ov.y.dummy.lv.idx[[g]],
-          ov_x_dummy_lv_idx = lavmodel@ov.x.dummy.lv.idx[[g]]
+          ov_x_dummy_lv_idx = lavmodel@ov.x.dummy.lv.idx[[g]],
+          use_wmat = use_wmat
         )
       } else {
         theta_g <- lav_lisrel_theta(mlist = mlist)

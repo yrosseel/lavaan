@@ -554,7 +554,8 @@ lav_predict_internal <- function(lavmodel = NULL,
     if (mdist) {
       LAMBDA <- lav_model_lambda(
         lavmodel = lavmodel,
-        remove_dummy_lv = FALSE
+        remove_dummy_lv = FALSE,
+        use_wmat = TRUE
       )
       MDIST <- lapply(seq_len(lavdata@ngroups), function(g) {
         Sigma <- lavimplied$cov[[g]]
@@ -817,7 +818,8 @@ lav_predict_eta_normal <- function(lavobject = NULL, # for convenience
     }
   }
 
-  LAMBDA <- lav_model_lambda(lavmodel = lavmodel, remove_dummy_lv = FALSE)
+  LAMBDA <- lav_model_lambda(lavmodel = lavmodel, remove_dummy_lv = FALSE,
+                             use_wmat = TRUE)
   Sigma.hat <- lavimplied$cov
   Sigma.inv <- lapply(Sigma.hat, MASS::ginv)
   VETA <- lav_model_veta(lavmodel = lavmodel)
@@ -858,6 +860,7 @@ lav_predict_eta_normal <- function(lavobject = NULL, # for convenience
     VETA.g <- VETA[[b]]
     EETA.g <- EETA[[b]]
     LAMBDA.g <- LAMBDA[[b]]
+
     EY.g <- EY[[b]]
     Sigma.inv.g <- Sigma.inv[[b]]
 
@@ -1150,7 +1153,8 @@ lav_predict_eta_bartlett <- function(lavobject = NULL, # for convenience
     }
   }
 
-  LAMBDA <- lav_model_lambda(lavmodel = lavmodel, remove_dummy_lv = FALSE)
+  LAMBDA <- lav_model_lambda(lavmodel = lavmodel, remove_dummy_lv = FALSE,
+                             use_wmat = TRUE)
   Sigma.hat <- lavimplied$cov
   Sigma.inv <- lapply(lavimplied$cov, MASS::ginv)
   VETA <- lav_model_veta(lavmodel = lavmodel) # for se only
@@ -2031,7 +2035,7 @@ lav_predict_tmat_green <- function(lavobject = NULL,
   }
   Sigma <- lavimplied$cov
   VETA <- lav_model_veta(lavmodel = lavmodel, remove_dummy_lv = FALSE)
-  LAMBDA <- lav_model_lambda(lavmodel, remove_dummy_lv = FALSE)
+  LAMBDA <- lav_model_lambda(lavmodel, remove_dummy_lv = FALSE, use_wmat = TRUE)
 
   nblocks <- lavmodel@nblocks
   tmat <- vector("list", length = nblocks)
@@ -2070,7 +2074,7 @@ lav_predict_tmat_det <- function(lavobject = NULL,
   }
   Sigma <- lavimplied$cov
   VETA <- lav_model_veta(lavmodel = lavmodel, remove_dummy_lv = FALSE)
-  LAMBDA <- lav_model_lambda(lavmodel, remove_dummy_lv = FALSE)
+  LAMBDA <- lav_model_lambda(lavmodel, remove_dummy_lv = FALSE, use_wmat = TRUE)
 
   nblocks <- lavmodel@nblocks
   tmat <- vector("list", length = nblocks)
