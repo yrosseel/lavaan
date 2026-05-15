@@ -4,7 +4,8 @@ lav_model_objective <- function(lavmodel = NULL,
                                 glist = NULL,
                                 lavsamplestats = NULL,
                                 lavdata = NULL,
-                                lavcache = NULL) {
+                                lavcache = NULL,
+                                implied = NULL) {
   # state or final?
   if (is.null(glist)) glist <- lavmodel@GLIST
 
@@ -50,8 +51,9 @@ lav_model_objective <- function(lavmodel = NULL,
     ) # ,
     # cov.x = lavsamplestats@cov.x)
     if (estimator == "NTRLS") {
-      implied_fast <- lav_model_implied_fast(
+      implied_fast <- lav_model_implied_fast_state(
         lavmodel = lavmodel, glist = glist,
+        implied = implied,
         need_sigma = TRUE,
         need_mu = TRUE,
         extra = TRUE
@@ -60,8 +62,9 @@ lav_model_objective <- function(lavmodel = NULL,
       mu_hat <- implied_fast$mu
     }
     if (estimator == "DLS" && estimator_args$dls.GammaNT == "model") {
-      implied_fast <- lav_model_implied_fast(
+      implied_fast <- lav_model_implied_fast_state(
         lavmodel = lavmodel, glist = glist,
+        implied = implied,
         need_sigma = TRUE,
         need_mu = TRUE,
         extra = FALSE
@@ -78,8 +81,9 @@ lav_model_objective <- function(lavmodel = NULL,
     #                     GLIST = GLIST, lavsamplestats = lavsamplestats,
     #                     extra = (estimator %in% c("ML", "REML","NTRLS")))
     # } else {
-    implied_fast <- lav_model_implied_fast(
+    implied_fast <- lav_model_implied_fast_state(
       lavmodel = lavmodel, glist = glist,
+      implied = implied,
       need_sigma = TRUE,
       need_mu = meanstructure,
       need_th = categorical,

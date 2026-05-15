@@ -10,8 +10,10 @@ lav_model_gradient <- function(lavmodel = NULL,
                                delta = NULL,
                                m_el_idx = NULL,
                                x_el_idx = NULL,
-                               ceq_simple = FALSE) {
+                               ceq_simple = FALSE,
+                               implied = NULL) {
   nmat <- lavmodel@nmat
+  mm_idx <- lav_model_get_mm_idx(lavmodel)
   estimator <- lavmodel@estimator
   representation <- lavmodel@representation
   meanstructure <- lavmodel@meanstructure
@@ -63,8 +65,9 @@ lav_model_gradient <- function(lavmodel = NULL,
     #                     GLIST = GLIST,
     #                     extra = (estimator %in% c("ML", "REML","NTRLS")))
     # } else {
-    implied_fast <- lav_model_implied_fast(
+    implied_fast <- lav_model_implied_fast_state(
       lavmodel = lavmodel, glist = glist,
+      implied = implied,
       need_sigma = TRUE,
       need_mu = meanstructure,
       need_th = categorical,
@@ -99,8 +102,9 @@ lav_model_gradient <- function(lavmodel = NULL,
     #   gw <- lav_model_gw(lavmodel = lavmodel, glist = glist)
     # }
   } else if (estimator == "DLS" && estimator_args$dls.GammaNT == "model") {
-    implied_fast <- lav_model_implied_fast(
+    implied_fast <- lav_model_implied_fast_state(
       lavmodel = lavmodel, glist = glist,
+      implied = implied,
       need_sigma = TRUE,
       need_mu = TRUE,
       extra = FALSE
@@ -156,7 +160,7 @@ lav_model_gradient <- function(lavmodel = NULL,
 
     for (g in 1:lavmodel@nblocks) {
       # which mm belong to group g?
-      mm_in_group <- 1:nmat[g] + cumsum(c(0, nmat))[g]
+      mm_in_group <- mm_idx[[g]]
       mm_names <- names(glist[mm_in_group])
 
       if (representation == "LISREL") {
@@ -201,7 +205,7 @@ lav_model_gradient <- function(lavmodel = NULL,
       if (lavmodel@ceq.simple.only) { # new in 0.6-11
         dx <- numeric(lavmodel@nx.unco)
         for (g in 1:lavmodel@nblocks) {
-          mm_in_group <- 1:nmat[g] + cumsum(c(0, nmat))[g]
+          mm_in_group <- mm_idx[[g]]
           for (mm in mm_in_group) {
             m_free_idx <- lavmodel@m.free.idx[[mm]]
             x_unco_idx <- lavmodel@x.unco.idx[[mm]]
@@ -214,7 +218,7 @@ lav_model_gradient <- function(lavmodel = NULL,
       } else {
         dx <- numeric(nx_free)
         for (g in 1:lavmodel@nblocks) {
-          mm_in_group <- 1:nmat[g] + cumsum(c(0, nmat))[g]
+          mm_in_group <- mm_idx[[g]]
           for (mm in mm_in_group) {
             m_free_idx <- lavmodel@m.free.idx[[mm]]
             x_free_idx <- lavmodel@x.free.idx[[mm]]
@@ -763,6 +767,7 @@ lav_model_ddelta_dx <- function(lavmodel = NULL, glist = NULL,
     n_col <- lavmodel@nx.free
   }
   m_el_idx <- x_el_idx <- vector("list", length = length(glist))
+  mm_idx <- lav_model_get_mm_idx(lavmodel)
   for (mm in seq_along(glist)) {
     m_el_idx[[mm]] <- lavmodel@m.free.idx[[mm]]
     if (lavmodel@ceq.simple.only) {
@@ -788,7 +793,7 @@ lav_model_ddelta_dx <- function(lavmodel = NULL, glist = NULL,
   # compute Delta per group
   delta <- vector("list", length = nblocks)
   for (g in 1:nblocks) {
-    mm_in_group <- 1:nmat[g] + cumsum(c(0, nmat))[g]
+    mm_in_group <- mm_idx[[g]]
     delta_group <- NULL
     for (mm in mm_in_group) {
       mname <- names(lavmodel@GLIST)[mm]
@@ -952,9 +957,9 @@ lav_model_delta <- function(lavmodel = NULL, glist = NULL,
   }
 
   delta <- vector("list", length = lavmodel@nblocks)
+  mm_idx <- lav_model_get_mm_idx(lavmodel)
   for (b in seq_len(lavmodel@nblocks)) {
-    mm_in_group <-
-      seq_len(lavmodel@nmat[b]) + cumsum(c(0, lavmodel@nmat))[b]
+    mm_in_group <- mm_idx[[b]]
 
     if (representation == "LISREL") {
       delta[[b]] <- lav_lisrel_dimplied_dx(
@@ -1135,7 +1140,8 @@ lav_model_gradient_dd <- function(lavmodel, g_list = NULL, group = 1L) {
   num_idx <- lavmodel@num.idx[[group]]
 
   # fix Delta's...
-  mm_in_group <- 1:lavmodel@nmat[group] + cumsum(c(0, lavmodel@nmat))[group]
+  mm_idx <- lav_model_get_mm_idx(lavmodel)
+  mm_in_group <- mm_idx[[group]]
   m_list <- g_list[mm_in_group]
 
   dd <- list()

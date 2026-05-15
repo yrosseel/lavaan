@@ -154,6 +154,55 @@ lav_model_implied_fast <- function(lavmodel = NULL, glist = NULL,
   out
 }
 
+lav_model_implied_fast_state <- function(lavmodel = NULL, glist = NULL,
+                                         implied = NULL,
+                                         need_sigma = FALSE,
+                                         need_mu = FALSE,
+                                         need_th = FALSE,
+                                         need_pi = FALSE,
+                                         extra = FALSE,
+                                         delta = TRUE) {
+  spec <- list(
+    need_sigma = need_sigma,
+    need_mu = need_mu,
+    need_th = need_th,
+    need_pi = need_pi,
+    extra = extra,
+    delta = delta
+  )
+
+  if (is.environment(implied)) {
+    if (!is.null(implied$implied) &&
+        identical(implied$implied_spec, spec)) {
+      return(implied$implied)
+    }
+
+    implied$implied <- lav_model_implied_fast(
+      lavmodel = lavmodel,
+      glist = glist,
+      need_sigma = need_sigma,
+      need_mu = need_mu,
+      need_th = need_th,
+      need_pi = need_pi,
+      extra = extra,
+      delta = delta
+    )
+    implied$implied_spec <- spec
+    return(implied$implied)
+  }
+
+  lav_model_implied_fast(
+    lavmodel = lavmodel,
+    glist = glist,
+    need_sigma = need_sigma,
+    need_mu = need_mu,
+    need_th = need_th,
+    need_pi = need_pi,
+    extra = extra,
+    delta = delta
+  )
+}
+
 lav_model_sigma <- function(lavmodel = NULL, glist = NULL, extra = FALSE,
                             delta = TRUE) {
   lav_model_implied_fast(

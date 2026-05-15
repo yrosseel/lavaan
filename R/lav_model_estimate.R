@@ -291,6 +291,39 @@ lav_model_estimate <- function(lavmodel = NULL,
     upper[bad_idx] <- +Inf
   }
 
+  estimate_cache <- new.env(parent = emptyenv())
+  estimate_cache$packed_x <- NULL
+  estimate_cache$model_x <- NULL
+  estimate_cache$glist <- NULL
+  estimate_cache$implied <- NULL
+  estimate_cache$implied_spec <- NULL
+
+  estimate_state <- function(x) {
+    if (!is.null(estimate_cache$packed_x) &&
+        identical(x, estimate_cache$packed_x)) {
+      return(estimate_cache)
+    }
+
+    model_x <- x
+    if (lavmodel@eq.constraints) {
+      model_x <- as.numeric(lavmodel@eq.constraints.K %*% model_x) +
+        lavmodel@eq.constraints.k0
+    }
+    model_x <- model_x / parscale
+
+    estimate_cache$packed_x <- x
+    estimate_cache$model_x <- model_x
+    estimate_cache$glist <- lav_model_x2glist(lavmodel, x = model_x)
+    estimate_cache$implied <- NULL
+    estimate_cache$implied_spec <- NULL
+    estimate_cache
+  }
+
+  share_implied <- estimator == "ML" &&
+    lavdata@nlevels == 1L &&
+    !lavmodel@categorical &&
+    lavsamplestats@ridge <= 0.0
+
   # function to be minimized
   objective_function <- function(x, verbose = FALSE, inf_to_max = FALSE,
                                  debug = FALSE) {
@@ -304,24 +337,15 @@ lav_model_estimate <- function(lavmodel = NULL,
     #    x[lavmodel@x.free.var.idx] <- x.var.sign * (x.var * x.var) # square!
     # }
 
-    # 2. unpack
-    if (lavmodel@eq.constraints) {
-      x <- as.numeric(lavmodel@eq.constraints.K %*% x) +
-        lavmodel@eq.constraints.k0
-    }
-
-    # 1. unscale
-    x <- x / parscale
-
-    # update GLIST (change `state') and make a COPY!
-    glist <- lav_model_x2glist(lavmodel, x = x)
+    state <- estimate_state(x)
 
     fx <- lav_model_objective(
       lavmodel = lavmodel,
-      glist = glist,
+      glist = state$glist,
       lavsamplestats = lavsamplestats,
       lavdata = lavdata,
-      lavcache = lavcache
+      lavcache = lavcache,
+      implied = if (share_implied) state else NULL
     )
 
     # only for PML: divide by N (to speed up convergence)
@@ -342,12 +366,12 @@ lav_model_estimate <- function(lavmodel = NULL,
       # tmp.x <- lav_model_get_parameters(lavmodel, GLIST=GLIST, type="unco")
       # print(tmp.x); cat("\n")
       cat("Current free parameter values =\n")
-      print(x)
+      print(state$model_x)
       cat("\n")
     }
 
     if (lavoptions$optim.partrace) {
-      penv$PARTRACE <- rbind(penv$PARTRACE, c(fx, x))
+      penv$PARTRACE <- rbind(penv$PARTRACE, c(fx, state$model_x))
     }
 
     # for L-BFGS-B
@@ -372,27 +396,18 @@ lav_model_estimate <- function(lavmodel = NULL,
     #    x[lavmodel@x.free.var.idx] <- x.var.sign * (x.var * x.var) # square!
     # }
 
-    # 2. unpack
-    if (lavmodel@eq.constraints) {
-      x <- as.numeric(lavmodel@eq.constraints.K %*% x) +
-        lavmodel@eq.constraints.k0
-    }
-
-    # 1. unscale
-    x <- x / parscale
-
-    # update GLIST (change `state') and make a COPY!
-    glist <- lav_model_x2glist(lavmodel, x = x)
+    state <- estimate_state(x)
 
     dx <- lav_model_gradient(
       lavmodel = lavmodel,
-      glist = glist,
+      glist = state$glist,
       lavsamplestats = lavsamplestats,
       lavdata = lavdata,
       lavcache = lavcache,
       type = "free",
       group_weight = group_weight, ### check me!!
-      ceq_simple = lavmodel@ceq.simple.only
+      ceq_simple = lavmodel@ceq.simple.only,
+      implied = if (share_implied) state else NULL
     )
 
     if (debug) {

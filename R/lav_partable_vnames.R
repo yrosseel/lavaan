@@ -22,6 +22,78 @@ lav_object_vnames <- function(object, type = "ov", ...) { # nolint
 }
 lavNames <- lav_object_vnames    # synonym #nolint
 
+lav_partable_vnames_cached_block_select <- function(partable, dotdotdot) {
+  dot_names <- names(dotdotdot)
+  if (is.null(dot_names) ||
+      any(!nzchar(dot_names)) ||
+      !all(dot_names %in% c("block", "group", "level"))) {
+    return(NULL)
+  }
+
+  if (is.null(partable$block)) {
+    partable_block <- rep(1L, length(partable$lhs))
+  } else {
+    partable_block <- partable$block
+  }
+  valid_row <- partable_block > 0L &
+    !partable$op %in% c("==", "<", ">", ":=")
+  block_select <- unique(na.omit(partable_block[valid_row]))
+  if (length(block_select) == 0L) {
+    lav_msg_warn(gettext("no blocks selected."))
+    return(block_select)
+  }
+
+  block_row <- match(block_select, partable_block)
+  for (dot in seq_along(dotdotdot)) {
+    block_var <- dot_names[dot]
+    block_val <- dotdotdot[[dot]]
+
+    if (block_var == "block") {
+      if (!all(block_val %in% partable_block)) {
+        lav_msg_stop(gettextf(
+          "%1$s column does not contain value `%2$s'", block_var, block_val))
+      }
+      block_select <- block_select[block_select %in% block_val]
+      block_row <- match(block_select, partable_block)
+      next
+    }
+
+    block_var_values <- partable[[block_var]]
+    if (is.null(block_var_values) || length(block_var_values) == 0L) {
+      if (block_var == "group" &&
+          length(block_val) == 1L &&
+          !is.na(block_val) &&
+          block_val == 1L) {
+        next
+      }
+      return(NULL)
+    }
+    if (!all(block_val %in% block_var_values)) {
+      lav_msg_stop(gettextf(
+        "%1$s column does not contain value `%2$s'", block_var, block_val))
+    }
+
+    block_select <- block_select[block_var_values[block_row] %in% block_val]
+    block_row <- match(block_select, partable_block)
+  }
+
+  if (length(block_select) == 0L) {
+    lav_msg_warn(gettext("no blocks selected."))
+  }
+  block_select
+}
+
+lav_partable_vnames_cached_block_subset <- function(cached_values,
+                                                    block_select) {
+  if (length(block_select) == 0L) {
+    return(vector("list", length = 0L))
+  }
+
+  out <- vector("list", length = max(block_select))
+  out[block_select] <- cached_values[block_select]
+  out
+}
+
 # return variable names in a partable
 # - the 'type' argument determines the status of the variable: observed,
 #   latent, endo/exo/...; default = "ov", but most used is type = "all"
@@ -136,6 +208,34 @@ lav_partable_vnames <- function(partable, type = NULL, ..., # nolint
         }
       } else {
         return(return_value)
+      }
+    } else {
+      block_select <- lav_partable_vnames_cached_block_select(
+        partable,
+        dotdotdot
+      )
+      if (!is.null(block_select)) {
+        if (type[1L] == "all") {
+          return(lapply(return_value,
+            lav_partable_vnames_cached_block_subset,
+            block_select = block_select
+          ))
+        } else if (length(type) == 1L) {
+          return_value <- return_value[[type]]
+          if (length(block_select) == 1L) {
+            return(return_value[[block_select]])
+          } else {
+            return(lav_partable_vnames_cached_block_subset(
+              return_value,
+              block_select
+            ))
+          }
+        } else {
+          return(lapply(return_value,
+            lav_partable_vnames_cached_block_subset,
+            block_select = block_select
+          ))
+        }
       }
     }
   }

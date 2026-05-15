@@ -396,18 +396,15 @@ lav_mvnorm_cluster_dlogl_2l_samplestats <- function(ylp = NULL, # nolint
     logdet = FALSE, sinv_method = sinv_method
   )
 
-  # both level-1 and level-2
-  g_muy <- matrix(0, ncluster_sizes, length(mu_y))
-  g_sigma_w_1 <- matrix(0, ncluster_sizes, length(lav_matrix_vech(sigma_w_1)))
-  g_sigma_b_1 <- matrix(0, ncluster_sizes, length(lav_matrix_vech(sigma_b_1)))
+  # weighted level-1 and level-2 derivative accumulators
+  d_mu_y <- numeric(length(mu_y))
+  d_sigma_w1_vech <- numeric(length(lav_matrix_vech(sigma_w_1)))
+  d_sigma_b_vech <- numeric(length(lav_matrix_vech(sigma_b_1)))
 
   if (length(between_idx) > 0L) {
-    g_muz <- matrix(0, ncluster_sizes, length(mu_z))
-    g_sigma_zz_1 <- matrix(
-      0, ncluster_sizes,
-      length(lav_matrix_vech(sigma_zz))
-    )
-    g_sigma_yz_1 <- matrix(0, ncluster_sizes, length(lav_matrix_vec(sigma_yz)))
+    d_mu_z <- numeric(length(mu_z))
+    d_sigma_zz_vech <- numeric(length(lav_matrix_vech(sigma_zz)))
+    d_sigma_yz_vec <- numeric(length(lav_matrix_vec(sigma_yz)))
 
     sigma_zz_inv <- lav_matrix_symmetric_inverse(
       s = sigma_zz,
@@ -417,20 +414,20 @@ lav_mvnorm_cluster_dlogl_2l_samplestats <- function(ylp = NULL, # nolint
     sigma_zi_zy <- t(sigma_yz_zi)
     sigma_b_z <- sigma_b_1 - sigma_yz %*% sigma_zi_zy
 
+    b_idx <- seq_along(lp$between.idx[[2]])
 
     for (clz in seq_len(ncluster_sizes)) {
       # cluster size
       nj <- cluster_sizes[clz]
+      cluster_weight <- cluster_size_ns[clz]
 
       # level-2 vectors
-      b_idx <- seq_along(lp$between.idx[[2]])
       zyc <- mean_d[[clz]] - c(mu_z, mu_y)
       yc <- zyc[-b_idx]
       zc <- zyc[b_idx]
 
       # level-2 crossproducts
       y2yc <- (cov_d[[clz]] + tcrossprod(mean_d[[clz]] - c(mu_z, mu_y)))
-      b_idx <- seq_along(lp$between.idx[[2]])
       y2yc_zz <- y2yc[b_idx, b_idx, drop = FALSE]
       y2yc_yz <- y2yc[-b_idx, b_idx, drop = FALSE]
       y2yc_yy <- y2yc[-b_idx, -b_idx, drop = FALSE]
@@ -456,26 +453,29 @@ lav_mvnorm_cluster_dlogl_2l_samplestats <- function(ylp = NULL, # nolint
 
 
       # Mu.Z
-      g_muz[clz, ] <- -2 * as.numeric(
+      d_mu_z <- d_mu_z + cluster_weight * (-2 * as.numeric(
         (sigma_zz_inv + nj * (sigma_zi_zy_ji %*% sigma_yz_zi)) %*% zc
           - nj * sigma_zi_zy_ji %*% yc
-      )
+      ))
 
       # MU.Y
-      g_muy[clz, ] <- 2 * nj * as.numeric(zc %*% sigma_zi_zy_ji -
-        yc %*% sigma_j_inv)
+      d_mu_y <- d_mu_y + cluster_weight * (
+        2 * nj * as.numeric(zc %*% sigma_zi_zy_ji - yc %*% sigma_j_inv)
+      )
 
       # SIGMA.W (between part)
       g_sigma_w <- sigma_j_inv - j_yzj
       tmp <- g_sigma_w * 2
       diag(tmp) <- diag(g_sigma_w)
-      g_sigma_w_1[clz, ] <- lav_matrix_vech(tmp)
+      d_sigma_w1_vech <- d_sigma_w1_vech +
+        cluster_weight * lav_matrix_vech(tmp)
 
       # SIGMA.B
       g_sigma_b <- nj * (sigma_j_inv - j_yzj)
       tmp <- g_sigma_b * 2
       diag(tmp) <- diag(g_sigma_b)
-      g_sigma_b_1[clz, ] <- lav_matrix_vech(tmp)
+      d_sigma_b_vech <- d_sigma_b_vech +
+        cluster_weight * lav_matrix_vech(tmp)
 
       # SIGMA.ZZ
       g_sigma_zz <- (sigma_zz_inv + nj * sigma_zz_inv %*% (
@@ -485,7 +485,8 @@ lav_mvnorm_cluster_dlogl_2l_samplestats <- function(ylp = NULL, # nolint
 
       tmp <- g_sigma_zz * 2
       diag(tmp) <- diag(g_sigma_zz)
-      g_sigma_zz_1[clz, ] <- lav_matrix_vech(tmp)
+      d_sigma_zz_vech <- d_sigma_zz_vech +
+        cluster_weight * lav_matrix_vech(tmp)
 
       # SIGMA.ZY
       g_sigma_yz <- 2 * nj * (
@@ -493,22 +494,18 @@ lav_mvnorm_cluster_dlogl_2l_samplestats <- function(ylp = NULL, # nolint
           (sigma_yz_zi %*% y2yc_zz - sigma_yz - y2yc_yz)
           + j_yzj %*% sigma_yz) %*% sigma_zz_inv)
 
-      g_sigma_yz_1[clz, ] <- lav_matrix_vec(g_sigma_yz)
+      d_sigma_yz_vec <- d_sigma_yz_vec +
+        cluster_weight * lav_matrix_vec(g_sigma_yz)
     }
 
     # level-1
-    d_mu_y <- colSums(g_muy * cluster_size_ns)
-    d_sigma_w1 <- lav_matrix_vech_reverse(colSums(g_sigma_w_1 *
-      cluster_size_ns))
-    d_sigma_b <- lav_matrix_vech_reverse(colSums(g_sigma_b_1 *
-      cluster_size_ns))
+    d_sigma_w1 <- lav_matrix_vech_reverse(d_sigma_w1_vech)
+    d_sigma_b <- lav_matrix_vech_reverse(d_sigma_b_vech)
 
     # level-2
-    d_mu_z <- colSums(g_muz * cluster_size_ns)
-    d_sigma_zz <- lav_matrix_vech_reverse(colSums(g_sigma_zz_1 *
-      cluster_size_ns))
+    d_sigma_zz <- lav_matrix_vech_reverse(d_sigma_zz_vech)
     d_sigma_yz <- matrix(
-      colSums(g_sigma_yz_1 * cluster_size_ns),
+      d_sigma_yz_vec,
       nrow(sigma_yz), ncol(sigma_yz)
     )
   # between.idx
@@ -517,6 +514,7 @@ lav_mvnorm_cluster_dlogl_2l_samplestats <- function(ylp = NULL, # nolint
     for (clz in seq_len(ncluster_sizes)) {
       # cluster size
       nj <- cluster_sizes[clz]
+      cluster_weight <- cluster_size_ns[clz]
 
       # level-2 vectors
       yc <- mean_d[[clz]] - mu_y
@@ -534,27 +532,27 @@ lav_mvnorm_cluster_dlogl_2l_samplestats <- function(ylp = NULL, # nolint
       j_yyj <- nj * sigma_j_inv %*% y2yc_yy %*% sigma_j_inv
 
       # MU.Y
-      g_muy[clz, ] <- -2 * nj * as.numeric(yc %*% sigma_j_inv)
+      d_mu_y <- d_mu_y +
+        cluster_weight * (-2 * nj * as.numeric(yc %*% sigma_j_inv))
 
       # SIGMA.W (between part)
       g_sigma_w <- sigma_j_inv - j_yyj
       tmp <- g_sigma_w * 2
       diag(tmp) <- diag(g_sigma_w)
-      g_sigma_w_1[clz, ] <- lav_matrix_vech(tmp)
+      d_sigma_w1_vech <- d_sigma_w1_vech +
+        cluster_weight * lav_matrix_vech(tmp)
 
       # SIGMA.B
       g_sigma_b <- nj * (sigma_j_inv - j_yyj)
       tmp <- g_sigma_b * 2
       diag(tmp) <- diag(g_sigma_b)
-      g_sigma_b_1[clz, ] <- lav_matrix_vech(tmp)
+      d_sigma_b_vech <- d_sigma_b_vech +
+        cluster_weight * lav_matrix_vech(tmp)
     }
 
     # level-1
-    d_mu_y <- colSums(g_muy * cluster_size_ns)
-    d_sigma_w1 <- lav_matrix_vech_reverse(colSums(g_sigma_w_1 *
-      cluster_size_ns))
-    d_sigma_b <- lav_matrix_vech_reverse(colSums(g_sigma_b_1 *
-      cluster_size_ns))
+    d_sigma_w1 <- lav_matrix_vech_reverse(d_sigma_w1_vech)
+    d_sigma_b <- lav_matrix_vech_reverse(d_sigma_b_vech)
     # level-2
     d_mu_z <- numeric(0L)
     d_sigma_zz <- matrix(0, 0L, 0L)
