@@ -98,17 +98,17 @@ lav_model_loglik <- function(lavdata = NULL,
           if (lavmodel@conditional.x) {
             logl_group[g] <-
               lav_mvreg_cluster_loglik_samplestats_2l(
-                YLp          = lavsamplestats@YLp[[g]],
-                Lp           = lavdata@Lp[[g]],
-                Res.Sigma.W  = res_sigma_w,
-                Res.Int.W    = res_int_w,
-                Res.Pi.W     = res_pi_w,
-                Res.Sigma.B  = res_sigma_b,
-                Res.Int.B    = res_int_b,
-                Res.Pi.B     = res_pi_b,
-                Sinv.method  = "eigen",
+                ylp          = lavsamplestats@YLp[[g]],
+                lp           = lavdata@Lp[[g]],
+                res_sigma_w  = res_sigma_w,
+                res_int_w    = res_int_w,
+                res_pi_w     = res_pi_w,
+                res_sigma_b  = res_sigma_b,
+                res_int_b    = res_int_b,
+                res_pi_b     = res_pi_b,
+                sinv_method  = "eigen",
                 log2pi       = TRUE,
-                minus.two    = FALSE
+                minus_two    = FALSE
               )
           } else {
             logl_group[g] <-
@@ -145,16 +145,16 @@ lav_model_loglik <- function(lavdata = NULL,
         if (lavoptions$conditional.x) {
           # FIXME: use lavh1
           logl_group[g] <- lav_mvreg_loglik_samplestats(
-            sample.res.int    = lavsamplestats@res.int[[g]],
-            sample.res.slopes = lavsamplestats@res.slopes[[g]],
-            sample.res.cov    = lavsamplestats@res.cov[[g]],
-            sample.mean.x     = lavsamplestats@mean.x[[g]],
-            sample.cov.x      = lavsamplestats@cov.x[[g]],
-            sample.nobs       = lavsamplestats@nobs[[g]],
-            res.int           = lavimplied$res.int[[g]],
-            res.slopes        = lavimplied$res.slopes[[g]],
-            res.cov           = lavimplied$res.cov[[g]],
-            Sinv.method       = "eigen"
+            sample_res_int    = lavsamplestats@res.int[[g]],
+            sample_res_slopes = lavsamplestats@res.slopes[[g]],
+            sample_res_cov    = lavsamplestats@res.cov[[g]],
+            sample_mean_x     = lavsamplestats@mean.x[[g]],
+            sample_cov_x      = lavsamplestats@cov.x[[g]],
+            sample_nobs       = lavsamplestats@nobs[[g]],
+            res_int           = lavimplied$res.int[[g]],
+            res_slopes        = lavimplied$res.slopes[[g]],
+            res_cov           = lavimplied$res.cov[[g]],
+            sinv_method       = "eigen"
           )
         } else {
           if (lavoptions$meanstructure) {

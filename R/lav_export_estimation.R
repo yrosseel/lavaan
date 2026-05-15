@@ -1,7 +1,7 @@
 #' lav_export_estimation
 #'
 #' lavaan provides a range of optimization methods with the optim.method
-#' argument (nlminb, BFGS, L-BFGS-B, GN, and nlminb.constr).
+#' argument (nlminb, BFGS, L-BFGS-B, GN, and nlminb_constr).
 #' `lav_export_estimation` allows exporting objects and functions necessary
 #' to pass a lavaan model into any optimizer that takes a combination of
 #' (1) starting values, (2) fit-function, (3) gradient-function, and (4) upper

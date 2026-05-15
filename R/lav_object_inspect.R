@@ -3212,11 +3212,11 @@ lav_object_inspect_loglik_casewise <- function(object, log_1 = TRUE, # nolint
           lav_msg_stop(gettext("no support (yet) if weights are used."))
         }
         return_value[[g]] <- lav_mvreg_loglik_data(
-          Y          = lavdata@X[[g]],
-          eXo        = lavdata@eXo[[g]],
-          res.int    = lavimplied$res.int[[g]],
-          res.slopes = lavimplied$res.slopes[[g]],
-          res.cov    = lavimplied$res.cov[[g]],
+          y          = lavdata@X[[g]],
+          exo        = lavdata@eXo[[g]],
+          res_int    = lavimplied$res.int[[g]],
+          res_slopes = lavimplied$res.slopes[[g]],
+          res_cov    = lavimplied$res.cov[[g]],
           casewise   = TRUE)
 
       } else {

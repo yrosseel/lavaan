@@ -370,7 +370,7 @@ Optimization options:
       (\code{optim.method = "GN"}). The latter is the default when 
       \code{estimator = "DLS"}.
       For constrained
-      optimization, the only available option is \code{"nlminb.constr"},
+      optimization, the only available option is \code{"nlminb_constr"},
       which uses an augmented Lagrangian minimization algorithm.}
     \item{\code{optim.force.converged}:}{Logical. If \code{TRUE}, pretend
       the model has converged, no matter what.}
