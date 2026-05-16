@@ -2743,7 +2743,7 @@ lav_object_inspect_ugamma <- function(object,                  # nolint
 
   out <- lav_test_satorra_bentler(lavobject = object,
     method = "original",
-    return.ugamma = TRUE)
+    return_ugamma = TRUE)
   return_value <- out$UGamma
 
   # labels
@@ -2764,7 +2764,7 @@ lav_object_inspect_u_from_ugamma <- function(object,            # nolint
 
   out <- lav_test_satorra_bentler(lavobject     = object,
     method        = "original",
-    return.u      = TRUE)
+    return_u      = TRUE)
   return_value <- out$UfromUGamma
 
   # labels

@@ -248,8 +248,8 @@ lav_test_fmg_browne_nt_model <- function(lavobject = NULL,
       lavoptions = lavoptions,
       lavh1 = lavh1,
       lavimplied = lavimplied,
-      ADF = FALSE,
-      model.based = TRUE
+      adf = FALSE,
+      model_based = TRUE
     ),
     silent = TRUE
   )
@@ -597,14 +597,14 @@ lav_test_fmg_ugamma <- function(lavobject = NULL,
     lavimplied = lavimplied,
     lavdata = lavdata,
     lavoptions = lavoptions,
-    TEST.unscaled = TEST.unscaled,
-    E.inv = E.inv,
-    Delta = Delta,
-    WLS.V = WLS.V,
-    Gamma = Gamma,
+    test_unscaled = TEST.unscaled,
+    e_inv = E.inv,
+    delta = Delta,
+    wls_v = WLS.V,
+    m_gamma = Gamma,
     method = "original",
-    return.ugamma = TRUE,
-    return.u = TRUE
+    return_ugamma = TRUE,
+    return_u = TRUE
   )
 
   if (is.null(out)) {
