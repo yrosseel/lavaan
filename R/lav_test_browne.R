@@ -38,9 +38,9 @@ lav_test_browne <- function(lavobject = NULL,
                             lavh1 = NULL,
                             lavimplied = NULL,
                             # further options:
-                            n.minus.one = "default",
-                            ADF = TRUE,
-                            model.based = FALSE) {
+                            n_minus_one = "default",
+                            adf = TRUE,
+                            model_based = FALSE) {
   if (!is.null(lavobject)) {
     # check input
     if (!inherits(lavobject, "lavaan")) {
@@ -58,21 +58,21 @@ lav_test_browne <- function(lavobject = NULL,
   }
 
   if (lavmodel@categorical) {
-    if (!ADF) {
+    if (!adf) {
       lav_msg_warn(gettext("normal theory version of Browne's residual test
         not available in the categorical setting; switching to ADF."))
-      ADF <- TRUE
+      adf <- TRUE
     }
-    if (model.based) {
+    if (model_based) {
       lav_msg_stop(gettext("model-based version of Browne's residual test not
         available in the categorical setting; switching to sample-based."))
-      model.based <- FALSE
+      model_based <- FALSE
     }
   }
-  if (lavdata@missing != "listwise" && !model.based) {
+  if (lavdata@missing != "listwise" && !model_based) {
     lav_msg_stop(gettext("sample-based version of Browne's test is not
       available when data is missing; switching to model-based."))
-    model.based <- TRUE
+    model_based <- TRUE
   }
   if (lavdata@nlevels > 1L) {
     lav_msg_stop(gettext("Browne's test is not available when data is
@@ -83,29 +83,29 @@ lav_test_browne <- function(lavobject = NULL,
                          equality constraints are involved."))
   }
 
-  if (!is.logical(n.minus.one)) {
+  if (!is.logical(n_minus_one)) {
     if (lavoptions$estimator == "ML" &&
       lavoptions$likelihood == "normal") {
-      n.minus.one <- FALSE
+      n_minus_one <- FALSE
     } else {
-      n.minus.one <- TRUE
+      n_minus_one <- TRUE
     }
   }
 
   # linear equality constraints?
-  lineq.flag <- FALSE
+  lineq_flag <- FALSE
   if (lavmodel@eq.constraints) {
-    lineq.flag <- TRUE
+    lineq_flag <- TRUE
   } else if (lavmodel@ceq.simple.only) {
-    lineq.flag <- TRUE
+    lineq_flag <- TRUE
   }
 
   # can we use the fast version?
-  fast.flag <- FALSE
-  if (!ADF && !lineq.flag && !lavmodel@conditional.x &&
+  fast_flag <- FALSE
+  if (!adf && !lineq_flag && !lavmodel@conditional.x &&
       !lavmodel@group.w.free) {
-    fast.flag <- TRUE
-    if (model.based) {
+    fast_flag <- TRUE
+    if (model_based) {
       implied <- lavimplied
     } else {
       implied <- lavh1$implied
@@ -113,28 +113,28 @@ lav_test_browne <- function(lavobject = NULL,
   }
 
   # ingredients
-  Delta <- lav_model_delta(lavmodel)
-  if (ADF) {
+  delta <- lav_model_delta(lavmodel)
+  if (adf) {
     # ADF version
     if (!is.null(lavsamplestats@NACOV[[1]]) &&
         !lavoptions$se == "robust.sem.nt") { # eg, estimator = "ULS"/"DWLS"
-      Gamma <- lavsamplestats@NACOV
+      gamma_1 <- lavsamplestats@NACOV
     } else {
       if (!is.null(lavobject)) {
         if (lavobject@Data@data.type != "full") {
           lav_msg_stop(gettext("ADF version not available without full data or
                                user-provided Gamma/NACOV matrix"))
         }
-        Gamma <- lav_object_gamma(lavobject,
+        gamma_1 <- lav_object_gamma(lavobject,
           adf = TRUE,
-          model_based = model.based
+          model_based = model_based
         )
       } else {
         if (lavdata@data.type != "full") {
           lav_msg_stop(gettext("ADF version not available without full data or
                                user-provided Gamma/NACOV matrix"))
         }
-        Gamma <- lav_object_gamma(
+        gamma_1 <- lav_object_gamma(
           lavobject = NULL,
           lavdata = lavdata,
           lavoptions = lavoptions,
@@ -142,19 +142,19 @@ lav_test_browne <- function(lavobject = NULL,
           lavh1 = lavh1,
           lavimplied = lavimplied,
           adf = TRUE,
-          model_based = model.based
+          model_based = model_based
         )
       }
     }
-  } else if (!fast.flag) {
+  } else if (!fast_flag) {
     # NT version
     if (!is.null(lavobject)) {
-      Gamma <- lav_object_gamma(lavobject,
+      gamma_1 <- lav_object_gamma(lavobject,
         adf = FALSE,
-        model_based = model.based
+        model_based = model_based
       )
     } else {
-      Gamma <- lav_object_gamma(
+      gamma_1 <- lav_object_gamma(
         lavobject = NULL,
         lavdata = lavdata,
         lavoptions = lavoptions,
@@ -162,85 +162,85 @@ lav_test_browne <- function(lavobject = NULL,
         lavh1 = lavh1,
         lavimplied = lavimplied,
         adf = FALSE,
-        model_based = model.based
+        model_based = model_based
       )
     }
   }
-  WLS.obs <- lavsamplestats@WLS.obs
-  WLS.est <- lav_model_wls_est(lavmodel)
+  wls_obs <- lavsamplestats@WLS.obs
+  wls_est <- lav_model_wls_est(lavmodel)
   nobs <- lavsamplestats@nobs
   ntotal <- lavsamplestats@ntotal
 
   # compute T.B per group
-  ngroups <- length(WLS.obs)
-  stat.group <- numeric(ngroups)
+  ngroups <- length(wls_obs)
+  stat_group <- numeric(ngroups)
 
   # 1. standard setting: no equality constraints
-  if (!lineq.flag) {
+  if (!lineq_flag) {
     for (g in seq_len(ngroups)) {
-      RES <- WLS.obs[[g]] - WLS.est[[g]]
-      Delta.g <- Delta[[g]]
-      if (n.minus.one) {
-        Ng <- nobs[[g]] - 1L
+      res <- wls_obs[[g]] - wls_est[[g]]
+      delta_g <- delta[[g]]
+      if (n_minus_one) {
+        ng <- nobs[[g]] - 1L
       } else {
-        Ng <- nobs[[g]]
+        ng <- nobs[[g]]
       }
-      if (fast.flag) {
-        stat.group[g] <- lav_test_browne_nt_fast(
-          res = RES, Delta = Delta.g,
-          sample.cov = implied$cov[[g]], sample.nobs = Ng,
+      if (fast_flag) {
+        stat_group[g] <- lav_test_browne_nt_fast(
+          res = res, delta = delta_g,
+          sample_cov = implied$cov[[g]], sample_nobs = ng,
           meanstructure = lavmodel@meanstructure,
-          x.idx = lavsamplestats@x.idx[[g]]
+          x_idx = lavsamplestats@x.idx[[g]]
         )
       } else {
         # naive formula base computation (slow!)
-        Delta.c <- lav_matrix_orthogonal_complement(Delta.g)
-        tDGD <- crossprod(Delta.c, Gamma[[g]]) %*% Delta.c
-        # if fixed.x = TRUE, Gamma[[g]] may contain zero col/rows
-        tDGD.inv <- lav_matrix_symmetric_inverse(tDGD)
-        tResDelta.c <- crossprod(RES, Delta.c)
-        stat.group[g] <-
-          Ng * drop(tResDelta.c %*% tDGD.inv %*% t(tResDelta.c))
+        delta_c <- lav_matrix_orthogonal_complement(delta_g)
+        t_dgd <- crossprod(delta_c, gamma_1[[g]]) %*% delta_c
+        # if fixed.x = TRUE, gamma_1[[g]] may contain zero col/rows
+        t_dgd_inv <- lav_matrix_symmetric_inverse(t_dgd)
+        t_res_delta_c <- crossprod(res, delta_c)
+        stat_group[g] <-
+          ng * drop(t_res_delta_c %*% t_dgd_inv %*% t(t_res_delta_c))
       }
     }
-    STAT <- sum(stat.group)
+    stat <- sum(stat_group)
 
     # 2. linear equality constraint
-  } else if (lineq.flag) {
-    RES.all <- do.call("c", WLS.obs) - do.call("c", WLS.est)
-    Delta.all <- do.call("rbind", Delta)
+  } else if (lineq_flag) {
+    res_all <- do.call("c", wls_obs) - do.call("c", wls_est)
+    delta_all <- do.call("rbind", delta)
     if (lavmodel@eq.constraints) {
-      Delta.g <- Delta.all %*% lavmodel@eq.constraints.K
+      delta_g <- delta_all %*% lavmodel@eq.constraints.K
     } else if (lavmodel@ceq.simple.only) {
-      Delta.g <- Delta.all %*% lavmodel@ceq.simple.K
+      delta_g <- delta_all %*% lavmodel@ceq.simple.K
     }
-    Gamma.inv.weighted <- vector("list", ngroups)
+    gamma_inv_weighted <- vector("list", ngroups)
     for (g in seq_len(ngroups)) {
-      if (n.minus.one) {
-        Ng <- nobs[[g]] - 1L
+      if (n_minus_one) {
+        ng <- nobs[[g]] - 1L
       } else {
-        Ng <- nobs[[g]]
+        ng <- nobs[[g]]
       }
-      Gamma.inv.temp <- try(solve(Gamma[[g]]), silent = TRUE)
-      if (inherits(Gamma.inv.temp, "try-error")) {
+      gamma_inv_temp <- try(solve(gamma_1[[g]]), silent = TRUE)
+      if (inherits(gamma_inv_temp, "try-error")) {
         # TDJ: This will happen whenever an (otherwise) unrestricted
         #      covariance matrix has a structure to it, such as equal
         #      variances (and certain covariances) for 2 members of an
         #      indistinguishable dyad (represented as 2 columns).  In
         #      such cases, their (N)ACOV elements are also identical.
-        Gamma.inv.temp <- MASS::ginv(Gamma[[g]])
+        gamma_inv_temp <- MASS::ginv(gamma_1[[g]])
       }
-      Gamma.inv.weighted[[g]] <- Gamma.inv.temp * Ng / ntotal
+      gamma_inv_weighted[[g]] <- gamma_inv_temp * ng / ntotal
     }
-    GI <- lav_matrix_bdiag(Gamma.inv.weighted)
-    tDGiD <- t(Delta.g) %*% GI %*% Delta.g
-    tDGiD.inv <- MASS::ginv(tDGiD) # GI may be rank-deficient
-    q1 <- drop(t(RES.all) %*% GI %*% RES.all)
-    q2 <- drop(t(RES.all) %*%
-      GI %*% Delta.g %*% tDGiD.inv %*% t(Delta.g) %*% GI %*%
-      RES.all)
-    STAT <- ntotal * (q1 - q2)
-    stat.group <- STAT * unlist(nobs) / ntotal # proxy only
+    gi <- lav_matrix_bdiag(gamma_inv_weighted)
+    t_dgi_d <- t(delta_g) %*% gi %*% delta_g
+    t_dgi_d_inv <- MASS::ginv(t_dgi_d) # GI may be rank-deficient
+    q1 <- drop(t(res_all) %*% gi %*% res_all)
+    q2 <- drop(t(res_all) %*%
+      gi %*% delta_g %*% t_dgi_d_inv %*% t(delta_g) %*% gi %*%
+      res_all)
+    stat <- ntotal * (q1 - q2)
+    stat_group <- stat * unlist(nobs) / ntotal # proxy only
 
     # 3. nonlinear equality constraints
   } else {
@@ -250,14 +250,14 @@ lav_test_browne <- function(lavobject = NULL,
 
   # DF
   if (!is.null(lavobject)) {
-    DF <- lavobject@test[[1]]$df
+    df_1 <- lavobject@test[[1]]$df
   } else {
     # same approach as in lav_test.R
     df <- lav_partable_df(lavpartable)
     if (nrow(lavmodel@con.jac) > 0L) {
-      ceq.idx <- attr(lavmodel@con.jac, "ceq.idx")
-      if (length(ceq.idx) > 0L) {
-        neq <- qr(lavmodel@con.jac[ceq.idx, , drop = FALSE])$rank
+      ceq_idx <- attr(lavmodel@con.jac, "ceq.idx")
+      if (length(ceq_idx) > 0L) {
+        neq <- qr(lavmodel@con.jac[ceq_idx, , drop = FALSE])$rank
         df <- df + neq
       }
     } else if (lavmodel@ceq.simple.only) {
@@ -266,66 +266,66 @@ lav_test_browne <- function(lavobject = NULL,
       npar <- max(lavpartable$free)
       df <- ndat - npar
     }
-    DF <- df
+    df_1 <- df
   }
 
-  if (ADF) {
-    if (model.based) {
+  if (adf) {
+    if (model_based) {
       # using model-based Gamma
-      NAME <- "browne.residual.adf.model"
-      LABEL <- "Browne's residual (ADF model-based) test"
+      name <- "browne.residual.adf.model"
+      label <- "Browne's residual (ADF model-based) test"
     } else {
       # regular one
-      NAME <- "browne.residual.adf"
-      LABEL <- "Browne's residual-based (ADF) test"
+      name <- "browne.residual.adf"
+      label <- "Browne's residual-based (ADF) test"
     }
   } else {
-    if (model.based) {
+    if (model_based) {
       # using model-implied Sigma (instead of S)
       # also called the 'reweighted least-squares (RLS)' version
-      NAME <- "browne.residual.nt.model"
-      LABEL <- "Browne's residual (NT model-based) test"
+      name <- "browne.residual.nt.model"
+      label <- "Browne's residual (NT model-based) test"
     } else {
       # regular one
-      NAME <- "browne.residual.nt"
-      LABEL <- "Browne's residual-based (NT) test"
+      name <- "browne.residual.nt"
+      label <- "Browne's residual-based (NT) test"
     }
   }
   out <- list(
-    test = NAME,
-    stat = STAT,
-    stat.group = stat.group,
-    df = DF,
+    test = name,
+    stat = stat,
+    stat.group = stat_group,
+    df = df_1,
     refdistr = "chisq",
-    pvalue = 1 - pchisq(STAT, DF),
-    label = LABEL
+    pvalue = 1 - pchisq(stat, df_1),
+    label = label
   )
   out
 }
 
 
 # faster version for the NT setting with no constraints
-lav_test_browne_nt_fast <- function(res = NULL, Delta = NULL,
-                                    sample.cov = NULL, sample.nobs = NULL,
+lav_test_browne_nt_fast <- function(res = NULL, delta = NULL,
+                                    sample_cov = NULL, sample_nobs = NULL,
                                     meanstructure = FALSE,
-                                    x.idx = integer(0L)) {
-  nvar <- nrow(sample.cov)
+                                    x_idx = integer(0L)) {
+  nvar <- nrow(sample_cov)
   pstar <- nvar * (nvar + 1L) / 2L
-  q <- ncol(Delta)
+  q <- ncol(delta)
   nrow_expected <- if (meanstructure) nvar + pstar else pstar
-  stopifnot(length(res) == nrow_expected, nrow(Delta) == nrow_expected)
+  stopifnot(length(res) == nrow_expected, nrow(delta) == nrow_expected)
 
   # only once
-  S.inv <- solve(sample.cov)
+  s_inv <- solve(sample_cov)
 
   # handle fixed.x = TRUE
-  if (length(x.idx) > 0L) {
-    S.inv[x.idx, ] <- 0.0
-    S.inv[, x.idx] <- 0.0
+  if (length(x_idx) > 0L) {
+    s_inv[x_idx, ] <- 0.0
+    s_inv[, x_idx] <- 0.0
   }
 
   # vech
-  diag.idx <- lav_matrix_diagh_idx(nvar)
+  diag_idx <- lav_matrix_diagh_idx(nvar)
 
   # applies gamma_cov_inv = 0.5 * t(D) %*% (S.inv %x% S.inv) %*% D
   # to a pstar-vector 'x'
@@ -334,13 +334,13 @@ lav_test_browne_nt_fast <- function(res = NULL, Delta = NULL,
     if (meanstructure) {
       x_mean <- x[seq_len(nvar)]
       x_cov <- x[nvar + seq_len(pstar)]
-      out_mean <- drop(S.inv %*% x_mean)
+      out_mean <- drop(s_inv %*% x_mean)
     }
 
-    W <- lav_matrix_vech_reverse(x_cov)
-    Z <- S.inv %*% W %*% S.inv
-    out_cov <- lav_matrix_vech(Z)
-    out_cov[diag.idx] <- out_cov[diag.idx] / 2.0
+    m_w <- lav_matrix_vech_reverse(x_cov)
+    z <- s_inv %*% m_w %*% s_inv
+    out_cov <- lav_matrix_vech(z)
+    out_cov[diag_idx] <- out_cov[diag_idx] / 2.0
     out <- out_cov
     if (meanstructure) {
       out <- c(out_mean, out_cov)
@@ -351,23 +351,23 @@ lav_test_browne_nt_fast <- function(res = NULL, Delta = NULL,
   u <- apply_gamma_inv(res)
   gamma_inv_delta <- matrix(0.0, nrow_expected, q)
   for (j in seq_len(q)) {
-    gamma_inv_delta[, j] <- apply_gamma_inv(Delta[, j])
+    gamma_inv_delta[, j] <- apply_gamma_inv(delta[, j])
   }
-  A <- crossprod(Delta, gamma_inv_delta)
-  b <- crossprod(Delta, u)
-  Ab_inv_b <- tryCatch(
+  a <- crossprod(delta, gamma_inv_delta)
+  b <- crossprod(delta, u)
+  ab_inv_b <- tryCatch(
     {
-      R_chol <- chol(A)
-      backsolve(R_chol, forwardsolve(t(R_chol), b))
+      r_chol <- chol(a)
+      backsolve(r_chol, forwardsolve(t(r_chol), b))
     },
     error = function(e) {
-      MASS::ginv(A) %*% b
+      MASS::ginv(a) %*% b
     }
   )
 
   term1 <- as.numeric(crossprod(res, u)) # t(res) Ginv res
-  term2 <- as.numeric(crossprod(b, Ab_inv_b)) # t(b) A^{-1} b
+  term2 <- as.numeric(crossprod(b, ab_inv_b)) # t(b) A^{-1} b
 
-  stat <- sample.nobs * (term1 - term2)
+  stat <- sample_nobs * (term1 - term2)
   stat
 }

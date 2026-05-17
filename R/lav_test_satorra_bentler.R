@@ -8,17 +8,17 @@ lav_test_satorra_bentler <- function(lavobject = NULL,
                                      lavimplied = NULL,
                                      lavoptions = NULL,
                                      lavdata = NULL,
-                                     TEST.unscaled = NULL,
-                                     E.inv = NULL,
-                                     Delta = NULL,
-                                     WLS.V = NULL,
-                                     Gamma = NULL,
+                                     test_unscaled = NULL,
+                                     e_inv = NULL,
+                                     delta = NULL,
+                                     wls_v = NULL,
+                                     m_gamma = NULL,
                                      test = "satorra.bentler",
                                      method = "original",
-                                     ug2.old.approach = FALSE,
-                                     return.u = FALSE,
-                                     return.ugamma = FALSE) {
-  TEST <- list()
+                                     ug2_old_approach = FALSE,
+                                     return_u = FALSE,
+                                     return_ugamma = FALSE) {
+  test_1 <- list()
 
   if (!is.null(lavobject)) {
     lavsamplestats <- lavobject@SampleStats
@@ -26,18 +26,18 @@ lav_test_satorra_bentler <- function(lavobject = NULL,
     lavoptions <- lavobject@Options
     lavimplied <- lavobject@implied
     lavdata <- lavobject@Data
-    TEST$standard <- lavobject@test[[1]]
+    test_1$standard <- lavobject@test[[1]]
   } else {
-    TEST$standard <- TEST.unscaled
+    test_1$standard <- test_unscaled
   }
   npar <- lavmodel@nx.free
 
   # ug2.old.approach
-  if (missing(ug2.old.approach)) {
+  if (missing(ug2_old_approach)) {
     if (!is.null(lavoptions$ug2.old.approach)) {
-      ug2.old.approach <- lavoptions$ug2.old.approach
+      ug2_old_approach <- lavoptions$ug2.old.approach
     } else {
-      ug2.old.approach <- FALSE
+      ug2_old_approach <- FALSE
     }
   }
 
@@ -45,23 +45,23 @@ lav_test_satorra_bentler <- function(lavobject = NULL,
   if (length(lavoptions$information) == 1L &&
     length(lavoptions$h1.information) == 1L &&
     length(lavoptions$observed.information) == 1L) {
-    E.inv.recompute <- FALSE
+    e_inv_recompute <- FALSE
   } else if (
     (lavoptions$information[1] == lavoptions$information[2]) &&
       (lavoptions$h1.information[1] == lavoptions$h1.information[2]) &&
       (lavoptions$information[2] == "expected" ||
         (lavoptions$observed.information[1] ==
           lavoptions$observed.information[2]))) {
-    E.inv.recompute <- FALSE
+    e_inv_recompute <- FALSE
   } else {
-    E.inv.recompute <- TRUE
+    e_inv_recompute <- TRUE
     # change information options
     lavoptions$information[1] <- lavoptions$information[2]
     lavoptions$h1.information[1] <- lavoptions$h1.information[2]
     lavoptions$observed.information[1] <- lavoptions$observed.information[2]
   }
-  if (!is.null(E.inv) && !is.null(WLS.V) && !is.null(Delta)) {
-    E.inv.recompute <- FALSE # user-provided
+  if (!is.null(e_inv) && !is.null(wls_v) && !is.null(delta)) {
+    e_inv_recompute <- FALSE # user-provided
   }
 
   # check test
@@ -76,7 +76,7 @@ lav_test_satorra_bentler <- function(lavobject = NULL,
     test <- "satorra.bentler"
   }
 
-  if (return.u) {
+  if (return_u) {
     method <- "original"
   }
 
@@ -89,72 +89,74 @@ lav_test_satorra_bentler <- function(lavobject = NULL,
 
   # do we have E.inv, Delta, WLS.V?
   if (npar > 0L &&
-    (is.null(E.inv) || is.null(Delta) || is.null(WLS.V) || E.inv.recompute)) {
+    (is.null(e_inv) || is.null(delta) || is.null(wls_v) || e_inv_recompute)) {
     if (lavoptions$information.expected.mplus && lavoptions$estimator == "ML") {
-      E <- lav_model_information_expected_mlm(
+      m_e <- lav_model_information_expected_mlm(
         lavmodel = lavmodel,
         augmented = FALSE, inverted = FALSE,
         lavsamplestats = lavsamplestats, extra = TRUE
       )
     } else {
-      E <- lav_model_information(
+      m_e <- lav_model_information(
         lavmodel = lavmodel,
         lavimplied = lavimplied,
         lavsamplestats = lavsamplestats, lavdata = lavdata,
         lavoptions = lavoptions, extra = TRUE
       )
     }
-    E.inv <- try(lav_model_information_augment_invert(lavmodel,
-      information = E, inverted = TRUE
+    e_inv <- try(lav_model_information_augment_invert(lavmodel,
+      information = m_e, inverted = TRUE
     ), silent = TRUE)
-    if (inherits(E.inv, "try-error")) {
-      if (return.ugamma) {
+    if (inherits(e_inv, "try-error")) {
+      if (return_ugamma) {
         lav_msg_warn(gettext(
           "could not invert information matrix needed for UGamma"))
         return(NULL)
-      } else if (return.u) {
+      } else if (return_u) {
         lav_msg_warn(gettext(
           "could not invert information matrix needed for UfromUGamma"))
         return(NULL)
       } else {
-        TEST$standard$stat <- as.numeric(NA)
-        TEST$standard$stat.group <- rep(as.numeric(NA), lavdata@ngroups)
-        TEST$standard$pvalue <- as.numeric(NA)
-        TEST[[test[1]]] <- c(TEST$standard,
+        test_1$standard$stat <- as.numeric(NA)
+        test_1$standard$stat.group <- rep(as.numeric(NA), lavdata@ngroups)
+        test_1$standard$pvalue <- as.numeric(NA)
+        test_1[[test[1]]] <- c(test_1$standard,
           scaling.factor = as.numeric(NA),
           shift.parameter = as.numeric(NA),
           label = character(0)
         )
         lav_msg_warn(gettext("could not invert information matrix needed for
                              robust test statistic"))
-        TEST[[test[1]]]$test <- test[1] # to prevent lavTestLRT error when robust test is detected for some but not all models
-        return(TEST)
+        test_1[[test[1]]]$test <- test[1] # to prevent lavTestLRT error when
+                       # robust test is detected for some but not all models
+        return(test_1)
       }
     }
-    Delta <- attr(E, "Delta")
-    WLS.V <- attr(E, "WLS.V")
+    delta <- attr(m_e, "Delta")
+    wls_v <- attr(m_e, "WLS.V")
   }
 
   # catch df == 0
-  if ((TEST$standard$df == 0L || TEST$standard$df < 0) &&
-    !return.u && !return.ugamma) {
-    TEST[[test[1]]] <- c(TEST$standard,
+  if ((test_1$standard$df == 0L || test_1$standard$df < 0) &&
+    !return_u && !return_ugamma) {
+    test_1[[test[1]]] <- c(test_1$standard,
       scaling.factor = as.numeric(NA),
       label = character(0)
     )
-    TEST[[test[1]]]$test <- test[1] # to prevent lavTestLRT error when robust test is detected for some but not all models
-    return(TEST)
+    test_1[[test[1]]]$test <- test[1] # to prevent lavTestLRT error when
+                   # robust test is detected for some but not all models
+    return(test_1)
   }
 
   # Gamma
-  if (is.null(Gamma)) {
-    Gamma <- lavsamplestats@NACOV
+  if (is.null(m_gamma)) {
+    m_gamma <- lavsamplestats@NACOV
     # still NULL? (perhaps estimator = ML)
-    if (is.null(Gamma[[1]])) {
+    if (is.null(m_gamma[[1]])) {
       if (!is.null(lavobject)) {
-        Gamma <- lav_object_gamma(lavobject, model_based = FALSE)
+        m_gamma <- lav_object_gamma(lavobject, model_based = FALSE)
       } else {
-        Gamma <- lav_object_gamma(
+        m_gamma <- lav_object_gamma(
           lavobject = NULL,
           lavdata = lavdata,
           lavoptions = lavoptions,
@@ -170,8 +172,8 @@ lav_test_satorra_bentler <- function(lavobject = NULL,
 
   if (lavoptions$information.expected.mplus && lavmodel@categorical) {
     for (g in 1:lavsamplestats@ngroups) {
-      Ng <- lavsamplestats@nobs[[g]]
-      Gamma[[g]] <- Gamma[[g]] / Ng * (Ng - 1L)
+      ng <- lavsamplestats@nobs[[g]]
+      m_gamma[[g]] <- m_gamma[[g]] / ng * (ng - 1L)
     }
   }
 
@@ -179,76 +181,76 @@ lav_test_satorra_bentler <- function(lavobject = NULL,
   ngroups <- lavsamplestats@ngroups
 
   # mean and variance adjusted?
-  Satterthwaite <- FALSE
+  satterthwaite <- FALSE
   if (any(test %in% c("mean.var.adjusted", "scaled.shifted"))) {
-    Satterthwaite <- TRUE
+    satterthwaite <- TRUE
   }
 
   if (npar == 0) {
     # catch npar == 0 (eg baseline model if correlation structure)
-    trace.UGamma <- trace.UGamma2 <- U.all <- UG <- as.numeric(NA)
+    trace_ugamma <- trace_ugamma2 <- u_all <- ug <- as.numeric(NA)
     fg <- unlist(lavsamplestats@nobs) / lavsamplestats@ntotal
-    Gamma.f <- Gamma
+    gamma_f <- m_gamma
     for (g in 1:ngroups) {
-      Gamma.f[[g]] <- 1 / fg[g] * Gamma[[g]]
+      gamma_f[[g]] <- 1 / fg[g] * m_gamma[[g]]
     }
-    Gamma.all <- lav_matrix_bdiag(Gamma.f)
-    UG <- Gamma.all
-    trace.UGamma <- sum(diag(Gamma.all))
-    trace.UGamma2 <- sum(UG * t(UG))
+    gamma_all <- lav_matrix_bdiag(gamma_f)
+    ug <- gamma_all
+    trace_ugamma <- sum(diag(gamma_all))
+    trace_ugamma2 <- sum(ug * t(ug))
     out <- list(
-      trace.UGamma = trace.UGamma, trace.UGamma2 = trace.UGamma2,
-      UGamma = UG, UfromUGamma = U.all
+      trace.UGamma = trace_ugamma, trace.UGamma2 = trace_ugamma2,
+      UGamma = ug, UfromUGamma = u_all
     )
   } else if (method == "original") {
     out <- lav_test_satorra_bentler_trace_original(
-      Gamma = Gamma,
-      Delta = Delta, WLS.V = WLS.V, E.inv = E.inv,
+      m_gamma = m_gamma,
+      delta = delta, wls_v = wls_v, e_inv = e_inv,
       ngroups = ngroups, nobs = lavsamplestats@nobs,
-      ntotal = lavsamplestats@ntotal, return.u = return.u,
-      return.ugamma = return.ugamma,
-      ug2.old.approach = ug2.old.approach,
-      Satterthwaite = Satterthwaite
+      ntotal = lavsamplestats@ntotal, return_u = return_u,
+      return_ugamma = return_ugamma,
+      ug2_old_approach = ug2_old_approach,
+      satterthwaite = satterthwaite
     )
   } else if (method == "orthogonal.complement") {
     out <- lav_test_satorra_bentler_trace_complement(
-      Gamma = Gamma,
-      Delta = Delta, WLS.V = WLS.V, lavmodel = lavmodel,
+      m_gamma = m_gamma,
+      delta = delta, wls_v = wls_v, lavmodel = lavmodel,
       ngroups = ngroups, nobs = lavsamplestats@nobs,
       ntotal = lavsamplestats@ntotal,
-      return.ugamma = return.ugamma,
-      ug2.old.approach = ug2.old.approach,
-      Satterthwaite = Satterthwaite
+      return_ugamma = return_ugamma,
+      ug2_old_approach = ug2_old_approach,
+      satterthwaite = satterthwaite
     )
   } else if (method == "ABA") {
     out <- lav_test_satorra_bentler_trace_aba(
-      m_gamma = Gamma,
-      m_delta = Delta, wls_v = WLS.V, e_inv = E.inv,
+      m_gamma = m_gamma,
+      m_delta = delta, wls_v = wls_v, e_inv = e_inv,
       ngroups = ngroups, nobs = lavsamplestats@nobs,
       ntotal = lavsamplestats@ntotal,
-      return_ugamma = return.ugamma,
-      ug2_old_approach = ug2.old.approach,
-      satterthwaite = Satterthwaite
+      return_ugamma = return_ugamma,
+      ug2_old_approach = ug2_old_approach,
+      satterthwaite = satterthwaite
     )
   } else {
     lav_msg_stop(gettextf("method `%s' not supported", method))
   }
-  trace.UGamma <- out$trace.UGamma
-  trace.UGamma2 <- out$trace.UGamma2
+  trace_ugamma <- out$trace.UGamma
+  trace_ugamma2 <- out$trace.UGamma2
 
   if ("satorra.bentler" %in% test) {
     # same df
-    df.scaled <- TEST$standard$df
+    df_scaled <- test_1$standard$df
 
     # scaling factor
-    scaling.factor <- trace.UGamma / df.scaled
-    if (scaling.factor < 0) scaling.factor <- as.numeric(NA)
+    scaling_factor <- trace_ugamma / df_scaled
+    if (scaling_factor < 0) scaling_factor <- as.numeric(NA)
 
     # scaled test statistic per group
-    stat.group <- TEST$standard$stat.group / scaling.factor
+    stat_group <- test_1$standard$stat.group / scaling_factor
 
     # scaled test statistic global
-    stat <- sum(stat.group)
+    stat <- sum(stat_group)
 
     # label
     if (lavoptions$information.expected.mplus) {
@@ -266,45 +268,45 @@ lav_test_satorra_bentler <- function(lavobject = NULL,
       label <- "Satorra-Bentler correction"
     }
 
-    TEST$satorra.bentler <-
+    test_1$satorra.bentler <-
       list(
         test = "satorra.bentler",
         stat = stat,
-        stat.group = stat.group,
-        df = df.scaled,
-        pvalue = 1 - pchisq(stat, df.scaled),
-        trace.UGamma = trace.UGamma,
-        scaling.factor = scaling.factor,
-        scaled.test.stat = TEST$standard$stat,
-        scaled.test = TEST$standard$test,
+        stat.group = stat_group,
+        df = df_scaled,
+        pvalue = 1 - pchisq(stat, df_scaled),
+        trace.UGamma = trace_ugamma,
+        scaling.factor = scaling_factor,
+        scaled.test.stat = test_1$standard$stat,
+        scaled.test = test_1$standard$test,
         label = label
       )
   }
 
   if ("mean.var.adjusted" %in% test) {
     if (lavoptions$information.expected.mplus) {
-      df.scaled <- floor(trace.UGamma^2 / trace.UGamma2 + 0.5)
+      df_scaled <- floor(trace_ugamma^2 / trace_ugamma2 + 0.5)
     } else {
       # more precise, fractional df
-      df.scaled <- trace.UGamma^2 / trace.UGamma2
+      df_scaled <- trace_ugamma^2 / trace_ugamma2
     }
 
     # scaling factor
-    scaling.factor <- trace.UGamma / df.scaled
-    if (scaling.factor < 0) scaling.factor <- as.numeric(NA)
+    scaling_factor <- trace_ugamma / df_scaled
+    if (scaling_factor < 0) scaling_factor <- as.numeric(NA)
 
-    if (ug2.old.approach) {
+    if (ug2_old_approach) {
       # scaled test statistic per group
-      stat.group <- TEST$standard$stat.group / scaling.factor
+      stat_group <- test_1$standard$stat.group / scaling_factor
 
       # scaled test statistic global
-      stat <- sum(stat.group)
+      stat <- sum(stat_group)
     } else {
       # scaled test statistic per group
-      stat.group <- TEST$standard$stat.group / scaling.factor
+      stat_group <- test_1$standard$stat.group / scaling_factor
 
       # scaled test statistic global
-      stat <- TEST$standard$stat / scaling.factor
+      stat <- test_1$standard$stat / scaling_factor
     }
 
     # label
@@ -323,18 +325,18 @@ lav_test_satorra_bentler <- function(lavobject = NULL,
       label <- "mean and variance adjusted correction"
     }
 
-    TEST$mean.var.adjusted <-
+    test_1$mean.var.adjusted <-
       list(
         test = "mean.var.adjusted",
         stat = stat,
-        stat.group = stat.group,
-        df = df.scaled,
-        pvalue = 1 - pchisq(stat, df.scaled),
-        trace.UGamma = trace.UGamma,
-        trace.UGamma2 = trace.UGamma2,
-        scaling.factor = scaling.factor,
-        scaled.test.stat = TEST$standard$stat,
-        scaled.test = TEST$standard$test,
+        stat.group = stat_group,
+        df = df_scaled,
+        pvalue = 1 - pchisq(stat, df_scaled),
+        trace.UGamma = trace_ugamma,
+        trace.UGamma2 = trace_ugamma2,
+        scaling.factor = scaling_factor,
+        scaled.test.stat = test_1$standard$stat,
+        scaled.test = test_1$standard$test,
         label = label
       )
   }
@@ -345,26 +347,26 @@ lav_test_satorra_bentler <- function(lavobject = NULL,
     # www.statmodel.com
 
     # same df
-    df.scaled <- TEST$standard$df
+    df_scaled <- test_1$standard$df
 
     # scaling factor
     fg <- unlist(lavsamplestats@nobs) / lavsamplestats@ntotal
-    a <- sqrt(df.scaled / trace.UGamma2)
+    a <- sqrt(df_scaled / trace_ugamma2)
     if (isTRUE(a < 0) || is.nan(a)) a <- as.numeric(NA)
-    scaling.factor <- 1 / a
-    if (isTRUE(scaling.factor < 0)) scaling.factor <- as.numeric(NA)
+    scaling_factor <- 1 / a
+    if (isTRUE(scaling_factor < 0)) scaling_factor <- as.numeric(NA)
 
-    if (ug2.old.approach) {
+    if (ug2_old_approach) {
       # scaling factor
-      shift.parameter <- fg * (df.scaled - a * trace.UGamma)
+      shift_parameter <- fg * (df_scaled - a * trace_ugamma)
       # scaled test statistic per group
-      stat.group <- (TEST$standard$stat.group * a + shift.parameter)
+      stat_group <- (test_1$standard$stat.group * a + shift_parameter)
       # scaled test statistic global
-      stat <- sum(stat.group)
+      stat <- sum(stat_group)
     } else {
-      shift.parameter <- df.scaled - a * trace.UGamma
-      stat <- TEST$standard$stat * a + shift.parameter
-      stat.group <- TEST$standard$stat.group * a + fg * shift.parameter
+      shift_parameter <- df_scaled - a * trace_ugamma
+      stat <- test_1$standard$stat * a + shift_parameter
+      stat_group <- test_1$standard$stat.group * a + fg * shift_parameter
     }
 
     # label
@@ -383,228 +385,228 @@ lav_test_satorra_bentler <- function(lavobject = NULL,
       label <- "simple second-order correction"
     }
 
-    TEST$scaled.shifted <-
+    test_1$scaled.shifted <-
       list(
         test = "scaled.shifted",
         stat = stat,
-        stat.group = stat.group,
-        df = df.scaled,
-        pvalue = 1 - pchisq(stat, df.scaled),
-        trace.UGamma = trace.UGamma,
-        trace.UGamma2 = trace.UGamma2,
-        scaling.factor = scaling.factor,
-        shift.parameter = shift.parameter,
-        scaled.test.stat = TEST$standard$stat,
-        scaled.test = TEST$standard$test,
+        stat.group = stat_group,
+        df = df_scaled,
+        pvalue = 1 - pchisq(stat, df_scaled),
+        trace.UGamma = trace_ugamma,
+        trace.UGamma2 = trace_ugamma2,
+        scaling.factor = scaling_factor,
+        shift.parameter = shift_parameter,
+        scaled.test.stat = test_1$standard$stat,
+        scaled.test = test_1$standard$test,
         label = label
       )
   }
 
-  if (return.ugamma) {
-    TEST$UGamma <- out$UGamma
+  if (return_ugamma) {
+    test_1$UGamma <- out$UGamma
   }
 
-  if (return.u) {
-    TEST$UfromUGamma <- out$UfromUGamma
+  if (return_u) {
+    test_1$UfromUGamma <- out$UfromUGamma
   }
 
-  TEST
+  test_1
 }
 
 # using the `classical' formula
 # UG = Gamma * [V - V Delta E.inv Delta' V']
-lav_test_satorra_bentler_trace_original <- function(Gamma = NULL,
-                                                    Delta = NULL,
-                                                    WLS.V = NULL,
-                                                    E.inv = NULL,
+lav_test_satorra_bentler_trace_original <- function(m_gamma = NULL,  # nolint
+                                                    delta = NULL,
+                                                    wls_v = NULL,
+                                                    e_inv = NULL,
                                                     ngroups = NULL,
                                                     nobs = NULL,
                                                     ntotal = NULL,
-                                                    return.u = FALSE,
-                                                    return.ugamma = FALSE,
-                                                    ug2.old.approach = FALSE,
-                                                    Satterthwaite = FALSE) {
+                                                    return_u = FALSE,
+                                                    return_ugamma = FALSE,
+                                                    ug2_old_approach = FALSE,
+                                                    satterthwaite = FALSE) {
   # this is what we did <0.6-13: everything per group
-  if (ug2.old.approach) {
-    UfromUGamma <- UG <- vector("list", ngroups)
-    trace.UGamma <- trace.UGamma2 <- rep(as.numeric(NA), ngroups)
+  if (ug2_old_approach) {
+    ufrom_ugamma <- ug <- vector("list", ngroups)
+    trace_ugamma <- trace_ugamma2 <- rep(as.numeric(NA), ngroups)
     for (g in 1:ngroups) {
       fg <- nobs[[g]] / ntotal
-      Gamma.g <- Gamma[[g]] / fg ## ?? check this
-      Delta.g <- Delta[[g]]
-      if (is.matrix(WLS.V[[g]])) {
-        WLS.Vg <- WLS.V[[g]] * fg
+      gamma_g <- m_gamma[[g]] / fg ## ?? check this
+      # delta_g <- delta[[g]]
+      if (is.matrix(wls_v[[g]])) {
+        wls_vg <- wls_v[[g]] * fg
       } else {
-        WLS.Vg <- diag(WLS.V[[g]]) * fg
+        wls_vg <- diag(wls_v[[g]]) * fg
       }
 
-      U <- (WLS.Vg - WLS.Vg %*% Delta[[g]] %*% E.inv %*%
-        t(Delta[[g]]) %*% WLS.Vg)
-      trace.UGamma[g] <- sum(U * Gamma.g)
+      u <- (wls_vg - wls_vg %*% delta[[g]] %*% e_inv %*%
+        t(delta[[g]]) %*% wls_vg)
+      trace_ugamma[g] <- sum(u * gamma_g)
 
-      if (return.u) {
-        UfromUGamma[[g]] <- U
+      if (return_u) {
+        ufrom_ugamma[[g]] <- u
       }
 
-      UG <- NULL
-      if (Satterthwaite || return.ugamma) {
-        UG.group <- U %*% Gamma.g
-        trace.UGamma2[g] <- sum(UG.group * t(UG.group))
-        UG[[g]] <- UG.group
+      ug <- NULL
+      if (satterthwaite || return_ugamma) {
+        ug_group <- u %*% gamma_g
+        trace_ugamma2[g] <- sum(ug_group * t(ug_group))
+        ug[[g]] <- ug_group
       }
     } # g
     # sum over groups
-    trace.UGamma <- sum(trace.UGamma)
-    trace.UGamma2 <- sum(trace.UGamma2)
-    U.all <- UfromUGamma # group-specific
+    trace_ugamma <- sum(trace_ugamma)
+    trace_ugamma2 <- sum(trace_ugamma2)
+    u_all <- ufrom_ugamma # group-specific
   } else {
-    trace.UGamma <- trace.UGamma2 <- U.all <- UG <- as.numeric(NA)
+    trace_ugamma <- trace_ugamma2 <- u_all <- ug <- as.numeric(NA)
     fg <- unlist(nobs) / ntotal
-    if (Satterthwaite || return.ugamma || return.u) {
+    if (satterthwaite || return_ugamma || return_u) {
       # for trace.UGamma2, we can no longer compute the trace per group
-      V.g <- WLS.V
+      v_g <- wls_v
       for (g in 1:ngroups) {
-        if (is.matrix(WLS.V[[g]])) {
-          V.g[[g]] <- fg[g] * WLS.V[[g]]
+        if (is.matrix(wls_v[[g]])) {
+          v_g[[g]] <- fg[g] * wls_v[[g]]
         } else {
-          V.g[[g]] <- fg[g] * diag(WLS.V[[g]])
+          v_g[[g]] <- fg[g] * diag(wls_v[[g]])
         }
       }
-      V.all <- lav_matrix_bdiag(V.g)
-      Gamma.f <- Gamma
+      v_all <- lav_matrix_bdiag(v_g)
+      gamma_f <- m_gamma
       for (g in 1:ngroups) {
-        Gamma.f[[g]] <- 1 / fg[g] * Gamma[[g]]
+        gamma_f[[g]] <- 1 / fg[g] * m_gamma[[g]]
       }
-      Gamma.all <- lav_matrix_bdiag(Gamma.f)
-      Delta.all <- do.call("rbind", Delta)
-      U.all <- V.all - V.all %*% Delta.all %*% E.inv %*% t(Delta.all) %*% V.all
-      UG <- U.all %*% Gamma.all
+      gamma_all <- lav_matrix_bdiag(gamma_f)
+      delta_all <- do.call("rbind", delta)
+      u_all <- v_all - v_all %*% delta_all %*% e_inv %*% t(delta_all) %*% v_all
+      ug <- u_all %*% gamma_all
 
-      trace.UGamma <- sum(U.all * Gamma.all)
-      trace.UGamma2 <- sum(UG * t(UG))
+      trace_ugamma <- sum(u_all * gamma_all)
+      trace_ugamma2 <- sum(ug * t(ug))
     } else {
       # we only need trace.UGamma - this can be done group-specific
-      trace.UGamma.group <- numeric(ngroups)
+      trace_ugamma_group <- numeric(ngroups)
       for (g in 1:ngroups) {
-        Gamma.g <- Gamma[[g]] / fg[g]
-        Delta.g <- Delta[[g]]
-        if (is.matrix(WLS.V[[g]])) {
-          WLS.Vg <- WLS.V[[g]] * fg[g]
+        gamma_g <- m_gamma[[g]] / fg[g]
+        # delta_g <- delta[[g]]
+        if (is.matrix(wls_v[[g]])) {
+          wls_vg <- wls_v[[g]] * fg[g]
         } else {
-          WLS.Vg <- diag(WLS.V[[g]]) * fg[g]
+          wls_vg <- diag(wls_v[[g]]) * fg[g]
         }
 
-        U <- (WLS.Vg - WLS.Vg %*% Delta[[g]] %*% E.inv %*%
-          t(Delta[[g]]) %*% WLS.Vg)
-        trace.UGamma.group[g] <- sum(U * Gamma.g)
+        u <- (wls_vg - wls_vg %*% delta[[g]] %*% e_inv %*%
+          t(delta[[g]]) %*% wls_vg)
+        trace_ugamma_group[g] <- sum(u * gamma_g)
       }
-      trace.UGamma <- sum(trace.UGamma.group)
+      trace_ugamma <- sum(trace_ugamma_group)
     }
   }
 
   list(
-    trace.UGamma = trace.UGamma, trace.UGamma2 = trace.UGamma2,
-    UGamma = UG, UfromUGamma = U.all
+    trace.UGamma = trace_ugamma, trace.UGamma2 = trace_ugamma2,
+    UGamma = ug, UfromUGamma = u_all
   )
 }
 
 # using the orthogonal complement of Delta: Delta.c
 # UG = [ (Delta.c' W Delta.c)^{-1} (Delta.c' Gamma Delta.c)
-lav_test_satorra_bentler_trace_complement <- function(Gamma = NULL,
-                                                      Delta = NULL,
-                                                      WLS.V = NULL,
+lav_test_satorra_bentler_trace_complement <- function(m_gamma = NULL,  # nolint
+                                                      delta = NULL,
+                                                      wls_v = NULL,
                                                       lavmodel = NULL,
                                                       ngroups = NULL,
                                                       nobs = NULL,
                                                       ntotal = NULL,
-                                                      return.ugamma = FALSE,
-                                                      ug2.old.approach = FALSE,
-                                                      Satterthwaite = FALSE) {
+                                                      return_ugamma = FALSE,
+                                                      ug2_old_approach = FALSE,
+                                                      satterthwaite = FALSE) {
   # this is what we did <0.6-13: everything per group
   # does not work when ngroups > 1 + equality constraints
-  if (ug2.old.approach) {
-    UG <- vector("list", ngroups)
-    trace.UGamma <- trace.UGamma2 <- rep(as.numeric(NA), ngroups)
+  if (ug2_old_approach) {
+    ug <- vector("list", ngroups)
+    trace_ugamma <- trace_ugamma2 <- rep(as.numeric(NA), ngroups)
     for (g in 1:ngroups) {
       fg <- nobs[[g]] / ntotal
-      Gamma.g <- Gamma[[g]] / fg ## ?? check this
-      Delta.g <- Delta[[g]]
-      if (is.matrix(WLS.V[[g]])) {
-        WLS.Vg <- WLS.V[[g]] * fg
+      gamma_g <- m_gamma[[g]] / fg ## ?? check this
+      delta_g <- delta[[g]]
+      if (is.matrix(wls_v[[g]])) {
+        wls_vg <- wls_v[[g]] * fg
       } else {
-        WLS.Vg <- diag(WLS.V[[g]]) * fg
+        wls_vg <- diag(wls_v[[g]]) * fg
       }
 
       # handle equality constraints
       # FIXME: inequality constraints are ignored!
       if (lavmodel@eq.constraints) {
-        Delta.g <- Delta.g %*% lavmodel@eq.constraints.K
+        delta_g <- delta_g %*% lavmodel@eq.constraints.K
       } else if (lavmodel@ceq.simple.only) {
-        Delta.g <- Delta.g %*% lavmodel@ceq.simple.K
+        delta_g <- delta_g %*% lavmodel@ceq.simple.K
       }
 
       # orthogonal complement of Delta.g
-      Delta.c <- lav_matrix_orthogonal_complement(Delta.g)
+      delta_c <- lav_matrix_orthogonal_complement(delta_g)
 
       ### FIXME: compute WLS.W directly, instead of using solve(WLS.V)
 
-      tmp1 <- solve(t(Delta.c) %*% solve(WLS.Vg) %*% Delta.c)
-      tmp2 <- t(Delta.c) %*% Gamma.g %*% Delta.c
+      tmp1 <- solve(t(delta_c) %*% solve(wls_vg) %*% delta_c)
+      tmp2 <- t(delta_c) %*% gamma_g %*% delta_c
 
-      trace.UGamma[g] <- sum(tmp1 * tmp2)
-      UG <- NULL
-      if (Satterthwaite || return.ugamma) {
-        UG.group <- tmp1 %*% tmp2
-        trace.UGamma2[g] <- sum(UG.group * t(UG.group))
-        UG[[g]] <- UG.group
+      trace_ugamma[g] <- sum(tmp1 * tmp2)
+      ug <- NULL
+      if (satterthwaite || return_ugamma) {
+        ug_group <- tmp1 %*% tmp2
+        trace_ugamma2[g] <- sum(ug_group * t(ug_group))
+        ug[[g]] <- ug_group
       }
     }
     # sum over groups
-    trace.UGamma <- sum(trace.UGamma)
-    trace.UGamma2 <- sum(trace.UGamma2)
+    trace_ugamma <- sum(trace_ugamma)
+    trace_ugamma2 <- sum(trace_ugamma2)
   } else {
-    trace.UGamma <- trace.UGamma2 <- UG <- as.numeric(NA)
+    trace_ugamma <- trace_ugamma2 <- ug <- as.numeric(NA)
     fg <- unlist(nobs) / ntotal
 
-    V.g <- WLS.V
+    v_g <- wls_v
     for (g in 1:ngroups) {
-      if (is.matrix(WLS.V[[g]])) {
-        V.g[[g]] <- fg[g] * WLS.V[[g]]
+      if (is.matrix(wls_v[[g]])) {
+        v_g[[g]] <- fg[g] * wls_v[[g]]
       } else {
-        V.g[[g]] <- fg[g] * diag(WLS.V[[g]])
+        v_g[[g]] <- fg[g] * diag(wls_v[[g]])
       }
     }
-    V.all <- lav_matrix_bdiag(V.g)
-    Gamma.f <- Gamma
+    v_all <- lav_matrix_bdiag(v_g)
+    gamma_f <- m_gamma
     for (g in 1:ngroups) {
-      Gamma.f[[g]] <- 1 / fg[g] * Gamma[[g]]
+      gamma_f[[g]] <- 1 / fg[g] * m_gamma[[g]]
     }
-    Gamma.all <- lav_matrix_bdiag(Gamma.f)
-    Delta.all <- do.call("rbind", Delta)
+    gamma_all <- lav_matrix_bdiag(gamma_f)
+    delta_all <- do.call("rbind", delta)
 
     # handle equality constraints
     # FIXME: inequality constraints are ignored!
     if (lavmodel@eq.constraints) {
-      Delta.all <- Delta.all %*% lavmodel@eq.constraints.K
+      delta_all <- delta_all %*% lavmodel@eq.constraints.K
     } else if (lavmodel@ceq.simple.only) {
-      Delta.all <- Delta.all %*% lavmodel@ceq.simple.K
+      delta_all <- delta_all %*% lavmodel@ceq.simple.K
     }
 
     # orthogonal complement of Delta.g
-    Delta.c <- lav_matrix_orthogonal_complement(Delta.all)
+    delta_c <- lav_matrix_orthogonal_complement(delta_all)
 
-    tmp1 <- solve(t(Delta.c) %*% solve(V.all) %*% Delta.c)
-    tmp2 <- t(Delta.c) %*% Gamma.all %*% Delta.c
+    tmp1 <- solve(t(delta_c) %*% solve(v_all) %*% delta_c)
+    tmp2 <- t(delta_c) %*% gamma_all %*% delta_c
 
-    UG <- tmp1 %*% tmp2
+    ug <- tmp1 %*% tmp2
 
-    trace.UGamma <- sum(tmp1 * tmp2)
-    trace.UGamma2 <- sum(UG * t(UG))
+    trace_ugamma <- sum(tmp1 * tmp2)
+    trace_ugamma2 <- sum(ug * t(ug))
   }
 
   list(
-    trace.UGamma = trace.UGamma, trace.UGamma2 = trace.UGamma2,
-    UGamma = UG
+    trace.UGamma = trace_ugamma, trace.UGamma2 = trace_ugamma2,
+    UGamma = ug
   )
 }
 
@@ -626,7 +628,7 @@ lav_test_satorra_bentler_trace_complement <- function(Gamma = NULL,
 
 # we write it like this to highlight the connection with MLR
 #
-lav_test_satorra_bentler_trace_aba <- function(m_gamma = NULL,
+lav_test_satorra_bentler_trace_aba <- function(m_gamma = NULL,       # nolint
                                                m_delta = NULL,
                                                wls_v = NULL,
                                                e_inv = NULL,
@@ -638,7 +640,8 @@ lav_test_satorra_bentler_trace_aba <- function(m_gamma = NULL,
                                                satterthwaite = FALSE) {
   # this is what we did <0.6-13: everything per group
   if (ug2_old_approach) {
-    ufromugamma <- ug <- vector("list", ngroups)
+    # ufromugamma <-
+                     ug <- vector("list", ngroups)
     trace_ugamma <- trace_ugamma2 <- rep(as.numeric(NA), ngroups)
 
     for (g in 1:ngroups) {
@@ -680,26 +683,26 @@ lav_test_satorra_bentler_trace_aba <- function(m_gamma = NULL,
     fg <- unlist(nobs) / ntotal
     if (satterthwaite || return_ugamma) {
       # for trace_ugamma2, we can no longer compute the trace per group
-      V.g <- wls_v
+      v_g <- wls_v
       for (g in 1:ngroups) {
         if (is.matrix(wls_v[[g]])) {
-          V.g[[g]] <- fg[g] * wls_v[[g]]
+          v_g[[g]] <- fg[g] * wls_v[[g]]
         } else {
-          V.g[[g]] <- fg[g] * diag(wls_v[[g]])
+          v_g[[g]] <- fg[g] * diag(wls_v[[g]])
         }
       }
-      V.all <- lav_matrix_bdiag(V.g)
-      Gamma.f <- m_gamma
+      v_all <- lav_matrix_bdiag(v_g)
+      gamma_f <- m_gamma
       for (g in 1:ngroups) {
-        Gamma.f[[g]] <- 1 / fg[g] * m_gamma[[g]]
+        gamma_f[[g]] <- 1 / fg[g] * m_gamma[[g]]
       }
-      Gamma.all <- lav_matrix_bdiag(Gamma.f)
-      Delta.all <- do.call("rbind", m_delta)
+      gamma_all <- lav_matrix_bdiag(gamma_f)
+      delta_all <- do.call("rbind", m_delta)
 
-      aga1 <- V.all %*% Gamma.all %*% V.all
+      aga1 <- v_all %*% gamma_all %*% v_all
 
-      ug <- (Gamma.all %*% V.all) -
-        (Delta.all %*% tcrossprod(e_inv, Delta.all) %*% aga1)
+      ug <- (gamma_all %*% v_all) -
+        (delta_all %*% tcrossprod(e_inv, delta_all) %*% aga1)
 
       trace_ugamma <- sum(diag(ug))
       trace_ugamma2 <- sum(ug * t(ug))

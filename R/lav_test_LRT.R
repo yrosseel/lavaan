@@ -348,7 +348,7 @@ lavTestLRT <- function(object, ..., method = "default", test = "default",   # no
       for (m in seq_len(length(mods) - 1L)) {
         out <- lav_test_diff_SatorraBentler2010(mods[[m]], mods[[m + 1]],
           test = test_1, # in case not @test[[2]]
-          H1 = FALSE
+          h1 = FALSE
         ) # must be F
 
         stat_delta[m + 1] <- out$T.delta

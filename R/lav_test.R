@@ -4,24 +4,24 @@
 #                   when the user provides a custom h1 model.  Called by
 #                   lav_object_summary and lav_fit_measures(_check_baseline)
 
-lavTest <- function(lavobject, test = "standard",
+lavTest <- function(lavobject, test = "standard",               # nolint start
                     scaled.test = "standard",
-                    output = "list", drop.list.single = TRUE) {
+                    output = "list", drop.list.single = TRUE) { # nolint end
 
   # check object
   lavobject <- lav_object_check_version(lavobject)
 
   # check output
-  output.valid <- c("list", "text")
-  if (!any(output == output.valid)) {
+  output_valid <- c("list", "text")
+  if (!any(output == output_valid)) {
       lav_msg_stop(gettextf(
         "%1$s argument must be either %2$s",
-        "output", lav_msg_view(output.valid, "or")
+        "output", lav_msg_view(output_valid, "or")
       ))
   }
 
   # extract 'test' slot
-  TEST <- lavobject@test
+  test_1 <- lavobject@test
 
   # backwards compatibility:
   # if (length(TEST) > 0L && is.null(names(TEST))) {
@@ -41,22 +41,23 @@ lavTest <- function(lavobject, test = "standard",
     }
 
     # check scaled.test
+    scaled_test <- scaled.test
     if (!missing(scaled.test)) {
       if (!is.character(scaled.test)) {
         lav_msg_stop(
           gettextf("%s should be a character string.", "scaled.test"))
       } else {
-        scaled.test <- lav_test_rename(scaled.test, check = TRUE)
+        scaled_test <- lav_test_rename(scaled_test, check = TRUE)
       }
 
       # merge
-      test <- unique(c(test, scaled.test))
+      test <- unique(c(test, scaled_test))
     }
 
     # "standard" must always be first
-    standard.idx <- which(test == "standard")
-    if (length(standard.idx) > 0L && standard.idx != 1L) {
-      test <- c("standard", test[-standard.idx])
+    standard_idx <- which(test == "standard")
+    if (length(standard_idx) > 0L && standard_idx != 1L) {
+      test <- c("standard", test[-standard_idx])
     }
 
     if (test[1] == "none") {
@@ -68,11 +69,11 @@ lavTest <- function(lavobject, test = "standard",
     }
 
     # check if we already have it:
-    if (all(test %in% names(TEST))) {
-      info.attr <- attr(TEST, "info")
-      test.idx <- which(names(TEST) %in% test)
-      TEST <- TEST[test.idx]
-      attr(TEST, "info") <- info.attr
+    if (all(test %in% names(test_1))) {
+      info_attr <- attr(test_1, "info")
+      test_idx <- which(names(test_1) %in% test)
+      test_1 <- test_1[test_idx]
+      attr(test_1, "info") <- info_attr
     } else {
       # redo ALL of them, even if already have some in TEST
       # later, we will allow to also change the options (like information)
@@ -82,32 +83,32 @@ lavTest <- function(lavobject, test = "standard",
       lavobject@Options$test <- test
 
       # fill-in scaled.test in Options slot
-      lavobject@Options$scaled.test <- scaled.test
+      lavobject@Options$scaled.test <- scaled_test
 
       # get requested test statistics
-      TEST <- lav_model_test(lavobject = lavobject)
+      test_1 <- lav_model_test(lavobject = lavobject)
     }
   }
 
   if (output == "list") {
     # remove 'info' attribute
-    attr(TEST, "info") <- NULL
+    attr(test_1, "info") <- NULL
 
     # select only those that were requested (eg remove standard)
-    test.idx <- which(names(TEST) %in% test)
-    TEST <- TEST[test.idx]
+    test_idx <- which(names(test_1) %in% test)
+    test_1 <- test_1[test_idx]
 
     # if only 1 test, drop outer list
-    if (length(TEST) == 1L && drop.list.single) {
-      TEST <- TEST[[1]]
+    if (length(test_1) == 1L && drop.list.single) {
+      test_1 <- test_1[[1]]
     }
 
-    return(TEST)
+    return(test_1)
   } else {
-    lav_test_print(TEST)
+    lav_test_print(test_1)
   }
 
-  invisible(TEST)
+  invisible(test_1)
 }
 
 # allow for 'flexible' names for the test statistics
@@ -116,79 +117,79 @@ lavTest <- function(lavobject, test = "standard",
 lav_test_rename <- function(test, check = FALSE) {
   test <- tolower(test)
 
-  if (length(target.idx <- which(test %in%
+  if (length(target_idx <- which(test %in%
     c("standard", "chisq", "chi", "chi-square", "chi.square"))) > 0L) {
-    test[target.idx] <- "standard"
+    test[target_idx] <- "standard"
   }
-  if (length(target.idx <- which(test %in%
+  if (length(target_idx <- which(test %in%
     c(
       "satorra", "sb", "satorra.bentler", "satorra-bentler",
       "m.adjusted", "m", "mean.adjusted", "mean-adjusted"
     ))) > 0L) {
-    test[target.idx] <- "satorra.bentler"
+    test[target_idx] <- "satorra.bentler"
   }
-  if (length(target.idx <- which(test %in%
+  if (length(target_idx <- which(test %in%
     c("yuan", "yb", "yuan.bentler", "yuan-bentler"))) > 0L) {
-    test[target.idx] <- "yuan.bentler"
+    test[target_idx] <- "yuan.bentler"
   }
-  if (length(target.idx <- which(test %in%
+  if (length(target_idx <- which(test %in%
     c(
       "yuan.bentler.mplus", "yuan-bentler.mplus",
       "yuan-bentler-mplus"
     ))) > 0L) {
-    test[target.idx] <- "yuan.bentler.mplus"
+    test[target_idx] <- "yuan.bentler.mplus"
   }
-  if (length(target.idx <- which(test %in%
+  if (length(target_idx <- which(test %in%
     c(
       "mean.var.adjusted", "mean-var-adjusted", "mv", "second.order",
       "satterthwaite", "mv.adjusted"
     ))) > 0L) {
-    test[target.idx] <- "mean.var.adjusted"
+    test[target_idx] <- "mean.var.adjusted"
   }
-  if (length(target.idx <- which(test %in%
+  if (length(target_idx <- which(test %in%
     c(
       "mplus6", "scale.shift", "scaled.shifted",
       "scaled-shifted"
     ))) > 0L) {
-    test[target.idx] <- "scaled.shifted"
+    test[target_idx] <- "scaled.shifted"
   }
-  if (length(target.idx <- which(test %in%
+  if (length(target_idx <- which(test %in%
     c("bootstrap", "boot", "bollen.stine", "bollen-stine"))) > 0L) {
-    test[target.idx] <- "bollen.stine"
+    test[target_idx] <- "bollen.stine"
   }
-  if (length(target.idx <- which(test %in%
+  if (length(target_idx <- which(test %in%
     c(
       "browne", "residual", "residuals", "browne.residual",
       "browne.residuals", "residual-based", "residual.based",
       "browne.residuals.adf", "browne.residual.adf"
     ))) > 0L) {
-    test[target.idx] <- "browne.residual.adf"
+    test[target_idx] <- "browne.residual.adf"
   }
-  if (length(target.idx <- which(test %in%
+  if (length(target_idx <- which(test %in%
     c("browne.residuals.nt", "browne.residual.nt",
       "browne.nt.residuals", "browne.nt.residual"))) > 0L) {
-    test[target.idx] <- "browne.residual.nt"
+    test[target_idx] <- "browne.residual.nt"
   }
-  if (length(target.idx <- which(test %in%
+  if (length(target_idx <- which(test %in%
     c("browne.residual.adf.model", "browne.residuals.adf.model",
       "browne.residual.model.adf", "browne.residuals.model.adf"))) > 0L) {
-    test[target.idx] <- "browne.residual.adf.model"
+    test[target_idx] <- "browne.residual.adf.model"
   }
-  if (length(target.idx <- which(test %in%
+  if (length(target_idx <- which(test %in%
     c(
       "browne.residuals.nt.model", "browne.residual.nt.model",
       "rls", "browne.rls", "nt.rls", "nt-rls", "ntrls"
     ))) > 0L) {
-    test[target.idx] <- "browne.residual.nt.model"
+    test[target_idx] <- "browne.residual.nt.model"
   }
 
 
   # check?
   if (check) {
-    fmg.idx <- which(vapply(test, lav_test_fmg_is_fmg, logical(1L)))
+    fmg_idx <- which(vapply(test, lav_test_fmg_is_fmg, logical(1L)))
 
     # report unknown values
-    bad.idx <- which(!test %in% c(
+    bad_idx <- which(!test %in% c(
       "standard", "none", "default",
       "satorra.bentler",
       "yuan.bentler",
@@ -202,15 +203,15 @@ lav_test_rename <- function(test, check = FALSE) {
       "browne.residual.adf",
       "browne.residual.adf.model"
     ))
-    bad.idx <- setdiff(bad.idx, fmg.idx)
-    if (length(bad.idx) > 0L) {
+    bad_idx <- setdiff(bad_idx, fmg_idx)
+    if (length(bad_idx) > 0L) {
       lav_msg_stop(sprintf(
         ngettext(
-          length(test[bad.idx]),
+          length(test[bad_idx]),
           "invalid value in %1$s argument: %2$s.",
           "invalid values in %1$s argument: %2$s."
         ),
-        "test", lav_msg_view(test[bad.idx], log_sep = "none")
+        "test", lav_msg_view(test[bad_idx], log_sep = "none")
       ))
     }
 
@@ -230,7 +231,7 @@ lav_test_rename <- function(test, check = FALSE) {
   }
 
   # reorder: first nonscaled, then scaled
-  nonscaled.idx <- which(test %in% c(
+  nonscaled_idx <- which(test %in% c(
     "standard", "none", "default",
     "bollen.stine",
     "browne.residual.nt",
@@ -238,7 +239,7 @@ lav_test_rename <- function(test, check = FALSE) {
     "browne.residual.adf",
     "browne.residual.adf.model"
   ))
-  scaled.idx <- which(test %in% c(
+  scaled_idx <- which(test %in% c(
     "satorra.bentler",
     "yuan.bentler",
     "yuan.bentler.mplus",
@@ -246,8 +247,8 @@ lav_test_rename <- function(test, check = FALSE) {
     "mean.var.adjusted",
     "scaled.shifted"
   ))
-  fmg.idx <- which(vapply(test, lav_test_fmg_is_fmg, logical(1L)))
-  test <- c(test[nonscaled.idx], test[scaled.idx], test[fmg.idx])
+  fmg_idx <- which(vapply(test, lav_test_fmg_is_fmg, logical(1L)))
+  test <- c(test[nonscaled_idx], test[scaled_idx], test[fmg_idx])
 
   test
 }
@@ -260,11 +261,11 @@ lav_model_test <- function(lavobject = NULL,
                            lavh1 = list(),
                            lavoptions = NULL,
                            x = NULL,
-                           VCOV = NULL,
+                           vcov_1 = NULL,
                            lavcache = NULL,
                            lavdata = NULL,
                            lavloglik = NULL,
-                           test.UGamma.eigvals = FALSE) {
+                           test_ugamma_eigvals = FALSE) {
   # lavobject?
   if (!is.null(lavobject)) {
     lavmodel <- lavobject@Model
@@ -275,10 +276,10 @@ lav_model_test <- function(lavobject = NULL,
     lavoptions <- lavobject@Options
     x <- lavobject@optim$x
     fx <- lavobject@optim[["fx"]]
-    fx.group <- lavobject@optim[["fx.group"]]
-    attr(fx, "fx.group") <- fx.group
+    fx_group <- lavobject@optim[["fx.group"]]
+    attr(fx, "fx.group") <- fx_group
     attr(x, "fx") <- fx
-    VCOV <- lavobject@vcov$vcov
+    vcov_1 <- lavobject@vcov$vcov
     lavcache <- lavobject@Cache
     lavdata <- lavobject@Data
     lavloglik <- lavobject@loglik
@@ -291,7 +292,7 @@ lav_model_test <- function(lavobject = NULL,
 
   test <- lavoptions$test
 
-  TEST <- list()
+  test_1 <- list()
 
   # degrees of freedom (ignoring constraints)
   df <- lav_partable_df(lavpartable)
@@ -300,9 +301,9 @@ lav_model_test <- function(lavobject = NULL,
   # active or not!)
   # we use the rank of con.jac (even if the constraints are nonlinear)
   if (!lavmodel@cin.simple.only && nrow(lavmodel@con.jac) > 0L) {
-    ceq.idx <- attr(lavmodel@con.jac, "ceq.idx")
-    if (length(ceq.idx) > 0L) {
-      neq <- qr(lavmodel@con.jac[ceq.idx, , drop = FALSE])$rank
+    ceq_idx <- attr(lavmodel@con.jac, "ceq.idx")
+    if (length(ceq_idx) > 0L) {
+      neq <- qr(lavmodel@con.jac[ceq_idx, , drop = FALSE])$rank
       df <- df + neq
     }
   } else if (lavmodel@ceq.simple.only) {
@@ -317,7 +318,7 @@ lav_model_test <- function(lavobject = NULL,
   # - df < 0
   # - estimator == "MML"
   if (test[1] == "none" || df < 0L || lavoptions$estimator == "MML") {
-    TEST[[1]] <- list(
+    test_1[[1]] <- list(
       test = test[1],
       stat = as.numeric(NA),
       stat.group = as.numeric(NA),
@@ -327,7 +328,7 @@ lav_model_test <- function(lavobject = NULL,
     )
 
     if (length(test) > 1L) {
-      TEST[[2]] <- list(
+      test_1[[2]] <- list(
         test = test[2],
         stat = as.numeric(NA),
         stat.group = as.numeric(NA),
@@ -337,7 +338,7 @@ lav_model_test <- function(lavobject = NULL,
       )
     }
 
-    attr(TEST, "info") <-
+    attr(test_1, "info") <-
       list(
         ngroups = lavdata@ngroups, group.label = lavdata@group.label,
         information = lavoptions$information,
@@ -345,7 +346,7 @@ lav_model_test <- function(lavobject = NULL,
         observed.information = lavoptions$observed.information
       )
 
-    return(TEST)
+    return(test_1)
   }
 
 
@@ -368,91 +369,91 @@ lav_model_test <- function(lavobject = NULL,
     #
 
 
-    thresholds.structured <- FALSE
+    thresholds_structured <- FALSE
     # check
-    th.idx <- which(lavpartable$op == "|")
-    if (any(lavpartable$free[th.idx] == 0L)) {
-      thresholds.structured <- TRUE
+    th_idx <- which(lavpartable$op == "|")
+    if (any(lavpartable$free[th_idx] == 0L)) {
+      thresholds_structured <- TRUE
     }
 
-    eq.idx <- which(lavpartable$op == "==")
-    if (length(eq.idx) > 0L) {
-      th.labels <- lavpartable$plabel[th.idx]
-      eq.labels <- unique(c(
-        lavpartable$lhs[eq.idx],
-        lavpartable$rhs[eq.idx]
+    eq_idx <- which(lavpartable$op == "==")
+    if (length(eq_idx) > 0L) {
+      th_labels <- lavpartable$plabel[th_idx]
+      eq_labels <- unique(c(
+        lavpartable$lhs[eq_idx],
+        lavpartable$rhs[eq_idx]
       ))
-      if (any(th.labels %in% eq.labels)) {
-        thresholds.structured <- TRUE
+      if (any(th_labels %in% eq_labels)) {
+        thresholds_structured <- TRUE
       }
     }
 
     # switch between lav_pml_plrt() and lav_pml_plrt2()
-    if (thresholds.structured) {
+    if (thresholds_structured) {
       pml_plrt <- lav_pml_plrt2
     } else {
       pml_plrt <- lav_pml_plrt
     }
 
-    PML <- pml_plrt(
+    pml <- pml_plrt(
       lavobject = NULL,
       lavmodel = lavmodel,
       lavdata = lavdata,
       lavoptions = lavoptions,
       x = x,
-      vcov_1 = VCOV,
+      vcov_1 = vcov_1,
       lavcache = lavcache,
       lavsamplestats = lavsamplestats,
       lavpartable = lavpartable
     )
     # get chi.group from PML, since we compare to `unrestricted' model,
     # NOT observed data
-    chisq.group <- PML$PLRTH0Sat.group
+    chisq_group <- pml$PLRTH0Sat.group
 
     # twolevel
   } else if (lavdata@nlevels > 1L) {
     if (length(lavh1) > 0L) {
       # LRT
-      chisq.group <- -2 * (lavloglik$loglik.group - lavh1$logl$loglik.group)
+      chisq_group <- -2 * (lavloglik$loglik.group - lavh1$logl$loglik.group)
     } else {
-      chisq.group <- rep(as.numeric(NA), lavdata@ngroups)
+      chisq_group <- rep(as.numeric(NA), lavdata@ngroups)
     }
   } else if (lavdata@missing == "ml" && any(lavdata@Mp[[1]]$coverage == 0)) {
     if (length(lavh1) > 0L) {
-      chisq.group <- -2 * (lavloglik$loglik.group - lavh1$logl$loglik.group)
+      chisq_group <- -2 * (lavloglik$loglik.group - lavh1$logl$loglik.group)
     } else {
-      chisq.group <- rep(as.numeric(NA), lavdata@ngroups)
+      chisq_group <- rep(as.numeric(NA), lavdata@ngroups)
     }
   } else if (lavoptions$estimator %in% c("IV")) {
     # no 'standard' chi-square statistic
-    chisq.group <- rep(as.numeric(NA), lavdata@ngroups)
+    chisq_group <- rep(as.numeric(NA), lavdata@ngroups)
   } else {
     # get fx.group
     fx <- attr(x, "fx")
-    fx.group <- attr(fx, "fx.group")
+    fx_group <- attr(fx, "fx.group")
 
     # always compute `standard' test statistic
     ## FIXME: the NFAC is now implicit in the computation of fx...
-    NFAC <- 2 * unlist(lavsamplestats@nobs)
+    nfac <- 2 * unlist(lavsamplestats@nobs)
     if (lavoptions$estimator == "ML" && lavoptions$likelihood == "wishart") {
       # first divide by two
-      NFAC <- NFAC / 2
-      NFAC <- NFAC - 1
-      NFAC <- NFAC * 2
+      nfac <- nfac / 2
+      nfac <- nfac - 1
+      nfac <- nfac * 2
     } else if (lavoptions$estimator == "DLS") {
-      NFAC <- NFAC / 2
-      NFAC <- NFAC - 1
-      NFAC <- NFAC * 2
+      nfac <- nfac / 2
+      nfac <- nfac - 1
+      nfac <- nfac * 2
     }
 
-    chisq.group <- fx.group * NFAC
+    chisq_group <- fx_group * nfac
   }
 
   # check for negative values
-  chisq.group[chisq.group < 0] <- 0.0
+  chisq_group[chisq_group < 0] <- 0.0
 
   # global test statistic
-  chisq <- sum(chisq.group)
+  chisq <- sum(chisq_group)
 
   # reference distribution: always chi-square, except for the
   # non-robust version of ULS and PML
@@ -481,10 +482,10 @@ lav_model_test <- function(lavobject = NULL,
     }
   }
 
-  TEST[["standard"]] <- list(
+  test_1[["standard"]] <- list(
     test = "standard",
     stat = chisq,
-    stat.group = chisq.group,
+    stat.group = chisq_group,
     df = df,
     refdistr = refdistr,
     pvalue = pvalue
@@ -492,20 +493,20 @@ lav_model_test <- function(lavobject = NULL,
 
   if (length(test) == 1L && test == "standard") {
     # we are done
-    attr(TEST, "info") <-
+    attr(test_1, "info") <-
       list(
         ngroups = lavdata@ngroups, group.label = lavdata@group.label,
         information = lavoptions$information,
         h1.information = lavoptions$h1.information,
         observed.information = lavoptions$observed.information
       )
-    return(TEST)
+    return(test_1)
   } else {
     # strip 'standard' from test list
     if (length(test) > 1L) {
-      standard.idx <- which(test == "standard")
-      if (length(standard.idx) > 0L) {
-        test <- test[-standard.idx]
+      standard_idx <- which(test == "standard")
+      if (length(standard_idx) > 0L) {
+        test <- test[-standard_idx]
       }
     }
   }
@@ -516,23 +517,23 @@ lav_model_test <- function(lavobject = NULL,
 
   # first: sort tests, so that the unscaled tests come first, and then the
   # scaled (otherwise, we don't find the base test)
-  unscaled.idx <- which(test %in% c(
+  unscaled_idx <- which(test %in% c(
       "browne.residual.adf",
       "browne.residual.adf.model",
       "browne.residual.nt",
       "browne.residual.nt.model"
     ))
-  if (length(unscaled.idx) > 0L) {
-    test <- c(test[unscaled.idx], test[-unscaled.idx])
+  if (length(unscaled_idx) > 0L) {
+    test <- c(test[unscaled_idx], test[-unscaled_idx])
   }
 
-  for (this.test in test) {
-    if (lav_test_fmg_is_fmg(this.test)) {
-      parsed <- lav_test_fmg_parse(this.test)
+  for (this_test in test) {
+    if (lav_test_fmg_is_fmg(this_test)) {
+      parsed <- lav_test_fmg_parse(this_test)
       chisq <- lav_test_fmg_resolve_chisq(parsed, lavoptions = lavoptions)
-      unscaled.TEST <- TEST[[1]]
+      unscaled_test <- test_1[[1]]
       if (chisq == "rls") {
-        unscaled.TEST <- lav_test_fmg_browne_nt_model(
+        unscaled_test <- lav_test_fmg_browne_nt_model(
           lavobject = lavobject,
           lavdata = lavdata,
           lavsamplestats = lavsamplestats,
@@ -542,36 +543,36 @@ lav_model_test <- function(lavobject = NULL,
           lavh1 = lavh1,
           lavimplied = lavimplied
         )
-        TEST[[unscaled.TEST$test]] <- unscaled.TEST
+        test_1[[unscaled_test$test]] <- unscaled_test
       }
 
-      TEST[[this.test]] <- lav_test_fmg(
+      test_1[[this_test]] <- lav_test_fmg(
         lavobject = lavobject,
         lavsamplestats = lavsamplestats,
         lavmodel = lavmodel,
         lavdata = lavdata,
         lavoptions = lavoptions,
         lavimplied = lavimplied,
-        TEST.unscaled = TEST[[1]],
-        TEST.chisq = unscaled.TEST,
-        E.inv = attr(VCOV, "E.inv"),
-        Delta = attr(VCOV, "Delta"),
-        WLS.V = attr(VCOV, "WLS.V"),
-        Gamma = attr(VCOV, "Gamma"),
-        test = this.test
+        TEST.unscaled = test_1[[1]],
+        TEST.chisq = unscaled_test,
+        E.inv = attr(vcov_1, "E.inv"),
+        Delta = attr(vcov_1, "Delta"),
+        WLS.V = attr(vcov_1, "WLS.V"),
+        Gamma = attr(vcov_1, "Gamma"),
+        test = this_test
       )
     } else if (lavoptions$estimator == "PML") {
-      if (this.test == "mean.var.adjusted") {
-        LABEL <- "mean+var adjusted correction (PML)"
-        TEST[[this.test]] <-
+      if (this_test == "mean.var.adjusted") {
+        label <- "mean+var adjusted correction (PML)"
+        test_1[[this_test]] <-
           list(
-            test = this.test,
-            stat = PML$stat,
-            stat.group = TEST[[1]]$stat.group * PML$scaling.factor,
-            df = PML$df,
-            pvalue = PML$p.value,
-            scaling.factor = 1 / PML$scaling.factor,
-            label = LABEL,
+            test = this_test,
+            stat = pml$stat,
+            stat.group = test_1[[1]]$stat.group * pml$scaling.factor,
+            df = pml$df,
+            pvalue = pml$p.value,
+            scaling.factor = 1 / pml$scaling.factor,
+            label = label,
             shift.parameter = as.numeric(NA),
             trace.UGamma = as.numeric(NA),
             trace.UGamma4 = as.numeric(NA),
@@ -580,27 +581,27 @@ lav_model_test <- function(lavobject = NULL,
           )
       } else {
         lav_msg_warn(gettextf("test option %s not available for estimator PML",
-                              this.test))
+                              this_test))
       }
-    } else if (this.test %in% c(
+    } else if (this_test %in% c(
       "browne.residual.adf",
       "browne.residual.adf.model",
       "browne.residual.nt",
       "browne.residual.nt.model"
     )) {
-      ADF <- TRUE
-      if (this.test %in% c(
+      adf <- TRUE
+      if (this_test %in% c(
         "browne.residual.nt",
         "browne.residual.nt.model"
       )) {
-        ADF <- FALSE
+        adf <- FALSE
       }
-      model.based <- FALSE
-      if (this.test %in% c(
+      model_based <- FALSE
+      if (this_test %in% c(
         "browne.residual.adf.model",
         "browne.residual.nt.model"
       )) {
-        model.based <- TRUE
+        model_based <- TRUE
       }
 
       out <- lav_test_browne(
@@ -612,21 +613,21 @@ lav_model_test <- function(lavobject = NULL,
         lavoptions = lavoptions,
         lavh1 = lavh1,
         lavimplied = lavimplied,
-        ADF = ADF,
-        model.based = model.based
+        adf = adf,
+        model_based = model_based
       )
-      TEST[[this.test]] <- out
-    } else if (this.test %in% c(
+      test_1[[this_test]] <- out
+    } else if (this_test %in% c(
       "satorra.bentler",
       "mean.var.adjusted",
       "scaled.shifted"
     )) {
       # which test statistic shall we scale?
-      unscaled.TEST <- TEST[[1]]
+      unscaled_test <- test_1[[1]]
       if (lavoptions$scaled.test != "standard") {
-        idx <- which(names(TEST) == lavoptions$scaled.test)
+        idx <- which(names(test_1) == lavoptions$scaled.test)
         if (length(idx) > 0L) {
-          unscaled.TEST <- TEST[[idx[1]]]
+          unscaled_test <- test_1[[idx[1]]]
         } else {
           lav_msg_warn(gettextf(
             "scaled.test [%1$s] not found among available (non scaled) tests:
@@ -642,26 +643,26 @@ lav_model_test <- function(lavobject = NULL,
         lavimplied = lavimplied,
         lavdata = lavdata,
         lavoptions = lavoptions,
-        TEST.unscaled = unscaled.TEST,
-        E.inv = attr(VCOV, "E.inv"),
-        Delta = attr(VCOV, "Delta"),
-        WLS.V = attr(VCOV, "WLS.V"),
-        Gamma = attr(VCOV, "Gamma"),
-        test = this.test,
+        test_unscaled = unscaled_test,
+        e_inv = attr(vcov_1, "E.inv"),
+        delta = attr(vcov_1, "Delta"),
+        wls_v = attr(vcov_1, "WLS.V"),
+        m_gamma = attr(vcov_1, "Gamma"),
+        test = this_test,
         method = "original", # since 0.6-13
-        return.ugamma = FALSE
+        return_ugamma = FALSE
       )
-      TEST[[this.test]] <- out[[this.test]]
-    } else if (this.test %in% c(
+      test_1[[this_test]] <- out[[this_test]]
+    } else if (this_test %in% c(
       "yuan.bentler",
       "yuan.bentler.mplus"
     )) {
       # which test statistic shall we scale?
-      unscaled.TEST <- TEST[[1]]
+      unscaled_test <- test_1[[1]]
       if (lavoptions$scaled.test != "standard") {
-        idx <- which(names(TEST) == lavoptions$scaled.test)
+        idx <- which(names(test_1) == lavoptions$scaled.test)
         if (length(idx) > 0L) {
-          unscaled.TEST <- TEST[[idx[1]]]
+          unscaled_test <- test_1[[idx[1]]]
         } else {
           lav_msg_warn(gettextf(
             "scaled.test [%1$s] not found among available (non scaled) tests:
@@ -678,26 +679,26 @@ lav_model_test <- function(lavobject = NULL,
         lavimplied = lavimplied,
         lavh1 = lavh1,
         lavoptions = lavoptions,
-        TEST.unscaled = unscaled.TEST,
-        E.inv = attr(VCOV, "E.inv"),
-        B0.group = attr(VCOV, "B0.group"),
-        test = this.test,
+        test_unscaled = unscaled_test,
+        e_inv = attr(vcov_1, "E.inv"),
+        b0_group = attr(vcov_1, "B0.group"),
+        test = this_test,
         mimic = lavoptions$mimic,
         # method         = "default",
-        return.ugamma = FALSE
+        return_ugamma = FALSE
       )
-      TEST[[this.test]] <- out[[this.test]]
-    } else if (this.test == "bollen.stine") {
+      test_1[[this_test]] <- out[[this_test]]
+    } else if (this_test == "bollen.stine") {
       # check if we have bootstrap lavdata
-      BOOT.TEST <- attr(VCOV, "BOOT.TEST")
-      if (is.null(BOOT.TEST)) {
+      boot_test <- attr(vcov_1, "BOOT.TEST")
+      if (is.null(boot_test)) {
         if (!is.null(lavoptions$bootstrap)) {
-          R <- as.integer(lavoptions$bootstrap$R)
+          r <- as.integer(lavoptions$bootstrap$R)
         } else {
-          R <- 1000L
+          r <- 1000L
         }
-        boot.type <- "bollen.stine"
-        BOOT.TEST <-
+        boot_type <- "bollen.stine"
+        boot_test <-
           lav_bootstrap_internal(
             object = NULL,
             lavmodel = lavmodel,
@@ -705,58 +706,58 @@ lav_model_test <- function(lavobject = NULL,
             lavpartable = lavpartable,
             lavoptions = lavoptions,
             lavdata = lavdata,
-            r = R,
-            type = boot.type,
+            r = r,
+            type = boot_type,
             fun = "test"
           )
 
         # new in 0.6-12: always warn for failed and nonadmissible
-        error.idx <- attr(BOOT.TEST, "error.idx")
-        nfailed <- length(attr(BOOT.TEST, "error.idx")) # zero if NULL
+        error_idx <- attr(boot_test, "error.idx")
+        nfailed <- length(attr(boot_test, "error.idx")) # zero if NULL
         if (nfailed > 0L) {
           lav_msg_warn(gettextf(
             "%d bootstrap runs failed or did not converge.", nfailed
           ))
         }
 
-        notok <- length(attr(BOOT.TEST, "nonadmissible")) # zero if NULL
+        notok <- length(attr(boot_test, "nonadmissible")) # zero if NULL
         if (notok > 0L) {
           lav_msg_warn(gettextf(
             "%d bootstrap runs resulted in nonadmissible solutions.", notok
           ))
         }
 
-        if (length(error.idx) > 0L) {
+        if (length(error_idx) > 0L) {
           # new in 0.6-13: we must still remove them!
-          BOOT.TEST <- BOOT.TEST[-error.idx, , drop = FALSE]
+          boot_test <- boot_test[-error_idx, , drop = FALSE]
           # this also drops the attributes
         }
 
-        BOOT.TEST <- drop(BOOT.TEST)
+        boot_test <- drop(boot_test)
       }
 
       # bootstrap p-value
-      boot.larger <- sum(BOOT.TEST > chisq)
-      boot.length <- length(BOOT.TEST)
-      pvalue.boot <- boot.larger / boot.length
+      boot_larger <- sum(boot_test > chisq)
+      boot_length <- length(boot_test)
+      pvalue_boot <- boot_larger / boot_length
 
-      TEST[[this.test]] <- list(
-        test = this.test,
+      test_1[[this_test]] <- list(
+        test = this_test,
         stat = chisq,
-        stat.group = chisq.group,
+        stat.group = chisq_group,
         df = df,
-        pvalue = pvalue.boot,
+        pvalue = pvalue_boot,
         refdistr = "bootstrap",
-        boot.T = BOOT.TEST,
-        boot.larger = boot.larger,
-        boot.length = boot.length
+        boot.T = boot_test,
+        boot.larger = boot_larger,
+        boot.length = boot_length
       )
     }
   } # additional tests
 
   # add additional information as an attribute, needed for independent
   # printing
-  attr(TEST, "info") <-
+  attr(test_1, "info") <-
     list(
       ngroups = lavdata@ngroups, group.label = lavdata@group.label,
       information = lavoptions$information,
@@ -764,7 +765,7 @@ lav_model_test <- function(lavobject = NULL,
       observed.information = lavoptions$observed.information
     )
 
-  TEST
+  test_1
 }
 
 lav_update_test_custom_h1 <- function(lav_obj_h0, lav_obj_h1) {
@@ -780,35 +781,35 @@ lav_update_test_custom_h1 <- function(lav_obj_h0, lav_obj_h1) {
 
   ## save old @test slot as template
   ## (so the @test[[1]]$df don't change while looping over tests to update)
-  newTEST <- lav_obj_h0@test
+  new_test <- lav_obj_h0@test
 
   ## assemble a call to lavTestLRT()
-  lrtCallTemplate <- list(quote(lavTestLRT), object = quote(lav_obj_h0),
+  lrt_call_template <- list(quote(lavTestLRT), object = quote(lav_obj_h0),
                           quote(lav_obj_h1)) # in ...
 
   ## can only update tests available in both objects
-  testNames0 <- names(lav_obj_h0@test)
-  testNames1 <- names(lav_obj_h1@test)
-  testNames <- intersect(testNames0, testNames1)
+  test_names0 <- names(lav_obj_h0@test)
+  test_names1 <- names(lav_obj_h1@test)
+  test_names <- intersect(test_names0, test_names1)
 
   ## loop over those tests
-  for (tn in testNames) {
-    lrtCall <- lrtCallTemplate
+  for (tn in test_names) {
+    lrt_call <- lrt_call_template
     ## conditional arguments:
     if (tn == "standard") {
-      lrtCall$method <- "standard"
-    } else if (tn %in% c("scaled.shifted","mean.var.adjusted")) {
+      lrt_call$method <- "standard"
+    } else if (tn %in% c("scaled.shifted", "mean.var.adjusted")) {
       if (lav_obj_h0@Options$estimator == "PML") {
-        lrtCall$method <- "mean.var.adjusted.PLRT"
+        lrt_call$method <- "mean.var.adjusted.PLRT"
       } else {
-        lrtCall$method <- "satorra.2000"
+        lrt_call$method <- "satorra.2000"
       }
-      lrtCall$scaled.shifted <- tn == "scaled.shifted"
+      lrt_call$scaled.shifted <- tn == "scaled.shifted"
     } else if (tn %in% c("satorra.bentler",
-                         "yuan.bentler","yuan.bentler.mplus")) {
-      lrtCall$test <- tn
+                         "yuan.bentler", "yuan.bentler.mplus")) {
+      lrt_call$test <- tn
     } else if (grepl(pattern = "browne", x = tn)) {
-      lrtCall$type <- tn
+      lrt_call$type <- tn
     } else {
       #TODO?
       #   - if (tn %in% c("bootstrap", "bollen.stine")) next
@@ -818,33 +819,34 @@ lav_update_test_custom_h1 <- function(lav_obj_h0, lav_obj_h1) {
     ## get new test
     if (lav_obj_h0@test[[1]]$df == lav_obj_h1@test[[1]]$df) {
       ## suppress warning about == df
-      ANOVA <- suppressWarnings(eval(as.call(lrtCall)))
+      anova_1 <- suppressWarnings(eval(as.call(lrt_call)))
     } else {
       ## maybe some other informative warning would be important to see
-      ANOVA <- eval(as.call(lrtCall))
+      anova_1 <- eval(as.call(lrt_call))
     }
 
 
     ## replace old @test[[tn]] values
-    newTEST[[tn]]$stat.group <- NULL # avoid wrong stats in summary() header?
-    newTEST[[tn]]$stat   <- ANOVA["lav_obj_h0" , "Chisq diff"]
-    newTEST[[tn]]$df     <- ANOVA["lav_obj_h0" , "Df diff"   ]
-    newTEST[[tn]]$pvalue <- ANOVA["lav_obj_h0" , "Pr(>Chisq)"]
-    if (!is.null(newTEST[[tn]]$scaling.factor)) {
-      newTEST[[tn]]$scaling.factor <- attr(ANOVA, "scale")[2] # first row is NA
+    new_test[[tn]]$stat.group <- NULL # avoid wrong stats in summary() header?
+    new_test[[tn]]$stat   <- anova_1["lav_obj_h0", "Chisq diff"]
+    new_test[[tn]]$df     <- anova_1["lav_obj_h0", "Df diff"]
+    new_test[[tn]]$pvalue <- anova_1["lav_obj_h0", "Pr(>Chisq)"]
+    if (!is.null(new_test[[tn]]$scaling.factor)) {
+      new_test[[tn]]$scaling.factor <- attr(anova_1, "scale")[2] #1st row is NA
     }
-    if (!is.null(newTEST[[tn]]$shift.parameter)) {
-      newTEST[[tn]]$shift.parameter <- attr(ANOVA, "shift")[2] # first row is NA
+    if (!is.null(new_test[[tn]]$shift.parameter)) {
+      new_test[[tn]]$shift.parameter <- attr(anova_1, "shift")[2] #1st row is NA
     } else {
       ## unless scaled.shifted, RMSEA is calculated from $standard$stat and
       ## df == sum($trace.UGamma).  Reverse-engineer from $scaling.factor:
-      newTEST[[tn]]$trace.UGamma <- newTEST[[tn]]$df * newTEST[[tn]]$scaling.factor
+      new_test[[tn]]$trace.UGamma <- new_test[[tn]]$df *
+                                                   new_test[[tn]]$scaling.factor
     }
     ## should not be necessary to replace $trace.UGamma2
     ## nor to replace $scaling.factor.h0/h1
   } # end loop over tests
 
   ## assign updated @test slot and return
-  lav_obj_h0@test <- newTEST
+  lav_obj_h0@test <- new_test
   lav_obj_h0
 }
