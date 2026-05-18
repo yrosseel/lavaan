@@ -32,8 +32,10 @@ the model.}
     Bollen-Stine bootstrap is used to compute the bootstrap probability value
     of the (regular) test statistic. FMG p-value tests can be requested using
     names such as \code{"peba4"}, \code{"pols3"}, \code{"pall"}, or
-    \code{"all"}. Suffixless FMG names use the standard ML chi-square statistic
-    by default; set \code{scaled.test = "Browne.residual.nt.model"} or
+    \code{"all"}. The convenience value \code{"fmg"} resolves to
+    \code{"peba4_rls"} for one-model tests. Suffixless FMG names use the
+    standard ML chi-square statistic by default; set
+    \code{scaled.test = "Browne.residual.nt.model"} or
     \code{scaled.test = "RLS"} to use the Browne residual normal-theory
     model-based statistic. Suffixes such as \code{"_ml"}, \code{"_rls"},
     and \code{"_ug"} can be used for explicit control, for example

@@ -183,6 +183,16 @@ lav_test_rename <- function(test, check = FALSE) {
     test[target_idx] <- "browne.residual.nt.model"
   }
 
+  if (length(target_idx <- which(vapply(
+    test, lav_test_fmg_is_preset, logical(1L)
+  ))) > 0L) {
+    test[target_idx] <- vapply(
+      test[target_idx],
+      lav_test_fmg_resolve_preset,
+      character(1L)
+    )
+  }
+
 
   # check?
   if (check) {
