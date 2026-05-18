@@ -18,9 +18,9 @@ lav_efa_print <- function(x, nd = 3L, cutoff = 0.3,
     mm_lambda <- unclass(y$efa$lambda[[b]])
     lav_print_loadings(mm_lambda,
       nd = nd, cutoff = cutoff,
-      dot.cutoff = dot.cutoff,
-      alpha.level = alpha.level,
-      x.se = y$efa$lambda.se[[b]]
+      dot_cutoff = dot.cutoff,
+      alpha_level = alpha.level,
+      x_se = y$efa$lambda.se[[b]]
     )
     cat("\n")
   }

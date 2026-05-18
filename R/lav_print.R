@@ -6,11 +6,11 @@
 ## perhaps we should add 0.0005 or something to avoid this?
 
 lav_dataframe_print <- function(x, ..., nd = 3L) {
-  ROW.NAMES <- rownames(x)
+  row_names <- rownames(x)
   y <- as.data.frame(lapply(x, function(x) {
     if (is.numeric(x)) round(x, nd) else x
   }))
-  rownames(y) <- ROW.NAMES
+  rownames(y) <- row_names
 
   if (!is.null(attr(x, "header"))) {
     cat("\n", attr(x, "header"), "\n\n", sep = "")
@@ -45,8 +45,8 @@ lav_lavaanlist_print <- function(x, ...) {
 
 
 # prints only lower triangle of a symmetric matrix
-lav_matrix_symmetric_print <- function(x, ..., nd = 3L, shift = 0L,
-                                          diag.na.dot = TRUE) {
+lav_matrix_symmetric_print <- function(x, ..., nd = 3L, shift = 0L,  # nolint start
+                                          diag.na.dot = TRUE) {      # nolint end
   # print only lower triangle of a symmetric matrix
   # this function was inspired by the `print.correlation' function
   # in package nlme
@@ -59,21 +59,21 @@ lav_matrix_symmetric_print <- function(x, ..., nd = 3L, shift = 0L,
   y[!ll] <- ""
   if (diag.na.dot) {
     # print a "." instead of NA on the main diagonal (eg lav_efalist_summary)
-    diag.idx <- lav_matrix_diag_idx(ncol(x))
-    tmp <- x[diag.idx]
+    diag_idx <- lav_matrix_diag_idx(ncol(x))
+    tmp <- x[diag_idx]
     if (all(is.na(tmp))) {
-      y[diag.idx] <- paste(strrep(" ", nd + 2L), ".", sep = "")
+      y[diag_idx] <- paste(strrep(" ", nd + 2L), ".", sep = "")
     }
   }
   if (!is.null(colnames(x))) {
     colnames(y) <- abbreviate(colnames(x), minlength = nd + 3L)
   }
   if (shift > 0L) {
-    empty.string <- rep(strrep(x = " ", times = shift), times = nrow(x))
+    empty_string <- rep(strrep(x = " ", times = shift), times = nrow(x))
     if (!is.null(rownames(x))) {
-      rownames(y) <- paste(empty.string, rownames(x), sep = "")
+      rownames(y) <- paste(empty_string, rownames(x), sep = "")
     } else {
-      rownames(y) <- empty.string
+      rownames(y) <- empty_string
     }
   }
 
@@ -99,11 +99,11 @@ lav_matrix_print <- function(x, ..., nd = 3L, shift = 0L) {
     colnames(y) <- abbreviate(colnames(x), minlength = nd + 3L)
   }
   if (shift > 0L) {
-    empty.string <- rep(strrep(x = " ", times = shift), times = nrow(x))
+    empty_string <- rep(strrep(x = " ", times = shift), times = nrow(x))
     if (!is.null(rownames(x))) {
-      rownames(y) <- paste(empty.string, rownames(x), sep = "")
+      rownames(y) <- paste(empty_string, rownames(x), sep = "")
     } else {
-      rownames(y) <- empty.string
+      rownames(y) <- empty_string
     }
   }
   if (!is.null(attr(x, "header"))) {
@@ -130,9 +130,9 @@ lav_vector_print <- function(x, ..., nd = 3L, shift = 0L) {
   }
 
   if (shift > 0L) {
-    empty.string <- strrep(x = " ", times = shift)
+    empty_string <- strrep(x = " ", times = shift)
     tmp <- format(y, digits = nd, width = 2L + nd)
-    tmp[1] <- paste(empty.string, tmp[1], sep = "")
+    tmp[1] <- paste(empty_string, tmp[1], sep = "")
     print(tmp, quote = FALSE, ...)
   } else {
     print(round(y, nd), right = TRUE, ...)
@@ -147,12 +147,12 @@ lav_vector_print <- function(x, ..., nd = 3L, shift = 0L) {
 
 lav_parameterestimates_print <- function(x, ..., nd = 3L) {
   # format for numeric values
-  num.format <- paste("%", max(8L, nd + 5L), ".", nd, "f", sep = "")
-  int.format <- paste("%", max(8L, nd + 5L), "d", sep = "")
-  char.format <- paste("%", max(8L, nd + 5L), "s", sep = "")
+  num_format <- paste("%", max(8L, nd + 5L), ".", nd, "f", sep = "")
+  int_format <- paste("%", max(8L, nd + 5L), "d", sep = "")
+  char_format <- paste("%", max(8L, nd + 5L), "s", sep = "")
 
   # output sections
-  GSECTIONS <- c(
+  gsections <- c(
     "Latent Variables",
     "Composites",
     "Regressions",
@@ -164,7 +164,7 @@ lav_parameterestimates_print <- function(x, ..., nd = 3L) {
     "Group Weight",
     "R-Square"
   )
-  ASECTIONS <- c(
+  asections <- c(
     "Defined Parameters",
     "Constraints"
   )
@@ -179,16 +179,16 @@ lav_parameterestimates_print <- function(x, ..., nd = 3L) {
     cat("\nParameter Estimates:\n\n")
 
     # info about parameterization (if categorical only)
-    categorical.flag <- attr(x, "categorical")
-    if (categorical.flag) {
+    categorical_flag <- attr(x, "categorical")
+    if (categorical_flag) {
       # container
       c1 <- c2 <- character(0L)
 
       # which parameterization?
       c1 <- c(c1, "Parameterization")
-      tmp.txt <- attr(x, "parameterization")
-      c2 <- c(c2, paste(toupper(substring(tmp.txt, 1, 1)),
-        substring(tmp.txt, 2),
+      tmp_txt <- attr(x, "parameterization")
+      c2 <- c(c2, paste(toupper(substring(tmp_txt, 1, 1)),
+        substring(tmp_txt, 2),
         sep = ""
       ))
 
@@ -199,12 +199,12 @@ lav_parameterestimates_print <- function(x, ..., nd = 3L) {
       )
 
       # create character matrix
-      M <- cbind(c1, c2, deparse.level = 0)
-      colnames(M) <- rep("", ncol(M))
-      rownames(M) <- rep(" ", nrow(M))
+      m_1 <- cbind(c1, c2, deparse.level = 0)
+      colnames(m_1) <- rep("", ncol(m_1))
+      rownames(m_1) <- rep(" ", nrow(m_1))
 
       # print
-      write.table(M, row.names = TRUE, col.names = FALSE, quote = FALSE)
+      write.table(m_1, row.names = TRUE, col.names = FALSE, quote = FALSE)
     }
 
     # info about standard errors (if we have x$se only)
@@ -218,12 +218,12 @@ lav_parameterestimates_print <- function(x, ..., nd = 3L) {
       # which type of standard errors?
       c1 <- c(c1, "Standard errors")
       if (attr(x, "se") == "robust.huber.white") {
-        tmp.txt <- "sandwich" # since 0.6-6
+        tmp_txt <- "sandwich" # since 0.6-6
       } else {
-        tmp.txt <- attr(x, "se")
+        tmp_txt <- attr(x, "se")
       }
-      c2 <- c(c2, paste(toupper(substring(tmp.txt, 1, 1)),
-        substring(tmp.txt, 2),
+      c2 <- c(c2, paste(toupper(substring(tmp_txt, 1, 1)),
+        substring(tmp_txt, 2),
         sep = ""
       ))
       # information
@@ -234,18 +234,18 @@ lav_parameterestimates_print <- function(x, ..., nd = 3L) {
         } else {
           c1 <- c(c1, "Information")
         }
-        tmp.txt <- attr(x, "information")
-        c2 <- c(c2, paste(toupper(substring(tmp.txt, 1, 1)),
-          substring(tmp.txt, 2),
+        tmp_txt <- attr(x, "information")
+        c2 <- c(c2, paste(toupper(substring(tmp_txt, 1, 1)),
+          substring(tmp_txt, 2),
           sep = ""
         ))
 
         # if observed, which type? (hessian of h1)
         if (attr(x, "information") == "observed") {
           c1 <- c(c1, "Observed information based on")
-          tmp.txt <- attr(x, "observed.information")
-          c2 <- c(c2, paste(toupper(substring(tmp.txt, 1, 1)),
-            substring(tmp.txt, 2),
+          tmp_txt <- attr(x, "observed.information")
+          c2 <- c(c2, paste(toupper(substring(tmp_txt, 1, 1)),
+            substring(tmp_txt, 2),
             sep = ""
           ))
         }
@@ -260,9 +260,9 @@ lav_parameterestimates_print <- function(x, ..., nd = 3L) {
           } else {
             c1 <- c(c1, "Information saturated (h1) model")
           }
-          tmp.txt <- attr(x, "h1.information")
-          c2 <- c(c2, paste(toupper(substring(tmp.txt, 1, 1)),
-            substring(tmp.txt, 2),
+          tmp_txt <- attr(x, "h1.information")
+          c2 <- c(c2, paste(toupper(substring(tmp_txt, 1, 1)),
+            substring(tmp_txt, 2),
             sep = ""
           ))
         }
@@ -272,9 +272,9 @@ lav_parameterestimates_print <- function(x, ..., nd = 3L) {
         if (attr(x, "se") == "robust.huber.white" &&
           attr(x, "information.meat") != "first.order") {
           c1 <- c(c1, "Information meat")
-          tmp.txt <- attr(x, "information.meat")
-          c2 <- c(c2, paste(toupper(substring(tmp.txt, 1, 1)),
-            substring(tmp.txt, 2),
+          tmp_txt <- attr(x, "information.meat")
+          c2 <- c(c2, paste(toupper(substring(tmp_txt, 1, 1)),
+            substring(tmp_txt, 2),
             sep = ""
           ))
         }
@@ -285,9 +285,9 @@ lav_parameterestimates_print <- function(x, ..., nd = 3L) {
           attr(x, "h1.information.meat") !=
             attr(x, "h1.information")) {
           c1 <- c(c1, "Information meat saturated (h1) model")
-          tmp.txt <- attr(x, "h1.information.meat")
-          c2 <- c(c2, paste(toupper(substring(tmp.txt, 1, 1)),
-            substring(tmp.txt, 2),
+          tmp_txt <- attr(x, "h1.information.meat")
+          c2 <- c(c2, paste(toupper(substring(tmp_txt, 1, 1)),
+            substring(tmp_txt, 2),
             sep = ""
           ))
         }
@@ -331,12 +331,12 @@ lav_parameterestimates_print <- function(x, ..., nd = 3L) {
       )
 
       # create character matrix
-      M <- cbind(c1, c2, deparse.level = 0)
-      colnames(M) <- rep("", ncol(M))
-      rownames(M) <- rep(" ", nrow(M))
+      m_1 <- cbind(c1, c2, deparse.level = 0)
+      colnames(m_1) <- rep("", ncol(m_1))
+      rownames(m_1) <- rep(" ", nrow(m_1))
 
       # print
-      write.table(M, row.names = TRUE, col.names = FALSE, quote = FALSE)
+      write.table(m_1, row.names = TRUE, col.names = FALSE, quote = FALSE)
 
       #TDJ: Message for lavaan.mi-class objects when df > 1000 for t test
       if (isTRUE(attr(x, "infDF"))) {
@@ -392,11 +392,11 @@ lav_parameterestimates_print <- function(x, ..., nd = 3L) {
   y <- as.data.frame(
     lapply(x, function(x) {
       if (is.integer(x)) {
-        sprintf(int.format, x)
+        sprintf(int_format, x)
       } else if (is.character(x)) { # perhaps plabel
-        sprintf(char.format, x)
+        sprintf(char_format, x)
       } else if (is.numeric(x)) {
-        sprintf(num.format, x)
+        sprintf(num_format, x)
       } else {
         x
       }
@@ -426,39 +426,39 @@ lav_parameterestimates_print <- function(x, ..., nd = 3L) {
 
   # handle se == 0.0
   if (!is.null(x$se)) {
-    se.idx <- which(x$se == 0)
-    if (length(se.idx) > 0L) {
-      m[se.idx, "se"] <- ""
+    se_idx <- which(x$se == 0)
+    if (length(se_idx) > 0L) {
+      m[se_idx, "se"] <- ""
       if (!is.null(x$z)) {
-        m[se.idx, "z"] <- ""
+        m[se_idx, "z"] <- ""
       }
       if (!is.null(x$pvalue)) {
-        m[se.idx, "pvalue"] <- ""
+        m[se_idx, "pvalue"] <- ""
       }
       ## for lavaan.mi-class objects (semTools)
       if (!is.null(x$t)) {
-        m[se.idx, "t"] <- ""
+        m[se_idx, "t"] <- ""
       }
       if (!is.null(x$df)) {
-        m[se.idx, "df"] <- ""
+        m[se_idx, "df"] <- ""
       }
     }
 
     # handle se == NA
-    se.idx <- which(is.na(x$se))
-    if (length(se.idx) > 0L) {
+    se_idx <- which(is.na(x$se))
+    if (length(se_idx) > 0L) {
       if (!is.null(x$z)) {
-        m[se.idx, "z"] <- ""
+        m[se_idx, "z"] <- ""
       }
       if (!is.null(x$pvalue)) {
-        m[se.idx, "pvalue"] <- ""
+        m[se_idx, "pvalue"] <- ""
       }
       ## for lavaan.mi-class objects (semTools)
       if (!is.null(x$t)) {
-        m[se.idx, "t"] <- ""
+        m[se_idx, "t"] <- ""
       }
       if (!is.null(x$df)) {
-        m[se.idx, "df"] <- ""
+        m[se_idx, "df"] <- ""
       }
     }
   }
@@ -469,16 +469,16 @@ lav_parameterestimates_print <- function(x, ..., nd = 3L) {
   #            free parameters only
   if (!is.null(x$lower)) {
     diff_lower <- abs(x$lower - x$est)
-    b.idx <- which(diff_lower > 0 & diff_lower < sqrt(.Machine$double.eps))
-    if (length(b.idx) > 0L) {
+    b_idx <- which(diff_lower > 0 & diff_lower < sqrt(.Machine$double.eps))
+    if (length(b_idx) > 0L) {
       if (!is.null(x$pvalue)) {
-        m[b.idx, "pvalue"] <- ""
+        m[b_idx, "pvalue"] <- ""
       }
       if (is.null(x$label)) {
         x$label <- rep("", length(x$lhs))
       }
-      x$label[b.idx] <- ifelse(nchar(x$label[b.idx]) > 0L,
-        paste(x$label[b.idx], "+lb", sep = ""),
+      x$label[b_idx] <- ifelse(nchar(x$label[b_idx]) > 0L,
+        paste(x$label[b_idx], "+lb", sep = ""),
         "lb"
       )
     }
@@ -487,16 +487,16 @@ lav_parameterestimates_print <- function(x, ..., nd = 3L) {
   }
   if (!is.null(x$upper)) {
     diff_upper <- abs(x$upper - x$est)
-    b.idx <- which(diff_upper > 0 & diff_upper < sqrt(.Machine$double.eps))
-    if (length(b.idx) > 0L) {
+    b_idx <- which(diff_upper > 0 & diff_upper < sqrt(.Machine$double.eps))
+    if (length(b_idx) > 0L) {
       if (!is.null(x$pvalue)) {
-        m[b.idx, "pvalue"] <- ""
+        m[b_idx, "pvalue"] <- ""
       }
       if (is.null(x$label)) {
         x$label <- rep("", length(x$lhs))
       }
-      x$label[b.idx] <- ifelse(nchar(x$label[b.idx]) > 0L,
-        paste(x$label[b.idx], "+ub", sep = ""),
+      x$label[b_idx] <- ifelse(nchar(x$label[b_idx]) > 0L,
+        paste(x$label[b_idx], "+ub", sep = ""),
         "ub"
       )
     }
@@ -507,44 +507,44 @@ lav_parameterestimates_print <- function(x, ..., nd = 3L) {
 
   # handle fmi
   if (!is.null(x$fmi)) {
-    se.idx <- which(x$se == 0)
-    if (length(se.idx) > 0L) {
-      m[se.idx, "fmi"] <- ""
+    se_idx <- which(x$se == 0)
+    if (length(se_idx) > 0L) {
+      m[se_idx, "fmi"] <- ""
       ## for lavaan.mi-class objects (semTools)
-      if (!is.null(x$riv)) m[se.idx, "riv"] <- ""
+      if (!is.null(x$riv)) m[se_idx, "riv"] <- ""
     }
 
-    not.idx <- which(x$op %in% c(":=", "<", ">", "=="))
-    if (length(not.idx) > 0L) {
+    not_idx <- which(x$op %in% c(":=", "<", ">", "=="))
+    if (length(not_idx) > 0L) {
       if (!is.null(x$fmi)) {
-        m[not.idx, "fmi"] <- ""
+        m[not_idx, "fmi"] <- ""
         ## for lavaan.mi-class objects (semTools)
-        if (!is.null(x$riv)) m[not.idx, "riv"] <- ""
+        if (!is.null(x$riv)) m[not_idx, "riv"] <- ""
       }
     }
   }
 
   # for blavaan, handle Post.SD and PSRF
   if (!is.null(x$Post.SD)) {
-    se.idx <- which(x$Post.SD == 0)
-    if (length(se.idx) > 0L) {
-      m[se.idx, "Post.SD"] <- ""
+    se_idx <- which(x$Post.SD == 0)
+    if (length(se_idx) > 0L) {
+      m[se_idx, "Post.SD"] <- ""
       if (!is.null(x$psrf)) {
-        m[se.idx, "psrf"] <- ""
+        m[se_idx, "psrf"] <- ""
       }
       if (!is.null(x$PSRF)) {
-        m[se.idx, "PSRF"] <- ""
+        m[se_idx, "PSRF"] <- ""
       }
     }
 
     # handle psrf for defined parameters
-    not.idx <- which(x$op %in% c(":=", "<", ">", "=="))
-    if (length(not.idx) > 0L) {
+    not_idx <- which(x$op %in% c(":=", "<", ">", "=="))
+    if (length(not_idx) > 0L) {
       if (!is.null(x$psrf)) {
-        m[not.idx, "psrf"] <- ""
+        m[not_idx, "psrf"] <- ""
       }
       if (!is.null(x$PSRF)) {
-        m[not.idx, "PSRF"] <- ""
+        m[not_idx, "PSRF"] <- ""
       }
     }
   }
@@ -571,27 +571,27 @@ lav_parameterestimates_print <- function(x, ..., nd = 3L) {
   }
 
   # format column names
-  colnames(m) <- sprintf(char.format, colnames(m))
+  colnames(m) <- sprintf(char_format, colnames(m))
 
   # exceptions for blavaan: Post.Mean (width = 9), Prior (width = 14)
   if (!is.null(x$Post.Mean)) {
     tmp <- gsub("[ \t]+", "", colnames(m), perl = TRUE)
 
     # reformat "Post.Mean" column
-    col.idx <- which(tmp == "Post.Mean")
-    if (length(col.idx) > 0L) {
-      tmp.format <- paste("%", max(9, nd + 5), "s", sep = "")
-      colnames(m)[col.idx] <- sprintf(tmp.format, colnames(m)[col.idx])
-      m[, col.idx] <- sprintf(tmp.format, m[, col.idx])
+    col_idx <- which(tmp == "Post.Mean")
+    if (length(col_idx) > 0L) {
+      tmp_format <- paste("%", max(9, nd + 5), "s", sep = "")
+      colnames(m)[col_idx] <- sprintf(tmp_format, colnames(m)[col_idx])
+      m[, col_idx] <- sprintf(tmp_format, m[, col_idx])
     }
 
     # reformat "Prior" column
-    col.idx <- which(tmp == "Prior")
-    if (length(col.idx) > 0L) {
-      MAX <- max(nchar(m[, col.idx])) + 1L
-      tmp.format <- paste("%", max(MAX, nd + 5), "s", sep = "")
-      colnames(m)[col.idx] <- sprintf(tmp.format, colnames(m)[col.idx])
-      m[, col.idx] <- sprintf(tmp.format, m[, col.idx])
+    col_idx <- which(tmp == "Prior")
+    if (length(col_idx) > 0L) {
+      max_1 <- max(nchar(m[, col_idx])) + 1L
+      tmp_format <- paste("%", max(max_1, nd + 5), "s", sep = "")
+      colnames(m)[col_idx] <- sprintf(tmp_format, colnames(m)[col_idx])
+      m[, col_idx] <- sprintf(tmp_format, m[, col_idx])
     }
   }
 
@@ -600,9 +600,9 @@ lav_parameterestimates_print <- function(x, ..., nd = 3L) {
   for (g in 1:ngroups) {
     # group header
     if (ngroups > 1L) {
-      group.label <- attr(x, "group.label")
+      group_label <- attr(x, "group.label")
       cat("\n\n")
-      cat("Group ", g, " [", group.label[g], "]:\n", sep = "")
+      cat("Group ", g, " [", group_label[g], "]:\n", sep = "")
     }
 
     for (l in 1:nlevels) {
@@ -610,98 +610,103 @@ lav_parameterestimates_print <- function(x, ..., nd = 3L) {
       b <- b + 1L
 
       # ov/lv names
-      ov.names <- lav_object_vnames(x, "ov", block = b)
-      lv.names <- lav_object_vnames(x, "lv", block = b)
+      ov_names <- lav_object_vnames(x, "ov", block = b)
+      # lv_names <- lav_object_vnames(x, "lv", block = b)
 
       # level header
       if (nlevels > 1L) {
-        level.label <- attr(x, "level.label")
+        level_label <- attr(x, "level.label")
         cat("\n\n")
-        cat("Level ", l, " [", level.label[l], "]:\n", sep = "")
+        cat("Level ", l, " [", level_label[l], "]:\n", sep = "")
       }
 
       # group-specific sections
-      for (s in GSECTIONS) {
+      for (s in gsections) {
         if (s == "Latent Variables") {
-          row.idx <- which(x$op == "=~" & !x$lhs %in% ov.names &
+          row_idx <- which(x$op == "=~" & !x$lhs %in% ov_names &
             x$block == b)
-          if (length(row.idx) == 0L) next
-          m[row.idx, 1] <- lav_print_format_names(x$rhs[row.idx], x$label[row.idx])
+          if (length(row_idx) == 0L) next
+          m[row_idx, 1] <- lav_print_format_names(x$rhs[row_idx],
+                                                 x$label[row_idx])
         } else if (s == "Composites") {
-          row.idx <- which(x$op == "<~" & x$block == b)
-          if (length(row.idx) == 0L) next
-          m[row.idx, 1] <- lav_print_format_names(x$rhs[row.idx], x$label[row.idx])
+          row_idx <- which(x$op == "<~" & x$block == b)
+          if (length(row_idx) == 0L) next
+          m[row_idx, 1] <- lav_print_format_names(x$rhs[row_idx],
+                                                 x$label[row_idx])
         } else if (s == "Regressions") {
-          row.idx <- which(x$op == "~" & x$block == b)
-          if (length(row.idx) == 0L) next
-          m[row.idx, 1] <- lav_print_format_names(x$rhs[row.idx], x$label[row.idx])
+          row_idx <- which(x$op == "~" & x$block == b)
+          if (length(row_idx) == 0L) next
+          m[row_idx, 1] <- lav_print_format_names(x$rhs[row_idx],
+                                                  x$label[row_idx])
         } else if (s == "Covariances") {
-          row.idx <- which(x$op == "~~" & x$lhs != x$rhs & !x$exo &
+          row_idx <- which(x$op == "~~" & x$lhs != x$rhs & !x$exo &
             x$block == b)
-          if (length(row.idx) == 0L) next
+          if (length(row_idx) == 0L) next
           # make distinction between residual and plain
-          y.names <- unique(c(
+          y_names <- unique(c(
             lav_object_vnames(x, "eqs.y"),
             lav_object_vnames(x, "ov.ind"),
             lav_object_vnames(x, "lv.ind")
           ))
-          PREFIX <- rep("", length(row.idx))
-          PREFIX[x$rhs[row.idx] %in% y.names] <- "  ."
-          m[row.idx, 1] <- lav_print_format_names(x$rhs[row.idx], x$label[row.idx],
-            PREFIX = PREFIX
-          )
-          # m[row.idx,1] <- lav_print_format_names(x$rhs[row.idx], x$label[row.idx])
+          prefix <- rep("", length(row_idx))
+          prefix[x$rhs[row_idx] %in% y_names] <- "  ."
+          m[row_idx, 1] <- lav_print_format_names(x$rhs[row_idx],
+                                      x$label[row_idx], prefix = prefix)
+          # m[row.idx,1] <- lav_print_format_names(x$rhs[row.idx],
+          #                                            x$label[row.idx])
         } else if (s == "Intercepts") {
-          row.idx <- which(x$op == "~1" & !x$exo & x$block == b)
-          if (length(row.idx) == 0L) next
+          row_idx <- which(x$op == "~1" & !x$exo & x$block == b)
+          if (length(row_idx) == 0L) next
           # make distinction between intercepts and means
-          y.names <- unique(c(
+          y_names <- unique(c(
             lav_object_vnames(x, "eqs.y"),
             lav_object_vnames(x, "ov.ind"),
             lav_object_vnames(x, "lv.ind")
           ))
-          PREFIX <- rep("", length(row.idx))
-          PREFIX[x$lhs[row.idx] %in% y.names] <- "  ."
-          m[row.idx, 1] <- lav_print_format_names(x$lhs[row.idx], x$label[row.idx],
-            PREFIX = PREFIX
-          )
-          # m[row.idx,1] <- lav_print_format_names(x$lhs[row.idx], x$label[row.idx])
+          prefix <- rep("", length(row_idx))
+          prefix[x$lhs[row_idx] %in% y_names] <- "  ."
+          m[row_idx, 1] <- lav_print_format_names(x$lhs[row_idx],
+                           x$label[row_idx], prefix = prefix)
+          # m[row.idx,1] <- lav_print_format_names(x$lhs[row.idx],
+          #                                             x$label[row.idx])
         } else if (s == "Thresholds") {
-          row.idx <- which(x$op == "|" & x$block == b)
-          if (length(row.idx) == 0L) next
-          m[row.idx, 1] <- lav_print_format_names(paste(x$lhs[row.idx], "|",
-            x$rhs[row.idx],
+          row_idx <- which(x$op == "|" & x$block == b)
+          if (length(row_idx) == 0L) next
+          m[row_idx, 1] <- lav_print_format_names(paste(x$lhs[row_idx], "|",
+            x$rhs[row_idx],
             sep = ""
-          ), x$label[row.idx])
+          ), x$label[row_idx])
         } else if (s == "Variances") {
-          row.idx <- which(x$op == "~~" & x$lhs == x$rhs & !x$exo &
+          row_idx <- which(x$op == "~~" & x$lhs == x$rhs & !x$exo &
             x$block == b)
-          if (length(row.idx) == 0L) next
+          if (length(row_idx) == 0L) next
           # make distinction between residual and plain
-          y.names <- unique(c(
+          y_names <- unique(c(
             lav_object_vnames(x, "eqs.y"),
             lav_object_vnames(x, "ov.ind"),
             lav_object_vnames(x, "lv.ind")
           ))
-          PREFIX <- rep("", length(row.idx))
-          PREFIX[x$rhs[row.idx] %in% y.names] <- "  ."
-          m[row.idx, 1] <- lav_print_format_names(x$rhs[row.idx], x$label[row.idx],
-            PREFIX = PREFIX
-          )
+          prefix <- rep("", length(row_idx))
+          prefix[x$rhs[row_idx] %in% y_names] <- "  ."
+          m[row_idx, 1] <- lav_print_format_names(x$rhs[row_idx],
+                                 x$label[row_idx], prefix = prefix)
         } else if (s == "Scales y*") {
-          row.idx <- which(x$op == "~*~" & x$block == b)
-          if (length(row.idx) == 0L) next
-          m[row.idx, 1] <- lav_print_format_names(x$rhs[row.idx], x$label[row.idx])
+          row_idx <- which(x$op == "~*~" & x$block == b)
+          if (length(row_idx) == 0L) next
+          m[row_idx, 1] <- lav_print_format_names(x$rhs[row_idx],
+                                                     x$label[row_idx])
         } else if (s == "Group Weight") {
-          row.idx <- which(x$lhs == "group" & x$op == "%" & x$block == b)
-          if (length(row.idx) == 0L) next
-          m[row.idx, 1] <- lav_print_format_names(x$rhs[row.idx], x$label[row.idx])
+          row_idx <- which(x$lhs == "group" & x$op == "%" & x$block == b)
+          if (length(row_idx) == 0L) next
+          m[row_idx, 1] <- lav_print_format_names(x$rhs[row_idx],
+                                                     x$label[row_idx])
         } else if (s == "R-Square") {
-          row.idx <- which(x$op == "r2" & x$block == b)
-          if (length(row.idx) == 0L) next
-          m[row.idx, 1] <- lav_print_format_names(x$rhs[row.idx], x$label[row.idx])
+          row_idx <- which(x$op == "r2" & x$block == b)
+          if (length(row_idx) == 0L) next
+          m[row_idx, 1] <- lav_print_format_names(x$rhs[row_idx],
+                                                     x$label[row_idx])
         } else {
-          row.idx <- integer(0L)
+          row_idx <- integer(0L)
         }
 
         # do we need special formatting for this section?
@@ -716,187 +721,185 @@ lav_parameterestimates_print <- function(x, ..., nd = 3L) {
           "Latent Variables", "Composites",
           "Regressions", "Covariances"
         )) {
-          nel <- length(row.idx)
-          M <- matrix("", nrow = nel * 2, ncol = ncol(m))
-          colnames(M) <- colnames(m)
-          rownames(M) <- rep("", NROW(M))
+          nel <- length(row_idx)
+          m_1 <- matrix("", nrow = nel * 2, ncol = ncol(m))
+          colnames(m_1) <- colnames(m)
+          rownames(m_1) <- rep("", NROW(m_1))
           # colnames(M)[1] <- sprintf("%-17s", paste(s, ":", sep = ""))
           if (is.null(x$efa)) {
-            LHS <- paste(x$lhs[row.idx], x$op[row.idx])
+            lhs <- paste(x$lhs[row_idx], x$op[row_idx])
           } else {
-            LHS <- paste(
-              x$lhs[row.idx], x$op[row.idx],
-              x$efa[row.idx]
+            lhs <- paste(
+              x$lhs[row_idx], x$op[row_idx],
+              x$efa[row_idx]
             )
           }
-          lhs.idx <- seq(1, nel * 2L, 2L)
-          rhs.idx <- seq(1, nel * 2L, 2L) + 1L
+          lhs_idx <- seq(1, nel * 2L, 2L)
+          rhs_idx <- seq(1, nel * 2L, 2L) + 1L
           if (s == "Covariances") {
             # make distinction between residual and plain
-            y.names <- unique(c(
+            y_names <- unique(c(
               lav_object_vnames(x, "eqs.y"),
               lav_object_vnames(x, "ov.ind"),
               lav_object_vnames(x, "lv.ind")
             ))
-            PREFIX <- rep("", length(row.idx))
-            PREFIX[x$lhs[row.idx] %in% y.names] <- "."
+            prefix <- rep("", length(row_idx))
+            prefix[x$lhs[row_idx] %in% y_names] <- "."
           } else {
-            PREFIX <- rep("", length(LHS))
+            prefix <- rep("", length(lhs))
           }
-          M[lhs.idx, 1] <- sprintf("%1s%-15s", PREFIX, LHS)
-          M[rhs.idx, ] <- m[row.idx, ]
+          m_1[lhs_idx, 1] <- sprintf("%1s%-15s", prefix, lhs)
+          m_1[rhs_idx, ] <- m[row_idx, ]
           # avoid duplicated LHS labels
           if (nel > 1L) {
-            del.idx <- integer(0)
-            old.lhs <- ""
+            del_idx <- integer(0)
+            old_lhs <- ""
             for (i in 1:nel) {
-              if (LHS[i] == old.lhs) {
-                del.idx <- c(del.idx, lhs.idx[i])
+              if (lhs[i] == old_lhs) {
+                del_idx <- c(del_idx, lhs_idx[i])
               }
-              old.lhs <- LHS[i]
+              old_lhs <- lhs[i]
             }
-            if (length(del.idx) > 0L) {
-              M <- M[-del.idx, , drop = FALSE]
+            if (length(del_idx) > 0L) {
+              m_1 <- m_1[-del_idx, , drop = FALSE]
             }
           }
           cat("\n", s, ":\n", sep = "")
           # cat("\n")
-          print(M, quote = FALSE)
+          print(m_1, quote = FALSE)
 
           # R-square
         } else if (s == "R-Square") {
-          M <- m[row.idx, 1:2, drop = FALSE]
-          colnames(M) <- colnames(m)[1:2]
-          rownames(M) <- rep("", NROW(M))
+          m_1 <- m[row_idx, 1:2, drop = FALSE]
+          colnames(m_1) <- colnames(m)[1:2]
+          rownames(m_1) <- rep("", NROW(m_1))
           # colnames(M)[1] <- sprintf("%-17s", paste(s, ":", sep = ""))
           cat("\n", s, ":\n", sep = "")
           # cat("\n")
-          print(M, quote = FALSE)
+          print(m_1, quote = FALSE)
 
           # Regular
         } else {
           # M <- rbind(matrix("", nrow = 1L, ncol = ncol(m)),
           #           m[row.idx,])
-          M <- m[row.idx, , drop = FALSE]
-          colnames(M) <- colnames(m)
-          rownames(M) <- rep("", NROW(M))
+          m_1 <- m[row_idx, , drop = FALSE]
+          colnames(m_1) <- colnames(m)
+          rownames(m_1) <- rep("", NROW(m_1))
           # colnames(M)[1] <- sprintf("%-17s", paste(s, ":", sep = ""))
           cat("\n", s, ":\n", sep = "")
           # cat("\n")
-          print(M, quote = FALSE)
+          print(m_1, quote = FALSE)
         }
       } # GSECTIONS
     } # levels
   } # groups
 
   # asections
-  for (s in ASECTIONS) {
+  for (s in asections) {
     if (s == "Defined Parameters") {
-      row.idx <- which(x$op == ":=")
-      m[row.idx, 1] <- lav_print_format_names(x$lhs[row.idx], "")
-      M <- m[row.idx, , drop = FALSE]
-      colnames(M) <- colnames(m)
+      row_idx <- which(x$op == ":=")
+      m[row_idx, 1] <- lav_print_format_names(x$lhs[row_idx], "")
+      m_1 <- m[row_idx, , drop = FALSE]
+      colnames(m_1) <- colnames(m)
     } else if (s == "Constraints") {
-      row.idx <- which(x$op %in% c("==", "<", ">"))
-      if (length(row.idx) == 0) next
-      m[row.idx, 1] <- lav_print_format_constraints(x$lhs[row.idx], x$op[row.idx],
-        x$rhs[row.idx],
-        nd = nd
-      )
-      m[row.idx, 2] <- sprintf(num.format, abs(x$est[row.idx]))
-      M <- m[row.idx, 1:2, drop = FALSE]
-      colnames(M) <- c("", sprintf(char.format, "|Slack|"))
+      row_idx <- which(x$op %in% c("==", "<", ">"))
+      if (length(row_idx) == 0) next
+      m[row_idx, 1] <- lav_print_format_constraints(x$lhs[row_idx],
+                          x$op[row_idx], x$rhs[row_idx], nd = nd)
+      m[row_idx, 2] <- sprintf(num_format, abs(x$est[row_idx]))
+      m_1 <- m[row_idx, 1:2, drop = FALSE]
+      colnames(m_1) <- c("", sprintf(char_format, "|Slack|"))
     } else {
-      row.idx <- integer(0L)
+      row_idx <- integer(0L)
     }
 
-    if (length(row.idx) == 0L) {
+    if (length(row_idx) == 0L) {
       next
     }
 
-    rownames(M) <- rep("", NROW(M))
+    rownames(m_1) <- rep("", NROW(m_1))
     # colnames(M)[1] <- sprintf("%-17s", paste(s, ":", sep = ""))
     # cat("\n")
     cat("\n", s, ":\n", sep = "")
-    print(M, quote = FALSE)
+    print(m_1, quote = FALSE)
   }
   cat("\n")
 
   invisible(m)
 }
 
-lav_print_format_names <- function(NAMES, LABELS, PREFIX = NULL) {
-  W <- 14
-  if (is.null(PREFIX)) {
-    PREFIX <- rep("", length(NAMES))
+lav_print_format_names <- function(names_1, labels_1, prefix = NULL) {
+  m_w <- 14
+  if (is.null(prefix)) {
+    prefix <- rep("", length(names_1))
   }
 
-  multiB <- FALSE
-  if (any(nchar(NAMES) != nchar(NAMES, "bytes"))) {
-    multiB <- TRUE
+  multi_b <- FALSE
+  if (any(nchar(names_1) != nchar(names_1, "bytes"))) {
+    multi_b <- TRUE
   }
-  if (any(nchar(LABELS) != nchar(LABELS, "bytes"))) {
-    multiB <- TRUE
+  if (any(nchar(labels_1) != nchar(labels_1, "bytes"))) {
+    multi_b <- TRUE
   }
   # labels?
-  l.idx <- which(nchar(LABELS) > 0L)
-  if (length(l.idx) > 0L) {
-    if (!multiB) {
-      LABELS <- abbreviate(LABELS, 4)
-      LABELS[l.idx] <- paste(" (", LABELS[l.idx], ")", sep = "")
-      MAX.L <- max(nchar(LABELS))
-      NAMES <- abbreviate(NAMES,
-        minlength = (W - MAX.L),
+  l_idx <- which(nchar(labels_1) > 0L)
+  if (length(l_idx) > 0L) {
+    if (!multi_b) {
+      labels_1 <- abbreviate(labels_1, 4)
+      labels_1[l_idx] <- paste(" (", labels_1[l_idx], ")", sep = "")
+      max_l <- max(nchar(labels_1))
+      names_1 <- abbreviate(names_1,
+        minlength = (m_w - max_l),
         strict = TRUE
       )
     } else {
       # do not abbreviate anything (eg in multi-byte locales)
-      MAX.L <- 4L
+      max_l <- 4L
     }
-    NAMES <- sprintf(paste("%-", (W - MAX.L), "s%", MAX.L, "s",
+    names_1 <- sprintf(paste("%-", (m_w - max_l), "s%", max_l, "s",
       sep = ""
-    ), NAMES, LABELS)
+    ), names_1, labels_1)
   } else {
-    if (!multiB) {
-      NAMES <- abbreviate(NAMES, minlength = W, strict = TRUE)
+    if (!multi_b) {
+      names_1 <- abbreviate(names_1, minlength = m_w, strict = TRUE)
     } else {
-      NAMES <- sprintf(paste("%-", W, "s", sep = ""), NAMES)
+      names_1 <- sprintf(paste("%-", m_w, "s", sep = ""), names_1)
     }
   }
 
-  char.format <- paste("%3s%-", W, "s", sep = "")
-  sprintf(char.format, PREFIX, NAMES)
+  char_format <- paste("%3s%-", m_w, "s", sep = "")
+  sprintf(char_format, prefix, names_1)
 }
 
 lav_print_format_constraints <- function(lhs, op, rhs, nd) {
   nd <- max(nd, 3)
-  W <- 41 + (nd - 3) * 3
+  m_w <- 41 + (nd - 3) * 3
 
   nel <- length(lhs)
   if (length(nel) == 0L) {
     return(character(0))
   }
-  NAMES <- character(nel)
+  names_1 <- character(nel)
   for (i in 1:nel) {
     if (rhs[i] == "0" && op[i] == ">") {
-      con.string <- paste(lhs[i], " - 0", sep = "")
+      con_string <- paste(lhs[i], " - 0", sep = "")
     } else if (rhs[i] == "0" && op[i] == "<") {
-      con.string <- paste(rhs[i], " - (", lhs[i], ")", sep = "")
+      con_string <- paste(rhs[i], " - (", lhs[i], ")", sep = "")
     } else if (rhs[i] != "0" && op[i] == ">") {
-      con.string <- paste(lhs[i], " - (", rhs[i], ")", sep = "")
+      con_string <- paste(lhs[i], " - (", rhs[i], ")", sep = "")
     } else if (rhs[i] != "0" && op[i] == "<") {
-      con.string <- paste(rhs[i], " - (", lhs[i], ")", sep = "")
+      con_string <- paste(rhs[i], " - (", lhs[i], ")", sep = "")
     } else if (rhs[i] == "0" && op[i] == "==") {
-      con.string <- paste(lhs[i], " - 0", sep = "")
+      con_string <- paste(lhs[i], " - 0", sep = "")
     } else if (rhs[i] != "0" && op[i] == "==") {
-      con.string <- paste(lhs[i], " - (", rhs[i], ")", sep = "")
+      con_string <- paste(lhs[i], " - (", rhs[i], ")", sep = "")
     }
-    con.string <- abbreviate(con.string, W, strict = TRUE)
-    char.format <- paste("   %-", W, "s", sep = "")
-    NAMES[i] <- sprintf(char.format, con.string)
+    con_string <- abbreviate(con_string, m_w, strict = TRUE)
+    char_format <- paste("   %-", m_w, "s", sep = "")
+    names_1[i] <- sprintf(char_format, con_string)
   }
 
-  NAMES
+  names_1
 }
 
 lav_fsr_summary <- function(object, ...) {
@@ -929,18 +932,19 @@ lav_fsr_print <- function(x, ..., nd = 3L, mm = FALSE, struc = FALSE) {
       )
 
       # fit measures?
-      b.options <- lavInspect(y$MM.FIT[[b]], "options")
-      if (!(length(b.options$test) == 1L && b.options$test == "none")) {
+      b_options <- lavInspect(y$MM.FIT[[b]], "options")
+      if (!(length(b_options$test) == 1L && b_options$test == "none")) {
         cat("\n")
-        print(fitMeasures(y$MM.FIT[[b]], c("chisq", "df", "pvalue", "cfi", "rmsea", "srmr")))
+        print(fitMeasures(y$MM.FIT[[b]],
+                  c("chisq", "df", "pvalue", "cfi", "rmsea", "srmr")))
       }
 
       # parameter estimates
-      PE <- lavParameterEstimates(y$MM.FIT[[b]],
+      pe <- lavParameterEstimates(y$MM.FIT[[b]],
         ci = FALSE,
         output = "text", header = TRUE
       )
-      lav_parameterestimates_print(PE, ..., nd = nd)
+      lav_parameterestimates_print(pe, ..., nd = nd)
       cat("\n")
     }
   }
@@ -953,19 +957,19 @@ lav_fsr_print <- function(x, ..., nd = 3L, mm = FALSE, struc = FALSE) {
       fit.measures = FALSE, estimates = FALSE,
       modindices = FALSE
     ))
-    FIT <- fitMeasures(y$STRUC.FIT, fit.measures = "default")
-    if (FIT["df"] > 0) {
-      lav_fitmeasures_print(FIT, add.h0 = FALSE)
+    fit <- fitMeasures(y$STRUC.FIT, fit.measures = "default")
+    if (fit["df"] > 0) {
+      lav_fitmeasures_print(fit, add.h0 = FALSE)
     }
   }
-  PE <- lavParameterEstimates(y$STRUC.FIT,
+  pe <- lavParameterEstimates(y$STRUC.FIT,
     ci = FALSE,
     remove.eq = FALSE, remove.system.eq = TRUE,
     remove.ineq = FALSE, remove.def = FALSE,
     remove.nonfree = FALSE, remove.unused = TRUE,
     output = "text", header = TRUE
   )
-  lav_parameterestimates_print(PE, ..., nd = nd)
+  lav_parameterestimates_print(pe, ..., nd = nd)
 
   invisible(y)
 }
@@ -975,49 +979,49 @@ lav_summary_print <- function(x, ..., nd = 3L) {
   y <- unclass(x) # change to ordinary list
 
   # get nd, if it is stored as an attribute
-  ND <- attr(y, "nd")
-  if (!is.null(ND) && is.numeric(ND)) {
-    nd <- as.integer(ND)
+  nd_1 <- attr(y, "nd")
+  if (!is.null(nd_1) && is.numeric(nd_1)) {
+    nd <- as.integer(nd_1)
   }
 
   # header
   if (!is.null(y$header)) {
-    lavaan.version <- y$header$lavaan.version
-    sam.approach <- y$header$sam.approach
-    optim.method <- y$header$optim.method
-    optim.iterations <- y$header$optim.iterations
-    optim.converged <- y$header$optim.converged
+    lavaan_version <- y$header$lavaan.version
+    sam_approach <- y$header$sam.approach
+    optim_method <- y$header$optim.method
+    optim_iterations <- y$header$optim.iterations
+    optim_converged <- y$header$optim.converged
 
     # sam or sem?
-    if (sam.approach) {
+    if (sam_approach) {
       cat("This is ",
-        sprintf("lavaan %s", lavaan.version),
+        sprintf("lavaan %s", lavaan_version),
         " -- using the SAM approach to SEM\n",
         sep = ""
       )
     } else {
-      cat(sprintf("lavaan %s ", lavaan.version))
+      cat(sprintf("lavaan %s ", lavaan_version))
 
       # Convergence or not?
-      if (optim.method == "none") {
+      if (optim_method == "none") {
         cat("-- DRY RUN with 0 iterations --\n")
-      } else if (optim.iterations > 0) {
-        if (optim.converged) {
-          if (optim.iterations == 1L) {
+      } else if (optim_iterations > 0) {
+        if (optim_converged) {
+          if (optim_iterations == 1L) {
             cat("ended normally after 1 iteration\n")
           } else {
             cat(sprintf(
               "ended normally after %i iterations\n",
-              optim.iterations
+              optim_iterations
             ))
           }
         } else {
-          if (optim.iterations == 1L) {
+          if (optim_iterations == 1L) {
             cat("did NOT end normally after 1 iteration\n")
           } else {
             cat(sprintf(
               "did NOT end normally after %i iterations\n",
-              optim.iterations
+              optim_iterations
             ))
           }
           cat("** WARNING ** Estimates below are most likely unreliable\n")
@@ -1035,58 +1039,58 @@ lav_summary_print <- function(x, ..., nd = 3L) {
   # optim
   if (!is.null(y$optim)) {
     estimator <- y$optim$estimator
-    estimator.args <- y$optim$estimator.args
-    optim.method <- y$optim$optim.method
+    estimator_args <- y$optim$estimator.args
+    optim_method <- y$optim$optim.method
     npar <- y$optim$npar
-    eq.constraints <- y$optim$eq.constraints
-    nrow.ceq.jac <- y$optim$nrow.ceq.jac
-    nrow.cin.jac <- y$optim$nrow.cin.jac
-    nrow.con.jac <- y$optim$nrow.con.jac
-    con.jac.rank <- y$optim$con.jac.rank
+    eq_constraints <- y$optim$eq.constraints
+    nrow_ceq_jac <- y$optim$nrow.ceq.jac
+    nrow_cin_jac <- y$optim$nrow.cin.jac
+    nrow_con_jac <- y$optim$nrow.con.jac
+    con_jac_rank <- y$optim$con.jac.rank
 
     cat("\n")
     # cat("Optimization information:\n\n")
 
     c1 <- c("Estimator")
     # second column
-    tmp.est <- toupper(estimator)
-    if (tmp.est == "DLS") {
-      dls.first.letter <- substr(
-        estimator.args$dls.GammaNT,
+    tmp_est <- toupper(estimator)
+    if (tmp_est == "DLS") {
+      dls_first_letter <- substr(
+        estimator_args$dls.GammaNT,
         1L, 1L
       )
-      tmp.est <- paste("DLS-", toupper(dls.first.letter), sep = "")
+      tmp_est <- paste("DLS-", toupper(dls_first_letter), sep = "")
     }
-    c2 <- tmp.est
+    c2 <- tmp_est
 
     # additional estimator args
-    if (!is.null(estimator.args) &&
-      length(estimator.args) > 0L) {
+    if (!is.null(estimator_args) &&
+      length(estimator_args) > 0L) {
       if (estimator == "DLS") {
         c1 <- c(c1, "Estimator DLS value for a")
-        c2 <- c(c2, estimator.args$dls.a)
+        c2 <- c(c2, estimator_args$dls.a)
       }
     }
 
     # optimization method + npar
     c1 <- c(c1, "Optimization method", "Number of model parameters")
-    c2 <- c(c2, toupper(optim.method), npar)
+    c2 <- c(c2, toupper(optim_method), npar)
 
     # optional output
-    if (eq.constraints) {
+    if (eq_constraints) {
       c1 <- c(c1, "Number of equality constraints")
-      c2 <- c(c2, nrow.ceq.jac)
+      c2 <- c(c2, nrow_ceq_jac)
     }
-    if (nrow.cin.jac > 0L) {
+    if (nrow_cin_jac > 0L) {
       c1 <- c(c1, "Number of inequality constraints")
-      c2 <- c(c2, nrow.cin.jac)
+      c2 <- c(c2, nrow_cin_jac)
     }
-    if (nrow.con.jac > 0L) {
-      if (con.jac.rank == (nrow.ceq.jac + nrow.cin.jac)) {
+    if (nrow_con_jac > 0L) {
+      if (con_jac_rank == (nrow_ceq_jac + nrow_cin_jac)) {
         # nothing to do (don't print, as this is redundant information)
       } else {
         c1 <- c(c1, "Row rank of the constraints matrix")
-        c2 <- c(c2, con.jac.rank)
+        c2 <- c(c2, con_jac_rank)
       }
     }
 
@@ -1098,45 +1102,45 @@ lav_summary_print <- function(x, ..., nd = 3L) {
     )
 
     # character matrix
-    M <- cbind(c1, c2, deparse.level = 0)
-    colnames(M) <- rep("", ncol(M))
-    rownames(M) <- rep(" ", nrow(M))
+    m <- cbind(c1, c2, deparse.level = 0)
+    colnames(m) <- rep("", ncol(m))
+    rownames(m) <- rep(" ", nrow(m))
 
     # print
-    write.table(M, row.names = TRUE, col.names = FALSE, quote = FALSE)
+    write.table(m, row.names = TRUE, col.names = FALSE, quote = FALSE)
   }
 
   # sam header
   if (!is.null(y$sam.header)) {
     cat("\n")
-    sam.method <- y$sam.header$sam.method
-    sam.local.options <- y$sam.header$sam.local.options
-    sam.mm.list <- y$sam.header$sam.mm.list
-    sam.mm.estimator <- y$sam.header$sam.mm.estimator
-    sam.struc.estimator <- y$sam.header$sam.struc.estimator
+    sam_method <- y$sam.header$sam.method
+    sam_local_options <- y$sam.header$sam.local.options
+    sam_mm_list <- y$sam.header$sam.mm.list
+    sam_mm_estimator <- y$sam.header$sam.mm.estimator
+    sam_struc_estimator <- y$sam.header$sam.struc.estimator
 
     # sam method
     c1 <- c("SAM method")
-    c2 <- toupper(sam.method)
+    c2 <- toupper(sam_method)
 
     # options
-    if (sam.method == "local") {
+    if (sam_method == "local") {
       c1 <- c(c1, "Mapping matrix M method")
-      c2 <- c(c2, sam.local.options$M.method)
+      c2 <- c(c2, sam_local_options$M.method)
       # TODo: more!
     }
 
     # number of measurement blocks
     c1 <- c(c1, "Number of measurement blocks")
-    c2 <- c(c2, length(sam.mm.list))
+    c2 <- c(c2, length(sam_mm_list))
 
     # estimator measurement blocks
     c1 <- c(c1, "Estimator measurement part")
-    c2 <- c(c2, sam.mm.estimator)
+    c2 <- c(c2, sam_mm_estimator)
 
     # estimator structural part
     c1 <- c(c1, "Estimator  structural part")
-    c2 <- c(c2, sam.struc.estimator)
+    c2 <- c(c2, sam_struc_estimator)
 
     # format
     c1 <- format(c1, width = 40L)
@@ -1146,19 +1150,19 @@ lav_summary_print <- function(x, ..., nd = 3L) {
     )
 
     # character matrix
-    M <- cbind(c1, c2, deparse.level = 0)
-    colnames(M) <- rep("", ncol(M))
-    rownames(M) <- rep(" ", nrow(M))
+    m <- cbind(c1, c2, deparse.level = 0)
+    colnames(m) <- rep("", ncol(m))
+    rownames(m) <- rep(" ", nrow(m))
 
     # print
-    write.table(M, row.names = TRUE, col.names = FALSE, quote = FALSE)
+    write.table(m, row.names = TRUE, col.names = FALSE, quote = FALSE)
   }
 
   # efa/rotation
   if (!is.null(y$rotation)) {
     cat("\n")
     rotation <- y$rotation
-    rotation.args <- y$rotation.args
+    # rotation_args <- y$rotation.args
 
     # cat("Rotation information:\n\n")
     # container
@@ -1167,17 +1171,17 @@ lav_summary_print <- function(x, ..., nd = 3L) {
     # rotation method
     c1 <- c(c1, "Rotation method")
     if (rotation$rotation == "none") {
-      MM <- toupper(rotation$rotation)
+      mm <- toupper(rotation$rotation)
     } else if (rotation$rotation.args$orthogonal) {
-      MM <- paste(toupper(rotation$rotation), " ", "ORTHOGONAL",
+      mm <- paste(toupper(rotation$rotation), " ", "ORTHOGONAL",
         sep = ""
       )
     } else {
-      MM <- paste(toupper(rotation$rotation), " ", "OBLIQUE",
+      mm <- paste(toupper(rotation$rotation), " ", "OBLIQUE",
         sep = ""
       )
     }
-    c2 <- c(c2, MM)
+    c2 <- c(c2, mm)
 
     if (rotation$rotation != "none") {
       # method options
@@ -1216,9 +1220,9 @@ lav_summary_print <- function(x, ..., nd = 3L) {
 
       # Row weights
       c1 <- c(c1, "Row weights")
-      tmp.txt <- rotation$rotation.args$row_weights
-      c2 <- c(c2, paste(toupper(substring(tmp.txt, 1, 1)),
-        substring(tmp.txt, 2),
+      tmp_txt <- rotation$rotation.args$row_weights
+      c2 <- c(c2, paste(toupper(substring(tmp_txt, 1, 1)),
+        substring(tmp_txt, 2),
         sep = ""
       ))
     }
@@ -1231,12 +1235,12 @@ lav_summary_print <- function(x, ..., nd = 3L) {
     )
 
     # create character matrix
-    M <- cbind(c1, c2, deparse.level = 0)
-    colnames(M) <- rep("", ncol(M))
-    rownames(M) <- rep(" ", nrow(M))
+    m <- cbind(c1, c2, deparse.level = 0)
+    colnames(m) <- rep("", ncol(m))
+    rownames(m) <- rep(" ", nrow(m))
 
     # print
-    write.table(M, row.names = TRUE, col.names = FALSE, quote = FALSE)
+    write.table(m, row.names = TRUE, col.names = FALSE, quote = FALSE)
   }
 
   # data object
@@ -1248,32 +1252,32 @@ lav_summary_print <- function(x, ..., nd = 3L) {
   # sam local stats: measurement blocks + structural part
   if (!is.null(y$sam)) {
     cat("\n")
-    sam.method <- y$sam$sam.method
-    sam.mm.table <- y$sam$sam.mm.table
-    sam.mm.rel <- y$sam$sam.mm.rel
-    sam.struc.fit <- y$sam$sam.struc.fit
+    sam_method <- y$sam$sam.method
+    sam_mm_table <- y$sam$sam.mm.table
+    sam_mm_rel <- y$sam$sam.mm.rel
+    sam_struc_fit <- y$sam$sam.struc.fit
     ngroups <- y$sam$ngroups
     nlevels <- y$sam$nlevels
-    group.label <- y$sam$group.label
-    level.label <- y$sam$level.label
-    block.label <- y$sam$block.label
+    group_label <- y$sam$group.label
+    level_label <- y$sam$level.label
+    block_label <- y$sam$block.label
 
     # measurement
-    tmp <- sam.mm.table
-    if (sam.method == "global") {
+    tmp <- sam_mm_table
+    if (sam_method == "global") {
       cat("Summary Information Measurement Part:\n\n")
     } else {
       cat("Summary Information Measurement + Structural:\n\n")
     }
     print(tmp, row.names = rep(" ", nrow(tmp)), nd = nd)
 
-    if (sam.method == "local") {
+    if (sam_method == "local") {
       # reliability information
       c1 <- c2 <- character(0L)
       if (ngroups == 1L && nlevels == 1L) {
         cat("\n")
         cat("  Model-based reliability latent variables:\n\n")
-        tmp <- data.frame(as.list(sam.mm.rel[[1]]))
+        tmp <- data.frame(as.list(sam_mm_rel[[1]]))
         class(tmp) <- c("lavaan.data.frame", "data.frame")
         print(tmp, row.names = rep(" ", nrow(tmp)), nd = nd)
       } else if (ngroups > 1L && nlevels == 1L) {
@@ -1281,10 +1285,10 @@ lav_summary_print <- function(x, ..., nd = 3L) {
         cat("  Model-based reliability latent variables (per group):\n")
         for (g in 1:ngroups) {
           cat("\n")
-          cat("  Group ", g, " [", group.label[g], "]:\n\n",
+          cat("  Group ", g, " [", group_label[g], "]:\n\n",
             sep = ""
           )
-          tmp <- data.frame(as.list(sam.mm.rel[[g]]))
+          tmp <- data.frame(as.list(sam_mm_rel[[g]]))
           class(tmp) <- c("lavaan.data.frame", "data.frame")
           print(tmp, row.names = rep(" ", nrow(tmp)), nd = nd)
         }
@@ -1293,22 +1297,22 @@ lav_summary_print <- function(x, ..., nd = 3L) {
         cat("  Model-based reliability latent variables (per level):\n")
         for (g in 1:nlevels) {
           cat("\n")
-          cat("  Level ", g, " [", level.label[g], "]:\n\n",
+          cat("  Level ", g, " [", level_label[g], "]:\n\n",
             sep = ""
           )
-          tmp <- data.frame(as.list(sam.mm.rel[[g]]))
+          tmp <- data.frame(as.list(sam_mm_rel[[g]]))
           class(tmp) <- c("lavaan.data.frame", "data.frame")
           print(tmp, row.names = rep(" ", nrow(tmp)), nd = nd)
         }
       } else if (ngroups > 1L && nlevels > 1L) {
         cat("\n")
         cat("  Model-based reliability latent variables (per group/level):\n")
-        for (g in 1:length(block.label)) {
+        for (g in seq_along(block_label)) {
           cat("\n")
-          cat("  Group/Level ", g, " [", block.label[g], "]:\n\n",
+          cat("  Group/Level ", g, " [", block_label[g], "]:\n\n",
             sep = ""
           )
-          tmp <- data.frame(as.list(sam.mm.rel[[g]]))
+          tmp <- data.frame(as.list(sam_mm_rel[[g]]))
           class(tmp) <- c("lavaan.data.frame", "data.frame")
           print(tmp, row.names = rep(" ", nrow(tmp)), nd = nd)
         }
@@ -1316,7 +1320,7 @@ lav_summary_print <- function(x, ..., nd = 3L) {
 
       cat("\n")
       cat("  Summary Information Structural part:\n\n")
-      tmp <- data.frame(as.list(sam.struc.fit))
+      tmp <- data.frame(as.list(sam_struc_fit))
       class(tmp) <- c("lavaan.data.frame", "data.frame")
       print(tmp, row.names = rep(" ", nrow(tmp)), nd = nd)
     }
@@ -1330,35 +1334,35 @@ lav_summary_print <- function(x, ..., nd = 3L) {
 
   # extra fit measures (if present)
   if (!is.null(y$fit)) {
-    add.h0 <- FALSE
+    add_h0 <- FALSE
     if (!is.null(attr(y$fit, "add.h0"))) {
-      add.h0 <- isTRUE(attr(y$fit, "add.h0"))
+      add_h0 <- isTRUE(attr(y$fit, "add.h0"))
     }
-    lav_fitmeasures_print(y$fit, nd = nd, add.h0 = add.h0)
+    lav_fitmeasures_print(y$fit, nd = nd, add.h0 = add_h0)
   }
 
   # efa output
   if (!is.null(y$efa)) {
     # get cutoff, if it is stored as an attribute
-    CT <- attr(y, "cutoff")
-    if (!is.null(CT) && is.numeric(CT)) {
-      cutoff <- CT
+    ct <- attr(y, "cutoff")
+    if (!is.null(ct) && is.numeric(ct)) {
+      cutoff <- ct
     } else {
       cutoff <- 0.3
     }
     # get dot.cutoff, if it is stored as an attribute
-    DC <- attr(y, "dot.cutoff")
-    if (!is.null(DC) && is.numeric(DC)) {
-      dot.cutoff <- DC
+    dc <- attr(y, "dot.cutoff")
+    if (!is.null(dc) && is.numeric(dc)) {
+      dot_cutoff <- dc
     } else {
-      dot.cutoff <- 0.1
+      dot_cutoff <- 0.1
     }
     # get alpha.level, if it is stored as an attribute
-    AL <- attr(y, "alpha.level")
-    if (!is.null(AL) && is.numeric(AL)) {
-      alpha.level <- AL
+    al <- attr(y, "alpha.level")
+    if (!is.null(al) && is.numeric(al)) {
+      alpha_level <- al
     } else {
-      alpha.level <- 0.01
+      alpha_level <- 0.01
     }
 
     for (b in seq_len(y$efa$nblocks)) {
@@ -1368,23 +1372,23 @@ lav_summary_print <- function(x, ..., nd = 3L) {
       }
       if (!is.null(y$efa$lambda[[b]])) {
         cat("\n")
-        if (!is.null(y$efa$lambda.se[[b]]) && alpha.level > 0) {
+        if (!is.null(y$efa$lambda.se[[b]]) && alpha_level > 0) {
           cat("Standardized loadings: (* = significant at ",
-            round(alpha.level * 100),
+            round(alpha_level * 100),
             "% level)\n\n",
             sep = ""
           )
         } else {
           cat("Standardized loadings:\n\n")
         }
-        LAMBDA <- unclass(y$efa$lambda[[b]])
-        THETA <- unname(unclass(y$efa$theta[[b]]))
-        lav_print_loadings(LAMBDA,
+        mm_lambda <- unclass(y$efa$lambda[[b]])
+        mm_theta <- unname(unclass(y$efa$theta[[b]]))
+        lav_print_loadings(mm_lambda,
           nd = nd, cutoff = cutoff,
-          dot.cutoff = dot.cutoff,
-          alpha.level = alpha.level,
-          resvar = THETA, # diag elements only
-          x.se = y$efa$lambda.se[[b]]
+          dot_cutoff = dot_cutoff,
+          alpha_level = alpha_level,
+          resvar = mm_theta, # diag elements only
+          x_se = y$efa$lambda.se[[b]]
         )
       }
 
@@ -1397,9 +1401,9 @@ lav_summary_print <- function(x, ..., nd = 3L) {
       if (!y$efa$orthogonal && !is.null(y$efa$psi[[b]]) &&
         ncol(y$efa$psi[[b]]) > 1L) {
         cat("\n")
-        if (!is.null(y$efa$psi.se[[b]]) && alpha.level > 0) {
+        if (!is.null(y$efa$psi.se[[b]]) && alpha_level > 0) {
           cat("Factor correlations: (* = significant at ",
-            round(alpha.level * 100),
+            round(alpha_level * 100),
             "% level)\n\n",
             sep = ""
           )
@@ -1408,18 +1412,18 @@ lav_summary_print <- function(x, ..., nd = 3L) {
         }
         lav_print_psi(y$efa$psi[[b]],
           nd = nd,
-          alpha.level = alpha.level,
-          x.se = y$efa$psi.se[[b]]
+          alpha_level = alpha_level,
+          x_se = y$efa$psi.se[[b]]
         )
       }
 
       # factor score determinacy (for regression scores only!)
       if (!is.null(y$efa$fs.determinacy[[b]])) {
-        cat("\n")
-        cat("Correlation regression factor scores and factors (determinacy):\n\n")
+        cat("
+Correlation regression factor scores and factors (determinacy):\n\n")
         print(y$efa$fs.determinacy[[b]], nd = nd)
-        cat("\n")
-        cat("R2 regression factor scores (= squared correlations):\n\n")
+        cat("
+R2 regression factor scores (= squared correlations):\n\n")
         tmp <- y$efa$fs.determinacy[[b]]
         tmp2 <- tmp * tmp
         class(tmp2) <- c("lavaan.vector", "numeric")
@@ -1503,28 +1507,28 @@ lav_summary_print <- function(x, ..., nd = 3L) {
 
   # parameter table
   if (!is.null(y$pe) && is.null(y$efa)) {
-    PE <- y$pe
-    class(PE) <- c(
+    pe <- y$pe
+    class(pe) <- c(
       "lavaan.parameterEstimates", "lavaan.data.frame",
       "data.frame"
     )
-    print(PE, nd = nd)
+    print(pe, nd = nd)
   }
 
   # modification indices
   if (!is.null(y$mi)) {
     cat("Modification Indices:\n\n")
-    MI <- y$mi
-    rownames(MI) <- NULL
-    print(MI, nd = nd)
+    mi <- y$mi
+    rownames(mi) <- NULL
+    print(mi, nd = nd)
   }
 
   invisible(y)
 }
 
 # helper function to print the loading matrix, masking small loadings
-lav_print_loadings <- function(x, nd = 3L, cutoff = 0.3, dot.cutoff = 0.1,
-                               alpha.level = 0.01, resvar = NULL, x.se = NULL) {
+lav_print_loadings <- function(x, nd = 3L, cutoff = 0.3, dot_cutoff = 0.1,
+                               alpha_level = 0.01, resvar = NULL, x_se = NULL) {
   # unclass
   y <- unclass(x)
 
@@ -1535,40 +1539,40 @@ lav_print_loadings <- function(x, nd = 3L, cutoff = 0.3, dot.cutoff = 0.1,
   colnames(y) <- format(colnames(y), width = 3L + nd, justify = "right")
 
   # create dot/empty string
-  dot.string <- format(".", width = 3L + nd, justify = "right")
-  empty.string <- format(" ", width = 3L + nd)
+  dot_string <- format(".", width = 3L + nd, justify = "right")
+  empty_string <- format(" ", width = 3L + nd)
 
   # print a 'dot' if dot.cutoff < |loading| < cutoff
-  if (dot.cutoff < cutoff) {
-    y[abs(x) < cutoff & abs(x) > dot.cutoff] <- dot.string
+  if (dot_cutoff < cutoff) {
+    y[abs(x) < cutoff & abs(x) > dot_cutoff] <- dot_string
   }
 
   # print nothing if |loading| < dot.cutoff
-  y[abs(x) < min(dot.cutoff, cutoff)] <- empty.string
+  y[abs(x) < min(dot_cutoff, cutoff)] <- empty_string
 
   # add 'star' for significant loadings (if provided) using alpha = 0.01
-  if (!is.null(x.se) && !any(is.na(x.se))) {
-    colNAMES <- colnames(y)
-    rowNAMES <- rownames(y)
-    x.se[x.se < sqrt(.Machine$double.eps)] <- 1 # to avoid NA
-    zstat <- x / x.se
-    z.cutoff <- qnorm(1 - (alpha.level / 2))
-    zstat.string <- ifelse(abs(zstat) > z.cutoff, "*", " ")
-    y <- matrix(paste(y, zstat.string, sep = ""), nrow(y), ncol(y))
-    colnames(y) <- colNAMES
-    rownames(y) <- rowNAMES
+  if (!is.null(x_se) && !any(is.na(x_se))) {
+    col_names <- colnames(y)
+    row_names <- rownames(y)
+    x_se[x_se < sqrt(.Machine$double.eps)] <- 1 # to avoid NA
+    zstat <- x / x_se
+    z_cutoff <- qnorm(1 - (alpha_level / 2))
+    zstat_string <- ifelse(abs(zstat) > z_cutoff, "*", " ")
+    y <- matrix(paste(y, zstat_string, sep = ""), nrow(y), ncol(y))
+    colnames(y) <- col_names
+    rownames(y) <- row_names
   }
 
   # add resvar
   if (!is.null(resvar)) {
-    NAMES <- colnames(y)
+    names_1 <- colnames(y)
     y <- cbind(y, format(round(cbind(resvar, 1 - resvar), nd),
       width = 12L + nd, justify = "right"
     ))
-    resvar.names <- format(c("unique.var", "communalities"),
+    resvar_names <- format(c("unique.var", "communalities"),
       width = 12L + nd, justify = "right"
     )
-    colnames(y) <- c(NAMES, resvar.names)
+    colnames(y) <- c(names_1, resvar_names)
   }
 
   # print
@@ -1576,7 +1580,7 @@ lav_print_loadings <- function(x, nd = 3L, cutoff = 0.3, dot.cutoff = 0.1,
 }
 
 # helper function to print the psi matrix, showing signif stars
-lav_print_psi <- function(x, nd = 3L, alpha.level = 0.01, x.se = NULL) {
+lav_print_psi <- function(x, nd = 3L, alpha_level = 0.01, x_se = NULL) {
   # unclass
   y <- unclass(x)
 
@@ -1587,16 +1591,16 @@ lav_print_psi <- function(x, nd = 3L, alpha.level = 0.01, x.se = NULL) {
   colnames(y) <- format(colnames(y), width = 3L + nd, justify = "right")
 
   # add 'star' for significant loadings (if provided) using alpha = 0.01
-  if (!is.null(x.se) && !any(is.na(x.se))) {
-    colNAMES <- colnames(y)
-    rowNAMES <- rownames(y)
-    x.se[x.se < sqrt(.Machine$double.eps)] <- 1 # to avoid NA
-    zstat <- x / x.se
-    z.cutoff <- qnorm(1 - (alpha.level / 2))
-    zstat.string <- ifelse(abs(zstat) > z.cutoff, "*", " ")
-    y <- matrix(paste(y, zstat.string, sep = ""), nrow(y), ncol(y))
-    colnames(y) <- colNAMES
-    rownames(y) <- rowNAMES
+  if (!is.null(x_se) && !any(is.na(x_se))) {
+    col_names <- colnames(y)
+    row_names <- rownames(y)
+    x_se[x_se < sqrt(.Machine$double.eps)] <- 1 # to avoid NA
+    zstat <- x / x_se
+    z_cutoff <- qnorm(1 - (alpha_level / 2))
+    zstat_string <- ifelse(abs(zstat) > z_cutoff, "*", " ")
+    y <- matrix(paste(y, zstat_string, sep = ""), nrow(y), ncol(y))
+    colnames(y) <- col_names
+    rownames(y) <- row_names
   }
 
   # remove upper part

@@ -7,9 +7,9 @@
 
 # YR 17 July 2012
 
-lav_func_gradient_complex <- function(func, x,
+lav_func_gradient_complex <- function(func, x,                        # nolint start
                                       h = .Machine$double.eps, ...,
-                                      fallback.simple = TRUE) {
+                                      fallback.simple = TRUE) {       #nolint end
   f0 <- try(func(x * (0 + 1i), ...), silent = TRUE)
   if (!is.complex(f0)) {
     if (fallback.simple) {
@@ -80,9 +80,9 @@ lav_func_gradient_simple <- function(func, x,
   dx
 }
 
-lav_func_jacobian_complex <- function(func, x,
+lav_func_jacobian_complex <- function(func, x,                       # nolint start
                                       h = .Machine$double.eps, ...,
-                                      fallback.simple = TRUE) {
+                                      fallback.simple = TRUE) {      # nolint end
   f0 <- try(func(x * (0 + 1i), ...), silent = TRUE)
   if (!is.complex(f0)) {
     if (fallback.simple) {
@@ -162,37 +162,37 @@ lav_deriv_cov2cor_b <- function(m_cov = NULL) {
 # surely there must be a more elegant way?
 # see lav_deriv_cov2cor_b, if no num.idx...
 # dCor/dCov
-lav_deriv_cov2cor <- function(COV = NULL, num.idx = NULL) {
+lav_deriv_cov2cor <- function(cov_1 = NULL, num_idx = NULL) {
   # dCor/dvar1 = - cov / (2*var1 * sqrt(var1) * sqrt(var2))
   # dCor/dvar2 = - cov / (2*var2 * sqrt(var1) * sqrt(var2))
   # dCor/dcov  =  1/(sqrt(var1) * sqrt(var2))
 
   # diagonal: diag(lav_matrix_vech(tcrossprod(1/delta)))
 
-  nvar <- ncol(COV)
+  nvar <- ncol(cov_1)
   pstar <- nvar * (nvar + 1) / 2
-  delta <- sqrt(diag(COV))
-  if (length(num.idx) > 0L) {
-    delta[num.idx] <- 1.0
+  delta <- sqrt(diag(cov_1))
+  if (length(num_idx) > 0L) {
+    delta[num_idx] <- 1.0
   }
 
-  A <- COV * -1 / (2 * delta * delta * tcrossprod(delta))
-  if (length(num.idx) > 0L) {
-    A[num.idx, ] <- 0
-    A[cbind(num.idx, num.idx)] <- 1
+  a <- cov_1 * -1 / (2 * delta * delta * tcrossprod(delta))
+  if (length(num_idx) > 0L) {
+    a[num_idx, ] <- 0
+    a[cbind(num_idx, num_idx)] <- 1
   }
-  A2 <- diag(nvar) %x% t(A)
+  a2 <- diag(nvar) %x% t(a)
 
-  OUT <- diag(pstar)
-  diag(OUT) <- lav_matrix_vech(tcrossprod(1 / delta))
-  var.idx <- lav_matrix_diagh_idx(nvar)
-  DUP <- lav_matrix_duplication(nvar)
-  OUT[, var.idx] <- t(DUP) %*% A2[, lav_matrix_diag_idx(nvar)]
+  out <- diag(pstar)
+  diag(out) <- lav_matrix_vech(tcrossprod(1 / delta))
+  var_idx <- lav_matrix_diagh_idx(nvar)
+  dup <- lav_matrix_duplication(nvar)
+  out[, var_idx] <- t(dup) %*% a2[, lav_matrix_diag_idx(nvar)]
 
-  if (length(num.idx) > 0L) {
-    var.idx <- var.idx[-num.idx]
+  if (length(num_idx) > 0L) {
+    var_idx <- var_idx[-num_idx]
   }
-  OUT[var.idx, var.idx] <- 0
+  out[var_idx, var_idx] <- 0
 
-  OUT
+  out
 }

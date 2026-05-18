@@ -211,10 +211,10 @@ lav_model_gradient_mml <- function(lavmodel = NULL,
 
     # compute fy.var, for this node (eta): P(Y_i =  y_i | eta_i, x_i)
     log_fy_var <- lav_predict_fy_internal(
-      X = x_1, yhat = yhat,
-      TH = th, THETA = mm_theta,
-      num.idx = num_idx, th.idx = th_idx,
-      link = lavmodel@link, log. = TRUE
+      x = x_1, yhat = yhat,
+      th = th, mm_theta = mm_theta,
+      num_idx = num_idx, th_idx = th_idx,
+      link = lavmodel@link, log_1 = TRUE
     )
 
     # if log, fy is just the sum of log.fy.var

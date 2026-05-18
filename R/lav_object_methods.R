@@ -229,18 +229,18 @@ standardizedSolution <-                                      # nolint start
     # add std and std.all columns
     if (type == "std.lv") {
       tmp_list$est.std <- lav_standardize_lv(object,
-        est = est, GLIST = GLIST,
-        partable = partable, cov.std = cov.std
+        est = est, glist = GLIST,
+        partable = partable, cov_std = cov.std
       )
     } else if (type == "std.all") {
       tmp_list$est.std <- lav_standardize_all(object,
-        est = est, GLIST = GLIST,
-        partable = partable, cov.std = cov.std
+        est = est, glist = GLIST,
+        partable = partable, cov_std = cov.std
       )
     } else if (type == "std.nox") {
       tmp_list$est.std <- lav_standardize_all_nox(object,
-        est = est, GLIST = GLIST,
-        partable = partable, cov.std = cov.std
+        est = est, glist = GLIST,
+        partable = partable, cov_std = cov.std
       )
     }
 
@@ -870,18 +870,18 @@ lavParameterEstimates <- function(object,                      # nolint start
     # Then add each requested type
     # (original source code, but now independently conditional)
     if ("std.lv" %in% standardized) {
-      tmp_list$std.lv <- lav_standardize_lv(object, cov.std = cov.std)
+      tmp_list$std.lv <- lav_standardize_lv(object, cov_std = cov.std)
     }
     if ("std.all" %in% standardized) {
       tmp_list$std.all <- lav_standardize_all(object,
-        est.std = tmp_list$est.std,
-        cov.std = cov.std
+        est_std = tmp_list$est.std,
+        cov_std = cov.std
       )
     }
     if ("std.nox" %in% standardized) {
       tmp_list$std.nox <- lav_standardize_all_nox(object,
-        est.std = tmp_list$est.std,
-        cov.std = cov.std
+        est_std = tmp_list$est.std,
+        cov_std = cov.std
       )
     }
 

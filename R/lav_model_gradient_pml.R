@@ -568,8 +568,8 @@ lav_pml_grad_tau_rho <- function(no_x, all_thres, index_var_of_thres, rho_xixj,
 # these for all pairs of variables. All are needed for the
 # computation of expected probabilities, der.L.to.rho, and der.L.to.tau
 
-# all duplications of indices are done as follows: within each pair of 
-# variables,  xi-xj, if for example we want to duplicate the indices of 
+# all duplications of indices are done as follows: within each pair of
+# variables,  xi-xj, if for example we want to duplicate the indices of
 # the thresholds, tau^xi_a and tau^xj_b, then index a runs faster than b,
 # i.e. for each b we take all different tau^xi's, and then we proceed to
 # the next b and do the same. In other words if it was tabulated we fill
@@ -701,7 +701,7 @@ lav_pml_longvec_ind <- function(no_x, all_thres, index_var_of_thres) {
 # Note that each variable may have a different number of categories, that's why
 # for example we take lists below.
 
-lav_pml_longvec_th_rho <- function(no_x, all_thres, 
+lav_pml_longvec_th_rho <- function(no_x, all_thres,
                                    index_var_of_thres, rho_xixj) {
   no_thres_of_each_var <- tapply(all_thres, index_var_of_thres, length)
   index_pairs <- utils::combn(no_x, 2)

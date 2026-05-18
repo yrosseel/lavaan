@@ -7,16 +7,17 @@
 # check if adjacency matrix B represents an acyclic graph (DAG)
 # B[i,j] != 0 means directed edge j -> i
 # uses Kahn's topological sort: acyclic iff all nodes can be visited
-lav_graph_is_acyclic <- function(B = NULL) {
-  if (is.null(B) || all(B == 0)) return(TRUE)
-  nr <- nrow(B)
-  indegree <- rowSums(B != 0)
+lav_graph_is_acyclic <- function(m_b = NULL) {
+  if (is.null(m_b) || all(m_b == 0)) return(TRUE)
+  nr <- nrow(m_b)
+  indegree <- rowSums(m_b != 0)
   k <- 0L
   queue <- which(indegree == 0L)
   while (length(queue) > 0L) {
-    v <- queue[1L]; queue <- queue[-1L]
+    v <- queue[1L]
+    queue <- queue[-1L]
     k <- k + 1L
-    for (u in which(B[, v] != 0)) {
+    for (u in which(m_b[, v] != 0)) {
       indegree[u] <- indegree[u] - 1L
       if (indegree[u] == 0L) queue <- c(queue, u)
     }
@@ -28,13 +29,13 @@ lav_graph_is_acyclic <- function(B = NULL) {
 # given an adjacency matrix B (rows are y's, columns are x's)
 #
 # this (speedy!) version is written by Luc De Wilde
-lav_graph_get_ancestors <- function(B = NULL) {
-  B <- abs(B)
-  nr <- nrow(B)
+lav_graph_get_ancestors <- function(m_b = NULL) {
+  m_b <- abs(m_b)
+  nr <- nrow(m_b)
   out_env <- new.env(parent = emptyenv())
 
   # container to hold ancestor indices per node
-  out.idx <- vector("list", length = nr)
+  out_idx <- vector("list", length = nr)
 
   get_ancestors <- function(nr, callers) {
     if (any(callers == nr)) {
@@ -44,9 +45,9 @@ lav_graph_get_ancestors <- function(B = NULL) {
     x <- get0(as.character(nr), envir = out_env, ifnotfound = NULL)
     if (!is.null(x)) return(x)
     retval <- integer(0L)
-    x.direct.idx <- which(B[nr, ] != 0)
-    for (j in seq_along(x.direct.idx)) {
-      thisone <- x.direct.idx[j]
+    x_direct_idx <- which(m_b[nr, ] != 0)
+    for (j in seq_along(x_direct_idx)) {
+      thisone <- x_direct_idx[j]
       retval <- c(retval, thisone)
       sub <- get_ancestors(thisone, c(callers, nr))
       if (all(sub != nr)) retval <- c(retval, sub)
@@ -58,9 +59,9 @@ lav_graph_get_ancestors <- function(B = NULL) {
 
   # run over each node
   for (i in seq_len(nr)) {
-    out.idx[[i]] <- get_ancestors(i, integer(0))
+    out_idx[[i]] <- get_ancestors(i, integer(0))
   } # all nodes
-  out.idx
+  out_idx
 }
 
 
@@ -70,48 +71,48 @@ lav_graph_get_ancestors <- function(B = NULL) {
 # undirected graph
 #
 # this version written by Luc De Wilde
-lav_graph_get_connected_nodes <- function(A) {
+lav_graph_get_connected_nodes <- function(a) {
 
   # make sure we have square symmetric matrix
-  A <- as.matrix(A)
+  a <- as.matrix(a)
 
   # A must be square
-  stopifnot(nrow(A) == ncol(A))
+  stopifnot(nrow(a) == ncol(a))
 
   # A must be symmetric
-  stopifnot(isSymmetric(A))
+  stopifnot(isSymmetric(a))
 
   # set diagonal to zero (just in case)
-  diag(A) <- 0L
+  diag(a) <- 0L
 
   # make it logical
-  A <- (A != 0)
+  a <- (a != 0)
 
   # number of cols/rows
-  M <- ncol(A)
+  m <- ncol(a)
 
   # catch diagonal A
-  if (all(lavaan::lav_matrix_vech(A, diagonal = FALSE) == 0L)) {
-    return(seq_len(M))
+  if (all(lavaan::lav_matrix_vech(a, diagonal = FALSE) == 0L)) {
+    return(seq_len(m))
   }
 
-  visited <- rep(FALSE, M)         # track visited nodes
-  membership <- integer(M)         # component id for each node
-  component.id <- 0L               # current component id
+  visited <- rep(FALSE, m)         # track visited nodes
+  membership <- integer(m)         # component id for each node
+  component_id <- 0L               # current component id
 
   put_node_in_component <- function(node, componentid) {
     visited[node] <<- TRUE
     membership[node] <<- componentid
-    toadd <- which(A[, node])
+    toadd <- which(a[, node])
     for (n in toadd) {
       if (!visited[n]) put_node_in_component(n, componentid)
     }
   }
 
-  for (node in seq_len(M)) {
+  for (node in seq_len(m)) {
     if (!visited[node]) {
-      component.id <- component.id + 1L
-      put_node_in_component(node, component.id)
+      component_id <- component_id + 1L
+      put_node_in_component(node, component_id)
     }
   }
 
@@ -125,8 +126,8 @@ lav_graph_get_connected_nodes <- function(A) {
 # defined in expression r is used in expression c.
 
 # contributed by ldw (adapted from function defined by Kss2k, github issue #445)
-lav_graph_order_adj_mat <- function(adj.mat, warn = TRUE) {
-  adjmat <- adj.mat
+lav_graph_order_adj_mat <- function(adj_mat, warn = TRUE) {
+  adjmat <- adj_mat
   n <- nrow(adjmat)
   k <- 0
   testen <- 1:n
@@ -257,8 +258,8 @@ lav_graph_topological_matrix <- function(
       if (length(followers) == 0L) {
         rvindic[i] <- "l"
       }
-      predecessor.ind <- match(predecessors, rv)
-      rvcol[i] <- max(rvcol[predecessor.ind]) + 1L
+      predecessor_ind <- match(predecessors, rv)
+      rvcol[i] <- max(rvcol[predecessor_ind]) + 1L
       if (length(colmax) < rvcol[i]) {
         colmax[rvcol[i]] <- 1L
         bordersincol <- 0L
@@ -285,8 +286,8 @@ lav_graph_topological_matrix <- function(
     for (i in seq_along(rv)) {
       if (rvindic[i] != "l" && !(rv[i] %in% bordernodes && rvindic[i] == "r")) {
         followers <- defined[rv[i] == definedby]
-        followers.ind <- match(followers, rv)
-        mincol <- min(rvcol[followers.ind])
+        followers_ind <- match(followers, rv)
+        mincol <- min(rvcol[followers_ind])
         if (rvcol[i] < mincol - 1L) {
           incremented <- TRUE
           curcol <- rvcol[i]
@@ -304,17 +305,17 @@ lav_graph_topological_matrix <- function(
   }
   # place bordernodes in columns 2 through maxcol-1 in the first or last row
   for (col in seq.int(2L, length(colmax) - 1L)) {
-    bordernodes.incol <- which(rvcol == col & rv %in% bordernodes)
-    if (length(bordernodes.incol) > 0L) {
-      totop <- bordernodes.incol[1L]
+    bordernodes_incol <- which(rvcol == col & rv %in% bordernodes)
+    if (length(bordernodes_incol) > 0L) {
+      totop <- bordernodes_incol[1L]
       if (rvrow[totop] != 1L) {
         swappie <- which(rvcol == col & rvrow == 1L)
         rvrow[swappie] <- rvrow[totop]
         rvrow[totop] <- 1L
       }
     }
-    if (length(bordernodes.incol) > 1L) {
-      tobottom <- bordernodes.incol[2L]
+    if (length(bordernodes_incol) > 1L) {
+      tobottom <- bordernodes_incol[2L]
       if (rvrow[tobottom] != max(colmax)) {
         swappie <- which(rvcol == col & rvrow == colmax[col])
         rvrow[swappie] <- rvrow[tobottom]
@@ -331,13 +332,13 @@ lav_graph_topological_matrix <- function(
       }
       return(as.integer(sum(outrange) / 2))
     }
-    in.order <- order(inorder)
-    in.order[in.order] <- seq_along(inorder)
+    in_order <- order(inorder)
+    in_order[in_order] <- seq_along(inorder)
     if (length(inorder) == outrange[2] - outrange[1] + 1) {
-      return(as.integer(outrange[1]) + in.order - 1L)
+      return(as.integer(outrange[1]) + in_order - 1L)
     }
-    as.integer(outrange[1] + (in.order - 1L) *
-      (outrange[2] - outrange[1] + 0.99) / (length(in.order) - 1L))
+    as.integer(outrange[1] + (in_order - 1L) *
+      (outrange[2] - outrange[1] + 0.99) / (length(in_order) - 1L))
   }
   # arrange nodes in first column (***)
   rowmax <- max(colmax)
@@ -351,11 +352,11 @@ lav_graph_topological_matrix <- function(
   }
   nodescol1 <- which(rvcol == 1L)
   optimalrows <- sapply(nodescol1, function(ci) {
-    nextnodes.ind <- which(rv[ci] == definedby)
-    if (length(nextnodes.ind) == 0L) {
+    nextnodes_ind <- which(rv[ci] == definedby)
+    if (length(nextnodes_ind) == 0L) {
       colmax[1L] / 2
     } else {
-      nextnodes <- defined[nextnodes.ind]
+      nextnodes <- defined[nextnodes_ind]
       mean(rvrow[match(nextnodes, rv)])
     }
   })
@@ -371,24 +372,24 @@ lav_graph_topological_matrix <- function(
   if (length(colmax) > 1L) {
     for (c in seq.int(2L, length(colmax))) {
       if (c == length(colmax)) {
-        cnodes.ind <- which(rvcol == c)
+        cnodes_ind <- which(rvcol == c)
         interval <- interval1l
       } else {
-        cnodes.ind <- which(rvcol == c & !(rv %in% bordernodes))
-        if (length(cnodes.ind) == 0L) next
-        interval <- range(rvrow[cnodes.ind])
+        cnodes_ind <- which(rvcol == c & !(rv %in% bordernodes))
+        if (length(cnodes_ind) == 0L) next
+        interval <- range(rvrow[cnodes_ind])
         interval[2L] <- max(interval[2L], colmax - 1L)
       }
-      optimalrows <- sapply(cnodes.ind, function(ci) {
-        prevnodes.ind <- which(rv[ci] == defined)
-        if (length(prevnodes.ind) == 0L) {
+      optimalrows <- sapply(cnodes_ind, function(ci) {
+        prevnodes_ind <- which(rv[ci] == defined)
+        if (length(prevnodes_ind) == 0L) {
           rvrow[ci]
         } else {
-          prevnodes <- definedby[prevnodes.ind]
+          prevnodes <- definedby[prevnodes_ind]
           mean(rvrow[match(prevnodes, rv)])
         }
       })
-      rvrow[cnodes.ind] <- order_doubles_interval(optimalrows, interval)
+      rvrow[cnodes_ind] <- order_doubles_interval(optimalrows, interval)
     }
   }
   # order on column, then row, and return
