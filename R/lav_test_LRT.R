@@ -71,6 +71,11 @@ lavTestLRT <- function(object, ..., method = "default", test = "default",   # no
 
   # shortcut for single argument (just plain LRT)
   if (!any(modp) && !user_h1_exists) {
+    if (lav_test_fmg_is_preset(test)) {
+      test <- lav_test_fmg_resolve_preset(
+        test, nested = FALSE, ngroups = ngroups
+      )
+    }
     if (type == "cf") {
       lav_msg_warn(gettext("`type' argument is ignored for a single model"))
     }
@@ -96,6 +101,12 @@ lavTestLRT <- function(object, ..., method = "default", test = "default",   # no
   order_idx <- order(ndf)
   mods <- mods[order_idx]
   ndf <- ndf[order_idx]
+
+  if (lav_test_fmg_is_preset(test)) {
+    test <- lav_test_fmg_resolve_preset(
+      test, nested = TRUE, ngroups = ngroups
+    )
+  }
 
   # here come the checks -- eventually, an option may skip this
   if (TRUE) {
@@ -348,7 +359,7 @@ lavTestLRT <- function(object, ..., method = "default", test = "default",   # no
       for (m in seq_len(length(mods) - 1L)) {
         out <- lav_test_diff_SatorraBentler2010(mods[[m]], mods[[m + 1]],
           test = test_1, # in case not @test[[2]]
-          H1 = FALSE
+          h1 = FALSE
         ) # must be F
 
         stat_delta[m + 1] <- out$T.delta
@@ -638,6 +649,12 @@ lav_test_lrt_fmg <- function(mods, test = "pall_ug_ml", method = "default",
 
   parsed <- lav_test_fmg_parse(test)
   chisq <- lav_test_fmg_resolve_chisq(parsed, lavoptions = mods[[1]]@Options)
+  unbiased <- lav_test_fmg_resolve_unbiased(
+    parsed, lavoptions = mods[[1]]@Options
+  )
+  label <- lav_test_fmg_label(parsed, unbiased = unbiased, chisq = chisq)
+  heading_label <- sub(" p-value test \\(", "; ", label)
+  heading_label <- sub("\\)$", "", heading_label)
 
   if (chisq == "rls") {
     TESTlist <- lapply(
@@ -724,8 +741,33 @@ lav_test_lrt_fmg <- function(mods, test = "pall_ug_ml", method = "default",
     lav_msg_warn(gettext("some models have the same degrees of freedom"))
   }
 
+  txt <- if (chisq == "rls") {
+    paste("The ", dQuote("Chisq"), " column contains source RLS ",
+      "test statistics, not the FMG test that should be reported per ",
+      "model. An FMG difference test is a function of two source ",
+      "statistics.",
+      sep = ""
+    )
+  } else {
+    paste("The ", dQuote("Chisq"), " column contains standard ",
+      "test statistics, not the FMG test that should be reported per ",
+      "model. An FMG difference test is a function of two standard ",
+      "(not FMG) statistics.",
+      sep = ""
+    )
+  }
+  note <- paste(strwrap(
+    paste("lavaan NOTE:", txt),
+    width = getOption("width", 80L) - 3L
+  ), collapse = "\n")
+  note <- paste0(
+    "lavaan->lavTestLRT():  \n   ",
+    gsub("\n", "\n   ", note, fixed = TRUE)
+  )
   attr(val, "heading") <- paste0(
-    "\nFMG Chi-Squared Difference Test (test = ", dQuote(test), ")\n"
+    "\nFMG Chi-Squared Difference Test (", heading_label, ")\n\n",
+    note,
+    "\n"
   )
   class(val) <- c("anova", class(val))
 

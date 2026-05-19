@@ -118,10 +118,10 @@ lav_test_diff_satorra2000 <- function(m1, m0, h1 = TRUE, a_method = "delta",
   apa <- m_a %*% p_inv %*% t(m_a)
   c_sums <- colSums(apa)
   r_sums <- rowSums(apa)
-  empty.idx <- which(abs(c_sums) < .Machine$double.eps^0.5 &
+  empty_idx <- which(abs(c_sums) < .Machine$double.eps^0.5 &
     abs(r_sums) < .Machine$double.eps^0.5)
-  if (length(empty.idx) > 0) {
-    m_a <- m_a[-empty.idx, , drop = FALSE]
+  if (length(empty_idx) > 0) {
+    m_a <- m_a[-empty_idx, , drop = FALSE]
   }
   if (nrow(m_a) == 0L) {
     # oops... abort!
@@ -132,7 +132,8 @@ lav_test_diff_satorra2000 <- function(m1, m0, h1 = TRUE, a_method = "delta",
   }
 
   # paapaap
-  paapaap <- p_inv %*% t(m_a) %*% MASS::ginv(m_a %*% p_inv %*% t(m_a)) %*% m_a %*% p_inv
+  paapaap <- p_inv %*% t(m_a) %*% MASS::ginv(m_a %*%
+                               p_inv %*% t(m_a)) %*% m_a %*% p_inv
 
   # compute scaling factor
   fg <- unlist(m1@SampleStats@nobs) / m1@SampleStats@ntotal
@@ -214,7 +215,7 @@ lav_test_diff_satorra2000 <- function(m1, m0, h1 = TRUE, a_method = "delta",
 
 lav_test_diff_SatorraBentler2001 <- function(m1, m0, test = 2) {
   # extract information from m1 and m2
-  T1 <- m1@test[[1]]$stat
+  t1 <- m1@test[[1]]$stat
   r1 <- m1@test[[1]]$df
   c1 <- m1@test[[test]]$scaling.factor
 
@@ -223,12 +224,12 @@ lav_test_diff_SatorraBentler2001 <- function(m1, m0, test = 2) {
     ## saturated model
     c1 <- 1 # canceled out by 0 when calculating "cd"
 
-  } else if (r1 > 0 && isTRUE(all.equal(T1, 0))) {
+  } else if (r1 > 0 && isTRUE(all.equal(t1, 0))) {
     ## perfect fit
     c1 <- 0 # cancels out r1 when calculating "cd"
   }
 
-  T0 <- m0@test[[1]]$stat
+  t0 <- m0@test[[1]]$stat
   r0 <- m0@test[[1]]$df
   c0 <- m0@test[[test]]$scaling.factor
 
@@ -238,7 +239,7 @@ lav_test_diff_SatorraBentler2001 <- function(m1, m0, test = 2) {
   # check for identical df setting
   if (m == 0L) {
     return(list(
-      T.delta = (T0 - T1), scaling.factor = as.numeric(NA),
+      T.delta = (t0 - t1), scaling.factor = as.numeric(NA),
       df.delta = m
     ))
   }
@@ -253,24 +254,24 @@ lav_test_diff_SatorraBentler2001 <- function(m1, m0, test = 2) {
   }
 
   # compute scaled difference test
-  T.delta <- (T0 - T1) / cd
+  t_delta <- (t0 - t1) / cd
 
-  list(T.delta = T.delta, scaling.factor = cd, df.delta = m)
+  list(T.delta = t_delta, scaling.factor = cd, df.delta = m)
 }
 
 lav_test_diff_SatorraBentler2010 <- function(m1, m0, test = 2,
-                                             H1 = FALSE) {
+                                             h1 = FALSE) {
   ### FIXME: check if models are nested at the parameter level!!!
 
   # extract information from m1 and m2
-  T1 <- m1@test[[1]]$stat
+  t1 <- m1@test[[1]]$stat
   r1 <- m1@test[[1]]$df
-  c1 <- m1@test[[test]]$scaling.factor
-  if (r1 == 0) { # saturated model
-    c1 <- 1
-  }
+  # c1 <- m1@test[[test]]$scaling.factor
+  # if (r1 == 0) { # saturated model
+  #   c1 <- 1
+  # }
 
-  T0 <- m0@test[[1]]$stat
+  t0 <- m0@test[[1]]$stat
   r0 <- m0@test[[1]]$df
   c0 <- m0@test[[test]]$scaling.factor
   if (r0 == 0) { # should never happen
@@ -283,20 +284,20 @@ lav_test_diff_SatorraBentler2010 <- function(m1, m0, test = 2,
   # check for identical df setting
   if (m == 0L) {
     return(list(
-      T.delta = (T0 - T1), scaling.factor = as.numeric(NA),
+      T.delta = (t0 - t1), scaling.factor = as.numeric(NA),
       df.delta = m
     ))
   }
 
   # generate `M10' model
-  if (H1) {
+  if (h1) {
     # M0 with M1 parameters
-    M01 <- lav_test_diff_m10(m0, m1, test = TRUE)
-    c01 <- M01@test[[test]]$scaling.factor
+    m01 <- lav_test_diff_m10(m0, m1, test = TRUE)
+    c01 <- m01@test[[test]]$scaling.factor
 
     # check if vcov is positive definite (new in 0.6)
     # if not, we may get negative values
-    eigvals <- eigen(lavTech(M01, "information"),
+    eigvals <- eigen(lavTech(m01, "information"),
       symmetric = TRUE, only.values = TRUE
     )$values
     if (any(eigvals < -1 * .Machine$double.eps^(3 / 4))) {
@@ -312,12 +313,12 @@ lav_test_diff_SatorraBentler2010 <- function(m1, m0, test = 2,
     # }
   } else {
     # M1 with M0 parameters (as in Satorra & Bentler 2010)
-    M10 <- lav_test_diff_m10(m1, m0, test = TRUE)
-    c10 <- M10@test[[test]]$scaling.factor
+    m10 <- lav_test_diff_m10(m1, m0, test = TRUE)
+    c10 <- m10@test[[test]]$scaling.factor
 
     # check if vcov is positive definite (new in 0.6)
     # if not, we may get negative values
-    eigvals <- eigen(lavTech(M10, "information"),
+    eigvals <- eigen(lavTech(m10, "information"),
       symmetric = TRUE, only.values = TRUE
     )$values
     if (any(eigvals < -1 * .Machine$double.eps^(3 / 4))) {
@@ -333,11 +334,11 @@ lav_test_diff_SatorraBentler2010 <- function(m1, m0, test = 2,
   }
 
   # compute scaled difference test
-  T.delta <- (T0 - T1) / cd
+  t_delta <- (t0 - t1) / cd
 
   list(
-    T.delta = T.delta, scaling.factor = cd, df.delta = m,
-    T.delta.unscaled = (T0 - T1)
+    T.delta = t_delta, scaling.factor = cd, df.delta = m,
+    T.delta.unscaled = (t0 - t1)
   )
 }
 
@@ -345,62 +346,62 @@ lav_test_diff_SatorraBentler2010 <- function(m1, m0, test = 2,
 # inject it with the values of 'm0'
 lav_test_diff_m10 <- function(m1, m0, test = FALSE) {
   # switch of verbose/se/test
-  Options <- m1@Options
+  options_1 <- m1@Options
   # switch of optim.gradient check
-  Options$check.gradient <- FALSE
+  options_1$check.gradient <- FALSE
 
   # should we compute se/test statistics?
   if (!test) {
-    Options$se <- "none"
-    Options$test <- "none"
+    options_1$se <- "none"
+    options_1$test <- "none"
   }
 
-  PT.M0 <- lav_partable_set_cache(m0@ParTable, m0@pta)
-  PT.M1 <- lav_partable_set_cache(m1@ParTable, m1@pta)
+  pt_m0 <- lav_partable_set_cache(m0@ParTable, m0@pta)
+  pt_m1 <- lav_partable_set_cache(m1@ParTable, m1@pta)
 
   # `extend' PT.M1 partable to include all `fixed-to-zero parameters'
-  PT.M1.FULL <- lav_partable_full(
-    partable = PT.M1,
+  pt_m1_full <- lav_partable_full(
+    partable = pt_m1,
     free = TRUE, start = TRUE
   )
-  PT.M1.extended <- lav_partable_merge(PT.M1, PT.M1.FULL,
+  pt_m1_extended <- lav_partable_merge(pt_m1, pt_m1_full,
     remove.duplicated = TRUE, warn = FALSE
   )
 
   # remove most columns
-  PT.M1.extended$start <- NULL # new in 0.6-4! (otherwise, they are used)
-  PT.M1.extended$est <- NULL
-  PT.M1.extended$se <- NULL
+  pt_m1_extended$start <- NULL # new in 0.6-4! (otherwise, they are used)
+  pt_m1_extended$est <- NULL
+  pt_m1_extended$se <- NULL
 
   # in addition, use 'NA' for free parameters in ustart column
-  free.par.idx <- which(PT.M1.extended$free > 0L)
-  PT.M1.extended$ustart[free.par.idx] <- as.numeric(NA)
+  free_par_idx <- which(pt_m1_extended$free > 0L)
+  pt_m1_extended$ustart[free_par_idx] <- as.numeric(NA)
 
   # `extend' PT.M0 partable to include all `fixed-to-zero parameters'
-  PT.M0.FULL <- lav_partable_full(
-    partable = PT.M0,
+  pt_m0_full <- lav_partable_full(
+    partable = pt_m0,
     free = TRUE, start = TRUE
   )
-  PT.M0.extended <- lav_partable_merge(PT.M0, PT.M0.FULL,
+  pt_m0_extended <- lav_partable_merge(pt_m0, pt_m0_full,
     remove.duplicated = TRUE, warn = FALSE
   )
   # remove most columns, but not 'est'
-  PT.M0.extended$ustart <- NULL
-  PT.M0.extended$start <- NULL
-  PT.M0.extended$se <- NULL
+  pt_m0_extended$ustart <- NULL
+  pt_m0_extended$start <- NULL
+  pt_m0_extended$se <- NULL
 
 
   # FIXME:
   # - check if H0 does not contain additional parameters...
 
-  Options$optim.method <- "none"
-  Options$optim.force.converged <- TRUE
-  Options$baseline <- FALSE
-  Options$h1 <- TRUE # needed after all (yuan.benter.mplus)
-  Options$start <- PT.M0.extended # new in 0.6!
+  options_1$optim.method <- "none"
+  options_1$optim.force.converged <- TRUE
+  options_1$baseline <- FALSE
+  options_1$h1 <- TRUE # needed after all (yuan.benter.mplus)
+  options_1$start <- pt_m0_extended # new in 0.6!
   m10 <- lavaan(
-    model = PT.M1.extended,
-    slotOptions = Options,
+    model = pt_m1_extended,
+    slotOptions = options_1,
     slotSampleStats = m1@SampleStats,
     slotData = m1@Data,
     slotCache = m1@Cache,
@@ -433,28 +434,28 @@ lav_test_diff_a <- function(m1, m0, method = "delta", reference = "H1") {
     }
   } else if (method == "delta") {
     # use a numeric approximation of `A'
-    Delta1.list <- lav_model_delta(m1@Model)
-    Delta0.list <- lav_model_delta(m0@Model)
-    Delta1 <- do.call(rbind, Delta1.list)
-    Delta0 <- do.call(rbind, Delta0.list)
+    delta1_list <- lav_model_delta(m1@Model)
+    delta0_list <- lav_model_delta(m0@Model)
+    delta1 <- do.call(rbind, delta1_list)
+    delta0 <- do.call(rbind, delta0_list)
 
     # take into account equality constraints m0
     if (m0@Model@eq.constraints) {
-      Delta0 <- Delta0 %*% m0@Model@eq.constraints.K
+      delta0 <- delta0 %*% m0@Model@eq.constraints.K
     } else if (m0@Model@ceq.simple.only) {
-      Delta0 <- Delta0 %*% t(m0@Model@ceq.simple.K)
+      delta0 <- delta0 %*% t(m0@Model@ceq.simple.K)
     }
 
     # take into account equality constraints m1
     if (m1@Model@eq.constraints) {
-      Delta1 <- Delta1 %*% m1@Model@eq.constraints.K
+      delta1 <- delta1 %*% m1@Model@eq.constraints.K
     } else if (m1@Model@ceq.simple.only) {
-      Delta1 <- Delta1 %*% t(m1@Model@ceq.simple.K)
+      delta1 <- delta1 %*% t(m1@Model@ceq.simple.K)
     }
 
     # H <- solve(t(Delta1) %*% Delta1) %*% t(Delta1) %*% Delta0
-    H <- MASS::ginv(Delta1) %*% Delta0
-    m_a <- t(lav_matrix_orthogonal_complement(H))
+    h <- MASS::ginv(delta1) %*% delta0
+    m_a <- t(lav_matrix_orthogonal_complement(h))
   }
 
   m_a
@@ -474,14 +475,14 @@ lav_test_diff_a <- function(m1, m0, method = "delta", reference = "H1") {
 #   - the plabels used in "==" constraints must be renamed, if necessary
 #
 lav_test_diff_af_h1 <- function(m1, m0) {
-  PT.M0 <- lav_partable_set_cache(parTable(m0), m0@pta)
-  PT.M1 <- lav_partable_set_cache(parTable(m1), m1@pta)
+  pt_m0 <- lav_partable_set_cache(parTable(m0), m0@pta)
+  pt_m1 <- lav_partable_set_cache(parTable(m1), m1@pta)
 
   # select .p*. parameters only
-  M0.p.idx <- which(grepl("\\.p", PT.M0$plabel))
-  np0 <- length(M0.p.idx)
-  M1.p.idx <- which(grepl("\\.p", PT.M1$plabel))
-  np1 <- length(M1.p.idx)
+  m0_p_idx <- which(grepl("\\.p", pt_m0$plabel))
+  np0 <- length(m0_p_idx)
+  m1_p_idx <- which(grepl("\\.p", pt_m1$plabel))
+  np1 <- length(m1_p_idx)
 
   # check if parameter space is the same
   if (np0 != np1) {
@@ -490,67 +491,67 @@ lav_test_diff_af_h1 <- function(m1, m0) {
   }
 
   # split partable in 'parameter' and 'constraints' section
-  PT.M0.part1 <- PT.M0[M0.p.idx, ]
-  PT.M0.part2 <- PT.M0[-M0.p.idx, ]
+  pt_m0_part1 <- pt_m0[m0_p_idx, ]
+  pt_m0_part2 <- pt_m0[-m0_p_idx, ]
 
-  PT.M1.part1 <- PT.M1[M1.p.idx, ]
-  PT.M1.part2 <- PT.M1[-M1.p.idx, ]
+  pt_m1_part1 <- pt_m1[m1_p_idx, ]
+  pt_m1_part2 <- pt_m1[-m1_p_idx, ]
 
   # figure out relationship between m0 and m1
-  p1.id <- lav_partable_map_id_p1_in_p2(PT.M0.part1, PT.M1.part1)
-  p0.free.idx <- which(PT.M0.part1$free > 0)
+  p1_id <- lav_partable_map_id_p1_in_p2(pt_m0_part1, pt_m1_part1)
+  p0_free_idx <- which(pt_m0_part1$free > 0)
 
   # change 'free' order in m0
   # NOTE: this only works all the free parameters in h0 are also free
   # in h1 (and if not, they will become fixed in h0)
-  PT.M0.part1$free[p0.free.idx] <-
-    PT.M1.part1$free[PT.M0.part1$id[p1.id][p0.free.idx]]
+  pt_m0_part1$free[p0_free_idx] <-
+    pt_m1_part1$free[pt_m0_part1$id[p1_id][p0_free_idx]]
 
   # paste back
-  PT.M0 <- rbind(PT.M0.part1, PT.M0.part2)
-  PT.M1 <- rbind(PT.M1.part1, PT.M1.part2)
+  pt_m0 <- rbind(pt_m0_part1, pt_m0_part2)
+  pt_m1 <- rbind(pt_m1_part1, pt_m1_part2)
 
   # `extend' PT.M1 partable to include all `fixed-to-zero parameters'
-  PT.M1.FULL <- lav_partable_full(
-    partable = PT.M1,
+  pt_m1_full <- lav_partable_full(
+    partable = pt_m1,
     free = TRUE, start = TRUE
   )
-  PT.M1.extended <- lav_partable_merge(PT.M1, PT.M1.FULL,
+  pt_m1_extended <- lav_partable_merge(pt_m1, pt_m1_full,
     remove.duplicated = TRUE, warn = FALSE
   )
 
   # `extend' PT.M0 partable to include all `fixed-to-zero parameters'
-  PT.M0.FULL <- lav_partable_full(
-    partable = PT.M0,
+  pt_m0_full <- lav_partable_full(
+    partable = pt_m0,
     free = TRUE, start = TRUE
   )
-  PT.M0.extended <- lav_partable_merge(PT.M0, PT.M0.FULL,
+  pt_m0_extended <- lav_partable_merge(pt_m0, pt_m0_full,
     remove.duplicated = TRUE, warn = FALSE
   )
 
-  p1 <- PT.M1.extended
+  p1 <- pt_m1_extended
   np1 <- length(p1$lhs)
-  p0 <- PT.M0.extended
+  p0 <- pt_m0_extended
   np0 <- length(p0$lhs)
 
-  con.function <- function() NULL
-  formals(con.function) <- alist(.x. = , ... = )
-  BODY.txt <- paste("{\nout <- numeric(0L)\n", sep = "")
+  con_function <- function() NULL
+  formals(con_function) <- alist(.x. = , ... = )
+  body_txt <- paste("{\nout <- numeric(0L)\n", sep = "")
 
 
   # first handle def + == constraints
   # but FIRST, remove == constraints that also appear in H1!!!
 
   # remove equivalent eq constraints from p0
-  P0 <- p0
+  p0_1 <- p0
 
-  p0.eq.idx <- which(p0$op == "==")
-  p1.eq.idx <- which(p1$op == "==")
-  p0.remove.idx <- integer(0L)
-  if (length(p0.eq.idx) > 0L) {
-    for (i in seq_along(p0.eq.idx)) {
+  p0_eq_idx <- which(p0$op == "==")
+  p1_eq_idx <- which(p1$op == "==")
+  p0_remove_idx <- integer(0L)
+  if (length(p0_eq_idx) > 0L) {
+    for (i in seq_along(p0_eq_idx)) {
       # e0 in p0
-      e0 <- p0.eq.idx[i]
+      e0 <- p0_eq_idx[i]
       lhs <- p0$lhs[e0]
       rhs <- p0$rhs[e0]
 
@@ -561,31 +562,31 @@ lav_test_diff_af_h1 <- function(m1, m0) {
       # values, and work out the constraint, do we get identical values?
       # if yes, constraint is equivalent, and we should NOT add it here
 
-      if (length(p1.eq.idx) > 0) {
+      if (length(p1_eq_idx) > 0) {
         # generate random parameter values
-        xx1 <- rnorm(length(M1.p.idx))
-        xx0 <- xx1[p1.id]
+        xx1 <- rnorm(length(m1_p_idx))
+        xx0 <- xx1[p1_id]
 
-        con.h0.value <- m0@Model@ceq.function(xx0)[i]
-        con.h1.values <- m1@Model@ceq.function(xx1)
+        con_h0_value <- m0@Model@ceq.function(xx0)[i]
+        con_h1_values <- m1@Model@ceq.function(xx1)
 
-        if (con.h0.value %in% con.h1.values) {
-          p0.remove.idx <- c(p0.remove.idx, e0)
+        if (con_h0_value %in% con_h1_values) {
+          p0_remove_idx <- c(p0_remove_idx, e0)
         }
       }
     }
   }
-  if (length(p0.remove.idx) > 0L) {
-    P0 <- P0[-p0.remove.idx, ]
+  if (length(p0_remove_idx) > 0L) {
+    p0_1 <- p0_1[-p0_remove_idx, ]
   }
 
   # only for the UNIQUE equality constraints in H0, generate syntax
-  DEFCON.txt <- lav_partable_constraints_ceq(P0, txtOnly = TRUE)
-  BODY.txt <- paste(BODY.txt, DEFCON.txt, "\n", sep = "")
+  defcon_txt <- lav_partable_constraints_ceq(p0_1, txtOnly = TRUE)
+  body_txt <- paste(body_txt, defcon_txt, "\n", sep = "")
 
 
   # for each parameter in p1, we 'check' is it is fixed to a constant in p0
-  ncon <- length(which(P0$op == "=="))
+  ncon <- length(which(p0_1$op == "=="))
   for (i in seq_len(np1)) {
     # p in p1
     lhs <- p1$lhs[i]
@@ -597,9 +598,9 @@ lav_test_diff_af_h1 <- function(m1, m0) {
     if (op == "==" || op == ">" || op == "<" || op == ":=") next
 
     # search for corresponding parameter in p0
-    p0.idx <- which(p0$lhs == lhs & p0$op == op & p0$rhs == rhs &
+    p0_idx <- which(p0$lhs == lhs & p0$op == op & p0$rhs == rhs &
       p0$group == group)
-    if (length(p0.idx) == 0L) {
+    if (length(p0_idx) == 0L) {
       lav_msg_stop(
         gettextf("parameter in H1 not found in H0: %s",
         paste(lhs, op, rhs, "(group = ", group, ")", sep = " ")
@@ -608,7 +609,7 @@ lav_test_diff_af_h1 <- function(m1, m0) {
 
     # 4 possibilities: p is free/fixed in p1, p is free/fixed in p0
     if (p1$free[i] == 0L) {
-      if (p0$free[p0.idx] == 0L) {
+      if (p0$free[p0_idx] == 0L) {
         # match, nothing to do
       } else {
         lav_msg_warn(
@@ -620,12 +621,12 @@ lav_test_diff_af_h1 <- function(m1, m0) {
         ))
       }
     } else {
-      if (p0$free[p0.idx] == 0L) {
+      if (p0$free[p0_idx] == 0L) {
         # match, this is a constrained parameter in H0
         ncon <- ncon + 1L
-        BODY.txt <- paste(BODY.txt,
+        body_txt <- paste(body_txt,
           "out[", ncon, "] = .x.[", p1$free[i], "] - ",
-          p0$ustart[p0.idx], "\n",
+          p0$ustart[p0_idx], "\n",
           sep = ""
         )
         next
@@ -637,8 +638,8 @@ lav_test_diff_af_h1 <- function(m1, m0) {
 
 
   # wrap function
-  BODY.txt <- paste(BODY.txt, "return(out)\n}\n", sep = "")
-  body(con.function) <- parse(file = "", text = BODY.txt)
+  body_txt <- paste(body_txt, "return(out)\n}\n", sep = "")
+  body(con_function) <- parse(file = "", text = body_txt)
 
-  con.function
+  con_function
 }

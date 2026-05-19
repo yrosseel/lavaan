@@ -14,7 +14,8 @@ lav_sem_miiv_utils_jacb_uls <- function(sample_cov = NULL, delta2 = NULL) {
   nvar <- nrow(sample_cov)
   pstar <- nvar * (nvar + 1L) / 2L
 
-  jac_cov <- delta2; nc <- ncol(jac_cov)
+  jac_cov <- delta2
+  # nc <- ncol(jac_cov)
   meanstructure <- FALSE
   if (nrow(delta2) > pstar) {
     meanstructure <- TRUE
@@ -23,7 +24,7 @@ lav_sem_miiv_utils_jacb_uls <- function(sample_cov = NULL, delta2 = NULL) {
   # split delta2/svec
   if (meanstructure) {
     mean_idx <- seq_len(nvar)
-    jac_mean <- delta2[ mean_idx, , drop = FALSE]
+    jac_mean <- delta2[mean_idx, , drop = FALSE]
     jac_cov <- delta2[-mean_idx, , drop = FALSE]
   }
 
@@ -32,20 +33,20 @@ lav_sem_miiv_utils_jacb_uls <- function(sample_cov = NULL, delta2 = NULL) {
   w[lav_matrix_diagh_idx(nvar)] <- 0.5
 
   q_cov <- w * jac_cov
-  A <- crossprod(jac_cov, q_cov)
+  a <- crossprod(jac_cov, q_cov)
   if (meanstructure) {
-    A <- A + crossprod(jac_mean)
+    a <- a + crossprod(jac_mean)
   }
 
   # tQ only needed if H is requested
-  tQ <- t(q_cov)
-  if (meanstructure) tQ <- cbind(t(jac_mean), tQ)
+  t_q <- t(q_cov)
+  if (meanstructure) t_q <- cbind(t(jac_mean), t_q)
 
-  R <- chol(A)
-  Ainv  <- chol2inv(R)
-  H <- Ainv %*% tQ
+  r <- chol(a)
+  ainv  <- chol2inv(r)
+  h <- ainv %*% t_q
 
-  H
+  h
 }
 
 # this is the GLS version where W2 = t(D) %*% (S.inv %x% S.inv) %*% D
@@ -60,55 +61,55 @@ lav_sem_miiv_utils_jacb_gls <- function(sample_cov = NULL, delta2 = NULL,
   w[lav_matrix_diagh_idx(nvar)] <- 0.5
 
   # only covariance block
-  meanstructure.flag <- FALSE
+  meanstructure_flag <- FALSE
   if (nrow(delta2) > pstar) {
-    meanstructure.flag <- TRUE
+    meanstructure_flag <- TRUE
     delta2 <- delta2[-seq_len(nvar), , drop = FALSE]
   }
 
   nc <- ncol(delta2)
-  cS <- chol(sample_cov)
-  Si <- chol2inv(cS)
+  c_s <- chol(sample_cov)
+  si <- chol2inv(c_s)
 
   # q_cov[,j] = w * vech(Si %*% Vj %*% Si),  Vj = vech_inv(delta2[,j])
   # equivalent to (1/2) W2 %*% delta2
   q_cov <- matrix(0.0, pstar, nc)
   for (j in seq_len(nc)) {
-    V_j <- lav_matrix_vech_reverse(delta2[, j])
-    SiVj <- Si %*% V_j
-    q_cov[, j] <- w * lav_matrix_vech(SiVj %*% Si)
+    v_j <- lav_matrix_vech_reverse(delta2[, j])
+    si_vj <- si %*% v_j
+    q_cov[, j] <- w * lav_matrix_vech(si_vj %*% si)
   }
 
   # M_half = (1/2) M = t(delta2) %*% q_cov
-  M_half <- crossprod(delta2, q_cov)
+  m_half <- crossprod(delta2, q_cov)
   b_half <- drop(crossprod(q_cov, s_vech))
 
   # theta2: GLS estimate
   # (scaling cancels: M_half^{-1} b_half = M^{-1} t(delta2) W2 s_vech)
-  R <- chol(M_half)
+  r <- chol(m_half)
   if (is.null(theta2)) {
-    theta2 <- backsolve(R, forwardsolve(t(R), b_half))
+    theta2 <- backsolve(r, forwardsolve(t(r), b_half))
   }
 
   # error term and GLS correction q_mat = Si %*% e_mat %*% Si
   e_mat <- lav_matrix_vech_reverse(s_vech - delta2 %*% theta2)
-  q_mat <- Si %*% e_mat %*% Si
+  q_mat <- si %*% e_mat %*% si
 
   # correction_cov[,j] = w * vech(Tj + t(Tj)),  Tj = Si %*% Vj %*% q_mat
   # equivalent to (1/2) correction %*% delta2
   correction_cov <- matrix(0.0, pstar, nc)
   for (j in seq_len(nc)) {
-    V_j              <- lav_matrix_vech_reverse(delta2[, j])
-    T_j              <- Si %*% V_j %*% q_mat
-    correction_cov[, j] <- w * lav_matrix_vech(T_j + t(T_j))
+    v_j              <- lav_matrix_vech_reverse(delta2[, j])
+    t_j              <- si %*% v_j %*% q_mat
+    correction_cov[, j] <- w * lav_matrix_vech(t_j + t(t_j))
   }
 
   # out = M^{-1} %*% t(delta2) %*% (W2 - correction)
   #     = M_half^{-1} %*% t(q_cov - correction_cov)
-  out <- backsolve(R, forwardsolve(t(R), t(q_cov - correction_cov)))
+  out <- backsolve(r, forwardsolve(t(r), t(q_cov - correction_cov)))
 
   # meanstructure: prepend zero block for mean parameters
-  if (meanstructure.flag) {
+  if (meanstructure_flag) {
     out <- cbind(matrix(0.0, nrow = nrow(out), ncol = nvar), out)
   }
 
@@ -130,34 +131,37 @@ lav_sem_miiv_utils_jacb_2rls <- function(sample_cov = NULL, delta2 = NULL,
   w[lav_matrix_diagh_idx(nvar)] <- 0.5
 
   # only covariance block
-  meanstructure.flag <- FALSE
+  meanstructure_flag <- FALSE
   if (nrow(delta2) > pstar) {
-    meanstructure.flag <- TRUE
+    meanstructure_flag <- TRUE
     delta2 <- delta2[-seq_len(nvar), , drop = FALSE]
   }
   nc <- ncol(delta2)
 
   # step 1: ULS estimate of theta_uls
-  q_uls <- w * delta2; m_uls <- crossprod(delta2, q_uls); R_uls <- chol(m_uls)
+  q_uls <- w * delta2
+  m_uls <- crossprod(delta2, q_uls)
+  r_uls <- chol(m_uls)
   theta_uls <-
-    backsolve(R_uls, forwardsolve(t(R_uls), drop(crossprod(q_uls, s_vech))))
+    backsolve(r_uls, forwardsolve(t(r_uls), drop(crossprod(q_uls, s_vech))))
 
   # sigma to be used for GLS estimate
   sigma <- lav_matrix_vech_reverse(delta2 %*% theta_uls)
-  cSi <- chol(sigma); sigma_inv <- chol2inv(cSi)
+  c_si <- chol(sigma)
+  sigma_inv <- chol2inv(c_si)
 
   # step 2: GLS estimate of theta using sigma_inv
   # q_cov[,j] = w * vech(Si Vj Si)  =  (1/2) w2 delta2[,j]
   q_cov <- matrix(0.0, pstar, nc)
   for (j in seq_len(nc)) {
-    V_j <- lav_matrix_vech_reverse(delta2[, j])
-    q_cov[, j] <- w * lav_matrix_vech(sigma_inv %*% V_j %*% sigma_inv)
+    v_j <- lav_matrix_vech_reverse(delta2[, j])
+    q_cov[, j] <- w * lav_matrix_vech(sigma_inv %*% v_j %*% sigma_inv)
   }
-  M_sigma_half <- crossprod(delta2, q_cov)
-  R_sigma <- chol(M_sigma_half)
+  m_sigma_half <- crossprod(delta2, q_cov)
+  r_sigma <- chol(m_sigma_half)
   if (is.null(theta2)) {
-    theta2 <- backsolve(R_sigma,
-      forwardsolve(t(R_sigma), drop(crossprod(q_cov, s_vech))))
+    theta2 <- backsolve(r_sigma,
+      forwardsolve(t(r_sigma), drop(crossprod(q_cov, s_vech))))
   }
 
   # step 3: correction matrix (as column operations, no c_mat formed)
@@ -168,24 +172,24 @@ lav_sem_miiv_utils_jacb_2rls <- function(sample_cov = NULL, delta2 = NULL,
 
   c_cov <- matrix(0.0, pstar, nc)
   for (j in seq_len(nc)) {
-    V_j <- lav_matrix_vech_reverse(delta2[, j])
-    T_j <- sigma_inv %*% V_j %*% q_mat
-    c_cov[, j] <- w * lav_matrix_vech(T_j + t(T_j))
+    v_j <- lav_matrix_vech_reverse(delta2[, j])
+    t_j <- sigma_inv %*% v_j %*% q_mat
+    c_cov[, j] <- w * lav_matrix_vech(t_j + t(t_j))
   }
 
   # step 4: Jacobian
   #   out = M_sigma_half^{-1} (t(q_cov) - t(c_cov) delta2 m_uls^{-1} t(q_uls))
   # build rhs = t(q_cov) - t(c_cov) delta2 m_uls^{-1} t(q_uls)  (nc x pstar)
   # Step A: CtD = t(c_cov) delta2  (nc x nc)
-  CtD  <- crossprod(c_cov, delta2)
-  MiCtD <- backsolve(R_uls, forwardsolve(t(R_uls), t(CtD)))
+  ct_d  <- crossprod(c_cov, delta2)
+  mi_ct_d <- backsolve(r_uls, forwardsolve(t(r_uls), t(ct_d)))
   # Step B: rhs = t(q_cov) - MiCtD^T t(q_uls)  (nc x pstar)
-  rhs <- t(q_cov) - t(MiCtD) %*% t(q_uls)
+  rhs <- t(q_cov) - t(mi_ct_d) %*% t(q_uls)
   # Step C: out = M_sigma_half^{-1} rhs
-  out <- backsolve(R_sigma, forwardsolve(t(R_sigma), rhs))
+  out <- backsolve(r_sigma, forwardsolve(t(r_sigma), rhs))
 
   # meanstructure: prepend zero block for mean parameters
-  if (meanstructure.flag) {
+  if (meanstructure_flag) {
     out <- cbind(matrix(0.0, nrow = nrow(out), ncol = nvar), out)
   }
 
@@ -204,9 +208,9 @@ lav_sem_miiv_utils_jacb_rls <- function(sample_cov = NULL, delta2 = NULL,
   w[lav_matrix_diagh_idx(nvar)] <- 0.5
 
   # only covariance block
-  meanstructure.flag <- FALSE
+  meanstructure_flag <- FALSE
   if (nrow(delta2) > pstar) {
-    meanstructure.flag <- TRUE
+    meanstructure_flag <- TRUE
     delta2 <- delta2[-seq_len(nvar), , drop = FALSE]
   }
 
@@ -214,20 +218,20 @@ lav_sem_miiv_utils_jacb_rls <- function(sample_cov = NULL, delta2 = NULL,
 
   # Pre-compute vech_reverse of each column of delta2 once; used in the
   # final block (and in the loop when theta2 is not supplied).
-  V_list <- vector("list", nc)
-  for (j in seq_len(nc)) V_list[[j]] <- lav_matrix_vech_reverse(delta2[, j])
+  v_list <- vector("list", nc)
+  for (j in seq_len(nc)) v_list[[j]] <- lav_matrix_vech_reverse(delta2[, j])
 
   q_cov <- matrix(0.0, pstar, nc)
 
   # using final theta2 estimate
   new_sigma <- lav_matrix_vech_reverse(delta2 %*% theta2)
-  cSi       <- chol(new_sigma)
-  sigma_inv <- chol2inv(cSi)
+  c_si       <- chol(new_sigma)
+  sigma_inv <- chol2inv(c_si)
   for (j in seq_len(nc)) {
-    q_cov[, j] <- w * lav_matrix_vech(sigma_inv %*% V_list[[j]] %*% sigma_inv)
+    q_cov[, j] <- w * lav_matrix_vech(sigma_inv %*% v_list[[j]] %*% sigma_inv)
   }
   m_mat <- crossprod(delta2, q_cov)
-  R_mat <- chol(m_mat)
+  r_mat <- chol(m_mat)
 
   # correction columns: c_cov[,j] = w * vech(Tj + t(Tj)),  Tj = Si Vj q_mat
   # where q_mat = Si e_mat Si.
@@ -236,8 +240,8 @@ lav_sem_miiv_utils_jacb_rls <- function(sample_cov = NULL, delta2 = NULL,
   q_mat <- sigma_inv %*% e_mat %*% sigma_inv
   c_cov <- matrix(0.0, pstar, nc)
   for (j in seq_len(nc)) {
-    T_j <- sigma_inv %*% V_list[[j]] %*% q_mat
-    c_cov[, j] <- w * lav_matrix_vech(T_j + t(T_j))
+    t_j <- sigma_inv %*% v_list[[j]] %*% q_mat
+    c_cov[, j] <- w * lav_matrix_vech(t_j + t(t_j))
   }
 
   # Jacobian:
@@ -245,14 +249,14 @@ lav_sem_miiv_utils_jacb_rls <- function(sample_cov = NULL, delta2 = NULL,
   #               = -solve(m_mat, crossprod(delta2, c_cov))
   #   IminusA_inv = solve(I - A)
   #   out         = IminusA_inv %*% solve(m_mat, t(q_cov))
-  DtC <- crossprod(delta2, c_cov)
-  A <- -backsolve(R_mat, forwardsolve(t(R_mat), DtC))
-  IminusA_inv <- solve(diag(nc) - A)
-  Minv_tQ <- backsolve(R_mat, forwardsolve(t(R_mat), t(q_cov)))
-  out     <- IminusA_inv %*% Minv_tQ
+  dt_c <- crossprod(delta2, c_cov)
+  a <- -backsolve(r_mat, forwardsolve(t(r_mat), dt_c))
+  iminus_a_inv <- solve(diag(nc) - a)
+  minv_t_q <- backsolve(r_mat, forwardsolve(t(r_mat), t(q_cov)))
+  out     <- iminus_a_inv %*% minv_t_q
 
   # meanstructure: prepend zero block for mean parameters
-  if (meanstructure.flag) {
+  if (meanstructure_flag) {
     out <- cbind(matrix(0.0, nrow = nrow(out), ncol = nvar), out)
   }
 
@@ -269,12 +273,12 @@ lav_sem_miiv_utils_jacb_rls <- function(sample_cov = NULL, delta2 = NULL,
 # - RLS
 
 # ULS and GLS: only delta2 depends on theta1
-lav_sem_miiv_utils_jaca_uls_gls <- function(lavmodel = NULL,
+lav_sem_miiv_utils_jaca_uls_gls <- function(lavmodel = NULL,  # nolint
                                             lavpartable = NULL,
                                             lavh1 = NULL,
-                                            free.directed.idx = integer(0L),
-                                            free.undirected.idx = integer(0L),
-                                            iv.varcov.method = "ULS") {
+                                            free_directed_idx = integer(0L),
+                                            free_undirected_idx = integer(0L),
+                                            iv_varcov_method = "ULS") {
   nblocks <- lavmodel@nblocks
 
   # delta across all blocks
@@ -283,7 +287,7 @@ lav_sem_miiv_utils_jaca_uls_gls <- function(lavmodel = NULL,
   # augment lavpartable to include model matrices and row/col indices
   mm_info <- lav_lisrel(lavpartable, target = NULL, extra = FALSE)
 
-  jac_a <- matrix(0, length(free.undirected.idx), length(free.directed.idx))
+  jac_a <- matrix(0, length(free_undirected_idx), length(free_directed_idx))
   for (b in seq_len(nblocks)) {
     # s_vech
     sample_cov <- lavh1$implied$cov[[b]]
@@ -291,13 +295,13 @@ lav_sem_miiv_utils_jaca_uls_gls <- function(lavmodel = NULL,
     s_vech <- lav_matrix_vech(sample_cov)
 
     # delta2
-    delta2 <- delta_block[[b]][, free.undirected.idx, drop = FALSE]
+    delta2 <- delta_block[[b]][, free_undirected_idx, drop = FALSE]
     if (lavmodel@meanstructure) {
       delta2 <- delta2[-seq_len(nvar), , drop = FALSE]
     }
 
     # w2
-    if (iv.varcov.method == "GLS") {
+    if (iv_varcov_method == "GLS") {
       s_inv <- solve(sample_cov)
     } else {
       s_inv <- diag(1, nrow = nrow(sample_cov))
@@ -306,10 +310,10 @@ lav_sem_miiv_utils_jaca_uls_gls <- function(lavmodel = NULL,
     w2 <- w2_22
 
     # MLIST
-    mm.in.group <- seq_len(lavmodel@nmat[b]) + cumsum(c(0, lavmodel@nmat))[b]
-    MLIST <- lavmodel@GLIST[mm.in.group]
-    if (!is.null(MLIST$beta)) {
-      MLIST$IB.inv <- lav_lisrel_ibinv(MLIST)
+    mm_in_group <- seq_len(lavmodel@nmat[b]) + cumsum(c(0, lavmodel@nmat))[b]
+    mlist <- lavmodel@GLIST[mm_in_group]
+    if (!is.null(mlist$beta)) {
+      mlist$IB.inv <- lav_lisrel_ibinv(mlist)
     }
 
     m_mat <- t(delta2) %*% w2 %*% delta2
@@ -319,8 +323,8 @@ lav_sem_miiv_utils_jaca_uls_gls <- function(lavmodel = NULL,
     delta2tw2 <- t(delta2) %*% w2
 
     # container for Jacobian for this block
-    for (k in seq_along(free.directed.idx)) {
-      d_idx <- match(free.directed.idx[k], lavpartable$free)[1]
+    for (k in seq_along(free_directed_idx)) {
+      d_idx <- match(free_directed_idx[k], lavpartable$free)[1]
       # correct block?
       if (lavpartable$block[d_idx] != b) {
         next
@@ -328,11 +332,11 @@ lav_sem_miiv_utils_jaca_uls_gls <- function(lavmodel = NULL,
       d_mat <- mm_info$mat[d_idx]
       d_row <- mm_info$row[d_idx]
       d_col <- mm_info$col[d_idx]
-      dDeltak <- matrix(0, nrow(delta2), ncol(delta2))
+      d_deltak <- matrix(0, nrow(delta2), ncol(delta2))
       # we only need to fill the columns of dDeltak that correspond to the
       # psi elements in free.undirected.idx
-      for (i in seq_along(free.undirected.idx)) {
-        un_idx <- match(free.undirected.idx[i], lavpartable$free)[1]
+      for (i in seq_along(free_undirected_idx)) {
+        un_idx <- match(free_undirected_idx[i], lavpartable$free)[1]
         un_mat <- mm_info$mat[un_idx]
         if (un_mat == "theta") {
           next
@@ -342,19 +346,19 @@ lav_sem_miiv_utils_jaca_uls_gls <- function(lavmodel = NULL,
 
         if (d_mat == "lambda") {
           tmp <- lav_lisrel_d2sigma_lambda_psi(
-            mlist = MLIST,
+            mlist = mlist,
             i = d_row, j = d_col, k = un_row, l = un_col
           )
         } else if (d_mat == "beta") {
           tmp <- lav_lisrel_d2sigma_beta_psi(
-            mlist = MLIST,
+            mlist = mlist,
             i = d_row, j = d_col, k = un_row, l = un_col
           )
         }
-        dDeltak[, i] <- lav_matrix_vech(tmp)
+        d_deltak[, i] <- lav_matrix_vech(tmp)
       }
       jac_a[, k] <-
-        m_inv %*% (t(dDeltak) %*% w2e - delta2tw2 %*% dDeltak %*% theta2)
+        m_inv %*% (t(d_deltak) %*% w2e - delta2tw2 %*% d_deltak %*% theta2)
     }
   }
   jac_a
@@ -366,8 +370,8 @@ lav_sem_miiv_utils_jaca_uls_gls <- function(lavmodel = NULL,
 lav_sem_miiv_utils_jaca_2rls <- function(lavmodel = NULL,
                                          lavpartable = NULL,
                                          lavh1 = NULL,
-                                         free.directed.idx = integer(0L),
-                                         free.undirected.idx = integer(0L)) {
+                                         free_directed_idx = integer(0L),
+                                         free_undirected_idx = integer(0L)) {
   nblocks <- lavmodel@nblocks
 
   # delta across all blocks
@@ -380,11 +384,11 @@ lav_sem_miiv_utils_jaca_2rls <- function(lavmodel = NULL,
   jac_uls <- lav_sem_miiv_utils_jaca_uls_gls(
     lavmodel = lavmodel,
     lavpartable = lavpartable, lavh1 = lavh1,
-    free.directed.idx = free.directed.idx,
-    free.undirected.idx = free.undirected.idx, iv.varcov.method = "ULS"
+    free_directed_idx = free_directed_idx,
+    free_undirected_idx = free_undirected_idx, iv_varcov_method = "ULS"
   )
 
-  jac_a <- matrix(0, length(free.undirected.idx), length(free.directed.idx))
+  jac_a <- matrix(0, length(free_undirected_idx), length(free_directed_idx))
   for (b in seq_len(nblocks)) {
     # s_vech
     sample_cov <- lavh1$implied$cov[[b]]
@@ -392,7 +396,7 @@ lav_sem_miiv_utils_jaca_2rls <- function(lavmodel = NULL,
     s_vech <- lav_matrix_vech(sample_cov)
 
     # delta2
-    delta2 <- delta_block[[b]][, free.undirected.idx, drop = FALSE]
+    delta2 <- delta_block[[b]][, free_undirected_idx, drop = FALSE]
     if (lavmodel@meanstructure) {
       delta2 <- delta2[-seq_len(nvar), , drop = FALSE]
     }
@@ -401,10 +405,10 @@ lav_sem_miiv_utils_jaca_2rls <- function(lavmodel = NULL,
     w2_uls <- 0.5 * lav_matrix_duplication_pre_post(s_inv %x% s_inv)
 
     # MLIST
-    mm.in.group <- seq_len(lavmodel@nmat[b]) + cumsum(c(0, lavmodel@nmat))[b]
-    MLIST <- lavmodel@GLIST[mm.in.group]
-    if (!is.null(MLIST$beta)) {
-      MLIST$IB.inv <- lav_lisrel_ibinv(MLIST)
+    mm_in_group <- seq_len(lavmodel@nmat[b]) + cumsum(c(0, lavmodel@nmat))[b]
+    mlist <- lavmodel@GLIST[mm_in_group]
+    if (!is.null(mlist$beta)) {
+      mlist$IB.inv <- lav_lisrel_ibinv(mlist)
     }
 
     # step 1
@@ -428,8 +432,8 @@ lav_sem_miiv_utils_jaca_2rls <- function(lavmodel = NULL,
     delta2t_w2 <- t(delta2) %*% w2
     sigma_inv_e <- sigma_inv %*% e_mat
 
-    for (k in seq_along(free.directed.idx)) {
-      d_idx <- match(free.directed.idx[k], lavpartable$free)[1]
+    for (k in seq_along(free_directed_idx)) {
+      d_idx <- match(free_directed_idx[k], lavpartable$free)[1]
       # correct block?
       if (lavpartable$block[d_idx] != b) {
         next
@@ -437,11 +441,11 @@ lav_sem_miiv_utils_jaca_2rls <- function(lavmodel = NULL,
       d_mat <- mm_info$mat[d_idx]
       d_row <- mm_info$row[d_idx]
       d_col <- mm_info$col[d_idx]
-      dDeltak <- matrix(0, nrow(delta2), ncol(delta2))
+      d_deltak <- matrix(0, nrow(delta2), ncol(delta2))
       # we only need to fill the columns of dDeltak that correspond to the
       # psi elements in free.undirected.idx
-      for (i in seq_along(free.undirected.idx)) {
-        un_idx <- match(free.undirected.idx[i], lavpartable$free)[1]
+      for (i in seq_along(free_undirected_idx)) {
+        un_idx <- match(free_undirected_idx[i], lavpartable$free)[1]
         un_mat <- mm_info$mat[un_idx]
         if (un_mat == "theta") {
           next
@@ -451,24 +455,24 @@ lav_sem_miiv_utils_jaca_2rls <- function(lavmodel = NULL,
 
         if (d_mat == "lambda") {
           tmp <- lav_lisrel_d2sigma_lambda_psi(
-            mlist = MLIST,
+            mlist = mlist,
             i = d_row, j = d_col, k = un_row, l = un_col
           )
         } else if (d_mat == "beta") {
           tmp <- lav_lisrel_d2sigma_beta_psi(
-            mlist = MLIST,
+            mlist = mlist,
             i = d_row, j = d_col, k = un_row, l = un_col
           )
         }
-        dDeltak[, i] <- lav_matrix_vech(tmp)
+        d_deltak[, i] <- lav_matrix_vech(tmp)
       }
 
       # d vech(Sigma)/d theta1[k]: product rule on unvech(Delta2 theta_uls)
-      v_k <- dDeltak %*% theta_uls + delta2 %*% jac_uls[, k]
-      dSigma_k <- lav_matrix_vech_reverse(v_k)
+      v_k <- d_deltak %*% theta_uls + delta2 %*% jac_uls[, k]
+      d_sigma_k <- lav_matrix_vech_reverse(v_k)
 
       # d_sigma_inv = -sigma.inv dSigma_k sigma.inv
-      d_sigma_inv <- -sigma_inv %*% dSigma_k %*% sigma_inv
+      d_sigma_inv <- -sigma_inv %*% d_sigma_k %*% sigma_inv
 
       # the tricky one:
       # (dw2_k) e2 = (1/2)
@@ -479,7 +483,8 @@ lav_sem_miiv_utils_jaca_2rls <- function(lavmodel = NULL,
 
       # term 1: direct delta2 variation in final WLS
       term1 <-
-        m_mat_inv %*% (t(dDeltak) %*% w2_e2 - delta2t_w2 %*% dDeltak %*% theta2)
+        m_mat_inv %*% (t(d_deltak) %*% w2_e2 -
+                                           delta2t_w2 %*% d_deltak %*% theta2)
 
       # term 2: W2 variation via Sigma = unvech(delta2 theta_uls)
       term2 <- minv_delta2t %*% dw2_e2
@@ -496,8 +501,8 @@ lav_sem_miiv_utils_jaca_2rls <- function(lavmodel = NULL,
 lav_sem_miiv_utils_jaca_rls <- function(lavmodel = NULL,
                                         lavpartable = NULL,
                                         lavh1 = NULL,
-                                        free.directed.idx = integer(0L),
-                                        free.undirected.idx = integer(0L)) {
+                                        free_directed_idx = integer(0L),
+                                        free_undirected_idx = integer(0L)) {
   nblocks <- lavmodel@nblocks
 
   # delta across all blocks
@@ -506,7 +511,7 @@ lav_sem_miiv_utils_jaca_rls <- function(lavmodel = NULL,
   # augment lavpartable to include model matrices and row/col indices
   mm_info <- lav_lisrel(lavpartable, target = NULL, extra = FALSE)
 
-  jac_a <- matrix(0, length(free.undirected.idx), length(free.directed.idx))
+  jac_a <- matrix(0, length(free_undirected_idx), length(free_directed_idx))
   for (b in seq_len(nblocks)) {
     # s_vech
     sample_cov <- lavh1$implied$cov[[b]]
@@ -514,7 +519,7 @@ lav_sem_miiv_utils_jaca_rls <- function(lavmodel = NULL,
     s_vech <- lav_matrix_vech(sample_cov)
 
     # delta2
-    delta2 <- delta_block[[b]][, free.undirected.idx, drop = FALSE]
+    delta2 <- delta_block[[b]][, free_undirected_idx, drop = FALSE]
     if (lavmodel@meanstructure) {
       delta2 <- delta2[-seq_len(nvar), , drop = FALSE]
     }
@@ -524,10 +529,10 @@ lav_sem_miiv_utils_jaca_rls <- function(lavmodel = NULL,
     w2_uls <- 0.5 * lav_matrix_duplication_pre_post(s_inv %x% s_inv)
 
     # MLIST
-    mm.in.group <- seq_len(lavmodel@nmat[b]) + cumsum(c(0, lavmodel@nmat))[b]
-    MLIST <- lavmodel@GLIST[mm.in.group]
-    if (!is.null(MLIST$beta)) {
-      MLIST$IB.inv <- lav_lisrel_ibinv(MLIST)
+    mm_in_group <- seq_len(lavmodel@nmat[b]) + cumsum(c(0, lavmodel@nmat))[b]
+    mlist <- lavmodel@GLIST[mm_in_group]
+    if (!is.null(mlist$beta)) {
+      mlist$IB.inv <- lav_lisrel_ibinv(mlist)
     }
 
     # step 1
@@ -562,9 +567,9 @@ lav_sem_miiv_utils_jaca_rls <- function(lavmodel = NULL,
     delta2t_w2 <- t(delta2) %*% w2
 
     # helper: compute (dW)e2 given d vech(Sigma) as a vector v
-    dW_e2_from_v <- function(v) {
-      dSigma <- lav_matrix_vech_reverse(v)
-      d_sigma_inv <- -sigma_inv %*% dSigma %*% sigma_inv
+    d_w_e2_from_v <- function(v) {
+      d_sigma <- lav_matrix_vech_reverse(v)
+      d_sigma_inv <- -sigma_inv %*% d_sigma %*% sigma_inv
       sym_part <- sigma_inv_e %*% d_sigma_inv + d_sigma_inv %*% t(sigma_inv_e)
       dw2_e2 <-
         0.5 * drop(lav_matrix_duplication_pre(as.matrix(as.vector(sym_part))))
@@ -573,15 +578,15 @@ lav_sem_miiv_utils_jaca_rls <- function(lavmodel = NULL,
 
     # A = M2^{-1} delta2^T J_W^(theta2): q2 x q2
     # column j of J_W^(theta2): dSigma = unvech(delta2[:,j])
-    JW_theta2 <- matrix(0.0, nrow(delta2), ncol(delta2))
+    jw_theta2 <- matrix(0.0, nrow(delta2), ncol(delta2))
     for (j in seq_len(ncol(delta2))) {
-      JW_theta2[, j] <- dW_e2_from_v(delta2[, j])
+      jw_theta2[, j] <- d_w_e2_from_v(delta2[, j])
     }
-    A <- minv_delta2t %*% JW_theta2
-    IminusA_inv <- solve(diag(ncol(delta2)) - A)
+    a <- minv_delta2t %*% jw_theta2
+    iminus_a_inv <- solve(diag(ncol(delta2)) - a)
 
-    for (k in seq_along(free.directed.idx)) {
-      d_idx <- match(free.directed.idx[k], lavpartable$free)[1]
+    for (k in seq_along(free_directed_idx)) {
+      d_idx <- match(free_directed_idx[k], lavpartable$free)[1]
       # correct block?
       if (lavpartable$block[d_idx] != b) {
         next
@@ -589,11 +594,11 @@ lav_sem_miiv_utils_jaca_rls <- function(lavmodel = NULL,
       d_mat <- mm_info$mat[d_idx]
       d_row <- mm_info$row[d_idx]
       d_col <- mm_info$col[d_idx]
-      dDeltak <- matrix(0, nrow(delta2), ncol(delta2))
+      d_deltak <- matrix(0, nrow(delta2), ncol(delta2))
       # we only need to fill the columns of dDeltak that correspond to the
       # psi elements in free.undirected.idx
-      for (i in seq_along(free.undirected.idx)) {
-        un_idx <- match(free.undirected.idx[i], lavpartable$free)[1]
+      for (i in seq_along(free_undirected_idx)) {
+        un_idx <- match(free_undirected_idx[i], lavpartable$free)[1]
         un_mat <- mm_info$mat[un_idx]
         if (un_mat == "theta") {
           next
@@ -603,28 +608,29 @@ lav_sem_miiv_utils_jaca_rls <- function(lavmodel = NULL,
 
         if (d_mat == "lambda") {
           tmp <- lav_lisrel_d2sigma_lambda_psi(
-            mlist = MLIST,
+            mlist = mlist,
             i = d_row, j = d_col, k = un_row, l = un_col
           )
         } else if (d_mat == "beta") {
           tmp <- lav_lisrel_d2sigma_beta_psi(
-            mlist = MLIST,
+            mlist = mlist,
             i = d_row, j = d_col, k = un_row, l = un_col
           )
         }
-        dDeltak[, i] <- lav_matrix_vech(tmp)
+        d_deltak[, i] <- lav_matrix_vech(tmp)
       }
 
       # term 1: direct delta2 variation in final WLS
       term1 <-
-        m_mat_inv %*% (t(dDeltak) %*% w2_e2 - delta2t_w2 %*% dDeltak %*% theta2)
+        m_mat_inv %*% (t(d_deltak) %*% w2_e2 -
+                                            delta2t_w2 %*% d_deltak %*% theta2)
 
       # term 2: W variation from dSigma^(Delta2) = unvech(dDelta2_k %*% theta2)
       # (the dSigma^(theta2) part is handled implicitly by (I-A)^{-1})
-      v_k <- as.vector(dDeltak %*% theta2)
-      term2 <- minv_delta2t %*% dW_e2_from_v(v_k)
+      v_k <- as.vector(d_deltak %*% theta2)
+      term2 <- minv_delta2t %*% d_w_e2_from_v(v_k)
 
-      jac_a[, k] <- IminusA_inv %*% (term1 + term2)
+      jac_a[, k] <- iminus_a_inv %*% (term1 + term2)
     }
   }
   jac_a
@@ -639,7 +645,7 @@ lav_sem_miiv_utils_jack_eqs <- function(eqs = NULL, # one block only
                                         block = 1L,
                                         lavmodel = NULL,
                                         lavpartable = NULL,
-                                        free.directed.idx = integer(0L)) {
+                                        free_directed_idx = integer(0L)) {
   # continuous data only (for now)
   nvar <- lavmodel@nvar[block]
   if (lavmodel@categorical) {
@@ -647,18 +653,18 @@ lav_sem_miiv_utils_jack_eqs <- function(eqs = NULL, # one block only
   } else {
     pstar <- nvar * (nvar + 1L) / 2
   }
-  ntheta1 <- length(free.directed.idx)
+  ntheta1 <- length(free_directed_idx)
 
   b <- block
 
   # K matrix
   if (lavmodel@categorical) {
     nc <- ncol(eqs[[1]][[1]]$k_mat)
-    K_mat <- matrix(0.0, nrow = ntheta1, ncol = nc)
+    k_mat <- matrix(0.0, nrow = ntheta1, ncol = nc)
   } else if (lavmodel@meanstructure) {
-    K_mat <- matrix(0.0, nrow = ntheta1, ncol = (nvar + pstar))
+    k_mat <- matrix(0.0, nrow = ntheta1, ncol = (nvar + pstar))
   } else {
-    K_mat <- matrix(0.0, nrow = ntheta1, ncol = pstar)
+    k_mat <- matrix(0.0, nrow = ntheta1, ncol = pstar)
   }
 
   # collect k_mat matrices from each equation
@@ -667,29 +673,29 @@ lav_sem_miiv_utils_jack_eqs <- function(eqs = NULL, # one block only
     eq <- eqs[[b]][[j]]
     tmp <- lavpartable$free[eq$pt] # free index
     tmp <- tmp[!tmp == 0]
-    free.idx <- match(tmp, free.directed.idx)
+    free_idx <- match(tmp, free_directed_idx)
     nx <- nrow(eq$k_mat)
-    if (length(free.idx) > 0L && nx > 0L) {
-      if (all(free.idx > 0L)) {
-        K_mat[free.idx,] <- eq$k_mat
+    if (length(free_idx) > 0L && nx > 0L) {
+      if (all(free_idx > 0L)) {
+        k_mat[free_idx, ] <- eq$k_mat
       } else {
         # remove non-free elements
-        zero.idx <- which(free.idx == 0L)
-        free.idx <- free.idx[-zero.idx]
-        if (length(free.idx) > 0) {
-          K_mat[free.idx,] <- eq$k_mat[-zero.idx, , drop = FALSE]
+        zero_idx <- which(free_idx == 0L)
+        free_idx <- free_idx[-zero_idx]
+        if (length(free_idx) > 0) {
+          k_mat[free_idx, ] <- eq$k_mat[-zero_idx, , drop = FALSE]
         }
       }
     }
     if (lavmodel@meanstructure) {
       tmp <- lavpartable$free[eq$ptint]
       tmp <- tmp[!tmp == 0]
-      free.int.idx <- match(tmp, free.directed.idx)
-      if (length(free.int.idx) > 0L && free.int.idx > 0L) {
-        K_mat[free.int.idx,] <- eq$k_mat_int
+      free_int_idx <- match(tmp, free_directed_idx)
+      if (length(free_int_idx) > 0L && free_int_idx > 0L) {
+        k_mat[free_int_idx, ] <- eq$k_mat_int
       }
     }
   } # eq
 
-  K_mat
+  k_mat
 }

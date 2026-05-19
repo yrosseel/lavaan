@@ -132,7 +132,7 @@ lavpartable$lower <- NULL
 lavpartable$upper <- NULL
 
 # 8. compute starting values
-lavpartable$start <- lavaan:::lav_start(start.method = lavoptions$start,
+lavpartable$start <- lavaan:::lav_start(start_method = lavoptions$start,
                                lavpartable     = lavpartable,
                                lavsamplestats  = lavsamplestats)
 lavpartable
@@ -209,7 +209,7 @@ TEST <- lavaan:::lav_model_test(lavmodel            = lavmodel,
                        lavh1               = lavh1,
                        lavoptions          = lavoptions,
                        x                   = x,
-                       VCOV                = VCOV,
+                       vcov_1              = VCOV,
                        lavdata             = lavdata,
                        lavcache            = lavcache,
                        lavloglik           = lavloglik)

@@ -419,8 +419,8 @@ lav_sam_step1_local <- function(step1 = NULL, fit = NULL, y = NULL,
       veta[[b]] <- tmp[, , drop = FALSE]
       # compute 'Sigma'
       sigma_1 <- this_lambda %*% veta[[b]] %*% t(this_lambda) + mm_theta[[b]]
-      tmat <- lav_predict_tmat_det_internal(Sigma = sigma_1, Veta = veta[[b]],
-                                            Lambda = this_lambda)
+      tmat <- lav_predict_tmat_det_internal(sigma_1 = sigma_1, veta = veta[[b]],
+                                            lambda = this_lambda)
       a <- tmat %*% mb
       veta[[b]] <- a %*% cov_1 %*% t(a)
     } else {

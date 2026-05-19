@@ -343,7 +343,7 @@ lavTestScore <- function(object, add = NULL, release = NULL,       # nolint star
       list_1$sepc.lv <- epc_sign * lav_standardize_lv(object,
         partable = list_1,
         est = abs(epc_1),
-        cov.std = cov.std
+        cov_std = cov.std
       )
       if (length(small_idx) > 0L) {
         list_1$sepc.lv[small_idx] <- 0
@@ -351,7 +351,7 @@ lavTestScore <- function(object, add = NULL, release = NULL,       # nolint star
       list_1$sepc.all <- epc_sign * lav_standardize_all(object,
         partable = list_1,
         est = abs(epc_1),
-        cov.std = cov.std
+        cov_std = cov.std
       )
       if (length(small_idx) > 0L) {
         list_1$sepc.all[small_idx] <- 0
@@ -359,7 +359,7 @@ lavTestScore <- function(object, add = NULL, release = NULL,       # nolint star
       list_1$sepc.nox <- epc_sign * lav_standardize_all_nox(object,
         partable = list_1,
         est = abs(epc_1),
-        cov.std = cov.std
+        cov_std = cov.std
       )
       if (length(small_idx) > 0L) {
         list_1$sepc.nox[small_idx] <- 0

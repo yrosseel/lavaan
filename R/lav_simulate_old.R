@@ -5,7 +5,7 @@
 #
 #
 #
-lav_data_simulate_old <- function( # user-specified model
+lav_data_simulate_old <- function( # user-specified model    # nolint start
                          model = NULL,
                          model.type = "sem",
                          # model modifiers
@@ -36,11 +36,11 @@ lav_data_simulate_old <- function( # user-specified model
                          return.type = "data.frame",
                          return.fit = FALSE,
                          debug = FALSE,
-                         standardized = FALSE) {
+                         standardized = FALSE) {           # nolint end
   if (!missing(debug)) {
-    current.debug <- lav_debug()
+    current_debug <- lav_debug()
     if (lav_debug(debug))
-      on.exit(lav_debug(current.debug), TRUE)
+      on.exit(lav_debug(current_debug), TRUE)
   }
   if (!is.null(seed)) set.seed(seed)
   # if(!exists(".Random.seed", envir = .GlobalEnv))
@@ -87,7 +87,7 @@ lav_data_simulate_old <- function( # user-specified model
     )
   }
 
-  group.values <- lav_partable_group_values(lav)
+  group_values <- lav_partable_group_values(lav)
   if (lav_debug()) {
     cat("initial lav\n")
     print(as.data.frame(lav))
@@ -126,14 +126,14 @@ lav_data_simulate_old <- function( # user-specified model
 
   if (standardized) {
     # check if factor loadings are smaller than 1.0
-    lambda.idx <- which(lav$op == "=~")
-    if (any(lav$ustart[lambda.idx] >= 1.0)) {
+    lambda_idx <- which(lav$op == "=~")
+    if (any(lav$ustart[lambda_idx] >= 1.0)) {
       lav_msg_warn(gettext("standardized=TRUE but factor loadings are >= 1.0"))
     }
 
     # check if regression coefficients are smaller than 1.0
-    reg.idx <- which(lav$op == "~")
-    if (any(lav$ustart[reg.idx] >= 1.0)) {
+    reg_idx <- which(lav$op == "~")
+    if (any(lav$ustart[reg_idx] >= 1.0)) {
       lav_msg_warn(gettext(
         "standardized=TRUE but regression coefficients are >= 1.0"))
     }
@@ -142,16 +142,16 @@ lav_data_simulate_old <- function( # user-specified model
     # so there is no need to make a distinction between numeric/ordered
     # here??
     ngroups <- lav_partable_ngroups(lav)
-    ov.names <- lav_partable_vnames(lav, "ov")
-    ov.nox <- lav_partable_vnames(lav, "ov.nox")
-    lv.names <- lav_partable_vnames(lav, "lv")
-    lv.y <- lav_partable_vnames(lav, "lv.y")
-    lv.nox <- lav_partable_vnames(lav, "lv.nox")
-    ov.var.idx <- which(lav$op == "~~" & lav$lhs %in% ov.nox &
+    ov_names <- lav_partable_vnames(lav, "ov")
+    ov_nox <- lav_partable_vnames(lav, "ov.nox")
+    # lv_names <- lav_partable_vnames(lav, "lv")
+    # lv_y <- lav_partable_vnames(lav, "lv.y")
+    lv_nox <- lav_partable_vnames(lav, "lv.nox")
+    ov_var_idx <- which(lav$op == "~~" & lav$lhs %in% ov_nox &
       lav$rhs == lav$lhs)
-    lv.var.idx <- which(lav$op == "~~" & lav$lhs %in% lv.nox &
+    lv_var_idx <- which(lav$op == "~~" & lav$lhs %in% lv_nox &
       lav$rhs == lav$lhs)
-    if (any(lav$user[c(ov.var.idx, lv.var.idx)] > 0L)) {
+    if (any(lav$user[c(ov_var_idx, lv_var_idx)] > 0L)) {
       lav_msg_warn(gettext(
         "if residual variances are specified, please use standardized=FALSE"))
     }
@@ -164,30 +164,30 @@ lav_data_simulate_old <- function( # user-specified model
     dotdotdot$representation <- "LISREL"
     dotdotdot$composites <- composites
     dotdotdot$correlation <- TRUE # this is the trick
-    tmp.fit <- do.call("lavaan", args = c(list(model = lav), dotdotdot))
+    tmp_fit <- do.call("lavaan", args = c(list(model = lav), dotdotdot))
     # set/get parameters to invoke lav_lisrel_residual_variances
-    tmp.lav <- tmp.fit@ParTable
-    tmp.x <- lav_model_get_parameters(tmp.fit@Model)
-    tmp.model <- lav_model_set_parameters(tmp.fit@Model, x = tmp.x)
-    tmp.lav$ustart <- lav_model_get_parameters(tmp.model, type = "user")
+    tmp_lav <- tmp_fit@ParTable
+    tmp_x <- lav_model_get_parameters(tmp_fit@Model)
+    tmp_model <- lav_model_set_parameters(tmp_fit@Model, x = tmp_x)
+    tmp_lav$ustart <- lav_model_get_parameters(tmp_model, type = "user")
 
     # copy residual values to lav (without assuming parameter tables look the
     # same)
-    res.idx <- c(ov.var.idx, lv.var.idx)
-    for (i in seq_len(length(res.idx))) {
+    res_idx <- c(ov_var_idx, lv_var_idx)
+    for (i in seq_along(res_idx)) {
       # lookup this parameter in tmp.lav
-      idx.in.lav <- res.idx[i]
-      this.lhs <- lav$lhs[idx.in.lav]
-      idx.in.tmp <- which(tmp.lav$op == "~~" & tmp.lav$lhs == this.lhs &
-                          tmp.lav$rhs == tmp.lav$lhs)
-      if (length(idx.in.tmp) == 0L) {
+      idx_in_lav <- res_idx[i]
+      this_lhs <- lav$lhs[idx_in_lav]
+      idx_in_tmp <- which(tmp_lav$op == "~~" & tmp_lav$lhs == this_lhs &
+                          tmp_lav$rhs == tmp_lav$lhs)
+      if (length(idx_in_tmp) == 0L) {
         # hm, not found? Give a warning?
       } else {
-        vals <- tmp.lav$ustart[idx.in.tmp]
+        vals <- tmp_lav$ustart[idx_in_tmp]
         # check if we have unfortunate values
-        bad.idx <- which(!is.finite(vals) | vals < 0)
-        vals[bad.idx] <- 1.0 # not pretty, but safe
-        lav$ustart[idx.in.lav] <- vals
+        bad_idx <- which(!is.finite(vals) | vals < 0)
+        vals[bad_idx] <- 1.0 # not pretty, but safe
+        lav$ustart[idx_in_lav] <- vals
       }
     }
 
@@ -244,7 +244,7 @@ lav_data_simulate_old <- function( # user-specified model
     # FIXME: if ov.var is named, check the order of the elements
 
     # 1. unstandardize observed variables
-    lav$ustart <- lav_unstandardize_ov(partable = lav, ov.var = ov.var)
+    lav$ustart <- lav_unstandardize_ov(partable = lav, ov_var = ov.var)
 
     # 2. unstandardized latent variables
 
@@ -258,48 +258,48 @@ lav_data_simulate_old <- function( # user-specified model
   fit <- lavaan(model = lav, sample.nobs = sample.nobs, ...)
 
   # the model-implied moments for the population
-  Sigma.hat <- lav_model_sigma(lavmodel = fit@Model)
-  Mu.hat <- lav_model_mu(lavmodel = fit@Model)
+  sigma_hat <- lav_model_sigma(lavmodel = fit@Model)
+  mu_hat <- lav_model_mu(lavmodel = fit@Model)
   if (fit@Model@categorical) {
-    TH <- lav_model_th(lavmodel = fit@Model)
+    th <- lav_model_th(lavmodel = fit@Model)
   }
 
   if (lav_debug()) {
     cat("\nModel-implied moments (before Vale-Maurelli):\n")
-    print(Sigma.hat)
-    print(Mu.hat)
-    if (exists("TH")) print(TH)
+    print(sigma_hat)
+    print(mu_hat)
+    if (exists("TH")) print(th)
   }
 
   # ngroups
   ngroups <- length(sample.nobs)
 
   # prepare
-  X <- vector("list", length = ngroups)
-  out <- vector("list", length = ngroups)
+  x <- vector("list", length = ngroups)
+  # out <- vector("list", length = ngroups)
 
   for (g in 1:ngroups) {
-    COV <- Sigma.hat[[g]]
+    cov_1 <- sigma_hat[[g]]
 
     # if empirical = TRUE, rescale by N/(N-1), so that estimator=ML
     # returns exact results
     if (empirical) {
-      COV <- COV * sample.nobs[g] / (sample.nobs[g] - 1)
+      cov_1 <- cov_1 * sample.nobs[g] / (sample.nobs[g] - 1)
     }
 
     # Using sign-invariant method for cross-machine reproducibility
     if (is.null(skewness) && is.null(kurtosis)) {
-      X[[g]] <- lav_mvrnorm(
+      x[[g]] <- lav_mvrnorm(
         n = sample.nobs[g],
-        mu = Mu.hat[[g]],
-        sigma_1 = COV,
+        mu = mu_hat[[g]],
+        sigma_1 = cov_1,
         empirical = empirical
       )
     } else {
       # first generate Z
-      Z <- lav_data_valemaurelli1983(
+      z <- lav_data_valemaurelli1983(
         n = sample.nobs[g],
-        COR = cov2cor(COV),
+        cor_1 = cov2cor(cov_1),
         skewness = skewness, # FIXME: per group?
         kurtosis = kurtosis
       )
@@ -311,61 +311,61 @@ lav_data_simulate_old <- function( # user-specified model
       #                   scale  = 1/sqrt(diag(COV)))
 
       # first, we scale
-      TMP <- scale(Z,
+      tmp <- scale(z,
         center = FALSE,
-        scale = 1 / sqrt(diag(COV))
+        scale = 1 / sqrt(diag(cov_1))
       )[, , drop = FALSE]
 
       # then, we center
-      X[[g]] <- sweep(TMP, MARGIN = 2, STATS = Mu.hat[[g]], FUN = "+")
+      x[[g]] <- sweep(tmp, MARGIN = 2, STATS = mu_hat[[g]], FUN = "+")
     }
 
     # any categorical variables?
-    ov.ord <- lav_partable_vnames(lav, type = "ov.ord", group = group.values[g])
-    if (length(ov.ord) > 0L) {
-      ov.names <- lav_partable_vnames(lav, type = "ov", group = group.values[g])
+    ov_ord <- lav_partable_vnames(lav, type = "ov.ord", group = group_values[g])
+    if (length(ov_ord) > 0L) {
+      ov_names <- lav_partable_vnames(lav, type = "ov", group = group_values[g])
       # use thresholds to cut
-      for (o in ov.ord) {
-        o.idx <- which(o == ov.names)
-        th.idx <- which(lav$op == "|" & lav$lhs == o &
-          lav$group == group.values[g])
-        th.val <- c(-Inf, sort(lav$ustart[th.idx]), +Inf)
-        X[[g]][, o.idx] <- as.integer(cut(X[[g]][, o.idx], th.val))
+      for (o in ov_ord) {
+        o_idx <- which(o == ov_names)
+        th_idx <- which(lav$op == "|" & lav$lhs == o &
+          lav$group == group_values[g])
+        th_val <- c(-Inf, sort(lav$ustart[th_idx]), +Inf)
+        x[[g]][, o_idx] <- as.integer(cut(x[[g]][, o_idx], th_val))
       }
     }
 
-    if (return.type == "data.frame") X[[g]] <- as.data.frame(X[[g]])
+    if (return.type == "data.frame") x[[g]] <- as.data.frame(x[[g]])
   }
 
   if (return.type == "matrix") {
     if (ngroups == 1L) {
-      return(X[[1L]])
+      x[[1L]]
     } else {
-      return(X)
+      x
     }
   } else if (return.type == "data.frame") {
-    Data <- X[[1L]]
+    data_1 <- x[[1L]]
 
     # if multiple groups, add group column
     if (ngroups > 1L) {
       for (g in 2:ngroups) {
-        Data <- rbind(Data, X[[g]])
+        data_1 <- rbind(data_1, x[[g]])
       }
-      Data$group <- rep(1:ngroups, times = sample.nobs)
+      data_1$group <- rep(1:ngroups, times = sample.nobs)
     }
-    var.names <- lav_partable_vnames(fit@ParTable, type = "ov", group = 1L)
-    if (ngroups > 1L) var.names <- c(var.names, "group")
-    names(Data) <- var.names
+    var_names <- lav_partable_vnames(fit@ParTable, type = "ov", group = 1L)
+    if (ngroups > 1L) var_names <- c(var_names, "group")
+    names(data_1) <- var_names
     if (return.fit) {
-      attr(Data, "fit") <- fit
+      attr(data_1, "fit") <- fit
     }
-    return(Data)
+    data_1
   } else if (return.type == "cov") {
     if (ngroups == 1L) {
-      return(cov(X[[1L]]))
+      cov(x[[1L]])
     } else {
-      cov.list <- lapply(X, cov)
-      return(cov.list)
+      cov_list <- lapply(x, cov)
+      cov_list
     }
   }
 }
@@ -373,22 +373,22 @@ lavSimulateData <- lav_data_simulate_old  # synonym #nolint
 
 
 
-lav_data_valemaurelli1983 <- function(n = 100L, COR, skewness, kurtosis) {
+lav_data_valemaurelli1983 <- function(n = 100L, cor_1, skewness, kurtosis) {
   fleishman1978_abcd <- function(skewness, kurtosis) {
-    system.function <- function(x, skewness, kurtosis) {
-      b. <- x[1L]
-      c. <- x[2L]
-      d. <- x[3L]
-      eq1 <- b. * b. + 6 * b. * d. + 2 * c. * c. + 15 * d. * d. - 1
-      eq2 <- 2 * c. * (b. * b. + 24 * b. * d. + 105 * d. * d. + 2) - skewness
-      eq3 <- 24 * (b. * d. + c. * c. * (1 + b. * b. + 28 * b. * d.) +
-        d. * d. * (12 + 48 * b. * d. + 141 * c. * c. + 225 * d. * d.)) - kurtosis
+    system_function <- function(x, skewness, kurtosis) {
+      b <- x[1L]
+      c_1 <- x[2L]
+      d <- x[3L]
+      eq1 <- b * b + 6 * b * d + 2 * c_1 * c_1 + 15 * d * d - 1
+      eq2 <- 2 * c_1 * (b * b + 24 * b * d + 105 * d * d + 2) - skewness
+      eq3 <- 24 * (b * d + c_1 * c_1 * (1 + b * b + 28 * b * d) +
+        d * d * (12 + 48 * b * d + 141 * c_1 * c_1 + 225 * d * d)) - kurtosis
       eq <- c(eq1, eq2, eq3)
       sum(eq * eq) ## SS
     }
 
     out <- nlminb(
-      start = c(1, 0, 0), objective = system.function,
+      start = c(1, 0, 0), objective = system_function,
       scale = 10,
       control = list(trace = 0),
       skewness = skewness, kurtosis = kurtosis
@@ -397,18 +397,18 @@ lav_data_valemaurelli1983 <- function(n = 100L, COR, skewness, kurtosis) {
       lav_msg_warn(gettext("lav_data_valemaurelli1983 method did not converge,
                    or it did not find the roots"))
     }
-    b. <- out$par[1L]
-    c. <- out$par[2L]
-    d. <- out$par[3L]
-    a. <- -c.
-    c(a., b., c., d.)
+    b <- out$par[1L]
+    c_1 <- out$par[2L]
+    d <- out$par[3L]
+    a <- -c_1
+    c(a, b, c_1, d)
   }
 
-  getICOV <- function(b1, c1, d1, b2, c2, d2, R) {
-    objectiveFunction <- function(x, b1, c1, d1, b2, c2, d2, R) {
+get_icov <- function(b1, c1, d1, b2, c2, d2, r) {
+    objective_function <- function(x, b1, c1, d1, b2, c2, d2, r) {
       rho <- x[1L]
       eq <- rho * (b1 * b2 + 3 * b1 * d2 + 3 * d1 * b2 + 9 * d1 * d2) +
-        rho * rho * (2 * c1 * c2) + rho * rho * rho * (6 * d1 * d2) - R
+        rho * rho * (2 * c1 * c2) + rho * rho * rho * (6 * d1 * d2) - r
       eq * eq
     }
 
@@ -417,9 +417,9 @@ lav_data_valemaurelli1983 <- function(n = 100L, COR, skewness, kurtosis) {
     # }
 
     out <- nlminb(
-      start = R, objective = objectiveFunction,
+      start = r, objective = objective_function,
       scale = 10, control = list(trace = 0),
-      b1 = b1, c1 = c1, d1 = d1, b2 = b2, c2 = c2, d2 = d2, R = R
+      b1 = b1, c1 = c1, d1 = d1, b2 = b2, c2 = c2, d2 = d2, r = r
     )
     if (out$convergence != 0 || out$objective > 1e-5)
       lav_msg_warn(gettext("no convergence"))
@@ -428,64 +428,65 @@ lav_data_valemaurelli1983 <- function(n = 100L, COR, skewness, kurtosis) {
   }
 
   # number of variables
-  nvar <- ncol(COR)
+  nvar <- ncol(cor_1)
   # check skewness
   if (is.null(skewness)) {
-    SK <- rep(0, nvar)
+    sk <- rep(0, nvar)
   } else if (length(skewness) == nvar) {
-    SK <- skewness
+    sk <- skewness
   } else if (length(skewness) == 1L) {
-    SK <- rep(skewness, nvar)
+    sk <- rep(skewness, nvar)
   } else {
     lav_msg_stop(gettext("skewness has wrong length"))
   }
 
   if (is.null(kurtosis)) {
-    KU <- rep(0, nvar)
+    ku <- rep(0, nvar)
   } else if (length(kurtosis) == nvar) {
-    KU <- kurtosis
+    ku <- kurtosis
   } else if (length(kurtosis) == 1L) {
-    KU <- rep(kurtosis, nvar)
+    ku <- rep(kurtosis, nvar)
   } else {
     lav_msg_stop(gettext("kurtosis has wrong length"))
   }
 
   # create Fleishman table
-  FTable <- matrix(0, nvar, 4L)
+  ftable_1 <- matrix(0, nvar, 4L)
   for (i in 1:nvar) {
-    FTable[i, ] <- fleishman1978_abcd(skewness = SK[i], kurtosis = KU[i])
+    ftable_1[i, ] <- fleishman1978_abcd(skewness = sk[i], kurtosis = ku[i])
   }
 
   # compute intermediate correlations between all pairs
-  ICOR <- diag(nvar)
+  icor <- diag(nvar)
   for (j in 1:(nvar - 1L)) {
     for (i in (j + 1):nvar) {
-      if (COR[i, j] == 0) next
-      ICOR[i, j] <- ICOR[j, i] <-
-        getICOV(FTable[i, 2], FTable[i, 3], FTable[i, 4],
-          FTable[j, 2], FTable[j, 3], FTable[j, 4],
-          R = COR[i, j]
+      if (cor_1[i, j] == 0) next
+      icor[i, j] <- icor[j, i] <-
+        get_icov(ftable_1[i, 2], ftable_1[i, 3], ftable_1[i, 4],
+          ftable_1[j, 2], ftable_1[j, 3], ftable_1[j, 4],
+          r = cor_1[i, j]
         )
     }
   }
 
   if (lav_debug()) {
     cat("\nOriginal correlations (for Vale-Maurelli):\n")
-    print(COR)
+    print(cor_1)
     cat("\nIntermediate correlations (for Vale-Maurelli):\n")
-    print(ICOR)
+    print(icor)
     cat("\nEigen values ICOR:\n")
-    print(eigen(ICOR)$values)
+    print(eigen(icor)$values)
   }
 
   # generate Z (using sign-invariant method for cross-machine reproducibility)
-  X <- Z <- lav_mvrnorm(n = n, mu = rep(0, nvar), sigma_1 = ICOR)
+  x <- z <- lav_mvrnorm(n = n, mu = rep(0, nvar), sigma_1 = icor)
 
   # transform Z using Fleishman constants
   for (i in 1:nvar) {
-    X[, i] <- FTable[i, 1L] + FTable[i, 2L] * Z[, i] + FTable[i, 3L] * Z[, i] * Z[, i] +
-      FTable[i, 4L] * Z[, i] * Z[, i] * Z[, i]
+    x[, i] <- ftable_1[i, 1L] + ftable_1[i, 2L] * z[, i] +
+      ftable_1[i, 3L] * z[, i] * z[, i] +
+      ftable_1[i, 4L] * z[, i] * z[, i] * z[, i]
   }
 
-  X
+  x
 }

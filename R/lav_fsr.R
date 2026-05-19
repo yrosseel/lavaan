@@ -7,72 +7,72 @@
 # theta_1: - in the columns
 #          - the free parameters of the measurement model
 #
-lav_fsr_delta21 <- function(object, FSM = NULL) {
+lav_fsr_delta21 <- function(object, fsm = NULL) {
   lavmodel <- object@Model
   nmat <- lavmodel@nmat
 
-  NCOL <- lavmodel@nx.free
-  m.el.idx <- x.el.idx <- vector("list", length = length(lavmodel@GLIST))
-  for (mm in seq_len(length(lavmodel@GLIST))) {
-    m.el.idx[[mm]] <- lavmodel@m.free.idx[[mm]]
-    x.el.idx[[mm]] <- lavmodel@x.free.idx[[mm]]
+  n_col <- lavmodel@nx.free
+  m_el_idx <- x_el_idx <- vector("list", length = length(lavmodel@GLIST))
+  for (mm in seq_along(lavmodel@GLIST)) {
+    m_el_idx[[mm]] <- lavmodel@m.free.idx[[mm]]
+    x_el_idx[[mm]] <- lavmodel@x.free.idx[[mm]]
     # handle symmetric matrices
     if (lavmodel@isSymmetric[mm]) {
       # since we use 'x.free.idx', only symmetric elements
       # are duplicated (not the equal ones, only in x.free.free)
-      dix <- duplicated(x.el.idx[[mm]])
+      dix <- duplicated(x_el_idx[[mm]])
       if (any(dix)) {
-        m.el.idx[[mm]] <- m.el.idx[[mm]][!dix]
-        x.el.idx[[mm]] <- x.el.idx[[mm]][!dix]
+        m_el_idx[[mm]] <- m_el_idx[[mm]][!dix]
+        x_el_idx[[mm]] <- x_el_idx[[mm]][!dix]
       }
     }
   }
 
   # Delta per group (or block?)
-  Delta <- vector("list", length = lavmodel@ngroups)
+  delta_1 <- vector("list", length = lavmodel@ngroups)
 
   for (g in 1:lavmodel@ngroups) {
-    fsm <- FSM[[g]]
+    fsm_1 <- fsm[[g]]
 
     # which mm belong to group g?
-    mm.in.group <- 1:nmat[g] + cumsum(c(0, nmat))[g]
-    MLIST <- lavmodel@GLIST[mm.in.group]
+    mm_in_group <- 1:nmat[g] + cumsum(c(0, nmat))[g]
+    mlist <- lavmodel@GLIST[mm_in_group]
 
-    nrow.scoffset <- ncol(MLIST$lambda)
-    nrow.scale <- ncol(MLIST$lambda)
-    NROW <- nrow.scoffset + nrow.scale
-    Delta.group <- matrix(0, nrow = NROW, ncol = NCOL)
+    nrow_scoffset <- ncol(mlist$lambda)
+    nrow_scale <- ncol(mlist$lambda)
+    n_row <- nrow_scoffset + nrow_scale
+    delta_group <- matrix(0, nrow = n_row, ncol = n_col)
 
     # prepare some computations
-    AL.inv <- solve(fsm %*% MLIST$lambda)
-    ATA <- fsm %*% MLIST$theta %*% t(fsm)
+    al_inv <- solve(fsm_1 %*% mlist$lambda)
+    ata <- fsm_1 %*% mlist$theta %*% t(fsm_1)
 
-    for (mm in mm.in.group) {
+    for (mm in mm_in_group) {
       mname <- names(lavmodel@GLIST)[mm]
 
       # skip empty ones
-      if (!length(m.el.idx[[mm]])) next
+      if (!length(m_el_idx[[mm]])) next
 
       if (mname == "lambda") {
-        dL <- (-1 * (ATA %*% AL.inv + AL.inv %*% ATA) %*%
-          (AL.inv %x% AL.inv) %*% fsm)
+        d_l <- (-1 * (ata %*% al_inv + al_inv %*% ata) %*%
+          (al_inv %x% al_inv) %*% fsm_1)
 
-        delta.scoffset <- dL
-        delta.scale <- fsm ## only ok for 1 row!!!
-        delta <- rbind(delta.scoffset, delta.scale)
+        delta_scoffset <- d_l
+        delta_scale <- fsm_1 ## only ok for 1 row!!!
+        delta <- rbind(delta_scoffset, delta_scale)
 
-        Delta.group[, x.el.idx[[mm]]] <- delta[, m.el.idx[[mm]]]
+        delta_group[, x_el_idx[[mm]]] <- delta[, m_el_idx[[mm]]]
       } else if (mname == "theta") {
-        dT <- lav_matrix_vec((t(AL.inv) %*% fsm) %x%
-          (t(fsm) %*% AL.inv))
-        delta.scoffset <- dT
-        delta.scale <- matrix(0,
-          nrow = nrow.scale,
-          ncol = length(MLIST$theta)
+        d_t <- lav_matrix_vec((t(al_inv) %*% fsm_1) %x%
+          (t(fsm_1) %*% al_inv))
+        delta_scoffset <- d_t
+        delta_scale <- matrix(0,
+          nrow = nrow_scale,
+          ncol = length(mlist$theta)
         )
-        delta <- rbind(delta.scoffset, delta.scale)
+        delta <- rbind(delta_scoffset, delta_scale)
 
-        Delta.group[, x.el.idx[[mm]]] <- delta[, m.el.idx[[mm]]]
+        delta_group[, x_el_idx[[mm]]] <- delta[, m_el_idx[[mm]]]
       } else if (mname %in% c("psi", "nu", "alpha")) {
         # zero
         next
@@ -82,44 +82,44 @@ lav_fsr_delta21 <- function(object, FSM = NULL) {
       }
     } # mm
 
-    Delta[[g]] <- Delta.group
+    delta_1[[g]] <- delta_group
   } # g
 
-  Delta
+  delta_1
 }
 
-lav_fsr_pa2si <- function(PT = NULL, LVINFO) {
-  PT.orig <- PT
+lav_fsr_pa2si <- function(pt_1 = NULL, lvinfo) {
+  # pt_orig <- pt_1
 
   # remove se column (if any)
-  if (!is.null(PT$se)) {
-    PT$se <- NULL
+  if (!is.null(pt_1$se)) {
+    pt_1$se <- NULL
   }
 
   # ngroups
-  ngroups <- lav_partable_ngroups(PT)
+  ngroups <- lav_partable_ngroups(pt_1)
 
   lhs <- rhs <- op <- character(0)
-  group <- block <- level <- free <- exo <- integer(0)
+  group <- block <- free <- exo <- integer(0)
   ustart <- est <- start <- numeric(0)
 
   for (g in seq_len(ngroups)) {
-    nMM <- length(LVINFO[[g]])
-    for (mm in seq_len(nMM)) {
-      lvinfo <- LVINFO[[g]][[mm]]
-      lv.names <- lvinfo$lv.names
+    n_mm <- length(lvinfo[[g]])
+    for (mm in seq_len(n_mm)) {
+      lvinfo_1 <- lvinfo[[g]][[mm]]
+      lv_names <- lvinfo_1$lv.names
 
-      nfac <- length(lv.names)
+      nfac <- length(lv_names)
       if (nfac > 1L) {
         lav_msg_stop(gettext("more than 1 factor in measurement block"))
       }
 
-      LV <- lv.names
-      ind <- paste(LV, ".si", sep = "")
-      scoffset <- lvinfo$scoffset[1, 1]
-      scale <- lvinfo$scale[1, 1]
+      lv <- lv_names
+      ind <- paste(lv, ".si", sep = "")
+      scoffset <- lvinfo_1$scoffset[1, 1]
+      scale <- lvinfo_1$scale[1, 1]
 
-      lhs <- c(lhs, LV, ind, ind, ind)
+      lhs <- c(lhs, lv, ind, ind, ind)
       op <- c(op, "=~", "~~", "~*~", "~1")
       rhs <- c(rhs, ind, ind, ind, "")
       block <- c(block, rep(g, 4L))
@@ -133,11 +133,11 @@ lav_fsr_pa2si <- function(PT = NULL, LVINFO) {
   }
 
   # free counter
-  idx.free <- which(free > 0)
-  free[idx.free] <- max(PT$free) + 1:length(idx.free)
+  idx_free <- which(free > 0)
+  free[idx_free] <- max(pt_1$free) + seq_along(idx_free)
 
-  LIST <- list(
-    id = max(PT$id) + 1:length(lhs),
+  list_1 <- list(
+    id = max(pt_1$id) + seq_along(lhs),
     lhs = lhs,
     op = op,
     rhs = rhs,
@@ -152,7 +152,7 @@ lav_fsr_pa2si <- function(PT = NULL, LVINFO) {
     est = est
   )
 
-  PT.si <- lav_partable_merge(PT, LIST)
+  pt_si <- lav_partable_merge(pt_1, list_1)
 
-  PT.si
+  pt_si
 }

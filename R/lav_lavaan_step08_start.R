@@ -51,14 +51,14 @@ lav_lavaan_step08_start <- function(slot_model = NULL, # nolint
 
       if (length(zero_idx) > 0L || any(is.na(lavpartable$est))) {
         lavpartable$start <- lav_start(
-          start.method = lavoptions$start,
+          start_method = lavoptions$start,
           lavpartable = lavpartable,
           lavsamplestats = lavsamplestats,
-          model.type = lavoptions$model.type,
+          model_type = lavoptions$model.type,
           reflect = FALSE,
-          samplestats.flag = samplestats_flag,
+          samplestats_flag = samplestats_flag,
           # order.lv.by  = lavoptions$rotation.args$order_lv_by,
-          order.lv.by = "none"
+          order_lv_by = "none"
           )
       } else {
         lavpartable$start <- lavpartable$est
@@ -94,15 +94,15 @@ lav_lavaan_step08_start <- function(slot_model = NULL, # nolint
         cat("lavstart           ...")
       }
       start_values <- lav_start(
-        start.method = lavoptions$start,
+        start_method = lavoptions$start,
         lavpartable = lavpartable,
         lavsamplestats = lavsamplestats,
         lavh1 = lavh1,
-        model.type = lavoptions$model.type,
+        model_type = lavoptions$model.type,
         reflect = FALSE,
-        samplestats.flag = samplestats_flag,
+        samplestats_flag = samplestats_flag,
         # order.lv.by  = lavoptions$rotation.args$order_lv_by,
-        order.lv.by = "none"
+        order_lv_by = "none"
       )
 
       # sanity check

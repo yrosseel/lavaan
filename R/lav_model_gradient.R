@@ -521,15 +521,15 @@ lav_model_gradient <- function(lavmodel = NULL,
       if (!lavsamplestats@missing.flag) { # complete data
         if (lavmodel@conditional.x) {
           dx_1 <- lav_mvreg_cluster_dlogl_2l_samplestats(
-            YLp = lavsamplestats@YLp[[g]],
-            Lp = lavdata@Lp[[g]],
-            Res.Sigma.W = sigma_hat[[(g - 1) * 2 + 1]],
-            Res.Int.W = mu_hat[[(g - 1) * 2 + 1]],
-            Res.Pi.W = pi0[[(g - 1) * 2 + 1]],
-            Res.Sigma.B = sigma_hat[[(g - 1) * 2 + 2]],
-            Res.Int.B = mu_hat[[(g - 1) * 2 + 2]],
-            Res.Pi.B = pi0[[(g - 1) * 2 + 2]],
-            Sinv.method = "eigen"
+            ylp = lavsamplestats@YLp[[g]],
+            lp = lavdata@Lp[[g]],
+            res_sigma_w = sigma_hat[[(g - 1) * 2 + 1]],
+            res_int_w = mu_hat[[(g - 1) * 2 + 1]],
+            res_pi_w = pi0[[(g - 1) * 2 + 1]],
+            res_sigma_b = sigma_hat[[(g - 1) * 2 + 2]],
+            res_int_b = mu_hat[[(g - 1) * 2 + 2]],
+            res_pi_b = pi0[[(g - 1) * 2 + 2]],
+            sinv_method = "eigen"
           )
         } else {
           dx_1 <- lav_mvnorm_cluster_dlogl_2l_samplestats(

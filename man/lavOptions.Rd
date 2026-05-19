@@ -329,12 +329,13 @@ Estimation options:
       \code{\link{lavTest}} function to extract (alternative) 
       test statistics from a fitted lavaan object. FMG test names such as
       \code{"peba4"}, \code{"pols3"}, \code{"pall"}, and \code{"all"} can be
-      requested here for supported ML-family models.}
+      requested here for supported ML-family models. The convenience value
+      \code{"fmg"} resolves to \code{"peba4_rls"} for one-model tests.}
    \item{\code{standard.test}:}{Character. Choose the test statistic
     that will be used to compute fit measures (like CFI or RSMEA).
     The default is \code{"standard"}, but it could also be (for example)
     \code{"Browne.residual.nt"}, or an FMG test name such as
-    \code{"peba4"}.}
+    \code{"peba4"} or \code{"fmg"}.}
    \item{\code{scaled.test}:}{Character. Choose the test statistic
     that will be scaled (if a scaled test statistic is requested).
     The default is \code{"standard"}, but it could also be (for example)
@@ -370,7 +371,7 @@ Optimization options:
       (\code{optim.method = "GN"}). The latter is the default when 
       \code{estimator = "DLS"}.
       For constrained
-      optimization, the only available option is \code{"nlminb.constr"},
+      optimization, the only available option is \code{"nlminb_constr"},
       which uses an augmented Lagrangian minimization algorithm.}
     \item{\code{optim.force.converged}:}{Logical. If \code{TRUE}, pretend
       the model has converged, no matter what.}

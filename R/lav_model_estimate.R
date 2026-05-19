@@ -146,10 +146,10 @@ lav_model_estimate <- function(lavmodel = NULL,
       parscale <- lav_standardize_all(
         lavobject = NULL,
         est = rep(1, length(lavpartable$lhs)),
-        est.std = rep(1, length(lavpartable$lhs)),
-        cov.std = FALSE, ov.var = ov_var,
+        est_std = rep(1, length(lavpartable$lhs)),
+        cov_std = FALSE, ov_var = ov_var,
         lavmodel = lavmodel, lavpartable = lavpartable,
-        cov.x = lavsamplestats@cov.x
+        cov_x = lavsamplestats@cov.x
       )
     } else {
       # needs good estimates for lv variances!
@@ -176,10 +176,10 @@ lav_model_estimate <- function(lavmodel = NULL,
         # est.std = rep(1, length(lavpartable$lhs)),
         # here, we use whatever the starting values are
         # for the latent variances...
-        cov.std = FALSE, ov.var = ov_var,
-        lv.var = lv_var,
+        cov_std = FALSE, ov_var = ov_var,
+        lv_var = lv_var,
         lavmodel = lavmodel, lavpartable = lavpartable,
-        cov.x = lavsamplestats@cov.x
+        cov_x = lavsamplestats@cov.x
       )
     }
 
@@ -617,7 +617,7 @@ lav_model_estimate <- function(lavmodel = NULL,
 
 
   if (optimizer == "NLMINB0") {
-    if (verbose) 
+    if (verbose)
       cat("  quasi-Newton steps using NLMINB0 (no analytic gradient):\n")
     # if(debug) control$trace <- 1L;
     control_nlminb <- list(
@@ -856,7 +856,7 @@ lav_model_estimate <- function(lavmodel = NULL,
     if (!is.null(body(lavmodel@ceq.jacobian))) ceq_jac <- lavmodel@ceq.jacobian
     trace <- FALSE
     if (verbose) trace <- TRUE
-    optim_out <- nlminb.constr(
+    optim_out <- nlminb_constr(
       start = start_x,
       objective = objective_function,
       gradient = gradient,
@@ -865,13 +865,13 @@ lav_model_estimate <- function(lavmodel = NULL,
       verbose = verbose, debug = debug,
       lower = lower,
       upper = upper,
-      cin = cin, cin.jac = cin_jac,
-      ceq = ceq, ceq.jac = ceq_jac,
-      control.outer = ocontrol
+      cin = cin, cin_jac = cin_jac,
+      ceq = ceq, ceq_jac = ceq_jac,
+      control_outer = ocontrol
     )
     if (verbose) {
       cat("  convergence status (0=ok): ", optim_out$convergence, "\n")
-      cat("  nlminb.constr message says: ", optim_out$message, "\n")
+      cat("  nlminb_constr message says: ", optim_out$message, "\n")
       cat("  number of outer iterations: ", optim_out$outer.iterations, "\n")
       cat("  number of inner iterations: ", optim_out$iterations, "\n")
       cat(

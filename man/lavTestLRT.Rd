@@ -23,7 +23,8 @@ anova(object, ...)
 \item{test}{Character string specifying which scaled test statistics to use,
   in case multiple scaled \code{test=} options were requested when fitting the
   model(s). See details. FMG nested tests can be requested using names such as
-  \code{"pall"}, \code{"all"}, \code{"peba4"}, or \code{"pols3"}.}
+  \code{"pall"}, \code{"all"}, \code{"peba4"}, or \code{"pols3"}; the
+  convenience value \code{"fmg"} resolves to the recommended nested default.}
 \item{A.method}{Character string. The possible options are \code{"exact"}
   and \code{"delta"}. This is only used when method = \code{"satorra.2000"}.
   It determines how the Jacobian of the constraint function (the matrix A)
@@ -78,6 +79,9 @@ anova(object, ...)
     FMG nested tests are available when \code{type = "Chisq"} and
     \code{test} is an FMG test name. The supported nested FMG methods are
     \code{"pall"}, \code{"all"}, \code{"peba"} and \code{"pols"} variants.
+    The convenience value \code{"fmg"} resolves to \code{"pall_ug_rls"} for
+    single-group comparisons and \code{"pall_ug_ml"} for multiple-group
+    comparisons.
     They use the Satorra (2000) UGamma projection; \code{method} may be left
     at \code{"default"} or set to \code{"standard"} or
     \code{"satorra.2000"}. Other nested LRT methods are not used for FMG

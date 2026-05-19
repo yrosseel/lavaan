@@ -20,10 +20,60 @@
 lav_test_fmg_is_fmg <- function(test) {
   test <- tolower(test)
   patterns <- c(
-    "^peba", "^pols", "^pall", "^all$",
+    "^fmg($|_)", "^peba", "^pols", "^pall", "^all$",
     "^all_", "^sb_", "^ss_", "^sf_", "^std_"
   )
   any(vapply(patterns, function(p) grepl(p, test), logical(1)))
+}
+
+lav_test_fmg_is_preset <- function(test) {
+  grepl("^fmg($|_)", tolower(test))
+}
+
+lav_test_fmg_resolve_preset <- function(test, nested = FALSE,
+                                        ngroups = 1L) {
+  if (!lav_test_fmg_is_preset(test)) {
+    return(test)
+  }
+
+  test <- tolower(test)
+  splitted <- strsplit(test, "_")[[1L]]
+  if (splitted[1L] != "fmg" || length(splitted) > 3L) {
+    lav_msg_stop(gettextf(
+      "FMG preset does not support test= %1$s.",
+      dQuote(test)
+    ))
+  }
+
+  unbiased <- isTRUE(nested)
+  chisq <- if (isTRUE(nested) && ngroups > 1L) "ml" else "rls"
+
+  if (length(splitted) > 1L) {
+    suffix <- splitted[-1L]
+    if (!all(suffix %in% c("ug", "ml", "rls")) ||
+        sum(suffix %in% c("ml", "rls")) > 1L ||
+        sum(suffix == "ug") > 1L) {
+      lav_msg_stop(gettextf(
+        "FMG preset does not support test= %1$s.",
+        dQuote(test)
+      ))
+    }
+    if ("ug" %in% suffix) {
+      unbiased <- TRUE
+    }
+    if ("ml" %in% suffix) {
+      chisq <- "ml"
+    } else if ("rls" %in% suffix) {
+      chisq <- "rls"
+    }
+  }
+
+  method <- if (isTRUE(nested)) "pall" else "peba4"
+  paste0(
+    method,
+    if (isTRUE(unbiased)) "_ug" else "",
+    "_", chisq
+  )
 }
 
 #' Parse FMG test string into components
@@ -201,9 +251,13 @@ lav_test_fmg_label <- function(parsed, unbiased = FALSE, chisq = "ml") {
     parsed$method
   )
   chisq_label <- if (chisq == "rls") "RLS" else toupper(chisq)
-  gamma_label <- if (isTRUE(unbiased)) "unbiased Gamma, " else ""
+  gamma_label <- if (isTRUE(unbiased)) "unbiased" else "biased"
 
-  paste0(method_label, " p-value test (", gamma_label, chisq_label, ")")
+  paste0(
+    method_label,
+    " p-value test (base: ", chisq_label,
+    ", Gamma: ", gamma_label, ")"
+  )
 }
 
 lav_test_fmg_chisq_equivalent <- function(pvalue, df) {
@@ -248,8 +302,8 @@ lav_test_fmg_browne_nt_model <- function(lavobject = NULL,
       lavoptions = lavoptions,
       lavh1 = lavh1,
       lavimplied = lavimplied,
-      ADF = FALSE,
-      model.based = TRUE
+      adf = FALSE,
+      model_based = TRUE
     ),
     silent = TRUE
   )
@@ -597,14 +651,14 @@ lav_test_fmg_ugamma <- function(lavobject = NULL,
     lavimplied = lavimplied,
     lavdata = lavdata,
     lavoptions = lavoptions,
-    TEST.unscaled = TEST.unscaled,
-    E.inv = E.inv,
-    Delta = Delta,
-    WLS.V = WLS.V,
-    Gamma = Gamma,
+    test_unscaled = TEST.unscaled,
+    e_inv = E.inv,
+    delta = Delta,
+    wls_v = WLS.V,
+    m_gamma = Gamma,
     method = "original",
-    return.ugamma = TRUE,
-    return.u = TRUE
+    return_ugamma = TRUE,
+    return_u = TRUE
   )
 
   if (is.null(out)) {

@@ -11,7 +11,7 @@ lav_model_get_parameters <- function(lavmodel = NULL, GLIST = NULL,   # nolint s
 
   # state or final?
   glist <- GLIST
-  if (is.null(glist)) glist <- lavmodel@GLIST 
+  if (is.null(glist)) glist <- lavmodel@GLIST
                   # if this changes, tag @TDJorgensen in commit message
 
   if (type == "free") {

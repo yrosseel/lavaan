@@ -1,113 +1,117 @@
-lav_standardize_lv_x <- function(x, lavobject, partable = NULL, cov.std = TRUE,
-                                 lv.var = NULL,
+lav_standardize_lv_x <- function(x, lavobject, partable = NULL, cov_std = TRUE,
+                                 lv_var = NULL,
                                  rotation = FALSE) {
   # set new values for x
   lavmodel <- lav_model_set_parameters(lavmodel = lavobject@Model, x = x)
 
   if (rotation) {
-    x.unrotated <- x
+    x_unrotated <- x
     lavmodel@GLIST <- lavTech(lavobject, "est.unrotated") # unrotated!
-    est.rot <- lav_model_efa_rotate_x(
-      x = x.unrotated,
+    est_rot <- lav_model_efa_rotate_x(
+      x = x_unrotated,
       lavmodel = lavmodel, # unrotated!
       lavoptions = lavobject@Options,
       init_rot = lavmodel@H,
       type = "user",
       extra = TRUE
     )
-    GLIST <- attr(est.rot, "extra")$GLIST
-    attributes(est.rot) <- NULL
-    est <- est.rot
+    glist <- attr(est_rot, "extra")$glist
+    attributes(est_rot) <- NULL
+    est <- est_rot
   } else {
-    GLIST <- lavmodel@GLIST # if this changes, tag @TDJorgensen in commit message
+    glist <- lavmodel@GLIST
+                    # if this changes, tag @TDJorgensen in commit message
     est <- lav_model_get_parameters(lavmodel, type = "user")
   }
 
-  x.stand.user <- lav_standardize_lv(
+  x_stand_user <- lav_standardize_lv(
     lavobject = lavobject,
     partable = partable, est = est,
-    GLIST = GLIST, cov.std = cov.std,
-    lv.var = lv.var
+    glist = glist, cov_std = cov_std,
+    lv_var = lv_var
   )
 
-  x.stand.user
+  x_stand_user
 }
 
-lav_standardize_all_x <- function(x, lavobject, partable = NULL, cov.std = TRUE,
+lav_standardize_all_x <- function(x, lavobject, partable = NULL, cov_std = TRUE,
                                   rotation = FALSE) {
   lavmodel <- lav_model_set_parameters(lavmodel = lavobject@Model, x = x)
 
   if (rotation) {
-    x.unrotated <- x
+    x_unrotated <- x
     lavmodel@GLIST <- lavTech(lavobject, "est.unrotated") # unrotated!
-    est.rot <- lav_model_efa_rotate_x(
-      x = x.unrotated,
+    est_rot <- lav_model_efa_rotate_x(
+      x = x_unrotated,
       lavmodel = lavmodel, # unrotated!
       lavoptions = lavobject@Options,
       init_rot = lavmodel@H,
       type = "user",
       extra = TRUE
     )
-    GLIST <- attr(est.rot, "extra")$GLIST
-    attributes(est.rot) <- NULL
-    est <- est.rot
+    glist <- attr(est_rot, "extra")$glist
+    attributes(est_rot) <- NULL
+    est <- est_rot
   } else {
-    GLIST <- lavmodel@GLIST # if this changes, tag @TDJorgensen in commit message
+    glist <- lavmodel@GLIST
+           # if this changes, tag @TDJorgensen in commit message
     est <- lav_model_get_parameters(lavmodel, type = "user")
   }
 
-  x.stand.user <- lav_standardize_all(
+  x_stand_user <- lav_standardize_all(
     lavobject = lavobject,
     partable = partable, est = est,
-    est.std = NULL, GLIST = GLIST,
-    cov.std = cov.std
+    est_std = NULL, glist = glist,
+    cov_std = cov_std
   )
-  x.stand.user
+  x_stand_user
 }
 
 lav_standardize_all_nox_x <- function(x, lavobject, partable = NULL,
-                                      cov.std = TRUE, rotation = FALSE) {
+                                      cov_std = TRUE, rotation = FALSE) {
   lavmodel <- lav_model_set_parameters(lavmodel = lavobject@Model, x = x)
 
   if (rotation) {
-    x.unrotated <- x
+    x_unrotated <- x
     lavmodel@GLIST <- lavTech(lavobject, "est.unrotated") # unrotated!
-    est.rot <- lav_model_efa_rotate_x(
-      x = x.unrotated,
+    est_rot <- lav_model_efa_rotate_x(
+      x = x_unrotated,
       lavmodel = lavmodel, # unrotated!
       lavoptions = lavobject@Options,
       init_rot = lavmodel@H,
       type = "user",
       extra = TRUE
     )
-    GLIST <- attr(est.rot, "extra")$GLIST
-    attributes(est.rot) <- NULL
-    est <- est.rot
+    glist <- attr(est_rot, "extra")$glist
+    attributes(est_rot) <- NULL
+    est <- est_rot
   } else {
-    GLIST <- lavmodel@GLIST # if this changes, tag @TDJorgensen in commit message
+    glist <- lavmodel@GLIST
+                # if this changes, tag @TDJorgensen in commit message
     est <- lav_model_get_parameters(lavmodel, type = "user")
   }
 
-  x.stand.user <- lav_standardize_all_nox(
+  x_stand_user <- lav_standardize_all_nox(
     lavobject = lavobject,
     partable = partable, est = est,
-    est.std = NULL, GLIST = GLIST,
-    cov.std = cov.std
+    est_std = NULL, glist = glist,
+    cov_std = cov_std
   )
-  x.stand.user
+  x_stand_user
 }
 
 
 lav_standardize_lv <- function(lavobject = NULL,
-                               partable = NULL, est = NULL, GLIST = NULL,
-                               cov.std = TRUE, lv.var = NULL,
+                               partable = NULL, est = NULL, glist = NULL,
+                               cov_std = TRUE, lv_var = NULL,
                                lavmodel = NULL, lavpartable = NULL) {
   if (is.null(lavobject)) {
     stopifnot(!is.null(lavmodel))
     stopifnot(!is.null(lavpartable))
     if (is.null(est)) {
       if (!is.null(lavpartable$est)) {
-        est <- lavpartable$est # if this changes, tag @TDJorgensen in commit message
+        est <- lavpartable$est
+                # if this changes, tag @TDJorgensen in commit message
       } else {
         lav_msg_stop(gettext("could not find `est' in lavpartable"))
       }
@@ -123,81 +127,81 @@ lav_standardize_lv <- function(lavobject = NULL,
   if (is.null(partable)) {
     partable <- lavpartable
   }
-  if (is.null(GLIST)) {
-    GLIST <- lavmodel@GLIST
+  if (is.null(glist)) {
+    glist <- lavmodel@GLIST
   }
 
   out <- est
-  N <- length(est)
-  stopifnot(N == length(partable$lhs))
+  n <- length(est)
+  stopifnot(n == length(partable$lhs))
 
   nmat <- lavmodel@nmat
 
   # compute ETA
-  if (is.null(lv.var)) {
-    LV.ETA <- lav_model_veta(
+  if (is.null(lv_var)) {
+    lv_eta <- lav_model_veta(
       lavmodel = lavmodel,
-      glist = GLIST
+      glist = glist
     )
 
-    LV.EETA <- lav_model_eeta(
+    lv_eeta <- lav_model_eeta(
       lavmodel = lavmodel,
-      glist = GLIST,
+      glist = glist,
       lavsamplestats = lavobject@SampleStats
     )
   }
 
   for (g in 1:lavmodel@nblocks) {
-    ov.names <- lav_partable_vnames(lavpartable, "ov", block = g) # not user,
+    ov_names <- lav_partable_vnames(lavpartable, "ov", block = g) # not user,
     # which may be incomplete
-    lv.names <- lav_partable_vnames(lavpartable, "lv", block = g)
+    lv_names <- lav_partable_vnames(lavpartable, "lv", block = g)
 
     # shortcut: no latents in this block, nothing to do
-    if (length(lv.names) == 0L) {
+    if (length(lv_names) == 0L) {
       next
     }
 
     # which mm belong to block g?
-    mm.in.group <- 1:nmat[g] + cumsum(c(0, nmat))[g]
-    MLIST <- GLIST[mm.in.group]
+    mm_in_group <- 1:nmat[g] + cumsum(c(0, nmat))[g]
+    # mlist <- glist[mm_in_group]
 
-    if (is.null(lv.var)) {
-      ETA2 <- diag(LV.ETA[[g]])
+    if (is.null(lv_var)) {
+      eta2 <- diag(lv_eta[[g]])
     } else {
-      ETA2 <- lv.var[[g]]
+      eta2 <- lv_var[[g]]
     }
     # change negative values to NA
-    ETA2[ETA2 < 0] <- as.numeric(NA)
-    ETA <- sqrt(ETA2)
-    EETA <- LV.EETA[[g]]
+    eta2[eta2 < 0] <- as.numeric(NA)
+    eta <- sqrt(eta2)
+    eeta <- lv_eeta[[g]]
 
     # Interaction/quadratic term correction (FV)
     # (based on Kelava & Brandt, 2022; Brandt et al., 2015)
     # For interaction terms A:B, the standardized coefficient should use
     # SD(A)*SD(B) instead of SD(A:B) (Eq. 13 in Brandt et al., 2015).
-    lv.int.names <- lav_partable_vnames(lavpartable, "lv.interaction",
+    lv_int_names <- lav_partable_vnames(lavpartable, "lv.interaction",
       block = g
     )
 
-    if (length(lv.int.names) > 0L) {
+    if (length(lv_int_names) > 0L) {
 
-      for (int.name in lv.int.names) {
-        components <- strsplit(int.name, ":", fixed = TRUE)[[1L]]
+      for (int_name in lv_int_names) {
+        components <- strsplit(int_name, ":", fixed = TRUE)[[1L]]
         a <- components[1]
         b <- components[2]
 
-        idx.int <- match(int.name, lv.names)
-        idx.a   <- match(a, lv.names)
-        idx.b   <- match(b, lv.names)
+        idx_int <- match(int_name, lv_names)
+        idx_a   <- match(a, lv_names)
+        idx_b   <- match(b, lv_names)
 
         # Need a, b and interaction term before moving on
-        if (is.na(idx.a) || is.na(idx.b) || is.na(idx.int)) next
+        if (is.na(idx_a) || is.na(idx_b) || is.na(idx_int)) next
 
-        exp.a <- EETA[idx.a]
-        exp.b <- EETA[idx.b]
+        exp_a <- eeta[idx_a]
+        exp_b <- eeta[idx_b]
 
         # Do we need to shift simple main effects?
-        if (exp.a != 0 || exp.b != 0) {
+        if (exp_a != 0 || exp_b != 0) {
           # KS, 08/05/26
           #
           # This covers the general case of y ~ x + z + w + x:z + x:x
@@ -239,33 +243,33 @@ lav_standardize_lv <- function(lavobject = NULL,
           #
 
           # Find dependent variables
-          lv.int.dep <- unique(partable$lhs[
-            partable$op == "~" & partable$rhs == int.name
+          lv_int_dep <- unique(partable$lhs[
+            partable$op == "~" & partable$rhs == int_name
           ])
 
-          for (dep in lv.int.dep) {
-            idx.beta.a <- which(
+          for (dep in lv_int_dep) {
+            idx_beta_a <- which(
               partable$lhs == dep & partable$op == "~" &
               partable$rhs == a & partable$group == g
             )
 
-            idx.beta.b <- which(
+            idx_beta_b <- which(
               partable$lhs == dep & partable$op == "~" &
               partable$rhs == b & partable$group == g
             )
 
-            beta.ab <- partable$est[
+            beta_ab <- partable$est[
               partable$lhs == dep & partable$op == "~" &
-              partable$rhs == int.name & partable$group == g
+              partable$rhs == int_name & partable$group == g
             ]
 
-            out[idx.beta.a] <- out[idx.beta.a] + beta.ab * exp.b
-            out[idx.beta.b] <- out[idx.beta.b] + beta.ab * exp.a
+            out[idx_beta_a] <- out[idx_beta_a] + beta_ab * exp_b
+            out[idx_beta_b] <- out[idx_beta_b] + beta_ab * exp_a
           }
         }
 
         # Replace ETA for interaction terms with SD(A)*SD(B)
-        ETA[idx.int] <- ETA[idx.a] * ETA[idx.b]
+        eta[idx_int] <- eta[idx_a] * eta[idx_b]
       }
     }
 
@@ -273,15 +277,15 @@ lav_standardize_lv <- function(lavobject = NULL,
     # The next step is to correctly scale the variances of the interaction terms
 
     # 1a. "=~" regular indicators
-    idx <- which(partable$op == "=~" & !(partable$rhs %in% lv.names) &
+    idx <- which(partable$op == "=~" & !(partable$rhs %in% lv_names) &
       partable$block == g)
-    out[idx] <- out[idx] * ETA[match(partable$lhs[idx], lv.names)]
+    out[idx] <- out[idx] * eta[match(partable$lhs[idx], lv_names)]
 
     # 1b. "=~" regular higher-order lv indicators
-    idx <- which(partable$op == "=~" & !(partable$rhs %in% ov.names) &
+    idx <- which(partable$op == "=~" & !(partable$rhs %in% ov_names) &
       partable$block == g)
-    out[idx] <- (out[idx] * ETA[match(partable$lhs[idx], lv.names)]
-      / ETA[match(partable$rhs[idx], lv.names)])
+    out[idx] <- (out[idx] * eta[match(partable$lhs[idx], lv_names)]
+      / eta[match(partable$rhs[idx], lv_names)])
 
     # 1c. "=~" indicators that are both in ov and lv
     # idx <- which(partable$op == "=~" & partable$rhs %in% ov.names
@@ -290,14 +294,14 @@ lav_standardize_lv <- function(lavobject = NULL,
 
     # 2. "~" regressions (and "<~")
     idx <- which((partable$op == "~" | partable$op == "<~") &
-      partable$lhs %in% lv.names &
+      partable$lhs %in% lv_names &
       partable$block == g)
-    out[idx] <- out[idx] / ETA[match(partable$lhs[idx], lv.names)]
+    out[idx] <- out[idx] / eta[match(partable$lhs[idx], lv_names)]
 
     idx <- which((partable$op == "~" | partable$op == "<~") &
-      partable$rhs %in% lv.names &
+      partable$rhs %in% lv_names &
       partable$block == g)
-    out[idx] <- out[idx] * ETA[match(partable$rhs[idx], lv.names)]
+    out[idx] <- out[idx] * eta[match(partable$rhs[idx], lv_names)]
 
     # 3a. "~~" ov
     # idx <- which(partable$op == "~~" & !(partable$lhs %in% lv.names) &
@@ -312,53 +316,53 @@ lav_standardize_lv <- function(lavobject = NULL,
     #            elements are the 'PSI' diagonal elements!!
 
     # variances
-    rv.idx <- which(partable$op == "~~" & partable$rhs %in% lv.names &
+    rv_idx <- which(partable$op == "~~" & partable$rhs %in% lv_names &
       partable$lhs == partable$rhs &
       partable$block == g)
-    out[rv.idx] <- (out[rv.idx] / ETA[match(partable$lhs[rv.idx], lv.names)]
-      / ETA[match(partable$rhs[rv.idx], lv.names)])
+    out[rv_idx] <- (out[rv_idx] / eta[match(partable$lhs[rv_idx], lv_names)]
+      / eta[match(partable$rhs[rv_idx], lv_names)])
 
     # covariances lv
     # three types:
     # - only lhs is LV (and fixed.x = FALSE)
     # - only rhs is LV (and fixed.x = FALSE)
     # - both lhs and rhs are LV (regular case)
-    if (cov.std) {
-      if (!is.complex(est[rv.idx])) {
-        RV <- sqrt(abs(est[rv.idx])) # abs in case of heywood cases
+    if (cov_std) {
+      if (!is.complex(est[rv_idx])) {
+        rv <- sqrt(abs(est[rv_idx])) # abs in case of heywood cases
       } else {
-        RV <- sqrt(est[rv.idx])
+        rv <- sqrt(est[rv_idx])
       }
-      rv.names <- partable$lhs[rv.idx]
+      rv_names <- partable$lhs[rv_idx]
     }
 
     # left
-    idx.lhs <- which(partable$op == "~~" &
-      partable$lhs %in% lv.names &
+    idx_lhs <- which(partable$op == "~~" &
+      partable$lhs %in% lv_names &
       partable$lhs != partable$rhs &
       partable$block == g)
-    if (length(idx.lhs) > 0L) {
-      if (cov.std == FALSE) {
-        out[idx.lhs] <-
-          (out[idx.lhs] / ETA[match(partable$lhs[idx.lhs], lv.names)])
+    if (length(idx_lhs) > 0L) {
+      if (cov_std == FALSE) {
+        out[idx_lhs] <-
+          (out[idx_lhs] / eta[match(partable$lhs[idx_lhs], lv_names)])
       } else {
-        out[idx.lhs] <-
-          (out[idx.lhs] / RV[match(partable$lhs[idx.lhs], rv.names)])
+        out[idx_lhs] <-
+          (out[idx_lhs] / rv[match(partable$lhs[idx_lhs], rv_names)])
       }
     }
 
     # right
-    idx.rhs <- which(partable$op == "~~" &
-      partable$rhs %in% lv.names &
+    idx_rhs <- which(partable$op == "~~" &
+      partable$rhs %in% lv_names &
       partable$lhs != partable$rhs &
       partable$block == g)
-    if (length(idx.rhs) > 0L) {
-      if (cov.std == FALSE) {
-        out[idx.rhs] <-
-          (out[idx.rhs] / ETA[match(partable$rhs[idx.rhs], lv.names)])
+    if (length(idx_rhs) > 0L) {
+      if (cov_std == FALSE) {
+        out[idx_rhs] <-
+          (out[idx_rhs] / eta[match(partable$rhs[idx_rhs], lv_names)])
       } else {
-        out[idx.rhs] <-
-          (out[idx.rhs] / RV[match(partable$rhs[idx.rhs], rv.names)])
+        out[idx_rhs] <-
+          (out[idx_rhs] / rv[match(partable$rhs[idx_rhs], rv_names)])
       }
     }
 
@@ -368,9 +372,9 @@ lav_standardize_lv <- function(lavobject = NULL,
     #             partable$block == g)
 
     # 4b. "~1" lv
-    idx <- which(partable$op == "~1" & partable$lhs %in% lv.names &
+    idx <- which(partable$op == "~1" & partable$lhs %in% lv_names &
       partable$block == g)
-    out[idx] <- out[idx] / ETA[match(partable$lhs[idx], lv.names)]
+    out[idx] <- out[idx] / eta[match(partable$lhs[idx], lv_names)]
   }
 
   # 5a ":="
@@ -398,17 +402,18 @@ lav_standardize_lv <- function(lavobject = NULL,
 }
 
 lav_standardize_all <- function(lavobject = NULL,
-                                partable = NULL, est = NULL, est.std = NULL,
-                                GLIST = NULL, cov.std = TRUE, ov.var = NULL,
-                                lv.var = NULL,
+                                partable = NULL, est = NULL, est_std = NULL,
+                                glist = NULL, cov_std = TRUE, ov_var = NULL,
+                                lv_var = NULL,
                                 lavmodel = NULL, lavpartable = NULL,
-                                cov.x = NULL) {
+                                cov_x = NULL) {
   if (is.null(lavobject)) {
     stopifnot(!is.null(lavmodel))
     stopifnot(!is.null(lavpartable))
     if (is.null(est)) {
       if (!is.null(lavpartable$est)) {
-        est <- lavpartable$est # if this changes, tag @TDJorgensen in commit message
+        est <- lavpartable$est
+             # if this changes, tag @TDJorgensen in commit message
       } else {
         lav_msg_stop(gettext("could not find `est' in lavpartable"))
       }
@@ -420,22 +425,23 @@ lav_standardize_all <- function(lavobject = NULL,
       est <- lav_object_inspect_est(lavobject)
     }
     if (lavmodel@conditional.x) {
-      if (is.null(cov.x)) {
+      if (is.null(cov_x)) {
         # try SampleStats slot
         # if("SampleStats" %in% slotNames(lavobject)) {
         #    cov.x <- lavobject@SampleStats@cov.x
         if (!is.null(lavobject@implied$cov.x[[1]])) {
-          cov.x <- lavobject@implied$cov.x # if this changes, tag @TDJorgensen in commit message
+          cov_x <- lavobject@implied$cov.x
+             # if this changes, tag @TDJorgensen in commit message
         } else {
           # perhaps lavaanList object
           # extract it from GLIST per block
-          cov.x <- vector("list", length = lavmodel@nblocks)
+          cov_x <- vector("list", length = lavmodel@nblocks)
           for (b in seq_len(lavmodel@nblocks)) {
             # which mm belong to block b?
-            mm.in.block <- (seq_len(lavmodel@nmat[b]) +
+            mm_in_block <- (seq_len(lavmodel@nmat[b]) +
               cumsum(c(0, lavmodel@nmat))[b])
-            MLIST <- lavmodel@GLIST[mm.in.block]
-            cov.x[[b]] <- MLIST[["cov.x"]]
+            mlist <- lavmodel@GLIST[mm_in_block]
+            cov_x[[b]] <- mlist[["cov.x"]]
           }
         }
       }
@@ -445,65 +451,65 @@ lav_standardize_all <- function(lavobject = NULL,
   if (is.null(partable)) {
     partable <- lavpartable
   }
-  if (is.null(GLIST)) {
-    GLIST <- lavmodel@GLIST
+  if (is.null(glist)) {
+    glist <- lavmodel@GLIST
   }
-  if (is.null(est.std)) {
-    est.std <- lav_standardize_lv(
+  if (is.null(est_std)) {
+    est_std <- lav_standardize_lv(
       lavobject = lavobject,
-      partable = partable, est = est, GLIST = GLIST,
-      cov.std = cov.std, lv.var = lv.var, lavmodel = lavmodel,
+      partable = partable, est = est, glist = glist,
+      cov_std = cov_std, lv_var = lv_var, lavmodel = lavmodel,
       lavpartable = lavpartable
     )
   }
 
-  out <- est.std
-  N <- length(est.std)
-  stopifnot(N == length(partable$lhs))
+  out <- est_std
+  n <- length(est_std)
+  stopifnot(n == length(partable$lhs))
 
-  VY <- lav_model_vy(
-    lavmodel = lavmodel, glist = GLIST,
+  vy <- lav_model_vy(
+    lavmodel = lavmodel, glist = glist,
     diagonal_only = TRUE
   )
 
 
   for (g in 1:lavmodel@nblocks) {
-    ov.names <- lav_partable_vnames(lavpartable, "ov", block = g) # not user
-    lv.names <- lav_partable_vnames(lavpartable, "lv", block = g)
+    ov_names <- lav_partable_vnames(lavpartable, "ov", block = g) # not user
+    lv_names <- lav_partable_vnames(lavpartable, "lv", block = g)
 
-    if (is.null(ov.var)) {
-      OV2 <- VY[[g]]
+    if (is.null(ov_var)) {
+      ov2 <- vy[[g]]
       # replace zero values by NA (but keep negative values)
-      zero.idx <- which(abs(OV2) < .Machine$double.eps)
-      if (length(zero.idx) > 0L) {
-        OV2[zero.idx] <- as.numeric(NA)
+      zero_idx <- which(abs(ov2) < .Machine$double.eps)
+      if (length(zero_idx) > 0L) {
+        ov2[zero_idx] <- as.numeric(NA)
       }
 
       # replace negative values by NA (for sqrt)
-      tmp.OV2 <- OV2
-      neg.idx <- which(tmp.OV2 < 0)
-      if (length(neg.idx) > 0L) {
-        tmp.OV2[neg.idx] <- as.numeric(NA)
+      tmp_ov2 <- ov2
+      neg_idx <- which(tmp_ov2 < 0)
+      if (length(neg_idx) > 0L) {
+        tmp_ov2[neg_idx] <- as.numeric(NA)
       }
-      OV <- sqrt(tmp.OV2)
+      ov <- sqrt(tmp_ov2)
     } else {
-      OV2 <- ov.var[[g]]
-      OV <- sqrt(OV2)
+      ov2 <- ov_var[[g]]
+      ov <- sqrt(ov2)
     }
 
     if (lavmodel@conditional.x) {
       # extend OV with ov.names.x
-      ov.names.x <- lav_partable_vnames(lavpartable, "ov.x", block = g)
-      ov.names.nox <- lav_partable_vnames(lavpartable, "ov.nox", block = g)
-      ov.names <- c(ov.names.nox, ov.names.x)
-      OV2 <- c(OV2, diag(cov.x[[g]]))
-      OV <- c(OV, sqrt(diag(cov.x[[g]])))
+      ov_names_x <- lav_partable_vnames(lavpartable, "ov.x", block = g)
+      ov_names_nox <- lav_partable_vnames(lavpartable, "ov.nox", block = g)
+      ov_names <- c(ov_names_nox, ov_names_x)
+      ov2 <- c(ov2, diag(cov_x[[g]]))
+      ov <- c(ov, sqrt(diag(cov_x[[g]])))
     }
 
     # 1a. "=~" regular indicators
-    idx <- which(partable$op == "=~" & !(partable$rhs %in% lv.names) &
+    idx <- which(partable$op == "=~" & !(partable$rhs %in% lv_names) &
       partable$block == g)
-    out[idx] <- out[idx] / OV[match(partable$rhs[idx], ov.names)]
+    out[idx] <- out[idx] / ov[match(partable$rhs[idx], ov_names)]
 
     # 1b. "=~" regular higher-order lv indicators
 
@@ -514,14 +520,14 @@ lav_standardize_all <- function(lavobject = NULL,
 
     # 2. "~" regressions (and "<~")
     idx <- which((partable$op == "~" | partable$op == "<~") &
-      partable$lhs %in% ov.names &
+      partable$lhs %in% ov_names &
       partable$block == g)
-    out[idx] <- out[idx] / OV[match(partable$lhs[idx], ov.names)]
+    out[idx] <- out[idx] / ov[match(partable$lhs[idx], ov_names)]
 
     idx <- which((partable$op == "~" | partable$op == "<~") &
-      partable$rhs %in% ov.names &
+      partable$rhs %in% ov_names &
       partable$block == g)
-    out[idx] <- out[idx] * OV[match(partable$rhs[idx], ov.names)]
+    out[idx] <- out[idx] * ov[match(partable$rhs[idx], ov_names)]
 
     # 3a. "~~" ov
     # ATTENTION: in Mplus 4.1, the off-diagonal residual covariances
@@ -532,55 +538,55 @@ lav_standardize_all <- function(lavobject = NULL,
     #            elements are the 'THETA' diagonal elements!!
 
     # variances
-    rv.idx <- which(partable$op == "~~" & !(partable$lhs %in% lv.names) &
+    rv_idx <- which(partable$op == "~~" & !(partable$lhs %in% lv_names) &
       partable$lhs == partable$rhs &
       partable$block == g)
     # out[rv.idx] <- ( out[rv.idx] / OV[ match(partable$lhs[rv.idx], ov.names) ]
-    #                             / OV[ match(partable$rhs[rv.idx], ov.names) ] )
-    out[rv.idx] <- (out[rv.idx] /
-      OV2[match(partable$lhs[rv.idx], ov.names)])
+    #                          / OV[ match(partable$rhs[rv.idx], ov.names) ] )
+    out[rv_idx] <- (out[rv_idx] /
+      ov2[match(partable$lhs[rv_idx], ov_names)])
 
     # covariances ov
     # three types:
     # - only lhs is OV (and fixed.x = FALSE)
     # - only rhs is OV (and fixed.x = FALSE)
     # - both lhs and rhs are OV (regular case)
-    if (cov.std) {
-      if (!is.complex(est[rv.idx])) {
-        RV <- sqrt(abs(est[rv.idx]))
+    if (cov_std) {
+      if (!is.complex(est[rv_idx])) {
+        rv <- sqrt(abs(est[rv_idx]))
       } else {
-        RV <- sqrt(est[rv.idx])
+        rv <- sqrt(est[rv_idx])
       }
-      rv.names <- partable$lhs[rv.idx]
+      rv_names <- partable$lhs[rv_idx]
     }
 
     # left
-    idx.lhs <- which(partable$op == "~~" &
-      !(partable$lhs %in% lv.names) &
+    idx_lhs <- which(partable$op == "~~" &
+      !(partable$lhs %in% lv_names) &
       partable$lhs != partable$rhs &
       partable$block == g)
-    if (length(idx.lhs) > 0L) {
-      if (cov.std == FALSE) {
-        out[idx.lhs] <-
-          (out[idx.lhs] / OV[match(partable$lhs[idx.lhs], ov.names)])
+    if (length(idx_lhs) > 0L) {
+      if (cov_std == FALSE) {
+        out[idx_lhs] <-
+          (out[idx_lhs] / ov[match(partable$lhs[idx_lhs], ov_names)])
       } else {
-        out[idx.lhs] <-
-          (out[idx.lhs] / RV[match(partable$lhs[idx.lhs], rv.names)])
+        out[idx_lhs] <-
+          (out[idx_lhs] / rv[match(partable$lhs[idx_lhs], rv_names)])
       }
     }
 
     # right
-    idx.rhs <- which(partable$op == "~~" &
-      !(partable$rhs %in% lv.names) &
+    idx_rhs <- which(partable$op == "~~" &
+      !(partable$rhs %in% lv_names) &
       partable$lhs != partable$rhs &
       partable$block == g)
-    if (length(idx.rhs) > 0L) {
-      if (cov.std == FALSE) {
-        out[idx.rhs] <-
-          (out[idx.rhs] / OV[match(partable$rhs[idx.rhs], ov.names)])
+    if (length(idx_rhs) > 0L) {
+      if (cov_std == FALSE) {
+        out[idx_rhs] <-
+          (out[idx_rhs] / ov[match(partable$rhs[idx_rhs], ov_names)])
       } else {
-        out[idx.rhs] <-
-          (out[idx.rhs] / RV[match(partable$rhs[idx.rhs], rv.names)])
+        out[idx_rhs] <-
+          (out[idx_rhs] / rv[match(partable$rhs[idx_rhs], rv_names)])
       }
     }
 
@@ -589,21 +595,21 @@ lav_standardize_all <- function(lavobject = NULL,
     #             partable$block == g)
 
     # 4a. "~1" ov
-    idx <- which(partable$op == "~1" & !(partable$lhs %in% lv.names) &
+    idx <- which(partable$op == "~1" & !(partable$lhs %in% lv_names) &
       partable$block == g)
-    out[idx] <- out[idx] / OV[match(partable$lhs[idx], ov.names)]
+    out[idx] <- out[idx] / ov[match(partable$lhs[idx], ov_names)]
 
     # 4b. "~1" lv
     # idx <- which(partable$op == "~1" & partable$lhs %in% lv.names &
     #             partable$block == g)
 
     # 4c. "|" thresholds
-    idx <- which(partable$op == "|" & !(partable$lhs %in% lv.names) &
+    idx <- which(partable$op == "|" & !(partable$lhs %in% lv_names) &
       partable$block == g)
-    out[idx] <- out[idx] / OV[match(partable$lhs[idx], ov.names)]
+    out[idx] <- out[idx] / ov[match(partable$lhs[idx], ov_names)]
 
     # 4d. "~*~" scales
-    idx <- which(partable$op == "~*~" & !(partable$lhs %in% lv.names) &
+    idx <- which(partable$op == "~*~" & !(partable$lhs %in% lv_names) &
       partable$block == g)
     out[idx] <- 1.0
   }
@@ -634,17 +640,18 @@ lav_standardize_all <- function(lavobject = NULL,
 
 
 lav_standardize_all_nox <- function(lavobject = NULL,
-                                    partable = NULL, est = NULL, est.std = NULL,
-                                    GLIST = NULL, cov.std = TRUE, ov.var = NULL,
-                                    lv.var = NULL,
+                                    partable = NULL, est = NULL, est_std = NULL,
+                                    glist = NULL, cov_std = TRUE, ov_var = NULL,
+                                    lv_var = NULL,
                                     lavmodel = NULL, lavpartable = NULL,
-                                    cov.x = NULL) {
+                                    cov_x = NULL) {
   if (is.null(lavobject)) {
     stopifnot(!is.null(lavmodel))
     stopifnot(!is.null(lavpartable))
     if (is.null(est)) {
       if (!is.null(lavpartable$est)) {
-        est <- lavpartable$est # if this changes, tag @TDJorgensen in commit message
+        est <- lavpartable$est
+                   # if this changes, tag @TDJorgensen in commit message
       } else {
         lav_msg_stop(gettext("could not find `est' in lavpartable"))
       }
@@ -656,22 +663,23 @@ lav_standardize_all_nox <- function(lavobject = NULL,
       est <- lav_object_inspect_est(lavobject)
     }
     if (lavmodel@conditional.x) {
-      if (is.null(cov.x)) {
+      if (is.null(cov_x)) {
         # try SampleStats slot
         # if("SampleStats" %in% slotNames(lavobject)) {
         #    cov.x <- lavobject@SampleStats@cov.x
         if (!is.null(lavobject@implied$cov.x[[1]])) {
-          cov.x <- lavobject@implied$cov.x # if this changes, tag @TDJorgensen in commit message
+          cov_x <- lavobject@implied$cov.x
+                      # if this changes, tag @TDJorgensen in commit message
         } else {
           # perhaps lavaanList object
           # extract it from GLIST per block
-          cov.x <- vector("list", length = lavmodel@nblocks)
+          cov_x <- vector("list", length = lavmodel@nblocks)
           for (b in seq_len(lavmodel@nblocks)) {
             # which mm belong to block b?
-            mm.in.block <- (seq_len(lavmodel@nmat[b]) +
+            mm_in_block <- (seq_len(lavmodel@nmat[b]) +
               cumsum(c(0, lavmodel@nmat))[b])
-            MLIST <- lavmodel@GLIST[mm.in.block]
-            cov.x[[b]] <- MLIST[["cov.x"]]
+            mlist <- lavmodel@GLIST[mm_in_block]
+            cov_x[[b]] <- mlist[["cov.x"]]
           }
         }
       }
@@ -681,68 +689,68 @@ lav_standardize_all_nox <- function(lavobject = NULL,
   if (is.null(partable)) {
     partable <- lavpartable
   }
-  if (is.null(GLIST)) {
-    GLIST <- lavmodel@GLIST
+  if (is.null(glist)) {
+    glist <- lavmodel@GLIST
   }
-  if (is.null(est.std)) {
-    est.std <- lav_standardize_lv(
+  if (is.null(est_std)) {
+    est_std <- lav_standardize_lv(
       lavobject = lavobject,
-      partable = partable, est = est, GLIST = GLIST,
-      cov.std = cov.std, lv.var = lv.var, lavmodel = lavmodel,
+      partable = partable, est = est, glist = glist,
+      cov_std = cov_std, lv_var = lv_var, lavmodel = lavmodel,
       lavpartable = lavpartable
     )
   }
 
 
-  out <- est.std
-  N <- length(est.std)
-  stopifnot(N == length(partable$lhs))
+  out <- est_std
+  n <- length(est_std)
+  stopifnot(n == length(partable$lhs))
 
-  VY <- lav_model_vy(
-    lavmodel = lavmodel, glist = GLIST,
+  vy <- lav_model_vy(
+    lavmodel = lavmodel, glist = glist,
     diagonal_only = TRUE
   )
 
 
   for (g in 1:lavmodel@nblocks) {
-    ov.names <- lav_partable_vnames(lavpartable, "ov", block = g)
-    ov.names.x <- lav_partable_vnames(lavpartable, "ov.x", block = g)
-    ov.names.nox <- lav_partable_vnames(lavpartable, "ov.nox", block = g)
-    lv.names <- lav_partable_vnames(lavpartable, "lv", block = g)
+    ov_names <- lav_partable_vnames(lavpartable, "ov", block = g)
+    ov_names_x <- lav_partable_vnames(lavpartable, "ov.x", block = g)
+    ov_names_nox <- lav_partable_vnames(lavpartable, "ov.nox", block = g)
+    lv_names <- lav_partable_vnames(lavpartable, "lv", block = g)
 
-    if (is.null(ov.var)) {
-      OV2 <- VY[[g]]
+    if (is.null(ov_var)) {
+      ov2 <- vy[[g]]
       # replace zero values by NA (but keep negative values)
-      zero.idx <- which(abs(OV2) < .Machine$double.eps)
-      if (length(zero.idx) > 0L) {
-        OV2[zero.idx] <- as.numeric(NA)
+      zero_idx <- which(abs(ov2) < .Machine$double.eps)
+      if (length(zero_idx) > 0L) {
+        ov2[zero_idx] <- as.numeric(NA)
       }
 
       # replace negative values by NA (for sqrt)
-      tmp.OV2 <- OV2
-      neg.idx <- which(tmp.OV2 < 0)
-      if (length(neg.idx) > 0L) {
-        tmp.OV2[neg.idx] <- as.numeric(NA)
+      tmp_ov2 <- ov2
+      neg_idx <- which(tmp_ov2 < 0)
+      if (length(neg_idx) > 0L) {
+        tmp_ov2[neg_idx] <- as.numeric(NA)
       }
-      OV <- sqrt(tmp.OV2)
+      ov <- sqrt(tmp_ov2)
     } else {
-      OV2 <- ov.var[[g]]
-      OV <- sqrt(OV2)
+      ov2 <- ov_var[[g]]
+      ov <- sqrt(ov2)
     }
 
 
     if (lavmodel@conditional.x) {
       # extend OV with ov.names.x
-      ov.names.x <- lav_partable_vnames(lavpartable, "ov.x", block = g)
-      ov.names <- c(ov.names.nox, ov.names.x)
-      OV2 <- c(OV2, diag(cov.x[[g]]))
-      OV <- c(OV, sqrt(diag(cov.x[[g]])))
+      ov_names_x <- lav_partable_vnames(lavpartable, "ov.x", block = g)
+      ov_names <- c(ov_names_nox, ov_names_x)
+      ov2 <- c(ov2, diag(cov_x[[g]]))
+      ov <- c(ov, sqrt(diag(cov_x[[g]])))
     }
 
     # 1a. "=~" regular indicators
-    idx <- which(partable$op == "=~" & !(partable$rhs %in% lv.names) &
+    idx <- which(partable$op == "=~" & !(partable$rhs %in% lv_names) &
       partable$block == g)
-    out[idx] <- out[idx] / OV[match(partable$rhs[idx], ov.names)]
+    out[idx] <- out[idx] / ov[match(partable$rhs[idx], ov_names)]
 
     # 1b. "=~" regular higher-order lv indicators
 
@@ -753,14 +761,14 @@ lav_standardize_all_nox <- function(lavobject = NULL,
 
     # 2. "~" regressions (and "<~")
     idx <- which((partable$op == "~" | partable$op == "<~") &
-      partable$lhs %in% ov.names &
+      partable$lhs %in% ov_names &
       partable$block == g)
-    out[idx] <- out[idx] / OV[match(partable$lhs[idx], ov.names)]
+    out[idx] <- out[idx] / ov[match(partable$lhs[idx], ov_names)]
 
     idx <- which((partable$op == "~" | partable$op == "<~") &
-      partable$rhs %in% ov.names.nox &
+      partable$rhs %in% ov_names_nox &
       partable$block == g)
-    out[idx] <- out[idx] * OV[match(partable$rhs[idx], ov.names.nox)]
+    out[idx] <- out[idx] * ov[match(partable$rhs[idx], ov_names_nox)]
 
     # 3a. "~~" ov
     # ATTENTION: in Mplus 4.1, the off-diagonal residual covariances
@@ -771,58 +779,58 @@ lav_standardize_all_nox <- function(lavobject = NULL,
     #            elements are the 'THETA' diagonal elements!!
 
     # variances
-    rv.idx <- which(partable$op == "~~" & !(partable$lhs %in% lv.names) &
-      !(partable$lhs %in% ov.names.x) &
+    rv_idx <- which(partable$op == "~~" & !(partable$lhs %in% lv_names) &
+      !(partable$lhs %in% ov_names_x) &
       partable$lhs == partable$rhs &
       partable$block == g)
     # out[rv.idx] <- ( out[rv.idx] / OV[ match(partable$lhs[rv.idx], ov.names) ]
     #                            / OV[ match(partable$rhs[rv.idx], ov.names) ] )
-    out[rv.idx] <- (out[rv.idx] /
-      OV2[match(partable$lhs[rv.idx], ov.names)])
+    out[rv_idx] <- (out[rv_idx] /
+      ov2[match(partable$lhs[rv_idx], ov_names)])
 
     # covariances ov
     # three types:
     # - only lhs is OV (and fixed.x = FALSE)
     # - only rhs is OV (and fixed.x = FALSE)
     # - both lhs and rhs are OV (regular case)
-    if (cov.std) {
-      if (!is.complex(est[rv.idx])) {
-        RV <- sqrt(abs(est[rv.idx]))
+    if (cov_std) {
+      if (!is.complex(est[rv_idx])) {
+        rv <- sqrt(abs(est[rv_idx]))
       } else {
-        RV <- sqrt(est[rv.idx])
+        rv <- sqrt(est[rv_idx])
       }
-      rv.names <- partable$lhs[rv.idx]
+      rv_names <- partable$lhs[rv_idx]
     }
 
     # left
-    idx.lhs <- which(partable$op == "~~" &
-      !(partable$lhs %in% lv.names) &
-      !(partable$lhs %in% ov.names.x) &
+    idx_lhs <- which(partable$op == "~~" &
+      !(partable$lhs %in% lv_names) &
+      !(partable$lhs %in% ov_names_x) &
       partable$lhs != partable$rhs &
       partable$block == g)
-    if (length(idx.lhs) > 0L) {
-      if (cov.std == FALSE) {
-        out[idx.lhs] <-
-          (out[idx.lhs] / OV[match(partable$lhs[idx.lhs], ov.names)])
+    if (length(idx_lhs) > 0L) {
+      if (cov_std == FALSE) {
+        out[idx_lhs] <-
+          (out[idx_lhs] / ov[match(partable$lhs[idx_lhs], ov_names)])
       } else {
-        out[idx.lhs] <-
-          (out[idx.lhs] / RV[match(partable$lhs[idx.lhs], rv.names)])
+        out[idx_lhs] <-
+          (out[idx_lhs] / rv[match(partable$lhs[idx_lhs], rv_names)])
       }
     }
 
     # right
-    idx.rhs <- which(partable$op == "~~" &
-      !(partable$rhs %in% lv.names) &
-      !(partable$rhs %in% ov.names.x) &
+    idx_rhs <- which(partable$op == "~~" &
+      !(partable$rhs %in% lv_names) &
+      !(partable$rhs %in% ov_names_x) &
       partable$lhs != partable$rhs &
       partable$block == g)
-    if (length(idx.rhs) > 0L) {
-      if (cov.std == FALSE) {
-        out[idx.rhs] <-
-          (out[idx.rhs] / OV[match(partable$rhs[idx.rhs], ov.names)])
+    if (length(idx_rhs) > 0L) {
+      if (cov_std == FALSE) {
+        out[idx_rhs] <-
+          (out[idx_rhs] / ov[match(partable$rhs[idx_rhs], ov_names)])
       } else {
-        out[idx.rhs] <-
-          (out[idx.rhs] / RV[match(partable$rhs[idx.rhs], rv.names)])
+        out[idx_rhs] <-
+          (out[idx_rhs] / rv[match(partable$rhs[idx_rhs], rv_names)])
       }
     }
 
@@ -831,22 +839,22 @@ lav_standardize_all_nox <- function(lavobject = NULL,
     #             partable$block == g)
 
     # 4a. "~1" ov
-    idx <- which(partable$op == "~1" & !(partable$lhs %in% lv.names) &
-      !(partable$lhs %in% ov.names.x) &
+    idx <- which(partable$op == "~1" & !(partable$lhs %in% lv_names) &
+      !(partable$lhs %in% ov_names_x) &
       partable$block == g)
-    out[idx] <- out[idx] / OV[match(partable$lhs[idx], ov.names)]
+    out[idx] <- out[idx] / ov[match(partable$lhs[idx], ov_names)]
 
     # 4b. "~1" lv
     # idx <- which(partable$op == "~1" & partable$lhs %in% lv.names &
     #             partable$block == g)
 
     # 4c. "|" thresholds
-    idx <- which(partable$op == "|" & !(partable$lhs %in% lv.names) &
+    idx <- which(partable$op == "|" & !(partable$lhs %in% lv_names) &
       partable$block == g)
-    out[idx] <- out[idx] / OV[match(partable$lhs[idx], ov.names)]
+    out[idx] <- out[idx] / ov[match(partable$lhs[idx], ov_names)]
 
     # 4d. "~*~" scales
-    idx <- which(partable$op == "~*~" & !(partable$lhs %in% lv.names) &
+    idx <- which(partable$op == "~*~" & !(partable$lhs %in% lv_names) &
       partable$block == g)
     out[idx] <- 1.0
   }
@@ -875,7 +883,7 @@ lav_standardize_all_nox <- function(lavobject = NULL,
   out
 }
 
-lav_unstandardize_ov <- function(partable, ov.var = NULL, cov.std = TRUE) {
+lav_unstandardize_ov <- function(partable, ov_var = NULL, cov_std = TRUE) {
   # check if ustart is missing; if so, look for est
   if (is.null(partable$ustart)) {
     partable$ustart <- partable$est
@@ -888,28 +896,28 @@ lav_unstandardize_ov <- function(partable, ov.var = NULL, cov.std = TRUE) {
 
   stopifnot(!any(is.na(partable$ustart)))
   est <- out <- partable$ustart
-  N <- length(est)
+  # n <- length(est)
 
   # nblocks
   nblocks <- lav_partable_nblocks(partable)
 
   # if ov.var is NOT a list, make a list
-  if (!is.list(ov.var)) {
-    tmp <- ov.var
-    ov.var <- vector("list", length = nblocks)
-    ov.var[1:nblocks] <- list(tmp)
+  if (!is.list(ov_var)) {
+    tmp <- ov_var
+    ov_var <- vector("list", length = nblocks)
+    ov_var[1:nblocks] <- list(tmp)
   }
 
   for (g in 1:nblocks) {
-    ov.names <- lav_partable_vnames(partable, "ov", block = g) # not user
-    lv.names <- lav_partable_vnames(partable, "lv", block = g)
+    ov_names <- lav_partable_vnames(partable, "ov", block = g) # not user
+    lv_names <- lav_partable_vnames(partable, "lv", block = g)
 
-    OV <- sqrt(ov.var[[g]])
+    ov <- sqrt(ov_var[[g]])
 
     # 1a. "=~" regular indicators
-    idx <- which(partable$op == "=~" & !(partable$rhs %in% lv.names) &
+    idx <- which(partable$op == "=~" & !(partable$rhs %in% lv_names) &
       partable$block == g)
-    out[idx] <- out[idx] * OV[match(partable$rhs[idx], ov.names)]
+    out[idx] <- out[idx] * ov[match(partable$rhs[idx], ov_names)]
 
     # 1b. "=~" regular higher-order lv indicators
 
@@ -920,14 +928,14 @@ lav_unstandardize_ov <- function(partable, ov.var = NULL, cov.std = TRUE) {
 
     # 2. "~" regressions (and "<~")
     idx <- which((partable$op == "~" | partable$op == "<~") &
-      partable$lhs %in% ov.names &
+      partable$lhs %in% ov_names &
       partable$block == g)
-    out[idx] <- out[idx] * OV[match(partable$lhs[idx], ov.names)]
+    out[idx] <- out[idx] * ov[match(partable$lhs[idx], ov_names)]
 
     idx <- which((partable$op == "~" | partable$op == "<~") &
-      partable$rhs %in% ov.names &
+      partable$rhs %in% ov_names &
       partable$block == g)
-    out[idx] <- out[idx] / OV[match(partable$rhs[idx], ov.names)]
+    out[idx] <- out[idx] / ov[match(partable$rhs[idx], ov_names)]
 
     # 3a. "~~" ov
     # ATTENTION: in Mplus 4.1, the off-diagonal residual covariances
@@ -938,29 +946,29 @@ lav_unstandardize_ov <- function(partable, ov.var = NULL, cov.std = TRUE) {
     #            elements are the 'THETA' diagonal elements!!
 
     # variances
-    rv.idx <- which(partable$op == "~~" & !(partable$lhs %in% lv.names) &
+    rv_idx <- which(partable$op == "~~" & !(partable$lhs %in% lv_names) &
       partable$lhs == partable$rhs &
       partable$block == g)
-    out[rv.idx] <- (out[rv.idx] * OV[match(partable$lhs[rv.idx], ov.names)]
-      * OV[match(partable$rhs[rv.idx], ov.names)])
+    out[rv_idx] <- (out[rv_idx] * ov[match(partable$lhs[rv_idx], ov_names)]
+      * ov[match(partable$rhs[rv_idx], ov_names)])
 
     # covariances
-    idx <- which(partable$op == "~~" & !(partable$lhs %in% lv.names) &
+    idx <- which(partable$op == "~~" & !(partable$lhs %in% lv_names) &
       partable$lhs != partable$rhs &
       partable$block == g)
     if (length(idx) > 0L) {
-      if (cov.std == FALSE) {
-        out[idx] <- (out[idx] * OV[match(partable$lhs[idx], ov.names)]
-          * OV[match(partable$rhs[idx], ov.names)])
+      if (cov_std == FALSE) {
+        out[idx] <- (out[idx] * ov[match(partable$lhs[idx], ov_names)]
+          * ov[match(partable$rhs[idx], ov_names)])
       } else {
-        if (!is.complex(out[rv.idx])) {
-          RV <- sqrt(abs(out[rv.idx]))
+        if (!is.complex(out[rv_idx])) {
+          rv <- sqrt(abs(out[rv_idx]))
         } else {
-          RV <- sqrt(out[rv.idx])
+          rv <- sqrt(out[rv_idx])
         }
-        rv.names <- partable$lhs[rv.idx]
-        out[idx] <- (out[idx] * RV[match(partable$lhs[idx], rv.names)]
-          * RV[match(partable$rhs[idx], rv.names)])
+        rv_names <- partable$lhs[rv_idx]
+        out[idx] <- (out[idx] * rv[match(partable$lhs[idx], rv_names)]
+          * rv[match(partable$rhs[idx], rv_names)])
       }
     }
 
@@ -969,9 +977,9 @@ lav_unstandardize_ov <- function(partable, ov.var = NULL, cov.std = TRUE) {
     #             partable$block == g)
 
     # 4a. "~1" ov
-    idx <- which(partable$op == "~1" & !(partable$lhs %in% lv.names) &
+    idx <- which(partable$op == "~1" & !(partable$lhs %in% lv_names) &
       partable$block == g)
-    out[idx] <- out[idx] * OV[match(partable$lhs[idx], ov.names)]
+    out[idx] <- out[idx] * ov[match(partable$lhs[idx], ov_names)]
 
     # 4b. "~1" lv
     # idx <- which(partable$op == "~1" & partable$lhs %in% lv.names &
