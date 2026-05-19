@@ -6,7 +6,7 @@ lav_samplestats_step1 <- function(y,
                                   ov_names_x = character(0L),
                                   exo = NULL,
                                   scores_flag = TRUE, # scores?
-                                  allow_empty_cell = TRUE, 
+                                  allow_empty_cell = TRUE,
                                            # allow empty categories?
                                   group = 1L) { # for error message
 

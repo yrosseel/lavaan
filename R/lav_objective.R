@@ -30,7 +30,7 @@ lav_model_objective_ml <- function(sigma_hat = NULL, mu_hat = NULL,
 }
 
 # fitting function for standard ML
-lav_model_objective_ml_res <- function(sigma_hat = NULL, mu_hat = NULL, 
+lav_model_objective_ml_res <- function(sigma_hat = NULL, mu_hat = NULL,
                                        pi0 = NULL, res_cov = NULL,
                                        res_int = NULL, res_slopes = NULL,
                                        res_cov_log_det = NULL,

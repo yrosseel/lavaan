@@ -146,7 +146,7 @@ lav_partable_complete <- function(partable = NULL, start = TRUE) { # nolint
   # add start column
   if (start) {
     if (is.null(partable$start)) {
-      partable$start <- lav_start(start.method = "simple",
+      partable$start <- lav_start(start_method = "simple",
         lavpartable = partable)
     }
   }

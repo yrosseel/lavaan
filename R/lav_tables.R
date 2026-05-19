@@ -20,7 +20,7 @@
 # - 8 Nov 2013:   - skip empty cells for G2, instead of adding 0.5 to obs
 # - 7 Feb 2016:   - take care of conditional.x = TRUE
 
-lavTables <- function(object,
+lavTables <- function(object,                         # nolint start
                       # what type of table?
                       dimension = 2L,
                       type = "cells",
@@ -37,7 +37,7 @@ lavTables <- function(object,
                       # alpha.adj    = FALSE,
                       # output format
                       output = "data.frame",
-                      patternAsString = TRUE) {
+                      patternAsString = TRUE) {      # nolint end
   # check object
   object <- lav_object_check_version(object)
 
@@ -65,7 +65,7 @@ lavTables <- function(object,
     out <- lav_tables_pattern(
       lavobject = lavobject, lavdata = lavdata,
       statistic = statistic,
-      patternAsString = patternAsString
+      pattern_as_string = patternAsString
     )
     # output format
     if (output == "data.frame") {
@@ -113,9 +113,9 @@ lavTables <- function(object,
       lavobject = lavobject,
       lavdata = lavdata,
       statistic = statistic,
-      G2.min = G2.min,
-      X2.min = X2.min,
-      p.value = p.value
+      g2_min = G2.min,
+      x2_min = X2.min,
+      p_value = p.value
     )
     # output format
     if (output == "data.frame") {
@@ -178,10 +178,10 @@ lavTables <- function(object,
 
 
 lav_tables_pattern <- function(lavobject = NULL, lavdata = NULL,
-                               statistic = NULL, patternAsString = TRUE) {
+                               statistic = NULL, pattern_as_string = TRUE) {
   # this only works if we have 'categorical' variables
-  cat.idx <- which(lavdata@ov$type %in% c("ordered", "factor"))
-  if (length(cat.idx) == 0L) {
+  cat_idx <- which(lavdata@ov$type %in% c("ordered", "factor"))
+  if (length(cat_idx) == 0L) {
     lav_msg_warn(gettext("no categorical variables are found"))
     return(data.frame(
       pattern = character(0L), nobs = integer(0L),
@@ -190,7 +190,7 @@ lav_tables_pattern <- function(lavobject = NULL, lavdata = NULL,
   }
   # no support yet for mixture of endogenous ordered + numeric variables
   if (!is.null(lavobject) &&
-    length(lav_object_vnames(lavobject, "ov.nox")) > length(cat.idx)) {
+    length(lav_object_vnames(lavobject, "ov.nox")) > length(cat_idx)) {
     lav_msg_warn(gettext("some endogenous variables are not categorical"))
     return(data.frame(
       pattern = character(0L), nobs = integer(0L),
@@ -218,8 +218,8 @@ lav_tables_pattern <- function(lavobject = NULL, lavdata = NULL,
   # first, create basic table with response patterns
   for (g in 1:lavdata@ngroups) {
     pat <- lav_data_resp_patterns(lavdata@X[[g]])$pat
-    obs.freq <- as.integer(rownames(pat))
-    if (patternAsString) {
+    obs_freq <- as.integer(rownames(pat))
+    if (pattern_as_string) {
       pat <- data.frame(
         pattern = apply(pat, 1, paste, collapse = ""),
         stringsAsFactors = FALSE
@@ -232,9 +232,9 @@ lav_tables_pattern <- function(lavobject = NULL, lavdata = NULL,
     if (lavdata@ngroups > 1L) {
       pat$group <- rep(g, nrow(pat))
     }
-    NOBS <- sum(obs.freq)
-    pat$nobs <- rep(NOBS, nrow(pat))
-    pat$obs.freq <- obs.freq
+    nobs_1 <- sum(obs_freq)
+    pat$nobs <- rep(nobs_1, nrow(pat))
+    pat$obs.freq <- obs_freq
     rownames(pat) <- NULL
     if (g == 1L) {
       out <- pat
@@ -250,12 +250,12 @@ lav_tables_pattern <- function(lavobject = NULL, lavdata = NULL,
     lav_msg_warn(gettext(
       "limited information used for thresholds and correlations;
       but X2/G2 assumes full information"))
-    PI <- lav_tables_resp_pi(
+    pi0 <- lav_tables_resp_pi(
       lavobject = lavobject, lavdata = lavdata,
       est = "h1"
     )
 
-    out$est.prop.un <- unlist(PI)
+    out$est.prop.un <- unlist(pi0)
     if ("G2.un" %in% statistic) {
       out$G2.un <- lav_tables_stat_g2(
         out$obs.prop, out$est.prop.un,
@@ -282,12 +282,12 @@ lav_tables_pattern <- function(lavobject = NULL, lavdata = NULL,
         "estimator %s is not supported.", lavobject@Options$estimator))
     }
 
-    PI <- lav_tables_resp_pi(
+    pi0 <- lav_tables_resp_pi(
       lavobject = lavobject, lavdata = lavdata,
       est = "h0"
     )
 
-    out$est.prop <- unlist(PI)
+    out$est.prop <- unlist(pi0)
     if ("G2" %in% statistic) {
       out$G2 <- lav_tables_stat_g2(
         out$obs.prop, out$est.prop,
@@ -312,8 +312,8 @@ lav_tables_pattern <- function(lavobject = NULL, lavdata = NULL,
 lav_tables_pairwise_cells <- function(lavobject = NULL, lavdata = NULL,
                                       statistic = character(0L)) {
   # this only works if we have at least two 'categorical' variables
-  cat.idx <- which(lavdata@ov$type %in% c("ordered", "factor"))
-  if (length(cat.idx) == 0L) {
+  cat_idx <- which(lavdata@ov$type %in% c("ordered", "factor"))
+  if (length(cat_idx) == 0L) {
     lav_msg_warn(gettext("no categorical variables are found"))
     return(data.frame(
       id = integer(0L), lhs = character(0L), rhs = character(0L),
@@ -321,7 +321,7 @@ lav_tables_pairwise_cells <- function(lavobject = NULL, lavdata = NULL,
       obs.freq = integer(0L), obs.prop = numeric(0L)
     ))
   }
-  if (length(cat.idx) == 1L) {
+  if (length(cat_idx) == 1L) {
     lav_msg_warn(gettext("at least two categorical variables are needed"))
     return(data.frame(
       id = integer(0L), lhs = character(0L), rhs = character(0L),
@@ -352,16 +352,16 @@ lav_tables_pairwise_cells <- function(lavobject = NULL, lavdata = NULL,
   # initial table, observed cell frequencies
   out <- lav_tables_pairwise_freq_cell(
     lavdata = lavdata,
-    as.data.frame. = TRUE
+    as_data_frame = TRUE
   )
   out$obs.prop <- out$obs.freq / out$nobs
 
   if (any(c("cor.un", "th.un", "X2.un", "G2.un") %in% statistic)) {
-    PI <- lav_tables_pairwise_sample_pi(
+    pi0 <- lav_tables_pairwise_sample_pi(
       lavobject = lavobject,
       lavdata = lavdata
     )
-    out$est.prop.un <- unlist(PI)
+    out$est.prop.un <- unlist(pi0)
     if ("G2.un" %in% statistic) {
       out$G2.un <- lav_tables_stat_g2(
         out$obs.prop, out$est.prop.un,
@@ -376,16 +376,16 @@ lav_tables_pairwise_cells <- function(lavobject = NULL, lavdata = NULL,
     }
 
     if ("cor.un" %in% statistic) {
-      COR <- attr(PI, "COR")
-      cor.all <- unlist(lapply(COR, function(x) {
+      cor_1 <- attr(pi0, "COR")
+      cor_all <- unlist(lapply(cor_1, function(x) {
         x[lower.tri(x, diag = FALSE)]
       }))
-      out$cor.un <- cor.all[out$id]
+      out$cor.un <- cor_all[out$id]
     }
   }
   if (any(c("cor", "th", "X2", "G2") %in% statistic)) {
-    PI <- lav_tables_pairwise_model_pi(lavobject = lavobject)
-    out$est.prop <- unlist(PI)
+    pi0 <- lav_tables_pairwise_model_pi(lavobject = lavobject)
+    out$est.prop <- unlist(pi0)
     if ("G2" %in% statistic) {
       out$G2 <- lav_tables_stat_g2(
         out$obs.prop, out$est.prop,
@@ -399,11 +399,11 @@ lav_tables_pairwise_cells <- function(lavobject = NULL, lavdata = NULL,
       )
     }
     if ("cor" %in% statistic) {
-      COR <- attr(PI, "COR")
-      cor.all <- unlist(lapply(COR, function(x) {
+      cor_1 <- attr(pi0, "COR")
+      cor_all <- unlist(lapply(cor_1, function(x) {
         x[lower.tri(x, diag = FALSE)]
       }))
-      out$cor <- cor.all[out$id]
+      out$cor <- cor_all[out$id]
     }
   }
 
@@ -432,9 +432,9 @@ lav_tables_stat_x2 <- function(obs_prop = NULL, est_prop = NULL, nobs = NULL) {
 # pairwise tables, rows = tables
 lav_tables_pairwise_table <- function(lavobject = NULL, lavdata = NULL,
                                       statistic = character(0L),
-                                      G2.min = 3.0,
-                                      X2.min = 3.0,
-                                      p.value = FALSE) {
+                                      g2_min = 3.0,
+                                      x2_min = 3.0,
+                                      p_value = FALSE) {
   # default statistics
   if (!is.null(lavobject)) {
     if (length(statistic) == 1L && statistic == "default") {
@@ -478,128 +478,128 @@ lav_tables_pairwise_table <- function(lavobject = NULL, lavdata = NULL,
   # names(out) <- c("id", "lhs", "rhs")
 
   # collapse approach
-  stat.cell <- character(0)
+  stat_cell <- character(0)
   if (any(c("G2", "G2.average", "G2.plarge", "G2.nlarge") %in% statistic)) {
-    stat.cell <- c(stat.cell, "G2")
+    stat_cell <- c(stat_cell, "G2")
   }
   if (any(c("X2", "X2.average", "X2.plarge", "X2.nlarge") %in% statistic)) {
-    stat.cell <- c(stat.cell, "X2")
+    stat_cell <- c(stat_cell, "X2")
   }
   if ("G2" %in% statistic || "RMSEA" %in% statistic) {
-    stat.cell <- c(stat.cell, "G2")
+    stat_cell <- c(stat_cell, "G2")
   }
   if ("X2.un" %in% statistic) {
-    stat.cell <- c(stat.cell, "X2.un")
+    stat_cell <- c(stat_cell, "X2.un")
   }
   if ("G2.un" %in% statistic || "RMSEA.un" %in% statistic) {
-    stat.cell <- c(stat.cell, "G2.un")
+    stat_cell <- c(stat_cell, "G2.un")
   }
   if ("cor.un" %in% statistic) {
-    stat.cell <- c(stat.cell, "cor.un")
+    stat_cell <- c(stat_cell, "cor.un")
   }
   if ("cor" %in% statistic) {
-    stat.cell <- c(stat.cell, "cor")
+    stat_cell <- c(stat_cell, "cor")
   }
 
   # get table with table cells
-  out.cell <- lav_tables_pairwise_cells(
+  out_cell <- lav_tables_pairwise_cells(
     lavobject = lavobject,
     lavdata = lavdata,
-    statistic = stat.cell
+    statistic = stat_cell
   )
   # only 1 row per table
-  row.idx <- which(!duplicated(out.cell$id))
-  if (is.null(out.cell$group)) {
-    out <- out.cell[row.idx, c("lhs", "rhs", "nobs"), drop = FALSE]
+  row_idx <- which(!duplicated(out_cell$id))
+  if (is.null(out_cell$group)) {
+    out <- out_cell[row_idx, c("lhs", "rhs", "nobs"), drop = FALSE]
   } else {
-    out <- out.cell[row.idx, c("lhs", "rhs", "group", "nobs"), drop = FALSE]
+    out <- out_cell[row_idx, c("lhs", "rhs", "group", "nobs"), drop = FALSE]
   }
 
   # df
   if (length(statistic) > 0L) {
-    nrow <- tapply(out.cell$row, INDEX = out.cell$id, FUN = max)
-    ncol <- tapply(out.cell$col, INDEX = out.cell$id, FUN = max)
+    nrow <- tapply(out_cell$row, INDEX = out_cell$id, FUN = max)
+    ncol <- tapply(out_cell$col, INDEX = out_cell$id, FUN = max)
     out$df <- nrow * ncol - nrow - ncol
   }
 
   # cor
   if ("cor" %in% statistic) {
-    out$cor <- out.cell[row.idx, "cor"]
+    out$cor <- out_cell[row_idx, "cor"]
   }
 
   # cor.un
   if ("cor.un" %in% statistic) {
-    out$cor.un <- out.cell[row.idx, "cor.un"]
+    out$cor.un <- out_cell[row_idx, "cor.un"]
   }
 
   # X2
   if ("X2" %in% statistic) {
-    out$X2 <- tapply(out.cell$X2,
-      INDEX = out.cell$id, FUN = sum,
+    out$X2 <- tapply(out_cell$X2,
+      INDEX = out_cell$id, FUN = sum,
       na.rm = TRUE
     )
-    if (p.value) {
+    if (p_value) {
       out$X2.pval <- pchisq(out$X2, df = out$df, lower.tail = FALSE)
     }
   }
   if ("X2.un" %in% statistic) {
-    out$X2.un <- tapply(out.cell$X2.un,
-      INDEX = out.cell$id, FUN = sum,
+    out$X2.un <- tapply(out_cell$X2.un,
+      INDEX = out_cell$id, FUN = sum,
       na.rm = TRUE
     )
-    if (p.value) {
+    if (p_value) {
       out$X2.un.pval <- pchisq(out$X2.un, df = out$df, lower.tail = FALSE)
     }
   }
 
   # G2
   if ("G2" %in% statistic) {
-    out$G2 <- tapply(out.cell$G2,
-      INDEX = out.cell$id, FUN = sum,
+    out$G2 <- tapply(out_cell$G2,
+      INDEX = out_cell$id, FUN = sum,
       na.rm = TRUE
     )
-    if (p.value) {
+    if (p_value) {
       out$G2.pval <- pchisq(out$G2, df = out$df, lower.tail = FALSE)
     }
   }
   if ("G2.un" %in% statistic) {
-    out$G2.un <- tapply(out.cell$G2.un,
-      INDEX = out.cell$id, FUN = sum,
+    out$G2.un <- tapply(out_cell$G2.un,
+      INDEX = out_cell$id, FUN = sum,
       na.rm = TRUE
     )
-    if (p.value) {
+    if (p_value) {
       out$G2.un.pval <- pchisq(out$G2.un, df = out$df, lower.tail = FALSE)
     }
   }
 
   if ("RMSEA" %in% statistic) {
-    G2 <- tapply(out.cell$G2, INDEX = out.cell$id, FUN = sum, na.rm = TRUE)
+    g2 <- tapply(out_cell$G2, INDEX = out_cell$id, FUN = sum, na.rm = TRUE)
     # note: there seems to be a mistake in Appendix 1 eqs 43/44 of Joreskog
     # SSI paper (2005) 'SEM with ordinal variables using LISREL'
     # 2*N*d should N*d
-    out$RMSEA <- sqrt(pmax(0, (G2 - out$df) / (out$nobs * out$df)))
-    if (p.value) {
+    out$RMSEA <- sqrt(pmax(0, (g2 - out$df) / (out$nobs * out$df)))
+    if (p_value) {
       # note: MUST use 1 - pchisq (instead of lower.tail = FALSE)
       # because for ncp > 80, routine only computes lower tail
-      out$RMSEA.pval <- 1.0 - pchisq(G2,
+      out$RMSEA.pval <- 1.0 - pchisq(g2,
         ncp = 0.1 * 0.1 * out$nobs * out$df,
         df = out$df, lower.tail = TRUE
       )
     }
   }
   if ("RMSEA.un" %in% statistic) {
-    G2 <- tapply(out.cell$G2.un,
-      INDEX = out.cell$id, FUN = sum,
+    g2 <- tapply(out_cell$G2.un,
+      INDEX = out_cell$id, FUN = sum,
       na.rm = TRUE
     )
     # note: there seems to be a mistake in Appendix 1 eqs 43/44 of Joreskog
     # SSI paper (2005) 'SEM with ordinal variables using LISREL'
     # 2*N*d should N*d
-    out$RMSEA.un <- sqrt(pmax(0, (G2 - out$df) / (out$nobs * out$df)))
-    if (p.value) {
+    out$RMSEA.un <- sqrt(pmax(0, (g2 - out$df) / (out$nobs * out$df)))
+    if (p_value) {
       # note: MUST use 1 - pchisq (instead of lower.tail = FALSE)
       # because for ncp > 80, routine only computes lower tail
-      out$RMSEA.un.pval <- 1.0 - pchisq(G2,
+      out$RMSEA.un.pval <- 1.0 - pchisq(g2,
         ncp = 0.1 * 0.1 * out$nobs * out$df,
         df = out$df, lower.tail = TRUE
       )
@@ -607,48 +607,48 @@ lav_tables_pairwise_table <- function(lavobject = NULL, lavdata = NULL,
   }
 
   if ("G2.average" %in% statistic) {
-    out$G2.average <- tapply(out.cell$G2,
-      INDEX = out.cell$id, FUN = mean,
+    out$G2.average <- tapply(out_cell$G2,
+      INDEX = out_cell$id, FUN = mean,
       na.rm = TRUE
     )
   }
 
   if ("G2.nlarge" %in% statistic) {
-    out$G2.min <- rep(G2.min, length(out$lhs))
-    out$G2.nlarge <- tapply(out.cell$G2,
-      INDEX = out.cell$id,
-      FUN = function(x) sum(x > G2.min, na.rm = TRUE)
+    out$G2.min <- rep(g2_min, length(out$lhs))
+    out$G2.nlarge <- tapply(out_cell$G2,
+      INDEX = out_cell$id,
+      FUN = function(x) sum(x > g2_min, na.rm = TRUE)
     )
   }
 
   if ("G2.plarge" %in% statistic) {
-    out$G2.min <- rep(G2.min, length(out$lhs))
-    out$G2.plarge <- tapply(out.cell$G2,
-      INDEX = out.cell$id,
-      FUN = function(x) sum(x > G2.min, na.rm = TRUE) / length(x)
+    out$G2.min <- rep(g2_min, length(out$lhs))
+    out$G2.plarge <- tapply(out_cell$G2,
+      INDEX = out_cell$id,
+      FUN = function(x) sum(x > g2_min, na.rm = TRUE) / length(x)
     )
   }
 
   if ("X2.average" %in% statistic) {
-    out$X2.average <- tapply(out.cell$X2,
-      INDEX = out.cell$id, FUN = mean,
+    out$X2.average <- tapply(out_cell$X2,
+      INDEX = out_cell$id, FUN = mean,
       na.rm = TRUE
     )
   }
 
   if ("X2.nlarge" %in% statistic) {
-    out$X2.min <- rep(X2.min, length(out$lhs))
-    out$X2.nlarge <- tapply(out.cell$X2,
-      INDEX = out.cell$id,
-      FUN = function(x) sum(x > X2.min, na.rm = TRUE)
+    out$X2.min <- rep(x2_min, length(out$lhs))
+    out$X2.nlarge <- tapply(out_cell$X2,
+      INDEX = out_cell$id,
+      FUN = function(x) sum(x > x2_min, na.rm = TRUE)
     )
   }
 
   if ("X2.plarge" %in% statistic) {
-    out$X2.min <- rep(X2.min, length(out$lhs))
-    out$X2.plarge <- tapply(out.cell$X2,
-      INDEX = out.cell$id,
-      FUN = function(x) sum(x > X2.min, na.rm = TRUE) / length(x)
+    out$X2.min <- rep(x2_min, length(out$lhs))
+    out$X2.plarge <- tapply(out_cell$X2,
+      INDEX = out_cell$id,
+      FUN = function(x) sum(x > x2_min, na.rm = TRUE) / length(x)
     )
   }
 
@@ -660,14 +660,14 @@ lav_tables_oneway <- function(lavobject = NULL, lavdata = NULL,
                               statistic = NULL) {
   # shortcuts
   vartable <- lavdata@ov
-  X <- lavdata@X
+  xx <- lavdata@X
 
   # identify 'categorical' variables
-  cat.idx <- which(vartable$type %in% c("ordered", "factor"))
-  ncat <- length(cat.idx)
+  cat_idx <- which(vartable$type %in% c("ordered", "factor"))
+  ncat <- length(cat_idx)
 
   # do we have any categorical variables?
-  if (length(cat.idx) == 0L) {
+  if (length(cat_idx) == 0L) {
     lav_msg_warn(gettext("no categorical variables are found"))
     return(data.frame(
       id = integer(0L), lhs = character(0L), rhs = character(0L),
@@ -676,25 +676,25 @@ lav_tables_oneway <- function(lavobject = NULL, lavdata = NULL,
       est.prop = numeric(0L), X2 = numeric(0L)
     ))
   } else {
-    labels <- strsplit(vartable$lnam[cat.idx], "\\|")
+    labels <- strsplit(vartable$lnam[cat_idx], "\\|")
   }
 
   # ok, we have an overview of all categorical variables in the data
-  ngroups <- length(X)
+  ngroups <- length(xx)
 
   # for each group, for each categorical variable, collect information
-  TABLES <- vector("list", length = ngroups)
+  tables <- vector("list", length = ngroups)
   for (g in 1:ngroups) {
-    TABLES[[g]] <- lapply(seq_len(ncat),
+    tables[[g]] <- lapply(seq_len(ncat),
       FUN = function(x) {
-        idx <- cat.idx[x]
+        idx <- cat_idx[x]
         nrow <- vartable$nlev[idx]
         ncell <- nrow
         nvar <- length(lavdata@ov.names[[g]])
         id <- (g - 1) * nvar + x
 
         # compute observed frequencies
-        FREQ <- tabulate(X[[g]][, idx], nbins = ncell)
+        freq <- tabulate(xx[[g]][, idx], nbins = ncell)
 
         list(
           id = rep.int(id, ncell),
@@ -702,21 +702,21 @@ lav_tables_oneway <- function(lavobject = NULL, lavdata = NULL,
           # op = rep.int("freq", ncell),
           rhs = labels[[x]],
           group = rep.int(g, ncell),
-          nobs = rep.int(sum(FREQ), ncell),
-          obs.freq = FREQ,
-          obs.prop = FREQ / sum(FREQ)
+          nobs = rep.int(sum(freq), ncell),
+          obs.freq = freq,
+          obs.prop = freq / sum(freq)
         )
       }
     )
   }
 
   for (g in 1:ngroups) {
-    TABLE <- TABLES[[g]]
-    TABLE <- lapply(TABLE, as.data.frame, stringsAsFactors = FALSE)
+    table_1 <- tables[[g]]
+    table_1 <- lapply(table_1, as.data.frame, stringsAsFactors = FALSE)
     if (g == 1L) {
-      out <- do.call(rbind, TABLE)
+      out <- do.call(rbind, table_1)
     } else {
-      out <- rbind(out, do.call(rbind, TABLE))
+      out <- rbind(out, do.call(rbind, table_1))
     }
   }
   if (g == 1) {
@@ -739,28 +739,28 @@ lav_tables_oneway <- function(lavobject = NULL, lavdata = NULL,
     # note, there is no G2.un or X2.un: always saturated!
     if ("th.un" %in% statistic) {
       # sample based
-      th <- unlist(lapply(1:lavdata@ngroups, function(x) {
+      th_un <- unlist(lapply(1:lavdata@ngroups, function(x) {
         if (lavobject@Model@conditional.x) {
-          TH <- lavobject@SampleStats@res.th[[x]][
+          th <- lavobject@SampleStats@res.th[[x]][
             lavobject@SampleStats@th.idx[[x]] > 0
           ]
         } else {
-          TH <- lavobject@SampleStats@th[[x]][
+          th <- lavobject@SampleStats@th[[x]][
             lavobject@SampleStats@th.idx[[x]] > 0
           ]
         }
-        TH.IDX <- lavobject@SampleStats@th.idx[[x]][
+        th_idx <- lavobject@SampleStats@th.idx[[x]][
           lavobject@SampleStats@th.idx[[x]] > 0
         ]
-        unname(unlist(tapply(TH,
-          INDEX = TH.IDX,
+        unname(unlist(tapply(th,
+          INDEX = th_idx,
           function(y) c(y, Inf)
         )))
       }))
       # overwrite obs.prop
       # NOTE: if we have exogenous variables, obs.prop will NOT
-      #       correspond with qnorm(th)
-      out$obs.prop <- unname(unlist(tapply(th,
+      #       correspond with qnorm(th_un)
+      out$obs.prop <- unname(unlist(tapply(th_un,
         INDEX = out$id,
         FUN = function(x) {
           (pnorm(c(x, Inf)) -
@@ -768,42 +768,42 @@ lav_tables_oneway <- function(lavobject = NULL, lavdata = NULL,
         }
       )))
 
-      out$th.un <- th
+      out$th.un <- th_un
     }
 
     # model based
     if (any(c("th", "G2", "X2") %in% statistic)) {
       # model based
-      th.h0 <- unlist(lapply(1:lavdata@ngroups, function(x) {
+      th_h0 <- unlist(lapply(1:lavdata@ngroups, function(x) {
         if (lavobject@Model@conditional.x) {
-          TH <- lavobject@implied$res.th[[x]][
+          th <- lavobject@implied$res.th[[x]][
             lavobject@SampleStats@th.idx[[x]] > 0
           ]
         } else {
-          TH <- lavobject@implied$th[[x]][
+          th <- lavobject@implied$th[[x]][
             lavobject@SampleStats@th.idx[[x]] > 0
           ]
         }
-        TH.IDX <- lavobject@SampleStats@th.idx[[x]][
+        th_idx <- lavobject@SampleStats@th.idx[[x]][
           lavobject@SampleStats@th.idx[[x]] > 0
         ]
-        unname(unlist(tapply(TH,
-          INDEX = TH.IDX,
+        unname(unlist(tapply(th,
+          INDEX = th_idx,
           function(x) c(x, Inf)
         )))
       }))
 
-      est.prop <- unname(unlist(tapply(th.h0,
+      est_prop <- unname(unlist(tapply(th_h0,
         INDEX = out$id,
         FUN = function(x) {
           (pnorm(c(x, Inf)) -
             pnorm(c(-Inf, x)))[-(length(x) + 1)]
         }
       )))
-      out$est.prop <- est.prop
+      out$est.prop <- est_prop
 
       if ("th" %in% statistic) {
-        out$th <- th.h0
+        out$th <- th_h0
       }
       if ("G2" %in% statistic) {
         out$G2 <- lav_tables_stat_g2(
@@ -840,33 +840,33 @@ lav_tables_oneway <- function(lavobject = NULL, lavdata = NULL,
 # HJ 15/1/2023 MODIFIED to add sampling weights
 # compute pairwise (two-way) frequency tables
 lav_tables_pairwise_freq_cell <- function(lavdata = NULL,
-                                          as.data.frame. = TRUE) {
+                                          as_data_frame = TRUE) {
   # shortcuts
   vartable <- as.data.frame(lavdata@ov, stringsAsFactors = FALSE)
-  X <- lavdata@X
-  ov.names <- lavdata@ov.names
+  xx <- lavdata@X
+  # ov_names <- lavdata@ov.names
   ngroups <- lavdata@ngroups
-  wt <- lavdata@weights
+  # wt <- lavdata@weights
 
   # identify 'categorical' variables
-  cat.idx <- which(vartable$type %in% c("ordered", "factor"))
+  cat_idx <- which(vartable$type %in% c("ordered", "factor"))
 
   # do we have any categorical variables?
-  if (length(cat.idx) == 0L) {
+  if (length(cat_idx) == 0L) {
     lav_msg_stop(gettext("no categorical variables are found"))
-  } else if (length(cat.idx) == 1L) {
+  } else if (length(cat_idx) == 1L) {
     lav_msg_stop(gettext("at least two categorical variables are needed"))
   }
 
   # pairwise tables
-  pairwise.tables <- utils::combn(vartable$name[cat.idx], m = 2L)
-  pairwise.tables <- rbind(pairwise.tables, seq_len(ncol(pairwise.tables)))
-  ntables <- ncol(pairwise.tables)
+  pairwise_tables <- utils::combn(vartable$name[cat_idx], m = 2L)
+  pairwise_tables <- rbind(pairwise_tables, seq_len(ncol(pairwise_tables)))
+  ntables <- ncol(pairwise_tables)
 
   # for each group, for each pairwise table, collect information
-  TABLES <- vector("list", length = ngroups)
+  tables <- vector("list", length = ngroups)
   for (g in 1:ngroups) {
-    TABLES[[g]] <- apply(pairwise.tables,
+    tables[[g]] <- apply(pairwise_tables,
       MARGIN = 2,
       FUN = function(x) {
         idx1 <- which(vartable$name == x[1])
@@ -877,10 +877,10 @@ lav_tables_pairwise_freq_cell <- function(lavdata = NULL,
         ncell <- nrow * ncol
 
         # compute two-way observed frequencies
-        Y1 <- X[[g]][, idx1]
-        Y2 <- X[[g]][, idx2]
-        # FREQ <- table(Y1, Y2) # we lose missings; useNA is ugly
-        FREQ <- lav_bvord_freq(Y1, Y2)
+        y1 <- xx[[g]][, idx1]
+        y2 <- xx[[g]][, idx2]
+        # freq <- table(y1, y2) # we lose missings; useNA is ugly
+        freq <- lav_bvord_freq(y1, y2)
 
         # >>>>>>>> HJ/MK PML CODE >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
@@ -890,7 +890,7 @@ lav_tables_pairwise_freq_cell <- function(lavdata = NULL,
         # and nonsensical numbers here. So for now, just keep the
         # lavtables as is (using non-weighted frequencies).
         #
-        # FREQ <- lav_bvord_freq(Y1, Y2, wt[[g]])
+        # freq <- lav_bvord_freq(y1, Y2, wt[[g]])
 
         # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
@@ -901,23 +901,23 @@ lav_tables_pairwise_freq_cell <- function(lavdata = NULL,
           # op = rep.int("table", ncell),
           rhs = rep.int(x[2], ncell),
           group = rep.int(g, ncell),
-          nobs = rep.int(sum(FREQ), ncell),
+          nobs = rep.int(sum(freq), ncell),
           row = rep.int(seq_len(nrow), times = ncol),
           col = rep(seq_len(ncol), each = nrow),
-          obs.freq = lav_matrix_vec(FREQ) # col by col!
+          obs.freq = lav_matrix_vec(freq) # col by col!
         )
       }
     )
   }
 
-  if (as.data.frame.) {
+  if (as_data_frame) {
     for (g in 1:ngroups) {
-      TABLE <- TABLES[[g]]
-      TABLE <- lapply(TABLE, as.data.frame, stringsAsFactors = FALSE)
+      table_1 <- tables[[g]]
+      table_1 <- lapply(table_1, as.data.frame, stringsAsFactors = FALSE)
       if (g == 1) {
-        out <- do.call(rbind, TABLE)
+        out <- do.call(rbind, table_1)
       } else {
-        out <- rbind(out, do.call(rbind, TABLE))
+        out <- rbind(out, do.call(rbind, table_1))
       }
     }
     if (g == 1) {
@@ -926,9 +926,9 @@ lav_tables_pairwise_freq_cell <- function(lavdata = NULL,
     }
   } else {
     if (ngroups == 1L) {
-      out <- TABLES[[1]]
+      out <- tables[[1]]
     } else {
-      out <- TABLES
+      out <- tables
     }
   }
 
@@ -945,60 +945,60 @@ lav_tables_pairwise_model_pi <- function(lavobject = NULL) {
   lavmodel <- lavobject@Model
   implied <- lavobject@implied
   ngroups <- lavobject@Data@ngroups
-  ov.types <- lavobject@Data@ov$type
-  th.idx <- lavobject@Model@th.idx
-  Sigma.hat <- if (lavmodel@conditional.x) implied$res.cov else implied$cov
-  TH <- if (lavmodel@conditional.x) implied$res.th else implied$th
+  ov_types <- lavobject@Data@ov$type
+  th_idx <- lavobject@Model@th.idx
+  sigma_hat <- if (lavmodel@conditional.x) implied$res.cov else implied$cov
+  th <- if (lavmodel@conditional.x) implied$res.th else implied$th
 
-  PI <- vector("list", length = ngroups)
+  pi0 <- vector("list", length = ngroups)
   for (g in 1:ngroups) {
-    Sigmahat <- Sigma.hat[[g]]
-    cors <- Sigmahat[lower.tri(Sigmahat)]
+    sigmahat <- sigma_hat[[g]]
+    cors <- sigmahat[lower.tri(sigmahat)]
     if (any(abs(cors) > 1)) {
       lav_msg_warn(gettext(
         "some model-implied correlations are larger than 1.0"))
     }
-    nvar <- nrow(Sigmahat)
+    nvar <- nrow(sigmahat)
 
     # shortcut for all ordered - tablewise
-    if (all(ov.types == "ordered") && !is.null(lavobject@Cache[[g]]$long)) {
+    if (all(ov_types == "ordered") && !is.null(lavobject@Cache[[g]]$long)) {
       # FREQ.OBS <- c(FREQ.OBS, lavobject@Cache[[g]]$bifreq)
       long2 <- lav_pml_longvec_th_rho(
         no_x = nvar,
-        all_thres = TH[[g]],
-        index_var_of_thres = th.idx[[g]],
+        all_thres = th[[g]],
+        index_var_of_thres = th_idx[[g]],
         rho_xixj = cors
       )
       # get expected probability per table, per pair
-      PI[[g]] <- lav_pml_expprob_vec(
+      pi0[[g]] <- lav_pml_expprob_vec(
         ind_vec = lavobject@Cache[[g]]$long,
         th_rho_vec = long2
       )
     } else {
-      PI.group <- integer(0)
+      pi_group <- integer(0)
       # order! first i, then j, lav_matrix_vec(table)!
       for (i in seq_len(nvar - 1L)) {
         for (j in (i + 1L):nvar) {
-          if (ov.types[i] == "ordered" && ov.types[j] == "ordered") {
-            PI.table <- lav_bvord_noexo_pi(
-              rho = Sigmahat[i, j],
-              th_y1 = TH[[g]][th.idx[[g]] == i],
-              th_y2 = TH[[g]][th.idx[[g]] == j]
+          if (ov_types[i] == "ordered" && ov_types[j] == "ordered") {
+            pi_table <- lav_bvord_noexo_pi(
+              rho = sigmahat[i, j],
+              th_y1 = th[[g]][th_idx[[g]] == i],
+              th_y2 = th[[g]][th_idx[[g]] == j]
             )
-            PI.group <- c(PI.group, lav_matrix_vec(PI.table))
+            pi_group <- c(pi_group, lav_matrix_vec(pi_table))
           }
         }
       }
-      PI[[g]] <- PI.group
+      pi0[[g]] <- pi_group
     }
   } # g
 
-  # add  COR/TH/TH.IDX
-  attr(PI, "COR") <- Sigma.hat
-  attr(PI, "TH") <- TH
-  attr(PI, "TH.IDX") <- th.idx
+  # add  COR/th/TH.IDX
+  attr(pi0, "COR") <- sigma_hat
+  attr(pi0, "TH") <- th
+  attr(pi0, "TH.IDX") <- th_idx
 
-  PI
+  pi0
 }
 
 # low-level function to compute expected proportions per cell
@@ -1009,77 +1009,77 @@ lav_tables_pairwise_sample_pi <- function(lavobject = NULL, lavdata = NULL) {
   # get COR, TH and th.idx
   if (!is.null(lavobject)) {
     if (lavobject@Model@conditional.x) {
-      COR <- lavobject@SampleStats@res.cov
-      TH <- lavobject@SampleStats@res.th
+      cor_1 <- lavobject@SampleStats@res.cov
+      th <- lavobject@SampleStats@res.th
     } else {
-      COR <- lavobject@SampleStats@cov
-      TH <- lavobject@SampleStats@th
+      cor_1 <- lavobject@SampleStats@cov
+      th <- lavobject@SampleStats@th
     }
-    TH.IDX <- lavobject@SampleStats@th.idx
+    th_idx <- lavobject@SampleStats@th.idx
   } else if (!is.null(lavdata)) {
-    fit.un <- lav_object_cor(object = lavdata, se = "none", output = "fit")
-    if (fit.un@Model@conditional.x) {
-      COR <- fit.un@SampleStats@res.cov
-      TH <- fit.un@SampleStats@res.th
+    fit_un <- lav_object_cor(object = lavdata, se = "none", output = "fit")
+    if (fit_un@Model@conditional.x) {
+      cor_1 <- fit_un@SampleStats@res.cov
+      th <- fit_un@SampleStats@res.th
     } else {
-      COR <- fit.un@SampleStats@cov
-      TH <- fit.un@SampleStats@th
+      cor_1 <- fit_un@SampleStats@cov
+      th <- fit_un@SampleStats@th
     }
-    TH.IDX <- fit.un@SampleStats@th.idx
+    th_idx <- fit_un@SampleStats@th.idx
   } else {
     lav_msg_stop(gettext("both lavobject and lavdata are NULL"))
   }
 
   lav_tables_pairwise_sample_pi_cor(
-    COR = COR, TH = TH,
-    TH.IDX = TH.IDX
+    cor_1 = cor_1, th = th,
+    th_idx = th_idx
   )
 }
 
 # low-level function to compute expected proportions per cell
-lav_tables_pairwise_sample_pi_cor <- function(COR = NULL, TH = NULL,
-                                              TH.IDX = NULL) {
-  ngroups <- length(COR)
+lav_tables_pairwise_sample_pi_cor <- function(cor_1 = NULL, th = NULL, # nolint
+                                              th_idx = NULL) {
+  ngroups <- length(cor_1)
 
-  PI <- vector("list", length = ngroups)
+  pi0 <- vector("list", length = ngroups)
   for (g in 1:ngroups) {
-    Sigmahat <- COR[[g]]
-    cors <- Sigmahat[lower.tri(Sigmahat)]
+    sigmahat <- cor_1[[g]]
+    cors <- sigmahat[lower.tri(sigmahat)]
     if (any(abs(cors) > 1)) {
       lav_msg_warn(gettext(
         "some model-implied correlations are larger than 1.0"))
     }
-    nvar <- nrow(Sigmahat)
-    th.idx <- TH.IDX[[g]]
+    nvar <- nrow(sigmahat)
+    th_idx_1 <- th_idx[[g]]
 
     # reconstruct ov.types
-    ov.types <- rep("numeric", nvar)
-    ord.idx <- unique(th.idx[th.idx > 0])
-    ov.types[ord.idx] <- "ordered"
+    ov_types <- rep("numeric", nvar)
+    ord_idx <- unique(th_idx_1[th_idx_1 > 0])
+    ov_types[ord_idx] <- "ordered"
 
-    PI.group <- integer(0)
+    pi_group <- integer(0)
     # order! first i, then j, lav_matrix_vec(table)!
     for (i in seq_len(nvar - 1L)) {
       for (j in (i + 1L):nvar) {
-        if (ov.types[i] == "ordered" && ov.types[j] == "ordered") {
-          PI.table <- lav_bvord_noexo_pi(
-            rho = Sigmahat[i, j],
-            th_y1 = TH[[g]][th.idx == i],
-            th_y2 = TH[[g]][th.idx == j]
+        if (ov_types[i] == "ordered" && ov_types[j] == "ordered") {
+          pi_table <- lav_bvord_noexo_pi(
+            rho = sigmahat[i, j],
+            th_y1 = th[[g]][th_idx_1 == i],
+            th_y2 = th[[g]][th_idx_1 == j]
           )
-          PI.group <- c(PI.group, lav_matrix_vec(PI.table))
+          pi_group <- c(pi_group, lav_matrix_vec(pi_table))
         }
       }
     }
-    PI[[g]] <- PI.group
+    pi0[[g]] <- pi_group
   } # g
 
   # add  COR/TH/TH.IDX
-  attr(PI, "COR") <- COR
-  attr(PI, "TH") <- TH
-  attr(PI, "TH.IDX") <- TH.IDX
+  attr(pi0, "COR") <- cor_1
+  attr(pi0, "TH") <- th
+  attr(pi0, "TH.IDX") <- th_idx
 
-  PI
+  pi0
 }
 
 # low-level function to compute expected proportions per PATTERN
@@ -1100,96 +1100,98 @@ lav_tables_resp_pi <- function(lavobject = NULL, lavdata = NULL,
 
   # h0 or unrestricted?
   if (est == "h0") {
-    Sigma.hat <- if (lavmodel@conditional.x) implied$res.cov else implied$cov
-    TH <- if (lavmodel@conditional.x) implied$res.th else implied$th
-    TH.IDX <- lavobject@SampleStats@th.idx
+    sigma_hat <- if (lavmodel@conditional.x) implied$res.cov else implied$cov
+    th <- if (lavmodel@conditional.x) implied$res.th else implied$th
+    th_idx_1 <- lavobject@SampleStats@th.idx
   } else {
     if (is.null(lavobject)) {
-      fit.un <- lav_object_cor(object = lavdata, se = "none", output = "fit")
-      Sigma.hat <- if (fit.un@Model@conditional.x) fit.un@implied$res.cov else fit.un@implied$cov
-      TH <- if (fit.un@Model@conditional.x) fit.un@implied$res.th else fit.un@implied$th
-      TH.IDX <- fit.un@SampleStats@th.idx
+      fit_un <- lav_object_cor(object = lavdata, se = "none", output = "fit")
+      sigma_hat <-
+        if (fit_un@Model@conditional.x) fit_un@implied$res.cov else fit_un@implied$cov
+      th <-
+        if (fit_un@Model@conditional.x) fit_un@implied$res.th else fit_un@implied$th
+      th_idx_1 <- fit_un@SampleStats@th.idx
     } else {
       if (lavobject@Model@conditional.x) {
-        Sigma.hat <- lavobject@SampleStats@res.cov
-        TH <- lavobject@SampleStats@res.th
+        sigma_hat <- lavobject@SampleStats@res.cov
+        th <- lavobject@SampleStats@res.th
       } else {
-        Sigma.hat <- lavobject@SampleStats@cov
-        TH <- lavobject@SampleStats@th
+        sigma_hat <- lavobject@SampleStats@cov
+        th <- lavobject@SampleStats@th
       }
-      TH.IDX <- lavobject@SampleStats@th.idx
+      th_idx_1 <- lavobject@SampleStats@th.idx
     }
   }
 
-  PI <- vector("list", length = ngroups)
+  pi0 <- vector("list", length = ngroups)
   for (g in 1:ngroups) {
-    Sigmahat <- Sigma.hat[[g]]
-    cors <- Sigmahat[lower.tri(Sigmahat)]
+    sigmahat <- sigma_hat[[g]]
+    cors <- sigmahat[lower.tri(sigmahat)]
     if (any(abs(cors) > 1)) {
       lav_msg_warn(gettext(
         "some model-implied correlations are larger than 1.0"))
     }
-    nvar <- nrow(Sigmahat)
-    th.idx <- TH.IDX[[g]]
-    MEAN <- rep(0, nvar)
+    nvar <- nrow(sigmahat)
+    th_idx <- th_idx_1[[g]]
+    mean_1 <- rep(0, nvar)
 
     # reconstruct ov.types
-    ov.types <- rep("numeric", nvar)
-    ord.idx <- unique(th.idx[th.idx > 0])
-    ov.types[ord.idx] <- "ordered"
+    ov_types <- rep("numeric", nvar)
+    ord_idx <- unique(th_idx[th_idx > 0])
+    ov_types[ord_idx] <- "ordered"
 
-    if (all(ov.types == "ordered")) {
+    if (all(ov_types == "ordered")) {
       # get patterns ## FIXME GET it
       if (!is.null(lavdata@Rp[[g]]$pat)) {
-        PAT <- lavdata@Rp[[g]]$pat
+        pat_1 <- lavdata@Rp[[g]]$pat
       } else {
-        PAT <- lav_data_resp_patterns(lavdata@X[[g]])$pat
+        pat_1 <- lav_data_resp_patterns(lavdata@X[[g]])$pat
       }
-      npatterns <- nrow(PAT)
-      freq <- as.numeric(rownames(PAT))
-      PI.group <- numeric(npatterns)
-      TH.VAR <- lapply(
+      npatterns <- nrow(pat_1)
+      freq <- as.numeric(rownames(pat_1))
+      pi_group <- numeric(npatterns)
+      th_var <- lapply(
         1:nvar,
-        function(x) c(-Inf, TH[[g]][th.idx == x], +Inf)
+        function(x) c(-Inf, th[[g]][th_idx == x], +Inf)
       )
       # FIXME!!! ok to set diagonal to 1.0?
-      diag(Sigmahat) <- 1.0
+      diag(sigmahat) <- 1.0
       for (r in 1:npatterns) {
         # compute probability for each pattern
-        lower <- sapply(1:nvar, function(x) TH.VAR[[x]][PAT[r, x]])
-        upper <- sapply(1:nvar, function(x) TH.VAR[[x]][PAT[r, x] + 1L])
+        lower <- sapply(1:nvar, function(x) th_var[[x]][pat_1[r, x]])
+        upper <- sapply(1:nvar, function(x) th_var[[x]][pat_1[r, x] + 1L])
         # handle missing values
-        na.idx <- which(is.na(PAT[r, ]))
-        if (length(na.idx) > 0L) {
-          lower <- lower[-na.idx]
-          upper <- upper[-na.idx]
-          MEAN.r <- MEAN[-na.idx]
-          Sigmahat.r <- Sigmahat[-na.idx, -na.idx, drop = FALSE]
+        na_idx <- which(is.na(pat_1[r, ]))
+        if (length(na_idx) > 0L) {
+          lower <- lower[-na_idx]
+          upper <- upper[-na_idx]
+          mean_r <- mean_1[-na_idx]
+          sigmahat_r <- sigmahat[-na_idx, -na_idx, drop = FALSE]
         } else {
-          MEAN.r <- MEAN
-          Sigmahat.r <- Sigmahat
+          mean_r <- mean_1
+          sigmahat_r <- sigmahat
         }
-        PI.group[r] <- sadmvn(lower, upper,
-          mean = MEAN.r,
-          varcov = Sigmahat.r
+        pi_group[r] <- sadmvn(lower, upper,
+          mean = mean_r,
+          varcov = sigmahat_r
         )
       }
     } else { # case-wise
-      PI.group <- rep(as.numeric(NA), lavdata@nobs[[g]])
+      pi_group <- rep(as.numeric(NA), lavdata@nobs[[g]])
       lav_msg_warn(gettext("casewise PI not implemented"))
     }
 
-    PI[[g]] <- PI.group
+    pi0[[g]] <- pi_group
   } # g
 
-  PI
+  pi0
 }
 
 lav_tables_table_format <- function(out, lavdata = lavdata,
                                     lavobject = lavobject) {
   # determine column we need
-  NAMES <- names(out)
-  stat.idx <- which(NAMES %in% c(
+  names_1 <- names(out)
+  stat_idx <- which(names_1 %in% c(
     "cor", "cor.un",
     "G2", "G2.un",
     "X2", "X2.un",
@@ -1197,83 +1199,83 @@ lav_tables_table_format <- function(out, lavdata = lavdata,
     "G2.average", "G2.plarge", "G2.nlarge",
     "X2.average", "X2.plarge", "X2.nlarge"
   ))
-  if (length(stat.idx) == 0) {
+  if (length(stat_idx) == 0) {
     if (!is.null(out$obs.freq)) {
-      stat.idx <- which(NAMES == "obs.freq")
+      stat_idx <- which(names_1 == "obs.freq")
     } else if (!is.null(out$nobs)) {
-      stat.idx <- which(NAMES == "nobs")
+      stat_idx <- which(names_1 == "nobs")
     }
-    UNI <- NULL
-  } else if (length(stat.idx) > 1) {
+    uni <- NULL
+  } else if (length(stat_idx) > 1) {
     lav_msg_stop(gettext(
       "more than one statistic for table output:"),
-      paste(NAMES[stat.idx], collapse = " ")
+      paste(names_1[stat_idx], collapse = " ")
     )
   } else {
     # univariate version of same statistic
-    if (NAMES[stat.idx] == "G2.average") {
-      UNI <- lavTables(lavobject, dimension = 1L, statistic = "G2")
-    } else if (NAMES[stat.idx] == "X2.average") {
-      UNI <- lavTables(lavobject, dimension = 1L, statistic = "X2")
+    if (names_1[stat_idx] == "G2.average") {
+      uni <- lavTables(lavobject, dimension = 1L, statistic = "G2")
+    } else if (names_1[stat_idx] == "X2.average") {
+      uni <- lavTables(lavobject, dimension = 1L, statistic = "X2")
     } else {
-      UNI <- NULL
+      uni <- NULL
     }
   }
 
-  OUT <- vector("list", length = lavdata@ngroups)
+  out_1 <- vector("list", length = lavdata@ngroups)
   for (g in 1:lavdata@ngroups) {
     if (lavdata@ngroups == 1L) { # no group column
-      STAT <- out[[stat.idx]]
+      stat <- out[[stat_idx]]
     } else {
-      STAT <- out[[stat.idx]][out$group == g]
+      stat <- out[[stat_idx]][out$group == g]
     }
-    RN <- lavdata@ov.names[[g]]
-    OUT[[g]] <- lav_getcov(STAT, diagonal = FALSE, lower = FALSE, names = RN)
+    rn <- lavdata@ov.names[[g]]
+    out_1[[g]] <- lav_getcov(stat, diagonal = FALSE, lower = FALSE, names = rn)
     # change diagonal elements: replace by univariate stat
     # if possible
-    diag(OUT[[g]]) <- as.numeric(NA)
-    if (!is.null(UNI)) {
-      if (!is.null(UNI$group)) {
-        idx <- which(UNI$group == g)
+    diag(out_1[[g]]) <- as.numeric(NA)
+    if (!is.null(uni)) {
+      if (!is.null(uni$group)) {
+        idx <- which(uni$group == g)
       } else {
-        idx <- 1:length(UNI$lhs)
+        idx <- seq_along(uni$lhs)
       }
-      if (NAMES[stat.idx] == "G2.average") {
-        diag(OUT[[g]]) <- tapply(UNI$G2[idx],
-          INDEX = UNI$id[idx],
+      if (names_1[stat_idx] == "G2.average") {
+        diag(out_1[[g]]) <- tapply(uni$G2[idx],
+          INDEX = uni$id[idx],
           FUN = mean
         )
-      } else if (NAMES[stat.idx] == "X2.average") {
-        diag(OUT[[g]]) <- tapply(UNI$X2[idx],
-          INDEX = UNI$id[idx],
+      } else if (names_1[stat_idx] == "X2.average") {
+        diag(out_1[[g]]) <- tapply(uni$X2[idx],
+          INDEX = uni$id[idx],
           FUN = mean
         )
       }
-    } else if (NAMES[stat.idx] %in% c("cor", "cor.un")) {
-      diag(OUT[[g]]) <- 1
+    } else if (names_1[stat_idx] %in% c("cor", "cor.un")) {
+      diag(out_1[[g]]) <- 1
     }
-    class(OUT[[g]]) <- c("lavaan.matrix.symmetric", "matrix")
+    class(out_1[[g]]) <- c("lavaan.matrix.symmetric", "matrix")
   }
   if (lavdata@ngroups > 1L) {
-    names(OUT) <- lavdata@group.label
-    out <- OUT
+    names(out_1) <- lavdata@group.label
+    out <- out_1
   } else {
-    out <- OUT[[1]]
+    out <- out_1[[1]]
   }
 
   out
 }
 
 lav_tables_cells_format <- function(out, lavdata = lavdata,
-                                    drop.list.single.group = FALSE) {
-  OUT <- vector("list", length = lavdata@ngroups)
+                                    drop_list_single_group = FALSE) {
+  out_1 <- vector("list", length = lavdata@ngroups)
   if (is.null(out$group)) {
     out$group <- rep(1L, length(out$lhs))
   }
   # do we have a statistic?
   # determine column we need
-  NAMES <- names(out)
-  stat.idx <- which(NAMES %in% c(
+  names_1 <- names(out)
+  stat_idx <- which(names_1 %in% c(
     "cor", "cor.un",
     "G2", "G2.un",
     "X2", "X2.un",
@@ -1281,60 +1283,63 @@ lav_tables_cells_format <- function(out, lavdata = lavdata,
     "G2.average", "G2.plarge", "G2.nlarge",
     "X2.average", "X2.plarge", "X2.nlarge"
   ))
-  if (length(stat.idx) == 0) {
+  if (length(stat_idx) == 0) {
     statistic <- "obs.freq"
-  } else if (length(stat.idx) > 1) {
+  } else if (length(stat_idx) > 1) {
     lav_msg_stop(gettext(
       "more than one statistic for table output:"),
-      paste(NAMES[stat.idx], collapse = " ")
+      paste(names_1[stat_idx], collapse = " ")
     )
   } else {
-    statistic <- NAMES[stat.idx]
+    statistic <- names_1[stat_idx]
   }
 
   for (g in 1:lavdata@ngroups) {
-    case.idx <- which(out$group == g)
-    ID.group <- unique(out$id[out$group == g])
-    TMP <- lapply(ID.group, function(x) {
-      Tx <- out[out$id == x, ]
-      M <- matrix(
-        Tx[, statistic],
-        max(Tx$row), max(Tx$col)
+    case_idx <- which(out$group == g)
+    id_group <- unique(out$id[out$group == g])
+    tmp <- lapply(id_group, function(x) {
+      tx <- out[out$id == x, ]
+      m <- matrix(
+        tx[, statistic],
+        max(tx$row), max(tx$col)
       )
-      rownames(M) <- unique(Tx$row)
-      colnames(M) <- unique(Tx$col)
-      class(M) <- c("lavaan.matrix", "matrix")
-      M
+      rownames(m) <- unique(tx$row)
+      colnames(m) <- unique(tx$col)
+      class(m) <- c("lavaan.matrix", "matrix")
+      m
     })
-    names(TMP) <- unique(paste(out$lhs[case.idx], out$rhs[case.idx],
+    names(tmp) <- unique(paste(out$lhs[case_idx], out$rhs[case_idx],
       sep = "_"
     ))
-    OUT[[g]] <- TMP
+    out_1[[g]] <- tmp
   }
 
-  if (lavdata@ngroups == 1L && drop.list.single.group) {
-    OUT <- OUT[[1]]
+  if (lavdata@ngroups == 1L && drop_list_single_group) {
+    out_1 <- out_1[[1]]
   } else {
     if (length(lavdata@group.label) > 0L) {
-      names(OUT) <- unlist(lavdata@group.label)
+      names(out_1) <- unlist(lavdata@group.label)
     }
   }
 
-  OUT
+  out_1
 }
 
 
 
-# The function lav_tables_univariate_freq_cell computes the univariate (one-way) frequency tables.
+# The function lav_tables_univariate_freq_cell computes the univariate (one-way)
+# frequency tables.
 # The function closely follows the "logic" of the lavaan function
 # lav_tables_pairwise_freq_cell.
 # The output is either a list or a data.frame depending on the value the logical
-# input argument as.data.frame. Either way, the same information is contained which is:
+# input argument as.data.frame. Either way, the same information is contained
+# which is:
 # a) the observed (univariate) frequencies f_ia, i=1,...,p (variables),
 #    a=1,...,ci (response categories), with a index running faster than i index.
-# b) an index vector with the name varb which indicates which variable each frequency refers to.
-# c) an index vector with the name group which indicates which group each frequency
-#    refers to when multi-group analysis.
+# b) an index vector with the name varb which indicates which variable each
+#    frequency refers to.
+# c) an index vector with the name group which indicates which group each
+#    frequency refers to when multi-group analysis.
 # d) an index vector with the name level which indicates which level within
 #    each ordinal variable each frequency refers to.
 # e) a vector nobs which gives how many cases were considered to compute the
@@ -1342,37 +1347,38 @@ lav_tables_cells_format <- function(out, lavdata = lavdata,
 #    when missing=="available_cases" we expect these numbers to differ when
 #    missing values are present.
 # f) an index vector with the name id indexing each univariate table,
-#    1 goes to first variable in the first group, 2 to 2nd variable in the second
-#    group and so on. The last table has the index equal to (no of groups)*(no of variables).
+#    1 goes to first variable in the first group, 2 to 2nd variable in the
+#    second group and so on. The last table has the index equal to
+#                                   (no of groups) * (no of variables).
 
-lav_tables_univariate_freq_cell <- function(lavdata = NULL,
-                                            as.data.frame. = TRUE) {
+lav_tables_univariate_freq_cell <- function(lavdata = NULL,   # nolint
+                                            as_data_frame = TRUE) {
   # shortcuts
   vartable <- as.data.frame(lavdata@ov, stringsAsFactors = FALSE)
-  X <- lavdata@X
-  ov.names <- lavdata@ov.names
+  xx <- lavdata@X
+  # ov_names <- lavdata@ov.names
   ngroups <- lavdata@ngroups
 
   # identify 'categorical' variables
-  cat.idx <- which(vartable$type %in% c("ordered", "factor"))
+  cat_idx <- which(vartable$type %in% c("ordered", "factor"))
 
   # do we have any categorical variables?
-  if (length(cat.idx) == 0L) {
+  if (length(cat_idx) == 0L) {
     lav_msg_stop(gettext("no categorical variables are found"))
   }
 
   # univariate tables
-  univariate.tables <- vartable$name[cat.idx]
-  univariate.tables <- rbind(univariate.tables,
-    seq_len(length(univariate.tables)),
+  univariate_tables <- vartable$name[cat_idx]
+  univariate_tables <- rbind(univariate_tables,
+    seq_along(univariate_tables),
     deparse.level = 0
   )
-  ntables <- ncol(univariate.tables)
+  ntables <- ncol(univariate_tables)
 
   # for each group, for each pairwise table, collect information
-  UNI_TABLES <- vector("list", length = ngroups)
+  uni_tables <- vector("list", length = ngroups)
   for (g in 1:ngroups) {
-    UNI_TABLES[[g]] <- apply(univariate.tables,
+    uni_tables[[g]] <- apply(univariate_tables,
       MARGIN = 2,
       FUN = function(x) {
         idx1 <- which(vartable$name == x[1])
@@ -1380,31 +1386,31 @@ lav_tables_univariate_freq_cell <- function(lavdata = NULL,
         ncell <- vartable$nlev[idx1]
 
         # compute one-way observed frequencies
-        Y1 <- X[[g]][, idx1]
-        UNI_FREQ <- tabulate(Y1, nbins = max(Y1, na.rm = TRUE))
+        y1 <- xx[[g]][, idx1]
+        uni_freq <- tabulate(y1, nbins = max(y1, na.rm = TRUE))
 
         list(
           id = rep.int(id, ncell),
           varb = rep.int(x[1], ncell),
           group = rep.int(g, ncell),
-          nobs = rep.int(sum(UNI_FREQ), ncell),
+          nobs = rep.int(sum(uni_freq), ncell),
           level = seq_len(ncell),
-          obs.freq = UNI_FREQ
+          obs.freq = uni_freq
         )
       }
     )
   }
 
-  if (as.data.frame.) {
+  if (as_data_frame) {
     for (g in 1:ngroups) {
-      UNI_TABLE <- UNI_TABLES[[g]]
-      UNI_TABLE <- lapply(UNI_TABLE, as.data.frame,
+      uni_table <- uni_tables[[g]]
+      uni_table <- lapply(uni_table, as.data.frame,
         stringsAsFactors = FALSE
       )
       if (g == 1) {
-        out <- do.call(rbind, UNI_TABLE)
+        out <- do.call(rbind, uni_table)
       } else {
-        out <- rbind(out, do.call(rbind, UNI_TABLE))
+        out <- rbind(out, do.call(rbind, uni_table))
       }
     }
     if (g == 1) {
@@ -1413,9 +1419,9 @@ lav_tables_univariate_freq_cell <- function(lavdata = NULL,
     }
   } else {
     if (ngroups == 1L) {
-      out <- UNI_TABLES[[1]]
+      out <- uni_tables[[1]]
     } else {
-      out <- UNI_TABLES
+      out <- uni_tables
     }
   }
 

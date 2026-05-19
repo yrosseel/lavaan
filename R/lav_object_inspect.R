@@ -692,7 +692,7 @@ lav_object_inspect_est <- function(object, unrotated = FALSE) {
       if (unrotated) {
         return_value <- object@ParTable$est.unrotated
       } else {
-        return_value <- object@ParTable$est 
+        return_value <- object@ParTable$est
                   # if this changes, tag @TDJorgensen in commit message
       }
     } else {
@@ -1633,8 +1633,8 @@ lav_object_inspect_residuals <- function(object, h1 = TRUE,
     add_labels = FALSE, add_class = FALSE, drop_list_single_group = FALSE) {
 
   lav_residuals(object, type = "raw", h1 = h1,
-    add.labels = add_labels, add.class = add_class,
-    drop.list.single.group = drop_list_single_group)
+    add_labels = add_labels, add_class = add_class,
+    drop_list_single_group = drop_list_single_group)
 }
 
 
@@ -2520,7 +2520,7 @@ lav_object_inspect_vcov <- function(object, standardized = FALSE,
     #   && !(rotation && standardized)) {
     if (!is.null(object@vcov$vcov) &&
         !(standardized && lavmodel@ceq.simple.only)) {
-      return_value <- object@vcov$vcov 
+      return_value <- object@vcov$vcov
                  # if this changes, tag @TDJorgensen in commit message
     } else {
       # compute it again
@@ -2997,7 +2997,7 @@ lav_object_inspect_zero_cell_tables <-                          # nolint
   lav_tables_cells_format(
       tmp_table[tmp_table$id %in% empty_id, ],
       lavdata = lavdata,
-      drop.list.single.group = drop_list_single_group)
+      drop_list_single_group = drop_list_single_group)
 }
 
 lav_object_inspect_coef <- function(object, type = "free",

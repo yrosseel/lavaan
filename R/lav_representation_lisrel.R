@@ -2554,7 +2554,7 @@ lav_lisrel_test_derivatives <- function(mlist = NULL,
     }
     if (theta) {
       sigma_hat <- lav_lisrel_sigma(mlist = mlist, delta = FALSE)
-      r <- lav_deriv_cov2cor(sigma_hat, num.idx = num_idx)
+      r <- lav_deriv_cov2cor(sigma_hat, num_idx = num_idx)
 
       dx3 <- dx2
       dx2 <- r %*% dx2

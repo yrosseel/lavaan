@@ -14,7 +14,7 @@ lavResiduals(object, type = "cor.bentler", custom.rmr = NULL,
     se = FALSE, zstat = TRUE, summary = TRUE, h1.acov = "unstructured",
     add.type = TRUE, add.labels = TRUE, add.class = TRUE,
     drop.list.single.group = TRUE,
-    maximum.number = length(res.vech), output = "list")
+    maximum.number = length(res_vech), output = "list")
 }
 \arguments{
 \item{object}{An object of class \code{\linkS4class{lavaan}}.}
