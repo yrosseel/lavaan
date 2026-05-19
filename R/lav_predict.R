@@ -557,7 +557,8 @@ lav_predict_internal <- function(lavmodel = NULL,
     if (mdist) {
       mm_lambda <- lav_model_lambda(
         lavmodel = lavmodel,
-        remove_dummy_lv = FALSE
+        remove_dummy_lv = FALSE,
+        use_wmat = TRUE
       )
       mdist_1 <- lapply(seq_len(lavdata@ngroups), function(g) {
         sigma <- lavimplied$cov[[g]]
@@ -820,7 +821,8 @@ lav_predict_eta_normal <- function(lavobject = NULL, # for convenience
     }
   }
 
-  mm_lambda <- lav_model_lambda(lavmodel = lavmodel, remove_dummy_lv = FALSE)
+  mm_lambda <- lav_model_lambda(lavmodel = lavmodel, remove_dummy_lv = FALSE,
+                                use_wmat = TRUE)
   sigma_hat <- lavimplied$cov
   sigma_inv <- lapply(sigma_hat, MASS::ginv)
   veta <- lav_model_veta(lavmodel = lavmodel)
@@ -1153,7 +1155,8 @@ lav_predict_eta_bartlett <- function(lavobject = NULL, # for convenience
     }
   }
 
-  mm_lambda <- lav_model_lambda(lavmodel = lavmodel, remove_dummy_lv = FALSE)
+  mm_lambda <- lav_model_lambda(lavmodel = lavmodel, remove_dummy_lv = FALSE,
+                                use_wmat = TRUE)
   sigma_hat <- lavimplied$cov
   sigma_inv <- lapply(lavimplied$cov, MASS::ginv)
   veta <- lav_model_veta(lavmodel = lavmodel) # for se only
@@ -2035,7 +2038,7 @@ lav_predict_tmat_green <- function(lavobject = NULL,
   }
   sigma_1 <- lavimplied$cov
   veta_1 <- lav_model_veta(lavmodel = lavmodel, remove_dummy_lv = FALSE)
-  mm_lambda <- lav_model_lambda(lavmodel, remove_dummy_lv = FALSE)
+  mm_lambda <- lav_model_lambda(lavmodel, remove_dummy_lv = FALSE, use_wmat = TRUE)
 
   nblocks <- lavmodel@nblocks
   tmat <- vector("list", length = nblocks)
@@ -2074,7 +2077,7 @@ lav_predict_tmat_det <- function(lavobject = NULL,
   }
   sigma_1 <- lavimplied$cov
   veta_1 <- lav_model_veta(lavmodel = lavmodel, remove_dummy_lv = FALSE)
-  mm_lambda <- lav_model_lambda(lavmodel, remove_dummy_lv = FALSE)
+  mm_lambda <- lav_model_lambda(lavmodel, remove_dummy_lv = FALSE, use_wmat = TRUE)
 
   nblocks <- lavmodel@nblocks
   tmat <- vector("list", length = nblocks)
