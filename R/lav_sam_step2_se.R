@@ -144,8 +144,14 @@ lav_sam_step2_se <- function(fit = NULL, joint = NULL,
       vcov_1 <- vcov_1[-step2_rm_idx, -step2_rm_idx]
     }
     # order rows/cols of VCOV, so that they correspond with the (step 2)
-    # parameters of the JOINT model
-    idx <- sort.int(step2$pt.idx, index.return = TRUE)$ix
+    # parameters of the JOINT model, but remove := parameters first
+    pt_idx <- step2$pt.idx
+    nonpar_id <- fit@ParTable$id[fit@ParTable$op %in% c(":=", "==", "<", ">")]
+    rm_idx <- which(step2$pt.idx %in% nonpar_id)
+    if (length(rm_idx) > 0L) {
+      pt_idx <- step2$pt.idx[-rm_idx]
+    }
+    idx <- sort.int(pt_idx, index.return = TRUE)$ix
     vcov_1 <- vcov_1[idx, idx]
 
     out$VCOV <- vcov_1
