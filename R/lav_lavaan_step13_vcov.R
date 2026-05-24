@@ -106,7 +106,8 @@ lav_lavaan_step13_vcov_boot <- function(lavoptions = NULL,
       lavpartable$se <- lav_model_vcov_se(
         lavmodel = lavmodel,
         lavpartable = lavpartable,
-        VCOV = NULL, BOOT = NULL
+        VCOV = NULL, BOOT = NULL,
+        lavoptions = lavoptions
       )
       lav_msg_warn(gettext(
         "se = \"external\" but parameter table does not contain a `se' column"))
@@ -118,7 +119,8 @@ lav_lavaan_step13_vcov_boot <- function(lavoptions = NULL,
       lavmodel = lavmodel,
       lavpartable = lavpartable,
       VCOV = vcov_1,
-      BOOT = lavboot$coef
+      BOOT = lavboot$coef,
+      lavoptions = lavoptions
     )
   }
 

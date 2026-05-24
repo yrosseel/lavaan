@@ -2581,11 +2581,34 @@ lav_object_inspect_vcov <- function(object, standardized = FALSE,
     tmp_jac <- try(lav_func_jacobian_complex(func = tmp_fun, x = x_vec,
       lavobject = object),
     silent = TRUE)
-    if (inherits(tmp_jac, "try-error")) { # eg. pnorm()
+    use_complex <- !inherits(tmp_jac, "try-error")
+    if (!use_complex) { # eg. pnorm()
       tmp_jac <- lav_func_jacobian_simple(func = tmp_fun, x = x_vec,
         lavobject = object)
     }
     # }
+
+    # second-order delta method: compute Hessians for each row of tmp_jac
+    tmp_hess <- NULL
+    if (isTRUE(lavoptions$se.delta.second.order)) {
+      if (use_complex) {
+        tmp_hess <- try(lav_func_hessian_complex(func = tmp_fun, x = x_vec,
+          lavobject = object), silent = TRUE)
+        if (inherits(tmp_hess, "try-error")) {
+          tmp_hess <- try(lav_func_hessian_simple(func = tmp_fun, x = x_vec,
+            lavobject = object), silent = TRUE)
+        }
+      } else {
+        tmp_hess <- try(lav_func_hessian_simple(func = tmp_fun, x = x_vec,
+          lavobject = object), silent = TRUE)
+      }
+      if (inherits(tmp_hess, "try-error")) {
+        lav_msg_warn(gettext(
+          "Could not compute the Hessian for the standardized solution;
+           falling back to the first-order delta method."))
+        tmp_hess <- NULL
+      }
+    }
 
     # handle ceq.simple.only
     #if (object@Model@ceq.simple.only) {
@@ -2601,10 +2624,31 @@ lav_object_inspect_vcov <- function(object, standardized = FALSE,
         pt_free_idx <- which(object@ParTable$free > 0L)
       }
       tmp_jac <- tmp_jac[pt_free_idx, , drop = FALSE]
+      if (!is.null(tmp_hess)) {
+        tmp_hess <- tmp_hess[pt_free_idx]
+      }
     }
 
     # apply Delta method
+    param_vcov <- return_value
     return_value <- tmp_jac %*% return_value %*% t(tmp_jac)
+
+    # add second-order delta method correction:
+    # Cov(g_i, g_j) ~ grad_i' V grad_j + 0.5 tr(H_i V H_j V)
+    if (!is.null(tmp_hess)) {
+      ndef_1 <- length(tmp_hess)
+      correction <- matrix(0, ndef_1, ndef_1)
+      hv_list <- lapply(tmp_hess, function(h) h %*% param_vcov)
+      for (i in seq_len(ndef_1)) {
+        for (j in i:ndef_1) {
+          correction[i, j] <- 0.5 * sum(hv_list[[i]] * t(hv_list[[j]]))
+          if (i != j) {
+            correction[j, i] <- correction[i, j]
+          }
+        }
+      }
+      return_value <- return_value + correction
+    }
 
     # force return.value to be symmetric and pd
     return_value <- (return_value + t(return_value)) / 2
@@ -2707,15 +2751,73 @@ lav_object_inspect_vcov_def <- function(object, joint = FALSE,
       # regular delta method
       tmp_jac <- try(lav_func_jacobian_complex(func = lavmodel@def.function,
         x = x), silent = TRUE)
-      if (inherits(tmp_jac, "try-error")) { # eg. pnorm()
+      use_complex <- !inherits(tmp_jac, "try-error")
+      if (!use_complex) { # eg. pnorm()
         tmp_jac <- lav_func_jacobian_simple(func = lavmodel@def.function,
           x = x)
       }
+
+      # second-order delta method
+      tmp_hess <- NULL
+      if (isTRUE(object@Options$se.delta.second.order)) {
+        if (use_complex) {
+          tmp_hess <- try(lav_func_hessian_complex(
+            func = lavmodel@def.function, x = x), silent = TRUE)
+          if (inherits(tmp_hess, "try-error")) {
+            tmp_hess <- try(lav_func_hessian_simple(
+              func = lavmodel@def.function, x = x), silent = TRUE)
+          }
+        } else {
+          tmp_hess <- try(lav_func_hessian_simple(
+            func = lavmodel@def.function, x = x), silent = TRUE)
+        }
+        if (inherits(tmp_hess, "try-error")) {
+          lav_msg_warn(gettext(
+            "Could not compute the Hessian of the defined parameters;
+             falling back to the first-order delta method."))
+          tmp_hess <- NULL
+        }
+      }
+
       if (joint) {
         tmp_jac2 <- rbind(diag(nrow = ncol(tmp_jac)), tmp_jac)
         return_value <- tmp_jac2 %*% tmp_vcov %*% t(tmp_jac2)
+        if (!is.null(tmp_hess)) {
+          # second-order correction: only the def-def block is non-zero
+          # (the free part is linear, so its Hessian is zero)
+          nfree <- ncol(tmp_jac)
+          ndef_1 <- length(tmp_hess)
+          correction <- matrix(0, nfree + ndef_1, nfree + ndef_1)
+          hv_list <- lapply(tmp_hess, function(h) h %*% tmp_vcov)
+          for (i in seq_len(ndef_1)) {
+            for (j in i:ndef_1) {
+              correction[nfree + i, nfree + j] <-
+                0.5 * sum(hv_list[[i]] * t(hv_list[[j]]))
+              if (i != j) {
+                correction[nfree + j, nfree + i] <-
+                  correction[nfree + i, nfree + j]
+              }
+            }
+          }
+          return_value <- return_value + correction
+        }
       } else {
         return_value <- tmp_jac %*% tmp_vcov %*% t(tmp_jac)
+        if (!is.null(tmp_hess)) {
+          ndef_1 <- length(tmp_hess)
+          correction <- matrix(0, ndef_1, ndef_1)
+          hv_list <- lapply(tmp_hess, function(h) h %*% tmp_vcov)
+          for (i in seq_len(ndef_1)) {
+            for (j in i:ndef_1) {
+              correction[i, j] <-
+                0.5 * sum(hv_list[[i]] * t(hv_list[[j]]))
+              if (i != j) {
+                correction[j, i] <- correction[i, j]
+              }
+            }
+          }
+          return_value <- return_value + correction
+        }
       }
     }
   }

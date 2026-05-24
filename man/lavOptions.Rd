@@ -344,9 +344,21 @@ Estimation options:
      Gamma matrix by N-1 (instead of the default N).}
    \item{\code{gamma.unbiased}}{Logical. If \code{TRUE}, we compute an
      unbiased version for the Gamma matrix. Only available for single-level
-     complete data and when \code{conditional.x = FALSE} and 
+     complete data and when \code{conditional.x = FALSE} and
      \code{fixed.x = FALSE} (for now). Suffixless FMG test names use this
      option to choose between biased and unbiased Gamma.}
+   \item{\code{se.delta.second.order}}{Logical. If \code{FALSE} (the
+     default), the standard errors of defined parameters (introduced with
+     the \code{:=} operator) and of standardized parameters (as returned
+     by \code{standardizedSolution()} or \code{lavInspect(., "vcov.std.*")})
+     are computed using the first-order delta method. If \code{TRUE}, the
+     second-order delta method is used, which adds the term
+     \eqn{\frac{1}{2}\textrm{tr}(H V H V)} (where \eqn{H} is the Hessian
+     of the transformed parameter and \eqn{V} is the parameter covariance
+     matrix) to the first-order variance approximation. This may improve
+     accuracy when the transformation is a strongly non-linear function
+     of the model parameters. Has no effect when standard errors are
+     obtained by bootstrapping.}
    \item{\code{bootstrap}:}{Number of bootstrap draws, if bootstrapping is 
      used.}
    \item{\code{do.fit}:}{If \code{FALSE}, the model is not fit, and the 

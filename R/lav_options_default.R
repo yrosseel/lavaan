@@ -372,6 +372,11 @@ lav_options_default <- function() {
   elm("test", "default", oklen = c(1L, 100L))
                   # checks for 'test' are in lav_test_rename !!!
 
+  # delta method for defined parameter SEs (:=)
+  # FALSE = first-order delta method (default)
+  # TRUE  = second-order delta method
+  elm("se.delta.second.order", FALSE, bl = TRUE)
+
   # information (se + test)
   elm("information", c("default", "default"), chr = c(
     "default", "expected", "observed", "first.order"),

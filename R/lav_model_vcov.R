@@ -670,7 +670,7 @@ lav_model_vcov <- function(lavmodel = NULL,
 }
 
 lav_model_vcov_se <- function(lavmodel, lavpartable, VCOV = NULL, # nolint start
-                              BOOT = NULL) {                      # nolint end
+                              BOOT = NULL, lavoptions = NULL) {  # nolint end
   # 0. special case
   if (is.null(VCOV)) {
     se <- rep(as.numeric(NA), lavmodel@nx.user)
@@ -746,13 +746,64 @@ lav_model_vcov_se <- function(lavmodel, lavpartable, VCOV = NULL, # nolint start
       jac <- try(lav_func_jacobian_complex(func = lavmodel@def.function, x = x),
         silent = TRUE
       )
-      if (inherits(jac, "try-error")) { # eg. pnorm()
+      use_complex <- !inherits(jac, "try-error")
+      if (!use_complex) { # eg. pnorm()
         jac <- lav_func_jacobian_simple(func = lavmodel@def.function, x = x)
       }
+
+      # second-order delta method: compute Hessian for each defined param
+      hess_list <- NULL
+      if (!is.null(lavoptions) &&
+        isTRUE(lavoptions$se.delta.second.order)) {
+        if (use_complex) {
+          hess_list <- try(lav_func_hessian_complex(
+            func = lavmodel@def.function, x = x), silent = TRUE)
+          if (inherits(hess_list, "try-error")) {
+            hess_list <- try(lav_func_hessian_simple(
+              func = lavmodel@def.function, x = x), silent = TRUE)
+          }
+        } else {
+          hess_list <- try(lav_func_hessian_simple(
+            func = lavmodel@def.function, x = x), silent = TRUE)
+        }
+        if (inherits(hess_list, "try-error")) {
+          lav_msg_warn(gettext(
+            "Could not compute the Hessian of the defined parameters;
+             falling back to the first-order delta method."))
+          hess_list <- NULL
+        }
+      }
+
       if (lavmodel@ceq.simple.only) {
         jac <- jac %*% t(lavmodel@ceq.simple.K)
+        if (!is.null(hess_list)) {
+          tmp_k <- lavmodel@ceq.simple.K
+          hess_list <- lapply(hess_list, function(h) {
+            tmp_k %*% h %*% t(tmp_k)
+          })
+        }
       }
       def_cov <- jac %*% VCOV %*% t(jac)
+
+      # add second-order delta method correction:
+      # Cov(g_i, g_j) ~ grad_i' V grad_j + 0.5 tr(H_i V H_j V)
+      if (!is.null(hess_list)) {
+        ndef_1 <- length(hess_list)
+        correction <- matrix(0, ndef_1, ndef_1)
+        hv_list <- lapply(hess_list, function(h) h %*% VCOV)
+        for (i in seq_len(ndef_1)) {
+          for (j in i:ndef_1) {
+            # tr(A B) where A = H_i V, B = H_j V
+            #   = sum_{a,b} A_{a,b} B_{b,a}
+            #   = sum element-wise of A and t(B)
+            correction[i, j] <- 0.5 * sum(hv_list[[i]] * t(hv_list[[j]]))
+            if (i != j) {
+              correction[j, i] <- correction[i, j]
+            }
+          }
+        }
+        def_cov <- def_cov + correction
+      }
     }
     # check for negative se's
     diag_def_cov <- diag(def_cov)

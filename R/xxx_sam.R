@@ -459,7 +459,8 @@ sam <- function(model = NULL,                      # nolint start
     pt_1$se <- lav_model_vcov_se(
       lavmodel = joint@Model,
       lavpartable = pt_1,
-      VCOV = joint@vcov$vcov
+      VCOV = joint@vcov$vcov,
+      lavoptions = lavoptions
     )
     joint@ParTable <- pt_1
   }

@@ -143,6 +143,119 @@ lav_func_jacobian_simple <- function(func, x,
   dx
 }
 
+# Hessian computation for a (possibly vector-valued) function func: R^k -> R^m
+# Returns a list of length m, where the i-th element is the (k x k)
+# symmetric Hessian matrix of the i-th component of func at x.
+#
+# The inner Jacobian is computed using the complex-step method (high
+# accuracy), while the outer step uses forward finite differences.
+# A small symmetrization step compensates for finite-difference asymmetry.
+#
+# Components whose Jacobian row is exactly zero at x (i.e. the function
+# is locally constant for that component) are returned with a zero
+# Hessian. Without this, forward-FD noise in the Jacobian can be
+# amplified to O(1) when divided by the outer step.
+lav_func_hessian_complex <- function(func, x,                          # nolint start
+                                     h = sqrt(.Machine$double.eps), ...,
+                                     fallback.simple = TRUE) {         # nolint end
+  # Jacobian at x
+  j0 <- try(lav_func_jacobian_complex(func = func, x = x, ...,
+                                      fallback.simple = fallback.simple),
+            silent = TRUE)
+  if (inherits(j0, "try-error")) {
+    return(j0)
+  }
+  nres <- nrow(j0)
+  nvar <- length(x)
+
+  # outer step per element of x
+  h_vec <- pmax(h, abs(h * x))
+  # exact h per element (avoid floating-point asymmetry)
+  tmp <- x + h_vec
+  h_vec <- tmp - x
+
+  # detect components whose function is (locally) constant: their
+  # Jacobian row is essentially zero. We will zero their Hessians too.
+  # The threshold accommodates numerical noise from the fallback simple
+  # forward FD, which has O(sqrt(eps)) accuracy per element.
+  j0_row_max <- apply(abs(j0), 1, max)
+  constant_idx <- which(j0_row_max < .Machine$double.eps^(1 / 3))
+
+  # build Hessians by finite-differencing the Jacobian
+  h_list <- vector("list", nres)
+  for (i in seq_len(nres)) {
+    h_list[[i]] <- matrix(0, nrow = nvar, ncol = nvar)
+  }
+  for (j in seq_len(nvar)) {
+    x_plus <- x
+    x_plus[j] <- x[j] + h_vec[j]
+    jp <- try(lav_func_jacobian_complex(func = func, x = x_plus, ...,
+                                        fallback.simple = fallback.simple),
+              silent = TRUE)
+    if (inherits(jp, "try-error")) {
+      return(jp)
+    }
+    for (i in seq_len(nres)) {
+      h_list[[i]][, j] <- (jp[i, ] - j0[i, ]) / h_vec[j]
+    }
+  }
+
+  # symmetrize (small numerical asymmetry from finite differences)
+  for (i in seq_len(nres)) {
+    h_list[[i]] <- 0.5 * (h_list[[i]] + t(h_list[[i]]))
+  }
+
+  # zero out Hessians for locally-constant components
+  for (i in constant_idx) {
+    h_list[[i]][] <- 0
+  }
+
+  h_list
+}
+
+# 'simple' version (forward finite differences only), used as a fallback
+# when the complex-step Jacobian cannot be used (e.g. functions that
+# do not accept complex arguments). See lav_func_hessian_complex() for
+# the rationale behind zeroing Hessians of locally-constant components.
+lav_func_hessian_simple <- function(func, x,
+                                    h = .Machine$double.eps^(1 / 4), ...) {
+  j0 <- lav_func_jacobian_simple(func = func, x = x, ...)
+  nres <- nrow(j0)
+  nvar <- length(x)
+
+  h_vec <- pmax(h, abs(h * x))
+  tmp <- x + h_vec
+  h_vec <- tmp - x
+
+  # detect components whose function is (locally) constant (see complex
+  # variant for rationale)
+  j0_row_max <- apply(abs(j0), 1, max)
+  constant_idx <- which(j0_row_max < .Machine$double.eps^(1 / 3))
+
+  h_list <- vector("list", nres)
+  for (i in seq_len(nres)) {
+    h_list[[i]] <- matrix(0, nrow = nvar, ncol = nvar)
+  }
+  for (j in seq_len(nvar)) {
+    x_plus <- x
+    x_plus[j] <- x[j] + h_vec[j]
+    jp <- lav_func_jacobian_simple(func = func, x = x_plus, ...)
+    for (i in seq_len(nres)) {
+      h_list[[i]][, j] <- (jp[i, ] - j0[i, ]) / h_vec[j]
+    }
+  }
+
+  for (i in seq_len(nres)) {
+    h_list[[i]] <- 0.5 * (h_list[[i]] + t(h_list[[i]]))
+  }
+
+  for (i in constant_idx) {
+    h_list[[i]][] <- 0
+  }
+
+  h_list
+}
+
 lav_deriv_cov2cor_b <- function(m_cov = NULL) {
   nvar <- nrow(m_cov)
   ds_inv <- 1 / diag(m_cov)
