@@ -317,6 +317,31 @@ lavaanList <- function(model = NULL, # model                   # nolint start
       }
       if ("partable" %in% store_slots) {
         res$ParTable <- lavobject@ParTable
+        # if the (possibly asymmetric) confidence intervals are based on
+        # the bootstrap or the Monte Carlo method, the internal ParTable
+        # does not contain them; compute and store ci.lower/ci.upper here,
+        # so summary() (eg of a lavSimulate() object) can evaluate the
+        # coverage of these intervals. The intervals are computed at the
+        # 95% level (the lavaan default).
+        if (identical(lavobject@Options$se, "bootstrap") ||
+            identical(lavobject@Options$se.def, "monte.carlo")) {
+          pe_ci <- try(lavParameterEstimates(lavobject,
+            se = TRUE, zstat = FALSE, pvalue = FALSE, ci = TRUE,
+            level = 0.95, standardized = FALSE,
+            remove.system.eq = FALSE, remove.eq = FALSE,
+            remove.ineq = FALSE, remove.def = FALSE,
+            remove.nonfree = FALSE, remove.step1 = FALSE,
+            remove.unused = FALSE, output = "data.frame"),
+            silent = TRUE)
+          if (!inherits(pe_ci, "try-error") && !is.null(pe_ci$ci.lower) &&
+              length(pe_ci$ci.lower) == length(res$ParTable$lhs)) {
+            res$ParTable$ci.lower <- pe_ci$ci.lower
+            res$ParTable$ci.upper <- pe_ci$ci.upper
+          } else {
+            res$ParTable$ci.lower <- as.numeric(NA)
+            res$ParTable$ci.upper <- as.numeric(NA)
+          }
+        }
       }
       if ("data" %in% store_slots) {
         res$Data <- lavobject@Data
@@ -375,6 +400,13 @@ lavaanList <- function(model = NULL, # model                   # nolint start
         res$ParTable$est[res$ParTable$free > 0] <- as.numeric(NA)
         res$ParTable$se <- numeric(length(lavpartable$lhs))
         res$ParTable$se[res$ParTable$free > 0] <- as.numeric(NA)
+        # keep the ci.lower/ci.upper columns in sync with the converged
+        # runs (see above), so all stored ParTables have the same columns
+        if (identical(lavoptions$se, "bootstrap") ||
+            identical(lavoptions$se.def, "monte.carlo")) {
+          res$ParTable$ci.lower <- as.numeric(NA)
+          res$ParTable$ci.upper <- as.numeric(NA)
+        }
       }
       if (store.failed) {
         tmpfile <- tempfile(pattern = "lavaanListData")
