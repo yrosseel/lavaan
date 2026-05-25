@@ -179,7 +179,7 @@ lav_test_fmg_resolve_chisq <- function(parsed, lavoptions = NULL) {
   ))
 }
 
-lav_test_fmg_check_missing <- function(lavoptions = NULL,
+lav_test_fmg_check_mi <- function(lavoptions = NULL,
                                        context = "FMG tests") {
   if (is.null(lavoptions) || is.null(lavoptions$missing)) {
     return(invisible(TRUE))
@@ -351,9 +351,9 @@ lav_test_fmg_browne_nt_model <- function(lavobject = NULL,
   if (!lineq.flag) {
     for (g in seq_len(ngroups)) {
       RES <- WLS.obs[[g]] - WLS.est[[g]]
-      Delta.c <- lav_matrix_orthogonal_complement(Delta[[g]])
+      Delta.c <- lav_mat_ortho_complement(Delta[[g]])
       t_dgd <- crossprod(Delta.c, Gamma[[g]]) %*% Delta.c
-      t_dgd_inv <- lav_matrix_symmetric_inverse(t_dgd)
+      t_dgd_inv <- lav_mat_sym_inverse(t_dgd)
       Ng <- if (n.minus.one) nobs[[g]] - 1L else nobs[[g]]
       t_res_delta_c <- crossprod(RES, Delta.c)
       stat.group[g] <-
@@ -377,7 +377,7 @@ lav_test_fmg_browne_nt_model <- function(lavobject = NULL,
       }
       Gamma.inv.weighted[[g]] <- Gamma.inv.temp * Ng / ntotal
     }
-    GI <- lav_matrix_bdiag(Gamma.inv.weighted)
+    GI <- lav_mat_bdiag(Gamma.inv.weighted)
     t_dgid <- t(Delta.g) %*% GI %*% Delta.g
     t_dgid_inv <- MASS::ginv(t_dgid)
     q1 <- drop(t(RES.all) %*% GI %*% RES.all)
@@ -391,14 +391,14 @@ lav_test_fmg_browne_nt_model <- function(lavobject = NULL,
   if (!is.null(lavobject)) {
     DF <- lavobject@test[[1]]$df
   } else {
-    DF <- lav_partable_df(lavpartable)
+    DF <- lav_pt_df(lavpartable)
     if (!lavmodel@cin.simple.only && nrow(lavmodel@con.jac) > 0L) {
       ceq.idx <- attr(lavmodel@con.jac, "ceq.idx")
       if (length(ceq.idx) > 0L) {
         DF <- DF + qr(lavmodel@con.jac[ceq.idx, , drop = FALSE])$rank
       }
     } else if (lavmodel@ceq.simple.only) {
-      DF <- lav_partable_ndat(lavpartable) - max(lavpartable$free)
+      DF <- lav_pt_ndat(lavpartable) - max(lavpartable$free)
     }
   }
 
@@ -453,7 +453,7 @@ lav_test_fmg <- function(lavobject = NULL,
   }
 
   lav_test_fmg_check_estimator(lavoptions, context = "FMG tests")
-  lav_test_fmg_check_missing(lavoptions, context = "FMG tests")
+  lav_test_fmg_check_mi(lavoptions, context = "FMG tests")
 
   # Parse test string
   parsed <- lav_test_fmg_parse(test)
@@ -612,7 +612,7 @@ lav_test_fmg_ugamma <- function(lavobject = NULL,
     # Recompute Gamma with unbiased = TRUE
     Gamma <- vector("list", ngroups)
     for (g in seq_len(ngroups)) {
-      Gamma[[g]] <- lav_samplestats_gamma(
+      Gamma[[g]] <- lav_samp_gamma(
         m_y = lavdata@X[[g]],
         meanstructure = lavoptions$meanstructure,
         unbiased = TRUE
@@ -644,7 +644,7 @@ lav_test_fmg_ugamma <- function(lavobject = NULL,
   }
 
   # Get U matrix and UGamma using existing infrastructure
-  out <- lav_test_satorra_bentler(
+  out <- lav_test_sb(
     lavobject = lavobject,
     lavsamplestats = lavsamplestats,
     lavmodel = lavmodel,
@@ -678,7 +678,7 @@ lav_test_fmg_ugamma <- function(lavobject = NULL,
     for (g in seq_along(Gamma)) {
       Gamma_scaled[[g]] <- Gamma[[g]] / fg[g]
     }
-    Gamma_all <- lav_matrix_bdiag(Gamma_scaled)
+    Gamma_all <- lav_mat_bdiag(Gamma_scaled)
     UGamma <- U %*% Gamma_all
   } else {
     UGamma <- out$UGamma
@@ -945,8 +945,8 @@ lav_test_fmg_nested <- function(m0, m1, test = "pall") {
       dQuote(m1@Options$estimator.orig)
     ))
   }
-  lav_test_fmg_check_missing(m0@Options, context = "FMG nested tests")
-  lav_test_fmg_check_missing(m1@Options, context = "FMG nested tests")
+  lav_test_fmg_check_mi(m0@Options, context = "FMG nested tests")
+  lav_test_fmg_check_mi(m1@Options, context = "FMG nested tests")
 
   # Parse test string
   parsed <- lav_test_fmg_parse(test)
@@ -1040,7 +1040,7 @@ lav_test_fmg_ugamma_nested <- function(m0, m1, unbiased = FALSE) {
   if (unbiased) {
     Gamma <- vector("list", ngroups)
     for (g in seq_len(ngroups)) {
-      Gamma[[g]] <- lav_samplestats_gamma(
+      Gamma[[g]] <- lav_samp_gamma(
         m_y = lavdata@X[[g]],
         meanstructure = m1@Options$meanstructure,
         unbiased = TRUE
@@ -1104,13 +1104,13 @@ lav_test_fmg_ugamma_nested <- function(m0, m1, unbiased = FALSE) {
   for (g in seq_along(Gamma)) {
     Gamma_f[[g]] <- Gamma[[g]] / fg[g]
   }
-  Gamma_all <- lav_matrix_bdiag(Gamma_f)
+  Gamma_all <- lav_mat_bdiag(Gamma_f)
 
   V_f <- WLS.V
   for (g in seq_along(WLS.V)) {
     V_f[[g]] <- fg[g] * WLS.V[[g]]
   }
-  V_all <- lav_matrix_bdiag(V_f)
+  V_all <- lav_mat_bdiag(V_f)
 
   PI_all <- do.call(rbind, PI)
 

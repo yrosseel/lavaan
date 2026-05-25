@@ -567,7 +567,7 @@ other (observed) variable in the model syntax. Problematic term is: "),
   }
 
   # new in 0.6, reorder covariances here!
-  flat <- lav_partable_covariance_reorder(flat)
+  flat <- lav_pt_covariance_reorder(flat)
 
   if (as_data_frame) {
     flat <- as.data.frame(flat, stringsAsFactors = FALSE)

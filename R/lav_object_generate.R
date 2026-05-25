@@ -38,8 +38,8 @@ lav_object_independence <- lav_object_baseline <- function(object = NULL,
       lavoptions$estimator.args <- list()
     }
   } else {
-    lavpta <- lav_partable_attributes(lavpartable)
-    lavpartable <- lav_partable_set_cache(lavpartable, lavpta)
+    lavpta <- lav_pt_attributes(lavpartable)
+    lavpartable <- lav_pt_set_cache(lavpartable, lavpta)
   }
 
   # if two-level, force conditional.x = FALSE (for now)
@@ -50,12 +50,12 @@ lav_object_independence <- lav_object_baseline <- function(object = NULL,
   # construct parameter table for independence model
   if (!is.null(lavoptions$baseline.type) &&
     lavoptions$baseline.type == "nested") {
-    lavpartable <- lav_partable_baseline(
+    lavpartable <- lav_pt_baseline(
       lavobject = NULL,
       lavpartable = lavpartable, lavh1 = lavh1
     )
   } else {
-    lavpartable <- lav_partable_indep_or_unrestricted(
+    lavpartable <- lav_pt_indep_or_unrestricted(
       lavobject = NULL,
       lavdata = lavdata, lavpta = lavpta, lavoptions = lavoptions,
       lavsamplestats = lavsamplestats, lavh1 = lavh1, independent = TRUE
@@ -67,7 +67,7 @@ lav_object_independence <- lav_object_baseline <- function(object = NULL,
     lavoptions$bounds <- "doe.maar"
     lavoptions$effect.coding <- "" # to avoid warning
     lavoptions$optim.bounds <- list(lower = "ov.var")
-    lavpartable <- lav_partable_add_bounds(
+    lavpartable <- lav_pt_add_bounds(
       partable = lavpartable,
       lavh1 = lavh1, lavdata = lavdata,
       lavsamplestats = lavsamplestats, lavoptions = lavoptions
@@ -82,7 +82,7 @@ lav_object_independence <- lav_object_baseline <- function(object = NULL,
       lavoptions$estimator.args$dls.GammaNT <- "sample"
       dls_a <- lavoptions$estimator.args$dls.a
       for (g in 1:lavsamplestats@ngroups) {
-        gamma_nt <- lav_samplestats_gamma_nt(
+        gamma_nt <- lav_samp_gamma_nt(
           m_cov          = lavsamplestats@cov[[g]],
           m_mean         = lavsamplestats@mean[[g]],
           x_idx          = lavsamplestats@x.idx[[g]],
@@ -93,7 +93,7 @@ lav_object_independence <- lav_object_baseline <- function(object = NULL,
         )
         w_dls <- (1 - dls_a) * lavsamplestats@NACOV[[g]] + dls_a * gamma_nt
         # overwrite
-        lavsamplestats@WLS.V[[g]] <- lav_matrix_symmetric_inverse(w_dls)
+        lavsamplestats@WLS.V[[g]] <- lav_mat_sym_inverse(w_dls)
       }
     }
   }
@@ -133,7 +133,7 @@ lav_object_independence <- lav_object_baseline <- function(object = NULL,
   lavoptions$rstarts <- 0L # no random starts
 
   # ALWAYS do.fit and set optim.method = "nlminb" (if npar > 0)
-  npar <- lav_partable_npar(lavpartable)
+  npar <- lav_pt_npar(lavpartable)
   if (npar > 0L) {
     lavoptions$do.fit <- TRUE
     if (lavoptions$optim.method != "noniter") {
@@ -210,11 +210,11 @@ lav_object_extended <- function(object, add = NULL,
     }
   }
 
-  # TDJ: Added to prevent error when lav_partable_merge() is called below.
+  # TDJ: Added to prevent error when lav_pt_merge() is called below.
   #      Problematic if object@ParTable is missing one of the requested slots,
   #      which returns a NULL slot with a missing <NA> name.  For example:
   #        example(cfa)
-  #        lav_partable_independence(lavdata = fit@Data, lavpta = fit@pta,
+  #        lav_pt_independence(lavdata = fit@Data, lavpta = fit@pta,
   #                                  lavoptions = lavInspect(fit, "options"))
   #     Has no "label" or "plabel" elements.
   empties <- which(sapply(partable, is.null))
@@ -250,8 +250,8 @@ lav_object_extended <- function(object, add = NULL,
     )
     add_1 <- add
   } else if (is.character(add)) {
-    ngroups <- lav_partable_ngroups(partable)
-    add_orig <- lav_model_partable(add, ngroups = ngroups)
+    ngroups <- lav_pt_ngroups(partable)
+    add_orig <- lav_model_pt(add, ngroups = ngroups)
     add_1 <- add_orig[, c("lhs", "op", "rhs", "user", "label")] # minimum
 
     # always add block/group/level
@@ -281,8 +281,8 @@ lav_object_extended <- function(object, add = NULL,
   }
 
   # merge
-  list_1 <- lav_partable_merge(partable, add_1,
-    remove.duplicated = remove_duplicated,
+  list_1 <- lav_pt_merge(partable, add_1,
+    remove_duplicated = remove_duplicated,
     warn = FALSE
   )
 
@@ -369,7 +369,7 @@ lav_object_catml <- function(lavobject = NULL) {
       partable_catml$free[ov_var_idx] <- 0L
     }
   }
-  partable_catml <- lav_partable_complete(partable_catml)
+  partable_catml <- lav_pt_complete(partable_catml)
 
   # adapt lavsamplestats
   for (g in seq_len(lavdata@ngroups)) {
@@ -380,7 +380,7 @@ lav_object_catml <- function(lavobject = NULL) {
     ev <- eigen(cor_1, symmetric = TRUE, only.values = TRUE)$values
     if (any(ev < .Machine$double.eps^(1 / 2))) {
       # not PD!
-      cov_1 <- cov2cor(lav_matrix_symmetric_force_pd(cor_1, tol = 1e-04))
+      cov_1 <- cov2cor(lav_mat_sym_force_pd(cor_1, tol = 1e-04))
       lavsamplestats@cov[[g]] <- cov_1
       lavsamplestats@var[[g]] <- diag(cov_1)
       refit <- TRUE
@@ -392,7 +392,7 @@ lav_object_catml <- function(lavobject = NULL) {
     if (lav_warn(FALSE)) {
       on.exit(lav_warn(current_warn), TRUE)
     }
-    out <- lav_samplestats_icov(
+    out <- lav_samp_icov(
       cov_1 = cov_1, ridge = 1e-05,
       x_idx = lavsamplestats@x.idx[[g]],
       ngroups = lavdata@ngroups, g = g

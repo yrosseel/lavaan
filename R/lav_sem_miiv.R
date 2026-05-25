@@ -25,7 +25,7 @@ lav_sem_miiv_internal <- function(lavmodel = NULL, lavh1 = NULL,
   stopifnot(iv_varcov_method %in% c("ULS", "GLS", "2RLS", "RLS", "NONE"))
 
   # get lavpta
-  # lavpta <- lav_partable_attributes(lavpartable)
+  # lavpta <- lav_pt_attributes(lavpartable)
 
   # we assume the blocks are independent groups for now
   stopifnot(lavdata@nlevels == 1L)
@@ -52,7 +52,7 @@ lav_sem_miiv_internal <- function(lavmodel = NULL, lavh1 = NULL,
   theta1 <- numeric(0L)
   if (length(free_directed_idx) > 0L) {
     if (iv_samplestats) {
-      theta1 <- lav_sem_miiv_2sls_samplestats(
+      theta1 <- lav_sem_miiv_2sls_samp(
         x = NULL, samplestats = FALSE, eqs = eqs,
         lavmodel = lavmodel, lavpartable = lavpartable,
         lavdata = lavdata, lavsamplestats = lavsamplestats,
@@ -115,7 +115,7 @@ lav_sem_miiv_2sls <- function(eqs = NULL, lavmodel = NULL, lavpartable = NULL,
   stopifnot(iv_vcov_stage1 %in% c("lm.vcov.dfres", "lm.vcov", "none"))
 
   # get lavpta
-  lavpta <- lav_partable_attributes(lavpartable)
+  lavpta <- lav_pt_attributes(lavpartable)
 
   if (is.null(eqs)) {
     # find ALL model-implied instrumental variables (miivs) per equation
@@ -323,7 +323,7 @@ lav_sem_miiv_2sls <- function(eqs = NULL, lavmodel = NULL, lavpartable = NULL,
 #          directed effects in the model -- samplestats version
 # if samplestats = TRUE, x should contain the sample statistics
 # (taken from lavh1$implied)
-lav_sem_miiv_2sls_samplestats <- function(x = NULL, samplestats = FALSE,
+lav_sem_miiv_2sls_samp <- function(x = NULL, samplestats = FALSE,
                                           eqs = NULL, lavmodel = NULL,
                                           lavpartable = NULL, lavdata = NULL,
                                           lavsamplestats = NULL, lavh1 = NULL,
@@ -338,7 +338,7 @@ lav_sem_miiv_2sls_samplestats <- function(x = NULL, samplestats = FALSE,
     c("lm.vcov.dfres", "lm.vcov", "gamma", "none"))
 
   # get lavpta
-  lavpta <- lav_partable_attributes(lavpartable)
+  lavpta <- lav_pt_attributes(lavpartable)
 
   if (is.null(eqs)) {
     # find ALL model-implied instrumental variables (miivs) per equation
@@ -436,18 +436,18 @@ lav_sem_miiv_2sls_samplestats <- function(x = NULL, samplestats = FALSE,
       fit_y_on_xhat <- list()
       if (iv_flag) {
         # Step 1: compute S_ZZ^{-1} S_ZX and S_ZZ^{-1} S_Zy
-        m_w <- lav_matrix_symmetric_solve_spd(s_zz, s_zx)
-        v <- lav_matrix_symmetric_solve_spd(s_zz, s_zy)
+        m_w <- lav_mat_sym_solve_spd(s_zz, s_zx)
+        v <- lav_mat_sym_solve_spd(s_zz, s_zy)
         # Step 2: build reduced system
         amat <- s_xz %*% m_w
         bvec <- s_xz %*% v
-        beta_slopes <- drop(lav_matrix_symmetric_solve_spd(amat, bvec))
+        beta_slopes <- drop(lav_mat_sym_solve_spd(amat, bvec))
         beta0 <- as.vector(y_bar - t(x_bar) %*% beta_slopes)
       } else {
         if (nx > 0L) {
           amat <- s_xx
           bvec <- s_xy
-          beta_slopes <- drop(lav_matrix_symmetric_solve_spd(amat, bvec))
+          beta_slopes <- drop(lav_mat_sym_solve_spd(amat, bvec))
           beta0 <- as.vector(y_bar - t(x_bar) %*% beta_slopes)
         } else {
           beta_slopes <- numeric(0L)
@@ -468,8 +468,8 @@ lav_sem_miiv_2sls_samplestats <- function(x = NULL, samplestats = FALSE,
           ex[cbind(seq_len(nx), x_idx)] <- 1.0
         }
         # ---- Jacobian of beta_slopes w.r.t. vech(S) --------------
-        a_vec <- lav_matrix_vech_row_idx(nvar)
-        b_vec <- lav_matrix_vech_col_idx(nvar)
+        a_vec <- lav_mat_vech_row_idx(nvar)
+        b_vec <- lav_mat_vech_col_idx(nvar)
         offdiag <- (a_vec > b_vec) # logical: strictly off-diagonal elements
 
         if (!iv_flag && nx == 0L) {
@@ -480,10 +480,10 @@ lav_sem_miiv_2sls_samplestats <- function(x = NULL, samplestats = FALSE,
           # build M (p x m) column-by-column in vectorised form
           m <- sweep(ex[, b_vec, drop = FALSE], 2L, g[a_vec], `*`) +
             sweep(ex[, a_vec, drop = FALSE], 2L, g[b_vec] * offdiag, `*`)
-          j_slopes_s <- lav_matrix_symmetric_solve_spd(s_xx, m)
+          j_slopes_s <- lav_mat_sym_solve_spd(s_xx, m)
         } else {
           r_z <- drop(s_zy) - s_zx %*% beta_slopes
-          u <- drop(lav_matrix_symmetric_solve_spd(s_zz, r_z))
+          u <- drop(lav_mat_sym_solve_spd(s_zz, r_z))
           ez <- matrix(0.0, nz, nvar)
           ez[cbind(seq_len(nz), i_idx)] <- 1.0
           ew <- crossprod(m_w, ez)
@@ -518,7 +518,7 @@ lav_sem_miiv_2sls_samplestats <- function(x = NULL, samplestats = FALSE,
         } else if (lavmodel@categorical) {
           # split: var_num, off
           # FIXME: all ordinal for now (ie no variances)
-          tmp <- j_slopes_s[, -lav_matrix_diagh_idx(nvar), drop = FALSE]
+          tmp <- j_slopes_s[, -lav_mat_diagh_idx(nvar), drop = FALSE]
           nth <- nrow(lavsamplestats@NACOV[[b]]) - ncol(tmp)
           k_mat_int <- numeric(nth + ncol(tmp))
           k_mat <- matrix(0.0, nx, nth + ncol(tmp))
@@ -580,7 +580,7 @@ lav_sem_miiv_2sls_samplestats <- function(x = NULL, samplestats = FALSE,
         }
         if (nx > 0L) {
           ainv <-
-            lav_matrix_symmetric_solve_spd(amat, diag(x = 1, nrow = nrow(amat)))
+            lav_mat_sym_solve_spd(amat, diag(x = 1, nrow = nrow(amat)))
           vcov_slopes <- (this_resvar / nobs) * ainv
           vcov_beta0 <-
             (this_resvar / nobs) + t(x_bar) %*% vcov_slopes %*% x_bar
@@ -601,7 +601,7 @@ lav_sem_miiv_2sls_samplestats <- function(x = NULL, samplestats = FALSE,
         sargan["df"] <- nz - nx
         if (sargan["df"] > 0L) {
           g <- s_zy - s_zx %*% beta_slopes
-          w <- lav_matrix_symmetric_solve_spd(s_zz, g)
+          w <- lav_mat_sym_solve_spd(s_zz, g)
           sargan["stat"] <- as.numeric(nobs * t(g) %*% w / resvar_df_res)
           if (!lavmodel@categorical) {
             sargan["pvalue"] <- pchisq(sargan["stat"], sargan["df"],
@@ -696,11 +696,11 @@ lav_sem_miiv_varcov <- function(x = NULL, samplestats = FALSE,
   sample_mean <- implied$mean[[b]]
   if (lavmodel@categorical) {
     sample_th <- implied$th[[b]]
-    svec <- c(sample_th, lav_matrix_vech(sample_cov, diagonal = FALSE))
+    svec <- c(sample_th, lav_mat_vech(sample_cov, diagonal = FALSE))
   } else if (!lavmodel@categorical && lavmodel@meanstructure) {
-    svec <- c(sample_mean, lav_matrix_vech(sample_cov))
+    svec <- c(sample_mean, lav_mat_vech(sample_cov))
   } else {
-    svec <- lav_matrix_vech(sample_cov)
+    svec <- lav_mat_vech(sample_cov)
   }
 
   # initial estimate for theta.2
@@ -836,7 +836,7 @@ lav_sem_miiv_vcov <- function(lavmodel = NULL, lavsamplestats = NULL,
           cov_g <- lavh1$implied$cov[[g]]
         }
 #         # NT version (for now), model-based
-#         gamma_g[[g]] <- lav_samplestats_gamma_nt(
+#         gamma_g[[g]] <- lav_samp_gamma_nt(
 #           m_cov = cov_g,
 #           m_mean = mean_g,
 #           x_idx = lavsamplestats@x.idx[[g]],
@@ -849,7 +849,7 @@ lav_sem_miiv_vcov <- function(lavmodel = NULL, lavsamplestats = NULL,
       }
     }
     if (!is.null(lavsamplestats@NACOV[[g]])) {
-      gamma_big <- lav_matrix_bdiag(gamma_g)
+      gamma_big <- lav_mat_bdiag(gamma_g)
     }
   }
 
@@ -863,7 +863,7 @@ lav_sem_miiv_vcov <- function(lavmodel = NULL, lavsamplestats = NULL,
         drop_list = TRUE
       )
       jac_k <- numDeriv::jacobian(
-        lav_sem_miiv_2sls_samplestats,
+        lav_sem_miiv_2sls_samp,
         x = vec, samplestats = TRUE, eqs = eqs,
         lavmodel = lavmodel, lavpartable = lavpartable,
         lavsamplestats = lavsamplestats,
@@ -892,7 +892,7 @@ lav_sem_miiv_vcov <- function(lavmodel = NULL, lavsamplestats = NULL,
         # k_gammant_kt <- jac_k %*% gamma_big %*% t(jac_k)
         x_idx <-
           if (lavmodel@fixed.x) lavsamplestats@x.idx[[1]] else integer(0L)
-        k_gammant_kt <- lav_matrix_k_gammant_kt(m_k = jac_k, s = cov_g,
+        k_gammant_kt <- lav_mat_k_gammant_kt(m_k = jac_k, s = cov_g,
           meanstructure = lavmodel@meanstructure, x_idx = x_idx)
         vcov[free_directed_idx, free_directed_idx] <-
           k_gammant_kt / lavsamplestats@ntotal
@@ -968,16 +968,16 @@ lav_sem_miiv_vcov <- function(lavmodel = NULL, lavsamplestats = NULL,
       #   } else {
       #     s.inv <- lavimplied$cov[[b]]
       #   }
-      #   w2_22 <- 0.5 * lav_matrix_duplication_pre_post(s.inv %x% s.inv)
+      #   w2_22 <- 0.5 * lav_mat_dup_pre_post(s.inv %x% s.inv)
       #   if (lavmodel@meanstructure) {
-      #     w2_block[[b]] <- lav_matrix_bdiag(s.inv, w2_22)
+      #     w2_block[[b]] <- lav_mat_bdiag(s.inv, w2_22)
       #   } else {
       #     w2_block[[b]] <- w2_22
       #   }
       # } # blocks
       # delta1 <- do.call("rbind", delta1_block)
       # delta2 <- do.call("rbind", delta2_block)
-      # w2 <- lav_matrix_bdiag(w2_block)
+      # w2 <- lav_mat_bdiag(w2_block)
       # h2 <- solve(t(delta2) %*% w2 %*% delta2, t(delta2) %*% w2)
 
       # tmp <- lav_sem_miiv_varcov(
@@ -1037,7 +1037,7 @@ lav_sem_miiv_vcov <- function(lavmodel = NULL, lavsamplestats = NULL,
       } else {
         x_idx <-
           if (lavmodel@fixed.x) lavsamplestats@x.idx[[1]] else integer(0L)
-        tmp_gammant_tmpt <- lav_matrix_k_gammant_kt(m_k = tmp, s = cov_g,
+        tmp_gammant_tmpt <- lav_mat_k_gammant_kt(m_k = tmp, s = cov_g,
           meanstructure = lavmodel@meanstructure, x_idx = x_idx)
         #tmp_gammant_tmpt_bis <- tmp %*% gamma_big %*% t(tmp)
         vcov[free_undirected_idx, free_undirected_idx] <-
@@ -1126,7 +1126,7 @@ lav_sem_miiv_vcov <- function(lavmodel = NULL, lavsamplestats = NULL,
                                           theta2 = theta2)
           }
         } # blocks
-        jac_b <- lav_matrix_bdiag(jac_b_block)
+        jac_b <- lav_mat_bdiag(jac_b_block)
 
       # for checking only: numerical approximation (very slow!)
       } else {
@@ -1154,7 +1154,7 @@ lav_sem_miiv_vcov <- function(lavmodel = NULL, lavsamplestats = NULL,
         # )
       }
       x_idx <- if (lavmodel@fixed.x) lavsamplestats@x.idx[[1]] else integer(0L)
-      jacb_gammant_jacbt <- lav_matrix_k_gammant_kt(m_k = jac_b, s = cov_g,
+      jacb_gammant_jacbt <- lav_mat_k_gammant_kt(m_k = jac_b, s = cov_g,
         meanstructure = lavmodel@meanstructure, x_idx = x_idx)
       #jacb_gammant_jacbt_bis <- jac_b %*% gamma_big %*% t(jac_b)
       vcov_b <- jacb_gammant_jacbt / lavsamplestats@ntotal

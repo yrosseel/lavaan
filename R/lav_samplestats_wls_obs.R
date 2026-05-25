@@ -1,4 +1,4 @@
-lav_samplestats_wls_obs <- function(mean_g, cov_g, var_g,
+lav_samp_wls_obs <- function(mean_g, cov_g, var_g,
                                     th_g, th_idx_g,
                                     res_int_g, res_cov_g, res_var_g, res_th_g,
                                     res_slopes_g,
@@ -30,9 +30,9 @@ lav_samplestats_wls_obs <- function(mean_g, cov_g, var_g,
 
       wls_obs <- c(
         th,
-        lav_matrix_vec(res_slopes_g),
+        lav_mat_vec(res_slopes_g),
         res_var_g[num_idx],
-        lav_matrix_vech(res_cov_g, diagonal = FALSE)
+        lav_mat_vech(res_cov_g, diagonal = FALSE)
       )
     } else {
       th <- th_g
@@ -44,7 +44,7 @@ lav_samplestats_wls_obs <- function(mean_g, cov_g, var_g,
       wls_obs <- c(
         th,
         var_g[num_idx],
-        lav_matrix_vech(cov_g, diagonal = FALSE)
+        lav_mat_vech(cov_g, diagonal = FALSE)
       )
     }
   } else {
@@ -60,36 +60,36 @@ lav_samplestats_wls_obs <- function(mean_g, cov_g, var_g,
           # cbind(res.int, res.slopes) is t(Beta)
           # so we need vecr
           wls_obs <- c(
-            lav_matrix_vecr(cbind(
+            lav_mat_vecr(cbind(
               res_int_g,
               res_slopes_g
             )),
-            lav_matrix_vech(res_cov_g, diagonal = diag_1)
+            lav_mat_vech(res_cov_g, diagonal = diag_1)
           )
         } else {
           wls_obs <- c(
             res_int_g,
-            lav_matrix_vech(res_cov_g, diagonal = diag_1)
+            lav_mat_vech(res_cov_g, diagonal = diag_1)
           )
         }
       } else {
         if (slopestructure) {
           wls_obs <- c(
-            lav_matrix_vecr(res_slopes_g),
-            lav_matrix_vech(res_cov_g, diagonal = diag_1)
+            lav_mat_vecr(res_slopes_g),
+            lav_mat_vech(res_cov_g, diagonal = diag_1)
           )
         } else {
-          wls_obs <- lav_matrix_vech(res_cov_g, diagonal = diag_1)
+          wls_obs <- lav_mat_vech(res_cov_g, diagonal = diag_1)
         }
       }
     } else {
       if (meanstructure) {
         wls_obs <- c(
           mean_g,
-          lav_matrix_vech(cov_g, diagonal = diag_1)
+          lav_mat_vech(cov_g, diagonal = diag_1)
         )
       } else {
-        wls_obs <- lav_matrix_vech(cov_g, diagonal = diag_1)
+        wls_obs <- lav_mat_vech(cov_g, diagonal = diag_1)
       }
     }
   }

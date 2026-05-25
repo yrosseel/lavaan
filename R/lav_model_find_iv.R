@@ -27,7 +27,7 @@ lav_model_find_iv <- function(lavobject = NULL, lavmodel = NULL,
     lavmodel <- lavobject@Model
   } else {
     # get lavpta
-    lavpta <- lav_partable_attributes(lavpartable)
+    lavpta <- lav_pt_attributes(lavpartable)
   }
 
   # sanity checks
@@ -568,7 +568,7 @@ lav_model_find_iv_miivsem <- function(lavmodel = NULL, lavpta = NULL) {
     beta_orig[, colnames(tmp)] <- tmp
 
     # construct Phi
-    phi <- lav_matrix_bdiag(
+    phi <- lav_mat_bdiag(
       psi[lv_x_idx, lv_x_idx, drop = FALSE],
       theta,
       psi[-lv_x_idx, -lv_x_idx, drop = FALSE]
@@ -582,7 +582,7 @@ lav_model_find_iv_miivsem <- function(lavmodel = NULL, lavpta = NULL) {
 
     tmp <- crossprod(gamma)
     tmp[, ] <- 0
-    beta_1 <- lav_matrix_bdiag(beta, tmp)
+    beta_1 <- lav_mat_bdiag(beta, tmp)
     ii <- diag(nrow(beta_1))
     diag(tmp) <- 1
     gamma <- rbind(gamma, tmp)

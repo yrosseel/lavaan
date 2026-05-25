@@ -34,7 +34,7 @@ lav_start <- function(start_method = "default",
   # ord.names <- unique(lavpartable$lhs[ lavpartable$op == "|" ])
 
   # nlevels?
-  nlevels <- lav_partable_nlevels(lavpartable)
+  nlevels <- lav_pt_nlevels(lavpartable)
 
   # reflect/order.lv.by
   if (is.null(reflect)) {
@@ -72,7 +72,7 @@ lav_start <- function(start_method = "default",
       #    start[ which(lavpartable$op == "=~") ] <- 1.0
       # }
       start[which(lavpartable$op == "~*~")] <- 1.0
-      ov_names_ord <- lav_partable_vnames(lavpartable, "ov.ord")
+      ov_names_ord <- lav_pt_vnames(lavpartable, "ov.ord")
       var_idx <- which(lavpartable$op == "~~" &
         lavpartable$lhs == lavpartable$rhs &
         !(lavpartable$lhs %in% ov_names_ord))
@@ -139,7 +139,7 @@ lav_start <- function(start_method = "default",
   }
 
   # 2. (residual) lv variances for latent variables
-  lv_names <- lav_partable_vnames(lavpartable, "lv") # all groups
+  lv_names <- lav_pt_vnames(lavpartable, "lv") # all groups
   lv_var_idx <- which(lavpartable$op == "~~" &
     lavpartable$lhs %in% lv_names &
     lavpartable$lhs == lavpartable$rhs)
@@ -152,7 +152,7 @@ lav_start <- function(start_method = "default",
 
 
   # group-specific settings
-  ngroups <- lav_partable_ngroups(lavpartable)
+  ngroups <- lav_pt_ngroups(lavpartable)
 
   # for now, if no group column, add one (again), until we rewrite
   # this function to handle block/group hybrid settings
@@ -162,35 +162,35 @@ lav_start <- function(start_method = "default",
   }
 
   # group values
-  group_values <- lav_partable_group_values(lavpartable)
+  group_values <- lav_pt_group_values(lavpartable)
 
   for (g in 1:ngroups) {
 
     # info from user model for this group
     if (conditional_x) {
-      ov_names <- lav_partable_vnames(lavpartable, "ov.nox",
+      ov_names <- lav_pt_vnames(lavpartable, "ov.nox",
                                                 group = group_values[g])
     } else {
-      ov_names <- lav_partable_vnames(lavpartable, "ov",
+      ov_names <- lav_pt_vnames(lavpartable, "ov",
                                                 group = group_values[g])
     }
     if (categorical) {
-      ov_names_num <- lav_partable_vnames(lavpartable, "ov.num",
+      ov_names_num <- lav_pt_vnames(lavpartable, "ov.num",
                                                 group = group_values[g])
-      ov_names_ord <- lav_partable_vnames(lavpartable, "ov.ord",
+      ov_names_ord <- lav_pt_vnames(lavpartable, "ov.ord",
                                                 group = group_values[g])
     } else {
       ov_names_num <- ov_names
     }
-    lv_names <- lav_partable_vnames(lavpartable, "lv",
+    lv_names <- lav_pt_vnames(lavpartable, "lv",
                                                  group = group_values[g])
-    lv_names_efa <- lav_partable_vnames(lavpartable, "lv.efa",
+    lv_names_efa <- lav_pt_vnames(lavpartable, "lv.efa",
                                                  group = group_values[g])
-    ov_names_x <- lav_partable_vnames(lavpartable, "ov.x",
+    ov_names_x <- lav_pt_vnames(lavpartable, "ov.x",
                                                  group = group_values[g])
-    ov_ind_c <- lav_partable_vnames(lavpartable, "ov.cind",
+    ov_ind_c <- lav_pt_vnames(lavpartable, "ov.cind",
                                                  group = group_values[g])
-    lv_names_c <- lav_partable_vnames(lavpartable, "lv.composite",
+    lv_names_c <- lav_pt_vnames(lavpartable, "lv.composite",
                                                  group = group_values[g])
 
     # just for the nlevels >1 case
@@ -360,9 +360,9 @@ lav_start <- function(start_method = "default",
       } # fabin3
 
       # efa?
-      nefa <- lav_partable_nefa(lavpartable)
+      nefa <- lav_pt_nefa(lavpartable)
       if (nefa > 0L) {
-        efa_values <- lav_partable_efa_values(lavpartable)
+        efa_values <- lav_pt_efa_values(lavpartable)
 
         for (set in seq_len(nefa)) {
           # determine ov idx for this set
@@ -541,7 +541,7 @@ lav_start <- function(start_method = "default",
       th_names_sample <-
         lavsamplestats@th.names[[g]][lavsamplestats@th.idx[[g]] > 0L]
       # th.names.sample should identical to
-      # lav_partable_vnames(lavpartable, "th", group = group.values[g])
+      # lav_pt_vnames(lavpartable, "th", group = group.values[g])
       if (conditional_x && nlevels == 1L) {
         th_values <-
           lavsamplestats@res.th[[g]][lavsamplestats@th.idx[[g]] > 0L]
@@ -601,7 +601,7 @@ lav_start <- function(start_method = "default",
     }
 
     # 6b. exogenous lv variances if single indicator -- new in 0.5-21
-    lv_x <- lav_partable_vnames(lavpartable, "lv.x", group = group_values[g])
+    lv_x <- lav_pt_vnames(lavpartable, "lv.x", group = group_values[g])
     # FIXME: also for multilevel?
     lv_x <- unique(unlist(lv_x))
     if (length(lv_x) > 0L) {
@@ -699,9 +699,9 @@ lav_start <- function(start_method = "default",
     }
 
     #  # 8 latent variances (new in 0.6-2)
-    #  lv.names.y <- lav_partable_vnames(lavpartable,
+    #  lv.names.y <- lav_pt_vnames(lavpartable,
     #                               "lv.y", group = group.values[g])
-    #  lv.names.x <- lav_partable_vnames(lavpartable,
+    #  lv.names.x <- lav_pt_vnames(lavpartable,
     #                               "lv.x", group = group.values[g])
     #  # multilevel? take first level only
     #  if(is.list(lv.names.y)) {
@@ -770,17 +770,17 @@ lav_start <- function(start_method = "default",
 
     # nlevels > 1L
     if (nlevels > 1L) {
-      level_values <- lav_partable_level_values(lavpartable)
+      level_values <- lav_pt_level_values(lavpartable)
       # Note: ov.names.x contains all levels within a group!
       if (length(ov_names_x) > 0) {
         for (l in 1:nlevels) {
           # block number
           block <- (g - 1L) * nlevels + l
 
-          this_block_x <- lav_partable_vnames(lavpartable, "ov.x",
+          this_block_x <- lav_pt_vnames(lavpartable, "ov.x",
             block = block
           )
-          this_block_ov <- lav_partable_vnames(lavpartable, "ov",
+          this_block_ov <- lav_pt_vnames(lavpartable, "ov",
             block = block
           )
           if (length(this_block_x) == 0L) {
@@ -847,7 +847,7 @@ lav_start <- function(start_method = "default",
                "lavh1 information is needed; please rerun with h1 = TRUE"))
             }
             blocks_within_group <- (g - 1L) * nlevels + seq_len(nlevels)
-            other_block_names <- lav_partable_vnames(lavpartable, "ov",
+            other_block_names <- lav_pt_vnames(lavpartable, "ov",
                                     block = blocks_within_group[-block])
             ov_names_x_block <- this_block_x
             idx <- which(ov_names_x_block %in% other_block_names)
@@ -1046,12 +1046,12 @@ lav_start <- function(start_method = "default",
 # sanity check: (user-specified) variances smaller than covariances
 # but not for composites, as we have not 'set' their variances yet
 lav_start_check_cov <- function(lavpartable = NULL, start = lavpartable$start) {
-  nblocks <- lav_partable_nblocks(lavpartable)
-  block_values <- lav_partable_block_values(lavpartable)
+  nblocks <- lav_pt_nblocks(lavpartable)
+  block_values <- lav_pt_block_values(lavpartable)
 
   for (g in 1:nblocks) {
 
-    lv_names_c <- lav_partable_vnames(lavpartable, "lv.composite", block = g)
+    lv_names_c <- lav_pt_vnames(lavpartable, "lv.composite", block = g)
 
     # collect all non-zero covariances
     cov_idx <- which(lavpartable$op == "~~" &

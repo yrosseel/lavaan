@@ -1,10 +1,10 @@
 # handle ov.order = "data" by adding attribute "ovda" to FLAT
-lav_partable_ov_from_data <- function(flat = NULL, # nolint
+lav_pt_ov_from_data <- function(flat = NULL,
                                       data = NULL,
                                       sample_cov = NULL,
                                       slot_data = NULL) { # nolint
   # current model-based ov.names
-  ov_names <- lav_partable_vnames(flat, type = "ov")
+  ov_names <- lav_pt_vnames(flat, type = "ov")
 
   # get data-based ov.names
   data_names <- NULL

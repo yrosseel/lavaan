@@ -159,7 +159,7 @@ lav_object_cor <- function(object,                 # nolint start
 
   # generate partable for unrestricted model
   pt_un <-
-    lav_partable_unrestricted(
+    lav_pt_unrestricted(
       lavobject = NULL,
       lavdata = lav_data,
       lavoptions = list(
@@ -172,9 +172,9 @@ lav_object_cor <- function(object,                 # nolint start
         estimator = estimator,
         mimic = mimic
       ),
-      sample.cov = NULL,
-      sample.mean = NULL,
-      sample.th = NULL
+      sample_cov = NULL,
+      sample_mean = NULL,
+      sample_th = NULL
     )
 
 
@@ -191,7 +191,7 @@ lav_object_cor <- function(object,                 # nolint start
   # smooth correlation matrix? (only if output = "cor")
   if (output == "cor" && cor.smooth) {
     tmp_attr <- attributes(out)
-    out <- cov2cor(lav_matrix_symmetric_force_pd(out, tol = cor.smooth.tol))
+    out <- cov2cor(lav_mat_sym_force_pd(out, tol = cor.smooth.tol))
     # we lost most of the attributes
     attributes(out) <- tmp_attr
   }

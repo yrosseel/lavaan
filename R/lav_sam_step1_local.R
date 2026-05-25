@@ -166,19 +166,19 @@ lav_sam_step1_local <- function(step1 = NULL, fit = NULL, y = NULL,
 
     # if lambda has full rank, check if cov.lv is unrestricted
     if (!lsam_analytic_flag[b]) {
-      veta_symbolic_1 <- lav_sam_veta_partable(fit, block = b)
+      veta_symbolic_1 <- lav_sam_veta_pt(fit, block = b)
       # this is the tricky thing: which rows/cols should we remove?
       # none for now
       if (fit@Options$std.lv) {
-        veta_symbolic <- lav_matrix_vech(veta_symbolic_1, diagonal = FALSE)
+        veta_symbolic <- lav_mat_vech(veta_symbolic_1, diagonal = FALSE)
       } else {
-        veta_symbolic <- lav_matrix_vech(veta_symbolic_1, diagonal = TRUE)
+        veta_symbolic <- lav_mat_vech(veta_symbolic_1, diagonal = TRUE)
       }
       if (any(veta_symbolic == 0)) {
         lsam_analytic_flag[b] <- FALSE
         nfac <- ncol(veta_symbolic_1)
         m_free <- which(veta_symbolic_1 != 0)
-        tmp <- lav_matrix_vech_reverse(lav_matrix_vech_idx(nfac))
+        tmp <- lav_mat_vech_rev(lav_mat_vech_idx(nfac))
         x_free <- tmp[which(veta_symbolic_1 != 0)]
         unique_idx <- unique(x_free)
         row_idx <- match(x_free, unique_idx)
@@ -313,7 +313,7 @@ lav_sam_step1_local <- function(step1 = NULL, fit = NULL, y = NULL,
       this_lambda <- this_lambda[, -lavpta$vidx$lv.interaction[[b]]]
     }
     if (lsam_analytic_flag[b]) {
-      mb <- lav_sam_mapping_matrix(
+      mb <- lav_sam_mapping_mat(
         mm_lambda = this_lambda,
         mm_theta = mm_theta[[b]],
         s = cov_1, s_inv = icov,
@@ -342,9 +342,9 @@ lav_sam_step1_local <- function(step1 = NULL, fit = NULL, y = NULL,
     # if (FIT@Model@conditional.x) {
     #   I0 <- diag(x = 0, nrow = length(exo.names))
     #   I1 <- diag(x = 1, nrow = length(exo.names))
-    #   Mb <- lav_matrix_bdiag(Mb, I1)
-    #   LAMBDA[[b]] <- lav_matrix_bdiag(LAMBDA[[b]], I1)
-    #   THETA[[b]] <- lav_matrix_bdiag(THETA[[b]], I0)
+    #   Mb <- lav_mat_bdiag(Mb, I1)
+    #   LAMBDA[[b]] <- lav_mat_bdiag(LAMBDA[[b]], I1)
+    #   THETA[[b]] <- lav_mat_bdiag(THETA[[b]], I0)
     #   NU[[b]] <- c(drop(NU[[b]]), numeric(length(exo.names)))
     # }
 
@@ -646,7 +646,7 @@ lav_sam_step1_local_jac <- function(step1 = NULL, fit = NULL, p_only = FALSE,
     mm_ov_idx <- match(step1$MM.FIT[[mm]]@Data@ov.names[[g]],
                        lavdata@ov.names[[g]])
     mm_nvar <- length(lavdata@ov.names[[g]])
-    mm_col_idx <- lav_matrix_vech_which_idx(mm_nvar, idx = mm_ov_idx,
+    mm_col_idx <- lav_mat_vech_which_idx(mm_nvar, idx = mm_ov_idx,
       add_idx_at_start = lavmodel@meanstructure)
     mm_row_idx <- step1$block.mm.idx[[mm]][step1$block.ptm.idx[[mm]]]
     jaca[mm_row_idx, mm_col_idx] <- mm_jac
@@ -695,10 +695,10 @@ lav_sam_step1_local_jac <- function(step1 = NULL, fit = NULL, p_only = FALSE,
       if (lavmodel@meanstructure) {
         nvar <- nrow(fit@h1$implied$cov[[g]])
         this_ybar <- x[seq_len(nvar)]
-        this_cov <- lav_matrix_vech_reverse(x[-seq_len(nvar)])
+        this_cov <- lav_mat_vech_rev(x[-seq_len(nvar)])
       } else {
         this_ybar <- fit@h1$implied$mean[[g]]
-        this_cov <- lav_matrix_vech_reverse(x)
+        this_cov <- lav_mat_vech_rev(x)
       }
 
       # change COV/YBAR
@@ -711,23 +711,23 @@ lav_sam_step1_local_jac <- function(step1 = NULL, fit = NULL, p_only = FALSE,
       # transform data to comply with the new COV/YBAR
       y <- fit@Data@X[[1]]
       ytrans <- vector("list", nblocks)
-      ytrans[[1]] <- lav_matrix_transform_mean_cov(y, target_mean = this_ybar,
+      ytrans[[1]] <- lav_mat_transform_mean_cov(y, target_mean = this_ybar,
                                                    target_cov = this_cov)
       colnames(ytrans[[1]]) <- fit@pta$vnames$ov[[1]]
 
       step1_1 <- lav_sam_step1_local(step1 = step1_1, fit = fit, y = ytrans,
            sam_method = step1$sam.method, local_options = step1$local.options)
       if (lavmodel@meanstructure) {
-        out <- c(step1_1$EETA[[1]], lav_matrix_vech(step1_1$VETA[[1]]))
+        out <- c(step1_1$EETA[[1]], lav_mat_vech(step1_1$VETA[[1]]))
       } else {
-        out <- lav_matrix_vech(step1_1$VETA[[1]])
+        out <- lav_mat_vech(step1_1$VETA[[1]])
       }
       out
     }
     # shut off verbose
     verbose_flag <- lav_verbose()
     lav_verbose(FALSE)
-    this_x <- lav_matrix_vech(fit@h1$implied$cov[[g]])
+    this_x <- lav_mat_vech(fit@h1$implied$cov[[g]])
     if (lavmodel@meanstructure) {
       this_x <- c(fit@h1$implied$mean[[g]], this_x)
     }
@@ -751,16 +751,16 @@ lav_sam_step1_local_jac <- function(step1 = NULL, fit = NULL, p_only = FALSE,
     #   tmp <- lav_sam_step1_local_jac_mean2(ybar = STEP1$YBAR[[g]],
     #     M = STEP1$M[[g]], NU = STEP1$NU[[g]])
     #   dd
-    #   JACb <- lav_matrix_bdiag(tmp, JACb)
+    #   JACb <- lav_mat_bdiag(tmp, JACb)
     # }
 
   } else { # no latent interactions
     mb <- step1$M[[g]]
     mbx_mb <- mb %x% mb
-    row_idx <- lav_matrix_vech_idx(nrow(mb))
-    jacb <- lav_matrix_duplication_post(mbx_mb)[row_idx, , drop = FALSE]
+    row_idx <- lav_mat_vech_idx(nrow(mb))
+    jacb <- lav_mat_dup_post(mbx_mb)[row_idx, , drop = FALSE]
     if (lavmodel@meanstructure) {
-      jacb <- lav_matrix_bdiag(mb, jacb)
+      jacb <- lav_mat_bdiag(mb, jacb)
     }
   }
 
@@ -777,7 +777,7 @@ lav_sam_step1_local_jac <- function(step1 = NULL, fit = NULL, p_only = FALSE,
   #   theta.idx  <- which(names(this.model@GLIST) ==  "theta")[b]
   #   LAMBDA <- this.model@GLIST[[lambda.idx]]
   #   THETA  <- this.model@GLIST[[ theta.idx]]
-  #   Mb <- lav_sam_mapping_matrix(LAMBDA = LAMBDA,
+  #   Mb <- lav_sam_mapping_mat(LAMBDA = LAMBDA,
   #                                THETA = THETA, S = COV,
   #                                method = local.options$M.method)
   #   # handle observed-only variables
@@ -801,9 +801,9 @@ lav_sam_step1_local_jac <- function(step1 = NULL, fit = NULL, p_only = FALSE,
   #     nu.idx <- which(names(this.model@GLIST) ==  "nu")[b]
   #     NU <- this.model@GLIST[[nu.idx]]
   #     EETA <- lav_sam_eeta(M = Mb, YBAR = YBAR, NU = NU)
-  #     out <- c(EETA, lav_matrix_vech(VETA))
+  #     out <- c(EETA, lav_mat_vech(VETA))
   #   } else {
-  #     out <- lav_matrix_vech(VETA)
+  #     out <- lav_mat_vech(VETA)
   #   }
 
   #   out
@@ -828,9 +828,9 @@ lav_sam_step1_local_jac <- function(step1 = NULL, fit = NULL, p_only = FALSE,
     step1_1 <- lav_sam_step1_local(step1 = step1_1, fit = fit,
            sam_method = step1$sam.method, local_options = step1$local.options)
     if (lavmodel@meanstructure) {
-      out <- c(step1_1$EETA[[1]], lav_matrix_vech(step1_1$VETA[[1]]))
+      out <- c(step1_1$EETA[[1]], lav_mat_vech(step1_1$VETA[[1]]))
     } else {
-      out <- lav_matrix_vech(step1_1$VETA[[1]])
+      out <- lav_mat_vech(step1_1$VETA[[1]])
     }
     out
   }
@@ -883,9 +883,9 @@ lav_sam_gamma_add <- function(step1 = NULL, fit = NULL, group = 1L) {
   idx1 <- rep(seq_len(nfac), each = nfac)
   idx2 <- rep(seq_len(nfac), times = nfac)
 
-  # k_nfac <- lav_matrix_commutation(nfac, nfac)
+  # k_nfac <- lav_mat_com(nfac, nfac)
   # ik <- diag(nfac * nfac) + k_nfac
-  m_d <- lav_matrix_duplication(nfac)
+  m_d <- lav_mat_dup(nfac)
 
   names_1 <- paste(lv_names[idx1], lv_names[idx2], sep = ":")
   names_1[seq_len(nfac)] <- lv_names
@@ -899,9 +899,9 @@ lav_sam_gamma_add <- function(step1 = NULL, fit = NULL, group = 1L) {
 
   this_nu <- step1$NU[[1]]
   this_m  <- step1$M[[1]]
-  this_mtm <- lav_matrix_bdiag(0,
+  this_mtm <- lav_mat_bdiag(0,
                   step1$MTM[[1]][seq_len(nfac - 1), seq_len(nfac - 1)])
-  this <- c(this_nu, lav_matrix_vec(this_m), lav_matrix_vech(this_mtm))
+  this <- c(this_nu, lav_mat_vec(this_m), lav_mat_vech(this_mtm))
   index <- matrix(seq_len(nfac^2 * nfac^2), nfac^2, nfac^2)
 
   x2this <- function(x) {
@@ -914,14 +914,14 @@ lav_sam_gamma_add <- function(step1 = NULL, fit = NULL, group = 1L) {
     # no interaction columns!
     this_lambda <- this_lavmodel@GLIST$lambda[, -rm_idx, drop = FALSE]
     this_theta  <- this_lavmodel@GLIST$theta
-    this_m <- lav_sam_mapping_matrix(mm_lambda = this_lambda,
+    this_m <- lav_sam_mapping_mat(mm_lambda = this_lambda,
                                      mm_theta = this_theta,
                                      s = step1$COV[[1]],
                                      method = step1$local.options$M.method)
     mtm <- this_m %*% this_theta %*% t(this_m)
-    mtm <- lav_matrix_bdiag(0, mtm)
+    mtm <- lav_mat_bdiag(0, mtm)
 
-    out <- c(this_nu, lav_matrix_vec(this_m), lav_matrix_vech(mtm))
+    out <- c(this_nu, lav_mat_vec(this_m), lav_mat_vech(mtm))
     out
   }
   jac_x2this <- numDeriv::jacobian(func = x2this, x = x_step1)
@@ -946,30 +946,30 @@ lav_sam_gamma_add <- function(step1 = NULL, fit = NULL, group = 1L) {
     # (tcrossprod(fi) - MTM) %x% MTM) -- part A
     block_a <- fi %x% do.call("rbind",
             lapply(seq_len(p), function(i) diag(p) %x% mtm[, i]))
-    long_a <- diag(p) %x% lav_matrix_vec(fi %x% mtm)
+    long_a <- diag(p) %x% lav_mat_vec(fi %x% mtm)
     big_a <- block_a + long_a
-    part_a <- big_a[lav_matrix_vech(index[keep_idx, keep_idx]), ]
+    part_a <- big_a[lav_mat_vech(index[keep_idx, keep_idx]), ]
 
     # (MTM %x% (tcrossprod(fi) - MTM)) -- part B
-    block_b <- lav_matrix_vec(fi %x% mtm) %x% diag(p)
+    block_b <- lav_mat_vec(fi %x% mtm) %x% diag(p)
     long_b <- do.call("rbind",
             lapply(seq_len(p), function(i) diag(p) %x% mtm[, i])) %x% fi
     big_b <- block_b + long_b
-    part_b <- big_b[lav_matrix_vech(index[keep_idx, keep_idx]), ]
+    part_b <- big_b[lav_mat_vech(index[keep_idx, keep_idx]), ]
 
-    # lav_matrix_commutation_post((tcrossprod(fi) - MTM) %x% MTM) -- part C
+    # lav_mat_com_post((tcrossprod(fi) - MTM) %x% MTM) -- part C
     block_c <- do.call("rbind",
             lapply(seq_len(p), function(i) fi %x% (diag(p) %x% mtm[, i])))
     long_c  <- do.call("rbind",
             lapply(seq_len(p), function(i) diag(p) %x% (fi %x% mtm[, i])))
     big_c <- block_c + long_c
-    part_c <- big_c[lav_matrix_vech(index[keep_idx, keep_idx]), ]
+    part_c <- big_c[lav_mat_vech(index[keep_idx, keep_idx]), ]
 
-    # lav_matrix_commutation_pre((tcrossprod(fi) - MTM) %x% MTM) -- part m_d
-    long_d <- diag(p) %x% lav_matrix_vec(mtm %x% fi)
-    block_d <- (fi %x% lav_matrix_vec(mtm)) %x% diag(p)
+    # lav_mat_com_pre((tcrossprod(fi) - MTM) %x% MTM) -- part m_d
+    long_d <- diag(p) %x% lav_mat_vec(mtm %x% fi)
+    block_d <- (fi %x% lav_mat_vec(mtm)) %x% diag(p)
     big_d <- block_d + long_d
-    part_d <- big_d[lav_matrix_vech(index[keep_idx, keep_idx]), ]
+    part_d <- big_d[lav_mat_vech(index[keep_idx, keep_idx]), ]
 
     # t1 (tcrossprod(fi2[keep.idx] - FS.mean) only) -- part E
     idx1 <- rep(seq_len(p), each = p)
@@ -980,7 +980,7 @@ lav_sam_gamma_add <- function(step1 = NULL, fit = NULL, group = 1L) {
     fi <- as.matrix(fi)
     tt <- ((fi %x% diag(p))[keep_idx, ] + (diag(p) %x% fi)[keep_idx, ])
     tmp <- ((fik - fs_mean) %x% tt) + (tt %x% (fik - fs_mean))
-    part_e <- tmp[lav_matrix_vech_idx(length(fik)), ]
+    part_e <- tmp[lav_mat_vech_idx(length(fik)), ]
 
     final <- part_e - lambda_star * (part_a + part_b + part_c + part_d)
     final
@@ -995,7 +995,7 @@ lav_sam_gamma_add <- function(step1 = NULL, fit = NULL, group = 1L) {
     x <- x[-seq_len(nvar)]
     # this_m  <- matrix(x[seq_len(nvar * nfac)], nrow = nfac, ncol = nvar)
     x <- x[-seq_len(nvar * nfac)]
-    mtm <- lav_matrix_vech_reverse(x)
+    mtm <- lav_mat_vech_rev(x)
     fi <- as.matrix(fi)
     p <- nrow(fi)
 
@@ -1008,7 +1008,7 @@ lav_sam_gamma_add <- function(step1 = NULL, fit = NULL, group = 1L) {
                         })) %x% diag(p)
     big_a_vec <- long_a + block_a
     big_a <- big_a_vec %*% m_d
-    part_a <- big_a[lav_matrix_vech(index[keep_idx, keep_idx]), ]
+    part_a <- big_a[lav_mat_vech(index[keep_idx, keep_idx]), ]
 
     # part b: (MTM %x% (tcrossprod(fi) - MTM))
     block_b <- do.call("rbind",
@@ -1019,9 +1019,9 @@ lav_sam_gamma_add <- function(step1 = NULL, fit = NULL, group = 1L) {
                         }))
     big_b_vec <- block_b + long_b
     big_b <- big_b_vec %*% m_d
-    part_b <- big_b[lav_matrix_vech(index[keep_idx, keep_idx]), ]
+    part_b <- big_b[lav_mat_vech(index[keep_idx, keep_idx]), ]
 
-    # part c: lav_matrix_commutation_post((tcrossprod(fi) - MTM) %x% MTM)
+    # part c: lav_mat_com_post((tcrossprod(fi) - MTM) %x% MTM)
     block_c <- diag(p) %x% do.call("rbind",
            lapply(seq_len(p),
                        function(i) ((tcrossprod(fi) - mtm)[, i]) %x% diag(p)))
@@ -1029,9 +1029,9 @@ lav_sam_gamma_add <- function(step1 = NULL, fit = NULL, group = 1L) {
            lapply(seq_len(p), function(i) diag(p * p) %x% (-mtm[, i])))
     big_c_vec <- block_c + long_c
     big_c <- big_c_vec %*% m_d
-    part_c <- big_c[lav_matrix_vech(index[keep_idx, keep_idx]), ]
+    part_c <- big_c[lav_mat_vech(index[keep_idx, keep_idx]), ]
 
-    # part d: lav_matrix_commutation_pre((tcrossprod(fi) - MTM) %x% MTM)
+    # part d: lav_mat_com_pre((tcrossprod(fi) - MTM) %x% MTM)
     block_d <- diag(p) %x% do.call("rbind",
                   lapply(seq_len(p), function(i) -mtm[, i] %x% diag(p)))
     long_d <- do.call("rbind",
@@ -1039,10 +1039,10 @@ lav_sam_gamma_add <- function(step1 = NULL, fit = NULL, group = 1L) {
                      function(i) diag(p * p) %x% ((tcrossprod(fi) - mtm)[, i])))
     big_d_vec <- block_d + long_d
     big_d <- big_d_vec %*% m_d
-    part_d <- big_d[lav_matrix_vech(index[keep_idx, keep_idx]), ]
+    part_d <- big_d[lav_mat_vech(index[keep_idx, keep_idx]), ]
 
     # part e: (IK %*% (MTM %x% MTM))
-    m_k <- lav_matrix_commutation(p, p)
+    m_k <- lav_mat_com(p, p)
     e1 <- diag(p) %x% do.call("rbind",
             lapply(seq_len(p), function(i) diag(p) %x% mtm[, i]))
     e2 <- do.call("rbind",
@@ -1053,14 +1053,14 @@ lav_sam_gamma_add <- function(step1 = NULL, fit = NULL, group = 1L) {
             lapply(seq_len(p), function(i) m_k %*% (diag(p) %x% mtm[, i])))
     big_e_vec <- e1 + e2 + e3 + e4
     big_e <- big_e_vec %*% m_d
-    part_e <-  big_e[lav_matrix_vech(index[keep_idx, keep_idx]), ]
+    part_e <-  big_e[lav_mat_vech(index[keep_idx, keep_idx]), ]
 
     final <- -1 * lambda_star * (part_a + part_b + part_c + part_d + part_e)
     final
                 }
 
   n_eeta_veta <- length(step1$EETA[[1]]) +
-                 length(lav_matrix_vech(step1$VETA[[1]]))
+                 length(lav_mat_vech(step1$VETA[[1]]))
   cveta <- matrix(0, nrow = n_eeta_veta, ncol = length(x_step1))
   for (i in 1:n) {
     # experimental: remove fs outliers
@@ -1076,7 +1076,7 @@ lav_sam_gamma_add <- function(step1 = NULL, fit = NULL, group = 1L) {
                            t(as.matrix(y[i, ] - drop(this_nu))) %x%
                                                          diag(nrow(this_m)),
                            matrix(0, nrow = nrow(this_m),
-                                  ncol = length(lav_matrix_vech(this_mtm)))))
+                                  ncol = length(lav_mat_vech(this_mtm)))))
 
     jac_eeta2_fi_i <- ((fi %x% diag(nfac)) + (diag(nfac) %x% fi))[keep_idx, ]
     eeta2 <- ((jac_eeta2_fi_i %*% jac_this2fi_i) +

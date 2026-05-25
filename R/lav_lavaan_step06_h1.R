@@ -1,4 +1,4 @@
-lav_lavaan_step06_h1 <- function(sloth1 = NULL,
+lav_step06_h1 <- function(sloth1 = NULL,
                                  lavoptions = NULL,
                                  lavsamplestats = NULL,
                                  lavdata = NULL,

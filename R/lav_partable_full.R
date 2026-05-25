@@ -3,7 +3,7 @@
 #
 # main motivation: univariate scores tests (modification indices)
 #
-lav_partable_full <- function(partable = NULL,
+lav_pt_full <- function(partable = NULL,
                               strict_exo = FALSE,
                               free = FALSE, start = FALSE) {
   # check minimum requirements: lhs, op, rhs
@@ -14,7 +14,7 @@ lav_partable_full <- function(partable = NULL,
   )
 
   # lavpta?
-  lavpta <- lav_partable_attributes(partable)
+  lavpta <- lav_pt_attributes(partable)
 
   # meanstructure
   if (!is.null(lavpta$meanstructure)) {
@@ -33,8 +33,8 @@ lav_partable_full <- function(partable = NULL,
   block <- group <- level <- integer(0L)
 
   # new in 0.6-3:
-  group_values <- lav_partable_group_values(partable)
-  level_values <- lav_partable_level_values(partable)
+  group_values <- lav_pt_group_values(partable)
+  level_values <- lav_pt_level_values(partable)
   if (is.character(group_values[1])) {
     group <- character(0L)
   }

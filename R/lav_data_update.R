@@ -22,7 +22,7 @@ lav_data_update <- function(lavdata = NULL, newX = NULL, # nolint start
 
     # Mp + nobs
     if (lavoptions$missing != "listwise") {
-      newdata@Mp[[g]] <- lav_data_missing_patterns(newX[[g]],
+      newdata@Mp[[g]] <- lav_data_mi_patterns(newX[[g]],
         sort_freq = FALSE, coverage = TRUE
       )
       newdata@nobs[[g]] <-
@@ -44,7 +44,7 @@ lav_data_update <- function(lavdata = NULL, newX = NULL, # nolint start
       for (l in 2:lavdata@nlevels) {
         clus[, (l - 1L)] <- lavdata@Lp[[g]]$cluster.idx[[l]]
       }
-      newdata@Lp[[g]] <- lav_data_cluster_patterns(
+      newdata@Lp[[g]] <- lav_data_cl_patterns(
         y = newX[[g]],
         clus = clus,
         cluster = lavdata@cluster,
@@ -129,7 +129,7 @@ lav_data_update_subset <- function(lavdata = NULL, ov_names = NULL) {
 
     # Mp + nobs
     if (lavdata@missing != "listwise") {
-      newdata@Mp[[g]] <- lav_data_missing_patterns(newdata@X[[g]],
+      newdata@Mp[[g]] <- lav_data_mi_patterns(newdata@X[[g]],
         sort_freq = FALSE, coverage = TRUE
       )
       newdata@nobs[[g]] <-
@@ -158,7 +158,7 @@ lav_data_update_subset <- function(lavdata = NULL, ov_names = NULL) {
         multilevel <- FALSE
       }
       ov_names_1 <- unique(c(ov_names[[g]], newdata@ov.names.x[[g]]))
-      newdata@Lp[[g]] <- lav_data_cluster_patterns(
+      newdata@Lp[[g]] <- lav_data_cl_patterns(
         y = newdata@X[[g]],
         clus = clus,
         cluster = newdata@cluster,

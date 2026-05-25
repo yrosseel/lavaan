@@ -9,7 +9,7 @@
 #    5a: (unit)    expected information
 #    5b: (unit)    observed information
 #    5c: (unit) first.order information
-#    5d: lav_mvnorm_missing_information_both (both observed + first.order)
+#    5d: lav_mvn_mi_info_both (both observed + first.order)
 
 # 6) inverted information h0 mu + vech(Sigma)
 #    6a: /
@@ -39,7 +39,7 @@
 #                    2) truly case per case    (pattern = FALSE)
 #    depending on the sample size, missing patterns, etc... one can be
 #    (much) faster than the other
-lav_mvnorm_missing_loglik_data <- function(y = NULL,
+lav_mvn_mi_loglik_data <- function(y = NULL,
                                            mu = NULL,
                                            wt = NULL,
                                            sigma_1 = NULL,
@@ -50,13 +50,13 @@ lav_mvnorm_missing_loglik_data <- function(y = NULL,
                                            log2pi = TRUE,
                                            minus_two = FALSE) {
   if (pattern) {
-    llik <- lav_mvnorm_missing_llik_pattern(
+    llik <- lav_mvn_mi_llik_pattern(
       y = y, wt = wt, mu = mu,
       sigma_1 = sigma_1, x_idx = x_idx, sinv_method = sinv_method,
       log2pi = log2pi, minus_two = minus_two
     )
   } else {
-    llik <- lav_mvnorm_missing_llik_casewise(
+    llik <- lav_mvn_mi_llik_casewise(
       y = y, wt = wt, mu = mu,
       sigma_1 = sigma_1, x_idx = x_idx, sinv_method = sinv_method,
       log2pi = log2pi, minus_two = minus_two
@@ -73,7 +73,7 @@ lav_mvnorm_missing_loglik_data <- function(y = NULL,
 }
 
 # 1b: input are sample statistics (mean, cov, N) per pattern
-lav_mvnorm_missing_loglik_samplestats <- function(yp = NULL, # nolint
+lav_mvn_mi_loglik_samp <- function(yp = NULL,
                                                   mu = NULL,
                                                   sigma_1 = NULL,
                                                   x_idx = integer(0L),
@@ -87,7 +87,7 @@ lav_mvnorm_missing_loglik_samplestats <- function(yp = NULL, # nolint
   p_1 <- length(yp[[1]]$var.idx)
 
   # global inverse + logdet
-  sigma_inv_1 <- lav_matrix_symmetric_inverse(
+  sigma_inv_1 <- lav_mat_sym_inverse(
     s = sigma_1, logdet = TRUE,
     sinv_method = sinv_method
   )
@@ -110,7 +110,7 @@ lav_mvnorm_missing_loglik_samplestats <- function(yp = NULL, # nolint
 
     # invert Sigma for this pattern
     if (length(na_idx) > 0L) {
-      sigma_inv <- lav_matrix_symmetric_inverse_update(
+      sigma_inv <- lav_mat_sym_inverse_update(
         s_inv = sigma_inv_1,
         rm_idx = na_idx, logdet = TRUE, s_logdet = sigma_logdet
       )
@@ -141,7 +141,7 @@ lav_mvnorm_missing_loglik_samplestats <- function(yp = NULL, # nolint
     # Note: x.cov should be identical to Sigma[x.idx, x.idx]
     #       so we don't really need x.cov
     n <- sum(sapply(yp, "[[", "freq"))
-    loglik_x <- lav_mvnorm_h1_loglik_samplestats(
+    loglik_x <- lav_mvn_h1_loglik_samp(
       sample_cov = x_cov,
       sample_nobs = n
     )
@@ -155,7 +155,7 @@ lav_mvnorm_missing_loglik_samplestats <- function(yp = NULL, # nolint
 ## casewise loglikelihoods
 
 # casewise Sinv.method
-lav_mvnorm_missing_llik_casewise <- function(y = NULL, # nolint
+lav_mvn_mi_llik_casewise <- function(y = NULL,
                                              wt = NULL,
                                              mu = NULL,
                                              sigma_1 = NULL,
@@ -174,7 +174,7 @@ lav_mvnorm_missing_llik_casewise <- function(y = NULL, # nolint
   ny <- NROW(y)
 
   # global inverse + logdet
-  sigma_inv_1 <- lav_matrix_symmetric_inverse(
+  sigma_inv_1 <- lav_mat_sym_inverse(
     s = sigma_1, logdet = TRUE,
     sinv_method = sinv_method
   )
@@ -213,7 +213,7 @@ lav_mvnorm_missing_llik_casewise <- function(y = NULL, # nolint
     if (length(na_idx) == p) next
 
     # invert Sigma for this pattern
-    sigma_inv <- lav_matrix_symmetric_inverse_update(
+    sigma_inv <- lav_mat_sym_inverse_update(
       s_inv = sigma_inv_1,
       rm_idx = na_idx, logdet = TRUE, s_logdet = sigma_logdet
     )
@@ -242,7 +242,7 @@ lav_mvnorm_missing_llik_casewise <- function(y = NULL, # nolint
 
   # x.idx
   if (length(x_idx) > 0L) {
-    llik_x <- lav_mvnorm_missing_llik_casewise(
+    llik_x <- lav_mvn_mi_llik_casewise(
       y = y[, x_idx, drop = FALSE],
       wt = wt, mu = mu[x_idx],
       sigma_1 = sigma_1[x_idx, x_idx, drop = FALSE],
@@ -256,7 +256,7 @@ lav_mvnorm_missing_llik_casewise <- function(y = NULL, # nolint
 }
 
 # pattern-based, but casewise loglikelihoods
-lav_mvnorm_missing_llik_pattern <- function(y = NULL,   # nolint
+lav_mvn_mi_llik_pattern <- function(y = NULL,
                                             mp = NULL,
                                             wt = NULL,
                                             mu = NULL,
@@ -276,7 +276,7 @@ lav_mvnorm_missing_llik_pattern <- function(y = NULL,   # nolint
   ny <- NROW(y)
 
   # global inverse + logdet
-  sigma_inv_1 <- lav_matrix_symmetric_inverse(
+  sigma_inv_1 <- lav_mat_sym_inverse(
     s = sigma_1, logdet = TRUE,
     sinv_method = sinv_method
   )
@@ -290,7 +290,7 @@ lav_mvnorm_missing_llik_pattern <- function(y = NULL,   # nolint
 
   # missing patterns
   if (is.null(mp)) {
-    mp <- lav_data_missing_patterns(y)
+    mp <- lav_data_mi_patterns(y)
   }
 
   # for each pattern, compute sigma.inv/logdet; compute DIST for all
@@ -310,7 +310,7 @@ lav_mvnorm_missing_llik_pattern <- function(y = NULL,   # nolint
 
     # invert Sigma for this pattern
     if (length(na_idx) > 0L) {
-      sigma_inv <- lav_matrix_symmetric_inverse_update(
+      sigma_inv <- lav_mat_sym_inverse_update(
         s_inv = sigma_inv_1,
         rm_idx = na_idx, logdet = TRUE, s_logdet = sigma_logdet
       )
@@ -350,7 +350,7 @@ lav_mvnorm_missing_llik_pattern <- function(y = NULL,   # nolint
   # x.idx -- using casewise (as patterns for Y may not be the same as
   #                          patterns for Y[,-x.idx])
   if (length(x_idx) > 0L) {
-    llik_x <- lav_mvnorm_missing_llik_casewise(
+    llik_x <- lav_mvn_mi_llik_casewise(
       y = y[, x_idx, drop = FALSE],
       wt = wt, mu = mu[x_idx],
       sigma_1 = sigma_1[x_idx, x_idx, drop = FALSE],
@@ -369,14 +369,14 @@ lav_mvnorm_missing_llik_pattern <- function(y = NULL,   # nolint
 # 2. Derivatives
 
 # 2a: derivative logl with respect to mu
-lav_mvnorm_missing_dlogl_dmu <- function(y = NULL,
+lav_mvn_mi_dlogl_dmu <- function(y = NULL,
                                          wt = NULL,
                                          mu = NULL,
                                          sigma_1 = NULL,
                                          x_idx = integer(0L),
                                          sigma_inv = NULL,
                                          sinv_method = "eigen") {
-  sc <- lav_mvnorm_missing_scores_mu(
+  sc <- lav_mvn_mi_sc_mu(
     y = y, wt = wt, mu = mu, sigma_1 = sigma_1,
     x_idx = x_idx, sigma_inv = sigma_inv, sinv_method = sinv_method
   )
@@ -385,7 +385,7 @@ lav_mvnorm_missing_dlogl_dmu <- function(y = NULL,
 }
 
 # 2abis: using samplestats
-lav_mvnorm_missing_dlogl_dmu_samplestats <- function(yp = NULL, # nolint
+lav_mvn_mi_dlogl_dmu_samp <- function(yp = NULL,
                                                      mu = NULL,
                                                      sigma_1 = NULL,
                                                      x_idx = integer(0L),
@@ -395,7 +395,7 @@ lav_mvnorm_missing_dlogl_dmu_samplestats <- function(yp = NULL, # nolint
   p_1 <- length(yp[[1]]$var.idx)
 
   if (is.null(sigma_inv)) {
-    sigma_inv <- lav_matrix_symmetric_inverse(
+    sigma_inv <- lav_mat_sym_inverse(
       s = sigma_1, logdet = FALSE,
       sinv_method = sinv_method
     )
@@ -414,7 +414,7 @@ lav_mvnorm_missing_dlogl_dmu_samplestats <- function(yp = NULL, # nolint
 
     # invert Sigma for this pattern
     if (length(na_idx) > 0L) {
-      sigma_inv_1 <- lav_matrix_symmetric_inverse_update(
+      sigma_inv_1 <- lav_mat_sym_inverse_update(
         s_inv = sigma_inv,
         rm_idx = na_idx, logdet = FALSE
       )
@@ -440,7 +440,7 @@ lav_mvnorm_missing_dlogl_dmu_samplestats <- function(yp = NULL, # nolint
 
 
 # 2b: derivative logl with respect to Sigma (full matrix, ignoring symmetry)
-lav_mvnorm_missing_dlogl_dsigma <- function(m_y = NULL,  # nolint
+lav_mvn_mi_dlogl_dsigma <- function(m_y = NULL,
                                             l_mp = NULL,
                                             wt = NULL,
                                             m_mu = NULL,
@@ -459,7 +459,7 @@ lav_mvnorm_missing_dlogl_dsigma <- function(m_y = NULL,  # nolint
 
   if (is.null(sigma_inv)) {
     # invert Sigma
-    sigma_inv <- lav_matrix_symmetric_inverse(
+    sigma_inv <- lav_mat_sym_inverse(
       s = m_sigma, logdet = FALSE,
       sinv_method = sinv_method
     )
@@ -473,7 +473,7 @@ lav_mvnorm_missing_dlogl_dsigma <- function(m_y = NULL,  # nolint
 
   # missing patterns
   if (is.null(l_mp)) {
-    l_mp <- lav_data_missing_patterns(m_y)
+    l_mp <- lav_data_mi_patterns(m_y)
   }
 
   # for each pattern
@@ -489,7 +489,7 @@ lav_mvnorm_missing_dlogl_dsigma <- function(m_y = NULL,  # nolint
 
     # invert Sigma for this pattern
     if (length(na_idx) > 0L) {
-      local_sigma_inv <- lav_matrix_symmetric_inverse_update(
+      local_sigma_inv <- lav_mat_sym_inverse_update(
         s_inv = sigma_inv,
         rm_idx = na_idx, logdet = FALSE
       )
@@ -536,7 +536,7 @@ lav_mvnorm_missing_dlogl_dsigma <- function(m_y = NULL,  # nolint
 }
 
 # 2bbis: using samplestats
-lav_mvnorm_missing_dlogl_dsigma_samplestats <- function(yp = NULL, # nolint
+lav_mvn_mi_dlogl_dsigma_samp <- function(yp = NULL,
                                                         mu = NULL,
                                                         sigma_1 = NULL,
                                                         x_idx = integer(0L),
@@ -547,7 +547,7 @@ lav_mvnorm_missing_dlogl_dsigma_samplestats <- function(yp = NULL, # nolint
 
   if (is.null(sigma_inv)) {
     # invert Sigma
-    sigma_inv <- lav_matrix_symmetric_inverse(
+    sigma_inv <- lav_mat_sym_inverse(
       s = sigma_1, logdet = FALSE,
       sinv_method = sinv_method
     )
@@ -566,7 +566,7 @@ lav_mvnorm_missing_dlogl_dsigma_samplestats <- function(yp = NULL, # nolint
 
     # invert Sigma for this pattern
     if (length(na_idx) > 0L) {
-      sigma_inv_1 <- lav_matrix_symmetric_inverse_update(
+      sigma_inv_1 <- lav_mat_sym_inverse_update(
         s_inv = sigma_inv,
         rm_idx = na_idx, logdet = FALSE
       )
@@ -595,21 +595,21 @@ lav_mvnorm_missing_dlogl_dsigma_samplestats <- function(yp = NULL, # nolint
 
 
 # 2c: derivative logl with respect to vech(Sigma)
-lav_mvnorm_missing_dlogl_dvechsigma <- function(y = NULL, # nolint
+lav_mvn_mi_dlogl_dvechsigma <- function(y = NULL,
                                                 wt = NULL,
                                                 mu = NULL,
                                                 x_idx = integer(0L),
                                                 sigma_1 = NULL,
                                                 sigma_inv = NULL,
                                                 sinv_method = "eigen") {
-  d_sigma <- lav_mvnorm_missing_dlogl_dsigma(
+  d_sigma <- lav_mvn_mi_dlogl_dsigma(
     m_y = y, wt = wt, m_mu = mu,
     m_sigma = sigma_1, x_idx = x_idx, sigma_inv = sigma_inv,
     sinv_method = sinv_method
   )
 
-  dvech_sigma <- as.numeric(lav_matrix_duplication_pre(
-    as.matrix(lav_matrix_vec(d_sigma))
+  dvech_sigma <- as.numeric(lav_mat_dup_pre(
+    as.matrix(lav_mat_vec(d_sigma))
   ))
 
   dvech_sigma
@@ -628,7 +628,7 @@ lav_mvnorm_missing_dlogl_dvechsigma_samplestats <- # nolint
 
     if (is.null(sigma_inv)) {
       # invert Sigma
-      sigma_inv <- lav_matrix_symmetric_inverse(
+      sigma_inv <- lav_mat_sym_inverse(
         s = sigma_1, logdet = FALSE,
         sinv_method = sinv_method
       )
@@ -647,7 +647,7 @@ lav_mvnorm_missing_dlogl_dvechsigma_samplestats <- # nolint
 
       # invert Sigma for this pattern
       if (length(na_idx) > 0L) {
-        sigma_inv_1 <- lav_matrix_symmetric_inverse_update(
+        sigma_inv_1 <- lav_mat_sym_inverse_update(
           s_inv = sigma_inv,
           rm_idx = na_idx, logdet = FALSE
         )
@@ -668,8 +668,8 @@ lav_mvnorm_missing_dlogl_dvechsigma_samplestats <- # nolint
       }
 
       # convert to vechSigma
-      dvech_sigma_pattern <- as.numeric(lav_matrix_duplication_pre(
-        as.matrix(lav_matrix_vec(d_sigma_pattern))
+      dvech_sigma_pattern <- as.numeric(lav_mat_dup_pre(
+        as.matrix(lav_mat_vec(d_sigma_pattern))
       ))
 
       # update dvechSigma
@@ -685,7 +685,7 @@ lav_mvnorm_missing_dlogl_dvechsigma_samplestats <- # nolint
 # 3. Casewise scores
 
 # 3a: casewise scores with respect to mu
-lav_mvnorm_missing_scores_mu <- function(y = NULL,
+lav_mvn_mi_sc_mu <- function(y = NULL,
                                          wt = NULL,
                                          mp = NULL,
                                          mu = NULL,
@@ -704,7 +704,7 @@ lav_mvnorm_missing_scores_mu <- function(y = NULL,
 
   if (is.null(sigma_inv)) {
     # invert Sigma
-    sigma_inv <- lav_matrix_symmetric_inverse(
+    sigma_inv <- lav_mat_sym_inverse(
       s = sigma_1, logdet = FALSE,
       sinv_method = sinv_method
     )
@@ -712,7 +712,7 @@ lav_mvnorm_missing_scores_mu <- function(y = NULL,
 
   # missing patterns
   if (is.null(mp)) {
-    mp <- lav_data_missing_patterns(y)
+    mp <- lav_data_mi_patterns(y)
   }
 
   # subtract Mu
@@ -733,7 +733,7 @@ lav_mvnorm_missing_scores_mu <- function(y = NULL,
 
     # invert Sigma for this pattern
     if (length(na_idx) > 0L) {
-      sigma_inv_1 <- lav_matrix_symmetric_inverse_update(
+      sigma_inv_1 <- lav_mat_sym_inverse_update(
         s_inv = sigma_inv,
         rm_idx = na_idx, logdet = FALSE
       )
@@ -760,7 +760,7 @@ lav_mvnorm_missing_scores_mu <- function(y = NULL,
 }
 
 # 3b: casewise scores with respect to vech(Sigma)
-lav_mvnorm_missing_scores_vech_sigma <- function(y = NULL, # nolint
+lav_mvn_mi_sc_sigma <- function(y = NULL,
                                                  wt = NULL,
                                                  mp = NULL,
                                                  mu = NULL,
@@ -779,22 +779,22 @@ lav_mvnorm_missing_scores_vech_sigma <- function(y = NULL, # nolint
 
   if (is.null(sigma_inv)) {
     # invert Sigma
-    sigma_inv <- lav_matrix_symmetric_inverse(
+    sigma_inv <- lav_mat_sym_inverse(
       s = sigma_1, logdet = FALSE,
       sinv_method = sinv_method
     )
   }
 
   # for the tcrossprod
-  idx1 <- lav_matrix_vech_col_idx(p_1)
-  idx2 <- lav_matrix_vech_row_idx(p_1)
+  idx1 <- lav_mat_vech_col_idx(p_1)
+  idx2 <- lav_mat_vech_row_idx(p_1)
 
   # vech(Sigma.inv)
-  i_sigma <- lav_matrix_vech(sigma_inv)
+  i_sigma <- lav_mat_vech(sigma_inv)
 
   # missing patterns
   if (is.null(mp)) {
-    mp <- lav_data_missing_patterns(y)
+    mp <- lav_data_mi_patterns(y)
   }
 
   # subtract Mu
@@ -816,13 +816,13 @@ lav_mvnorm_missing_scores_vech_sigma <- function(y = NULL, # nolint
 
     # invert Sigma for this pattern
     if (length(na_idx) > 0L) {
-      sigma_inv_1 <- lav_matrix_symmetric_inverse_update(
+      sigma_inv_1 <- lav_mat_sym_inverse_update(
         s_inv = sigma_inv,
         rm_idx = na_idx, logdet = FALSE
       )
       tmp <- matrix(0, p_1, p_1)
       tmp[var_idx, var_idx] <- sigma_inv_1
-      isigma <- lav_matrix_vech(tmp)
+      isigma <- lav_mat_vech(tmp)
     } else {
       sigma_inv_1 <- sigma_inv
       isigma <- i_sigma
@@ -839,7 +839,7 @@ lav_mvnorm_missing_scores_vech_sigma <- function(y = NULL, # nolint
   }
 
   # adjust for vech
-  sc[, lav_matrix_diagh_idx(p_1)] <- sc[, lav_matrix_diagh_idx(p_1)] / 2
+  sc[, lav_mat_diagh_idx(p_1)] <- sc[, lav_mat_diagh_idx(p_1)] / 2
 
   # weights
   if (!is.null(wt)) {
@@ -848,14 +848,14 @@ lav_mvnorm_missing_scores_vech_sigma <- function(y = NULL, # nolint
 
   # fixed.x?
   if (length(x_idx) > 0L) {
-    sc[, lav_matrix_vech_which_idx(n = p_1, idx = x_idx)] <- 0
+    sc[, lav_mat_vech_which_idx(n = p_1, idx = x_idx)] <- 0
   }
 
   sc
 }
 
 # 3c: casewise scores with respect to mu + vech(Sigma)
-lav_mvnorm_missing_scores_mu_vech_sigma <- function(y = NULL, # nolint
+lav_mvn_mi_sc_mu_sigma <- function(y = NULL,
                                                     mp = NULL,
                                                     wt = NULL,
                                                     mu = NULL,
@@ -874,22 +874,22 @@ lav_mvnorm_missing_scores_mu_vech_sigma <- function(y = NULL, # nolint
 
   if (is.null(sigma_inv)) {
     # invert Sigma
-    sigma_inv <- lav_matrix_symmetric_inverse(
+    sigma_inv <- lav_mat_sym_inverse(
       s = sigma_1, logdet = FALSE,
       sinv_method = sinv_method
     )
   }
 
   # for the tcrossprod
-  idx1 <- lav_matrix_vech_col_idx(p_1)
-  idx2 <- lav_matrix_vech_row_idx(p_1)
+  idx1 <- lav_mat_vech_col_idx(p_1)
+  idx2 <- lav_mat_vech_row_idx(p_1)
 
   # vech(Sigma.inv)
-  i_sigma <- lav_matrix_vech(sigma_inv)
+  i_sigma <- lav_mat_vech(sigma_inv)
 
   # missing patterns
   if (is.null(mp)) {
-    mp <- lav_data_missing_patterns(y)
+    mp <- lav_data_mi_patterns(y)
   }
 
   # subtract Mu
@@ -914,13 +914,13 @@ lav_mvnorm_missing_scores_mu_vech_sigma <- function(y = NULL, # nolint
 
     # invert Sigma for this pattern
     if (length(na_idx) > 0L) {
-      sigma_inv_1 <- lav_matrix_symmetric_inverse_update(
+      sigma_inv_1 <- lav_mat_sym_inverse_update(
         s_inv = sigma_inv,
         rm_idx = na_idx, logdet = FALSE
       )
       tmp <- matrix(0, p_1, p_1)
       tmp[var_idx, var_idx] <- sigma_inv_1
-      isigma <- lav_matrix_vech(tmp)
+      isigma <- lav_mat_vech(tmp)
     } else {
       sigma_inv_1 <- sigma_inv
       isigma <- i_sigma
@@ -941,7 +941,7 @@ lav_mvnorm_missing_scores_mu_vech_sigma <- function(y = NULL, # nolint
   }
 
   # adjust for vech
-  sc[, lav_matrix_diagh_idx(p_1)] <- sc[, lav_matrix_diagh_idx(p_1)] / 2
+  sc[, lav_mat_diagh_idx(p_1)] <- sc[, lav_mat_diagh_idx(p_1)] / 2
 
   out <- cbind(dmu, sc)
 
@@ -952,7 +952,7 @@ lav_mvnorm_missing_scores_mu_vech_sigma <- function(y = NULL, # nolint
 
   # fixed.x?
   if (length(x_idx) > 0L) {
-    not_x <- lav_matrix_vech_which_idx(n = p_1, idx = x_idx,
+    not_x <- lav_mat_vech_which_idx(n = p_1, idx = x_idx,
                                        #diagonal = !correlation,
                                        add_idx_at_start = TRUE)
     out[, not_x] <- 0
@@ -963,7 +963,7 @@ lav_mvnorm_missing_scores_mu_vech_sigma <- function(y = NULL, # nolint
 
 
 # 4) Hessian of logl
-lav_mvnorm_missing_logl_hessian_data <- function(y = NULL, # nolint
+lav_mvn_mi_logl_hessian_data <- function(y = NULL,
                                                  mp = NULL,
                                                  wt = NULL,
                                                  mu = NULL,
@@ -972,7 +972,7 @@ lav_mvnorm_missing_logl_hessian_data <- function(y = NULL, # nolint
                                                  sinv_method = "eigen",
                                                  sigma_inv = NULL) {
   # missing patterns
-  yp <- lav_samplestats_missing_patterns(y = y, mp = mp, wt = wt)
+  yp <- lav_samp_mi_patterns(y = y, mp = mp, wt = wt)
 
   lav_mvnorm_missing_logl_hessian_samplestats(
     yp = yp, mu = mu,
@@ -993,7 +993,7 @@ lav_mvnorm_missing_logl_hessian_samplestats <- # nolint
     p_1 <- length(yp[[1]]$var.idx)
 
     if (is.null(sigma_inv)) {
-      sigma_inv <- lav_matrix_symmetric_inverse(
+      sigma_inv <- lav_mat_sym_inverse(
         s = sigma_1, logdet = FALSE,
         sinv_method = sinv_method
       )
@@ -1014,7 +1014,7 @@ lav_mvnorm_missing_logl_hessian_samplestats <- # nolint
 
       # invert Sigma for this pattern
       if (length(na_idx) > 0L) {
-        sigma_inv_1 <- lav_matrix_symmetric_inverse_update(
+        sigma_inv_1 <- lav_mat_sym_inverse_update(
           s_inv = sigma_inv,
           rm_idx = na_idx, logdet = FALSE
         )
@@ -1036,11 +1036,11 @@ lav_mvnorm_missing_logl_hessian_samplestats <- # nolint
       tmp22[var_idx, var_idx] <- aaa
 
       i11 <- s_inv
-      i21 <- lav_matrix_duplication_pre(tmp21 %x% s_inv)
+      i21 <- lav_mat_dup_pre(tmp21 %x% s_inv)
       # if (lav_use_lavaanC()) {
       #   i22 <- lavaanC::m_kronecker_dup_pre_post(S.inv, tmp22, 0.5)
       # } else {
-        i22 <- (1 / 2) * lav_matrix_duplication_pre_post(s_inv %x% tmp22)
+        i22 <- (1 / 2) * lav_mat_dup_pre_post(s_inv %x% tmp22)
       # }
       h11 <- h11 + pat_freq * i11
       h21 <- h21 + pat_freq * i21
@@ -1056,7 +1056,7 @@ lav_mvnorm_missing_logl_hessian_samplestats <- # nolint
 
     # fixed.x?
     if (length(x_idx) > 0L) {
-      not_x <- lav_matrix_vech_which_idx(n = p_1, idx = x_idx,
+      not_x <- lav_mat_vech_which_idx(n = p_1, idx = x_idx,
                                          #diagonal = !correlation,
                                          add_idx_at_start = TRUE)
       out[, not_x] <- 0
@@ -1074,7 +1074,7 @@ lav_mvnorm_missing_logl_hessian_samplestats <- # nolint
 # 5a: expected unit information Mu and vech(Sigma)
 #     (only useful under MCAR)
 # (old term: Abeta, expected)
-lav_mvnorm_missing_information_expected <- function(y = NULL,  # nolint
+lav_mvn_mi_info_expected <- function(y = NULL,
                                                     mp = NULL,
                                                     wt = NULL,
                                                     mu = NULL, # unused
@@ -1085,7 +1085,7 @@ lav_mvnorm_missing_information_expected <- function(y = NULL,  # nolint
   p_1 <- NCOL(y)
 
   if (is.null(sigma_inv)) {
-    sigma_inv <- lav_matrix_symmetric_inverse(
+    sigma_inv <- lav_mat_sym_inverse(
       s = sigma_1, logdet = FALSE,
       sinv_method = sinv_method
     )
@@ -1093,7 +1093,7 @@ lav_mvnorm_missing_information_expected <- function(y = NULL,  # nolint
 
   # missing patterns
   if (is.null(mp)) {
-    mp <- lav_data_missing_patterns(y)
+    mp <- lav_data_mi_patterns(y)
   }
 
   # N
@@ -1120,7 +1120,7 @@ lav_mvnorm_missing_information_expected <- function(y = NULL,  # nolint
 
     # invert Sigma for this pattern
     if (length(na_idx) > 0L) {
-      sigma_inv_1 <- lav_matrix_symmetric_inverse_update(
+      sigma_inv_1 <- lav_mat_sym_inverse_update(
         s_inv = sigma_inv,
         rm_idx = na_idx, logdet = FALSE
       )
@@ -1134,7 +1134,7 @@ lav_mvnorm_missing_information_expected <- function(y = NULL,  # nolint
     # if (lav_use_lavaanC()) {
     #   S2.inv <- lavaanC::m_kronecker_dup_pre_post(S.inv, multiplicator = 0.5)
     # } else {
-      s2_inv <- 0.5 * lav_matrix_duplication_pre_post(s_inv %x% s_inv)
+      s2_inv <- 0.5 * lav_mat_dup_pre_post(s_inv %x% s_inv)
     # }
 
     if (!is.null(wt)) {
@@ -1147,11 +1147,11 @@ lav_mvnorm_missing_information_expected <- function(y = NULL,  # nolint
     i22 <- i22 + freq * s2_inv
   }
 
-  out <- lav_matrix_bdiag(i11, i22) / n
+  out <- lav_mat_bdiag(i11, i22) / n
 
   # fixed.x?
   if (length(x_idx) > 0L) {
-    not_x <- lav_matrix_vech_which_idx(n = p_1, idx = x_idx,
+    not_x <- lav_mat_vech_which_idx(n = p_1, idx = x_idx,
                                        # diagonal = !correlation,
                                        add_idx_at_start = TRUE)
     out[not_x, ] <- 0
@@ -1163,7 +1163,7 @@ lav_mvnorm_missing_information_expected <- function(y = NULL,  # nolint
 
 # 5b: unit observed information Mu and vech(Sigma) from raw data
 # (old term: Abeta, observed)
-lav_mvnorm_missing_information_observed_data <- function(y = NULL,  # nolint
+lav_mvn_mi_info_observed_data <- function(y = NULL,
                                                          mp = NULL,
                                                          wt = NULL,
                                                          mu = NULL,
@@ -1173,7 +1173,7 @@ lav_mvnorm_missing_information_observed_data <- function(y = NULL,  # nolint
                                                          sigma_inv = NULL) {
   # missing patterns
   if (is.null(mp)) {
-    mp <- lav_data_missing_patterns(y)
+    mp <- lav_data_mi_patterns(y)
   }
 
   # N
@@ -1188,7 +1188,7 @@ lav_mvnorm_missing_information_observed_data <- function(y = NULL,  # nolint
   }
 
   # observed information
-  observed <- lav_mvnorm_missing_logl_hessian_data(
+  observed <- lav_mvn_mi_logl_hessian_data(
     y = y, mp = mp, wt = wt,
     mu = mu, sigma_1 = sigma_1, x_idx = x_idx,
     sinv_method = sinv_method, sigma_inv = sigma_inv
@@ -1220,7 +1220,7 @@ lav_mvnorm_missing_information_observed_samplestats <- # nolint
 
 # 5c: unit first-order information Mu and vech(Sigma) from raw data
 # (old term: Bbeta)
-lav_mvnorm_missing_information_firstorder <- function(y = NULL,  # nolint
+lav_mvn_mi_info_firstorder <- function(y = NULL,
                                                       mp = NULL,
                                                       wt = NULL,
                                                       cluster_idx = NULL,
@@ -1231,7 +1231,7 @@ lav_mvnorm_missing_information_firstorder <- function(y = NULL,  # nolint
                                                       sigma_inv = NULL) {
   # missing patterns
   if (is.null(mp)) {
-    mp <- lav_data_missing_patterns(y)
+    mp <- lav_data_mi_patterns(y)
   }
 
   # N
@@ -1245,7 +1245,7 @@ lav_mvnorm_missing_information_firstorder <- function(y = NULL,  # nolint
     n <- sum(mp$freq) # removed empty cases!
   }
 
-  sc <- lav_mvnorm_missing_scores_mu_vech_sigma(
+  sc <- lav_mvn_mi_sc_mu_sigma(
     y = y, mp = mp, wt = wt,
     mu = mu, sigma_1 = sigma_1, x_idx = x_idx, sinv_method = sinv_method,
     sigma_inv = sigma_inv
@@ -1262,12 +1262,12 @@ lav_mvnorm_missing_information_firstorder <- function(y = NULL,  # nolint
     sc <- sc * sqrt(correction_factor)
   }
 
-  lav_matrix_crossprod(sc) / n
+  lav_mat_crossprod(sc) / n
 }
 
 # 5d: both unit first-order information and expected/observed information
 #     from raw data, in one go for efficiency
-lav_mvnorm_missing_information_both <- function(y = NULL, # nolint
+lav_mvn_mi_info_both <- function(y = NULL,
                                                 mp = NULL,
                                                 wt = NULL,
                                                 cluster_idx = NULL,
@@ -1282,26 +1282,26 @@ lav_mvnorm_missing_information_both <- function(y = NULL, # nolint
 
   if (is.null(sigma_inv)) {
     # invert Sigma
-    sigma_inv <- lav_matrix_symmetric_inverse(
+    sigma_inv <- lav_mat_sym_inverse(
       s = sigma_1, logdet = FALSE,
       sinv_method = sinv_method
     )
   }
 
   # for the tcrossprod
-  idx1 <- lav_matrix_vech_col_idx(p_1)
-  idx2 <- lav_matrix_vech_row_idx(p_1)
+  idx1 <- lav_mat_vech_col_idx(p_1)
+  idx2 <- lav_mat_vech_row_idx(p_1)
 
   # vech(Sigma.inv)
-  i_sigma <- lav_matrix_vech(sigma_inv)
+  i_sigma <- lav_mat_vech(sigma_inv)
 
   # missing patterns
   if (is.null(mp)) {
-    mp <- lav_data_missing_patterns(y)
+    mp <- lav_data_mi_patterns(y)
   }
 
   if (information == "observed") {
-    yp <- lav_samplestats_missing_patterns(y = y, mp = mp, wt = wt)
+    yp <- lav_samp_mi_patterns(y = y, mp = mp, wt = wt)
   }
 
   # N
@@ -1344,13 +1344,13 @@ lav_mvnorm_missing_information_both <- function(y = NULL, # nolint
 
     # invert Sigma for this pattern
     if (length(na_idx) > 0L) {
-      sigma_inv_1 <- lav_matrix_symmetric_inverse_update(
+      sigma_inv_1 <- lav_mat_sym_inverse_update(
         s_inv = sigma_inv,
         rm_idx = na_idx, logdet = FALSE
       )
       tmp <- matrix(0, p_1, p_1)
       tmp[var_idx, var_idx] <- sigma_inv_1
-      isigma <- lav_matrix_vech(tmp)
+      isigma <- lav_mat_vech(tmp)
     } else {
       sigma_inv_1 <- sigma_inv
       isigma <- i_sigma
@@ -1371,7 +1371,7 @@ lav_mvnorm_missing_information_both <- function(y = NULL, # nolint
       #   S2.inv <-
       #         lavaanC::m_kronecker_dup_pre_post(S.inv, multiplicator = 0.5)
       # } else {
-        s2_inv <- 0.5 * lav_matrix_duplication_pre_post(s_inv %x% s_inv)
+        s2_inv <- 0.5 * lav_mat_dup_pre_post(s_inv %x% s_inv)
       # }
 
       i11_1 <- i11_1 + freq * s_inv
@@ -1390,11 +1390,11 @@ lav_mvnorm_missing_information_both <- function(y = NULL, # nolint
       tmp22[var_idx, var_idx] <- aaa
 
       i11 <- s_inv
-      i21 <- lav_matrix_duplication_pre(tmp21 %x% s_inv)
+      i21 <- lav_mat_dup_pre(tmp21 %x% s_inv)
       # if (lav_use_lavaanC()) {
       #   i22 <- lavaanC::m_kronecker_dup_pre_post(S.inv, tmp22, 0.5)
       # } else {
-        i22 <- (1 / 2) * lav_matrix_duplication_pre_post(s_inv %x% tmp22)
+        i22 <- (1 / 2) * lav_mat_dup_pre_post(s_inv %x% tmp22)
       # }
 
       i11_1 <- i11_1 + pat_freq * i11
@@ -1417,7 +1417,7 @@ lav_mvnorm_missing_information_both <- function(y = NULL, # nolint
   }
 
   # adjust for vech
-  sc[, lav_matrix_diagh_idx(p_1)] <- sc[, lav_matrix_diagh_idx(p_1)] / 2
+  sc[, lav_mat_diagh_idx(p_1)] <- sc[, lav_mat_diagh_idx(p_1)] / 2
 
   # add dmu
   sc <- cbind(dmu, sc)
@@ -1429,7 +1429,7 @@ lav_mvnorm_missing_information_both <- function(y = NULL, # nolint
 
   # fixed.x?
   if (length(x_idx) > 0L) {
-    not_x <- lav_matrix_vech_which_idx(n = p_1, idx = x_idx,
+    not_x <- lav_mat_vech_which_idx(n = p_1, idx = x_idx,
                                        #diagonal = !correlation,
                                        add_idx_at_start = TRUE)
     sc[, not_x] <- 0
@@ -1447,11 +1447,11 @@ lav_mvnorm_missing_information_both <- function(y = NULL, # nolint
   }
 
   # first order information
-  bbeta <- lav_matrix_crossprod(sc) / n
+  bbeta <- lav_mat_crossprod(sc) / n
 
   # expected/observed information
   if (information == "expected") {
-    abeta <- lav_matrix_bdiag(i11_1, i22_1) / n
+    abeta <- lav_mat_bdiag(i11_1, i22_1) / n
   } else {
     abeta <- rbind(
       cbind(i11_1, t(i21_1)),
@@ -1461,7 +1461,7 @@ lav_mvnorm_missing_information_both <- function(y = NULL, # nolint
 
   # fixed.x?
   if (length(x_idx) > 0L) {
-    not_x <- lav_matrix_vech_which_idx(n = p_1, idx = x_idx,
+    not_x <- lav_mat_vech_which_idx(n = p_1, idx = x_idx,
                                        # diagonal = !correlation,
                                        add_idx_at_start = TRUE)
     abeta[not_x, ] <- 0
@@ -1485,7 +1485,7 @@ lav_mvnorm_missing_information_both <- function(y = NULL, # nolint
 #
 #    # missing patterns
 #    if(is.null(Mp)) {
-#        Mp <- lav_data_missing_patterns(Y)
+#        Mp <- lav_data_mi_patterns(Y)
 #    }
 #
 #    # N
@@ -1502,13 +1502,13 @@ lav_mvnorm_missing_information_both <- function(y = NULL, # nolint
 #
 #        sigma <- matrix(0, P, P)
 #        sigma[var.idx, var.idx] <- Sigma[var.idx, var.idx]
-#        sigma2 <- 2 * lav_matrix_duplication_ginv_pre_post(sigma %x% sigma)
+#        sigma2 <- 2 * lav_mat_dup_ginv_pre_post(sigma %x% sigma)
 #
 #        I11 <- I11 + Mp$freq[p] * sigma
 #        I22 <- I22 + Mp$freq[p] * sigma2
 #    }
 #
-#    lav_matrix_bdiag(I11, I22)/N
+#    lav_mat_bdiag(I11, I22)/N
 # }
 
 #    6b: /
@@ -1532,7 +1532,7 @@ lav_mvnorm_missing_information_both <- function(y = NULL, # nolint
 
 # single imputation missing cells, under the normal model, pattern-based
 # FIXME: add wt
-lav_mvnorm_missing_impute_pattern <- function(y = NULL, # nolint
+lav_mvn_mi_impute_pattern <- function(y = NULL,
                                               mp = NULL,
                                               mu = NULL,
                                               sigma_1 = NULL,
@@ -1545,12 +1545,12 @@ lav_mvnorm_missing_impute_pattern <- function(y = NULL, # nolint
 
   # missing patterns
   if (is.null(mp)) {
-    mp <- lav_data_missing_patterns(y)
+    mp <- lav_data_mi_patterns(y)
   }
 
   if (is.null(sigma_inv)) {
     # invert Sigma
-    sigma_inv <- lav_matrix_symmetric_inverse(
+    sigma_inv <- lav_mat_sym_inverse(
       s = sigma_1, logdet = FALSE,
       sinv_method = sinv_method
     )
@@ -1577,7 +1577,7 @@ lav_mvnorm_missing_impute_pattern <- function(y = NULL, # nolint
 
     # invert Sigma (Sigma_22, observed part only) for this pattern
     sigma_22_inv <- try(
-      lav_matrix_symmetric_inverse_update(
+      lav_mat_sym_inverse_update(
         s_inv = sigma_inv, rm_idx = na_idx, logdet = FALSE
       ),
       silent = TRUE
@@ -1600,7 +1600,7 @@ lav_mvnorm_missing_impute_pattern <- function(y = NULL, # nolint
 
 # E-step: expectations of sum, sum of squares, sum of crossproducts
 # plus correction
-lav_mvnorm_missing_estep <- function(y = NULL,
+lav_mvn_mi_estep <- function(y = NULL,
                                      mp = NULL,
                                      wt = NULL,
                                      mu = NULL,
@@ -1612,12 +1612,12 @@ lav_mvnorm_missing_estep <- function(y = NULL,
 
   # missing patterns
   if (is.null(mp)) {
-    mp <- lav_data_missing_patterns(y)
+    mp <- lav_data_mi_patterns(y)
   }
 
   if (is.null(sigma_inv)) {
     # invert Sigma
-    sigma_inv <- lav_matrix_symmetric_inverse(
+    sigma_inv <- lav_mat_sym_inverse(
       s = sigma_1, logdet = FALSE,
       sinv_method = sinv_method
     )
@@ -1659,7 +1659,7 @@ lav_mvnorm_missing_estep <- function(y = NULL,
 
     # invert Sigma (Sigma_22, observed part only) for this pattern
     sigma_22_inv <- try(
-      lav_matrix_symmetric_inverse_update(
+      lav_mat_sym_inverse_update(
         s_inv = sigma_inv, rm_idx = na_idx, logdet = FALSE
       ),
       silent = TRUE

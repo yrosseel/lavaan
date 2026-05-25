@@ -6,7 +6,7 @@
 
 
 # Mu.W, Mu.B, Sigma.W, Sigma.B are the model-implied statistics
-lav_mvnorm_cluster_missing_loglik_samplestats_2l <- function(y1 = NULL, # nolint
+lav_mvn_cl_mi_loglik_samp_2l <- function(y1 = NULL,
                                                          y2 = NULL,
                                                          lp = NULL,
                                                          mp = NULL,
@@ -19,7 +19,7 @@ lav_mvnorm_cluster_missing_loglik_samplestats_2l <- function(y1 = NULL, # nolint
                                                          loglik_x = 0,
                                                          minus_two = TRUE) {
   # map implied to 2l matrices
-  out <- lav_mvnorm_cluster_implied22l(
+  out <- lav_mvn_cl_implied22l(
     lp = lp, mu_w = mu_w, mu_b = mu_b,
     sigma_w = sigma_w, sigma_b = sigma_b
   )
@@ -113,7 +113,7 @@ lav_mvnorm_cluster_missing_loglik_samplestats_2l <- function(y1 = NULL, # nolint
 
       if (length(z_na_idx) > 0L) {
         # zp <- sigma_zz[-z_na_idx, -z_na_idx, drop = FALSE]
-        zp_inv <- lav_matrix_symmetric_inverse_update(
+        zp_inv <- lav_mat_sym_inverse_update(
           s_inv = sigma_zz_inv, rm_idx = z_na_idx,
           logdet = TRUE, s_logdet = sigma_zz_logdet
         )
@@ -160,7 +160,7 @@ lav_mvnorm_cluster_missing_loglik_samplestats_2l <- function(y1 = NULL, # nolint
     if (length(na_idx) > 0L) {
       #MPi[Mp$case.idx[[p]]] <- p
       # wp <- sigma_w_1[-na_idx, -na_idx, drop = FALSE]
-      wp_inv <- lav_matrix_symmetric_inverse_update(
+      wp_inv <- lav_mat_sym_inverse_update(
         s_inv = sigma_w_inv, rm_idx = na_idx,
         logdet = TRUE, s_logdet = sigma_w_logdet
       )
@@ -194,7 +194,7 @@ lav_mvnorm_cluster_missing_loglik_samplestats_2l <- function(y1 = NULL, # nolint
   ) # only both part is needed
 
   # per cluster
-  both_diag_idx <- lav_matrix_diag_idx(length(both_idx))
+  both_diag_idx <- lav_mat_diag_idx(length(both_idx))
   for (j in seq_len(nclusters)) {
     # we only need the 'both.idx' part of A.j, sigma.b.z, p.j, g.j ,...
     a_j <- alist_1[[j]]
@@ -251,7 +251,7 @@ lav_mvnorm_cluster_missing_loglik_samplestats_2l <- function(y1 = NULL, # nolint
 }
 
 # Mu.W, Mu.B, Sigma.W, Sigma.B are the model-implied statistics
-lav_mvnorm_cluster_missing_dlogl_2l_samplestats <- function( # nolint
+lav_mvn_cl_mi_dlogl_2l_samp <- function(
     y1 = NULL,
     y2 = NULL,
     lp = NULL,
@@ -263,7 +263,7 @@ lav_mvnorm_cluster_missing_dlogl_2l_samplestats <- function( # nolint
     sinv_method = "eigen",
     return_list = FALSE) {
   # map implied to 2l matrices
-  out <- lav_mvnorm_cluster_implied22l(
+  out <- lav_mvn_cl_implied22l(
     lp = lp, mu_w = mu_w, mu_b = mu_b,
     sigma_w = sigma_w, sigma_b = sigma_b
   )
@@ -342,7 +342,7 @@ lav_mvnorm_cluster_missing_dlogl_2l_samplestats <- function( # nolint
 
       if (length(z_na_idx) > 0L) {
         # zp <- sigma_zz[-z_na_idx, -z_na_idx, drop = FALSE]
-        zp_inv <- lav_matrix_symmetric_inverse_update(
+        zp_inv <- lav_mat_sym_inverse_update(
           s_inv = sigma_zz_inv, rm_idx = z_na_idx,
           logdet = FALSE
         )
@@ -384,7 +384,7 @@ lav_mvnorm_cluster_missing_dlogl_2l_samplestats <- function( # nolint
 
     if (length(na_idx) > 0L) {
       mpi[mp$case.idx[[p]]] <- p
-      wp_inv <- lav_matrix_symmetric_inverse_update(
+      wp_inv <- lav_mat_sym_inverse_update(
         s_inv = sigma_w_inv, rm_idx = na_idx,
         logdet = FALSE
       )
@@ -415,7 +415,7 @@ lav_mvnorm_cluster_missing_dlogl_2l_samplestats <- function( # nolint
   )
 
   # per cluster
-  both_diag_idx <- lav_matrix_diag_idx(length(both_idx))
+  both_diag_idx <- lav_mat_diag_idx(length(both_idx))
   for (j in seq_len(nclusters)) {
     a_j_full <- alist_1[[j]]
     a_j <- a_j_full[both_idx, both_idx, drop = FALSE]
@@ -589,7 +589,7 @@ lav_mvnorm_cluster_missing_dlogl_2l_samplestats <- function( # nolint
   } # j
 
   # rearrange
-  dout <- lav_mvnorm_cluster_2l2implied(
+  dout <- lav_mvn_cl_2l2implied(
     lp = lp,
     sigma_w = dx_sigma_w, sigma_b = dx_sigma_b,
     sigma_yz = dx_sigma_yz, sigma_zz = dx_sigma_zz,
@@ -600,8 +600,8 @@ lav_mvnorm_cluster_missing_dlogl_2l_samplestats <- function( # nolint
     out <- dout
   } else {
     out <- c(
-      dout$Mu.W, lav_matrix_vech(dout$Sigma.W),
-      dout$Mu.B, lav_matrix_vech(dout$Sigma.B)
+      dout$Mu.W, lav_mat_vech(dout$Sigma.W),
+      dout$Mu.B, lav_mat_vech(dout$Sigma.B)
     )
   }
 
@@ -609,7 +609,7 @@ lav_mvnorm_cluster_missing_dlogl_2l_samplestats <- function( # nolint
 }
 
 # cluster-wise scores -2*logl wrt Mu.W, Mu.B, Sigma.W, Sigma.B
-lav_mvnorm_cluster_missing_scores_2l <- function(             # nolint
+lav_mvn_cl_mi_sc_2l <- function(
     y1 = NULL,
     y2 = NULL,
     lp = NULL,
@@ -620,7 +620,7 @@ lav_mvnorm_cluster_missing_scores_2l <- function(             # nolint
     sigma_b = NULL,
     sinv_method = "eigen") {
   # map implied to 2l matrices
-  out <- lav_mvnorm_cluster_implied22l(
+  out <- lav_mvn_cl_implied22l(
     lp = lp, mu_w = mu_w, mu_b = mu_b,
     sigma_w = sigma_w, sigma_b = sigma_b
   )
@@ -672,11 +672,11 @@ lav_mvnorm_cluster_missing_scores_2l <- function(             # nolint
 
   # both level-1 and level-2
   g_muy <- matrix(0, nclusters, length(mu_y))
-  g_sigma_w <- matrix(0, nclusters, length(lav_matrix_vech(sigma_w_1)))
-  g_sigma_b <- matrix(0, nclusters, length(lav_matrix_vech(out$sigma.b)))
+  g_sigma_w <- matrix(0, nclusters, length(lav_mat_vech(sigma_w_1)))
+  g_sigma_b <- matrix(0, nclusters, length(lav_mat_vech(out$sigma.b)))
   g_muz <- matrix(0, nclusters, length(mu_z))
-  g_sigma_zz <- matrix(0, nclusters, length(lav_matrix_vech(sigma_zz)))
-  g_sigma_yz <- matrix(0, nclusters, length(lav_matrix_vec(out$sigma.yz)))
+  g_sigma_zz <- matrix(0, nclusters, length(lav_mat_vech(sigma_zz)))
+  g_sigma_yz <- matrix(0, nclusters, length(lav_mat_vec(out$sigma.yz)))
 
   # Z per missing pattern
   if (nz > 0L) {
@@ -699,7 +699,7 @@ lav_mvnorm_cluster_missing_scores_2l <- function(             # nolint
 
       if (length(z_na_idx) > 0L) {
         # zp <- sigma_zz[-z_na_idx, -z_na_idx, drop = FALSE]
-        zp_inv <- lav_matrix_symmetric_inverse_update(
+        zp_inv <- lav_mat_sym_inverse_update(
           s_inv = sigma_zz_inv, rm_idx = z_na_idx,
           logdet = FALSE
         )
@@ -741,7 +741,7 @@ lav_mvnorm_cluster_missing_scores_2l <- function(             # nolint
 
     if (length(na_idx) > 0L) {
       mpi[mp$case.idx[[p]]] <- p
-      wp_inv <- lav_matrix_symmetric_inverse_update(
+      wp_inv <- lav_mat_sym_inverse_update(
         s_inv = sigma_w_inv, rm_idx = na_idx,
         logdet = FALSE
       )
@@ -773,7 +773,7 @@ lav_mvnorm_cluster_missing_scores_2l <- function(             # nolint
   )
 
   # per cluster
-  both_diag_idx <- lav_matrix_diag_idx(length(both_idx))
+  both_diag_idx <- lav_mat_diag_idx(length(both_idx))
   for (j in seq_len(nclusters)) {
     a_j_full <- alist_1[[j]]
     a_j <- a_j_full[both_idx, both_idx, drop = FALSE]
@@ -836,7 +836,7 @@ lav_mvnorm_cluster_missing_scores_2l <- function(             # nolint
       # symmetry correction
       zz <- 2 * tmp
       diag(zz) <- diag(tmp)
-      g_sigma_zz[j, ] <- lav_matrix_vech(zz)
+      g_sigma_zz[j, ] <- lav_mat_vech(zz)
 
       ###############
       # dx.sigma.yz #
@@ -852,7 +852,7 @@ lav_mvnorm_cluster_missing_scores_2l <- function(             # nolint
       tmp <- t0 + t1 + t2 + t3 + t4
       tmp2 <- matrix(0, nrow(out$sigma.yz), ncol(out$sigma.yz))
       tmp2[both_idx, ] <- tmp
-      g_sigma_yz[j, ] <- lav_matrix_vec(tmp2)
+      g_sigma_yz[j, ] <- lav_mat_vec(tmp2)
 
       ##############
       # dx.sigma.b #
@@ -864,7 +864,7 @@ lav_mvnorm_cluster_missing_scores_2l <- function(             # nolint
       diag(zz) <- diag(tmp)
       zz2 <- matrix(0, nrow(out$sigma.b), ncol(out$sigma.b))
       zz2[both_idx, both_idx] <- zz
-      g_sigma_b[j, ] <- lav_matrix_vech(zz2)
+      g_sigma_b[j, ] <- lav_mat_vech(zz2)
       # dx.sigma.b[both.idx, both.idx] <-
       #  dx.sigma.b[both.idx, both.idx, drop = FALSE] + ZZ
 
@@ -886,7 +886,7 @@ lav_mvnorm_cluster_missing_scores_2l <- function(             # nolint
       diag(zz) <- diag(tmp)
       zz2 <- matrix(0, nrow(out$sigma.b), ncol(out$sigma.b))
       zz2[both_idx, both_idx] <- zz
-      g_sigma_b[j, ] <- lav_matrix_vech(zz2)
+      g_sigma_b[j, ] <- lav_mat_vech(zz2)
       # dx.sigma.b[both.idx, both.idx] <-
       #  dx.sigma.b[both.idx, both.idx, drop = FALSE] + ZZ
 
@@ -939,7 +939,7 @@ lav_mvnorm_cluster_missing_scores_2l <- function(             # nolint
     # symmetry correction
     zz <- 2 * tmp
     diag(zz) <- diag(tmp)
-    g_sigma_w[j, ] <- lav_matrix_vech(zz)
+    g_sigma_w[j, ] <- lav_mat_vech(zz)
     # dx.sigma.w <- dx.sigma.w + ZZ
 
     ###########
@@ -982,41 +982,41 @@ lav_mvnorm_cluster_missing_scores_2l <- function(             # nolint
   # Sigma.B
   if (length(between_idx) > 0L) {
     p_tilde_star <- p_tilde * (p_tilde + 1) / 2
-    b_tilde <- lav_matrix_vech_reverse(seq_len(p_tilde_star))
+    b_tilde <- lav_mat_vech_rev(seq_len(p_tilde_star))
 
     sigma_b_tilde <- matrix(0, nclusters, p_tilde_star)
 
-    col_idx <- lav_matrix_vech(b_tilde[ov_idx[[1]], ov_idx[[1]],
+    col_idx <- lav_mat_vech(b_tilde[ov_idx[[1]], ov_idx[[1]],
       drop = FALSE
     ])
     sigma_b_tilde[, col_idx] <- g_sigma_b
 
-    col_idx <- lav_matrix_vec(b_tilde[ov_idx[[1]], between_idx,
+    col_idx <- lav_mat_vec(b_tilde[ov_idx[[1]], between_idx,
       drop = FALSE
     ])
     sigma_b_tilde[, col_idx] <- g_sigma_yz
 
-    col_idx <- lav_matrix_vech(b_tilde[between_idx, between_idx,
+    col_idx <- lav_mat_vech(b_tilde[between_idx, between_idx,
       drop = FALSE
     ])
     sigma_b_tilde[, col_idx] <- g_sigma_zz
 
-    col_idx <- lav_matrix_vech(b_tilde[ov_idx[[2]], ov_idx[[2]],
+    col_idx <- lav_mat_vech(b_tilde[ov_idx[[2]], ov_idx[[2]],
       drop = FALSE
     ])
     sigma_b <- sigma_b_tilde[, col_idx, drop = FALSE]
   } else {
     p_tilde_star <- p_tilde * (p_tilde + 1) / 2
-    b_tilde <- lav_matrix_vech_reverse(seq_len(p_tilde_star))
+    b_tilde <- lav_mat_vech_rev(seq_len(p_tilde_star))
 
     sigma_b_tilde <- matrix(0, nclusters, p_tilde_star)
 
-    col_idx <- lav_matrix_vech(b_tilde[ov_idx[[1]], ov_idx[[1]],
+    col_idx <- lav_mat_vech(b_tilde[ov_idx[[1]], ov_idx[[1]],
       drop = FALSE
     ])
     sigma_b_tilde[, col_idx] <- g_sigma_b
 
-    col_idx <- lav_matrix_vech(b_tilde[ov_idx[[2]], ov_idx[[2]],
+    col_idx <- lav_mat_vech(b_tilde[ov_idx[[2]], ov_idx[[2]],
       drop = FALSE
     ])
     sigma_b <- sigma_b_tilde[, col_idx, drop = FALSE]
@@ -1029,7 +1029,7 @@ lav_mvnorm_cluster_missing_scores_2l <- function(             # nolint
 }
 
 # first-order information: outer crossprod of scores per cluster
-lav_mvnorm_cluster_missing_information_firstorder <- function( # nolint
+lav_mvn_cl_mi_info_firstorder <- function(
     y1 = NULL,
     y2 = NULL,
     lp = NULL,
@@ -1042,7 +1042,7 @@ lav_mvnorm_cluster_missing_information_firstorder <- function( # nolint
     divide_by_two = FALSE,
     sinv_method = "eigen") {
 
-  scores <- lav_mvnorm_cluster_missing_scores_2l(
+  scores <- lav_mvn_cl_mi_sc_2l(
     y1 = y1,
     y2 = y2,
     lp = lp,
@@ -1074,7 +1074,7 @@ lav_mvnorm_cluster_missing_information_firstorder <- function( # nolint
     if (length(x_idx_w) > 0L) {
       xw_idx <- c(
         x_idx_w,
-        nw + lav_matrix_vech_which_idx(n = nw, idx = x_idx_w)
+        nw + lav_mat_vech_which_idx(n = nw, idx = x_idx_w)
       )
     } else {
       xw_idx <- integer(0L)
@@ -1083,7 +1083,7 @@ lav_mvnorm_cluster_missing_information_firstorder <- function( # nolint
     if (length(x_idx_b) > 0L) {
       xb_idx <- c(
         x_idx_b,
-        nb + lav_matrix_vech_which_idx(n = nb, idx = x_idx_b)
+        nb + lav_mat_vech_which_idx(n = nb, idx = x_idx_b)
       )
     } else {
       xb_idx <- integer(0L)
@@ -1103,7 +1103,7 @@ lav_mvnorm_cluster_missing_information_firstorder <- function( # nolint
 # mu.w rows/cols that are splitted within/between are forced to zero
 #
 # numerical approximation (for now)
-lav_mvnorm_cluster_missing_information_observed <- function( # nolint
+lav_mvn_cl_mi_info_observed <- function(
     y1 = NULL,
     y2 = NULL,
     lp = NULL,
@@ -1136,11 +1136,11 @@ lav_mvnorm_cluster_missing_information_observed <- function( # nolint
     mu_w_tilde2[lp$both.idx[[2]]] <- mu_w_tilde[lp$both.idx[[2]]]
     mu_w2 <- mu_w_tilde2[ov_idx[[1]]]
 
-    sigma_w2 <- lav_matrix_vech_reverse(x[nw + 1:nw_star])
+    sigma_w2 <- lav_mat_vech_rev(x[nw + 1:nw_star])
     mu_b2 <- x[nw + nw_star + 1:nb]
-    sigma_b2 <- lav_matrix_vech_reverse(x[nw + nw_star + nb + 1:nb_star])
+    sigma_b2 <- lav_mat_vech_rev(x[nw + nw_star + nb + 1:nb_star])
 
-    dx <- lav_mvnorm_cluster_missing_dlogl_2l_samplestats(
+    dx <- lav_mvn_cl_mi_dlogl_2l_samp(
       y1 = y1, y2 = y2, lp = lp, mp = mp,
       mu_w = mu_w2, sigma_w = sigma_w2,
       mu_b = mu_b2, sigma_b = sigma_b2,
@@ -1154,8 +1154,8 @@ lav_mvnorm_cluster_missing_information_observed <- function( # nolint
 
   # start.x
   start_x <- c(
-    as.vector(mu_w), lav_matrix_vech(sigma_w),
-    as.vector(mu_b), lav_matrix_vech(sigma_b)
+    as.vector(mu_w), lav_mat_vech(sigma_w),
+    as.vector(mu_b), lav_mat_vech(sigma_b)
   )
 
   # total information
@@ -1171,7 +1171,7 @@ lav_mvnorm_cluster_missing_information_observed <- function( # nolint
     if (length(x_idx_w) > 0L) {
       xw_idx <- c(
         x_idx_w,
-        nw + lav_matrix_vech_which_idx(n = nw, idx = x_idx_w)
+        nw + lav_mat_vech_which_idx(n = nw, idx = x_idx_w)
       )
     } else {
       xw_idx <- integer(0L)
@@ -1180,7 +1180,7 @@ lav_mvnorm_cluster_missing_information_observed <- function( # nolint
     if (length(x_idx_b) > 0L) {
       xb_idx <- c(
         x_idx_b,
-        nb + lav_matrix_vech_which_idx(n = nb, idx = x_idx_b)
+        nb + lav_mat_vech_which_idx(n = nb, idx = x_idx_b)
       )
     } else {
       xb_idx <- integer(0L)

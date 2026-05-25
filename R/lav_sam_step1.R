@@ -142,7 +142,7 @@ lav_sam_step1 <- function(cmd = "sem", mm_list = NULL, mm_args = list(),
   if (!lavoptions$se %in% c("none", "bootstrap")) {
     sigma_11_1 <- matrix(0, npar, npar)
     colnames(sigma_11_1) <- rownames(sigma_11_1) <-
-      lav_partable_labels(fit@ParTable, type = "free")
+      lav_pt_labels(fit@ParTable, type = "free")
   }
   step1_free_idx <- integer(0L)
   block_mm_idx  <- vector("list", length = n_mmblocks)
@@ -166,7 +166,7 @@ lav_sam_step1 <- function(cmd = "sem", mm_list = NULL, mm_args = list(),
     }
 
     # create parameter table for this measurement block only
-    ptm <- lav_partable_subset_measurement_model(
+    ptm <- lav_pt_subset_measurement_model(
       pt_1 = pt_1,
       add_lv_cov = add_lv_cov,
       add_idx = TRUE,
@@ -186,7 +186,7 @@ lav_sam_step1 <- function(cmd = "sem", mm_list = NULL, mm_args = list(),
 
     # update slotData for this measurement block
     ov_names_block <- lapply(1:ngroups, function(g) {
-      unique(unlist(lav_partable_vnames(ptm, type = "ov", group = g)))
+      unique(unlist(lav_pt_vnames(ptm, type = "ov", group = g)))
     })
     slot_data_block <- lav_data_update_subset(fit@Data,
       ov_names = ov_names_block
@@ -278,7 +278,7 @@ lav_sam_step1 <- function(cmd = "sem", mm_list = NULL, mm_args = list(),
     # fill in point estimates measurement block (including slack values)
     ptm <- mm_fit[[mm]]@ParTable
     # pt.idx: the row-numbers in PT that correspond to the rows in PTM
-    # pt.idx <- lav_partable_map_id_p1_in_p2(p1 = PTM, p2 = PT,
+    # pt.idx <- lav_pt_map_id_p1_in_p2(p1 = PTM, p2 = PT,
     #             stopifnotfound = TRUE, exclude.nonpar = FALSE)
     # pt.idx == mm.idx
     ptm_idx <- which((ptm$free > 0L | ptm$op %in% c(":=", "<", ">")) &

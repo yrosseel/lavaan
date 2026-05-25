@@ -120,7 +120,7 @@ lav_standardize_lv <- function(lavobject = NULL,
     lavmodel <- lavobject@Model
     lavpartable <- lavobject@ParTable
     if (is.null(est)) {
-      est <- lav_object_inspect_est(lavobject)
+      est <- lav_inspect_est(lavobject)
     }
   }
 
@@ -152,9 +152,9 @@ lav_standardize_lv <- function(lavobject = NULL,
   }
 
   for (g in 1:lavmodel@nblocks) {
-    ov_names <- lav_partable_vnames(lavpartable, "ov", block = g) # not user,
+    ov_names <- lav_pt_vnames(lavpartable, "ov", block = g) # not user,
     # which may be incomplete
-    lv_names <- lav_partable_vnames(lavpartable, "lv", block = g)
+    lv_names <- lav_pt_vnames(lavpartable, "lv", block = g)
 
     # shortcut: no latents in this block, nothing to do
     if (length(lv_names) == 0L) {
@@ -179,7 +179,7 @@ lav_standardize_lv <- function(lavobject = NULL,
     # (based on Kelava & Brandt, 2022; Brandt et al., 2015)
     # For interaction terms A:B, the standardized coefficient should use
     # SD(A)*SD(B) instead of SD(A:B) (Eq. 13 in Brandt et al., 2015).
-    lv_int_names <- lav_partable_vnames(lavpartable, "lv.interaction",
+    lv_int_names <- lav_pt_vnames(lavpartable, "lv.interaction",
       block = g
     )
 
@@ -422,7 +422,7 @@ lav_standardize_all <- function(lavobject = NULL,
     lavmodel <- lavobject@Model
     lavpartable <- lavobject@ParTable
     if (is.null(est)) {
-      est <- lav_object_inspect_est(lavobject)
+      est <- lav_inspect_est(lavobject)
     }
     if (lavmodel@conditional.x) {
       if (is.null(cov_x)) {
@@ -474,8 +474,8 @@ lav_standardize_all <- function(lavobject = NULL,
 
 
   for (g in 1:lavmodel@nblocks) {
-    ov_names <- lav_partable_vnames(lavpartable, "ov", block = g) # not user
-    lv_names <- lav_partable_vnames(lavpartable, "lv", block = g)
+    ov_names <- lav_pt_vnames(lavpartable, "ov", block = g) # not user
+    lv_names <- lav_pt_vnames(lavpartable, "lv", block = g)
 
     if (is.null(ov_var)) {
       ov2 <- vy[[g]]
@@ -499,8 +499,8 @@ lav_standardize_all <- function(lavobject = NULL,
 
     if (lavmodel@conditional.x) {
       # extend OV with ov.names.x
-      ov_names_x <- lav_partable_vnames(lavpartable, "ov.x", block = g)
-      ov_names_nox <- lav_partable_vnames(lavpartable, "ov.nox", block = g)
+      ov_names_x <- lav_pt_vnames(lavpartable, "ov.x", block = g)
+      ov_names_nox <- lav_pt_vnames(lavpartable, "ov.nox", block = g)
       ov_names <- c(ov_names_nox, ov_names_x)
       ov2 <- c(ov2, diag(cov_x[[g]]))
       ov <- c(ov, sqrt(diag(cov_x[[g]])))
@@ -660,7 +660,7 @@ lav_standardize_all_nox <- function(lavobject = NULL,
     lavmodel <- lavobject@Model
     lavpartable <- lavobject@ParTable
     if (is.null(est)) {
-      est <- lav_object_inspect_est(lavobject)
+      est <- lav_inspect_est(lavobject)
     }
     if (lavmodel@conditional.x) {
       if (is.null(cov_x)) {
@@ -713,10 +713,10 @@ lav_standardize_all_nox <- function(lavobject = NULL,
 
 
   for (g in 1:lavmodel@nblocks) {
-    ov_names <- lav_partable_vnames(lavpartable, "ov", block = g)
-    ov_names_x <- lav_partable_vnames(lavpartable, "ov.x", block = g)
-    ov_names_nox <- lav_partable_vnames(lavpartable, "ov.nox", block = g)
-    lv_names <- lav_partable_vnames(lavpartable, "lv", block = g)
+    ov_names <- lav_pt_vnames(lavpartable, "ov", block = g)
+    ov_names_x <- lav_pt_vnames(lavpartable, "ov.x", block = g)
+    ov_names_nox <- lav_pt_vnames(lavpartable, "ov.nox", block = g)
+    lv_names <- lav_pt_vnames(lavpartable, "lv", block = g)
 
     if (is.null(ov_var)) {
       ov2 <- vy[[g]]
@@ -741,7 +741,7 @@ lav_standardize_all_nox <- function(lavobject = NULL,
 
     if (lavmodel@conditional.x) {
       # extend OV with ov.names.x
-      ov_names_x <- lav_partable_vnames(lavpartable, "ov.x", block = g)
+      ov_names_x <- lav_pt_vnames(lavpartable, "ov.x", block = g)
       ov_names <- c(ov_names_nox, ov_names_x)
       ov2 <- c(ov2, diag(cov_x[[g]]))
       ov <- c(ov, sqrt(diag(cov_x[[g]])))
@@ -899,7 +899,7 @@ lav_unstandardize_ov <- function(partable, ov_var = NULL, cov_std = TRUE) {
   # n <- length(est)
 
   # nblocks
-  nblocks <- lav_partable_nblocks(partable)
+  nblocks <- lav_pt_nblocks(partable)
 
   # if ov.var is NOT a list, make a list
   if (!is.list(ov_var)) {
@@ -909,8 +909,8 @@ lav_unstandardize_ov <- function(partable, ov_var = NULL, cov_std = TRUE) {
   }
 
   for (g in 1:nblocks) {
-    ov_names <- lav_partable_vnames(partable, "ov", block = g) # not user
-    lv_names <- lav_partable_vnames(partable, "lv", block = g)
+    ov_names <- lav_pt_vnames(partable, "ov", block = g) # not user
+    lv_names <- lav_pt_vnames(partable, "lv", block = g)
 
     ov <- sqrt(ov_var[[g]])
 

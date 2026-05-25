@@ -16,13 +16,13 @@
 # YR 16 Feb 2016: adapt to changed @Mp slot elements; add remove.empty.cases=
 #                 argument
 # YR 12 Mar 2024: make lintr (more) happy; include WLS code from Franz Classe
-#                 move ML-specific code to lav_scores_ml() function
+#                 move ML-specific code to lav_sc_ml() function
 # YR 26 Apr 2025: add lav_scores_gls()
 
-lav_scores <- function(object, scaling = FALSE,                    # nolint start
-                                       ignore.constraints = FALSE,
-                                       remove.duplicated = TRUE,
-                                       remove.empty.cases = TRUE) { # nolint end
+lav_sc <- function(object, scaling = FALSE,
+                           ignore_constraints = FALSE,
+                           remove_duplicated = TRUE,
+                           remove_empty_cases = TRUE) {
   stopifnot(inherits(object, "lavaan"))
 
   # check object
@@ -54,11 +54,11 @@ lav_scores <- function(object, scaling = FALSE,                    # nolint star
   # ntot <- max( object@Data@case.idx[[ object@Data@ngroups ]] )
   ntab <- unlist(lavdata@norig)
   ntot <- sum(ntab)
-  npar <- lav_object_inspect_npar(object, ceq = FALSE)
+  npar <- lav_inspect_npar(object, ceq = FALSE)
 
   if (object@Options$estimator == "ML") {
     moments <- fitted(object)
-    score_matrix <- lav_scores_ml(
+    score_matrix <- lav_sc_ml(
       ntab = ntab, ntot = ntot, npar = npar,
       moments = moments, lavdata = lavdata, lavsamplestats = lavsamplestats,
       lavmodel = lavmodel, lavoptions = lavoptions, scaling = scaling
@@ -73,7 +73,7 @@ lav_scores <- function(object, scaling = FALSE,                    # nolint star
     }
 
     # compute WLS scores
-    score_matrix <- lav_scores_wls(
+    score_matrix <- lav_sc_wls(
       ntab = ntab, ntot = ntot, npar = npar,
       lavdata = lavdata, lavsamplestats = lavsamplestats,
       lavmodel = lavmodel, lavoptions = lavoptions
@@ -81,7 +81,7 @@ lav_scores <- function(object, scaling = FALSE,                    # nolint star
   } else if (!lavmodel@categorical &&
              object@Options$estimator %in% c("GLS", "ULS", "WLS")) {
     # compute WLS/GLS/ULS `scores'
-    score_matrix <- lav_scores_ls(
+    score_matrix <- lav_sc_ls(
       ntab = ntab, ntot = ntot, npar = npar,
       lavdata = lavdata, lavsamplestats = lavsamplestats,
       lavmodel = lavmodel, lavoptions = lavoptions
@@ -92,7 +92,7 @@ lav_scores <- function(object, scaling = FALSE,                    # nolint star
   }
 
   # handle empty rows
-  if (remove.empty.cases) {
+  if (remove_empty_cases) {
     # empty.idx <- which( apply(score_matrix, 1L,
     #                        function(x) sum(is.na(x))) == ncol(score_matrix) )
     empty_idx <- unlist(lapply(lavdata@Mp, "[[", "empty.idx"))
@@ -102,28 +102,28 @@ lav_scores <- function(object, scaling = FALSE,                    # nolint star
   }
 
   # provide column names
-  colnames(score_matrix) <- names(lav_object_inspect_coef(object,
+  colnames(score_matrix) <- names(lav_inspect_coef(object,
     type = "free", add_labels = TRUE
   ))
 
   # handle general constraints, so that the sum of the columns equals zero
-  if (!ignore.constraints &&
+  if (!ignore_constraints &&
     sum(
       lavmodel@ceq.linear.idx, lavmodel@ceq.nonlinear.idx,
       lavmodel@cin.linear.idx, lavmodel@cin.nonlinear.idx
     ) > 0) {
     r_matrix <- object@Model@con.jac[, ]
-    pre <- lav_constraints_lambda_pre(object)
+    pre <- lav_con_lambda_pre(object)
     # LAMBDA <- -1 * t(pre %*% t(score_matrix))
     # RLAMBDA <- t(t(r_matrix) %*% t(LAMBDA))
     score_matrix <- score_matrix - t(t(r_matrix) %*% pre %*% t(score_matrix))
   }
 
   # handle simple equality constraints
-  if (remove.duplicated && lavmodel@eq.constraints) {
-    simple_flag <- lav_constraints_check_simple(lavmodel)
+  if (remove_duplicated && lavmodel@eq.constraints) {
+    simple_flag <- lav_con_check_simple(lavmodel)
     if (simple_flag) {
-      k_matrix <- lav_constraints_r2k(lavmodel)
+      k_matrix <- lav_con_r2k(lavmodel)
       score_matrix <- score_matrix %*% k_matrix
     } else {
       lav_msg_warn(gettext(
@@ -134,10 +134,20 @@ lav_scores <- function(object, scaling = FALSE,                    # nolint star
 
   score_matrix
 }
-lavScores <- lav_scores       # synonym #nolint
-estfun.lavaan <- lav_scores   # synonym
 
-lav_scores_ml <- function(ntab = 0L,
+lavScores <- estfun.lavaan <- function(               # nolint start
+                       object,
+                       scaling = FALSE,
+                       ignore.constraints = FALSE,
+                       remove.duplicated = TRUE,
+                       remove.empty.cases = TRUE) {   # nolint end
+  sc <- sys.call()
+  names(sc) <- lav_snake_case(names(sc))
+  sc[[1L]] <- quote(lavaan:::lav_sc)
+  eval(sc, parent.frame())
+}       
+
+lav_sc_ml <- function(ntab = 0L,
                           ntot = 0L,
                           npar = 0L,
                           moments = NULL,
@@ -185,7 +195,7 @@ lav_scores_ml <- function(ntab = 0L,
         dx_sigma <- t(matrix(apply(
           mean_diff, 1L,
           function(x) {
-            lav_matrix_vech(-j2 *
+            lav_mat_vech(-j2 *
               (sigma_inv %*% (tcrossprod(x) * nobs1 - sigma_hat) %*% sigma_inv))
           }
         ), ncol = nrow(mean_diff)))
@@ -196,7 +206,7 @@ lav_scores_ml <- function(ntab = 0L,
         dx_sigma <- t(matrix(apply(
           mean_diff, 1L,
           function(x) {
-            lav_matrix_vech(-j2 *
+            lav_mat_vech(-j2 *
               (sigma_inv %*% (tcrossprod(x) * nobs1 - sigma_hat) %*% sigma_inv))
           }
         ), ncol = nrow(mean_diff)))
@@ -250,7 +260,7 @@ lav_scores_ml <- function(ntab = 0L,
         score_sigma[case_idx, sigma_idx] <- t(matrix(apply(
           mean_diff, 1L,
           function(x) {
-            lav_matrix_vech(-j2 *
+            lav_mat_vech(-j2 *
               (sigma_inv %*% (tcrossprod(x) -
                 sigma_hat[var_idx, var_idx, drop = FALSE]) %*% sigma_inv))
           }
@@ -280,7 +290,7 @@ lav_scores_ml <- function(ntab = 0L,
 
 # this function is based on code originally written by Franz Classe (Munich)
 # for categorical data only!
-lav_scores_wls <- function(ntab = 0L,
+lav_sc_wls <- function(ntab = 0L,
                            ntot = 0L,
                            npar = 0L,
                            lavdata = NULL,
@@ -334,7 +344,7 @@ lav_scores_wls <- function(ntab = 0L,
     mus <- colMeans(x_1)
     y_minus_mu <- t(apply(x_1, 1L, function(x) x - mus))
     s_vech <- t(apply(y_minus_mu, 1L, function(i) {
-      lavaan::lav_matrix_vech(tcrossprod(i), diagonal = FALSE)
+      lavaan::lav_mat_vech(tcrossprod(i), diagonal = FALSE)
     })) # s=c( (y1-mu1)(y2-mu2)....
     sigma <- colMeans(s_vech)
     e2 <- t(apply(s_vech, 1L, function(x) x - sigma))
@@ -355,7 +365,7 @@ lav_scores_wls <- function(ntab = 0L,
 
 
 # wls/gls/uls (continuous data only)
-lav_scores_ls <- function(ntab = 0L,
+lav_sc_ls <- function(ntab = 0L,
                           ntot = 0L,
                           npar = 0L,
                           lavdata = NULL,
@@ -386,8 +396,8 @@ lav_scores_ls <- function(ntab = 0L,
     # create Z where the rows_i contain the following elements:
     #  - Y_i (if meanstructure is TRUE)
     #  - vech(Yc_i' %*% Yc_i) where Yc_i are the residuals
-    idx1 <- lav_matrix_vech_col_idx(nvar)
-    idx2 <- lav_matrix_vech_row_idx(nvar)
+    idx1 <- lav_mat_vech_col_idx(nvar)
+    idx2 <- lav_mat_vech_row_idx(nvar)
     if (lavmodel@meanstructure) {
       z <- cbind(y, yc[, idx1, drop = FALSE] * yc[, idx2, drop = FALSE])
     } else {
@@ -397,9 +407,9 @@ lav_scores_ls <- function(ntab = 0L,
     # model-based sample statistics
     if (lavmodel@meanstructure) {
       sigma <- c(as.numeric(implied$mean[[g]]),
-                 lav_matrix_vech(implied$cov[[g]]))
+                 lav_mat_vech(implied$cov[[g]]))
     } else {
-      sigma <- lav_matrix_vech(implied$cov[[g]])
+      sigma <- lav_mat_vech(implied$cov[[g]])
     }
 
     # adjust sigma for N-1, so that colMeans(scores) == gradient

@@ -63,7 +63,7 @@ lav_cfa_bentler1982 <- function(s,
   #     theta.y <- matrix(0, p, p)
   #     # insert 'free' parameters only
   #     diag(theta.y) <- x
-  #     lav_matrix_vec(theta.y)
+  #     lav_mat_vec(theta.y)
   # }
   # P <- t(numDeriv::jacobian(func = theta.fy, x = rep(1, q)))
 
@@ -86,7 +86,7 @@ lav_cfa_bentler1982 <- function(s,
     tmp2 <- s_yy - g %*% s_yy %*% g
   }
 
-  # Theta.f    <- as.numeric(solve(tmp1) %*% P %*% lav_matrix_vec(tmp2))
+  # Theta.f    <- as.numeric(solve(tmp1) %*% P %*% lav_mat_vec(tmp2))
   # Note:
   # if only the 'diagonal' element of Theta are free (as usual), then we
   # can write Theta.f as
@@ -107,7 +107,7 @@ lav_cfa_bentler1982 <- function(s,
   theta_yhat <- diag(theta_f, p)
 
   # force (S.yy - Theta.yhat) to be positive definite
-  lambda <- try(lav_matrix_symmetric_diff_smallest_root(s_yy, theta_yhat),
+  lambda <- try(lav_mat_sym_diff_smallest_root(s_yy, theta_yhat),
     silent = TRUE
   )
   if (inherits(lambda, "try-error")) {
@@ -146,7 +146,7 @@ lav_cfa_bentler1982 <- function(s,
   }
 
   # in addition, force PSI to be PD
-  mm_psi <- lav_matrix_symmetric_force_pd(mm_psi, tol = 1e-04)
+  mm_psi <- lav_mat_sym_force_pd(mm_psi, tol = 1e-04)
 
   # residual variances markers
   theta_x <- diag(s_xx - mm_psi)
@@ -161,7 +161,7 @@ lav_cfa_bentler1982 <- function(s,
   if (quadprog) {
     # only really needed if we need to impose (in)equality constraints
     # (TODO)
-    dmat <- lav_matrix_bdiag(rep(list(mm_psi), p))
+    dmat <- lav_mat_bdiag(rep(list(mm_psi), p))
     dvec <- as.vector(t(s_yx))
     eq_idx <- which(t(b_y) != 1) # these must be zero (row-wise!)
     rmat <- diag(nrow(dmat))[eq_idx, , drop = FALSE]
@@ -224,14 +224,14 @@ lav_cfa_bentler1982_internal <- function(lavobject = NULL, # convenience
     # extract slots
     lavmodel <- lavobject@Model
     lavsamplestats <- lavobject@SampleStats
-    lavpartable <- lav_partable_set_cache(lavobject@ParTable, lavobject@pta)
+    lavpartable <- lav_pt_set_cache(lavobject@ParTable, lavobject@pta)
     lavpta <- lavobject@pta
     lavdata <- lavobject@Data
     lavoptions <- lavobject@Options
   }
   if (is.null(lavpta)) {
-    lavpta <- lav_partable_attributes(lavpartable)
-    lavpartable <- lav_partable_set_cache(lavpartable, lavpta)
+    lavpta <- lav_pt_attributes(lavpartable)
+    lavpartable <- lav_pt_set_cache(lavpartable, lavpta)
   }
   # no structural part!
   if (any(lavpartable$op == "~")) {
@@ -248,7 +248,7 @@ lav_cfa_bentler1982_internal <- function(lavobject = NULL, # convenience
       "bentler1982 estimator not available if std.lv = TRUE"))
   }
 
-  nblocks <- lav_partable_nblocks(lavpartable)
+  nblocks <- lav_pt_nblocks(lavpartable)
   stopifnot(nblocks == 1L) # for now
   b <- 1L
   sample_cov <- lavsamplestats@cov[[b]]
@@ -262,7 +262,7 @@ lav_cfa_bentler1982_internal <- function(lavobject = NULL, # convenience
   # (see MIIV)
   theta_idx <- which(names(lavmodel@GLIST) == "theta") # usually '2'
   m_theta <- lavmodel@m.free.idx[[theta_idx]]
-  nondiag_idx <- m_theta[!m_theta %in% lav_matrix_diag_idx(nvar)]
+  nondiag_idx <- m_theta[!m_theta %in% lav_mat_diag_idx(nvar)]
   if (length(nondiag_idx) > 0L) {
     lav_msg_warn(gettext(
       "this implementation of FABIN does not handle correlated residuals yet!"))

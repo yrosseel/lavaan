@@ -109,7 +109,7 @@ lav_bvreg_cor_twostep_fit <- function(y1, y2, exo = NULL, wt = NULL,
 
   # optim.method
   min_objective <- lav_bvreg_min_objective
-  min_gradient <- lav_bvreg_min_gradient
+  min_gradient <- lav_bvreg_min_grad
   min_hessian <- lav_bvreg_min_hessian
   if (optim_method == "nlminb" || optim_method == "nlminb2") {
     # nothing to do
@@ -156,7 +156,7 @@ lav_bvreg_cor_twostep_fit <- function(y1, y2, exo = NULL, wt = NULL,
   # try 3 (start = 0, step.min = 0.1)
   if (optim$convergence != 0L) {
     control$step.min <- 0.1
-    min_gradient <- lav_bvreg_min_gradient
+    min_gradient <- lav_bvreg_min_grad
     # try again, with different starting value
     optim <- nlminb(
       start = 0, objective = min_objective,
@@ -288,7 +288,7 @@ lav_bvreg_lik_cache <- function(cache = NULL) {
 
     cov_y12 <- rho * sqrt(evar_y1) * sqrt(evar_y2)
     sigma <- matrix(c(evar_y1, cov_y12, cov_y12, evar_y2), 2L, 2L)
-    lik <- exp(lav_mvnorm_loglik_data(
+    lik <- exp(lav_mvn_loglik_data(
       y = cbind(y1c, y2c), wt = NULL,
       mu = c(0, 0), sigma_1 = sigma,
       casewise = TRUE
@@ -315,7 +315,7 @@ lav_bvreg_logl_cache <- function(cache = NULL) {
   })                # nolint end
 }
 
-lav_bvreg_gradient_cache <- function(cache = NULL) {
+lav_bvreg_grad_cache <- function(cache = NULL) {
   with(cache, {     # nolint start
     rho <- theta[1L]
     r <- (1 - rho * rho)
@@ -374,14 +374,14 @@ lav_bvreg_min_objective <- function(x, cache = NULL) {
 }
 
 # compute gradient, for specific 'x' (nlminb)
-lav_bvreg_min_gradient <- function(x, cache = NULL) {
+lav_bvreg_min_grad <- function(x, cache = NULL) {
   # check if x has changed
   if (!all(x == cache$theta)) {
     cache$theta <- x
     tmp <- lav_bvreg_logl_cache(cache = cache)
     rm(tmp)
   }
-  -1 * lav_bvreg_gradient_cache(cache = cache) / cache$n
+  -1 * lav_bvreg_grad_cache(cache = cache) / cache$n
 }
 
 # compute hessian, for specific 'x' (nlminb)
@@ -389,7 +389,7 @@ lav_bvreg_min_hessian <- function(x, cache = NULL) {
   # check if x has changed
   if (!all(x == cache$theta)) {
     tmp <- lav_bvreg_logl_cache(cache = cache)
-    tmp <- lav_bvreg_gradient_cache(cache = cache)
+    tmp <- lav_bvreg_grad_cache(cache = cache)
     rm(tmp)
   }
   -1 * lav_bvreg_hessian_cache(cache = cache) / cache$n
@@ -397,7 +397,7 @@ lav_bvreg_min_hessian <- function(x, cache = NULL) {
 
 # casewise scores - cache
 # FIXME: should we also set 'lik.toosmall.idx' cases to NA?
-lav_bvreg_cor_scores_cache <- function(cache = NULL) {
+lav_bvreg_cor_sc_cache <- function(cache = NULL) {
   with(cache, {           # nolint start
     rho <- theta[1L]
     r <- (1 - rho * rho)
@@ -463,7 +463,7 @@ lav_bvreg_cor_scores_cache <- function(cache = NULL) {
 #
 # Y1 = linear
 # Y2 = linear
-lav_bvreg_cor_scores <- function(y1, y2, exo = NULL, wt = NULL,
+lav_bvreg_cor_sc <- function(y1, y2, exo = NULL, wt = NULL,
                                  rho = NULL,
                                  fit_y1 = NULL, fit_y2 = NULL,
                                  evar_y1 = NULL, beta_y1 = NULL,
@@ -496,7 +496,7 @@ lav_bvreg_cor_scores <- function(y1, y2, exo = NULL, wt = NULL,
   )
   cache$theta <- rho
 
-  sc <- lav_bvreg_cor_scores_cache(cache = cache)
+  sc <- lav_bvreg_cor_sc_cache(cache = cache)
 
   sc
 }

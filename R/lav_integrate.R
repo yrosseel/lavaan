@@ -33,7 +33,7 @@ lav_integration_gauss_hermite_xw <- function(n = 21L, revert = FALSE) {  # nolin
     # diagonal = 0, -1/+1 diagonal is sqrt(1:(n-1)/2)
     u <- sqrt(seq.int(n - 1L) / 2) # upper diagonal of J
     jn <- matrix(0, n, n)
-    didx <- lav_matrix_diag_idx(n)
+    didx <- lav_mat_diag_idx(n)
     jn[(didx + 1)[-n]] <- u
     # Jn[(didx-1)[-1]] <- u # only lower matrix is used anyway
 

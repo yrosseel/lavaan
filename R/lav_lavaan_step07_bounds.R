@@ -1,4 +1,4 @@
-lav_lavaan_step07_bounds <- function(lavoptions = NULL,
+lav_step07_bounds <- function(lavoptions = NULL,
                                      lavh1 = NULL,
                                      lavdata = NULL,
                                      lavsamplestats = NULL,
@@ -18,7 +18,7 @@ lav_lavaan_step07_bounds <- function(lavoptions = NULL,
     if (lav_verbose()) {
       cat("lavpartable bounds ...")
     }
-    lavpartable <- lav_partable_add_bounds(
+    lavpartable <- lav_pt_add_bounds(
       partable = lavpartable,
       lavh1 = lavh1, lavdata = lavdata, lavsamplestats = lavsamplestats,
       lavoptions = lavoptions

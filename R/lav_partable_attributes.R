@@ -1,5 +1,5 @@
 # return 'attributes' of a lavaan partable -- generate a new set if necessary
-lav_partable_attributes <- function(partable, pta = NULL) {
+lav_pt_attributes <- function(partable, pta = NULL) {
   if (is.null(pta)) {
     # attached to partable?
     pta <- attributes(partable)
@@ -13,7 +13,7 @@ lav_partable_attributes <- function(partable, pta = NULL) {
   }
 
   # vnames
-  pta$vnames <- lav_partable_vnames(partable, type = "*")
+  pta$vnames <- lav_pt_vnames(partable, type = "*")
 
   # vidx
   tmp_ov <- pta$vnames$ov
@@ -49,10 +49,10 @@ lav_partable_attributes <- function(partable, pta = NULL) {
   pta$nblocks <- nblocks
 
   # ngroups
-  pta$ngroups <- lav_partable_ngroups(partable)
+  pta$ngroups <- lav_pt_ngroups(partable)
 
   # nlevels
-  pta$nlevels <- lav_partable_nlevels(partable)
+  pta$nlevels <- lav_pt_nlevels(partable)
 
   # nvar
   pta$nvar <- lapply(pta$vnames$ov, length)

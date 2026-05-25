@@ -71,7 +71,7 @@ lav_model_nvcov_bootstrap <- function(lavmodel = NULL,
                    apply(coef_1, 2, mad, na.rm = TRUE))
   crit_ratio <- 5
   if (any(sd_mad_ratio > crit_ratio)) {
-    names_1 <- lav_partable_labels(lavpartable, type = "free")
+    names_1 <- lav_pt_labels(lavpartable, type = "free")
     params_w_outliers <- paste(names_1[sd_mad_ratio > crit_ratio],
                                collapse = " ")
     lav_msg_warn(gettextf(
@@ -113,7 +113,7 @@ lav_model_nvcov_robust_sem <- function(lavmodel = NULL,
     # - gamma is not identical to what is used for WLS; closer to EQS
     # - N/N-1 bug in G11 for NVarCov (but not test statistic)
     # - we divide by N-1! (just like EQS)
-    e_inv <- lav_model_information_expected_mlm(
+    e_inv <- lav_model_info_expected_mlm(
       lavmodel = lavmodel,
       lavsamplestats = lavsamplestats,
       extra = TRUE,
@@ -122,7 +122,7 @@ lav_model_nvcov_robust_sem <- function(lavmodel = NULL,
       use_ginv = use_ginv
     )
   } else {
-    e_inv <- lav_model_information(
+    e_inv <- lav_model_info(
       lavmodel = lavmodel,
       lavsamplestats = lavsamplestats,
       lavdata = lavdata,
@@ -231,7 +231,7 @@ lav_model_nvcov_robust_sandwich <- function(lavmodel = NULL,    # nolint
   #       B == outer product of case-wise scores
 
   # inverse observed/expected information matrix
-  e_inv <- lav_model_information(
+  e_inv <- lav_model_info(
     lavmodel = lavmodel,
     lavsamplestats = lavsamplestats,
     lavdata = lavdata,
@@ -261,7 +261,7 @@ lav_model_nvcov_robust_sandwich <- function(lavmodel = NULL,    # nolint
 
   # outer product of case-wise scores
   b0 <-
-    lav_model_information_firstorder(
+    lav_model_info_firstorder(
       lavmodel = lavmodel,
       lavsamplestats = lavsamplestats,
       lavdata = lavdata,
@@ -342,7 +342,7 @@ lav_model_nvcov_two_stage <- function(lavmodel = NULL,
 
 
   # information matrix
-  e_inv <- lav_model_information(
+  e_inv <- lav_model_info(
     lavmodel = lavmodel,
     lavsamplestats = lavsamplestats,
     lavdata = lavdata,
@@ -402,7 +402,7 @@ lav_model_nvcov_two_stage <- function(lavmodel = NULL,
     if (lavoptions$se == "two.stage") {
       # this is Savalei & Bentler (2009)
       if (lavoptions$information[1] == "expected") {
-        info <- lav_mvnorm_missing_information_expected(
+        info <- lav_mvn_mi_info_expected(
           y = lavdata@X[[g]], mp = lavdata@Mp[[g]],
           wt = lavdata@weights[[g]],
           mu = mu, sigma_1 = sigma_1,
@@ -416,7 +416,7 @@ lav_model_nvcov_two_stage <- function(lavmodel = NULL,
           x_idx = lavsamplestats@x.idx[[g]]
         )
       }
-      gamma[[g]] <- lav_matrix_symmetric_inverse(info)
+      gamma[[g]] <- lav_mat_sym_inverse(info)
     } else { # we assume "robust.two.stage"
       # NACOV is here incomplete gamma
       # Savalei & Falk (2014)
@@ -426,7 +426,7 @@ lav_model_nvcov_two_stage <- function(lavmodel = NULL,
       } else {
         cluster_idx <- NULL
       }
-      gamma[[g]] <- lav_mvnorm_missing_h1_omega_sw(
+      gamma[[g]] <- lav_mvn_mi_h1_omega_sw(
         y = lavdata@X[[g]],
         mp = lavdata@Mp[[g]],
         yp = lavsamplestats@missing[[g]],
@@ -482,7 +482,7 @@ lav_model_vcov <- function(lavmodel = NULL,
   }
 
   if (se == "standard") {
-    nvar_cov <- lav_model_information(
+    nvar_cov <- lav_model_info(
       lavmodel = lavmodel,
       lavsamplestats = lavsamplestats,
       lavdata = lavdata,
@@ -497,7 +497,7 @@ lav_model_vcov <- function(lavmodel = NULL,
     )
   } else if (se == "first.order") {
     nvar_cov <-
-      lav_model_information_firstorder(
+      lav_model_info_firstorder(
         lavmodel = lavmodel,
         lavsamplestats = lavsamplestats,
         lavdata = lavdata,

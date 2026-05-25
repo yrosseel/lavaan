@@ -11,7 +11,7 @@
 # with an Application to Condition Estimators. SIAM Journal on Numerical
 # Analysis, 17(3), 403-409. http://www.jstor.org/stable/2156882
 #
-lav_matrix_rotate_gen <- function(m = 10L, orthogonal = TRUE) {
+lav_mat_rotate_gen <- function(m = 10L, orthogonal = TRUE) {
   # catch M=1
   if (m == 1L) {
     return(matrix(1, 1, 1))
@@ -37,7 +37,7 @@ lav_matrix_rotate_gen <- function(m = 10L, orthogonal = TRUE) {
 
 # check if ROT is an orthogonal matrix if orthogonal = TRUE, or normal if
 # orthogonal = FALSE
-lav_matrix_rotate_check <- function(rot = NULL, orthogonal = TRUE,
+lav_mat_rotate_check <- function(rot = NULL, orthogonal = TRUE,
                                     tolerance = sqrt(.Machine$double.eps)) {
   # we assume ROT is a matrix
   m <- nrow(rot)
@@ -69,7 +69,7 @@ lav_matrix_rotate_check <- function(rot = NULL, orthogonal = TRUE,
 }
 
 # get weights vector needed to weight the rows using Kaiser normalization
-lav_matrix_rotate_kaiser_weights <- function(a = NULL) {    # nolint
+lav_mat_rotate_kaiser_weights <- function(a = NULL) {
   normalize <- 1 / sqrt(rowSums(a * a))
   idx_zero <- which(normalize == 0)
   # catch rows with all zero (thanks to Coen Bernaards for suggesting this)
@@ -83,7 +83,7 @@ lav_matrix_rotate_kaiser_weights <- function(a = NULL) {    # nolint
 #
 # Note: the 'final' weights are multiplied by the Kaiser weights (see CEFA)
 #
-lav_matrix_rotate_cm_weights <- function(a = NULL) {
+lav_mat_rotate_cm_weights <- function(a = NULL) {
   p <- nrow(a)
   m <- ncol(a)
 
@@ -110,7 +110,7 @@ lav_matrix_rotate_cm_weights <- function(a = NULL) {
 }
 
 # taken from the stats package, but skipping varimax (already done):
-lav_matrix_rotate_promax <- function(x, m = 4, varimax_rot = NULL) {
+lav_mat_rotate_promax <- function(x, m = 4, varimax_rot = NULL) {
   # this is based on promax() from factanal.R in /src/library/stats/R
 
   # 1. create 'ideal' pattern matrix

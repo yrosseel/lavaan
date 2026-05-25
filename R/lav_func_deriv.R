@@ -7,13 +7,13 @@
 
 # YR 17 July 2012
 
-lav_func_gradient_complex <- function(func, x,                        # nolint start
+lav_func_grad_complex <- function(func, x,                        # nolint start
                                       h = .Machine$double.eps, ...,
-                                      fallback.simple = TRUE) {       #nolint end
+                                      fallback_simple = TRUE) {       #nolint end
   f0 <- try(func(x * (0 + 1i), ...), silent = TRUE)
   if (!is.complex(f0)) {
-    if (fallback.simple) {
-      dx <- lav_func_gradient_simple(func = func, x = x, h = sqrt(h), ...)
+    if (fallback_simple) {
+      dx <- lav_func_grad_simple(func = func, x = x, h = sqrt(h), ...)
       return(dx)
     } else {
       lav_msg_stop(gettext(
@@ -21,8 +21,8 @@ lav_func_gradient_complex <- function(func, x,                        # nolint s
     }
   }
   if (inherits(f0, "try-error")) {
-    if (fallback.simple) {
-      dx <- lav_func_gradient_simple(func = func, x = x, h = sqrt(h), ...)
+    if (fallback_simple) {
+      dx <- lav_func_grad_simple(func = func, x = x, h = sqrt(h), ...)
       return(dx)
     } else {
       lav_msg_stop(gettext(
@@ -53,7 +53,7 @@ lav_func_gradient_complex <- function(func, x,                        # nolint s
 }
 
 # as a backup, if func() is not happy about non-numeric arguments
-lav_func_gradient_simple <- function(func, x,
+lav_func_grad_simple <- function(func, x,
                                      h = sqrt(.Machine$double.eps), ...) {
   # check current point, see if it is a scalar function
   f0 <- func(x, ...)
@@ -262,11 +262,11 @@ lav_deriv_cov2cor_b <- function(m_cov = NULL) {
   m_r <- cov2cor(m_cov)
   m_a <- -m_r %x% (0.5 * diag(ds_inv))
   m_b <- (0.5 * diag(ds_inv)) %x% -m_r
-  m_dd <- diag(lav_matrix_vec(diag(nvar)))
+  m_dd <- diag(lav_mat_vec(diag(nvar)))
   a2 <- m_a %*% m_dd
   b2 <- m_b %*% m_dd
-  out <- a2 + b2 + diag(lav_matrix_vec(tcrossprod(sqrt(ds_inv))))
-  m_d <- lav_matrix_duplication(nvar)
+  out <- a2 + b2 + diag(lav_mat_vec(tcrossprod(sqrt(ds_inv))))
+  m_d <- lav_mat_dup(nvar)
   out_vech <- 0.5 * (t(m_d) %*% out %*% m_d)
   out_vech
 }
@@ -280,7 +280,7 @@ lav_deriv_cov2cor <- function(cov_1 = NULL, num_idx = NULL) {
   # dCor/dvar2 = - cov / (2*var2 * sqrt(var1) * sqrt(var2))
   # dCor/dcov  =  1/(sqrt(var1) * sqrt(var2))
 
-  # diagonal: diag(lav_matrix_vech(tcrossprod(1/delta)))
+  # diagonal: diag(lav_mat_vech(tcrossprod(1/delta)))
 
   nvar <- ncol(cov_1)
   pstar <- nvar * (nvar + 1) / 2
@@ -297,10 +297,10 @@ lav_deriv_cov2cor <- function(cov_1 = NULL, num_idx = NULL) {
   a2 <- diag(nvar) %x% t(a)
 
   out <- diag(pstar)
-  diag(out) <- lav_matrix_vech(tcrossprod(1 / delta))
-  var_idx <- lav_matrix_diagh_idx(nvar)
-  dup <- lav_matrix_duplication(nvar)
-  out[, var_idx] <- t(dup) %*% a2[, lav_matrix_diag_idx(nvar)]
+  diag(out) <- lav_mat_vech(tcrossprod(1 / delta))
+  var_idx <- lav_mat_diagh_idx(nvar)
+  dup <- lav_mat_dup(nvar)
+  out[, var_idx] <- t(dup) %*% a2[, lav_mat_diag_idx(nvar)]
 
   if (length(num_idx) > 0L) {
     var_idx <- var_idx[-num_idx]

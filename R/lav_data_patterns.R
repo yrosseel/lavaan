@@ -1,5 +1,5 @@
 # get missing patterns
-lav_data_missing_patterns <- function(y, sort_freq = FALSE, coverage = FALSE,
+lav_data_mi_patterns <- function(y, sort_freq = FALSE, coverage = FALSE,
                                       lp = NULL) {
   # handle two-level data
   if (!is.null(lp)) {
@@ -88,7 +88,7 @@ lav_data_missing_patterns <- function(y, sort_freq = FALSE, coverage = FALSE,
 
     # between-level patterns
     if (!is.null(z)) {
-      mp$Zp <- lav_data_missing_patterns(z,
+      mp$Zp <- lav_data_mi_patterns(z,
         sort_freq = FALSE,
         coverage = FALSE, lp = NULL
       )
@@ -145,7 +145,7 @@ lav_data_resp_patterns <- function(y) {
 # get cluster information
 # - cluster can be a vector!
 # - clus can contain multiple columns!
-lav_data_cluster_patterns <- function(y = NULL,
+lav_data_cl_patterns <- function(y = NULL,
                                       clus = NULL, # the cluster ids
                                       cluster = NULL, # the cluster 'names'
                                       multilevel = FALSE,

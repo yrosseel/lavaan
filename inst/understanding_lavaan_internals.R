@@ -97,12 +97,12 @@ lavdata@X[[1]] # the raw data in group/block 1
 lavpartable <- lavParTable(model = FLAT, auto = TRUE)
 
 # 4b. compute and store partable attributes (ov.names, ov.names.x, ...)
-lavpta <- lav_partable_attributes(lavpartable)
+lavpta <- lav_pt_attributes(lavpartable)
 lavpta$vnames$ov
 
 # 5. lavsamplestats
 # compute sample statistics (cov, mean, Gamma, ...)
-lavsamplestats <- lavaan:::lav_samplestats_from_data(lavdata,
+lavsamplestats <- lavaan:::lav_samp_from_data(lavdata,
                                                      lavoptions = lavoptions)
 slotNames(lavsamplestats)
 lavsamplestats@cov[[1]] # observed covariance matrix first group/block
@@ -124,7 +124,7 @@ lavoptions$bounds <- "standard"
 lavoptions$optim.bounds <- list(lower = c("ov.var", "loadings"),
                                 upper = c("ov.var", "loadings"),
                                 min.reliability.marker = 0.1)
-lavpartable <- lavaan:::lav_partable_add_bounds(partable = lavpartable,
+lavpartable <- lavaan:::lav_pt_add_bounds(partable = lavpartable,
                 lavh1 = lavh1, lavdata = lavdata, lavsamplestats = lavsamplestats,
                 lavoptions = lavoptions)
 # remove bounds again to save space
@@ -147,12 +147,12 @@ lavmodel@GLIST
 lavcache <- list()
 
 # 11. estimation
-# - default: lav_model_estimate() + nlminb() (quasi-Newton optimization)
+# - default: lav_model_est() + nlminb() (quasi-Newton optimization)
 # - lav_optim_gn(): Gauss-Newton optimization
 # - lav_optim_noniter(): non-iterative procedures
-# - lav_mvnorm_cluster_em_h0: EM for multilevel models
+# - lav_mvn_cl_em_h0: EM for multilevel models
 lavaan:::lav_verbose(TRUE) # be verbose
-x <- try(lavaan:::lav_model_estimate(lavmodel        = lavmodel,
+x <- try(lavaan:::lav_model_est(lavmodel        = lavmodel,
                             lavpartable     = lavpartable,
                             lavsamplestats  = lavsamplestats,
                             lavdata         = lavdata,

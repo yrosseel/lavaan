@@ -57,7 +57,7 @@ lavaan <- function(
 
   # ------------- adapt parameters -----------------
   mc <- match.call(expand.dots = TRUE)
-  temp <- lav_lavaan_step00_parameters(
+  temp <- lav_step00_parameters(
     matchcall = mc,
     syscall   = sys.call(), # to get main arguments without partial matching
     dotdotdot = list(...)
@@ -99,7 +99,7 @@ lavaan <- function(
   }
 
   # ------------ check data ------------------------
-  temp <- lav_lavaan_step00_checkdata(
+  temp <- lav_step00_checkdata(
     data        = data,
     dotdotdot   = dotdotdot,
     sample_cov  = sample.cov,
@@ -131,7 +131,7 @@ lavaan <- function(
     useparser <- dotdotdot$parser
   }
 
-  flat_model <- lav_lavaan_step01_ovnames_initflat(
+  flat_model <- lav_step01_ovnames_initflat(
     slot_par_table   = slotParTable,
     model            = model,
     dotdotdot_parser = useparser
@@ -140,11 +140,11 @@ lavaan <- function(
   # ------------ ov.names 1b ----- handle 'old way' for composites -------
   if (!is.null(dotdotdot$composites) && !dotdotdot$composites &&
      any(flat_model$op == "<~")) {
-    flat_model <- lav_lavaan_step01_ovnames_composites(flat_model)
+    flat_model <- lav_step01_ovnames_composites(flat_model)
   }
 
   # ------------ ov.names 2 ------ handle ov.order -----------------------
-  flat_model <- lav_lavaan_step01_ovnames_ovorder(
+  flat_model <- lav_step01_ovnames_ovorder(
     flat_model = flat_model,
     ov_order   = ov_order,
     data       = data,
@@ -154,7 +154,7 @@ lavaan <- function(
 
   # ------------ ov.names 3 ------- group blocks ------------------
   ngroups <- 1L # default value
-  temp <- lav_lavaan_step01_ovnames_group(
+  temp <- lav_step01_ovnames_group(
     flat_model = flat_model,
     ngroups    = ngroups
   )
@@ -167,7 +167,7 @@ lavaan <- function(
   ngroups <- temp$ngroups
 
   # ------------ ov.names 4 ------ sanity checks ------------------
-  lav_lavaan_step01_ovnames_checklv(
+  lav_step01_ovnames_checklv(
     lv_names     = lv_names,
     ov_names     = ov_names,
     data         = data,
@@ -177,7 +177,7 @@ lavaan <- function(
   )
 
   # ------------ ov.names 5 ------ handle ov.names.l --------------
-  temp <- lav_lavaan_step01_ovnames_namesl(
+  temp <- lav_step01_ovnames_namesl(
     data         = data,
     cluster      = cluster,
     flat_model   = flat_model,
@@ -189,7 +189,7 @@ lavaan <- function(
 
   # ------------ ov.names 6 ------ sanity check ordered --------------
   ordered_orig <- ordered
-  ordered <- lav_lavaan_step01_ovnames_ordered(
+  ordered <- lav_step01_ovnames_ordered(
     ordered    = ordered,
     flat_model = flat_model,
     data       = data
@@ -197,7 +197,7 @@ lavaan <- function(
   timing <- lav_add_timing(timing, "ov.names")
 
   # ------------ lavoptions --------------------
-  lavoptions <- lav_lavaan_step02_options(
+  lavoptions <- lav_step02_options(
     slot_options      = slotOptions,
     slot_data         = slotData,
     flat_model       = flat_model,
@@ -225,7 +225,7 @@ lavaan <- function(
   timing <- lav_add_timing(timing, "Options")
 
   # ------------ lavdata ------------------------
-  temp <- lav_lavaan_step03_data(
+  temp <- lav_step03_data(
     slot_data         = slotData,
     lavoptions       = lavoptions,
     ov_names         = ov_names,
@@ -255,7 +255,7 @@ lavaan <- function(
   timing <- lav_add_timing(timing, "Data")
 
   # ------------ lavpartable -------------------
-  temp <- lav_lavaan_step04_partable(
+  temp <- lav_step04_pt(
     slot_par_table = slotParTable,
     model          = model,
     flat_model     = flat_model,
@@ -275,7 +275,7 @@ lavaan <- function(
   # timing <- lav_add_timing(timing, "lavpta")
 
   # ------------ lavsamplestats ---------------
-  lavsamplestats <- lav_lavaan_step05_samplestats(
+  lavsamplestats <- lav_step05_samp(
     slot_sample_stats = slotSampleStats,
     lavdata           = lavdata,
     lavoptions        = lavoptions,
@@ -292,7 +292,7 @@ lavaan <- function(
   timing <- lav_add_timing(timing, "SampleStats")
 
   # ------------ lavh1 ------------------------
-  lavh1 <- lav_lavaan_step06_h1(
+  lavh1 <- lav_step06_h1(
     sloth1         = sloth1,
     lavoptions     = lavoptions,
     lavsamplestats = lavsamplestats,
@@ -302,7 +302,7 @@ lavaan <- function(
   timing <- lav_add_timing(timing, "h1")
 
   # ------------ bounds ------------------------
-  lavpartable <- lav_lavaan_step07_bounds(
+  lavpartable <- lav_step07_bounds(
     lavoptions     = lavoptions,
     lavh1          = lavh1,
     lavdata        = lavdata,
@@ -312,7 +312,7 @@ lavaan <- function(
   timing <- lav_add_timing(timing, "bounds")
 
   # ------------ lavstart ----------------------
-  lavpartable <- lav_lavaan_step08_start(
+  lavpartable <- lav_step08_start(
     slot_model      = slotModel,
     lavoptions      = lavoptions,
     lavpartable     = lavpartable,
@@ -323,7 +323,7 @@ lavaan <- function(
   timing <- lav_add_timing(timing, "start")
 
   # ------------ model -------------------------
-  temp <- lav_lavaan_step09_model(
+  temp <- lav_step09_model(
     slot_model     = slotModel,
     lavoptions     = lavoptions,
     lavpartable    = lavpartable,
@@ -336,7 +336,7 @@ lavaan <- function(
   timing <- lav_add_timing(timing, "Model")
 
   # -------- lavcache ----------------------------------
-  lavcache <- lav_lavaan_step10_cache(
+  lavcache <- lav_step10_cache(
     slot_cache       = slotCache,
     lavdata          = lavdata,
     lavmodel         = lavmodel,
@@ -347,7 +347,7 @@ lavaan <- function(
   timing <- lav_add_timing(timing, "cache")
 
   # -------- est + lavoptim ----------------------------
-  temp <- lav_lavaan_step11_estoptim(
+  temp <- lav_step11_estoptim(
     lavdata        = lavdata,
     lavmodel       = lavmodel,
     lavcache       = lavcache,
@@ -369,13 +369,13 @@ lavaan <- function(
   timing <- lav_add_timing(timing, "optim")
 
   # -------- lavimplied + lavloglik --------------------
-  lavimplied <- lav_lavaan_step12_implied(
+  lavimplied <- lav_step12_implied(
     lavoptions = lavoptions,
     lavmodel   = lavmodel
   )
   timing <- lav_add_timing(timing, "implied")
 
-  lavloglik <- lav_lavaan_step12_loglik(
+  lavloglik <- lav_step12_loglik(
     lavoptions     = lavoptions,
     lavdata        = lavdata,
     lavsamplestats = lavsamplestats,
@@ -386,7 +386,7 @@ lavaan <- function(
   timing <- lav_add_timing(timing, "loglik")
 
   # ----------- lavvcov + lavboot -------------------
-  temp <- lav_lavaan_step13_vcov_boot(
+  temp <- lav_step13_vcov_boot(
     lavoptions     = lavoptions,
     lavmodel       = lavmodel,
     lavsamplestats = lavsamplestats,
@@ -407,7 +407,7 @@ lavaan <- function(
   timing <- lav_add_timing(timing, "vcov")
 
   # ----------- lavtest ----------
-  lavtest <- lav_lavaan_step14_test(
+  lavtest <- lav_step14_test(
     lavoptions     = lavoptions,
     lavmodel       = lavmodel,
     lavsamplestats = lavsamplestats,
@@ -423,7 +423,7 @@ lavaan <- function(
   timing <- lav_add_timing(timing, "test")
 
   # ----------- lavfit ----------
-  lavfit <- lav_lavaan_step14_fit(
+  lavfit <- lav_step14_fit(
     lavpartable = lavpartable,
     lavmodel    = lavmodel,
     lavimplied  = lavimplied,
@@ -434,7 +434,7 @@ lavaan <- function(
   timing <- lav_add_timing(timing, "Fit")
 
   # ----------- baseline ----------------------------
-  lavbaseline <- lav_lavaan_step15_baseline(
+  lavbaseline <- lav_step15_baseline(
     lavoptions     = lavoptions,
     lavsamplestats = lavsamplestats,
     lavdata        = lavdata,
@@ -445,7 +445,7 @@ lavaan <- function(
   timing <- lav_add_timing(timing, "baseline")
 
   # ----------- rotation ---------------------------
-  temp <- lav_lavaan_step16_rotation(
+  temp <- lav_step16_rotation(
     lavoptions     = lavoptions,
     lavmodel       = lavmodel,
     lavpartable    = lavpartable,
@@ -465,7 +465,7 @@ lavaan <- function(
   timing <- lav_add_timing(timing, "rotation")
 
   # ------ lavaan result  ----------------
-  out <- lav_lavaan_step17_lavaan(
+  out <- lav_step17_lavaan(
     lavmc          = lavmc,
     timing         = timing,
     lavoptions     = lavoptions,

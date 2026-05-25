@@ -5,7 +5,7 @@
 # optionally return MTM (for ML)
 #
 # by construction, M %*% LAMBDA = I (the identity matrix)
-lav_sam_mapping_matrix <- function(mm_lambda = NULL, mm_theta = NULL,
+lav_sam_mapping_mat <- function(mm_lambda = NULL, mm_theta = NULL,
                                    s = NULL, s_inv = NULL,
                                    method = "ML") {
 
@@ -42,7 +42,7 @@ lav_sam_mapping_matrix <- function(mm_lambda = NULL, mm_theta = NULL,
     }
     if (inherits(s_inv, "try-error")) {
       lav_msg_warn(gettext("S is not invertible; switching to ULS method"))
-      m <- lav_sam_mapping_matrix(mm_lambda = mm_lambda, method = "ULS")
+      m <- lav_sam_mapping_mat(mm_lambda = mm_lambda, method = "ULS")
     } else {
       t_lsinv <- t(mm_lambda) %*% s_inv
       t_lsinv_l <- t_lsinv %*% mm_lambda
@@ -77,7 +77,7 @@ lav_sam_mapping_matrix <- function(mm_lambda = NULL, mm_theta = NULL,
     zero_theta_idx <- which(abs(diag(mm_theta)) < 1e-4) # be conservative
     if (length(zero_theta_idx) == 0L) {
       # ok, no zero diagonal elements: try to invert THETA
-      if (lav_matrix_is_diagonal(mm_theta)) {
+      if (lav_mat_is_diagonal(mm_theta)) {
         theta_inv <- diag(1 / diag(mm_theta), nrow = nrow(mm_theta))
       } else {
         theta_inv <- try(solve(mm_theta), silent = TRUE)
@@ -89,7 +89,7 @@ lav_sam_mapping_matrix <- function(mm_lambda = NULL, mm_theta = NULL,
       # see if we can use marker method
       marker_idx <- lav_utils_get_marker(mm_lambda = mm_lambda, std_lv = TRUE)
       if (any(is.na(marker_idx))) {
-        theta_inv <- try(lav_matrix_symmetric_inverse(mm_theta), silent = TRUE)
+        theta_inv <- try(lav_mat_sym_inverse(mm_theta), silent = TRUE)
         if (inherits(theta_inv, "try-error")) {
           theta_inv <- NULL
         } else {
@@ -110,18 +110,18 @@ lav_sam_mapping_matrix <- function(mm_lambda = NULL, mm_theta = NULL,
       if (inherits(m, "try-error")) {
         lav_msg_warn(gettext(
           "problem constructing ML mapping matrix; switching to ULS"))
-        m <- lav_sam_mapping_matrix(mm_lambda = mm_lambda, method = "ULS")
+        m <- lav_sam_mapping_mat(mm_lambda = mm_lambda, method = "ULS")
       }
     } else {
       # use W&A2000's method using the 'T' transformation
-      m <- try(lav_sam_mapping_matrix_tmat(
+      m <- try(lav_sam_mapping_mat_tmat(
         mm_lambda = mm_lambda,
         mm_theta = mm_theta
       ), silent = TRUE)
       if (inherits(m, "try-error")) {
         lav_msg_warn(gettext(
           "problem constructing ML mapping matrix; switching to ULS"))
-        m <- lav_sam_mapping_matrix(mm_lambda = mm_lambda, method = "ULS")
+        m <- lav_sam_mapping_mat(mm_lambda = mm_lambda, method = "ULS")
       }
     }
   } # ML
@@ -148,7 +148,7 @@ lav_sam_mapping_matrix <- function(mm_lambda = NULL, mm_theta = NULL,
 # - if std.lv = TRUE, we first rescale to 'create' marker indicators
 #   and then rescale back at the end
 #
-lav_sam_mapping_matrix_tmat <- function(mm_lambda = NULL,
+lav_sam_mapping_mat_tmat <- function(mm_lambda = NULL,
                                         mm_theta = NULL,
                                         marker_idx = NULL,
                                         std_lv = NULL) {
@@ -293,7 +293,7 @@ lav_sam_veta <- function(m = NULL, s = NULL, mm_theta = NULL,
   empty_theta_idx <- which(diag(mtm) == 0)
 
   # new in 0.6-16: make sure MTM is pd
-  # (otherwise lav_matrix_symmetric_diff_smallest_root will fail)
+  # (otherwise lav_mat_sym_diff_smallest_root will fail)
   theta_rm_idx <- unique(c(dummy_lv_idx, empty_theta_idx))
   if (length(theta_rm_idx) == nrow(mtm)) {
     # all zero?
@@ -302,13 +302,13 @@ lav_sam_veta <- function(m = NULL, s = NULL, mm_theta = NULL,
     lambda_correction <- FALSE
   } else if (length(theta_rm_idx) > 0L) {
     mtm_small <- mtm[-theta_rm_idx, -theta_rm_idx, drop = FALSE]
-    mtm_small <- zapsmall(lav_matrix_symmetric_force_pd(
+    mtm_small <- zapsmall(lav_mat_sym_force_pd(
       mtm_small,
       tol = 1e-04
     ))
     mtm[-theta_rm_idx, -theta_rm_idx] <- mtm_small
   } else {
-    mtm <- zapsmall(lav_matrix_symmetric_force_pd(mtm, tol = 1e-04))
+    mtm <- zapsmall(lav_mat_sym_force_pd(mtm, tol = 1e-04))
   }
 
   # apply small sample correction (if requested)
@@ -328,7 +328,7 @@ lav_sam_veta <- function(m = NULL, s = NULL, mm_theta = NULL,
   lambda <- lambda_star <- +Inf
   if (lambda_correction) {
     # use Fuller (1987) approach to ensure VETA is positive
-    lambda <- try(lav_matrix_symmetric_diff_smallest_root(msm, mtm),
+    lambda <- try(lav_mat_sym_diff_smallest_root(msm, mtm),
       silent = TRUE
     )
     if (inherits(lambda, "try-error")) {
@@ -409,24 +409,24 @@ lav_sam_veta2 <- function(fs = NULL, m = NULL,
   mtm <- m %*% mm_theta %*% t(m)
 
   # new in 0.6-16: make sure MTM is pd
-  # (otherwise lav_matrix_symmetric_diff_smallest_root will fail)
+  # (otherwise lav_mat_sym_diff_smallest_root will fail)
   dummy_lv_idx <- which(lv_names %in% dummy_lv_names)
   if (length(dummy_lv_idx) > 0L) {
     mtm_nodummy <- mtm[-dummy_lv_idx, -dummy_lv_idx, drop = FALSE]
-    mtm_nodummy <- zapsmall(lav_matrix_symmetric_force_pd(
+    mtm_nodummy <- zapsmall(lav_mat_sym_force_pd(
       mtm_nodummy,
       tol = 1e-04
     ))
     mtm[-dummy_lv_idx, -dummy_lv_idx] <- mtm_nodummy
   } else {
-    mtm <- zapsmall(lav_matrix_symmetric_force_pd(mtm, tol = 1e-04))
+    mtm <- zapsmall(lav_mat_sym_force_pd(mtm, tol = 1e-04))
   }
 
   # augment to include intercept
   fs <- cbind(1, fs)
   n <- nrow(fs)
-  mtm <- lav_matrix_bdiag(0, mtm)
-  veta <- lav_matrix_bdiag(0, veta)
+  mtm <- lav_mat_bdiag(0, mtm)
+  veta <- lav_mat_bdiag(0, veta)
   eeta <- c(1, eeta)
   lv_names <- c("..int..", lv_names)
   nfac <- ncol(fs)
@@ -439,7 +439,7 @@ lav_sam_veta2 <- function(fs = NULL, m = NULL,
 
   fs2 <- fs[, idx1] * fs[, idx2]
 
-  k_nfac <- lav_matrix_commutation(nfac, nfac)
+  k_nfac <- lav_mat_com(nfac, nfac)
   ik <- diag(nfac * nfac) + k_nfac
 
   eeta <- as.matrix(drop(eeta))
@@ -451,10 +451,10 @@ lav_sam_veta2 <- function(fs = NULL, m = NULL,
   # ingredients (normal ME case)
   var_fs2 <- varn(fs2, n)
   var_etak_me <- (tcrossprod(eeta) %x% mtm + vetak_mtm)
-  var_mek_eta <- lav_matrix_commutation_pre_post(var_etak_me)
+  var_mek_eta <- lav_mat_com_pre_post(var_etak_me)
   var_me2 <- gamma_me22
 
-  cov_etak_me_mek_eta <- lav_matrix_commutation_post(var_etak_me)
+  cov_etak_me_mek_eta <- lav_mat_com_post(var_etak_me)
   cov_mek_eta_etak_me <- t(cov_etak_me_mek_eta)
 
   var_error <- (var_etak_me + var_mek_eta + cov_etak_me_mek_eta
@@ -473,7 +473,7 @@ lav_sam_veta2 <- function(fs = NULL, m = NULL,
   fs_mean <- fs_mean[lv_keep]
 
   # compute Gamma for FS2[,lv.keep]
-  #FS.gamma <- lav_samplestats_gamma(FS2[,lv.keep, drop  = FALSE],
+  #FS.gamma <- lav_samp_gamma(FS2[,lv.keep, drop  = FALSE],
   #                                  meanstructure = TRUE)
 
   # apply small sample correction (if requested)
@@ -494,7 +494,7 @@ lav_sam_veta2 <- function(fs = NULL, m = NULL,
   lambda_star <- 1
   if (lambda_correction) {
     # use Fuller (1987) approach to ensure VETA2 is positive
-    lambda <- try(lav_matrix_symmetric_diff_smallest_root(
+    lambda <- try(lav_mat_sym_diff_smallest_root(
       var_fs2,
       var_error
     ), silent = TRUE)
@@ -519,26 +519,26 @@ lav_sam_veta2 <- function(fs = NULL, m = NULL,
   # new in 0.6-20: to compute Gamma.eta
   if (return_cov_iveta2) {
     iveta2_1 <- matrix(0, n,
-                ncol = length(lav_matrix_vech(veta2)) + ncol(veta2))
+                ncol = length(lav_mat_vech(veta2)) + ncol(veta2))
     ef <- colMeans(fs)
     for (i in 1:n) {
       fi <- as.matrix(fs2[i, seq_len(nfac)])
       tmp <- (((tcrossprod(fi) - mtm) %x% mtm) +
            (mtm %x% (tcrossprod(fi) - mtm)) +
-           lav_matrix_commutation_post((tcrossprod(fi) - mtm) %x% mtm) +
-           lav_matrix_commutation_pre((tcrossprod(fi) - mtm) %x% mtm) +
+           lav_mat_com_post((tcrossprod(fi) - mtm) %x% mtm) +
+           lav_mat_com_pre((tcrossprod(fi) - mtm) %x% mtm) +
            (ik %*% (mtm %x% mtm)))
       iveta2 <- tcrossprod(fs2[i, ] - fs2_mean) - lambda_star * tmp
       colnames(iveta2) <- rownames(iveta2) <- names_1
 
-      ieeta2 <- (lav_matrix_vec(tcrossprod(fi)) -
-                 lav_matrix_vec(tcrossprod(ef)) +
+      ieeta2 <- (lav_mat_vec(tcrossprod(fi)) -
+                 lav_mat_vec(tcrossprod(ef)) +
                  (ef %x% ef) -
-                 lambda_star * lav_matrix_vec(mtm))
+                 lambda_star * lav_mat_vec(mtm))
       names(ieeta2) <- names_1
 
       iveta2_1[i, ] <- c(ieeta2[lv_keep],
-                      lav_matrix_vech(iveta2[lv_keep, lv_keep]))
+                      lav_mat_vech(iveta2[lv_keep, lv_keep]))
     } # N
     # experimental:
     # remove outliers in FS?
@@ -586,7 +586,7 @@ lav_sam_eeta2 <- function(eeta = NULL, veta = NULL, lv_names = NULL,
   names_1 <- c(lv_names, paste(lv_names[idx1], lv_names[idx2], sep = ":"))
 
   # E(\eta %x% \eta)
-  eeta2 <- lav_matrix_vec(veta) + eeta %x% eeta
+  eeta2 <- lav_mat_vec(veta) + eeta %x% eeta
 
   # add 1st order
   eeta2_aug <- c(eeta, eeta2)
@@ -931,7 +931,7 @@ lav_sam_get_mmlist <- function(lavobject) {
   mm_list
 }
 
-lav_sam_veta_partable <- function(lavobject, block = 1L) {
+lav_sam_veta_pt <- function(lavobject, block = 1L) {
 
   lavmodel <- lavobject@Model
   lavpta   <- lavobject@pta
@@ -948,7 +948,7 @@ lav_sam_veta_partable <- function(lavobject, block = 1L) {
   if (!is.null(mlist$beta)) {
     mm_beta <- (mlist$beta != 0) + 0L
     tmp <- -mm_beta
-    tmp[lav_matrix_diag_idx(nr)] <- 1
+    tmp[lav_mat_diag_idx(nr)] <- 1
     ib_inv <- solve(tmp)
   } else {
     ib_inv <- diag(nr)
@@ -977,7 +977,7 @@ lav_sam_veta_con <- function(s = NULL, mm_lambda = NULL, mm_theta = NULL,
   t_lw  <- t(wl)
   t_lwl <- t_lw %*% mm_lambda
   tmp1 <- t(l_veta) %*% (t_lwl %x% t_lwl) %*% l_veta
-  tmp2 <- t(l_veta) %*% lav_matrix_vec(t_lw %*% (s - mm_theta) %*% wl)
+  tmp2 <- t(l_veta) %*% lav_mat_vec(t_lw %*% (s - mm_theta) %*% wl)
   out <- solve(tmp1, tmp2)
   veta_init <- matrix(l_veta %*% out, m, m)
 
@@ -994,7 +994,7 @@ lav_sam_veta_con <- function(s = NULL, mm_lambda = NULL, mm_theta = NULL,
     t_lw  <- t(wl)
     t_lwl <- t_lw %*% mm_lambda
     tmp1 <- t(l_veta) %*% (t_lwl %x% t_lwl) %*% l_veta
-    tmp2 <- t(l_veta) %*% lav_matrix_vec(t_lw %*% (s - mm_theta) %*% wl)
+    tmp2 <- t(l_veta) %*% lav_mat_vec(t_lw %*% (s - mm_theta) %*% wl)
     out <- solve(tmp1, tmp2)
     veta_ml <- matrix(l_veta %*% out, m, m)
     rmsea <- sqrt(sum((veta_new - veta_ml)^2))

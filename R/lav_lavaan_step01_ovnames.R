@@ -1,4 +1,4 @@
-lav_lavaan_step01_ovnames_initflat <- function(slot_par_table     = NULL, # nolint
+lav_step01_ovnames_initflat <- function(slot_par_table     = NULL,
                                                model            = NULL,
                                                dotdotdot_parser = "new") {
   # if slotPartable not NULL copy to flat.model
@@ -117,7 +117,7 @@ lav_lavaan_step01_ovnames_initflat <- function(slot_par_table     = NULL, # noli
 # For example: "f <~ 1*income + occup + educ" is replaced by:
 # "f =~ 0; f ~~ 0*f; f ~ 1*income + occup + educ"
 #
-lav_lavaan_step01_ovnames_composites <- function(flat_model = NULL) {  # nolint
+lav_step01_ovnames_composites <- function(flat_model = NULL) {
 
   # get composite idx
   c_idx <- which(flat_model$op == "<~")
@@ -180,7 +180,7 @@ lav_lavaan_step01_ovnames_composites <- function(flat_model = NULL) {  # nolint
   flat_model
 }
 
-lav_lavaan_step01_ovnames_ovorder <- function(flat_model = NULL,       # nolint
+lav_step01_ovnames_ovorder <- function(flat_model = NULL,
                                               ov_order   = "model",
                                               data       = NULL,
                                               sample_cov = NULL,
@@ -199,7 +199,7 @@ lav_lavaan_step01_ovnames_ovorder <- function(flat_model = NULL,       # nolint
   if (ov_order == "data") {
     flat_model_orig <- flat_model
     try(
-      flat_model <- lav_partable_ov_from_data(flat_model,
+      flat_model <- lav_pt_ov_from_data(flat_model,
         data = data,
         sample_cov = sample_cov,
         slot_data = slot_data
@@ -219,11 +219,11 @@ lav_lavaan_step01_ovnames_ovorder <- function(flat_model = NULL,       # nolint
   flat_model
 }
 
-lav_lavaan_step01_ovnames_group <- function(flat_model = NULL,        # nolint
+lav_step01_ovnames_group <- function(flat_model = NULL,
                                             ngroups    = 1L) {
   # if "group :" appears in flat.model
   #   tmp.group.values: set of names in corresponding right hand sides
-  #   copy flat.model without attributes and call lav_model_partable,
+  #   copy flat.model without attributes and call lav_model_pt,
   #     store result in tmp.lav
   #   extract ov.names, ov.names.y, ov.names.x, lv.names from tmp.lav
   #     via lav_partable_vnames
@@ -237,7 +237,7 @@ lav_lavaan_step01_ovnames_group <- function(flat_model = NULL,        # nolint
   #     extract ov.names, ov.names.y, ov.names.x, lv.names from flat.model
   #     via lav_partable_vnames
   #
-  #     TODO: call lav_partable_vnames only ones and not for each type
+  #     TODO: call lav_pt_vnames only ones and not for each type
 
   flat_model_2 <- NULL
   tmp_lav <- NULL
@@ -249,7 +249,7 @@ lav_lavaan_step01_ovnames_group <- function(flat_model = NULL,        # nolint
     # - ov's per group
     #
     # - FIXME: we need a more efficient way, avoiding
-    #          lav_model_partable/lav_partable_vnames
+    #          lav_model_pt/lav_partable_vnames
     #
     group_idx <- which(flat_model$op == ":" &
                        tolower(flat_model$lhs) == "group")
@@ -262,63 +262,63 @@ lav_lavaan_step01_ovnames_group <- function(flat_model = NULL,        # nolint
     attr(flat_model_2, "modifiers") <- NULL
     attr(flat_model_2, "constraints") <- NULL
     tmp_lav <-
-      lav_model_partable(flat_model_2, ngroups = tmp_ngroups, warn = FALSE)
+      lav_model_pt(flat_model_2, ngroups = tmp_ngroups, warn = FALSE)
     ov_names <- ov_names_y <- ov_names_x <- lv_names <- vector("list",
       length = tmp_ngroups
     )
-    attr(tmp_lav, "vnames") <- lav_partable_vnames(tmp_lav, type = "*")
+    attr(tmp_lav, "vnames") <- lav_pt_vnames(tmp_lav, type = "*")
     for (g in seq_len(tmp_ngroups)) {
-      ov_names[[g]] <- unique(unlist(lav_partable_vnames(tmp_lav,
+      ov_names[[g]] <- unique(unlist(lav_pt_vnames(tmp_lav,
         type = "ov", group = tmp_group_values[g]
       )))
-      ov_names_y[[g]] <- unique(unlist(lav_partable_vnames(tmp_lav,
+      ov_names_y[[g]] <- unique(unlist(lav_pt_vnames(tmp_lav,
         type = "ov.nox", group = tmp_group_values[g]
       )))
-      ov_names_x[[g]] <- unique(unlist(lav_partable_vnames(tmp_lav,
+      ov_names_x[[g]] <- unique(unlist(lav_pt_vnames(tmp_lav,
         type = "ov.x", group = tmp_group_values[g]
       )))
-      lv_names[[g]] <- unique(unlist(lav_partable_vnames(tmp_lav,
+      lv_names[[g]] <- unique(unlist(lav_pt_vnames(tmp_lav,
         type = "lv", group = tmp_group_values[g]
       )))
     }
   } else if (!is.null(flat_model$group)) {
     # user-provided full partable with group column!
-    attr(flat_model, "vnames") <- lav_partable_vnames(flat_model, type = "*")
-    ngroups <- lav_partable_ngroups(flat_model)
+    attr(flat_model, "vnames") <- lav_pt_vnames(flat_model, type = "*")
+    ngroups <- lav_pt_ngroups(flat_model)
     if (ngroups > 1L) {
-      group_values <- lav_partable_group_values(flat_model)
+      group_values <- lav_pt_group_values(flat_model)
       ov_names <- ov_names_y <- ov_names_x <- lv_names <- vector("list",
         length = ngroups
       )
       for (g in seq_len(ngroups)) {
         # collapsed over levels (if any)
-        ov_names[[g]] <- unique(unlist(lav_partable_vnames(flat_model,
+        ov_names[[g]] <- unique(unlist(lav_pt_vnames(flat_model,
           type = "ov", group = group_values[g]
         )))
-        ov_names_y[[g]] <- unique(unlist(lav_partable_vnames(flat_model,
+        ov_names_y[[g]] <- unique(unlist(lav_pt_vnames(flat_model,
           type = "ov.nox", group = group_values[g]
         )))
-        ov_names_x[[g]] <- unique(unlist(lav_partable_vnames(flat_model,
+        ov_names_x[[g]] <- unique(unlist(lav_pt_vnames(flat_model,
           type = "ov.x", group = group_values[g]
         )))
-        lv_names[[g]] <- unique(unlist(lav_partable_vnames(flat_model,
+        lv_names[[g]] <- unique(unlist(lav_pt_vnames(flat_model,
           type = "lv", group = group_values[g]
         )))
       }
     } else {
-      ov_names   <- lav_partable_vnames(flat_model, type = "ov")
-      ov_names_y <- lav_partable_vnames(flat_model, type = "ov.nox")
-      ov_names_x <- lav_partable_vnames(flat_model, type = "ov.x")
-      lv_names   <- lav_partable_vnames(flat_model, type = "lv")
+      ov_names   <- lav_pt_vnames(flat_model, type = "ov")
+      ov_names_y <- lav_pt_vnames(flat_model, type = "ov.nox")
+      ov_names_x <- lav_pt_vnames(flat_model, type = "ov.x")
+      lv_names   <- lav_pt_vnames(flat_model, type = "lv")
     }
   } else {
     # collapse over levels (if any)
-    attr(flat_model, "vnames") <- lav_partable_vnames(flat_model, type = "*")
-    ov_names   <- unique(unlist(lav_partable_vnames(flat_model, type = "ov")))
-    ov_names_y <- unique(unlist(lav_partable_vnames(flat_model,
+    attr(flat_model, "vnames") <- lav_pt_vnames(flat_model, type = "*")
+    ov_names   <- unique(unlist(lav_pt_vnames(flat_model, type = "ov")))
+    ov_names_y <- unique(unlist(lav_pt_vnames(flat_model,
       type = "ov.nox")))
-    ov_names_x <- unique(unlist(lav_partable_vnames(flat_model, type = "ov.x")))
-    lv_names   <- unique(unlist(lav_partable_vnames(flat_model, type = "lv")))
+    ov_names_x <- unique(unlist(lav_pt_vnames(flat_model, type = "ov.x")))
+    lv_names   <- unique(unlist(lav_pt_vnames(flat_model, type = "lv")))
   }
 
   # sanity check (new in 0.6-8): do we have any ov.names?
@@ -340,7 +340,7 @@ lav_lavaan_step01_ovnames_group <- function(flat_model = NULL,        # nolint
   )
 }
 
-lav_lavaan_step01_ovnames_checklv <- function(                    # nolint
+lav_step01_ovnames_checklv <- function(
     lv_names    = character(0L),
     ov_names    = character(0L),
     data        = NULL,
@@ -408,7 +408,7 @@ lav_lavaan_step01_ovnames_checklv <- function(                    # nolint
   invisible(NULL)
 }
 
-lav_lavaan_step01_ovnames_namesl <- function(data         = NULL,  # nolint
+lav_step01_ovnames_namesl <- function(data         = NULL,
                                              cluster      = NULL,
                                              flat_model   = NULL,
                                              group_values = NULL,
@@ -417,12 +417,12 @@ lav_lavaan_step01_ovnames_namesl <- function(data         = NULL,  # nolint
   #   if data not NULL, cluster must not be NULL, if it is: *** error ***
   #   compute tmp.group.values and tmp.level.values from flat.model
   #   there should be at least 2 levels, if not *** error ***
-  #   copy flat.model without attributes and lav_model_partable -> tmp.lav
+  #   copy flat.model without attributes and lav_model_pt -> tmp.lav
   #   check at least 2 levels for tmp.lav, if not *** error ***
   #   compute ov.names.l per group and per level (via lav_partable_vnames
   #     on tmp.lav)
   # else
-  #   if lav_partable_nlevels(flat.model) > 0
+  #   if lav_pt_nlevels(flat.model) > 0
   #   if data not NULL, cluster must not be NULL, if it is: *** error ***
   #     compute ov.names.l per group and per level (via lav_partable_vnames
   #     on flat.model)
@@ -439,7 +439,7 @@ lav_lavaan_step01_ovnames_namesl <- function(data         = NULL,  # nolint
     # here, we only need to figure out:
     # - nlevels
     # - ov's per level
-    # - FIXME: we need a more efficient way, avoiding lav_model_partable/vnames
+    # - FIXME: we need a more efficient way, avoiding lav_model_pt/vnames
 
     group_idx <- which(flat_model$op == ":" & flat_model$lhs == "group")
     tmp_group_values <- unique(flat_model$rhs[group_idx])
@@ -465,7 +465,7 @@ lav_lavaan_step01_ovnames_namesl <- function(data         = NULL,  # nolint
     attr(flat_model_2, "modifiers") <- NULL
     attr(flat_model_2, "constraints") <- NULL
     tmp_lav <-
-      lav_model_partable(flat_model_2, ngroups = tmp_ngroups, warn = FALSE)
+      lav_model_pt(flat_model_2, ngroups = tmp_ngroups, warn = FALSE)
     # check for empty levels
     if (max(tmp_lav$level) < 2L) {
       lav_msg_stop(
@@ -481,14 +481,14 @@ lav_lavaan_step01_ovnames_namesl <- function(data         = NULL,  # nolint
       for (l in seq_len(tmp_nlevels)) {
         if (tmp_ngroups > 1L) {
           ov_names_l[[g]][[l]] <-
-            unique(unlist(lav_partable_vnames(tmp_lav,
+            unique(unlist(lav_pt_vnames(tmp_lav,
               type = "ov",
               group = tmp_group_values[g],
               level = tmp_level_values[l]
             )))
         } else {
           ov_names_l[[g]][[l]] <-
-            unique(unlist(lav_partable_vnames(tmp_lav,
+            unique(unlist(lav_pt_vnames(tmp_lav,
               type = "ov",
               level = tmp_level_values[l]
             )))
@@ -497,15 +497,15 @@ lav_lavaan_step01_ovnames_namesl <- function(data         = NULL,  # nolint
     } # groups
   } else {
     # perhaps model is already a parameter table
-    nlevels <- lav_partable_nlevels(flat_model)
+    nlevels <- lav_pt_nlevels(flat_model)
     if (nlevels > 1L) {
       # check for cluster argument (only if we have data)
       if (!is.null(data) && is.null(cluster)) {
         lav_msg_stop(gettext("cluster argument is missing."))
       }
 
-      ngroups <- lav_partable_ngroups(flat_model)
-      group_values <- lav_partable_group_values(flat_model)
+      ngroups <- lav_pt_ngroups(flat_model)
+      group_values <- lav_pt_group_values(flat_model)
       ov_names_l <- vector("list", length = ngroups)
       for (g in 1:ngroups) {
         # note: lav_object_vnames() will return a list if any level:
@@ -524,7 +524,7 @@ lav_lavaan_step01_ovnames_namesl <- function(data         = NULL,  # nolint
   )
 }
 
-lav_lavaan_step01_ovnames_ordered <- function(ordered    = NULL,  # nolint
+lav_step01_ovnames_ordered <- function(ordered    = NULL,
                                               flat_model = NULL,
                                               data       = NULL) {
   # interpretation and check ordered parameter, modify if needed

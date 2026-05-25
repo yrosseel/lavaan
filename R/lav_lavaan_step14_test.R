@@ -1,4 +1,4 @@
-lav_lavaan_step14_test <- function(lavoptions = NULL,
+lav_step14_test <- function(lavoptions = NULL,
                                    lavmodel = NULL,
                                    lavsamplestats = NULL,
                                    lavdata = NULL,
@@ -52,7 +52,7 @@ lav_lavaan_step14_test <- function(lavoptions = NULL,
   lavtest
 }
 
-lav_lavaan_step14_fit <- function(lavpartable = NULL,
+lav_step14_fit <- function(lavpartable = NULL,
                                   lavmodel = NULL,
                                   lavimplied = NULL,
                                   x = NULL,

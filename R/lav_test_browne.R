@@ -194,10 +194,10 @@ lav_test_browne <- function(lavobject = NULL,
         )
       } else {
         # naive formula base computation (slow!)
-        delta_c <- lav_matrix_orthogonal_complement(delta_g)
+        delta_c <- lav_mat_ortho_complement(delta_g)
         t_dgd <- crossprod(delta_c, gamma_1[[g]]) %*% delta_c
         # if fixed.x = TRUE, gamma_1[[g]] may contain zero col/rows
-        t_dgd_inv <- lav_matrix_symmetric_inverse(t_dgd)
+        t_dgd_inv <- lav_mat_sym_inverse(t_dgd)
         t_res_delta_c <- crossprod(res, delta_c)
         stat_group[g] <-
           ng * drop(t_res_delta_c %*% t_dgd_inv %*% t(t_res_delta_c))
@@ -232,7 +232,7 @@ lav_test_browne <- function(lavobject = NULL,
       }
       gamma_inv_weighted[[g]] <- gamma_inv_temp * ng / ntotal
     }
-    gi <- lav_matrix_bdiag(gamma_inv_weighted)
+    gi <- lav_mat_bdiag(gamma_inv_weighted)
     t_dgi_d <- t(delta_g) %*% gi %*% delta_g
     t_dgi_d_inv <- MASS::ginv(t_dgi_d) # GI may be rank-deficient
     q1 <- drop(t(res_all) %*% gi %*% res_all)
@@ -253,7 +253,7 @@ lav_test_browne <- function(lavobject = NULL,
     df_1 <- lavobject@test[[1]]$df
   } else {
     # same approach as in lav_test.R
-    df <- lav_partable_df(lavpartable)
+    df <- lav_pt_df(lavpartable)
     if (nrow(lavmodel@con.jac) > 0L) {
       ceq_idx <- attr(lavmodel@con.jac, "ceq.idx")
       if (length(ceq_idx) > 0L) {
@@ -262,7 +262,7 @@ lav_test_browne <- function(lavobject = NULL,
       }
     } else if (lavmodel@ceq.simple.only) {
       # needed??
-      ndat <- lav_partable_ndat(lavpartable)
+      ndat <- lav_pt_ndat(lavpartable)
       npar <- max(lavpartable$free)
       df <- ndat - npar
     }
@@ -325,7 +325,7 @@ lav_test_browne_nt_fast <- function(res = NULL, delta = NULL,
   }
 
   # vech
-  diag_idx <- lav_matrix_diagh_idx(nvar)
+  diag_idx <- lav_mat_diagh_idx(nvar)
 
   # applies gamma_cov_inv = 0.5 * t(D) %*% (S.inv %x% S.inv) %*% D
   # to a pstar-vector 'x'
@@ -337,9 +337,9 @@ lav_test_browne_nt_fast <- function(res = NULL, delta = NULL,
       out_mean <- drop(s_inv %*% x_mean)
     }
 
-    m_w <- lav_matrix_vech_reverse(x_cov)
+    m_w <- lav_mat_vech_rev(x_cov)
     z <- s_inv %*% m_w %*% s_inv
-    out_cov <- lav_matrix_vech(z)
+    out_cov <- lav_mat_vech(z)
     out_cov[diag_idx] <- out_cov[diag_idx] / 2.0
     out <- out_cov
     if (meanstructure) {

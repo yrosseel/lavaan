@@ -35,7 +35,7 @@ lav_bvmix_cor_twostep_fit <- function(y1, y2, exo = NULL, wt = NULL,
 
   # optim.method
   min_objective <- lav_bvmix_min_objective
-  min_gradient <- lav_bvmix_min_gradient
+  min_gradient <- lav_bvmix_min_grad
   min_hessian <- lav_bvmix_min_hessian
   if (optim_method == "nlminb" || optim_method == "nlminb2") {
     # nothing to do
@@ -165,7 +165,7 @@ lav_bvmix_init_cache <- function(fit_y1 = NULL,
     } else {
       tmp <- na.omit(cbind(z, y2, wt))
       cor_1 <- cov.wt(x = tmp[, 1:2], wt = tmp[, 3], cor = TRUE)$cor[2, 1]
-      sd_1 <- sqrt(lav_matrix_var_wt(tmp[, 2], wt = tmp[, 3]))
+      sd_1 <- sqrt(lav_mat_var_wt(tmp[, 2], wt = tmp[, 3]))
     }
     rho_init <- (cor_1 * sd_1 / sum(dnorm(th_y2)))
   } else {
@@ -176,7 +176,7 @@ lav_bvmix_init_cache <- function(fit_y1 = NULL,
     } else {
       tmp <- na.omit(cbind(y1, y2, wt))
       cor_1 <- cov.wt(x = tmp[, 1:2], wt = tmp[, 3], cor = TRUE)$cor[2, 1]
-      sd_1 <- sqrt(lav_matrix_var_wt(tmp[, 2], wt = tmp[, 3]))
+      sd_1 <- sqrt(lav_mat_var_wt(tmp[, 2], wt = tmp[, 3]))
     }
     rho_init <- (cor_1 * sd_1 / sum(dnorm(th_y2)))
   }
@@ -259,7 +259,7 @@ lav_bvmix_logl_cache <- function(cache = NULL) {
   })                                # nolint end
 }
 
-lav_bvmix_gradient_cache <- function(cache = NULL) {
+lav_bvmix_grad_cache <- function(cache = NULL) {
   with(cache, {                     # nolint start
     rho <- theta[1L]
 
@@ -329,14 +329,14 @@ lav_bvmix_min_objective <- function(x, cache = NULL) {
 }
 
 # compute gradient, for specific 'x' (nlminb)
-lav_bvmix_min_gradient <- function(x, cache = NULL) {
+lav_bvmix_min_grad <- function(x, cache = NULL) {
   # check if x has changed
   if (!all(x == cache$theta)) {
     cache$theta <- x
     tmp <- lav_bvmix_logl_cache(cache = cache)
     rm(tmp)
   }
-  -1 * lav_bvmix_gradient_cache(cache = cache) / cache$n
+  -1 * lav_bvmix_grad_cache(cache = cache) / cache$n
 }
 
 # compute hessian, for specific 'x' (nlminb)
@@ -344,14 +344,14 @@ lav_bvmix_min_hessian <- function(x, cache = NULL) {
   # check if x has changed
   if (!all(x == cache$theta)) {
     tmp <- lav_bvmix_logl_cache(cache = cache)
-    tmp <- lav_bvmix_gradient_cache(cache = cache)
+    tmp <- lav_bvmix_grad_cache(cache = cache)
     rm(tmp)
   }
   -1 * lav_bvmix_hessian_cache(cache = cache) / cache$n
 }
 
 
-lav_bvmix_cor_scores_cache <- function(cache = NULL,
+lav_bvmix_cor_sc_cache <- function(cache = NULL,
                                        sigma_correction = FALSE,
                                        na_zero = FALSE) {
   with(cache, {                           # nolint start
@@ -445,7 +445,7 @@ lav_bvmix_cor_scores_cache <- function(cache = NULL,
 #
 # Y1 = linear
 # Y2 = ordinal
-lav_bvmix_cor_scores <- function(y1, y2, exo = NULL, wt = NULL,
+lav_bvmix_cor_sc <- function(y1, y2, exo = NULL, wt = NULL,
                                  rho = NULL,
                                  fit_y1 = NULL, fit_y2 = NULL,
                                  evar_y1 = NULL, beta_y1 = NULL,
@@ -477,7 +477,7 @@ lav_bvmix_cor_scores <- function(y1, y2, exo = NULL, wt = NULL,
   )
   cache$theta <- rho
 
-  sc <- lav_bvmix_cor_scores_cache(
+  sc <- lav_bvmix_cor_sc_cache(
     cache = cache,
     sigma_correction = sigma_correction,
     na_zero = na_zero

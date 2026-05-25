@@ -3,8 +3,8 @@
 # YR: this function was broken since Mar 3, 2017, but nobody noticed this!
 #     fixed again Apr 29, 2025.
 
-lav_partable_from_lm <- function(object, est = FALSE, label = FALSE,
-                                 as.data.frame. = FALSE) {           # nolint
+lav_pt_from_lm <- function(object, est = FALSE, label = FALSE,
+                                 as_data_frame = FALSE) {
   # sanity check
   if (!inherits(object, "lm")) {
     lav_msg_stop(gettext("object must be of class lm"))
@@ -55,7 +55,7 @@ lav_partable_from_lm <- function(object, est = FALSE, label = FALSE,
   }
 
   # convert to data.frame?
-  if (as.data.frame.) {
+  if (as_data_frame) {
     partable <- as.data.frame(partable, stringsAsFactors = FALSE)
   }
 

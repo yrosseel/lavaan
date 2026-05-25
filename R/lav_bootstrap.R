@@ -235,8 +235,8 @@ lav_bootstrap_internal <- function(object = NULL,
   # if bollen.stine, transform data here
   if (type == "bollen.stine") {
     for (g in 1:lavsamplestats_1@ngroups) {
-      sigma_sqrt <- lav_matrix_symmetric_sqrt(sigma_hat[[g]])
-      s_inv_sqrt <- lav_matrix_symmetric_sqrt(lavsamplestats_1@icov[[g]])
+      sigma_sqrt <- lav_mat_sym_sqrt(sigma_hat[[g]])
+      s_inv_sqrt <- lav_mat_sym_sqrt(lavsamplestats_1@icov[[g]])
 
       # center (needed???)
       x_1 <- scale(lavdata_1@X[[g]], center = TRUE, scale = FALSE)
@@ -320,8 +320,8 @@ lav_bootstrap_internal <- function(object = NULL,
       }
 
       # Transform the data (p. 263)
-      s_a_sqrt <- lav_matrix_symmetric_sqrt(s_a)
-      s_inv_sqrt <- lav_matrix_symmetric_sqrt(lavsamplestats_1@icov[[g]])
+      s_a_sqrt <- lav_mat_sym_sqrt(s_a)
+      s_inv_sqrt <- lav_mat_sym_sqrt(lavsamplestats_1@icov[[g]])
 
       x_1 <- lavdata_1@X[[g]]
       x_1 <- x_1 %*% s_inv_sqrt %*% s_a_sqrt
@@ -369,7 +369,7 @@ lav_bootstrap_internal <- function(object = NULL,
       cat(if (interactive()) "\r" else "",
           "  ... bootstrap draw number:", sprintf("%4d", b))
     }
-    boot_sample_stats <- try(lav_samplestats_from_data(
+    boot_sample_stats <- try(lav_samp_from_data(
       lavdata       = new_data,
       lavoptions    = lavoptions_1
     ), silent = TRUE)
@@ -395,7 +395,7 @@ lav_bootstrap_internal <- function(object = NULL,
     # do we need to update Model slot? only if we have fixed exogenous
     # covariates, as their variances/covariances are stored in GLIST
     if (lavmodel_1@fixed.x &&
-        length(lav_partable_vnames(lavpartable_1, "ov.x")) > 0L) {
+        length(lav_pt_vnames(lavpartable_1, "ov.x")) > 0L) {
       model_boot <- NULL
     } else {
       model_boot <- lavmodel_1

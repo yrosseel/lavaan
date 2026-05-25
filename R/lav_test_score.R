@@ -93,7 +93,7 @@ lavTestScore <- function(object, add = NULL, release = NULL,       # nolint star
     }
 
     # lhs/rhs
-    lhs <- lav_partable_labels(fit@ParTable)[fit@ParTable$user == 10L]
+    lhs <- lav_pt_labels(fit@ParTable)[fit@ParTable$user == 10L]
     op <- rep("==", nadd)
     rhs <- rep("0", nadd)
     table_1 <- data.frame(
@@ -300,7 +300,7 @@ lavTestScore <- function(object, add = NULL, release = NULL,       # nolint star
       ## release mode
       list_1 <- parTable(object)
     }
-    if (lav_partable_ngroups(list_1) == 1L) {
+    if (lav_pt_ngroups(list_1) == 1L) {
       list_1$group <- NULL
     }
     nonpar_idx <- which(list_1$op %in% c("==", ":=", "<", ">"))
@@ -309,7 +309,7 @@ lavTestScore <- function(object, add = NULL, release = NULL,       # nolint star
     }
 
     list_1$est[list_1$free > 0 & list_1$user != 10] <-
-            lav_object_inspect_coef(object, type = "free")
+            lav_inspect_coef(object, type = "free")
     list_1$est[list_1$user == 10L] <- 0
     list_1$epc <- rep(as.numeric(NA), length(list_1$lhs))
     list_1$epc[list_1$free > 0] <- epc_all
@@ -371,7 +371,7 @@ lavTestScore <- function(object, add = NULL, release = NULL,       # nolint star
     # remove some more columns
     list_1$id <- list_1$ustart <- list_1$exo <-
            list_1$start <- list_1$se <- list_1$prior <- NULL
-    if (lav_partable_nblocks(list_1) == 1L) {
+    if (lav_pt_nblocks(list_1) == 1L) {
       list_1$block <- NULL
       list_1$group <- NULL
       list_1$level <- NULL

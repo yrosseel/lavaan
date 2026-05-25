@@ -1,4 +1,4 @@
-lav_samplestats_step2 <- function(uni = NULL,
+lav_samp_step2 <- function(uni = NULL,
                                   wt = NULL,
                                   ov_names = NULL, # error message only
                                   # polychoric and empty cells

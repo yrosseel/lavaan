@@ -342,7 +342,7 @@ lavTestLRT <- function(object, ..., method = "default", test = "default",   # no
     if (method == "satorra.bentler.2001") {
       # use formula from Satorra & Bentler 2001
       for (m in seq_len(length(mods) - 1L)) {
-        out <- lav_test_diff_SatorraBentler2001(mods[[m]], mods[[m + 1]],
+        out <- lav_test_diff_sb2001(mods[[m]], mods[[m + 1]],
                                                 # in case not @test[[2]]:
                                                 test = test_1)
         stat_delta[m + 1] <- out$T.delta
@@ -357,7 +357,7 @@ lavTestLRT <- function(object, ..., method = "default", test = "default",   # no
       }
     } else if (method == "satorra.bentler.2010") {
       for (m in seq_len(length(mods) - 1L)) {
-        out <- lav_test_diff_SatorraBentler2010(mods[[m]], mods[[m + 1]],
+        out <- lav_test_diff_sb2010(mods[[m]], mods[[m + 1]],
           test = test_1, # in case not @test[[2]]
           h1 = FALSE
         ) # must be F
@@ -635,7 +635,7 @@ lav_test_lrt_fmg <- function(mods, test = "pall_ug_ml", method = "default",
     mods,
     function(x) {
       lav_test_fmg_check_estimator(x@Options, context = "FMG nested tests")
-      lav_test_fmg_check_missing(x@Options, context = "FMG nested tests")
+      lav_test_fmg_check_mi(x@Options, context = "FMG nested tests")
     }
   ))
   estimators <- vapply(mods, function(x) x@Options$estimator.orig,

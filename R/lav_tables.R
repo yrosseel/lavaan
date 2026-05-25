@@ -904,7 +904,7 @@ lav_tables_pairwise_freq_cell <- function(lavdata = NULL,
           nobs = rep.int(sum(freq), ncell),
           row = rep.int(seq_len(nrow), times = ncol),
           col = rep(seq_len(ncol), each = nrow),
-          obs.freq = lav_matrix_vec(freq) # col by col!
+          obs.freq = lav_mat_vec(freq) # col by col!
         )
       }
     )
@@ -976,7 +976,7 @@ lav_tables_pairwise_model_pi <- function(lavobject = NULL) {
       )
     } else {
       pi_group <- integer(0)
-      # order! first i, then j, lav_matrix_vec(table)!
+      # order! first i, then j, lav_mat_vec(table)!
       for (i in seq_len(nvar - 1L)) {
         for (j in (i + 1L):nvar) {
           if (ov_types[i] == "ordered" && ov_types[j] == "ordered") {
@@ -985,7 +985,7 @@ lav_tables_pairwise_model_pi <- function(lavobject = NULL) {
               th_y1 = th[[g]][th_idx[[g]] == i],
               th_y2 = th[[g]][th_idx[[g]] == j]
             )
-            pi_group <- c(pi_group, lav_matrix_vec(pi_table))
+            pi_group <- c(pi_group, lav_mat_vec(pi_table))
           }
         }
       }
@@ -1058,7 +1058,7 @@ lav_tables_pairwise_sample_pi_cor <- function(cor_1 = NULL, th = NULL, # nolint
     ov_types[ord_idx] <- "ordered"
 
     pi_group <- integer(0)
-    # order! first i, then j, lav_matrix_vec(table)!
+    # order! first i, then j, lav_mat_vec(table)!
     for (i in seq_len(nvar - 1L)) {
       for (j in (i + 1L):nvar) {
         if (ov_types[i] == "ordered" && ov_types[j] == "ordered") {
@@ -1067,7 +1067,7 @@ lav_tables_pairwise_sample_pi_cor <- function(cor_1 = NULL, th = NULL, # nolint
             th_y1 = th[[g]][th_idx_1 == i],
             th_y2 = th[[g]][th_idx_1 == j]
           )
-          pi_group <- c(pi_group, lav_matrix_vec(pi_table))
+          pi_group <- c(pi_group, lav_mat_vec(pi_table))
         }
       }
     }
@@ -1327,7 +1327,7 @@ lav_tables_cells_format <- function(out, lavdata = lavdata,
 
 
 
-# The function lav_tables_univariate_freq_cell computes the univariate (one-way)
+# The function lav_tables_uni_freq_cell computes the univariate (one-way)
 # frequency tables.
 # The function closely follows the "logic" of the lavaan function
 # lav_tables_pairwise_freq_cell.
@@ -1351,7 +1351,7 @@ lav_tables_cells_format <- function(out, lavdata = lavdata,
 #    second group and so on. The last table has the index equal to
 #                                   (no of groups) * (no of variables).
 
-lav_tables_univariate_freq_cell <- function(lavdata = NULL,   # nolint
+lav_tables_uni_freq_cell <- function(lavdata = NULL,
                                             as_data_frame = TRUE) {
   # shortcuts
   vartable <- as.data.frame(lavdata@ov, stringsAsFactors = FALSE)

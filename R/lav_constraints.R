@@ -1,4 +1,4 @@
-lav_constraints_parse <- function(partable = NULL, constraints = NULL,
+lav_con_parse <- function(partable = NULL, constraints = NULL,
                                   theta = NULL,
                                   debug = FALSE) {
   if (!missing(debug)) {
@@ -72,38 +72,38 @@ lav_constraints_parse <- function(partable = NULL, constraints = NULL,
   }
 
   # variable definitions
-  def_function <- lav_partable_constraints_def(partable,
+  def_function <- lav_pt_con_def(partable,
     con = list_1,
     debug = debug
   )
 
   # construct ceq/ciq functions
-  ceq_function <- lav_partable_constraints_ceq(partable,
+  ceq_function <- lav_pt_con_ceq(partable,
     con = list_1,
     debug = debug
   )
   # linear or nonlinear?
-  ceq_linear_idx <- lav_constraints_linear_idx(
+  ceq_linear_idx <- lav_con_linear_idx(
     func = ceq_function,
     npar = npar
   )
-  ceq_nonlinear_idx <- lav_constraints_nonlinear_idx(
+  ceq_nonlinear_idx <- lav_con_nonlinear_idx(
     func = ceq_function,
     npar = npar
   )
 
   # inequalities
-  cin_function <- lav_partable_constraints_ciq(partable,
+  cin_function <- lav_pt_con_ciq(partable,
     con = list_1,
     debug = debug
   )
 
   # linear or nonlinear?
-  cin_linear_idx <- lav_constraints_linear_idx(
+  cin_linear_idx <- lav_con_linear_idx(
     func = cin_function,
     npar = npar
   )
-  cin_nonlinear_idx <- lav_constraints_nonlinear_idx(
+  cin_nonlinear_idx <- lav_con_nonlinear_idx(
     func = cin_function,
     npar = npar
   )
@@ -314,7 +314,7 @@ lav_constraints_parse <- function(partable = NULL, constraints = NULL,
   out
 }
 
-lav_constraints_linear_idx <- function(func = NULL, npar = NULL) {
+lav_con_linear_idx <- function(func = NULL, npar = NULL) {
   if (is.null(func) || is.null(body(func))) {
     return(integer(0L))
   }
@@ -330,7 +330,7 @@ lav_constraints_linear_idx <- function(func = NULL, npar = NULL) {
   which(linear)
 }
 
-lav_constraints_nonlinear_idx <- function(func = NULL, npar = NULL) {
+lav_con_nonlinear_idx <- function(func = NULL, npar = NULL) {
   if (is.null(func) || is.null(body(func))) {
     return(integer(0L))
   }
@@ -347,7 +347,7 @@ lav_constraints_nonlinear_idx <- function(func = NULL, npar = NULL) {
 }
 
 # check if the equality constraints are 'simple' (a == b)
-lav_constraints_check_simple <- function(lavmodel = NULL) {
+lav_con_check_simple <- function(lavmodel = NULL) {
   ones <- (lavmodel@ceq.JAC == 1 | lavmodel@ceq.JAC == -1)
   simple <- all(lavmodel@ceq.rhs == 0) &&
     all(apply(lavmodel@ceq.JAC != 0, 1, sum) == 2) &&
@@ -358,7 +358,7 @@ lav_constraints_check_simple <- function(lavmodel = NULL) {
   simple
 }
 
-lav_constraints_r2k <- function(lavmodel = NULL) {
+lav_con_r2k <- function(lavmodel = NULL) {
   # constraint matrix
   m_r <- NULL
   if (!is.null(lavmodel)) {
@@ -384,7 +384,7 @@ lav_constraints_r2k <- function(lavmodel = NULL) {
   m_k
 }
 
-lav_constraints_lambda_pre <- function(lavobject = NULL, method = "Don") {
+lav_con_lambda_pre <- function(lavobject = NULL, method = "Don") {
   # compute factor 'pre' so that pre %*% g = lambda
   method <- tolower(method)
 

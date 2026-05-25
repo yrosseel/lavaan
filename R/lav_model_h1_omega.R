@@ -60,21 +60,21 @@ lav_model_h1_omega <- function(lavobject = NULL,
 
   # compute A1 (per group)
   if (information == "observed") {
-    a1_1 <- lav_model_h1_information_observed(
+    a1_1 <- lav_model_h1_info_observed(
       lavmodel = lavmodel,
       lavsamplestats = lavsamplestats, lavdata = lavdata,
       lavimplied = lavimplied, lavh1 = lavh1,
       lavcache = lavcache, lavoptions = a1_options
     )
   } else if (information == "expected") {
-    a1_1 <- lav_model_h1_information_expected(
+    a1_1 <- lav_model_h1_info_expected(
       lavmodel = lavmodel,
       lavsamplestats = lavsamplestats, lavdata = lavdata,
       lavimplied = lavimplied, lavh1 = lavh1,
       lavcache = lavcache, lavoptions = a1_options
     )
   } else if (information == "first.order") { # not needed?
-    a1_1 <- lav_model_h1_information_firstorder(
+    a1_1 <- lav_model_h1_info_firstorder(
       lavmodel = lavmodel,
       lavsamplestats = lavsamplestats, lavdata = lavdata,
       lavimplied = lavimplied, lavh1 = lavh1,
@@ -83,7 +83,7 @@ lav_model_h1_omega <- function(lavobject = NULL,
   }
 
   # compute B1 (per group)
-  b1 <- lav_model_h1_information_firstorder(
+  b1 <- lav_model_h1_info_firstorder(
     lavmodel = lavmodel,
     lavsamplestats = lavsamplestats, lavdata = lavdata,
     lavimplied = lavimplied, lavh1 = lavh1,

@@ -2,7 +2,7 @@
 # comparing the current model versus the saturated/unrestricted model
 # TDJ 9 April 2024: Add a (hidden) function to update the @test slot
 #                   when the user provides a custom h1 model.  Called by
-#                   lav_object_summary and lav_fit_measures(_check_baseline)
+#                   lav_object_summary and lav_fit(_check_baseline)
 
 lavTest <- function(lavobject, test = "standard",               # nolint start
                     scaled.test = "standard",
@@ -279,7 +279,7 @@ lav_model_test <- function(lavobject = NULL,
   # lavobject?
   if (!is.null(lavobject)) {
     lavmodel <- lavobject@Model
-    lavpartable <- lav_partable_set_cache(lavobject@ParTable, lavobject@pta)
+    lavpartable <- lav_pt_set_cache(lavobject@ParTable, lavobject@pta)
     lavsamplestats <- lavobject@SampleStats
     lavimplied <- lavobject@implied
     lavh1 <- lavobject@h1
@@ -305,7 +305,7 @@ lav_model_test <- function(lavobject = NULL,
   test_1 <- list()
 
   # degrees of freedom (ignoring constraints)
-  df <- lav_partable_df(lavpartable)
+  df <- lav_pt_df(lavpartable)
 
   # handle equality constraints (note: we ignore inequality constraints,
   # active or not!)
@@ -318,7 +318,7 @@ lav_model_test <- function(lavobject = NULL,
     }
   } else if (lavmodel@ceq.simple.only) {
     # needed??
-    ndat <- lav_partable_ndat(lavpartable)
+    ndat <- lav_pt_ndat(lavpartable)
     npar <- max(lavpartable$free)
     df <- ndat - npar
   }
@@ -646,7 +646,7 @@ lav_model_test <- function(lavobject = NULL,
         }
       }
 
-      out <- lav_test_satorra_bentler(
+      out <- lav_test_sb(
         lavobject = NULL,
         lavsamplestats = lavsamplestats,
         lavmodel = lavmodel,
@@ -681,7 +681,7 @@ lav_model_test <- function(lavobject = NULL,
           }
       }
 
-      out <- lav_test_yuan_bentler(
+      out <- lav_test_yb(
         lavobject = NULL,
         lavsamplestats = lavsamplestats,
         lavmodel = lavmodel,

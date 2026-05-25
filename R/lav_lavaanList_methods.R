@@ -119,11 +119,11 @@ lav_lavaanlist_summary <- function(object,
       nel <- length(pe$est.true)
 
       # always compute EST
-      est <- lav_lavaanlist_partable(object, what = "est", type = "all")
+      est <- lav_lavaanlist_pt(object, what = "est", type = "all")
 
       # sometimes compute SE
       if (sim_args$se.bias || sim_args$prop.sig || sim_args$coverage) {
-        se <- lav_lavaanlist_partable(object, what = "se", type = "all")
+        se <- lav_lavaanlist_pt(object, what = "se", type = "all")
       }
 
       # est.bias?
@@ -218,9 +218,9 @@ lav_lavaanlist_summary <- function(object,
                the 95% level; the requested `level' only affects the
                symmetric (SE-based) intervals."))
           }
-          ci_lower_a1 <- lav_lavaanlist_partable(object, what = "ci.lower",
+          ci_lower_a1 <- lav_lavaanlist_pt(object, what = "ci.lower",
                                                  type = "all")
-          ci_upper_a1 <- lav_lavaanlist_partable(object, what = "ci.upper",
+          ci_upper_a1 <- lav_lavaanlist_pt(object, what = "ci.upper",
                                                  type = "all")
           # average bounds
           ci_lower_a <- apply(ci_lower_a1, 1L, mean, na.rm = TRUE,
@@ -256,13 +256,13 @@ lav_lavaanlist_summary <- function(object,
       # scenario 2: bootstrap
     } else if (!is.null(object@meta$lavBootstrap)) {
       # print the average value for est
-      est <- lav_lavaanlist_partable(object, what = "est", type = "all")
+      est <- lav_lavaanlist_pt(object, what = "est", type = "all")
       pe$est.ave <- rowMeans(est, na.rm = TRUE)
 
       # scenario 3: multiple imputation
     } else if (!is.null(object@meta$lavMultipleImputation)) {
       # pool est: take the mean
-      est <- lav_lavaanlist_partable(object, what = "est", type = "all")
+      est <- lav_lavaanlist_pt(object, what = "est", type = "all")
       m <- NCOL(est)
       pe$est <- rowMeans(est, na.rm = TRUE)
 
@@ -275,7 +275,7 @@ lav_lavaanlist_summary <- function(object,
       b_var <- (est2 - est1 * est1) * m / (m - 1)
 
       # within-imputation variance
-      se <- lav_lavaanlist_partable(object, what = "se", type = "all")
+      se <- lav_lavaanlist_pt(object, what = "se", type = "all")
       w_var <- rowMeans(se^2, na.rm = TRUE)
 
       # total variance: T.var = W.var + B.var + B.var/m
@@ -292,7 +292,7 @@ lav_lavaanlist_summary <- function(object,
       # scenario 4: multiple groups/sets
     } else if (!is.null(object@meta$lavMultipleGroups)) {
       # show individual estimates, for each group
-      est <- lav_lavaanlist_partable(object, what = "est", type = "all")
+      est <- lav_lavaanlist_pt(object, what = "est", type = "all")
       est <- as.list(as.data.frame(est))
       names(est) <- object@meta$group.label
       attr_1 <- attributes(pe)
@@ -303,7 +303,7 @@ lav_lavaanlist_summary <- function(object,
     } else {
       # scenario 5: just a bunch of fits, using different datasets
       # print the average value for est
-      est <- lav_lavaanlist_partable(object, what = "est", type = "all")
+      est <- lav_lavaanlist_pt(object, what = "est", type = "all")
       pe$est.ave <- rowMeans(est, na.rm = TRUE)
 
       # more?
@@ -343,14 +343,14 @@ setMethod(
         )
       }
     }
-    lav_lavaanlist_partable(
+    lav_lavaanlist_pt(
       object = object, what = "est", type = type,
       labels = labels
     )
   }
 )
 
-lav_lavaanlist_partable <- function(object, what = "est",
+lav_lavaanlist_pt <- function(object, what = "est",
                                     type = "free", labels = TRUE) {
   # check object
   object <- lav_object_check_version(object)
@@ -378,7 +378,7 @@ lav_lavaanlist_partable <- function(object, what = "est",
   out <- out[idx, , drop = FALSE]
 
   if (labels) {
-    rownames(out) <- lav_partable_labels(object@ParTable, type = type)
+    rownames(out) <- lav_pt_labels(object@ParTable, type = type)
   }
 
   out
