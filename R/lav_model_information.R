@@ -5,7 +5,7 @@
 # 2) by default, we ignore the constraints (we deal with this when we
 #    take the inverse later on)
 
-lav_model_information <- function(lavmodel = NULL,
+lav_model_info <- function(lavmodel = NULL,
                                   lavsamplestats = NULL,
                                   lavdata = NULL,
                                   lavimplied = NULL,
@@ -41,7 +41,7 @@ lav_model_information <- function(lavmodel = NULL,
     } else {
       group_weight <- TRUE
     }
-    m_e <- lav_model_information_observed(
+    m_e <- lav_model_info_observed(
       lavmodel = lavmodel,
       lavsamplestats = lavsamplestats, lavdata = lavdata,
       lavimplied = lavimplied, lavh1 = lavh1,
@@ -50,7 +50,7 @@ lav_model_information <- function(lavmodel = NULL,
       augmented = augmented, inverted = inverted, use_ginv = use_ginv
     )
   } else if (information == "expected") {
-    m_e <- lav_model_information_expected(
+    m_e <- lav_model_info_expected(
       lavmodel = lavmodel,
       lavsamplestats = lavsamplestats, lavdata = lavdata,
       lavimplied = lavimplied, lavh1 = lavh1,
@@ -58,7 +58,7 @@ lav_model_information <- function(lavmodel = NULL,
       augmented = augmented, inverted = inverted, use_ginv = use_ginv
     )
   } else if (information == "first.order") {
-    m_e <- lav_model_information_firstorder(
+    m_e <- lav_model_info_firstorder(
       lavmodel = lavmodel,
       lavsamplestats = lavsamplestats, lavdata = lavdata,
       lavimplied = lavimplied, lavh1 = lavh1,
@@ -77,7 +77,7 @@ lav_model_information <- function(lavmodel = NULL,
 # information = Delta' I1 Delta, where I1 is the unit information of
 # the saturated model (evaluated either at the structured or unstructured
 # estimates)
-lav_model_information_expected <- function(lavmodel = NULL,
+lav_model_info_expected <- function(lavmodel = NULL,
                                            lavsamplestats = NULL,
                                            lavdata = NULL,
                                            lavoptions = NULL,
@@ -101,7 +101,7 @@ lav_model_information_expected <- function(lavmodel = NULL,
 
   # 2. H1 information (single level)
   if (lavdata@nlevels == 1L) {
-    a1 <- lav_model_h1_information_expected(
+    a1 <- lav_model_h1_info_expected(
       lavmodel = lavmodel,
       lavsamplestats = lavsamplestats,
       lavdata = lavdata,
@@ -138,7 +138,7 @@ lav_model_information_expected <- function(lavmodel = NULL,
       lp <- lavdata@Lp[[g]]
 
       info_g <-
-        lav_mvnorm_cluster_information_expected_delta(
+        lav_mvn_cl_info_expected_delta(
           lp = lp,
           delta = delta[[g]],
           mu_w = mu_w,
@@ -184,7 +184,7 @@ lav_model_information_expected <- function(lavmodel = NULL,
   # 5. augmented information?
   if (augmented) {
     information <-
-      lav_model_information_augment_invert(
+      lav_model_info_augment_invert(
         lavmodel = lavmodel,
         information = information,
         inverted = inverted,
@@ -202,7 +202,7 @@ lav_model_information_expected <- function(lavmodel = NULL,
 }
 
 # only for Mplus MLM
-lav_model_information_expected_mlm <- function(lavmodel = NULL,
+lav_model_info_expected_mlm <- function(lavmodel = NULL,
                                                lavsamplestats = NULL,
                                                m_delta = NULL,
                                                extra = FALSE,
@@ -223,7 +223,7 @@ lav_model_information_expected_mlm <- function(lavmodel = NULL,
     gw <- unlist(lav_model_gw(lavmodel = lavmodel))
   }
   for (g in 1:lavsamplestats@ngroups) {
-    a1[[g]] <- lav_mvnorm_h1_information_expected(
+    a1[[g]] <- lav_mvn_h1_info_expected(
       sample_cov     = lavsamplestats@cov[[g]],
       sample_cov_inv = lavsamplestats@icov[[g]],
       x_idx          = lavsamplestats@x.idx[[g]]
@@ -233,7 +233,7 @@ lav_model_information_expected_mlm <- function(lavmodel = NULL,
       # unweight!!
       a <- exp(gw[g]) / lavsamplestats@nobs[[g]]
       # a <- exp(gw[g]) * lavsamplestats@ntotal / lavsamplestats@nobs[[g]]
-      a1[[g]] <- lav_matrix_bdiag(matrix(a, 1, 1), a1[[g]])
+      a1[[g]] <- lav_mat_bdiag(matrix(a, 1, 1), a1[[g]])
     }
   }
 
@@ -256,7 +256,7 @@ lav_model_information_expected_mlm <- function(lavmodel = NULL,
   # augmented information?
   if (augmented) {
     information <-
-      lav_model_information_augment_invert(
+      lav_model_info_augment_invert(
         lavmodel = lavmodel,
         information = information,
         inverted = inverted,
@@ -273,7 +273,7 @@ lav_model_information_expected_mlm <- function(lavmodel = NULL,
 }
 
 
-lav_model_information_observed <- function(lavmodel = NULL,
+lav_model_info_observed <- function(lavmodel = NULL,
                                            lavsamplestats = NULL,
                                            lavdata = NULL,
                                            lavimplied = NULL,
@@ -349,7 +349,7 @@ lav_model_information_observed <- function(lavmodel = NULL,
 
     # 2. H1 information
 
-    a1 <- lav_model_h1_information_observed(
+    a1 <- lav_model_h1_info_observed(
       lavmodel = lavmodel,
       lavsamplestats = lavsamplestats,
       lavdata = lavdata,
@@ -389,7 +389,7 @@ lav_model_information_observed <- function(lavmodel = NULL,
   # augmented information?
   if (augmented) {
     information <-
-      lav_model_information_augment_invert(
+      lav_model_info_augment_invert(
         lavmodel = lavmodel,
         information = information,
         inverted = inverted,
@@ -408,7 +408,7 @@ lav_model_information_observed <- function(lavmodel = NULL,
 # outer product of the case-wise scores (gradients)
 # HJ 18/10/23: Need to divide sum of crossproduct of individual log-likelihoods
 # by sum of weights rather than sample size.
-lav_model_information_firstorder <- function(lavmodel = NULL,           # nolint
+lav_model_info_firstorder <- function(lavmodel = NULL,
                                              lavsamplestats = NULL,
                                              lavdata = NULL,
                                              lavimplied = NULL,
@@ -436,7 +436,7 @@ lav_model_information_firstorder <- function(lavmodel = NULL,           # nolint
   delta <- lav_model_delta(lavmodel = lavmodel)
 
   # 2. H1 information
-  b1 <- lav_model_h1_information_firstorder(
+  b1 <- lav_model_h1_info_firstorder(
     lavmodel = lavmodel,
     lavsamplestats = lavsamplestats,
     lavdata = lavdata,
@@ -500,7 +500,7 @@ lav_model_information_firstorder <- function(lavmodel = NULL,           # nolint
   # augmented information?
   if (augmented) {
     information <-
-      lav_model_information_augment_invert(
+      lav_model_info_augment_invert(
         lavmodel = lavmodel,
         information = information,
         check_pd = check_pd,
@@ -526,7 +526,7 @@ lav_model_information_firstorder <- function(lavmodel = NULL,           # nolint
 # contains more parameters than the joint model; therefore, information
 # will be 'too small', and we need to remove some columns in H
 #
-lav_model_information_augment_invert <- function(lavmodel = NULL,   # nolint
+lav_model_info_augment_invert <- function(lavmodel = NULL,
                                                  information = NULL,
                                                  inverted = FALSE,
                                                  check_pd = FALSE,
@@ -564,7 +564,7 @@ lav_model_information_augment_invert <- function(lavmodel = NULL,   # nolint
       information <- e3
     }
   } else if (lavmodel@ceq.simple.only) {
-    h <- t(lav_matrix_orthogonal_complement(lavmodel@ceq.simple.K))
+    h <- t(lav_mat_ortho_complement(lavmodel@ceq.simple.K))
     if (length(rm_idx) > 0L) {
       h <- h[, -rm_idx, drop = FALSE]
     }

@@ -12,7 +12,7 @@
 #  - if conditional_x = TRUE, we ignore fixed_x (can be TRUE or FALSE)
 
 # NORMAL-THEORY
-lav_samplestats_gamma_inverse_nt <- function(m_y = NULL,
+lav_samp_gamma_inverse_nt <- function(m_y = NULL,
                                              m_cov = NULL,
                                              m_icov = NULL,
                                              m_mean = NULL,
@@ -79,10 +79,10 @@ lav_samplestats_gamma_inverse_nt <- function(m_y = NULL,
       #   gamma_inv <- lavaanC::m_kronecker_dup_pre_post(s_inv,
       #                                                multiplicator = 0.5)
       # } else {
-        gamma_inv <- 0.5 * lav_matrix_duplication_pre_post(s_inv %x% s_inv)
+        gamma_inv <- 0.5 * lav_mat_dup_pre_post(s_inv %x% s_inv)
       # }
       if (meanstructure) {
-        gamma_inv <- lav_matrix_bdiag(s_inv, gamma_inv)
+        gamma_inv <- lav_mat_bdiag(s_inv, gamma_inv)
       }
 
       # unconditional - fixed x
@@ -92,15 +92,15 @@ lav_samplestats_gamma_inverse_nt <- function(m_y = NULL,
       #   gamma_inv <- lavaanC::m_kronecker_dup_pre_post(s_inv,
       #                                                multiplicator = 0.5)
       # } else {
-        gamma_inv <- 0.5 * lav_matrix_duplication_pre_post(s_inv %x% s_inv)
+        gamma_inv <- 0.5 * lav_mat_dup_pre_post(s_inv %x% s_inv)
       # }
 
       # zero rows/cols corresponding with x/x combinations
       nvar <- NROW(m_icov)
       pstar <- nvar * (nvar + 1) / 2
       m_m <- matrix(0, nvar, nvar)
-      m_m[lav_matrix_vech_idx(nvar)] <- seq_len(pstar)
-      zero_idx <- lav_matrix_vech(m_m[x_idx, x_idx, drop = FALSE])
+      m_m[lav_mat_vech_idx(nvar)] <- seq_len(pstar)
+      zero_idx <- lav_mat_vech(m_m[x_idx, x_idx, drop = FALSE])
       gamma_inv[zero_idx, ] <- 0
       gamma_inv[, zero_idx] <- 0
 
@@ -108,7 +108,7 @@ lav_samplestats_gamma_inverse_nt <- function(m_y = NULL,
         s_inv_nox <- s_inv
         s_inv_nox[x_idx, ] <- 0
         s_inv_nox[, x_idx] <- 0
-        gamma_inv <- lav_matrix_bdiag(s_inv_nox, gamma_inv)
+        gamma_inv <- lav_mat_bdiag(s_inv_nox, gamma_inv)
       }
     }
   } else {
@@ -125,7 +125,7 @@ lav_samplestats_gamma_inverse_nt <- function(m_y = NULL,
     # if (lav_use_lavaanC()) {
     #   gamma_inv <- lavaanC::m_kronecker_dup_pre_post(s11, multiplicator = 0.5)
     # } else {
-      gamma_inv <- 0.5 * lav_matrix_duplication_pre_post(s11 %x% s11)
+      gamma_inv <- 0.5 * lav_mat_dup_pre_post(s11 %x% s11)
     # }
 
     if (meanstructure || slopestructure) {
@@ -153,7 +153,7 @@ lav_samplestats_gamma_inverse_nt <- function(m_y = NULL,
     }
 
     if (meanstructure || slopestructure) {
-      gamma_inv <- lav_matrix_bdiag(a11, gamma_inv)
+      gamma_inv <- lav_mat_bdiag(a11, gamma_inv)
     }
   }
 

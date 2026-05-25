@@ -155,7 +155,7 @@ lav_export_estimation <- function(lavaan_model) {
     current_verbose <- lav_verbose()
     if (lav_verbose(FALSE))
       on.exit(lav_verbose(current_verbose), TRUE)
-    dx <- lav_model_gradient(
+    dx <- lav_model_grad(
       lavmodel = lavaan_model@Model,
       glist = glist,
       lavsamplestats = lavaan_model@SampleStats,
@@ -199,7 +199,7 @@ lav_export_estimation <- function(lavaan_model) {
       parameter_values <- as.numeric(lavaan_model@Model@eq.constraints.K %*%
                   parameter_values) + lavaan_model@Model@eq.constraints.k0
     }
-    names(parameter_values) <- lav_partable_labels(lavaan_model@ParTable,
+    names(parameter_values) <- lav_pt_labels(lavaan_model@ParTable,
       type = "free"
     )
     parameter_values

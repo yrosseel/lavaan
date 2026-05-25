@@ -15,44 +15,44 @@
 # - 24 March 2019: handle efa sets
 # - 23 May   2020: support for random slopes
 
-lav_model_partable  <- function(
-                                model = NULL,            # nolint start
-                                meanstructure = FALSE,
-                                int.ov.free = FALSE,
-                                int.lv.free = FALSE,
-                                marker.int.zero = FALSE,
-                                orthogonal = FALSE,
-                                orthogonal.y = FALSE,
-                                orthogonal.x = FALSE,
-                                orthogonal.efa = FALSE,
-                                std.lv = FALSE,
-                                correlation = FALSE,
-                                composites = TRUE,
-                                effect.coding = "",
-                                conditional.x = FALSE,
-                                fixed.x = FALSE,
-                                parameterization = "delta",
-                                constraints = NULL,
-                                ceq.simple = FALSE,
-                                auto = FALSE,
-                                model.type = "sem",
-                                auto.fix.first = FALSE,
-                                auto.fix.single = FALSE,
-                                auto.var = FALSE,
-                                auto.cov.lv.x = FALSE,
-                                auto.cov.y = FALSE,
-                                auto.th = FALSE,
-                                auto.delta = FALSE,
-                                auto.efa = FALSE,
-                                varTable = NULL,
-                                ngroups = 1L,
-                                nthresholds = NULL,
-                                group.equal = NULL,
-                                group.partial = NULL,
-                                group.w.free = FALSE,
-                                debug = FALSE,
-                                warn = TRUE,
-                                as.data.frame. = TRUE) {  # nolint end
+lav_model_pt  <- function(
+                          model = NULL,
+                          meanstructure = FALSE,
+                          int_ov_free = FALSE,
+                          int_lv_free = FALSE,
+                          marker_int_zero = FALSE,
+                          orthogonal = FALSE,
+                          orthogonal_y = FALSE,
+                          orthogonal_x = FALSE,
+                          orthogonal_efa = FALSE,
+                          std_lv = FALSE,
+                          correlation = FALSE,
+                          composites = TRUE,
+                          effect_coding = "",
+                          conditional_x = FALSE,
+                          fixed_x = FALSE,
+                          parameterization = "delta",
+                          constraints = NULL,
+                          ceq_simple = FALSE,
+                          auto = FALSE,
+                          model_type = "sem",
+                          auto_fix_first = FALSE,
+                          auto_fix_single = FALSE,
+                          auto_var = FALSE,
+                          auto_cov_lv_x = FALSE,
+                          auto_cov_y = FALSE,
+                          auto_th = FALSE,
+                          auto_delta = FALSE,
+                          auto_efa = FALSE,
+                          var_table = NULL,
+                          ngroups = 1L,
+                          nthresholds = NULL,
+                          group_equal = NULL,
+                          group_partial = NULL,
+                          group_w_free = FALSE,
+                          debug = FALSE,
+                          warn = TRUE,
+                          as_data_frame = TRUE) {
   if (!missing(debug)) {
     current_debug <- lav_debug()
     if (lav_debug(debug))
@@ -64,26 +64,11 @@ lav_model_partable  <- function(
       on.exit(lav_warn(current_warn), TRUE)
   }
 
-  # copy arguments which are not snake_case and modified within function
-  int_ov_free <- int.ov.free
-  int_lv_free <- int.lv.free
-  effect_coding <- effect.coding
-  ceq_simple <- ceq.simple
-  auto_fix_first <- auto.fix.first
-  auto_fix_single <- auto.fix.single
-  auto_var <- auto.var
-  auto_cov_lv_x <- auto.cov.lv.x
-  auto_cov_y <- auto.cov.y
-  auto_th <- auto.th
-  auto_delta <- auto.delta
-  auto_efa <- auto.efa
-  var_table <- varTable
-
   # check if model is already flat or a full parameter table
   if (is.list(model) && !is.null(model$lhs)) {
     if (is.null(model$mod.idx)) {
       lav_msg_warn(gettext("input already looks like a parameter table"))
-      return(lav_partable_set_cache(model))
+      return(lav_pt_set_cache(model))
     } else {
       flat <- model
     }
@@ -148,9 +133,9 @@ lav_model_partable  <- function(
 
   # check for wrongly specified variances/covariances/intercepts
   # of exogenous variables in model syntax (if fixed.x=TRUE)
-  if (fixed.x && lav_warn()) { # we ignore the groups here!
+  if (fixed_x && lav_warn()) { # we ignore the groups here!
     # we only call this function for the warning message
-    tmp <- lav_partable_vnames(flat, "ov.x", force_warn = TRUE)
+    tmp <- lav_pt_vnames(flat, "ov.x", force_warn = TRUE)
     rm(tmp)
   }
 
@@ -163,10 +148,10 @@ lav_model_partable  <- function(
 
   # auto=TRUE?
   if (auto) { # mimic sem/cfa auto behavior
-    if (model.type == "sem") {
+    if (model_type == "sem") {
       int_ov_free <- TRUE
       int_lv_free <- FALSE
-      auto_fix_first <- !std.lv
+      auto_fix_first <- !std_lv
       auto_fix_single <- TRUE
       auto_var <- TRUE
       auto_cov_lv_x <- TRUE
@@ -174,10 +159,10 @@ lav_model_partable  <- function(
       auto_th <- TRUE
       auto_delta <- TRUE
       auto_efa <- TRUE
-    } else if (model.type == "growth") {
+    } else if (model_type == "growth") {
       int_ov_free <- FALSE
       int_lv_free <- TRUE
-      auto_fix_first <- !std.lv
+      auto_fix_first <- !std_lv
       auto_fix_single <- TRUE
       auto_var <- TRUE
       auto_cov_lv_x <- TRUE
@@ -342,9 +327,9 @@ lav_model_partable  <- function(
       }
 
       # new in 0.6-8: if multilevel, use 'global' ov.names.x
-      if (fixed.x && block_lhs == "level") {
-        tmp_ov_names_x <- lav_partable_vnames(flat, "ov.x") # global
-        ov_names_x_block <- lav_partable_vnames(flat_block, "ov.x")
+      if (fixed_x && block_lhs == "level") {
+        tmp_ov_names_x <- lav_pt_vnames(flat, "ov.x") # global
+        ov_names_x_block <- lav_pt_vnames(flat_block, "ov.x")
         if (length(ov_names_x_block) > 0L) {
           idx <- which(!ov_names_x_block %in% tmp_ov_names_x)
           if (length(idx) > 0L) {
@@ -364,20 +349,20 @@ lav_model_partable  <- function(
 
       # new in 0.6-12: if multilevel and conditional.x, make sure
       # that 'split' exogenous covariates become 'y' variables
-      if (conditional.x && block_lhs == "level") {
+      if (conditional_x && block_lhs == "level") {
         if (ngroups == 1L) {
-          other_block_names <- lav_partable_vnames(flat, "ov",
+          other_block_names <- lav_pt_vnames(flat, "ov",
             block = seq_len(nblocks)[-block]
           )
         } else {
           # TEST ME
           this_group <- ceiling(block / nlevels)
           blocks_within_group <- (this_group - 1L) * nlevels + seq_len(nlevels)
-          other_block_names <- lav_partable_vnames(flat, "ov",
+          other_block_names <- lav_pt_vnames(flat, "ov",
             block = blocks_within_group[-block]
           )
         }
-        ov_names_x_block <- lav_partable_vnames(flat_block, "ov.x")
+        ov_names_x_block <- lav_pt_vnames(flat_block, "ov.x")
         if (length(ov_names_x_block) > 0L) {
           idx <- which(ov_names_x_block %in% other_block_names)
           if (length(idx) > 0L) {
@@ -388,15 +373,15 @@ lav_model_partable  <- function(
         ov_names_x_block <- NULL
       }
 
-      list_block <- lav_partable_flat(flat_block,
+      list_block <- lav_pt_flat(flat_block,
         blocks = tmp_blocks_lhs,
         block_id = block,
         meanstructure = meanstructure,
         int_ov_free = int_ov_free, int_lv_free = int_lv_free,
-        orthogonal = orthogonal, orthogonal_y = orthogonal.y,
-        orthogonal_x = orthogonal.x, orthogonal_efa = orthogonal.efa,
-        std_lv = std.lv, correlation = correlation, composites = composites,
-        conditional_x = conditional.x, fixed_x = fixed.x,
+        orthogonal = orthogonal, orthogonal_y = orthogonal_y,
+        orthogonal_x = orthogonal_x, orthogonal_efa = orthogonal_efa,
+        std_lv = std_lv, correlation = correlation, composites = composites,
+        conditional_x = conditional_x, fixed_x = fixed_x,
         parameterization = parameterization,
         auto_fix_first = auto_fix_first,
         auto_fix_single = auto_fix_single,
@@ -404,7 +389,7 @@ lav_model_partable  <- function(
         auto_cov_y = auto_cov_y, auto_th = auto_th,
         auto_delta = auto_delta, auto_efa = auto_efa,
         var_table = var_table, group_equal = NULL,
-        group_w_free = group.w.free, ngroups = 1L,
+        group_w_free = group_w_free, ngroups = 1L,
         nthresholds = nthresholds,
         ov_names_x_block = ov_names_x_block
       )
@@ -439,21 +424,21 @@ lav_model_partable  <- function(
       }
     }
   } else {
-    tmp_list <- lav_partable_flat(flat,
+    tmp_list <- lav_pt_flat(flat,
       blocks = "group",
       meanstructure = meanstructure,
       int_ov_free = int_ov_free, int_lv_free = int_lv_free,
-      orthogonal = orthogonal, orthogonal_y = orthogonal.y,
-      orthogonal_x = orthogonal.x, orthogonal_efa = orthogonal.efa,
-      std_lv = std.lv, correlation = correlation, composites = composites,
-      conditional_x = conditional.x, fixed_x = fixed.x,
+      orthogonal = orthogonal, orthogonal_y = orthogonal_y,
+      orthogonal_x = orthogonal_x, orthogonal_efa = orthogonal_efa,
+      std_lv = std_lv, correlation = correlation, composites = composites,
+      conditional_x = conditional_x, fixed_x = fixed_x,
       parameterization = parameterization,
       auto_fix_first = auto_fix_first, auto_fix_single = auto_fix_single,
       auto_var = auto_var, auto_cov_lv_x = auto_cov_lv_x,
       auto_cov_y = auto_cov_y, auto_th = auto_th,
       auto_delta = auto_delta, auto_efa = auto_efa,
-      var_table = var_table, group_equal = group.equal,
-      group_w_free = group.w.free,
+      var_table = var_table, group_equal = group_equal,
+      group_w_free = group_w_free,
       ngroups = ngroups, nthresholds = nthresholds
     )
   }
@@ -486,7 +471,7 @@ lav_model_partable  <- function(
   multilevel <- FALSE
   nlevels <- 1L
   if (!is.null(tmp_list$level)) {
-    nlevels <- lav_partable_nlevels(tmp_list)
+    nlevels <- lav_pt_nlevels(tmp_list)
     if (nlevels > 1L) {
       multilevel <- TRUE
     }
@@ -494,8 +479,8 @@ lav_model_partable  <- function(
   if (multilevel && any(tmp_list$op == "~1")) {
     # fix ov intercepts for all within ov that also appear at level 2
     # FIXME: not tested with > 2 levels
-    ov_names <- lav_partable_vnames(tmp_list, "ov") ## all names
-    level_values <- lav_partable_level_values(tmp_list)
+    ov_names <- lav_pt_vnames(tmp_list, "ov") ## all names
+    level_values <- lav_pt_level_values(tmp_list)
     other_names <- tmp_list$lhs[tmp_list$op == "~1" &
       tmp_list$level %in% level_values[-1L] &
       tmp_list$lhs %in% ov_names]
@@ -509,7 +494,7 @@ lav_model_partable  <- function(
   }
   if (multilevel && any(tmp_list$op == "|")) {
     # fix ALL thresholds at level 1
-    level_values <- lav_partable_level_values(tmp_list)
+    level_values <- lav_pt_level_values(tmp_list)
     th_idx <- which(tmp_list$op == "|" &
       tmp_list$level %in% level_values[1L])
     tmp_list$free[th_idx] <- 0L
@@ -575,7 +560,7 @@ lav_model_partable  <- function(
         #   (as this is a break from < 0.6-6)
         if (length(tmp_mod_label) == 1L) {
           tmp_mod_label <- rep(tmp_mod_label, ngroups)
-          if (is.null(group.equal) || length(group.equal) == 0L) {
+          if (is.null(group_equal) || length(group_equal) == 0L) {
             warn_about_single_label <- TRUE
           }
         }
@@ -737,11 +722,11 @@ lav_model_partable  <- function(
   } else {
     blocks <- "group"
   }
-  label <- lav_partable_labels(
+  label <- lav_pt_labels(
     partable = tmp_list,
     blocks = blocks,
-    group.equal = group.equal,
-    group.partial = group.partial
+    group_equal = group_equal,
+    group_partial = group_partial
   )
 
   if (lav_debug()) {
@@ -759,10 +744,10 @@ lav_model_partable  <- function(
   #       are constrained to be equal to the factor-loadings of the first
   #       set, no further constraints are needed
   if (auto_efa && !is.null(tmp_list$efa)) {
-    tmp_list <- lav_partable_efa_constraints(
+    tmp_list <- lav_pt_efa_con(
       list_1 = tmp_list,
-      orthogonal_efa = orthogonal.efa,
-      group_equal = group.equal
+      orthogonal_efa = orthogonal_efa,
+      group_equal = group_equal
     )
   } # auto_efa
 
@@ -960,7 +945,7 @@ lav_model_partable  <- function(
   if (any(c("loadings", "intercepts") %in% effect_coding)) {
     tmp <- list()
     # for each block
-    nblocks <- lav_partable_nblocks(tmp_list)
+    nblocks <- lav_pt_nblocks(tmp_list)
     for (b in seq_len(nblocks)) {
 
       # which group?
@@ -981,7 +966,7 @@ lav_model_partable  <- function(
           tmp_list$lhs == lv]
 
         if ("loadings" %in% effect_coding &&
-            (!"loadings" %in% group.equal || this_group == 1L)) {
+            (!"loadings" %in% group_equal || this_group == 1L)) {
           # factor loadings indicators of this lv
           loadings_idx <- which(tmp_list$op == "=~" &
             tmp_list$block == b &
@@ -1028,7 +1013,7 @@ lav_model_partable  <- function(
           nlevs <- table(tmp_list$lhs[thresholds_idx]) + 1
           kmax <- max(nlevs)
 
-          if (!"thresholds" %in% group.equal || this_group == 1L) {
+          if (!"thresholds" %in% group_equal || this_group == 1L) {
             # all free?
             if (length(thresholds_idx) > 0L && all(tmp_list$free[thresholds_idx] > 0L)) {
               for (ind in ind_names) {
@@ -1086,7 +1071,7 @@ lav_model_partable  <- function(
         } # thresholds
 
         if ("intercepts" %in% effect_coding &&
-            (!"intercepts" %in% group.equal || this_group == 1L)) {
+            (!"intercepts" %in% group_equal || this_group == 1L)) {
           # intercepts for indicators of this lv
           intercepts_idx <- which(tmp_list$op == "~1" &
             tmp_list$block == b &
@@ -1127,7 +1112,7 @@ lav_model_partable  <- function(
             }
           }
         } else if ("intercepts" %in% effect_coding &&
-                   "intercepts" %in% group.equal &&
+                   "intercepts" %in% group_equal &&
                    this_group > 1L) {
           ## add equality constraints of the newly-freed intercepts
           intercepts_idx <- which(tmp_list$op == "~1" &
@@ -1148,24 +1133,24 @@ lav_model_partable  <- function(
       } # lv
     } # blocks
 
-    tmp_list <- lav_partable_merge(tmp_list, tmp)
+    tmp_list <- lav_pt_merge(tmp_list, tmp)
   }
 
   # marker.int.zero
-  if (meanstructure && marker.int.zero) {
+  if (meanstructure && marker_int_zero) {
     # for each block
-    nblocks <- lav_partable_nblocks(tmp_list)
+    nblocks <- lav_pt_nblocks(tmp_list)
     for (b in seq_len(nblocks)) {
       # lv's for this block/set
-      lv_names <- lav_partable_vnames(tmp_list,
+      lv_names <- lav_pt_vnames(tmp_list,
         type = "lv.regular",
         block = b
       )
-      lv_marker <- lav_partable_vnames(tmp_list,
+      lv_marker <- lav_pt_vnames(tmp_list,
         type = "lv.marker",
         block = b
       )
-      ov_num <- lav_partable_vnames(tmp_list,
+      ov_num <- lav_pt_vnames(tmp_list,
         type = "ov.num",
         block = b
       )
@@ -1204,7 +1189,7 @@ lav_model_partable  <- function(
     } else {
       lv_names <- unique(tmp_list$lhs[tmp_list$op == "=~"])
     }
-    group_values <- lav_partable_group_values(tmp_list)
+    group_values <- lav_pt_group_values(tmp_list)
 
     for (lv in lv_names) {
       # factor variances
@@ -1250,7 +1235,7 @@ lav_model_partable  <- function(
       }
     } # lv
 
-    tmp_list <- lav_partable_merge(tmp_list, tmp)
+    tmp_list <- lav_pt_merge(tmp_list, tmp)
   }
 
   # mg.lv.efa.variances
@@ -1264,7 +1249,7 @@ lav_model_partable  <- function(
     } else {
       lv_names <- character(0L)
     }
-    group_values <- lav_partable_group_values(tmp_list)
+    group_values <- lav_pt_group_values(tmp_list)
 
     for (lv in lv_names) {
       # factor variances
@@ -1310,7 +1295,7 @@ lav_model_partable  <- function(
       }
     } # lv
 
-    tmp_list <- lav_partable_merge(tmp_list, tmp)
+    tmp_list <- lav_pt_merge(tmp_list, tmp)
   }
 
 
@@ -1340,14 +1325,55 @@ lav_model_partable  <- function(
   }
 
   # data.frame?
-  if (as.data.frame.) {
+  if (as_data_frame) {
     tmp_list <- as.data.frame(tmp_list, stringsAsFactors = FALSE)
     attr(tmp_list, "ovda") <- ov_names_data
   } else {
-    tmp_list <- lav_partable_set_cache(tmp_list) # add cached "pta" data
+    tmp_list <- lav_pt_set_cache(tmp_list) # add cached "pta" data
   }
 
   tmp_list
 }
-lavParTable <- lav_model_partable   # synonym #nolint
-lavaanify <- lav_model_partable     # synonym
+lavParTable <- lavaanify <- function(              # synonym # nolint start
+                               model = NULL,
+                               meanstructure = FALSE,
+                               int.ov.free = FALSE,
+                               int.lv.free = FALSE,
+                               marker.int.zero = FALSE,
+                               orthogonal = FALSE,
+                               orthogonal.y = FALSE,
+                               orthogonal.x = FALSE,
+                               orthogonal.efa = FALSE,
+                               std.lv = FALSE,
+                               correlation = FALSE,
+                               composites = TRUE,
+                               effect.coding = "",
+                               conditional.x = FALSE,
+                               fixed.x = FALSE,
+                               parameterization = "delta",
+                               constraints = NULL,
+                               ceq.simple = FALSE,
+                               auto = FALSE,
+                               model.type = "sem",
+                               auto.fix.first = FALSE,
+                               auto.fix.single = FALSE,
+                               auto.var = FALSE,
+                               auto.cov.lv.x = FALSE,
+                               auto.cov.y = FALSE,
+                               auto.th = FALSE,
+                               auto.delta = FALSE,
+                               auto.efa = FALSE,
+                               varTable = NULL,
+                               ngroups = 1L,
+                               nthresholds = NULL,
+                               group.equal = NULL,
+                               group.partial = NULL,
+                               group.w.free = FALSE,
+                               debug = FALSE,
+                               warn = TRUE,
+                               as.data.frame. = TRUE) {    # nolint end
+  sc <- sys.call()
+  names(sc) <- lav_snake_case(names(sc))
+  sc[[1L]] <- quote(lavaan:::lav_model_pt)
+  eval(sc, parent.frame())
+}

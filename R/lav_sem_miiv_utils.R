@@ -30,7 +30,7 @@ lav_sem_miiv_utils_jacb_uls <- function(sample_cov = NULL, delta2 = NULL) {
 
   # vech
   w <- rep(1.0, pstar)
-  w[lav_matrix_diagh_idx(nvar)] <- 0.5
+  w[lav_mat_diagh_idx(nvar)] <- 0.5
 
   q_cov <- w * jac_cov
   a <- crossprod(jac_cov, q_cov)
@@ -54,11 +54,11 @@ lav_sem_miiv_utils_jacb_gls <- function(sample_cov = NULL, delta2 = NULL,
                                         theta2 = NULL) {
   nvar  <- nrow(sample_cov)
   pstar <- nvar * (nvar + 1L) / 2L
-  s_vech <- lav_matrix_vech(sample_cov)
+  s_vech <- lav_mat_vech(sample_cov)
 
   # vech weights
   w <- rep(1.0, pstar)
-  w[lav_matrix_diagh_idx(nvar)] <- 0.5
+  w[lav_mat_diagh_idx(nvar)] <- 0.5
 
   # only covariance block
   meanstructure_flag <- FALSE
@@ -75,9 +75,9 @@ lav_sem_miiv_utils_jacb_gls <- function(sample_cov = NULL, delta2 = NULL,
   # equivalent to (1/2) W2 %*% delta2
   q_cov <- matrix(0.0, pstar, nc)
   for (j in seq_len(nc)) {
-    v_j <- lav_matrix_vech_reverse(delta2[, j])
+    v_j <- lav_mat_vech_rev(delta2[, j])
     si_vj <- si %*% v_j
-    q_cov[, j] <- w * lav_matrix_vech(si_vj %*% si)
+    q_cov[, j] <- w * lav_mat_vech(si_vj %*% si)
   }
 
   # M_half = (1/2) M = t(delta2) %*% q_cov
@@ -92,16 +92,16 @@ lav_sem_miiv_utils_jacb_gls <- function(sample_cov = NULL, delta2 = NULL,
   }
 
   # error term and GLS correction q_mat = Si %*% e_mat %*% Si
-  e_mat <- lav_matrix_vech_reverse(s_vech - delta2 %*% theta2)
+  e_mat <- lav_mat_vech_rev(s_vech - delta2 %*% theta2)
   q_mat <- si %*% e_mat %*% si
 
   # correction_cov[,j] = w * vech(Tj + t(Tj)),  Tj = Si %*% Vj %*% q_mat
   # equivalent to (1/2) correction %*% delta2
   correction_cov <- matrix(0.0, pstar, nc)
   for (j in seq_len(nc)) {
-    v_j              <- lav_matrix_vech_reverse(delta2[, j])
+    v_j              <- lav_mat_vech_rev(delta2[, j])
     t_j              <- si %*% v_j %*% q_mat
-    correction_cov[, j] <- w * lav_matrix_vech(t_j + t(t_j))
+    correction_cov[, j] <- w * lav_mat_vech(t_j + t(t_j))
   }
 
   # out = M^{-1} %*% t(delta2) %*% (W2 - correction)
@@ -124,11 +124,11 @@ lav_sem_miiv_utils_jacb_2rls <- function(sample_cov = NULL, delta2 = NULL,
 
   nvar  <- nrow(sample_cov)
   pstar <- nvar * (nvar + 1L) / 2L
-  s_vech <- lav_matrix_vech(sample_cov)
+  s_vech <- lav_mat_vech(sample_cov)
 
   # vech weights: 1 for off-diagonal positions, 0.5 for diagonal positions
   w <- rep(1.0, pstar)
-  w[lav_matrix_diagh_idx(nvar)] <- 0.5
+  w[lav_mat_diagh_idx(nvar)] <- 0.5
 
   # only covariance block
   meanstructure_flag <- FALSE
@@ -146,7 +146,7 @@ lav_sem_miiv_utils_jacb_2rls <- function(sample_cov = NULL, delta2 = NULL,
     backsolve(r_uls, forwardsolve(t(r_uls), drop(crossprod(q_uls, s_vech))))
 
   # sigma to be used for GLS estimate
-  sigma <- lav_matrix_vech_reverse(delta2 %*% theta_uls)
+  sigma <- lav_mat_vech_rev(delta2 %*% theta_uls)
   c_si <- chol(sigma)
   sigma_inv <- chol2inv(c_si)
 
@@ -154,8 +154,8 @@ lav_sem_miiv_utils_jacb_2rls <- function(sample_cov = NULL, delta2 = NULL,
   # q_cov[,j] = w * vech(Si Vj Si)  =  (1/2) w2 delta2[,j]
   q_cov <- matrix(0.0, pstar, nc)
   for (j in seq_len(nc)) {
-    v_j <- lav_matrix_vech_reverse(delta2[, j])
-    q_cov[, j] <- w * lav_matrix_vech(sigma_inv %*% v_j %*% sigma_inv)
+    v_j <- lav_mat_vech_rev(delta2[, j])
+    q_cov[, j] <- w * lav_mat_vech(sigma_inv %*% v_j %*% sigma_inv)
   }
   m_sigma_half <- crossprod(delta2, q_cov)
   r_sigma <- chol(m_sigma_half)
@@ -167,14 +167,14 @@ lav_sem_miiv_utils_jacb_2rls <- function(sample_cov = NULL, delta2 = NULL,
   # step 3: correction matrix (as column operations, no c_mat formed)
   # c_cov[,j] = w * vech(Tj + t(Tj)),  Tj = Si Vj q_mat
   #           = (1/2) c_mat delta2[,j]
-  e_mat <- lav_matrix_vech_reverse(s_vech - delta2 %*% theta2)
+  e_mat <- lav_mat_vech_rev(s_vech - delta2 %*% theta2)
   q_mat <- sigma_inv %*% e_mat %*% sigma_inv
 
   c_cov <- matrix(0.0, pstar, nc)
   for (j in seq_len(nc)) {
-    v_j <- lav_matrix_vech_reverse(delta2[, j])
+    v_j <- lav_mat_vech_rev(delta2[, j])
     t_j <- sigma_inv %*% v_j %*% q_mat
-    c_cov[, j] <- w * lav_matrix_vech(t_j + t(t_j))
+    c_cov[, j] <- w * lav_mat_vech(t_j + t(t_j))
   }
 
   # step 4: Jacobian
@@ -201,11 +201,11 @@ lav_sem_miiv_utils_jacb_rls <- function(sample_cov = NULL, delta2 = NULL,
                                         theta2 = NULL) {
   nvar  <- nrow(sample_cov)
   pstar <- nvar * (nvar + 1L) / 2L
-  s_vech <- lav_matrix_vech(sample_cov)
+  s_vech <- lav_mat_vech(sample_cov)
 
   # vech weights: 0.5 for diagonal positions, 1 for off-diagonal positions
   w <- rep(1.0, pstar)
-  w[lav_matrix_diagh_idx(nvar)] <- 0.5
+  w[lav_mat_diagh_idx(nvar)] <- 0.5
 
   # only covariance block
   meanstructure_flag <- FALSE
@@ -219,16 +219,16 @@ lav_sem_miiv_utils_jacb_rls <- function(sample_cov = NULL, delta2 = NULL,
   # Pre-compute vech_reverse of each column of delta2 once; used in the
   # final block (and in the loop when theta2 is not supplied).
   v_list <- vector("list", nc)
-  for (j in seq_len(nc)) v_list[[j]] <- lav_matrix_vech_reverse(delta2[, j])
+  for (j in seq_len(nc)) v_list[[j]] <- lav_mat_vech_rev(delta2[, j])
 
   q_cov <- matrix(0.0, pstar, nc)
 
   # using final theta2 estimate
-  new_sigma <- lav_matrix_vech_reverse(delta2 %*% theta2)
+  new_sigma <- lav_mat_vech_rev(delta2 %*% theta2)
   c_si       <- chol(new_sigma)
   sigma_inv <- chol2inv(c_si)
   for (j in seq_len(nc)) {
-    q_cov[, j] <- w * lav_matrix_vech(sigma_inv %*% v_list[[j]] %*% sigma_inv)
+    q_cov[, j] <- w * lav_mat_vech(sigma_inv %*% v_list[[j]] %*% sigma_inv)
   }
   m_mat <- crossprod(delta2, q_cov)
   r_mat <- chol(m_mat)
@@ -236,12 +236,12 @@ lav_sem_miiv_utils_jacb_rls <- function(sample_cov = NULL, delta2 = NULL,
   # correction columns: c_cov[,j] = w * vech(Tj + t(Tj)),  Tj = Si Vj q_mat
   # where q_mat = Si e_mat Si.
   # JW_theta2 = -c_cov  (dW_e2_from_v(delta2[,j]) = -c_cov[,j], derived above)
-  e_mat <- lav_matrix_vech_reverse(s_vech - delta2 %*% theta2)
+  e_mat <- lav_mat_vech_rev(s_vech - delta2 %*% theta2)
   q_mat <- sigma_inv %*% e_mat %*% sigma_inv
   c_cov <- matrix(0.0, pstar, nc)
   for (j in seq_len(nc)) {
     t_j <- sigma_inv %*% v_list[[j]] %*% q_mat
-    c_cov[, j] <- w * lav_matrix_vech(t_j + t(t_j))
+    c_cov[, j] <- w * lav_mat_vech(t_j + t(t_j))
   }
 
   # Jacobian:
@@ -292,7 +292,7 @@ lav_sem_miiv_utils_jaca_uls_gls <- function(lavmodel = NULL,  # nolint
     # s_vech
     sample_cov <- lavh1$implied$cov[[b]]
     nvar <- nrow(sample_cov)
-    s_vech <- lav_matrix_vech(sample_cov)
+    s_vech <- lav_mat_vech(sample_cov)
 
     # delta2
     delta2 <- delta_block[[b]][, free_undirected_idx, drop = FALSE]
@@ -306,7 +306,7 @@ lav_sem_miiv_utils_jaca_uls_gls <- function(lavmodel = NULL,  # nolint
     } else {
       s_inv <- diag(1, nrow = nrow(sample_cov))
     }
-    w2_22 <- 0.5 * lav_matrix_duplication_pre_post(s_inv %x% s_inv)
+    w2_22 <- 0.5 * lav_mat_dup_pre_post(s_inv %x% s_inv)
     w2 <- w2_22
 
     # MLIST
@@ -355,7 +355,7 @@ lav_sem_miiv_utils_jaca_uls_gls <- function(lavmodel = NULL,  # nolint
             i = d_row, j = d_col, k = un_row, l = un_col
           )
         }
-        d_deltak[, i] <- lav_matrix_vech(tmp)
+        d_deltak[, i] <- lav_mat_vech(tmp)
       }
       jac_a[, k] <-
         m_inv %*% (t(d_deltak) %*% w2e - delta2tw2 %*% d_deltak %*% theta2)
@@ -393,7 +393,7 @@ lav_sem_miiv_utils_jaca_2rls <- function(lavmodel = NULL,
     # s_vech
     sample_cov <- lavh1$implied$cov[[b]]
     nvar <- nrow(sample_cov)
-    s_vech <- lav_matrix_vech(sample_cov)
+    s_vech <- lav_mat_vech(sample_cov)
 
     # delta2
     delta2 <- delta_block[[b]][, free_undirected_idx, drop = FALSE]
@@ -402,7 +402,7 @@ lav_sem_miiv_utils_jaca_2rls <- function(lavmodel = NULL,
     }
     # w2
     s_inv <- diag(1, nrow = nrow(sample_cov))
-    w2_uls <- 0.5 * lav_matrix_duplication_pre_post(s_inv %x% s_inv)
+    w2_uls <- 0.5 * lav_mat_dup_pre_post(s_inv %x% s_inv)
 
     # MLIST
     mm_in_group <- seq_len(lavmodel@nmat[b]) + cumsum(c(0, lavmodel@nmat))[b]
@@ -417,14 +417,14 @@ lav_sem_miiv_utils_jaca_2rls <- function(lavmodel = NULL,
     theta_uls <- drop(m_uls_inv %*% t(delta2) %*% w2_uls %*% s_vech)
 
     # step 2
-    new_sigma <- lav_matrix_vech_reverse(delta2 %*% theta_uls)
+    new_sigma <- lav_mat_vech_rev(delta2 %*% theta_uls)
     sigma_inv <- solve(new_sigma)
-    w2 <- 0.5 * lav_matrix_duplication_pre_post(sigma_inv %x% sigma_inv)
+    w2 <- 0.5 * lav_mat_dup_pre_post(sigma_inv %x% sigma_inv)
     m_mat <- t(delta2) %*% w2 %*% delta2
     m_mat_inv <- solve(m_mat)
     theta2 <- drop(m_mat_inv %*% t(delta2) %*% w2 %*% s_vech)
     e2 <- s_vech - delta2 %*% theta2
-    e_mat <- lav_matrix_vech_reverse(e2)
+    e_mat <- lav_mat_vech_rev(e2)
 
     # pre-compute
     minv_delta2t <- m_mat_inv %*% t(delta2)
@@ -464,12 +464,12 @@ lav_sem_miiv_utils_jaca_2rls <- function(lavmodel = NULL,
             i = d_row, j = d_col, k = un_row, l = un_col
           )
         }
-        d_deltak[, i] <- lav_matrix_vech(tmp)
+        d_deltak[, i] <- lav_mat_vech(tmp)
       }
 
       # d vech(Sigma)/d theta1[k]: product rule on unvech(Delta2 theta_uls)
       v_k <- d_deltak %*% theta_uls + delta2 %*% jac_uls[, k]
-      d_sigma_k <- lav_matrix_vech_reverse(v_k)
+      d_sigma_k <- lav_mat_vech_rev(v_k)
 
       # d_sigma_inv = -sigma.inv dSigma_k sigma.inv
       d_sigma_inv <- -sigma_inv %*% d_sigma_k %*% sigma_inv
@@ -479,7 +479,7 @@ lav_sem_miiv_utils_jaca_2rls <- function(lavmodel = NULL,
       # D^T vec(sigma_inv e_mat dsigma_inv_k + dsigma_invk e_mat sigma_inv)
       sym_part <- sigma_inv_e %*% d_sigma_inv + d_sigma_inv %*% t(sigma_inv_e)
       dw2_e2 <-
-        0.5 * drop(lav_matrix_duplication_pre(as.matrix(as.vector(sym_part))))
+        0.5 * drop(lav_mat_dup_pre(as.matrix(as.vector(sym_part))))
 
       # term 1: direct delta2 variation in final WLS
       term1 <-
@@ -516,7 +516,7 @@ lav_sem_miiv_utils_jaca_rls <- function(lavmodel = NULL,
     # s_vech
     sample_cov <- lavh1$implied$cov[[b]]
     nvar <- nrow(sample_cov)
-    s_vech <- lav_matrix_vech(sample_cov)
+    s_vech <- lav_mat_vech(sample_cov)
 
     # delta2
     delta2 <- delta_block[[b]][, free_undirected_idx, drop = FALSE]
@@ -526,7 +526,7 @@ lav_sem_miiv_utils_jaca_rls <- function(lavmodel = NULL,
 
     # w2
     s_inv <- diag(1, nrow = nrow(sample_cov))
-    w2_uls <- 0.5 * lav_matrix_duplication_pre_post(s_inv %x% s_inv)
+    w2_uls <- 0.5 * lav_mat_dup_pre_post(s_inv %x% s_inv)
 
     # MLIST
     mm_in_group <- seq_len(lavmodel@nmat[b]) + cumsum(c(0, lavmodel@nmat))[b]
@@ -544,22 +544,22 @@ lav_sem_miiv_utils_jaca_rls <- function(lavmodel = NULL,
     theta2 <- theta_uls
     for (i in seq_len(200)) {
       old_x <- theta2
-      new_sigma <- lav_matrix_vech_reverse(delta2 %*% theta2)
+      new_sigma <- lav_mat_vech_rev(delta2 %*% theta2)
       sigma_inv <- solve(new_sigma)
-      w2 <- 0.5 * lav_matrix_duplication_pre_post(sigma_inv %x% sigma_inv)
+      w2 <- 0.5 * lav_mat_dup_pre_post(sigma_inv %x% sigma_inv)
       m_mat <- t(delta2) %*% w2 %*% delta2
       theta2 <- drop(solve(m_mat, t(delta2) %*% w2 %*% s_vech))
       if (sum((old_x - theta2)^2) < 1e-12 * (1 + sum(theta2^2))) break
     }
 
     # final quantities
-    new_sigma <- lav_matrix_vech_reverse(delta2 %*% theta2)
+    new_sigma <- lav_mat_vech_rev(delta2 %*% theta2)
     sigma_inv <- solve(new_sigma)
-    w2 <- 0.5 * lav_matrix_duplication_pre_post(sigma_inv %x% sigma_inv)
+    w2 <- 0.5 * lav_mat_dup_pre_post(sigma_inv %x% sigma_inv)
     m_mat <- t(delta2) %*% w2 %*% delta2
     m_mat_inv <- solve(m_mat)
     e2 <- s_vech - delta2 %*% theta2
-    e_mat <- lav_matrix_vech_reverse(e2)
+    e_mat <- lav_mat_vech_rev(e2)
     sigma_inv_e <- sigma_inv %*% e_mat
 
     minv_delta2t <- m_mat_inv %*% t(delta2)
@@ -568,11 +568,11 @@ lav_sem_miiv_utils_jaca_rls <- function(lavmodel = NULL,
 
     # helper: compute (dW)e2 given d vech(Sigma) as a vector v
     d_w_e2_from_v <- function(v) {
-      d_sigma <- lav_matrix_vech_reverse(v)
+      d_sigma <- lav_mat_vech_rev(v)
       d_sigma_inv <- -sigma_inv %*% d_sigma %*% sigma_inv
       sym_part <- sigma_inv_e %*% d_sigma_inv + d_sigma_inv %*% t(sigma_inv_e)
       dw2_e2 <-
-        0.5 * drop(lav_matrix_duplication_pre(as.matrix(as.vector(sym_part))))
+        0.5 * drop(lav_mat_dup_pre(as.matrix(as.vector(sym_part))))
       dw2_e2
     }
 
@@ -617,7 +617,7 @@ lav_sem_miiv_utils_jaca_rls <- function(lavmodel = NULL,
             i = d_row, j = d_col, k = un_row, l = un_col
           )
         }
-        d_deltak[, i] <- lav_matrix_vech(tmp)
+        d_deltak[, i] <- lav_mat_vech(tmp)
       }
 
       # term 1: direct delta2 variation in final WLS

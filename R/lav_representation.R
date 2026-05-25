@@ -4,7 +4,7 @@ lavMatrixRepresentation <- function(partable, representation = "LISREL", # nolin
                                     add.attributes = FALSE,
                                     as.data.frame. = TRUE) {             # nolint end
   # check parameter table
-  partable <- lav_partable_complete(partable)
+  partable <- lav_pt_complete(partable)
 
   # get model matrices
   if (representation == "LISREL") {

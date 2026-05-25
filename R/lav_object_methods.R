@@ -153,7 +153,7 @@ setMethod(
     # check object
     object <- lav_object_check_version(object)
 
-    lav_object_inspect_coef(
+    lav_inspect_coef(
       object = object, type = type,
       add_labels = labels, add_class = TRUE
     )
@@ -246,7 +246,7 @@ standardizedSolution <-                                      # nolint start
 
     if (object@Options$se != "none" && se) {
       # add 'se' for standardized parameters
-      tmp_vcov <- try(lav_object_inspect_vcov(object,
+      tmp_vcov <- try(lav_inspect_vcov(object,
         standardized = TRUE,
         type = type, free_only = FALSE,
         add_labels = FALSE,
@@ -304,7 +304,7 @@ standardizedSolution <-                                      # nolint start
 
       # Monte Carlo: asymmetric percentile-based CI for standardized
       # defined parameters (Preacher & Selig 2012)
-      mc_coef <- lav_object_inspect_mc(object)
+      mc_coef <- lav_inspect_mc(object)
       def_idx <- which(tmp_list$op == ":=")
       if (!is.null(mc_coef) && length(def_idx) > 0L) {
         if (type == "std.lv") {
@@ -545,7 +545,7 @@ lavParameterEstimates <- function(object,                      # nolint start
 
     # add se, zstat, pvalue
     if (se && object@Options$se != "none") {
-      tmp_list$se <- lav_object_inspect_se(object)
+      tmp_list$se <- lav_inspect_se(object)
       # handle tiny SEs
       tmp_list$se <- ifelse(tmp_list$se < sqrt(.Machine$double.eps),
         0, tmp_list$se
@@ -580,7 +580,7 @@ lavParameterEstimates <- function(object,                      # nolint start
     if (object@Options$se == "bootstrap" ||
       "bootstrap" %in% object@Options$test ||
       "bollen.stine" %in% object@Options$test) {
-      tmp_boot <- lav_object_inspect_boot(object)
+      tmp_boot <- lav_inspect_boot(object)
       bootstrap_seed <- attr(tmp_boot, "seed") # for bca
       error_idx <- attr(tmp_boot, "error.idx")
       if (length(error_idx) > 0L) {
@@ -602,7 +602,7 @@ lavParameterEstimates <- function(object,                      # nolint start
         ci <- tmp_list$est + tmp_list$se %o% fac
         # Monte Carlo: replace CI for defined parameters with
         # asymmetric percentile-based bounds (Preacher & Selig 2012)
-        mc_coef <- lav_object_inspect_mc(object)
+        mc_coef <- lav_inspect_mc(object)
         def_idx <- which(object@ParTable$op == ":=")
         if (!is.null(mc_coef) && length(def_idx) > 0L) {
           mc_def <- apply(mc_coef, 1L, object@Model@def.function)
@@ -938,7 +938,7 @@ lavParameterEstimates <- function(object,                      # nolint start
         lav_msg_warn(
           gettext("rsquare = TRUE, but there are no dependent variables"))
       } else {
-        if (lav_partable_nlevels(tmp_list) == 1L) {
+        if (lav_pt_nlevels(tmp_list) == 1L) {
           block <- rep(seq_along(r2), sapply(r2, length))
           first_block_idx <- which(!duplicated(tmp_list$block) &
             tmp_list$block > 0L)
@@ -981,7 +981,7 @@ lavParameterEstimates <- function(object,                      # nolint start
           step1_idx <- which(r2$lhs %in% ov_ind)
           r2$step[step1_idx] <- 1L
         }
-        tmp_list <- lav_partable_merge(pt1 = tmp_list, pt2 = r2, warn = FALSE)
+        tmp_list <- lav_pt_merge(pt1 = tmp_list, pt2 = r2, warn = FALSE)
       }
     }
 
@@ -1254,7 +1254,7 @@ setMethod(
       return(lavPredict(object, type = "ov", label = labels))
     }
 
-    lav_object_inspect_implied(object,
+    lav_inspect_implied(object,
       add_labels = labels, add_class = TRUE,
       drop_list_single_group = TRUE
     )
@@ -1306,7 +1306,7 @@ setMethod(
     ## verify there are any user-defined parameters
     #FIXME? smarter to check @ParTable for $op == ":="?
     if (is.null(formals(object@Model@def.function))) {
-      type <- "free" # avoids error in lav_object_inspect_vcov_def()
+      type <- "free" # avoids error in lav_inspect_vcov_def()
     }
 
     if (!is.null(standardized)) {
@@ -1321,7 +1321,7 @@ setMethod(
           "argument \"remove.duplicated\" not supported if type = \"user\""
         ))
       }
-      tmp_varcov <- lav_object_inspect_vcov_def(object,
+      tmp_varcov <- lav_inspect_vcov_def(object,
         joint = TRUE,
         standardized = !is.null(standardized),
         type = ifelse(is.null(standardized), "std.all", standardized),
@@ -1329,7 +1329,7 @@ setMethod(
         add_class = TRUE
       )
     } else if (type == "free") {
-      tmp_varcov <- lav_object_inspect_vcov(object,
+      tmp_varcov <- lav_inspect_vcov(object,
         standardized = !is.null(standardized),
         type = ifelse(is.null(standardized), "std.all", standardized),
         free_only = free.only,
@@ -1473,7 +1473,7 @@ setMethod(
     if (!(mode(add) %in% c("list", "character"))) {
       lav_msg_stop(
         gettext("'add' argument must be model syntax or parameter table.
-                See ?lav_model_partable help page.")
+                See ?lav_model_pt help page.")
       )
     }
     tmp_pt <- lav_object_extended(newfit, add = add)@ParTable

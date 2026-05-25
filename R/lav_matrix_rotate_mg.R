@@ -5,7 +5,7 @@
 # - rstarts only affects the 'initial' rotation
 
 # main function to rotate a list of matrices 'Alist'
-lav_matrix_rotate_mg <- function(a_list = NULL, # original matrices
+lav_mat_rotate_mg <- function(a_list = NULL, # original matrices
                                  orthogonal = FALSE, # default is oblique
                                  method = "geomin", # default rot method
                                  method_args = list(
@@ -87,7 +87,7 @@ lav_matrix_rotate_mg <- function(a_list = NULL, # original matrices
         ))
       }
       # rotation matrix?
-      if (!lav_matrix_rotate_check(init_rot, orthogonal = orthogonal)) {
+      if (!lav_mat_rotate_check(init_rot, orthogonal = orthogonal)) {
         lav_msg_stop(gettext("init.ROT does not look like a rotation matrix"))
       }
     } # group
@@ -98,7 +98,7 @@ lav_matrix_rotate_mg <- function(a_list = NULL, # original matrices
     "cf-quartimax", "cf-varimax", "cf-equamax",
     "cf-parsimax", "cf-facparsim"
   )) {
-    method_fname <- "lav_matrix_rotate_cf"
+    method_fname <- "lav_mat_rotate_cf"
     method_args$cf_gamma <- switch(method,
       "cf-quartimax" = 0,
       "cf-varimax"   = 1 / p,
@@ -107,13 +107,13 @@ lav_matrix_rotate_mg <- function(a_list = NULL, # original matrices
       "cf-facparsim" = 1
     )
   } else if (method %in% c("bi-quartimin", "biquartimin")) {
-    method_fname <- "lav_matrix_rotate_biquartimin"
+    method_fname <- "lav_mat_rotate_biquartimin"
   } else if (method %in% c("bi-geomin", "bigeomin")) {
-    method_fname <- "lav_matrix_rotate_bigeomin"
+    method_fname <- "lav_mat_rotate_bigeomin"
   } else if (method == "target.strict") {
-    method_fname <- "lav_matrix_rotate_target"
+    method_fname <- "lav_mat_rotate_target"
   } else {
-    method_fname <- paste("lav_matrix_rotate_", method, sep = "")
+    method_fname <- paste("lav_mat_rotate_", method, sep = "")
   }
 
   # check if rotation method exists
@@ -149,10 +149,10 @@ lav_matrix_rotate_mg <- function(a_list = NULL, # original matrices
       lav_msg_stop(gettext("col(target_mask) != ncol(A)"))
     }
   }
-  # we keep this here, so lav_matrix_rotate() can be used independently
+  # we keep this here, so lav_mat_rotate() can be used independently
   if (method == "target.strict" && anyNA(target)) {
     method <- "pst"
-    method_fname <- "lav_matrix_rotate_pst"
+    method_fname <- "lav_mat_rotate_pst"
     target_mask <- matrix(1, nrow = nrow(target), ncol = ncol(target))
     target_mask[is.na(target)] <- 0
     method_args$target_mask <- target_mask
@@ -188,7 +188,7 @@ lav_matrix_rotate_mg <- function(a_list = NULL, # original matrices
     if (lav_verbose()) {
       cat("  group = ", g, "\n")
     }
-    res0 <- lav_matrix_rotate(
+    res0 <- lav_mat_rotate(
       a = a_list[[g]],
       orthogonal = orthogonal,
       method = method,
@@ -249,9 +249,9 @@ lav_matrix_rotate_mg <- function(a_list = NULL, # original matrices
   #   if (row_weights == "none") {
   #     weights <- rep(1.0, P)
   #   } else if (row_weights == "kaiser") {
-  #     weights <- lav_matrix_rotate_kaiser_weights(A)
+  #     weights <- lav_mat_rotate_kaiser_weights(A)
   #   } else if (row_weights == "cureton-mulaik") {
-  #     weights <- lav_matrix_rotate_cm_weights(A)
+  #     weights <- lav_mat_rotate_cm_weights(A)
   #   } else {
   #     lav_msg_stop(gettext("row_weights can be none,
   #                    kaiser or cureton-mulaik"))
@@ -265,8 +265,8 @@ lav_matrix_rotate_mg <- function(a_list = NULL, # original matrices
 #  if (rstarts > 0L) {
 #    REP <- lapply(seq_len(rstarts), function(rep) {
 #      # random start (always orthogonal)
-#      # init.ROT <- lav_matrix_rotate_gen(M = M, orthogonal = TRUE)
-#      # init.ROT <- lav_matrix_rotate_gen(M = M, orthogonal = orthogonal)
+#      # init.ROT <- lav_mat_rotate_gen(M = M, orthogonal = TRUE)
+#      # init.ROT <- lav_mat_rotate_gen(M = M, orthogonal = orthogonal)
 #
 #      if (lav_verbose()) {
 #        cat("\n")
@@ -274,7 +274,7 @@ lav_matrix_rotate_mg <- function(a_list = NULL, # original matrices
 #      }
 #
 #      # mg-pairwise + agreement
-#      rotList <- lav_matrix_rotate_pairwise_mg(
+#      rotList <- lav_mat_rotate_pairwise_mg(
 #        Alist = Alist,
 #        orthogonal = orthogonal,
 #        random.ROT = TRUE,
@@ -311,7 +311,7 @@ lav_matrix_rotate_mg <- function(a_list = NULL, # original matrices
     if (lav_verbose()) {
       cat("  mg-pairwise + agreement rotation:\n")
     }
-    rot_list <- lav_matrix_rotate_pairwise_mg(
+    rot_list <- lav_mat_rotate_pairwise_mg(
       a_list = a_list,
       orthogonal = orthogonal,
       random_rot = FALSE,
@@ -388,11 +388,11 @@ lav_matrix_rotate_mg <- function(a_list = NULL, # original matrices
 
 
 # pairwise rotation algorithm with direct line search
-# (see lav_matrix_rotate_pairwise()
+# (see lav_mat_rotate_pairwise()
 #
 # but adapted to handle multiple groups + an agreement criterion
 #
-lav_matrix_rotate_pairwise_mg <- function(a_list = NULL, # original matrices
+lav_mat_rotate_pairwise_mg <- function(a_list = NULL, # original matrices
                                           orthogonal = FALSE,
                                           random_rot = FALSE,
                                           method_fname = NULL, # crit function
@@ -416,7 +416,7 @@ lav_matrix_rotate_pairwise_mg <- function(a_list = NULL, # original matrices
   # random initial rotation?
   if (random_rot) {
     for (g in seq_len(ngroups)) {
-      init_rot <- lav_matrix_rotate_gen(m = m, orthogonal = TRUE)
+      init_rot <- lav_mat_rotate_gen(m = m, orthogonal = TRUE)
       if (orthogonal) {
         lambda_list[[g]] <- a_list[[g]] %*% init_rot
       } else {
@@ -428,7 +428,7 @@ lav_matrix_rotate_pairwise_mg <- function(a_list = NULL, # original matrices
 
   # using the current LAMBDA, evaluate the user-specified
   # rotation criterion; return Q (the criterion) only
-  q_current <- lav_matrix_rotate_mg_agreement(
+  q_current <- lav_mat_rotate_mg_agreement(
     lambda_list = lambda_list, method_fname = method_fname,
     method_args = method_args,
     mg_agreement_method = mg_agreement_method,
@@ -468,7 +468,7 @@ lav_matrix_rotate_pairwise_mg <- function(a_list = NULL, # original matrices
     lambda_list[[g]] <- a %*% rot
 
     # evaluate criterion
-    q_1 <- lav_matrix_rotate_mg_agreement(
+    q_1 <- lav_mat_rotate_mg_agreement(
       lambda_list = lambda_list, method_fname = method_fname,
       method_args = method_args, mg_agreement_method = mg_agreement_method,
       w = mg_agreement_weight, scale = scale
@@ -495,7 +495,7 @@ lav_matrix_rotate_pairwise_mg <- function(a_list = NULL, # original matrices
     lambda_list[[g]] <- a %*% rot
 
     # evaluate criterion
-    q_1 <- lav_matrix_rotate_mg_agreement(
+    q_1 <- lav_mat_rotate_mg_agreement(
       lambda_list = lambda_list, method_fname = method_fname,
       method_args = method_args, mg_agreement_method = mg_agreement_method,
       w = mg_agreement_weight, scale = scale
@@ -575,7 +575,7 @@ lav_matrix_rotate_pairwise_mg <- function(a_list = NULL, # original matrices
     } # ngroups
 
     # check for convergence
-    q_current <- lav_matrix_rotate_mg_agreement(
+    q_current <- lav_mat_rotate_mg_agreement(
       lambda_list = lambda_list, method_fname = method_fname,
       method_args = method_args, mg_agreement_method = mg_agreement_method,
       w = mg_agreement_weight, scale = scale

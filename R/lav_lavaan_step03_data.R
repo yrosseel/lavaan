@@ -1,4 +1,4 @@
-lav_lavaan_step03_data <- function(slot_data = NULL, # nolint
+lav_step03_data <- function(slot_data = NULL,
                                    lavoptions = NULL,
                                    ov_names = NULL,
                                    ov_names_y = NULL,

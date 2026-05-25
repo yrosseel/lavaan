@@ -6,8 +6,8 @@
 lav_optim_noniter <- function(lavmodel = NULL, lavsamplestats = NULL,
                               lavpartable = NULL, lavh1 = NULL,
                               lavdata = NULL, lavoptions = NULL) {
-  lavpta <- lav_partable_attributes(lavpartable)
-  lavpartable <- lav_partable_set_cache(lavpartable, lavpta)
+  lavpta <- lav_pt_attributes(lavpartable)
+  lavpartable <- lav_pt_set_cache(lavpartable, lavpta)
 
   # no support for many things:
   if (lavmodel@ngroups > 1L) {

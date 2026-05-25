@@ -1,4 +1,4 @@
-lav_lavaan_step00_parameters <- function(matchcall = NULL,
+lav_step00_parameters <- function(matchcall = NULL,
                                          syscall = NULL,
                                          dotdotdot = NULL) {
   # 1. resolve a problem where parameter 'cl' is matched to 'cluster'
@@ -79,7 +79,7 @@ lav_lavaan_step00_parameters <- function(matchcall = NULL,
   list(mc = mc, dotdotdot = ddd)
 }
 
-lav_lavaan_step00_checkdata <- function(data = NULL,
+lav_step00_checkdata <- function(data = NULL,
                                         dotdotdot = NULL,
                                         sample_cov = NULL,
                                         sample_nobs = NULL,

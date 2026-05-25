@@ -6,14 +6,12 @@
 
 # YR 18 Jan 2021: use lavoptions
 
-lav_samplestats_from_data <- function(lavdata = NULL,        # nolint start
+lav_samp_from_data <- function(lavdata = NULL,        # nolint start
                                       lavoptions = NULL,
-                                      WLS.V = NULL,
-                                      NACOV = NULL) {        # nolint end
+                                      wls_v = NULL,
+                                      nacov = NULL) {        # nolint end
   # extra info from lavoptions
   stopifnot(!is.null(lavoptions))
-  wls_v <- WLS.V
-  nacov <- NACOV
   missing <- lavoptions$missing
   rescale <- lavoptions$sample.cov.rescale
   estimator <- lavoptions$estimator
@@ -137,13 +135,13 @@ lav_samplestats_from_data <- function(lavdata = NULL,        # nolint start
         wls_v <- list(wls_v)
       } else {
         lav_msg_stop(gettextf(
-          "WLS.V argument should be a list of length %s", ngroups)
+          "wls_v argument should be a list of length %s", ngroups)
         )
       }
     } else {
       if (length(wls_v) != ngroups) {
         lav_msg_stop(gettextf(
-          "WLS.V assumes %1$s groups; data contains %2$s groups",
+          "wls_v assumes %1$s groups; data contains %2$s groups",
           length(wls_v), ngroups))
       }
     }
@@ -403,12 +401,12 @@ lav_samplestats_from_data <- function(lavdata = NULL,        # nolint start
 
       # only for catML
       if (estimator == "catML") {
-        cov_1 <- cov2cor(lav_matrix_symmetric_force_pd(cov[[g]],
+        cov_1 <- cov2cor(lav_mat_sym_force_pd(cov[[g]],
           tol = 1e-04
         ))
         # overwrite
         cov[[g]] <- cov_1
-        out <- lav_samplestats_icov(
+        out <- lav_samp_icov(
           cov_1 = cov_1,
           x_idx = x_idx[[g]],
           ngroups = ngroups, g = g
@@ -419,12 +417,12 @@ lav_samplestats_from_data <- function(lavdata = NULL,        # nolint start
         # the same for res.cov if conditional.x = TRUE
         if (conditional_x) {
           res_cov_1 <-
-            cov2cor(lav_matrix_symmetric_force_pd(res_cov[[g]],
+            cov2cor(lav_mat_sym_force_pd(res_cov[[g]],
               tol = 1e-04
             ))
           # overwrite
           res_cov[[g]] <- res_cov_1
-          out <- lav_samplestats_icov(
+          out <- lav_samp_icov(
             cov_1 = res_cov_1,
             ridge = 1e-05,
             x_idx = x_idx[[g]],
@@ -439,7 +437,7 @@ lav_samplestats_from_data <- function(lavdata = NULL,        # nolint start
     # continuous -- multilevel
     } else if (nlevels > 1L) {
       # level-based sample statistics
-      ylp[[g]] <- lav_samplestats_cluster_patterns(
+      ylp[[g]] <- lav_samp_cl_patterns(
         y = x[[g]],
         lp = lavdata@Lp[[g]],
         conditional_x = lavoptions$conditional.x
@@ -521,7 +519,7 @@ lav_samplestats_from_data <- function(lavdata = NULL,        # nolint start
         if (missing %in% c("ml", "ml.x")) {
           missing_flag <- TRUE
           missing_1[[g]] <-
-            lav_samplestats_missing_patterns(
+            lav_samp_mi_patterns(
               y = x[[g]],
               mp = mp[[g]],
               wt = wt[[g]],
@@ -596,7 +594,7 @@ lav_samplestats_from_data <- function(lavdata = NULL,        # nolint start
         missing == "robust.two.stage") {
         missing_flag <- FALSE # !!! just use sample statistics
         missing_1[[g]] <-
-          lav_samplestats_missing_patterns(
+          lav_samp_mi_patterns(
             y = x[[g]],
             mp = mp[[g]],
             wt = wt[[g]]
@@ -604,7 +602,7 @@ lav_samplestats_from_data <- function(lavdata = NULL,        # nolint start
         current_warn <- lav_warn()
         if (lav_warn(lavoptions$em.h1.warn))
           on.exit(lav_warn(current_warn), TRUE)
-        out <- lav_mvnorm_missing_h1_estimate_moments(
+        out <- lav_mvn_mi_h1_est_moments(
           y = x[[g]],
           wt = wt[[g]],
           mp = mp[[g]], yp = missing_1[[g]],
@@ -626,7 +624,7 @@ lav_samplestats_from_data <- function(lavdata = NULL,        # nolint start
       } else if (missing %in% c("ml", "ml.x")) {
         missing_flag <- TRUE
         missing_1[[g]] <-
-          lav_samplestats_missing_patterns(
+          lav_samp_mi_patterns(
             y = x[[g]],
             mp = mp[[g]],
             wt = wt[[g]]
@@ -638,14 +636,14 @@ lav_samplestats_from_data <- function(lavdata = NULL,        # nolint start
           if (lav_warn(lavoptions$em.h1.warn))
             on.exit(lav_warn(current_warn), TRUE)
           # zero coverage?
-          if (any(lav_matrix_vech(mp[[g]]$coverage, diagonal = FALSE) == 0)) {
-            #out <- lav_mvnorm_missing_h1_estimate_moments_chol(
+          if (any(lav_mat_vech(mp[[g]]$coverage, diagonal = FALSE) == 0)) {
+            #out <- lav_mvn_mi_h1_est_moments_chol(
             #         lavdata = lavdata, lavoptions = lavoptions, group = g)
             #missing.h1.[[g]]$sigma <- out$Sigma
             #missing.h1.[[g]]$mu <- out$Mu
             #missing.h1.[[g]]$h1 <- out$fx
           } else if (!allow_empty_cell) {
-            out <- lav_mvnorm_missing_h1_estimate_moments(
+            out <- lav_mvn_mi_h1_est_moments(
               y = x[[g]],
               wt = wt[[g]],
               mp = mp[[g]], yp = missing_1[[g]],
@@ -743,7 +741,7 @@ lav_samplestats_from_data <- function(lavdata = NULL,        # nolint start
 
       # icov and cov.log.det (but not if missing)
       if (sample_icov && !missing %in% c("ml", "ml.x")) {
-        out <- lav_samplestats_icov(
+        out <- lav_samp_icov(
           cov_1 = cov[[g]], ridge = 1e-05,
           x_idx = x_idx[[g]],
           ngroups = ngroups, g = g
@@ -753,7 +751,7 @@ lav_samplestats_from_data <- function(lavdata = NULL,        # nolint start
 
         # the same for res.cov if conditional.x = TRUE
         if (conditional_x) {
-          out <- lav_samplestats_icov(
+          out <- lav_samp_icov(
             cov_1 = res_cov[[g]],
             ridge = 1e-05,
             x_idx = x_idx[[g]],
@@ -776,7 +774,7 @@ lav_samplestats_from_data <- function(lavdata = NULL,        # nolint start
         tmp_categorical <- categorical
         tmp_meanstructure <- meanstructure
       }
-      wls_obs[[g]] <- lav_samplestats_wls_obs(
+      wls_obs[[g]] <- lav_samp_wls_obs(
         mean_g = mean[[g]],
         cov_g = cov[[g]], var_g = var[[g]], th_g = th[[g]],
         th_idx_g = th_idx[[g]], res_int_g = res_int[[g]],
@@ -834,13 +832,13 @@ lav_samplestats_from_data <- function(lavdata = NULL,        # nolint start
         }
 
         if (correlation) {
-      nacov[[g]] <- lav_samplestats_cor_gamma(
+      nacov[[g]] <- lav_samp_cor_gamma(
         m_y = y,
         meanstructure = meanstructure
       )
     } else {
           nacov[[g]] <-
-            lav_samplestats_gamma(
+            lav_samp_gamma(
               m_y = y,
               x_idx = x_idx[[g]],
               cluster_idx = cluster_idx,
@@ -889,7 +887,7 @@ lav_samplestats_from_data <- function(lavdata = NULL,        # nolint start
             cluster_idx <- NULL
           }
       if (correlation) {
-            nacov[[g]] <- lav_samplestats_cor_gamma(
+            nacov[[g]] <- lav_samp_cor_gamma(
               m_y = y,
               meanstructure = meanstructure
             )
@@ -897,7 +895,7 @@ lav_samplestats_from_data <- function(lavdata = NULL,        # nolint start
             if ("robust.sem.nt" %in% lavoptions$se ||
                 "browne.residual.nt" %in% lavoptions$test) {
               nacov[[g]] <-
-                lav_samplestats_gamma_nt(
+                lav_samp_gamma_nt(
                   m_y = y,
                   m_cov = cov[[g]],
                   m_mean = mean[[g]],
@@ -910,7 +908,7 @@ lav_samplestats_from_data <- function(lavdata = NULL,        # nolint start
                 )
             } else {
               nacov[[g]] <-
-                lav_samplestats_gamma(
+                lav_samp_gamma(
                   m_y = y,
                   x_idx = x_idx[[g]],
                   cluster_idx = cluster_idx,
@@ -955,7 +953,7 @@ lav_samplestats_from_data <- function(lavdata = NULL,        # nolint start
         # unweight!!
         a <- group_w[[g]] * sum(unlist(nobs)) / nobs[[g]]
         # always 1!!!
-        nacov[[g]] <- lav_matrix_bdiag(matrix(a, 1, 1), nacov[[g]])
+        nacov[[g]] <- lav_mat_bdiag(matrix(a, 1, 1), nacov[[g]])
       }
     }
 
@@ -964,7 +962,7 @@ lav_samplestats_from_data <- function(lavdata = NULL,        # nolint start
       if (estimator == "DLS" && dls_gamma_nt == "sample" && dls_a < 1.0) {
         # compute GammaNT here
         if (correlation) {
-          gamma_nt <- lav_samplestats_cor_gamma_nt(
+          gamma_nt <- lav_samp_cor_gamma_nt(
             m_cov          = cov[[g]],
             m_mean         = mean[[g]],
             rescale        = FALSE,
@@ -975,7 +973,7 @@ lav_samplestats_from_data <- function(lavdata = NULL,        # nolint start
             slopestructure = conditional_x   # not used yet
           )
         } else {
-          gamma_nt <- lav_samplestats_gamma_nt(
+          gamma_nt <- lav_samp_gamma_nt(
             m_cov          = cov[[g]],
             m_mean         = mean[[g]],
             rescale        = FALSE,
@@ -994,7 +992,7 @@ lav_samplestats_from_data <- function(lavdata = NULL,        # nolint start
         # Note: we need the 'original' COV/MEAN/ICOV
         #        sample statistics; not the 'residual' version
         if (correlation) {
-          gamma_nt <- lav_samplestats_cor_gamma_nt(
+          gamma_nt <- lav_samp_cor_gamma_nt(
             m_cov          = cov[[g]],
             m_mean         = mean[[g]],
             #rescale        = FALSE,
@@ -1004,9 +1002,9 @@ lav_samplestats_from_data <- function(lavdata = NULL,        # nolint start
             meanstructure  = meanstructure,  # not used yet
             slopestructure = conditional_x   # not used yet
           )
-          wls_v[[g]] <- lav_matrix_symmetric_inverse(gamma_nt)
+          wls_v[[g]] <- lav_mat_sym_inverse(gamma_nt)
         } else {
-          wls_v[[g]] <- lav_samplestats_gamma_inverse_nt(
+          wls_v[[g]] <- lav_samp_gamma_inverse_nt(
             m_icov         = icov[[g]],
             m_cov          = cov[[g]],
             m_mean         = mean[[g]],
@@ -1053,11 +1051,11 @@ lav_samplestats_from_data <- function(lavdata = NULL,        # nolint start
                   w_dls <-
                     (1 - dls_a) * nacov[[g]] + dls_a * gamma_nt
                   wls_v[[g]] <-
-                    lav_matrix_symmetric_inverse(w_dls)
+                    lav_mat_sym_inverse(w_dls)
                 }
               } else { # WLS
                 wls_v[[g]] <-
-                  lav_matrix_symmetric_inverse(nacov[[g]])
+                  lav_mat_sym_inverse(nacov[[g]])
               }
             } else {
               # fixed.x: we have zero cols/rows
@@ -1068,10 +1066,10 @@ lav_samplestats_from_data <- function(lavdata = NULL,        # nolint start
               if (estimator == "DLS" && dls_gamma_nt == "sample") {
                 w_dls <- (1 - dls_a) * nacov[[g]] + dls_a * gamma_nt
                 wls_v[[g]] <-
-                  lav_matrix_symmetric_inverse(w_dls)
+                  lav_mat_sym_inverse(w_dls)
               } else { # WLS
                 wls_v[[g]] <-
-                  lav_matrix_symmetric_inverse(nacov[[g]])
+                  lav_mat_sym_inverse(nacov[[g]])
               }
             }
           } else if (estimator == "DWLS") {
@@ -1127,7 +1125,7 @@ lav_samplestats_from_data <- function(lavdata = NULL,        # nolint start
           # always 1!!!
           # invert
           a <- 1 / a
-          wls_v[[g]] <- lav_matrix_bdiag(matrix(a, 1, 1), wls_v[[g]])
+          wls_v[[g]] <- lav_mat_bdiag(matrix(a, 1, 1), wls_v[[g]])
         }
         if (!is.null(wls_vd[[g]])) {
           # unweight!!
@@ -1211,7 +1209,7 @@ lav_samplestats_from_data <- function(lavdata = NULL,        # nolint start
 }
 
 
-lav_samplestats_from_moments <- function(sample_cov = NULL,
+lav_samp_from_moments <- function(sample_cov = NULL,
                                          sample_mean = NULL,
                                          sample_th = NULL,
                                          sample_nobs = NULL,
@@ -1396,20 +1394,20 @@ lav_samplestats_from_moments <- function(sample_cov = NULL,
       if (ngroups == 1L) {
         wls_v <- list(unclass(wls_v))
       } else {
-        lav_msg_stop(gettextf("WLS.V argument should be a list of length %s",
+        lav_msg_stop(gettextf("wls_v argument should be a list of length %s",
           ngroups)
         )
       }
     } else {
       if (length(wls_v) != ngroups) {
         lav_msg_stop(gettextf(
-          "WLS.V assumes %1$s groups; data contains %2$s groups",
+          "wls_v assumes %1$s groups; data contains %2$s groups",
           length(wls_v), ngroups))
       }
       wls_v <- lapply(wls_v, unclass)
     }
 
-    # is WLS.V full? check first
+    # is wls_v full? check first
     if (is.null(dim(wls_v[[1]]))) {
       # we will assume it is the diagonal only
       wls_vd <- wls_v
@@ -1421,7 +1419,7 @@ lav_samplestats_from_moments <- function(sample_cov = NULL,
     }
 
     wls_v_user <- TRUE
-    # FIXME: check dimension of WLS.V!!
+    # FIXME: check dimension of wls_v!!
   }
 
   if (is.null(nacov)) {
@@ -1605,7 +1603,7 @@ lav_samplestats_from_moments <- function(sample_cov = NULL,
 
         # icov and cov.log.det
         # if(lavoptions$sample.icov) {
-        out <- lav_samplestats_icov(
+        out <- lav_samp_icov(
           cov_1 = res_cov[[g]],
           ridge = 1e-05,
           x_idx = x_idx[[g]],
@@ -1633,7 +1631,7 @@ lav_samplestats_from_moments <- function(sample_cov = NULL,
 
         # icov and cov.log.det
         # if(lavoptions$sample.icov) {
-        out <- lav_samplestats_icov(
+        out <- lav_samp_icov(
           cov_1 = cov[[g]],
           ridge = 1e-05,
           x_idx = x_idx[[g]],
@@ -1675,7 +1673,7 @@ lav_samplestats_from_moments <- function(sample_cov = NULL,
     }
 
     # WLS.obs
-    wls_obs[[g]] <- lav_samplestats_wls_obs(
+    wls_obs[[g]] <- lav_samp_wls_obs(
       mean_g = mean[[g]],
       cov_g = cov[[g]], var_g = var[[g]], th_g = th[[g]],
       th_idx_g = th_idx[[g]], res_int_g = res_int[[g]],
@@ -1688,7 +1686,7 @@ lav_samplestats_from_moments <- function(sample_cov = NULL,
       group_w_free = group_w_free
     )
 
-    # WLS.V
+    # wls_v
     if (!wls_v_user) {
       if (estimator == "GLS") {
         # FIXME: in <0.5-21, we had
@@ -1697,7 +1695,7 @@ lav_samplestats_from_moments <- function(sample_cov = NULL,
         #        V11 <- V11 * nobs[[g]]/(nobs[[g]]-1)
         #    }
         if (correlation) {
-          gamma_nt <- lav_samplestats_cor_gamma_nt(
+          gamma_nt <- lav_samp_cor_gamma_nt(
             m_cov          = cov[[g]],
             m_mean         = mean[[g]],
             #rescale        = FALSE,
@@ -1707,9 +1705,9 @@ lav_samplestats_from_moments <- function(sample_cov = NULL,
             meanstructure  = meanstructure,  # not used yet
             slopestructure = conditional_x   # not used yet
           )
-          wls_v[[g]] <- lav_matrix_symmetric_inverse(gamma_nt)
+          wls_v[[g]] <- lav_mat_sym_inverse(gamma_nt)
         } else {
-          wls_v[[g]] <- lav_samplestats_gamma_inverse_nt(
+          wls_v[[g]] <- lav_samp_gamma_inverse_nt(
             m_icov = icov[[g]],
             m_cov = cov[[g]],
             m_mean = mean[[g]],
@@ -1728,14 +1726,14 @@ lav_samplestats_from_moments <- function(sample_cov = NULL,
         if (is.null(wls_v[[g]])) {
           lav_msg_stop(gettext(
             "the (D)WLS estimator is only available with full data
-            or with a user-provided WLS.V"))
+            or with a user-provided wls_v"))
         }
       }
 
       # group.w.free
       if (!is.null(wls_v[[g]]) && group_w_free) {
         # FIXME!!!
-        wls_v[[g]] <- lav_matrix_bdiag(matrix(1, 1, 1), wls_v[[g]])
+        wls_v[[g]] <- lav_mat_bdiag(matrix(1, 1, 1), wls_v[[g]])
       }
     }
   } # ngroups
@@ -1798,7 +1796,7 @@ lav_samplestats_from_moments <- function(sample_cov = NULL,
 }
 
 # compute sample statistics, per missing pattern
-lav_samplestats_missing_patterns <- function(     # nolint
+lav_samp_mi_patterns <- function(
   y = NULL, mp = NULL, wt = NULL,lp = NULL) {
   # coerce Y to matrix
   y <- as.matrix(y)
@@ -1815,7 +1813,7 @@ lav_samplestats_missing_patterns <- function(     # nolint
   }
 
   if (is.null(mp)) {
-    mp <- lav_data_missing_patterns(y,
+    mp <- lav_data_mi_patterns(y,
       sort_freq = FALSE, coverage = FALSE,
       lp = lp
     )
@@ -1841,7 +1839,7 @@ lav_samplestats_missing_patterns <- function(     # nolint
         my <- base::.colMeans(raw_1, m = NROW(raw_1), n = NCOL(raw_1))
         # SY <- crossprod(RAW)/Mp$freq[p] - tcrossprod(MY)
         # bad practice, better like this:
-        sy <- lav_matrix_cov(raw_1)
+        sy <- lav_mat_cov(raw_1)
       }
     # only a single observation (no need to weight!)
     } else {
@@ -1870,7 +1868,7 @@ lav_samplestats_missing_patterns <- function(     # nolint
 
   # add Zp as an attribute
   # if(!is.null(Lp)) {
-  #    Zp <- lav_samplestats_missing_patterns(Y = Z, Mp = Mp$Zp)
+  #    Zp <- lav_samp_mi_patterns(Y = Z, Mp = Mp$Zp)
   #    for(p in Mp$Zp$npatterns) {
   #        this.z <- Z[Mp$Zp$case.idx[[p]], drop = FALSE]
   #        Zp[[p]]$ROWSUM <- t(this.z)
@@ -1883,7 +1881,7 @@ lav_samplestats_missing_patterns <- function(     # nolint
 }
 
 # compute sample statistics, per cluster
-lav_samplestats_cluster_patterns <- function(y = NULL, lp = NULL,     # nolint
+lav_samp_cl_patterns <- function(y = NULL, lp = NULL,
                                              conditional_x = FALSE) {
   # coerce Y to matrix
   y1 <- as.matrix(y)
@@ -1917,7 +1915,7 @@ lav_samplestats_cluster_patterns <- function(y = NULL, lp = NULL,     # nolint
     # size even in the balanced case
 
     y1_means <- colMeans(y1, na.rm = TRUE)
-    y1y1 <- lav_matrix_crossprod(y1)
+    y1y1 <- lav_mat_crossprod(y1)
     both_idx <- all_idx <- seq_len(p)
 
     if (length(within_idx) > 0L ||
@@ -1945,13 +1943,13 @@ lav_samplestats_cluster_patterns <- function(y = NULL, lp = NULL,     # nolint
     #    }
     # }
     y1a <- y1 - y2a[cluster_idx, , drop = FALSE]
-    s_w <- lav_matrix_crossprod(y1a) / (n - nclusters)
+    s_w <- lav_mat_crossprod(y1a) / (n - nclusters)
 
     # S.b
     # three parts: within/within, between/between, between/within
     # standard definition of the between variance matrix
     # divides by (nclusters - 1)
-    s_b <- lav_matrix_crossprod(y2c * cluster_size, y2c) / (nclusters - 1)
+    s_b <- lav_mat_crossprod(y2c * cluster_size, y2c) / (nclusters - 1)
 
     # check for zero variances
     if (length(both_idx) > 0L) {
@@ -1972,7 +1970,7 @@ lav_samplestats_cluster_patterns <- function(y = NULL, lp = NULL,     # nolint
     # extract 'fixed' level-1 loglik from here
     wx_idx <- lp$ov.x.idx[[1]]
     if (length(wx_idx) > 0L) {
-      loglik_x_w <- lav_mvnorm_h1_loglik_samplestats(
+      loglik_x_w <- lav_mvn_h1_loglik_samp(
         sample_nobs = lp$nclusters[[1]],
         sample_cov  = s_1[wx_idx, wx_idx, drop = FALSE]
       )
@@ -1983,7 +1981,7 @@ lav_samplestats_cluster_patterns <- function(y = NULL, lp = NULL,     # nolint
     bx_idx <- lp$ov.x.idx[[2]]
     if (length(bx_idx) > 0L) {
       covb <- cov(y2[, bx_idx, drop = FALSE]) * (nclusters - 1) / nclusters
-      loglik_x_b <- lav_mvnorm_h1_loglik_samplestats(
+      loglik_x_b <- lav_mvn_h1_loglik_samp(
         sample_nobs = lp$nclusters[[2]],
         sample_cov  = covb
       )
@@ -2013,7 +2011,7 @@ lav_samplestats_cluster_patterns <- function(y = NULL, lp = NULL,     # nolint
       s_b[between_idx, ] <-
         (s * nclusters / n) * s_b[between_idx, , drop = FALSE]
       s_b[between_idx, between_idx] <-
-        (s * lav_matrix_crossprod(
+        (s * lav_mat_crossprod(
           y2c[, between_idx, drop = FALSE],
           y2c[, between_idx, drop = FALSE]
         ) / nclusters)
@@ -2082,7 +2080,7 @@ lav_samplestats_cluster_patterns <- function(y = NULL, lp = NULL,     # nolint
         if (any(is.na(tmp2))) {
           # if full column has NA, this will fail...
           # not needed anyway
-          # out <- lav_mvnorm_missing_h1_estimate_moments(Y = tmp2,
+          # out <- lav_mvn_mi_h1_est_moments(Y = tmp2,
           #          max.iter = 10L)
           # cov.d[[clz]] <- out$Sigma
           cov_d[[clz]] <- 0

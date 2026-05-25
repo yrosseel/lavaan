@@ -236,7 +236,7 @@ lav_mplus_cmd_fix_start <- function(cmd) {
   }
 }
 
-lav_mplus_cmd_constraints <- function(cmd) {
+lav_mplus_cmd_con <- function(cmd) {
   # Allow cmd to have newlines embedded. In this case, split on newlines, and
   #  loop over and parse each chunk
   # Dump leading and trailing newlines, which contain no information about
@@ -544,7 +544,7 @@ lav_mplus_cmd_wrap <- function(cmd, width = 90, exdent = 5) {
   unname(do.call(c, result))
 }
 
-lav_mplus_syntax_constraints <- function(syntax) {
+lav_mplus_syntax_con <- function(syntax) {
   # should probably pass in model syntax along with some tracking
   #  of which parameter labels are defined.
 
@@ -702,7 +702,7 @@ lav_mplus_syntax_model <- function(syntax) {
 
     # handle model constraint
     if ("model.constraint" %in% names(parsed_syntax)) {
-      con_syntax <- strsplit(lav_mplus_syntax_constraints(
+      con_syntax <- strsplit(lav_mplus_syntax_con(
                   parsed_syntax$model.constraint), "\n")[[1]]
     }
 
@@ -758,7 +758,7 @@ lav_mplus_syntax_model <- function(syntax) {
   for (cmd in syntax_split) {
     if (grepl("^\\s*#", cmd, perl = TRUE)) { # comment line
       lavaan_out <- c(lavaan_out, gsub("\n", "", cmd, fixed = TRUE))
-       # drop any newlines (otherwise done by lav_mplus_cmd_constraints)
+       # drop any newlines (otherwise done by lav_mplus_cmd_con)
     } else if (grepl("^\\s*$", cmd, perl = TRUE)) {
       # do nothing, just a space or blank line
     } else {
@@ -769,7 +769,7 @@ lav_mplus_syntax_model <- function(syntax) {
       cmd <- lav_mplus_cmd_fix_start(cmd)
 
       # parse any constraints here (avoid weird logic below)
-      cmd <- lav_mplus_cmd_constraints(cmd)
+      cmd <- lav_mplus_cmd_con(cmd)
 
       if ((op <- regexpr("\\s+(by|on|with|pwith)\\s+", cmd, ignore.case = TRUE,
        perl = TRUE))[1L] > 0) { # regressions, factors, covariances
@@ -846,7 +846,7 @@ lav_mplus_syntax_model <- function(syntax) {
         if (operator == "[") {
           # Tricky syntax shift (and corresponding kludge). For means, need to
           #    put constraint on RHS as pre-multiplier of 1 (e.g., x1 ~ 5*1).
-          # But lav_mplus_cmd_constraints returns constraints
+          # But lav_mplus_cmd_con returns constraints
           #     multiplied by parameters
           cmd <- sapply(means_scales_split, function(v) {
             # shift pre-multiplier
@@ -1048,7 +1048,7 @@ lav_mplus_lavaan <- function(inpfile, run = TRUE) {
   # handle model constraint
   if ("model.constraint" %in% names(sections)) {
     mplus_inp$model.constraint <-
-      lav_mplus_syntax_constraints(sections$model.constraint)
+      lav_mplus_syntax_con(sections$model.constraint)
     mplus_inp$model <-
       paste(mplus_inp$model, mplus_inp$model.constraint, sep = "\n")
   }

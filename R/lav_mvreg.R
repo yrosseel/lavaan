@@ -48,7 +48,7 @@ lav_mvreg_loglik_data <- function(y = NULL,
       res <- y - x %*% beta_1
       dist_1 <- rowSums((res %*% ic_s)^2)
     } else {
-      res_cov_inv <- lav_matrix_symmetric_inverse(
+      res_cov_inv <- lav_mat_sym_inverse(
         s = res_cov, logdet = TRUE,
         sinv_method = sinv_method
       )
@@ -61,7 +61,7 @@ lav_mvreg_loglik_data <- function(y = NULL,
     loglik <- -(q_1 * log_2pi + logdet + dist_1) / 2
   } else {
     # invert res.cov
-    res_cov_inv <- lav_matrix_symmetric_inverse(
+    res_cov_inv <- lav_mat_sym_inverse(
       s = res_cov, logdet = TRUE,
       sinv_method = sinv_method
     )
@@ -78,7 +78,7 @@ lav_mvreg_loglik_data <- function(y = NULL,
 
 
 # 2b. input are sample statistics (res.int, res.slopes, res.cov, N) only
-lav_mvreg_loglik_samplestats <- function(sample_res_int = NULL,
+lav_mvreg_loglik_samp <- function(sample_res_int = NULL,
                                          sample_res_slopes = NULL,
                                          sample_res_cov = NULL,
                                          sample_mean_x = NULL,
@@ -113,7 +113,7 @@ lav_mvreg_loglik_samplestats <- function(sample_res_int = NULL,
 
   # res.cov.inv
   if (is.null(res_cov_inv)) {
-    res_cov_inv <- lav_matrix_symmetric_inverse(
+    res_cov_inv <- lav_mat_sym_inverse(
       s = res_cov, logdet = TRUE,
       sinv_method = sinv_method
     )
@@ -164,7 +164,7 @@ lav_mvreg_dlogl_dbeta <- function(y = NULL,
   # res.cov.inv
   if (is.null(res_cov_inv)) {
     # invert res.cov
-    res_cov_inv <- lav_matrix_symmetric_inverse(
+    res_cov_inv <- lav_mat_sym_inverse(
       s = res_cov, logdet = FALSE,
       sinv_method = sinv_method
     )
@@ -200,7 +200,7 @@ lav_mvreg_dlogl_drescov <- function(y = NULL,
   # res.cov.in
   if (is.null(res_cov_inv)) {
     # invert res.cov
-    res_cov_inv <- lav_matrix_symmetric_inverse(
+    res_cov_inv <- lav_mat_sym_inverse(
       s = res_cov, logdet = FALSE,
       sinv_method = sinv_method
     )
@@ -240,7 +240,7 @@ lav_mvreg_dlogl_dvechrescov <- function(y = NULL,
   # res.cov.inv
   if (is.null(res_cov_inv)) {
     # invert res.cov
-    res_cov_inv <- lav_matrix_symmetric_inverse(
+    res_cov_inv <- lav_mat_sym_inverse(
       s = res_cov, logdet = FALSE,
       sinv_method = sinv_method
     )
@@ -255,8 +255,8 @@ lav_mvreg_dlogl_dvechrescov <- function(y = NULL,
   # derivative
   dres_cov <- -(n / 2) * (res_cov_inv -
                          (res_cov_inv %*% w_tilde %*% res_cov_inv))
-  dvechres_cov <- as.numeric(lav_matrix_duplication_pre(
-    as.matrix(lav_matrix_vec(dres_cov))
+  dvechres_cov <- as.numeric(lav_mat_dup_pre(
+    as.matrix(lav_mat_vec(dres_cov))
   ))
 
   dvechres_cov
@@ -267,7 +267,7 @@ lav_mvreg_dlogl_dvechrescov <- function(y = NULL,
 
 # 3a: casewise scores with respect to Beta (=intercepts and slopes)
 #     column order: Y1_int, Y1_x1, Y1_x2, ...| Y2_int, Y2_x1, Y2_x2, ... |
-lav_mvreg_scores_beta <- function(y = NULL,
+lav_mvreg_sc_beta <- function(y = NULL,
                                   exo = NULL,
                                   beta_1 = NULL,
                                   res_int = NULL,
@@ -288,7 +288,7 @@ lav_mvreg_scores_beta <- function(y = NULL,
   # res.cov.inv
   if (is.null(res_cov_inv)) {
     # invert res.cov
-    res_cov_inv <- lav_matrix_symmetric_inverse(
+    res_cov_inv <- lav_mat_sym_inverse(
       s = res_cov, logdet = FALSE,
       sinv_method = sinv_method
     )
@@ -308,7 +308,7 @@ lav_mvreg_scores_beta <- function(y = NULL,
 
 
 # 3b: casewise scores with respect to vech(res.cov)
-lav_mvreg_scores_vech_sigma <- function(y = NULL,
+lav_mvreg_sc_sigma <- function(y = NULL,
                                         exo = NULL,
                                         beta_1 = NULL,
                                         res_int = NULL,
@@ -328,14 +328,14 @@ lav_mvreg_scores_vech_sigma <- function(y = NULL,
   # res.cov.inv
   if (is.null(res_cov_inv)) {
     # invert res.cov
-    res_cov_inv <- lav_matrix_symmetric_inverse(
+    res_cov_inv <- lav_mat_sym_inverse(
       s = res_cov, logdet = FALSE,
       sinv_method = sinv_method
     )
   }
 
   # vech(res.cov.inv)
-  isigma <- lav_matrix_vech(res_cov_inv)
+  isigma <- lav_mat_vech(res_cov_inv)
 
   # subtract X %*% Beta
   res <- y - x %*% beta_1
@@ -344,22 +344,22 @@ lav_mvreg_scores_vech_sigma <- function(y = NULL,
   res <- res %*% res_cov_inv
 
   # tcrossprod
-  idx1 <- lav_matrix_vech_col_idx(q_1)
-  idx2 <- lav_matrix_vech_row_idx(q_1)
+  idx1 <- lav_mat_vech_col_idx(q_1)
+  idx2 <- lav_mat_vech_row_idx(q_1)
   z <- res[, idx1] * res[, idx2]
 
   # subtract isigma from each row
   sc <- t(t(z) - isigma)
 
   # adjust for vech (and avoiding the 1/2 factor)
-  sc[, lav_matrix_diagh_idx(q_1)] <- sc[, lav_matrix_diagh_idx(q_1)] / 2
+  sc[, lav_mat_diagh_idx(q_1)] <- sc[, lav_mat_diagh_idx(q_1)] / 2
 
   sc
 }
 
 
 # 3c: casewise scores with respect to beta + vech(res.cov)
-lav_mvreg_scores_beta_vech_sigma <- function(y = NULL,      # nolint
+lav_mvreg_sc_beta_sigma <- function(y = NULL,
                                              exo = NULL,
                                              beta_1 = NULL,
                                              res_int = NULL,
@@ -380,14 +380,14 @@ lav_mvreg_scores_beta_vech_sigma <- function(y = NULL,      # nolint
   # res.cov.inv
   if (is.null(res_cov_inv)) {
     # invert res.cov
-    res_cov_inv <- lav_matrix_symmetric_inverse(
+    res_cov_inv <- lav_mat_sym_inverse(
       s = res_cov, logdet = FALSE,
       sinv_method = sinv_method
     )
   }
 
   # vech(res.cov.inv)
-  isigma <- lav_matrix_vech(res_cov_inv)
+  isigma <- lav_mat_vech(res_cov_inv)
 
   # subtract X %*% Beta
   res <- y - x %*% beta_1
@@ -399,15 +399,15 @@ lav_mvreg_scores_beta_vech_sigma <- function(y = NULL,      # nolint
     res[, rep(1:q_1, each = p), drop = FALSE]
 
   # tcrossprod
-  idx1 <- lav_matrix_vech_col_idx(q_1)
-  idx2 <- lav_matrix_vech_row_idx(q_1)
+  idx1 <- lav_mat_vech_col_idx(q_1)
+  idx2 <- lav_mat_vech_row_idx(q_1)
   z <- res[, idx1] * res[, idx2]
 
   # subtract isigma from each row
   sc <- t(t(z) - isigma)
 
   # adjust for vech (and avoiding the 1/2 factor)
-  sc[, lav_matrix_diagh_idx(q_1)] <- sc[, lav_matrix_diagh_idx(q_1)] / 2
+  sc[, lav_mat_diagh_idx(q_1)] <- sc[, lav_mat_diagh_idx(q_1)] / 2
 
   cbind(sc_beta, sc)
 }
@@ -427,7 +427,7 @@ lav_mvreg_logl_hessian_data <- function(y = NULL,
   n <- NROW(y)
 
   # observed information
-  observed <- lav_mvreg_information_observed_data(
+  observed <- lav_mvreg_info_observed_data(
     y = y, exo = exo,
     beta_1 = beta_1, res_int = res_int, res_slopes = res_slopes,
     res_cov = res_cov, res_cov_inv = res_cov_inv,
@@ -439,7 +439,7 @@ lav_mvreg_logl_hessian_data <- function(y = NULL,
 }
 
 # 4b. hessian logl Beta and vech(res.cov) from samplestats
-lav_mvreg_logl_hessian_samplestats <- function(  # nolint
+lav_mvreg_logl_hessian_samp <- function(
       sample_res_int = NULL,
       sample_res_slopes = NULL,
       sample_res_cov = NULL,
@@ -472,7 +472,7 @@ lav_mvreg_logl_hessian_samplestats <- function(  # nolint
 # Information h0
 
 # 5a: unit expected information h0 Beta and vech(res.cov)
-lav_mvreg_information_expected <- function(y = NULL, # not used
+lav_mvreg_info_expected <- function(y = NULL, # not used
                                            exo = NULL, # not used
                                            sample_mean_x = NULL,
                                            sample_cov_x = NULL,
@@ -488,7 +488,7 @@ lav_mvreg_information_expected <- function(y = NULL, # not used
   # res.cov.inv
   if (is.null(res_cov_inv)) {
     # invert res.cov
-    res_cov_inv <- lav_matrix_symmetric_inverse(
+    res_cov_inv <- lav_mat_sym_inverse(
       s = res_cov, logdet = FALSE,
       sinv_method = sinv_method
     )
@@ -506,7 +506,7 @@ lav_mvreg_information_expected <- function(y = NULL, # not used
     sample_mean_x <- base::.colMeans(exo, m = NROW(exo), n = NCOL(exo))
   }
   if (is.null(sample_cov_x)) {
-    sample_cov_x <- lav_matrix_cov(exo)
+    sample_cov_x <- lav_mat_cov(exo)
   }
 
   # construct sample.xx = 1/N*crossprod(X1) (including intercept)
@@ -523,14 +523,14 @@ lav_mvreg_information_expected <- function(y = NULL, # not used
   # if (lav_use_lavaanC()) {
   #   I22 <- lavaanC::m_kronecker_dup_pre_post(res.cov.inv, multiplicator = 0.5)
   # } else {
-    i22 <- 0.5 * lav_matrix_duplication_pre_post(res_cov_inv %x% res_cov_inv)
+    i22 <- 0.5 * lav_mat_dup_pre_post(res_cov_inv %x% res_cov_inv)
   # }
 
-  lav_matrix_bdiag(i11, i22)
+  lav_mat_bdiag(i11, i22)
 }
 
 # 5b: unit observed information h0
-lav_mvreg_information_observed_data <- function(y = NULL,          # nolint
+lav_mvreg_info_observed_data <- function(y = NULL,
                                                 exo = NULL, # no int
                                                 beta_1 = NULL, # int+slopes
                                                 res_int = NULL,
@@ -551,7 +551,7 @@ lav_mvreg_information_observed_data <- function(y = NULL,          # nolint
   sample_res_slopes <- t(sample_b[-1, , drop = FALSE]) # transpose!
   sample_res_cov <- cov(qr.resid(qr_1, y)) * (n - 1) / n
   sample_mean_x <- base::.colMeans(exo, m = NROW(exo), n = NCOL(exo))
-  sample_cov_x <- lav_matrix_cov(exo)
+  sample_cov_x <- lav_mat_cov(exo)
 
   lav_mvreg_information_observed_samplestats(
     sample_res_int = sample_res_int,
@@ -600,14 +600,14 @@ lav_mvreg_information_observed_samplestats <-               # nolint
     # res.cov.inv
     if (is.null(res_cov_inv)) {
       # invert res.cov
-      res_cov_inv <- lav_matrix_symmetric_inverse(
+      res_cov_inv <- lav_mat_sym_inverse(
         s = res_cov, logdet = FALSE,
         sinv_method = sinv_method
       )
     }
 
     h11 <- res_cov_inv %x% sample_xx
-    h21 <- lav_matrix_duplication_pre(res_cov_inv %x%
+    h21 <- lav_mat_dup_pre(res_cov_inv %x%
       (res_cov_inv %*% (crossprod(sample_b - beta_1, sample_xx))))
     h12 <- t(h21)
 
@@ -615,7 +615,7 @@ lav_mvreg_information_observed_samplestats <-               # nolint
     # if (lav_use_lavaanC()) {
     #   H22 <- lavaanC::m_kronecker_dup_pre_post(res.cov.inv, AAA, 0.5)
     # } else {
-      h22 <- (1 / 2) * lav_matrix_duplication_pre_post(res_cov_inv %x% aaa)
+      h22 <- (1 / 2) * lav_mat_dup_pre_post(res_cov_inv %x% aaa)
     # }
 
     out <- rbind(
@@ -627,7 +627,7 @@ lav_mvreg_information_observed_samplestats <-               # nolint
 
 
 # 5c: unit first-order information h0
-lav_mvreg_information_firstorder <- function(y = NULL,        # nolint
+lav_mvreg_info_firstorder <- function(y = NULL,
                                              exo = NULL, # no int
                                              beta_1 = NULL, # int+slopes
                                              res_int = NULL,
@@ -638,7 +638,7 @@ lav_mvreg_information_firstorder <- function(y = NULL,        # nolint
   n <- NROW(y)
 
   # scores
-  sc <- lav_mvreg_scores_beta_vech_sigma(
+  sc <- lav_mvreg_sc_beta_sigma(
     y = y, exo = exo, beta_1 = beta_1,
     res_int = res_int, res_slopes = res_slopes, res_cov = res_cov,
     sinv_method = sinv_method, res_cov_inv = res_cov_inv

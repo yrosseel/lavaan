@@ -33,10 +33,10 @@ lav_export <- function(object, target = "lavaan", prefix = "sem", # nolint start
       data_file = data_file,
       group_label = object@Data@group.label,
       ov_names = c(
-        lav_partable_vnames(object@ParTable, "ov"),
+        lav_pt_vnames(object@ParTable, "ov"),
         object@Data@sampling.weights
       ),
-      ov_ord_names = lav_partable_vnames(object@ParTable, "ov.ord"),
+      ov_ord_names = lav_pt_vnames(object@ParTable, "ov.ord"),
       weight_name = object@Data@sampling.weights,
       listwise = lavInspect(object, "options")$missing == "listwise",
       estimator = lav_mplus_estimator(object),

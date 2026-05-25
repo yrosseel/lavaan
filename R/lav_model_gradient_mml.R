@@ -1,4 +1,4 @@
-lav_model_gradient_mml <- function(lavmodel = NULL,
+lav_model_grad_mml <- function(lavmodel = NULL,
                                    mm_theta = NULL,
                                    th = NULL,
                                    glist = NULL,
@@ -142,7 +142,7 @@ lav_model_gradient_mml <- function(lavmodel = NULL,
 
   # Delta
   ## DD <- lavcache[[group]]$DD
-  dd <- lav_model_gradient_dd(lavmodel, g_list = glist, group = group)
+  dd <- lav_model_grad_dd(lavmodel, g_list = glist, group = group)
 
   ## FIXME!!! do this analytically...
   x <- lav_model_get_parameters(lavmodel = lavmodel, GLIST = mlist)

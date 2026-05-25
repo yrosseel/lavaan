@@ -24,7 +24,7 @@
 
 
 
-lav_model_h1_information <- function(lavobject = NULL,
+lav_model_h1_info <- function(lavobject = NULL,
                                      lavmodel = NULL,
                                      lavsamplestats = NULL,
                                      lavdata = NULL,
@@ -61,21 +61,21 @@ lav_model_h1_information <- function(lavobject = NULL,
 
   # compute information matrix
   if (information == "observed") {
-    i1 <- lav_model_h1_information_observed(
+    i1 <- lav_model_h1_info_observed(
       lavmodel = lavmodel,
       lavsamplestats = lavsamplestats, lavdata = lavdata,
       lavimplied = lavimplied, lavh1 = lavh1,
       lavcache = lavcache, lavoptions = lavoptions
     )
   } else if (information == "expected") {
-    i1 <- lav_model_h1_information_expected(
+    i1 <- lav_model_h1_info_expected(
       lavmodel = lavmodel,
       lavsamplestats = lavsamplestats, lavdata = lavdata,
       lavimplied = lavimplied, lavh1 = lavh1,
       lavcache = lavcache, lavoptions = lavoptions
     )
   } else if (information == "first.order") {
-    i1 <- lav_model_h1_information_firstorder(
+    i1 <- lav_model_h1_info_firstorder(
       lavmodel = lavmodel,
       lavsamplestats = lavsamplestats, lavdata = lavdata,
       lavimplied = lavimplied, lavh1 = lavh1,
@@ -88,7 +88,7 @@ lav_model_h1_information <- function(lavobject = NULL,
 }
 
 # fisher/expected information of H1
-lav_model_h1_information_expected <- function(lavobject = NULL, # nolint
+lav_model_h1_info_expected <- function(lavobject = NULL,
                                               lavmodel = NULL,
                                               lavsamplestats = NULL,
                                               lavdata = NULL,
@@ -141,7 +141,7 @@ lav_model_h1_information_expected <- function(lavobject = NULL, # nolint
       a1 <- vector("list", length = lavsamplestats@ngroups)
       for (g in seq_len(lavsamplestats@ngroups)) {
         dls_a <- lavmodel@estimator.args$dls.a
-        gamma_nt <- lav_samplestats_gamma_nt(
+        gamma_nt <- lav_samp_gamma_nt(
           m_cov          = lavimplied$cov[[g]],
           m_mean         = lavimplied$mean[[g]],
           x_idx          = lavsamplestats@x.idx[[g]],
@@ -151,7 +151,7 @@ lav_model_h1_information_expected <- function(lavobject = NULL, # nolint
           slopestructure = lavmodel@conditional.x
         )
         w_dls <- (1 - dls_a) * lavsamplestats@NACOV[[g]] + dls_a * gamma_nt
-        a1[[g]] <- lav_matrix_symmetric_inverse(w_dls)
+        a1[[g]] <- lav_mat_sym_inverse(w_dls)
       }
     }
 
@@ -186,7 +186,7 @@ lav_model_h1_information_expected <- function(lavobject = NULL, # nolint
 
         if (structured) {
           a1[[g]] <-
-            lav_mvnorm_missing_information_expected(
+            lav_mvn_mi_info_expected(
               y = lavdata@X[[g]],
               mp = lavdata@Mp[[g]],
               wt = wt,
@@ -197,7 +197,7 @@ lav_model_h1_information_expected <- function(lavobject = NULL, # nolint
             )
         } else {
           a1[[g]] <-
-            lav_mvnorm_missing_information_expected(
+            lav_mvn_mi_info_expected(
               y = lavdata@X[[g]],
               mp = lavdata@Mp[[g]],
               wt = wt,
@@ -220,7 +220,7 @@ lav_model_h1_information_expected <- function(lavobject = NULL, # nolint
           }
 
           if (structured) {
-            a1[[g]] <- lav_mvreg_information_expected(
+            a1[[g]] <- lav_mvreg_info_expected(
               sample_mean_x     = lavsamplestats@mean.x[[g]],
               sample_cov_x      = lavsamplestats@cov.x[[g]],
               sample_nobs       = lavsamplestats@nobs[[g]],
@@ -231,7 +231,7 @@ lav_model_h1_information_expected <- function(lavobject = NULL, # nolint
               res_cov           = lavimplied$res.cov[[g]]
             )
           } else {
-            a1[[g]] <- lav_mvreg_information_expected(
+            a1[[g]] <- lav_mvreg_info_expected(
               sample_mean_x     = lavsamplestats@mean.x[[g]],
               sample_cov_x      = lavsamplestats@cov.x[[g]],
               sample_nobs       = lavsamplestats@nobs[[g]],
@@ -254,7 +254,7 @@ lav_model_h1_information_expected <- function(lavobject = NULL, # nolint
           correlation_flag <- lavmodel@correlation
 
           if (structured) {
-            a1[[g]] <- lav_mvnorm_information_expected(
+            a1[[g]] <- lav_mvn_info_expected(
               sigma_1         = lavimplied$cov[[g]],
               # wt = WT, # not needed
               x_idx         = lavsamplestats@x.idx[[g]],
@@ -262,7 +262,7 @@ lav_model_h1_information_expected <- function(lavobject = NULL, # nolint
               correlation   = correlation_flag
             )
           } else {
-            a1[[g]] <- lav_mvnorm_h1_information_expected(
+            a1[[g]] <- lav_mvn_h1_info_expected(
               sample_cov_inv = lavsamplestats@icov[[g]],
               # wt = WT, not needed
               x_idx          = lavsamplestats@x.idx[[g]],
@@ -277,7 +277,7 @@ lav_model_h1_information_expected <- function(lavobject = NULL, # nolint
       if (lavmodel@group.w.free) {
         # unweight!! (as otherwise, we would 'weight' again)
         a <- exp(lavimplied$group.w[[g]]) / lavsamplestats@nobs[[g]]
-        a1[[g]] <- lav_matrix_bdiag(matrix(a, 1L, 1L), a1[[g]])
+        a1[[g]] <- lav_mat_bdiag(matrix(a, 1L, 1L), a1[[g]])
       }
     } # g
   # ML
@@ -305,7 +305,7 @@ lav_model_h1_information_expected <- function(lavobject = NULL, # nolint
       sigma_b <- implied$cov[[(g - 1) * lavdata@nlevels + 2L]]
 
       # clustered data
-      a1[[g]] <- lav_mvnorm_cluster_information_expected(
+      a1[[g]] <- lav_mvn_cl_info_expected(
         lp           = lavdata@Lp[[g]],
         mu_w         = mu_w,
         sigma_w      = sigma_w,
@@ -320,7 +320,7 @@ lav_model_h1_information_expected <- function(lavobject = NULL, # nolint
   a1
 }
 
-lav_model_h1_information_observed <- function(lavobject = NULL, # nolint
+lav_model_h1_info_observed <- function(lavobject = NULL,
                                               lavmodel = NULL,
                                               lavsamplestats = NULL,
                                               lavdata = NULL,
@@ -373,7 +373,7 @@ lav_model_h1_information_observed <- function(lavobject = NULL, # nolint
       a1 <- vector("list", length = lavsamplestats@ngroups)
       for (g in seq_len(lavsamplestats@ngroups)) {
         dls_a <- lavmodel@estimator.args$dls.a
-        gamma_nt <- lav_samplestats_gamma_nt(
+        gamma_nt <- lav_samp_gamma_nt(
           m_cov          = lavimplied$cov[[g]],
           m_mean         = lavimplied$mean[[g]],
           x_idx          = lavsamplestats@x.idx[[g]],
@@ -383,7 +383,7 @@ lav_model_h1_information_observed <- function(lavobject = NULL, # nolint
           slopestructure = lavmodel@conditional.x
         )
         w_dls <- (1 - dls_a) * lavsamplestats@NACOV[[g]] + dls_a * gamma_nt
-        a1[[g]] <- lav_matrix_symmetric_inverse(w_dls)
+        a1[[g]] <- lav_mat_sym_inverse(w_dls)
       }
     }
   # 2. DWLS/ULS diagonal @WLS.VD slot
@@ -481,7 +481,7 @@ lav_model_h1_information_observed <- function(lavobject = NULL, # nolint
           }
 
           if (structured) {
-            a1[[g]] <- lav_mvnorm_information_observed_samplestats(
+            a1[[g]] <- lav_mvn_info_observed_samp(
               sample_mean   = lavsamplestats@mean[[g]],
               sample_cov    = lavsamplestats@cov[[g]],
               mu            = mean_1,
@@ -491,7 +491,7 @@ lav_model_h1_information_observed <- function(lavobject = NULL, # nolint
               meanstructure = lavmodel@meanstructure
             )
           } else {
-            a1[[g]] <- lav_mvnorm_h1_information_observed_samplestats(
+            a1[[g]] <- lav_mvn_h1_info_observed_samp(
               sample_mean    = lavsamplestats@mean[[g]],
               sample_cov     = lavsamplestats@cov[[g]],
               sample_cov_inv = lavsamplestats@icov[[g]],
@@ -507,7 +507,7 @@ lav_model_h1_information_observed <- function(lavobject = NULL, # nolint
       if (lavmodel@group.w.free) {
         # unweight!!
         a <- exp(lavimplied$group.w[[g]]) / lavsamplestats@nobs[[g]]
-        a1[[g]] <- lav_matrix_bdiag(matrix(a, 1, 1), a1[[g]])
+        a1[[g]] <- lav_mat_bdiag(matrix(a, 1, 1), a1[[g]])
       }
     } # g
   # ML
@@ -534,7 +534,7 @@ lav_model_h1_information_observed <- function(lavobject = NULL, # nolint
       sigma_b <- implied$cov[[(g - 1) * lavdata@nlevels + 2L]]
 
       if (lavdata@missing == "ml") {
-          a1[[g]] <- lav_mvnorm_cluster_missing_information_observed(
+          a1[[g]] <- lav_mvn_cl_mi_info_observed(
             y1            = lavdata@X[[g]],
             y2            = lavsamplestats@YLp[[g]][[2]]$Y2,
             lp            = lavdata@Lp[[g]],
@@ -546,7 +546,7 @@ lav_model_h1_information_observed <- function(lavobject = NULL, # nolint
             x_idx         = lavsamplestats@x.idx[[g]]
           )
       } else {
-        a1[[g]] <- lav_mvnorm_cluster_information_observed(
+        a1[[g]] <- lav_mvn_cl_info_observed(
           lp           = lavdata@Lp[[g]],
           ylp          = lavsamplestats@YLp[[g]],
           mu_w         = mu_w,
@@ -565,7 +565,7 @@ lav_model_h1_information_observed <- function(lavobject = NULL, # nolint
 # outer product of the case-wise scores (gradients)
 # HJ 18/10/2023: Adjust J matrix correctly using weights. Note: H matrix is
 # based on lav_model_hessian so no changes required.
-lav_model_h1_information_firstorder <- function(lavobject = NULL,     # nolint
+lav_model_h1_info_firstorder <- function(lavobject = NULL,
                                                 lavmodel = NULL,
                                                 lavsamplestats = NULL,
                                                 lavdata = NULL,
@@ -715,7 +715,7 @@ lav_model_h1_information_firstorder <- function(lavobject = NULL,     # nolint
 
       } else {
         if (is.null(wt)) {
-          b1[[g]] <- lav_matrix_crossprod(sc)
+          b1[[g]] <- lav_mat_crossprod(sc)
         } else {
           b1[[g]] <- crossprod(wt * sc)
         }
@@ -738,7 +738,7 @@ lav_model_h1_information_firstorder <- function(lavobject = NULL,     # nolint
         res_sigma_b <- implied$res.cov[[(g - 1) * lavdata@nlevels + 2L]]
         res_int_b <- implied$res.int[[(g - 1) * lavdata@nlevels + 2L]]
         res_pi_b <- implied$res.slopes[[(g - 1) * lavdata@nlevels + 2L]]
-        b1[[g]] <- lav_mvreg_cluster_information_firstorder(
+        b1[[g]] <- lav_mvreg_cl_info_firstorder(
           y1            = lavdata@X[[g]],
           ylp           = lavsamplestats@YLp[[g]],
           lp            = lavdata@Lp[[g]],
@@ -756,7 +756,7 @@ lav_model_h1_information_firstorder <- function(lavobject = NULL,     # nolint
         sigma_w <- implied$cov[[(g - 1) * lavdata@nlevels + 1L]]
         sigma_b <- implied$cov[[(g - 1) * lavdata@nlevels + 2L]]
     if (lavdata@missing == "ml") {
-          b1[[g]] <- lav_mvnorm_cluster_missing_information_firstorder(
+          b1[[g]] <- lav_mvn_cl_mi_info_firstorder(
             y1            = lavdata@X[[g]],
             y2            = lavsamplestats@YLp[[g]][[2]]$Y2,
             lp            = lavdata@Lp[[g]],
@@ -770,7 +770,7 @@ lav_model_h1_information_firstorder <- function(lavobject = NULL,     # nolint
           )
     } else {
       # no missing values
-          b1[[g]] <- lav_mvnorm_cluster_information_firstorder(
+          b1[[g]] <- lav_mvn_cl_info_firstorder(
             y1            = lavdata@X[[g]],
             ylp           = lavsamplestats@YLp[[g]],
             lp            = lavdata@Lp[[g]],
@@ -801,7 +801,7 @@ lav_model_h1_information_firstorder <- function(lavobject = NULL,     # nolint
           mean_1 <- lavh1$implied$mean[[g]]
         }
 
-        b1[[g]] <- lav_mvnorm_missing_information_firstorder(
+        b1[[g]] <- lav_mvn_mi_info_firstorder(
           y = lavdata@X[[g]],
           mp = lavdata@Mp[[g]], wt = wt,
           cluster_idx = cluster_idx,
@@ -821,7 +821,7 @@ lav_model_h1_information_firstorder <- function(lavobject = NULL,     # nolint
             res_slopes <- lavsamplestats@res.slopes[[g]]
           }
 
-          b1[[g]] <- lav_mvreg_information_firstorder(
+          b1[[g]] <- lav_mvreg_info_firstorder(
             y              = lavdata@X[[g]],
             exo            = lavdata@eXo[[g]],
             res_int        = res_int,
@@ -845,7 +845,7 @@ lav_model_h1_information_firstorder <- function(lavobject = NULL,     # nolint
           }
 
           if (structured) {
-            b1[[g]] <- lav_mvnorm_information_firstorder(
+            b1[[g]] <- lav_mvn_info_firstorder(
               y = lavdata@X[[g]],
               mu = mean_1, sigma_1 = lavimplied$cov[[g]],
               wt = wt,
@@ -854,7 +854,7 @@ lav_model_h1_information_firstorder <- function(lavobject = NULL,     # nolint
               meanstructure = lavmodel@meanstructure
             )
           } else {
-            b1[[g]] <- lav_mvnorm_h1_information_firstorder(
+            b1[[g]] <- lav_mvn_h1_info_firstorder(
               y = lavdata@X[[g]],
               sample_cov_inv = lavsamplestats@icov[[g]],
               gamma_1 = lavsamplestats@NACOV[[g]],
@@ -872,7 +872,7 @@ lav_model_h1_information_firstorder <- function(lavobject = NULL,     # nolint
     if (lavmodel@group.w.free) {
       # unweight!!
       a <- exp(lavimplied$group.w[[g]]) / lavsamplestats@nobs[[g]]
-      b1[[g]] <- lav_matrix_bdiag(matrix(a, 1, 1), b1[[g]])
+      b1[[g]] <- lav_mat_bdiag(matrix(a, 1, 1), b1[[g]])
     }
   } # g
 
@@ -936,21 +936,21 @@ lav_model_h1_acov <- function(lavobject = NULL,
 
   # compute information matrix
   if (information == "observed") {
-    i1 <- lav_model_h1_information_observed(
+    i1 <- lav_model_h1_info_observed(
       lavmodel = lavmodel,
       lavsamplestats = lavsamplestats, lavdata = lavdata,
       lavimplied = lavimplied, lavh1 = lavh1,
       lavcache = lavcache, lavoptions = lavoptions
     )
   } else if (information == "expected") {
-    i1 <- lav_model_h1_information_expected(
+    i1 <- lav_model_h1_info_expected(
       lavmodel = lavmodel,
       lavsamplestats = lavsamplestats, lavdata = lavdata,
       lavimplied = lavimplied, lavh1 = lavh1,
       lavcache = lavcache, lavoptions = lavoptions
     )
   } else if (information == "first.order") {
-    i1 <- lav_model_h1_information_firstorder(
+    i1 <- lav_model_h1_info_firstorder(
       lavmodel = lavmodel,
       lavsamplestats = lavsamplestats, lavdata = lavdata,
       lavimplied = lavimplied, lavh1 = lavh1,
@@ -959,7 +959,7 @@ lav_model_h1_acov <- function(lavobject = NULL,
   }
 
   if (lavoptions$se %in% c("robust.huber.white", "robust.sem")) {
-    j1 <- lav_model_h1_information_firstorder(
+    j1 <- lav_model_h1_info_firstorder(
       lavmodel = lavmodel,
       lavsamplestats = lavsamplestats, lavdata = lavdata,
       lavimplied = lavimplied, lavh1 = lavh1,
@@ -978,7 +978,7 @@ lav_model_h1_acov <- function(lavobject = NULL,
     }
 
     # invert information
-    i1_g_inv <- try(lav_matrix_symmetric_inverse(i1[[g]]), silent = TRUE)
+    i1_g_inv <- try(lav_mat_sym_inverse(i1[[g]]), silent = TRUE)
     if (inherits(i1_g_inv, "try-error")) {
       lav_msg_stop(gettext(
         "could not invert h1 information matrix in group"), g)

@@ -47,7 +47,7 @@ lav_h1_logl <- function(lavdata = NULL,
         current_verbose <- lav_verbose()
         if (lav_verbose(FALSE))
             on.exit(lav_verbose(current_verbose), TRUE)
-        out_1 <- lav_mvnorm_cluster_em_sat(
+        out_1 <- lav_mvn_cl_em_sat(
           ylp = lavsamplestats@YLp[[g]],
           lp = lavdata@Lp[[g]],
           tol = 1e-04, # option?
@@ -59,7 +59,7 @@ lav_h1_logl <- function(lavdata = NULL,
         logl_group[g] <- out_1$logl
       } else if (lavsamplestats@missing.flag) {
         logl_group[g] <-
-          lav_mvnorm_missing_loglik_samplestats(
+          lav_mvn_mi_loglik_samp(
             yp     = lavsamplestats@missing[[g]],
             #Mu     = lavsamplestats@missing.h1[[g]]$mu,
             mu     = h1_implied$mean[[g]],
@@ -73,7 +73,7 @@ lav_h1_logl <- function(lavdata = NULL,
         # all we need is: logdet of covariance matrix, nobs and nvar
         if (lavoptions$conditional.x) {
           logl_group[g] <-
-            lav_mvnorm_h1_loglik_samplestats(
+            lav_mvn_h1_loglik_samp(
               sample_cov_logdet =
                 lavsamplestats@res.cov.log.det[[g]],
               sample_nvar =
@@ -82,7 +82,7 @@ lav_h1_logl <- function(lavdata = NULL,
             )
         } else {
           logl_group[g] <-
-            lav_mvnorm_h1_loglik_samplestats(
+            lav_mvn_h1_loglik_samp(
               sample_cov_logdet = lavsamplestats@cov.log.det[[g]],
               sample_nvar       = NCOL(lavsamplestats@cov[[g]]),
               sample_nobs       = lavsamplestats@nobs[[g]],

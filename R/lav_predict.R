@@ -118,7 +118,7 @@ lav_predict_internal <- function(lavmodel = NULL,
                                drop_list_single_group = TRUE) {
   # type
   type <- tolower(type)
-  lavpta <- lav_partable_attributes(lavpartable)
+  lavpta <- lav_pt_attributes(lavpartable)
   if (type %in% c("latent", "lv", "factor", "factor.score", "factorscore")) {
     type <- "lv"
   } else if (type %in% c("ov", "yhat")) {
@@ -357,8 +357,8 @@ lav_predict_internal <- function(lavmodel = NULL,
 #         #            returning original factor scores."))
 #         #  return(out[[g]])
 #         #}
-#         #fs.inv.sqrt <- lav_matrix_symmetric_sqrt(FS.cov.inv)
-#         #veta.sqrt <- lav_matrix_symmetric_sqrt(VETA[[g]])
+#         #fs.inv.sqrt <- lav_mat_sym_sqrt(FS.cov.inv)
+#         #veta.sqrt <- lav_mat_sym_sqrt(VETA[[g]])
 #         #tmp <- FS.centered %*% fs.inv.sqrt %*% veta.sqrt
 #         tmp <- FS.centered %*% t(tmat[[b]])
 #         ret <- t(t(tmp) + drop(EETA[[g]]))
@@ -813,7 +813,7 @@ lav_predict_eta_normal <- function(lavobject = NULL, # for convenience
     if (newdata_flag) {
       mp_1 <- vector("list", lavdata@ngroups)
       for (g in seq_len(lavdata@ngroups)) {
-        mp_1[[g]] <- lav_data_missing_patterns(data_obs[[g]])
+        mp_1[[g]] <- lav_data_mi_patterns(data_obs[[g]])
       }
     } else {
       mp_1 <- lavdata@Mp
@@ -873,11 +873,11 @@ lav_predict_eta_normal <- function(lavobject = NULL, # for convenience
       implied_group <- lapply(lavimplied, function(x) x[group_idx])
 
       # random effects (=random intercepts or cluster means)
-      out <- lav_mvnorm_cluster_implied22l(
+      out <- lav_mvn_cl_implied22l(
         lp = lp,
         implied = implied_group
       )
-      mb_j <- lav_mvnorm_cluster_em_estep_ranef(
+      mb_j <- lav_mvn_cl_em_estep_ranef(
         ylp = ylp, lp = lp,
         sigma_w = out$sigma.w, sigma_b = out$sigma.b,
         sigma_zz = out$sigma.zz, sigma_yz = out$sigma.yz,
@@ -988,7 +988,7 @@ lav_predict_eta_normal <- function(lavobject = NULL, # for convenience
         oc <- yc[mp$case.idx[[p]], mp$pat[p, ], drop = FALSE]
 
         # invert sigma (Sigma_22, observed part only) for this pattern
-        sigma_22_inv <- try(lav_matrix_symmetric_inverse_update(
+        sigma_22_inv <- try(lav_mat_sym_inverse_update(
           s_inv = sigma_inv_g, rm_idx = na_idx, logdet = FALSE
         ), silent = TRUE)
         if (inherits(sigma_22_inv, "try-error")) {
@@ -1146,7 +1146,7 @@ lav_predict_eta_bartlett <- function(lavobject = NULL, # for convenience
     if (newdata_flag) {
       mp_1 <- vector("list", lavdata@ngroups)
       for (g in seq_len(lavdata@ngroups)) {
-        mp_1[[g]] <- lav_data_missing_patterns(data_obs[[g]])
+        mp_1[[g]] <- lav_data_mi_patterns(data_obs[[g]])
       }
     } else {
       mp_1 <- lavdata@Mp
@@ -1206,11 +1206,11 @@ lav_predict_eta_bartlett <- function(lavobject = NULL, # for convenience
       # random effects (=random intercepts or cluster means)
       # NOTE: is the 'ML' way not simply using the observed cluster
       #       means?
-      out <- lav_mvnorm_cluster_implied22l(
+      out <- lav_mvn_cl_implied22l(
         lp = lp,
         implied = implied_group
       )
-      mb_j <- lav_mvnorm_cluster_em_estep_ranef(
+      mb_j <- lav_mvn_cl_em_estep_ranef(
         ylp = ylp, lp = lp,
         sigma_w = out$sigma.w, sigma_b = out$sigma.b,
         sigma_zz = out$sigma.zz, sigma_yz = out$sigma.yz,
@@ -1323,7 +1323,7 @@ lav_predict_eta_bartlett <- function(lavobject = NULL, # for convenience
         oc <- yc[mp$case.idx[[p]], mp$pat[p, ], drop = FALSE]
 
         # invert sigma (Sigma_22, observed part only) for this pattern
-        sigma_22_inv <- try(lav_matrix_symmetric_inverse_update(
+        sigma_22_inv <- try(lav_mat_sym_inverse_update(
           s_inv = sigma_inv_g, rm_idx = na_idx, logdet = FALSE
         ), silent = TRUE)
         if (inherits(sigma_22_inv, "try-error")) {
@@ -2045,11 +2045,11 @@ lav_predict_tmat_green <- function(lavobject = NULL,
     sigma_b <- sigma_1[[b]]
     sigma_b_inv <- solve(sigma_b)
     veta <- veta_1[[b]]
-    veta_sqrt <- lav_matrix_symmetric_sqrt(veta)
+    veta_sqrt <- lav_mat_sym_sqrt(veta)
     veta32 <- veta %*% veta_sqrt
     lambda <- mm_lambda[[b]]
     tmp <- veta32 %*% t(lambda) %*% sigma_b_inv %*% lambda %*% veta32
-    tmp_inv_sqrt <- lav_matrix_symmetric_sqrt(solve(tmp))
+    tmp_inv_sqrt <- lav_mat_sym_sqrt(solve(tmp))
     tmat[[b]] <- veta_sqrt %*% tmp_inv_sqrt %*% veta_sqrt
   }
 
@@ -2084,11 +2084,11 @@ lav_predict_tmat_det <- function(lavobject = NULL,
     sigma_b <- sigma_1[[b]]
     sigma_b_inv <- solve(sigma_b)
     veta <- veta_1[[b]]
-    veta_sqrt <- lav_matrix_symmetric_sqrt(veta)
-    veta_inv_sqrt <- lav_matrix_symmetric_sqrt(solve(veta))
+    veta_sqrt <- lav_mat_sym_sqrt(veta)
+    veta_inv_sqrt <- lav_mat_sym_sqrt(solve(veta))
     lambda <- mm_lambda[[b]]
     tmp <- veta_sqrt %*% t(lambda) %*% sigma_b_inv %*% lambda %*% veta_sqrt
-    tmp_sqrt <- lav_matrix_symmetric_sqrt(tmp)
+    tmp_sqrt <- lav_mat_sym_sqrt(tmp)
     tmat[[b]] <- veta_sqrt %*% tmp_sqrt %*% veta_inv_sqrt
   }
 
@@ -2099,10 +2099,10 @@ lav_predict_tmat_det <- function(lavobject = NULL,
 lav_predict_tmat_det_internal <- function(sigma_1 = NULL, veta = NULL,
                                           lambda = NULL) {
     sigma_inv <- solve(sigma_1)
-    veta_sqrt <- lav_matrix_symmetric_sqrt(veta)
-    veta_inv_sqrt <- lav_matrix_symmetric_sqrt(solve(veta))
+    veta_sqrt <- lav_mat_sym_sqrt(veta)
+    veta_inv_sqrt <- lav_mat_sym_sqrt(solve(veta))
     tmp <- veta_sqrt %*% t(lambda) %*% sigma_inv %*% lambda %*% veta_sqrt
-    tmp_sqrt <- lav_matrix_symmetric_sqrt(tmp)
+    tmp_sqrt <- lav_mat_sym_sqrt(tmp)
     tmat <- veta_sqrt %*% tmp_sqrt %*% veta_inv_sqrt
     tmat
 }

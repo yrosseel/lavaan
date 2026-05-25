@@ -61,7 +61,7 @@ lav_sam_step2 <- function(step1 = NULL, fit = NULL,
   # construct PTS
   if (sam_method %in% c("local", "fsr", "cfsr")) {
     # extract structural part
-    pts <- lav_partable_subset_structural_model(pt_1,
+    pts <- lav_pt_subset_structural_model(pt_1,
       add_idx = TRUE,
       add_exo_cov = TRUE,
       fixed_x = lavoptions_pa$fixed.x,
@@ -115,7 +115,7 @@ lav_sam_step2 <- function(step1 = NULL, fit = NULL,
     # the measurement model parameters now become fixed ustart values
     pt_1$ustart[pt_1$free > 0] <- pt_1$est[pt_1$free > 0]
 
-    reg_idx <- lav_partable_subset_structural_model(
+    reg_idx <- lav_pt_subset_structural_model(
       pt_1 = pt_1,
       idx_only = TRUE
     )
@@ -164,7 +164,7 @@ lav_sam_step2 <- function(step1 = NULL, fit = NULL,
     # set 'ustart' values for free FIT.PA parameter to NA
     pts$ustart[pts$free > 0L] <- as.numeric(NA)
 
-    pts <- lav_partable_complete(pts)
+    pts <- lav_pt_complete(pts)
 
     extra_id <- integer(0L)
   } # global
@@ -211,7 +211,7 @@ lav_sam_step2 <- function(step1 = NULL, fit = NULL,
 
   # find corresponding rows in PT
   pts2 <- as.data.frame(pts, stringsAsFactors = FALSE)
-  pt_idx <- lav_partable_map_id_p1_in_p2(pts2[pts_idx, ], pt_1,
+  pt_idx <- lav_pt_map_id_p1_in_p2(pts2[pts_idx, ], pt_1,
     exclude_nonpar = FALSE
   )
   # fill in

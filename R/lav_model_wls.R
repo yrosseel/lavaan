@@ -24,9 +24,9 @@ lav_model_wls_est <- function(lavmodel = NULL, glist = NULL,
       if (lavmodel@conditional.x) {
         wls_est <- c(
           lavimplied$res.th[[g]],
-          lav_matrix_vec(lavimplied$res.slopes[[g]]),
+          lav_mat_vec(lavimplied$res.slopes[[g]]),
           diag(lavimplied$res.cov[[g]])[num_idx[[g]]],
-          lav_matrix_vech(lavimplied$res.cov[[g]],
+          lav_mat_vech(lavimplied$res.cov[[g]],
             diagonal = FALSE
           )
         )
@@ -34,7 +34,7 @@ lav_model_wls_est <- function(lavmodel = NULL, glist = NULL,
         wls_est <- c(
           lavimplied$th[[g]],
           diag(lavimplied$cov[[g]])[num_idx[[g]]],
-          lav_matrix_vech(lavimplied$cov[[g]],
+          lav_mat_vech(lavimplied$cov[[g]],
             diagonal = FALSE
           )
         )
@@ -52,20 +52,20 @@ lav_model_wls_est <- function(lavmodel = NULL, glist = NULL,
         # so we need vecr
         if (meanstructure) {
           wls_est <- c(
-            lav_matrix_vecr(
+            lav_mat_vecr(
               cbind(
                 lavimplied$res.int[[g]],
                 lavimplied$res.slopes[[g]]
               )
             ),
-            lav_matrix_vech(lavimplied$res.cov[[g]],
+            lav_mat_vech(lavimplied$res.cov[[g]],
               diagonal = diag_1
             )
           )
         } else {
           wls_est <- c(
-            lav_matrix_vecr(lavimplied$res.slopes[[g]]),
-            lav_matrix_vech(lavimplied$res.cov[[g]],
+            lav_mat_vecr(lavimplied$res.slopes[[g]]),
+            lav_mat_vech(lavimplied$res.cov[[g]],
               diagonal = diag_1
             )
           )
@@ -74,12 +74,12 @@ lav_model_wls_est <- function(lavmodel = NULL, glist = NULL,
         if (meanstructure) {
           wls_est <- c(
             lavimplied$mean[[g]],
-            lav_matrix_vech(lavimplied$cov[[g]],
+            lav_mat_vech(lavimplied$cov[[g]],
               diagonal = diag_1
             )
           )
         } else {
-          wls_est <- lav_matrix_vech(lavimplied$cov[[g]],
+          wls_est <- lav_mat_vech(lavimplied$cov[[g]],
             diagonal = diag_1
           )
         }
@@ -96,4 +96,4 @@ lav_model_wls_est <- function(lavmodel = NULL, glist = NULL,
   wls_est_1
 }
 
-# Note: lav_model_wls_v() is replaced by lav_model_h1_information() in 0.6-1
+# Note: lav_model_wls_v() is replaced by lav_model_h1_info() in 0.6-1

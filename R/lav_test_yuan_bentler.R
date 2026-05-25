@@ -4,7 +4,7 @@
 #           Note however that Satterthwaite = FALSE always (for now), so
 #           the fix has no (visible) effect
 
-lav_test_yuan_bentler <- function(lavobject = NULL,
+lav_test_yb <- function(lavobject = NULL,
                                   lavsamplestats = NULL,
                                   lavmodel = NULL,
                                   lavimplied = NULL,
@@ -85,7 +85,7 @@ lav_test_yuan_bentler <- function(lavobject = NULL,
   # do we have E.inv?
   if (is.null(e_inv) || e_inv_recompute) {
     e_inv <- try(
-      lav_model_information(
+      lav_model_info(
         lavmodel = lavmodel,
         lavsamplestats = lavsamplestats,
         lavdata = lavdata,
@@ -148,7 +148,7 @@ lav_test_yuan_bentler <- function(lavobject = NULL,
   }
 
   # A1 is usually expected or observed
-  a1_group <- lav_model_h1_information(
+  a1_group <- lav_model_h1_info(
     lavmodel = lavmodel,
     lavsamplestats = lavsamplestats,
     lavdata = lavdata,
@@ -157,7 +157,7 @@ lav_test_yuan_bentler <- function(lavobject = NULL,
     lavoptions = h1_options
   )
   # B1 is always first.order
-  b1_group <- lav_model_h1_information_firstorder(
+  b1_group <- lav_model_h1_info_firstorder(
     lavmodel = lavmodel,
     lavsamplestats = lavsamplestats,
     lavdata = lavdata,
@@ -168,7 +168,7 @@ lav_test_yuan_bentler <- function(lavobject = NULL,
 
   if (test == "yuan.bentler.mplus") {
     if (is.null(b0_group)) {
-      b0 <- lav_model_information_firstorder(
+      b0 <- lav_model_info_firstorder(
         lavmodel = lavmodel,
         lavsamplestats = lavsamplestats,
         lavdata = lavdata,
@@ -182,7 +182,7 @@ lav_test_yuan_bentler <- function(lavobject = NULL,
       b0_group <- attr(b0, "B0.group")
     }
     trace_ugamma <-
-      lav_test_yuan_bentler_mplus_trace(
+      lav_test_yb_mplus_trace(
         lavsamplestats = lavsamplestats,
         a1_group = a1_group,
         b1_group = b1_group,
@@ -205,7 +205,7 @@ lav_test_yuan_bentler <- function(lavobject = NULL,
     )
 
     # compute trace 'U %*% Gamma' (or 'U %*% Omega')
-    trace_ugamma <- lav_test_yuan_bentler_trace(
+    trace_ugamma <- lav_test_yb_trace(
       lavsamplestats   = lavsamplestats,
       meanstructure    = lavmodel@meanstructure,
       a1_group         = a1_group,
@@ -277,7 +277,7 @@ lav_test_yuan_bentler <- function(lavobject = NULL,
 }
 
 
-lav_test_yuan_bentler_trace <- function(lavsamplestats = lavsamplestats,
+lav_test_yb_trace <- function(lavsamplestats = lavsamplestats,
                                         meanstructure = TRUE,
                                         a1_group = NULL,
                                         b1_group = NULL,
@@ -337,19 +337,19 @@ lav_test_yuan_bentler_trace <- function(lavsamplestats = lavsamplestats,
     for (g in 1:ngroups) {
       a1_f[[g]] <- a1_group[[g]] * fg[g]
     }
-    a1_all <- lav_matrix_bdiag(a1_f)
+    a1_all <- lav_mat_bdiag(a1_f)
 
     b1_f <- b1_group
     for (g in 1:ngroups) {
       b1_f[[g]] <- b1_group[[g]] * fg[g]
     }
-    b1_all <- lav_matrix_bdiag(b1_f)
+    b1_all <- lav_mat_bdiag(b1_f)
 
     gamma_f <- omega
     for (g in 1:ngroups) {
       gamma_f[[g]] <- 1 / fg[g] * omega[[g]]
     }
-    gamma_all <- lav_matrix_bdiag(gamma_f)
+    gamma_all <- lav_mat_bdiag(gamma_f)
     delta_all <- do.call("rbind", delta)
 
     d_einv_t_d <- delta_all %*% tcrossprod(e_inv, delta_all)
@@ -373,7 +373,7 @@ lav_test_yuan_bentler_trace <- function(lavsamplestats = lavsamplestats,
   trace_ugamma
 }
 
-lav_test_yuan_bentler_mplus_trace <- function(lavsamplestats = NULL, # nolint
+lav_test_yb_mplus_trace <- function(lavsamplestats = NULL,
                                               a1_group = NULL,
                                               b1_group = NULL,
                                               b0_group = NULL,

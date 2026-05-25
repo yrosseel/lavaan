@@ -66,7 +66,7 @@ lav_cfa_fabin3 <- function(s, marker_idx = NULL, lambda_nonzero_idx = NULL) {
     fac_idx <- marker_idx[free_idx]
     rm3_idx <- rm3_idx + 1L
     # update inverse
-    s33_inv <- lav_matrix_symmetric_inverse_update(
+    s33_inv <- lav_mat_sym_inverse_update(
       s_inv = s33_inv_1,
       rm_idx = rm3_idx
     )
@@ -93,8 +93,8 @@ lav_cfa_fabin3 <- function(s, marker_idx = NULL, lambda_nonzero_idx = NULL) {
 lav_cfa_fabin_internal <- function(lavmodel = NULL, lavsamplestats = NULL,
                                    lavpartable = NULL,
                                    lavdata = NULL, lavoptions = NULL) {
-  lavpta <- lav_partable_attributes(lavpartable)
-  lavpartable <- lav_partable_set_cache(lavpartable, lavpta)
+  lavpta <- lav_pt_attributes(lavpartable)
+  lavpartable <- lav_pt_set_cache(lavpartable, lavpta)
   # no structural part!
   if (any(lavpartable$op == "~")) {
     lav_msg_stop(gettext("FABIN estimator only available for CFA models"))
@@ -110,7 +110,7 @@ lav_cfa_fabin_internal <- function(lavmodel = NULL, lavsamplestats = NULL,
       gettext("FABIN estimator not available if std.lv = TRUE"))
   }
 
-  nblocks <- lav_partable_nblocks(lavpartable)
+  nblocks <- lav_pt_nblocks(lavpartable)
   stopifnot(nblocks == 1L) # for now
   b <- 1L
   sample_cov <- lavsamplestats@cov[[b]]
@@ -124,7 +124,7 @@ lav_cfa_fabin_internal <- function(lavmodel = NULL, lavsamplestats = NULL,
   # (see MIIV)
   theta_idx <- which(names(lavmodel@GLIST) == "theta") # usually '2'
   m_theta <- lavmodel@m.free.idx[[theta_idx]]
-  nondiag_idx <- m_theta[!m_theta %in% lav_matrix_diag_idx(nvar)]
+  nondiag_idx <- m_theta[!m_theta %in% lav_mat_diag_idx(nvar)]
   if (length(nondiag_idx) > 0L) {
     lav_msg_warn(gettext(
       "this implementation of FABIN does not handle correlated residuals yet!"

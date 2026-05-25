@@ -67,27 +67,27 @@ lav_data_simulate_old <- function( # user-specified model    # nolint start
       lav_msg_stop(gettext("model is a list, but not a parameterTable?"))
     }
   } else {
-    lav <- lav_model_partable(
+    lav <- lav_model_pt(
       model = model,
       meanstructure = meanstructure,
-      int.ov.free = int.ov.free,
-      int.lv.free = int.lv.free,
-      marker.int.zero = marker.int.zero,
+      int_ov_free = int.ov.free,
+      int_lv_free = int.lv.free,
+      marker_int_zero = marker.int.zero,
       composites = composites,
-      conditional.x = conditional.x,
-      fixed.x = fixed.x,
+      conditional_x = conditional.x,
+      fixed_x = fixed.x,
       orthogonal = orthogonal,
-      std.lv = std.lv,
-      auto.fix.first = auto.fix.first,
-      auto.fix.single = auto.fix.single,
-      auto.var = auto.var,
-      auto.cov.lv.x = auto.cov.lv.x,
-      auto.cov.y = auto.cov.y,
+      std_lv = std.lv,
+      auto_fix_first = auto.fix.first,
+      auto_fix_single = auto.fix.single,
+      auto_var = auto.var,
+      auto_cov_lv_x = auto.cov.lv.x,
+      auto_cov_y = auto.cov.y,
       ngroups = length(sample.nobs)
     )
   }
 
-  group_values <- lav_partable_group_values(lav)
+  group_values <- lav_pt_group_values(lav)
   if (lav_debug()) {
     cat("initial lav\n")
     print(as.data.frame(lav))
@@ -141,12 +141,12 @@ lav_data_simulate_old <- function( # user-specified model    # nolint start
     # for ordered observed variables, we will get '0.0', but that is ok
     # so there is no need to make a distinction between numeric/ordered
     # here??
-    ngroups <- lav_partable_ngroups(lav)
-    ov_names <- lav_partable_vnames(lav, "ov")
-    ov_nox <- lav_partable_vnames(lav, "ov.nox")
-    # lv_names <- lav_partable_vnames(lav, "lv")
-    # lv_y <- lav_partable_vnames(lav, "lv.y")
-    lv_nox <- lav_partable_vnames(lav, "lv.nox")
+    ngroups <- lav_pt_ngroups(lav)
+    ov_names <- lav_pt_vnames(lav, "ov")
+    ov_nox <- lav_pt_vnames(lav, "ov.nox")
+    # lv_names <- lav_pt_vnames(lav, "lv")
+    # lv_y <- lav_pt_vnames(lav, "lv.y")
+    lv_nox <- lav_pt_vnames(lav, "lv.nox")
     ov_var_idx <- which(lav$op == "~~" & lav$lhs %in% ov_nox &
       lav$rhs == lav$lhs)
     lv_var_idx <- which(lav$op == "~~" & lav$lhs %in% lv_nox &
@@ -321,9 +321,9 @@ lav_data_simulate_old <- function( # user-specified model    # nolint start
     }
 
     # any categorical variables?
-    ov_ord <- lav_partable_vnames(lav, type = "ov.ord", group = group_values[g])
+    ov_ord <- lav_pt_vnames(lav, type = "ov.ord", group = group_values[g])
     if (length(ov_ord) > 0L) {
-      ov_names <- lav_partable_vnames(lav, type = "ov", group = group_values[g])
+      ov_names <- lav_pt_vnames(lav, type = "ov", group = group_values[g])
       # use thresholds to cut
       for (o in ov_ord) {
         o_idx <- which(o == ov_names)
@@ -353,7 +353,7 @@ lav_data_simulate_old <- function( # user-specified model    # nolint start
       }
       data_1$group <- rep(1:ngroups, times = sample.nobs)
     }
-    var_names <- lav_partable_vnames(fit@ParTable, type = "ov", group = 1L)
+    var_names <- lav_pt_vnames(fit@ParTable, type = "ov", group = 1L)
     if (ngroups > 1L) var_names <- c(var_names, "group")
     names(data_1) <- var_names
     if (return.fit) {

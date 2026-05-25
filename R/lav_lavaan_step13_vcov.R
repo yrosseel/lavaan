@@ -1,4 +1,4 @@
-lav_lavaan_step13_vcov_boot <- function(lavoptions = NULL,
+lav_step13_vcov_boot <- function(lavoptions = NULL,
                                         lavmodel = NULL,
                                         lavsamplestats = NULL,
                                         lavdata = NULL,

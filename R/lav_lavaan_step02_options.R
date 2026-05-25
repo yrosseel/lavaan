@@ -1,4 +1,4 @@
-lav_lavaan_step02_options <- function(slot_options = NULL, # nolint
+lav_step02_options <- function(slot_options = NULL,
                                       slot_data = NULL, # nolint
                                       flat_model = NULL,
                                       ordered = NULL,

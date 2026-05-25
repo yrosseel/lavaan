@@ -441,7 +441,7 @@ lav_lavdata <- function(data = NULL, # data.frame
       if (nlevels > 1L) {
         # ALWAYS add ov.names.x at the end, even if conditional.x
         ov_names_1 <- unique(c(ov_names[[g]], ov_names_x[[g]]))
-        lp[[g]] <- lav_data_cluster_patterns(
+        lp[[g]] <- lav_data_cl_patterns(
           y = NULL, clus = NULL,
           cluster = cluster,
           multilevel = TRUE,
@@ -837,7 +837,7 @@ lav_data_full <- function(data = NULL, # data.frame
     # replace any NAs by 0 (as we only wish to detect perfect correlations)
     cor_1[is.na(cor_1)] <- 0
     if (!inherits(cor_1, "try-error") &&
-        any(lav_matrix_vech(cor_1, diagonal = FALSE) == 1)) {
+        any(lav_mat_vech(cor_1, diagonal = FALSE) == 1)) {
       cor_1[upper.tri(cor_1, diag = TRUE)] <- 0
       idx <- which(cor_1 == 1)
       this_names <- ov$name[num_idx]
@@ -1073,7 +1073,7 @@ lav_data_full <- function(data = NULL, # data.frame
       }
       # ALWAYS add ov.names.x at the end, even if conditional.x (0.6-7)
       ov_names_2 <- unique(c(ov_names[[g]], ov_names_x[[g]]))
-      lp[[g]] <- lav_data_cluster_patterns(
+      lp[[g]] <- lav_data_cl_patterns(
         y = x[[g]], clus = clus,
         cluster = cluster,
         multilevel = multilevel,
@@ -1180,13 +1180,13 @@ lav_data_full <- function(data = NULL, # data.frame
     if (missing != "listwise") {
       if (length(cluster) > 0L) {
         # get missing patterns
-        mp[[g]] <- lav_data_missing_patterns(x[[g]],
+        mp[[g]] <- lav_data_mi_patterns(x[[g]],
           sort_freq = TRUE, coverage = TRUE,
           lp = lp[[g]]
         )
       } else {
         # get missing patterns
-        mp[[g]] <- lav_data_missing_patterns(x[[g]],
+        mp[[g]] <- lav_data_mi_patterns(x[[g]],
           sort_freq = TRUE, coverage = TRUE,
           lp = NULL
         )
@@ -1201,7 +1201,7 @@ lav_data_full <- function(data = NULL, # data.frame
           paste(empty_case_idx, collapse = " ")))
       }
     if (any(mp[[g]]$coverage < 0.1)) {
-      coverage_vech <- lav_matrix_vech(mp[[g]]$coverage, diagonal = FALSE)
+      coverage_vech <- lav_mat_vech(mp[[g]]$coverage, diagonal = FALSE)
       small_idx <- which(coverage_vech < 0.1)
       if (all(coverage_vech[small_idx] == 0)) {
       # 0.6-18: no warning --> this could be due to missing by design

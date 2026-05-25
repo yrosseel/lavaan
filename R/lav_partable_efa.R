@@ -6,12 +6,12 @@
 #       eg., if all the factor-loadings of the 'second' set (time/group)
 #       are constrained to be equal to the factor-loadings of the first
 #       set, no further constraints are needed
-lav_partable_efa_constraints <- function(list_1 = NULL,
+lav_pt_efa_con <- function(list_1 = NULL,
                                          orthogonal_efa = FALSE,
                                          group_equal = character(0L)) {
   # for each set, for each block
-  nblocks <- lav_partable_nblocks(list_1)
-  set_names <- lav_partable_efa_values(list_1)
+  nblocks <- lav_pt_nblocks(list_1)
+  set_names <- lav_pt_efa_values(list_1)
   nsets <- length(set_names)
 
   for (b in seq_len(nblocks)) {

@@ -256,7 +256,7 @@ lav_object_summary <- function(object, header = TRUE,
       lav_msg_warn(gettext(
         "fit measures not available if model did not converge"))
     } else {
-      fit <- lav_fit_measures(object,
+      fit <- lav_fit(object,
        fit_measures = c(list(fit.measures = fit_measures), fm_args),
        baseline_model = baseline_model,
        h1_model = h1_model)

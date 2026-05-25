@@ -1,4 +1,4 @@
-lav_samplestats_icov <- function(cov_1 = NULL, ridge = 0.0, x_idx = integer(0L),
+lav_samp_icov <- function(cov_1 = NULL, ridge = 0.0, x_idx = integer(0L),
                                  ngroups = 1L, g = 1L) {
 
   c_s <- tryCatch(chol(cov_1), error = function(e) NULL)

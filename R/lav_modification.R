@@ -53,8 +53,8 @@ modindices <- function(object,                         # nolint start
   if (object@Model@conditional.x) {
     strict_exo <- TRUE
   }
-  full <- lav_partable_full(
-    partable = lav_partable_set_cache(object@ParTable, object@pta),
+  full <- lav_pt_full(
+    partable = lav_pt_set_cache(object@ParTable, object@pta),
     free = TRUE, start = TRUE,
     strict_exo = strict_exo
   )
@@ -296,7 +296,7 @@ modindices <- function(object,                         # nolint start
   list_1$user <- NULL
 
   # remove block/group/level is only single block
-  if (lav_partable_nblocks(list_1) == 1L) {
+  if (lav_pt_nblocks(list_1) == 1L) {
     list_1$block <- NULL
     list_1$group <- NULL
     list_1$level <- NULL

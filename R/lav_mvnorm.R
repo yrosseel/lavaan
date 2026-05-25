@@ -27,7 +27,7 @@
 #                 (only for catml; not for correlation = TRUE!)
 
 # 0. densities
-lav_mvnorm_dmvnorm <- function(y = NULL,
+lav_mvn_dmvnorm <- function(y = NULL,
                                wt = NULL,
                                mu = NULL,
                                sigma_1 = NULL,
@@ -39,9 +39,9 @@ lav_mvnorm_dmvnorm <- function(y = NULL,
                                log = TRUE) {
   if (is.matrix(y)) {
     if (is.null(mu) && is.null(sigma_1) && is.null(sigma_inv)) {
-      out <- lav_mvnorm_loglik_data_z(y = y, casewise = TRUE)
+      out <- lav_mvn_loglik_data_z(y = y, casewise = TRUE)
     } else {
-      out <- lav_mvnorm_loglik_data(
+      out <- lav_mvn_loglik_data(
         y = y, mu = mu, sigma_1 = sigma_1,
         casewise = TRUE,
         sinv_method = sinv_method
@@ -58,7 +58,7 @@ lav_mvnorm_dmvnorm <- function(y = NULL,
       out <- -(p * log_2pi + dist_1) / 2
     } else {
       if (is.null(sigma_inv)) {
-        sigma_inv <- lav_matrix_symmetric_inverse(
+        sigma_inv <- lav_mat_sym_inverse(
           s = sigma_1,
           logdet = TRUE, sinv_method = sinv_method
         )
@@ -103,7 +103,7 @@ lav_mvnorm_dmvnorm <- function(y = NULL,
       sigma_x <- sigma_1[x_idx, x_idx, drop = FALSE]
     }
 
-    logl_x <- lav_mvnorm_dmvnorm(
+    logl_x <- lav_mvn_dmvnorm(
       y = x, wt = wt, mu = mu_x, sigma_1 = sigma_x,
       sigma_inv = NULL,
       sinv_method = sinv_method,
@@ -125,7 +125,7 @@ lav_mvnorm_dmvnorm <- function(y = NULL,
 
 # 1a: input is raw data
 # (note casewise = TRUE same as: dmvnorm(Y, mean, sigma, log = TRUE))
-lav_mvnorm_loglik_data <- function(y = NULL,
+lav_mvn_loglik_data <- function(y = NULL,
                                    wt = NULL,
                                    mu = NULL,
                                    sigma_1 = NULL,
@@ -134,7 +134,7 @@ lav_mvnorm_loglik_data <- function(y = NULL,
                                    x_cov = NULL,
                                    casewise = FALSE,
                                    sinv_method = "eigen") {
-  # Y must be a matrix (use lav_mvnorm_dmvnorm() for non-matrix input)
+  # Y must be a matrix (use lav_mvn_dmvnorm() for non-matrix input)
   stopifnot(is.matrix(y))
 
   if (!is.null(wt)) {
@@ -157,7 +157,7 @@ lav_mvnorm_loglik_data <- function(y = NULL,
       dist_1 <- rowSums((yc %*% ic_s)^2)
       logdet <- -2 * sum(log(diag(ic_s)))
     } else {
-      sigma_inv <- lav_matrix_symmetric_inverse(
+      sigma_inv <- lav_mat_sym_inverse(
         s = sigma_1, logdet = TRUE,
         sinv_method = sinv_method
       )
@@ -175,7 +175,7 @@ lav_mvnorm_loglik_data <- function(y = NULL,
     }
   } else {
     # invert Sigma
-    sigma_inv <- lav_matrix_symmetric_inverse(
+    sigma_inv <- lav_mat_sym_inverse(
       s = sigma_1, logdet = TRUE,
       sinv_method = sinv_method
     )
@@ -185,9 +185,9 @@ lav_mvnorm_loglik_data <- function(y = NULL,
       sample_cov <- out$cov
     } else {
       sample_mean <- base::.colMeans(y, m = n, n = p)
-      sample_cov <- lav_matrix_cov(y)
+      sample_cov <- lav_mat_cov(y)
     }
-    loglik <- lav_mvnorm_loglik_samplestats(
+    loglik <- lav_mvn_loglik_samp(
       sample_mean = sample_mean,
       sample_cov = sample_cov,
       sample_nobs = n,
@@ -206,7 +206,7 @@ lav_mvnorm_loglik_data <- function(y = NULL,
     if (is.null(x_cov)) {
       sigma_x <- sigma_1[x_idx, x_idx, drop = FALSE]
     }
-    loglik_x <- lav_mvnorm_loglik_data(
+    loglik_x <- lav_mvn_loglik_data(
       y = y[, x_idx, drop = FALSE],
       wt = wt, mu = mu_x, sigma_1 = sigma_x,
       x_idx = integer(0L), casewise = casewise,
@@ -222,7 +222,7 @@ lav_mvnorm_loglik_data <- function(y = NULL,
 
 
 # 1b: input are sample statistics (mean, cov, N) only
-lav_mvnorm_loglik_samplestats <- function(sample_mean = NULL,
+lav_mvn_loglik_samp <- function(sample_mean = NULL,
                                           sample_cov = NULL,
                                           sample_nobs = NULL,
                                           mu = NULL,
@@ -239,7 +239,7 @@ lav_mvnorm_loglik_samplestats <- function(sample_mean = NULL,
   log_2pi <- log(2 * pi)
 
   if (is.null(sigma_inv)) {
-    sigma_inv <- lav_matrix_symmetric_inverse(
+    sigma_inv <- lav_mat_sym_inverse(
       s = sigma_1, logdet = TRUE,
       sinv_method = sinv_method
     )
@@ -274,7 +274,7 @@ lav_mvnorm_loglik_samplestats <- function(sample_mean = NULL,
     sample_mean_x <- sample_mean[x_idx]
     sample_cov_x <- sample_cov[x_idx, x_idx, drop = FALSE]
     loglik_x <-
-      lav_mvnorm_loglik_samplestats(
+      lav_mvn_loglik_samp(
         sample_mean = sample_mean_x,
         sample_cov = sample_cov_x,
         sample_nobs = sample_nobs,
@@ -290,7 +290,7 @@ lav_mvnorm_loglik_samplestats <- function(sample_mean = NULL,
 }
 
 # 1c special case: Mu = 0, Sigma = I
-lav_mvnorm_loglik_data_z <- function(y = NULL,
+lav_mvn_loglik_data_z <- function(y = NULL,
                                      wt = NULL,
                                      casewise = FALSE) {
   if (!is.null(wt)) {
@@ -315,7 +315,7 @@ lav_mvnorm_loglik_data_z <- function(y = NULL,
       sample_cov <- out$cov
     } else {
       sample_mean <- base::.colMeans(y, m = n, n = p)
-      sample_cov <- lav_matrix_cov(y)
+      sample_cov <- lav_mat_cov(y)
     }
 
     dist1 <- sum(diag(sample_cov))
@@ -334,7 +334,7 @@ lav_mvnorm_loglik_data_z <- function(y = NULL,
 # 2. Derivatives
 
 # 2a: derivative logl with respect to mu
-lav_mvnorm_dlogl_dmu <- function(y = NULL,
+lav_mvn_dlogl_dmu <- function(y = NULL,
                                  wt = NULL,
                                  mu = NULL,
                                  sigma_1 = NULL,
@@ -345,7 +345,7 @@ lav_mvnorm_dlogl_dmu <- function(y = NULL,
 
   if (is.null(sigma_inv)) {
     # invert Sigma
-    sigma_inv <- lav_matrix_symmetric_inverse(
+    sigma_inv <- lav_mat_sym_inverse(
       s = sigma_1, logdet = FALSE,
       sinv_method = sinv_method
     )
@@ -371,7 +371,7 @@ lav_mvnorm_dlogl_dmu <- function(y = NULL,
 }
 
 # 2b: derivative logl with respect to Sigma (full matrix, ignoring symmetry)
-lav_mvnorm_dlogl_dsigma <- function(y = NULL,
+lav_mvn_dlogl_dsigma <- function(y = NULL,
                                     wt = NULL,
                                     mu = NULL,
                                     sigma_1 = NULL,
@@ -388,7 +388,7 @@ lav_mvnorm_dlogl_dsigma <- function(y = NULL,
 
   if (is.null(sigma_inv)) {
     # invert Sigma
-    sigma_inv <- lav_matrix_symmetric_inverse(
+    sigma_inv <- lav_mat_sym_inverse(
       s = sigma_1, logdet = FALSE,
       sinv_method = sinv_method
     )
@@ -404,7 +404,7 @@ lav_mvnorm_dlogl_dsigma <- function(y = NULL,
     # subtract 'Mu' from Y
     # Yc <- t( t(Y) - Mu )
     # W.tilde <- crossprod(Yc) / N
-    w_tilde <- lav_matrix_cov(y, Mu = mu)
+    w_tilde <- lav_mat_cov(y, mu = mu)
   }
 
   # derivative
@@ -419,7 +419,7 @@ lav_mvnorm_dlogl_dsigma <- function(y = NULL,
 }
 
 # 2c: derivative logl with respect to vech(Sigma)
-lav_mvnorm_dlogl_dvechsigma <- function(y = NULL,
+lav_mvn_dlogl_dvechsigma <- function(y = NULL,
                                         wt = NULL,
                                         mu = NULL,
                                         sigma_1 = NULL,
@@ -436,7 +436,7 @@ lav_mvnorm_dlogl_dvechsigma <- function(y = NULL,
 
   if (is.null(sigma_inv)) {
     # invert Sigma
-    sigma_inv <- lav_matrix_symmetric_inverse(
+    sigma_inv <- lav_mat_sym_inverse(
       s = sigma_1, logdet = FALSE,
       sinv_method = sinv_method
     )
@@ -449,7 +449,7 @@ lav_mvnorm_dlogl_dvechsigma <- function(y = NULL,
     my <- out$center
     w_tilde <- sy + tcrossprod(my - mu)
   } else {
-    w_tilde <- lav_matrix_cov(y, Mu = mu)
+    w_tilde <- lav_mat_cov(y, mu = mu)
   }
 
   # derivative (avoiding kronecker product)
@@ -461,15 +461,15 @@ lav_mvnorm_dlogl_dvechsigma <- function(y = NULL,
   }
 
   # vech
-  dvech_sigma <- as.numeric(lav_matrix_duplication_pre(
-      as.matrix(lav_matrix_vec(d_sigma))
+  dvech_sigma <- as.numeric(lav_mat_dup_pre(
+      as.matrix(lav_mat_vec(d_sigma))
   ))
 
   dvech_sigma
 }
 
 # 2d: : derivative logl with respect to Mu and vech(Sigma)
-lav_mvnorm_dlogl_dmu_dvechsigma <- function(m_y = NULL,   # nolint
+lav_mvn_dlogl_dmu_dvechsigma <- function(m_y = NULL,
                                             wt = NULL,
                                             m_mu = NULL,
                                             m_sigma = NULL,
@@ -486,7 +486,7 @@ lav_mvnorm_dlogl_dmu_dvechsigma <- function(m_y = NULL,   # nolint
 
   if (is.null(sigma_inv)) {
     # invert Sigma
-    sigma_inv <- lav_matrix_symmetric_inverse(
+    sigma_inv <- lav_mat_sym_inverse(
       s = m_sigma, logdet = FALSE,
       sinv_method = sinv_method
     )
@@ -503,7 +503,7 @@ lav_mvnorm_dlogl_dmu_dvechsigma <- function(m_y = NULL,   # nolint
     m_w_tilde <- m_sy + tcrossprod(m_my - m_mu)
     dmu <- as.numeric(sigma_inv %*% colSums(m_yc * wt))
   } else {
-    m_w_tilde <- lav_matrix_cov(m_y, Mu = m_mu)
+    m_w_tilde <- lav_mat_cov(m_y, mu = m_mu)
     dmu <- as.numeric(sigma_inv %*% colSums(m_yc))
   }
 
@@ -517,8 +517,8 @@ lav_mvnorm_dlogl_dmu_dvechsigma <- function(m_y = NULL,   # nolint
   }
 
   # vech
-  dvech_sigma <- as.numeric(lav_matrix_duplication_pre(
-    as.matrix(lav_matrix_vec(m_dsigma))
+  dvech_sigma <- as.numeric(lav_mat_dup_pre(
+    as.matrix(lav_mat_vec(m_dsigma))
   ))
 
   c(dmu, dvech_sigma)
@@ -527,7 +527,7 @@ lav_mvnorm_dlogl_dmu_dvechsigma <- function(m_y = NULL,   # nolint
 # 3. Casewise scores
 
 # 3a: casewise scores with respect to mu
-lav_mvnorm_scores_mu <- function(y = NULL,
+lav_mvn_sc_mu <- function(y = NULL,
                                  wt = NULL,
                                  mu = NULL,
                                  x_idx = integer(0L),
@@ -538,7 +538,7 @@ lav_mvnorm_scores_mu <- function(y = NULL,
 
   if (is.null(sigma_inv)) {
     # invert Sigma
-    sigma_inv <- lav_matrix_symmetric_inverse(
+    sigma_inv <- lav_mat_sym_inverse(
       s = sigma_1, logdet = FALSE,
       sinv_method = sinv_method
     )
@@ -564,7 +564,7 @@ lav_mvnorm_scores_mu <- function(y = NULL,
 }
 
 # 3b: casewise scores with respect to vech(Sigma)
-lav_mvnorm_scores_vech_sigma <- function(y = NULL,
+lav_mvn_sc_sigma <- function(y = NULL,
                                          wt = NULL,
                                          mu = NULL,
                                          sigma_1 = NULL,
@@ -576,14 +576,14 @@ lav_mvnorm_scores_vech_sigma <- function(y = NULL,
 
   if (is.null(sigma_inv)) {
     # invert Sigma
-    sigma_inv <- lav_matrix_symmetric_inverse(
+    sigma_inv <- lav_mat_sym_inverse(
       s = sigma_1, logdet = FALSE,
       sinv_method = sinv_method
     )
   }
 
   # vech(Sigma.inv)
-  isigma <- lav_matrix_vech(sigma_inv)
+  isigma <- lav_mat_vech(sigma_inv)
 
   # subtract Mu
   yc <- t(t(y) - mu)
@@ -592,19 +592,19 @@ lav_mvnorm_scores_vech_sigma <- function(y = NULL,
   yc <- yc %*% sigma_inv
 
   # tcrossprod
-  idx1 <- lav_matrix_vech_col_idx(p)
-  idx2 <- lav_matrix_vech_row_idx(p)
+  idx1 <- lav_mat_vech_col_idx(p)
+  idx2 <- lav_mat_vech_row_idx(p)
   z <- yc[, idx1] * yc[, idx2]
 
   # subtract isigma from each row
   sc <- t(t(z) - isigma)
 
   # adjust for vech
-  sc[, lav_matrix_diagh_idx(p)] <- sc[, lav_matrix_diagh_idx(p)] / 2
+  sc[, lav_mat_diagh_idx(p)] <- sc[, lav_mat_diagh_idx(p)] / 2
 
   # fixed.x?
   if (length(x_idx) > 0L) {
-    sc[, lav_matrix_vech_which_idx(n = p, idx = x_idx)] <- 0
+    sc[, lav_mat_vech_which_idx(n = p, idx = x_idx)] <- 0
   }
 
   # weights
@@ -616,7 +616,7 @@ lav_mvnorm_scores_vech_sigma <- function(y = NULL,
 }
 
 # 3c: casewise scores with respect to mu + vech(Sigma)
-lav_mvnorm_scores_mu_vech_sigma <- function(y = NULL, # nolint
+lav_mvn_sc_mu_sigma <- function(y = NULL,
                                             wt = NULL,
                                             mu = NULL,
                                             sigma_1 = NULL,
@@ -628,14 +628,14 @@ lav_mvnorm_scores_mu_vech_sigma <- function(y = NULL, # nolint
 
   if (is.null(sigma_inv)) {
     # invert Sigma
-    sigma_inv <- lav_matrix_symmetric_inverse(
+    sigma_inv <- lav_mat_sym_inverse(
       s = sigma_1, logdet = FALSE,
       sinv_method = sinv_method
     )
   }
 
   # vech(Sigma.inv)
-  isigma <- lav_matrix_vech(sigma_inv)
+  isigma <- lav_mat_vech(sigma_inv)
 
   # subtract Mu
   yc <- t(t(y) - mu)
@@ -644,20 +644,20 @@ lav_mvnorm_scores_mu_vech_sigma <- function(y = NULL, # nolint
   yc <- yc %*% sigma_inv
 
   # tcrossprod
-  idx1 <- lav_matrix_vech_col_idx(p)
-  idx2 <- lav_matrix_vech_row_idx(p)
+  idx1 <- lav_mat_vech_col_idx(p)
+  idx2 <- lav_mat_vech_row_idx(p)
   z <- yc[, idx1] * yc[, idx2]
 
   # subtract isigma from each row
   sc <- t(t(z) - isigma)
 
-  # adjust for lav_matrix_duplication_pre (not vech!)
-  sc[, lav_matrix_diagh_idx(p)] <- sc[, lav_matrix_diagh_idx(p)] / 2
+  # adjust for lav_mat_dup_pre (not vech!)
+  sc[, lav_mat_diagh_idx(p)] <- sc[, lav_mat_diagh_idx(p)] / 2
 
   # fixed.x?
   if (length(x_idx) > 0L) {
     yc[, x_idx] <- 0
-    sc[, lav_matrix_vech_which_idx(n = p, idx = x_idx)] <- 0
+    sc[, lav_mat_vech_which_idx(n = p, idx = x_idx)] <- 0
   }
 
   out <- cbind(yc, sc)
@@ -674,7 +674,7 @@ lav_mvnorm_scores_mu_vech_sigma <- function(y = NULL, # nolint
 # 4. hessian of logl
 
 # 4a: hessian logl Mu and vech(Sigma) from raw data
-lav_mvnorm_logl_hessian_data <- function(y = NULL,
+lav_mvn_logl_hessian_data <- function(y = NULL,
                                          wt = NULL,
                                          mu = NULL,
                                          sigma_1 = NULL,
@@ -689,7 +689,7 @@ lav_mvnorm_logl_hessian_data <- function(y = NULL,
   }
 
   # observed information
-  observed <- lav_mvnorm_information_observed_data(
+  observed <- lav_mvn_info_observed_data(
     y = y, wt = wt, mu = mu,
     sigma_1 = sigma_1, x_idx = x_idx,
     sinv_method = sinv_method, sigma_inv = sigma_inv,
@@ -713,7 +713,7 @@ lav_mvnorm_logl_hessian_samplestats <- # nolint
     n <- sample_nobs
 
     # observed information
-    observed <- lav_mvnorm_information_observed_samplestats(
+    observed <- lav_mvn_info_observed_samp(
       sample_mean = sample_mean, sample_cov = sample_cov,
       mu = mu, sigma_1 = sigma_1,
       x_idx = x_idx, sinv_method = sinv_method, sigma_inv = sigma_inv,
@@ -726,7 +726,7 @@ lav_mvnorm_logl_hessian_samplestats <- # nolint
 # 5) Information h0
 
 # 5a: unit expected information h0 Mu and vech(Sigma)
-lav_mvnorm_information_expected <- function(y = NULL, # unused! # nolint
+lav_mvn_info_expected <- function(y = NULL, # unused!
                                             wt = NULL, # unused!
                                             mu = NULL, # unused!
                                             sigma_1 = NULL,
@@ -737,7 +737,7 @@ lav_mvnorm_information_expected <- function(y = NULL, # unused! # nolint
                       correlation = FALSE) {
   if (is.null(sigma_inv)) {
     # invert Sigma
-    sigma_inv <- lav_matrix_symmetric_inverse(
+    sigma_inv <- lav_mat_sym_inverse(
       s = sigma_1, logdet = FALSE,
       sinv_method = sinv_method
     )
@@ -752,15 +752,15 @@ lav_mvnorm_information_expected <- function(y = NULL, # unused! # nolint
   #   }
   # } else {
     if (correlation) {
-      i22 <- 0.5 * lav_matrix_duplication_cor_pre_post(sigma_inv %x% sigma_inv)
+      i22 <- 0.5 * lav_mat_dup_cor_pre_post(sigma_inv %x% sigma_inv)
     } else {
-      i22 <- 0.5 * lav_matrix_duplication_pre_post(sigma_inv %x% sigma_inv)
+      i22 <- 0.5 * lav_mat_dup_pre_post(sigma_inv %x% sigma_inv)
     }
   # }
 
   # fixed.x?
   if (length(x_idx) > 0L) {
-    pstar_x <- lav_matrix_vech_which_idx(
+    pstar_x <- lav_mat_vech_which_idx(
       n = NCOL(sigma_inv), idx = x_idx
     )
     i22[pstar_x, ] <- 0
@@ -774,7 +774,7 @@ lav_mvnorm_information_expected <- function(y = NULL, # unused! # nolint
       i11[x_idx, ] <- 0
       i11[, x_idx] <- 0
     }
-    out <- lav_matrix_bdiag(i11, i22)
+    out <- lav_mat_bdiag(i11, i22)
   } else {
     out <- i22
   }
@@ -783,7 +783,7 @@ lav_mvnorm_information_expected <- function(y = NULL, # unused! # nolint
 }
 
 # 5b: unit observed information h0
-lav_mvnorm_information_observed_data <- function(y = NULL, # nolint
+lav_mvn_info_observed_data <- function(y = NULL,
                                                  wt = NULL,
                                                  mu = NULL,
                                                  sigma_1 = NULL,
@@ -800,10 +800,10 @@ lav_mvnorm_information_observed_data <- function(y = NULL, # nolint
     n <- NROW(y)
     # sample statistics
     sample_mean <- colMeans(y)
-    sample_cov <- lav_matrix_cov(y)
+    sample_cov <- lav_mat_cov(y)
   }
 
-  lav_mvnorm_information_observed_samplestats(
+  lav_mvn_info_observed_samp(
     sample_mean = sample_mean,
     sample_cov = sample_cov, mu = mu, sigma_1 = sigma_1,
     x_idx = x_idx, sinv_method = sinv_method, sigma_inv = sigma_inv,
@@ -812,7 +812,7 @@ lav_mvnorm_information_observed_data <- function(y = NULL, # nolint
 }
 
 # 5b-bis: observed information h0 from sample statistics
-lav_mvnorm_information_observed_samplestats <- function( # nolint
+lav_mvn_info_observed_samp <- function(
     sample_mean = NULL,
     sample_cov = NULL,
     mu = NULL,
@@ -827,7 +827,7 @@ lav_mvnorm_information_observed_samplestats <- function( # nolint
 
   if (is.null(sigma_inv)) {
     # invert Sigma
-    sigma_inv <- lav_matrix_symmetric_inverse(
+    sigma_inv <- lav_mat_sym_inverse(
       s = sigma_1, logdet = FALSE,
       sinv_method = sinv_method
     )
@@ -837,7 +837,7 @@ lav_mvnorm_information_observed_samplestats <- function( # nolint
 
   if (meanstructure) {
     i11 <- sigma_inv
-    i21 <- lav_matrix_duplication_pre((sigma_inv %*%
+    i21 <- lav_mat_dup_pre((sigma_inv %*%
       (sample_mean - mu)) %x% sigma_inv)
     i12 <- t(i21)
   }
@@ -846,7 +846,7 @@ lav_mvnorm_information_observed_samplestats <- function( # nolint
   # if (lav_use_lavaanC()) {
   #   I22 <- lavaanC::m_kronecker_dup_pre_post(Sigma.inv, AAA, 0.5)
   # } else {
-    i22 <- (1 / 2) * lav_matrix_duplication_pre_post(sigma_inv %x% aaa)
+    i22 <- (1 / 2) * lav_mat_dup_pre_post(sigma_inv %x% aaa)
   # }
 
   if (meanstructure) {
@@ -860,7 +860,7 @@ lav_mvnorm_information_observed_samplestats <- function( # nolint
 
   # fixed.x?
   if (length(x_idx) > 0L) {
-    not_x <- lav_matrix_vech_which_idx(
+    not_x <- lav_mat_vech_which_idx(
       n = NCOL(sigma_inv), idx = x_idx,
       add_idx_at_start = meanstructure
     )
@@ -872,7 +872,7 @@ lav_mvnorm_information_observed_samplestats <- function( # nolint
 }
 
 # 5c: unit first-order information h0
-lav_mvnorm_information_firstorder <- function(y = NULL,    # nolint
+lav_mvn_info_firstorder <- function(y = NULL,
                                               wt = NULL,
                                               cluster_idx = NULL,
                                               mu = NULL,
@@ -888,14 +888,14 @@ lav_mvnorm_information_firstorder <- function(y = NULL,    # nolint
   }
 
   if (meanstructure) {
-    sc <- lav_mvnorm_scores_mu_vech_sigma(
+    sc <- lav_mvn_sc_mu_sigma(
       y = y, wt = wt,
       mu = mu, sigma_1 = sigma_1, x_idx = x_idx,
       sinv_method = sinv_method, sigma_inv = sigma_inv
     )
   } else {
     # the caller should use Mu = sample.mean
-    sc <- lav_mvnorm_scores_vech_sigma(
+    sc <- lav_mvn_sc_sigma(
       y = y, wt = wt,
       mu = mu, sigma_1 = sigma_1,
       sinv_method = sinv_method, sigma_inv = sigma_inv
@@ -925,10 +925,10 @@ lav_mvnorm_information_firstorder <- function(y = NULL,    # nolint
 
 # 6a: inverted unit expected information h0 Mu and vech(Sigma)
 #
-#     Note: this is the same as lav_samplestats_gamma_nt()
+#     Note: this is the same as lav_samp_gamma_nt()
 #           but where COV=Sigma and MEAN=Mu
 #
-lav_mvnorm_inverted_information_expected <- function(y = NULL, # unused! # nolint
+lav_mvn_inv_info_expected <- function(y = NULL, # unused!
                                                      wt = NULL, # unused!
                                                      mu = NULL, # unused!
                                                      sigma_1 = NULL,
@@ -953,14 +953,14 @@ lav_mvnorm_inverted_information_expected <- function(y = NULL, # unused! # nolin
     #   SS <- lavaanC::m_kronecker_dup_ginv_pre_post(Sigma, multiplicator = 2.0)
     #   RR <- lavaanC::m_kronecker_dup_ginv_pre_post(R, multiplicator = 2.0)
     # } else {
-      ss <- 2 * lav_matrix_duplication_ginv_pre_post(sigma_1 %x% sigma_1)
-      rr <- 2 * lav_matrix_duplication_ginv_pre_post(r %x% r)
+      ss <- 2 * lav_mat_dup_ginv_pre_post(sigma_1 %x% sigma_1)
+      rr <- 2 * lav_mat_dup_ginv_pre_post(r %x% r)
     # }
     i22 <- ss - rr
 
     if (meanstructure) {
       i11 <- ybar_x_aug
-      out <- lav_matrix_bdiag(i11, i22)
+      out <- lav_mat_bdiag(i11, i22)
     } else {
       out <- i22
     }
@@ -969,11 +969,11 @@ lav_mvnorm_inverted_information_expected <- function(y = NULL, # unused! # nolin
     #   I22 <-
     #      lavaanC::m_kronecker_dup_ginv_pre_post(Sigma, multiplicator = 2.0)
     # } else {
-      i22 <- 2 * lav_matrix_duplication_ginv_pre_post(sigma_1 %x% sigma_1)
+      i22 <- 2 * lav_mat_dup_ginv_pre_post(sigma_1 %x% sigma_1)
     # }
     if (meanstructure) {
       i11 <- sigma_1
-      out <- lav_matrix_bdiag(i11, i22)
+      out <- lav_mat_bdiag(i11, i22)
     } else {
       out <- i22
     }

@@ -122,9 +122,9 @@ lav_fit_gfi_lavobject <- function(lavobject = NULL, fit_measures = "gfi") {
   }
 
   # extract ingredients
-  wls_obs <- lav_object_inspect_wls_obs(lavobject)
-  wls_est <- lav_object_inspect_wls_est(lavobject)
-  wls_v <- lav_object_inspect_wls_v(lavobject)
+  wls_obs <- lav_inspect_wls_obs(lavobject)
+  wls_est <- lav_inspect_wls_est(lavobject)
+  wls_v <- lav_inspect_wls_v(lavobject)
   nobs_1 <- lavobject@SampleStats@nobs
 
   # compute GFI

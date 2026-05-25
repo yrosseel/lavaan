@@ -63,7 +63,7 @@ lav_fsr_delta21 <- function(object, fsm = NULL) {
 
         delta_group[, x_el_idx[[mm]]] <- delta[, m_el_idx[[mm]]]
       } else if (mname == "theta") {
-        d_t <- lav_matrix_vec((t(al_inv) %*% fsm_1) %x%
+        d_t <- lav_mat_vec((t(al_inv) %*% fsm_1) %x%
           (t(fsm_1) %*% al_inv))
         delta_scoffset <- d_t
         delta_scale <- matrix(0,
@@ -97,7 +97,7 @@ lav_fsr_pa2si <- function(pt_1 = NULL, lvinfo) {
   }
 
   # ngroups
-  ngroups <- lav_partable_ngroups(pt_1)
+  ngroups <- lav_pt_ngroups(pt_1)
 
   lhs <- rhs <- op <- character(0)
   group <- block <- free <- exo <- integer(0)
@@ -152,7 +152,7 @@ lav_fsr_pa2si <- function(pt_1 = NULL, lvinfo) {
     est = est
   )
 
-  pt_si <- lav_partable_merge(pt_1, list_1)
+  pt_si <- lav_pt_merge(pt_1, list_1)
 
   pt_si
 }

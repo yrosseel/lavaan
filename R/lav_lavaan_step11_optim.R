@@ -1,4 +1,4 @@
-lav_lavaan_step11_estoptim <- function(lavdata = NULL, # nolint
+lav_step11_estoptim <- function(lavdata = NULL,
                                        lavmodel = NULL,
                                        lavcache = NULL,
                                        lavsamplestats = NULL,
@@ -16,12 +16,12 @@ lav_lavaan_step11_estoptim <- function(lavdata = NULL, # nolint
   #     try x <- lav_optim_noniter(...)
   #   case "em"
   #     if nlevels < 2L *** error ***
-  #     try x <- lav_mvnorm_cluster_em_h0(...)
+  #     try x <- lav_mvn_cl_em_h0(...)
   #   case "gn"
   #     try x <- lav_optim_gn(...)
   #   case else
   #     set 1 in lavoptions$optim.attempts if it wasn't specified
-  #     try x <- lav_model_estimate(...)
+  #     try x <- lav_model_est(...)
   #     if not successful and optim.attempts > 1L
   #       try x <- lav_optim_estimate(...) with
   #         options$optim.parscale = "standardized"
@@ -75,7 +75,7 @@ lav_lavaan_step11_estoptim <- function(lavdata = NULL, # nolint
       # multilevel only for now
       stopifnot(lavdata@nlevels > 1L)
       x <- try(
-        lav_mvnorm_cluster_em_h0(
+        lav_mvn_cl_em_h0(
           lavsamplestats = lavsamplestats,
           lavdata = lavdata,
           lavimplied = NULL,
@@ -114,7 +114,7 @@ lav_lavaan_step11_estoptim <- function(lavdata = NULL, # nolint
         cat("attempt 1 -- default options\n")
       }
       x <- try(
-        lav_model_estimate(
+        lav_model_est(
           lavmodel = lavmodel,
           lavpartable = lavpartable,
           lavsamplestats = lavsamplestats,
@@ -136,7 +136,7 @@ lav_lavaan_step11_estoptim <- function(lavdata = NULL, # nolint
           cat("attempt 2 -- optim.parscale = \"standardized\"\n")
         }
         x <- try(
-          lav_model_estimate(
+          lav_model_est(
             lavmodel = lavmodel,
             lavpartable = lavpartable,
             lavsamplestats = lavsamplestats,
@@ -157,7 +157,7 @@ lav_lavaan_step11_estoptim <- function(lavdata = NULL, # nolint
           cat("attempt 3 -- start = \"simple\"\n")
         }
         x <- try(
-          lav_model_estimate(
+          lav_model_est(
             lavmodel = lavmodel,
             lavpartable = lavpartable,
             lavsamplestats = lavsamplestats,
@@ -184,7 +184,7 @@ lav_lavaan_step11_estoptim <- function(lavdata = NULL, # nolint
           )
         }
         x <- try(
-          lav_model_estimate(
+          lav_model_est(
             lavmodel = lavmodel,
             lavpartable = lavpartable,
             lavsamplestats = lavsamplestats,
@@ -216,7 +216,7 @@ lav_lavaan_step11_estoptim <- function(lavdata = NULL, # nolint
           }
           x_rstarts[[i]] <-
             try(
-              lav_model_estimate(
+              lav_model_est(
                 lavmodel = lavmodel,
                 lavpartable = lavpartable,
                 lavsamplestats = lavsamplestats,
@@ -366,7 +366,7 @@ lav_lavaan_step11_estoptim <- function(lavdata = NULL, # nolint
     lavoptim$x.rstarts <- attr(x, "x.rstarts")
   }
 
-  lavpartable <- lav_partable_set_cache(lavpartable, force = TRUE)
+  lavpartable <- lav_pt_set_cache(lavpartable, force = TRUE)
   list(
     lavoptim = lavoptim, lavmodel = lavmodel, lavpartable = lavpartable,
     x = x

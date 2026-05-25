@@ -351,7 +351,7 @@ lav_fit_cfi_lavobject <- function(lavobject = NULL, fit_measures = "cfi",
   x2 <- test[[test_idx]]$stat
   df <- test[[test_idx]]$df
   # g <- lavobject@Data@ngroups # number of groups
-  # n <- lav_object_inspect_ntotal(object = lavobject) # N vs N-1
+  # n <- lav_inspect_ntotal(object = lavobject) # N vs N-1
 
   # scaled X2
   if (scaled_flag) {
@@ -429,7 +429,7 @@ lav_fit_cfi_lavobject <- function(lavobject = NULL, fit_measures = "cfi",
   # 1. user-provided baseline model
   if (!is.null(baseline_model)) {
     baseline_test <-
-      lav_fit_measures_check_baseline(
+      lav_fit_check_baseline(
         fit_indep = baseline_model,
         object = lavobject,
         fit_h1 = h1_model # okay if NULL
@@ -438,7 +438,7 @@ lav_fit_cfi_lavobject <- function(lavobject = NULL, fit_measures = "cfi",
   } else if (!is.null(lavobject@external$baseline.model)) {
     fit_indep <- lavobject@external$baseline.model
     baseline_test <-
-      lav_fit_measures_check_baseline(
+      lav_fit_check_baseline(
         fit_indep = fit_indep,
         object = lavobject,
         fit_h1 = h1_model # okay if NULL
@@ -453,7 +453,7 @@ lav_fit_cfi_lavobject <- function(lavobject = NULL, fit_measures = "cfi",
   } else {
     fit_indep <- try(lav_object_independence(lavobject), silent = TRUE)
     baseline_test <-
-      lav_fit_measures_check_baseline(
+      lav_fit_check_baseline(
         fit_indep = fit_indep,
         object = lavobject,
         fit_h1 = h1_model # okay if NULL
@@ -635,7 +635,7 @@ lav_fit_cfi_lavobject <- function(lavobject = NULL, fit_measures = "cfi",
 # new in 0.6-5
 # internal function to check the (external) baseline model, and
 # return baseline 'test' list if everything checks out (and NULL otherwise)
-lav_fit_measures_check_baseline <- function(fit_indep = NULL, object = NULL, # nolint
+lav_fit_check_baseline <- function(fit_indep = NULL, object = NULL,
                                             fit_h1 = NULL) {
   test <- NULL
 
@@ -694,7 +694,7 @@ lav_fit_measures_check_baseline <- function(fit_indep = NULL, object = NULL, # n
         silent = TRUE
       )
       # try again
-      test <- lav_fit_measures_check_baseline(
+      test <- lav_fit_check_baseline(
         fit_indep = fit_indep,
         object = object
       )

@@ -1,4 +1,4 @@
-lav_partable_flat <- function(flat = NULL, # nolint
+lav_pt_flat <- function(flat = NULL,
                               blocks = "group",
                               block_id = NULL,
                               meanstructure = FALSE,
@@ -35,42 +35,42 @@ lav_partable_flat <- function(flat = NULL, # nolint
   ###                   either free or fixed
 
   # extract `names' of various types of variables:
-  lv_names <- lav_partable_vnames(flat, type = "lv") # latent variables
-  # lv.names.r   <- lav_partable_vnames(FLAT, type="lv.regular")
+  lv_names <- lav_pt_vnames(flat, type = "lv") # latent variables
+  # lv.names.r   <- lav_pt_vnames(FLAT, type="lv.regular")
   # regular latent variables
   if (composites) {
     lv_names_f <- character(0L)
-    lv_names_c <- lav_partable_vnames(flat, type = "lv.composite")
-    ov_ind_c <- lav_partable_vnames(flat, type = "ov.cind")
+    lv_names_c <- lav_pt_vnames(flat, type = "lv.composite")
+    ov_ind_c <- lav_pt_vnames(flat, type = "ov.cind")
     lv_names_noc <- lv_names[!lv_names %in% lv_names_c]
   } else {
     lv_names_c <- character(0L)
     ov_ind_c <- character(0L)
-    lv_names_f <- lav_partable_vnames(flat, type = "lv.formative")
+    lv_names_f <- lav_pt_vnames(flat, type = "lv.formative")
     lv_names_noc <- lv_names
   }
 
   # formative latent variables
-  ov_names <- lav_partable_vnames(flat, type = "ov")
+  ov_names <- lav_pt_vnames(flat, type = "ov")
   # observed variables
-  ov_names_x <- lav_partable_vnames(flat, type = "ov.x")
+  ov_names_x <- lav_pt_vnames(flat, type = "ov.x")
   # exogenous x covariates
-  lv_names_int <- lav_partable_vnames(flat, type = "lv.interaction")
+  lv_names_int <- lav_pt_vnames(flat, type = "lv.interaction")
   # lv interactions
 
   if (is.null(ov_names_x_block)) {
     ov_names_x_block <- ov_names_x
   }
-  ov_names_nox <- lav_partable_vnames(flat, type = "ov.nox")
-  lv_names_x <- lav_partable_vnames(flat, type = "lv.x") # exogenous lv
-  ov_names_y <- lav_partable_vnames(flat, type = "ov.y") # dependent ov
-  lv_names_y <- lav_partable_vnames(flat, type = "lv.y") # dependent lv
-  lv_names_efa <- lav_partable_vnames(flat, type = "lv.efa")
+  ov_names_nox <- lav_pt_vnames(flat, type = "ov.nox")
+  lv_names_x <- lav_pt_vnames(flat, type = "lv.x") # exogenous lv
+  ov_names_y <- lav_pt_vnames(flat, type = "ov.y") # dependent ov
+  lv_names_y <- lav_pt_vnames(flat, type = "lv.y") # dependent lv
+  lv_names_efa <- lav_pt_vnames(flat, type = "lv.efa")
   # lvov.names.y <- c(ov.names.y, lv.names.y)
   lvov_names_y <- c(lv_names_y, ov_names_y)
 
   # get 'ordered' variables, either from FLAT or var_table
-  ov_names_ord1 <- lav_partable_vnames(flat, type = "ov.ord")
+  ov_names_ord1 <- lav_pt_vnames(flat, type = "ov.ord")
   # check if we have "|" for exogenous variables
   if (length(ov_names_ord1) > 0L) {
     idx <- which(ov_names_ord1 %in% ov_names_x)
@@ -277,7 +277,7 @@ lav_partable_flat <- function(flat = NULL, # nolint
   # f) efa latent variables COVARIANCES; only needed for 'mediators'
   #    (not in lv.names.x, not in lv.names.y) -- added in 0.6-18
   if (auto_efa && length(lv_names_efa) > 1L) {
-    efa_values <- lav_partable_efa_values(flat)
+    efa_values <- lav_pt_efa_values(flat)
     for (set in efa_values) {
       # correlated factors within each set
       this_set_lv <- unique(flat$lhs[flat$op == "=~" &
@@ -371,8 +371,8 @@ lav_partable_flat <- function(flat = NULL, # nolint
   rhs <- flat$rhs
   mod_idx <- flat$mod.idx
 
-  lv_names <- lav_partable_vnames(flat, type = "lv") # latent variables
-  ov_names <- lav_partable_vnames(flat, type = "ov") # observed variables
+  lv_names <- lav_pt_vnames(flat, type = "lv") # latent variables
+  ov_names <- lav_pt_vnames(flat, type = "ov") # observed variables
   tmp_user <- data.frame(
     lhs = lhs, op = op, rhs = rhs, mod.idx = mod_idx,
     stringsAsFactors = FALSE
@@ -608,7 +608,7 @@ lav_partable_flat <- function(flat = NULL, # nolint
     }
     # 4b. fixed effect (only if we have random slopes)
     if (!is.null(flat$rv) && any(nchar(flat$rv) > 0L)) {
-      lv_names_rv <- lav_partable_vnames(flat, "lv.rv")
+      lv_names_rv <- lav_pt_vnames(flat, "lv.rv")
       lv_rv_idx <- which(op == "~1" &
         lhs %in% lv_names_rv &
         user == 0L)
@@ -760,7 +760,7 @@ lav_partable_flat <- function(flat = NULL, # nolint
         free        = free,
         ustart      = ustart,
         block       = rep(1, length(rhs)))
-      lv_marker <- lav_partable_vnames(tmp_list, "lv.marker")
+      lv_marker <- lav_pt_vnames(tmp_list, "lv.marker")
     }
 
 

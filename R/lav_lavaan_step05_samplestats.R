@@ -1,4 +1,4 @@
-lav_lavaan_step05_samplestats <- function(slot_sample_stats = NULL, # nolint
+lav_step05_samp <- function(slot_sample_stats = NULL,
                                           lavdata = NULL,
                                           lavoptions = NULL,
                                           wls_v = NULL, # nolint
@@ -34,11 +34,11 @@ lav_lavaan_step05_samplestats <- function(slot_sample_stats = NULL, # nolint
     if (lav_verbose()) {
       cat("lavsamplestats     ...")
     }
-    lavsamplestats <- lav_samplestats_from_data(
+    lavsamplestats <- lav_samp_from_data(
       lavdata       = lavdata,
       lavoptions    = lavoptions,
-      WLS.V         = wls_v,
-      NACOV         = nacov
+      wls_v         = wls_v,
+      nacov         = nacov
     )
     if (lav_verbose()) {
       cat(" done.\n")
@@ -53,7 +53,7 @@ lav_lavaan_step05_samplestats <- function(slot_sample_stats = NULL, # nolint
         gettext("sample.mean= argument is missing, but model contains
                 mean/intercept parameters."))
     }
-    lavsamplestats <- lav_samplestats_from_moments(
+    lavsamplestats <- lav_samp_from_moments(
       sample_cov    = sample_cov,
       sample_mean   = sample_mean,
       sample_th     = sample_th,

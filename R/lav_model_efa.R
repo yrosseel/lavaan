@@ -158,7 +158,7 @@ lav_model_efa_rotate_x <- function(x, lavmodel = NULL, lavoptions = NULL,
         if (lav_verbose(ropts$verbose))
           on.exit(lav_verbose(current_verbose), TRUE)
         # rotate this set
-        res <- lav_matrix_rotate(
+        res <- lav_mat_rotate(
           a = a,
           orthogonal = ropts$orthogonal,
           method = method,
@@ -340,7 +340,7 @@ lav_model_efa_rotate_x <- function(x, lavmodel = NULL, lavoptions = NULL,
       }
 
       # rotate this set
-      res <- lav_matrix_rotate_mg(
+      res <- lav_mat_rotate_mg(
         a_list = alist_1,
         orthogonal = ropts$orthogonal,
         method = method,
@@ -511,7 +511,7 @@ lav_model_efa_rotate_border_x <- function(x, lavmodel = NULL,
     )
 
     # setnames
-    set_names <- lav_partable_efa_values(lavpartable)
+    set_names <- lav_pt_efa_values(lavpartable)
 
     # for each set
     for (set in seq_len(lavmodel@nefa)) {
@@ -562,7 +562,7 @@ lav_model_efa_rotate_border_x <- function(x, lavmodel = NULL,
         "cf-quartimax", "cf-varimax", "cf-equamax",
         "cf-parsimax", "cf-facparsim"
       )) {
-        method_fname <- "lav_matrix_rotate_cf"
+        method_fname <- "lav_mat_rotate_cf"
         this_method_args$cf_gamma <- switch(method,
           "cf-quartimax" = 0,
           "cf-varimax"   = 1 / p,
@@ -571,9 +571,9 @@ lav_model_efa_rotate_border_x <- function(x, lavmodel = NULL,
           "cf-facparsim" = 1
         )
       } else if (method == "target.strict") {
-        method_fname <- "lav_matrix_rotate_target"
+        method_fname <- "lav_mat_rotate_target"
       } else {
-        method_fname <- paste("lav_matrix_rotate_", method, sep = "")
+        method_fname <- paste("lav_mat_rotate_", method, sep = "")
       }
 
       # check if rotation method exists
@@ -592,9 +592,9 @@ lav_model_efa_rotate_border_x <- function(x, lavmodel = NULL,
       if (ropts$row_weights == "none") {
         weights <- rep(1.0, p)
       } else if (ropts$row_weights == "kaiser") {
-        weights <- lav_matrix_rotate_kaiser_weights(a)
+        weights <- lav_mat_rotate_kaiser_weights(a)
       } else if (ropts$row_weights == "cureton-mulaik") {
-        weights <- lav_matrix_rotate_cm_weights(a)
+        weights <- lav_mat_rotate_cm_weights(a)
       } else {
         lav_msg_stop(gettextf("row_weights can be",
           lav_msg_view(c("none", "kaiser", "cureton-mulaik"), "or")))
@@ -618,12 +618,12 @@ lav_model_efa_rotate_border_x <- function(x, lavmodel = NULL,
         # or in other words, the non-diagonal elements of
         # Z - t(Z) are all zero
         tmp <- z - t(z)
-        this_res <- lav_matrix_vech(tmp, diagonal = FALSE)
+        this_res <- lav_mat_vech(tmp, diagonal = FALSE)
       } else {
         psi_z <- mm_psi * diag(z) # rescale rows only
         tmp <- z - psi_z
-        out1 <- lav_matrix_vech(tmp, diagonal = FALSE)
-        out2 <- lav_matrix_vechu(tmp, diagonal = FALSE)
+        out1 <- lav_mat_vech(tmp, diagonal = FALSE)
+        out2 <- lav_mat_vechu(tmp, diagonal = FALSE)
         this_res <- c(out1, out2)
       }
 

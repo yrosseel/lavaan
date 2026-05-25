@@ -271,7 +271,7 @@ lav_pml_dbilogl_dpar_x <- function(y1, y2, exo, rho,
 ###############################################################
 
 
-# The function lav_pml_uni_scores gives, casewise, the derivative of a
+# The function lav_pml_uni_sc gives, casewise, the derivative of a
 # univariate log-likelihood w.r.t. thresholds and slopes if present weighted by
 # the casewise uni-weights as those defined in AC-PL (essentially the number of
 # missing values per case).
@@ -288,7 +288,7 @@ lav_pml_dbilogl_dpar_x <- function(y1, y2, exo, rho,
 #    Otherwise it takes the value NULL.
 
 
-lav_pml_uni_scores <- function(y1, th_y1, exo = NULL, sl_y1 = NULL,
+lav_pml_uni_sc <- function(y1, th_y1, exo = NULL, sl_y1 = NULL,
                        weights_casewise) {
   nth_y1 <- length(th_y1)
   nobs_1 <- length(y1)

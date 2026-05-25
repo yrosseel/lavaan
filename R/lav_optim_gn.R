@@ -45,7 +45,7 @@ lav_objective_gn <- function(x, lavsamplestats = NULL, lavmodel = NULL,
   wls_obs <- lavsamplestats@WLS.obs
 
   # always use expected information
-  a1 <- lav_model_h1_information_expected(
+  a1 <- lav_model_h1_info_expected(
     lavobject = NULL,
     lavmodel = lavmodel,
     lavsamplestats = lavsamplestats,

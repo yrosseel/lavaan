@@ -1,6 +1,6 @@
 # build def function from partable
-lav_partable_constraints_def <- function(partable, con = NULL, debug = FALSE, # nolint start
-                                         txtOnly = FALSE, warn = TRUE) {      # nolint end
+lav_pt_con_def <- function(partable, con = NULL, debug = FALSE, # nolint start
+                                         txt_only = FALSE, warn = TRUE) {      # nolint end
   if (!missing(debug)) {
     current_debug <- lav_debug()
     if (lav_debug(debug))
@@ -21,7 +21,7 @@ lav_partable_constraints_def <- function(partable, con = NULL, debug = FALSE, # 
 
   # catch empty def
   if (length(def_idx) == 0L) {
-    if (txtOnly) {
+    if (txt_only) {
       return(character(0L))
     } else {
       return(def_function)
@@ -40,7 +40,7 @@ lav_partable_constraints_def <- function(partable, con = NULL, debug = FALSE, # 
 
   # create function
   formals(def_function) <- alist(.x. = , ... = )
-  if (txtOnly) {
+  if (txt_only) {
     body_txt <- ""
   } else {
     body_txt <- paste("{\n# parameter definitions\n\n")
@@ -85,7 +85,7 @@ lav_partable_constraints_def <- function(partable, con = NULL, debug = FALSE, # 
     )
   }
 
-  if (txtOnly) {
+  if (txt_only) {
     return(body_txt)
   }
 
@@ -123,8 +123,8 @@ lav_partable_constraints_def <- function(partable, con = NULL, debug = FALSE, # 
 #             b1 = x[10]; b2 = x[17]
 #             out[1] <- b1 + b2 - 2
 #         }
-lav_partable_constraints_ceq <- function(partable, con = NULL, debug = FALSE, # nolint start
-                                         txtOnly = FALSE) {                   # nolint end
+lav_pt_con_ceq <- function(partable, con = NULL, debug = FALSE, # nolint start
+                                         txt_only = FALSE) {                   # nolint end
   if (!missing(debug)) {
     current_debug <- lav_debug()
     if (lav_debug(debug))
@@ -145,7 +145,7 @@ lav_partable_constraints_ceq <- function(partable, con = NULL, debug = FALSE, # 
 
   # catch empty ceq
   if (length(eq_idx) == 0L) {
-    if (txtOnly) {
+    if (txt_only) {
       return(character(0L))
     } else {
       return(ceq_function)
@@ -154,14 +154,14 @@ lav_partable_constraints_ceq <- function(partable, con = NULL, debug = FALSE, # 
 
   # create function
   formals(ceq_function) <- alist(.x. = , ... = )
-  if (txtOnly) {
+  if (txt_only) {
     body_txt <- ""
   } else {
     body_txt <- paste("{\nout <- rep(NA, ", length(eq_idx), ")\n", sep = "")
   }
 
   # first come the variable definitions
-  def_txt <- lav_partable_constraints_def(partable, txtOnly = TRUE,
+  def_txt <- lav_pt_con_def(partable, txt_only = TRUE,
                                           warn = FALSE)
   def_idx <- which(partable$op == ":=")
   body_txt <- paste(body_txt, def_txt, "\n", sep = "")
@@ -261,7 +261,7 @@ lav_partable_constraints_ceq <- function(partable, con = NULL, debug = FALSE, # 
     body_txt <- paste(body_txt, "out[", i, "] <- ", eq_string, "\n", sep = "")
   }
 
-  if (txtOnly) {
+  if (txt_only) {
     return(body_txt)
   }
 
@@ -299,8 +299,8 @@ lav_partable_constraints_ceq <- function(partable, con = NULL, debug = FALSE, # 
 #
 # NOTE: very similar, but not identitical to ceq, because we need to take
 #       care of the difference between '<' and '>'
-lav_partable_constraints_ciq <- function(partable, con = NULL, debug = FALSE, # nolint start
-                                         txtOnly = FALSE) {                   # nolint end
+lav_pt_con_ciq <- function(partable, con = NULL, debug = FALSE, # nolint start
+                                         txt_only = FALSE) {                   # nolint end
   if (!missing(debug)) {
     current_debug <- lav_debug()
     if (lav_debug(debug))
@@ -335,7 +335,7 @@ lav_partable_constraints_ciq <- function(partable, con = NULL, debug = FALSE, # 
 
   # catch empty ciq
   if (length(ineq_idx) == 0L) {
-    if (txtOnly) {
+    if (txt_only) {
       return(character(0L))
     } else {
       return(cin_function)
@@ -344,14 +344,14 @@ lav_partable_constraints_ciq <- function(partable, con = NULL, debug = FALSE, # 
 
   # create function
   formals(cin_function) <- alist(.x. = , ... = )
-  if (txtOnly) {
+  if (txt_only) {
     body_txt <- ""
   } else {
     body_txt <- paste("{\nout <- rep(NA, ", length(ineq_idx), ")\n", sep = "")
   }
 
   # first come the variable definitions
-  def_txt <- lav_partable_constraints_def(partable, txtOnly = TRUE,
+  def_txt <- lav_pt_con_def(partable, txt_only = TRUE,
                                           warn = FALSE)
   def_idx <- which(partable$op == ":=")
   body_txt <- paste(body_txt, def_txt, "\n", sep = "")
@@ -461,7 +461,7 @@ lav_partable_constraints_ciq <- function(partable, con = NULL, debug = FALSE, # 
     body_txt <- paste(body_txt, "out[", i, "] <- ", ineq_string, "\n", sep = "")
   }
 
-  if (txtOnly) {
+  if (txt_only) {
     return(body_txt)
   }
 
@@ -487,7 +487,7 @@ lav_partable_constraints_ciq <- function(partable, con = NULL, debug = FALSE, # 
 # return a named vector of the 'free' indices, for the labels that
 # are used in a constrained (or optionally a definition)
 # (always 0 for definitions)
-lav_partable_constraints_label_id <- function(partable, con = NULL, # nolint
+lav_pt_con_label_id <- function(partable, con = NULL,
                                               def = TRUE) {
   # if 'con', merge partable + con
   if (!is.null(con)) {

@@ -41,7 +41,7 @@ setMethod(
     if (!is.list(fit_measures))
         fit_measures <- list(fit.measures = fit_measures)
     if (!missing(fm.args)) fit_measures <- c(fit_measures, fm.args)
-    lav_fit_measures(
+    lav_fit(
       object = object, fit_measures = fit.measures,
       baseline_model = baseline.model, h1_model = h1.model,
       output = output
@@ -76,7 +76,7 @@ setMethod(
     if (!is.list(fit_measures))
                   fit_measures <- list(fit.measures = fit_measures)
     if (!missing(fm.args)) fit_measures <- c(fit_measures, fm.args)
-    lav_fit_measures(
+    lav_fit(
       object = object, fit_measures = fit.measures,
       baseline_model = baseline.model, h1_model = h1.model,
       output = output
@@ -109,7 +109,7 @@ lav_efalist_fitmeasures <- function(         # nolint start
   res <- simplify2array(lapply(
     object,
     function(x) {
-      lav_fit_measures(
+      lav_fit(
         object = x,
         fit_measures = fit_measures, h1_model = h1.model,
         baseline_model = baseline.model,
@@ -143,7 +143,7 @@ lav_efalist_fitmeasures <- function(         # nolint start
 }
 
 
-lav_fit_measures <- function(object, fit_measures = "all",
+lav_fit <- function(object, fit_measures = "all",
                              baseline_model = NULL, h1_model = NULL,
                              fm_args = list(
                                standard.test = "default",
@@ -353,8 +353,8 @@ lav_fit_measures <- function(object, fit_measures = "all",
     x2_scaled <- test[[scaled_idx]]$stat
     df_scaled <- test[[scaled_idx]]$df
   }
-  npar <- lav_object_inspect_npar(object = object, ceq = TRUE)
-  n <- lav_object_inspect_ntotal(object = object) # N vs N-1
+  npar <- lav_inspect_npar(object = object, ceq = TRUE)
+  n <- lav_inspect_ntotal(object = object) # N vs N-1
 
 
   # define 'sets' of fit measures:

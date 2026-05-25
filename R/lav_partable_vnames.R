@@ -18,7 +18,7 @@ lav_object_vnames <- function(object, type = "ov", ...) { # nolint
     # just a model string?
     partable <- lavParseModelString(object)
   }
-  lav_partable_vnames(partable, type = type, ...)
+  lav_pt_vnames(partable, type = type, ...)
 }
 lavNames <- lav_object_vnames    # synonym #nolint
 
@@ -37,7 +37,7 @@ lavNames <- lav_object_vnames    # synonym #nolint
 #   LDW 30/1/24: 'block' argument not explicitly tested !?
 #   LDW 29/2/24: ov.order = "data" via attribute "ovda"
 # - YR 11/02/25: add type = "lv.ho" for higher-order latent variables
-lav_partable_vnames <- function(partable, type = NULL, ..., # nolint
+lav_pt_vnames <- function(partable, type = NULL, ...,
                                 force_warn = FALSE, ov_x_fatal = FALSE) {
   # This function derives the names of some types of variable (as specified
   # in type) from a 'partable'. The 'warn' parameter needs no explanation.
@@ -53,7 +53,7 @@ lav_partable_vnames <- function(partable, type = NULL, ..., # nolint
   # If the 'partable' contains an attribute vnames and the type is not "*",
   # the 'type' elements of this attribute are used.
 
-  # ----- lav_partable_vnames ---- common ----------------------------------
+  # ----- lav_pt_vnames ---- common ----------------------------------
   # sanity check
   stopifnot(is.list(partable), !missing(type))
   # this is a special function where the default is to suppress warnings,
@@ -115,7 +115,7 @@ lav_partable_vnames <- function(partable, type = NULL, ..., # nolint
   }
   return_value <- NULL
   if (type[1L] != "*" && !is.null(attr(partable, "vnames"))) {
-    # ----- lav_partable_vnames ---- cached data --------------------------
+    # ----- lav_pt_vnames ---- cached data --------------------------
     # uncomment/comment following line to enable/disable trace
     # lav_trace(paste("cached:", paste(type, collapse = ",")))
 
@@ -125,7 +125,7 @@ lav_partable_vnames <- function(partable, type = NULL, ..., # nolint
       return_value <- attr(partable, "vnames")[type]
     }
   }
-  # ----- lav_partable_vnames ---- common ----------------------------------
+  # ----- lav_pt_vnames ---- common ----------------------------------
   if (type[1L] == "all" || type[1L] == "*") {
     type <- type_list
   }
@@ -134,7 +134,7 @@ lav_partable_vnames <- function(partable, type = NULL, ..., # nolint
     partable$block <- rep(1L, length(partable$lhs))
   }
   # per default, use full partable
-  block_select <- lav_partable_block_values(partable)
+  block_select <- lav_pt_block_values(partable)
   # check for ... selection argument(s)
   ndotdotdot <- length(dotdotdot)
   if (ndotdotdot > 0L) {
@@ -177,7 +177,7 @@ lav_partable_vnames <- function(partable, type = NULL, ..., # nolint
     }
   }
   if (is.null(return_value)) {
-    # ----- lav_partable_vnames ---- no cache ------------------------
+    # ----- lav_pt_vnames ---- no cache ------------------------
 
     # uncomment/comment following line to enable/disable trace
     # lav_trace(paste("computed:", paste(type, collapse = ",")))
@@ -230,7 +230,7 @@ lav_partable_vnames <- function(partable, type = NULL, ..., # nolint
         lv_interaction <- character(0L)
       }
       if (length(type) == 1L) {
-        # ----- lav_partable_vnames ---- no cache ----- 1 type -----------
+        # ----- lav_pt_vnames ---- no cache ----- 1 type -----------
         # store lv
         if ("lv" == type) {
           # check if FLAT for random slopes
@@ -305,7 +305,7 @@ lav_partable_vnames <- function(partable, type = NULL, ..., # nolint
           if (is.null(partable$efa)) {
             out <- character(0L)
           } else {
-            set_names <- lav_partable_efa_values(partable)
+            set_names <- lav_pt_efa_values(partable)
             out <- unique(partable$lhs[partable$op == "=~" &
               block_ind &
               partable$efa %in% set_names])
@@ -400,7 +400,7 @@ lav_partable_vnames <- function(partable, type = NULL, ..., # nolint
           # 2. dependent ov's
           ov_y <- eqs_y[!eqs_y %in% c(lv_names2, ov_ind, ov_cind)]
           # 3. independent ov's
-          if (lav_partable_nlevels(partable) > 1L && b > 1L) {
+          if (lav_pt_nlevels(partable) > 1L && b > 1L) {
             # NEW in 0.6-8: if an 'x' was an 'y' in a previous level,
             #               treat it as 'y'
             tmp_eqs_y <- unique(partable$lhs[partable$op == "~"]) # all blocks
@@ -513,7 +513,7 @@ lav_partable_vnames <- function(partable, type = NULL, ..., # nolint
         ))) {
           # correction: is any of these ov.names.x mentioned as a variance,
           #             covariance, or intercept?
-          # this should trigger a warning in lav_model_partable()
+          # this should trigger a warning in lav_model_pt()
           if (is.null(partable$user)) { # FLAT!
             partable$user <- rep(1L, length(partable$lhs))
           }
@@ -818,7 +818,7 @@ lav_partable_vnames <- function(partable, type = NULL, ..., # nolint
           return_value$lv.marker[[b]] <- out
         }
       } else {
-        # ----- lav_partable_vnames ---- no cache ----- more than 1 type ------
+        # ----- lav_pt_vnames ---- no cache ----- more than 1 type ------
         # store lv
         if (any("lv" == type)) {
           # check if FLAT for random slopes
@@ -889,7 +889,7 @@ lav_partable_vnames <- function(partable, type = NULL, ..., # nolint
           if (is.null(partable$efa)) {
             out <- character(0L)
           } else {
-            set_names <- lav_partable_efa_values(partable)
+            set_names <- lav_pt_efa_values(partable)
             out <- unique(partable$lhs[partable$op == "=~" &
               block_ind &
               partable$efa %in% set_names])
@@ -968,7 +968,7 @@ lav_partable_vnames <- function(partable, type = NULL, ..., # nolint
         # 2. dependent ov's
         ov_y <- eqs_y[!eqs_y %in% c(lv_names2, ov_ind, ov_cind)]
         # 3. independent ov's
-        if (lav_partable_nlevels(partable) > 1L && b > 1L) {
+        if (lav_pt_nlevels(partable) > 1L && b > 1L) {
           # NEW in 0.6-8: if an 'x' was an 'y' in a previous level,
           #               treat it as 'y'
           tmp_eqs_y <- unique(partable$lhs[partable$op == "~"]) # all blocks
@@ -1074,7 +1074,7 @@ lav_partable_vnames <- function(partable, type = NULL, ..., # nolint
         ))) {
           # correction: is any of these ov.names.x mentioned as a variance,
           #             covariance, or intercept?
-          # this should trigger a warning in lav_model_partable()
+          # this should trigger a warning in lav_model_pt()
           if (is.null(partable$user)) { # FLAT!
             partable$user <- rep(1L, length(partable$lhs))
           }
@@ -1365,7 +1365,7 @@ lav_partable_vnames <- function(partable, type = NULL, ..., # nolint
       }
     } # b
 
-    # ----- lav_partable_vnames ---- no cache ------------------------
+    # ----- lav_pt_vnames ---- no cache ------------------------
     # new in 0.6-14: if 'da' operator, change order! (for ov.order = "data")
     # now via attribute "ovda"
     ov_names_data <- attr(partable, "ovda")
@@ -1382,7 +1382,7 @@ lav_partable_vnames <- function(partable, type = NULL, ..., # nolint
       })
     }
   }
-  # ----- lav_partable_vnames ---- common ------ 1 type --------
+  # ----- lav_pt_vnames ---- common ------ 1 type --------
   # to mimic old behaviour, if length(type) == 1L
   if (length(type) == 1L) {
     return_value <- return_value[[type]]
@@ -1403,6 +1403,6 @@ lav_partable_vnames <- function(partable, type = NULL, ..., # nolint
       return_value <- return_value[block_select]
     }
   }
-  # ----- lav_partable_vnames ---- common ------------------------
+  # ----- lav_pt_vnames ---- common ------------------------
   return_value
 }

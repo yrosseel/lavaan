@@ -1,4 +1,4 @@
-lav_lavaan_step16_rotation <- function(lavoptions = NULL,
+lav_step16_rotation <- function(lavoptions = NULL,
                                        lavmodel = NULL,
                                        lavpartable = NULL,
                                        lavh1 = NULL,
@@ -83,7 +83,7 @@ lav_lavaan_step16_rotation <- function(lavoptions = NULL,
         attr(lavmodel_unrot@con.jac, "inactive.idx")
       attr(con_jac, "cin.idx") <- attr(lavmodel_unrot@con.jac, "cin.idx")
       # use nrow(lavmodel@ceq.JAC), not lavmodel.unrot (which may have had
-      # zero rows removed by lav_constraints_parse for temporarily-fixed
+      # zero rows removed by lav_con_parse for temporarily-fixed
       # user=7 EFA identification parameters)
       attr(con_jac, "ceq.idx") <- seq_len(nrow(lavmodel@ceq.JAC))
       lavmodel@con.jac <- con_jac
@@ -120,7 +120,7 @@ lav_lavaan_step16_rotation <- function(lavoptions = NULL,
         ) # important!
 
         # force VCOV to be pd, before we transform (not very elegant)
-        vcov_in <- lav_matrix_symmetric_force_pd(lavvcov$vcov, # nolint
+        vcov_in <- lav_mat_sym_force_pd(lavvcov$vcov,
           tol = 1e-10
         )
         # apply Delta rule

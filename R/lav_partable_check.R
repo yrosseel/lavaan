@@ -1,6 +1,6 @@
 # check if the partable is complete/consistent
 # for example, we may have added intercepts/variances (user = 0), fixed to zero
-lav_partable_check <- function(partable, categorical = FALSE) {
+lav_pt_check <- function(partable, categorical = FALSE) {
   check <- TRUE
 
   # check for empty table - or should we WARN?
@@ -9,14 +9,14 @@ lav_partable_check <- function(partable, categorical = FALSE) {
   }
 
   # get observed/latent variables
-  ov_names <- lav_partable_vnames(partable, "ov.nox") # no need to specify exo??
-  lv_names <- lav_partable_vnames(partable, "lv")
-  lv_names_c <- lav_partable_vnames(partable, "lv.composite")
+  ov_names <- lav_pt_vnames(partable, "ov.nox") # no need to specify exo??
+  lv_names <- lav_pt_vnames(partable, "lv")
+  lv_names_c <- lav_pt_vnames(partable, "lv.composite")
   lv_names_noc <- lv_names[!lv_names %in% lv_names_c]
   all.names <- c(ov_names, lv_names_noc)
-  ov_names_ord <- lav_partable_vnames(partable, "ov.ord")
+  ov_names_ord <- lav_pt_vnames(partable, "ov.ord")
 
-  nlevels <- lav_partable_nlevels(partable)
+  nlevels <- lav_pt_nlevels(partable)
 
   # if categorical, we should have some ov.names.ord
   if (categorical && length(ov_names_ord) == 0L) {
@@ -25,7 +25,7 @@ lav_partable_check <- function(partable, categorical = FALSE) {
   }
 
   # we should have a (residual) variance for *each* ov/lv
-  # note: if lav_model_partable() has been used, this is always TRUE
+  # note: if lav_model_pt() has been used, this is always TRUE
   var_idx <- which(partable$op == "~~" &
     partable$lhs == partable$rhs & !partable$lhs %in% lv_names_c)
   missing_idx <- which(is.na(match(all.names, partable$lhs[var_idx])))
@@ -41,7 +41,7 @@ lav_partable_check <- function(partable, categorical = FALSE) {
   meanstructure <- any(partable$op == "~1")
 
   # if meanstructure, check for missing intercepts
-  # note if lav_model_partable() has been used, this is always TRUE
+  # note if lav_model_pt() has been used, this is always TRUE
   if (meanstructure) {
     # we should have an intercept for *each* ov/lv
     int_idx <- which(partable$op == "~1")

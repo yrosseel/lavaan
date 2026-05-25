@@ -160,9 +160,9 @@ lav_getcov <- function(x, lower = TRUE, diagonal = TRUE, sds = NULL,
   if (is.character(sds)) sds <- lav_char2num(sds)
 
   if (lower) {
-    cov_1 <- lav_matrix_lower2full(x, diagonal = diagonal)
+    cov_1 <- lav_mat_lower2full(x, diagonal = diagonal)
   } else {
-    cov_1 <- lav_matrix_upper2full(x, diagonal = diagonal)
+    cov_1 <- lav_mat_upper2full(x, diagonal = diagonal)
   }
   nvar <- ncol(cov_1)
 
@@ -216,7 +216,7 @@ lav_implied_to_vec <- function(implied = NULL, lavmodel = NULL,
       var <- var[var != 1]
     }
 
-    wls_obs[[g]] <- lav_samplestats_wls_obs(
+    wls_obs[[g]] <- lav_samp_wls_obs(
       # plain
       mean_g = implied$mean[[g]],
       cov_g = implied$cov[[g]],
@@ -299,7 +299,7 @@ lav_vec_to_implied <- function(x = NULL, lavmodel) {
 
       # cov - lower only
       idx <- seq_len(nvar * (nvar - 1) / 2)
-      cov_g <- lav_matrix_vech_reverse(x[idx], diagonal = FALSE)
+      cov_g <- lav_mat_vech_rev(x[idx], diagonal = FALSE)
       x <- x[-idx]
       diag(cov_g) <- var_g
 
@@ -330,7 +330,7 @@ lav_vec_to_implied <- function(x = NULL, lavmodel) {
       } else {
         idx <- seq_len(nvar * (nvar - 1) / 2)
       }
-      cov_g <- lav_matrix_vech_reverse(x[idx], diagonal = diag_flag)
+      cov_g <- lav_mat_vech_rev(x[idx], diagonal = diag_flag)
       x <- x[-idx]
 
       # fill in
@@ -351,8 +351,8 @@ lav_vec_to_implied <- function(x = NULL, lavmodel) {
 # theta = solve(t(Delta) %*% W %*% Delta) %*% t(Delta) %*% W %*% svec
 #
 # where Delta is the Jacobian of Sigma wrt the free parameters,
-# W is lav_matrix_bdiag(S.inv, S22_inv)
-# where S22_inv = 0.5 * lav_matrix_duplication_pre_post(S.inv %x% S.inv)
+# W is lav_mat_bdiag(S.inv, S22_inv)
+# where S22_inv = 0.5 * lav_mat_dup_pre_post(S.inv %x% S.inv)
 #  - S can be I (ULS) (then W = 0.5 * t(D) %*% D)
 #  - S can be sample.cov (GLS)
 #  - S can be Sigma (2RLS or RLS)
@@ -404,7 +404,7 @@ lav_utils_wls_linearization <- function(delta = NULL, s = NULL,
     jac_cov <- delta[-mean_idx, , drop = FALSE]
     s_mean <- svec[mean_idx]
     s_cov <- svec[-mean_idx]
-    w[lav_matrix_diagh_idx(nvar)] <- 0.5
+    w[lav_mat_diagh_idx(nvar)] <- 0.5
   } else if (nrow(delta) != pstar) {
     lav_msg_stop(gettext("nrow(Delta) != pstar"))
   }
@@ -436,9 +436,9 @@ lav_utils_wls_linearization <- function(delta = NULL, s = NULL,
     # cov part
     q_cov <- matrix(0, pstar, nc)
     for (j in seq_len(nc)) {
-      vmat <- lav_matrix_vech_reverse(jac_cov[, j])
+      vmat <- lav_mat_vech_rev(jac_cov[, j])
       m_w <- si %*% vmat %*% si
-      q_cov[, j] <- w * lav_matrix_vech(m_w)
+      q_cov[, j] <- w * lav_mat_vech(m_w)
     }
 
     a <- crossprod(jac_cov, q_cov)

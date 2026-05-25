@@ -49,7 +49,7 @@ lav_model_hessian <- function(lavmodel = NULL,
     x_right2[j] <- x[j] + 2 * h_j
 
     g_left <-
-      lav_model_gradient(
+      lav_model_grad(
         lavmodel = lavmodel,
         glist = lav_model_x2glist(
           lavmodel =
@@ -64,7 +64,7 @@ lav_model_hessian <- function(lavmodel = NULL,
         ceq_simple = ceq_simple
       )
     g_left2 <-
-      lav_model_gradient(
+      lav_model_grad(
         lavmodel = lavmodel,
         glist = lav_model_x2glist(
           lavmodel =
@@ -80,7 +80,7 @@ lav_model_hessian <- function(lavmodel = NULL,
       )
 
     g_right <-
-      lav_model_gradient(
+      lav_model_grad(
         lavmodel = lavmodel,
         glist = lav_model_x2glist(
           lavmodel =
@@ -96,7 +96,7 @@ lav_model_hessian <- function(lavmodel = NULL,
       )
 
     g_right2 <-
-      lav_model_gradient(
+      lav_model_grad(
         lavmodel = lavmodel,
         glist = lav_model_x2glist(
           lavmodel =

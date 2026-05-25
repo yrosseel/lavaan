@@ -45,8 +45,8 @@ lav_lavaanlist_print <- function(x, ...) {
 
 
 # prints only lower triangle of a symmetric matrix
-lav_matrix_symmetric_print <- function(x, ..., nd = 3L, shift = 0L,  # nolint start
-                                          diag.na.dot = TRUE) {      # nolint end
+lav_mat_sym_print <- function(x, ..., nd = 3L, shift = 0L,
+                                          diag_na_dot = TRUE) {
   # print only lower triangle of a symmetric matrix
   # this function was inspired by the `print.correlation' function
   # in package nlme
@@ -57,9 +57,9 @@ lav_matrix_symmetric_print <- function(x, ..., nd = 3L, shift = 0L,  # nolint st
   ll <- lower.tri(x, diag = TRUE)
   y[ll] <- format(round(x[ll], digits = nd))
   y[!ll] <- ""
-  if (diag.na.dot) {
+  if (diag_na_dot) {
     # print a "." instead of NA on the main diagonal (eg lav_efalist_summary)
-    diag_idx <- lav_matrix_diag_idx(ncol(x))
+    diag_idx <- lav_mat_diag_idx(ncol(x))
     tmp <- x[diag_idx]
     if (all(is.na(tmp))) {
       y[diag_idx] <- paste(strrep(" ", nd + 2L), ".", sep = "")
@@ -91,7 +91,7 @@ lav_matrix_symmetric_print <- function(x, ..., nd = 3L, shift = 0L,  # nolint st
 }
 
 
-lav_matrix_print <- function(x, ..., nd = 3L, shift = 0L) {
+lav_mat_print <- function(x, ..., nd = 3L, shift = 0L) {
   x <- as.matrix(x) # just in case
   y <- unclass(x)
   attributes(y)[c("header", "footer")] <- NULL
@@ -355,7 +355,7 @@ lav_parameterestimates_print <- function(x, ..., nd = 3L) {
     ngroups <- 1L
     x$group <- rep(1L, length(x$lhs))
   } else {
-    ngroups <- lav_partable_ngroups(x)
+    ngroups <- lav_pt_ngroups(x)
   }
 
   # number of levels
@@ -363,7 +363,7 @@ lav_parameterestimates_print <- function(x, ..., nd = 3L) {
     nlevels <- 1L
     x$level <- rep(1L, length(x$lhs))
   } else {
-    nlevels <- lav_partable_nlevels(x)
+    nlevels <- lav_pt_nlevels(x)
   }
 
   # block column
@@ -804,7 +804,7 @@ lav_parameterestimates_print <- function(x, ..., nd = 3L) {
     } else if (s == "Constraints") {
       row_idx <- which(x$op %in% c("==", "<", ">"))
       if (length(row_idx) == 0) next
-      m[row_idx, 1] <- lav_print_format_constraints(x$lhs[row_idx],
+      m[row_idx, 1] <- lav_print_format_con(x$lhs[row_idx],
                           x$op[row_idx], x$rhs[row_idx], nd = nd)
       m[row_idx, 2] <- sprintf(num_format, abs(x$est[row_idx]))
       m_1 <- m[row_idx, 1:2, drop = FALSE]
@@ -871,7 +871,7 @@ lav_print_format_names <- function(names_1, labels_1, prefix = NULL) {
   sprintf(char_format, prefix, names_1)
 }
 
-lav_print_format_constraints <- function(lhs, op, rhs, nd) {
+lav_print_format_con <- function(lhs, op, rhs, nd) {
   nd <- max(nd, 3)
   m_w <- 41 + (nd - 3) * 3
 

@@ -6,8 +6,8 @@ lav_h1_implied_logl <- function(lavdata = NULL,
                                 lavoptions = NULL) {
   lavpta <- NULL
   if (!is.null(lavpartable)) {
-    lavpta <- lav_partable_attributes(lavpartable)
-    lavpartable <- lav_partable_set_cache(lavpartable, lavpta)
+    lavpta <- lav_pt_attributes(lavpartable)
+    lavpartable <- lav_pt_set_cache(lavpartable, lavpta)
   }
 
   # single-level case
@@ -27,9 +27,9 @@ lav_h1_implied_logl <- function(lavdata = NULL,
         # insert ML estimates
         for (g in 1:lavdata@ngroups) {
           # zero coverage?
-          if (any(lav_matrix_vech(lavdata@Mp[[g]]$coverage,
+          if (any(lav_mat_vech(lavdata@Mp[[g]]$coverage,
                                   diagonal = FALSE) == 0L)) {
-            out <- lav_mvnorm_missing_h1_estimate_moments_chol(
+            out <- lav_mvn_mi_h1_est_moments_chol(
               lavdata = lavdata, lavsamplestats = lavsamplestats,
               lavoptions = lavoptions, group = g)
             implied$cov[[g]] <- out$Sigma
@@ -101,7 +101,7 @@ lav_h1_implied_logl <- function(lavdata = NULL,
         #                })[,-1]))
         # YLp = lavsamplestats@YLp[[g]]
         # YLp[[2]]$Y2 <- Y2.complete
-        # OUT <- lav_mvnorm_cluster_em_sat(
+        # OUT <- lav_mvn_cl_em_sat(
         #    YLp      = YLp,
         #    Lp       = lavdata@Lp[[g]],
         #    verbose  = TRUE, # for now
@@ -115,7 +115,7 @@ lav_h1_implied_logl <- function(lavdata = NULL,
         # implied$mean[[(g-1)*nlevels + 2L]] <- OUT$Mu.B
         # loglik.group[g] <- OUT$logl
         # lavh1 <- list(implied = implied, logl = sum(loglik.group))
-        # lavpartable <- lav_partable_unrestricted(lavdata = lavdata,
+        # lavpartable <- lav_pt_unrestricted(lavdata = lavdata,
         #     lavsamplestats = lavsamplestats, lavoptions = lavoptions,
         #     lavpta = lavpta, lavh1 = lavh1)
         # lavpartable$lower <- rep(-Inf, length(lavpartable$lhs))
@@ -124,7 +124,7 @@ lav_h1_implied_logl <- function(lavdata = NULL,
         #                 lavpartable$lhs == lavpartable$rhs)
         # lavpartable$lower[var.idx] <- 1e-05
 
-        lavpartable <- lav_partable_unrestricted_chol(
+        lavpartable <- lav_pt_unrestricted_chol(
           lavdata = lavdata,
           lavoptions = lavoptions, lavpta = lavpta
         )
@@ -166,7 +166,7 @@ lav_h1_implied_logl <- function(lavdata = NULL,
         # }
       } else {
         # complete data
-        out_1 <- lav_mvnorm_cluster_em_sat(
+        out_1 <- lav_mvn_cl_em_sat(
           ylp = lavsamplestats@YLp[[g]],
           lp = lavdata@Lp[[g]],
           tol = 1e-04, # option?
