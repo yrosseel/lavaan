@@ -302,6 +302,33 @@ standardizedSolution <-                                      # nolint start
       #              tmp_list$se %o% fac
       # }
 
+      # Monte Carlo: asymmetric percentile-based CI for standardized
+      # defined parameters (Preacher & Selig 2012)
+      mc_coef <- lav_object_inspect_mc(object)
+      def_idx <- which(tmp_list$op == ":=")
+      if (!is.null(mc_coef) && length(def_idx) > 0L) {
+        if (type == "std.lv") {
+          tmp_fun_mc <- lav_standardize_lv_x
+        } else if (type == "std.all") {
+          tmp_fun_mc <- lav_standardize_all_x
+        } else if (type == "std.nox") {
+          tmp_fun_mc <- lav_standardize_all_nox_x
+        }
+        mc_std <- try(apply(mc_coef, 1L, tmp_fun_mc,
+                            lavobject = object), silent = TRUE)
+        if (!inherits(mc_std, "try-error")) {
+          if (is.matrix(mc_std)) {
+            mc_std <- t(mc_std)
+          } else {
+            mc_std <- as.matrix(mc_std)
+          }
+          alpha <- c((1 - level) / 2, 1 - (1 - level) / 2)
+          mc_qq <- apply(mc_std[, def_idx, drop = FALSE], 2L,
+                         quantile, probs = alpha, na.rm = TRUE, type = 7)
+          ci[def_idx, ] <- t(mc_qq)
+        }
+      }
+
       tmp_list$ci.lower <- ci[, 1]
       tmp_list$ci.upper <- ci[, 2]
     }
@@ -573,6 +600,23 @@ lavParameterEstimates <- function(object,                      # nolint start
       if (object@Options$se != "bootstrap") {
         fac <- qnorm(a)
         ci <- tmp_list$est + tmp_list$se %o% fac
+        # Monte Carlo: replace CI for defined parameters with
+        # asymmetric percentile-based bounds (Preacher & Selig 2012)
+        mc_coef <- lav_object_inspect_mc(object)
+        def_idx <- which(object@ParTable$op == ":=")
+        if (!is.null(mc_coef) && length(def_idx) > 0L) {
+          mc_def <- apply(mc_coef, 1L, object@Model@def.function)
+          if (length(def_idx) == 1L) {
+            mc_def <- as.matrix(mc_def)
+          } else {
+            mc_def <- t(mc_def)
+          }
+          mc_def[!is.finite(mc_def)] <- as.numeric(NA)
+          alpha <- c((1 - level) / 2, 1 - (1 - level) / 2)
+          mc_qq <- apply(mc_def, 2L, quantile, probs = alpha,
+                         na.rm = TRUE, type = 7)
+          ci[def_idx, ] <- t(mc_qq)
+        }
       } else if (object@Options$se == "bootstrap") {
         # local copy of 'norm.inter' from boot package (not exported!)
         norm_inter <- function(t, alpha) {

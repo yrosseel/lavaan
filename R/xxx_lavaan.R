@@ -402,6 +402,7 @@ lavaan <- function(
   vcov <- temp$VCOV
   lavmodel <- temp$lavmodel
   lavboot <- temp$lavboot
+  lav_monte_carlo <- temp$lav_monte_carlo
 
   timing <- lav_add_timing(timing, "vcov")
 
@@ -483,7 +484,8 @@ lavaan <- function(
     lavh1          = lavh1,
     lavbaseline    = lavbaseline,
     laveqs         = laveqs,
-    start_time0    = start_time0
+    start_time0    = start_time0,
+    lav_monte_carlo = lav_monte_carlo
   )
 
   # restore random seed

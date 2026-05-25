@@ -77,6 +77,25 @@ lav_lavaan_step13_vcov_boot <- function(lavoptions = NULL,
     lavboot <- list()
   }
 
+  # draw Monte Carlo samples (if requested) for defined parameters
+  # only when bootstrap is not used (bootstrap covers def CIs already)
+  lav_monte_carlo <- list()
+  def_idx_count <- sum(lavpartable$op == ":=")
+  if (def_idx_count > 0L && lavoptions$se != "bootstrap" &&
+    lav_model_vcov_se_mc_active(lavoptions) &&
+    !is.null(vcov_1) && !inherits(vcov_1, "try-error")) {
+    if (lav_verbose()) {
+      cat("drawing", lavoptions$monte.carlo$R,
+          "Monte Carlo samples for defined parameters ...")
+    }
+    mc_coef <- lav_model_vcov_mc(lavmodel = lavmodel, VCOV = vcov_1,
+                                 lavoptions = lavoptions)
+    lav_monte_carlo$coef <- mc_coef
+    if (lav_verbose()) {
+      cat(" done.\n")
+    }
+  }
+
   # store VCOV in vcov
   # strip all attributes but 'dim'
   tmp_attr <- attributes(vcov_1)
@@ -120,15 +139,17 @@ lav_lavaan_step13_vcov_boot <- function(lavoptions = NULL,
       lavpartable = lavpartable,
       VCOV = vcov_1,
       BOOT = lavboot$coef,
+      MC = lav_monte_carlo$coef,
       lavoptions = lavoptions
     )
   }
 
   list(
-    lavpartable = lavpartable,
-    lavvcov     = lavvcov,
-    VCOV        = vcov_1,
-    lavmodel    = lavmodel,
-    lavboot     = lavboot
+    lavpartable      = lavpartable,
+    lavvcov          = lavvcov,
+    VCOV             = vcov_1,
+    lavmodel         = lavmodel,
+    lavboot          = lavboot,
+    lav_monte_carlo  = lav_monte_carlo
   )
 }

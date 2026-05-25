@@ -456,10 +456,22 @@ sam <- function(model = NULL,                      # nolint start
     } else {
       joint@vcov$vcov[step2$step2.free.idx, step2$step2.free.idx] <- vcov_1$VCOV
     }
+
+    # Monte Carlo samples for defined parameter CIs (Preacher & Selig 2012)
+    mc_coef <- NULL
+    if (sum(pt_1$op == ":=") > 0L && lavoptions$se != "bootstrap" &&
+      lav_model_vcov_se_mc_active(lavoptions)) {
+      mc_coef <- lav_model_vcov_mc(lavmodel = joint@Model,
+                                   VCOV = joint@vcov$vcov,
+                                   lavoptions = lavoptions)
+      joint@internal$monte.carlo <- list(coef = mc_coef)
+    }
+
     pt_1$se <- lav_model_vcov_se(
       lavmodel = joint@Model,
       lavpartable = pt_1,
       VCOV = joint@vcov$vcov,
+      MC = mc_coef,
       lavoptions = lavoptions
     )
     joint@ParTable <- pt_1
@@ -487,7 +499,11 @@ sam <- function(model = NULL,                      # nolint start
       global_options = global_options
     )
     res <- joint
+    mc_keep <- joint@internal$monte.carlo
     res@internal <- sam_1
+    if (!is.null(mc_keep)) {
+      res@internal$monte.carlo <- mc_keep
+    }
     if (lav_verbose()) {
       cat("done.\n")
     }

@@ -16,7 +16,8 @@ lav_lavaan_step17_lavaan <- function(lavmc = NULL,
                                      lavh1 = NULL,
                                      lavbaseline = NULL,
                                      laveqs = NULL,
-                                     start_time0 = NULL) {
+                                     start_time0 = NULL,
+                                     lav_monte_carlo = NULL) {
   # # # # # # # # # #
   # #  17. lavaan # #
   # # # # # # # # # #
@@ -54,7 +55,11 @@ lav_lavaan_step17_lavaan <- function(lavmc = NULL,
     test = lavtest, # list - test (14)
     h1 = lavh1, # list - h1 (6)
     baseline = lavbaseline, # list - baseline (15)
-    internal = list(), # empty list
+    internal = if (is.null(lav_monte_carlo) || length(lav_monte_carlo) == 0L) {
+      list()
+    } else {
+      list(monte.carlo = lav_monte_carlo)
+    },
     external = list() # empty list
   )
 
@@ -78,7 +83,7 @@ lav_lavaan_step17_lavaan <- function(lavmc = NULL,
 
   # eqs?
   if (length(laveqs) > 0L) {
-    lavaan@internal <- list(eqs = laveqs)
+    lavaan@internal$eqs <- laveqs
   }
 
   # post-fitting check of parameters

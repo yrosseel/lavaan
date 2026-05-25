@@ -358,7 +358,27 @@ Estimation options:
      matrix) to the first-order variance approximation. This may improve
      accuracy when the transformation is a strongly non-linear function
      of the model parameters. Has no effect when standard errors are
-     obtained by bootstrapping.}
+     obtained by bootstrapping or by the Monte Carlo method.}
+   \item{\code{se.def}}{Character. Method for computing standard errors
+     (and confidence intervals) of defined parameters (introduced with
+     the \code{:=} operator). The default is \code{"default"} (or
+     equivalently \code{"delta"}), which uses the delta method (respecting
+     \code{se.delta.second.order}). Set to \code{"monte.carlo"} to use
+     the Monte Carlo method of Preacher and Selig (2012). Under this
+     method, \code{R} draws are taken from
+     \eqn{\textit{MVN}(\hat{\theta}, \widehat{\textit{Var}}(\hat{\theta}))},
+     the defined parameter is evaluated for each draw, and standard
+     errors are obtained as the standard deviation of these realisations.
+     Confidence intervals (in \code{parameterEstimates()} and
+     \code{standardizedSolution()}) are based on percentile bounds of
+     the Monte Carlo distribution, and therefore can be asymmetric (just
+     like bootstrap intervals). Has no effect when
+     \code{se = "bootstrap"}.}
+   \item{\code{monte.carlo}}{List of settings for the Monte Carlo method
+     (used when \code{se.def = "monte.carlo"}). Currently recognises:
+     \code{R} (integer; number of Monte Carlo draws; default 20000) and
+     \code{seed} (integer or \code{NULL}; optional seed for
+     reproducibility).}
    \item{\code{bootstrap}:}{Number of bootstrap draws, if bootstrapping is 
      used.}
    \item{\code{do.fit}:}{If \code{FALSE}, the model is not fit, and the 

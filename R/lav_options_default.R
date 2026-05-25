@@ -377,6 +377,19 @@ lav_options_default <- function() {
   # TRUE  = second-order delta method
   elm("se.delta.second.order", FALSE, bl = TRUE)
 
+  # SE method for defined parameters (:=)
+  # "default" = delta method (respects se.delta.second.order)
+  # "monte.carlo" = Monte Carlo method (Preacher & Selig 2012)
+  elm("se.def", "default", chr = c(
+    default = "default",
+    delta = "default",
+    monte.carlo = "monte.carlo",
+    mc = "monte.carlo",
+    MC = "monte.carlo"))
+
+  # Monte Carlo settings (used when se.def = "monte.carlo")
+  elm("monte.carlo", list(R = 20000L, seed = NULL), oklen = c(0L, 100L))
+
   # information (se + test)
   elm("information", c("default", "default"), chr = c(
     "default", "expected", "observed", "first.order"),

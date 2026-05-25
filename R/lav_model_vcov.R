@@ -669,8 +669,73 @@ lav_model_vcov <- function(lavmodel = NULL,
   var_cov
 }
 
+# Generate Monte Carlo draws for the free parameters from a multivariate
+# normal distribution with mean = coef_hat (the point estimate) and
+# covariance = VCOV. Used for Preacher & Selig (2012)-style Monte Carlo
+# confidence intervals for defined parameters.
+#
+# Returns an R x n_free matrix. The number of draws and (optional) seed
+# are taken from lavoptions$monte.carlo.
+lav_model_vcov_mc <- function(lavmodel = NULL, VCOV = NULL,
+                              lavoptions = NULL) {
+  if (is.null(VCOV) || inherits(VCOV, "try-error")) {
+    return(NULL)
+  }
+  r <- 20000L
+  seed <- NULL
+  if (!is.null(lavoptions) && !is.null(lavoptions$monte.carlo)) {
+    if (!is.null(lavoptions$monte.carlo$R)) {
+      r <- as.integer(lavoptions$monte.carlo$R)
+    }
+    if (!is.null(lavoptions$monte.carlo$seed)) {
+      seed <- lavoptions$monte.carlo$seed
+    }
+  }
+  stopifnot(r > 0L)
+
+  coef_hat <- lav_model_get_parameters(lavmodel = lavmodel, type = "free")
+  # ensure we sample in the dimension of VCOV: typically n_free, but
+  # with simple equality constraints (ceq.simple.only) VCOV is in unco
+  # space; in that case lift coef_hat via t(K)
+  if (lavmodel@ceq.simple.only && nrow(VCOV) == nrow(lavmodel@ceq.simple.K)) {
+    coef_hat <- drop(lavmodel@ceq.simple.K %*% coef_hat)
+  }
+
+  # save and restore RNG state so MC sampling does not perturb the
+  # user's global seed
+  if (exists(".Random.seed", envir = .GlobalEnv, inherits = FALSE)) {
+    saved_seed <- get(".Random.seed", envir = .GlobalEnv, inherits = FALSE)
+    on.exit(assign(".Random.seed", saved_seed, envir = .GlobalEnv), add = TRUE)
+  } else {
+    on.exit({
+      if (exists(".Random.seed", envir = .GlobalEnv, inherits = FALSE)) {
+        rm(".Random.seed", envir = .GlobalEnv)
+      }
+    }, add = TRUE)
+  }
+  if (!is.null(seed)) {
+    set.seed(seed)
+  }
+
+  # symmetrize VCOV for safety
+  vcov_sym <- 0.5 * (VCOV + t(VCOV))
+  mc_coef <- lav_mvrnorm(n = r, mu = coef_hat, sigma_1 = vcov_sym,
+                         check_symmetry = FALSE)
+  if (!is.matrix(mc_coef)) {
+    mc_coef <- matrix(mc_coef, nrow = r)
+  }
+  mc_coef
+}
+
+# Is the Monte Carlo method requested for defined parameters?
+lav_model_vcov_se_mc_active <- function(lavoptions) {
+  isTRUE(!is.null(lavoptions) &&
+    identical(lavoptions$se.def, "monte.carlo"))
+}
+
 lav_model_vcov_se <- function(lavmodel, lavpartable, VCOV = NULL, # nolint start
-                              BOOT = NULL, lavoptions = NULL) {  # nolint end
+                              BOOT = NULL, lavoptions = NULL,
+                              MC = NULL) {                       # nolint end
   # 0. special case
   if (is.null(VCOV)) {
     se <- rep(as.numeric(NA), lavmodel@nx.user)
@@ -710,6 +775,28 @@ lav_model_vcov_se <- function(lavmodel, lavpartable, VCOV = NULL, # nolint start
   # 3. defined parameters:
   def_idx <- which(lavpartable$op == ":=")
   if (length(def_idx) > 0L) {
+    # if Monte Carlo samples are not supplied but requested, draw them
+    if (is.null(MC) && is.null(BOOT) &&
+        lav_model_vcov_se_mc_active(lavoptions)) {
+      MC <- lav_model_vcov_mc(lavmodel = lavmodel, VCOV = VCOV,
+                              lavoptions = lavoptions)
+    }
+    if (!is.null(MC)) {
+      mc_def <- apply(MC, 1L, lavmodel@def.function)
+      if (length(def_idx) == 1L) {
+        mc_def <- as.matrix(mc_def)
+      } else {
+        mc_def <- t(mc_def)
+      }
+      # def.function maps invalid evaluations (NaN) to +Inf;
+      # treat those draws as missing so that cov() ignores them
+      mc_def[!is.finite(mc_def)] <- as.numeric(NA)
+      def_cov <- cov(mc_def, use = "pairwise.complete.obs")
+      diag_def_cov <- diag(def_cov)
+      diag_def_cov[diag_def_cov < 0] <- as.numeric(NA)
+      se[def_idx] <- sqrt(diag_def_cov)
+      return(se)
+    }
     if (!is.null(BOOT)) {
       # we must remove the NA rows (and hope we have something left)
       error_idx <- attr(BOOT, "error.idx")

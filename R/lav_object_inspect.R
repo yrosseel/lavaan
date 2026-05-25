@@ -138,6 +138,11 @@ lav_lavaan_lavinspect <- function(object,                                # nolin
     lav_object_inspect_boot(object, add_labels = add.labels,
       add_class = add.class)
 
+    #### Monte Carlo coef draws ####
+  } else if (what %in% c("monte.carlo", "mc", "mc.coef", "coef.mc")) {
+    lav_object_inspect_mc(object, add_labels = add.labels,
+      add_class = add.class)
+
     #### fit indices ####
   } else if (what == "fit" ||
     what == "fitmeasures" ||
@@ -745,6 +750,28 @@ lav_object_inspect_start <- function(object) {
   }
 
   return_value
+}
+
+lav_object_inspect_mc <- function(object, add_labels = FALSE,
+                                  add_class = FALSE) {
+  # retrieve the Monte Carlo coefficient draws used for defined parameter
+  # confidence intervals (Preacher & Selig 2012). Returns NULL if MC was
+  # not requested.
+  mc_coef <- NULL
+  int <- try(slot(object, "internal"), silent = TRUE)
+  if (!inherits(int, "try-error") && !is.null(int$monte.carlo)) {
+    mc_coef <- int$monte.carlo$coef
+  }
+  if (is.null(mc_coef)) {
+    return(NULL)
+  }
+  if (add_labels) {
+    colnames(mc_coef) <- names(coef(object))
+  }
+  if (add_class) {
+    class(mc_coef) <- c("lavaan.matrix", "matrix")
+  }
+  mc_coef
 }
 
 lav_object_inspect_boot <- function(object, add_labels = FALSE,
@@ -2708,21 +2735,53 @@ lav_object_inspect_vcov_def <- function(object, joint = FALSE,
   }
 
   if (standardized) {
-    # compute tmp.vcov for "free" parameters only
-    tmp_vcov <- lav_object_inspect_vcov(object,
-      standardized = TRUE,
-      type = type, free_only = FALSE,
-      add_labels = FALSE, add_class = FALSE)
-    if (joint) {
-      return_value <- tmp_vcov[joint_idx, joint_idx, drop = FALSE]
-    } else {
-      return_value <- tmp_vcov[def_idx, def_idx, drop = FALSE]
+    # Monte Carlo path: empirical cov of the standardized def parameters
+    mc_coef_std <- lav_object_inspect_mc(object)
+    if (!is.null(mc_coef_std) && length(def_idx) > 0L) {
+      if (type == "std.lv") {
+        tmp_fun_std <- lav_standardize_lv_x
+      } else if (type == "std.all") {
+        tmp_fun_std <- lav_standardize_all_x
+      } else if (type == "std.nox") {
+        tmp_fun_std <- lav_standardize_all_nox_x
+      }
+      mc_std <- try(apply(mc_coef_std, 1L, tmp_fun_std,
+                          lavobject = object), silent = TRUE)
+      if (!inherits(mc_std, "try-error")) {
+        if (is.matrix(mc_std)) {
+          mc_std <- t(mc_std)
+        } else {
+          mc_std <- as.matrix(mc_std)
+        }
+        mc_std[!is.finite(mc_std)] <- as.numeric(NA)
+        if (joint) {
+          mc_std_sub <- mc_std[, joint_idx, drop = FALSE]
+        } else {
+          mc_std_sub <- mc_std[, def_idx, drop = FALSE]
+        }
+        return_value <- cov(mc_std_sub, use = "pairwise.complete.obs")
+      } else {
+        mc_coef_std <- NULL
+      }
+    }
+    # delta-based standardized cov (default path)
+    if (is.null(mc_coef_std) || length(def_idx) == 0L) {
+      tmp_vcov <- lav_object_inspect_vcov(object,
+        standardized = TRUE,
+        type = type, free_only = FALSE,
+        add_labels = FALSE, add_class = FALSE)
+      if (joint) {
+        return_value <- tmp_vcov[joint_idx, joint_idx, drop = FALSE]
+      } else {
+        return_value <- tmp_vcov[def_idx, def_idx, drop = FALSE]
+      }
     }
   } else {
     # get free parameters
     x <- lav_model_get_parameters(lavmodel, type = "free")
 
-    # bootstrap or not?
+    # bootstrap, Monte Carlo or delta?
+    mc_coef <- lav_object_inspect_mc(object)
     if (!is.null(object@boot$coef)) {
       tmp_boot <- object@boot$coef
       # remove NA rows
@@ -2740,6 +2799,18 @@ lav_object_inspect_vcov_def <- function(object, joint = FALSE,
         tmp_boot_def <- cbind(tmp_boot, tmp_boot_def)
       }
       return_value <- cov(tmp_boot_def)
+    } else if (!is.null(mc_coef)) {
+      mc_def <- apply(mc_coef, 1L, lavmodel@def.function)
+      if (length(def_idx) == 1L) {
+        mc_def <- as.matrix(mc_def)
+      } else {
+        mc_def <- t(mc_def)
+      }
+      if (joint) {
+        mc_def <- cbind(mc_coef, mc_def)
+      }
+      nmc <- nrow(mc_def)
+      return_value <- cov(mc_def) * (nmc - 1) / nmc
     } else {
       # tmp.vcov
       tmp_vcov <- lav_object_inspect_vcov(object,
