@@ -734,8 +734,8 @@ lav_model_vcov_se_mc_active <- function(lavoptions) {
 }
 
 lav_model_vcov_se <- function(lavmodel, lavpartable, VCOV = NULL, # nolint start
-                              BOOT = NULL, lavoptions = NULL,
-                              MC = NULL) {                       # nolint end
+                              BOOT = NULL, MC = NULL,
+                              lavoptions = NULL) {                # nolint end
   # 0. special case
   if (is.null(VCOV)) {
     se <- rep(as.numeric(NA), lavmodel@nx.user)

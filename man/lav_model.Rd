@@ -15,7 +15,8 @@ lav_model_get_parameters(lavmodel, GLIST = NULL, type = "free",
 lav_model_implied(lavmodel, GLIST = NULL, delta = TRUE)
 
 # compute standard errors
-lav_model_vcov_se(lavmodel, lavpartable, VCOV = NULL, BOOT = NULL, lavoptions = NULL)
+lav_model_vcov_se(lavmodel, lavpartable, VCOV = NULL, BOOT = NULL, 
+                  MC = NULL, lavoptions = NULL)
 }
 \arguments{
 \item{lavmodel}{An internal representation of a lavaan model.}
@@ -35,7 +36,8 @@ correlations.}
 \item{lavpartable}{A parameter table.}
 \item{VCOV}{Numeric matrix containing an estimate of the variance covariance matrix of the free model parameters.}
 \item{BOOT}{Numeric matrix containing the bootstrap based parameter estimates (in the columns) for each bootstrap sample (in the rows).}
-\item{lavoptions}{A named list. The Options lsot from a lavaan object.}
+\item{MC}{Numeric matrix containing the Monte-Carlo based parameter estimates (in the columns) for each Monte-Carlo sample (in the rows).}
+\item{lavoptions}{A named list. The Options slot from a lavaan object.}
 }
 \examples{
 HS.model <- ' visual  =~ x1 + x2 + x3
