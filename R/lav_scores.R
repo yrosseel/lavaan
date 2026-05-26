@@ -145,7 +145,7 @@ lavScores <- estfun.lavaan <- function(               # nolint start
   names(sc) <- lav_snake_case(names(sc))
   sc[[1L]] <- quote(lavaan:::lav_sc)
   eval(sc, parent.frame())
-}       
+}
 
 lav_sc_ml <- function(ntab = 0L,
                           ntot = 0L,

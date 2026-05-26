@@ -394,7 +394,7 @@ lav_partable_labels <- function(
   eval(sc, parent.frame())
 }
 # used in bain
-getParameterLabels <- lav_partable_labels  
+getParameterLabels <- lav_partable_labels
 
 lav_matrix_vecr <- function(A) {
   lav_deprecated("lav_mat_vecr", times = 0L) # --> for now no warning

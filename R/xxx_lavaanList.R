@@ -338,8 +338,12 @@ lavaanList <- function(model = NULL, # model                   # nolint start
             res$ParTable$ci.lower <- pe_ci$ci.lower
             res$ParTable$ci.upper <- pe_ci$ci.upper
           } else {
-            res$ParTable$ci.lower <- as.numeric(NA)
-            res$ParTable$ci.upper <- as.numeric(NA)
+            # res$ParTable is a list (not a data.frame), so we must use a
+            # full-length vector here, not a scalar
+            res$ParTable$ci.lower <- rep(as.numeric(NA),
+                                         length(res$ParTable$lhs))
+            res$ParTable$ci.upper <- rep(as.numeric(NA),
+                                         length(res$ParTable$lhs))
           }
         }
       }
@@ -401,11 +405,14 @@ lavaanList <- function(model = NULL, # model                   # nolint start
         res$ParTable$se <- numeric(length(lavpartable$lhs))
         res$ParTable$se[res$ParTable$free > 0] <- as.numeric(NA)
         # keep the ci.lower/ci.upper columns in sync with the converged
-        # runs (see above), so all stored ParTables have the same columns
+        # runs (see above), so all stored ParTables have the same columns.
+        # res$ParTable is a list, so use full-length vectors, not scalars.
         if (identical(lavoptions$se, "bootstrap") ||
             identical(lavoptions$se.def, "monte.carlo")) {
-          res$ParTable$ci.lower <- as.numeric(NA)
-          res$ParTable$ci.upper <- as.numeric(NA)
+          res$ParTable$ci.lower <- rep(as.numeric(NA),
+                                       length(lavpartable$lhs))
+          res$ParTable$ci.upper <- rep(as.numeric(NA),
+                                       length(lavpartable$lhs))
         }
       }
       if (store.failed) {
