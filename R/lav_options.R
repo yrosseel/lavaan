@@ -56,7 +56,7 @@ lav_options_checkvalues <- function(optname, optvalue, chr) {
   }
   as.vector(chr[optvalsok])
 }
-lav_options_check <- function(opts, opt_check, subname) { # nolint
+lav_options_check <- function(opts, opt_check, subname) {
   opt_names <- names(opts)
   hiddens <- startsWith(opt_names, ".")
   if (any(hiddens)) { # remove hidden options temporarily

@@ -85,8 +85,8 @@ lav_step00_checkdata <- function(data = NULL,
                                         sample_nobs = NULL,
                                         sample_mean = NULL,
                                         sample_th = NULL,
-                                        nacov = NULL, # nolint
-                                        wls_v = NULL, # nolint
+                                        nacov = NULL,
+                                        wls_v = NULL,
                                         ov_order = NULL) {
   # if data not NULL:
   #   if it is an 'enriched' data.frame (e.g. a tibble), simplify to an
@@ -128,8 +128,8 @@ lav_step00_checkdata <- function(data = NULL,
       # check for optional-data arguments
       if ("sample.mean" %in% names(data)) sample_mean <- data$sample.mean
       if ("sample.th" %in% names(data)) sample_th <- data$sample.th
-      if ("NACOV" %in% names(data)) nacov <- data$NACOV # nolint
-      if ("WLS.V" %in% names(data)) wls_v <- data$WLS.V # nolint
+      if ("NACOV" %in% names(data)) nacov <- data$NACOV
+      if ("WLS.V" %in% names(data)) wls_v <- data$WLS.V
 
       # set other args not included in dotdotdot
       if (length(data$lavOptions)) {

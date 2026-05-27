@@ -1,8 +1,8 @@
 lav_step05_samp <- function(slot_sample_stats = NULL,
                                           lavdata = NULL,
                                           lavoptions = NULL,
-                                          wls_v = NULL, # nolint
-                                          nacov = NULL, # nolint
+                                          wls_v = NULL,
+                                          nacov = NULL,
                                           sample_cov = NULL,
                                           sample_mean = NULL,
                                           sample_th = NULL,

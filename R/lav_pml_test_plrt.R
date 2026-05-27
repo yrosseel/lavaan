@@ -418,7 +418,7 @@ lav_pml_inspect_hessian <- function(object, samplestats, x,
 
 ##################################  lav_pml_inspect_parameters
 # different input arguments: my_m_el_idx, my_x_el_idx
-lav_pml_inspect_parameters <-         # nolint
+lav_pml_inspect_parameters <-
   function(object, glist = NULL, n, # N the number of parameters to consider
            my_m_el_idx, my_x_el_idx) {
   if (is.null(glist)) {
@@ -442,7 +442,7 @@ lav_pml_inspect_parameters <-         # nolint
 #############################  lav_pml_inspect_grad
 # the difference are the input arguments my_m_el_idx, my_x_el_idx
 # used  in  lavaan:::lav_model_delta
-lav_pml_inspect_grad <-                  # nolint
+lav_pml_inspect_grad <-
   function(object, glist, samplestats = NULL, x = NULL,
            lavcache = NULL, estimator = "PML",
            my_m_el_idx, my_x_el_idx, equal_constr) {

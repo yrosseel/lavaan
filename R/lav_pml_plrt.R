@@ -118,7 +118,7 @@ lav_pml_plrt <- function(lavobject = NULL, lavmodel = NULL, lavdata = NULL,
 
   # Thirdly, specify the sample size.
   # nsize <- lavdata@nobs[[g]]
-  nsize <- lavsamplestats@ntotal #TODO: check if var nsize needed ?? # nolint
+  nsize <- lavsamplestats@ntotal #TODO: check if var nsize needed ??
 
   # Now we can proceed to the computation of the quantities needed for PLRT.
   # Briefly, to say that PLRT is equal to the difference of two quadratic forms.
@@ -170,7 +170,7 @@ lav_pml_plrt <- function(lavobject = NULL, lavmodel = NULL, lavdata = NULL,
         h10 <- matrix(0, ncol(in_1), nrow(h))
         dl <- 2 * diag(lambda, nrow(h), nrow(h))
         # FIXME: better include inactive + slacks??
-        e3 <- rbind( #TODO: check if var e3 needed ???  # nolint
+        e3 <- rbind( #TODO: check if var e3 needed ???
           cbind(in_1, h10, t(h)),
           cbind(t(h10), dl, h0),
           cbind(h, h0, h0)

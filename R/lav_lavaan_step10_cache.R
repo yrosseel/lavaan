@@ -138,7 +138,7 @@ lav_step10_cache <- function(slot_cache = NULL,
           lavcache[[g]]$idx_ab_of_xixj_ab <- idx_ab_of_xixj_ab
 
           # Raw data for group g
-          x_g <- lavdata@X[[g]] # nolint
+          x_g <- lavdata@X[[g]]
 
           # I assume that X.g includes only the ordinal indicators nvar
           # gives the number of ordinal indicators

@@ -184,7 +184,7 @@ lav_step01_ovnames_ovorder <- function(flat_model = NULL,
                                               ov_order   = "model",
                                               data       = NULL,
                                               sample_cov = NULL,
-                                              slot_data   = NULL) {     # nolint
+                                              slot_data   = NULL) {
   # set ov.order in lowercase, check if it is "data" or "model",
   #  if not *** error ***
   # if ov.order == "data"
@@ -346,7 +346,7 @@ lav_step01_ovnames_checklv <- function(
     data        = NULL,
     sample_cov  = NULL,
     dotdotdot   = NULL,
-    slot_options = NULL) {                                         # nolint
+    slot_options = NULL) {
 
   # latent variable names should not appear in the subset of the data
   #   that is formed by merging ov+lv names --> **warning**

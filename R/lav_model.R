@@ -9,7 +9,7 @@
 # - YR 21 Jan 2025: add composites
 
 # construct MATRIX lavoptions$representation of the model
-lav_model <- function(lavpartable = NULL,                          # nolint
+lav_model <- function(lavpartable = NULL,
                       lavoptions = NULL,
                       th_idx = list()) {
   # handle bare-minimum partables

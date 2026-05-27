@@ -1,5 +1,5 @@
 lav_step02_options <- function(slot_options = NULL,
-                                      slot_data = NULL, # nolint
+                                      slot_data = NULL,
                                       flat_model = NULL,
                                       ordered = NULL,
                                       ordered_orig = NULL,
@@ -252,7 +252,7 @@ lav_step02_options <- function(slot_options = NULL,
     lavoptions <- lav_options_set(opt)
 
     # store check.sigma.pd in lavaan_cache_env
-    assign("opt_check_sigma_pd", opt$check.sigma.pd, lavaan_cache_env)        # nolint
+    assign("opt_check_sigma_pd", opt$check.sigma.pd, lavaan_cache_env)
 
     if (lav_verbose()) {
       cat(" done.\n")
