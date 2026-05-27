@@ -6,7 +6,7 @@
 #    returning them all as a list (or just a vector if only 1 type is needed)
 
 # public version
-lav_object_vnames <- function(object, type = "ov", ...) { # nolint
+lav_object_vnames <- function(object, type = "ov", ...) {
   if (inherits(object, "lavaan") || inherits(object, "lavaanList")) {
     # check object
     object <- lav_object_check_version(object)

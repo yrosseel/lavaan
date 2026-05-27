@@ -13,13 +13,13 @@ lav_step03_data <- function(slot_data = NULL,
                                    sample_mean = NULL,
                                    sample_th = NULL,
                                    sample_nobs = NULL,
-                                   slot_par_table = NULL, # nolint
+                                   slot_par_table = NULL,
                                    ngroups = NULL,
                                    dotdotdot = NULL,
                                    flat_model = NULL,
                                    model = NULL,
-                                   nacov = NULL, # nolint
-                                   wls_v = NULL) { # nolint
+                                   nacov = NULL,
+                                   wls_v = NULL) {
   # # # # # # # # # # #
   # #  3. lavdata  # #
   # # # # # # # # # # #

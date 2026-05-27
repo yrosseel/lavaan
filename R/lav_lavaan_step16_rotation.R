@@ -110,7 +110,7 @@ lav_step16_rotation <- function(lavoptions = NULL,
       # use delta rule to recompute vcov
       if (lavoptions$rotation.se == "delta") {
         # Jacobian
-        jac <- numDeriv::jacobian( # nolint
+        jac <- numDeriv::jacobian(
           func = lav_model_efa_rotate_x,
           x = x_unrotated, lavmodel = lavmodel_unrot,
           init.rot = lavmodel@H, lavoptions = lavoptions,
@@ -124,7 +124,7 @@ lav_step16_rotation <- function(lavoptions = NULL,
           tol = 1e-10
         )
         # apply Delta rule
-        vcov_user <- jac %*% vcov_in %*% t(jac) # nolint
+        vcov_user <- jac %*% vcov_in %*% t(jac)
 
         # re-compute SE and store them in lavpartable
         tmp <- diag(vcov_user)
@@ -154,7 +154,7 @@ lav_step16_rotation <- function(lavoptions = NULL,
       } else if (lavoptions$rotation.se == "bordered") {
         # create 'border' for augmented information matrix
         x_rot <- lav_model_get_parameters(lavmodel)
-        jac <- numDeriv::jacobian( # nolint
+        jac <- numDeriv::jacobian(
           func = lav_model_efa_rotate_border_x,
           x = x_rot, lavmodel = lavmodel,
           lavoptions = lavoptions,

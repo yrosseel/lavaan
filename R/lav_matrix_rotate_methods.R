@@ -489,10 +489,10 @@ lav_mat_rotate_target <- function(mm_lambda = NULL, target = NULL,
 # target_mask matrix
 #
 lav_mat_rotate_pst <- function(mm_lambda = NULL, target = NULL,
-                                  target_mask = NULL, ..., grad = FALSE) { # nolint
+                                  target_mask = NULL, ..., grad = FALSE) {
   # mask target+mm_lambda
   target <- target_mask * target
-  mm_lambda <- target_mask * mm_lambda              # nolint
+  mm_lambda <- target_mask * mm_lambda
 
   # squared difference
   diff_1 <- mm_lambda - target

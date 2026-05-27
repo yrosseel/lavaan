@@ -7,7 +7,7 @@ lav_step14_test <- function(lavoptions = NULL,
                                    lavimplied = NULL,
                                    lavh1 = NULL,
                                    x = NULL,
-                                   vcov = NULL, # nolint
+                                   vcov = NULL,
                                    lavloglik = NULL) {
   # # # # # # # # # # #
   # #  14. lavtest # #
@@ -56,7 +56,7 @@ lav_step14_fit <- function(lavpartable = NULL,
                                   lavmodel = NULL,
                                   lavimplied = NULL,
                                   x = NULL,
-                                  vcov = NULL, # nolint
+                                  vcov = NULL,
                                   lavtest = NULL) {
   # # # # # # # # # # # #
   # #  14bis. lavfit  # # -> remove if the offending packages are fixed!!
