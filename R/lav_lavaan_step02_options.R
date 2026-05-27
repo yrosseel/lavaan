@@ -48,7 +48,7 @@ lav_step02_options <- function(slot_options = NULL,
   #     set opt$estimator to "MLR"
   #   if constraints present and estimator == "ML", set opt$information to
   #     c("observed", "observed")
-  #   if there is an operator "~1" in flat.model and sample.mean not NULL,
+  #   if there is an operator "~1" in flat_model and sample.mean not NULL,
   #     set opt$meanstructure TRUE
   #   if there are no exogenous variables but conditional.x explicitly
   #     requested: ** warning **

@@ -1372,8 +1372,42 @@ lavParTable <- lavaanify <- function(              # synonym # nolint start
                                debug = FALSE,
                                warn = TRUE,
                                as.data.frame. = TRUE) {    # nolint end
-  sc <- sys.call()
-  names(sc) <- lav_snake_case(names(sc))
-  sc[[1L]] <- quote(lavaan:::lav_model_pt)
-  eval(sc, parent.frame())
+  lav_model_pt(
+              model = model,
+              meanstructure = meanstructure,
+              int_ov_free = int.ov.free,
+              int_lv_free = int.lv.free,
+              marker_int_zero = marker.int.zero,
+              orthogonal = orthogonal,
+              orthogonal_y = orthogonal.y,
+              orthogonal_x = orthogonal.x,
+              orthogonal_efa = orthogonal.efa,
+              std_lv = std.lv,
+              correlation = correlation,
+              composites = composites,
+              effect_coding = effect.coding,
+              conditional_x = conditional.x,
+              fixed_x = fixed.x,
+              parameterization = parameterization,
+              constraints = constraints,
+              ceq_simple = ceq.simple,
+              auto = auto,
+              model_type = model.type,
+              auto_fix_first = auto.fix.first,
+              auto_fix_single = auto.fix.single,
+              auto_var = auto.var,
+              auto_cov_lv_x = auto.cov.lv.x,
+              auto_cov_y = auto.cov.y,
+              auto_th = auto.th,
+              auto_delta = auto.delta,
+              auto_efa = auto.efa,
+              var_table = varTable,
+              ngroups = ngroups,
+              nthresholds = nthresholds,
+              group_equal = group.equal,
+              group_partial = group.partial,
+              group_w_free = group.w.free,
+              debug = debug,
+              warn = warn,
+              as_data_frame = as.data.frame.)
 }

@@ -25,7 +25,7 @@ lav_step04_pt <- function(slot_par_table = NULL,
   #     else
   #       if model is a list
   #         set lavpartable to
-  #           as.list(lav_pt_complete(as.list(flat.model)))
+  #           as.list(lav_pt_complete(as.list(flat_model)))
   #       else
   #         *** error ***
   # if slotParTable is NULL check lavpartable via lav_partable_check
@@ -38,13 +38,13 @@ lav_step04_pt <- function(slot_par_table = NULL,
     lavpartable <- lav_pt_set_cache(slot_par_table)
   } else if (is.character(model) ||
     inherits(model, "formula") ||
-  # model was already a flat.model
+  # model was already a flat_model
   (is.list(model) && !is.null(model$mod.idx) &&
    !is.null(attr(model, "modifiers")))) {
     if (lav_verbose()) {
       cat("lavpartable        ...")
     }
-    # check flat.model before we proceed
+    # check flat_model before we proceed
     if (lav_debug()) {
       print(as.data.frame(flat_model))
     }
@@ -52,9 +52,9 @@ lav_step04_pt <- function(slot_par_table = NULL,
     # --> done inside lav_model_pt!
 
     # if(lavoptions$fixed.x) {
-    #    tmp <- lav_pt_vnames(flat.model, type = "ov.x",
+    #    tmp <- lav_pt_vnames(flat_model, type = "ov.x",
     #                               ov.x.fatal = FALSE, warn = TRUE)
-    # tmp <- try(lav_pt_vnames(flat.model, type = "ov.x",
+    # tmp <- try(lav_pt_vnames(flat_model, type = "ov.x",
     #                                         ov.x.fatal = TRUE),
     #           silent = TRUE)
     # if(inherits(tmp, "try-error")) {
@@ -64,7 +64,7 @@ lav_step04_pt <- function(slot_par_table = NULL,
     # }
     # }
     # if(lavoptions$conditional.x) {
-    #    tmp <- lav_pt_vnames(flat.model,
+    #    tmp <- lav_pt_vnames(flat_model,
     #                  type = "ov.x", ov.x.fatal = TRUE)
     # }
     tmp_data_ov <- lavdata@ov
@@ -114,7 +114,7 @@ lav_step04_pt <- function(slot_par_table = NULL,
   } else if (inherits(model, "lavaan")) {
     lavpartable <- lav_pt_set_cache(as.list(parTable(model)), model@pta)
   } else if (is.list(model)) {
-    # we already checked this when creating flat.model
+    # we already checked this when creating flat_model
     # but we may need to complete it
     lavpartable <- as.list(flat_model) # in case model is a data.frame
     # complete table
