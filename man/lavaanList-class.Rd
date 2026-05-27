@@ -54,9 +54,10 @@ about the data.}
       If \code{type="user"}, all parameters listed in the parameter table
       are returned, including constrained and fixed parameters.}
 	\item{summary}{\code{signature(object = "lavaanList", header = TRUE,
-         estimates = TRUE, nd = 3L, 
-         simulate.args = list(list(est.bias = TRUE, se.bias = TRUE, 
-         prop.sig = TRUE, trim = 0)))}: 
+         estimates = TRUE, nd = 3L,
+         simulate.args = list(list(est.bias = TRUE, se.bias = TRUE,
+         se.bias.med = TRUE, prop.sig = TRUE, coverage = TRUE,
+         level = 0.95, trim = 0)))}:
       Print a summary of the collection of fitted models.
       If \code{header = TRUE}, the header section is
       printed.
@@ -68,8 +69,15 @@ about the data.}
       indicates that the parameter tables are obtained in the context of
       a simulattion. The options switch on/off the columns that are printed,
       and the \code{trim} option determines the amount of trimming that is
-      used when taking the average (or standard deviation) across all 
+      used when taking the average (or standard deviation) across all
       replications.
+      If \code{se.bias.med = TRUE} (the default, only relevant when
+      \code{se.bias = TRUE}), two additional columns are printed: \code{se.med}
+      (the median, rather than the mean, of the computed standard errors across
+      replications) and \code{se.bias.med} (the ratio \code{se.med/se.obs}).
+      The median is a robust alternative to the mean-based \code{se.ave}/\code{se.bias},
+      which can be dominated by a few outliers for nonlinear defined parameters
+      (e.g. ratios with near-zero denominators in some replications).
     }
   }
 }

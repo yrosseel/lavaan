@@ -32,6 +32,7 @@ setMethod(
            nd = 3L,
            simulate.args = list(est.bias = TRUE,                     # nolint
                                 se.bias  = TRUE,
+                                se.bias.med = TRUE,
                                 prop.sig = TRUE,
                                 coverage = TRUE,
                                 level    = 0.95,
@@ -58,6 +59,7 @@ lav_lavaanlist_summary <- function(object,
                                    estimates = TRUE,
                                    simulate_args = list(est.bias = TRUE,
                                                         se.bias  = TRUE,
+                                                        se.bias.med = TRUE,
                                                         prop.sig = TRUE,
                                                         coverage = TRUE,
                                                         level    = 0.95,
@@ -103,6 +105,7 @@ lav_lavaanlist_summary <- function(object,
       # default behavior
       sim_args <- list(est.bias = TRUE,
                        se.bias  = TRUE,
+                       se.bias.med = TRUE,
                        prop.sig = TRUE,
                        coverage = TRUE,
                        level    = 0.95,
@@ -162,6 +165,22 @@ lav_lavaanlist_summary <- function(object,
         se_obs[se_obs < .Machine$double.eps ^ (1 / 3)] <- as.numeric(NA)
         pe$se.bias <- pe$se.ave / se_obs # use ratio!
         pe$se.bias[!is.finite(pe$se.bias)] <- as.numeric(NA)
+
+        # robust (median-based) SE summary. The SE sampling distribution of
+        # (non)linear defined parameters can be heavy-tailed (eg ratios with
+        # near-zero denominators), so the mean-based se.ave/se.bias may be
+        # dominated by a few outliers; the median is robust. Use the original
+        # (untrimmed) 'se' here, before the prop.sig block alters it below.
+        if (sim_args$se.bias.med) {
+          se_med <- apply(se, 1L, median, na.rm = TRUE)
+          if (length(se_med) > nel) {
+            se_med <- se_med[seq_len(nel)]
+          }
+          se_med[!is.finite(se_med)] <- as.numeric(NA)
+          pe$se.med <- se_med
+          pe$se.bias.med <- pe$se.med / se_obs # use ratio!
+          pe$se.bias.med[!is.finite(pe$se.bias.med)] <- as.numeric(NA)
+        }
       }
 
       if (sim_args$prop.sig) {
