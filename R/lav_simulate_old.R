@@ -47,7 +47,7 @@ lav_data_simulate_old <- function( # user-specified model    # nolint start
   #    runif(1)               # initialize the RNG if necessary
   # RNGstate <- .Random.seed
 
-  # lav_model_partable
+  # lav_model_pt
   if (is.list(model)) {
     # two possibilities: either model is already lavaanified
     # or it is something else...

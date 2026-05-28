@@ -1,20 +1,20 @@
 lav_step01_ovnames_initflat <- function(slot_par_table     = NULL,
                                                model            = NULL,
                                                dotdotdot_parser = "new") {
-  # if slotPartable not NULL copy to flat.model
+  # if slotPartable not NULL copy to flat_model
   # else
   #   if model is of type character
-  #     parse model to flat.model
+  #     parse model to flat_model
   #   else if model is a formula (** warning **)
   #     transform "~ x1 + x2 + x3" to character "f =~ x1 + x2 + x3",
-  #         and parse to flat.model
-  #     transform "y =~ x1 + x2 + x3" to character and parse to flat.model
+  #         and parse to flat_model
+  #     transform "y =~ x1 + x2 + x3" to character and parse to flat_model
   #     something else : *** error ***
   #   else if model is a lavaan object
-  #     extract flat.model from @parTable
+  #     extract flat_model from @parTable
   #   else if model is a list
   #     if bare minimum present (columns lhs, op, rhs, free)
-  #        flat.model = model
+  #        flat_model = model
   #        replace column block by column group (if present)
   #     else
   #        --> *** error ***
@@ -66,7 +66,7 @@ lav_step01_ovnames_initflat <- function(slot_par_table     = NULL,
     # a list! perhaps a full parameter table, or an initial flat model,
     # or something else...
 
-  # 1. flat.model already (output of lavParseModelString)?
+  # 1. flat_model already (output of lavParseModelString)?
   if (!is.null(model$lhs) && !is.null(model$op) &&
       !is.null(model$rhs) && !is.null(model$mod.idx) &&
     !is.null(attr(model, "modifiers"))) {
@@ -102,7 +102,7 @@ lav_step01_ovnames_initflat <- function(slot_par_table     = NULL,
     lav_msg_stop(gettext("model is NULL or not a valid type for it!"))
   }
 
-  # Ok, we got a flattened model; usually this a flat.model object, but it
+  # Ok, we got a flattened model; usually this a flat_model object, but it
   # could also be an already lavaanified parTable, or a bare-minimum list with
   # lhs/op/rhs/free elements
   flat_model
@@ -125,7 +125,7 @@ lav_step01_ovnames_composites <- function(flat_model = NULL) {
     return(flat_model)
   }
 
-  # flat.model info
+  # flat_model info
   flat_names <- names(flat_model)
   c_names <- unique(flat_model$lhs[c_idx])
   nc <- length(c_names)
@@ -188,13 +188,13 @@ lav_step01_ovnames_ovorder <- function(flat_model = NULL,
   # set ov.order in lowercase, check if it is "data" or "model",
   #  if not *** error ***
   # if ov.order == "data"
-  #   try adapt flat.model via lav_partable_ov_from_data
+  #   try adapt flat_model via lav_partable_ov_from_data
   #   (** warning ** if this fails)
 
   # new in 0.6-14
   # if ov.order = "data", it would seem we need to intervene here;
   # ldw 1/3/2024:
-  # we do this by adding an attribute "ovda" to flat.model and partable
+  # we do this by adding an attribute "ovda" to flat_model and partable
   ov_order <- tolower(ov_order)
   if (ov_order == "data") {
     flat_model_orig <- flat_model
@@ -221,20 +221,20 @@ lav_step01_ovnames_ovorder <- function(flat_model = NULL,
 
 lav_step01_ovnames_group <- function(flat_model = NULL,
                                             ngroups    = 1L) {
-  # if "group :" appears in flat.model
+  # if "group :" appears in flat_model
   #   tmp.group.values: set of names in corresponding right hand sides
-  #   copy flat.model without attributes and call lav_model_pt,
+  #   copy flat_model without attributes and call lav_model_pt,
   #     store result in tmp.lav
   #   extract ov.names, ov.names.y, ov.names.x, lv.names from tmp.lav
   #     via lav_partable_vnames
   # else
-  #   if flat.model$group not NULL and more than 1 group.value
+  #   if flat_model$group not NULL and more than 1 group.value
   #     extract group.values via lav_partable_group_values
   #     extract, for each group.value,
-  #       ov.names, ov.names.y, ov.names.x, lv.names from flat.model
+  #       ov.names, ov.names.y, ov.names.x, lv.names from flat_model
   #       via lav_partable_vnames
   #   else
-  #     extract ov.names, ov.names.y, ov.names.x, lv.names from flat.model
+  #     extract ov.names, ov.names.y, ov.names.x, lv.names from flat_model
   #     via lav_partable_vnames
   #
   #     TODO: call lav_pt_vnames only ones and not for each type
@@ -330,12 +330,12 @@ lav_step01_ovnames_group <- function(flat_model = NULL,
   }
 
   list(
-    flat.model   = flat_model,
-    ov.names     = ov_names,
-    ov.names.x   = ov_names_x,
-    ov.names.y   = ov_names_y,
-    lv.names     = lv_names,
-    group.values = group_values,
+    flat_model   = flat_model,
+    ov_names     = ov_names,
+    ov_names_x   = ov_names_x,
+    ov_names_y   = ov_names_y,
+    lv_names     = lv_names,
+    group_values = group_values,
     ngroups      = ngroups
   )
 }
@@ -408,24 +408,24 @@ lav_step01_ovnames_checklv <- function(
   invisible(NULL)
 }
 
-lav_step01_ovnames_namesl <- function(data         = NULL,
-                                             cluster      = NULL,
-                                             flat_model   = NULL,
-                                             group_values = NULL,
-                                             ngroups      = 1L) {
-  # if "level :" appears in flat.model
+lav_step01_ovnames_namesl <- function(data = NULL,
+                                      cluster      = NULL,
+                                      flat_model   = NULL,
+                                      group_values = NULL,
+                                      ngroups      = 1L) {
+  # if "level :" appears in flat_model
   #   if data not NULL, cluster must not be NULL, if it is: *** error ***
-  #   compute tmp.group.values and tmp.level.values from flat.model
+  #   compute tmp.group.values and tmp.level.values from flat_model
   #   there should be at least 2 levels, if not *** error ***
-  #   copy flat.model without attributes and lav_model_pt -> tmp.lav
+  #   copy flat_model without attributes and lav_model_pt -> tmp.lav
   #   check at least 2 levels for tmp.lav, if not *** error ***
   #   compute ov.names.l per group and per level (via lav_partable_vnames
   #     on tmp.lav)
   # else
-  #   if lav_pt_nlevels(flat.model) > 0
+  #   if lav_pt_nlevels(flat_model) > 0
   #   if data not NULL, cluster must not be NULL, if it is: *** error ***
   #     compute ov.names.l per group and per level (via lav_partable_vnames
-  #     on flat.model)
+  #     on flat_model)
   #   else
   #     there are no levels (ov.names.l = list())
 
@@ -519,8 +519,8 @@ lav_step01_ovnames_namesl <- function(data         = NULL,
   }
 
   list(
-    flat.model = flat_model,
-    ov.names.l = ov_names_l
+    flat_model = flat_model,
+    ov_names_l = ov_names_l
   )
 }
 

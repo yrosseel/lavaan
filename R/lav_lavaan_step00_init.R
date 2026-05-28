@@ -172,8 +172,8 @@ lav_step00_checkdata <- function(data = NULL,
   }
 
   list(
-    data = data, dotdotdot = dotdotdot, sample.cov = sample_cov,
-    sample.nobs = sample_nobs, sample.mean = sample_mean,
-    sample.th = sample_th, NACOV = nacov, WLS.V = wls_v, ov.order = ov_order
+    data = data, dotdotdot = dotdotdot, sample_cov = sample_cov,
+    sample_nobs = sample_nobs, sample_mean = sample_mean,
+    sample_th = sample_th, nacov = nacov, wls_v = wls_v, ov_order = ov_order
   )
 }

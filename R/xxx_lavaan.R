@@ -112,13 +112,13 @@ lavaan <- function(
   )
   data <- temp$data
   dotdotdot <- temp$dotdotdot
-  sample_cov <- temp$sample.cov
-  sample_nobs <- temp$sample.nobs
-  sample_mean <- temp$sample.mean
-  sample_th <- temp$sample.th
-  nacov <- temp$NACOV
-  wls_v <- temp$WLS.V
-  ov_order <- temp$ov.order
+  sample_cov <- temp$sample_cov
+  sample_nobs <- temp$sample_nobs
+  sample_mean <- temp$sample_mean
+  sample_th <- temp$sample_th
+  nacov <- temp$nacov
+  wls_v <- temp$wls_v
+  ov_order <- temp$ov_order
 
   timing <- lav_add_timing(timing, "init")
 
@@ -158,12 +158,12 @@ lavaan <- function(
     flat_model = flat_model,
     ngroups    = ngroups
   )
-  flat_model <- temp$flat.model
-  ov_names <- temp$ov.names
-  ov_names_x <- temp$ov.names.x
-  ov_names_y <- temp$ov.names.y
-  lv_names <- temp$lv.names
-  group_values <- temp$group.values
+  flat_model <- temp$flat_model
+  ov_names <- temp$ov_names
+  ov_names_x <- temp$ov_names_x
+  ov_names_y <- temp$ov_names_y
+  lv_names <- temp$lv_names
+  group_values <- temp$group_values
   ngroups <- temp$ngroups
 
   # ------------ ov.names 4 ------ sanity checks ------------------
@@ -184,8 +184,8 @@ lavaan <- function(
     group_values = group_values,
     ngroups      = ngroups
   )
-  flat_model <- temp$flat.model
-  ov_names_l <- temp$ov.names.l
+  flat_model <- temp$flat_model
+  ov_names_l <- temp$ov_names_l
 
   # ------------ ov.names 6 ------ sanity check ordered --------------
   ordered_orig <- ordered
