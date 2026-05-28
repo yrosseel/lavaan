@@ -422,50 +422,6 @@ lav_partable_merge <- function(
   sc[[1L]] <- quote(lavaan::lav_pt_merge)
   eval(sc, parent.frame())
 }
-lav_model_partable <- function(
-                               model = NULL,
-                               meanstructure = FALSE,
-                               int.ov.free = FALSE,
-                               int.lv.free = FALSE,
-                               marker.int.zero = FALSE,
-                               orthogonal = FALSE,
-                               orthogonal.y = FALSE,
-                               orthogonal.x = FALSE,
-                               orthogonal.efa = FALSE,
-                               std.lv = FALSE,
-                               correlation = FALSE,
-                               composites = TRUE,
-                               effect.coding = "",
-                               conditional.x = FALSE,
-                               fixed.x = FALSE,
-                               parameterization = "delta",
-                               constraints = NULL,
-                               ceq.simple = FALSE,
-                               auto = FALSE,
-                               model.type = "sem",
-                               auto.fix.first = FALSE,
-                               auto.fix.single = FALSE,
-                               auto.var = FALSE,
-                               auto.cov.lv.x = FALSE,
-                               auto.cov.y = FALSE,
-                               auto.th = FALSE,
-                               auto.delta = FALSE,
-                               auto.efa = FALSE,
-                               varTable = NULL,
-                               ngroups = 1L,
-                               nthresholds = NULL,
-                               group.equal = NULL,
-                               group.partial = NULL,
-                               group.w.free = FALSE,
-                               debug = FALSE,
-                               warn = TRUE,
-                               as.data.frame. = TRUE) {
-  lav_deprecated("lavaanify", times = 0L) # --> for now no warning
-  sc <- sys.call()
-  names(sc) <- lav_snake_case(names(sc))
-  sc[[1L]] <- quote(lavaan::lavaanify)
-  eval(sc, parent.frame())
-}
 lav_matrix_vec <- function(A) {
   lav_deprecated("lav_mat_vec", times = 0L) # --> for now no warning
   sc <- sys.call()
@@ -521,16 +477,4 @@ lav_partable_df <- function(partable) {
   names(sc) <- lav_snake_case(names(sc))
   sc[[1L]] <- quote(lavaan::lav_pt_df)
   eval(sc, parent.frame())
-}
-lav_scores <- function(
-                       object,
-                       scaling = FALSE,
-                       ignore.constraints = FALSE,
-                       remove.duplicated = TRUE,
-                       remove.empty.cases = TRUE) {
-  lav_deprecated("lavScores", times = 0L) # --> for now no warning
-  sc <- sys.call()
-  names(sc) <- lav_snake_case(names(sc))
-  sc[[1L]] <- quote(lavaan::lavScores)
-  eval(sc, parent.frame())
-}                                                               # nolint end
+}                                                             # nolint end

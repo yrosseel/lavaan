@@ -49,7 +49,6 @@
 \alias{lav_matrix_vecr}
 \alias{lav_matrix_vech}
 \alias{lav_partable_merge}
-\alias{lav_model_partable}
 \alias{lav_matrix_vec}
 \alias{lav_matrix_duplication}
 \alias{lav_matrix_commutation}
@@ -58,7 +57,6 @@
 \alias{lav_partable_npar}
 \alias{lav_partable_add}
 \alias{lav_partable_df}
-\alias{lav_scores}
 
 \title{deprecated functions with long names}
 \description{Functions which are deprecated because of adaption of shorter names in May, 2026}
@@ -185,44 +183,6 @@ lav_partable_merge(
                    remove.duplicated = FALSE,
                    fromLast = FALSE,
                    warn = TRUE)
-lav_model_partable(
-                   model = NULL,
-                   meanstructure = FALSE,
-                   int.ov.free = FALSE,
-                   int.lv.free = FALSE,
-                   marker.int.zero = FALSE,
-                   orthogonal = FALSE,
-                   orthogonal.y = FALSE,
-                   orthogonal.x = FALSE,
-                   orthogonal.efa = FALSE,
-                   std.lv = FALSE,
-                   correlation = FALSE,
-                   composites = TRUE,
-                   effect.coding = "",
-                   conditional.x = FALSE,
-                   fixed.x = FALSE,
-                   parameterization = "delta",
-                   constraints = NULL,
-                   ceq.simple = FALSE,
-                   auto = FALSE,
-                   model.type = "sem",
-                   auto.fix.first = FALSE,
-                   auto.fix.single = FALSE,
-                   auto.var = FALSE,
-                   auto.cov.lv.x = FALSE,
-                   auto.cov.y = FALSE,
-                   auto.th = FALSE,
-                   auto.delta = FALSE,
-                   auto.efa = FALSE,
-                   varTable = NULL,
-                   ngroups = 1L,
-                   nthresholds = NULL,
-                   group.equal = NULL,
-                   group.partial = NULL,
-                   group.w.free = FALSE,
-                   debug = FALSE,
-                   warn = TRUE,
-                   as.data.frame. = TRUE)
 lav_matrix_vec(A)
 lav_matrix_duplication(n = 1L)
 lav_matrix_commutation(m = 1L, n = 1L)
@@ -231,50 +191,25 @@ lav_partable_ndat(partable)
 lav_partable_npar(partable)
 lav_partable_add(partable = NULL, add = list())
 lav_partable_df(partable)
-lav_scores(
-           object,
-           scaling = FALSE,
-           ignore.constraints = FALSE,
-           remove.duplicated = TRUE,
-           remove.empty.cases = TRUE)
 }
 \arguments{
 \item{...}{See argument \code{...} in the corresponding function with shortened name.}
 \item{A}{See argument \code{a} in the corresponding function with shortened name.}
 \item{add}{See argument \code{add} in the corresponding function with shortened name.}
 \item{as.data.frame.}{See argument \code{as_data_frame} in the corresponding function with shortened name.}
-\item{auto}{See argument \code{auto} in the corresponding function with shortened name.}
-\item{auto.cov.lv.x}{See argument \code{auto_cov_lv_x} in the corresponding function with shortened name.}
-\item{auto.cov.y}{See argument \code{auto_cov_y} in the corresponding function with shortened name.}
-\item{auto.delta}{See argument \code{auto_delta} in the corresponding function with shortened name.}
-\item{auto.efa}{See argument \code{auto_efa} in the corresponding function with shortened name.}
-\item{auto.fix.first}{See argument \code{auto_fix_first} in the corresponding function with shortened name.}
-\item{auto.fix.single}{See argument \code{auto_fix_single} in the corresponding function with shortened name.}
-\item{auto.th}{See argument \code{auto_th} in the corresponding function with shortened name.}
-\item{auto.var}{See argument \code{auto_var} in the corresponding function with shortened name.}
 \item{blocks}{See argument \code{blocks} in the corresponding function with shortened name.}
-\item{ceq.simple}{See argument \code{ceq_simple} in the corresponding function with shortened name.}
 \item{check}{See argument \code{check} in the corresponding function with shortened name.}
-\item{composites}{See argument \code{composites} in the corresponding function with shortened name.}
 \item{con}{See argument \code{con} in the corresponding function with shortened name.}
-\item{conditional.x}{See argument \code{conditional_x} in the corresponding function with shortened name.}
 \item{constraints}{See argument \code{constraints} in the corresponding function with shortened name.}
-\item{correlation}{See argument \code{correlation} in the corresponding function with shortened name.}
 \item{debug}{See argument \code{debug} in the corresponding function with shortened name.}
 \item{diagonal}{See argument \code{diagonal} in the corresponding function with shortened name.}
-\item{effect.coding}{See argument \code{effect_coding} in the corresponding function with shortened name.}
 \item{est}{See argument \code{est} in the corresponding function with shortened name.}
 \item{fallback.simple}{See argument \code{fallback_simple} in the corresponding function with shortened name.}
-\item{fixed.x}{See argument \code{fixed_x} in the corresponding function with shortened name.}
 \item{fromLast}{See argument \code{from_last} in the corresponding function with shortened name.}
 \item{func}{See argument \code{func} in the corresponding function with shortened name.}
 \item{group.equal}{See argument \code{group_equal} in the corresponding function with shortened name.}
 \item{group.partial}{See argument \code{group_partial} in the corresponding function with shortened name.}
-\item{group.w.free}{See argument \code{group_w_free} in the corresponding function with shortened name.}
 \item{h}{See argument \code{h} in the corresponding function with shortened name.}
-\item{ignore.constraints}{See argument \code{ignore_constraints} in the corresponding function with shortened name.}
-\item{int.lv.free}{See argument \code{int_lv_free} in the corresponding function with shortened name.}
-\item{int.ov.free}{See argument \code{int_ov_free} in the corresponding function with shortened name.}
 \item{label}{See argument \code{label} in the corresponding function with shortened name.}
 \item{lavdata}{See argument \code{lavdata} in the corresponding function with shortened name.}
 \item{lavh1}{See argument \code{lavh1} in the corresponding function with shortened name.}
@@ -283,27 +218,15 @@ lav_scores(
 \item{lavpta}{See argument \code{lavpta} in the corresponding function with shortened name.}
 \item{lavsamplestats}{See argument \code{lavsamplestats} in the corresponding function with shortened name.}
 \item{m}{See argument \code{m} in the corresponding function with shortened name.}
-\item{marker.int.zero}{See argument \code{marker_int_zero} in the corresponding function with shortened name.}
-\item{meanstructure}{See argument \code{meanstructure} in the corresponding function with shortened name.}
-\item{model}{See argument \code{model} in the corresponding function with shortened name.}
-\item{model.type}{See argument \code{model_type} in the corresponding function with shortened name.}
 \item{Mu}{See argument \code{mu} in the corresponding function with shortened name.}
 \item{n}{See argument \code{n} in the corresponding function with shortened name.}
 \item{NACOV}{See argument \code{nacov} in the corresponding function with shortened name.}
-\item{ngroups}{See argument \code{ngroups} in the corresponding function with shortened name.}
-\item{nthresholds}{See argument \code{nthresholds} in the corresponding function with shortened name.}
 \item{object}{See argument \code{object} in the corresponding function with shortened name.}
-\item{orthogonal}{See argument \code{orthogonal} in the corresponding function with shortened name.}
-\item{orthogonal.efa}{See argument \code{orthogonal_efa} in the corresponding function with shortened name.}
-\item{orthogonal.x}{See argument \code{orthogonal_x} in the corresponding function with shortened name.}
-\item{orthogonal.y}{See argument \code{orthogonal_y} in the corresponding function with shortened name.}
-\item{parameterization}{See argument \code{parameterization} in the corresponding function with shortened name.}
 \item{partable}{See argument \code{partable} in the corresponding function with shortened name.}
 \item{pt1}{See argument \code{pt1} in the corresponding function with shortened name.}
 \item{pt2}{See argument \code{pt2} in the corresponding function with shortened name.}
 \item{pta}{See argument \code{pta} in the corresponding function with shortened name.}
 \item{remove.duplicated}{See argument \code{remove_duplicated} in the corresponding function with shortened name.}
-\item{remove.empty.cases}{See argument \code{remove_empty_cases} in the corresponding function with shortened name.}
 \item{S}{See argument \code{s} in the corresponding function with shortened name.}
 \item{sample.cov}{See argument \code{sample_cov} in the corresponding function with shortened name.}
 \item{sample.cov.x}{See argument \code{sample_cov_x} in the corresponding function with shortened name.}
@@ -312,13 +235,10 @@ lav_scores(
 \item{sample.slopes}{See argument \code{sample_slopes} in the corresponding function with shortened name.}
 \item{sample.th}{See argument \code{sample_th} in the corresponding function with shortened name.}
 \item{sample.th.idx}{See argument \code{sample_th_idx} in the corresponding function with shortened name.}
-\item{scaling}{See argument \code{scaling} in the corresponding function with shortened name.}
 \item{start}{See argument \code{start} in the corresponding function with shortened name.}
-\item{std.lv}{See argument \code{std_lv} in the corresponding function with shortened name.}
 \item{theta}{See argument \code{theta} in the corresponding function with shortened name.}
 \item{txtOnly}{See argument \code{txt_only} in the corresponding function with shortened name.}
 \item{type}{See argument \code{type} in the corresponding function with shortened name.}
-\item{varTable}{See argument \code{var_table} in the corresponding function with shortened name.}
 \item{warn}{See argument \code{warn} in the corresponding function with shortened name.}
 \item{WLS.V}{See argument \code{wls_v} in the corresponding function with shortened name.}
 \item{x}{See argument \code{x} in the corresponding function with shortened name.}

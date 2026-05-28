@@ -31,7 +31,7 @@ lav_step03_data <- function(slot_data = NULL,
   #     if lavoptions$conditional.x
   # if lavdata$data.type is "none"
   #   set lavoptions$do.fit to FALSE
-  #   if flat.model$est not null set lavoptions$start to "est", else set
+  #   if flat_model$est not null set lavoptions$start to "est", else set
   #     it to "simple"
   #   set lavoptions$se and lavoptions$test to "none"
   # else
