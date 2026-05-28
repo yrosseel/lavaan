@@ -14,6 +14,41 @@
 # TDJ 28 March 2024: deprecate std.nox= argument ("std.nox" can be %in%
 #                                                          standardized=)
 
+# Is at least one defined (:=) parameter a NONLINEAR function of the free
+# parameters? The (first-order) delta method is exact for linear definitions
+# (sums/differences), so the se.def note in lav_summary_print() is only
+# relevant when a nonlinear definition is present. Detected numerically: a
+# function is linear iff its Jacobian does not depend on the parameter values.
+lav_object_def_nonlinear <- function(object) {
+  if (sum(object@ParTable$op == ":=") == 0L) {
+    return(FALSE)
+  }
+  lavmodel <- object@Model
+  if (!is.function(lavmodel@def.function)) {
+    return(FALSE)
+  }
+  x <- try(lav_model_get_parameters(lavmodel, type = "free"), silent = TRUE)
+  if (inherits(x, "try-error") || length(x) < 1L) {
+    return(FALSE)
+  }
+  jac <- function(p) {
+    out <- try(lav_func_jacobian_complex(lavmodel@def.function, p),
+               silent = TRUE)
+    if (inherits(out, "try-error")) {
+      out <- try(lav_func_jacobian_simple(lavmodel@def.function, p),
+                 silent = TRUE)
+    }
+    out
+  }
+  j1 <- jac(x)
+  j2 <- jac(x + 1e-3 * (abs(x) + 1)) # deterministic perturbation
+  if (inherits(j1, "try-error") || inherits(j2, "try-error")) {
+    return(FALSE)
+  }
+  ok <- is.finite(j1) & is.finite(j2)
+  isTRUE(any(abs(j1[ok] - j2[ok]) > 1e-8))
+}
+
 # create summary of a lavaan object
 lav_object_summary <- function(object, header = TRUE,
                                fit_measures = FALSE,
@@ -280,6 +315,15 @@ lav_object_summary <- function(object, header = TRUE,
       header = TRUE
     )
     res$pe <- as.data.frame(pe)
+
+    # flag: nonlinear defined (:=) parameters whose SE/CI rely on the
+    # (first-order) delta method -> suggest se.def="mc" or bootstrap
+    # (printed by lav_summary_print(); silent otherwise)
+    res$pe.delta.note <-
+      identical(object@Options$se.def, "default") &&
+      !identical(object@Options$se, "bootstrap") &&
+      !identical(object@Options$se, "none") &&
+      lav_object_def_nonlinear(object)
   }
 
   # modification indices?
