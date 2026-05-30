@@ -20,22 +20,7 @@ lavSimulate <- function(model = NULL, # user model
                         iseed = NULL) {
   # dotdotdot
   dotdotdot <- list(...)
-
-  # convert old names of function arguments (now in ...)
-  oldargs <- c("dataFunction", "dataFunction.args", "est.true", "FUN", "show.progress", "store.failed", "store.slots")
-  newargs <- lav_snake_case(oldargs)
-  oldidx <- match(names(dotdotdot), oldargs, nomatch = 0L)
-  for (j in seq_along(oldidx)) {
-    if (oldidx[j] > 0L) {
-      k <- oldidx[j]                      # assign to new argument
-      assign(newargs[k], dotdotdot[[j]])
-    }
-  }
-  for (j in rev(seq_along(oldidx))) {
-    if (oldidx[j] > 0L) {                 # remove from dotdotdot
-      dotdotdot[[j]] <- NULL
-    }
-  }
+  lav_adapt_func(environment(), dotdotdot)
 
   # dotdotdot for fit.pop
   dotdotdot_pop <- dotdotdot

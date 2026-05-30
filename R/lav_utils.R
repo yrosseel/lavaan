@@ -492,5 +492,30 @@ lav_snake_case <- function(old_names) {
   }
   # remove trailing underscores in new names
   varnames_new <- gsub("_$", "", varnames_new)
+  # check no doubles in new names
+  doubles <- anyDuplicated(varnames_new)
+  if (doubles) {
+    lav_msg_stop(gettextf("At least one snake_cased name (%s) is duplicated!", 
+                   varnames_new[doubles]))
+  }
   varnames_new
+}
+
+# function to put arguments with old names (in ...) in the new named argument
+# the function to adapt must have a ... argument and call this function in the 
+# beginning as follows :
+#   dotdotdot <- list(...)
+#   lav_adapt_func(environment(), dotdotdot)
+lav_adapt_func <- function(envir, dotdotdot) {
+  lijst <- ls(pos=envir)
+  if (length(dotdotdot) > 0L) {
+    dddnames <- names(dotdotdot)
+    dddnewnames <- lav_snake_case(dddnames)
+    newargs <- dddnewnames %in% lijst
+    for (j in which(newargs)) {
+      assign(dddnewnames[j], dotdotdot[[dddnames[j]]], envir)
+      dotdotdot[[dddnames[j]]] <- NULL
+    }
+    assign("dotdotdot", dotdotdot, envir)
+  }
 }
