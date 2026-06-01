@@ -1296,10 +1296,10 @@ lav_lisrel_alpha0 <- function(mlist = NULL, sample_mean = NULL,
 
   if (length(ov_dummy_idx) > 0L) {
     mm_alpha <- matrix(0, nfac, 1L)
-    # Note: instead of sample.mean, we need 'intercepts'
-    # sample.mean = NU + LAMBDA..IB.inv %*% ALPHA
+    # Note: instead of sample_mean, we need 'intercepts'
+    # sample_mean = NU + LAMBDA..IB.inv %*% ALPHA
     # so,
-    # solve(LAMBDA..IB.inv) %*% (sample.mean - NU) = ALPHA
+    # solve(LAMBDA..IB.inv) %*% (sample_mean - NU) = ALPHA
     # where
     # - LAMBDA..IB.inv only contains 'dummy' variables, and is square
     # - NU elements are not needed (since not in ov.dummy.idx)
@@ -1321,8 +1321,8 @@ lav_lisrel_alpha0 <- function(mlist = NULL, sample_mean = NULL,
 # and contains either:
 #     1) the sample means (if not eXo)
 #     2) the intercepts, if we have exogenous covariates
-#        since sample.mean = NU + LAMBDA %*% E(eta)
-#        we have NU = sample.mean - LAMBDA %*% E(eta)
+#        since sample_mean = NU + LAMBDA %*% E(eta)
+#        we have NU = sample_mean - LAMBDA %*% E(eta)
 lav_lisrel_nu0 <- function(mlist = NULL, sample_mean = NULL,
                            ov_y_dummy_ov_idx = NULL,
                            ov_x_dummy_ov_idx = NULL,

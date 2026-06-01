@@ -169,7 +169,7 @@ lav_cfa_fabin_internal <- function(lavmodel = NULL, lavsamplestats = NULL,
   #    Sigma and S
   # if(length(nondiag.idx) > 0L) {
   #    Sigma <- LAMBDA %*% PSI %*% t(LAMBDA) + THETA
-  #    THETA[nondiag.idx] <- (sample.cov - Sigma)[nondiag.idx]
+  #    THETA[nondiag.idx] <- (sample_cov - Sigma)[nondiag.idx]
   # }
 
   # store matrices in lavmodel@GLIST

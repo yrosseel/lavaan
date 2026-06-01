@@ -1,6 +1,6 @@
 lav_step00_parameters <- function(matchcall = NULL,
-                                         syscall = NULL,
-                                         dotdotdot = NULL) {
+                                  syscall = NULL,
+                                  dotdotdot = NULL) {
   # 1. resolve a problem where parameter 'cl' is matched to 'cluster'
   #    and shouldn't
   # 2. apply default options for cfa/sem/growth functions
@@ -100,7 +100,7 @@ lav_step00_checkdata <- function(data = NULL,
   #             set data to NULL
   #   if it is a function --> ***error***
   #   TODO: other tests are present in lav_lavdata(), should we copy them here?
-  # if NACOV or WLS.V not NULL, set ov.order to "data"
+  # if nacov or wls_v not NULL, set ov_order to "data"
 
   if (!is.null(data)) {
     if (inherits(data, "data.frame")) {
@@ -160,7 +160,7 @@ lav_step00_checkdata <- function(data = NULL,
     }
   }
   # new in 0.6-14: if NACOV and/or WLS.V are provided, we force
-  # ov.order="data" for now
+  # ov_order="data" for now
   # until we have reliable code to re-arrange/select col/rows for
   # of NACOV/WLS.V based on the model-based ov.names
   if (!is.null(nacov) || !is.null(wls_v)) {

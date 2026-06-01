@@ -219,9 +219,9 @@ lavaanList <- function(model = NULL, # model                   # nolint start
           do.call("lavaan",
             args = c(
               list(
-                slotOptions = lavoptions,
-                slotParTable = lavpartable,
-                slotModel = lavmodel,
+                slot_options = lavoptions,
+                slot_par_table = lavpartable,
+                slot_model = lavmodel,
                 # start        = FIT,
                 data = data_1
               ),
@@ -249,9 +249,9 @@ lavaanList <- function(model = NULL, # model                   # nolint start
           do.call("fsr",
             args = c(
               list(
-                slotOptions = lavoptions,
-                slotParTable = lavpartable,
-                slotModel = lavmodel,
+                slot_options = lavoptions,
+                slot_par_table = lavpartable,
+                slot_model = lavmodel,
                 # start        = FIT,
                 data = data_1,
                 cmd = "lavaan",

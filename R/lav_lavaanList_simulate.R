@@ -27,7 +27,7 @@ lavSimulate <- function(model = NULL, # user model
   dotdotdot_pop$verbose <- FALSE
   dotdotdot_pop$debug <- FALSE
   dotdotdot_pop$data <- NULL
-  dotdotdot_pop$sample.cov <- NULL
+  dotdotdot_pop$sample_cov <- NULL
 
   # 'fit' model without data, check 'true' parameters
   fit_pop <- do.call(cmd,

@@ -31,7 +31,7 @@ lav_sam_step0 <- function(cmd = "sem", model = NULL, data = NULL,
     dotdotdot0$NACOV <- TRUE
     #dotdotdot0$gamma.unbiased <- TRUE
     dotdotdot0$fixed.x <- FALSE
-    dotdotdot0$ov.order <- "force.model" # avoid data ordering...
+    dotdotdot0$ov_order <- "force.model" # avoid data ordering...
   }
 
   # any lv interaction terms?

@@ -253,9 +253,9 @@ lav_mvn_mi_h1_est_moments_chol <- function(lavdata = NULL,
   lavoptions2$control <- list(rel.tol = 1e-7)
   lavoptions2$start <- "simple" # add this point, we have no lavh1 yet!
   fit <- lavaan(lavpartable,
-    slotOptions = lavoptions2,
-    slotSampleStats = lavsamplestats,
-    slotData = lavdata,
+    slot_options = lavoptions2,
+    slot_sample_stats = lavsamplestats,
+    slot_data = lavdata,
     warn = FALSE
   )
 

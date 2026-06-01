@@ -185,14 +185,14 @@ lav_step01_ovnames_ovorder <- function(flat_model = NULL,
                                               data       = NULL,
                                               sample_cov = NULL,
                                               slot_data   = NULL) {
-  # set ov.order in lowercase, check if it is "data" or "model",
+  # set ov_order in lowercase, check if it is "data" or "model",
   #  if not *** error ***
-  # if ov.order == "data"
+  # if ov_order == "data"
   #   try adapt flat_model via lav_partable_ov_from_data
   #   (** warning ** if this fails)
 
   # new in 0.6-14
-  # if ov.order = "data", it would seem we need to intervene here;
+  # if ov_order = "data", it would seem we need to intervene here;
   # ldw 1/3/2024:
   # we do this by adding an attribute "ovda" to flat_model and partable
   ov_order <- tolower(ov_order)
@@ -207,13 +207,13 @@ lav_step01_ovnames_ovorder <- function(flat_model = NULL,
       silent = TRUE
     )
     if (inherits(flat_model, "try-error")) {
-      lav_msg_warn(gettext("ov.order = \"data\" setting failed;
-                           switching back to ov.order = \"model\""))
+      lav_msg_warn(gettext("ov_order = \"data\" setting failed;
+                           switching back to ov_order = \"model\""))
       flat_model <- flat_model_orig
     }
   } else if (ov_order != "model") {
     lav_msg_stop(gettext(
-      "ov.order= argument should be \"model\" (default) or \"data\""))
+      "ov_order= argument should be \"model\" (default) or \"data\""))
   }
 
   flat_model

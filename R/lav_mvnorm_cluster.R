@@ -1602,15 +1602,15 @@ lav_mvn_cl_em_h0 <- function(lavsamplestats = NULL,
     local_partable$ustart[free_idx] <- x_current
 
     local_fit <- lavaan(local_partable,
-      sample.cov = list(
+      sample_cov = list(
         within = implied$Sigma.W,
         between = implied$Sigma.B
       ),
-      sample.mean = list(
+      sample_mean = list(
         within = implied$Mu.W,
         between = implied$Mu.B
       ),
-      sample.nobs = lp$nclusters,
+      sample_nobs = lp$nclusters,
       sample.cov.rescale = FALSE,
       control = list(
         iter.max = mstep_iter_max,

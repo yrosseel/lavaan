@@ -80,7 +80,7 @@ wheaton.model <- '
 '
 
 # fitting the model
-fit <- sem(wheaton.model, sample.cov=wheaton.cov, sample.nobs=932)
+fit <- sem(wheaton.model, sample_cov=wheaton.cov, sample_nobs=932)
 
 # showing the results
 summary(fit, standardized=TRUE)

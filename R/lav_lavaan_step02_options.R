@@ -20,20 +20,20 @@ lav_step02_options <- function(slot_options = NULL,
   # #  2. lavoptions  # #
   # # # # # # # # # # # #
 
-  # if slotOptions not NULL
+  # if slot_options not NULL
   #   copy to lavoptions and modify categorical/clustered/multilevel
   #     inserting a "." in the first position
   #   if necessary, overwrite with values in dotdotdot and issue a warning
   #   check if all names in dotdotdot are possible options, if not *** error ***
   #   create complete option list (lav_options_default) and substitute values
   #     given in dotdotdot
-  #   if data, slotData and sample.cov NULL: opt$bounds = FALSE
-  #   if slotData$data.type != "full" or (slotData and data = NULL):
+  #   if data, slot_data and sample_cov NULL: opt$bounds = FALSE
+  #   if slot_data$data.type != "full" or (slot_data and data = NULL):
   #     opt$missing = "listwise"
   #   set categorical mode ON if
   #     - an operator "|" (threshold) was used
   #     - data not NULL and one or more elements in ordered parameter
-  #     - sample.th provided
+  #     - sample_th provided
   #     - at least one of the non-exogenous observed variables is "ordered"
   #       (ordered factor in R)
   #   if opt$estimator == "catml": set categorical mode OFF
@@ -48,7 +48,7 @@ lav_step02_options <- function(slot_options = NULL,
   #     set opt$estimator to "MLR"
   #   if constraints present and estimator == "ML", set opt$information to
   #     c("observed", "observed")
-  #   if there is an operator "~1" in flat_model and sample.mean not NULL,
+  #   if there is an operator "~1" in flat_model and sample_mean not NULL,
   #     set opt$meanstructure TRUE
   #   if there are no exogenous variables but conditional.x explicitly
   #     requested: ** warning **
@@ -80,7 +80,7 @@ lav_step02_options <- function(slot_options = NULL,
       dot_names <- names(dotdotdot)
       op_idx <- which(dot_names %in% names(slot_options))
       lav_msg_warn(gettext(
-        "the following argument(s) override(s) the options in slotOptions:"),
+        "the following argument(s) override(s) the options in slot_options:"),
         paste(dot_names[op_idx], collapse = " ")
       )
       lavoptions[dot_names[op_idx]] <- dotdotdot[op_idx]

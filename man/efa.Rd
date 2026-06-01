@@ -5,7 +5,7 @@
 \description{
 Fit one or more Exploratory Factor Analysis (EFA) model(s).}
 \usage{
-efa(data = NULL, nfactors = 1L, sample.cov = NULL, sample.nobs = NULL,
+efa(data = NULL, nfactors = 1L, sample_cov = NULL, sample_nobs = NULL,
     rotation = "geomin", rotation.args = list(), ov.names = NULL,
     bounds = "pos.var", ..., output = "efa")
 }
@@ -17,10 +17,10 @@ efa(data = NULL, nfactors = 1L, sample.cov = NULL, sample.nobs = NULL,
     to extract. Can be a single number, or a vector of numbers
     (e.g., \code{nfactors = 1:4}.), For each different number, a model
     is fitted.}
-\item{sample.cov}{Numeric matrix. A sample variance-covariance matrix.
+\item{sample_cov}{Numeric matrix. A sample variance-covariance matrix.
     The rownames and/or colnames must contain the observed variable names.
     Unlike sem and CFA, the matrix may be a correlation matrix.}
-\item{sample.nobs}{Number of observations if the full data frame is missing
+\item{sample_nobs}{Number of observations if the full data frame is missing
     and only the sample variance-covariance matrix is given.}
 \item{rotation}{Character or a list with first element a character variable.
     The character variable is the rotation method to be used. Possible options

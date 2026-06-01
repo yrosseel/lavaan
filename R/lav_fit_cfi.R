@@ -684,11 +684,11 @@ lav_fit_check_baseline <- function(fit_indep = NULL, object = NULL,
       lavoptions$test <- object@Options$test
       fit_indep <- try(
         lavaan(fit_indep,
-          slotOptions = lavoptions,
-          slotData = object@Data,
-          slotSampleStats = object@SampleStats,
+          slot_options = lavoptions,
+          slot_data = object@Data,
+          slot_sample_stats = object@SampleStats,
           sloth1 = object@h1,
-          slotCache = object@Cache,
+          slot_cache = object@Cache,
           verbose = FALSE
         ),
         silent = TRUE

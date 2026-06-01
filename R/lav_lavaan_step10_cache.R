@@ -8,7 +8,7 @@ lav_step10_cache <- function(slot_cache = NULL,
   # #  10. lavcache # #
   # # # # # # # # # # #
 
-  # if slotCache not NULL
+  # if slot_cache not NULL
   #   copy to lavcache
   # else
   #   lavcache = list of length lavdata@ngroups

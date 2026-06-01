@@ -11,8 +11,8 @@
 
 efa <- function(data = NULL,              # nolint start
                 nfactors = 1L,
-                sample.cov = NULL,
-                sample.nobs = NULL,
+                sample_cov = NULL,
+                sample_nobs = NULL,
                 rotation = "geomin",
                 rotation.args = list(),
                 ov.names = NULL,
@@ -89,16 +89,16 @@ efa <- function(data = NULL,              # nolint start
         ov_names <- ov_names[-which(ov_names == dotdotdot$sampling.weights)]
       }
     }
-  } else if (!is.null(sample.cov)) {
-    ov_names <- rownames(sample.cov)
+  } else if (!is.null(sample_cov)) {
+    ov_names <- rownames(sample_cov)
     if (is.null(ov_names)) {
-      ov_names <- colnames(sample.cov)
+      ov_names <- colnames(sample_cov)
     }
   }
   # ov_names?
   if (length(ov_names) == 0L) {
     lav_msg_stop(gettext(
-      "could not extract variable names from data or sample.cov"))
+      "could not extract variable names from data or sample_cov"))
   }
 
   # check nfactors
@@ -150,8 +150,8 @@ efa <- function(data = NULL,              # nolint start
         list(
           model = model_syntax,
           data = data,
-          sample.cov = sample.cov,
-          sample.nobs = sample.nobs,
+          sample_cov = sample_cov,
+          sample_nobs = sample_nobs,
           rotation = rotation,
           rotation.args = rotation_args,
           bounds = bounds,

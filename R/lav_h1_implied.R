@@ -145,13 +145,13 @@ lav_h1_implied_logl <- function(lavdata = NULL,
         lavoptions2$check.gradient <- FALSE
         lavoptions2$optim.force.convergence <- TRUE # for now...
         lavoptions2$control <- list(rel.tol = 1e-7)
-        # FIT <- lavaan(lavpartable, slotOptions = lavoptions2,
-        #          slotSampleStats = lavsamplestats,
-        #          slotData = lavdata, sloth1 = lavh1)
+        # FIT <- lavaan(lavpartable, slot_options = lavoptions2,
+        #          slot_sample_stats = lavsamplestats,
+        #          slot_data = lavdata, sloth1 = lavh1)
         fit <- lavaan(lavpartable,
-          slotOptions = lavoptions2,
-          slotSampleStats = lavsamplestats,
-          slotData = lavdata,
+          slot_options = lavoptions2,
+          slot_sample_stats = lavsamplestats,
+          slot_data = lavdata,
           warn = FALSE
         )
         out_1 <- list(

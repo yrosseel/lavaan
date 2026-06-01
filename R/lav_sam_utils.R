@@ -668,9 +668,9 @@ lav_sam_step3_joint <- function(fit = NULL, pt_1 = NULL, sam_method = "local") {
   pt_1$ustart <- pt_1$est # as this is used if optim.method == "none"
 
   joint <- lavaan::lavaan(pt_1,
-    slotOptions = lavoptions_joint,
-    slotSampleStats = fit@SampleStats,
-    slotData = fit@Data,
+    slot_options = lavoptions_joint,
+    slot_sample_stats = fit@SampleStats,
+    slot_data = fit@Data,
     verbose = FALSE
   )
   joint

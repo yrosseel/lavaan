@@ -14,14 +14,14 @@ lav_step05_samp <- function(slot_sample_stats = NULL,
   # #  5. lavsamplestats  # #
   # # # # # # # # # # # # # #
 
-  # if slotSampleStats not NULL
+  # if slot_sample_stats not NULL
   #   copy to lavsamplestats
   # else
   #   if lavdata@data.type == "full"
   #     compute lavsamplestats via lav_samplestats_from_data
   #   else
   #     if lavdata@data.type == "moment"
-  #       if lavoptions$meanstructure TRUE but sample.mean is NULL:
+  #       if lavoptions$meanstructure TRUE but sample_mean is NULL:
   #         ** warning **
   #       compute lavsamplestats via lav_samplestats_from_moments
   #     else
@@ -47,10 +47,10 @@ lav_step05_samp <- function(slot_sample_stats = NULL,
     if (lav_verbose()) {
       cat("lavsamplestats ...")
     }
-    # check if we have sample.mean and meanstructure = TRUE
+    # check if we have sample_mean and meanstructure = TRUE
     if (lavoptions$meanstructure && is.null(sample_mean)) {
       lav_msg_warn(
-        gettext("sample.mean= argument is missing, but model contains
+        gettext("sample_mean= argument is missing, but model contains
                 mean/intercept parameters."))
     }
     lavsamplestats <- lav_samp_from_moments(

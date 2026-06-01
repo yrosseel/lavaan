@@ -24,8 +24,8 @@ lav_step03_data <- function(slot_data = NULL,
   # #  3. lavdata  # #
   # # # # # # # # # # #
 
-  # if slotData not null
-  #   copy slotData to lavdata
+  # if slot_data not null
+  #   copy slot_data to lavdata
   # else
   #   create lavdata via function lav_lavdata, setting ov.names to ov.names.y
   #     if lavoptions$conditional.x
@@ -38,7 +38,7 @@ lav_step03_data <- function(slot_data = NULL,
   #   if lavdata$data.type is "moment"
   #     if estimator one of MLM, MLMV, MLR, ULSM, ULSMV, ULSMVS and NACOV
   #       is NULL: *** error ***
-  #     if estimator one of WLS, WLSM, WLSMV, WLSMVS, DWLS and WLS.V is
+  #     if estimator one of WLS, WLSM, WLSMV, WLSMVS, DWLS and wls_v is
   #       NULL: *** error ***
   #     if lavoptions$se = bootstrap: *** error ***
   # if slotPartable not NULL and model is lavaan-object, check equality
@@ -105,7 +105,7 @@ lav_step03_data <- function(slot_data = NULL,
       )) &&
         is.null(wls_v)) {
         lav_msg_stop(gettextf(
-          "estimator %s requires full data or user-provided WLS.V and NACOV",
+          "estimator %s requires full data or user-provided wls_v and NACOV",
           estimator))
       }
     }

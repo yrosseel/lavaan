@@ -1366,7 +1366,7 @@ lav_pt_vnames <- function(partable, type = NULL, ...,
     } # b
 
     # ----- lav_pt_vnames ---- no cache ------------------------
-    # new in 0.6-14: if 'da' operator, change order! (for ov.order = "data")
+    # new in 0.6-14: if 'da' operator, change order! (for ov_order = "data")
     # now via attribute "ovda"
     ov_names_data <- attr(partable, "ovda")
     if (!is.null(ov_names_data)) {
