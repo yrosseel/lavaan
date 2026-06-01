@@ -495,14 +495,14 @@ lav_snake_case <- function(old_names) {
   # check no doubles in new names
   doubles <- anyDuplicated(varnames_new)
   if (doubles) {
-    lav_msg_stop(gettextf("At least one snake_cased name (%s) is duplicated!", 
+    lav_msg_stop(gettextf("At least one snake_cased name (%s) is duplicated!",
                    varnames_new[doubles]))
   }
   varnames_new
 }
 
 # function to put arguments with old names (in ...) in the new named argument
-# the function to adapt must have a ... argument and call this function in the 
+# the function to adapt must have a ... argument and call this function in the
 # beginning as follows :
 #   dotdotdot <- list(...)
 #   lav_adapt_func(environment(), dotdotdot)

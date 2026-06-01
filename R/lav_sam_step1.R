@@ -132,7 +132,7 @@ lav_sam_step1 <- function(cmd = "sem", mm_list = NULL, mm_args = list(),
   # override with user-specified mm.args
   lavoptions_mm <- modifyList(lavoptions_mm, mm_args)
 
-  # create MM slotOptions
+  # create MM slot_options
   slot_options_mm <- lav_options_set(lavoptions_mm)
 
   # we assume the same number/names of lv's per group!!!
@@ -184,7 +184,7 @@ lav_sam_step1 <- function(cmd = "sem", mm_list = NULL, mm_args = list(),
       slot_options_mm$.categorical <- FALSE
     }
 
-    # update slotData for this measurement block
+    # update slot_data for this measurement block
     ov_names_block <- lapply(1:ngroups, function(g) {
       unique(unlist(lav_pt_vnames(ptm, type = "ov", group = g)))
     })
@@ -199,7 +199,7 @@ lav_sam_step1 <- function(cmd = "sem", mm_list = NULL, mm_args = list(),
         lapply(seq_len(nblocks), function(x) NULL)
     }
 
-    # if data.type == "moment", (re)create sample.cov and sample.nobs
+    # if data.type == "moment", (re)create sample.cov and sample_nobs
     if (fit@Data@data.type == "moment") {
       if (ngroups == 1L) {
         mm_sample_cov <- lavInspect(fit, "h1")$cov
@@ -251,16 +251,16 @@ lav_sam_step1 <- function(cmd = "sem", mm_list = NULL, mm_args = list(),
     # (question: can we re-use even more slots?)
     if (fit@Data@data.type == "full") {
       fit_mm_block <- lavaan(
-        model = ptm, slotData = slot_data_block,
-        slotOptions = slot_options_mm, debug = FALSE, verbose = FALSE
+        model = ptm, slot_data = slot_data_block,
+        slot_options = slot_options_mm, debug = FALSE, verbose = FALSE
       )
     } else if (fit@Data@data.type == "moment") {
       slot_options_mm$sample.cov.rescale <- FALSE
       fit_mm_block <- lavaan(
-        model = ptm, slotData = slot_data_block,
-        sample.cov = mm_sample_cov, sample.mean = mm_sample_mean,
-        sample.nobs = mm_sample_nobs,
-        slotOptions = slot_options_mm, debug = FALSE, verbose = FALSE
+        model = ptm, slot_data = slot_data_block,
+        sample_cov = mm_sample_cov, sample_mean = mm_sample_mean,
+        sample_nobs = mm_sample_nobs,
+        slot_options = slot_options_mm, debug = FALSE, verbose = FALSE
       )
     }
 

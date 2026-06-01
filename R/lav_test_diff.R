@@ -401,10 +401,10 @@ lav_test_diff_m10 <- function(m1, m0, test = FALSE) {
   options_1$start <- pt_m0_extended # new in 0.6!
   m10 <- lavaan(
     model = pt_m1_extended,
-    slotOptions = options_1,
-    slotSampleStats = m1@SampleStats,
-    slotData = m1@Data,
-    slotCache = m1@Cache,
+    slot_options = options_1,
+    slot_sample_stats = m1@SampleStats,
+    slot_data = m1@Data,
+    slot_cache = m1@Cache,
     verbose = FALSE
   )
 

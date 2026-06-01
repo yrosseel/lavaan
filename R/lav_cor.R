@@ -179,7 +179,7 @@ lav_object_cor <- function(object,                 # nolint start
 
 
   fit <- lavaan(
-    slotParTable = pt_un, slotData = lav_data,
+    slot_par_table = pt_un, slot_data = lav_data,
     model.type = "unrestricted",
     missing = missing,
     baseline = baseline, h1 = TRUE, # must be TRUE!

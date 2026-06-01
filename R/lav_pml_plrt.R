@@ -49,9 +49,9 @@ lav_pml_plrt <- function(lavobject = NULL, lavmodel = NULL, lavdata = NULL,
   options_1$baseline <- FALSE
   options_1$h1 <- FALSE
   fitted_sat <- lavaan(model_sat,
-    slotOptions = options_1, verbose = FALSE,
-    slotSampleStats = lavsamplestats,
-    slotData = lavdata, slotCache = lavcache
+    slot_options = options_1, verbose = FALSE,
+    slot_sample_stats = lavsamplestats,
+    slot_data = lavdata, slot_cache = lavcache
   )
   fx <- lav_model_objective(
     lavmodel = fitted_sat@Model,
@@ -84,9 +84,9 @@ lav_pml_plrt <- function(lavobject = NULL, lavmodel = NULL, lavdata = NULL,
   options2$check.post <- FALSE
   options2$check.vcov <- FALSE
   fitted_sat2 <- lavaan(model_sat2,
-    slotOptions = options2, verbose = FALSE,
-    slotSampleStats = lavsamplestats,
-    slotData = lavdata, slotCache = lavcache
+    slot_options = options2, verbose = FALSE,
+    slot_sample_stats = lavsamplestats,
+    slot_data = lavdata, slot_cache = lavcache
   )
 
   # the code below was contributed by Myrsini Katsikatsou (Jan 2015)

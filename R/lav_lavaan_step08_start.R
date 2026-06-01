@@ -7,7 +7,7 @@ lav_step08_start <- function(slot_model = NULL,
   # #  8. lavstart # #
   # # # # # # # # # # #
 
-  # if slotModel is NULL
+  # if slot_model is NULL
   #   if lavpartable$est not NULL and lavoptions$start == "default"
   #     if there are free variances with est==0 or there are NA's in est
   #       compute start column in lavpartable via lav_start

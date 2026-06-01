@@ -8,8 +8,8 @@ lav_step04_pt <- function(slot_par_table = NULL,
   # #  4. lavpartable # #
   # # # # # # # # # # # #
 
-  # if slotParTable not null
-  #   copy slotParTable to lavpartable
+  # if slot_par_table not null
+  #   copy slot_par_table to lavpartable
   # else
   #   if model is character or formula
   #     create a temporary variable tmp.data.ov equal to lavdata@ov
@@ -28,7 +28,7 @@ lav_step04_pt <- function(slot_par_table = NULL,
   #           as.list(lav_pt_complete(as.list(flat_model)))
   #       else
   #         *** error ***
-  # if slotParTable is NULL check lavpartable via lav_partable_check
+  # if slot_par_table is NULL check lavpartable via lav_partable_check
   # if lavoptions$optim.method is "em" and there are variances specified in
   #   partable with free = 0L and
   #    starting value ustart 0, set ustart for these variances to

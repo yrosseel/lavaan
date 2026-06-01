@@ -14,21 +14,22 @@
 # YR 07 Feb 2023: add ov.order= argument
 # HJ 18 Oct 2023: extend PML to allow sampling weights
 # LDW 26 Feb 2024: split lavaan in smaller steps
-#
+# LDW June 2026: argument names in snake_case
+
 lavaan <- function(
-    # user specified model: can be syntax, parameter Table, ... # nolint start
+    # user specified model: can be syntax, parameter Table, ...
     model = NULL,
     # data (second argument, most used)
     data = NULL,
     # variable information
     ordered = NULL,
     # sampling weights
-    sampling.weights = NULL,
+    sampling_weights = NULL,
     # summary data
-    sample.cov = NULL,
-    sample.mean = NULL,
-    sample.th = NULL,
-    sample.nobs = NULL,
+    sample_cov = NULL,
+    sample_mean = NULL,
+    sample_th = NULL,
+    sample_nobs = NULL,
     # multiple groups?
     group = NULL,
     # multiple levels?
@@ -36,20 +37,22 @@ lavaan <- function(
     # constraints
     constraints = "",
     # user-specified variance matrices
-    WLS.V = NULL,
-    NACOV = NULL,
+    wls_v = NULL,
+    nacov = NULL,
     # internal order of ov.names
-    ov.order = "model",
+    ov_order = "model",
     # full slots from previous fits
-    slotOptions = NULL,
-    slotParTable = NULL,
-    slotSampleStats = NULL,
-    slotData = NULL,
-    slotModel = NULL,
-    slotCache = NULL,
+    slot_options = NULL,
+    slot_par_table = NULL,
+    slot_sample_stats = NULL,
+    slot_data = NULL,
+    slot_model = NULL,
+    slot_cache = NULL,
     sloth1 = NULL,
     # options (dotdotdot)
-    ...) {                                                     # nolint end
+    ...) {
+  dotdotdot <- list(...)
+  lav_adapt_func(environment(), dotdotdot)
   # start timer
   start_time0 <- proc.time()[3]
   timing <- list()
@@ -60,7 +63,7 @@ lavaan <- function(
   temp <- lav_step00_parameters(
     matchcall = mc,
     syscall   = sys.call(), # to get main arguments without partial matching
-    dotdotdot = list(...)
+    dotdotdot = dotdotdot
   )
   lavmc <- temp$mc
   dotdotdot <- temp$dotdotdot
@@ -102,13 +105,13 @@ lavaan <- function(
   temp <- lav_step00_checkdata(
     data        = data,
     dotdotdot   = dotdotdot,
-    sample_cov  = sample.cov,
-    sample_nobs = sample.nobs,
-    sample_mean = sample.mean,
-    sample_th   = sample.th,
-    nacov       = NACOV,
-    wls_v       = WLS.V,
-    ov_order    = ov.order
+    sample_cov  = sample_cov,
+    sample_nobs = sample_nobs,
+    sample_mean = sample_mean,
+    sample_th   = sample_th,
+    nacov       = nacov,
+    wls_v       = wls_v,
+    ov_order    = ov_order
   )
   data <- temp$data
   dotdotdot <- temp$dotdotdot
@@ -132,7 +135,7 @@ lavaan <- function(
   }
 
   flat_model <- lav_step01_ovnames_initflat(
-    slot_par_table   = slotParTable,
+    slot_par_table   = slot_par_table,
     model            = model,
     dotdotdot_parser = useparser
   )
@@ -143,13 +146,13 @@ lavaan <- function(
     flat_model <- lav_step01_ovnames_composites(flat_model)
   }
 
-  # ------------ ov.names 2 ------ handle ov.order -----------------------
+  # ------------ ov.names 2 ------ handle ov_order -----------------------
   flat_model <- lav_step01_ovnames_ovorder(
     flat_model = flat_model,
     ov_order   = ov_order,
     data       = data,
     sample_cov = sample_cov,
-    slot_data  = slotData
+    slot_data  = slot_data
   )
 
   # ------------ ov.names 3 ------- group blocks ------------------
@@ -173,7 +176,7 @@ lavaan <- function(
     data         = data,
     sample_cov   = sample_cov,
     dotdotdot    = dotdotdot,
-    slot_options = slotOptions
+    slot_options = slot_options
   )
 
   # ------------ ov.names 5 ------ handle ov.names.l --------------
@@ -198,8 +201,8 @@ lavaan <- function(
 
   # ------------ lavoptions --------------------
   lavoptions <- lav_step02_options(
-    slot_options      = slotOptions,
-    slot_data         = slotData,
+    slot_options      = slot_options,
+    slot_data         = slot_data,
     flat_model       = flat_model,
     ordered          = ordered,
     ordered_orig     = ordered_orig,
@@ -208,7 +211,7 @@ lavaan <- function(
     sample_th        = sample_th,
     sample_nobs      = sample_nobs,
     ov_names_l       = ov_names_l,
-    sampling_weights = sampling.weights,
+    sampling_weights = sampling_weights,
     constraints      = constraints,
     group            = group,
     ov_names_x       = ov_names_x,
@@ -226,7 +229,7 @@ lavaan <- function(
 
   # ------------ lavdata ------------------------
   temp <- lav_step03_data(
-    slot_data         = slotData,
+    slot_data         = slot_data,
     lavoptions       = lavoptions,
     ov_names         = ov_names,
     ov_names_y       = ov_names_y,
@@ -236,12 +239,12 @@ lavaan <- function(
     ov_names_x       = ov_names_x,
     ov_names_l       = ov_names_l,
     ordered          = ordered,
-    sampling_weights = sampling.weights,
+    sampling_weights = sampling_weights,
     sample_cov       = sample_cov,
     sample_mean      = sample_mean,
     sample_th        = sample_th,
     sample_nobs      = sample_nobs,
-    slot_par_table   = slotParTable,
+    slot_par_table   = slot_par_table,
     ngroups          = ngroups,
     dotdotdot        = dotdotdot,
     flat_model       = flat_model,
@@ -256,7 +259,7 @@ lavaan <- function(
 
   # ------------ lavpartable -------------------
   temp <- lav_step04_pt(
-    slot_par_table = slotParTable,
+    slot_par_table = slot_par_table,
     model          = model,
     flat_model     = flat_model,
     lavoptions     = lavoptions,
@@ -276,7 +279,7 @@ lavaan <- function(
 
   # ------------ lavsamplestats ---------------
   lavsamplestats <- lav_step05_samp(
-    slot_sample_stats = slotSampleStats,
+    slot_sample_stats = slot_sample_stats,
     lavdata           = lavdata,
     lavoptions        = lavoptions,
     wls_v             = wls_v,
@@ -313,7 +316,7 @@ lavaan <- function(
 
   # ------------ lavstart ----------------------
   lavpartable <- lav_step08_start(
-    slot_model      = slotModel,
+    slot_model      = slot_model,
     lavoptions      = lavoptions,
     lavpartable     = lavpartable,
     lavsamplestats  = lavsamplestats,
@@ -324,7 +327,7 @@ lavaan <- function(
 
   # ------------ model -------------------------
   temp <- lav_step09_model(
-    slot_model     = slotModel,
+    slot_model     = slot_model,
     lavoptions     = lavoptions,
     lavpartable    = lavpartable,
     lavsamplestats = lavsamplestats,
@@ -337,12 +340,12 @@ lavaan <- function(
 
   # -------- lavcache ----------------------------------
   lavcache <- lav_step10_cache(
-    slot_cache       = slotCache,
+    slot_cache       = slot_cache,
     lavdata          = lavdata,
     lavmodel         = lavmodel,
     lavpartable      = lavpartable,
     lavoptions       = lavoptions,
-    sampling_weights = sampling.weights
+    sampling_weights = sampling_weights
   )
   timing <- lav_add_timing(timing, "cache")
 
@@ -503,21 +506,21 @@ lavaan <- function(
 # # cfa # #
 # # # # # #
 cfa <- function(
-  model = NULL,                        # nolint start
+  model = NULL,
   data = NULL,
   ordered = NULL,
-  sampling.weights = NULL,
-  sample.cov = NULL,
-  sample.mean = NULL,
-  sample.th = NULL,
-  sample.nobs = NULL,
+  sampling_weights = NULL,
+  sample_cov = NULL,
+  sample_mean = NULL,
+  sample_th = NULL,
+  sample_nobs = NULL,
   group = NULL,
   cluster = NULL,
   constraints = "",
-  WLS.V = NULL,
-  NACOV = NULL,
-  ov.order = "model",
-  ...) {                              # nolint end
+  wls_v = NULL,
+  nacov = NULL,
+  ov_order = "model",
+  ...) {
   sc <- sys.call()
   sc[["model.type"]] <- quote("cfa")
   sc[["cmd"]] <- quote("cfa")
@@ -529,21 +532,21 @@ cfa <- function(
 # # sem # #
 # # # # # #
 sem <- function(
-    model = NULL,                      # nolint start
+    model = NULL,
     data = NULL,
     ordered = NULL,
-    sampling.weights = NULL,
-    sample.cov = NULL,
-    sample.mean = NULL,
-    sample.th = NULL,
-    sample.nobs = NULL,
+    sampling_weights = NULL,
+    sample_cov = NULL,
+    sample_mean = NULL,
+    sample_th = NULL,
+    sample_nobs = NULL,
     group = NULL,
     cluster = NULL,
     constraints = "",
-    WLS.V = NULL,
-    NACOV = NULL,
-    ov.order = "model",
-    ...) {                             # nolint end
+    wls_v = NULL,
+    nacov = NULL,
+    ov_order = "model",
+    ...) {
   sc <- sys.call()
   sc[["model.type"]] <- quote("sem")
   sc[["cmd"]] <- quote("sem")
@@ -555,21 +558,21 @@ sem <- function(
 # # growth  # #
 # # # # # # # #
 growth <- function(
-    model = NULL,                      # nolint start
+    model = NULL,
     data = NULL,
     ordered = NULL,
-    sampling.weights = NULL,
-    sample.cov = NULL,
-    sample.mean = NULL,
-    sample.th = NULL,
-    sample.nobs = NULL,
+    sampling_weights = NULL,
+    sample_cov = NULL,
+    sample_mean = NULL,
+    sample_th = NULL,
+    sample_nobs = NULL,
     group = NULL,
     cluster = NULL,
     constraints = "",
-    WLS.V = NULL,
-    NACOV = NULL,
-    ov.order = "model",
-    ...) {                             # nolint end
+    wls_v = NULL,
+    nacov = NULL,
+    ov_order = "model",
+    ...) {
   sc <- sys.call()
   sc[["model.type"]] <- quote("growth")
   sc[["cmd"]] <- quote("growth")

@@ -198,12 +198,12 @@ lav_samp_from_data <- function(lavdata = NULL,        # nolint start
         nacov <- list(nacov)
       } else {
         lav_msg_stop(gettextf(
-          "NACOV argument should be a list of length ", ngroups))
+          "nacov= argument should be a list of length ", ngroups))
       }
     } else {
       if (length(nacov) != ngroups) {
         lav_msg_stop(gettextf(
-          "NACOV assumes %1$s groups; data contains %2$s groups",
+          "nacov= assumes %1$s groups; data contains %2$s groups",
           length(nacov), ngroups))
       }
     }
@@ -816,7 +816,7 @@ lav_samp_from_data <- function(lavdata = NULL,        # nolint start
       }
     }
 
-    # NACOV (=GAMMA)
+    # nacov (=GAMMA)
     if (!nacov_user && nlevels == 1L) {
       if (estimator == "ML" && !missing_flag && nacov_compute) {
         if (conditional_x) {

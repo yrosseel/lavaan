@@ -517,10 +517,10 @@ fsr <- function(model = NULL,
   lavoptions2$test <- "none"
   lavoptions2$missing <- "listwise" # always complete data anyway...
   fit <- lavaan(pt_pa,
-    sample.cov = fsr_cov,
-    sample.mean = fs_mean,
-    sample.nobs = fit_1@SampleStats@nobs,
-    slotOptions = lavoptions2
+    sample_cov = fsr_cov,
+    sample_mean = fs_mean,
+    sample_nobs = fit_1@SampleStats@nobs,
+    slot_options = lavoptions2
   )
 
   # only to correct the SE, we create another model, augmented with
@@ -537,10 +537,10 @@ fsr <- function(model = NULL,
   lavoptions3$check.gradient <- FALSE
   lavoptions3$information <- "expected" ## FIXME: lav_model_grad + delta
   fit_si2 <- lavaan(pt_si,
-    sample.cov  = fsr_cov2,
-    sample.mean = fs_mean,
-    sample.nobs = fit_1@SampleStats@nobs,
-    slotOptions = lavoptions3
+    sample_cov  = fsr_cov2,
+    sample_mean = fs_mean,
+    sample_nobs = fit_1@SampleStats@nobs,
+    slot_options = lavoptions3
   )
   info_all <- lavTech(fit_si2, "information") * nobs(fit)
   i33 <- info_all[idx2, idx2]
@@ -560,10 +560,10 @@ fsr <- function(model = NULL,
   if (output == "lavaan" || output == "fsr") {
     lavoptions3$se <- "twostep"
     fit <- lavaan::lavaan(pt_pa2,
-      sample.cov = fsr_cov,
-      sample.mean = fs_mean,
-      sample.nobs = fit_1@SampleStats@nobs,
-      slotOptions = lavoptions3
+      sample_cov = fsr_cov,
+      sample_mean = fs_mean,
+      sample_nobs = fit_1@SampleStats@nobs,
+      slot_options = lavoptions3
     )
     fit@vcov$vcov <- vcov_1
   }

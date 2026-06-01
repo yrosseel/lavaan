@@ -1,4 +1,4 @@
-# handle ov.order = "data" by adding attribute "ovda" to FLAT
+# handle ov_order = "data" by adding attribute "ovda" to FLAT
 lav_pt_ov_from_data <- function(flat = NULL,
                                       data = NULL,
                                       sample_cov = NULL,

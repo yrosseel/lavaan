@@ -412,11 +412,11 @@ lav_bootstrap_internal <- function(object = NULL,
                                        silent = FALSE)) # show what is wrong
     } else {
       fit_boot <- suppressWarnings(try(lavaan(
-        slotOptions = lavoptions_1,
-        slotParTable = lavpartable_1,
-        slotModel = model_boot,
-        slotSampleStats = boot_sample_stats,
-        slotData = new_data
+        slot_options = lavoptions_1,
+        slot_par_table = lavpartable_1,
+        slot_model = model_boot,
+        slot_sample_stats = boot_sample_stats,
+        slot_data = new_data
       ), silent = FALSE))
     }
     if (inherits(fit_boot, "try-error")) {

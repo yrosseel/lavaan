@@ -230,7 +230,7 @@ lav_pt_indep_or_unrestricted <- function(lavobject = NULL,
         ov_names_nox <- lavpta$vnames$ov.nox[[b]]
       }
 
-      # only for multilevel, overwrite sample.cov and sample.mean
+      # only for multilevel, overwrite sample.cov and sample_mean
       if (nlevels > 1L) {
         if (independent) {
           # better use lavdata@Lp[[g]]$ov.x.idx??
@@ -259,11 +259,11 @@ lav_pt_indep_or_unrestricted <- function(lavobject = NULL,
         # if(l == 1L) {
         #    sample.cov  <- YLp[[2]]$Sigma.W[block.idx, block.idx,
         #                                    drop = FALSE]
-        #    sample.mean <- YLp[[2]]$Mu.W[block.idx]
+        #    sample_mean <- YLp[[2]]$Mu.W[block.idx]
         # } else {
         #    sample.cov  <- YLp[[2]]$Sigma.B[block.idx, block.idx,
         #                                    drop = FALSE]
-        #    sample.mean <- YLp[[2]]$Mu.B[block.idx]
+        #    sample_mean <- YLp[[2]]$Mu.B[block.idx]
         # }
 
         # force local sample.cov to be strictly pd (and exaggerate)
@@ -752,7 +752,7 @@ lav_pt_unrestricted_chol <- function(lavobject = NULL,
         # ov_names_nox <- lavpta$vnames$ov.nox[[b]]
       }
 
-      # only for multilevel, overwrite sample.cov and sample.mean
+      # only for multilevel, overwrite sample.cov and sample_mean
       if (nlevels > 1L) {
         # ov_names_x <- character(0L)
         # ov_names_nox <- ov_names

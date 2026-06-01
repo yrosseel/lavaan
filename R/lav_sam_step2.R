@@ -182,19 +182,19 @@ lav_sam_step2 <- function(step1 = NULL, fit = NULL,
       # ov_order <- "model"
     }
     fit_pa <- lavaan::lavaan(pts,
-      sample.cov  = step1$VETA,
-      sample.mean = step1$EETA,
-      sample.nobs = nobs_1,
-      NACOV       = nacov,
-      slotOptions = lavoptions_pa,
+      sample_cov  = step1$VETA,
+      sample_mean = step1$EETA,
+      sample_nobs = nobs_1,
+      nacov       = nacov,
+      slot_options = lavoptions_pa,
       verbose     = FALSE
     )
   } else {
     fit_pa <- lavaan::lavaan(
       model = pts,
-      slotData = fit@Data,
-      slotSampleStats = fit@SampleStats,
-      slotOptions = lavoptions_pa,
+      slot_data = fit@Data,
+      slot_sample_stats = fit@SampleStats,
+      slot_options = lavoptions_pa,
       verbose = FALSE
     )
   }

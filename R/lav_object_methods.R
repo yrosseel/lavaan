@@ -1019,10 +1019,10 @@ lavParameterEstimates <- function(object,                      # nolint start
 
       fit_complete <- lavaan(
         model = tmp_pt,
-        sample.cov = em_cov,
-        sample.mean = em_mean,
-        sample.nobs = lavInspect(object, "nobs"),
-        slotOptions = this_options
+        sample_cov = em_cov,
+        sample_mean = em_mean,
+        sample_nobs = lavInspect(object, "nobs"),
+        slot_options = this_options
       )
 
       se_comp <- lavParameterEstimates(fit_complete,
@@ -1410,6 +1410,12 @@ setMethod(
     if (is.null(call)) {
       lav_msg_stop(gettext("need an object with call slot"))
     }
+    current_call_names <- names(call)
+    lavaan_formals <- names(formals(lavaan::lavaan))
+    current_formals <- lav_snake_case(current_call_names) %in% lavaan_formals
+    current_call_names[current_formals] <-
+              lav_snake_case(current_call_names[current_formals])
+    names(call) <- current_call_names
 
     extras <- match.call(expand.dots = FALSE)$...
 
@@ -1426,16 +1432,16 @@ setMethod(
       call$model$est <- NULL
       call$model$se <- NULL
     }
-    if (!is.null(call$slotParTable) && is.list(call$model)) {
-      call$slotParTable <- call$model
+    if (!is.null(call$slot_par_table) && is.list(call$model)) {
+      call$slot_par_table <- call$model
     }
 
     if (length(extras) > 0) {
-      ## check for call$slotOptions conflicts
-      if (!is.null(call$slotOptions)) {
+      ## check for call$slot_options conflicts
+      if (!is.null(call$slot_options)) {
         same_names <- intersect(names(lavOptions()), names(extras))
         for (i in same_names) {
-          call$slotOptions[[i]] <- extras[[i]]
+          call$slot_options[[i]] <- extras[[i]]
           extras[i] <- NULL # not needed if they are in slotOptions
         }
       }

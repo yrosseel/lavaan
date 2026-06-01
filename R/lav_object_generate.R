@@ -158,10 +158,10 @@ lav_object_independence <- lav_object_baseline <- function(object = NULL,
   # intercepts)
 
   fit <- lavaan(lavpartable,
-    slotOptions     = lavoptions,
-    slotSampleStats = lavsamplestats,
-    slotData        = lavdata,
-    slotCache       = lavcache,
+    slot_options     = lavoptions,
+    slot_sample_stats = lavsamplestats,
+    slot_data        = lavdata,
+    slot_cache       = lavcache,
     sloth1          = lavh1
   )
 
@@ -312,10 +312,10 @@ lav_object_extended <- function(object, add = NULL,
   lavoptions$check.delta.cat.mediator <- FALSE
 
   fit <- lavaan(list_1,
-    slotOptions     = lavoptions,
-    slotSampleStats = object@SampleStats,
-    slotData        = object@Data,
-    slotCache       = object@Cache,
+    slot_options     = lavoptions,
+    slot_sample_stats = object@SampleStats,
+    slot_data        = object@Data,
+    slot_cache       = object@Cache,
     sloth1          = object@h1
   )
 
@@ -434,10 +434,10 @@ lav_object_catml <- function(lavobject = NULL) {
 
   # dummy fit
   fit <- lavaan(
-    slotParTable = partable_catml,
-    slotSampleStats = lavsamplestats,
-    slotData = lavdata,
-    slotOptions = lavoptions
+    slot_par_table = partable_catml,
+    slot_sample_stats = lavsamplestats,
+    slot_data = lavdata,
+    slot_options = lavoptions
   )
 
   fit

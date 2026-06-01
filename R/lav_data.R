@@ -109,7 +109,7 @@ lav_lavdata <- function(data = NULL, # data.frame
           if (isSymmetric(data)) {
             lav_msg_warn(
               gettext("data argument looks like a covariance matrix;
-              please use the sample.cov argument instead"))
+              please use the sample_cov= argument instead"))
           }
         }
         # or perhaps it is a data matrix?
@@ -211,7 +211,7 @@ lav_lavdata <- function(data = NULL, # data.frame
       group_label <- character(0)
       if (!is.matrix(sample_cov)) {
         lav_msg_stop(gettext(
-          "sample.cov must be a matrix or a list of matrices"))
+          "sample_cov must be a matrix or a list of matrices"))
       }
       sample_cov <- list(sample_cov)
     }
@@ -344,7 +344,7 @@ lav_lavdata <- function(data = NULL, # data.frame
     )
   }
 
-  # 3) data.type = "none":  both data and sample.cov are NULL
+  # 3) data.type = "none":  both data and sample_cov are NULL
   if (is.null(data) && is.null(sample_cov)) {
     # clustered/multilevel? --> ov.names.l should be filled in
     if (length(ov_names_l) > 0L) {
@@ -376,7 +376,7 @@ lav_lavdata <- function(data = NULL, # data.frame
       level_label <- character(0L)
     }
 
-    # ngroups: ov.names (when group: is used), or sample.nobs
+    # ngroups: ov.names (when group: is used), or sample_nobs
     if (is.null(ov_names)) {
       lav_msg_warn(gettext("ov.names is NULL"))
       ov_names <- character(0L)
@@ -404,7 +404,7 @@ lav_lavdata <- function(data = NULL, # data.frame
         sample_nobs <- as.list(sample_nobs)
         if (length(sample_nobs) != ngroups) {
           lav_msg_stop(gettextf(
-            "length(sample.nobs) = %1$s but syntax implies ngroups = %2$s",
+            "length(sample_nobs) = %1$s but syntax implies ngroups = %2$s",
             length(sample_nobs), ngroups))
         }
       }

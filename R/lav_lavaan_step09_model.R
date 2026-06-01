@@ -7,7 +7,7 @@ lav_step09_model <- function(slot_model = NULL,
   # #  9. lavmodel # #
   # # # # # # # # # # #
 
-  # if slotModel not NULL
+  # if slot_model not NULL
   #   copy to lavmodel
   # else
   #   compute lavmodel via lav_model

@@ -894,7 +894,7 @@ lav_mvn_info_firstorder <- function(y = NULL,
       sinv_method = sinv_method, sigma_inv = sigma_inv
     )
   } else {
-    # the caller should use Mu = sample.mean
+    # the caller should use Mu = sample_mean
     sc <- lav_mvn_sc_sigma(
       y = y, wt = wt,
       mu = mu, sigma_1 = sigma_1,
