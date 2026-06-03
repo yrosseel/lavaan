@@ -4,6 +4,7 @@
 \alias{lav_pt_df}
 \alias{lav_pt_ndat}
 \alias{lav_pt_npar}
+\alias{lav_pt_ngroups}
 \alias{lav_pt_labels}
 \alias{lav_pt_from_lm}
 \alias{lav_pt_complete}
@@ -17,6 +18,7 @@
 lav_pt_df(partable)
 lav_pt_ndat(partable)
 lav_pt_npar(partable)
+lav_pt_ngroups(partable)
 lav_pt_attributes(partable, pta = NULL)
 
 # generate parameter labels
@@ -129,7 +131,6 @@ HS.model <- ' visual  =~ x1 + x2 + x3
 fit <- cfa(HS.model, data=HolzingerSwineford1939)
 lav <- lav_pt_independence(fit)
 as.data.frame(lav, stringsAsFactors = FALSE)
-
 
 # how many free parameters?
 lav_pt_npar(lav)

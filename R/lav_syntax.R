@@ -17,25 +17,23 @@ lavParseModelString <- function(model.syntax = "", as.data.frame. = FALSE,   # n
       on.exit(lav_warn(current_warn), TRUE)
   }
   parser <- tolower(parser)
-  if (!parser %in% c("old", "new")) {
-    lav_msg_stop(gettext("parser= argument should
-     be \"old\" or \"new\""))
+  parser_choices <- c("old", "new", "open")
+  if (!parser %in% parser_choices) {
+    lav_msg_stop(gettextf("parser= argument should be %s",
+     lav_msg_view(parser_choices, "or")))
   }
 
-  if (parser == "old") {
-    # original/classic parser
-    out <- lav_parse_model_string_orig(
-      model_syntax = model.syntax,
-      as_data_frame = as.data.frame.
-    )
-  } else {
-    # new parser
-    out <- lav_parse_model_string(
-      model_syntax = model.syntax,
-      as_data_frame = as.data.frame.
-      )
-  }
-  out
+  switch(parser,
+  old = # original/classic parser
+    lav_parse_model_string_orig(model_syntax = model.syntax,
+       as_data_frame = as.data.frame.),
+  new = # new parser
+    lav_parse_model_string(model_syntax = model.syntax,
+      as_data_frame = as.data.frame.),
+  open = # open parser
+    lav_parse_model_string_open(model_syntax = model.syntax,
+      as_data_frame = as.data.frame.)
+  )
 }
 
 # the 'original' parser (up to 0.6-17)
