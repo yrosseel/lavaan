@@ -20,7 +20,7 @@ lavSimulate <- function(model = NULL, # user model
                         iseed = NULL) {
   # dotdotdot
   dotdotdot <- list(...)
-  lav_adapt_func(environment(), dotdotdot)
+  lav_adapt_func(environment(), dotdotdot, FALSE)
 
   # dotdotdot for fit.pop
   dotdotdot_pop <- dotdotdot

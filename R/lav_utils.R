@@ -505,8 +505,9 @@ lav_snake_case <- function(old_names) {
 # the function to adapt must have a ... argument and call this function in the
 # beginning as follows :
 #   dotdotdot <- list(...)
-#   lav_adapt_func(environment(), dotdotdot)
-lav_adapt_func <- function(envir, dotdotdot) {
+#   lav_adapt_func(environment(), dotdotdot, TRUE/FALSE)
+# The argument include_ddd if set to TRUE transforms the names of dotdotdot also.
+lav_adapt_func <- function(envir, dotdotdot, include_ddd = TRUE) {
   lijst <- ls(pos=envir)
   if (length(dotdotdot) > 0L) {
     dddnames <- names(dotdotdot)
@@ -515,6 +516,9 @@ lav_adapt_func <- function(envir, dotdotdot) {
     for (j in which(newargs)) {
       assign(dddnewnames[j], dotdotdot[[dddnames[j]]], envir)
       dotdotdot[[dddnames[j]]] <- NULL
+    }
+    if (include_ddd && length(dotdotdot) > 0L) {
+      names(dotdotdot) <- lav_snake_case(names(dotdotdot))
     }
     assign("dotdotdot", dotdotdot, envir)
   }

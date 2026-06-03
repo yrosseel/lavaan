@@ -55,6 +55,7 @@
 \alias{lav_matrix_cov}
 \alias{lav_partable_ndat}
 \alias{lav_partable_npar}
+\alias{lav_partable_ngroups}
 \alias{lav_partable_add}
 \alias{lav_partable_df}
 
@@ -189,6 +190,7 @@ lav_matrix_commutation(m = 1L, n = 1L)
 lav_matrix_cov(Y, Mu = NULL)
 lav_partable_ndat(partable)
 lav_partable_npar(partable)
+lav_partable_ngroups(partable)
 lav_partable_add(partable = NULL, add = list())
 lav_partable_df(partable)
 }

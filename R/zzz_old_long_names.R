@@ -464,6 +464,13 @@ lav_partable_npar <- function(partable) {
   sc[[1L]] <- quote(lavaan::lav_pt_npar)
   eval(sc, parent.frame())
 }
+lav_partable_ngroups <- function(partable) {
+  lav_deprecated("lav_pt_ngroups", times = 0L) # --> for now no warning
+  sc <- sys.call()
+  names(sc) <- lav_snake_case(names(sc))
+  sc[[1L]] <- quote(lavaan::lav_pt_ngroups)
+  eval(sc, parent.frame())
+}
 lav_partable_add <- function(partable = NULL, add = list()) {
   lav_deprecated("lav_pt_add", times = 0L) # --> for now no warning
   sc <- sys.call()

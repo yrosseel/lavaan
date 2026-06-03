@@ -517,7 +517,7 @@ lav_options_default <- function() {
 
   # internal
   elm("parser", "new", chr = c(old = "old", orig = "old", new = "new",
-                               c.r = "c.r", cr = "c.r", classic = "old"))
+          open = "open", c.r = "c.r", cr = "c.r", classic = "old"))
 
   # categorical
   elm("categorical", "default", chr = "default", bl = TRUE)
