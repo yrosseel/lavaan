@@ -7,14 +7,14 @@ bibentry(
                              person(given = "Terrence D.", family = "Jorgensen"), 
                              person(given = "Luc", family = "De Wilde"))),
   year         = "2026",
-  note         = "R package version 0.6-22",
+  note         = "R package version 0.7-1",
   doi          = "10.32614/CRAN.package.lavaan",
   url          = "https://CRAN.R-project.org/package=lavaan",
 
   textVersion =
   paste("Rosseel Y., Jorgensen T. D., De Wilde L. (2026).", 
         "lavaan: Latent Variable Analysis.", 
-        "R package version 0.6-22.",
+        "R package version 0.7-1.",
         "https://doi.org/10.32614/CRAN.package.lavaan")
 )
 
