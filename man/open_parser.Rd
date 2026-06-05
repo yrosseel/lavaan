@@ -58,6 +58,7 @@ model <- '
     y6 ~~ y8
 '
 print(result <- lavParseModelString(model, TRUE, parser = "open"))
+print(attributes(result))
 
 model2 <- '
   color: green  
@@ -76,4 +77,5 @@ model2 <- '
         fb ~ w1 + w2
 '
 print(result2 <- lavParseModelString(model2, TRUE, parser = "open"))
+print(attributes(result2))
 }

@@ -493,10 +493,11 @@ lav_snake_case <- function(old_names) {
   # remove trailing underscores in new names
   varnames_new <- gsub("_$", "", varnames_new)
   # check no doubles in new names
-  doubles <- anyDuplicated(varnames_new[varnames_new != ""])
+  tocheck <- varnames_new[varnames_new != ""]
+  doubles <- anyDuplicated(tocheck)
   if (doubles) {
     lav_msg_stop(gettextf("At least one snake_cased name (%s) is duplicated!",
-                   varnames_new[doubles]))
+                   tocheck[doubles]))
   }
   varnames_new
 }

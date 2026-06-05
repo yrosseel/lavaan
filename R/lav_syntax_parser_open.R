@@ -582,7 +582,7 @@ lav_parse_modifier_open <- function(formul1, lhs, opi, modelsrc, types,
         if (v1 != "pi") assign(v1, v1, modenv)
       }
       tmp <- eval(str2expression(s), modenv)
-      rm(list = v, pos = modenv)
+      suppressWarnings(rm(list = v, pos = modenv))
       if (is.null(attr(tmp, "tiepe"))) {
         if (is.numeric(tmp) || is.logical(tmp)) {
           attr(tmp, "tiepe") <- "fixed"
@@ -629,7 +629,7 @@ lav_parse_modifier_open <- function(formul1, lhs, opi, modelsrc, types,
                      footer = tl[2L]
         )
       }
-    } else {
+    } else if (config$modifiers$expect[mdind] == "num") {
       if (!is.numeric(modifier) && !all(is.na(modifier))) {
         tl <- lav_parse_txtloc(modelsrc, formul1$elem_pos[opi + 1L])
         lav_msg_stop(gettextf("invalid %s modifier (should be numeric)", mdtype),
@@ -642,6 +642,26 @@ lav_parse_modifier_open <- function(formul1, lhs, opi, modelsrc, types,
     names(modifierlist) <- attr(modifier, "tiepe")
     modifierlist
   }
+}
+
+# -------------------- create environment for evaluating modifiers ----------- #
+lav_parse_modenv <- function(config, side) {
+  modenv <- new.env()
+  for (j in which(config$modifiers$side == side)) {
+    mod1 <- config$modifiers$mod[j]
+    src <- paste0("assign('", mod1, "', function(...) {\n",
+    if (config$modifiers$expect[j] == "raw") {
+      "x <- sub('^.*?\\\\(', '', sub('\\\\)$', '', deparse(sys.call())))\n"
+    } else {
+      "x <- do.call('c', args = list(...))\n"
+    },
+    "attr(x, 'tiepe') <- '", mod1, "'\n",
+    "x\n}, modenv)")
+    source(exprs = str2expression(src), local = TRUE)
+  }
+  # equal is synonym for label
+  if (side == "r") assign("equal", modenv$label, modenv)
+  modenv
 }
 
 # -------------------- main parsing function --------------------------------- #
@@ -659,16 +679,8 @@ lav_parse_model_string_open <- function(model_syntax = "",
     return(get(hashstring, envir = lavaan_cache_env))
   }
   config <- lav_parse_options()
-  modenv <- new.env()
-  for (j in which(config$modifiers$side == "r")) {
-    mod1 <- config$modifiers$mod[j]
-    src <- paste0("assign('", mod1, "', function(...) {\n",
-    "x <- do.call('c', args = list(...))\n",
-    "attr(x, 'tiepe') <- '", mod1, "'\n",
-    "x\n}, modenv)")
-    source(exprs = str2expression(src), local = TRUE)
-  }
-  assign("equal", modenv$label, modenv) # equal is synonym for label
+  modenvl <- lav_parse_modenv(config, "l")
+  modenvr <- lav_parse_modenv(config, "r")
   types <- lav_create_enum(c(
     "identifier", "numliteral", "stringliteral",
     "symbol", "lavaanoperator", "newline"
@@ -930,14 +942,14 @@ lav_parse_model_string_open <- function(model_syntax = "",
       if (opi > 2 && rmei == 1L) {
         lhsmod <- lav_parse_modifier_open(
           formul1,
-          TRUE, opi, modelsrc, types, modenv = modenv
+          TRUE, opi, modelsrc, types, modenv = modenvl
         )
       }
       rhsmod <- list()
       if (nelem - opi > 1) {
         rhsmod <- lav_parse_modifier_open(
           formul1,
-          FALSE, opi, modelsrc, types, rme, rmeprev, modenv = modenv
+          FALSE, opi, modelsrc, types, rme, rmeprev, modenv = modenvr
         )
       }
       for (j in seq_along(config$modifiers$mod)) {
