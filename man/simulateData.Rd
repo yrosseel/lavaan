@@ -13,7 +13,7 @@ lav_data_simulate_old(model = NULL, model.type = "sem", meanstructure = FALSE,
     auto.fix.single = FALSE, auto.var = TRUE, auto.cov.lv.x = TRUE, 
     auto.cov.y = TRUE, ..., sample.nobs = 500L, ov.var = NULL, 
     group.label = paste("G", 1:ngroups, sep = ""), skewness = NULL, 
-    kurtosis = NULL, seed = NULL, empirical = FALSE, 
+    kurtosis = NULL, seed = NULL, empirical = FALSE, mass = FALSE,
     return.type = "data.frame", return.fit = FALSE,
     debug = FALSE, standardized = FALSE)
 lavSimulateData(model = NULL, model.type = "sem", meanstructure = FALSE, 
@@ -24,7 +24,7 @@ lavSimulateData(model = NULL, model.type = "sem", meanstructure = FALSE,
     auto.fix.single = FALSE, auto.var = TRUE, auto.cov.lv.x = TRUE, 
     auto.cov.y = TRUE, ..., sample.nobs = 500L, ov.var = NULL, 
     group.label = paste("G", 1:ngroups, sep = ""), skewness = NULL, 
-    kurtosis = NULL, seed = NULL, empirical = FALSE, 
+    kurtosis = NULL, seed = NULL, empirical = FALSE, mass = FALSE,
     return.type = "data.frame", return.fit = FALSE,
     debug = FALSE, standardized = FALSE)
 simulateData(model = NULL, model.type = "sem", meanstructure = FALSE, 
@@ -35,7 +35,7 @@ simulateData(model = NULL, model.type = "sem", meanstructure = FALSE,
     auto.fix.single = FALSE, auto.var = TRUE, auto.cov.lv.x = TRUE, 
     auto.cov.y = TRUE, ..., sample.nobs = 500L, ov.var = NULL, 
     group.label = paste("G", 1:ngroups, sep = ""), skewness = NULL, 
-    kurtosis = NULL, seed = NULL, empirical = FALSE, 
+    kurtosis = NULL, seed = NULL, empirical = FALSE, mass = FALSE,
     return.type = "data.frame", return.fit = FALSE,
     debug = FALSE, standardized = FALSE)
 }
@@ -111,6 +111,9 @@ simulateData(model = NULL, model.type = "sem", meanstructure = FALSE,
 \item{seed}{Set random seed.}
 \item{empirical}{Logical. If \code{TRUE}, the implied moments (Mu and Sigma)
     specify the empirical not population mean and covariance matrix.}
+\item{mass}{Logical. If \code{TRUE}, use the mvrnorm() function from the
+    MASS package (the default before 0.7-1) instead of the internal
+    lav_mvrnorm() function.}
 \item{return.type}{If \code{"data.frame"}, a data.frame is returned. If
     \code{"matrix"}, a numeric matrix is returned (without any variable names).
     If \code{"cov"}, a covariance matrix is returned (without any variable 
