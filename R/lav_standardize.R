@@ -167,13 +167,14 @@ lav_standardize_lv <- function(lavobject = NULL,
 
     if (is.null(lv_var)) {
       eta2 <- diag(lv_eta[[g]])
+      eeta <- lv_eeta[[g]]
     } else {
       eta2 <- lv_var[[g]]
+      eeta <- numeric(length(eta2))
     }
     # change negative values to NA
     eta2[eta2 < 0] <- as.numeric(NA)
     eta <- sqrt(eta2)
-    eeta <- lv_eeta[[g]]
 
     # Interaction/quadratic term correction (FV)
     # (based on Kelava & Brandt, 2022; Brandt et al., 2015)
@@ -700,7 +701,6 @@ lav_standardize_all_nox <- function(lavobject = NULL,
       lavpartable = lavpartable
     )
   }
-
 
   out <- est_std
   n <- length(est_std)
