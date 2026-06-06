@@ -33,6 +33,7 @@ lav_data_simulate_old <- function( # user-specified model    # nolint start
                          # control
                          seed = NULL,
                          empirical = FALSE,
+                         mass = FALSE,
                          return.type = "data.frame",
                          return.fit = FALSE,
                          debug = FALSE,
@@ -289,19 +290,28 @@ lav_data_simulate_old <- function( # user-specified model    # nolint start
 
     # Using sign-invariant method for cross-machine reproducibility
     if (is.null(skewness) && is.null(kurtosis)) {
-      x[[g]] <- lav_mvrnorm(
-        n = sample.nobs[g],
-        mu = mu_hat[[g]],
-        sigma_1 = cov_1,
-        empirical = empirical
-      )
+      if (mass) {
+        x[[g]] <- MASS::mvrnorm(
+          n = sample.nobs[g],
+          mu = mu_hat[[g]],
+          Sigma = cov_1,
+          empirical = empirical
+        )
+      } else {
+        x[[g]] <- lav_mvrnorm(
+          n = sample.nobs[g],
+          mu = mu_hat[[g]],
+          sigma_1 = cov_1,
+          empirical = empirical
+        )
+      }
     } else {
       # first generate Z
       z <- lav_data_valemaurelli1983(
         n = sample.nobs[g],
         cor_1 = cov2cor(cov_1),
         skewness = skewness, # FIXME: per group?
-        kurtosis = kurtosis
+        kurtosis = kurtosis, mass = mass
       )
       # rescale
       # Note: 'scale()' will first center, and then scale
@@ -373,7 +383,8 @@ lavSimulateData <- lav_data_simulate_old  # synonym #nolint
 
 
 
-lav_data_valemaurelli1983 <- function(n = 100L, cor_1, skewness, kurtosis) {
+lav_data_valemaurelli1983 <- function(n = 100L, cor_1, skewness, kurtosis,
+                                      mass = FALSE) {
   fleishman1978_abcd <- function(skewness, kurtosis) {
     system_function <- function(x, skewness, kurtosis) {
       b <- x[1L]
@@ -404,7 +415,7 @@ lav_data_valemaurelli1983 <- function(n = 100L, cor_1, skewness, kurtosis) {
     c(a, b, c_1, d)
   }
 
-get_icov <- function(b1, c1, d1, b2, c2, d2, r) {
+  get_icov <- function(b1, c1, d1, b2, c2, d2, r) {
     objective_function <- function(x, b1, c1, d1, b2, c2, d2, r) {
       rho <- x[1L]
       eq <- rho * (b1 * b2 + 3 * b1 * d2 + 3 * d1 * b2 + 9 * d1 * d2) +
@@ -479,7 +490,11 @@ get_icov <- function(b1, c1, d1, b2, c2, d2, r) {
   }
 
   # generate Z (using sign-invariant method for cross-machine reproducibility)
-  x <- z <- lav_mvrnorm(n = n, mu = rep(0, nvar), sigma_1 = icor)
+  if (mass) {
+    x <- z <- MASS::mvrnorm(n = n, mu = rep(0, nvar), Sigma = icor)
+  } else {
+    x <- z <- lav_mvrnorm(n = n, mu = rep(0, nvar), sigma_1 = icor)
+  }
 
   # transform Z using Fleishman constants
   for (i in 1:nvar) {

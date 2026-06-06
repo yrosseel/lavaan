@@ -78,6 +78,7 @@ simulateData <- function(
                          skewness = NULL,
                          kurtosis = NULL,
                          seed = NULL,
+                         mass = FALSE,
                          empirical = FALSE,
                          return.type = "data.frame",
                          return.fit = FALSE,
