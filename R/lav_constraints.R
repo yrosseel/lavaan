@@ -22,6 +22,13 @@ lav_con_parse <- function(partable = NULL, constraints = NULL,
     theta <- rep(0, length(partable$lhs))
   }
 
+  # note: avoid zero values in theta (so jac is not all null)
+  # (eg, regression coefficients are often zero in partable$start)
+  zero_theta_idx <- which(theta == 0)
+  if (length(zero_theta_idx) > 0L) {
+    theta[zero_theta_idx] <- rnorm(length(zero_theta_idx), 0, 0.1)
+  }
+
   # number of free (but possibly constrained) parameters
   npar <- length(theta)
 
@@ -151,7 +158,7 @@ lav_con_parse <- function(partable = NULL, constraints = NULL,
     cin_theta <- numeric(0L)
   }
 
-  # check for empty/unused constraints (new in 0.6-22)
+  # check for empty/unused constraints (new in 0.7-1)
   if (nrow(ceq_jac) > 0L) {
     if (all(ceq_jac == 0)) {
       ceq_jac <- matrix(0, nrow = 0L, ncol = npar)
