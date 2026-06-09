@@ -119,28 +119,6 @@ lav_parse_options <- function(
   config
 }
 
-# ------------------------ lav_parse_eval_r_expr_open ------------------- #
-# help function to evaluate the value of an r expression formed by the elements
-# with index 'from' to 'to' of a formula 'formul1'
-# returns "_error_" if evaluation failed
-# used only in lav_parse_modifier_open
-# ---------------------------------------------------------------------------- #
-lav_parse_eval_r_expr_open <- function(formul1, from, to, types, raw = FALSE) {
-  strings <- vapply(seq.int(from, to), function(x) {
-    if (formul1$elem_type[x] == types$stringliteral) {
-     dQuote(formul1$elem_text[x], q = FALSE)
-    } else {
-      formul1$elem_text[x]
-    }
-  }, "")
-  txt <- paste(strings, collapse = "")
-  if (raw) return(txt)
-  tryCatch(eval(parse(text = txt),
-                     envir = NULL,
-                     enclos = baseenv()
-  ), error = function(e) "_error_")
-}
-
 # ------------------------ lav_parse_tokens_open ----------------------------- #
 # function to split the model source in tokens.
 # Returns a list with tokens with their attributes
@@ -548,7 +526,7 @@ lav_parse_modifier_open <- function(formul, opi, modelsrc, types,
   }
   formul1 <- lav_parse_sublist(formul, welke)
   nelem <- length(formul1$elem_type)
-  opi <- which(formul1$elem_type == types$lavaanoperator)
+  opi <- which(formul1$elem_type == types$lavaanoperator)[1L]
   # remove unnecessary parentheses (one element between parentheses, previous
   # no identifier)
   check_more <- TRUE
