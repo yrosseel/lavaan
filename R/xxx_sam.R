@@ -1,7 +1,11 @@
-
-# fsr = wrapper for local sam
-# TODO
-
+# sam: fit a SEM in two (or more) steps: Structural After Measurement
+#
+# sam.method = "local"  : compute (corrected) VETA/EETA per block, and use
+#                         these summary statistics to fit the structural part
+# sam.method = "global" : fix the measurement parameters, and estimate the
+#                         structural parameters in the full (joint) model
+# sam.method = "fsr"    : naive (uncorrected) factor score regression
+# sam.method = "cfsr"   : Croon-corrected factor score regression
 
 sam <- function(model = NULL,                      # nolint start
                 data = NULL,
@@ -40,8 +44,9 @@ sam <- function(model = NULL,                      # nolint start
   # check sam.method
   sam_method <- tolower(sam.method)
   if (!sam_method %in% c("local", "global", "fsr", "cfsr")) {
-    lav_msg_stop(gettextf("unknown option for sam_method: [%s]",
-                          "available options are local, global, fsr and cfsr."))
+    lav_msg_stop(gettextf(
+      "unknown option for sam.method: [%s]; available options are
+       local, global, fsr and cfsr.", sam.method))
   }
 
   # ------------- handling of warn/debug/verbose switches ----------
@@ -69,14 +74,6 @@ sam <- function(model = NULL,                      # nolint start
         on.exit(lav_verbose(current_verbose), TRUE)
       dotdotdot$verbose <- NULL
     }
-    # check for conditional.x= argument
-    # if (!sam_method == "global" && !is.null(dotdotdot$conditional.x) &&
-    #     dotdotdot$conditional.x) {
-    #   lav_msg_warn(gettext(
-    #     "local sam() does not support conditional.x = TRUE (yet) ->
-    #             switching to conditional.x = FALSE"))
-    #   dotdotdot$conditional.x <- FALSE
-    # }
     # check for orthogonal= argument
     if (!is.null(dotdotdot$orthogonal) &&
         dotdotdot$orthogonal &&
@@ -90,13 +87,10 @@ sam <- function(model = NULL,                      # nolint start
 
   # check output= argument
   output <- tolower(output)
-  if (output %in% c("list", "list.step1.only", "lavaan")) {
-    # nothing to do
-  } else {
-    lav_msg_stop(gettext("output should be \"list\" or \"lavaan.\""))
+  if (!output %in% c("list", "list.step1.only", "lavaan")) {
+    lav_msg_stop(gettext(
+      "output should be \"lavaan\", \"list\" or \"list.step1.only\"."))
   }
-
-  #
 
   # check se= argument
   if (!missing(se)) {
@@ -159,9 +153,7 @@ sam <- function(model = NULL,                      # nolint start
     }
     if (missing(sam.method)) {
       sam_method <- fit@internal$sam.method
-    } else {
-      sam_method <- sam.method
-    }
+    } # else: sam_method already holds the validated sam.method
     if (missing(local.options)) {
       local_options <- fit@internal$sam.local.options
     } else {
@@ -188,7 +180,6 @@ sam <- function(model = NULL,                      # nolint start
     struc_args <- struc.args
     local_options <- local.options
     global_options <- global.options
-    sam_method <- sam.method
     fit <- lav_sam_step0(
       cmd = cmd, model = model, data = data, se = se,
       sam_method = sam_method, dotdotdot = dotdotdot
@@ -238,9 +229,6 @@ sam <- function(model = NULL,                      # nolint start
   ##############################################
   # STEP 1: fit each measurement model (block) #
   ##############################################
-  if (lav_verbose()) {
-    cat("Fitting the measurement part:\n")
-  }
   step1 <- lav_sam_step1(
     cmd = cmd, mm_list = mm_list, mm_args = mm_args,
     fit = fit, sam_method = sam_method
@@ -381,16 +369,10 @@ sam <- function(model = NULL,                      # nolint start
     cat("done.\n")
   }
 
-  ##############################################
-  # Step 4: compute standard errors for step 2 #
-  ##############################################
-
-  if (lavoptions$se == "bootstrap") {
-    if (lav_verbose()) {
-      cat("computing VCOV for      se = bootstrap ...")
-    }
-    # construct temporary sam object, so that lav_bootstrap_internal() can
-    # use it
+  # assemble the extra information for the @internal slot
+  # (needed for output = "lavaan", and for se = "bootstrap", where
+  #  lav_bootstrap_internal() needs a full sam object)
+  if (output == "lavaan" || lavoptions$se == "bootstrap") {
     sam_1 <- lav_sam_table(
       joint = joint, step1 = step1,
       fit_pa = step2$FIT.PA,
@@ -401,38 +383,26 @@ sam <- function(model = NULL,                      # nolint start
       local_options = local_options,
       global_options = global_options
     )
+  }
+
+  ##############################################
+  # Step 4: compute standard errors for step 2 #
+  ##############################################
+
+  if (lavoptions$se == "bootstrap") {
+    if (lav_verbose()) {
+      cat("computing VCOV for      se = bootstrap ...")
+    }
+    # construct temporary sam object, so that lav_bootstrap_internal() can
+    # use it
     sam_object <- joint
     sam_object@internal <- sam_1
-    default_args <- list(R = 1000L, type = "ordinary",
-                         show.progress = FALSE,
-                         check.post = TRUE, keep.idx = FALSE)
-    this_args <- modifyList(default_args, bootstrap)
-    coef_1 <- lav_bootstrap_internal(object = sam_object,
-      r = this_args$R, show_progress = this_args$show.progress,
-      type = this_args$type, fun = "coef",
-      check_post = this_args$check.post, keep_idx = this_args$keep.idx)
-    coef_orig <- coef_1
-    error_idx <- attr(coef_1, "error.idx")
-    nfailed <- length(error_idx) # zero if NULL
-    if (nfailed > 0L) {
-      lav_msg_warn(gettextf(
-        "%s bootstrap runs failed or did not converge.", nfailed))
-    }
-    notok <- length(attr(coef_1, "nonadmissible")) # zero if NULL
-    if (notok > 0L) {
-      lav_msg_warn(gettextf(
-        "%s bootstrap runs resulted in nonadmissible solutions.", notok))
-    }
-    if (length(error_idx) > 0L) {
-      # new in 0.6-13: we must still remove them!
-      coef_1 <- coef_1[-error_idx, , drop = FALSE]
-      # this also drops the attributes
-    }
-    nboot <- nrow(coef_1)
-    var_cov <- cov(coef_1) * (nboot - 1) / nboot
-    joint@boot$coef <- coef_orig
-    joint@Options$bootstrap <- this_args$R
-    vcov_1 <- list(se = "bootstrap", VCOV = var_cov)
+    boot_out <- lav_sam_step2_se_bootstrap(
+      sam_object = sam_object, bootstrap = bootstrap
+    )
+    joint@boot$coef <- boot_out$boot.coef
+    joint@Options$bootstrap <- boot_out$R
+    vcov_1 <- list(se = "bootstrap", VCOV = boot_out$VCOV)
 
     if (lav_verbose()) {
       cat("done.\n")
@@ -488,16 +458,6 @@ sam <- function(model = NULL,                      # nolint start
     if (lav_verbose()) {
       cat("Assembling results for output ... ")
     }
-    sam_1 <- lav_sam_table(
-      joint = joint, step1 = step1,
-      fit_pa = step2$FIT.PA,
-      cmd = cmd, lavoptions = fit@Options,
-      mm_args = mm_args,
-      struc_args = struc_args,
-      sam_method = sam_method,
-      local_options = local_options,
-      global_options = global_options
-    )
     res <- joint
     mc_keep <- joint@internal$monte.carlo
     res@internal <- sam_1

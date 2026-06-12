@@ -18,26 +18,20 @@ lav_sam_step0 <- function(cmd = "sem", model = NULL, data = NULL,
   dotdotdot0$se                   <- "none"
   dotdotdot0$test                 <- "none"
   dotdotdot0$verbose              <- FALSE # no output for this 'dummy' FIT
-  # if (sam.method != "global") {
-  #   dotdotdot0$conditional.x        <- FALSE
-  # }
-  #dotdotdot0$fixed.x              <- TRUE
   dotdotdot0$ceq.simple           <- TRUE # if not the default yet
   dotdotdot0$check.lv.interaction <- FALSE # we allow for it
-  # dotdotdot0$cat.wls.w            <- FALSE # no weight matrix if categorical
-  # note: this breaks the computation of twostep standard errors...
+  # note: setting cat.wls.w = FALSE (no weight matrix if categorical)
+  # would break the computation of twostep standard errors
   if (se %in% c("local", "ij", "twostep.robust")) {
     dotdotdot0$sample.icov <- TRUE
     dotdotdot0$NACOV <- TRUE
-    #dotdotdot0$gamma.unbiased <- TRUE
     dotdotdot0$fixed.x <- FALSE
     dotdotdot0$ov_order <- "force.model" # avoid data ordering...
   }
 
   # any lv interaction terms?
   if (length(lav_object_vnames(flat_model, "lv.interaction")) > 0L) {
-    dotdotdot0$meanstructure   <- TRUE
-    #dotdotdot0$marker.int.zero <- FALSE # or not?
+    dotdotdot0$meanstructure <- TRUE
   }
 
   # initial processing of the model, no fitting
@@ -53,7 +47,6 @@ lav_sam_step0 <- function(cmd = "sem", model = NULL, data = NULL,
 
   # do.fit
   fit@Options$do.fit <- TRUE
-  # FIT@Options$cat.wls.w <- TRUE
 
   # sample.icov
   if (sam_method %in% c("local", "fsr", "cfsr")) {

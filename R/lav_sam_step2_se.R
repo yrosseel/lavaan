@@ -10,6 +10,55 @@
 # 3) se = "naive": grab (naive) VCOV from FIT.PA
 # 4) se = "local": grab (robust) VCOV from FIT.PA
 
+# se = "bootstrap": bootstrap the whole two-step procedure, and compute
+# the vcov of the (combined step 1 + step 2) coefficients
+lav_sam_step2_se_bootstrap <- function(sam_object = NULL, bootstrap = list()) {
+  default_args <- list(R = 1000L, type = "ordinary",
+                       show.progress = FALSE,
+                       check.post = TRUE, keep.idx = FALSE)
+  this_args <- modifyList(default_args, bootstrap)
+  coef_1 <- lav_bootstrap_internal(object = sam_object,
+    r = this_args$R, show_progress = this_args$show.progress,
+    type = this_args$type, fun = "coef",
+    check_post = this_args$check.post, keep_idx = this_args$keep.idx)
+  coef_orig <- coef_1
+  error_idx <- attr(coef_1, "error.idx")
+  nfailed <- length(error_idx) # zero if NULL
+  if (nfailed > 0L) {
+    lav_msg_warn(gettextf(
+      "%s bootstrap runs failed or did not converge.", nfailed))
+  }
+  notok <- length(attr(coef_1, "nonadmissible")) # zero if NULL
+  if (notok > 0L) {
+    lav_msg_warn(gettextf(
+      "%s bootstrap runs resulted in nonadmissible solutions.", notok))
+  }
+  if (length(error_idx) > 0L) {
+    # new in 0.6-13: we must still remove them!
+    coef_1 <- coef_1[-error_idx, , drop = FALSE]
+    # this also drops the attributes
+  }
+  nboot <- nrow(coef_1)
+  var_cov <- cov(coef_1) * (nboot - 1) / nboot
+
+  list(VCOV = var_cov, boot.coef = coef_orig, R = this_args$R)
+}
+
+# grab the 'naive' vcov from FIT.PA (computing it if absent), removing
+# any rows/cols in step2_rm_idx
+lav_sam_step2_se_vcov_pa <- function(fit_pa, step2_rm_idx = integer(0L)) {
+  if (is.null(fit_pa@vcov$vcov)) {
+    fit_pa@Options$se <- "standard"
+    vcov_pa <- lavTech(fit_pa, "vcov")
+  } else {
+    vcov_pa <- fit_pa@vcov$vcov
+  }
+  if (length(step2_rm_idx) > 0L) {
+    vcov_pa <- vcov_pa[-step2_rm_idx, -step2_rm_idx]
+  }
+  vcov_pa
+}
+
 lav_sam_step2_se <- function(fit = NULL, joint = NULL,
                              step1 = NULL, step2 = NULL,
                              local_options = list()) {
@@ -117,15 +166,9 @@ lav_sam_step2_se <- function(fit = NULL, joint = NULL,
     }
   } # se needs I.22.inv
 
-  # method below has the advantage that we can use a 'robust' vcov
-  # for the joint model;
-  # but does not work if we have equality constraints in the MM!
-  # -> D will be singular
-  # A <- JOINT@vcov$vcov[ step2.free.idx,  step2.free.idx]
-  # B <- JOINT@vcov$vcov[ step2.free.idx, -step2.free.idx]
-  # C <- JOINT@vcov$vcov[-step2.free.idx,  step2.free.idx]
-  # D <- JOINT@vcov$vcov[-step2.free.idx, -step2.free.idx]
-  # I.22.inv <- A - B %*% solve(D) %*% C
+  # note: computing I.22.inv as a Schur complement of JOINT@vcov$vcov
+  # would allow a 'robust' vcov for the joint model, but does not work if
+  # we have equality constraints in the MM (the (1,1) block is singular)
 
   # se = "standard"
   if (lavoptions$se == "standard") {
@@ -134,15 +177,7 @@ lav_sam_step2_se <- function(fit = NULL, joint = NULL,
 
   # se = "naive" or "local": grab VCOV directly from FIT.PA
   } else if (lavoptions$se %in% c("naive", "local", "local.nt")) {
-    if (is.null(fit_pa@vcov$vcov)) {
-      fit_pa@Options$se <- "standard"
-      vcov_1 <- lavTech(fit_pa, "vcov")
-    } else {
-      vcov_1 <- fit_pa@vcov$vcov
-    }
-    if (length(step2_rm_idx) > 0L) {
-      vcov_1 <- vcov_1[-step2_rm_idx, -step2_rm_idx]
-    }
+    vcov_1 <- lav_sam_step2_se_vcov_pa(fit_pa, step2_rm_idx)
     # order rows/cols of VCOV, so that they correspond with the (step 2)
     # parameters of the JOINT model, but remove := parameters first
     pt_idx <- step2$pt.idx
@@ -177,12 +212,20 @@ lav_sam_step2_se <- function(fit = NULL, joint = NULL,
       # following Yuan & Chan 2002, eqs 4, 10, 11, 12, 13 and 14
       # but for V11, V12, V21, V22: we use index '1' for step1, and '2'
       # for step 2!!
-
-      # a <- -1 * info[step2_free_idx, step2_free_idx, drop = FALSE]
       m_b <- -1 * info[step2_free_idx, step1_free_idx, drop = FALSE]
 
       # get P (for a single group!! for now)
       p <- lav_sam_step1_local_jac(step1 = step1, fit = fit, p_only = TRUE)
+      # align the rows of P with step1.free.idx: the rows of P are in
+      # ascending free-parameter order, while step1.free.idx (and hence
+      # m_b below) is ordered per measurement block
+      p_row_idx <- match(step1_free_idx, attr(p, "free.idx"))
+      if (anyNA(p_row_idx)) {
+        lav_msg_stop(gettext(
+          "internal error: unable to align the step 1 jacobian (P) with
+           the step 1 free parameters"))
+      }
+      p <- p[p_row_idx, , drop = FALSE]
 
       # get V22
       if (is.null(joint@SampleStats@NACOV[[1]])) {
@@ -195,26 +238,25 @@ lav_sam_step2_se <- function(fit = NULL, joint = NULL,
         lavoptions = joint@Options, use_ginv = FALSE,
         attr_delta = TRUE, attr_t_dvgvd = TRUE, attr_e_inv = TRUE,
         attr_wls_v = TRUE)
-      # nvar_cov <- tmp[, ] # remove attributes
       delta <- attr(tmp, "Delta")
-      # e_inv <- attr(tmp, "E.inv")
       wls_v <- attr(tmp, "WLS.V")
       t_dvgvd <- attr(tmp, "tDVGVD")
 
       v22 <- t_dvgvd[step2_free_idx, step2_free_idx, drop = FALSE] # ok
 
       # FIXME: for a single group only:
-      v11 <- p %*% lavTech(joint, "gamma")[[1]] %*% t(p)
-      v21 <- t(delta[[1]][, step2_free_idx]) %*% wls_v[[1]] %*%
-                                  lavTech(joint, "gamma")[[1]] %*% t(p)
+      gamma_1 <- lavTech(joint, "gamma")[[1]]
+      v11 <- p %*% gamma_1 %*% t(p)
+      if (is.matrix(wls_v[[1]])) {
+        wd <- wls_v[[1]] %*% delta[[1]][, step2_free_idx, drop = FALSE]
+      } else {
+        # DWLS/ULS: WLS.V holds the diagonal of the weight matrix
+        wd <- wls_v[[1]] * delta[[1]][, step2_free_idx, drop = FALSE]
+      }
+      v21 <- t(wd) %*% gamma_1 %*% t(p)
       v12 <- t(v21)
 
-      #V11 <- NVarCov[step1.free.idx, step1.free.idx, drop = FALSE]
-      #V21 <- tmp2[   step2.free.idx, step1.free.idx, drop = FALSE]
-      #PI <- V22 + B %*% V12 + V21 %*% t(B) + B %*% V11 %*% t(B)
-      #A.inv <- solve(A)
-      a_inv <-  -1 * i_22_inv
-      #VCOV <- A.inv %*% PI %*% t(A.inv)
+      a_inv <- -1 * i_22_inv
       v2 <- 1 / n * (a_inv %*% v22 %*% a_inv)
       v1 <- 1 / n * (a_inv %*%
         (m_b %*% v12 + v21 %*% t(m_b) + m_b %*% v11 %*% t(m_b)) %*% a_inv)
@@ -223,21 +265,8 @@ lav_sam_step2_se <- function(fit = NULL, joint = NULL,
     # V for second step
     if (!is.null(local_options$alpha.correction) &&
       local_options$alpha.correction > 0) {
-      alpha_n1 <- local_options$alpha.correction / (n - 1)
-      if (alpha_n1 > 1.0) {
-        alpha_n1 <- 1.0
-      } else if (alpha_n1 < 0.0) {
-        alpha_n1 <- 0.0
-      }
-      if (is.null(fit_pa@vcov$vcov)) {
-        fit_pa@Options$se <- "standard"
-        vcov_naive <- lavTech(fit_pa, "vcov")
-      } else {
-        vcov_naive <- fit_pa@vcov$vcov
-      }
-      if (length(step2_rm_idx) > 0L) {
-        vcov_naive <- vcov_naive[-step2_rm_idx, -step2_rm_idx]
-      }
+      alpha_n1 <- lav_sam_alpha_n1(local_options$alpha.correction, n)
+      vcov_naive <- lav_sam_step2_se_vcov_pa(fit_pa, step2_rm_idx)
       vcov_corrected <- v2 + v1
       vcov_1 <- alpha_n1 * vcov_naive + (1 - alpha_n1) * vcov_corrected
     } else {

@@ -1,7 +1,7 @@
 # step 1 in SAM: fitting the measurement blocks
 
 lav_sam_step1 <- function(cmd = "sem", mm_list = NULL, mm_args = list(),
-                          fit = fit, sam_method = "local") {
+                          fit = NULL, sam_method = "local") {
   lavoptions <- fit@Options
   lavpta <- fit@pta
   pt_1 <- fit@ParTable
@@ -11,22 +11,6 @@ lav_sam_step1 <- function(cmd = "sem", mm_list = NULL, mm_args = list(),
   if (lav_verbose()) {
     cat("Fitting the measurement part:\n")
   }
-
-  # local only -> handle missing data
-  # if (sam.method %in% c("local", "fsr")) {
-  #   # if missing = "listwise", make data complete, to avoid different
-  #   # datasets per measurement block
-  #   if (lavoptions$missing == "listwise") {
-  #     # FIXME: make this work for multiple groups!!
-  #     OV <- unique(unlist(FIT@pta$vnames$ov))
-  #     # add group/cluster/sample.weights variables (if any)
-  #     OV <- c(
-  #       OV, FIT@Data@group, FIT@Data@cluster,
-  #       FIT@Data@sampling.weights
-  #     )
-  #     data <- na.omit(data[, OV])
-  #   }
-  # }
 
   # total number of free parameters
   if (fit@Model@ceq.simple.only) {
@@ -43,25 +27,15 @@ lav_sam_step1 <- function(cmd = "sem", mm_list = NULL, mm_args = list(),
 
   # do we have at least 1 'regular' (measured) latent variable?
   lv_names <- unique(unlist(fit@pta$vnames$lv.regular))
-
-  # eqs_x <- unlist(fit@pta$vnames$eqs.x)
-  # eqs_y <- unlist(fit@pta$vnames$eqs.y)
-
-  #if (length(eqs.x) == 0L && length(eqs.y) == 0L) {
-  #  lav_msg_warn(gettext("the model does seem to contain a structural part
-  #                        (i.e., regressions); consider using sem() instead"))
-  #} else
   if (length(lv_names) == 0L) {
     lav_msg_warn(gettext("structural model does not contain any (measured)
                           latent variables; consider using sem() instead"))
   }
 
-  # check for higher-order factors
-  # 0.6-20: now we do!
+  # check for higher-order factors (supported since 0.6-20):
+  # remove the lower-order factors from lv_names
   lv_ind_names <- unique(unlist(fit@pta$vnames$lv.ind))
-  # lv_higherorder_flag <- FALSE
   if (length(lv_ind_names) > 0L) {
-    # lv_higherorder_flag <- TRUE
     lv_names <- lv_names[!lv_names %in% lv_ind_names]
   }
 
@@ -88,10 +62,15 @@ lav_sam_step1 <- function(cmd = "sem", mm_list = NULL, mm_args = list(),
       }
     }
   } else {
-    mm_list_per_block <- lav_sam_get_mmlist(fit)
-    # we get a list PER BLOCK
-    # for now, we only keep the first block
-    mm_list <- mm_list_per_block[[1]]
+    mm_list_per_block <- lav_sam_get_mmlist(fit) # we get a list PER BLOCK
+    if (fit@Data@nlevels > 1L) {
+      # multilevel: join the within and between clusters that share
+      # observed indicators into a single (two-level) measurement block
+      mm_list <- lav_sam_mmlist_merge_blocks(fit, mm_list_per_block)
+    } else {
+      # for now, we only keep the first block
+      mm_list <- mm_list_per_block[[1]]
+    }
     n_mmblocks <- length(mm_list)
   }
 
@@ -114,10 +93,7 @@ lav_sam_step1 <- function(cmd = "sem", mm_list = NULL, mm_args = list(),
       lavoptions_mm$se <- "standard" # may be overridden later
     }
   }
-  # if(sam.method == "global") {
-  #    lavoptions.mm$test <- "none"
-  # }
-  # we need the tests to create summary info about MM
+  # note: we keep the tests, as we need them for the summary info about MM
   lavoptions_mm$check.post <- FALSE # neg lv variances may be overridden
   lavoptions_mm$check.gradient <- FALSE # too sensitive in large model (global)
   lavoptions_mm$baseline <- FALSE
@@ -150,10 +126,11 @@ lav_sam_step1 <- function(cmd = "sem", mm_list = NULL, mm_args = list(),
 
   # NOTE: we should explicitly add zero-constrained LV covariances
   # to PT, and keep them zero in PTM
-  if (cmd == "lavaan") {
-    add_lv_cov <- FALSE
-  } else {
-    add_lv_cov <- TRUE
+  add_lv_cov <- cmd != "lavaan"
+
+  # if data.type == "moment", we need the h1 sample statistics (per group)
+  if (fit@Data@data.type == "moment") {
+    h1_all <- lavTech(fit, "h1", add.labels = TRUE)
   }
 
   # fit mm model for each measurement block
@@ -199,47 +176,42 @@ lav_sam_step1 <- function(cmd = "sem", mm_list = NULL, mm_args = list(),
         lapply(seq_len(nblocks), function(x) NULL)
     }
 
-    # if data.type == "moment", (re)create sample.cov and sample_nobs
+    # if data.type == "moment", (re)create sample.cov and sample.nobs
     if (fit@Data@data.type == "moment") {
+      mm_sample_mean <- NULL
       if (ngroups == 1L) {
-        mm_sample_cov <- lavInspect(fit, "h1")$cov
-        mm_sample_mean <- NULL
+        mm_sample_cov <- h1_all[[1L]]$cov
         if (fit@Model@meanstructure) {
-          mm_sample_mean <- lavInspect(fit, "h1")$mean
+          mm_sample_mean <- h1_all[[1L]]$mean
         }
         mm_sample_nobs <- fit@SampleStats@nobs[[1L]]
       } else {
-        cov_list <- lapply(lavTech(fit, "h1", add.labels = TRUE),
-                           "[[", "cov")
-        mm_sample_cov <- lapply(seq_len(ngroups),
-          function(x) cov_list[[x]][ov_names_block[[x]], ov_names_block[[x]]])
-        mm_sample_mean <- NULL
+        mm_sample_cov <- lapply(seq_len(ngroups), function(x) {
+          h1_all[[x]]$cov[ov_names_block[[x]], ov_names_block[[x]]]
+        })
         if (fit@Model@meanstructure) {
-          mean_list <- lapply(lavTech(fit, "h1", add.labels = TRUE),
-                           "[[", "mean")
-          mm_sample_mean <- lapply(seq_len(ngroups),
-            function(x) mean_list[[x]][ov_names_block[[x]]])
+          mm_sample_mean <- lapply(seq_len(ngroups), function(x) {
+            h1_all[[x]]$mean[ov_names_block[[x]]]
+          })
         }
         mm_sample_nobs <- fit@SampleStats@nobs
       }
     }
 
-
     # handle single block 1-factor CFA with (only) two indicators
     if (length(unlist(ov_names_block)) == 2L && ngroups == 1L) {
       lambda_idx <- which(ptm$op == "=~")
-    # check if both factor loadings are fixed
-    # (note: this assumes std.lv = FALSE)
-    if (any(ptm$free[lambda_idx] != 0)) {
+      # check if both factor loadings are fixed
+      # (note: this assumes std.lv = FALSE)
+      if (any(ptm$free[lambda_idx] != 0)) {
         ptm$free[lambda_idx] <- 0L
         ptm$ustart[lambda_idx] <- 1
         ptm$start[lambda_idx] <- 1
+        # adjust free counter
         free_idx <- which(as.logical(ptm$free))
-    # adjust free counter
         if (length(free_idx) > 0L) {
           ptm$free[free_idx] <- seq_along(free_idx)
         }
-    # warn about it (needed?)
         lav_msg_warn(gettextf(
           "measurement block [%1$s] (%2$s) contains only two indicators;
           -> fixing both factor loadings to unity",
@@ -277,10 +249,8 @@ lav_sam_step1 <- function(cmd = "sem", mm_list = NULL, mm_args = list(),
 
     # fill in point estimates measurement block (including slack values)
     ptm <- mm_fit[[mm]]@ParTable
-    # pt.idx: the row-numbers in PT that correspond to the rows in PTM
-    # pt.idx <- lav_pt_map_id_p1_in_p2(p1 = PTM, p2 = PT,
-    #             stopifnotfound = TRUE, exclude.nonpar = FALSE)
-    # pt.idx == mm.idx
+    # note: the row-numbers in PT that correspond to the rows in PTM
+    # are given by mm_idx
     ptm_idx <- which((ptm$free > 0L | ptm$op %in% c(":=", "<", ">")) &
       ptm$user != 3L)
     block_ptm_idx[[mm]] <- ptm_idx
@@ -306,32 +276,21 @@ lav_sam_step1 <- function(cmd = "sem", mm_list = NULL, mm_args = list(),
     # add step1.free.idx
     par_idx <- pt_free[mm_idx[ptm_idx]]
     # store (ordered) indices in step1.free.idx
-    this_mm_idx <- sort.int(par_idx)
-    step1_free_idx <- c(step1_free_idx, this_mm_idx) # all combined
-
+    step1_free_idx <- c(step1_free_idx, sort.int(par_idx)) # all combined
 
     # fill in standard errors measurement block
     if (!lavoptions$se %in% c("none", "bootstrap")) {
+      ptm_free <- ptm$free
       if (fit_mm_block@Model@ceq.simple.only) {
-        ptm_free <- ptm$free
         ptm_free[ptm_free > 0] <- seq_len(fit_mm_block@Model@nx.unco)
-      } else {
-        ptm_free <- ptm$free
       }
 
       ptm_se_idx <- which((ptm$free > 0L) & ptm$user != 3L) # no :=, <, >
-      # PT$se[ seq_len(length(PT$lhs)) %in% mm.idx & PT$free > 0L ] <-
-      #    PTM$se[ PTM$free > 0L & PTM$user != 3L]
       pt_1$se[mm_idx[ptm_se_idx]] <- ptm$se[ptm_se_idx]
 
-      # compute variance matrix for this measurement block
+      # fill in variance matrix for this measurement block
       sigma_11 <- mm_fit[[mm]]@vcov$vcov
-
-      # fill in variance matrix
       keep_idx <- ptm_free[ptm_idx]
-      # par.idx <- PT.free[ seq_len(length(PT$lhs)) %in% mm.idx &
-      #                    PT$free > 0L ]
-      # keep.idx <- PTM.free[ PTM$free > 0 & PTM$user != 3L ]
       sigma_11_1[par_idx, par_idx] <-
         sigma_11[keep_idx, keep_idx, drop = FALSE]
     }

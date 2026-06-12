@@ -408,7 +408,14 @@ lav_pt_subset_structural_model <- function(pt_1 = NULL,
       lavpta$vnames$eqs.y[[g]]
     ))
     if (length(eqs_names) == 0L) { # no structural model
+      # only the latent variances/covariances are 'structural'; in the
+      # higher-order setting, the lower-order factors (lv.ind) belong to
+      # the measurement part
       eqs_names <- lv_names[[g]]
+      lv_ind <- lavpta$vnames$lv.ind[[g]]
+      if (length(lv_ind) > 0L) {
+        eqs_names <- eqs_names[!eqs_names %in% lv_ind]
+      }
     }
     # all.names <- unique(c(
     #   eqs.names,

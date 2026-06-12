@@ -8,11 +8,8 @@ lav_sam_step2 <- function(step1 = NULL, fit = NULL,
   pt_1 <- step1$PT
 
   # Gamma available?
-  gamma_flag <- FALSE
-  if (sam_method %in% c("local", "fsr", "cfsr") &&
-      !is.null(step1$Gamma.eta[[1]])) {
-    gamma_flag <- TRUE
-  }
+  gamma_flag <- (sam_method %in% c("local", "fsr", "cfsr") &&
+                 !is.null(step1$Gamma.eta[[1]]))
 
   lv_names <- unique(unlist(fit@pta$vnames$lv.regular))
 
@@ -27,7 +24,6 @@ lav_sam_step2 <- function(step1 = NULL, fit = NULL,
     # twostep or none -> none
     lavoptions_pa$se <- "none"
   }
-  # lavoptions.PA$fixed.x <- TRUE # may be false if indicator is predictor
   if (!lavoptions_pa$conditional.x) {
     lavoptions_pa$fixed.x <- FALSE # until we fix this...
   }
@@ -47,16 +43,11 @@ lav_sam_step2 <- function(step1 = NULL, fit = NULL,
   if (sam_method %in% c("local", "fsr", "cfsr")) {
     lavoptions_pa$missing <- "listwise"
     lavoptions_pa$sample.cov.rescale <- FALSE
-    # lavoptions.PA$baseline <- FALSE
-    # lavoptions.PA$h1 <- FALSE
-    # lavoptions.PA$implied <- FALSE
     lavoptions_pa$loglik <- FALSE
   } else {
     lavoptions_pa$h1 <- FALSE
-    # lavoptions.PA$implied <- FALSE
     lavoptions_pa$loglik <- FALSE
   }
-
 
   # construct PTS
   if (sam_method %in% c("local", "fsr", "cfsr")) {
@@ -89,23 +80,6 @@ lav_sam_step2 <- function(step1 = NULL, fit = NULL,
     } else {
       nobs_1 <- fit@Data@nobs
     }
-
-    # if meanstructure, 'free' user=0 intercepts?
-    # if (lavoptions.PA$meanstructure) {
-    #   extra.int.idx <- which(PTS$op == "~1" & PTS$user == 0L &
-    #     PTS$free == 0L &
-    #     PTS$exo == 0L) # needed?
-    #   if (length(extra.int.idx) > 0L) {
-    #     PTS$free[extra.int.idx] <- 1L
-    #     PTS$ustart[extra.int.idx] <- as.numeric(NA)
-    #     PTS$free[PTS$free > 0L] <-
-    #       seq_len(length(PTS$free[PTS$free > 0L]))
-    #     PTS$user[extra.int.idx] <- 3L
-    #   }
-    # } else {
-    #   extra.int.idx <- integer(0L)
-    # }
-    # extra.id <- c(extra.id, extra.int.idx)
 
     reg_idx <- attr(pts, "idx")
     attr(pts, "idx") <- NULL
@@ -176,10 +150,8 @@ lav_sam_step2 <- function(step1 = NULL, fit = NULL,
   if (sam_method %in% c("local", "fsr", "cfsr")) {
     if (gamma_flag) {
       nacov <- step1$Gamma.eta
-      # ov_order <- "data"
     } else {
       nacov <- NULL
-      # ov_order <- "model"
     }
     fit_pa <- lavaan::lavaan(pts,
       sample_cov  = step1$VETA,

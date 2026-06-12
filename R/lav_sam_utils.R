@@ -1,8 +1,28 @@
 # utility functions for the sam() function
 # YR 4 April 2023
 
+# clamped small-sample correction factor alpha/(n - 1), forced into [0, 1]
+lav_sam_alpha_n1 <- function(alpha_correction = 0L, n = 20L) {
+  alpha_n1 <- alpha_correction / (n - 1)
+  if (!is.finite(alpha_n1)) {
+    alpha_n1 <- 0
+  }
+  min(max(alpha_n1, 0), 1)
+}
+
+# row/column index pairs and labels for the elements of (eta* %x% eta*),
+# where lv_names already includes the leading "..int.." intercept entry;
+# the first nfac labels are the plain (first-order) lv names
+lav_sam_lvnames2 <- function(lv_names) {
+  nfac <- length(lv_names)
+  idx1 <- rep(seq_len(nfac), each = nfac)
+  idx2 <- rep(seq_len(nfac), times = nfac)
+  names2 <- paste(lv_names[idx1], lv_names[idx2], sep = ":")
+  names2[seq_len(nfac)] <- lv_names
+  list(idx1 = idx1, idx2 = idx2, names = names2)
+}
+
 # construct 'mapping matrix' M using either "ML", "GLS" or "ULS" method
-# optionally return MTM (for ML)
 #
 # by construction, M %*% LAMBDA = I (the identity matrix)
 lav_sam_mapping_mat <- function(mm_lambda = NULL, mm_theta = NULL,
@@ -22,8 +42,6 @@ lav_sam_mapping_mat <- function(mm_lambda = NULL, mm_theta = NULL,
   # M == solve( t(LAMBDA) %*% LAMBDA ) %*% t(LAMBDA)
   #   == MASS:::ginv(LAMBDA)
   if (method == "ULS") {
-    # M == solve( t(LAMBDA) %*% LAMBDA ) %*% t(LAMBDA)
-    #   == MASS:::ginv(LAMBDA)
     m <- try(tcrossprod(solve(crossprod(mm_lambda)), mm_lambda),
       silent = TRUE
     )
@@ -81,7 +99,7 @@ lav_sam_mapping_mat <- function(mm_lambda = NULL, mm_theta = NULL,
         theta_inv <- diag(1 / diag(mm_theta), nrow = nrow(mm_theta))
       } else {
         theta_inv <- try(solve(mm_theta), silent = TRUE)
-        if (inherits(mm_theta, "try-error")) {
+        if (inherits(theta_inv, "try-error")) {
           theta_inv <- NULL
         }
       }
@@ -300,17 +318,10 @@ lav_sam_veta <- function(m = NULL, s = NULL, mm_theta = NULL,
   }
 
   # apply small sample correction (if requested)
+  alpha <- alpha_correction
   if (alpha_correction > 0) {
-    alpha_n1 <- alpha_correction / (n - 1)
-    if (alpha_n1 > 1.0) {
-      alpha_n1 <- 1.0
-    } else if (alpha_n1 < 0.0) {
-      alpha_n1 <- 0.0
-    }
+    alpha_n1 <- lav_sam_alpha_n1(alpha_correction, n)
     mtm <- (1 - alpha_n1) * mtm
-    alpha <- alpha_correction
-  } else {
-    alpha <- alpha_correction
   }
 
   lambda <- lambda_star <- +Inf
@@ -353,8 +364,8 @@ lav_sam_veta <- function(m = NULL, s = NULL, mm_theta = NULL,
     attr(veta, "lambda") <- lambda
     attr(veta, "alpha") <- alpha
     attr(veta, "lambda.star") <- lambda_star
-  attr(veta, "MSM") <- msm
-  attr(veta, "MTM") <- mtm
+    attr(veta, "MSM") <- msm
+    attr(veta, "MTM") <- mtm
   }
 
   veta
@@ -362,8 +373,7 @@ lav_sam_veta <- function(m = NULL, s = NULL, mm_theta = NULL,
 
 # compute EETA = E(Eta) = M %*% [YBAR - NU]
 lav_sam_eeta <- function(m = NULL, ybar = NULL, mm_nu = NULL) {
-  eeta <- m %*% (ybar - mm_nu)
-  eeta
+  m %*% (ybar - mm_nu)
 }
 
 # compute veta including quadratic/interaction terms
@@ -412,11 +422,10 @@ lav_sam_veta2 <- function(fs = NULL, m = NULL,
   lv_names <- c("..int..", lv_names)
   nfac <- ncol(fs)
 
-  idx1 <- rep(seq_len(nfac), each = nfac)
-  idx2 <- rep(seq_len(nfac), times = nfac)
-
-  names_1 <- paste(lv_names[idx1], lv_names[idx2], sep = ":")
-  names_1[seq_len(nfac)] <- lv_names
+  tmp <- lav_sam_lvnames2(lv_names)
+  idx1 <- tmp$idx1
+  idx2 <- tmp$idx2
+  names_1 <- tmp$names
 
   fs2 <- fs[, idx1] * fs[, idx2]
 
@@ -453,23 +462,12 @@ lav_sam_veta2 <- function(fs = NULL, m = NULL,
   fs2_mean <- fs_mean # all of them
   fs_mean <- fs_mean[lv_keep]
 
-  # compute Gamma for FS2[,lv.keep]
-  #FS.gamma <- lav_samp_gamma(FS2[,lv.keep, drop  = FALSE],
-  #                                  meanstructure = TRUE)
-
   # apply small sample correction (if requested)
+  alpha <- alpha_correction
   alpha_n1 <- 0
   if (alpha_correction > 0) {
-    alpha_n1 <- alpha_correction / (n - 1)
-    if (alpha_n1 > 1.0) {
-      alpha_n1 <- 1.0
-    } else if (alpha_n1 < 0.0) {
-      alpha_n1 <- 0.0
-    }
+    alpha_n1 <- lav_sam_alpha_n1(alpha_correction, n)
     var_error <- (1 - alpha_n1) * var_error
-    alpha <- alpha_correction
-  } else {
-    alpha <- alpha_correction
   }
 
   lambda <- +Inf
@@ -484,11 +482,9 @@ lav_sam_veta2 <- function(fs = NULL, m = NULL,
       lav_msg_warn(gettext("failed to compute lambda"))
       veta2 <- var_fs2 - var_error # and hope for the best
     } else {
-      #cutoff <- 1 + 1 / (N - 1)
-    cutoff <- 1 + 2 / n # be more conservative for VETA2
+      cutoff <- 1 + 2 / n # be more conservative for VETA2
       if (lambda < cutoff) {
-        #lambda.star <- lambda - 1 / (N - 1)
-    lambda_star <- max(c(0, lambda - ncol(var_fs2) / (n - 1)))
+        lambda_star <- max(c(0, lambda - ncol(var_fs2) / (n - 1)))
         veta2 <- var_fs2 - lambda_star * var_error
       } else {
         veta2 <- var_fs2 - var_error
@@ -574,12 +570,6 @@ lav_sam_veta2 <- function(fs = NULL, m = NULL,
                    each = n)))
 
     iveta2_1 <- cbind(part1, part2)
-    # experimental:
-    # remove outliers in FS?
-    #if (length(fs.outlier.idx) > 0L) {
-    #  IVETA2 <- IVETA2[-fs.outlier.idx, ,drop = FALSE]
-    #  N <- N - length(fs.outlier.idx)
-    #}
     cov_iveta2 <- cov(iveta2_1) * (n - 1) / n
   }
 
@@ -590,8 +580,7 @@ lav_sam_veta2 <- function(fs = NULL, m = NULL,
     attr(veta2, "lambda.star") <- lambda_star
     attr(veta2, "MSM") <- var_fs2
     attr(veta2, "MTM") <- var_error
-  attr(veta2, "FS.mean") <- fs_mean
-    #attr(VETA2, "FS.gamma") <- FS.gamma
+    attr(veta2, "FS.mean") <- fs_mean
   }
   if (return_fs) {
     attr(veta2, "FS") <- fs2[, lv_keep, drop = FALSE]
@@ -725,7 +714,6 @@ lav_sam_table <- function(joint = NULL, step1 = NULL, fit_pa = NULL,
     Nind = sapply(mm_fit, function(x) {
       length(unique(unlist(x@pta$vnames$ov)))
     }),
-    # Estimator = sapply(MM.FIT, function(x) { x@Model@estimator} ),
     Chisq = sapply(mm_fit, function(x) {
       x@test[[1]]$stat
     }),
@@ -733,9 +721,7 @@ lav_sam_table <- function(joint = NULL, step1 = NULL, fit_pa = NULL,
       x@test[[1]]$df
     })
   )
-  # pvalue = sapply(MM.FIT, function(x) {x@test[[1]]$pvalue}) )
   class(sam_mm_table) <- c("lavaan.data.frame", "data.frame")
-
 
   # extra info for @internal slot
   if (sam_method %in% c("local", "fsr", "cfsr")) {
@@ -797,10 +783,7 @@ lav_sam_get_cov_ybar <- function(fit = NULL, local_options = list(
       "local option twolevel.method should be one of h1, anova or mean."))
   }
 
-  # local_m_method <- toupper(local_options[["M.method"]])
-
   lavpta <- fit@pta
-  ngroups <- lavpta$ngroups
   nlevels <- lavpta$nlevels
   nblocks <- lavpta$nblocks
 
@@ -814,9 +797,6 @@ lav_sam_get_cov_ybar <- function(fit = NULL, local_options = list(
     h1implied <- h1$implied
   } else {
     h1implied <- fit@h1$implied
-    # if (FIT@Options$conditional.x) {
-    #   h1implied <- lav_model_implied_cond2uncond(h1implied)
-    # }
   }
 
   # containers
@@ -834,53 +814,43 @@ lav_sam_get_cov_ybar <- function(fit = NULL, local_options = list(
 
     # get sample statistics for this block
     if (nlevels > 1L) {
-      if (ngroups > 1L) {
-        this_level <- (b - 1L) %% ngroups + 1L
-      } else {
-        this_level <- b
+      # block order is group-major: (g1l1, g1l2, g2l1, g2l2, ...)
+      this_level <- (b - 1L) %% nlevels + 1L
+      this_group <- floor((b - 1L) / nlevels) + 1L
+      if (this_level > 2L) {
+        lav_msg_stop(gettext("level 3 not supported (yet)."))
       }
-      this_group <- floor(b / nlevels + 0.5)
 
-      if (this_level == 1L) {
-        if (local_twolevel_method == "h1") {
-          cov_1 <- h1implied$cov[[1]]
-          ybar <- h1implied$mean[[1]]
-        } else if (local_twolevel_method == "anova" ||
-          local_twolevel_method == "mean") {
-          cov_1 <- fit@SampleStats@YLp[[this_group]][[2]]$Sigma.W
-          ybar <- fit@SampleStats@YLp[[this_group]][[2]]$Mu.W
-        }
-
-        # reduce
-        ov_idx <- fit@Data@Lp[[this_group]]$ov.idx[[this_level]]
-        cov_1 <- cov_1[ov_idx, ov_idx, drop = FALSE]
-        ybar <- ybar[ov_idx]
-      } else if (this_level == 2L) {
-        if (local_twolevel_method == "h1") {
-          cov_1 <- h1implied$cov[[2]]
-          ybar <- h1implied$mean[[2]]
+      if (local_twolevel_method == "h1") {
+        # note: the h1 estimates are already reduced to the
+        # level-specific variables -- no need to subset
+        cov_1 <- h1implied$cov[[(this_group - 1L) * nlevels + this_level]]
+        ybar <- h1implied$mean[[(this_group - 1L) * nlevels + this_level]]
+      } else {
+        ylp <- fit@SampleStats@YLp[[this_group]][[2]]
+        if (this_level == 1L) {
+          # "anova" and "mean" use the same within statistics
+          cov_1 <- ylp$Sigma.W
+          ybar <- ylp$Mu.W
         } else if (local_twolevel_method == "anova") {
-          cov_1 <- fit@SampleStats@YLp[[this_group]][[2]]$Sigma.B
-          ybar <- fit@SampleStats@YLp[[this_group]][[2]]$Mu.B
-        } else if (local_twolevel_method == "mean") {
-          s_pw <- fit@SampleStats@YLp[[this_group]][[2]]$Sigma.W
-          nj <- fit@SampleStats@YLp[[this_group]][[2]]$s
-          y2 <- fit@SampleStats@YLp[[this_group]][[2]]$Y2
+          cov_1 <- ylp$Sigma.B
+          ybar <- ylp$Mu.B
+        } else { # "mean"
+          s_pw <- ylp$Sigma.W
+          nj <- ylp$s
+          y2 <- ylp$Y2
           # grand mean
-          mu_y <- (fit@SampleStats@YLp[[this_group]][[2]]$Mu.W +
-                   fit@SampleStats@YLp[[this_group]][[2]]$Mu.B)
+          mu_y <- ylp$Mu.W + ylp$Mu.B
           y2c <- t(t(y2) - mu_y) # MUST be centered
           yb <- crossprod(y2c) / nrow(y2c)
           cov_1 <- yb - 1 / nj * s_pw
-          ybar <- fit@SampleStats@YLp[[this_group]][[2]]$Mu.B
+          ybar <- ylp$Mu.B
         }
 
-        # reduce
+        # reduce to the level-specific variables
         ov_idx <- fit@Data@Lp[[this_group]]$ov.idx[[this_level]]
         cov_1 <- cov_1[ov_idx, ov_idx, drop = FALSE]
         ybar <- ybar[ov_idx]
-      } else {
-        lav_msg_stop(gettext("level 3 not supported (yet)."))
       }
 
       # single level
@@ -911,16 +881,6 @@ lav_sam_get_mmlist <- function(lavobject) {
   lavmodel <- lavobject@Model
   lavpta <- lavobject@pta
   nblocks <- lavpta$nblocks
-
-  # flags
-  # lv_interaction_flag <- FALSE
-  # lv_higherorder_flag <- FALSE
-  # if (length(unlist(lavpta$vnames$lv.interaction)) > 0L) {
-  #   lv_interaction_flag <- TRUE
-  # }
-  # if (length(unlist(lavpta$vnames$lv.ind)) > 0L) {
-  #   lv_higherorder_flag <- TRUE
-  # }
 
   lambda_idx <- which(names(lavmodel@GLIST) == "lambda")
 
@@ -965,11 +925,102 @@ lav_sam_get_mmlist <- function(lavobject) {
   mm_list
 }
 
+# labels for the elements of the WLS.obs statistics vector in the
+# categorical, conditional.x = FALSE case: 1) thresholds and (negative)
+# means, interleaved per variable, 2) variances (numeric variables only),
+# 3) correlations (vech, no diagonal); used to map the statistics of a
+# measurement block into the statistics vector of the joint model
+lav_sam_wls_obs_labels <- function(ov_names, th_idx) {
+  nvar <- length(ov_names)
+
+  # variable of each th element: ordered variables have th_idx > 0; the
+  # th_idx == 0 elements are the (negative) means of the numeric
+  # variables, appearing in variable order
+  v_of <- th_idx
+  num_var_idx <- which(!seq_len(nvar) %in% th_idx)
+  v_of[th_idx == 0L] <- num_var_idx
+
+  th_labels <- character(length(th_idx))
+  count <- integer(nvar)
+  for (k in seq_along(th_idx)) {
+    v <- v_of[k]
+    count[v] <- count[v] + 1L
+    th_labels[k] <- paste0(ov_names[v], "|t", count[v])
+  }
+
+  # variances (numeric variables only)
+  var_labels <- character(0L)
+  if (length(num_var_idx) > 0L) {
+    var_labels <- paste0(ov_names[num_var_idx], "|var")
+  }
+
+  # correlations: lav_mat_vech(cov, diagonal = FALSE), column-major;
+  # use a canonical (sorted) pair label, as the relative order of two
+  # variables may differ between the joint model and a measurement block
+  cor_labels <- character(0L)
+  if (nvar > 1L) {
+    row_idx <- matrix(seq_len(nvar), nvar, nvar)[lower.tri(diag(nvar))]
+    col_idx <- matrix(seq_len(nvar), nvar, nvar,
+                      byrow = TRUE)[lower.tri(diag(nvar))]
+    cor_labels <- vapply(seq_along(row_idx), function(k) {
+      paste(sort(c(ov_names[row_idx[k]], ov_names[col_idx[k]])),
+            collapse = "~~")
+    }, character(1L))
+  }
+
+  c(th_labels, var_labels, cor_labels)
+}
+
+# merge the per-block mm clusters (as returned by lav_sam_get_mmlist())
+# into a single mm.list, transitively joining clusters that share a latent
+# variable or an observed indicator; needed for multilevel models, where
+# the within and between factors of the same indicators must end up in the
+# same (two-level) measurement block
+lav_sam_mmlist_merge_blocks <- function(lavobject, mm_list_per_block) {
+  pt_1 <- lavobject@ParTable
+  nblocks <- lavobject@pta$nblocks
+  block_values <- lav_pt_block_values(pt_1)
+
+  # collect all clusters: a set of lv names + their observed indicators
+  clusters <- list()
+  for (b in seq_len(nblocks)) {
+    for (cl in mm_list_per_block[[b]]) {
+      lv <- unlist(cl)
+      ind_idx <- which(pt_1$op == "=~" & pt_1$block == block_values[b] &
+                       pt_1$lhs %in% lv)
+      clusters <- c(clusters,
+                    list(list(lv = lv, ov = unique(pt_1$rhs[ind_idx]))))
+    }
+  }
+
+  # merge until no two clusters share an lv or an ov
+  changed <- TRUE
+  while (changed) {
+    changed <- FALSE
+    i <- 1L
+    while (i < length(clusters)) {
+      j <- i + 1L
+      while (j <= length(clusters)) {
+        if (any(clusters[[i]]$lv %in% clusters[[j]]$lv) ||
+            any(clusters[[i]]$ov %in% clusters[[j]]$ov)) {
+          clusters[[i]]$lv <- unique(c(clusters[[i]]$lv, clusters[[j]]$lv))
+          clusters[[i]]$ov <- unique(c(clusters[[i]]$ov, clusters[[j]]$ov))
+          clusters[[j]] <- NULL
+          changed <- TRUE
+        } else {
+          j <- j + 1L
+        }
+      }
+      i <- i + 1L
+    }
+  }
+
+  lapply(clusters, "[[", "lv")
+}
+
 lav_sam_veta_pt <- function(lavobject, block = 1L) {
 
   lavmodel <- lavobject@Model
-  lavpta   <- lavobject@pta
-  # nblocks  <- lavpta$nblocks
 
   lambda_idx <- which(names(lavmodel@GLIST) == "lambda")
 
