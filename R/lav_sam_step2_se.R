@@ -154,6 +154,17 @@ lav_sam_step2_se <- function(fit = NULL, joint = NULL,
     idx <- sort.int(pt_idx, index.return = TRUE)$ix
     vcov_1 <- vcov_1[idx, idx]
 
+    # drop parameters that are free in FIT.PA, but fixed in the JOINT
+    # model (eg std.lv = TRUE: the lv (residual) variances are freed in
+    # the structural model, but fixed (to 1) in the joint model); there is
+    # no room for their sampling variability in the joint vcov, and
+    # step2.free.idx does not include them
+    pt_2 <- step2$PT
+    keep_idx <- which(pt_2$free[sort.int(pt_idx)] > 0L)
+    if (length(keep_idx) < length(pt_idx)) {
+      vcov_1 <- vcov_1[keep_idx, keep_idx, drop = FALSE]
+    }
+
     out$VCOV <- vcov_1
 
   # se = "twostep" or "twostep.robust"

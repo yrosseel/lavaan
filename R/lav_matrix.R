@@ -1229,6 +1229,18 @@ lav_mat_sym_inverse_update <- function(s_inv, rm_idx = integer(0L),
 # this approach was suggested to me by Wayne A. Fuller, personal communication,
 # 12 Nov 2020
 #
+# YR 12 June 2026: P no longer needs to be strictly positive definite: any
+# rank deficiency of P that is not visible as zero rows/columns (a zero
+# eigenvalue with a nonzero diagonal) is now handled in the same way, by
+# regressing out the null space of P in its eigenbasis: writing
+# P = V diag(d1, 0) t(V) and Mt = t(V) M V (partitioned accordingly),
+#   |M - lambda*P| = |Mt22| * |Mt11 - Mt12 solve(Mt22) Mt21 - lambda*diag(d1)|
+# so the finite roots are the eigenvalues of the Schur complement pencil;
+# the null space directions of P produce no (finite) roots
+#
+# if P is (numerically) zero, there are no finite roots, and we return +Inf
+# (the callers test 'lambda < cutoff', and with P = 0 the correction term
+# vanishes anyway)
 lav_mat_sym_diff_smallest_root <- function(m = NULL, p = NULL) {
   # check input (we will 'assume' they are square and symmetric)
   stopifnot(is.matrix(m), is.matrix(p))
@@ -1257,60 +1269,61 @@ lav_mat_sym_diff_smallest_root <- function(m = NULL, p = NULL) {
   # check for (near)zero diagonal elements
   zero_idx <- which(abs(diag_p) < sqrt(.Machine$double.eps))
 
-  # three cases:
-  #    1. all elements are zero (P=0) -> lambda = 0
-  #    2. no elements are zero
-  #    3. some elements are zero -> regress out
-
-  # 1. all elements are zero
+  # P is (numerically) zero: no finite roots
   if (length(zero_idx) == n_p) {
-    return(0.0)
-  # 2. no elements are zero
-  } else if (length(zero_idx) == 0L) {
-    if (pdiag_flag) {
-      ldiag <- 1 / sqrt(diag_p)
-      lml <- t(ldiag * m) * ldiag
-    } else {
-      eig_p <- eigen(p, symmetric = TRUE)
-      d_p <- pmax(eig_p$values, 0)
-      vt_mv <- crossprod(eig_p$vectors, m %*% eig_p$vectors)
-      lml <- t(vt_mv / sqrt(d_p)) / sqrt(d_p)
-    }
+    return(+Inf)
+  }
 
-    # compute lambda
-    lambda <- eigen(lml, symmetric = TRUE, only.values = TRUE)$values[n_p]
-
-    # 3. some elements are zero
-  } else {
-    # regress out M-block corresponding to zero diagonal elements in P
-
-    # partition M accordingly: p = positive, n = negative
+  # regress out the M-block corresponding to zero diagonal elements in P
+  # (for a positive semidefinite P, a zero diagonal element implies a zero
+  # row/column, i.e. a null space direction of P)
+  if (length(zero_idx) > 0L) {
     m_pp <- m[-zero_idx, -zero_idx, drop = FALSE]
     m_pn <- m[-zero_idx, zero_idx, drop = FALSE]
     m_np <- m[zero_idx, -zero_idx, drop = FALSE]
     m_nn <- m[zero_idx, zero_idx, drop = FALSE]
 
-    # create Mp.n
-    mp_n <- m_pp - m_pn %*% lav_mat_sym_solve_spd(m_nn, m_np)
+    m <- m_pp - m_pn %*% lav_mat_sym_solve_spd(m_nn, m_np)
+    p <- p[-zero_idx, -zero_idx, drop = FALSE]
+  }
 
-    # extract positive part of P
-    p_p <- p[-zero_idx, -zero_idx, drop = FALSE]
+  # compute the smallest root of |M - lambda*P| = 0
+  if (pdiag_flag) {
+    # diagonal P with strictly positive diagonal elements
+    ldiag <- 1 / sqrt(diag(p))
+    lml <- t(ldiag * m) * ldiag
+    lambda <- eigen(lml, symmetric = TRUE, only.values = TRUE)$values[nrow(p)]
+  } else {
+    eig_p <- eigen(p, symmetric = TRUE)
+    ev <- eig_p$values
 
-    # compute smallest root
-    if (pdiag_flag) {
-      diag_pp <- diag(p_p)
-      ldiag <- 1 / sqrt(diag_pp)
-      lml <- t(ldiag * mp_n) * ldiag
-    } else {
-      eig_pp <- eigen(p_p, symmetric = TRUE)
-      d_pp <- pmax(eig_pp$values, 0)
-      vt_mv <- crossprod(eig_pp$vectors, mp_n %*% eig_pp$vectors)
-      lml <- t(vt_mv / sqrt(d_pp)) / sqrt(d_pp)
+    # (numerical) rank of P; eigenvalues below the tolerance (including
+    # any negative ones) span the null space of P
+    ev_tol <- sqrt(.Machine$double.eps) * max(ev[1], 0)
+    rank_p <- sum(ev > ev_tol)
+    if (rank_p == 0L) {
+      # no positive eigenvalues left: no finite roots
+      return(+Inf)
     }
-    lambda <- eigen(lml,
-      symmetric = TRUE,
-      only.values = TRUE
-    )$values[nrow(p_p)]
+    if (any(ev < -1000 * ev_tol)) {
+      lav_msg_warn(gettext(
+        "P is not positive semidefinite; using its positive part only"))
+    }
+
+    vt_mv <- crossprod(eig_p$vectors, m %*% eig_p$vectors)
+    if (rank_p < nrow(p)) {
+      # hidden rank deficiency: regress out the null space of P
+      pos_idx <- seq_len(rank_p)
+      m_pp <- vt_mv[pos_idx, pos_idx, drop = FALSE]
+      m_pn <- vt_mv[pos_idx, -pos_idx, drop = FALSE]
+      m_np <- vt_mv[-pos_idx, pos_idx, drop = FALSE]
+      m_nn <- vt_mv[-pos_idx, -pos_idx, drop = FALSE]
+      vt_mv <- m_pp - m_pn %*% lav_mat_sym_solve_spd(m_nn, m_np)
+    }
+
+    d_p <- ev[seq_len(rank_p)]
+    lml <- t(vt_mv / sqrt(d_p)) / sqrt(d_p)
+    lambda <- eigen(lml, symmetric = TRUE, only.values = TRUE)$values[rank_p]
   }
 
   lambda

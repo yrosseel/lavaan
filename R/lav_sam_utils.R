@@ -289,26 +289,14 @@ lav_sam_veta <- function(m = NULL, s = NULL, mm_theta = NULL,
   # MTM
   mtm <- m %*% mm_theta %*% t(m)
 
-  # empty theta elements?
-  empty_theta_idx <- which(diag(mtm) == 0)
-
-  # new in 0.6-16: make sure MTM is pd
-  # (otherwise lav_mat_sym_diff_smallest_root will fail)
-  theta_rm_idx <- unique(c(dummy_lv_idx, empty_theta_idx))
-  if (length(theta_rm_idx) == nrow(mtm)) {
-    # all zero?
-    # do nothing, but certainly no need for alpha or lambda.correction
+  # note: MTM no longer needs to be regularized (force-pd) here:
+  # lav_mat_sym_diff_smallest_root() handles a singular (or even zero)
+  # MTM natively, by regressing out its null space (which includes the
+  # rows/columns of any dummy lvs, and any empty theta elements)
+  if (all(abs(mtm) < sqrt(.Machine$double.eps))) {
+    # all zero? certainly no need for alpha or lambda.correction
     alpha_correction <- 0L
     lambda_correction <- FALSE
-  } else if (length(theta_rm_idx) > 0L) {
-    mtm_small <- mtm[-theta_rm_idx, -theta_rm_idx, drop = FALSE]
-    mtm_small <- zapsmall(lav_mat_sym_force_pd(
-      mtm_small,
-      tol = 1e-04
-    ))
-    mtm[-theta_rm_idx, -theta_rm_idx] <- mtm_small
-  } else {
-    mtm <- zapsmall(lav_mat_sym_force_pd(mtm, tol = 1e-04))
   }
 
   # apply small sample correction (if requested)
@@ -386,6 +374,7 @@ lav_sam_veta2 <- function(fs = NULL, m = NULL,
                           dummy_lv_names = character(0L),
                           alpha_correction = 0L,
                           lambda_correction = TRUE,
+                          lambda1 = 1,
                           fs_outlier_idx = integer(0L),
                           return_fs = FALSE,
                           return_cov_iveta2 = TRUE,
@@ -408,19 +397,11 @@ lav_sam_veta2 <- function(fs = NULL, m = NULL,
   # MTM
   mtm <- m %*% mm_theta %*% t(m)
 
-  # new in 0.6-16: make sure MTM is pd
-  # (otherwise lav_mat_sym_diff_smallest_root will fail)
-  dummy_lv_idx <- which(lv_names %in% dummy_lv_names)
-  if (length(dummy_lv_idx) > 0L) {
-    mtm_nodummy <- mtm[-dummy_lv_idx, -dummy_lv_idx, drop = FALSE]
-    mtm_nodummy <- zapsmall(lav_mat_sym_force_pd(
-      mtm_nodummy,
-      tol = 1e-04
-    ))
-    mtm[-dummy_lv_idx, -dummy_lv_idx] <- mtm_nodummy
-  } else {
-    mtm <- zapsmall(lav_mat_sym_force_pd(mtm, tol = 1e-04))
-  }
+  # note: MTM no longer needs to be regularized (force-pd) here:
+  # lav_mat_sym_diff_smallest_root() handles a singular var.error matrix
+  # natively, by regressing out its null space (which includes the
+  # rows/columns of any dummy lvs); this also keeps MTM identical to the
+  # (raw) version used in lav_sam_gamma_add()
 
   # augment to include intercept
   fs <- cbind(1, fs)
@@ -477,6 +458,7 @@ lav_sam_veta2 <- function(fs = NULL, m = NULL,
   #                                  meanstructure = TRUE)
 
   # apply small sample correction (if requested)
+  alpha_n1 <- 0
   if (alpha_correction > 0) {
     alpha_n1 <- alpha_correction / (n - 1)
     if (alpha_n1 > 1.0) {
@@ -517,29 +499,81 @@ lav_sam_veta2 <- function(fs = NULL, m = NULL,
   }
 
   # new in 0.6-20: to compute Gamma.eta
+  # the casewise contributions are defined so that their average over the
+  # observations equals *exactly* the augmented summary statistics
+  # (EETA2, VETA2) that are used in the second step; this requires the
+  # effective *first-order* lambda1 inside the decomposition (because
+  # EETA2 and var.error are built from the lambda1-corrected first-order
+  # VETA), while the *second-order* lambda.star multiplies the whole
+  # correction term:
+  #   ieeta2_i = fs2[i, ] - lambda1 * vec(MTM)
+  #   (the terms involving the mean factor scores cancel out exactly)
+  # and
+  #   iveta2_i = tcrossprod(fs2[i, ] - fs2.mean) - lambda2.eff * tmp_i
+  # where lambda2.eff = lambda.star * (1 - alpha/(n-1)) is the effective
+  # multiplier of the *unscaled* var.error (the alpha correction rescales
+  # var.error before the lambda step), and
+  #       tmp_i = ((F_i - lambda1 * MTM) %x% MTM) +
+  #               (MTM %x% (F_i - lambda1 * MTM)) +
+  #               lav_mat_com_post((F_i - lambda1 * MTM) %x% MTM) +
+  #               lav_mat_com_pre((F_i - lambda1 * MTM) %x% MTM) +
+  #               (I + K) %*% (MTM %x% MTM)
+  # with F_i = tcrossprod(f_i); both selected in the rows/columns we keep
+  # note: cov(iveta2_1) is invariant to the value of lambda1 (the lambda1
+  # terms are constant across the observations); but lambda1 does matter
+  # for the jacobian of the average casewise contribution computed in
+  # lav_sam_gamma_add()
+  # rewritten 12 June 2026 to avoid the loop over the observations: every
+  # kept element is a linear function of the second-order factor scores
+  # fs2[i, ]; elementwise, for kept elements a = (r1, s1) and b = (r2, s2)
+  # of (eta* %x% eta*):
+  #   tmp_i[a, b] = F_i[r1, r2] MTM[s1, s2] + MTM[r1, r2] F_i[s1, s2] +
+  #                 F_i[r1, s2] MTM[s1, r2] + F_i[s1, r2] MTM[r1, s2] +
+  #                 (1 - 2 * lambda1) * (MTM[r1, r2] MTM[s1, s2] +
+  #                                      MTM[s1, r2] MTM[r1, s2])
+  # where F_i[r, s] = fs2[i, (r - 1) * nfac + s]
   if (return_cov_iveta2) {
-    iveta2_1 <- matrix(0, n,
-                ncol = length(lav_mat_vech(veta2)) + ncol(veta2))
-    ef <- colMeans(fs)
-    for (i in 1:n) {
-      fi <- as.matrix(fs2[i, seq_len(nfac)])
-      tmp <- (((tcrossprod(fi) - mtm) %x% mtm) +
-           (mtm %x% (tcrossprod(fi) - mtm)) +
-           lav_mat_com_post((tcrossprod(fi) - mtm) %x% mtm) +
-           lav_mat_com_pre((tcrossprod(fi) - mtm) %x% mtm) +
-           (ik %*% (mtm %x% mtm)))
-      iveta2 <- tcrossprod(fs2[i, ] - fs2_mean) - lambda_star * tmp
-      colnames(iveta2) <- rownames(iveta2) <- names_1
+    lambda2_eff <- lambda_star * (1 - alpha_n1)
+    keep_idx <- match(lv_keep, names_1)
+    nkeep <- length(keep_idx)
+    # row/column pairs of the kept elements of (eta* %x% eta*)
+    i1k <- idx1[keep_idx]
+    i2k <- idx2[keep_idx]
 
-      ieeta2 <- (lav_mat_vec(tcrossprod(fi)) -
-                 lav_mat_vec(tcrossprod(ef)) +
-                 (ef %x% ef) -
-                 lambda_star * lav_mat_vec(mtm))
-      names(ieeta2) <- names_1
+    # casewise contributions to E(eta* %x% eta*)[keep]
+    part1 <- t(t(fs2[, keep_idx, drop = FALSE]) -
+               lambda1 * lav_mat_vec(mtm)[keep_idx])
 
-      iveta2_1[i, ] <- c(ieeta2[lv_keep],
-                      lav_mat_vech(iveta2[lv_keep, lv_keep]))
-    } # N
+    # casewise contributions to vech(Var(eta* %x% eta*)[keep, keep])
+    # vech row (pa) and column (pb) indices over the kept elements
+    tmp_mat <- matrix(seq_len(nkeep), nkeep, nkeep)
+    pa <- tmp_mat[lower.tri(tmp_mat, diag = TRUE)]
+    pb <- t(tmp_mat)[lower.tri(tmp_mat, diag = TRUE)]
+    r1 <- i1k[pa]; s1 <- i2k[pa]
+    r2 <- i1k[pb]; s2 <- i2k[pb]
+
+    # fs2 columns holding F_i[r1, r2], F_i[s1, s2], F_i[r1, s2], F_i[s1, r2]
+    col_11 <- (r1 - 1L) * nfac + r2
+    col_22 <- (s1 - 1L) * nfac + s2
+    col_12 <- (r1 - 1L) * nfac + s2
+    col_21 <- (s1 - 1L) * nfac + r2
+
+    b_11 <- mtm[cbind(r1, r2)]
+    b_22 <- mtm[cbind(s1, s2)]
+    b_12 <- mtm[cbind(r1, s2)]
+    b_21 <- mtm[cbind(s1, r2)]
+
+    fs2kc <- t(t(fs2[, keep_idx, drop = FALSE]) - fs2_mean[keep_idx])
+    part2 <- (fs2kc[, pa, drop = FALSE] * fs2kc[, pb, drop = FALSE] -
+              lambda2_eff *
+              (t(t(fs2[, col_11, drop = FALSE]) * b_22) +
+               t(t(fs2[, col_22, drop = FALSE]) * b_11) +
+               t(t(fs2[, col_12, drop = FALSE]) * b_21) +
+               t(t(fs2[, col_21, drop = FALSE]) * b_12) +
+               rep((1 - 2 * lambda1) * (b_11 * b_22 + b_21 * b_12),
+                   each = n)))
+
+    iveta2_1 <- cbind(part1, part2)
     # experimental:
     # remove outliers in FS?
     #if (length(fs.outlier.idx) > 0L) {
