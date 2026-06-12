@@ -94,7 +94,6 @@ lavaanList <- function(model = NULL, # model                   # nolint start
       args = c(list(
         model = model,
         data = first_data,
-        cmd = cmd
       ), dotdotdot)
     )
   }
