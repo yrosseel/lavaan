@@ -3,7 +3,8 @@ lav_step04_pt <- function(slot_par_table = NULL,
                                        flat_model = NULL,
                                        lavoptions = NULL,
                                        lavdata = NULL,
-                                       constraints = NULL) {
+                                       constraints = NULL,
+                                       marker = NULL) {
   # # # # # # # # # # # #
   # #  4. lavpartable # #
   # # # # # # # # # # # #
@@ -95,6 +96,7 @@ lav_step04_pt <- function(slot_par_table = NULL,
         ceq.simple = lavoptions$ceq.simple,
         parameterization = lavoptions$parameterization,
         auto.fix.first = lavoptions$auto.fix.first,
+        marker = marker,
         auto.fix.single = lavoptions$auto.fix.single,
         auto.var = lavoptions$auto.var,
         auto.cov.lv.x = lavoptions$auto.cov.lv.x,

@@ -304,6 +304,41 @@ lavaan <- function(
   )
   timing <- lav_add_timing(timing, "h1")
 
+  # ------------ adapt marker ------------------
+  # if the first indicator (the default marker) of a latent variable turns
+  # out to be a poor item, switch to a better marker (and warn); this avoids
+  # convergence problems caused by a (very) poor marker item
+  if (isTRUE(lavoptions$auto.fix.first) &&
+      lavoptions$bad.marker.crit > 0) {
+    adapt <- lav_partable_marker_adapt(
+      lavpartable = lavpartable,
+      lavh1       = lavh1,
+      lavoptions  = lavoptions,
+      lavdata     = lavdata,
+      threshold   = lavoptions$bad.marker.crit
+    )
+    if (!is.null(adapt)) {
+      lav_msg_warn(gettextf(
+        "the first indicator of the following latent variable(s) is a poor
+         item; switching to another marker item (to set the metric) to avoid
+         convergence problems; use bad.marker.crit = 0 to switch off
+         this behavior: %s",
+        paste0(adapt$info$lv, " (", adapt$info$old, " -> ",
+               adapt$info$new, ")", collapse = ", ")))
+      # rebuild the parameter table using the new marker(s)
+      temp <- lav_step04_pt(
+        slot_par_table = slot_par_table,
+        model          = model,
+        flat_model     = flat_model,
+        lavoptions     = lavoptions,
+        lavdata        = lavdata,
+        constraints    = constraints,
+        marker         = adapt$marker
+      )
+      lavpartable <- temp$lavpartable
+    }
+  }
+
   # ------------ bounds ------------------------
   lavpartable <- lav_step07_bounds(
     lavoptions     = lavoptions,

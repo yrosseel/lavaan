@@ -92,9 +92,25 @@ Model features:
      under normal and non-normal conditions respectively. For now, this
      option always assumes \code{fixed.x = FALSE} and
      \code{conditional.x = FALSE}.}
-    \item{\code{auto.fix.first}:}{If \code{TRUE}, the factor loading of the 
+    \item{\code{auto.fix.first}:}{If \code{TRUE}, the factor loading of the
       first indicator is set to 1.0 for every latent variable.}
-    \item{\code{auto.fix.single}:}{If \code{TRUE}, the residual variance (if 
+    \item{\code{bad.marker.crit}:}{Only used if
+      \code{auto.fix.first = TRUE}. A single number (default 0.1). If larger
+      than zero, lavaan checks -- once the unrestricted (h1) sample statistics
+      are available -- whether the first indicator of each latent variable is
+      a poor item, in the sense that it correlates weakly with the other
+      indicators of the same factor (more precisely: the absolute value of its
+      corrected item-total correlation is below \code{bad.marker.crit}). If so
+      (and a clearly better indicator is available), a warning is issued and
+      the loading of that better indicator is fixed to 1.0 instead, in order
+      to set the metric of that latent variable. The main purpose is to avoid
+      convergence problems caused by a (very) poor marker item. The check is
+      based on the (pooled) unrestricted (h1) covariance matrix, so it behaves
+      consistently with or without missing data, categorical data, multiple
+      groups, etc. Larger values make the switching more aggressive; a value
+      of 0 disables the check and always keeps the first indicator as the
+      marker.}
+    \item{\code{auto.fix.single}:}{If \code{TRUE}, the residual variance (if
       included) of an observed indicator is set to zero if it is the only 
       indicator of a latent variable.}
     \item{auto.var}{If \code{TRUE}, the (residual) variances of both observed

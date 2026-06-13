@@ -15,6 +15,7 @@ lav_pt_flat <- function(flat = NULL,
                               fixed_x = TRUE,
                               parameterization = "delta",
                               auto_fix_first = FALSE,
+                              marker = NULL,
                               auto_fix_single = FALSE,
                               auto_var = FALSE,
                               auto_cov_lv_x = FALSE,
@@ -501,10 +502,30 @@ lav_pt_flat <- function(flat = NULL,
   if (auto_fix_first) {
     # fix metric by fixing the loading of the first indicator
     # (but not for efa factors)
+    #
+    # if 'marker' is provided (a named vector lv -> indicator), fix the
+    # loading of that indicator instead of the first one; this is used by
+    # the bad.marker.crit mechanism to switch to another marker if the first
+    # indicator turns out to be a poor item (see lav_partable_marker_adapt())
     mm_idx <- which(op == "=~" & !(lhs %in% lv_names_efa))
-    first_idx <- mm_idx[which(!duplicated(lhs[mm_idx]))]
-    ustart[first_idx] <- 1.0
-    free[first_idx] <- 0L
+    if (is.null(marker)) {
+      first_idx <- mm_idx[which(!duplicated(lhs[mm_idx]))]
+      ustart[first_idx] <- 1.0
+      free[first_idx] <- 0L
+    } else {
+      for (lv in unique(lhs[mm_idx])) {
+        lv_rows <- mm_idx[lhs[mm_idx] == lv]
+        marker_row <- lv_rows[1L] # default: first indicator
+        if (lv %in% names(marker) && !is.na(marker[[lv]])) {
+          tmp_row <- lv_rows[rhs[lv_rows] == marker[[lv]]]
+          if (length(tmp_row) > 0L) {
+            marker_row <- tmp_row[1L]
+          }
+        }
+        ustart[marker_row] <- 1.0
+        free[marker_row] <- 0L
+      }
+    }
     if (composites && length(lv_names_c) > 0L) {
       mm_idx <- which(op == "<~")
       first_idx <- mm_idx[which(!duplicated(lhs[mm_idx]))]

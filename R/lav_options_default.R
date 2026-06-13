@@ -229,6 +229,11 @@ lav_options_default <- function() {
   elm("parameterization", "default", c(
     "default", "mml", "delta", "theta"))
   elm("auto.fix.first", FALSE, bl = TRUE)
+  # if > 0 (and auto.fix.first = TRUE), switch to another marker if the first
+  # indicator is a poor item; the value is the threshold below which a marker
+  # indicator is considered 'poor' (in absolute value of its corrected
+  # item-total correlation)
+  elm("bad.marker.crit", 0.1, nm = "[0, 1]")
   elm("auto.fix.single", FALSE, bl = TRUE)
   elm("auto.var", FALSE, bl = TRUE)
   elm("auto.cov.lv.x", FALSE, bl = TRUE)

@@ -18,7 +18,8 @@ lavaanify(model = NULL, meanstructure = FALSE, int.ov.free = FALSE,
     effect.coding = "", conditional.x = FALSE, 
     fixed.x = FALSE, parameterization = "delta", constraints = NULL, 
     ceq.simple = FALSE, auto = FALSE, model.type = "sem",
-    auto.fix.first = FALSE, auto.fix.single = FALSE, auto.var = FALSE,
+    auto.fix.first = FALSE, marker = NULL,
+    auto.fix.single = FALSE, auto.var = FALSE,
     auto.cov.lv.x = FALSE, auto.cov.y = FALSE, auto.th = FALSE,
     auto.delta = FALSE, auto.efa = FALSE,
     varTable = NULL, ngroups = 1L, nthresholds = NULL,
@@ -33,7 +34,8 @@ lavParTable(model = NULL, meanstructure = FALSE, int.ov.free = FALSE,
     effect.coding = "", conditional.x = FALSE, 
     fixed.x = FALSE, parameterization = "delta", constraints = NULL, 
     ceq.simple = FALSE, auto = FALSE, model.type = "sem",
-    auto.fix.first = FALSE, auto.fix.single = FALSE, auto.var = FALSE,
+    auto.fix.first = FALSE, marker = NULL,
+    auto.fix.single = FALSE, auto.var = FALSE,
     auto.cov.lv.x = FALSE, auto.cov.y = FALSE, auto.th = FALSE,
     auto.delta = FALSE, auto.efa = FALSE,
     varTable = NULL, ngroups = 1L, nthresholds = NULL,
@@ -122,6 +124,12 @@ the model for both observed and latent variables.}
     \code{auto=TRUE}.}
 \item{auto.fix.first}{If \code{TRUE}, the factor loading of the first indicator
     is set to 1.0 for every latent variable.}
+\item{marker}{Optional named character vector mapping a latent variable
+    (name) to the observed indicator (name) whose loading should be fixed to
+    1.0 (instead of the first indicator) when \code{auto.fix.first = TRUE}.
+    Latent variables that are not named in this vector keep the first
+    indicator as their marker. This is used internally by the
+    \code{bad.marker.crit} mechanism.}
 \item{auto.fix.single}{If \code{TRUE}, the residual variance (if included)
     of an observed indicator is set to zero if it is the only indicator of a
     latent variable.}
