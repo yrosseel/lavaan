@@ -100,6 +100,14 @@ lav_lavaan_lavinspect <- function(object,                                # nolin
       add_labels = add.labels, add_class = add.class,
       list_by_group =  list.by.group,
       drop_list_single_group = drop.list.single.group)
+  } else if (what == "mm.lambda" || what == "lambda") {
+    lav_inspect_mm(object, mm_name = "lambda",
+      add_labels = add.labels, add_class = add.class,
+      drop_list_single_group = drop.list.single.group)
+  } else if (what == "mm.delta") {
+    lav_inspect_mm(object, mm_name = "delta",
+      add_labels = add.labels, add_class = add.class,
+      drop_list_single_group = drop.list.single.group)
   } else if (what == "dx.free") {
     lav_inspect_modelmatrices(object, what = "dx.free",
       add_labels = add.labels, add_class = add.class,
@@ -386,7 +394,7 @@ lav_lavaan_lavinspect <- function(object,                                # nolin
 
 
     #### specific model matrices? ####
-  } else if (what == "theta" || what == "theta.cov") {
+  } else if (what == "mm.theta" || what == "theta" || what == "theta.cov") {
     lav_inspect_theta(object,  correlation_metric = FALSE,
       add_labels = add.labels, add_class = add.class,
       drop_list_single_group = drop.list.single.group)
@@ -855,7 +863,10 @@ lav_inspect_modelmatrices <- function(object, what = "free",
   } else if (what == "est") {
     tmp_est <- lav_inspect_est(object)
   } else if (what == "est.unrotated") {
-    if (!is.null(object@Options$rotation) &&
+    # only an unrotated solution exists if the model contains EFA blocks
+    # and a rotation (other than "none") was actually applied
+    if (object@Model@nefa == 0L ||
+      is.null(object@Options$rotation) ||
       object@Options$rotation == "none") {
       tmp_est <- lav_inspect_est(object, unrotated = FALSE)
     } else {
@@ -2953,6 +2964,37 @@ lav_inspect_u_from_ugamma <- function(object,
   return_value
 }
 
+
+# Extract a single (estimated) model matrix (by name) from the @GLIST slot,
+# per block. Used by the "mm.*" options (e.g. "mm.lambda", "mm.delta"). Note
+# that for "delta" this is the scaling matrix, NOT the Delta jacobian (see
+# lav_inspect_delta below).
+lav_inspect_mm <- function(object, mm_name = "lambda", add_labels = FALSE,
+    add_class = FALSE, drop_list_single_group = FALSE) {
+
+  # estimated model matrices, per block
+  MM <- lav_inspect_modelmatrices(object, what = "est",
+    add_labels = add_labels, add_class = add_class,
+    list_by_group = TRUE, drop_list_single_group = FALSE)
+
+  nblocks <- length(MM)
+  return_value <- vector("list", length = nblocks)
+  names(return_value) <- names(MM)
+  for (b in seq_len(nblocks)) {
+    if (is.null(MM[[b]][[mm_name]])) {
+      lav_msg_stop(gettextf(
+        "model matrix \"%s\" is not available for this model", mm_name))
+    }
+    return_value[[b]] <- MM[[b]][[mm_name]]
+  }
+
+  # drop list?
+  if (nblocks == 1L && drop_list_single_group) {
+    return_value <- return_value[[1]]
+  }
+
+  return_value
+}
 
 # Delta (jacobian: d samplestats / d free_parameters)
 lav_inspect_delta <- function(object,

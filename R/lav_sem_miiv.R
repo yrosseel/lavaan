@@ -827,14 +827,15 @@ lav_sem_miiv_vcov <- function(lavmodel = NULL, lavsamplestats = NULL,
       gamma_g <- vector("list", lavmodel@ngroups)
     for (g in seq_len(lavmodel@ngroups)) {
       fg <- lavsamplestats@nobs[[g]] / lavsamplestats@ntotal
+      # (model-implied or h1) covariance, used by the continuous NT-gamma
+      # path; needed whether or not NACOV is available
+      if (iv_vcov_gamma_modelbased) {
+        cov_g <- lavimplied$cov[[g]]
+      } else {
+        cov_g <- lavh1$implied$cov[[g]]
+      }
       if (!is.null(lavsamplestats@NACOV[[g]])) {
         gamma_g[[g]] <- fg * lavsamplestats@NACOV[[g]]
-      } else {
-        if (iv_vcov_gamma_modelbased) {
-          cov_g <- lavimplied$cov[[g]]
-        } else {
-          cov_g <- lavh1$implied$cov[[g]]
-        }
 #         # NT version (for now), model-based
 #         gamma_g[[g]] <- lav_samp_gamma_nt(
 #           m_cov = cov_g,

@@ -69,12 +69,19 @@ Model matrices:
         If two parameters are constrained to be equal, they will have the
         same standard error for both parameters.
         Aliases: \code{"std.err"} and \code{"standard.errors"}.}
+    \item{\code{"se.std"}:}{A list of model matrices. The non-zero numbers
+        represent the standard errors for the (completely) standardized free
+        parameters in the model. Alias: \code{"std.se"}.}
     \item{\code{"start"}:}{A list of model matrices. The values represent
         the starting values for all model parameters.
         Alias: \code{"starting.values"}.}
     \item{\code{"est"}:}{A list of model matrices. The values represent
         the estimated model parameters. Aliases:
         \code{"estimates"}, and \code{"x"}.}
+    \item{\code{"est.unrotated"}:}{A list of model matrices. The values
+        represent the estimated model parameters before rotation was applied.
+        Only relevant if rotation was used (for example in EFA); otherwise
+        this is identical to \code{"est"}.}
     \item{\code{"dx.free"}:}{A list of model matrices. The values represent
         the gradient (first derivative) values of the model parameters.
         If two parameters are constrained to be equal, they will have the
@@ -95,7 +102,20 @@ Model matrices:
         both the observed and the latent variables are set to unity;
         however, the variances of any observed exogenous variables are not
         set to unity; hence no-x.)}
+    \item{\code{"mm.lambda"}:}{The estimated factor loading matrix (per
+        group), as extracted from the \code{@GLIST} slot.
+        Alias: \code{"lambda"}.}
+    \item{\code{"mm.delta"}:}{The estimated delta (scaling) matrix (per group),
+        as extracted from the \code{@GLIST} slot. Only available for
+        categorical data or when a correlation structure is used. (Note: this
+        is the delta model matrix, not the delta \emph{jacobian} that is
+        returned by \code{"delta"}.)}
 }
+
+To extract a single model matrix (from the \code{@GLIST} slot), use the
+\code{"mm.*"} options (for example \code{"mm.lambda"} for the factor loading
+matrix). For backward compatibility, the (older) bare names are still accepted
+as aliases.
 
 Information about the data:
 
@@ -121,6 +141,9 @@ Information about the data:
         cases/observations that contained missing values only
         (at least for the observed variables that were included in the model).
         In the case of multiple groups: a list of numbers.}
+    \item{\code{"th.idx"}:}{Integer vector. For categorical data, the index of
+        the observed variable that each threshold belongs to.
+        In the case of multiple groups: a list of integer vectors.}
     \item{\code{"patterns"}:}{A binary matrix. The rows of the matrix
         are the missing data patterns where 1 and 0 denote non-missing
         and missing values for the corresponding observed variables
@@ -188,6 +211,10 @@ Observed sample statistics:
          of the covariance matrix (or correlation matrix), and
          listwise deletion for all univariate statistics (means, intercepts
          and thresholds).}
+    \item{\code{"sampstat.std"}:}{Standardized observed sample statistics.
+         The covariance matrix is rescaled to a correlation matrix. Aliases:
+         \code{"obs.std"}, \code{"observed.std"}, \code{"samp.std"},
+         \code{"sample.std"}, \code{"samplestatistics.std"}.}
     \item{\code{"sampstat.h1"}:}{Deprecated. Do not use any longer.}
     \item{\code{"wls.obs"}:}{The observed sample statistics (covariance
         elements, intercepts/thresholds, etc.) in a single vector.}
@@ -238,6 +265,11 @@ Model-implied sample statistics:
         of both the observed and latent variables.}
     \item{\code{"th"}:}{The model-implied thresholds.
         Alias: \code{"thresholds"}.}
+    \item{\code{"mm.theta"}:}{The (residual) variance-covariance
+        matrix of the observed variables (the theta model matrix).
+        Aliases: \code{"theta"}, \code{"theta.cov"}.}
+    \item{\code{"theta.cor"}:}{The (residual) variance-covariance
+        matrix of the observed variables, expressed in correlation metric.}
     \item{\code{"wls.est"}:}{The model-implied sample statistics (covariance
         elements, intercepts/thresholds, etc.) in a single vector.}
     \item{\code{"vy"}:}{The model-implied unconditional variances of the
@@ -260,6 +292,9 @@ Model-implied sample statistics:
        data with multilevel models. Computed from the model-implied (H1)
        within-group and between-group covariance matrices. Only available
        for models with clustered data and multiple levels.}
+    \item{\code{"ranef"}:}{The random effects (empirical Bayes predictions of
+       the cluster-level latent variables). Only available for clustered data
+       (in the long format) with multiple levels.}
 }
 
 Diagnostics:
@@ -289,6 +324,12 @@ Gradient, Hessian, observed, expected and first.order information matrices:
     \item{\code{"gradient"}:}{Numeric vector containing the first derivatives
         of the discrepancy function with respect to the (free) model
         parameters.}
+    \item{\code{"gradient.logl"}:}{Numeric vector containing the first
+        derivatives of the loglikelihood with respect to the (free) model
+        parameters.}
+    \item{\code{"optim.gradient"}:}{Numeric vector containing the first
+        derivatives of the objective function (as seen by the optimizer)
+        with respect to the (free) model parameters.}
     \item{\code{"hessian"}:}{Matrix containing the second derivatives
         of the discrepancy function with respect to the (free) model
         parameters.}
@@ -388,12 +429,27 @@ Miscellaneous:
 
 \describe{
     \item{\code{"coef.boot"}:}{Matrix containing estimated model parameters for each bootstrap sample. Only relevant when bootstrapping was used.}
+    \item{\code{"monte.carlo"}:}{Matrix containing the Monte Carlo draws of the
+        model parameters, as used for the Monte Carlo confidence intervals of
+        defined parameters (Preacher & Selig, 2012). Only relevant when these
+        draws were requested. Aliases: \code{"mc"}, \code{"mc.coef"},
+        \code{"coef.mc"}.}
     \item{\code{"UGamma"}:}{Matrix containing the product of 'U' and 'Gamma'
         matrices as used by the Satorra-Bentler correction. The trace of
         this matrix, divided by the degrees of freedom, gives the scaling
         factor.}
     \item{\code{"UfromUGamma"}:}{Matrix containing the 'U' matrix
         as used by the Satorra-Bentler correction. Alias: \code{"U"}.}
+    \item{\code{"delta"}:}{The delta matrix (per group): the Jacobian of the
+        model-implied summary statistics (the rows: means, (co)variances,
+        thresholds, \ldots) with respect to the free model parameters (the
+        columns). This is the matrix used in the delta method. (Note: this is
+        the delta \emph{Jacobian}, not the delta model matrix that is returned
+        by \code{"mm.delta"}.) In the case of multiple groups: a list of
+        matrices.}
+    \item{\code{"delta.rownames"}:}{The row names of the delta matrix (see
+        \code{"delta"}): the labels of the model-implied summary statistics.
+        In the case of multiple groups: a list of character vectors.}
     \item{\code{"list"}:}{The parameter table. The same output as given
         by \code{parTable()}.}
     \item{\code{"fit"}:}{The fit measures. Aliases: \code{"fitmeasures"},
@@ -421,6 +477,23 @@ Miscellaneous:
         \code{lavInspect(fit, "theta")} return a non-positive definite matrix.}
     \item{\code{"zero.cell.tables"}:}{List. List of bivariate frequency tables
         where at least one cell is empty.}
+    \item{\code{"iv"}:}{Data.frame. One row per (transformed) equation, with
+        the (model-implied) instrumental variables that were used for each
+        equation. Columns are \code{lhs}, \code{rhs}, \code{lhs.new},
+        \code{rhs.new}, \code{type}, and \code{instruments}. Only available
+        when \code{estimator = "IV"}. Aliases: \code{"ivs"}, \code{"miiv"},
+        \code{"miivs"}, \code{"instr"}, \code{"instruments"}. In the case of
+        multiple groups: a list of data.frames.}
+    \item{\code{"eqs"}:}{List. The (internal) list of equations that was used
+        for the (MI)IV-based estimation, including the instruments, the
+        coefficients, and the Sargan test per equation. Only available when
+        \code{estimator = "IV"}.}
+    \item{\code{"sargan"}:}{Data.frame. The Sargan test of overidentifying
+        restrictions, for each overidentified equation. Columns are
+        \code{lhs}, \code{rhs}, \code{instruments}, \code{sargan.stat},
+        \code{df}, and \code{pvalue}. Only available when
+        \code{estimator = "IV"}. In the case of multiple groups: a list of
+        data.frames.}
     \item{\code{"version"}:}{The lavaan version number that was used to
         construct the fitted lavaan object.}
 }

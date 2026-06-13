@@ -1777,7 +1777,7 @@ lav_mvn_cl_em_estep_ranef <- function(ylp = NULL,
       )
       # ybar_j <- y2[cl, -between_idx]
     } else {
-      # ybar_j <- b_j <- y2[cl, ]
+      b_j <- y2[cl, ]
     }
 
     sigma_j <- sigma_w + nj * sigma_b

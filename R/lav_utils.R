@@ -392,6 +392,13 @@ lav_utils_wls_linearization <- function(delta = NULL, s = NULL,
 
   # vech
   w <- rep(1.0, pstar)
+  if (!categorical) {
+    # half-weight the diagonal elements of vech(): they are counted once,
+    # while each off-diagonal element represents two (symmetric) entries.
+    # (For categorical data, the cov part only contains off-diagonal
+    # correlations, so no diagonal weighting is needed.)
+    w[lav_mat_diagh_idx(nvar)] <- 0.5
+  }
 
   # split Delta/svec
   if (categorical) {
@@ -404,7 +411,6 @@ lav_utils_wls_linearization <- function(delta = NULL, s = NULL,
     jac_cov <- delta[-mean_idx, , drop = FALSE]
     s_mean <- svec[mean_idx]
     s_cov <- svec[-mean_idx]
-    w[lav_mat_diagh_idx(nvar)] <- 0.5
   } else if (nrow(delta) != pstar) {
     lav_msg_stop(gettext("nrow(Delta) != pstar"))
   }
