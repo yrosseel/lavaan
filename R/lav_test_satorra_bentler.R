@@ -17,8 +17,15 @@ lav_test_sb <- function(lavobject = NULL,
                                      method = "original",
                                      ug2_old_approach = FALSE,
                                      return_u = FALSE,
-                                     return_ugamma = FALSE) {
+                                     return_ugamma = FALSE,
+                                     gamma_full = NULL) {
   test_1 <- list()
+
+  # if a full (cross-group) Gamma is supplied, we must use the 'original'
+  # method (the only path that consumes a single assembled Gamma matrix)
+  if (!is.null(gamma_full)) {
+    method <- "original"
+  }
 
   if (!is.null(lavobject)) {
     lavsamplestats <- lavobject@SampleStats
@@ -210,7 +217,8 @@ lav_test_sb <- function(lavobject = NULL,
       ntotal = lavsamplestats@ntotal, return_u = return_u,
       return_ugamma = return_ugamma,
       ug2_old_approach = ug2_old_approach,
-      satterthwaite = satterthwaite
+      satterthwaite = satterthwaite,
+      gamma_full = gamma_full
     )
   } else if (method == "orthogonal.complement") {
     out <- lav_test_sb_trace_complement(
@@ -425,7 +433,13 @@ lav_test_sb_trace_original <- function(m_gamma = NULL,
                                                     return_u = FALSE,
                                                     return_ugamma = FALSE,
                                                     ug2_old_approach = FALSE,
-                                                    satterthwaite = FALSE) {
+                                                    satterthwaite = FALSE,
+                                                    gamma_full = NULL) {
+  # gamma_full: an already-assembled (full) Gamma matrix for the *stacked*
+  # statistics of all groups. When supplied (e.g. by sam() with across-group
+  # constraints, where Gamma has nonzero cross-group blocks), it is used as-is
+  # instead of block-diagonalizing the per-group m_gamma list. This forces the
+  # full (non per-group) computation path.
   # this is what we did <0.6-13: everything per group
   if (ug2_old_approach) {
     ufrom_ugamma <- ug <- vector("list", ngroups)
@@ -462,7 +476,7 @@ lav_test_sb_trace_original <- function(m_gamma = NULL,
   } else {
     trace_ugamma <- trace_ugamma2 <- u_all <- ug <- as.numeric(NA)
     fg <- unlist(nobs) / ntotal
-    if (satterthwaite || return_ugamma || return_u) {
+    if (satterthwaite || return_ugamma || return_u || !is.null(gamma_full)) {
       # for trace.UGamma2, we can no longer compute the trace per group
       v_g <- wls_v
       for (g in 1:ngroups) {
@@ -473,11 +487,16 @@ lav_test_sb_trace_original <- function(m_gamma = NULL,
         }
       }
       v_all <- lav_mat_bdiag(v_g)
-      gamma_f <- m_gamma
-      for (g in 1:ngroups) {
-        gamma_f[[g]] <- 1 / fg[g] * m_gamma[[g]]
+      if (is.null(gamma_full)) {
+        gamma_f <- m_gamma
+        for (g in 1:ngroups) {
+          gamma_f[[g]] <- 1 / fg[g] * m_gamma[[g]]
+        }
+        gamma_all <- lav_mat_bdiag(gamma_f)
+      } else {
+        # full (possibly cross-group) Gamma, supplied by the caller
+        gamma_all <- gamma_full
       }
-      gamma_all <- lav_mat_bdiag(gamma_f)
       delta_all <- do.call("rbind", delta)
       u_all <- v_all - v_all %*% delta_all %*% e_inv %*% t(delta_all) %*% v_all
       ug <- u_all %*% gamma_all

@@ -214,10 +214,13 @@ sam <- function(model = NULL,                      # nolint start
       }
     }
 
-    # check for multiple groups/blocks
-    if (fit@Model@nblocks > 1L && se == "local") {
+    # check for multiple blocks: multigroup (single level) is supported for
+    # the local approach as long as the measurement model has no across-group
+    # constraints (checked later in lav_sam_step1_local_jac_mg()); multilevel
+    # local SEs are not available yet
+    if (fit@Data@nlevels > 1L && se %in% c("local", "local.nt")) {
       lav_msg_stop(gettext("se = \"local\" not available (yet) if multiple
-                            blocks (groups, levels) are involved."))
+                            levels are involved."))
     }
   }
 
@@ -291,6 +294,23 @@ sam <- function(model = NULL,                      # nolint start
         gamma_eta[[g]] <- jac[[g]] %*% gamma[[g]] %*% t(jac[[g]])
       }
       step1$JAC <- jac
+
+      # Case B (across-group constraints in the measurement model): the
+      # per-group Gamma.eta blocks above are incomplete, because vech(VETA_g)
+      # also depends on the other groups' sample statistics. Build the full
+      # (cross-group) covariance of the stacked structural statistics so that
+      # step 2 can compute a proper cross-group sandwich. Cov(vech(S_g)) =
+      # gamma[[g]] / n_g, so the actual covariance of the stacked structural
+      # statistics is jac.full %*% bdiag(gamma_g / n_g) %*% t(jac.full).
+      if (isTRUE(attr(jac, "caseB"))) {
+        jac_full <- attr(jac, "jac.full")
+        nobs_g <- unlist(fit@SampleStats@nobs)
+        gscaled <- lapply(seq_len(fit@Data@ngroups),
+                          function(g) gamma[[g]] / nobs_g[g])
+        gamma_obs_full <- lav_mat_bdiag(gscaled)
+        step1$Gamma.eta.full <- jac_full %*% gamma_obs_full %*% t(jac_full)
+        step1$caseB <- TRUE
+      }
     } # no lv-interaction
     step1$Gamma.eta <- gamma_eta
   }

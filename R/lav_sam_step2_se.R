@@ -44,6 +44,65 @@ lav_sam_step2_se_bootstrap <- function(sam_object = NULL, bootstrap = list()) {
   list(VCOV = var_cov, boot.coef = coef_orig, R = this_args$R)
 }
 
+# Case B local SEs: across-group (equality) constraints in the measurement
+# model couple vech(VETA_g) across groups, so the NACOV of the stacked
+# structural statistics (step1$Gamma.eta.full) has nonzero cross-group blocks
+# that lavaan's multigroup robust.sem (a per-group NACOV list) cannot use.
+# We therefore compute the robust sandwich ourselves, reusing the structural
+# model's Delta, WLS.V (weight) and the augmented inverse information E.inv:
+#
+#   VCOV = (1/N^2) E.inv [ WD' (Dn Cov.full Dn) WD ] E.inv
+#
+# with WD = rbind_g( WLS.V_g %*% Delta_g ), Dn = diag(n_g) (repeated over the
+# statistics of group g), Cov.full = the full covariance of the stacked
+# structural statistics. When Cov.full is block-diagonal (Case A) this reduces
+# exactly to lavaan's E.inv %*% (sum_g (n_g/N) WD_g' Gamma_g WD_g) %*% E.inv / N.
+lav_sam_step2_se_local_caseB <- function(fit_pa, step1) {
+  ngroups <- fit_pa@Data@ngroups
+  ntotal  <- fit_pa@SampleStats@ntotal
+  nobs_g  <- unlist(fit_pa@SampleStats@nobs)
+
+  # structural model Delta, WLS.V (weight) and augmented E.inv
+  tmp <- lav_model_nvcov_robust_sem(
+    lavmodel = fit_pa@Model, lavsamplestats = fit_pa@SampleStats,
+    lavcache = fit_pa@cache, lavdata = fit_pa@Data,
+    lavimplied = fit_pa@implied, lavh1 = fit_pa@h1,
+    lavoptions = fit_pa@Options, use_ginv = FALSE,
+    attr_delta = TRUE, attr_e_inv = TRUE, attr_wls_v = TRUE)
+  e_inv <- attr(tmp, "E.inv")
+  delta <- attr(tmp, "Delta")
+  wls_v <- attr(tmp, "WLS.V")
+
+  # WD = rbind_g( W_g Delta_g ); dn = n_g repeated over group g's statistics
+  wd_list <- vector("list", ngroups)
+  dn_list <- vector("list", ngroups)
+  for (g in seq_len(ngroups)) {
+    if (is.matrix(wls_v[[g]])) {
+      wd <- wls_v[[g]] %*% delta[[g]]
+    } else {
+      # DWLS/ULS: WLS.V holds the diagonal of the weight matrix
+      wd <- wls_v[[g]] * delta[[g]]
+    }
+    wd_list[[g]] <- wd
+    dn_list[[g]] <- rep.int(nobs_g[g], nrow(wd))
+  }
+  wd_all <- do.call(rbind, wd_list)
+  dn <- unlist(dn_list)
+
+  cov_full <- step1$Gamma.eta.full
+  if (nrow(cov_full) != length(dn)) {
+    lav_msg_stop(gettext(
+      "internal error: dimension mismatch while assembling the multigroup
+       (Case B) local sandwich."))
+  }
+
+  # M = WD' (Dn Cov.full Dn) WD  ;  (Dn Cov.full Dn)[i,j] = n_i cov[i,j] n_j
+  dcd <- cov_full * outer(dn, dn)
+  m_cov <- crossprod(wd_all, dcd %*% wd_all)
+  vcov_1 <- (1 / (ntotal * ntotal)) * (e_inv %*% m_cov %*% e_inv)
+  vcov_1
+}
+
 # grab the 'naive' vcov from FIT.PA (computing it if absent), removing
 # any rows/cols in step2_rm_idx
 lav_sam_step2_se_vcov_pa <- function(fit_pa, step2_rm_idx = integer(0L)) {
@@ -131,28 +190,33 @@ lav_sam_step2_se <- function(fit = NULL, joint = NULL,
     step2_rm_idx <- pts_free[id_idx]
   }
 
-  # Fix for EFA/ESEM: when rotation is used, FIT.PA@Model@con.jac includes
-  # columns for rotation identification constraints that are not part of
-  # step2.free.idx. These extra columns cause dimension mismatch in
-  # lav_model_info_augment_invert(). Remove them via rm.idx.
-  if (nrow(fit_pa@Model@con.jac) > 0L) {
-    n_jac_cols <- ncol(fit_pa@Model@con.jac)
-    n_step2 <- length(step2_free_idx)
-    if (n_jac_cols > n_step2) {
-      step2_rm_idx <- union(step2_rm_idx, (n_step2 + 1):n_jac_cols)
-    }
-  }
-
   # invert augmented information, for I.22 block only
   # new in 0.6-16 (otherwise, eq constraints in struc part are ignored)
   if (lavoptions$se %in% c("standard", "twostep", "twostep.robust")) {
+    # Fix for EFA/ESEM: when rotation is used, FIT.PA@Model@con.jac includes
+    # columns for rotation identification constraints that are not part of
+    # step2.free.idx. These extra columns cause a dimension mismatch in
+    # lav_model_info_augment_invert(). Remove them via rm.idx. NOTE: this
+    # adjustment is only relevant for the augmented-inverse path below; it must
+    # NOT be added to step2_rm_idx itself, because the naive/local path reads
+    # the FIT.PA vcov directly and would then drop legitimate parameters (this
+    # used to break multigroup models with across-group equality constraints,
+    # where con.jac legitimately has more columns than step2.free.idx).
+    aug_rm_idx <- step2_rm_idx
+    if (nrow(fit_pa@Model@con.jac) > 0L) {
+      n_jac_cols <- ncol(fit_pa@Model@con.jac)
+      n_step2 <- length(step2_free_idx)
+      if (n_jac_cols > n_step2) {
+        aug_rm_idx <- union(step2_rm_idx, (n_step2 + 1):n_jac_cols)
+      }
+    }
     i_22_inv <-
       lav_model_info_augment_invert(
         lavmodel = fit_pa@Model,
         information = i_22,
         inverted = TRUE,
         use_ginv = FALSE, # if interaction, SEs end up smaller than naive...
-        rm_idx = step2_rm_idx
+        rm_idx = aug_rm_idx
       )
     if (inherits(i_22_inv, "try-error")) {
       # hm, not good
@@ -177,7 +241,16 @@ lav_sam_step2_se <- function(fit = NULL, joint = NULL,
 
   # se = "naive" or "local": grab VCOV directly from FIT.PA
   } else if (lavoptions$se %in% c("naive", "local", "local.nt")) {
-    vcov_1 <- lav_sam_step2_se_vcov_pa(fit_pa, step2_rm_idx)
+    if (isTRUE(step1$caseB) && lavoptions$se %in% c("local", "local.nt")) {
+      # across-group constraints in the measurement model: build the
+      # cross-group sandwich (the per-group FIT.PA vcov is incomplete)
+      vcov_1 <- lav_sam_step2_se_local_caseB(fit_pa = fit_pa, step1 = step1)
+      if (length(step2_rm_idx) > 0L) {
+        vcov_1 <- vcov_1[-step2_rm_idx, -step2_rm_idx, drop = FALSE]
+      }
+    } else {
+      vcov_1 <- lav_sam_step2_se_vcov_pa(fit_pa, step2_rm_idx)
+    }
     # order rows/cols of VCOV, so that they correspond with the (step 2)
     # parameters of the JOINT model, but remove := parameters first
     pt_idx <- step2$pt.idx

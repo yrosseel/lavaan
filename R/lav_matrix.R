@@ -1261,7 +1261,7 @@ lav_mat_sym_diff_smallest_root <- function(m = NULL, p = NULL) {
   neg_idx <- which(diag_p < 0)
   if (length(neg_idx) > 0L) {
     lav_msg_warn(gettext(
-      "some diagonal elements of P are negative (and set to zero)"
+      "some diagonal elements of the matrix that is subtracted are negative (and set to zero)"
     ))
     diag(p)[neg_idx] <- diag_p[neg_idx] <- 0
   }
@@ -1307,7 +1307,7 @@ lav_mat_sym_diff_smallest_root <- function(m = NULL, p = NULL) {
     }
     if (any(ev < -1000 * ev_tol)) {
       lav_msg_warn(gettext(
-        "P is not positive semidefinite; using its positive part only"))
+        "matrix to subtract is not positive semidefinite; using its positive part only"))
     }
 
     vt_mv <- crossprod(eig_p$vectors, m %*% eig_p$vectors)

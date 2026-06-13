@@ -563,17 +563,6 @@ lav_sam_step1_local_jac <- function(step1 = NULL, fit = NULL, p_only = FALSE,
   # sam_method <- step1$sam.method
 
   ngroups <- lavdata@ngroups
-  if (ngroups > 1L) {
-    lav_msg_stop(gettext("IJ local SEs: not available with multiple groups!\n"))
-    # if multiple groups:
-    # - we have a separate Gamma, h1.expected, delta matrix per group
-    # - but we have only 1 observed information matrix, reflecting possible
-    #   across-group equality constraints
-    # - we may need to use the same procedure as for robust test statistics:
-    #   create a (huge) block-diagonal Gamma matrix, and one big 'JAC'
-    #   matrix...
-  }
-  g <- 1L
   if (lavmodel@categorical && !p_only) {
     lav_msg_stop(gettext(
       "IJ local SEs: not available for the categorical setting (yet)!\n"))
@@ -583,6 +572,37 @@ lav_sam_step1_local_jac <- function(step1 = NULL, fit = NULL, p_only = FALSE,
       "twostep.robust SEs: not available for the categorical setting in
        combination with conditional.x = TRUE (yet)!\n"))
   }
+
+  # multiple groups: dispatch to the (single-level, no latent interaction)
+  # multigroup implementation, which builds one stacked jacobian over all
+  # groups and returns a list of per-group jacobians. This currently only
+  # supports the case where the measurement model has NO across-group
+  # (equality) constraints (so the groups remain independent in step 1);
+  # that case is detected and reported in lav_sam_step1_local_jac_mg().
+  if (ngroups > 1L) {
+    if (p_only) {
+      lav_msg_stop(gettext(
+        "twostep.robust SEs: not available with multiple groups (yet)!"))
+    }
+    if (lavdata@nlevels > 1L) {
+      lav_msg_stop(gettext(
+        "local SEs: not available for multigroup multilevel models (yet)!"))
+    }
+    if (lavmodel@conditional.x) {
+      lav_msg_stop(gettext(
+        "local SEs: not available with multiple groups in combination with
+         conditional.x = TRUE (yet)!"))
+    }
+    if (length(unlist(lavpta$vnames$lv.interaction)) > 0L) {
+      lav_msg_stop(gettext(
+        "local SEs: not available for latent interactions with multiple
+         groups (yet)!"))
+    }
+    return(lav_sam_step1_local_jac_mg(step1 = step1, fit = fit,
+                                      return_jac = return_jac))
+  }
+
+  g <- 1L
   n_mmblocks <- length(step1$MM.FIT)
 
   # categorical: we map the statistics of each measurement block into the
@@ -809,6 +829,218 @@ lav_sam_step1_local_jac <- function(step1 = NULL, fit = NULL, p_only = FALSE,
 
   # eventually, this will be a list per group/block
   list(jac)
+}
+
+# multigroup version of lav_sam_step1_local_jac() (single level, no latent
+# interactions, continuous data).
+#
+# Strategy: build ONE 'stacked' jacobian
+#   JAC.full = JACc %*% JACa + JACb
+# where
+#   - the columns run over the stacked sample statistics vech(S_g) (per group),
+#   - the rows run over the stacked c(EETA_g, vech(VETA_g)) (per group).
+# The sample statistics are independent across groups, so the (full) Gamma of
+# the stacked vech(S) is block-diagonal. When the measurement model has NO
+# across-group (equality) constraints, the measurement parameters of the
+# different groups are estimated independently, hence JAC.full is itself
+# block-diagonal across groups, and we can return a simple list of per-group
+# jacobians jac[[g]] (the caller then forms Gamma.eta[[g]] = jac[[g]] %*%
+# Gamma[[g]] %*% t(jac[[g]]), and feeds it as a per-group NACOV to the
+# multigroup structural model).
+#
+# If the measurement model DOES contain across-group constraints, JAC.full has
+# nonzero off-diagonal (cross-group) blocks: vech(VETA_g) then depends on the
+# sample statistics of the OTHER groups too. A per-group NACOV list can no
+# longer capture this (the structural step would need the full cross-group
+# Gamma.eta); we detect this situation and stop with an informative message.
+lav_sam_step1_local_jac_mg <- function(step1 = NULL, fit = NULL,
+                                       return_jac = FALSE) {
+  lavdata  <- fit@Data
+  lavmodel <- fit@Model
+  lavpta   <- fit@pta
+  ngroups  <- lavdata@ngroups
+  n_mmblocks <- length(step1$MM.FIT)
+  meanstructure <- lavmodel@meanstructure
+
+  # per-group size of the (joint) sample-statistics vector vech(S_g)[+ means]
+  stat_n <- vapply(seq_len(ngroups),
+    function(g) length(fit@SampleStats@WLS.obs[[g]]), integer(1L))
+  stat_offset <- c(0L, cumsum(stat_n)) # length ngroups + 1
+  stat_tot <- sum(stat_n)
+
+  # per-group size of c(EETA_g, vech(VETA_g))
+  veta_n <- vapply(seq_len(ngroups), function(g) {
+    p <- ncol(step1$VETA[[g]])
+    (if (meanstructure) p else 0L) + p * (p + 1L) %/% 2L
+  }, integer(1L))
+  veta_offset <- c(0L, cumsum(veta_n))
+  veta_tot <- sum(veta_n)
+
+  # JACa: jacobian of theta.mm = f(vech(S_all))
+  # rows: all parameters in fit@ParTable (we select 'measurement' rows later)
+  # cols: stacked vech(S_g) over the groups
+  jaca <- matrix(0, nrow = length(fit@ParTable$lhs), ncol = stat_tot)
+  for (mm in seq_len(n_mmblocks)) {
+    fit_mm_block   <- step1$MM.FIT[[mm]]
+    mm_h1_expected <- lavTech(fit_mm_block, "h1.information.expected")
+    mm_delta       <- lavTech(fit_mm_block, "Delta")
+    mm_inv_observed <- lavTech(fit_mm_block, "inverted.information.observed")
+
+    # rows of mm_jac that we keep (the free params present in fit@ParTable),
+    # together with the corresponding row numbers in fit@ParTable.
+    # NOTE: Delta and (inverted) information have one row/col per *unconstrained*
+    # free parameter (nx.unco); with simple equality constraints (ceq.simple,
+    # e.g. across-group equal loadings) the ParTable$free numbering (nx.free)
+    # is smaller and would mis-index the rows of mm_jac. Remap to the
+    # unconstrained position (cf. lav_sam_step1()).
+    mm_free <- fit_mm_block@ParTable$free
+    if (fit_mm_block@Model@ceq.simple.only) {
+      mm_free[mm_free > 0L] <- seq_len(fit_mm_block@Model@nx.unco)
+    }
+    mm_keep_idx <- mm_free[step1$block.ptm.idx[[mm]]]
+    mm_row_idx  <- step1$block.mm.idx[[mm]][step1$block.ptm.idx[[mm]]]
+
+    # lavaan stores a single 'unit' (per-observation averaged) information
+    # matrix for the whole (multigroup) block; the group-g diagonal block of
+    # its inverse is therefore (N/n_g) times the inverse one would obtain from
+    # group g alone, while Delta[[g]] and h1.information.expected[[g]] are
+    # unweighted. To recover the per-group influence d(theta.mm_g)/d(s_g) we
+    # undo this normalization with the group proportion w_g = n_g / N.
+    mm_ntotal <- fit_mm_block@SampleStats@ntotal
+
+    for (g in seq_len(ngroups)) {
+      w_g <- fit_mm_block@SampleStats@nobs[[g]] / mm_ntotal
+      # influence of group g's sample statistics on ALL block parameters
+      # (in the no-across-group-constraint case, only group g's parameters
+      #  have nonzero rows; with across-group constraints, other groups'
+      #  parameter rows are nonzero too -> cross-group coupling)
+      mm_jac <- w_g *
+        t(mm_h1_expected[[g]] %*% mm_delta[[g]] %*% mm_inv_observed)
+      mm_jac <- mm_jac[mm_keep_idx, , drop = FALSE]
+
+      # map the columns (block statistics of group g) into the joint
+      # statistics vector of group g
+      mm_ov_idx <- match(fit_mm_block@Data@ov.names[[g]],
+                         lavdata@ov.names[[g]])
+      mm_nvar   <- length(lavdata@ov.names[[g]])
+      mm_col_idx <- lav_mat_vech_which_idx(mm_nvar, idx = mm_ov_idx,
+        add_idx_at_start = meanstructure)
+      jaca[mm_row_idx, stat_offset[g] + mm_col_idx] <- mm_jac
+    }
+  }
+
+  # keep only 'measurement' (LAMBDA/THETA/NU/BETA/PSI) parameters
+  pt_1 <- step1$PT
+  ov_names <- unique(unlist(lapply(step1$MM.FIT, lav_object_vnames, "ov")))
+  lambda_idx <- which(pt_1$op == "=~" & pt_1$free > 0L & !duplicated(pt_1$free))
+  theta_idx  <- which(pt_1$op == "~~" & pt_1$free > 0L &
+                      !duplicated(pt_1$free) &
+                      pt_1$lhs %in% ov_names & pt_1$rhs %in% ov_names)
+  nu_idx <- integer(0L)
+  if (meanstructure) {
+    nu_idx <- which(pt_1$op == "~1" & pt_1$free > 0L &
+                    !duplicated(pt_1$free) & pt_1$lhs %in% ov_names)
+  }
+  delta_idx <- integer(0L)
+  if (lavmodel@correlation) {
+    delta_idx <- which(pt_1$op == "~*~" & pt_1$free > 0L &
+                       !duplicated(pt_1$free))
+  }
+  beta_idx <- psi_idx <- integer(0L)
+  lv_ind <- unlist(lavpta$vnames$lv.ind)
+  if (length(lv_ind) > 0L) {
+    beta_idx <- which(pt_1$op == "=~" & pt_1$free > 0L &
+                      !duplicated(pt_1$free) & pt_1$rhs %in% lv_ind)
+    psi_idx <- which(pt_1$op == "~~" & pt_1$free > 0L &
+                     !duplicated(pt_1$free) &
+                     pt_1$rhs %in% lv_ind & pt_1$lhs %in% lv_ind)
+  }
+  keep_idx <- sort(c(lambda_idx, theta_idx, nu_idx,
+                     delta_idx, beta_idx, psi_idx))
+  jaca <- jaca[keep_idx, , drop = FALSE]
+
+  # JACb: jacobian of vech(VETA) = f(vech(S)), keeping theta.mm fixed
+  # (block-diagonal across groups: VETA_g = M_g S_g M_g')
+  jacb_list <- vector("list", ngroups)
+  for (g in seq_len(ngroups)) {
+    mb <- step1$M[[g]]
+    mbx_mb <- mb %x% mb
+    row_idx <- lav_mat_vech_idx(nrow(mb))
+    jb <- lav_mat_dup_post(mbx_mb)[row_idx, , drop = FALSE]
+    if (meanstructure) {
+      jb <- lav_mat_bdiag(mb, jb)
+    }
+    jacb_list[[g]] <- jb
+  }
+  jacb <- lav_mat_bdiag(jacb_list)
+
+  # JACc: jacobian of vech(VETA) = f(theta.mm), keeping vech(S) fixed
+  # (numeric; over the stacked c(EETA_g, vech(VETA_g)) of all groups)
+  ffc <- function(x) {
+    step1_1 <- step1
+    step1_1$PT$est[keep_idx] <- x
+    step1_1 <- lav_sam_step1_local(step1 = step1_1, fit = fit,
+      sam_method = step1$sam.method, local_options = step1$local.options)
+    unlist(lapply(seq_len(ngroups), function(g) {
+      if (meanstructure) {
+        c(step1_1$EETA[[g]], lav_mat_vech(step1_1$VETA[[g]]))
+      } else {
+        lav_mat_vech(step1_1$VETA[[g]])
+      }
+    }))
+  }
+  verbose_flag <- lav_verbose()
+  lav_verbose(FALSE)
+  jacc <- numDeriv::jacobian(func = ffc, x = step1$PT$est[keep_idx])
+  lav_verbose(verbose_flag)
+
+  # assemble the stacked JAC
+  jac_full <- (jacc %*% jaca) + jacb
+
+  # split into per-group jacobians, and detect cross-group (off-diagonal)
+  # coupling. Negligible off-diagonal blocks => the measurement model has no
+  # across-group constraints (Case A): the per-group jac[[g]] are sufficient,
+  # and the caller forms a per-group NACOV list. Non-negligible off-diagonal
+  # blocks => across-group measurement constraints (Case B): vech(VETA_g) then
+  # depends on the OTHER groups' sample statistics, so the full (stacked)
+  # jacobian must be kept and a cross-group sandwich computed in step 2.
+  jac <- vector("list", ngroups)
+  caseb_flag <- FALSE
+  for (g in seq_len(ngroups)) {
+    r_idx <- (veta_offset[g] + 1L):veta_offset[g + 1L]
+    c_idx <- (stat_offset[g] + 1L):stat_offset[g + 1L]
+    jac[[g]] <- jac_full[r_idx, c_idx, drop = FALSE]
+
+    other_c <- if (stat_tot > length(c_idx)) {
+      seq_len(stat_tot)[-c_idx]
+    } else {
+      integer(0L)
+    }
+    if (length(other_c) > 0L) {
+      off_block <- max(abs(jac_full[r_idx, other_c, drop = FALSE]))
+      this_block <- max(abs(jac[[g]]), 1)
+      # numeric (finite-difference) noise is ~1e-7; genuine across-group
+      # coupling is O(1), so a relative tolerance of 1e-4 separates them
+      if (off_block > 1e-4 * this_block) {
+        caseb_flag <- TRUE
+      }
+    }
+  }
+
+  # always expose the stacked jacobian + block layout, so step 2 can build the
+  # cross-group sandwich when needed (Case B)
+  attr(jac, "jac.full") <- jac_full
+  attr(jac, "caseB") <- caseb_flag
+  attr(jac, "stat.offset") <- stat_offset
+  attr(jac, "veta.offset") <- veta_offset
+
+  if (return_jac) {
+    attr(jac, "JACa") <- jaca
+    attr(jac, "JACb") <- jacb
+    attr(jac, "JACc") <- jacc
+  }
+
+  jac
 }
 
 # semi-analytic version
