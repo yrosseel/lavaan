@@ -409,6 +409,12 @@ lav_mvn_cl_mi_dlogl_2l_samp <- function(
       }
     }
   } # p
+
+  # fully-missing-within cases (empty.idx) belong to a cluster but
+  # contribute nothing to the loglik; flag them (-1L) so they are not
+  # counted as complete cases when computing dx.sigma.w below
+  mpi[mp$empty.idx] <- -1L
+
   pj <- rowsum.default(pij_1[, , drop = FALSE],
     cluster_idx,
     reorder = FALSE, na.rm = TRUE
@@ -542,7 +548,7 @@ lav_mvn_cl_mi_dlogl_2l_samp <- function(
     pij <- pij_1[ij_index, , drop = FALSE]
 
     which_compl <- which(mpi[ij_index] == 0L)
-    which_incompl <- which(mpi[ij_index] != 0L)
+    which_incompl <- which(mpi[ij_index] > 0L)
 
     ap2 <- rep(list(sigma_w_inv %*% part2), length(ij_index))
     ap1a_a <- ap1a_b <- matrix(0, ny, ny)
@@ -767,6 +773,11 @@ lav_mvn_cl_mi_sc_2l <- function(
     }
   } # p
 
+  # fully-missing-within cases (empty.idx) belong to a cluster but
+  # contribute nothing to the loglik; flag them (-1L) so they are not
+  # counted as complete cases when computing dx.sigma.w below
+  mpi[mp$empty.idx] <- -1L
+
   pj <- rowsum.default(pij_1[, , drop = FALSE],
     cluster_idx,
     reorder = FALSE, na.rm = TRUE
@@ -908,7 +919,7 @@ lav_mvn_cl_mi_sc_2l <- function(
     pij <- pij_1[ij_index, , drop = FALSE]
 
     which_compl <- which(mpi[ij_index] == 0L)
-    which_incompl <- which(mpi[ij_index] != 0L)
+    which_incompl <- which(mpi[ij_index] > 0L)
 
     ap2 <- rep(list(sigma_w_inv %*% part2), length(ij_index))
     ap1a_a <- ap1a_b <- matrix(0, ny, ny)
