@@ -49,7 +49,7 @@ fitmeasures(object, fit.measures = "all",
   interval for the rmsea value. The \code{rmsea.close.h0} option, default 0.05,
   is the rmsea value that is used under the null hypothesis that \code{rmsea <= rmsea.close.h0}.
   The \code{rmsea.notclose.h0} option, default 0.08, is the rmsea value that is used under the
-  null hypothesis that \code{rsmsea >= rmsea.notclose.h0}. The \code{robust} 
+  null hypothesis that \code{rmsea >= rmsea.notclose.h0}. The \code{robust} 
   option, default \code{TRUE}, can be set to \code{FALSE} to avoid computing the so-called robust
   rmsea/cfi measures (for example if the computations take too long).
   The \code{cat.check.pd} option, default \code{TRUE}, is only used when data is categorical. If
@@ -58,7 +58,7 @@ fitmeasures(object, fit.measures = "all",
 \item{baseline.model}{If not NULL, an object of class
   \code{\linkS4class{lavaan}}, representing a user-specified baseline model.
   If a baseline model is provided, all fit indices relying on a
-  baseline model (eg. CFI or TLI) will use the test statistics from
+  baseline model (e.g., CFI or TLI) will use the test statistics from
   this user-specified baseline model, instead of the default baseline model.}
 \item{h1.model}{If not NULL, an object of class \code{\linkS4class{lavaan}},
   representing a user-specified alternative to the default unrestricted model.
@@ -77,7 +77,7 @@ fitmeasures(object, fit.measures = "all",
   (for example \code{"rmsea"}) if related fit measures are requested
   (for example \code{"rmsea.ci.lower"}). Otherwise, nothing will be 
   printed in that section.
-  See the examples how to add the chi-square test in the text output.}
+  See the examples for how to add the chi-square test in the text output.}
 \item{...}{Further arguments passed to or from other methods. Not currently
   used for \code{lavaan} objects.}
 }
@@ -125,37 +125,37 @@ No separate FMG-specific fit-measure names are needed.
 Brosseau-Liard, P. E., Savalei, V., & Li, L. (2012). An investigation of the
 sample performance of two nonnormality corrections for RMSEA. Multivariate
 behavioral research, 47(6), 904-930.
-\doi{https://doi.org/10.1080/00273171.2012.715252}
+\doi{10.1080/00273171.2012.715252}
 
 Brosseau-Liard, P. E., & Savalei, V. (2014). Adjusting incremental fit
 indices for nonnormality. Multivariate behavioral research, 49(5), 460-470.
-\doi{https://doi.org/10.1080/00273171.2014.933697}
+\doi{10.1080/00273171.2014.933697}
 
 Savalei, V. (2018). On the computation of the RMSEA and CFI from the
 mean-and-variance corrected test statistic with nonnormal data in SEM.
 Multivariate behavioral research, 53(3), 419-429.
-\doi{https://doi.org/10.1080/00273171.2018.1455142}
+\doi{10.1080/00273171.2018.1455142}
 
 Savalei, V. (2021). Improving fit indices in structural equation modeling with
 categorical data. Multivariate Behavioral Research, 56(3), 390-407.
-\doi{https://doi.org/10.1080/00273171.2020.1717922}
+\doi{10.1080/00273171.2020.1717922}
 
 Savalei, V., Brace, J. C., & Fouladi, R. T. (2023). We need to change how we
 compute RMSEA for nested model comparisons in structural equation modeling.
 Psychological Methods.
-\doi{https://doi.org/10.1037/met0000537}
+\doi{10.1037/met0000537}
 
 Zhang, X., & Savalei, V. (2023). New computations for RMSEA and CFI following
 FIML and TS estimation with missing data. Psychological Methods, 28(2),
-263-283. \doi{https://doi.org/10.1037/met0000445}
+263-283. \doi{10.1037/met0000445}
 
 Foldnes, N., Moss, J., & Gronneberg, S. (2024). Improved goodness of fit
 procedures for structural equation models. \emph{Structural Equation Modeling:
-A Multidisciplinary Journal}, 1-13. \doi{https://doi.org/10.1080/10705511.2024.2372028}
+A Multidisciplinary Journal}, 1-13. \doi{10.1080/10705511.2024.2372028}
 
 Foldnes, N., Gronneberg, S., & Moss, J. (2026). Penalized eigenvalue block
 averaging: Extension to nested model comparison and Monte Carlo evaluations.
-\emph{Behavior Research Methods, 58}(4). \doi{https://doi.org/10.3758/s13428-026-02968-4}
+\emph{Behavior Research Methods, 58}(4). \doi{10.3758/s13428-026-02968-4}
 }
 
 \examples{

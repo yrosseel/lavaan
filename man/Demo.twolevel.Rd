@@ -2,7 +2,7 @@
 \alias{Demo.twolevel}
 \docType{data}
 \title{
-Demo dataset for a illustrating a multilevel CFA.
+Demo dataset for illustrating a multilevel CFA
 }
 \description{
 A toy dataset containing measures on 6 items (y1-y6), 3 within-level 
@@ -13,7 +13,6 @@ variable is \dQuote{cluster}.
 \usage{data(Demo.twolevel)}
 \format{
 A data frame of 2500 observations of 12 variables.
-clusters.
 \describe{
     \item{\code{y1}}{item 1}
     \item{\code{y2}}{item 2}

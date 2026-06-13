@@ -1,6 +1,6 @@
 \name{lav_plotinfo_tikzcode}
 \alias{lav_plotinfo_tikzcode}
-\title{Creates code to show a diagram in tikz format.}
+\title{Creates code to show a diagram in tikz format}
 \usage{
 lav_plotinfo_tikzcode(plotinfo,
                       outfile = "",
@@ -18,7 +18,7 @@ lav_plotinfo_tikzcode(plotinfo,
 \item{outfile}{A connection or a character string, the file to store the code.}
 \item{cex}{Minimum distance between nodes in cm.}
 \item{sloped_labels}{logical, sloped labels for the edges.}
-\item{standalone}{logical, add code to make teX file standalone?}
+\item{standalone}{logical, add code to make TeX file standalone?}
 \item{mlovcolors}{Array of two colors for distinguishing ov nodes with same name
 between the levels in a  multilevel model.}
 \item{lightness}{A scalar factor to modify the distances between nodes.}

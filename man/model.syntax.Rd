@@ -46,13 +46,13 @@ lavParseModelString(model.syntax = '', as.data.frame. = FALSE,
 }
 \arguments{
 \item{model}{A description of the user-specified model. Typically, the model
-    is described using the lavaan model syntax; see details for more 
+    is described using the lavaan model syntax; see details for more
     information. Alternatively, a parameter table (e.g., the output of
-    \code{lavParseModelString} is also accepted.}
+    \code{lavParseModelString}) is also accepted.}
 \item{model.syntax}{The model syntax specifying the model. Must be a literal
 string.}
 \item{meanstructure}{If \code{TRUE}, intercepts/means will be added to
-the model both for both observed and latent variables.}
+the model for both observed and latent variables.}
 \item{int.ov.free}{If \code{FALSE}, the intercepts of the observed variables
     are fixed to zero.}
 \item{int.lv.free}{If \code{FALSE}, the intercepts of the latent variables
@@ -62,7 +62,7 @@ the model both for both observed and latent variables.}
     If \code{TRUE}, it implies \code{meanstructure = TRUE} and 
     \code{std.lv = FALSE}, and it fixes the intercepts of the marker
     indicators to zero, while freeing the means/intercepts of the latent
-    variables. Only works correcly for single group, single level models.}
+    variables. Only works correctly for single group, single level models.}
 \item{orthogonal}{If \code{TRUE}, all covariances among
    latent variables are set to zero.}
 \item{orthogonal.y}{If \code{TRUE}, all covariances among
@@ -76,7 +76,7 @@ the model both for both observed and latent variables.}
     of each latent variable is determined by fixing the factor loading of the
     first indicator to 1.0. If there are multiple
       groups, \code{std.lv = TRUE} and \code{"loadings"} is included in 
-      the \code{group.label} argument, then only the latent variances i
+      the \code{group.label} argument, then only the latent variances
       of the first group will be fixed to 1.0, while the latent
       variances of other groups are set free.}
 \item{correlation}{If \code{TRUE}, a correlation structure is fitted. For
@@ -101,7 +101,7 @@ the model both for both observed and latent variables.}
     the exogenous `x' covariates; the model-implied sample statistics
     only include the non-x variables. If \code{FALSE}, the exogenous `x'
     variables are modeled jointly with the other variables, and the
-    model-implied statistics refect both sets of variables.}
+    model-implied statistics reflect both sets of variables.}
 \item{fixed.x}{If \code{TRUE}, the exogenous `x' covariates are considered
     fixed variables and the means, variances and covariances of these variables
     are fixed to their sample values. If \code{FALSE}, they are considered
@@ -260,7 +260,7 @@ There can be seven types of formula-like expressions in the model syntax:
     \item Thresholds: The \code{"|"} operator can be used to define the 
       thresholds of categorical endogenous variables (on the left hand side
       of the operator). By convention, the
-      thresholds (on the right hand sided, separated by the \code{"+"} operator,
+      thresholds (on the right hand side, separated by the \code{"+"} operator,
       are named \code{"t1"}, \code{"t2"}, etcetera.
 
     \item Scaling factors: The \code{"~*~"} operator defines a scale factor.
@@ -307,7 +307,7 @@ following sections.
 \section{Fixing parameters}{
 It is often desirable to fix a model parameter that is otherwise (by default)
 free. Any parameter in a model can be fixed by using a modifier resulting
-in a numerical constaint. Here are some examples:
+in a numerical constant. Here are some examples:
 \itemize{
 
     \item Fixing the regression coefficient of the predictor 
@@ -355,7 +355,7 @@ corresponding to the covariance between two latent variables in the
 formula \code{f1 ~~ f2} is the string \code{"f1~~f2"}.
 
 Although this automatic labeling of parameters is convenient, the user may
-specify its own labels for specific parameters simply by pre-multiplying
+specify their own labels for specific parameters simply by pre-multiplying
 the corresponding term (on the right hand side of the operator only) by
 a character string (starting with a letter).
 For example, in the formula \code{f1 =~ x1 + x2 + mylabel*x3}, the parameter 
@@ -510,6 +510,6 @@ model <- ' # direct effect
 \references{
 Rosseel, Y. (2012). \code{lavaan}: An R package for structural equation
 modeling. \emph{Journal of Statistical Software, 48}(2), 1--36. 
-\doi{https://doi.org/10.18637/jss.v048.i02}
+\doi{10.18637/jss.v048.i02}
 }
 

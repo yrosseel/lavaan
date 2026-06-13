@@ -76,7 +76,7 @@ entries or only the free parameters from the parameter table respectively.}
 it should be the only argument. All the values for the other arguments 
 are extracted from this object.}
 \item{lavdata}{An object of class `lavData'. The Data slot from a lavaan object.}
-\item{lavoptions}{A named list. The Options lsot from a lavaan object.}
+\item{lavoptions}{A named list. The Options slot from a lavaan object.}
 \item{lavsamplestats}{An object of class `lavSampleStats'. The SampleStats
 slot from a lavaan object.}
 \item{lavh1}{A named list. The h1 slot from a lavaan object.}

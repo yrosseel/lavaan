@@ -3,7 +3,7 @@
 \alias{lavaanNames}
 \title{lavaan Names}
 \description{
-Extract variables names from a fitted lavaan object.}
+Extract variable names from a fitted lavaan object.}
 \usage{
 lavNames(object, type = "ov", ...)
 }
@@ -29,7 +29,7 @@ The following variable types are available:
 
   \item \code{"ov.nox"}: non-exogenous observed variables
 
-  \item \code{"ov.model"}: modelled observed variables (joint vs conditional)
+  \item \code{"ov.model"}: modeled observed variables (joint vs conditional)
 
   \item \code{"ov.y"}: (pure) endogenous variables (dependent only) (no mediators)
 
@@ -39,7 +39,7 @@ The following variable types are available:
 
   \item \code{"ov.ind"}: observed indicators of latent variables
 
-  \item \code{"ov.orphan"}: lonely observed variables (only intercepts/variancesappear in the model syntax)
+  \item \code{"ov.orphan"}: lonely observed variables (only intercepts/variances appear in the model syntax)
 
   \item \code{"ov.interaction"}: interaction terms (defined by the colon operator)
 

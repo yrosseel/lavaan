@@ -1,6 +1,6 @@
 \name{lav_plotinfo_svgcode}
 \alias{lav_plotinfo_svgcode}
-\title{Creates code to show a diagram in svg format.}
+\title{Creates code to show a diagram in svg format}
 \usage{
 lav_plotinfo_svgcode(plotinfo,
                      outfile = "",
@@ -12,7 +12,7 @@ lav_plotinfo_svgcode(plotinfo,
                      dy = 5L,
                      mlovcolors = c("lightgreen", "lightblue"),
                      lightness= 1,
-                     font_family = "Latin Modern Math, arial, Aerial, sans",
+                     font_family = "Latin Modern Math, arial, Arial, sans",
                      italic = TRUE,
                      auto_subscript = TRUE
                      )

@@ -1,6 +1,6 @@
 \name{lav_plotinfo_rgraph}
 \alias{lav_plotinfo_rgraph}
-\title{Plots a graph in R.}
+\title{Plots a graph in R}
 \usage{
 lav_plotinfo_rgraph(plotinfo,
                     sloped_labels = TRUE,

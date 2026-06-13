@@ -12,7 +12,7 @@ lav_data_update(lavdata = NULL, newX = NULL, BOOT.idx = NULL, lavoptions = NULL)
 They will replace the data stored in the internal dataslot.}
 \item{BOOT.idx}{A list of integers. If bootstrapping was used to produce
 the data in newX, use these indices to adapt the remaining slots.}
-\item{lavoptions}{A named list. The Options lsot from a lavaan object.}
+\item{lavoptions}{A named list. The Options slot from a lavaan object.}
 }
 \examples{
 # generate syntax for an independence model

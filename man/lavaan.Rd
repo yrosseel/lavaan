@@ -19,7 +19,7 @@ lavaan(model = NULL, data = NULL, ordered = NULL,
 \item{model}{A description of the user-specified model. Typically, the model
     is described using the lavaan model syntax. See 
     \code{\link{model.syntax}} for more information. Alternatively, a
-    parameter table (eg. the output of the \code{lavParTable()} function) is also
+    parameter table (e.g., the output of the \code{lavParTable()} function) is also
     accepted.}
 \item{data}{An optional data frame containing the observed variables used in
     the model. If some variables are declared as ordered factors, lavaan will
@@ -101,7 +101,7 @@ in a multiple group analysis.}
 \references{
 Yves Rosseel (2012). lavaan: An R Package for Structural Equation
 Modeling. Journal of Statistical Software, 48(2), 1-36. 
-\doi{https://doi.org/10.18637/jss.v048.i02}}
+\doi{10.18637/jss.v048.i02}}
 \seealso{
 \code{\link{cfa}}, \code{\link{sem}}, \code{\link{growth}}
 }

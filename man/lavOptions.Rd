@@ -144,7 +144,7 @@ Data options:
       covariates, even if \code{fixed.x = TRUE}. (Note: all lavaan versions
       < 0.6 used \code{"ml.x"} instead of \code{"ml"}).
       If you wish to use multiple
-      imputation, you need to use an external package (eg. mice) to
+      imputation, you need to use an external package (e.g., mice) to
       generate imputed datasets, which can then be analyzed using
       the \code{\link{semList}} function. The semTools package contains
       several functions to do this automatically. Another option (with
@@ -254,7 +254,7 @@ Estimation options:
       for \code{"MLR"}, `Huber-White' robust standard errors are used
       (\code{se="robust.huber.white"}). In addition, \code{"MLM"} will compute
       a Satorra-Bentler scaled (mean adjusted) test statistic
-      (\code{test="satorra.bentler"}) , \code{"MLMVS"} will compute a
+      (\code{test="satorra.bentler"}), \code{"MLMVS"} will compute a
       mean and variance adjusted test statistic (Satterthwaite style)
       (\code{test="mean.var.adjusted"}), \code{"MLMV"} will compute a mean
       and variance adjusted test statistic (scaled and shifted)
@@ -332,7 +332,7 @@ Estimation options:
       requested here for supported ML-family models. The convenience value
       \code{"fmg"} resolves to \code{"peba4_rls"} for one-model tests.}
    \item{\code{standard.test}:}{Character. Choose the test statistic
-    that will be used to compute fit measures (like CFI or RSMEA).
+    that will be used to compute fit measures (like CFI or RMSEA).
     The default is \code{"standard"}, but it could also be (for example)
     \code{"Browne.residual.nt"}, or an FMG test name such as
     \code{"peba4"} or \code{"fmg"}.}
@@ -368,7 +368,7 @@ Estimation options:
      method, \code{R} draws are taken from
      \eqn{\textit{MVN}(\hat{\theta}, \widehat{\textit{Var}}(\hat{\theta}))},
      the defined parameter is evaluated for each draw, and standard
-     errors are obtained as the standard deviation of these realisations.
+     errors are obtained as the standard deviation of these realizations.
      Confidence intervals (in \code{parameterEstimates()} and
      \code{standardizedSolution()}) are based on percentile bounds of
      the Monte Carlo distribution, and therefore can be asymmetric (just
@@ -438,7 +438,7 @@ Optimization options:
       list are \code{lower}, \code{upper}, \code{lower.factor} and 
       \code{upper.factor}. All of these accept a vector. The \code{lower} and
       \code{upper} elements indicate for which type of parameters bounds
-      should be computed. Possible choice are \code{"ov.var"}, \code{"lv.var"},
+      should be computed. Possible choices are \code{"ov.var"}, \code{"lv.var"},
       \code{"loadings"} and \code{"covariances"}. The \code{lower.factor} and 
       \code{upper.factor} elements should have the same length as the 
       \code{lower} and \code{upper} elements respectively. They indicate the
@@ -457,8 +457,8 @@ Parallelization options (currently only used for bootstrapping):
     \item{parallel}{The type of parallel operation to be used (if any).  If
       missing, the default is \code{"no"}.  }
     \item{ncpus}{Integer: number of processes to be used in parallel operation:
-      typically one would chose this to the number of available CPUs. By
-      By default this is the number of cores (as detected by 
+      typically one would choose this to the number of available CPUs. By
+      default this is the number of cores (as detected by 
       \code{parallel::detectCores()}) minus one.}
     \item{cl}{An optional \pkg{parallel} or \pkg{snow} cluster for use if
       \code{parallel = "snow"}. If not supplied, a cluster on the local 
@@ -484,13 +484,13 @@ Categorical estimation options:
       applies for 2x2 tables. The second value for larger tables. This value 
       is added to the zero frequency in the bivariate table. If 
       \code{"default"}, the value is set depending on the \code{"mimic"}
-      option. By default, lavaan uses \code{zero.add = c(0.5. 0.0)}.}
+      option. By default, lavaan uses \code{zero.add = c(0.5, 0.0)}.}
     \item{\code{zero.keep.margins}:}{Logical. This argument only affects 
       the computation of polychoric correlations for 2x2 tables with an empty 
       cell, and where a value is added to the empty cell. If \code{TRUE}, the 
       other values of the frequency table are adjusted so that all margins are 
-      unaffected. If \code{"default"}, the value is set depending on the 
-      \code{"mimic"}. The default is \code{TRUE}.}
+      unaffected. If \code{"default"}, the value is set depending on the
+      \code{"mimic"} option. The default is \code{TRUE}.}
     \item{\code{zero.cell.warn}:}{Logical. Only used if some observed 
       endogenous variables are categorical. If \code{TRUE}, give a warning if 
       one or more cells of a bivariate frequency table are empty.}
@@ -511,7 +511,7 @@ Starting values options:
       (residual) variances, which are set to 0.7 and 1.0 respectively.
       When \code{start} is \code{"default"}, the factor loadings are
       estimated using the fabin3 estimator (tsls) per factor. The
-      residual variances of observed variables are set tot half the 
+      residual variances of observed variables are set to half the
       observed variance, and all other (residual) variances are set to 0.05.
       The remaining parameters (regression coefficients, covariances) are
       set to zero.
@@ -521,7 +521,7 @@ Starting values options:
       If \code{start} is a fitted object of class \code{\linkS4class{lavaan}},
       the estimated values of the corresponding parameters will be extracted.
       If it is a parameter table, for example the output of the
-      \code{paramaterEstimates()} function, the values of the \code{est} or
+      \code{parameterEstimates()} function, the values of the \code{est} or
       \code{start} or \code{ustart} column (whichever is found first) will be
       extracted.}
     \item{\code{rstarts}:}{Integer. The number of refits that lavaan should
@@ -595,7 +595,7 @@ Miscellaneous:
       based on a fitted lavaan object.}
     \item{\code{mimic}:}{If \code{"Mplus"}, an attempt is made to mimic the 
       Mplus program. If \code{"EQS"}, an attempt is made to mimic the EQS 
-      program. If \code{"default"}, the value is (currently) set to to 
+      program. If \code{"default"}, the value is (currently) set to
       \code{"lavaan"}, which is very close to \code{"Mplus"}.}
     \item{\code{representation}:}{If \code{"LISREL"} the classical LISREL 
       matrix representation is used to represent the model (using the all-y 
@@ -610,7 +610,7 @@ Miscellaneous:
       are uncorrelated) and store the results in the baseline slot.}
     \item{\code{baseline.conditional.x.free.slopes}:}{Logical. If \code{TRUE},
       and \code{conditional.x = TRUE}, the (default) baseline model will
-      allow the slopestructure to be unrestricted.}
+      allow the slope structure to be unrestricted.}
     \item{\code{store.vcov}}{Logical. If \code{TRUE}, and \code{se=} is not
       set to \code{"none"}, store the full variance-covariance matrix of
       the model parameters in the vcov slot of the fitted lavaan object.}

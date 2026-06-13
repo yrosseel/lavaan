@@ -20,7 +20,7 @@ lav_plot <- function(
              font_size = 20L,
              idx_font_size = 15L,
              dy = 5L,
-             font_family = "Latin Modern Math, arial, Aerial, sans",
+             font_family = "Latin Modern Math, arial, Arial, sans",
              standalone = FALSE)
 ) {
   tmp <- lav_model_plotinfo(model,

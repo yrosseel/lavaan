@@ -20,7 +20,7 @@ to be on the same side of the diagram?}
 \item{debug}{logical, print debug information?}
 }
 \value{
-A plotinfo strucure with modified \code{nodes} and \code{edges} 
+A plotinfo structure with modified \code{nodes} and \code{edges} 
 data.frames, and an integer \code{mlrij} giving the position at which a line
 should be drawn for multilevel models.
 
@@ -38,11 +38,11 @@ The data.frames have new columns defined as follows:
     \item{naaranker}{character, anchor point for destination node,
     initialized NA.}
     \item{controlpt.kol}{real, column position of control point if the
-    edge has to be drawn as a quadratic Beziers curve.}
+    edge has to be drawn as a quadratic Bezier curve.}
     \item{controlpt.row}{real, row position of control point if the
-    edge has to be drawn as a quadratic Beziers curve.}
+    edge has to be drawn as a quadratic Bezier curve.}
     \item{labelbelow}{logical, TRUE if label has to be positioned under 
-    the line, initalized FALSE.}
+    the line, initialized FALSE.}
   }
 }
 }
@@ -52,7 +52,7 @@ edges in the diagram.
 }
 \details{
 This function \strong{tries} to arrange the nodes and anchor points for the edges in
-a way that gives a not-to-large diagram and trying to put dependent variables in
+a way that gives a not-too-large diagram and trying to put dependent variables in
 a regression to the right of the variables they depend on.
 If the result is not what you want, you can
 take a look at the plot via \code{lav_plotinfo_rgraph} or \code{lav_plot} functions and

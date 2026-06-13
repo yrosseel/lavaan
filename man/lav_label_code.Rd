@@ -22,10 +22,10 @@ If \var{value} is specified in parameter \code{label} and parameter
 subscript in svg.}
 \item{dy}{An integer specifying the distance to move the baseline of
 the subscript in svg.}
-\item{italic}{A logical to indicate if the labels font should be cursive.
+\item{italic}{A logical to indicate if the label's font should be cursive.
 Only used for tikz output and in shown Rplot if result isn't an expression.}
 \item{auto_subscript}{Logical, if TRUE and \code{label} starts with one or more
-alhabetic chars followed by one or more digits, an underscore will be
+alphabetic chars followed by one or more digits, an underscore will be
 inserted between these parts.}
 }
 \value{

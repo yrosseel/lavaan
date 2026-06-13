@@ -3,7 +3,7 @@
 \title{Determine an optimal lambda penalty value through cross-validation}
 \description{
 This function can be used to determine an optimal lambda value for the
-\code{lavPredictY} function. based on cross-validation.}
+\code{lavPredictY} function, based on cross-validation.}
 \usage{
 lavPredictY_cv(object, data = NULL,
               xnames = lav_object_vnames(object, "ov.x"),
@@ -39,11 +39,11 @@ the values of (observed) x-variables in a structural equation model.
 de Rooij, M., Karch, J.D., Fokkema, M., Bakk, Z., Pratiwi, B.C, and 
 Kelderman, H. (2022) SEM-Based Out-of-Sample Predictions,
 Structural Equation Modeling: A Multidisciplinary Journal.
-DOI:10.1080/10705511.2022.2061494
+\doi{10.1080/10705511.2022.2061494}
 
 Molina, M. D., Molina, L., & Zappaterra, M. W. (2024). Aspects of Higher
 Consciousness: A Psychometric Validation and Analysis of a New Model of
-Mystical Experience. \doi{https://doi.org/10.31219/osf.io/cgb6e}
+Mystical Experience. \doi{10.31219/osf.io/cgb6e}
 }
 \examples{
 colnames(PoliticalDemocracy) <- c("z1", "z2", "z3", "z4", 

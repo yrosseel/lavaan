@@ -2,7 +2,7 @@
 \alias{Demo.growth}
 \docType{data}
 \title{
-Demo dataset for a illustrating a linear growth model.
+Demo dataset for illustrating a linear growth model
 }
 \description{
 A toy dataset containing measures on 4 time points (t1,t2, t3 and t4),

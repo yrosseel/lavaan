@@ -23,7 +23,7 @@ lav_plot(model = NULL,
                    font_size = 20L,
                    idx_font_size = 15L,
                    dy = 5L,
-                   font_family = "Latin Modern Math, arial, Aerial, sans",
+                   font_family = "Latin Modern Math, arial, Arial, sans",
                    standalone = FALSE)
         )
 }
@@ -36,7 +36,7 @@ Should be \code{NULL} if infile is given.}
 \item{infile}{A character string specifying the file which contains the model
 syntax.}
 \item{varlv}{A logical indicating that the (residual) variance of a variable
-should be plotted as a separate latent variable (with a smaller circle then
+should be plotted as a separate latent variable (with a smaller circle than
 ordinary latent variables). In this case covariances between two such variables
 will be plotted as covariance between the latent variables for the variance.}
 \item{placenodes}{optional list with members \code{\var{nodename} = c(row, column)},

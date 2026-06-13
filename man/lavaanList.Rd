@@ -28,11 +28,11 @@ cfaList(model = NULL, dataList = NULL, dataFunction = NULL,
 \item{model}{A description of the user-specified model. Typically, the model
     is described using the lavaan model syntax. See 
     \code{\link{model.syntax}} for more information. Alternatively, a
-    parameter table (eg. the output of the \code{lavParTable()} function) is also
+    parameter table (e.g., the output of the \code{lavParTable()} function) is also
     accepted.}
 \item{dataList}{List. Each element contains a full data frame containing
       the observed variables used in the model.}
-\item{dataFunction}{Function. A function that generated a full data frame
+\item{dataFunction}{Function. A function that generates a full data frame
       containing the observed variables used in the model. It can also be
       a matrix, if the columns are named.}
 \item{dataFunction.args}{List. Optional list of arguments that are passed
@@ -56,7 +56,7 @@ cfaList(model = NULL, dataList = NULL, dataFunction = NULL,
 \item{parallel}{The type of parallel operation to be used (if any). If
 missing, the default is \code{"no"}.}
 \item{ncpus}{Integer. The number of processes to be used in parallel operation:
-typically one would chose this to the number of available CPUs.}
+typically one would choose this to the number of available CPUs.}
 \item{cl}{An optional \pkg{parallel} or \pkg{snow} cluster for use if
 \code{parallel = "snow"}.  If not supplied, a cluster on the local machine is
 created for the duration of the \code{lavaanList} call.}

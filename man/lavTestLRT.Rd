@@ -102,7 +102,7 @@ Satorra, A., & Bentler, P. M. (2001). A scaled difference chi-square test
 statistic for moment structure analysis. \emph{Psychometrika, 66}(4), 507-514.
 \doi{10.1007/BF02296192}
 
-Satorra, A., & Bentler, P. M. (2010). Ensuring postiveness of the scaled
+Satorra, A., & Bentler, P. M. (2010). Ensuring positiveness of the scaled
 difference chi-square test statistic. \emph{Psychometrika, 75}(2), 243-248.
 \doi{10.1007/s11336-009-9135-y}
 

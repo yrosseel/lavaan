@@ -59,7 +59,7 @@
 \alias{lav_partable_df}
 
 \title{deprecated functions with long names}
-\description{Functions which are deprecated because of adaption of shorter names in May, 2026}
+\description{Functions which are deprecated because of the adoption of shorter names in May, 2026}
 \usage{
 lav_matrix_duplication_ginv_pre_post(A = matrix(0, 0, 0))
 lav_matrix_orthogonal_complement(A = matrix(0, 0, 0))
@@ -245,7 +245,7 @@ lav_partable_df(partable)
 \item{Y}{See argument \code{y} in the corresponding function with shortened name.}
 }
 \details{
-Function names are shortened by following replacements:
+Function names are shortened by the following replacements:
 
 \describe{
   \item{_mvnorm}{_mvn}

@@ -113,7 +113,7 @@ in the output.}
 }
 \value{
   A data.frame containing the estimated parameters,
-  parameters, standard errors, and (by default) z-values , p-values, and
+  standard errors, and (by default) z-values, p-values, and
   the lower and upper values of the confidence intervals. If requested,
   extra columns are added with standardized versions of the parameter
   estimates.

@@ -21,7 +21,7 @@ lavTablesFitCm(object)
 
 \arguments{
 \item{object}{An object of class \code{\linkS4class{lavaan}}.}
-\item{alpha}{The nominal level of signifiance of global fit.}
+\item{alpha}{The nominal level of significance of global fit.}
 }
 
 \references{
@@ -62,12 +62,12 @@ df_M = k(k-1)/2 + k(m-1) - n_{1},
 where \eqn{k} denotes the number of items with discrete response scales, \eqn{m} denotes the number of response options, and \eqn{k(k-1)/2} 
 denotes the number of polychoric correlations, \eqn{k(m-1)} denotes the number of thresholds, and \eqn{n_1} is the number of parameters of the 
 model of interest. Notice that \eqn{C_M}  results may be biased because of large numbers of empty cells in the multivariate contingency table. However, 
-bias may cancels out as both Model 1 and Model 0 contain the same pattern of empty responses.
+bias may cancel out as both Model 1 and Model 0 contain the same pattern of empty responses.
 }
 
 \subsection{\eqn{C_P}}{
 With the \eqn{C_P} statistic we only consider pairs of responses, and compare observed sample proportions (\eqn{p}) with model-implied proportions 
-of pairs of responses(\eqn{\pi}). For items \eqn{i} and \eqn{j} we obtain a pairwise likelihood ratio test statistic \eqn{C_{P_{ij}}}
+of pairs of responses (\eqn{\pi}). For items \eqn{i} and \eqn{j} we obtain a pairwise likelihood ratio test statistic \eqn{C_{P_{ij}}}
 \deqn{
 C_{P_{ij}}=2N\sum_{c_i=1}^m \sum_{c_j=1}^m
 p_{c_i,c_j}\ln[p_{c_i,c_j}/\hat{\pi}_{c_i,c_j}],
@@ -84,7 +84,7 @@ a Bonferroni adjusted level of significance \eqn{\alpha^*}, with
 }
 to keep the family-wise error rate at \eqn{\alpha}. The hypothesis of overall goodness-of-fit is tested at \eqn{\alpha} and rejected as 
 soon as \eqn{C_P} is significant at \eqn{\alpha^*} for at least one pair of items. Notice that with dichotomous items, \eqn{m = 2}, 
-and \eqn{df_P = 0}, so that hypothesis can not be tested. 
+and \eqn{df_P = 0}, so that the hypothesis can not be tested.
 }
 }
 

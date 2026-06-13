@@ -1,7 +1,7 @@
 \name{lavPredict}
 \alias{lavPredict}
 \alias{lavpredict}
-\title{Predict the values of latent variables (and their indicators).}
+\title{Predict the values of latent variables (and their indicators)}
 \description{
 The main purpose of the \code{lavPredict()} function is to compute (or
 `predict') individual scores for the latent variables in the model
@@ -24,9 +24,9 @@ the data.frame used when fitting the model in object.}
 variables in the model are computed. If \code{"ov"}, model predicted values for
 the indicators of the latent variables in the model are computed. If
 \code{"yhat"}, the estimated value for the observed indicators, given
-user-specified values for the latent variables provided by de \code{ETA}
+user-specified values for the latent variables provided by the \code{ETA}
 argument.  If \code{"fy"}, densities (or probabilities) for each observed
-indicator, given user-specified values for the latent variables provided by de
+indicator, given user-specified values for the latent variables provided by the
 \code{ETA} argument.}
 \item{method}{A character string. In the linear case (when the indicators are
 continuous), the possible options are \code{"regression"} or \code{"Bartlett"}.
@@ -37,7 +37,7 @@ likelihood approach.}
 group) so that their mean and variance-covariance matrix matches the
 model-implied mean and variance-covariance matrix. This may be useful if the
 individual factor scores will be used in a follow-up (regression) analysis.
-Note: the standard errors (if requested) not transformed (yet). The resulting
+Note: the standard errors (if requested) are not transformed (yet). The resulting
 factor scores are often called correlation-preserving factor scores.}
 \item{se}{Character. If \code{"none"}, no standard errors are computed.
 If \code{"standard"}, naive standard errors are computed (assuming the
@@ -62,7 +62,7 @@ the original data (or the data provided
 in the newdata argument) is appended to the factor scores.}
 \item{assemble}{Logical. If TRUE, 
 the separate multiple groups are reassembled again to form a single data.frame
-with a group column, having the same dimensions are the original (or
+with a group column, having the same dimensions as the original (or
 newdata) dataset.}
 \item{level}{Integer. Only used in a multilevel SEM.
 If \code{level = 1}, only factor scores for latent variable
@@ -135,7 +135,7 @@ for (g in seq_along(fscores)) {
 head(HolzingerSwineford1939)
 
 ## -------------------------------------
-## Use factor scores in susequent models
+## Use factor scores in subsequent models
 ## -------------------------------------
 
 ## see Examples in semTools package: ?plausibleValues

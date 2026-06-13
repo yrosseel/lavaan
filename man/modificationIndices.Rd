@@ -55,7 +55,7 @@ NA values for the modification indices.}
 operator \code{op}.}
 }
 \value{
-  A data.frame containing modification indices and EPC's.
+  A data.frame containing modification indices and EPCs.
 }
 \details{
   Modification indices are just 1-df (or univariate) score tests. The

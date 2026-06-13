@@ -17,7 +17,7 @@ Objects can be created via the
 }
 \section{Slots}{
   \describe{
-    \item{\code{version}:}{The lavaan package version used to create this objects}
+    \item{\code{version}:}{The lavaan package version used to create this object}
     \item{\code{call}:}{The function call as returned by \code{match.call()}.}
     \item{\code{Options}:}{Named list of options that were provided by
       the user, or filled-in automatically.}
@@ -67,7 +67,7 @@ about the data.}
       section.)
       The argument \code{simulate.args} is only used if the meta slot
       indicates that the parameter tables are obtained in the context of
-      a simulattion. The options switch on/off the columns that are printed,
+      a simulation. The options switch on/off the columns that are printed,
       and the \code{trim} option determines the amount of trimming that is
       used when taking the average (or standard deviation) across all
       replications.

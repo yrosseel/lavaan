@@ -13,7 +13,7 @@ lav_export_estimation(lavaan_model)
 List with:
 \itemize{
   \item get_coef - When working with equality constraints, lavaan internally
-  uses some transformations. get_coef is a functions that recreates the coef
+  uses some transformations. get_coef is a function that recreates the coef
   function for the parameters. 
   \item starting_values - starting_values to be used in the optimization
   \item objective_function - objective function, expecting the current parameter

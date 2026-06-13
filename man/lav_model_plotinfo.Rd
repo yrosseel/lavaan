@@ -13,7 +13,7 @@ Should be \code{NULL} if infile is given.}
 \item{infile}{A character string specifying the file which contains the model
 syntax.}
 \item{varlv}{A logical indicating that the (residual) variance of a variable
-should be plotted as a seperate latent variable (with a smaller circle then
+should be plotted as a separate latent variable (with a smaller circle than
 ordinary latent variables). In this case covariances between two such variables
 will be plotted as covariance between the latent variables for the variance.}
 }

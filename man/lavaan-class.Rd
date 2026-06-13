@@ -28,7 +28,7 @@ Objects can be created via the
 }
 \section{Slots}{
   \describe{
-    \item{\code{version}:}{The lavaan package version used to create this objects}
+    \item{\code{version}:}{The lavaan package version used to create this object}
     \item{\code{call}:}{The function call as returned by \code{match.call()}.}
     \item{\code{timing}:}{The elapsed time (user+system) for various parts of
       the program as a list, including the total time.}
@@ -142,7 +142,7 @@ the independence model) (if available).}
       If \code{header = TRUE}, the header section (including fit measures) is
       printed.
       If \code{fit.measures = TRUE}, additional fit measures are added to the
-      header section. \code{fit.measures} can also be a list, which allows to set options
+      header section. \code{fit.measures} can also be a list, which allows one to set options
       related to the fit measures. See \code{\link{fitMeasures}} 
       for more details.
       If \code{estimates = TRUE}, print the parameter estimates section.
@@ -172,9 +172,9 @@ the independence model) (if available).}
       If \code{rsquare = TRUE}, the R-Square values for the dependent variables
       in the model are printed.
       If \code{efa = TRUE}, EFA related information is printed. The related
-      \code{efa.args} list allows to set options related to the EFA output.
+      \code{efa.args} list allows one to set options related to the EFA output.
       See \code{\link{lav_efalist_summary}} for more details.
-      \code{baseline.model} and \code{h1.model} allow to specify user-defined
+      \code{baseline.model} and \code{h1.model} allow one to specify user-defined
       baseline and/or h1 models for the fit measures.
       If \code{modindices = TRUE} or \code{modindices} is a list, 
       modification indices are printed for all fixed parameters.
@@ -188,7 +188,7 @@ the independence model) (if available).}
 \references{
 Yves Rosseel (2012). lavaan: An R Package for Structural Equation
 Modeling. Journal of Statistical Software, 48(2), 1-36. 
-\doi{https://doi.org/10.18637/jss.v048.i02}
+\doi{10.18637/jss.v048.i02}
 
 Standardized Residuals in Mplus. Document retrieved from URL
 https://www.statmodel.com/download/StandardizedResiduals.pdf

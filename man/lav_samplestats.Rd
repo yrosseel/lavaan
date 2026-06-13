@@ -9,7 +9,7 @@ lav_samp_from_data(lavdata = NULL, lavoptions = NULL,
 }
 \arguments{
 \item{lavdata}{A lavdata object.}
-\item{lavoptions}{A named list. The Options lsot from a lavaan object.}
+\item{lavoptions}{A named list. The Options slot from a lavaan object.}
 \item{wls_v}{A user provided weight matrix.}
 \item{nacov}{A user provided matrix containing the elements of (N times)
     the asymptotic variance-covariance matrix of the sample statistics.

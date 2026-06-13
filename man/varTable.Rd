@@ -17,7 +17,7 @@ varTable(object, ov.names = names(object), ov.names.x = NULL,
 \item{ov.names}{Only used if object is a data.frame. A character vector containing the variables that need to be summarized.}
 \item{ov.names.x}{Only used if object is a data.frame. A character vector containing additional variables that need to be summarized.}
 \item{ordered}{Character vector. Which variables should be treated as ordered
-factors}
+factors?}
 \item{factor}{Character vector. Which variables should be treated as (unordered) factors?}
 \item{as.data.frame.}{If TRUE, return the list as a data.frame.}
 }

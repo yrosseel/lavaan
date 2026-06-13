@@ -26,14 +26,14 @@ cor2cov(R, sds, names = NULL)
 \item{lower}{Logical. If \code{TRUE}, the numeric values in \code{x} are
 the lower-triangular elements of the (symmetric) covariance matrix only.
 If \code{FALSE}, \code{x} contains the upper triangular elements only.
-Note we always assumed the elements are provided row-wise!}
+Note we always assume the elements are provided row-wise!}
 \item{diagonal}{Logical. If \code{TRUE}, the numeric values in \code{x}
 include the diagonal elements. If \code{FALSE}, a unit diagonal is assumed.}
 \item{sds}{A numeric vector containing the standard deviations to be 
 used to scale the elements in \code{x} or the correlation matrix \code{R}
 into a covariance matrix.}
 \item{names}{The variable names of the observed variables.}
-\item{s}{Character string containing numeric values; comma's and semi-colons
+\item{s}{Character string containing numeric values; commas and semi-colons
 are ignored.}
 \item{R}{A correlation matrix, to be scaled into a covariance matrix.}
 }
@@ -50,7 +50,7 @@ be given.
 }
 \examples{
 # The classic Wheaton et. al. (1977) model 
-# panel data on he stability of alienation
+# panel data on the stability of alienation
 lower <- '
  11.834,
   6.947,    9.364,

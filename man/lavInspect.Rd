@@ -6,7 +6,7 @@
 \description{
 The \code{lavInspect()} and \code{lavTech()} functions can be used to
 inspect/extract information that is stored inside (or can be computed from) a
-fitted lavaan object. Note: the (older) \code{lavInspect()} function is
+fitted lavaan object. Note: the (older) \code{inspect()} function is
 now simply a shortcut for \code{lavInspect()} with default arguments.
 }
 \usage{
@@ -45,7 +45,7 @@ names for multiple groups.}
 The \code{lavInspect()} and \code{lavTech()} functions only differ in the way
 they return the results. The \code{lavInspect()} function will prettify the
 output by default, while the \code{lavTech()} will not attempt to prettify the
-output by default. The (older) \code{lavInspect()} function is a simplified
+output by default. The (older) \code{inspect()} function is a simplified
 version of \code{lavInspect()} with only the first two arguments.
 
 Below is a list of possible values for the \code{what} argument, organized
@@ -104,7 +104,7 @@ Information about the data:
         that have been used to fit the model. No column/row names are provided.
         Column names correspond to the output of \code{lav_object_vnames(object)},
         while the rows correspond to the output of
-        \code{lavInspect(object, "case.idx"}.}
+        \code{lavInspect(object, "case.idx")}.}
     \item{\code{"ordered"}:}{A character vector. The ordered variables.}
     \item{\code{"nobs"}:}{Integer vector. The number of observations
         in each group that were used in the analysis.}
@@ -246,13 +246,13 @@ Model-implied sample statistics:
         Aliases: \code{"r-square"}, \code{"r2"}.}
 	\item{\code{"fs.determinacy"}:}{The factor determinacies (based on
 	   regression factor scores). They represent the (estimated) correlation
-       between the factor scores and the latent variables scores.}
+       between the factor scores and the latent variable scores.}
 	\item{\code{"fs.reliability"}:}{The factor reliabilities (based on
        regression factor scores). They are the square of the factor 
        determinacies.}
     \item{\code{"fs.determinacy.Bartlett"}:}{The factor determinacies (based on
        Bartlett factor scores). They represent the (estimated) correlation
-       between the factor scores and the latent variables scores.}
+       between the factor scores and the latent variable scores.}
     \item{\code{"fs.reliability.Bartlett"}:}{The factor reliabilities (based on
        Bartlett factor scores). They are the square of the factor
        determinacies.}
@@ -268,7 +268,7 @@ Diagnostics:
     \item{\code{"mdist2.fs"}:}{The squared Mahalanobis distances for the (Bartlett) factor scores.}
     \item{\code{"mdist.fs"}:}{The Mahalanobis distances for the (Bartlett) factor scores.}
     \item{\code{"mdist2.resid"}:}{The squared Mahalanobis distances for the (Bartlett-based) casewise residuals.}
-    \item{\code{"mdist.fs"}:}{The Mahalanobis distances for the (Bartlett-based) casewise residuals.}
+    \item{\code{"mdist.resid"}:}{The Mahalanobis distances for the (Bartlett-based) casewise residuals.}
 }
 
 Optimizer information:
@@ -276,7 +276,7 @@ Optimizer information:
 \describe{
     \item{\code{"converged"}:}{Logical. \code{TRUE} if the optimizer has
         converged; \code{FALSE} otherwise.}
-    \item{\code{"iteratons"}:}{Integer. The number of iterations used by the
+    \item{\code{"iterations"}:}{Integer. The number of iterations used by the
         optimizer.}
     \item{\code{"optim"}:}{List. All available information regarding the
         optimization results.}
@@ -306,7 +306,7 @@ Gradient, Hessian, observed, expected and first.order information matrices:
         Alias: \code{"first.order"}.}
     \item{\code{"augmented.information"}:}{Matrix containing either the
         observed or the expected augmented (or bordered) information
-        matrix (depending on the information option of the fitted model.
+        matrix (depending on the information option of the fitted model).
         Only relevant if constraints have been used in the model.}
     \item{\code{"augmented.information.expected"}:}{Matrix containing the
         expected augmented (or bordered) information matrix.
@@ -319,7 +319,7 @@ Gradient, Hessian, observed, expected and first.order information matrices:
         Only relevant if constraints have been used in the model.}
     \item{\code{"inverted.information"}:}{Matrix containing either the
         observed or the expected inverted information matrix
-        (depending on the information option of the fitted model.}
+        (depending on the information option of the fitted model).}
     \item{\code{"inverted.information.expected"}:}{Matrix containing the
         inverted expected information matrix for the free model parameters.}
     \item{\code{"inverted.information.observed"}:}{Matrix containing the
@@ -335,7 +335,7 @@ Gradient, Hessian, observed, expected and first.order information matrices:
     \item{\code{"h1.information.observed"}:}{Matrix containing the observed
         information matrix for the unrestricted h1 model.}
     \item{\code{"h1.information.first.order"}:}{Matrix containing the 
-        first.order information matrix for the the unrestricted h1 model.
+        first.order information matrix for the unrestricted h1 model.
         Alias: \code{"h1.first.order"}.}
 }
 
@@ -387,7 +387,7 @@ Variance covariance matrix of the model parameters:
 Miscellaneous:
 
 \describe{
-    \item{\code{"coef.boot"}:}{Matrix containing estimated model parameters for         for each bootstrap sample. Only relevant when bootstrapping was used.}
+    \item{\code{"coef.boot"}:}{Matrix containing estimated model parameters for each bootstrap sample. Only relevant when bootstrapping was used.}
     \item{\code{"UGamma"}:}{Matrix containing the product of 'U' and 'Gamma'
         matrices as used by the Satorra-Bentler correction. The trace of
         this matrix, divided by the degrees of freedom, gives the scaling

@@ -22,7 +22,7 @@ sam(model = NULL, data = NULL, cmd = "sem", se = "twostep",
 \item{model}{A description of the user-specified model. Typically, the model
     is described using the lavaan model syntax. See 
     \code{\link{model.syntax}} for more information. Alternatively, a
-    parameter table (eg. the output of the \code{lavParTable()} function) is also
+    parameter table (e.g., the output of the \code{lavParTable()} function) is also
     accepted.}
 \item{data}{A data frame containing the observed variables used in
     the model.}
@@ -55,7 +55,7 @@ sam(model = NULL, data = NULL, cmd = "sem", se = "twostep",
      options may change over time). If \code{lambda.correction = TRUE},
      we ensure that the variance matrix of the latent variables (VETA)
      is positive definite. The \code{alpha.correction} options must be an
-     integer. Acceptable values are in the range 0 till
+     integer. Acceptable values are in the range 0 to
      N-1. If zero (the default), no small sample correction is performed,
      and the bias-correction is the same as with local SAM. When equal to N-1,
      the bias-correction is eliminated, and the results are the same as
@@ -67,7 +67,7 @@ sam(model = NULL, data = NULL, cmd = "sem", se = "twostep",
      elements of this list are \code{R}: the number of bootstrap samples, and
      \code{type}, which can be set to \code{"ordinary"} (the default) or
      \code{"parametric"}.}
-\item{output}{Character. If \code{"lavaan"}, a lavaan object returned. If
+\item{output}{Character. If \code{"lavaan"}, a lavaan object is returned. If
     \code{"list"}, a list is returned with all the ingredients from the 
     different stages.}
 \item{bootstrap.args}{List. Deprecated, use \code{bootstrap} instead.}

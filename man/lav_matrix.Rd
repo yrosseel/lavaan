@@ -98,7 +98,7 @@ lav_mat_trace(..., check = TRUE)
 \item{y}{A matrix representing a (numeric) dataset.}
 \item{diagonal}{Logical. If TRUE, include the diagonal.}
 \item{n}{Integer. When it is the only argument, the dimension of a square 
-matrix. If m is also provided, the number of column of the matrix.}
+matrix. If m is also provided, the number of columns of the matrix.}
 \item{m}{Integer. The number of rows of a matrix.}
 \item{x}{Numeric. A vector.}
 \item{mu}{Numeric. If given, use mu (instead of sample mean) to center, before 
@@ -157,12 +157,12 @@ The \code{lav_mat_diagh_idx} function returns the vector indices of
 the lower part of a symmetric matrix of size n.
 
 The \code{lav_mat_antidiag_idx} function returns the vector indices of
-the anti diagonal elements a symmetric matrix of size n.
+the anti diagonal elements of a symmetric matrix of size n.
 
 The \code{lav_mat_vech_rev} function (alias:
 \code{lav_mat_vechru_rev} and \code{lav_mat_upper2full}) creates a
 symmetric matrix, given only upper triangular elements, row by row. If
-diagonal = FALSE, an diagonal with zero elements is added.
+diagonal = FALSE, a diagonal with zero elements is added.
 
 The \code{lav_mat_vechr_rev} (alias: \code{lav_mat_vechu_rev} and
 \code{lav_mat_lower2full}) creates a symmetric matrix, given only the lower

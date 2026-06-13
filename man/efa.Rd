@@ -15,7 +15,7 @@ efa(data = NULL, nfactors = 1L, sample_cov = NULL, sample_nobs = NULL,
     \code{ov.names} argument.}
 \item{nfactors}{Integer or Integer vector. The desired number of factors
     to extract. Can be a single number, or a vector of numbers
-    (e.g., \code{nfactors = 1:4}.), For each different number, a model
+    (e.g., \code{nfactors = 1:4}). For each different number, a model
     is fitted.}
 \item{sample_cov}{Numeric matrix. A sample variance-covariance matrix.
     The rownames and/or colnames must contain the observed variable names.
@@ -50,16 +50,16 @@ efa(data = NULL, nfactors = 1L, sample_cov = NULL, sample_nobs = NULL,
    \code{cf_gamma = 0}, and \code{oblimin_gamma = 0}.}
 \item{rotation.args}{List. Options related to the rotation algorithm. DEPRECATED.
    The options should now be given in the \code{rotation} argument as a list.}
-\item{ov.names}{Character vector. The variables names that are needed for
-   the EFA. Should be a subset of the variables names in the data.frame.
+\item{ov.names}{Character vector. The variable names that are needed for
+   the EFA. Should be a subset of the variable names in the data.frame.
    By default (if NULL), all the variables in the data are used.}
 \item{bounds}{Per default, \code{bounds = "pos.var"} forces all variances
    of both observed and latent variables to be strictly nonnegative. See
    the entry in \code{\link{lavOptions}} for more options.}
-\item{...}{Aditional options to be passed to lavaan, using 'name = value'.
+\item{...}{Additional options to be passed to lavaan, using 'name = value'.
     See \code{\link{lavOptions}} for a complete list.}
 \item{output}{Character. If \code{"efa"} (the default), the output mimics
-    the typical output of an EFA. If \code{"lavaan"}, a lavaan object returned.
+    the typical output of an EFA. If \code{"lavaan"}, a lavaan object is returned.
     The latter is only possible if nfactors contains a single (integer) number.}
 }
 \details{

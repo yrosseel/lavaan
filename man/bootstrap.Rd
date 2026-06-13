@@ -102,7 +102,7 @@ fit <- cfa(HS.model, data=HolzingerSwineford1939, se="none")
 T.orig <- fitMeasures(fit, "chisq")
 
 # bootstrap to get bootstrap test statistics
-# we only generate 10 bootstrap sample in this example; in practice
+# we only generate 10 bootstrap samples in this example; in practice
 # you may wish to use a much higher number
 T.boot <- lavBootstrap(fit, R=10, type="bollen.stine",
                           FUN=fitMeasures, fit.measures="chisq")

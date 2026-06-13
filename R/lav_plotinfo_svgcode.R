@@ -8,7 +8,7 @@ lav_plotinfo_svgcode <- function(plotinfo,
                          dy = 5L,
                          mlovcolors = c("lightgreen", "lightblue"),
                          lightness = 1,
-                         font_family = "Latin Modern Math, arial, Aerial, sans",
+                         font_family = "Latin Modern Math, arial, Arial, sans",
                          italic = TRUE,
                          auto_subscript = TRUE
                          ) {

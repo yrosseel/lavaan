@@ -4,7 +4,7 @@
 \title{The open parser configuration}
 \description{
 The lavaan model syntax parser can be extended with new operators, modifiers and groupings.
-This extensions are only used in the 'open' parser.} 
+These extensions are only used in the 'open' parser.} 
 \usage{
 lav_parse_options(
     pkgname   = NULL,
@@ -19,7 +19,7 @@ lav_parse_options(
 a percentage sign and be at least 3 characters long.}
 \item{modifiers}{A data.frame with columns \code{mod}, \code{side} and \code{expect}. The elements in \code{mod}
 must be character strings in snake_case. The elements in \code{side} must be \code{l} or \code{r}, indicating
-whether the modifier can be expected on the left hand of the operator or on the right hand side. The elements in
+whether the modifier can be expected on the left hand side of the operator or on the right hand side. The elements in
 \code{expect} must be \code{char}, \code{num} or \code{raw}, specifying the value for the modifier to expect, where
 \code{raw} means the value is not evaluated in the parser and returned as an uninterpreted string.}
 \item{groupings}{A character vector with new groupings, they must be snake_case.}
