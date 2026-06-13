@@ -4,8 +4,8 @@
 \title{lavaan Options}
 \description{
 Show the default options used by the \code{lavaan()} function. The
-options can be changed by passing 'name = value' arguments to the 
-\code{lavaan()} function call, where they will be added to the '...'
+options can be changed by passing 'name = value' arguments to the
+\code{lavaan()} function call, where they are added to the '...'
 argument.
 }
 \usage{
@@ -72,8 +72,8 @@ Model features:
      included, equality constraints are used so that the sum of the
      intercepts (belonging to the indicators of a single latent variable) 
      equals zero.
-     As a result, the latent mean will be freely estimated and usually 
-     equal the average of the means of the involved indicators.}
+     As a result, the latent mean is freely estimated and usually
+     equals the average of the means of the involved indicators.}
     \item{\code{ceq.simple}:}{Logical. If \code{TRUE}, and no other 
      general (equality or inequality) constraints are used in the model, 
      simple equality constraints
@@ -86,11 +86,12 @@ Model features:
      continuous data. If \code{TRUE}, analyze a correlation matrix (instead
      of a (co)variance matrix). This implies that the residual observed
      variances are no longer free parameters. Instead, they are set to
-     values to ensure the model-implied variances are unity. This also
+     values that ensure the model-implied variances are unity. This also
      affects the standard errors. The only available estimators are GLS and
      WLS, which produce correct standard errors and a correct test statistic
-     under normal and non-normal conditions respectively. Always assuming
-     \code{fixed.x = FALSE} and \code{conditional.x = FALSE} (for now).}
+     under normal and non-normal conditions respectively. For now, this
+     option always assumes \code{fixed.x = FALSE} and
+     \code{conditional.x = FALSE}.}
     \item{\code{auto.fix.first}:}{If \code{TRUE}, the factor loading of the 
       first indicator is set to 1.0 for every latent variable.}
     \item{\code{auto.fix.single}:}{If \code{TRUE}, the residual variance (if 
@@ -120,11 +121,11 @@ Data options:
     \item{\code{std.ov}:}{If \code{TRUE}, observed variables are 
       standardized before entering the analysis. By default, these are
       only the non-exogenous observed variables, unless \code{fixed.x = FALSE}.
-      Use this option with caution; it can be used to test if (for example)
-      nonconvergence was due to scaling issues. But this is still a covariance
-      based analysis, in the sense that no constraints are involved (to 
-      ensure the model-implied (co)variance matrix has unit variances), and the
-      standard errors still assume that the input was unstandardized. See
+      Use this option with caution; it can be used to test whether (for
+      example) nonconvergence was due to scaling issues. Note that this is
+      still a covariance-based analysis: no constraints are imposed to
+      ensure the model-implied (co)variance matrix has unit variances, and
+      the standard errors still assume that the input was unstandardized. See
       also the \code{correlation} option.}
     \item{\code{missing}:}{The default setting is \code{"listwise"}: all
          cases with missing values
@@ -167,8 +168,8 @@ Data options:
 	  the missing values just like in mean(x, na.rm = TRUE). In the second
       step, we compute polychoric/polyserial/pearson correlations using (only)
       two variables at a time. Here we use pairwise deletion: we only keep
-      those observations for which both values are observed (not-missing).
-      And this may change from pair to pair.
+      those observations for which both values are observed (not missing),
+      and this set may change from pair to pair.
       By default, in the categorical case we use \code{conditional.x = TRUE}. 
       Therefore, any cases
       with missing values on the exogenous covariates will be deleted listwise
@@ -199,9 +200,9 @@ Data summary options:
       on the estimator and the likelihood option: it is set to \code{TRUE} if 
       maximum likelihood estimation is used and \code{likelihood="normal"}, 
       and \code{FALSE} otherwise.}
-    \item{\code{ridge}:}{Logical. If \code{TRUE} a small constant value will
-      be added the diagonal elements of the covariance (or correlation) 
-      matrix before analysis. The value can be set using the 
+    \item{\code{ridge}:}{Logical. If \code{TRUE}, a small constant value is
+      added to the diagonal elements of the covariance (or correlation)
+      matrix before analysis. The value can be set using the
       \code{ridge.constant} option.}
     \item{\code{ridge.constant}:}{Numeric. Small constant used for ridging.
       The default value is 1e-05.}
@@ -375,7 +376,7 @@ Estimation options:
      like bootstrap intervals). Has no effect when
      \code{se = "bootstrap"}.}
    \item{\code{monte.carlo}}{List of settings for the Monte Carlo method
-     (used when \code{se.def = "monte.carlo"}). Currently recognises:
+     (used when \code{se.def = "monte.carlo"}). Currently recognizes:
      \code{R} (integer; number of Monte Carlo draws; default 20000) and
      \code{seed} (integer or \code{NULL}; optional seed for
      reproducibility).}
@@ -413,7 +414,7 @@ Optimization options:
     \item{\code{optim.gn.tol.x}:}{Numeric. Only used when 
       \code{optim.method = "GN"}. Optimization stops when
       the root mean square of the difference between the old and new
-      parameter values are smaller than this tolerance value. Default is
+      parameter values is smaller than this tolerance value. Default is
       \code{1e-05} for DLS estimation and \code{1e-07} otherwise.}
     \item{\code{optim.gn.iter.max}:}{Integer. Only used when 
       \code{optim.method = "GN"}. The maximum number of GN iterations. 
@@ -447,7 +448,7 @@ Optimization options:
       \code{min.reliability.marker} which sets the lower bound for the
       reliability of the marker indicator (if any) of each factor 
       (default is 0.1). Finally, the \code{min.var.lv.endo} element indicates
-      the lower bound of the variance of any endogenous latent variance
+      the lower bound of the variance of any endogenous latent variable
       (default is 0.0).}
 }
 
@@ -457,8 +458,8 @@ Parallelization options (currently only used for bootstrapping):
     \item{parallel}{The type of parallel operation to be used (if any).  If
       missing, the default is \code{"no"}.  }
     \item{ncpus}{Integer: number of processes to be used in parallel operation:
-      typically one would choose this to the number of available CPUs. By
-      default this is the number of cores (as detected by 
+      typically one would set this to the number of available CPUs. By
+      default this is the number of cores (as detected by
       \code{parallel::detectCores()}) minus one.}
     \item{cl}{An optional \pkg{parallel} or \pkg{snow} cluster for use if
       \code{parallel = "snow"}. If not supplied, a cluster on the local 
@@ -551,11 +552,10 @@ Check options:
       default until 0.6-20. From 0.6-21 onwards, \code{"chol"} became the
       default (as it is much faster).}
     \item{\code{check.gradient}:}{Logical. If \code{TRUE}, and the model
-      converged, a warning
-      is given if the optimizer decided that a (local) solution has
-      been found, while not all elements of the (unscaled) gradient (as 
-      seen by the optimizer) are (near) zero, as
-      they should be (the tolerance used is 0.001).}
+      converged, a warning is given if the optimizer reported a (local)
+      solution while not all elements of the (unscaled) gradient (as
+      seen by the optimizer) are (near) zero, as they should be (the
+      tolerance used is 0.001).}
     \item{\code{check.post}:}{Logical. If \code{TRUE}, and the model
       converged, a check is performed after (post) fitting, to verify if 
       the solution is admissible. This implies that all variances are

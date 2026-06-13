@@ -58,8 +58,8 @@
 \alias{lav_partable_add}
 \alias{lav_partable_df}
 
-\title{deprecated functions with long names}
-\description{Functions which are deprecated because of the adoption of shorter names in May, 2026}
+\title{Deprecated functions with long names}
+\description{Functions that are deprecated following the adoption of shorter names in May 2026.}
 \usage{
 lav_matrix_duplication_ginv_pre_post(A = matrix(0, 0, 0))
 lav_matrix_orthogonal_complement(A = matrix(0, 0, 0))

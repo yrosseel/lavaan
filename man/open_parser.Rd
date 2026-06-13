@@ -19,10 +19,10 @@ lav_parse_options(
 a percentage sign and be at least 3 characters long.}
 \item{modifiers}{A data.frame with columns \code{mod}, \code{side} and \code{expect}. The elements in \code{mod}
 must be character strings in snake_case. The elements in \code{side} must be \code{l} or \code{r}, indicating
-whether the modifier can be expected on the left hand side of the operator or on the right hand side. The elements in
-\code{expect} must be \code{char}, \code{num} or \code{raw}, specifying the value for the modifier to expect, where
-\code{raw} means the value is not evaluated in the parser and returned as an uninterpreted string.}
-\item{groupings}{A character vector with new groupings, they must be snake_case.}
+whether the modifier is expected on the left-hand side or on the right-hand side of the operator. The elements in
+\code{expect} must be \code{char}, \code{num} or \code{raw}, specifying the type of value the modifier expects, where
+\code{raw} means the value is not evaluated by the parser but returned as an uninterpreted string.}
+\item{groupings}{A character vector with new groupings; they must be in snake_case.}
 }
 \value{
   A \code{list} with \code{data.frames} containing the currently active parser configuration.

@@ -13,7 +13,7 @@ standardizedSolution(object, type = "std.all", se = TRUE, zstat = TRUE,
 }
 \arguments{
 \item{object}{An object of class \code{\linkS4class{lavaan}}.}
-\item{type}{If \code{"std.lv"}, the standardized estimates are
+\item{type}{If \code{"std.lv"}, the standardized estimates are based
 on the variances of the (continuous) latent variables only.
 If \code{"std.all"}, the standardized estimates are based
 on the variances of both (continuous) observed and latent variables.
@@ -58,7 +58,7 @@ the parameter table inside the object@ParTable slot.}
 \item{output}{Character. If \code{"data.frame"}, the parameter table is
 displayed as a standard (albeit lavaan-formatted) data.frame.
 If \code{"text"} (or alias \code{"pretty"}), the parameter table is
-prettyfied, and displayed with subsections (as used by the summary function).}
+prettified and displayed with subsections (as used by the summary function).}
 }
 \note{
 The \code{est}, \code{GLIST}, and \code{partable} arguments are not meant for

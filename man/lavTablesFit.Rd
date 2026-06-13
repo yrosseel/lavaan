@@ -84,7 +84,7 @@ a Bonferroni adjusted level of significance \eqn{\alpha^*}, with
 }
 to keep the family-wise error rate at \eqn{\alpha}. The hypothesis of overall goodness-of-fit is tested at \eqn{\alpha} and rejected as 
 soon as \eqn{C_P} is significant at \eqn{\alpha^*} for at least one pair of items. Notice that with dichotomous items, \eqn{m = 2}, 
-and \eqn{df_P = 0}, so that the hypothesis can not be tested.
+and \eqn{df_P = 0}, so that the hypothesis cannot be tested.
 }
 }
 

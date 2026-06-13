@@ -91,7 +91,7 @@ in a multiple group analysis.}
     no new Cache slot will be created by this call.}
 \item{sloth1}{h1 slot from a fitted lavaan object. If provided,
     no new h1 slot will be created by this call.}
-\item{...}{Many more additional options can be defined, using 'name = value'. 
+\item{...}{Many more options can be specified, using 'name = value'.
     See \code{\link{lavOptions}} for a complete list.}
 }
 \value{

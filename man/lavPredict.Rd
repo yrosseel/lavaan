@@ -23,11 +23,11 @@ the data.frame used when fitting the model in object.}
 \item{type}{A character string. If \code{"lv"}, estimated values for the latent
 variables in the model are computed. If \code{"ov"}, model predicted values for
 the indicators of the latent variables in the model are computed. If
-\code{"yhat"}, the estimated value for the observed indicators, given
-user-specified values for the latent variables provided by the \code{ETA}
-argument.  If \code{"fy"}, densities (or probabilities) for each observed
-indicator, given user-specified values for the latent variables provided by the
-\code{ETA} argument.}
+\code{"yhat"}, the estimated values for the observed indicators are computed,
+given the user-specified values for the latent variables provided by the
+\code{ETA} argument.  If \code{"fy"}, densities (or probabilities) are computed
+for each observed indicator, given the user-specified values for the latent
+variables provided by the \code{ETA} argument.}
 \item{method}{A character string. In the linear case (when the indicators are
 continuous), the possible options are \code{"regression"} or \code{"Bartlett"}.
 In the categorical case, the two options are \code{"EBM"} for
@@ -61,7 +61,7 @@ values are often called the factor determinacies.)}
 the original data (or the data provided
 in the newdata argument) is appended to the factor scores.}
 \item{assemble}{Logical. If TRUE, 
-the separate multiple groups are reassembled again to form a single data.frame
+the separate groups are reassembled into a single data.frame
 with a group column, having the same dimensions as the original (or
 newdata) dataset.}
 \item{level}{Integer. Only used in a multilevel SEM.
@@ -88,7 +88,7 @@ with its default options.
 If there are no latent variables in the model, \code{type = "ov"} will
 simply return the values of the observed variables. Note that this function
 can not be used to `predict' values of dependent variables, given the
-values of independent values (in the regression sense). In other words,
+values of independent variables (in the regression sense). In other words,
 the structural component is completely ignored (for now).
 }
 \seealso{

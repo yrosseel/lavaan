@@ -34,7 +34,7 @@ parameterEstimates(object,
 \arguments{
 \item{object}{An object of class \code{\linkS4class{lavaan}}.}
 \item{se}{Logical. If \code{TRUE}, include column containing the standard
-errors. If \code{FALSE}, this implies \code{zstat} and \code{pvalue} and
+errors. If \code{FALSE}, this implies that \code{zstat}, \code{pvalue}, and
 \code{ci} are also \code{FALSE}.}
 \item{zstat}{Logical. If \code{TRUE}, an extra column is added containing
 the so-called z-statistic, which is simply the value of the estimate divided
@@ -104,12 +104,12 @@ to indicate that the values in the \code{est} column are rsquare values.}
 \item{output}{Character. If \code{"data.frame"}, the parameter table is
 displayed as a standard (albeit lavaan-formatted) data.frame. 
 If \code{"text"} (or alias \code{"pretty"}), the parameter table is
-prettyfied, and displayed with subsections (as used by the summary function).}
+formatted and displayed with subsections (as used by the summary function).}
 \item{header}{Logical. Only used if \code{output = "text"}. If
 \code{TRUE}, print a header at the top of the parameter list. This header
-contains information about the information matrix, if saturated (h1) model
-is structured or unstructured, and which type of standard errors are shown
-in the output.}
+contains information about the information matrix, whether the saturated (h1)
+model is structured or unstructured, and which type of standard errors are
+shown in the output.}
 }
 \value{
   A data.frame containing the estimated parameters,

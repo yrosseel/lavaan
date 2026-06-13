@@ -50,13 +50,13 @@ lav_efalist_summary_print(x, nd = 3L, cutoff = 0.3, dot.cutoff = 0.1,
     of squares of factor loadings (and related measures) in the summary.
     The sums of squares are computed as the
     diagonal elements of Lambda times Psi (where Psi is the matrix of
-    factor correlations.).
-    If orthogonal rotation was used, Psi is diagonal and the sums of 
+    factor correlations).
+    If orthogonal rotation was used, Psi is diagonal and the sums of
     squares are identical to the sums of the squared column elements of the 
     Lambda matrix (i.e., the factor loadings). This is no longer the case
     when oblique rotation has been used. But in both cases (orthogonal or
     oblique), the (total) sum of the sums of squares equals the sum of the
-    communalities. In the second row of the table (Proportion of total), 
+    communalities. In the second row of the table (Proportion of total),
     the sums of squares are divided by the total. In the third row of the 
     table (Proportion var), the sums of squares are divided by the 
     number of items.}

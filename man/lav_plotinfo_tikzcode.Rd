@@ -18,11 +18,11 @@ lav_plotinfo_tikzcode(plotinfo,
 \item{outfile}{A connection or a character string, the file to store the code.}
 \item{cex}{Minimum distance between nodes in cm.}
 \item{sloped_labels}{logical, sloped labels for the edges.}
-\item{standalone}{logical, add code to make TeX file standalone?}
-\item{mlovcolors}{Array of two colors for distinguishing ov nodes with same name
-between the levels in a  multilevel model.}
+\item{standalone}{logical, should code be added to make the TeX file standalone?}
+\item{mlovcolors}{Array of two colors for distinguishing ov nodes with the same
+name across the levels of a multilevel model.}
 \item{lightness}{A scalar factor to modify the distances between nodes.}
-\item{italic}{Are labels to be in italic font? If FALSE the labels will be
+\item{italic}{Should labels be in an italic font? If FALSE, the labels are
 shown in mathrm font.}
 \item{auto_subscript}{Logical, see \code{\link{lav_label_code}}.}
 }

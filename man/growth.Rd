@@ -74,7 +74,7 @@ in a multiple group analysis.}
     data.frame or the sample (co)variance matrix). If the \code{wls_v}
     and/or \code{nacov} matrices are provided, this argument is currently
     set to \code{"data"}.}
-\item{...}{Many more additional options can be defined, using 'name = value'.
+\item{...}{Many more options can be specified, using 'name = value'.
     See \code{\link{lavOptions}} for a complete list.}
 }
 \details{

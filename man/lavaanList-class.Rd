@@ -6,9 +6,9 @@
 
 \title{Class For Representing A List of (Fitted) Latent Variable Models}
 \description{The \code{lavaanList} class represents a collection of (fitted)
-  latent variable models, for a (potentially large) number of datasets. 
+  latent variable models, fitted to a (potentially large) number of datasets.
   It contains information about the model (which is always the same),
-  and for every dataset a set of (user-specified) slots from a regular
+  and, for every dataset, a set of (user-specified) slots from a regular
   lavaan object.}
 \section{Objects from the Class}{
 Objects can be created via the
@@ -54,14 +54,15 @@ about the data.}
       If \code{type="user"}, all parameters listed in the parameter table
       are returned, including constrained and fixed parameters.}
 	\item{summary}{\code{signature(object = "lavaanList", header = TRUE,
-         estimates = TRUE, nd = 3L,
-         simulate.args = list(list(est.bias = TRUE, se.bias = TRUE,
+         estimates = TRUE, print = TRUE, nd = 3L,
+         simulate.args = list(est.bias = TRUE, se.bias = TRUE,
          se.bias.med = TRUE, prop.sig = TRUE, coverage = TRUE,
-         level = 0.95, trim = 0)))}:
+         level = 0.95, trim = 0))}:
       Print a summary of the collection of fitted models.
       If \code{header = TRUE}, the header section is
       printed.
       If \code{estimates = TRUE}, print the parameter estimates section.
+      If \code{print = TRUE}, the summary is printed to the screen.
       The argument \code{nd} determines the number of digits after the
       decimal point to be printed (currently only in the parameter estimates
       section.)

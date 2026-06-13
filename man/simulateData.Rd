@@ -70,8 +70,8 @@ simulateData(model = NULL, model.type = "sem", meanstructure = FALSE,
     model-implied statistics reflect both sets of variables. If
     \code{"default"}, the value is set depending on the estimator, and
     whether or not the model involves categorical endogenous variables.}
-\item{composites}{If \code{TRUE}, allow for the new (0.6-20) approach
-    to handle composites.}
+\item{composites}{If \code{TRUE}, use the new (0.6-20) approach
+    for handling composites.}
 \item{fixed.x}{If \code{TRUE}, the exogenous `x' covariates are considered
     fixed variables and the means, variances and covariances of these variables
     are fixed to their sample values. If \code{FALSE}, they are considered

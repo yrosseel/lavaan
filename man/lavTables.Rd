@@ -12,9 +12,9 @@ lavTables(object, dimension = 2L, type = "cells", categorical = NULL,
 \item{object}{Either a \code{data.frame}, or an object of class 
 \code{\linkS4class{lavaan}}.}
 \item{dimension}{Integer. If 0L, display all response patterns. If 1L, 
-display one-dimensional (one-way) tables; if 2L, display two-dimensional 
-(two-way or pairwise) tables. For the latter, we can change the information
-per row: if \code{type = "cells"}, each row is a cell in a pairwise table;
+display one-dimensional (one-way) tables; if 2L, display two-dimensional
+(two-way or pairwise) tables. For the latter, the information shown
+per row can be changed: if \code{type = "cells"}, each row is a cell in a pairwise table;
 if \code{type = "table"}, each row is a table.}
 \item{type}{If \code{"cells"}, display information for each cell in the
 (one-way or two-way) table. If \code{"table"}, display information per table.
@@ -28,10 +28,10 @@ a grouping variable.}
 requesting one or more statistics for each cell, pattern or table.  Always
 available are \code{X2} and \code{G2} for the Pearson and LRT based
 goodness-of-fit statistics. A distinction is made between the unrestricted and
-restricted model. The statistics based on the former have an extension
+restricted model. The statistics based on the former carry the suffix
 \code{*.un}, as in \code{X2.un} and \code{G2.un}.  If object is a
-\code{data.frame}, the unrestricted versions of the statistics are the only
-ones available.  For one-way tables, additional statistics are the thresholds
+\code{data.frame}, only the unrestricted versions of the statistics are
+available.  For one-way tables, additional statistics are the thresholds
 (\code{th.un} and \code{th}). For two-way tables and \code{type = "table"}, the
 following statistics are available: \code{X2}, \code{G2}, \code{cor}
 (polychoric correlation), \code{RMSEA} and the corresponding unrestricted
@@ -43,8 +43,8 @@ two-way table; \code{G2.nlarge} is the number of cells with a \code{G2} value
 larger than \code{G2.min}, and \code{G2.plarge} is the proportion of cells with
 a \code{G2} value larger than \code{G2.min}. A similar set of statistics based
 on \code{X2} is also available. If \code{"default"}, the selection of
-statistics (if any) depends on the \code{dim} and \code{type} arguments, and if
-the object is a \code{data.frame} or a fitted lavaan object.}
+statistics (if any) depends on the \code{dim} and \code{type} arguments, and on
+whether the object is a \code{data.frame} or a fitted lavaan object.}
 \item{G2.min}{Numeric. All cells with a G2 statistic larger than this number
 are considered `large', as reflected in the (optional) \code{"G2.plarge"} and
 \code{"G2.nlarge"} columns.}
@@ -66,10 +66,10 @@ If \code{"FALSE"}, as many columns as observed variables are displayed.}
   If \code{output = "data.frame"}, the output is presented as a data.frame
   where each row is either a cell, a table, or a response pattern, depending on
   the \code{"type"} argument.
-  If \code{output = "table"} (only for two-way tables),
-  a list of tables (if \code{type = "cells"}) where each list element 
-  corresponds to a pairwise table, or if \code{type = "table"}, a single table
-  (per group). In both cases, the table entries are determined by the
+  If \code{output = "table"} (only for two-way tables), the output is
+  a list of tables (if \code{type = "cells"}) in which each list element
+  corresponds to a pairwise table, or a single table per group (if
+  \code{type = "table"}). In both cases, the table entries are determined by the
   (single) \code{statistic} argument.
 }
 \references{

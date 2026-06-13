@@ -8,8 +8,8 @@ lav_data_update(lavdata = NULL, newX = NULL, BOOT.idx = NULL, lavoptions = NULL)
 }
 \arguments{
 \item{lavdata}{A lavdata object.}
-\item{newX}{A list of (new) data matrices (per group) of the same size. 
-They will replace the data stored in the internal dataslot.}
+\item{newX}{A list of (new) data matrices (per group) of the same size.
+They replace the data stored in the internal data slot.}
 \item{BOOT.idx}{A list of integers. If bootstrapping was used to produce
 the data in newX, use these indices to adapt the remaining slots.}
 \item{lavoptions}{A named list. The Options slot from a lavaan object.}

@@ -36,8 +36,8 @@ fitmeasures(object, fit.measures = "all",
   returned. If only a single or a few fit measures are specified by name,
   only those are computed and returned.
   If additional options for certain fit measures are needed, fit.measures
-  should be a list with element \code{fit.measures} the measures wanted,
-  and the options are provided as other named elements in this list. The
+  should be a list whose \code{fit.measures} element holds the measures
+  wanted, with the options supplied as further named elements of the list. The
   \code{standard.test} option determines the main test statistic (chi-square
   value) that will be used to compute all the fit measures that depend on this
   test statistic. Usually this is \code{"standard"}. FMG p-value tests can be

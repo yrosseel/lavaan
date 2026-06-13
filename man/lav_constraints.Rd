@@ -27,8 +27,8 @@ model parameters in the parameter table.}
 \item{warn}{Logical. If FALSE, warnings are suppressed.}
 }
 \details{
-This is a collection of lower-level constraint related functions
-that are used in the lavaan code. They are made public per
+This is a collection of lower-level constraint-related functions
+that are used in the lavaan code. They are made public at the
 request of package developers. Below is a brief description of what
 they do:
 

@@ -11,12 +11,12 @@ lavNames(object, type = "ov", ...)
 \item{object}{An object of class \code{\linkS4class{lavaan}}.}
 \item{type}{Character. The type of variables whose names should be extracted. 
 See details for a complete list.}
-\item{...}{Additional selection variables. For example \code{"group = 2L"}
-(in a multiple-group analysis) only considers the variables included
-in the model for the second group.}
+\item{...}{Additional selection criteria. For example, \code{"group = 2L"}
+(in a multiple-group analysis) restricts the selection to the variables
+included in the model for the second group.}
 }
 \details{
-The order of the variable names, as returned by \code{lav_object_vnames} 
+The order of the variable names, as returned by \code{lav_object_vnames},
 determines the order in which the variables are listed in the parameter
 table, and therefore also in the summary output.
 
@@ -39,13 +39,13 @@ The following variable types are available:
 
   \item \code{"ov.ind"}: observed indicators of latent variables
 
-  \item \code{"ov.orphan"}: lonely observed variables (only intercepts/variances appear in the model syntax)
+  \item \code{"ov.orphan"}: isolated observed variables (only their intercepts or variances appear in the model syntax)
 
   \item \code{"ov.interaction"}: interaction terms (defined by the colon operator)
 
-  \item \code{"th"}: threshold names ordinal variables only
+  \item \code{"th"}: threshold names (ordinal variables only)
 
-  \item \code{"th.mean"}: threshold names ordinal + numeric variables (if any)
+  \item \code{"th.mean"}: threshold names (ordinal and numeric variables, if any)
 
   \item \code{"lv"}: latent variables
 

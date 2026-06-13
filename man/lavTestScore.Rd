@@ -19,9 +19,9 @@ lavTestScore(object, add = NULL, release = NULL,
 \item{add}{Either a character string (typically between single quotes) or
   a parameter table containing additional (currently fixed-to-zero) parameters
   for which the score test must be computed.}
-\item{release}{Vector of Integers. The indices of the constraints that
-should be released. The indices correspond to the order of the equality
-constraints as they appear in the parameter table.}
+\item{release}{Vector of integers. The indices of the constraints that
+should be released. The indices correspond to the order in which the equality
+constraints appear in the parameter table.}
 \item{univariate}{Logical. If \code{TRUE}, compute the univariate score
 statistics, one for each constraint.}
 \item{cumulative}{Logical. If \code{TRUE}, order the univariate score
@@ -48,7 +48,7 @@ information is the default, which provides better control of Type I errors.}
     This function can be used to compute both multivariate and univariate
     score tests. There are two modes: 1) releasing fixed-to-zero parameters
     (using the \code{add} argument), and 2) releasing existing equality
-    constraints (using the \code{release} argument). The two modes can not
+    constraints (using the \code{release} argument). The two modes cannot
     be used simultaneously.
 
     When adding new parameters, they should not already be part of the model

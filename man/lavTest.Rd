@@ -21,7 +21,7 @@ the model.}
     statistic is computed. If \code{"Yuan.Bentler"} is included, 
     a Yuan-Bentler scaled test statistic is computed. 
     If \code{"Yuan.Bentler.Mplus"} is included, a
-    test statistic is computed that is asymptotically equal to the
+    test statistic is computed that is asymptotically equivalent to the
     Yuan-Bentler scaled test statistic. If \code{"mean.var.adjusted"} or
     \code{"Satterthwaite"} is included, a mean and variance adjusted test 
     statistic is computed. If \code{"scaled.shifted"} is included, 
@@ -48,11 +48,11 @@ the model.}
     all test statistics. If \code{"text"}, display the output as text with 
     verbose descriptions (as in the summary output). If any scaled
     test statistics are included, they are printed first in a two-column
-    format. Next come the other test statistics in a one-column format.}
+    format, followed by the remaining test statistics in a one-column format.}
 \item{drop.list.single}{Logical. Only used when \code{output = "list"}.
-    If \code{TRUE} and the list is of length one (i.e. only a single test 
-    statistic), drop the outer list. If \code{FALSE}, return a nested list 
-    with as many elements as we have test statistics.}
+    If \code{TRUE} and the list is of length one (i.e. only a single test
+    statistic), drop the outer list. If \code{FALSE}, return a nested list
+    with one element per test statistic.}
 }
 \value{
     If \code{output = "list"}: a nested list with test statistics, or if

@@ -28,8 +28,8 @@ cross-validation.}
 values to be tested during cross-validation.}
 }
 \details{
-This function is used to generate an optimal lambda value for
-\code{lavPredictY} predictions to improve prediction accuracy.
+This function determines an optimal lambda value for use with
+\code{lavPredictY}, in order to improve prediction accuracy.
 }
 \seealso{
 \code{\link{lavPredictY}} to predict the values of (observed) y-variables given

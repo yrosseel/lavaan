@@ -48,13 +48,13 @@ sam(model = NULL, data = NULL, cmd = "sem", se = "twostep",
 \item{sam.method}{Character. Can be set to \code{"local"}, \code{"global"}
     or \code{"fsr"}. In the latter case, the results are the same as if
     Bartlett factor scores were used, without any bias correction.}
-\item{...}{Many more additional options can be defined, using 'name = value'.
+\item{...}{Many more options can be specified, using 'name = value'.
     See \code{\link{lavOptions}} for a complete list. These options affect
     both the measurement blocks and the structural part.}
 \item{local.options}{List. Options specific for local SAM method (these
      options may change over time). If \code{lambda.correction = TRUE},
      we ensure that the variance matrix of the latent variables (VETA)
-     is positive definite. The \code{alpha.correction} options must be an
+     is positive definite. The \code{alpha.correction} option must be an
      integer. Acceptable values are in the range 0 to
      N-1. If zero (the default), no small sample correction is performed,
      and the bias-correction is the same as with local SAM. When equal to N-1,
@@ -73,14 +73,13 @@ sam(model = NULL, data = NULL, cmd = "sem", se = "twostep",
 \item{bootstrap.args}{List. Deprecated, use \code{bootstrap} instead.}
 }
 \details{
-    The \code{sam} function tries to automate the SAM approach, by first
-    estimating the measurement part of the model,
-    and then the structural part of the model. See reference for more
-    details.
+    The \code{sam} function automates the SAM approach by first
+    estimating the measurement part of the model and then the structural
+    part of the model. See the reference for more details.
 
     Note that in the current implementation, all indicators of latent
-    variables have to be observed. This implies: no support for second-order 
-    factor structures (for now).
+    variables must be observed. As a result, second-order factor structures
+    are not yet supported.
 }
 \value{
   If \code{output = "lavaan"}, an object of class 

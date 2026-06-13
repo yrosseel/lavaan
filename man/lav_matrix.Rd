@@ -108,8 +108,8 @@ matrix. If m is also provided, the number of columns of the matrix.}
 is square.}
 }
 \details{
-These are a collection of lower-level matrix/vector related functions
-that are used throughout the lavaan code. They are made public per
+These are a collection of lower-level matrix and vector functions
+that are used throughout the lavaan code. They are made public at the
 request of package developers. Below is a brief description of what
 they do:
 
@@ -166,7 +166,7 @@ diagonal = FALSE, a diagonal with zero elements is added.
 
 The \code{lav_mat_vechr_rev} (alias: \code{lav_mat_vechu_rev} and
 \code{lav_mat_lower2full}) creates a symmetric matrix, given only the lower
-triangular elements, row by row. If diagonal = FALSE, an diagonal with zero
+triangular elements, row by row. If diagonal = FALSE, a diagonal with zero
 elements is added.
 
 The \code{lav_mat_dup} function generates the duplication matrix
@@ -212,8 +212,8 @@ generalized inverse matrix. The matrix A must be square with n*n rows and
 columns, where n is an integer. The generalized inverse of the duplication
 matrix is not explicitly created.
 
-The \code{lav_mat_com} function computes the commutation matrix which
-is a permutation matrix which transforms vec(A) (with m rows and n columns) 
+The \code{lav_mat_com} function computes the commutation matrix, a
+permutation matrix that transforms vec(A) (with m rows and n columns)
 into vec(t(A)).
 
 The \code{lav_mat_com_pre} function computes the product of the

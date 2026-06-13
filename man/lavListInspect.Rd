@@ -52,11 +52,11 @@ Model matrices:
         represent the free parameters. The numbers themselves correspond
         to the position of the free parameter in the parameter vector.
         This determines the order of the model parameters in the output
-        of for example \code{coef()} and \code{vcov()}.}
+        of, for example, \code{coef()} and \code{vcov()}.}
     \item{\code{"partable"}:}{A list of model matrices. The non-zero integers
         represent both the fixed parameters (for example, factor loadings
-        fixed at 1.0), and the free parameters if we ignore any equality
-        constraints. They correspond with all entries (fixed or free)
+        fixed at 1.0) and the free parameters (ignoring any equality
+        constraints). They correspond to all entries (fixed or free)
         in the parameter table. See \code{\link{parTable}}.}
     \item{\code{"start"}:}{A list of model matrices. The values represent
         the starting values for all model parameters.

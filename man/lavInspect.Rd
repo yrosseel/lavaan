@@ -58,16 +58,16 @@ Model matrices:
         represent the free parameters. The numbers themselves correspond
         to the position of the free parameter in the parameter vector.
         This determines the order of the model parameters in the output
-        of for example \code{coef()} and \code{vcov()}.}
+        of, for example, \code{coef()} and \code{vcov()}.}
     \item{\code{"partable"}:}{A list of model matrices. The non-zero integers
         represent both the fixed parameters (for example, factor loadings
-        fixed at 1.0), and the free parameters if we ignore any equality
-        constraints. They correspond with all entries (fixed or free)
+        fixed at 1.0) and the free parameters (ignoring any equality
+        constraints). They correspond to all entries (fixed or free)
         in the parameter table. See \code{\link{parTable}}.}
     \item{\code{"se"}:}{A list of model matrices. The non-zero numbers
         represent the standard errors for the free parameters in the model.
-        If two parameters are constrained to be equal, they will have the
-        same standard error for both parameters.
+        If two parameters are constrained to be equal, they will share the
+        same standard error.
         Aliases: \code{"std.err"} and \code{"standard.errors"}.}
     \item{\code{"se.std"}:}{A list of model matrices. The non-zero numbers
         represent the standard errors for the (completely) standardized free
@@ -121,10 +121,10 @@ Information about the data:
 
 \describe{
     \item{\code{"data"}:}{A matrix containing the observed variables
-        that have been used to fit the model. No column/row names are provided.
-        Column names correspond to the output of \code{lav_object_vnames(object)},
-        while the rows correspond to the output of
-        \code{lavInspect(object, "case.idx")}.}
+        that were used to fit the model. The matrix has no row or column
+        names. The columns correspond to the output of
+        \code{lav_object_vnames(object)}, while the rows correspond to the
+        output of \code{lavInspect(object, "case.idx")}.}
     \item{\code{"ordered"}:}{A character vector. The ordered variables.}
     \item{\code{"nobs"}:}{Integer vector. The number of observations
         in each group that were used in the analysis.}
@@ -152,9 +152,9 @@ Information about the data:
         If the data is complete (no missing values), there will be only
         a single pattern. In the case of multiple groups: a list of
         pattern matrices.}
-    \item{\code{"coverage"}:}{A symmetric matrix where each element contains
-        the proportion of observed datapoints for the corresponding
-        pair of observed variables.
+    \item{\code{"coverage"}:}{A symmetric matrix in which each element
+        contains the proportion of jointly observed data points for the
+        corresponding pair of observed variables.
         In the case of multiple groups: a list of coverage matrices.}
     \item{\code{"group"}:}{A character string. The group variable in
         the data.frame (if any).}
@@ -201,15 +201,15 @@ Observed sample statistics:
          \code{"samplestatistics"}. Since
          0.6-3, we always check if an h1 slot is available (the estimates
          for the unrestricted model); if present, we extract the sample
-         statistics from this slot. This implies that if variables are
-         continuous, and \code{missing = "ml"} (or \code{"fiml"}), we
+         statistics from this slot. This implies that if the variables are
+         continuous and \code{missing = "ml"} (or \code{"fiml"}), we
          return the covariance matrix (and mean vector) as computed by
-         the EM algorithm under the unrestricted (h1) model. If the h1 is
-         not present (perhaps, because the model was fitted with
+         the EM algorithm under the unrestricted (h1) model. If the h1 slot
+         is not present (for example, because the model was fitted with
          \code{h1 = FALSE}), we return the sample statistics from the
-         SampleStats slot. Here, pairwise deletion is used for the elements
-         of the covariance matrix (or correlation matrix), and
-         listwise deletion for all univariate statistics (means, intercepts
+         SampleStats slot. In that case, pairwise deletion is used for the
+         elements of the covariance matrix (or correlation matrix), and
+         listwise deletion for all univariate statistics (means, intercepts,
          and thresholds).}
     \item{\code{"sampstat.std"}:}{Standardized observed sample statistics.
          The covariance matrix is rescaled to a correlation matrix. Aliases:

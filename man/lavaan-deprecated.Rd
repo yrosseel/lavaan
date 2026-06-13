@@ -2,8 +2,8 @@
 \alias{lavaan-deprecated}
 \title{Deprecated functions in lavaan package}
 \details{
-The functions in the first column hereafter are deprecated and calls should
-be replaced by the calls of the corresponding function in the second column.
+The functions listed in the first column below are deprecated; calls to them
+should be replaced by calls to the corresponding function in the second column.
 \tabular{ll}{
 #  bootstrapLavaan \tab lavBootstrap \cr
   char2num \tab lav_char2num \cr

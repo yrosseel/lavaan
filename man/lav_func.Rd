@@ -31,10 +31,10 @@ we call the corresponding simple (non-complex) method instead.}
 \details{
 The complex versions use complex numbers to gain more precision, while
 retaining the simplicity (and speed) of the simple forward method (see
-references). These
-functions were added to lavaan (around 2012) when the complex functionality
-was not part of the numDeriv package. They were used internally, and made
-public in 0.5-17 per request of other package developers.
+references). These functions were added to lavaan (around 2012), when the
+complex functionality was not yet part of the numDeriv package. They were
+used internally, and made public in 0.5-17 at the request of other package
+developers.
 }
 \references{
 Squire, W. and Trapp, G. (1998). Using Complex Variables to Estimate 

@@ -70,8 +70,8 @@ Parameters that are constrained to be equal across groups will be given the
 same label.}
 \item{group_partial}{A vector of character strings containing the labels
     of the parameters which should be free in all groups.}
-\item{type}{Character string. Can be either `user' or `free' to select all
-entries or only the free parameters from the parameter table respectively.}
+\item{type}{Character string. Either `user' to select all entries, or
+`free' to select only the free parameters from the parameter table.}
 \item{lavobject}{An object of class `lavaan'. If this argument is provided,
 it should be the only argument. All the values for the other arguments 
 are extracted from this object.}

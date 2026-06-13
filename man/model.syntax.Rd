@@ -59,10 +59,11 @@ the model for both observed and latent variables.}
     are fixed to zero.}
 \item{marker.int.zero}{Logical. Only relevant if the metric of each latent
     variable is set by fixing the first factor loading to unity.
-    If \code{TRUE}, it implies \code{meanstructure = TRUE} and 
+    If \code{TRUE}, it implies \code{meanstructure = TRUE} and
     \code{std.lv = FALSE}, and it fixes the intercepts of the marker
     indicators to zero, while freeing the means/intercepts of the latent
-    variables. Only works correctly for single group, single level models.}
+    variables. This only works correctly for single-group, single-level
+    models.}
 \item{orthogonal}{If \code{TRUE}, all covariances among
    latent variables are set to zero.}
 \item{orthogonal.y}{If \code{TRUE}, all covariances among
@@ -75,10 +76,10 @@ the model for both observed and latent variables.}
     determined by fixing their variances to 1.0. If \code{FALSE}, the metric
     of each latent variable is determined by fixing the factor loading of the
     first indicator to 1.0. If there are multiple
-      groups, \code{std.lv = TRUE} and \code{"loadings"} is included in 
+      groups, \code{std.lv = TRUE} and \code{"loadings"} is included in
       the \code{group.label} argument, then only the latent variances
       of the first group will be fixed to 1.0, while the latent
-      variances of other groups are set free.}
+      variances of the other groups are freely estimated.}
 \item{correlation}{If \code{TRUE}, a correlation structure is fitted. For
     continuous data, this implies that the (residual) variances are no
     longer parameters of the model.}
@@ -95,8 +96,8 @@ the model for both observed and latent variables.}
      included, equality constraints are used so that the sum of the
      intercepts (belonging to the indicators of a single latent variable)
      equals zero.
-     As a result, the latent mean will be freely estimated and usually
-     equal the average of the means of the involved indicators.}
+     As a result, the latent mean will be freely estimated and will usually
+     equal the average of the means of the indicators involved.}
 \item{conditional.x}{If \code{TRUE}, we set up the model conditional on
     the exogenous `x' covariates; the model-implied sample statistics
     only include the non-x variables. If \code{FALSE}, the exogenous `x'
@@ -242,26 +243,27 @@ There can be seven types of formula-like expressions in the model syntax:
       terms are currently not supported. 
 
     \item Variance-covariances: The \code{"~~"} (`double tilde') operator specifies
-     (residual) variances of an observed or latent variable, or a set of 
-     covariances between one variable, and several other variables (either
-     observed or latent). Several variables, separated by \code{"+"} 
-     operators can appear on the right. This way, several pairwise 
+     (residual) variances of an observed or latent variable, or a set of
+     covariances between one variable and several other variables (either
+     observed or latent). Several variables, separated by \code{"+"}
+     operators, can appear on the right. In this way, several pairwise
      (co)variances involving the same left-hand variable can be expressed in a
      single expression. The distinction between variances and residual variances
      is made automatically.
 
     \item Intercepts: A special case of a regression formula can be used to
       specify an intercept (or a mean) of either an observed or a latent variable.
-     The variable name is on the left of a \code{"~"} operator. On the right is
-     only the number \code{"1"} representing the intercept. Including an intercept
+     The variable name is on the left of a \code{"~"} operator, and the only
+     term on the right is the number \code{"1"}, representing the intercept.
+     Including an intercept
      formula in the model automatically implies \code{meanstructure = TRUE}. The
      distinction between intercepts and means is made automatically.
 
     \item Thresholds: The \code{"|"} operator can be used to define the 
-      thresholds of categorical endogenous variables (on the left hand side
+      thresholds of categorical endogenous variables (on the left-hand side
       of the operator). By convention, the
-      thresholds (on the right hand side, separated by the \code{"+"} operator,
-      are named \code{"t1"}, \code{"t2"}, etcetera.
+      thresholds (on the right-hand side, separated by the \code{"+"} operator)
+      are named \code{"t1"}, \code{"t2"}, and so on.
 
     \item Scaling factors: The \code{"~*~"} operator defines a scale factor.
       The variable name on the left hand side must be the same as the variable
@@ -289,8 +291,8 @@ Usually, only a single variable name appears on the left side of an
 operator. However, if multiple variable names are specified, 
 separated by the \code{"+"} operator, the formula is repeated for each
 element on the left side (as for example in the third regression 
-formula in the example above). The only exception are scaling factors, where
-only a single element is allowed on the left hand side. 
+formula in the example above). The only exception is scaling factors, where
+only a single element is allowed on the left-hand side.
 
 In the right-hand side of these formula-like expressions, each element can be
 modified (using the \code{"*"} operator) by either a numeric constant,
@@ -366,10 +368,10 @@ An alternative way to specify the label is as follows:
 where the label is the argument of special function \code{label()};
 this can be useful if the label contains a space, or an operator (like "~").
 
-To constrain a parameter
-to be equal to another target parameter, there are two ways. If you
-have specified your own labels, you can use the fact that 
-\emph{equal labels imply equal parameter values}. 
+There are two ways to constrain a parameter
+to be equal to another target parameter. If you
+have specified your own labels, you can use the fact that
+\emph{equal labels imply equal parameter values}.
 If you rely on automatic parameter labels, you
 can use the special function \code{equal()}. The argument of
 \code{equal()} is the (automatic or user-specified) name of the target
@@ -455,9 +457,9 @@ specified in a separate character-string object, which can be passed to the
 \code{lavaan(..., constraints=)} argument, enabling users to compare results
 with(out) the constraints.
 
-Inequality constraints work much the same way, using the \code{<} or \code{>}
-operator indicate which estimated parameter is hypothesized to be greater/less
-than either a specific value or another estimated parameter.  For example, a
+Inequality constraints work in much the same way, using the \code{<} or \code{>}
+operator to indicate which estimated parameter is hypothesized to be greater or
+less than either a specific value or another estimated parameter. For example, a
 variance can be constrained to be nonnegative:
 \preformatted{
     y1a ~~ var1a*y1a

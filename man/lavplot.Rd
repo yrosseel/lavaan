@@ -1,6 +1,6 @@
 \name{lav_plot}
 \alias{lav_plot}
-\title{Creates diagram code for tikz, svg or creates an Rplot}
+\title{Create diagram code for tikz or svg, or produce an R plot}
 \usage{
 lav_plot(model = NULL,
         infile = NULL,
@@ -33,12 +33,12 @@ lav_plot(model = NULL,
 lavaan object (in which case the \code{ParTable} object is extracted and column
 \code{est} is used as value to show).
 Should be \code{NULL} if infile is given.}
-\item{infile}{A character string specifying the file which contains the model
+\item{infile}{A character string specifying the file that contains the model
 syntax.}
 \item{varlv}{A logical indicating that the (residual) variance of a variable
 should be plotted as a separate latent variable (with a smaller circle than
-ordinary latent variables). In this case covariances between two such variables
-will be plotted as covariance between the latent variables for the variance.}
+ordinary latent variables). In this case, a covariance between two such variables
+is plotted as a covariance between their variance latent variables.}
 \item{placenodes}{optional list with members \code{\var{nodename} = c(row, column)},
 \code{row} and \code{column} don't have to be integers.}
 \item{edgelabelsbelow}{optional list with members \code{c(\var{nodename1},
@@ -55,16 +55,16 @@ see \code{\link{lav_plotinfo_tikzcode}}.}
 see \code{\link{lav_plotinfo_svgcode}}.}
 }
 \details{
-If \code{rplot} is specified or neither \code{tikz} nor \code{svg} are specified
-an R plot is generated, possibly stored in a png file if the outfile member of
-\code{rplot} is set. If \code{tikz} is specified the code for a tikz diagram is
-stored in the specified \code{outfile}, and the same for svg.
+If \code{rplot} is specified, or if neither \code{tikz} nor \code{svg} is
+specified, an R plot is generated, and stored in a png file if the outfile
+member of \code{rplot} is set. If \code{tikz} is specified, the code for a tikz
+diagram is stored in the specified \code{outfile}; the same applies to svg.
 
-The lav_plot command \strong{tries} to create a nice plot from the input model, 
-but one should keep the names of the variables short and sometimes rearrange the
-nodes in the plot. As an example the (slightly modified) example of the
-\code{sem} function in \code{lavaan} results in the following first plot
-hereunder. If we use the placenodes argument, we get the second plot.
+The lav_plot command \strong{tries} to create a nice plot from the input model,
+but the variable names should be kept short, and the nodes in the plot may
+sometimes need to be rearranged. As an example, the (slightly modified) example
+of the \code{sem} function in \code{lavaan} produces the first plot shown below.
+Using the placenodes argument produces the second plot.
 \if{html}{\figure{semex0.svg}{options: width=500 alt="sem example before"}}
 \if{latex}{\figure{semex0.pdf}{options: width=3in}}
 \if{html}{\figure{semex.svg}{options: width=500 alt="sem example after"}}
@@ -77,7 +77,7 @@ the \code{lav_\dots} functions.
 NULL, invisible
 }
 \description{
-Creates code to make a diagram in tikz or svg or plot the diagram or store
+Creates code to draw a diagram in tikz or svg, plots the diagram, or stores
 the diagram in a png file.
 }
 \seealso{

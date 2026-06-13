@@ -4,7 +4,7 @@
 \alias{cfaList}
 \title{Fit List of Latent Variable Models}
 \description{
-Fit the same latent variable model, for a (potentially large) number of datasets.}
+Fit the same latent variable model to a (potentially large) number of datasets.}
 \usage{
 lavaanList(model = NULL, dataList = NULL, dataFunction = NULL, 
     dataFunction.args = list(), ndat = length(dataList), cmd = "lavaan", 
@@ -39,10 +39,10 @@ cfaList(model = NULL, dataList = NULL, dataFunction = NULL,
     to the \code{dataFunction} function.}
 \item{ndat}{Integer. The number of datasets that should be generated using
     the \code{dataFunction} function.}
-\item{cmd}{Character. Which command is used to run the sem models. The possible
-    choices are \code{"sem"}, \code{"cfa"} or \code{"lavaan"}, determining how
-    we deal with default options.}
-\item{\dots}{Other named arguments for \code{lavaan} function.}
+\item{cmd}{Character. The command used to run the SEM models. The possible
+    choices are \code{"sem"}, \code{"cfa"} or \code{"lavaan"}, which determine
+    how the default options are handled.}
+\item{\dots}{Other named arguments for the \code{lavaan} function.}
 \item{store.slots}{Character vector. Which slots (from a lavaan object) 
     should be stored for each dataset? The possible choices are
     \code{"timing"}, \code{"partable"}, \code{"data"}, \code{"samplestats"},
@@ -52,11 +52,11 @@ cfaList(model = NULL, dataList = NULL, dataFunction = NULL,
     \code{\linkS4class{lavaan}} object returns the information of interest.}
 \item{store.failed}{Logical. If \code{TRUE}, write (to tempdir()) the dataset
      and (if available) the fitted object when the estimation for a particular
-     dataset somehow failed. This will allow posthoc inspection of the problem.}
+     dataset failed for some reason. This allows post hoc inspection of the problem.}
 \item{parallel}{The type of parallel operation to be used (if any). If
 missing, the default is \code{"no"}.}
 \item{ncpus}{Integer. The number of processes to be used in parallel operation:
-typically one would choose this to the number of available CPUs.}
+typically one would set this to the number of available CPUs.}
 \item{cl}{An optional \pkg{parallel} or \pkg{snow} cluster for use if
 \code{parallel = "snow"}.  If not supplied, a cluster on the local machine is
 created for the duration of the \code{lavaanList} call.}

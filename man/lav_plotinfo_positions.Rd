@@ -51,13 +51,13 @@ Computes the positions for the nodes and anchors and control points for the
 edges in the diagram.
 }
 \details{
-This function \strong{tries} to arrange the nodes and anchor points for the edges in
-a way that gives a not-too-large diagram and trying to put dependent variables in
-a regression to the right of the variables they depend on.
-If the result is not what you want, you can
-take a look at the plot via \code{lav_plotinfo_rgraph} or \code{lav_plot} functions and
-decide yourself to place some nodes at another location (\code{placenodes})
-and/or put some edge labels at the other side of the edge (\code{labelsbelow}).
+This function \strong{tries} to arrange the nodes and the anchor points for the
+edges in a way that keeps the diagram reasonably compact, while placing the
+dependent variable of a regression to the right of the variables it depends on.
+If the result is not what you want, you can inspect the plot with the
+\code{lav_plotinfo_rgraph} or \code{lav_plot} functions and then place some
+nodes at a different location (\code{placenodes}) and/or move some edge labels
+to the other side of the edge (\code{labelsbelow}).
 
 For multilevel models -- maximum two levels -- the nodes in block 2 are grouped
 at the top of the diagram and those in block 1 at the bottom. The item 
