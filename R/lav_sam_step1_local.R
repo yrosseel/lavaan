@@ -563,26 +563,38 @@ lav_sam_step1_local_jac <- function(step1 = NULL, fit = NULL, p_only = FALSE,
   # sam_method <- step1$sam.method
 
   ngroups <- lavdata@ngroups
+  # categorical local SEs are GUARDED for now: the machinery runs (JACa is
+  # already categorical-aware, used by twostep.robust; a categorical JACb branch
+  # is implemented below), but the resulting latent (co)variance SEs come out
+  # ~0.5-0.65x of the bootstrap SEs (regressions are fine). This was traced to a
+  # genuine magnitude deficit in the categorical d(VETA)/d(stats) jacobian
+  # (NOT nonlinearity, NOT a bootstrap artifact, NOT the per-group/Case-B work);
+  # the exact source is not yet pinned, so we do not (yet) expose these SEs.
   if (lavmodel@categorical && !p_only) {
     lav_msg_stop(gettext(
       "IJ local SEs: not available for the categorical setting (yet)!\n"))
   }
   if (lavmodel@categorical && lavmodel@conditional.x) {
     lav_msg_stop(gettext(
-      "twostep.robust SEs: not available for the categorical setting in
-       combination with conditional.x = TRUE (yet)!\n"))
+      "local SEs: not available for the categorical setting in combination
+       with conditional.x = TRUE (yet)!\n"))
   }
 
   # multiple groups: dispatch to the (single-level, no latent interaction)
   # multigroup implementation, which builds one stacked jacobian over all
-  # groups and returns a list of per-group jacobians. This currently only
-  # supports the case where the measurement model has NO across-group
-  # (equality) constraints (so the groups remain independent in step 1);
-  # that case is detected and reported in lav_sam_step1_local_jac_mg().
+  # groups and returns a list of per-group jacobians. Across-group (equality)
+  # constraints in the measurement model (Case B) are detected there (via the
+  # cross-group blocks of the stacked jacobian) and handled with the full
+  # cross-group Gamma in step 2 (SEs and the robust test statistic).
   if (ngroups > 1L) {
     if (p_only) {
       lav_msg_stop(gettext(
         "twostep.robust SEs: not available with multiple groups (yet)!"))
+    }
+    if (lavmodel@categorical) {
+      lav_msg_stop(gettext(
+        "local SEs: not available for the categorical setting with multiple
+         groups (yet)!"))
     }
     if (lavdata@nlevels > 1L) {
       lav_msg_stop(gettext(
@@ -785,6 +797,56 @@ lav_sam_step1_local_jac <- function(step1 = NULL, fit = NULL, p_only = FALSE,
     }
     jacb <- numDeriv::jacobian(func = ffb, x = this_x)
     lav_verbose(verbose_flag)
+  } else if (lavmodel@categorical) {
+    # categorical: the sample statistics are the thresholds and the polychoric
+    # correlations. vech(VETA) depends on the correlations only (not on the
+    # thresholds), but through the DELTA rescaling and the Croon correction
+    # inside lav_sam_step1_local(), so it is not a simple M %x% M map. Since M
+    # is independent of the sample statistics for M.method = "ULS" (forced for
+    # categorical data), we obtain this block numerically by perturbing the
+    # off-diagonal correlations, keeping theta.mm fixed. The threshold columns
+    # of JACb are zero.
+    cov_g <- step1$COV[[g]]
+    low_idx <- lower.tri(cov_g) # strict lower triangle (column-major)
+    ffb_cat <- function(xcorr) {
+      step1_1 <- step1
+      this_cov <- step1$COV[[g]]
+      this_cov[low_idx] <- xcorr
+      this_cov[upper.tri(this_cov)] <- t(this_cov)[upper.tri(this_cov)]
+      step1_1$COV[[g]] <- this_cov
+      step1_1 <- lav_sam_step1_local(step1 = step1_1, fit = fit,
+        sam_method = step1$sam.method, local_options = step1$local.options)
+      if (lavmodel@meanstructure) {
+        c(step1_1$EETA[[g]], lav_mat_vech(step1_1$VETA[[g]]))
+      } else {
+        lav_mat_vech(step1_1$VETA[[g]])
+      }
+    }
+    verbose_flag <- lav_verbose()
+    lav_verbose(FALSE)
+    jacb_corr <- numDeriv::jacobian(func = ffb_cat, x = cov_g[low_idx])
+    lav_verbose(verbose_flag)
+
+    # map the correlation columns into the joint WLS.obs vector (by label, so
+    # any difference in variable ordering is handled); thresholds stay zero
+    ov_g <- colnames(cov_g)
+    if (is.null(ov_g)) {
+      ov_g <- lavdata@ov.names[[g]]
+    }
+    r_idx <- row(cov_g)[low_idx]
+    c_idx <- col(cov_g)[low_idx]
+    my_cor_labels <- vapply(seq_along(r_idx), function(k) {
+      paste(sort(c(ov_g[r_idx[k]], ov_g[c_idx[k]])), collapse = "~~")
+    }, character(1L))
+    corr_col_idx <- match(my_cor_labels, joint_labels)
+    if (anyNA(corr_col_idx)) {
+      lav_msg_stop(gettext(
+        "internal error: unable to map the polychoric correlations into the
+         statistics vector of the joint model (categorical JACb)"))
+    }
+    jacb <- matrix(0, nrow = nrow(jacb_corr),
+                   ncol = length(fit@SampleStats@WLS.obs[[g]]))
+    jacb[, corr_col_idx] <- jacb_corr
   } else { # no latent interactions
     mb <- step1$M[[g]]
     mbx_mb <- mb %x% mb
