@@ -506,7 +506,7 @@ lav_pt_flat <- function(flat = NULL,
     # if 'marker' is provided (a named vector lv -> indicator), fix the
     # loading of that indicator instead of the first one; this is used by
     # the bad.marker.crit mechanism to switch to another marker if the first
-    # indicator turns out to be a poor item (see lav_partable_marker_adapt())
+    # indicator turns out to be a poor item (see lav_pt_marker_adapt())
     mm_idx <- which(op == "=~" & !(lhs %in% lv_names_efa))
     if (is.null(marker)) {
       first_idx <- mm_idx[which(!duplicated(lhs[mm_idx]))]

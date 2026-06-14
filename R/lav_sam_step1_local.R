@@ -563,21 +563,32 @@ lav_sam_step1_local_jac <- function(step1 = NULL, fit = NULL, p_only = FALSE,
   # sam_method <- step1$sam.method
 
   ngroups <- lavdata@ngroups
-  # categorical local SEs are GUARDED for now: the machinery runs (JACa is
-  # already categorical-aware, used by twostep.robust; a categorical JACb branch
-  # is implemented below), but the resulting latent (co)variance SEs come out
-  # ~0.5-0.65x of the bootstrap SEs (regressions are fine). This was traced to a
-  # genuine magnitude deficit in the categorical d(VETA)/d(stats) jacobian
-  # (NOT nonlinearity, NOT a bootstrap artifact, NOT the per-group/Case-B work);
-  # the exact source is not yet pinned, so we do not (yet) expose these SEs.
-  if (lavmodel@categorical && !p_only) {
-    lav_msg_stop(gettext(
-      "IJ local SEs: not available for the categorical setting (yet)!\n"))
-  }
+  # categorical local SEs: supported for the single-group setting. The
+  # categorical d(VETA)/d(stats) jacobian needs an extra channel that the
+  # continuous case does not: in the delta (correlation) parameterization the
+  # residual variances theta are not free but are pinned by the unit-diagonal
+  # constraint theta_jj = 1 - (Lambda Psi Lambda')_jj. Hence VETA also depends
+  # on the within-block factor (co)variances Psi (through theta, and so through
+  # the mapping matrix M). Psi is not a measurement parameter in 'keep_idx', so
+  # this 'psi channel' is otherwise dropped; without it the latent (co)variance
+  # SEs come out ~0.6x of their true value. It is added to JAC below (the
+  # continuous case is unaffected, because there theta is free and
+  # d(VETA)/d(Psi) = 0). Block-wise mixed models (some measurement blocks fully
+  # categorical, others fully continuous) are supported: the JACa loop picks the
+  # influence path per block, and JACb also perturbs the free continuous
+  # variances. Still guarded: conditional.x, and higher-order categorical.
   if (lavmodel@categorical && lavmodel@conditional.x) {
     lav_msg_stop(gettext(
       "local SEs: not available for the categorical setting in combination
        with conditional.x = TRUE (yet)!\n"))
+  }
+  # higher-order + categorical: the structural-part vcov assembly in
+  # lav_sam_step2_se() does not yet support this combination (it works for the
+  # continuous case); guard it with an informative message for now
+  if (lavmodel@categorical && !p_only &&
+      length(unlist(lavpta$vnames$lv.ind)) > 0L) {
+    lav_msg_stop(gettext(
+      "local SEs: not available for higher-order categorical models (yet)!\n"))
   }
 
   # multiple groups: dispatch to the (single-level, no latent interaction)
@@ -637,15 +648,20 @@ lav_sam_step1_local_jac <- function(step1 = NULL, fit = NULL, p_only = FALSE,
   # JACa: jacobian of theta.mm = f(vech(S))
   jaca <- matrix(0, nrow = length(fit@ParTable$lhs), # we select later
                     ncol = length(fit@SampleStats@WLS.obs[[g]]))
+  # 'psi channel' accumulators (categorical only): the influence d(Psi)/d(stats)
+  # for the within-block factor (co)variances, and their joint partable rows
+  psi_infl_list <- list()
+  psi_jrow_list <- integer(0L)
   for (mm in seq_len(n_mmblocks)) {
     fit_mm_block <- step1$MM.FIT[[mm]]
 
+    # influence d(theta.mm)/d(block stats). When the joint model is categorical
+    # we use the (D)WLS sandwich ingredients for EVERY block, including a fully
+    # continuous one (block-wise mixed): lavTech(., "h1.information.expected")
+    # is not available for a continuous measurement block that is embedded in a
+    # categorical SAM, whereas lav_model_nvcov_robust_sem() returns a valid
+    # Delta/E.inv/WLS.V for it.
     if (lavmodel@categorical) {
-      if (!fit_mm_block@Model@categorical) {
-        lav_msg_stop(gettext(
-          "twostep.robust SEs: not available (yet) when categorical and
-           continuous measurement blocks are mixed"))
-      }
       # influence of the (D)WLS estimator: (Delta' W Delta)^-1 Delta' W
       # (we reuse the same ingredients that produced the robust vcov of
       # this measurement block)
@@ -678,6 +694,8 @@ lav_sam_step1_local_jac <- function(step1 = NULL, fit = NULL, p_only = FALSE,
       }
       mm_jac <- t(mm_h1_expected[[g]] %*% mm_delta[[g]] %*% mm_inv_observed)
     }
+    # full (unfiltered) influence: needed for the psi channel below
+    mm_jac_full <- mm_jac
 
     # keep only rows that are also in FIT@ParTable
     mm_keep_idx <- fit_mm_block@ParTable$free[step1$block.ptm.idx[[mm]]]
@@ -686,10 +704,35 @@ lav_sam_step1_local_jac <- function(step1 = NULL, fit = NULL, p_only = FALSE,
     # map the columns of mm_jac (the sample statistics of this
     # measurement block) into the statistics vector of the joint model
     if (lavmodel@categorical) {
-      mm_labels <- lav_sam_wls_obs_labels(
-        ov_names = fit_mm_block@Data@ov.names[[g]],
-        th_idx = fit_mm_block@SampleStats@th.idx[[g]]
-      )
+      # label-based mapping (handles any variable ordering and a block-wise
+      # mix of categorical and continuous measurement blocks)
+      if (fit_mm_block@Model@categorical) {
+        mm_labels <- lav_sam_wls_obs_labels(
+          ov_names = fit_mm_block@Data@ov.names[[g]],
+          th_idx = fit_mm_block@SampleStats@th.idx[[g]]
+        )
+      } else {
+        # continuous block within a categorical joint model: the influence
+        # columns are ordered (means, vech(cov)); the joint represents each
+        # continuous variable by its mean (|t1), variance (|var) and the
+        # covariances (~~) -- all present in joint_labels
+        block_ov <- fit_mm_block@Data@ov.names[[g]]
+        nvar_b <- length(block_ov)
+        v_lin <- lav_mat_vech_idx(nvar_b)
+        zero_b <- matrix(0L, nvar_b, nvar_b)
+        v_r <- row(zero_b)[v_lin]
+        v_c <- col(zero_b)[v_lin]
+        cov_labels <- ifelse(v_r == v_c,
+          paste0(block_ov[v_r], "|var"),
+          vapply(seq_along(v_r), function(k)
+            paste(sort(c(block_ov[v_r[k]], block_ov[v_c[k]])), collapse = "~~"),
+            character(1L)))
+        if (ncol(mm_jac_full) == nvar_b + length(v_lin)) {
+          mm_labels <- c(paste0(block_ov, "|t1"), cov_labels) # with means
+        } else {
+          mm_labels <- cov_labels
+        }
+      }
       mm_col_idx <- match(mm_labels, joint_labels)
       if (anyNA(mm_col_idx)) {
         lav_msg_stop(gettext(
@@ -705,6 +748,25 @@ lav_sam_step1_local_jac <- function(step1 = NULL, fit = NULL, p_only = FALSE,
     }
     mm_row_idx <- step1$block.mm.idx[[mm]][step1$block.ptm.idx[[mm]]]
     jaca[mm_row_idx, mm_col_idx] <- mm_jac
+
+    # psi channel: capture the influence d(Psi)/d(stats) for the within-block
+    # factor (co)variances (categorical blocks only), mapped to the joint stats
+    if (lavmodel@categorical && fit_mm_block@Model@categorical) {
+      blv <- unlist(fit_mm_block@pta$vnames$lv)
+      bpt <- fit_mm_block@ParTable
+      bpsi <- which(bpt$op == "~~" & bpt$lhs %in% blv & bpt$rhs %in% blv &
+                    bpt$free > 0L & !duplicated(bpt$free))
+      for (k in bpsi) {
+        ja_row <- numeric(ncol(jaca))
+        ja_row[mm_col_idx] <- mm_jac_full[bpt$free[k], ]
+        # joint partable row for this factor (co)variance (canonical pair)
+        jrow <- which(step1$PT$op == "~~" &
+          ((step1$PT$lhs == bpt$lhs[k] & step1$PT$rhs == bpt$rhs[k]) |
+           (step1$PT$lhs == bpt$rhs[k] & step1$PT$rhs == bpt$lhs[k])))[1]
+        psi_infl_list[[length(psi_infl_list) + 1L]] <- ja_row
+        psi_jrow_list <- c(psi_jrow_list, jrow)
+      }
+    }
   }
 
   # keep only 'LAMBDA/THETA' parameters
@@ -798,21 +860,31 @@ lav_sam_step1_local_jac <- function(step1 = NULL, fit = NULL, p_only = FALSE,
     jacb <- numDeriv::jacobian(func = ffb, x = this_x)
     lav_verbose(verbose_flag)
   } else if (lavmodel@categorical) {
-    # categorical: the sample statistics are the thresholds and the polychoric
-    # correlations. vech(VETA) depends on the correlations only (not on the
-    # thresholds), but through the DELTA rescaling and the Croon correction
-    # inside lav_sam_step1_local(), so it is not a simple M %x% M map. Since M
-    # is independent of the sample statistics for M.method = "ULS" (forced for
-    # categorical data), we obtain this block numerically by perturbing the
-    # off-diagonal correlations, keeping theta.mm fixed. The threshold columns
-    # of JACb are zero.
+    # categorical (and block-wise mixed): the sample statistics that vech(VETA)
+    # depends on are the off-diagonal (poly)choric correlations / covariances
+    # and -- for continuous variables -- their (free) variances (the diagonal).
+    # It does NOT depend on the thresholds or means, and through the DELTA
+    # rescaling / Croon correction it is not a simple M %x% M map. Since M is
+    # independent of the statistics for the (forced ULS) mapping, we obtain
+    # JACb numerically by perturbing those entries of step1$COV, keeping
+    # theta.mm fixed. The threshold/mean columns of JACb are zero.
     cov_g <- step1$COV[[g]]
     low_idx <- lower.tri(cov_g) # strict lower triangle (column-major)
-    ffb_cat <- function(xcorr) {
+    n_low <- sum(low_idx)
+    # continuous variables: their variances (the diagonal) are free statistics
+    nvar_g <- ncol(cov_g)
+    num_idx <- which(!seq_len(nvar_g) %in% fit@SampleStats@th.idx[[g]])
+    x0 <- c(cov_g[low_idx], diag(cov_g)[num_idx])
+    ffb_cat <- function(xx) {
       step1_1 <- step1
       this_cov <- step1$COV[[g]]
-      this_cov[low_idx] <- xcorr
+      this_cov[low_idx] <- xx[seq_len(n_low)]
       this_cov[upper.tri(this_cov)] <- t(this_cov)[upper.tri(this_cov)]
+      if (length(num_idx) > 0L) {
+        dd <- diag(this_cov)
+        dd[num_idx] <- xx[n_low + seq_along(num_idx)]
+        diag(this_cov) <- dd
+      }
       step1_1$COV[[g]] <- this_cov
       step1_1 <- lav_sam_step1_local(step1 = step1_1, fit = fit,
         sam_method = step1$sam.method, local_options = step1$local.options)
@@ -824,20 +896,26 @@ lav_sam_step1_local_jac <- function(step1 = NULL, fit = NULL, p_only = FALSE,
     }
     verbose_flag <- lav_verbose()
     lav_verbose(FALSE)
-    jacb_corr <- numDeriv::jacobian(func = ffb_cat, x = cov_g[low_idx])
+    jacb_corr <- numDeriv::jacobian(func = ffb_cat, x = x0)
     lav_verbose(verbose_flag)
 
-    # map the correlation columns into the joint WLS.obs vector (by label, so
-    # any difference in variable ordering is handled); thresholds stay zero
+    # map the perturbed-statistic columns into the joint WLS.obs vector (by
+    # label, so any difference in variable ordering is handled); thresholds and
+    # means stay zero
     ov_g <- colnames(cov_g)
     if (is.null(ov_g)) {
       ov_g <- lavdata@ov.names[[g]]
     }
     r_idx <- row(cov_g)[low_idx]
     c_idx <- col(cov_g)[low_idx]
-    my_cor_labels <- vapply(seq_along(r_idx), function(k) {
+    var_labels <- if (length(num_idx) > 0L) {
+      paste0(ov_g[num_idx], "|var")
+    } else {
+      character(0L)
+    }
+    my_cor_labels <- c(vapply(seq_along(r_idx), function(k) {
       paste(sort(c(ov_g[r_idx[k]], ov_g[c_idx[k]])), collapse = "~~")
-    }, character(1L))
+    }, character(1L)), var_labels)
     corr_col_idx <- match(my_cor_labels, joint_labels)
     if (anyNA(corr_col_idx)) {
       lav_msg_stop(gettext(
@@ -883,10 +961,49 @@ lav_sam_step1_local_jac <- function(step1 = NULL, fit = NULL, p_only = FALSE,
   # assemble JAC
   jac <- (jacc %*% jaca) + jacb
 
+  # psi channel (categorical): add (d VETA / d Psi) %*% (d Psi / d stats), the
+  # contribution of the within-block factor (co)variances that enter VETA
+  # through the delta constraint theta_jj = 1 - (Lambda Psi Lambda')_jj. Without
+  # it the categorical latent (co)variance SEs are ~0.6x too small. For
+  # continuous indicators d VETA / d Psi = 0, so this leaves the continuous
+  # (and mixed-within-block) results that do not depend on Psi unchanged.
+  jacpsi <- NULL
+  # drop any factor (co)variance already propagated as a measurement parameter
+  # in keep_idx (e.g. the lv.ind (co)variances of a higher-order model), to
+  # avoid double counting
+  if (length(psi_jrow_list) > 0L) {
+    dup_idx <- which(psi_jrow_list %in% keep_idx)
+    if (length(dup_idx) > 0L) {
+      psi_jrow_list <- psi_jrow_list[-dup_idx]
+      psi_infl_list <- psi_infl_list[-dup_idx]
+    }
+  }
+  if (lavmodel@categorical && length(psi_jrow_list) > 0L) {
+    jaca_psi <- do.call(rbind, psi_infl_list)
+    psi_x0 <- step1$PT$est[psi_jrow_list]
+    ffpsi <- function(x) {
+      step1_1 <- step1
+      step1_1$PT$est[psi_jrow_list] <- x
+      step1_1 <- lav_sam_step1_local(step1 = step1_1, fit = fit,
+        sam_method = step1$sam.method, local_options = step1$local.options)
+      if (lavmodel@meanstructure) {
+        c(step1_1$EETA[[1]], lav_mat_vech(step1_1$VETA[[1]]))
+      } else {
+        lav_mat_vech(step1_1$VETA[[1]])
+      }
+    }
+    verbose_flag <- lav_verbose()
+    lav_verbose(FALSE)
+    jacpsi <- numDeriv::jacobian(func = ffpsi, x = psi_x0)
+    lav_verbose(verbose_flag)
+    jac <- jac + (jacpsi %*% jaca_psi)
+  }
+
   if (return_jac) {
     attr(jac, "JACa") <- jaca
     attr(jac, "JACb") <- jacb
     attr(jac, "JACc") <- jacc
+    attr(jac, "JACpsi") <- jacpsi
   }
 
   # eventually, this will be a list per group/block

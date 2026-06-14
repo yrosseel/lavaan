@@ -310,7 +310,7 @@ lavaan <- function(
   # convergence problems caused by a (very) poor marker item
   if (isTRUE(lavoptions$auto.fix.first) &&
       lavoptions$bad.marker.crit > 0) {
-    adapt <- lav_partable_marker_adapt(
+    adapt <- lav_pt_marker_adapt(
       lavpartable = lavpartable,
       lavh1       = lavh1,
       lavoptions  = lavoptions,

@@ -19,7 +19,7 @@
 # unrestricted (h1) covariance matrix, so the behavior is consistent whether
 # or not we have missing data, categorical data, etc.
 #
-# lav_partable_marker_adapt() returns NULL if no change is needed, or a list
+# lav_pt_marker_adapt() returns NULL if no change is needed, or a list
 # with:
 #   - marker: a named character vector (lv -> new indicator) for the latent
 #             variables whose marker should be switched
@@ -28,21 +28,21 @@
 # 'threshold' is the value below which the first indicator is considered a
 # 'poor' item (in absolute value of its corrected item-total correlation);
 # it is set by the 'bad.marker.crit' option (default 0.1)
-lav_partable_marker_adapt <- function(lavpartable = NULL,
-                                      lavh1 = NULL,
-                                      lavoptions = NULL,
-                                      lavdata = NULL,
-                                      threshold = 0.1) {
+lav_pt_marker_adapt <- function(lavpartable = NULL,
+                                lavh1 = NULL,
+                                lavoptions = NULL,
+                                lavdata = NULL,
+                                threshold = 0.1) {
 
   # we need the unrestricted (h1) covariance matrix/matrices
   implied <- lavh1$implied
   if (is.null(implied)) {
     return(NULL)
   }
-  cov_list <- implied$cov
+  cov_list <- implied[["cov"]]
   if (is.null(cov_list)) {
     # conditional.x: use the residual covariance matrix
-    cov_list <- implied$res.cov
+    cov_list <- implied[["res.cov"]]
   }
   if (is.null(cov_list) || length(cov_list) == 0L) {
     return(NULL)
