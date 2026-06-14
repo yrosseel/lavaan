@@ -118,6 +118,106 @@ lav_sam_step2_se_vcov_pa <- function(fit_pa, step2_rm_idx = integer(0L)) {
   vcov_pa
 }
 
+# Standard errors for latent (residual) variances that are 'fixed' (free == 0)
+# in the JOINT model but are in fact data-derived. Under std.lv = TRUE, SAM
+# step 1 fixes the *total* variance of each factor to 1; for an *endogenous*
+# factor the residual variance is then a derived quantity
+#   r_j = total_j - explained_j   with   VETA = (I - B)^-1 Psi (I - B)^-T
+# (total_j fixed to 1). Although r_j is fixed-by-label in the joint model (and
+# therefore excluded from the joint vcov, giving se = 0), it is a function of
+# the free structural parameters and has genuine sampling variability. We
+# recover its SE by the delta method, using a numerical jacobian of r_j
+# through the model-implied VETA and the (se-method-specific) joint vcov.
+# Exogenous factor variances have no incoming paths, so their jacobian is zero
+# and they keep se = 0 automatically.
+#
+# Returns a numeric vector aligned with the rows of joint@ParTable (0 for every
+# row that is not such a derived latent variance).
+lav_sam_step2_se_lv_var <- function(joint = NULL) {
+  lavmodel    <- joint@Model
+  lavpartable <- joint@ParTable
+  VCOV        <- joint@vcov$vcov
+  se_out      <- numeric(length(lavpartable$lhs))
+
+  if (is.null(VCOV) || lavmodel@representation != "LISREL" || anyNA(VCOV)) {
+    return(se_out)
+  }
+
+  # 'psi' matrix index in GLIST per block, plus its latent-variable names
+  nmat      <- lavmodel@nmat
+  mm_idx    <- lav_model_group_mm_indices(nmat)
+  psi_glist <- which(names(lavmodel@GLIST) == "psi")
+  if (length(psi_glist) == 0L) {
+    return(se_out)
+  }
+  lv_block <- lapply(seq_len(lavmodel@nblocks), function(g) {
+    psi_mm <- intersect(mm_idx[[g]], psi_glist)
+    lavmodel@dimNames[[psi_mm[1]]][[1]]
+  })
+
+  # target rows: latent (residual) variances, fixed (free == 0), and not
+  # explicitly fixed by the user (user != 1)
+  target <- which(
+    lavpartable$op == "~~" &
+      lavpartable$lhs == lavpartable$rhs &
+      lavpartable$free == 0L &
+      lavpartable$user != 1L
+  )
+  target <- target[vapply(target, function(i) {
+    lavpartable$lhs[i] %in% lv_block[[lavpartable$block[i]]]
+  }, logical(1L))]
+  if (length(target) == 0L) {
+    return(se_out)
+  }
+
+  # parameter vector in the space matching VCOV (unco if simple eq constraints)
+  ceq_simple <- lavmodel@ceq.simple.only &&
+    nrow(lavmodel@ceq.simple.K) == nrow(VCOV)
+  vtype <- if (ceq_simple) "unco" else "free"
+  x0 <- lav_model_get_parameters(lavmodel) # nx.free
+  if (ceq_simple) {
+    x0 <- drop(lavmodel@ceq.simple.K %*% x0) # nx.unco
+  }
+  npar <- length(x0)
+  if (npar != ncol(VCOV)) { # spaces do not line up: stay safe
+    return(se_out)
+  }
+
+  # explained_j: model-implied total variance of factor j in block g, with its
+  # own residual psi[j, j] set to zero
+  explained <- function(x, g, j) {
+    gl <- lav_model_x2glist(lavmodel, x = x, type = vtype)
+    psi_mm <- intersect(mm_idx[[g]], psi_glist)[1]
+    gl[[psi_mm]][j, j] <- 0
+    lav_model_veta(lavmodel = lavmodel, glist = gl)[[g]][j, j]
+  }
+
+  eps <- 1e-6
+  for (row in target) {
+    g <- lavpartable$block[row]
+    j <- match(lavpartable$lhs[row], lv_block[[g]])
+    if (is.na(j)) next
+    v <- try(
+      {
+        e0 <- explained(x0, g, j)
+        jac <- numeric(npar)
+        for (k in seq_len(npar)) {
+          xk <- x0
+          xk[k] <- xk[k] + eps
+          jac[k] <- -(explained(xk, g, j) - e0) / eps
+        }
+        as.numeric(crossprod(jac, VCOV %*% jac))
+      },
+      silent = TRUE
+    )
+    if (!inherits(v, "try-error") && is.finite(v) && v >= 0) {
+      se_out[row] <- sqrt(v)
+    }
+  }
+
+  se_out
+}
+
 lav_sam_step2_se <- function(fit = NULL, joint = NULL,
                              step1 = NULL, step2 = NULL,
                              local_options = list()) {

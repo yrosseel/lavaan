@@ -464,6 +464,18 @@ sam <- function(model = NULL,                      # nolint start
       MC = mc_coef,
       lavoptions = lavoptions
     )
+
+    # surface SEs for latent (residual) variances that are 'fixed' in the
+    # joint model but data-derived (eg std.lv = TRUE: the residual variance of
+    # an endogenous factor = total - explained). These are free = 0 in the
+    # joint model, so lav_model_vcov_se() set their se to 0; recover the proper
+    # (delta-method) se from the joint vcov. See lav_sam_step2_se_lv_var().
+    lv_var_se <- lav_sam_step2_se_lv_var(joint = joint)
+    nz_idx <- which(lv_var_se > 0)
+    if (length(nz_idx) > 0L) {
+      pt_1$se[nz_idx] <- lv_var_se[nz_idx]
+    }
+
     joint@ParTable <- pt_1
   }
 
