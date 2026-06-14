@@ -396,7 +396,16 @@ lav_model_grad <- function(lavmodel = NULL,
     } # g
 
     if (type == "free") {
-      # nothing to do
+      # *LS Delta has one column per *unconstrained* parameter (nx.unco); with
+      # simple equality constraints (ceq.simple, e.g. across-group equal
+      # loadings) reduce the gradient to the free parameters (nx.free), exactly
+      # as the ML path above. Without this the gradient is too long and breaks
+      # the optimizer (parscale length mismatch) for ceq.simple models -- this
+      # is what blocked categorical (DWLS) multigroup SAM with across-group
+      # measurement constraints.
+      if (lavmodel@ceq.simple.only && ceq_simple) {
+        dx <- drop(crossprod(lavmodel@ceq.simple.K, dx))
+      }
     } else {
       # make a GLIST
       dx <- lav_model_x2glist(

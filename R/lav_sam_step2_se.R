@@ -113,7 +113,7 @@ lav_sam_step2_se_vcov_pa <- function(fit_pa, step2_rm_idx = integer(0L)) {
     vcov_pa <- fit_pa@vcov$vcov
   }
   if (length(step2_rm_idx) > 0L) {
-    vcov_pa <- vcov_pa[-step2_rm_idx, -step2_rm_idx]
+    vcov_pa <- vcov_pa[-step2_rm_idx, -step2_rm_idx, drop = FALSE]
   }
   vcov_pa
 }
@@ -260,7 +260,7 @@ lav_sam_step2_se <- function(fit = NULL, joint = NULL,
       pt_idx <- step2$pt.idx[-rm_idx]
     }
     idx <- sort.int(pt_idx, index.return = TRUE)$ix
-    vcov_1 <- vcov_1[idx, idx]
+    vcov_1 <- vcov_1[idx, idx, drop = FALSE]
 
     # drop parameters that are free in FIT.PA, but fixed in the JOINT
     # model (eg std.lv = TRUE: the lv (residual) variances are freed in
