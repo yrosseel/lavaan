@@ -24,9 +24,17 @@ lav_sam_step0 <- function(cmd = "sem", model = NULL, data = NULL,
   # would break the computation of twostep standard errors
   if (se %in% c("local", "ij", "twostep.robust")) {
     dotdotdot0$sample.icov <- TRUE
-    dotdotdot0$NACOV <- TRUE
     dotdotdot0$fixed.x <- FALSE
-    dotdotdot0$ov_order <- "force.model" # avoid data ordering...
+    # ij/twostep.robust need the stored observed Gamma (NACOV); the
+    # "force.model" ov_order sentinel keeps it in model order (it is only
+    # honored when NACOV is supplied; see lav_lavaan_step00_init()). se =
+    # "local" builds Gamma.eta in (memory-lean) influence form and computes the
+    # observed Gamma on demand only when needed (eg categorical), so it needs
+    # neither -- and the default ov_order is already "model".
+    if (se %in% c("ij", "twostep.robust")) {
+      dotdotdot0$NACOV <- TRUE
+      dotdotdot0$ov_order <- "force.model" # avoid data ordering...
+    }
   }
 
   # any lv interaction terms?

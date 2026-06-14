@@ -284,14 +284,38 @@ sam <- function(model = NULL,                      # nolint start
       }
     } else {
       jac <- lav_sam_step1_local_jac(step1 = step1, fit = fit)
-      if (se == "local") {
-        gamma <- fit@SampleStats@NACOV
-      } else if (se == "local.nt") {
-        gamma <- lav_object_gamma(lavobject = fit, adf = FALSE)
+
+      # se = "local": build Gamma.eta = JAC %*% Gamma %*% t(JAC) in a
+      # memory-lean form that never materializes the p* x p* observed Gamma
+      # (see lav_sam_gamma_eta_g()). Falls back to the explicit observed Gamma
+      # for settings where that form does not apply (categorical, conditional.x,
+      # missing data, ...) and for se = "local.nt" (normal-theory Gamma).
+      use_influence <- (se == "local")
+      if (use_influence) {
+        for (g in seq_len(fit@Data@ngroups)) {
+          ge_g <- lav_sam_gamma_eta_g(fit = fit, jac_g = jac[[g]], g = g)
+          if (is.null(ge_g)) {
+            use_influence <- FALSE
+            break
+          }
+          gamma_eta[[g]] <- ge_g
+        }
       }
 
-      for (g in seq_len(fit@Data@ngroups)) {
-        gamma_eta[[g]] <- jac[[g]] %*% gamma[[g]] %*% t(jac[[g]])
+      gamma <- NULL
+      if (!use_influence) {
+        if (se == "local") {
+          gamma <- fit@SampleStats@NACOV
+          if (is.null(gamma) || is.null(gamma[[1]])) {
+            # NACOV not stored (skipped in step 0) -> compute on demand
+            gamma <- lavTech(fit, "gamma")
+          }
+        } else if (se == "local.nt") {
+          gamma <- lav_object_gamma(lavobject = fit, adf = FALSE)
+        }
+        for (g in seq_len(fit@Data@ngroups)) {
+          gamma_eta[[g]] <- jac[[g]] %*% gamma[[g]] %*% t(jac[[g]])
+        }
       }
       step1$JAC <- jac
 
@@ -301,10 +325,17 @@ sam <- function(model = NULL,                      # nolint start
       # (cross-group) covariance of the stacked structural statistics so that
       # step 2 can compute a proper cross-group sandwich. Cov(vech(S_g)) =
       # gamma[[g]] / n_g, so the actual covariance of the stacked structural
-      # statistics is jac.full %*% bdiag(gamma_g / n_g) %*% t(jac.full).
+      # statistics is jac.full %*% bdiag(gamma_g / n_g) %*% t(jac.full). This
+      # rare path needs the explicit per-group observed Gamma.
       if (isTRUE(attr(jac, "caseB"))) {
         jac_full <- attr(jac, "jac.full")
         nobs_g <- unlist(fit@SampleStats@nobs)
+        if (is.null(gamma)) {
+          gamma <- fit@SampleStats@NACOV
+          if (is.null(gamma) || is.null(gamma[[1]])) {
+            gamma <- lavTech(fit, "gamma")
+          }
+        }
         gscaled <- lapply(seq_len(fit@Data@ngroups),
                           function(g) gamma[[g]] / nobs_g[g])
         gamma_obs_full <- lav_mat_bdiag(gscaled)

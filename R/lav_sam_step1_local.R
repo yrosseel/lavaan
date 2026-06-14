@@ -550,6 +550,93 @@ lav_sam_step1_local <- function(step1 = NULL, fit = NULL, y = NULL,
 }
 
 
+# Memory-lean Gamma.eta for group g: JAC %*% Gamma %*% t(JAC) without ever
+# forming the p* x p* observed Gamma. Returns NULL when the (continuous, simple)
+# setting does not apply, so the caller falls back to the explicit Gamma.
+#
+# The ADF Gamma of the WLS.obs statistics is the casewise crossprod
+#   Gamma = crossprod(z) / n.eff,   z_i = [ y_i (meanstructure),
+#                                           vech((y_i - ybar)(y_i - ybar)') ]
+# so JAC %*% Gamma %*% t(JAC) = crossprod(z %*% t(JAC)) / n.eff (the U below).
+#
+# With the unbiased (Browne) Gamma -- the sam() default -- the cov block also
+# needs the normal-theory Gamma and a rank-1 term:
+#   Gamma_u_cov = c1*Gamma_cov - c2*(Gamma_NT - 2/(n-1)*tcrossprod(vech(S)))
+# with c1 = n(n-1)/((n-2)(n-3)), c2 = n/((n-2)(n-3)). The NT sandwich is built
+# without the p* x p* Gamma_NT via [JAC Gamma_NT JAC']_rc = 2*tr(G_r S G_c S),
+# where G_r is the symmetric matrix with vech G_r = (cov rows of) JAC[r, ]
+# (off-diagonals halved). The mean-mean block is unchanged and the mean-cov
+# block is scaled by n/(n-2).
+lav_sam_gamma_eta_g <- function(fit = NULL, jac_g = NULL, g = 1L) {
+  lavoptions <- fit@Options
+  lavmodel <- fit@Model
+  unbiased <- isTRUE(lavoptions$gamma.unbiased)
+  if (lavmodel@categorical || lavmodel@correlation || lavmodel@conditional.x ||
+      (isTRUE(lavoptions$fixed.x) && length(fit@Data@ov.names.x[[g]]) > 0L) ||
+      fit@Data@nlevels > 1L || length(fit@Data@cluster) > 0L ||
+      (unbiased && isTRUE(lavoptions$gamma.n.minus.one))) {
+    return(NULL)
+  }
+  m_y <- unname(as.matrix(fit@Data@X[[g]]))
+  if (anyNA(m_y)) {
+    return(NULL) # missing data: leave it to the (pairwise) NACOV path
+  }
+  n <- nrow(m_y)
+  p <- ncol(m_y)
+  meanstr <- lavmodel@meanstructure
+  m_yc <- t(t(m_y) - colMeans(m_y))
+  idx1 <- lav_mat_vech_col_idx(p)
+  idx2 <- lav_mat_vech_row_idx(p)
+  zc_cov <- m_yc[, idx1, drop = FALSE] * m_yc[, idx2, drop = FALSE]
+  zc_cov <- t(t(zc_cov) - colMeans(zc_cov))
+
+  if (meanstr) {
+    jac_m <- jac_g[, seq_len(p), drop = FALSE]
+    jac_c <- jac_g[, -seq_len(p), drop = FALSE]
+    u_m <- m_yc %*% t(jac_m)
+  } else {
+    jac_c <- jac_g
+  }
+  u_c <- zc_cov %*% t(jac_c)
+
+  # biased ADF Gamma: simple casewise crossprod
+  if (!unbiased) {
+    n_eff <- if (isTRUE(lavoptions$gamma.n.minus.one)) n - 1L else n
+    u <- if (meanstr) u_m + u_c else u_c
+    return(crossprod(u) / n_eff)
+  }
+
+  # unbiased (Browne): cov block needs the NT Gamma + rank-1 correction
+  s_cov <- crossprod(m_yc) / n
+  cov_vech <- lav_mat_vech(s_cov)
+  mstar <- nrow(jac_g)
+  offu <- which(idx1 != idx2)
+  # G_mat: rows = vec(G_r), the symmetric matrix with halved off-diagonals
+  g_mat <- matrix(0, mstar, p * p)
+  lin_11 <- (idx1 - 1L) * p + idx2
+  lin_22 <- (idx2 - 1L) * p + idx1
+  g_mat[, lin_11] <- jac_c
+  g_mat[, lin_22] <- jac_c
+  g_mat[, lin_11[offu]] <- jac_c[, offu, drop = FALSE] / 2
+  g_mat[, lin_22[offu]] <- jac_c[, offu, drop = FALSE] / 2
+  # M_mat: rows = vec(S G_r S)
+  m_mat <- t(apply(g_mat, 1L, function(gv) {
+    as.vector(s_cov %*% matrix(gv, p, p) %*% s_cov)
+  }))
+  gamma_nt <- 2 * tcrossprod(g_mat, m_mat) # JAC Gamma_NT JAC'  (mstar x mstar)
+  d_vec <- drop(jac_c %*% cov_vech)
+  c1 <- n * (n - 1) / ((n - 2) * (n - 3))
+  c2 <- n / ((n - 2) * (n - 3))
+  ge_cov <- c1 * (crossprod(u_c) / n) -
+    c2 * (gamma_nt - 2 / (n - 1) * tcrossprod(d_vec))
+  if (!meanstr) {
+    return(ge_cov)
+  }
+  ge_mm <- crossprod(u_m) / n
+  ge_mc <- (n / (n - 2)) * (crossprod(u_m, u_c) / n)
+  ge_mm + ge_cov + ge_mc + t(ge_mc)
+}
+
 lav_sam_step1_local_jac <- function(step1 = NULL, fit = NULL, p_only = FALSE,
                                     return_jac = FALSE) {
 
@@ -1448,7 +1535,8 @@ lav_sam_step1_local_jac_mg <- function(step1 = NULL, fit = NULL,
 # operations; the centering terms (involving the mean of the second-order
 # factor scores) can be ignored, as they cancel out when summing over the
 # observations
-lav_sam_gamma_add <- function(step1 = NULL, fit = NULL, group = 1L) {
+lav_sam_gamma_add <- function(step1 = NULL, fit = NULL, group = 1L,
+                              use_analytic = TRUE) {
 
   lavdata <- fit@Data
   lavmodel <- fit@Model
@@ -1542,14 +1630,18 @@ lav_sam_gamma_add <- function(step1 = NULL, fit = NULL, group = 1L) {
   #     tmpbar[a, b] = E[r1, r2] B[s1, s2] + B[r1, r2] E[s1, s2] +
   #                    E[r1, s2] B[s1, r2] + E[s1, r2] B[r1, s2] +
   #                    B[r1, r2] B[s1, s2] + B[s1, r2] B[r1, s2]
-  lbar <- function(x) {
+  lbar <- function(x, .return_all = FALSE) {
     pt_x <- pt_1
     pt_x$est[step1_idx] <- x
     this_lavmodel <- lav_model_set_parameters(lavmodel,
                        x = pt_x$est[pt_x$free > 0 & !duplicated(pt_x$free)])
     this_nu     <- drop(this_lavmodel@GLIST$nu)
     # no interaction columns!
-    this_lambda <- this_lavmodel@GLIST$lambda[, -rm_idx, drop = FALSE]
+    if (length(rm_idx) > 0L) {
+      this_lambda <- this_lavmodel@GLIST$lambda[, -rm_idx, drop = FALSE]
+    } else {
+      this_lambda <- this_lavmodel@GLIST$lambda
+    }
     this_theta  <- this_lavmodel@GLIST$theta
     # dummy lv patches (cfr. lav_sam_step1_local())
     if (length(dummy_ov_y_idx) > 0L) {
@@ -1567,6 +1659,8 @@ lav_sam_gamma_add <- function(step1 = NULL, fit = NULL, group = 1L) {
       this_m[dummy_lv_idx, ] <- 0
       this_m[cbind(dummy_lv_idx, dummy_ov_idx)] <- 1
     }
+    m_pre_std <- this_m
+    d_std <- NULL
     if (std_lv_flag) {
       # mirror the cov2cor() rescaling of the first-order VETA: rescale
       # the rows of the mapping matrix so that the (lambda1-corrected)
@@ -1602,11 +1696,166 @@ lav_sam_gamma_add <- function(step1 = NULL, fit = NULL, group = 1L) {
                b_aug[i1k, i1k] * b_aug[i2k, i2k] +
                b_aug[i2k, i1k] * b_aug[i1k, i2k])
 
-    c(out1, lav_mat_vech(var_fs2k - lambda2_eff * tmpbar))
+    out_vec <- c(out1, lav_mat_vech(var_fs2k - lambda2_eff * tmpbar))
+    if (!.return_all) {
+      return(out_vec)
+    }
+    # intermediates needed by the analytic jacobian below
+    list(vec = out_vec, nu = this_nu, lambda = this_lambda,
+         theta = this_theta, m_pre_std = m_pre_std, m = this_m,
+         b = b_aug, e = e_mat, fs = fs, fs2kc = fs2kc, d_std = d_std)
   }
 
-  cveta <- numDeriv::jacobian(func = lbar, x = x_step1)
+  # jacobian of Lbar w.r.t. the step 1 parameters: cveta[a, k] = d Lbar[a]/d x_k
+  # By default we use a closed-form (analytic) jacobian, which avoids the
+  # repeated mapping-matrix solves and full factor-score recomputations of the
+  # numerical (numDeriv) jacobian. The analytic path applies the chain rule
+  # through the model-implied factor scores, with the key building block being
+  # the differential of the mapping matrix M = (Lambda' W Lambda)^-1 Lambda' W
+  # (W = I, S^-1, Theta^-1 for ULS/GLS/ML):
+  #   dM = A dLambda' W Pp  -  M dLambda M  [ -  M dTheta Theta^-1 Pp (ML) ]
+  # with A = (Lambda' W Lambda)^-1 and Pp = I - Lambda M. It is only taken for
+  # the 'clean' continuous setting (standard mapping matrix, no dummy latent
+  # variables, no empty Lambda columns, invertible Theta for ML); otherwise we
+  # fall back to numDeriv. See lav_sam_gamma_add_jac().
+  cveta <- NULL
+  if (use_analytic) {
+    cveta <- tryCatch(
+      lav_sam_gamma_add_jac(
+        base = lbar(x_step1, .return_all = TRUE),
+        x_step1 = x_step1, lavmodel = lavmodel, pt_1 = pt_1,
+        step1_idx = step1_idx, rm_idx = rm_idx,
+        dummy_ov_idx = dummy_ov_idx, s_cov = step1$COV[[1]],
+        method = step1$local.options$M.method, std_lv_flag = std_lv_flag,
+        lambda1 = lambda1, lambda2_eff = lambda2_eff,
+        i1k = i1k, i2k = i2k, y = y, n = n),
+      error = function(e) NULL)
+  }
+  if (is.null(cveta)) {
+    cveta <- numDeriv::jacobian(func = lbar, x = x_step1)
+  }
 
   gamma_addition <- n * (cveta %*% step1$Sigma.11 %*% t(cveta))
   gamma_addition
+}
+
+# Closed-form jacobian of the augmented summary statistics Lbar w.r.t. the
+# step 1 parameters (the analytic counterpart of numDeriv::jacobian(lbar)).
+# Returns the d_L x n_par jacobian matrix, or NULL if the 'clean' continuous
+# setting does not apply (the caller then falls back to numDeriv).
+lav_sam_gamma_add_jac <- function(base = NULL, x_step1 = NULL, lavmodel = NULL,
+                                  pt_1 = NULL, step1_idx = NULL, rm_idx = NULL,
+                                  dummy_ov_idx = NULL, s_cov = NULL,
+                                  method = "ML", std_lv_flag = FALSE,
+                                  lambda1 = 1, lambda2_eff = 1,
+                                  i1k = NULL, i2k = NULL, y = NULL, n = NULL) {
+  Lam0 <- base$lambda; Th0 <- base$theta; nu0 <- base$nu
+  M0 <- base$m_pre_std; Mf <- base$m; fs0 <- base$fs
+  e0 <- base$e; b0 <- base$b; fs2kc0 <- base$fs2kc; d_std0 <- base$d_std
+  S <- s_cov
+  p <- nrow(Lam0); mlv <- ncol(Lam0)
+  method <- toupper(method)
+
+  # eligibility: no dummy lvs, no empty Lambda columns, standard mapping matrix
+  if (length(dummy_ov_idx) > 0L) {
+    return(NULL)
+  }
+  if (any(apply(Lam0, 2L, function(z) all(z == 0)))) {
+    return(NULL)
+  }
+
+  # weight matrix W and A = (Lambda' W Lambda)^-1
+  if (method == "ULS") {
+    W <- diag(p)
+  } else if (method == "GLS") {
+    W <- solve(S)
+  } else if (method == "ML") {
+    if (any(abs(diag(Th0)) < 1e-4)) {
+      return(NULL)
+    }
+    W <- solve(Th0)
+  } else {
+    return(NULL)
+  }
+  LtW <- crossprod(Lam0, W) # mlv x p
+  A <- solve(LtW %*% Lam0)
+  # is the mapping matrix the standard weighted pseudo-inverse? (if lbar used
+  # a fallback -- tmat/ginv/ULS -- the closed form below does not apply)
+  if (max(abs(A %*% LtW - M0)) > 1e-7) {
+    return(NULL)
+  }
+  Pp <- diag(p) - Lam0 %*% M0 # residual projector (p x p)
+  WPp <- W %*% Pp
+  ThiPp <- if (method == "ML") W %*% Pp else NULL # Theta^-1 Pp
+
+  # cheap GLIST extractor (set_parameters only; no mapping/scores). The
+  # Lambda/Theta/nu entries are linear in the free parameters, so the forward
+  # difference below is exact (up to round-off).
+  get_lln <- function(x) {
+    pt_x <- pt_1
+    pt_x$est[step1_idx] <- x
+    ml <- lav_model_set_parameters(lavmodel,
+            x = pt_x$est[pt_x$free > 0 & !duplicated(pt_x$free)])
+    if (length(rm_idx) > 0L) {
+      lam <- ml@GLIST$lambda[, -rm_idx, drop = FALSE]
+    } else {
+      lam <- ml@GLIST$lambda
+    }
+    list(nu = drop(ml@GLIST$nu), lambda = lam, theta = ml@GLIST$theta)
+  }
+
+  Ymc <- t(t(y) - nu0) # n x p  = Y - 1 nu'
+  np <- length(x_step1)
+  cv <- matrix(0, length(base$vec), np)
+  eps_g <- 1e-6
+  for (k in seq_len(np)) {
+    xk <- x_step1
+    xk[k] <- xk[k] + eps_g
+    gk <- get_lln(xk)
+    dLam <- (gk$lambda - Lam0) / eps_g
+    dTh  <- (gk$theta  - Th0)  / eps_g
+    dnu  <- (gk$nu     - nu0)  / eps_g
+
+    # raw mapping-matrix derivative (pre-std rescaling)
+    dM0 <- A %*% crossprod(dLam, WPp) - M0 %*% (dLam %*% M0)
+    if (!is.null(ThiPp)) {
+      dM0 <- dM0 - M0 %*% (dTh %*% ThiPp)
+    }
+
+    # std.lv rescaling chain: Mf = M0 / d_std, d_std_j = sqrt(msm_j - l1 mtm_j)
+    if (std_lv_flag) {
+      d_msm <- 2 * rowSums((dM0 %*% S) * M0)
+      d_mtm <- 2 * rowSums((dM0 %*% Th0) * M0) + rowSums((M0 %*% dTh) * M0)
+      d_dstd <- (d_msm - lambda1 * d_mtm) / (2 * d_std0)
+      dMf <- dM0 / d_std0 - M0 * (d_dstd / d_std0^2)
+    } else {
+      dMf <- dM0
+    }
+
+    # b_aug = bdiag(0, M Theta M'), augmented factor scores fs, C2, E
+    dMtMt <- dMf %*% Th0 %*% t(Mf)
+    d_b <- lav_mat_bdiag(0, dMtMt + Mf %*% dTh %*% t(Mf) + t(dMtMt))
+    d_score <- Ymc %*% t(dMf) - matrix(drop(Mf %*% dnu), n, mlv, byrow = TRUE)
+    d_fs <- cbind(0, d_score)
+    d_e <- (crossprod(d_fs, fs0) + crossprod(fs0, d_fs)) / n - lambda1 * d_b
+
+    # first-order part
+    d_out1 <- d_e[cbind(i2k, i1k)]
+
+    # second-order part
+    d_fs2k <- d_fs[, i1k, drop = FALSE] * fs0[, i2k, drop = FALSE] +
+              fs0[, i1k, drop = FALSE] * d_fs[, i2k, drop = FALSE]
+    d_fs2kc <- t(t(d_fs2k) - colMeans(d_fs2k))
+    d_var <- (crossprod(d_fs2kc, fs2kc0) + crossprod(fs2kc0, d_fs2kc)) / n
+    d_tmp <- (d_e[i1k, i1k] * b0[i2k, i2k] + e0[i1k, i1k] * d_b[i2k, i2k] +
+              d_b[i1k, i1k] * e0[i2k, i2k] + b0[i1k, i1k] * d_e[i2k, i2k] +
+              d_e[i1k, i2k] * b0[i2k, i1k] + e0[i1k, i2k] * d_b[i2k, i1k] +
+              d_e[i2k, i1k] * b0[i1k, i2k] + e0[i2k, i1k] * d_b[i1k, i2k] +
+              d_b[i1k, i1k] * b0[i2k, i2k] + b0[i1k, i1k] * d_b[i2k, i2k] +
+              d_b[i2k, i1k] * b0[i1k, i2k] + b0[i2k, i1k] * d_b[i1k, i2k])
+
+    cv[, k] <- c(d_out1, lav_mat_vech(d_var - lambda2_eff * d_tmp))
+  }
+
+  cv
 }
