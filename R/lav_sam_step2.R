@@ -20,13 +20,29 @@ lav_sam_step2 <- function(step1 = NULL, fit = NULL,
   if (any(lavoptions_pa$test == "yuan.chan")) {
     lavoptions_pa$test <- "standard"
   }
-  if (lavoptions_pa$se == "naive") {
-    lavoptions_pa$se <- "standard"
-  } else if (gamma_flag) {
-    lavoptions_pa$se <- "robust.sem"
+  # the corrected two-step STRUCTURAL test (Satorra-Bentler, using Gamma.eta as
+  # the NACOV of vech(VETA)) is the default test for sam.method = local/fsr/cfsr
+  # whenever Gamma.eta is available -- INDEPENDENT of the requested SE. (For
+  # se = "twostep"/"naive" the FIT.PA SEs below are not the final ones: twostep
+  # SEs are recomputed in step 4, naive SEs are FIT.PA's plain vcov.)
+  if (gamma_flag) {
     lavoptions_pa$test <- "satorra.bentler"
+  }
+  if (lavoptions_pa$se == "naive") {
+    # naive SEs = FIT.PA's plain (standard) vcov
+    lavoptions_pa$se <- "standard"
+  } else if (lavoptions_pa$se %in% c("local", "local.nt")) {
+    # local SEs ARE FIT.PA's robust.sem vcov (read back in lav_sam_step2_se())
+    lavoptions_pa$se <- "robust.sem"
+  } else if (gamma_flag) {
+    # twostep / twostep.robust: the final SEs are recomputed in step 4
+    # (lav_sam_step2_se). Use se = "standard" -- NOT "robust.sem" -- so that
+    # FIT.PA's vcov stays the NAIVE (standard) one: the alpha.correction blend
+    # in lav_sam_step2_se() reads it as 'vcov_naive'. The corrected structural
+    # test is still computed (it is independent of the se).
+    lavoptions_pa$se <- "standard"
   } else {
-    # twostep or none -> none
+    # twostep or none, without Gamma.eta -> none
     lavoptions_pa$se <- "none"
   }
   if (!lavoptions_pa$conditional.x) {

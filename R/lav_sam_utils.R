@@ -791,12 +791,18 @@ lav_sam_struc_fit <- function(fit_pa = NULL, step1 = NULL) {
         fit_pa@baseline$test[[base_idx[1]]] <- test_base[["satorra.bentler"]]
       }
 
-      fm <- fitMeasures(fit_pa, c(
+      # use the fitMeasures() labels for the SCALED/ROBUST measures, so the
+      # printed header makes clear these are the two-step corrected values
+      # (chisq.scaled / pvalue.scaled / cfi.robust / rmsea.robust), exactly as
+      # fitMeasures() reports them. (The naive fallback() above keeps the plain
+      # chisq/pvalue/cfi/rmsea labels.)
+      scaled_labels <- c(
         "chisq.scaled", "df", "pvalue.scaled",
         "cfi.robust", "rmsea.robust", "srmr"
-      ))
+      )
+      fm <- fitMeasures(fit_pa, scaled_labels)
       fm <- as.numeric(fm)
-      names(fm) <- measures
+      names(fm) <- scaled_labels
       fm
     },
     silent = TRUE

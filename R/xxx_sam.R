@@ -258,87 +258,126 @@ sam <- function(model = NULL,
       step1 = step1, fit = fit,
       sam_method = sam_method,
       local_options = local_options,
-      return_cov_iveta2 = (se %in% c("local", "local.nt"))
+      return_cov_iveta2 = (se %in% c("local", "local.nt", "twostep.robust"))
     )
   }
 
   ##################################################
   # STEP 1c: jacobian of vech(VETA) = f(vech(S))   #
-  #          only needed for local approach!       #
-  #          only if se = "local"                  #
+  #          Gamma.eta = NACOV of vech(VETA), the   #
+  #          ingredient for (1) the local SEs and   #
+  #          (2) the corrected two-step STRUCTURAL  #
+  #          test (Satorra-Bentler), which is the   #
+  #          DEFAULT test for sam.method = local    #
+  #          REGARDLESS of the requested SE. So we  #
+  #          compute Gamma.eta for every analytic   #
+  #          SE of the local family (incl. the      #
+  #          default se = "twostep" and "naive").   #
+  #          For SEs that do not strictly need it   #
+  #          (twostep/twostep.robust/naive) a        #
+  #          failure is NON-fatal: we just skip the #
+  #          corrected test. local/local.nt require #
+  #          it (re-raise on failure).              #
   ##################################################
-  if (se %in% c("local", "local.nt")) {
-    gamma_eta <- vector("list", length = fit@Data@ngroups)
-    if (lv_interaction_flag) {
-      for (g in seq_len(fit@Data@ngroups)) { # group or block
-        # initial Gamma.eta
-        gamma_eta_init <- step1$COV.IVETA2[[g]]
-        # compute 'additional variability' due to step1
-        gamma_eta_add <- lav_sam_gamma_add(step1 = step1, fit = fit, group = g)
-        gamma_eta[[g]] <- gamma_eta_init + gamma_eta_add
-      }
-    } else {
-      jac <- lav_sam_step1_local_jac(step1 = step1, fit = fit)
-
-      # se = "local": build Gamma.eta = JAC %*% Gamma %*% t(JAC) in a
-      # memory-lean form that never materializes the p* x p* observed Gamma
-      # (see lav_sam_gamma_eta_g()). Falls back to the explicit observed Gamma
-      # for settings where that form does not apply (categorical, conditional.x,
-      # missing data, ...) and for se = "local.nt" (normal-theory Gamma).
-      use_influence <- (se == "local")
-      if (use_influence) {
-        for (g in seq_len(fit@Data@ngroups)) {
-          ge_g <- lav_sam_gamma_eta_g(fit = fit, jac_g = jac[[g]], g = g)
-          if (is.null(ge_g)) {
-            use_influence <- FALSE
-            break
-          }
-          gamma_eta[[g]] <- ge_g
+  if (se %in% c("local", "local.nt", "twostep", "twostep.robust", "naive")) {
+    gamma_eta_required <- se %in% c("local", "local.nt")
+    ge_try <- tryCatch({
+      gamma_eta <- vector("list", length = fit@Data@ngroups)
+      if (lv_interaction_flag) {
+        for (g in seq_len(fit@Data@ngroups)) { # group or block
+          # initial Gamma.eta
+          gamma_eta_init <- step1$COV.IVETA2[[g]]
+          # compute 'additional variability' due to step1
+          gamma_eta_add <- lav_sam_gamma_add(step1 = step1, fit = fit, group = g)
+          gamma_eta[[g]] <- gamma_eta_init + gamma_eta_add
         }
-      }
+      } else {
+        jac <- lav_sam_step1_local_jac(step1 = step1, fit = fit)
 
-      gamma <- NULL
-      if (!use_influence) {
-        if (se == "local") {
-          gamma <- fit@SampleStats@NACOV
-          if (is.null(gamma) || is.null(gamma[[1]])) {
-            # NACOV not stored (skipped in step 0) -> compute on demand
-            gamma <- lavTech(fit, "gamma")
-          }
-        } else if (se == "local.nt") {
-          gamma <- lav_object_gamma(lavobject = fit, adf = FALSE)
-        }
-        for (g in seq_len(fit@Data@ngroups)) {
-          gamma_eta[[g]] <- jac[[g]] %*% gamma[[g]] %*% t(jac[[g]])
-        }
-      }
-      step1$JAC <- jac
-
-      # Case B (across-group constraints in the measurement model): the
-      # per-group Gamma.eta blocks above are incomplete, because vech(VETA_g)
-      # also depends on the other groups' sample statistics. Build the full
-      # (cross-group) covariance of the stacked structural statistics so that
-      # step 2 can compute a proper cross-group sandwich. Cov(vech(S_g)) =
-      # gamma[[g]] / n_g, so the actual covariance of the stacked structural
-      # statistics is jac.full %*% bdiag(gamma_g / n_g) %*% t(jac.full). This
-      # rare path needs the explicit per-group observed Gamma.
-      if (isTRUE(attr(jac, "caseB"))) {
-        jac_full <- attr(jac, "jac.full")
-        nobs_g <- unlist(fit@SampleStats@nobs)
-        if (is.null(gamma)) {
-          gamma <- fit@SampleStats@NACOV
-          if (is.null(gamma) || is.null(gamma[[1]])) {
-            gamma <- lavTech(fit, "gamma")
+        # build Gamma.eta = JAC %*% Gamma %*% t(JAC) in a memory-lean form that
+        # never materializes the p* x p* observed Gamma (see
+        # lav_sam_gamma_eta_g()). Falls back to the explicit observed Gamma for
+        # settings where that form does not apply (categorical, conditional.x,
+        # missing data, ...) and for se = "local.nt" (normal-theory Gamma). The
+        # ADF/influence path applies to all SEs except the normal-theory one.
+        use_influence <- (se != "local.nt")
+        if (use_influence) {
+          for (g in seq_len(fit@Data@ngroups)) {
+            ge_g <- lav_sam_gamma_eta_g(fit = fit, jac_g = jac[[g]], g = g)
+            if (is.null(ge_g)) {
+              use_influence <- FALSE
+              break
+            }
+            gamma_eta[[g]] <- ge_g
           }
         }
-        gscaled <- lapply(seq_len(fit@Data@ngroups),
-                          function(g) gamma[[g]] / nobs_g[g])
-        gamma_obs_full <- lav_mat_bdiag(gscaled)
-        step1$Gamma.eta.full <- jac_full %*% gamma_obs_full %*% t(jac_full)
-        step1$caseB <- TRUE
+
+        gamma <- NULL
+        if (!use_influence) {
+          if (se == "local.nt") {
+            gamma <- lav_object_gamma(lavobject = fit, adf = FALSE)
+          } else {
+            gamma <- fit@SampleStats@NACOV
+            if (is.null(gamma) || is.null(gamma[[1]])) {
+              # NACOV not stored (skipped in step 0) -> compute on demand. The
+              # (unbiased) ADF Gamma is unavailable for fixed.x / conditional.x
+              # (lav_samp_gamma() stops), which the default se = "twostep" can
+              # hit (its default is fixed.x = TRUE); fall back to the *biased*
+              # ADF Gamma there, exactly as the global yuan.chan test does.
+              gamma <- tryCatch(lavTech(fit, "gamma"), error = function(e) NULL)
+              if (is.null(gamma) || is.null(gamma[[1]])) {
+                opts <- fit@Options
+                opts$gamma.unbiased <- FALSE
+                gamma <- lav_object_gamma(
+                  lavdata = fit@Data, lavoptions = opts,
+                  lavsamplestats = fit@SampleStats, lavh1 = fit@h1,
+                  lavimplied = fit@implied, model_based = FALSE
+                )
+              }
+            }
+          }
+          for (g in seq_len(fit@Data@ngroups)) {
+            gamma_eta[[g]] <- jac[[g]] %*% gamma[[g]] %*% t(jac[[g]])
+          }
+        }
+        step1$JAC <- jac
+
+        # Case B (across-group constraints in the measurement model): the
+        # per-group Gamma.eta blocks above are incomplete, because vech(VETA_g)
+        # also depends on the other groups' sample statistics. Build the full
+        # (cross-group) covariance of the stacked structural statistics so that
+        # step 2 can compute a proper cross-group sandwich. Cov(vech(S_g)) =
+        # gamma[[g]] / n_g, so the actual covariance of the stacked structural
+        # statistics is jac.full %*% bdiag(gamma_g / n_g) %*% t(jac.full). This
+        # rare path needs the explicit per-group observed Gamma.
+        if (isTRUE(attr(jac, "caseB"))) {
+          jac_full <- attr(jac, "jac.full")
+          nobs_g <- unlist(fit@SampleStats@nobs)
+          if (is.null(gamma)) {
+            gamma <- fit@SampleStats@NACOV
+            if (is.null(gamma) || is.null(gamma[[1]])) {
+              gamma <- lavTech(fit, "gamma")
+            }
+          }
+          gscaled <- lapply(seq_len(fit@Data@ngroups),
+                            function(g) gamma[[g]] / nobs_g[g])
+          gamma_obs_full <- lav_mat_bdiag(gscaled)
+          step1$Gamma.eta.full <- jac_full %*% gamma_obs_full %*% t(jac_full)
+          step1$caseB <- TRUE
+        }
+      } # no lv-interaction
+      step1$Gamma.eta <- gamma_eta
+      TRUE
+    }, error = function(e) e)
+    if (inherits(ge_try, "error")) {
+      if (gamma_eta_required) {
+        stop(ge_try) # local / local.nt SEs cannot be computed without Gamma.eta
       }
-    } # no lv-interaction
-    step1$Gamma.eta <- gamma_eta
+      # twostep / twostep.robust / naive: the SEs do not need Gamma.eta, so a
+      # failure is non-fatal -- we simply do not report the corrected structural
+      # test (the naive structural test is reported instead).
+      step1$Gamma.eta <- NULL
+    }
   }
 
   if (output == "list.step1.only") {

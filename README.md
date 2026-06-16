@@ -13,12 +13,16 @@ lavaan is still under development, and much work still needs to be done.
 
 ## Job ad
 
-As part of an NWO-funded project for Dutch open-science infrastructural development, we are looking for a **post-doc/programmer for the lavaan project**. The position is initially for 1 year, but conditional on positive first-year review, it is designed to be extended to as many as 4 years.
-The job ad can be found on the University of [Amsterdam (UVA) website](https://werkenbij.uva.nl/en/vacancies/researcher-in-methods-and-statistics-specializing-in-programming-and-structural-equation-modeling-netherlands-15033),
-but it is also published on [AcademicTransfer.com](https://www.academictransfer.com/en/jobs/360501/researcher-in-methods-and-statistics-specializing-in-programming-and-structural-equation-modeling).
-And the same keywords can be searched to find the job posting on LinkedIn.
-The deadline is already *17 May 2026*, but the deadline might be extended if sufficient candidates are not already found.
-The proposal for the full project can be found on [Zenodo](https://doi.org/10.5281/zenodo.19552779). The post-doc position above is part of Work Package 1 (WP1).
+As part of an NWO-funded project for Dutch open-science infrastructural
+development, we are looking for a (second) 
+**researcher/junior postdoc for the lavaan project project**. 
+The job ad can be found on the University of [Twente](https://utwentecareers.nl/en/vacancies/2525/researcher-in-methods-and-statistics-specializing-in-programming-and-structural-equation-modelling/).
+
+The deadline is *31 July 2026*.
+
+The proposal for the full project
+can be found on [Zenodo](https://doi.org/10.5281/zenodo.19552779). The post-doc
+position above is part of Work Package 1 (WP1).
 
 
 ## Installation

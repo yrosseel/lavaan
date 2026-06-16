@@ -388,29 +388,35 @@ lav_sam_step2_se <- function(fit = NULL, joint = NULL,
   # se = "twostep" or "twostep.robust"
   } else if (lavoptions$se  == "twostep" || lavoptions$se == "twostep.robust") {
 
-    if (lavoptions$se  == "twostep") {
+    robust <- (lavoptions$se == "twostep.robust")
+    if (robust) {
+      # get P (the influence of the step 1 / measurement parameters on the
+      # sample statistics) and align its rows with step1.free.idx (the rows of
+      # P are in ascending free-parameter order). Single group: one matrix;
+      # multigroup: the columns are the stacked statistics of all groups, with
+      # attr 'stat.offset' giving the per-group column boundaries.
+      p <- lav_sam_step1_local_jac(step1 = step1, fit = fit, p_only = TRUE)
+      p_row_idx <- match(step1_free_idx, attr(p, "free.idx"))
+      if (anyNA(p_row_idx)) {
+        # P cannot be aligned with the step 1 free parameters (eg a measurement
+        # model with within-block equality constraints): the robust correction
+        # is not available -> fall back to (non-robust) twostep SEs.
+        lav_msg_warn(gettext(
+          "robust standard errors (se = \"twostep.robust\") are not available
+           for this model (eg a measurement model with within-block equality
+           constraints); twostep standard errors are reported instead."))
+        robust <- FALSE
+        lavoptions$se <- "twostep"
+      }
+    }
+    if (!robust) {
       v2 <- 1 / n * i_22_inv # not the same as FIT.PA@vcov$vcov!!
       v1 <- i_22_inv %*% i_21 %*% sigma_11 %*% i_12 %*% i_22_inv
-    } else if (lavoptions$se == "twostep.robust") {
+    } else {
       # following Yuan & Chan 2002, eqs 4, 10, 11, 12, 13 and 14
       # but for V11, V12, V21, V22: we use index '1' for step1, and '2'
       # for step 2!!
       m_b <- -1 * info[step2_free_idx, step1_free_idx, drop = FALSE]
-
-      # get P (the influence of the step 1 / measurement parameters on the
-      # sample statistics). Single group: one matrix; multigroup: the columns
-      # are the stacked statistics of all groups, with attr 'stat.offset'
-      # giving the per-group column boundaries.
-      p <- lav_sam_step1_local_jac(step1 = step1, fit = fit, p_only = TRUE)
-      # align the rows of P with step1.free.idx: the rows of P are in
-      # ascending free-parameter order, while step1.free.idx (and hence
-      # m_b below) is ordered per measurement block
-      p_row_idx <- match(step1_free_idx, attr(p, "free.idx"))
-      if (anyNA(p_row_idx)) {
-        lav_msg_stop(gettext(
-          "internal error: unable to align the step 1 jacobian (P) with
-           the step 1 free parameters"))
-      }
       stat_offset <- attr(p, "stat.offset") # NULL if single group
       p <- p[p_row_idx, , drop = FALSE]
 
