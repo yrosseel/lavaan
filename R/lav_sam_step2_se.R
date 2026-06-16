@@ -44,6 +44,21 @@ lav_sam_step2_se_bootstrap <- function(sam_object = NULL, bootstrap = list()) {
   list(VCOV = var_cov, boot.coef = coef_orig, R = this_args$R)
 }
 
+# WLS.V_g %*% Delta_g (the 'WD' building block of the robust SEM sandwich),
+# handling the DWLS/ULS case where lavaan stores the diagonal weight matrix as
+# a plain vector. Optionally restrict Delta to a subset of columns.
+lav_sam_wls_delta <- function(wls_v_g, delta_g, cols = NULL) {
+  if (!is.null(cols)) {
+    delta_g <- delta_g[, cols, drop = FALSE]
+  }
+  if (is.matrix(wls_v_g)) {
+    wls_v_g %*% delta_g
+  } else {
+    # DWLS/ULS: WLS.V holds the diagonal of the weight matrix
+    wls_v_g * delta_g
+  }
+}
+
 # Case B local SEs: across-group (equality) constraints in the measurement
 # model couple vech(VETA_g) across groups, so the NACOV of the stacked
 # structural statistics (step1$Gamma.eta.full) has nonzero cross-group blocks
@@ -77,12 +92,7 @@ lav_sam_step2_se_local_caseB <- function(fit_pa, step1) {
   wd_list <- vector("list", ngroups)
   dn_list <- vector("list", ngroups)
   for (g in seq_len(ngroups)) {
-    if (is.matrix(wls_v[[g]])) {
-      wd <- wls_v[[g]] %*% delta[[g]]
-    } else {
-      # DWLS/ULS: WLS.V holds the diagonal of the weight matrix
-      wd <- wls_v[[g]] * delta[[g]]
-    }
+    wd <- lav_sam_wls_delta(wls_v[[g]], delta[[g]])
     wd_list[[g]] <- wd
     dn_list[[g]] <- rep.int(nobs_g[g], nrow(wd))
   }
@@ -387,7 +397,10 @@ lav_sam_step2_se <- function(fit = NULL, joint = NULL,
       # for step 2!!
       m_b <- -1 * info[step2_free_idx, step1_free_idx, drop = FALSE]
 
-      # get P (for a single group!! for now)
+      # get P (the influence of the step 1 / measurement parameters on the
+      # sample statistics). Single group: one matrix; multigroup: the columns
+      # are the stacked statistics of all groups, with attr 'stat.offset'
+      # giving the per-group column boundaries.
       p <- lav_sam_step1_local_jac(step1 = step1, fit = fit, p_only = TRUE)
       # align the rows of P with step1.free.idx: the rows of P are in
       # ascending free-parameter order, while step1.free.idx (and hence
@@ -398,9 +411,11 @@ lav_sam_step2_se <- function(fit = NULL, joint = NULL,
           "internal error: unable to align the step 1 jacobian (P) with
            the step 1 free parameters"))
       }
+      stat_offset <- attr(p, "stat.offset") # NULL if single group
       p <- p[p_row_idx, , drop = FALSE]
 
-      # get V22
+      # get V22 (= the robust covariance of the step 2 estimating function,
+      # already aggregated over groups by lav_model_nvcov_robust_sem())
       if (is.null(joint@SampleStats@NACOV[[1]])) {
         joint@SampleStats@NACOV <- lavTech(joint, "gamma")
       }
@@ -417,16 +432,40 @@ lav_sam_step2_se <- function(fit = NULL, joint = NULL,
 
       v22 <- t_dvgvd[step2_free_idx, step2_free_idx, drop = FALSE] # ok
 
-      # FIXME: for a single group only:
-      gamma_1 <- lavTech(joint, "gamma")[[1]]
-      v11 <- p %*% gamma_1 %*% t(p)
-      if (is.matrix(wls_v[[1]])) {
-        wd <- wls_v[[1]] %*% delta[[1]][, step2_free_idx, drop = FALSE]
-      } else {
-        # DWLS/ULS: WLS.V holds the diagonal of the weight matrix
-        wd <- wls_v[[1]] * delta[[1]][, step2_free_idx, drop = FALSE]
+      # V11 = Cov(sqrt(N) * step1 params) and V21 = Cov(sqrt(N) * step2 score,
+      # sqrt(N) * step1 params). Because the groups are independent samples,
+      # Gamma is block-diagonal across groups, so both aggregate as a sum over
+      # groups. The group weights differ per block, however, because the step 2
+      # estimating function G is the sample-size weighted average of the
+      # per-group scores (G = sum_g f_g G_g), while the step 1 estimates gamma_g
+      # are per-group. With Gamma_g = Cov(sqrt(n_g) s_g) and f_g = n_g/N:
+      #   V22 = Cov(sqrt(N) G)         -> sum_g f_g   WD_g' Gamma_g WD_g  (= t_dvgvd)
+      #   V21 = Cov(sqrt(N) G, gamma)  -> sum_g  1    WD_g' Gamma_g P_g'
+      #   V11 = Cov(sqrt(N) gamma)     -> sum_g 1/f_g P_g  Gamma_g P_g'
+      # (each replacement of a 'score' index by a 'parameter' index trades one
+      # factor f_g for 1/f_g). This makes the three terms of V1 below scale
+      # consistently, so for independent groups (Case A) the per-group result
+      # equals a separate single-group fit. It also covers across-group
+      # measurement constraints (Case B): the cross-group coupling is encoded
+      # in the per-group columns of P. For a single group f_g = 1 and the loop
+      # reduces to the original (unweighted) single-group expressions.
+      gamma <- lavTech(joint, "gamma")
+      ngroups <- joint@Data@ngroups
+      ntot <- joint@SampleStats@ntotal
+      v11 <- matrix(0, nrow(p), nrow(p))
+      v21 <- matrix(0, length(step2_free_idx), nrow(p))
+      for (g in seq_len(ngroups)) {
+        fg <- joint@SampleStats@nobs[[g]] / ntot
+        gamma_g <- gamma[[g]]
+        if (is.null(stat_offset)) {
+          p_g <- p
+        } else {
+          p_g <- p[, (stat_offset[g] + 1L):stat_offset[g + 1L], drop = FALSE]
+        }
+        wd_g <- lav_sam_wls_delta(wls_v[[g]], delta[[g]], step2_free_idx)
+        v11 <- v11 + (1 / fg) * (p_g %*% gamma_g %*% t(p_g))
+        v21 <- v21 + crossprod(wd_g, gamma_g %*% t(p_g))
       }
-      v21 <- t(wd) %*% gamma_1 %*% t(p)
       v12 <- t(v21)
 
       a_inv <- -1 * i_22_inv

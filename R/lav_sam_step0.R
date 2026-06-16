@@ -63,12 +63,13 @@ lav_sam_step0 <- function(cmd = "sem", model = NULL, data = NULL,
 
   # se
   if (fit@Model@categorical && se == "twostep") {
-    # FIXME!
-    # should do this for global too, but we need the 'P' matrix, which
-    # we only have for local (for now)
-    if (sam_method == "local") {
-      se <- "twostep.robust"
-    }
+    # for categorical data, the classic ('global') two-step correction uses
+    # the model-based information matrix, which underestimates the standard
+    # errors for the (D)WLS estimator. Use the robust (Yuan & Chan, 2002)
+    # correction instead. This needs the 'P' matrix (the influence of the
+    # measurement parameters on the sample statistics), which is available for
+    # all sam methods (the measurement blocks are always fitted in step 1).
+    se <- "twostep.robust"
   }
   fit@Options$se <- se
 

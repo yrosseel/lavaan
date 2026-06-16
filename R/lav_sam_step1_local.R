@@ -637,6 +637,158 @@ lav_sam_gamma_eta_g <- function(fit = NULL, jac_g = NULL, g = 1L) {
   ge_mm + ge_cov + ge_mc + t(ge_mc)
 }
 
+# Shared helpers for lav_sam_step1_local_jac() (single group) and
+# lav_sam_step1_local_jac_mg() (multigroup) -- they build the same jacobian
+# (JAC = JACc %*% JACa + JACb [+ psi channel]); the multigroup version simply
+# stacks the per-group statistics and structural moments. Factoring the common
+# pieces out keeps the two entry points thin and avoids drift between them.
+
+# Indices (in step1$PT) of the free 'measurement' parameters whose influence
+# d(theta.mm)/d(stats) forms the rows of JACa: factor loadings (=~), residual
+# (co)variances of observed indicators (~~), intercepts (~1, if meanstructure),
+# scaling factors (~*~) and thresholds (|, categorical), plus the higher-order
+# loadings (=~ on an lv indicator) and latent (co)variances (~~ between lv
+# indicators). One row per free parameter: by default de-duplicated on the
+# (constrained) pt_1$free numbering; pass dedup_key = step1$PT.free to de-dup on
+# the *unconstrained* numbering instead (needed for the p_only 'P' matrix under
+# ceq.simple, where across-group equality-constrained parameters share a
+# constrained free number but are distinct rows of P / step1.free.idx).
+lav_sam_meas_keep_idx <- function(pt_1, ov_names, lavmodel, lv_ind,
+                                  meanstructure, dedup_key = NULL) {
+  if (is.null(dedup_key)) {
+    dedup_key <- pt_1$free
+  }
+  dup <- duplicated(dedup_key)
+  lambda_idx <- which(pt_1$op == "=~" & pt_1$free > 0L & !dup)
+  theta_idx  <- which(pt_1$op == "~~" & pt_1$free > 0L & !dup &
+                      pt_1$lhs %in% ov_names & pt_1$rhs %in% ov_names)
+  nu_idx <- integer(0L)
+  if (meanstructure) {
+    nu_idx <- which(pt_1$op == "~1" & pt_1$free > 0L & !dup &
+                    pt_1$lhs %in% ov_names)
+  }
+  delta_idx <- integer(0L)
+  if (lavmodel@categorical || lavmodel@correlation) {
+    delta_idx <- which(pt_1$op == "~*~" & pt_1$free > 0L & !dup)
+  }
+  th_idx <- integer(0L)
+  if (lavmodel@categorical) {
+    th_idx <- which(pt_1$op == "|" & pt_1$free > 0L & !dup)
+  }
+  beta_idx <- psi_idx <- integer(0L)
+  if (length(lv_ind) > 0L) {
+    beta_idx <- which(pt_1$op == "=~" & pt_1$free > 0L & !dup &
+                      pt_1$rhs %in% lv_ind)
+    psi_idx <- which(pt_1$op == "~~" & pt_1$free > 0L & !dup &
+                     pt_1$rhs %in% lv_ind & pt_1$lhs %in% lv_ind)
+  }
+  sort(c(lambda_idx, theta_idx, nu_idx, delta_idx, th_idx, beta_idx, psi_idx))
+}
+
+# Stack the structural moments c(EETA_g, vech(VETA_g)) over the requested groups
+# (a single g for a per-group JACb, or all groups for JACc/psi). This is the
+# function whose jacobian (w.r.t. the sample statistics / measurement params)
+# the numeric-difference helpers below compute.
+lav_sam_veta_vec <- function(step1_obj, groups, meanstructure) {
+  unlist(lapply(groups, function(g) {
+    if (meanstructure) {
+      c(step1_obj$EETA[[g]], lav_mat_vech(step1_obj$VETA[[g]]))
+    } else {
+      lav_mat_vech(step1_obj$VETA[[g]])
+    }
+  }))
+}
+
+# Numeric jacobian of the stacked structural moments w.r.t. a set of
+# free-parameter rows of step1$PT$est (rows_idx). Used for JACc (rows_idx =
+# keep_idx) and the psi channel (rows_idx = the joint factor (co)variance rows).
+lav_sam_jac_est_rows <- function(rows_idx, step1, fit, groups, meanstructure) {
+  ff <- function(x) {
+    step1_1 <- step1
+    step1_1$PT$est[rows_idx] <- x
+    step1_1 <- lav_sam_step1_local(step1 = step1_1, fit = fit,
+      sam_method = step1$sam.method, local_options = step1$local.options)
+    lav_sam_veta_vec(step1_1, groups, meanstructure)
+  }
+  verbose_flag <- lav_verbose()
+  lav_verbose(FALSE)
+  on.exit(lav_verbose(verbose_flag))
+  numDeriv::jacobian(func = ff, x = step1$PT$est[rows_idx])
+}
+
+# Categorical JACb for one group g: numeric jacobian of vech(VETA_g) w.r.t. the
+# off-diagonal (poly)choric correlations and the free continuous variances of
+# step1$COV[[g]] (keeping theta.mm fixed), with the columns mapped (by label)
+# into group g's joint WLS.obs vector. Thresholds/means stay zero.
+lav_sam_jacb_cat_g <- function(g, step1, fit, joint_labels_g, meanstructure) {
+  cov_g <- step1$COV[[g]]
+  low_idx <- lower.tri(cov_g) # strict lower triangle (column-major)
+  n_low <- sum(low_idx)
+  nvar_g <- ncol(cov_g)
+  # continuous variables: their variances (the diagonal) are free statistics
+  num_idx <- which(!seq_len(nvar_g) %in% fit@SampleStats@th.idx[[g]])
+  x0 <- c(cov_g[low_idx], diag(cov_g)[num_idx])
+  ffb_cat <- function(xx) {
+    step1_1 <- step1
+    this_cov <- step1$COV[[g]]
+    this_cov[low_idx] <- xx[seq_len(n_low)]
+    this_cov[upper.tri(this_cov)] <- t(this_cov)[upper.tri(this_cov)]
+    if (length(num_idx) > 0L) {
+      dd <- diag(this_cov)
+      dd[num_idx] <- xx[n_low + seq_along(num_idx)]
+      diag(this_cov) <- dd
+    }
+    step1_1$COV[[g]] <- this_cov
+    step1_1 <- lav_sam_step1_local(step1 = step1_1, fit = fit,
+      sam_method = step1$sam.method, local_options = step1$local.options)
+    lav_sam_veta_vec(step1_1, g, meanstructure)
+  }
+  verbose_flag <- lav_verbose()
+  lav_verbose(FALSE)
+  jacb_corr <- numDeriv::jacobian(func = ffb_cat, x = x0)
+  lav_verbose(verbose_flag)
+
+  # map the perturbed-statistic columns into group g's joint WLS.obs vector (by
+  # label, so any difference in variable ordering is handled)
+  ov_g <- colnames(cov_g)
+  if (is.null(ov_g)) {
+    ov_g <- fit@Data@ov.names[[g]]
+  }
+  r_idx <- row(cov_g)[low_idx]
+  c_idx <- col(cov_g)[low_idx]
+  var_labels <- if (length(num_idx) > 0L) {
+    paste0(ov_g[num_idx], "|var")
+  } else {
+    character(0L)
+  }
+  my_labels <- c(vapply(seq_along(r_idx), function(k) {
+    paste(sort(c(ov_g[r_idx[k]], ov_g[c_idx[k]])), collapse = "~~")
+  }, character(1L)), var_labels)
+  col_idx <- match(my_labels, joint_labels_g)
+  if (anyNA(col_idx)) {
+    lav_msg_stop(gettext(
+      "internal error: unable to map the polychoric correlations into the
+       statistics vector of the joint model (categorical JACb)"))
+  }
+  jb <- matrix(0, nrow = nrow(jacb_corr),
+               ncol = length(fit@SampleStats@WLS.obs[[g]]))
+  jb[, col_idx] <- jacb_corr
+  jb
+}
+
+# Continuous JACb for one group g: vech(VETA_g) = M_g S_g M_g', so
+# d vech(VETA_g) / d vech(S_g) is the (row-selected) duplication-post product of
+# M_g %x% M_g, with a leading M_g block for the means (if meanstructure).
+lav_sam_jacb_cont_g <- function(mb, meanstructure) {
+  mbx_mb <- mb %x% mb
+  row_idx <- lav_mat_vech_idx(nrow(mb))
+  jb <- lav_mat_dup_post(mbx_mb)[row_idx, , drop = FALSE]
+  if (meanstructure) {
+    jb <- lav_mat_bdiag(mb, jb)
+  }
+  jb
+}
+
 lav_sam_step1_local_jac <- function(step1 = NULL, fit = NULL, p_only = FALSE,
                                     return_jac = FALSE) {
 
@@ -679,10 +831,6 @@ lav_sam_step1_local_jac <- function(step1 = NULL, fit = NULL, p_only = FALSE,
   # cross-group blocks of the stacked jacobian) and handled with the full
   # cross-group Gamma in step 2 (SEs and the robust test statistic).
   if (ngroups > 1L) {
-    if (p_only) {
-      lav_msg_stop(gettext(
-        "twostep.robust SEs: not available with multiple groups (yet)!"))
-    }
     if (lavdata@nlevels > 1L) {
       lav_msg_stop(gettext(
         "local SEs: not available for multigroup multilevel models (yet)!"))
@@ -698,6 +846,7 @@ lav_sam_step1_local_jac <- function(step1 = NULL, fit = NULL, p_only = FALSE,
          groups (yet)!"))
     }
     return(lav_sam_step1_local_jac_mg(step1 = step1, fit = fit,
+                                      p_only = p_only,
                                       return_jac = return_jac))
   }
 
@@ -782,39 +931,8 @@ lav_sam_step1_local_jac <- function(step1 = NULL, fit = NULL, p_only = FALSE,
     if (lavmodel@categorical) {
       # label-based mapping (handles any variable ordering and a block-wise
       # mix of categorical and continuous measurement blocks)
-      if (fit_mm_block@Model@categorical) {
-        mm_labels <- lav_sam_wls_obs_labels(
-          ov_names = fit_mm_block@Data@ov.names[[g]],
-          th_idx = fit_mm_block@SampleStats@th.idx[[g]]
-        )
-      } else {
-        # continuous block within a categorical joint model: the influence
-        # columns are ordered (means, vech(cov)); the joint represents each
-        # continuous variable by its mean (|t1), variance (|var) and the
-        # covariances (~~) -- all present in joint_labels
-        block_ov <- fit_mm_block@Data@ov.names[[g]]
-        nvar_b <- length(block_ov)
-        v_lin <- lav_mat_vech_idx(nvar_b)
-        zero_b <- matrix(0L, nvar_b, nvar_b)
-        v_r <- row(zero_b)[v_lin]
-        v_c <- col(zero_b)[v_lin]
-        cov_labels <- ifelse(v_r == v_c,
-          paste0(block_ov[v_r], "|var"),
-          vapply(seq_along(v_r), function(k)
-            paste(sort(c(block_ov[v_r[k]], block_ov[v_c[k]])), collapse = "~~"),
-            character(1L)))
-        if (ncol(mm_jac_full) == nvar_b + length(v_lin)) {
-          mm_labels <- c(paste0(block_ov, "|t1"), cov_labels) # with means
-        } else {
-          mm_labels <- cov_labels
-        }
-      }
-      mm_col_idx <- match(mm_labels, joint_labels)
-      if (anyNA(mm_col_idx)) {
-        lav_msg_stop(gettext(
-          "internal error: unable to map the statistics of a measurement
-           block into the statistics vector of the joint model"))
-      }
+      mm_col_idx <- lav_sam_mg_cat_col_idx(fit_mm_block, g, joint_labels,
+                                           ncol(mm_jac_full))
     } else {
       mm_ov_idx <- match(step1$MM.FIT[[mm]]@Data@ov.names[[g]],
                          lavdata@ov.names[[g]])
@@ -845,42 +963,13 @@ lav_sam_step1_local_jac <- function(step1 = NULL, fit = NULL, p_only = FALSE,
     }
   }
 
-  # keep only 'LAMBDA/THETA' parameters
+  # keep only the free 'measurement' parameters
   pt_1 <- step1$PT
   # only ov.names that are actually used in the measurement models
   ov_names <- unique(unlist(lapply(step1$MM.FIT, lav_object_vnames, "ov")))
-  lambda_idx <- which(pt_1$op == "=~" & pt_1$free > 0L & !duplicated(pt_1$free))
-  theta_idx  <- which(pt_1$op == "~~" & pt_1$free > 0L &
-                      !duplicated(pt_1$free) &
-                      pt_1$lhs %in% ov_names & pt_1$rhs %in% ov_names)
-  nu_idx <- integer(0L)
-  if (lavmodel@meanstructure) {
-    nu_idx     <- which(pt_1$op == "~1" & pt_1$free > 0L &
-                        !duplicated(pt_1$free) &
-                        pt_1$lhs %in% ov_names)
-  }
-  delta_idx <- integer(0L)
-  if (lavmodel@categorical || lavmodel@correlation) {
-    delta_idx <- which(pt_1$op == "~*~" & pt_1$free > 0L &
-                                   !duplicated(pt_1$free))
-  }
-  th_idx <- integer(0L)
-  if (lavmodel@categorical) {
-    th_idx <- which(pt_1$op == "|" & pt_1$free > 0L &
-                    !duplicated(pt_1$free))
-  }
-  beta_idx <- psi_idx <- integer(0L)
   lv_ind <- unlist(lavpta$vnames$lv.ind)
-  if (length(lv_ind) > 0L) {
-    beta_idx <- which(pt_1$op == "=~" & pt_1$free > 0L &
-                      !duplicated(pt_1$free) & pt_1$rhs %in% lv_ind)
-    psi_idx <- which(pt_1$op == "~~" & pt_1$free > 0L &
-                    !duplicated(pt_1$free) &
-                    pt_1$rhs %in% lv_ind & pt_1$lhs %in% lv_ind)
-  }
-  # keep only these free parameters (measurement only)
-  keep_idx <- sort(c(lambda_idx, theta_idx, nu_idx,
-                     delta_idx, th_idx, beta_idx, psi_idx))
+  keep_idx <- lav_sam_meas_keep_idx(pt_1, ov_names, lavmodel, lv_ind,
+                                    lavmodel@meanstructure)
   jaca <- jaca[keep_idx, , drop = FALSE]
   if (p_only) {
     # the rows of P are in ascending free-parameter order; return the
@@ -936,103 +1025,18 @@ lav_sam_step1_local_jac <- function(step1 = NULL, fit = NULL, p_only = FALSE,
     jacb <- numDeriv::jacobian(func = ffb, x = this_x)
     lav_verbose(verbose_flag)
   } else if (lavmodel@categorical) {
-    # categorical (and block-wise mixed): the sample statistics that vech(VETA)
-    # depends on are the off-diagonal (poly)choric correlations / covariances
-    # and -- for continuous variables -- their (free) variances (the diagonal).
-    # It does NOT depend on the thresholds or means, and through the DELTA
-    # rescaling / Croon correction it is not a simple M %x% M map. Since M is
-    # independent of the statistics for the (forced ULS) mapping, we obtain
-    # JACb numerically by perturbing those entries of step1$COV, keeping
-    # theta.mm fixed. The threshold/mean columns of JACb are zero.
-    cov_g <- step1$COV[[g]]
-    low_idx <- lower.tri(cov_g) # strict lower triangle (column-major)
-    n_low <- sum(low_idx)
-    # continuous variables: their variances (the diagonal) are free statistics
-    nvar_g <- ncol(cov_g)
-    num_idx <- which(!seq_len(nvar_g) %in% fit@SampleStats@th.idx[[g]])
-    x0 <- c(cov_g[low_idx], diag(cov_g)[num_idx])
-    ffb_cat <- function(xx) {
-      step1_1 <- step1
-      this_cov <- step1$COV[[g]]
-      this_cov[low_idx] <- xx[seq_len(n_low)]
-      this_cov[upper.tri(this_cov)] <- t(this_cov)[upper.tri(this_cov)]
-      if (length(num_idx) > 0L) {
-        dd <- diag(this_cov)
-        dd[num_idx] <- xx[n_low + seq_along(num_idx)]
-        diag(this_cov) <- dd
-      }
-      step1_1$COV[[g]] <- this_cov
-      step1_1 <- lav_sam_step1_local(step1 = step1_1, fit = fit,
-        sam_method = step1$sam.method, local_options = step1$local.options)
-      if (lavmodel@meanstructure) {
-        c(step1_1$EETA[[g]], lav_mat_vech(step1_1$VETA[[g]]))
-      } else {
-        lav_mat_vech(step1_1$VETA[[g]])
-      }
-    }
-    verbose_flag <- lav_verbose()
-    lav_verbose(FALSE)
-    jacb_corr <- numDeriv::jacobian(func = ffb_cat, x = x0)
-    lav_verbose(verbose_flag)
-
-    # map the perturbed-statistic columns into the joint WLS.obs vector (by
-    # label, so any difference in variable ordering is handled); thresholds and
-    # means stay zero
-    ov_g <- colnames(cov_g)
-    if (is.null(ov_g)) {
-      ov_g <- lavdata@ov.names[[g]]
-    }
-    r_idx <- row(cov_g)[low_idx]
-    c_idx <- col(cov_g)[low_idx]
-    var_labels <- if (length(num_idx) > 0L) {
-      paste0(ov_g[num_idx], "|var")
-    } else {
-      character(0L)
-    }
-    my_cor_labels <- c(vapply(seq_along(r_idx), function(k) {
-      paste(sort(c(ov_g[r_idx[k]], ov_g[c_idx[k]])), collapse = "~~")
-    }, character(1L)), var_labels)
-    corr_col_idx <- match(my_cor_labels, joint_labels)
-    if (anyNA(corr_col_idx)) {
-      lav_msg_stop(gettext(
-        "internal error: unable to map the polychoric correlations into the
-         statistics vector of the joint model (categorical JACb)"))
-    }
-    jacb <- matrix(0, nrow = nrow(jacb_corr),
-                   ncol = length(fit@SampleStats@WLS.obs[[g]]))
-    jacb[, corr_col_idx] <- jacb_corr
+    # categorical (and block-wise mixed): JACb depends on the (poly)choric
+    # correlations and the free continuous variances of step1$COV (not the
+    # thresholds/means), and through the DELTA rescaling / Croon correction is
+    # not a simple M %x% M map; obtain it numerically (see lav_sam_jacb_cat_g()).
+    jacb <- lav_sam_jacb_cat_g(g, step1, fit, joint_labels,
+                               lavmodel@meanstructure)
   } else { # no latent interactions
-    mb <- step1$M[[g]]
-    mbx_mb <- mb %x% mb
-    row_idx <- lav_mat_vech_idx(nrow(mb))
-    jacb <- lav_mat_dup_post(mbx_mb)[row_idx, , drop = FALSE]
-    if (lavmodel@meanstructure) {
-      jacb <- lav_mat_bdiag(mb, jacb)
-    }
+    jacb <- lav_sam_jacb_cont_g(step1$M[[g]], lavmodel@meanstructure)
   }
 
-  # JACc: jacobian of the function vech(VETA) = f(theta.mm, vech(S))
-  #       (treating vech(S) as fixed)
-  # calling lav_sam_step1_local() directly
-  ffc <- function(x) {
-    step1_1 <- step1
-
-    # fill in new 'x' values in PT
-    step1_1$PT$est[keep_idx] <- x
-    step1_1 <- lav_sam_step1_local(step1 = step1_1, fit = fit,
-           sam_method = step1$sam.method, local_options = step1$local.options)
-    if (lavmodel@meanstructure) {
-      out <- c(step1_1$EETA[[1]], lav_mat_vech(step1_1$VETA[[1]]))
-    } else {
-      out <- lav_mat_vech(step1_1$VETA[[1]])
-    }
-    out
-  }
-  # shut off verbose
-  verbose_flag <- lav_verbose()
-  lav_verbose(FALSE)
-  jacc <- numDeriv::jacobian(func = ffc, x = step1$PT$est[keep_idx])
-  lav_verbose(verbose_flag)
+  # JACc: jacobian of vech(VETA) = f(theta.mm), keeping vech(S) fixed
+  jacc <- lav_sam_jac_est_rows(keep_idx, step1, fit, g, lavmodel@meanstructure)
 
   # assemble JAC
   jac <- (jacc %*% jaca) + jacb
@@ -1056,22 +1060,8 @@ lav_sam_step1_local_jac <- function(step1 = NULL, fit = NULL, p_only = FALSE,
   }
   if (lavmodel@categorical && length(psi_jrow_list) > 0L) {
     jaca_psi <- do.call(rbind, psi_infl_list)
-    psi_x0 <- step1$PT$est[psi_jrow_list]
-    ffpsi <- function(x) {
-      step1_1 <- step1
-      step1_1$PT$est[psi_jrow_list] <- x
-      step1_1 <- lav_sam_step1_local(step1 = step1_1, fit = fit,
-        sam_method = step1$sam.method, local_options = step1$local.options)
-      if (lavmodel@meanstructure) {
-        c(step1_1$EETA[[1]], lav_mat_vech(step1_1$VETA[[1]]))
-      } else {
-        lav_mat_vech(step1_1$VETA[[1]])
-      }
-    }
-    verbose_flag <- lav_verbose()
-    lav_verbose(FALSE)
-    jacpsi <- numDeriv::jacobian(func = ffpsi, x = psi_x0)
-    lav_verbose(verbose_flag)
+    jacpsi <- lav_sam_jac_est_rows(psi_jrow_list, step1, fit, g,
+                                   lavmodel@meanstructure)
     jac <- jac + (jacpsi %*% jaca_psi)
   }
 
@@ -1147,6 +1137,7 @@ lav_sam_mg_cat_col_idx <- function(fit_mm_block, g, joint_labels, ncol_full) {
 }
 
 lav_sam_step1_local_jac_mg <- function(step1 = NULL, fit = NULL,
+                                       p_only = FALSE,
                                        return_jac = FALSE) {
   lavdata  <- fit@Data
   lavmodel <- fit@Model
@@ -1161,15 +1152,11 @@ lav_sam_step1_local_jac_mg <- function(step1 = NULL, fit = NULL,
   stat_offset <- c(0L, cumsum(stat_n)) # length ngroups + 1
   stat_tot <- sum(stat_n)
 
-  # per-group size of c(EETA_g, vech(VETA_g))
-  veta_n <- vapply(seq_len(ngroups), function(g) {
-    p <- ncol(step1$VETA[[g]])
-    # NOTE: %/% binds tighter than *, so parenthesize the vech length
-    # (p*(p+1)/2); without the parens p*(p+1L)%/%2L is wrong for even p
-    (if (meanstructure) p else 0L) + (p * (p + 1L)) %/% 2L
-  }, integer(1L))
-  veta_offset <- c(0L, cumsum(veta_n))
-  veta_tot <- sum(veta_n)
+  # NOTE: veta_n / veta_offset (the per-group size of c(EETA_g, vech(VETA_g)))
+  # are only needed for the JACb/JACc stacking below; they rely on step1$VETA,
+  # which is only computed for the local/fsr/cfsr methods. They are therefore
+  # deferred until after the p_only early return (twostep.robust, also used by
+  # sam.method = "global", does not need them and does not have step1$VETA).
 
   # categorical: per-group labels of the joint WLS statistics vector, used to
   # map each measurement block's statistics into the right joint columns
@@ -1309,135 +1296,73 @@ lav_sam_step1_local_jac_mg <- function(step1 = NULL, fit = NULL,
     }
   }
 
-  # keep only 'measurement' (LAMBDA/THETA/NU/BETA/PSI) parameters
+  # keep only the free 'measurement' parameters
   pt_1 <- step1$PT
   ov_names <- unique(unlist(lapply(step1$MM.FIT, lav_object_vnames, "ov")))
-  lambda_idx <- which(pt_1$op == "=~" & pt_1$free > 0L & !duplicated(pt_1$free))
-  theta_idx  <- which(pt_1$op == "~~" & pt_1$free > 0L &
-                      !duplicated(pt_1$free) &
-                      pt_1$lhs %in% ov_names & pt_1$rhs %in% ov_names)
-  nu_idx <- integer(0L)
-  if (meanstructure) {
-    nu_idx <- which(pt_1$op == "~1" & pt_1$free > 0L &
-                    !duplicated(pt_1$free) & pt_1$lhs %in% ov_names)
-  }
-  delta_idx <- integer(0L)
-  if (lavmodel@categorical || lavmodel@correlation) {
-    delta_idx <- which(pt_1$op == "~*~" & pt_1$free > 0L &
-                       !duplicated(pt_1$free))
-  }
-  th_idx <- integer(0L)
-  if (lavmodel@categorical) {
-    th_idx <- which(pt_1$op == "|" & pt_1$free > 0L & !duplicated(pt_1$free))
-  }
-  beta_idx <- psi_idx <- integer(0L)
   lv_ind <- unlist(lavpta$vnames$lv.ind)
-  if (length(lv_ind) > 0L) {
-    beta_idx <- which(pt_1$op == "=~" & pt_1$free > 0L &
-                      !duplicated(pt_1$free) & pt_1$rhs %in% lv_ind)
-    psi_idx <- which(pt_1$op == "~~" & pt_1$free > 0L &
-                     !duplicated(pt_1$free) &
-                     pt_1$rhs %in% lv_ind & pt_1$lhs %in% lv_ind)
+  keep_idx <- lav_sam_meas_keep_idx(pt_1, ov_names, lavmodel, lv_ind,
+                                    meanstructure)
+
+  if (p_only) {
+    # twostep.robust: we only need the 'P' matrix = influence of the
+    # measurement (step 1) parameters on the (stacked) sample statistics.
+    # The rows are in ascending free-parameter order; the caller aligns them
+    # with step1.free.idx and splits the columns per group using stat.offset.
+    # (No need for the costly JACb/JACc numeric jacobians below; this branch
+    # is therefore also usable for sam.method = "global", which does not
+    # populate step1$VETA / step1$M / step1$COV.)
+    #
+    # keep_idx de-duplicates on pt_1$free (the *constrained* free number). With
+    # across-group equality constraints in the measurement model (Case B)
+    # several partable rows -- one per group -- share that number but are
+    # distinct in step1.free.idx (the *unconstrained* numbering). For the P
+    # matrix we need one row per unconstrained step 1 parameter, so de-duplicate
+    # on step1$PT.free instead. (When there are no simple equality constraints
+    # the two numberings coincide, so p_keep_idx == keep_idx.)
+    p_keep_idx <- if (lavmodel@ceq.simple.only) {
+      lav_sam_meas_keep_idx(pt_1, ov_names, lavmodel, lv_ind, meanstructure,
+                            dedup_key = step1$PT.free)
+    } else {
+      keep_idx
+    }
+    pjac <- jaca[p_keep_idx, , drop = FALSE]
+    attr(pjac, "free.idx") <- step1$PT.free[p_keep_idx]
+    attr(pjac, "stat.offset") <- stat_offset
+    return(pjac)
   }
-  keep_idx <- sort(c(lambda_idx, theta_idx, nu_idx,
-                     delta_idx, th_idx, beta_idx, psi_idx))
+
   jaca <- jaca[keep_idx, , drop = FALSE]
+
+  # per-group size of c(EETA_g, vech(VETA_g)) (needed for the JACb/JACc
+  # stacking below; relies on step1$VETA, only computed for local/fsr/cfsr)
+  veta_n <- vapply(seq_len(ngroups), function(g) {
+    p <- ncol(step1$VETA[[g]])
+    # NOTE: %/% binds tighter than *, so parenthesize the vech length
+    # (p*(p+1)/2); without the parens p*(p+1L)%/%2L is wrong for even p
+    (if (meanstructure) p else 0L) + (p * (p + 1L)) %/% 2L
+  }, integer(1L))
+  veta_offset <- c(0L, cumsum(veta_n))
+  veta_tot <- sum(veta_n)
 
   # JACb: jacobian of vech(VETA) = f(vech(S)), keeping theta.mm fixed
   # (block-diagonal across groups: VETA_g = M_g S_g M_g')
   jacb_list <- vector("list", ngroups)
   if (lavmodel@categorical) {
-    # categorical (and block-wise mixed): VETA_g depends on the off-diagonal
-    # (poly)choric correlations / covariances and -- for continuous variables --
-    # their (free) variances (the diagonal), but NOT on the thresholds or means.
-    # Obtain JACb numerically per group by perturbing those entries of
-    # step1$COV[[g]] (keeping theta.mm fixed); map the columns by label.
-    verbose_flag <- lav_verbose()
-    lav_verbose(FALSE)
     for (g in seq_len(ngroups)) {
-      cov_g <- step1$COV[[g]]
-      low_idx <- lower.tri(cov_g)
-      n_low <- sum(low_idx)
-      nvar_g <- ncol(cov_g)
-      num_idx <- which(!seq_len(nvar_g) %in% fit@SampleStats@th.idx[[g]])
-      x0 <- c(cov_g[low_idx], diag(cov_g)[num_idx])
-      ffb_cat <- function(xx) {
-        step1_1 <- step1
-        this_cov <- step1$COV[[g]]
-        this_cov[low_idx] <- xx[seq_len(n_low)]
-        this_cov[upper.tri(this_cov)] <- t(this_cov)[upper.tri(this_cov)]
-        if (length(num_idx) > 0L) {
-          dd <- diag(this_cov)
-          dd[num_idx] <- xx[n_low + seq_along(num_idx)]
-          diag(this_cov) <- dd
-        }
-        step1_1$COV[[g]] <- this_cov
-        step1_1 <- lav_sam_step1_local(step1 = step1_1, fit = fit,
-          sam_method = step1$sam.method, local_options = step1$local.options)
-        if (meanstructure) {
-          c(step1_1$EETA[[g]], lav_mat_vech(step1_1$VETA[[g]]))
-        } else {
-          lav_mat_vech(step1_1$VETA[[g]])
-        }
-      }
-      jb_corr <- numDeriv::jacobian(func = ffb_cat, x = x0)
-      # map the perturbed-statistic columns into group g's joint WLS.obs vector
-      ov_g <- colnames(cov_g)
-      if (is.null(ov_g)) ov_g <- lavdata@ov.names[[g]]
-      r_idx <- row(cov_g)[low_idx]
-      c_idx <- col(cov_g)[low_idx]
-      var_labels <- if (length(num_idx) > 0L) {
-        paste0(ov_g[num_idx], "|var")
-      } else {
-        character(0L)
-      }
-      my_labels <- c(vapply(seq_along(r_idx), function(k) {
-        paste(sort(c(ov_g[r_idx[k]], ov_g[c_idx[k]])), collapse = "~~")
-      }, character(1L)), var_labels)
-      col_idx <- match(my_labels, joint_labels[[g]])
-      if (anyNA(col_idx)) {
-        lav_msg_stop(gettext(
-          "internal error: unable to map the polychoric correlations into the
-           statistics vector of the joint model (categorical JACb, multigroup)"))
-      }
-      jb <- matrix(0, nrow = nrow(jb_corr), ncol = stat_n[g])
-      jb[, col_idx] <- jb_corr
-      jacb_list[[g]] <- jb
+      jacb_list[[g]] <- lav_sam_jacb_cat_g(g, step1, fit, joint_labels[[g]],
+                                           meanstructure)
     }
-    lav_verbose(verbose_flag)
   } else {
     for (g in seq_len(ngroups)) {
-      mb <- step1$M[[g]]
-      mbx_mb <- mb %x% mb
-      row_idx <- lav_mat_vech_idx(nrow(mb))
-      jb <- lav_mat_dup_post(mbx_mb)[row_idx, , drop = FALSE]
-      if (meanstructure) {
-        jb <- lav_mat_bdiag(mb, jb)
-      }
-      jacb_list[[g]] <- jb
+      jacb_list[[g]] <- lav_sam_jacb_cont_g(step1$M[[g]], meanstructure)
     }
   }
   jacb <- lav_mat_bdiag(jacb_list)
 
   # JACc: jacobian of vech(VETA) = f(theta.mm), keeping vech(S) fixed
-  # (numeric; over the stacked c(EETA_g, vech(VETA_g)) of all groups)
-  ffc <- function(x) {
-    step1_1 <- step1
-    step1_1$PT$est[keep_idx] <- x
-    step1_1 <- lav_sam_step1_local(step1 = step1_1, fit = fit,
-      sam_method = step1$sam.method, local_options = step1$local.options)
-    unlist(lapply(seq_len(ngroups), function(g) {
-      if (meanstructure) {
-        c(step1_1$EETA[[g]], lav_mat_vech(step1_1$VETA[[g]]))
-      } else {
-        lav_mat_vech(step1_1$VETA[[g]])
-      }
-    }))
-  }
-  verbose_flag <- lav_verbose()
-  lav_verbose(FALSE)
-  jacc <- numDeriv::jacobian(func = ffc, x = step1$PT$est[keep_idx])
-  lav_verbose(verbose_flag)
+  # (over the stacked c(EETA_g, vech(VETA_g)) of all groups)
+  jacc <- lav_sam_jac_est_rows(keep_idx, step1, fit, seq_len(ngroups),
+                               meanstructure)
 
   # assemble the stacked JAC
   jac_full <- (jacc %*% jaca) + jacb
@@ -1458,24 +1383,8 @@ lav_sam_step1_local_jac_mg <- function(step1 = NULL, fit = NULL,
   }
   if (lavmodel@categorical && length(psi_jrow_list) > 0L) {
     jaca_psi <- do.call(rbind, psi_infl_list)
-    psi_x0 <- step1$PT$est[psi_jrow_list]
-    ffpsi <- function(x) {
-      step1_1 <- step1
-      step1_1$PT$est[psi_jrow_list] <- x
-      step1_1 <- lav_sam_step1_local(step1 = step1_1, fit = fit,
-        sam_method = step1$sam.method, local_options = step1$local.options)
-      unlist(lapply(seq_len(ngroups), function(g) {
-        if (meanstructure) {
-          c(step1_1$EETA[[g]], lav_mat_vech(step1_1$VETA[[g]]))
-        } else {
-          lav_mat_vech(step1_1$VETA[[g]])
-        }
-      }))
-    }
-    verbose_flag <- lav_verbose()
-    lav_verbose(FALSE)
-    jacpsi <- numDeriv::jacobian(func = ffpsi, x = psi_x0)
-    lav_verbose(verbose_flag)
+    jacpsi <- lav_sam_jac_est_rows(psi_jrow_list, step1, fit,
+                                   seq_len(ngroups), meanstructure)
     jac_full <- jac_full + (jacpsi %*% jaca_psi)
   }
 
