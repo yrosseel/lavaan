@@ -895,10 +895,30 @@ lav_sam_global_test <- function(joint = NULL, step1 = NULL, step2 = NULL,
       step2_free_idx <- step2$step2.free.idx
 
       # ingredients of the full (joint) model
-      if (is.null(joint@SampleStats@NACOV[[1]])) {
-        gamma <- lavTech(joint, "gamma")
-      } else {
+      if (!is.null(joint@SampleStats@NACOV[[1]])) {
         gamma <- joint@SampleStats@NACOV
+      } else {
+        # default: the (unbiased) ADF Gamma. This is unavailable for the
+        # fixed.x / conditional.x setting (lav_samp_gamma() with unbiased =
+        # TRUE stops), so fall back to the *biased* ADF Gamma there
+        # (gamma.unbiased = FALSE) -- exactly the Gamma that simultaneous
+        # sem(test = "satorra.bentler") uses for such models. Asymptotically
+        # equivalent; the simple (no-x) cases keep the unbiased Gamma so their
+        # values are unchanged.
+        gamma <- tryCatch(lavTech(joint, "gamma"),
+                          error = function(e) NULL)
+        if (is.null(gamma)) {
+          opts <- joint@Options
+          opts$gamma.unbiased <- FALSE
+          gamma <- lav_object_gamma(
+            lavdata        = joint@Data,
+            lavoptions     = opts,
+            lavsamplestats = joint@SampleStats,
+            lavh1          = joint@h1,
+            lavimplied     = joint@implied,
+            model_based    = FALSE
+          )
+        }
       }
       delta <- lavTech(joint, "Delta")
       wls_v <- lavTech(joint, "WLS.V")
@@ -958,14 +978,16 @@ lav_sam_global_test <- function(joint = NULL, step1 = NULL, step2 = NULL,
   )
 
   if (inherits(out, "try-error")) {
-    # the Yuan-Chan correction reuses the same step-1 jacobian (P) and observed
-    # Gamma as the robust SEs, so it shares their current limitations (it is not
-    # available for, eg, models with equality constraints, exogenous covariates,
-    # or conditional.x = TRUE). Fall back to the unscaled test, with a note.
+    # the Yuan-Chan correction reuses the same step-1 jacobian (P) as the robust
+    # SEs, so it shares their current limitations: it is not available for models
+    # with within-block equality constraints or conditional.x = TRUE (the P-row
+    # alignment then fails). Exogenous covariates with the default fixed.x = TRUE
+    # ARE supported (the biased ADF Gamma is used). Fall back to the unscaled
+    # test, with a note.
     lav_msg_warn(gettext(
       "the Yuan & Chan (2002) scaled test statistic (test = \"yuan.chan\") is
-       not available for this model (eg models with equality constraints,
-       exogenous covariates, or conditional.x); the standard (unscaled) test is
+       not available for this model (eg models with within-block equality
+       constraints or conditional.x = TRUE); the standard (unscaled) test is
        reported instead."))
     return(fallback) # fall back to the unscaled standard test
   }
