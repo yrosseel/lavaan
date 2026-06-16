@@ -1,38 +1,41 @@
 # sam: fit a SEM in two (or more) steps: Structural After Measurement
 #
-# sam.method = "local"  : compute (corrected) VETA/EETA per block, and use
+# sam_method = "local"  : compute (corrected) VETA/EETA per block, and use
 #                         these summary statistics to fit the structural part
-# sam.method = "global" : fix the measurement parameters, and estimate the
+# sam_method = "global" : fix the measurement parameters, and estimate the
 #                         structural parameters in the full (joint) model
-# sam.method = "fsr"    : naive (uncorrected) factor score regression
-# sam.method = "cfsr"   : Croon-corrected factor score regression
+# sam_method = "fsr"    : naive (uncorrected) factor score regression
+# sam_method = "cfsr"   : Croon-corrected factor score regression
 
-sam <- function(model = NULL,                      # nolint start
+sam <- function(model = NULL,
                 data = NULL,
                 cmd = "sem",
                 se = "twostep",
-                mm.list = NULL,
-                mm.args = list(bounds = "wide.zerovar"),
-                struc.args = list(estimator = "ML"),
-                sam.method = "local", # or "global", or "fsr", or "cfsr"
+                mm_list = NULL,
+                mm_args = list(bounds = "wide.zerovar"),
+                struc_args = list(estimator = "ML"),
+                sam_method = "local", # or "global", or "fsr", or "cfsr"
                 ..., # common options
-                local.options = list(
+                local_options = list(
                   M.method = "ML", # mapping matrix
                   lambda.correction = TRUE,
                   alpha.correction = 0L, # 0 -> (N-1)
                   twolevel.method = "h1"
                 ),
                 # h1, anova, mean
-                global.options = list(), # not used for now
+                global_options = list(), # not used for now
                 bootstrap = list(R = 1000L, type = "ordinary",
                                       show.progress = FALSE),
                 output = "lavaan",
-                bootstrap.args = bootstrap) {        # nolint end
-  # "bootstrap" is the new way to specify arguments, replacing bootstrap.args
-  if (!missing(bootstrap.args)) {
+                bootstrap_args = bootstrap) {
+  dotdotdot <- list(...)
+  lav_adapt_func(environment(), dotdotdot, FALSE)
+
+  # "bootstrap" is the new way to specify arguments, replacing bootstrap_args
+  if (!missing(bootstrap_args)) {
     lav_msg_warn(gettext(
-      "'bootstrap.args' is deprecated; please use 'bootstrap' instead."))
-    bootstrap <- bootstrap.args
+      "'bootstrap_args' is deprecated; please use 'bootstrap' instead."))
+    bootstrap <- bootstrap_args
   }
 
   # check model= argument
@@ -41,16 +44,15 @@ sam <- function(model = NULL,                      # nolint start
     has_sam_object_flag <- TRUE
   }
 
-  # check sam.method
-  sam_method <- tolower(sam.method)
+  # check sam_method
+  sam_method <- tolower(sam_method)
   if (!sam_method %in% c("local", "global", "fsr", "cfsr")) {
     lav_msg_stop(gettextf(
-      "unknown option for sam.method: [%s]; available options are
-       local, global, fsr and cfsr.", sam.method))
+      "unknown option for sam_method: [%s]; available options are
+       local, global, fsr and cfsr.", sam_method))
   }
 
   # ------------- handling of warn/debug/verbose switches ----------
-  dotdotdot <- list(...)
   if (length(dotdotdot) > 0L) {
     if (!is.null(dotdotdot$debug)) {
      current_debug <- lav_debug()
@@ -115,7 +117,7 @@ sam <- function(model = NULL,                      # nolint start
     if (se %in% c("local", "local.nt")) {
       if (!sam_method %in% c("local", "fsr", "cfsr")) { # for now
         lav_msg_stop(gettext(
-          "local se only available if sam.method is local, fsr, or cfsr"))
+          "local se only available if sam_method is local, fsr, or cfsr"))
       }
     }
   }
@@ -136,33 +138,31 @@ sam <- function(model = NULL,                      # nolint start
     # restore options
     fit@Options <- fit@internal$sam.lavoptions
     # extract other arguments from FIT@internal, unless specified as arguments
-    if (missing(mm.list)) {
+    if (missing(mm_list)) {
       mm_list <- fit@internal$sam.mm.list
     } else {
-      mm_list <- mm.list
+      mm_list <- mm_list
     }
-    if (missing(mm.args)) {
+    if (missing(mm_args)) {
       mm_args <- fit@internal$sam.mm.args
     } else {
-      mm_args <- mm.args
+      mm_args <- mm_args
     }
-    if (missing(struc.args)) {
+    if (missing(struc_args)) {
       struc_args <- fit@internal$sam.struc.args
     } else {
-      struc_args <- struc.args
+      struc_args <- struc_args
     }
-    if (missing(sam.method)) {
+    if (missing(sam_method)) {
       sam_method <- fit@internal$sam.method
-    } # else: sam_method already holds the validated sam.method
-    if (missing(local.options)) {
+    } # else: sam_method already holds the validated sam_method
+    if (missing(local_options)) {
       local_options <- fit@internal$sam.local.options
     } else {
-      local_options <- local.options
+      local_options <- local_options
     }
-    if (missing(global.options)) {
+    if (missing(global_options)) {
       global_options <- fit@internal$sam.global.options
-    } else {
-      global_options <- global.options
     }
     if (missing(se)) {
       se <- fit@Options$se
@@ -175,11 +175,6 @@ sam <- function(model = NULL,                      # nolint start
     # remove @internal slot
     fit@internal <- list()
   } else {
-    mm_list <- mm.list
-    mm_args <- mm.args
-    struc_args <- struc.args
-    local_options <- local.options
-    global_options <- global.options
     fit <- lav_sam_step0(
       cmd = cmd, model = model, data = data, se = se,
       sam_method = sam_method, dotdotdot = dotdotdot
@@ -226,7 +221,7 @@ sam <- function(model = NULL,                      # nolint start
 
   lavoptions <- lavInspect(fit, "options")
   if (lav_verbose()) {
-    cat("This is sam using sam.method = ", sam_method, ".\n", sep = "")
+    cat("This is sam using sam_method = ", sam_method, ".\n", sep = "")
   }
 
   ##############################################

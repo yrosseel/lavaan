@@ -2,12 +2,12 @@
 # this function draws the bootstrap samples, and estimates the
 # free parameters for each bootstrap sample
 #
-# return COEF matrix of size R x npar (R = number of bootstrap samples)
+# return COEF matrix of size r x npar (r = number of bootstrap samples)
 #
 # Ed. 9 mar 2012
 #
 # Notes: - faulty runs are simply ignored (with a warning)
-#        - default R=1000
+#        - default r=1000
 #
 # Updates: - now we have a separate @Data slot, we only need to transform once
 #            for the bollen.stine bootstrap (13 dec 2011)
@@ -17,29 +17,31 @@
 # Question: if fixed.x=TRUE, should we not keep X fixed, and bootstrap Y
 #           only, conditional on X?? How to implement the conditional part?
 
-# YR 27 Aug 2022: - add keep.idx argument
+# YR 27 Aug 2022: - add keep_idx argument
 #                 - always return 'full' set of bootstrap results, including
 #                   failed runs (as NAs)
 #                 - idx nonadmissible/error solutions as an attribute
-#                 - thanks to keep.idx, it is easy to replicate/investigate
+#                 - thanks to keep_idx, it is easy to replicate/investigate
 #                   these cases if needed
 
 # YR 10 Nov 2024: - detect sam object
 
-lavBootstrap <- function(object,                                   # nolint start
-                            R = 1000L,
+lavBootstrap <- function(object,                                   # nolint
+                            r = 1000L,
                             type = "ordinary",
                             verbose = FALSE,
-                            FUN = "coef",
+                            fun = "coef",
                             # return.boot = FALSE, # no use, as boot stores
                             #                      # sample indices differently
-                            keep.idx = FALSE,
+                            keep_idx = FALSE,
                             parallel = c("no", "multicore", "snow"),
                             ncpus = max(1L, parallel::detectCores() - 2L),
                             cl = NULL,
                             iseed = NULL,
-                            h0.rmsea = NULL,
-                            ...) {                                 # nolint end
+                            h0_rmsea = NULL,
+                            ...) {
+  dotdotdot <- list(...)
+  lav_adapt_func(environment(), dotdotdot, FALSE)
 
   # check object
   object <- lav_object_check_version(object)
@@ -87,21 +89,11 @@ lavBootstrap <- function(object,                                   # nolint star
     iseed = iseed
   )
 
-  out <- lav_bootstrap_internal(
-    object = object,
-    lavdata = NULL,
-    lavmodel = NULL,
-    lavsamplestats = NULL,
-    lavoptions = lavoptions,
-    lavpartable = NULL,
-    r = R,
-    show_progress = verbose,
-    type = type_1,
-    fun = FUN,
-    keep_idx = keep.idx,
-    h0_rmsea = h0.rmsea,
-    ...
-  )
+  tocall <- c(list(as.name("lav_bootstrap_internal")),
+    list(object = object, lavoptions = lavoptions, r = r, 
+    show_progress = verbose, type = type_1, fun = fun, 
+    keep_idx = keep_idx, h0_rmsea = h0_rmsea), dotdotdot)
+  out <- eval(as.call(tocall))
 
   # new in 0.6-12: always warn for failed and nonadmissible runs
   nfailed <- length(attr(out, "error.idx")) # zero if NULL
@@ -118,7 +110,6 @@ lavBootstrap <- function(object,                                   # nolint star
 
   out
 }
-lavBootstrap <- lavBootstrap  # synonym                                  #nolint
 
 # we need an internal version to be called from VCOV and lav_model_test
 # when there is no lavaan object yet!
@@ -280,7 +271,7 @@ lav_bootstrap_internal <- function(object = NULL,
       }
       # if search fails to converge in 50 iterations
       lav_msg_warn(gettext("yuan bootstrap search for `a` did not converge.
-                           h0.rmsea may be too large."))
+                           h0_rmsea may be too large."))
       a0
     }
 
@@ -649,7 +640,7 @@ lav_bootstrap_internal <- function(object = NULL,
   #                     }
   #        attr(t.star, "seed") <- NULL
   #        attr(t.star, "nonadmissible") <- NULL
-  #        out <- list(t0 = t0, t = t.star, R = RR,
+  #        out <- list(t0 = t0, t = t.star, r = RR,
   #                    data = lavInspect(object, "data"),
   #                    seed = iseed, statistic = statistic.,
   #                    sim = sim, call = mc)
@@ -676,7 +667,7 @@ lav_bootstrap_internal <- function(object = NULL,
 # per group
 # (originally needed for BCa confidence intervals)
 #
-# rows are the (R) bootstrap runs
+# rows are the (r) bootstrap runs
 # columns are the (N) observations
 #
 # simple version: no strata, no weights

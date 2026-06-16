@@ -5,22 +5,20 @@
 \description{Bootstrap the LRT, or any other statistic (or vector
 of statistics) you can extract from a fitted lavaan object.}
 \usage{
-lavBootstrap(object, R = 1000L, type = "ordinary", verbose = FALSE, 
-                FUN = "coef", keep.idx = FALSE,
+lavBootstrap(object, r = 1000L, type = "ordinary", verbose = FALSE, 
+                fun = "coef", keep_idx = FALSE,
                 parallel = c("no", "multicore", "snow"),
                 ncpus =  max(1L, parallel::detectCores() - 2L), 
-                cl = NULL, iseed = NULL, h0.rmsea = NULL, ...)
-bootstrapLavaan(object, R = 1000L, type = "ordinary", verbose = FALSE, 
-                FUN = "coef", keep.idx = FALSE,
+                cl = NULL, iseed = NULL, h0_rmsea = NULL, ...)
+bootstrapLavaan(object, r = 1000L, type = "ordinary", verbose = FALSE, 
+                fun = "coef", keep_idx = FALSE,
                 parallel = c("no", "multicore", "snow"),
                 ncpus =  max(1L, parallel::detectCores() - 2L), 
-                cl = NULL, iseed = NULL, h0.rmsea = NULL, ...)
+                cl = NULL, iseed = NULL, h0_rmsea = NULL, ...)
 }
 \arguments{
 \item{object}{An object of class \code{\linkS4class{lavaan}}.}
-\item{h0}{An object of class \code{\linkS4class{lavaan}}. The restricted
-model.}
-\item{R}{Integer. The number of bootstrap draws.}
+\item{r}{Integer. The number of bootstrap draws.}
 \item{type}{If \code{"ordinary"} or \code{"nonparametric"}, the usual (naive)
 bootstrap method is used. If \code{"bollen.stine"}, the data is first
 transformed such that the null hypothesis holds exactly in the resampling
@@ -31,14 +29,14 @@ to be continuous. They will not work with ordinal data.  If
 \code{"parametric"}, the parametric bootstrap approach is used; currently, this
 is only valid for continuous data following a multivariate normal distribution.
 See references for more details.}
-\item{FUN}{A function which when applied to the \code{\linkS4class{lavaan}} 
+\item{fun}{A function which when applied to the \code{\linkS4class{lavaan}} 
 object returns a vector containing the statistic(s) of interest.
-The default is \code{FUN="coef"}, returning the estimated values of the
+The default is \code{fun="coef"}, returning the estimated values of the
 free parameters in the model.}
-\item{\dots}{Other named arguments for \code{FUN} which are passed
+\item{\dots}{Other named arguments for \code{fun} which are passed
     unchanged each time it is called.}
 \item{verbose}{If \code{TRUE}, show information for each bootstrap draw.}
-\item{keep.idx}{If \code{TRUE}, store the indices of each bootstrap run (i.e.,
+\item{keep_idx}{If \code{TRUE}, store the indices of each bootstrap run (i.e.,
 the observations that were used for this bootstrap run) as an attribute.}
 \item{parallel}{The type of parallel operation to be used (if any).  If
 missing, the default is \code{"no"}.  }
@@ -57,7 +55,7 @@ created for the duration of the \code{lavBootstrap} call.}
   automatically switches to \code{"L'Ecuyer-CMRG"}. When \code{iseed} is not 
   NULL, \code{.Random.seed} (if it exists) in the global environment is 
   left untouched.}
-\item{h0.rmsea}{Only used if \code{type="yuan"}. Allows one to do the Yuan
+\item{h0_rmsea}{Only used if \code{type="yuan"}. Allows one to do the Yuan
 bootstrap under the hypothesis that the population RMSEA equals a specified
 value.}
 }
@@ -66,9 +64,9 @@ Yuan's bootstrap. Improvements to Yuan's bootstrap were contributed
 by Hao Wu and Chuchu Cheng. The handling of iseed was contributed by
 Shu Fai Cheung.}
 \value{For \code{lavBootstrap()}, the bootstrap distribution of the value(s)
-returned by \code{FUN}, when the object can be simplified to a vector.
+returned by \code{fun}, when the object can be simplified to a vector.
 }
-\details{The FUN function can return either a scalar or a numeric vector.
+\details{The fun function can return either a scalar or a numeric vector.
 This function can be an existing function (for example \code{coef}) or
 can be a custom defined function. For example:
 \preformatted{
@@ -81,7 +79,7 @@ myFUN <- function(x) {
 If \code{parallel="snow"}, it is imperative that the \code{require(lavaan)}
 is included in the custom function.}
 \references{
-Bollen, K. and Stine, R. (1992) Bootstrapping Goodness of Fit Measures in
+Bollen, K. and Stine, r. (1992) Bootstrapping Goodness of Fit Measures in
         Structural Equation Models. Sociological Methods and Research, 21,
         205--229.
 
@@ -104,8 +102,8 @@ T.orig <- fitMeasures(fit, "chisq")
 # bootstrap to get bootstrap test statistics
 # we only generate 10 bootstrap samples in this example; in practice
 # you may wish to use a much higher number
-T.boot <- lavBootstrap(fit, R=10, type="bollen.stine",
-                          FUN=fitMeasures, fit.measures="chisq")
+T.boot <- lavBootstrap(fit, r=10, type="bollen.stine",
+                          fun=fitMeasures, fit.measures="chisq")
 
 # compute a bootstrap based p-value
 pvalue.boot <- length(which(T.boot > T.orig))/length(T.boot)

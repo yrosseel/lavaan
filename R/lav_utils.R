@@ -476,10 +476,12 @@ lav_utils_wls_linearization <- function(delta = NULL, s = NULL,
   out
 }
 
+# ----------------------- lav_snake_case -------------------------------- #
 # function to transform names of variables to snake_case
 # this function is used mainly to rename function arguments given in a list
 #     where 'old' names are still accepted to avoid breaking other packages
-lav_snake_case <- function(old_names) {
+# if input is a list, the names of the list are transformed.
+lav_snake_case <- function(old) {
   curval <- c("B", "C", "D", "E", "K", "W", "PI",
              "TAU", "DELTA", "NU", "LAMBDA", "eXo",
               "WMAT", "THETA", "ALPHA", "BETA", "GAMMA", "PSI",
@@ -488,6 +490,7 @@ lav_snake_case <- function(old_names) {
              "mm_tau", "mm_delta", "mm_nu", "mm_lambda", "exo",
              "mm_wmat", "mm_theta", "mm_alpha", "mm_beta", "mm_gamma", "mm_psi",
              "s_min_theta")
+  if (is.list(old)) old_names <- names(old) else old_names <- old
   # transform dot.case and CamelCase to snake_case
   varnames_new <- tolower(chartr(".", "_",
                    gsub("([a-z])([A-Z])", "\\1_\\2", old_names)))
@@ -505,17 +508,24 @@ lav_snake_case <- function(old_names) {
     lav_msg_stop(gettextf("At least one snake_cased name (%s) is duplicated!",
                    tocheck[doubles]))
   }
-  varnames_new
+  if (is.list(old)) {
+    names(old) <- varnames_new
+    old
+  } else {
+    varnames_new
+  }
 }
-
+# ------------------------- lav_adapt_func --------------------------------- #
 # function to put arguments with old names (in ...) in the new named argument
 # the function to adapt must have a ... argument and call this function in the
 # beginning as follows :
 #   dotdotdot <- list(...)
-#   lav_adapt_func(environment(), dotdotdot, TRUE/FALSE)
-# The argument include_ddd if set to TRUE transforms the names of dotdotdot also.
-lav_adapt_func <- function(envir, dotdotdot, include_ddd = TRUE) {
-  lijst <- ls(pos=envir)
+#   lav_adapt_func(environment(), dotdotdot, TRUE/FALSE/NULL)
+# The argument snake_ddd if set to TRUE transforms the names of dotdotdot also.
+# If snake_ddd is set to NULL an error "unused argument(s)" is generated when
+# there are items left in dotdotdot.
+lav_adapt_func <- function(envir, dotdotdot, snake_ddd = TRUE) {
+  lijst <- ls(pos = envir)
   if (length(dotdotdot) > 0L) {
     dddnames <- names(dotdotdot)
     dddnewnames <- lav_snake_case(dddnames)
@@ -524,9 +534,17 @@ lav_adapt_func <- function(envir, dotdotdot, include_ddd = TRUE) {
       assign(dddnewnames[j], dotdotdot[[dddnames[j]]], envir)
       dotdotdot[[dddnames[j]]] <- NULL
     }
-    if (include_ddd && length(dotdotdot) > 0L) {
-      names(dotdotdot) <- lav_snake_case(names(dotdotdot))
+    if (length(dotdotdot) > 0L) {
+      if (is.null(snake_ddd)) {
+        lav_msg_stop(ngettext(length(dotdotdot),
+                     "unused argument:", "unused arguments:"),
+                     lav_msg_view(names(dotdotdot), "none", FALSE)
+        )
+      }
+      if (snake_ddd && length(dotdotdot) > 0L) {
+        names(dotdotdot) <- lav_snake_case(names(dotdotdot))
+      }
     }
     assign("dotdotdot", dotdotdot, envir)
-  }
+    }
 }

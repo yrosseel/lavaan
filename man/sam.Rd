@@ -7,15 +7,15 @@ Fit a Structural Equation Model (SEM) using the Structural After Measurement
 (SAM) approach.}
 \usage{
 sam(model = NULL, data = NULL, cmd = "sem", se = "twostep", 
-    mm.list = NULL, mm.args = list(bounds = "wide.zerovar"), 
-    struc.args = list(estimator = "ML"), 
-    sam.method = "local", ..., 
-    local.options = list(M.method = "ML", lambda.correction = TRUE, 
+    mm_list = NULL, mm_args = list(bounds = "wide.zerovar"), 
+    struc_args = list(estimator = "ML"), 
+    sam_method = "local", ..., 
+    local_options = list(M.method = "ML", lambda.correction = TRUE, 
                          alpha.correction = 0L, twolevel.method = "h1"), 
-    global.options = list(), 
+    global_options = list(), 
     bootstrap = list(R = 1000L, type = "ordinary", show.progress = FALSE),
     output = "lavaan",
-    bootstrap.args = bootstrap
+    bootstrap_args = bootstrap
 )
 }
 \arguments{
@@ -35,23 +35,23 @@ sam(model = NULL, data = NULL, cmd = "sem", se = "twostep",
     stage into account. If \code{"standard"}, this uncertainty is ignored,
     and we treat the measurement information as known. If \code{"none"},
     no standard errors are computed.}
-\item{mm.list}{List. Define the measurement blocks. 
+\item{mm_list}{List. Define the measurement blocks. 
      Each element of the list should
      be either a single name of a latent variable, or a vector of latent
      variable names.  If omitted, a separate measurement
      block is used for each latent variable.}
-\item{mm.args}{List. Optional arguments for the fitting
+\item{mm_args}{List. Optional arguments for the fitting
     function(s) of the measurement block(s) only. See \code{\link{lavOptions}} 
     for a complete list.}
-\item{struc.args}{List. Optional arguments for the fitting function of the
+\item{struc_args}{List. Optional arguments for the fitting function of the
     structural part only. See \code{\link{lavOptions}} for a complete list.}
-\item{sam.method}{Character. Can be set to \code{"local"}, \code{"global"}
+\item{sam_method}{Character. Can be set to \code{"local"}, \code{"global"}
     or \code{"fsr"}. In the latter case, the results are the same as if
     Bartlett factor scores were used, without any bias correction.}
 \item{...}{Many more options can be specified, using 'name = value'.
     See \code{\link{lavOptions}} for a complete list. These options affect
     both the measurement blocks and the structural part.}
-\item{local.options}{List. Options specific for local SAM method (these
+\item{local_options}{List. Options specific for local SAM method (these
      options may change over time). If \code{lambda.correction = TRUE},
      we ensure that the variance matrix of the latent variables (VETA)
      is positive definite. The \code{alpha.correction} option must be an
@@ -61,7 +61,7 @@ sam(model = NULL, data = NULL, cmd = "sem", se = "twostep",
      the bias-correction is eliminated, and the results are the same as
      naive FSR. Typical values are 0, P+1 (where P is the number of
      predictors in the structural model), P+5, and (N-1)/2.}
-\item{global.options}{List. Options specific for global SAM method (not
+\item{global_options}{List. Options specific for global SAM method (not
      used for now).}
 \item{bootstrap}{List. Only used when \code{se = "bootstrap"}. Typical
      elements of this list are \code{R}: the number of bootstrap samples, and
@@ -70,7 +70,7 @@ sam(model = NULL, data = NULL, cmd = "sem", se = "twostep",
 \item{output}{Character. If \code{"lavaan"}, a lavaan object is returned. If
     \code{"list"}, a list is returned with all the ingredients from the 
     different stages.}
-\item{bootstrap.args}{List. Deprecated, use \code{bootstrap} instead.}
+\item{bootstrap_args}{List. Deprecated, use \code{bootstrap} instead.}
 }
 \details{
     The \code{sam} function automates the SAM approach by first

@@ -185,7 +185,7 @@ lav_options_set <- function(opt = NULL) {
   }
 
   if (is.list(opt$rotation.args)) {
-    names(opt$rotation.args) <- lav_snake_case(names(opt$rotation.args))
+    opt$rotation.args <- lav_snake_case(opt$rotation.args)
   }
 
   # check options with definitions ####
@@ -1101,7 +1101,7 @@ lav_options_set <- function(opt = NULL) {
   }
 
   # transform names rotation.args to snake_case
-  names(opt$rotation.args) <- lav_snake_case(names(opt$rotation.args))
+  opt$rotation.args <- lav_snake_case(opt$rotation.args)
 
   # force orthogonal for some rotation algorithms
   if (any(opt$rotation == c(

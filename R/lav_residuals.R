@@ -411,7 +411,7 @@ lav_residuals <- function(object, type = "raw", h1 = TRUE, custom_rmr = NULL,
 
   # add summary statistics (rms, mabs)
   if (summary) {
-    names(summary_options_1) <- lav_snake_case(names(summary_options_1))
+    summary_options_1 <- lav_snake_case(summary_options_1)
     args <- c(
       list(
         object = object, type = type, h1_acov = h1_acov,

@@ -9,31 +9,28 @@
 
 # YR 20 Sept 2022 - first version
 
-efa <- function(data = NULL,              # nolint start
+efa <- function(data = NULL,
                 nfactors = 1L,
                 sample_cov = NULL,
                 sample_nobs = NULL,
                 rotation = "geomin",
-                rotation.args = list(),
-                ov.names = NULL,
+                rotation_args = list(),
+                ov_names = NULL,
                 bounds = "pos.var",
                 ...,
-                output = "efa") {        # nolint end
+                output = "efa") {
+  dotdotdot <- list(...)
+  lav_adapt_func(environment(), dotdotdot, FALSE)
   # rotation.args deprecation handling
-  if (!missing(rotation.args)) {
-    lav_deprecated_args("rotation", "rotation.args")
+  if (!missing(rotation_args)) {
+    lav_deprecated_args("rotation", "rotation_args")
   }
-  rotation_args <- rotation.args
-  ov_names <- ov.names
 
   if (is.list(rotation)) {
     rotation_args <- modifyList(list(), rotation)
-    names(rotation_args) <- lav_snake_case(names(rotation_args))
+    rotation_args <- lav_snake_case(rotation_args)
     rotation <- rotation[[1L]]
   }
-
-  # handle dotdotdot
-  dotdotdot <- list(...)
 
   # twolevel?
   twolevel_flag <- !is.null(dotdotdot$cluster)

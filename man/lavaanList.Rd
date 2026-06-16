@@ -6,22 +6,22 @@
 \description{
 Fit the same latent variable model to a (potentially large) number of datasets.}
 \usage{
-lavaanList(model = NULL, dataList = NULL, dataFunction = NULL, 
-    dataFunction.args = list(), ndat = length(dataList), cmd = "lavaan", 
-    ..., store.slots = c("partable"), FUN = NULL, show.progress = FALSE,
-    store.failed = FALSE, parallel = c("no", "multicore", "snow"), 
+lavaanList(model = NULL, data_list = NULL, data_function = NULL, 
+    data_function_args = list(), ndat = length(data_list), cmd = "lavaan", 
+    ..., store_slots = c("partable"), fun = NULL, show_progress = FALSE,
+    store_failed = FALSE, parallel = c("no", "multicore", "snow"), 
     ncpus = max(1L, parallel::detectCores() - 1L), cl = NULL, iseed = NULL)
 
-semList(model = NULL, dataList = NULL, dataFunction = NULL,
-    dataFunction.args = list(), ndat = length(dataList),
-    ..., store.slots = c("partable"), FUN = NULL, show.progress = FALSE,
-    store.failed = FALSE, parallel = c("no", "multicore", "snow"), 
+semList(model = NULL, data_list = NULL, data_function = NULL,
+    data_function_args = list(), ndat = length(data_list),
+    ..., store_slots = c("partable"), fun = NULL, show_progress = FALSE,
+    store_failed = FALSE, parallel = c("no", "multicore", "snow"), 
     ncpus = max(1L, parallel::detectCores() - 1L), cl = NULL, iseed = NULL)
 
-cfaList(model = NULL, dataList = NULL, dataFunction = NULL,
-    dataFunction.args = list(), ndat = length(dataList),
-    ..., store.slots = c("partable"), FUN = NULL, show.progress = FALSE,
-    store.failed = FALSE, parallel = c("no", "multicore", "snow"), 
+cfaList(model = NULL, data_list = NULL, data_function = NULL,
+    data_function_args = list(), ndat = length(data_list),
+    ..., store_slots = c("partable"), fun = NULL, show_progress = FALSE,
+    store_failed = FALSE, parallel = c("no", "multicore", "snow"), 
     ncpus = max(1L, parallel::detectCores() - 1L), cl = NULL, iseed = NULL)
 }
 \arguments{
@@ -30,27 +30,27 @@ cfaList(model = NULL, dataList = NULL, dataFunction = NULL,
     \code{\link{model.syntax}} for more information. Alternatively, a
     parameter table (e.g., the output of the \code{lavParTable()} function) is also
     accepted.}
-\item{dataList}{List. Each element contains a full data frame containing
+\item{data_list}{List. Each element contains a full data frame containing
       the observed variables used in the model.}
-\item{dataFunction}{Function. A function that generates a full data frame
+\item{data_function}{Function. A function that generates a full data frame
       containing the observed variables used in the model. It can also be
       a matrix, if the columns are named.}
-\item{dataFunction.args}{List. Optional list of arguments that are passed
-    to the \code{dataFunction} function.}
+\item{data_function_args}{List. Optional list of arguments that are passed
+    to the \code{data_function} function.}
 \item{ndat}{Integer. The number of datasets that should be generated using
     the \code{dataFunction} function.}
 \item{cmd}{Character. The command used to run the SEM models. The possible
     choices are \code{"sem"}, \code{"cfa"} or \code{"lavaan"}, which determine
     how the default options are handled.}
 \item{\dots}{Other named arguments for the \code{lavaan} function.}
-\item{store.slots}{Character vector. Which slots (from a lavaan object) 
+\item{store_slots}{Character vector. Which slots (from a lavaan object) 
     should be stored for each dataset? The possible choices are
     \code{"timing"}, \code{"partable"}, \code{"data"}, \code{"samplestats"},
     \code{"vcov"}, \code{"test"}, \code{"optim"}, \code{"h1"}, \code{"loglik"},
     or \code{"implied"}. Finally, \code{"all"} selects all slots.}
-\item{FUN}{Function. A function which when applied to the
+\item{fun}{Function. A function which when applied to the
     \code{\linkS4class{lavaan}} object returns the information of interest.}
-\item{store.failed}{Logical. If \code{TRUE}, write (to tempdir()) the dataset
+\item{store_failed}{Logical. If \code{TRUE}, write (to tempdir()) the dataset
      and (if available) the fitted object when the estimation for a particular
      dataset failed for some reason. This allows post hoc inspection of the problem.}
 \item{parallel}{The type of parallel operation to be used (if any). If
@@ -65,7 +65,7 @@ created for the duration of the \code{lavaanList} call.}
   RNGkind() element is \code{"L'Ecuyer-CMRG"}. You can check this by
   typing \code{RNGkind()} in the console. You can set it by typing
   \code{RNGkind("L'Ecuyer-CMRG")}, before the lavaanList functions are called.}
-\item{show.progress}{If \code{TRUE}, show information for each dataset.}
+\item{show_progress}{If \code{TRUE}, show information for each dataset.}
 }
 \value{
   An object of class \code{\linkS4class{lavaanList}}, for which several methods
@@ -84,8 +84,8 @@ HS.model <- ' visual  =~ x1 + x2 + x3
 generateData <- function() lavSimulateData(HS.model, sample_nobs = 100)
 
 set.seed(1234)
-fit <- semList(HS.model, dataFunction = generateData, ndat = 5,
-               store.slots = "partable")
+fit <- semList(HS.model, data_function = generateData, ndat = 5,
+               store_slots = "partable")
 
 # show parameter estimates, per dataset
 coef(fit)
