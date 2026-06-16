@@ -90,8 +90,8 @@ lavBootstrap <- function(object,                                   # nolint
   )
 
   tocall <- c(list(as.name("lav_bootstrap_internal")),
-    list(object = object, lavoptions = lavoptions, r = r, 
-    show_progress = verbose, type = type_1, fun = fun, 
+    list(object = object, lavoptions = lavoptions, r = r,
+    show_progress = verbose, type = type_1, fun = fun,
     keep_idx = keep_idx, h0_rmsea = h0_rmsea), dotdotdot)
   out <- eval(as.call(tocall))
 

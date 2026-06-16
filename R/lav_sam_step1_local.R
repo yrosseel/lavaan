@@ -1195,7 +1195,19 @@ lav_sam_step1_local_jac_mg <- function(step1 = NULL, fit = NULL,
     } else {
       mm_h1_expected <- lavTech(fit_mm_block, "h1.information.expected")
       mm_delta       <- lavTech(fit_mm_block, "Delta")
-      mm_inv_observed <- lavTech(fit_mm_block, "inverted.information.observed")
+      # honor the 'information' option, consistently with the single-group
+      # path: for twostep.robust (p_only) the influence is the Yuan & Chan
+      # (2002) asymptotic form (Delta' W Delta)^-1 Delta' W, which uses the
+      # EXPECTED information when information = "expected" (the default). The
+      # two coincide for a just-identified measurement block. (se = "local"
+      # keeps the observed information.)
+      if (p_only && fit@Options$information[1] == "expected") {
+        mm_inv_observed <-
+          lavTech(fit_mm_block, "inverted.information.expected")
+      } else {
+        mm_inv_observed <-
+          lavTech(fit_mm_block, "inverted.information.observed")
+      }
     }
 
     # rows of mm_jac that we keep (the free params present in fit@ParTable),
