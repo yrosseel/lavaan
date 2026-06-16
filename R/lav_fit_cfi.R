@@ -262,7 +262,7 @@ lav_fit_cfi_lavobject <- function(lavobject = NULL, fit_measures = "cfi",
   if (robust && scaled_flag &&
     scaled_test %in% c(
       "satorra.bentler", "yuan.bentler.mplus",
-      "yuan.bentler", "scaled.shifted"
+      "yuan.bentler", "yuan.chan", "scaled.shifted"
     )) {
     robust_flag <- TRUE
   }

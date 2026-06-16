@@ -253,14 +253,14 @@ lav_fit <- function(object, fit_measures = "all",
       scaled_test != "none" &&
       any(test_names %in% c(
         "satorra.bentler",
-        "yuan.bentler", "yuan.bentler.mplus",
+        "yuan.bentler", "yuan.bentler.mplus", "yuan.chan",
         "mean.var.adjusted", "scaled.shifted"
       ))) {
     scaled_flag <- TRUE
     if (scaled_test %in% c("standard", "default")) {
       tmp_idx <- which(test_names %in% c(
         "satorra.bentler",
-        "yuan.bentler", "yuan.bentler.mplus",
+        "yuan.bentler", "yuan.bentler.mplus", "yuan.chan",
         "mean.var.adjusted", "scaled.shifted"
       ))
       scaled_test <- test_names[tmp_idx[1]]

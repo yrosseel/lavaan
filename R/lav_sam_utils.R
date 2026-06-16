@@ -683,7 +683,14 @@ lav_sam_step3_joint <- function(fit = NULL, pt_1 = NULL, sam_method = "local") {
     lavoptions_joint$test <- "none"
     lavoptions_joint$estimator <- "none"
   } else {
-    lavoptions_joint$test <- lavoptions$test
+    # global: the joint computes the core (base) test(s); "yuan.chan" is not a
+    # core lavaan test (it is added afterwards by lav_sam_global_test()), so we
+    # strip it here and make sure the unscaled "standard" base is present.
+    joint_test <- lavoptions$test[lavoptions$test != "yuan.chan"]
+    if (length(joint_test) == 0L || !"standard" %in% joint_test) {
+      joint_test <- unique(c("standard", joint_test))
+    }
+    lavoptions_joint$test <- joint_test
     lavoptions_joint$estimator <- lavoptions$estimator
   }
 
@@ -799,6 +806,205 @@ lav_sam_struc_fit <- function(fit_pa = NULL, step1 = NULL) {
     return(fallback())
   }
   out
+}
+
+# Yuan & Chan (2002) rescaled GLOBAL test statistic for sam.method = "global".
+#
+# The 'joint' object already carries the base statistic T = n F[S, Sigma(theta,
+# gamma.hat)] -- the discrepancy of the FULL (observed-variable) model evaluated
+# at the plugged-in SAM estimates -- and the correct reference df = p* - q_total
+# (all measurement AND structural parameters counted) in joint@test[[1]]. What is
+# missing is the scaling correction tau.hat = tr(Q Gamma)/(p* - q) of eq. (22),
+# which accounts for (a) the non-normality of the data (via the ADF Gamma) and
+# (b) the fact that the measurement parameters gamma were estimated SEPARATELY in
+# step 1 (segregated estimation), not jointly with theta.
+#
+# Key simplification that lets us reuse lav_test_sb() verbatim. With
+#   H.theta = sigma.dot.theta (sigma.dot.theta' W sigma.dot.theta)^-1
+#                             sigma.dot.theta' W   (the W-projector onto the
+#                                                   structural columns of Delta),
+#   D       = I - sigma.dot.gamma P   (P = d gamma.hat / d stats, eq. 12a),
+# Yuan & Chan's U (eq. 19) gives  I - sigma.dot U = (I - H.theta) D, hence
+#   Q = (I - sigma.dot U)' W (I - sigma.dot U) = D' U.struc D ,
+# with U.struc = W - W Delta.theta (Delta.theta' W Delta.theta)^-1 Delta.theta' W
+# -- exactly the Satorra-Bentler residual-weight matrix, but built from the
+# STRUCTURAL columns of Delta only. By the cyclic trace property
+#   tr(Q Gamma) = tr( U.struc . (D Gamma D') ).
+# So we hand lav_test_sb():
+#   - delta   = Delta.theta              (structural columns of the full Delta)
+#   - e_inv   = (sum_g f_g Delta.theta_g' W_g Delta.theta_g)^-1
+#   - wls_v   = W                        (the estimator weight of the full model)
+#   - gamma_full = D Gamma D'            (the 'measurement-residualized' Gamma)
+#   - test_unscaled = the standard (unscaled) full-model test  (T and df)
+# and read off the satorra.bentler-scaled statistic, which IS eq. (22).
+#
+# P (the step-1 measurement influence) is the SAME jacobian already used by the
+# twostep.robust SEs (lav_sam_step1_local_jac(p_only = TRUE)). Multigroup support
+# (Case A block-diagonal, Case B cross-group) follows from the stacked assembly:
+# D and Gamma.tilde are built in the stacked statistics space, so the cross-group
+# coupling that across-group measurement constraints induce in P is carried
+# through automatically.
+#
+# Returns a list with two components, to be stored in the joint object:
+#   $test          -> joint@test          (standard + the YC-scaled test)
+#   $baseline.test -> joint@baseline$test (standard + a scaled baseline test)
+# The baseline (independence) model has no measurement model, so the Yuan-Chan
+# correction there reduces to the ordinary Satorra-Bentler scaling; we obtain it
+# by refitting the baseline with test = "satorra.bentler". Both scaled tests are
+# needed so that the robust/scaled fit measures (CFI, RMSEA) can be computed. On
+# any failure the original (unscaled) test list is returned unchanged.
+# 'test' is the internal SB-family base used to drive lav_test_sb (eq. 22 is the
+# satorra.bentler-type rescaling); the resulting entry is renamed to "yuan.chan"
+# (and given a Yuan-Chan label) in both the model and the baseline test lists.
+lav_sam_global_test <- function(joint = NULL, step1 = NULL, step2 = NULL,
+                                fit = NULL, test = "satorra.bentler") {
+  test_orig <- joint@test
+
+  # rename a satorra.bentler entry (and its $test field) to "yuan.chan"
+  rename_yc <- function(test_list) {
+    idx <- which(names(test_list) == "satorra.bentler")
+    if (length(idx) == 0L) {
+      return(test_list)
+    }
+    e <- test_list[[idx[1]]]
+    e$test  <- "yuan.chan"
+    e$label <- "Yuan-Chan (2002) correction"
+    names(test_list)[idx[1]] <- "yuan.chan"
+    test_list[[idx[1]]] <- e
+    test_list
+  }
+  fallback  <- list(test = test_orig, baseline.test = NULL)
+
+  # locate the standard (unscaled) full-model test = base statistic T
+  std_idx <- which(vapply(test_orig, function(x) x$test, character(1L)) ==
+                   "standard")
+  if (length(std_idx) == 0L) {
+    return(fallback) # no usable base statistic (eg test = "none")
+  }
+  std <- test_orig[[std_idx[1]]]
+  if (is.null(std$df) || anyNA(std$df) || std$df < 1L) {
+    return(fallback) # saturated full model: no global test
+  }
+
+  out <- try(
+    {
+      ngroups <- joint@Data@ngroups
+      ntot    <- joint@SampleStats@ntotal
+      fg      <- unlist(joint@SampleStats@nobs) / ntot
+      step1_free_idx <- step1$step1.free.idx
+      step2_free_idx <- step2$step2.free.idx
+
+      # ingredients of the full (joint) model
+      if (is.null(joint@SampleStats@NACOV[[1]])) {
+        gamma <- lavTech(joint, "gamma")
+      } else {
+        gamma <- joint@SampleStats@NACOV
+      }
+      delta <- lavTech(joint, "Delta")
+      wls_v <- lavTech(joint, "WLS.V")
+
+      # P = d(gamma.mm)/d(stats), reusing the twostep.robust jacobian; align its
+      # rows with step1.free.idx (P rows are in ascending free-parameter order)
+      p <- lav_sam_step1_local_jac(step1 = step1, fit = fit, p_only = TRUE)
+      p_row_idx <- match(step1_free_idx, attr(p, "free.idx"))
+      if (anyNA(p_row_idx)) {
+        lav_msg_stop(gettext(
+          "internal error: unable to align the step 1 jacobian (P) for the
+           global test statistic"))
+      }
+      p <- p[p_row_idx, , drop = FALSE]
+
+      # per group: structural and measurement columns of Delta, the weight W,
+      # and the SB-convention Gamma (Cov of sqrt(N) * per-group statistics)
+      delta_theta_list <- vector("list", ngroups)
+      delta_gamma_list <- vector("list", ngroups)
+      gamma_sb_list    <- vector("list", ngroups)
+      a_theta <- matrix(0, length(step2_free_idx), length(step2_free_idx))
+      for (g in seq_len(ngroups)) {
+        delta_theta_list[[g]] <- delta[[g]][, step2_free_idx, drop = FALSE]
+        delta_gamma_list[[g]] <- delta[[g]][, step1_free_idx, drop = FALSE]
+        gamma_sb_list[[g]]    <- gamma[[g]] / fg[g]
+        # structural information E.theta = sum_g f_g Delta.theta_g' W_g Delta.theta_g
+        wd <- lav_sam_wls_delta(wls_v[[g]], delta_theta_list[[g]])
+        a_theta <- a_theta + fg[g] * crossprod(delta_theta_list[[g]], wd)
+      }
+      e_theta_inv <- solve(a_theta)
+
+      # D (stacked) = I - Delta.gamma P ; Gamma.tilde = D Gamma D'
+      delta_gamma_all <- do.call(rbind, delta_gamma_list)
+      nstat_all <- nrow(delta_gamma_all)
+      d_mat <- diag(nstat_all) - delta_gamma_all %*% p
+      gamma_sb_all <- lav_mat_bdiag(gamma_sb_list)
+      gamma_tilde  <- d_mat %*% gamma_sb_all %*% t(d_mat)
+
+      # reuse lav_test_sb: structural-only Delta/E.inv/W + residualized Gamma
+      # (gamma_full forces the assembled 'original' path)
+      lav_test_sb(
+        lavmodel       = joint@Model,
+        lavsamplestats = joint@SampleStats,
+        lavoptions     = joint@Options,
+        lavimplied     = joint@implied,
+        lavdata        = joint@Data,
+        test_unscaled  = std,
+        e_inv          = e_theta_inv,
+        delta          = delta_theta_list,
+        wls_v          = wls_v,
+        m_gamma        = gamma, # ignored when gamma_full is set; avoids recompute
+        gamma_full     = gamma_tilde,
+        test           = test
+      )
+    },
+    silent = TRUE
+  )
+
+  if (inherits(out, "try-error")) {
+    # the Yuan-Chan correction reuses the same step-1 jacobian (P) and observed
+    # Gamma as the robust SEs, so it shares their current limitations (it is not
+    # available for, eg, models with equality constraints, exogenous covariates,
+    # or conditional.x = TRUE). Fall back to the unscaled test, with a note.
+    lav_msg_warn(gettext(
+      "the Yuan & Chan (2002) scaled test statistic (test = \"yuan.chan\") is
+       not available for this model (eg models with equality constraints,
+       exogenous covariates, or conditional.x); the standard (unscaled) test is
+       reported instead."))
+    return(fallback) # fall back to the unscaled standard test
+  }
+
+  # name the scaled entry "yuan.chan" (the SAM-global analogue of the
+  # simultaneous "satorra.bentler"); @test = list(standard, yuan.chan)
+  out <- rename_yc(out)
+
+  # baseline (independence) model: no measurement model -> the Yuan-Chan
+  # correction reduces to the ordinary Satorra-Bentler scaling. Refit the
+  # baseline with the matching scaled test so the robust CFI/RMSEA can be
+  # computed (and so fitMeasures()/summary() do not choke on a model that has a
+  # scaled test while its baseline does not).
+  baseline_test <- NULL
+  if (!is.null(joint@baseline$partable)) {
+    baseline_test <- try(
+      {
+        opts <- fit@Options
+        opts$se       <- "none"
+        opts$test     <- test
+        opts$baseline <- FALSE
+        opts$estimator <- joint@Model@estimator
+        fit_base <- lavaan::lavaan(
+          model             = joint@baseline$partable,
+          slot_data         = joint@Data,
+          slot_sample_stats = joint@SampleStats,
+          slot_options      = opts,
+          verbose           = FALSE
+        )
+        rename_yc(fit_base@test)
+      },
+      silent = TRUE
+    )
+    if (inherits(baseline_test, "try-error")) {
+      baseline_test <- NULL
+    }
+  }
+
+  list(test = out, baseline.test = baseline_test)
 }
 
 lav_sam_table <- function(joint = NULL, step1 = NULL, fit_pa = NULL,

@@ -982,6 +982,7 @@ lav_options_set <- function(opt = NULL) {
   wrong_idx <- which(!opt$test %in% c(
     "none", "standard", "satorra.bentler",
     "yuan.bentler", "yuan.bentler.mplus",
+    "yuan.chan", # SAM-only (sam.method = "global"); ignored elsewhere
     "mean.var.adjusted", "scaled.shifted",
     "browne.residual.adf", "browne.residual.nt",
     "browne.residual.nt.model",

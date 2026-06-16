@@ -75,7 +75,11 @@ lav_sam_step0 <- function(cmd = "sem", model = NULL, data = NULL,
 
   # test
   if (!is.null(dotdotdot$test)) {
-    fit@Options$test <- dotdotdot$test
+    fit@Options$test <- lav_test_rename(dotdotdot$test)
+  } else if (sam_method == "global") {
+    # global SAM: the Yuan & Chan (2002) rescaled GLOBAL statistic is the
+    # default robust test (the analogue of test = "satorra.bentler" in sem()).
+    fit@Options$test <- "yuan.chan"
   } else {
     fit@Options$test <- "standard"
   }

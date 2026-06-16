@@ -76,6 +76,11 @@ lav_sam_step1 <- function(cmd = "sem", mm_list = NULL, mm_args = list(),
 
   # adjust options for measurement models
   lavoptions_mm <- lavoptions
+  # "yuan.chan" is a SAM-global test for the JOINT model only; the measurement
+  # blocks use the ordinary (standard) test
+  if (any(lavoptions_mm$test == "yuan.chan")) {
+    lavoptions_mm$test <- "standard"
+  }
   lavoptions_mm$optim.bounds <- NULL
   if (lavoptions$se %in% c("none", "bootstrap")) {
     lavoptions_mm$se <- "none"

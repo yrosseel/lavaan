@@ -386,6 +386,29 @@ sam <- function(model = NULL,
   if (sam_method %in% c("local", "fsr", "cfsr")) {
     joint@optim <- step2$FIT.PA@optim
     joint@test <- step2$FIT.PA@test
+  } else {
+    # global SAM: if requested (the default for sam.method = "global"), augment
+    # the standard full-model test with the Yuan & Chan (2002) rescaled GLOBAL
+    # chi-square, which corrects the full-model fit statistic for the separate
+    # estimation of the measurement parameters in step 1 and for non-normality.
+    # @test then holds both "standard" and "yuan.chan", exactly as sem() holds
+    # "standard" and "satorra.bentler". See lav_sam_global_test().
+    if (any(fit@Options$test == "yuan.chan")) {
+      yc_test <- lav_sam_global_test(
+        joint = joint, step1 = step1, step2 = step2, fit = fit
+      )
+      joint@test <- yc_test$test
+      if (!is.null(yc_test$baseline.test)) {
+        joint@baseline$test <- yc_test$baseline.test
+      }
+    }
+    # the joint was fitted internally with "yuan.chan" stripped from its test
+    # option (lavaan's core cannot compute it). Report exactly the test(s) that
+    # ended up in @test, so @Options$test stays consistent with @test (as sem()
+    # does for "satorra.bentler"). If the Yuan-Chan test could not be computed
+    # (lav_sam_global_test() warned and fell back), this honestly reports just
+    # "standard" instead of misleadingly claiming "yuan.chan".
+    joint@Options$test <- unname(vapply(joint@test, `[[`, character(1L), "test"))
   }
   # fill in vcov/se information from step 1
   if (!lavoptions$se %in% c("none", "bootstrap")) {

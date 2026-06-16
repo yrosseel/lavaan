@@ -15,6 +15,11 @@ lav_sam_step2 <- function(step1 = NULL, fit = NULL,
 
   # adjust options
   lavoptions_pa <- lavoptions
+  # "yuan.chan" is a SAM-global test for the JOINT model, computed afterwards in
+  # lav_sam_global_test(); the structural fit itself uses the ordinary test
+  if (any(lavoptions_pa$test == "yuan.chan")) {
+    lavoptions_pa$test <- "standard"
+  }
   if (lavoptions_pa$se == "naive") {
     lavoptions_pa$se <- "standard"
   } else if (gamma_flag) {

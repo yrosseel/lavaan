@@ -140,6 +140,10 @@ lav_test_rename <- function(test, check = FALSE) {
     test[target_idx] <- "yuan.bentler.mplus"
   }
   if (length(target_idx <- which(test %in%
+    c("yuan.chan", "yuan-chan", "yuan_chan", "yuanchan", "yc"))) > 0L) {
+    test[target_idx] <- "yuan.chan"
+  }
+  if (length(target_idx <- which(test %in%
     c(
       "mean.var.adjusted", "mean-var-adjusted", "mv", "second.order",
       "satterthwaite", "mv.adjusted"
@@ -204,6 +208,7 @@ lav_test_rename <- function(test, check = FALSE) {
       "satorra.bentler",
       "yuan.bentler",
       "yuan.bentler.mplus",
+      "yuan.chan",
       "mean.adjusted",
       "mean.var.adjusted",
       "scaled.shifted",
@@ -253,6 +258,7 @@ lav_test_rename <- function(test, check = FALSE) {
     "satorra.bentler",
     "yuan.bentler",
     "yuan.bentler.mplus",
+    "yuan.chan",
     "mean.adjusted",
     "mean.var.adjusted",
     "scaled.shifted"
@@ -301,6 +307,20 @@ lav_model_test <- function(lavobject = NULL,
   }
 
   test <- lavoptions$test
+
+  # "yuan.chan" is a SAM-only (sam.method = "global") rescaled test statistic;
+  # it is computed in lav_sam_global_test(), not here. If it ever reaches the
+  # core test machinery (eg sem(test = "yuan.chan")), drop it with a note.
+  if (any(test == "yuan.chan")) {
+    lav_msg_warn(gettext(
+      "test = \"yuan.chan\" is only available for sam(sam.method = \"global\");
+       it will be ignored here."))
+    test <- test[test != "yuan.chan"]
+    if (length(test) == 0L) {
+      test <- "standard"
+    }
+    lavoptions$test <- test
+  }
 
   test_1 <- list()
 

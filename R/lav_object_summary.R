@@ -194,7 +194,22 @@ lav_object_summary <- function(object, header = TRUE,
 
       # 5b. global test statistics (for global only)
       if (object@internal$sam.method == "global") {
-        res$test <- object@test
+        test <- object@test
+        # attach the meta info that lav_test_print() needs (the SAM branch
+        # does not go through the SEM path that normally sets this)
+        if (is.null(attr(test, "info"))) {
+          lavdata <- object@Data
+          lavoptions <- object@Options
+          attr(test, "info") <-
+            list(
+              ngroups = lavdata@ngroups,
+              group.label = lavdata@group.label,
+              information = lavoptions$information,
+              h1.information = lavoptions$h1.information,
+              observed.information = lavoptions$observed.information
+            )
+        }
+        res$test <- test
       }
     } else {
       # SEM version

@@ -251,7 +251,7 @@ lav_fit_rmsea_lavobject <- function(lavobject = NULL, fit_measures = "rmsea",
   if (robust && scaled_flag &&
     scaled_test %in% c(
       "satorra.bentler", "yuan.bentler.mplus",
-      "yuan.bentler", "scaled.shifted"
+      "yuan.bentler", "yuan.chan", "scaled.shifted"
     )) {
     robust_flag <- TRUE
   }
