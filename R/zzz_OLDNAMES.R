@@ -97,16 +97,16 @@ simulateData <- function(
 }
 # standardize function names in lav_bootstrap.R / 9 December 2025
 bootstrapLavaan <- function(object,
-                            R = 1000L,
+                            r = 1000L,
                             type = "ordinary",
                             verbose = FALSE,
-                            FUN = "coef",
-                            keep.idx = FALSE,
+                            fun = "coef",
+                            keep_idx = FALSE,
                             parallel = c("no", "multicore", "snow"),
                             ncpus = max(1L, parallel::detectCores() - 2L),
                             cl = NULL,
                             iseed = NULL,
-                            h0.rmsea = NULL,
+                            h0_rmsea = NULL,
                             ...) {
     lav_deprecated("lavBootstrap", times = 0L) #--> for now no warning
     sc <- sys.call()

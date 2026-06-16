@@ -107,7 +107,7 @@ lav_step02_options <- function(slot_options = NULL,
 
     # modifyList
     if (is.list(dotdotdot$rotation.args)) {
-      names(dotdotdot$rotation.args) <- lav_snake_case(names(dotdotdot$rotation.args))
+      dotdotdot$rotation.args <- lav_snake_case(dotdotdot$rotation.args)
     }
     opt <- modifyList(opt, dotdotdot)
 
