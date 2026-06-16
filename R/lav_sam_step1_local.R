@@ -909,8 +909,22 @@ lav_sam_step1_local_jac <- function(step1 = NULL, fit = NULL, p_only = FALSE,
     } else {
       mm_h1_expected <- lavTech(fit_mm_block, "h1.information.expected")
       mm_delta       <- lavTech(fit_mm_block, "Delta")
+      # JACa = d(theta.mm)/d(stats) = invI . Delta' . A1 (A1 = saturated/h1
+      # weight). Which information to invert depends on the SE method, and the
+      # two choices are NOT interchangeable in principle (they coincide only for
+      # a just-identified measurement block, where s = sigma):
+      #   - se = "twostep.robust" (p_only): the Yuan & Chan (2002, eq. 12a)
+      #     ASYMPTOTIC sandwich, whose bread is the population A-matrix -> the
+      #     EXPECTED information (Delta'A1Delta)^-1, when information = "expected"
+      #     (the lavaan default; honor the option otherwise).
+      #   - se = "local"/"ij": the infinitesimal jackknife = an EMPIRICAL,
+      #     finite-sample sandwich. Its influence d(theta.mm_hat)/d(stats) is the
+      #     exact realized jacobian (implicit function theorem at the solution),
+      #     i.e. the OBSERVED information; this also keeps JACa coherent with the
+      #     observed/ADF Gamma it is later sandwiched with in Gamma.eta =
+      #     JAC . Gamma . JAC'. So local MUST use observed (do not "unify" this
+      #     with the twostep.robust choice).
       if (p_only && fit@Options$information[1] == "expected") {
-        # for twostep.robust
         mm_inv_observed <-
           lavTech(fit_mm_block, "inverted.information.expected")
       } else {
@@ -1195,12 +1209,11 @@ lav_sam_step1_local_jac_mg <- function(step1 = NULL, fit = NULL,
     } else {
       mm_h1_expected <- lavTech(fit_mm_block, "h1.information.expected")
       mm_delta       <- lavTech(fit_mm_block, "Delta")
-      # honor the 'information' option, consistently with the single-group
-      # path: for twostep.robust (p_only) the influence is the Yuan & Chan
-      # (2002) asymptotic form (Delta' W Delta)^-1 Delta' W, which uses the
-      # EXPECTED information when information = "expected" (the default). The
-      # two coincide for a just-identified measurement block. (se = "local"
-      # keeps the observed information.)
+      # same expected-vs-observed information choice as the single-group path
+      # (see lav_sam_step1_local_jac()): EXPECTED for se = "twostep.robust"
+      # (p_only; Yuan & Chan asymptotic sandwich, honoring the information
+      # option), OBSERVED for se = "local"/"ij" (infinitesimal jackknife =
+      # empirical sandwich, coherent with the observed/ADF Gamma).
       if (p_only && fit@Options$information[1] == "expected") {
         mm_inv_observed <-
           lavTech(fit_mm_block, "inverted.information.expected")
