@@ -2,9 +2,9 @@
 # TDJ: add "..." to make the generic actually generic, for lavaan.mi objects
 
 # S3 generic for S3 dispatch
-fitMeasures <- function(object, fit.measures = "all",           # nolint start
-                        baseline.model = NULL, h1.model = NULL,
-                        fm.args = list(
+fitMeasures <- function(object, fit_measures = "all",           # nolint start
+                        baseline_model = NULL, h1_model = NULL,
+                        fm_args = list(
                           standard.test = "default",
                           scaled.test = "default",
                           rmsea.ci.level = 0.90,
@@ -16,9 +16,9 @@ fitMeasures <- function(object, fit.measures = "all",           # nolint start
                         output = "vector", ...) {               # nolint end
   UseMethod("fitMeasures", object)
 }
-fitmeasures <- function(object, fit.measures = "all",           # nolint start
-                        baseline.model = NULL, h1.model = NULL,
-                        fm.args = list(
+fitmeasures <- function(object, fit_measures = "all",           # nolint start
+                        baseline_model = NULL, h1_model = NULL,
+                        fm_args = list(
                           standard.test = "default",
                           scaled.test = "default",
                           rmsea.ci.level = 0.90,
@@ -35,9 +35,9 @@ fitmeasures <- function(object, fit.measures = "all",           # nolint start
 # S4 generic for S4 dispatch
 setGeneric(
   "fitMeasures",                                              # nolint start
-  function(object, fit.measures = "all",
-           baseline.model = NULL, h1.model = NULL,
-           fm.args = list(
+  function(object, fit_measures = "all",
+           baseline_model = NULL, h1_model = NULL,
+           fm_args = list(
              standard.test = "default",
              scaled.test = "default",
              rmsea.ci.level = 0.90,
@@ -52,9 +52,9 @@ setGeneric(
 )
 setGeneric(
   "fitmeasures",
-  function(object, fit.measures = "all",                      # nolint start
-           baseline.model = NULL, h1.model = NULL,
-           fm.args = list(
+  function(object, fit_measures = "all",                      # nolint start
+           baseline_model = NULL, h1_model = NULL,
+           fm_args = list(
              standard.test = "default",
              scaled.test = "default",
              rmsea.ci.level = 0.90,
