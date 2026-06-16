@@ -385,6 +385,49 @@ sam <- function(model = NULL,
     return(step1)
   }
 
+  # If the structural model uses only a SUBSET of the variables in VETA, restrict
+  # VETA / EETA / Gamma.eta to that sub-block. A bi-factor's specific factors, for
+  # instance, are pure measurement factors with no structural role: they are part
+  # of VETA (and hence of Gamma.eta, the NACOV of vech(VETA)) but absent from the
+  # structural model, so the structural fit's Delta/WLS.V would not conform with
+  # the full Gamma.eta. For ordinary models every latent appears in the structural
+  # model, so 'keep' is everything and this is a no-op.
+  if (sam_method %in% c("local", "fsr", "cfsr") &&
+      !is.null(step1$VETA) && !is.null(colnames(step1$VETA[[1]])) &&
+      !isTRUE(step1$caseB)) {
+    keep <- tryCatch({
+      struc_pt <- lav_pt_subset_structural_model(step1$PT, add_exo_cov = TRUE,
+                    fixed_x = FALSE,
+                    conditional_x = fit@Options$conditional.x,
+                    free_fixed_var = TRUE,
+                    meanstructure = fit@Options$meanstructure)
+      struc_vars <- unique(c(struc_pt$lhs, struc_pt$rhs))
+      which(colnames(step1$VETA[[1]]) %in% struc_vars)
+    }, error = function(e) integer(0L))
+    p_full <- ncol(step1$VETA[[1]])
+    if (length(keep) > 0L && length(keep) < p_full) {
+      meanstr <- length(step1$EETA[[1]]) > 0L
+      # vech positions of the kept sub-block within the full vech(VETA)
+      pos <- matrix(0L, p_full, p_full)
+      pos[lower.tri(pos, diag = TRUE)] <- seq_len(p_full * (p_full + 1L) / 2L)
+      pos[upper.tri(pos)] <- t(pos)[upper.tri(pos)]
+      sub_pos <- pos[keep, keep, drop = FALSE]
+      vech_keep <- sub_pos[lower.tri(sub_pos, diag = TRUE)]
+      # Gamma.eta row order per group is c(EETA (means), vech(VETA))
+      ge_keep <- if (meanstr) c(keep, p_full + vech_keep) else vech_keep
+      for (g in seq_along(step1$VETA)) {
+        step1$VETA[[g]] <- step1$VETA[[g]][keep, keep, drop = FALSE]
+        if (meanstr) {
+          step1$EETA[[g]] <- step1$EETA[[g]][keep]
+        }
+        if (!is.null(step1$Gamma.eta) && !is.null(step1$Gamma.eta[[g]])) {
+          step1$Gamma.eta[[g]] <-
+            step1$Gamma.eta[[g]][ge_keep, ge_keep, drop = FALSE]
+        }
+      }
+    }
+  }
+
   ####################################
   # STEP 2: estimate structural part #
   ####################################

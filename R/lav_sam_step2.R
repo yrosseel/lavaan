@@ -174,14 +174,44 @@ lav_sam_step2 <- function(step1 = NULL, fit = NULL,
     } else {
       nacov <- NULL
     }
-    fit_pa <- lavaan::lavaan(pts,
-      sample_cov  = step1$VETA,
-      sample_mean = step1$EETA,
-      sample_nobs = nobs_1,
-      nacov       = nacov,
-      slot_options = lavoptions_pa,
-      verbose     = FALSE
+    fit_pa <- tryCatch(
+      lavaan::lavaan(pts,
+        sample_cov  = step1$VETA,
+        sample_mean = step1$EETA,
+        sample_nobs = nobs_1,
+        nacov       = nacov,
+        slot_options = lavoptions_pa,
+        verbose     = FALSE
+      ),
+      error = function(e) e
     )
+    if (inherits(fit_pa, "error")) {
+      # the corrected two-step STRUCTURAL test (Satorra-Bentler via Gamma.eta)
+      # could not be computed for this structural model (eg a bi-factor
+      # measurement model, whose VETA jacobian is not conformable here). For
+      # se = twostep / twostep.robust / naive the FINAL SEs do not depend on
+      # this FIT.PA fit, so degrade gracefully: refit with the standard
+      # (uncorrected) structural test. For se = local / local.nt the SEs ARE
+      # read from this fit, so we cannot silently degrade -> re-raise.
+      if (gamma_flag &&
+          lavoptions$se %in% c("twostep", "twostep.robust", "naive")) {
+        lavoptions_pa$test <- "standard"
+        fit_pa <- lavaan::lavaan(pts,
+          sample_cov  = step1$VETA,
+          sample_mean = step1$EETA,
+          sample_nobs = nobs_1,
+          nacov       = nacov,
+          slot_options = lavoptions_pa,
+          verbose     = FALSE
+        )
+        lav_msg_warn(gettext(
+          "the two-step corrected structural test could not be computed for
+           this model (eg a bi-factor measurement model); the standard
+           (uncorrected) structural test is reported instead."))
+      } else {
+        stop(fit_pa)
+      }
+    }
   } else {
     fit_pa <- lavaan::lavaan(
       model = pts,
