@@ -395,7 +395,8 @@ lav_con_lambda_pre <- function(lavobject = NULL, method = "Don") {
   # compute factor 'pre' so that pre %*% g = lambda
   method <- tolower(method)
 
-  r <- lavobject@Model@con.jac[, ]
+  # note: drop = FALSE, so a single-row constraint matrix stays a matrix
+  r <- lavobject@Model@con.jac[, , drop = FALSE]
   if (is.null(r) || length(r) == 0L) {
     return(numeric(0L))
   }

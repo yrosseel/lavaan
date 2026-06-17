@@ -225,7 +225,7 @@ lav_options_default <- function() {
                                       "mg.lv.efa.variances", "mg.lv.variances",
                                       "mg.lv.means", "mg.lv.intercepts"),
       bl = TRUE, oklen = c(0L, 6L))
-  elm("ceq.simple", FALSE, bl = TRUE) # treat simple eq cons special?
+  elm("ceq.simple", TRUE, bl = TRUE) # treat simple eq cons special?
   elm("parameterization", "default", c(
     "default", "mml", "delta", "theta"))
   elm("auto.fix.first", FALSE, bl = TRUE)

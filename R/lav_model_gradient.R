@@ -585,6 +585,16 @@ lav_model_grad <- function(lavmodel = NULL,
     # divide by 2 * N
     dx <- dx / (2 * lavsamplestats@ntotal)
 
+    # Delta has one column per *unconstrained* parameter (nx.unco); with
+    # simple equality constraints (ceq.simple, e.g. across-level/across-group
+    # equal loadings) reduce the gradient to the free parameters (nx.free),
+    # exactly as the single-level paths above. Without this the gradient is too
+    # long and breaks the optimizer (parscale length mismatch) for ceq.simple
+    # multilevel models.
+    if (lavmodel@ceq.simple.only && ceq_simple) {
+      dx <- drop(crossprod(lavmodel@ceq.simple.K, dx))
+    }
+
   # cat("dx1 (numerical) = \n"); print( zapsmall(dx1) )
   # cat("dx  (analytic)  = \n"); print( zapsmall(dx ) )
   # ML + two-level

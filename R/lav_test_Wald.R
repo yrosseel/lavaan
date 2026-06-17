@@ -101,6 +101,10 @@ lavTestWald <- function(object, constraints = NULL, verbose = FALSE) { # nolint
     remove_duplicated = FALSE
   )
 
+  # the constraint jacobian is in the compact (nx.free) space; when
+  # ceq.simple.only, vcov_1 is in the larger 'unco' space, so reduce it
+  vcov_1 <- lav_model_vcov_unco_to_free(lavmodel, vcov_1)
+
   # restricted vcov
   vcov_r <- jac %*% vcov_1 %*% t(jac)
 

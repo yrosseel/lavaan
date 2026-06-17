@@ -2560,6 +2560,16 @@ lav_inspect_vcov <- function(object, standardized = FALSE,
         !(standardized && lavmodel@ceq.simple.only)) {
       return_value <- object@vcov$vcov
                  # if this changes, tag @TDJorgensen in commit message
+    } else if (standardized && lavmodel@ceq.simple.only &&
+               !is.null(object@vcov$vcov) &&
+               nrow(object@vcov$vcov) == nrow(lavmodel@ceq.simple.K)) {
+      # special case: ceq.simple.only + standardized
+      # tmp.jac (below) is in the 'compact' (nx.free) space, but the stored
+      # vcov lives in the larger 'unco' space (it duplicates the simple
+      # equality parameters). Reduce the stored vcov to the compact space.
+      # NB: do NOT recompute with ceq.simple.only dropped, as that corrupts
+      # the (expected) information matrix for the shared parameters.
+      return_value <- lav_model_vcov_unco_to_free(lavmodel, object@vcov$vcov)
     } else {
       # compute it again
       # if(rotation && standardized) {
@@ -2568,13 +2578,6 @@ lav_inspect_vcov <- function(object, standardized = FALSE,
       #    lavoptions <- object@Options
       #    lavoptions$rotation.se <- "delta"
       # }
-
-      # special case: ceq.simple.only + standardized
-      if (standardized && lavmodel@ceq.simple.only) {
-        # create 'compact' vcov (compatible with tmp.jac later)
-        lavmodel@ceq.simple.only <- FALSE
-        lavmodel@con.jac <- matrix(0, 0L, 0L)
-      }
 
       return_value <- lav_model_vcov(
         lavmodel       = lavmodel,
@@ -2592,6 +2595,14 @@ lav_inspect_vcov <- function(object, standardized = FALSE,
 
       if (is.null(return_value)) {
         return(return_value)
+      }
+
+      # special case: ceq.simple.only + standardized
+      # tmp.jac (below) is in the 'compact' (nx.free) space, but the recomputed
+      # vcov may live in the larger 'unco' space (it duplicates the simple
+      # equality parameters). Reduce it to the compact space if needed.
+      if (standardized && lavmodel@ceq.simple.only) {
+        return_value <- lav_model_vcov_unco_to_free(lavmodel, return_value)
       }
     }
   }
@@ -2829,6 +2840,9 @@ lav_inspect_vcov_def <- function(object, joint = FALSE,
         type = type, free_only = TRUE,
         add_labels = FALSE,
         add_class = FALSE)
+      # tmp_jac (below) is in the compact (nx.free) space; when ceq.simple.only,
+      # tmp_vcov is in the larger 'unco' space, so reduce it to the compact space
+      tmp_vcov <- lav_model_vcov_unco_to_free(lavmodel, tmp_vcov)
 
       # regular delta method
       tmp_jac <- try(lav_func_jacobian_complex(func = lavmodel@def.function,
@@ -2862,12 +2876,21 @@ lav_inspect_vcov_def <- function(object, joint = FALSE,
       }
 
       if (joint) {
-        tmp_jac2 <- rbind(diag(nrow = ncol(tmp_jac)), tmp_jac)
+        # the free block maps the (compact) free parameters to the 'user' free
+        # parameters: identity normally, but ceq.simple.K when ceq.simple.only
+        # (so the duplicated simple-equality parameters are expanded back)
+        if (lavmodel@ceq.simple.only &&
+            ncol(lavmodel@ceq.simple.K) == ncol(tmp_jac)) {
+          free_block <- lavmodel@ceq.simple.K
+        } else {
+          free_block <- diag(nrow = ncol(tmp_jac))
+        }
+        tmp_jac2 <- rbind(free_block, tmp_jac)
         return_value <- tmp_jac2 %*% tmp_vcov %*% t(tmp_jac2)
         if (!is.null(tmp_hess)) {
           # second-order correction: only the def-def block is non-zero
           # (the free part is linear, so its Hessian is zero)
-          nfree <- ncol(tmp_jac)
+          nfree <- nrow(free_block)
           ndef_1 <- length(tmp_hess)
           correction <- matrix(0, nfree + ndef_1, nfree + ndef_1)
           hv_list <- lapply(tmp_hess, function(h) h %*% tmp_vcov)
@@ -3251,7 +3274,12 @@ lav_inspect_npar <- function(object, ceq = FALSE) {
   npar <- object@Model@nx.free
 
   # account for equality constraints?
-  if (ceq && nrow(object@Model@con.jac) > 0L) {
+  # note: when ceq.simple.only is TRUE, nx.free already excludes the simple
+  # equality constraints (they are absorbed via ceq.simple.K), and the
+  # (synthesized) con.jac lives in the larger 'unco' space; subtracting its
+  # rank here would double-count the constraints (see lav_model_loglik.R)
+  if (ceq && !object@Model@ceq.simple.only &&
+      nrow(object@Model@con.jac) > 0L) {
     ceq_idx <- attr(object@Model@con.jac, "ceq.idx")
     if (length(ceq_idx) > 0L) {
       neq <- qr(object@Model@con.jac[ceq_idx, , drop = FALSE])$rank

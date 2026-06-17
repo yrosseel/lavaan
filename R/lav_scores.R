@@ -55,6 +55,12 @@ lav_sc <- function(object, scaling = FALSE,
   ntab <- unlist(lavdata@norig)
   ntot <- sum(ntab)
   npar <- lav_inspect_npar(object, ceq = FALSE)
+  # with simple equality constraints (ceq.simple), the casewise scores are first
+  # computed in the larger 'unco' space (one column per non-collapsed parameter,
+  # matching Delta); they are collapsed to the free parameters further below
+  if (lavmodel@ceq.simple.only) {
+    npar <- lavmodel@nx.unco
+  }
 
   if (object@Options$estimator == "ML") {
     moments <- fitted(object)
@@ -107,12 +113,17 @@ lav_sc <- function(object, scaling = FALSE,
   ))
 
   # handle general constraints, so that the sum of the columns equals zero
+  # note: for ceq.simple.only models there are no explicit ceq/cin indices, but
+  # the (synthesized) con.jac encodes the simple equalities in the 'unco' space;
+  # projecting here makes the full (remove.duplicated = FALSE) scores respect the
+  # constraints, exactly as for explicit equality constraints. This projection
+  # does NOT affect the collapsed scores below, since con.jac %*% ceq.simple.K = 0
   if (!ignore_constraints &&
-    sum(
+    (sum(
       lavmodel@ceq.linear.idx, lavmodel@ceq.nonlinear.idx,
       lavmodel@cin.linear.idx, lavmodel@cin.nonlinear.idx
-    ) > 0) {
-    r_matrix <- object@Model@con.jac[, ]
+    ) > 0 || (lavmodel@ceq.simple.only && nrow(lavmodel@con.jac) > 0L))) {
+    r_matrix <- object@Model@con.jac[, , drop = FALSE]
     pre <- lav_con_lambda_pre(object)
     # LAMBDA <- -1 * t(pre %*% t(score_matrix))
     # RLAMBDA <- t(t(r_matrix) %*% t(LAMBDA))
@@ -130,6 +141,11 @@ lav_sc <- function(object, scaling = FALSE,
         "remove.duplicated is TRUE, but equality constraints do not appear
         to be simple; returning full scores"))
     }
+  } else if (remove_duplicated && lavmodel@ceq.simple.only) {
+    # collapse the 'unco'-space scores to the free parameters: the score for a
+    # free parameter is the sum of the scores of the parameters that share it
+    # (ceq.simple.K is the nx.unco x nx.free duplication matrix)
+    score_matrix <- score_matrix %*% lavmodel@ceq.simple.K
   }
 
   score_matrix

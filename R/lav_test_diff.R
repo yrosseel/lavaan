@@ -4,6 +4,16 @@
 #           Gronneberg, Foldnes and Moss) when Satterthwaite = TRUE and
 #           ngroups > 1L (use old_approach = TRUE to get the old result)
 
+# Orthonormal basis spanning the columns of ceq.simple.K. In the (scaled)
+# difference tests, ceq.simple.K must play the same role as eq.constraints.K
+# (mapping the full/unco parameter space to the constrained space and back).
+# eq.constraints.K has orthonormal columns, but ceq.simple.K is a 0/1
+# duplication matrix (t(K) %*% K != I), so a plain K / t(K) round-trip would be
+# inconsistent. Using an orthonormal basis for the same column space fixes this.
+lav_test_diff_ceq_simple_k <- function(lavmodel) {
+  qr.Q(qr(lavmodel@ceq.simple.K))
+}
+
 lav_test_diff_satorra2000 <- function(m1, m0, h1 = TRUE, a_method = "delta",
                                       m_a = NULL,
                                       satterthwaite = FALSE,
@@ -75,7 +85,7 @@ lav_test_diff_satorra2000 <- function(m1, m0, h1 = TRUE, a_method = "delta",
         if (m1@Model@eq.constraints) {
           m_a <- m_a %*% t(m1@Model@eq.constraints.K)
         } else if (m1@Model@ceq.simple.only) {
-          m_a <- m_a %*% t(m1@Model@ceq.simple.K)
+          m_a <- m_a %*% t(lav_test_diff_ceq_simple_k(m1@Model))
         }
       }
       if (lav_debug()) print(m_a)
@@ -102,7 +112,7 @@ lav_test_diff_satorra2000 <- function(m1, m0, h1 = TRUE, a_method = "delta",
       if (m0@Model@eq.constraints) {
         m_a <- m_a %*% t(m0@Model@eq.constraints.K)
       } else if (m0@Model@ceq.simple.only) {
-        m_a <- m_a %*% t(m0@Model@ceq.simple.K)
+        m_a <- m_a %*% t(lav_test_diff_ceq_simple_k(m0@Model))
       }
       if (lav_debug()) print(m_a)
     }
@@ -440,17 +450,21 @@ lav_test_diff_a <- function(m1, m0, method = "delta", reference = "H1") {
     delta0 <- do.call(rbind, delta0_list)
 
     # take into account equality constraints m0
+    # note: delta is in the 'unco' space (one column per non-collapsed free
+    # parameter); ceq.simple.K (nx.unco x nx.free) maps it to the compact
+    # (nx.free) space, so we post-multiply by K (NOT t(K)), exactly as for the
+    # eq.constraints.K case above
     if (m0@Model@eq.constraints) {
       delta0 <- delta0 %*% m0@Model@eq.constraints.K
     } else if (m0@Model@ceq.simple.only) {
-      delta0 <- delta0 %*% t(m0@Model@ceq.simple.K)
+      delta0 <- delta0 %*% lav_test_diff_ceq_simple_k(m0@Model)
     }
 
     # take into account equality constraints m1
     if (m1@Model@eq.constraints) {
       delta1 <- delta1 %*% m1@Model@eq.constraints.K
     } else if (m1@Model@ceq.simple.only) {
-      delta1 <- delta1 %*% t(m1@Model@ceq.simple.K)
+      delta1 <- delta1 %*% lav_test_diff_ceq_simple_k(m1@Model)
     }
 
     # H <- solve(t(Delta1) %*% Delta1) %*% t(Delta1) %*% Delta0

@@ -733,6 +733,22 @@ lav_model_vcov_se_mc_active <- function(lavoptions) {
     identical(lavoptions$se.def, "monte.carlo"))
 }
 
+# Reduce a vcov matrix from the 'unco' space (one row/column per
+# non-collapsed free parameter, nx.unco) to the 'compact' space (one
+# row/column per free parameter, nx.free) for ceq.simple.only models. This is
+# needed whenever the vcov must be combined with a jacobian/hessian that is
+# expressed in the compact (nx.free) space (e.g. defined parameters, Wald
+# tests). VCOV is returned unchanged if it is not in the unco space.
+lav_model_vcov_unco_to_free <- function(lavmodel, VCOV) {
+  if (lavmodel@ceq.simple.only && nrow(lavmodel@ceq.simple.K) > 0L &&
+      nrow(VCOV) == nrow(lavmodel@ceq.simple.K)) {
+    rep_idx <- apply(lavmodel@ceq.simple.K, 2L,
+                     function(col) which(col != 0)[1L])
+    VCOV <- VCOV[rep_idx, rep_idx, drop = FALSE]
+  }
+  VCOV
+}
+
 lav_model_vcov_se <- function(lavmodel, lavpartable, VCOV = NULL, # nolint start
                               BOOT = NULL, MC = NULL,
                               lavoptions = NULL) {                # nolint end
@@ -861,23 +877,20 @@ lav_model_vcov_se <- function(lavmodel, lavpartable, VCOV = NULL, # nolint start
         }
       }
 
-      if (lavmodel@ceq.simple.only) {
-        jac <- jac %*% t(lavmodel@ceq.simple.K)
-        if (!is.null(hess_list)) {
-          tmp_k <- lavmodel@ceq.simple.K
-          hess_list <- lapply(hess_list, function(h) {
-            tmp_k %*% h %*% t(tmp_k)
-          })
-        }
-      }
-      def_cov <- jac %*% VCOV %*% t(jac)
+      # jac (and hess_list) are in the compact (nx.free) space; when
+      # ceq.simple.only, VCOV is in the larger 'unco' space, so reduce VCOV to
+      # the compact space. NB: previously jac was *expanded* to the unco space
+      # via ceq.simple.K, which multiply-counts the shared parameters and
+      # inflates the SE of defined parameters that involve them.
+      vcov_def <- lav_model_vcov_unco_to_free(lavmodel, VCOV)
+      def_cov <- jac %*% vcov_def %*% t(jac)
 
       # add second-order delta method correction:
       # Cov(g_i, g_j) ~ grad_i' V grad_j + 0.5 tr(H_i V H_j V)
       if (!is.null(hess_list)) {
         ndef_1 <- length(hess_list)
         correction <- matrix(0, ndef_1, ndef_1)
-        hv_list <- lapply(hess_list, function(h) h %*% VCOV)
+        hv_list <- lapply(hess_list, function(h) h %*% vcov_def)
         for (i in seq_len(ndef_1)) {
           for (j in i:ndef_1) {
             # tr(A B) where A = H_i V, B = H_j V
