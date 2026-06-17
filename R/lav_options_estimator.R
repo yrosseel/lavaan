@@ -749,8 +749,8 @@ lav_options_est_rbm <- function(opt) {
   #
   # penalized-ML point estimation; the discrepancy, implied moments, loglik,
   # test and information matrices are all the ML ones, so we keep the estimator
-  # as "ml" internally and trigger the dedicated fit function via optim.method =
-  # "rbm".
+  # as "ml" internally. The dedicated fit function is triggered in step 11 by
+  # the presence of estimator.args$rbm.method (the optimizer itself is nlminb).
 
   # estimator.args
   if (is.null(opt$estimator.args)) {
@@ -784,8 +784,9 @@ lav_options_est_rbm <- function(opt) {
     opt$missing <- "listwise" # for now
   }
 
-  # trigger the rbm fit function in step 11
-  opt$optim.method <- "rbm"
+  # the actual optimizer is nlminb (the rbm fit is triggered in step 11 by
+  # estimator.args$rbm.method)
+  opt$optim.method <- "nlminb"
 
   # internally, treat as ML for all downstream machinery
   opt$estimator <- "ml"
