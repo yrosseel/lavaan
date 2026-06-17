@@ -5,7 +5,7 @@
 # LDW 9 Jan 2026: remove c.r option
 
 lavParseModelString <- function(model.syntax = "", as.data.frame. = FALSE,   # nolint
-                                parser = "new", warn = TRUE, debug = FALSE) {
+                                parser = "open", warn = TRUE, debug = FALSE) {
   if (!missing(debug)) {
     current_debug <- lav_debug()
     if (lav_debug(debug))
