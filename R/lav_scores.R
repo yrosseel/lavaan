@@ -97,6 +97,18 @@ lav_sc <- function(object, scaling = FALSE,
     lav_msg_fixme("this should not happen")
   }
 
+  # sampling weights? the casewise score contributions become wt_i * s_i,
+  # so that the column sums equal the (weighted) gradient (= 0 at the MLE),
+  # and crossprod() yields the design-based information that is also used
+  # for the (robust) standard errors. This is a no-op without weights.
+  if (length(lavdata@sampling.weights) > 0L) {
+    wt_full <- numeric(ntot)
+    for (g in seq_len(lavdata@ngroups)) {
+      wt_full[lavdata@case.idx[[g]]] <- lavdata@weights[[g]]
+    }
+    score_matrix <- score_matrix * wt_full
+  }
+
   # handle empty rows
   if (remove_empty_cases) {
     # empty.idx <- which( apply(score_matrix, 1L,

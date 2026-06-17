@@ -923,14 +923,10 @@ lav_predict_eta_normal <- function(lavobject = NULL, # for convenience
     # center data
     yc <- t(t(data_obs_g) - ey_g)
 
-    # sampling weights? -- CHECKME: needed??
-    if (!is.null(lavdata@weights[[g]]) && level == 1L) {
-      # EY.g is already weighted
-      # use sampling.weights.normalization == "group"
-      wt <- lavdata@weights[[g]]
-      wt2 <- wt / sum(wt) * lavdata@nobs[[g]]
-      yc <- yc * sqrt(wt2)
-    }
+    # NOTE: do NOT scale yc by the sampling weights here. Factor scores are
+    # per-case predictions; a case's score must not depend on its own
+    # sampling weight. Weights already enter via the (weighted) parameter
+    # estimates and the weighted mean (ey_g) used for centering above.
 
     # global factor score coefficient matrix 'C'
     fsc <- veta_g %*% t(lambda_g) %*% sigma_inv_g
@@ -1256,14 +1252,10 @@ lav_predict_eta_bartlett <- function(lavobject = NULL, # for convenience
     # center data
     yc <- t(t(data_obs_g) - ey_g)
 
-    # sampling weights? CHECKME: needed??
-    if (!is.null(lavdata@weights[[g]]) && level == 1L) {
-      # EY.g is already weighted
-      # use sampling.weights.normalization == "group"
-      wt <- lavdata@weights[[g]]
-      wt2 <- wt / sum(wt) * lavdata@nobs[[g]]
-      yc <- yc * sqrt(wt2)
-    }
+    # NOTE: do NOT scale yc by the sampling weights here. Factor scores are
+    # per-case predictions; a case's score must not depend on its own
+    # sampling weight. Weights already enter via the (weighted) parameter
+    # estimates and the weighted mean (ey_g) used for centering above.
 
     # global factor score coefficient matrix 'C'
     fsc <- (MASS::ginv(t(lambda_g) %*% sigma_inv_g %*% lambda_g)
