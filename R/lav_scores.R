@@ -135,16 +135,19 @@ lav_sc <- function(object, scaling = FALSE,
   score_matrix
 }
 
-lavScores <- estfun.lavaan <- function(               # nolint start
+lavScores <- estfun.lavaan <- function(               # nolint
                        object,
                        scaling = FALSE,
-                       ignore.constraints = FALSE,
-                       remove.duplicated = TRUE,
-                       remove.empty.cases = TRUE) {   # nolint end
+                       ignore_constraints = FALSE,
+                       remove_duplicated = TRUE,
+                       remove_empty_cases = TRUE,
+                      ...) {
+  dotdotdot <- list(...)
+  lav_adapt_func(environment(), dotdotdot, NULL)
   lav_sc(object, scaling = scaling,
-        ignore_constraints = ignore.constraints,
-        remove_duplicated = remove.duplicated,
-        remove_empty_cases = remove.empty.cases)
+        ignore_constraints = ignore_constraints,
+        remove_duplicated = remove_duplicated,
+        remove_empty_cases = remove_empty_cases)
 }
 
 lav_sc_ml <- function(ntab = 0L,
