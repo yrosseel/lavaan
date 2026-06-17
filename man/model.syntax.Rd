@@ -43,7 +43,7 @@ lavParTable(model = NULL, meanstructure = FALSE, int.ov.free = FALSE,
     debug = FALSE, warn = TRUE, as.data.frame. = TRUE)
 
 lavParseModelString(model.syntax = '', as.data.frame. = FALSE,
-                    parser = "new", warn = TRUE, debug = FALSE)
+                    parser = "open", warn = TRUE, debug = FALSE)
 
 }
 \arguments{
@@ -179,8 +179,9 @@ the model for both observed and latent variables.}
 \item{as.data.frame.}{If \code{TRUE}, return the list of model parameters
     as a \code{data.frame}.}
 \item{parser}{Character. If \code{"old"}, use the original/classic parser.
-    If \code{"new"}, use the new/ldw parser. The default (as of version 0.6-18)
-    is \code{"new"}.}
+    If \code{"new"}, use the new/ldw parser. 
+    If \code{"open"}, use the newest, extensible parser.
+    The default (as of version 0.7-1) is \code{"open"}.}
 \item{warn}{If \code{TRUE}, some (possibly harmless) warnings are printed
     out.}
 \item{debug}{If \code{TRUE}, debugging information is printed out.}

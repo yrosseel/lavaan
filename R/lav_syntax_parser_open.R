@@ -20,7 +20,7 @@ lav_parse_options <- function(
   if (is.null(config)) {
     ops = data.frame(
       op = c("=~", "<~", "~*~", "~~", "~", "|~", "==",
-      "<", ">", ":=", ":", "|", "%"),
+      "<", ">", ":=", ":", "|", "%", ":~"),
       pkg = "lavaan"
     )
     mods = data.frame(
@@ -355,7 +355,7 @@ lav_parse_formula_numbers <- function(list_before_numbering, types) {
     frm_hasefa <- TRUE
   }
   if (any(elem_text[i] ==
-          c("+", "*", "=~", "-", "<~", "~*~", "~~", "~", "|~", "|", "%"))) {
+      c("+", "*", "=~", "-", "<~", "~*~", "~~", "~", "|~", "|", "%", ":~"))) {
     if (frm_incremented) {
       frm_number <- frm_number - 1L
       elem_formula_number[i] <- frm_number
@@ -808,8 +808,9 @@ lav_parse_handle_formule <- function(formule, tmplist, types, modelsrc,
   lhs <- formule$elem_text[opi - 1L]
   rhs <- formule$elem_text[nelem]
   already <- which(flat$lhs == lhs & flat$op == op & flat$block == block &
-            (flat$rhs == rhs | (flat$rhs == "" & (op == "~" | op == "|~") &
-                            formule$elem_type[nelem] == types$numliteral)))
+            (flat$rhs == rhs | (flat$rhs == "" & 
+              (op == "~" | op == "|~" | op == ":~") &
+              formule$elem_type[nelem] == types$numliteral)))
   if (length(already) == 1L) {
     idx <- already
   } else {
@@ -820,7 +821,7 @@ lav_parse_handle_formule <- function(formule, tmplist, types, modelsrc,
     flat$rhs[idx] <- rhs
     flat$block[idx] <- block
     if (formule$elem_type[nelem] == types$numliteral) {
-      if (op == "~" || op == "|~") flat$rhs[idx] <- ""
+      if (op == "~" || op == "|~"| op == ":~") flat$rhs[idx] <- ""
     }
   }
   # modifiers always come before an asterix or a question mark
@@ -883,7 +884,7 @@ lav_parse_handle_formule <- function(formule, tmplist, types, modelsrc,
     }
   }
   # check for variable regressed on itself
-  if (formule$elem_text[opi] == "~" &&
+  if (formule$elem_text[opi] %in% c("~", ":~") &&
       formule$elem_text[opi - 1L] == formule$elem_text[nelem]) {
     if (!grepl("^0\\.?0*$", flat$fixed[idx])) {
       tl <- lav_parse_txtloc(modelsrc, formule$elem_pos[opi])
@@ -931,11 +932,11 @@ lav_parse_check_relational <- function(formule, modelsrc, types, opi,
   }
   if (formule$elem_type[nelem] != types$identifier &&
       (formule$elem_type[nelem] != types$numliteral ||
-        all(op != c("~", "|~", "=~")))) {
+        all(op != c("~", "|~", "=~", ":~")))) {
     tl <- lav_parse_txtloc(modelsrc, formule$elem_pos[nelem])
     lav_msg_stop(
       gettext("Last element of rhs part expected to be an identifier or,
-              for operator ~, |~ or =~, a numeric literal!"),
+              for operator ~, |~, =~ or :~, a numeric literal!"),
       tl[1L],
       footer = tl[2L]
     )
