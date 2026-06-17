@@ -313,11 +313,57 @@ lav_samp_gamma <- function(m_y, # Y+X if cond!
                                   slopestructure = FALSE,
                                   gamma_n_minus_one = FALSE,
                                   unbiased = FALSE,
-                                  mplus_wls = FALSE) {
+                                  mplus_wls = FALSE,
+                                  wt = NULL) {
   # coerce to matrix
   m_y <- unname(as.matrix(m_y))
   n <- nrow(m_y)
   p <- ncol(m_y)
+
+  # sampling weights?
+  # Gamma is the asymptotic (co)variance of the sample moments, which for
+  # the saturated (h1) model equals the sandwich I^{-1} J I^{-1}, where I is
+  # the expected and J the first-order h1 information matrix. We reuse the
+  # (weight-aware) expected information I, and construct J by weighting each
+  # casewise score by its (frequency) weight. This treats the weights as
+  # frequencies: the result equals the Gamma one would obtain by physically
+  # replicating each case wt times. (Note: J is built with sqrt(wt), i.e.
+  # sum(wt)-weighting, NOT the sum(wt^2)-weighting used for design-based
+  # robust SEs; the latter would miscalibrate the WLS weight matrix.)
+  # Under normality J = I and this reduces to the normal-theory Gamma.
+  if (!is.null(wt)) {
+    if (conditional_x) {
+      lav_msg_stop(gettext(
+        "Gamma with sampling weights is not available (yet) if
+         conditional.x = TRUE."))
+    }
+    if (length(cluster_idx) > 0L) {
+      lav_msg_stop(gettext(
+        "Gamma with sampling weights is not available (yet) for
+         clustered data."))
+    }
+    out <- stats::cov.wt(m_y, wt = wt, method = "ML")
+    i_mat <- lav_mvn_h1_info_expected(
+      y = m_y, wt = wt, sample_cov = out$cov, x_idx = x_idx,
+      meanstructure = meanstructure
+    )
+    # unit (unweighted) casewise scores of the saturated model, evaluated
+    # at the weighted sample moments
+    sc <- lav_mvn_sc_mu_sigma(
+      y = m_y, mu = out$center, sigma_1 = out$cov, x_idx = x_idx
+    )
+    if (!meanstructure) {
+      sc <- sc[, -seq_len(p), drop = FALSE]
+    }
+    j_mat <- crossprod(sqrt(wt) * sc) / sum(wt)
+    # fixed.x zeroes the x-blocks of I, so use a pseudo-inverse there
+    if (length(x_idx) > 0L) {
+      i_inv <- MASS::ginv(i_mat)
+    } else {
+      i_inv <- solve(i_mat)
+    }
+    return(i_inv %*% j_mat %*% i_inv)
+  }
 
   # unbiased?
   if (unbiased) {

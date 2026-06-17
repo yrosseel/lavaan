@@ -849,7 +849,8 @@ lav_samp_from_data <- function(lavdata = NULL,        # nolint start
               gamma_n_minus_one =
                 lavoptions$gamma.n.minus.one,
               unbiased = lavoptions$gamma.unbiased,
-              mplus_wls = FALSE
+              mplus_wls = FALSE,
+              wt = wt[[g]]
             )
         }
       } else if (estimator %in% c("WLS", "DWLS", "ULS", "DLS", "IV", "catML")) {
@@ -920,7 +921,8 @@ lav_samp_from_data <- function(lavdata = NULL,        # nolint start
                     lavoptions$gamma.n.minus.one,
                   unbiased =
                     lavoptions$gamma.unbiased,
-                  mplus_wls = lavoptions$gamma.wls.mplus
+                  mplus_wls = lavoptions$gamma.wls.mplus,
+                  wt = wt[[g]]
                 )
             }
           }
