@@ -18,7 +18,7 @@
 # Reference: 
 # - Jamil, H., Rosseel, Y., Kemp, O., & Kosmidis, I. (2026). Bias-Reduced 
 #   Estimation of Structural Equation Models. Structural Equation Modeling: A 
-#   Multidisciplinary Journal, 33(3), 376–392. 
+#   Multidisciplinary Journal, 33(3), 376-392.
 #   https://doi.org/10.1080/10705511.2025.2610462
 # - ported from the brlavaan package (github.com/haziqj/brlavaan)
 
