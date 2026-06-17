@@ -106,9 +106,11 @@ lav_sample_trimmed_sd <- function(x, na_rm = TRUE, trim = 0) {
 
 # convert correlation matrix + standard deviations to covariance matrix
 # based on cov2cor in package:stats
-lav_cor2cov <- function(R, sds, names = NULL) {             # nolint
-  p <- (d <- dim(R))[1L]
-  if (!is.numeric(R) || length(d) != 2L || p != d[2L]) {
+lav_cor2cov <- function(r, sds, names = NULL, ...) {
+  dotdotdot <- list(...)
+  lav_adapt_func(environment(), dotdotdot, NULL)
+  p <- (d <- dim(r))[1L]
+  if (!is.numeric(r) || length(d) != 2L || p != d[2L]) {
     lav_msg_stop(gettext("'V' is not a square numeric matrix"))
   }
 
@@ -118,7 +120,7 @@ lav_cor2cov <- function(R, sds, names = NULL) {             # nolint
     ))
   }
 
-  # if(sum(diag(R)) != p)
+  # if(sum(diag(r)) != p)
   #    stop("The diagonal of a correlation matrix should be all ones.")
 
   if (p != length(sds)) {
@@ -126,8 +128,8 @@ lav_cor2cov <- function(R, sds, names = NULL) {             # nolint
                          have a different number of variables"))
   }
 
-  s <- R
-  s[] <- sds * R * rep(sds, each = p)
+  s <- r
+  s[] <- sds * r * rep(sds, each = p)
 
   # optionally, add names
   if (!is.null(names)) {

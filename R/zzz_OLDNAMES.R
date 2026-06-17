@@ -24,7 +24,7 @@ char2num <- function(s = "") {
     sc[[1L]] <- quote(lavaan::lav_char2num)
     eval(sc, parent.frame())
 }
-cor2cov <- function(R, sds, names = NULL) {
+cor2cov <- function(r, sds, names = NULL, ...) {
     lav_deprecated("lav_cor2cov")
     sc <- sys.call()
     sc[[1L]] <- quote(lavaan::lav_cor2cov)
