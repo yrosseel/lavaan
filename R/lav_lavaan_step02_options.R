@@ -194,12 +194,15 @@ lav_step02_options <- function(slot_options = NULL,
 
     # sampling weights? force MLR
     # HJ 18/10/23: Except for PML
+    # YR 17/06/26: only force se/test if the user did not explicitly
+    #              request a value for them; if the user insists on a
+    #              different se=/test=, we honor that choice
     if (!is.null(sampling_weights) && !opt$.categorical &&
       toupper(estimator) %in% c("DEFAULT", "ML", "PML")) {
-      if (opt$se != "none") {
+      if (opt$se != "none" && is.null(dotdotdot$se)) {
         opt$se <- "robust.huber.white"
       }
-      if (opt$se != "none") {
+      if (opt$se != "none" && is.null(dotdotdot$test)) {
         opt$test <- "yuan.bentler.mplus"
       }
     }
