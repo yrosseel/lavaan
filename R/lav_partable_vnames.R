@@ -1372,7 +1372,13 @@ lav_pt_vnames <- function(partable, type = NULL, ...,
     if (!is.null(ov_names_data)) {
       return_value <- lapply(return_value, function(x) {
         for (b in seq_along(x)) {
-          m <- match(x[[b]], ov_names_data)
+          # match against the base ov name: threshold-type names look like
+          # "y1|t1", so strip the "|..." suffix before matching (plain ov
+          # names are unaffected). This keeps "th" ordering consistent with
+          # "ov" ordering under ov_order = "data" (order() is stable, so
+          # t1, t2, ... keep their relative order within a variable).
+          base_name <- sub("\\|.*$", "", x[[b]])
+          m <- match(base_name, ov_names_data)
           target_idx <- which(!is.na(m))
           if (length(target_idx) > 1L) {
             x[[b]][target_idx] <- x[[b]][target_idx][order(m[target_idx])]
