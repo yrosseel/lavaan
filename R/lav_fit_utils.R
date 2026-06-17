@@ -162,8 +162,15 @@ lav_fit_fiml_corrected <- function(lavobject, baseline_model,
   }
 
   # 'refit' using 'tilde' (=EM/saturated) sample statistics
+  # re-attach the data-based ov order (ov_order = "data"); parTable() has
+  # stripped the "ovda" attribute, so without this fit_tilde would be built
+  # in model order while lavobject (and its delta/information used below) is
+  # in data order, yielding an order-dependent scaling factor. Harmless
+  # no-op when the data order already equals the model order.
+  pt_tilde <- parTable(lavobject)
+  attr(pt_tilde, "ovda") <- lavobject@Data@ov.names[[1]]
   fit_tilde <- try(lavaan(
-    model = parTable(lavobject),
+    model = pt_tilde,
     sample_cov = cov_tilde,
     sample_mean = mean_tilde,
     sample_nobs = sample_nobs,

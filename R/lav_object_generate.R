@@ -371,6 +371,14 @@ lav_object_catml <- function(lavobject = NULL) {
       partable_catml$free[ov_var_idx] <- 0L
     }
   }
+  # re-attach the data-based ov order (ov_order = "data"). parTable() has
+  # stripped the "ovda" attribute and the row-subsetting above drops
+  # attributes, so without this the model would be rebuilt in model order
+  # while the reused sample statistics / data remain in data order, leading
+  # to a mismatched (inflated) catML chi-square. Harmless no-op when the
+  # data order already equals the model order.
+  attr(partable_catml, "ovda") <- lavdata@ov.names[[1]]
+
   partable_catml <- lav_pt_complete(partable_catml)
 
   # adapt lavsamplestats
