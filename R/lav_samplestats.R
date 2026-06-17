@@ -694,6 +694,14 @@ lav_samp_from_data <- function(lavdata = NULL,        # nolint start
           # if we have missing values (missing by design?), replace them by 0
           cov_1[is.na(cov_1)] <- 0
           cov[[g]] <- cov_1
+          # cov.wt(method = "ML") divides by sum(wt) (the 'N' version). If
+          # rescale is FALSE (e.g. GLS/ULS/(D)WLS), the unweighted path uses
+          # the unbiased 'N-1' version; mirror that here so that supplying
+          # sampling weights does not change the covariance normalization
+          # (nobs[[g]] == sum(wt[[g]]); see top of this function).
+          if (!rescale) {
+            cov[[g]] <- (nobs[[g]] / (nobs[[g]] - 1)) * cov[[g]]
+          }
           if (ridge) {
             diag(cov[[g]]) <- diag(cov[[g]]) + ridge_eps
           }
