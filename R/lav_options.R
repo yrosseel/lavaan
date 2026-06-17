@@ -652,6 +652,7 @@ lav_options_set <- function(opt = NULL) {
     jsa = ,
     bentler1982 = lav_options_est_fabin(opt),
     iv = lav_options_est_iv(opt),
+    rbm = lav_options_est_rbm(opt),
     lav_options_est_none(opt) # estimator = none
   )
 

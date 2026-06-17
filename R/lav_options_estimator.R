@@ -723,6 +723,77 @@ lav_options_est_iv <- function(opt) {
   opt
 }
 
+# normalize the rbm.method estimator.arg (short forms allowed)
+# ("none" is an undocumented value that falls back to plain ML; kept for
+#  debugging / parity checks)
+lav_options_est_rbm_method <- function(x) {
+  if (length(x) == 0L) {
+    return("implicit")
+  }
+  x <- tolower(as.character(x)[1L])
+  if (x %in% c("none", "ml", "false")) {
+    "none"
+  } else if (startsWith(x, "e")) {
+    "explicit" # explicit, erbm, e
+  } else if (startsWith(x, "i")) {
+    "implicit" # implicit, irbm, i
+  } else {
+    lav_msg_stop(gettextf(
+      "estimator.args$rbm.method must be one of %s.",
+      lav_msg_view(c("implicit", "explicit"), log_sep = "or")))
+  }
+}
+
+lav_options_est_rbm <- function(opt) {
+  # RBM reduced-bias M-estimation (continuous SEM, for now)  # FIXME
+  #
+  # penalized-ML point estimation; the discrepancy, implied moments, loglik,
+  # test and information matrices are all the ML ones, so we keep the estimator
+  # as "ml" internally. The dedicated fit function is triggered in step 11 by
+  # the presence of estimator.args$rbm.method (the optimizer itself is nlminb).
+
+  # estimator.args
+  if (is.null(opt$estimator.args)) {
+    opt$estimator.args <- list(rbm.method = "implicit")
+  } else {
+    opt$estimator.args$rbm.method <-
+      lav_options_est_rbm_method(opt$estimator.args$rbm.method)
+  }
+
+  # information: the penalty/bias need the observed information
+  opt$information[1] <- "observed"
+  if (length(opt$information) > 1L &&
+      opt$information[2] == "default") {
+    opt$information[2] <- "observed"
+  }
+
+  # se: sandwich by default
+  if (opt$se == "default") {
+    opt$se <- "robust.huber.white"
+  } else if (opt$se == "robust") {
+    opt$se <- "robust.huber.white"
+  }
+
+  # test
+  if (opt$test[1] == "default") {
+    opt$test <- "standard"
+  }
+
+  # missing
+  if (opt$missing == "default") {
+    opt$missing <- "listwise" # for now
+  }
+
+  # the actual optimizer is nlminb (the rbm fit is triggered in step 11 by
+  # estimator.args$rbm.method)
+  opt$optim.method <- "nlminb"
+
+  # internally, treat as ML for all downstream machinery
+  opt$estimator <- "ml"
+
+  opt
+}
+
 lav_options_est_none <- function(opt) {
   # NONE                                                           ####
   # se

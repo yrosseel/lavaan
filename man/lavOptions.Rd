@@ -284,7 +284,17 @@ Estimation options:
       and a mean or mean and variance adjusted test statistic. Estimators
       \code{"ULSM"} and \code{"ULSMV"} imply the \code{"ULS"}
       estimator with robust standard errors
-      and a mean or mean and variance adjusted test statistic.}
+      and a mean or mean and variance adjusted test statistic.
+      Finally, \code{"RBM"} requests reduced-bias M-estimation
+      (penalized maximum likelihood; continuous-outcome models for now). By
+      default sandwich standard errors are used
+      (\code{se = "robust.huber.white"}). The type of bias reduction is
+      controlled by the \code{rbm.method} element of \code{estimator.args}
+      (either \code{"implicit"} (default) or \code{"explicit"}), for example
+      \code{estimator = list(estimator = "RBM", rbm.method = "explicit")}.
+      The \code{"explicit"} method is much faster for models with many
+      parameters (it requires a single ML fit plus a one-step correction),
+      and is recommended in that case.}
     \item{\code{likelihood}:}{Only relevant for ML estimation. If 
       \code{"wishart"}, the Wishart likelihood approach is used. In this 
       approach, the covariance matrix has been divided by N-1, and both 

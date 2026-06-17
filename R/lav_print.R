@@ -1061,6 +1061,15 @@ lav_summary_print <- function(x, ..., nd = 3L) {
       )
       tmp_est <- paste("DLS-", toupper(dls_first_letter), sep = "")
     }
+    # reduced-bias M-estimation: show IRBM / ERBM (estimator is ML internally)
+    if (!is.null(estimator_args$rbm.method)) {
+      tmp_est <- switch(estimator_args$rbm.method,
+        implicit = "IRB-ML",
+        explicit = "ERB-ML",
+        none = "ML",
+        "RBM"
+      )
+    }
     c2 <- tmp_est
 
     # additional estimator args
