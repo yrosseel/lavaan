@@ -269,14 +269,15 @@ lav_model_grad_mml <- function(lavmodel = NULL,
 
     if (length(num_idx) > 0L) {
       # THETA (num only)
-      dsigma2 <- sweep(0.5 * pre[, num_idx] * pre[, num_idx],
+      dsigma2 <- sweep(0.5 * pre[, num_idx, drop = FALSE] *
+        pre[, num_idx, drop = FALSE],
         MARGIN = 2,
         STATS = 1 / (2 * theta_var), FUN = "-"
       )
       d_fyp_q <- d_fyp_q + (dsigma2 %*% dd$theta)
 
       # NU (num only)
-      dnu <- pre[, num_idx]
+      dnu <- pre[, num_idx, drop = FALSE]
       d_fyp_q <- d_fyp_q + (dnu %*% dd$nu)
     }
 

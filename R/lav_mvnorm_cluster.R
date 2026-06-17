@@ -1070,7 +1070,7 @@ lav_mvn_cl_info_expected <- function(lp = NULL,
     npar + b_idx + p_tilde
   )
 
-  information <- information_tilde[ok_idx, ok_idx]
+  information <- information_tilde[ok_idx, ok_idx, drop = FALSE]
 
   information
 }

@@ -752,7 +752,7 @@ lav_samp_cor_gamma_nt <- function(m_y = NULL,
       diag(m_a) <- 1 - diag(tmp)
       gamma_nt_big <- m_a %*% gamma_z_nt %*% t(m_a)
       r_idx <- lav_mat_vech_idx(s_p, diagonal = FALSE)
-      v_gamma <- gamma_nt_big[r_idx, r_idx]
+      v_gamma <- gamma_nt_big[r_idx, r_idx, drop = FALSE]
 
       if (meanstructure) {
         v_gamma <- lav_mat_bdiag(m_r, v_gamma)

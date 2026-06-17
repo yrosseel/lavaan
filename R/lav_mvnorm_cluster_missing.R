@@ -57,7 +57,7 @@ lav_mvn_cl_mi_loglik_samp_2l <- function(y1 = NULL,
   # global
   sigma_w_inv <- solve.default(sigma_w_1)
   sigma_w_logdet <- log(det(sigma_w_1))
-  sigma_b_1 <- sigma_b_1[both_idx, both_idx] # only both part
+  sigma_b_1 <- sigma_b_1[both_idx, both_idx, drop = FALSE] # only both part
 
   # y
   ny <- ncol(sigma_w_1)
@@ -290,7 +290,7 @@ lav_mvn_cl_mi_dlogl_2l_samp <- function(
 
   # sigma.w
   sigma_w_inv <- solve.default(sigma_w_1)
-  sigma_b_1 <- sigma_b_1[both_idx, both_idx] # only both part
+  sigma_b_1 <- sigma_b_1[both_idx, both_idx, drop = FALSE] # only both part
 
   # y
   ny <- ncol(sigma_w_1)
@@ -645,7 +645,7 @@ lav_mvn_cl_mi_sc_2l <- function(
 
   # sigma.w
   sigma_w_inv <- solve.default(sigma_w_1)
-  sigma_b_1 <- sigma_b_1[both_idx, both_idx] # only both part
+  sigma_b_1 <- sigma_b_1[both_idx, both_idx, drop = FALSE] # only both part
 
   # y
   ny <- ncol(sigma_w_1)

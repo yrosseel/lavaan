@@ -427,7 +427,7 @@ lav_sam_veta2 <- function(fs = NULL, m = NULL,
   idx2 <- tmp$idx2
   names_1 <- tmp$names
 
-  fs2 <- fs[, idx1] * fs[, idx2]
+  fs2 <- fs[, idx1, drop = FALSE] * fs[, idx2, drop = FALSE]
 
   k_nfac <- lav_mat_com(nfac, nfac)
   ik <- diag(nfac * nfac) + k_nfac
@@ -455,8 +455,8 @@ lav_sam_veta2 <- function(fs = NULL, m = NULL,
   colnames(var_error) <- rownames(var_error) <- names_1
   colnames(fs2) <- names_1
   lv_keep <- c(lv_names[-1], lv_int_names)
-  var_fs2 <- var_fs2[lv_keep, lv_keep]
-  var_error <- var_error[lv_keep, lv_keep]
+  var_fs2 <- var_fs2[lv_keep, lv_keep, drop = FALSE]
+  var_error <- var_error[lv_keep, lv_keep, drop = FALSE]
   fs_mean <- colMeans(fs2, na.rm = TRUE)
   names(fs_mean) <- names_1
   fs2_mean <- fs_mean # all of them
@@ -648,14 +648,14 @@ lav_sam_fs2 <- function(fs = NULL, lv_names = NULL, lv_int_names = NULL) {
 
   names_1 <- paste(lv_names[idx1], lv_names[idx2], sep = ":")
 
-  fs2 <- fs[, idx1] * fs[, idx2]
+  fs2 <- fs[, idx1, drop = FALSE] * fs[, idx2, drop = FALSE]
   var_fs2 <- varn(fs2, n)
 
   # select only what we need
   colnames(var_fs2) <- rownames(var_fs2) <- names_1
   lv_main <- paste(lv_names[-1], "..int..", sep = ":")
   lv_keep <- c(lv_main, lv_int_names)
-  var_fs2 <- var_fs2[lv_keep, lv_keep]
+  var_fs2 <- var_fs2[lv_keep, lv_keep, drop = FALSE]
 
   var_fs2
 }

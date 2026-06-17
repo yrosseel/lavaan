@@ -139,7 +139,7 @@ fsr <- function(model = NULL,
   if (lavoptions$missing == "listwise") {
     # FIXME: make this work for multiple groups!!
     ov <- unique(unlist(lavpta$vnames$ov))
-    data <- na.omit(data[, ov])
+    data <- na.omit(data[, ov, drop = FALSE])
   }
 
   # any `regular' latent variables?
@@ -543,8 +543,8 @@ fsr <- function(model = NULL,
     slot_options = lavoptions3
   )
   info_all <- lavTech(fit_si2, "information") * nobs(fit)
-  i33 <- info_all[idx2, idx2]
-  i32 <- info_all[idx2, idx1]
+  i33 <- info_all[idx2, idx2, drop = FALSE]
+  i32 <- info_all[idx2, idx1, drop = FALSE]
   # i23 <- info_all[idx1, idx2]
   # i22 <- info_all[idx1, idx1]
 

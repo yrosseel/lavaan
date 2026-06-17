@@ -269,9 +269,9 @@ lav_sam_step2_se <- function(fit = NULL, joint = NULL,
 
   if (lavoptions$se %in% c("naive", "twostep", "twostep.robust")) {
     info <- lavInspect(joint, "information")
-    i_12 <- info[step1_free_idx, step2_free_idx]
-    i_22 <- info[step2_free_idx, step2_free_idx]
-    i_21 <- info[step2_free_idx, step1_free_idx]
+    i_12 <- info[step1_free_idx, step2_free_idx, drop = FALSE]
+    i_22 <- info[step2_free_idx, step2_free_idx, drop = FALSE]
+    i_21 <- info[step2_free_idx, step1_free_idx, drop = FALSE]
   }
 
   # V2

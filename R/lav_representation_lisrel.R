@@ -1263,7 +1263,7 @@ lav_lisrel_ibinv <- function(mlist = NULL) {
     # recursive model: permute B to strictly lower triangular, solve, unpermute
     ib_inv <- forwardsolve(diag(nr) - mm_beta[result, result], diag(nr))
     inv_order <- order(result)
-    return(ib_inv[inv_order, inv_order])
+    return(ib_inv[inv_order, inv_order, drop = FALSE])
   }
 
   # case 5: non-recursive model
@@ -1305,7 +1305,7 @@ lav_lisrel_alpha0 <- function(mlist = NULL, sample_mean = NULL,
     # - NU elements are not needed (since not in ov.dummy.idx)
     ib_inv <- lav_lisrel_ibinv(mlist = mlist)
     lambda__ib_inv <- mm_lambda %*% ib_inv
-    lambda__ib_inv_dummy <- lambda__ib_inv[ov_dummy_idx, lv_dummy_idx]
+    lambda__ib_inv_dummy <- lambda__ib_inv[ov_dummy_idx, lv_dummy_idx, drop = FALSE]
     mm_alpha[lv_dummy_idx] <-
       solve(lambda__ib_inv_dummy, sample_mean[ov_dummy_idx])
   } else {
@@ -2626,7 +2626,8 @@ lav_lisrel_test_derivatives <- function(mlist = NULL,
         sigma_hat <- lav_lisrel_sigma(mlist = mlist, delta = FALSE)
         dsigma <- diag(sigma_hat)
         # dy/ddsigma = -0.5/(ddsigma*sqrt(ddsigma))
-        d_delta_dx <- dx_sigma[var_idx, ] * -0.5 / (dsigma * sqrt(dsigma))
+        d_delta_dx <- dx_sigma[var_idx, , drop = FALSE] * -0.5 /
+          (dsigma * sqrt(dsigma))
 
         # 2. compute dth.dDelta
         dth_d_delta <-
@@ -2693,7 +2694,8 @@ lav_lisrel_test_derivatives <- function(mlist = NULL,
         sigma_hat <- lav_lisrel_sigma(mlist = mlist, delta = FALSE)
         dsigma <- diag(sigma_hat)
         # dy/ddsigma = -0.5/(ddsigma*sqrt(ddsigma))
-        d_delta_dx <- dx_sigma[var_idx, ] * -0.5 / (dsigma * sqrt(dsigma))
+        d_delta_dx <- dx_sigma[var_idx, , drop = FALSE] * -0.5 /
+          (dsigma * sqrt(dsigma))
 
         # 2. compute dpi.dDelta
         dpi_d_delta <-
