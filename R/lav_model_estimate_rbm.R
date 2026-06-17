@@ -15,8 +15,12 @@
 # Standard errors use the sandwich estimator (se = "robust.huber.white"),
 # computed by lav_model_vcov() in the usual way.
 #
-# Reference: Jamil, Kosmidis, Rosseel (2025) <arXiv:2509.25419>; ported from
-# the brlavaan package.
+# Reference: 
+# - Jamil, H., Rosseel, Y., Kemp, O., & Kosmidis, I. (2026). Bias-Reduced 
+#   Estimation of Structural Equation Models. Structural Equation Modeling: A 
+#   Multidisciplinary Journal, 33(3), 376–392. 
+#   https://doi.org/10.1080/10705511.2025.2610462
+# - ported from the brlavaan package (github.com/haziqj/brlavaan)
 
 # check whether a matrix is non-positive-definite or has NAs
 lav_model_rbm_check_mat <- function(mat) {
