@@ -23,9 +23,17 @@ fit_ML   <- sem(model = mod, data = PoliticalDemocracy)
 
 # Implicit RBM fit (default)
 fit_iRBM <- sem(model = mod, data = PoliticalDemocracy,
-                estimator = list(estimator = "rbm", rbm.method = "implicit") 
+                estimator = list(estimator = "rbm", rbm.method = "implicit")) 
 
 # Explicit RBM fit
 fit_eRBM <- sem(model = mod, data = PoliticalDemocracy,
-                estimator = list(estimator = "rbm", rbm.method = "explicit")
+                estimator = list(estimator = "rbm", rbm.method = "explicit"))
 
+# Compare
+tab <- data.frame(
+    ML = coef(fit_ML),
+    iRBM = coef(fit_iRBM),
+    eRBM = coef(fit_eRBM)
+)
+rownames(tab) <- names(coef(fit_ML))
+print(round(tab, 3))
