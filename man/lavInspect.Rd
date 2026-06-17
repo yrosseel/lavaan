@@ -126,14 +126,18 @@ Information about the data:
         \code{lav_object_vnames(object)}, while the rows correspond to the
         output of \code{lavInspect(object, "case.idx")}.}
     \item{\code{"ordered"}:}{A character vector. The ordered variables.}
-    \item{\code{"nobs"}:}{Integer vector. The number of observations
-        in each group that were used in the analysis.}
+    \item{\code{"nobs"}:}{Numeric vector. The effective number of observations
+        in each group that were used in the analysis. If sampling weights were
+        provided, this is the (per group) sum of the weights, consistent with
+        the value returned by the \code{nobs()} method. Use \code{"norig"} to
+        obtain the number of rows in the data.}
     \item{\code{"norig"}:}{Integer vector. The original number of observations
-        in each group.}
-    \item{\code{"ntotal"}:}{Integer. The total number of observations that
-        were used in the analysis. If there is just a single group, this
+        (rows in the data) in each group.}
+    \item{\code{"ntotal"}:}{Numeric. The total effective number of observations
+        that were used in the analysis. If there is just a single group, this
         is the same as the \code{"nobs"} option; if there are multiple groups,
-        this is the sum of the \code{"nobs"} numbers for each group.}
+        this is the sum of the \code{"nobs"} numbers for each group. If sampling
+        weights were provided, this is the sum of the weights.}
     \item{\code{"case.idx"}:}{Integer vector. The case/observation numbers 
         that were used in the analysis.
         In the case of multiple groups: a list of numbers.}

@@ -274,11 +274,16 @@ lav_lavaan_lavinspect <- function(object,                                # nolin
   } else if (what == "level.label") {
     object@Data@level.label
   } else if (what == "nobs") {
-    unlist(object@Data@nobs)
+    # use @SampleStats@nobs (not @Data@nobs): if sampling weights are
+    # used, the effective sample size is sum(wt), and this is what the
+    # nobs() generic and all fit computations rely on (see also "ntotal")
+    unlist(object@SampleStats@nobs)
   } else if (what == "norig") {
     unlist(object@Data@norig)
   } else if (what == "ntotal") {
-    sum(unlist(object@Data@nobs))
+    # effective total sample size; equals sum(wt) when sampling weights
+    # are used (consistent with the nobs() method)
+    object@SampleStats@ntotal
   } else if (what == "coverage") {
     lav_inspect_mi_coverage(object,
       add_labels = add.labels, add_class = add.class,
