@@ -302,7 +302,7 @@ lav_model_plotinfo <- function(model = NULL, infile = NULL, varlv = FALSE) {
       edges$id[curedge] <- curedge
       edges$label[curedge] <- edge_label(tbl$label[i], tbl$fixed[i])
       if (varlv && jl == jr) { # prepare for handling varlv
-        edges$label[curedge] <- paste(tbl$label[i], 
+        edges$label[curedge] <- paste(tbl$label[i],
           if (is.null(tbl$fixed)) "" else tbl$fixed[i],
           sep = "=")
       }

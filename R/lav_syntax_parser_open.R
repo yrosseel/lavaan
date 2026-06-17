@@ -808,7 +808,7 @@ lav_parse_handle_formule <- function(formule, tmplist, types, modelsrc,
   lhs <- formule$elem_text[opi - 1L]
   rhs <- formule$elem_text[nelem]
   already <- which(flat$lhs == lhs & flat$op == op & flat$block == block &
-            (flat$rhs == rhs | (flat$rhs == "" & 
+            (flat$rhs == rhs | (flat$rhs == "" &
               (op == "~" | op == "|~" | op == ":~") &
               formule$elem_type[nelem] == types$numliteral)))
   if (length(already) == 1L) {
