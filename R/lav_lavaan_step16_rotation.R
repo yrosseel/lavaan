@@ -143,7 +143,7 @@ lav_step16_rotation <- function(lavoptions = NULL,
         # store rotated VCOV
         # lavvcov$vcov.unrotated <- lavvcov$vcov
         if (lavmodel@ceq.simple.only) {
-          free_idx <- which(lavpartable$free > 0L &&
+          free_idx <- which(lavpartable$free > 0L &
             !duplicated(lavpartable$free))
         } else {
           free_idx <- which(lavpartable$free > 0L)

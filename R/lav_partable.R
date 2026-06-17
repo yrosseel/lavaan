@@ -753,6 +753,17 @@ lav_model_pt  <- function(
     )
   } # auto_efa
 
+  # EFA/ESEM: do not use the 'simple equality constraint' shortcut when the
+  # model contains EFA blocks. The rotation machinery adds its own (efa)
+  # constraints, so ceq.simple.only is never TRUE here; collapsing the user
+  # equality constraints would then drop them entirely (neither '==' rows nor a
+  # shared free index), leaving the vcov rank-deficient. Keep them as explicit
+  # '==' constraints instead (the pre-ceq.simple behaviour).
+  if (ceq_simple && !is.null(tmp_list$efa) &&
+      any(nchar(tmp_list$efa) > 0L)) {
+    ceq_simple <- FALSE
+  }
+
   # handle user-specified equality constraints
   # lavaan 0.6-11:
   #     two settings:
