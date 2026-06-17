@@ -352,6 +352,30 @@ lav_pt_add_bounds <- function(partable = NULL,
         lv_names
       )]
 
+      # new in 0.6-20: if std.lv = TRUE, the latent variances are normally
+      # fixed to 1.0; but in some settings (eg multiple groups +
+      # group.equal = "loadings") the latent variances in groups 2+ are
+      # free parameters. For those free parameters, the [1, 1] bounds are
+      # wrong (they would fix the variance to 1.0). Use data-driven bounds
+      # instead (std.lv has no marker indicator, so no marker-based bounds).
+      if (lavoptions$std.lv) {
+        std_free_idx <- which(partable$free[par_idx] > 0L)
+        if (length(std_free_idx) > 0L) {
+          fidx <- par_idx[std_free_idx]
+          lower_auto[fidx] <- optim_bounds$min.var.lv.exo
+          upper_auto[fidx] <- max(ov_var)
+          # endogenous lv: respect min.var.lv.endo / max.r2.lv.endo
+          endo_f <- which(partable$lhs[fidx] %in% lv_names_endo)
+          if (length(endo_f) > 0L) {
+            lower_auto[fidx[endo_f]] <- optim_bounds$min.var.lv.endo
+            if (optim_bounds$max.r2.lv.endo != 1) {
+              lower_auto[fidx[endo_f]] <-
+                (1 - optim_bounds$max.r2.lv.endo) * upper_auto[fidx[endo_f]]
+            }
+          }
+        }
+      }
+
       # range
       bound_range <- upper_auto[par_idx] - pmax(lower_auto[par_idx], 0)
 

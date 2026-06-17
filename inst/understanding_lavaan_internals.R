@@ -319,7 +319,7 @@ fit@version
 fit@call
 
 # 3. timings of several substeps
-unlist(fit@timing)
+# unlist(fit@timing)
 
 # 4. options used for this object
 unlist(fit@Options)
