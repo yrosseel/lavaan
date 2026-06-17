@@ -102,6 +102,20 @@ lav_step11_estoptim <- function(lavdata = NULL,
         silent = TRUE
       )
 
+      # reduced-bias M-estimation (RBM)
+    } else if (lavoptions$optim.method == "rbm") {
+      x <- try(
+        lav_model_est_rbm(
+          lavmodel = lavmodel,
+          lavpartable = lavpartable,
+          lavsamplestats = lavsamplestats,
+          lavdata = lavdata,
+          lavoptions = lavoptions,
+          lavcache = lavcache
+        ),
+        silent = TRUE
+      )
+
       # Quasi-Newton
     } else {
       # for backwards compatibility (<0.6)
