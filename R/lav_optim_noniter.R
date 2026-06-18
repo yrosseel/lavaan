@@ -38,8 +38,11 @@ lav_optim_noniter <- function(lavmodel = NULL, lavsamplestats = NULL,
     ))
   }
 
-  # no support (yet) for equality constraints
-  if (length(lavmodel@ceq.linear.idx) > 0L) {
+  # linear equality constraints are supported by the IV estimator (handled by
+  # a constrained system solve); other noniterative estimators do not (yet)
+  # support them
+  if (length(lavmodel@ceq.linear.idx) > 0L &&
+      !identical(lavoptions$estimator, "IV")) {
     lav_msg_stop(gettext(
       "equality constraints not supported (yet) with optim.method = 'NONITER'."
       ))
