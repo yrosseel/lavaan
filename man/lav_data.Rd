@@ -4,15 +4,16 @@
 \description{Utility functions related to the Data slot}
 \usage{
 # update data slot with new data (of the same size)
-lav_data_update(lavdata = NULL, newX = NULL, BOOT.idx = NULL, lavoptions = NULL)
+lav_data_update(lavdata = NULL, new_x = NULL, boot_idx = NULL, lavoptions = NULL, ...)
 }
 \arguments{
 \item{lavdata}{A lavdata object.}
-\item{newX}{A list of (new) data matrices (per group) of the same size.
+\item{new_x}{A list of (new) data matrices (per group) of the same size.
 They replace the data stored in the internal data slot.}
-\item{BOOT.idx}{A list of integers. If bootstrapping was used to produce
+\item{boot_idx}{A list of integers. If bootstrapping was used to produce
 the data in newX, use these indices to adapt the remaining slots.}
 \item{lavoptions}{A named list. The Options slot from a lavaan object.}
+\item{...}{To accept old argument names with dots or capitals. No other arguments are accepted.}
 }
 \examples{
 # generate syntax for an independence model
@@ -31,7 +32,7 @@ boot.idx <- sample(x = nobs(fit), size = nobs(fit), replace = TRUE)
 newX <- list(lavdata@X[[1]][boot.idx,])
 
 # generate update lavdata object
-newdata <- lav_data_update(lavdata = lavdata, newX = newX, 
+newdata <- lav_data_update(lavdata = lavdata, new_x = newX,
                            lavoptions = lavoptions)
 }
 

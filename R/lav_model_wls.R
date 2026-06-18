@@ -10,7 +10,7 @@ lav_model_wls_est <- function(lavmodel = NULL, glist = NULL,
 
   # model-implied statistics
   if (is.null(lavimplied)) {
-    lavimplied <- lav_model_implied(lavmodel, GLIST = glist)
+    lavimplied <- lav_model_implied(lavmodel, glist = glist)
   }
 
   wls_est_1 <- vector("list", length = nblocks)

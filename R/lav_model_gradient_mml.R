@@ -145,7 +145,7 @@ lav_model_grad_mml <- function(lavmodel = NULL,
   dd <- lav_model_grad_dd(lavmodel, g_list = glist, group = group)
 
   ## FIXME!!! do this analytically...
-  x <- lav_model_get_parameters(lavmodel = lavmodel, GLIST = mlist)
+  x <- lav_model_get_parameters(lavmodel = lavmodel, glist = mlist)
   d_vetadx <- function(x, lavmodel = lavmodel, g = 1L) {
     glist <- lav_model_x2glist(lavmodel, x = x, type = "free")
     vetax <- lav_model_vetax(lavmodel, glist = glist)[[g]]

@@ -339,7 +339,7 @@ lav_model_est <- function(lavmodel = NULL,
     }
     if (debug) {
       # cat("Current unconstrained parameter values =\n")
-      # tmp.x <- lav_model_get_parameters(lavmodel, GLIST=GLIST, type="unco")
+      # tmp.x <- lav_model_get_parameters(lavmodel, glist=GLIST, type="unco")
       # print(tmp.x); cat("\n")
       cat("Current free parameter values =\n")
       print(x)

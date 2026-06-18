@@ -676,9 +676,9 @@ lav_model_vcov <- function(lavmodel = NULL,
 #
 # Returns an R x n_free matrix. The number of draws and (optional) seed
 # are taken from lavoptions$monte.carlo.
-lav_model_vcov_mc <- function(lavmodel = NULL, VCOV = NULL,
+lav_model_vcov_mc <- function(lavmodel = NULL, vcov = NULL,
                               lavoptions = NULL) {
-  if (is.null(VCOV) || inherits(VCOV, "try-error")) {
+  if (is.null(vcov) || inherits(vcov, "try-error")) {
     return(NULL)
   }
   r <- 20000L
@@ -694,14 +694,14 @@ lav_model_vcov_mc <- function(lavmodel = NULL, VCOV = NULL,
   stopifnot(r > 0L)
 
   coef_hat <- lav_model_get_parameters(lavmodel = lavmodel, type = "free")
-  # ensure we sample in the dimension of VCOV: typically n_free, but
-  # with simple equality constraints (ceq.simple.only) VCOV is in unco
+  # ensure we sample in the dimension of vcov: typically n_free, but
+  # with simple equality constraints (ceq.simple.only) vcov is in unco
   # space; in that case lift coef_hat via t(K)
-  if (lavmodel@ceq.simple.only && nrow(VCOV) == nrow(lavmodel@ceq.simple.K)) {
+  if (lavmodel@ceq.simple.only && nrow(vcov) == nrow(lavmodel@ceq.simple.K)) {
     coef_hat <- drop(lavmodel@ceq.simple.K %*% coef_hat)
   }
 
-  # save and restore RNG state so MC sampling does not perturb the
+  # save and restore RNG state so mc sampling does not perturb the
   # user's global seed
   if (exists(".Random.seed", envir = .GlobalEnv, inherits = FALSE)) {
     saved_seed <- get(".Random.seed", envir = .GlobalEnv, inherits = FALSE)
@@ -717,8 +717,8 @@ lav_model_vcov_mc <- function(lavmodel = NULL, VCOV = NULL,
     set.seed(seed)
   }
 
-  # symmetrize VCOV for safety
-  vcov_sym <- 0.5 * (VCOV + t(VCOV))
+  # symmetrize vcov for safety
+  vcov_sym <- 0.5 * (vcov + t(vcov))
   mc_coef <- lav_mvrnorm(n = r, mu = coef_hat, sigma_1 = vcov_sym,
                          check_symmetry = FALSE)
   if (!is.matrix(mc_coef)) {
@@ -738,29 +738,31 @@ lav_model_vcov_se_mc_active <- function(lavoptions) {
 # row/column per free parameter, nx.free) for ceq.simple.only models. This is
 # needed whenever the vcov must be combined with a jacobian/hessian that is
 # expressed in the compact (nx.free) space (e.g. defined parameters, Wald
-# tests). VCOV is returned unchanged if it is not in the unco space.
-lav_model_vcov_unco_to_free <- function(lavmodel, VCOV) {
+# tests). vcov is returned unchanged if it is not in the unco space.
+lav_model_vcov_unco_to_free <- function(lavmodel, vcov) {
   if (lavmodel@ceq.simple.only && nrow(lavmodel@ceq.simple.K) > 0L &&
-      nrow(VCOV) == nrow(lavmodel@ceq.simple.K)) {
+      nrow(vcov) == nrow(lavmodel@ceq.simple.K)) {
     rep_idx <- apply(lavmodel@ceq.simple.K, 2L,
                      function(col) which(col != 0)[1L])
-    VCOV <- VCOV[rep_idx, rep_idx, drop = FALSE]
+    vcov <- vcov[rep_idx, rep_idx, drop = FALSE]
   }
-  VCOV
+  vcov
 }
 
-lav_model_vcov_se <- function(lavmodel, lavpartable, VCOV = NULL, # nolint start
-                              BOOT = NULL, MC = NULL,
-                              lavoptions = NULL) {                # nolint end
+lav_model_vcov_se <- function(lavmodel, lavpartable, vcov = NULL,
+                              boot = NULL, mc = NULL,
+                              lavoptions = NULL, ...) {
+  dotdotdot <- list(...)
+  lav_adapt_func(environment(), dotdotdot, NULL)
   # 0. special case
-  if (is.null(VCOV)) {
-    se <- rep(as.numeric(NA), lavmodel@nx.user)
+  if (is.null(vcov)) {
+    se <- rep(NA_real_, lavmodel@nx.user)
     se[lavpartable$free == 0L] <- 0.0
     return(se)
   }
 
   # 1. free parameters only
-  x_var <- diag(VCOV)
+  x_var <- diag(vcov)
   # check for negative values (what to do: NA or 0.0?)
   x_var[x_var < 0] <- as.numeric(NA)
   x_se <- sqrt(x_var)
@@ -779,7 +781,7 @@ lav_model_vcov_se <- function(lavmodel, lavpartable, VCOV = NULL, # nolint start
   # se for full parameter table, but with 0.0 entries for def/ceq/cin
   # elements
   se <- lav_model_get_parameters(
-    lavmodel = lavmodel, GLIST = glist,
+    lavmodel = lavmodel, glist = glist,
     type = "user", extra = FALSE
   )
 
@@ -792,13 +794,13 @@ lav_model_vcov_se <- function(lavmodel, lavpartable, VCOV = NULL, # nolint start
   def_idx <- which(lavpartable$op == ":=")
   if (length(def_idx) > 0L) {
     # if Monte Carlo samples are not supplied but requested, draw them
-    if (is.null(MC) && is.null(BOOT) &&
+    if (is.null(mc) && is.null(boot) &&
         lav_model_vcov_se_mc_active(lavoptions)) {
-      MC <- lav_model_vcov_mc(lavmodel = lavmodel, VCOV = VCOV,
+      mc <- lav_model_vcov_mc(lavmodel = lavmodel, vcov = vcov,
                               lavoptions = lavoptions)
     }
-    if (!is.null(MC)) {
-      mc_def <- apply(MC, 1L, lavmodel@def.function)
+    if (!is.null(mc)) {
+      mc_def <- apply(mc, 1L, lavmodel@def.function)
       if (length(def_idx) == 1L) {
         mc_def <- as.matrix(mc_def)
       } else {
@@ -813,12 +815,12 @@ lav_model_vcov_se <- function(lavmodel, lavpartable, VCOV = NULL, # nolint start
       se[def_idx] <- sqrt(diag_def_cov)
       return(se)
     }
-    if (!is.null(BOOT)) {
+    if (!is.null(boot)) {
       # we must remove the NA rows (and hope we have something left)
-      error_idx <- attr(BOOT, "error.idx")
-      boot <- BOOT
+      error_idx <- attr(boot, "error.idx")
+      boot <- boot
       if (length(error_idx) > 0L) {
-        boot <- BOOT[-error_idx, , drop = FALSE] # drops attributes
+        boot <- boot[-error_idx, , drop = FALSE] # drops attributes
       }
 
       boot_def <- apply(boot, 1L, lavmodel@def.function)
@@ -878,11 +880,11 @@ lav_model_vcov_se <- function(lavmodel, lavpartable, VCOV = NULL, # nolint start
       }
 
       # jac (and hess_list) are in the compact (nx.free) space; when
-      # ceq.simple.only, VCOV is in the larger 'unco' space, so reduce VCOV to
+      # ceq.simple.only, vcov is in the larger 'unco' space, so reduce vcov to
       # the compact space. NB: previously jac was *expanded* to the unco space
       # via ceq.simple.K, which multiply-counts the shared parameters and
       # inflates the SE of defined parameters that involve them.
-      vcov_def <- lav_model_vcov_unco_to_free(lavmodel, VCOV)
+      vcov_def <- lav_model_vcov_unco_to_free(lavmodel, vcov)
       def_cov <- jac %*% vcov_def %*% t(jac)
 
       # add second-order delta method correction:

@@ -23,7 +23,7 @@ lav_step13_vcov_boot <- function(lavoptions = NULL,
   #                 store.vcov=="default" and rotation="none"
   # if lavoptions$se == "external"
   #   if lavpartable$se NULL
-  #     lavpartable$se <- lav_model_vcov_se(..., VCOV=NULL, BOOT=NULL)
+  #     lavpartable$se <- lav_model_vcov_se(..., vcov=NULL, boot=NULL)
   #       + ** warning **
   # if lavpartable not "external" or "none" or "twostep"
   #     lavpartable$se <- lav_model_vcov_se(...)
@@ -88,7 +88,7 @@ lav_step13_vcov_boot <- function(lavoptions = NULL,
       cat("drawing", lavoptions$monte.carlo$R,
           "Monte Carlo samples for defined parameters ...")
     }
-    mc_coef <- lav_model_vcov_mc(lavmodel = lavmodel, VCOV = vcov_1,
+    mc_coef <- lav_model_vcov_mc(lavmodel = lavmodel, vcov = vcov_1,
                                  lavoptions = lavoptions)
     lav_monte_carlo$coef <- mc_coef
     if (lav_verbose()) {
@@ -125,7 +125,7 @@ lav_step13_vcov_boot <- function(lavoptions = NULL,
       lavpartable$se <- lav_model_vcov_se(
         lavmodel = lavmodel,
         lavpartable = lavpartable,
-        VCOV = NULL, BOOT = NULL,
+        vcov = NULL, boot = NULL,
         lavoptions = lavoptions
       )
       lav_msg_warn(gettext(
@@ -137,9 +137,9 @@ lav_step13_vcov_boot <- function(lavoptions = NULL,
     lavpartable$se <- lav_model_vcov_se(
       lavmodel = lavmodel,
       lavpartable = lavpartable,
-      VCOV = vcov_1,
-      BOOT = lavboot$coef,
-      MC = lav_monte_carlo$coef,
+      vcov = vcov_1,
+      boot = lavboot$coef,
+      mc = lav_monte_carlo$coef,
       lavoptions = lavoptions
     )
   }
