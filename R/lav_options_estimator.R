@@ -696,6 +696,8 @@ lav_options_est_iv <- function(opt) {
                                iv.samplestats = TRUE,
                                iv.varcov.method = "RLS",
                                iv.sargan = TRUE,
+                               iv.weak = "warn",
+                               iv.weak.threshold = 10,
                                iv.vcov.stage1 = "lm.vcov.dfres",
                                iv.vcov.stage2 = "h2",
                                iv.vcov.gamma.modelbased = TRUE,
@@ -713,6 +715,21 @@ lav_options_est_iv <- function(opt) {
     }
     if (is.null(opt$estimator.args$iv.sargan)) {
       opt$estimator.args$iv.sargan <- TRUE
+    }
+    # NOTE: use [[ ]] (exact match); $ would partial-match iv.weak to
+    # iv.weak.threshold
+    if (is.null(opt$estimator.args[["iv.weak"]])) {
+      opt$estimator.args$iv.weak <- "warn"
+    } else if (!tolower(opt$estimator.args[["iv.weak"]]) %in%
+               c("warn", "prune", "none")) {
+      lav_msg_stop(gettext("iv.weak should be warn, prune, or none."))
+    }
+    if (is.null(opt$estimator.args[["iv.weak.threshold"]])) {
+      opt$estimator.args$iv.weak.threshold <- 10
+    } else if (!is.numeric(opt$estimator.args[["iv.weak.threshold"]]) ||
+               opt$estimator.args[["iv.weak.threshold"]] < 0) {
+      lav_msg_stop(gettext(
+        "iv.weak.threshold should be a non-negative number."))
     }
     if (is.null(opt$estimator.args$iv.vcov.stage1)) {
       if (opt$.categorical) {

@@ -63,6 +63,19 @@ lav_sem_miiv_internal <- function(lavmodel = NULL, lavh1 = NULL,
   # find ALL model-implied instrumental variables (miivs) per equation
   eqs <- lav_model_find_iv(lavmodel = lavmodel, lavpartable = lavpartable)
 
+  # weak-instrument diagnostics (warn) or pruning, based on the first-stage
+  # F-statistic of each overidentified equation
+  # use [[ ]] (exact match): $ would partial-match iv.weak to iv.weak.threshold
+  iv_weak <- tolower(lavoptions$estimator.args[["iv.weak"]])
+  if (length(iv_weak) > 0L && iv_weak != "none") {
+    eqs <- lav_sem_miiv_weak(
+      eqs = eqs, lavpta = lav_pt_attributes(lavpartable),
+      lavh1 = lavh1, lavsamplestats = lavsamplestats,
+      threshold = lavoptions$estimator.args[["iv.weak.threshold"]],
+      action = iv_weak
+    )
+  }
+
   # initial parameter vector
   x <- lav_model_get_parameters(lavmodel)
 
@@ -118,6 +131,129 @@ lav_sem_miiv_internal <- function(lavmodel = NULL, lavh1 = NULL,
 
   attr(x, "eqs") <- eqs
   x
+}
+
+
+# assess instrument strength for each IV equation via the first-stage
+# F-statistic (Staiger & Stock, 1997): for each endogenous regressor in an
+# equation, regress it on the equation's instruments and compute the F for the
+# instruments. A minimum F below 'threshold' (rule of thumb: 10) flags weak
+# instruments. 'action' controls the response:
+#  - "warn":  warn about the affected equations (default); the user can supply
+#             stronger instruments manually via the |~ operator
+#  - "prune": greedily drop the weakest excess instrument from weak,
+#             overidentified equations (never below just-identified)
+#  - "none":  do nothing (caller skips this function)
+# Returns the (possibly pruned) eqs list.
+lav_sem_miiv_weak <- function(eqs = NULL, lavpta = NULL, lavh1 = NULL,
+                              lavsamplestats = NULL, threshold = 10,
+                              action = "warn") {
+  # first-stage R^2 of regressor 'xi' on instruments 'zi' (indices)
+  r2_fun <- function(s, xi, zi) {
+    if (length(zi) == 0L) {
+      return(0)
+    }
+    beta <- try(solve(s[zi, zi, drop = FALSE], s[zi, xi]), silent = TRUE)
+    if (inherits(beta, "try-error")) {
+      return(NA_real_)
+    }
+    min(max(drop(s[xi, zi, drop = FALSE] %*% beta) / s[xi, xi], 0), 1 - 1e-12)
+  }
+  # first-stage F from an R^2 with nz instruments and N observations
+  f_fun <- function(r2, nz, n) {
+    df_res <- n - nz - 1L
+    if (is.na(r2) || df_res <= 0L || nz <= 0L) {
+      return(NA_real_)
+    }
+    (r2 / nz) / ((1 - r2) / df_res)
+  }
+
+  weak_msgs <- character(0L)
+  pruned_msgs <- character(0L)
+
+  for (b in seq_along(eqs)) {
+    ov_names <- lavpta$vnames$ov[[b]]
+    s <- lavh1$implied$cov[[b]]
+    n <- lavsamplestats@nobs[[b]]
+    for (j in seq_along(eqs[[b]])) {
+      eq <- eqs[[b]][[j]]
+      iv_flag <- if (!is.null(eq$iv_type)) {
+        eq$iv_type != "ols"
+      } else {
+        !identical(eq$rhs_new, eq$miiv)
+      }
+      if (!iv_flag || identical(eq$rhs_new, "1")) {
+        next
+      }
+      endog <- setdiff(eq$rhs_new, eq$iv) # regressors needing instruments
+      if (length(endog) == 0L) {
+        next
+      }
+      iv <- eq$iv
+      min_f <- function(iv_set) {
+        zi <- match(iv_set, ov_names)
+        min(vapply(endog, function(xv) {
+          f_fun(r2_fun(s, match(xv, ov_names), zi), length(iv_set), n)
+        }, numeric(1)), na.rm = TRUE)
+      }
+      cur_f <- min_f(iv)
+
+      # prune the weakest excess instruments
+      if (action == "prune" && is.finite(cur_f) && cur_f < threshold) {
+        repeat {
+          if (length(iv) <= length(eq$rhs_new) || min_f(iv) >= threshold) {
+            break
+          }
+          # binding (weakest) regressor; drop the excluded instrument whose
+          # removal best preserves that regressor's R^2
+          f_each <- vapply(endog, function(xv) {
+            f_fun(r2_fun(s, match(xv, ov_names), match(iv, ov_names)),
+                  length(iv), n)
+          }, numeric(1))
+          xi <- match(endog[which.min(f_each)], ov_names)
+          cand <- setdiff(iv, eq$rhs_new)
+          if (length(cand) == 0L) {
+            break
+          }
+          keep_r2 <- vapply(cand, function(z) {
+            r2_fun(s, xi, match(setdiff(iv, z), ov_names))
+          }, numeric(1))
+          iv <- setdiff(iv, cand[which.max(keep_r2)])
+        }
+        if (!identical(iv, eq$iv)) {
+          new_f <- min_f(iv)
+          pruned_msgs <- c(pruned_msgs, sprintf(
+            "%s ~ %s: dropped %s (first-stage F %.1f -> %.1f)",
+            eq$lhs_new, paste(eq$rhs_new, collapse = " + "),
+            paste(setdiff(eq$iv, iv), collapse = ", "), cur_f, new_f))
+          eqs[[b]][[j]]$iv <- iv
+          eqs[[b]][[j]]$iv_type <- "user" # fixed set downstream
+          cur_f <- new_f
+        }
+      }
+
+      if (is.finite(cur_f) && cur_f < threshold) {
+        weak_msgs <- c(weak_msgs, sprintf(
+          "%s ~ %s (first-stage F = %.1f)",
+          eq$lhs_new, paste(eq$rhs_new, collapse = " + "), cur_f))
+      }
+    }
+  }
+
+  if (length(pruned_msgs) > 0L) {
+    lav_msg_warn(gettextf(
+      "[IV] weak instruments pruned (iv.weak = \"prune\"):\n%s",
+      paste(" -", pruned_msgs, collapse = "\n")))
+  }
+  if (length(weak_msgs) > 0L) {
+    lav_msg_warn(gettextf(
+      "[IV] weak instruments (first-stage F < %g) for:\n%s\nConsider supplying
+       stronger instruments via the |~ operator, or set
+       estimator.args = list(..., iv.weak = \"prune\") to drop weak ones.",
+      threshold, paste(" -", weak_msgs, collapse = "\n")))
+  }
+
+  eqs
 }
 
 
