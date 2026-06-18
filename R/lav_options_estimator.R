@@ -75,11 +75,25 @@ lav_options_est_gls <- function(opt) {
   }
   # se
   if (opt$se == "default") {
-    opt$se <- "standard"
+    # GLS uses a normal-theory weight matrix, so the 'standard' se/test are
+    # only valid for normal, i.i.d. data. With sampling weights the moments
+    # follow the sampling design, so default to the (ADF) sandwich se and the
+    # ADF-based test instead (cf. ULS).
+    if (isTRUE(opt$.sampling.weights)) {
+      opt$se <- "robust.sem"
+    } else {
+      opt$se <- "standard"
+    }
+  } else if (opt$se == "robust") {
+    opt$se <- "robust.sem"
   }
   # test
   if (opt$test[1] == "default") {
-    opt$test <- "standard"
+    if (isTRUE(opt$.sampling.weights)) {
+      opt$test <- "browne.residual.adf"
+    } else {
+      opt$test <- "standard"
+    }
   }
   bad_idx <- which(!opt$test %in% c(
     "standard", "none",

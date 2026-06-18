@@ -826,7 +826,7 @@ lav_samp_from_data <- function(lavdata = NULL,        # nolint start
 
     # nacov (=GAMMA)
     if (!nacov_user && nlevels == 1L) {
-      if (estimator == "ML" && !missing_flag && nacov_compute) {
+      if (estimator %in% c("ML", "GLS") && !missing_flag && nacov_compute) {
         if (conditional_x) {
           y <- y
         } else {
