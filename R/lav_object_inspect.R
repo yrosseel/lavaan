@@ -3660,6 +3660,13 @@ lav_inspect_sargan <- function(object, drop_list_single_group = FALSE) {
   # nblocks
   nblocks <- object@pta$nblocks
 
+  # multiple-comparison adjustment for the per-equation Sargan p-values
+  # (applied within each block, over the overidentified equations)
+  adjust <- object@Options$estimator.args[["iv.sargan.adjust"]]
+  if (is.null(adjust)) {
+    adjust <- "none"
+  }
+
   table <- vector("list", length = nblocks)
   for (b in seq_len(nblocks)) {
     eqs <- iv_list[[b]]
@@ -3681,6 +3688,12 @@ lav_inspect_sargan <- function(object, drop_list_single_group = FALSE) {
     na_idx <- which(is.na(sargan_stat))
     if (length(na_idx) > 0L) {
       table[[b]] <- table[[b]][-na_idx, , drop = FALSE]
+    }
+
+    # adjusted p-values over the (overidentified) equations in this block
+    if (adjust != "none" && nrow(table[[b]]) > 0L) {
+      table[[b]]$pvalue.adj <- stats::p.adjust(
+        table[[b]]$pvalue, method = adjust)
     }
 
     class(table[[b]]) <- c("lavaan.data.frame", "data.frame")

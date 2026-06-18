@@ -17,7 +17,8 @@ lav_sem_miiv_internal <- function(lavmodel = NULL, lavh1 = NULL,
   }
   iv_vcov_stage1 <- tolower(lavoptions$estimator.args$iv.vcov.stage1)
   iv_vcov_stage2 <- tolower(lavoptions$estimator.args$iv.vcov.stage2)
-  iv_sargan <- lavoptions$estimator.args$iv.sargan
+  # [[ ]] exact match: $ would partial-match iv.sargan to iv.sargan.adjust
+  iv_sargan <- lavoptions$estimator.args[["iv.sargan"]]
   # just in case
   if (lavmodel@categorical) {
     iv_samplestats <- TRUE

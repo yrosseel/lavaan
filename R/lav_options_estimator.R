@@ -696,6 +696,7 @@ lav_options_est_iv <- function(opt) {
                                iv.samplestats = TRUE,
                                iv.varcov.method = "RLS",
                                iv.sargan = TRUE,
+                               iv.sargan.adjust = "none",
                                iv.weak = "warn",
                                iv.weak.threshold = 10,
                                iv.vcov.stage1 = "lm.vcov.dfres",
@@ -713,8 +714,18 @@ lav_options_est_iv <- function(opt) {
     if (is.null(opt$estimator.args$iv.samplestats)) {
       opt$estimator.args$iv.samplestats <- TRUE
     }
-    if (is.null(opt$estimator.args$iv.sargan)) {
+    # [[ ]] exact match: $ would partial-match iv.sargan to iv.sargan.adjust
+    if (is.null(opt$estimator.args[["iv.sargan"]])) {
       opt$estimator.args$iv.sargan <- TRUE
+    }
+    # multiple-comparison adjustment for the per-equation Sargan p-values
+    if (is.null(opt$estimator.args[["iv.sargan.adjust"]])) {
+      opt$estimator.args$iv.sargan.adjust <- "none"
+    } else if (!opt$estimator.args[["iv.sargan.adjust"]] %in%
+               stats::p.adjust.methods) {
+      lav_msg_stop(gettextf(
+        "iv.sargan.adjust should be one of %s.",
+        lav_msg_view(stats::p.adjust.methods, log_sep = "or")))
     }
     # NOTE: use [[ ]] (exact match); $ would partial-match iv.weak to
     # iv.weak.threshold
