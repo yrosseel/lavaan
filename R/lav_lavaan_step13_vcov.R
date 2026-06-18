@@ -49,6 +49,7 @@ lav_step13_vcov_boot <- function(lavoptions = NULL,
         lavpartable = lavpartable,
         lavimplied = lavimplied,
         lavh1 = lavh1,
+        lavdata = lavdata,
         eqs = attr(x, "eqs")
       )
     } else {
