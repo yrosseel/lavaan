@@ -1524,7 +1524,7 @@ R2 regression factor scores (= squared correlations):\n\n")
     print(pe, nd = nd)
 
     # note for nonlinear defined (:=) parameters under the delta method
-    if (isTRUE(y$pe.delta.note)) {
+    if (isTRUE(attr(pe, "delta.note"))) {
       lav_msg_note(gettext(
         "Standard errors and confidence intervals of the (nonlinear) defined
          (:=) parameters are based on the first-order delta method; for

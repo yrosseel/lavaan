@@ -333,8 +333,11 @@ lav_object_summary <- function(object, header = TRUE,
 
     # flag: nonlinear defined (:=) parameters whose SE/CI rely on the
     # (first-order) delta method -> suggest se.def="mc" or bootstrap
-    # (printed by lav_summary_print(); silent otherwise)
-    res$pe.delta.note <-
+    # (printed by lav_summary_print(); silent otherwise). Stored as an
+    # attribute of the parameter table (res$pe) instead of a separate
+    # list element, to avoid disturbing code that relies on partial
+    # matching of names(summary(object)) (e.g. $p -> $pe).
+    attr(res$pe, "delta.note") <-
       identical(object@Options$se.def, "default") &&
       !identical(object@Options$se, "bootstrap") &&
       !identical(object@Options$se, "none") &&
