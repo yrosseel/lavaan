@@ -314,7 +314,8 @@ lav_samp_gamma <- function(m_y, # Y+X if cond!
                                   gamma_n_minus_one = FALSE,
                                   unbiased = FALSE,
                                   mplus_wls = FALSE,
-                                  wt = NULL) {
+                                  wt = NULL,
+                                  sampling_weights_type = "design") {
   # coerce to matrix
   m_y <- unname(as.matrix(m_y))
   n <- nrow(m_y)
@@ -324,12 +325,17 @@ lav_samp_gamma <- function(m_y, # Y+X if cond!
   # Gamma is the asymptotic (co)variance of the sample moments, which for
   # the saturated (h1) model equals the sandwich I^{-1} J I^{-1}, where I is
   # the expected and J the first-order h1 information matrix. We reuse the
-  # (weight-aware) expected information I, and construct J by weighting each
-  # casewise score by its (frequency) weight. This treats the weights as
-  # frequencies: the result equals the Gamma one would obtain by physically
-  # replicating each case wt times. (Note: J is built with sqrt(wt), i.e.
-  # sum(wt)-weighting, NOT the sum(wt^2)-weighting used for design-based
-  # robust SEs; the latter would miscalibrate the WLS weight matrix.)
+  # (weight-aware) expected information I, and construct the meat J according
+  # to how the sampling weights are interpreted (sampling.weights.type):
+  #  - "design"    : J = crossprod(wt * sc) / sum(wt), i.e. sum(wt^2)-weighted,
+  #                  the design-based sandwich; the parameter vcov is then
+  #                  invariant to the overall scale of the weights, matching
+  #                  the continuous ML robust (huber.white) SEs.
+  #  - "frequency" : J = crossprod(sqrt(wt) * sc) / sum(wt), i.e. sum(wt)-
+  #                  weighted; treats the weights as frequencies, so the result
+  #                  equals the Gamma from physically replicating each case wt
+  #                  times. (NB: this also feeds the WLS/DWLS/DLS weight matrix,
+  #                  so it shifts those point estimates relative to "design".)
   # Under normality J = I and this reduces to the normal-theory Gamma.
   if (!is.null(wt)) {
     if (conditional_x) {
@@ -355,7 +361,11 @@ lav_samp_gamma <- function(m_y, # Y+X if cond!
     if (!meanstructure) {
       sc <- sc[, -seq_len(p), drop = FALSE]
     }
-    j_mat <- crossprod(sqrt(wt) * sc) / sum(wt)
+    if (identical(sampling_weights_type, "frequency")) {
+      j_mat <- crossprod(sqrt(wt) * sc) / sum(wt)
+    } else {
+      j_mat <- crossprod(wt * sc) / sum(wt)
+    }
     # fixed.x zeroes the x-blocks of I, so use a pseudo-inverse there
     if (length(x_idx) > 0L) {
       i_inv <- MASS::ginv(i_mat)

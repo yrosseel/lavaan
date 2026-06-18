@@ -30,6 +30,12 @@ lav_samp_from_data <- function(lavdata = NULL,        # nolint start
   allow_empty_cell <- lavoptions$allow.empty.cell
   dls_a <- lavoptions$estimator.args$dls.a
   dls_gamma_nt <- lavoptions$estimator.args$dls.GammaNT
+  # design vs frequency weighting of the (categorical/continuous) Gamma
+  swt_type <- if (!is.null(lavoptions$sampling.weights.type)) {
+    lavoptions$sampling.weights.type
+  } else {
+    "design"
+  }
 
   # sample.icov (new in 0.6-9; ensure it exists, for older objects)
   sample_icov <- TRUE
@@ -305,11 +311,6 @@ lav_samp_from_data <- function(lavdata = NULL,        # nolint start
       current_verbose <- lav_verbose()
       if (lav_verbose(lav_debug()))
         on.exit(lav_verbose(current_verbose), TRUE)
-      swt_type <- if (!is.null(lavoptions$sampling.weights.type)) {
-        lavoptions$sampling.weights.type
-      } else {
-        "design"
-      }
       if (conditional_x) {
         cat_1 <- muthen1984(
           data_1 = x[[g]],
@@ -865,7 +866,8 @@ lav_samp_from_data <- function(lavdata = NULL,        # nolint start
                 lavoptions$gamma.n.minus.one,
               unbiased = lavoptions$gamma.unbiased,
               mplus_wls = FALSE,
-              wt = wt[[g]]
+              wt = wt[[g]],
+              sampling_weights_type = swt_type
             )
         }
       } else if (estimator %in% c("WLS", "DWLS", "ULS", "DLS", "IV", "catML")) {
@@ -937,7 +939,8 @@ lav_samp_from_data <- function(lavdata = NULL,        # nolint start
                   unbiased =
                     lavoptions$gamma.unbiased,
                   mplus_wls = lavoptions$gamma.wls.mplus,
-                  wt = wt[[g]]
+                  wt = wt[[g]],
+                  sampling_weights_type = swt_type
                 )
             }
           }

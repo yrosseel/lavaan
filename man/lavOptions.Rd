@@ -207,11 +207,14 @@ Data options:
       group's relative contribution proportional to its sample size, matching
       the behavior of Mplus.)}
     \item{\code{sampling.weights.type}:}{Only used when sampling weights are
-      provided and the data are categorical (estimators DWLS/WLS/WLSMV/ULS and
-      friends) or estimated by PML. Determines how the sampling weights enter
-      the asymptotic variance (the categorical Gamma / the PML first-order
+      provided and the estimator relies on a weight matrix or sandwich variance:
+      the least-squares family (GLS/WLS/DWLS/ULS/DLS, both continuous and
+      categorical) and PML. Determines how the sampling weights enter the
+      asymptotic variance (the Gamma / NACOV matrix, or the PML first-order
       information), and hence the (robust) standard errors and the scaled test
-      statistic; the point estimates are (almost) unaffected. If
+      statistic. For GLS and ULS only the standard errors are affected; for
+      WLS/DWLS/DLS the Gamma also feeds the weight matrix, so the point
+      estimates shift as well. If
       \code{"design"} (the default), the weights are treated as sampling
       (design) weights and a design-based sandwich is used (the meat is
       weighted by the sum of the squared weights), matching the behavior of
