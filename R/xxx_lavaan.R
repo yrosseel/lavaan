@@ -307,7 +307,12 @@ lavaan <- function(
   # ------------ adapt marker ------------------
   # if the first indicator (the default marker) of a latent variable turns
   # out to be a poor item, switch to a better marker (and warn); this avoids
-  # convergence problems caused by a (very) poor marker item
+  # convergence problems caused by a (very) poor marker item. We keep the
+  # original parameter table around: if the switched model fails to converge,
+  # we retry with the original marker(s) further below, so that the
+  # bad.marker.crit mechanism can never make convergence worse.
+  lavpartable_orig <- lavpartable
+  marker_switched  <- FALSE
   if (isTRUE(lavoptions$auto.fix.first) &&
       lavoptions$bad.marker.crit > 0) {
     adapt <- lav_pt_marker_adapt(
@@ -336,75 +341,111 @@ lavaan <- function(
         marker         = adapt$marker
       )
       lavpartable <- temp$lavpartable
+      marker_switched <- TRUE
     }
   }
 
-  # ------------ bounds ------------------------
-  lavpartable <- lav_step07_bounds(
-    lavoptions     = lavoptions,
-    lavh1          = lavh1,
-    lavdata        = lavdata,
-    lavsamplestats = lavsamplestats,
-    lavpartable    = lavpartable
-  )
-  timing <- lav_add_timing(timing, "bounds")
+  # ------------ bounds + start + model + cache + optim ------------
+  # steps 07-11 are wrapped in a local function so they can be re-run with the
+  # original marker(s) as a fail-safe (see the marker switch above and the
+  # retry just below)
+  lav_bounds_to_optim <- function(lavpartable, timing) {
+    # ------------ bounds ------------------------
+    lavpartable <- lav_step07_bounds(
+      lavoptions     = lavoptions,
+      lavh1          = lavh1,
+      lavdata        = lavdata,
+      lavsamplestats = lavsamplestats,
+      lavpartable    = lavpartable
+    )
+    timing <- lav_add_timing(timing, "bounds")
 
-  # ------------ lavstart ----------------------
-  lavpartable <- lav_step08_start(
-    slot_model      = slot_model,
-    lavoptions      = lavoptions,
-    lavpartable     = lavpartable,
-    lavsamplestats  = lavsamplestats,
-    lavh1           = lavh1
-  )
+    # ------------ lavstart ----------------------
+    lavpartable <- lav_step08_start(
+      slot_model      = slot_model,
+      lavoptions      = lavoptions,
+      lavpartable     = lavpartable,
+      lavsamplestats  = lavsamplestats,
+      lavh1           = lavh1
+    )
+    timing <- lav_add_timing(timing, "start")
 
-  timing <- lav_add_timing(timing, "start")
+    # ------------ model -------------------------
+    temp <- lav_step09_model(
+      slot_model     = slot_model,
+      lavoptions     = lavoptions,
+      lavpartable    = lavpartable,
+      lavsamplestats = lavsamplestats,
+      lavdata        = lavdata
+    )
+    lavpartable <- temp$lavpartable
+    lavmodel <- temp$lavmodel
+    timing <- lav_add_timing(timing, "Model")
 
-  # ------------ model -------------------------
-  temp <- lav_step09_model(
-    slot_model     = slot_model,
-    lavoptions     = lavoptions,
-    lavpartable    = lavpartable,
-    lavsamplestats = lavsamplestats,
-    lavdata        = lavdata
-  )
+    # -------- lavcache ----------------------------------
+    lavcache <- lav_step10_cache(
+      slot_cache       = slot_cache,
+      lavdata          = lavdata,
+      lavmodel         = lavmodel,
+      lavpartable      = lavpartable,
+      lavoptions       = lavoptions,
+      sampling_weights = sampling_weights
+    )
+    timing <- lav_add_timing(timing, "cache")
+
+    # -------- est + lavoptim ----------------------------
+    temp <- lav_step11_estoptim(
+      lavdata        = lavdata,
+      lavmodel       = lavmodel,
+      lavcache       = lavcache,
+      lavsamplestats = lavsamplestats,
+      lavh1          = lavh1,
+      lavoptions     = lavoptions,
+      lavpartable    = lavpartable
+    )
+    timing <- lav_add_timing(timing, "optim")
+
+    list(lavpartable = temp$lavpartable,
+         lavmodel    = temp$lavmodel,
+         lavcache    = lavcache,
+         lavoptim    = temp$lavoptim,
+         x           = temp$x,
+         timing      = timing)
+  }
+
+  temp <- lav_bounds_to_optim(lavpartable, timing)
+
+  # fail-safe: if we switched marker(s) but the model did not converge, retry
+  # with the original marker(s). bad.marker.crit should never make convergence
+  # worse: if the original (un-switched) model converges we keep that; if it
+  # does not converge either, we still revert (so the result matches what
+  # bad.marker.crit = 0 would have produced).
+  if (marker_switched && !isTRUE(attr(temp$x, "converged"))) {
+    temp_orig <- lav_bounds_to_optim(lavpartable_orig, temp$timing)
+    if (isTRUE(attr(temp_orig$x, "converged"))) {
+      lav_msg_note(gettext(
+        "the model with the switched marker item(s) did not converge;
+         reverting to the original marker item(s) (which did converge)."))
+    } else {
+      lav_msg_note(gettext(
+        "the model with the switched marker item(s) did not converge;
+         reverting to the original marker item(s)."))
+    }
+    temp <- temp_orig
+  }
+
   lavpartable <- temp$lavpartable
-  lavmodel <- temp$lavmodel
+  lavmodel    <- temp$lavmodel
+  lavcache    <- temp$lavcache
+  lavoptim    <- temp$lavoptim
+  x           <- temp$x
+  timing      <- temp$timing
 
-  timing <- lav_add_timing(timing, "Model")
-
-  # -------- lavcache ----------------------------------
-  lavcache <- lav_step10_cache(
-    slot_cache       = slot_cache,
-    lavdata          = lavdata,
-    lavmodel         = lavmodel,
-    lavpartable      = lavpartable,
-    lavoptions       = lavoptions,
-    sampling_weights = sampling_weights
-  )
-  timing <- lav_add_timing(timing, "cache")
-
-  # -------- est + lavoptim ----------------------------
-  temp <- lav_step11_estoptim(
-    lavdata        = lavdata,
-    lavmodel       = lavmodel,
-    lavcache       = lavcache,
-    lavsamplestats = lavsamplestats,
-    lavh1          = lavh1,
-    lavoptions     = lavoptions,
-    lavpartable    = lavpartable
-  )
-  lavoptim <- temp$lavoptim
-  lavmodel <- temp$lavmodel
-  lavpartable <- temp$lavpartable
-  x <- temp$x
   # store eqs if present in x
   laveqs <- list()
   if (!is.null(attr(x, "eqs"))) {
     laveqs <- attr(x, "eqs")
   }
-
-  timing <- lav_add_timing(timing, "optim")
 
   # -------- lavimplied + lavloglik --------------------
   lavimplied <- lav_step12_implied(
