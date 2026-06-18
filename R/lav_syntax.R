@@ -4,8 +4,10 @@
 # YR 23 Oct 2024: switch to "c.r"
 # LDW 9 Jan 2026: remove c.r option
 
-lavParseModelString <- function(model.syntax = "", as.data.frame. = FALSE,   # nolint
-                                parser = "open", warn = TRUE, debug = FALSE) {
+lavParseModelString <- function(model_syntax = "", as_data_frame = FALSE,   # nolint
+                                parser = "open", warn = TRUE, debug = FALSE, ...) {
+  dotdotdot <- list(...)
+  lav_adapt_func(environment(), dotdotdot, NULL)
   if (!missing(debug)) {
     current_debug <- lav_debug()
     if (lav_debug(debug))
@@ -25,14 +27,14 @@ lavParseModelString <- function(model.syntax = "", as.data.frame. = FALSE,   # n
 
   switch(parser,
   old = # original/classic parser
-    lav_parse_model_string_orig(model_syntax = model.syntax,
-       as_data_frame = as.data.frame.),
+    lav_parse_model_string_orig(model_syntax = model_syntax,
+       as_data_frame = as_data_frame),
   new = # new parser
-    lav_parse_model_string(model_syntax = model.syntax,
-      as_data_frame = as.data.frame.),
+    lav_parse_model_string(model_syntax = model_syntax,
+      as_data_frame = as_data_frame),
   open = # open parser
-    lav_parse_model_string_open(model_syntax = model.syntax,
-      as_data_frame = as.data.frame.)
+    lav_parse_model_string_open(model_syntax = model_syntax,
+      as_data_frame = as_data_frame)
   )
 }
 

@@ -525,7 +525,8 @@ lav_snake_case <- function(old) {
 #   lav_adapt_func(environment(), dotdotdot, TRUE/FALSE/NULL)
 # The argument snake_ddd if set to TRUE transforms the names of dotdotdot also.
 # If snake_ddd is set to NULL an error "unused argument(s)" is generated when
-# there are items left in dotdotdot.
+# there are items left in dotdotdot. If dotdotdot is empty and snake_ddd is
+# NULL, dotdotdot is removed from the environment!
 lav_adapt_func <- function(envir, dotdotdot, snake_ddd = TRUE) {
   lijst <- ls(pos = envir)
   if (length(dotdotdot) > 0L) {
@@ -548,5 +549,7 @@ lav_adapt_func <- function(envir, dotdotdot, snake_ddd = TRUE) {
       }
     }
     assign("dotdotdot", dotdotdot, envir)
-    }
+  } else {
+    if (is.null(snake_ddd)) rm("dotdotdot", pos = envir)
+  }
 }

@@ -6,13 +6,13 @@
 \title{Utility Functions: Constraints}
 \description{Utility functions for equality and inequality constraints.}
 \usage{
-lav_con_parse(partable = NULL, constraints = NULL, theta = NULL, 
+lav_con_parse(partable = NULL, constraints = NULL, theta = NULL,
                      debug = FALSE)
-lav_pt_con_ceq(partable, con = NULL, debug = FALSE, 
+lav_pt_con_ceq(partable, con = NULL, debug = FALSE,
                              txt_only = FALSE)
-lav_pt_con_ciq(partable, con = NULL, debug = FALSE, 
+lav_pt_con_ciq(partable, con = NULL, debug = FALSE,
                              txt_only = FALSE)
-lav_pt_con_def(partable, con = NULL, debug = FALSE, 
+lav_pt_con_def(partable, con = NULL, debug = FALSE,
                              txt_only = FALSE, warn = TRUE)
 }
 \arguments{
@@ -36,14 +36,14 @@ The \code{lav_con_parse} function parses the constraints
 specification (provided as a string, see example), and generates
 a list with useful information about the constraints.
 
-The \code{lav_pt_con_ceq} function creates a function 
+The \code{lav_pt_con_ceq} function creates a function
 which takes the (unconstrained) parameter vector as input, and
 returns the slack values for each equality constraint. If the equality
 constraints hold perfectly, this function returns zeroes.
 
 The \code{lav_pt_con_ciq} function creates a function
 which takes the (unconstrained) parameter vector as input, and
-returns the slack values for each inequality constraint. 
+returns the slack values for each inequality constraint.
 
 The \code{lav_pt_con_def} function creates a function
 which takes the (unconstrained) parameter vector as input, and
@@ -51,7 +51,7 @@ returns the computed values of the defined parameters.
 }
 \examples{
 myModel <- 'x1 ~ a*x2 + b*x3 + c*x4'
-myParTable <- lavParTable(myModel, as.data.frame. = FALSE)
+myParTable <- lavParTable(myModel, as_data_frame = FALSE)
 con <- ' a == 2*b
          b - c == 5 '
 conInfo <- lav_con_parse(myParTable, constraints = con)
