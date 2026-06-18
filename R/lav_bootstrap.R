@@ -337,8 +337,8 @@ lav_bootstrap_internal <- function(object = NULL,
         data_x[[g]] <- data_x[[g]][boot_idx, , drop = FALSE]
       }
       new_data <- lav_data_update(
-        lavdata = lavdata_1, newX = data_x,
-        BOOT.idx = boot_idx_1,
+        lavdata = lavdata_1, new_x = data_x,
+        boot_idx = boot_idx_1,
         lavoptions = lavoptions_1
       )
     } else { # parametric! (using sign-invariant method for reproducibility)
@@ -350,7 +350,7 @@ lav_bootstrap_internal <- function(object = NULL,
         )
       }
       new_data <- lav_data_update(
-        lavdata = lavdata_1, newX = data_x,
+        lavdata = lavdata_1, new_x = data_x,
         lavoptions = lavoptions_1
       )
     }

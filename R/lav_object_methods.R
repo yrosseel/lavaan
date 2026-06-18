@@ -656,7 +656,7 @@ lavParameterEstimates <- function(object,                      # nolint start
           boot_x <- colMeans(tmp_boot, na.rm = TRUE)
           boot_est <-
             lav_model_get_parameters(object@Model,
-              GLIST = lav_model_x2glist(object@Model, boot_x),
+              glist = lav_model_x2glist(object@Model, boot_x),
               type = "user", extra = TRUE
             )
           bias_est <- (boot_est - tmp_list$est)

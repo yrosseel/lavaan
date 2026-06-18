@@ -195,9 +195,9 @@ lavvcov <- list(se = lavoptions$se, information = lavoptions$information,
                 vcov = VCOV)
 
 # store standard errors in parameter table
-lavpartable$se <- lavaan:::lav_model_vcov_se(lavmodel = lavmodel,
+lavpartable$se <- lavaan::lav_model_vcov_se(lavmodel = lavmodel,
                                     lavpartable = lavpartable,
-                                    VCOV = VCOV)
+                                    vcov = VCOV)
 
 # 14. compute global test statistic (chi-square)
 # trivial for standard test (=N * F_ML)

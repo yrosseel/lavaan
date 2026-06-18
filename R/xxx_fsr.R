@@ -580,7 +580,7 @@ fsr <- function(model = NULL,
   # lavsamplestats@NACOV <- Omega.f
   # VCOV <- lav_model_vcov(fit@Model, lavsamplestats = lavsamplestats,
   #                       lavoptions = lavoptions)
-  # SE <- lav_model_vcov_se(fit@Model, fit@ParTable, VCOV = VCOV)
+  # SE <- lav_model_vcov_se(fit@Model, fit@ParTable, vcov = VCOV)
   # PE$se <- SE
   # tmp.se <- ifelse(PE$se == 0.0, NA, PE$se)
   # zstat <- pvalue <- TRUE

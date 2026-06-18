@@ -793,7 +793,7 @@ lav_model_objective_2l <- function(lavmodel = NULL,
                          lavsamplestats = NULL,
                          group = 1L) {
   # compute model-implied statistics for all blocks
-  implied <- lav_model_implied(lavmodel, GLIST = glist)
+  implied <- lav_model_implied(lavmodel, glist = glist)
 
   # here, we assume only 2!!! levels, at [[1]] and [[2]]
   if (lavmodel@conditional.x) {

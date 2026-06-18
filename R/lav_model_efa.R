@@ -429,7 +429,7 @@ lav_model_efa_rotate_x <- function(x, lavmodel = NULL, lavoptions = NULL,
   } # option 3
 
   # extract all rotated parameter estimates
-  x_rot <- lav_model_get_parameters(lavmodel, GLIST = glist, type = type)
+  x_rot <- lav_model_get_parameters(lavmodel, glist = glist, type = type)
 
   # extra?
   if (extra) {

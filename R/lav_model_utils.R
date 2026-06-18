@@ -4,13 +4,13 @@
 # - YR 14 Jan 2014: rename object -> lavmodel, all functions as lav_model_*
 # - YR 20 Nov 2021: add lav_model_dmmdpar
 
-lav_model_get_parameters <- function(lavmodel = NULL, GLIST = NULL,   # nolint start
-                                     type = "free", extra = TRUE) {   # nolint end
+lav_model_get_parameters <- function(lavmodel = NULL, glist = NULL,   # nolint start
+                                     type = "free", extra = TRUE, ...) {   # nolint end
   # type == "free": only non-redundant free parameters (x)
   # type == "user": all parameters listed in User model
-
+  dotdotdot <- list(...)
+  lav_adapt_func(environment(), dotdotdot, NULL)
   # state or final?
-  glist <- GLIST
   if (is.null(glist)) glist <- lavmodel@GLIST
                   # if this changes, tag @TDJorgensen in commit message
 
@@ -44,7 +44,7 @@ lav_model_get_parameters <- function(lavmodel = NULL, GLIST = NULL,   # nolint s
   ) > 0L) {
     # we need 'free' x
     x_free <- lav_model_get_parameters(
-      lavmodel = lavmodel, GLIST = glist,
+      lavmodel = lavmodel, glist = glist,
       type = "free"
     )
     if (length(lavmodel@x.def.idx) > 0L) {

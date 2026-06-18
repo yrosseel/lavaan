@@ -80,12 +80,14 @@ lav_func_grad_simple <- function(func, x,
   dx
 }
 
-lav_func_jacobian_complex <- function(func, x,                       # nolint start
+lav_func_jacobian_complex <- function(func, x,
                                       h = .Machine$double.eps, ...,
-                                      fallback.simple = TRUE) {      # nolint end
+                                      fallback_simple = TRUE) {
+  dotdotdot <- list(...)
+  lav_adapt_func(environment(), dotdotdot, FALSE)
   f0 <- try(func(x * (0 + 1i), ...), silent = TRUE)
   if (!is.complex(f0)) {
-    if (fallback.simple) {
+    if (fallback_simple) {
       dx <- lav_func_jacobian_simple(func = func, x = x, h = sqrt(h), ...)
       return(dx)
     } else {
@@ -94,7 +96,7 @@ lav_func_jacobian_complex <- function(func, x,                       # nolint st
     }
   }
   if (inherits(f0, "try-error")) {
-    if (fallback.simple) {
+    if (fallback_simple) {
       dx <- lav_func_jacobian_simple(func = func, x = x, h = sqrt(h), ...)
       return(dx)
     } else {
@@ -155,12 +157,12 @@ lav_func_jacobian_simple <- function(func, x,
 # is locally constant for that component) are returned with a zero
 # Hessian. Without this, forward-FD noise in the Jacobian can be
 # amplified to O(1) when divided by the outer step.
-lav_func_hessian_complex <- function(func, x,                          # nolint start
+lav_func_hessian_complex <- function(func, x,
                                      h = sqrt(.Machine$double.eps), ...,
-                                     fallback.simple = TRUE) {         # nolint end
+                                     fallback_simple = TRUE) {
   # Jacobian at x
   j0 <- try(lav_func_jacobian_complex(func = func, x = x, ...,
-                                      fallback.simple = fallback.simple),
+                                      fallback_simple = fallback_simple),
             silent = TRUE)
   if (inherits(j0, "try-error")) {
     return(j0)
@@ -190,7 +192,7 @@ lav_func_hessian_complex <- function(func, x,                          # nolint 
     x_plus <- x
     x_plus[j] <- x[j] + h_vec[j]
     jp <- try(lav_func_jacobian_complex(func = func, x = x_plus, ...,
-                                        fallback.simple = fallback.simple),
+                                        fallback_simple = fallback_simple),
               silent = TRUE)
     if (inherits(jp, "try-error")) {
       return(jp)

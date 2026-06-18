@@ -608,7 +608,7 @@ lav_model_grad <- function(lavmodel = NULL,
 
     for (g in 1:lavmodel@nblocks) {
       # print(GLIST)
-      # print(lav_model_get_parameters(lavmodel = lavmodel, GLIST = GLIST))
+      # print(lav_model_get_parameters(lavmodel = lavmodel, glist = GLIST))
       # print(Sigma.hat[[g]])
       # print(TH[[g]])
       # cat("*****\n")
@@ -748,7 +748,7 @@ lav_model_delta_numerical <- function(lavmodel = NULL, glist = NULL, g = 1L) {
   }
 
   x <- lav_model_get_parameters(lavmodel = lavmodel,
-                                GLIST = glist, type = "free")
+                                glist = glist, type = "free")
   delta <- lav_func_jacobian_complex(func = compute_moments, x = x)
 
   delta

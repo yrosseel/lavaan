@@ -207,7 +207,7 @@ lav_step16_rotation <- function(lavoptions = NULL,
         # compute SE and store them in lavpartable
         tmp <- lav_model_vcov_se(
           lavmodel = lavmodel,
-          lavpartable = lavpartable, VCOV = vcov,
+          lavpartable = lavpartable, vcov = vcov,
           lavoptions = lavoptions
         )
         lavpartable$se <- tmp

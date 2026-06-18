@@ -583,7 +583,7 @@ sam <- function(model = NULL,
     if (sum(pt_1$op == ":=") > 0L && lavoptions$se != "bootstrap" &&
       lav_model_vcov_se_mc_active(lavoptions)) {
       mc_coef <- lav_model_vcov_mc(lavmodel = joint@Model,
-                                   VCOV = joint@vcov$vcov,
+                                   vcov = joint@vcov$vcov,
                                    lavoptions = lavoptions)
       joint@internal$monte.carlo <- list(coef = mc_coef)
     }
@@ -591,8 +591,8 @@ sam <- function(model = NULL,
     pt_1$se <- lav_model_vcov_se(
       lavmodel = joint@Model,
       lavpartable = pt_1,
-      VCOV = joint@vcov$vcov,
-      MC = mc_coef,
+      vcov = joint@vcov$vcov,
+      mc = mc_coef,
       lavoptions = lavoptions
     )
 
