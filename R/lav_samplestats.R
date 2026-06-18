@@ -305,10 +305,16 @@ lav_samp_from_data <- function(lavdata = NULL,        # nolint start
       current_verbose <- lav_verbose()
       if (lav_verbose(lav_debug()))
         on.exit(lav_verbose(current_verbose), TRUE)
+      swt_type <- if (!is.null(lavoptions$sampling.weights.type)) {
+        lavoptions$sampling.weights.type
+      } else {
+        "design"
+      }
       if (conditional_x) {
         cat_1 <- muthen1984(
           data_1 = x[[g]],
           wt = wt[[g]],
+          sampling_weights_type = swt_type,
           ov_names = ov_names[[g]],
           ov_types = ov_types,
           ov_levels = ov_levels,
@@ -326,6 +332,7 @@ lav_samp_from_data <- function(lavdata = NULL,        # nolint start
         cat_1 <- muthen1984(
           data_1 = x[[g]],
           wt = wt[[g]],
+          sampling_weights_type = swt_type,
           ov_names = ov_names[[g]],
           ov_types = ov_types,
           ov_levels = ov_levels,

@@ -206,6 +206,19 @@ Data options:
       when there are multiple groups, in which case \code{"group"} keeps each
       group's relative contribution proportional to its sample size, matching
       the behavior of Mplus.)}
+    \item{\code{sampling.weights.type}:}{Only used when sampling weights are
+      provided and the data are categorical (estimators DWLS/WLS/WLSMV/ULS and
+      friends) or estimated by PML. Determines how the sampling weights enter
+      the asymptotic variance (the categorical Gamma / the PML first-order
+      information), and hence the (robust) standard errors and the scaled test
+      statistic; the point estimates are (almost) unaffected. If
+      \code{"design"} (the default), the weights are treated as sampling
+      (design) weights and a design-based sandwich is used (the meat is
+      weighted by the sum of the squared weights), matching the behavior of
+      Mplus. If \code{"frequency"}, the weights are treated as frequency
+      (replication) counts (the meat is weighted by the sum of the weights),
+      so that the results match a fit on the row-replicated data. Without
+      sampling weights the two are identical.}
     \item{\code{samplestats}:}{Logical. If \code{FALSE}, no sample statistics
       will be computed (and no estimation can take place). This can be useful
       when only a dummy lavaan object is requested, without any computations.

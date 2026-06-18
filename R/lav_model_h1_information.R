@@ -717,13 +717,24 @@ lav_model_h1_info_firstorder <- function(lavobject = NULL,
         if (is.null(wt)) {
           b1[[g]] <- lav_mat_crossprod(sc)
         } else {
-          # sc holds the unit (unweighted) casewise scores; weight the
-          # cross-product by sum(wt) (sqrt(wt) on each side), i.e. treat the
-          # weights as frequencies, so the first-order information (and the
-          # resulting robust SEs / scaled test) matches a fit on the
-          # row-replicated data. (crossprod(wt * sc) would weight by
-          # sum(wt^2), the design-based version.)
-          b1[[g]] <- crossprod(sqrt(wt) * sc)
+          # sc holds the unit (unweighted) casewise scores. How the sampling
+          # weights enter the first-order information (the meat of the robust
+          # sandwich / the scaled test) is controlled by sampling.weights.type:
+          #  - "design"    : crossprod(wt * sc), weighted by sum(wt^2), the
+          #                  design-based version (matches Mplus).
+          #  - "frequency" : crossprod(sqrt(wt) * sc), weighted by sum(wt),
+          #                  i.e. treats the weights as frequencies, so the
+          #                  result matches a fit on the row-replicated data.
+          swt_type <- if (!is.null(lavoptions$sampling.weights.type)) {
+            lavoptions$sampling.weights.type
+          } else {
+            "design"
+          }
+          if (identical(swt_type, "frequency")) {
+            b1[[g]] <- crossprod(sqrt(wt) * sc)
+          } else {
+            b1[[g]] <- crossprod(wt * sc)
+          }
         }
       }
 

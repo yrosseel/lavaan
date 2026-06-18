@@ -19,6 +19,7 @@ muthen1984 <- function(data_1 = NULL,
                        ov_names_x = character(0L),
                        exo = NULL,
                        wt = NULL,
+                       sampling_weights_type = "design",
                        wls_w = TRUE,
                        zero_add = c(0.5, 0.0),
                        zero_keep_margins = TRUE,
@@ -472,14 +473,22 @@ muthen1984 <- function(data_1 = NULL,
 
 
   #  weight matrix (correlation metric)
-  # NOTE: use 'inner2' (not 'inner') as the meat of the sandwich. Without
-  # sampling weights inner2 == inner, so this is a no-op. With sampling
-  # weights, the casewise scores in 'sc' are scaled by wt; crossprod(sc)
-  # would then weight by sum(wt^2) (design-based), whereas inner2 =
-  # crossprod(sc/wt, sc) weights by sum(wt). The latter treats the weights
-  # as frequencies, so Gamma (and hence the WLS weight matrix and the
-  # robust SEs) matches a fit on the row-replicated data.
-  wls_w <- b_inv %*% inner2 %*% t(b_inv)
+  # The bread b_inv is built from sum(wt)-weighted quantities (a11/a22 use
+  # 'inner2'). The choice of meat encodes how the sampling weights are
+  # interpreted (sampling.weights.type):
+  #  - "design"    : meat = 'inner' = crossprod(sc) where sc is wt-scaled,
+  #                  i.e. weighted by sum(wt^2). b_inv %*% inner %*% b_inv is
+  #                  then the design-based sandwich Gamma (matches Mplus).
+  #  - "frequency" : meat = 'inner2' = crossprod(sc/wt, sc), weighted by
+  #                  sum(wt); treats the weights as frequencies, so Gamma
+  #                  (and the WLS weight matrix and robust SEs) matches a fit
+  #                  on the row-replicated data.
+  # Without sampling weights inner2 == inner, so the choice is a no-op.
+  if (!is.null(wt) && identical(sampling_weights_type, "frequency")) {
+    wls_w <- b_inv %*% inner2 %*% t(b_inv)
+  } else {
+    wls_w <- b_inv %*% inner %*% t(b_inv)
+  }
 
   # COV matrix?
   if (any("numeric" %in% ov_types)) {

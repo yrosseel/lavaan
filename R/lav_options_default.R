@@ -309,6 +309,7 @@ lav_options_default <- function() {
     available.cases = "available.cases", doubly.robust = "doubly.robust"))
   elm("sampling.weights.normalization", "group", chr = c(
     "total", "group", "none"))
+  elm("sampling.weights.type", "design", chr = c("design", "frequency"))
   elm("samplestats", TRUE, bl = TRUE)
 
   # summary data
