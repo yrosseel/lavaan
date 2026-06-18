@@ -472,7 +472,14 @@ muthen1984 <- function(data_1 = NULL,
 
 
   #  weight matrix (correlation metric)
-  wls_w <- b_inv %*% inner %*% t(b_inv)
+  # NOTE: use 'inner2' (not 'inner') as the meat of the sandwich. Without
+  # sampling weights inner2 == inner, so this is a no-op. With sampling
+  # weights, the casewise scores in 'sc' are scaled by wt; crossprod(sc)
+  # would then weight by sum(wt^2) (design-based), whereas inner2 =
+  # crossprod(sc/wt, sc) weights by sum(wt). The latter treats the weights
+  # as frequencies, so Gamma (and hence the WLS weight matrix and the
+  # robust SEs) matches a fit on the row-replicated data.
+  wls_w <- b_inv %*% inner2 %*% t(b_inv)
 
   # COV matrix?
   if (any("numeric" %in% ov_types)) {
