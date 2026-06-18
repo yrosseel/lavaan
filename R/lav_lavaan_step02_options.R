@@ -161,6 +161,21 @@ lav_step02_options <- function(slot_options = NULL,
       opt$.categorical <- FALSE
     }
 
+    # IV estimator: default to two-stage missing-data handling when the data
+    # contain missing values among the modeled variables and the user did not
+    # request a 'missing' option. (opt$missing is still "default" here; it is
+    # resolved to "listwise" later in lav_options_set().) This must happen
+    # before lav_options_set() so the two.stage option cascade (meanstructure,
+    # information, ...) and lavData (no listwise deletion) are set up correctly.
+    if (toupper(estimator) == "IV" && identical(opt$missing, "default") &&
+        !opt$.categorical && is.data.frame(data)) {
+      tmp_ov <- unique(c(unlist(ov_names_y), unlist(ov_names_x)))
+      tmp_ov <- tmp_ov[tmp_ov %in% names(data)]
+      if (length(tmp_ov) > 0L && anyNA(data[, tmp_ov, drop = FALSE])) {
+        opt$missing <- "two.stage"
+      }
+    }
+
     # check for WLSMV estimator with NULL ordered= argument (new in 0.7-1)
     # to avoid unintentional use of WLSMV
     # we do this here, because we need the value of opt$.categorical

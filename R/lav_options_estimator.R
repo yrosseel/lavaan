@@ -629,8 +629,27 @@ lav_options_est_iv <- function(opt) {
   # them via a pooled (system) solve -- see lav_sem_miiv_pool_directed()
   opt$ceq.simple <- TRUE
 
-  # se
-  if (opt$se == "default") {
+  # missing data
+  # - two.stage / robust.two.stage: use the (saturated) EM moments for point
+  #   estimation, with standard errors corrected for the EM uncertainty (see
+  #   lav_sem_miiv_vcov()); requires the sample-statistics path
+  # - anything else falls back to listwise deletion
+  two_stage <- any(opt$missing == c("two.stage", "robust.two.stage"))
+  if (two_stage && isTRUE(opt$.categorical)) {
+    lav_msg_warn(gettext(
+      "[IV] two-stage missing-data handling is not available for categorical
+       data; using listwise deletion instead."))
+    two_stage <- FALSE
+  }
+  if (!two_stage) {
+    opt$missing <- "listwise" # for now
+  }
+
+  # se: the general missing = two.stage handling (in lav_options()) sets se to
+  # (robust.)two.stage, but the IV estimator uses its own SE machinery and
+  # reads opt$missing to pick the two-stage moment covariance; reset to
+  # "standard" here
+  if (any(opt$se == c("default", "two.stage", "robust.two.stage"))) {
     opt$se <- "standard" # for now
   }
   # bounds
@@ -638,22 +657,28 @@ lav_options_est_iv <- function(opt) {
       length(opt$optim.bounds) == 0L) {
     opt$bounds <- "standard"
   }
-  # test
-  if (length(opt$test) == 1L && opt$test == "default") {
+  # test (the general two.stage handling forces satorra.bentler; reset to the
+  # IV default Browne residual test). With missing data the sample-based
+  # version is not available, so use the model-based variant.
+  if ((length(opt$test) == 1L && opt$test == "default") || two_stage) {
     if (opt$.categorical) {
-      opt$test <- "browne.residual.adf" # always sample-based
+      opt$test <- if (two_stage) {
+        "browne.residual.adf.model"
+      } else {
+        "browne.residual.adf" # always sample-based
+      }
     } else {
-      opt$test <- "browne.residual.nt" # sample-based (especially for baseline)
-                                       # model-based Sigma is here diagonal!
+      opt$test <- if (two_stage) {
+        "browne.residual.nt.model"
+      } else {
+        "browne.residual.nt" # sample-based (especially for baseline)
+      }                       # model-based Sigma is here diagonal!
     }
   }
   opt$standard.test <- opt$test[1]
 
   # fixed.x
   opt$fixed.x <- FALSE # for now
-
-  # missing
-  opt$missing <- "listwise" # for now
 
   # sample.icov not needed
   opt$sample.icov <- FALSE
@@ -743,6 +768,18 @@ lav_options_est_iv <- function(opt) {
     }
     if (is.null(opt$estimator.args$iv.vcov.jacb.numerical)) {
       opt$estimator.args$iv.vcov.jacb.numerical <- FALSE
+    }
+  }
+
+  # two-stage missing data needs the (EM) sample moments, and the standard
+  # errors must run through the gamma path so the moment covariance can be
+  # replaced by the two-stage one (see lav_sem_miiv_vcov())
+  if (two_stage) {
+    opt$estimator.args$iv.samplestats <- TRUE
+    if (tolower(opt$se) != "none" &&
+        tolower(opt$estimator.args$iv.vcov.stage1) %in%
+          c("lm.vcov", "lm.vcov.dfres")) {
+      opt$estimator.args$iv.vcov.stage1 <- "gamma"
     }
   }
 

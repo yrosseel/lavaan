@@ -1025,7 +1025,7 @@ lav_sem_miiv_varcov <- function(x = NULL, samplestats = FALSE,
 lav_sem_miiv_vcov <- function(lavmodel = NULL, lavsamplestats = NULL,
                               lavoptions = NULL, lavpartable = NULL,
                               lavimplied = NULL,
-                              lavh1 = NULL, eqs = NULL) {
+                              lavh1 = NULL, lavdata = NULL, eqs = NULL) {
   # iv options
   iv_vcov_stage1 <- tolower(lavoptions$estimator.args$iv.vcov.stage1)
   iv_vcov_stage2 <- tolower(lavoptions$estimator.args$iv.vcov.stage2)
@@ -1131,6 +1131,16 @@ lav_sem_miiv_vcov <- function(lavmodel = NULL, lavsamplestats = NULL,
     iv_vcov_stage2 <- "none"
   }
 
+  # missing data: two-stage standard errors. Under missing = "two.stage" /
+  # "robust.two.stage" the sample moments are the (saturated) EM estimates;
+  # their asymptotic covariance ('gamma') is no longer the complete-data NT
+  # gamma but the inverse saturated information (two.stage) or its sandwich
+  # (robust.two.stage). We build that 'gamma_big' explicitly (in the same
+  # (mean, vech(cov)) ordering as jac_k) and route the SEs through the same
+  # explicit jac %*% gamma %*% t(jac) path used for categorical data.
+  two_stage <- any(lavoptions$missing == c("two.stage", "robust.two.stage"))
+  use_explicit_gamma <- lavmodel@categorical || two_stage
+
   # do we need gamma_big?
   if (iv_vcov_stage1 == "gamma" ||
      (iv_vcov_stage2 != "none" && length(free_undirected_idx) > 0L)) {
@@ -1151,22 +1161,34 @@ lav_sem_miiv_vcov <- function(lavmodel = NULL, lavsamplestats = NULL,
       } else {
         cov_g <- lavh1$implied$cov[[g]]
       }
-      if (!is.null(lavsamplestats@NACOV[[g]])) {
+      if (two_stage) {
+        # two-stage moment covariance, in (mean, vech(cov)) order
+        mu_g <- lavh1$implied$mean[[g]]
+        sig_g <- lavh1$implied$cov[[g]]
+        x_idx_g <-
+          if (lavmodel@fixed.x) lavsamplestats@x.idx[[g]] else integer(0L)
+        if (identical(tolower(lavoptions$missing), "robust.two.stage")) {
+          # sandwich I_1^{-1} J_1 I_1^{-1} (Savalei & Falk, 2014)
+          gg <- lav_mvn_mi_h1_omega_sw(
+            y = lavdata@X[[g]], mp = lavdata@Mp[[g]],
+            yp = lavsamplestats@missing[[g]],
+            mu = mu_g, sigma_1 = sig_g, x_idx = x_idx_g,
+            information = "observed"
+          )
+        } else {
+          # I_1^{-1} (Savalei & Bentler, 2009)
+          i1 <- lav_mvnorm_missing_information_observed_samplestats(
+            yp = lavsamplestats@missing[[g]],
+            mu = mu_g, sigma_1 = sig_g, x_idx = x_idx_g
+          )
+          gg <- lav_mat_sym_inverse(i1)
+        }
+        gamma_g[[g]] <- fg * gg
+      } else if (!is.null(lavsamplestats@NACOV[[g]])) {
         gamma_g[[g]] <- fg * lavsamplestats@NACOV[[g]]
-#         # NT version (for now), model-based
-#         gamma_g[[g]] <- lav_samp_gamma_nt(
-#           m_cov = cov_g,
-#           m_mean = mean_g,
-#           x_idx = lavsamplestats@x.idx[[g]],
-#           fixed_x = lavmodel@fixed.x,
-#           conditional_x = lavmodel@conditional.x,
-#           meanstructure = lavmodel@meanstructure,
-#           slopestructure = lavmodel@conditional.x
-#         )
-#         gamma_g[[g]] <- fg * gamma_g[[g]]
       }
     }
-    if (!is.null(lavsamplestats@NACOV[[g]])) {
+    if (two_stage || !is.null(lavsamplestats@NACOV[[g]])) {
       gamma_big <- lav_mat_bdiag(gamma_g)
     }
   }
@@ -1201,7 +1223,8 @@ lav_sem_miiv_vcov <- function(lavmodel = NULL, lavsamplestats = NULL,
   # stage 1: directed effects
   if (length(free_directed_idx) > 0L && iv_vcov_stage1 != "none") {
     if (iv_vcov_stage1 == "gamma") {
-      if (lavmodel@categorical) {
+      if (use_explicit_gamma) {
+        # explicit moment covariance: categorical (ADF) or two-stage missing
         k_gamma_adf_kt <- jac_k %*% gamma_big %*% t(jac_k)
         vcov[free_directed_idx, free_directed_idx] <-
           k_gamma_adf_kt / lavsamplestats@ntotal
@@ -1340,13 +1363,13 @@ lav_sem_miiv_vcov <- function(lavmodel = NULL, lavsamplestats = NULL,
       } else {
         tmp <- h2
       }
-      if (lavmodel@categorical) {
+      if (use_explicit_gamma) {
         tmp_gamma_tmpt <- tmp %*% gamma_big %*% t(tmp)
         vcov[free_undirected_idx, free_undirected_idx] <-
           tmp_gamma_tmpt / lavsamplestats@ntotal
-        # add thresholds
-        nth <- length(free_th_idx)
-        if (length(nth) > 0L) {
+        # add thresholds (categorical only)
+        nth <- if (lavmodel@categorical) length(free_th_idx) else 0L
+        if (length(nth) > 0L && nth > 0L) {
           delta_th <- delta[, free_th_idx, drop = FALSE]
           # FIXME: remove zero rows from delta
           zero_idx <- which(rowSums(delta_th) == 0)
@@ -1477,11 +1500,15 @@ lav_sem_miiv_vcov <- function(lavmodel = NULL, lavsamplestats = NULL,
         #   iv.varcov.method = iv.varcov.method
         # )
       }
-      x_idx <- if (lavmodel@fixed.x) lavsamplestats@x.idx[[1]] else integer(0L)
-      jacb_gammant_jacbt <- lav_mat_k_gammant_kt(m_k = jac_b, s = cov_g,
-        meanstructure = lavmodel@meanstructure, x_idx = x_idx)
-      #jacb_gammant_jacbt_bis <- jac_b %*% gamma_big %*% t(jac_b)
-      vcov_b <- jacb_gammant_jacbt / lavsamplestats@ntotal
+      if (use_explicit_gamma) {
+        jacb_gamma_jacbt <- jac_b %*% gamma_big %*% t(jac_b)
+      } else {
+        x_idx <-
+          if (lavmodel@fixed.x) lavsamplestats@x.idx[[1]] else integer(0L)
+        jacb_gamma_jacbt <- lav_mat_k_gammant_kt(m_k = jac_b, s = cov_g,
+          meanstructure = lavmodel@meanstructure, x_idx = x_idx)
+      }
+      vcov_b <- jacb_gamma_jacbt / lavsamplestats@ntotal
       vcov_ab <- vcov_a + vcov_b
       vcov[free_undirected_idx, free_undirected_idx] <- vcov_ab
     } # continuous
