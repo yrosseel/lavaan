@@ -78,7 +78,8 @@ Model features:
      general (equality or inequality) constraints are used in the model, 
      simple equality constraints
      are represented in the parameter table as duplicated free parameters 
-     (instead of extra rows with \code{op = "=="}).}
+     (instead of extra rows with \code{op = "=="}). When introduced (in 0.6),
+     the default FALSE. But from 0.7-1 onwards, the default is TRUE.}
     \item{\code{parameterization}:}{Currently only used if data is 
       categorical. If \code{"delta"}, the delta parameterization is used. 
       If \code{"theta"}, the theta parameterization is used.}
