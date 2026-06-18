@@ -201,7 +201,11 @@ Data options:
       the weights, and multiplying again by the total sample size. 
       If \code{"group"}, the sampling weights are normalized per group:
       by dividing by the sum of the weights (in each group), and multiplying
-      again by the group size. The default is \code{"total"}.}
+      again by the group size. The default is \code{"group"}. (For a single
+      group, \code{"group"} and \code{"total"} are identical; they only differ
+      when there are multiple groups, in which case \code{"group"} keeps each
+      group's relative contribution proportional to its sample size, matching
+      the behavior of Mplus.)}
     \item{\code{samplestats}:}{Logical. If \code{FALSE}, no sample statistics
       will be computed (and no estimation can take place). This can be useful
       when only a dummy lavaan object is requested, without any computations.

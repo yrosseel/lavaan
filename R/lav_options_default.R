@@ -307,7 +307,7 @@ lav_options_default <- function() {
     twostep.robust = "robust.two.stage",
     listwise = "listwise", pairwise = "pairwise",
     available.cases = "available.cases", doubly.robust = "doubly.robust"))
-  elm("sampling.weights.normalization", "total", chr = c(
+  elm("sampling.weights.normalization", "group", chr = c(
     "total", "group", "none"))
   elm("samplestats", TRUE, bl = TRUE)
 

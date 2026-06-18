@@ -60,7 +60,7 @@ lav_object_cor <- function(object,
 
   # extract sampling.weights.normalization from dots (for lav_lavdata() call)
   dots <- dotdotdot
-  sampling_weights_normalization <- "total"
+  sampling_weights_normalization <- "group"
   if (!is.null(dots$sampling.weights.normalization)) {
     sampling_weights_normalization <- dots$sampling.weights.normalization
   }
