@@ -352,7 +352,14 @@ lav_options_est_uls <- function(opt) {
   } else if (opt$se == "default") {
     if (opt$estimator == "uls" && !opt$.categorical) {
       #opt$se <- "standard"
-      opt$se <- "robust.sem.nt" # new in 0.6-21
+      # with sampling weights, the (ADF) full Gamma is computed, so we can
+      # default to the ADF-based robust SE (and, below, the ADF-based test)
+      # instead of the normal-theory versions
+      if (isTRUE(opt$.sampling.weights)) {
+        opt$se <- "robust.sem"
+      } else {
+        opt$se <- "robust.sem.nt" # new in 0.6-21
+      }
     } else {
       opt$se <- "robust.sem"
     }

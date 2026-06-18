@@ -192,6 +192,10 @@ lav_step02_options <- function(slot_options = NULL,
       opt$.multilevel <- FALSE
     }
 
+    # sampling weights? (internal flag; used when resolving estimator
+    # defaults, e.g. the se/test defaults for continuous ULS)
+    opt$.sampling.weights <- !is.null(sampling_weights)
+
     # sampling weights? force MLR
     # HJ 18/10/23: Except for PML
     # YR 17/06/26: only force se/test if the user did not explicitly
