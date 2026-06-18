@@ -1167,7 +1167,7 @@ lav_model_pt  <- function(
         type = "ov.num",
         block = b
       )
-      # new in 0.6-22: only consider ov_num markers
+      # new in 0.7-1: only consider ov_num markers
       lv_marker <- lv_marker[lv_marker %in% ov_num]
 
       if (length(lv_marker) == 0L) {

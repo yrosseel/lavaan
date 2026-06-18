@@ -41,7 +41,7 @@ lav_model_loglik <- function(lavdata = NULL,
   # catch all-zero Sigma (new in 0.6-20)
   nblocks <- lavmodel@nblocks
   for (b in seq_len(nblocks)) {
-    # except for level-2, where Sigma could be all zero (0.6-22)
+    # except for level-2, where Sigma could be all zero (0.7-1)
     if (lavdata@nlevels > 1L && ((b %% lavdata@nlevels) != 1)) {
       next
     }

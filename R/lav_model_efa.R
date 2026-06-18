@@ -58,7 +58,7 @@ lav_model_efa_rotate_x <- function(x, lavmodel = NULL, lavoptions = NULL,
   h <- vector("list", lavmodel@nblocks)
   order_1 <- vector("list", lavmodel@nblocks)
 
-  # new in 0.6-22 -- three options:
+  # new in 0.7-1 -- three options:
   # 1. rotate per group (default)
   # 2. group.equal = "loadings": use first lambda matrix only
   # 3. rotate all groups together + agreement (eg De Roover & Vermunt, 2019)

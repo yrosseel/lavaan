@@ -562,7 +562,7 @@ lav_object_check_version <- function(object = NULL) {
   new_options$h1.information.meat <- "structured"
   new_options$mega.h1.information <- "unstructured"
 
-  # 0.6-22
+  # 0.7-1
   if (is.null(new_options$rotation.args$mg_agreement)) {
     new_options$rotation.args$mg_agreement <- FALSE
     new_options$rotation.args$mg_agreement_weight <- 0.5

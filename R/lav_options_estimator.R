@@ -295,7 +295,7 @@ lav_options_est_dls <- function(opt) {
 lav_options_est_dwls <- function(opt) {
   # DWLS, WLSM, WLSMV, WLSMVS                                      ####
   # new in 0.6-17: if !categorical, give a warning
-  # changed in 0.6-22: catch this earlier
+  # changed in 0.7-1: catch this earlier
   #if (!opt$.categorical) {
   #  lav_msg_warn(gettextf(
   #    "estimator %s is not recommended for continuous data.
@@ -327,7 +327,7 @@ lav_options_est_dwls <- function(opt) {
     if (opt$estimator == "dwls") {
       if (opt$test[1] == "default" && !opt$.categorical) {
         if (opt$se == "robust.sem") { # user-specified?
-          opt$test <- "browne.residual.adf" # new in 0.6-22
+          opt$test <- "browne.residual.adf" # new in 0.7-1
           opt$standard.test <- "browne.residual.adf"
           opt$scaled.test <- "browne.residual.adf"
         } else {
@@ -391,7 +391,7 @@ lav_options_est_uls <- function(opt) {
     if (opt$estimator == "uls") {
       if (opt$test[1] == "default" && !opt$.categorical) {
         if (opt$se == "robust.sem") { # user-specified?
-          opt$test <- "browne.residual.adf" # new in 0.6-22
+          opt$test <- "browne.residual.adf" # new in 0.7-1
           opt$standard.test <- "browne.residual.adf"
           opt$scaled.test <- "browne.residual.adf"
         } else {

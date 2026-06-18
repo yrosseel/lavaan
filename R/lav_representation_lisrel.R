@@ -355,7 +355,7 @@ lav_lisrel <- function(lavpartable = NULL,
     tmp_row[idx] <- 1L
     tmp_col[idx] <- 1L
 
-    # new in 0.6-22: instruments
+    # new in 0.7-1: instruments
     idx <- which(target$block == g & target$lhs == "group" &
       target$op == "|~")
     tmp_mat[idx] <- "miiv"
@@ -1209,7 +1209,7 @@ lav_lisrel_theta <- function(mlist = NULL,
 }
 
 # compute (I - BETA)^{-1}
-# new in 0.6-22: check structure of BETA
+# new in 0.7-1: check structure of BETA
 #  1. BETA absent / all-zero        -> identity
 #  1b.BETA is complex               -> general solve()
 #  2. BETA strictly lower triangular-> forwardsolve

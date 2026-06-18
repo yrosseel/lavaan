@@ -161,7 +161,7 @@ lav_step02_options <- function(slot_options = NULL,
       opt$.categorical <- FALSE
     }
 
-    # check for WLSMV estimator with NULL ordered= argument (new in 0.6-22)
+    # check for WLSMV estimator with NULL ordered= argument (new in 0.7-1)
     # to avoid unintentional use of WLSMV
     # we do this here, because we need the value of opt$.categorical
     if (!opt$.categorical && is.null(ordered_orig) && !estimator == "default") {
