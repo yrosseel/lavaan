@@ -363,77 +363,87 @@ lav_start <- function(start_method = "default",
       nefa <- lav_pt_nefa(lavpartable)
       if (nefa > 0L) {
         efa_values <- lav_pt_efa_values(lavpartable)
+        # blocks belonging to this group (group-major, level-minor ordering);
+        # the factor set is determined per block, as different blocks (eg the
+        # within and between level, or different groups) may have a different
+        # number of efa factors
+        blocks_g <- (g - 1L) * nlevels + seq_len(nlevels)
 
-        for (set in seq_len(nefa)) {
-          # determine ov idx for this set
-          ov_efa <-
-            unique(lavpartable$rhs[lavpartable$op == "=~" &
-              lavpartable$block == g &
-              lavpartable$efa == efa_values[set]])
-          lv_efa <-
-            unique(lavpartable$lhs[lavpartable$op == "=~" &
-              lavpartable$block == g &
-              lavpartable$efa == efa_values[set]])
-          lambda_idx <- which(lavpartable$lhs %in% lv_efa &
-            lavpartable$op == "=~" &
-            lavpartable$group == group_values[g])
-
-          theta_idx <- which(lavpartable$lhs %in% ov_efa &
-            lavpartable$op == "~~" &
-            lavpartable$lhs == lavpartable$rhs &
-            lavpartable$group == group_values[g])
-
-          # get observed indicators for these EFA lv variables
-          ov_idx <- match(
-            unique(lavpartable$rhs[lambda_idx]),
-            ov_names
-          )
-
-          if (length(ov_idx) > 0L && !any(is.na(ov_idx))) {
-            if (lavsamplestats@missing.flag && nlevels == 1L) {
-              if (!is.null(lavh1$implied$cov[[g]])) {
-                h1_cov <- lavh1$implied$cov[[g]]
-              } else {
-                h1_cov <- lavsamplestats@missing.h1[[g]]$sigma
-              }
-              cov_1 <- h1_cov[ov_idx, ov_idx, drop = FALSE]
-            } else {
-              if (conditional_x) {
-                cov_1 <- lavsamplestats@res.cov[[g]][ov_idx,
-                  ov_idx,
-                  drop = FALSE
-                ]
-              } else {
-                cov_1 <- lavsamplestats@cov[[g]][ov_idx,
-                  ov_idx,
-                  drop = FALSE
-                ]
-              }
+        for (b in blocks_g) {
+          for (set in seq_len(nefa)) {
+            # determine ov idx for this set, within this block
+            ov_efa <-
+              unique(lavpartable$rhs[lavpartable$op == "=~" &
+                lavpartable$block == b &
+                lavpartable$efa == efa_values[set]])
+            lv_efa <-
+              unique(lavpartable$lhs[lavpartable$op == "=~" &
+                lavpartable$block == b &
+                lavpartable$efa == efa_values[set]])
+            if (length(lv_efa) == 0L) {
+              next
             }
+            lambda_idx <- which(lavpartable$lhs %in% lv_efa &
+              lavpartable$op == "=~" &
+              lavpartable$block == b)
 
-            # EFA solution with zero upper-right corner
-            efa_1 <- lav_efa_extraction(
-              s = cov_1,
-              nfactors = length(lv_efa),
-              method = "ML",
-              order_lv_by = order_lv_by,
-              # order.lv.by = "none",
-              # reflect = reflect,
-              reflect = FALSE,
-              corner = TRUE
+            theta_idx <- which(lavpartable$lhs %in% ov_efa &
+              lavpartable$op == "~~" &
+              lavpartable$lhs == lavpartable$rhs &
+              lavpartable$block == b)
+
+            # get observed indicators for these EFA lv variables
+            ov_idx <- match(
+              unique(lavpartable$rhs[lambda_idx]),
+              ov_names
             )
 
-            # factor loadings
-            tmp <- as.numeric(efa_1$LAMBDA)
-            tmp[!is.finite(tmp)] <- 1.0 # just in case (eg 0/0)
-            start[lambda_idx] <- tmp
+            if (length(ov_idx) > 0L && !any(is.na(ov_idx))) {
+              if (lavsamplestats@missing.flag && nlevels == 1L) {
+                if (!is.null(lavh1$implied$cov[[g]])) {
+                  h1_cov <- lavh1$implied$cov[[g]]
+                } else {
+                  h1_cov <- lavsamplestats@missing.h1[[g]]$sigma
+                }
+                cov_1 <- h1_cov[ov_idx, ov_idx, drop = FALSE]
+              } else {
+                if (conditional_x) {
+                  cov_1 <- lavsamplestats@res.cov[[g]][ov_idx,
+                    ov_idx,
+                    drop = FALSE
+                  ]
+                } else {
+                  cov_1 <- lavsamplestats@cov[[g]][ov_idx,
+                    ov_idx,
+                    drop = FALSE
+                  ]
+                }
+              }
 
-            # residual variances
-            tmp <- diag(efa_1$THETA)
-            tmp[!is.finite(tmp)] <- 1.0 # just in case
-            start[theta_idx] <- tmp
-          }
-        } # set
+              # EFA solution with zero upper-right corner
+              efa_1 <- lav_efa_extraction(
+                s = cov_1,
+                nfactors = length(lv_efa),
+                method = "ML",
+                order_lv_by = order_lv_by,
+                # order.lv.by = "none",
+                # reflect = reflect,
+                reflect = FALSE,
+                corner = TRUE
+              )
+
+              # factor loadings
+              tmp <- as.numeric(efa_1$LAMBDA)
+              tmp[!is.finite(tmp)] <- 1.0 # just in case (eg 0/0)
+              start[lambda_idx] <- tmp
+
+              # residual variances
+              tmp <- diag(efa_1$THETA)
+              tmp[!is.finite(tmp)] <- 1.0 # just in case
+              start[theta_idx] <- tmp
+            }
+          } # set
+        } # block
       } # efa
     } # factor loadings
 

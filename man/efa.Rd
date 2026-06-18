@@ -13,10 +13,18 @@ efa(data = NULL, nfactors = 1L, sample_cov = NULL, sample_nobs = NULL,
 \item{data}{A data frame containing the observed variables we need for the
     EFA. If only a subset of the observed variables is needed, use the
     \code{ov.names} argument.}
-\item{nfactors}{Integer or Integer vector. The desired number of factors
-    to extract. Can be a single number, or a vector of numbers
-    (e.g., \code{nfactors = 1:4}). For each different number, a model
-    is fitted.}
+\item{nfactors}{Integer, integer vector, or a list. The desired number of
+    factors to extract. Can be a single number, or a vector of numbers
+    (e.g., \code{nfactors = 1:4}); for each different number, a model is
+    fitted. When the model has multiple blocks (because the data is
+    multilevel and/or multigroup), the same number of factors is extracted in
+    every block. To extract a different number of factors per block, supply a
+    \emph{list}: each element of the list is one fitted model and contains a
+    vector with the number of factors per block (or a single number that is
+    recycled to all blocks). Blocks are ordered group-major, level-minor, ie
+    block \eqn{= (g - 1) \times nlevels + level}. For example, for a twolevel
+    model, \code{nfactors = list(c(1, 2))} extracts one factor at the within
+    level and two factors at the between level.}
 \item{sample_cov}{Numeric matrix. A sample variance-covariance matrix.
     The rownames and/or colnames must contain the observed variable names.
     Unlike sem and CFA, the matrix may be a correlation matrix.}
@@ -65,14 +73,16 @@ efa(data = NULL, nfactors = 1L, sample_cov = NULL, sample_nobs = NULL,
 \details{
     The \code{efa} function is essentially a wrapper around the
     \code{lavaan} function. It generates the model syntax (for a given number
-    of factors) and then calls \code{lavaan()} treating the factors as 
-    a single block that should be rotated. The function only supports
-    a single group. Categorical data is handled as usual by first computing
+    of factors) and then calls \code{lavaan()} treating the factors (in each
+    block) as a set that should be rotated. Each block is rotated
+    independently. Categorical data is handled as usual by first computing
     an appropriate (e.g., tetrachoric or polychoric) correlation matrix,
-    which is then used as input for the EFA. 
-    There is also (limited) support for
-    twolevel data. The same number of factors is then extracted at the
-    within and the between level.
+    which is then used as input for the EFA.
+    Multiple groups (via the \code{group=} argument) and twolevel data
+    (via the \code{cluster=} argument) are supported, and these may be
+    combined. By default, the same number of factors is extracted in every
+    block, but a different number of factors per block can be requested by
+    supplying \code{nfactors} as a list (see the \code{nfactors} argument).
     The promax rotation method (taken from the stats package) is only 
     provided for convenience. Because promax is a two-step algorithm (first 
     varimax, then oblique rotation to get simple structure), it does not 
@@ -107,8 +117,16 @@ target[1:3, 1] <- 1
 target[4:6, 2] <- 1
 target[7:9, 3] <- 1
 fit2 <- efa(data = HolzingerSwineford1939,
-            ov.names = paste("x", 1:9, sep = ""), 
+            ov.names = paste("x", 1:9, sep = ""),
             nfactors = 3,
             rotation = list("target", target = target))
 summary(fit2)
+
+\dontrun{
+# twolevel EFA with a different number of factors per level:
+# one factor at the within level, two factors at the between level
+fit3 <- efa(data = Demo.twolevel, ov.names = paste0("y", 1:6),
+            cluster = "cluster", nfactors = list(c(1, 2)))
+summary(fit3)
+}
 }
