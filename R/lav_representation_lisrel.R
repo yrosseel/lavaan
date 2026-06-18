@@ -1221,16 +1221,26 @@ lav_lisrel_ibinv <- function(mlist = NULL) {
   mm_beta <- mlist$beta
   nr   <- nrow(mlist$psi)
 
-  # case 1: no BETA, or BETA is identically zero
-  if (is.null(mm_beta) || all(mm_beta == 0)) {
+  # case 1: no BETA
+  if (is.null(mm_beta)) {
     return(diag(nr))
   }
 
-  # forwardsolve/backsolve do not support complex values; solve() does
-  if (is.complex(mm_beta)) {
+  # forwardsolve/backsolve do not support complex values; solve() does.
+  # We also route to the generic solve() path when BETA contains missing
+  # values (e.g. NA while a model is being filled in during post-estimation,
+  # as blavaan does): solve() propagates NA/NaN silently, matching the
+  # historical behavior, whereas the logical shortcuts below would trip with
+  # "missing value where TRUE/FALSE needed".
+  if (is.complex(mm_beta) || anyNA(mm_beta)) {
     tmp <- -mm_beta
     diag(tmp) <- 1
     return(solve(tmp))
+  }
+
+  # BETA is identically zero
+  if (all(mm_beta == 0)) {
+    return(diag(nr))
   }
 
   # case 2: strictly lower triangular
