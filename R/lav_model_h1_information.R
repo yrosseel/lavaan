@@ -717,7 +717,13 @@ lav_model_h1_info_firstorder <- function(lavobject = NULL,
         if (is.null(wt)) {
           b1[[g]] <- lav_mat_crossprod(sc)
         } else {
-          b1[[g]] <- crossprod(wt * sc)
+          # sc holds the unit (unweighted) casewise scores; weight the
+          # cross-product by sum(wt) (sqrt(wt) on each side), i.e. treat the
+          # weights as frequencies, so the first-order information (and the
+          # resulting robust SEs / scaled test) matches a fit on the
+          # row-replicated data. (crossprod(wt * sc) would weight by
+          # sum(wt^2), the design-based version.)
+          b1[[g]] <- crossprod(sqrt(wt) * sc)
         }
       }
 
