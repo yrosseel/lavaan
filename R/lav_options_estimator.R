@@ -624,6 +624,11 @@ lav_options_est_iv <- function(opt) {
   opt$optim.method <- "noniter"
   opt$marker.int.zero <- TRUE
 
+  # treat simple equality constraints (eg equal loadings) as shared
+  # free parameters; this lets the equation-by-equation estimator honor
+  # them via a pooled (system) solve -- see lav_sem_miiv_pool_directed()
+  opt$ceq.simple <- TRUE
+
   # se
   if (opt$se == "default") {
     opt$se <- "standard" # for now

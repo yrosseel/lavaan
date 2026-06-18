@@ -40,6 +40,26 @@ lav_sem_miiv_internal <- function(lavmodel = NULL, lavh1 = NULL,
   free_directed_idx <- unique(lavpartable$free[directed_idx])
   free_undirected_idx <- unique(lavpartable$free[undirected_idx])
 
+  # general linear equality constraints are handled stage-wise: among the
+  # directed slopes (stage 1) and among the undirected parameters (stage 2).
+  # Warn once about constraints we cannot honor this way (constraints on
+  # intercepts, or spanning both stages).
+  if (length(lavmodel@ceq.linear.idx) > 0L) {
+    noint_idx <- which(lavpartable$free > 0L & !duplicated(lavpartable$free) &
+      lavpartable$op %in% c("=~", "~"))
+    free_noint_idx <- unique(lavpartable$free[noint_idx])
+    con_dir <- lav_sem_miiv_linear_con(lavmodel, free_noint_idx)
+    con_und <- lav_sem_miiv_linear_con(lavmodel, free_undirected_idx)
+    n_handled <- (if (is.null(con_dir)) 0L else nrow(con_dir$jac)) +
+      (if (is.null(con_und)) 0L else nrow(con_und$jac))
+    if (length(lavmodel@ceq.linear.idx) > n_handled) {
+      lav_msg_warn(gettext(
+        "[IV] some linear equality constraints involve intercepts or span both
+         the directed and undirected parameters; these are not honored by the
+         (sequential) IV estimator and are ignored."))
+    }
+  }
+
   # find ALL model-implied instrumental variables (miivs) per equation
   eqs <- lav_model_find_iv(lavmodel = lavmodel, lavpartable = lavpartable)
 
@@ -97,6 +117,141 @@ lav_sem_miiv_internal <- function(lavmodel = NULL, lavh1 = NULL,
   x[free_undirected_idx] <- theta2
 
   attr(x, "eqs") <- eqs
+  x
+}
+
+
+# pool the directed (slope) coefficients across equations subject to simple
+# equality constraints (ie parameters that share the same 'free' column, such
+# as equal factor loadings in different equations).
+#
+# each equation j contributes a quadratic block to a stacked least-squares
+# problem: amat_j = Xhat_j' Xhat_j (centered) and bvec_j = Xhat_j' y_j. Without
+# constraints, the stacked system is block-diagonal and the joint solution
+# reproduces the per-equation 2SLS estimates exactly. Simple equality
+# constraints become linear equality restrictions across the blocks, which we
+# enforce with quadprog::solve.QP() (meq = number of equality rows).
+#
+# 'blocks' is a list with, per equation, $amat (nx x nx), $bvec (nx) and
+# $gcol (length nx: the global 'free' column for each slope). The per-equation
+# blocks are accumulated into a single system D (over the distinct free slope
+# columns) and d; simple equality constraints (parameters that share a free
+# column) are handled automatically by this accumulation. General linear
+# equality constraints are passed in 'con_jac' (n_con x n, columns aligned to
+# sort(unique(gcol))) and 'con_rhs' (length n_con) and enforced with
+# quadprog::solve.QP(). Returns a named numeric vector: the pooled estimate per
+# distinct free slope column.
+lav_sem_miiv_pool_directed <- function(blocks = NULL, con_jac = NULL,
+                                       con_rhs = NULL) {
+  # drop equations without slopes
+  blocks <- blocks[vapply(blocks, function(b) length(b$gcol) > 0L, logical(1))]
+  if (length(blocks) == 0L) {
+    return(numeric(0L))
+  }
+
+  # distinct free slope columns
+  free_slope_idx <- sort(unique(unlist(lapply(blocks, `[[`, "gcol"))))
+  n <- length(free_slope_idx)
+
+  # accumulate the per-equation blocks into one system (shared columns sum)
+  dmat <- matrix(0, n, n)
+  dvec <- numeric(n)
+  for (bl in blocks) {
+    p <- match(bl$gcol, free_slope_idx)
+    dmat[p, p] <- dmat[p, p] + bl$amat
+    dvec[p] <- dvec[p] + bl$bvec
+  }
+
+  if (!is.null(con_jac) && nrow(con_jac) > 0L) {
+    sol <- quadprog::solve.QP(
+      Dmat = dmat, dvec = dvec, Amat = t(con_jac),
+      bvec = con_rhs, meq = nrow(con_jac)
+    )$solution
+  } else {
+    sol <- solve(dmat, dvec)
+  }
+
+  names(sol) <- as.character(free_slope_idx)
+  sol
+}
+
+
+# extract the linear equality constraints (rows of ceq.JAC) that involve ONLY
+# the free columns in 'target_idx'. Returns NULL if there are none, else a list
+# with $jac (n_con x length(target_idx), columns aligned to 'target_idx' in the
+# given order) and $rhs (length n_con). Constraints whose support is not fully
+# inside 'target_idx' (eg cross-stage or intercept constraints) are skipped.
+lav_sem_miiv_linear_con <- function(lavmodel = NULL, target_idx = NULL) {
+  lin_idx <- lavmodel@ceq.linear.idx
+  if (length(lin_idx) == 0L || is.null(lavmodel@ceq.JAC) ||
+      nrow(lavmodel@ceq.JAC) == 0L || length(target_idx) == 0L) {
+    return(NULL)
+  }
+  jac <- lavmodel@ceq.JAC[lin_idx, , drop = FALSE]
+  rhs <- lavmodel@ceq.rhs[lin_idx]
+  keep <- apply(jac, 1L, function(r) {
+    nz <- which(abs(r) > 0)
+    length(nz) > 0L && all(nz %in% target_idx)
+  })
+  if (!any(keep)) {
+    return(NULL)
+  }
+  list(jac = jac[keep, target_idx, drop = FALSE], rhs = rhs[keep])
+}
+
+
+# apply the pooled directed solve to the parameter vector 'x'. This is engaged
+# when a free (directed slope) column is shared by more than one equation (a
+# simple equality constraint, handled via column accumulation) OR when there is
+# a general linear equality constraint among the directed slopes (handled via
+# quadprog::solve.QP). When neither applies, the per-equation fills are already
+# correct and 'x' is returned unchanged. Intercepts (if free) are recomputed
+# from the pooled slopes.
+lav_sem_miiv_apply_directed_pool <- function(eqs_b = NULL, x = NULL,
+                                             lavmodel = NULL,
+                                             lavpartable = NULL) {
+  slope_blocks <- lapply(eqs_b, `[[`, "slope_block")
+  slope_blocks <- slope_blocks[!vapply(slope_blocks, is.null, logical(1))]
+  if (length(slope_blocks) == 0L) {
+    return(x)
+  }
+  all_gcol <- unlist(lapply(slope_blocks, `[[`, "gcol"))
+  free_slope_idx <- sort(unique(all_gcol))
+
+  # general linear equality constraints among the directed slopes (if any)
+  con <- lav_sem_miiv_linear_con(lavmodel, free_slope_idx)
+
+  # nothing to pool?
+  if (anyDuplicated(all_gcol) == 0L && is.null(con)) {
+    return(x)
+  }
+
+  theta_pool <- lav_sem_miiv_pool_directed(
+    slope_blocks,
+    con_jac = if (is.null(con)) NULL else con$jac,
+    con_rhs = if (is.null(con)) NULL else con$rhs
+  )
+  for (j in seq_along(eqs_b)) {
+    sb <- eqs_b[[j]]$slope_block
+    if (is.null(sb)) {
+      next
+    }
+    x[sb$gcol] <- theta_pool[as.character(sb$gcol)]
+    if (lavmodel@meanstructure) {
+      eq <- eqs_b[[j]]
+      # full slope vector in rhs order (free pooled values + fixed ustart)
+      eq_free_idx <- lavpartable$free[eq$pt]
+      b_full <- lavpartable$ustart[eq$pt]
+      b_full[is.na(b_full)] <- 0
+      free_pos <- which(eq_free_idx > 0L)
+      b_full[free_pos] <- x[eq_free_idx[free_pos]]
+      beta0 <- as.vector(sb$y_bar - sb$x_bar %*% b_full)
+      free_int_idx <- lavpartable$free[eq$ptint]
+      if (length(free_int_idx) == 1L && free_int_idx > 0L) {
+        x[free_int_idx] <- beta0
+      }
+    }
+  }
   x
 }
 
@@ -226,6 +381,47 @@ lav_sem_miiv_2sls <- function(eqs = NULL, lavmodel = NULL, lavpartable = NULL,
         )
       }
 
+      # store the (centered) slope system for the pooled solve that handles
+      # simple equality constraints across equations (see below)
+      if (length(x_idx) > 0L) {
+        if (is.null(weights)) {
+          x_bar <- colMeans(xhat)
+          y_bar <- mean(yvec)
+          xc <- sweep(xhat, 2L, x_bar)
+          yc <- yvec - y_bar
+          amat <- crossprod(xc)
+          bvec <- crossprod(xc, yc)
+        } else {
+          sw <- sum(weights)
+          x_bar <- colSums(weights * xhat) / sw
+          y_bar <- sum(weights * yvec) / sw
+          xc <- sweep(xhat, 2L, x_bar)
+          yc <- yvec - y_bar
+          amat <- crossprod(xc * weights, xc)
+          bvec <- crossprod(xc * weights, yc)
+        }
+        eq_free_idx <- lavpartable$free[eq$pt]
+        fix_idx <- which(eq_free_idx == 0L)
+        if (length(fix_idx) > 0L) {
+          b_fix <- lavpartable$ustart[eq$pt][fix_idx]
+          b_fix[is.na(b_fix)] <- 0
+          amat_free <- amat[-fix_idx, -fix_idx, drop = FALSE]
+          bvec_free <- bvec[-fix_idx, , drop = FALSE] -
+            amat[-fix_idx, fix_idx, drop = FALSE] %*% b_fix
+          gcol_free <- eq_free_idx[-fix_idx]
+        } else {
+          amat_free <- amat
+          bvec_free <- bvec
+          gcol_free <- eq_free_idx
+        }
+        if (length(gcol_free) > 0L) {
+          eqs[[b]][[j]]$slope_block <- list(
+            amat = amat_free, bvec = drop(bvec_free), gcol = gcol_free,
+            x_idx = x_idx, x_bar = x_bar, y_bar = y_bar
+          )
+        }
+      }
+
       # 3. fill estimates in x
       # - eq$pt contains partable/user rows
       # - lavpartable$free[eq$pt] should give the free idx
@@ -308,6 +504,12 @@ lav_sem_miiv_2sls <- function(eqs = NULL, lavmodel = NULL, lavpartable = NULL,
       eqs[[b]][[j]]$vcov <- vcov
       eqs[[b]][[j]]$sargan <- sargan
     } # eqs
+
+    # pooled (system) solve for simple equality constraints among the
+    # directed slopes (no-op when nothing is shared)
+    x <- lav_sem_miiv_apply_directed_pool(
+      eqs_b = eqs[[b]], x = x, lavmodel = lavmodel, lavpartable = lavpartable
+    )
   } # nblocks
 
   # return theta1
@@ -455,6 +657,32 @@ lav_sem_miiv_2sls_samp <- function(x = NULL, samplestats = FALSE,
         }
       }
       fit_y_on_xhat$coefficients <- c(beta0, beta_slopes)
+
+      # store the (centered) slope system for the pooled solve that handles
+      # simple equality constraints across equations (see below). fixed slopes
+      # (free == 0) are moved to the right-hand side.
+      if (nx > 0L) {
+        eq_free_idx <- lavpartable$free[eq$pt]
+        fix_idx <- which(eq_free_idx == 0L)
+        if (length(fix_idx) > 0L) {
+          b_fix <- lavpartable$ustart[eq$pt][fix_idx]
+          b_fix[is.na(b_fix)] <- 0
+          amat_free <- amat[-fix_idx, -fix_idx, drop = FALSE]
+          bvec_free <- bvec[-fix_idx, , drop = FALSE] -
+            amat[-fix_idx, fix_idx, drop = FALSE] %*% b_fix
+          gcol_free <- eq_free_idx[-fix_idx]
+        } else {
+          amat_free <- amat
+          bvec_free <- bvec
+          gcol_free <- eq_free_idx
+        }
+        if (length(gcol_free) > 0L) {
+          eqs[[b]][[j]]$slope_block <- list(
+            amat = amat_free, bvec = drop(bvec_free), gcol = gcol_free,
+            x_idx = x_idx, x_bar = x_bar, y_bar = y_bar
+          )
+        }
+      }
 
       # 2b. jac_eqs_k
       k_mat <- NULL
@@ -634,6 +862,14 @@ lav_sem_miiv_2sls_samp <- function(x = NULL, samplestats = FALSE,
       eqs[[b]][[j]]$k_mat_int <- k_mat_int
       eqs[[b]][[j]]$k_mat <- k_mat
     } # eqs
+
+    # pooled (system) solve for simple equality constraints among the
+    # directed slopes: if a free column is shared by >1 equation, the
+    # per-equation fills above are last-write-wins and must be replaced by a
+    # joint solution (no-op when nothing is shared).
+    x <- lav_sem_miiv_apply_directed_pool(
+      eqs_b = eqs[[b]], x = x, lavmodel = lavmodel, lavpartable = lavpartable
+    )
   } # nblocks
 
   # return theta1
@@ -691,6 +927,12 @@ lav_sem_miiv_varcov <- function(x = NULL, samplestats = FALSE,
   tmp <- lav_model_delta(lavmodel_tmp)[[b]]
   delta2 <- tmp[, free_undirected_idx, drop = FALSE]
 
+  # general linear equality constraints among the undirected parameters (if
+  # any); aligned to the free_undirected_idx (ie delta2 column) order
+  con_und <- lav_sem_miiv_linear_con(lavmodel, free_undirected_idx)
+  con_jac <- if (is.null(con_und)) NULL else con_und$jac
+  con_rhs <- if (is.null(con_und)) NULL else con_und$rhs
+
   # svec
   sample_cov <- implied$cov[[b]]
   sample_mean <- implied$mean[[b]]
@@ -712,7 +954,8 @@ lav_sem_miiv_varcov <- function(x = NULL, samplestats = FALSE,
   theta2 <- lav_utils_wls_linearization(delta = delta2, s = s,
                                         meanstructure = lavmodel@meanstructure,
                                         categorical = lavmodel@categorical,
-                                        svec = svec, return_h = add_h2)
+                                        svec = svec, return_h = add_h2,
+                                        con_jac = con_jac, con_rhs = con_rhs)
 
   # if ULS/GLS, we are done
 
@@ -721,10 +964,22 @@ lav_sem_miiv_varcov <- function(x = NULL, samplestats = FALSE,
     x[free_undirected_idx] <- theta2
     lavmodel_tmp <- lav_model_set_parameters(lavmodel = lavmodel, x = x)
     sigma <- lav_model_sigma(lavmodel = lavmodel_tmp, extra = FALSE)[[b]]
-    theta2 <-
+    # fall back to the ULS estimate if the model-implied Sigma (from the ULS
+    # step) is not positive definite (eg a Heywood case)
+    new_theta2 <- try(
       lav_utils_wls_linearization(delta = delta2, s = sigma,
                                   meanstructure = lavmodel@meanstructure,
-                                  svec = svec, return_h = add_h2)
+                                  svec = svec, return_h = add_h2,
+                                  con_jac = con_jac, con_rhs = con_rhs),
+      silent = TRUE
+    )
+    if (inherits(new_theta2, "try-error")) {
+      lav_msg_warn(gettext("2RLS for variances/covariances fell back to the
+                            ULS estimate: the model-implied covariance matrix
+                            is not positive definite."))
+    } else {
+      theta2 <- new_theta2
+    }
   # RLS
   } else if (iv_varcov_method == "RLS") {
     # typically, we need 5-15 iterations, so max = 200 should be enough
@@ -733,10 +988,25 @@ lav_sem_miiv_varcov <- function(x = NULL, samplestats = FALSE,
       x[free_undirected_idx] <- theta2
       lavmodel_tmp <- lav_model_set_parameters(lavmodel = lavmodel, x = x)
       sigma <- lav_model_sigma(lavmodel = lavmodel_tmp, extra = FALSE)[[b]]
-      theta2 <-
+      # the RLS weight needs a positive-definite model-implied Sigma; if the
+      # current iterate yields a non-PD Sigma (eg a Heywood case), keep the
+      # last valid estimate rather than aborting the whole estimator
+      new_theta2 <- try(
         lav_utils_wls_linearization(delta = delta2, s = sigma,
                                     meanstructure = lavmodel@meanstructure,
-                                    svec = svec, return_h = add_h2)
+                                    svec = svec, return_h = add_h2,
+                                    con_jac = con_jac, con_rhs = con_rhs),
+        silent = TRUE
+      )
+      if (inherits(new_theta2, "try-error")) {
+        lav_msg_warn(gettext("RLS for variances/covariances stopped early:
+                              the model-implied covariance matrix is not
+                              positive definite; returning the last valid
+                              estimate."))
+        theta2 <- old_x
+        break
+      }
+      theta2 <- new_theta2
       sse <- Re(sum((old_x - theta2)^2))
       if (sse < 1e-12 * Re(1 + sum(theta2^2))) {
         break
@@ -816,6 +1086,46 @@ lav_sem_miiv_vcov <- function(lavmodel = NULL, lavsamplestats = NULL,
   theta1_noint <- x[free_directed_noint_idx]
   theta2 <- x[free_undirected_idx] # final estimate
 
+  # equality constraints? Two flavors:
+  #  - simple (parameters sharing a free column, ceq.simple.only path)
+  #  - general linear (rows of ceq.JAC)
+  # The analytic Jacobians assume independent equations / no constraints, so
+  # when a constraint touches the directed (undirected) parameters we fall back
+  # to the numerical Jacobian of the constrained point-estimation function,
+  # which differentiates the actual pooled / projected solve.
+  dir_slope_free <- lavpartable$free[lavpartable$free > 0L &
+    lavpartable$op %in% c("=~", "~")]
+  has_shared_dir <- anyDuplicated(dir_slope_free) > 0L
+  con_dir <- lav_sem_miiv_linear_con(lavmodel, free_directed_noint_idx)
+  con_und <- lav_sem_miiv_linear_con(lavmodel, free_undirected_idx)
+  has_dir_con <- has_shared_dir || !is.null(con_dir)
+  has_und_con <- !is.null(con_und)
+
+  if (has_dir_con && length(free_directed_idx) > 0L &&
+      iv_vcov_stage1 != "none") {
+    if (iv_vcov_stage1 %in% c("lm.vcov", "lm.vcov.dfres")) {
+      if (isTRUE(lavoptions$estimator.args$iv.samplestats)) {
+        iv_vcov_stage1 <- "gamma"
+      } else {
+        lav_msg_warn(gettext(
+          "[IV] equality constraints are ignored by the raw-data standard
+           errors; use iv.samplestats = TRUE for constraint-aware
+           standard errors."))
+      }
+    }
+    iv_vcov_jack_numerical <- TRUE
+  }
+
+  # general linear constraints among the undirected parameters: the analytic
+  # stage-2 Jacobians (and the h2 weight) ignore the constraint, so switch to
+  # the delta method with numerical jac_a / jac_b (which differentiate the
+  # constrained projection in lav_sem_miiv_varcov())
+  # (iv_vcov_jaca_numerical gates both the numerical jac_a and jac_b below)
+  if (has_und_con && iv_vcov_stage2 != "none") {
+    iv_vcov_stage2 <- "delta"
+    iv_vcov_jaca_numerical <- TRUE
+  }
+
   # switch off iv.vcov.stage2?
   if (length(free_directed_idx) > 0L && iv_vcov_stage1 == "none") {
     iv_vcov_stage2 <- "none"
@@ -831,6 +1141,13 @@ lav_sem_miiv_vcov <- function(lavmodel = NULL, lavsamplestats = NULL,
       # path; needed whether or not NACOV is available
       if (iv_vcov_gamma_modelbased) {
         cov_g <- lavimplied$cov[[g]]
+        # the model-implied covariance may be non-PD (eg a Heywood case); the
+        # continuous NT-gamma path needs a PD matrix, so fall back to the
+        # (PD) sample covariance in that case
+        if (!lavmodel@categorical &&
+            inherits(try(chol(cov_g), silent = TRUE), "try-error")) {
+          cov_g <- lavh1$implied$cov[[g]]
+        }
       } else {
         cov_g <- lavh1$implied$cov[[g]]
       }
@@ -1001,7 +1318,13 @@ lav_sem_miiv_vcov <- function(lavmodel = NULL, lavsamplestats = NULL,
       } else if (iv_varcov_method == "GLS") {
         s_mat <- lavh1$implied$cov[[1]]
       } else {
+        # 2RLS/RLS use the model-implied covariance, which may be non-PD (eg a
+        # Heywood case); fall back to the (PD) sample covariance if so
         s_mat <- lavimplied$cov[[1]]
+        if (!lavmodel@categorical &&
+            inherits(try(chol(s_mat), silent = TRUE), "try-error")) {
+          s_mat <- lavh1$implied$cov[[1]]
+        }
       }
       tmp <- lav_utils_wls_linearization(delta = delta2, s = s_mat,
         meanstructure = lavmodel@meanstructure,

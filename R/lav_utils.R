@@ -378,7 +378,9 @@ lav_utils_wls_linearization <- function(delta = NULL, s = NULL,
                                         #fixed.x = FALSE, # FIXME: needed?
                                         #x.idx = integer(0L),
                                         svec = NULL,
-                                        return_h = FALSE) {
+                                        return_h = FALSE,
+                                        con_jac = NULL,
+                                        con_rhs = NULL) {
   nvar <- nrow(s)
   if (categorical) {
     meanstructure <- FALSE
@@ -466,13 +468,30 @@ lav_utils_wls_linearization <- function(delta = NULL, s = NULL,
   }
 
   r <- chol(a)
-  if (!return_h) {
+  have_con <- !is.null(con_jac) && nrow(con_jac) > 0L
+  if (!return_h && !have_con) {
     out <- backsolve(r, forwardsolve(t(r), b))
   } else {
     ainv  <- chol2inv(r)
     out <- drop(ainv %*% b)
-    h <- ainv %*% t_q
-    attr(out, "H") <- h
+    if (return_h) {
+      h <- ainv %*% t_q
+      attr(out, "H") <- h
+    }
+  }
+
+  # impose linear equality constraints (con_jac %*% theta == con_rhs) on the
+  # WLS estimate by projection onto the constraint set, using the WLS Hessian
+  # 'a' as the metric: theta_c = theta - A^{-1} R' (R A^{-1} R')^{-1}(R theta-q)
+  if (have_con) {
+    air <- ainv %*% t(con_jac)
+    rar <- con_jac %*% air
+    lambda <- solve(rar, drop(con_jac %*% out) - con_rhs)
+    h_attr <- attr(out, "H")
+    out <- drop(out - air %*% lambda)
+    if (!is.null(h_attr)) {
+      attr(out, "H") <- h_attr
+    }
   }
 
   out
