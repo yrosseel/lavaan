@@ -178,6 +178,14 @@ lavScores <- estfun.lavaan <- function(               # nolint
         remove_empty_cases = remove_empty_cases)
 }
 
+# YR 18 Jun 2026: the casewise H1 (saturated-model) scores are now computed by
+#                 the (better tested) lav_mvn_sc_mu_sigma() (complete data) and
+#                 lav_mvn_mi_sc_mu_sigma() (incomplete data) functions from the
+#                 lav_mvnorm*.R files; this function only assembles them into the
+#                 model-parameter scores via the Delta matrix. The mvn casewise
+#                 score has the opposite sign of the old 'scores_h1' (so the old
+#                 '-scores_h1 %*% Delta' becomes 'sc %*% Delta'), and produces
+#                 vech(Sigma) with the diagonal already halved -- matching Delta.
 lav_sc_ml <- function(ntab = 0L,
                           ntot = 0L,
                           npar = 0L,
@@ -195,122 +203,66 @@ lav_sc_ml <- function(ntab = 0L,
   # rename moments
   moments_groups <- moments
 
+  # group weights (only used if scaling = TRUE)
+  group_w <- unlist(lavsamplestats@nobs) / lavsamplestats@ntotal
+
   for (g in 1:lavsamplestats@ngroups) {
     if (lavsamplestats@ngroups > 1) {
       moments <- moments_groups[[g]]
     }
     sigma_hat <- moments$cov
+    nvar <- ncol(lavsamplestats@cov[[g]])
 
-    if (lavoptions$likelihood == "wishart") {
-      nobs1 <- lavsamplestats@nobs[[g]] / (lavsamplestats@nobs[[g]] - 1)
+    # H1 (saturated) mean: model-implied if meanstructure, else sample mean
+    if (lavmodel@meanstructure) {
+      mu_hat <- moments$mean
     } else {
-      nobs1 <- 1
+      mu_hat <- lavsamplestats@mean[[g]]
     }
 
     if (!lavsamplestats@missing.flag) { # complete data
-      # if(lavmodel@meanstructure) { # mean structure
-      nvar <- ncol(lavsamplestats@cov[[g]])
-      mu_hat <- moments$mean
-      x_1 <- lavdata@X[[g]]
-      sigma_inv <- chol2inv(chol(sigma_hat)) # FIXME: check for pd?
-      group_w <- (unlist(lavsamplestats@nobs) / lavsamplestats@ntotal)
+      sc <- lav_mvn_sc_mu_sigma(
+        y = lavdata@X[[g]], mu = mu_hat, sigma_1 = sigma_hat
+      )
 
-      j <- matrix(1, 1L, ntab[g]) ## FIXME: needed?better maybe rowSums/colSums?
-      j2 <- matrix(1, nvar, nvar)
-      diag(j2) <- 0.5
-
-      if (lavmodel@meanstructure) {
-        ## scores_h1 (H1 = saturated model)
-        mean_diff <- t(t(x_1) - mu_hat %*% j)
-        dx_mu <- -1 * mean_diff %*% sigma_inv
-        dx_sigma <- t(matrix(apply(
-          mean_diff, 1L,
-          function(x) {
-            lav_mat_vech(-j2 *
-              (sigma_inv %*% (tcrossprod(x) * nobs1 - sigma_hat) %*% sigma_inv))
-          }
-        ), ncol = nrow(mean_diff)))
-
-        scores_h1 <- cbind(dx_mu, dx_sigma)
-      } else {
-        mean_diff <- t(t(x_1) - lavsamplestats@mean[[g]] %*% j)
-        dx_sigma <- t(matrix(apply(
-          mean_diff, 1L,
-          function(x) {
-            lav_mat_vech(-j2 *
-              (sigma_inv %*% (tcrossprod(x) * nobs1 - sigma_hat) %*% sigma_inv))
-          }
-        ), ncol = nrow(mean_diff)))
-        scores_h1 <- dx_sigma
-      }
-      ## FIXME? Seems like we would need group.w even in the
-      ##        complete-data case:
-      ## if(scaling){
-      ##  scores_h1 <- group.w[g] * scores_h1
-      ## }
-
-      # } else {
-      #  ## no mean structure
-      #  stop("Score calculation with no mean structure is not implemented.")
-      # }
-    } else { # incomplete data
-      nsub <- ntab[g]
-      m <- lavsamplestats@missing[[g]]
-      mp <- lavdata@Mp[[g]]
-      # pat.idx <- match(MP1$id, MP1$order)
-      group_w <- (unlist(lavsamplestats@nobs) / lavsamplestats@ntotal)
-
-      mu_hat <- moments$mean
-      nvar <- ncol(lavsamplestats@cov[[g]])
-      score_sigma <- matrix(0, nsub, nvar * (nvar + 1) / 2)
-      score_mu <- matrix(0, nsub, nvar)
-
-      for (p in seq_along(m)) {
-        ## Data
-        # X <- M[[p]][["X"]]
-        case_idx <- mp$case.idx[[p]]
-        var_idx <- m[[p]][["var.idx"]]
-        x_1 <- lavdata@X[[g]][case_idx, var_idx, drop = FALSE]
-        nobs <- m[[p]][["freq"]]
-        ## Which unique entries of covariance matrix are estimated?
-        ## (Used to keep track of scores in score.sigma)
-        var_idx_mat <- tcrossprod(var_idx)
-        sigma_idx <-
-          which(var_idx_mat[lower.tri(var_idx_mat, diag = TRUE)] == 1)
-
-        j <- matrix(1, 1L, nobs) # [var.idx]
-        j2 <- matrix(1, nvar, nvar)[var_idx, var_idx, drop = FALSE]
+      # wishart likelihood: the second-order (vech(Sigma)) block uses the
+      # unbiased cross-product, i.e. tcrossprod(y - mu) is scaled by n/(n-1).
+      # This rescales the vech(Sigma) columns of the casewise score, and adds a
+      # (constant) shift proportional to vech(Sigma.inv).
+      if (lavoptions$likelihood == "wishart") {
+        nobs1 <- lavsamplestats@nobs[[g]] / (lavsamplestats@nobs[[g]] - 1)
+        j2 <- matrix(1, nvar, nvar)
         diag(j2) <- 0.5
-        # FIXME: check for pd?
-        sigma_inv <- chol2inv(chol(sigma_hat[var_idx, var_idx, drop = FALSE]))
-        mu <- mu_hat[var_idx]
-        mean_diff <- t(t(x_1) - mu %*% j)
-
-        ## Scores for missing pattern p within group g
-        score_mu[case_idx, var_idx] <- -1 * mean_diff %*% sigma_inv
-        score_sigma[case_idx, sigma_idx] <- t(matrix(apply(
-          mean_diff, 1L,
-          function(x) {
-            lav_mat_vech(-j2 *
-              (sigma_inv %*% (tcrossprod(x) -
-                sigma_hat[var_idx, var_idx, drop = FALSE]) %*% sigma_inv))
-          }
-        ), ncol = nrow(mean_diff)))
+        d_row <- lav_mat_vech(-j2 * chol2inv(chol(sigma_hat)))
+        sig_idx <- seq.int(nvar + 1L, ncol(sc))
+        sc[, sig_idx] <- nobs1 * sc[, sig_idx, drop = FALSE] -
+          matrix((nobs1 - 1) * d_row, nrow(sc), length(d_row), byrow = TRUE)
       }
-
-      scores_h1 <- cbind(score_mu, score_sigma)
-      if (scaling) {
-        scores_h1 <- group_w[g] * scores_h1
-      }
+    } else { # incomplete data
+      sc <- lav_mvn_mi_sc_mu_sigma(
+        y = lavdata@X[[g]], mp = lavdata@Mp[[g]],
+        mu = mu_hat, sigma_1 = sigma_hat
+      )
+      # lav_mvn_mi_sc_mu_sigma() leaves NA in the score entries that refer to
+      # the *unobserved* cells of a case; the (saturated) casewise score for a
+      # missing variable is zero, so we zero them here before mapping through
+      # Delta (the old implementation initialised these entries to 0).
+      sc[is.na(sc)] <- 0
     } # missing
 
-    # if(lavmodel@eq.constraints) {
-    #    Delta <- Delta %*% lavmodel@eq.constraints.K
-    #    #x <- as.numeric(lavmodel@eq.constraints.K %*% x) +
-    #    #                lavmodel@eq.constraints.k0
-    # }
+    # no mean structure: drop the (leading) mu columns
+    if (!lavmodel@meanstructure) {
+      sc <- sc[, -seq_len(nvar), drop = FALSE]
+    }
+
+    # scaling? (matches the historical behaviour: group weights are applied to
+    # the incomplete-data scores only, then everything is scaled by -1/ntot)
+    if (scaling && lavsamplestats@missing.flag) {
+      sc <- group_w[g] * sc
+    }
+
     wi <- lavdata@case.idx[[g]]
-    score_matrix[wi, ] <- -scores_h1 %*% delta[[g]]
+    score_matrix[wi, ] <- sc %*% delta[[g]]
     if (scaling) {
       score_matrix[wi, ] <- (-1 / ntot) * score_matrix[wi, ]
     }
