@@ -1226,6 +1226,14 @@ lav_lisrel_ibinv <- function(mlist = NULL) {
     return(diag(nr))
   }
 
+  # the diagonal of BETA is structurally zero in the (I - BETA)^-1 formula;
+  # some representations (e.g. composites with composites = FALSE) leave a
+  # non-zero value on the diagonal. We force it to zero here, so that the
+  # diagonal of (I - BETA) is always one. This matches the historical
+  # solve()-based implementation (tmp <- -BETA; diag(tmp) <- 1; solve(tmp))
+  # and keeps the triangular shortcuts below non-singular.
+  diag(mm_beta) <- 0
+
   # forwardsolve/backsolve do not support complex values; solve() does.
   # We also route to the generic solve() path when BETA contains missing
   # values (e.g. NA while a model is being filled in during post-estimation,
