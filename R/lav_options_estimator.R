@@ -309,7 +309,13 @@ lav_options_est_dwls <- function(opt) {
   } else if (opt$se == "default") {
     if (opt$estimator == "dwls" && !opt$.categorical) {
       # opt$se <- "standard"
-      opt$se <- "robust.sem.nt" # new in 0.6-21
+      # with continuous data, DWLS follows the same defaults as ULS: with
+      # sampling weights, use the ADF-based se (and, below, the ADF test)
+      if (isTRUE(opt$.sampling.weights)) {
+        opt$se <- "robust.sem"
+      } else {
+        opt$se <- "robust.sem.nt" # new in 0.6-21
+      }
     } else {
       opt$se <- "robust.sem"
     }
