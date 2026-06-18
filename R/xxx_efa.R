@@ -80,10 +80,21 @@ efa <- function(data = NULL,
     } else {
       ov_names <- names(data)
       if (twolevel_flag) {
-        ov_names <- ov_names[-which(ov_names == dotdotdot$cluster)]
+        if (!all(dotdotdot$cluster %in% ov_names)) {
+          lav_msg_stop(gettextf(
+            "cluster variable(s) %s not found in data.",
+            lav_msg_view(dotdotdot$cluster[!dotdotdot$cluster %in% ov_names])))
+        }
+        ov_names <- setdiff(ov_names, dotdotdot$cluster)
       }
       if (sampling_weights_flag) {
-        ov_names <- ov_names[-which(ov_names == dotdotdot$sampling.weights)]
+        if (!all(dotdotdot$sampling.weights %in% ov_names)) {
+          lav_msg_stop(gettextf(
+            "sampling.weights variable(s) %s not found in data.",
+            lav_msg_view(dotdotdot$sampling.weights[
+              !dotdotdot$sampling.weights %in% ov_names])))
+        }
+        ov_names <- setdiff(ov_names, dotdotdot$sampling.weights)
       }
     }
   } else if (!is.null(sample_cov)) {
