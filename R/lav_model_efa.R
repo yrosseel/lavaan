@@ -54,9 +54,9 @@ lav_model_efa_rotate_x <- function(x, lavmodel = NULL, lavoptions = NULL,
   # GLIST
   glist <- lavmodel_orig@GLIST
 
-  # H per group
-  h <- vector("list", lavmodel@ngroups)
-  order_1 <- vector("list", lavmodel@ngroups)
+  # H per block
+  h <- vector("list", lavmodel@nblocks)
+  order_1 <- vector("list", lavmodel@nblocks)
 
   # new in 0.6-22 -- three options:
   # 1. rotate per group (default)
@@ -73,7 +73,12 @@ lav_model_efa_rotate_x <- function(x, lavmodel = NULL, lavoptions = NULL,
 
   # option 1 + 2 (single group or multipgroup + no agreement)
   if (!mg_agreement_flag) {
-    for (g in seq_len(lavmodel@ngroups)) {
+    # iterate over blocks, not groups: each block (eg the within and the
+    # between level of a twolevel model) is rotated independently. The
+    # efa-related slots (ov.efa.idx, lv.efa.idx, nmat, the dummy-ov indices
+    # and H) are all indexed per block; for single-level models block == group,
+    # so multigroup behaviour is unchanged.
+    for (g in seq_len(lavmodel@nblocks)) {
       # select model matrices for this group
       mm_in_group <- seq_len(lavmodel@nmat[g]) + cumsum(c(0, lavmodel@nmat))[g]
       mlist <- glist[mm_in_group]
@@ -467,8 +472,11 @@ lav_model_efa_rotate_border_x <- function(x, lavmodel = NULL,
   # res
   res <- numeric(0L)
 
-  # per group (not per block)
-  for (g in seq_len(lavmodel@ngroups)) {
+  # per block (group x level): the rotation constraints must be generated for
+  # every rotated block, otherwise the bordered information matrix is rank
+  # deficient (and the rotated vcov is not positive definite). The efa-related
+  # slots are indexed per block; for single-level models block == group.
+  for (g in seq_len(lavmodel@nblocks)) {
 
     # group-specific method.args
   this_method_args <- method_args
@@ -518,7 +526,7 @@ lav_model_efa_rotate_border_x <- function(x, lavmodel = NULL,
       # check if we have any user=7 elements in this set
       # if not, skip constraints
       ind_idx <- which(lavpartable$op == "=~" &
-        lavpartable$group == g &
+        lavpartable$block == g &
         lavpartable$efa == set_names[set])
       if (!any(lavpartable$user[ind_idx] == 7L)) {
         next
@@ -629,7 +637,7 @@ lav_model_efa_rotate_border_x <- function(x, lavmodel = NULL,
 
       res <- c(res, this_res)
     } # set
-  } # group
+  } # block
 
   # return constraint vector
   res
