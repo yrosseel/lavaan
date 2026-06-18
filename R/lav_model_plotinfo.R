@@ -35,8 +35,8 @@ lav_model_plotinfo <- function(model = NULL, infile = NULL, varlv = FALSE) {
     tbl <- as.data.frame(model)
   } else if (is.character(model)) {
     tbl <- lavParseModelString(
-      model.syntax = model,
-      as.data.frame. = TRUE
+      model_syntax = model,
+      as_data_frame = TRUE
     )
   } else {
     lav_msg_stop(gettext(

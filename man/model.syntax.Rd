@@ -6,79 +6,78 @@
 \alias{lavParseModelString}
 \title{The Lavaan Model Syntax}
 \description{
-The lavaan model syntax describes a latent variable model. The 
+The lavaan model syntax describes a latent variable model. The
 function \code{lavParTable} turns it into a table that represents the full
-model as specified by the user. We refer to this table as the parameter table.} 
+model as specified by the user. We refer to this table as the parameter table.}
 \usage{
-lavaanify(model = NULL, meanstructure = FALSE, int.ov.free = FALSE,
-    int.lv.free = FALSE, marker.int.zero = FALSE,
-    orthogonal = FALSE, orthogonal.y = FALSE, 
-    orthogonal.x = FALSE, orthogonal.efa = FALSE, std.lv = FALSE,
+lavaanify(model = NULL, meanstructure = FALSE, int_ov_free = FALSE,
+    int_lv_free = FALSE, marker_int_zero = FALSE,
+    orthogonal = FALSE, orthogonal_y = FALSE,
+    orthogonal_x = FALSE, orthogonal_efa = FALSE, std_lv = FALSE,
     correlation = FALSE, composites = TRUE,
-    effect.coding = "", conditional.x = FALSE, 
-    fixed.x = FALSE, parameterization = "delta", constraints = NULL, 
-    ceq.simple = FALSE, auto = FALSE, model.type = "sem",
-    auto.fix.first = FALSE, marker = NULL,
-    auto.fix.single = FALSE, auto.var = FALSE,
-    auto.cov.lv.x = FALSE, auto.cov.y = FALSE, auto.th = FALSE,
-    auto.delta = FALSE, auto.efa = FALSE,
-    varTable = NULL, ngroups = 1L, nthresholds = NULL,
-    group.equal = NULL, group.partial = NULL, group.w.free = FALSE,
-    debug = FALSE, warn = TRUE, as.data.frame. = TRUE)
+    effect_coding = "", conditional_x = FALSE,
+    fixed_x = FALSE, parameterization = "delta", constraints = NULL,
+    ceq_simple = FALSE, auto = FALSE, model_type = "sem",
+    auto_fix_first = FALSE, marker = NULL,
+    auto_fix_single = FALSE, auto_var = FALSE,
+    auto_cov_lv_x = FALSE, auto_cov_y = FALSE, auto_th = FALSE,
+    auto_delta = FALSE, auto_efa = FALSE,
+    var_table = NULL, ngroups = 1L, nthresholds = NULL,
+    group_equal = NULL, group_partial = NULL, group_w_free = FALSE,
+    debug = FALSE, warn = TRUE, as_data_frame = TRUE, ...)
 
-lavParTable(model = NULL, meanstructure = FALSE, int.ov.free = FALSE,
-    int.lv.free = FALSE, marker.int.zero = FALSE,
-    orthogonal = FALSE, orthogonal.y = FALSE, 
-    orthogonal.x = FALSE, orthogonal.efa = FALSE, std.lv = FALSE,
+lavParTable(model = NULL, meanstructure = FALSE, int_ov_free = FALSE,
+    int_lv_free = FALSE, marker_int_zero = FALSE,
+    orthogonal = FALSE, orthogonal_y = FALSE,
+    orthogonal_x = FALSE, orthogonal_efa = FALSE, std_lv = FALSE,
     correlation = FALSE, composites = TRUE,
-    effect.coding = "", conditional.x = FALSE, 
-    fixed.x = FALSE, parameterization = "delta", constraints = NULL, 
-    ceq.simple = FALSE, auto = FALSE, model.type = "sem",
-    auto.fix.first = FALSE, marker = NULL,
-    auto.fix.single = FALSE, auto.var = FALSE,
-    auto.cov.lv.x = FALSE, auto.cov.y = FALSE, auto.th = FALSE,
-    auto.delta = FALSE, auto.efa = FALSE,
-    varTable = NULL, ngroups = 1L, nthresholds = NULL,
-    group.equal = NULL, group.partial = NULL, group.w.free = FALSE,
-    debug = FALSE, warn = TRUE, as.data.frame. = TRUE)
+    effect_coding = "", conditional_x = FALSE,
+    fixed_x = FALSE, parameterization = "delta", constraints = NULL,
+    ceq_simple = FALSE, auto = FALSE, model_type = "sem",
+    auto_fix_first = FALSE, marker = NULL,
+    auto_fix_single = FALSE, auto_var = FALSE,
+    auto_cov_lv_x = FALSE, auto_cov_y = FALSE, auto_th = FALSE,
+    auto_delta = FALSE, auto_efa = FALSE,
+    var_table = NULL, ngroups = 1L, nthresholds = NULL,
+    group_equal = NULL, group_partial = NULL, group_w_free = FALSE,
+    debug = FALSE, warn = TRUE, as_data_frame = TRUE, ...)
 
-lavParseModelString(model.syntax = '', as.data.frame. = FALSE,
-                    parser = "open", warn = TRUE, debug = FALSE)
-
+lavParseModelString(model_syntax = '', as_data_frame = FALSE,
+                    parser = "open", warn = TRUE, debug = FALSE, ...)
 }
 \arguments{
 \item{model}{A description of the user-specified model. Typically, the model
     is described using the lavaan model syntax; see details for more
     information. Alternatively, a parameter table (e.g., the output of
     \code{lavParseModelString}) is also accepted.}
-\item{model.syntax}{The model syntax specifying the model. Must be a literal
+\item{model_syntax}{The model syntax specifying the model. Must be a literal
 string.}
 \item{meanstructure}{If \code{TRUE}, intercepts/means will be added to
 the model for both observed and latent variables.}
-\item{int.ov.free}{If \code{FALSE}, the intercepts of the observed variables
+\item{int_ov_free}{If \code{FALSE}, the intercepts of the observed variables
     are fixed to zero.}
-\item{int.lv.free}{If \code{FALSE}, the intercepts of the latent variables
+\item{int_lv_free}{If \code{FALSE}, the intercepts of the latent variables
     are fixed to zero.}
-\item{marker.int.zero}{Logical. Only relevant if the metric of each latent
+\item{marker_int_zero}{Logical. Only relevant if the metric of each latent
     variable is set by fixing the first factor loading to unity.
     If \code{TRUE}, it implies \code{meanstructure = TRUE} and
-    \code{std.lv = FALSE}, and it fixes the intercepts of the marker
+    \code{std_lv = FALSE}, and it fixes the intercepts of the marker
     indicators to zero, while freeing the means/intercepts of the latent
     variables. This only works correctly for single-group, single-level
     models.}
 \item{orthogonal}{If \code{TRUE}, all covariances among
    latent variables are set to zero.}
-\item{orthogonal.y}{If \code{TRUE}, all covariances among
+\item{orthogonal_y}{If \code{TRUE}, all covariances among
    endogenous latent variables only are set to zero.}
-\item{orthogonal.x}{If \code{TRUE}, all covariances among
+\item{orthogonal_x}{If \code{TRUE}, all covariances among
    exogenous latent variables only are set to zero.}
-\item{orthogonal.efa}{If \code{TRUE}, all covariances among
+\item{orthogonal_efa}{If \code{TRUE}, all covariances among
    latent variables involved in rotation only are set to zero.}
-\item{std.lv}{If \code{TRUE}, the metric of each latent variable is
+\item{std_lv}{If \code{TRUE}, the metric of each latent variable is
     determined by fixing their variances to 1.0. If \code{FALSE}, the metric
     of each latent variable is determined by fixing the factor loading of the
     first indicator to 1.0. If there are multiple
-      groups, \code{std.lv = TRUE} and \code{"loadings"} is included in
+      groups, \code{std_lv = TRUE} and \code{"loadings"} is included in
       the \code{group.label} argument, then only the latent variances
       of the first group will be fixed to 1.0, while the latent
       variances of the other groups are freely estimated.}
@@ -87,25 +86,25 @@ the model for both observed and latent variables.}
     longer parameters of the model.}
 \item{composites}{Logical. If \code{TRUE}, use the new (0.6-20) approach
      to handle composites.}
-\item{effect.coding}{Can be logical or character string. If
-     logical and \code{TRUE}, this implies 
-     \code{effect.coding = c("loadings", "intercepts")}. If logical and 
-     \code{FALSE}, it is set equal to the empty string. 
+\item{effect_coding}{Can be logical or character string. If
+     logical and \code{TRUE}, this implies
+     \code{effect_coding = c("loadings", "intercepts")}. If logical and
+     \code{FALSE}, it is set equal to the empty string.
      If \code{"loadings"} is included, equality
      constraints are used so that the average of the factor loadings (per
-     latent variable) equals 1. Note that this should not be used 
-     together with \code{std.lv = TRUE}. If \code{"intercepts"} is
+     latent variable) equals 1. Note that this should not be used
+     together with \code{std_lv = TRUE}. If \code{"intercepts"} is
      included, equality constraints are used so that the sum of the
      intercepts (belonging to the indicators of a single latent variable)
      equals zero.
      As a result, the latent mean will be freely estimated and will usually
      equal the average of the means of the indicators involved.}
-\item{conditional.x}{If \code{TRUE}, we set up the model conditional on
+\item{conditional_x}{If \code{TRUE}, we set up the model conditional on
     the exogenous `x' covariates; the model-implied sample statistics
     only include the non-x variables. If \code{FALSE}, the exogenous `x'
     variables are modeled jointly with the other variables, and the
     model-implied statistics reflect both sets of variables.}
-\item{fixed.x}{If \code{TRUE}, the exogenous `x' covariates are considered
+\item{fixed_x}{If \code{TRUE}, the exogenous `x' covariates are considered
     fixed variables and the means, variances and covariances of these variables
     are fixed to their sample values. If \code{FALSE}, they are considered
     random, and the means, variances and covariances are free parameters.}
@@ -114,93 +113,94 @@ the model for both observed and latent variables.}
     the theta parameterization is used.}
 \item{constraints}{Additional (in)equality constraints. See details for
     more information.}
-\item{ceq.simple}{If \code{TRUE}, and no other general constraints are
+\item{ceq_simple}{If \code{TRUE}, and no other general constraints are
     used in the model, simple equality constraints are represented in the
     parameter table as duplicated free parameters (instead of extra rows
     with \code{op = "=="}).}
 \item{auto}{If \code{TRUE}, the default values are used for the auto.*
-    arguments, depending on the value of \code{model.type}.}
-\item{model.type}{Either \code{"sem"} or \code{"growth"}; only used if
+    arguments, depending on the value of \code{model_type}.}
+\item{model_type}{Either \code{"sem"} or \code{"growth"}; only used if
     \code{auto=TRUE}.}
-\item{auto.fix.first}{If \code{TRUE}, the factor loading of the first indicator
+\item{auto_fix_first}{If \code{TRUE}, the factor loading of the first indicator
     is set to 1.0 for every latent variable.}
 \item{marker}{Optional named character vector mapping a latent variable
     (name) to the observed indicator (name) whose loading should be fixed to
-    1.0 (instead of the first indicator) when \code{auto.fix.first = TRUE}.
+    1.0 (instead of the first indicator) when \code{auto_fix_first = TRUE}.
     Latent variables that are not named in this vector keep the first
     indicator as their marker. This is used internally by the
     \code{bad.marker.crit} mechanism.}
-\item{auto.fix.single}{If \code{TRUE}, the residual variance (if included)
+\item{auto_fix_single}{If \code{TRUE}, the residual variance (if included)
     of an observed indicator is set to zero if it is the only indicator of a
     latent variable.}
-\item{auto.var}{If \code{TRUE}, the (residual) variances of both observed
+\item{auto_var}{If \code{TRUE}, the (residual) variances of both observed
     and latent variables are set free.}
-\item{auto.cov.lv.x}{If \code{TRUE}, the covariances of exogenous latent
+\item{auto_cov_lv_x}{If \code{TRUE}, the covariances of exogenous latent
     variables are included in the model and set free.}
-\item{auto.cov.y}{If \code{TRUE}, the covariances of dependent variables
+\item{auto_cov_y}{If \code{TRUE}, the covariances of dependent variables
     (both observed and latent) are included in the model and set free.}
-\item{auto.th}{If \code{TRUE}, thresholds for limited dependent variables
+\item{auto_th}{If \code{TRUE}, thresholds for limited dependent variables
     are included in the model and set free.}
-\item{auto.delta}{If \code{TRUE}, response scaling parameters for limited
+\item{auto_delta}{If \code{TRUE}, response scaling parameters for limited
     dependent variables are included in the model and set free.}
-\item{auto.efa}{If \code{TRUE}, the necessary constraints are
+\item{auto_efa}{If \code{TRUE}, the necessary constraints are
     imposed to make the (unrotated) exploratory factor analysis blocks
     identifiable: for each block, factor variances are set to 1, factor
     covariances are constrained to be zero, and factor loadings are
     constrained to follow an echelon pattern.}
-\item{varTable}{The variable table containing information about the
+\item{var_table}{The variable table containing information about the
     observed variables in the model.}
 \item{ngroups}{The number of (independent) groups.}
 \item{nthresholds}{Either a single integer or a named vector of integers.
     If \code{nthresholds} is a single integer, all endogenous
-    variables are assumed to be ordered with \code{nthresholds} indicating 
-    the number of thresholds needed in the model. If \code{nthresholds} is a 
+    variables are assumed to be ordered with \code{nthresholds} indicating
+    the number of thresholds needed in the model. If \code{nthresholds} is a
     named vector, it indicates the number of thresholds for these ordered
-    variables only. This argument should not be used in combination with 
-    varTable.}
-\item{group.equal}{A vector of character strings. Only used in
+    variables only. This argument should not be used in combination with
+    var_table.}
+\item{group_equal}{A vector of character strings. Only used in
     a multiple group analysis. Can be one or more of the following:
     \code{"loadings"}, \code{"intercepts"},
     \code{"means"}, \code{"regressions"}, \code{"residuals"} or
     \code{"covariances"}, specifying the pattern of equality
-    constraints across multiple groups. When (in the model syntax) a vector 
-    of labels is used as a modifier for a certain parameter, this will 
-    override the group.equal setting if it applies to this parameter. 
+    constraints across multiple groups. When (in the model syntax) a vector
+    of labels is used as a modifier for a certain parameter, this will
+    override the group_equal setting if it applies to this parameter.
     See also the Multiple groups section below for using modifiers in multiple
     groups.}
-\item{group.partial}{A vector of character strings containing the labels
+\item{group_partial}{A vector of character strings containing the labels
     of the parameters which should be free in all groups (thereby
-    overriding the group.equal argument for some specific parameters).}
-\item{group.w.free}{Logical. If \code{TRUE}, the group frequencies are
+    overriding the group_equal argument for some specific parameters).}
+\item{group_w_free}{Logical. If \code{TRUE}, the group frequencies are
     considered to be free parameters in the model. In this case, a
     Poisson model is fitted to estimate the group frequencies. If
     \code{FALSE} (the default), the group frequencies are fixed to their
     observed values.}
-\item{as.data.frame.}{If \code{TRUE}, return the list of model parameters
+\item{as_data_frame}{If \code{TRUE}, return the list of model parameters
     as a \code{data.frame}.}
 \item{parser}{Character. If \code{"old"}, use the original/classic parser.
-    If \code{"new"}, use the new/ldw parser. 
+    If \code{"new"}, use the new/ldw parser.
     If \code{"open"}, use the newest, extensible parser.
     The default (as of version 0.7-1) is \code{"open"}.}
 \item{warn}{If \code{TRUE}, some (possibly harmless) warnings are printed
     out.}
 \item{debug}{If \code{TRUE}, debugging information is printed out.}
+\item{...}{To accept old argument names with dots. No other arguments are accepted.}
 }
 \details{
 The model syntax consists of one or more formula-like expressions, each one
 describing a specific part of the model. The model syntax can be read from
 a file (using \code{\link{readLines}}), or can be specified as a literal
-string enclosed by single quotes as in the example below. 
+string enclosed by single quotes as in the example below.
 \preformatted{myModel <- '
   # 1. latent variable definitions
     f1 =~ y1 + y2 + y3
     f2 =~ y4 + y5 + y6
-    f3 =~ y7 + y8 + 
-          y9 + y10 
+    f3 =~ y7 + y8 +
+          y9 + y10
     f4 =~ y11 + y12 + y13
 
   ! this is also a comment
- 
+
   # 2. regressions
     f1 ~ f3 + f4
     f2 ~ f4
@@ -208,7 +208,7 @@ string enclosed by single quotes as in the example below.
 
   # 3. (co)variances
     y1 ~~ y1
-    y2 ~~ y4 + y5 
+    y2 ~~ y4 + y5
     f1 ~~ f2
 
   # 4. intercepts
@@ -229,7 +229,7 @@ string enclosed by single quotes as in the example below.
 '
 }
 Blank lines and comments can be used in between the formulas, and formulas can
-be split over multiple lines. Both the sharp (#) and the exclamation (!) 
+be split over multiple lines. Both the sharp (#) and the exclamation (!)
 characters can be used to start a comment. Multiple formulas can be placed
 on a single line if they are separated by a semicolon (;).
 
@@ -238,9 +238,9 @@ There can be seven types of formula-like expressions in the model syntax:
 
     \item Latent variable definitions: The \code{"=~"} operator can be
       used to define (continuous) latent variables. The name of the latent
-      variable is on the left of the \code{"=~"} operator, while the terms 
-      on the right, separated by \code{"+"} operators, are the indicators 
-      of the latent variable. 
+      variable is on the left of the \code{"=~"} operator, while the terms
+      on the right, separated by \code{"+"} operators, are the indicators
+      of the latent variable.
 
       The operator \code{"=~"} can be read as ``is manifested by''.
 
@@ -249,7 +249,7 @@ There can be seven types of formula-like expressions in the model syntax:
       independent variables, separated by \code{"+"} operators, are on the right.
       These regression formulas are similar to the way ordinary linear regression
       formulas are used in R, but they may include latent variables. Interaction
-      terms are currently not supported. 
+      terms are currently not supported.
 
     \item Variance-covariances: The \code{"~~"} (`double tilde') operator specifies
      (residual) variances of an observed or latent variable, or a set of
@@ -268,7 +268,7 @@ There can be seven types of formula-like expressions in the model syntax:
      formula in the model automatically implies \code{meanstructure = TRUE}. The
      distinction between intercepts and means is made automatically.
 
-    \item Thresholds: The \code{"|"} operator can be used to define the 
+    \item Thresholds: The \code{"|"} operator can be used to define the
       thresholds of categorical endogenous variables (on the left-hand side
       of the operator). By convention, the
       thresholds (on the right-hand side, separated by the \code{"+"} operator)
@@ -283,23 +283,23 @@ There can be seven types of formula-like expressions in the model syntax:
     \item Composites: The \code{"<~"} operator can be used to define
       a composite (on the right hand side of the operator).
       A composite is a weighted linear combination of its composite indicators.
-      The name of the composite variable is on the left of the \code{"<~"} 
-      operator, while the terms on the right, separated by \code{"+"} 
+      The name of the composite variable is on the left of the \code{"<~"}
+      operator, while the terms on the right, separated by \code{"+"}
       operators, are the indicators of the composite variable.
 }
 There are 4 additional operators, also with left- and right-hand sides, that can
 be included in model syntax.  Three of them are used to specify (in)equality
 constraints on estimated parameters (\code{==}, \code{>}, and \code{<}), and
-those are demonstrated in a later section about 
+those are demonstrated in a later section about
 \bold{(In)equality constraints}.
 The final additional operator (\code{:=}) can be used to define ``new'' parameters
 that are functions of one or more other estimated parameters. The \code{:=}
 operator is demonstrated in a section about \bold{User-defined parameters}.
 
 Usually, only a single variable name appears on the left side of an
-operator. However, if multiple variable names are specified, 
+operator. However, if multiple variable names are specified,
 separated by the \code{"+"} operator, the formula is repeated for each
-element on the left side (as for example in the third regression 
+element on the left side (as for example in the third regression
 formula in the example above). The only exception is scaling factors, where
 only a single element is allowed on the left-hand side.
 
@@ -321,13 +321,13 @@ free. Any parameter in a model can be fixed by using a modifier resulting
 in a numerical constant. Here are some examples:
 \itemize{
 
-    \item Fixing the regression coefficient of the predictor 
+    \item Fixing the regression coefficient of the predictor
        \code{x2}: \preformatted{y ~ x1 + 2.4*x2 + x3}
 
-    \item Specifying an orthogonal (zero) covariance between two latent 
+    \item Specifying an orthogonal (zero) covariance between two latent
       variables: \preformatted{f1 ~~ 0*f2}
 
-    \item Specifying an intercept and a linear slope in a growth 
+    \item Specifying an intercept and a linear slope in a growth
     model: \preformatted{i =~ 1*y11 + 1*y12 + 1*y13 + 1*y14
 s =~ 0*y11 + 1*y12 + 2*y13 + 3*y14}
 }
@@ -344,7 +344,7 @@ about \bold{(In)equality constraints}.
 User-provided starting values can be given by using the special function
 \code{start()}, containing a numeric constant. For example:
 \preformatted{y ~ x1 + start(1.0)*x2 + x3}
-Note that if a starting value is provided, the parameter is not 
+Note that if a starting value is provided, the parameter is not
 automatically considered to be free.
 }
 
@@ -369,11 +369,11 @@ Although this automatic labeling of parameters is convenient, the user may
 specify their own labels for specific parameters simply by pre-multiplying
 the corresponding term (on the right hand side of the operator only) by
 a character string (starting with a letter).
-For example, in the formula \code{f1 =~ x1 + x2 + mylabel*x3}, the parameter 
+For example, in the formula \code{f1 =~ x1 + x2 + mylabel*x3}, the parameter
 corresponding with the factor loading of
 \code{x3} will be named \code{"mylabel"}.
-An alternative way to specify the label is as follows: 
-\code{f1 =~ x1 + x2 + label("mylabel")*x3}, 
+An alternative way to specify the label is as follows:
+\code{f1 =~ x1 + x2 + label("mylabel")*x3},
 where the label is the argument of special function \code{label()};
 this can be useful if the label contains a space, or an operator (like "~").
 
@@ -387,7 +387,7 @@ can use the special function \code{equal()}. The argument of
 parameter. For example, in the confirmatory factor analysis example below, the
 intercepts of the three indicators of each latent variable are constrained to
 be equal to each other. For the first three, we have used the default
-names. For the last three, we have provided a custom label for the 
+names. For the last three, we have provided a custom label for the
 \code{y2a} intercept.
 \preformatted{model <- '
   # two latent variables with fixed loadings
@@ -416,8 +416,8 @@ of groups. If you provide a single element, it will be recycled
 for all the groups. This may be dangerous, in particular when the modifier
 is a label. In that case, the (same) label is copied across all groups,
 and this would imply an equality constraint across groups.
-Therefore, when using modifiers in a multiple group setting, it is always 
-safer (and cleaner) to specify the same number of 
+Therefore, when using modifiers in a multiple group setting, it is always
+safer (and cleaner) to specify the same number of
 elements as the number of groups. Consider this example with two groups:
 \preformatted{
 HS.model <- ' visual  =~ x1 + 0.5*x2 + c(0.6, 0.8)*x3
@@ -425,7 +425,7 @@ HS.model <- ' visual  =~ x1 + 0.5*x2 + c(0.6, 0.8)*x3
               speed   =~ x7 + x8 + c(x9.group1, x9.group2)*x9 '
 }
 In this example, the factor loading of the `x2' indicator is fixed to the
-value 0.5 for both groups. However, the factor loadings of the `x3' indicator 
+value 0.5 for both groups. However, the factor loadings of the `x3' indicator
 are fixed to 0.6 and 0.8 for group 1 and group 2 respectively. The same
 logic is used for all modifiers. Note that character vectors can contain
 unquoted strings.
@@ -496,7 +496,7 @@ factor loading is larger (i.e., an estimate of differential item functioning
   DIF_L9 := L9.group1 - L9.group2
 }
 Note that this hypothesis is easily tested without a user-defined parameter by
-using the \code{lavTestWald()} function. However, a user-defined parameter 
+using the \code{lavTestWald()} function. However, a user-defined parameter
 additionally provides an estimate of the parameter being tested.
 
 User-defined parameters are particularly useful for specifying indirect effects
@@ -507,7 +507,7 @@ model <- ' # direct effect
            # mediator
              M ~ a*X
              Y ~ b*M
- 
+
 # user defined parameters:
 
     # indirect effect (a*b)
@@ -520,7 +520,7 @@ model <- ' # direct effect
 
 \references{
 Rosseel, Y. (2012). \code{lavaan}: An R package for structural equation
-modeling. \emph{Journal of Statistical Software, 48}(2), 1--36. 
+modeling. \emph{Journal of Statistical Software, 48}(2), 1--36.
 \doi{10.18637/jss.v048.i02}
 }
 

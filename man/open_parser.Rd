@@ -4,7 +4,7 @@
 \title{The open parser configuration}
 \description{
 The lavaan model syntax parser can be extended with new operators, modifiers and groupings.
-These extensions are only used in the 'open' parser.} 
+These extensions are only used in the 'open' parser.}
 \usage{
 lav_parse_options(
     pkgname   = NULL,
@@ -28,7 +28,7 @@ whether the modifier is expected on the left-hand side or on the right-hand side
   A \code{list} with \code{data.frames} containing the currently active parser configuration.
 }
 \examples{
-curconfig <- lav_parse_options("testPKG", 
+curconfig <- lav_parse_options("testPKG",
     operators = c('\%w\%', '\%q\%'),
     modifiers = data.frame(mod = c("linksc", "linksn", "rechtsn"),
                            side = c("l", "l", "r"),
@@ -61,14 +61,14 @@ print(result <- lavParseModelString(model, TRUE, parser = "open"))
 print(attributes(result))
 
 model2 <- '
-  color: green  
+  color: green
     level: 1
         fw =~ y1 + y2 + y3
         fw ~ x1 + x2 + x3
     level: 2
         fb =~ y1 + y2 + y3
         fb ~ w1 + w2
-  color: blue  
+  color: blue
     level: 1
         fw =~ y1 + y2 + y3
         fw ~ x1 + x2 + x3

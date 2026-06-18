@@ -4,8 +4,8 @@
 \description{
 Export a fitted lavaan object to an external program.}
 \usage{
-lavExport(object, target = "lavaan", prefix = "sem", dir.name = "lav_export", 
-          export = TRUE)
+lavExport(object, target = "lavaan", prefix = "sem", dir_name = "lav_export",
+          export = TRUE, ...)
 }
 \arguments{
 \item{object}{An object of class \code{\linkS4class{lavaan}}.}
@@ -14,11 +14,12 @@ lavExport(object, target = "lavaan", prefix = "sem", dir.name = "lav_export",
 \item{prefix}{The prefix used to create the input files; the name of the
 input file has the pattern \sQuote{prefix dot target dot in}; the name of the
 data file has the pattern \sQuote{prefix dot target dot raw}.}
-\item{dir.name}{The directory name (including a full path) where the 
+\item{dir_name}{The directory name (including a full path) where the
 input files will be written.}
 \item{export}{If \code{TRUE}, the files are written to the output directory
-(\code{dir.name}). If \code{FALSE}, only the syntax is generated as a
+(\code{dir_name}). If \code{FALSE}, only the syntax is generated as a
 character string.}
+\item{...}{Only to support old argument name 'dir.name'.}
 }
 \value{
 If \code{export = TRUE}, a directory (called \code{lav_export} by default) will

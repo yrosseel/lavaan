@@ -7,7 +7,7 @@ library(lavaan)
 model <- 'f =~ x1 + a*x2 + 3*x3'
 
 # parsing the syntax
-lavParseModelString(model, as.data.frame. = TRUE)
+lavParseModelString(model, as_data_frame = TRUE)
 # creates a 'FLAT' initial parameter table
 FLAT <- lavParseModelString(model)
 lavNames(FLAT)
@@ -29,11 +29,11 @@ lavParTable(model, auto = TRUE)
 
 # alternative for 'simple' equality constraints
 # (will become the default soon)
-lavParTable(model, auto = TRUE, ceq.simple = TRUE)
+lavParTable(model, auto = TRUE, ceq_simple = TRUE)
 
 # explicit equality constraints
 model <- 'f =~ x1 + a*x2 + b*x3; a == b'
-lavParTable(model, auto = TRUE, ceq.simple = TRUE)
+lavParTable(model, auto = TRUE, ceq_simple = TRUE)
 
 # multiple groups/blocks
 model <- 'f =~ x1 + c(a1,a2)*x2 + c(b1, b2)*x3'
@@ -41,7 +41,7 @@ lavParTable(model, auto = TRUE, ngroups = 2)
 
 # matrix representation: LISREL-all-y
 model <- 'f =~ x1 + x2 + x3'
-PT <- lavParTable(model, auto = TRUE, as.data.frame. = TRUE)
+PT <- lavParTable(model, auto = TRUE, as_data_frame = TRUE)
 PT
 # map every parameter to a matrix element
 MAT <- as.data.frame(lavaan:::lav_lisrel(PT))

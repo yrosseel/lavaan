@@ -77,7 +77,7 @@ lav_model_pt  <- function(
     # parse the model syntax and flatten the user-specified model
     # return a data.frame, where each line is a model element (rhs, op, lhs)
     flat <- lavParseModelString(
-      model.syntax = model, debug = FALSE
+      model_syntax = model, debug = FALSE
     )
   }
   # user-specified *modifiers* are returned as an attribute
@@ -92,7 +92,7 @@ lav_model_pt  <- function(
 
   # extra constraints?
   if (!is.null(constraints) && any(nchar(constraints) > 0L)) {
-    flat2 <- lavParseModelString(model.syntax = constraints, warn = lav_warn())
+    flat2 <- lavParseModelString(model_syntax = constraints, warn = lav_warn())
     con2 <- attr(flat2, "constraints")
     rm(flat2)
     tmp_con <- c(tmp_con, con2)
@@ -1347,82 +1347,85 @@ lav_model_pt  <- function(
 
   tmp_list
 }
-lavParTable <- lavaanify <- function(              # synonym # nolint start
+lavParTable <- lavaanify <- function(              # synonym # nolint
                                model = NULL,
                                meanstructure = FALSE,
-                               int.ov.free = FALSE,
-                               int.lv.free = FALSE,
-                               marker.int.zero = FALSE,
+                               int_ov_free = FALSE,
+                               int_lv_free = FALSE,
+                               marker_int_zero = FALSE,
                                orthogonal = FALSE,
-                               orthogonal.y = FALSE,
-                               orthogonal.x = FALSE,
-                               orthogonal.efa = FALSE,
-                               std.lv = FALSE,
+                               orthogonal_y = FALSE,
+                               orthogonal_x = FALSE,
+                               orthogonal_efa = FALSE,
+                               std_lv = FALSE,
                                correlation = FALSE,
                                composites = TRUE,
-                               effect.coding = "",
-                               conditional.x = FALSE,
-                               fixed.x = FALSE,
+                               effect_coding = "",
+                               conditional_x = FALSE,
+                               fixed_x = FALSE,
                                parameterization = "delta",
                                constraints = NULL,
-                               ceq.simple = FALSE,
+                               ceq_simple = FALSE,
                                auto = FALSE,
-                               model.type = "sem",
-                               auto.fix.first = FALSE,
+                               model_type = "sem",
+                               auto_fix_first = FALSE,
                                marker = NULL,
-                               auto.fix.single = FALSE,
-                               auto.var = FALSE,
-                               auto.cov.lv.x = FALSE,
-                               auto.cov.y = FALSE,
-                               auto.th = FALSE,
-                               auto.delta = FALSE,
-                               auto.efa = FALSE,
-                               varTable = NULL,
+                               auto_fix_single = FALSE,
+                               auto_var = FALSE,
+                               auto_cov_lv_x = FALSE,
+                               auto_cov_y = FALSE,
+                               auto_th = FALSE,
+                               auto_delta = FALSE,
+                               auto_efa = FALSE,
+                               var_table = NULL,
                                ngroups = 1L,
                                nthresholds = NULL,
-                               group.equal = NULL,
-                               group.partial = NULL,
-                               group.w.free = FALSE,
+                               group_equal = NULL,
+                               group_partial = NULL,
+                               group_w_free = FALSE,
                                debug = FALSE,
                                warn = TRUE,
-                               as.data.frame. = TRUE) {    # nolint end
+                               as_data_frame = TRUE,
+                              ...) {
+  dotdotdot <- list(...)
+  lav_adapt_func(environment(), dotdotdot, NULL)
   lav_model_pt(
               model = model,
               meanstructure = meanstructure,
-              int_ov_free = int.ov.free,
-              int_lv_free = int.lv.free,
-              marker_int_zero = marker.int.zero,
+              int_ov_free = int_ov_free,
+              int_lv_free = int_lv_free,
+              marker_int_zero = marker_int_zero,
               orthogonal = orthogonal,
-              orthogonal_y = orthogonal.y,
-              orthogonal_x = orthogonal.x,
-              orthogonal_efa = orthogonal.efa,
-              std_lv = std.lv,
+              orthogonal_y = orthogonal_y,
+              orthogonal_x = orthogonal_x,
+              orthogonal_efa = orthogonal_efa,
+              std_lv = std_lv,
               correlation = correlation,
               composites = composites,
-              effect_coding = effect.coding,
-              conditional_x = conditional.x,
-              fixed_x = fixed.x,
+              effect_coding = effect_coding,
+              conditional_x = conditional_x,
+              fixed_x = fixed_x,
               parameterization = parameterization,
               constraints = constraints,
-              ceq_simple = ceq.simple,
+              ceq_simple = ceq_simple,
               auto = auto,
-              model_type = model.type,
-              auto_fix_first = auto.fix.first,
+              model_type = model_type,
+              auto_fix_first = auto_fix_first,
               marker = marker,
-              auto_fix_single = auto.fix.single,
-              auto_var = auto.var,
-              auto_cov_lv_x = auto.cov.lv.x,
-              auto_cov_y = auto.cov.y,
-              auto_th = auto.th,
-              auto_delta = auto.delta,
-              auto_efa = auto.efa,
-              var_table = varTable,
+              auto_fix_single = auto_fix_single,
+              auto_var = auto_var,
+              auto_cov_lv_x = auto_cov_lv_x,
+              auto_cov_y = auto_cov_y,
+              auto_th = auto_th,
+              auto_delta = auto_delta,
+              auto_efa = auto_efa,
+              var_table = var_table,
               ngroups = ngroups,
               nthresholds = nthresholds,
-              group_equal = group.equal,
-              group_partial = group.partial,
-              group_w_free = group.w.free,
+              group_equal = group_equal,
+              group_partial = group_partial,
+              group_w_free = group_w_free,
               debug = debug,
               warn = warn,
-              as_data_frame = as.data.frame.)
+              as_data_frame = as_data_frame)
 }
