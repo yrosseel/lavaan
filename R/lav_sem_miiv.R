@@ -1313,18 +1313,6 @@ lav_sem_miiv_vcov <- function(lavmodel = NULL, lavsamplestats = NULL,
 
   # nblocks
   nblocks <- lavmodel@nblocks
-  # multiple-group standard errors are supported for continuous data; the
-  # categorical (ADF) and two-stage missing-data multiple-group SEs are not
-  # available yet -> signal 'no vcov' (like se = "none") for those cases
-  if (nblocks > 1L &&
-      (lavmodel@categorical ||
-       any(lavoptions$missing == c("two.stage", "robust.two.stage")))) {
-    lav_msg_warn(gettext(
-      "[IV] standard errors are not available yet for multiple-group models
-       with categorical data or two-stage missing data; only the point
-       estimates are returned."))
-    return(matrix(0, 0, 0))
-  }
 
   # eqs?
   if (is.null(eqs)) {
@@ -1439,25 +1427,52 @@ lav_sem_miiv_vcov <- function(lavmodel = NULL, lavsamplestats = NULL,
   # and so handles cross-group constraints). The ceq.simple expansion at the
   # end maps the compact vcov to the parameter table.
   if (nblocks > 1L && iv_vcov_stage1 != "none") {
+    two_stage <- any(lavoptions$missing == c("two.stage", "robust.two.stage"))
+    # two-stage missing data and categorical data need the explicit moment
+    # covariance for the directed block; complete continuous data uses the
+    # (exact) restricted-2SLS directed covariance
+    use_explicit_gamma <- two_stage || lavmodel@categorical
     vec_list <- lav_implied_to_vec(implied = lavh1$implied,
                                    lavmodel = lavmodel, drop_list = FALSE)
     md <- vapply(vec_list, length, integer(1L)) # moment dim per block
     moff <- cumsum(c(0L, md))                    # column offsets
     ntot_moment <- sum(md)
 
-    # block-diagonal moment covariance gamma_big = bdiag(Gamma_NT_b / nobs_b)
+    # block-diagonal moment covariance gamma_big = bdiag(Gamma_b / nobs_b),
+    # where Gamma_b is the (per-observation) asymptotic covariance of the
+    # sample moments of group b: the categorical ADF gamma (NACOV) for ordered
+    # data, the two-stage gamma (Savalei & Bentler / Savalei & Falk) under
+    # two-stage missing data, or the normal-theory gamma otherwise
     gamma_g <- vector("list", nblocks)
     for (b in seq_len(nblocks)) {
-      cov_b <- if (iv_vcov_gamma_modelbased) lavimplied$cov[[b]] else
-        lavh1$implied$cov[[b]]
-      if (inherits(try(chol(cov_b), silent = TRUE), "try-error")) {
-        cov_b <- lavh1$implied$cov[[b]]
-      }
       x_idx_b <-
         if (lavmodel@fixed.x) lavsamplestats@x.idx[[b]] else integer(0L)
-      gamma_g[[b]] <- lav_mat_k_gammant_kt(m_k = diag(md[b]), s = cov_b,
-        meanstructure = lavmodel@meanstructure, x_idx = x_idx_b) /
-        lavsamplestats@nobs[[b]]
+      if (lavmodel@categorical) {
+        gamma_g[[b]] <- lavsamplestats@NACOV[[b]] / lavsamplestats@nobs[[b]]
+      } else if (two_stage) {
+        mu_b <- lavh1$implied$mean[[b]]
+        sig_b <- lavh1$implied$cov[[b]]
+        if (identical(tolower(lavoptions$missing), "robust.two.stage")) {
+          gg <- lav_mvn_mi_h1_omega_sw(y = lavdata@X[[b]], mp = lavdata@Mp[[b]],
+            yp = lavsamplestats@missing[[b]], mu = mu_b, sigma_1 = sig_b,
+            x_idx = x_idx_b, information = "observed")
+        } else {
+          i1 <- lav_mvnorm_missing_information_observed_samplestats(
+            yp = lavsamplestats@missing[[b]], mu = mu_b, sigma_1 = sig_b,
+            x_idx = x_idx_b)
+          gg <- lav_mat_sym_inverse(i1)
+        }
+        gamma_g[[b]] <- gg / lavsamplestats@nobs[[b]]
+      } else {
+        cov_b <- if (iv_vcov_gamma_modelbased) lavimplied$cov[[b]] else
+          lavh1$implied$cov[[b]]
+        if (inherits(try(chol(cov_b), silent = TRUE), "try-error")) {
+          cov_b <- lavh1$implied$cov[[b]]
+        }
+        gamma_g[[b]] <- lav_mat_k_gammant_kt(m_k = diag(md[b]), s = cov_b,
+          meanstructure = lavmodel@meanstructure, x_idx = x_idx_b) /
+          lavsamplestats@nobs[[b]]
+      }
     }
     gamma_big <- lav_mat_bdiag(gamma_g)
 
@@ -1472,13 +1487,19 @@ lav_sem_miiv_vcov <- function(lavmodel = NULL, lavsamplestats = NULL,
         lavh1 = lavh1, free_directed_idx = free_directed_idx)
     }
 
-    # directed covariance: restricted-2SLS (block-diagonal for unconstrained
-    # groups, pooled across groups for cross-group constraints)
+    # directed covariance. Complete continuous data: restricted-2SLS
+    # (block-diagonal for unconstrained groups, pooled across groups for
+    # cross-group constraints). Two-stage missing data: the explicit
+    # jac_k %*% gamma %*% t(jac_k), since the per-equation covariances do not
+    # carry the EM-uncertainty correction.
     if (length(free_directed_idx) > 0L) {
-      v_dir <- try(lav_sem_miiv_directed_vcov_restricted(eqs = eqs,
-        lavpartable = lavpartable, free_directed_idx = free_directed_idx,
-        nfree = lavmodel@nx.free), silent = TRUE)
-      if (!inherits(v_dir, "try-error")) {
+      v_dir <- NULL
+      if (!use_explicit_gamma) {
+        v_dir <- try(lav_sem_miiv_directed_vcov_restricted(eqs = eqs,
+          lavpartable = lavpartable, free_directed_idx = free_directed_idx,
+          nfree = lavmodel@nx.free), silent = TRUE)
+      }
+      if (!is.null(v_dir) && !inherits(v_dir, "try-error")) {
         vcov[free_directed_idx, free_directed_idx] <- v_dir
       } else {
         vcov[free_directed_idx, free_directed_idx] <-
@@ -1506,7 +1527,7 @@ lav_sem_miiv_vcov <- function(lavmodel = NULL, lavsamplestats = NULL,
           next
         }
         delta2_b <- delta_list[[b]][, fu_b, drop = FALSE]
-        if (iv_varcov_method == "ULS") {
+        if (lavmodel@categorical || iv_varcov_method == "ULS") {
           s_mat <- diag(lavmodel@nvar[[b]])
         } else if (iv_varcov_method == "GLS") {
           s_mat <- lavh1$implied$cov[[b]]
@@ -1517,9 +1538,16 @@ lav_sem_miiv_vcov <- function(lavmodel = NULL, lavsamplestats = NULL,
           }
         }
         tmp_b <- lav_utils_wls_linearization(delta = delta2_b, s = s_mat,
-          meanstructure = lavmodel@meanstructure, categorical = FALSE,
+          meanstructure = lavmodel@meanstructure,
+          categorical = lavmodel@categorical,
           svec = vec_list[[b]], return_h = TRUE)
-        h2_full[match(fu_b, free_undirected_idx), cols] <- attr(tmp_b, "H")
+        h2_b <- attr(tmp_b, "H")
+        # the stage-2 map covers the (co)variance/correlation moments; for
+        # categorical data the threshold moments come first in each block and
+        # are left at zero (the (co)variance parameters do not depend on them)
+        nth_b <- md[b] - ncol(h2_b)
+        h2_cols <- moff[b] + nth_b + seq_len(ncol(h2_b))
+        h2_full[match(fu_b, free_undirected_idx), h2_cols] <- h2_b
       }
       if (length(free_directed_idx) > 0L) {
         tmp <- h2_full %*% (diag(ntot_moment) - delta1_full %*% jac_k)
@@ -1528,6 +1556,22 @@ lav_sem_miiv_vcov <- function(lavmodel = NULL, lavsamplestats = NULL,
       }
       vcov[free_undirected_idx, free_undirected_idx] <-
         tmp %*% gamma_big %*% t(tmp)
+    }
+
+    # thresholds (categorical): the threshold parameters equal the sample
+    # thresholds, so their covariance is the corresponding block of the moment
+    # covariance, delta_th' gamma delta_th
+    if (lavmodel@categorical && length(free_th_idx) > 0L) {
+      delta_full <- do.call("rbind", lav_sem_miiv_delta(lavmodel))
+      delta_th <- delta_full[, free_th_idx, drop = FALSE]
+      gamma_th <- gamma_big
+      zero_idx <- which(rowSums(abs(delta_th)) == 0)
+      if (length(zero_idx) > 0L) {
+        delta_th <- delta_th[-zero_idx, , drop = FALSE]
+        gamma_th <- gamma_big[-zero_idx, -zero_idx, drop = FALSE]
+      }
+      vcov[free_th_idx, free_th_idx] <-
+        t(delta_th) %*% gamma_th %*% delta_th
     }
 
     # ceq.simple: expand the compact vcov to the 'unco' space

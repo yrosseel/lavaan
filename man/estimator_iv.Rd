@@ -46,15 +46,13 @@ Both continuous and ordered-categorical data are supported (for ordered data,
 the polychoric-based PIV estimator of Bollen & Maydeu-Olivares, 2007 is used).
 Simple equality constraints (e.g. equal factor loadings) and general linear
 equality constraints (e.g. \code{a == 2*b}) are honored. Multiple groups are
-supported (with standard errors for continuous data), including the mean
-structure and cross-group equality constraints for measurement invariance
-testing (configural, metric and scalar, e.g. via
-\code{group.equal = c("loadings", "intercepts")}). For multiple-group models,
-the scalar (intercept-constrained) mean estimates use a method-of-moments
-pooling and need not coincide exactly with the maximum likelihood solution;
-standard errors are not yet available for multiple-group models with
-categorical data or two-stage missing data. The IV estimator is restricted to
-single-level models.
+supported, with standard errors (for continuous, two-stage-missing and
+categorical data), including the mean structure and cross-group equality
+constraints for measurement invariance testing (configural, metric and scalar,
+e.g. via \code{group.equal = c("loadings", "intercepts")}). For multiple-group
+models, the scalar (intercept-constrained) mean estimates use a
+method-of-moments pooling and need not coincide exactly with the maximum
+likelihood solution. The IV estimator is restricted to single-level models.
 
 \subsection{Estimator options}{
 
