@@ -1666,5 +1666,16 @@ lav_sem_miiv_vcov <- function(lavmodel = NULL, lavsamplestats = NULL,
     } # continuous
   } # iv_vcov_stage2 != "none"
 
+  # the rest of lavaan expects the vcov of a ceq.simple.only model to be in the
+  # 'unco' space (one row/column per non-collapsed parameter, nx.unco), eg in
+  # lav_model_vcov_se(). The vcov above is built in the compact (nx.free)
+  # space, so expand it via the ceq.simple.K mapping: constrained parameters
+  # then share their (co)variance, and the SEs map to the parameter table
+  # correctly (without this, the constrained parameters get inconsistent SEs
+  # and the trailing parameters get NA).
+  if (lavmodel@ceq.simple.only && nrow(lavmodel@ceq.simple.K) > 0L) {
+    vcov <- lavmodel@ceq.simple.K %*% vcov %*% t(lavmodel@ceq.simple.K)
+  }
+
   vcov
 }
