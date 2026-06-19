@@ -1028,6 +1028,21 @@ lav_sem_miiv_2sls_samp <- function(x = NULL, samplestats = FALSE,
 # (for now)
 #
 # see lav_sem_miiv_varcov_old() for an alternative
+# model derivative matrix Delta (per block), with the ceq.simple shared
+# columns collapsed so that the columns are indexed by the *free* parameter
+# number (matching free_directed_idx / free_undirected_idx). Under
+# ceq.simple.only, lav_model_delta() returns nx.unco columns (one per
+# unconstrained parameter); indexing those by free numbers would select the
+# wrong columns and corrupt the second-stage (co)variance estimates (e.g. the
+# residual-variance blow-up seen with equal factor loadings).
+lav_sem_miiv_delta <- function(lavmodel, glist = NULL) {
+  delta <- lav_model_delta(lavmodel = lavmodel, glist = glist)
+  if (lavmodel@ceq.simple.only) {
+    delta <- lapply(delta, function(d) d %*% lavmodel@ceq.simple.K)
+  }
+  delta
+}
+
 lav_sem_miiv_varcov <- function(x = NULL, samplestats = FALSE,
                                 lavmodel = NULL, lavpartable = NULL,
                                 lavsamplestats = NULL,
@@ -1061,7 +1076,7 @@ lav_sem_miiv_varcov <- function(x = NULL, samplestats = FALSE,
   b <- 1L # for now
 
   # delta2
-  tmp <- lav_model_delta(lavmodel_tmp)[[b]]
+  tmp <- lav_sem_miiv_delta(lavmodel_tmp)[[b]]
   delta2 <- tmp[, free_undirected_idx, drop = FALSE]
 
   # general linear equality constraints among the undirected parameters (if
@@ -1467,7 +1482,7 @@ lav_sem_miiv_vcov <- function(lavmodel = NULL, lavsamplestats = NULL,
       # )
       # h2 <- attr(tmp, "H")
       stopifnot(lavmodel@nblocks == 1L)
-      delta <- lav_model_delta(lavmodel)[[1L]]
+      delta <- lav_sem_miiv_delta(lavmodel)[[1L]]
       delta2 <- delta[, free_undirected_idx, drop = FALSE]
       svec <- lav_implied_to_vec(
           implied = lavh1$implied, lavmodel = lavmodel,
@@ -1588,7 +1603,7 @@ lav_sem_miiv_vcov <- function(lavmodel = NULL, lavsamplestats = NULL,
       # - vcov_undirected_b <- jac_b %*% (1/N * gamma_mat) %*% t(jac_b)
 
       if (!iv_vcov_jaca_numerical) {
-        delta_block <- lav_model_delta(lavmodel = lavmodel)
+        delta_block <- lav_sem_miiv_delta(lavmodel = lavmodel)
         jac_b_block <- vector("list", length = nblocks)
         for (b in seq_len(nblocks)) {
           sample_cov <- lavh1$implied$cov[[b]]
