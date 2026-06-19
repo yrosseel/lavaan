@@ -45,8 +45,14 @@ available for both stages (see the options below).
 Both continuous and ordered-categorical data are supported (for ordered data,
 the polychoric-based PIV estimator of Bollen & Maydeu-Olivares, 2007 is used).
 Simple equality constraints (e.g. equal factor loadings) and general linear
-equality constraints (e.g. \code{a == 2*b}) are honored. For now, the IV
-estimator is restricted to single-group, single-level models.
+equality constraints (e.g. \code{a == 2*b}) are honored. Multiple groups are
+supported, including cross-group equality constraints on loadings, regressions
+and variances for measurement invariance testing (e.g. via
+\code{group.equal = "loadings"}). For multiple-group models, only the point
+estimates are returned (standard errors are not yet available), and the mean
+structure with freely estimated latent means (e.g. scalar invariance with
+latent-mean differences) is not fully supported yet. The IV estimator is
+restricted to single-level models.
 
 \subsection{Estimator options}{
 

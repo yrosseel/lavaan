@@ -31,6 +31,24 @@ lav_sem_miiv_internal <- function(lavmodel = NULL, lavh1 = NULL,
   # we assume the blocks are independent groups for now
   stopifnot(lavdata@nlevels == 1L)
 
+  # multiple groups are supported (including cross-group equality constraints
+  # for loadings/regressions/variances, e.g. metric invariance), but the mean
+  # structure with freely estimated latent means (e.g. scalar invariance with
+  # latent-mean differences) is not handled correctly yet; warn rather than
+  # return unreliable latent-mean estimates
+  if (lavmodel@nblocks > 1L) {
+    lv_names <- unique(lavpartable$lhs[lavpartable$op == "=~"])
+    if (any(lavpartable$op == "~1" & lavpartable$free > 0L &
+            lavpartable$lhs %in% lv_names)) {
+      lav_msg_warn(gettext(
+        "[IV] multiple-group models with a mean structure (freely estimated
+         latent means, e.g. for scalar measurement invariance) are not fully
+         supported yet; the latent-mean estimates may be unreliable. Use
+         meanstructure = FALSE for covariance-structure-only invariance
+         (configural/metric), which is fully supported."))
+    }
+  }
+
   # directed versus undirected (free) parameters
   undirected_idx <- which(lavpartable$free > 0L &
     !duplicated(lavpartable$free) & # if ceq.simple
@@ -641,13 +659,16 @@ lav_sem_miiv_2sls <- function(eqs = NULL, lavmodel = NULL, lavpartable = NULL,
       eqs[[b]][[j]]$vcov <- vcov
       eqs[[b]][[j]]$sargan <- sargan
     } # eqs
-
-    # pooled (system) solve for simple equality constraints among the
-    # directed slopes (no-op when nothing is shared)
-    x <- lav_sem_miiv_apply_directed_pool(
-      eqs_b = eqs[[b]], x = x, lavmodel = lavmodel, lavpartable = lavpartable
-    )
   } # nblocks
+
+  # pooled (system) solve for simple equality constraints among the directed
+  # slopes, across ALL blocks/groups so that cross-group constraints (e.g.
+  # equal loadings for measurement invariance) are pooled jointly rather than
+  # left as last-write-wins (no-op when nothing is shared)
+  x <- lav_sem_miiv_apply_directed_pool(
+    eqs_b = do.call(c, eqs), x = x, lavmodel = lavmodel,
+    lavpartable = lavpartable
+  )
 
   # return theta1
   theta1 <- x[free_directed_idx]
@@ -999,15 +1020,17 @@ lav_sem_miiv_2sls_samp <- function(x = NULL, samplestats = FALSE,
       eqs[[b]][[j]]$k_mat_int <- k_mat_int
       eqs[[b]][[j]]$k_mat <- k_mat
     } # eqs
-
-    # pooled (system) solve for simple equality constraints among the
-    # directed slopes: if a free column is shared by >1 equation, the
-    # per-equation fills above are last-write-wins and must be replaced by a
-    # joint solution (no-op when nothing is shared).
-    x <- lav_sem_miiv_apply_directed_pool(
-      eqs_b = eqs[[b]], x = x, lavmodel = lavmodel, lavpartable = lavpartable
-    )
   } # nblocks
+
+  # pooled (system) solve for simple equality constraints among the directed
+  # slopes: if a free column is shared by >1 equation (within a group, or
+  # across groups for measurement invariance), the per-equation fills above are
+  # last-write-wins and must be replaced by a joint solution over ALL
+  # blocks/groups (no-op when nothing is shared).
+  x <- lav_sem_miiv_apply_directed_pool(
+    eqs_b = do.call(c, eqs), x = x, lavmodel = lavmodel,
+    lavpartable = lavpartable
+  )
 
   # return theta1
   theta1 <- x[free_directed_idx]
@@ -1043,6 +1066,105 @@ lav_sem_miiv_delta <- function(lavmodel, glist = NULL) {
   delta
 }
 
+# solve the undirected (variance/covariance) parameters for a single block
+# 'b', given that block's collapsed Delta and the free-parameter indices 'fu'
+# of its undirected parameters. ULS/GLS use a single WLS linearization; 2RLS
+# and RLS reweight with the model-implied covariance of block 'b'. Returns
+# theta2 for 'fu' (with the H attribute when return_h = TRUE).
+lav_sem_miiv_varcov_block <- function(b, fu, delta_b, implied, lavmodel, x,
+                                      iv_varcov_method, return_h) {
+  delta2 <- delta_b[, fu, drop = FALSE]
+
+  # general linear equality constraints among the undirected parameters (if
+  # any); aligned to the 'fu' (ie delta2 column) order
+  con_und <- lav_sem_miiv_linear_con(lavmodel, fu)
+  con_jac <- if (is.null(con_und)) NULL else con_und$jac
+  con_rhs <- if (is.null(con_und)) NULL else con_und$rhs
+
+  # svec
+  sample_cov <- implied$cov[[b]]
+  sample_mean <- implied$mean[[b]]
+  if (lavmodel@categorical) {
+    svec <- c(implied$th[[b]], lav_mat_vech(sample_cov, diagonal = FALSE))
+  } else if (lavmodel@meanstructure) {
+    svec <- c(sample_mean, lav_mat_vech(sample_cov))
+  } else {
+    svec <- lav_mat_vech(sample_cov)
+  }
+
+  # initial estimate for theta.2
+  if (iv_varcov_method == "GLS") {
+    s <- sample_cov
+  } else { # ULS, or starting point for 2RLS/RLS
+    s <- diag(1, nrow = nrow(sample_cov))
+  }
+  theta2 <- lav_utils_wls_linearization(delta = delta2, s = s,
+                                        meanstructure = lavmodel@meanstructure,
+                                        categorical = lavmodel@categorical,
+                                        svec = svec, return_h = return_h,
+                                        con_jac = con_jac, con_rhs = con_rhs)
+
+  # 2RLS
+  if (iv_varcov_method == "2RLS") {
+    x[fu] <- theta2
+    lavmodel_tmp <- lav_model_set_parameters(lavmodel = lavmodel, x = x)
+    sigma <- lav_model_sigma(lavmodel = lavmodel_tmp, extra = FALSE)[[b]]
+    # fall back to the ULS estimate if the model-implied Sigma (from the ULS
+    # step) is not positive definite (eg a Heywood case)
+    new_theta2 <- try(
+      lav_utils_wls_linearization(delta = delta2, s = sigma,
+                                  meanstructure = lavmodel@meanstructure,
+                                  svec = svec, return_h = return_h,
+                                  con_jac = con_jac, con_rhs = con_rhs),
+      silent = TRUE
+    )
+    if (inherits(new_theta2, "try-error")) {
+      lav_msg_warn(gettext("2RLS for variances/covariances fell back to the
+                            ULS estimate: the model-implied covariance matrix
+                            is not positive definite."))
+    } else {
+      theta2 <- new_theta2
+    }
+  # RLS
+  } else if (iv_varcov_method == "RLS") {
+    # typically, we need 5-15 iterations, so max = 200 should be enough
+    for (i in seq_len(200L)) {
+      old_x <- theta2
+      x[fu] <- theta2
+      lavmodel_tmp <- lav_model_set_parameters(lavmodel = lavmodel, x = x)
+      sigma <- lav_model_sigma(lavmodel = lavmodel_tmp, extra = FALSE)[[b]]
+      # the RLS weight needs a positive-definite model-implied Sigma; if the
+      # current iterate yields a non-PD Sigma (eg a Heywood case), keep the
+      # last valid estimate rather than aborting the whole estimator
+      new_theta2 <- try(
+        lav_utils_wls_linearization(delta = delta2, s = sigma,
+                                    meanstructure = lavmodel@meanstructure,
+                                    svec = svec, return_h = return_h,
+                                    con_jac = con_jac, con_rhs = con_rhs),
+        silent = TRUE
+      )
+      if (inherits(new_theta2, "try-error")) {
+        lav_msg_warn(gettext("RLS for variances/covariances stopped early:
+                              the model-implied covariance matrix is not
+                              positive definite; returning the last valid
+                              estimate."))
+        theta2 <- old_x
+        break
+      }
+      theta2 <- new_theta2
+      sse <- Re(sum((old_x - theta2)^2))
+      if (sse < 1e-12 * Re(1 + sum(theta2^2))) {
+        break
+      } else if (i == 200L) {
+        lav_msg_warn(gettext("RLS for variances/covariances did not converge
+                              after 200 iterations."))
+      }
+    }
+  }
+
+  theta2
+}
+
 lav_sem_miiv_varcov <- function(x = NULL, samplestats = FALSE,
                                 lavmodel = NULL, lavpartable = NULL,
                                 lavsamplestats = NULL,
@@ -1072,101 +1194,35 @@ lav_sem_miiv_varcov <- function(x = NULL, samplestats = FALSE,
   }
 
   # number of blocks
-  # nblocks <-
-  b <- 1L # for now
+  nblocks <- lavmodel@nblocks
+  delta_list <- lav_sem_miiv_delta(lavmodel_tmp)
 
-  # delta2
-  tmp <- lav_sem_miiv_delta(lavmodel_tmp)[[b]]
-  delta2 <- tmp[, free_undirected_idx, drop = FALSE]
-
-  # general linear equality constraints among the undirected parameters (if
-  # any); aligned to the free_undirected_idx (ie delta2 column) order
-  con_und <- lav_sem_miiv_linear_con(lavmodel, free_undirected_idx)
-  con_jac <- if (is.null(con_und)) NULL else con_und$jac
-  con_rhs <- if (is.null(con_und)) NULL else con_und$rhs
-
-  # svec
-  sample_cov <- implied$cov[[b]]
-  sample_mean <- implied$mean[[b]]
-  if (lavmodel@categorical) {
-    sample_th <- implied$th[[b]]
-    svec <- c(sample_th, lav_mat_vech(sample_cov, diagonal = FALSE))
-  } else if (!lavmodel@categorical && lavmodel@meanstructure) {
-    svec <- c(sample_mean, lav_mat_vech(sample_cov))
-  } else {
-    svec <- lav_mat_vech(sample_cov)
+  # single group: solve directly (also keeps the H attribute for the SE path)
+  if (nblocks == 1L) {
+    return(lav_sem_miiv_varcov_block(
+      b = 1L, fu = free_undirected_idx, delta_b = delta_list[[1L]],
+      implied = implied, lavmodel = lavmodel, x = x,
+      iv_varcov_method = iv_varcov_method, return_h = add_h2))
   }
 
-  # initial estimate for theta.2
-  if (iv_varcov_method == "GLS") {
-    s <- sample_cov
-  } else { # ULS, or starting point for 2RLS/RLS
-    s <- diag(1, nrow = nrow(sample_cov))
-  }
-  theta2 <- lav_utils_wls_linearization(delta = delta2, s = s,
-                                        meanstructure = lavmodel@meanstructure,
-                                        categorical = lavmodel@categorical,
-                                        svec = svec, return_h = add_h2,
-                                        con_jac = con_jac, con_rhs = con_rhs)
-
-  # if ULS/GLS, we are done
-
-  # 2RLS
-  if (iv_varcov_method == "2RLS") {
-    x[free_undirected_idx] <- theta2
-    lavmodel_tmp <- lav_model_set_parameters(lavmodel = lavmodel, x = x)
-    sigma <- lav_model_sigma(lavmodel = lavmodel_tmp, extra = FALSE)[[b]]
-    # fall back to the ULS estimate if the model-implied Sigma (from the ULS
-    # step) is not positive definite (eg a Heywood case)
-    new_theta2 <- try(
-      lav_utils_wls_linearization(delta = delta2, s = sigma,
-                                  meanstructure = lavmodel@meanstructure,
-                                  svec = svec, return_h = add_h2,
-                                  con_jac = con_jac, con_rhs = con_rhs),
-      silent = TRUE
-    )
-    if (inherits(new_theta2, "try-error")) {
-      lav_msg_warn(gettext("2RLS for variances/covariances fell back to the
-                            ULS estimate: the model-implied covariance matrix
-                            is not positive definite."))
-    } else {
-      theta2 <- new_theta2
+  # multiple groups: each group's moments contribute its own block; solve the
+  # undirected parameters per block and assemble in free_undirected_idx order.
+  # (Cross-group equality constraints among loadings/intercepts are imposed in
+  # stage 1; cross-group constraints among variances, if any, are handled per
+  # block here.)
+  theta2 <- numeric(length(free_undirected_idx))
+  for (b in seq_len(nblocks)) {
+    fu_b <- unique(lavpartable$free[lavpartable$op == "~~" &
+      lavpartable$free > 0L & lavpartable$block == b])
+    fu_b <- fu_b[fu_b %in% free_undirected_idx]
+    if (length(fu_b) == 0L) {
+      next
     }
-  # RLS
-  } else if (iv_varcov_method == "RLS") {
-    # typically, we need 5-15 iterations, so max = 200 should be enough
-    for (i in seq_len(200L)) {
-      old_x <- theta2
-      x[free_undirected_idx] <- theta2
-      lavmodel_tmp <- lav_model_set_parameters(lavmodel = lavmodel, x = x)
-      sigma <- lav_model_sigma(lavmodel = lavmodel_tmp, extra = FALSE)[[b]]
-      # the RLS weight needs a positive-definite model-implied Sigma; if the
-      # current iterate yields a non-PD Sigma (eg a Heywood case), keep the
-      # last valid estimate rather than aborting the whole estimator
-      new_theta2 <- try(
-        lav_utils_wls_linearization(delta = delta2, s = sigma,
-                                    meanstructure = lavmodel@meanstructure,
-                                    svec = svec, return_h = add_h2,
-                                    con_jac = con_jac, con_rhs = con_rhs),
-        silent = TRUE
-      )
-      if (inherits(new_theta2, "try-error")) {
-        lav_msg_warn(gettext("RLS for variances/covariances stopped early:
-                              the model-implied covariance matrix is not
-                              positive definite; returning the last valid
-                              estimate."))
-        theta2 <- old_x
-        break
-      }
-      theta2 <- new_theta2
-      sse <- Re(sum((old_x - theta2)^2))
-      if (sse < 1e-12 * Re(1 + sum(theta2^2))) {
-        break
-      } else if (i == 200L) {
-        lav_msg_warn(gettext("RLS for variances/covariances did not converge
-                              after 200 iterations."))
-      }
-    }
+    tb <- lav_sem_miiv_varcov_block(
+      b = b, fu = fu_b, delta_b = delta_list[[b]], implied = implied,
+      lavmodel = lavmodel, x = x, iv_varcov_method = iv_varcov_method,
+      return_h = FALSE)
+    theta2[match(fu_b, free_undirected_idx)] <- as.numeric(tb)
   }
 
   theta2
@@ -1238,7 +1294,14 @@ lav_sem_miiv_vcov <- function(lavmodel = NULL, lavsamplestats = NULL,
 
   # nblocks
   nblocks <- lavmodel@nblocks
-  stopifnot(lavmodel@nblocks == 1L) # for now...
+  # multiple-group standard errors are not available yet (point estimates are);
+  # signal 'no vcov' (like se = "none") rather than aborting the estimation
+  if (nblocks > 1L) {
+    lav_msg_warn(gettext(
+      "[IV] standard errors are not available yet for multiple-group models;
+       only the point estimates are returned."))
+    return(matrix(0, 0, 0))
+  }
 
   # eqs?
   if (is.null(eqs)) {

@@ -10,7 +10,9 @@ lav_optim_noniter <- function(lavmodel = NULL, lavsamplestats = NULL,
   lavpartable <- lav_pt_set_cache(lavpartable, lavpta)
 
   # no support for many things:
-  if (lavmodel@ngroups > 1L) {
+  # (the IV estimator supports multiple groups, including cross-group equality
+  # constraints for measurement invariance)
+  if (lavmodel@ngroups > 1L && !identical(lavoptions$estimator, "IV")) {
     lav_msg_stop(gettext(
       "multiple groups not supported (yet) with optim.method = 'NONITER'."))
   }
