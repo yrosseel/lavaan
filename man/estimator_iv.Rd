@@ -177,7 +177,26 @@ from the EM estimates (Savalei & Bentler, 2009). This default is used when the
 data contain missing values and the user does not set the \code{missing}
 argument. Set \code{missing = "robust.two.stage"} for sandwich-corrected
 standard errors (Savalei & Falk, 2014), or \code{missing = "listwise"} to
-delete incomplete cases instead.
+delete incomplete cases instead. Two-stage missing-data estimation is also
+available for multiple-group models.
+}
+
+\subsection{Multiple groups and measurement invariance}{
+
+Multiple-group models are supported, with point estimates and standard errors
+for continuous, two-stage-missing and categorical data. Cross-group equality
+constraints are imposed in the usual way, either through shared parameter
+labels in the model syntax or through the \code{group.equal} argument, so the
+standard measurement-invariance sequence is available: configural
+(\code{group.equal = NULL}), metric (\code{group.equal = "loadings"}) and
+scalar (\code{group.equal = c("loadings", "intercepts")}).
+
+A parameter that is constrained equal across groups is estimated by pooling the
+information from all groups; for a configural model the per-group estimates (and
+their standard errors) reproduce the separate single-group fits. The mean
+structure (observed intercepts and latent means) is estimated by a joint GLS
+solve over all groups (see \code{iv_mean_structure}), which reproduces the
+maximum likelihood mean estimates given the model-implied covariance matrix.
 }
 
 \subsection{Inspecting the instruments and the Sargan test}{
@@ -276,6 +295,14 @@ model.eq <- '
 '
 fit4 <- sem(model.eq, data = PoliticalDemocracy, estimator = "IV")
 coef(fit4)
+
+## multiple groups: metric measurement invariance (equal loadings)
+HS.model <- ' visual  =~ x1 + x2 + x3
+              textual =~ x4 + x5 + x6
+              speed   =~ x7 + x8 + x9 '
+fit.metric <- sem(HS.model, data = HolzingerSwineford1939, estimator = "IV",
+                  group = "school", group.equal = "loadings")
+summary(fit.metric)
 }
 \keyword{models}
 \keyword{regression}
