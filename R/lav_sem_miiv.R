@@ -1313,12 +1313,16 @@ lav_sem_miiv_vcov <- function(lavmodel = NULL, lavsamplestats = NULL,
 
   # nblocks
   nblocks <- lavmodel@nblocks
-  # multiple-group standard errors are not available yet (point estimates are);
-  # signal 'no vcov' (like se = "none") rather than aborting the estimation
-  if (nblocks > 1L) {
+  # multiple-group standard errors are supported for continuous data; the
+  # categorical (ADF) and two-stage missing-data multiple-group SEs are not
+  # available yet -> signal 'no vcov' (like se = "none") for those cases
+  if (nblocks > 1L &&
+      (lavmodel@categorical ||
+       any(lavoptions$missing == c("two.stage", "robust.two.stage")))) {
     lav_msg_warn(gettext(
-      "[IV] standard errors are not available yet for multiple-group models;
-       only the point estimates are returned."))
+      "[IV] standard errors are not available yet for multiple-group models
+       with categorical data or two-stage missing data; only the point
+       estimates are returned."))
     return(matrix(0, 0, 0))
   }
 
@@ -1424,6 +1428,113 @@ lav_sem_miiv_vcov <- function(lavmodel = NULL, lavsamplestats = NULL,
   # switch off iv_vcov_stage2?
   if (length(free_directed_idx) > 0L && iv_vcov_stage1 == "none") {
     iv_vcov_stage2 <- "none"
+  }
+
+  # ---- multiple groups (continuous data) ----------------------------------
+  # The sample moments are independent across groups, so the moment covariance
+  # is block-diagonal. We build that block-diagonal 'gamma_big' (each block its
+  # NT moment covariance divided by its nobs), a block-diagonal stage-2 map h2,
+  # the (already multiblock) numerical directed Jacobian jac_k, and the
+  # restricted-2SLS directed covariance (which loops over all blocks/equations
+  # and so handles cross-group constraints). The ceq.simple expansion at the
+  # end maps the compact vcov to the parameter table.
+  if (nblocks > 1L && iv_vcov_stage1 != "none") {
+    vec_list <- lav_implied_to_vec(implied = lavh1$implied,
+                                   lavmodel = lavmodel, drop_list = FALSE)
+    md <- vapply(vec_list, length, integer(1L)) # moment dim per block
+    moff <- cumsum(c(0L, md))                    # column offsets
+    ntot_moment <- sum(md)
+
+    # block-diagonal moment covariance gamma_big = bdiag(Gamma_NT_b / nobs_b)
+    gamma_g <- vector("list", nblocks)
+    for (b in seq_len(nblocks)) {
+      cov_b <- if (iv_vcov_gamma_modelbased) lavimplied$cov[[b]] else
+        lavh1$implied$cov[[b]]
+      if (inherits(try(chol(cov_b), silent = TRUE), "try-error")) {
+        cov_b <- lavh1$implied$cov[[b]]
+      }
+      x_idx_b <-
+        if (lavmodel@fixed.x) lavsamplestats@x.idx[[b]] else integer(0L)
+      gamma_g[[b]] <- lav_mat_k_gammant_kt(m_k = diag(md[b]), s = cov_b,
+        meanstructure = lavmodel@meanstructure, x_idx = x_idx_b) /
+        lavsamplestats@nobs[[b]]
+    }
+    gamma_big <- lav_mat_bdiag(gamma_g)
+
+    # numerical directed Jacobian over the stacked moments (jac_k differentiates
+    # the per-group 2SLS solve, including the cross-group pooled constraints)
+    jac_k <- NULL
+    if (length(free_directed_idx) > 0L) {
+      vec <- unlist(vec_list)
+      jac_k <- numDeriv::jacobian(lav_sem_miiv_2sls_samp, x = vec,
+        samplestats = TRUE, eqs = eqs, lavmodel = lavmodel,
+        lavpartable = lavpartable, lavsamplestats = lavsamplestats,
+        lavh1 = lavh1, free_directed_idx = free_directed_idx)
+    }
+
+    # directed covariance: restricted-2SLS (block-diagonal for unconstrained
+    # groups, pooled across groups for cross-group constraints)
+    if (length(free_directed_idx) > 0L) {
+      v_dir <- try(lav_sem_miiv_directed_vcov_restricted(eqs = eqs,
+        lavpartable = lavpartable, free_directed_idx = free_directed_idx,
+        nfree = lavmodel@nx.free), silent = TRUE)
+      if (!inherits(v_dir, "try-error")) {
+        vcov[free_directed_idx, free_directed_idx] <- v_dir
+      } else {
+        vcov[free_directed_idx, free_directed_idx] <-
+          jac_k %*% gamma_big %*% t(jac_k)
+      }
+    }
+
+    # undirected covariance: block-diagonal stage-2 map, propagating the
+    # directed uncertainty via jac_k
+    if (iv_vcov_stage2 != "none" && length(free_undirected_idx) > 0L &&
+        iv_varcov_method != "NONE") {
+      delta_list <- lav_sem_miiv_delta(lavmodel)
+      h2_full <- matrix(0, length(free_undirected_idx), ntot_moment)
+      delta1_full <- matrix(0, ntot_moment, length(free_directed_idx))
+      for (b in seq_len(nblocks)) {
+        cols <- moff[b] + seq_len(md[b])
+        if (length(free_directed_idx) > 0L) {
+          delta1_full[cols, ] <-
+            delta_list[[b]][, free_directed_idx, drop = FALSE]
+        }
+        fu_b <- unique(lavpartable$free[lavpartable$op == "~~" &
+          lavpartable$free > 0L & lavpartable$block == b])
+        fu_b <- fu_b[fu_b %in% free_undirected_idx]
+        if (length(fu_b) == 0L) {
+          next
+        }
+        delta2_b <- delta_list[[b]][, fu_b, drop = FALSE]
+        if (iv_varcov_method == "ULS") {
+          s_mat <- diag(lavmodel@nvar[[b]])
+        } else if (iv_varcov_method == "GLS") {
+          s_mat <- lavh1$implied$cov[[b]]
+        } else {
+          s_mat <- lavimplied$cov[[b]]
+          if (inherits(try(chol(s_mat), silent = TRUE), "try-error")) {
+            s_mat <- lavh1$implied$cov[[b]]
+          }
+        }
+        tmp_b <- lav_utils_wls_linearization(delta = delta2_b, s = s_mat,
+          meanstructure = lavmodel@meanstructure, categorical = FALSE,
+          svec = vec_list[[b]], return_h = TRUE)
+        h2_full[match(fu_b, free_undirected_idx), cols] <- attr(tmp_b, "H")
+      }
+      if (length(free_directed_idx) > 0L) {
+        tmp <- h2_full %*% (diag(ntot_moment) - delta1_full %*% jac_k)
+      } else {
+        tmp <- h2_full
+      }
+      vcov[free_undirected_idx, free_undirected_idx] <-
+        tmp %*% gamma_big %*% t(tmp)
+    }
+
+    # ceq.simple: expand the compact vcov to the 'unco' space
+    if (lavmodel@ceq.simple.only && nrow(lavmodel@ceq.simple.K) > 0L) {
+      vcov <- lavmodel@ceq.simple.K %*% vcov %*% t(lavmodel@ceq.simple.K)
+    }
+    return(vcov)
   }
 
   # missing data: two-stage standard errors. Under missing = "two.stage" /
