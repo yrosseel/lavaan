@@ -104,7 +104,13 @@ The option names use snake_case. For backward compatibility, dot.case names
     \code{"lm.vcov.dfres"}, \code{"gamma"} or \code{"none"}. Default is
     \code{"lm.vcov.dfres"} for continuous data and \code{"gamma"} for
     categorical data. The \code{"gamma"} method requires
-    \code{iv_samplestats = TRUE}.}
+    \code{iv_samplestats = TRUE}. When the model contains \emph{simple}
+    equality constraints among the directed coefficients (e.g. equal factor
+    loadings), the \code{"lm.vcov"}/\code{"lm.vcov.dfres"} methods use a
+    variance-weighted restricted-2SLS covariance for the constrained
+    coefficients (as in the MIIVsem package); set \code{iv_vcov_stage1 =
+    "gamma"} to obtain the delta-method (moment-Jacobian) standard errors
+    instead.}
   \item{\code{iv_vcov_stage2}:}{Character. The standard-error method for the
     second-stage (undirected) parameters. One of \code{"h2"}, \code{"delta"}
     or \code{"none"}. Default is \code{"h2"}. The \code{"h2"} method requires
@@ -133,7 +139,8 @@ instruments to use.
         ind60 =~ x1 + x2 + x3
         dem60 =~ y1 + y2 + y3 + y4
         dem60 ~ ind60
-        # use only x2 and x3 as instruments for the dem60 ~ ind60 equation
+        # use only x2 and x3 as instruments for the 
+        # dem60 ~ ind60 equation
         y1 |~ x2 + x3
     '
     fit <- sem(model, data = PoliticalDemocracy, estimator = "IV")}

@@ -1173,6 +1173,50 @@ lav_sem_miiv_varcov <- function(x = NULL, samplestats = FALSE,
 }
 
 
+# restricted-2SLS covariance for the directed parameters under (simple)
+# equality constraints. Each equation contributes its per-equation 2SLS
+# coefficient information (the inverse of eq$vcov) to the shared free-parameter
+# positions; summing the information across equations that share a free
+# parameter yields the variance-weighted restricted-2SLS covariance used by
+# MIIVsem. This is algebraically the restricted-GLS covariance K (K' A K)^{-1}
+# K' (with A the block-diagonal per-equation information and K the sharing
+# map), and reproduces the top-left block of MIIVsem's KKT system
+# [[A, R'], [R, 0]]^{-1}. Returns the covariance block aligned to
+# free_directed_idx (in the compact / nx.free space).
+lav_sem_miiv_directed_vcov_restricted <- function(eqs, lavpartable,
+                                                  free_directed_idx, nfree) {
+  info <- matrix(0, nfree, nfree)
+  for (b in seq_along(eqs)) {
+    for (eq in eqs[[b]]) {
+      if (is.null(eq$vcov) || nrow(eq$vcov) == 0L) {
+        next
+      }
+      # coefficient -> free parameter index; eq$vcov is ordered as
+      # (intercept, slopes), matching c(eq$ptint, eq$pt)
+      int_free <- if (!is.null(eq$ptint) && length(eq$ptint) > 0L) {
+        lavpartable$free[eq$ptint]
+      } else {
+        0L
+      }
+      slope_free <- if (length(eq$rhs) > 0L) {
+        lavpartable$free[eq$pt]
+      } else {
+        integer(0L)
+      }
+      coef_free <- c(int_free, slope_free)
+      keep <- which(coef_free > 0L)
+      if (length(keep) == 0L) {
+        next
+      }
+      a_j <- solve(eq$vcov[keep, keep, drop = FALSE])
+      fidx <- coef_free[keep]
+      info[fidx, fidx] <- info[fidx, fidx] + a_j
+    }
+  }
+  solve(info[free_directed_idx, free_directed_idx, drop = FALSE])
+}
+
+
 # VCOV for free parameters
 lav_sem_miiv_vcov <- function(lavmodel = NULL, lavsamplestats = NULL,
                               lavoptions = NULL, lavpartable = NULL,
@@ -1253,11 +1297,28 @@ lav_sem_miiv_vcov <- function(lavmodel = NULL, lavsamplestats = NULL,
   has_dir_con <- has_shared_dir || !is.null(con_dir)
   has_und_con <- !is.null(con_und)
 
+  # how to handle equality constraints among the *directed* parameters:
+  #  - lm.vcov(.dfres) (default): variance-weighted restricted-2SLS covariance
+  #    for the directed block (matches MIIVsem) -- see
+  #    lav_sem_miiv_directed_vcov_restricted()
+  #  - gamma: the original delta-method (moment-Jacobian) standard errors, with
+  #    a numerical Jacobian of the constrained pooled solve
+  # Either way stage 2 still needs the constraint-aware (numerical) directed
+  # Jacobian to propagate the directed uncertainty into the undirected block.
+  use_restricted_directed <- FALSE
   if (has_dir_con && length(free_directed_idx) > 0L &&
       iv_vcov_stage1 != "none") {
     if (iv_vcov_stage1 %in% c("lm.vcov", "lm.vcov.dfres")) {
       if (isTRUE(lavoptions$estimator.args$iv_samplestats)) {
-        iv_vcov_stage1 <- "gamma"
+        # the restricted-2SLS covariance only handles *simple* equality
+        # constraints (parameters that share a free column, ceq.simple.only);
+        # for general linear directed constraints (rows of ceq.JAC) fall back
+        # to the delta method
+        if (lavmodel@ceq.simple.only && has_shared_dir && is.null(con_dir)) {
+          use_restricted_directed <- TRUE
+        } else {
+          iv_vcov_stage1 <- "gamma"
+        }
       } else {
         lav_msg_warn(gettext(
           "[IV] equality constraints are ignored by the raw-data standard
@@ -1374,7 +1435,16 @@ lav_sem_miiv_vcov <- function(lavmodel = NULL, lavsamplestats = NULL,
 
   # stage 1: directed effects
   if (length(free_directed_idx) > 0L && iv_vcov_stage1 != "none") {
-    if (iv_vcov_stage1 == "gamma") {
+    if (use_restricted_directed) {
+      # variance-weighted restricted-2SLS covariance (matches MIIVsem)
+      v_dir <- try(lav_sem_miiv_directed_vcov_restricted(
+        eqs = eqs, lavpartable = lavpartable,
+        free_directed_idx = free_directed_idx, nfree = lavmodel@nx.free),
+        silent = TRUE)
+      if (!inherits(v_dir, "try-error")) {
+        vcov[free_directed_idx, free_directed_idx] <- v_dir
+      }
+    } else if (iv_vcov_stage1 == "gamma") {
       if (use_explicit_gamma) {
         # explicit moment covariance: categorical (ADF) or two-stage missing
         k_gamma_adf_kt <- jac_k %*% gamma_big %*% t(jac_k)
