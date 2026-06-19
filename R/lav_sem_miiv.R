@@ -7,18 +7,18 @@ lav_sem_miiv_internal <- function(lavmodel = NULL, lavh1 = NULL,
                                   lavpartable = NULL,
                                   lavdata = NULL, lavoptions = NULL) {
   # IV options
-  iv_method <- toupper(lavoptions$estimator.args$iv.method)
+  iv_method <- toupper(lavoptions$estimator.args$iv_method)
   stopifnot(iv_method %in% "2SLS")
-  iv_varcov_method <- toupper(lavoptions$estimator.args$iv.varcov.method)
-  iv_samplestats <- lavoptions$estimator.args$iv.samplestats
+  iv_varcov_method <- toupper(lavoptions$estimator.args$iv_varcov_method)
+  iv_samplestats <- lavoptions$estimator.args$iv_samplestats
   if (lavdata@data.type == "moment") {
-    # force iv.samplestats = TRUE
+    # force iv_samplestats = TRUE
     iv_samplestats <- TRUE
   }
-  iv_vcov_stage1 <- tolower(lavoptions$estimator.args$iv.vcov.stage1)
-  iv_vcov_stage2 <- tolower(lavoptions$estimator.args$iv.vcov.stage2)
-  # [[ ]] exact match: $ would partial-match iv.sargan to iv.sargan.adjust
-  iv_sargan <- lavoptions$estimator.args[["iv.sargan"]]
+  iv_vcov_stage1 <- tolower(lavoptions$estimator.args$iv_vcov_stage1)
+  iv_vcov_stage2 <- tolower(lavoptions$estimator.args$iv_vcov_stage2)
+  # [[ ]] exact match: $ would partial-match iv_sargan to iv_sargan_adjust
+  iv_sargan <- lavoptions$estimator.args[["iv_sargan"]]
   # just in case
   if (lavmodel@categorical) {
     iv_samplestats <- TRUE
@@ -66,13 +66,13 @@ lav_sem_miiv_internal <- function(lavmodel = NULL, lavh1 = NULL,
 
   # weak-instrument diagnostics (warn) or pruning, based on the first-stage
   # F-statistic of each overidentified equation
-  # use [[ ]] (exact match): $ would partial-match iv.weak to iv.weak.threshold
-  iv_weak <- tolower(lavoptions$estimator.args[["iv.weak"]])
+  # use [[ ]] (exact match): $ would partial-match iv_weak to iv_weak_threshold
+  iv_weak <- tolower(lavoptions$estimator.args[["iv_weak"]])
   if (length(iv_weak) > 0L && iv_weak != "none") {
     eqs <- lav_sem_miiv_weak(
       eqs = eqs, lavpta = lav_pt_attributes(lavpartable),
       lavh1 = lavh1, lavsamplestats = lavsamplestats,
-      threshold = lavoptions$estimator.args[["iv.weak.threshold"]],
+      threshold = lavoptions$estimator.args[["iv_weak_threshold"]],
       action = iv_weak
     )
   }
@@ -243,14 +243,14 @@ lav_sem_miiv_weak <- function(eqs = NULL, lavpta = NULL, lavh1 = NULL,
 
   if (length(pruned_msgs) > 0L) {
     lav_msg_warn(gettextf(
-      "[IV] weak instruments pruned (iv.weak = \"prune\"):\n%s",
+      "[IV] weak instruments pruned (iv_weak = \"prune\"):\n%s",
       paste(" -", pruned_msgs, collapse = "\n")))
   }
   if (length(weak_msgs) > 0L) {
     lav_msg_warn(gettextf(
       "[IV] weak instruments (first-stage F < %g) for:\n%s\nConsider supplying
        stronger instruments via the |~ operator, or set
-       estimator.args = list(..., iv.weak = \"prune\") to drop weak ones.",
+       estimator.args = list(..., iv_weak = \"prune\") to drop weak ones.",
       threshold, paste(" -", weak_msgs, collapse = "\n")))
   }
 
@@ -1164,15 +1164,15 @@ lav_sem_miiv_vcov <- function(lavmodel = NULL, lavsamplestats = NULL,
                               lavimplied = NULL,
                               lavh1 = NULL, lavdata = NULL, eqs = NULL) {
   # iv options
-  iv_vcov_stage1 <- tolower(lavoptions$estimator.args$iv.vcov.stage1)
-  iv_vcov_stage2 <- tolower(lavoptions$estimator.args$iv.vcov.stage2)
-  # iv_samplestats <- lavoptions$estimator.args$iv.samplestats
+  iv_vcov_stage1 <- tolower(lavoptions$estimator.args$iv_vcov_stage1)
+  iv_vcov_stage2 <- tolower(lavoptions$estimator.args$iv_vcov_stage2)
+  # iv_samplestats <- lavoptions$estimator.args$iv_samplestats
   iv_vcov_gamma_modelbased <-
-    lavoptions$estimator.args$iv.vcov.gamma.modelbased
-  iv_varcov_method <- toupper(lavoptions$estimator.args$iv.varcov.method)
-  iv_vcov_jack_numerical <- lavoptions$estimator.args$iv.vcov.jack.numerical
-  iv_vcov_jaca_numerical <- lavoptions$estimator.args$iv.vcov.jaca.numerical
-  # iv_vcov_jacb_numerical <- lavoptions$estimator.args$iv.vcov.jacb.numerical
+    lavoptions$estimator.args$iv_vcov_gamma_modelbased
+  iv_varcov_method <- toupper(lavoptions$estimator.args$iv_varcov_method)
+  iv_vcov_jack_numerical <- lavoptions$estimator.args$iv_vcov_jack_numerical
+  iv_vcov_jaca_numerical <- lavoptions$estimator.args$iv_vcov_jaca_numerical
+  # iv_vcov_jacb_numerical <- lavoptions$estimator.args$iv_vcov_jacb_numerical
 
   # empty vcov
   vcov <- matrix(0, lavmodel@nx.free, lavmodel@nx.free)
@@ -1241,12 +1241,12 @@ lav_sem_miiv_vcov <- function(lavmodel = NULL, lavsamplestats = NULL,
   if (has_dir_con && length(free_directed_idx) > 0L &&
       iv_vcov_stage1 != "none") {
     if (iv_vcov_stage1 %in% c("lm.vcov", "lm.vcov.dfres")) {
-      if (isTRUE(lavoptions$estimator.args$iv.samplestats)) {
+      if (isTRUE(lavoptions$estimator.args$iv_samplestats)) {
         iv_vcov_stage1 <- "gamma"
       } else {
         lav_msg_warn(gettext(
           "[IV] equality constraints are ignored by the raw-data standard
-           errors; use iv.samplestats = TRUE for constraint-aware
+           errors; use iv_samplestats = TRUE for constraint-aware
            standard errors."))
       }
     }
@@ -1263,7 +1263,7 @@ lav_sem_miiv_vcov <- function(lavmodel = NULL, lavsamplestats = NULL,
     iv_vcov_jaca_numerical <- TRUE
   }
 
-  # switch off iv.vcov.stage2?
+  # switch off iv_vcov_stage2?
   if (length(free_directed_idx) > 0L && iv_vcov_stage1 == "none") {
     iv_vcov_stage2 <- "none"
   }
@@ -1376,7 +1376,7 @@ lav_sem_miiv_vcov <- function(lavmodel = NULL, lavsamplestats = NULL,
           k_gammant_kt / lavsamplestats@ntotal
       }
 
-    # iv.vcov.stage1 = lm.vcov or lm.vcov.dfres
+    # iv_vcov_stage1 = lm.vcov or lm.vcov.dfres
     } else {
       for (b in seq_len(nblocks)) {
         neqs <- length(eqs[[b]])
@@ -1434,14 +1434,14 @@ lav_sem_miiv_vcov <- function(lavmodel = NULL, lavsamplestats = NULL,
       # for (b in seq_len(nblocks)) {
       #   nvar <- lavmodel@nvar[b]
       #   # delta1 + delta2
-      #   delta1_block[[b]] <- delta_list[[b]][, free.directed.idx,
+      #   delta1_block[[b]] <- delta_list[[b]][, free_directed_idx,
       #                                                  drop = FALSE]
       #   delta2_block[[b]] <-
-      #     delta_list[[b]][, free.undirected.idx, drop = FALSE]
+      #     delta_list[[b]][, free_undirected_idx, drop = FALSE]
       #   # w2
-      #   if (lavmodel@categorical || iv.varcov.method == "ULS") {
+      #   if (lavmodel@categorical || iv_varcov_method == "ULS") {
       #     s.inv <- diag(1, nrow = nvar)
-      #   } else if (iv.varcov.method == "GLS") {
+      #   } else if (iv_varcov_method == "GLS") {
       #     s.inv <- lavh1$implied$cov[[b]]
       #   } else {
       #     s.inv <- lavimplied$cov[[b]]
@@ -1461,9 +1461,9 @@ lav_sem_miiv_vcov <- function(lavmodel = NULL, lavsamplestats = NULL,
       # tmp <- lav_sem_miiv_varcov(
       #   x = NULL, lavmodel = lavmodel,
       #   lavpartable = lavpartable, lavsamplestats = lavsamplestats,
-      #   lavh1 = lavh1, free.directed.idx = free.directed.idx,
-      #   free.undirected.idx = free.undirected.idx, add.h2 = TRUE,
-      #   iv.varcov.method = iv.varcov.method
+      #   lavh1 = lavh1, free_directed_idx = free_directed_idx,
+      #   free_undirected_idx = free_undirected_idx, add_h2 = TRUE,
+      #   iv_varcov_method = iv_varcov_method
       # )
       # h2 <- attr(tmp, "H")
       stopifnot(lavmodel@nblocks == 1L)
@@ -1528,7 +1528,7 @@ lav_sem_miiv_vcov <- function(lavmodel = NULL, lavsamplestats = NULL,
           tmp_gammant_tmpt / lavsamplestats@ntotal
       }
 
-      # iv.vcov.stage2 == "delta"
+      # iv_vcov_stage2 == "delta"
     } else {
       # part a: effect of theta1
       if (!iv_vcov_jaca_numerical) {
@@ -1571,9 +1571,9 @@ lav_sem_miiv_vcov <- function(lavmodel = NULL, lavsamplestats = NULL,
         #   func = lav_sem_miiv_varcov_old,
         #   x = theta1_noint, samplestats = FALSE, lavmodel = lavmodel,
         #   lavpartable = lavpartable, lavsamplestats = lavsamplestats,
-        #   lavh1 = lavh1, free.directed.idx = free.directed_noint.idx,
-        #   free.undirected.idx = free.undirected.idx,
-        #   iv.varcov.method = iv.varcov.method
+        #   lavh1 = lavh1, free_directed_idx = free_directed_noint_idx,
+        #   free_undirected_idx = free_undirected_idx,
+        #   iv_varcov_method = iv_varcov_method
         # )
       }
 
@@ -1632,9 +1632,9 @@ lav_sem_miiv_vcov <- function(lavmodel = NULL, lavsamplestats = NULL,
         #   func = lav_sem_miiv_varcov_old,
         #   x = vec, samplestats = TRUE, lavmodel = lavmodel,
         #   lavpartable = lavpartable, lavsamplestats = lavsamplestats,
-        #   lavh1 = lavh1, free.directed.idx = free.directed_noint.idx,
-        #   free.undirected.idx = free.undirected.idx,
-        #   iv.varcov.method = iv.varcov.method
+        #   lavh1 = lavh1, free_directed_idx = free_directed_noint_idx,
+        #   free_undirected_idx = free_undirected_idx,
+        #   iv_varcov_method = iv_varcov_method
         # )
       }
       if (use_explicit_gamma) {
@@ -1649,7 +1649,7 @@ lav_sem_miiv_vcov <- function(lavmodel = NULL, lavsamplestats = NULL,
       vcov_ab <- vcov_a + vcov_b
       vcov[free_undirected_idx, free_undirected_idx] <- vcov_ab
     } # continuous
-  } # iv.vcov.stage2 != "none"
+  } # iv_vcov_stage2 != "none"
 
   vcov
 }

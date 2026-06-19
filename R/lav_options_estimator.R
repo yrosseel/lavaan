@@ -620,6 +620,13 @@ lav_options_est_fabin <- function(opt) {
 lav_options_est_iv <- function(opt) {
   # (MI)IV-2SLS and friends                                          ####
 
+  # the IV estimator.args use snake_case names (iv_samplestats, iv_vcov_stage1,
+  # ...); normalize any user-supplied dot.case / CamelCase names so both styles
+  # are accepted during the transition to snake_case
+  if (is.list(opt$estimator.args) && length(opt$estimator.args) > 0L) {
+    opt$estimator.args <- lav_snake_case(opt$estimator.args)
+  }
+
   # brute-force override
   opt$optim.method <- "noniter"
   opt$marker.int.zero <- TRUE
@@ -692,110 +699,110 @@ lav_options_est_iv <- function(opt) {
   # estimator options
   if (is.null(opt$estimator.args)) {
     # create default list
-    opt$estimator.args <- list(iv.method = "2SLS",
-                               iv.samplestats = TRUE,
-                               iv.varcov.method = "RLS",
-                               iv.sargan = TRUE,
-                               iv.sargan.adjust = "none",
-                               iv.weak = "warn",
-                               iv.weak.threshold = 10,
-                               iv.vcov.stage1 = "lm.vcov.dfres",
-                               iv.vcov.stage2 = "h2",
-                               iv.vcov.gamma.modelbased = TRUE,
-                               iv.vcov.jack.numerical = FALSE,
-                               iv.vcov.jaca.numerical = FALSE,
-                               iv.vcov.jacb.numerical = FALSE)
+    opt$estimator.args <- list(iv_method = "2SLS",
+                               iv_samplestats = TRUE,
+                               iv_varcov_method = "RLS",
+                               iv_sargan = TRUE,
+                               iv_sargan_adjust = "none",
+                               iv_weak = "warn",
+                               iv_weak_threshold = 10,
+                               iv_vcov_stage1 = "lm.vcov.dfres",
+                               iv_vcov_stage2 = "h2",
+                               iv_vcov_gamma_modelbased = TRUE,
+                               iv_vcov_jack_numerical = FALSE,
+                               iv_vcov_jaca_numerical = FALSE,
+                               iv_vcov_jacb_numerical = FALSE)
   } else {
-    if (is.null(opt$estimator.args$iv.method)) {
-      opt$estimator.args$iv.method <- "2SLS"
-    } else if (!opt$estimator.args$iv.method %in% "2SLS") {
-      lav_msg_stop(gettext("iv.method should be 2SLS (for now)."))
+    if (is.null(opt$estimator.args$iv_method)) {
+      opt$estimator.args$iv_method <- "2SLS"
+    } else if (!opt$estimator.args$iv_method %in% "2SLS") {
+      lav_msg_stop(gettext("iv_method should be 2SLS (for now)."))
     }
-    if (is.null(opt$estimator.args$iv.samplestats)) {
-      opt$estimator.args$iv.samplestats <- TRUE
+    if (is.null(opt$estimator.args$iv_samplestats)) {
+      opt$estimator.args$iv_samplestats <- TRUE
     }
-    # [[ ]] exact match: $ would partial-match iv.sargan to iv.sargan.adjust
-    if (is.null(opt$estimator.args[["iv.sargan"]])) {
-      opt$estimator.args$iv.sargan <- TRUE
+    # [[ ]] exact match: $ would partial-match iv_sargan to iv_sargan_adjust
+    if (is.null(opt$estimator.args[["iv_sargan"]])) {
+      opt$estimator.args$iv_sargan <- TRUE
     }
     # multiple-comparison adjustment for the per-equation Sargan p-values
-    if (is.null(opt$estimator.args[["iv.sargan.adjust"]])) {
-      opt$estimator.args$iv.sargan.adjust <- "none"
-    } else if (!opt$estimator.args[["iv.sargan.adjust"]] %in%
+    if (is.null(opt$estimator.args[["iv_sargan_adjust"]])) {
+      opt$estimator.args$iv_sargan_adjust <- "none"
+    } else if (!opt$estimator.args[["iv_sargan_adjust"]] %in%
                stats::p.adjust.methods) {
       lav_msg_stop(gettextf(
-        "iv.sargan.adjust should be one of %s.",
+        "iv_sargan_adjust should be one of %s.",
         lav_msg_view(stats::p.adjust.methods, log_sep = "or")))
     }
-    # NOTE: use [[ ]] (exact match); $ would partial-match iv.weak to
-    # iv.weak.threshold
-    if (is.null(opt$estimator.args[["iv.weak"]])) {
-      opt$estimator.args$iv.weak <- "warn"
-    } else if (!tolower(opt$estimator.args[["iv.weak"]]) %in%
+    # NOTE: use [[ ]] (exact match); $ would partial-match iv_weak to
+    # iv_weak_threshold
+    if (is.null(opt$estimator.args[["iv_weak"]])) {
+      opt$estimator.args$iv_weak <- "warn"
+    } else if (!tolower(opt$estimator.args[["iv_weak"]]) %in%
                c("warn", "prune", "none")) {
-      lav_msg_stop(gettext("iv.weak should be warn, prune, or none."))
+      lav_msg_stop(gettext("iv_weak should be warn, prune, or none."))
     }
-    if (is.null(opt$estimator.args[["iv.weak.threshold"]])) {
-      opt$estimator.args$iv.weak.threshold <- 10
-    } else if (!is.numeric(opt$estimator.args[["iv.weak.threshold"]]) ||
-               opt$estimator.args[["iv.weak.threshold"]] < 0) {
+    if (is.null(opt$estimator.args[["iv_weak_threshold"]])) {
+      opt$estimator.args$iv_weak_threshold <- 10
+    } else if (!is.numeric(opt$estimator.args[["iv_weak_threshold"]]) ||
+               opt$estimator.args[["iv_weak_threshold"]] < 0) {
       lav_msg_stop(gettext(
-        "iv.weak.threshold should be a non-negative number."))
+        "iv_weak_threshold should be a non-negative number."))
     }
-    if (is.null(opt$estimator.args$iv.vcov.stage1)) {
+    if (is.null(opt$estimator.args$iv_vcov_stage1)) {
       if (opt$.categorical) {
-        opt$estimator.args$iv.vcov.stage1 <- "gamma"
+        opt$estimator.args$iv_vcov_stage1 <- "gamma"
       } else {
-        opt$estimator.args$iv.vcov.stage1 <- "lm.vcov.dfres"
+        opt$estimator.args$iv_vcov_stage1 <- "lm.vcov.dfres"
       }
       if (tolower(opt$se[1]) == "none") {
-        opt$estimator.args$iv.vcov.stage1 <- "none"
+        opt$estimator.args$iv_vcov_stage1 <- "none"
       }
-    } else if (!tolower(opt$estimator.args$iv.vcov.stage1) %in%
+    } else if (!tolower(opt$estimator.args$iv_vcov_stage1) %in%
                c("lm.vcov", "lm.vcov.dfres", "gamma", "none")) {
-      lav_msg_stop(gettext("iv.vcov.stage1 should be lm.vcov, lm.vcov.dfres,
+      lav_msg_stop(gettext("iv_vcov_stage1 should be lm.vcov, lm.vcov.dfres,
                             gamma or none."))
-    } else if (tolower(opt$estimator.args$iv.vcov.stage1) == "gamma" &&
-               !opt$estimator.args$iv.samplestats) {
-      lav_msg_stop(gettext("iv.vcov.stage1 cannot be gamma if
-                            iv.samplestats is FALSE"))
+    } else if (tolower(opt$estimator.args$iv_vcov_stage1) == "gamma" &&
+               !opt$estimator.args$iv_samplestats) {
+      lav_msg_stop(gettext("iv_vcov_stage1 cannot be gamma if
+                            iv_samplestats is FALSE"))
     }
-    if (is.null(opt$estimator.args$iv.vcov.stage2)) {
+    if (is.null(opt$estimator.args$iv_vcov_stage2)) {
       if (tolower(opt$se[1]) == "none") {
-        opt$estimator.args$iv.vcov.stage2 <- "none"
+        opt$estimator.args$iv_vcov_stage2 <- "none"
       } else {
-        opt$estimator.args$iv.vcov.stage2 <- "h2"
+        opt$estimator.args$iv_vcov_stage2 <- "h2"
       }
-    } else if (!tolower(opt$estimator.args$iv.vcov.stage2) %in%
+    } else if (!tolower(opt$estimator.args$iv_vcov_stage2) %in%
                c("h2", "delta", "none")) {
-      lav_msg_stop(gettext("iv.vcov.stage2 should be h2, delta, or none."))
-    } else if (tolower(opt$estimator.args$iv.vcov.stage2) == "h2" &&
-               !opt$estimator.args$iv.samplestats) {
-      lav_msg_stop(gettext("iv.vcov.stage2 should be delta (or none) if
-                   iv.samplestats = FALSE."))
+      lav_msg_stop(gettext("iv_vcov_stage2 should be h2, delta, or none."))
+    } else if (tolower(opt$estimator.args$iv_vcov_stage2) == "h2" &&
+               !opt$estimator.args$iv_samplestats) {
+      lav_msg_stop(gettext("iv_vcov_stage2 should be delta (or none) if
+                   iv_samplestats = FALSE."))
     }
     if (opt$.categorical) {
-      opt$estimator.args$iv.samplestats <- TRUE
-      opt$estimator.args$iv.varcov.method = "ULS"
+      opt$estimator.args$iv_samplestats <- TRUE
+      opt$estimator.args$iv_varcov_method = "ULS"
     }
-    if (is.null(opt$estimator.args$iv.varcov.method)) {
-      opt$estimator.args$iv.varcov.method <- "RLS"
-    } else if (!toupper(opt$estimator.args$iv.varcov.method) %in%
+    if (is.null(opt$estimator.args$iv_varcov_method)) {
+      opt$estimator.args$iv_varcov_method <- "RLS"
+    } else if (!toupper(opt$estimator.args$iv_varcov_method) %in%
                c("ULS", "GLS", "2RLS", "RLS", "NONE")) {
-      lav_msg_stop(gettext("iv.varcov.method should be ULS, GLS, 2RLS, RLS
+      lav_msg_stop(gettext("iv_varcov_method should be ULS, GLS, 2RLS, RLS
                             or NONE."))
     }
-    if (is.null(opt$estimator.args$iv.vcov.gamma.modelbased)) {
-      opt$estimator.args$iv.vcov.gamma.modelbased <- TRUE
+    if (is.null(opt$estimator.args$iv_vcov_gamma_modelbased)) {
+      opt$estimator.args$iv_vcov_gamma_modelbased <- TRUE
     }
-    if (is.null(opt$estimator.args$iv.vcov.jack.numerical)) {
-      opt$estimator.args$iv.vcov.jack.numerical <- FALSE
+    if (is.null(opt$estimator.args$iv_vcov_jack_numerical)) {
+      opt$estimator.args$iv_vcov_jack_numerical <- FALSE
     }
-    if (is.null(opt$estimator.args$iv.vcov.jaca.numerical)) {
-      opt$estimator.args$iv.vcov.jaca.numerical <- FALSE
+    if (is.null(opt$estimator.args$iv_vcov_jaca_numerical)) {
+      opt$estimator.args$iv_vcov_jaca_numerical <- FALSE
     }
-    if (is.null(opt$estimator.args$iv.vcov.jacb.numerical)) {
-      opt$estimator.args$iv.vcov.jacb.numerical <- FALSE
+    if (is.null(opt$estimator.args$iv_vcov_jacb_numerical)) {
+      opt$estimator.args$iv_vcov_jacb_numerical <- FALSE
     }
   }
 
@@ -803,16 +810,16 @@ lav_options_est_iv <- function(opt) {
   # errors must run through the gamma path so the moment covariance can be
   # replaced by the two-stage one (see lav_sem_miiv_vcov())
   if (two_stage) {
-    opt$estimator.args$iv.samplestats <- TRUE
+    opt$estimator.args$iv_samplestats <- TRUE
     if (tolower(opt$se) != "none" &&
-        tolower(opt$estimator.args$iv.vcov.stage1) %in%
+        tolower(opt$estimator.args$iv_vcov_stage1) %in%
           c("lm.vcov", "lm.vcov.dfres")) {
-      opt$estimator.args$iv.vcov.stage1 <- "gamma"
+      opt$estimator.args$iv_vcov_stage1 <- "gamma"
     }
   }
 
-  # override test if iv.varcov.method is "none"
-  if (tolower(opt$estimator.args$iv.varcov.method) == "none") {
+  # override test if iv_varcov_method is "none"
+  if (tolower(opt$estimator.args$iv_varcov_method) == "none") {
     opt$test <- "none"
     opt$standard.test <- "none"
   }

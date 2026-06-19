@@ -3662,7 +3662,7 @@ lav_inspect_sargan <- function(object, drop_list_single_group = FALSE) {
 
   # multiple-comparison adjustment for the per-equation Sargan p-values
   # (applied within each block, over the overidentified equations)
-  adjust <- object@Options$estimator.args[["iv.sargan.adjust"]]
+  adjust <- object@Options$estimator.args[["iv_sargan_adjust"]]
   if (is.null(adjust)) {
     adjust <- "none"
   }

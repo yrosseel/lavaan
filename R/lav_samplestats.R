@@ -187,7 +187,7 @@ lav_samp_from_data <- function(lavdata = NULL,        # nolint start
       nacov_compute <- TRUE
     }
     if (estimator == "IV" &&
-        lavoptions$estimator.args$iv.vcov.stage1 == "gamma") {
+        lavoptions$estimator.args$iv_vcov_stage1 == "gamma") {
       nacov_compute <- TRUE
     }
   } else if (is.logical(nacov)) {
@@ -294,7 +294,7 @@ lav_samp_from_data <- function(lavdata = NULL,        # nolint start
         if (estimator == "ULS" && se %in% c("robust.sem", "robust.sem.nt")) {
           wls_w <- TRUE
         } else if (estimator == "IV" &&
-                  lavoptions$estimator.args$iv.vcov.stage1 == "gamma") {
+                  lavoptions$estimator.args$iv_vcov_stage1 == "gamma") {
           wls_w <- TRUE
         }
       } else {
