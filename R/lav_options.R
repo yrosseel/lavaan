@@ -422,9 +422,13 @@ lav_options_set <- function(opt = NULL) {
         dQuote(opt$missing)
       ))
     }
-    if (any(opt$estimator == c(
-      "mlm", "mlmv", "gls", "wls", "wlsm", "wlsmv",
-      "uls", "ulsm", "ulsmv", "pml", "dls"
+    # for the (continuous) least-squares estimators, ML is not available;
+    # interpret missing = "ml"/"fiml" as a generic request to handle missing
+    # values, and silently switch to two-stage estimation
+    if (any(opt$estimator == c("uls", "gls", "wls", "dls"))) {
+      opt$missing <- "two.stage"
+    } else if (any(opt$estimator == c(
+      "mlm", "mlmv", "wlsm", "wlsmv", "ulsm", "ulsmv", "pml"
     ))) {
       lav_msg_stop(gettextf(
         "missing=%1$s is not allowed for estimator %2$s",
@@ -439,9 +443,11 @@ lav_options_set <- function(opt = NULL) {
         dQuote(opt$missing)
       ))
     }
-    if (any(opt$estimator == c(
-      "mlm", "mlmv", "gls", "wls", "wlsm", "wlsmv",
-      "uls", "ulsm", "ulsmv", "pml", "dls"
+    # see missing = "ml" above: handle missing values via two-stage
+    if (any(opt$estimator == c("uls", "gls", "wls", "dls"))) {
+      opt$missing <- "two.stage"
+    } else if (any(opt$estimator == c(
+      "mlm", "mlmv", "wlsm", "wlsmv", "ulsm", "ulsmv", "pml"
     ))) {
       lav_msg_stop(gettextf(
         "missing=%1$s is not allowed for estimator %2$s",
@@ -456,9 +462,11 @@ lav_options_set <- function(opt = NULL) {
         dQuote(opt$missing)
       ))
     }
+    # uls/gls/wls/dls are allowed (continuous data only): they use the
+    # two-stage EM moments for estimation and the robust.sem sandwich for SEs
     if (any(opt$estimator == c(
-      "mlm", "mlmv", "gls", "wls", "wlsm", "wlsmv",
-      "uls", "ulsm", "ulsmv", "pml", "mml", "dls"
+      "mlm", "mlmv", "wlsm", "wlsmv",
+      "ulsm", "ulsmv", "pml", "mml"
     ))) {
       lav_msg_stop(gettextf(
         "missing=%1$s is not allowed for estimator %2$s",
@@ -474,8 +482,8 @@ lav_options_set <- function(opt = NULL) {
       ))
     }
     if (any(opt$estimator == c(
-      "mlm", "mlmv", "gls", "wls", "wlsm", "wlsmv",
-      "uls", "ulsm", "ulsmv", "pml", "mml", "dls"
+      "mlm", "mlmv", "wlsm", "wlsmv",
+      "ulsm", "ulsmv", "pml", "mml"
     ))) {
       lav_msg_stop(gettextf(
         "missing=%1$s is not allowed for estimator %2$s",
@@ -516,8 +524,24 @@ lav_options_set <- function(opt = NULL) {
   # checks if missing = "two.stage" or "robust.two.stage" ####
   if (any(opt$missing == c("two.stage", "robust.two.stage"))) {
     opt$meanstructure <- TRUE
+    # the (continuous) least-squares estimators do not have a dedicated
+    # two-stage SE machinery; instead, they reuse the standard robust.sem
+    # sandwich, with the two-stage NACOV of the EM moments (computed in
+    # lav_samplestats); only the (point) estimation uses the EM moments
+    ls_two_stage <- any(opt$estimator == c("uls", "gls", "wls", "dls"))
     # se
-    if (opt$se == "default") {
+    if (ls_two_stage) {
+      if (opt$se == "default") {
+        opt$se <- "robust.sem"
+      } else if (!any(opt$se == c("none", "robust.sem", "robust.sem.nt"))) {
+        lav_msg_warn(gettextf(
+          "se will be set to %1$s if missing = %2$s and estimator = %3$s",
+          dQuote("robust.sem"), dQuote(opt$missing),
+          dQuote(lav_options_estimatorgroup(opt$estimator.orig))
+        ))
+        opt$se <- "robust.sem"
+      }
+    } else if (opt$se == "default") {
       if (opt$missing == "two.stage") {
         opt$se <- "two.stage"
       } else {
@@ -536,28 +560,34 @@ lav_options_set <- function(opt = NULL) {
       ))
       opt$se <- opt$missing
     }
-    # information
-    if (opt$information[1] == "default") {
-      # for both two.stage and robust.two.stage
-      opt$information[1] <- "observed"
-    } else if (opt$information[1] == "first.order") {
-      lav_msg_warn(gettextf(
-        "information will be set to %1$s if missing = %2$s",
-        dQuote("observed"), dQuote(opt$missing)
-      ))
-      opt$information[1] <- "observed"
-    }
 
-    # observed.information (ALWAYS "h1" for now)
-    opt$observed.information[1] <- "h1"
-    opt$observed.information[2] <- "h1"
+    # the information/observed.information overrides below are specific to the
+    # ML two-stage SE machinery; the least-squares + robust.sem path keeps the
+    # estimator's own (default) information settings
+    if (!ls_two_stage) {
+      # information
+      if (opt$information[1] == "default") {
+        # for both two.stage and robust.two.stage
+        opt$information[1] <- "observed"
+      } else if (opt$information[1] == "first.order") {
+        lav_msg_warn(gettextf(
+          "information will be set to %1$s if missing = %2$s",
+          dQuote("observed"), dQuote(opt$missing)
+        ))
+        opt$information[1] <- "observed"
+      }
 
-    # new in 0.6-9: ALWAYS h1.information = "unstructured"
-    opt$h1.information <- c("unstructured", "unstructured")
+      # observed.information (ALWAYS "h1" for now)
+      opt$observed.information[1] <- "h1"
+      opt$observed.information[2] <- "h1"
 
-    if (length(opt$information) > 1L && opt$information[2] == "default") {
-      # for both two.stage and robust.two.stage
-      opt$information[2] <- "observed"
+      # new in 0.6-9: ALWAYS h1.information = "unstructured"
+      opt$h1.information <- c("unstructured", "unstructured")
+
+      if (length(opt$information) > 1L && opt$information[2] == "default") {
+        # for both two.stage and robust.two.stage
+        opt$information[2] <- "observed"
+      }
     }
 
     # test

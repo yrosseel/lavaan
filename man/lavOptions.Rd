@@ -175,6 +175,15 @@ Data options:
       are adjusted correctly to reflect the two-step procedure. The
       \code{"robust.two.stage"} option produces standard errors and
       a test statistic that are robust against non-normality.
+      Both options are available for the ML estimator, and also for the
+      (continuous-data) least-squares estimators \code{"ULS"}, \code{"GLS"},
+      \code{"WLS"} and \code{"DLS"}; for the latter, lavaan automatically
+      switches to \code{se = "robust.sem"} and \code{test = "satorra.bentler"},
+      using the two-stage variance-covariance matrix of the EM-based sample
+      statistics. In addition, for these least-squares estimators, requesting
+      \code{missing = "ml"} (or \code{"fiml"}) is interpreted as a generic
+      request to handle the missing values, and is silently treated as
+      \code{missing = "two.stage"}.
       If (part of) the data is categorical, and the estimator is
       from the (W)LS family, the only option (besides listwise deletion)
       is \code{"pairwise"}. In this three-step approach, missingness is

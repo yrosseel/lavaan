@@ -190,6 +190,13 @@ lav_samp_from_data <- function(lavdata = NULL,        # nolint start
         lavoptions$estimator.args$iv_vcov_stage1 == "gamma") {
       nacov_compute <- TRUE
     }
+    # two-stage missing data for the (continuous) least-squares estimators:
+    # the robust.sem SEs (and satorra.bentler test) need the two-stage NACOV
+    # of the EM moments (computed below, see lav_mvn_mi_* functions)
+    if (any(missing == c("two.stage", "robust.two.stage")) &&
+        estimator %in% c("ULS", "GLS", "WLS", "DLS")) {
+      nacov_compute <- TRUE
+    }
   } else if (is.logical(nacov)) {
     if (!nacov) {
       nacov_compute <- FALSE
@@ -834,7 +841,33 @@ lav_samp_from_data <- function(lavdata = NULL,        # nolint start
 
     # nacov (=GAMMA)
     if (!nacov_user && nlevels == 1L) {
-      if (estimator %in% c("ML", "GLS") && !missing_flag && nacov_compute) {
+      if (nacov_compute && !categorical &&
+          any(missing == c("two.stage", "robust.two.stage")) &&
+          estimator %in% c("ULS", "GLS", "WLS", "DLS")) {
+        # two-stage missing data: the NACOV of the (saturated) EM moments,
+        # in (mean, vech(cov)) order, to be used by the robust.sem sandwich
+        # and the satorra.bentler test
+        # - two.stage:        I_1^{-1}            (Savalei & Bentler, 2009)
+        # - robust.two.stage: I_1^{-1} J_1 I_1^{-1} (Savalei & Falk, 2014)
+        mu_g <- missing_h1[[g]]$mu
+        sigma_g <- missing_h1[[g]]$sigma
+        x_idx_g <- if (fixed_x) x_idx[[g]] else integer(0L)
+        if (missing == "robust.two.stage") {
+          nacov[[g]] <- lav_mvn_mi_h1_omega_sw(
+            y = x[[g]], mp = mp[[g]],
+            yp = missing_1[[g]], wt = wt[[g]],
+            mu = mu_g, sigma_1 = sigma_g, x_idx = x_idx_g,
+            information = "observed"
+          )
+        } else {
+          i1 <- lav_mvnorm_missing_information_observed_samplestats(
+            yp = missing_1[[g]],
+            mu = mu_g, sigma_1 = sigma_g, x_idx = x_idx_g
+          )
+          nacov[[g]] <- lav_mat_sym_inverse(i1)
+        }
+      } else if (estimator %in% c("ML", "GLS") &&
+                 !missing_flag && nacov_compute) {
         if (conditional_x) {
           y <- y
         } else {

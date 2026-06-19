@@ -73,6 +73,13 @@ lav_options_est_gls <- function(opt) {
     lav_msg_stop(gettext(
       "ordered categorical data is not supported when estimator is GLS."))
   }
+  # two-stage missing data: estimation uses the (EM) saturated moments, while
+  # the SEs use the robust.sem sandwich (with the two-stage NACOV) and the
+  # scaled (satorra.bentler) test; se/test/missing are set in lav_options()
+  two_stage <- any(opt$missing == c("two.stage", "robust.two.stage"))
+  if (two_stage) {
+    return(opt)
+  }
   # se
   if (opt$se == "default") {
     # GLS uses a normal-theory weight matrix, so the 'standard' se/test are
@@ -170,6 +177,10 @@ lav_options_est_catml <- function(opt) {
 
 lav_options_est_wls <- function(opt) {
   # WLS                                                            ####
+  # two-stage missing data: see lav_options_est_gls()
+  if (any(opt$missing == c("two.stage", "robust.two.stage"))) {
+    return(opt)
+  }
   # se
   if (opt$se == "default") {
     opt$se <- "standard"
@@ -231,8 +242,11 @@ lav_options_est_dls <- function(opt) {
   )) {
     opt$test <- union("satorra.bentler", opt$test)
   }
-  # missing
-  opt$missing <- "listwise"
+  # missing (two-stage missing data keeps the EM moments; see
+  # lav_options_est_gls())
+  if (!any(opt$missing == c("two.stage", "robust.two.stage"))) {
+    opt$missing <- "listwise"
+  }
   # estimator.args
   if (is.null(opt$estimator.args)) {
     opt$estimator.args <- list(
@@ -365,6 +379,10 @@ lav_options_est_dwls <- function(opt) {
 
 lav_options_est_uls <- function(opt) {
   # ULS, ULSM, ULSMV, ULSMVS                                       ####
+  # two-stage missing data: see lav_options_est_gls()
+  if (any(opt$missing == c("two.stage", "robust.two.stage"))) {
+    return(opt)
+  }
   # se
   if (opt$se == "bootstrap" &&
       opt$estimator %in% c("ulsm", "ulsmv", "ulsmvs")) {
