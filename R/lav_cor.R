@@ -179,12 +179,12 @@ lav_object_cor <- function(object,
     )
 
 
-  fit <- lavaan(
+  fit <- do.call(lavaan, c(list(
     slot_par_table = pt_un, slot_data = lav_data,
     model.type = "unrestricted",
     missing = missing,
     baseline = baseline, h1 = TRUE, # must be TRUE!
-    se = se, test = test, estimator = estimator, ...
+    se = se, test = test, estimator = estimator), dotdotdot)
   )
 
   out <- lav_object_cor_output(fit, output = output)
