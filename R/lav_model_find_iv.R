@@ -67,8 +67,14 @@ lav_model_find_iv <- function(lavobject = NULL, lavmodel = NULL,
   if (any(lavpartable$op == "|~")) {
     for (b in seq_len(nblocks)) {
       iv_list[[b]] <- lapply(iv_list[[b]], function(eq) {
+        # the user specifies the dependent variable of the equation on the
+        # lhs of |~; for a latent variable, this is its scaling indicator,
+        # which is stored in eq$lhs_new (eq$lhs holds the latent name). Match
+        # on either, so that |~ works for both observed and latent dependents.
         lhs <- eq$lhs[1] # we assume a single lhs
-        iv_idx <- which(lavpartable$op == "|~" & lavpartable$lhs == lhs)
+        lhs_new <- eq$lhs_new[1]
+        iv_idx <- which(lavpartable$op == "|~" &
+          (lavpartable$lhs == lhs | lavpartable$lhs == lhs_new))
         if (length(iv_idx)) {
           # override iv
           eq$iv <- lavpartable$rhs[iv_idx]
