@@ -31,24 +31,6 @@ lav_sem_miiv_internal <- function(lavmodel = NULL, lavh1 = NULL,
   # we assume the blocks are independent groups for now
   stopifnot(lavdata@nlevels == 1L)
 
-  # multiple groups are supported (including cross-group equality constraints
-  # for loadings/regressions/variances, e.g. metric invariance), but the mean
-  # structure with freely estimated latent means (e.g. scalar invariance with
-  # latent-mean differences) is not handled correctly yet; warn rather than
-  # return unreliable latent-mean estimates
-  if (lavmodel@nblocks > 1L) {
-    lv_names <- unique(lavpartable$lhs[lavpartable$op == "=~"])
-    if (any(lavpartable$op == "~1" & lavpartable$free > 0L &
-            lavpartable$lhs %in% lv_names)) {
-      lav_msg_warn(gettext(
-        "[IV] multiple-group models with a mean structure (freely estimated
-         latent means, e.g. for scalar measurement invariance) are not fully
-         supported yet; the latent-mean estimates may be unreliable. Use
-         meanstructure = FALSE for covariance-structure-only invariance
-         (configural/metric), which is fully supported."))
-    }
-  }
-
   # directed versus undirected (free) parameters
   undirected_idx <- which(lavpartable$free > 0L &
     !duplicated(lavpartable$free) & # if ceq.simple
@@ -376,8 +358,21 @@ lav_sem_miiv_apply_directed_pool <- function(eqs_b = NULL, x = NULL,
   # general linear equality constraints among the directed slopes (if any)
   con <- lav_sem_miiv_linear_con(lavmodel, free_slope_idx)
 
+  # intercepts that are shared across equations/groups (e.g. equal intercepts
+  # for scalar measurement invariance) must also be pooled, not left as
+  # last-write-wins
+  all_int <- unlist(lapply(eqs_b, function(e) {
+    if (!is.null(e$slope_block) && !is.null(e$ptint) &&
+        length(e$ptint) == 1L) {
+      lavpartable$free[e$ptint]
+    } else {
+      integer(0L)
+    }
+  }))
+  shared_int <- anyDuplicated(all_int[all_int > 0L]) > 0L
+
   # nothing to pool?
-  if (anyDuplicated(all_gcol) == 0L && is.null(con)) {
+  if (anyDuplicated(all_gcol) == 0L && is.null(con) && !shared_int) {
     return(x)
   }
 
@@ -386,14 +381,33 @@ lav_sem_miiv_apply_directed_pool <- function(eqs_b = NULL, x = NULL,
     con_jac = if (is.null(con)) NULL else con$jac,
     con_rhs = if (is.null(con)) NULL else con$rhs
   )
+  # 1. write the pooled slopes
   for (j in seq_along(eqs_b)) {
     sb <- eqs_b[[j]]$slope_block
     if (is.null(sb)) {
       next
     }
     x[sb$gcol] <- theta_pool[as.character(sb$gcol)]
-    if (lavmodel@meanstructure) {
+  }
+  # 2. recompute the intercepts from the pooled slopes. When an intercept free
+  #    column is shared across equations/groups, pool the per-equation
+  #    intercepts by an nobs-weighted average (consistent with the nobs-scaled
+  #    cross-products used for the slopes); a non-shared intercept reduces to
+  #    its single per-equation value.
+  if (lavmodel@meanstructure) {
+    int_idx <- integer(0L)
+    int_val <- numeric(0L)
+    int_wgt <- numeric(0L)
+    for (j in seq_along(eqs_b)) {
+      sb <- eqs_b[[j]]$slope_block
+      if (is.null(sb)) {
+        next
+      }
       eq <- eqs_b[[j]]
+      free_int_idx <- lavpartable$free[eq$ptint]
+      if (length(free_int_idx) != 1L || free_int_idx <= 0L) {
+        next
+      }
       # full slope vector in rhs order (free pooled values + fixed ustart)
       eq_free_idx <- lavpartable$free[eq$pt]
       b_full <- lavpartable$ustart[eq$pt]
@@ -401,10 +415,15 @@ lav_sem_miiv_apply_directed_pool <- function(eqs_b = NULL, x = NULL,
       free_pos <- which(eq_free_idx > 0L)
       b_full[free_pos] <- x[eq_free_idx[free_pos]]
       beta0 <- as.vector(sb$y_bar - sb$x_bar %*% b_full)
-      free_int_idx <- lavpartable$free[eq$ptint]
-      if (length(free_int_idx) == 1L && free_int_idx > 0L) {
-        x[free_int_idx] <- beta0
-      }
+      int_idx <- c(int_idx, free_int_idx)
+      int_val <- c(int_val, beta0)
+      int_wgt <- c(int_wgt, if (!is.null(eq$nobs)) eq$nobs else 1)
+    }
+    if (length(int_idx) > 0L) {
+      num <- tapply(int_wgt * int_val, int_idx, sum)
+      den <- tapply(int_wgt, int_idx, sum)
+      pooled_int <- num / den
+      x[as.integer(names(pooled_int))] <- pooled_int
     }
   }
   x
