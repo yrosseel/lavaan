@@ -669,7 +669,7 @@ Miscellaneous:
 }
 
 \seealso{
-\code{\link{lavaan}}
+\code{\link{lavaan}}, \code{\link{estimator_iv}}
 }
 
 \examples{
