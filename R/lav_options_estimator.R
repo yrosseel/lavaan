@@ -813,6 +813,12 @@ lav_options_est_iv <- function(opt) {
     if (is.null(opt$estimator.args$iv_vcov_gamma_modelbased)) {
       opt$estimator.args$iv_vcov_gamma_modelbased <- TRUE
     }
+    if (is.null(opt$estimator.args$iv_mean_structure)) {
+      opt$estimator.args$iv_mean_structure <- "wls"
+    } else if (!tolower(opt$estimator.args$iv_mean_structure) %in%
+               c("moments", "wls")) {
+      lav_msg_stop(gettext("iv_mean_structure should be moments or wls."))
+    }
     if (is.null(opt$estimator.args$iv_vcov_jack_numerical)) {
       opt$estimator.args$iv_vcov_jack_numerical <- FALSE
     }

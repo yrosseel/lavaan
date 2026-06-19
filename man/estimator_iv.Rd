@@ -49,10 +49,11 @@ equality constraints (e.g. \code{a == 2*b}) are honored. Multiple groups are
 supported, with standard errors (for continuous, two-stage-missing and
 categorical data), including the mean structure and cross-group equality
 constraints for measurement invariance testing (configural, metric and scalar,
-e.g. via \code{group.equal = c("loadings", "intercepts")}). For multiple-group
-models, the scalar (intercept-constrained) mean estimates use a
-method-of-moments pooling and need not coincide exactly with the maximum
-likelihood solution. The IV estimator is restricted to single-level models.
+e.g. via \code{group.equal = c("loadings", "intercepts")}). For scalar
+invariance the latent-mean (and intercept) estimates are obtained by a joint
+GLS solve over the mean structure (see \code{iv_mean_structure}), which matches
+the maximum likelihood mean estimates given the model-implied covariance
+matrix. The IV estimator is restricted to single-level models.
 
 \subsection{Estimator options}{
 
@@ -125,6 +126,16 @@ The option names use snake_case. For backward compatibility, dot.case names
     default), the normal-theory weight matrix (gamma) used for the standard
     errors is based on the model-implied covariance matrix; if \code{FALSE},
     it is based on the unrestricted (H1) sample covariance matrix.}
+  \item{\code{iv_mean_structure}:}{Character. How the free mean-structure
+    parameters (observed intercepts and latent means) are estimated. With
+    \code{"wls"} (the default) they are obtained by a joint GLS solve that fits
+    the model-implied means to the sample means across all groups, pooling
+    parameters that are constrained equal across groups (e.g. intercepts for
+    scalar invariance); this matches the maximum likelihood mean estimates
+    (given the model-implied covariance matrix). With \code{"moments"} the
+    intercepts are recomputed per equation and shared intercepts are pooled by
+    a (simpler) nobs-weighted average. The two agree unless intercepts are
+    constrained across groups (scalar invariance).}
   \item{\code{iv_vcov_jack_numerical}, \code{iv_vcov_jaca_numerical},
     \code{iv_vcov_jacb_numerical}:}{Logical. If \code{TRUE}, the corresponding
     Jacobians used in the standard-error computation are obtained numerically

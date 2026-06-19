@@ -19,6 +19,10 @@ lav_sem_miiv_internal <- function(lavmodel = NULL, lavh1 = NULL,
   iv_vcov_stage2 <- tolower(lavoptions$estimator.args$iv_vcov_stage2)
   # [[ ]] exact match: $ would partial-match iv_sargan to iv_sargan_adjust
   iv_sargan <- lavoptions$estimator.args[["iv_sargan"]]
+  iv_mean_structure <- tolower(lavoptions$estimator.args$iv_mean_structure)
+  if (length(iv_mean_structure) == 0L) {
+    iv_mean_structure <- "moments"
+  }
   # just in case
   if (lavmodel@categorical) {
     iv_samplestats <- TRUE
@@ -130,8 +134,61 @@ lav_sem_miiv_internal <- function(lavmodel = NULL, lavh1 = NULL,
   # store theta2 elements in x
   x[free_undirected_idx] <- theta2
 
+  # mean structure: re-estimate the free mean parameters (observed intercepts
+  # and latent means) jointly by GLS (iv_mean_structure = "wls"), which matches
+  # the ML mean estimate and pools shared intercepts/latent means across groups
+  # (e.g. for scalar invariance). The default "moments" path keeps the
+  # per-equation, nobs-pooled estimates from stage 1.
+  if (lavmodel@meanstructure && identical(iv_mean_structure, "wls")) {
+    free_mean_idx <- unique(lavpartable$free[lavpartable$op == "~1" &
+      lavpartable$free > 0L & !duplicated(lavpartable$free)])
+    if (length(free_mean_idx) > 0L) {
+      x[free_mean_idx] <- lav_sem_miiv_mean_wls(
+        lavmodel = lavmodel, lavsamplestats = lavsamplestats, x = x,
+        free_mean_idx = free_mean_idx)
+    }
+  }
+
   attr(x, "eqs") <- eqs
   x
+}
+
+# joint mean-structure GLS solve. Given the estimated loadings/regressions and
+# variances, re-estimate all free mean parameters (observed intercepts nu and
+# latent means alpha) by a single GLS solve that fits the model-implied means
+# to the sample means across all groups, weighting by nobs * Sigma^{-1}. The
+# model-implied means are linear in the mean parameters, so this is a linear
+# solve; shared mean parameters (e.g. equal intercepts for scalar invariance)
+# are pooled jointly, reproducing the ML mean estimate (given Sigma). The "vcov"
+# attribute holds the GLS information inverse A^{-1} (= the SE covariance for
+# the continuous, complete-data case).
+lav_sem_miiv_mean_wls <- function(lavmodel, lavsamplestats, x, free_mean_idx) {
+  implied <- lav_model_implied(lav_model_set_parameters(lavmodel, x = x))
+  delta_list <- lav_sem_miiv_delta(lav_model_set_parameters(lavmodel, x = x))
+  # fixed mean contribution (free mean parameters set to 0)
+  x0 <- x
+  x0[free_mean_idx] <- 0
+  implied0 <- lav_model_implied(lav_model_set_parameters(lavmodel, x = x0))
+
+  nfree <- length(free_mean_idx)
+  amat <- matrix(0, nfree, nfree)
+  bvec <- numeric(nfree)
+  for (g in seq_len(lavmodel@nblocks)) {
+    nvar <- lavmodel@nvar[[g]]
+    m_g <- delta_list[[g]][seq_len(nvar), free_mean_idx, drop = FALSE]
+    resid <- lavsamplestats@mean[[g]] - implied0$mean[[g]]
+    w_g <- try(lav_mat_sym_inverse(implied$cov[[g]]), silent = TRUE)
+    if (inherits(w_g, "try-error")) {
+      w_g <- diag(nvar)
+    }
+    w_g <- w_g * lavsamplestats@nobs[[g]]
+    amat <- amat + crossprod(m_g, w_g %*% m_g)
+    bvec <- bvec + crossprod(m_g, w_g %*% resid)
+  }
+  ainv <- lav_mat_sym_inverse(amat)
+  out <- drop(ainv %*% bvec)
+  attr(out, "vcov") <- ainv
+  out
 }
 
 
