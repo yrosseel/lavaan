@@ -28,6 +28,7 @@ setClass("lavData",
     weights = "list", # sampling weights (per group)
     sampling.weights = "character", # sampling weights variable
     ov = "list", # variable table
+    ov.aux = "list", # variable table for auxiliary/instrument variables
     case.idx = "list", # case indices per group
     missing = "character", # "listwise" or not?
     Mp = "list", # if not complete, missing patterns

@@ -176,8 +176,11 @@ enters the model-implied summary statistics. The model degrees of freedom, the
 fit measures, and the model-implied moments are therefore exactly the same as
 if the instrument had not been mentioned; only the equations for which it is
 used are affected. External instruments require raw data (a \code{data=}
-argument) and continuous variables; they are not available when only sample
-moments are supplied, nor for categorical data.
+argument); they are not available when only sample moments are supplied. For
+categorical data the external instruments must themselves be ordered
+(categorical) and only single-group models are supported; the augmented
+polychoric correlations and the asymptotic covariance of the sample statistics
+are then used for the estimates and the standard errors.
 
 \preformatted{    ## z is not part of the model; it is used only as an
     ## instrument for the (endogenous) regression y ~ x

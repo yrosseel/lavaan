@@ -35,6 +35,17 @@ lav_sem_miiv_internal <- function(lavmodel = NULL, lavh1 = NULL,
   # we assume the blocks are independent groups for now
   stopifnot(lavdata@nlevels == 1L)
 
+  # external instruments with categorical data are only supported for
+  # single-group models (the multiple-group standard errors would not fold in
+  # the instrument sampling variability); fail cleanly rather than report
+  # unreliable standard errors
+  if (lavmodel@categorical && lavmodel@nblocks > 1L &&
+      length(unlist(lavdata@ov.names.aux)) > 0L) {
+    lav_msg_stop(gettext(
+      "external instruments (the |~ operator with a variable not in the model)
+       with categorical data are only supported for single-group models."))
+  }
+
   # directed versus undirected (free) parameters
   undirected_idx <- which(lavpartable$free > 0L &
     !duplicated(lavpartable$free) & # if ceq.simple
@@ -221,6 +232,91 @@ lav_sem_miiv_aug_moments <- function(lavdata = NULL, b = 1L, ov_names = NULL,
     aug_mean[seq_len(p_model)] <- sample_mean
   }
   list(cov = aug_cov, mean = aug_mean, ov.names = c(ov_names, aux_names_b))
+}
+
+
+# external instruments, CATEGORICAL data: build the augmented sample statistics
+# over [model variables, instruments] for block 'b'. The instruments must be
+# ordinal (the IV/PIV estimator works on the all-ordinal threshold/correlation
+# structure). Runs muthen1984() over the augmented data to obtain the augmented
+# polychoric correlation matrix R, the thresholds, and the asymptotic
+# covariance of the sample statistics (NACOV = WLS.W * nobs). The model
+# correlation block (and the model thresholds) are overwritten with the model's
+# own saturated values, so that the model-variable estimates are unchanged.
+# Returns NULL when there are no external instruments for this block.
+lav_sem_miiv_aug_cat_moments <- function(lavdata = NULL, b = 1L,
+                                         model_cor = NULL, model_th = NULL,
+                                         nobs = NULL) {
+  aux_names_b <- if (length(lavdata@ov.names.aux) >= b) {
+    lavdata@ov.names.aux[[b]]
+  } else {
+    character(0L)
+  }
+  if (length(aux_names_b) == 0L || length(lavdata@X) < b ||
+    is.null(lavdata@X[[b]]) || is.null(lavdata@aux[[b]])) {
+    return(NULL)
+  }
+  model_ov <- lavdata@ov.names[[b]]
+  p_model <- length(model_ov)
+
+  # variable types/levels for the augmented set
+  m_type <- lavdata@ov$type[match(model_ov, lavdata@ov$name)]
+  m_lev <- lavdata@ov$nlev[match(model_ov, lavdata@ov$name)]
+  a_type <- lavdata@ov.aux$type[match(aux_names_b, lavdata@ov.aux$name)]
+  a_lev <- lavdata@ov.aux$nlev[match(aux_names_b, lavdata@ov.aux$name)]
+
+  # ordinal instruments only (for now)
+  if (any(a_type != "ordered")) {
+    lav_msg_stop(gettextf(
+      "external instrument(s) must be ordered (categorical) when the model is
+       categorical; continuous instrument(s): %s",
+      paste(aux_names_b[a_type != "ordered"], collapse = " ")))
+  }
+
+  full_b <- cbind(lavdata@X[[b]], lavdata@aux[[b]])
+  cat1 <- muthen1984(
+    data_1 = full_b, ov_names = c(model_ov, aux_names_b),
+    ov_types = c(m_type, a_type), ov_levels = c(m_lev, a_lev),
+    wls_w = TRUE, allow_empty_cell = FALSE
+  )
+
+  R <- unname(cat1$COR)
+  th <- unlist(cat1$TH)
+  th_idx <- unlist(cat1$TH.IDX)
+  # keep the model block exactly equal to the model's saturated statistics
+  if (!is.null(model_cor)) {
+    R[seq_len(p_model), seq_len(p_model)] <- model_cor
+  }
+  if (!is.null(model_th)) {
+    th[th_idx <= p_model] <- model_th
+  }
+  nacov <- if (!is.null(cat1$WLS.W) && !is.null(nobs)) {
+    cat1$WLS.W * nobs
+  } else {
+    NULL
+  }
+
+  list(R = R, th = th, th.idx = th_idx, nacov = nacov,
+       ov.names = c(model_ov, aux_names_b), p.model = p_model)
+}
+
+
+# external instruments, CATEGORICAL data: the column indices, within the
+# augmented categorical moment vector [thresholds, off-diagonal correlations],
+# that correspond to the model moments (model thresholds + correlations among
+# model variables). 'th.idx' is the per-threshold variable index of the
+# augmented threshold block.
+lav_sem_miiv_aug_cat_keep_idx <- function(p_model = 0L, p_aug = 0L,
+                                          th_idx = integer(0L)) {
+  nth <- length(th_idx)
+  th_keep <- which(th_idx <= p_model)
+  ri <- lav_mat_vech_row_idx(p_aug)
+  ci <- lav_mat_vech_col_idx(p_aug)
+  offdiag <- ri > ci
+  ri_off <- ri[offdiag]
+  ci_off <- ci[offdiag]
+  cor_keep <- which(ri_off <= p_model & ci_off <= p_model)
+  c(th_keep, nth + cor_keep)
 }
 
 
@@ -1001,6 +1097,8 @@ lav_sem_miiv_2sls_samp <- function(x = NULL, samplestats = FALSE,
     nobs <- lavsamplestats@nobs[[b]]
 
     p_model <- length(ov_names)
+    aug_nth <- NULL      # external instruments, categorical: augmented #th
+    aug_th_idx <- NULL   # external instruments, categorical: augmented th.idx
     if (use_aug_vec) {
       # reconstruct the augmented covariance/mean directly from aug_vec
       seg <- aug_vec[(aug_off[b] + 1L):aug_off[b + 1L]]
@@ -1035,29 +1133,40 @@ lav_sem_miiv_2sls_samp <- function(x = NULL, samplestats = FALSE,
       sample_cov <- implied$cov[[b]]
       sample_mean <- implied$mean[[b]]
 
-      # external instruments (estimator = "IV"): augment the saturated
-      # covariance/mean with the extra observed variables (lavData@aux) so the
-      # 2SLS estimator can use instruments that are not part of the model. The
-      # model-variable block is kept exactly equal to the saturated moments;
-      # the instrument blocks (and means) are taken from the raw data. Model
-      # variables come first and instruments last, so that the model-moment
-      # sub-block can be recovered for the (model-dimensioned) Jacobians (k_mat)
-      # below (see lav_aux_moment_idx()).
-      aug <- lav_sem_miiv_aug_moments(
-        lavdata = lavdata, b = b, ov_names = ov_names,
-        sample_cov = sample_cov, sample_mean = sample_mean
-      )
-      has_ext_iv <- !is.null(aug)
-      if (has_ext_iv) {
-        sample_cov <- aug$cov
-        sample_mean <- aug$mean
-        ov_names <- aug$ov.names
+      # external instruments (estimator = "IV"): augment the saturated sample
+      # statistics with the extra observed variables (lavData@aux) so the 2SLS
+      # estimator can use instruments that are not part of the model. The
+      # model-variable block is kept exactly equal to the saturated statistics;
+      # the instrument blocks come from the data. Model variables come first
+      # and instruments last, so that the model-moment sub-block can be
+      # recovered for the (model-dimensioned) Jacobians (k_mat) below.
+      if (lavmodel@categorical) {
+        # categorical: augmented polychoric correlation matrix (the instruments
+        # must be ordinal); the slopes use the correlations only
+        augc <- lav_sem_miiv_aug_cat_moments(
+          lavdata = lavdata, b = b, model_cor = sample_cov
+        )
+        has_ext_iv <- !is.null(augc)
+        if (has_ext_iv) {
+          sample_cov <- augc$R
+          ov_names <- augc$ov.names
+          sample_mean <- c(sample_mean,
+            rep(0, length(ov_names) - length(sample_mean)))
+          aug_nth <- length(augc$th)
+          aug_th_idx <- augc$th.idx
+        }
+      } else {
+        aug <- lav_sem_miiv_aug_moments(
+          lavdata = lavdata, b = b, ov_names = ov_names,
+          sample_cov = sample_cov, sample_mean = sample_mean
+        )
+        has_ext_iv <- !is.null(aug)
+        if (has_ext_iv) {
+          sample_cov <- aug$cov
+          sample_mean <- aug$mean
+          ov_names <- aug$ov.names
+        }
       }
-    }
-    if (has_ext_iv && lavmodel@categorical) {
-      lav_msg_stop(gettext(
-        "external instruments (the |~ operator with a variable that is not
-         part of the model) are not supported for categorical data."))
     }
 
     # estimation per equation
@@ -1239,7 +1348,14 @@ lav_sem_miiv_2sls_samp <- function(x = NULL, samplestats = FALSE,
           # split: var_num, off
           # FIXME: all ordinal for now (ie no variances)
           tmp <- j_slopes_s[, -lav_mat_diagh_idx(nvar), drop = FALSE]
-          nth <- nrow(lavsamplestats@NACOV[[b]]) - ncol(tmp)
+          # number of thresholds: for external instruments the moments span the
+          # augmented [thresholds, correlations] set (aug_nth thresholds), else
+          # the model NACOV size minus the correlation block
+          nth <- if (has_ext_iv) {
+            aug_nth
+          } else {
+            nrow(lavsamplestats@NACOV[[b]]) - ncol(tmp)
+          }
           k_mat_int <- numeric(nth + ncol(tmp))
           k_mat <- matrix(0.0, nx, nth + ncol(tmp))
           if (nx > 0L) {
@@ -1259,7 +1375,13 @@ lav_sem_miiv_2sls_samp <- function(x = NULL, samplestats = FALSE,
         # errors, see lav_sem_miiv_vcov()), and also produce model-moment-only
         # versions (the model variables come first) for the model-dimensioned
         # consumers that do not augment (e.g. lav_sem_miiv_utils_jack_eqs()).
-        if (has_ext_iv && !lavmodel@categorical) {
+        if (has_ext_iv && lavmodel@categorical) {
+          k_mat_full <- k_mat
+          k_mat_int_full <- k_mat_int
+          keep <- lav_sem_miiv_aug_cat_keep_idx(p_model, nvar, aug_th_idx)
+          k_mat <- k_mat[, keep, drop = FALSE]
+          k_mat_int <- k_mat_int[keep]
+        } else if (has_ext_iv && !lavmodel@categorical) {
           k_mat_full <- k_mat
           k_mat_int_full <- k_mat_int
           if (lavmodel@meanstructure) {
@@ -2127,6 +2249,32 @@ lav_sem_miiv_vcov <- function(lavmodel = NULL, lavsamplestats = NULL,
     }
   }
 
+  # external instruments with CATEGORICAL data (single group): replace the
+  # model gamma (NACOV) and the directed Jacobian with their augmented
+  # [thresholds, correlations] versions, so the instrument sampling variability
+  # is folded into all standard errors (directed coefficients and the stage-2
+  # parameters). The augmented directed Jacobian is assembled analytically from
+  # k_mat_full (the numerical route reconstructs a Pearson covariance and is
+  # not valid for categorical data; equality constraints among directed
+  # coefficients are therefore not supported here).
+  ext_cat <- lavmodel@categorical && lavmodel@nblocks == 1L &&
+    length(unlist(lavdata@ov.names.aux)) > 0L &&
+    length(free_directed_idx) > 0L && eqs_have_kmat_full
+  cat_keep <- NULL
+  if (ext_cat) {
+    augc <- lav_sem_miiv_aug_cat_moments(
+      lavdata = lavdata, b = 1L, model_cor = lavh1$implied$cov[[1]],
+      model_th = lavsamplestats@th[[1]], nobs = lavsamplestats@nobs[[1]])
+    # single-group explicit-gamma path uses fg * NACOV (fg = nobs/ntotal = 1),
+    # i.e. the augmented NACOV on the same scale as lavsamplestats@NACOV
+    gamma_big <- (lavsamplestats@nobs[[1]] / lavsamplestats@ntotal) * augc$nacov
+    jac_k <- lav_sem_miiv_jack_eqs_aug(
+      eqs = eqs, block = 1L, lavmodel = lavmodel,
+      lavpartable = lavpartable, free_directed_idx = free_directed_idx)
+    cat_keep <- lav_sem_miiv_aug_cat_keep_idx(
+      lavmodel@nvar[[1]], ncol(augc$R), augc$th.idx)
+  }
+
   # stage 1: directed effects
   if (length(free_directed_idx) > 0L && iv_vcov_stage1 != "none") {
     if (use_restricted_directed) {
@@ -2293,10 +2441,22 @@ lav_sem_miiv_vcov <- function(lavmodel = NULL, lavsamplestats = NULL,
       if (length(free_directed_idx) > 0L) {
         # assuming a SINGLE block for now
         delta1 <- delta[, free_directed_idx, drop = FALSE]
-        idiag <- diag(1, nrow = nrow(delta1))
         nth <- nrow(delta1) - ncol(h2)
         h2 <- cbind(matrix(0, nrow(h2), ncol = nth), h2)
-        tmp <- h2 %*% (idiag - delta1 %*% jac_k)
+        if (ext_cat) {
+          # place the (model-moment) stage-2 map and directed derivative into
+          # the augmented [thresholds, correlations] layout, then propagate the
+          # directed uncertainty through the augmented Jacobian
+          m_aug <- ncol(jac_k)
+          h2_aug <- matrix(0, nrow(h2), m_aug)
+          h2_aug[, cat_keep] <- h2
+          d1_aug <- matrix(0, m_aug, ncol(delta1))
+          d1_aug[cat_keep, ] <- delta1
+          tmp <- h2_aug %*% (diag(m_aug) - d1_aug %*% jac_k)
+        } else {
+          idiag <- diag(1, nrow = nrow(delta1))
+          tmp <- h2 %*% (idiag - delta1 %*% jac_k)
+        }
       } else {
         tmp <- h2
       }
@@ -2308,11 +2468,20 @@ lav_sem_miiv_vcov <- function(lavmodel = NULL, lavsamplestats = NULL,
         nth <- if (lavmodel@categorical) length(free_th_idx) else 0L
         if (length(nth) > 0L && nth > 0L) {
           delta_th <- delta[, free_th_idx, drop = FALSE]
+          if (ext_cat) {
+            # map the model threshold derivative into the augmented layout
+            dta <- matrix(0, ncol(jac_k), ncol(delta_th))
+            dta[cat_keep, ] <- delta_th
+            delta_th <- dta
+            gamma_th <- gamma_big
+          } else {
+            gamma_th <- gamma_big
+          }
           # FIXME: remove zero rows from delta
-          zero_idx <- which(rowSums(delta_th) == 0)
+          zero_idx <- which(rowSums(abs(delta_th)) == 0)
           if (length(zero_idx) > 0L) {
             delta_th <- delta_th[-zero_idx, , drop = FALSE]
-            gamma_th <- gamma_big[-zero_idx, -zero_idx, drop = FALSE]
+            gamma_th <- gamma_th[-zero_idx, -zero_idx, drop = FALSE]
           }
           th_gamma_tht <- t(delta_th) %*% gamma_th %*% delta_th
           vcov[free_th_idx, free_th_idx] <-

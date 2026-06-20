@@ -791,6 +791,18 @@ lav_data_full <- function(data = NULL, # data.frame
     as_data_frame = FALSE, allow_empty_cell = allow_empty_cell
   )
 
+  # variable table for the auxiliary/instrument variables (their type and
+  # number of levels are needed, eg by the categorical IV estimator, to compute
+  # the augmented polychoric sample statistics)
+  ov_aux <- list()
+  if (length(ov_names_aux) > 0L) {
+    ov_aux <- lav_dataframe_vartable(
+      frame = data, ov_names = ov_names_aux,
+      ordered = ordered, as_data_frame = FALSE,
+      allow_empty_cell = allow_empty_cell
+    )
+  }
+
   # do some checking
   # check for unordered factors (but only if nlev > 2)
   if ("factor" %in% ov$type) {
@@ -1366,6 +1378,7 @@ lav_data_full <- function(data = NULL, # data.frame
     weights = weights,
     sampling.weights = sampling_weights,
     ov = ov,
+    ov.aux = ov_aux,
     case.idx = case_idx,
     missing = missing,
     X = x,
