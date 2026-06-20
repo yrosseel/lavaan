@@ -1658,6 +1658,28 @@ lav_sem_miiv_vcov <- function(lavmodel = NULL, lavsamplestats = NULL,
     eqs <- lav_model_find_iv(lavmodel = lavmodel, lavpartable = lavpartable)
   }
 
+  # the raw-data engine (iv_samplestats = FALSE) produces the per-equation
+  # covariances (eq$vcov) used for the directed standard errors, but not the
+  # analytic moment Jacobian (eq$k_mat / eq$k_mat_full). When those are
+  # missing, the directed Jacobian needed for the stage-2 (and gamma) standard
+  # errors is computed numerically instead (from the sample statistics, which
+  # does not require k_mat).
+  eqs_have_kmat <- FALSE
+  eqs_have_kmat_full <- FALSE
+  for (eqs_b in eqs) {
+    for (e in eqs_b) {
+      if (!is.null(e$k_mat)) {
+        eqs_have_kmat <- TRUE
+      }
+      if (!is.null(e$k_mat_full)) {
+        eqs_have_kmat_full <- TRUE
+      }
+    }
+  }
+  if (!eqs_have_kmat) {
+    iv_vcov_jack_numerical <- TRUE
+  }
+
   # directed versus undirected (free) parameters
   undirected_idx <- which(lavpartable$free > 0L &
     !duplicated(lavpartable$free) & # if ceq.simple
@@ -1898,10 +1920,7 @@ lav_sem_miiv_vcov <- function(lavmodel = NULL, lavsamplestats = NULL,
       # instrument moments enters through the full (augmented) directed
       # Jacobian assembled analytically from k_mat_full.
       ext_aux_mg <- !use_explicit_gamma && length(free_directed_idx) > 0L &&
-        length(unlist(lavdata@ov.names.aux)) > 0L &&
-        !is.null(lav_sem_miiv_jack_eqs_aug(eqs = eqs, block = 1L,
-          lavmodel = lavmodel, lavpartable = lavpartable,
-          free_directed_idx = free_directed_idx))
+        length(unlist(lavdata@ov.names.aux)) > 0L
       if (ext_aux_mg) {
         ms <- lavmodel@meanstructure
         md_aug <- integer(nblocks)
@@ -1937,7 +1956,7 @@ lav_sem_miiv_vcov <- function(lavmodel = NULL, lavsamplestats = NULL,
         for (b in seq_len(nblocks)) {
           cols_b <- moff_aug[b] + seq_len(md_aug[b])
           model_cols_b <- moff_aug[b] + keep_b[[b]]
-          if (!has_dir_con) {
+          if (!has_dir_con && eqs_have_kmat_full) {
             jb <- lav_sem_miiv_jack_eqs_aug(eqs = eqs, block = b,
               lavmodel = lavmodel, lavpartable = lavpartable,
               free_directed_idx = free_directed_idx)
@@ -1970,11 +1989,12 @@ lav_sem_miiv_vcov <- function(lavmodel = NULL, lavsamplestats = NULL,
           h2_b <- cbind(matrix(0, nrow(h2_b), nth_b), h2_b)
           h2_aug[match(fu_b, free_undirected_idx), model_cols_b] <- h2_b
         }
-        if (has_dir_con) {
-          # equality constraints among the directed coefficients: the
-          # per-equation analytic Jacobian cannot represent the cross-equation
-          # (and cross-group) pooling, so differentiate the constraint-aware
-          # directed solve numerically with respect to the augmented moments
+        if (has_dir_con || !eqs_have_kmat_full) {
+          # use the numerical augmented Jacobian when the analytic k_mat_full
+          # is unavailable (raw-data engine) or when there are equality
+          # constraints among the directed coefficients (the per-equation
+          # analytic Jacobian cannot represent the cross-equation/cross-group
+          # pooling)
           jac_k_aug <- lav_sem_miiv_jac_full_numeric(
             eqs = eqs, lavmodel = lavmodel, lavpartable = lavpartable,
             lavdata = lavdata, lavsamplestats = lavsamplestats,
@@ -2310,11 +2330,11 @@ lav_sem_miiv_vcov <- function(lavmodel = NULL, lavsamplestats = NULL,
         jac_full <- NULL
         if (length(unlist(lavdata@ov.names.aux)) > 0L &&
             length(free_directed_idx) > 0L) {
-          if (has_dir_con) {
-            # equality constraints among the directed coefficients: the
-            # per-equation analytic Jacobian ignores the cross-equation
-            # pooling, so differentiate the (constraint-aware) directed solve
-            # numerically with respect to the augmented moments
+          if (has_dir_con || !eqs_have_kmat_full) {
+            # use the numerical augmented Jacobian when the analytic k_mat_full
+            # is unavailable (raw-data engine) or when there are equality
+            # constraints among the directed coefficients (the per-equation
+            # analytic Jacobian cannot represent the cross-equation pooling)
             jac_full <- lav_sem_miiv_jac_full_numeric(
               eqs = eqs, lavmodel = lavmodel, lavpartable = lavpartable,
               lavdata = lavdata, lavsamplestats = lavsamplestats,
