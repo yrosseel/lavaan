@@ -1,3 +1,21 @@
+# Evaluate 'expr' using a local, fixed RNG state, and restore the global
+# '.Random.seed' afterwards. This keeps RNG-using helpers (eg the jacobian
+# linearity checks below) from disturbing the global stream -- which would,
+# for example, change the seed picked by a subsequent se = "bootstrap" run.
+lav_with_local_seed <- function(expr, seed = 1234L) {
+  if (exists(".Random.seed", envir = .GlobalEnv, inherits = FALSE)) {
+    old_seed <- get(".Random.seed", envir = .GlobalEnv, inherits = FALSE)
+    on.exit(assign(".Random.seed", old_seed, envir = .GlobalEnv,
+                   inherits = FALSE), add = TRUE)
+  } else {
+    # no '.Random.seed' existed: remove the one set.seed() creates below
+    on.exit(rm(".Random.seed", envir = .GlobalEnv, inherits = FALSE),
+            add = TRUE)
+  }
+  set.seed(seed)
+  force(expr)
+}
+
 lav_con_parse <- function(partable = NULL, constraints = NULL,
                                   theta = NULL,
                                   debug = FALSE) {
@@ -24,9 +42,12 @@ lav_con_parse <- function(partable = NULL, constraints = NULL,
 
   # note: avoid zero values in theta (so jac is not all null)
   # (eg, regression coefficients are often zero in partable$start)
+  # we perturb with small random numbers, but isolate the RNG state
+  # (see lav_with_local_seed() above)
   zero_theta_idx <- which(theta == 0)
   if (length(zero_theta_idx) > 0L) {
-    theta[zero_theta_idx] <- rnorm(length(zero_theta_idx), 0, 0.1)
+    theta[zero_theta_idx] <- lav_with_local_seed(
+      rnorm(length(zero_theta_idx), 0, 0.1))
   }
 
   # number of free (but possibly constrained) parameters
@@ -326,13 +347,13 @@ lav_con_linear_idx <- function(func = NULL, npar = NULL) {
     return(integer(0L))
   }
 
-  # seed 1: rnorm
-  a0 <- lav_func_jacobian_complex(func = func, x = rnorm(npar))
-
-  # seed 2: rnorm
-  a1 <- lav_func_jacobian_complex(func = func, x = rnorm(npar))
-
-  a0min_a1 <- a0 - a1
+  # compare the jacobian at two (distinct) evaluation points; isolate the
+  # RNG state so we do not disturb the global stream (see lav_with_local_seed)
+  a0min_a1 <- lav_with_local_seed({
+    a0 <- lav_func_jacobian_complex(func = func, x = rnorm(npar)) # point 1
+    a1 <- lav_func_jacobian_complex(func = func, x = rnorm(npar)) # point 2
+    a0 - a1
+  })
   linear <- apply(a0min_a1, 1, function(x) all(x == 0))
   which(linear)
 }
@@ -342,13 +363,13 @@ lav_con_nonlinear_idx <- function(func = NULL, npar = NULL) {
     return(integer(0L))
   }
 
-  # seed 1: rnorm
-  a0 <- lav_func_jacobian_complex(func = func, x = rnorm(npar))
-
-  # seed 2: rnorm
-  a1 <- lav_func_jacobian_complex(func = func, x = rnorm(npar))
-
-  a0min_a1 <- a0 - a1
+  # compare the jacobian at two (distinct) evaluation points; isolate the
+  # RNG state so we do not disturb the global stream (see lav_with_local_seed)
+  a0min_a1 <- lav_with_local_seed({
+    a0 <- lav_func_jacobian_complex(func = func, x = rnorm(npar)) # point 1
+    a1 <- lav_func_jacobian_complex(func = func, x = rnorm(npar)) # point 2
+    a0 - a1
+  })
   linear <- apply(a0min_a1, 1, function(x) all(x == 0))
   which(!linear)
 }
