@@ -6,7 +6,7 @@
 Fit a Structural Equation Model (SEM) using the Structural After Measurement
 (SAM) approach.}
 \usage{
-sam(model = NULL, data = NULL, cmd = "sem", se = "twostep", 
+sam(model = NULL, data = NULL, aux = NULL, cmd = "sem", se = "twostep",
     mm_list = NULL, mm_args = list(bounds = "wide.zerovar"), 
     struc_args = list(estimator = "ML"), 
     sam_method = "local", ..., 
@@ -26,6 +26,9 @@ sam(model = NULL, data = NULL, cmd = "sem", se = "twostep",
     accepted.}
 \item{data}{A data frame containing the observed variables used in
     the model.}
+\item{aux}{Character vector. Names of auxiliary observed variables, forwarded
+    to the underlying measurement and structural model fits. See the
+    \code{\link{lavaan}} function for more details.}
 \item{cmd}{Character. Which command is used to run the sem models. The possible
     choices are \code{"sem"}, \code{"cfa"} or \code{"lavaan"}, determining how
     we deal with default options.}

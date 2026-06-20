@@ -6,6 +6,50 @@
 
 # YR 18 Jan 2021: use lavoptions
 
+# helper: estimate the h1 (saturated) moments via the EM algorithm for a
+# single group; if auxiliary variables are provided, they are included in the
+# EM run to improve the moments under the missing-at-random (MAR) assumption,
+# after which only the submatrix that corresponds to the model variables is
+# kept (the auxiliary variables are dropped). When auxiliary variables are
+# used, the saturated logl is recomputed over the model variables (at the
+# aux-improved moments), so that it stays consistent with the reported moments.
+lav_samp_mi_aux_moments <- function(y = NULL, aux = NULL, wt = NULL,
+                                    mp = NULL, yp = NULL, nobs = NULL,
+                                    max_iter = 500L, tol = 1e-05) {
+  has_aux <- !is.null(aux) && NCOL(aux) > 0L
+  if (has_aux) {
+    out <- lav_mvn_mi_h1_est_moments(
+      y = cbind(y, aux), wt = wt,
+      max_iter = max_iter, tol = tol
+    )
+    p_ov <- seq_len(NCOL(y))
+    sigma <- out$Sigma[p_ov, p_ov, drop = FALSE]
+    mu <- out$Mu[p_ov]
+    n_h1 <- nobs
+    if (length(mp$empty.idx) > 0L) {
+      if (!is.null(wt)) {
+        n_h1 <- n_h1 - sum(wt[mp$empty.idx])
+      } else {
+        n_h1 <- n_h1 - length(mp$empty.idx)
+      }
+    }
+    h1 <- lav_mvn_mi_loglik_samp(
+      yp = yp, mu = mu, sigma_1 = sigma,
+      log2pi = FALSE, minus_two = TRUE
+    ) / n_h1
+    # keep the full augmented moments: needed for the two-stage standard
+    # errors with auxiliary variables (Savalei & Bentler, 2009)
+    list(sigma = sigma, mu = mu, h1 = h1,
+         sigma.aug = out$Sigma, mu.aug = out$Mu)
+  } else {
+    out <- lav_mvn_mi_h1_est_moments(
+      y = y, wt = wt, mp = mp, yp = yp,
+      max_iter = max_iter, tol = tol
+    )
+    list(sigma = out$Sigma, mu = out$Mu, h1 = out$fx)
+  }
+}
+
 lav_samp_from_data <- function(lavdata = NULL,        # nolint start
                                       lavoptions = NULL,
                                       wls_v = NULL,
@@ -67,6 +111,7 @@ lav_samp_from_data <- function(lavdata = NULL,        # nolint start
   ov_names_x <- lavdata@ov.names.x
   data_ov <- lavdata@ov
   exo <- lavdata@eXo
+  aux <- lavdata@aux
   wt <- lavdata@weights
 
   # new in 0.6-6
@@ -617,17 +662,18 @@ lav_samp_from_data <- function(lavdata = NULL,        # nolint start
         current_warn <- lav_warn()
         if (lav_warn(lavoptions$em.h1.warn))
           on.exit(lav_warn(current_warn), TRUE)
-        out <- lav_mvn_mi_h1_est_moments(
-          y = x[[g]],
-          wt = wt[[g]],
-          mp = mp[[g]], yp = missing_1[[g]],
+        # optionally augment the EM run with auxiliary variables to improve
+        # the moments under MAR (see lav_samp_mi_aux_moments); for two-stage
+        # estimation, the sample statistics ARE the EM estimates, so the
+        # auxiliary variables affect the model estimates as well
+        aux_g <- if (length(aux) >= g) aux[[g]] else NULL
+        missing_h1[[g]] <- lav_samp_mi_aux_moments(
+          y = x[[g]], aux = aux_g, wt = wt[[g]],
+          mp = mp[[g]], yp = missing_1[[g]], nobs = nobs[[g]],
           max_iter = lavoptions$em.h1.iter.max,
-          tol = lavoptions$em.h1.tol,
+          tol = lavoptions$em.h1.tol
         )
         lav_warn(current_warn)
-        missing_h1[[g]]$sigma <- out$Sigma
-        missing_h1[[g]]$mu <- out$Mu
-        missing_h1[[g]]$h1 <- out$fx
 
         # here, sample statistics == EM estimates
         cov[[g]] <- missing_h1[[g]]$sigma
@@ -658,16 +704,15 @@ lav_samp_from_data <- function(lavdata = NULL,        # nolint start
             #missing.h1.[[g]]$mu <- out$Mu
             #missing.h1.[[g]]$h1 <- out$fx
           } else if (!allow_empty_cell) {
-            out <- lav_mvn_mi_h1_est_moments(
-              y = x[[g]],
-              wt = wt[[g]],
-              mp = mp[[g]], yp = missing_1[[g]],
+            # optionally augment the EM run with auxiliary variables to
+            # improve the h1 moments under MAR (see lav_samp_mi_aux_moments)
+            aux_g <- if (length(aux) >= g) aux[[g]] else NULL
+            missing_h1[[g]] <- lav_samp_mi_aux_moments(
+              y = x[[g]], aux = aux_g, wt = wt[[g]],
+              mp = mp[[g]], yp = missing_1[[g]], nobs = nobs[[g]],
               max_iter = lavoptions$em.h1.iter.max,
               tol = lavoptions$em.h1.tol
             )
-            missing_h1[[g]]$sigma <- out$Sigma
-            missing_h1[[g]]$mu <- out$Mu
-            missing_h1[[g]]$h1 <- out$fx
           }
           lav_warn(current_warn)
         }

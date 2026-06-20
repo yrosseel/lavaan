@@ -9,6 +9,7 @@
 
 sam <- function(model = NULL,
                 data = NULL,
+                aux = NULL,
                 cmd = "sem",
                 se = "twostep",
                 mm_list = NULL,
@@ -30,6 +31,12 @@ sam <- function(model = NULL,
                 bootstrap_args = bootstrap) {
   dotdotdot <- list(...)
   lav_adapt_func(environment(), dotdotdot, FALSE)
+
+  # auxiliary variables: forward via dotdotdot, so they reach the
+  # underlying measurement-block (and structural) lavaan() calls
+  if (!is.null(aux)) {
+    dotdotdot$aux <- aux
+  }
 
   # "bootstrap" is the new way to specify arguments, replacing bootstrap_args
   if (!missing(bootstrap_args)) {
@@ -396,7 +403,7 @@ sam <- function(model = NULL,
       !is.null(step1$VETA) && !is.null(colnames(step1$VETA[[1]])) &&
       !isTRUE(step1$caseB)) {
     keep <- tryCatch({
-      struc_pt <- lav_pt_subset_structural_model(step1$PT, add_exo_cov = TRUE,
+      struc_pt <- lav_pt_subset_sm(step1$PT, add_exo_cov = TRUE,
                     fixed_x = FALSE,
                     conditional_x = fit@Options$conditional.x,
                     free_fixed_var = TRUE,

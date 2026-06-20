@@ -4,7 +4,7 @@
 \description{
 Fit a latent variable model.}
 \usage{
-lavaan(model = NULL, data = NULL, ordered = NULL,
+lavaan(model = NULL, data = NULL, ordered = NULL, aux = NULL,
        sampling_weights   = NULL,
        sample_cov = NULL, sample_mean = NULL, sample_th = NULL,
        sample_nobs = NULL,
@@ -32,7 +32,31 @@ lavaan(model = NULL, data = NULL, ordered = NULL,
     observed endogenous variables are treated as ordered (ordinal).
     If FALSE, all observed endogenous variables are considered to be numeric
     (again, unless they are declared as ordered in the data.frame.)}
-\item{sampling_weights}{A variable name in the data frame containing 
+\item{aux}{Character vector. Names of auxiliary observed variables. Auxiliary
+    variables are not part of the user-specified model; they are used to make
+    the missing-at-random (MAR) assumption more plausible under missing data.
+    Only available (for now) with continuous data and one of
+    \code{missing = "ml"}, \code{"two.stage"} or \code{"robust.two.stage"}.
+    With \code{missing = "ml"} (full-information ML), the auxiliary variables
+    are added to the model as a block of `saturated correlates' (Graham, 2003):
+    each auxiliary variable is freely correlated with every other auxiliary
+    variable, with every model observed variable, and has a free mean. The
+    (enlarged) model is estimated with casewise FIML, so the auxiliary
+    variables affect both the point estimates and the standard errors, while
+    leaving the model degrees of freedom unchanged. The baseline model is
+    adjusted accordingly (so CFI/TLI remain correct), and the auxiliary
+    (nuisance) parameters are hidden from the default output (use
+    \code{remove.aux = FALSE} in \code{parameterEstimates()} to show them; they
+    are always part of \code{coef()}). With \code{missing = "two.stage"} or
+    \code{"robust.two.stage"}, the auxiliary variables are instead included in
+    the first-stage EM run that estimates the saturated summary statistics the
+    model is fitted to, so they also affect the model estimates; the two-stage
+    standard errors account for the auxiliary variables via the augmented
+    first-stage asymptotic covariance (Savalei & Bentler, 2009), except when
+    fixed-x covariates are present (in which case they fall back to the
+    model-only covariance). Binary or ordered/categorical auxiliary variables
+    are not supported and are removed (with a warning).}
+\item{sampling_weights}{A variable name in the data frame containing
     sampling weight information. Currently only available for non-clustered
     data. Depending on the \code{sampling_weights.normalization} option, these
     weights may be rescaled (or not) so that their sum equals the number of

@@ -21,6 +21,7 @@ setClass("lavData",
     ov.names = "list", # variable names (per group)
     ov.names.x = "list", # exo variable names (per group)
     ov.names.l = "list", # names per level
+    ov.names.aux = "list", # auxiliary variable names (per group)
     # ov.types          = "list",           # variable types (per group)
     # ov.idx            = "list",           # column indices (all observed variables)
     ordered = "character", # ordered variables
@@ -34,6 +35,7 @@ setClass("lavData",
     Rp = "list", # response patterns (categorical only)
     Lp = "list", # level patterns
     eXo = "list", # local copy exo only
+    aux = "list", # local copy auxiliary variables only (per group)
     X = "list" # local copy
   )
 )

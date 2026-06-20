@@ -16,7 +16,8 @@ lavParameterEstimates(object,
                    remove.system.eq = TRUE, remove.eq = TRUE, 
                    remove.ineq = TRUE, remove.def = FALSE, 
                    remove.nonfree = FALSE, remove.step1 = TRUE,
-                   remove.unused = FALSE, add.attributes = FALSE, 
+                   remove.unused = FALSE,
+                   remove.aux = TRUE, add.attributes = FALSE, 
                    output = "data.frame", header = FALSE)
 parameterEstimates(object, 
                    se = TRUE, zstat = TRUE, pvalue = TRUE, ci = TRUE, 
@@ -28,7 +29,8 @@ parameterEstimates(object,
                    remove.system.eq = TRUE, remove.eq = TRUE, 
                    remove.ineq = TRUE, remove.def = FALSE, 
                    remove.nonfree = FALSE, remove.step1 = TRUE,
-                   remove.unused = FALSE, add.attributes = FALSE, 
+                   remove.unused = FALSE,
+                   remove.aux = TRUE, add.attributes = FALSE, 
                    output = "data.frame", header = FALSE)
 }
 \arguments{
@@ -93,8 +95,12 @@ that are part of the first step.}
 \item{remove.unused}{Logical. If \code{TRUE}, filter the output by removing
 all rows containing automatically added parameters (user == 0) that are 
 nonfree, and with their final (est) values fixed to their default values 
-(typically 1 or 0); currently only used for intercepts and 
+(typically 1 or 0); currently only used for intercepts and
 scaling-factors.}
+\item{remove.aux}{Logical. If \code{TRUE} (the default), filter the output by
+removing all rows corresponding to auxiliary (\code{aux=}) variables that were
+added to the model as saturated correlates (only relevant when
+\code{missing = "ml"} and the \code{aux=} argument was used).}
 \item{rsquare}{Logical. If \code{TRUE}, add additional rows containing
 the rsquare values (in the \code{est} column) of all endogenous variables
 in the model. Both the \code{lhs} and \code{rhs} column contain the

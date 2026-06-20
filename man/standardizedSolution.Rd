@@ -7,7 +7,8 @@ Standardized solution of a latent variable model.}
 \usage{
 standardizedSolution(object, type = "std.all", se = TRUE, zstat = TRUE, 
                      pvalue = TRUE, ci = TRUE, level = 0.95, cov.std = TRUE, 
-                     remove.eq = TRUE, remove.ineq = TRUE, remove.def = FALSE, 
+                     remove.eq = TRUE, remove.ineq = TRUE, remove.def = FALSE,
+                     remove.aux = TRUE,
                      partable = NULL, GLIST = NULL, est = NULL,
                      output = "data.frame")
 }
@@ -45,6 +46,10 @@ containing equality constraints, if any.}
 rows containing inequality constraints, if any.}
 \item{remove.def}{Logical. If TRUE, filter the output by removing all
 rows containing parameter definitions, if any.}
+\item{remove.aux}{Logical. If TRUE (the default), filter the output by
+removing all rows corresponding to auxiliary (\code{aux=}) variables added to
+the model as saturated correlates (only relevant when \code{missing = "ml"}
+and the \code{aux=} argument was used).}
 \item{GLIST}{List of model matrices. If provided, they will be used
 instead of the GLIST inside the object@Model slot. Only works if the
 \code{est} argument is also provided. See Note.}

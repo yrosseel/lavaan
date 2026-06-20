@@ -23,6 +23,8 @@ lavaan <- function(
     data = NULL,
     # variable information
     ordered = NULL,
+    # auxiliary observed variables (not part of the model)
+    aux = NULL,
     # sampling weights
     sampling_weights = NULL,
     # summary data
@@ -199,6 +201,56 @@ lavaan <- function(
   )
   timing <- lav_add_timing(timing, "ov.names")
 
+  # ------------ auxiliary variables (FIML saturated correlates) ----------
+  # if aux= is supplied and the user requests full-information ML, add the
+  # auxiliary variables to the model as a block of 'saturated correlates'
+  # (Graham, 2003): they become ordinary (endogenous) observed variables that
+  # are freely correlated with each other and with every model variable, and
+  # have a free mean. The (enlarged) model is then estimated with casewise
+  # FIML, so the auxiliary variables affect the estimates and standard errors.
+  # The auxiliary parameters are hidden from the default output. The two-stage
+  # missing-data options use a different mechanism (see lav_data_aux_check()).
+  aux_satcor         <- FALSE
+  aux_fiml_attempted <- FALSE
+  aux_names          <- character(0L)
+  if (!is.null(aux)) {
+    user_missing <- tolower(
+      if (!is.null(dotdotdot$missing)) dotdotdot$missing else "")
+    user_estimator <- toupper(
+      if (!is.null(dotdotdot$estimator)) dotdotdot$estimator else "ML")
+    is_fiml <- user_missing %in% c("ml", "fiml", "direct", "direct.ml")
+    is_ml_estimator <- user_estimator %in%
+      c("", "DEFAULT", "ML", "MLR", "MLM", "MLMV", "MLMVS", "MLF")
+    if (is_fiml && is_ml_estimator) {
+      aux_fiml_attempted <- TRUE
+      aux_names <- lav_aux_clean_names(
+        aux = aux, data = data, ov_names = ov_names, ordered = ordered
+      )
+      if (length(aux_names) > 0L) {
+        aux_satcor <- TRUE
+        # add the saturated-correlates block to the (flat) model
+        flat_model <- lav_aux_satcor_flat(flat_model, aux_names, ov_names)
+        # add the auxiliary variables to the observed variable names, so they
+        # are read from the data and enter the FIML likelihood (endogenous)
+        if (is.list(ov_names)) {
+          ov_names   <- lapply(ov_names,   function(x) unique(c(x, aux_names)))
+          ov_names_y <- lapply(ov_names_y, function(x) unique(c(x, aux_names)))
+        } else {
+          ov_names   <- unique(c(ov_names,   aux_names))
+          ov_names_y <- unique(c(ov_names_y, aux_names))
+        }
+        # auxiliary means require a mean structure; auxiliary covariances with
+        # exogenous covariates require fixed.x = FALSE
+        dotdotdot$meanstructure <- TRUE
+        dotdotdot$fixed.x       <- FALSE
+        lav_msg_note(gettextf(
+          "auxiliary (aux) variable(s) added to the model as saturated
+           correlates (estimated with FIML and hidden from the output): %s",
+          paste(aux_names, collapse = " ")))
+      }
+    }
+  }
+
   # ------------ lavoptions --------------------
   lavoptions <- lav_step02_options(
     slot_options      = slot_options,
@@ -227,6 +279,27 @@ lavaan <- function(
   }
   timing <- lav_add_timing(timing, "Options")
 
+  # ------------ auxiliary variables --------------
+  # if the auxiliary variables were already added as saturated correlates
+  # (FIML, see above), they are part of the model now; otherwise, validate
+  # them for the EM-based (two-stage) channel (see lav_data_aux_check())
+  if (aux_satcor) {
+    ov_names_aux       <- character(0L)
+    lavoptions$aux     <- aux_names
+  } else if (aux_fiml_attempted) {
+    # FIML saturated-correlates path was attempted, but no usable auxiliary
+    # variables remained (already validated/warned above); nothing to do
+    ov_names_aux <- character(0L)
+  } else {
+    ov_names_aux <- lav_data_aux_check(
+      aux        = aux,
+      data       = data,
+      ov_names   = ov_names,
+      ordered    = ordered,
+      lavoptions = lavoptions
+    )
+  }
+
   # ------------ lavdata ------------------------
   temp <- lav_step03_data(
     slot_data         = slot_data,
@@ -238,6 +311,7 @@ lavaan <- function(
     cluster          = cluster,
     ov_names_x       = ov_names_x,
     ov_names_l       = ov_names_l,
+    ov_names_aux     = ov_names_aux,
     ordered          = ordered,
     sampling_weights = sampling_weights,
     sample_cov       = sample_cov,
@@ -585,6 +659,7 @@ cfa <- function(
   model = NULL,
   data = NULL,
   ordered = NULL,
+  aux = NULL,
   sampling_weights = NULL,
   sample_cov = NULL,
   sample_mean = NULL,
@@ -611,6 +686,7 @@ sem <- function(
     model = NULL,
     data = NULL,
     ordered = NULL,
+    aux = NULL,
     sampling_weights = NULL,
     sample_cov = NULL,
     sample_mean = NULL,
@@ -637,6 +713,7 @@ growth <- function(
     model = NULL,
     data = NULL,
     ordered = NULL,
+    aux = NULL,
     sampling_weights = NULL,
     sample_cov = NULL,
     sample_mean = NULL,

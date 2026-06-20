@@ -172,6 +172,7 @@ standardizedSolution <-                                      # nolint start
                                    remove.eq = TRUE,
                                    remove.ineq = TRUE,
                                    remove.def = FALSE,
+                                   remove.aux = TRUE,
                                    partable = NULL,
                                    GLIST = NULL,
                                    est = NULL,
@@ -358,6 +359,14 @@ standardizedSolution <-                                      # nolint start
         tmp_list <- tmp_list[-def_idx, ]
       }
     }
+    # remove auxiliary (saturated-correlates) rows? (FIML aux= variables)
+    if (remove.aux && length(object@Options$aux) > 0L) {
+      aux_idx <- which(tmp_list$lhs %in% object@Options$aux |
+        tmp_list$rhs %in% object@Options$aux)
+      if (length(aux_idx) > 0L) {
+        tmp_list <- tmp_list[-aux_idx, ]
+      }
+    }
 
     # remove attribute for data order
     attr(tmp_list, "ovda") <- NULL
@@ -404,6 +413,7 @@ lavParameterEstimates <- function(object,                      # nolint start
                                  remove.nonfree = FALSE,
                                  remove.step1 = TRUE,
                                  remove.unused = FALSE,
+                                 remove.aux = TRUE,
                                  # output
                                  add.attributes = FALSE,
                                  output = "data.frame",
@@ -1143,6 +1153,15 @@ lavParameterEstimates <- function(object,                      # nolint start
       }
       # remove step column
       tmp_list$step <- NULL
+    }
+
+    # remove auxiliary (saturated-correlates) rows? (FIML aux= variables)
+    if (remove.aux && length(object@Options$aux) > 0L) {
+      aux_idx <- which(tmp_list$lhs %in% object@Options$aux |
+        tmp_list$rhs %in% object@Options$aux)
+      if (length(aux_idx) > 0L) {
+        tmp_list <- tmp_list[-aux_idx, ]
+      }
     }
 
     # remove attribute for data order

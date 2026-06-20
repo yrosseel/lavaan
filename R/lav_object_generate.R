@@ -60,6 +60,17 @@ lav_object_independence <- lav_object_baseline <- function(object = NULL,
       lavdata = lavdata, lavpta = lavpta, lavoptions = lavoptions,
       lavsamplestats = lavsamplestats, lavh1 = lavh1, independent = TRUE
     )
+    # auxiliary variables (FIML saturated correlates): free the auxiliary
+    # covariances in the baseline, so the auxiliary variables stay saturated
+    # (the model observed variables remain uncorrelated); see lav_aux.R
+    if (length(lavoptions$aux) > 0L) {
+      lavpartable <- lav_aux_satcor_baseline(
+        indep_partable = lavpartable,
+        aux = lavoptions$aux,
+        ov_names = lavdata@ov.names,
+        ngroups = lavdata@ngroups
+      )
+    }
   }
 
   # new in 0.6-6: add lower bounds for ov.var

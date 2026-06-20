@@ -22,6 +22,7 @@ lav_lavdata <- function(data = NULL, # data.frame
                     ov_names = NULL, # variables in model
                     ov_names_x = character(0), # exo variables
                     ov_names_l = list(), # names per level
+                    ov_names_aux = character(0), # auxiliary variables
                     ordered = NULL, # ordered variables
                     sampling_weights = NULL, # sampling weights
                     sample_cov = NULL, # sample covariance(s)
@@ -152,6 +153,7 @@ lav_lavdata <- function(data = NULL, # data.frame
         lavoptions$sampling.weights.normalization,
       ov_names_x = ov_names_x,
       ov_names_l = ov_names_l,
+      ov_names_aux = ov_names_aux,
       std_ov = std_ov,
       missing = missing,
       allow_single_case = allow_single_case,
@@ -499,6 +501,68 @@ lav_lavdata <- function(data = NULL, # data.frame
 }
 
 
+# validate the aux= argument and return the names of the auxiliary variables
+# that can actually be used in the current configuration
+#
+# auxiliary variables are observed variables that are NOT part of the model;
+# they are never part of the model-implied summary statistics. For now, they
+# are only used to improve the EM-based h1 (saturated) moments when
+# missing = "ml" (continuous data). In any other configuration, they are
+# ignored (with a note).
+#
+# binary or ordered/categorical auxiliary variables are not supported and are
+# removed (with a warning).
+lav_data_aux_check <- function(aux        = NULL,
+                               data       = NULL,
+                               ov_names   = NULL,
+                               ordered    = NULL,
+                               lavoptions = NULL) {
+  # nothing to do?
+  if (is.null(aux)) {
+    return(character(0L))
+  }
+  if (!is.character(aux)) {
+    lav_msg_stop(gettext("aux= argument must be a character vector."))
+  }
+  aux <- unique(aux[nchar(aux) > 0L])
+  if (length(aux) == 0L) {
+    return(character(0L))
+  }
+
+  # we can only use auxiliary variables if we have raw data, the model is
+  # continuous, and missing is one of the EM-based options
+  missing <- tolower(lavoptions$missing)
+  aux_missing <- c("ml", "ml.x", "two.stage", "robust.two.stage")
+  if (is.null(data) || !(is.data.frame(data) || is.matrix(data)) ||
+      isTRUE(lavoptions$categorical) ||
+      !missing %in% aux_missing) {
+    lav_msg_note(gettext(
+      "auxiliary (aux) variables are currently only used (to improve the
+       EM-based h1/saturated summary statistics) when missing = \"ml\",
+       \"two.stage\" or \"robust.two.stage\" with continuous data;
+       they will be ignored here."))
+    return(character(0L))
+  }
+
+  # drop aux names that are not usable (not in data, model variables, or
+  # binary/ordered-categorical); shared with the FIML saturated-correlates path
+  aux <- lav_aux_clean_names(
+    aux = aux, data = data, ov_names = ov_names, ordered = ordered
+  )
+  if (length(aux) == 0L) {
+    return(character(0L))
+  }
+
+  # note: for the two-stage (and robust two-stage) standard errors, the
+  # auxiliary variables are accounted for via the augmented stage-1 ACOV
+  # (Savalei & Bentler, 2009; see lav_model_nvcov_two_stage()), except when
+  # fixed-x covariates are present, in which case the standard errors fall
+  # back to the model-only ACOV
+
+  aux
+}
+
+
 # handle full data
 lav_data_full <- function(data = NULL, # data.frame
                           group = NULL, # multiple groups?
@@ -513,6 +577,7 @@ lav_data_full <- function(data = NULL, # data.frame
                           sampling_weights_normalization = "none",
                           ov_names_x = character(0L), # exo variables
                           ov_names_l = list(), # var per level
+                          ov_names_aux = character(0L), # auxiliary variables
                           std_ov = FALSE, # standardize ov's?
                           missing = "listwise", # remove missings?
                           allow_single_case = FALSE, # allow single case?
@@ -861,6 +926,7 @@ lav_data_full <- function(data = NULL, # data.frame
   nobs <- vector("list", length = ngroups)
   x <- vector("list", length = ngroups)
   exo <- vector("list", length = ngroups)
+  aux <- vector("list", length = ngroups)
   lp <- vector("list", length = ngroups)
   weights <- vector("list", length = ngroups)
 
@@ -990,6 +1056,17 @@ lav_data_full <- function(data = NULL, # data.frame
       dimnames(exo[[g]]) <- NULL
     } else {
       exo[g] <- list(NULL)
+    }
+
+    # auxiliary variables (not part of the model); kept here only so that
+    # downstream code (eg the EM-based h1 moments) can use them; they never
+    # enter the model-implied summary statistics. Rows are aligned with
+    # case.idx[[g]], hence with x[[g]].
+    if (length(ov_names_aux) > 0L) {
+      aux[[g]] <- data.matrix(data[case_idx[[g]], ov_names_aux, drop = FALSE])
+      dimnames(aux[[g]]) <- NULL
+    } else {
+      aux[g] <- list(NULL)
     }
 
     # standardize observed variables? numeric only!
@@ -1278,6 +1355,11 @@ lav_data_full <- function(data = NULL, # data.frame
     ov.names = ov_names,
     ov.names.x = ov_names_x,
     ov.names.l = ov_names_l,
+    ov.names.aux = if (length(ov_names_aux) > 0L) {
+      rep(list(as.character(ov_names_aux)), ngroups)
+    } else {
+      vector("list", length = ngroups)
+    },
     # ov.types        = ov.types,
     # ov.idx          = ov.idx,
     ordered = as.character(ordered),
@@ -1288,6 +1370,7 @@ lav_data_full <- function(data = NULL, # data.frame
     missing = missing,
     X = x,
     eXo = exo,
+    aux = aux,
     Mp = mp,
     Rp = rp,
     Lp = lp

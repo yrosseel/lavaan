@@ -4,7 +4,7 @@
 \description{
 Fit a Confirmatory Factor Analysis (CFA) model.}
 \usage{
-cfa(model = NULL, data = NULL, ordered = NULL, sampling_weights = NULL,
+cfa(model = NULL, data = NULL, ordered = NULL, aux = NULL, sampling_weights = NULL,
     sample_cov = NULL, sample_mean = NULL, sample_th = NULL,
     sample_nobs = NULL, group = NULL, cluster = NULL,
     constraints = "", wls_v = NULL, nacov = NULL, ov_order = "model",
@@ -28,6 +28,13 @@ cfa(model = NULL, data = NULL, ordered = NULL, sampling_weights = NULL,
     observed endogenous variables are treated as ordered (ordinal).
     If FALSE, all observed endogenous variables are considered to be numeric
     (again, unless they are declared as ordered in the data.frame.)}
+\item{aux}{Character vector. Names of auxiliary observed variables, used to
+    make the missing-at-random (MAR) assumption more plausible under missing
+    data (continuous data only). With \code{missing = "ml"} they are added to
+    the model as saturated correlates (Graham, 2003), affecting the estimates
+    and standard errors but hidden from the default output; with
+    \code{missing = "two.stage"}/\code{"robust.two.stage"} they enter the
+    first-stage EM moments. See the \code{lavaan} function for more details.}
 \item{sampling_weights}{A variable name in the data frame containing
     sampling weight information. Currently only available for non-clustered 
     data. Depending on the \code{sampling.weights.normalization} option, these
