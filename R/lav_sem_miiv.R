@@ -35,17 +35,6 @@ lav_sem_miiv_internal <- function(lavmodel = NULL, lavh1 = NULL,
   # we assume the blocks are independent groups for now
   stopifnot(lavdata@nlevels == 1L)
 
-  # external instruments with categorical data are only supported for
-  # single-group models (the multiple-group standard errors would not fold in
-  # the instrument sampling variability); fail cleanly rather than report
-  # unreliable standard errors
-  if (lavmodel@categorical && lavmodel@nblocks > 1L &&
-      length(unlist(lavdata@ov.names.aux)) > 0L) {
-    lav_msg_stop(gettext(
-      "external instruments (the |~ operator with a variable not in the model)
-       with categorical data are only supported for single-group models."))
-  }
-
   # directed versus undirected (free) parameters
   undirected_idx <- which(lavpartable$free > 0L &
     !duplicated(lavpartable$free) & # if ceq.simple
@@ -55,6 +44,24 @@ lav_sem_miiv_internal <- function(lavmodel = NULL, lavh1 = NULL,
     lavpartable$op %in% c("=~", "~", "~1"))
   free_directed_idx <- unique(lavpartable$free[directed_idx])
   free_undirected_idx <- unique(lavpartable$free[undirected_idx])
+
+  # external instruments with categorical data: equality constraints among the
+  # directed coefficients (eg measurement invariance) are not supported, because
+  # the constraint-aware standard errors would require a numerical moment
+  # Jacobian, which is not available for categorical data (the analytic
+  # per-equation Jacobian cannot represent the pooling). Fail cleanly rather
+  # than report unreliable standard errors.
+  if (lavmodel@categorical && length(unlist(lavdata@ov.names.aux)) > 0L) {
+    dir_slope_free <- lavpartable$free[lavpartable$free > 0L &
+      lavpartable$op %in% c("=~", "~")]
+    if (anyDuplicated(dir_slope_free) > 0L ||
+        length(lavmodel@ceq.linear.idx) > 0L) {
+      lav_msg_stop(gettext(
+        "external instruments with categorical data do not support equality
+         constraints among the directed coefficients (eg measurement
+         invariance) yet."))
+    }
+  }
 
   # general linear equality constraints are handled stage-wise: among the
   # directed slopes (stage 1) and among the undirected parameters (stage 2).
@@ -1959,10 +1966,48 @@ lav_sem_miiv_vcov <- function(lavmodel = NULL, lavsamplestats = NULL,
     }
     gamma_big <- lav_mat_bdiag(gamma_g)
 
+    # external instruments with CATEGORICAL data (multiple groups): replace the
+    # per-block model gamma (NACOV) and the directed Jacobian with their
+    # augmented [thresholds, correlations] versions, so the instrument sampling
+    # variability is folded into all standard errors. The augmented directed
+    # Jacobian is assembled analytically from k_mat_full (the numerical route is
+    # not valid for categorical data).
+    ext_cat_mg <- lavmodel@categorical && length(free_directed_idx) > 0L &&
+      length(unlist(lavdata@ov.names.aux)) > 0L && eqs_have_kmat_full
+    md_aug <- NULL
+    moff_aug <- NULL
+    cat_keep_b <- NULL
+    if (ext_cat_mg) {
+      md_aug <- integer(nblocks)
+      cat_keep_b <- vector("list", nblocks)
+      gamma_aug_b <- vector("list", nblocks)
+      for (b in seq_len(nblocks)) {
+        augb <- lav_sem_miiv_aug_cat_moments(lavdata = lavdata, b = b,
+          model_cor = lavh1$implied$cov[[b]], model_th = lavsamplestats@th[[b]],
+          nobs = lavsamplestats@nobs[[b]])
+        gamma_aug_b[[b]] <- augb$nacov / lavsamplestats@nobs[[b]]
+        cat_keep_b[[b]] <- lav_sem_miiv_aug_cat_keep_idx(
+          lavmodel@nvar[[b]], ncol(augb$R), augb$th.idx)
+        md_aug[b] <- nrow(augb$nacov)
+      }
+      moff_aug <- cumsum(c(0L, md_aug))
+      gamma_big <- lav_mat_bdiag(gamma_aug_b)
+    }
+
     # numerical directed Jacobian over the stacked moments (jac_k differentiates
     # the per-group 2SLS solve, including the cross-group pooled constraints)
     jac_k <- NULL
-    if (length(free_directed_idx) > 0L) {
+    if (length(free_directed_idx) > 0L && ext_cat_mg) {
+      # categorical external instruments: analytic augmented Jacobian
+      ntot_aug <- sum(md_aug)
+      jac_k <- matrix(0, length(free_directed_idx), ntot_aug)
+      for (b in seq_len(nblocks)) {
+        jb <- lav_sem_miiv_jack_eqs_aug(eqs = eqs, block = b,
+          lavmodel = lavmodel, lavpartable = lavpartable,
+          free_directed_idx = free_directed_idx)
+        jac_k[, moff_aug[b] + seq_len(md_aug[b])] <- jb
+      }
+    } else if (length(free_directed_idx) > 0L) {
       vec <- unlist(vec_list)
       jac_k <- numDeriv::jacobian(lav_sem_miiv_2sls_samp, x = vec,
         samplestats = TRUE, eqs = eqs, lavmodel = lavmodel,
@@ -2125,6 +2170,36 @@ lav_sem_miiv_vcov <- function(lavmodel = NULL, lavsamplestats = NULL,
         tmp <- h2_aug %*% (diag(ntot_aug) - delta1_aug %*% jac_k_aug)
         vcov[free_undirected_idx, free_undirected_idx] <-
           tmp %*% gamma_big_aug %*% t(tmp)
+      } else if (ext_cat_mg) {
+        # categorical external instruments: build the stage-2 map and directed
+        # derivative over the per-block augmented [thresholds, correlations]
+        # layout; gamma_big and jac_k are already augmented (see above)
+        ntot_aug <- sum(md_aug)
+        delta1_aug <- matrix(0, ntot_aug, length(free_directed_idx))
+        h2_aug <- matrix(0, length(free_undirected_idx), ntot_aug)
+        for (b in seq_len(nblocks)) {
+          model_cols_b <- moff_aug[b] + cat_keep_b[[b]]
+          delta1_aug[model_cols_b, ] <-
+            delta_list[[b]][, free_directed_idx, drop = FALSE]
+          fu_b <- unique(lavpartable$free[lavpartable$op == "~~" &
+            lavpartable$free > 0L & lavpartable$block == b])
+          fu_b <- fu_b[fu_b %in% free_undirected_idx]
+          if (length(fu_b) == 0L) {
+            next
+          }
+          delta2_b <- delta_list[[b]][, fu_b, drop = FALSE]
+          s_mat <- diag(lavmodel@nvar[[b]])
+          tmp_b <- lav_utils_wls_linearization(delta = delta2_b, s = s_mat,
+            meanstructure = lavmodel@meanstructure, categorical = TRUE,
+            svec = vec_list[[b]], return_h = TRUE)
+          h2_b <- attr(tmp_b, "H")
+          nth_b <- md[b] - ncol(h2_b)
+          h2_b <- cbind(matrix(0, nrow(h2_b), nth_b), h2_b)
+          h2_aug[match(fu_b, free_undirected_idx), model_cols_b] <- h2_b
+        }
+        tmp <- h2_aug %*% (diag(ntot_aug) - delta1_aug %*% jac_k)
+        vcov[free_undirected_idx, free_undirected_idx] <-
+          tmp %*% gamma_big %*% t(tmp)
       } else {
         if (length(free_directed_idx) > 0L) {
           tmp <- h2_full %*% (diag(ntot_moment) - delta1_full %*% jac_k)
@@ -2140,13 +2215,24 @@ lav_sem_miiv_vcov <- function(lavmodel = NULL, lavsamplestats = NULL,
     # thresholds, so their covariance is the corresponding block of the moment
     # covariance, delta_th' gamma delta_th
     if (lavmodel@categorical && length(free_th_idx) > 0L) {
-      delta_full <- do.call("rbind", lav_sem_miiv_delta(lavmodel))
+      delta_list_th <- lav_sem_miiv_delta(lavmodel)
+      delta_full <- do.call("rbind", delta_list_th)
       delta_th <- delta_full[, free_th_idx, drop = FALSE]
       gamma_th <- gamma_big
+      if (ext_cat_mg) {
+        # map the per-block model threshold derivative into the augmented layout
+        delta_th <- matrix(0, sum(md_aug), length(free_th_idx))
+        for (b in seq_len(nblocks)) {
+          cols <- moff[b] + seq_len(md[b])
+          delta_th[moff_aug[b] + cat_keep_b[[b]], ] <-
+            delta_list_th[[b]][, free_th_idx, drop = FALSE]
+        }
+        gamma_th <- gamma_big
+      }
       zero_idx <- which(rowSums(abs(delta_th)) == 0)
       if (length(zero_idx) > 0L) {
         delta_th <- delta_th[-zero_idx, , drop = FALSE]
-        gamma_th <- gamma_big[-zero_idx, -zero_idx, drop = FALSE]
+        gamma_th <- gamma_th[-zero_idx, -zero_idx, drop = FALSE]
       }
       vcov[free_th_idx, free_th_idx] <-
         t(delta_th) %*% gamma_th %*% delta_th
