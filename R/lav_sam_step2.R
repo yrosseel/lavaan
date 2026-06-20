@@ -73,7 +73,7 @@ lav_sam_step2 <- function(step1 = NULL, fit = NULL,
   # construct PTS
   if (sam_method %in% c("local", "fsr", "cfsr")) {
     # extract structural part
-    pts <- lav_pt_subset_structural_model(pt_1,
+    pts <- lav_pt_subset_sm(pt_1,
       add_idx = TRUE,
       add_exo_cov = TRUE,
       fixed_x = lavoptions_pa$fixed.x,
@@ -110,7 +110,7 @@ lav_sam_step2 <- function(step1 = NULL, fit = NULL,
     # the measurement model parameters now become fixed ustart values
     pt_1$ustart[pt_1$free > 0] <- pt_1$est[pt_1$free > 0]
 
-    reg_idx <- lav_pt_subset_structural_model(
+    reg_idx <- lav_pt_subset_sm(
       pt_1 = pt_1,
       idx_only = TRUE
     )

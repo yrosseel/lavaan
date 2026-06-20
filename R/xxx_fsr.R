@@ -171,7 +171,7 @@ fsr <- function(model = NULL,
   pt_1$est <- pt_1$se <- NULL
 
   # extract structural part
-  pt_pa <- lav_pt_subset_structural_model(pt_1)
+  pt_pa <- lav_pt_subset_sm(pt_1)
 
   # check if we can use skrondal & laake (no mediational terms?)
   if (fsr_method == "skrondal.laake") {
@@ -245,7 +245,7 @@ fsr <- function(model = NULL,
   for (b in 1:nblocks) {
     # create parameter table for this measurement block only
     pt_block <-
-      lav_pt_subset_measurement_model(
+      lav_pt_subset_mm(
         pt_1 = pt_1,
         add_lv_cov = TRUE,
         lv_names = mm_list[[b]]

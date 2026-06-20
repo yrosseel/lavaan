@@ -148,7 +148,7 @@ lav_sam_step1 <- function(cmd = "sem", mm_list = NULL, mm_args = list(),
     }
 
     # create parameter table for this measurement block only
-    ptm <- lav_pt_subset_measurement_model(
+    ptm <- lav_pt_subset_mm(
       pt_1 = pt_1,
       add_lv_cov = add_lv_cov,
       add_idx = TRUE,

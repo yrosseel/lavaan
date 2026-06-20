@@ -17,12 +17,12 @@
 #   add them here? (no for now, unless add.ind.predictors = TRUE)
 # - new in 0.6-20: - check for 2nd, 3rd order lv.names...
 #                  - allow for conditional.x (global SAM)
-lav_pt_subset_measurement_model <- function(pt_1 = NULL,
-                                                  lv_names = NULL,
-                                                  add_lv_cov = TRUE,
-                                                  add_ind_predictors = FALSE,
-                                                  add_idx = FALSE,
-                                                  idx_only = FALSE) {
+lav_pt_subset_mm <- function(pt_1 = NULL,
+                             lv_names = NULL,
+                             add_lv_cov = TRUE,
+                             add_ind_predictors = FALSE,
+                             add_idx = FALSE,
+                             idx_only = FALSE) {
   # PT
   pt_1 <- as.data.frame(pt_1, stringsAsFactors = FALSE)
 
@@ -359,7 +359,7 @@ lav_pt_add_lv_cov <- function(pt_1, lv_names = NULL) {
 # - what to do if we have no regressions among the latent variables?
 #   -> we return all covariances among the latent variables
 #
-lav_pt_subset_structural_model <- function(pt_1 = NULL,
+lav_pt_subset_sm <- function(pt_1 = NULL,
                                                  add_idx = FALSE,
                                                  idx_only = FALSE,
                                                  add_exo_cov = FALSE,
