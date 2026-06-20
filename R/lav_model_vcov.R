@@ -63,6 +63,14 @@ lav_model_nvcov_bootstrap <- function(lavmodel = NULL,
     nc <- ncol(coef_1)
     test <- coef_1[, nc]
     coef_1 <- coef_1[, -nc, drop = FALSE]
+    # the last column is the (bollen.stine) test statistic, not a
+    # coefficient; remove it from BOOT.COEF too (it is stored separately
+    # in BOOT.TEST), but preserve the attributes (error.idx, nonadmissible,
+    # seed, ...) that subsetting would otherwise drop
+    keep_attr <- attributes(coef_orig)
+    keep_attr[c("dim", "dimnames")] <- NULL
+    coef_orig <- coef_orig[, -nc, drop = FALSE]
+    attributes(coef_orig) <- c(attributes(coef_orig), keep_attr)
   }
 
   # new in 0.6-20: check for outliers, ie big difference between sd() and mad()
