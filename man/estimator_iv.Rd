@@ -188,9 +188,12 @@ moments are supplied, nor for categorical data.
     fit <- sem(model, data = Data, estimator = "IV")}
 
 For external instruments the point estimates and the directed-coefficient
-(loading and regression) standard errors are the usual 2SLS quantities; the
-second-stage (residual variance and covariance) standard errors treat the
-instrument moments as fixed.
+(loading and regression) standard errors are the usual 2SLS quantities. The
+second-stage (residual variance and covariance) standard errors also account
+for the sampling variability of the instrument moments: the directed
+coefficients depend on the instrument-model covariances, and this uncertainty
+is propagated into the variance/covariance parameters through the full
+(augmented) moment Jacobian.
 }
 
 \subsection{Missing data}{

@@ -224,6 +224,128 @@ lav_sem_miiv_aug_moments <- function(lavdata = NULL, b = 1L, ov_names = NULL,
 }
 
 
+# external instruments: assemble the full (augmented-moment) directed Jacobian
+# jac_k for block 'b' from the per-equation k_mat_full matrices stored by
+# lav_sem_miiv_2sls_samp(). This mirrors lav_sem_miiv_utils_jack_eqs(), but the
+# columns span the AUGMENTED moments [model variables, instruments] (so the
+# directed coefficients' dependence on the instrument moments is retained).
+# Returns NULL when no augmented Jacobian is available for this block.
+lav_sem_miiv_jack_eqs_aug <- function(eqs = NULL, block = 1L, lavmodel = NULL,
+                                      lavpartable = NULL,
+                                      free_directed_idx = integer(0L)) {
+  b <- block
+  ntheta1 <- length(free_directed_idx)
+  # augmented moment dimension, taken from the first available k_mat_full
+  m_aug <- NULL
+  for (j in seq_along(eqs[[b]])) {
+    if (!is.null(eqs[[b]][[j]]$k_mat_full)) {
+      m_aug <- ncol(eqs[[b]][[j]]$k_mat_full)
+      break
+    }
+  }
+  if (is.null(m_aug)) {
+    return(NULL)
+  }
+  k_mat <- matrix(0.0, nrow = ntheta1, ncol = m_aug)
+  for (j in seq_along(eqs[[b]])) {
+    eq <- eqs[[b]][[j]]
+    if (is.null(eq$k_mat_full)) {
+      next
+    }
+    tmp <- lavpartable$free[eq$pt]
+    tmp <- tmp[tmp != 0]
+    free_idx <- match(tmp, free_directed_idx)
+    nx <- nrow(eq$k_mat_full)
+    if (length(free_idx) > 0L && nx > 0L) {
+      if (all(free_idx > 0L)) {
+        k_mat[free_idx, ] <- eq$k_mat_full
+      } else {
+        zero_idx <- which(free_idx == 0L)
+        free_idx <- free_idx[-zero_idx]
+        if (length(free_idx) > 0L) {
+          k_mat[free_idx, ] <- eq$k_mat_full[-zero_idx, , drop = FALSE]
+        }
+      }
+    }
+    if (lavmodel@meanstructure) {
+      tmp <- lavpartable$free[eq$ptint]
+      tmp <- tmp[tmp != 0]
+      free_int_idx <- match(tmp, free_directed_idx)
+      if (length(free_int_idx) > 0L && free_int_idx > 0L) {
+        k_mat[free_int_idx, ] <- eq$k_mat_int_full
+      }
+    }
+  }
+  k_mat
+}
+
+
+# external instruments: map a model-moment quantity into the augmented moment
+# layout [model variables, instruments]. Returns the column indices, within the
+# augmented (mean, vech(cov)) vector, that correspond to the model moments.
+lav_sem_miiv_aug_keep_idx <- function(p_model = 0L, p_aug = 0L,
+                                      meanstructure = FALSE) {
+  if (meanstructure) {
+    lav_aux_moment_idx(p_model, p_aug)
+  } else {
+    ri <- lav_mat_vech_row_idx(p_aug)
+    ci <- lav_mat_vech_col_idx(p_aug)
+    which(ri <= p_model & ci <= p_model)
+  }
+}
+
+
+# external instruments: build the augmented saturated moment vector at the
+# estimate, concatenated over blocks (each block: [mean, vech(cov)] of the
+# augmented [model variables, instruments] covariance). Returns the vector and
+# the per-block augmented variable count (p_aug), as consumed by the aug_vec
+# mode of lav_sem_miiv_2sls_samp().
+lav_sem_miiv_aug_vec0 <- function(lavdata = NULL, lavmodel = NULL,
+                                  lavh1 = NULL) {
+  ms <- lavmodel@meanstructure
+  nblocks <- lavmodel@nblocks
+  vec <- numeric(0L)
+  pdim <- integer(nblocks)
+  for (b in seq_len(nblocks)) {
+    augb <- lav_sem_miiv_aug_moments(lavdata = lavdata, b = b,
+      ov_names = lavdata@ov.names[[b]],
+      sample_cov = lavh1$implied$cov[[b]],
+      sample_mean = if (ms) lavh1$implied$mean[[b]] else NULL)
+    pdim[b] <- ncol(augb$cov)
+    seg <- if (ms) {
+      c(augb$mean, lav_matrix_vech(augb$cov))
+    } else {
+      lav_matrix_vech(augb$cov)
+    }
+    vec <- c(vec, seg)
+  }
+  list(vec = vec, pdim = pdim)
+}
+
+
+# external instruments: the full (augmented-moment) directed Jacobian computed
+# NUMERICALLY, by differentiating the (constraint-aware) 2SLS directed solve
+# with respect to the augmented moment vector. This is used when there are
+# equality constraints among the directed coefficients (which the per-equation
+# analytic Jacobian, lav_sem_miiv_jack_eqs_aug(), cannot represent because it
+# ignores the cross-equation pooling). Returns an n_directed x ntot_aug matrix,
+# with the columns in the same per-block [mean, vech(cov)] order used elsewhere.
+lav_sem_miiv_jac_full_numeric <- function(eqs = NULL, lavmodel = NULL,
+                                          lavpartable = NULL, lavdata = NULL,
+                                          lavsamplestats = NULL, lavh1 = NULL,
+                                          free_directed_idx = NULL) {
+  av <- lav_sem_miiv_aug_vec0(lavdata = lavdata, lavmodel = lavmodel,
+                              lavh1 = lavh1)
+  numDeriv::jacobian(func = function(v) {
+    lav_sem_miiv_2sls_samp(x = NULL, samplestats = TRUE, eqs = eqs,
+      lavmodel = lavmodel, lavpartable = lavpartable, lavdata = lavdata,
+      lavsamplestats = lavsamplestats, lavh1 = lavh1,
+      free_directed_idx = free_directed_idx,
+      aug_vec = v, aug_pdim = av$pdim)
+  }, x = av$vec)
+}
+
+
 # assess instrument strength for each IV equation via the first-stage
 # F-statistic (Staiger & Stock, 1997): for each endogenous regressor in an
 # equation, regress it on the equation's instruments and compute the F for the
@@ -825,7 +947,8 @@ lav_sem_miiv_2sls_samp <- function(x = NULL, samplestats = FALSE,
                                           iv_vcov_stage1 = "lm.vcov.dfres",
                                           iv_vcov_stage2 = "delta",
                                           iv_sargan = TRUE,
-                                          free_directed_idx = NULL) {
+                                          free_directed_idx = NULL,
+                                          aug_vec = NULL, aug_pdim = NULL) {
   # no conditional.x for now!
   stopifnot(!lavmodel@conditional.x)
   iv_vcov_stage1 <- tolower(iv_vcov_stage1)
@@ -840,7 +963,22 @@ lav_sem_miiv_2sls_samp <- function(x = NULL, samplestats = FALSE,
     eqs <- lav_model_find_iv(lavmodel = lavmodel, lavpartable = lavpartable)
   }
 
-  if (samplestats) {
+  # external instruments: 'aug_vec' mode. The directed coefficients are
+  # computed from an AUGMENTED moment vector [model variables, instruments]
+  # supplied directly (one segment per block, concatenated), instead of from
+  # the model moments plus the raw-data instrument blocks. This lets a
+  # numerical Jacobian differentiate the (constraint-aware) directed solve with
+  # respect to the instrument moments as well (see lav_sem_miiv_vcov()).
+  use_aug_vec <- !is.null(aug_vec)
+  if (use_aug_vec) {
+    aug_ms <- lavmodel@meanstructure
+    aug_md <- if (aug_ms) {
+      aug_pdim + aug_pdim * (aug_pdim + 1L) / 2L
+    } else {
+      aug_pdim * (aug_pdim + 1L) / 2L
+    }
+    aug_off <- cumsum(c(0L, aug_md))
+  } else if (samplestats) {
     implied <- lav_vec_to_implied(x, lavmodel = lavmodel)
   } else {
     implied <- lavh1$implied
@@ -859,36 +997,67 @@ lav_sem_miiv_2sls_samp <- function(x = NULL, samplestats = FALSE,
     # ov.names for this block
     ov_names <- lavpta$vnames$ov[[b]]
 
-    # sample statistics for this block
-    sample_cov <- implied$cov[[b]]
-    sample_mean <- implied$mean[[b]]
-
     # nobs for this 'block'
     nobs <- lavsamplestats@nobs[[b]]
 
-    # external instruments (estimator = "IV"): augment the saturated
-    # covariance/mean with the extra observed variables (lavData@aux) so the
-    # 2SLS estimator can use instruments that are not part of the model. The
-    # model-variable block is kept exactly equal to the saturated moments; the
-    # instrument blocks (and means) are taken from the raw data. Model
-    # variables come first and instruments last, so that the model-moment
-    # sub-block can be recovered for the (model-dimensioned) Jacobians (k_mat)
-    # below (see lav_aux_moment_idx()).
     p_model <- length(ov_names)
-    aug <- lav_sem_miiv_aug_moments(
-      lavdata = lavdata, b = b, ov_names = ov_names,
-      sample_cov = sample_cov, sample_mean = sample_mean
-    )
-    has_ext_iv <- !is.null(aug)
+    if (use_aug_vec) {
+      # reconstruct the augmented covariance/mean directly from aug_vec
+      seg <- aug_vec[(aug_off[b] + 1L):aug_off[b + 1L]]
+      p_aug <- aug_pdim[b]
+      aux_names_b <- if (length(lavdata@ov.names.aux) >= b) {
+        lavdata@ov.names.aux[[b]]
+      } else {
+        character(0L)
+      }
+      ov_names <- c(ov_names, aux_names_b)
+      has_ext_iv <- length(aux_names_b) > 0L
+      if (aug_ms) {
+        sample_mean <- seg[seq_len(p_aug)]
+        sample_cov <- lav_matrix_vech_reverse(seg[-seq_len(p_aug)])
+      } else {
+        sample_cov <- lav_matrix_vech_reverse(seg)
+        # no mean structure: the directed slopes do not depend on the means,
+        # but the engine still needs a (held-fixed) mean vector for centering
+        mm <- lavh1$implied$mean[[b]]
+        if (is.null(mm)) {
+          mm <- numeric(p_model)
+        }
+        instr_mean <- if (has_ext_iv && !is.null(lavdata@aux[[b]])) {
+          colMeans(lavdata@aux[[b]], na.rm = TRUE)
+        } else {
+          numeric(0L)
+        }
+        sample_mean <- c(mm, instr_mean)
+      }
+    } else {
+      # sample statistics for this block
+      sample_cov <- implied$cov[[b]]
+      sample_mean <- implied$mean[[b]]
+
+      # external instruments (estimator = "IV"): augment the saturated
+      # covariance/mean with the extra observed variables (lavData@aux) so the
+      # 2SLS estimator can use instruments that are not part of the model. The
+      # model-variable block is kept exactly equal to the saturated moments;
+      # the instrument blocks (and means) are taken from the raw data. Model
+      # variables come first and instruments last, so that the model-moment
+      # sub-block can be recovered for the (model-dimensioned) Jacobians (k_mat)
+      # below (see lav_aux_moment_idx()).
+      aug <- lav_sem_miiv_aug_moments(
+        lavdata = lavdata, b = b, ov_names = ov_names,
+        sample_cov = sample_cov, sample_mean = sample_mean
+      )
+      has_ext_iv <- !is.null(aug)
+      if (has_ext_iv) {
+        sample_cov <- aug$cov
+        sample_mean <- aug$mean
+        ov_names <- aug$ov.names
+      }
+    }
     if (has_ext_iv && lavmodel@categorical) {
       lav_msg_stop(gettext(
         "external instruments (the |~ operator with a variable that is not
          part of the model) are not supported for categorical data."))
-    }
-    if (has_ext_iv) {
-      sample_cov <- aug$cov
-      sample_mean <- aug$mean
-      ov_names <- aug$ov.names
     }
 
     # estimation per equation
@@ -1005,6 +1174,11 @@ lav_sem_miiv_2sls_samp <- function(x = NULL, samplestats = FALSE,
       # 2b. jac_eqs_k
       k_mat <- NULL
       k_mat_int <- NULL
+      # full (augmented-moment) directed Jacobians, kept only when external
+      # instruments are present (see the reduction below and the stage-2
+      # standard errors in lav_sem_miiv_vcov())
+      k_mat_full <- NULL
+      k_mat_int_full <- NULL
       if (iv_vcov_stage1 == "gamma" || iv_vcov_stage2 == "h2") {
         nvar <- nrow(sample_cov)
         pstar <- nvar * (nvar + 1) / 2
@@ -1078,14 +1252,16 @@ lav_sem_miiv_2sls_samp <- function(x = NULL, samplestats = FALSE,
           }
         }
 
-        # external instruments: reduce the Jacobians from the augmented moment
-        # space back to the model moments (model variables come first), so they
-        # are dimensioned over the model's (mean, vech(cov)) like the model
-        # Delta. The instrument moments are treated as fixed for the stage-2
-        # (variance/covariance) standard errors; the directed-coefficient
-        # standard errors come (exactly) from the per-equation 2SLS covariance
-        # (eq$vcov, which uses the augmented instrument blocks).
+        # external instruments: the Jacobians here are over the AUGMENTED
+        # moments [model variables, instruments]. Keep the full (augmented)
+        # versions for the stage-2 standard errors (so the instrument sampling
+        # variance is folded into the variance/covariance parameter standard
+        # errors, see lav_sem_miiv_vcov()), and also produce model-moment-only
+        # versions (the model variables come first) for the model-dimensioned
+        # consumers that do not augment (e.g. lav_sem_miiv_utils_jack_eqs()).
         if (has_ext_iv && !lavmodel@categorical) {
+          k_mat_full <- k_mat
+          k_mat_int_full <- k_mat_int
           if (lavmodel@meanstructure) {
             keep <- lav_aux_moment_idx(p_model, nvar)
             k_mat <- k_mat[, keep, drop = FALSE]
@@ -1199,6 +1375,8 @@ lav_sem_miiv_2sls_samp <- function(x = NULL, samplestats = FALSE,
       eqs[[b]][[j]]$sargan <- sargan
       eqs[[b]][[j]]$k_mat_int <- k_mat_int
       eqs[[b]][[j]]$k_mat <- k_mat
+      eqs[[b]][[j]]$k_mat_full <- k_mat_full
+      eqs[[b]][[j]]$k_mat_int_full <- k_mat_int_full
     } # eqs
   } # nblocks
 
@@ -1711,13 +1889,109 @@ lav_sem_miiv_vcov <- function(lavmodel = NULL, lavsamplestats = NULL,
         h2_cols <- moff[b] + nth_b + seq_len(ncol(h2_b))
         h2_full[match(fu_b, free_undirected_idx), h2_cols] <- h2_b
       }
-      if (length(free_directed_idx) > 0L) {
-        tmp <- h2_full %*% (diag(ntot_moment) - delta1_full %*% jac_k)
+      # external instruments (continuous data): fold the instrument sampling
+      # variance into the variance/covariance parameter standard errors, by
+      # rebuilding the stage-2 map over the per-block AUGMENTED moments
+      # [model variables, instruments] and sandwiching with the block-diagonal
+      # normal-theory gamma of the augmented covariances (see the single-group
+      # path for the rationale). The directed coefficients' dependence on the
+      # instrument moments enters through the full (augmented) directed
+      # Jacobian assembled analytically from k_mat_full.
+      ext_aux_mg <- !use_explicit_gamma && length(free_directed_idx) > 0L &&
+        length(unlist(lavdata@ov.names.aux)) > 0L &&
+        !is.null(lav_sem_miiv_jack_eqs_aug(eqs = eqs, block = 1L,
+          lavmodel = lavmodel, lavpartable = lavpartable,
+          free_directed_idx = free_directed_idx))
+      if (ext_aux_mg) {
+        ms <- lavmodel@meanstructure
+        md_aug <- integer(nblocks)
+        cov_aug_b <- vector("list", nblocks)
+        keep_b <- vector("list", nblocks)
+        gamma_aug_b <- vector("list", nblocks)
+        for (b in seq_len(nblocks)) {
+          x_idx_b <-
+            if (lavmodel@fixed.x) lavsamplestats@x.idx[[b]] else integer(0L)
+          augb <- lav_sem_miiv_aug_moments(lavdata = lavdata, b = b,
+            ov_names = lavdata@ov.names[[b]],
+            sample_cov = lavh1$implied$cov[[b]],
+            sample_mean = if (ms) lavh1$implied$mean[[b]] else NULL)
+          cov_aug_b[[b]] <- augb$cov
+          p_model_b <- lavmodel@nvar[[b]]
+          p_aug_b <- ncol(augb$cov)
+          keep_b[[b]] <- lav_sem_miiv_aug_keep_idx(p_model_b, p_aug_b, ms)
+          md_aug[b] <- if (ms) {
+            p_aug_b + p_aug_b * (p_aug_b + 1L) / 2L
+          } else {
+            p_aug_b * (p_aug_b + 1L) / 2L
+          }
+          gamma_aug_b[[b]] <- lav_mat_k_gammant_kt(m_k = diag(md_aug[b]),
+            s = cov_aug_b[[b]], meanstructure = ms, x_idx = x_idx_b) /
+            lavsamplestats@nobs[[b]]
+        }
+        moff_aug <- cumsum(c(0L, md_aug))
+        ntot_aug <- sum(md_aug)
+        gamma_big_aug <- lav_mat_bdiag(gamma_aug_b)
+        jac_k_aug <- matrix(0, length(free_directed_idx), ntot_aug)
+        delta1_aug <- matrix(0, ntot_aug, length(free_directed_idx))
+        h2_aug <- matrix(0, length(free_undirected_idx), ntot_aug)
+        for (b in seq_len(nblocks)) {
+          cols_b <- moff_aug[b] + seq_len(md_aug[b])
+          model_cols_b <- moff_aug[b] + keep_b[[b]]
+          if (!has_dir_con) {
+            jb <- lav_sem_miiv_jack_eqs_aug(eqs = eqs, block = b,
+              lavmodel = lavmodel, lavpartable = lavpartable,
+              free_directed_idx = free_directed_idx)
+            jac_k_aug[, cols_b] <- jb
+          }
+          delta1_aug[model_cols_b, ] <-
+            delta_list[[b]][, free_directed_idx, drop = FALSE]
+          fu_b <- unique(lavpartable$free[lavpartable$op == "~~" &
+            lavpartable$free > 0L & lavpartable$block == b])
+          fu_b <- fu_b[fu_b %in% free_undirected_idx]
+          if (length(fu_b) == 0L) {
+            next
+          }
+          delta2_b <- delta_list[[b]][, fu_b, drop = FALSE]
+          if (iv_varcov_method == "ULS") {
+            s_mat <- diag(lavmodel@nvar[[b]])
+          } else if (iv_varcov_method == "GLS") {
+            s_mat <- lavh1$implied$cov[[b]]
+          } else {
+            s_mat <- lavimplied$cov[[b]]
+            if (inherits(try(chol(s_mat), silent = TRUE), "try-error")) {
+              s_mat <- lavh1$implied$cov[[b]]
+            }
+          }
+          tmp_b <- lav_utils_wls_linearization(delta = delta2_b, s = s_mat,
+            meanstructure = ms, categorical = FALSE,
+            svec = vec_list[[b]], return_h = TRUE)
+          h2_b <- attr(tmp_b, "H")
+          nth_b <- md[b] - ncol(h2_b) # mean offset (continuous)
+          h2_b <- cbind(matrix(0, nrow(h2_b), nth_b), h2_b)
+          h2_aug[match(fu_b, free_undirected_idx), model_cols_b] <- h2_b
+        }
+        if (has_dir_con) {
+          # equality constraints among the directed coefficients: the
+          # per-equation analytic Jacobian cannot represent the cross-equation
+          # (and cross-group) pooling, so differentiate the constraint-aware
+          # directed solve numerically with respect to the augmented moments
+          jac_k_aug <- lav_sem_miiv_jac_full_numeric(
+            eqs = eqs, lavmodel = lavmodel, lavpartable = lavpartable,
+            lavdata = lavdata, lavsamplestats = lavsamplestats,
+            lavh1 = lavh1, free_directed_idx = free_directed_idx)
+        }
+        tmp <- h2_aug %*% (diag(ntot_aug) - delta1_aug %*% jac_k_aug)
+        vcov[free_undirected_idx, free_undirected_idx] <-
+          tmp %*% gamma_big_aug %*% t(tmp)
       } else {
-        tmp <- h2_full
+        if (length(free_directed_idx) > 0L) {
+          tmp <- h2_full %*% (diag(ntot_moment) - delta1_full %*% jac_k)
+        } else {
+          tmp <- h2_full
+        }
+        vcov[free_undirected_idx, free_undirected_idx] <-
+          tmp %*% gamma_big %*% t(tmp)
       }
-      vcov[free_undirected_idx, free_undirected_idx] <-
-        tmp %*% gamma_big %*% t(tmp)
     }
 
     # thresholds (categorical): the threshold parameters equal the sample
@@ -1855,8 +2129,29 @@ lav_sem_miiv_vcov <- function(lavmodel = NULL, lavsamplestats = NULL,
         # k_gammant_kt <- jac_k %*% gamma_big %*% t(jac_k)
         x_idx <-
           if (lavmodel@fixed.x) lavsamplestats@x.idx[[1]] else integer(0L)
-        k_gammant_kt <- lav_mat_k_gammant_kt(m_k = jac_k, s = cov_g,
-          meanstructure = lavmodel@meanstructure, x_idx = x_idx)
+        if (length(unlist(lavdata@ov.names.aux)) > 0L) {
+          # external instruments: the 2SLS slopes depend on the instrument
+          # moments (and not on the model moments), so the model-moment
+          # Jacobian would be ~0. Use the full (augmented) directed Jacobian
+          # and the augmented covariance instead.
+          jac_full <- lav_sem_miiv_jac_full_numeric(
+            eqs = eqs, lavmodel = lavmodel, lavpartable = lavpartable,
+            lavdata = lavdata, lavsamplestats = lavsamplestats,
+            lavh1 = lavh1, free_directed_idx = free_directed_idx)
+          cov_aug <- lav_sem_miiv_aug_moments(
+            lavdata = lavdata, b = 1L, ov_names = lavdata@ov.names[[1]],
+            sample_cov = lavh1$implied$cov[[1]],
+            sample_mean = if (lavmodel@meanstructure) {
+              lavh1$implied$mean[[1]]
+            } else {
+              NULL
+            })$cov
+          k_gammant_kt <- lav_mat_k_gammant_kt(m_k = jac_full, s = cov_aug,
+            meanstructure = lavmodel@meanstructure, x_idx = x_idx)
+        } else {
+          k_gammant_kt <- lav_mat_k_gammant_kt(m_k = jac_k, s = cov_g,
+            meanstructure = lavmodel@meanstructure, x_idx = x_idx)
+        }
         vcov[free_directed_idx, free_directed_idx] <-
           k_gammant_kt / lavsamplestats@ntotal
       }
@@ -2006,8 +2301,59 @@ lav_sem_miiv_vcov <- function(lavmodel = NULL, lavsamplestats = NULL,
       } else {
         x_idx <-
           if (lavmodel@fixed.x) lavsamplestats@x.idx[[1]] else integer(0L)
-        tmp_gammant_tmpt <- lav_mat_k_gammant_kt(m_k = tmp, s = cov_g,
-          meanstructure = lavmodel@meanstructure, x_idx = x_idx)
+        # external instruments: fold the instrument sampling variance into the
+        # variance/covariance parameter standard errors. The directed
+        # coefficients depend on the instrument moments, so we propagate the
+        # uncertainty through the FULL (augmented-moment) directed Jacobian and
+        # sandwich with the normal-theory gamma of the augmented covariance,
+        # rather than treating the instrument moments as fixed.
+        jac_full <- NULL
+        if (length(unlist(lavdata@ov.names.aux)) > 0L &&
+            length(free_directed_idx) > 0L) {
+          if (has_dir_con) {
+            # equality constraints among the directed coefficients: the
+            # per-equation analytic Jacobian ignores the cross-equation
+            # pooling, so differentiate the (constraint-aware) directed solve
+            # numerically with respect to the augmented moments
+            jac_full <- lav_sem_miiv_jac_full_numeric(
+              eqs = eqs, lavmodel = lavmodel, lavpartable = lavpartable,
+              lavdata = lavdata, lavsamplestats = lavsamplestats,
+              lavh1 = lavh1, free_directed_idx = free_directed_idx)
+          } else {
+            jac_full <- lav_sem_miiv_jack_eqs_aug(
+              eqs = eqs, block = 1L, lavmodel = lavmodel,
+              lavpartable = lavpartable, free_directed_idx = free_directed_idx)
+          }
+        }
+        if (!is.null(jac_full)) {
+          # the instrument moments have no model-implied counterpart, so for a
+          # coherent augmented covariance (needed by the normal-theory gamma)
+          # we use the saturated (H1) sample covariance for the whole matrix
+          aug <- lav_sem_miiv_aug_moments(
+            lavdata = lavdata, b = 1L, ov_names = lavdata@ov.names[[1]],
+            sample_cov = lavh1$implied$cov[[1]],
+            sample_mean = if (lavmodel@meanstructure) {
+              lavh1$implied$mean[[1]]
+            } else {
+              NULL
+            })
+          cov_aug <- aug$cov
+          p_model <- lavmodel@nvar[[1]]
+          p_aug <- ncol(cov_aug)
+          keep <- lav_sem_miiv_aug_keep_idx(p_model, p_aug,
+            lavmodel@meanstructure)
+          m_aug <- ncol(jac_full)
+          h2_aug <- matrix(0, nrow(h2), m_aug)
+          h2_aug[, keep] <- h2
+          d1_aug <- matrix(0, m_aug, ncol(delta1))
+          d1_aug[keep, ] <- delta1
+          tmp_aug <- h2_aug %*% (diag(m_aug) - d1_aug %*% jac_full)
+          tmp_gammant_tmpt <- lav_mat_k_gammant_kt(m_k = tmp_aug, s = cov_aug,
+            meanstructure = lavmodel@meanstructure, x_idx = x_idx)
+        } else {
+          tmp_gammant_tmpt <- lav_mat_k_gammant_kt(m_k = tmp, s = cov_g,
+            meanstructure = lavmodel@meanstructure, x_idx = x_idx)
+        }
         #tmp_gammant_tmpt_bis <- tmp %*% gamma_big %*% t(tmp)
         vcov[free_undirected_idx, free_undirected_idx] <-
           tmp_gammant_tmpt / lavsamplestats@ntotal
