@@ -75,7 +75,7 @@ lav_sem_miiv_internal <- function(lavmodel = NULL, lavh1 = NULL,
   if (length(iv_weak) > 0L && iv_weak != "none") {
     eqs <- lav_sem_miiv_weak(
       eqs = eqs, lavpta = lav_pt_attributes(lavpartable),
-      lavh1 = lavh1, lavsamplestats = lavsamplestats,
+      lavh1 = lavh1, lavsamplestats = lavsamplestats, lavdata = lavdata,
       threshold = lavoptions$estimator.args[["iv_weak_threshold"]],
       action = iv_weak
     )
@@ -192,6 +192,38 @@ lav_sem_miiv_mean_wls <- function(lavmodel, lavsamplestats, x, free_mean_idx) {
 }
 
 
+# external instruments (estimator = "IV"): build the saturated moments over
+# [model variables, external instruments] for block 'b' by augmenting the
+# model (saturated) covariance/mean with the extra observed variables
+# (lavData@aux). The model-variable block is kept exactly equal to the supplied
+# model moments; the instrument blocks (and means) come from the raw data.
+# Model variables come first, instruments last (so the model sub-block can be
+# recovered later). Returns NULL when there are no external instruments for
+# this block (so callers keep their model-only moments unchanged).
+lav_sem_miiv_aug_moments <- function(lavdata = NULL, b = 1L, ov_names = NULL,
+                                     sample_cov = NULL, sample_mean = NULL) {
+  aux_names_b <- if (length(lavdata@ov.names.aux) >= b) {
+    lavdata@ov.names.aux[[b]]
+  } else {
+    character(0L)
+  }
+  if (length(aux_names_b) == 0L || length(lavdata@X) < b ||
+    is.null(lavdata@X[[b]]) || is.null(lavdata@aux[[b]])) {
+    return(NULL)
+  }
+  p_model <- length(ov_names)
+  full_b <- cbind(lavdata@X[[b]], lavdata@aux[[b]])
+  aug_cov <- stats::cov(full_b, use = "pairwise.complete.obs")
+  aug_cov[seq_len(p_model), seq_len(p_model)] <- sample_cov
+  aug_mean <- NULL
+  if (!is.null(sample_mean)) {
+    aug_mean <- colMeans(full_b, na.rm = TRUE)
+    aug_mean[seq_len(p_model)] <- sample_mean
+  }
+  list(cov = aug_cov, mean = aug_mean, ov.names = c(ov_names, aux_names_b))
+}
+
+
 # assess instrument strength for each IV equation via the first-stage
 # F-statistic (Staiger & Stock, 1997): for each endogenous regressor in an
 # equation, regress it on the equation's instruments and compute the F for the
@@ -204,7 +236,8 @@ lav_sem_miiv_mean_wls <- function(lavmodel, lavsamplestats, x, free_mean_idx) {
 #  - "none":  do nothing (caller skips this function)
 # Returns the (possibly pruned) eqs list.
 lav_sem_miiv_weak <- function(eqs = NULL, lavpta = NULL, lavh1 = NULL,
-                              lavsamplestats = NULL, threshold = 10,
+                              lavsamplestats = NULL, lavdata = NULL,
+                              threshold = 10,
                               action = "warn") {
   # first-stage R^2 of regressor 'xi' on instruments 'zi' (indices)
   r2_fun <- function(s, xi, zi) {
@@ -233,6 +266,18 @@ lav_sem_miiv_weak <- function(eqs = NULL, lavpta = NULL, lavh1 = NULL,
     ov_names <- lavpta$vnames$ov[[b]]
     s <- lavh1$implied$cov[[b]]
     n <- lavsamplestats@nobs[[b]]
+    # external instruments: use the covariance augmented with the extra
+    # observed variables (lavData@aux), so instruments not in the model can be
+    # assessed for strength
+    if (!is.null(lavdata)) {
+      aug <- lav_sem_miiv_aug_moments(
+        lavdata = lavdata, b = b, ov_names = ov_names, sample_cov = s
+      )
+      if (!is.null(aug)) {
+        s <- aug$cov
+        ov_names <- aug$ov.names
+      }
+    }
     for (j in seq_along(eqs[[b]])) {
       eq <- eqs[[b]][[j]]
       iv_flag <- if (!is.null(eq$iv_type)) {
@@ -524,6 +569,20 @@ lav_sem_miiv_2sls <- function(eqs = NULL, lavmodel = NULL, lavpartable = NULL,
     # raw data for this block
     xy <- lavdata@X[[b]]
 
+    # external instruments (estimator = "IV"): append the extra observed
+    # variables (lavData@aux) as additional columns so that instruments which
+    # are not part of the model can be used by the per-equation 2SLS below. The
+    # model variables come first, the instruments last.
+    aux_names_b <- if (length(lavdata@ov.names.aux) >= b) {
+      lavdata@ov.names.aux[[b]]
+    } else {
+      character(0L)
+    }
+    if (length(aux_names_b) > 0L && !is.null(lavdata@aux[[b]])) {
+      xy <- cbind(xy, lavdata@aux[[b]])
+      ov_names <- c(ov_names, aux_names_b)
+    }
+
     # estimation per equation
     for (j in seq_along(eqs[[b]])) {
       # this equation
@@ -807,6 +866,31 @@ lav_sem_miiv_2sls_samp <- function(x = NULL, samplestats = FALSE,
     # nobs for this 'block'
     nobs <- lavsamplestats@nobs[[b]]
 
+    # external instruments (estimator = "IV"): augment the saturated
+    # covariance/mean with the extra observed variables (lavData@aux) so the
+    # 2SLS estimator can use instruments that are not part of the model. The
+    # model-variable block is kept exactly equal to the saturated moments; the
+    # instrument blocks (and means) are taken from the raw data. Model
+    # variables come first and instruments last, so that the model-moment
+    # sub-block can be recovered for the (model-dimensioned) Jacobians (k_mat)
+    # below (see lav_aux_moment_idx()).
+    p_model <- length(ov_names)
+    aug <- lav_sem_miiv_aug_moments(
+      lavdata = lavdata, b = b, ov_names = ov_names,
+      sample_cov = sample_cov, sample_mean = sample_mean
+    )
+    has_ext_iv <- !is.null(aug)
+    if (has_ext_iv && lavmodel@categorical) {
+      lav_msg_stop(gettext(
+        "external instruments (the |~ operator with a variable that is not
+         part of the model) are not supported for categorical data."))
+    }
+    if (has_ext_iv) {
+      sample_cov <- aug$cov
+      sample_mean <- aug$mean
+      ov_names <- aug$ov.names
+    }
+
     # estimation per equation
     for (j in seq_along(eqs[[b]])) {
       # this equation
@@ -991,6 +1075,26 @@ lav_sem_miiv_2sls_samp <- function(x = NULL, samplestats = FALSE,
           k_mat <- matrix(0.0, nrow = nx, ncol = pstar)
           if (nx > 0L) {
             k_mat <- j_slopes_s
+          }
+        }
+
+        # external instruments: reduce the Jacobians from the augmented moment
+        # space back to the model moments (model variables come first), so they
+        # are dimensioned over the model's (mean, vech(cov)) like the model
+        # Delta. The instrument moments are treated as fixed for the stage-2
+        # (variance/covariance) standard errors; the directed-coefficient
+        # standard errors come (exactly) from the per-equation 2SLS covariance
+        # (eq$vcov, which uses the augmented instrument blocks).
+        if (has_ext_iv && !lavmodel@categorical) {
+          if (lavmodel@meanstructure) {
+            keep <- lav_aux_moment_idx(p_model, nvar)
+            k_mat <- k_mat[, keep, drop = FALSE]
+            k_mat_int <- k_mat_int[keep]
+          } else {
+            ri <- lav_mat_vech_row_idx(nvar)
+            ci <- lav_mat_vech_col_idx(nvar)
+            vech_keep <- which(ri <= p_model & ci <= p_model)
+            k_mat <- k_mat[, vech_keep, drop = FALSE]
           }
         }
         k_mat
@@ -1541,7 +1645,8 @@ lav_sem_miiv_vcov <- function(lavmodel = NULL, lavsamplestats = NULL,
       jac_k <- numDeriv::jacobian(lav_sem_miiv_2sls_samp, x = vec,
         samplestats = TRUE, eqs = eqs, lavmodel = lavmodel,
         lavpartable = lavpartable, lavsamplestats = lavsamplestats,
-        lavh1 = lavh1, free_directed_idx = free_directed_idx)
+        lavh1 = lavh1, lavdata = lavdata,
+        free_directed_idx = free_directed_idx)
     }
 
     # directed covariance. Complete continuous data: restricted-2SLS
@@ -1714,7 +1819,8 @@ lav_sem_miiv_vcov <- function(lavmodel = NULL, lavsamplestats = NULL,
         x = vec, samplestats = TRUE, eqs = eqs,
         lavmodel = lavmodel, lavpartable = lavpartable,
         lavsamplestats = lavsamplestats,
-        lavh1 = lavh1, free_directed_idx = free_directed_idx
+        lavh1 = lavh1, lavdata = lavdata,
+        free_directed_idx = free_directed_idx
       )
     } else {
       # analytic version -- # FIXME: multiple blocks!!!

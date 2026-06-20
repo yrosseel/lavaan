@@ -165,6 +165,32 @@ instruments to use.
 This is useful when the automatically selected instruments are weak (see
 \code{iv_weak} above) or when subject-matter knowledge suggests a different
 set of instruments.
+
+\emph{External instruments.} The instruments listed on the right-hand side of
+\code{|~} need not be part of the model. If an instrument is an observed
+variable that does not otherwise appear in the model (it is not an indicator,
+a predictor, an outcome, or otherwise mentioned), it is treated as an
+\emph{external} instrument: it is read from the data so that its covariances
+with the model variables are available to the 2SLS estimator, but it never
+enters the model-implied summary statistics. The model degrees of freedom, the
+fit measures, and the model-implied moments are therefore exactly the same as
+if the instrument had not been mentioned; only the equations for which it is
+used are affected. External instruments require raw data (a \code{data=}
+argument) and continuous variables; they are not available when only sample
+moments are supplied, nor for categorical data.
+
+\preformatted{    ## z is not part of the model; it is used only as an
+    ## instrument for the (endogenous) regression y ~ x
+    model <- '
+        y ~ x
+        y |~ z
+    '
+    fit <- sem(model, data = Data, estimator = "IV")}
+
+For external instruments the point estimates and the directed-coefficient
+(loading and regression) standard errors are the usual 2SLS quantities; the
+second-stage (residual variance and covariance) standard errors treat the
+instrument moments as fixed.
 }
 
 \subsection{Missing data}{

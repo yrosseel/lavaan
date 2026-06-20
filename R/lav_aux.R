@@ -1,4 +1,18 @@
-# auxiliary (aux=) variable handling
+# auxiliary (aux=) variable handling and, more generally, the "extra observed
+# variable" channel: observed variables that are read from the data and enter
+# the sample statistics, but are NOT part of the user-specified model and never
+# show up in the model-implied summary statistics. This channel is carried by
+# the lavData@aux / lavData@ov.names.aux slots. It is currently used for:
+#
+#  - auxiliary variables (aux=), to make the missing-at-random assumption more
+#    plausible under missing data (see below); and
+#
+#  - external instruments for estimator = "IV": instruments supplied with the
+#    |~ operator that are not otherwise part of the model. They must be read
+#    from the data so that their covariances with the model variables are
+#    available to the 2SLS estimator, but they must not enter the model-implied
+#    moments / degrees of freedom (see lav_iv_external_names() below and the
+#    augmented-covariance handling in lav_sem_miiv.R).
 #
 # auxiliary variables are observed variables that are NOT part of the
 # user-specified model. They are used to make the missing-at-random (MAR)
@@ -235,6 +249,54 @@ lav_aux_moment_idx <- function(p_model = 0L, p_aug = 0L) {
   ci <- lav_mat_vech_col_idx(p_aug)
   vech_keep <- which(ri <= p_model & ci <= p_model)
   c(mean_idx, p_aug + vech_keep)
+}
+
+# detect 'external' instruments for estimator = "IV": instruments supplied via
+# the |~ operator (the rhs of a |~ row) that are NOT part of the model observed
+# variables. These are returned so that they can be routed through the
+# extra-observed-variable channel (ov_names_aux -> lavData@aux): read from the
+# data, but kept out of the model-implied summary statistics. Instruments that
+# are already model variables are handled by the ordinary IV machinery (they
+# are looked up in the model covariance matrix) and are not returned here.
+# 'flat_model' is the parsed-syntax object (with $op/$lhs/$rhs); 'ov_names' are
+# the model observed variable names (a vector or a per-group list); 'data' is
+# the raw data.frame/matrix (used only to check that the instruments exist).
+lav_iv_external_names <- function(flat_model = NULL,
+                                  ov_names   = NULL,
+                                  data       = NULL) {
+  if (is.null(flat_model$op) || !any(flat_model$op == "|~")) {
+    return(character(0L))
+  }
+  iv_idx <- which(flat_model$op == "|~" & nchar(flat_model$rhs) > 0L)
+  if (length(iv_idx) == 0L) {
+    return(character(0L))
+  }
+  iv_rhs <- unique(flat_model$rhs[iv_idx])
+
+  # drop instruments that are already model observed variables
+  model_ov <- unique(unlist(ov_names))
+  ext <- iv_rhs[!iv_rhs %in% model_ov]
+  if (length(ext) == 0L) {
+    return(character(0L))
+  }
+
+  # the remaining instruments must be found in the data
+  if (is.null(data) || !(is.data.frame(data) || is.matrix(data))) {
+    lav_msg_warn(gettextf(
+      "external instrument(s) require raw data and are ignored: %s",
+      paste(ext, collapse = " ")))
+    return(character(0L))
+  }
+  data_names <- if (is.data.frame(data)) names(data) else colnames(data)
+  bad_idx <- which(!ext %in% data_names)
+  if (length(bad_idx) > 0L) {
+    lav_msg_warn(gettextf(
+      "external instrument(s) not found in the data and ignored: %s",
+      paste(ext[bad_idx], collapse = " ")))
+    ext <- ext[-bad_idx]
+  }
+
+  ext
 }
 
 # given a (fitted) lavaan parameter table and the auxiliary variable names,

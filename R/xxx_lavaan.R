@@ -251,6 +251,27 @@ lavaan <- function(
     }
   }
 
+  # ------------ external instruments (estimator = "IV") ----------------
+  # instruments supplied with the |~ operator that are NOT otherwise part of
+  # the model are 'external' instruments. Like auxiliary variables, they must
+  # be read from the data (so that their covariances with the model variables
+  # are available to the 2SLS estimator), but they must NOT enter the
+  # model-implied summary statistics. They are routed through the generic
+  # extra-observed-variable channel (ov_names_aux -> lavData@aux); the IV
+  # estimator then augments the covariance matrix with these columns (see
+  # lav_sem_miiv.R).
+  ext_iv_names <- character(0L)
+  if (!aux_satcor) {
+    user_estimator2 <- toupper(
+      if (!is.null(dotdotdot$estimator)) {
+        as.character(dotdotdot$estimator)[1L]
+      } else "")
+    if (identical(user_estimator2, "IV")) {
+      ext_iv_names <- lav_iv_external_names(
+        flat_model = flat_model, ov_names = ov_names, data = data)
+    }
+  }
+
   # ------------ lavoptions --------------------
   lavoptions <- lav_step02_options(
     slot_options      = slot_options,
@@ -290,6 +311,10 @@ lavaan <- function(
     # FIML saturated-correlates path was attempted, but no usable auxiliary
     # variables remained (already validated/warned above); nothing to do
     ov_names_aux <- character(0L)
+  } else if (length(ext_iv_names) > 0L) {
+    # external instruments (estimator = "IV"): route through the extra-ov
+    # channel so they are read from the data, but keep them out of the model
+    ov_names_aux <- ext_iv_names
   } else {
     ov_names_aux <- lav_data_aux_check(
       aux        = aux,
