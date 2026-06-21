@@ -464,21 +464,26 @@ lav_predict_internal <- function(lavmodel = NULL,
         }
 
         if (fsm) {
+          # column names = manifest indicators. For models with composites the
+          # factor-score matrix also has columns for the composite indicators,
+          # so use the full set of observed indicators (ov = ov.ind + ov.cind)
+          # rather than ov.ind alone.
+          fsm_ov <- if (lavmodel@composites) {
+            lavpta$vnames$ov[[gg]]
+          } else {
+            lavpta$vnames$ov.ind[[gg]]
+          }
           if (is.null(fsm_1[[g]])) {
             # skip
           } else if (is.matrix(fsm_1[[g]])) {
-            dimnames(fsm_1[[g]]) <- list(
-              lavpta$vnames$lv[[gg]],
-              # ov.names[[g]]) # !not gg
-              lavpta$vnames$ov.ind[[gg]]
-            )
+            if (ncol(fsm_1[[g]]) == length(fsm_ov)) {
+              dimnames(fsm_1[[g]]) <- list(lavpta$vnames$lv[[gg]], fsm_ov)
+            }
           } else if (is.list(fsm_1[[g]])) {
             fsm_1[[g]] <- lapply(fsm_1[[g]], function(x) {
-              dimnames(x) <- list(
-                lavpta$vnames$lv[[gg]],
-                # ov.names[[g]]) # !not gg
-                lavpta$vnames$ov.ind[[gg]]
-              )
+              if (ncol(x) == length(fsm_ov)) {
+                dimnames(x) <- list(lavpta$vnames$lv[[gg]], fsm_ov)
+              }
               x
             })
           }
