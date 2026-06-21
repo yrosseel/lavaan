@@ -944,23 +944,19 @@ lav_samp_from_data <- function(lavdata = NULL,        # nolint start
         }
 
         if (correlation) {
+          # (partial) correlation ADF Gamma via the delta method (handles
+          # fixed.x); cor_idx lists the unit-variance variables (all, unless
+          # a subset was requested via correlation = c(...))
           cor_idx_g <- if (length(correlation_ov) > 0L) {
             which(ov_names[[g]] %in% correlation_ov)
           } else {
             seq_along(ov_names[[g]])
           }
-          if (length(cor_idx_g) < length(ov_names[[g]])) {
-            # partial correlation structure
-            nacov[[g]] <- lav_samp_partial_cor_gamma(
-              m_y = y, cor_idx = cor_idx_g,
-              meanstructure = meanstructure
-            )
-          } else {
-            nacov[[g]] <- lav_samp_cor_gamma(
-              m_y = y,
-              meanstructure = meanstructure
-            )
-          }
+          nacov[[g]] <- lav_samp_partial_cor_gamma(
+            m_y = y, cor_idx = cor_idx_g,
+            meanstructure = meanstructure,
+            fixed_x = fixed_x, x_idx = x_idx[[g]]
+          )
     } else {
           nacov[[g]] <-
             lav_samp_gamma(
@@ -1014,23 +1010,18 @@ lav_samp_from_data <- function(lavdata = NULL,        # nolint start
             cluster_idx <- NULL
           }
       if (correlation) {
+            # (partial) correlation ADF Gamma via the delta method (handles
+            # fixed.x)
             cor_idx_g <- if (length(correlation_ov) > 0L) {
               which(ov_names[[g]] %in% correlation_ov)
             } else {
               seq_along(ov_names[[g]])
             }
-            if (length(cor_idx_g) < length(ov_names[[g]])) {
-              # partial correlation structure
-              nacov[[g]] <- lav_samp_partial_cor_gamma(
-                m_y = y, cor_idx = cor_idx_g,
-                meanstructure = meanstructure
-              )
-            } else {
-              nacov[[g]] <- lav_samp_cor_gamma(
-                m_y = y,
-                meanstructure = meanstructure
-              )
-            }
+            nacov[[g]] <- lav_samp_partial_cor_gamma(
+              m_y = y, cor_idx = cor_idx_g,
+              meanstructure = meanstructure,
+              fixed_x = fixed_x, x_idx = x_idx[[g]]
+            )
       } else {
             if ("robust.sem.nt" %in% lavoptions$se ||
                 "browne.residual.nt" %in% lavoptions$test) {
@@ -1104,15 +1095,17 @@ lav_samp_from_data <- function(lavdata = NULL,        # nolint start
       if (estimator == "DLS" && dls_gamma_nt == "sample" && dls_a < 1.0) {
         # compute GammaNT here
         if (correlation) {
-          gamma_nt <- lav_samp_cor_gamma_nt(
-            m_cov          = cov[[g]],
-            m_mean         = mean[[g]],
-            rescale        = FALSE,
-            x_idx          = x_idx[[g]],     # not used yet
-            fixed_x        = fixed_x,        # not used yet
-            conditional_x  = conditional_x,  # not used yet
-            meanstructure  = meanstructure,  # not used yet
-            slopestructure = conditional_x   # not used yet
+          cor_idx_g <- if (length(correlation_ov) > 0L) {
+            which(ov_names[[g]] %in% correlation_ov)
+          } else {
+            seq_along(ov_names[[g]])
+          }
+          gamma_nt <- lav_samp_partial_cor_gamma_nt(
+            m_cov         = cov[[g]],
+            cor_idx       = cor_idx_g,
+            meanstructure = meanstructure,
+            fixed_x       = fixed_x,
+            x_idx         = x_idx[[g]]
           )
         } else {
           gamma_nt <- lav_samp_gamma_nt(
@@ -1133,42 +1126,23 @@ lav_samp_from_data <- function(lavdata = NULL,        # nolint start
           dls_a == 1.0)) {
         # Note: we need the 'original' COV/MEAN/ICOV
         #        sample statistics; not the 'residual' version
-        num_idx_g <- if (length(correlation_ov) > 0L) {
-          which(!(ov_names[[g]] %in% correlation_ov))
-        } else {
-          integer(0L)
-        }
-        if (correlation && length(num_idx_g) > 0L) {
-          # partial correlation structure: the (normal-theory) weight matrix
-          # is the NT Gamma restricted to the partial moment vector
-          # [ var(num_idx), off-diagonal covariances ] (and the means, if
-          # any). We subset the full-vech NT Gamma accordingly.
-          nvar_g <- ncol(cov[[g]])
-          cov_idx <- lav_mat_vech_idx(nvar_g)
-          covd_idx <- lav_mat_vech_idx(nvar_g, diagonal = FALSE)
-          var_pos <- which(is.na(match(cov_idx, covd_idx)))[num_idx_g]
-          offd_pos <- match(covd_idx, cov_idx)
-          keep <- c(var_pos, offd_pos)
-          if (meanstructure) {
-            keep <- c(seq_len(nvar_g), nvar_g + keep)
+        if (correlation) {
+          # (partial) correlation structure: normal-theory weight matrix is
+          # the NT Gamma of the (partial) correlation moments, obtained via
+          # the delta method (this also handles fixed.x). cor_idx lists the
+          # variables that are standardized to unit variance (all, unless a
+          # subset was requested via correlation = c(...)).
+          cor_idx_g <- if (length(correlation_ov) > 0L) {
+            which(ov_names[[g]] %in% correlation_ov)
+          } else {
+            seq_along(ov_names[[g]])
           }
-          gamma_full <- lav_samp_gamma_nt(
+          gamma_nt <- lav_samp_partial_cor_gamma_nt(
             m_cov         = cov[[g]],
-            m_mean        = mean[[g]],
-            meanstructure = meanstructure
-          )
-          wls_v[[g]] <- lav_mat_sym_inverse(
-            gamma_full[keep, keep, drop = FALSE])
-        } else if (correlation) {
-          gamma_nt <- lav_samp_cor_gamma_nt(
-            m_cov          = cov[[g]],
-            m_mean         = mean[[g]],
-            #rescale        = FALSE,
-            x_idx          = x_idx[[g]],     # not used yet
-            fixed_x        = fixed_x,        # not used yet
-            conditional_x  = conditional_x,  # not used yet
-            meanstructure  = meanstructure,  # not used yet
-            slopestructure = conditional_x   # not used yet
+            cor_idx       = cor_idx_g,
+            meanstructure = meanstructure,
+            fixed_x       = fixed_x,
+            x_idx         = x_idx[[g]]
           )
           wls_v[[g]] <- lav_mat_sym_inverse(gamma_nt)
         } else {
@@ -1875,15 +1849,17 @@ lav_samp_from_moments <- function(sample_cov = NULL,
         #        V11 <- V11 * nobs[[g]]/(nobs[[g]]-1)
         #    }
         if (correlation) {
-          gamma_nt <- lav_samp_cor_gamma_nt(
-            m_cov          = cov[[g]],
-            m_mean         = mean[[g]],
-            #rescale        = FALSE,
-            x_idx          = x_idx[[g]],     # not used yet
-            fixed_x        = fixed_x,        # not used yet
-            conditional_x  = conditional_x,  # not used yet
-            meanstructure  = meanstructure,  # not used yet
-            slopestructure = conditional_x   # not used yet
+          cor_idx_g <- if (length(correlation_ov) > 0L) {
+            which(ov_names[[g]] %in% correlation_ov)
+          } else {
+            seq_along(ov_names[[g]])
+          }
+          gamma_nt <- lav_samp_partial_cor_gamma_nt(
+            m_cov         = cov[[g]],
+            cor_idx       = cor_idx_g,
+            meanstructure = meanstructure,
+            fixed_x       = fixed_x,
+            x_idx         = x_idx[[g]]
           )
           wls_v[[g]] <- lav_mat_sym_inverse(gamma_nt)
         } else {

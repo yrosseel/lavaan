@@ -1331,11 +1331,6 @@ lav_options_set <- function(opt = NULL) {
         "correlation structures only work for representation = \"LISREL\"."
       ))
     }
-    if (opt$fixed.x) {
-      lav_msg_stop(gettext(
-        "correlation structures only work for fixed.x = FALSE (for now)."
-      ))
-    }
   }
 
   # sample.cov.robust

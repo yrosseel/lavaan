@@ -693,31 +693,22 @@ lav_samp_gamma <- function(m_y, # Y+X if cond!
 # ADF Gamma for correlations
 #
 # 30 May 2024: basic version: fixed_x=FALSE, conditional_x=FALSE, ...
-# ADF (sandwich) Gamma for a *partial* correlation structure: only the
-# variables in 'cor_idx' are standardized to unit variance, the others keep
-# their original metric. The partial moment vector is
-#   [ var(num_idx), off-diagonal (co)variances ]   (and the means, if any)
-# where num_idx = complement of cor_idx. Each partial moment is a smooth
-# function of the raw moments [mean, vech(S)], so the ADF Gamma follows from
-# the delta method: Gamma_partial = J %*% Gamma_full %*% t(J), with J the
-# Jacobian of the partial moments wrt the raw moments. (For cor_idx = all
-# variables this reduces to lav_samp_cor_gamma().)
-lav_samp_partial_cor_gamma <- function(m_y, cor_idx = NULL,
-                                       meanstructure = FALSE) {
-  m_y <- unname(as.matrix(m_y))
-  n <- nrow(m_y)
-  p <- ncol(m_y)
-  m_s <- cov(m_y) * (n - 1) / n
-
+# Jacobian of the (partial) correlation moment vector
+#   [ mean?, var(num_idx), off-diagonal (co)variances ]
+# with respect to the raw moments [ mean?, vech(S) ], evaluated at 'm_s'.
+# 'cor_idx' lists the variables that are standardized to unit variance;
+# num_idx (= complement) keep their original metric. This is the building
+# block of the delta-method correlation Gamma (both NT and ADF), and works
+# for full (cor_idx = all) as well as partial correlation structures.
+lav_partial_cor_jacobian <- function(m_s, cor_idx = NULL,
+                                      meanstructure = FALSE) {
+  p <- nrow(m_s)
   is_cor <- logical(p)
   is_cor[cor_idx] <- TRUE
   num_idx <- which(!is_cor)
   # scaling: sd for correlation variables, 1 for the others
   d <- rep(1.0, p)
   d[is_cor] <- sqrt(diag(m_s)[is_cor])
-
-  # raw ADF Gamma over [mean(p)?, vech(S)]
-  gamma_full <- lav_samp_gamma(m_y, meanstructure = meanstructure)
 
   # vech bookkeeping (full, with diagonal)
   vr <- lav_mat_vech_row_idx(p)
@@ -760,6 +751,43 @@ lav_samp_partial_cor_gamma <- function(m_y, cor_idx = NULL,
   } else {
     j_mat <- j_cov
   }
+
+  j_mat
+}
+
+# ADF (sandwich) Gamma for a (partial) correlation structure, via the delta
+# method: Gamma_cor = J %*% Gamma_full %*% t(J), where Gamma_full is the raw
+# ADF Gamma (lav_samp_gamma, which also handles fixed.x via x_idx) and J is
+# the Jacobian above. For cor_idx = all variables (and fixed.x = FALSE) this
+# reduces to lav_samp_cor_gamma().
+lav_samp_partial_cor_gamma <- function(m_y, cor_idx = NULL,
+                                       meanstructure = FALSE,
+                                       fixed_x = FALSE,
+                                       x_idx = integer(0L)) {
+  m_y <- unname(as.matrix(m_y))
+  n <- nrow(m_y)
+  m_s <- cov(m_y) * (n - 1) / n
+
+  j_mat <- lav_partial_cor_jacobian(m_s, cor_idx = cor_idx,
+                                    meanstructure = meanstructure)
+  gamma_full <- lav_samp_gamma(m_y, meanstructure = meanstructure,
+                               x_idx = x_idx, fixed_x = fixed_x)
+
+  j_mat %*% gamma_full %*% t(j_mat)
+}
+
+# Normal-theory Gamma for a (partial) correlation structure, via the delta
+# method: Gamma_cor = J %*% Gamma_full_NT %*% t(J), where Gamma_full_NT is the
+# raw NT Gamma (lav_samp_gamma_nt, which also handles fixed.x). For cor_idx =
+# all variables (and fixed.x = FALSE) this reduces to lav_samp_cor_gamma_nt().
+lav_samp_partial_cor_gamma_nt <- function(m_cov, cor_idx = NULL,
+                                          meanstructure = FALSE,
+                                          fixed_x = FALSE,
+                                          x_idx = integer(0L)) {
+  j_mat <- lav_partial_cor_jacobian(m_cov, cor_idx = cor_idx,
+                                    meanstructure = meanstructure)
+  gamma_full <- lav_samp_gamma_nt(m_cov = m_cov, meanstructure = meanstructure,
+                                  x_idx = x_idx, fixed_x = fixed_x)
 
   j_mat %*% gamma_full %*% t(j_mat)
 }

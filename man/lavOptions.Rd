@@ -90,9 +90,10 @@ Model features:
      values that ensure the model-implied variances are unity. This also
      affects the standard errors. The only available estimators are GLS and
      WLS, which produce correct standard errors and a correct test statistic
-     under normal and non-normal conditions respectively. For now, this
-     option always assumes \code{fixed.x = FALSE} and
-     \code{conditional.x = FALSE}.
+     under normal and non-normal conditions respectively. Both
+     \code{fixed.x = FALSE} and \code{fixed.x = TRUE} are supported (the
+     latter affects the way the standard errors are computed). For now, this
+     option always assumes \code{conditional.x = FALSE}.
      Alternatively, \code{correlation} may be a character vector of
      (observed) variable names (for example
      \code{correlation = c("x1", "x2", "x3")}). In that case only the
