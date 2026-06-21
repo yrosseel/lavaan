@@ -775,6 +775,25 @@ lav_predict_eta <- function(lavobject = NULL, # for convenience
 }
 
 
+# (pseudo-)inverse used in the factor-score machinery.
+# For a converged model the model-implied Sigma is positive definite, and
+# (lambda' Sigma.inv lambda) is invertible in all but a few "by construction"
+# singular settings (e.g. a single-indicator construct with a fixed zero
+# residual variance). In particular, for models with composites both matrices
+# are well-conditioned, so we use an exact (and fast) solve() here; we only fall
+# back to the Moore-Penrose pseudo-inverse for the genuinely singular cases that
+# originally motivated MASS::ginv(). This keeps the common path exact and avoids
+# relying on ginv() for composites.
+lav_predict_solve <- function(x) {
+  out <- try(solve(x), silent = TRUE)
+  if (inherits(out, "try-error")) {
+    out <- MASS::ginv(x)
+  }
+  # drop dimnames so the result behaves exactly like MASS::ginv() downstream
+  dimnames(out) <- NULL
+  out
+}
+
 # factor scores - normal case
 # NOTE: this is the classic 'regression' method; for the linear/continuous
 #       case, this is equivalent to both EB and EBM
@@ -824,7 +843,7 @@ lav_predict_eta_normal <- function(lavobject = NULL, # for convenience
   mm_lambda <- lav_model_lambda(lavmodel = lavmodel, remove_dummy_lv = FALSE,
                                 use_wmat = TRUE)
   sigma_hat <- lavimplied$cov
-  sigma_inv <- lapply(sigma_hat, MASS::ginv)
+  sigma_inv <- lapply(sigma_hat, lav_predict_solve)
   veta <- lav_model_veta(lavmodel = lavmodel)
   eeta <- lav_model_eeta(lavmodel = lavmodel, lavsamplestats = lavsamplestats)
   ey <- lav_model_ey(lavmodel = lavmodel, lavsamplestats = lavsamplestats)
@@ -1154,7 +1173,7 @@ lav_predict_eta_bartlett <- function(lavobject = NULL, # for convenience
   mm_lambda <- lav_model_lambda(lavmodel = lavmodel, remove_dummy_lv = FALSE,
                                 use_wmat = TRUE)
   sigma_hat <- lavimplied$cov
-  sigma_inv <- lapply(lavimplied$cov, MASS::ginv)
+  sigma_inv <- lapply(lavimplied$cov, lav_predict_solve)
   veta <- lav_model_veta(lavmodel = lavmodel) # for se only
   eeta <- lav_model_eeta(lavmodel = lavmodel, lavsamplestats = lavsamplestats)
   ey <- lav_model_ey(lavmodel = lavmodel, lavsamplestats = lavsamplestats)
@@ -1261,7 +1280,7 @@ lav_predict_eta_bartlett <- function(lavobject = NULL, # for convenience
     # estimates and the weighted mean (ey_g) used for centering above.
 
     # global factor score coefficient matrix 'C'
-    fsc <- (MASS::ginv(t(lambda_g) %*% sigma_inv_g %*% lambda_g)
+    fsc <- (lav_predict_solve(t(lambda_g) %*% sigma_inv_g %*% lambda_g)
     %*% t(lambda_g) %*% sigma_inv_g)
 
     # transform?
@@ -1326,7 +1345,7 @@ lav_predict_eta_bartlett <- function(lavobject = NULL, # for convenience
         }
 
         lambda <- lambda_g[var_idx, , drop = FALSE]
-        fsc <- (MASS::ginv(t(lambda) %*% sigma_22_inv %*% lambda)
+        fsc <- (lav_predict_solve(t(lambda) %*% sigma_22_inv %*% lambda)
         %*% t(lambda) %*% sigma_22_inv)
 
         # if FSC contains rows that are all-zero, replace by NA
@@ -1359,7 +1378,7 @@ lav_predict_eta_bartlett <- function(lavobject = NULL, # for convenience
 
         # SE?
         if (se == "standard") {
-          tmp <- (MASS::ginv(t(lambda) %*% sigma_22_inv %*% lambda)
+          tmp <- (lav_predict_solve(t(lambda) %*% sigma_22_inv %*% lambda)
           - veta_g)
           tmp_d <- diag(tmp)
           tmp_d[tmp_d < 1e-05] <- as.numeric(NA)
@@ -1424,8 +1443,8 @@ lav_predict_eta_bartlett <- function(lavobject = NULL, # for convenience
         # but we replace it by
         #     solve( t(lambda) %*% solve(sigma) %*% lambda ) - psi
         # to handle negative variances
-        # in addition, we use ginv
-        tmp <- (MASS::ginv(t(lambda_g) %*% sigma_inv_g %*% lambda_g)
+        # in addition, we use a pseudo-inverse fallback (lav_predict_solve)
+        tmp <- (lav_predict_solve(t(lambda_g) %*% sigma_inv_g %*% lambda_g)
         - veta_g)
         tmp_d <- diag(tmp)
         tmp_d[tmp_d < 1e-05] <- as.numeric(NA)
