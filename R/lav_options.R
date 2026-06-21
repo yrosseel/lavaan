@@ -271,6 +271,14 @@ lav_options_set <- function(opt = NULL) {
     opt$group.equal <- character(0)
   } else if (is.null(opt$group.equal) || all(nchar(opt$group.equal) == 0L)) {
     opt$group.equal <- character(0)
+  } else if ("all" %in% opt$group.equal) {
+    # "all": constrain all (free) parameters to be equal across groups
+    # (expand to the full set of parameter types; any other elements that
+    #  were given together with "all" become redundant)
+    opt$group.equal <- c("loadings", "composite.weights", "intercepts",
+                         "means", "thresholds", "regressions", "residuals",
+                         "residual.covariances", "lv.variances",
+                         "lv.covariances")
   }
 
   if (is.null(opt$group.partial) || all(nchar(opt$group.partial) == 0L)) {

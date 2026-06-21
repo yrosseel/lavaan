@@ -93,6 +93,16 @@ Model features:
      under normal and non-normal conditions respectively. For now, this
      option always assumes \code{fixed.x = FALSE} and
      \code{conditional.x = FALSE}.}
+    \item{\code{composites.cov}:}{Character string. Only used if the model
+     contains composites. Controls whether the composite-indicator
+     (co)variances (the elements of the \code{T} matrix) are fixed to their
+     sample values or estimated as free parameters. If \code{"fixed"}, the
+     \code{T} matrix is fixed to the sample (co)variances. If \code{"free"},
+     the \code{T} matrix is estimated as free parameters. If
+     \code{"default"}, the value is resolved to \code{"free"} for multilevel
+     models (which makes composites at every level identified) and
+     \code{"fixed"} otherwise. For a single-level model, freeing \code{T}
+     is fit-invariant (the degrees of freedom are unchanged).}
     \item{\code{auto.fix.first}:}{If \code{TRUE}, the factor loading of the
       first indicator is set to 1.0 for every latent variable.}
     \item{\code{bad.marker.crit}:}{Only used if
@@ -268,7 +278,10 @@ Multiple group options:
       \code{"thresholds"}, \code{"regressions"}, \code{"residuals"},
       \code{"residual.covariances"}, \code{"lv.variances"} or
       \code{"lv.covariances"}, specifying the pattern of equality
-      constraints across multiple groups.}
+      constraints across multiple groups. As a shortcut, the single
+      value \code{"all"} can be used to constrain all (free) parameters
+      to be equal across groups; it is equivalent to listing all of the
+      values above.}
     \item{\code{group.partial}:}{A vector of character strings containing 
       the labels of the parameters which should be free in all groups (thereby
       overriding the group.equal argument for some specific parameters).}

@@ -329,8 +329,8 @@ lav_options_default <- function() {
   # multiple groups !!! group.label and group.partial capitals OK !!!
   elm("group.label", NULL, oklen = c(0L, 100L)) # no checks
   elm("group.equal", "", chr =
-        c("", "none", "loadings", "intercepts", "means", "composite.loadings",
-          "composite.weights",
+        c("", "none", "all", "loadings", "intercepts", "means",
+          "composite.loadings", "composite.weights",
           "regressions", "residuals", "residual.covariances", "thresholds",
           "lv.variances", "lv.covariances"), oklen = c(0L, 100L))
   elm("group.partial", "", oklen = c(0L, 100L)) # no checks

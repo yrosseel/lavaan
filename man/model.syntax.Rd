@@ -14,7 +14,7 @@ lavaanify(model = NULL, meanstructure = FALSE, int_ov_free = FALSE,
     int_lv_free = FALSE, marker_int_zero = FALSE,
     orthogonal = FALSE, orthogonal_y = FALSE,
     orthogonal_x = FALSE, orthogonal_efa = FALSE, std_lv = FALSE,
-    correlation = FALSE, composites = TRUE,
+    correlation = FALSE, composites = TRUE, composites_cov_free = FALSE,
     effect_coding = "", conditional_x = FALSE,
     fixed_x = FALSE, parameterization = "delta", constraints = NULL,
     ceq_simple = FALSE, auto = FALSE, model_type = "sem",
@@ -30,7 +30,7 @@ lavParTable(model = NULL, meanstructure = FALSE, int_ov_free = FALSE,
     int_lv_free = FALSE, marker_int_zero = FALSE,
     orthogonal = FALSE, orthogonal_y = FALSE,
     orthogonal_x = FALSE, orthogonal_efa = FALSE, std_lv = FALSE,
-    correlation = FALSE, composites = TRUE,
+    correlation = FALSE, composites = TRUE, composites_cov_free = FALSE,
     effect_coding = "", conditional_x = FALSE,
     fixed_x = FALSE, parameterization = "delta", constraints = NULL,
     ceq_simple = FALSE, auto = FALSE, model_type = "sem",
@@ -86,6 +86,10 @@ the model for both observed and latent variables.}
     longer parameters of the model.}
 \item{composites}{Logical. If \code{TRUE}, use the new (0.6-20) approach
      to handle composites.}
+\item{composites_cov_free}{Logical. Only relevant if the model contains
+     composites. If \code{TRUE}, the composite-indicator (co)variances (the
+     elements of the \code{T} matrix) are estimated as free parameters. If
+     \code{FALSE} (the default), they are fixed to their sample values.}
 \item{effect_coding}{Can be logical or character string. If
      logical and \code{TRUE}, this implies
      \code{effect_coding = c("loadings", "intercepts")}. If logical and
