@@ -3528,8 +3528,23 @@ lav_lisrel_dimplied_dx <- function(mlist           = NULL,
 
   # correlation structure
   if (!categorical && correlation) {
-    rm_idx <- lav_mat_diagh_idx(nvar)
-    jac_sigma <- jac_sigma[-rm_idx, , drop = FALSE]
+    if (length(num_idx) > 0L) {
+      # partial correlation structure: keep the (free) variances of the
+      # non-correlation variables (num_idx), drop only the correlation
+      # variables' diagonal -- mirror the categorical layout (variances of
+      # num_idx first, then the off-diagonal covariances)
+      cov_idx <- lav_mat_vech_idx(nvar)
+      covd_idx <- lav_mat_vech_idx(nvar, diagonal = FALSE)
+      var_idx <- which(is.na(match(cov_idx, covd_idx)))[num_idx]
+      offd_idx <- match(covd_idx, cov_idx)
+      jac_sigma <- rbind(
+        jac_sigma[var_idx, , drop = FALSE],
+        jac_sigma[offd_idx, , drop = FALSE]
+      )
+    } else {
+      rm_idx <- lav_mat_diagh_idx(nvar)
+      jac_sigma <- jac_sigma[-rm_idx, , drop = FALSE]
+    }
   }
 
   jac_th   <- NULL

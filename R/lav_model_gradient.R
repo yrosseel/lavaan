@@ -128,7 +128,7 @@ lav_model_grad <- function(lavmodel = NULL,
         estimator = estimator,
         meanstructure = TRUE,
         conditional_x = conditional_x,
-    correlation = correlation
+    correlation = correlation, num_idx = num_idx
       )
       omega_mu <- attr(omega, "mu")
     } else {
@@ -138,7 +138,7 @@ lav_model_grad <- function(lavmodel = NULL,
         estimator = estimator,
         meanstructure = FALSE,
         conditional_x = conditional_x,
-    correlation = correlation
+    correlation = correlation, num_idx = num_idx
       )
       omega_mu <- vector("list", length = lavmodel@nblocks)
     }
@@ -239,7 +239,7 @@ lav_model_grad <- function(lavmodel = NULL,
         estimator = estimator,
         meanstructure = TRUE,
         conditional_x = conditional_x,
-        correlation = correlation
+        correlation = correlation, num_idx = num_idx
       )
       omega_mu <- attr(omega, "mu")
     } else {
@@ -249,7 +249,7 @@ lav_model_grad <- function(lavmodel = NULL,
         estimator = estimator,
         meanstructure = FALSE,
         conditional_x = conditional_x,
-        correlation = correlation
+        correlation = correlation, num_idx = num_idx
       )
       omega_mu <- vector("list", length = lavmodel@nblocks)
     }
@@ -1014,7 +1014,7 @@ lav_model_delta <- function(lavmodel = NULL, glist = NULL,
 lav_model_omega <- function(sigma_hat = NULL, mu_hat = NULL,
                          lavsamplestats = NULL, estimator = "ML",
                          meanstructure = FALSE, conditional_x = FALSE,
-             correlation = FALSE) {
+             correlation = FALSE, num_idx = NULL) {
   # nblocks
   nblocks <- length(sigma_hat)
 
@@ -1108,9 +1108,19 @@ lav_model_omega <- function(sigma_hat = NULL, mu_hat = NULL,
     }
 
     # new in 0.6-18
-  if (correlation) {
-      diag(omega[[g]]) <- 0
-  }
+    # the diagonal of omega is the gradient wrt the (fixed) unit variances;
+    # zero it out for the correlation variables only. For a 'partial'
+    # correlation structure, num_idx holds the non-correlation variables
+    # (which keep a free residual variance), so we zero the complement.
+    if (correlation) {
+      ni <- num_idx[[g]]
+      if (length(ni) > 0L) {
+        cor_idx <- seq_len(nrow(omega[[g]]))[-ni]
+      } else {
+        cor_idx <- seq_len(nrow(omega[[g]]))
+      }
+      diag(omega[[g]])[cor_idx] <- 0
+    }
   } # g
 
   if (meanstructure) attr(omega, "mu") <- omega_mu

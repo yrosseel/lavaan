@@ -68,6 +68,21 @@ lav_lavdata <- function(data = NULL, # data.frame
   if (is.null(std_ov)) {
     std_ov <- FALSE
   }
+  # partial correlation structure: only these (observed) variables are
+  # standardized to unit variance (empty -> all, the usual std.ov behavior)
+  correlation_ov <- lavoptions$.correlation.ov
+  if (is.null(correlation_ov)) {
+    correlation_ov <- character(0L)
+  }
+  if (length(correlation_ov) > 0L && !is.null(ov_names)) {
+    all_ov <- unique(unlist(ov_names))
+    bad <- correlation_ov[!(correlation_ov %in% all_ov)]
+    if (length(bad) > 0L) {
+      lav_msg_warn(gettextf(
+        "correlation= argument contains unknown observed variable(s): %s",
+        paste(bad, collapse = ", ")))
+    }
+  }
 
   # missing? (lav_object_cor() does not parse options before calling lavdata...)
   missing <- tolower(lavoptions$missing)
@@ -155,6 +170,7 @@ lav_lavdata <- function(data = NULL, # data.frame
       ov_names_l = ov_names_l,
       ov_names_aux = ov_names_aux,
       std_ov = std_ov,
+      correlation_ov = correlation_ov,
       missing = missing,
       allow_single_case = allow_single_case,
       allow_empty_cell = allow_empty_cell
@@ -579,6 +595,7 @@ lav_data_full <- function(data = NULL, # data.frame
                           ov_names_l = list(), # var per level
                           ov_names_aux = character(0L), # auxiliary variables
                           std_ov = FALSE, # standardize ov's?
+                          correlation_ov = character(0L), # std only these
                           missing = "listwise", # remove missings?
                           allow_single_case = FALSE, # allow single case?
                           allow_empty_cell = FALSE
@@ -1085,6 +1102,11 @@ lav_data_full <- function(data = NULL, # data.frame
     if (std_ov) {
       num_idx <- which(ov$name %in% ov_names[[g]] &
         ov$type == "numeric" & ov$exo == 0L)
+      # partial correlation structure: only standardize the requested
+      # variables, leave the others in their original metric
+      if (length(correlation_ov) > 0L && length(num_idx) > 0L) {
+        num_idx <- num_idx[ov$name[num_idx] %in% correlation_ov]
+      }
       if (length(num_idx) > 0L) {
         x[[g]][, num_idx] <-
           scale(x[[g]][, num_idx, drop = FALSE])[, , drop = FALSE]

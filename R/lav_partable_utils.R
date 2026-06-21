@@ -209,9 +209,13 @@ lav_pt_ndat <- function(partable) {
       }
     }
 
-    # correction for correlation not categorical
+    # correction for correlation not categorical: every variable that is
+    # standardized to unit variance (i.e. has a '~*~' scaling row) removes
+    # one sample statistic. For a 'partial' correlation structure this is a
+    # subset of the variables, so count the '~*~' rows rather than 'nvar'.
     if (correlation && !categorical) {
-      ndat[b] <- ndat[b] - nvar
+      n_cor <- sum(partable$op == "~*~" & partable$block == b)
+      ndat[b] <- ndat[b] - n_cor
     }
 
     # correction for conditional.x not categorical

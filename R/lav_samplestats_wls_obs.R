@@ -7,6 +7,7 @@ lav_samp_wls_obs <- function(mean_g, cov_g, var_g,
                                     conditional_x = FALSE,
                                     meanstructure = FALSE,
                                     correlation = FALSE,
+                                    num_idx = integer(0L),
                                     slopestructure = FALSE,
                                     group_w_free = FALSE) {
   # WLS.obs
@@ -83,13 +84,18 @@ lav_samp_wls_obs <- function(mean_g, cov_g, var_g,
         }
       }
     } else {
-      if (meanstructure) {
-        wls_obs <- c(
-          mean_g,
-          lav_mat_vech(cov_g, diagonal = diag_1)
-        )
+      if (correlation && length(num_idx) > 0L) {
+        # partial correlation structure: keep the variances of the
+        # non-correlation variables (num_idx), drop only the correlation
+        # variables' diagonal (mirrors the categorical layout above)
+        v_obs <- c(var_g[num_idx], lav_mat_vech(cov_g, diagonal = FALSE))
       } else {
-        wls_obs <- lav_mat_vech(cov_g, diagonal = diag_1)
+        v_obs <- lav_mat_vech(cov_g, diagonal = diag_1)
+      }
+      if (meanstructure) {
+        wls_obs <- c(mean_g, v_obs)
+      } else {
+        wls_obs <- v_obs
       }
     }
   }

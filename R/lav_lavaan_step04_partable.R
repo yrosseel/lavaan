@@ -90,7 +90,11 @@ lav_step04_pt <- function(slot_par_table = NULL,
         conditional_x = lavoptions$conditional.x,
         fixed_x = lavoptions$fixed.x,
         std_lv = lavoptions$std.lv,
-        correlation = lavoptions$correlation,
+        correlation = if (length(lavoptions$.correlation.ov) > 0L) {
+          lavoptions$.correlation.ov
+        } else {
+          lavoptions$correlation
+        },
         composites = lavoptions$composites,
         composites_cov_free = identical(lavoptions$composites.cov, "free"),
         effect_coding = lavoptions$effect.coding,

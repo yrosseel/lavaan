@@ -188,6 +188,20 @@ lav_options_set <- function(opt = NULL) {
     opt$rotation.args <- lav_snake_case(opt$rotation.args)
   }
 
+  # 'correlation' may be a character vector of (observed) variable names:
+  # in that case, only those variables are standardized to unit variance
+  # (a 'partial' correlation structure). We store the names in a hidden
+  # option (.correlation.ov) and treat 'correlation' as a logical TRUE, so
+  # the rest of the machinery (and all `if (correlation)` checks) work as
+  # before. An empty .correlation.ov means 'all observed variables'.
+  if (is.null(opt$.correlation.ov)) {
+    opt$.correlation.ov <- character(0L)
+  }
+  if (is.character(opt$correlation)) {
+    opt$.correlation.ov <- opt$correlation
+    opt$correlation <- TRUE
+  }
+
   # check options with definitions ####
   opt <- lav_options_check(opt, opt_check, "")
 

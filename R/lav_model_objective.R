@@ -26,8 +26,15 @@ lav_model_objective <- function(lavmodel = NULL,
   th_idx <- lavmodel@th.idx
   estimator_args <- lavmodel@estimator.args
 
+  # partial correlation structure (GLS): a subset of the observed variables
+  # is standardized to unit variance. The objective is then the canonical
+  # GLS quadratic form in the partial moment space (consistent with the
+  # analytic gradient), not the closed-form Bentler-Savalei expression.
+  partial_cor <- correlation && any(lengths(num_idx) > 0L)
+
   # do we need WLS.est?
-  if (estimator %in% c("ULS", "WLS", "DWLS", "NTRLS", "DLS")) {
+  if (estimator %in% c("ULS", "WLS", "DWLS", "NTRLS", "DLS") ||
+      (estimator == "GLS" && partial_cor)) {
     lavimplied <- lav_model_implied(lavmodel, glist = glist)
     # check for COV with negative diagonal elements?
     for (g in 1:lavsamplestats@ngroups) {
@@ -210,15 +217,25 @@ lav_model_objective <- function(lavmodel = NULL,
 
       ### GLS #### (0.6-10: not using WLS function any longer)
     } else if (estimator == "GLS") {
-      group_fx <- lav_model_objective_gls(
-        sigma_hat        = sigma_hat[[g]],
-        mu_hat           = mu_hat[[g]],
-        data_cov         = lavsamplestats@cov[[g]],
-        data_cov_inv     = lavsamplestats@icov[[g]],
-        data_mean        = lavsamplestats@mean[[g]],
-        meanstructure    = meanstructure,
-    correlation      = correlation
-      )
+      if (partial_cor) {
+        # canonical GLS quadratic form in the partial moment space
+        group_fx <- lav_model_objective_wls(
+          wls_est = wls_est[[g]],
+          wls_obs = lavsamplestats@WLS.obs[[g]],
+          wls_v = lavsamplestats@WLS.V[[g]]
+        )
+        attr(group_fx, "WLS.est") <- wls_est[[g]]
+      } else {
+        group_fx <- lav_model_objective_gls(
+          sigma_hat        = sigma_hat[[g]],
+          mu_hat           = mu_hat[[g]],
+          data_cov         = lavsamplestats@cov[[g]],
+          data_cov_inv     = lavsamplestats@icov[[g]],
+          data_mean        = lavsamplestats@mean[[g]],
+          meanstructure    = meanstructure,
+          correlation      = correlation
+        )
+      }
     } else if (estimator == "WLS" ||
       estimator == "DLS" ||
       estimator == "NTRLS") {

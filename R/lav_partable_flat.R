@@ -311,11 +311,17 @@ lav_pt_flat <- function(flat = NULL,
     op <- c(op, rep("~*~", length(ov_names_ord)))
   }
 
-  # same for correlation structures, but now for ALL variables
-  if (!categorical && correlation) {
-    lhs <- c(lhs, ov_names)
-    rhs <- c(rhs, ov_names)
-    op <- c(op, rep("~*~", length(ov_names)))
+  # same for correlation structures, but now for ALL variables (or a
+  # subset, if 'correlation' is a character vector of variable names)
+  if (!categorical && (isTRUE(correlation) || is.character(correlation))) {
+    cor_ov <- if (is.character(correlation)) {
+      ov_names[ov_names %in% correlation]
+    } else {
+      ov_names
+    }
+    lhs <- c(lhs, cor_ov)
+    rhs <- c(rhs, cor_ov)
+    op <- c(op, rep("~*~", length(cor_ov)))
   }
 
   # 3. INTERCEPTS
@@ -764,8 +770,15 @@ lav_pt_flat <- function(flat = NULL,
   }
 
   # correlation structure (new in 0.6-13)
-  if (correlation) {
-    var_idx <- which(lhs %in% ov_names &
+  # 'correlation' may be TRUE (all ov) or a character vector (a subset);
+  # only the selected variables get a fixed unit variance + scaling factor
+  if (isTRUE(correlation) || is.character(correlation)) {
+    cor_ov <- if (is.character(correlation)) {
+      ov_names[ov_names %in% correlation]
+    } else {
+      ov_names
+    }
+    var_idx <- which(lhs %in% cor_ov &
       op == "~~" &
       user == 0L &
       lhs == rhs)

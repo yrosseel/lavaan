@@ -92,7 +92,14 @@ Model features:
      WLS, which produce correct standard errors and a correct test statistic
      under normal and non-normal conditions respectively. For now, this
      option always assumes \code{fixed.x = FALSE} and
-     \code{conditional.x = FALSE}.}
+     \code{conditional.x = FALSE}.
+     Alternatively, \code{correlation} may be a character vector of
+     (observed) variable names (for example
+     \code{correlation = c("x1", "x2", "x3")}). In that case only the
+     listed variables are standardized to unit variance (their residual
+     variances are fixed accordingly), while all remaining observed
+     variables keep their original metric (a 'partial' correlation
+     structure).}
     \item{\code{composites.cov}:}{Character string. Only used if the model
      contains composites. Controls whether the composite-indicator
      (co)variances (the elements of the \code{T} matrix) are fixed to their

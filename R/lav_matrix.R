@@ -497,6 +497,18 @@ lav_mat_dup_pre_post <- function(a = matrix(0, 0, 0)) {
   out
 }
 
+# 'partial' correlation transform of a covariance matrix: scale only the
+# variables in 'cor_idx' to unit variance, leaving the others in their
+# original metric. If 'cor_idx' covers all variables, this is cov2cor().
+lav_cov2cor_partial <- function(s = matrix(0, 0, 0), cor_idx = NULL) {
+  if (is.null(cor_idx) || length(cor_idx) == 0L) {
+    return(stats::cov2cor(s))
+  }
+  scale <- rep(1.0, nrow(s))
+  scale[cor_idx] <- sqrt(diag(s)[cor_idx])
+  s / tcrossprod(scale)
+}
+
 # compute t(D) %*% A %*% D (without explicitly computing D)
 # A must be a square matrix and sqrt(ncol) an integer
 # correlation version: ignoring diagonal elements

@@ -25,6 +25,13 @@ lav_model <- function(lavpartable = NULL,
   if (is.null(correlation)) {
     correlation <- FALSE
   }
+  # partial correlation structure: only these observed variables have unit
+  # variance; the others keep a free residual variance and are treated like
+  # 'numeric' variables (i.e. added to num.idx below). Empty -> all ov.
+  correlation_ov <- lavoptions$.correlation.ov
+  if (is.null(correlation_ov)) {
+    correlation_ov <- character(0L)
+  }
   composites_option <- lavoptions$composites
   if (is.null(composites_option)) {
     composites_option <- TRUE
@@ -180,14 +187,24 @@ lav_model <- function(lavpartable = NULL,
       }
       nvar[g] <- length(ov_names_nox)
       if (correlation) {
-        num_idx[[g]] <- integer(0L)
+        if (length(correlation_ov) > 0L) {
+          # partial: non-correlation variables keep a free residual variance
+          num_idx[[g]] <- which(!(ov_names_nox %in% correlation_ov))
+        } else {
+          num_idx[[g]] <- integer(0L)
+        }
       } else {
         num_idx[[g]] <- which(ov_names_nox %in% ov_num)
       }
     } else {
       nvar[g] <- length(ov_names)
       if (correlation) {
-        num_idx[[g]] <- integer(0L)
+        if (length(correlation_ov) > 0L) {
+          # partial: non-correlation variables keep a free residual variance
+          num_idx[[g]] <- which(!(ov_names %in% correlation_ov))
+        } else {
+          num_idx[[g]] <- integer(0L)
+        }
       } else {
         num_idx[[g]] <- which(ov_names %in% ov_num)
       }

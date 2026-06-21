@@ -71,17 +71,21 @@ lav_model_wls_est <- function(lavmodel = NULL, glist = NULL,
           )
         }
       } else {
-        if (meanstructure) {
-          wls_est <- c(
-            lavimplied$mean[[g]],
-            lav_mat_vech(lavimplied$cov[[g]],
-              diagonal = diag_1
-            )
+        if (correlation && length(num_idx[[g]]) > 0L) {
+          # partial correlation structure: keep the variances of the
+          # non-correlation variables (num.idx), drop only the correlation
+          # variables' diagonal (mirrors the categorical layout above)
+          v_est <- c(
+            diag(lavimplied$cov[[g]])[num_idx[[g]]],
+            lav_mat_vech(lavimplied$cov[[g]], diagonal = FALSE)
           )
         } else {
-          wls_est <- lav_mat_vech(lavimplied$cov[[g]],
-            diagonal = diag_1
-          )
+          v_est <- lav_mat_vech(lavimplied$cov[[g]], diagonal = diag_1)
+        }
+        if (meanstructure) {
+          wls_est <- c(lavimplied$mean[[g]], v_est)
+        } else {
+          wls_est <- v_est
         }
       } # conditional.x = FALSE
     } # categorical = FALSE

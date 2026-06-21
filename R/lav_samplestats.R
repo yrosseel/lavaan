@@ -62,6 +62,12 @@ lav_samp_from_data <- function(lavdata = NULL,        # nolint start
   # mimic <- lavoptions$mimic
   meanstructure <- lavoptions$meanstructure
   correlation <- lavoptions$correlation
+  # partial correlation structure: only these observed variables are scaled
+  # to unit variance (empty -> all of them, the usual correlation structure)
+  correlation_ov <- lavoptions$.correlation.ov
+  if (is.null(correlation_ov)) {
+    correlation_ov <- character(0L)
+  }
   conditional_x <- lavoptions$conditional.x
   fixed_x <- lavoptions$fixed.x
   group_w_free <- lavoptions$group.w.free
@@ -797,11 +803,18 @@ lav_samp_from_data <- function(lavdata = NULL,        # nolint start
 
       # correlation structure?
       if (correlation) {
-        cov[[g]] <- cov2cor(cov[[g]])
-        var[[g]] <- rep(1, length(var[[g]]))
+        # which variables are scaled to unit variance? (all, or a subset
+        # for a 'partial' correlation structure)
+        if (length(correlation_ov) > 0L) {
+          cor_idx <- which(ov_names[[g]] %in% correlation_ov)
+        } else {
+          cor_idx <- seq_len(ncol(cov[[g]]))
+        }
+        cov[[g]] <- lav_cov2cor_partial(cov[[g]], cor_idx)
+        var[[g]] <- diag(cov[[g]])
         if (conditional_x) {
-          res_cov[[g]] <- cov2cor(res_cov[[g]])
-          res_var[[g]] <- rep(1, length(res_var[[g]]))
+          res_cov[[g]] <- lav_cov2cor_partial(res_cov[[g]], cor_idx)
+          res_var[[g]] <- diag(res_cov[[g]])
           cov_x[[g]] <- cov2cor(cov_x[[g]])
           # FIXME: slopes? more?
         }
@@ -851,6 +864,11 @@ lav_samp_from_data <- function(lavdata = NULL,        # nolint start
         group_w_g = log(nobs[[g]]),
         categorical = tmp_categorical, conditional_x = conditional_x,
         meanstructure = tmp_meanstructure, correlation = correlation,
+        num_idx = if (correlation && length(correlation_ov) > 0L) {
+          which(!(ov_names[[g]] %in% correlation_ov))
+        } else {
+          integer(0L)
+        },
         slopestructure = conditional_x,
         group_w_free = group_w_free
       )
@@ -1089,7 +1107,33 @@ lav_samp_from_data <- function(lavdata = NULL,        # nolint start
           dls_a == 1.0)) {
         # Note: we need the 'original' COV/MEAN/ICOV
         #        sample statistics; not the 'residual' version
-        if (correlation) {
+        num_idx_g <- if (length(correlation_ov) > 0L) {
+          which(!(ov_names[[g]] %in% correlation_ov))
+        } else {
+          integer(0L)
+        }
+        if (correlation && length(num_idx_g) > 0L) {
+          # partial correlation structure: the (normal-theory) weight matrix
+          # is the NT Gamma restricted to the partial moment vector
+          # [ var(num_idx), off-diagonal covariances ] (and the means, if
+          # any). We subset the full-vech NT Gamma accordingly.
+          nvar_g <- ncol(cov[[g]])
+          cov_idx <- lav_mat_vech_idx(nvar_g)
+          covd_idx <- lav_mat_vech_idx(nvar_g, diagonal = FALSE)
+          var_pos <- which(is.na(match(cov_idx, covd_idx)))[num_idx_g]
+          offd_pos <- match(covd_idx, cov_idx)
+          keep <- c(var_pos, offd_pos)
+          if (meanstructure) {
+            keep <- c(seq_len(nvar_g), nvar_g + keep)
+          }
+          gamma_full <- lav_samp_gamma_nt(
+            m_cov         = cov[[g]],
+            m_mean        = mean[[g]],
+            meanstructure = meanstructure
+          )
+          wls_v[[g]] <- lav_mat_sym_inverse(
+            gamma_full[keep, keep, drop = FALSE])
+        } else if (correlation) {
           gamma_nt <- lav_samp_cor_gamma_nt(
             m_cov          = cov[[g]],
             m_mean         = mean[[g]],
@@ -1759,11 +1803,18 @@ lav_samp_from_moments <- function(sample_cov = NULL,
 
       # correlation structure?
       if (correlation) {
-        cov[[g]] <- cov2cor(cov[[g]])
-        var[[g]] <- rep(1, length(var[[g]]))
+        # which variables are scaled to unit variance? (all, or a subset
+        # for a 'partial' correlation structure)
+        if (length(correlation_ov) > 0L) {
+          cor_idx <- which(ov_names[[g]] %in% correlation_ov)
+        } else {
+          cor_idx <- seq_len(ncol(cov[[g]]))
+        }
+        cov[[g]] <- lav_cov2cor_partial(cov[[g]], cor_idx)
+        var[[g]] <- diag(cov[[g]])
         if (conditional_x) {
-          res_cov[[g]] <- cov2cor(res_cov[[g]])
-          res_var[[g]] <- rep(1, length(res_var[[g]]))
+          res_cov[[g]] <- lav_cov2cor_partial(res_cov[[g]], cor_idx)
+          res_var[[g]] <- diag(res_cov[[g]])
           cov_x[[g]] <- cov2cor(cov_x[[g]])
           # FIXME: slopes? more?
         }
@@ -1780,6 +1831,11 @@ lav_samp_from_moments <- function(sample_cov = NULL,
       group_w_g = log(nobs[[g]]),
       categorical = categorical, conditional_x = conditional_x,
       meanstructure = meanstructure, correlation = correlation,
+      num_idx = if (correlation && length(correlation_ov) > 0L) {
+        which(!(ov_names[[g]] %in% correlation_ov))
+      } else {
+        integer(0L)
+      },
       slopestructure = conditional_x,
       group_w_free = group_w_free
     )
