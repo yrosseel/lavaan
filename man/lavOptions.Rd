@@ -281,7 +281,15 @@ Multiple group options:
       constraints across multiple groups. As a shortcut, the single
       value \code{"all"} can be used to constrain all (free) parameters
       to be equal across groups; it is equivalent to listing all of the
-      values above.}
+      values above. When the model is not the same across groups (for
+      example when the \code{group:} modifier is used to specify a
+      different model per group), only parameters that are present in two
+      or more groups are constrained to be equal; a parameter that occurs
+      in a single group only is always left free. The constraints are
+      symmetric and do not depend on the first group: a parameter that is
+      shared by (say) the second and third group is constrained to be
+      equal across those two groups, even if it does not appear in the
+      first group.}
     \item{\code{group.partial}:}{A vector of character strings containing 
       the labels of the parameters which should be free in all groups (thereby
       overriding the group.equal argument for some specific parameters).}

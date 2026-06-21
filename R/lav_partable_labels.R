@@ -66,94 +66,105 @@ lav_pt_labels <- function(partable,
       }
     }
 
-    # g1.flag: TRUE if included, FALSE if not
-    g1_flag <- logical(length(partable$lhs))
+    # eq_flag: TRUE if the parameter is a candidate for a (cross-group)
+    # equality constraint. Note that the models need NOT be the same across
+    # groups (eg when the 'group:' syntax is used): a parameter qualifies in
+    # a given group if it belongs to the requested set *in that group*.
+    eq_flag <- logical(length(partable$lhs))
+
+    # helper: TRUE for a row if its 'lhs' is in 'names_list[[group]]' of the
+    # group that the row belongs to
+    in_group_names <- function(names_list) {
+      out <- logical(length(partable$lhs))
+      for (g in seq_len(ngroups)) {
+        out[partable$group == g &
+          partable$lhs %in% names_list[[g]]] <- TRUE
+      }
+      out
+    }
 
     # LOADINGS
     if ("loadings" %in% group_equal) {
-      g1_flag[partable$op == "=~" & partable$group == 1L] <- TRUE
+      eq_flag[partable$op == "=~"] <- TRUE
     }
     # COMPOSITE LOADINGS (new in 0.6-4)
     if ("composite.loadings" %in% group_equal) {
       # new setting (0.6-20): <~
-      if (any(partable$op == "<~" & partable$group == 1L)) {
+      if (any(partable$op == "<~")) {
         lav_msg_warn(gettext("composite.loadings are in fact composite weights;
                               better use composite.weights"))
-        g1_flag[partable$op == "<~" & partable$group == 1L] <- TRUE
+        eq_flag[partable$op == "<~"] <- TRUE
       } else {
         # old school: composites are phantom constructs with zero residual...
         lv_f_names <- unique(unlist(
           lav_pt_vnames(partable, "lv.formative")))
-        g1_flag[partable$op == "~" &
-                partable$lhs %in% lv_f_names &
-                partable$group == 1L] <- TRUE
+        eq_flag[partable$op == "~" &
+                partable$lhs %in% lv_f_names] <- TRUE
       }
     }
     # COMPOSITE WEIGHTS (new in 0.6-20) # same as 'loadings'...
     if ("composite.weights" %in% group_equal) {
-      g1_flag[partable$op == "<~" & partable$group == 1L] <- TRUE
+      eq_flag[partable$op == "<~"] <- TRUE
     }
     # INTERCEPTS (OV)
     if ("intercepts" %in% group_equal) {
-      g1_flag[partable$op == "~1" & partable$group == 1L &
-        partable$lhs %in% ov_names_nox[[1L]]] <- TRUE
+      eq_flag[partable$op == "~1" & in_group_names(ov_names_nox)] <- TRUE
     }
     # THRESHOLDS (OV-ORD)
     if ("thresholds" %in% group_equal) {
-      g1_flag[partable$op == "|" & partable$group == 1L &
-        partable$lhs %in% ov_names_ord[[1L]]] <- TRUE
+      eq_flag[partable$op == "|" & in_group_names(ov_names_ord)] <- TRUE
     }
     # MEANS (LV)
     if ("means" %in% group_equal) {
-      g1_flag[partable$op == "~1" & partable$group == 1L &
-        partable$lhs %in% lv_names[[1L]]] <- TRUE
+      eq_flag[partable$op == "~1" & in_group_names(lv_names)] <- TRUE
     }
     # REGRESSIONS
     if ("regressions" %in% group_equal) {
-      g1_flag[partable$op == "~" & partable$group == 1L] <- TRUE
+      eq_flag[partable$op == "~"] <- TRUE
     }
     # RESIDUAL variances (FIXME: OV ONLY!)
     if ("residuals" %in% group_equal) {
-      g1_flag[partable$op == "~~" & partable$group == 1L &
-        partable$lhs %in% ov_names_nox[[1L]] &
+      eq_flag[partable$op == "~~" & in_group_names(ov_names_nox) &
         partable$lhs == partable$rhs] <- TRUE
     }
     # RESIDUAL covariances (FIXME: OV ONLY!)
     if ("residual.covariances" %in% group_equal) {
-      g1_flag[partable$op == "~~" & partable$group == 1L &
-        partable$lhs %in% ov_names_nox[[1L]] &
+      eq_flag[partable$op == "~~" & in_group_names(ov_names_nox) &
         partable$lhs != partable$rhs] <- TRUE
     }
     # LV VARIANCES
     if ("lv.variances" %in% group_equal) {
-      g1_flag[partable$op == "~~" & partable$group == 1L &
-        partable$lhs %in% lv_names[[1L]] &
+      eq_flag[partable$op == "~~" & in_group_names(lv_names) &
         partable$lhs == partable$rhs] <- TRUE
     }
     # LV COVARIANCES
     if ("lv.covariances" %in% group_equal) {
-      g1_flag[partable$op == "~~" & partable$group == 1L &
-        partable$lhs %in% lv_names[[1L]] &
+      eq_flag[partable$op == "~~" & in_group_names(lv_names) &
         partable$lhs != partable$rhs] <- TRUE
     }
 
-    # if group_partial, set corresponding flag to FALSE
+    # if group_partial, do NOT constrain these parameters (in any group)
     if (length(group_partial) > 0L) {
-      g1_flag[label %in% group_partial &
-        partable$group == 1L] <- FALSE
+      base_label <- paste(partable$lhs, partable$op, partable$rhs, sep = "")
+      eq_flag[base_label %in% group_partial] <- FALSE
     }
 
-    # for each (constrained) parameter in 'group 1', find a similar one
-    # in the other groups (we assume here that the models need
-    # NOT be the same across groups!
-    g1_idx <- which(g1_flag)
-    for (i in seq_along(g1_idx)) {
-      ref_idx <- g1_idx[i]
-      idx <- which(partable$lhs == partable$lhs[ref_idx] &
-        partable$op == partable$op[ref_idx] &
-        partable$rhs == partable$rhs[ref_idx] &
-        partable$group > 1L)
-      label[idx] <- label[ref_idx]
+    # Give all candidate parameters that share the same lhs/op/rhs the same
+    # label, so they become equality-constrained -- across *every* group that
+    # contains them, independently of group 1. Parameters that appear in a
+    # single group only keep their unique label (and stay free). This way the
+    # constraints are symmetric: a parameter present in groups 2 and 3 (but
+    # not group 1) is constrained just as one present in groups 1 and 2.
+    eq_idx <- which(eq_flag)
+    if (length(eq_idx) > 0L) {
+      eq_key <- paste(partable$lhs, partable$op, partable$rhs,
+        sep = "")[eq_idx]
+      for (key in unique(eq_key)) {
+        same_idx <- eq_idx[eq_key == key]
+        if (length(same_idx) > 1L) {
+          label[same_idx] <- label[same_idx[1L]]
+        }
+      }
     }
   }
 
