@@ -487,8 +487,10 @@ lav_pt_flat <- function(flat = NULL,
   # 1. fix metric of regular latent variables
   if (std_lv) {
     # fix metric by fixing the variance of the latent variable
+    # (composites are excluded: their variance is determined by W'TW and
+    #  cannot be fixed here; they are scaled via their first weight below)
     lv_var_idx <- which(op == "~~" &
-      lhs %in% lv_names & lhs == rhs)
+      lhs %in% lv_names_noc & lhs == rhs)
     ustart[lv_var_idx] <- 1.0
     free[lv_var_idx] <- 0L
   }
@@ -526,12 +528,17 @@ lav_pt_flat <- function(flat = NULL,
         free[marker_row] <- 0L
       }
     }
-    if (composites && length(lv_names_c) > 0L) {
-      mm_idx <- which(op == "<~")
-      first_idx <- mm_idx[which(!duplicated(lhs[mm_idx]))]
-      ustart[first_idx] <- 1.0
-      free[first_idx] <- 0L
-    }
+  }
+  # composites always need a scale. Unlike common factors, a composite's
+  # variance is determined within the model (= W'TW) and cannot be fixed via
+  # the std.lv mechanism above. Therefore composites default to marker scaling
+  # (first weight = 1) under BOTH auto.fix.first and std.lv. Users who want a
+  # different marker can free the first weight explicitly (e.g. NA*x1 + 1*x2).
+  if (composites && length(lv_names_c) > 0L && (auto_fix_first || std_lv)) {
+    mm_idx <- which(op == "<~")
+    first_idx <- mm_idx[which(!duplicated(lhs[mm_idx]))]
+    ustart[first_idx] <- 1.0
+    free[first_idx] <- 0L
   }
 
   # 2. fix residual variance of single indicators to zero

@@ -18,6 +18,21 @@ lav_pt_check <- function(partable, categorical = FALSE) {
 
   nlevels <- lav_pt_nlevels(partable)
 
+  # composites: an indicator may not serve a composite (<~) and a common
+  # factor (=~) at the same time (each indicator relates to one construct
+  # only; see Schamberger et al.). Catch this here with a clear message,
+  # otherwise it crashes later (non-positive-definite Sigma / NA in loglik).
+  if (length(lv_names_c) > 0L) {
+    cind <- unique(partable$rhs[partable$op == "<~"])
+    find <- unique(partable$rhs[partable$op == "=~"])
+    both <- cind[cind %in% find]
+    if (length(both) > 0L) {
+      lav_msg_stop(gettextf(
+        "indicator(s) used by both a composite (<~) and a common factor (=~): %s",
+        lav_msg_view(both)))
+    }
+  }
+
   # if categorical, we should have some ov.names.ord
   if (categorical && length(ov_names_ord) == 0L) {
     check <- FALSE

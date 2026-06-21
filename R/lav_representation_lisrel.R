@@ -988,14 +988,8 @@ lav_lisrel_sigma <- function(mlist = NULL, delta = TRUE) {
     # - create 'T' matrix: - identity for regular lv's,
     #                      - THETA block-diagonal for composites
     # - create C_0: VETA, but zero diagonal elements for composites
-    cov_idx <- which(apply(
-      mm_lambda, 1L,
-      function(x) sum(x == 0) == ncol(mm_lambda)
-    ))
-    clv_idx <- which(apply(
-      mm_lambda, 2L,
-      function(x) sum(x == 0) == nrow(mm_lambda)
-    ))
+    cov_idx <- which(rowSums(mm_lambda != 0) == 0L)
+    clv_idx <- which(colSums(mm_lambda != 0) == 0L)
     # regular latent variables
     # rlv_idx <- seq_len(ncol(mm_lambda))[-clv_idx]
 
@@ -1426,14 +1420,8 @@ lav_lisrel_comp_set_intresvar <- function(mlist = NULL,
   }
 
   # housekeeping
-  ovc_idx <- which(apply(
-    mm_lambda, 1L,
-    function(x) sum(x == 0) == ncol(mm_lambda)
-  ))
-  lvc_idx <- which(apply(
-    mm_lambda, 2L,
-    function(x) sum(x == 0) == nrow(mm_lambda)
-  ))
+  ovc_idx <- which(rowSums(mm_lambda != 0) == 0L)
+  lvc_idx <- which(colSums(mm_lambda != 0) == 0L)
   lvc_flag <- logical(nrow(mm_psi))
   lvc_flag[lvc_idx] <- TRUE
   tmat <- diag(nrow(mm_lambda))
@@ -2870,26 +2858,31 @@ lav_mlist_target_psi <- function(mm_beta = NULL, ib_inv = NULL, mm_psi = NULL,
     y_idx <- seq_len(nr)
   }
 
-  # cast the problem as a nonlinear optimization problem
-  obj <- function(x) {
-    # cat("x = ", x, "\n")
-    # x are the diagonal elements of PSI
-    this_psi <- mm_psi
-    diag(this_psi)[y_idx] <- x
-    veta <- ib_inv %*% this_psi %*% t(ib_inv)
-    current_diag <- diag(veta)
-    # ratio or difference?
-    diff <- target_psi[y_idx] - current_diag[y_idx]
-    out <- sum(diff * diff) # least squares
-    out
-  }
-
-  veta <- ib_inv %*% mm_psi %*% t(ib_inv)
-  x_start <- diag(veta)[y_idx]
-  out <- nlminb(start = x_start, objective = obj)
+  # The unknown (residual) variances diag(PSI)[y_idx] enter
+  #   diag(IB.inv %*% PSI %*% t(IB.inv))[y_idx]
+  # *linearly*: writing v_i = sum_{j in y} IB.inv[i,j]^2 * PSI[j,j] + known_i,
+  # the requirement v_i = target_i (i in y_idx) is the square linear system
+  #   A %*% PSI_yy = target[y] - known[y],   A[i,j] = IB.inv[i,j]^2.
+  # Solving it directly (instead of via nlminb) is exact and fast, and -- unlike
+  # nlminb -- it propagates a complex perturbation, so complex-step
+  # differentiation through lav_lisrel_comp_set_intresvar() works for cyclic
+  # (non-recursive) models too (avoiding 'imaginary parts discarded' warnings
+  # and incorrect derivatives). This holds for any BETA, acyclic or not.
+  psi0 <- mm_psi
+  diag(psi0)[y_idx] <- 0
+  known <- diag(ib_inv %*% psi0 %*% t(ib_inv))[y_idx]
+  amat <- (ib_inv[y_idx, y_idx, drop = FALSE])^2
+  bvec <- target_psi[y_idx] - known
+  psi_yy <- tryCatch(solve(amat, bvec), error = function(e) {
+    # singular system (e.g. an under-identified cyclic model): fall back to a
+    # least-squares solution via the normal equations (real-valued only).
+    drop(solve(crossprod(amat) +
+               diag(sqrt(.Machine$double.eps), length(bvec)),
+               crossprod(amat, bvec)))
+  })
 
   # return updated PSI matrix
-  diag(mm_psi)[y_idx] <- out$par
+  diag(mm_psi)[y_idx] <- psi_yy
   mm_psi
 }
 
@@ -3244,14 +3237,8 @@ lav_lisrel_dimplied_dx <- function(mlist           = NULL,
 
   } else {
     # composite ov (cov) and composite lv (clv)
-    cov_idx <- which(apply(
-      mlist$lambda, 1L,
-      function(x) sum(x == 0) == ncol(mlist$lambda)
-    ))
-    clv_idx <- which(apply(
-      mlist$lambda, 2L,
-      function(x) sum(x == 0) == nrow(mlist$lambda)
-    ))
+    cov_idx <- which(rowSums(mlist$lambda != 0) == 0L)
+    clv_idx <- which(colSums(mlist$lambda != 0) == 0L)
 
     lw  <- mlist$lambda + mlist$wmat
     tmat <- diag(nvar)
