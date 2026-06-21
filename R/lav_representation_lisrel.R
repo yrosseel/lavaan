@@ -988,8 +988,13 @@ lav_lisrel_sigma <- function(mlist = NULL, delta = TRUE) {
     # - create 'T' matrix: - identity for regular lv's,
     #                      - THETA block-diagonal for composites
     # - create C_0: VETA, but zero diagonal elements for composites
-    cov_idx <- which(rowSums(mm_lambda != 0) == 0L)
-    clv_idx <- which(colSums(mm_lambda != 0) == 0L)
+    # composite indicators (rows) and composite latent variables (columns) are
+    # identified from WMAT (which holds the composite weights), NOT from empty
+    # rows/columns of LAMBDA: a higher-order common factor whose only indicators
+    # are latent variables (e.g. a growth factor measured by composites) also
+    # has an empty LAMBDA column and must not be treated as a composite.
+    cov_idx <- which(rowSums(mm_wmat != 0) > 0L)
+    clv_idx <- which(colSums(mm_wmat != 0) > 0L)
     # regular latent variables
     # rlv_idx <- seq_len(ncol(mm_lambda))[-clv_idx]
 
@@ -1419,9 +1424,11 @@ lav_lisrel_comp_set_intresvar <- function(mlist = NULL,
     std_lv <- TRUE
   }
 
-  # housekeeping
-  ovc_idx <- which(rowSums(mm_lambda != 0) == 0L)
-  lvc_idx <- which(colSums(mm_lambda != 0) == 0L)
+  # housekeeping (identify composites from WMAT, not from empty LAMBDA rows/cols;
+  # see lav_lisrel_sigma() for why a higher-order factor would otherwise be
+  # mistaken for a composite)
+  ovc_idx <- which(rowSums(mm_wmat != 0) > 0L)
+  lvc_idx <- which(colSums(mm_wmat != 0) > 0L)
   lvc_flag <- logical(nrow(mm_psi))
   lvc_flag[lvc_idx] <- TRUE
   tmat <- diag(nrow(mm_lambda))
@@ -3236,9 +3243,11 @@ lav_lisrel_dimplied_dx <- function(mlist           = NULL,
     }
 
   } else {
-    # composite ov (cov) and composite lv (clv)
-    cov_idx <- which(rowSums(mlist$lambda != 0) == 0L)
-    clv_idx <- which(colSums(mlist$lambda != 0) == 0L)
+    # composite ov (cov) and composite lv (clv): identify from WMAT, not from
+    # empty LAMBDA rows/cols (a higher-order factor measured only by latent
+    # variables also has an empty LAMBDA column; see lav_lisrel_sigma()).
+    cov_idx <- which(rowSums(mlist$wmat != 0) > 0L)
+    clv_idx <- which(colSums(mlist$wmat != 0) > 0L)
 
     lw  <- mlist$lambda + mlist$wmat
     tmat <- diag(nvar)

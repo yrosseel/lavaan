@@ -650,10 +650,14 @@ lav_pt_flat <- function(flat = NULL,
       ustart[lv_int_idx] <- as.numeric(NA)
       free[lv_int_idx] <- 1L
     }
-    # composites: always non-free, but with ustart = NA; value should be
-    # filled in later as a function of the other parameters
+    # composites: the composite mean is determined (= W'nu), so the intercept
+    # is always non-free, with ustart = NA; the value is filled in later as a
+    # function of the other parameters (see lav_lisrel_comp_set_intresvar).
+    # This holds even if the user writes 'composite ~ 1' explicitly (just like
+    # composite variances above): otherwise it adds a redundant free parameter
+    # that does not affect the fit and makes the information matrix singular.
     if (length(lv_names_c) > 0L) {
-      c_int_idx <- which(op == "~1" & lhs %in% lv_names_c & user == 0L)
+      c_int_idx <- which(op == "~1" & lhs %in% lv_names_c)
       ustart[c_int_idx] <- as.numeric(NA)
       free[c_int_idx] <- 0L
     }
