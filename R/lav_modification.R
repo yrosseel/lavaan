@@ -34,6 +34,18 @@ modindices <- function(object,                         # nolint start
       "modification indices for estimator PML are not implemented yet."))
   }
 
+  # not (yet) available for models with composites: the saturated model used to
+  # generate candidate parameters (lav_pt_full) is not composite-aware (it would
+  # generate '=~' loadings and indicator covariances for composites that the
+  # LISREL representation cannot map), and freeing the composite weights/indicator
+  # (co)variances breaks composite identification. Use lavTestScore() to assess
+  # specific constraints instead.
+  if (.hasSlot(object@Model, "composites") && object@Model@composites) {
+    lav_msg_stop(gettext(
+      "modification indices are not available for models with composites (<~);
+      use lavTestScore() to assess specific (constrained) parameters."))
+  }
+
   # new in 0.6-17: check if the model contains equality constraints
   if (object@Model@eq.constraints) {
     lav_msg_warn(
