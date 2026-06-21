@@ -693,6 +693,77 @@ lav_samp_gamma <- function(m_y, # Y+X if cond!
 # ADF Gamma for correlations
 #
 # 30 May 2024: basic version: fixed_x=FALSE, conditional_x=FALSE, ...
+# ADF (sandwich) Gamma for a *partial* correlation structure: only the
+# variables in 'cor_idx' are standardized to unit variance, the others keep
+# their original metric. The partial moment vector is
+#   [ var(num_idx), off-diagonal (co)variances ]   (and the means, if any)
+# where num_idx = complement of cor_idx. Each partial moment is a smooth
+# function of the raw moments [mean, vech(S)], so the ADF Gamma follows from
+# the delta method: Gamma_partial = J %*% Gamma_full %*% t(J), with J the
+# Jacobian of the partial moments wrt the raw moments. (For cor_idx = all
+# variables this reduces to lav_samp_cor_gamma().)
+lav_samp_partial_cor_gamma <- function(m_y, cor_idx = NULL,
+                                       meanstructure = FALSE) {
+  m_y <- unname(as.matrix(m_y))
+  n <- nrow(m_y)
+  p <- ncol(m_y)
+  m_s <- cov(m_y) * (n - 1) / n
+
+  is_cor <- logical(p)
+  is_cor[cor_idx] <- TRUE
+  num_idx <- which(!is_cor)
+  # scaling: sd for correlation variables, 1 for the others
+  d <- rep(1.0, p)
+  d[is_cor] <- sqrt(diag(m_s)[is_cor])
+
+  # raw ADF Gamma over [mean(p)?, vech(S)]
+  gamma_full <- lav_samp_gamma(m_y, meanstructure = meanstructure)
+
+  # vech bookkeeping (full, with diagonal)
+  vr <- lav_mat_vech_row_idx(p)
+  vc <- lav_mat_vech_col_idx(p)
+  pstar <- length(vr)
+  diag_pos <- which(vr == vc) # variances, in variable order
+  off_pos <- which(vr != vc) # covariances
+  var_pos <- diag_pos[num_idx] # variances we keep (non-correlation vars)
+
+  # Jacobian (covariance part): rows = [var(num_idx), offdiag], cols = vech(S)
+  nkeep <- length(var_pos) + length(off_pos)
+  j_cov <- matrix(0, nkeep, pstar)
+  if (length(var_pos) > 0L) {
+    j_cov[cbind(seq_along(var_pos), var_pos)] <- 1
+  }
+  off0 <- length(var_pos)
+  for (i in seq_along(off_pos)) {
+    pos <- off_pos[i]
+    k <- vr[pos]
+    l <- vc[pos]
+    m_kl <- m_s[k, l] / (d[k] * d[l])
+    row <- off0 + i
+    j_cov[row, pos] <- 1 / (d[k] * d[l])
+    if (is_cor[k]) {
+      j_cov[row, diag_pos[k]] <- j_cov[row, diag_pos[k]] -
+        0.5 * m_kl / m_s[k, k]
+    }
+    if (is_cor[l]) {
+      j_cov[row, diag_pos[l]] <- j_cov[row, diag_pos[l]] -
+        0.5 * m_kl / m_s[l, l]
+    }
+  }
+
+  if (meanstructure) {
+    # partial moments: [mean(p), var(num_idx), offdiag]; the mean of a
+    # standardized variable is scaled by 1/sd (first order), others by 1
+    j_mat <- matrix(0, p + nkeep, p + pstar)
+    j_mat[cbind(seq_len(p), seq_len(p))] <- 1 / d
+    j_mat[(p + 1L):(p + nkeep), (p + 1L):(p + pstar)] <- j_cov
+  } else {
+    j_mat <- j_cov
+  }
+
+  j_mat %*% gamma_full %*% t(j_mat)
+}
+
 lav_samp_cor_gamma <- function(m_y, meanstructure = FALSE) {
 
   # coerce to matrix

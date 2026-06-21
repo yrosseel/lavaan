@@ -944,10 +944,23 @@ lav_samp_from_data <- function(lavdata = NULL,        # nolint start
         }
 
         if (correlation) {
-      nacov[[g]] <- lav_samp_cor_gamma(
-        m_y = y,
-        meanstructure = meanstructure
-      )
+          cor_idx_g <- if (length(correlation_ov) > 0L) {
+            which(ov_names[[g]] %in% correlation_ov)
+          } else {
+            seq_along(ov_names[[g]])
+          }
+          if (length(cor_idx_g) < length(ov_names[[g]])) {
+            # partial correlation structure
+            nacov[[g]] <- lav_samp_partial_cor_gamma(
+              m_y = y, cor_idx = cor_idx_g,
+              meanstructure = meanstructure
+            )
+          } else {
+            nacov[[g]] <- lav_samp_cor_gamma(
+              m_y = y,
+              meanstructure = meanstructure
+            )
+          }
     } else {
           nacov[[g]] <-
             lav_samp_gamma(
@@ -1001,10 +1014,23 @@ lav_samp_from_data <- function(lavdata = NULL,        # nolint start
             cluster_idx <- NULL
           }
       if (correlation) {
-            nacov[[g]] <- lav_samp_cor_gamma(
-              m_y = y,
-              meanstructure = meanstructure
-            )
+            cor_idx_g <- if (length(correlation_ov) > 0L) {
+              which(ov_names[[g]] %in% correlation_ov)
+            } else {
+              seq_along(ov_names[[g]])
+            }
+            if (length(cor_idx_g) < length(ov_names[[g]])) {
+              # partial correlation structure
+              nacov[[g]] <- lav_samp_partial_cor_gamma(
+                m_y = y, cor_idx = cor_idx_g,
+                meanstructure = meanstructure
+              )
+            } else {
+              nacov[[g]] <- lav_samp_cor_gamma(
+                m_y = y,
+                meanstructure = meanstructure
+              )
+            }
       } else {
             if ("robust.sem.nt" %in% lavoptions$se ||
                 "browne.residual.nt" %in% lavoptions$test) {
