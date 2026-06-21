@@ -8,7 +8,7 @@
 # B[i,j] != 0 means directed edge j -> i
 # uses Kahn's topological sort: acyclic iff all nodes can be visited
 lav_graph_is_acyclic <- function(m_b = NULL) {
-  if (is.null(m_b) || all(m_b == 0)) return(TRUE)
+  if (is.null(m_b) || !any(m_b != 0, na.rm = TRUE)) return(TRUE)
   nr <- nrow(m_b)
   indegree <- rowSums(m_b != 0)
   k <- 0L

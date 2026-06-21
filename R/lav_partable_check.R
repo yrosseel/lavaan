@@ -18,18 +18,25 @@ lav_pt_check <- function(partable, categorical = FALSE) {
 
   nlevels <- lav_pt_nlevels(partable)
 
-  # composites: an indicator may not serve a composite (<~) and a common
-  # factor (=~) at the same time (each indicator relates to one construct
-  # only; see Schamberger et al.). Catch this here with a clear message,
-  # otherwise it crashes later (non-positive-definite Sigma / NA in loglik).
+  # composites: within a single block, an indicator may not serve a composite
+  # (<~) and a common factor (=~) at the same time (each indicator relates to
+  # one construct only; see Schamberger et al.). Catch this here with a clear
+  # message, otherwise it crashes later (non-positive-definite Sigma / NA in
+  # loglik). NOTE: the check is per-block, because in a multilevel (or
+  # multigroup) model the same observed variable may legitimately be a composite
+  # indicator in one block and a common-factor indicator in another.
   if (length(lv_names_c) > 0L) {
-    cind <- unique(partable$rhs[partable$op == "<~"])
-    find <- unique(partable$rhs[partable$op == "=~"])
-    both <- cind[cind %in% find]
-    if (length(both) > 0L) {
-      lav_msg_stop(gettextf(
-        "indicator(s) used by both a composite (<~) and a common factor (=~): %s",
-        lav_msg_view(both)))
+    blk <- if (!is.null(partable$block)) partable$block else
+      rep(1L, length(partable$lhs))
+    for (b in unique(blk)) {
+      cind <- unique(partable$rhs[partable$op == "<~" & blk == b])
+      find <- unique(partable$rhs[partable$op == "=~" & blk == b])
+      both <- cind[cind %in% find]
+      if (length(both) > 0L) {
+        lav_msg_stop(gettextf(
+          "indicator(s) used by both a composite (<~) and a common factor (=~) %s: %s",
+          "in the same block", lav_msg_view(both)))
+      }
     }
   }
 

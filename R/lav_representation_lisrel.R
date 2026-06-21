@@ -1417,6 +1417,12 @@ lav_lisrel_comp_set_intresvar <- function(mlist = NULL,
   mm_wmat <- mlist$wmat
   # mm_theta <- mlist$theta
 
+  # nothing to do if this block has no composites (e.g. in a multilevel or
+  # multigroup model where composites appear in some blocks only)
+  if (is.null(mm_wmat) || all(mm_wmat == 0)) {
+    return(mlist)
+  }
+
   # std.lv or not?
   marker_idx <- lav_utils_get_marker(mlist$wmat)
   std_lv <- FALSE
