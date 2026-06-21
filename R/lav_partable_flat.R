@@ -11,6 +11,7 @@ lav_pt_flat <- function(flat = NULL,
                               std_lv = FALSE,
                               correlation = FALSE,
                               composites = TRUE,
+                              composites_cov_free = FALSE,
                               conditional_x = FALSE,
                               fixed_x = TRUE,
                               parameterization = "delta",
@@ -463,12 +464,24 @@ lav_pt_flat <- function(flat = NULL,
     free[var_idx] <- 0L
   }
 
-  # 0c. for the ~~ for composite indicators: currently ALWAYS fixed
-  #     todo: create an option to free them anyway
+  # 0c. for the ~~ for composite indicators (the 'T' matrix):
+  #     by default these are fixed to their sample (co)variances; if
+  #     composites_cov_free = TRUE, they are estimated as free parameters
+  #     instead (needed for multilevel models, see lav_options). Either way
+  #     ustart is set to NA, so good starting values (the sample (co)variances)
+  #     are filled in later by lav_start().
   if (length(ov_ind_c) > 0) {
-    var_idx <- which(op == "~~" & lhs %in% ov_ind_c)
-    ustart[var_idx] <- as.numeric(NA)
-    free[var_idx] <- 0L
+    if (composites_cov_free) {
+      # free only the (co)variances *among* composite indicators (the T block)
+      var_idx <- which(op == "~~" &
+                       lhs %in% ov_ind_c & rhs %in% ov_ind_c)
+      ustart[var_idx] <- as.numeric(NA)
+      free[var_idx] <- 1L
+    } else {
+      var_idx <- which(op == "~~" & lhs %in% ov_ind_c)
+      ustart[var_idx] <- as.numeric(NA)
+      free[var_idx] <- 0L
+    }
   }
 
   # 0d. variances for composites: ALWAYS fixed (should be set later

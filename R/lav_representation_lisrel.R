@@ -3394,6 +3394,40 @@ lav_lisrel_dimplied_dx <- function(mlist           = NULL,
         jt[cbind(vech_pos, seq_len(n_the))] <- 1
       }
 
+      # free composite-indicator (co)variances (a free 'T' matrix).
+      # For an ordinary residual, dSigma[k,l]/dtheta[k,l] = 1 (the unit entry
+      # set above). But an entry of the composite 'T' matrix also enters Sigma
+      # through Lambda_c = T W (W'TW)^{-1} and Theta_c = T - Lambda_c W'TW
+      # Lambda_c' (see lav_lisrel_sigma()). Replace the unit column with the
+      # exact *direct* derivative dSigma/dT (holding psi fixed), obtained by
+      # complex-step differentiation of lav_lisrel_sigma(). The remaining,
+      # indirect path theta -> psi[clv,clv] = W'TW -> Sigma is added later by
+      # the composite chain-rule correction (which differentiates psi[clv,clv]
+      # w.r.t. all free parameters, T included).
+      is_t <- rc[, 1L] %in% cov_idx & rc[, 2L] %in% cov_idx
+      if (any(is_t)) {
+        t_rc_cap <- rc[is_t, , drop = FALSE]
+        mlist_cap <- mlist
+        rs_cap <- r_s
+        cs_cap <- c_s
+        compute_sig_t <- function(tt) {
+          ml <- mlist_cap
+          th <- ml$theta
+          for (i in seq_along(tt)) {
+            th[t_rc_cap[i, 1L], t_rc_cap[i, 2L]] <- tt[i]
+            th[t_rc_cap[i, 2L], t_rc_cap[i, 1L]] <- tt[i]
+          }
+          ml$theta <- th
+          lav_lisrel_sigma(ml, delta = FALSE)[cbind(rs_cap, cs_cap)]
+        }
+        tt0 <- mlist$theta[t_rc_cap]
+        j_t <- lav_func_jacobian_complex(func = compute_sig_t, x = tt0)
+        if (delta_flag) {
+          j_t <- j_t * delta_weight
+        }
+        jt[, which(is_t)] <- j_t
+      }
+
       jac_sigma[, col:(col + n_the - 1L)] <- jt
       col <- col + n_the
     }

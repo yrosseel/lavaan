@@ -143,7 +143,8 @@ lavaan <- function(
   )
 
   # ------------ ov.names 1b ----- handle 'old way' for composites -------
-  if (!is.null(dotdotdot$composites) && !dotdotdot$composites &&
+  if (!is.null(dotdotdot[["composites", exact = TRUE]]) &&
+     !dotdotdot[["composites", exact = TRUE]] &&
      any(flat_model$op == "<~")) {
     flat_model <- lav_step01_ovnames_composites(flat_model)
   }

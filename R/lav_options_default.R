@@ -242,6 +242,13 @@ lav_options_default <- function() {
   elm("auto.delta", FALSE, bl = TRUE)
   elm("auto.efa", FALSE, bl = TRUE)
   elm("composites", TRUE, bl = TRUE)
+  # should the composite-indicator (co)variances (the 'T' matrix) be estimated
+  # as free parameters, or fixed to their sample values?
+  #   "fixed"   - fix T to the sample (co)variances (default for single-level)
+  #   "free"    - estimate T as free parameters (needed for multilevel, where
+  #               the same indicators may be composite indicators at >1 level)
+  #   "default" - resolved later: "free" if multilevel, "fixed" otherwise
+  elm("composites.cov", "default", chr = c("default", "fixed", "free"))
 
   # rotation
   elm("rotation", "geomin", chr = c(crawfer = "cf", crawford.ferguson = "cf",

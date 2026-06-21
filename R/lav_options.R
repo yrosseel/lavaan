@@ -362,6 +362,20 @@ lav_options_set <- function(opt = NULL) {
     }
   }
 
+  # composites ####
+  # resolve composites.cov = "default": the composite-indicator (co)variances
+  # (the 'T' matrix) are fixed to their sample values for single-level models,
+  # but estimated freely for multilevel models (where the same indicators may
+  # serve as composite indicators at more than one level, and fixing T at every
+  # level would over-constrain the model).
+  if (identical(opt$composites.cov, "default")) {
+    if (opt$.multilevel) {
+      opt$composites.cov <- "free"
+    } else {
+      opt$composites.cov <- "fixed"
+    }
+  }
+
   # multilevel ####
   # brute-force override (for now)
   if (opt$.multilevel) {
