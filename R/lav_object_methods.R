@@ -181,8 +181,30 @@ standardizedSolution <-                                      # nolint start
     # check object
     object <- lav_object_check_version(object)
 
-    # check type
-    stopifnot(type %in% c("std.all", "std.lv", "std.nox"))
+    # check type: either one of the std.* keywords, or a vector of (observed)
+    # variable names, in which case only the parameters involving these
+    # variables are standardized (a generalization of "std.nox")
+    ov_std_user <- NULL
+    std_types <- c("std.all", "std.lv", "std.nox")
+    if (length(type) > 1L || !any(tolower(type) %in% std_types)) {
+      ov_all <- lav_object_vnames(object, "ov")
+      bad <- type[!(type %in% ov_all)]
+      if (length(bad) > 0L) {
+        lav_msg_warn(gettextf(
+          "type= argument contains unknown observed variable(s): %s",
+          paste(bad, collapse = ", ")))
+      }
+      ov_std_user <- type[type %in% ov_all]
+      if (length(ov_std_user) == 0L) {
+        lav_msg_stop(gettext(
+          "type= must be one of std.lv, std.all, std.nox, or a vector of
+           observed variable names."))
+      }
+      type <- "std.user"
+    } else {
+      type <- tolower(type)
+      stopifnot(type %in% std_types)
+    }
 
     # check output= argument
     output <- tolower(output)
@@ -243,13 +265,18 @@ standardizedSolution <-                                      # nolint start
         est = est, glist = GLIST,
         partable = partable, cov_std = cov.std
       )
+    } else if (type == "std.user") {
+      tmp_list$est.std <- lav_standardize_all(object,
+        est = est, glist = GLIST,
+        partable = partable, cov_std = cov.std, ov_std = ov_std_user
+      )
     }
 
     if (object@Options$se != "none" && se) {
       # add 'se' for standardized parameters
       tmp_vcov <- try(lav_inspect_vcov(object,
         standardized = TRUE,
-        type = type, free_only = FALSE,
+        type = type, ov_std = ov_std_user, free_only = FALSE,
         add_labels = FALSE,
         add_class = FALSE
       ))
@@ -314,6 +341,10 @@ standardizedSolution <-                                      # nolint start
           tmp_fun_mc <- lav_standardize_all_x
         } else if (type == "std.nox") {
           tmp_fun_mc <- lav_standardize_all_nox_x
+        } else if (type == "std.user") {
+          tmp_fun_mc <- function(x, lavobject) {
+            lav_standardize_all_x(x, lavobject = lavobject, ov_std = ov_std_user)
+          }
         }
         mc_std <- try(apply(mc_coef, 1L, tmp_fun_mc,
                             lavobject = object), silent = TRUE)
@@ -896,6 +927,9 @@ lavParameterEstimates <- function(object,                      # nolint start
 
     # standardized estimates?
     # 28 March 2024: TDJ adds option to select specific types
+    # observed variables to standardize when standardized= is a vector of
+    # (observed) variable names (a generalization of std.nox); see below
+    ov_std_user <- NULL
     if (is.logical(standardized)) {
       if (standardized) {
         standardized <- c("std.lv", "std.all")
@@ -908,16 +942,39 @@ lavParameterEstimates <- function(object,                      # nolint start
       } # corresponds to standardized=FALSE
     } else {
       # !is.logical(standardized)
-      standardized <- tolower(as.character(standardized))
-      if ("std.nox" %in% standardized) {
-        # sanity checks
-        if (length(lav_object_vnames(object, "ov.x")) == 0) {
-          lav_msg_note(gettext(
-            "`std.nox' unavailable without fixed exogenous predictors"))
-          standardized <- setdiff(standardized, "std.nox")
-        } else if (!object@Options$fixed.x) {
-          lav_msg_note(gettext("`std.nox' unavailable when fixed.x = FALSE"))
-          standardized <- setdiff(standardized, "std.nox")
+      standardized <- as.character(standardized)
+      std_types <- c("std.lv", "std.all", "std.nox")
+      if (length(standardized) > 0L &&
+          !any(tolower(standardized) %in% std_types)) {
+        # interpret 'standardized' as a vector of observed variable names:
+        # standardize ONLY the parameters involving these variables (a
+        # generalization of "std.nox", where the exogenous 'x' are the ones
+        # left unstandardized)
+        ov_all <- lav_object_vnames(object, "ov")
+        bad <- standardized[!(standardized %in% ov_all)]
+        if (length(bad) > 0L) {
+          lav_msg_warn(gettextf(
+            "standardized= argument contains unknown observed variable(s): %s",
+            paste(bad, collapse = ", ")))
+        }
+        ov_std_user <- standardized[standardized %in% ov_all]
+        if (length(ov_std_user) == 0L) {
+          standardized <- character(0)
+        } else {
+          standardized <- c("std.lv", "std.user")
+        }
+      } else {
+        standardized <- tolower(standardized)
+        if ("std.nox" %in% standardized) {
+          # sanity checks
+          if (length(lav_object_vnames(object, "ov.x")) == 0) {
+            lav_msg_note(gettext(
+              "`std.nox' unavailable without fixed exogenous predictors"))
+            standardized <- setdiff(standardized, "std.nox")
+          } else if (!object@Options$fixed.x) {
+            lav_msg_note(gettext("`std.nox' unavailable when fixed.x = FALSE"))
+            standardized <- setdiff(standardized, "std.nox")
+          }
         }
       }
     }
@@ -936,6 +993,12 @@ lavParameterEstimates <- function(object,                      # nolint start
       tmp_list$std.nox <- lav_standardize_all_nox(object,
         est_std = tmp_list$est.std,
         cov_std = cov.std
+      )
+    }
+    if ("std.user" %in% standardized) {
+      tmp_list$std.user <- lav_standardize_all(object,
+        est_std = tmp_list$est.std,
+        cov_std = cov.std, ov_std = ov_std_user
       )
     }
 

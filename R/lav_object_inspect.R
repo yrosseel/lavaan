@@ -2543,7 +2543,7 @@ lav_inspect_h1_info <- function(object,
 }
 
 lav_inspect_vcov <- function(object, standardized = FALSE,
-    type = "std.all", free_only = TRUE,
+    type = "std.all", ov_std = NULL, free_only = TRUE,
     add_labels = FALSE, add_class = FALSE, remove_duplicated = FALSE) {
 
   lavmodel <- object@Model
@@ -2629,6 +2629,10 @@ lav_inspect_vcov <- function(object, standardized = FALSE,
       tmp_fun <- lav_standardize_all_x
     } else if (type == "std.nox") {
       tmp_fun <- lav_standardize_all_nox_x
+    } else if (type == "std.user") {
+      tmp_fun <- function(x, lavobject, ...) {
+        lav_standardize_all_x(x, lavobject = lavobject, ov_std = ov_std, ...)
+      }
     }
 
     x_vec <- lav_model_get_parameters(lavmodel)

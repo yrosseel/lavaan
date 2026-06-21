@@ -142,9 +142,20 @@ lav_object_summary <- function(object, header = TRUE,
   if (is.logical(std) && is.logical(standardized)) {
     standardized <- std || standardized
   } else {
-    # At least 1 is not logical. Retain only valid standardization options.
-    standardized <- intersect(union(tolower(std), tolower(standardized)),
-                              c("std.lv", "std.all", "std.nox"))
+    # At least 1 is not logical.
+    tmp <- union(
+      if (is.logical(std)) character(0L) else as.character(std),
+      if (is.logical(standardized)) character(0L) else as.character(standardized)
+    )
+    std_types <- c("std.lv", "std.all", "std.nox")
+    if (length(tmp) > 0L && !any(tolower(tmp) %in% std_types)) {
+      # a vector of observed variable names: standardize only those (a
+      # generalization of std.nox); pass through unchanged
+      standardized <- tmp
+    } else {
+      # Retain only valid standardization options.
+      standardized <- intersect(tolower(tmp), std_types)
+    }
   }
 
   # create the 'short' summary

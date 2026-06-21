@@ -1,14 +1,140 @@
-lav_standardize_lv_x <- function(x, lavobject, partable = NULL, cov_std = TRUE,
-                                 lv_var = NULL,
-                                 rotation = FALSE) {
-  # set new values for x
+# Standardize parameter estimates of a fitted lavaan model.
+#
+# Three "modes" of standardization are supported, all implemented on top of a
+# single observed-variable engine (lav_standardize_all):
+#   - std.lv  : only the latent variables are standardized
+#   - std.all : latent *and* observed variables are standardized
+#   - std.nox : like std.all, but the (observed) exogenous 'x' variables are
+#               left unstandardized
+# std.nox is in fact a special case of a more general mechanism: standardize
+# all observed variables *except* a given set (here: the exogenous 'x'). The
+# 'ov_std' argument of lav_standardize_all() exposes this generality, so that a
+# caller can request that only a user-specified subset of observed variables is
+# standardized.
+
+# ---------------------------------------------------------------------------
+# internal helpers
+# ---------------------------------------------------------------------------
+
+# Resolve the standard set of ingredients (lavmodel, lavpartable, partable,
+# est, glist, cov_x) from either a fitted lavobject or the individual pieces.
+lav_standardize_setup <- function(lavobject = NULL, lavmodel = NULL,
+                                  lavpartable = NULL, partable = NULL,
+                                  est = NULL, glist = NULL, cov_x = NULL,
+                                  need_cov_x = FALSE) {
+  if (is.null(lavobject)) {
+    stopifnot(!is.null(lavmodel), !is.null(lavpartable))
+    if (is.null(est)) {
+      if (!is.null(lavpartable$est)) {
+        est <- lavpartable$est
+                # if this changes, tag @TDJorgensen in commit message
+      } else {
+        lav_msg_stop(gettext("could not find `est' in lavpartable"))
+      }
+    }
+  } else {
+    lavmodel <- lavobject@Model
+    lavpartable <- lavobject@ParTable
+    if (is.null(est)) {
+      est <- lav_inspect_est(lavobject)
+    }
+    if (need_cov_x && lavmodel@conditional.x && is.null(cov_x)) {
+      if (!is.null(lavobject@implied$cov.x[[1]])) {
+        cov_x <- lavobject@implied$cov.x
+                # if this changes, tag @TDJorgensen in commit message
+      } else {
+        # perhaps a lavaanList object: extract it from GLIST per block
+        cov_x <- vector("list", length = lavmodel@nblocks)
+        for (b in seq_len(lavmodel@nblocks)) {
+          mm_in_block <- (seq_len(lavmodel@nmat[b]) +
+            cumsum(c(0, lavmodel@nmat))[b])
+          mlist <- lavmodel@GLIST[mm_in_block]
+          cov_x[[b]] <- mlist[["cov.x"]]
+        }
+      }
+    }
+  }
+
+  if (is.null(partable)) {
+    partable <- lavpartable
+  }
+  if (is.null(glist)) {
+    glist <- lavmodel@GLIST
+  }
+
+  list(lavmodel = lavmodel, lavpartable = lavpartable, partable = partable,
+       est = est, glist = glist, cov_x = cov_x)
+}
+
+# Evaluate the standardized values of the defined (:=), equality (==) and
+# inequality (< >) rows, given the (already standardized) 'out' vector.
+lav_standardize_constraints <- function(out, partable, lavmodel) {
+  x <- out[partable$free & !duplicated(partable$free)]
+
+  idx <- which(partable$op == ":=")
+  if (length(idx) > 0L) {
+    out[idx] <- lavmodel@def.function(x)
+  }
+  idx <- which(partable$op == "==")
+  if (length(idx) > 0L) {
+    out[idx] <- lavmodel@ceq.function(x)
+  }
+  idx <- which(partable$op == "<" | partable$op == ">")
+  if (length(idx) > 0L) {
+    out[idx] <- lavmodel@cin.function(x)
+  }
+
+  out
+}
+
+# Observed-variable standard deviations (and variances) for block 'g'.
+# Returns the (possibly conditional.x-extended) ov.names together with the
+# vectors of SDs ('ov') and variances ('ov2').
+lav_standardize_ov_sd <- function(lavpartable, g, vy = NULL, ov_var = NULL,
+                                  conditional_x = FALSE, cov_x = NULL) {
+  ov_names <- lav_pt_vnames(lavpartable, "ov", block = g) # not user
+
+  if (is.null(ov_var)) {
+    ov2 <- vy[[g]]
+    # replace zero values by NA (but keep negative values)
+    zero_idx <- which(abs(ov2) < .Machine$double.eps)
+    if (length(zero_idx) > 0L) {
+      ov2[zero_idx] <- as.numeric(NA)
+    }
+    # replace negative values by NA (for sqrt)
+    tmp_ov2 <- ov2
+    neg_idx <- which(tmp_ov2 < 0)
+    if (length(neg_idx) > 0L) {
+      tmp_ov2[neg_idx] <- as.numeric(NA)
+    }
+    ov <- sqrt(tmp_ov2)
+  } else {
+    ov2 <- ov_var[[g]]
+    ov <- sqrt(ov2)
+  }
+
+  if (conditional_x) {
+    # extend OV with ov.names.x
+    ov_names_x <- lav_pt_vnames(lavpartable, "ov.x", block = g)
+    ov_names_nox <- lav_pt_vnames(lavpartable, "ov.nox", block = g)
+    ov_names <- c(ov_names_nox, ov_names_x)
+    ov2 <- c(ov2, diag(cov_x[[g]]))
+    ov <- c(ov, sqrt(diag(cov_x[[g]])))
+  }
+
+  list(ov_names = ov_names, ov = ov, ov2 = ov2)
+}
+
+# Given a parameter vector 'x', set it as the model parameters and return the
+# (glist, est) pair to feed into the standardization engines. Handles the
+# (EFA) rotation case. Used by the bootstrap/Monte-Carlo machinery.
+lav_standardize_prepare_x <- function(x, lavobject, rotation = FALSE) {
   lavmodel <- lav_model_set_parameters(lavmodel = lavobject@Model, x = x)
 
   if (rotation) {
-    x_unrotated <- x
     lavmodel@GLIST <- lavTech(lavobject, "est.unrotated") # unrotated!
     est_rot <- lav_model_efa_rotate_x(
-      x = x_unrotated,
+      x = x,
       lavmodel = lavmodel, # unrotated!
       lavoptions = lavobject@Options,
       init_rot = lavmodel@H,
@@ -24,112 +150,58 @@ lav_standardize_lv_x <- function(x, lavobject, partable = NULL, cov_std = TRUE,
     est <- lav_model_get_parameters(lavmodel, type = "user")
   }
 
-  x_stand_user <- lav_standardize_lv(
-    lavobject = lavobject,
-    partable = partable, est = est,
-    glist = glist, cov_std = cov_std,
-    lv_var = lv_var
-  )
+  list(glist = glist, est = est)
+}
 
-  x_stand_user
+# ---------------------------------------------------------------------------
+# 'x' wrappers (parameter vector -> standardized values), used for bootstrap
+# and Monte-Carlo standard errors.
+# ---------------------------------------------------------------------------
+
+lav_standardize_lv_x <- function(x, lavobject, partable = NULL, cov_std = TRUE,
+                                 lv_var = NULL, rotation = FALSE) {
+  ge <- lav_standardize_prepare_x(x, lavobject, rotation = rotation)
+  lav_standardize_lv(
+    lavobject = lavobject, partable = partable, est = ge$est,
+    glist = ge$glist, cov_std = cov_std, lv_var = lv_var
+  )
 }
 
 lav_standardize_all_x <- function(x, lavobject, partable = NULL, cov_std = TRUE,
-                                  rotation = FALSE) {
-  lavmodel <- lav_model_set_parameters(lavmodel = lavobject@Model, x = x)
-
-  if (rotation) {
-    x_unrotated <- x
-    lavmodel@GLIST <- lavTech(lavobject, "est.unrotated") # unrotated!
-    est_rot <- lav_model_efa_rotate_x(
-      x = x_unrotated,
-      lavmodel = lavmodel, # unrotated!
-      lavoptions = lavobject@Options,
-      init_rot = lavmodel@H,
-      type = "user",
-      extra = TRUE
-    )
-    glist <- attr(est_rot, "extra")$glist
-    attributes(est_rot) <- NULL
-    est <- est_rot
-  } else {
-    glist <- lavmodel@GLIST
-           # if this changes, tag @TDJorgensen in commit message
-    est <- lav_model_get_parameters(lavmodel, type = "user")
-  }
-
-  x_stand_user <- lav_standardize_all(
-    lavobject = lavobject,
-    partable = partable, est = est,
-    est_std = NULL, glist = glist,
-    cov_std = cov_std
+                                  ov_std = NULL, nox = FALSE, rotation = FALSE) {
+  ge <- lav_standardize_prepare_x(x, lavobject, rotation = rotation)
+  lav_standardize_all(
+    lavobject = lavobject, partable = partable, est = ge$est,
+    est_std = NULL, glist = ge$glist, cov_std = cov_std,
+    ov_std = ov_std, nox = nox
   )
-  x_stand_user
 }
 
 lav_standardize_all_nox_x <- function(x, lavobject, partable = NULL,
                                       cov_std = TRUE, rotation = FALSE) {
-  lavmodel <- lav_model_set_parameters(lavmodel = lavobject@Model, x = x)
-
-  if (rotation) {
-    x_unrotated <- x
-    lavmodel@GLIST <- lavTech(lavobject, "est.unrotated") # unrotated!
-    est_rot <- lav_model_efa_rotate_x(
-      x = x_unrotated,
-      lavmodel = lavmodel, # unrotated!
-      lavoptions = lavobject@Options,
-      init_rot = lavmodel@H,
-      type = "user",
-      extra = TRUE
-    )
-    glist <- attr(est_rot, "extra")$glist
-    attributes(est_rot) <- NULL
-    est <- est_rot
-  } else {
-    glist <- lavmodel@GLIST
-                # if this changes, tag @TDJorgensen in commit message
-    est <- lav_model_get_parameters(lavmodel, type = "user")
-  }
-
-  x_stand_user <- lav_standardize_all_nox(
-    lavobject = lavobject,
-    partable = partable, est = est,
-    est_std = NULL, glist = glist,
-    cov_std = cov_std
+  lav_standardize_all_x(
+    x = x, lavobject = lavobject, partable = partable, cov_std = cov_std,
+    nox = TRUE, rotation = rotation
   )
-  x_stand_user
 }
 
+# ---------------------------------------------------------------------------
+# std.lv : standardize the latent variables only
+# ---------------------------------------------------------------------------
 
 lav_standardize_lv <- function(lavobject = NULL,
                                partable = NULL, est = NULL, glist = NULL,
                                cov_std = TRUE, lv_var = NULL,
                                lavmodel = NULL, lavpartable = NULL) {
-  if (is.null(lavobject)) {
-    stopifnot(!is.null(lavmodel))
-    stopifnot(!is.null(lavpartable))
-    if (is.null(est)) {
-      if (!is.null(lavpartable$est)) {
-        est <- lavpartable$est
-                # if this changes, tag @TDJorgensen in commit message
-      } else {
-        lav_msg_stop(gettext("could not find `est' in lavpartable"))
-      }
-    }
-  } else {
-    lavmodel <- lavobject@Model
-    lavpartable <- lavobject@ParTable
-    if (is.null(est)) {
-      est <- lav_inspect_est(lavobject)
-    }
-  }
-
-  if (is.null(partable)) {
-    partable <- lavpartable
-  }
-  if (is.null(glist)) {
-    glist <- lavmodel@GLIST
-  }
+  s <- lav_standardize_setup(
+    lavobject = lavobject, lavmodel = lavmodel, lavpartable = lavpartable,
+    partable = partable, est = est, glist = glist
+  )
+  lavmodel <- s$lavmodel
+  lavpartable <- s$lavpartable
+  partable <- s$partable
+  est <- s$est
+  glist <- s$glist
 
   out <- est
   n <- length(est)
@@ -160,10 +232,6 @@ lav_standardize_lv <- function(lavobject = NULL,
     if (length(lv_names) == 0L) {
       next
     }
-
-    # which mm belong to block g?
-    mm_in_group <- 1:nmat[g] + cumsum(c(0, nmat))[g]
-    # mlist <- glist[mm_in_group]
 
     if (is.null(lv_var)) {
       eta2 <- diag(lv_eta[[g]])
@@ -275,7 +343,8 @@ lav_standardize_lv <- function(lavobject = NULL,
     }
 
     # End interaction/quadratic term correction for now (08/05/26;KS)
-    # The next step is to correctly scale the variances of the interaction terms
+    # The next step is to correctly scale the variances of the interaction
+    # terms
 
     # 1a. "=~" regular indicators
     idx <- which(partable$op == "=~" & !(partable$rhs %in% lv_names) &
@@ -288,11 +357,6 @@ lav_standardize_lv <- function(lavobject = NULL,
     out[idx] <- (out[idx] * eta[match(partable$lhs[idx], lv_names)]
       / eta[match(partable$rhs[idx], lv_names)])
 
-    # 1c. "=~" indicators that are both in ov and lv
-    # idx <- which(partable$op == "=~" & partable$rhs %in% ov.names
-    #                             & partable$rhs %in% lv.names &
-    #             partable$block == g)
-
     # 2. "~" regressions (and "<~")
     idx <- which((partable$op == "~" | partable$op == "<~") &
       partable$lhs %in% lv_names &
@@ -304,19 +368,13 @@ lav_standardize_lv <- function(lavobject = NULL,
       partable$block == g)
     out[idx] <- out[idx] * eta[match(partable$rhs[idx], lv_names)]
 
-    # 3a. "~~" ov
-    # idx <- which(partable$op == "~~" & !(partable$lhs %in% lv.names) &
-    #             partable$block == g)
-
-    # 3b. "~~" lv
+    # 3b. "~~" lv variances
     # ATTENTION: in Mplus 4.1, the off-diagonal residual covariances
     #            were computed by the formula cov(i,j) / sqrt(i.var*j.var)
     #            where i.var and j.var were diagonal elements of ETA
     #
     #            in Mplus 6.1 (but also AMOS and EQS), the i.var and j.var
     #            elements are the 'PSI' diagonal elements!!
-
-    # variances
     rv_idx <- which(partable$op == "~~" & partable$rhs %in% lv_names &
       partable$lhs == partable$rhs &
       partable$block == g)
@@ -367,94 +425,47 @@ lav_standardize_lv <- function(lavobject = NULL,
       }
     }
 
-
-    # 4a. "~1" ov
-    # idx <- which(partable$op == "~1" & !(partable$lhs %in% lv.names) &
-    #             partable$block == g)
-
     # 4b. "~1" lv
     idx <- which(partable$op == "~1" & partable$lhs %in% lv_names &
       partable$block == g)
     out[idx] <- out[idx] / eta[match(partable$lhs[idx], lv_names)]
   }
 
-  # 5a ":="
-  idx <- which(partable$op == ":=")
-  if (length(idx) > 0L) {
-    x <- out[partable$free & !duplicated(partable$free)]
-    out[idx] <- lavmodel@def.function(x)
-  }
-
-  # 5b "=="
-  idx <- which(partable$op == "==")
-  if (length(idx) > 0L) {
-    x <- out[partable$free & !duplicated(partable$free)]
-    out[idx] <- lavmodel@ceq.function(x)
-  }
-
-  # 5c. "<" or ">"
-  idx <- which((partable$op == "<" | partable$op == ">"))
-  if (length(idx) > 0L) {
-    x <- out[partable$free & !duplicated(partable$free)]
-    out[idx] <- lavmodel@cin.function(x)
-  }
-
-  out
+  # 5. defined/(in)equality constraints
+  lav_standardize_constraints(out, partable, lavmodel)
 }
+
+# ---------------------------------------------------------------------------
+# std.all / std.nox / user subset : standardize observed (and latent)
+# variables.
+#
+# 'ov_std' and 'nox' control *which* observed variables are standardized:
+#   - nox = FALSE, ov_std = NULL      -> all observed variables (std.all)
+#   - nox = TRUE                      -> all but the exogenous 'x' (std.nox)
+#   - nox = FALSE, ov_std = c(...)    -> only the observed variables listed in
+#                                        'ov_std' (a generalization of std.nox)
+# In all cases the latent variables are fully standardized (via
+# lav_standardize_lv()).
+# ---------------------------------------------------------------------------
 
 lav_standardize_all <- function(lavobject = NULL,
                                 partable = NULL, est = NULL, est_std = NULL,
                                 glist = NULL, cov_std = TRUE, ov_var = NULL,
                                 lv_var = NULL,
                                 lavmodel = NULL, lavpartable = NULL,
-                                cov_x = NULL) {
-  if (is.null(lavobject)) {
-    stopifnot(!is.null(lavmodel))
-    stopifnot(!is.null(lavpartable))
-    if (is.null(est)) {
-      if (!is.null(lavpartable$est)) {
-        est <- lavpartable$est
-             # if this changes, tag @TDJorgensen in commit message
-      } else {
-        lav_msg_stop(gettext("could not find `est' in lavpartable"))
-      }
-    }
-  } else {
-    lavmodel <- lavobject@Model
-    lavpartable <- lavobject@ParTable
-    if (is.null(est)) {
-      est <- lav_inspect_est(lavobject)
-    }
-    if (lavmodel@conditional.x) {
-      if (is.null(cov_x)) {
-        # try SampleStats slot
-        # if("SampleStats" %in% slotNames(lavobject)) {
-        #    cov.x <- lavobject@SampleStats@cov.x
-        if (!is.null(lavobject@implied$cov.x[[1]])) {
-          cov_x <- lavobject@implied$cov.x
-             # if this changes, tag @TDJorgensen in commit message
-        } else {
-          # perhaps lavaanList object
-          # extract it from GLIST per block
-          cov_x <- vector("list", length = lavmodel@nblocks)
-          for (b in seq_len(lavmodel@nblocks)) {
-            # which mm belong to block b?
-            mm_in_block <- (seq_len(lavmodel@nmat[b]) +
-              cumsum(c(0, lavmodel@nmat))[b])
-            mlist <- lavmodel@GLIST[mm_in_block]
-            cov_x[[b]] <- mlist[["cov.x"]]
-          }
-        }
-      }
-    }
-  }
+                                cov_x = NULL, ov_std = NULL, nox = FALSE) {
+  s <- lav_standardize_setup(
+    lavobject = lavobject, lavmodel = lavmodel, lavpartable = lavpartable,
+    partable = partable, est = est, glist = glist, cov_x = cov_x,
+    need_cov_x = TRUE
+  )
+  lavmodel <- s$lavmodel
+  lavpartable <- s$lavpartable
+  partable <- s$partable
+  est <- s$est
+  glist <- s$glist
+  cov_x <- s$cov_x
 
-  if (is.null(partable)) {
-    partable <- lavpartable
-  }
-  if (is.null(glist)) {
-    glist <- lavmodel@GLIST
-  }
   if (is.null(est_std)) {
     est_std <- lav_standardize_lv(
       lavobject = lavobject,
@@ -473,60 +484,44 @@ lav_standardize_all <- function(lavobject = NULL,
     diagonal_only = TRUE
   )
 
-
   for (g in 1:lavmodel@nblocks) {
-    ov_names <- lav_pt_vnames(lavpartable, "ov", block = g) # not user
     lv_names <- lav_pt_vnames(lavpartable, "lv", block = g)
 
-    if (is.null(ov_var)) {
-      ov2 <- vy[[g]]
-      # replace zero values by NA (but keep negative values)
-      zero_idx <- which(abs(ov2) < .Machine$double.eps)
-      if (length(zero_idx) > 0L) {
-        ov2[zero_idx] <- as.numeric(NA)
-      }
+    tmp <- lav_standardize_ov_sd(
+      lavpartable = lavpartable, g = g, vy = vy, ov_var = ov_var,
+      conditional_x = lavmodel@conditional.x, cov_x = cov_x
+    )
+    ov_names <- tmp$ov_names
+    ov <- tmp$ov
+    ov2 <- tmp$ov2
 
-      # replace negative values by NA (for sqrt)
-      tmp_ov2 <- ov2
-      neg_idx <- which(tmp_ov2 < 0)
-      if (length(neg_idx) > 0L) {
-        tmp_ov2[neg_idx] <- as.numeric(NA)
-      }
-      ov <- sqrt(tmp_ov2)
+    # which observed variables should NOT be standardized in this block?
+    # (std.all: none; std.nox: the exogenous 'x'; user: all but 'ov_std')
+    if (nox) {
+      ov_nostd <- lav_pt_vnames(lavpartable, "ov.x", block = g)
+    } else if (is.null(ov_std)) {
+      ov_nostd <- character(0L)
     } else {
-      ov2 <- ov_var[[g]]
-      ov <- sqrt(ov2)
-    }
-
-    if (lavmodel@conditional.x) {
-      # extend OV with ov.names.x
-      ov_names_x <- lav_pt_vnames(lavpartable, "ov.x", block = g)
-      ov_names_nox <- lav_pt_vnames(lavpartable, "ov.nox", block = g)
-      ov_names <- c(ov_names_nox, ov_names_x)
-      ov2 <- c(ov2, diag(cov_x[[g]]))
-      ov <- c(ov, sqrt(diag(cov_x[[g]])))
+      ov_nostd <- setdiff(ov_names, ov_std)
     }
 
     # 1a. "=~" regular indicators
     idx <- which(partable$op == "=~" & !(partable$rhs %in% lv_names) &
+      !(partable$rhs %in% ov_nostd) &
       partable$block == g)
     out[idx] <- out[idx] / ov[match(partable$rhs[idx], ov_names)]
 
-    # 1b. "=~" regular higher-order lv indicators
-
-    # 1c. "=~" indicators that are both in ov and lv
-    # idx <- which(partable$op == "=~" & partable$rhs %in% ov.names
-    #                             & partable$rhs %in% lv.names &
-    #             partable$block == g)
+    # 1b. "=~" regular higher-order lv indicators -> handled in std.lv
+    # 1c. "=~" indicators that are both in ov and lv -> not standardized here
 
     # 2. "~" regressions (and "<~")
     idx <- which((partable$op == "~" | partable$op == "<~") &
-      partable$lhs %in% ov_names &
+      partable$lhs %in% ov_names & !(partable$lhs %in% ov_nostd) &
       partable$block == g)
     out[idx] <- out[idx] / ov[match(partable$lhs[idx], ov_names)]
 
     idx <- which((partable$op == "~" | partable$op == "<~") &
-      partable$rhs %in% ov_names &
+      partable$rhs %in% ov_names & !(partable$rhs %in% ov_nostd) &
       partable$block == g)
     out[idx] <- out[idx] * ov[match(partable$rhs[idx], ov_names)]
 
@@ -540,10 +535,9 @@ lav_standardize_all <- function(lavobject = NULL,
 
     # variances
     rv_idx <- which(partable$op == "~~" & !(partable$lhs %in% lv_names) &
+      !(partable$lhs %in% ov_nostd) &
       partable$lhs == partable$rhs &
       partable$block == g)
-    # out[rv.idx] <- ( out[rv.idx] / OV[ match(partable$lhs[rv.idx], ov.names) ]
-    #                          / OV[ match(partable$rhs[rv.idx], ov.names) ] )
     out[rv_idx] <- (out[rv_idx] /
       ov2[match(partable$lhs[rv_idx], ov_names)])
 
@@ -563,7 +557,7 @@ lav_standardize_all <- function(lavobject = NULL,
 
     # left
     idx_lhs <- which(partable$op == "~~" &
-      !(partable$lhs %in% lv_names) &
+      !(partable$lhs %in% lv_names) & !(partable$lhs %in% ov_nostd) &
       partable$lhs != partable$rhs &
       partable$block == g)
     if (length(idx_lhs) > 0L) {
@@ -578,7 +572,7 @@ lav_standardize_all <- function(lavobject = NULL,
 
     # right
     idx_rhs <- which(partable$op == "~~" &
-      !(partable$rhs %in% lv_names) &
+      !(partable$rhs %in% lv_names) & !(partable$rhs %in% ov_nostd) &
       partable$lhs != partable$rhs &
       partable$block == g)
     if (length(idx_rhs) > 0L) {
@@ -591,297 +585,52 @@ lav_standardize_all <- function(lavobject = NULL,
       }
     }
 
-    # 3b. "~~" lv
-    # idx <- which(partable$op == "~~" & partable$rhs %in% lv.names &
-    #             partable$block == g)
+    # 3b. "~~" lv -> handled in std.lv
 
     # 4a. "~1" ov
     idx <- which(partable$op == "~1" & !(partable$lhs %in% lv_names) &
+      !(partable$lhs %in% ov_nostd) &
       partable$block == g)
     out[idx] <- out[idx] / ov[match(partable$lhs[idx], ov_names)]
 
-    # 4b. "~1" lv
-    # idx <- which(partable$op == "~1" & partable$lhs %in% lv.names &
-    #             partable$block == g)
+    # 4b. "~1" lv -> handled in std.lv
 
     # 4c. "|" thresholds
     idx <- which(partable$op == "|" & !(partable$lhs %in% lv_names) &
+      !(partable$lhs %in% ov_nostd) &
       partable$block == g)
     out[idx] <- out[idx] / ov[match(partable$lhs[idx], ov_names)]
 
     # 4d. "~*~" scales
     idx <- which(partable$op == "~*~" & !(partable$lhs %in% lv_names) &
+      !(partable$lhs %in% ov_nostd) &
       partable$block == g)
     out[idx] <- 1.0
   }
 
-  # 5a ":="
-  idx <- which(partable$op == ":=")
-  if (length(idx) > 0L) {
-    x <- out[partable$free & !duplicated(partable$free)]
-    out[idx] <- lavmodel@def.function(x)
-  }
-
-  # 5b "=="
-  idx <- which(partable$op == "==")
-  if (length(idx) > 0L) {
-    x <- out[partable$free & !duplicated(partable$free)]
-    out[idx] <- lavmodel@ceq.function(x)
-  }
-
-  # 5c. "<" or ">"
-  idx <- which((partable$op == "<" | partable$op == ">"))
-  if (length(idx) > 0L) {
-    x <- out[partable$free & !duplicated(partable$free)]
-    out[idx] <- lavmodel@cin.function(x)
-  }
-
-  out
+  # 5. defined/(in)equality constraints
+  lav_standardize_constraints(out, partable, lavmodel)
 }
 
-
+# std.nox: standardize all observed variables except the exogenous 'x'.
+# Thin wrapper around lav_standardize_all().
 lav_standardize_all_nox <- function(lavobject = NULL,
                                     partable = NULL, est = NULL, est_std = NULL,
                                     glist = NULL, cov_std = TRUE, ov_var = NULL,
                                     lv_var = NULL,
                                     lavmodel = NULL, lavpartable = NULL,
                                     cov_x = NULL) {
-  if (is.null(lavobject)) {
-    stopifnot(!is.null(lavmodel))
-    stopifnot(!is.null(lavpartable))
-    if (is.null(est)) {
-      if (!is.null(lavpartable$est)) {
-        est <- lavpartable$est
-                   # if this changes, tag @TDJorgensen in commit message
-      } else {
-        lav_msg_stop(gettext("could not find `est' in lavpartable"))
-      }
-    }
-  } else {
-    lavmodel <- lavobject@Model
-    lavpartable <- lavobject@ParTable
-    if (is.null(est)) {
-      est <- lav_inspect_est(lavobject)
-    }
-    if (lavmodel@conditional.x) {
-      if (is.null(cov_x)) {
-        # try SampleStats slot
-        # if("SampleStats" %in% slotNames(lavobject)) {
-        #    cov.x <- lavobject@SampleStats@cov.x
-        if (!is.null(lavobject@implied$cov.x[[1]])) {
-          cov_x <- lavobject@implied$cov.x
-                      # if this changes, tag @TDJorgensen in commit message
-        } else {
-          # perhaps lavaanList object
-          # extract it from GLIST per block
-          cov_x <- vector("list", length = lavmodel@nblocks)
-          for (b in seq_len(lavmodel@nblocks)) {
-            # which mm belong to block b?
-            mm_in_block <- (seq_len(lavmodel@nmat[b]) +
-              cumsum(c(0, lavmodel@nmat))[b])
-            mlist <- lavmodel@GLIST[mm_in_block]
-            cov_x[[b]] <- mlist[["cov.x"]]
-          }
-        }
-      }
-    }
-  }
-
-  if (is.null(partable)) {
-    partable <- lavpartable
-  }
-  if (is.null(glist)) {
-    glist <- lavmodel@GLIST
-  }
-  if (is.null(est_std)) {
-    est_std <- lav_standardize_lv(
-      lavobject = lavobject,
-      partable = partable, est = est, glist = glist,
-      cov_std = cov_std, lv_var = lv_var, lavmodel = lavmodel,
-      lavpartable = lavpartable
-    )
-  }
-
-  out <- est_std
-  n <- length(est_std)
-  stopifnot(n == length(partable$lhs))
-
-  vy <- lav_model_vy(
-    lavmodel = lavmodel, glist = glist,
-    diagonal_only = TRUE
+  lav_standardize_all(
+    lavobject = lavobject, partable = partable, est = est, est_std = est_std,
+    glist = glist, cov_std = cov_std, ov_var = ov_var, lv_var = lv_var,
+    lavmodel = lavmodel, lavpartable = lavpartable, cov_x = cov_x,
+    nox = TRUE
   )
-
-
-  for (g in 1:lavmodel@nblocks) {
-    ov_names <- lav_pt_vnames(lavpartable, "ov", block = g)
-    ov_names_x <- lav_pt_vnames(lavpartable, "ov.x", block = g)
-    ov_names_nox <- lav_pt_vnames(lavpartable, "ov.nox", block = g)
-    lv_names <- lav_pt_vnames(lavpartable, "lv", block = g)
-
-    if (is.null(ov_var)) {
-      ov2 <- vy[[g]]
-      # replace zero values by NA (but keep negative values)
-      zero_idx <- which(abs(ov2) < .Machine$double.eps)
-      if (length(zero_idx) > 0L) {
-        ov2[zero_idx] <- as.numeric(NA)
-      }
-
-      # replace negative values by NA (for sqrt)
-      tmp_ov2 <- ov2
-      neg_idx <- which(tmp_ov2 < 0)
-      if (length(neg_idx) > 0L) {
-        tmp_ov2[neg_idx] <- as.numeric(NA)
-      }
-      ov <- sqrt(tmp_ov2)
-    } else {
-      ov2 <- ov_var[[g]]
-      ov <- sqrt(ov2)
-    }
-
-
-    if (lavmodel@conditional.x) {
-      # extend OV with ov.names.x
-      ov_names_x <- lav_pt_vnames(lavpartable, "ov.x", block = g)
-      ov_names <- c(ov_names_nox, ov_names_x)
-      ov2 <- c(ov2, diag(cov_x[[g]]))
-      ov <- c(ov, sqrt(diag(cov_x[[g]])))
-    }
-
-    # 1a. "=~" regular indicators
-    idx <- which(partable$op == "=~" & !(partable$rhs %in% lv_names) &
-      partable$block == g)
-    out[idx] <- out[idx] / ov[match(partable$rhs[idx], ov_names)]
-
-    # 1b. "=~" regular higher-order lv indicators
-
-    # 1c. "=~" indicators that are both in ov and lv
-    # idx <- which(partable$op == "=~" & partable$rhs %in% ov.names
-    #                             & partable$rhs %in% lv.names &
-    #             partable$block == g)
-
-    # 2. "~" regressions (and "<~")
-    idx <- which((partable$op == "~" | partable$op == "<~") &
-      partable$lhs %in% ov_names &
-      partable$block == g)
-    out[idx] <- out[idx] / ov[match(partable$lhs[idx], ov_names)]
-
-    idx <- which((partable$op == "~" | partable$op == "<~") &
-      partable$rhs %in% ov_names_nox &
-      partable$block == g)
-    out[idx] <- out[idx] * ov[match(partable$rhs[idx], ov_names_nox)]
-
-    # 3a. "~~" ov
-    # ATTENTION: in Mplus 4.1, the off-diagonal residual covariances
-    #            were computed by the formula cov(i,j) / sqrt(i.var*j.var)
-    #            where i.var and j.var were diagonal elements of OV
-    #
-    #            in Mplus 6.1 (but also AMOS and EQS), the i.var and j.var
-    #            elements are the 'THETA' diagonal elements!!
-
-    # variances
-    rv_idx <- which(partable$op == "~~" & !(partable$lhs %in% lv_names) &
-      !(partable$lhs %in% ov_names_x) &
-      partable$lhs == partable$rhs &
-      partable$block == g)
-    # out[rv.idx] <- ( out[rv.idx] / OV[ match(partable$lhs[rv.idx], ov.names) ]
-    #                            / OV[ match(partable$rhs[rv.idx], ov.names) ] )
-    out[rv_idx] <- (out[rv_idx] /
-      ov2[match(partable$lhs[rv_idx], ov_names)])
-
-    # covariances ov
-    # three types:
-    # - only lhs is OV (and fixed.x = FALSE)
-    # - only rhs is OV (and fixed.x = FALSE)
-    # - both lhs and rhs are OV (regular case)
-    if (cov_std) {
-      if (!is.complex(est[rv_idx])) {
-        rv <- sqrt(abs(est[rv_idx]))
-      } else {
-        rv <- sqrt(est[rv_idx])
-      }
-      rv_names <- partable$lhs[rv_idx]
-    }
-
-    # left
-    idx_lhs <- which(partable$op == "~~" &
-      !(partable$lhs %in% lv_names) &
-      !(partable$lhs %in% ov_names_x) &
-      partable$lhs != partable$rhs &
-      partable$block == g)
-    if (length(idx_lhs) > 0L) {
-      if (cov_std == FALSE) {
-        out[idx_lhs] <-
-          (out[idx_lhs] / ov[match(partable$lhs[idx_lhs], ov_names)])
-      } else {
-        out[idx_lhs] <-
-          (out[idx_lhs] / rv[match(partable$lhs[idx_lhs], rv_names)])
-      }
-    }
-
-    # right
-    idx_rhs <- which(partable$op == "~~" &
-      !(partable$rhs %in% lv_names) &
-      !(partable$rhs %in% ov_names_x) &
-      partable$lhs != partable$rhs &
-      partable$block == g)
-    if (length(idx_rhs) > 0L) {
-      if (cov_std == FALSE) {
-        out[idx_rhs] <-
-          (out[idx_rhs] / ov[match(partable$rhs[idx_rhs], ov_names)])
-      } else {
-        out[idx_rhs] <-
-          (out[idx_rhs] / rv[match(partable$rhs[idx_rhs], rv_names)])
-      }
-    }
-
-    # 3b. "~~" lv
-    # idx <- which(partable$op == "~~" & partable$rhs %in% lv.names &
-    #             partable$block == g)
-
-    # 4a. "~1" ov
-    idx <- which(partable$op == "~1" & !(partable$lhs %in% lv_names) &
-      !(partable$lhs %in% ov_names_x) &
-      partable$block == g)
-    out[idx] <- out[idx] / ov[match(partable$lhs[idx], ov_names)]
-
-    # 4b. "~1" lv
-    # idx <- which(partable$op == "~1" & partable$lhs %in% lv.names &
-    #             partable$block == g)
-
-    # 4c. "|" thresholds
-    idx <- which(partable$op == "|" & !(partable$lhs %in% lv_names) &
-      partable$block == g)
-    out[idx] <- out[idx] / ov[match(partable$lhs[idx], ov_names)]
-
-    # 4d. "~*~" scales
-    idx <- which(partable$op == "~*~" & !(partable$lhs %in% lv_names) &
-      partable$block == g)
-    out[idx] <- 1.0
-  }
-
-  # 5a ":="
-  idx <- which(partable$op == ":=")
-  if (length(idx) > 0L) {
-    x <- out[partable$free & !duplicated(partable$free)]
-    out[idx] <- lavmodel@def.function(x)
-  }
-
-  # 5b "=="
-  idx <- which(partable$op == "==")
-  if (length(idx) > 0L) {
-    x <- out[partable$free & !duplicated(partable$free)]
-    out[idx] <- lavmodel@ceq.function(x)
-  }
-
-  # 5c. "<" or ">"
-  idx <- which((partable$op == "<" | partable$op == ">"))
-  if (length(idx) > 0L) {
-    x <- out[partable$free & !duplicated(partable$free)]
-    out[idx] <- lavmodel@cin.function(x)
-  }
-
-  out
 }
+
+# ---------------------------------------------------------------------------
+# unstandardize observed variables (used by e.g. simulateData)
+# ---------------------------------------------------------------------------
 
 lav_unstandardize_ov <- function(partable, ov_var = NULL, cov_std = TRUE) {
   # check if ustart is missing; if so, look for est
@@ -896,7 +645,6 @@ lav_unstandardize_ov <- function(partable, ov_var = NULL, cov_std = TRUE) {
 
   stopifnot(!any(is.na(partable$ustart)))
   est <- out <- partable$ustart
-  # n <- length(est)
 
   # nblocks
   nblocks <- lav_pt_nblocks(partable)
@@ -920,11 +668,7 @@ lav_unstandardize_ov <- function(partable, ov_var = NULL, cov_std = TRUE) {
     out[idx] <- out[idx] * ov[match(partable$rhs[idx], ov_names)]
 
     # 1b. "=~" regular higher-order lv indicators
-
     # 1c. "=~" indicators that are both in ov and lv
-    # idx <- which(partable$op == "=~" & partable$rhs %in% ov.names
-    #                             & partable$rhs %in% lv.names &
-    #             partable$block == g)
 
     # 2. "~" regressions (and "<~")
     idx <- which((partable$op == "~" | partable$op == "<~") &
@@ -973,8 +717,6 @@ lav_unstandardize_ov <- function(partable, ov_var = NULL, cov_std = TRUE) {
     }
 
     # 3b. "~~" lv
-    # idx <- which(partable$op == "~~" & partable$rhs %in% lv.names &
-    #             partable$block == g)
 
     # 4a. "~1" ov
     idx <- which(partable$op == "~1" & !(partable$lhs %in% lv_names) &
@@ -982,8 +724,6 @@ lav_unstandardize_ov <- function(partable, ov_var = NULL, cov_std = TRUE) {
     out[idx] <- out[idx] * ov[match(partable$lhs[idx], ov_names)]
 
     # 4b. "~1" lv
-    # idx <- which(partable$op == "~1" & partable$lhs %in% lv.names &
-    #             partable$block == g)
   }
 
   # 5a ":="

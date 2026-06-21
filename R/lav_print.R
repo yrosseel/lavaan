@@ -561,6 +561,7 @@ lav_parameterestimates_print <- function(x, ..., nd = 3L) {
   colnames(m)[colnames(m) == "std.lv"] <- "Std.lv"
   colnames(m)[colnames(m) == "std.all"] <- "Std.all"
   colnames(m)[colnames(m) == "std.nox"] <- "Std.nox"
+  colnames(m)[colnames(m) == "std.user"] <- "Std.usr"
   colnames(m)[colnames(m) == "prior"] <- "Prior"
   colnames(m)[colnames(m) == "fmi"] <- "FMI"
   ## for lavaan.mi-class objects (semTools)

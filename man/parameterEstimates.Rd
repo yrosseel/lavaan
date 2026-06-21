@@ -61,7 +61,13 @@ are added to the output. Note that \emph{SE}s and tests are still based on
 unstandardized estimates. Use \code{\link{standardizedSolution}} to obtain
 \emph{SE}s and test statistics for standardized estimates. If a character
 vector is passed with any of \code{c("std.lv","std.all","std.nox")}, only the
-selected standardization methods are added.}
+selected standardization methods are added. Alternatively, a character vector
+of (observed) variable names may be passed (for example
+\code{standardized = c("x1", "x2")}); in that case only the parameters
+involving these variables are standardized (the other observed variables are
+left unstandardized), and the result is added in a \code{std.user} column.
+This is a generalization of \code{"std.nox"}, where the (observed) exogenous
+\code{x} variables are the ones left unstandardized.}
 \item{cov.std}{Logical. If TRUE, the (residual) observed
 covariances are scaled by the square root of the `Theta' diagonal elements, and
 the (residual) latent covariances are scaled by the square root of the `Psi'

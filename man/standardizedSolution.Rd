@@ -20,7 +20,12 @@ If \code{"std.all"}, the standardized estimates are based
 on the variances of both (continuous) observed and latent variables.
 If \code{"std.nox"}, the standardized estimates are based
 on the variances of both (continuous) observed and latent variables,
-but not the variances of exogenous covariates.}
+but not the variances of exogenous covariates.
+Alternatively, \code{type} may be a vector of (observed) variable names
+(for example \code{type = c("x1", "x2")}); in that case only the parameters
+involving these variables are standardized (the other observed variables are
+left unstandardized). This is a generalization of \code{"std.nox"}, where the
+(observed) exogenous \code{x} variables are the ones left unstandardized.}
 \item{se}{Logical. If TRUE, standard errors for the standardized parameters
 will be computed, together with a z-statistic and a p-value.}
 \item{zstat}{Logical. If \code{TRUE}, an extra column is added containing

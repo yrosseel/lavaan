@@ -162,6 +162,12 @@ the independence model) (if available).}
       statistics for standardized estimates.
       The \code{std.nox} argument is deprecated; the \code{standardized}
       argument allows \code{"std.nox"} solution to be specifically requested.
+      The \code{standardized} argument may also be a character vector of
+      (observed) variable names (for example \code{c("x1", "x2")}); only the
+      parameters involving these variables are then standardized, and the
+      result is shown in a \code{Std.usr} column. This generalizes
+      \code{"std.nox"}, where the exogenous \code{x} variables are the ones
+      left unstandardized.
       If \code{remove.system.eq = TRUE}, the system-generated equality 
       constraints (using plabels) are not shown.
       If \code{remove.eq = TRUE} or \code{remove.ineq = TRUE}, 
