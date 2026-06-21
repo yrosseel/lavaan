@@ -21,7 +21,7 @@ lavResiduals(object, type = "cor.bentler", custom.rmr = NULL,
 \item{type}{Character.
 If \code{type = "raw"}, this function returns the raw (= unscaled)
 difference between the observed and the expected (model-implied) summary
-statistics, as well as the standardized version of these residualds.
+statistics, as well as the standardized version of these residuals.
 If \code{type = "cor"}, or \code{type = "cor.bollen"}, the observed and model
 implied covariance matrices are first transformed to a correlation matrix
 (using \code{cov2cor()}), before the residuals are computed.

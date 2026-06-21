@@ -1,4 +1,4 @@
-lav_samplestats_step1 <- function(y,
+lav_samp_step1 <- function(y,
                                   wt = NULL, # new in 0.6-6
                                   ov_names = NULL,
                                   ov_types = NULL,
@@ -60,7 +60,7 @@ lav_samplestats_step1 <- function(y,
       th_names[[i]] <- ov_names[i]
       th_idx_1[[i]] <- 0L
       if (scores_flag) {
-        scores <- lav_uvreg_scores(y = y[, i], x = exo, wt = wt)
+        scores <- lav_uvreg_sc(y = y[, i], x = exo, wt = wt)
         sc_th[, th_idx] <- scores[, 1L]
         sc_var[, i] <- scores[, fit$var_idx]
       }
@@ -98,7 +98,7 @@ lav_samplestats_step1 <- function(y,
       fit_nox <- lav_uvord_th(y = y[, i], wt = wt)
       th_nox[[i]] <- fit_nox
       if (scores_flag) {
-        scores <- lav_uvord_scores(y = y[, i], x = exo, wt = wt)
+        scores <- lav_uvord_sc(y = y[, i], x = exo, wt = wt)
       }
 
       if (allow_empty_cell) {

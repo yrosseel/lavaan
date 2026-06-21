@@ -106,9 +106,11 @@ lav_sample_trimmed_sd <- function(x, na_rm = TRUE, trim = 0) {
 
 # convert correlation matrix + standard deviations to covariance matrix
 # based on cov2cor in package:stats
-lav_cor2cov <- function(R, sds, names = NULL) {             # nolint
-  p <- (d <- dim(R))[1L]
-  if (!is.numeric(R) || length(d) != 2L || p != d[2L]) {
+lav_cor2cov <- function(r, sds, names = NULL, ...) {
+  dotdotdot <- list(...)
+  lav_adapt_func(environment(), dotdotdot, NULL)
+  p <- (d <- dim(r))[1L]
+  if (!is.numeric(r) || length(d) != 2L || p != d[2L]) {
     lav_msg_stop(gettext("'V' is not a square numeric matrix"))
   }
 
@@ -118,7 +120,7 @@ lav_cor2cov <- function(R, sds, names = NULL) {             # nolint
     ))
   }
 
-  # if(sum(diag(R)) != p)
+  # if(sum(diag(r)) != p)
   #    stop("The diagonal of a correlation matrix should be all ones.")
 
   if (p != length(sds)) {
@@ -126,8 +128,8 @@ lav_cor2cov <- function(R, sds, names = NULL) {             # nolint
                          have a different number of variables"))
   }
 
-  s <- R
-  s[] <- sds * R * rep(sds, each = p)
+  s <- r
+  s[] <- sds * r * rep(sds, each = p)
 
   # optionally, add names
   if (!is.null(names)) {
@@ -160,9 +162,9 @@ lav_getcov <- function(x, lower = TRUE, diagonal = TRUE, sds = NULL,
   if (is.character(sds)) sds <- lav_char2num(sds)
 
   if (lower) {
-    cov_1 <- lav_matrix_lower2full(x, diagonal = diagonal)
+    cov_1 <- lav_mat_lower2full(x, diagonal = diagonal)
   } else {
-    cov_1 <- lav_matrix_upper2full(x, diagonal = diagonal)
+    cov_1 <- lav_mat_upper2full(x, diagonal = diagonal)
   }
   nvar <- ncol(cov_1)
 
@@ -216,7 +218,7 @@ lav_implied_to_vec <- function(implied = NULL, lavmodel = NULL,
       var <- var[var != 1]
     }
 
-    wls_obs[[g]] <- lav_samplestats_wls_obs(
+    wls_obs[[g]] <- lav_samp_wls_obs(
       # plain
       mean_g = implied$mean[[g]],
       cov_g = implied$cov[[g]],
@@ -299,7 +301,7 @@ lav_vec_to_implied <- function(x = NULL, lavmodel) {
 
       # cov - lower only
       idx <- seq_len(nvar * (nvar - 1) / 2)
-      cov_g <- lav_matrix_vech_reverse(x[idx], diagonal = FALSE)
+      cov_g <- lav_mat_vech_rev(x[idx], diagonal = FALSE)
       x <- x[-idx]
       diag(cov_g) <- var_g
 
@@ -330,7 +332,7 @@ lav_vec_to_implied <- function(x = NULL, lavmodel) {
       } else {
         idx <- seq_len(nvar * (nvar - 1) / 2)
       }
-      cov_g <- lav_matrix_vech_reverse(x[idx], diagonal = diag_flag)
+      cov_g <- lav_mat_vech_rev(x[idx], diagonal = diag_flag)
       x <- x[-idx]
 
       # fill in
@@ -351,8 +353,8 @@ lav_vec_to_implied <- function(x = NULL, lavmodel) {
 # theta = solve(t(Delta) %*% W %*% Delta) %*% t(Delta) %*% W %*% svec
 #
 # where Delta is the Jacobian of Sigma wrt the free parameters,
-# W is lav_matrix_bdiag(S.inv, S22_inv)
-# where S22_inv = 0.5 * lav_matrix_duplication_pre_post(S.inv %x% S.inv)
+# W is lav_mat_bdiag(S.inv, S22_inv)
+# where S22_inv = 0.5 * lav_mat_dup_pre_post(S.inv %x% S.inv)
 #  - S can be I (ULS) (then W = 0.5 * t(D) %*% D)
 #  - S can be sample.cov (GLS)
 #  - S can be Sigma (2RLS or RLS)
@@ -376,7 +378,9 @@ lav_utils_wls_linearization <- function(delta = NULL, s = NULL,
                                         #fixed.x = FALSE, # FIXME: needed?
                                         #x.idx = integer(0L),
                                         svec = NULL,
-                                        return_h = FALSE) {
+                                        return_h = FALSE,
+                                        con_jac = NULL,
+                                        con_rhs = NULL) {
   nvar <- nrow(s)
   if (categorical) {
     meanstructure <- FALSE
@@ -392,6 +396,13 @@ lav_utils_wls_linearization <- function(delta = NULL, s = NULL,
 
   # vech
   w <- rep(1.0, pstar)
+  if (!categorical) {
+    # half-weight the diagonal elements of vech(): they are counted once,
+    # while each off-diagonal element represents two (symmetric) entries.
+    # (For categorical data, the cov part only contains off-diagonal
+    # correlations, so no diagonal weighting is needed.)
+    w[lav_mat_diagh_idx(nvar)] <- 0.5
+  }
 
   # split Delta/svec
   if (categorical) {
@@ -404,7 +415,6 @@ lav_utils_wls_linearization <- function(delta = NULL, s = NULL,
     jac_cov <- delta[-mean_idx, , drop = FALSE]
     s_mean <- svec[mean_idx]
     s_cov <- svec[-mean_idx]
-    w[lav_matrix_diagh_idx(nvar)] <- 0.5
   } else if (nrow(delta) != pstar) {
     lav_msg_stop(gettext("nrow(Delta) != pstar"))
   }
@@ -436,9 +446,9 @@ lav_utils_wls_linearization <- function(delta = NULL, s = NULL,
     # cov part
     q_cov <- matrix(0, pstar, nc)
     for (j in seq_len(nc)) {
-      vmat <- lav_matrix_vech_reverse(jac_cov[, j])
+      vmat <- lav_mat_vech_rev(jac_cov[, j])
       m_w <- si %*% vmat %*% si
-      q_cov[, j] <- w * lav_matrix_vech(m_w)
+      q_cov[, j] <- w * lav_mat_vech(m_w)
     }
 
     a <- crossprod(jac_cov, q_cov)
@@ -458,22 +468,41 @@ lav_utils_wls_linearization <- function(delta = NULL, s = NULL,
   }
 
   r <- chol(a)
-  if (!return_h) {
+  have_con <- !is.null(con_jac) && nrow(con_jac) > 0L
+  if (!return_h && !have_con) {
     out <- backsolve(r, forwardsolve(t(r), b))
   } else {
     ainv  <- chol2inv(r)
     out <- drop(ainv %*% b)
-    h <- ainv %*% t_q
-    attr(out, "H") <- h
+    if (return_h) {
+      h <- ainv %*% t_q
+      attr(out, "H") <- h
+    }
+  }
+
+  # impose linear equality constraints (con_jac %*% theta == con_rhs) on the
+  # WLS estimate by projection onto the constraint set, using the WLS Hessian
+  # 'a' as the metric: theta_c = theta - A^{-1} R' (R A^{-1} R')^{-1}(R theta-q)
+  if (have_con) {
+    air <- ainv %*% t(con_jac)
+    rar <- con_jac %*% air
+    lambda <- solve(rar, drop(con_jac %*% out) - con_rhs)
+    h_attr <- attr(out, "H")
+    out <- drop(out - air %*% lambda)
+    if (!is.null(h_attr)) {
+      attr(out, "H") <- h_attr
+    }
   }
 
   out
 }
 
+# ----------------------- lav_snake_case -------------------------------- #
 # function to transform names of variables to snake_case
 # this function is used mainly to rename function arguments given in a list
 #     where 'old' names are still accepted to avoid breaking other packages
-lav_snake_case <- function(old_names) {
+# if input is a list, the names of the list are transformed.
+lav_snake_case <- function(old) {
   curval <- c("B", "C", "D", "E", "K", "W", "PI",
              "TAU", "DELTA", "NU", "LAMBDA", "eXo",
               "WMAT", "THETA", "ALPHA", "BETA", "GAMMA", "PSI",
@@ -482,6 +511,7 @@ lav_snake_case <- function(old_names) {
              "mm_tau", "mm_delta", "mm_nu", "mm_lambda", "exo",
              "mm_wmat", "mm_theta", "mm_alpha", "mm_beta", "mm_gamma", "mm_psi",
              "s_min_theta")
+  if (is.list(old)) old_names <- names(old) else old_names <- old
   # transform dot.case and CamelCase to snake_case
   varnames_new <- tolower(chartr(".", "_",
                    gsub("([a-z])([A-Z])", "\\1_\\2", old_names)))
@@ -492,5 +522,53 @@ lav_snake_case <- function(old_names) {
   }
   # remove trailing underscores in new names
   varnames_new <- gsub("_$", "", varnames_new)
-  varnames_new
+  # check no doubles in new names
+  tocheck <- varnames_new[varnames_new != ""]
+  doubles <- anyDuplicated(tocheck)
+  if (doubles) {
+    lav_msg_stop(gettextf("At least one snake_cased name (%s) is duplicated!",
+                   tocheck[doubles]))
+  }
+  if (is.list(old)) {
+    names(old) <- varnames_new
+    old
+  } else {
+    varnames_new
+  }
+}
+# ------------------------- lav_adapt_func --------------------------------- #
+# function to put arguments with old names (in ...) in the new named argument
+# the function to adapt must have a ... argument and call this function in the
+# beginning as follows :
+#   dotdotdot <- list(...)
+#   lav_adapt_func(environment(), dotdotdot, TRUE/FALSE/NULL)
+# The argument snake_ddd if set to TRUE transforms the names of dotdotdot also.
+# If snake_ddd is set to NULL an error "unused argument(s)" is generated when
+# there are items left in dotdotdot. If dotdotdot is empty and snake_ddd is
+# NULL, dotdotdot is removed from the environment!
+lav_adapt_func <- function(envir, dotdotdot, snake_ddd = TRUE) {
+  lijst <- ls(pos = envir)
+  if (length(dotdotdot) > 0L) {
+    dddnames <- names(dotdotdot)
+    dddnewnames <- lav_snake_case(dddnames)
+    newargs <- dddnewnames %in% lijst
+    for (j in which(newargs)) {
+      assign(dddnewnames[j], dotdotdot[[dddnames[j]]], envir)
+      dotdotdot[[dddnames[j]]] <- NULL
+    }
+    if (length(dotdotdot) > 0L) {
+      if (is.null(snake_ddd)) {
+        lav_msg_stop(ngettext(length(dotdotdot),
+                     "unused argument:", "unused arguments:"),
+                     lav_msg_view(names(dotdotdot), "none", FALSE)
+        )
+      }
+      if (snake_ddd && length(dotdotdot) > 0L) {
+        names(dotdotdot) <- lav_snake_case(names(dotdotdot))
+      }
+    }
+    assign("dotdotdot", dotdotdot, envir)
+  } else {
+    if (is.null(snake_ddd)) rm("dotdotdot", pos = envir)
+  }
 }

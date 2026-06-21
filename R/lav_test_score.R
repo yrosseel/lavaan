@@ -13,6 +13,45 @@
 #                  inequality constraints anyway, and we do not want to
 #                  release the EFA constraints)
 
+# For ceq.simple models, the simple equality constraints are absorbed (no '=='
+# rows; ceq.JAC is empty). Reconstruct an explicit constraint jacobian in the
+# 'unco' parameter space (one +1/-1 row per equality, ref == other), together
+# with matching lhs/rhs labels, so that lavTestScore() can release them. The
+# 'unco' parameter order matches which(partable$free > 0), i.e. the space used
+# by lavTech(object, "gradient.logl") and "information.*".
+lav_test_score_ceq_simple <- function(object) {
+  pt <- object@ParTable
+  free_rows <- which(pt$free > 0L) # one entry per 'unco' parameter
+  nunco <- length(free_rows)
+  comp_idx <- pt$free[free_rows]   # compact (nx.free) index per unco parameter
+  # use plabels (unique per parameter) so the two sides of each equality are
+  # distinguishable, exactly as for explicit '==' constraints (ceq.simple=FALSE)
+  labels <- pt$plabel[free_rows]
+
+  r_list <- list()
+  lhs <- character(0L)
+  rhs <- character(0L)
+  dup_comp <- unique(comp_idx[duplicated(comp_idx)])
+  for (k in dup_comp) {
+    members <- which(comp_idx == k) # unco positions sharing free index k
+    ref <- members[1L]
+    for (o in members[-1L]) {
+      row <- numeric(nunco)
+      row[ref] <- 1
+      row[o] <- -1
+      r_list[[length(r_list) + 1L]] <- row
+      lhs <- c(lhs, labels[ref])
+      rhs <- c(rhs, labels[o])
+    }
+  }
+  r_mat <- if (length(r_list) > 0L) {
+    do.call(rbind, r_list)
+  } else {
+    matrix(0, 0L, nunco)
+  }
+  list(R = r_mat, lhs = lhs, op = rep("==", length(lhs)), rhs = rhs)
+}
+
 lavTestScore <- function(object, add = NULL, release = NULL,       # nolint start
                          univariate = TRUE, cumulative = FALSE,
                          epc = FALSE, standardized = epc, cov.std = epc,
@@ -93,7 +132,7 @@ lavTestScore <- function(object, add = NULL, release = NULL,       # nolint star
     }
 
     # lhs/rhs
-    lhs <- lav_partable_labels(fit@ParTable)[fit@ParTable$user == 10L]
+    lhs <- lav_pt_labels(fit@ParTable)[fit@ParTable$user == 10L]
     op <- rep("==", nadd)
     rhs <- rep("0", nadd)
     table_1 <- data.frame(
@@ -105,6 +144,15 @@ lavTestScore <- function(object, add = NULL, release = NULL,       # nolint star
     # MODE 2: releasing constraints
 
     r_1 <- object@Model@ceq.JAC[, , drop = FALSE]
+    ceq_simple_con <- NULL
+    if (nrow(r_1) == 0L && object@Model@ceq.simple.only) {
+      # simple equality constraints (ceq.simple) are absorbed: ceq.JAC is empty.
+      # reconstruct an explicit constraint jacobian in the 'unco' parameter
+      # space (one +1/-1 row per equality), matching the space of the score and
+      # information below, so the constraints can be released individually.
+      ceq_simple_con <- lav_test_score_ceq_simple(object)
+      r_1 <- ceq_simple_con$R
+    }
     if (nrow(r_1) == 0L) {
       lav_msg_stop(gettext("no equality constraints found in model."))
     }
@@ -143,11 +191,17 @@ lavTestScore <- function(object, add = NULL, release = NULL,       # nolint star
     }
 
     # lhs/rhs
-    eq_idx <- which(object@ParTable$op == "==")
-    if (length(eq_idx) > 0L) {
-      lhs <- object@ParTable$lhs[eq_idx][r_idx]
+    if (!is.null(ceq_simple_con)) {
+      lhs <- ceq_simple_con$lhs[r_idx]
       op <- rep("==", length(r_idx))
-      rhs <- object@ParTable$rhs[eq_idx][r_idx]
+      rhs <- ceq_simple_con$rhs[r_idx]
+    } else {
+      eq_idx <- which(object@ParTable$op == "==")
+      if (length(eq_idx) > 0L) {
+        lhs <- object@ParTable$lhs[eq_idx][r_idx]
+        op <- rep("==", length(r_idx))
+        rhs <- object@ParTable$rhs[eq_idx][r_idx]
+      }
     }
     table_1 <- data.frame(
       lhs = lhs, op = op, rhs = rhs,
@@ -300,7 +354,7 @@ lavTestScore <- function(object, add = NULL, release = NULL,       # nolint star
       ## release mode
       list_1 <- parTable(object)
     }
-    if (lav_partable_ngroups(list_1) == 1L) {
+    if (lav_pt_ngroups(list_1) == 1L) {
       list_1$group <- NULL
     }
     nonpar_idx <- which(list_1$op %in% c("==", ":=", "<", ">"))
@@ -309,7 +363,7 @@ lavTestScore <- function(object, add = NULL, release = NULL,       # nolint star
     }
 
     list_1$est[list_1$free > 0 & list_1$user != 10] <-
-            lav_object_inspect_coef(object, type = "free")
+            lav_inspect_coef(object, type = "free")
     list_1$est[list_1$user == 10L] <- 0
     list_1$epc <- rep(as.numeric(NA), length(list_1$lhs))
     list_1$epc[list_1$free > 0] <- epc_all
@@ -371,7 +425,7 @@ lavTestScore <- function(object, add = NULL, release = NULL,       # nolint star
     # remove some more columns
     list_1$id <- list_1$ustart <- list_1$exo <-
            list_1$start <- list_1$se <- list_1$prior <- NULL
-    if (lav_partable_nblocks(list_1) == 1L) {
+    if (lav_pt_nblocks(list_1) == 1L) {
       list_1$block <- NULL
       list_1$group <- NULL
       list_1$level <- NULL

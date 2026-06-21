@@ -122,8 +122,8 @@ lav_fit_srmr_twolevel <- function(lavobject = NULL) {
     # mu_between <- implied$mean[[b_between]]
 
     # force pd for between
-    #    S.between <- lav_matrix_symmetric_force_pd(S.between)
-    sigma_between <- lav_matrix_symmetric_force_pd(sigma_between)
+    #    S.between <- lav_mat_sym_force_pd(S.between)
+    sigma_between <- lav_mat_sym_force_pd(sigma_between)
 
     # Bollen approach: simply using cov2cor ('residual correlations')
     s_within_cor <- cov2cor(s_within)
@@ -146,9 +146,9 @@ lav_fit_srmr_twolevel <- function(lavobject = NULL) {
     pstar_between <- nvar_between * (nvar_between + 1) / 2
 
     # SRMR
-    srmr_within[g] <- sqrt(sum(lav_matrix_vech(r_within_cor)^2) /
+    srmr_within[g] <- sqrt(sum(lav_mat_vech(r_within_cor)^2) /
       pstar_within)
-    srmr_between[g] <- sqrt(sum(lav_matrix_vech(r_between_cor)^2) /
+    srmr_between[g] <- sqrt(sum(lav_mat_vech(r_between_cor)^2) /
       pstar_between)
   }
 

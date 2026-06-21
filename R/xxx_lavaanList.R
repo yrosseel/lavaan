@@ -4,26 +4,26 @@
 # TDJ - 23 Aug 2018: change wrappers to preserve arguments from match.call()
 # YR - 15 Oct 2024: add iseed (as in lavBootstrap)
 
-lavaanList <- function(model = NULL, # model                   # nolint start
-                       dataList = NULL, # list of datasets
-                       dataFunction = NULL, # generating function
-                       dataFunction.args = list(), # optional arguments
-                       ndat = length(dataList), # how many datasets?
+lavaanList <- function(model = NULL, # model                    # nolint
+                       data_list = NULL, # list of datasets
+                       data_function = NULL, # generating function
+                       data_function_args = list(), # optional arguments
+                       ndat = length(data_list), # how many datasets?
                        cmd = "lavaan",
                        ...,
-                       store.slots = c("partable"), # default is partable
-                       FUN = NULL, # arbitrary FUN
-                       show.progress = FALSE,
-                       store.failed = FALSE,
+                       store_slots = c("partable"), # default is partable
+                       fun = NULL, # arbitrary fun
+                       show_progress = FALSE,
+                       store_failed = FALSE,
                        parallel = c("no", "multicore", "snow"),
                        ncpus = max(1L, parallel::detectCores() - 1L),
                        cl = NULL,
-                       iseed = NULL) {                          # nolint end
-  # store.slots call
+                       iseed = NULL) {
+  dotdotdot <- list(...)
+  lav_adapt_func(environment(), dotdotdot, FALSE)
+
+  # store_slots call
   mc <- match.call()
-
-  store_slots <- store.slots
-
 
   # store current random seed (if any) and method
   rngkind_old <- RNGkind()
@@ -49,17 +49,17 @@ lavaanList <- function(model = NULL, # model                   # nolint start
     )
   }
 
-  # dataList or function?
-  if (is.function(dataFunction)) {
+  # data_list or function?
+  if (is.function(data_function)) {
     if (ndat == 0L) {
       lav_msg_stop(gettext(
         "please specify number of requested datasets (ndat)"))
     }
     # here we already use the random generator
-    first_data <- do.call(dataFunction, args = dataFunction.args)
-    # dataList  <- vector("list", length = ndat)
+    first_data <- do.call(data_function, args = data_function_args)
+    # data_list  <- vector("list", length = ndat)
   } else {
-    first_data <- dataList[[1]]
+    first_data <- data_list[[1]]
   }
 
   # check data
@@ -74,9 +74,6 @@ lavaanList <- function(model = NULL, # model                   # nolint start
   } else {
     lav_msg_stop(gettext("(generated) data is not a data.frame (or a matrix)"))
   }
-
-  # dot dot dot
-  dotdotdot <- list(...)
 
   # if 'model' is a lavaan object (perhaps from lavSimulate), no need to
   # call `cmd'
@@ -93,8 +90,7 @@ lavaanList <- function(model = NULL, # model                   # nolint start
     fit <- do.call(cmd,
       args = c(list(
         model = model,
-        data = first_data,
-        cmd = cmd
+        data = first_data
       ), dotdotdot)
     )
   }
@@ -117,12 +113,12 @@ lavaanList <- function(model = NULL, # model                   # nolint start
   lavpartable$start <- lavpartable$est <- lavpartable$se <- NULL
 
   # empty slots
-  timing_list <- par_table_list <- data_list <- sample_stats_list <-
+  timing_list <- par_table_list <- local_data_list <- sample_stats_list <-
     cache_list <- vcov_list <- test_list <- optim_list <-
     h1list <- loglik_list <- baseline_list <-
     implied_list <- fun_list <- list()
 
-  # prepare store.slots slots
+  # prepare store_slots slots
   if ("timing" %in% store_slots) {
     timing_list <- vector("list", length = ndat)
   }
@@ -130,7 +126,7 @@ lavaanList <- function(model = NULL, # model                   # nolint start
     par_table_list <- vector("list", length = ndat)
   }
   if ("data" %in% store_slots) {
-    data_list <- vector("list", length = ndat)
+    local_data_list <- vector("list", length = ndat)
   }
   if ("samplestats" %in% store_slots) {
     sample_stats_list <- vector("list", length = ndat)
@@ -160,23 +156,23 @@ lavaanList <- function(model = NULL, # model                   # nolint start
     baseline_list <- vector("list", length = ndat)
   }
 
-  if (!is.null(FUN)) {
+  if (!is.null(fun)) {
     fun_list <- vector("list", length = ndat)
   }
 
   # single run
   fn <- function(i) {
-    if (show.progress) {
+    if (show_progress) {
       cat("   ... data set number:", sprintf("%4d", i))
     }
 
     # get new dataset
     if (i == 1L) {
       data_1 <- first_data
-    } else if (is.function(dataFunction)) {
-      data_1 <- do.call(dataFunction, args = dataFunction.args)
-    } else if (is.list(dataList)) {
-      data_1 <- dataList[[i]]
+    } else if (is.function(data_function)) {
+      data_1 <- do.call(data_function, args = data_function_args)
+    } else if (is.list(data_list)) {
+      data_1 <- data_list[[i]]
     }
 
     # if categorical, check if we have enough response categories
@@ -204,7 +200,7 @@ lavaanList <- function(model = NULL, # model                   # nolint start
     # - ov.x variances/covariances
     # FIXME: can we not make the changes internally?
     # if(lavmodel@fixed.x &&
-    #     length(lav_partable_vnames(lavpartable, "ov.x")) > 0L) {
+    #     length(lav_pt_vnames(lavpartable, "ov.x")) > 0L) {
     # for(g in 1:FIT@Data@ngroups) {
     #
     # }
@@ -219,9 +215,9 @@ lavaanList <- function(model = NULL, # model                   # nolint start
           do.call("lavaan",
             args = c(
               list(
-                slotOptions = lavoptions,
-                slotParTable = lavpartable,
-                slotModel = lavmodel,
+                slot_options = lavoptions,
+                slot_par_table = lavpartable,
+                slot_model = lavmodel,
                 # start        = FIT,
                 data = data_1
               ),
@@ -249,9 +245,9 @@ lavaanList <- function(model = NULL, # model                   # nolint start
           do.call("fsr",
             args = c(
               list(
-                slotOptions = lavoptions,
-                slotParTable = lavpartable,
-                slotModel = lavmodel,
+                slot_options = lavoptions,
+                slot_par_table = lavpartable,
+                slot_model = lavmodel,
                 # start        = FIT,
                 data = data_1,
                 cmd = "lavaan",
@@ -303,7 +299,7 @@ lavaanList <- function(model = NULL, # model                   # nolint start
       lavInspect(lavobject, "converged")) {
       res$ok <- TRUE
 
-      if (show.progress) {
+      if (show_progress) {
         cat(
           "   OK -- niter = ",
           sprintf("%3d", lavInspect(lavobject, "iterations")),
@@ -317,6 +313,35 @@ lavaanList <- function(model = NULL, # model                   # nolint start
       }
       if ("partable" %in% store_slots) {
         res$ParTable <- lavobject@ParTable
+        # if the (possibly asymmetric) confidence intervals are based on
+        # the bootstrap or the Monte Carlo method, the internal ParTable
+        # does not contain them; compute and store ci.lower/ci.upper here,
+        # so summary() (eg of a lavSimulate() object) can evaluate the
+        # coverage of these intervals. The intervals are computed at the
+        # 95% level (the lavaan default).
+        if (identical(lavobject@Options$se, "bootstrap") ||
+            identical(lavobject@Options$se.def, "monte.carlo")) {
+          pe_ci <- try(lavParameterEstimates(lavobject,
+            se = TRUE, zstat = FALSE, pvalue = FALSE, ci = TRUE,
+            level = 0.95, standardized = FALSE,
+            remove.system.eq = FALSE, remove.eq = FALSE,
+            remove.ineq = FALSE, remove.def = FALSE,
+            remove.nonfree = FALSE, remove.step1 = FALSE,
+            remove.unused = FALSE, output = "data.frame"),
+            silent = TRUE)
+          if (!inherits(pe_ci, "try-error") && !is.null(pe_ci$ci.lower) &&
+              length(pe_ci$ci.lower) == length(res$ParTable$lhs)) {
+            res$ParTable$ci.lower <- pe_ci$ci.lower
+            res$ParTable$ci.upper <- pe_ci$ci.upper
+          } else {
+            # res$ParTable is a list (not a data.frame), so we must use a
+            # full-length vector here, not a scalar
+            res$ParTable$ci.lower <- rep(as.numeric(NA),
+                                         length(res$ParTable$lhs))
+            res$ParTable$ci.upper <- rep(as.numeric(NA),
+                                         length(res$ParTable$lhs))
+          }
+        }
       }
       if ("data" %in% store_slots) {
         res$Data <- lavobject@Data
@@ -352,12 +377,12 @@ lavaanList <- function(model = NULL, # model                   # nolint start
         }
       }
 
-      # custom FUN
-      if (!is.null(FUN)) {
-        res$fun <- FUN(lavobject)
+      # custom fun
+      if (!is.null(fun)) {
+        res$fun <- fun(lavobject)
       }
     } else { # failed!
-      if (show.progress) {
+      if (show_progress) {
         if (data_ok_flag) {
           if (inherits(lavobject, "lavaan")) {
             cat("   FAILED: no convergence\n")
@@ -375,8 +400,18 @@ lavaanList <- function(model = NULL, # model                   # nolint start
         res$ParTable$est[res$ParTable$free > 0] <- as.numeric(NA)
         res$ParTable$se <- numeric(length(lavpartable$lhs))
         res$ParTable$se[res$ParTable$free > 0] <- as.numeric(NA)
+        # keep the ci.lower/ci.upper columns in sync with the converged
+        # runs (see above), so all stored ParTables have the same columns.
+        # res$ParTable is a list, so use full-length vectors, not scalars.
+        if (identical(lavoptions$se, "bootstrap") ||
+            identical(lavoptions$se.def, "monte.carlo")) {
+          res$ParTable$ci.lower <- rep(as.numeric(NA),
+                                       length(lavpartable$lhs))
+          res$ParTable$ci.upper <- rep(as.numeric(NA),
+                                       length(lavpartable$lhs))
+        }
       }
-      if (store.failed) {
+      if (store_failed) {
         tmpfile <- tempfile(pattern = "lavaanListData")
         datfile <- paste0(tmpfile, ".csv")
         write.csv(data_1, file = datfile, row.names = FALSE)
@@ -487,7 +522,7 @@ lavaanList <- function(model = NULL, # model                   # nolint start
     par_table_list <- lapply(res, "[[", "ParTable")
   }
   if ("data" %in% store_slots) {
-    data_list <- lapply(res, "[[", "Data")
+    local_data_list <- lapply(res, "[[", "Data")
   }
   if ("samplestats" %in% store_slots) {
     sample_stats_list <- lapply(res, "[[", "SampleStats")
@@ -516,7 +551,7 @@ lavaanList <- function(model = NULL, # model                   # nolint start
   if ("baseline" %in% store_slots) {
     baseline_list <- lapply(res, "[[", "baseline")
   }
-  if (!is.null(FUN)) {
+  if (!is.null(fun)) {
     fun_list <- lapply(res, "[[", "fun")
   }
 
@@ -536,7 +571,7 @@ lavaanList <- function(model = NULL, # model                   # nolint start
     # per dataset
     timingList = timing_list,
     ParTableList = par_table_list,
-    DataList = data_list,
+    DataList = local_data_list,
     SampleStatsList = sample_stats_list,
     CacheList = cache_list,
     vcovList = vcov_list,
@@ -564,40 +599,40 @@ lavaanList <- function(model = NULL, # model                   # nolint start
   lavaan_list
 }
 
-semList <- function(model = NULL,                # nolint start
-                    dataList = NULL,
-                    dataFunction = NULL,
-                    dataFunction.args = list(),
-                    ndat = length(dataList),
+semList <- function(model = NULL,                            # nolint
+                    data_list = NULL,
+                    data_function = NULL,
+                    data_function_args = list(),
+                    ndat = length(data_list),
                     ...,
-                    store.slots = c("partable"),
-                    FUN = NULL,
-                    show.progress = FALSE,
-                    store.failed = FALSE,
+                    store_slots = c("partable"),
+                    fun = NULL,
+                    show_progress = FALSE,
+                    store_failed = FALSE,
                     parallel = c("no", "multicore", "snow"),
                     ncpus = max(1L, parallel::detectCores() - 1L),
                     cl = NULL,
-                    iseed = NULL) {              # nolint end
+                    iseed = NULL) {
   mc <- match.call(expand.dots = TRUE)
   mc$cmd <- "sem"
   mc[[1L]] <- quote(lavaan::lavaanList)
   eval(mc, parent.frame())
 }
 
-cfaList <- function(model = NULL,                    # nolint start
-                    dataList = NULL,
-                    dataFunction = NULL,
-                    dataFunction.args = list(),
-                    ndat = length(dataList),
+cfaList <- function(model = NULL,                         # nolint
+                    data_list = NULL,
+                    data_function = NULL,
+                    data_function_args = list(),
+                    ndat = length(data_list),
                     ...,
-                    store.slots = c("partable"),
-                    FUN = NULL,
-                    show.progress = FALSE,
-                    store.failed = FALSE,
+                    store_slots = c("partable"),
+                    fun = NULL,
+                    show_progress = FALSE,
+                    store_failed = FALSE,
                     parallel = c("no", "multicore", "snow"),
                     ncpus = max(1L, parallel::detectCores() - 1L),
                     cl = NULL,
-                    iseed = NULL) {                  # nolint end
+                    iseed = NULL) {
   mc <- match.call(expand.dots = TRUE)
   mc$cmd <- "cfa"
   mc[[1L]] <- quote(lavaan::lavaanList)

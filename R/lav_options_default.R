@@ -229,6 +229,11 @@ lav_options_default <- function() {
   elm("parameterization", "default", c(
     "default", "mml", "delta", "theta"))
   elm("auto.fix.first", FALSE, bl = TRUE)
+  # if > 0 (and auto.fix.first = TRUE), switch to another marker if the first
+  # indicator is a poor item; the value is the threshold below which a marker
+  # indicator is considered 'poor' (in absolute value of its corrected
+  # item-total correlation)
+  elm("bad.marker.crit", 0.1, nm = "[0, 1]")
   elm("auto.fix.single", FALSE, bl = TRUE)
   elm("auto.var", FALSE, bl = TRUE)
   elm("auto.cov.lv.x", FALSE, bl = TRUE)
@@ -302,8 +307,9 @@ lav_options_default <- function() {
     twostep.robust = "robust.two.stage",
     listwise = "listwise", pairwise = "pairwise",
     available.cases = "available.cases", doubly.robust = "doubly.robust"))
-  elm("sampling.weights.normalization", "total", chr = c(
+  elm("sampling.weights.normalization", "group", chr = c(
     "total", "group", "none"))
+  elm("sampling.weights.type", "design", chr = c("design", "frequency"))
   elm("samplestats", TRUE, bl = TRUE)
 
   # summary data
@@ -339,7 +345,7 @@ lav_options_default <- function() {
     js = "js", jsa = "jsa", james.stein = "js",
     james.stein.aggregated = "jsa", bentler = "bentler1982",
     bentler1982 = "bentler1982", miiv = "iv", iv = "iv",
-    miiv.2sls = "iv"
+    miiv.2sls = "iv", rbm = "rbm"
   ))
   elmdup("estimator.orig", "estimator")
 
@@ -371,6 +377,24 @@ lav_options_default <- function() {
   )
   elm("test", "default", oklen = c(1L, 100L))
                   # checks for 'test' are in lav_test_rename !!!
+
+  # delta method for defined parameter SEs (:=)
+  # FALSE = first-order delta method (default)
+  # TRUE  = second-order delta method
+  elm("se.delta.second.order", FALSE, bl = TRUE)
+
+  # SE method for defined parameters (:=)
+  # "default" = delta method (respects se.delta.second.order)
+  # "monte.carlo" = Monte Carlo method (Preacher & Selig 2012)
+  elm("se.def", "default", chr = c(
+    default = "default",
+    delta = "default",
+    monte.carlo = "monte.carlo",
+    mc = "monte.carlo",
+    MC = "monte.carlo"))
+
+  # Monte Carlo settings (used when se.def = "monte.carlo")
+  elm("monte.carlo", list(R = 20000L, seed = NULL), oklen = c(0L, 100L))
 
   # information (se + test)
   elm("information", c("default", "default"), chr = c(
@@ -498,8 +522,8 @@ lav_options_default <- function() {
   elm("store.vcov", "default", chr = "default", bl = TRUE)
 
   # internal
-  elm("parser", "new", chr = c(old = "old", orig = "old", new = "new",
-                               c.r = "c.r", cr = "c.r", classic = "old"))
+  elm("parser", "open", chr = c(old = "old", orig = "old", new = "new",
+          open = "open", c.r = "c.r", cr = "c.r", classic = "old"))
 
   # categorical
   elm("categorical", "default", chr = "default", bl = TRUE)

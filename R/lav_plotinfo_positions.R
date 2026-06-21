@@ -142,7 +142,7 @@ lav_plotinfo_positions_one <- function(
     print(edgs1)
     rm(edgs1, nods1)
     cat("matrix with groups after ordering\n")
-    print(lav_groups_matrix(groups))
+    print(lav_groups_mat(groups))
     cat("debug end\n")
   }
   for (g in seq_along(groups)) {
@@ -426,7 +426,7 @@ lav_plotinfo_groups <- function(plotinfo) {
   })
   groups
 }
-lav_groups_matrix <- function(groups) {
+lav_groups_mat <- function(groups) {
   maxrow <- 1L
   maxcol <- 1L
   for (group in groups) {
@@ -482,7 +482,7 @@ lav_groups_matrix <- function(groups) {
         }
       }
     }
-    internaldf <- lav_graph_topological_matrix(defined, definedby,
+    internaldf <- lav_graph_topological_mat(defined, definedby,
                                                bordernodes = bordernodes)
     for (j in seq_along(group$nodes.id)) {
       group$offsets.lin[j] <- internaldf$rows[internaldf$nodes ==
@@ -552,7 +552,7 @@ lav_groups_order <- function(groups, plotinfo) {
   if (nrow(dependencies) == 0L) {
     for (g in groups) dependencies <- add_dependency(dependencies, 999, g$id)
   }
-  groupmatrixdf <- lav_graph_topological_matrix(
+  groupmatrixdf <- lav_graph_topological_mat(
     dependencies$defined,
     dependencies$definedby,
     bordernodes = bordernodes,
@@ -575,7 +575,7 @@ lav_groups_order <- function(groups, plotinfo) {
   #                               not first or last column.
   # Set loc = "b" for measurement groups in another row and
   #                               not first or last column.
-  group_matrix <- lav_groups_matrix(groups)
+  group_matrix <- lav_groups_mat(groups)
   gmcols <- ncol(group_matrix)
   for (g in seq_along(groups)) {
     group <- groups[[g]]

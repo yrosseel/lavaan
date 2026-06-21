@@ -72,7 +72,7 @@ lav_fit_catml_dwls <- function(lavobject, check_pd = TRUE) {
   fg <- unlist(lavsamplestats@nobs) / lavsamplestats@ntotal
 
   # Fixme: as we only need the trace, perhaps we could do this
-  # group-specific? (see lav_test_satorra_bentler_trace_original)
+  # group-specific? (see lav_test_sb_trace_original)
   v_g <- v
   w_dwls_g <- w_dwls
   gamma_f <- gamma
@@ -91,9 +91,9 @@ lav_fit_catml_dwls <- function(lavobject, check_pd = TRUE) {
     gamma_f[[g]] <- 1 / fg[g] * gamma[[g]][-rm_idx, -rm_idx]
   }
   # create 'big' matrices
-  w_dwls_all <- lav_matrix_bdiag(w_dwls_g)
-  v_all <- lav_matrix_bdiag(v_g)
-  gamma_all <- lav_matrix_bdiag(gamma_f)
+  w_dwls_all <- lav_mat_bdiag(w_dwls_g)
+  v_all <- lav_mat_bdiag(v_g)
+  gamma_all <- lav_mat_bdiag(gamma_f)
   delta_all <- do.call("rbind", delta_g)
 
   # compute trace
@@ -162,11 +162,18 @@ lav_fit_fiml_corrected <- function(lavobject, baseline_model,
   }
 
   # 'refit' using 'tilde' (=EM/saturated) sample statistics
+  # re-attach the data-based ov order (ov_order = "data"); parTable() has
+  # stripped the "ovda" attribute, so without this fit_tilde would be built
+  # in model order while lavobject (and its delta/information used below) is
+  # in data order, yielding an order-dependent scaling factor. Harmless
+  # no-op when the data order already equals the model order.
+  pt_tilde <- parTable(lavobject)
+  attr(pt_tilde, "ovda") <- lavobject@Data@ov.names[[1]]
   fit_tilde <- try(lavaan(
-    model = parTable(lavobject),
-    sample.cov = cov_tilde,
-    sample.mean = mean_tilde,
-    sample.nobs = sample_nobs,
+    model = pt_tilde,
+    sample_cov = cov_tilde,
+    sample_mean = mean_tilde,
+    sample_nobs = sample_nobs,
     sample.cov.rescale = FALSE,
     information = "observed",
     optim.method = "none",
@@ -190,16 +197,16 @@ lav_fit_fiml_corrected <- function(lavobject, baseline_model,
   fit_tilde@Options$h1.information <- c("unstructured", "unstructured")
   fit_tilde@Options$observed.information <- c("h1", "h1")
 
-  wm <- wm_g <- lav_model_h1_information_observed(lavobject)
-  wc <- wc_g <- lav_model_h1_information_observed(fit_tilde)
+  wm <- wm_g <- lav_model_h1_info_observed(lavobject)
+  wc <- wc_g <- lav_model_h1_info_observed(fit_tilde)
 
   if (version == "V3") {
-    jm <- jm_g <- lav_model_h1_information_firstorder(lavobject)
+    jm <- jm_g <- lav_model_h1_info_firstorder(lavobject)
     gamma_f <- vector("list", length = lavdata@ngroups)
   }
   delta <- lavTech(lavobject, "delta")
   e_inv <- lavTech(lavobject, "inverted.information")
-  wmi <- wmi_g <- try(lapply(wm, lav_matrix_symmetric_inverse),
+  wmi <- wmi_g <- try(lapply(wm, lav_mat_sym_inverse),
     silent = TRUE
   )
   if (inherits(wmi, "try-error")) {
@@ -208,7 +215,7 @@ lav_fit_fiml_corrected <- function(lavobject, baseline_model,
 
   fg <- unlist(lavsamplestats@nobs) / lavsamplestats@ntotal
   # Fixme: as we only need the trace, perhaps we could do this
-  # group-specific? (see lav_test_satorra_bentler_trace_original)
+  # group-specific? (see lav_test_sb_trace_original)
   for (g in seq_len(lavdata@ngroups)) {
     # group weight
     wc_g[[g]] <- fg[g] * wc[[g]]
@@ -223,9 +230,9 @@ lav_fit_fiml_corrected <- function(lavobject, baseline_model,
     }
   }
   # create 'big' matrices
-  wc_all <- lav_matrix_bdiag(wc_g)
-  wm_all <- lav_matrix_bdiag(wm_g)
-  wmi_all <- lav_matrix_bdiag(wmi_g)
+  wc_all <- lav_mat_bdiag(wc_g)
+  wm_all <- lav_mat_bdiag(wm_g)
+  wmi_all <- lav_mat_bdiag(wmi_g)
   delta_all <- do.call("rbind", delta)
 
   e_comp <- t(delta_all) %*% wc_all %*% delta_all
@@ -234,10 +241,10 @@ lav_fit_fiml_corrected <- function(lavobject, baseline_model,
 
   # compute trace
   if (version == "V3") {
-    gamma_all <- lav_matrix_bdiag(gamma_f)
+    gamma_all <- lav_mat_bdiag(gamma_f)
     # VS: Simplification of k.fimlc to minimize matrix multiplication
     #                                                 of big matrices
-    jm_all <- lav_matrix_bdiag(jm_g)
+    jm_all <- lav_mat_bdiag(jm_g)
 
     # VS: tr11 is also used for baseline
     # VS: tr(AB) = sum(A*t(B)) is more efficient
@@ -281,9 +288,9 @@ lav_fit_fiml_corrected <- function(lavobject, baseline_model,
   # 'refit' using 'tilde' (=EM/saturated) sample statistics
   fit_b_tilde <- try(lavaan(
     model = parTable(fit_b),
-    sample.cov = cov_tilde,
-    sample.mean = mean_tilde,
-    sample.nobs = sample_nobs,
+    sample_cov = cov_tilde,
+    sample_mean = mean_tilde,
+    sample_nobs = sample_nobs,
     sample.cov.rescale = FALSE,
     information = "observed",
     optim.method = "none",

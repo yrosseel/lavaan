@@ -1,18 +1,51 @@
 # utility function related to EFA
 
 # generate 'efa' syntax for a single block of factors
-lav_syntax_efa <- function(ov_names = NULL, nfactors = 1L, twolevel = FALSE) {
-  if (twolevel) {
-    tmp <- lav_syntax_efa(ov_names = ov_names, nfactors = nfactors)
-    model <- c("level: 1", tmp, "level: 2", tmp)
-  } else {
-    model <- character(nfactors)
-    for (f in seq_len(nfactors)) {
-      txt <- paste('efa("efa")*f', f, " =~ ",
-        paste(ov_names, collapse = " + "),
-        sep = ""
-      )
-      model[f] <- txt
+# generate EFA model syntax
+#
+# 'nfactors' is a per-block vector of (integer) factor counts; the blocks are
+# ordered group-major, level-minor, ie block = (g - 1L) * nlevels + level.
+# When there is a single block (ngroups == 1 and nlevels == 1), the output is
+# just the '=~' lines (no 'group:'/'level:' header), identical to the original
+# single-block syntax. With multiple levels and/or groups, the blocks are
+# wrapped in 'level:' and/or 'group:' sections.
+lav_syntax_efa <- function(ov_names = NULL, nfactors = 1L,
+                           nlevels = 1L, ngroups = 1L) {
+  # 'twolevel = TRUE' was the old (pre per-block) calling convention
+  if (isTRUE(nlevels)) {
+    nlevels <- 2L
+  }
+  nblocks <- ngroups * nlevels
+
+  # recycle a single factor count to all blocks
+  if (length(nfactors) == 1L) {
+    nfactors <- rep.int(nfactors, nblocks)
+  }
+  stopifnot(length(nfactors) == nblocks)
+
+  # the '=~' lines for a single block with 'k' factors
+  block_lines <- function(k) {
+    vapply(seq_len(k), function(f) {
+      paste0('efa("efa")*f', f, " =~ ", paste(ov_names, collapse = " + "))
+    }, character(1L))
+  }
+
+  # single block: no header (backward compatible)
+  if (nblocks == 1L) {
+    return(block_lines(nfactors[1L]))
+  }
+
+  model <- character(0L)
+  for (g in seq_len(ngroups)) {
+    if (ngroups > 1L) {
+      model <- c(model, paste("group:", g))
+    }
+    for (l in seq_len(nlevels)) {
+      block <- (g - 1L) * nlevels + l
+      if (nlevels > 1L) {
+        model <- c(model, paste("level:", l))
+      }
+      model <- c(model, block_lines(nfactors[block]))
     }
   }
 

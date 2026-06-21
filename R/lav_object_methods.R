@@ -153,7 +153,7 @@ setMethod(
     # check object
     object <- lav_object_check_version(object)
 
-    lav_object_inspect_coef(
+    lav_inspect_coef(
       object = object, type = type,
       add_labels = labels, add_class = TRUE
     )
@@ -172,6 +172,7 @@ standardizedSolution <-                                      # nolint start
                                    remove.eq = TRUE,
                                    remove.ineq = TRUE,
                                    remove.def = FALSE,
+                                   remove.aux = TRUE,
                                    partable = NULL,
                                    GLIST = NULL,
                                    est = NULL,
@@ -246,7 +247,7 @@ standardizedSolution <-                                      # nolint start
 
     if (object@Options$se != "none" && se) {
       # add 'se' for standardized parameters
-      tmp_vcov <- try(lav_object_inspect_vcov(object,
+      tmp_vcov <- try(lav_inspect_vcov(object,
         standardized = TRUE,
         type = type, free_only = FALSE,
         add_labels = FALSE,
@@ -302,6 +303,33 @@ standardizedSolution <-                                      # nolint start
       #              tmp_list$se %o% fac
       # }
 
+      # Monte Carlo: asymmetric percentile-based CI for standardized
+      # defined parameters (Preacher & Selig 2012)
+      mc_coef <- lav_inspect_mc(object)
+      def_idx <- which(tmp_list$op == ":=")
+      if (!is.null(mc_coef) && length(def_idx) > 0L) {
+        if (type == "std.lv") {
+          tmp_fun_mc <- lav_standardize_lv_x
+        } else if (type == "std.all") {
+          tmp_fun_mc <- lav_standardize_all_x
+        } else if (type == "std.nox") {
+          tmp_fun_mc <- lav_standardize_all_nox_x
+        }
+        mc_std <- try(apply(mc_coef, 1L, tmp_fun_mc,
+                            lavobject = object), silent = TRUE)
+        if (!inherits(mc_std, "try-error")) {
+          if (is.matrix(mc_std)) {
+            mc_std <- t(mc_std)
+          } else {
+            mc_std <- as.matrix(mc_std)
+          }
+          alpha <- c((1 - level) / 2, 1 - (1 - level) / 2)
+          mc_qq <- apply(mc_std[, def_idx, drop = FALSE], 2L,
+                         quantile, probs = alpha, na.rm = TRUE, type = 7)
+          ci[def_idx, ] <- t(mc_qq)
+        }
+      }
+
       tmp_list$ci.lower <- ci[, 1]
       tmp_list$ci.upper <- ci[, 2]
     }
@@ -329,6 +357,14 @@ standardizedSolution <-                                      # nolint start
       def_idx <- which(tmp_list$op == ":=")
       if (length(def_idx) > 0L) {
         tmp_list <- tmp_list[-def_idx, ]
+      }
+    }
+    # remove auxiliary (saturated-correlates) rows? (FIML aux= variables)
+    if (remove.aux && length(object@Options$aux) > 0L) {
+      aux_idx <- which(tmp_list$lhs %in% object@Options$aux |
+        tmp_list$rhs %in% object@Options$aux)
+      if (length(aux_idx) > 0L) {
+        tmp_list <- tmp_list[-aux_idx, ]
       }
     }
 
@@ -377,6 +413,7 @@ lavParameterEstimates <- function(object,                      # nolint start
                                  remove.nonfree = FALSE,
                                  remove.step1 = TRUE,
                                  remove.unused = FALSE,
+                                 remove.aux = TRUE,
                                  # output
                                  add.attributes = FALSE,
                                  output = "data.frame",
@@ -518,7 +555,7 @@ lavParameterEstimates <- function(object,                      # nolint start
 
     # add se, zstat, pvalue
     if (se && object@Options$se != "none") {
-      tmp_list$se <- lav_object_inspect_se(object)
+      tmp_list$se <- lav_inspect_se(object)
       # handle tiny SEs
       tmp_list$se <- ifelse(tmp_list$se < sqrt(.Machine$double.eps),
         0, tmp_list$se
@@ -553,7 +590,7 @@ lavParameterEstimates <- function(object,                      # nolint start
     if (object@Options$se == "bootstrap" ||
       "bootstrap" %in% object@Options$test ||
       "bollen.stine" %in% object@Options$test) {
-      tmp_boot <- lav_object_inspect_boot(object)
+      tmp_boot <- lav_inspect_boot(object)
       bootstrap_seed <- attr(tmp_boot, "seed") # for bca
       error_idx <- attr(tmp_boot, "error.idx")
       if (length(error_idx) > 0L) {
@@ -573,6 +610,23 @@ lavParameterEstimates <- function(object,                      # nolint start
       if (object@Options$se != "bootstrap") {
         fac <- qnorm(a)
         ci <- tmp_list$est + tmp_list$se %o% fac
+        # Monte Carlo: replace CI for defined parameters with
+        # asymmetric percentile-based bounds (Preacher & Selig 2012)
+        mc_coef <- lav_inspect_mc(object)
+        def_idx <- which(object@ParTable$op == ":=")
+        if (!is.null(mc_coef) && length(def_idx) > 0L) {
+          mc_def <- apply(mc_coef, 1L, object@Model@def.function)
+          if (length(def_idx) == 1L) {
+            mc_def <- as.matrix(mc_def)
+          } else {
+            mc_def <- t(mc_def)
+          }
+          mc_def[!is.finite(mc_def)] <- as.numeric(NA)
+          alpha <- c((1 - level) / 2, 1 - (1 - level) / 2)
+          mc_qq <- apply(mc_def, 2L, quantile, probs = alpha,
+                         na.rm = TRUE, type = 7)
+          ci[def_idx, ] <- t(mc_qq)
+        }
       } else if (object@Options$se == "bootstrap") {
         # local copy of 'norm.inter' from boot package (not exported!)
         norm_inter <- function(t, alpha) {
@@ -612,7 +666,7 @@ lavParameterEstimates <- function(object,                      # nolint start
           boot_x <- colMeans(tmp_boot, na.rm = TRUE)
           boot_est <-
             lav_model_get_parameters(object@Model,
-              GLIST = lav_model_x2glist(object@Model, boot_x),
+              glist = lav_model_x2glist(object@Model, boot_x),
               type = "user", extra = TRUE
             )
           bias_est <- (boot_est - tmp_list$est)
@@ -894,7 +948,7 @@ lavParameterEstimates <- function(object,                      # nolint start
         lav_msg_warn(
           gettext("rsquare = TRUE, but there are no dependent variables"))
       } else {
-        if (lav_partable_nlevels(tmp_list) == 1L) {
+        if (lav_pt_nlevels(tmp_list) == 1L) {
           block <- rep(seq_along(r2), sapply(r2, length))
           first_block_idx <- which(!duplicated(tmp_list$block) &
             tmp_list$block > 0L)
@@ -937,7 +991,7 @@ lavParameterEstimates <- function(object,                      # nolint start
           step1_idx <- which(r2$lhs %in% ov_ind)
           r2$step[step1_idx] <- 1L
         }
-        tmp_list <- lav_partable_merge(pt1 = tmp_list, pt2 = r2, warn = FALSE)
+        tmp_list <- lav_pt_merge(pt1 = tmp_list, pt2 = r2, warn = FALSE)
       }
     }
 
@@ -975,10 +1029,10 @@ lavParameterEstimates <- function(object,                      # nolint start
 
       fit_complete <- lavaan(
         model = tmp_pt,
-        sample.cov = em_cov,
-        sample.mean = em_mean,
-        sample.nobs = lavInspect(object, "nobs"),
-        slotOptions = this_options
+        sample_cov = em_cov,
+        sample_mean = em_mean,
+        sample_nobs = lavInspect(object, "nobs"),
+        slot_options = this_options
       )
 
       se_comp <- lavParameterEstimates(fit_complete,
@@ -1101,6 +1155,15 @@ lavParameterEstimates <- function(object,                      # nolint start
       tmp_list$step <- NULL
     }
 
+    # remove auxiliary (saturated-correlates) rows? (FIML aux= variables)
+    if (remove.aux && length(object@Options$aux) > 0L) {
+      aux_idx <- which(tmp_list$lhs %in% object@Options$aux |
+        tmp_list$rhs %in% object@Options$aux)
+      if (length(aux_idx) > 0L) {
+        tmp_list <- tmp_list[-aux_idx, ]
+      }
+    }
+
     # remove attribute for data order
     attr(tmp_list, "ovda") <- NULL
 
@@ -1210,7 +1273,7 @@ setMethod(
       return(lavPredict(object, type = "ov", label = labels))
     }
 
-    lav_object_inspect_implied(object,
+    lav_inspect_implied(object,
       add_labels = labels, add_class = TRUE,
       drop_list_single_group = TRUE
     )
@@ -1262,7 +1325,7 @@ setMethod(
     ## verify there are any user-defined parameters
     #FIXME? smarter to check @ParTable for $op == ":="?
     if (is.null(formals(object@Model@def.function))) {
-      type <- "free" # avoids error in lav_object_inspect_vcov_def()
+      type <- "free" # avoids error in lav_inspect_vcov_def()
     }
 
     if (!is.null(standardized)) {
@@ -1277,7 +1340,7 @@ setMethod(
           "argument \"remove.duplicated\" not supported if type = \"user\""
         ))
       }
-      tmp_varcov <- lav_object_inspect_vcov_def(object,
+      tmp_varcov <- lav_inspect_vcov_def(object,
         joint = TRUE,
         standardized = !is.null(standardized),
         type = ifelse(is.null(standardized), "std.all", standardized),
@@ -1285,7 +1348,7 @@ setMethod(
         add_class = TRUE
       )
     } else if (type == "free") {
-      tmp_varcov <- lav_object_inspect_vcov(object,
+      tmp_varcov <- lav_inspect_vcov(object,
         standardized = !is.null(standardized),
         type = ifelse(is.null(standardized), "std.all", standardized),
         free_only = free.only,
@@ -1366,6 +1429,12 @@ setMethod(
     if (is.null(call)) {
       lav_msg_stop(gettext("need an object with call slot"))
     }
+    current_call_names <- names(call)
+    lavaan_formals <- names(formals(lavaan::lavaan))
+    current_formals <- lav_snake_case(current_call_names) %in% lavaan_formals
+    current_call_names[current_formals] <-
+              lav_snake_case(current_call_names[current_formals])
+    names(call) <- current_call_names
 
     extras <- match.call(expand.dots = FALSE)$...
 
@@ -1382,16 +1451,16 @@ setMethod(
       call$model$est <- NULL
       call$model$se <- NULL
     }
-    if (!is.null(call$slotParTable) && is.list(call$model)) {
-      call$slotParTable <- call$model
+    if (!is.null(call$slot_par_table) && is.list(call$model)) {
+      call$slot_par_table <- call$model
     }
 
     if (length(extras) > 0) {
-      ## check for call$slotOptions conflicts
-      if (!is.null(call$slotOptions)) {
+      ## check for call$slot_options conflicts
+      if (!is.null(call$slot_options)) {
         same_names <- intersect(names(lavOptions()), names(extras))
         for (i in same_names) {
-          call$slotOptions[[i]] <- extras[[i]]
+          call$slot_options[[i]] <- extras[[i]]
           extras[i] <- NULL # not needed if they are in slotOptions
         }
       }
@@ -1429,7 +1498,7 @@ setMethod(
     if (!(mode(add) %in% c("list", "character"))) {
       lav_msg_stop(
         gettext("'add' argument must be model syntax or parameter table.
-                See ?lav_model_partable help page.")
+                See ?lav_model_pt help page.")
       )
     }
     tmp_pt <- lav_object_extended(newfit, add = add)@ParTable

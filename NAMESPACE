@@ -18,9 +18,9 @@ importFrom("methods",
 
 importFrom("stats",
            "as.formula", "complete.cases", "cor", "cov", "cov2cor", "cov.wt",
-           "dnorm", "lm.fit", "lm.wfit", "mad", "na.omit", "nlminb", "optim", 
+           "dnorm", "lm.fit", "lm.wfit", "mad", "na.omit", "nlminb", "optim",
            "pchisq", "plogis", "pnorm", "qchisq", "qnorm", "quantile", "rnorm",
-           "runif", "sd", "terms", "uniroot", "var", "weighted.mean", 
+           "runif", "sd", "terms", "uniroot", "var", "weighted.mean", "median",
            "aggregate", "dlogis", "qlogis", "optimize", "lm", "setNames",
            # generics
            "coef", "residuals", "resid", "fitted.values", "fitted",
@@ -57,7 +57,7 @@ export("lavaan", "cfa", "sem", "growth",
        # new name            # old name
        "lavParTable",        "lavaanify",
        "lavNames",           "lavaanNames",
-       "lavParseModelString", # "parseModelString",
+       "lavParseModelString", "lav_parse_options", # "parseModelString",
        "lavInspect",         "inspect",
        "lavTech",
        "lavListInspect",     "lavListTech",
@@ -180,7 +180,66 @@ export("lavaan", "cfa", "sem", "growth",
        "lav_plotinfo_tikzcode",
        "lav_plotinfo_rgraph",
        "lav_plotinfo_svgcode",
-       "lav_plot"
+       "lav_plot",
+
+       # shortened function names
+       "lav_mat_dup_ginv_pre_post",
+       "lav_mat_ortho_complement",
+       "lav_func_grad_complex",
+       "lav_mat_dup_ginv_post",
+       "lav_func_grad_simple",
+       "lav_mat_vech_row_idx",
+       "lav_mat_vech_col_idx",
+       "lav_mat_antidiag_idx",
+       "lav_mat_dup_pre_post",
+       "lav_mat_dup_ginv_pre",
+       "lav_mat_com_pre_post",
+       "lav_pt_unrestricted",
+       "lav_pt_independence",
+       "lav_mat_vechru_idx",
+       "lav_mat_upper2full",
+       "lav_mat_lower2full",
+       "lav_mat_com_mn_pre",
+       "lav_samp_from_data",
+       "lav_mat_vechru_rev",
+       "lav_mat_vechr_idx",
+       "lav_mat_vechu_idx",
+       "lav_mat_diagh_idx",
+       "lav_pt_attributes",
+       "lav_mat_vechr_rev",
+       "lav_mat_vechu_rev",
+       "lav_mat_vech_idx",
+       "lav_mat_diag_idx",
+       "lav_mat_dup_post",
+       "lav_mat_dup_ginv",
+       "lav_mat_com_post",
+       "lav_mat_sym_sqrt",
+       "lav_mat_vech_rev",
+       "lav_mat_dup_pre",
+       "lav_mat_com_pre",
+       "lav_pt_complete",
+       "lav_mat_vechru",
+       "lav_pt_con_def",
+       "lav_pt_con_ceq",
+       "lav_pt_con_ciq",
+       "lav_pt_from_lm",
+       "lav_con_parse",
+       "lav_mat_vechr",
+       "lav_mat_vechu",
+       "lav_mat_bdiag",
+       "lav_mat_trace",
+       "lav_pt_labels",
+       "lav_mat_vecr",
+       "lav_mat_vech",
+       "lav_pt_merge",
+       "lav_mat_vec",
+       "lav_mat_dup",
+       "lav_mat_com",
+       "lav_mat_cov",
+       "lav_pt_ndat",
+       "lav_pt_npar",
+       "lav_pt_add",
+       "lav_pt_df"
 
        # deprecated functions
        #"vech", "vech.reverse", "vechru", "vechru.reverse", "lower2full",
@@ -209,8 +268,8 @@ exportMethods(
 
 S3method(print, lavaan.data.frame, lav_dataframe_print)
 S3method(print, lavaan.list, lav_lavaanlist_print)
-S3method(print, lavaan.matrix, lav_matrix_print)
-S3method(print, lavaan.matrix.symmetric, lav_matrix_symmetric_print)
+S3method(print, lavaan.matrix, lav_mat_print)
+S3method(print, lavaan.matrix.symmetric, lav_mat_sym_print)
 S3method(print, lavaan.vector, lav_vector_print)
 S3method(print, lavaan.parameterEstimates, lav_parameterestimates_print)
 S3method(print, lavaan.fitMeasures, lav_fitmeasures_print)

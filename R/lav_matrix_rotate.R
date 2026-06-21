@@ -8,7 +8,7 @@
 #                     be a list
 
 # main function to rotate a single matrix 'A'
-lav_matrix_rotate <- function(a = NULL, # original matrix
+lav_mat_rotate <- function(a = NULL, # original matrix
                               orthogonal = FALSE, # default is oblique
                               method = "geomin", # default rot method
                               method_args = list(
@@ -83,7 +83,7 @@ lav_matrix_rotate <- function(a = NULL, # original matrix
         nrow(init_rot), ncol(init_rot)))
     }
     # rotation matrix?
-    if (!lav_matrix_rotate_check(init_rot, orthogonal = orthogonal)) {
+    if (!lav_mat_rotate_check(init_rot, orthogonal = orthogonal)) {
       lav_msg_stop(gettext("init.ROT does not look like a rotation matrix"))
     }
   }
@@ -93,7 +93,7 @@ lav_matrix_rotate <- function(a = NULL, # original matrix
     "cf-quartimax", "cf-varimax", "cf-equamax",
     "cf-parsimax", "cf-facparsim"
   )) {
-    method_fname <- "lav_matrix_rotate_cf"
+    method_fname <- "lav_mat_rotate_cf"
     method_args$cf_gamma <- switch(method,
       "cf-quartimax" = 0,
       "cf-varimax"   = 1 / p,
@@ -102,13 +102,13 @@ lav_matrix_rotate <- function(a = NULL, # original matrix
       "cf-facparsim" = 1
     )
   } else if (method %in% c("bi-quartimin", "biquartimin")) {
-    method_fname <- "lav_matrix_rotate_biquartimin"
+    method_fname <- "lav_mat_rotate_biquartimin"
   } else if (method %in% c("bi-geomin", "bigeomin")) {
-    method_fname <- "lav_matrix_rotate_bigeomin"
+    method_fname <- "lav_mat_rotate_bigeomin"
   } else if (method == "target.strict") {
-    method_fname <- "lav_matrix_rotate_target"
+    method_fname <- "lav_mat_rotate_target"
   } else {
-    method_fname <- paste("lav_matrix_rotate_", method, sep = "")
+    method_fname <- paste("lav_mat_rotate_", method, sep = "")
   }
 
   # check if rotation method exists
@@ -144,10 +144,10 @@ lav_matrix_rotate <- function(a = NULL, # original matrix
       lav_msg_stop(gettext("col(target_mask) != ncol(A)"))
     }
   }
-  # we keep this here, so lav_matrix_rotate() can be used independently
+  # we keep this here, so lav_mat_rotate() can be used independently
   if (method == "target.strict" && anyNA(target)) {
     method <- "pst"
-    method_fname <- "lav_matrix_rotate_pst"
+    method_fname <- "lav_mat_rotate_pst"
     target_mask <- matrix(1, nrow = nrow(target), ncol = ncol(target))
     target_mask[is.na(target)] <- 0
     method_args$target_mask <- target_mask
@@ -207,9 +207,9 @@ lav_matrix_rotate <- function(a = NULL, # original matrix
   if (row_weights == "none") {
     weights <- rep(1.0, p)
   } else if (row_weights == "kaiser") {
-    weights <- lav_matrix_rotate_kaiser_weights(a)
+    weights <- lav_mat_rotate_kaiser_weights(a)
   } else if (row_weights == "cureton-mulaik") {
-    weights <- lav_matrix_rotate_cm_weights(a)
+    weights <- lav_mat_rotate_cm_weights(a)
   } else {
     lav_msg_stop(gettext("row_weights can be none, kaiser or cureton-mulaik"))
   }
@@ -222,8 +222,8 @@ lav_matrix_rotate <- function(a = NULL, # original matrix
   if (rstarts > 0L) {
     rep_1 <- sapply(seq_len(rstarts), function(rep) {
       # random start (always orthogonal)
-      init_rot <- lav_matrix_rotate_gen(m = m, orthogonal = TRUE)
-      # init.ROT <- lav_matrix_rotate_gen(M = M, orthogonal = orthogonal)
+      init_rot <- lav_mat_rotate_gen(m = m, orthogonal = TRUE)
+      # init.ROT <- lav_mat_rotate_gen(M = M, orthogonal = orthogonal)
 
       if (lav_verbose()) {
         cat("\n")
@@ -233,7 +233,7 @@ lav_matrix_rotate <- function(a = NULL, # original matrix
 
       # choose rotation algorithm
       if (algorithm == "gpa") {
-        rot <- lav_matrix_rotate_gpa(
+        rot <- lav_mat_rotate_gpa(
           a = a, orthogonal = orthogonal,
           init_rot = init_rot,
           method_fname = method_fname,
@@ -243,9 +243,9 @@ lav_matrix_rotate <- function(a = NULL, # original matrix
         )
         info <- attr(rot, "info")
         attr(rot, "info") <- NULL
-        res <- c(info$method.value, lav_matrix_vec(rot))
+        res <- c(info$method.value, lav_mat_vec(rot))
       } else if (algorithm == "pairwise") {
-        rot <- lav_matrix_rotate_pairwise(
+        rot <- lav_mat_rotate_pairwise(
           a = a,
           orthogonal = orthogonal,
           init_rot = init_rot,
@@ -256,7 +256,7 @@ lav_matrix_rotate <- function(a = NULL, # original matrix
         )
         info <- attr(rot, "info")
         attr(rot, "info") <- NULL
-        res <- c(info$method.value, lav_matrix_vec(rot))
+        res <- c(info$method.value, lav_mat_vec(rot))
       }
 
       if (lav_verbose()) {
@@ -282,7 +282,7 @@ lav_matrix_rotate <- function(a = NULL, # original matrix
 
     # Gradient Projection Algorithm
     if (algorithm == "gpa") {
-      rot <- lav_matrix_rotate_gpa(
+      rot <- lav_mat_rotate_gpa(
         a = a, orthogonal = orthogonal,
         init_rot = init_rot,
         method_fname = method_fname,
@@ -291,7 +291,7 @@ lav_matrix_rotate <- function(a = NULL, # original matrix
         max_iter = max_iter
       )
     } else if (algorithm == "pairwise") {
-      rot <- lav_matrix_rotate_pairwise(
+      rot <- lav_mat_rotate_pairwise(
         a = a,
         orthogonal = orthogonal,
         init_rot = init_rot,
@@ -331,7 +331,7 @@ lav_matrix_rotate <- function(a = NULL, # original matrix
 
     # promax
     kappa <- method_args$promax_kappa
-    out <- lav_matrix_rotate_promax(
+    out <- lav_mat_rotate_promax(
       x = xx$loadings, m = kappa,
       varimax_rot = xx$rotmat
     )
@@ -421,7 +421,7 @@ lav_matrix_rotate <- function(a = NULL, # original matrix
 #   combined in a single function
 # - the default is oblique rotation
 #
-lav_matrix_rotate_gpa <- function(a = NULL, # original matrix
+lav_mat_rotate_gpa <- function(a = NULL, # original matrix
                                   orthogonal = FALSE, # default is oblique
                                   init_rot = NULL, # initial rotation
                                   method_fname = NULL, # criterion function
@@ -598,7 +598,7 @@ lav_matrix_rotate_gpa <- function(a = NULL, # original matrix
 # - repeat until the changes in the f() criterion are below tol
 #
 
-lav_matrix_rotate_pairwise <- function(a = NULL, # original matrix
+lav_mat_rotate_pairwise <- function(a = NULL, # original matrix
                                        orthogonal = FALSE,
                                        init_rot = NULL,
                                        method_fname = NULL, # crit function

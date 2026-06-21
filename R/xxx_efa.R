@@ -9,49 +9,37 @@
 
 # YR 20 Sept 2022 - first version
 
-efa <- function(data = NULL,              # nolint start
+efa <- function(data = NULL,
                 nfactors = 1L,
-                sample.cov = NULL,
-                sample.nobs = NULL,
+                sample_cov = NULL,
+                sample_nobs = NULL,
                 rotation = "geomin",
-                rotation.args = list(),
-                ov.names = NULL,
+                rotation_args = list(),
+                ov_names = NULL,
                 bounds = "pos.var",
                 ...,
-                output = "efa") {        # nolint end
+                output = "efa") {
+  dotdotdot <- list(...)
+  lav_adapt_func(environment(), dotdotdot, FALSE)
   # rotation.args deprecation handling
-  if (!missing(rotation.args)) {
-    lav_deprecated_args("rotation", "rotation.args")
+  if (!missing(rotation_args)) {
+    lav_deprecated_args("rotation", "rotation_args")
   }
-  rotation_args <- rotation.args
-  ov_names <- ov.names
 
   if (is.list(rotation)) {
     rotation_args <- modifyList(list(), rotation)
-    names(rotation_args) <- lav_snake_case(names(rotation_args))
+    rotation_args <- lav_snake_case(rotation_args)
     rotation <- rotation[[1L]]
   }
-
-  # handle dotdotdot
-  dotdotdot <- list(...)
 
   # twolevel?
   twolevel_flag <- !is.null(dotdotdot$cluster)
 
+  # multiple groups?
+  group_flag <- !is.null(dotdotdot$group)
+
   # sampling weights?
   sampling_weights_flag <- !is.null(dotdotdot$sampling.weights)
-
-  # check for unallowed arguments
-  if (!is.null(dotdotdot$group)) {
-    lav_msg_stop(gettext("efa has no support for multiple groups (for now);
-                          consider using the cfa() function in combination
-                          with the efa() modifier."))
-  }
-  #if (!is.null(dotdotdot$sampling.weights)) {
-  #  lav_msg_stop(gettext("efa has no support for sampling weights (for now);
-  #                        consider using the cfa() function in combination
-  #                        with the efa() modifier."))
-  #}
 
   # if data= argument is used, convert to data.frame (eg matrix, tibble, ...)
   if (!is.null(data) && !inherits(data, "lavMoments")) {
@@ -76,6 +64,9 @@ efa <- function(data = NULL,              # nolint start
       if (twolevel_flag) {
         names_1 <- c(names_1, dotdotdot$cluster)
       }
+      if (group_flag) {
+        names_1 <- c(names_1, dotdotdot$group)
+      }
       if (sampling_weights_flag) {
         names_1 <- c(names_1, dotdotdot$sampling.weights)
       }
@@ -83,26 +74,89 @@ efa <- function(data = NULL,              # nolint start
     } else {
       ov_names <- names(data)
       if (twolevel_flag) {
-        ov_names <- ov_names[-which(ov_names == dotdotdot$cluster)]
+        if (!all(dotdotdot$cluster %in% ov_names)) {
+          lav_msg_stop(gettextf(
+            "cluster variable(s) %s not found in data.",
+            lav_msg_view(dotdotdot$cluster[!dotdotdot$cluster %in% ov_names])))
+        }
+        ov_names <- setdiff(ov_names, dotdotdot$cluster)
+      }
+      if (group_flag) {
+        if (!all(dotdotdot$group %in% ov_names)) {
+          lav_msg_stop(gettextf(
+            "group variable(s) %s not found in data.",
+            lav_msg_view(dotdotdot$group[!dotdotdot$group %in% ov_names])))
+        }
+        ov_names <- setdiff(ov_names, dotdotdot$group)
       }
       if (sampling_weights_flag) {
-        ov_names <- ov_names[-which(ov_names == dotdotdot$sampling.weights)]
+        if (!all(dotdotdot$sampling.weights %in% ov_names)) {
+          lav_msg_stop(gettextf(
+            "sampling.weights variable(s) %s not found in data.",
+            lav_msg_view(dotdotdot$sampling.weights[
+              !dotdotdot$sampling.weights %in% ov_names])))
+        }
+        ov_names <- setdiff(ov_names, dotdotdot$sampling.weights)
       }
     }
-  } else if (!is.null(sample.cov)) {
-    ov_names <- rownames(sample.cov)
+  } else if (!is.null(sample_cov)) {
+    ov_names <- rownames(sample_cov)
     if (is.null(ov_names)) {
-      ov_names <- colnames(sample.cov)
+      ov_names <- colnames(sample_cov)
     }
   }
   # ov_names?
   if (length(ov_names) == 0L) {
     lav_msg_stop(gettext(
-      "could not extract variable names from data or sample.cov"))
+      "could not extract variable names from data or sample_cov"))
   }
 
+  # determine the block structure (blocks are ordered group-major, level-minor,
+  # ie block = (g - 1L) * nlevels + level)
+  nlevels <- if (twolevel_flag) 2L else 1L
+  if (group_flag && !is.null(data) && inherits(data, "data.frame")) {
+    ngroups <- length(unique(data[[dotdotdot$group]]))
+  } else if (!is.null(sample_cov) && is.list(sample_cov) &&
+    !inherits(sample_cov, "lavMoments")) {
+    ngroups <- length(sample_cov)
+  } else {
+    ngroups <- 1L
+  }
+  nblocks <- ngroups * nlevels
+
+  # normalize 'nfactors' into a list of per-block (integer) vectors, one element
+  # per candidate model; a scalar or plain vector keeps its original meaning,
+  # ie 'candidate models, the same factor count in every block'
+  if (is.list(nfactors)) {
+    nfactors_list <- lapply(nfactors, function(x) {
+      x <- as.integer(x)
+      if (length(x) == 1L) {
+        x <- rep.int(x, nblocks)
+      }
+      if (length(x) != nblocks) {
+        lav_msg_stop(gettextf("each element of nfactors must have length 1 or
+                              the number of blocks (= %1$s); found length %2$s.",
+          nblocks, length(x)))
+      }
+      x
+    })
+  } else {
+    nfactors_list <- lapply(as.integer(nfactors), function(k) {
+      rep.int(k, nblocks)
+    })
+  }
+  # labels for the resulting fits ('nf2', or 'nf1_2' if it varies per block)
+  nfactors_labels <- vapply(nfactors_list, function(x) {
+    if (length(unique(x)) == 1L) {
+      paste0("nf", x[1L])
+    } else {
+      paste0("nf", paste(x, collapse = "_"))
+    }
+  }, character(1L))
+
   # check nfactors
-  if (any(nfactors < 1L)) {
+  all_nfactors <- unlist(nfactors_list)
+  if (any(all_nfactors < 1L)) {
     lav_msg_stop(gettext("nfactors must be greater than zero."))
   } else {
     # check for maximum number of factors
@@ -118,7 +172,7 @@ efa <- function(data = NULL,              # nolint start
         break
       }
     }
-    if (any(nfactors > nfac_max)) {
+    if (any(all_nfactors > nfac_max)) {
       lav_msg_stop(gettextf("when nvar = %1$s the maximum number of factors
                             is %2$s", nvar, nfac_max))
     }
@@ -129,20 +183,21 @@ efa <- function(data = NULL,              # nolint start
   if (!output %in% c("lavaan", "efa")) {
     lav_msg_stop(gettext("output= must be either \"lavaan\" or \"efa\""))
   }
-  if (output == "lavaan" && length(nfactors) > 1L) {
+  if (output == "lavaan" && length(nfactors_list) > 1L) {
     lav_msg_stop(gettext("when output = \"lavaan\", nfactors must be a
                          single (integer) number."))
   }
 
   # fit models
-  nfits <- length(nfactors)
+  nfits <- length(nfactors_list)
   out <- vector("list", length = nfits)
   for (f in seq_len(nfits)) {
     # generate model syntax
     model_syntax <- lav_syntax_efa(
       ov_names = ov_names,
-      nfactors = nfactors[f],
-      twolevel = twolevel_flag
+      nfactors = nfactors_list[[f]],
+      nlevels = nlevels,
+      ngroups = ngroups
     )
     # call lavaan (using sem())
     fit <- do.call("sem",
@@ -150,8 +205,8 @@ efa <- function(data = NULL,              # nolint start
         list(
           model = model_syntax,
           data = data,
-          sample.cov = sample.cov,
-          sample.nobs = sample.nobs,
+          sample_cov = sample_cov,
+          sample_nobs = sample_nobs,
           rotation = rotation,
           rotation.args = rotation_args,
           bounds = bounds,
@@ -172,7 +227,7 @@ efa <- function(data = NULL,              # nolint start
   if (nfits == 1L && output == "lavaan") {
     out <- out[[1]]
   } else {
-    names(out) <- paste0("nf", nfactors)
+    names(out) <- nfactors_labels
     # add loadings element to the end of the list
     # so we an use the non-generic but useful loadings() function
     # from the stats package

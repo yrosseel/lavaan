@@ -167,7 +167,7 @@ lav_bvord_cor_twostep_fit <- function(y1, y2, exo = NULL, wt = NULL,
 
   # optim.method
   min_objective <- lav_bvord_min_objective
-  min_gradient <- lav_bvord_min_gradient
+  min_gradient <- lav_bvord_min_grad
   min_hessian <- lav_bvord_min_hessian
   if (optim_method == "nlminb" || optim_method == "nlminb2") {
     # nothing to do
@@ -509,7 +509,7 @@ lav_bvord_logl_cache <- function(cache = NULL) {
   })                                     # nolint end
 }
 
-lav_bvord_gradient_cache <- function(cache = NULL) {
+lav_bvord_grad_cache <- function(cache = NULL) {
   with(cache, {              # nolint start
     rho <- theta[1L]
 
@@ -601,14 +601,14 @@ lav_bvord_min_objective <- function(x, cache = NULL) {
 }
 
 # compute gradient, for specific 'x' (nlminb)
-lav_bvord_min_gradient <- function(x, cache = NULL) {
+lav_bvord_min_grad <- function(x, cache = NULL) {
   # check if x has changed
   if (!all(x == cache$theta)) {
     cache$theta <- x
     tmp <- lav_bvord_logl_cache(cache = cache)
     rm(tmp)
   }
-  -1 * lav_bvord_gradient_cache(cache = cache) / cache$n
+  -1 * lav_bvord_grad_cache(cache = cache) / cache$n
 }
 
 # compute hessian, for specific 'x' (nlminb)
@@ -617,7 +617,7 @@ lav_bvord_min_hessian <- function(x, cache = NULL) {
   if (!all(x == cache$theta)) {
     cache$theta <- x
     tmp <- lav_bvord_logl_cache(cache = cache)
-    tmp <- lav_bvord_gradient_cache(cache = cache)
+    tmp <- lav_bvord_grad_cache(cache = cache)
     rm(tmp)
   }
   -1 * lav_bvord_hessian_cache(cache = cache) / cache$n
@@ -627,7 +627,7 @@ lav_bvord_min_hessian <- function(x, cache = NULL) {
 
 
 # casewise scores
-lav_bvord_cor_scores_cache <- function(cache = NULL, na_zero = FALSE,
+lav_bvord_cor_sc_cache <- function(cache = NULL, na_zero = FALSE,
                                        use_weights = TRUE) {
   with(cache, {                 # nolint start
     rho <- theta[1L]
@@ -726,7 +726,7 @@ lav_bvord_cor_scores_cache <- function(cache = NULL, na_zero = FALSE,
 
 
 # casewise scores - no cache
-lav_bvord_cor_scores <- function(y1, y2, exo = NULL, wt = NULL,
+lav_bvord_cor_sc <- function(y1, y2, exo = NULL, wt = NULL,
                                  rho = NULL,
                                  fit_y1 = NULL, fit_y2 = NULL,
                                  th_y1 = NULL, th_y2 = NULL,
@@ -757,7 +757,7 @@ lav_bvord_cor_scores <- function(y1, y2, exo = NULL, wt = NULL,
   )
   cache$theta <- rho
 
-  sc <- lav_bvord_cor_scores_cache(
+  sc <- lav_bvord_cor_sc_cache(
     cache = cache, na_zero = na_zero,
     use_weights = use_weights
   )

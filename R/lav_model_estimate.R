@@ -10,7 +10,7 @@
 
 
 # model estimation
-lav_model_estimate <- function(lavmodel = NULL,
+lav_model_est <- function(lavmodel = NULL,
                                lavpartable = NULL, # for parscale = "stand"
                                lavh1 = NULL, # for multilevel + parsc
                                lavsamplestats = NULL,
@@ -19,7 +19,7 @@ lav_model_estimate <- function(lavmodel = NULL,
                                lavcache = list(),
                                start = "model",
                                do_fit = TRUE) {
-  lavpartable <- lav_partable_set_cache(lavpartable)
+  lavpartable <- lav_pt_set_cache(lavpartable)
   estimator <- lavoptions$estimator
   verbose <- lav_verbose()
   debug <- lav_debug()
@@ -72,7 +72,7 @@ lav_model_estimate <- function(lavmodel = NULL,
 
     # override? use random starting values instead? (new in 0.6-18)
   } else if (start == "random") {
-    start_1 <- lav_partable_random(
+    start_1 <- lav_pt_random(
       lavpartable = lavpartable,
       # needed if we still need to compute bounds:
       lavh1 = lavh1,
@@ -339,7 +339,7 @@ lav_model_estimate <- function(lavmodel = NULL,
     }
     if (debug) {
       # cat("Current unconstrained parameter values =\n")
-      # tmp.x <- lav_model_get_parameters(lavmodel, GLIST=GLIST, type="unco")
+      # tmp.x <- lav_model_get_parameters(lavmodel, glist=GLIST, type="unco")
       # print(tmp.x); cat("\n")
       cat("Current free parameter values =\n")
       print(x)
@@ -384,7 +384,7 @@ lav_model_estimate <- function(lavmodel = NULL,
     # update GLIST (change `state') and make a COPY!
     glist <- lav_model_x2glist(lavmodel, x = x)
 
-    dx <- lav_model_gradient(
+    dx <- lav_model_grad(
       lavmodel = lavmodel,
       glist = glist,
       lavsamplestats = lavsamplestats,
@@ -470,7 +470,7 @@ lav_model_estimate <- function(lavmodel = NULL,
   }
 
   gradient_function_numerical_complex <- function(x, verbose = FALSE, debug = FALSE) { # nolint
-    dx <- Re(lav_func_gradient_complex(
+    dx <- Re(lav_func_grad_complex(
       func = objective_function, x = x,
       h = sqrt(.Machine$double.eps)
     ))
@@ -992,7 +992,7 @@ lav_model_estimate <- function(lavmodel = NULL,
     }
 
     if (lavmodel@ceq.simple.only && nrow(lavmodel@ceq.simple.K) > 0L) {
-      ceq_jac_1 <- t(lav_matrix_orthogonal_complement(lavmodel@ceq.simple.K))
+      ceq_jac_1 <- t(lav_mat_ortho_complement(lavmodel@ceq.simple.K))
       ceq_lambda <- numeric(nrow(ceq_jac_1))
     } else {
       npar <- length(lavpartable$free[lavpartable$free > 0])

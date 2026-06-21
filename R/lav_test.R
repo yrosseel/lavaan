@@ -2,7 +2,7 @@
 # comparing the current model versus the saturated/unrestricted model
 # TDJ 9 April 2024: Add a (hidden) function to update the @test slot
 #                   when the user provides a custom h1 model.  Called by
-#                   lav_object_summary and lav_fit_measures(_check_baseline)
+#                   lav_object_summary and lav_fit(_check_baseline)
 
 lavTest <- function(lavobject, test = "standard",               # nolint start
                     scaled.test = "standard",
@@ -140,6 +140,10 @@ lav_test_rename <- function(test, check = FALSE) {
     test[target_idx] <- "yuan.bentler.mplus"
   }
   if (length(target_idx <- which(test %in%
+    c("yuan.chan", "yuan-chan", "yuan_chan", "yuanchan", "yc"))) > 0L) {
+    test[target_idx] <- "yuan.chan"
+  }
+  if (length(target_idx <- which(test %in%
     c(
       "mean.var.adjusted", "mean-var-adjusted", "mv", "second.order",
       "satterthwaite", "mv.adjusted"
@@ -204,6 +208,7 @@ lav_test_rename <- function(test, check = FALSE) {
       "satorra.bentler",
       "yuan.bentler",
       "yuan.bentler.mplus",
+      "yuan.chan",
       "mean.adjusted",
       "mean.var.adjusted",
       "scaled.shifted",
@@ -253,6 +258,7 @@ lav_test_rename <- function(test, check = FALSE) {
     "satorra.bentler",
     "yuan.bentler",
     "yuan.bentler.mplus",
+    "yuan.chan",
     "mean.adjusted",
     "mean.var.adjusted",
     "scaled.shifted"
@@ -279,7 +285,7 @@ lav_model_test <- function(lavobject = NULL,
   # lavobject?
   if (!is.null(lavobject)) {
     lavmodel <- lavobject@Model
-    lavpartable <- lav_partable_set_cache(lavobject@ParTable, lavobject@pta)
+    lavpartable <- lav_pt_set_cache(lavobject@ParTable, lavobject@pta)
     lavsamplestats <- lavobject@SampleStats
     lavimplied <- lavobject@implied
     lavh1 <- lavobject@h1
@@ -302,10 +308,24 @@ lav_model_test <- function(lavobject = NULL,
 
   test <- lavoptions$test
 
+  # "yuan.chan" is a SAM-only (sam.method = "global") rescaled test statistic;
+  # it is computed in lav_sam_global_test(), not here. If it ever reaches the
+  # core test machinery (eg sem(test = "yuan.chan")), drop it with a note.
+  if (any(test == "yuan.chan")) {
+    lav_msg_warn(gettext(
+      "test = \"yuan.chan\" is only available for sam(sam.method = \"global\");
+       it will be ignored here."))
+    test <- test[test != "yuan.chan"]
+    if (length(test) == 0L) {
+      test <- "standard"
+    }
+    lavoptions$test <- test
+  }
+
   test_1 <- list()
 
   # degrees of freedom (ignoring constraints)
-  df <- lav_partable_df(lavpartable)
+  df <- lav_pt_df(lavpartable)
 
   # handle equality constraints (note: we ignore inequality constraints,
   # active or not!)
@@ -318,7 +338,7 @@ lav_model_test <- function(lavobject = NULL,
     }
   } else if (lavmodel@ceq.simple.only) {
     # needed??
-    ndat <- lav_partable_ndat(lavpartable)
+    ndat <- lav_pt_ndat(lavpartable)
     npar <- max(lavpartable$free)
     df <- ndat - npar
   }
@@ -646,7 +666,7 @@ lav_model_test <- function(lavobject = NULL,
         }
       }
 
-      out <- lav_test_satorra_bentler(
+      out <- lav_test_sb(
         lavobject = NULL,
         lavsamplestats = lavsamplestats,
         lavmodel = lavmodel,
@@ -681,7 +701,7 @@ lav_model_test <- function(lavobject = NULL,
           }
       }
 
-      out <- lav_test_yuan_bentler(
+      out <- lav_test_yb(
         lavobject = NULL,
         lavsamplestats = lavsamplestats,
         lavmodel = lavmodel,

@@ -25,7 +25,7 @@ lav_uvreg_fit <- function(y = NULL,
 
   # optim.method
   min_objective <- lav_uvreg_min_objective
-  min_gradient <- lav_uvreg_min_gradient
+  min_gradient <- lav_uvreg_min_grad
   min_hessian <- lav_uvreg_min_hessian
   if (optim_method == "nlminb" || optim_method == "nlminb2") {
     # nothing to do
@@ -120,7 +120,7 @@ lav_uvreg_init_cache <- function(y = NULL,
     theta_evar <- sum(fit_lm$residuals * wt_tmp * fit_lm$residuals) /
                   sum(wt_tmp)
 
-    lav_crossprod <- lav_matrix_crossprod
+    lav_crossprod <- lav_mat_crossprod
   } else {
     fit_lm <- stats::lm.wfit(y = y, x = x1, w = wt)
     theta_evar <- sum(fit_lm$residuals * wt * fit_lm$residuals) / sum(wt)
@@ -172,17 +172,17 @@ lav_uvreg_loglik_cache <- function(cache = NULL) {
 }
 
 # casewise scores
-lav_uvreg_scores <- function(y = NULL,
+lav_uvreg_sc <- function(y = NULL,
                              x = NULL,
                              wt = rep(1, length(y)),
                              cache = NULL) {
   if (is.null(cache)) {
     cache <- lav_uvreg_fit(y = y, x = x, wt = wt, output = "cache")
   }
-  lav_uvreg_scores_cache(cache = cache)
+  lav_uvreg_sc_cache(cache = cache)
 }
 
-lav_uvreg_scores_cache <- function(cache = NULL) {
+lav_uvreg_sc_cache <- function(cache = NULL) {
   with(cache, {   # nolint start
     res <- y - yhat
     resw <- res * wt
@@ -196,17 +196,17 @@ lav_uvreg_scores_cache <- function(cache = NULL) {
 }
 
 # gradient
-lav_uvreg_gradient <- function(y = NULL,
+lav_uvreg_grad <- function(y = NULL,
                                x = NULL,
                                wt = rep(1, length(y)),
                                cache = NULL) {
   if (is.null(cache)) {
     cache <- lav_uvreg_fit(y = y, x = x, wt = wt, output = "cache")
   }
-  lav_uvreg_gradient_cache(cache = cache)
+  lav_uvreg_grad_cache(cache = cache)
 }
 
-lav_uvreg_gradient_cache <- function(cache = NULL) {
+lav_uvreg_grad_cache <- function(cache = NULL) {
   with(cache, {    # nolint start
     res <- y - yhat
     resw <- res * wt
@@ -255,14 +255,14 @@ lav_uvreg_min_objective <- function(x, cache = NULL) {
 }
 
 # compute gradient, for specific 'x' (nlminb)
-lav_uvreg_min_gradient <- function(x, cache = NULL) {
+lav_uvreg_min_grad <- function(x, cache = NULL) {
   # check if x has changed
   if (!all(x == cache$theta)) {
     cache$theta <- x
     tmp <- lav_uvreg_loglik_cache(cache = cache)
     rm(tmp)
   }
-  -1 * lav_uvreg_gradient_cache(cache = cache) / cache$n
+  -1 * lav_uvreg_grad_cache(cache = cache) / cache$n
 }
 
 # compute hessian, for specific 'x' (nlminb)
@@ -271,7 +271,7 @@ lav_uvreg_min_hessian <- function(x, cache = NULL) {
   if (!all(x == cache$theta)) {
     cache$theta <- x
     tmp <- lav_uvreg_loglik_cache(cache = cache)
-    tmp <- lav_uvreg_gradient_cache(cache = cache)
+    tmp <- lav_uvreg_grad_cache(cache = cache)
     rm(tmp)
   }
   -1 * lav_uvreg_hessian_cache(cache = cache) / cache$n

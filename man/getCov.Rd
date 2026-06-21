@@ -15,8 +15,8 @@ getCov(x, lower = TRUE, diagonal = TRUE, sds = NULL,
        names = paste("V", 1:nvar, sep=""))
 lav_char2num(s)
 char2num(s)
-lav_cor2cov(R, sds, names = NULL)
-cor2cov(R, sds, names = NULL)
+lav_cor2cov(r, sds, names = NULL, ...)
+cor2cov(r, sds, names = NULL, ...)
 }
 \arguments{
 \item{x}{The elements of the covariance matrix. Either inside a character 
@@ -26,16 +26,17 @@ cor2cov(R, sds, names = NULL)
 \item{lower}{Logical. If \code{TRUE}, the numeric values in \code{x} are
 the lower-triangular elements of the (symmetric) covariance matrix only.
 If \code{FALSE}, \code{x} contains the upper triangular elements only.
-Note we always assumed the elements are provided row-wise!}
+Note we always assume the elements are provided row-wise!}
 \item{diagonal}{Logical. If \code{TRUE}, the numeric values in \code{x}
 include the diagonal elements. If \code{FALSE}, a unit diagonal is assumed.}
 \item{sds}{A numeric vector containing the standard deviations to be 
-used to scale the elements in \code{x} or the correlation matrix \code{R}
+used to scale the elements in \code{x} or the correlation matrix \code{r}
 into a covariance matrix.}
 \item{names}{The variable names of the observed variables.}
-\item{s}{Character string containing numeric values; comma's and semi-colons
+\item{s}{Character string containing numeric values; commas and semi-colons
 are ignored.}
-\item{R}{A correlation matrix, to be scaled into a covariance matrix.}
+\item{r}{A correlation matrix, to be scaled into a covariance matrix.}
+\item{...}{To accept old argument name \code{R} (is now \code{r}). No other arguments are accepted.} 
 }
 \details{
 The \code{lav_getcov} function is typically used to input the lower 
@@ -50,7 +51,7 @@ be given.
 }
 \examples{
 # The classic Wheaton et. al. (1977) model 
-# panel data on he stability of alienation
+# panel data on the stability of alienation
 lower <- '
  11.834,
   6.947,    9.364,
@@ -80,7 +81,7 @@ wheaton.model <- '
 '
 
 # fitting the model
-fit <- sem(wheaton.model, sample.cov=wheaton.cov, sample.nobs=932)
+fit <- sem(wheaton.model, sample_cov=wheaton.cov, sample_nobs=932)
 
 # showing the results
 summary(fit, standardized=TRUE)

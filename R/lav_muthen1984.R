@@ -19,6 +19,7 @@ muthen1984 <- function(data_1 = NULL,
                        ov_names_x = character(0L),
                        exo = NULL,
                        wt = NULL,
+                       sampling_weights_type = "design",
                        wls_w = TRUE,
                        zero_add = c(0.5, 0.0),
                        zero_keep_margins = TRUE,
@@ -56,7 +57,7 @@ muthen1984 <- function(data_1 = NULL,
     cat("\n")
   }
 
-  step1 <- lav_samplestats_step1(
+  step1 <- lav_samp_step1(
     y = data_1, wt = wt, ov_names = ov_names,
     ov_types = ov_types, ov_levels = ov_levels, ov_names_x = ov_names_x,
     exo = exo, scores_flag = wls_w, allow_empty_cell = allow_empty_cell,
@@ -100,7 +101,7 @@ muthen1984 <- function(data_1 = NULL,
   # stage two -- correlations
 
   if (lav_verbose()) cat("\n\nSTEP 2: covariances/correlations:\n")
-  cor_1 <- lav_samplestats_step2(
+  cor_1 <- lav_samp_step2(
     uni = fit, wt = wt, ov_names = ov_names,
     zero_add = zero_add,
     zero_keep_margins = zero_keep_margins,
@@ -117,7 +118,7 @@ muthen1984 <- function(data_1 = NULL,
 
   if (!wls_w) { # we do not need the asymptotic variance matrix
     if (any("numeric" %in% ov_types)) {
-      cov_1 <- lav_cor2cov(R = cor_1, sds = sqrt(unlist(var_1)))
+      cov_1 <- lav_cor2cov(r = cor_1, sds = sqrt(unlist(var_1)))
     } else {
       cov_1 <- cor_1
     }
@@ -134,7 +135,7 @@ muthen1984 <- function(data_1 = NULL,
   # stage three -- WLS.W
   sc_cor <- matrix(0, n, pstar)
   pstar_1 <- matrix(0, nvar, nvar)
-  pstar_1[lav_matrix_vech_idx(nvar, diagonal = FALSE)] <- 1:pstar
+  pstar_1[lav_mat_vech_idx(nvar, diagonal = FALSE)] <- 1:pstar
 
   a11_size <- NCOL(sc_th) + NCOL(sc_sl) + NCOL(sc_var)
 
@@ -167,7 +168,7 @@ muthen1984 <- function(data_1 = NULL,
         var_idx_j <- NCOL(sc_th) + match(j, num_idx)
       }
       if (ov_types[i] == "numeric" && ov_types[j] == "numeric") {
-        sc_cor_uni <- lav_bvreg_cor_scores(
+        sc_cor_uni <- lav_bvreg_cor_sc(
           rho = cor_1[i, j],
           fit_y1 = fit[[i]],
           fit_y2 = fit[[j]],
@@ -183,36 +184,36 @@ muthen1984 <- function(data_1 = NULL,
 
         # TH
         a21[pstar_idx, th_idx_i] <-
-          lav_matrix_crossprod(
+          lav_mat_crossprod(
             sc_cor[, pstar_idx],
             sc_cor_uni$dx_mu_y1
           )
         a21[pstar_idx, th_idx_j] <-
-          lav_matrix_crossprod(
+          lav_mat_crossprod(
             sc_cor[, pstar_idx],
             sc_cor_uni$dx_mu_y2
           )
         # SL
         if (nexo > 0L) {
           a21[pstar_idx, sl_idx_i] <-
-            lav_matrix_crossprod(
+            lav_mat_crossprod(
               sc_cor[, pstar_idx],
               sc_cor_uni$dx_sl_y1
             )
           a21[pstar_idx, sl_idx_j] <-
-            lav_matrix_crossprod(
+            lav_mat_crossprod(
               sc_cor[, pstar_idx],
               sc_cor_uni$dx_sl_y2
             )
         }
         # VAR
         a21[pstar_idx, var_idx_i] <-
-          lav_matrix_crossprod(
+          lav_mat_crossprod(
             sc_cor[, pstar_idx],
             sc_cor_uni$dx_var_y1
           )
         a21[pstar_idx, var_idx_j] <-
-          lav_matrix_crossprod(
+          lav_mat_crossprod(
             sc_cor[, pstar_idx],
             sc_cor_uni$dx_var_y2
           )
@@ -223,7 +224,7 @@ muthen1984 <- function(data_1 = NULL,
           (sqrt(var_1[i]) * cor_1[i, j]) / (2 * sqrt(var_1[j]))
         h22[pstar_idx, pstar_idx] <- sqrt(var_1[i]) * sqrt(var_1[j])
       } else if (ov_types[i] == "numeric" && ov_types[j] == "ordered") {
-        sc_cor_uni <- lav_bvmix_cor_scores(
+        sc_cor_uni <- lav_bvmix_cor_sc(
           rho = cor_1[i, j],
           fit_y1 = fit[[i]],
           fit_y2 = fit[[j]],
@@ -238,31 +239,31 @@ muthen1984 <- function(data_1 = NULL,
 
         # TH
         a21[pstar_idx, th_idx_i] <-
-          lav_matrix_crossprod(
+          lav_mat_crossprod(
             sc_cor[, pstar_idx],
             sc_cor_uni$dx_mu_y1
           )
         a21[pstar_idx, th_idx_j] <-
-          lav_matrix_crossprod(
+          lav_mat_crossprod(
             sc_cor[, pstar_idx],
             sc_cor_uni$dx_th_y2
           )
         # SL
         if (nexo > 0L) {
           a21[pstar_idx, sl_idx_i] <-
-            lav_matrix_crossprod(
+            lav_mat_crossprod(
               sc_cor[, pstar_idx],
               sc_cor_uni$dx_sl_y1
             )
           a21[pstar_idx, sl_idx_j] <-
-            lav_matrix_crossprod(
+            lav_mat_crossprod(
               sc_cor[, pstar_idx],
               sc_cor_uni$dx_sl_y2
             )
         }
         # VAR
         a21[pstar_idx, var_idx_i] <-
-          lav_matrix_crossprod(
+          lav_mat_crossprod(
             sc_cor[, pstar_idx],
             sc_cor_uni$dx_var_y1
           )
@@ -270,7 +271,7 @@ muthen1984 <- function(data_1 = NULL,
         h21[pstar_idx, var_idx_i] <- cor_1[i, j] / (2 * sqrt(var_1[i]))
         h22[pstar_idx, pstar_idx] <- sqrt(var_1[i])
       } else if (ov_types[j] == "numeric" && ov_types[i] == "ordered") {
-        sc_cor_uni <- lav_bvmix_cor_scores(
+        sc_cor_uni <- lav_bvmix_cor_sc(
           rho = cor_1[i, j],
           fit_y1 = fit[[j]],
           fit_y2 = fit[[i]],
@@ -285,31 +286,31 @@ muthen1984 <- function(data_1 = NULL,
 
         # TH
         a21[pstar_idx, th_idx_j] <-
-          lav_matrix_crossprod(
+          lav_mat_crossprod(
             sc_cor[, pstar_idx],
             sc_cor_uni$dx_mu_y1
           )
         a21[pstar_idx, th_idx_i] <-
-          lav_matrix_crossprod(
+          lav_mat_crossprod(
             sc_cor[, pstar_idx],
             sc_cor_uni$dx_th_y2
           )
         # SL
         if (nexo > 0L) {
           a21[pstar_idx, sl_idx_j] <-
-            lav_matrix_crossprod(
+            lav_mat_crossprod(
               sc_cor[, pstar_idx],
               sc_cor_uni$dx_sl_y1
             )
           a21[pstar_idx, sl_idx_i] <-
-            lav_matrix_crossprod(
+            lav_mat_crossprod(
               sc_cor[, pstar_idx],
               sc_cor_uni$dx_sl_y2
             )
         }
         # VAR
         a21[pstar_idx, var_idx_j] <-
-          lav_matrix_crossprod(
+          lav_mat_crossprod(
             sc_cor[, pstar_idx],
             sc_cor_uni$dx_var_y1
           )
@@ -318,7 +319,7 @@ muthen1984 <- function(data_1 = NULL,
         h22[pstar_idx, pstar_idx] <- sqrt(var_1[j])
       } else if (ov_types[i] == "ordered" && ov_types[j] == "ordered") {
         # polychoric correlation
-        sc_cor_uni <- lav_bvord_cor_scores(
+        sc_cor_uni <- lav_bvord_cor_sc(
           rho = cor_1[i, j],
           fit_y1 = fit[[i]],
           fit_y2 = fit[[j]],
@@ -333,24 +334,24 @@ muthen1984 <- function(data_1 = NULL,
 
         # TH
         a21[pstar_idx, th_idx_i] <-
-          lav_matrix_crossprod(
+          lav_mat_crossprod(
             sc_cor[, pstar_idx],
             sc_cor_uni$dx_th_y1
           )
         a21[pstar_idx, th_idx_j] <-
-          lav_matrix_crossprod(
+          lav_mat_crossprod(
             sc_cor[, pstar_idx],
             sc_cor_uni$dx_th_y2
           )
         # SL
         if (nexo > 0L) {
           a21[pstar_idx, sl_idx_i] <-
-            lav_matrix_crossprod(
+            lav_mat_crossprod(
               sc_cor[, pstar_idx],
               sc_cor_uni$dx_sl_y1
             )
           a21[pstar_idx, sl_idx_j] <-
-            lav_matrix_crossprod(
+            lav_mat_crossprod(
               sc_cor[, pstar_idx],
               sc_cor_uni$dx_sl_y2
             )
@@ -370,14 +371,14 @@ muthen1984 <- function(data_1 = NULL,
   # stage three
 
   sc <- cbind(sc_th, sc_sl, sc_var, sc_cor)
-  inner <- lav_matrix_crossprod(sc)
+  inner <- lav_mat_crossprod(sc)
 
   # A11
   # new approach (2 June 2012): A11 is just a 'sparse' version of
   # (the left upper block of) INNER
   a11 <- matrix(0, a11_size, a11_size)
   if (!is.null(wt)) {
-    inner2 <- lav_matrix_crossprod(sc / wt, sc)
+    inner2 <- lav_mat_crossprod(sc / wt, sc)
   } else {
     inner2 <- inner
   }
@@ -472,11 +473,26 @@ muthen1984 <- function(data_1 = NULL,
 
 
   #  weight matrix (correlation metric)
-  wls_w <- b_inv %*% inner %*% t(b_inv)
+  # The bread b_inv is built from sum(wt)-weighted quantities (a11/a22 use
+  # 'inner2'). The choice of meat encodes how the sampling weights are
+  # interpreted (sampling.weights.type):
+  #  - "design"    : meat = 'inner' = crossprod(sc) where sc is wt-scaled,
+  #                  i.e. weighted by sum(wt^2). b_inv %*% inner %*% b_inv is
+  #                  then the design-based sandwich Gamma (matches Mplus).
+  #  - "frequency" : meat = 'inner2' = crossprod(sc/wt, sc), weighted by
+  #                  sum(wt); treats the weights as frequencies, so Gamma
+  #                  (and the WLS weight matrix and robust SEs) matches a fit
+  #                  on the row-replicated data.
+  # Without sampling weights inner2 == inner, so the choice is a no-op.
+  if (!is.null(wt) && identical(sampling_weights_type, "frequency")) {
+    wls_w <- b_inv %*% inner2 %*% t(b_inv)
+  } else {
+    wls_w <- b_inv %*% inner %*% t(b_inv)
+  }
 
   # COV matrix?
   if (any("numeric" %in% ov_types)) {
-    cov_1 <- lav_cor2cov(R = cor_1, sds = sqrt(unlist(var_1)))
+    cov_1 <- lav_cor2cov(r = cor_1, sds = sqrt(unlist(var_1)))
 
     # construct H matrix to apply delta rule (for the transformation
     # of rho_ij to cov_ij)

@@ -71,7 +71,7 @@ lav_pml_test_plrt <- function(fit_obj_h0, fit_obj_h1) {
 
   # handle possible constraints in H1 (and therefore also in objH1_h0)
   inv_hes_theta0 <-
-    lav_model_information_augment_invert(
+    lav_model_info_augment_invert(
       lavmodel = obj_h1_h0@Model,
       information = hes_theta0,
       inverted = TRUE
@@ -240,14 +240,14 @@ lav_pml_test_plrt2 <- function(fit_obj_h0, fit_obj_h1) {
 
   # Compute the sum of the eigenvalues and the sum of the squared eigenvalues
   # so that the adjustment to PLRT can be applied.
-  # Here a couple of functions (e.g. lav_pml_object_inspect_hessian) which are
+  # Here a couple of functions (e.g. lav_pml_inspect_hessian) which are
   # modifications of lavaan functions (e.g. getHessian) are needed. These are
   # defined in the end of the file.
 
   # the quantity below follows the same logic as getHessian of lavaan 0.5-18
   # and it actually gives N*Hessian. That's why the command following the
   # command below.
-  # NHes.theta0 <- lav_pml_object_inspect_hessian (object = obj@Model,
+  # NHes.theta0 <- lav_pml_inspect_hessian (object = obj@Model,
   #                           samplestats = obj@SampleStats ,
   #                           x = obj@Data@X ,
   #                           estimator = "PML",
@@ -260,7 +260,7 @@ lav_pml_test_plrt2 <- function(fit_obj_h0, fit_obj_h1) {
   #                              # input for lav_pml_object_x2glist
   #                           Npar = Npar,
   #                           equal_constr=equal_constr)
-  nhes_theta0 <- lav_pml_object_inspect_hessian(
+  nhes_theta0 <- lav_pml_inspect_hessian(
     object = obj@Model, samplestats = obj@SampleStats,
     x = obj@Data@X, estimator = "PML", lavcache = obj@Cache,
     my_m_el_idx = my_m_el_idx, my_x_el_idx = my_x_el_idx,
@@ -321,7 +321,7 @@ lav_pml_test_plrt2 <- function(fit_obj_h0, fit_obj_h1) {
 # Npar = Npar
 # equal_constr =TRUE
 
-lav_pml_object_inspect_hessian <- function(object, samplestats, x,
+lav_pml_inspect_hessian <- function(object, samplestats, x,
                          estimator = "PML", lavcache,
                          my_m_el_idx, my_x_el_idx,
                          my_m_el_idx2, my_x_el_idx2,
@@ -333,7 +333,7 @@ lav_pml_object_inspect_hessian <- function(object, samplestats, x,
   hessian <- matrix(0, npar, npar) #
 
   # !!!! MYfunction below
-  x_1 <- lav_pml_object_inspect_parameters(
+  x_1 <- lav_pml_inspect_parameters(
     object = object,
     glist = NULL, n = npar, # N the number of parameters to consider
     my_m_el_idx = my_m_el_idx,
@@ -347,9 +347,9 @@ lav_pml_object_inspect_hessian <- function(object, samplestats, x,
     x_left2[j] <- x_1[j] - 2 * h_j
     x_right[j] <- x_1[j] + h_j
     x_right2[j] <- x_1[j] + 2 * h_j
-    # !!!! MYfunction below : lav_pml_object_inspect_gradient and
+    # !!!! MYfunction below : lav_pml_inspect_grad and
     #                         lav_pml_object_x2glist
-    g_left <- lav_pml_object_inspect_gradient(
+    g_left <- lav_pml_inspect_grad(
       object = object,
       glist = lav_pml_object_x2glist(
         object = object, x = x_left,
@@ -363,7 +363,7 @@ lav_pml_object_inspect_hessian <- function(object, samplestats, x,
       equal_constr = equal_constr
     )
 
-    g_left2 <- lav_pml_object_inspect_gradient(
+    g_left2 <- lav_pml_inspect_grad(
       object = object,
       glist = lav_pml_object_x2glist(
         object = object, x = x_left2,
@@ -377,7 +377,7 @@ lav_pml_object_inspect_hessian <- function(object, samplestats, x,
       equal_constr = equal_constr
     )
 
-    g_right <- lav_pml_object_inspect_gradient(
+    g_right <- lav_pml_inspect_grad(
       object = object,
       glist = lav_pml_object_x2glist(
         object = object, x = x_right,
@@ -391,7 +391,7 @@ lav_pml_object_inspect_hessian <- function(object, samplestats, x,
       equal_constr = equal_constr
     )
 
-    g_right2 <- lav_pml_object_inspect_gradient(
+    g_right2 <- lav_pml_inspect_grad(
       object = object,
       glist = lav_pml_object_x2glist(
         object = object, x = x_right2,
@@ -416,9 +416,9 @@ lav_pml_object_inspect_hessian <- function(object, samplestats, x,
 
 
 
-##################################  lav_pml_object_inspect_parameters
+##################################  lav_pml_inspect_parameters
 # different input arguments: my_m_el_idx, my_x_el_idx
-lav_pml_object_inspect_parameters <-         # nolint
+lav_pml_inspect_parameters <-
   function(object, glist = NULL, n, # N the number of parameters to consider
            my_m_el_idx, my_x_el_idx) {
   if (is.null(glist)) {
@@ -439,10 +439,10 @@ lav_pml_object_inspect_parameters <-         # nolint
 
 
 
-#############################  lav_pml_object_inspect_gradient
+#############################  lav_pml_inspect_grad
 # the difference are the input arguments my_m_el_idx, my_x_el_idx
 # used  in  lavaan:::lav_model_delta
-lav_pml_object_inspect_gradient <-                  # nolint
+lav_pml_inspect_grad <-
   function(object, glist, samplestats = NULL, x = NULL,
            lavcache = NULL, estimator = "PML",
            my_m_el_idx, my_x_el_idx, equal_constr) {
@@ -579,7 +579,7 @@ lav_pml_model_vcov_firstorder <- function(lavmodel, lavsamplestats = NULL,
     scores = TRUE, negative = FALSE
   )
   group_sc <- sc %*% delta[[g]]
-  b0_group[[g]] <- lav_matrix_crossprod(group_sc)
+  b0_group[[g]] <- lav_mat_crossprod(group_sc)
   # !!!! B0.group[[g]] <- B0.group[[g]]/lavsamplestats@ntotal
   #  !!! skip so that the result is in line with the 0.5-18 version of lavaan
 

@@ -6,8 +6,8 @@
 \alias{lavWaldTest}
 \title{Wald test}
 \description{
-Wald test for testing a linear hypothesis about the parameters of 
-fitted lavaan object.}
+Wald test for testing a linear hypothesis about the parameters of
+a fitted lavaan object.}
 \usage{
 lavTestWald(object, constraints = NULL, verbose = FALSE)
 }

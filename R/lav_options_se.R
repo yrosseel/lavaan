@@ -48,7 +48,8 @@ lav_options_check_se <- function(opt = NULL) {
   if (any(opt$estimator == c("gls", "ntrls", "fml"))) {
     ok_flag <- any(opt$se == c(
       "default", "none", "standard",
-      "bootstrap", "external"
+      "bootstrap", "external",
+      "robust", "robust.sem"
     ))
   # WLS, DLS, DWLS, WLSM, WLSMV, WLSMVS, ULS, ULSM, ULSMV, ULSMVS
   } else if (any(opt$estimator == c(

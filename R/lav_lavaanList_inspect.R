@@ -120,49 +120,49 @@ lavListInspect <- function(object,                                       # nolin
   } else if (what == "nlevels") {
     object@Data@nlevels
   } else if (what == "nclusters") {
-    lav_object_inspect_cluster_info(object,
+    lav_inspect_cl_info(object,
       level = 2L,
       what = "nclusters",
       drop_list_single_group = drop.list.single.group
     )
   } else if (what == "ncluster.size") {
-    lav_object_inspect_cluster_info(object,
+    lav_inspect_cl_info(object,
       level = 2L,
       what = "ncluster.size",
       drop_list_single_group = drop.list.single.group
     )
   } else if (what == "cluster.size") {
-    lav_object_inspect_cluster_info(object,
+    lav_inspect_cl_info(object,
       level = 2L,
       what = "cluster.size",
       drop_list_single_group = drop.list.single.group
     )
   } else if (what == "cluster.id") {
-    lav_object_inspect_cluster_info(object,
+    lav_inspect_cl_info(object,
       level = 2L,
       what = "cluster.id",
       drop_list_single_group = drop.list.single.group
     )
   } else if (what == "cluster.idx") {
-    lav_object_inspect_cluster_info(object,
+    lav_inspect_cl_info(object,
       level = 2L,
       what = "cluster.idx",
       drop_list_single_group = drop.list.single.group
     )
   } else if (what == "cluster.label") {
-    lav_object_inspect_cluster_info(object,
+    lav_inspect_cl_info(object,
       level = 2L,
       what = "cluster.label",
       drop_list_single_group = drop.list.single.group
     )
   } else if (what == "cluster.sizes") {
-    lav_object_inspect_cluster_info(object,
+    lav_inspect_cl_info(object,
       level = 2L,
       what = "cluster.sizes",
       drop_list_single_group = drop.list.single.group
     )
   } else if (what == "average.cluster.size") {
-    lav_object_inspect_cluster_info(object,
+    lav_inspect_cl_info(object,
       level = 2L,
       what = "average.cluster.size",
       drop_list_single_group = drop.list.single.group
@@ -282,7 +282,7 @@ lav_lavaanlist_inspect_mms <- function(
     rownames(con_1) <- NULL
 
     # replace 'labels' by parameter numbers
-    id <- lav_partable_constraints_label_id(pt_1)
+    id <- lav_pt_con_label_id(pt_1)
     label <- names(id)
     for (con in seq_len(nrow(con_1))) {
       # lhs

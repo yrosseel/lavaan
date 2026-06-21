@@ -81,7 +81,7 @@ lav_object_gamma <- function(lavobject = NULL,
       } else {
         cluster_idx <- NULL
       }
-      out[[g]] <- lav_samplestats_gamma(
+      out[[g]] <- lav_samp_gamma(
         m_y = y,
         m_mu = mean_1,
         m_sigma = cov_1,
@@ -96,7 +96,7 @@ lav_object_gamma <- function(lavobject = NULL,
         mplus_wls = mplus_wls
       )
     } else {
-      out[[g]] <- lav_samplestats_gamma_nt(
+      out[[g]] <- lav_samp_gamma_nt(
         m_cov = cov_1, # joint!
         m_mean = mean_1, # joint!
         x_idx = x_idx,
@@ -110,7 +110,7 @@ lav_object_gamma <- function(lavobject = NULL,
     # group.w.free
     if (lavoptions$group.w.free) {
       # checkme!
-      out[[g]] <- lav_matrix_bdiag(matrix(1, 1, 1), out[[g]])
+      out[[g]] <- lav_mat_bdiag(matrix(1, 1, 1), out[[g]])
     }
 
   } # g
@@ -130,7 +130,7 @@ lav_object_gamma <- function(lavobject = NULL,
 #  - if conditional.x = TRUE, we ignore fixed.x (can be TRUE or FALSE)
 
 # NORMAL-THEORY
-lav_samplestats_gamma_nt <- function(m_y = NULL, # should include
+lav_samp_gamma_nt <- function(m_y = NULL, # should include
                                      # eXo if
                                      # conditional.x=TRUE
                                      wt = NULL,
@@ -196,10 +196,10 @@ lav_samplestats_gamma_nt <- function(m_y = NULL, # should include
       #   m_gamma <- lavaanC::m_kronecker_dup_ginv_pre_post(m_s,
       #                                              multiplicator = 2.0)
       # } else {
-        m_gamma <- 2 * lav_matrix_duplication_ginv_pre_post(m_s %x% m_s)
+        m_gamma <- 2 * lav_mat_dup_ginv_pre_post(m_s %x% m_s)
       # }
       if (meanstructure) {
-        m_gamma <- lav_matrix_bdiag(m_s, m_gamma)
+        m_gamma <- lav_mat_bdiag(m_s, m_gamma)
       }
 
       # unconditional - fixed x
@@ -226,13 +226,13 @@ lav_samplestats_gamma_nt <- function(m_y = NULL, # should include
       #   gamma_r <- lavaanC::m_kronecker_dup_ginv_pre_post(m_r,
       #                                               multiplicator = 2.0)
       # } else {
-        gamma_s <- 2 * lav_matrix_duplication_ginv_pre_post(m_s %x% m_s)
-        gamma_r <- 2 * lav_matrix_duplication_ginv_pre_post(m_r %x% m_r)
+        gamma_s <- 2 * lav_mat_dup_ginv_pre_post(m_s %x% m_s)
+        gamma_r <- 2 * lav_mat_dup_ginv_pre_post(m_r %x% m_r)
       # }
       m_gamma <- gamma_s - gamma_r
 
       if (meanstructure) {
-        m_gamma <- lav_matrix_bdiag(ybarx_aug, m_gamma)
+        m_gamma <- lav_mat_bdiag(ybarx_aug, m_gamma)
       }
     }
   } else {
@@ -254,7 +254,7 @@ lav_samplestats_gamma_nt <- function(m_y = NULL, # should include
     #                                                  multiplicator = 2.0)
     # } else {
       m_gamma <- 2 *
-               lav_matrix_duplication_ginv_pre_post(cov_ybarx %x% cov_ybarx)
+               lav_mat_dup_ginv_pre_post(cov_ybarx %x% cov_ybarx)
     # }
 
     if (meanstructure || slopestructure) {
@@ -283,7 +283,7 @@ lav_samplestats_gamma_nt <- function(m_y = NULL, # should include
       }
     }
 
-    m_gamma <- lav_matrix_bdiag(a11, m_gamma)
+    m_gamma <- lav_mat_bdiag(a11, m_gamma)
   }
 
   m_gamma
@@ -302,7 +302,7 @@ lav_samplestats_gamma_nt <- function(m_y = NULL, # should include
 #  - new in 0.6-13: add unbiased = TRUE (for the 'plain' setting only)
 
 # ADF THEORY
-lav_samplestats_gamma <- function(m_y, # Y+X if cond!
+lav_samp_gamma <- function(m_y, # Y+X if cond!
                                   m_mu = NULL,
                                   m_sigma = NULL,
                                   x_idx = integer(0L),
@@ -313,11 +313,67 @@ lav_samplestats_gamma <- function(m_y, # Y+X if cond!
                                   slopestructure = FALSE,
                                   gamma_n_minus_one = FALSE,
                                   unbiased = FALSE,
-                                  mplus_wls = FALSE) {
+                                  mplus_wls = FALSE,
+                                  wt = NULL,
+                                  sampling_weights_type = "design") {
   # coerce to matrix
   m_y <- unname(as.matrix(m_y))
   n <- nrow(m_y)
   p <- ncol(m_y)
+
+  # sampling weights?
+  # Gamma is the asymptotic (co)variance of the sample moments, which for
+  # the saturated (h1) model equals the sandwich I^{-1} J I^{-1}, where I is
+  # the expected and J the first-order h1 information matrix. We reuse the
+  # (weight-aware) expected information I, and construct the meat J according
+  # to how the sampling weights are interpreted (sampling.weights.type):
+  #  - "design"    : J = crossprod(wt * sc) / sum(wt), i.e. sum(wt^2)-weighted,
+  #                  the design-based sandwich; the parameter vcov is then
+  #                  invariant to the overall scale of the weights, matching
+  #                  the continuous ML robust (huber.white) SEs.
+  #  - "frequency" : J = crossprod(sqrt(wt) * sc) / sum(wt), i.e. sum(wt)-
+  #                  weighted; treats the weights as frequencies, so the result
+  #                  equals the Gamma from physically replicating each case wt
+  #                  times. (NB: this also feeds the WLS/DWLS/DLS weight matrix,
+  #                  so it shifts those point estimates relative to "design".)
+  # Under normality J = I and this reduces to the normal-theory Gamma.
+  if (!is.null(wt)) {
+    if (conditional_x) {
+      lav_msg_stop(gettext(
+        "Gamma with sampling weights is not available (yet) if
+         conditional.x = TRUE."))
+    }
+    if (length(cluster_idx) > 0L) {
+      lav_msg_stop(gettext(
+        "Gamma with sampling weights is not available (yet) for
+         clustered data."))
+    }
+    out <- stats::cov.wt(m_y, wt = wt, method = "ML")
+    i_mat <- lav_mvn_h1_info_expected(
+      y = m_y, wt = wt, sample_cov = out$cov, x_idx = x_idx,
+      meanstructure = meanstructure
+    )
+    # unit (unweighted) casewise scores of the saturated model, evaluated
+    # at the weighted sample moments
+    sc <- lav_mvn_sc_mu_sigma(
+      y = m_y, mu = out$center, sigma_1 = out$cov, x_idx = x_idx
+    )
+    if (!meanstructure) {
+      sc <- sc[, -seq_len(p), drop = FALSE]
+    }
+    if (identical(sampling_weights_type, "frequency")) {
+      j_mat <- crossprod(sqrt(wt) * sc) / sum(wt)
+    } else {
+      j_mat <- crossprod(wt * sc) / sum(wt)
+    }
+    # fixed.x zeroes the x-blocks of I, so use a pseudo-inverse there
+    if (length(x_idx) > 0L) {
+      i_inv <- MASS::ginv(i_mat)
+    } else {
+      i_inv <- solve(i_mat)
+    }
+    return(i_inv %*% j_mat %*% i_inv)
+  }
 
   # unbiased?
   if (unbiased) {
@@ -330,7 +386,7 @@ lav_samplestats_gamma <- function(m_y, # Y+X if cond!
     # data really should be complete
       m_cov <- stats::cov(m_y, use = "pairwise.complete.obs")
       m_cov <- m_cov * (n - 1) / n
-      cov_vech <- lav_matrix_vech(m_cov)
+      cov_vech <- lav_mat_vech(m_cov)
     }
   }
 
@@ -340,10 +396,10 @@ lav_samplestats_gamma <- function(m_y, # Y+X if cond!
     model_based <- TRUE
     if (meanstructure) {
       stopifnot(!is.null(m_mu))
-      sigma <- c(as.numeric(m_mu), lav_matrix_vech(m_sigma))
+      sigma <- c(as.numeric(m_mu), lav_mat_vech(m_sigma))
     } else {
       m_mu <- colMeans(m_y, na.rm = TRUE) # for centering!
-      sigma <- lav_matrix_vech(m_sigma)
+      sigma <- lav_mat_vech(m_sigma)
     }
   } else {
     model_based <- FALSE
@@ -374,8 +430,8 @@ lav_samplestats_gamma <- function(m_y, # Y+X if cond!
     # create z where the rows_i contain the following elements:
     #  - Y_i (if meanstructure is TRUE)
     #  - vech(Yc_i' %*% Yc_i) where Yc_i are the residuals
-    idx1 <- lav_matrix_vech_col_idx(p)
-    idx2 <- lav_matrix_vech_row_idx(p)
+    idx1 <- lav_mat_vech_col_idx(p)
+    idx2 <- lav_mat_vech_row_idx(p)
     if (meanstructure) {
       z <- cbind(m_y, m_yc[, idx1, drop = FALSE] *
         m_yc[, idx2, drop = FALSE])
@@ -387,9 +443,9 @@ lav_samplestats_gamma <- function(m_y, # Y+X if cond!
     if (model_based) {
       if (meanstructure) {
         stopifnot(!is.null(m_mu))
-        sigma <- c(as.numeric(m_mu), lav_matrix_vech(m_sigma))
+        sigma <- c(as.numeric(m_mu), lav_mat_vech(m_sigma))
       } else {
-        sigma <- lav_matrix_vech(m_sigma)
+        sigma <- lav_mat_vech(m_sigma)
       }
       zc <- t(t(z) - sigma)
     } else {
@@ -402,7 +458,7 @@ lav_samplestats_gamma <- function(m_y, # Y+X if cond!
     }
 
     if (anyNA(zc)) {
-      m_gamma <- lav_matrix_crossprod(zc) / n
+      m_gamma <- lav_mat_crossprod(zc) / n
     } else {
       m_gamma <- base::crossprod(zc) / n
     }
@@ -434,22 +490,22 @@ lav_samplestats_gamma <- function(m_y, # Y+X if cond!
       y_hat[, -x_idx] <- yhat
       # y_hat <- cbind(yhat, m_y[,x_idx])
       y_hatc <- t(t(y_hat) - yhat_bar)
-      idx1 <- lav_matrix_vech_col_idx(p)
-      idx2 <- lav_matrix_vech_row_idx(p)
+      idx1 <- lav_mat_vech_col_idx(p)
+      idx2 <- lav_mat_vech_row_idx(p)
       if (meanstructure) {
         z <- (cbind(m_y, m_yc[, idx1, drop = FALSE] *
           m_yc[, idx2, drop = FALSE]) -
           cbind(y_hat, y_hatc[, idx1, drop = FALSE] *
             y_hatc[, idx2, drop = FALSE]))
-        sigma1 <- c(m_mu, lav_matrix_vech(m_sigma))
-        sigma2 <- c(yhat_bar, lav_matrix_vech(yhat_cov))
+        sigma1 <- c(m_mu, lav_mat_vech(m_sigma))
+        sigma2 <- c(yhat_bar, lav_mat_vech(yhat_cov))
       } else {
         z <- (m_yc[, idx1, drop = FALSE] *
           m_yc[, idx2, drop = FALSE] -
           y_hatc[, idx1, drop = FALSE] *
             y_hatc[, idx2, drop = FALSE])
-        sigma1 <- lav_matrix_vech(m_sigma)
-        sigma2 <- lav_matrix_vech(yhat_cov)
+        sigma1 <- lav_mat_vech(m_sigma)
+        sigma2 <- lav_mat_vech(yhat_cov)
       }
       zc <- t(t(z) - (sigma1 - sigma2))
     } else {
@@ -461,8 +517,8 @@ lav_samplestats_gamma <- function(m_y, # Y+X if cond!
 
       m_yc <- t(t(m_y) - colMeans(m_y, na.rm = TRUE))
       y_hatc <- t(t(y_hat) - colMeans(y_hat, na.rm = TRUE))
-      idx1 <- lav_matrix_vech_col_idx(p)
-      idx2 <- lav_matrix_vech_row_idx(p)
+      idx1 <- lav_mat_vech_col_idx(p)
+      idx2 <- lav_mat_vech_row_idx(p)
       if (meanstructure) {
         z <- (cbind(m_y, m_yc[, idx1, drop = FALSE] *
           m_yc[, idx2, drop = FALSE]) -
@@ -483,7 +539,7 @@ lav_samplestats_gamma <- function(m_y, # Y+X if cond!
     }
 
     if (anyNA(zc)) {
-      m_gamma <- lav_matrix_crossprod(zc) / n
+      m_gamma <- lav_mat_crossprod(zc) / n
     } else {
       m_gamma <- base::crossprod(zc) / n
     }
@@ -502,8 +558,8 @@ lav_samplestats_gamma <- function(m_y, # Y+X if cond!
     m_res <- qr.resid(m_qr, m_y[, -x_idx, drop = FALSE])
     p <- ncol(m_res)
 
-    idx1 <- lav_matrix_vech_col_idx(p)
-    idx2 <- lav_matrix_vech_row_idx(p)
+    idx1 <- lav_mat_vech_col_idx(p)
+    idx2 <- lav_mat_vech_row_idx(p)
 
     if (meanstructure || slopestructure) {
       xtx_inv <- unname(solve(crossprod(m_x)))
@@ -563,7 +619,7 @@ lav_samplestats_gamma <- function(m_y, # Y+X if cond!
     }
 
     if (anyNA(zc)) {
-      m_gamma <- lav_matrix_crossprod(zc) / n
+      m_gamma <- lav_mat_crossprod(zc) / n
     } else {
       m_gamma <- base::crossprod(zc) / n
     }
@@ -574,7 +630,7 @@ lav_samplestats_gamma <- function(m_y, # Y+X if cond!
   if (mplus_wls && !fixed_x && !conditional_x) {
     # adjust G_22 (the varcov part)
     m_s <- cov(m_y, use = "pairwise")
-    w <- lav_matrix_vech(m_s)
+    w <- lav_mat_vech(m_s)
     w_biased <- (n - 1) / n * w
     diff <- outer(w, w) - outer(w_biased, w_biased)
     if (meanstructure) {
@@ -606,7 +662,7 @@ lav_samplestats_gamma <- function(m_y, # Y+X if cond!
     #   gammant_cov <- lavaanC::m_kronecker_dup_ginv_pre_post(m_cov,
     #                                               multiplicator = 2.0)
     # } else {
-      gammant_cov <- 2 * lav_matrix_duplication_ginv_pre_post(m_cov %x% m_cov)
+      gammant_cov <- 2 * lav_mat_dup_ginv_pre_post(m_cov %x% m_cov)
     # }
 
     if (meanstructure) {
@@ -621,7 +677,7 @@ lav_samplestats_gamma <- function(m_y, # Y+X if cond!
       n / (n - 2) / (n - 3) * (gammant_cov -
         2 / (n - 1) * tcrossprod(cov_vech)))
     if (meanstructure) {
-      m_gamma <- lav_matrix_bdiag(m_cov, gamma_u)
+      m_gamma <- lav_mat_bdiag(m_cov, gamma_u)
 
       # 3-rd order:
       m_gamma[1:p, (p + 1):ncol(m_gamma)] <- gamma_mean_cov * n / (n - 2)
@@ -637,7 +693,7 @@ lav_samplestats_gamma <- function(m_y, # Y+X if cond!
 # ADF Gamma for correlations
 #
 # 30 May 2024: basic version: fixed_x=FALSE, conditional_x=FALSE, ...
-lav_samplestats_cor_gamma <- function(m_y, meanstructure = FALSE) {
+lav_samp_cor_gamma <- function(m_y, meanstructure = FALSE) {
 
   # coerce to matrix
   m_y <- unname(as.matrix(m_y))
@@ -657,12 +713,12 @@ lav_samplestats_cor_gamma <- function(m_y, meanstructure = FALSE) {
 
   # find indices so we avoid 1) double subscripts (diagonal!), and
   #                          2) duplicated subscripts (symmetric!)
-  idx1 <- lav_matrix_vech_col_idx(p, diagonal = FALSE)
-  idx2 <- lav_matrix_vech_row_idx(p, diagonal = FALSE)
+  idx1 <- lav_mat_vech_col_idx(p, diagonal = FALSE)
+  idx2 <- lav_mat_vech_row_idx(p, diagonal = FALSE)
 
   zr1 <- (yz[, idx1, drop = FALSE] * yz[, idx2, drop = FALSE])
   zr2 <- (yz2[, idx1, drop = FALSE] + yz2[, idx2, drop = FALSE])
-  zr2 <- t(t(zr2) * lav_matrix_vech(m_r, diagonal = FALSE))
+  zr2 <- t(t(zr2) * lav_mat_vech(m_r, diagonal = FALSE))
   zrr <- zr1 - 0.5 * zr2
   if (meanstructure) {
       zrr <- cbind(yz, zrr)
@@ -674,7 +730,7 @@ lav_samplestats_cor_gamma <- function(m_y, meanstructure = FALSE) {
 
 # normal theory version
 # 30 May 2024: basic version: fixed_x=FALSE, conditional_x=FALSE, ...
-lav_samplestats_cor_gamma_nt <- function(m_y = NULL,
+lav_samp_cor_gamma_nt <- function(m_y = NULL,
                                          wt = NULL,
                                          m_cov = NULL, # joint!
                                          m_mean = NULL, # joint!
@@ -744,18 +800,18 @@ lav_samplestats_cor_gamma_nt <- function(m_y = NULL,
     if (!fixed_x) {
       m_ip <- diag(s_p) %x% m_r
       m_rr <- m_r %x% m_r
-      gamma_z_nt <- m_rr + lav_matrix_commutation_pre(m_rr)
-      tmp <- (m_ip + lav_matrix_commutation_pre(m_ip)) / 2
-      zero_idx <- seq_len(s_p * s_p)[-lav_matrix_diag_idx(s_p)]
+      gamma_z_nt <- m_rr + lav_mat_com_pre(m_rr)
+      tmp <- (m_ip + lav_mat_com_pre(m_ip)) / 2
+      zero_idx <- seq_len(s_p * s_p)[-lav_mat_diag_idx(s_p)]
       tmp[, zero_idx] <- 0
       m_a <- -tmp
       diag(m_a) <- 1 - diag(tmp)
       gamma_nt_big <- m_a %*% gamma_z_nt %*% t(m_a)
-      r_idx <- lav_matrix_vech_idx(s_p, diagonal = FALSE)
-      v_gamma <- gamma_nt_big[r_idx, r_idx]
+      r_idx <- lav_mat_vech_idx(s_p, diagonal = FALSE)
+      v_gamma <- gamma_nt_big[r_idx, r_idx, drop = FALSE]
 
       if (meanstructure) {
-        v_gamma <- lav_matrix_bdiag(m_r, v_gamma)
+        v_gamma <- lav_mat_bdiag(m_r, v_gamma)
       }
 
       # unconditional - fixed x

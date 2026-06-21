@@ -178,7 +178,7 @@ lav_model_objective_fiml <- function(sigma_hat = NULL, mu_hat = NULL, yp = NULL,
   }
 
   # Note: we ignore x.idx (if any)
-  fx <- lav_mvnorm_missing_loglik_samplestats(
+  fx <- lav_mvn_mi_loglik_samp(
     yp = yp,
     mu = mu_hat, sigma_1 = sigma_hat,
     log2pi = FALSE,
@@ -243,7 +243,7 @@ lav_model_objective_pml <- function(sigma_hat = NULL, # model-based var/cov/cor
     return(out)
   }
   cor_hat <- cov2cor(sigma_hat2) # to get correlations (rho!)
-  cors <- lav_matrix_vech(cor_hat, diagonal = FALSE)
+  cors <- lav_mat_vech(cor_hat, diagonal = FALSE)
 
   if (length(cors) > 0L && (any(abs(cors) > 1) ||
     any(is.na(cors)))) {
@@ -475,7 +475,7 @@ lav_model_objective_pml <- function(sigma_hat = NULL, # model-based var/cov/cor
     # - no need to compute 'casewise' (log)likelihoods
 
     pstar_1 <- matrix(0, nvar, nvar) # utility matrix, to get indices
-    pstar_1[lav_matrix_vech_idx(nvar, diagonal = FALSE)] <- 1:pstar
+    pstar_1[lav_mat_vech_idx(nvar, diagonal = FALSE)] <- 1:pstar
     # n <- NROW(x)
 
     log_lik_pair <- numeric(pstar) # logl per pair (summed over cases)
@@ -484,7 +484,7 @@ lav_model_objective_pml <- function(sigma_hat = NULL, # model-based var/cov/cor
         pstar_idx <- pstar_1[i, j]
         if (ov_types[i] == "numeric" &&
           ov_types[j] == "numeric") {
-          log_lik <- lav_mvnorm_loglik_data(
+          log_lik <- lav_mvn_loglik_data(
             y = x[, c(i, j)], wt = wt, mu = mu_hat[c(i, j)],
             sigma_1 = sigma_hat[c(i, j), c(i, j)], casewise = TRUE
           )
@@ -552,7 +552,7 @@ lav_model_objective_pml <- function(sigma_hat = NULL, # model-based var/cov/cor
   } else {
     lik <- matrix(0, nrow(x), pstar) # likelihood per case, per pair
     pstar_1 <- matrix(0, nvar, nvar) # utility matrix, to get indices
-    pstar_1[lav_matrix_vech_idx(nvar, diagonal = FALSE)] <- 1:pstar
+    pstar_1[lav_mat_vech_idx(nvar, diagonal = FALSE)] <- 1:pstar
     # n <- NROW(x)
 
     for (j in seq_len(nvar - 1L)) {
@@ -793,7 +793,7 @@ lav_model_objective_2l <- function(lavmodel = NULL,
                          lavsamplestats = NULL,
                          group = 1L) {
   # compute model-implied statistics for all blocks
-  implied <- lav_model_implied(lavmodel, GLIST = glist)
+  implied <- lav_model_implied(lavmodel, glist = glist)
 
   # here, we assume only 2!!! levels, at [[1]] and [[2]]
   if (lavmodel@conditional.x) {
@@ -821,13 +821,13 @@ lav_model_objective_2l <- function(lavmodel = NULL,
     #    return(+Inf)
     # }
     # COR.B <- cov2cor(SIGMA.B)
-    # if(any(abs(lav_matrix_vech(COR.B, diagonal = FALSE)) > 1)) {
+    # if(any(abs(lav_mat_vech(COR.B, diagonal = FALSE)) > 1)) {
     #   return(+Inf)
     # }
 
     y2 <- lavsamplestats@YLp[[group]][[2]]$Y2
     # yp <- lavsamplestats@missing[[group]]
-    loglik <- lav_mvnorm_cluster_missing_loglik_samplestats_2l(
+    loglik <- lav_mvn_cl_mi_loglik_samp_2l(
       y1 = y1,
       y2 = y2, lp = lp, mp = mp,
       mu_w = mu_w, sigma_w = sigma_w,
@@ -837,7 +837,7 @@ lav_model_objective_2l <- function(lavmodel = NULL,
   } else {
     ylp <- lavsamplestats@YLp[[group]]
     if (lavmodel@conditional.x) {
-      loglik <- lav_mvreg_cluster_loglik_samplestats_2l(
+      loglik <- lav_mvreg_cl_loglik_samp_2l(
         ylp = ylp, lp = lp,
         res_sigma_w = res_sigma_w,
         res_int_w = res_int_w, res_pi_w = res_pi_w,
@@ -846,7 +846,7 @@ lav_model_objective_2l <- function(lavmodel = NULL,
         log2pi = FALSE, minus_two = TRUE
       )
     } else {
-      loglik <- lav_mvnorm_cluster_loglik_samplestats_2l(
+      loglik <- lav_mvn_cl_loglik_samp_2l(
         ylp = ylp, lp = lp,
         mu_w = mu_w, sigma_w = sigma_w,
         mu_b = mu_b, sigma_b = sigma_b,

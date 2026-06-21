@@ -8,26 +8,43 @@ lav_sam_step2 <- function(step1 = NULL, fit = NULL,
   pt_1 <- step1$PT
 
   # Gamma available?
-  gamma_flag <- FALSE
-  if (sam_method %in% c("local", "fsr", "cfsr") &&
-      !is.null(step1$Gamma.eta[[1]])) {
-    gamma_flag <- TRUE
-  }
+  gamma_flag <- (sam_method %in% c("local", "fsr", "cfsr") &&
+                 !is.null(step1$Gamma.eta[[1]]))
 
   lv_names <- unique(unlist(fit@pta$vnames$lv.regular))
 
   # adjust options
   lavoptions_pa <- lavoptions
-  if (lavoptions_pa$se == "naive") {
-    lavoptions_pa$se <- "standard"
-  } else if (gamma_flag) {
-    lavoptions_pa$se <- "robust.sem"
+  # "yuan.chan" is a SAM-global test for the JOINT model, computed afterwards in
+  # lav_sam_global_test(); the structural fit itself uses the ordinary test
+  if (any(lavoptions_pa$test == "yuan.chan")) {
+    lavoptions_pa$test <- "standard"
+  }
+  # the corrected two-step STRUCTURAL test (Satorra-Bentler, using Gamma.eta as
+  # the NACOV of vech(VETA)) is the default test for sam.method = local/fsr/cfsr
+  # whenever Gamma.eta is available -- INDEPENDENT of the requested SE. (For
+  # se = "twostep"/"naive" the FIT.PA SEs below are not the final ones: twostep
+  # SEs are recomputed in step 4, naive SEs are FIT.PA's plain vcov.)
+  if (gamma_flag) {
     lavoptions_pa$test <- "satorra.bentler"
+  }
+  if (lavoptions_pa$se == "naive") {
+    # naive SEs = FIT.PA's plain (standard) vcov
+    lavoptions_pa$se <- "standard"
+  } else if (lavoptions_pa$se %in% c("local", "local.nt")) {
+    # local SEs ARE FIT.PA's robust.sem vcov (read back in lav_sam_step2_se())
+    lavoptions_pa$se <- "robust.sem"
+  } else if (gamma_flag) {
+    # twostep / twostep.robust: the final SEs are recomputed in step 4
+    # (lav_sam_step2_se). Use se = "standard" -- NOT "robust.sem" -- so that
+    # FIT.PA's vcov stays the NAIVE (standard) one: the alpha.correction blend
+    # in lav_sam_step2_se() reads it as 'vcov_naive'. The corrected structural
+    # test is still computed (it is independent of the se).
+    lavoptions_pa$se <- "standard"
   } else {
-    # twostep or none -> none
+    # twostep or none, without Gamma.eta -> none
     lavoptions_pa$se <- "none"
   }
-  # lavoptions.PA$fixed.x <- TRUE # may be false if indicator is predictor
   if (!lavoptions_pa$conditional.x) {
     lavoptions_pa$fixed.x <- FALSE # until we fix this...
   }
@@ -47,21 +64,16 @@ lav_sam_step2 <- function(step1 = NULL, fit = NULL,
   if (sam_method %in% c("local", "fsr", "cfsr")) {
     lavoptions_pa$missing <- "listwise"
     lavoptions_pa$sample.cov.rescale <- FALSE
-    # lavoptions.PA$baseline <- FALSE
-    # lavoptions.PA$h1 <- FALSE
-    # lavoptions.PA$implied <- FALSE
     lavoptions_pa$loglik <- FALSE
   } else {
     lavoptions_pa$h1 <- FALSE
-    # lavoptions.PA$implied <- FALSE
     lavoptions_pa$loglik <- FALSE
   }
-
 
   # construct PTS
   if (sam_method %in% c("local", "fsr", "cfsr")) {
     # extract structural part
-    pts <- lav_partable_subset_structural_model(pt_1,
+    pts <- lav_pt_subset_sm(pt_1,
       add_idx = TRUE,
       add_exo_cov = TRUE,
       fixed_x = lavoptions_pa$fixed.x,
@@ -90,23 +102,6 @@ lav_sam_step2 <- function(step1 = NULL, fit = NULL,
       nobs_1 <- fit@Data@nobs
     }
 
-    # if meanstructure, 'free' user=0 intercepts?
-    # if (lavoptions.PA$meanstructure) {
-    #   extra.int.idx <- which(PTS$op == "~1" & PTS$user == 0L &
-    #     PTS$free == 0L &
-    #     PTS$exo == 0L) # needed?
-    #   if (length(extra.int.idx) > 0L) {
-    #     PTS$free[extra.int.idx] <- 1L
-    #     PTS$ustart[extra.int.idx] <- as.numeric(NA)
-    #     PTS$free[PTS$free > 0L] <-
-    #       seq_len(length(PTS$free[PTS$free > 0L]))
-    #     PTS$user[extra.int.idx] <- 3L
-    #   }
-    # } else {
-    #   extra.int.idx <- integer(0L)
-    # }
-    # extra.id <- c(extra.id, extra.int.idx)
-
     reg_idx <- attr(pts, "idx")
     attr(pts, "idx") <- NULL
   } else {
@@ -115,7 +110,7 @@ lav_sam_step2 <- function(step1 = NULL, fit = NULL,
     # the measurement model parameters now become fixed ustart values
     pt_1$ustart[pt_1$free > 0] <- pt_1$est[pt_1$free > 0]
 
-    reg_idx <- lav_partable_subset_structural_model(
+    reg_idx <- lav_pt_subset_sm(
       pt_1 = pt_1,
       idx_only = TRUE
     )
@@ -164,7 +159,7 @@ lav_sam_step2 <- function(step1 = NULL, fit = NULL,
     # set 'ustart' values for free FIT.PA parameter to NA
     pts$ustart[pts$free > 0L] <- as.numeric(NA)
 
-    pts <- lav_partable_complete(pts)
+    pts <- lav_pt_complete(pts)
 
     extra_id <- integer(0L)
   } # global
@@ -176,25 +171,53 @@ lav_sam_step2 <- function(step1 = NULL, fit = NULL,
   if (sam_method %in% c("local", "fsr", "cfsr")) {
     if (gamma_flag) {
       nacov <- step1$Gamma.eta
-      # ov_order <- "data"
     } else {
       nacov <- NULL
-      # ov_order <- "model"
     }
-    fit_pa <- lavaan::lavaan(pts,
-      sample.cov  = step1$VETA,
-      sample.mean = step1$EETA,
-      sample.nobs = nobs_1,
-      NACOV       = nacov,
-      slotOptions = lavoptions_pa,
-      verbose     = FALSE
+    fit_pa <- tryCatch(
+      lavaan::lavaan(pts,
+        sample_cov  = step1$VETA,
+        sample_mean = step1$EETA,
+        sample_nobs = nobs_1,
+        nacov       = nacov,
+        slot_options = lavoptions_pa,
+        verbose     = FALSE
+      ),
+      error = function(e) e
     )
+    if (inherits(fit_pa, "error")) {
+      # the corrected two-step STRUCTURAL test (Satorra-Bentler via Gamma.eta)
+      # could not be computed for this structural model (eg a bi-factor
+      # measurement model, whose VETA jacobian is not conformable here). For
+      # se = twostep / twostep.robust / naive the FINAL SEs do not depend on
+      # this FIT.PA fit, so degrade gracefully: refit with the standard
+      # (uncorrected) structural test. For se = local / local.nt the SEs ARE
+      # read from this fit, so we cannot silently degrade -> re-raise.
+      if (gamma_flag &&
+          lavoptions$se %in% c("twostep", "twostep.robust", "naive")) {
+        lavoptions_pa$test <- "standard"
+        fit_pa <- lavaan::lavaan(pts,
+          sample_cov  = step1$VETA,
+          sample_mean = step1$EETA,
+          sample_nobs = nobs_1,
+          nacov       = nacov,
+          slot_options = lavoptions_pa,
+          verbose     = FALSE
+        )
+        lav_msg_warn(gettext(
+          "the two-step corrected structural test could not be computed for
+           this model (eg a bi-factor measurement model); the standard
+           (uncorrected) structural test is reported instead."))
+      } else {
+        stop(fit_pa)
+      }
+    }
   } else {
     fit_pa <- lavaan::lavaan(
       model = pts,
-      slotData = fit@Data,
-      slotSampleStats = fit@SampleStats,
-      slotOptions = lavoptions_pa,
+      slot_data = fit@Data,
+      slot_sample_stats = fit@SampleStats,
+      slot_options = lavoptions_pa,
       verbose = FALSE
     )
   }
@@ -211,7 +234,7 @@ lav_sam_step2 <- function(step1 = NULL, fit = NULL,
 
   # find corresponding rows in PT
   pts2 <- as.data.frame(pts, stringsAsFactors = FALSE)
-  pt_idx <- lav_partable_map_id_p1_in_p2(pts2[pts_idx, ], pt_1,
+  pt_idx <- lav_pt_map_id_p1_in_p2(pts2[pts_idx, ], pt_1,
     exclude_nonpar = FALSE
   )
   # fill in

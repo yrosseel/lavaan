@@ -4,11 +4,8 @@
 # computeExpectedInformation <- lav_model_information_expected
 # only for simsem ==> tools::testinstalledpackages successful without next line
 
-# used in bain
-getParameterLabels <- lav_partable_labels                           # nolint start
-
 # standardize function names in lav_utils.R / 31 Oct 2025
-getCov <- function(x, lower = TRUE, diagonal = TRUE, sds = NULL,
+getCov <- function(x, lower = TRUE, diagonal = TRUE, sds = NULL,  # nolint start
                    names = paste("V", 1:nvar, sep = "")) {
   lav_deprecated("lav_getcov")
   if (diagonal) {
@@ -27,7 +24,7 @@ char2num <- function(s = "") {
     sc[[1L]] <- quote(lavaan::lav_char2num)
     eval(sc, parent.frame())
 }
-cor2cov <- function(R, sds, names = NULL) {
+cor2cov <- function(r, sds, names = NULL, ...) {
     lav_deprecated("lav_cor2cov")
     sc <- sys.call()
     sc[[1L]] <- quote(lavaan::lav_cor2cov)
@@ -82,13 +79,14 @@ simulateData <- function(
                          kurtosis = NULL,
                          seed = NULL,
                          empirical = FALSE,
+                         mass = FALSE,
                          return.type = "data.frame",
                          return.fit = FALSE,
                          debug = FALSE,
                          standardized = FALSE) {
   lav_deprecated("lavSimulateData", times = 0L)   #--> for now no warning
   if (is.list(model)) {
-    ngroups <- lav_partable_ngroups(model)
+    ngroups <- lav_pt_ngroups(model)
   } else {
     ngroups <- sample.nobs
   }
@@ -99,16 +97,16 @@ simulateData <- function(
 }
 # standardize function names in lav_bootstrap.R / 9 December 2025
 bootstrapLavaan <- function(object,
-                            R = 1000L,
+                            r = 1000L,
                             type = "ordinary",
                             verbose = FALSE,
-                            FUN = "coef",
-                            keep.idx = FALSE,
+                            fun = "coef",
+                            keep_idx = FALSE,
                             parallel = c("no", "multicore", "snow"),
                             ncpus = max(1L, parallel::detectCores() - 2L),
                             cl = NULL,
                             iseed = NULL,
-                            h0.rmsea = NULL,
+                            h0_rmsea = NULL,
                             ...) {
     lav_deprecated("lavBootstrap", times = 0L) #--> for now no warning
     sc <- sys.call()

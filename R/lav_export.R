@@ -1,8 +1,11 @@
 # export `lavaan' lav model description to third-party software
 #
 
-lav_export <- function(object, target = "lavaan", prefix = "sem", # nolint start
-                      dir.name = "lav_export", export = TRUE) {   # nolint end
+lav_export <- function(object, target = "lavaan", prefix = "sem",
+                      dir_name = "lav_export", export = TRUE, ...) {
+  dotdotdot <- list(...)
+  lav_adapt_func(environment(), dotdotdot, NULL)
+
   stopifnot(inherits(object, "lavaan"))
   # check object
   object <- lav_object_check_version(object)
@@ -33,10 +36,10 @@ lav_export <- function(object, target = "lavaan", prefix = "sem", # nolint start
       data_file = data_file,
       group_label = object@Data@group.label,
       ov_names = c(
-        lav_partable_vnames(object@ParTable, "ov"),
+        lav_pt_vnames(object@ParTable, "ov"),
         object@Data@sampling.weights
       ),
-      ov_ord_names = lav_partable_vnames(object@ParTable, "ov.ord"),
+      ov_ord_names = lav_pt_vnames(object@ParTable, "ov.ord"),
       weight_name = object@Data@sampling.weights,
       listwise = lavInspect(object, "options")$missing == "listwise",
       estimator = lav_mplus_estimator(object),
@@ -62,8 +65,8 @@ lav_export <- function(object, target = "lavaan", prefix = "sem", # nolint start
 
   # export to file?
   if (export) {
-    dir.create(path = dir.name)
-    input_file <- paste(dir.name, "/", prefix, ".", target, ".in", sep = "")
+    dir.create(path = dir_name)
+    input_file <- paste(dir_name, "/", prefix, ".", target, ".in", sep = "")
     cat(out, file = input_file, sep = "")
 
     # write data (if available)
@@ -78,7 +81,7 @@ lav_export <- function(object, target = "lavaan", prefix = "sem", # nolint start
           data_1 <- cbind(data_1, object@Data@weights[[g]])
         }
         write.table(data_1,
-          file = paste(dir.name, "/", data_file[g], sep = ""),
+          file = paste(dir_name, "/", data_file[g], sep = ""),
           na = "-999999",
           col.names = FALSE, row.names = FALSE, quote = FALSE
         )
@@ -87,7 +90,7 @@ lav_export <- function(object, target = "lavaan", prefix = "sem", # nolint start
       for (g in 1:ngroups) {
         data_1 <- object@SampleStats@cov[[g]]
         write.table(data_1,
-          file = paste(dir.name, "/", data_file[g], sep = ""),
+          file = paste(dir_name, "/", data_file[g], sep = ""),
           na = "-999999",
           col.names = FALSE, row.names = FALSE, quote = FALSE
         )

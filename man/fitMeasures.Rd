@@ -9,9 +9,9 @@
 This function computes a variety of fit measures to assess the global
 fit of a latent variable model.}
 \usage{
-fitMeasures(object, fit.measures = "all",
-            baseline.model = NULL, h1.model = NULL,
-            fm.args = list(standard.test     = "default",
+fitMeasures(object, fit_measures = "all",
+            baseline_model = NULL, h1_model = NULL,
+            fm_args = list(standard.test     = "default",
                            scaled.test       = "default",
                            rmsea.ci.level    = 0.90,
                            rmsea.close.h0    = 0.05,
@@ -19,9 +19,9 @@ fitMeasures(object, fit.measures = "all",
                            robust            = TRUE,
                            cat.check.pd      = TRUE),
             output = "vector", ...)
-fitmeasures(object, fit.measures = "all",
-            baseline.model = NULL, h1.model = NULL,
-            fm.args = list(standard.test     = "default",
+fitmeasures(object, fit_measures = "all",
+            baseline_model = NULL, h1_model = NULL,
+            fm_args = list(standard.test     = "default",
                            scaled.test       = "default",
                            rmsea.ci.level    = 0.90,
                            rmsea.close.h0    = 0.05,
@@ -32,12 +32,12 @@ fitmeasures(object, fit.measures = "all",
 }
 \arguments{
 \item{object}{An object of class \code{\linkS4class{lavaan}}.}
-\item{fit.measures}{If \code{"all"}, all fit measures available will be
+\item{fit_measures}{If \code{"all"}, all fit measures available will be
   returned. If only a single or a few fit measures are specified by name,
   only those are computed and returned.
-  If additional options for certain fit measures are needed, fit.measures
-  should be a list with element \code{fit.measures} the measures wanted,
-  and the options are provided as other named elements in this list. The
+  If additional options for certain fit measures are needed, fit_measures
+  should be a list whose \code{fit.measures} element holds the measures
+  wanted, with the options supplied as further named elements of the list. The
   \code{standard.test} option determines the main test statistic (chi-square
   value) that will be used to compute all the fit measures that depend on this
   test statistic. Usually this is \code{"standard"}. FMG p-value tests can be
@@ -49,35 +49,35 @@ fitmeasures(object, fit.measures = "all",
   interval for the rmsea value. The \code{rmsea.close.h0} option, default 0.05,
   is the rmsea value that is used under the null hypothesis that \code{rmsea <= rmsea.close.h0}.
   The \code{rmsea.notclose.h0} option, default 0.08, is the rmsea value that is used under the
-  null hypothesis that \code{rsmsea >= rmsea.notclose.h0}. The \code{robust} 
+  null hypothesis that \code{rmsea >= rmsea.notclose.h0}. The \code{robust} 
   option, default \code{TRUE}, can be set to \code{FALSE} to avoid computing the so-called robust
   rmsea/cfi measures (for example if the computations take too long).
   The \code{cat.check.pd} option, default \code{TRUE}, is only used when data is categorical. If
   \code{TRUE}, robust values for RMSEA and CFI are only computed if the input
   correlation matrix is positive-definite (for all groups).}
-\item{baseline.model}{If not NULL, an object of class
+\item{baseline_model}{If not NULL, an object of class
   \code{\linkS4class{lavaan}}, representing a user-specified baseline model.
   If a baseline model is provided, all fit indices relying on a
-  baseline model (eg. CFI or TLI) will use the test statistics from
+  baseline model (e.g., CFI or TLI) will use the test statistics from
   this user-specified baseline model, instead of the default baseline model.}
-\item{h1.model}{If not NULL, an object of class \code{\linkS4class{lavaan}},
+\item{h1_model}{If not NULL, an object of class \code{\linkS4class{lavaan}},
   representing a user-specified alternative to the default unrestricted model.
-  If \code{h1.model} is provided, all fit indices calculated from chi-squared
+  If \code{h1_model} is provided, all fit indices calculated from chi-squared
   will use the chi-squared \emph{difference} test statistics from 
-  \code{\link{lavTestLRT}}, which compare the user-provided \code{h1.model} 
+  \code{\link{lavTestLRT}}, which compare the user-provided \code{h1_model} 
   to \code{object}.}
-\item{fm.args}{List. Additional options for certain fit measures. DEPRECATED.
-  The options should now be specified in the \code{"fit.measures"} argument!}
+\item{fm_args}{List. Additional options for certain fit measures. DEPRECATED.
+  The options should now be specified in the \code{"fit_measures"} argument!}
 \item{output}{Character. If \code{"vector"} (the default), display the
   output as a named (lavaan-formatted) vector. If \code{"matrix"}, display
   the output as a 1-column matrix. If \code{"text"}, display the
   output using subsections and verbose descriptions. The latter is used
   in the summary output, and does not print the chi-square test by default.
-  In addition, \code{fit.measures} should contain the main ingredient
+  In addition, \code{fit_measures} should contain the main ingredient
   (for example \code{"rmsea"}) if related fit measures are requested
   (for example \code{"rmsea.ci.lower"}). Otherwise, nothing will be 
   printed in that section.
-  See the examples how to add the chi-square test in the text output.}
+  See the examples for how to add the chi-square test in the text output.}
 \item{...}{Further arguments passed to or from other methods. Not currently
   used for \code{lavaan} objects.}
 }
@@ -114,48 +114,48 @@ as \code{NA}.
 Finally, in some situations (especially when the data contains missing values),
 computing these robust fit indices may be computationally intensive. To avoid
 long runtimes, the calculation of robust fit measures can be disabled by
-setting the \code{robust} argument to \code{FALSE} in the \code{fit.measures} list.
+setting the \code{robust} argument to \code{FALSE} in the \code{fit_measures} list.
 
 FMG p-values can be selected through the existing \code{standard.test}
 mechanism, for example
-\code{fitMeasures(fit, "pvalue", fm.args = list(standard.test = "peba4"))}.
+\code{fitMeasures(fit, "pvalue", fm_args = list(standard.test = "peba4"))}.
 No separate FMG-specific fit-measure names are needed.
 }
 \references{
 Brosseau-Liard, P. E., Savalei, V., & Li, L. (2012). An investigation of the
 sample performance of two nonnormality corrections for RMSEA. Multivariate
 behavioral research, 47(6), 904-930.
-\doi{https://doi.org/10.1080/00273171.2012.715252}
+\doi{10.1080/00273171.2012.715252}
 
 Brosseau-Liard, P. E., & Savalei, V. (2014). Adjusting incremental fit
 indices for nonnormality. Multivariate behavioral research, 49(5), 460-470.
-\doi{https://doi.org/10.1080/00273171.2014.933697}
+\doi{10.1080/00273171.2014.933697}
 
 Savalei, V. (2018). On the computation of the RMSEA and CFI from the
 mean-and-variance corrected test statistic with nonnormal data in SEM.
 Multivariate behavioral research, 53(3), 419-429.
-\doi{https://doi.org/10.1080/00273171.2018.1455142}
+\doi{10.1080/00273171.2018.1455142}
 
 Savalei, V. (2021). Improving fit indices in structural equation modeling with
 categorical data. Multivariate Behavioral Research, 56(3), 390-407.
-\doi{https://doi.org/10.1080/00273171.2020.1717922}
+\doi{10.1080/00273171.2020.1717922}
 
 Savalei, V., Brace, J. C., & Fouladi, R. T. (2023). We need to change how we
 compute RMSEA for nested model comparisons in structural equation modeling.
 Psychological Methods.
-\doi{https://doi.org/10.1037/met0000537}
+\doi{10.1037/met0000537}
 
 Zhang, X., & Savalei, V. (2023). New computations for RMSEA and CFI following
 FIML and TS estimation with missing data. Psychological Methods, 28(2),
-263-283. \doi{https://doi.org/10.1037/met0000445}
+263-283. \doi{10.1037/met0000445}
 
 Foldnes, N., Moss, J., & Gronneberg, S. (2024). Improved goodness of fit
 procedures for structural equation models. \emph{Structural Equation Modeling:
-A Multidisciplinary Journal}, 1-13. \doi{https://doi.org/10.1080/10705511.2024.2372028}
+A Multidisciplinary Journal}, 1-13. \doi{10.1080/10705511.2024.2372028}
 
 Foldnes, N., Gronneberg, S., & Moss, J. (2026). Penalized eigenvalue block
 averaging: Extension to nested model comparison and Monte Carlo evaluations.
-\emph{Behavior Research Methods, 58}(4). \doi{https://doi.org/10.3758/s13428-026-02968-4}
+\emph{Behavior Research Methods, 58}(4). \doi{10.3758/s13428-026-02968-4}
 }
 
 \examples{
@@ -171,7 +171,7 @@ fitMeasures(fit, c("chisq", "df", "pvalue", "cfi", "rmsea"),
             output = "matrix")
 fitMeasures(fit, c("chisq", "df", "pvalue", "cfi", "rmsea"),
             output = "text")
-fitMeasures(fit, "pvalue", fm.args = list(standard.test = "peba4"))
+fitMeasures(fit, "pvalue", fm_args = list(standard.test = "peba4"))
 ## specify another threshold for RMSEA confidence interval
 fitMeasures(fit, list(
   fit.measures = c("cfi", "rmsea"),
@@ -181,5 +181,5 @@ fitMeasures(fit, list(
 fit0 <- cfa(HS.model, data = HolzingerSwineford1939, orthogonal = TRUE)
 ## Calculate RMSEA_D (Savalei et al., 2023)
 ## See https://psycnet.apa.org/doi/10.1037/met0000537
-fitMeasures(fit0, "rmsea", h1.model = fit)
+fitMeasures(fit0, "rmsea", h1_model = fit)
 }

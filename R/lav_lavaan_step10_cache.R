@@ -1,4 +1,4 @@
-lav_lavaan_step10_cache <- function(slot_cache = NULL, # nolint
+lav_step10_cache <- function(slot_cache = NULL,
                                     lavdata = NULL,
                                     lavmodel = NULL,
                                     lavpartable = NULL,
@@ -8,7 +8,7 @@ lav_lavaan_step10_cache <- function(slot_cache = NULL, # nolint
   # #  10. lavcache # #
   # # # # # # # # # # #
 
-  # if slotCache not NULL
+  # if slot_cache not NULL
   #   copy to lavcache
   # else
   #   lavcache = list of length lavdata@ngroups
@@ -19,7 +19,7 @@ lav_lavaan_step10_cache <- function(slot_cache = NULL, # nolint
   #     th = lav_model_th(lavmodel)
   #     bi = lav_tables_pairwise_freq_cells(lavdata)
   #     if lavoptions$missing is "available.cases" or "doubly.robust"
-  #       uni = lav_tables_univariate_freq_cell(lavdata)
+  #       uni = lav_tables_uni_freq_cell(lavdata)
   #       if lavoptions$missing is "doubly.robust"
   #         if lavoptions$control$pairwiseProbGivObs NULL: *** error ***
   #         if lavoptions$control$univariateProbGivObs NULL: *** error ***
@@ -81,7 +81,7 @@ lav_lavaan_step10_cache <- function(slot_cache = NULL, # nolint
       # handle option missing = "available.cases" or "doubly.robust"
       if (lavoptions$missing == "available.cases" ||
         lavoptions$missing == "doubly.robust") {
-        uni <- lav_tables_univariate_freq_cell(lavdata)
+        uni <- lav_tables_uni_freq_cell(lavdata)
         # checks for missing = "double.robust"
         if (lavoptions$missing == "doubly.robust") {
           # check whether the probabilities pairwiseProbGivObs and
@@ -138,7 +138,7 @@ lav_lavaan_step10_cache <- function(slot_cache = NULL, # nolint
           lavcache[[g]]$idx_ab_of_xixj_ab <- idx_ab_of_xixj_ab
 
           # Raw data for group g
-          x_g <- lavdata@X[[g]] # nolint
+          x_g <- lavdata@X[[g]]
 
           # I assume that X.g includes only the ordinal indicators nvar
           # gives the number of ordinal indicators
@@ -354,7 +354,7 @@ lav_lavaan_step10_cache <- function(slot_cache = NULL, # nolint
           mean = 0, sd = 1,
           ndim = nfac
         )
-      # lavcache[[g]]$DD <- lav_model_gradient_dd(lavmodel, group = g)
+      # lavcache[[g]]$DD <- lav_model_grad_dd(lavmodel, group = g)
     }
   }
 

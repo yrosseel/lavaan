@@ -1,4 +1,4 @@
-lav_lavaan_step09_model <- function(slot_model = NULL, # nolint
+lav_step09_model <- function(slot_model = NULL,
                                     lavoptions = NULL,
                                     lavpartable = NULL,
                                     lavsamplestats = NULL,
@@ -7,7 +7,7 @@ lav_lavaan_step09_model <- function(slot_model = NULL, # nolint
   # #  9. lavmodel # #
   # # # # # # # # # # #
 
-  # if slotModel not NULL
+  # if slot_model not NULL
   #   copy to lavmodel
   # else
   #   compute lavmodel via lav_model

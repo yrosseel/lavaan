@@ -18,26 +18,28 @@ lav_sam_step0 <- function(cmd = "sem", model = NULL, data = NULL,
   dotdotdot0$se                   <- "none"
   dotdotdot0$test                 <- "none"
   dotdotdot0$verbose              <- FALSE # no output for this 'dummy' FIT
-  # if (sam.method != "global") {
-  #   dotdotdot0$conditional.x        <- FALSE
-  # }
-  #dotdotdot0$fixed.x              <- TRUE
   dotdotdot0$ceq.simple           <- TRUE # if not the default yet
   dotdotdot0$check.lv.interaction <- FALSE # we allow for it
-  # dotdotdot0$cat.wls.w            <- FALSE # no weight matrix if categorical
-  # note: this breaks the computation of twostep standard errors...
+  # note: setting cat.wls.w = FALSE (no weight matrix if categorical)
+  # would break the computation of twostep standard errors
   if (se %in% c("local", "ij", "twostep.robust")) {
     dotdotdot0$sample.icov <- TRUE
-    dotdotdot0$NACOV <- TRUE
-    #dotdotdot0$gamma.unbiased <- TRUE
     dotdotdot0$fixed.x <- FALSE
-    dotdotdot0$ov.order <- "force.model" # avoid data ordering...
+    # ij/twostep.robust need the stored observed Gamma (NACOV); the
+    # "force.model" ov_order sentinel keeps it in model order (it is only
+    # honored when NACOV is supplied; see lav_lavaan_step00_init()). se =
+    # "local" builds Gamma.eta in (memory-lean) influence form and computes the
+    # observed Gamma on demand only when needed (eg categorical), so it needs
+    # neither -- and the default ov_order is already "model".
+    if (se %in% c("ij", "twostep.robust")) {
+      dotdotdot0$NACOV <- TRUE
+      dotdotdot0$ov_order <- "force.model" # avoid data ordering...
+    }
   }
 
   # any lv interaction terms?
   if (length(lav_object_vnames(flat_model, "lv.interaction")) > 0L) {
-    dotdotdot0$meanstructure   <- TRUE
-    #dotdotdot0$marker.int.zero <- FALSE # or not?
+    dotdotdot0$meanstructure <- TRUE
   }
 
   # initial processing of the model, no fitting
@@ -53,7 +55,6 @@ lav_sam_step0 <- function(cmd = "sem", model = NULL, data = NULL,
 
   # do.fit
   fit@Options$do.fit <- TRUE
-  # FIT@Options$cat.wls.w <- TRUE
 
   # sample.icov
   if (sam_method %in% c("local", "fsr", "cfsr")) {
@@ -62,18 +63,23 @@ lav_sam_step0 <- function(cmd = "sem", model = NULL, data = NULL,
 
   # se
   if (fit@Model@categorical && se == "twostep") {
-    # FIXME!
-    # should do this for global too, but we need the 'P' matrix, which
-    # we only have for local (for now)
-    if (sam_method == "local") {
-      se <- "twostep.robust"
-    }
+    # for categorical data, the classic ('global') two-step correction uses
+    # the model-based information matrix, which underestimates the standard
+    # errors for the (D)WLS estimator. Use the robust (Yuan & Chan, 2002)
+    # correction instead. This needs the 'P' matrix (the influence of the
+    # measurement parameters on the sample statistics), which is available for
+    # all sam methods (the measurement blocks are always fitted in step 1).
+    se <- "twostep.robust"
   }
   fit@Options$se <- se
 
   # test
   if (!is.null(dotdotdot$test)) {
-    fit@Options$test <- dotdotdot$test
+    fit@Options$test <- lav_test_rename(dotdotdot$test)
+  } else if (sam_method == "global") {
+    # global SAM: the Yuan & Chan (2002) rescaled GLOBAL statistic is the
+    # default robust test (the analogue of test = "satorra.bentler" in sem()).
+    fit@Options$test <- "yuan.chan"
   } else {
     fit@Options$test <- "standard"
   }

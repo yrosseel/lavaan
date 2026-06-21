@@ -1,4 +1,4 @@
-lav_lavaan_step12_implied <- function(lavoptions = NULL,
+lav_step12_implied <- function(lavoptions = NULL,
                                       lavmodel = NULL) {
   # # # # # # # # # # # #
   # #  12. lavimplied # #
@@ -19,7 +19,7 @@ lav_lavaan_step12_implied <- function(lavoptions = NULL,
   lavimplied
 }
 
-lav_lavaan_step12_loglik <- function(lavoptions = NULL,
+lav_step12_loglik <- function(lavoptions = NULL,
                                      lavdata = NULL,
                                      lavsamplestats = NULL,
                                      lavh1 = NULL,

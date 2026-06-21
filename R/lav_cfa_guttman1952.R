@@ -64,7 +64,7 @@ lav_cfa_guttman1952 <- function(s,
   diag_theta <- diag(theta, nvar)
   s_min_theta <- s - diag_theta
   if (force_pd) {
-    lambda <- try(lav_matrix_symmetric_diff_smallest_root(s, diag_theta),
+    lambda <- try(lav_mat_sym_diff_smallest_root(s, diag_theta),
       silent = TRUE
     )
     if (inherits(lambda, "try-error")) {
@@ -121,10 +121,10 @@ lav_cfa_guttman1952 <- function(s,
     # only useful if (in)equality constraints are needed (TODo)
 
     # PHI MUST be positive-definite
-    phi <- cov2cor(lav_matrix_symmetric_force_pd(phi,
+    phi <- cov2cor(lav_mat_sym_force_pd(phi,
       tol = 1e-04
     )) # option?
-    dmat <- lav_matrix_bdiag(rep(list(phi), nvar))
+    dmat <- lav_mat_bdiag(rep(list(phi), nvar))
     dvec <- as.vector(ys_cor)
     eq_idx <- which(t(m_b) != 1) # these must be zero (row-wise!)
     rmat <- diag(nrow(dmat))[eq_idx, , drop = FALSE]
@@ -198,14 +198,14 @@ lav_cfa_guttman1952_internal <- function(lavobject = NULL, # convenience
     # extract slots
     lavmodel <- lavobject@Model
     lavsamplestats <- lavobject@SampleStats
-    lavpartable <- lav_partable_set_cache(lavobject@ParTable, lavobject@pta)
+    lavpartable <- lav_pt_set_cache(lavobject@ParTable, lavobject@pta)
     lavpta <- lavobject@pta
     lavdata <- lavobject@Data
     lavoptions <- lavobject@Options
   }
   if (is.null(lavpta)) {
-    lavpta <- lav_partable_attributes(lavpartable)
-    lavpartable <- lav_partable_set_cache(lavpartable, lavpta)
+    lavpta <- lav_pt_attributes(lavpartable)
+    lavpartable <- lav_pt_set_cache(lavpartable, lavpta)
   }
 
   if (missing(zero_after_efa) &&
@@ -238,7 +238,7 @@ lav_cfa_guttman1952_internal <- function(lavobject = NULL, # convenience
       "GUTTMAN1952 estimator not available if std.lv = TRUE"))
   }
 
-  nblocks <- lav_partable_nblocks(lavpartable)
+  nblocks <- lav_pt_nblocks(lavpartable)
   stopifnot(nblocks == 1L) # for now
   b <- 1L
   sample_cov <- lavsamplestats@cov[[b]]
@@ -254,7 +254,7 @@ lav_cfa_guttman1952_internal <- function(lavobject = NULL, # convenience
   # (see MIIV)
   theta_idx <- which(names(lavmodel@GLIST) == "theta") # usually '2'
   m_theta <- lavmodel@m.free.idx[[theta_idx]]
-  nondiag_idx <- m_theta[!m_theta %in% lav_matrix_diag_idx(nvar)]
+  nondiag_idx <- m_theta[!m_theta %in% lav_mat_diag_idx(nvar)]
   if (length(nondiag_idx) > 0L) {
     lav_msg_warn(gettext(
       "this implementation of FABIN does not handle correlated residuals yet!"))

@@ -36,7 +36,7 @@ lav_ram <- function(partable = NULL,
   # group_w_free <- any(partable$lhs == "group" & partable$op == "%")
 
   # number of blocks
-  nblocks <- lav_partable_nblocks(partable)
+  nblocks <- lav_pt_nblocks(partable)
 
   # always return ov.idx
   ov_idx <- vector("list", nblocks)
@@ -53,13 +53,13 @@ lav_ram <- function(partable = NULL,
 
   for (g in 1:nblocks) {
     # info from user model per block
-    ov_names <- lav_partable_vnames(partable, "ov", block = g)
+    ov_names <- lav_pt_vnames(partable, "ov", block = g)
     nvar <- length(ov_names)
     ov_idx[[g]] <- seq_len(nvar)
     ov_dummy_names_nox[[g]] <- character(0)
     ov_dummy_names_x[[g]] <- character(0)
 
-    lv_names <- lav_partable_vnames(partable, "lv", block = g)
+    lv_names <- lav_pt_vnames(partable, "lv", block = g)
     both_names <- c(ov_names, lv_names)
     nboth <- length(both_names)
 
@@ -201,7 +201,7 @@ lav_ram_sigmahat <- function(mlist = NULL, delta = NULL) {
   s <- mlist$S
 
   # get (I-A)^{-1}
-  ia_inv <- lav_matrix_inverse_iminus(a)
+  ia_inv <- lav_mat_inverse_iminus(a)
 
   # compute Sigma for all ov and lv
   vyeta <- tcrossprod(ia_inv %*% s, ia_inv)
@@ -226,7 +226,7 @@ lav_ram_veta <- function(mlist = NULL) {
   s <- mlist$S
 
   # get (I-A)^{-1}
-  ia_inv <- lav_matrix_inverse_iminus(a)
+  ia_inv <- lav_mat_inverse_iminus(a)
 
   # compute Sigma for all ov and lv
   vyeta <- tcrossprod(ia_inv %*% s, ia_inv)
@@ -249,7 +249,7 @@ lav_ram_muhat <- function(mlist = NULL) {
   }
 
   # get (I-A)^{-1}
-  ia_inv <- lav_matrix_inverse_iminus(a)
+  ia_inv <- lav_mat_inverse_iminus(a)
 
   # all means/intercepts
   eyeta <- ia_inv %*% m
@@ -279,7 +279,7 @@ lav_ram_dsigma <- function(m = "A",
   }
 
   # get (I-A)^{-1}
-  ia_inv <- lav_matrix_inverse_iminus(a)
+  ia_inv <- lav_mat_inverse_iminus(a)
 
   if (m == "A") {
     l1 <- (ia_inv %*% s %*% t(ia_inv))[ov_idx, , drop = FALSE]
@@ -288,13 +288,13 @@ lav_ram_dsigma <- function(m = "A",
       (ia_inv[ov_idx, , drop = FALSE] %x% l1)[, kol_idx, drop = FALSE]
     # this is not really needed (because we select idx=m.el.idx)
     # but just in case we need all elements of beta...
-    dx[, which(idx %in% lav_matrix_diag_idx(nboth))] <- 0.0
+    dx[, which(idx %in% lav_mat_diag_idx(nboth))] <- 0.0
   } else if (m == "S") {
     dx <- (ia_inv[ov_idx, , drop = FALSE] %x% ia_inv[ov_idx, , drop = FALSE])
     # symmetry correction, but keeping all duplicated elements
     # since we depend on idx=m.el.idx
-    lower_idx <- lav_matrix_vech_idx(nboth, diagonal = FALSE)
-    upper_idx <- lav_matrix_vechru_idx(nboth, diagonal = FALSE)
+    lower_idx <- lav_mat_vech_idx(nboth, diagonal = FALSE)
+    upper_idx <- lav_mat_vechru_idx(nboth, diagonal = FALSE)
     offdiag_sum <- dx[, lower_idx] + dx[, upper_idx]
     dx[, c(lower_idx, upper_idx)] <- cbind(offdiag_sum, offdiag_sum)
     dx <- dx[, idx, drop = FALSE]
@@ -304,7 +304,7 @@ lav_ram_dsigma <- function(m = "A",
 
   # vech?
   if (vech) {
-    v_idx <- lav_matrix_vech_idx(nvar)
+    v_idx <- lav_mat_vech_idx(nvar)
     dx <- dx[v_idx, , drop = FALSE]
   }
 
@@ -329,7 +329,7 @@ lav_ram_dmu <- function(m = "A",
   }
 
   # get (I-A)^{-1}
-  ia_inv <- lav_matrix_inverse_iminus(a)
+  ia_inv <- lav_mat_inverse_iminus(a)
 
   if (m == "A") {
     dx <- (t(ia_inv %*% mlist$m) %x% ia_inv)[ov_idx, idx, drop = FALSE]
@@ -352,7 +352,7 @@ lav_ram_df <- function(mlist = NULL, omega = NULL, omega_mu = NULL) {
   # nboth <- nrow(a)
 
   # get (I-A)^{-1}
-  ia_inv <- lav_matrix_inverse_iminus(a)
+  ia_inv <- lav_mat_inverse_iminus(a)
 
   # meanstructure?
   meanstructure <- FALSE
@@ -449,7 +449,7 @@ lav_ram_dimplied_dx <- function(mlist         = NULL,
   }
 
   # precompute
-  ia_inv <- lav_matrix_inverse_iminus(mlist$A)            # nboth x nboth
+  ia_inv <- lav_mat_inverse_iminus(mlist$A)            # nboth x nboth
   fobs   <- ia_inv[ov_idx, , drop = FALSE]                # nvar  x nboth
   m_w      <- ia_inv %*% mlist$S %*% t(fobs)                # nboth x nvar
   wt     <- t(m_w)                                          # nvar  x nboth
@@ -458,8 +458,8 @@ lav_ram_dimplied_dx <- function(mlist         = NULL,
   }
 
   # vech structure for Sigma
-  r_s <- lav_matrix_vech_row_idx(nvar)
-  c_s <- lav_matrix_vech_col_idx(nvar)
+  r_s <- lav_mat_vech_row_idx(nvar)
+  c_s <- lav_mat_vech_col_idx(nvar)
 
   # helper: vec index -> (row, col)
   vec2rc <- function(idx, nr) {

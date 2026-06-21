@@ -48,9 +48,9 @@ lav_object_check_version <- function(object = NULL) {
   # ok, we have potentially an older (saved) lavaan or lavaanList object
   # check needed slots, and if missing, add them
   suppressWarnings(lavobject <- object)
-  ngroups <- lav_partable_ngroups(lavobject@ParTable)
-  nblocks <- lav_partable_nblocks(lavobject@ParTable)
-  nlevels <- lav_partable_nlevels(lavobject@ParTable)
+  ngroups <- lav_pt_ngroups(lavobject@ParTable)
+  nblocks <- lav_pt_nblocks(lavobject@ParTable)
+  nlevels <- lav_pt_nlevels(lavobject@ParTable)
 
   if (!has_version_flag) { # pre 0.6 object!
     # 0.5-10 (25 Oct 2012)
@@ -360,7 +360,7 @@ lav_object_check_version <- function(object = NULL) {
           lavsamplestats = lavobject@SampleStats,
           lavpartable = lavobject@ParTable,
           lavoptions = lavobject@Options)
-        lavobject@baseline <- lav_lavaan_step15_baseline(
+        lavobject@baseline <- lav_step15_baseline(
           lavoptions = lavobject@Options,
           lavsamplestats = lavobject@SampleStats,
           lavdata = lavobject@Data,
@@ -562,7 +562,7 @@ lav_object_check_version <- function(object = NULL) {
   new_options$h1.information.meat <- "structured"
   new_options$mega.h1.information <- "unstructured"
 
-  # 0.6-22
+  # 0.7-1
   if (is.null(new_options$rotation.args$mg_agreement)) {
     new_options$rotation.args$mg_agreement <- FALSE
     new_options$rotation.args$mg_agreement_weight <- 0.5

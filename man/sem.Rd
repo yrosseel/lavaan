@@ -4,17 +4,17 @@
 \description{
 Fit a Structural Equation Model (SEM).}
 \usage{
-sem(model = NULL, data = NULL, ordered = NULL, sampling.weights = NULL,
-    sample.cov = NULL, sample.mean = NULL, sample.th = NULL,
-    sample.nobs = NULL, group = NULL, cluster = NULL, 
-    constraints = "", WLS.V = NULL, NACOV = NULL, ov.order = "model",
+sem(model = NULL, data = NULL, ordered = NULL, aux = NULL, sampling_weights = NULL,
+    sample_cov = NULL, sample_mean = NULL, sample_th = NULL,
+    sample_nobs = NULL, group = NULL, cluster = NULL, 
+    constraints = "", wls_v = NULL, nacov = NULL, ov_order = "model",
     ...)
 }
 \arguments{
 \item{model}{A description of the user-specified model. Typically, the model
     is described using the lavaan model syntax. See 
     \code{\link{model.syntax}} for more information. Alternatively, a
-    parameter table (eg. the output of the \code{lavParTable()} function) is also
+    parameter table (e.g., the output of the \code{lavParTable()} function) is also
     accepted.}
 \item{data}{An optional data frame containing the observed variables used in
     the model. If some variables are declared as ordered factors, lavaan will
@@ -27,20 +27,27 @@ sem(model = NULL, data = NULL, ordered = NULL, sampling.weights = NULL,
     observed endogenous variables are treated as ordered (ordinal).
     If FALSE, all observed endogenous variables are considered to be numeric
     (again, unless they are declared as ordered in the data.frame.)}
-\item{sampling.weights}{A variable name in the data frame containing 
+\item{aux}{Character vector. Names of auxiliary observed variables, used to
+    make the missing-at-random (MAR) assumption more plausible under missing
+    data (continuous data only). With \code{missing = "ml"} they are added to
+    the model as saturated correlates (Graham, 2003), affecting the estimates
+    and standard errors but hidden from the default output; with
+    \code{missing = "two.stage"}/\code{"robust.two.stage"} they enter the
+    first-stage EM moments. See the \code{lavaan} function for more details.}
+\item{sampling_weights}{A variable name in the data frame containing 
     sampling weight information. Currently only available for non-clustered
     data. Depending on the \code{sampling.weights.normalization} option, these
     weights may be rescaled (or not) so that their sum equals the number of
     observations (total or per group).}
-\item{sample.cov}{Numeric matrix. A sample variance-covariance matrix.
+\item{sample_cov}{Numeric matrix. A sample variance-covariance matrix.
     The rownames and/or colnames must contain the observed variable names.
     For a multiple group analysis, a list with a variance-covariance matrix
     for each group.}
-\item{sample.mean}{A sample mean vector. For a multiple group analysis,
+\item{sample_mean}{A sample mean vector. For a multiple group analysis,
     a list with a mean vector for each group.}
-\item{sample.th}{Vector of sample-based thresholds. For a multiple group 
+\item{sample_th}{Vector of sample-based thresholds. For a multiple group 
     analysis, a list with a vector of thresholds for each group.}
-\item{sample.nobs}{Number of observations if the full data frame is missing
+\item{sample_nobs}{Number of observations if the full data frame is missing
     and only sample moments are given. For a multiple group analysis, a list
     or a vector with the number of observations for each group.}
 \item{group}{Character. A variable name in the data frame defining the groups
@@ -48,7 +55,7 @@ in a multiple group analysis.}
 \item{cluster}{Character. A (single) variable name in the data frame defining the clusters in a two-level dataset.}
 \item{constraints}{Additional (in)equality constraints not yet included in the
     model syntax. See \code{\link{model.syntax}} for more information.}
-\item{WLS.V}{A user provided weight matrix to be used by estimator \code{"WLS"};
+\item{wls_v}{A user provided weight matrix to be used by estimator \code{"WLS"};
     if the estimator is \code{"DWLS"}, only the diagonal of this matrix will be
     used. For a multiple group analysis, a list with a weight matrix
     for each group. The elements of the weight matrix should be in the
@@ -60,24 +67,24 @@ in a multiple group analysis.}
     continuous variables (if any), and finally the lower triangular elements
     of the correlation/covariance matrix excluding the diagonal, ordered
     column by column.}
-\item{NACOV}{A user provided matrix containing the elements of (N times)
+\item{nacov}{A user provided matrix containing the elements of (N times)
     the asymptotic variance-covariance matrix of the sample statistics.
     For a multiple group analysis, a list with an asymptotic
-    variance-covariance matrix for each group. See the \code{WLS.V}
+    variance-covariance matrix for each group. See the \code{wls_v}
     argument for information about the order of the elements.}
-\item{ov.order}{Character. If \code{"model"} (the default), the order of
+\item{ov_order}{Character. If \code{"model"} (the default), the order of
     the observed variable names (as reflected for example in the output of
     \code{lav_object_vnames()}) is determined by the model syntax. If
     \code{"data"}, the order is determined by the data (either the full
-    data.frame or the sample (co)variance matrix). If the \code{WLS.V}
-    and/or \code{NACOV} matrices are provided, this argument is currently
+    data.frame or the sample (co)variance matrix). If the \code{wls_v}
+    and/or \code{nacov} matrices are provided, this argument is currently
     set to \code{"data"}.}
-\item{...}{Many more additional options can be defined, using 'name = value'.
+\item{...}{Many more options can be specified, using 'name = value'.
     See \code{\link{lavOptions}} for a complete list.}
 }
 \details{
     The \code{sem} function is a wrapper for the more general
-    \code{\link{lavaan}} function, but setting the following default options:
+    \code{\link{lavaan}} function, using the following default arguments:
     \code{int.ov.free = TRUE}, \code{int.lv.free = FALSE},
     \code{auto.fix.first = TRUE} (unless \code{std.lv = TRUE}),
     \code{auto.fix.single = TRUE}, \code{auto.var = TRUE},
@@ -92,9 +99,9 @@ in a multiple group analysis.}
 \references{
 Yves Rosseel (2012). lavaan: An R Package for Structural Equation
 Modeling. Journal of Statistical Software, 48(2), 1-36. 
-\doi{https://doi.org/10.18637/jss.v048.i02}}
+\doi{10.18637/jss.v048.i02}}
 \seealso{
-\code{\link{lavaan}}
+\code{\link{lavaan}}, \code{\link{estimator_iv}}
 }
 \examples{
 ## The industrialization and Political Democracy Example 

@@ -28,7 +28,7 @@ Objects can be created via the
 }
 \section{Slots}{
   \describe{
-    \item{\code{version}:}{The lavaan package version used to create this objects}
+    \item{\code{version}:}{The lavaan package version used to create this object}
     \item{\code{call}:}{The function call as returned by \code{match.call()}.}
     \item{\code{timing}:}{The elapsed time (user+system) for various parts of
       the program as a list, including the total time.}
@@ -42,7 +42,7 @@ about the data.}
       statistics}
     \item{\code{Model}:}{Object of internal class \code{"Model"}: the
       internal (matrix) representation of the model}
-    \item{\code{Cache}:}{List using objects that we try to compute only once, and reuse many times.}
+    \item{\code{Cache}:}{List of objects that are computed only once and reused many times.}
     \item{\code{Fit}:}{Object of internal class \code{"Fit"}: the
       results of fitting the model. No longer used.}
     \item{\code{boot}:}{List. Results and information about the bootstrap.}
@@ -84,13 +84,13 @@ the independence model) (if available).}
       covariance matrices are rescaled by dividing the elements by the square 
       roots of the corresponding variances of the observed covariance matrix. 
       If \code{type="normalized"}, the residuals are divided by the square 
-      root of the asymptotic variance of the corresponding summary statistic 
+      root of the asymptotic variance of the corresponding summary statistic
       (the variance estimate depends on the choice for the \code{se} argument).
-      Unfortunately, the corresponding normalized residuals are not entirely
-      correct, and this option is only available for historical interest.
+      Unfortunately, these normalized residuals are not entirely
+      correct, and this option is retained only for historical interest.
       If \code{type="standardized"}, the residuals are divided by the square 
-      root of the asymptotic variance of these residuals. The resulting 
-      standardized residuals elements can be interpreted as z-scores. 
+      root of the asymptotic variance of these residuals. The resulting
+      standardized residuals can be interpreted as z-scores.
       If \code{type="standardized.mplus"}, the residuals are divided by the 
       square root of the asymptotic variance of these residuals. However, a 
       simplified formula is used (see the Mplus reference below) which often 
@@ -131,18 +131,22 @@ the independence model) (if available).}
       of the model fit}
     \item{summary}{\code{signature(object = "lavaan", header = TRUE,
      fit.measures = FALSE, estimates = TRUE, ci = FALSE, fmi = FALSE,
-     standardized = FALSE, std.nox = FALSE,
+     standardized = FALSE, std = standardized, std.nox = FALSE,
      remove.system.eq = TRUE, remove.eq = TRUE, remove.ineq = TRUE,
      remove.def = FALSE, remove.nonfree = FALSE, remove.step1 = TRUE,
      remove.unused = TRUE, plabel = FALSE,
      cov.std = TRUE, rsquare = FALSE,
      baseline.model = NULL, h1.model = NULL,
-     modindices = FALSE, ci = FALSE, nd = 3L)}:
+     fm.args = list(standard.test = "default", scaled.test = "default",
+     rmsea.ci.level = 0.90, rmsea.h0.closefit = 0.05,
+     rmsea.h0.notclosefit = 0.08, robust = TRUE, cat.check.pd = TRUE),
+     modindices = FALSE, srmr.close.h0 = NULL,
+     nd = 3L, cutoff = 0.3, dot.cutoff = 0.1)}:
       Print a nice summary of the model estimates.
       If \code{header = TRUE}, the header section (including fit measures) is
       printed.
       If \code{fit.measures = TRUE}, additional fit measures are added to the
-      header section. \code{fit.measures} can also be a list, which allows to set options
+      header section. \code{fit.measures} can also be a list, which allows one to set options
       related to the fit measures. See \code{\link{fitMeasures}} 
       for more details.
       If \code{estimates = TRUE}, print the parameter estimates section.
@@ -171,11 +175,17 @@ the independence model) (if available).}
       fixed to their default (0 or 1) values are removed.
       If \code{rsquare = TRUE}, the R-Square values for the dependent variables
       in the model are printed.
-      If \code{efa = TRUE}, EFA related information is printed. The related
-      \code{efa.args} list allows to set options related to the EFA output.
-      See \code{\link{lav_efalist_summary}} for more details.
-      \code{baseline.model} and \code{h1.model} allow to specify user-defined
+      The \code{fm.args} list allows one to set options related to the fit
+      measures (see \code{\link{fitMeasures}}).
+      \code{baseline.model} and \code{h1.model} allow one to specify user-defined
       baseline and/or h1 models for the fit measures.
+      If the model is an exploratory factor analysis (EFA) model, EFA related
+      information is printed automatically. The \code{cutoff} and
+      \code{dot.cutoff} arguments control how the factor loadings are displayed:
+      loadings whose absolute value is at or above \code{cutoff} are shown as
+      numbers; loadings whose absolute value falls between \code{dot.cutoff}
+      and \code{cutoff} are replaced by a dot; loadings whose absolute value is
+      below \code{dot.cutoff} are left blank.
       If \code{modindices = TRUE} or \code{modindices} is a list, 
       modification indices are printed for all fixed parameters.
       The argument \code{nd} determines the number of digits after the
@@ -188,7 +198,7 @@ the independence model) (if available).}
 \references{
 Yves Rosseel (2012). lavaan: An R Package for Structural Equation
 Modeling. Journal of Statistical Software, 48(2), 1-36. 
-\doi{https://doi.org/10.18637/jss.v048.i02}
+\doi{10.18637/jss.v048.i02}
 
 Standardized Residuals in Mplus. Document retrieved from URL
 https://www.statmodel.com/download/StandardizedResiduals.pdf

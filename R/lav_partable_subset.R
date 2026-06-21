@@ -17,12 +17,12 @@
 #   add them here? (no for now, unless add.ind.predictors = TRUE)
 # - new in 0.6-20: - check for 2nd, 3rd order lv.names...
 #                  - allow for conditional.x (global SAM)
-lav_partable_subset_measurement_model <- function(pt_1 = NULL,       # nolint
-                                                  lv_names = NULL,
-                                                  add_lv_cov = TRUE,
-                                                  add_ind_predictors = FALSE,
-                                                  add_idx = FALSE,
-                                                  idx_only = FALSE) {
+lav_pt_subset_mm <- function(pt_1 = NULL,
+                             lv_names = NULL,
+                             add_lv_cov = TRUE,
+                             add_ind_predictors = FALSE,
+                             add_idx = FALSE,
+                             idx_only = FALSE) {
   # PT
   pt_1 <- as.data.frame(pt_1, stringsAsFactors = FALSE)
 
@@ -36,11 +36,11 @@ lav_partable_subset_measurement_model <- function(pt_1 = NULL,       # nolint
   }
 
   # lavpta
-  lavpta <- lav_partable_attributes(pt_1)
+  lavpta <- lav_pt_attributes(pt_1)
 
   # nblocks
   nblocks <- lavpta$nblocks
-  block_values <- lav_partable_block_values(pt_1)
+  block_values <- lav_pt_block_values(pt_1)
 
   # lv.names: list with element per block
   if (is.null(lv_names)) {
@@ -149,7 +149,7 @@ lav_partable_subset_measurement_model <- function(pt_1 = NULL,       # nolint
       # get the 'id' numbers and the labels involved in def/constraints
       pt2 <- pt_1
       pt2$free <- pt_1$id # use 'id' numbers instead of 'free' indices
-      id <- lav_partable_constraints_label_id(pt2, def = TRUE)
+      id <- lav_pt_con_label_id(pt2, def = TRUE)
       label <- names(id)
 
       # what are the row indices that we currently keep?
@@ -248,14 +248,14 @@ lav_partable_subset_measurement_model <- function(pt_1 = NULL,       # nolint
 
   # add covariances among latent variables?
   if (add_lv_cov) {
-    pt_1 <- lav_partable_add_lv_cov(
+    pt_1 <- lav_pt_add_lv_cov(
       pt_1 = pt_1,
       lv_names = lv_names
     )
   }
 
   # clean up
-  pt_1 <- lav_partable_complete(pt_1)
+  pt_1 <- lav_pt_complete(pt_1)
 
   if (add_idx) {
     attr(pt_1, "idx") <- keep_idx
@@ -265,18 +265,18 @@ lav_partable_subset_measurement_model <- function(pt_1 = NULL,       # nolint
 }
 
 # NOTE: only within same level
-lav_partable_add_lv_cov <- function(pt_1, lv_names = NULL) {
+lav_pt_add_lv_cov <- function(pt_1, lv_names = NULL) {
   # PT
   if (!is.data.frame(pt_1)) {
     pt_1 <- as.data.frame(pt_1, stringsAsFactors = FALSE)
   }
 
   # lavpta
-  lavpta <- lav_partable_attributes(pt_1)
+  lavpta <- lav_pt_attributes(pt_1)
 
   # nblocks
   nblocks <- lavpta$nblocks
-  block_values <- lav_partable_block_values(pt_1)
+  block_values <- lav_pt_block_values(pt_1)
 
   # lv.names: list with element per block
   if (is.null(lv_names)) {
@@ -344,7 +344,7 @@ lav_partable_add_lv_cov <- function(pt_1, lv_names = NULL) {
           if (!is.null(pt_1$upper)) {
             add$upper <- as.numeric(+Inf)
           }
-          pt_1 <- lav_partable_add(pt_1, add = add)
+          pt_1 <- lav_pt_add(pt_1, add = add)
         }
       }
     } # lv.names
@@ -359,7 +359,7 @@ lav_partable_add_lv_cov <- function(pt_1, lv_names = NULL) {
 # - what to do if we have no regressions among the latent variables?
 #   -> we return all covariances among the latent variables
 #
-lav_partable_subset_structural_model <- function(pt_1 = NULL,          # nolint
+lav_pt_subset_sm <- function(pt_1 = NULL,
                                                  add_idx = FALSE,
                                                  idx_only = FALSE,
                                                  add_exo_cov = FALSE,
@@ -385,11 +385,11 @@ lav_partable_subset_structural_model <- function(pt_1 = NULL,          # nolint
   }
 
   # lavpta
-  lavpta <- lav_partable_attributes(pt_1)
+  lavpta <- lav_pt_attributes(pt_1)
 
   # nblocks
   nblocks <- lavpta$nblocks
-  block_values <- lav_partable_block_values(pt_1)
+  block_values <- lav_pt_block_values(pt_1)
 
   # eqs.names
   # eqs_x_names <- lavpta$vnames$eqs.x
@@ -408,7 +408,14 @@ lav_partable_subset_structural_model <- function(pt_1 = NULL,          # nolint
       lavpta$vnames$eqs.y[[g]]
     ))
     if (length(eqs_names) == 0L) { # no structural model
+      # only the latent variances/covariances are 'structural'; in the
+      # higher-order setting, the lower-order factors (lv.ind) belong to
+      # the measurement part
       eqs_names <- lv_names[[g]]
+      lv_ind <- lavpta$vnames$lv.ind[[g]]
+      if (length(lv_ind) > 0L) {
+        eqs_names <- eqs_names[!eqs_names %in% lv_ind]
+      }
     }
     # all.names <- unique(c(
     #   eqs.names,
@@ -445,7 +452,7 @@ lav_partable_subset_structural_model <- function(pt_1 = NULL,          # nolint
       # get the 'id' numbers and the labels involved in def/constraints
       pt2 <- pt_1
       pt2$free <- pt_1$id # use 'id' numbers instead of 'free' indices
-      id <- lav_partable_constraints_label_id(pt2, def = TRUE)
+      id <- lav_pt_con_label_id(pt2, def = TRUE)
       label <- names(id)
 
       # what are the row indices that we currently keep?
@@ -539,9 +546,9 @@ lav_partable_subset_structural_model <- function(pt_1 = NULL,          # nolint
   # add any missing covariances among exogenous variables
   if (add_exo_cov) {
     if (conditional_x) {
-      pt_1 <- lav_partable_add_exo_cov(pt_1, ov_names_x = lavpta$vnames$ov.x)
+      pt_1 <- lav_pt_add_exo_cov(pt_1, ov_names_x = lavpta$vnames$ov.x)
     } else {
-      pt_1 <- lav_partable_add_exo_cov(pt_1)
+      pt_1 <- lav_pt_add_exo_cov(pt_1)
     }
   }
 
@@ -575,7 +582,7 @@ lav_partable_subset_structural_model <- function(pt_1 = NULL,          # nolint
 
     # keep ov.x as in global model!
     for (g in 1:nblocks) {
-      # ov.names.x <- lav_partable_vnames(PT,
+      # ov.names.x <- lav_pt_vnames(PT,
       #   type = "ov.x",
       #   block = block.values[g]
       # )
@@ -620,7 +627,7 @@ lav_partable_subset_structural_model <- function(pt_1 = NULL,          # nolint
   if (conditional_x) {
     for (b in 1:nblocks) {
       global_ov_x <- lavpta$vnames$ov.x[[b]]
-      local_ov_x <- lav_partable_vnames(pt_1, type = "ov.x",
+      local_ov_x <- lav_pt_vnames(pt_1, type = "ov.x",
         block = block_values[b]
       )
       extra_idx <- which(!local_ov_x %in% global_ov_x)
@@ -653,7 +660,7 @@ lav_partable_subset_structural_model <- function(pt_1 = NULL,          # nolint
           if (!is.null(pt_1$upper)) {
             add$upper <- as.numeric(+Inf)
           }
-          pt_1 <- lav_partable_add(pt_1, add = add)
+          pt_1 <- lav_pt_add(pt_1, add = add)
         } # i
       } # extra.idx
     } # b
@@ -670,7 +677,7 @@ lav_partable_subset_structural_model <- function(pt_1 = NULL,          # nolint
   }
 
   # clean up
-  pt_1 <- lav_partable_complete(pt_1)
+  pt_1 <- lav_pt_complete(pt_1)
 
   if (add_idx) {
     attr(pt_1, "idx") <- keep_idx
@@ -680,16 +687,16 @@ lav_partable_subset_structural_model <- function(pt_1 = NULL,          # nolint
 }
 
 # NOTE: only within same level
-lav_partable_add_exo_cov <- function(pt_1, ov_names_x = NULL) {
+lav_pt_add_exo_cov <- function(pt_1, ov_names_x = NULL) {
   # PT
   pt_1 <- as.data.frame(pt_1, stringsAsFactors = FALSE)
 
   # lavpta
-  lavpta <- lav_partable_attributes(pt_1)
+  lavpta <- lav_pt_attributes(pt_1)
 
   # nblocks
   nblocks <- lavpta$nblocks
-  block_values <- lav_partable_block_values(pt_1)
+  block_values <- lav_pt_block_values(pt_1)
 
 
   # ov.names.x: list with element per block
@@ -749,7 +756,7 @@ lav_partable_add_exo_cov <- function(pt_1, ov_names_x = NULL) {
           if (!is.null(pt_1$upper)) {
             add$upper <- as.numeric(+Inf)
           }
-          pt_1 <- lav_partable_add(pt_1, add = add)
+          pt_1 <- lav_pt_add(pt_1, add = add)
         }
       }
     } # ov.names.x

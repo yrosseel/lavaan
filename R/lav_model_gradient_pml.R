@@ -45,7 +45,7 @@ lav_pml_dploglik_dimplied <- function(
     diag(sigma_hat2) <- 1
   }
   cor_hat <- cov2cor(sigma_hat2) # to get correlations (rho!)
-  cors <- lav_matrix_vech(cor_hat, diagonal = FALSE)
+  cors <- lav_mat_vech(cor_hat, diagonal = FALSE)
 
   if (any(abs(cors) > 1)) {
     # what should we do now... force cov2cor?
@@ -147,7 +147,7 @@ lav_pml_dploglik_dimplied <- function(
     grad <- matrix(0, pstar, grad_size) # each pair is a row
   }
   pstar_1 <- matrix(0, nvar, nvar) # utility matrix, to get indices
-  pstar_1[lav_matrix_vech_idx(nvar, diagonal = FALSE)] <- 1:pstar
+  pstar_1[lav_mat_vech_idx(nvar, diagonal = FALSE)] <- 1:pstar
   # n <- length(x[, 1])
 
   for (j in seq_len(nvar - 1L)) {
@@ -178,7 +178,7 @@ lav_pml_dploglik_dimplied <- function(
             try optim.gradient = \"numerical\""))
         }
 
-        sc <- lav_mvnorm_scores_mu_vech_sigma(
+        sc <- lav_mvn_sc_mu_sigma(
           y = x[, c(i, j)],
           mu = mu_hat[c(i, j)], sigma_1 = sigma_hat[c(i, j), c(i, j)]
         )
@@ -189,7 +189,7 @@ lav_pml_dploglik_dimplied <- function(
             scores_1[, c(i, j)] <- scores_1[, c(i, j)] + sc[, c(1, 2)]
             # VAR1 + COV_12 + VAR2
             var_idx <- (nvar +
-              lav_matrix_vech_match_idx(nvar, idx = c(i, j)))
+              lav_mat_vech_match_idx(nvar, idx = c(i, j)))
             scores_1[, var_idx] <- scores_1[, var_idx] + sc[, c(3, 4, 5)]
           } else { # mixed ordered/continuous
             # MU
@@ -203,7 +203,7 @@ lav_pml_dploglik_dimplied <- function(
           if (all(ov_types == "numeric") && nexo == 0L) {
             mu_idx <- c(i, j)
             sigma_idx <- (nvar +
-              lav_matrix_vech_match_idx(nvar, idx = c(i, j)))
+              lav_mat_vech_match_idx(nvar, idx = c(i, j)))
             # MU1 + MU2
             grad[pstar_idx, mu_idx] <-
               colSums(sc[, c(1, 2)], na.rm = TRUE)
@@ -226,7 +226,7 @@ lav_pml_dploglik_dimplied <- function(
             try optim.gradient = \"numerical\""))
         }
 
-        sc_cor_uni <- lav_bvmix_cor_scores(
+        sc_cor_uni <- lav_bvmix_cor_sc(
           y1 = x[, i], y2 = x[, j],
           exo = NULL, wt = wt,
           evar_y1 = sigma_hat[i, i],
@@ -272,7 +272,7 @@ lav_pml_dploglik_dimplied <- function(
             try optim.gradient = \"numerical\""))
         }
 
-        sc_cor_uni <- lav_bvmix_cor_scores(
+        sc_cor_uni <- lav_bvmix_cor_sc(
           y1 = x[, j], y2 = x[, i],
           exo = NULL, wt = wt,
           evar_y1 = sigma_hat[j, j],
@@ -313,7 +313,7 @@ lav_pml_dploglik_dimplied <- function(
         # polychoric correlation
         if (nexo == 0L) {
           sc_cor_uni <-
-            lav_bvord_cor_scores(
+            lav_bvord_cor_sc(
               y1 = x[, i], y2 = x[, j],
               exo = NULL, wt = wt,
               rho = sigma_hat[i, j],
@@ -412,7 +412,7 @@ lav_pml_dploglik_dimplied <- function(
       uni_scores <- matrix(0, nrow(x), n_th)
       for (i in seq_len(nvar)) {
         th_idx_i <- which(th_idx == i)
-        der_y1 <- lav_pml_uni_scores(
+        der_y1 <- lav_pml_uni_sc(
           y1 = x[, i], th_y1 = th[th_idx == i],
           exo = NULL, sl_y1 = NULL,
           weights_casewise = lavcache$uniweights.casewise
@@ -424,7 +424,7 @@ lav_pml_dploglik_dimplied <- function(
       for (i in seq_len(nvar)) {
         th_idx_i <- which(th_idx == i)
         sl_idx_i <- n_th + seq(i, by = nvar, length.out = nexo)
-        der_y1 <- lav_pml_uni_scores(
+        der_y1 <- lav_pml_uni_sc(
           y1 = x[, i], th_y1 = th[th_idx == i],
           exo = exo, sl_y1 = pi0[i, ],
           weights_casewise = lavcache$uniweights.casewise

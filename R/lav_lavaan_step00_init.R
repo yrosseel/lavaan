@@ -1,6 +1,6 @@
-lav_lavaan_step00_parameters <- function(matchcall = NULL,
-                                         syscall = NULL,
-                                         dotdotdot = NULL) {
+lav_step00_parameters <- function(matchcall = NULL,
+                                  syscall = NULL,
+                                  dotdotdot = NULL) {
   # 1. resolve a problem where parameter 'cl' is matched to 'cluster'
   #    and shouldn't
   # 2. apply default options for cfa/sem/growth functions
@@ -79,14 +79,14 @@ lav_lavaan_step00_parameters <- function(matchcall = NULL,
   list(mc = mc, dotdotdot = ddd)
 }
 
-lav_lavaan_step00_checkdata <- function(data = NULL,
+lav_step00_checkdata <- function(data = NULL,
                                         dotdotdot = NULL,
                                         sample_cov = NULL,
                                         sample_nobs = NULL,
                                         sample_mean = NULL,
                                         sample_th = NULL,
-                                        nacov = NULL, # nolint
-                                        wls_v = NULL, # nolint
+                                        nacov = NULL,
+                                        wls_v = NULL,
                                         ov_order = NULL) {
   # if data not NULL:
   #   if it is an 'enriched' data.frame (e.g. a tibble), simplify to an
@@ -100,7 +100,7 @@ lav_lavaan_step00_checkdata <- function(data = NULL,
   #             set data to NULL
   #   if it is a function --> ***error***
   #   TODO: other tests are present in lav_lavdata(), should we copy them here?
-  # if NACOV or WLS.V not NULL, set ov.order to "data"
+  # if nacov or wls_v not NULL, set ov_order to "data"
 
   if (!is.null(data)) {
     if (inherits(data, "data.frame")) {
@@ -128,8 +128,8 @@ lav_lavaan_step00_checkdata <- function(data = NULL,
       # check for optional-data arguments
       if ("sample.mean" %in% names(data)) sample_mean <- data$sample.mean
       if ("sample.th" %in% names(data)) sample_th <- data$sample.th
-      if ("NACOV" %in% names(data)) nacov <- data$NACOV # nolint
-      if ("WLS.V" %in% names(data)) wls_v <- data$WLS.V # nolint
+      if ("NACOV" %in% names(data)) nacov <- data$NACOV
+      if ("WLS.V" %in% names(data)) wls_v <- data$WLS.V
 
       # set other args not included in dotdotdot
       if (length(data$lavOptions)) {
@@ -160,7 +160,7 @@ lav_lavaan_step00_checkdata <- function(data = NULL,
     }
   }
   # new in 0.6-14: if NACOV and/or WLS.V are provided, we force
-  # ov.order="data" for now
+  # ov_order="data" for now
   # until we have reliable code to re-arrange/select col/rows for
   # of NACOV/WLS.V based on the model-based ov.names
   if (!is.null(nacov) || !is.null(wls_v)) {
@@ -172,8 +172,8 @@ lav_lavaan_step00_checkdata <- function(data = NULL,
   }
 
   list(
-    data = data, dotdotdot = dotdotdot, sample.cov = sample_cov,
-    sample.nobs = sample_nobs, sample.mean = sample_mean,
-    sample.th = sample_th, NACOV = nacov, WLS.V = wls_v, ov.order = ov_order
+    data = data, dotdotdot = dotdotdot, sample_cov = sample_cov,
+    sample_nobs = sample_nobs, sample_mean = sample_mean,
+    sample_th = sample_th, nacov = nacov, wls_v = wls_v, ov_order = ov_order
   )
 }

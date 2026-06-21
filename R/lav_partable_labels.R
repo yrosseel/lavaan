@@ -1,8 +1,8 @@
 # generate labels for each parameter
-lav_partable_labels <- function(partable,                                # nolint start
+lav_pt_labels <- function(partable,
                                 blocks = c("group", "level"),
-                                group.equal = "", group.partial = "",
-                                type = "user") {                         # nolint end
+                                group_equal = "", group_partial = "",
+                                type = "user") {
   # catch empty partable
   if (length(partable$lhs) == 0L) {
     return(character(0L))
@@ -18,7 +18,7 @@ lav_partable_labels <- function(partable,                                # nolin
       group_label <- group_label[nchar(group_label) > 0L]
       ngroups <- length(group_label)
     } else {
-      ngroups <- lav_partable_ngroups(partable)
+      ngroups <- lav_pt_ngroups(partable)
       group_label <- 1:ngroups
     }
     if (ngroups > 1L) {
@@ -35,34 +35,34 @@ lav_partable_labels <- function(partable,                                # nolin
   }
 
   # cat("DEBUG: label start:\n"); print(label); cat("\n")
-  # cat("group.equal = ", group.equal, "\n")
-  # cat("group.partial = ", group.partial, "\n")
+  # cat("group_equal = ", group_equal, "\n")
+  # cat("group_partial = ", group_partial, "\n")
 
-  # use group.equal so that equal sets of parameters get the same label
-  if (ngroups > 1L && length(group.equal) > 0L) {
-    if ("intercepts" %in% group.equal ||
-      "residuals" %in% group.equal ||
-      "residual.covariances" %in% group.equal) {
+  # use group_equal so that equal sets of parameters get the same label
+  if (ngroups > 1L && length(group_equal) > 0L) {
+    if ("intercepts" %in% group_equal ||
+      "residuals" %in% group_equal ||
+      "residual.covariances" %in% group_equal) {
       ov_names_nox <- vector("list", length = ngroups)
       for (g in 1:ngroups) {
         ov_names_nox[[g]] <- unique(unlist(
-          lav_partable_vnames(partable, "ov.nox", group = g)))
+          lav_pt_vnames(partable, "ov.nox", group = g)))
       }
     }
-    if ("thresholds" %in% group.equal) {
+    if ("thresholds" %in% group_equal) {
       ov_names_ord <- vector("list", length = ngroups)
       for (g in 1:ngroups) {
         ov_names_ord[[g]] <- unique(unlist(
-          lav_partable_vnames(partable, "ov.ord", group = g)))
+          lav_pt_vnames(partable, "ov.ord", group = g)))
       }
     }
-    if ("means" %in% group.equal ||
-      "lv.variances" %in% group.equal ||
-      "lv.covariances" %in% group.equal) {
+    if ("means" %in% group_equal ||
+      "lv.variances" %in% group_equal ||
+      "lv.covariances" %in% group_equal) {
       lv_names <- vector("list", length = ngroups)
       for (g in 1:ngroups) {
         lv_names[[g]] <- unique(unlist(
-          lav_partable_vnames(partable, "lv", group = g)))
+          lav_pt_vnames(partable, "lv", group = g)))
       }
     }
 
@@ -70,11 +70,11 @@ lav_partable_labels <- function(partable,                                # nolin
     g1_flag <- logical(length(partable$lhs))
 
     # LOADINGS
-    if ("loadings" %in% group.equal) {
+    if ("loadings" %in% group_equal) {
       g1_flag[partable$op == "=~" & partable$group == 1L] <- TRUE
     }
     # COMPOSITE LOADINGS (new in 0.6-4)
-    if ("composite.loadings" %in% group.equal) {
+    if ("composite.loadings" %in% group_equal) {
       # new setting (0.6-20): <~
       if (any(partable$op == "<~" & partable$group == 1L)) {
         lav_msg_warn(gettext("composite.loadings are in fact composite weights;
@@ -83,63 +83,63 @@ lav_partable_labels <- function(partable,                                # nolin
       } else {
         # old school: composites are phantom constructs with zero residual...
         lv_f_names <- unique(unlist(
-          lav_partable_vnames(partable, "lv.formative")))
+          lav_pt_vnames(partable, "lv.formative")))
         g1_flag[partable$op == "~" &
                 partable$lhs %in% lv_f_names &
                 partable$group == 1L] <- TRUE
       }
     }
     # COMPOSITE WEIGHTS (new in 0.6-20) # same as 'loadings'...
-    if ("composite.weights" %in% group.equal) {
+    if ("composite.weights" %in% group_equal) {
       g1_flag[partable$op == "<~" & partable$group == 1L] <- TRUE
     }
     # INTERCEPTS (OV)
-    if ("intercepts" %in% group.equal) {
+    if ("intercepts" %in% group_equal) {
       g1_flag[partable$op == "~1" & partable$group == 1L &
         partable$lhs %in% ov_names_nox[[1L]]] <- TRUE
     }
     # THRESHOLDS (OV-ORD)
-    if ("thresholds" %in% group.equal) {
+    if ("thresholds" %in% group_equal) {
       g1_flag[partable$op == "|" & partable$group == 1L &
         partable$lhs %in% ov_names_ord[[1L]]] <- TRUE
     }
     # MEANS (LV)
-    if ("means" %in% group.equal) {
+    if ("means" %in% group_equal) {
       g1_flag[partable$op == "~1" & partable$group == 1L &
         partable$lhs %in% lv_names[[1L]]] <- TRUE
     }
     # REGRESSIONS
-    if ("regressions" %in% group.equal) {
+    if ("regressions" %in% group_equal) {
       g1_flag[partable$op == "~" & partable$group == 1L] <- TRUE
     }
     # RESIDUAL variances (FIXME: OV ONLY!)
-    if ("residuals" %in% group.equal) {
+    if ("residuals" %in% group_equal) {
       g1_flag[partable$op == "~~" & partable$group == 1L &
         partable$lhs %in% ov_names_nox[[1L]] &
         partable$lhs == partable$rhs] <- TRUE
     }
     # RESIDUAL covariances (FIXME: OV ONLY!)
-    if ("residual.covariances" %in% group.equal) {
+    if ("residual.covariances" %in% group_equal) {
       g1_flag[partable$op == "~~" & partable$group == 1L &
         partable$lhs %in% ov_names_nox[[1L]] &
         partable$lhs != partable$rhs] <- TRUE
     }
     # LV VARIANCES
-    if ("lv.variances" %in% group.equal) {
+    if ("lv.variances" %in% group_equal) {
       g1_flag[partable$op == "~~" & partable$group == 1L &
         partable$lhs %in% lv_names[[1L]] &
         partable$lhs == partable$rhs] <- TRUE
     }
     # LV COVARIANCES
-    if ("lv.covariances" %in% group.equal) {
+    if ("lv.covariances" %in% group_equal) {
       g1_flag[partable$op == "~~" & partable$group == 1L &
         partable$lhs %in% lv_names[[1L]] &
         partable$lhs != partable$rhs] <- TRUE
     }
 
-    # if group.partial, set corresponding flag to FALSE
-    if (length(group.partial) > 0L) {
-      g1_flag[label %in% group.partial &
+    # if group_partial, set corresponding flag to FALSE
+    if (length(group_partial) > 0L) {
+      g1_flag[label %in% group_partial &
         partable$group == 1L] <- FALSE
     }
 
@@ -158,7 +158,7 @@ lav_partable_labels <- function(partable,                                # nolin
   }
 
   # cat("DEBUG: g1.idx = ", g1.idx, "\n")
-  # cat("DEBUG: label after group.equal:\n"); print(label); cat("\n")
+  # cat("DEBUG: label after group_equal:\n"); print(label); cat("\n")
 
   # handle other block identifier (not 'group')
   for (block in blocks) {
@@ -166,7 +166,7 @@ lav_partable_labels <- function(partable,                                # nolin
       next
     } else if (block == "level" && !is.null(partable[[block]])) {
       # all but first level
-      lev_vals <- lav_partable_level_values(partable)
+      lev_vals <- lav_pt_level_values(partable)
       idx <- which(partable[[block]] != lev_vals[1])
       label[idx] <- paste(label[idx], ".", "l",
         partable[[block]][idx],

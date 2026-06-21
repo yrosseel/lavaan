@@ -7,13 +7,13 @@
 
 # YR 17 July 2012
 
-lav_func_gradient_complex <- function(func, x,                        # nolint start
+lav_func_grad_complex <- function(func, x,                        # nolint start
                                       h = .Machine$double.eps, ...,
-                                      fallback.simple = TRUE) {       #nolint end
+                                      fallback_simple = TRUE) {       #nolint end
   f0 <- try(func(x * (0 + 1i), ...), silent = TRUE)
   if (!is.complex(f0)) {
-    if (fallback.simple) {
-      dx <- lav_func_gradient_simple(func = func, x = x, h = sqrt(h), ...)
+    if (fallback_simple) {
+      dx <- lav_func_grad_simple(func = func, x = x, h = sqrt(h), ...)
       return(dx)
     } else {
       lav_msg_stop(gettext(
@@ -21,8 +21,8 @@ lav_func_gradient_complex <- function(func, x,                        # nolint s
     }
   }
   if (inherits(f0, "try-error")) {
-    if (fallback.simple) {
-      dx <- lav_func_gradient_simple(func = func, x = x, h = sqrt(h), ...)
+    if (fallback_simple) {
+      dx <- lav_func_grad_simple(func = func, x = x, h = sqrt(h), ...)
       return(dx)
     } else {
       lav_msg_stop(gettext(
@@ -53,7 +53,7 @@ lav_func_gradient_complex <- function(func, x,                        # nolint s
 }
 
 # as a backup, if func() is not happy about non-numeric arguments
-lav_func_gradient_simple <- function(func, x,
+lav_func_grad_simple <- function(func, x,
                                      h = sqrt(.Machine$double.eps), ...) {
   # check current point, see if it is a scalar function
   f0 <- func(x, ...)
@@ -80,12 +80,14 @@ lav_func_gradient_simple <- function(func, x,
   dx
 }
 
-lav_func_jacobian_complex <- function(func, x,                       # nolint start
+lav_func_jacobian_complex <- function(func, x,
                                       h = .Machine$double.eps, ...,
-                                      fallback.simple = TRUE) {      # nolint end
+                                      fallback_simple = TRUE) {
+  dotdotdot <- list(...)
+  lav_adapt_func(environment(), dotdotdot, FALSE)
   f0 <- try(func(x * (0 + 1i), ...), silent = TRUE)
   if (!is.complex(f0)) {
-    if (fallback.simple) {
+    if (fallback_simple) {
       dx <- lav_func_jacobian_simple(func = func, x = x, h = sqrt(h), ...)
       return(dx)
     } else {
@@ -94,7 +96,7 @@ lav_func_jacobian_complex <- function(func, x,                       # nolint st
     }
   }
   if (inherits(f0, "try-error")) {
-    if (fallback.simple) {
+    if (fallback_simple) {
       dx <- lav_func_jacobian_simple(func = func, x = x, h = sqrt(h), ...)
       return(dx)
     } else {
@@ -143,17 +145,130 @@ lav_func_jacobian_simple <- function(func, x,
   dx
 }
 
+# Hessian computation for a (possibly vector-valued) function func: R^k -> R^m
+# Returns a list of length m, where the i-th element is the (k x k)
+# symmetric Hessian matrix of the i-th component of func at x.
+#
+# The inner Jacobian is computed using the complex-step method (high
+# accuracy), while the outer step uses forward finite differences.
+# A small symmetrization step compensates for finite-difference asymmetry.
+#
+# Components whose Jacobian row is exactly zero at x (i.e. the function
+# is locally constant for that component) are returned with a zero
+# Hessian. Without this, forward-FD noise in the Jacobian can be
+# amplified to O(1) when divided by the outer step.
+lav_func_hessian_complex <- function(func, x,
+                                     h = sqrt(.Machine$double.eps), ...,
+                                     fallback_simple = TRUE) {
+  # Jacobian at x
+  j0 <- try(lav_func_jacobian_complex(func = func, x = x, ...,
+                                      fallback_simple = fallback_simple),
+            silent = TRUE)
+  if (inherits(j0, "try-error")) {
+    return(j0)
+  }
+  nres <- nrow(j0)
+  nvar <- length(x)
+
+  # outer step per element of x
+  h_vec <- pmax(h, abs(h * x))
+  # exact h per element (avoid floating-point asymmetry)
+  tmp <- x + h_vec
+  h_vec <- tmp - x
+
+  # detect components whose function is (locally) constant: their
+  # Jacobian row is essentially zero. We will zero their Hessians too.
+  # The threshold accommodates numerical noise from the fallback simple
+  # forward FD, which has O(sqrt(eps)) accuracy per element.
+  j0_row_max <- apply(abs(j0), 1, max)
+  constant_idx <- which(j0_row_max < .Machine$double.eps^(1 / 3))
+
+  # build Hessians by finite-differencing the Jacobian
+  h_list <- vector("list", nres)
+  for (i in seq_len(nres)) {
+    h_list[[i]] <- matrix(0, nrow = nvar, ncol = nvar)
+  }
+  for (j in seq_len(nvar)) {
+    x_plus <- x
+    x_plus[j] <- x[j] + h_vec[j]
+    jp <- try(lav_func_jacobian_complex(func = func, x = x_plus, ...,
+                                        fallback_simple = fallback_simple),
+              silent = TRUE)
+    if (inherits(jp, "try-error")) {
+      return(jp)
+    }
+    for (i in seq_len(nres)) {
+      h_list[[i]][, j] <- (jp[i, ] - j0[i, ]) / h_vec[j]
+    }
+  }
+
+  # symmetrize (small numerical asymmetry from finite differences)
+  for (i in seq_len(nres)) {
+    h_list[[i]] <- 0.5 * (h_list[[i]] + t(h_list[[i]]))
+  }
+
+  # zero out Hessians for locally-constant components
+  for (i in constant_idx) {
+    h_list[[i]][] <- 0
+  }
+
+  h_list
+}
+
+# 'simple' version (forward finite differences only), used as a fallback
+# when the complex-step Jacobian cannot be used (e.g. functions that
+# do not accept complex arguments). See lav_func_hessian_complex() for
+# the rationale behind zeroing Hessians of locally-constant components.
+lav_func_hessian_simple <- function(func, x,
+                                    h = .Machine$double.eps^(1 / 4), ...) {
+  j0 <- lav_func_jacobian_simple(func = func, x = x, ...)
+  nres <- nrow(j0)
+  nvar <- length(x)
+
+  h_vec <- pmax(h, abs(h * x))
+  tmp <- x + h_vec
+  h_vec <- tmp - x
+
+  # detect components whose function is (locally) constant (see complex
+  # variant for rationale)
+  j0_row_max <- apply(abs(j0), 1, max)
+  constant_idx <- which(j0_row_max < .Machine$double.eps^(1 / 3))
+
+  h_list <- vector("list", nres)
+  for (i in seq_len(nres)) {
+    h_list[[i]] <- matrix(0, nrow = nvar, ncol = nvar)
+  }
+  for (j in seq_len(nvar)) {
+    x_plus <- x
+    x_plus[j] <- x[j] + h_vec[j]
+    jp <- lav_func_jacobian_simple(func = func, x = x_plus, ...)
+    for (i in seq_len(nres)) {
+      h_list[[i]][, j] <- (jp[i, ] - j0[i, ]) / h_vec[j]
+    }
+  }
+
+  for (i in seq_len(nres)) {
+    h_list[[i]] <- 0.5 * (h_list[[i]] + t(h_list[[i]]))
+  }
+
+  for (i in constant_idx) {
+    h_list[[i]][] <- 0
+  }
+
+  h_list
+}
+
 lav_deriv_cov2cor_b <- function(m_cov = NULL) {
   nvar <- nrow(m_cov)
   ds_inv <- 1 / diag(m_cov)
   m_r <- cov2cor(m_cov)
   m_a <- -m_r %x% (0.5 * diag(ds_inv))
   m_b <- (0.5 * diag(ds_inv)) %x% -m_r
-  m_dd <- diag(lav_matrix_vec(diag(nvar)))
+  m_dd <- diag(lav_mat_vec(diag(nvar)))
   a2 <- m_a %*% m_dd
   b2 <- m_b %*% m_dd
-  out <- a2 + b2 + diag(lav_matrix_vec(tcrossprod(sqrt(ds_inv))))
-  m_d <- lav_matrix_duplication(nvar)
+  out <- a2 + b2 + diag(lav_mat_vec(tcrossprod(sqrt(ds_inv))))
+  m_d <- lav_mat_dup(nvar)
   out_vech <- 0.5 * (t(m_d) %*% out %*% m_d)
   out_vech
 }
@@ -167,7 +282,7 @@ lav_deriv_cov2cor <- function(cov_1 = NULL, num_idx = NULL) {
   # dCor/dvar2 = - cov / (2*var2 * sqrt(var1) * sqrt(var2))
   # dCor/dcov  =  1/(sqrt(var1) * sqrt(var2))
 
-  # diagonal: diag(lav_matrix_vech(tcrossprod(1/delta)))
+  # diagonal: diag(lav_mat_vech(tcrossprod(1/delta)))
 
   nvar <- ncol(cov_1)
   pstar <- nvar * (nvar + 1) / 2
@@ -184,10 +299,10 @@ lav_deriv_cov2cor <- function(cov_1 = NULL, num_idx = NULL) {
   a2 <- diag(nvar) %x% t(a)
 
   out <- diag(pstar)
-  diag(out) <- lav_matrix_vech(tcrossprod(1 / delta))
-  var_idx <- lav_matrix_diagh_idx(nvar)
-  dup <- lav_matrix_duplication(nvar)
-  out[, var_idx] <- t(dup) %*% a2[, lav_matrix_diag_idx(nvar)]
+  diag(out) <- lav_mat_vech(tcrossprod(1 / delta))
+  var_idx <- lav_mat_diagh_idx(nvar)
+  dup <- lav_mat_dup(nvar)
+  out[, var_idx] <- t(dup) %*% a2[, lav_mat_diag_idx(nvar)]
 
   if (length(num_idx) > 0L) {
     var_idx <- var_idx[-num_idx]

@@ -1,4 +1,4 @@
-lav_lavaan_step03_data <- function(slot_data = NULL, # nolint
+lav_step03_data <- function(slot_data = NULL,
                                    lavoptions = NULL,
                                    ov_names = NULL,
                                    ov_names_y = NULL,
@@ -7,38 +7,39 @@ lav_lavaan_step03_data <- function(slot_data = NULL, # nolint
                                    cluster = NULL,
                                    ov_names_x = NULL,
                                    ov_names_l = NULL,
+                                   ov_names_aux = NULL,
                                    ordered = NULL,
                                    sampling_weights = NULL,
                                    sample_cov = NULL,
                                    sample_mean = NULL,
                                    sample_th = NULL,
                                    sample_nobs = NULL,
-                                   slot_par_table = NULL, # nolint
+                                   slot_par_table = NULL,
                                    ngroups = NULL,
                                    dotdotdot = NULL,
                                    flat_model = NULL,
                                    model = NULL,
-                                   nacov = NULL, # nolint
-                                   wls_v = NULL) { # nolint
+                                   nacov = NULL,
+                                   wls_v = NULL) {
   # # # # # # # # # # #
   # #  3. lavdata  # #
   # # # # # # # # # # #
 
-  # if slotData not null
-  #   copy slotData to lavdata
+  # if slot_data not null
+  #   copy slot_data to lavdata
   # else
   #   create lavdata via function lav_lavdata, setting ov.names to ov.names.y
   #     if lavoptions$conditional.x
   # if lavdata$data.type is "none"
   #   set lavoptions$do.fit to FALSE
-  #   if flat.model$est not null set lavoptions$start to "est", else set
+  #   if flat_model$est not null set lavoptions$start to "est", else set
   #     it to "simple"
   #   set lavoptions$se and lavoptions$test to "none"
   # else
   #   if lavdata$data.type is "moment"
   #     if estimator one of MLM, MLMV, MLR, ULSM, ULSMV, ULSMVS and NACOV
   #       is NULL: *** error ***
-  #     if estimator one of WLS, WLSM, WLSMV, WLSMVS, DWLS and WLS.V is
+  #     if estimator one of WLS, WLSM, WLSMV, WLSMVS, DWLS and wls_v is
   #       NULL: *** error ***
   #     if lavoptions$se = bootstrap: *** error ***
   # if slotPartable not NULL and model is lavaan-object, check equality
@@ -64,6 +65,7 @@ lav_lavaan_step03_data <- function(slot_data = NULL, # nolint
       ov_names = tmp_ov_names,
       ov_names_x = ov_names_x,
       ov_names_l = ov_names_l,
+      ov_names_aux = ov_names_aux,
       ordered = ordered,
       sampling_weights = sampling_weights,
       sample_cov = sample_cov,
@@ -105,7 +107,7 @@ lav_lavaan_step03_data <- function(slot_data = NULL, # nolint
       )) &&
         is.null(wls_v)) {
         lav_msg_stop(gettextf(
-          "estimator %s requires full data or user-provided WLS.V and NACOV",
+          "estimator %s requires full data or user-provided wls_v and NACOV",
           estimator))
       }
     }

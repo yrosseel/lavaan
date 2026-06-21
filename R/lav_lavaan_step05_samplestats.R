@@ -1,8 +1,8 @@
-lav_lavaan_step05_samplestats <- function(slot_sample_stats = NULL, # nolint
+lav_step05_samp <- function(slot_sample_stats = NULL,
                                           lavdata = NULL,
                                           lavoptions = NULL,
-                                          wls_v = NULL, # nolint
-                                          nacov = NULL, # nolint
+                                          wls_v = NULL,
+                                          nacov = NULL,
                                           sample_cov = NULL,
                                           sample_mean = NULL,
                                           sample_th = NULL,
@@ -14,14 +14,14 @@ lav_lavaan_step05_samplestats <- function(slot_sample_stats = NULL, # nolint
   # #  5. lavsamplestats  # #
   # # # # # # # # # # # # # #
 
-  # if slotSampleStats not NULL
+  # if slot_sample_stats not NULL
   #   copy to lavsamplestats
   # else
   #   if lavdata@data.type == "full"
   #     compute lavsamplestats via lav_samplestats_from_data
   #   else
   #     if lavdata@data.type == "moment"
-  #       if lavoptions$meanstructure TRUE but sample.mean is NULL:
+  #       if lavoptions$meanstructure TRUE but sample_mean is NULL:
   #         ** warning **
   #       compute lavsamplestats via lav_samplestats_from_moments
   #     else
@@ -34,11 +34,11 @@ lav_lavaan_step05_samplestats <- function(slot_sample_stats = NULL, # nolint
     if (lav_verbose()) {
       cat("lavsamplestats     ...")
     }
-    lavsamplestats <- lav_samplestats_from_data(
+    lavsamplestats <- lav_samp_from_data(
       lavdata       = lavdata,
       lavoptions    = lavoptions,
-      WLS.V         = wls_v,
-      NACOV         = nacov
+      wls_v         = wls_v,
+      nacov         = nacov
     )
     if (lav_verbose()) {
       cat(" done.\n")
@@ -47,13 +47,13 @@ lav_lavaan_step05_samplestats <- function(slot_sample_stats = NULL, # nolint
     if (lav_verbose()) {
       cat("lavsamplestats ...")
     }
-    # check if we have sample.mean and meanstructure = TRUE
+    # check if we have sample_mean and meanstructure = TRUE
     if (lavoptions$meanstructure && is.null(sample_mean)) {
       lav_msg_warn(
-        gettext("sample.mean= argument is missing, but model contains
+        gettext("sample_mean= argument is missing, but model contains
                 mean/intercept parameters."))
     }
-    lavsamplestats <- lav_samplestats_from_moments(
+    lavsamplestats <- lav_samp_from_moments(
       sample_cov    = sample_cov,
       sample_mean   = sample_mean,
       sample_th     = sample_th,

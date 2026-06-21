@@ -1,9 +1,9 @@
 # YR - 26 Nov 2013: generate partable for the unrestricted model
 # YR - 19 Mar 2017: handle twolevel model
-# YR - 27 May 2021: added lav_partable_unrestricted_chol so we can use
+# YR - 27 May 2021: added lav_pt_unrestricted_chol so we can use
 #                   a cholesky parameterization: S = LAMBDA %*% t(LAMBDA)
 
-lav_partable_unrestricted <- function(lavobject = NULL,          # nolint start
+lav_pt_unrestricted <- function(lavobject = NULL,          # nolint start
                                       # if no object is available,
                                       lavdata = NULL,
                                       lavpta = NULL,
@@ -11,27 +11,27 @@ lav_partable_unrestricted <- function(lavobject = NULL,          # nolint start
                                       lavsamplestats = NULL,
                                       lavh1 = NULL,
                                       # optional user-provided sample stats
-                                      sample.cov = NULL,
-                                      sample.mean = NULL,
-                                      sample.slopes = NULL,
-                                      sample.th = NULL,
-                                      sample.th.idx = NULL,
-                                      sample.cov.x = NULL,
-                                      sample.mean.x = NULL) {   # nolint end
-  lav_partable_indep_or_unrestricted(
+                                      sample_cov = NULL,
+                                      sample_mean = NULL,
+                                      sample_slopes = NULL,
+                                      sample_th = NULL,
+                                      sample_th_idx = NULL,
+                                      sample_cov_x = NULL,
+                                      sample_mean_x = NULL) {   # nolint end
+  lav_pt_indep_or_unrestricted(
     lavobject = lavobject,
     lavdata = lavdata, lavpta = lavpta, lavoptions = lavoptions,
     lavsamplestats = lavsamplestats, lavh1 = lavh1,
-    sample_cov = sample.cov, sample_mean = sample.mean,
-    sample_slopes = sample.slopes,
-    sample_th = sample.th, sample_th_idx = sample.th.idx,
+    sample_cov = sample_cov, sample_mean = sample_mean,
+    sample_slopes = sample_slopes,
+    sample_th = sample_th, sample_th_idx = sample_th_idx,
     independent = FALSE
   )
 }
 
 # generate parameter table for an independence model
-# YR - 12 Sep 2017: special case of lav_partable_unrestricted()
-lav_partable_independence <- function(lavobject = NULL,         # nolint start
+# YR - 12 Sep 2017: special case of lav_pt_unrestricted()
+lav_pt_independence <- function(lavobject = NULL,         # nolint start
                                       # if no object is available,
                                       lavdata = NULL,
                                       lavpta = NULL,
@@ -39,25 +39,25 @@ lav_partable_independence <- function(lavobject = NULL,         # nolint start
                                       lavsamplestats = NULL,
                                       lavh1 = NULL,
                                       # optional user-provided sample stats
-                                      sample.cov = NULL,
-                                      sample.mean = NULL,
-                                      sample.slopes = NULL,
-                                      sample.th = NULL,
-                                      sample.th.idx = NULL,
-                                      sample.cov.x = NULL,
-                                      sample.mean.x = NULL) {   # nolint end
-  lav_partable_indep_or_unrestricted(
+                                      sample_cov = NULL,
+                                      sample_mean = NULL,
+                                      sample_slopes = NULL,
+                                      sample_th = NULL,
+                                      sample_th_idx = NULL,
+                                      sample_cov_x = NULL,
+                                      sample_mean_x = NULL) {   # nolint end
+  lav_pt_indep_or_unrestricted(
     lavobject = lavobject,
     lavdata = lavdata, lavpta = lavpta, lavoptions = lavoptions,
     lavsamplestats = lavsamplestats, lavh1 = lavh1,
-    sample_cov = sample.cov, sample_mean = sample.mean,
-    sample_slopes = sample.slopes,
-    sample_th = sample.th, sample_th_idx = sample.th.idx,
+    sample_cov = sample_cov, sample_mean = sample_mean,
+    sample_slopes = sample_slopes,
+    sample_th = sample_th, sample_th_idx = sample_th_idx,
     independent = TRUE
   )
 }
 
-lav_partable_indep_or_unrestricted <- function(lavobject = NULL, # nolint
+lav_pt_indep_or_unrestricted <- function(lavobject = NULL,
                                                # if no object is available,
                                                lavdata = NULL,
                                                lavpta = NULL,
@@ -204,7 +204,7 @@ lav_partable_indep_or_unrestricted <- function(lavobject = NULL, # nolint
 
     # force local sample.cov to be pd -- just for starting values anyway
     if (!is.null(sample_cov) && !anyNA(sample_cov)) {
-      sample_cov <- lav_matrix_symmetric_force_pd(sample_cov)
+      sample_cov <- lav_mat_sym_force_pd(sample_cov)
     }
 
     for (l in 1:nlevels) {
@@ -230,7 +230,7 @@ lav_partable_indep_or_unrestricted <- function(lavobject = NULL, # nolint
         ov_names_nox <- lavpta$vnames$ov.nox[[b]]
       }
 
-      # only for multilevel, overwrite sample.cov and sample.mean
+      # only for multilevel, overwrite sample.cov and sample_mean
       if (nlevels > 1L) {
         if (independent) {
           # better use lavdata@Lp[[g]]$ov.x.idx??
@@ -259,17 +259,17 @@ lav_partable_indep_or_unrestricted <- function(lavobject = NULL, # nolint
         # if(l == 1L) {
         #    sample.cov  <- YLp[[2]]$Sigma.W[block.idx, block.idx,
         #                                    drop = FALSE]
-        #    sample.mean <- YLp[[2]]$Mu.W[block.idx]
+        #    sample_mean <- YLp[[2]]$Mu.W[block.idx]
         # } else {
         #    sample.cov  <- YLp[[2]]$Sigma.B[block.idx, block.idx,
         #                                    drop = FALSE]
-        #    sample.mean <- YLp[[2]]$Mu.B[block.idx]
+        #    sample_mean <- YLp[[2]]$Mu.B[block.idx]
         # }
 
         # force local sample.cov to be strictly pd (and exaggerate)
         # just for starting values anyway, but at least the first
         # evaluation will be feasible
-        sample_cov <- lav_matrix_symmetric_force_pd(sample_cov,
+        sample_cov <- lav_mat_sym_force_pd(sample_cov,
           tol = 1e-03
         )
       }
@@ -317,7 +317,7 @@ lav_partable_indep_or_unrestricted <- function(lavobject = NULL, # nolint
 
         # starting values -- covariances
         if (!is.null(sample_cov)) {
-          sample_cov_vech <- lav_matrix_vech(sample_cov, diagonal = FALSE)
+          sample_cov_vech <- lav_mat_vech(sample_cov, diagonal = FALSE)
           ustart <- c(ustart, sample_cov_vech)
           # check for 'missing by design' cells: here, the sample.cov
           # element is *exactly* zero (new in 0.6-18)
@@ -614,10 +614,10 @@ lav_partable_indep_or_unrestricted <- function(lavobject = NULL, # nolint
             ustart <- c(ustart, rep(0, nel))
           } else {
             # but we probably should do:
-            ustart <- c(ustart, lav_matrix_vec(sample_slopes))
+            ustart <- c(ustart, lav_mat_vec(sample_slopes))
           }
         } else if (!is.null(sample_slopes)) {
-          ustart <- c(ustart, lav_matrix_vec(sample_slopes))
+          ustart <- c(ustart, lav_mat_vec(sample_slopes))
         } else {
           ustart <- c(ustart, rep(as.numeric(NA), nel))
         }
@@ -670,7 +670,7 @@ lav_partable_indep_or_unrestricted <- function(lavobject = NULL, # nolint
 
 # - currently only used for continuous twolevel data
 # - conditional.x not supported (yet)
-lav_partable_unrestricted_chol <- function(lavobject = NULL,
+lav_pt_unrestricted_chol <- function(lavobject = NULL,
                                            # if no object is available,
                                            lavdata = NULL,
                                            lavpta = NULL, # optional
@@ -752,7 +752,7 @@ lav_partable_unrestricted_chol <- function(lavobject = NULL,
         # ov_names_nox <- lavpta$vnames$ov.nox[[b]]
       }
 
-      # only for multilevel, overwrite sample.cov and sample.mean
+      # only for multilevel, overwrite sample.cov and sample_mean
       if (nlevels > 1L) {
         # ov_names_x <- character(0L)
         # ov_names_nox <- ov_names
@@ -819,7 +819,7 @@ lav_partable_unrestricted_chol <- function(lavobject = NULL,
       # check for zero coverage at level 1 (new in 0.6-18)
       if (lavdata@missing == "ml" && l == 1 && !is.null(lavdata@Mp[[g]])) {
         coverage <- lavdata@Mp[[g]]$coverage
-        sample_cov_vech <- lav_matrix_vech(coverage, diagonal = FALSE)
+        sample_cov_vech <- lav_mat_vech(coverage, diagonal = FALSE)
         zero_cov <- which(sample_cov_vech == 0)
         if (length(zero_cov) > 0L) {
           n_tmp <- length(free)
@@ -917,7 +917,7 @@ lav_partable_unrestricted_chol <- function(lavobject = NULL,
 # - keep all other (relevant) constraints
 # - this *should* result in a baseline model that is always nested within
 #   the original model
-lav_partable_baseline <- function(lavobject = NULL,
+lav_pt_baseline <- function(lavobject = NULL,
                                   # if no object is available,
                                   lavpartable = NULL,
                                   lavh1 = NULL) {
@@ -930,7 +930,7 @@ lav_partable_baseline <- function(lavobject = NULL,
   }
 
   # number of blocks
-  nblocks <- lav_partable_nblocks(lavpartable)
+  nblocks <- lav_pt_nblocks(lavpartable)
 
   # conditional.x ? check res.cov[[1]] slot
   conditional_x <- FALSE
@@ -962,7 +962,7 @@ lav_partable_baseline <- function(lavobject = NULL,
   pt_1$est <- pt_1$se <- NULL
 
   # lv.names
-  lv_names <- lav_partable_vnames(pt_1, "lv")
+  lv_names <- lav_pt_vnames(pt_1, "lv")
 
   # zero-out all directed effects and covariances
   directed_idx <- which(pt_1$op %in% c("=~", "~") & pt_1$free > 0L &
@@ -982,9 +982,9 @@ lav_partable_baseline <- function(lavobject = NULL,
 
   # Question: fill in more elements in PT$start? (only ov variances for now)
   for (b in seq_len(nblocks)) {
-    ov_names_num <- lav_partable_vnames(lavpartable, "ov.num", block = b)
+    ov_names_num <- lav_pt_vnames(lavpartable, "ov.num", block = b)
     if (conditional_x) {
-      ov_names_x <- lav_partable_vnames(lavpartable, "ov.x", block = b)
+      ov_names_x <- lav_pt_vnames(lavpartable, "ov.x", block = b)
       ov_names_num <- ov_names_num[!ov_names_num %in% ov_names_x]
     }
     ovar_idx <- which(lavpartable$block == b &
@@ -995,6 +995,6 @@ lav_partable_baseline <- function(lavobject = NULL,
     pt_1$ustart[ovar_idx] <- diag(sample_cov[[b]])[sample_var_idx]
   }
 
-  pt_1 <- lav_partable_complete(pt_1)
+  pt_1 <- lav_pt_complete(pt_1)
   pt_1
 }

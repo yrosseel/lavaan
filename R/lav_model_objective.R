@@ -28,7 +28,7 @@ lav_model_objective <- function(lavmodel = NULL,
 
   # do we need WLS.est?
   if (estimator %in% c("ULS", "WLS", "DWLS", "NTRLS", "DLS")) {
-    lavimplied <- lav_model_implied(lavmodel, GLIST = glist)
+    lavimplied <- lav_model_implied(lavmodel, glist = glist)
     # check for COV with negative diagonal elements?
     for (g in 1:lavsamplestats@ngroups) {
       cov_1 <- if (lavmodel@conditional.x) {
@@ -136,7 +136,7 @@ lav_model_objective <- function(lavmodel = NULL,
         }
         # check if h1 is defined (eg zero coverage)
         if (is.null(lavsamplestats@missing.h1[[g]]$h1)) {
-          #this.h1 <- lav_mvnorm_missing_loglik_samplestats(
+          #this.h1 <- lav_mvn_mi_loglik_samp(
           #  Yp = lavsamplestats@missing[[g]],
           #  Mu = Mu.hat[[g]], Sigma = Sigma.hat[[g]],
           #  log2pi = FALSE, minus.two = TRUE) / lavsamplestats@nobs[[g]]
@@ -230,7 +230,7 @@ lav_model_objective <- function(lavmodel = NULL,
           wls_v <- lavsamplestats@WLS.V[[g]]
         } else {
           dls_a <- estimator_args$dls.a
-          gamma_nt <- lav_samplestats_gamma_nt(
+          gamma_nt <- lav_samp_gamma_nt(
             m_cov          = sigma_hat[[g]],
             m_mean         = mu_hat[[g]],
             x_idx          = lavsamplestats@x.idx[[g]],
@@ -240,10 +240,10 @@ lav_model_objective <- function(lavmodel = NULL,
             slopestructure = lavmodel@conditional.x
           )
           w_dls <- (1 - dls_a) * lavsamplestats@NACOV[[g]] + dls_a * gamma_nt
-          wls_v <- lav_matrix_symmetric_inverse(w_dls)
+          wls_v <- lav_mat_sym_inverse(w_dls)
         }
       } else if (estimator == "NTRLS") {
-        # WLS.V <- lav_samplestats_gamma_inverse_nt(
+        # WLS.V <- lav_samp_gamma_inverse_nt(
         #             m_icov = attr(Sigma.hat[[g]],"inv")[,,drop=FALSE],
         #             m_cov            = Sigma.hat[[g]][,,drop=FALSE],
         #             m_mean           = Mu.hat[[g]],
@@ -252,7 +252,7 @@ lav_model_objective <- function(lavmodel = NULL,
         #             conditional_x  = conditional.x,
         #             meanstructure  = meanstructure,
         #             slopestructure = conditional.x)
-        wls_v <- lav_mvnorm_information_expected(
+        wls_v <- lav_mvn_info_expected(
           sigma_1 = sigma_hat[[g]],
           x_idx = lavsamplestats@x.idx[[g]],
           meanstructure = lavmodel@meanstructure

@@ -16,8 +16,8 @@
 
 setMethod(
   "fitMeasures", signature(object = "lavaan"),
-  function(object, fit.measures = "all", baseline.model = NULL, h1.model = NULL, # nolint start
-           fm.args = list(
+  function(object, fit_measures = "all", baseline_model = NULL, h1_model = NULL,
+           fm_args = list(
              standard.test = "default",
              scaled.test = "default",
              rmsea.ci.level = 0.90,
@@ -26,24 +26,15 @@ setMethod(
              robust = TRUE,
              cat.check.pd = TRUE
            ),
-           output = "vector", ...) {                                             # nolint end
+           output = "vector", ...) {
     dotdotdot <- list(...)
-    if (length(dotdotdot) > 0L) {
-      for (j in seq_along(dotdotdot)) {
-        lav_msg_warn(gettextf(
-          "Unknown argument %s for %s", sQuote(names(dotdotdot)[j]),
-          sQuote("fitMeasures"))
-        )
-      }
-    }
-    # note: the ... is not used by lavaan
-    fit_measures <- fit.measures
+    lav_adapt_func(environment(), dotdotdot, NULL)
     if (!is.list(fit_measures))
         fit_measures <- list(fit.measures = fit_measures)
-    if (!missing(fm.args)) fit_measures <- c(fit_measures, fm.args)
-    lav_fit_measures(
-      object = object, fit_measures = fit.measures,
-      baseline_model = baseline.model, h1_model = h1.model,
+    if (!missing(fm_args)) fit_measures <- c(fit_measures, fm_args)
+    lav_fit(
+      object = object, fit_measures = fit_measures,
+      baseline_model = baseline_model, h1_model = h1_model,
       output = output
     )
   }
@@ -51,8 +42,8 @@ setMethod(
 
 setMethod(
   "fitmeasures", signature(object = "lavaan"),
-  function(object, fit.measures = "all", baseline.model = NULL, h1.model = NULL, # nolint start
-           fm.args = list(
+  function(object, fit_measures = "all", baseline_model = NULL, h1_model = NULL,
+           fm_args = list(
              standard.test = "default",
              scaled.test = "default",
              rmsea.ci.level = 0.90,
@@ -61,35 +52,26 @@ setMethod(
              robust = TRUE,
              cat.check.pd = TRUE
            ),
-           output = "vector", ...) {                                             # nolint end
+           output = "vector", ...) {
     dotdotdot <- list(...)
-    if (length(dotdotdot) > 0L) {
-      for (j in seq_along(dotdotdot)) {
-        lav_msg_warn(gettextf(
-          "Unknown argument %s for %s", sQuote(names(dotdotdot)[j]),
-          sQuote("fitmeasures"))
-        )
-      }
-    }
-    # note: the ... is not used by lavaan
-    fit_measures <- fit.measures
+    lav_adapt_func(environment(), dotdotdot, NULL)
     if (!is.list(fit_measures))
                   fit_measures <- list(fit.measures = fit_measures)
-    if (!missing(fm.args)) fit_measures <- c(fit_measures, fm.args)
-    lav_fit_measures(
-      object = object, fit_measures = fit.measures,
-      baseline_model = baseline.model, h1_model = h1.model,
+    if (!missing(fm_args)) fit_measures <- c(fit_measures, fm_args)
+    lav_fit(
+      object = object, fit_measures = fit_measures,
+      baseline_model = baseline_model, h1_model = h1_model,
       output = output
     )
   }
 )
 
 # S3 method for efaList
-lav_efalist_fitmeasures <- function(         # nolint start
+lav_efalist_fitmeasures <- function(
     object,
-    fit.measures = "all",
-    baseline.model = NULL, h1.model = NULL,
-    fm.args = list(
+    fit_measures = "all",
+    baseline_model = NULL, h1_model = NULL,
+    fm_args = list(
       standard.test = "default",
       scaled.test = "default",
       rmsea.ci.level = 0.90,
@@ -98,21 +80,23 @@ lav_efalist_fitmeasures <- function(         # nolint start
       robust = TRUE,
       cat.check.pd = TRUE
     ),
-    output = "list", ...) {                  # nolint end
+    output = "list", ...) {
+  dotdotdot <- list(...)
+  lav_adapt_func(environment(), dotdotdot, FALSE)
+
   # kill object$loadings if present
   object[["loadings"]] <- NULL
 
   # get fit measures for each model
-  fit_measures <- fit.measures
   if (!is.list(fit_measures)) fit_measures <- list(fit.measures = fit_measures)
-  if (!missing(fm.args)) fit_measures <- c(fit_measures, fm.args)
+  if (!missing(fm_args)) fit_measures <- c(fit_measures, fm_args)
   res <- simplify2array(lapply(
     object,
     function(x) {
-      lav_fit_measures(
+      lav_fit(
         object = x,
-        fit_measures = fit_measures, h1_model = h1.model,
-        baseline_model = baseline.model,
+        fit_measures = fit_measures, h1_model = h1_model,
+        baseline_model = baseline_model,
         output = "vector"
       )
     }
@@ -122,7 +106,7 @@ lav_efalist_fitmeasures <- function(         # nolint start
   # check if res is a matrix
   if (!is.matrix(res)) {
     if (is.numeric(res)) {
-      # fit.measures is just 1 element, or only one was correct
+      # fit_measures is just 1 element, or only one was correct
       name <- names(res)[1]
       res <- matrix(res, nrow = 1L)
       rownames(res) <- name
@@ -143,7 +127,7 @@ lav_efalist_fitmeasures <- function(         # nolint start
 }
 
 
-lav_fit_measures <- function(object, fit_measures = "all",
+lav_fit <- function(object, fit_measures = "all",
                              baseline_model = NULL, h1_model = NULL,
                              fm_args = list(
                                standard.test = "default",
@@ -158,7 +142,7 @@ lav_fit_measures <- function(object, fit_measures = "all",
   # check object
   object <- lav_object_check_version(object)
 
-  # default fm.args
+  # default fm_args
   default_fm_args <- list(
     standard.test = "default",
     scaled.test = "default",
@@ -169,7 +153,7 @@ lav_fit_measures <- function(object, fit_measures = "all",
     cat.check.pd = TRUE
   )
   if (!missing(fm_args)) {
-    lav_deprecated_args("fit.measures", "fm.args")
+    lav_deprecated_args("fit_measures", "fm_args")
     fm_args <- modifyList(default_fm_args, fm_args)
   } else {
     fm_args <- default_fm_args
@@ -179,7 +163,7 @@ lav_fit_measures <- function(object, fit_measures = "all",
         is.null(fit_measures$fit.measures)) {
       lav_msg_stop(gettextf(
         "If %s is a list, it must contain a named element %s.",
-        "fit.measures"
+        "fit_measures", "fit.measures"
       ))
     }
     temp <- fit_measures$fit.measures
@@ -253,14 +237,14 @@ lav_fit_measures <- function(object, fit_measures = "all",
       scaled_test != "none" &&
       any(test_names %in% c(
         "satorra.bentler",
-        "yuan.bentler", "yuan.bentler.mplus",
+        "yuan.bentler", "yuan.bentler.mplus", "yuan.chan",
         "mean.var.adjusted", "scaled.shifted"
       ))) {
     scaled_flag <- TRUE
     if (scaled_test %in% c("standard", "default")) {
       tmp_idx <- which(test_names %in% c(
         "satorra.bentler",
-        "yuan.bentler", "yuan.bentler.mplus",
+        "yuan.bentler", "yuan.bentler.mplus", "yuan.chan",
         "mean.var.adjusted", "scaled.shifted"
       ))
       scaled_test <- test_names[tmp_idx[1]]
@@ -353,8 +337,8 @@ lav_fit_measures <- function(object, fit_measures = "all",
     x2_scaled <- test[[scaled_idx]]$stat
     df_scaled <- test[[scaled_idx]]$df
   }
-  npar <- lav_object_inspect_npar(object = object, ceq = TRUE)
-  n <- lav_object_inspect_ntotal(object = object) # N vs N-1
+  npar <- lav_inspect_npar(object = object, ceq = TRUE)
+  n <- lav_inspect_ntotal(object = object) # N vs N-1
 
 
   # define 'sets' of fit measures:
@@ -676,7 +660,7 @@ lav_fit_measures <- function(object, fit_measures = "all",
   # keep only what we need
   out <- indices[fit_measures]
 
-  if (all(is.na(names(out)))) { # perhaps, fit.measures = ""
+  if (all(is.na(names(out)))) { # perhaps, fit_measures = ""
     # nothing left
     return(numeric(0L))
   }
@@ -697,7 +681,7 @@ lav_fit_measures <- function(object, fit_measures = "all",
   }
 
   # attributes?
-  # only if fit.measures == "all" or "default"
+  # only if fit_measures == "all" or "default"
   if (length(fit_measures_orig) == 1L &&
       fit_measures_orig %in% c("all", "default")) {
     x2_label <- test[[test_idx]]$label # NULL if "standard"

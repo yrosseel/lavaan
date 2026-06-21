@@ -4,11 +4,12 @@
 # YR 7 May 2022: add cov.x and mean.x if conditional.x (so that we do
 #                no longer depend on SampleStats)
 
-lav_model_implied <- function(lavmodel = NULL, GLIST = NULL, delta = TRUE) { # nolint
+lav_model_implied <- function(lavmodel = NULL, glist = NULL, delta = TRUE, ...) {
+  dotdotdot <- list(...)
+  lav_adapt_func(environment(), dotdotdot, NULL)
   stopifnot(inherits(lavmodel, "lavModel"))
 
   # state or final?
-  glist <- GLIST
   if (is.null(glist)) glist <- lavmodel@GLIST
 
   # model-implied variance/covariance matrix ('sigma hat')

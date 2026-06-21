@@ -1,4 +1,4 @@
-lav_lavaan_step15_baseline <- function(lavoptions = NULL,
+lav_step15_baseline <- function(lavoptions = NULL,
                                        lavsamplestats = NULL,
                                        lavdata = NULL,
                                        lavcache = NULL,

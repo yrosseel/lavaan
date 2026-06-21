@@ -1,5 +1,5 @@
 # what are the block values (not necessarily integers)
-lav_partable_block_values <- function(partable) {
+lav_pt_block_values <- function(partable) {
   if (is.null(partable$block)) {
     block_values <- 1L
   } else {
@@ -13,12 +13,12 @@ lav_partable_block_values <- function(partable) {
 }
 
 # guess number of blocks from a partable
-lav_partable_nblocks <- function(partable) {
-  length(lav_partable_block_values(partable))
+lav_pt_nblocks <- function(partable) {
+  length(lav_pt_block_values(partable))
 }
 
 # what are the group values (not necessarily integers)
-lav_partable_group_values <- function(partable) {
+lav_pt_group_values <- function(partable) {
   # FLAT?
   if (any(partable$op == ":")) {
     colon_idx <- which(partable$op == ":" &
@@ -43,12 +43,12 @@ lav_partable_group_values <- function(partable) {
 }
 
 # guess number of groups from a partable
-lav_partable_ngroups <- function(partable) {
-  length(lav_partable_group_values(partable))
+lav_pt_ngroups <- function(partable) {
+  length(lav_pt_group_values(partable))
 }
 
 # what are the level values (not necessarily integers)
-lav_partable_level_values <- function(partable) {
+lav_pt_level_values <- function(partable) {
   # FLAT?
   if (any(partable$op == ":")) {
     colon_idx <- which(partable$op == ":" &
@@ -74,12 +74,12 @@ lav_partable_level_values <- function(partable) {
 }
 
 # guess number of levels from a partable
-lav_partable_nlevels <- function(partable) {
-  length(lav_partable_level_values(partable))
+lav_pt_nlevels <- function(partable) {
+  length(lav_pt_level_values(partable))
 }
 
 # efa sets values
-lav_partable_efa_values <- function(partable) {
+lav_pt_efa_values <- function(partable) {
   if (is.null(partable$efa)) {
     efa_values <- character(0L)
   } else { # should be character
@@ -93,15 +93,15 @@ lav_partable_efa_values <- function(partable) {
 }
 
 # number of efa sets from a partable
-lav_partable_nefa <- function(partable) {
-  length(lav_partable_efa_values(partable))
+lav_pt_nefa <- function(partable) {
+  length(lav_pt_efa_values(partable))
 }
 
 
 
 
 # number of sample statistics per block
-lav_partable_ndat <- function(partable) {
+lav_pt_ndat <- function(partable) {
   # global
   meanstructure <- any(partable$op == "~1")
   fixed_x <- any(partable$exo > 0L & partable$free == 0L)
@@ -114,16 +114,16 @@ lav_partable_ndat <- function(partable) {
   }
 
   # blocks
-  nblocks <- lav_partable_nblocks(partable)
-  nlevels <- lav_partable_nlevels(partable)
+  nblocks <- lav_pt_nblocks(partable)
+  nlevels <- lav_pt_nlevels(partable)
   ndat <- integer(nblocks)
 
   for (b in seq_len(nblocks)) {
     # how many observed variables in this block?
     if (conditional_x) {
-      ov_names <- lav_partable_vnames(partable, "ov.nox", block = b)
+      ov_names <- lav_pt_vnames(partable, "ov.nox", block = b)
     } else {
-      ov_names <- lav_partable_vnames(partable, "ov", block = b)
+      ov_names <- lav_pt_vnames(partable, "ov", block = b)
     }
     nvar <- length(ov_names)
 
@@ -139,8 +139,8 @@ lav_partable_ndat <- function(partable) {
         pstar <- pstar - nvar
 
         # except within-only 'y'
-        ov_names_y <- lav_partable_vnames(partable, "ov.nox", block = b)
-        ov_names_y2 <- unlist(lav_partable_vnames(partable, "ov",
+        ov_names_y <- lav_pt_vnames(partable, "ov.nox", block = b)
+        ov_names_y2 <- unlist(lav_pt_vnames(partable, "ov",
           block = seq_len(nblocks)[-b]
         ))
         ov_names_y <- ov_names_y[!ov_names_y %in% ov_names_y2]
@@ -149,8 +149,8 @@ lav_partable_ndat <- function(partable) {
         }
 
         # except within-only 'x' (unless fixed.x)
-        ov_names_x <- lav_partable_vnames(partable, "ov.x", block = b)
-        ov_names_x2 <- unlist(lav_partable_vnames(partable, "ov",
+        ov_names_x <- lav_pt_vnames(partable, "ov.x", block = b)
+        ov_names_x2 <- unlist(lav_pt_vnames(partable, "ov",
           block = seq_len(nblocks)[-b]
         ))
         ov_names_x <- ov_names_x[!ov_names_x %in% ov_names_x2]
@@ -164,7 +164,7 @@ lav_partable_ndat <- function(partable) {
 
     # correction for fixed.x?
     if (!conditional_x && fixed_x) {
-      ov_names_x <- lav_partable_vnames(partable, "ov.x", block = b)
+      ov_names_x <- lav_pt_vnames(partable, "ov.x", block = b)
       nvar_x <- length(ov_names_x)
       pstar_x <- nvar_x * (nvar_x + 1) / 2
       if (meanstructure) {
@@ -179,7 +179,7 @@ lav_partable_ndat <- function(partable) {
 
     # composites?
     if (composites) {
-      ov_cind <- lav_partable_vnames(partable, "ov.cind", block = b)
+      ov_cind <- lav_pt_vnames(partable, "ov.cind", block = b)
       covar_idx <- which(partable$op == "~~" &
                          partable$lhs %in% ov_cind &
                          partable$rhs %in% ov_cind &
@@ -189,11 +189,11 @@ lav_partable_ndat <- function(partable) {
 
     # correction for ordinal data?
     if (categorical) {
-      ov_names_x <- lav_partable_vnames(partable, "ov.x", block = b)
+      ov_names_x <- lav_pt_vnames(partable, "ov.x", block = b)
       nexo <- length(ov_names_x)
-      ov_ord <- lav_partable_vnames(partable, "ov.ord", block = b)
+      ov_ord <- lav_pt_vnames(partable, "ov.ord", block = b)
       nvar_ord <- length(ov_ord)
-      th <- lav_partable_vnames(partable, "th", block = b)
+      th <- lav_pt_vnames(partable, "th", block = b)
       nth <- length(th)
       # no variances
       ndat[b] <- ndat[b] - nvar_ord
@@ -203,7 +203,7 @@ lav_partable_ndat <- function(partable) {
       ndat[b] <- ndat[b] + nth
       # add slopes
       if (conditional_x) {
-        ov_names_x <- lav_partable_vnames(partable, "ov.x", block = b)
+        ov_names_x <- lav_pt_vnames(partable, "ov.x", block = b)
         nexo <- length(ov_names_x)
         ndat[b] <- ndat[b] + (nvar * nexo)
       }
@@ -216,7 +216,7 @@ lav_partable_ndat <- function(partable) {
 
     # correction for conditional.x not categorical
     if (conditional_x && !categorical) {
-      ov_names_x <- lav_partable_vnames(partable, "ov.x", block = b)
+      ov_names_x <- lav_pt_vnames(partable, "ov.x", block = b)
       nexo <- length(ov_names_x)
       # add slopes
       ndat[b] <- ndat[b] + (nvar * nexo)
@@ -237,7 +237,7 @@ lav_partable_ndat <- function(partable) {
 }
 
 # total number of free parameters (ignoring equality constraints)
-lav_partable_npar <- function(partable) {
+lav_pt_npar <- function(partable) {
   # we only assume non-zero values
   npar <- length(which(partable$free > 0L))
   npar
@@ -248,9 +248,9 @@ lav_partable_npar <- function(partable) {
 #
 # we need to find the rank of con.jac to find the exact amount
 # of non-redundant equality constraints (this is done in lav_test.R)
-lav_partable_df <- function(partable) {
-  npar <- lav_partable_npar(partable)
-  ndat <- lav_partable_ndat(partable)
+lav_pt_df <- function(partable) {
+  npar <- lav_pt_npar(partable)
+  ndat <- lav_pt_ndat(partable)
 
   # degrees of freedom
   df <- ndat - npar
@@ -260,7 +260,7 @@ lav_partable_df <- function(partable) {
 
 # check order of covariances: we only fill the upper.tri
 # therefore, we 'switch' lhs & rhs if they appear in the wrong order
-lav_partable_covariance_reorder <- function(partable, # nolint
+lav_pt_covariance_reorder <- function(partable,
                                             ov_names = NULL,
                                             lv_names = NULL) {
   # shortcut
@@ -272,12 +272,12 @@ lav_partable_covariance_reorder <- function(partable, # nolint
 
   # get names
   if (is.null(ov_names)) {
-    ov_names <- lav_partable_vnames(partable, "ov")
+    ov_names <- lav_pt_vnames(partable, "ov")
   } else {
     ov_names <- unlist(ov_names)
   }
   if (is.null(lv_names)) {
-    lv_names <- lav_partable_vnames(partable, "lv")
+    lv_names <- lav_pt_vnames(partable, "lv")
     # add random slopes (if any)
     if (!is.null(partable$rv) && any(nchar(partable$rv) > 0L)) {
       rv_names <- unique(partable$rv[nchar(partable$rv) > 0L])
@@ -307,7 +307,7 @@ lav_partable_covariance_reorder <- function(partable, # nolint
 }
 
 # add a single parameter to an existing parameter table
-lav_partable_add <- function(partable = NULL, add = list()) {
+lav_pt_add <- function(partable = NULL, add = list()) {
   # treat partable as list, not as a data.frame
   partable <- as.list(partable)
 
@@ -345,7 +345,7 @@ lav_partable_add <- function(partable = NULL, add = list()) {
 # look for p2-row-idx of p1 elements
 # p1 is usually a subset of p2
 # return NA if not found
-lav_partable_map_id_p1_in_p2 <- function(p1, p2, stopifnotfound = TRUE,
+lav_pt_map_id_p1_in_p2 <- function(p1, p2, stopifnotfound = TRUE,
                                          exclude_nonpar = TRUE) {
   # check if we have a 'block' column (in both p1 and p2)
   if (is.null(p1$block)) {

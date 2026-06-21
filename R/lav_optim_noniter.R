@@ -6,11 +6,13 @@
 lav_optim_noniter <- function(lavmodel = NULL, lavsamplestats = NULL,
                               lavpartable = NULL, lavh1 = NULL,
                               lavdata = NULL, lavoptions = NULL) {
-  lavpta <- lav_partable_attributes(lavpartable)
-  lavpartable <- lav_partable_set_cache(lavpartable, lavpta)
+  lavpta <- lav_pt_attributes(lavpartable)
+  lavpartable <- lav_pt_set_cache(lavpartable, lavpta)
 
   # no support for many things:
-  if (lavmodel@ngroups > 1L) {
+  # (the IV estimator supports multiple groups, including cross-group equality
+  # constraints for measurement invariance)
+  if (lavmodel@ngroups > 1L && !identical(lavoptions$estimator, "IV")) {
     lav_msg_stop(gettext(
       "multiple groups not supported (yet) with optim.method = 'NONITER'."))
   }
@@ -38,8 +40,11 @@ lav_optim_noniter <- function(lavmodel = NULL, lavsamplestats = NULL,
     ))
   }
 
-  # no support (yet) for equality constraints
-  if (length(lavmodel@ceq.linear.idx) > 0L) {
+  # linear equality constraints are supported by the IV estimator (handled by
+  # a constrained system solve); other noniterative estimators do not (yet)
+  # support them
+  if (length(lavmodel@ceq.linear.idx) > 0L &&
+      !identical(lavoptions$estimator, "IV")) {
     lav_msg_stop(gettext(
       "equality constraints not supported (yet) with optim.method = 'NONITER'."
       ))

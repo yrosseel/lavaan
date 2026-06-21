@@ -47,7 +47,7 @@ lav_uvord_fit <- function(y = NULL,
   min_objective <- lav_uvord_min_objective
   y_ncat <- length(tabulate(y)) # number of response categories
   if (y_ncat > 1L) {
-    min_gradient <- lav_uvord_min_gradient
+    min_gradient <- lav_uvord_min_grad
     min_hessian <- lav_uvord_min_hessian
   } else {
     min_gradient <- NULL
@@ -166,7 +166,7 @@ lav_uvord_init_cache <- function(y = NULL,
 
   # missing values
   if (any(is.na(y)) || (!is.null(x) && any(is.na(x)))) {
-    lav_crossprod <- lav_matrix_crossprod
+    lav_crossprod <- lav_mat_crossprod
   } else {
     lav_crossprod <- base::crossprod
   }
@@ -301,7 +301,7 @@ lav_uvord_loglik_cache <- function(cache = NULL) {
 }
 
 # casewise scores
-lav_uvord_scores <- function(y = NULL,
+lav_uvord_sc <- function(y = NULL,
                              x = NULL,
                              wt = rep(1, length(y)),
                              use_weights = TRUE,
@@ -313,7 +313,7 @@ lav_uvord_scores <- function(y = NULL,
       logistic = logistic, output = "cache"
     )
   }
-  sc <- lav_uvord_scores_cache(cache = cache)
+  sc <- lav_uvord_sc_cache(cache = cache)
 
   if (!is.null(wt) && use_weights) {
     sc <- sc * wt
@@ -322,7 +322,7 @@ lav_uvord_scores <- function(y = NULL,
   sc
 }
 
-lav_uvord_scores_cache <- function(cache = NULL) {
+lav_uvord_sc_cache <- function(cache = NULL) {
   with(cache, {
     # d logl / d pi
     dldpi <- 1 / pi_i # unweighted!
@@ -344,7 +344,7 @@ lav_uvord_scores_cache <- function(cache = NULL) {
   })
 }
 
-lav_uvord_gradient_cache <- function(cache = NULL) {
+lav_uvord_grad_cache <- function(cache = NULL) {
   with(cache, {
     # d logl / d pi
     wtp <- wt / pi_i
@@ -382,7 +382,7 @@ lav_uvord_hessian <- function(y = NULL,
     )
   }
   tmp <- lav_uvord_loglik_cache(cache = cache)
-  tmp <- lav_uvord_gradient_cache(cache = cache)
+  tmp <- lav_uvord_grad_cache(cache = cache)
   lav_uvord_hessian_cache(cache = cache)
 }
 
@@ -438,13 +438,13 @@ lav_uvord_min_objective <- function(x, cache = NULL) {
 }
 
 # compute gradient, for specific 'x' (nlminb)
-lav_uvord_min_gradient <- function(x, cache = NULL) {
+lav_uvord_min_grad <- function(x, cache = NULL) {
   # check if x has changed
   if (!all(x == cache$theta)) {
     cache$theta <- x
     tmp <- lav_uvord_loglik_cache(cache = cache)
   }
-  -1 * lav_uvord_gradient_cache(cache = cache) / cache$n
+  -1 * lav_uvord_grad_cache(cache = cache) / cache$n
 }
 
 # compute hessian, for specific 'x' (nlminb)
@@ -453,14 +453,14 @@ lav_uvord_min_hessian <- function(x, cache = NULL) {
   if (!all(x == cache$theta)) {
     cache$theta <- x
     tmp <- lav_uvord_loglik_cache(cache = cache)
-    tmp <- lav_uvord_gradient_cache(cache = cache)
+    tmp <- lav_uvord_grad_cache(cache = cache)
     rm(tmp)
   }
   -1 * lav_uvord_hessian_cache(cache = cache) / cache$n
 }
 
 # get 'z1' and 'z2' values, given (new) values for the parameters
-# only needed for lav_bvord_cor_scores(), which is called from
+# only needed for lav_bvord_cor_sc(), which is called from
 # lav_pml_dploglik_dimplied() in lav_model_gradient_pml.R
 lav_uvord_update_fit <- function(fit_y = NULL, th_new = NULL, sl_new = NULL) {
   # return fit.y with 'update' z1/z2 values

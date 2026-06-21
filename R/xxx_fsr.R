@@ -128,7 +128,7 @@ fsr <- function(model = NULL,
   lavoptions$test <- dotdotdot$test
   ngroups <- lavInspect(fit_1, "ngroups")
   lavpta <- fit_1@pta
-  lavpartable <- lav_partable_set_cache(fit_1@ParTable, lavpta)
+  lavpartable <- lav_pt_set_cache(fit_1@ParTable, lavpta)
 
   # FIXME: not ready for multiple groups yet
   if (ngroups > 1L) {
@@ -139,7 +139,7 @@ fsr <- function(model = NULL,
   if (lavoptions$missing == "listwise") {
     # FIXME: make this work for multiple groups!!
     ov <- unique(unlist(lavpta$vnames$ov))
-    data <- na.omit(data[, ov])
+    data <- na.omit(data[, ov, drop = FALSE])
   }
 
   # any `regular' latent variables?
@@ -167,11 +167,11 @@ fsr <- function(model = NULL,
   # nfac <- length(lv_names)
 
   # check parameter table
-  pt_1 <- lav_partable_set_cache(parTable(fit_1))
+  pt_1 <- lav_pt_set_cache(parTable(fit_1))
   pt_1$est <- pt_1$se <- NULL
 
   # extract structural part
-  pt_pa <- lav_partable_subset_structural_model(pt_1)
+  pt_pa <- lav_pt_subset_sm(pt_1)
 
   # check if we can use skrondal & laake (no mediational terms?)
   if (fsr_method == "skrondal.laake") {
@@ -245,7 +245,7 @@ fsr <- function(model = NULL,
   for (b in 1:nblocks) {
     # create parameter table for this measurement block only
     pt_block <-
-      lav_partable_subset_measurement_model(
+      lav_pt_subset_mm(
         pt_1 = pt_1,
         add_lv_cov = TRUE,
         lv_names = mm_list[[b]]
@@ -342,12 +342,12 @@ fsr <- function(model = NULL,
   } # measurement block
 
   # Sigma.2 = Delta.21 %*% Sigma.1  %*% t(Delta.21)
-  sigma_2 <- lav_matrix_bdiag(sigma2_block)
+  sigma_2 <- lav_mat_bdiag(sigma2_block)
 
 
   # compute empirical covariance matrix factor scores + observed variables
   # in structural part
-  group_values <- lav_partable_group_values(pt_pa)
+  group_values <- lav_pt_group_values(pt_pa)
   fs_cov <- vector("list", length = ngroups)
   fsr_cov <- vector("list", length = ngroups)
   fsr_cov2 <- vector("list", length = ngroups)
@@ -398,8 +398,8 @@ fsr <- function(model = NULL,
 
     # STEP 1b: if using `Croon' method: correct COV matrix:
     if (fsr_method %in% c("croon")) {
-      scoffset <- lav_matrix_bdiag(lapply(lvinfo_1[[g]], "[[", "scoffset"))
-      scale_inv <- lav_matrix_bdiag(lapply(lvinfo_1[[g]], "[[", "scale.inv"))
+      scoffset <- lav_mat_bdiag(lapply(lvinfo_1[[g]], "[[", "scoffset"))
+      scale_inv <- lav_mat_bdiag(lapply(lvinfo_1[[g]], "[[", "scale.inv"))
 
       scoffset_1 <- matrix(0,
         nrow = length(struc_names),
@@ -412,7 +412,7 @@ fsr <- function(model = NULL,
 
       fsr_cov[[g]] <- scale_inv_1 %*% fs_cov[[g]] %*% scale_inv_1 - scoffset_1
     } else if (fsr_method == "simple") {
-      psi <- lav_matrix_bdiag(lapply(lvinfo_1[[g]], "[[", "psi"))
+      psi <- lav_mat_bdiag(lapply(lvinfo_1[[g]], "[[", "psi"))
 
       fsr_cov[[g]] <- fs_cov[[g]]
       # scalar version only (for now)
@@ -453,8 +453,8 @@ fsr <- function(model = NULL,
     if (fsr_method %in% c("croon", "simple")) {
       for (g in 1:ngroups) {
         old_inv <- solve(fs_cov[[g]])
-        old_inv_sqrt <- lav_matrix_symmetric_sqrt(old_inv)
-        fsr_cov_sqrt <- lav_matrix_symmetric_sqrt(fsr_cov[[g]])
+        old_inv_sqrt <- lav_mat_sym_sqrt(old_inv)
+        fsr_cov_sqrt <- lav_mat_sym_sqrt(fsr_cov[[g]])
         sc <- as.matrix(y[[g]])
         sc <- sc %*% old_inv_sqrt %*% fsr_cov_sqrt
         sc <- as.data.frame(sc)
@@ -517,10 +517,10 @@ fsr <- function(model = NULL,
   lavoptions2$test <- "none"
   lavoptions2$missing <- "listwise" # always complete data anyway...
   fit <- lavaan(pt_pa,
-    sample.cov = fsr_cov,
-    sample.mean = fs_mean,
-    sample.nobs = fit_1@SampleStats@nobs,
-    slotOptions = lavoptions2
+    sample_cov = fsr_cov,
+    sample_mean = fs_mean,
+    sample_nobs = fit_1@SampleStats@nobs,
+    slot_options = lavoptions2
   )
 
   # only to correct the SE, we create another model, augmented with
@@ -535,20 +535,20 @@ fsr <- function(model = NULL,
   lavoptions3$test <- "standard"
   lavoptions3$se <- "none"
   lavoptions3$check.gradient <- FALSE
-  lavoptions3$information <- "expected" ## FIXME: lav_model_gradient + delta
+  lavoptions3$information <- "expected" ## FIXME: lav_model_grad + delta
   fit_si2 <- lavaan(pt_si,
-    sample.cov  = fsr_cov2,
-    sample.mean = fs_mean,
-    sample.nobs = fit_1@SampleStats@nobs,
-    slotOptions = lavoptions3
+    sample_cov  = fsr_cov2,
+    sample_mean = fs_mean,
+    sample_nobs = fit_1@SampleStats@nobs,
+    slot_options = lavoptions3
   )
   info_all <- lavTech(fit_si2, "information") * nobs(fit)
-  i33 <- info_all[idx2, idx2]
-  i32 <- info_all[idx2, idx1]
+  i33 <- info_all[idx2, idx2, drop = FALSE]
+  i32 <- info_all[idx2, idx1, drop = FALSE]
   # i23 <- info_all[idx1, idx2]
   # i22 <- info_all[idx1, idx1]
 
-  i33_inv <- lav_matrix_symmetric_inverse(i33)
+  i33_inv <- lav_mat_sym_inverse(i33)
 
   v1 <- i33_inv
   v2 <- i33_inv %*% i32 %*% sigma_2 %*% t(i32) %*% i33_inv
@@ -560,10 +560,10 @@ fsr <- function(model = NULL,
   if (output == "lavaan" || output == "fsr") {
     lavoptions3$se <- "twostep"
     fit <- lavaan::lavaan(pt_pa2,
-      sample.cov = fsr_cov,
-      sample.mean = fs_mean,
-      sample.nobs = fit_1@SampleStats@nobs,
-      slotOptions = lavoptions3
+      sample_cov = fsr_cov,
+      sample_mean = fs_mean,
+      sample_nobs = fit_1@SampleStats@nobs,
+      slot_options = lavoptions3
     )
     fit@vcov$vcov <- vcov_1
   }
@@ -580,7 +580,7 @@ fsr <- function(model = NULL,
   # lavsamplestats@NACOV <- Omega.f
   # VCOV <- lav_model_vcov(fit@Model, lavsamplestats = lavsamplestats,
   #                       lavoptions = lavoptions)
-  # SE <- lav_model_vcov_se(fit@Model, fit@ParTable, VCOV = VCOV)
+  # SE <- lav_model_vcov_se(fit@Model, fit@ParTable, vcov = VCOV)
   # PE$se <- SE
   # tmp.se <- ifelse(PE$se == 0.0, NA, PE$se)
   # zstat <- pvalue <- TRUE

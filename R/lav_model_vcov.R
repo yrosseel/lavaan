@@ -63,6 +63,14 @@ lav_model_nvcov_bootstrap <- function(lavmodel = NULL,
     nc <- ncol(coef_1)
     test <- coef_1[, nc]
     coef_1 <- coef_1[, -nc, drop = FALSE]
+    # the last column is the (bollen.stine) test statistic, not a
+    # coefficient; remove it from BOOT.COEF too (it is stored separately
+    # in BOOT.TEST), but preserve the attributes (error.idx, nonadmissible,
+    # seed, ...) that subsetting would otherwise drop
+    keep_attr <- attributes(coef_orig)
+    keep_attr[c("dim", "dimnames")] <- NULL
+    coef_orig <- coef_orig[, -nc, drop = FALSE]
+    attributes(coef_orig) <- c(attributes(coef_orig), keep_attr)
   }
 
   # new in 0.6-20: check for outliers, ie big difference between sd() and mad()
@@ -71,7 +79,7 @@ lav_model_nvcov_bootstrap <- function(lavmodel = NULL,
                    apply(coef_1, 2, mad, na.rm = TRUE))
   crit_ratio <- 5
   if (any(sd_mad_ratio > crit_ratio)) {
-    names_1 <- lav_partable_labels(lavpartable, type = "free")
+    names_1 <- lav_pt_labels(lavpartable, type = "free")
     params_w_outliers <- paste(names_1[sd_mad_ratio > crit_ratio],
                                collapse = " ")
     lav_msg_warn(gettextf(
@@ -113,7 +121,7 @@ lav_model_nvcov_robust_sem <- function(lavmodel = NULL,
     # - gamma is not identical to what is used for WLS; closer to EQS
     # - N/N-1 bug in G11 for NVarCov (but not test statistic)
     # - we divide by N-1! (just like EQS)
-    e_inv <- lav_model_information_expected_mlm(
+    e_inv <- lav_model_info_expected_mlm(
       lavmodel = lavmodel,
       lavsamplestats = lavsamplestats,
       extra = TRUE,
@@ -122,7 +130,7 @@ lav_model_nvcov_robust_sem <- function(lavmodel = NULL,
       use_ginv = use_ginv
     )
   } else {
-    e_inv <- lav_model_information(
+    e_inv <- lav_model_info(
       lavmodel = lavmodel,
       lavsamplestats = lavsamplestats,
       lavdata = lavdata,
@@ -231,7 +239,7 @@ lav_model_nvcov_robust_sandwich <- function(lavmodel = NULL,    # nolint
   #       B == outer product of case-wise scores
 
   # inverse observed/expected information matrix
-  e_inv <- lav_model_information(
+  e_inv <- lav_model_info(
     lavmodel = lavmodel,
     lavsamplestats = lavsamplestats,
     lavdata = lavdata,
@@ -261,7 +269,7 @@ lav_model_nvcov_robust_sandwich <- function(lavmodel = NULL,    # nolint
 
   # outer product of case-wise scores
   b0 <-
-    lav_model_information_firstorder(
+    lav_model_info_firstorder(
       lavmodel = lavmodel,
       lavsamplestats = lavsamplestats,
       lavdata = lavdata,
@@ -342,7 +350,7 @@ lav_model_nvcov_two_stage <- function(lavmodel = NULL,
 
 
   # information matrix
-  e_inv <- lav_model_information(
+  e_inv <- lav_model_info(
     lavmodel = lavmodel,
     lavsamplestats = lavsamplestats,
     lavdata = lavdata,
@@ -398,25 +406,61 @@ lav_model_nvcov_two_stage <- function(lavmodel = NULL,
       sigma_1 <- lavimplied$cov[[g]]
     }
 
+    # auxiliary variables (aux=): with two-stage estimation, the stage-1
+    # saturated moments are estimated over the augmented set [model vars, aux],
+    # so the stage-1 ACOV (Omega) must be computed over that augmented set and
+    # then reduced to the model-variable moments (Savalei & Bentler, 2009).
+    # We only do this when there are no fixed-x covariates (the common case).
+    aux_g <- if (length(lavdata@aux) >= g) lavdata@aux[[g]] else NULL
+    use_aux <- !is.null(aux_g) && NCOL(aux_g) > 0L &&
+      length(lavsamplestats@x.idx[[g]]) == 0L
+    if (use_aux) {
+      y_g <- cbind(lavdata@X[[g]], aux_g)
+      mp_g <- lav_data_mi_patterns(y_g)
+      mu_g <- lavsamplestats@missing.h1[[g]]$mu.aug
+      sigma_g <- lavsamplestats@missing.h1[[g]]$sigma.aug
+      if (is.null(mu_g) || is.null(sigma_g)) {
+        em_aug <- lav_mvn_mi_h1_est_moments(y_g,
+          mp = mp_g, max_iter = lavoptions$em.h1.iter.max,
+          tol = lavoptions$em.h1.tol
+        )
+        mu_g <- em_aug$Mu
+        sigma_g <- em_aug$Sigma
+      }
+      midx <- lav_aux_moment_idx(
+        p_model = NCOL(lavdata@X[[g]]), p_aug = NCOL(y_g)
+      )
+    } else {
+      y_g <- lavdata@X[[g]]
+      mp_g <- lavdata@Mp[[g]]
+      mu_g <- mu
+      sigma_g <- sigma_1
+      midx <- NULL
+    }
+
     # compute 'gamma' (or Omega.beta)
     if (lavoptions$se == "two.stage") {
       # this is Savalei & Bentler (2009)
       if (lavoptions$information[1] == "expected") {
-        info <- lav_mvnorm_missing_information_expected(
-          y = lavdata@X[[g]], mp = lavdata@Mp[[g]],
+        info <- lav_mvn_mi_info_expected(
+          y = y_g, mp = mp_g,
           wt = lavdata@weights[[g]],
-          mu = mu, sigma_1 = sigma_1,
+          mu = mu_g, sigma_1 = sigma_g,
           x_idx = lavsamplestats@x.idx[[g]]
         )
       } else {
         info <- lav_mvnorm_missing_information_observed_samplestats(
-          yp = lavsamplestats@missing[[g]],
+          yp = if (use_aux) {
+            lav_samp_mi_patterns(y = y_g, mp = mp_g)
+          } else {
+            lavsamplestats@missing[[g]]
+          },
           # wt not needed
-          mu = mu, sigma_1 = sigma_1,
+          mu = mu_g, sigma_1 = sigma_g,
           x_idx = lavsamplestats@x.idx[[g]]
         )
       }
-      gamma[[g]] <- lav_matrix_symmetric_inverse(info)
+      omega_g <- lav_mat_sym_inverse(info)
     } else { # we assume "robust.two.stage"
       # NACOV is here incomplete gamma
       # Savalei & Falk (2014)
@@ -426,16 +470,28 @@ lav_model_nvcov_two_stage <- function(lavmodel = NULL,
       } else {
         cluster_idx <- NULL
       }
-      gamma[[g]] <- lav_mvnorm_missing_h1_omega_sw(
-        y = lavdata@X[[g]],
-        mp = lavdata@Mp[[g]],
-        yp = lavsamplestats@missing[[g]],
+      omega_g <- lav_mvn_mi_h1_omega_sw(
+        y = y_g,
+        mp = mp_g,
+        yp = if (use_aux) {
+          lav_samp_mi_patterns(y = y_g, mp = mp_g)
+        } else {
+          lavsamplestats@missing[[g]]
+        },
         wt = lavdata@weights[[g]],
         cluster_idx = cluster_idx,
-        mu = mu, sigma_1 = sigma_1,
+        mu = mu_g, sigma_1 = sigma_g,
         x_idx = lavsamplestats@x.idx[[g]],
         information = lavoptions$information[1]
       )
+    }
+
+    # auxiliary variables: reduce the augmented Omega to the model-variable
+    # moments (sub-matrix of the inverse information)
+    if (use_aux) {
+      gamma[[g]] <- omega_g[midx, midx, drop = FALSE]
+    } else {
+      gamma[[g]] <- omega_g
     }
 
     # compute
@@ -482,7 +538,7 @@ lav_model_vcov <- function(lavmodel = NULL,
   }
 
   if (se == "standard") {
-    nvar_cov <- lav_model_information(
+    nvar_cov <- lav_model_info(
       lavmodel = lavmodel,
       lavsamplestats = lavsamplestats,
       lavdata = lavdata,
@@ -497,7 +553,7 @@ lav_model_vcov <- function(lavmodel = NULL,
     )
   } else if (se == "first.order") {
     nvar_cov <-
-      lav_model_information_firstorder(
+      lav_model_info_firstorder(
         lavmodel = lavmodel,
         lavsamplestats = lavsamplestats,
         lavdata = lavdata,
@@ -669,17 +725,100 @@ lav_model_vcov <- function(lavmodel = NULL,
   var_cov
 }
 
-lav_model_vcov_se <- function(lavmodel, lavpartable, VCOV = NULL, # nolint start
-                              BOOT = NULL) {                      # nolint end
+# Generate Monte Carlo draws for the free parameters from a multivariate
+# normal distribution with mean = coef_hat (the point estimate) and
+# covariance = VCOV. Used for Preacher & Selig (2012)-style Monte Carlo
+# confidence intervals for defined parameters.
+#
+# Returns an R x n_free matrix. The number of draws and (optional) seed
+# are taken from lavoptions$monte.carlo.
+lav_model_vcov_mc <- function(lavmodel = NULL, vcov = NULL,
+                              lavoptions = NULL) {
+  if (is.null(vcov) || inherits(vcov, "try-error")) {
+    return(NULL)
+  }
+  r <- 20000L
+  seed <- NULL
+  if (!is.null(lavoptions) && !is.null(lavoptions$monte.carlo)) {
+    if (!is.null(lavoptions$monte.carlo$R)) {
+      r <- as.integer(lavoptions$monte.carlo$R)
+    }
+    if (!is.null(lavoptions$monte.carlo$seed)) {
+      seed <- lavoptions$monte.carlo$seed
+    }
+  }
+  stopifnot(r > 0L)
+
+  coef_hat <- lav_model_get_parameters(lavmodel = lavmodel, type = "free")
+  # ensure we sample in the dimension of vcov: typically n_free, but
+  # with simple equality constraints (ceq.simple.only) vcov is in unco
+  # space; in that case lift coef_hat via t(K)
+  if (lavmodel@ceq.simple.only && nrow(vcov) == nrow(lavmodel@ceq.simple.K)) {
+    coef_hat <- drop(lavmodel@ceq.simple.K %*% coef_hat)
+  }
+
+  # save and restore RNG state so mc sampling does not perturb the
+  # user's global seed
+  if (exists(".Random.seed", envir = .GlobalEnv, inherits = FALSE)) {
+    saved_seed <- get(".Random.seed", envir = .GlobalEnv, inherits = FALSE)
+    on.exit(assign(".Random.seed", saved_seed, envir = .GlobalEnv), add = TRUE)
+  } else {
+    on.exit({
+      if (exists(".Random.seed", envir = .GlobalEnv, inherits = FALSE)) {
+        rm(".Random.seed", envir = .GlobalEnv)
+      }
+    }, add = TRUE)
+  }
+  if (!is.null(seed)) {
+    set.seed(seed)
+  }
+
+  # symmetrize vcov for safety
+  vcov_sym <- 0.5 * (vcov + t(vcov))
+  mc_coef <- lav_mvrnorm(n = r, mu = coef_hat, sigma_1 = vcov_sym,
+                         check_symmetry = FALSE)
+  if (!is.matrix(mc_coef)) {
+    mc_coef <- matrix(mc_coef, nrow = r)
+  }
+  mc_coef
+}
+
+# Is the Monte Carlo method requested for defined parameters?
+lav_model_vcov_se_mc_active <- function(lavoptions) {
+  isTRUE(!is.null(lavoptions) &&
+    identical(lavoptions$se.def, "monte.carlo"))
+}
+
+# Reduce a vcov matrix from the 'unco' space (one row/column per
+# non-collapsed free parameter, nx.unco) to the 'compact' space (one
+# row/column per free parameter, nx.free) for ceq.simple.only models. This is
+# needed whenever the vcov must be combined with a jacobian/hessian that is
+# expressed in the compact (nx.free) space (e.g. defined parameters, Wald
+# tests). vcov is returned unchanged if it is not in the unco space.
+lav_model_vcov_unco_to_free <- function(lavmodel, vcov) {
+  if (lavmodel@ceq.simple.only && nrow(lavmodel@ceq.simple.K) > 0L &&
+      nrow(vcov) == nrow(lavmodel@ceq.simple.K)) {
+    rep_idx <- apply(lavmodel@ceq.simple.K, 2L,
+                     function(col) which(col != 0)[1L])
+    vcov <- vcov[rep_idx, rep_idx, drop = FALSE]
+  }
+  vcov
+}
+
+lav_model_vcov_se <- function(lavmodel, lavpartable, vcov = NULL,
+                              boot = NULL, mc = NULL,
+                              lavoptions = NULL, ...) {
+  dotdotdot <- list(...)
+  lav_adapt_func(environment(), dotdotdot, NULL)
   # 0. special case
-  if (is.null(VCOV)) {
-    se <- rep(as.numeric(NA), lavmodel@nx.user)
+  if (is.null(vcov)) {
+    se <- rep(NA_real_, lavmodel@nx.user)
     se[lavpartable$free == 0L] <- 0.0
     return(se)
   }
 
   # 1. free parameters only
-  x_var <- diag(VCOV)
+  x_var <- diag(vcov)
   # check for negative values (what to do: NA or 0.0?)
   x_var[x_var < 0] <- as.numeric(NA)
   x_se <- sqrt(x_var)
@@ -698,7 +837,7 @@ lav_model_vcov_se <- function(lavmodel, lavpartable, VCOV = NULL, # nolint start
   # se for full parameter table, but with 0.0 entries for def/ceq/cin
   # elements
   se <- lav_model_get_parameters(
-    lavmodel = lavmodel, GLIST = glist,
+    lavmodel = lavmodel, glist = glist,
     type = "user", extra = FALSE
   )
 
@@ -710,12 +849,34 @@ lav_model_vcov_se <- function(lavmodel, lavpartable, VCOV = NULL, # nolint start
   # 3. defined parameters:
   def_idx <- which(lavpartable$op == ":=")
   if (length(def_idx) > 0L) {
-    if (!is.null(BOOT)) {
+    # if Monte Carlo samples are not supplied but requested, draw them
+    if (is.null(mc) && is.null(boot) &&
+        lav_model_vcov_se_mc_active(lavoptions)) {
+      mc <- lav_model_vcov_mc(lavmodel = lavmodel, vcov = vcov,
+                              lavoptions = lavoptions)
+    }
+    if (!is.null(mc)) {
+      mc_def <- apply(mc, 1L, lavmodel@def.function)
+      if (length(def_idx) == 1L) {
+        mc_def <- as.matrix(mc_def)
+      } else {
+        mc_def <- t(mc_def)
+      }
+      # def.function maps invalid evaluations (NaN) to +Inf;
+      # treat those draws as missing so that cov() ignores them
+      mc_def[!is.finite(mc_def)] <- as.numeric(NA)
+      def_cov <- cov(mc_def, use = "pairwise.complete.obs")
+      diag_def_cov <- diag(def_cov)
+      diag_def_cov[diag_def_cov < 0] <- as.numeric(NA)
+      se[def_idx] <- sqrt(diag_def_cov)
+      return(se)
+    }
+    if (!is.null(boot)) {
       # we must remove the NA rows (and hope we have something left)
-      error_idx <- attr(BOOT, "error.idx")
-      boot <- BOOT
+      error_idx <- attr(boot, "error.idx")
+      boot <- boot
       if (length(error_idx) > 0L) {
-        boot <- BOOT[-error_idx, , drop = FALSE] # drops attributes
+        boot <- boot[-error_idx, , drop = FALSE] # drops attributes
       }
 
       boot_def <- apply(boot, 1L, lavmodel@def.function)
@@ -746,13 +907,61 @@ lav_model_vcov_se <- function(lavmodel, lavpartable, VCOV = NULL, # nolint start
       jac <- try(lav_func_jacobian_complex(func = lavmodel@def.function, x = x),
         silent = TRUE
       )
-      if (inherits(jac, "try-error")) { # eg. pnorm()
+      use_complex <- !inherits(jac, "try-error")
+      if (!use_complex) { # eg. pnorm()
         jac <- lav_func_jacobian_simple(func = lavmodel@def.function, x = x)
       }
-      if (lavmodel@ceq.simple.only) {
-        jac <- jac %*% t(lavmodel@ceq.simple.K)
+
+      # second-order delta method: compute Hessian for each defined param
+      hess_list <- NULL
+      if (!is.null(lavoptions) &&
+        isTRUE(lavoptions$se.delta.second.order)) {
+        if (use_complex) {
+          hess_list <- try(lav_func_hessian_complex(
+            func = lavmodel@def.function, x = x), silent = TRUE)
+          if (inherits(hess_list, "try-error")) {
+            hess_list <- try(lav_func_hessian_simple(
+              func = lavmodel@def.function, x = x), silent = TRUE)
+          }
+        } else {
+          hess_list <- try(lav_func_hessian_simple(
+            func = lavmodel@def.function, x = x), silent = TRUE)
+        }
+        if (inherits(hess_list, "try-error")) {
+          lav_msg_warn(gettext(
+            "Could not compute the Hessian of the defined parameters;
+             falling back to the first-order delta method."))
+          hess_list <- NULL
+        }
       }
-      def_cov <- jac %*% VCOV %*% t(jac)
+
+      # jac (and hess_list) are in the compact (nx.free) space; when
+      # ceq.simple.only, vcov is in the larger 'unco' space, so reduce vcov to
+      # the compact space. NB: previously jac was *expanded* to the unco space
+      # via ceq.simple.K, which multiply-counts the shared parameters and
+      # inflates the SE of defined parameters that involve them.
+      vcov_def <- lav_model_vcov_unco_to_free(lavmodel, vcov)
+      def_cov <- jac %*% vcov_def %*% t(jac)
+
+      # add second-order delta method correction:
+      # Cov(g_i, g_j) ~ grad_i' V grad_j + 0.5 tr(H_i V H_j V)
+      if (!is.null(hess_list)) {
+        ndef_1 <- length(hess_list)
+        correction <- matrix(0, ndef_1, ndef_1)
+        hv_list <- lapply(hess_list, function(h) h %*% vcov_def)
+        for (i in seq_len(ndef_1)) {
+          for (j in i:ndef_1) {
+            # tr(A B) where A = H_i V, B = H_j V
+            #   = sum_{a,b} A_{a,b} B_{b,a}
+            #   = sum element-wise of A and t(B)
+            correction[i, j] <- 0.5 * sum(hv_list[[i]] * t(hv_list[[j]]))
+            if (i != j) {
+              correction[j, i] <- correction[i, j]
+            }
+          }
+        }
+        def_cov <- def_cov + correction
+      }
     }
     # check for negative se's
     diag_def_cov <- diag(def_cov)

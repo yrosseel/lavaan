@@ -21,7 +21,7 @@ lav_efalist_summary_print(x, nd = 3L, cutoff = 0.3, dot.cutoff = 0.1,
     call to \code{lav_efalist_summary}.}
 \item{nd}{Integer. The number of digits that are printed after the decimal 
     point in the output.}
-\item{cutoff}{Numeric. Factor loadings smaller that this value (in absolute
+\item{cutoff}{Numeric. Factor loadings smaller than this value (in absolute
     value) are not printed
     (even if they are significantly different from zero). The idea is that
     only medium to large factor loadings are printed, to better see the
@@ -30,7 +30,7 @@ lav_efalist_summary_print(x, nd = 3L, cutoff = 0.3, dot.cutoff = 0.1,
     than this value, but smaller (in absolute value) than the cutoff value 
     are shown as a dot. They represent small loadings that may still need your
     attention.}
-\item{alpha.level}{Numeric. If the the p-value of a factor loading is smaller
+\item{alpha.level}{Numeric. If the p-value of a factor loading is smaller
     than this value, a significance star is printed to the right of the 
     factor loading. To switch this off, use \code{alpha.level = 0}.}
 \item{lambda}{Logical. If \code{TRUE}, include the (standardized) factor 
@@ -50,13 +50,13 @@ lav_efalist_summary_print(x, nd = 3L, cutoff = 0.3, dot.cutoff = 0.1,
     of squares of factor loadings (and related measures) in the summary.
     The sums of squares are computed as the
     diagonal elements of Lambda times Psi (where Psi is the matrix of
-    factor correlations.).
-    If orthogonal rotation was used, Psi is diagonal and the sums of 
+    factor correlations).
+    If orthogonal rotation was used, Psi is diagonal and the sums of
     squares are identical to the sums of the squared column elements of the 
     Lambda matrix (i.e., the factor loadings). This is no longer the case
-    when obique rotation has been used. But in both cases (orthgonal or
+    when oblique rotation has been used. But in both cases (orthogonal or
     oblique), the (total) sum of the sums of squares equals the sum of the
-    communalities. In the second row of the table (Proportion of total), 
+    communalities. In the second row of the table (Proportion of total),
     the sums of squares are divided by the total. In the third row of the 
     table (Proportion var), the sums of squares are divided by the 
     number of items.}

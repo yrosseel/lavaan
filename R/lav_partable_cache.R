@@ -1,5 +1,5 @@
 # store pta in attributes of partable
-lav_partable_set_cache <- function(partable, pta = NULL, force = FALSE) {
+lav_pt_set_cache <- function(partable, pta = NULL, force = FALSE) {
   if (!force &&
       !is.null(attr(partable, "vnames")) &&
       !is.null(attr(partable, "nvar"))) {
@@ -7,7 +7,7 @@ lav_partable_set_cache <- function(partable, pta = NULL, force = FALSE) {
     }
   if (is.null(pta)) {
     if (force) attr(partable, "vnames") <- NULL
-    pta <- lav_partable_attributes(partable)
+    pta <- lav_pt_attributes(partable)
   }
 
   for (n in names(pta)) {
@@ -17,7 +17,7 @@ lav_partable_set_cache <- function(partable, pta = NULL, force = FALSE) {
   partable
 }
 
-lav_partable_remove_cache <- function(partable) {
+lav_pt_remove_cache <- function(partable) {
   attributelist <- names(attributes(partable))
 
   for (n in attributelist) {

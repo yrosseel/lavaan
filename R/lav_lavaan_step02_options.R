@@ -1,5 +1,5 @@
-lav_lavaan_step02_options <- function(slot_options = NULL, # nolint
-                                      slot_data = NULL, # nolint
+lav_step02_options <- function(slot_options = NULL,
+                                      slot_data = NULL,
                                       flat_model = NULL,
                                       ordered = NULL,
                                       ordered_orig = NULL,
@@ -20,20 +20,20 @@ lav_lavaan_step02_options <- function(slot_options = NULL, # nolint
   # #  2. lavoptions  # #
   # # # # # # # # # # # #
 
-  # if slotOptions not NULL
+  # if slot_options not NULL
   #   copy to lavoptions and modify categorical/clustered/multilevel
   #     inserting a "." in the first position
   #   if necessary, overwrite with values in dotdotdot and issue a warning
   #   check if all names in dotdotdot are possible options, if not *** error ***
   #   create complete option list (lav_options_default) and substitute values
   #     given in dotdotdot
-  #   if data, slotData and sample.cov NULL: opt$bounds = FALSE
-  #   if slotData$data.type != "full" or (slotData and data = NULL):
+  #   if data, slot_data and sample_cov NULL: opt$bounds = FALSE
+  #   if slot_data$data.type != "full" or (slot_data and data = NULL):
   #     opt$missing = "listwise"
   #   set categorical mode ON if
   #     - an operator "|" (threshold) was used
   #     - data not NULL and one or more elements in ordered parameter
-  #     - sample.th provided
+  #     - sample_th provided
   #     - at least one of the non-exogenous observed variables is "ordered"
   #       (ordered factor in R)
   #   if opt$estimator == "catml": set categorical mode OFF
@@ -48,7 +48,7 @@ lav_lavaan_step02_options <- function(slot_options = NULL, # nolint
   #     set opt$estimator to "MLR"
   #   if constraints present and estimator == "ML", set opt$information to
   #     c("observed", "observed")
-  #   if there is an operator "~1" in flat.model and sample.mean not NULL,
+  #   if there is an operator "~1" in flat_model and sample_mean not NULL,
   #     set opt$meanstructure TRUE
   #   if there are no exogenous variables but conditional.x explicitly
   #     requested: ** warning **
@@ -80,7 +80,7 @@ lav_lavaan_step02_options <- function(slot_options = NULL, # nolint
       dot_names <- names(dotdotdot)
       op_idx <- which(dot_names %in% names(slot_options))
       lav_msg_warn(gettext(
-        "the following argument(s) override(s) the options in slotOptions:"),
+        "the following argument(s) override(s) the options in slot_options:"),
         paste(dot_names[op_idx], collapse = " ")
       )
       lavoptions[dot_names[op_idx]] <- dotdotdot[op_idx]
@@ -107,7 +107,7 @@ lav_lavaan_step02_options <- function(slot_options = NULL, # nolint
 
     # modifyList
     if (is.list(dotdotdot$rotation.args)) {
-      names(dotdotdot$rotation.args) <- lav_snake_case(names(dotdotdot$rotation.args))
+      dotdotdot$rotation.args <- lav_snake_case(dotdotdot$rotation.args)
     }
     opt <- modifyList(opt, dotdotdot)
 
@@ -161,7 +161,22 @@ lav_lavaan_step02_options <- function(slot_options = NULL, # nolint
       opt$.categorical <- FALSE
     }
 
-    # check for WLSMV estimator with NULL ordered= argument (new in 0.6-22)
+    # IV estimator: default to two-stage missing-data handling when the data
+    # contain missing values among the modeled variables and the user did not
+    # request a 'missing' option. (opt$missing is still "default" here; it is
+    # resolved to "listwise" later in lav_options_set().) This must happen
+    # before lav_options_set() so the two.stage option cascade (meanstructure,
+    # information, ...) and lavData (no listwise deletion) are set up correctly.
+    if (toupper(estimator) == "IV" && identical(opt$missing, "default") &&
+        !opt$.categorical && is.data.frame(data)) {
+      tmp_ov <- unique(c(unlist(ov_names_y), unlist(ov_names_x)))
+      tmp_ov <- tmp_ov[tmp_ov %in% names(data)]
+      if (length(tmp_ov) > 0L && anyNA(data[, tmp_ov, drop = FALSE])) {
+        opt$missing <- "two.stage"
+      }
+    }
+
+    # check for WLSMV estimator with NULL ordered= argument (new in 0.7-1)
     # to avoid unintentional use of WLSMV
     # we do this here, because we need the value of opt$.categorical
     if (!opt$.categorical && is.null(ordered_orig) && !estimator == "default") {
@@ -192,14 +207,21 @@ lav_lavaan_step02_options <- function(slot_options = NULL, # nolint
       opt$.multilevel <- FALSE
     }
 
+    # sampling weights? (internal flag; used when resolving estimator
+    # defaults, e.g. the se/test defaults for continuous ULS)
+    opt$.sampling.weights <- !is.null(sampling_weights)
+
     # sampling weights? force MLR
     # HJ 18/10/23: Except for PML
+    # YR 17/06/26: only force se/test if the user did not explicitly
+    #              request a value for them; if the user insists on a
+    #              different se=/test=, we honor that choice
     if (!is.null(sampling_weights) && !opt$.categorical &&
       toupper(estimator) %in% c("DEFAULT", "ML", "PML")) {
-      if (opt$se != "none") {
+      if (opt$se != "none" && is.null(dotdotdot$se)) {
         opt$se <- "robust.huber.white"
       }
-      if (opt$se != "none") {
+      if (opt$se != "none" && is.null(dotdotdot$test)) {
         opt$test <- "yuan.bentler.mplus"
       }
     }
@@ -252,7 +274,7 @@ lav_lavaan_step02_options <- function(slot_options = NULL, # nolint
     lavoptions <- lav_options_set(opt)
 
     # store check.sigma.pd in lavaan_cache_env
-    assign("opt_check_sigma_pd", opt$check.sigma.pd, lavaan_cache_env)        # nolint
+    assign("opt_check_sigma_pd", opt$check.sigma.pd, lavaan_cache_env)
 
     if (lav_verbose()) {
       cat(" done.\n")

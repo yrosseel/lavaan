@@ -4,44 +4,45 @@
 # YR - 26 Oct 2024: rm pop.model, add est.true argument
 
 lavSimulate <- function(model = NULL, # user model
-                        dataFunction = lav_data_simulate_old,
-                        dataFunction.args = list(),
-                        est.true = NULL,
+                        data_function = lav_data_simulate_old,
+                        data_function_args = list(),
+                        est_true = NULL,
                         ndat = 1000L,
                         cmd = "sem",
                         ...,
-                        store.slots = c("partable"),
-                        FUN = NULL,
-                        show.progress = FALSE,
-                        store.failed = FALSE,
+                        store_slots = c("partable"),
+                        fun = NULL,
+                        show_progress = FALSE,
+                        store_failed = FALSE,
                         parallel = c("no", "multicore", "snow"),
                         ncpus = max(1L, parallel::detectCores() - 1L),
                         cl = NULL,
                         iseed = NULL) {
   # dotdotdot
   dotdotdot <- list(...)
+  lav_adapt_func(environment(), dotdotdot, FALSE)
 
   # dotdotdot for fit.pop
-  dotdotdot.pop <- dotdotdot
-  dotdotdot.pop$verbose <- FALSE
-  dotdotdot.pop$debug <- FALSE
-  dotdotdot.pop$data <- NULL
-  dotdotdot.pop$sample.cov <- NULL
+  dotdotdot_pop <- dotdotdot
+  dotdotdot_pop$verbose <- FALSE
+  dotdotdot_pop$debug <- FALSE
+  dotdotdot_pop$data <- NULL
+  dotdotdot_pop$sample_cov <- NULL
 
   # 'fit' model without data, check 'true' parameters
-  fit.pop <- do.call(cmd,
-    args = c(list(model = model), dotdotdot.pop)
+  fit_pop <- do.call(cmd,
+    args = c(list(model = model), dotdotdot_pop)
   )
 
   # check est.true= argument
-  stopifnot(!missing(est.true), is.numeric(est.true),
-            length(fit.pop@ParTable$lhs) == length(est.true))
-  fit.pop@ParTable$est <- est.true
-  fit.pop@ParTable$start <- est.true
+  stopifnot(!missing(est_true), is.numeric(est_true),
+            length(fit_pop@ParTable$lhs) == length(est_true))
+  fit_pop@ParTable$est <- est_true
+  fit_pop@ParTable$start <- est_true
 
   # per default, use 'true' values as starting values
   if (is.null(dotdotdot$start)) {
-    dotdotdot$start <- fit.pop
+    dotdotdot$start <- fit_pop
   }
 
   # no warnings during/after the simulations
@@ -50,12 +51,12 @@ lavSimulate <- function(model = NULL, # user model
   # generate simulations
   fit <- do.call("lavaanList", args = c(list(
     model = model,
-    dataFunction = dataFunction,
-    dataFunction.args = dataFunction.args,
+    dataFunction = data_function,
+    dataFunction.args = data_function_args,
     ndat = ndat, cmd = cmd,
-    store.slots = store.slots, FUN = FUN,
-    show.progress = show.progress,
-    store.failed = store.failed,
+    store.slots = store_slots, FUN = fun,
+    show.progress = show_progress,
+    store.failed = store_failed,
     parallel = parallel, ncpus = ncpus,
     cl = cl, iseed = iseed
   ), dotdotdot))
@@ -64,7 +65,7 @@ lavSimulate <- function(model = NULL, # user model
   fit@meta$lavSimulate <- TRUE
 
   # store 'true' parameters in meta$est.true
-  fit@meta$est.true <- est.true
+  fit@meta$est.true <- est_true
 
   fit
 }

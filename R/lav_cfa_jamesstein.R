@@ -138,14 +138,14 @@ lav_cfa_jamesstein_internal <- function(lavobject = NULL, # convenience
     # extract slots
     lavmodel <- lavobject@Model
     lavsamplestats <- lavobject@SampleStats
-    lavpartable <- lav_partable_set_cache(lavobject@ParTable, lavobject@pta)
+    lavpartable <- lav_pt_set_cache(lavobject@ParTable, lavobject@pta)
     lavpta <- lavobject@pta
     lavdata <- lavobject@Data
     lavoptions <- lavobject@Options
   }
   if (is.null(lavpta)) {
-    lavpta <- lav_partable_attributes(lavpartable)
-    lavpartable <- lav_partable_set_cache(lavpartable, lavpta)
+    lavpta <- lav_pt_attributes(lavpartable)
+    lavpartable <- lav_pt_set_cache(lavpartable, lavpta)
   }
 
   # no structural part!
@@ -163,7 +163,7 @@ lav_cfa_jamesstein_internal <- function(lavobject = NULL, # convenience
     lav_msg_stop(gettext("JS(A) estimator not available if std.lv = TRUE"))
   }
 
-  nblocks <- lav_partable_nblocks(lavpartable)
+  nblocks <- lav_pt_nblocks(lavpartable)
   stopifnot(nblocks == 1L) # for now
   b <- 1L
   sample_cov <- lavsamplestats@cov[[b]]
@@ -176,7 +176,7 @@ lav_cfa_jamesstein_internal <- function(lavobject = NULL, # convenience
   # only diagonal THETA for now...
   theta_idx <- which(names(lavmodel@GLIST) == "theta") # usually '2'
   m_theta <- lavmodel@m.free.idx[[theta_idx]]
-  nondiag_idx <- m_theta[!m_theta %in% lav_matrix_diag_idx(nvar)]
+  nondiag_idx <- m_theta[!m_theta %in% lav_mat_diag_idx(nvar)]
   if (length(nondiag_idx) > 0L) {
     lav_msg_warn(gettext(
       "this implementation of JS/JSA does not handle correlated residuals yet!"

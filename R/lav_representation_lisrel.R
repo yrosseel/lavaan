@@ -39,11 +39,11 @@ lav_lisrel <- function(lavpartable = NULL,
   }
 
   # number of blocks
-  nblocks <- lav_partable_nblocks(lavpartable)
+  nblocks <- lav_pt_nblocks(lavpartable)
 
   # multilevel?
-  nlevels <- lav_partable_nlevels(lavpartable)
-  ngroups <- lav_partable_ngroups(lavpartable)
+  nlevels <- lav_pt_nlevels(lavpartable)
+  ngroups <- lav_pt_ngroups(lavpartable)
 
   ov_dummy_names_nox <- vector("list", nblocks)
   ov_dummy_names_x <- vector("list", nblocks)
@@ -59,18 +59,18 @@ lav_lisrel <- function(lavpartable = NULL,
   for (g in 1:nblocks) {
     # info from user model per block
     if (gamma) {
-      ov_names <- lav_partable_vnames(lavpartable, "ov.nox", block = g)
+      ov_names <- lav_pt_vnames(lavpartable, "ov.nox", block = g)
     } else {
-      ov_names <- lav_partable_vnames(lavpartable, "ov", block = g)
+      ov_names <- lav_pt_vnames(lavpartable, "ov", block = g)
     }
     nvar <- length(ov_names)
-    lv_names <- lav_partable_vnames(lavpartable, "lv", block = g)
+    lv_names <- lav_pt_vnames(lavpartable, "lv", block = g)
     nfac <- length(lv_names)
-    ov_th <- lav_partable_vnames(lavpartable, "th", block = g)
+    ov_th <- lav_pt_vnames(lavpartable, "th", block = g)
     nth <- length(ov_th)
-    ov_names_x <- lav_partable_vnames(lavpartable, "ov.x", block = g)
+    ov_names_x <- lav_pt_vnames(lavpartable, "ov.x", block = g)
     nexo <- length(ov_names_x)
-    ov_names_nox <- lav_partable_vnames(lavpartable, "ov.nox", block = g)
+    ov_names_nox <- lav_pt_vnames(lavpartable, "ov.nox", block = g)
 
     # in this representation, we need to create 'phantom/dummy' latent
     # variables for all `x' and `y' variables not in lv.names
@@ -86,14 +86,14 @@ lav_lisrel <- function(lavpartable = NULL,
       # are removed from ov.x
       if (nlevels > 1L) {
         if (ngroups == 1L) {
-          other_block_names <- lav_partable_vnames(lavpartable, "ov",
+          other_block_names <- lav_pt_vnames(lavpartable, "ov",
             block = seq_len(nblocks)[-g]
           )
         } else {
           # TEST ME
           this_group <- ceiling(g / nlevels)
           blocks_within_group <- (this_group - 1L) * nlevels + seq_len(nlevels)
-          other_block_names <- lav_partable_vnames(lavpartable,
+          other_block_names <- lav_pt_vnames(lavpartable,
             "ov",
             block = blocks_within_group[-g]
           )
@@ -355,7 +355,7 @@ lav_lisrel <- function(lavpartable = NULL,
     tmp_row[idx] <- 1L
     tmp_col[idx] <- 1L
 
-    # new in 0.6-22: instruments
+    # new in 0.7-1: instruments
     idx <- which(target$block == g & target$lhs == "group" &
       target$op == "|~")
     tmp_mat[idx] <- "miiv"
@@ -1242,7 +1242,7 @@ lav_lisrel_theta <- function(mlist = NULL,
 }
 
 # compute (I - BETA)^{-1}
-# new in 0.6-22: check structure of BETA
+# new in 0.7-1: check structure of BETA
 #  1. BETA absent / all-zero        -> identity
 #  1b.BETA is complex               -> general solve()
 #  2. BETA strictly lower triangular-> forwardsolve
@@ -1254,16 +1254,34 @@ lav_lisrel_ibinv <- function(mlist = NULL) {
   mm_beta <- mlist$beta
   nr   <- nrow(mlist$psi)
 
-  # case 1: no BETA, or BETA is identically zero
-  if (is.null(mm_beta) || all(mm_beta == 0)) {
+  # case 1: no BETA
+  if (is.null(mm_beta)) {
     return(diag(nr))
   }
 
-  # forwardsolve/backsolve do not support complex values; solve() does
-  if (is.complex(mm_beta)) {
+  # the diagonal of BETA is structurally zero in the (I - BETA)^-1 formula;
+  # some representations (e.g. composites with composites = FALSE) leave a
+  # non-zero value on the diagonal. We force it to zero here, so that the
+  # diagonal of (I - BETA) is always one. This matches the historical
+  # solve()-based implementation (tmp <- -BETA; diag(tmp) <- 1; solve(tmp))
+  # and keeps the triangular shortcuts below non-singular.
+  diag(mm_beta) <- 0
+
+  # forwardsolve/backsolve do not support complex values; solve() does.
+  # We also route to the generic solve() path when BETA contains missing
+  # values (e.g. NA while a model is being filled in during post-estimation,
+  # as blavaan does): solve() propagates NA/NaN silently, matching the
+  # historical behavior, whereas the logical shortcuts below would trip with
+  # "missing value where TRUE/FALSE needed".
+  if (is.complex(mm_beta) || anyNA(mm_beta)) {
     tmp <- -mm_beta
     diag(tmp) <- 1
     return(solve(tmp))
+  }
+
+  # BETA is identically zero
+  if (all(mm_beta == 0)) {
+    return(diag(nr))
   }
 
   # case 2: strictly lower triangular
@@ -1296,7 +1314,7 @@ lav_lisrel_ibinv <- function(mlist = NULL) {
     # recursive model: permute B to strictly lower triangular, solve, unpermute
     ib_inv <- forwardsolve(diag(nr) - mm_beta[result, result], diag(nr))
     inv_order <- order(result)
-    return(ib_inv[inv_order, inv_order])
+    return(ib_inv[inv_order, inv_order, drop = FALSE])
   }
 
   # case 5: non-recursive model
@@ -1329,16 +1347,16 @@ lav_lisrel_alpha0 <- function(mlist = NULL, sample_mean = NULL,
 
   if (length(ov_dummy_idx) > 0L) {
     mm_alpha <- matrix(0, nfac, 1L)
-    # Note: instead of sample.mean, we need 'intercepts'
-    # sample.mean = NU + LAMBDA..IB.inv %*% ALPHA
+    # Note: instead of sample_mean, we need 'intercepts'
+    # sample_mean = NU + LAMBDA..IB.inv %*% ALPHA
     # so,
-    # solve(LAMBDA..IB.inv) %*% (sample.mean - NU) = ALPHA
+    # solve(LAMBDA..IB.inv) %*% (sample_mean - NU) = ALPHA
     # where
     # - LAMBDA..IB.inv only contains 'dummy' variables, and is square
     # - NU elements are not needed (since not in ov.dummy.idx)
     ib_inv <- lav_lisrel_ibinv(mlist = mlist)
     lambda__ib_inv <- mm_lambda %*% ib_inv
-    lambda__ib_inv_dummy <- lambda__ib_inv[ov_dummy_idx, lv_dummy_idx]
+    lambda__ib_inv_dummy <- lambda__ib_inv[ov_dummy_idx, lv_dummy_idx, drop = FALSE]
     mm_alpha[lv_dummy_idx] <-
       solve(lambda__ib_inv_dummy, sample_mean[ov_dummy_idx])
   } else {
@@ -1354,8 +1372,8 @@ lav_lisrel_alpha0 <- function(mlist = NULL, sample_mean = NULL,
 # and contains either:
 #     1) the sample means (if not eXo)
 #     2) the intercepts, if we have exogenous covariates
-#        since sample.mean = NU + LAMBDA %*% E(eta)
-#        we have NU = sample.mean - LAMBDA %*% E(eta)
+#        since sample_mean = NU + LAMBDA %*% E(eta)
+#        we have NU = sample_mean - LAMBDA %*% E(eta)
 lav_lisrel_nu0 <- function(mlist = NULL, sample_mean = NULL,
                            ov_y_dummy_ov_idx = NULL,
                            ov_x_dummy_ov_idx = NULL,
@@ -1592,7 +1610,7 @@ lav_lisrel_residual_variances <- function(mlist = NULL,
 
     nr <- nrow(mm_beta)
     ib <- -mm_beta
-    ib[lav_matrix_diag_idx(nr)] <- 1
+    ib[lav_mat_diag_idx(nr)] <- 1
     ib_inv <- solve(ib)
 
 
@@ -1717,7 +1735,7 @@ lav_lisrel_cov_both <- function(mlist = NULL, delta = TRUE) {
 
   # 'extend' matrices
   lambda2 <- rbind(mm_lambda, diag(nlat))
-  theta2 <- lav_matrix_bdiag(mm_theta, matrix(0, nlat, nlat))
+  theta2 <- lav_mat_bdiag(mm_theta, matrix(0, nlat, nlat))
 
 
   # beta?
@@ -1884,11 +1902,11 @@ lav_lisrel_dsigma_dx <- function(mlist = NULL,
   compute_sigma <- function(x, mm = "wmat", mlist = NULL) {
     mlist_1 <- mlist
     if (mm %in% c("psi", "theta")) {
-      mlist_1[[mm]] <- lav_matrix_vech_reverse(x)
+      mlist_1[[mm]] <- lav_mat_vech_rev(x)
     } else {
       mlist_1[[mm]][, ] <- x
     }
-    lav_matrix_vec(lav_lisrel_sigma(mlist_1))
+    lav_mat_vec(lav_lisrel_sigma(mlist_1))
   }
 
   composites <- FALSE
@@ -1897,7 +1915,7 @@ lav_lisrel_dsigma_dx <- function(mlist = NULL,
   }
 
   # only lower.tri part of sigma (not same order as elimination matrix?)
-  v_idx <- lav_matrix_vech_idx(nvar)
+  v_idx <- lav_mat_vech_idx(nvar)
   pstar <- nvar * (nvar + 1) / 2
 
   # shortcut for gamma, nu, alpha, tau,.... : empty matrix
@@ -1924,7 +1942,7 @@ lav_lisrel_dsigma_dx <- function(mlist = NULL,
 
   # pre
   # if(m == "lambda" || m == "beta")
-  #    IK <- diag(nvar*nvar) + lav_matrix_commutation(nvar, nvar)
+  #    IK <- diag(nvar*nvar) + lav_mat_com(nvar, nvar)
   if (m == "lambda" || m == "beta") {
     l1 <- mm_lambda %*% ib_inv %*% mm_psi %*% t(ib_inv)
   }
@@ -1941,7 +1959,7 @@ lav_lisrel_dsigma_dx <- function(mlist = NULL,
     if (composites) {
       dx <- lav_func_jacobian_complex(
         func = compute_sigma,
-        x = lav_matrix_vec(mlist$beta),
+        x = lav_mat_vec(mlist$beta),
         mm = "beta", mlist = mlist
       )
       dx <- dx[, idx, drop = FALSE]
@@ -1951,26 +1969,26 @@ lav_lisrel_dsigma_dx <- function(mlist = NULL,
         (lambda__ib_inv %x% l1)[, kol_idx, drop = FALSE]
       # this is not really needed (because we select idx=m.el.idx)
       # but just in case we need all elements of beta...
-      dx[, which(idx %in% lav_matrix_diag_idx(nfac))] <- 0.0
+      dx[, which(idx %in% lav_mat_diag_idx(nfac))] <- 0.0
     }
   } else if (m == "psi") {
     if (composites) {
       tmp <- lav_func_jacobian_complex(
         func = compute_sigma,
-        x = lav_matrix_vech(mlist$psi),
+        x = lav_mat_vech(mlist$psi),
         mm = "psi", mlist = mlist
       )
       dx <- matrix(0, nrow = nrow(tmp), ncol = length(mm_psi))
-      dx[, lav_matrix_vech_idx(nrow(mm_psi))] <- tmp
-      dx[, lav_matrix_vechu_idx(nrow(mm_psi), diagonal = FALSE)] <-
-        dx[, lav_matrix_vech_idx(nrow(mm_psi), diagonal = FALSE), drop = FALSE]
+      dx[, lav_mat_vech_idx(nrow(mm_psi))] <- tmp
+      dx[, lav_mat_vechu_idx(nrow(mm_psi), diagonal = FALSE)] <-
+        dx[, lav_mat_vech_idx(nrow(mm_psi), diagonal = FALSE), drop = FALSE]
       dx <- dx[, idx, drop = FALSE]
     } else {
       dx <- (lambda__ib_inv %x% lambda__ib_inv)
       # symmetry correction, but keeping all duplicated elements
       # since we depend on idx=m.el.idx
-      lower_idx <- lav_matrix_vech_idx(nfac, diagonal = FALSE)
-      upper_idx <- lav_matrix_vechru_idx(nfac, diagonal = FALSE)
+      lower_idx <- lav_mat_vech_idx(nfac, diagonal = FALSE)
+      upper_idx <- lav_mat_vechru_idx(nfac, diagonal = FALSE)
       offdiag_sum <- dx[, lower_idx] + dx[, upper_idx]
       dx[, c(lower_idx, upper_idx)] <- cbind(offdiag_sum, offdiag_sum)
       dx <- dx[, idx, drop = FALSE]
@@ -1987,14 +2005,14 @@ lav_lisrel_dsigma_dx <- function(mlist = NULL,
     dd_omega <- (dd %*% omega)
     a <- dd_omega %x% diag(nvar)
     m_b <- diag(nvar) %x% dd_omega
-    dx <- a[, lav_matrix_diag_idx(nvar), drop = FALSE] +
-      m_b[, lav_matrix_diag_idx(nvar), drop = FALSE]
+    dx <- a[, lav_mat_diag_idx(nvar), drop = FALSE] +
+      m_b[, lav_mat_diag_idx(nvar), drop = FALSE]
     dx <- dx[, idx, drop = FALSE]
   } else if (m == "wmat") {
     # just a dummy to get us going
     dx <- lav_func_jacobian_complex(
       func = compute_sigma,
-      x = lav_matrix_vec(mm_wmat),
+      x = lav_mat_vec(mm_wmat),
       mm = "wmat", mlist = mlist
     )
     dx <- dx[, idx, drop = FALSE]
@@ -2069,7 +2087,7 @@ lav_lisrel_dmu_dx <- function(mlist = NULL,
   } else if (m == "beta") {
     dx <- t(ib_inv %*% mm_alpha) %x% (mm_lambda %*% ib_inv)
     # this is not really needed (because we select idx=m.el.idx)
-    dx[, lav_matrix_diag_idx(nfac)] <- 0.0
+    dx[, lav_mat_diag_idx(nfac)] <- 0.0
   } else if (m == "alpha") {
     dx <- mm_lambda %*% ib_inv
   } else {
@@ -2158,7 +2176,7 @@ lav_lisrel_dth_dx <- function(mlist = NULL,
   } else if (m == "beta") {
     dx <- (-1) * t(ib_inv %*% mm_alpha) %x% (mm_lambda %*% ib_inv)
     # this is not really needed (because we select idx=m.el.idx)
-    dx[, lav_matrix_diag_idx(nfac)] <- 0.0
+    dx[, lav_mat_diag_idx(nfac)] <- 0.0
     dx <- k_nu %*% dx
     if (delta_flag) {
       dx <- dx * as.vector(k_nu %*% mm_delta)
@@ -2222,7 +2240,7 @@ lav_lisrel_dpi_dx <- function(mlist = NULL,
   } else if (m == "beta") {
     dx <- t(ib_inv %*% mm_gamma) %x% (mm_lambda %*% ib_inv)
     # this is not really needed (because we select idx=m.el.idx)
-    dx[, lav_matrix_diag_idx(nfac)] <- 0.0
+    dx[, lav_mat_diag_idx(nfac)] <- 0.0
     if (delta_flag) {
       dx <- dx * delta_diag
     }
@@ -2285,7 +2303,7 @@ lav_lisrel_dpsi_dx <- function(mlist = NULL,
                                idx = seq_along(mlist[[m]])) {
   mm_psi <- mlist$psi
   nfac <- nrow(mm_psi)
-  v_idx <- lav_matrix_vech_idx(nfac)
+  v_idx <- lav_mat_vech_idx(nfac)
 
   # shortcut for empty matrices
   if (m != "psi") {
@@ -2307,7 +2325,7 @@ lav_lisrel_dtheta_dx <- function(mlist = NULL,
                                  idx = seq_along(mlist[[m]])) {
   mm_theta <- mlist$theta
   nvar <- nrow(mm_theta)
-  v_idx <- lav_matrix_vech_idx(nvar)
+  v_idx <- lav_mat_vech_idx(nvar)
 
   # shortcut for empty matrices
   if (m != "theta") {
@@ -2420,8 +2438,8 @@ lav_lisrel_dalpha_dx <- function(mlist = NULL,
 }
 
 # MLIST = NULL; meanstructure=TRUE; th=TRUE; delta=TRUE; pi=TRUE; gw=FALSE
-# lav_matrix_vech_idx <- lavaan:::lav_matrix_vech_idx;
-# lav_matrix_vechru_idx <- lavaan:::lav_matrix_vechru_idx
+# lav_mat_vech_idx <- lavaan:::lav_mat_vech_idx;
+# lav_mat_vechru_idx <- lavaan:::lav_mat_vechru_idx
 # vec <- lavaan:::vec;
 # lav_func_jacobian_complex <- lavaan:::lav_func_jacobian_complex
 # lav_lisrel_sigma <- lavaan:::lav_lisrel_sigma
@@ -2483,10 +2501,10 @@ lav_lisrel_test_derivatives <- function(mlist = NULL,
     diag(mlist$beta) <- 0.0
     diag(mlist$theta) <- diag(mlist$theta) * diag(mlist$theta) * 10
     diag(mlist$psi) <- diag(mlist$psi) * diag(mlist$psi) * 10
-    mlist$psi[lav_matrix_vechru_idx(nfac)] <-
-      mlist$psi[lav_matrix_vech_idx(nfac)]
-    mlist$theta[lav_matrix_vechru_idx(nvar)] <-
-      mlist$theta[lav_matrix_vech_idx(nvar)]
+    mlist$psi[lav_mat_vechru_idx(nfac)] <-
+      mlist$psi[lav_mat_vech_idx(nfac)]
+    mlist$theta[lav_mat_vechru_idx(nvar)] <-
+      mlist$theta[lav_mat_vech_idx(nvar)]
     if (delta) mlist$delta[, ] <- abs(mlist$delta) * 10
   } else {
     nvar <- nrow(mlist$lambda)
@@ -2495,20 +2513,20 @@ lav_lisrel_test_derivatives <- function(mlist = NULL,
   compute_sigma <- function(x, mm = "lambda", mlist = NULL) {
     mlist_1 <- mlist
     if (mm %in% c("psi", "theta")) {
-      mlist_1[[mm]] <- lav_matrix_vech_reverse(x)
+      mlist_1[[mm]] <- lav_mat_vech_rev(x)
     } else {
       mlist_1[[mm]][, ] <- x
     }
     if (theta) {
       mlist_1 <- lav_lisrel_delta(mlist = mlist_1, num_idx = num_idx)
     }
-    lav_matrix_vech(lav_lisrel_sigma(mlist_1))
+    lav_mat_vech(lav_lisrel_sigma(mlist_1))
   }
 
   compute_mu <- function(x, mm = "lambda", mlist = NULL) {
     mlist_1 <- mlist
     if (mm %in% c("psi", "theta")) {
-      mlist_1[[mm]] <- lav_matrix_vech_reverse(x)
+      mlist_1[[mm]] <- lav_mat_vech_rev(x)
     } else {
       mlist_1[[mm]][, ] <- x
     }
@@ -2521,7 +2539,7 @@ lav_lisrel_test_derivatives <- function(mlist = NULL,
   compute_th2 <- function(x, mm = "tau", mlist = NULL, th_idx) {
     mlist_1 <- mlist
     if (mm %in% c("psi", "theta")) {
-      mlist_1[[mm]] <- lav_matrix_vech_reverse(x)
+      mlist_1[[mm]] <- lav_mat_vech_rev(x)
     } else {
       mlist_1[[mm]][, ] <- x
     }
@@ -2534,7 +2552,7 @@ lav_lisrel_test_derivatives <- function(mlist = NULL,
   compute_pi <- function(x, mm = "lambda", mlist = NULL) {
     mlist_1 <- mlist
     if (mm %in% c("psi", "theta")) {
-      mlist_1[[mm]] <- lav_matrix_vech_reverse(x)
+      mlist_1[[mm]] <- lav_mat_vech_rev(x)
     } else {
       mlist_1[[mm]][, ] <- x
     }
@@ -2547,7 +2565,7 @@ lav_lisrel_test_derivatives <- function(mlist = NULL,
   compute_gw <- function(x, mm = "gw", mlist = NULL) {
     mlist_1 <- mlist
     if (mm %in% c("psi", "theta")) {
-      mlist_1[[mm]] <- lav_matrix_vech_reverse(x)
+      mlist_1[[mm]] <- lav_mat_vech_rev(x)
     } else {
       mlist_1[[mm]][, ] <- x
     }
@@ -2564,9 +2582,9 @@ lav_lisrel_test_derivatives <- function(mlist = NULL,
 
   for (mm in names(mlist)) {
     if (mm %in% c("psi", "theta")) {
-      x <- lav_matrix_vech(mlist[[mm]])
+      x <- lav_mat_vech(mlist[[mm]])
     } else {
-      x <- lav_matrix_vec(mlist[[mm]])
+      x <- lav_mat_vec(mlist[[mm]])
     }
     if (mm == "delta" && theta) next
     if (lav_debug()) {
@@ -2582,7 +2600,7 @@ lav_lisrel_test_derivatives <- function(mlist = NULL,
     )
     if (mm %in% c("psi", "theta")) {
       # remove duplicated columns of symmetric matrices
-      idx <- lav_matrix_vechru_idx(sqrt(ncol(dx2)), diagonal = FALSE)
+      idx <- lav_mat_vechru_idx(sqrt(ncol(dx2)), diagonal = FALSE)
       if (length(idx) > 0L) dx2 <- dx2[, -idx]
     }
     if (theta) {
@@ -2620,7 +2638,7 @@ lav_lisrel_test_derivatives <- function(mlist = NULL,
     )
     if (mm %in% c("psi", "theta")) {
       # remove duplicated columns of symmetric matrices
-      idx <- lav_matrix_vechru_idx(sqrt(ncol(dx2)), diagonal = FALSE)
+      idx <- lav_mat_vechru_idx(sqrt(ncol(dx2)), diagonal = FALSE)
       if (length(idx) > 0L) dx2 <- dx2[, -idx]
     }
     cat(
@@ -2654,12 +2672,13 @@ lav_lisrel_test_derivatives <- function(mlist = NULL,
             m = mm, idx = seq_along(mlist[[mm]]),
             mlist = mlist, delta = !theta
           )
-        var_idx <- which(!lav_matrix_vech_idx(nvar) %in%
-          lav_matrix_vech_idx(nvar, diagonal = FALSE))
+        var_idx <- which(!lav_mat_vech_idx(nvar) %in%
+          lav_mat_vech_idx(nvar, diagonal = FALSE))
         sigma_hat <- lav_lisrel_sigma(mlist = mlist, delta = FALSE)
         dsigma <- diag(sigma_hat)
         # dy/ddsigma = -0.5/(ddsigma*sqrt(ddsigma))
-        d_delta_dx <- dx_sigma[var_idx, ] * -0.5 / (dsigma * sqrt(dsigma))
+        d_delta_dx <- dx_sigma[var_idx, , drop = FALSE] * -0.5 /
+          (dsigma * sqrt(dsigma))
 
         # 2. compute dth.dDelta
         dth_d_delta <-
@@ -2678,7 +2697,7 @@ lav_lisrel_test_derivatives <- function(mlist = NULL,
       }
       if (mm %in% c("psi", "theta")) {
         # remove duplicated columns of symmetric matrices
-        idx <- lav_matrix_vechru_idx(sqrt(ncol(dx2)), diagonal = FALSE)
+        idx <- lav_mat_vechru_idx(sqrt(ncol(dx2)), diagonal = FALSE)
         if (length(idx) > 0L) dx2 <- dx2[, -idx]
       }
       cat(
@@ -2706,7 +2725,7 @@ lav_lisrel_test_derivatives <- function(mlist = NULL,
       )
       if (mm %in% c("psi", "theta")) {
         # remove duplicated columns of symmetric matrices
-        idx <- lav_matrix_vechru_idx(sqrt(ncol(dx2)), diagonal = FALSE)
+        idx <- lav_mat_vechru_idx(sqrt(ncol(dx2)), diagonal = FALSE)
         if (length(idx) > 0L) dx2 <- dx2[, -idx]
       }
       if (theta) {
@@ -2718,15 +2737,16 @@ lav_lisrel_test_derivatives <- function(mlist = NULL,
           )
         if (mm %in% c("psi", "theta")) {
           # remove duplicated columns of symmetric matrices
-          idx <- lav_matrix_vechru_idx(sqrt(ncol(dx_sigma)), diagonal = FALSE)
+          idx <- lav_mat_vechru_idx(sqrt(ncol(dx_sigma)), diagonal = FALSE)
           if (length(idx) > 0L) dx_sigma <- dx_sigma[, -idx]
         }
-        var_idx <- which(!lav_matrix_vech_idx(nvar) %in%
-          lav_matrix_vech_idx(nvar, diagonal = FALSE))
+        var_idx <- which(!lav_mat_vech_idx(nvar) %in%
+          lav_mat_vech_idx(nvar, diagonal = FALSE))
         sigma_hat <- lav_lisrel_sigma(mlist = mlist, delta = FALSE)
         dsigma <- diag(sigma_hat)
         # dy/ddsigma = -0.5/(ddsigma*sqrt(ddsigma))
-        d_delta_dx <- dx_sigma[var_idx, ] * -0.5 / (dsigma * sqrt(dsigma))
+        d_delta_dx <- dx_sigma[var_idx, , drop = FALSE] * -0.5 /
+          (dsigma * sqrt(dsigma))
 
         # 2. compute dpi.dDelta
         dpi_d_delta <-
@@ -2769,7 +2789,7 @@ lav_lisrel_test_derivatives <- function(mlist = NULL,
       )
       if (mm %in% c("psi", "theta")) {
         # remove duplicated columns of symmetric matrices
-        idx <- lav_matrix_vechru_idx(sqrt(ncol(dx2)), diagonal = FALSE)
+        idx <- lav_mat_vechru_idx(sqrt(ncol(dx2)), diagonal = FALSE)
         if (length(idx) > 0L) dx2 <- dx2[, -idx]
       }
       cat(
@@ -2836,7 +2856,7 @@ lav_mlist_target_psi <- function(mm_beta = NULL, ib_inv = NULL, mm_psi = NULL,
   # IB.inv (if not given)
   if (is.null(ib_inv)) {
     ib <- -mm_beta
-    ib[lav_matrix_diag_idx(nr)] <- 1
+    ib[lav_mat_diag_idx(nr)] <- 1
     ib_inv <- solve(ib)
   }
 
@@ -3114,9 +3134,9 @@ lav_lisrel_dimplied_dx <- function(mlist           = NULL,
 
 
   # vech structure for Sigma
-  r_s <- lav_matrix_vech_row_idx(nvar)
-  c_s <- lav_matrix_vech_col_idx(nvar)
-  sigma_lut <- lav_matrix_vech_reverse(seq_len(pstar))
+  r_s <- lav_mat_vech_row_idx(nvar)
+  c_s <- lav_mat_vech_col_idx(nvar)
+  sigma_lut <- lav_mat_vech_rev(seq_len(pstar))
 
   if (delta_flag) {
     # scaling weights: delta[r] * delta[s] for each vech position
@@ -3421,9 +3441,9 @@ lav_lisrel_dimplied_dx <- function(mlist           = NULL,
       s_diag[num_idx] <- 1.0
     }
     sigma_obs <- sigma_star / tcrossprod(s_diag)
-    sigma_obs_v <- lav_matrix_vech(sigma_obs)
+    sigma_obs_v <- lav_mat_vech(sigma_obs)
 
-    diag_pos <- lav_matrix_diagh_idx(nvar)
+    diag_pos <- lav_mat_diagh_idx(nvar)
     jac_diag_theta <- jac_sigma[diag_pos, , drop = FALSE]
 
     # If Delta itself is in the (compact) column block (e.g. the modindices
@@ -3455,8 +3475,8 @@ lav_lisrel_dimplied_dx <- function(mlist           = NULL,
   # categorical: reorder
   if (categorical) {
     # reorder: first variances (of numeric), then covariances
-    cov_idx <- lav_matrix_vech_idx(nvar)
-    covd_idx <- lav_matrix_vech_idx(nvar, diagonal = FALSE)
+    cov_idx <- lav_mat_vech_idx(nvar)
+    covd_idx <- lav_mat_vech_idx(nvar, diagonal = FALSE)
 
     var_idx <- which(is.na(match(
       cov_idx,
@@ -3472,7 +3492,7 @@ lav_lisrel_dimplied_dx <- function(mlist           = NULL,
 
   # correlation structure
   if (!categorical && correlation) {
-    rm_idx <- lav_matrix_diagh_idx(nvar)
+    rm_idx <- lav_mat_diagh_idx(nvar)
     jac_sigma <- jac_sigma[-rm_idx, , drop = FALSE]
   }
 

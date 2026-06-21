@@ -13,7 +13,7 @@ lav_data_simulate_old(model = NULL, model.type = "sem", meanstructure = FALSE,
     auto.fix.single = FALSE, auto.var = TRUE, auto.cov.lv.x = TRUE, 
     auto.cov.y = TRUE, ..., sample.nobs = 500L, ov.var = NULL, 
     group.label = paste("G", 1:ngroups, sep = ""), skewness = NULL, 
-    kurtosis = NULL, seed = NULL, empirical = FALSE, 
+    kurtosis = NULL, seed = NULL, empirical = FALSE, mass = FALSE,
     return.type = "data.frame", return.fit = FALSE,
     debug = FALSE, standardized = FALSE)
 lavSimulateData(model = NULL, model.type = "sem", meanstructure = FALSE, 
@@ -24,7 +24,7 @@ lavSimulateData(model = NULL, model.type = "sem", meanstructure = FALSE,
     auto.fix.single = FALSE, auto.var = TRUE, auto.cov.lv.x = TRUE, 
     auto.cov.y = TRUE, ..., sample.nobs = 500L, ov.var = NULL, 
     group.label = paste("G", 1:ngroups, sep = ""), skewness = NULL, 
-    kurtosis = NULL, seed = NULL, empirical = FALSE, 
+    kurtosis = NULL, seed = NULL, empirical = FALSE, mass = FALSE,
     return.type = "data.frame", return.fit = FALSE,
     debug = FALSE, standardized = FALSE)
 simulateData(model = NULL, model.type = "sem", meanstructure = FALSE, 
@@ -35,7 +35,7 @@ simulateData(model = NULL, model.type = "sem", meanstructure = FALSE,
     auto.fix.single = FALSE, auto.var = TRUE, auto.cov.lv.x = TRUE, 
     auto.cov.y = TRUE, ..., sample.nobs = 500L, ov.var = NULL, 
     group.label = paste("G", 1:ngroups, sep = ""), skewness = NULL, 
-    kurtosis = NULL, seed = NULL, empirical = FALSE, 
+    kurtosis = NULL, seed = NULL, empirical = FALSE, mass = FALSE,
     return.type = "data.frame", return.fit = FALSE,
     debug = FALSE, standardized = FALSE)
 }
@@ -43,7 +43,7 @@ simulateData(model = NULL, model.type = "sem", meanstructure = FALSE,
 \item{model}{A description of the user-specified model. Typically, the model
     is described using the lavaan model syntax. See
     \code{\link{model.syntax}} for more information. Alternatively, a
-    parameter table (eg. the output of the \code{lavParTable()} function) is also
+    parameter table (e.g., the output of the \code{lavParTable()} function) is also
     accepted.}
 \item{model.type}{Set the model type: possible values
     are \code{"cfa"}, \code{"sem"} or \code{"growth"}. This may affect
@@ -62,16 +62,16 @@ simulateData(model = NULL, model.type = "sem", meanstructure = FALSE,
     If \code{TRUE}, it implies \code{meanstructure = TRUE} and 
     \code{std.lv = FALSE}, and it fixes the intercepts of the marker
     indicators to zero, while freeing the means/intercepts of the latent
-    variables. Only works correcly for single group, single level models.}
+    variables. Only works correctly for single group, single level models.}
 \item{conditional.x}{If \code{TRUE}, we set up the model conditional on
     the exogenous `x' covariates; the model-implied sample statistics
     only include the non-x variables. If \code{FALSE}, the exogenous `x'
     variables are modeled jointly with the other variables, and the
-    model-implied statistics refect both sets of variables. If
+    model-implied statistics reflect both sets of variables. If
     \code{"default"}, the value is set depending on the estimator, and
     whether or not the model involves categorical endogenous variables.}
-\item{composites}{If \code{TRUE}, allow for the new (0.6-20) approach
-    to handle composites.}
+\item{composites}{If \code{TRUE}, use the new (0.6-20) approach
+    for handling composites.}
 \item{fixed.x}{If \code{TRUE}, the exogenous `x' covariates are considered
     fixed variables and the means, variances and covariances of these variables
     are fixed to their sample values. If \code{FALSE}, they are considered
@@ -111,6 +111,9 @@ simulateData(model = NULL, model.type = "sem", meanstructure = FALSE,
 \item{seed}{Set random seed.}
 \item{empirical}{Logical. If \code{TRUE}, the implied moments (Mu and Sigma)
     specify the empirical not population mean and covariance matrix.}
+\item{mass}{Logical. If \code{TRUE}, use the mvrnorm() function from the
+    MASS package (the default before 0.7-1) instead of the internal
+    lav_mvrnorm() function.}
 \item{return.type}{If \code{"data.frame"}, a data.frame is returned. If
     \code{"matrix"}, a numeric matrix is returned (without any variable names).
     If \code{"cov"}, a covariance matrix is returned (without any variable 
@@ -120,7 +123,7 @@ simulateData(model = NULL, model.type = "sem", meanstructure = FALSE,
     may be useful for inspection.}
 \item{debug}{If \code{TRUE}, debugging information is displayed.}
 \item{standardized}{If \code{TRUE}, the residual variances of the observed
-    variables are set in such a way such that the model implied variances 
+    variables are set in such a way that the model implied variances
     are unity. This allows regression coefficients and factor loadings 
     (involving observed variables) to be specified in a standardized metric.}
 }

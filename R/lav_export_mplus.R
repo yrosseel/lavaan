@@ -6,7 +6,7 @@ lav_export_mplus <- function(lav, group_label = NULL) {
   footer <- "\n"
 
   lav <- as.data.frame(lav, stringsAsFactors = FALSE)
-  ngroups <- lav_partable_ngroups(lav)
+  ngroups <- lav_pt_ngroups(lav)
 
   lav_one_group <- function(lav) {
     # mplus does not like variable names with a 'dot'
@@ -47,7 +47,7 @@ lav_export_mplus <- function(lav, group_label = NULL) {
     )
 
     # remove variances for ordered variables
-    ov_names_ord <- lav_partable_vnames(lav, type = "ov.ord")
+    ov_names_ord <- lav_pt_vnames(lav, type = "ov.ord")
     ord_idx <- which(lav$lhs %in% ov_names_ord &
       lav$op == "~~" &
       lav$free == 0L &
@@ -99,7 +99,7 @@ lav_export_mplus <- function(lav, group_label = NULL) {
   if (ngroups == 1L) {
     body <- lav_one_group(lav)
   } else {
-    group_values <- lav_partable_group_values(lav)
+    group_values <- lav_pt_group_values(lav)
     # group 1
     body <- lav_one_group(lav[lav$group == group_values[1], ])
 

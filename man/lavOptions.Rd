@@ -4,8 +4,8 @@
 \title{lavaan Options}
 \description{
 Show the default options used by the \code{lavaan()} function. The
-options can be changed by passing 'name = value' arguments to the 
-\code{lavaan()} function call, where they will be added to the '...'
+options can be changed by passing 'name = value' arguments to the
+\code{lavaan()} function call, where they are added to the '...'
 argument.
 }
 \usage{
@@ -72,13 +72,14 @@ Model features:
      included, equality constraints are used so that the sum of the
      intercepts (belonging to the indicators of a single latent variable) 
      equals zero.
-     As a result, the latent mean will be freely estimated and usually 
-     equal the average of the means of the involved indicators.}
+     As a result, the latent mean is freely estimated and usually
+     equals the average of the means of the involved indicators.}
     \item{\code{ceq.simple}:}{Logical. If \code{TRUE}, and no other 
      general (equality or inequality) constraints are used in the model, 
      simple equality constraints
-     are represented in the parameter table as duplicated free parameters 
-     (instead of extra rows with \code{op = "=="}).}
+     are represented in the parameter table as duplicated free parameters
+     (instead of extra rows with \code{op = "=="}). The default is
+     \code{FALSE}.}
     \item{\code{parameterization}:}{Currently only used if data is 
       categorical. If \code{"delta"}, the delta parameterization is used. 
       If \code{"theta"}, the theta parameterization is used.}
@@ -86,14 +87,31 @@ Model features:
      continuous data. If \code{TRUE}, analyze a correlation matrix (instead
      of a (co)variance matrix). This implies that the residual observed
      variances are no longer free parameters. Instead, they are set to
-     values to ensure the model-implied variances are unity. This also
+     values that ensure the model-implied variances are unity. This also
      affects the standard errors. The only available estimators are GLS and
      WLS, which produce correct standard errors and a correct test statistic
-     under normal and non-normal conditions respectively. Always assuming
-     \code{fixed.x = FALSE} and \code{conditional.x = FALSE} (for now).}
-    \item{\code{auto.fix.first}:}{If \code{TRUE}, the factor loading of the 
+     under normal and non-normal conditions respectively. For now, this
+     option always assumes \code{fixed.x = FALSE} and
+     \code{conditional.x = FALSE}.}
+    \item{\code{auto.fix.first}:}{If \code{TRUE}, the factor loading of the
       first indicator is set to 1.0 for every latent variable.}
-    \item{\code{auto.fix.single}:}{If \code{TRUE}, the residual variance (if 
+    \item{\code{bad.marker.crit}:}{Only used if
+      \code{auto.fix.first = TRUE}. A single number (default 0.1). If larger
+      than zero, lavaan checks -- once the unrestricted (h1) sample statistics
+      are available -- whether the first indicator of each latent variable is
+      a poor item, in the sense that it correlates weakly with the other
+      indicators of the same factor (more precisely: the absolute value of its
+      corrected item-total correlation is below \code{bad.marker.crit}). If so
+      (and a clearly better indicator is available), a warning is issued and
+      the loading of that better indicator is fixed to 1.0 instead, in order
+      to set the metric of that latent variable. The main purpose is to avoid
+      convergence problems caused by a (very) poor marker item. The check is
+      based on the (pooled) unrestricted (h1) covariance matrix, so it behaves
+      consistently with or without missing data, categorical data, multiple
+      groups, etc. Larger values make the switching more aggressive; a value
+      of 0 disables the check and always keeps the first indicator as the
+      marker.}
+    \item{\code{auto.fix.single}:}{If \code{TRUE}, the residual variance (if
       included) of an observed indicator is set to zero if it is the only 
       indicator of a latent variable.}
     \item{auto.var}{If \code{TRUE}, the (residual) variances of both observed
@@ -120,11 +138,11 @@ Data options:
     \item{\code{std.ov}:}{If \code{TRUE}, observed variables are 
       standardized before entering the analysis. By default, these are
       only the non-exogenous observed variables, unless \code{fixed.x = FALSE}.
-      Use this option with caution; it can be used to test if (for example)
-      nonconvergence was due to scaling issues. But this is still a covariance
-      based analysis, in the sense that no constraints are involved (to 
-      ensure the model-implied (co)variance matrix has unit variances), and the
-      standard errors still assume that the input was unstandardized. See
+      Use this option with caution; it can be used to test whether (for
+      example) nonconvergence was due to scaling issues. Note that this is
+      still a covariance-based analysis: no constraints are imposed to
+      ensure the model-implied (co)variance matrix has unit variances, and
+      the standard errors still assume that the input was unstandardized. See
       also the \code{correlation} option.}
     \item{\code{missing}:}{The default setting is \code{"listwise"}: all
          cases with missing values
@@ -144,7 +162,7 @@ Data options:
       covariates, even if \code{fixed.x = TRUE}. (Note: all lavaan versions
       < 0.6 used \code{"ml.x"} instead of \code{"ml"}).
       If you wish to use multiple
-      imputation, you need to use an external package (eg. mice) to
+      imputation, you need to use an external package (e.g., mice) to
       generate imputed datasets, which can then be analyzed using
       the \code{\link{semList}} function. The semTools package contains
       several functions to do this automatically. Another option (with
@@ -157,6 +175,15 @@ Data options:
       are adjusted correctly to reflect the two-step procedure. The
       \code{"robust.two.stage"} option produces standard errors and
       a test statistic that are robust against non-normality.
+      Both options are available for the ML estimator, and also for the
+      (continuous-data) least-squares estimators \code{"ULS"}, \code{"GLS"},
+      \code{"WLS"} and \code{"DLS"}; for the latter, lavaan automatically
+      switches to \code{se = "robust.sem"} and \code{test = "satorra.bentler"},
+      using the two-stage variance-covariance matrix of the EM-based sample
+      statistics. In addition, for these least-squares estimators, requesting
+      \code{missing = "ml"} (or \code{"fiml"}) is interpreted as a generic
+      request to handle the missing values, and is silently treated as
+      \code{missing = "two.stage"}.
       If (part of) the data is categorical, and the estimator is
       from the (W)LS family, the only option (besides listwise deletion)
       is \code{"pairwise"}. In this three-step approach, missingness is
@@ -167,8 +194,8 @@ Data options:
 	  the missing values just like in mean(x, na.rm = TRUE). In the second
       step, we compute polychoric/polyserial/pearson correlations using (only)
       two variables at a time. Here we use pairwise deletion: we only keep
-      those observations for which both values are observed (not-missing).
-      And this may change from pair to pair.
+      those observations for which both values are observed (not missing),
+      and this set may change from pair to pair.
       By default, in the categorical case we use \code{conditional.x = TRUE}. 
       Therefore, any cases
       with missing values on the exogenous covariates will be deleted listwise
@@ -183,7 +210,27 @@ Data options:
       the weights, and multiplying again by the total sample size. 
       If \code{"group"}, the sampling weights are normalized per group:
       by dividing by the sum of the weights (in each group), and multiplying
-      again by the group size. The default is \code{"total"}.}
+      again by the group size. The default is \code{"group"}. (For a single
+      group, \code{"group"} and \code{"total"} are identical; they only differ
+      when there are multiple groups, in which case \code{"group"} keeps each
+      group's relative contribution proportional to its sample size, matching
+      the behavior of Mplus.)}
+    \item{\code{sampling.weights.type}:}{Only used when sampling weights are
+      provided and the estimator relies on a weight matrix or sandwich variance:
+      the least-squares family (GLS/WLS/DWLS/ULS/DLS, both continuous and
+      categorical) and PML. Determines how the sampling weights enter the
+      asymptotic variance (the Gamma / NACOV matrix, or the PML first-order
+      information), and hence the (robust) standard errors and the scaled test
+      statistic. For GLS and ULS only the standard errors are affected; for
+      WLS/DWLS/DLS the Gamma also feeds the weight matrix, so the point
+      estimates shift as well. If
+      \code{"design"} (the default), the weights are treated as sampling
+      (design) weights and a design-based sandwich is used (the meat is
+      weighted by the sum of the squared weights), matching the behavior of
+      Mplus. If \code{"frequency"}, the weights are treated as frequency
+      (replication) counts (the meat is weighted by the sum of the weights),
+      so that the results match a fit on the row-replicated data. Without
+      sampling weights the two are identical.}
     \item{\code{samplestats}:}{Logical. If \code{FALSE}, no sample statistics
       will be computed (and no estimation can take place). This can be useful
       when only a dummy lavaan object is requested, without any computations.
@@ -199,9 +246,9 @@ Data summary options:
       on the estimator and the likelihood option: it is set to \code{TRUE} if 
       maximum likelihood estimation is used and \code{likelihood="normal"}, 
       and \code{FALSE} otherwise.}
-    \item{\code{ridge}:}{Logical. If \code{TRUE} a small constant value will
-      be added the diagonal elements of the covariance (or correlation) 
-      matrix before analysis. The value can be set using the 
+    \item{\code{ridge}:}{Logical. If \code{TRUE}, a small constant value is
+      added to the diagonal elements of the covariance (or correlation)
+      matrix before analysis. The value can be set using the
       \code{ridge.constant} option.}
     \item{\code{ridge.constant}:}{Numeric. Small constant used for ridging.
       The default value is 1e-05.}
@@ -254,7 +301,7 @@ Estimation options:
       for \code{"MLR"}, `Huber-White' robust standard errors are used
       (\code{se="robust.huber.white"}). In addition, \code{"MLM"} will compute
       a Satorra-Bentler scaled (mean adjusted) test statistic
-      (\code{test="satorra.bentler"}) , \code{"MLMVS"} will compute a
+      (\code{test="satorra.bentler"}), \code{"MLMVS"} will compute a
       mean and variance adjusted test statistic (Satterthwaite style)
       (\code{test="mean.var.adjusted"}), \code{"MLMV"} will compute a mean
       and variance adjusted test statistic (scaled and shifted)
@@ -267,7 +314,17 @@ Estimation options:
       and a mean or mean and variance adjusted test statistic. Estimators
       \code{"ULSM"} and \code{"ULSMV"} imply the \code{"ULS"}
       estimator with robust standard errors
-      and a mean or mean and variance adjusted test statistic.}
+      and a mean or mean and variance adjusted test statistic.
+      Finally, \code{"RBM"} requests reduced-bias M-estimation
+      (penalized maximum likelihood; continuous-outcome models for now). By
+      default sandwich standard errors are used
+      (\code{se = "robust.huber.white"}). The type of bias reduction is
+      controlled by the \code{rbm.method} element of \code{estimator.args}
+      (either \code{"implicit"} (default) or \code{"explicit"}), for example
+      \code{estimator = list(estimator = "RBM", rbm.method = "explicit")}.
+      The \code{"explicit"} method is much faster for models with many
+      parameters (it requires a single ML fit plus a one-step correction),
+      and is recommended in that case.}
     \item{\code{likelihood}:}{Only relevant for ML estimation. If 
       \code{"wishart"}, the Wishart likelihood approach is used. In this 
       approach, the covariance matrix has been divided by N-1, and both 
@@ -332,7 +389,7 @@ Estimation options:
       requested here for supported ML-family models. The convenience value
       \code{"fmg"} resolves to \code{"peba4_rls"} for one-model tests.}
    \item{\code{standard.test}:}{Character. Choose the test statistic
-    that will be used to compute fit measures (like CFI or RSMEA).
+    that will be used to compute fit measures (like CFI or RMSEA).
     The default is \code{"standard"}, but it could also be (for example)
     \code{"Browne.residual.nt"}, or an FMG test name such as
     \code{"peba4"} or \code{"fmg"}.}
@@ -344,9 +401,41 @@ Estimation options:
      Gamma matrix by N-1 (instead of the default N).}
    \item{\code{gamma.unbiased}}{Logical. If \code{TRUE}, we compute an
      unbiased version for the Gamma matrix. Only available for single-level
-     complete data and when \code{conditional.x = FALSE} and 
+     complete data and when \code{conditional.x = FALSE} and
      \code{fixed.x = FALSE} (for now). Suffixless FMG test names use this
      option to choose between biased and unbiased Gamma.}
+   \item{\code{se.delta.second.order}}{Logical. If \code{FALSE} (the
+     default), the standard errors of defined parameters (introduced with
+     the \code{:=} operator) and of standardized parameters (as returned
+     by \code{standardizedSolution()} or \code{lavInspect(., "vcov.std.*")})
+     are computed using the first-order delta method. If \code{TRUE}, the
+     second-order delta method is used, which adds the term
+     \eqn{\frac{1}{2}\textrm{tr}(H V H V)} (where \eqn{H} is the Hessian
+     of the transformed parameter and \eqn{V} is the parameter covariance
+     matrix) to the first-order variance approximation. This may improve
+     accuracy when the transformation is a strongly non-linear function
+     of the model parameters. Has no effect when standard errors are
+     obtained by bootstrapping or by the Monte Carlo method.}
+   \item{\code{se.def}}{Character. Method for computing standard errors
+     (and confidence intervals) of defined parameters (introduced with
+     the \code{:=} operator). The default is \code{"default"} (or
+     equivalently \code{"delta"}), which uses the delta method (respecting
+     \code{se.delta.second.order}). Set to \code{"monte.carlo"} to use
+     the Monte Carlo method of Preacher and Selig (2012). Under this
+     method, \code{R} draws are taken from
+     \eqn{\textit{MVN}(\hat{\theta}, \widehat{\textit{Var}}(\hat{\theta}))},
+     the defined parameter is evaluated for each draw, and standard
+     errors are obtained as the standard deviation of these realizations.
+     Confidence intervals (in \code{parameterEstimates()} and
+     \code{standardizedSolution()}) are based on percentile bounds of
+     the Monte Carlo distribution, and therefore can be asymmetric (just
+     like bootstrap intervals). Has no effect when
+     \code{se = "bootstrap"}.}
+   \item{\code{monte.carlo}}{List of settings for the Monte Carlo method
+     (used when \code{se.def = "monte.carlo"}). Currently recognizes:
+     \code{R} (integer; number of Monte Carlo draws; default 20000) and
+     \code{seed} (integer or \code{NULL}; optional seed for
+     reproducibility).}
    \item{\code{bootstrap}:}{Number of bootstrap draws, if bootstrapping is 
      used.}
    \item{\code{do.fit}:}{If \code{FALSE}, the model is not fit, and the 
@@ -381,7 +470,7 @@ Optimization options:
     \item{\code{optim.gn.tol.x}:}{Numeric. Only used when 
       \code{optim.method = "GN"}. Optimization stops when
       the root mean square of the difference between the old and new
-      parameter values are smaller than this tolerance value. Default is
+      parameter values is smaller than this tolerance value. Default is
       \code{1e-05} for DLS estimation and \code{1e-07} otherwise.}
     \item{\code{optim.gn.iter.max}:}{Integer. Only used when 
       \code{optim.method = "GN"}. The maximum number of GN iterations. 
@@ -406,7 +495,7 @@ Optimization options:
       list are \code{lower}, \code{upper}, \code{lower.factor} and 
       \code{upper.factor}. All of these accept a vector. The \code{lower} and
       \code{upper} elements indicate for which type of parameters bounds
-      should be computed. Possible choice are \code{"ov.var"}, \code{"lv.var"},
+      should be computed. Possible choices are \code{"ov.var"}, \code{"lv.var"},
       \code{"loadings"} and \code{"covariances"}. The \code{lower.factor} and 
       \code{upper.factor} elements should have the same length as the 
       \code{lower} and \code{upper} elements respectively. They indicate the
@@ -415,7 +504,7 @@ Optimization options:
       \code{min.reliability.marker} which sets the lower bound for the
       reliability of the marker indicator (if any) of each factor 
       (default is 0.1). Finally, the \code{min.var.lv.endo} element indicates
-      the lower bound of the variance of any endogenous latent variance
+      the lower bound of the variance of any endogenous latent variable
       (default is 0.0).}
 }
 
@@ -425,8 +514,8 @@ Parallelization options (currently only used for bootstrapping):
     \item{parallel}{The type of parallel operation to be used (if any).  If
       missing, the default is \code{"no"}.  }
     \item{ncpus}{Integer: number of processes to be used in parallel operation:
-      typically one would chose this to the number of available CPUs. By
-      By default this is the number of cores (as detected by 
+      typically one would set this to the number of available CPUs. By
+      default this is the number of cores (as detected by
       \code{parallel::detectCores()}) minus one.}
     \item{cl}{An optional \pkg{parallel} or \pkg{snow} cluster for use if
       \code{parallel = "snow"}. If not supplied, a cluster on the local 
@@ -452,13 +541,13 @@ Categorical estimation options:
       applies for 2x2 tables. The second value for larger tables. This value 
       is added to the zero frequency in the bivariate table. If 
       \code{"default"}, the value is set depending on the \code{"mimic"}
-      option. By default, lavaan uses \code{zero.add = c(0.5. 0.0)}.}
+      option. By default, lavaan uses \code{zero.add = c(0.5, 0.0)}.}
     \item{\code{zero.keep.margins}:}{Logical. This argument only affects 
       the computation of polychoric correlations for 2x2 tables with an empty 
       cell, and where a value is added to the empty cell. If \code{TRUE}, the 
       other values of the frequency table are adjusted so that all margins are 
-      unaffected. If \code{"default"}, the value is set depending on the 
-      \code{"mimic"}. The default is \code{TRUE}.}
+      unaffected. If \code{"default"}, the value is set depending on the
+      \code{"mimic"} option. The default is \code{TRUE}.}
     \item{\code{zero.cell.warn}:}{Logical. Only used if some observed 
       endogenous variables are categorical. If \code{TRUE}, give a warning if 
       one or more cells of a bivariate frequency table are empty.}
@@ -479,7 +568,7 @@ Starting values options:
       (residual) variances, which are set to 0.7 and 1.0 respectively.
       When \code{start} is \code{"default"}, the factor loadings are
       estimated using the fabin3 estimator (tsls) per factor. The
-      residual variances of observed variables are set tot half the 
+      residual variances of observed variables are set to half the
       observed variance, and all other (residual) variances are set to 0.05.
       The remaining parameters (regression coefficients, covariances) are
       set to zero.
@@ -489,7 +578,7 @@ Starting values options:
       If \code{start} is a fitted object of class \code{\linkS4class{lavaan}},
       the estimated values of the corresponding parameters will be extracted.
       If it is a parameter table, for example the output of the
-      \code{paramaterEstimates()} function, the values of the \code{est} or
+      \code{parameterEstimates()} function, the values of the \code{est} or
       \code{start} or \code{ustart} column (whichever is found first) will be
       extracted.}
     \item{\code{rstarts}:}{Integer. The number of refits that lavaan should
@@ -519,11 +608,10 @@ Check options:
       default until 0.6-20. From 0.6-21 onwards, \code{"chol"} became the
       default (as it is much faster).}
     \item{\code{check.gradient}:}{Logical. If \code{TRUE}, and the model
-      converged, a warning
-      is given if the optimizer decided that a (local) solution has
-      been found, while not all elements of the (unscaled) gradient (as 
-      seen by the optimizer) are (near) zero, as
-      they should be (the tolerance used is 0.001).}
+      converged, a warning is given if the optimizer reported a (local)
+      solution while not all elements of the (unscaled) gradient (as
+      seen by the optimizer) are (near) zero, as they should be (the
+      tolerance used is 0.001).}
     \item{\code{check.post}:}{Logical. If \code{TRUE}, and the model
       converged, a check is performed after (post) fitting, to verify if 
       the solution is admissible. This implies that all variances are
@@ -563,7 +651,7 @@ Miscellaneous:
       based on a fitted lavaan object.}
     \item{\code{mimic}:}{If \code{"Mplus"}, an attempt is made to mimic the 
       Mplus program. If \code{"EQS"}, an attempt is made to mimic the EQS 
-      program. If \code{"default"}, the value is (currently) set to to 
+      program. If \code{"default"}, the value is (currently) set to
       \code{"lavaan"}, which is very close to \code{"Mplus"}.}
     \item{\code{representation}:}{If \code{"LISREL"} the classical LISREL 
       matrix representation is used to represent the model (using the all-y 
@@ -578,7 +666,7 @@ Miscellaneous:
       are uncorrelated) and store the results in the baseline slot.}
     \item{\code{baseline.conditional.x.free.slopes}:}{Logical. If \code{TRUE},
       and \code{conditional.x = TRUE}, the (default) baseline model will
-      allow the slopestructure to be unrestricted.}
+      allow the slope structure to be unrestricted.}
     \item{\code{store.vcov}}{Logical. If \code{TRUE}, and \code{se=} is not
       set to \code{"none"}, store the full variance-covariance matrix of
       the model parameters in the vcov slot of the fitted lavaan object.}
@@ -590,7 +678,7 @@ Miscellaneous:
 }
 
 \seealso{
-\code{\link{lavaan}}
+\code{\link{lavaan}}, \code{\link{estimator_iv}}
 }
 
 \examples{

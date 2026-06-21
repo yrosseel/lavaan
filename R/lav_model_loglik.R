@@ -41,7 +41,7 @@ lav_model_loglik <- function(lavdata = NULL,
   # catch all-zero Sigma (new in 0.6-20)
   nblocks <- lavmodel@nblocks
   for (b in seq_len(nblocks)) {
-    # except for level-2, where Sigma could be all zero (0.6-22)
+    # except for level-2, where Sigma could be all zero (0.7-1)
     if (lavdata@nlevels > 1L && ((b %% lavdata@nlevels) != 1)) {
       next
     }
@@ -82,7 +82,7 @@ lav_model_loglik <- function(lavdata = NULL,
             logl_group[g] <- as.numeric(NA)
           } else {
             logl_group[g] <-
-              lav_mvnorm_cluster_missing_loglik_samplestats_2l(
+              lav_mvn_cl_mi_loglik_samp_2l(
                 y1 = lavdata@X[[g]],
                 y2 = lavsamplestats@YLp[[g]][[2]]$Y2,
                 lp = lavdata@Lp[[g]],
@@ -97,7 +97,7 @@ lav_model_loglik <- function(lavdata = NULL,
           # complete case
           if (lavmodel@conditional.x) {
             logl_group[g] <-
-              lav_mvreg_cluster_loglik_samplestats_2l(
+              lav_mvreg_cl_loglik_samp_2l(
                 ylp          = lavsamplestats@YLp[[g]],
                 lp           = lavdata@Lp[[g]],
                 res_sigma_w  = res_sigma_w,
@@ -112,7 +112,7 @@ lav_model_loglik <- function(lavdata = NULL,
               )
           } else {
             logl_group[g] <-
-              lav_mvnorm_cluster_loglik_samplestats_2l(
+              lav_mvn_cl_loglik_samp_2l(
                 ylp          = lavsamplestats@YLp[[g]],
                 lp           = lavdata@Lp[[g]],
                 mu_w         = mu_w,
@@ -133,7 +133,7 @@ lav_model_loglik <- function(lavdata = NULL,
           x_mean <- lavh1$implied$mean[[g]][x_idx]
           x_cov <- lavh1$implied$cov[[g]][x_idx, x_idx, drop = FALSE]
         }
-        logl_group[g] <- lav_mvnorm_missing_loglik_samplestats(
+        logl_group[g] <- lav_mvn_mi_loglik_samp(
           yp     = lavsamplestats@missing[[g]],
           mu     = lavimplied$mean[[g]],
           sigma_1  = lavimplied$cov[[g]],
@@ -144,7 +144,7 @@ lav_model_loglik <- function(lavdata = NULL,
       } else { # single-level, complete data
         if (lavoptions$conditional.x) {
           # FIXME: use lavh1
-          logl_group[g] <- lav_mvreg_loglik_samplestats(
+          logl_group[g] <- lav_mvreg_loglik_samp(
             sample_res_int    = lavsamplestats@res.int[[g]],
             sample_res_slopes = lavsamplestats@res.slopes[[g]],
             sample_res_cov    = lavsamplestats@res.cov[[g]],
@@ -162,7 +162,7 @@ lav_model_loglik <- function(lavdata = NULL,
           } else {
             mu <- lavsamplestats@mean[[g]]
           }
-          logl_group[g] <- lav_mvnorm_loglik_samplestats(
+          logl_group[g] <- lav_mvn_loglik_samp(
             sample_mean = lavsamplestats@mean[[g]],
             sample_cov  = lavsamplestats@cov[[g]],
             sample_nobs = lavsamplestats@nobs[[g]],

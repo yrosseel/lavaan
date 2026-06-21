@@ -1,15 +1,16 @@
-lav_lavaan_step04_partable <- function(slot_par_table = NULL, # nolint
+lav_step04_pt <- function(slot_par_table = NULL,
                                        model = NULL,
                                        flat_model = NULL,
                                        lavoptions = NULL,
                                        lavdata = NULL,
-                                       constraints = NULL) {
+                                       constraints = NULL,
+                                       marker = NULL) {
   # # # # # # # # # # # #
   # #  4. lavpartable # #
   # # # # # # # # # # # #
 
-  # if slotParTable not null
-  #   copy slotParTable to lavpartable
+  # if slot_par_table not null
+  #   copy slot_par_table to lavpartable
   # else
   #   if model is character or formula
   #     create a temporary variable tmp.data.ov equal to lavdata@ov
@@ -17,7 +18,7 @@ lav_lavaan_step04_partable <- function(slot_par_table = NULL, # nolint
   #       set meanstructure to FALSE
   #       set the member type in the temporary variable tmp.data.ov to a
   #         numeric vector with all zeroes
-  #     create lavpartable via function lavParTable (=lav_model_partable)
+  #     create lavpartable via function lavParTable (=lav_model_pt)
   #                     using the temporary variable for parameter varTable
   #   else
   #     if model is lavaan object
@@ -25,36 +26,36 @@ lav_lavaan_step04_partable <- function(slot_par_table = NULL, # nolint
   #     else
   #       if model is a list
   #         set lavpartable to
-  #           as.list(lav_partable_complete(as.list(flat.model)))
+  #           as.list(lav_pt_complete(as.list(flat_model)))
   #       else
   #         *** error ***
-  # if slotParTable is NULL check lavpartable via lav_partable_check
+  # if slot_par_table is NULL check lavpartable via lav_partable_check
   # if lavoptions$optim.method is "em" and there are variances specified in
   #   partable with free = 0L and
   #    starting value ustart 0, set ustart for these variances to
   #    lavoptions$em.zerovar.offset
 
   if (!is.null(slot_par_table)) {
-    lavpartable <- lav_partable_set_cache(slot_par_table)
+    lavpartable <- lav_pt_set_cache(slot_par_table)
   } else if (is.character(model) ||
     inherits(model, "formula") ||
-  # model was already a flat.model
+  # model was already a flat_model
   (is.list(model) && !is.null(model$mod.idx) &&
    !is.null(attr(model, "modifiers")))) {
     if (lav_verbose()) {
       cat("lavpartable        ...")
     }
-    # check flat.model before we proceed
+    # check flat_model before we proceed
     if (lav_debug()) {
       print(as.data.frame(flat_model))
     }
     # catch ~~ of fixed.x covariates if fixed.x = TRUE
-    # --> done inside lav_model_partable!
+    # --> done inside lav_model_pt!
 
     # if(lavoptions$fixed.x) {
-    #    tmp <- lav_partable_vnames(flat.model, type = "ov.x",
+    #    tmp <- lav_pt_vnames(flat_model, type = "ov.x",
     #                               ov.x.fatal = FALSE, warn = TRUE)
-    # tmp <- try(lav_partable_vnames(flat.model, type = "ov.x",
+    # tmp <- try(lav_pt_vnames(flat_model, type = "ov.x",
     #                                         ov.x.fatal = TRUE),
     #           silent = TRUE)
     # if(inherits(tmp, "try-error")) {
@@ -64,7 +65,7 @@ lav_lavaan_step04_partable <- function(slot_par_table = NULL, # nolint
     # }
     # }
     # if(lavoptions$conditional.x) {
-    #    tmp <- lav_partable_vnames(flat.model,
+    #    tmp <- lav_pt_vnames(flat_model,
     #                  type = "ov.x", ov.x.fatal = TRUE)
     # }
     tmp_data_ov <- lavdata@ov
@@ -76,50 +77,51 @@ lav_lavaan_step04_partable <- function(slot_par_table = NULL, # nolint
       lavParTable(
         model = flat_model,
         constraints = constraints,
-        varTable = tmp_data_ov,
+        var_table = tmp_data_ov,
         ngroups = lavdata@ngroups,
         meanstructure = lavoptions$meanstructure,
-        int.ov.free = lavoptions$int.ov.free,
-        int.lv.free = lavoptions$int.lv.free,
-        marker.int.zero = lavoptions$marker.int.zero,
+        int_ov_free = lavoptions$int.ov.free,
+        int_lv_free = lavoptions$int.lv.free,
+        marker_int_zero = lavoptions$marker.int.zero,
         orthogonal = lavoptions$orthogonal,
-        orthogonal.x = lavoptions$orthogonal.x,
-        orthogonal.y = lavoptions$orthogonal.y,
-        orthogonal.efa = lavoptions$rotation.args$orthogonal,
-        conditional.x = lavoptions$conditional.x,
-        fixed.x = lavoptions$fixed.x,
-        std.lv = lavoptions$std.lv,
+        orthogonal_x = lavoptions$orthogonal.x,
+        orthogonal_y = lavoptions$orthogonal.y,
+        orthogonal_efa = lavoptions$rotation.args$orthogonal,
+        conditional_x = lavoptions$conditional.x,
+        fixed_x = lavoptions$fixed.x,
+        std_lv = lavoptions$std.lv,
         correlation = lavoptions$correlation,
         composites = lavoptions$composites,
-        effect.coding = lavoptions$effect.coding,
-        ceq.simple = lavoptions$ceq.simple,
+        effect_coding = lavoptions$effect.coding,
+        ceq_simple = lavoptions$ceq.simple,
         parameterization = lavoptions$parameterization,
-        auto.fix.first = lavoptions$auto.fix.first,
-        auto.fix.single = lavoptions$auto.fix.single,
-        auto.var = lavoptions$auto.var,
-        auto.cov.lv.x = lavoptions$auto.cov.lv.x,
-        auto.cov.y = lavoptions$auto.cov.y,
-        auto.th = lavoptions$auto.th,
-        auto.delta = lavoptions$auto.delta,
-        auto.efa = lavoptions$auto.efa,
-        group.equal = lavoptions$group.equal,
-        group.partial = lavoptions$group.partial,
-        group.w.free = lavoptions$group.w.free,
-        as.data.frame. = FALSE
+        auto_fix_first = lavoptions$auto.fix.first,
+        marker = marker,
+        auto_fix_single = lavoptions$auto.fix.single,
+        auto_var = lavoptions$auto.var,
+        auto_cov_lv_x = lavoptions$auto.cov.lv.x,
+        auto_cov_y = lavoptions$auto.cov.y,
+        auto_th = lavoptions$auto.th,
+        auto_delta = lavoptions$auto.delta,
+        auto_efa = lavoptions$auto.efa,
+        group_equal = lavoptions$group.equal,
+        group_partial = lavoptions$group.partial,
+        group_w_free = lavoptions$group.w.free,
+        as_data_frame = FALSE
       )
-    lavpartable <- lav_partable_set_cache(lavpartable)
+    lavpartable <- lav_pt_set_cache(lavpartable)
     if (lav_verbose()) {
       cat(" done.\n")
     }
   } else if (inherits(model, "lavaan")) {
-    lavpartable <- lav_partable_set_cache(as.list(parTable(model)), model@pta)
+    lavpartable <- lav_pt_set_cache(as.list(parTable(model)), model@pta)
   } else if (is.list(model)) {
-    # we already checked this when creating flat.model
+    # we already checked this when creating flat_model
     # but we may need to complete it
     lavpartable <- as.list(flat_model) # in case model is a data.frame
     # complete table
-    lavpartable <- as.list(lav_partable_complete(lavpartable))
-    lavpartable <- lav_partable_set_cache(lavpartable)
+    lavpartable <- as.list(lav_pt_complete(lavpartable))
+    lavpartable <- lav_pt_set_cache(lavpartable)
   } else {
     lav_msg_stop(gettextf(
       "model [type = %s] is not of type character or list", class(model)))
@@ -132,7 +134,7 @@ lav_lavaan_step04_partable <- function(slot_par_table = NULL, # nolint
   # or not; this is especially relevant if the lavaan() function
   # was used, but the user has forgotten some variances/intercepts...
   if (is.null(slot_par_table)) {
-    junk <- lav_partable_check(lavpartable,
+    junk <- lav_pt_check(lavpartable,
       categorical = lavoptions$.categorical
     )
     rm(junk)
@@ -148,7 +150,7 @@ lav_lavaan_step04_partable <- function(slot_par_table = NULL, # nolint
     if (length(zero_var_idx) > 0L) {
       lavpartable$ustart[zero_var_idx] <- lavoptions$em.zerovar.offset
     }
-    lavpartable <- lav_partable_set_cache(lavpartable, NULL, force = TRUE)
+    lavpartable <- lav_pt_set_cache(lavpartable, NULL, force = TRUE)
   }
 
   list(

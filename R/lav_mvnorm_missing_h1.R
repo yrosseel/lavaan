@@ -8,7 +8,7 @@
 
 # here, we estimate Mu and Sigma from Y with missing values, assuming normality
 # this is a rewrite of the 'estimate.moments.EM' function in <= 0.5-22
-lav_mvnorm_missing_h1_estimate_moments <- function(y = NULL,    # nolint
+lav_mvn_mi_h1_est_moments <- function(y = NULL,
                                                    mp = NULL,
                                                    yp = NULL,
                                                    wt = NULL,
@@ -26,10 +26,10 @@ lav_mvnorm_missing_h1_estimate_moments <- function(y = NULL,    # nolint
 
   # missing patterns
   if (is.null(mp)) {
-    mp <- lav_data_missing_patterns(y)
+    mp <- lav_data_mi_patterns(y)
   }
   if (is.null(yp)) {
-    yp <- lav_samplestats_missing_patterns(y = y, mp = mp, wt = wt)
+    yp <- lav_samp_mi_patterns(y = y, mp = mp, wt = wt)
   }
 
   # covariances with zero coverage (perhaps planned?)
@@ -64,7 +64,7 @@ lav_mvnorm_missing_h1_estimate_moments <- function(y = NULL,    # nolint
   # verbose?
   if (lav_verbose()) {
     cat("\n")
-    cat("lav_mvnorm_missing_h1_estimate_moments: start EM steps\n")
+    cat("lav_mvn_mi_h1_est_moments: start EM steps\n")
   }
 
   # starting values; zero covariances to guarantee a pd matrix
@@ -102,7 +102,7 @@ lav_mvnorm_missing_h1_estimate_moments <- function(y = NULL,    # nolint
   # report
   if (lav_verbose()) {
     # fx0 <- lav_model_objective_fiml(Sigma.hat=Sigma, Mu.hat=Mu, M=Yp)
-    fx0 <- lav_mvnorm_missing_loglik_samplestats(
+    fx0 <- lav_mvn_mi_loglik_samp(
       yp = yp,
       mu = mu, sigma_1 = sigma_1,
       log2pi = FALSE,
@@ -118,7 +118,7 @@ lav_mvnorm_missing_h1_estimate_moments <- function(y = NULL,    # nolint
   # EM steps
   for (i in 1:max_iter) {
     # E-step
-    estep <- lav_mvnorm_missing_estep(
+    estep <- lav_mvn_mi_estep(
       y = y, mp = mp, wt = wt,
       mu = mu, sigma_1 = sigma_1,
       sinv_method = sinv_method
@@ -144,13 +144,13 @@ lav_mvnorm_missing_h1_estimate_moments <- function(y = NULL,    # nolint
     }
 
     # max absolute difference in parameter values
-    mm_delta <- max(abs(c(mu, lav_matrix_vech(sigma_1)) -
-      c(mu0, lav_matrix_vech(sigma0))))
+    mm_delta <- max(abs(c(mu, lav_mat_vech(sigma_1)) -
+      c(mu0, lav_mat_vech(sigma0))))
 
     # report fx
     if (lav_verbose()) {
       # fx <- lav_model_objective_fiml(Sigma.hat=Sigma, Mu.hat=Mu, M=Yp)
-      fx <- lav_mvnorm_missing_loglik_samplestats(
+      fx <- lav_mvn_mi_loglik_samp(
         yp = yp,
         mu = mu, sigma_1 = sigma_1,
         log2pi = FALSE,
@@ -185,7 +185,7 @@ lav_mvnorm_missing_h1_estimate_moments <- function(y = NULL,    # nolint
   # compute fx if we haven't already
   if (!lav_verbose()) {
     # fx <- lav_model_objective_fiml(Sigma.hat = Sigma, Mu.hat = Mu, M = Yp)
-    fx <- lav_mvnorm_missing_loglik_samplestats(
+    fx <- lav_mvn_mi_loglik_samp(
       yp = yp,
       mu = mu, sigma_1 = sigma_1,
       log2pi = FALSE,
@@ -218,7 +218,7 @@ lav_mvnorm_missing_h1_estimate_moments <- function(y = NULL,    # nolint
 # plain FIML and nlminb() instead
 #
 # single level only
-lav_mvnorm_missing_h1_estimate_moments_chol <- function(lavdata = NULL, # nolint
+lav_mvn_mi_h1_est_moments_chol <- function(lavdata = NULL,
                                                         lavsamplestats = NULL,
                                                         lavoptions = NULL,
                                                         group = 1L) {
@@ -230,7 +230,7 @@ lav_mvnorm_missing_h1_estimate_moments_chol <- function(lavdata = NULL, # nolint
 
   # construct unrestricted partable (using chol parameterization)
   # for this group only
-  lavpartable <- lav_partable_unrestricted_chol(
+  lavpartable <- lav_pt_unrestricted_chol(
                              lavdata = lavdata, lavoptions = lavoptions,
                              lavpta = NULL, group = group)
 
@@ -253,9 +253,9 @@ lav_mvnorm_missing_h1_estimate_moments_chol <- function(lavdata = NULL, # nolint
   lavoptions2$control <- list(rel.tol = 1e-7)
   lavoptions2$start <- "simple" # add this point, we have no lavh1 yet!
   fit <- lavaan(lavpartable,
-    slotOptions = lavoptions2,
-    slotSampleStats = lavsamplestats,
-    slotData = lavdata,
+    slot_options = lavoptions2,
+    slot_sample_stats = lavsamplestats,
+    slot_data = lavdata,
     warn = FALSE
   )
 
@@ -270,7 +270,7 @@ lav_mvnorm_missing_h1_estimate_moments_chol <- function(lavdata = NULL, # nolint
 # in the literature: - `Omega_{SW}'
 #                    - `Gamma for incomplete data'
 #                    - (N times the) sandwich estimator for acov(mu,vech(Sigma))
-lav_mvnorm_missing_h1_omega_sw <- function(y = NULL,
+lav_mvn_mi_h1_omega_sw <- function(y = NULL,
                                            mp = NULL,
                                            wt = NULL,
                                            cluster_idx = NULL,
@@ -283,23 +283,23 @@ lav_mvnorm_missing_h1_omega_sw <- function(y = NULL,
                                            information = "observed") {
   # missing patterns
   if (is.null(mp)) {
-    mp <- lav_data_missing_patterns(y)
+    mp <- lav_data_mi_patterns(y)
   }
 
   # sample stats per pattern
   if (is.null(yp) && (information == "observed" || is.null(sigma_1))) {
-    yp <- lav_samplestats_missing_patterns(y = y, mp = mp, wt = wt)
+    yp <- lav_samp_mi_patterns(y = y, mp = mp, wt = wt)
   }
 
   # Sigma and Mu
   if (is.null(sigma_1) || is.null(mu)) {
-    out <- lav_mvnorm_missing_h1_estimate_moments(y = y, mp = mp, yp = yp)
+    out <- lav_mvn_mi_h1_est_moments(y = y, mp = mp, yp = yp)
     mu <- out$Mu
     sigma_1 <- out$Sigma
   }
 
   # information matrices
-  info <- lav_mvnorm_missing_information_both(
+  info <- lav_mvn_mi_info_both(
     y = y, mp = mp, mu = mu,
     wt = wt, cluster_idx = cluster_idx,
     sigma_1 = sigma_1, x_idx = x_idx, sinv_method = sinv_method,
@@ -307,7 +307,7 @@ lav_mvnorm_missing_h1_omega_sw <- function(y = NULL,
   )
 
   a <- info$Abeta
-  a_inv <- lav_matrix_symmetric_inverse(
+  a_inv <- lav_mat_sym_inverse(
     s = a, logdet = FALSE,
     sinv_method = sinv_method
   )

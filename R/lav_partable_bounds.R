@@ -1,12 +1,12 @@
 # add parameter bounds to the parameter table
 # lavoptions$optim.bounds
-lav_partable_add_bounds <- function(partable = NULL,
+lav_pt_add_bounds <- function(partable = NULL,
                                     lavh1 = NULL,
                                     lavdata = NULL,
                                     lavsamplestats = NULL,
                                     lavoptions = NULL) {
   # no support (yet) for multilevel
-  if (lav_partable_nlevels(partable) > 1L) {
+  if (lav_pt_nlevels(partable) > 1L) {
     return(partable)
   }
 
@@ -155,19 +155,19 @@ lav_partable_add_bounds <- function(partable = NULL,
     upper_auto <- rep(+Inf, length(partable$lhs))
   }
 
-  lavpta <- lav_partable_attributes(partable)
+  lavpta <- lav_pt_attributes(partable)
 
   # check blocks
   if (is.null(partable$block)) {
     partable$block <- rep(1L, length(partable$lhs))
   }
-  # block_values <- lav_partable_block_values(partable)
+  # block_values <- lav_pt_block_values(partable)
 
   # check groups
   if (is.null(partable$group)) {
     partable$group <- rep(1L, length(partable$lhs))
   }
-  group_values <- lav_partable_group_values(partable)
+  group_values <- lav_pt_group_values(partable)
   ngroups <- length(group_values)
 
   # compute bounds per group ### TODO: add levels/classes/...
@@ -351,6 +351,30 @@ lav_partable_add_bounds <- function(partable = NULL,
         partable$lhs[par_idx],
         lv_names
       )]
+
+      # new in 0.6-20: if std.lv = TRUE, the latent variances are normally
+      # fixed to 1.0; but in some settings (eg multiple groups +
+      # group.equal = "loadings") the latent variances in groups 2+ are
+      # free parameters. For those free parameters, the [1, 1] bounds are
+      # wrong (they would fix the variance to 1.0). Use data-driven bounds
+      # instead (std.lv has no marker indicator, so no marker-based bounds).
+      if (lavoptions$std.lv) {
+        std_free_idx <- which(partable$free[par_idx] > 0L)
+        if (length(std_free_idx) > 0L) {
+          fidx <- par_idx[std_free_idx]
+          lower_auto[fidx] <- optim_bounds$min.var.lv.exo
+          upper_auto[fidx] <- max(ov_var)
+          # endogenous lv: respect min.var.lv.endo / max.r2.lv.endo
+          endo_f <- which(partable$lhs[fidx] %in% lv_names_endo)
+          if (length(endo_f) > 0L) {
+            lower_auto[fidx[endo_f]] <- optim_bounds$min.var.lv.endo
+            if (optim_bounds$max.r2.lv.endo != 1) {
+              lower_auto[fidx[endo_f]] <-
+                (1 - optim_bounds$max.r2.lv.endo) * upper_auto[fidx[endo_f]]
+            }
+          }
+        }
+      }
 
       # range
       bound_range <- upper_auto[par_idx] - pmax(lower_auto[par_idx], 0)

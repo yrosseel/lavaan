@@ -1,4 +1,4 @@
-lav_model_gradient_mml <- function(lavmodel = NULL,
+lav_model_grad_mml <- function(lavmodel = NULL,
                                    mm_theta = NULL,
                                    th = NULL,
                                    glist = NULL,
@@ -142,10 +142,10 @@ lav_model_gradient_mml <- function(lavmodel = NULL,
 
   # Delta
   ## DD <- lavcache[[group]]$DD
-  dd <- lav_model_gradient_dd(lavmodel, g_list = glist, group = group)
+  dd <- lav_model_grad_dd(lavmodel, g_list = glist, group = group)
 
   ## FIXME!!! do this analytically...
-  x <- lav_model_get_parameters(lavmodel = lavmodel, GLIST = mlist)
+  x <- lav_model_get_parameters(lavmodel = lavmodel, glist = mlist)
   d_vetadx <- function(x, lavmodel = lavmodel, g = 1L) {
     glist <- lav_model_x2glist(lavmodel, x = x, type = "free")
     vetax <- lav_model_vetax(lavmodel, glist = glist)[[g]]
@@ -269,14 +269,15 @@ lav_model_gradient_mml <- function(lavmodel = NULL,
 
     if (length(num_idx) > 0L) {
       # THETA (num only)
-      dsigma2 <- sweep(0.5 * pre[, num_idx] * pre[, num_idx],
+      dsigma2 <- sweep(0.5 * pre[, num_idx, drop = FALSE] *
+        pre[, num_idx, drop = FALSE],
         MARGIN = 2,
         STATS = 1 / (2 * theta_var), FUN = "-"
       )
       d_fyp_q <- d_fyp_q + (dsigma2 %*% dd$theta)
 
       # NU (num only)
-      dnu <- pre[, num_idx]
+      dnu <- pre[, num_idx, drop = FALSE]
       d_fyp_q <- d_fyp_q + (dnu %*% dd$nu)
     }
 

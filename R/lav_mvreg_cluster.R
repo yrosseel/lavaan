@@ -12,7 +12,7 @@
 # - beta.w: beta y within part
 # - beta.b: beta y between part
 # - beta.z: beta z (between-only)
-lav_mvreg_cluster_implied22l <- function(lp = NULL,
+lav_mvreg_cl_implied22l <- function(lp = NULL,
                                          implied = NULL,
                                          res_int_w = NULL,
                                          res_int_b = NULL,
@@ -114,7 +114,7 @@ lav_mvreg_cluster_implied22l <- function(lp = NULL,
 
 
 # recreate implied matrices from 2L matrices
-lav_mvreg_cluster_2l2implied <- function(lp,
+lav_mvreg_cl_2l2implied <- function(lp,
                                          sigma_w = NULL,
                                          sigma_b = NULL,
                                          sigma_zz = NULL,
@@ -190,7 +190,7 @@ lav_mvreg_cluster_2l2implied <- function(lp,
   implied
 }
 
-lav_mvreg_cluster_loglik_samplestats_2l <- function(ylp = NULL,   # nolint
+lav_mvreg_cl_loglik_samp_2l <- function(ylp = NULL,
                                                     lp = NULL,
                                                     res_sigma_w = NULL,
                                                     res_int_w = NULL,
@@ -204,7 +204,7 @@ lav_mvreg_cluster_loglik_samplestats_2l <- function(ylp = NULL,   # nolint
                                                     minus_two = TRUE) {
   # map implied to 2l matrices
   if (is.null(out)) {
-    out <- lav_mvreg_cluster_implied22l(
+    out <- lav_mvreg_cl_implied22l(
       lp = lp, implied = NULL,
       res_sigma_w = res_sigma_w,
       res_int_w = res_int_w, res_pi_w = res_pi_w,
@@ -275,13 +275,13 @@ lav_mvreg_cluster_loglik_samplestats_2l <- function(ylp = NULL,   # nolint
   s_pw <- (y1y1_wb_res - y2y2w_res) / sum(cluster_size - 1)
 
   # common parts:
-  sigma_w_inv <- lav_matrix_symmetric_inverse(
+  sigma_w_inv <- lav_mat_sym_inverse(
     s = sigma_w,
     logdet = TRUE
   )
   sigma_w_logdet <- attr(sigma_w_inv, "logdet")
   if (length(between_y_idx) > 0L) {
-    sigma_zz_inv <- lav_matrix_symmetric_inverse(
+    sigma_zz_inv <- lav_mat_sym_inverse(
       s = sigma_zz,
       logdet = TRUE
     )
@@ -318,7 +318,7 @@ lav_mvreg_cluster_loglik_samplestats_2l <- function(ylp = NULL,   # nolint
 
     # construct sigma.j
     sigma_j <- (nj * sigma_b_z) + sigma_w
-    sigma_j_inv <- lav_matrix_symmetric_inverse(
+    sigma_j_inv <- lav_mat_sym_inverse(
       s = sigma_j,
       logdet = TRUE
     )
@@ -368,7 +368,7 @@ lav_mvreg_cluster_loglik_samplestats_2l <- function(ylp = NULL,   # nolint
 }
 
 # first derivative -2*logl wrt Beta.W, Beta.B, Sigma.W, Sigma.B
-lav_mvreg_cluster_dlogl_2l_samplestats <- function(ylp = NULL,          # nolint
+lav_mvreg_cl_dlogl_2l_samp <- function(ylp = NULL,
                                                    lp = NULL,
                                                    res_sigma_w = NULL,
                                                    res_int_w = NULL,
@@ -381,7 +381,7 @@ lav_mvreg_cluster_dlogl_2l_samplestats <- function(ylp = NULL,          # nolint
                                                    sinv_method = "eigen") {
   # map implied to 2l matrices
   if (is.null(out)) {
-    out <- lav_mvreg_cluster_implied22l(
+    out <- lav_mvreg_cl_implied22l(
       lp = lp, implied = NULL,
       res_sigma_w = res_sigma_w,
       res_int_w = res_int_w, res_pi_w = res_pi_w,
@@ -452,20 +452,20 @@ lav_mvreg_cluster_dlogl_2l_samplestats <- function(ylp = NULL,          # nolint
   s_pw <- (y1y1_wb_res - y2y2w_res) / sum(cluster_size - 1)
 
   # common parts:
-  sigma_w_inv <- lav_matrix_symmetric_inverse(s = sigma_w)
+  sigma_w_inv <- lav_mat_sym_inverse(s = sigma_w)
 
   g_beta_w <- matrix(0, ncluster_sizes, length(beta_w))
   g_beta_b <- matrix(0, ncluster_sizes, length(beta_b))
   # g_beta_wb <- matrix(0, ncluster_sizes, length(beta_wb))
-  g_sigma_w1_1 <- matrix(0, ncluster_sizes, length(lav_matrix_vech(sigma_w)))
-  g_sigma_b_1 <- matrix(0, ncluster_sizes, length(lav_matrix_vech(sigma_b)))
+  g_sigma_w1_1 <- matrix(0, ncluster_sizes, length(lav_mat_vech(sigma_w)))
+  g_sigma_b_1 <- matrix(0, ncluster_sizes, length(lav_mat_vech(sigma_b)))
 
   if (length(between_y_idx) > 0L) {
     g_beta_z <- matrix(0, ncluster_sizes, length(beta_z))
-    g_sigma_zz_1 <- matrix(0, ncluster_sizes, length(lav_matrix_vech(sigma_zz)))
+    g_sigma_zz_1 <- matrix(0, ncluster_sizes, length(lav_mat_vech(sigma_zz)))
     g_sigma_yz_1 <- matrix(0, ncluster_sizes, length(sigma_yz))
 
-    sigma_zz_inv <- lav_matrix_symmetric_inverse(s = sigma_zz)
+    sigma_zz_inv <- lav_mat_sym_inverse(s = sigma_zz)
     sigma_yz_zi <- sigma_yz %*% sigma_zz_inv
     sigma_zi_zy <- t(sigma_yz_zi)
     sigma_b_z <- sigma_b - sigma_yz %*% sigma_zi_zy
@@ -488,7 +488,7 @@ lav_mvreg_cluster_dlogl_2l_samplestats <- function(ylp = NULL,          # nolint
 
       # construct sigma.j
       sigma_j <- (nj * sigma_b_z) + sigma_w
-      sigma_j_inv <- lav_matrix_symmetric_inverse(s = sigma_j)
+      sigma_j_inv <- lav_mat_sym_inverse(s = sigma_j)
       sigma_ji_yz_zi <- sigma_j_inv %*% sigma_yz_zi
       sigma_zi_zy_ji <- t(sigma_ji_yz_zi)
       sigma_ji_yz <- sigma_j_inv %*% sigma_yz
@@ -511,13 +511,13 @@ lav_mvreg_cluster_dlogl_2l_samplestats <- function(ylp = NULL,          # nolint
       g_sigma_w1 <- ns_sigma_j_inv - j_yzj
       tmp <- g_sigma_w1 * 2
       diag(tmp) <- diag(g_sigma_w1)
-      g_sigma_w1_1[clz, ] <- lav_matrix_vech(tmp)
+      g_sigma_w1_1[clz, ] <- lav_mat_vech(tmp)
 
       # SIGMA.B
       g_sigma_b <- nj * g_sigma_w1
       tmp <- g_sigma_b * 2
       diag(tmp) <- diag(g_sigma_b)
-      g_sigma_b_1[clz, ] <- lav_matrix_vech(tmp)
+      g_sigma_b_1[clz, ] <- lav_mat_vech(tmp)
 
       # SIGMA.ZZ
       yz1 <- zz_zi_yz_ji %*% sigma_yz
@@ -528,7 +528,7 @@ lav_mvreg_cluster_dlogl_2l_samplestats <- function(ylp = NULL,          # nolint
         nj * sigma_zz_inv %*% tmp %*% sigma_zz_inv)
       tmp <- g_sigma_zz * 2
       diag(tmp) <- diag(g_sigma_zz)
-      g_sigma_zz_1[clz, ] <- lav_matrix_vech(tmp)
+      g_sigma_zz_1[clz, ] <- lav_mat_vech(tmp)
 
       # SIGMA.ZY
       tmp1 <- crossprod(zz_zi_yz_ji, sigma_zz_inv)
@@ -536,7 +536,7 @@ lav_mvreg_cluster_dlogl_2l_samplestats <- function(ylp = NULL,          # nolint
       tmp3 <- ji_yz_zi
       tmp4 <- j_yzj %*% sigma_yz_zi
       g_sigma_yz <- 2 * nj * (tmp1 - tmp2 - tmp3 + tmp4)
-      g_sigma_yz_1[clz, ] <- lav_matrix_vec(g_sigma_yz)
+      g_sigma_yz_1[clz, ] <- lav_mat_vec(g_sigma_yz)
 
       # BETA.Z
       a <- (sigma_zz_inv + nj * (sigma_zi_zy_ji %*% sigma_yz_zi)) # symm!
@@ -559,12 +559,12 @@ lav_mvreg_cluster_dlogl_2l_samplestats <- function(ylp = NULL,          # nolint
 
     d_beta_w1 <- matrix(colSums(g_beta_w), nrow(beta_w), ncol(beta_w))
     d_beta_b <- matrix(colSums(g_beta_b), nrow(beta_b), ncol(beta_b))
-    d_sigma_w1 <- lav_matrix_vech_reverse(colSums(g_sigma_w1_1))
-    d_sigma_b <- lav_matrix_vech_reverse(colSums(g_sigma_b_1))
+    d_sigma_w1 <- lav_mat_vech_rev(colSums(g_sigma_w1_1))
+    d_sigma_b <- lav_mat_vech_rev(colSums(g_sigma_b_1))
 
     # z
     d_beta_z <- matrix(colSums(g_beta_z), nrow(beta_z), ncol(beta_z))
-    d_sigma_zz <- lav_matrix_vech_reverse(colSums(g_sigma_zz_1))
+    d_sigma_zz <- lav_mat_vech_rev(colSums(g_sigma_zz_1))
     d_sigma_yz <- matrix(colSums(g_sigma_yz_1), nrow(sigma_yz), ncol(sigma_yz))
   # between.y.idx
 
@@ -580,7 +580,7 @@ lav_mvreg_cluster_dlogl_2l_samplestats <- function(ylp = NULL,          # nolint
 
       # construct sigma.j
       sigma_j <- (nj * sigma_b) + sigma_w
-      sigma_j_inv <- lav_matrix_symmetric_inverse(s = sigma_j)
+      sigma_j_inv <- lav_mat_sym_inverse(s = sigma_j)
 
       # common part
       j_yyj <- nj * sigma_j_inv %*% y2yc_yy %*% sigma_j_inv
@@ -589,13 +589,13 @@ lav_mvreg_cluster_dlogl_2l_samplestats <- function(ylp = NULL,          # nolint
       g_sigma_w1 <- (n_s[clz] * sigma_j_inv) - j_yyj
       tmp <- g_sigma_w1 * 2
       diag(tmp) <- diag(g_sigma_w1)
-      g_sigma_w1_1[clz, ] <- lav_matrix_vech(tmp)
+      g_sigma_w1_1[clz, ] <- lav_mat_vech(tmp)
 
       # SIGMA.B
       g_sigma_b <- nj * g_sigma_w1
       tmp <- g_sigma_b * 2
       diag(tmp) <- diag(g_sigma_b)
-      g_sigma_b_1[clz, ] <- lav_matrix_vech(tmp)
+      g_sigma_b_1[clz, ] <- lav_mat_vech(tmp)
 
       # BETA.W (between part only) + BETA.B
       out_b <- -1 * xx_y2_diff %*% sigma_j_inv
@@ -608,8 +608,8 @@ lav_mvreg_cluster_dlogl_2l_samplestats <- function(ylp = NULL,          # nolint
 
     d_beta_w1 <- matrix(colSums(g_beta_w), nrow(beta_w), ncol(beta_w))
     d_beta_b <- matrix(colSums(g_beta_b), nrow(beta_b), ncol(beta_b))
-    d_sigma_w1 <- lav_matrix_vech_reverse(colSums(g_sigma_w1_1))
-    d_sigma_b <- lav_matrix_vech_reverse(colSums(g_sigma_b_1))
+    d_sigma_w1 <- lav_mat_vech_rev(colSums(g_sigma_w1_1))
+    d_sigma_b <- lav_mat_vech_rev(colSums(g_sigma_b_1))
 
     # z
     d_beta_z <- matrix(0, 0L, 0L)
@@ -633,7 +633,7 @@ lav_mvreg_cluster_dlogl_2l_samplestats <- function(ylp = NULL,          # nolint
   d_beta_w <- d_beta_w1 + d_beta_w2
 
   # rearrange
-  dimplied <- lav_mvreg_cluster_2l2implied(lp,
+  dimplied <- lav_mvreg_cl_2l2implied(lp,
     sigma_w = d_sigma_w, sigma_b = d_sigma_b,
     sigma_zz = d_sigma_zz, sigma_yz = d_sigma_yz,
     beta_w = d_beta_w, beta_b = d_beta_b, beta_z = d_beta_z
@@ -646,17 +646,17 @@ lav_mvreg_cluster_dlogl_2l_samplestats <- function(ylp = NULL,          # nolint
   # as a single vector
   out <- c(
     drop(dimplied$res.int[[1]]),
-    lav_matrix_vec(dimplied$res.slopes[[1]]),
-    lav_matrix_vech(dimplied$res.cov[[1]]),
+    lav_mat_vec(dimplied$res.slopes[[1]]),
+    lav_mat_vech(dimplied$res.cov[[1]]),
     drop(dimplied$res.int[[2]]),
-    lav_matrix_vec(dimplied$res.slopes[[2]]),
-    lav_matrix_vech(dimplied$res.cov[[2]])
+    lav_mat_vec(dimplied$res.slopes[[2]]),
+    lav_mat_vech(dimplied$res.cov[[2]])
   )
   out
 }
 
 # cluster-wise scores -2*logl wrt Beta.W, Beta.B, Sigma.W, Sigma.B
-lav_mvreg_cluster_scores_2l <- function(y1 = NULL,
+lav_mvreg_cl_sc_2l <- function(y1 = NULL,
                                         ylp = NULL,
                                         lp = NULL,
                                         res_sigma_w = NULL,
@@ -669,7 +669,7 @@ lav_mvreg_cluster_scores_2l <- function(y1 = NULL,
                                         sinv_method = "eigen") {
   # map implied to 2l matrices
   if (is.null(out)) {
-    out <- lav_mvreg_cluster_implied22l(
+    out <- lav_mvreg_cl_implied22l(
       lp = lp, implied = NULL,
       res_sigma_w = res_sigma_w,
       res_int_w = res_int_w, res_pi_w = res_pi_w,
@@ -747,21 +747,21 @@ lav_mvreg_cluster_scores_2l <- function(y1 = NULL,
   }
 
   # common parts:
-  sigma_w_inv <- lav_matrix_symmetric_inverse(s = sigma_w)
+  sigma_w_inv <- lav_mat_sym_inverse(s = sigma_w)
 
   g_beta_w1 <- matrix(0, nclusters, length(beta_w))
   g_beta_b <- matrix(0, nclusters, length(beta_b))
   # g_beta_wb <- matrix(0, nclusters, length(beta_wb))
-  g_sigma_w1_1 <- matrix(0, nclusters, length(lav_matrix_vech(sigma_w)))
-  g_sigma_b_1 <- matrix(0, nclusters, length(lav_matrix_vech(sigma_b)))
+  g_sigma_w1_1 <- matrix(0, nclusters, length(lav_mat_vech(sigma_w)))
+  g_sigma_b_1 <- matrix(0, nclusters, length(lav_mat_vech(sigma_b)))
 
 
   if (length(between_y_idx) > 0L) {
     g_beta_z <- matrix(0, nclusters, length(beta_z))
-    g_sigma_zz_1 <- matrix(0, nclusters, length(lav_matrix_vech(sigma_zz)))
+    g_sigma_zz_1 <- matrix(0, nclusters, length(lav_mat_vech(sigma_zz)))
     g_sigma_yz_1 <- matrix(0, nclusters, length(sigma_yz))
 
-    sigma_zz_inv <- lav_matrix_symmetric_inverse(s = sigma_zz)
+    sigma_zz_inv <- lav_mat_sym_inverse(s = sigma_zz)
     sigma_yz_zi <- sigma_yz %*% sigma_zz_inv
     sigma_zi_zy <- t(sigma_yz_zi)
     sigma_b_z <- sigma_b - sigma_yz %*% sigma_zi_zy
@@ -782,7 +782,7 @@ lav_mvreg_cluster_scores_2l <- function(y1 = NULL,
 
       # construct sigma.j
       sigma_j <- (nj * sigma_b_z) + sigma_w
-      sigma_j_inv <- lav_matrix_symmetric_inverse(s = sigma_j)
+      sigma_j_inv <- lav_mat_sym_inverse(s = sigma_j)
       sigma_ji_yz_zi <- sigma_j_inv %*% sigma_yz_zi
       sigma_zi_zy_ji <- t(sigma_ji_yz_zi)
       sigma_ji_yz <- sigma_j_inv %*% sigma_yz
@@ -801,20 +801,20 @@ lav_mvreg_cluster_scores_2l <- function(y1 = NULL,
       g_sigma_w1 <- sigma_j_inv - j_yzj
       tmp <- g_sigma_w1 * 2
       diag(tmp) <- diag(g_sigma_w1)
-      g_sigma_w1_1[cl, ] <- lav_matrix_vech(tmp)
+      g_sigma_w1_1[cl, ] <- lav_mat_vech(tmp)
 
       # SIGMA.W (within part)
       # g.sigma.w2 <- ( (nj-1) * sigma.w.inv
       #    - sigma.w.inv %*% (crossprod(Y1m) - nj*Y2Yc.yy) %*% sigma.w.inv )
       # tmp <- g.sigma.w2*2; diag(tmp) <- diag(g.sigma.w2)
-      # G.sigma.w2[cl,] <- lav_matrix_vech(tmp)
+      # G.sigma.w2[cl,] <- lav_mat_vech(tmp)
       # G.sigma.w[cl,] <- G.sigma.w1[cl,] + G.sigma.w2[cl,]
 
       # SIGMA.B
       g_sigma_b <- nj * g_sigma_w1
       tmp <- g_sigma_b * 2
       diag(tmp) <- diag(g_sigma_b)
-      g_sigma_b_1[cl, ] <- lav_matrix_vech(tmp)
+      g_sigma_b_1[cl, ] <- lav_mat_vech(tmp)
 
       # SIGMA.ZZ
       yz1 <- zz_zi_yz_ji %*% sigma_yz
@@ -825,7 +825,7 @@ lav_mvreg_cluster_scores_2l <- function(y1 = NULL,
         nj * sigma_zz_inv %*% tmp %*% sigma_zz_inv)
       tmp <- g_sigma_zz * 2
       diag(tmp) <- diag(g_sigma_zz)
-      g_sigma_zz_1[cl, ] <- lav_matrix_vech(tmp)
+      g_sigma_zz_1[cl, ] <- lav_mat_vech(tmp)
 
       # SIGMA.ZY
       # g.sigma.yz <- 2 * nj * (
@@ -837,7 +837,7 @@ lav_mvreg_cluster_scores_2l <- function(y1 = NULL,
       tmp3 <- ji_yz_zi
       tmp4 <- j_yzj %*% sigma_yz_zi
       g_sigma_yz <- 2 * nj * (tmp1 - tmp2 - tmp3 + tmp4)
-      g_sigma_yz_1[cl, ] <- lav_matrix_vec(g_sigma_yz)
+      g_sigma_yz_1[cl, ] <- lav_mat_vec(g_sigma_yz)
 
       # BETA.Z
       # here, we avoid the (sample.z - beta.z) approach
@@ -893,7 +893,7 @@ lav_mvreg_cluster_scores_2l <- function(y1 = NULL,
 
       # construct sigma.j
       sigma_j <- (nj * sigma_b) + sigma_w
-      sigma_j_inv <- lav_matrix_symmetric_inverse(s = sigma_j)
+      sigma_j_inv <- lav_mat_sym_inverse(s = sigma_j)
 
       # common part
       j_yyj <- nj * sigma_j_inv %*% y2yc_yy %*% sigma_j_inv
@@ -903,19 +903,19 @@ lav_mvreg_cluster_scores_2l <- function(y1 = NULL,
       #    - sigma.w.inv %*% (crossprod(Y1m) - nj*Y2Yc.yy) %*% sigma.w.inv
       #    + sigma.j.inv - jYYj )
       # tmp <- g.sigma.w*2; diag(tmp) <- diag(g.sigma.w)
-      # G.sigma.w[cl,] <- lav_matrix_vech(tmp)
+      # G.sigma.w[cl,] <- lav_mat_vech(tmp)
 
       # SIGMA.W (between part)
       g_sigma_w1 <- sigma_j_inv - j_yyj
       tmp <- g_sigma_w1 * 2
       diag(tmp) <- diag(g_sigma_w1)
-      g_sigma_w1_1[cl, ] <- lav_matrix_vech(tmp)
+      g_sigma_w1_1[cl, ] <- lav_mat_vech(tmp)
 
       # SIGMA.B
       g_sigma_b <- nj * (sigma_j_inv - j_yyj)
       tmp <- g_sigma_b * 2
       diag(tmp) <- diag(g_sigma_b)
-      g_sigma_b_1[cl, ] <- lav_matrix_vech(tmp)
+      g_sigma_b_1[cl, ] <- lav_mat_vech(tmp)
 
       # BETA.W (between part only)
       exo2_w <- cbind(1, y2[cl, within_x_idx, drop = FALSE])
@@ -956,17 +956,17 @@ lav_mvreg_cluster_scores_2l <- function(y1 = NULL,
 
   y1a_res <- y1_wb_res - y2w_res[cluster_idx, , drop = FALSE]
   y1a_res_i <- y1a_res %*% sigma_w_inv
-  idx1 <- lav_matrix_vech_col_idx(nrow(sigma_w))
-  idx2 <- lav_matrix_vech_row_idx(nrow(sigma_w))
-  sw2 <- matrix(lav_matrix_vech(sigma_w_inv),
+  idx1 <- lav_mat_vech_col_idx(nrow(sigma_w))
+  idx2 <- lav_mat_vech_row_idx(nrow(sigma_w))
+  sw2 <- matrix(lav_mat_vech(sigma_w_inv),
     nrow = nclusters,
-    length(lav_matrix_vech(sigma_w_inv)), byrow = TRUE
+    length(lav_mat_vech(sigma_w_inv)), byrow = TRUE
   )
   sw2 <- sw2 * (cluster_size - 1)
   tmp_1 <- y1a_res_i[, idx1, drop = FALSE] * y1a_res_i[, idx2, drop = FALSE]
   tmp2_1 <- rowsum.default(tmp_1, cluster_idx, reorder = FALSE, na.rm = TRUE)
   g_sigma_w2 <- 2 * (sw2 - tmp2_1)
-  diagh_idx <- lav_matrix_diagh_idx(nrow(sigma_w))
+  diagh_idx <- lav_mat_diagh_idx(nrow(sigma_w))
   g_sigma_w2[, diagh_idx] <- g_sigma_w2[, diagh_idx, drop = FALSE] / 2
   g_sigma_w <- g_sigma_w1_1 + g_sigma_w2
 
@@ -981,7 +981,7 @@ lav_mvreg_cluster_scores_2l <- function(y1 = NULL,
   # 'tilde' matrices: ALL variables within and between
   p_tilde <- length(unique(c(ov_idx[[1]], ov_idx[[2]])))
   p_tilde_star <- p_tilde * (p_tilde + 1) / 2
-  b_tilde <- lav_matrix_vech_reverse(seq_len(p_tilde_star))
+  b_tilde <- lav_mat_vech_rev(seq_len(p_tilde_star))
 
   # only 'y'
   ov_y_idx <- lp$ov.y.idx
@@ -995,12 +995,12 @@ lav_mvreg_cluster_scores_2l <- function(y1 = NULL,
   beta_b_idx <- matrix(seq_along(beta_b), nrow(beta_b), ncol(beta_b))
 
   res_int_w <- g_beta_w[, beta_w_idx[1L, ], drop = FALSE]
-  res_pi_w <- g_beta_w[, lav_matrix_vecr(beta_w_idx[-1L, ]), drop = FALSE]
+  res_pi_w <- g_beta_w[, lav_mat_vecr(beta_w_idx[-1L, ]), drop = FALSE]
   res_sigma_w <- g_sigma_w
 
   # Sigma.B
   sigma_b_tilde <- matrix(0, nclusters, p_tilde_star)
-  col_idx <- lav_matrix_vech(b_tilde[ov_y_idx1, ov_y_idx1, drop = FALSE])
+  col_idx <- lav_mat_vech(b_tilde[ov_y_idx1, ov_y_idx1, drop = FALSE])
   sigma_b_tilde[, col_idx] <- g_sigma_b_1
 
   # Int.B
@@ -1010,15 +1010,15 @@ lav_mvreg_cluster_scores_2l <- function(y1 = NULL,
 
   # Pi.B
   pi_b <- matrix(0, nclusters, p_tilde * (nrow(beta_b) - 1L))
-  col_idx <- lav_matrix_vecr(beta_b_tilde[-1L, ov_y_idx1, drop = FALSE])
-  pi_b[, col_idx] <- g_beta_b[, lav_matrix_vecr(beta_b_idx[-1L, ]),
+  col_idx <- lav_mat_vecr(beta_b_tilde[-1L, ov_y_idx1, drop = FALSE])
+  pi_b[, col_idx] <- g_beta_b[, lav_mat_vecr(beta_b_idx[-1L, ]),
                                                                 drop = FALSE]
 
   if (length(between_y_idx) > 0L) {
     # Sigma.B: add yz/zz parts
-    col_idx <- lav_matrix_vec(b_tilde[ov_y_idx1, between_y_idx, drop = FALSE])
+    col_idx <- lav_mat_vec(b_tilde[ov_y_idx1, between_y_idx, drop = FALSE])
     sigma_b_tilde[, col_idx] <- g_sigma_yz_1
-    col_idx <- lav_matrix_vech(b_tilde[between_y_idx, between_y_idx,
+    col_idx <- lav_mat_vech(b_tilde[between_y_idx, between_y_idx,
       drop = FALSE
     ])
     sigma_b_tilde[, col_idx] <- g_sigma_zz_1
@@ -1028,18 +1028,18 @@ lav_mvreg_cluster_scores_2l <- function(y1 = NULL,
     int_b[, between_y_idx] <- g_beta_z[, beta_z_idx[1L, ], drop = FALSE]
 
     # Pi.B: add beta.z
-    col_idx <- lav_matrix_vecr(beta_b_tilde[-1L, between_y_idx, drop = FALSE])
+    col_idx <- lav_mat_vecr(beta_b_tilde[-1L, between_y_idx, drop = FALSE])
     pi_b[, col_idx] <-
-      g_beta_z[, lav_matrix_vecr(beta_z_idx[-1L, ]), drop = FALSE]
+      g_beta_z[, lav_mat_vecr(beta_z_idx[-1L, ]), drop = FALSE]
   }
 
   # only extract ov.y.idx2 for BETWEEN
-  col_idx <- lav_matrix_vech(b_tilde[ov_y_idx2, ov_y_idx2, drop = FALSE])
+  col_idx <- lav_mat_vech(b_tilde[ov_y_idx2, ov_y_idx2, drop = FALSE])
   res_sigma_b <- sigma_b_tilde[, col_idx, drop = FALSE]
 
   res_int_b <- int_b[, ov_y_idx2, drop = FALSE]
 
-  col_idx <- lav_matrix_vecr(beta_b_tilde[-1, ov_y_idx2])
+  col_idx <- lav_mat_vecr(beta_b_tilde[-1, ov_y_idx2])
   res_pi_b <- pi_b[, col_idx, drop = FALSE]
 
   scores <- cbind(
@@ -1051,7 +1051,7 @@ lav_mvreg_cluster_scores_2l <- function(y1 = NULL,
 }
 
 # first-order information: outer crossprod of scores per cluster
-lav_mvreg_cluster_information_firstorder <- function(y1 = NULL,     # nolint
+lav_mvreg_cl_info_firstorder <- function(y1 = NULL,
                                                      ylp = NULL,
                                                      lp = NULL,
                                                      res_sigma_w = NULL,
@@ -1064,7 +1064,7 @@ lav_mvreg_cluster_information_firstorder <- function(y1 = NULL,     # nolint
                                                      sinv_method = "eigen") {
   # n <- NROW(y1)
 
-  scores <- lav_mvreg_cluster_scores_2l(
+  scores <- lav_mvreg_cl_sc_2l(
     y1 = y1,
     ylp = ylp,
     lp = lp,

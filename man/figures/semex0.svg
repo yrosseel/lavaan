@@ -19,27 +19,27 @@
 <path d="M 400 270 L 300 221.213203435596" stroke-width="2" stroke="black" marker-end="url(#arr)" />
 <path id="L4" d="M 300 221.213203435596 L 400 270" stroke-width="0" stroke="none" fill="none" />
 <path id="L5" d="M 400 270 L 400 221.213203435596" stroke-width="2" stroke="black" marker-end="url(#arr)" />
-<text fill="black" font-size="20" font-family="Latin Modern Math, arial, Aerial, sans" font-style="italic" text-anchor="middle">
+<text fill="black" font-size="20" font-family="Latin Modern Math, arial, Arial, sans" font-style="italic" text-anchor="middle">
 <textPath xlink:href="#L5" startOffset="50%">a</textPath>
 </text>
 <path id="L6" d="M 400 270 L 500 221.213203435596" stroke-width="2" stroke="black" marker-end="url(#arr)" />
-<text fill="black" font-size="20" font-family="Latin Modern Math, arial, Aerial, sans" font-style="italic" text-anchor="middle">
+<text fill="black" font-size="20" font-family="Latin Modern Math, arial, Arial, sans" font-style="italic" text-anchor="middle">
 <textPath xlink:href="#L6" startOffset="50%">b</textPath>
 </text>
 <path id="L7" d="M 400 270 L 600 221.213203435596" stroke-width="2" stroke="black" marker-end="url(#arr)" />
-<text fill="black" font-size="20" font-family="Latin Modern Math, arial, Aerial, sans" font-style="italic" text-anchor="middle">
+<text fill="black" font-size="20" font-family="Latin Modern Math, arial, Arial, sans" font-style="italic" text-anchor="middle">
 <textPath xlink:href="#L7" startOffset="50%">c</textPath>
 </text>
 <path id="L8" d="M 730 400 L 778.786796564404 300" stroke-width="2" stroke="black" marker-end="url(#arr)" />
-<text fill="black" font-size="20" font-family="Latin Modern Math, arial, Aerial, sans" font-style="italic" text-anchor="middle">
+<text fill="black" font-size="20" font-family="Latin Modern Math, arial, Arial, sans" font-style="italic" text-anchor="middle">
 <textPath xlink:href="#L8" startOffset="50%">c</textPath>
 </text>
 <path id="L9" d="M 730 400 L 778.786796564404 400" stroke-width="2" stroke="black" marker-end="url(#arr)" />
-<text fill="black" font-size="20" font-family="Latin Modern Math, arial, Aerial, sans" font-style="italic" text-anchor="middle">
+<text fill="black" font-size="20" font-family="Latin Modern Math, arial, Arial, sans" font-style="italic" text-anchor="middle">
 <textPath xlink:href="#L9" startOffset="50%">b</textPath>
 </text>
 <path id="L10" d="M 730 400 L 778.786796564404 500" stroke-width="2" stroke="black" marker-end="url(#arr)" />
-<text fill="black" font-size="20" font-family="Latin Modern Math, arial, Aerial, sans" font-style="italic" text-anchor="middle">
+<text fill="black" font-size="20" font-family="Latin Modern Math, arial, Arial, sans" font-style="italic" text-anchor="middle">
 <textPath xlink:href="#L10" startOffset="50%">a</textPath>
 </text>
 <path id="L11" d="M 730 400 L 778.786796564404 600" stroke-width="2" stroke="black" marker-end="url(#arr)" />
@@ -58,31 +58,31 @@
 <path id="L19" d="M 600 178.786796564404 Q 940 110 821.213203435596 300" stroke-width="0" stroke="none" fill="none" />
 <path id="L20" d="M 821.213203435596 500 Q 930 400 821.213203435596 300" stroke-width="2" stroke="black" fill="none" marker-start="url(#sarr)" marker-end="url(#arr)" />
 <circle cx="300" cy="400" r="30" stroke-width="2" stroke="black" fill="white"/>
-<text x="300" y="400" fill="black" font-size="20" font-family="Latin Modern Math, arial, Aerial, sans" font-style="italic" dominant-baseline="central" text-anchor="middle">ind<tspan dy="5" font-size="15">60</tspan></text>
+<text x="300" y="400" fill="black" font-size="20" font-family="Latin Modern Math, arial, Arial, sans" font-style="italic" dominant-baseline="central" text-anchor="middle">ind<tspan dy="5" font-size="15">60</tspan></text>
 <rect width="42.4264068711929" height="42.4264068711929" x="178.786796564404" y="278.786796564404" stroke-width="2" stroke="black" fill="white" />
-<text x="200" y="300" fill="black" font-size="20" font-family="Latin Modern Math, arial, Aerial, sans" font-style="italic" dominant-baseline="central" text-anchor="middle">x<tspan dy="5" font-size="15">1</tspan></text>
+<text x="200" y="300" fill="black" font-size="20" font-family="Latin Modern Math, arial, Arial, sans" font-style="italic" dominant-baseline="central" text-anchor="middle">x<tspan dy="5" font-size="15">1</tspan></text>
 <rect width="42.4264068711929" height="42.4264068711929" x="178.786796564404" y="378.786796564404" stroke-width="2" stroke="black" fill="white" />
-<text x="200" y="400" fill="black" font-size="20" font-family="Latin Modern Math, arial, Aerial, sans" font-style="italic" dominant-baseline="central" text-anchor="middle">x<tspan dy="5" font-size="15">2</tspan></text>
+<text x="200" y="400" fill="black" font-size="20" font-family="Latin Modern Math, arial, Arial, sans" font-style="italic" dominant-baseline="central" text-anchor="middle">x<tspan dy="5" font-size="15">2</tspan></text>
 <rect width="42.4264068711929" height="42.4264068711929" x="178.786796564404" y="478.786796564404" stroke-width="2" stroke="black" fill="white" />
-<text x="200" y="500" fill="black" font-size="20" font-family="Latin Modern Math, arial, Aerial, sans" font-style="italic" dominant-baseline="central" text-anchor="middle">x<tspan dy="5" font-size="15">3</tspan></text>
+<text x="200" y="500" fill="black" font-size="20" font-family="Latin Modern Math, arial, Arial, sans" font-style="italic" dominant-baseline="central" text-anchor="middle">x<tspan dy="5" font-size="15">3</tspan></text>
 <circle cx="400" cy="300" r="30" stroke-width="2" stroke="black" fill="white"/>
-<text x="400" y="300" fill="black" font-size="20" font-family="Latin Modern Math, arial, Aerial, sans" font-style="italic" dominant-baseline="central" text-anchor="middle">dem<tspan dy="5" font-size="15">60</tspan></text>
+<text x="400" y="300" fill="black" font-size="20" font-family="Latin Modern Math, arial, Arial, sans" font-style="italic" dominant-baseline="central" text-anchor="middle">dem<tspan dy="5" font-size="15">60</tspan></text>
 <rect width="42.4264068711929" height="42.4264068711929" x="278.786796564404" y="178.786796564404" stroke-width="2" stroke="black" fill="white" />
-<text x="300" y="200" fill="black" font-size="20" font-family="Latin Modern Math, arial, Aerial, sans" font-style="italic" dominant-baseline="central" text-anchor="middle">y<tspan dy="5" font-size="15">1</tspan></text>
+<text x="300" y="200" fill="black" font-size="20" font-family="Latin Modern Math, arial, Arial, sans" font-style="italic" dominant-baseline="central" text-anchor="middle">y<tspan dy="5" font-size="15">1</tspan></text>
 <rect width="42.4264068711929" height="42.4264068711929" x="378.786796564404" y="178.786796564404" stroke-width="2" stroke="black" fill="white" />
-<text x="400" y="200" fill="black" font-size="20" font-family="Latin Modern Math, arial, Aerial, sans" font-style="italic" dominant-baseline="central" text-anchor="middle">y<tspan dy="5" font-size="15">2</tspan></text>
+<text x="400" y="200" fill="black" font-size="20" font-family="Latin Modern Math, arial, Arial, sans" font-style="italic" dominant-baseline="central" text-anchor="middle">y<tspan dy="5" font-size="15">2</tspan></text>
 <rect width="42.4264068711929" height="42.4264068711929" x="478.786796564404" y="178.786796564404" stroke-width="2" stroke="black" fill="white" />
-<text x="500" y="200" fill="black" font-size="20" font-family="Latin Modern Math, arial, Aerial, sans" font-style="italic" dominant-baseline="central" text-anchor="middle">y<tspan dy="5" font-size="15">3</tspan></text>
+<text x="500" y="200" fill="black" font-size="20" font-family="Latin Modern Math, arial, Arial, sans" font-style="italic" dominant-baseline="central" text-anchor="middle">y<tspan dy="5" font-size="15">3</tspan></text>
 <rect width="42.4264068711929" height="42.4264068711929" x="578.786796564404" y="178.786796564404" stroke-width="2" stroke="black" fill="white" />
-<text x="600" y="200" fill="black" font-size="20" font-family="Latin Modern Math, arial, Aerial, sans" font-style="italic" dominant-baseline="central" text-anchor="middle">y<tspan dy="5" font-size="15">4</tspan></text>
+<text x="600" y="200" fill="black" font-size="20" font-family="Latin Modern Math, arial, Arial, sans" font-style="italic" dominant-baseline="central" text-anchor="middle">y<tspan dy="5" font-size="15">4</tspan></text>
 <circle cx="700" cy="400" r="30" stroke-width="2" stroke="black" fill="white"/>
-<text x="700" y="400" fill="black" font-size="20" font-family="Latin Modern Math, arial, Aerial, sans" font-style="italic" dominant-baseline="central" text-anchor="middle">dem<tspan dy="5" font-size="15">65</tspan></text>
+<text x="700" y="400" fill="black" font-size="20" font-family="Latin Modern Math, arial, Arial, sans" font-style="italic" dominant-baseline="central" text-anchor="middle">dem<tspan dy="5" font-size="15">65</tspan></text>
 <rect width="42.4264068711929" height="42.4264068711929" x="778.786796564404" y="278.786796564404" stroke-width="2" stroke="black" fill="white" />
-<text x="800" y="300" fill="black" font-size="20" font-family="Latin Modern Math, arial, Aerial, sans" font-style="italic" dominant-baseline="central" text-anchor="middle">y<tspan dy="5" font-size="15">8</tspan></text>
+<text x="800" y="300" fill="black" font-size="20" font-family="Latin Modern Math, arial, Arial, sans" font-style="italic" dominant-baseline="central" text-anchor="middle">y<tspan dy="5" font-size="15">8</tspan></text>
 <rect width="42.4264068711929" height="42.4264068711929" x="778.786796564404" y="378.786796564404" stroke-width="2" stroke="black" fill="white" />
-<text x="800" y="400" fill="black" font-size="20" font-family="Latin Modern Math, arial, Aerial, sans" font-style="italic" dominant-baseline="central" text-anchor="middle">y<tspan dy="5" font-size="15">7</tspan></text>
+<text x="800" y="400" fill="black" font-size="20" font-family="Latin Modern Math, arial, Arial, sans" font-style="italic" dominant-baseline="central" text-anchor="middle">y<tspan dy="5" font-size="15">7</tspan></text>
 <rect width="42.4264068711929" height="42.4264068711929" x="778.786796564404" y="478.786796564404" stroke-width="2" stroke="black" fill="white" />
-<text x="800" y="500" fill="black" font-size="20" font-family="Latin Modern Math, arial, Aerial, sans" font-style="italic" dominant-baseline="central" text-anchor="middle">y<tspan dy="5" font-size="15">6</tspan></text>
+<text x="800" y="500" fill="black" font-size="20" font-family="Latin Modern Math, arial, Arial, sans" font-style="italic" dominant-baseline="central" text-anchor="middle">y<tspan dy="5" font-size="15">6</tspan></text>
 <rect width="42.4264068711929" height="42.4264068711929" x="778.786796564404" y="578.786796564404" stroke-width="2" stroke="black" fill="white" />
-<text x="800" y="600" fill="black" font-size="20" font-family="Latin Modern Math, arial, Aerial, sans" font-style="italic" dominant-baseline="central" text-anchor="middle">y<tspan dy="5" font-size="15">5</tspan></text>
+<text x="800" y="600" fill="black" font-size="20" font-family="Latin Modern Math, arial, Arial, sans" font-style="italic" dominant-baseline="central" text-anchor="middle">y<tspan dy="5" font-size="15">5</tspan></text>
 </svg>

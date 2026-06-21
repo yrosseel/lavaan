@@ -8,21 +8,25 @@
 # update lavdata object with new dataset
 # - assuming everything else stays the same
 # - optionally, also provide boot.idx (per group) to adapt internal slots
-lav_data_update <- function(lavdata = NULL, newX = NULL, # nolint start
-                            BOOT.idx = NULL,
-                            lavoptions = NULL) {         # nolint end
-  stopifnot(length(newX) == lavdata@ngroups)
+lav_data_update <- function(lavdata = NULL,
+                            new_x = NULL,
+                            boot_idx = NULL,
+                            lavoptions = NULL,
+                            ...) {
+  dotdotdot <- list(...)
+  lav_adapt_func(environment(), dotdotdot, NULL)
+  stopifnot(length(new_x) == lavdata@ngroups)
   stopifnot(!is.null(lavoptions))
   newdata <- lavdata
 
   # replace data 'X' slot for each group
   for (g in 1:lavdata@ngroups) {
     # replace raw data
-    newdata@X[[g]] <- newX[[g]]
+    newdata@X[[g]] <- new_x[[g]]
 
     # Mp + nobs
     if (lavoptions$missing != "listwise") {
-      newdata@Mp[[g]] <- lav_data_missing_patterns(newX[[g]],
+      newdata@Mp[[g]] <- lav_data_mi_patterns(new_x[[g]],
         sort_freq = FALSE, coverage = TRUE
       )
       newdata@nobs[[g]] <-
@@ -33,19 +37,19 @@ lav_data_update <- function(lavdata = NULL, newX = NULL, # nolint start
     if (length(lavdata@ov.names.x[[g]]) == 0L &&
       all(lavdata@ov.names[[g]] %in%
         lavdata@ov$name[lavdata@ov$type == "ordered"])) {
-      newdata@Rp[[g]] <- lav_data_resp_patterns(newX[[g]])
+      newdata@Rp[[g]] <- lav_data_resp_patterns(new_x[[g]])
     }
 
     # Lp
     if (lavdata@nlevels > 1L) {
       # CHECKME!
       # extract cluster variable(s), for this group
-      clus <- matrix(0, nrow(newX[[g]]), lavdata@nlevels - 1L)
+      clus <- matrix(0, nrow(new_x[[g]]), lavdata@nlevels - 1L)
       for (l in 2:lavdata@nlevels) {
         clus[, (l - 1L)] <- lavdata@Lp[[g]]$cluster.idx[[l]]
       }
-      newdata@Lp[[g]] <- lav_data_cluster_patterns(
-        y = newX[[g]],
+      newdata@Lp[[g]] <- lav_data_cl_patterns(
+        y = new_x[[g]],
         clus = clus,
         cluster = lavdata@cluster,
         ov_names = lavdata@ov.names[[g]],
@@ -54,18 +58,18 @@ lav_data_update <- function(lavdata = NULL, newX = NULL, # nolint start
     }
   }
 
-  # if boot.idx if provided, also adapt eXo and WT
-  if (!is.null(BOOT.idx)) {
-    boot_idx <- BOOT.idx[[g]]
+  # if boot_idx if provided, also adapt eXo and WT
+  if (!is.null(boot_idx)) {
+    boot_idx_1 <- boot_idx[[g]]
 
     # eXo
     if (!is.null(lavdata@eXo[[g]])) {
-      newdata@eXo[[g]] <- lavdata@eXo[[g]][boot_idx, , drop = FALSE]
+      newdata@eXo[[g]] <- lavdata@eXo[[g]][boot_idx_1, , drop = FALSE]
     }
 
     # sampling weights
     if (!is.null(lavdata@weights[[g]])) {
-      newdata@weights[[g]] <- lavdata@weights[[g]][boot_idx]
+      newdata@weights[[g]] <- lavdata@weights[[g]][boot_idx_1]
     }
   } # g
 
@@ -129,7 +133,7 @@ lav_data_update_subset <- function(lavdata = NULL, ov_names = NULL) {
 
     # Mp + nobs
     if (lavdata@missing != "listwise") {
-      newdata@Mp[[g]] <- lav_data_missing_patterns(newdata@X[[g]],
+      newdata@Mp[[g]] <- lav_data_mi_patterns(newdata@X[[g]],
         sort_freq = FALSE, coverage = TRUE
       )
       newdata@nobs[[g]] <-
@@ -158,7 +162,7 @@ lav_data_update_subset <- function(lavdata = NULL, ov_names = NULL) {
         multilevel <- FALSE
       }
       ov_names_1 <- unique(c(ov_names[[g]], newdata@ov.names.x[[g]]))
-      newdata@Lp[[g]] <- lav_data_cluster_patterns(
+      newdata@Lp[[g]] <- lav_data_cl_patterns(
         y = newdata@X[[g]],
         clus = clus,
         cluster = newdata@cluster,

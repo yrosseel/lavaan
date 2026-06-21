@@ -1,4 +1,4 @@
-lav_lavaan_step13_vcov_boot <- function(lavoptions = NULL,
+lav_step13_vcov_boot <- function(lavoptions = NULL,
                                         lavmodel = NULL,
                                         lavsamplestats = NULL,
                                         lavdata = NULL,
@@ -23,12 +23,12 @@ lav_lavaan_step13_vcov_boot <- function(lavoptions = NULL,
   #                 store.vcov=="default" and rotation="none"
   # if lavoptions$se == "external"
   #   if lavpartable$se NULL
-  #     lavpartable$se <- lav_model_vcov_se(..., VCOV=NULL, BOOT=NULL)
+  #     lavpartable$se <- lav_model_vcov_se(..., vcov=NULL, boot=NULL)
   #       + ** warning **
   # if lavpartable not "external" or "none" or "twostep"
   #     lavpartable$se <- lav_model_vcov_se(...)
 
-  vcov_1 <- NULL # nolint
+  vcov_1 <- NULL
   if (lavoptions$se != "none" && lavoptions$se != "external" &&
     lavoptions$se != "twostep" &&
     (lavmodel@nefa == 0L ||
@@ -49,11 +49,12 @@ lav_lavaan_step13_vcov_boot <- function(lavoptions = NULL,
         lavpartable = lavpartable,
         lavimplied = lavimplied,
         lavh1 = lavh1,
+        lavdata = lavdata,
         eqs = attr(x, "eqs")
       )
     } else {
       # everything else:
-      vcov_1 <- lav_model_vcov( # nolint
+      vcov_1 <- lav_model_vcov(
         lavmodel = lavmodel,
         lavsamplestats = lavsamplestats,
         lavoptions = lavoptions,
@@ -77,21 +78,40 @@ lav_lavaan_step13_vcov_boot <- function(lavoptions = NULL,
     lavboot <- list()
   }
 
+  # draw Monte Carlo samples (if requested) for defined parameters
+  # only when bootstrap is not used (bootstrap covers def CIs already)
+  lav_monte_carlo <- list()
+  def_idx_count <- sum(lavpartable$op == ":=")
+  if (def_idx_count > 0L && lavoptions$se != "bootstrap" &&
+    lav_model_vcov_se_mc_active(lavoptions) &&
+    !is.null(vcov_1) && !inherits(vcov_1, "try-error")) {
+    if (lav_verbose()) {
+      cat("drawing", lavoptions$monte.carlo$R,
+          "Monte Carlo samples for defined parameters ...")
+    }
+    mc_coef <- lav_model_vcov_mc(lavmodel = lavmodel, vcov = vcov_1,
+                                 lavoptions = lavoptions)
+    lav_monte_carlo$coef <- mc_coef
+    if (lav_verbose()) {
+      cat(" done.\n")
+    }
+  }
+
   # store VCOV in vcov
   # strip all attributes but 'dim'
   tmp_attr <- attributes(vcov_1)
-  vcov1 <- vcov_1 # nolint
-  attributes(vcov1) <- tmp_attr["dim"] # nolint
+  vcov1 <- vcov_1
+  attributes(vcov1) <- tmp_attr["dim"]
   # store vcov? new in 0.6-6
   if (!is.null(lavoptions$store.vcov) && !is.null(vcov1)) {
     if (is.logical(lavoptions$store.vcov) && !lavoptions$store.vcov) {
-      vcov1 <- NULL # nolint
+      vcov1 <- NULL
     }
     if (is.character(lavoptions$store.vcov) &&
       lavoptions$rotation == "none" &&
       lavoptions$store.vcov == "default" &&
       ncol(vcov1) > 200L) {
-      vcov1 <- NULL # nolint
+      vcov1 <- NULL
     }
   }
   lavvcov <- list(
@@ -106,7 +126,8 @@ lav_lavaan_step13_vcov_boot <- function(lavoptions = NULL,
       lavpartable$se <- lav_model_vcov_se(
         lavmodel = lavmodel,
         lavpartable = lavpartable,
-        VCOV = NULL, BOOT = NULL
+        vcov = NULL, boot = NULL,
+        lavoptions = lavoptions
       )
       lav_msg_warn(gettext(
         "se = \"external\" but parameter table does not contain a `se' column"))
@@ -117,16 +138,19 @@ lav_lavaan_step13_vcov_boot <- function(lavoptions = NULL,
     lavpartable$se <- lav_model_vcov_se(
       lavmodel = lavmodel,
       lavpartable = lavpartable,
-      VCOV = vcov_1,
-      BOOT = lavboot$coef
+      vcov = vcov_1,
+      boot = lavboot$coef,
+      mc = lav_monte_carlo$coef,
+      lavoptions = lavoptions
     )
   }
 
   list(
-    lavpartable = lavpartable,
-    lavvcov     = lavvcov,
-    VCOV        = vcov_1,
-    lavmodel    = lavmodel,
-    lavboot     = lavboot
+    lavpartable      = lavpartable,
+    lavvcov          = lavvcov,
+    VCOV             = vcov_1,
+    lavmodel         = lavmodel,
+    lavboot          = lavboot,
+    lav_monte_carlo  = lav_monte_carlo
   )
 }

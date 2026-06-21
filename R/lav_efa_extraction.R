@@ -22,7 +22,7 @@ lav_efa_extraction <- function(s, nfactors = 1L,
   s_var <- diag(s)
 
   # force S to be pd (eg if we have polychoric correlations)
-  s <- lav_matrix_symmetric_force_pd(s, tol = 1e-08)
+  s <- lav_mat_sym_force_pd(s, tol = 1e-08)
 
   # convert to correlation matrix (ULS is not scale invariant!)
   r <- cov2cor(s)
@@ -30,11 +30,11 @@ lav_efa_extraction <- function(s, nfactors = 1L,
   # optim.method
   if (method == "uls") {
     min_objective <- lav_efa_uls_min_objective
-    min_gradient <- lav_efa_uls_min_gradient
+    min_gradient <- lav_efa_uls_min_grad
     cache <- lav_efa_uls_init_cache(r = r, nfactors = nfactors)
   } else if (method == "ml") {
     min_objective <- lav_efa_ml_min_objective
-    min_gradient <- lav_efa_ml_min_gradient
+    min_gradient <- lav_efa_ml_min_grad
     cache <- lav_efa_ml_init_cache(r = r, nfactors = nfactors)
   } else {
     lav_msg_stop(gettext("method must be uls or ml (for now)"))
@@ -212,7 +212,7 @@ lav_efa_uls_min_objective <- function(x, cache = NULL) {
   })               # nolint end
 }
 
-lav_efa_uls_min_gradient <- function(x, cache = NULL) {
+lav_efa_uls_min_grad <- function(x, cache = NULL) {
   # check if x has changed
   if (!all(x == cache$theta)) {
     cache$theta <- x
@@ -270,7 +270,7 @@ lav_efa_ml_min_objective <- function(x, cache = NULL) {
   })                  # nolint end
 }
 
-lav_efa_ml_min_gradient <- function(x, cache = NULL) {
+lav_efa_ml_min_grad <- function(x, cache = NULL) {
   # check if x has changed
   if (!all(x == cache$theta)) {
     cache$theta <- x
@@ -339,7 +339,7 @@ lav_efa_extraction_uls_corner <- function(s, nfactors = 1L, reflect = TRUE,
 
   # optim.method
   min_objective <- lav_efa_uls_corner_min_objective
-  min_gradient <- lav_efa_uls_corner_min_gradient
+  min_gradient <- lav_efa_uls_corner_min_grad
   min_hessian <- NULL
 
   # create cache environment
@@ -429,13 +429,13 @@ lav_efa_uls_corner_min_objective <- function(x, cache = NULL) { # nolint
   cache$theta <- x
   with(cache, {               # nolint start
     mm_lambda[lambda_idx] <- theta
-    res1 <- lav_matrix_vech(r - tcrossprod(mm_lambda), diagonal = FALSE)
+    res1 <- lav_mat_vech(r - tcrossprod(mm_lambda), diagonal = FALSE)
     res2 <- res1 * res1
     return(sum(res2))
   })                          # nolint end
 }
 
-lav_efa_uls_corner_min_gradient <- function(x, cache = NULL) { # nolint
+lav_efa_uls_corner_min_grad <- function(x, cache = NULL) {
   # check if x has changed
   if (!all(x == cache$theta)) {
     cache$theta <- x

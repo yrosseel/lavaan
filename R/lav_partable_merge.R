@@ -1,8 +1,8 @@
 # merge two parameter tables
 # - but allow different number of columns
-lav_partable_merge <- function(pt1 = NULL, pt2 = NULL,        # nolint start
-                               remove.duplicated = FALSE,
-                               fromLast = FALSE,
+lav_pt_merge <- function(pt1 = NULL, pt2 = NULL,        # nolint start
+                               remove_duplicated = FALSE,
+                               from_last = FALSE,
                                warn = TRUE) {                 # nolint end
   if (!missing(warn)) {
     current_warn <- lav_warn()
@@ -125,10 +125,10 @@ lav_partable_merge <- function(pt1 = NULL, pt2 = NULL,        # nolint start
 
 
   # check for duplicated elements
-  if (remove.duplicated) {
+  if (remove_duplicated) {
     # if fromLast = TRUE, idx is in pt1
     # if fromLast = FALSE, idx is in pt2
-    idx <- which(duplicated(tmp, fromLast = fromLast))
+    idx <- which(duplicated(tmp, fromLast = from_last))
 
     if (length(idx)) {
       lav_msg_warn(
@@ -138,7 +138,7 @@ lav_partable_merge <- function(pt1 = NULL, pt2 = NULL,        # nolint start
           collapse = " "
         ), collapse = "\n")
       )
-      if (fromLast) {
+      if (from_last) {
         pt1 <- pt1[-idx, ]
       } else {
         idx <- idx - nrow(pt1)

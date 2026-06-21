@@ -79,11 +79,6 @@ lav_sam_step1_local <- function(step1 = NULL, fit = NULL, y = NULL,
     mm_psi <- lavmodel_tmp@GLIST[psi_idx]
   }
 
-  # GAMMA (only for names, if conditional.x)
-  #if (FIT@Model@conditional.x) {
-  #  gamma.idx <- which(names(FIT@Model@GLIST) == "gamma")
-  #}
-
   # handle dummy's + higher-order + rank-deficient
   lsam_analytic_flag <- rep(TRUE, nblocks)
   l_veta <- vector("list", length = nblocks)
@@ -108,12 +103,6 @@ lav_sam_step1_local <- function(step1 = NULL, fit = NULL, y = NULL,
 
     # get ALL lv names (including dummy ov.x/ov.y)
     lv_names <- fit@Model@dimNames[[lambda_idx[b]]][[2L]]
-
-    # if conditional.x, we must add the ov.names.x manually
-    # if (FIT@Model@conditional.x) {
-    #   exo.names <- FIT@Model@dimNames[[gamma.idx[b]]][[2L]]
-    #   lv.names <- c(lv.names, exo.names)
-    # }
 
     # handle higher-order factors here
     if (length(lavpta$vidx$lv.ind[[b]]) > 0L) {
@@ -166,19 +155,19 @@ lav_sam_step1_local <- function(step1 = NULL, fit = NULL, y = NULL,
 
     # if lambda has full rank, check if cov.lv is unrestricted
     if (!lsam_analytic_flag[b]) {
-      veta_symbolic_1 <- lav_sam_veta_partable(fit, block = b)
+      veta_symbolic_1 <- lav_sam_veta_pt(fit, block = b)
       # this is the tricky thing: which rows/cols should we remove?
       # none for now
       if (fit@Options$std.lv) {
-        veta_symbolic <- lav_matrix_vech(veta_symbolic_1, diagonal = FALSE)
+        veta_symbolic <- lav_mat_vech(veta_symbolic_1, diagonal = FALSE)
       } else {
-        veta_symbolic <- lav_matrix_vech(veta_symbolic_1, diagonal = TRUE)
+        veta_symbolic <- lav_mat_vech(veta_symbolic_1, diagonal = TRUE)
       }
       if (any(veta_symbolic == 0)) {
         lsam_analytic_flag[b] <- FALSE
         nfac <- ncol(veta_symbolic_1)
         m_free <- which(veta_symbolic_1 != 0)
-        tmp <- lav_matrix_vech_reverse(lav_matrix_vech_idx(nfac))
+        tmp <- lav_mat_vech_rev(lav_mat_vech_idx(nfac))
         x_free <- tmp[which(veta_symbolic_1 != 0)]
         unique_idx <- unique(x_free)
         row_idx <- match(x_free, unique_idx)
@@ -200,55 +189,23 @@ lav_sam_step1_local <- function(step1 = NULL, fit = NULL, y = NULL,
     step1$DELTA <- mm_delta
   }
 
-  veta     <- vector("list", nblocks)
-  msm_    <- vector("list", nblocks)
-  mtm_    <- vector("list", nblocks)
-  fs_mean  <- vector("list", nblocks)
-  #FS.gamma <- vector("list", nblocks)
-  fs       <- vector("list", nblocks)
+  veta       <- vector("list", nblocks)
+  msm_list   <- vector("list", nblocks)
+  mtm_list   <- vector("list", nblocks)
+  fs_mean    <- vector("list", nblocks)
+  fs         <- vector("list", nblocks)
   cov_iveta2 <- vector("list", nblocks)
-  rel <- vector("list", nblocks)
-  alpha <- vector("list", nblocks)
-  lambda <- vector("list", nblocks)
+  rel        <- vector("list", nblocks)
+  alpha      <- vector("list", nblocks)
+  lambda     <- vector("list", nblocks)
+  lambda1    <- vector("list", nblocks)
   if (lavoptions$meanstructure) {
     eeta <- vector("list", nblocks)
   } else {
     eeta <- NULL
   }
-  #fs.outlier.idx <- vector("list", nblocks)
   m <- vector("list", nblocks)
   lv_names_1 <- vector("list", nblocks)
-
-  # if (lv.interaction.flag && is.null(FS)) {
-  #   # compute Bartlett factor scores
-  #   FS <- vector("list", nblocks)
-  #   # FS.mm <- lapply(STEP1$MM.FIT, lav_predict_eta_bartlett)
-  #   FS.mm <- lapply(STEP1$MM.FIT, lavPredict,
-  #     method = "Bartlett",
-  #     drop.list.single.group = FALSE
-  #   )
-  #   for (b in seq_len(nblocks)) {
-  #     tmp <- lapply(
-  #       1:length(STEP1$MM.FIT),
-  #       function(x) FS.mm[[x]][[b]]
-  #     )
-  #     LABEL <- unlist(lapply(tmp, colnames))
-  #     FS[[b]] <- do.call("cbind", tmp)
-  #     colnames(FS[[b]]) <- LABEL
-  #     FS[[b]] <- FIT@Data@X[[b]] %*%
-
-  #     # dummy lv's? (both 'x' and 'y'!)
-  #     dummy.ov.idx <- c(FIT@Model@ov.y.dummy.ov.idx[[b]],
-  #                       FIT@Model@ov.x.dummy.ov.idx[[b]])
-  #     dummy.lv.idx <- c(FIT@Model@ov.y.dummy.lv.idx[[b]],
-  #                       FIT@Model@ov.x.dummy.lv.idx[[b]])
-  #     if (length(dummy.lv.idx) > 0L) {
-  #       FS.obs <- FIT@Data@X[[b]][, dummy.ov.idx, drop = FALSE]
-  #       colnames(FS.obs) <- FIT@Data@ov.names[[b]][dummy.ov.idx]
-  #       FS[[b]] <- cbind(FS[[b]], FS.obs)
-  #     }
-  #   }
-  # }
 
   # compute VETA/EETA per block
   for (b in seq_len(nblocks)) {
@@ -259,10 +216,6 @@ lav_sam_step1_local <- function(step1 = NULL, fit = NULL, y = NULL,
     # lv.names, including dummy-lv covariates
     psi_idx <- which(names(fit@Model@GLIST) == "psi")[b]
     lv_names_b <- fit@Model@dimNames[[psi_idx]][[1L]] # including dummy/inter.
-    # if (FIT@Model@conditional.x) {
-    #   exo.names <- FIT@Model@dimNames[[gamma.idx[b]]][[2L]]
-    #   lv.names.b <- c(lv.names.b, exo.names)
-    # }
     rm_idx <- integer(0L)
 
     # higher-order? remove lower-order factors
@@ -313,7 +266,7 @@ lav_sam_step1_local <- function(step1 = NULL, fit = NULL, y = NULL,
       this_lambda <- this_lambda[, -lavpta$vidx$lv.interaction[[b]]]
     }
     if (lsam_analytic_flag[b]) {
-      mb <- lav_sam_mapping_matrix(
+      mb <- lav_sam_mapping_mat(
         mm_lambda = this_lambda,
         mm_theta = mm_theta[[b]],
         s = cov_1, s_inv = icov,
@@ -338,16 +291,6 @@ lav_sam_step1_local <- function(step1 = NULL, fit = NULL, y = NULL,
       fit@Model@ov.y.dummy.lv.idx[[b]]
     )
 
-    # handle conditional.x
-    # if (FIT@Model@conditional.x) {
-    #   I0 <- diag(x = 0, nrow = length(exo.names))
-    #   I1 <- diag(x = 1, nrow = length(exo.names))
-    #   Mb <- lav_matrix_bdiag(Mb, I1)
-    #   LAMBDA[[b]] <- lav_matrix_bdiag(LAMBDA[[b]], I1)
-    #   THETA[[b]] <- lav_matrix_bdiag(THETA[[b]], I0)
-    #   NU[[b]] <- c(drop(NU[[b]]), numeric(length(exo.names)))
-    # }
-
     # fix dummy.lv.idx if we have higher-order factors!
     if (lv_higherorder_flag) {
       dummy_lv_idx <- match(lv_names_b[dummy_lv_idx], lv_names1)
@@ -371,12 +314,8 @@ lav_sam_step1_local <- function(step1 = NULL, fit = NULL, y = NULL,
       } else {
         # EETA is constrained somehow
         lav_msg_stop(gettext("not ready yet"))
-        # EETA[[b]] <- lav_sam_eeta_con(YBAR = YBAR, LAMBDA = LAMBDA[[b]],
-        #                               THETA = THETA[[b]],
-        #                               L.veta = L.veta[[b]])
-
       }
-    fs_mean[[b]] <- eeta[[b]] # ok if no interaction
+      fs_mean[[b]] <- eeta[[b]] # ok if no interaction
     }
 
     # compute VETA
@@ -386,33 +325,48 @@ lav_sam_step1_local <- function(step1 = NULL, fit = NULL, y = NULL,
           m = mb, s = cov_1, mm_theta = mm_theta[[b]],
           alpha_correction = local_options[["alpha.correction"]],
           lambda_correction = local_options[["lambda.correction"]],
-          n <- fit@SampleStats@nobs[[this_group]],
+          n = fit@SampleStats@nobs[[this_group]],
           dummy_lv_idx = dummy_lv_idx,
           extra = TRUE
         )
         veta[[b]] <- tmp[, , drop = FALSE] # drop attributes
         alpha[[b]]  <- attr(tmp, "alpha")
         lambda[[b]] <- attr(tmp, "lambda.star")
-      msm_[[b]]  <- attr(tmp, "MSM")
-      mtm_[[b]]  <- attr(tmp, "MTM")
+        msm_list[[b]] <- attr(tmp, "MSM")
+        mtm_list[[b]] <- attr(tmp, "MTM")
+        # effective first-order coefficient on the (pd-forced) MTM matrix,
+        # so that VETA = MSM - lambda1 * MTM; this absorbs both the
+        # lambda.star correction (1 if the correction was not needed) and
+        # the alpha correction (lav_sam_veta() rescales MTM by
+        # (1 - alpha/(n-1)) *before* the lambda step); when lv interactions
+        # are present, lambda[[b]] will be overwritten by the second-order
+        # lambda.star, but the casewise decomposition of EETA2/VETA2 (see
+        # lav_sam_veta2() and lav_sam_gamma_add()) needs this first-order
+        # value
+        nobs_b <- fit@SampleStats@nobs[[this_group]]
+        alpha_n1 <- lav_sam_alpha_n1(local_options[["alpha.correction"]],
+                                     nobs_b)
+        l1 <- if (is.finite(lambda[[b]])) lambda[[b]] else 1
+        lambda1[[b]] <- (1 - alpha_n1) * l1
       } else {
         # VETA is constrained somehow
         veta[[b]] <- lav_sam_veta_con(s = cov_1, mm_lambda = mm_lambda[[b]],
                                       mm_theta = mm_theta[[b]],
                                       l_veta = l_veta[[b]],
                                       local_m_method = local_m_method)
-        alpha[[b]]  <- as.numeric(NA)
-        lambda[[b]] <- as.numeric(NA)
-        msm_[[b]]  <- matrix(0, 0, 0)
-        mtm_[[b]]  <- matrix(0, 0, 0)
+        alpha[[b]]   <- as.numeric(NA)
+        lambda[[b]]  <- as.numeric(NA)
+        lambda1[[b]] <- as.numeric(NA)
+        msm_list[[b]] <- matrix(0, 0, 0)
+        mtm_list[[b]] <- matrix(0, 0, 0)
       }
     } else if (sam_method == "cfsr") {
-      # first, we need to 'true' VETA (to get Sigma)
+      # first, we need the 'true' VETA (to get Sigma)
       tmp <- lav_sam_veta(
         m = mb, s = cov_1, mm_theta = mm_theta[[b]],
         alpha_correction = 0L,
         lambda_correction = local_options[["lambda.correction"]],
-        n <- fit@SampleStats@nobs[[this_group]],
+        n = fit@SampleStats@nobs[[this_group]],
         dummy_lv_idx = dummy_lv_idx,
         extra = FALSE
       )
@@ -430,25 +384,36 @@ lav_sam_step1_local <- function(step1 = NULL, fit = NULL, y = NULL,
 
     # standardize? not really needed, but we may have 1.0000001
     # as variances, and this may lead to false convergence
+    # d_std holds the rescaling factors (1 = no rescaling); when lv
+    # interactions are present, we will need them to express the factor
+    # scores (and related matrices) in the same standardized metric
+    d_std <- rep(1, ncol(veta[[b]]))
     if (fit@Options$std.lv) {
-      # warning: we should only do this for the LVs, not the
-      # observed variables
-      if (length(dummy_lv_idx) == 0L) {
+      # we should only standardize the LVs, not the observed variables
+      # (dummy lvs); but note that the cross-blocks between the dummy lvs
+      # and the latent variables must be rescaled by the factor-side
+      # scaling factors as well (new in June 2026; before, these
+      # cross-blocks were left unrescaled, and -- when interaction terms
+      # were present -- the dummy lvs were accidentally standardized too,
+      # because dummy_lv_idx refers to the full set of lv names, while
+      # veta[[b]] only contains lv_names1)
+      dummy_lv_idx1 <- dummy_lv_idx
+      if (!lv_higherorder_flag) { # if higher-order, already remapped
+        dummy_lv_idx1 <- match(lv_names_b[dummy_lv_idx], lv_names1)
+      }
+      if (length(dummy_lv_idx1) == 0L) {
+        d_std <- sqrt(diag(veta[[b]]))
         veta[[b]] <- stats::cov2cor(veta[[b]])
       } else {
-        tmp <- veta[[b]]
-        tmp_lv <- stats::cov2cor(veta[[b]][-dummy_lv_idx,
-                                           -dummy_lv_idx, drop = FALSE])
-        veta[[b]][-dummy_lv_idx, -dummy_lv_idx] <- tmp_lv
+        d_std[-dummy_lv_idx1] <- sqrt(diag(veta[[b]]))[-dummy_lv_idx1]
+        veta[[b]] <- t(veta[[b]] / d_std) / d_std
       }
     }
     colnames(veta[[b]]) <- rownames(veta[[b]]) <- lv_names1
 
     # compute model-based RELiability
-    # REL[[b]] <- diag(VETA[[b]]] %*% solve(MSM..[[b]]))
-    #                 CHECKme! -> done, must be:
     if (lsam_analytic_flag[b]) {
-      rel[[b]] <- diag(veta[[b]]) / diag(msm_[[b]]) #!
+      rel[[b]] <- diag(veta[[b]]) / diag(msm_list[[b]])
     } else {
       rel[[b]] <- as.numeric(NA)
     }
@@ -472,12 +437,20 @@ lav_sam_step1_local <- function(step1 = NULL, fit = NULL, y = NULL,
       colnames(fs_b) <- lv_names1
       # FIXME: what about observed covariates?
 
-      # get (approximate) indices with outliers
-      #fs.outlier.idx[[b]] <-
-      #        lav_sample_outlier_idx(lav_sample_mdist(FS.b), coef = 1.5)
+      # if std.lv = TRUE, express the factor scores, EETA and the mapping
+      # matrix in the same standardized metric as the cov2cor() rescaled
+      # VETA above, so that the augmented statistics EETA2/VETA2 (and
+      # their casewise decomposition in lav_sam_veta2()) are
+      # metric-coherent
+      eeta1 <- eeta[[b]]
+      mb_v2 <- mb
+      if (fit@Options$std.lv) {
+        fs_b <- t(t(fs_b) / d_std)
+        eeta1 <- eeta1 / d_std
+        mb_v2 <- mb / d_std
+      }
 
       # EETA2
-      eeta1 <- eeta[[b]]
       eeta[[b]] <- lav_sam_eeta2(
         eeta = eeta1, veta = veta[[b]],
         lv_names = lv_names1,
@@ -487,7 +460,7 @@ lav_sam_step1_local <- function(step1 = NULL, fit = NULL, y = NULL,
       # VETA2
       if (sam_method == "local") {
         tmp <- lav_sam_veta2(
-          fs = fs_b, m = mb,
+          fs = fs_b, m = mb_v2,
           veta = veta[[b]], eeta = eeta1,
           mm_theta = mm_theta[[b]],
           lv_names = lv_names1,
@@ -495,7 +468,7 @@ lav_sam_step1_local <- function(step1 = NULL, fit = NULL, y = NULL,
           dummy_lv_names = lv_names_b[dummy_lv_idx],
           alpha_correction = local_options[["alpha.correction"]],
           lambda_correction = local_options[["lambda.correction"]],
-          #fs.outlier.idx = fs.outlier.idx[[b]],
+          lambda1 = lambda1[[b]],
           return_fs = return_fs,
           return_cov_iveta2 = return_cov_iveta2,
           extra = TRUE
@@ -503,16 +476,15 @@ lav_sam_step1_local <- function(step1 = NULL, fit = NULL, y = NULL,
         veta[[b]] <- tmp[, , drop = FALSE] # drop attributes
         alpha[[b]] <- attr(tmp, "alpha")
         lambda[[b]] <- attr(tmp, "lambda.star")
-        msm_[[b]] <- attr(tmp, "MSM")
-        mtm_[[b]] <- attr(tmp, "MTM")
-    fs_mean[[b]] <- attr(tmp, "FS.mean")
+        msm_list[[b]] <- attr(tmp, "MSM")
+        mtm_list[[b]] <- attr(tmp, "MTM")
+        fs_mean[[b]] <- attr(tmp, "FS.mean")
         if (return_fs) {
           fs[[b]] <- attr(tmp, "FS")
         }
         if (return_cov_iveta2) {
           cov_iveta2[[b]] <- attr(tmp, "cov.iveta2")
         }
-        #FS.gamma[[b]] <- attr(tmp, "FS.gamma")
       } else {
         lav_msg_fixme("not ready yet!")
         # FSR -- no correction
@@ -529,16 +501,16 @@ lav_sam_step1_local <- function(step1 = NULL, fit = NULL, y = NULL,
 
   # label blocks
   if (nblocks > 1L) {
-    names(eeta)       <- fit@Data@block.label
+    if (!is.null(eeta)) {
+      names(eeta)     <- fit@Data@block.label
+    }
     names(veta)       <- fit@Data@block.label
     names(rel)        <- fit@Data@block.label
-  names(msm_)      <- fit@Data@block.label
-  names(mtm_)      <- fit@Data@block.label
-  names(fs_mean)    <- fit@Data@block.label
+    names(msm_list)   <- fit@Data@block.label
+    names(mtm_list)   <- fit@Data@block.label
+    names(fs_mean)    <- fit@Data@block.label
     names(fs)         <- fit@Data@block.label
     names(cov_iveta2) <- fit@Data@block.label
-    #names(fs.outlier.idx) <- FIT@Data@block.label
-    #names(FS.gamma) <- FIT@Data@block.label
   }
 
   # handle conditional.x: add res.slopes, cov.x and mean.x
@@ -558,14 +530,13 @@ lav_sam_step1_local <- function(step1 = NULL, fit = NULL, y = NULL,
   step1$REL      <- rel
   step1$M        <- m
   step1$lambda   <- lambda
+  step1$lambda1  <- lambda1
   step1$alpha    <- alpha
-  step1$MSM      <- msm_
-  step1$MTM      <- mtm_
+  step1$MSM      <- msm_list
+  step1$MTM      <- mtm_list
   step1$FS.mean  <- fs_mean
   step1$FS       <- fs
   step1$COV.IVETA2 <- cov_iveta2
-  #STEP1$fs.outlier.idx <- fs.outlier.idx
-  #STEP1$FS.gamma <- FS.gamma
   step1$LV.NAMES <- lv_names_1
   # store also sam.method and local.options
   step1$sam.method <- sam_method
@@ -578,6 +549,245 @@ lav_sam_step1_local <- function(step1 = NULL, fit = NULL, y = NULL,
   step1
 }
 
+
+# Memory-lean Gamma.eta for group g: JAC %*% Gamma %*% t(JAC) without ever
+# forming the p* x p* observed Gamma. Returns NULL when the (continuous, simple)
+# setting does not apply, so the caller falls back to the explicit Gamma.
+#
+# The ADF Gamma of the WLS.obs statistics is the casewise crossprod
+#   Gamma = crossprod(z) / n.eff,   z_i = [ y_i (meanstructure),
+#                                           vech((y_i - ybar)(y_i - ybar)') ]
+# so JAC %*% Gamma %*% t(JAC) = crossprod(z %*% t(JAC)) / n.eff (the U below).
+#
+# With the unbiased (Browne) Gamma -- the sam() default -- the cov block also
+# needs the normal-theory Gamma and a rank-1 term:
+#   Gamma_u_cov = c1*Gamma_cov - c2*(Gamma_NT - 2/(n-1)*tcrossprod(vech(S)))
+# with c1 = n(n-1)/((n-2)(n-3)), c2 = n/((n-2)(n-3)). The NT sandwich is built
+# without the p* x p* Gamma_NT via [JAC Gamma_NT JAC']_rc = 2*tr(G_r S G_c S),
+# where G_r is the symmetric matrix with vech G_r = (cov rows of) JAC[r, ]
+# (off-diagonals halved). The mean-mean block is unchanged and the mean-cov
+# block is scaled by n/(n-2).
+lav_sam_gamma_eta_g <- function(fit = NULL, jac_g = NULL, g = 1L) {
+  lavoptions <- fit@Options
+  lavmodel <- fit@Model
+  unbiased <- isTRUE(lavoptions$gamma.unbiased)
+  if (lavmodel@categorical || lavmodel@correlation || lavmodel@conditional.x ||
+      (isTRUE(lavoptions$fixed.x) && length(fit@Data@ov.names.x[[g]]) > 0L) ||
+      fit@Data@nlevels > 1L || length(fit@Data@cluster) > 0L ||
+      (unbiased && isTRUE(lavoptions$gamma.n.minus.one))) {
+    return(NULL)
+  }
+  m_y <- unname(as.matrix(fit@Data@X[[g]]))
+  if (anyNA(m_y)) {
+    return(NULL) # missing data: leave it to the (pairwise) NACOV path
+  }
+  n <- nrow(m_y)
+  p <- ncol(m_y)
+  meanstr <- lavmodel@meanstructure
+  m_yc <- t(t(m_y) - colMeans(m_y))
+  idx1 <- lav_mat_vech_col_idx(p)
+  idx2 <- lav_mat_vech_row_idx(p)
+  zc_cov <- m_yc[, idx1, drop = FALSE] * m_yc[, idx2, drop = FALSE]
+  zc_cov <- t(t(zc_cov) - colMeans(zc_cov))
+
+  if (meanstr) {
+    jac_m <- jac_g[, seq_len(p), drop = FALSE]
+    jac_c <- jac_g[, -seq_len(p), drop = FALSE]
+    u_m <- m_yc %*% t(jac_m)
+  } else {
+    jac_c <- jac_g
+  }
+  u_c <- zc_cov %*% t(jac_c)
+
+  # biased ADF Gamma: simple casewise crossprod
+  if (!unbiased) {
+    n_eff <- if (isTRUE(lavoptions$gamma.n.minus.one)) n - 1L else n
+    u <- if (meanstr) u_m + u_c else u_c
+    return(crossprod(u) / n_eff)
+  }
+
+  # unbiased (Browne): cov block needs the NT Gamma + rank-1 correction
+  s_cov <- crossprod(m_yc) / n
+  cov_vech <- lav_mat_vech(s_cov)
+  mstar <- nrow(jac_g)
+  offu <- which(idx1 != idx2)
+  # G_mat: rows = vec(G_r), the symmetric matrix with halved off-diagonals
+  g_mat <- matrix(0, mstar, p * p)
+  lin_11 <- (idx1 - 1L) * p + idx2
+  lin_22 <- (idx2 - 1L) * p + idx1
+  g_mat[, lin_11] <- jac_c
+  g_mat[, lin_22] <- jac_c
+  g_mat[, lin_11[offu]] <- jac_c[, offu, drop = FALSE] / 2
+  g_mat[, lin_22[offu]] <- jac_c[, offu, drop = FALSE] / 2
+  # M_mat: rows = vec(S G_r S)
+  m_mat <- t(apply(g_mat, 1L, function(gv) {
+    as.vector(s_cov %*% matrix(gv, p, p) %*% s_cov)
+  }))
+  gamma_nt <- 2 * tcrossprod(g_mat, m_mat) # JAC Gamma_NT JAC'  (mstar x mstar)
+  d_vec <- drop(jac_c %*% cov_vech)
+  c1 <- n * (n - 1) / ((n - 2) * (n - 3))
+  c2 <- n / ((n - 2) * (n - 3))
+  ge_cov <- c1 * (crossprod(u_c) / n) -
+    c2 * (gamma_nt - 2 / (n - 1) * tcrossprod(d_vec))
+  if (!meanstr) {
+    return(ge_cov)
+  }
+  ge_mm <- crossprod(u_m) / n
+  ge_mc <- (n / (n - 2)) * (crossprod(u_m, u_c) / n)
+  ge_mm + ge_cov + ge_mc + t(ge_mc)
+}
+
+# Shared helpers for lav_sam_step1_local_jac() (single group) and
+# lav_sam_step1_local_jac_mg() (multigroup) -- they build the same jacobian
+# (JAC = JACc %*% JACa + JACb [+ psi channel]); the multigroup version simply
+# stacks the per-group statistics and structural moments. Factoring the common
+# pieces out keeps the two entry points thin and avoids drift between them.
+
+# Indices (in step1$PT) of the free 'measurement' parameters whose influence
+# d(theta.mm)/d(stats) forms the rows of JACa: factor loadings (=~), residual
+# (co)variances of observed indicators (~~), intercepts (~1, if meanstructure),
+# scaling factors (~*~) and thresholds (|, categorical), plus the higher-order
+# loadings (=~ on an lv indicator) and latent (co)variances (~~ between lv
+# indicators). One row per free parameter: by default de-duplicated on the
+# (constrained) pt_1$free numbering; pass dedup_key = step1$PT.free to de-dup on
+# the *unconstrained* numbering instead (needed for the p_only 'P' matrix under
+# ceq.simple, where across-group equality-constrained parameters share a
+# constrained free number but are distinct rows of P / step1.free.idx).
+lav_sam_meas_keep_idx <- function(pt_1, ov_names, lavmodel, lv_ind,
+                                  meanstructure, dedup_key = NULL) {
+  if (is.null(dedup_key)) {
+    dedup_key <- pt_1$free
+  }
+  dup <- duplicated(dedup_key)
+  lambda_idx <- which(pt_1$op == "=~" & pt_1$free > 0L & !dup)
+  theta_idx  <- which(pt_1$op == "~~" & pt_1$free > 0L & !dup &
+                      pt_1$lhs %in% ov_names & pt_1$rhs %in% ov_names)
+  nu_idx <- integer(0L)
+  if (meanstructure) {
+    nu_idx <- which(pt_1$op == "~1" & pt_1$free > 0L & !dup &
+                    pt_1$lhs %in% ov_names)
+  }
+  delta_idx <- integer(0L)
+  if (lavmodel@categorical || lavmodel@correlation) {
+    delta_idx <- which(pt_1$op == "~*~" & pt_1$free > 0L & !dup)
+  }
+  th_idx <- integer(0L)
+  if (lavmodel@categorical) {
+    th_idx <- which(pt_1$op == "|" & pt_1$free > 0L & !dup)
+  }
+  beta_idx <- psi_idx <- integer(0L)
+  if (length(lv_ind) > 0L) {
+    beta_idx <- which(pt_1$op == "=~" & pt_1$free > 0L & !dup &
+                      pt_1$rhs %in% lv_ind)
+    psi_idx <- which(pt_1$op == "~~" & pt_1$free > 0L & !dup &
+                     pt_1$rhs %in% lv_ind & pt_1$lhs %in% lv_ind)
+  }
+  sort(c(lambda_idx, theta_idx, nu_idx, delta_idx, th_idx, beta_idx, psi_idx))
+}
+
+# Stack the structural moments c(EETA_g, vech(VETA_g)) over the requested groups
+# (a single g for a per-group JACb, or all groups for JACc/psi). This is the
+# function whose jacobian (w.r.t. the sample statistics / measurement params)
+# the numeric-difference helpers below compute.
+lav_sam_veta_vec <- function(step1_obj, groups, meanstructure) {
+  unlist(lapply(groups, function(g) {
+    if (meanstructure) {
+      c(step1_obj$EETA[[g]], lav_mat_vech(step1_obj$VETA[[g]]))
+    } else {
+      lav_mat_vech(step1_obj$VETA[[g]])
+    }
+  }))
+}
+
+# Numeric jacobian of the stacked structural moments w.r.t. a set of
+# free-parameter rows of step1$PT$est (rows_idx). Used for JACc (rows_idx =
+# keep_idx) and the psi channel (rows_idx = the joint factor (co)variance rows).
+lav_sam_jac_est_rows <- function(rows_idx, step1, fit, groups, meanstructure) {
+  ff <- function(x) {
+    step1_1 <- step1
+    step1_1$PT$est[rows_idx] <- x
+    step1_1 <- lav_sam_step1_local(step1 = step1_1, fit = fit,
+      sam_method = step1$sam.method, local_options = step1$local.options)
+    lav_sam_veta_vec(step1_1, groups, meanstructure)
+  }
+  verbose_flag <- lav_verbose()
+  lav_verbose(FALSE)
+  on.exit(lav_verbose(verbose_flag))
+  numDeriv::jacobian(func = ff, x = step1$PT$est[rows_idx])
+}
+
+# Categorical JACb for one group g: numeric jacobian of vech(VETA_g) w.r.t. the
+# off-diagonal (poly)choric correlations and the free continuous variances of
+# step1$COV[[g]] (keeping theta.mm fixed), with the columns mapped (by label)
+# into group g's joint WLS.obs vector. Thresholds/means stay zero.
+lav_sam_jacb_cat_g <- function(g, step1, fit, joint_labels_g, meanstructure) {
+  cov_g <- step1$COV[[g]]
+  low_idx <- lower.tri(cov_g) # strict lower triangle (column-major)
+  n_low <- sum(low_idx)
+  nvar_g <- ncol(cov_g)
+  # continuous variables: their variances (the diagonal) are free statistics
+  num_idx <- which(!seq_len(nvar_g) %in% fit@SampleStats@th.idx[[g]])
+  x0 <- c(cov_g[low_idx], diag(cov_g)[num_idx])
+  ffb_cat <- function(xx) {
+    step1_1 <- step1
+    this_cov <- step1$COV[[g]]
+    this_cov[low_idx] <- xx[seq_len(n_low)]
+    this_cov[upper.tri(this_cov)] <- t(this_cov)[upper.tri(this_cov)]
+    if (length(num_idx) > 0L) {
+      dd <- diag(this_cov)
+      dd[num_idx] <- xx[n_low + seq_along(num_idx)]
+      diag(this_cov) <- dd
+    }
+    step1_1$COV[[g]] <- this_cov
+    step1_1 <- lav_sam_step1_local(step1 = step1_1, fit = fit,
+      sam_method = step1$sam.method, local_options = step1$local.options)
+    lav_sam_veta_vec(step1_1, g, meanstructure)
+  }
+  verbose_flag <- lav_verbose()
+  lav_verbose(FALSE)
+  jacb_corr <- numDeriv::jacobian(func = ffb_cat, x = x0)
+  lav_verbose(verbose_flag)
+
+  # map the perturbed-statistic columns into group g's joint WLS.obs vector (by
+  # label, so any difference in variable ordering is handled)
+  ov_g <- colnames(cov_g)
+  if (is.null(ov_g)) {
+    ov_g <- fit@Data@ov.names[[g]]
+  }
+  r_idx <- row(cov_g)[low_idx]
+  c_idx <- col(cov_g)[low_idx]
+  var_labels <- if (length(num_idx) > 0L) {
+    paste0(ov_g[num_idx], "|var")
+  } else {
+    character(0L)
+  }
+  my_labels <- c(vapply(seq_along(r_idx), function(k) {
+    paste(sort(c(ov_g[r_idx[k]], ov_g[c_idx[k]])), collapse = "~~")
+  }, character(1L)), var_labels)
+  col_idx <- match(my_labels, joint_labels_g)
+  if (anyNA(col_idx)) {
+    lav_msg_stop(gettext(
+      "internal error: unable to map the polychoric correlations into the
+       statistics vector of the joint model (categorical JACb)"))
+  }
+  jb <- matrix(0, nrow = nrow(jacb_corr),
+               ncol = length(fit@SampleStats@WLS.obs[[g]]))
+  jb[, col_idx] <- jacb_corr
+  jb
+}
+
+# Continuous JACb for one group g: vech(VETA_g) = M_g S_g M_g', so
+# d vech(VETA_g) / d vech(S_g) is the (row-selected) duplication-post product of
+# M_g %x% M_g, with a leading M_g block for the means (if meanstructure).
+lav_sam_jacb_cont_g <- function(mb, meanstructure) {
+  mbx_mb <- mb %x% mb
+  row_idx <- lav_mat_vech_idx(nrow(mb))
+  jb <- lav_mat_dup_post(mbx_mb)[row_idx, , drop = FALSE]
+  if (meanstructure) {
+    jb <- lav_mat_bdiag(mb, jb)
+  }
+  jb
+}
 
 lav_sam_step1_local_jac <- function(step1 = NULL, fit = NULL, p_only = FALSE,
                                     return_jac = FALSE) {
@@ -592,22 +802,65 @@ lav_sam_step1_local_jac <- function(step1 = NULL, fit = NULL, p_only = FALSE,
   # sam_method <- step1$sam.method
 
   ngroups <- lavdata@ngroups
-  if (ngroups > 1L) {
-    lav_msg_stop(gettext("IJ local SEs: not available with multiple groups!\n"))
-    # if multiple groups:
-    # - we have a separate Gamma, h1.expected, delta matrix per group
-    # - but we have only 1 observed information matrix, reflecting possible
-    #   across-group equality constraints
-    # - we may need to use the same procedure as for robust test statistics:
-    #   create a (huge) block-diagonal Gamma matrix, and one big 'JAC'
-    #   matrix...
-  }
-  g <- 1L
-  if (lavmodel@categorical) {
+  # categorical local SEs: supported for the single-group setting. The
+  # categorical d(VETA)/d(stats) jacobian needs an extra channel that the
+  # continuous case does not: in the delta (correlation) parameterization the
+  # residual variances theta are not free but are pinned by the unit-diagonal
+  # constraint theta_jj = 1 - (Lambda Psi Lambda')_jj. Hence VETA also depends
+  # on the within-block factor (co)variances Psi (through theta, and so through
+  # the mapping matrix M). Psi is not a measurement parameter in 'keep_idx', so
+  # this 'psi channel' is otherwise dropped; without it the latent (co)variance
+  # SEs come out ~0.6x of their true value. It is added to JAC below (the
+  # continuous case is unaffected, because there theta is free and
+  # d(VETA)/d(Psi) = 0). Block-wise mixed models (some measurement blocks fully
+  # categorical, others fully continuous) are supported: the JACa loop picks the
+  # influence path per block, and JACb also perturbs the free continuous
+  # variances. Higher-order categorical models are supported too (the structural
+  # part reduces to the second-order factor (co)variances, as in the continuous
+  # case). Still guarded: conditional.x.
+  if (lavmodel@categorical && lavmodel@conditional.x) {
     lav_msg_stop(gettext(
-      "IJ local SEs: not available for the categorical setting (yet)!\n"))
+      "local SEs: not available for the categorical setting in combination
+       with conditional.x = TRUE (yet)!\n"))
   }
+
+  # multiple groups: dispatch to the (single-level, no latent interaction)
+  # multigroup implementation, which builds one stacked jacobian over all
+  # groups and returns a list of per-group jacobians. Across-group (equality)
+  # constraints in the measurement model (Case B) are detected there (via the
+  # cross-group blocks of the stacked jacobian) and handled with the full
+  # cross-group Gamma in step 2 (SEs and the robust test statistic).
+  if (ngroups > 1L) {
+    if (lavdata@nlevels > 1L) {
+      lav_msg_stop(gettext(
+        "local SEs: not available for multigroup multilevel models (yet)!"))
+    }
+    if (lavmodel@conditional.x) {
+      lav_msg_stop(gettext(
+        "local SEs: not available with multiple groups in combination with
+         conditional.x = TRUE (yet)!"))
+    }
+    if (length(unlist(lavpta$vnames$lv.interaction)) > 0L) {
+      lav_msg_stop(gettext(
+        "local SEs: not available for latent interactions with multiple
+         groups (yet)!"))
+    }
+    return(lav_sam_step1_local_jac_mg(step1 = step1, fit = fit,
+                                      p_only = p_only,
+                                      return_jac = return_jac))
+  }
+
+  g <- 1L
   n_mmblocks <- length(step1$MM.FIT)
+
+  # categorical: we map the statistics of each measurement block into the
+  # WLS statistics vector of the joint model by label
+  if (lavmodel@categorical) {
+    joint_labels <- lav_sam_wls_obs_labels(
+      ov_names = lavdata@ov.names[[g]],
+      th_idx = fit@SampleStats@th.idx[[g]]
+    )
+  }
 
   # JAC = (JACc %*% JACa) + JACb
   # - rows are the elements of vech(VETA)
@@ -620,71 +873,123 @@ lav_sam_step1_local_jac <- function(step1 = NULL, fit = NULL, p_only = FALSE,
   # JACa: jacobian of theta.mm = f(vech(S))
   jaca <- matrix(0, nrow = length(fit@ParTable$lhs), # we select later
                     ncol = length(fit@SampleStats@WLS.obs[[g]]))
+  # 'psi channel' accumulators (categorical only): the influence d(Psi)/d(stats)
+  # for the within-block factor (co)variances, and their joint partable rows
+  psi_infl_list <- list()
+  psi_jrow_list <- integer(0L)
   for (mm in seq_len(n_mmblocks)) {
     fit_mm_block <- step1$MM.FIT[[mm]]
-    mm_h1_expected   <- lavTech(fit_mm_block, "h1.information.expected")
-    mm_delta         <- lavTech(fit_mm_block, "Delta")
-    if (p_only && fit@Options$information[1] == "expected") {
-      # for twostep.robust
-      mm_inv_observed <- lavTech(fit_mm_block, "inverted.information.expected")
-    } else {
-      mm_inv_observed  <- lavTech(fit_mm_block, "inverted.information.observed")
-    }
 
-    #h1.info <- matrix(0, nrow(mm.h1.expected[[1]]), ncol(mm.h1.expected[[1]]))
-    #for (g in seq_len(ngroups)) {
-    #  fg <- lavsamplestats@nobs[[g]] / lavsamplestats@ntotal
-    #  tmp <- fg * (mm.h1.expected[[g]] %*% mm.delta[[g]])
-    #  h1.info <- h1.info + tmp
-    #}
-    mm_jac <- t(mm_h1_expected[[g]] %*% mm_delta[[g]] %*% mm_inv_observed)
+    # influence d(theta.mm)/d(block stats). When the joint model is categorical
+    # we use the (D)WLS sandwich ingredients for EVERY block, including a fully
+    # continuous one (block-wise mixed): lavTech(., "h1.information.expected")
+    # is not available for a continuous measurement block that is embedded in a
+    # categorical SAM, whereas lav_model_nvcov_robust_sem() returns a valid
+    # Delta/E.inv/WLS.V for it.
+    if (lavmodel@categorical) {
+      # influence of the (D)WLS estimator: (Delta' W Delta)^-1 Delta' W
+      # (we reuse the same ingredients that produced the robust vcov of
+      # this measurement block)
+      tmp <- lav_model_nvcov_robust_sem(
+        lavmodel = fit_mm_block@Model,
+        lavsamplestats = fit_mm_block@SampleStats,
+        lavcache = fit_mm_block@cache, lavdata = fit_mm_block@Data,
+        lavimplied = fit_mm_block@implied, lavh1 = fit_mm_block@h1,
+        lavoptions = fit_mm_block@Options, use_ginv = FALSE,
+        attr_delta = TRUE, attr_e_inv = TRUE, attr_wls_v = TRUE)
+      mm_e_inv <- attr(tmp, "E.inv")
+      mm_wls_v <- attr(tmp, "WLS.V")[[g]]
+      mm_delta_1 <- attr(tmp, "Delta")[[g]]
+      if (is.matrix(mm_wls_v)) {
+        mm_jac <- mm_e_inv %*% t(mm_wls_v %*% mm_delta_1)
+      } else {
+        # DWLS/ULS: WLS.V holds the diagonal of the weight matrix
+        mm_jac <- mm_e_inv %*% t(mm_wls_v * mm_delta_1)
+      }
+    } else {
+      mm_h1_expected <- lavTech(fit_mm_block, "h1.information.expected")
+      mm_delta       <- lavTech(fit_mm_block, "Delta")
+      # JACa = d(theta.mm)/d(stats) = invI . Delta' . A1 (A1 = saturated/h1
+      # weight). Which information to invert depends on the SE method, and the
+      # two choices are NOT interchangeable in principle (they coincide only for
+      # a just-identified measurement block, where s = sigma):
+      #   - se = "twostep.robust" (p_only): the Yuan & Chan (2002, eq. 12a)
+      #     ASYMPTOTIC sandwich, whose bread is the population A-matrix -> the
+      #     EXPECTED information (Delta'A1Delta)^-1, when information = "expected"
+      #     (the lavaan default; honor the option otherwise).
+      #   - se = "local"/"ij": the infinitesimal jackknife = an EMPIRICAL,
+      #     finite-sample sandwich. Its influence d(theta.mm_hat)/d(stats) is the
+      #     exact realized jacobian (implicit function theorem at the solution),
+      #     i.e. the OBSERVED information; this also keeps JACa coherent with the
+      #     observed/ADF Gamma it is later sandwiched with in Gamma.eta =
+      #     JAC . Gamma . JAC'. So local MUST use observed (do not "unify" this
+      #     with the twostep.robust choice).
+      if (p_only && fit@Options$information[1] == "expected") {
+        mm_inv_observed <-
+          lavTech(fit_mm_block, "inverted.information.expected")
+      } else {
+        mm_inv_observed <-
+          lavTech(fit_mm_block, "inverted.information.observed")
+      }
+      mm_jac <- t(mm_h1_expected[[g]] %*% mm_delta[[g]] %*% mm_inv_observed)
+    }
+    # full (unfiltered) influence: needed for the psi channel below
+    mm_jac_full <- mm_jac
+
     # keep only rows that are also in FIT@ParTable
     mm_keep_idx <- fit_mm_block@ParTable$free[step1$block.ptm.idx[[mm]]]
     mm_jac <- mm_jac[mm_keep_idx, , drop = FALSE]
 
-    # select 'S' elements (row index)
-    mm_ov_idx <- match(step1$MM.FIT[[mm]]@Data@ov.names[[g]],
-                       lavdata@ov.names[[g]])
-    mm_nvar <- length(lavdata@ov.names[[g]])
-    mm_col_idx <- lav_matrix_vech_which_idx(mm_nvar, idx = mm_ov_idx,
-      add_idx_at_start = lavmodel@meanstructure)
+    # map the columns of mm_jac (the sample statistics of this
+    # measurement block) into the statistics vector of the joint model
+    if (lavmodel@categorical) {
+      # label-based mapping (handles any variable ordering and a block-wise
+      # mix of categorical and continuous measurement blocks)
+      mm_col_idx <- lav_sam_mg_cat_col_idx(fit_mm_block, g, joint_labels,
+                                           ncol(mm_jac_full))
+    } else {
+      mm_ov_idx <- match(step1$MM.FIT[[mm]]@Data@ov.names[[g]],
+                         lavdata@ov.names[[g]])
+      mm_nvar <- length(lavdata@ov.names[[g]])
+      mm_col_idx <- lav_mat_vech_which_idx(mm_nvar, idx = mm_ov_idx,
+        add_idx_at_start = lavmodel@meanstructure)
+    }
     mm_row_idx <- step1$block.mm.idx[[mm]][step1$block.ptm.idx[[mm]]]
     jaca[mm_row_idx, mm_col_idx] <- mm_jac
+
+    # psi channel: capture the influence d(Psi)/d(stats) for the within-block
+    # factor (co)variances (categorical blocks only), mapped to the joint stats
+    if (lavmodel@categorical && fit_mm_block@Model@categorical) {
+      blv <- unlist(fit_mm_block@pta$vnames$lv)
+      bpt <- fit_mm_block@ParTable
+      bpsi <- which(bpt$op == "~~" & bpt$lhs %in% blv & bpt$rhs %in% blv &
+                    bpt$free > 0L & !duplicated(bpt$free))
+      for (k in bpsi) {
+        ja_row <- numeric(ncol(jaca))
+        ja_row[mm_col_idx] <- mm_jac_full[bpt$free[k], ]
+        # joint partable row for this factor (co)variance (canonical pair)
+        jrow <- which(step1$PT$op == "~~" &
+          ((step1$PT$lhs == bpt$lhs[k] & step1$PT$rhs == bpt$rhs[k]) |
+           (step1$PT$lhs == bpt$rhs[k] & step1$PT$rhs == bpt$lhs[k])))[1]
+        psi_infl_list[[length(psi_infl_list) + 1L]] <- ja_row
+        psi_jrow_list <- c(psi_jrow_list, jrow)
+      }
+    }
   }
 
-  # keep only 'LAMBDA/THETA' parameters
+  # keep only the free 'measurement' parameters
   pt_1 <- step1$PT
   # only ov.names that are actually used in the measurement models
   ov_names <- unique(unlist(lapply(step1$MM.FIT, lav_object_vnames, "ov")))
-  lambda_idx <- which(pt_1$op == "=~" & pt_1$free > 0L & !duplicated(pt_1$free))
-  theta_idx  <- which(pt_1$op == "~~" & pt_1$free > 0L &
-                      !duplicated(pt_1$free) &
-                      pt_1$lhs %in% ov_names & pt_1$rhs %in% ov_names)
-  nu_idx <- integer(0L)
-  if (lavmodel@meanstructure) {
-    nu_idx     <- which(pt_1$op == "~1" & pt_1$free > 0L &
-                        !duplicated(pt_1$free) &
-                        pt_1$lhs %in% ov_names)
-  }
-  delta_idx <- integer(0L)
-  if (lavmodel@categorical || lavmodel@correlation) {
-    delta_idx <- which(pt_1$op == "~*~" & pt_1$free > 0L &
-                                   !duplicated(pt_1$free))
-  }
-  beta_idx <- psi_idx <- integer(0L)
   lv_ind <- unlist(lavpta$vnames$lv.ind)
-  if (length(lv_ind) > 0L) {
-    beta_idx <- which(pt_1$op == "=~" & pt_1$free > 0L &
-                      !duplicated(pt_1$free) & pt_1$rhs %in% lv_ind)
-    psi_idx <- which(pt_1$op == "~~" & pt_1$free > 0L &
-                    !duplicated(pt_1$free) &
-                    pt_1$rhs %in% lv_ind & pt_1$lhs %in% lv_ind)
-  }
-  # keep only these free parameters (measurement only)
-  keep_idx <- sort(c(lambda_idx, theta_idx, nu_idx,
-                     delta_idx, beta_idx, psi_idx))
+  keep_idx <- lav_sam_meas_keep_idx(pt_1, ov_names, lavmodel, lv_ind,
+                                    lavmodel@meanstructure)
   jaca <- jaca[keep_idx, , drop = FALSE]
   if (p_only) {
+    # the rows of P are in ascending free-parameter order; return the
+    # free indices, so the caller can align them with step1.free.idx
+    # (which is ordered per measurement block)
+    attr(jaca, "free.idx") <- step1$PT.free[keep_idx]
     return(jaca)
   }
 
@@ -695,10 +1000,10 @@ lav_sam_step1_local_jac <- function(step1 = NULL, fit = NULL, p_only = FALSE,
       if (lavmodel@meanstructure) {
         nvar <- nrow(fit@h1$implied$cov[[g]])
         this_ybar <- x[seq_len(nvar)]
-        this_cov <- lav_matrix_vech_reverse(x[-seq_len(nvar)])
+        this_cov <- lav_mat_vech_rev(x[-seq_len(nvar)])
       } else {
         this_ybar <- fit@h1$implied$mean[[g]]
-        this_cov <- lav_matrix_vech_reverse(x)
+        this_cov <- lav_mat_vech_rev(x)
       }
 
       # change COV/YBAR
@@ -711,137 +1016,439 @@ lav_sam_step1_local_jac <- function(step1 = NULL, fit = NULL, p_only = FALSE,
       # transform data to comply with the new COV/YBAR
       y <- fit@Data@X[[1]]
       ytrans <- vector("list", nblocks)
-      ytrans[[1]] <- lav_matrix_transform_mean_cov(y, target_mean = this_ybar,
+      ytrans[[1]] <- lav_mat_transform_mean_cov(y, target_mean = this_ybar,
                                                    target_cov = this_cov)
       colnames(ytrans[[1]]) <- fit@pta$vnames$ov[[1]]
 
       step1_1 <- lav_sam_step1_local(step1 = step1_1, fit = fit, y = ytrans,
            sam_method = step1$sam.method, local_options = step1$local.options)
       if (lavmodel@meanstructure) {
-        out <- c(step1_1$EETA[[1]], lav_matrix_vech(step1_1$VETA[[1]]))
+        out <- c(step1_1$EETA[[1]], lav_mat_vech(step1_1$VETA[[1]]))
       } else {
-        out <- lav_matrix_vech(step1_1$VETA[[1]])
+        out <- lav_mat_vech(step1_1$VETA[[1]])
       }
       out
     }
     # shut off verbose
     verbose_flag <- lav_verbose()
     lav_verbose(FALSE)
-    this_x <- lav_matrix_vech(fit@h1$implied$cov[[g]])
+    this_x <- lav_mat_vech(fit@h1$implied$cov[[g]])
     if (lavmodel@meanstructure) {
       this_x <- c(fit@h1$implied$mean[[g]], this_x)
     }
     jacb <- numDeriv::jacobian(func = ffb, x = this_x)
     lav_verbose(verbose_flag)
-    # lv.names1 <- STEP1$LV.NAMES[[g]]
-    # lv.int.names <- FIT@pta$vnames$lv.interaction[[g]]
-    # nfac <- length(lv.names1)
-
-    # idx1 <- rep(seq_len(nfac), each = nfac)
-    # idx2 <- rep(seq_len(nfac), times = nfac)
-
-    # NAMES <- paste(lv.names[idx1], lv.names[idx2], sep = ":")
-
-
-
-    # JACb <- lav_sam_step1_local_jac_var2(ybar = STEP1$YBAR[[g]],
-    #   S = STEP1$COV[[g]], M = STEP1$M[[g]], NU = STEP1$NU[[g]])
-    # JACb <- JACb[STEP1$lv.keep2, , drop = FALSE]
-    # if (lavmodel@meanstructure) {
-    #   tmp <- lav_sam_step1_local_jac_mean2(ybar = STEP1$YBAR[[g]],
-    #     M = STEP1$M[[g]], NU = STEP1$NU[[g]])
-    #   dd
-    #   JACb <- lav_matrix_bdiag(tmp, JACb)
-    # }
-
+  } else if (lavmodel@categorical) {
+    # categorical (and block-wise mixed): JACb depends on the (poly)choric
+    # correlations and the free continuous variances of step1$COV (not the
+    # thresholds/means), and through the DELTA rescaling / Croon correction is
+    # not a simple M %x% M map; obtain it numerically (see lav_sam_jacb_cat_g()).
+    jacb <- lav_sam_jacb_cat_g(g, step1, fit, joint_labels,
+                               lavmodel@meanstructure)
   } else { # no latent interactions
-    mb <- step1$M[[g]]
-    mbx_mb <- mb %x% mb
-    row_idx <- lav_matrix_vech_idx(nrow(mb))
-    jacb <- lav_matrix_duplication_post(mbx_mb)[row_idx, , drop = FALSE]
-    if (lavmodel@meanstructure) {
-      jacb <- lav_matrix_bdiag(mb, jacb)
-    }
+    jacb <- lav_sam_jacb_cont_g(step1$M[[g]], lavmodel@meanstructure)
   }
 
-  # JACc: jacobian of the function vech(VETA) = f(theta.mm, vech(S))
-  #       (treating vech(S) as fixed)
-
-  # ffc <- function(x, YBAR = NULL, COV = NULL, b = 1L) {
-  #   # x only contains the LAMBDA/THETA/NU elements
-  #   PT$est[keep.idx] <- x
-  #   # get all free parameters (for lav_model_set_parameters)
-  #   x.free <- PT$est[PT$free > 0L & !duplicated(PT$free)]
-  #   this.model <- lav_model_set_parameters(lavmodel, x = x.free)
-  #   lambda.idx <- which(names(this.model@GLIST) == "lambda")[b]
-  #   theta.idx  <- which(names(this.model@GLIST) ==  "theta")[b]
-  #   LAMBDA <- this.model@GLIST[[lambda.idx]]
-  #   THETA  <- this.model@GLIST[[ theta.idx]]
-  #   Mb <- lav_sam_mapping_matrix(LAMBDA = LAMBDA,
-  #                                THETA = THETA, S = COV,
-  #                                method = local.options$M.method)
-  #   # handle observed-only variables
-  #   dummy.ov.idx <- c(
-  #     FIT@Model@ov.x.dummy.ov.idx[[b]],
-  #     FIT@Model@ov.y.dummy.ov.idx[[b]]
-  #   )
-  #   dummy.lv.idx <- c(
-  #     FIT@Model@ov.x.dummy.lv.idx[[b]],
-  #     FIT@Model@ov.y.dummy.lv.idx[[b]]
-  #   )
-  #   if (length(dummy.ov.idx)) {
-  #     Mb[dummy.lv.idx, ] <- 0
-  #     Mb[cbind(dummy.lv.idx, dummy.ov.idx)] <- 1
-  #   }
-  #   MSM <- Mb %*% COV %*% t(Mb)
-  #   MTM <- Mb %*% THETA %*% t(Mb)
-  #   VETA <- MSM - MTM
-
-  #   if (lavmodel@meanstructure) {
-  #     nu.idx <- which(names(this.model@GLIST) ==  "nu")[b]
-  #     NU <- this.model@GLIST[[nu.idx]]
-  #     EETA <- lav_sam_eeta(M = Mb, YBAR = YBAR, NU = NU)
-  #     out <- c(EETA, lav_matrix_vech(VETA))
-  #   } else {
-  #     out <- lav_matrix_vech(VETA)
-  #   }
-
-  #   out
-  # }
-
-  # current point estimates
-  # PT <- STEP1$PT
-  # x <- PT$est[keep.idx]
-  # if (lavmodel@meanstructure) {
-  #   JACc <- numDeriv::jacobian(func = ffc, x = x, YBAR = STEP1$YBAR[[1]],
-  #                              COV = STEP1$COV[[1]])
-  # } else {
-  #   JACc <- numDeriv::jacobian(func = ffc, x = x, COV = STEP1$COV[[1]])
-  # }
-
-  # calling lav_sam_step1_local() directly
-  ffc <- function(x) {
-    step1_1 <- step1
-
-    # fill in new 'x' values in PT
-    step1_1$PT$est[keep_idx] <- x
-    step1_1 <- lav_sam_step1_local(step1 = step1_1, fit = fit,
-           sam_method = step1$sam.method, local_options = step1$local.options)
-    if (lavmodel@meanstructure) {
-      out <- c(step1_1$EETA[[1]], lav_matrix_vech(step1_1$VETA[[1]]))
-    } else {
-      out <- lav_matrix_vech(step1_1$VETA[[1]])
-    }
-    out
-  }
-  # shut off verbose
-  verbose_flag <- lav_verbose()
-  lav_verbose(FALSE)
-  jacc <- numDeriv::jacobian(func = ffc, x = step1$PT$est[keep_idx])
-  lav_verbose(verbose_flag)
+  # JACc: jacobian of vech(VETA) = f(theta.mm), keeping vech(S) fixed
+  jacc <- lav_sam_jac_est_rows(keep_idx, step1, fit, g, lavmodel@meanstructure)
 
   # assemble JAC
   jac <- (jacc %*% jaca) + jacb
+
+  # psi channel (categorical): add (d VETA / d Psi) %*% (d Psi / d stats), the
+  # contribution of the within-block factor (co)variances that enter VETA
+  # through the delta constraint theta_jj = 1 - (Lambda Psi Lambda')_jj. Without
+  # it the categorical latent (co)variance SEs are ~0.6x too small. For
+  # continuous indicators d VETA / d Psi = 0, so this leaves the continuous
+  # (and mixed-within-block) results that do not depend on Psi unchanged.
+  jacpsi <- NULL
+  # drop any factor (co)variance already propagated as a measurement parameter
+  # in keep_idx (e.g. the lv.ind (co)variances of a higher-order model), to
+  # avoid double counting
+  if (length(psi_jrow_list) > 0L) {
+    dup_idx <- which(psi_jrow_list %in% keep_idx)
+    if (length(dup_idx) > 0L) {
+      psi_jrow_list <- psi_jrow_list[-dup_idx]
+      psi_infl_list <- psi_infl_list[-dup_idx]
+    }
+  }
+  if (lavmodel@categorical && length(psi_jrow_list) > 0L) {
+    jaca_psi <- do.call(rbind, psi_infl_list)
+    jacpsi <- lav_sam_jac_est_rows(psi_jrow_list, step1, fit, g,
+                                   lavmodel@meanstructure)
+    jac <- jac + (jacpsi %*% jaca_psi)
+  }
+
+  if (return_jac) {
+    attr(jac, "JACa") <- jaca
+    attr(jac, "JACb") <- jacb
+    attr(jac, "JACc") <- jacc
+    attr(jac, "JACpsi") <- jacpsi
+  }
+
+  # eventually, this will be a list per group/block
+  list(jac)
+}
+
+# multigroup version of lav_sam_step1_local_jac() (single level, no latent
+# interactions, continuous data).
+#
+# Strategy: build ONE 'stacked' jacobian
+#   JAC.full = JACc %*% JACa + JACb
+# where
+#   - the columns run over the stacked sample statistics vech(S_g) (per group),
+#   - the rows run over the stacked c(EETA_g, vech(VETA_g)) (per group).
+# The sample statistics are independent across groups, so the (full) Gamma of
+# the stacked vech(S) is block-diagonal. When the measurement model has NO
+# across-group (equality) constraints, the measurement parameters of the
+# different groups are estimated independently, hence JAC.full is itself
+# block-diagonal across groups, and we can return a simple list of per-group
+# jacobians jac[[g]] (the caller then forms Gamma.eta[[g]] = jac[[g]] %*%
+# Gamma[[g]] %*% t(jac[[g]]), and feeds it as a per-group NACOV to the
+# multigroup structural model).
+#
+# If the measurement model DOES contain across-group constraints, JAC.full has
+# nonzero off-diagonal (cross-group) blocks: vech(VETA_g) then depends on the
+# sample statistics of the OTHER groups too. A per-group NACOV list can no
+# longer capture this (the structural step would need the full cross-group
+# Gamma.eta); we detect this situation and stop with an informative message.
+# map the statistics of a (categorical or continuous) measurement block of
+# group g into the labels of the joint WLS statistics vector of group g, and
+# return the matching column indices (within group g's statistics).
+lav_sam_mg_cat_col_idx <- function(fit_mm_block, g, joint_labels, ncol_full) {
+  if (fit_mm_block@Model@categorical) {
+    mm_labels <- lav_sam_wls_obs_labels(
+      ov_names = fit_mm_block@Data@ov.names[[g]],
+      th_idx = fit_mm_block@SampleStats@th.idx[[g]])
+  } else {
+    # continuous block within a categorical joint model: the influence columns
+    # are ordered (means, vech(cov)); the joint represents each continuous
+    # variable by its mean (|t1), variance (|var) and covariances (~~)
+    block_ov <- fit_mm_block@Data@ov.names[[g]]
+    nvar_b <- length(block_ov)
+    v_lin <- lav_mat_vech_idx(nvar_b)
+    zero_b <- matrix(0L, nvar_b, nvar_b)
+    v_r <- row(zero_b)[v_lin]
+    v_c <- col(zero_b)[v_lin]
+    cov_labels <- ifelse(v_r == v_c,
+      paste0(block_ov[v_r], "|var"),
+      vapply(seq_along(v_r), function(k)
+        paste(sort(c(block_ov[v_r[k]], block_ov[v_c[k]])), collapse = "~~"),
+        character(1L)))
+    if (ncol_full == nvar_b + length(v_lin)) {
+      mm_labels <- c(paste0(block_ov, "|t1"), cov_labels) # with means
+    } else {
+      mm_labels <- cov_labels
+    }
+  }
+  col_idx <- match(mm_labels, joint_labels)
+  if (anyNA(col_idx)) {
+    lav_msg_stop(gettext(
+      "internal error: unable to map the statistics of a measurement block
+       into the statistics vector of the joint model"))
+  }
+  col_idx
+}
+
+lav_sam_step1_local_jac_mg <- function(step1 = NULL, fit = NULL,
+                                       p_only = FALSE,
+                                       return_jac = FALSE) {
+  lavdata  <- fit@Data
+  lavmodel <- fit@Model
+  lavpta   <- fit@pta
+  ngroups  <- lavdata@ngroups
+  n_mmblocks <- length(step1$MM.FIT)
+  meanstructure <- lavmodel@meanstructure
+
+  # per-group size of the (joint) sample-statistics vector vech(S_g)[+ means]
+  stat_n <- vapply(seq_len(ngroups),
+    function(g) length(fit@SampleStats@WLS.obs[[g]]), integer(1L))
+  stat_offset <- c(0L, cumsum(stat_n)) # length ngroups + 1
+  stat_tot <- sum(stat_n)
+
+  # NOTE: veta_n / veta_offset (the per-group size of c(EETA_g, vech(VETA_g)))
+  # are only needed for the JACb/JACc stacking below; they rely on step1$VETA,
+  # which is only computed for the local/fsr/cfsr methods. They are therefore
+  # deferred until after the p_only early return (twostep.robust, also used by
+  # sam.method = "global", does not need them and does not have step1$VETA).
+
+  # categorical: per-group labels of the joint WLS statistics vector, used to
+  # map each measurement block's statistics into the right joint columns
+  if (lavmodel@categorical) {
+    joint_labels <- lapply(seq_len(ngroups), function(g)
+      lav_sam_wls_obs_labels(ov_names = lavdata@ov.names[[g]],
+                             th_idx = fit@SampleStats@th.idx[[g]]))
+  }
+
+  # JACa: jacobian of theta.mm = f(vech(S_all))
+  # rows: all parameters in fit@ParTable (we select 'measurement' rows later)
+  # cols: stacked vech(S_g) over the groups
+  jaca <- matrix(0, nrow = length(fit@ParTable$lhs), ncol = stat_tot)
+  # psi-channel accumulators (categorical only): the influence d(Psi)/d(stats)
+  # of the within-block factor (co)variances, and their joint partable rows
+  psi_infl_list <- list()
+  psi_jrow_list <- integer(0L)
+  for (mm in seq_len(n_mmblocks)) {
+    fit_mm_block   <- step1$MM.FIT[[mm]]
+    if (lavmodel@categorical) {
+      # influence of the (D)WLS estimator: (Delta' W Delta)^-1 Delta' W, reusing
+      # the robust-vcov ingredients. We use this for EVERY block (incl. a fully
+      # continuous one in a block-wise mixed model), because
+      # lavTech(., "h1.information.expected") is not available for a continuous
+      # block embedded in a categorical SAM.
+      tmp <- lav_model_nvcov_robust_sem(
+        lavmodel = fit_mm_block@Model,
+        lavsamplestats = fit_mm_block@SampleStats,
+        lavcache = fit_mm_block@cache, lavdata = fit_mm_block@Data,
+        lavimplied = fit_mm_block@implied, lavh1 = fit_mm_block@h1,
+        lavoptions = fit_mm_block@Options, use_ginv = FALSE,
+        attr_delta = TRUE, attr_e_inv = TRUE, attr_wls_v = TRUE)
+      mm_e_inv  <- attr(tmp, "E.inv")
+      mm_delta  <- attr(tmp, "Delta")
+      mm_wls_v  <- attr(tmp, "WLS.V")
+    } else {
+      mm_h1_expected <- lavTech(fit_mm_block, "h1.information.expected")
+      mm_delta       <- lavTech(fit_mm_block, "Delta")
+      # same expected-vs-observed information choice as the single-group path
+      # (see lav_sam_step1_local_jac()): EXPECTED for se = "twostep.robust"
+      # (p_only; Yuan & Chan asymptotic sandwich, honoring the information
+      # option), OBSERVED for se = "local"/"ij" (infinitesimal jackknife =
+      # empirical sandwich, coherent with the observed/ADF Gamma).
+      if (p_only && fit@Options$information[1] == "expected") {
+        mm_inv_observed <-
+          lavTech(fit_mm_block, "inverted.information.expected")
+      } else {
+        mm_inv_observed <-
+          lavTech(fit_mm_block, "inverted.information.observed")
+      }
+    }
+
+    # rows of mm_jac that we keep (the free params present in fit@ParTable),
+    # together with the corresponding row numbers in fit@ParTable.
+    # NOTE: Delta and (inverted) information have one row/col per *unconstrained*
+    # free parameter (nx.unco); with simple equality constraints (ceq.simple,
+    # e.g. across-group equal loadings) the ParTable$free numbering (nx.free)
+    # is smaller and would mis-index the rows of mm_jac. Remap to the
+    # unconstrained position (cf. lav_sam_step1()).
+    mm_free <- fit_mm_block@ParTable$free
+    if (fit_mm_block@Model@ceq.simple.only) {
+      mm_free[mm_free > 0L] <- seq_len(fit_mm_block@Model@nx.unco)
+    }
+    mm_keep_idx <- mm_free[step1$block.ptm.idx[[mm]]]
+    mm_row_idx  <- step1$block.mm.idx[[mm]][step1$block.ptm.idx[[mm]]]
+
+    # psi channel: identify this block's free factor (co)variances (ALL groups)
+    # ONCE, with their (unconstrained) block-row index and their joint partable
+    # row. We accumulate d(Psi)/d(stats) over the groups below, so that with
+    # across-group measurement constraints (Case B) a group's factor variance
+    # also picks up its dependence on the OTHER groups' statistics.
+    psi_fp <- integer(0L); psi_jr <- integer(0L)
+    if (lavmodel@categorical && fit_mm_block@Model@categorical) {
+      blv <- unlist(fit_mm_block@pta$vnames$lv)
+      bpt <- fit_mm_block@ParTable
+      bpsi <- which(bpt$op == "~~" & bpt$lhs %in% blv & bpt$rhs %in% blv &
+                    bpt$free > 0L & !duplicated(bpt$free))
+      for (k in bpsi) {
+        psi_fp <- c(psi_fp, mm_free[k]) # unconstrained block-row index
+        jrow <- which(step1$PT$op == "~~" & step1$PT$group == bpt$group[k] &
+          ((step1$PT$lhs == bpt$lhs[k] & step1$PT$rhs == bpt$rhs[k]) |
+           (step1$PT$lhs == bpt$rhs[k] & step1$PT$rhs == bpt$lhs[k])))[1]
+        psi_jr <- c(psi_jr, jrow)
+      }
+    }
+    psi_acc <- matrix(0, nrow = length(psi_fp), ncol = stat_tot)
+
+    # lavaan stores a single 'unit' (per-observation averaged) information
+    # matrix for the whole (multigroup) block; the group-g diagonal block of
+    # its inverse is therefore (N/n_g) times the inverse one would obtain from
+    # group g alone, while Delta[[g]] and h1.information.expected[[g]] are
+    # unweighted. To recover the per-group influence d(theta.mm_g)/d(s_g) we
+    # undo this normalization with the group proportion w_g = n_g / N.
+    mm_ntotal <- fit_mm_block@SampleStats@ntotal
+
+    for (g in seq_len(ngroups)) {
+      w_g <- fit_mm_block@SampleStats@nobs[[g]] / mm_ntotal
+      # influence of group g's sample statistics on ALL block parameters
+      # (in the no-across-group-constraint case, only group g's parameters
+      #  have nonzero rows; with across-group constraints, other groups'
+      #  parameter rows are nonzero too -> cross-group coupling)
+      if (lavmodel@categorical) {
+        wv <- mm_wls_v[[g]]
+        if (is.matrix(wv)) {
+          mm_jac <- w_g * (mm_e_inv %*% t(wv %*% mm_delta[[g]]))
+        } else {
+          # DWLS/ULS: WLS.V holds the diagonal of the weight matrix
+          mm_jac <- w_g * (mm_e_inv %*% t(wv * mm_delta[[g]]))
+        }
+      } else {
+        mm_jac <- w_g *
+          t(mm_h1_expected[[g]] %*% mm_delta[[g]] %*% mm_inv_observed)
+      }
+      # full (unfiltered) influence: needed for the psi channel below
+      mm_jac_full <- mm_jac
+      mm_jac <- mm_jac[mm_keep_idx, , drop = FALSE]
+
+      # map the columns (block statistics of group g) into the joint
+      # statistics vector of group g
+      if (lavmodel@categorical) {
+        mm_col_idx <- stat_offset[g] +
+          lav_sam_mg_cat_col_idx(fit_mm_block, g, joint_labels[[g]],
+                                 ncol(mm_jac_full))
+      } else {
+        mm_ov_idx <- match(fit_mm_block@Data@ov.names[[g]],
+                           lavdata@ov.names[[g]])
+        mm_nvar   <- length(lavdata@ov.names[[g]])
+        mm_col_idx <- stat_offset[g] +
+          lav_mat_vech_which_idx(mm_nvar, idx = mm_ov_idx,
+            add_idx_at_start = meanstructure)
+      }
+      jaca[mm_row_idx, mm_col_idx] <- mm_jac
+
+      # psi channel: accumulate d(Psi)/d(group-g stats) for this block's factor
+      # (co)variances at group g's columns. Summed over the group loop, this
+      # gives the full (cross-group) influence; for Case A only the own-group
+      # columns are nonzero.
+      if (length(psi_fp) > 0L) {
+        psi_acc[, mm_col_idx] <- psi_acc[, mm_col_idx, drop = FALSE] +
+          mm_jac_full[psi_fp, , drop = FALSE]
+      }
+    }
+
+    # store the accumulated psi-channel influence rows for this block
+    for (i in seq_along(psi_fp)) {
+      psi_infl_list[[length(psi_infl_list) + 1L]] <- psi_acc[i, ]
+      psi_jrow_list <- c(psi_jrow_list, psi_jr[i])
+    }
+  }
+
+  # keep only the free 'measurement' parameters
+  pt_1 <- step1$PT
+  ov_names <- unique(unlist(lapply(step1$MM.FIT, lav_object_vnames, "ov")))
+  lv_ind <- unlist(lavpta$vnames$lv.ind)
+  keep_idx <- lav_sam_meas_keep_idx(pt_1, ov_names, lavmodel, lv_ind,
+                                    meanstructure)
+
+  if (p_only) {
+    # twostep.robust: we only need the 'P' matrix = influence of the
+    # measurement (step 1) parameters on the (stacked) sample statistics.
+    # The rows are in ascending free-parameter order; the caller aligns them
+    # with step1.free.idx and splits the columns per group using stat.offset.
+    # (No need for the costly JACb/JACc numeric jacobians below; this branch
+    # is therefore also usable for sam.method = "global", which does not
+    # populate step1$VETA / step1$M / step1$COV.)
+    #
+    # keep_idx de-duplicates on pt_1$free (the *constrained* free number). With
+    # across-group equality constraints in the measurement model (Case B)
+    # several partable rows -- one per group -- share that number but are
+    # distinct in step1.free.idx (the *unconstrained* numbering). For the P
+    # matrix we need one row per unconstrained step 1 parameter, so de-duplicate
+    # on step1$PT.free instead. (When there are no simple equality constraints
+    # the two numberings coincide, so p_keep_idx == keep_idx.)
+    p_keep_idx <- if (lavmodel@ceq.simple.only) {
+      lav_sam_meas_keep_idx(pt_1, ov_names, lavmodel, lv_ind, meanstructure,
+                            dedup_key = step1$PT.free)
+    } else {
+      keep_idx
+    }
+    pjac <- jaca[p_keep_idx, , drop = FALSE]
+    attr(pjac, "free.idx") <- step1$PT.free[p_keep_idx]
+    attr(pjac, "stat.offset") <- stat_offset
+    return(pjac)
+  }
+
+  jaca <- jaca[keep_idx, , drop = FALSE]
+
+  # per-group size of c(EETA_g, vech(VETA_g)) (needed for the JACb/JACc
+  # stacking below; relies on step1$VETA, only computed for local/fsr/cfsr)
+  veta_n <- vapply(seq_len(ngroups), function(g) {
+    p <- ncol(step1$VETA[[g]])
+    # NOTE: %/% binds tighter than *, so parenthesize the vech length
+    # (p*(p+1)/2); without the parens p*(p+1L)%/%2L is wrong for even p
+    (if (meanstructure) p else 0L) + (p * (p + 1L)) %/% 2L
+  }, integer(1L))
+  veta_offset <- c(0L, cumsum(veta_n))
+  veta_tot <- sum(veta_n)
+
+  # JACb: jacobian of vech(VETA) = f(vech(S)), keeping theta.mm fixed
+  # (block-diagonal across groups: VETA_g = M_g S_g M_g')
+  jacb_list <- vector("list", ngroups)
+  if (lavmodel@categorical) {
+    for (g in seq_len(ngroups)) {
+      jacb_list[[g]] <- lav_sam_jacb_cat_g(g, step1, fit, joint_labels[[g]],
+                                           meanstructure)
+    }
+  } else {
+    for (g in seq_len(ngroups)) {
+      jacb_list[[g]] <- lav_sam_jacb_cont_g(step1$M[[g]], meanstructure)
+    }
+  }
+  jacb <- lav_mat_bdiag(jacb_list)
+
+  # JACc: jacobian of vech(VETA) = f(theta.mm), keeping vech(S) fixed
+  # (over the stacked c(EETA_g, vech(VETA_g)) of all groups)
+  jacc <- lav_sam_jac_est_rows(keep_idx, step1, fit, seq_len(ngroups),
+                               meanstructure)
+
+  # assemble the stacked JAC
+  jac_full <- (jacc %*% jaca) + jacb
+
+  # psi channel (categorical): add (d VETA / d Psi) %*% (d Psi / d stats), the
+  # contribution of the within-block factor (co)variances that enter VETA
+  # through the delta constraint theta_jj = 1 - (Lambda Psi Lambda')_jj. Without
+  # it the categorical latent (co)variance SEs are ~0.6x too small. (For
+  # continuous indicators d VETA / d Psi = 0.)
+  if (length(psi_jrow_list) > 0L) {
+    # drop any factor (co)variance already propagated as a measurement
+    # parameter in keep_idx (e.g. lv.ind (co)variances), to avoid double counting
+    dup_idx <- which(psi_jrow_list %in% keep_idx)
+    if (length(dup_idx) > 0L) {
+      psi_jrow_list <- psi_jrow_list[-dup_idx]
+      psi_infl_list <- psi_infl_list[-dup_idx]
+    }
+  }
+  if (lavmodel@categorical && length(psi_jrow_list) > 0L) {
+    jaca_psi <- do.call(rbind, psi_infl_list)
+    jacpsi <- lav_sam_jac_est_rows(psi_jrow_list, step1, fit,
+                                   seq_len(ngroups), meanstructure)
+    jac_full <- jac_full + (jacpsi %*% jaca_psi)
+  }
+
+  # split into per-group jacobians, and detect cross-group (off-diagonal)
+  # coupling. Negligible off-diagonal blocks => the measurement model has no
+  # across-group constraints (Case A): the per-group jac[[g]] are sufficient,
+  # and the caller forms a per-group NACOV list. Non-negligible off-diagonal
+  # blocks => across-group measurement constraints (Case B): vech(VETA_g) then
+  # depends on the OTHER groups' sample statistics, so the full (stacked)
+  # jacobian must be kept and a cross-group sandwich computed in step 2.
+  jac <- vector("list", ngroups)
+  caseb_flag <- FALSE
+  for (g in seq_len(ngroups)) {
+    r_idx <- (veta_offset[g] + 1L):veta_offset[g + 1L]
+    c_idx <- (stat_offset[g] + 1L):stat_offset[g + 1L]
+    jac[[g]] <- jac_full[r_idx, c_idx, drop = FALSE]
+
+    other_c <- if (stat_tot > length(c_idx)) {
+      seq_len(stat_tot)[-c_idx]
+    } else {
+      integer(0L)
+    }
+    if (length(other_c) > 0L) {
+      off_block <- max(abs(jac_full[r_idx, other_c, drop = FALSE]))
+      this_block <- max(abs(jac[[g]]), 1)
+      # numeric (finite-difference) noise is ~1e-7; genuine across-group
+      # coupling is O(1), so a relative tolerance of 1e-4 separates them
+      if (off_block > 1e-4 * this_block) {
+        caseb_flag <- TRUE
+      }
+    }
+  }
+
+  # always expose the stacked jacobian + block layout, so step 2 can build the
+  # cross-group sandwich when needed (Case B)
+  attr(jac, "jac.full") <- jac_full
+  attr(jac, "caseB") <- caseb_flag
+  attr(jac, "stat.offset") <- stat_offset
+  attr(jac, "veta.offset") <- veta_offset
 
   if (return_jac) {
     attr(jac, "JACa") <- jaca
@@ -849,23 +1456,25 @@ lav_sam_step1_local_jac <- function(step1 = NULL, fit = NULL, p_only = FALSE,
     attr(jac, "JACc") <- jacc
   }
 
-  # eventually, this will be a list per group/block
-  list(jac)
+  jac
 }
 
 # semi-analytic version
 # YR 4 June 2025: works, but still needs cleanup + avoid redundant calculations
 # (eg when multiplied with a matrix with many zero rows/cols)
-lav_sam_gamma_add <- function(step1 = NULL, fit = NULL, group = 1L) {
+# YR 12 June 2026: rewritten to avoid the loop over the observations:
+# because differentiation is linear, the average (over the observations) of
+# the casewise jacobians equals the jacobian of the *average* casewise
+# contribution, and the latter can be computed with a few (small) matrix
+# operations; the centering terms (involving the mean of the second-order
+# factor scores) can be ignored, as they cancel out when summing over the
+# observations
+lav_sam_gamma_add <- function(step1 = NULL, fit = NULL, group = 1L,
+                              use_analytic = TRUE) {
 
   lavdata <- fit@Data
-  # lavsamplestats <- fit@SampleStats
   lavmodel <- fit@Model
   lavpta <- fit@pta
-  # nblocks <- lavpta$nblocks
-
-  # local_options <- step1$local.options
-  # sam_method <- step1$sam.method
 
   ngroups <- lavdata@ngroups
   if (ngroups > 1L) {
@@ -874,230 +1483,313 @@ lav_sam_gamma_add <- function(step1 = NULL, fit = NULL, group = 1L) {
   g <- group
   y <- fit@Data@X[[g]]
   n <- nrow(y)
-  p <- ncol(y)
 
   # NAMES + lv.keep
-  lv_names <- step1$LV.NAMES[[1]]
-  lv_names <- c("..int..", lv_names)
-  nfac <- length(lv_names)
-  idx1 <- rep(seq_len(nfac), each = nfac)
-  idx2 <- rep(seq_len(nfac), times = nfac)
-
-  # k_nfac <- lav_matrix_commutation(nfac, nfac)
-  # ik <- diag(nfac * nfac) + k_nfac
-  m_d <- lav_matrix_duplication(nfac)
-
-  names_1 <- paste(lv_names[idx1], lv_names[idx2], sep = ":")
-  names_1[seq_len(nfac)] <- lv_names
+  lv_names <- c("..int..", step1$LV.NAMES[[1]])
+  tmp <- lav_sam_lvnames2(lv_names)
   lv_keep <- colnames(step1$VETA[[1]])
-  fs_mean <- step1$FS.mean[[1]]
-  keep_idx <- match(lv_keep, names_1)
+  keep_idx <- match(lv_keep, tmp$names)
+
+  # row/column pairs of the kept elements of (eta* %x% eta*)
+  i1k <- tmp$idx1[keep_idx]
+  i2k <- tmp$idx2[keep_idx]
+
+  # the second-order lambda.star, and the effective first-order lambda1,
+  # are treated as fixed constants (not differentiated)
+  lambda_star <- step1$lambda[[1]]
+  lambda1 <- step1$lambda1[[1]]
+  if (is.null(lambda1) || !is.finite(lambda1)) {
+    lambda1 <- 1
+  }
+  # effective second-order multiplier of the unscaled var.error term,
+  # absorbing the alpha correction (see lav_sam_veta2())
+  alpha_n1 <- lav_sam_alpha_n1(step1$alpha[[1]], n)
+  lambda2_eff <- lambda_star * (1 - alpha_n1)
+
+  # dummy lvs (observed variables in the structural part): mirror the
+  # patches of lav_sam_step1_local() inside lbar() below; a dummy lv's
+  # factor score is the observed variable itself (no measurement error),
+  # and the patched rows/columns are *constants* (zero derivative); for
+  # M.method = "ML" the patches are usually redundant (the model matrices
+  # already encode lambda = 1/theta = 0, and the mapping matrix reproduces
+  # the unit rows), but for M.method = "GLS" the unpatched mapping matrix
+  # rows of the dummy lvs are *not* unit vectors
+  lambda_gidx <- which(names(lavmodel@GLIST) == "lambda")[1]
+  lv_names_full <- lavmodel@dimNames[[lambda_gidx]][[2L]]
+  rm_idx <- lavpta$vidx$lv.interaction[[1]]
+  lv_names_noint <- lv_names_full
+  if (length(rm_idx) > 0L) {
+    lv_names_noint <- lv_names_full[-rm_idx]
+  }
+  dummy_ov_y_idx <- lavmodel@ov.y.dummy.ov.idx[[1]]
+  dummy_lv_y_idx <- match(lv_names_full[lavmodel@ov.y.dummy.lv.idx[[1]]],
+                          lv_names_noint)
+  dummy_ov_idx <- c(lavmodel@ov.x.dummy.ov.idx[[1]], dummy_ov_y_idx)
+  dummy_lv_idx <- match(lv_names_full[c(lavmodel@ov.x.dummy.lv.idx[[1]],
+                                        lavmodel@ov.y.dummy.lv.idx[[1]])],
+                        lv_names_noint)
+
+  # std.lv = TRUE? if so, lav_sam_step1_local() has rescaled VETA
+  # (cov2cor) and expressed the factor scores in the same standardized
+  # metric; we must mirror this inside lbar() below (the rescaling factors
+  # depend on the step 1 parameters, so they are differentiated through)
+  std_lv_flag <- fit@Options$std.lv
 
   # step 1 free parameters
   step1_idx <- which(step1$PT$free %in% step1$step1.free.idx)
   x_step1 <- step1$PT$est[step1_idx]
+  pt_1 <- step1$PT
 
-  this_nu <- step1$NU[[1]]
-  this_m  <- step1$M[[1]]
-  this_mtm <- lav_matrix_bdiag(0,
-                  step1$MTM[[1]][seq_len(nfac - 1), seq_len(nfac - 1)])
-  this <- c(this_nu, lav_matrix_vec(this_m), lav_matrix_vech(this_mtm))
-  index <- matrix(seq_len(nfac^2 * nfac^2), nfac^2, nfac^2)
-
-  x2this <- function(x) {
-    pt_1 <- step1$PT
-   pt_1$est[step1_idx] <- x
+  # the average casewise contribution to the augmented summary statistics
+  #   Lbar = [ E(eta* %x% eta*)[keep], vech(Var(eta* %x% eta*)[keep, keep]) ]
+  # as a function of the step 1 free parameters (holding the data, and
+  # lambda.star/lambda1, fixed); see the casewise contributions (iveta2_1)
+  # in lav_sam_veta2(); the averages equal the EETA2/VETA2 statistics that
+  # are actually used in step 2:
+  # with f_i = (1, M (y_i - nu)), B = bdiag(0, M THETA t(M)),
+  # C2 = (1/N) \sum_i f_i t(f_i), E = C2 - lambda1 * B, and writing
+  # (r1, s1) and (r2, s2) for the row/column pairs of elements 'a' and 'b'
+  # of (eta* %x% eta*), the averages of the casewise contributions are:
+  # - first-order part:
+  #     Lbar1[a] = (1/N) \sum_i (f_i %x% f_i)[a] - lambda1 * vec(B)[a]
+  # - second-order part (before taking vech):
+  #     Lbar2[a, b] = Var(fs2)[a, b] - lambda2.eff * tmpbar[a, b]
+  #   with lambda2.eff = lambda.star * (1 - alpha/(n-1))
+  #   where fs2_i = f_i %x% f_i, and tmpbar is the average of
+  #     tmp_i = ((F_i - lambda1 * B) %x% B) + (B %x% (F_i - lambda1 * B)) +
+  #             ((F_i - lambda1 * B) %x% B) %*% K +
+  #             K %*% ((F_i - lambda1 * B) %x% B) +
+  #             (I + K) %*% (B %x% B)              (with F_i = f_i t(f_i))
+  #   which depends on the f_i's only through C2; elementwise:
+  #     tmpbar[a, b] = E[r1, r2] B[s1, s2] + B[r1, r2] E[s1, s2] +
+  #                    E[r1, s2] B[s1, r2] + E[s1, r2] B[r1, s2] +
+  #                    B[r1, r2] B[s1, s2] + B[s1, r2] B[r1, s2]
+  lbar <- function(x, .return_all = FALSE) {
+    pt_x <- pt_1
+    pt_x$est[step1_idx] <- x
     this_lavmodel <- lav_model_set_parameters(lavmodel,
-                       x = pt_1$est[pt_1$free > 0 & !duplicated(pt_1$free)])
-    this_nu     <- this_lavmodel@GLIST$nu
-    rm_idx <- lavpta$vidx$lv.interaction[[1]]
+                       x = pt_x$est[pt_x$free > 0 & !duplicated(pt_x$free)])
+    this_nu     <- drop(this_lavmodel@GLIST$nu)
     # no interaction columns!
-    this_lambda <- this_lavmodel@GLIST$lambda[, -rm_idx, drop = FALSE]
+    if (length(rm_idx) > 0L) {
+      this_lambda <- this_lavmodel@GLIST$lambda[, -rm_idx, drop = FALSE]
+    } else {
+      this_lambda <- this_lavmodel@GLIST$lambda
+    }
     this_theta  <- this_lavmodel@GLIST$theta
-    this_m <- lav_sam_mapping_matrix(mm_lambda = this_lambda,
+    # dummy lv patches (cfr. lav_sam_step1_local())
+    if (length(dummy_ov_y_idx) > 0L) {
+      this_theta[dummy_ov_y_idx, ] <- 0
+      this_theta[, dummy_ov_y_idx] <- 0
+      this_lambda[dummy_ov_y_idx, ] <- 0
+      this_lambda[cbind(dummy_ov_y_idx, dummy_lv_y_idx)] <- 1
+      this_nu[dummy_ov_y_idx] <- 0
+    }
+    this_m <- lav_sam_mapping_mat(mm_lambda = this_lambda,
                                      mm_theta = this_theta,
                                      s = step1$COV[[1]],
                                      method = step1$local.options$M.method)
-    mtm <- this_m %*% this_theta %*% t(this_m)
-    mtm <- lav_matrix_bdiag(0, mtm)
+    if (length(dummy_ov_idx) > 0L) {
+      this_m[dummy_lv_idx, ] <- 0
+      this_m[cbind(dummy_lv_idx, dummy_ov_idx)] <- 1
+    }
+    m_pre_std <- this_m
+    d_std <- NULL
+    if (std_lv_flag) {
+      # mirror the cov2cor() rescaling of the first-order VETA: rescale
+      # the rows of the mapping matrix so that the (lambda1-corrected)
+      # factor-score covariance matrix has unit diagonal; dummy lvs are
+      # never rescaled
+      msm_diag <- rowSums((this_m %*% step1$COV[[1]]) * this_m)
+      mtm_diag <- rowSums((this_m %*% this_theta) * this_m)
+      d_std <- sqrt(msm_diag - lambda1 * mtm_diag)
+      d_std[dummy_lv_idx] <- 1
+      this_m <- this_m / d_std
+    }
+    b_aug <- lav_mat_bdiag(0, this_m %*% this_theta %*% t(this_m))
 
-    out <- c(this_nu, lav_matrix_vec(this_m), lav_matrix_vech(mtm))
-    out
-  }
-  jac_x2this <- numDeriv::jacobian(func = x2this, x = x_step1)
-  # 46 x 24
+    # (Bartlett) factor scores, augmented with an intercept
+    fs <- cbind(1, t(t(y) - this_nu) %*% t(this_m))
 
-  # JAC.eetai2.this
-  jac_eeta2_this <- matrix(0, nrow = length(step1$EETA[[1]]),
-                              ncol = length(this))
-  pstar <- nfac * (nfac + 1) / 2
-  idx <- p + length(this_m) + seq_len(pstar)
-  jac_eeta2_this[, idx] <- (-diag(nfac^2) %*% m_d)[keep_idx, ]
+    # C2 = (1/N) \sum_i f_i t(f_i)
+    c2 <- crossprod(fs) / n
+    e_mat <- c2 - lambda1 * b_aug
 
-  # define function for JAC.veta2.fi
-  get_jac_veta2_fi <- function(x, mtm, fs_mean = NULL,
-                      lambda_star = 1, keep_idx = NULL) {
-    fi <- drop(fi)
-    p <- length(fi)
-    stopifnot(p == ncol(mtm))
+    # first-order part
+    out1 <- e_mat[cbind(i2k, i1k)]
 
-    #INDEX <- matrix(seq_len(P^2 * P^2), P^2, P^2)
+    # second-order part: only the kept columns of fs2 are needed
+    fs2k <- fs[, i1k, drop = FALSE] * fs[, i2k, drop = FALSE]
+    fs2kc <- t(t(fs2k) - colMeans(fs2k))
+    var_fs2k <- crossprod(fs2kc) / n
 
-    # (tcrossprod(fi) - MTM) %x% MTM) -- part A
-    block_a <- fi %x% do.call("rbind",
-            lapply(seq_len(p), function(i) diag(p) %x% mtm[, i]))
-    long_a <- diag(p) %x% lav_matrix_vec(fi %x% mtm)
-    big_a <- block_a + long_a
-    part_a <- big_a[lav_matrix_vech(index[keep_idx, keep_idx]), ]
+    tmpbar <- (e_mat[i1k, i1k] * b_aug[i2k, i2k] +
+               b_aug[i1k, i1k] * e_mat[i2k, i2k] +
+               e_mat[i1k, i2k] * b_aug[i2k, i1k] +
+               e_mat[i2k, i1k] * b_aug[i1k, i2k] +
+               b_aug[i1k, i1k] * b_aug[i2k, i2k] +
+               b_aug[i2k, i1k] * b_aug[i1k, i2k])
 
-    # (MTM %x% (tcrossprod(fi) - MTM)) -- part B
-    block_b <- lav_matrix_vec(fi %x% mtm) %x% diag(p)
-    long_b <- do.call("rbind",
-            lapply(seq_len(p), function(i) diag(p) %x% mtm[, i])) %x% fi
-    big_b <- block_b + long_b
-    part_b <- big_b[lav_matrix_vech(index[keep_idx, keep_idx]), ]
-
-    # lav_matrix_commutation_post((tcrossprod(fi) - MTM) %x% MTM) -- part C
-    block_c <- do.call("rbind",
-            lapply(seq_len(p), function(i) fi %x% (diag(p) %x% mtm[, i])))
-    long_c  <- do.call("rbind",
-            lapply(seq_len(p), function(i) diag(p) %x% (fi %x% mtm[, i])))
-    big_c <- block_c + long_c
-    part_c <- big_c[lav_matrix_vech(index[keep_idx, keep_idx]), ]
-
-    # lav_matrix_commutation_pre((tcrossprod(fi) - MTM) %x% MTM) -- part m_d
-    long_d <- diag(p) %x% lav_matrix_vec(mtm %x% fi)
-    block_d <- (fi %x% lav_matrix_vec(mtm)) %x% diag(p)
-    big_d <- block_d + long_d
-    part_d <- big_d[lav_matrix_vech(index[keep_idx, keep_idx]), ]
-
-    # t1 (tcrossprod(fi2[keep.idx] - FS.mean) only) -- part E
-    idx1 <- rep(seq_len(p), each = p)
-    idx2 <- rep(seq_len(p), times = p)
-    fi2 <- (fi[idx1] * fi[idx2])
-    fik <- fi2[keep_idx]
-
-    fi <- as.matrix(fi)
-    tt <- ((fi %x% diag(p))[keep_idx, ] + (diag(p) %x% fi)[keep_idx, ])
-    tmp <- ((fik - fs_mean) %x% tt) + (tt %x% (fik - fs_mean))
-    part_e <- tmp[lav_matrix_vech_idx(length(fik)), ]
-
-    final <- part_e - lambda_star * (part_a + part_b + part_c + part_d)
-    final
+    out_vec <- c(out1, lav_mat_vech(var_fs2k - lambda2_eff * tmpbar))
+    if (!.return_all) {
+      return(out_vec)
+    }
+    # intermediates needed by the analytic jacobian below
+    list(vec = out_vec, nu = this_nu, lambda = this_lambda,
+         theta = this_theta, m_pre_std = m_pre_std, m = this_m,
+         b = b_aug, e = e_mat, fs = fs, fs2kc = fs2kc, d_std = d_std)
   }
 
-  # define function for JAC.veta2.this.i
-  get_jac_veta2_this <- function(x, fi = NULL,
-                        lambda_star = 1, keep_idx = NULL) {
-    nvar <- ncol(step1$M[[1]])
-    nfac <- nrow(step1$M[[1]])
-    # this_nu <- x[seq_len(nvar)]
-    x <- x[-seq_len(nvar)]
-    # this_m  <- matrix(x[seq_len(nvar * nfac)], nrow = nfac, ncol = nvar)
-    x <- x[-seq_len(nvar * nfac)]
-    mtm <- lav_matrix_vech_reverse(x)
-    fi <- as.matrix(fi)
-    p <- nrow(fi)
-
-    # part a: ((tcrossprod(fi) - MTM) %x% MTM)
-    long_a <- diag(p) %x% do.call("rbind",
-                lapply(seq_len(p), function(i) diag(p) %x% -mtm[, i]))
-    block_a <- do.call("rbind",
-                lapply(seq_len(p), function(i) {
-                  diag(p) %x% (tcrossprod(fi) - mtm)[, i]
-                        })) %x% diag(p)
-    big_a_vec <- long_a + block_a
-    big_a <- big_a_vec %*% m_d
-    part_a <- big_a[lav_matrix_vech(index[keep_idx, keep_idx]), ]
-
-    # part b: (MTM %x% (tcrossprod(fi) - MTM))
-    block_b <- do.call("rbind",
-             lapply(seq_len(p), function(i) diag(p) %x% -mtm[, i])) %x% diag(p)
-    long_b <- diag(p) %x% do.call("rbind",
-             lapply(seq_len(p), function(i) {
-               diag(p) %x% (tcrossprod(fi) - mtm)[, i]
-                        }))
-    big_b_vec <- block_b + long_b
-    big_b <- big_b_vec %*% m_d
-    part_b <- big_b[lav_matrix_vech(index[keep_idx, keep_idx]), ]
-
-    # part c: lav_matrix_commutation_post((tcrossprod(fi) - MTM) %x% MTM)
-    block_c <- diag(p) %x% do.call("rbind",
-           lapply(seq_len(p),
-                       function(i) ((tcrossprod(fi) - mtm)[, i]) %x% diag(p)))
-    long_c <- do.call("rbind",
-           lapply(seq_len(p), function(i) diag(p * p) %x% (-mtm[, i])))
-    big_c_vec <- block_c + long_c
-    big_c <- big_c_vec %*% m_d
-    part_c <- big_c[lav_matrix_vech(index[keep_idx, keep_idx]), ]
-
-    # part d: lav_matrix_commutation_pre((tcrossprod(fi) - MTM) %x% MTM)
-    block_d <- diag(p) %x% do.call("rbind",
-                  lapply(seq_len(p), function(i) -mtm[, i] %x% diag(p)))
-    long_d <- do.call("rbind",
-                  lapply(seq_len(p),
-                     function(i) diag(p * p) %x% ((tcrossprod(fi) - mtm)[, i])))
-    big_d_vec <- block_d + long_d
-    big_d <- big_d_vec %*% m_d
-    part_d <- big_d[lav_matrix_vech(index[keep_idx, keep_idx]), ]
-
-    # part e: (IK %*% (MTM %x% MTM))
-    m_k <- lav_matrix_commutation(p, p)
-    e1 <- diag(p) %x% do.call("rbind",
-            lapply(seq_len(p), function(i) diag(p) %x% mtm[, i]))
-    e2 <- do.call("rbind",
-            lapply(seq_len(p), function(i) diag(p * p) %x% mtm[, i]))
-    e3 <- do.call("rbind",
-            lapply(seq_len(p), function(i) diag(p) %x% mtm[, i])) %x% diag(p)
-    e4 <- diag(p) %x% do.call("rbind",
-            lapply(seq_len(p), function(i) m_k %*% (diag(p) %x% mtm[, i])))
-    big_e_vec <- e1 + e2 + e3 + e4
-    big_e <- big_e_vec %*% m_d
-    part_e <-  big_e[lav_matrix_vech(index[keep_idx, keep_idx]), ]
-
-    final <- -1 * lambda_star * (part_a + part_b + part_c + part_d + part_e)
-    final
-                }
-
-  n_eeta_veta <- length(step1$EETA[[1]]) +
-                 length(lav_matrix_vech(step1$VETA[[1]]))
-  cveta <- matrix(0, nrow = n_eeta_veta, ncol = length(x_step1))
-  for (i in 1:n) {
-    # experimental: remove fs outliers
-    #if (i %in% STEP1$fs.outlier.idx[[1]]) {
-    #  next
-    #}
-
-    # factor score
-    fi <- rbind(1, this_m %*% (y[i, ] - this_nu))
-
-    #tmp <- numDeriv::jacobian(func = theta.to.eetavetai, x = x.step1, i = i)
-    jac_this2fi_i <- rbind(0, cbind(-1 * this_m,
-                           t(as.matrix(y[i, ] - drop(this_nu))) %x%
-                                                         diag(nrow(this_m)),
-                           matrix(0, nrow = nrow(this_m),
-                                  ncol = length(lav_matrix_vech(this_mtm)))))
-
-    jac_eeta2_fi_i <- ((fi %x% diag(nfac)) + (diag(nfac) %x% fi))[keep_idx, ]
-    eeta2 <- ((jac_eeta2_fi_i %*% jac_this2fi_i) +
-                                              jac_eeta2_this) %*% jac_x2this
-
-    jac_veta2_fi_i <- get_jac_veta2_fi(x = fi, mtm = this_mtm,
-                                       fs_mean = fs_mean,
-                                       lambda_star = step1$lambda[[1]],
-                                       keep_idx = keep_idx)
-    jac_veta2_this_i <- matrix(0, nrow = nrow(jac_veta2_fi_i),
-                                                  ncol = ncol(jac_this2fi_i))
-    jac_veta2_this_i[, idx] <- get_jac_veta2_this(x = this, fi = fi,
-                                                  lambda_star = step1$lambda[[1]],
-                                                  keep_idx = keep_idx)
-    veta2 <- ((jac_veta2_fi_i %*% jac_this2fi_i) +
-                                       jac_veta2_this_i) %*% jac_x2this
-
-    # FIXME: remove outliers somehow?
-    cveta <- cveta + 1 / n * rbind(eeta2, veta2)
+  # jacobian of Lbar w.r.t. the step 1 parameters: cveta[a, k] = d Lbar[a]/d x_k
+  # By default we use a closed-form (analytic) jacobian, which avoids the
+  # repeated mapping-matrix solves and full factor-score recomputations of the
+  # numerical (numDeriv) jacobian. The analytic path applies the chain rule
+  # through the model-implied factor scores, with the key building block being
+  # the differential of the mapping matrix M = (Lambda' W Lambda)^-1 Lambda' W
+  # (W = I, S^-1, Theta^-1 for ULS/GLS/ML):
+  #   dM = A dLambda' W Pp  -  M dLambda M  [ -  M dTheta Theta^-1 Pp (ML) ]
+  # with A = (Lambda' W Lambda)^-1 and Pp = I - Lambda M. It is only taken for
+  # the 'clean' continuous setting (standard mapping matrix, no dummy latent
+  # variables, no empty Lambda columns, invertible Theta for ML); otherwise we
+  # fall back to numDeriv. See lav_sam_gamma_add_jac().
+  cveta <- NULL
+  if (use_analytic) {
+    cveta <- tryCatch(
+      lav_sam_gamma_add_jac(
+        base = lbar(x_step1, .return_all = TRUE),
+        x_step1 = x_step1, lavmodel = lavmodel, pt_1 = pt_1,
+        step1_idx = step1_idx, rm_idx = rm_idx,
+        dummy_ov_idx = dummy_ov_idx, s_cov = step1$COV[[1]],
+        method = step1$local.options$M.method, std_lv_flag = std_lv_flag,
+        lambda1 = lambda1, lambda2_eff = lambda2_eff,
+        i1k = i1k, i2k = i2k, y = y, n = n),
+      error = function(e) NULL)
+  }
+  if (is.null(cveta)) {
+    cveta <- numDeriv::jacobian(func = lbar, x = x_step1)
   }
 
   gamma_addition <- n * (cveta %*% step1$Sigma.11 %*% t(cveta))
   gamma_addition
+}
+
+# Closed-form jacobian of the augmented summary statistics Lbar w.r.t. the
+# step 1 parameters (the analytic counterpart of numDeriv::jacobian(lbar)).
+# Returns the d_L x n_par jacobian matrix, or NULL if the 'clean' continuous
+# setting does not apply (the caller then falls back to numDeriv).
+lav_sam_gamma_add_jac <- function(base = NULL, x_step1 = NULL, lavmodel = NULL,
+                                  pt_1 = NULL, step1_idx = NULL, rm_idx = NULL,
+                                  dummy_ov_idx = NULL, s_cov = NULL,
+                                  method = "ML", std_lv_flag = FALSE,
+                                  lambda1 = 1, lambda2_eff = 1,
+                                  i1k = NULL, i2k = NULL, y = NULL, n = NULL) {
+  Lam0 <- base$lambda; Th0 <- base$theta; nu0 <- base$nu
+  M0 <- base$m_pre_std; Mf <- base$m; fs0 <- base$fs
+  e0 <- base$e; b0 <- base$b; fs2kc0 <- base$fs2kc; d_std0 <- base$d_std
+  S <- s_cov
+  p <- nrow(Lam0); mlv <- ncol(Lam0)
+  method <- toupper(method)
+
+  # eligibility: no dummy lvs, no empty Lambda columns, standard mapping matrix
+  if (length(dummy_ov_idx) > 0L) {
+    return(NULL)
+  }
+  if (any(apply(Lam0, 2L, function(z) all(z == 0)))) {
+    return(NULL)
+  }
+
+  # weight matrix W and A = (Lambda' W Lambda)^-1
+  if (method == "ULS") {
+    W <- diag(p)
+  } else if (method == "GLS") {
+    W <- solve(S)
+  } else if (method == "ML") {
+    if (any(abs(diag(Th0)) < 1e-4)) {
+      return(NULL)
+    }
+    W <- solve(Th0)
+  } else {
+    return(NULL)
+  }
+  LtW <- crossprod(Lam0, W) # mlv x p
+  A <- solve(LtW %*% Lam0)
+  # is the mapping matrix the standard weighted pseudo-inverse? (if lbar used
+  # a fallback -- tmat/ginv/ULS -- the closed form below does not apply)
+  if (max(abs(A %*% LtW - M0)) > 1e-7) {
+    return(NULL)
+  }
+  Pp <- diag(p) - Lam0 %*% M0 # residual projector (p x p)
+  WPp <- W %*% Pp
+  ThiPp <- if (method == "ML") W %*% Pp else NULL # Theta^-1 Pp
+
+  # cheap GLIST extractor (set_parameters only; no mapping/scores). The
+  # Lambda/Theta/nu entries are linear in the free parameters, so the forward
+  # difference below is exact (up to round-off).
+  get_lln <- function(x) {
+    pt_x <- pt_1
+    pt_x$est[step1_idx] <- x
+    ml <- lav_model_set_parameters(lavmodel,
+            x = pt_x$est[pt_x$free > 0 & !duplicated(pt_x$free)])
+    if (length(rm_idx) > 0L) {
+      lam <- ml@GLIST$lambda[, -rm_idx, drop = FALSE]
+    } else {
+      lam <- ml@GLIST$lambda
+    }
+    list(nu = drop(ml@GLIST$nu), lambda = lam, theta = ml@GLIST$theta)
+  }
+
+  Ymc <- t(t(y) - nu0) # n x p  = Y - 1 nu'
+  np <- length(x_step1)
+  cv <- matrix(0, length(base$vec), np)
+  eps_g <- 1e-6
+  for (k in seq_len(np)) {
+    xk <- x_step1
+    xk[k] <- xk[k] + eps_g
+    gk <- get_lln(xk)
+    dLam <- (gk$lambda - Lam0) / eps_g
+    dTh  <- (gk$theta  - Th0)  / eps_g
+    dnu  <- (gk$nu     - nu0)  / eps_g
+
+    # raw mapping-matrix derivative (pre-std rescaling)
+    dM0 <- A %*% crossprod(dLam, WPp) - M0 %*% (dLam %*% M0)
+    if (!is.null(ThiPp)) {
+      dM0 <- dM0 - M0 %*% (dTh %*% ThiPp)
+    }
+
+    # std.lv rescaling chain: Mf = M0 / d_std, d_std_j = sqrt(msm_j - l1 mtm_j)
+    if (std_lv_flag) {
+      d_msm <- 2 * rowSums((dM0 %*% S) * M0)
+      d_mtm <- 2 * rowSums((dM0 %*% Th0) * M0) + rowSums((M0 %*% dTh) * M0)
+      d_dstd <- (d_msm - lambda1 * d_mtm) / (2 * d_std0)
+      dMf <- dM0 / d_std0 - M0 * (d_dstd / d_std0^2)
+    } else {
+      dMf <- dM0
+    }
+
+    # b_aug = bdiag(0, M Theta M'), augmented factor scores fs, C2, E
+    dMtMt <- dMf %*% Th0 %*% t(Mf)
+    d_b <- lav_mat_bdiag(0, dMtMt + Mf %*% dTh %*% t(Mf) + t(dMtMt))
+    d_score <- Ymc %*% t(dMf) - matrix(drop(Mf %*% dnu), n, mlv, byrow = TRUE)
+    d_fs <- cbind(0, d_score)
+    d_e <- (crossprod(d_fs, fs0) + crossprod(fs0, d_fs)) / n - lambda1 * d_b
+
+    # first-order part
+    d_out1 <- d_e[cbind(i2k, i1k)]
+
+    # second-order part
+    d_fs2k <- d_fs[, i1k, drop = FALSE] * fs0[, i2k, drop = FALSE] +
+              fs0[, i1k, drop = FALSE] * d_fs[, i2k, drop = FALSE]
+    d_fs2kc <- t(t(d_fs2k) - colMeans(d_fs2k))
+    d_var <- (crossprod(d_fs2kc, fs2kc0) + crossprod(fs2kc0, d_fs2kc)) / n
+    d_tmp <- (d_e[i1k, i1k] * b0[i2k, i2k] + e0[i1k, i1k] * d_b[i2k, i2k] +
+              d_b[i1k, i1k] * e0[i2k, i2k] + b0[i1k, i1k] * d_e[i2k, i2k] +
+              d_e[i1k, i2k] * b0[i2k, i1k] + e0[i1k, i2k] * d_b[i2k, i1k] +
+              d_e[i2k, i1k] * b0[i1k, i2k] + e0[i2k, i1k] * d_b[i1k, i2k] +
+              d_b[i1k, i1k] * b0[i2k, i2k] + b0[i1k, i1k] * d_b[i2k, i2k] +
+              d_b[i2k, i1k] * b0[i1k, i2k] + b0[i2k, i1k] * d_b[i1k, i2k])
+
+    cv[, k] <- c(d_out1, lav_mat_vech(d_var - lambda2_eff * d_tmp))
+  }
+
+  cv
 }

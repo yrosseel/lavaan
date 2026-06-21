@@ -4,6 +4,7 @@ lav_model_plotinfo <- function(model = NULL, infile = NULL, varlv = FALSE) {
     lav_msg_stop(gettext("either model or infile must be specified"))
   }
   edge_label <- function(label, fix) {
+    if (is.null(fix)) fix <- ""
     if (label == "" && fix == "") {
       return("")
     }
@@ -34,8 +35,8 @@ lav_model_plotinfo <- function(model = NULL, infile = NULL, varlv = FALSE) {
     tbl <- as.data.frame(model)
   } else if (is.character(model)) {
     tbl <- lavParseModelString(
-      model.syntax = model,
-      as.data.frame. = TRUE
+      model_syntax = model,
+      as_data_frame = TRUE
     )
   } else {
     lav_msg_stop(gettext(
@@ -301,7 +302,9 @@ lav_model_plotinfo <- function(model = NULL, infile = NULL, varlv = FALSE) {
       edges$id[curedge] <- curedge
       edges$label[curedge] <- edge_label(tbl$label[i], tbl$fixed[i])
       if (varlv && jl == jr) { # prepare for handling varlv
-        edges$label[curedge] <- paste(tbl$label[i], tbl$fixed[i], sep = "=")
+        edges$label[curedge] <- paste(tbl$label[i],
+          if (is.null(tbl$fixed)) "" else tbl$fixed[i],
+          sep = "=")
       }
       edges$van[curedge] <- nodes$id[jr]
       edges$naar[curedge] <- nodes$id[jl]

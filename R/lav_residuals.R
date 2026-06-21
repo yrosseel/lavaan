@@ -106,7 +106,7 @@ lavResiduals <- function(object, type = "cor.bentler", custom.rmr = NULL,  # nol
   # no pretty printing yet...
   if (output == "table") {
     # new in 0.6-18: handle multiple blocks
-    nblocks <- lav_partable_nblocks(object@ParTable)
+    nblocks <- lav_pt_nblocks(object@ParTable)
     out_list <- vector("list", length = nblocks)
     for (block in seq_len(nblocks)) {
       if (nblocks == 1L) {
@@ -115,7 +115,7 @@ lavResiduals <- function(object, type = "cor.bentler", custom.rmr = NULL,  # nol
         res <- out[[block]]$cov
       }
       # extract only below-diagonal elements
-      res_vech <- lav_matrix_vech(res, diagonal = FALSE)
+      res_vech <- lav_mat_vech(res, diagonal = FALSE)
 
       # get names
       p <- nrow(res)
@@ -124,7 +124,7 @@ lavResiduals <- function(object, type = "cor.bentler", custom.rmr = NULL,  # nol
       nam <- expand.grid(
         names_1,
         names_1
-      )[lav_matrix_vech_idx(p, diagonal = FALSE), ]
+      )[lav_mat_vech_idx(p, diagonal = FALSE), ]
       names_vech <- paste(nam[, 1], "~~", nam[, 2], sep = "")
 
       # create table
@@ -277,12 +277,12 @@ lav_residuals <- function(object, type = "raw", h1 = TRUE, custom_rmr = NULL,
   }
 
   # observed and fitted sample statistics
-  obs_list <- lav_object_inspect_sampstat(object,
+  obs_list <- lav_inspect_sampstat(object,
     h1 = h1,
     add_labels = add_labels, add_class = add_class,
     drop_list_single_group = FALSE
   )
-  est_list <- lav_object_inspect_implied(object,
+  est_list <- lav_inspect_implied(object,
     add_labels = add_labels, add_class = add_class,
     drop_list_single_group = FALSE
   )
@@ -411,7 +411,7 @@ lav_residuals <- function(object, type = "raw", h1 = TRUE, custom_rmr = NULL,
 
   # add summary statistics (rms, mabs)
   if (summary) {
-    names(summary_options_1) <- lav_snake_case(names(summary_options_1))
+    summary_options_1 <- lav_snake_case(summary_options_1)
     args <- c(
       list(
         object = object, type = type, h1_acov = h1_acov,
@@ -501,7 +501,7 @@ lav_residuals_acov <- function(object, type = "raw", z_type = "standardized",
     return(acov_res)
   } else {
     if (z_type == "standardized") {
-      a1 <- lav_model_h1_information(object)
+      a1 <- lav_model_h1_info(object)
       if (lavmodel@estimator == "DWLS" || lavmodel@estimator == "ULS") {
         # A1 is diagonal matrix
         a1 <- lapply(a1, diag)
@@ -537,7 +537,7 @@ lav_residuals_acov <- function(object, type = "raw", z_type = "standardized",
       #               (only needed if information is observed)
       this_options <- object@Options
       this_options$observed.information[1] <- "h1"
-      a0_g_inv <- lav_model_information(
+      a0_g_inv <- lav_model_info(
         lavmodel = lavmodel,
         lavsamplestats = object@SampleStats,
         lavdata = lavdata,
@@ -575,10 +575,10 @@ lav_residuals_acov <- function(object, type = "raw", z_type = "standardized",
             sampstat[[g]][["cov"]]
           }
           ss <- 1 / sqrt(diag(cov_1))
-          tmp <- lav_matrix_vech(tcrossprod(ss))
+          tmp <- lav_mat_vech(tcrossprod(ss))
           g_inv_sqrt <- diag(tmp, nrow = length(tmp))
           if (lavmodel@meanstructure) {
-            gg <- lav_matrix_bdiag(
+            gg <- lav_mat_bdiag(
               diag(ss, nrow = length(ss)),
               g_inv_sqrt
             )
@@ -607,7 +607,7 @@ lav_residuals_acov <- function(object, type = "raw", z_type = "standardized",
           f1 <- lav_deriv_cov2cor_b(cov_1)
           if (lavmodel@meanstructure) {
             ss <- 1 / sqrt(diag(cov_1))
-            ff <- lav_matrix_bdiag(diag(ss, nrow = length(ss)), f1)
+            ff <- lav_mat_bdiag(diag(ss, nrow = length(ss)), f1)
           } else {
             ff <- f1
           }
@@ -664,7 +664,7 @@ lav_residuals_se <- function(object, type = "raw", z_type = "standardized",
       # COR
       nth <- length(lavmodel@th.idx[[g]])
       tmp <- sqrt(diag_acov[-(1:nth)])
-      cov_se <- lav_matrix_vech_reverse(tmp, diagonal = FALSE)
+      cov_se <- lav_mat_vech_rev(tmp, diagonal = FALSE)
 
       # MEAN
       mean_se <- rep(as.numeric(NA), nvar)
@@ -694,7 +694,7 @@ lav_residuals_se <- function(object, type = "raw", z_type = "standardized",
       } else {
         if (lavmodel@meanstructure) {
           tmp <- sqrt(diag_acov[-(1:nvar)])
-          cov_se <- lav_matrix_vech_reverse(tmp)
+          cov_se <- lav_mat_vech_rev(tmp)
           mean_se <- sqrt(diag_acov[1:nvar])
           if (add_class) {
             class(cov_se) <- c("lavaan.matrix.symmetric", "matrix")
@@ -706,7 +706,7 @@ lav_residuals_se <- function(object, type = "raw", z_type = "standardized",
           }
           se_list[[g]] <- list(cov.se = cov_se, mean.se = mean_se)
         } else {
-          cov_se <- lav_matrix_vech_reverse(sqrt(diag_acov))
+          cov_se <- lav_mat_vech_rev(sqrt(diag_acov))
           if (add_class) {
             class(cov_se) <- c("lavaan.matrix.symmetric", "matrix")
           }
@@ -890,11 +890,11 @@ lav_residuals_summary <- function(object, type = c("rmr", "srmr", "crmr"),
           # COR
           nth <- length(lavmodel@th.idx[[g]])
           if (conditional_x) {
-            stats <- lav_matrix_vech(rms_list_g[["res.cov"]],
+            stats <- lav_mat_vech(rms_list_g[["res.cov"]],
               diagonal = FALSE
             )
           } else {
-            stats <- lav_matrix_vech(rms_list_g[["cov"]],
+            stats <- lav_mat_vech(rms_list_g[["cov"]],
               diagonal = FALSE
             )
           }
@@ -995,14 +995,14 @@ lav_residuals_summary <- function(object, type = c("rmr", "srmr", "crmr"),
           # TOTAL -- FIXME: for conditional.x ....
           if (conditional_x) {
             stats <- c(
-              lav_matrix_vech(rms_list_g[["res.cov"]],
+              lav_mat_vech(rms_list_g[["res.cov"]],
                 diagonal = FALSE
               ),
               rms_list_g[["res.th"]]
             )
           } else {
             stats <- c(
-              lav_matrix_vech(rms_list_g[["cov"]],
+              lav_mat_vech(rms_list_g[["cov"]],
                 diagonal = FALSE
               ),
               rms_list_g[["th"]]
@@ -1090,9 +1090,9 @@ lav_residuals_summary <- function(object, type = c("rmr", "srmr", "crmr"),
 
           # COV
           if (conditional_x) {
-            stats <- lav_matrix_vech(rms_list_g[["res.cov"]])
+            stats <- lav_mat_vech(rms_list_g[["res.cov"]])
           } else {
-            stats <- lav_matrix_vech(rms_list_g[["cov"]])
+            stats <- lav_mat_vech(rms_list_g[["cov"]])
           }
           # pstar <- ( length(STATS) - pstar.x )
           pstar <- length(stats)
@@ -1163,12 +1163,12 @@ lav_residuals_summary <- function(object, type = c("rmr", "srmr", "crmr"),
             if (conditional_x) {
               stats <- c(
                 rms_list_g[["res.int"]],
-                lav_matrix_vech(rms_list_g[["res.cov"]])
+                lav_mat_vech(rms_list_g[["res.cov"]])
               )
             } else {
               stats <- c(
                 rms_list_g[["mean"]],
-                lav_matrix_vech(rms_list_g[["cov"]])
+                lav_mat_vech(rms_list_g[["cov"]])
               )
             }
             # pstar <- ( length(STATS) - ( pstar.x + nvar.x) )
@@ -1299,11 +1299,11 @@ lav_residuals_summary <- function(object, type = c("rmr", "srmr", "crmr"),
                 ## diagonal relevant?
                 if (type[typ] == "crmr") diag(custom_rmr[[cus]]$cov) <- FALSE
                 ## extract lower.tri indices
-                vech_idx <- which(lav_matrix_vech(custom_rmr[[cus]]$cov))
+                vech_idx <- which(lav_mat_vech(custom_rmr[[cus]]$cov))
 
                 ## add residuals to STATS, indices to ACOV.idx
                 stats <- c(stats,
-                         lav_matrix_vech(rms_list_g[["cov"]])[vech_idx])
+                         lav_mat_vech(rms_list_g[["cov"]])[vech_idx])
                 acov_idx <- c(acov_idx, vech_idx)
               }
 
@@ -1515,10 +1515,10 @@ lav_residuals_summary_old <- function(res_list = NULL,
         }
         x <- c(x, new_x)
       } else if (is.matrix(el_1) && isSymmetric(el_1)) {
-        tmp <- na.omit(lav_matrix_vech(el_1))
+        tmp <- na.omit(lav_mat_vech(el_1))
         rms <- sqrt(sum(tmp * tmp) / length(tmp))
         mabs <- mean(abs(tmp))
-        tmp2 <- na.omit(lav_matrix_vech(el_1, diagonal = FALSE))
+        tmp2 <- na.omit(lav_mat_vech(el_1, diagonal = FALSE))
         rms_nodiag <- sqrt(sum(tmp2 * tmp2) / length(tmp2))
         mabs_nodiag <- mean(abs(tmp2))
         cov_summary <- c(rms, rms_nodiag, mabs, mabs_nodiag)

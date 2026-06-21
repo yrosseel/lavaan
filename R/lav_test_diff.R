@@ -4,6 +4,16 @@
 #           Gronneberg, Foldnes and Moss) when Satterthwaite = TRUE and
 #           ngroups > 1L (use old_approach = TRUE to get the old result)
 
+# Orthonormal basis spanning the columns of ceq.simple.K. In the (scaled)
+# difference tests, ceq.simple.K must play the same role as eq.constraints.K
+# (mapping the full/unco parameter space to the constrained space and back).
+# eq.constraints.K has orthonormal columns, but ceq.simple.K is a 0/1
+# duplication matrix (t(K) %*% K != I), so a plain K / t(K) round-trip would be
+# inconsistent. Using an orthonormal basis for the same column space fixes this.
+lav_test_diff_ceq_simple_k <- function(lavmodel) {
+  qr.Q(qr(lavmodel@ceq.simple.K))
+}
+
 lav_test_diff_satorra2000 <- function(m1, m0, h1 = TRUE, a_method = "delta",
                                       m_a = NULL,
                                       satterthwaite = FALSE,
@@ -61,7 +71,7 @@ lav_test_diff_satorra2000 <- function(m1, m0, h1 = TRUE, a_method = "delta",
     m_pi <- lav_model_delta(m1@Model)
     p <- lavTech(m1, "information")
     # needed? (yes, if h1 already has eq constraints)
-    p_inv <- lav_model_information_augment_invert(m1@Model,
+    p_inv <- lav_model_info_augment_invert(m1@Model,
       information = p,
       inverted = TRUE
     )
@@ -75,7 +85,7 @@ lav_test_diff_satorra2000 <- function(m1, m0, h1 = TRUE, a_method = "delta",
         if (m1@Model@eq.constraints) {
           m_a <- m_a %*% t(m1@Model@eq.constraints.K)
         } else if (m1@Model@ceq.simple.only) {
-          m_a <- m_a %*% t(m1@Model@ceq.simple.K)
+          m_a <- m_a %*% t(lav_test_diff_ceq_simple_k(m1@Model))
         }
       }
       if (lav_debug()) print(m_a)
@@ -87,7 +97,7 @@ lav_test_diff_satorra2000 <- function(m1, m0, h1 = TRUE, a_method = "delta",
     m_pi <- lav_model_delta(m0@Model)
     p <- lavTech(m0, "information")
     # needed?
-    p_inv <- lav_model_information_augment_invert(m0@Model,
+    p_inv <- lav_model_info_augment_invert(m0@Model,
       information = p,
       inverted = TRUE
     )
@@ -102,7 +112,7 @@ lav_test_diff_satorra2000 <- function(m1, m0, h1 = TRUE, a_method = "delta",
       if (m0@Model@eq.constraints) {
         m_a <- m_a %*% t(m0@Model@eq.constraints.K)
       } else if (m0@Model@ceq.simple.only) {
-        m_a <- m_a %*% t(m0@Model@ceq.simple.K)
+        m_a <- m_a %*% t(lav_test_diff_ceq_simple_k(m0@Model))
       }
       if (lav_debug()) print(m_a)
     }
@@ -175,8 +185,8 @@ lav_test_diff_satorra2000 <- function(m1, m0, h1 = TRUE, a_method = "delta",
       for (g in seq_along(m_gamma)) {
         gamma_f[[g]] <- fg[g] * m_gamma[[g]]
       }
-      gamma_all <- lav_matrix_bdiag(gamma_f)
-      v_all <- lav_matrix_bdiag(wls_v)
+      gamma_all <- lav_mat_bdiag(gamma_f)
+      v_all <- lav_mat_bdiag(wls_v)
       pi_all <- do.call(rbind, m_pi)
       u_all <- v_all %*% pi_all %*% paapaap %*% t(pi_all) %*% v_all
       ug_all <- u_all %*% gamma_all
@@ -213,7 +223,7 @@ lav_test_diff_satorra2000 <- function(m1, m0, h1 = TRUE, a_method = "delta",
   )
 }
 
-lav_test_diff_SatorraBentler2001 <- function(m1, m0, test = 2) {
+lav_test_diff_sb2001 <- function(m1, m0, test = 2) {
   # extract information from m1 and m2
   t1 <- m1@test[[1]]$stat
   r1 <- m1@test[[1]]$df
@@ -259,7 +269,7 @@ lav_test_diff_SatorraBentler2001 <- function(m1, m0, test = 2) {
   list(T.delta = t_delta, scaling.factor = cd, df.delta = m)
 }
 
-lav_test_diff_SatorraBentler2010 <- function(m1, m0, test = 2,
+lav_test_diff_sb2010 <- function(m1, m0, test = 2,
                                              h1 = FALSE) {
   ### FIXME: check if models are nested at the parameter level!!!
 
@@ -356,16 +366,16 @@ lav_test_diff_m10 <- function(m1, m0, test = FALSE) {
     options_1$test <- "none"
   }
 
-  pt_m0 <- lav_partable_set_cache(m0@ParTable, m0@pta)
-  pt_m1 <- lav_partable_set_cache(m1@ParTable, m1@pta)
+  pt_m0 <- lav_pt_set_cache(m0@ParTable, m0@pta)
+  pt_m1 <- lav_pt_set_cache(m1@ParTable, m1@pta)
 
   # `extend' PT.M1 partable to include all `fixed-to-zero parameters'
-  pt_m1_full <- lav_partable_full(
+  pt_m1_full <- lav_pt_full(
     partable = pt_m1,
     free = TRUE, start = TRUE
   )
-  pt_m1_extended <- lav_partable_merge(pt_m1, pt_m1_full,
-    remove.duplicated = TRUE, warn = FALSE
+  pt_m1_extended <- lav_pt_merge(pt_m1, pt_m1_full,
+    remove_duplicated = TRUE, warn = FALSE
   )
 
   # remove most columns
@@ -378,12 +388,12 @@ lav_test_diff_m10 <- function(m1, m0, test = FALSE) {
   pt_m1_extended$ustart[free_par_idx] <- as.numeric(NA)
 
   # `extend' PT.M0 partable to include all `fixed-to-zero parameters'
-  pt_m0_full <- lav_partable_full(
+  pt_m0_full <- lav_pt_full(
     partable = pt_m0,
     free = TRUE, start = TRUE
   )
-  pt_m0_extended <- lav_partable_merge(pt_m0, pt_m0_full,
-    remove.duplicated = TRUE, warn = FALSE
+  pt_m0_extended <- lav_pt_merge(pt_m0, pt_m0_full,
+    remove_duplicated = TRUE, warn = FALSE
   )
   # remove most columns, but not 'est'
   pt_m0_extended$ustart <- NULL
@@ -401,10 +411,10 @@ lav_test_diff_m10 <- function(m1, m0, test = FALSE) {
   options_1$start <- pt_m0_extended # new in 0.6!
   m10 <- lavaan(
     model = pt_m1_extended,
-    slotOptions = options_1,
-    slotSampleStats = m1@SampleStats,
-    slotData = m1@Data,
-    slotCache = m1@Cache,
+    slot_options = options_1,
+    slot_sample_stats = m1@SampleStats,
+    slot_data = m1@Data,
+    slot_cache = m1@Cache,
     verbose = FALSE
   )
 
@@ -440,22 +450,26 @@ lav_test_diff_a <- function(m1, m0, method = "delta", reference = "H1") {
     delta0 <- do.call(rbind, delta0_list)
 
     # take into account equality constraints m0
+    # note: delta is in the 'unco' space (one column per non-collapsed free
+    # parameter); ceq.simple.K (nx.unco x nx.free) maps it to the compact
+    # (nx.free) space, so we post-multiply by K (NOT t(K)), exactly as for the
+    # eq.constraints.K case above
     if (m0@Model@eq.constraints) {
       delta0 <- delta0 %*% m0@Model@eq.constraints.K
     } else if (m0@Model@ceq.simple.only) {
-      delta0 <- delta0 %*% t(m0@Model@ceq.simple.K)
+      delta0 <- delta0 %*% lav_test_diff_ceq_simple_k(m0@Model)
     }
 
     # take into account equality constraints m1
     if (m1@Model@eq.constraints) {
       delta1 <- delta1 %*% m1@Model@eq.constraints.K
     } else if (m1@Model@ceq.simple.only) {
-      delta1 <- delta1 %*% t(m1@Model@ceq.simple.K)
+      delta1 <- delta1 %*% lav_test_diff_ceq_simple_k(m1@Model)
     }
 
     # H <- solve(t(Delta1) %*% Delta1) %*% t(Delta1) %*% Delta0
     h <- MASS::ginv(delta1) %*% delta0
-    m_a <- t(lav_matrix_orthogonal_complement(h))
+    m_a <- t(lav_mat_ortho_complement(h))
   }
 
   m_a
@@ -475,8 +489,8 @@ lav_test_diff_a <- function(m1, m0, method = "delta", reference = "H1") {
 #   - the plabels used in "==" constraints must be renamed, if necessary
 #
 lav_test_diff_af_h1 <- function(m1, m0) {
-  pt_m0 <- lav_partable_set_cache(parTable(m0), m0@pta)
-  pt_m1 <- lav_partable_set_cache(parTable(m1), m1@pta)
+  pt_m0 <- lav_pt_set_cache(parTable(m0), m0@pta)
+  pt_m1 <- lav_pt_set_cache(parTable(m1), m1@pta)
 
   # select .p*. parameters only
   m0_p_idx <- which(grepl("\\.p", pt_m0$plabel))
@@ -498,7 +512,7 @@ lav_test_diff_af_h1 <- function(m1, m0) {
   pt_m1_part2 <- pt_m1[-m1_p_idx, ]
 
   # figure out relationship between m0 and m1
-  p1_id <- lav_partable_map_id_p1_in_p2(pt_m0_part1, pt_m1_part1)
+  p1_id <- lav_pt_map_id_p1_in_p2(pt_m0_part1, pt_m1_part1)
   p0_free_idx <- which(pt_m0_part1$free > 0)
 
   # change 'free' order in m0
@@ -512,21 +526,21 @@ lav_test_diff_af_h1 <- function(m1, m0) {
   pt_m1 <- rbind(pt_m1_part1, pt_m1_part2)
 
   # `extend' PT.M1 partable to include all `fixed-to-zero parameters'
-  pt_m1_full <- lav_partable_full(
+  pt_m1_full <- lav_pt_full(
     partable = pt_m1,
     free = TRUE, start = TRUE
   )
-  pt_m1_extended <- lav_partable_merge(pt_m1, pt_m1_full,
-    remove.duplicated = TRUE, warn = FALSE
+  pt_m1_extended <- lav_pt_merge(pt_m1, pt_m1_full,
+    remove_duplicated = TRUE, warn = FALSE
   )
 
   # `extend' PT.M0 partable to include all `fixed-to-zero parameters'
-  pt_m0_full <- lav_partable_full(
+  pt_m0_full <- lav_pt_full(
     partable = pt_m0,
     free = TRUE, start = TRUE
   )
-  pt_m0_extended <- lav_partable_merge(pt_m0, pt_m0_full,
-    remove.duplicated = TRUE, warn = FALSE
+  pt_m0_extended <- lav_pt_merge(pt_m0, pt_m0_full,
+    remove_duplicated = TRUE, warn = FALSE
   )
 
   p1 <- pt_m1_extended
@@ -581,7 +595,7 @@ lav_test_diff_af_h1 <- function(m1, m0) {
   }
 
   # only for the UNIQUE equality constraints in H0, generate syntax
-  defcon_txt <- lav_partable_constraints_ceq(p0_1, txtOnly = TRUE)
+  defcon_txt <- lav_pt_con_ceq(p0_1, txt_only = TRUE)
   body_txt <- paste(body_txt, defcon_txt, "\n", sep = "")
 
 

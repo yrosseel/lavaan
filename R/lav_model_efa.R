@@ -54,11 +54,11 @@ lav_model_efa_rotate_x <- function(x, lavmodel = NULL, lavoptions = NULL,
   # GLIST
   glist <- lavmodel_orig@GLIST
 
-  # H per group
-  h <- vector("list", lavmodel@ngroups)
-  order_1 <- vector("list", lavmodel@ngroups)
+  # H per block
+  h <- vector("list", lavmodel@nblocks)
+  order_1 <- vector("list", lavmodel@nblocks)
 
-  # new in 0.6-22 -- three options:
+  # new in 0.7-1 -- three options:
   # 1. rotate per group (default)
   # 2. group.equal = "loadings": use first lambda matrix only
   # 3. rotate all groups together + agreement (eg De Roover & Vermunt, 2019)
@@ -73,7 +73,12 @@ lav_model_efa_rotate_x <- function(x, lavmodel = NULL, lavoptions = NULL,
 
   # option 1 + 2 (single group or multipgroup + no agreement)
   if (!mg_agreement_flag) {
-    for (g in seq_len(lavmodel@ngroups)) {
+    # iterate over blocks, not groups: each block (eg the within and the
+    # between level of a twolevel model) is rotated independently. The
+    # efa-related slots (ov.efa.idx, lv.efa.idx, nmat, the dummy-ov indices
+    # and H) are all indexed per block; for single-level models block == group,
+    # so multigroup behaviour is unchanged.
+    for (g in seq_len(lavmodel@nblocks)) {
       # select model matrices for this group
       mm_in_group <- seq_len(lavmodel@nmat[g]) + cumsum(c(0, lavmodel@nmat))[g]
       mlist <- glist[mm_in_group]
@@ -158,7 +163,7 @@ lav_model_efa_rotate_x <- function(x, lavmodel = NULL, lavoptions = NULL,
         if (lav_verbose(ropts$verbose))
           on.exit(lav_verbose(current_verbose), TRUE)
         # rotate this set
-        res <- lav_matrix_rotate(
+        res <- lav_mat_rotate(
           a = a,
           orthogonal = ropts$orthogonal,
           method = method,
@@ -340,7 +345,7 @@ lav_model_efa_rotate_x <- function(x, lavmodel = NULL, lavoptions = NULL,
       }
 
       # rotate this set
-      res <- lav_matrix_rotate_mg(
+      res <- lav_mat_rotate_mg(
         a_list = alist_1,
         orthogonal = ropts$orthogonal,
         method = method,
@@ -429,7 +434,7 @@ lav_model_efa_rotate_x <- function(x, lavmodel = NULL, lavoptions = NULL,
   } # option 3
 
   # extract all rotated parameter estimates
-  x_rot <- lav_model_get_parameters(lavmodel, GLIST = glist, type = type)
+  x_rot <- lav_model_get_parameters(lavmodel, glist = glist, type = type)
 
   # extra?
   if (extra) {
@@ -467,8 +472,11 @@ lav_model_efa_rotate_border_x <- function(x, lavmodel = NULL,
   # res
   res <- numeric(0L)
 
-  # per group (not per block)
-  for (g in seq_len(lavmodel@ngroups)) {
+  # per block (group x level): the rotation constraints must be generated for
+  # every rotated block, otherwise the bordered information matrix is rank
+  # deficient (and the rotated vcov is not positive definite). The efa-related
+  # slots are indexed per block; for single-level models block == group.
+  for (g in seq_len(lavmodel@nblocks)) {
 
     # group-specific method.args
   this_method_args <- method_args
@@ -511,14 +519,14 @@ lav_model_efa_rotate_border_x <- function(x, lavmodel = NULL,
     )
 
     # setnames
-    set_names <- lav_partable_efa_values(lavpartable)
+    set_names <- lav_pt_efa_values(lavpartable)
 
     # for each set
     for (set in seq_len(lavmodel@nefa)) {
       # check if we have any user=7 elements in this set
       # if not, skip constraints
       ind_idx <- which(lavpartable$op == "=~" &
-        lavpartable$group == g &
+        lavpartable$block == g &
         lavpartable$efa == set_names[set])
       if (!any(lavpartable$user[ind_idx] == 7L)) {
         next
@@ -562,7 +570,7 @@ lav_model_efa_rotate_border_x <- function(x, lavmodel = NULL,
         "cf-quartimax", "cf-varimax", "cf-equamax",
         "cf-parsimax", "cf-facparsim"
       )) {
-        method_fname <- "lav_matrix_rotate_cf"
+        method_fname <- "lav_mat_rotate_cf"
         this_method_args$cf_gamma <- switch(method,
           "cf-quartimax" = 0,
           "cf-varimax"   = 1 / p,
@@ -571,9 +579,9 @@ lav_model_efa_rotate_border_x <- function(x, lavmodel = NULL,
           "cf-facparsim" = 1
         )
       } else if (method == "target.strict") {
-        method_fname <- "lav_matrix_rotate_target"
+        method_fname <- "lav_mat_rotate_target"
       } else {
-        method_fname <- paste("lav_matrix_rotate_", method, sep = "")
+        method_fname <- paste("lav_mat_rotate_", method, sep = "")
       }
 
       # check if rotation method exists
@@ -592,9 +600,9 @@ lav_model_efa_rotate_border_x <- function(x, lavmodel = NULL,
       if (ropts$row_weights == "none") {
         weights <- rep(1.0, p)
       } else if (ropts$row_weights == "kaiser") {
-        weights <- lav_matrix_rotate_kaiser_weights(a)
+        weights <- lav_mat_rotate_kaiser_weights(a)
       } else if (ropts$row_weights == "cureton-mulaik") {
-        weights <- lav_matrix_rotate_cm_weights(a)
+        weights <- lav_mat_rotate_cm_weights(a)
       } else {
         lav_msg_stop(gettextf("row_weights can be",
           lav_msg_view(c("none", "kaiser", "cureton-mulaik"), "or")))
@@ -618,18 +626,18 @@ lav_model_efa_rotate_border_x <- function(x, lavmodel = NULL,
         # or in other words, the non-diagonal elements of
         # Z - t(Z) are all zero
         tmp <- z - t(z)
-        this_res <- lav_matrix_vech(tmp, diagonal = FALSE)
+        this_res <- lav_mat_vech(tmp, diagonal = FALSE)
       } else {
         psi_z <- mm_psi * diag(z) # rescale rows only
         tmp <- z - psi_z
-        out1 <- lav_matrix_vech(tmp, diagonal = FALSE)
-        out2 <- lav_matrix_vechu(tmp, diagonal = FALSE)
+        out1 <- lav_mat_vech(tmp, diagonal = FALSE)
+        out2 <- lav_mat_vechu(tmp, diagonal = FALSE)
         this_res <- c(out1, out2)
       }
 
       res <- c(res, this_res)
     } # set
-  } # group
+  } # block
 
   # return constraint vector
   res

@@ -22,6 +22,7 @@ lav_lavdata <- function(data = NULL, # data.frame
                     ov_names = NULL, # variables in model
                     ov_names_x = character(0), # exo variables
                     ov_names_l = list(), # names per level
+                    ov_names_aux = character(0), # auxiliary variables
                     ordered = NULL, # ordered variables
                     sampling_weights = NULL, # sampling weights
                     sample_cov = NULL, # sample covariance(s)
@@ -109,7 +110,7 @@ lav_lavdata <- function(data = NULL, # data.frame
           if (isSymmetric(data)) {
             lav_msg_warn(
               gettext("data argument looks like a covariance matrix;
-              please use the sample.cov argument instead"))
+              please use the sample_cov= argument instead"))
           }
         }
         # or perhaps it is a data matrix?
@@ -152,6 +153,7 @@ lav_lavdata <- function(data = NULL, # data.frame
         lavoptions$sampling.weights.normalization,
       ov_names_x = ov_names_x,
       ov_names_l = ov_names_l,
+      ov_names_aux = ov_names_aux,
       std_ov = std_ov,
       missing = missing,
       allow_single_case = allow_single_case,
@@ -211,7 +213,7 @@ lav_lavdata <- function(data = NULL, # data.frame
       group_label <- character(0)
       if (!is.matrix(sample_cov)) {
         lav_msg_stop(gettext(
-          "sample.cov must be a matrix or a list of matrices"))
+          "sample_cov must be a matrix or a list of matrices"))
       }
       sample_cov <- list(sample_cov)
     }
@@ -344,7 +346,7 @@ lav_lavdata <- function(data = NULL, # data.frame
     )
   }
 
-  # 3) data.type = "none":  both data and sample.cov are NULL
+  # 3) data.type = "none":  both data and sample_cov are NULL
   if (is.null(data) && is.null(sample_cov)) {
     # clustered/multilevel? --> ov.names.l should be filled in
     if (length(ov_names_l) > 0L) {
@@ -376,7 +378,7 @@ lav_lavdata <- function(data = NULL, # data.frame
       level_label <- character(0L)
     }
 
-    # ngroups: ov.names (when group: is used), or sample.nobs
+    # ngroups: ov.names (when group: is used), or sample_nobs
     if (is.null(ov_names)) {
       lav_msg_warn(gettext("ov.names is NULL"))
       ov_names <- character(0L)
@@ -404,7 +406,7 @@ lav_lavdata <- function(data = NULL, # data.frame
         sample_nobs <- as.list(sample_nobs)
         if (length(sample_nobs) != ngroups) {
           lav_msg_stop(gettextf(
-            "length(sample.nobs) = %1$s but syntax implies ngroups = %2$s",
+            "length(sample_nobs) = %1$s but syntax implies ngroups = %2$s",
             length(sample_nobs), ngroups))
         }
       }
@@ -441,7 +443,7 @@ lav_lavdata <- function(data = NULL, # data.frame
       if (nlevels > 1L) {
         # ALWAYS add ov.names.x at the end, even if conditional.x
         ov_names_1 <- unique(c(ov_names[[g]], ov_names_x[[g]]))
-        lp[[g]] <- lav_data_cluster_patterns(
+        lp[[g]] <- lav_data_cl_patterns(
           y = NULL, clus = NULL,
           cluster = cluster,
           multilevel = TRUE,
@@ -499,6 +501,68 @@ lav_lavdata <- function(data = NULL, # data.frame
 }
 
 
+# validate the aux= argument and return the names of the auxiliary variables
+# that can actually be used in the current configuration
+#
+# auxiliary variables are observed variables that are NOT part of the model;
+# they are never part of the model-implied summary statistics. For now, they
+# are only used to improve the EM-based h1 (saturated) moments when
+# missing = "ml" (continuous data). In any other configuration, they are
+# ignored (with a note).
+#
+# binary or ordered/categorical auxiliary variables are not supported and are
+# removed (with a warning).
+lav_data_aux_check <- function(aux        = NULL,
+                               data       = NULL,
+                               ov_names   = NULL,
+                               ordered    = NULL,
+                               lavoptions = NULL) {
+  # nothing to do?
+  if (is.null(aux)) {
+    return(character(0L))
+  }
+  if (!is.character(aux)) {
+    lav_msg_stop(gettext("aux= argument must be a character vector."))
+  }
+  aux <- unique(aux[nchar(aux) > 0L])
+  if (length(aux) == 0L) {
+    return(character(0L))
+  }
+
+  # we can only use auxiliary variables if we have raw data, the model is
+  # continuous, and missing is one of the EM-based options
+  missing <- tolower(lavoptions$missing)
+  aux_missing <- c("ml", "ml.x", "two.stage", "robust.two.stage")
+  if (is.null(data) || !(is.data.frame(data) || is.matrix(data)) ||
+      isTRUE(lavoptions$categorical) ||
+      !missing %in% aux_missing) {
+    lav_msg_note(gettext(
+      "auxiliary (aux) variables are currently only used (to improve the
+       EM-based h1/saturated summary statistics) when missing = \"ml\",
+       \"two.stage\" or \"robust.two.stage\" with continuous data;
+       they will be ignored here."))
+    return(character(0L))
+  }
+
+  # drop aux names that are not usable (not in data, model variables, or
+  # binary/ordered-categorical); shared with the FIML saturated-correlates path
+  aux <- lav_aux_clean_names(
+    aux = aux, data = data, ov_names = ov_names, ordered = ordered
+  )
+  if (length(aux) == 0L) {
+    return(character(0L))
+  }
+
+  # note: for the two-stage (and robust two-stage) standard errors, the
+  # auxiliary variables are accounted for via the augmented stage-1 ACOV
+  # (Savalei & Bentler, 2009; see lav_model_nvcov_two_stage()), except when
+  # fixed-x covariates are present, in which case the standard errors fall
+  # back to the model-only ACOV
+
+  aux
+}
+
+
 # handle full data
 lav_data_full <- function(data = NULL, # data.frame
                           group = NULL, # multiple groups?
@@ -513,6 +577,7 @@ lav_data_full <- function(data = NULL, # data.frame
                           sampling_weights_normalization = "none",
                           ov_names_x = character(0L), # exo variables
                           ov_names_l = list(), # var per level
+                          ov_names_aux = character(0L), # auxiliary variables
                           std_ov = FALSE, # standardize ov's?
                           missing = "listwise", # remove missings?
                           allow_single_case = FALSE, # allow single case?
@@ -726,6 +791,18 @@ lav_data_full <- function(data = NULL, # data.frame
     as_data_frame = FALSE, allow_empty_cell = allow_empty_cell
   )
 
+  # variable table for the auxiliary/instrument variables (their type and
+  # number of levels are needed, eg by the categorical IV estimator, to compute
+  # the augmented polychoric sample statistics)
+  ov_aux <- list()
+  if (length(ov_names_aux) > 0L) {
+    ov_aux <- lav_dataframe_vartable(
+      frame = data, ov_names = ov_names_aux,
+      ordered = ordered, as_data_frame = FALSE,
+      allow_empty_cell = allow_empty_cell
+    )
+  }
+
   # do some checking
   # check for unordered factors (but only if nlev > 2)
   if ("factor" %in% ov$type) {
@@ -837,7 +914,7 @@ lav_data_full <- function(data = NULL, # data.frame
     # replace any NAs by 0 (as we only wish to detect perfect correlations)
     cor_1[is.na(cor_1)] <- 0
     if (!inherits(cor_1, "try-error") &&
-        any(lav_matrix_vech(cor_1, diagonal = FALSE) == 1)) {
+        any(lav_mat_vech(cor_1, diagonal = FALSE) == 1)) {
       cor_1[upper.tri(cor_1, diag = TRUE)] <- 0
       idx <- which(cor_1 == 1)
       this_names <- ov$name[num_idx]
@@ -861,6 +938,7 @@ lav_data_full <- function(data = NULL, # data.frame
   nobs <- vector("list", length = ngroups)
   x <- vector("list", length = ngroups)
   exo <- vector("list", length = ngroups)
+  aux <- vector("list", length = ngroups)
   lp <- vector("list", length = ngroups)
   weights <- vector("list", length = ngroups)
 
@@ -992,6 +1070,17 @@ lav_data_full <- function(data = NULL, # data.frame
       exo[g] <- list(NULL)
     }
 
+    # auxiliary variables (not part of the model); kept here only so that
+    # downstream code (eg the EM-based h1 moments) can use them; they never
+    # enter the model-implied summary statistics. Rows are aligned with
+    # case.idx[[g]], hence with x[[g]].
+    if (length(ov_names_aux) > 0L) {
+      aux[[g]] <- data.matrix(data[case_idx[[g]], ov_names_aux, drop = FALSE])
+      dimnames(aux[[g]]) <- NULL
+    } else {
+      aux[g] <- list(NULL)
+    }
+
     # standardize observed variables? numeric only!
     if (std_ov) {
       num_idx <- which(ov$name %in% ov_names[[g]] &
@@ -1073,7 +1162,7 @@ lav_data_full <- function(data = NULL, # data.frame
       }
       # ALWAYS add ov.names.x at the end, even if conditional.x (0.6-7)
       ov_names_2 <- unique(c(ov_names[[g]], ov_names_x[[g]]))
-      lp[[g]] <- lav_data_cluster_patterns(
+      lp[[g]] <- lav_data_cl_patterns(
         y = x[[g]], clus = clus,
         cluster = cluster,
         multilevel = multilevel,
@@ -1180,13 +1269,13 @@ lav_data_full <- function(data = NULL, # data.frame
     if (missing != "listwise") {
       if (length(cluster) > 0L) {
         # get missing patterns
-        mp[[g]] <- lav_data_missing_patterns(x[[g]],
+        mp[[g]] <- lav_data_mi_patterns(x[[g]],
           sort_freq = TRUE, coverage = TRUE,
           lp = lp[[g]]
         )
       } else {
         # get missing patterns
-        mp[[g]] <- lav_data_missing_patterns(x[[g]],
+        mp[[g]] <- lav_data_mi_patterns(x[[g]],
           sort_freq = TRUE, coverage = TRUE,
           lp = NULL
         )
@@ -1201,7 +1290,7 @@ lav_data_full <- function(data = NULL, # data.frame
           paste(empty_case_idx, collapse = " ")))
       }
     if (any(mp[[g]]$coverage < 0.1)) {
-      coverage_vech <- lav_matrix_vech(mp[[g]]$coverage, diagonal = FALSE)
+      coverage_vech <- lav_mat_vech(mp[[g]]$coverage, diagonal = FALSE)
       small_idx <- which(coverage_vech < 0.1)
       if (all(coverage_vech[small_idx] == 0)) {
       # 0.6-18: no warning --> this could be due to missing by design
@@ -1278,16 +1367,23 @@ lav_data_full <- function(data = NULL, # data.frame
     ov.names = ov_names,
     ov.names.x = ov_names_x,
     ov.names.l = ov_names_l,
+    ov.names.aux = if (length(ov_names_aux) > 0L) {
+      rep(list(as.character(ov_names_aux)), ngroups)
+    } else {
+      vector("list", length = ngroups)
+    },
     # ov.types        = ov.types,
     # ov.idx          = ov.idx,
     ordered = as.character(ordered),
     weights = weights,
     sampling.weights = sampling_weights,
     ov = ov,
+    ov.aux = ov_aux,
     case.idx = case_idx,
     missing = missing,
     X = x,
     eXo = exo,
+    aux = aux,
     Mp = mp,
     Rp = rp,
     Lp = lp

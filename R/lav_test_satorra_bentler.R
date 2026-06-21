@@ -2,7 +2,7 @@
 #           Moss) when Satterthwaite = TRUE, ngroups > 1, and eq constraints.
 #           Use ug2.old.approach = TRUE to get the old result
 
-lav_test_satorra_bentler <- function(lavobject = NULL,
+lav_test_sb <- function(lavobject = NULL,
                                      lavsamplestats = NULL,
                                      lavmodel = NULL,
                                      lavimplied = NULL,
@@ -17,8 +17,15 @@ lav_test_satorra_bentler <- function(lavobject = NULL,
                                      method = "original",
                                      ug2_old_approach = FALSE,
                                      return_u = FALSE,
-                                     return_ugamma = FALSE) {
+                                     return_ugamma = FALSE,
+                                     gamma_full = NULL) {
   test_1 <- list()
+
+  # if a full (cross-group) Gamma is supplied, we must use the 'original'
+  # method (the only path that consumes a single assembled Gamma matrix)
+  if (!is.null(gamma_full)) {
+    method <- "original"
+  }
 
   if (!is.null(lavobject)) {
     lavsamplestats <- lavobject@SampleStats
@@ -91,20 +98,20 @@ lav_test_satorra_bentler <- function(lavobject = NULL,
   if (npar > 0L &&
     (is.null(e_inv) || is.null(delta) || is.null(wls_v) || e_inv_recompute)) {
     if (lavoptions$information.expected.mplus && lavoptions$estimator == "ML") {
-      m_e <- lav_model_information_expected_mlm(
+      m_e <- lav_model_info_expected_mlm(
         lavmodel = lavmodel,
         augmented = FALSE, inverted = FALSE,
         lavsamplestats = lavsamplestats, extra = TRUE
       )
     } else {
-      m_e <- lav_model_information(
+      m_e <- lav_model_info(
         lavmodel = lavmodel,
         lavimplied = lavimplied,
         lavsamplestats = lavsamplestats, lavdata = lavdata,
         lavoptions = lavoptions, extra = TRUE
       )
     }
-    e_inv <- try(lav_model_information_augment_invert(lavmodel,
+    e_inv <- try(lav_model_info_augment_invert(lavmodel,
       information = m_e, inverted = TRUE
     ), silent = TRUE)
     if (inherits(e_inv, "try-error")) {
@@ -194,7 +201,7 @@ lav_test_satorra_bentler <- function(lavobject = NULL,
     for (g in 1:ngroups) {
       gamma_f[[g]] <- 1 / fg[g] * m_gamma[[g]]
     }
-    gamma_all <- lav_matrix_bdiag(gamma_f)
+    gamma_all <- lav_mat_bdiag(gamma_f)
     ug <- gamma_all
     trace_ugamma <- sum(diag(gamma_all))
     trace_ugamma2 <- sum(ug * t(ug))
@@ -203,17 +210,18 @@ lav_test_satorra_bentler <- function(lavobject = NULL,
       UGamma = ug, UfromUGamma = u_all
     )
   } else if (method == "original") {
-    out <- lav_test_satorra_bentler_trace_original(
+    out <- lav_test_sb_trace_original(
       m_gamma = m_gamma,
       delta = delta, wls_v = wls_v, e_inv = e_inv,
       ngroups = ngroups, nobs = lavsamplestats@nobs,
       ntotal = lavsamplestats@ntotal, return_u = return_u,
       return_ugamma = return_ugamma,
       ug2_old_approach = ug2_old_approach,
-      satterthwaite = satterthwaite
+      satterthwaite = satterthwaite,
+      gamma_full = gamma_full
     )
   } else if (method == "orthogonal.complement") {
-    out <- lav_test_satorra_bentler_trace_complement(
+    out <- lav_test_sb_trace_complement(
       m_gamma = m_gamma,
       delta = delta, wls_v = wls_v, lavmodel = lavmodel,
       ngroups = ngroups, nobs = lavsamplestats@nobs,
@@ -223,7 +231,7 @@ lav_test_satorra_bentler <- function(lavobject = NULL,
       satterthwaite = satterthwaite
     )
   } else if (method == "ABA") {
-    out <- lav_test_satorra_bentler_trace_aba(
+    out <- lav_test_sb_trace_aba(
       m_gamma = m_gamma,
       m_delta = delta, wls_v = wls_v, e_inv = e_inv,
       ngroups = ngroups, nobs = lavsamplestats@nobs,
@@ -415,7 +423,7 @@ lav_test_satorra_bentler <- function(lavobject = NULL,
 
 # using the `classical' formula
 # UG = Gamma * [V - V Delta E.inv Delta' V']
-lav_test_satorra_bentler_trace_original <- function(m_gamma = NULL,  # nolint
+lav_test_sb_trace_original <- function(m_gamma = NULL,
                                                     delta = NULL,
                                                     wls_v = NULL,
                                                     e_inv = NULL,
@@ -425,7 +433,13 @@ lav_test_satorra_bentler_trace_original <- function(m_gamma = NULL,  # nolint
                                                     return_u = FALSE,
                                                     return_ugamma = FALSE,
                                                     ug2_old_approach = FALSE,
-                                                    satterthwaite = FALSE) {
+                                                    satterthwaite = FALSE,
+                                                    gamma_full = NULL) {
+  # gamma_full: an already-assembled (full) Gamma matrix for the *stacked*
+  # statistics of all groups. When supplied (e.g. by sam() with across-group
+  # constraints, where Gamma has nonzero cross-group blocks), it is used as-is
+  # instead of block-diagonalizing the per-group m_gamma list. This forces the
+  # full (non per-group) computation path.
   # this is what we did <0.6-13: everything per group
   if (ug2_old_approach) {
     ufrom_ugamma <- ug <- vector("list", ngroups)
@@ -462,7 +476,7 @@ lav_test_satorra_bentler_trace_original <- function(m_gamma = NULL,  # nolint
   } else {
     trace_ugamma <- trace_ugamma2 <- u_all <- ug <- as.numeric(NA)
     fg <- unlist(nobs) / ntotal
-    if (satterthwaite || return_ugamma || return_u) {
+    if (satterthwaite || return_ugamma || return_u || !is.null(gamma_full)) {
       # for trace.UGamma2, we can no longer compute the trace per group
       v_g <- wls_v
       for (g in 1:ngroups) {
@@ -472,12 +486,17 @@ lav_test_satorra_bentler_trace_original <- function(m_gamma = NULL,  # nolint
           v_g[[g]] <- fg[g] * diag(wls_v[[g]])
         }
       }
-      v_all <- lav_matrix_bdiag(v_g)
-      gamma_f <- m_gamma
-      for (g in 1:ngroups) {
-        gamma_f[[g]] <- 1 / fg[g] * m_gamma[[g]]
+      v_all <- lav_mat_bdiag(v_g)
+      if (is.null(gamma_full)) {
+        gamma_f <- m_gamma
+        for (g in 1:ngroups) {
+          gamma_f[[g]] <- 1 / fg[g] * m_gamma[[g]]
+        }
+        gamma_all <- lav_mat_bdiag(gamma_f)
+      } else {
+        # full (possibly cross-group) Gamma, supplied by the caller
+        gamma_all <- gamma_full
       }
-      gamma_all <- lav_matrix_bdiag(gamma_f)
       delta_all <- do.call("rbind", delta)
       u_all <- v_all - v_all %*% delta_all %*% e_inv %*% t(delta_all) %*% v_all
       ug <- u_all %*% gamma_all
@@ -512,7 +531,7 @@ lav_test_satorra_bentler_trace_original <- function(m_gamma = NULL,  # nolint
 
 # using the orthogonal complement of Delta: Delta.c
 # UG = [ (Delta.c' W Delta.c)^{-1} (Delta.c' Gamma Delta.c)
-lav_test_satorra_bentler_trace_complement <- function(m_gamma = NULL,  # nolint
+lav_test_sb_trace_complement <- function(m_gamma = NULL,
                                                       delta = NULL,
                                                       wls_v = NULL,
                                                       lavmodel = NULL,
@@ -546,7 +565,7 @@ lav_test_satorra_bentler_trace_complement <- function(m_gamma = NULL,  # nolint
       }
 
       # orthogonal complement of Delta.g
-      delta_c <- lav_matrix_orthogonal_complement(delta_g)
+      delta_c <- lav_mat_ortho_complement(delta_g)
 
       ### FIXME: compute WLS.W directly, instead of using solve(WLS.V)
 
@@ -576,12 +595,12 @@ lav_test_satorra_bentler_trace_complement <- function(m_gamma = NULL,  # nolint
         v_g[[g]] <- fg[g] * diag(wls_v[[g]])
       }
     }
-    v_all <- lav_matrix_bdiag(v_g)
+    v_all <- lav_mat_bdiag(v_g)
     gamma_f <- m_gamma
     for (g in 1:ngroups) {
       gamma_f[[g]] <- 1 / fg[g] * m_gamma[[g]]
     }
-    gamma_all <- lav_matrix_bdiag(gamma_f)
+    gamma_all <- lav_mat_bdiag(gamma_f)
     delta_all <- do.call("rbind", delta)
 
     # handle equality constraints
@@ -593,7 +612,7 @@ lav_test_satorra_bentler_trace_complement <- function(m_gamma = NULL,  # nolint
     }
 
     # orthogonal complement of Delta.g
-    delta_c <- lav_matrix_orthogonal_complement(delta_all)
+    delta_c <- lav_mat_ortho_complement(delta_all)
 
     tmp1 <- solve(t(delta_c) %*% solve(v_all) %*% delta_c)
     tmp2 <- t(delta_c) %*% gamma_all %*% delta_c
@@ -628,7 +647,7 @@ lav_test_satorra_bentler_trace_complement <- function(m_gamma = NULL,  # nolint
 
 # we write it like this to highlight the connection with MLR
 #
-lav_test_satorra_bentler_trace_aba <- function(m_gamma = NULL,       # nolint
+lav_test_sb_trace_aba <- function(m_gamma = NULL,
                                                m_delta = NULL,
                                                wls_v = NULL,
                                                e_inv = NULL,
@@ -691,12 +710,12 @@ lav_test_satorra_bentler_trace_aba <- function(m_gamma = NULL,       # nolint
           v_g[[g]] <- fg[g] * diag(wls_v[[g]])
         }
       }
-      v_all <- lav_matrix_bdiag(v_g)
+      v_all <- lav_mat_bdiag(v_g)
       gamma_f <- m_gamma
       for (g in 1:ngroups) {
         gamma_f[[g]] <- 1 / fg[g] * m_gamma[[g]]
       }
-      gamma_all <- lav_matrix_bdiag(gamma_f)
+      gamma_all <- lav_mat_bdiag(gamma_f)
       delta_all <- do.call("rbind", m_delta)
 
       aga1 <- v_all %*% gamma_all %*% v_all

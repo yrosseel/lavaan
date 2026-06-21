@@ -26,7 +26,7 @@ modindices(object, standardized = TRUE, cov.std = TRUE, information = "expected"
 will contain standardized values for the EPCs. In the first column (sepc.lv),
 standardization is based on the variances of the (continuous) latent
 variables. In the second column (sepc.all), standardization is based
-on both the variances of both (continuous) observed and latent variables.
+on the variances of both the (continuous) observed and latent variables.
 (Residual) covariances are standardized using (residual) variances.}
 \item{cov.std}{Logical. See \code{\link{standardizedSolution}}.}
 \item{information}{\code{character} indicating the type of information matrix
@@ -41,12 +41,13 @@ index is statistically significant or not.}
 \item{high.power}{If the computed power is higher than this cutoff value,
 the power is considered `high'. If not, the power is considered `low'.
 This affects the values in the 'decision' column in the output.}
-\item{sort.}{Logical. If TRUE, sort the output using the values of
-the modification index values. Higher values appear first.}
+\item{sort.}{Logical. If TRUE, sort the output by the modification
+index values. Higher values appear first.}
 \item{minimum.value}{Numeric. Filter output and only show rows with a
-modification index value equal or higher than this minimum value.}
+modification index value equal to or higher than this minimum value.}
 \item{maximum.number}{Integer. Filter output and only show the first
-maximum number rows. Most useful when combined with the \code{sort.} option.}
+\code{maximum.number} rows. Most useful when combined with the \code{sort.}
+option.}
 \item{free.remove}{Logical. If TRUE, filter output by removing all rows
 corresponding to free (unconstrained) parameters in the original model.}
 \item{na.remove}{Logical. If TRUE, filter output by removing all rows with
@@ -55,14 +56,14 @@ NA values for the modification indices.}
 operator \code{op}.}
 }
 \value{
-  A data.frame containing modification indices and EPC's.
+  A data.frame containing modification indices and EPCs.
 }
 \details{
   Modification indices are just 1-df (or univariate) score tests. The
   modification index (or score test) for a single parameter reflects
   (approximately) the improvement in model fit (in terms of the chi-square
-  test statistic), if we would refit the model but allow this parameter to
-  be free.
+  test statistic) if we were to refit the model with this parameter set
+  free.
   This function is a convenience function in the sense that it produces a
   (hopefully sensible) table of currently fixed-to-zero (or fixed to another
   constant) parameters. For each of these parameters, a modification index

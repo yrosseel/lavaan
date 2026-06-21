@@ -9,12 +9,12 @@ lav_pml_plrt <- function(lavobject = NULL, lavmodel = NULL, lavdata = NULL,
     lavoptions <- lavobject@Options
     lavsamplestats <- lavobject@SampleStats
     lavcache <- lavobject@Cache
-    lavpartable <- lav_partable_set_cache(lavobject@ParTable, lavobject@pta)
+    lavpartable <- lav_pt_set_cache(lavobject@ParTable, lavobject@pta)
     lavpta <- lavobject@pta
   }
   if (is.null(lavpta)) {
-    lavpta <- lav_partable_attributes(lavpartable)
-    lavpartable <- lav_partable_set_cache(lavpartable, lavpta)
+    lavpta <- lav_pt_attributes(lavpartable)
+    lavpartable <- lav_pt_set_cache(lavpartable, lavpta)
   }
 
   if (is.null(x)) {
@@ -34,7 +34,7 @@ lav_pml_plrt <- function(lavobject = NULL, lavmodel = NULL, lavdata = NULL,
   }
 
   # fit a saturated model 'fittedSat'
-  model_sat <- lav_partable_unrestricted(
+  model_sat <- lav_pt_unrestricted(
     lavobject = NULL,
     lavdata = lavdata,
     lavoptions = lavoptions,
@@ -49,9 +49,9 @@ lav_pml_plrt <- function(lavobject = NULL, lavmodel = NULL, lavdata = NULL,
   options_1$baseline <- FALSE
   options_1$h1 <- FALSE
   fitted_sat <- lavaan(model_sat,
-    slotOptions = options_1, verbose = FALSE,
-    slotSampleStats = lavsamplestats,
-    slotData = lavdata, slotCache = lavcache
+    slot_options = options_1, verbose = FALSE,
+    slot_sample_stats = lavsamplestats,
+    slot_data = lavdata, slot_cache = lavcache
   )
   fx <- lav_model_objective(
     lavmodel = fitted_sat@Model,
@@ -65,15 +65,15 @@ lav_pml_plrt <- function(lavobject = NULL, lavmodel = NULL, lavdata = NULL,
   # we also need a `saturated model', but where the moments are based
   # on the model-implied sample statistics under H0
   model_sat2 <-
-    lav_partable_unrestricted(
+    lav_pt_unrestricted(
       lavobject = NULL,
       lavdata = lavdata,
       lavoptions = lavoptions,
       lavsamplestats = NULL,
-      sample.cov = lav_model_sigma(lavmodel),
-      sample.mean = lav_model_mu(lavmodel),
-      sample.th = lav_model_th(lavmodel),
-      sample.th.idx = lavsamplestats@th.idx
+      sample_cov = lav_model_sigma(lavmodel),
+      sample_mean = lav_model_mu(lavmodel),
+      sample_th = lav_model_th(lavmodel),
+      sample_th_idx = lavsamplestats@th.idx
     )
 
   options2 <- options_1
@@ -84,9 +84,9 @@ lav_pml_plrt <- function(lavobject = NULL, lavmodel = NULL, lavdata = NULL,
   options2$check.post <- FALSE
   options2$check.vcov <- FALSE
   fitted_sat2 <- lavaan(model_sat2,
-    slotOptions = options2, verbose = FALSE,
-    slotSampleStats = lavsamplestats,
-    slotData = lavdata, slotCache = lavcache
+    slot_options = options2, verbose = FALSE,
+    slot_sample_stats = lavsamplestats,
+    slot_data = lavdata, slot_cache = lavcache
   )
 
   # the code below was contributed by Myrsini Katsikatsou (Jan 2015)
@@ -118,7 +118,7 @@ lav_pml_plrt <- function(lavobject = NULL, lavmodel = NULL, lavdata = NULL,
 
   # Thirdly, specify the sample size.
   # nsize <- lavdata@nobs[[g]]
-  nsize <- lavsamplestats@ntotal #TODO: check if var nsize needed ?? # nolint
+  nsize <- lavsamplestats@ntotal #TODO: check if var nsize needed ??
 
   # Now we can proceed to the computation of the quantities needed for PLRT.
   # Briefly, to say that PLRT is equal to the difference of two quadratic forms.
@@ -170,7 +170,7 @@ lav_pml_plrt <- function(lavobject = NULL, lavmodel = NULL, lavdata = NULL,
         h10 <- matrix(0, ncol(in_1), nrow(h))
         dl <- 2 * diag(lambda, nrow(h), nrow(h))
         # FIXME: better include inactive + slacks??
-        e3 <- rbind( #TODO: check if var e3 needed ???  # nolint
+        e3 <- rbind( #TODO: check if var e3 needed ???
           cbind(in_1, h10, t(h)),
           cbind(t(h10), dl, h0),
           cbind(h, h0, h0)
@@ -241,7 +241,7 @@ lav_pml_plrt <- function(lavobject = NULL, lavmodel = NULL, lavdata = NULL,
   #####            the two quadratic quantities
 
   drhodpsi_mat_1 <- vector("list", length = lavsamplestats@ngroups)
-  group_values <- lav_partable_group_values(fitted_sat2@ParTable)
+  group_values <- lav_pt_group_values(fitted_sat2@ParTable)
   for (g in 1:lavsamplestats@ngroups) {
     # delta.g <- lav_model_delta(lavmodel)[[g]] # [[1]] to be substituted by g?
     # The above gives the derivatives of thresholds and polychoric correlations
@@ -255,7 +255,7 @@ lav_pml_plrt <- function(lavobject = NULL, lavmodel = NULL, lavdata = NULL,
     # of H1
 
     pt_1 <- fitted_sat2@ParTable
-    pt_1$label <- lav_partable_labels(pt_1)
+    pt_1$label <- lav_pt_labels(pt_1)
     free_idx <- which(pt_1$free > 0 & pt_1$op != "|" &
                        pt_1$group == group_values[g])
     parlabel <- pt_1$label[free_idx]
@@ -287,7 +287,7 @@ lav_pml_plrt <- function(lavobject = NULL, lavmodel = NULL, lavdata = NULL,
 
     # added by YR - 26 April 2018, for 0.6-1
     # we now can get 'labelled' delta rownames
-    delta_g <- lav_object_inspect_delta_internal(
+    delta_g <- lav_inspect_delta_internal(
       lavmodel = lavmodel,
       lavdata = lavdata, lavpartable = lavpartable,
       add_labels = TRUE, add_class = FALSE,

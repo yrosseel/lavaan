@@ -52,7 +52,7 @@ lavTestWald <- function(object, constraints = NULL, verbose = FALSE) { # nolint
   theta <- lav_model_get_parameters(lavmodel)
 
   # build constraint function
-  ceq_function <- lav_partable_constraints_ceq(
+  ceq_function <- lav_pt_con_ceq(
     partable = partable,
     con = list_1, debug = FALSE
   )
@@ -65,7 +65,7 @@ lavTestWald <- function(object, constraints = NULL, verbose = FALSE) { # nolint
   }
 
   # check for linear redundant rows in JAC
-  out <- lav_matrix_rref(t(jac))
+  out <- lav_mat_rref(t(jac))
   ran_k <- length(out$pivot)
   if (ran_k < nrow(jac)) {
     lav_msg_warn(gettext(
@@ -93,13 +93,17 @@ lavTestWald <- function(object, constraints = NULL, verbose = FALSE) { # nolint
   # get VCOV
   # VCOV <- vcov(object, labels = FALSE)
   # avoid S4 dispatch
-  vcov_1 <- lav_object_inspect_vcov(object,
+  vcov_1 <- lav_inspect_vcov(object,
     standardized = FALSE,
     free_only = TRUE,
     add_labels = FALSE,
     add_class = FALSE,
     remove_duplicated = FALSE
   )
+
+  # the constraint jacobian is in the compact (nx.free) space; when
+  # ceq.simple.only, vcov_1 is in the larger 'unco' space, so reduce it
+  vcov_1 <- lav_model_vcov_unco_to_free(lavmodel, vcov_1)
 
   # restricted vcov
   vcov_r <- jac %*% vcov_1 %*% t(jac)

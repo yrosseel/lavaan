@@ -1,6 +1,6 @@
 \name{lav_plotinfo_rgraph}
 \alias{lav_plotinfo_rgraph}
-\title{Plots a graph in R.}
+\title{Plots a graph in R}
 \usage{
 lav_plotinfo_rgraph(plotinfo,
                     sloped_labels = TRUE,
@@ -14,15 +14,15 @@ lav_plotinfo_rgraph(plotinfo,
 }
 \arguments{
 \item{plotinfo}{A plotinfo structure as returned from \code{lav_plotinfo_positions}.}
-\item{sloped_labels}{Logical, sloped labels above (or under) the edges.}
-\item{outfile}{Character string naming the file to store the diagram in PNG or
-  NA to show the plot in R.}
+\item{sloped_labels}{Logical, should labels be sloped above (or below) the edges?}
+\item{outfile}{Character string naming the file in which to store the diagram as
+  a PNG, or NA to show the plot in R.}
 \item{addgrid}{Logical, add a grid with indicated 'positions' to the graph?}
-\item{mlovcolors}{Array of two colors for distinguishing ov nodes with same name
-between the levels in a  multilevel model.}
+\item{mlovcolors}{Array of two colors for distinguishing ov nodes with the same
+name across the levels of a multilevel model.}
 \item{lightness}{A scalar factor to modify the distances between nodes.}
-\item{italic}{Are labels to be in italic font? \strong{Attention:} The switch 
-to an italic font will only be possible if the label value isn't an expression!}
+\item{italic}{Should labels be in an italic font? \strong{Attention:} switching
+to an italic font is only possible if the label value is not an expression!}
 \item{auto_subscript}{Logical, see \code{\link{lav_label_code}}.}
 }
 \value{

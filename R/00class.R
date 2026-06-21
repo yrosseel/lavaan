@@ -21,12 +21,14 @@ setClass("lavData",
     ov.names = "list", # variable names (per group)
     ov.names.x = "list", # exo variable names (per group)
     ov.names.l = "list", # names per level
+    ov.names.aux = "list", # auxiliary variable names (per group)
     # ov.types          = "list",           # variable types (per group)
     # ov.idx            = "list",           # column indices (all observed variables)
     ordered = "character", # ordered variables
     weights = "list", # sampling weights (per group)
     sampling.weights = "character", # sampling weights variable
     ov = "list", # variable table
+    ov.aux = "list", # variable table for auxiliary/instrument variables
     case.idx = "list", # case indices per group
     missing = "character", # "listwise" or not?
     Mp = "list", # if not complete, missing patterns
@@ -34,6 +36,7 @@ setClass("lavData",
     Rp = "list", # response patterns (categorical only)
     Lp = "list", # level patterns
     eXo = "list", # local copy exo only
+    aux = "list", # local copy auxiliary variables only (per group)
     X = "list" # local copy
   )
 )

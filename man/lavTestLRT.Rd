@@ -57,10 +57,10 @@ anova(object, ...)
     \code{"satorra.bentler"}, \code{"yuan.bentler"}, or \code{"yuan.bentler.mplus"}
     because \code{"mean.var.adjusted"} and \code{"scaled.shifted"} are
     currently distinguished by the \code{scaled.shifted} argument.
-    See \code{\link{lavOptions}} for details about \code{test=} options
-    implied by robust \code{estimator=} options). The \code{"default"} is to
+    See \code{\link{lavOptions}} for details about the \code{test=} options
+    implied by robust \code{estimator=} options. The \code{"default"} is to
     select the first available scaled statistic, if any. To check which test(s)
-    were calculated when fitting your model(s), use 
+    were computed when fitting your model(s), use
     \code{lavInspect(fit, "options")$test}.
 
     If \code{type = "Chisq"} and the test statistics are scaled, a
@@ -70,8 +70,8 @@ anova(object, ...)
     this can lead to a negative test statistic. To ensure a positive
     test statistic, we can use the method proposed by 
     Satorra & Bentler (2010). Alternatively, when \code{method="satorra.2000"},
-    the original formulas of Satorra (2000) are used.  The latter is used for
-    model comparison, when \code{...} contain additional (nested) models.
+    the original formulas of Satorra (2000) are used. The latter is used for
+    model comparison when \code{...} contains additional (nested) models.
     Even when test statistics are scaled in \code{object} or \code{...},
     users may request the  \code{method="standard"} test statistic,
     without a robust adjustment.
@@ -102,7 +102,7 @@ Satorra, A., & Bentler, P. M. (2001). A scaled difference chi-square test
 statistic for moment structure analysis. \emph{Psychometrika, 66}(4), 507-514.
 \doi{10.1007/BF02296192}
 
-Satorra, A., & Bentler, P. M. (2010). Ensuring postiveness of the scaled
+Satorra, A., & Bentler, P. M. (2010). Ensuring positiveness of the scaled
 difference chi-square test statistic. \emph{Psychometrika, 75}(2), 243-248.
 \doi{10.1007/s11336-009-9135-y}
 

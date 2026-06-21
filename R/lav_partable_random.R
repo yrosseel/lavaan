@@ -6,12 +6,12 @@
 #
 # YR 26 Feb 2024
 
-lav_partable_random <- function(lavpartable = NULL,
+lav_pt_random <- function(lavpartable = NULL,
                                 # needed if we still need to compute bounds:
                                 lavh1 = NULL, lavdata = NULL,
                                 lavsamplestats = NULL, lavoptions = NULL) {
 
-  lavpta <- lav_partable_attributes(lavpartable)
+  lavpta <- lav_pt_attributes(lavpartable)
 
   # ALWAYS (recompute) bounds, as user may have provide other
   # bounds (eg "pos.var") (0.6-20)
@@ -32,7 +32,7 @@ lav_partable_random <- function(lavpartable = NULL,
       min.reliability.marker = 0.1,
       min.var.lv.endo = 0.005
     )
-  lavpartable <- lav_partable_add_bounds(
+  lavpartable <- lav_pt_add_bounds(
     partable = lavpartable,
     lavh1 = lavh1, lavdata = lavdata,
     lavsamplestats = lavsamplestats, lavoptions = lavoptions2
@@ -71,8 +71,8 @@ lav_partable_random <- function(lavpartable = NULL,
   # initial values
   start_1 <- lavpartable$start
 
-  nblocks <- lav_partable_nblocks(lavpartable)
-  block_values <- lav_partable_block_values(lavpartable)
+  nblocks <- lav_pt_nblocks(lavpartable)
+  block_values <- lav_pt_block_values(lavpartable)
   for (b in 1:nblocks) {
     ov_names <- lavpta$vnames$ov[[b]]
     lv_names <- lavpta$vnames$lv[[b]]

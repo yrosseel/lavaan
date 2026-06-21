@@ -9,17 +9,17 @@
 # - YR 21 Jan 2025: add composites
 
 # construct MATRIX lavoptions$representation of the model
-lav_model <- function(lavpartable = NULL,                          # nolint
+lav_model <- function(lavpartable = NULL,
                       lavoptions = NULL,
                       th_idx = list()) {
   # handle bare-minimum partables
-  lavpartable <- lav_partable_complete(lavpartable)
-  lavpta <- lav_partable_attributes(lavpartable)
-  lavpartable <- lav_partable_set_cache(lavpartable, lavpta)
+  lavpartable <- lav_pt_complete(lavpartable)
+  lavpta <- lav_pt_attributes(lavpartable)
+  lavpartable <- lav_pt_set_cache(lavpartable, lavpta)
 
   # global info from user model
-  nblocks <- lav_partable_nblocks(lavpartable)
-  ngroups <- lav_partable_ngroups(lavpartable)
+  nblocks <- lav_pt_nblocks(lavpartable)
+  ngroups <- lav_pt_ngroups(lavpartable)
   meanstructure <- any(lavpartable$op == "~1")
   correlation <- lavoptions$correlation
   if (is.null(correlation)) {
@@ -42,7 +42,7 @@ lav_model <- function(lavpartable = NULL,                          # nolint
   group_w_free <- any(lavpartable$lhs == "group" & lavpartable$op == "%")
   multilevel <- FALSE
   if (!is.null(lavpartable$level)) {
-    nlevels <- lav_partable_nlevels(lavpartable)
+    nlevels <- lav_pt_nlevels(lavpartable)
     if (nlevels > 1L) {
       multilevel <- TRUE
     }
@@ -50,9 +50,9 @@ lav_model <- function(lavpartable = NULL,                          # nolint
     nlevels <- 1L
   }
 
-  nefa <- lav_partable_nefa(lavpartable)
+  nefa <- lav_pt_nefa(lavpartable)
   if (nefa > 0L) {
-    efa_values <- lav_partable_efa_values(lavpartable)
+    efa_values <- lav_pt_efa_values(lavpartable)
   }
 
   # check for simple equality constraints
@@ -66,7 +66,7 @@ lav_model <- function(lavpartable = NULL,                          # nolint
   }
 
   # handle variable definitions and (in)equality constraints
-  tmp_con <- lav_constraints_parse(
+  tmp_con <- lav_con_parse(
     partable = lavpartable,
     constraints = NULL
   )
@@ -148,14 +148,14 @@ lav_model <- function(lavpartable = NULL,                          # nolint
   # keep track of ov.names across blocks
   for (g in 1:nblocks) {
     # observed and latent variables for this block
-    ov_names <- lav_partable_vnames(lavpartable, "ov", block = g)
-    ov_names_nox <- lav_partable_vnames(lavpartable, "ov.nox", block = g)
-    ov_names_x <- lav_partable_vnames(lavpartable, "ov.x", block = g)
-    ov_num <- lav_partable_vnames(lavpartable, "ov.num", block = g)
+    ov_names <- lav_pt_vnames(lavpartable, "ov", block = g)
+    ov_names_nox <- lav_pt_vnames(lavpartable, "ov.nox", block = g)
+    ov_names_x <- lav_pt_vnames(lavpartable, "ov.x", block = g)
+    ov_num <- lav_pt_vnames(lavpartable, "ov.num", block = g)
     if (lavoptions$conditional.x) {
       if (nlevels > 1L) {
         if (ngroups == 1L) {
-          other_block_names <- lav_partable_vnames(lavpartable, "ov",
+          other_block_names <- lav_pt_vnames(lavpartable, "ov",
             block = seq_len(nblocks)[-g]
           )
         } else {
@@ -163,7 +163,7 @@ lav_model <- function(lavpartable = NULL,                          # nolint
           # which group is this?
           this_group <- ceiling(g / nlevels)
           blocks_within_group <- (this_group - 1L) * nlevels + seq_len(nlevels)
-          other_block_names <- lav_partable_vnames(lavpartable, "ov",
+          other_block_names <- lav_pt_vnames(lavpartable, "ov",
             block = blocks_within_group[-g]
           )
         }
@@ -195,7 +195,7 @@ lav_model <- function(lavpartable = NULL,                          # nolint
     nexo[g] <- length(ov_names_x)
 
     if (nefa > 0L) {
-      lv_names <- lav_partable_vnames(lavpartable, "lv", block = g)
+      lv_names <- lav_pt_vnames(lavpartable, "lv", block = g)
     }
 
     # model matrices for this block
@@ -389,7 +389,7 @@ lav_model <- function(lavpartable = NULL,                          # nolint
   }
 
   # which free parameters are observed variances?
-  ov_names <- lav_partable_vnames(lavpartable, "ov")
+  ov_names <- lav_pt_vnames(lavpartable, "ov")
   x_free_var_idx <- lavpartable$free[lavpartable$free &
     # !duplicated(lavpartable$free) &
     lavpartable$lhs %in% ov_names &
@@ -399,10 +399,10 @@ lav_model <- function(lavpartable = NULL,                          # nolint
   rv_lv <- rv_ov <- list()
   if (multilevel) {
     # store information about random slopes (if any)
-    lv_names <- lav_partable_vnames(lavpartable, "lv")
+    lv_names <- lav_pt_vnames(lavpartable, "lv")
     # we should also add split-y names (x) to lv.names
     # FIXME: make this work for multiple work multilevel
-    level_values <- lav_partable_level_values(lavpartable)
+    level_values <- lav_pt_level_values(lavpartable)
     ovx1 <- lav_object_vnames(lavpartable, "ov.x", level = level_values[1])
     ovx2 <- lav_object_vnames(lavpartable, "ov.x", level = level_values[2])
     ovx12 <- ovx2[ovx2 %in% ovx1]

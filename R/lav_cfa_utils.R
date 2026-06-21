@@ -74,7 +74,7 @@ lav_cfa_lambda2thetapsi <- function(lambda = NULL, s = NULL, s_inv = NULL,
 
   # psi
   diag_theta <- diag(theta, nvar)
-  lambda <- try(lav_matrix_symmetric_diff_smallest_root(s, diag_theta),
+  lambda <- try(lav_mat_sym_diff_smallest_root(s, diag_theta),
     silent = TRUE
   )
   if (inherits(lambda, "try-error")) {
@@ -138,7 +138,7 @@ lav_cfa_lambdatheta2psi <- function(lambda = NULL, theta = NULL, # vector!
 
   # psi
   diag_theta <- diag(theta, nvar)
-  lambda <- try(lav_matrix_symmetric_diff_smallest_root(s, diag_theta),
+  lambda <- try(lav_mat_sym_diff_smallest_root(s, diag_theta),
     silent = TRUE
   )
   if (inherits(lambda, "try-error")) {
@@ -190,8 +190,8 @@ lav_cfa_theta_spearman <- function(s, bounds = "wide") {
   r <- cov2cor(s)
   for (p_idx in seq_len(p)) {
     x <- r[, p_idx][-p_idx]
-    aa <- lav_matrix_vech(tcrossprod(x), diagonal = FALSE)
-    ss <- lav_matrix_vech(r[-p_idx, -p_idx, drop = FALSE], diagonal = FALSE)
+    aa <- lav_mat_vech(tcrossprod(x), diagonal = FALSE)
+    ss <- lav_mat_vech(r[-p_idx, -p_idx, drop = FALSE], diagonal = FALSE)
     h2 <- mean(aa / ss) # communaliteit
     if (bounds == "standard") {
       h2[h2 < 0] <- 0

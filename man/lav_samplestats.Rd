@@ -1,17 +1,17 @@
 \name{lav_samplestats}
-\alias{lav_samplestats_from_data}
+\alias{lav_samp_from_data}
 \title{lavaan samplestats functions}
 \description{Utility functions related to the sample statistics}
 \usage{
 # generate samplestats object from full data
-lav_samplestats_from_data(lavdata = NULL, lavoptions = NULL, 
-                          WLS.V = NULL, NACOV = NULL)
+lav_samp_from_data(lavdata = NULL, lavoptions = NULL, 
+                          wls_v = NULL, nacov = NULL)
 }
 \arguments{
 \item{lavdata}{A lavdata object.}
-\item{lavoptions}{A named list. The Options lsot from a lavaan object.}
-\item{WLS.V}{A user provided weight matrix.}
-\item{NACOV}{A user provided matrix containing the elements of (N times)
+\item{lavoptions}{A named list. The Options slot from a lavaan object.}
+\item{wls_v}{A user provided weight matrix.}
+\item{nacov}{A user provided matrix containing the elements of (N times)
     the asymptotic variance-covariance matrix of the sample statistics.
     For a multiple group analysis, a list with an asymptotic
     variance-covariance matrix for each group.}
@@ -29,7 +29,7 @@ lavdata <- fit@Data
 lavoptions <- lavInspect(fit, "options")
 
 # generate sample statistics object
-sampleStats <- lav_samplestats_from_data(lavdata = lavdata, 
+sampleStats <- lav_samp_from_data(lavdata = lavdata, 
                                          lavoptions = lavoptions)
 }
 

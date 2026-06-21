@@ -7,7 +7,7 @@
 \title{Score test}
 \description{
 Score test (or Lagrange Multiplier test) for releasing one or more
-fixed or constrained parameters in model.}
+fixed or constrained parameters in the model.}
 \usage{
 lavTestScore(object, add = NULL, release = NULL,
              univariate = TRUE, cumulative = FALSE,
@@ -19,11 +19,11 @@ lavTestScore(object, add = NULL, release = NULL,
 \item{add}{Either a character string (typically between single quotes) or
   a parameter table containing additional (currently fixed-to-zero) parameters
   for which the score test must be computed.}
-\item{release}{Vector of Integers. The indices of the constraints that
-should be released. The indices correspond to the order of the equality
-constraints as they appear in the parameter table.}
+\item{release}{Vector of integers. The indices of the constraints that
+should be released. The indices correspond to the order in which the equality
+constraints appear in the parameter table.}
 \item{univariate}{Logical. If \code{TRUE}, compute the univariate score
-statistics, one for each constraints.}
+statistics, one for each constraint.}
 \item{cumulative}{Logical. If \code{TRUE}, order the univariate score
 statistics from large to small, and compute a series of
 multivariate score statistics, each time adding an additional constraint.}
@@ -35,7 +35,7 @@ in the \code{$epc} table
 will contain standardized values for the EPCs. In the first column (sepc.lv),
 standardization is based on the variances of the (continuous) latent
 variables. In the second column (sepc.all), standardization is based
-on both the variances of both (continuous) observed and latent variables.
+on the variances of both (continuous) observed and latent variables.
 (Residual) covariances are standardized using (residual) variances.}
 \item{cov.std}{Logical. See \code{\link{standardizedSolution}}.}
 \item{verbose}{Logical. Not used for now.}
@@ -48,7 +48,7 @@ information is the default, which provides better control of Type I errors.}
     This function can be used to compute both multivariate and univariate
     score tests. There are two modes: 1) releasing fixed-to-zero parameters
     (using the \code{add} argument), and 2) releasing existing equality
-    constraints (using the \code{release} argument). The two modes can not
+    constraints (using the \code{release} argument). The two modes cannot
     be used simultaneously.
 
     When adding new parameters, they should not already be part of the model
@@ -60,19 +60,19 @@ information is the default, which provides better control of Type I errors.}
 \value{
   A list containing at least one \code{data.frame}:
   \itemize{
-    \item{\code{$test}: The total score test, with columns for the score
+    \item \code{$test}: The total score test, with columns for the score
       test statistic (\code{X2}), the degrees of freedom (\code{df}), and
-      a \emph{p} value under the \eqn{\chi^2} distribution (\code{p.value}).}
-    \item{\code{$uni}: Optional (if \code{univariate=TRUE}).
+      a \emph{p} value under the \eqn{\chi^2} distribution (\code{p.value}).
+    \item \code{$uni}: Optional (if \code{univariate=TRUE}).
       Each 1-\emph{df} score test, equivalent to modification indices.
       If \code{epc=TRUE} when \code{add}ing parameters (not when releasing
       constraints), an unstandardized EPC is provided for each added parameter,
-      as would be returned by \code{\link{modificationIndices}}.}
-    \item{\code{$cumulative}: Optional (if \code{cumulative=TRUE}).
-      Cumulative score tests.}
-    \item{\code{$epc}: Optional (if \code{epc=TRUE}). Parameter estimates,
+      as would be returned by \code{\link{modificationIndices}}.
+    \item \code{$cumulative}: Optional (if \code{cumulative=TRUE}).
+      Cumulative score tests.
+    \item \code{$epc}: Optional (if \code{epc=TRUE}). Parameter estimates,
       expected parameter changes, and expected parameter values if all
-      the tested constraints were freed.}
+      the tested constraints were freed.
   }
 }
 \references{

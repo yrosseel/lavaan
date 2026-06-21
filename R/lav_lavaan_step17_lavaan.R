@@ -1,22 +1,23 @@
-lav_lavaan_step17_lavaan <- function(lavmc = NULL,
-                                     timing = NULL,
-                                     lavoptions = NULL,
-                                     lavpartable = NULL,
-                                     lavdata = NULL,
-                                     lavsamplestats = NULL,
-                                     lavmodel = NULL,
-                                     lavcache = NULL,
-                                     lavfit = NULL,
-                                     lavboot = NULL,
-                                     lavoptim = NULL,
-                                     lavimplied = NULL,
-                                     lavloglik = NULL,
-                                     lavvcov = NULL,
-                                     lavtest = NULL,
-                                     lavh1 = NULL,
-                                     lavbaseline = NULL,
-                                     laveqs = NULL,
-                                     start_time0 = NULL) {
+lav_step17_lavaan <- function(lavmc = NULL,
+                              timing = NULL,
+                              lavoptions = NULL,
+                              lavpartable = NULL,
+                              lavdata = NULL,
+                              lavsamplestats = NULL,
+                              lavmodel = NULL,
+                              lavcache = NULL,
+                              lavfit = NULL,
+                              lavboot = NULL,
+                              lavoptim = NULL,
+                              lavimplied = NULL,
+                              lavloglik = NULL,
+                              lavvcov = NULL,
+                              lavtest = NULL,
+                              lavh1 = NULL,
+                              lavbaseline = NULL,
+                              laveqs = NULL,
+                              start_time0 = NULL,
+                              lav_monte_carlo = NULL) {
   # # # # # # # # # #
   # #  17. lavaan # #
   # # # # # # # # # #
@@ -30,12 +31,12 @@ lav_lavaan_step17_lavaan <- function(lavmc = NULL,
   #
   timing$total <- (proc.time()[3] - start_time0)
   timing$start.time <- NULL
-  lavpta <- lav_partable_attributes(lavpartable)
-  lavpartable <- lav_partable_remove_cache(lavpartable)
+  lavpta <- lav_pt_attributes(lavpartable)
+  lavpartable <- lav_pt_remove_cache(lavpartable)
   lavaan <- new("lavaan", # type_of_slot - where created or modified ?
     # ------------   ------------------------- -
     version = packageDescription("lavaan", fields = "Version"),
-    call = lavmc, # match.call - ldw_adapt_match_call
+    call = lavmc, # match.call - lav_step00_parameters
     timing = timing, # list - ldw_add_timing
     Options = lavoptions, # list - options (2) / data (3) / partable (4)
     ParTable = lavpartable,
@@ -54,7 +55,11 @@ lav_lavaan_step17_lavaan <- function(lavmc = NULL,
     test = lavtest, # list - test (14)
     h1 = lavh1, # list - h1 (6)
     baseline = lavbaseline, # list - baseline (15)
-    internal = list(), # empty list
+    internal = if (is.null(lav_monte_carlo) || length(lav_monte_carlo) == 0L) {
+      list()
+    } else {
+      list(monte.carlo = lav_monte_carlo)
+    },
     external = list() # empty list
   )
 
@@ -78,7 +83,7 @@ lav_lavaan_step17_lavaan <- function(lavmc = NULL,
 
   # eqs?
   if (length(laveqs) > 0L) {
-    lavaan@internal <- list(eqs = laveqs)
+    lavaan@internal$eqs <- laveqs
   }
 
   # post-fitting check of parameters

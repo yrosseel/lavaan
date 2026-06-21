@@ -251,7 +251,7 @@ lav_fit_rmsea_lavobject <- function(lavobject = NULL, fit_measures = "rmsea",
   if (robust && scaled_flag &&
     scaled_test %in% c(
       "satorra.bentler", "yuan.bentler.mplus",
-      "yuan.bentler", "scaled.shifted"
+      "yuan.bentler", "yuan.chan", "scaled.shifted"
     )) {
     robust_flag <- TRUE
   }
@@ -328,7 +328,7 @@ lav_fit_rmsea_lavobject <- function(lavobject = NULL, fit_measures = "rmsea",
   x2 <- test[[test_idx]]$stat
   df <- test[[test_idx]]$df
   g <- lavobject@Data@ngroups # number of groups
-  n <- lav_object_inspect_ntotal(object = lavobject) # N vs N-1
+  n <- lav_inspect_ntotal(object = lavobject) # N vs N-1
 
   # scaled X2/df values
   if (scaled_flag) {

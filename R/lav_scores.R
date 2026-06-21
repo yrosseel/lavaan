@@ -16,13 +16,13 @@
 # YR 16 Feb 2016: adapt to changed @Mp slot elements; add remove.empty.cases=
 #                 argument
 # YR 12 Mar 2024: make lintr (more) happy; include WLS code from Franz Classe
-#                 move ML-specific code to lav_scores_ml() function
+#                 move ML-specific code to lav_sc_ml() function
 # YR 26 Apr 2025: add lav_scores_gls()
 
-lav_scores <- function(object, scaling = FALSE,                    # nolint start
-                                       ignore.constraints = FALSE,
-                                       remove.duplicated = TRUE,
-                                       remove.empty.cases = TRUE) { # nolint end
+lav_sc <- function(object, scaling = FALSE,
+                           ignore_constraints = FALSE,
+                           remove_duplicated = TRUE,
+                           remove_empty_cases = TRUE) {
   stopifnot(inherits(object, "lavaan"))
 
   # check object
@@ -54,11 +54,17 @@ lav_scores <- function(object, scaling = FALSE,                    # nolint star
   # ntot <- max( object@Data@case.idx[[ object@Data@ngroups ]] )
   ntab <- unlist(lavdata@norig)
   ntot <- sum(ntab)
-  npar <- lav_object_inspect_npar(object, ceq = FALSE)
+  npar <- lav_inspect_npar(object, ceq = FALSE)
+  # with simple equality constraints (ceq.simple), the casewise scores are first
+  # computed in the larger 'unco' space (one column per non-collapsed parameter,
+  # matching Delta); they are collapsed to the free parameters further below
+  if (lavmodel@ceq.simple.only) {
+    npar <- lavmodel@nx.unco
+  }
 
   if (object@Options$estimator == "ML") {
     moments <- fitted(object)
-    score_matrix <- lav_scores_ml(
+    score_matrix <- lav_sc_ml(
       ntab = ntab, ntot = ntot, npar = npar,
       moments = moments, lavdata = lavdata, lavsamplestats = lavsamplestats,
       lavmodel = lavmodel, lavoptions = lavoptions, scaling = scaling
@@ -73,7 +79,7 @@ lav_scores <- function(object, scaling = FALSE,                    # nolint star
     }
 
     # compute WLS scores
-    score_matrix <- lav_scores_wls(
+    score_matrix <- lav_sc_wls(
       ntab = ntab, ntot = ntot, npar = npar,
       lavdata = lavdata, lavsamplestats = lavsamplestats,
       lavmodel = lavmodel, lavoptions = lavoptions
@@ -81,7 +87,7 @@ lav_scores <- function(object, scaling = FALSE,                    # nolint star
   } else if (!lavmodel@categorical &&
              object@Options$estimator %in% c("GLS", "ULS", "WLS")) {
     # compute WLS/GLS/ULS `scores'
-    score_matrix <- lav_scores_ls(
+    score_matrix <- lav_sc_ls(
       ntab = ntab, ntot = ntot, npar = npar,
       lavdata = lavdata, lavsamplestats = lavsamplestats,
       lavmodel = lavmodel, lavoptions = lavoptions
@@ -91,8 +97,20 @@ lav_scores <- function(object, scaling = FALSE,                    # nolint star
     lav_msg_fixme("this should not happen")
   }
 
+  # sampling weights? the casewise score contributions become wt_i * s_i,
+  # so that the column sums equal the (weighted) gradient (= 0 at the MLE),
+  # and crossprod() yields the design-based information that is also used
+  # for the (robust) standard errors. This is a no-op without weights.
+  if (length(lavdata@sampling.weights) > 0L) {
+    wt_full <- numeric(ntot)
+    for (g in seq_len(lavdata@ngroups)) {
+      wt_full[lavdata@case.idx[[g]]] <- lavdata@weights[[g]]
+    }
+    score_matrix <- score_matrix * wt_full
+  }
+
   # handle empty rows
-  if (remove.empty.cases) {
+  if (remove_empty_cases) {
     # empty.idx <- which( apply(score_matrix, 1L,
     #                        function(x) sum(is.na(x))) == ncol(score_matrix) )
     empty_idx <- unlist(lapply(lavdata@Mp, "[[", "empty.idx"))
@@ -102,42 +120,73 @@ lav_scores <- function(object, scaling = FALSE,                    # nolint star
   }
 
   # provide column names
-  colnames(score_matrix) <- names(lav_object_inspect_coef(object,
+  colnames(score_matrix) <- names(lav_inspect_coef(object,
     type = "free", add_labels = TRUE
   ))
 
   # handle general constraints, so that the sum of the columns equals zero
-  if (!ignore.constraints &&
-    sum(
+  # note: for ceq.simple.only models there are no explicit ceq/cin indices, but
+  # the (synthesized) con.jac encodes the simple equalities in the 'unco' space;
+  # projecting here makes the full (remove.duplicated = FALSE) scores respect the
+  # constraints, exactly as for explicit equality constraints. This projection
+  # does NOT affect the collapsed scores below, since con.jac %*% ceq.simple.K = 0
+  if (!ignore_constraints &&
+    (sum(
       lavmodel@ceq.linear.idx, lavmodel@ceq.nonlinear.idx,
       lavmodel@cin.linear.idx, lavmodel@cin.nonlinear.idx
-    ) > 0) {
-    r_matrix <- object@Model@con.jac[, ]
-    pre <- lav_constraints_lambda_pre(object)
+    ) > 0 || (lavmodel@ceq.simple.only && nrow(lavmodel@con.jac) > 0L))) {
+    r_matrix <- object@Model@con.jac[, , drop = FALSE]
+    pre <- lav_con_lambda_pre(object)
     # LAMBDA <- -1 * t(pre %*% t(score_matrix))
     # RLAMBDA <- t(t(r_matrix) %*% t(LAMBDA))
     score_matrix <- score_matrix - t(t(r_matrix) %*% pre %*% t(score_matrix))
   }
 
   # handle simple equality constraints
-  if (remove.duplicated && lavmodel@eq.constraints) {
-    simple_flag <- lav_constraints_check_simple(lavmodel)
+  if (remove_duplicated && lavmodel@eq.constraints) {
+    simple_flag <- lav_con_check_simple(lavmodel)
     if (simple_flag) {
-      k_matrix <- lav_constraints_r2k(lavmodel)
+      k_matrix <- lav_con_r2k(lavmodel)
       score_matrix <- score_matrix %*% k_matrix
     } else {
       lav_msg_warn(gettext(
         "remove.duplicated is TRUE, but equality constraints do not appear
         to be simple; returning full scores"))
     }
+  } else if (remove_duplicated && lavmodel@ceq.simple.only) {
+    # collapse the 'unco'-space scores to the free parameters: the score for a
+    # free parameter is the sum of the scores of the parameters that share it
+    # (ceq.simple.K is the nx.unco x nx.free duplication matrix)
+    score_matrix <- score_matrix %*% lavmodel@ceq.simple.K
   }
 
   score_matrix
 }
-lavScores <- lav_scores       # synonym #nolint
-estfun.lavaan <- lav_scores   # synonym
 
-lav_scores_ml <- function(ntab = 0L,
+lavScores <- estfun.lavaan <- function(               # nolint
+                       object,
+                       scaling = FALSE,
+                       ignore_constraints = FALSE,
+                       remove_duplicated = TRUE,
+                       remove_empty_cases = TRUE,
+                      ...) {
+  dotdotdot <- list(...)
+  lav_adapt_func(environment(), dotdotdot, NULL)
+  lav_sc(object, scaling = scaling,
+        ignore_constraints = ignore_constraints,
+        remove_duplicated = remove_duplicated,
+        remove_empty_cases = remove_empty_cases)
+}
+
+# YR 18 Jun 2026: the casewise H1 (saturated-model) scores are now computed by
+#                 the (better tested) lav_mvn_sc_mu_sigma() (complete data) and
+#                 lav_mvn_mi_sc_mu_sigma() (incomplete data) functions from the
+#                 lav_mvnorm*.R files; this function only assembles them into the
+#                 model-parameter scores via the Delta matrix. The mvn casewise
+#                 score has the opposite sign of the old 'scores_h1' (so the old
+#                 '-scores_h1 %*% Delta' becomes 'sc %*% Delta'), and produces
+#                 vech(Sigma) with the diagonal already halved -- matching Delta.
+lav_sc_ml <- function(ntab = 0L,
                           ntot = 0L,
                           npar = 0L,
                           moments = NULL,
@@ -154,122 +203,66 @@ lav_scores_ml <- function(ntab = 0L,
   # rename moments
   moments_groups <- moments
 
+  # group weights (only used if scaling = TRUE)
+  group_w <- unlist(lavsamplestats@nobs) / lavsamplestats@ntotal
+
   for (g in 1:lavsamplestats@ngroups) {
     if (lavsamplestats@ngroups > 1) {
       moments <- moments_groups[[g]]
     }
     sigma_hat <- moments$cov
+    nvar <- ncol(lavsamplestats@cov[[g]])
 
-    if (lavoptions$likelihood == "wishart") {
-      nobs1 <- lavsamplestats@nobs[[g]] / (lavsamplestats@nobs[[g]] - 1)
+    # H1 (saturated) mean: model-implied if meanstructure, else sample mean
+    if (lavmodel@meanstructure) {
+      mu_hat <- moments$mean
     } else {
-      nobs1 <- 1
+      mu_hat <- lavsamplestats@mean[[g]]
     }
 
     if (!lavsamplestats@missing.flag) { # complete data
-      # if(lavmodel@meanstructure) { # mean structure
-      nvar <- ncol(lavsamplestats@cov[[g]])
-      mu_hat <- moments$mean
-      x_1 <- lavdata@X[[g]]
-      sigma_inv <- chol2inv(chol(sigma_hat)) # FIXME: check for pd?
-      group_w <- (unlist(lavsamplestats@nobs) / lavsamplestats@ntotal)
+      sc <- lav_mvn_sc_mu_sigma(
+        y = lavdata@X[[g]], mu = mu_hat, sigma_1 = sigma_hat
+      )
 
-      j <- matrix(1, 1L, ntab[g]) ## FIXME: needed?better maybe rowSums/colSums?
-      j2 <- matrix(1, nvar, nvar)
-      diag(j2) <- 0.5
-
-      if (lavmodel@meanstructure) {
-        ## scores_h1 (H1 = saturated model)
-        mean_diff <- t(t(x_1) - mu_hat %*% j)
-        dx_mu <- -1 * mean_diff %*% sigma_inv
-        dx_sigma <- t(matrix(apply(
-          mean_diff, 1L,
-          function(x) {
-            lav_matrix_vech(-j2 *
-              (sigma_inv %*% (tcrossprod(x) * nobs1 - sigma_hat) %*% sigma_inv))
-          }
-        ), ncol = nrow(mean_diff)))
-
-        scores_h1 <- cbind(dx_mu, dx_sigma)
-      } else {
-        mean_diff <- t(t(x_1) - lavsamplestats@mean[[g]] %*% j)
-        dx_sigma <- t(matrix(apply(
-          mean_diff, 1L,
-          function(x) {
-            lav_matrix_vech(-j2 *
-              (sigma_inv %*% (tcrossprod(x) * nobs1 - sigma_hat) %*% sigma_inv))
-          }
-        ), ncol = nrow(mean_diff)))
-        scores_h1 <- dx_sigma
-      }
-      ## FIXME? Seems like we would need group.w even in the
-      ##        complete-data case:
-      ## if(scaling){
-      ##  scores_h1 <- group.w[g] * scores_h1
-      ## }
-
-      # } else {
-      #  ## no mean structure
-      #  stop("Score calculation with no mean structure is not implemented.")
-      # }
-    } else { # incomplete data
-      nsub <- ntab[g]
-      m <- lavsamplestats@missing[[g]]
-      mp <- lavdata@Mp[[g]]
-      # pat.idx <- match(MP1$id, MP1$order)
-      group_w <- (unlist(lavsamplestats@nobs) / lavsamplestats@ntotal)
-
-      mu_hat <- moments$mean
-      nvar <- ncol(lavsamplestats@cov[[g]])
-      score_sigma <- matrix(0, nsub, nvar * (nvar + 1) / 2)
-      score_mu <- matrix(0, nsub, nvar)
-
-      for (p in seq_along(m)) {
-        ## Data
-        # X <- M[[p]][["X"]]
-        case_idx <- mp$case.idx[[p]]
-        var_idx <- m[[p]][["var.idx"]]
-        x_1 <- lavdata@X[[g]][case_idx, var_idx, drop = FALSE]
-        nobs <- m[[p]][["freq"]]
-        ## Which unique entries of covariance matrix are estimated?
-        ## (Used to keep track of scores in score.sigma)
-        var_idx_mat <- tcrossprod(var_idx)
-        sigma_idx <-
-          which(var_idx_mat[lower.tri(var_idx_mat, diag = TRUE)] == 1)
-
-        j <- matrix(1, 1L, nobs) # [var.idx]
-        j2 <- matrix(1, nvar, nvar)[var_idx, var_idx, drop = FALSE]
+      # wishart likelihood: the second-order (vech(Sigma)) block uses the
+      # unbiased cross-product, i.e. tcrossprod(y - mu) is scaled by n/(n-1).
+      # This rescales the vech(Sigma) columns of the casewise score, and adds a
+      # (constant) shift proportional to vech(Sigma.inv).
+      if (lavoptions$likelihood == "wishart") {
+        nobs1 <- lavsamplestats@nobs[[g]] / (lavsamplestats@nobs[[g]] - 1)
+        j2 <- matrix(1, nvar, nvar)
         diag(j2) <- 0.5
-        # FIXME: check for pd?
-        sigma_inv <- chol2inv(chol(sigma_hat[var_idx, var_idx, drop = FALSE]))
-        mu <- mu_hat[var_idx]
-        mean_diff <- t(t(x_1) - mu %*% j)
-
-        ## Scores for missing pattern p within group g
-        score_mu[case_idx, var_idx] <- -1 * mean_diff %*% sigma_inv
-        score_sigma[case_idx, sigma_idx] <- t(matrix(apply(
-          mean_diff, 1L,
-          function(x) {
-            lav_matrix_vech(-j2 *
-              (sigma_inv %*% (tcrossprod(x) -
-                sigma_hat[var_idx, var_idx, drop = FALSE]) %*% sigma_inv))
-          }
-        ), ncol = nrow(mean_diff)))
+        d_row <- lav_mat_vech(-j2 * chol2inv(chol(sigma_hat)))
+        sig_idx <- seq.int(nvar + 1L, ncol(sc))
+        sc[, sig_idx] <- nobs1 * sc[, sig_idx, drop = FALSE] -
+          matrix((nobs1 - 1) * d_row, nrow(sc), length(d_row), byrow = TRUE)
       }
-
-      scores_h1 <- cbind(score_mu, score_sigma)
-      if (scaling) {
-        scores_h1 <- group_w[g] * scores_h1
-      }
+    } else { # incomplete data
+      sc <- lav_mvn_mi_sc_mu_sigma(
+        y = lavdata@X[[g]], mp = lavdata@Mp[[g]],
+        mu = mu_hat, sigma_1 = sigma_hat
+      )
+      # lav_mvn_mi_sc_mu_sigma() leaves NA in the score entries that refer to
+      # the *unobserved* cells of a case; the (saturated) casewise score for a
+      # missing variable is zero, so we zero them here before mapping through
+      # Delta (the old implementation initialised these entries to 0).
+      sc[is.na(sc)] <- 0
     } # missing
 
-    # if(lavmodel@eq.constraints) {
-    #    Delta <- Delta %*% lavmodel@eq.constraints.K
-    #    #x <- as.numeric(lavmodel@eq.constraints.K %*% x) +
-    #    #                lavmodel@eq.constraints.k0
-    # }
+    # no mean structure: drop the (leading) mu columns
+    if (!lavmodel@meanstructure) {
+      sc <- sc[, -seq_len(nvar), drop = FALSE]
+    }
+
+    # scaling? (matches the historical behaviour: group weights are applied to
+    # the incomplete-data scores only, then everything is scaled by -1/ntot)
+    if (scaling && lavsamplestats@missing.flag) {
+      sc <- group_w[g] * sc
+    }
+
     wi <- lavdata@case.idx[[g]]
-    score_matrix[wi, ] <- -scores_h1 %*% delta[[g]]
+    score_matrix[wi, ] <- sc %*% delta[[g]]
     if (scaling) {
       score_matrix[wi, ] <- (-1 / ntot) * score_matrix[wi, ]
     }
@@ -280,7 +273,7 @@ lav_scores_ml <- function(ntab = 0L,
 
 # this function is based on code originally written by Franz Classe (Munich)
 # for categorical data only!
-lav_scores_wls <- function(ntab = 0L,
+lav_sc_wls <- function(ntab = 0L,
                            ntot = 0L,
                            npar = 0L,
                            lavdata = NULL,
@@ -334,7 +327,7 @@ lav_scores_wls <- function(ntab = 0L,
     mus <- colMeans(x_1)
     y_minus_mu <- t(apply(x_1, 1L, function(x) x - mus))
     s_vech <- t(apply(y_minus_mu, 1L, function(i) {
-      lavaan::lav_matrix_vech(tcrossprod(i), diagonal = FALSE)
+      lavaan::lav_mat_vech(tcrossprod(i), diagonal = FALSE)
     })) # s=c( (y1-mu1)(y2-mu2)....
     sigma <- colMeans(s_vech)
     e2 <- t(apply(s_vech, 1L, function(x) x - sigma))
@@ -355,7 +348,7 @@ lav_scores_wls <- function(ntab = 0L,
 
 
 # wls/gls/uls (continuous data only)
-lav_scores_ls <- function(ntab = 0L,
+lav_sc_ls <- function(ntab = 0L,
                           ntot = 0L,
                           npar = 0L,
                           lavdata = NULL,
@@ -386,8 +379,8 @@ lav_scores_ls <- function(ntab = 0L,
     # create Z where the rows_i contain the following elements:
     #  - Y_i (if meanstructure is TRUE)
     #  - vech(Yc_i' %*% Yc_i) where Yc_i are the residuals
-    idx1 <- lav_matrix_vech_col_idx(nvar)
-    idx2 <- lav_matrix_vech_row_idx(nvar)
+    idx1 <- lav_mat_vech_col_idx(nvar)
+    idx2 <- lav_mat_vech_row_idx(nvar)
     if (lavmodel@meanstructure) {
       z <- cbind(y, yc[, idx1, drop = FALSE] * yc[, idx2, drop = FALSE])
     } else {
@@ -397,9 +390,9 @@ lav_scores_ls <- function(ntab = 0L,
     # model-based sample statistics
     if (lavmodel@meanstructure) {
       sigma <- c(as.numeric(implied$mean[[g]]),
-                 lav_matrix_vech(implied$cov[[g]]))
+                 lav_mat_vech(implied$cov[[g]]))
     } else {
-      sigma <- lav_matrix_vech(implied$cov[[g]])
+      sigma <- lav_mat_vech(implied$cov[[g]])
     }
 
     # adjust sigma for N-1, so that colMeans(scores) == gradient

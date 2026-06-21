@@ -6,13 +6,13 @@
 # - YR 26 Nov 2013: big change - make it a wrapper around lavaan()
 #                   estimator = "none" means two.step (starting values)
 
-lav_object_cor <- function(object,                 # nolint start
+lav_object_cor <- function(object,
                    # lav.data options
                    ordered = NULL,
                    group = NULL,
                    missing = "listwise",
-                   ov.names.x = NULL,
-                   sampling.weights = NULL,
+                   ov_names_x = NULL,
+                   sampling_weights = NULL,
                    # lavaan options
                    se = "none",
                    test = "none",
@@ -20,14 +20,15 @@ lav_object_cor <- function(object,                 # nolint start
                    baseline = FALSE,
                    # other options (for lavaan)
                    ...,
-                   cor.smooth = FALSE,
-                   cor.smooth.tol = 1e-04, # was 1e-06 in <0.6-14
-                   output = "cor") {             # nolint end
+                   cor_smooth = FALSE,
+                   cor_smooth_tol = 1e-04, # was 1e-06 in <0.6-14
+                   output = "cor") {
+  dotdotdot <- list(...)
+  lav_adapt_func(environment(), dotdotdot, FALSE)
   # shortcut if object = lavaan object
   if (inherits(object, "lavaan")) {
     # check object
     object <- lav_object_check_version(object)
-    dotdotdot <- list(...)
     if (length(dotdotdot) > 0L) {
       for (j in seq_along(dotdotdot)) {
         lav_msg_warn(gettextf(
@@ -58,8 +59,8 @@ lav_object_cor <- function(object,                 # nolint start
   }
 
   # extract sampling.weights.normalization from dots (for lav_lavdata() call)
-  dots <- list(...)
-  sampling_weights_normalization <- "total"
+  dots <- dotdotdot
+  sampling_weights_normalization <- "group"
   if (!is.null(dots$sampling.weights.normalization)) {
     sampling_weights_normalization <- dots$sampling.weights.normalization
   }
@@ -75,15 +76,15 @@ lav_object_cor <- function(object,                 # nolint start
     if (!is.null(group)) {
       names_1 <- names_1[-match(group, names_1)]
     }
-    if (!is.null(sampling.weights)) {
-      names_1 <- names_1[-match(sampling.weights, names_1)]
+    if (!is.null(sampling_weights)) {
+      names_1 <- names_1[-match(sampling_weights, names_1)]
     }
     if (is.logical(ordered)) {
       ordered_flag <- ordered
       if (ordered_flag) {
         ordered <- names_1
-        if (length(ov.names.x) > 0L) {
-          ordered <- ordered[-which(ordered %in% ov.names.x)]
+        if (length(ov_names_x) > 0L) {
+          ordered <- ordered[-which(ordered %in% ov_names_x)]
         }
       } else {
         ordered <- character(0L)
@@ -107,8 +108,8 @@ lav_object_cor <- function(object,                 # nolint start
     lav_data <- lav_lavdata(
       data = object, group = group,
       ov_names = names_1, ordered = ordered,
-      sampling_weights = sampling.weights,
-      ov_names_x = ov.names.x,
+      sampling_weights = sampling_weights,
+      ov_names_x = ov_names_x,
       lavoptions = list(
         missing = missing,
         sampling.weights.normalization = sampling_weights_normalization
@@ -159,7 +160,7 @@ lav_object_cor <- function(object,                 # nolint start
 
   # generate partable for unrestricted model
   pt_un <-
-    lav_partable_unrestricted(
+    lav_pt_unrestricted(
       lavobject = NULL,
       lavdata = lav_data,
       lavoptions = list(
@@ -172,26 +173,26 @@ lav_object_cor <- function(object,                 # nolint start
         estimator = estimator,
         mimic = mimic
       ),
-      sample.cov = NULL,
-      sample.mean = NULL,
-      sample.th = NULL
+      sample_cov = NULL,
+      sample_mean = NULL,
+      sample_th = NULL
     )
 
 
-  fit <- lavaan(
-    slotParTable = pt_un, slotData = lav_data,
+  fit <- do.call(lavaan, c(list(
+    slot_par_table = pt_un, slot_data = lav_data,
     model.type = "unrestricted",
     missing = missing,
     baseline = baseline, h1 = TRUE, # must be TRUE!
-    se = se, test = test, estimator = estimator, ...
+    se = se, test = test, estimator = estimator), dotdotdot)
   )
 
   out <- lav_object_cor_output(fit, output = output)
 
   # smooth correlation matrix? (only if output = "cor")
-  if (output == "cor" && cor.smooth) {
+  if (output == "cor" && cor_smooth) {
     tmp_attr <- attributes(out)
-    out <- cov2cor(lav_matrix_symmetric_force_pd(out, tol = cor.smooth.tol))
+    out <- cov2cor(lav_mat_sym_force_pd(out, tol = cor_smooth_tol))
     # we lost most of the attributes
     attributes(out) <- tmp_attr
   }

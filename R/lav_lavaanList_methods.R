@@ -32,6 +32,7 @@ setMethod(
            nd = 3L,
            simulate.args = list(est.bias = TRUE,                     # nolint
                                 se.bias  = TRUE,
+                                se.bias.med = TRUE,
                                 prop.sig = TRUE,
                                 coverage = TRUE,
                                 level    = 0.95,
@@ -58,6 +59,7 @@ lav_lavaanlist_summary <- function(object,
                                    estimates = TRUE,
                                    simulate_args = list(est.bias = TRUE,
                                                         se.bias  = TRUE,
+                                                        se.bias.med = TRUE,
                                                         prop.sig = TRUE,
                                                         coverage = TRUE,
                                                         level    = 0.95,
@@ -103,6 +105,7 @@ lav_lavaanlist_summary <- function(object,
       # default behavior
       sim_args <- list(est.bias = TRUE,
                        se.bias  = TRUE,
+                       se.bias.med = TRUE,
                        prop.sig = TRUE,
                        coverage = TRUE,
                        level    = 0.95,
@@ -119,11 +122,11 @@ lav_lavaanlist_summary <- function(object,
       nel <- length(pe$est.true)
 
       # always compute EST
-      est <- lav_lavaanlist_partable(object, what = "est", type = "all")
+      est <- lav_lavaanlist_pt(object, what = "est", type = "all")
 
       # sometimes compute SE
       if (sim_args$se.bias || sim_args$prop.sig || sim_args$coverage) {
-        se <- lav_lavaanlist_partable(object, what = "se", type = "all")
+        se <- lav_lavaanlist_pt(object, what = "se", type = "all")
       }
 
       # est.bias?
@@ -162,6 +165,22 @@ lav_lavaanlist_summary <- function(object,
         se_obs[se_obs < .Machine$double.eps ^ (1 / 3)] <- as.numeric(NA)
         pe$se.bias <- pe$se.ave / se_obs # use ratio!
         pe$se.bias[!is.finite(pe$se.bias)] <- as.numeric(NA)
+
+        # robust (median-based) SE summary. The SE sampling distribution of
+        # (non)linear defined parameters can be heavy-tailed (eg ratios with
+        # near-zero denominators), so the mean-based se.ave/se.bias may be
+        # dominated by a few outliers; the median is robust. Use the original
+        # (untrimmed) 'se' here, before the prop.sig block alters it below.
+        if (sim_args$se.bias.med) {
+          se_med <- apply(se, 1L, median, na.rm = TRUE)
+          if (length(se_med) > nel) {
+            se_med <- se_med[seq_len(nel)]
+          }
+          se_med[!is.finite(se_med)] <- as.numeric(NA)
+          pe$se.med <- se_med
+          pe$se.bias.med <- pe$se.med / se_obs # use ratio!
+          pe$se.bias.med[!is.finite(pe$se.bias.med)] <- as.numeric(NA)
+        }
       }
 
       if (sim_args$prop.sig) {
@@ -182,6 +201,8 @@ lav_lavaanlist_summary <- function(object,
       }
 
       if (sim_args$coverage) {
+        # 1. symmetric (Wald-type) confidence intervals, based on the
+        #    standard error: est +/- z * se
         # next three lines based on confint.lm
         a <- (1 - sim_args$level) / 2
         a <- c(a, 1 - a)
@@ -201,6 +222,51 @@ lav_lavaanlist_summary <- function(object,
         coverage <- apply(inside_flag, 1L, mean, na.rm = TRUE)
         coverage[!is.finite(coverage)] <- as.numeric(NA)
         pe$coverage <- coverage
+
+        # 2. (possibly asymmetric) confidence intervals, based on the
+        #    bootstrap or the Monte Carlo method; only available if the
+        #    per-dataset ci.lower/ci.upper were stored (see lavaanList).
+        #    These intervals are computed at the 95% level (see lavaanList).
+        has_asym_ci <-
+          "ci.lower" %in% names(object@ParTableList[[1]]) &&
+          "ci.upper" %in% names(object@ParTableList[[1]])
+        if (has_asym_ci) {
+          if (!isTRUE(all.equal(sim_args$level, 0.95))) {
+            lav_msg_note(gettext(
+              "the bootstrap/Monte Carlo confidence intervals were stored at
+               the 95% level; the requested `level' only affects the
+               symmetric (SE-based) intervals."))
+          }
+          ci_lower_a1 <- lav_lavaanlist_pt(object, what = "ci.lower",
+                                                 type = "all")
+          ci_upper_a1 <- lav_lavaanlist_pt(object, what = "ci.upper",
+                                                 type = "all")
+          # average bounds
+          ci_lower_a <- apply(ci_lower_a1, 1L, mean, na.rm = TRUE,
+                              trim = sim_args$trim)
+          ci_upper_a <- apply(ci_upper_a1, 1L, mean, na.rm = TRUE,
+                              trim = sim_args$trim)
+          if (length(ci_lower_a) > nel) ci_lower_a <- ci_lower_a[seq_len(nel)]
+          if (length(ci_upper_a) > nel) ci_upper_a <- ci_upper_a[seq_len(nel)]
+          ci_lower_a[!is.finite(ci_lower_a)] <- as.numeric(NA)
+          ci_upper_a[!is.finite(ci_upper_a)] <- as.numeric(NA)
+          # columnwise comparison
+          ci_lower_a1 <- ci_lower_a1[seq_len(nel), , drop = FALSE]
+          ci_upper_a1 <- ci_upper_a1[seq_len(nel), , drop = FALSE]
+          inside_a <- (ci_lower_a1 <= pe$est.true) &
+                      (ci_upper_a1 >= pe$est.true)
+          coverage_a <- apply(inside_a, 1L, mean, na.rm = TRUE)
+          coverage_a[!is.finite(coverage_a)] <- as.numeric(NA)
+          # use a method-specific suffix (.boot or .mc) for the columns
+          ci_sfx <- if (identical(object@Options$se, "bootstrap")) {
+            "boot"
+          } else {
+            "mc"
+          }
+          pe[[paste0("ci.lower.", ci_sfx)]] <- ci_lower_a
+          pe[[paste0("ci.upper.", ci_sfx)]] <- ci_upper_a
+          pe[[paste0("coverage.", ci_sfx)]] <- coverage_a
+        }
       }
 
       # if sam(), should we keep or remove the step1 values?
@@ -209,13 +275,13 @@ lav_lavaanlist_summary <- function(object,
       # scenario 2: bootstrap
     } else if (!is.null(object@meta$lavBootstrap)) {
       # print the average value for est
-      est <- lav_lavaanlist_partable(object, what = "est", type = "all")
+      est <- lav_lavaanlist_pt(object, what = "est", type = "all")
       pe$est.ave <- rowMeans(est, na.rm = TRUE)
 
       # scenario 3: multiple imputation
     } else if (!is.null(object@meta$lavMultipleImputation)) {
       # pool est: take the mean
-      est <- lav_lavaanlist_partable(object, what = "est", type = "all")
+      est <- lav_lavaanlist_pt(object, what = "est", type = "all")
       m <- NCOL(est)
       pe$est <- rowMeans(est, na.rm = TRUE)
 
@@ -228,7 +294,7 @@ lav_lavaanlist_summary <- function(object,
       b_var <- (est2 - est1 * est1) * m / (m - 1)
 
       # within-imputation variance
-      se <- lav_lavaanlist_partable(object, what = "se", type = "all")
+      se <- lav_lavaanlist_pt(object, what = "se", type = "all")
       w_var <- rowMeans(se^2, na.rm = TRUE)
 
       # total variance: T.var = W.var + B.var + B.var/m
@@ -245,7 +311,7 @@ lav_lavaanlist_summary <- function(object,
       # scenario 4: multiple groups/sets
     } else if (!is.null(object@meta$lavMultipleGroups)) {
       # show individual estimates, for each group
-      est <- lav_lavaanlist_partable(object, what = "est", type = "all")
+      est <- lav_lavaanlist_pt(object, what = "est", type = "all")
       est <- as.list(as.data.frame(est))
       names(est) <- object@meta$group.label
       attr_1 <- attributes(pe)
@@ -256,7 +322,7 @@ lav_lavaanlist_summary <- function(object,
     } else {
       # scenario 5: just a bunch of fits, using different datasets
       # print the average value for est
-      est <- lav_lavaanlist_partable(object, what = "est", type = "all")
+      est <- lav_lavaanlist_pt(object, what = "est", type = "all")
       pe$est.ave <- rowMeans(est, na.rm = TRUE)
 
       # more?
@@ -296,14 +362,14 @@ setMethod(
         )
       }
     }
-    lav_lavaanlist_partable(
+    lav_lavaanlist_pt(
       object = object, what = "est", type = type,
       labels = labels
     )
   }
 )
 
-lav_lavaanlist_partable <- function(object, what = "est",
+lav_lavaanlist_pt <- function(object, what = "est",
                                     type = "free", labels = TRUE) {
   # check object
   object <- lav_object_check_version(object)
@@ -331,7 +397,7 @@ lav_lavaanlist_partable <- function(object, what = "est",
   out <- out[idx, , drop = FALSE]
 
   if (labels) {
-    rownames(out) <- lav_partable_labels(object@ParTable, type = type)
+    rownames(out) <- lav_pt_labels(object@ParTable, type = type)
   }
 
   out

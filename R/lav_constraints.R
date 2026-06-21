@@ -1,4 +1,22 @@
-lav_constraints_parse <- function(partable = NULL, constraints = NULL,
+# Evaluate 'expr' using a local, fixed RNG state, and restore the global
+# '.Random.seed' afterwards. This keeps RNG-using helpers (eg the jacobian
+# linearity checks below) from disturbing the global stream -- which would,
+# for example, change the seed picked by a subsequent se = "bootstrap" run.
+lav_with_local_seed <- function(expr, seed = 1234L) {
+  if (exists(".Random.seed", envir = .GlobalEnv, inherits = FALSE)) {
+    old_seed <- get(".Random.seed", envir = .GlobalEnv, inherits = FALSE)
+    on.exit(assign(".Random.seed", old_seed, envir = .GlobalEnv,
+                   inherits = FALSE), add = TRUE)
+  } else {
+    # no '.Random.seed' existed: remove the one set.seed() creates below
+    on.exit(rm(".Random.seed", envir = .GlobalEnv, inherits = FALSE),
+            add = TRUE)
+  }
+  set.seed(seed)
+  force(expr)
+}
+
+lav_con_parse <- function(partable = NULL, constraints = NULL,
                                   theta = NULL,
                                   debug = FALSE) {
   if (!missing(debug)) {
@@ -20,6 +38,16 @@ lav_constraints_parse <- function(partable = NULL, constraints = NULL,
     theta <- partable$start[partable$free > 0L]
   } else {
     theta <- rep(0, length(partable$lhs))
+  }
+
+  # note: avoid zero values in theta (so jac is not all null)
+  # (eg, regression coefficients are often zero in partable$start)
+  # we perturb with small random numbers, but isolate the RNG state
+  # (see lav_with_local_seed() above)
+  zero_theta_idx <- which(theta == 0)
+  if (length(zero_theta_idx) > 0L) {
+    theta[zero_theta_idx] <- lav_with_local_seed(
+      rnorm(length(zero_theta_idx), 0, 0.1))
   }
 
   # number of free (but possibly constrained) parameters
@@ -72,38 +100,38 @@ lav_constraints_parse <- function(partable = NULL, constraints = NULL,
   }
 
   # variable definitions
-  def_function <- lav_partable_constraints_def(partable,
+  def_function <- lav_pt_con_def(partable,
     con = list_1,
     debug = debug
   )
 
   # construct ceq/ciq functions
-  ceq_function <- lav_partable_constraints_ceq(partable,
+  ceq_function <- lav_pt_con_ceq(partable,
     con = list_1,
     debug = debug
   )
   # linear or nonlinear?
-  ceq_linear_idx <- lav_constraints_linear_idx(
+  ceq_linear_idx <- lav_con_linear_idx(
     func = ceq_function,
     npar = npar
   )
-  ceq_nonlinear_idx <- lav_constraints_nonlinear_idx(
+  ceq_nonlinear_idx <- lav_con_nonlinear_idx(
     func = ceq_function,
     npar = npar
   )
 
   # inequalities
-  cin_function <- lav_partable_constraints_ciq(partable,
+  cin_function <- lav_pt_con_ciq(partable,
     con = list_1,
     debug = debug
   )
 
   # linear or nonlinear?
-  cin_linear_idx <- lav_constraints_linear_idx(
+  cin_linear_idx <- lav_con_linear_idx(
     func = cin_function,
     npar = npar
   )
-  cin_nonlinear_idx <- lav_constraints_nonlinear_idx(
+  cin_nonlinear_idx <- lav_con_nonlinear_idx(
     func = cin_function,
     npar = npar
   )
@@ -151,7 +179,7 @@ lav_constraints_parse <- function(partable = NULL, constraints = NULL,
     cin_theta <- numeric(0L)
   }
 
-  # check for empty/unused constraints (new in 0.6-22)
+  # check for empty/unused constraints (new in 0.7-1)
   if (nrow(ceq_jac) > 0L) {
     if (all(ceq_jac == 0)) {
       ceq_jac <- matrix(0, nrow = 0L, ncol = npar)
@@ -314,40 +342,40 @@ lav_constraints_parse <- function(partable = NULL, constraints = NULL,
   out
 }
 
-lav_constraints_linear_idx <- function(func = NULL, npar = NULL) {
+lav_con_linear_idx <- function(func = NULL, npar = NULL) {
   if (is.null(func) || is.null(body(func))) {
     return(integer(0L))
   }
 
-  # seed 1: rnorm
-  a0 <- lav_func_jacobian_complex(func = func, x = rnorm(npar))
-
-  # seed 2: rnorm
-  a1 <- lav_func_jacobian_complex(func = func, x = rnorm(npar))
-
-  a0min_a1 <- a0 - a1
+  # compare the jacobian at two (distinct) evaluation points; isolate the
+  # RNG state so we do not disturb the global stream (see lav_with_local_seed)
+  a0min_a1 <- lav_with_local_seed({
+    a0 <- lav_func_jacobian_complex(func = func, x = rnorm(npar)) # point 1
+    a1 <- lav_func_jacobian_complex(func = func, x = rnorm(npar)) # point 2
+    a0 - a1
+  })
   linear <- apply(a0min_a1, 1, function(x) all(x == 0))
   which(linear)
 }
 
-lav_constraints_nonlinear_idx <- function(func = NULL, npar = NULL) {
+lav_con_nonlinear_idx <- function(func = NULL, npar = NULL) {
   if (is.null(func) || is.null(body(func))) {
     return(integer(0L))
   }
 
-  # seed 1: rnorm
-  a0 <- lav_func_jacobian_complex(func = func, x = rnorm(npar))
-
-  # seed 2: rnorm
-  a1 <- lav_func_jacobian_complex(func = func, x = rnorm(npar))
-
-  a0min_a1 <- a0 - a1
+  # compare the jacobian at two (distinct) evaluation points; isolate the
+  # RNG state so we do not disturb the global stream (see lav_with_local_seed)
+  a0min_a1 <- lav_with_local_seed({
+    a0 <- lav_func_jacobian_complex(func = func, x = rnorm(npar)) # point 1
+    a1 <- lav_func_jacobian_complex(func = func, x = rnorm(npar)) # point 2
+    a0 - a1
+  })
   linear <- apply(a0min_a1, 1, function(x) all(x == 0))
   which(!linear)
 }
 
 # check if the equality constraints are 'simple' (a == b)
-lav_constraints_check_simple <- function(lavmodel = NULL) {
+lav_con_check_simple <- function(lavmodel = NULL) {
   ones <- (lavmodel@ceq.JAC == 1 | lavmodel@ceq.JAC == -1)
   simple <- all(lavmodel@ceq.rhs == 0) &&
     all(apply(lavmodel@ceq.JAC != 0, 1, sum) == 2) &&
@@ -358,7 +386,7 @@ lav_constraints_check_simple <- function(lavmodel = NULL) {
   simple
 }
 
-lav_constraints_r2k <- function(lavmodel = NULL) {
+lav_con_r2k <- function(lavmodel = NULL) {
   # constraint matrix
   m_r <- NULL
   if (!is.null(lavmodel)) {
@@ -384,11 +412,12 @@ lav_constraints_r2k <- function(lavmodel = NULL) {
   m_k
 }
 
-lav_constraints_lambda_pre <- function(lavobject = NULL, method = "Don") {
+lav_con_lambda_pre <- function(lavobject = NULL, method = "Don") {
   # compute factor 'pre' so that pre %*% g = lambda
   method <- tolower(method)
 
-  r <- lavobject@Model@con.jac[, ]
+  # note: drop = FALSE, so a single-row constraint matrix stays a matrix
+  r <- lavobject@Model@con.jac[, , drop = FALSE]
   if (is.null(r) || length(r) == 0L) {
     return(numeric(0L))
   }

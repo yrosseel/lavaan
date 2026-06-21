@@ -1,6 +1,6 @@
 \name{lav_plotinfo_svgcode}
 \alias{lav_plotinfo_svgcode}
-\title{Creates code to show a diagram in svg format.}
+\title{Creates code to show a diagram in svg format}
 \usage{
 lav_plotinfo_svgcode(plotinfo,
                      outfile = "",
@@ -12,7 +12,7 @@ lav_plotinfo_svgcode(plotinfo,
                      dy = 5L,
                      mlovcolors = c("lightgreen", "lightblue"),
                      lightness= 1,
-                     font_family = "Latin Modern Math, arial, Aerial, sans",
+                     font_family = "Latin Modern Math, arial, Arial, sans",
                      italic = TRUE,
                      auto_subscript = TRUE
                      )
@@ -21,28 +21,28 @@ lav_plotinfo_svgcode(plotinfo,
 \item{plotinfo}{A plotinfo structure as returned from \code{lav_plotinfo_positions}.}
 \item{outfile}{A connection or a character string, the file to store the code.}
 \item{sloped_labels}{logical, sloped labels for the edges.}
-\item{standalone}{logical, add code to make a html file with svg in it? If
-FALSE (default) the outfile - if specified - must have a file extension
-'svg', if TRUE the file extension must be 'htm' or 'html'.}
+\item{standalone}{logical, should code be added to produce an html file with the
+svg embedded in it? If FALSE (the default), the outfile (if specified) must have
+the file extension 'svg'; if TRUE, the file extension must be 'htm' or 'html'.}
 \item{stroke_width}{Value for stroke-width parameter in svg.}
-\item{font_size}{An integer specifying normal font size to use.}
-\item{idx_font_size}{An integer specifying font size to use for a subscript.}
-\item{dy}{An integer specifying the distance to move the baseline of the subscript.}
-\item{mlovcolors}{Array of two colors for distinguishing ov nodes with same name
-between the levels in a  multilevel model.}
+\item{font_size}{An integer specifying the normal font size to use.}
+\item{idx_font_size}{An integer specifying the font size to use for a subscript.}
+\item{dy}{An integer specifying the distance by which to move the baseline of the subscript.}
+\item{mlovcolors}{Array of two colors for distinguishing ov nodes with the same
+name across the levels of a multilevel model.}
 \item{lightness}{A scalar factor to modify the distances between nodes.}
 \item{font_family}{Fonts to be tried for rendering the labels. The first one,
 Latin Modern Math, is close to the default font used in tikz for mathematical
 expressions and can be downloaded from
 \href{https://ctan.org/tex-archive/fonts/lm-math}{CTAN}.}
-\item{italic}{Are labels to be in italic font? If FALSE the labels will be
+\item{italic}{Should labels be in an italic font? If FALSE, the labels are
 shown in mathrm font.}
 \item{auto_subscript}{Logical, see \code{\link{lav_label_code}}.}
 }
 \value{
 NULL (invisible)}
 \description{
-Create svg code to show a diagram of the model.
+Creates svg code to show a diagram of the model.
 }
 \seealso{
 \code{\link{lav_plotinfo_positions}}

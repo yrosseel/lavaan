@@ -92,7 +92,7 @@ lav_graph_get_connected_nodes <- function(a) {
   m <- ncol(a)
 
   # catch diagonal A
-  if (all(lavaan::lav_matrix_vech(a, diagonal = FALSE) == 0L)) {
+  if (all(lav_mat_vech(a, diagonal = FALSE) == 0L)) {
     return(seq_len(m))
   }
 
@@ -219,7 +219,7 @@ lav_graph_topological_sort <- function(defined, definedby, warn = TRUE) {
 # (*4) if there are nodes forced to the top border in columns 2 through
 #     maxcol-1, the items in column1s 1 and maxcol cannot occupy the first row;
 #     analogue for the bottom
-lav_graph_topological_matrix <- function(
+lav_graph_topological_mat <- function(
   defined,
   definedby,
   bordernodes = character(0),

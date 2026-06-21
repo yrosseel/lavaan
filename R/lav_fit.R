@@ -35,8 +35,8 @@ lav_model_fit <- function(lavpartable = NULL,
       se <- lav_model_vcov_se(
         lavmodel = lavmodel,
         lavpartable = lavpartable,
-        VCOV = vcov_1,
-        BOOT = attr(vcov_1, "BOOT.COEF")
+        vcov = vcov_1,
+        boot = attr(vcov_1, "BOOT.COEF")
       )
     }
   } else {

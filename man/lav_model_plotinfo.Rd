@@ -10,17 +10,16 @@ lav_model_plotinfo(model = NULL, infile = NULL, varlv = FALSE)
 lavaan object (in which case the \code{ParTable} object is extracted and column
 \code{est} is used as value to show).
 Should be \code{NULL} if infile is given.}
-\item{infile}{A character string specifying the file which contains the model
+\item{infile}{A character string specifying the file that contains the model
 syntax.}
 \item{varlv}{A logical indicating that the (residual) variance of a variable
-should be plotted as a seperate latent variable (with a smaller circle then
-ordinary latent variables). In this case covariances between two such variables
-will be plotted as covariance between the latent variables for the variance.}
+should be plotted as a separate latent variable (with a smaller circle than
+ordinary latent variables). In this case, a covariance between two such variables
+is plotted as a covariance between their variance latent variables.}
 }
 \value{
-A structure 'plotinfo', which is a list with members nodes and edges, 
-which are data.frames containing the necessary data to create
-a diagram.
+A structure 'plotinfo', which is a list with members nodes and edges. These
+are data.frames containing the data needed to create a diagram.
 \enumerate{
 \item nodes
   \describe{
@@ -42,15 +41,15 @@ a diagram.
     the model and the fixed (or estimated) value if present.}
     \item{van}{character, id of the starting node.}
     \item{naar}{character, id of the destination node.}
-    \item{tiepe}{character, lavaan operator, except (residual)
-      variance, coded here as '~~~' and regressions introduced by varlv = TRUE,
-      coded as '~.'.}
+    \item{tiepe}{character, lavaan operator, with two exceptions: a (residual)
+      variance is coded here as '~~~', and a regression introduced by
+      varlv = TRUE is coded as '~.'.}
   }
 }
 }
 
 \description{
-Gets information from model necessary to produce a plot.
+Extracts the information from a model that is needed to produce a plot.
 }
 
 \examples{

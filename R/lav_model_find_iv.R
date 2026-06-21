@@ -27,7 +27,7 @@ lav_model_find_iv <- function(lavobject = NULL, lavmodel = NULL,
     lavmodel <- lavobject@Model
   } else {
     # get lavpta
-    lavpta <- lav_partable_attributes(lavpartable)
+    lavpta <- lav_pt_attributes(lavpartable)
   }
 
   # sanity checks
@@ -65,10 +65,24 @@ lav_model_find_iv <- function(lavobject = NULL, lavmodel = NULL,
 
   # check for user-specified instruments
   if (any(lavpartable$op == "|~")) {
+    # restrict the |~ rows to the current block, so that in a multiple-group
+    # analysis the per-group instruments are not pooled (which would duplicate
+    # them, e.g. iv = c("z", "z"), and make the instrument covariance singular)
+    pt_block <- if (!is.null(lavpartable$block)) {
+      lavpartable$block
+    } else {
+      rep(1L, length(lavpartable$op))
+    }
     for (b in seq_len(nblocks)) {
       iv_list[[b]] <- lapply(iv_list[[b]], function(eq) {
+        # the user specifies the dependent variable of the equation on the
+        # lhs of |~; for a latent variable, this is its scaling indicator,
+        # which is stored in eq$lhs_new (eq$lhs holds the latent name). Match
+        # on either, so that |~ works for both observed and latent dependents.
         lhs <- eq$lhs[1] # we assume a single lhs
-        iv_idx <- which(lavpartable$op == "|~" & lavpartable$lhs == lhs)
+        lhs_new <- eq$lhs_new[1]
+        iv_idx <- which(lavpartable$op == "|~" & pt_block == b &
+          (lavpartable$lhs == lhs | lavpartable$lhs == lhs_new))
         if (length(iv_idx)) {
           # override iv
           eq$iv <- lavpartable$rhs[iv_idx]
@@ -568,7 +582,7 @@ lav_model_find_iv_miivsem <- function(lavmodel = NULL, lavpta = NULL) {
     beta_orig[, colnames(tmp)] <- tmp
 
     # construct Phi
-    phi <- lav_matrix_bdiag(
+    phi <- lav_mat_bdiag(
       psi[lv_x_idx, lv_x_idx, drop = FALSE],
       theta,
       psi[-lv_x_idx, -lv_x_idx, drop = FALSE]
@@ -582,7 +596,7 @@ lav_model_find_iv_miivsem <- function(lavmodel = NULL, lavpta = NULL) {
 
     tmp <- crossprod(gamma)
     tmp[, ] <- 0
-    beta_1 <- lav_matrix_bdiag(beta, tmp)
+    beta_1 <- lav_mat_bdiag(beta, tmp)
     ii <- diag(nrow(beta_1))
     diag(tmp) <- 1
     gamma <- rbind(gamma, tmp)

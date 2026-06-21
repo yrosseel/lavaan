@@ -16,7 +16,8 @@ lavParameterEstimates(object,
                    remove.system.eq = TRUE, remove.eq = TRUE, 
                    remove.ineq = TRUE, remove.def = FALSE, 
                    remove.nonfree = FALSE, remove.step1 = TRUE,
-                   remove.unused = FALSE, add.attributes = FALSE, 
+                   remove.unused = FALSE,
+                   remove.aux = TRUE, add.attributes = FALSE, 
                    output = "data.frame", header = FALSE)
 parameterEstimates(object, 
                    se = TRUE, zstat = TRUE, pvalue = TRUE, ci = TRUE, 
@@ -28,13 +29,14 @@ parameterEstimates(object,
                    remove.system.eq = TRUE, remove.eq = TRUE, 
                    remove.ineq = TRUE, remove.def = FALSE, 
                    remove.nonfree = FALSE, remove.step1 = TRUE,
-                   remove.unused = FALSE, add.attributes = FALSE, 
+                   remove.unused = FALSE,
+                   remove.aux = TRUE, add.attributes = FALSE, 
                    output = "data.frame", header = FALSE)
 }
 \arguments{
 \item{object}{An object of class \code{\linkS4class{lavaan}}.}
 \item{se}{Logical. If \code{TRUE}, include column containing the standard
-errors. If \code{FALSE}, this implies \code{zstat} and \code{pvalue} and
+errors. If \code{FALSE}, this implies that \code{zstat}, \code{pvalue}, and
 \code{ci} are also \code{FALSE}.}
 \item{zstat}{Logical. If \code{TRUE}, an extra column is added containing
 the so-called z-statistic, which is simply the value of the estimate divided
@@ -93,8 +95,12 @@ that are part of the first step.}
 \item{remove.unused}{Logical. If \code{TRUE}, filter the output by removing
 all rows containing automatically added parameters (user == 0) that are 
 nonfree, and with their final (est) values fixed to their default values 
-(typically 1 or 0); currently only used for intercepts and 
+(typically 1 or 0); currently only used for intercepts and
 scaling-factors.}
+\item{remove.aux}{Logical. If \code{TRUE} (the default), filter the output by
+removing all rows corresponding to auxiliary (\code{aux=}) variables that were
+added to the model as saturated correlates (only relevant when
+\code{missing = "ml"} and the \code{aux=} argument was used).}
 \item{rsquare}{Logical. If \code{TRUE}, add additional rows containing
 the rsquare values (in the \code{est} column) of all endogenous variables
 in the model. Both the \code{lhs} and \code{rhs} column contain the
@@ -104,16 +110,16 @@ to indicate that the values in the \code{est} column are rsquare values.}
 \item{output}{Character. If \code{"data.frame"}, the parameter table is
 displayed as a standard (albeit lavaan-formatted) data.frame. 
 If \code{"text"} (or alias \code{"pretty"}), the parameter table is
-prettyfied, and displayed with subsections (as used by the summary function).}
+formatted and displayed with subsections (as used by the summary function).}
 \item{header}{Logical. Only used if \code{output = "text"}. If
 \code{TRUE}, print a header at the top of the parameter list. This header
-contains information about the information matrix, if saturated (h1) model
-is structured or unstructured, and which type of standard errors are shown
-in the output.}
+contains information about the information matrix, whether the saturated (h1)
+model is structured or unstructured, and which type of standard errors are
+shown in the output.}
 }
 \value{
   A data.frame containing the estimated parameters,
-  parameters, standard errors, and (by default) z-values , p-values, and
+  standard errors, and (by default) z-values, p-values, and
   the lower and upper values of the confidence intervals. If requested,
   extra columns are added with standardized versions of the parameter
   estimates.

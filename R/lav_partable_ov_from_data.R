@@ -1,10 +1,10 @@
-# handle ov.order = "data" by adding attribute "ovda" to FLAT
-lav_partable_ov_from_data <- function(flat = NULL, # nolint
+# handle ov_order = "data" by adding attribute "ovda" to FLAT
+lav_pt_ov_from_data <- function(flat = NULL,
                                       data = NULL,
                                       sample_cov = NULL,
-                                      slot_data = NULL) { # nolint
+                                      slot_data = NULL) {
   # current model-based ov.names
-  ov_names <- lav_partable_vnames(flat, type = "ov")
+  ov_names <- lav_pt_vnames(flat, type = "ov")
 
   # get data-based ov.names
   data_names <- NULL
@@ -47,7 +47,7 @@ lav_partable_ov_from_data <- function(flat = NULL, # nolint
 
   # check if the order is the same
   if (!identical(ov_names, ov_names_data)) {
-    attr(flat, "ovda") <- ov_names_data # nolint
+    attr(flat, "ovda") <- ov_names_data
   }
   flat
 }

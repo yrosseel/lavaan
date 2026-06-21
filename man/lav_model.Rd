@@ -8,19 +8,20 @@
 \usage{
 # set/get free parameters
 lav_model_set_parameters(lavmodel, x = NULL)
-lav_model_get_parameters(lavmodel, GLIST = NULL, type = "free",
-                         extra = TRUE)
+lav_model_get_parameters(lavmodel, glist = NULL, type = "free",
+                         extra = TRUE, ...)
 
 # compute model-implied statistics
-lav_model_implied(lavmodel, GLIST = NULL, delta = TRUE)
+lav_model_implied(lavmodel, glist = NULL, delta = TRUE, ...)
 
 # compute standard errors
-lav_model_vcov_se(lavmodel, lavpartable, VCOV = NULL, BOOT = NULL)
+lav_model_vcov_se(lavmodel, lavpartable, vcov = NULL, boot = NULL,
+                  mc = NULL, lavoptions = NULL, ...)
 }
 \arguments{
 \item{lavmodel}{An internal representation of a lavaan model.}
 \item{x}{Numeric. A vector containing the values of all the free model parameters.}
-\item{GLIST}{List. A list of model matrices, similar to the output of 
+\item{glist}{List. A list of model matrices, similar to the output of
 \code{lavInspect(object, "est")}.}
 \item{type}{Character string. If \code{"free"}, only return the free model
 parameters. If \code{"user"}, return all the parameters (free and fixed) as
@@ -33,8 +34,11 @@ use the (diagonal) values of the Delta matrix to rescale the covariance matrix.
 This is usually needed in the categorical setting to convert covariances to
 correlations.}
 \item{lavpartable}{A parameter table.}
-\item{VCOV}{Numeric matrix containing an estimate of the variance covariance matrix of the free model parameters.}
-\item{BOOT}{Numeric matrix containing the bootstrap based parameter estimates (in the columns) for each bootstrap sample (in the rows).}
+\item{vcov}{Numeric matrix containing an estimate of the variance covariance matrix of the free model parameters.}
+\item{boot}{Numeric matrix containing the bootstrap based parameter estimates (in the columns) for each bootstrap sample (in the rows).}
+\item{mc}{Numeric matrix containing the Monte-Carlo based parameter estimates (in the columns) for each Monte-Carlo sample (in the rows).}
+\item{lavoptions}{A named list. The Options slot from a lavaan object.}
+\item{...}{To accept old argument names with dots or capitals. No other arguments are accepted.}
 }
 \examples{
 HS.model <- ' visual  =~ x1 + x2 + x3

@@ -4,8 +4,10 @@
 # YR 23 Oct 2024: switch to "c.r"
 # LDW 9 Jan 2026: remove c.r option
 
-lavParseModelString <- function(model.syntax = "", as.data.frame. = FALSE,   # nolint
-                                parser = "new", warn = TRUE, debug = FALSE) {
+lavParseModelString <- function(model_syntax = "", as_data_frame = FALSE,   # nolint
+                                parser = "open", warn = TRUE, debug = FALSE, ...) {
+  dotdotdot <- list(...)
+  lav_adapt_func(environment(), dotdotdot, NULL)
   if (!missing(debug)) {
     current_debug <- lav_debug()
     if (lav_debug(debug))
@@ -17,25 +19,23 @@ lavParseModelString <- function(model.syntax = "", as.data.frame. = FALSE,   # n
       on.exit(lav_warn(current_warn), TRUE)
   }
   parser <- tolower(parser)
-  if (!parser %in% c("old", "new")) {
-    lav_msg_stop(gettext("parser= argument should
-     be \"old\" or \"new\""))
+  parser_choices <- c("old", "new", "open")
+  if (!parser %in% parser_choices) {
+    lav_msg_stop(gettextf("parser= argument should be %s",
+     lav_msg_view(parser_choices, "or")))
   }
 
-  if (parser == "old") {
-    # original/classic parser
-    out <- lav_parse_model_string_orig(
-      model_syntax = model.syntax,
-      as_data_frame = as.data.frame.
-    )
-  } else {
-    # new parser
-    out <- lav_parse_model_string(
-      model_syntax = model.syntax,
-      as_data_frame = as.data.frame.
-      )
-  }
-  out
+  switch(parser,
+  old = # original/classic parser
+    lav_parse_model_string_orig(model_syntax = model_syntax,
+       as_data_frame = as_data_frame),
+  new = # new parser
+    lav_parse_model_string(model_syntax = model_syntax,
+      as_data_frame = as_data_frame),
+  open = # open parser
+    lav_parse_model_string_open(model_syntax = model_syntax,
+      as_data_frame = as_data_frame)
+  )
 }
 
 # the 'original' parser (up to 0.6-17)
@@ -567,7 +567,7 @@ other (observed) variable in the model syntax. Problematic term is: "),
   }
 
   # new in 0.6, reorder covariances here!
-  flat <- lav_partable_covariance_reorder(flat)
+  flat <- lav_pt_covariance_reorder(flat)
 
   if (as_data_frame) {
     flat <- as.data.frame(flat, stringsAsFactors = FALSE)

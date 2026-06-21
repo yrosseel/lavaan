@@ -6,9 +6,9 @@
 
 \title{Class For Representing A List of (Fitted) Latent Variable Models}
 \description{The \code{lavaanList} class represents a collection of (fitted)
-  latent variable models, for a (potentially large) number of datasets. 
+  latent variable models, fitted to a (potentially large) number of datasets.
   It contains information about the model (which is always the same),
-  and for every dataset a set of (user-specified) slots from a regular
+  and, for every dataset, a set of (user-specified) slots from a regular
   lavaan object.}
 \section{Objects from the Class}{
 Objects can be created via the
@@ -17,7 +17,7 @@ Objects can be created via the
 }
 \section{Slots}{
   \describe{
-    \item{\code{version}:}{The lavaan package version used to create this objects}
+    \item{\code{version}:}{The lavaan package version used to create this object}
     \item{\code{call}:}{The function call as returned by \code{match.call()}.}
     \item{\code{Options}:}{Named list of options that were provided by
       the user, or filled-in automatically.}
@@ -54,22 +54,31 @@ about the data.}
       If \code{type="user"}, all parameters listed in the parameter table
       are returned, including constrained and fixed parameters.}
 	\item{summary}{\code{signature(object = "lavaanList", header = TRUE,
-         estimates = TRUE, nd = 3L, 
-         simulate.args = list(list(est.bias = TRUE, se.bias = TRUE, 
-         prop.sig = TRUE, trim = 0)))}: 
+         estimates = TRUE, print = TRUE, nd = 3L,
+         simulate.args = list(est.bias = TRUE, se.bias = TRUE,
+         se.bias.med = TRUE, prop.sig = TRUE, coverage = TRUE,
+         level = 0.95, trim = 0))}:
       Print a summary of the collection of fitted models.
       If \code{header = TRUE}, the header section is
       printed.
       If \code{estimates = TRUE}, print the parameter estimates section.
+      If \code{print = TRUE}, the summary is printed to the screen.
       The argument \code{nd} determines the number of digits after the
       decimal point to be printed (currently only in the parameter estimates
       section.)
       The argument \code{simulate.args} is only used if the meta slot
       indicates that the parameter tables are obtained in the context of
-      a simulattion. The options switch on/off the columns that are printed,
+      a simulation. The options switch on/off the columns that are printed,
       and the \code{trim} option determines the amount of trimming that is
-      used when taking the average (or standard deviation) across all 
+      used when taking the average (or standard deviation) across all
       replications.
+      If \code{se.bias.med = TRUE} (the default, only relevant when
+      \code{se.bias = TRUE}), two additional columns are printed: \code{se.med}
+      (the median, rather than the mean, of the computed standard errors across
+      replications) and \code{se.bias.med} (the ratio \code{se.med/se.obs}).
+      The median is a robust alternative to the mean-based \code{se.ave}/\code{se.bias},
+      which can be dominated by a few outliers for nonlinear defined parameters
+      (e.g. ratios with near-zero denominators in some replications).
     }
   }
 }
