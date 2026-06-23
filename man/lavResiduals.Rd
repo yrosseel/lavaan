@@ -10,7 +10,7 @@ The \sQuote{residuals()} (and \sQuote{resid()}) methods are just shortcuts to
 this function with a limited set of arguments.
 }
 \usage{
-lavResiduals(object, type = "cor.bentler", custom.rmr = NULL,
+lavResiduals(object, type = "cor.bentler",
     se = FALSE, zstat = TRUE, summary = TRUE, h1.acov = "unstructured",
     add.type = TRUE, add.labels = TRUE, add.class = TRUE,
     drop.list.single.group = TRUE,
@@ -28,7 +28,6 @@ implied covariance matrices are first transformed to a correlation matrix
 If \code{type = "cor.bentler"}, both the observed and model implied covariance
 matrices are rescaled by dividing the elements by the square roots of the
 corresponding variances of the observed covariance matrix.}
-\item{custom.rmr}{\code{list}. Not used yet.}
 \item{se}{Logical. If \code{TRUE}, show the estimated standard errors
 for the residuals.}
 \item{zstat}{Logical. If \code{TRUE}, show the standardized residuals, which
