@@ -35,10 +35,13 @@
 #                  summary statistics SEs (see lav_residuals_acov_obs())
 # - change 0.7-1: the (undocumented, never-functional) custom.rmr argument
 #                  has been removed
-# - change 0.7-1: raw (rmr) residual SEs/z-statistics/usrmr are now available
-#                  for the mixed (continuous + ordinal) case, as long as
-#                  conditional.x = FALSE; the standardized (cor.bentler/
-#                  cor.bollen) SEs for mixed data are still not ready
+# - change 0.7-1: residual SEs/z-statistics and the (u)rmr/(u)srmr/(u)crmr
+#                  summaries are now available for the mixed (continuous +
+#                  ordinal) case, as long as conditional.x = FALSE. The
+#                  cor.bentler/cor.bollen standardization uses a cov->cor
+#                  jacobian built for the categorical moment ordering (see
+#                  lav_residuals_cor_jacobian_cat()). conditional.x remains
+#                  unsupported.
 # - change 0.7-1: new h1= argument (lavResiduals) to supply a user-provided
 #                  saturated model (a fitted lavaan object, a lavh1 list, or a
 #                  moments list); it is swapped into object@h1 and used as the
@@ -330,14 +333,11 @@ lav_residuals <- function(object, type = "raw", h1 = TRUE,
 
   # change options if categorical (for now)
   if (lavmodel@categorical) {
-    # The standardized (cor.bentler/cor.bollen) SEs require a cov->cor
-    # jacobian in the mixed metric that is not ready yet, and conditional.x
-    # adds regression slopes to the moment vector (also not ready). The raw
-    # residual SEs, however, are metric-agnostic (Q-projection ACOV), so we
-    # support them for the unconditional mixed (continuous + ordinal) case.
-    mixed <- length(unlist(lavmodel@num.idx)) > 0L
-    raw_ok <- (type == "raw") && !lavmodel@conditional.x
-    if ((lavmodel@conditional.x || mixed) && !raw_ok) {
+    # conditional.x adds regression slopes to the moment vector, which the SE
+    # machinery does not handle yet; disable SEs/summary in that case. The
+    # unconditional case -- pure categorical as well as mixed (continuous +
+    # ordinal) -- is supported for raw, cor.bentler and cor.bollen.
+    if (lavmodel@conditional.x) {
       zstat <- se <- FALSE
       summary <- FALSE
       summary_options_1 <- lav_residuals_summary_options_off()
@@ -676,13 +676,18 @@ lav_residuals_acov <- function(object, type = "raw", z_type = "standardized",
       # correct ACOV.res for type = "cor.bentler" or type = "cor.bollen"
       if (type == "cor.bentler") {
         if (lavmodel@categorical) {
-          if (lavmodel@conditional.x ||
-            length(unlist(lavmodel@num.idx)) > 0L) {
+          if (lavmodel@conditional.x) {
             lav_msg_stop(gettext(
-      "SE for cor.bentler not available (yet) if categorical = TRUE, and
-      conditional.x = TRUE OR some endogenous variables are continuous"))
+              "SE for cor.bentler not available (yet) if categorical = TRUE
+               and conditional.x = TRUE"))
+          } else if (length(unlist(lavmodel@num.idx)) > 0L) {
+            # mixed continuous + ordinal: transform to correlation metric
+            jac <- lav_residuals_cor_jacobian_cat(
+              lavmodel, g, sampstat[[g]][["cov"]], "cor.bentler"
+            )
+            acov_res[[g]] <- jac %*% acov_res[[g]] %*% t(jac)
           } else {
-            # nothing to do, as we already are in correlation metric
+            # pure categorical: already in correlation metric, nothing to do
           }
         } else {
           # Ogasawara (2001), eq (13), or
@@ -707,13 +712,18 @@ lav_residuals_acov <- function(object, type = "raw", z_type = "standardized",
         } # continuous
       } else if (type == "cor.bollen") {
         if (lavmodel@categorical) {
-          if (lavmodel@conditional.x ||
-            length(unlist(lavmodel@num.idx)) > 0L) {
+          if (lavmodel@conditional.x) {
             lav_msg_stop(gettext(
-     "SE for cor.bentler not available (yet) if categorical = TRUE, and
-     conditional.x = TRUE OR some endogenous variables are continuous"))
+              "SE for cor.bollen not available (yet) if categorical = TRUE
+               and conditional.x = TRUE"))
+          } else if (length(unlist(lavmodel@num.idx)) > 0L) {
+            # mixed continuous + ordinal: transform to correlation metric
+            jac <- lav_residuals_cor_jacobian_cat(
+              lavmodel, g, sampstat[[g]][["cov"]], "cor.bollen"
+            )
+            acov_res[[g]] <- jac %*% acov_res[[g]] %*% t(jac)
           } else {
-            # nothing to do, as we already are in correlation metric
+            # pure categorical: already in correlation metric, nothing to do
           }
         } else {
           # here we use the Maydeu-Olivares (2017) approach, see eq 17
@@ -766,6 +776,59 @@ lav_residuals_cat_idx <- function(lavmodel, g = 1L, nvar = NULL) {
     num_idx = num_idx,
     nvar = nvar
   )
+}
+
+# Build the cov->cor standardization jacobian for the *categorical* moment
+# vector ordering [th-block, continuous variances, vech(cov, no diagonal)],
+# used to transform the raw-residual ACOV into the correlation metric for
+# mixed (continuous + ordinal) models. 'cov_1' is the observed (h1) covariance
+# matrix (ordinal variables have a unit diagonal, so 1/sqrt(diag) is 1 for them
+# and 1/SD for the continuous ones). 'type' is either "cor.bentler" (observed
+# SDs treated as fixed -> diagonal scaling) or "cor.bollen" (full cov2cor
+# jacobian). Returns J such that ACOV.cor = J %*% ACOV.raw %*% t(J).
+#
+# For a pure-categorical model (no continuous variables) this reduces to the
+# identity; we therefore only use it in the mixed case.
+lav_residuals_cor_jacobian_cat <- function(lavmodel, g, cov_1, type) {
+  idx <- lav_residuals_cat_idx(lavmodel, g, nvar = nrow(cov_1))
+  nvar <- idx$nvar
+  num_idx <- idx$num_idx
+  p <- length(idx$th) + length(idx$mean) + length(idx$var) + length(idx$cov)
+
+  ss <- 1 / sqrt(diag(cov_1)) # 1 for ordinal (unit diagonal), 1/SD otherwise
+
+  jac <- matrix(0, nrow = p, ncol = p)
+  # thresholds: unchanged (already in correlation metric)
+  if (length(idx$th) > 0L) {
+    jac[cbind(idx$th, idx$th)] <- 1
+  }
+  # continuous means: scaled by 1/SD (observed SD treated as fixed)
+  if (length(idx$mean) > 0L) {
+    jac[cbind(idx$mean, idx$mean)] <- ss[num_idx]
+  }
+
+  if (type == "cor.bentler") {
+    # diagonal scaling; observed SDs treated as fixed constants
+    if (length(idx$var) > 0L) {
+      jac[cbind(idx$var, idx$var)] <- ss[num_idx]^2
+    }
+    if (length(idx$cov) > 0L) {
+      jac[cbind(idx$cov, idx$cov)] <-
+        lav_mat_vech(tcrossprod(ss), diagonal = FALSE)
+    }
+  } else {
+    # cor.bollen: full cov2cor jacobian, restricted to the moments that are
+    # actually free (continuous variances + off-diagonal covariances); the
+    # ordinal variances are fixed at 1 and are dropped
+    f1 <- lav_deriv_cov2cor_b(cov_1)
+    diagh <- lav_mat_diagh_idx(nvar)
+    offdiag <- setdiff(seq_len(nvar * (nvar + 1) / 2), diagh)
+    full_idx <- c(diagh[num_idx], offdiag)
+    catcov <- c(idx$var, idx$cov) # variances first, then off-diagonals
+    jac[catcov, catcov] <- f1[full_idx, full_idx]
+  }
+
+  jac
 }
 
 # return resList with 'se' values for each residual
@@ -1000,12 +1063,10 @@ lav_residuals_summary <- function(object, type = c("rmr", "srmr", "crmr"),
 
     # categorical -- single level
     if (lavdata@nlevels == 1L && lavmodel@categorical) {
-      mixed <- length(unlist(lavmodel@num.idx)) > 0L
-      # raw (rmr) SEs are metric-agnostic and supported for the unconditional
-      # mixed (continuous + ordinal) case; the standardized srmr/crmr SEs and
-      # the conditional.x case need extra machinery and are not ready yet
-      if ((se || unbiased) &&
-        (conditional_x || (mixed && !all(type == "rmr")))) {
+      # rmr/srmr/crmr SEs are supported for the unconditional case (pure
+      # categorical as well as mixed continuous + ordinal); conditional.x adds
+      # regression slopes to the moment vector and is not ready yet
+      if ((se || unbiased) && conditional_x) {
         lav_msg_stop(gettext("not ready yet"))
       }
 
