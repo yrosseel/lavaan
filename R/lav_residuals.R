@@ -18,12 +18,11 @@
 #   often resulting in NAs due to negative var(resid) estimates
 #   (this was "standardized" in lavaan < 0.6.3
 
-# WARNING: only partial support for conditional.x = TRUE!!
-# - categorical conditional.x IS supported (the moment vector then includes a
-#   regression-slopes block; slopes are not rescaled in the cor metric)
-# - continuous conditional.x: SEs/summaries are still disabled
-# - twolevel not supported here; see lav_fit_srmr.R, where we convert to
-#   the unconditional setting
+# conditional.x = TRUE is supported (both categorical and continuous): the
+# moment vector then includes a regression-slopes block. Slopes are not
+# rescaled in the cor metric (they are not rescaled in the residual point
+# estimate either). Only the twolevel case is not supported here; see
+# lav_fit_srmr.R, where we convert to the unconditional setting.
 
 # - change 0.6-6: we enforce observed.information = "h1" to ensure 'Q' is a
 #                 projection matrix (see lav_residuals_acov)
@@ -38,8 +37,9 @@
 #                  has been removed
 # - change 0.7-1: residual SEs/z-statistics and the (u)rmr/(u)srmr/(u)crmr
 #                  summaries are now available for the categorical case,
-#                  including mixed (continuous + ordinal) and conditional.x
-#                  (with a regression-slopes block). The cor.bentler/cor.bollen
+#                  including mixed (continuous + ordinal), and for both
+#                  categorical and continuous conditional.x (with a
+#                  regression-slopes block). The cor.bentler/cor.bollen
 #                  standardization uses a cov->cor jacobian built for the
 #                  categorical moment ordering (see
 #                  lav_residuals_cor_jacobian_cat()). conditional.x remains
@@ -333,18 +333,10 @@ lav_residuals <- function(object, type = "raw", h1 = TRUE,
     summary <- FALSE
   }
 
-  # categorical residual SEs/summaries are supported for the unconditional
-  # case (pure categorical and mixed continuous + ordinal) as well as the
+  # residual SEs/summaries are supported for the unconditional case (pure
+  # categorical, continuous, and mixed continuous + ordinal) as well as the
   # conditional.x case (the moment vector then includes a regression-slopes
-  # block); nothing to disable here.
-
-  # change options if conditional.x (for now): only the *continuous*
-  # conditional.x case is still unsupported
-  if (!lavmodel@categorical && lavmodel@conditional.x) {
-    zstat <- se <- FALSE
-    summary <- FALSE
-    summary_options_1 <- lav_residuals_summary_options_off()
-  }
+  # block, both for categorical and continuous models); nothing to disable.
 
   # change options if estimator = "IV" (for now)
   if (lavmodel@estimator == "IV") {
@@ -700,7 +692,16 @@ lav_residuals_acov <- function(object, type = "raw", z_type = "standardized",
           ss <- 1 / sqrt(diag(cov_1))
           tmp <- lav_mat_vech(tcrossprod(ss))
           g_inv_sqrt <- diag(tmp, nrow = length(tmp))
-          if (lavmodel@meanstructure) {
+          if (lavmodel@conditional.x) {
+            # moment order [vecr(cbind(int, slopes)), vech(cov)]: intercepts
+            # are rescaled by 1/SD, regression slopes are left unchanged
+            d_intsl <- lav_residuals_condx_intsl_scale(
+              ss, lavmodel@nexo[g], lavmodel@meanstructure
+            )
+            gg <- lav_mat_bdiag(
+              diag(d_intsl, nrow = length(d_intsl)), g_inv_sqrt
+            )
+          } else if (lavmodel@meanstructure) {
             gg <- lav_mat_bdiag(
               diag(ss, nrow = length(ss)),
               g_inv_sqrt
@@ -738,7 +739,13 @@ lav_residuals_acov <- function(object, type = "raw", z_type = "standardized",
             sampstat[[g]][["cov"]]
           }
           f1 <- lav_deriv_cov2cor_b(cov_1)
-          if (lavmodel@meanstructure) {
+          if (lavmodel@conditional.x) {
+            ss <- 1 / sqrt(diag(cov_1))
+            d_intsl <- lav_residuals_condx_intsl_scale(
+              ss, lavmodel@nexo[g], lavmodel@meanstructure
+            )
+            ff <- lav_mat_bdiag(diag(d_intsl, nrow = length(d_intsl)), f1)
+          } else if (lavmodel@meanstructure) {
             ss <- 1 / sqrt(diag(cov_1))
             ff <- lav_mat_bdiag(diag(ss, nrow = length(ss)), f1)
           } else {
@@ -847,6 +854,21 @@ lav_residuals_cor_jacobian_cat <- function(lavmodel, g, cov_1, type,
   }
 
   jac
+}
+
+# scaling factors for the [vecr(cbind(intercepts, slopes))] block of the
+# *continuous* conditional.x moment vector: intercepts are rescaled by 1/SD
+# (ss), regression slopes are left unchanged (slopes are not rescaled in the
+# residual point estimate either). Returns the diagonal in vecr (row-major)
+# order. If meanstructure = FALSE the block contains only the slopes.
+lav_residuals_condx_intsl_scale <- function(ss, nexo, meanstructure) {
+  nvar <- length(ss)
+  b <- if (meanstructure) {
+    cbind(ss, matrix(1, nvar, nexo))
+  } else {
+    matrix(1, nvar, nexo)
+  }
+  as.vector(t(b))
 }
 
 # return resList with 'se' values for each residual
@@ -969,7 +991,56 @@ lav_residuals_se <- function(object, type = "raw", z_type = "standardized",
       # continuous -- single level
     } else if (lavdata@nlevels == 1L) {
       if (lavmodel@conditional.x) {
-        lav_msg_stop(gettext("not ready yet"))
+        # moment order: [vecr(cbind(res.int, res.slopes)), vech(res.cov)]
+        # (intercepts only if meanstructure); res.slopes is nvar.endo x nexo
+        nexo <- lavmodel@nexo[g]
+        nvar_endo <- length(lavpta$vnames$ov.nox[[g]])
+        ncol_b <- if (lavmodel@meanstructure) 1L + nexo else nexo
+        n_intsl <- nvar_endo * ncol_b
+        # row-major (vecr) reshape of the intercept/slopes block
+        b_se <- matrix(sqrt(diag_acov[seq_len(n_intsl)]),
+          nrow = nvar_endo, ncol = ncol_b, byrow = TRUE
+        )
+        cov_se <- lav_mat_vech_rev(sqrt(diag_acov[-seq_len(n_intsl)]),
+          diagonal = TRUE
+        )
+        covx_se <- matrix(as.numeric(NA), nexo, nexo)
+        meanx_se <- rep(as.numeric(NA), nexo)
+        if (lavmodel@meanstructure) {
+          int_se <- b_se[, 1]
+          slopes_se <- b_se[, -1, drop = FALSE]
+        } else {
+          int_se <- NULL
+          slopes_se <- b_se
+        }
+        if (add_class) {
+          class(cov_se) <- c("lavaan.matrix.symmetric", "matrix")
+          class(covx_se) <- c("lavaan.matrix.symmetric", "matrix")
+          class(slopes_se) <- c("lavaan.matrix", "matrix")
+          class(meanx_se) <- c("lavaan.vector", "numeric")
+          if (!is.null(int_se)) class(int_se) <- c("lavaan.vector", "numeric")
+        }
+        if (add_labels) {
+          rownames(cov_se) <- colnames(cov_se) <- lavpta$vnames$ov.nox[[g]]
+          rownames(slopes_se) <- lavpta$vnames$ov.nox[[g]]
+          colnames(slopes_se) <- lavpta$vnames$ov.x[[g]]
+          rownames(covx_se) <- colnames(covx_se) <- lavpta$vnames$ov.x[[g]]
+          names(meanx_se) <- lavpta$vnames$ov.x[[g]]
+          if (!is.null(int_se)) names(int_se) <- lavpta$vnames$ov.nox[[g]]
+        }
+        # order must match lav_inspect_sampstat(): res.cov, res.int (if
+        # meanstructure), res.slopes, cov.x, mean.x
+        if (lavmodel@meanstructure) {
+          se_list[[g]] <- list(
+            res.cov.se = cov_se, res.int.se = int_se,
+            res.slopes.se = slopes_se, cov.x.se = covx_se, mean.x.se = meanx_se
+          )
+        } else {
+          se_list[[g]] <- list(
+            res.cov.se = cov_se, res.slopes.se = slopes_se,
+            cov.x.se = covx_se, mean.x.se = meanx_se
+          )
+        }
       } else {
         if (lavmodel@meanstructure) {
           tmp <- sqrt(diag_acov[-(1:nvar)])
@@ -1200,13 +1271,39 @@ lav_residuals_summary <- function(object, type = c("rmr", "srmr", "crmr"),
 
       # continuous -- single level
     } else if (lavdata@nlevels == 1L) {
-      if ((se || unbiased) && conditional_x) {
-        lav_msg_stop(gettext("not ready yet"))
-      }
-
-      # ACOV order: [means(nvar), covariances(vech, with diagonal)]
       cov_nm <- if (conditional_x) "res.cov" else "cov"
       mean_nm <- if (conditional_x) "res.int" else "mean"
+      # endogenous variables only (the cov/mean summaries are over the
+      # endogenous ov; the conditional.x slopes block does not enter them)
+      nvar_endo <- if (conditional_x) {
+        length(object@pta$vnames$ov.nox[[g]])
+      } else {
+        nvar
+      }
+
+      # ACOV positions of the mean/intercept block and the covariance block.
+      # Non-conditional.x order: [means(nvar), vech(cov)]. Conditional.x order:
+      # [vecr(cbind(int, slopes)), vech(cov)], so the intercepts are row-major
+      # interleaved with the slopes (which are skipped here).
+      if (conditional_x) {
+        nexo <- lavmodel@nexo[g]
+        ncol_b <- if (lavmodel@meanstructure) 1L + nexo else nexo
+        n_intsl <- nvar_endo * ncol_b
+        mean_acov_idx <- if (lavmodel@meanstructure) {
+          seq.int(1L, by = ncol_b, length.out = nvar_endo)
+        } else {
+          integer(0)
+        }
+        cov_acov_idx <- n_intsl + seq_len(nvar_endo * (nvar_endo + 1) / 2)
+      } else {
+        mean_acov_idx <- if (lavmodel@meanstructure) {
+          seq_len(nvar_endo)
+        } else {
+          integer(0)
+        }
+        cov_acov_idx <- length(mean_acov_idx) +
+          seq_len(nvar_endo * (nvar_endo + 1) / 2)
+      }
 
       for (typ in seq_along(type)) {
         ty <- type[typ]
@@ -1219,40 +1316,44 @@ lav_residuals_summary <- function(object, type = c("rmr", "srmr", "crmr"),
         pstar <- length(stats)
         if (ty == "crmr") {
           # CRMR excludes the (co)variance diagonal
-          pstar <- pstar -
-            if (conditional_x) nrow(rms_list_g[[cov_nm]]) else nvar
+          pstar <- pstar - nvar_endo
         }
-        acov <- NULL
-        if (se || unbiased) {
-          acov <- if (lavmodel@meanstructure) {
-            rms_list_se_g[-seq_len(nvar), -seq_len(nvar), drop = FALSE]
-          } else {
-            rms_list_se_g
-          }
+        acov <- if (se || unbiased) {
+          rms_list_se_g[cov_acov_idx, cov_acov_idx, drop = FALSE]
+        } else {
+          NULL
         }
         rms_cov <- do_rms(stats, acov, pstar, ty)
 
         if (lavmodel@meanstructure) {
-          # MEAN
+          # MEAN / INTERCEPT
           stats <- rms_list_g[[mean_nm]]
           pstar <- length(stats)
           acov <- if (se || unbiased) {
-            rms_list_se_g[seq_len(nvar), seq_len(nvar), drop = FALSE]
+            rms_list_se_g[mean_acov_idx, mean_acov_idx, drop = FALSE]
           } else {
             NULL
           }
           rms_mean <- do_rms(stats, acov, pstar, ty)
 
-          # TOTAL
+          # TOTAL (means/intercepts + covariances; slopes excluded)
           stats <- c(
             rms_list_g[[mean_nm]],
             lav_mat_vech(rms_list_g[[cov_nm]])
           )
           pstar <- length(stats)
           if (ty == "crmr") {
-            pstar <- pstar - nvar
+            pstar <- pstar - nvar_endo
           }
-          acov <- if (se || unbiased) rms_list_se_g else NULL
+          acov <- if (se || unbiased) {
+            rms_list_se_g[
+              c(mean_acov_idx, cov_acov_idx),
+              c(mean_acov_idx, cov_acov_idx),
+              drop = FALSE
+            ]
+          } else {
+            NULL
+          }
           rms_total <- do_rms(stats, acov, pstar, ty)
 
           table_1 <- as.data.frame(cbind(rms_cov, rms_mean, rms_total))
