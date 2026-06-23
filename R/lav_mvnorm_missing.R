@@ -137,13 +137,47 @@ lav_mvn_mi_loglik_samp <- function(yp = NULL,
 
   # x.idx
   if (length(x_idx) > 0L) {
-    stopifnot(!is.null(x_cov))
-    # Note: x.cov should be identical to Sigma[x.idx, x.idx]
-    #       so we don't really need x.cov
-    n <- sum(sapply(yp, "[[", "freq"))
-    loglik_x <- lav_mvn_h1_loglik_samp(
-      sample_cov = x_cov,
-      sample_nobs = n
+    # conditional loglikelihood (fixed.x = TRUE): subtract the marginal
+    # loglikelihood of the x (exogenous) variables. This marginal must be
+    # computed using FIML over the missing-data patterns of the x variables
+    # themselves; using the complete-data formula (as we did before) is wrong
+    # whenever the x variables contain missing values (eg missing = "fiml.x"),
+    # as it ignores their missingness (see GitHub issue #226).
+    # Note: mu[x_idx]/Sigma[x_idx, x_idx] equal the (model-implied) moments of
+    # the x variables, so we do not need x_mean/x_cov.
+    xp <- vector("list", length = length(yp))
+    for (p in seq_len(length(yp))) {
+      var_idx_full <- yp[[p]]$var.idx
+      # which x variables are observed in this pattern?
+      x_obs <- var_idx_full[x_idx]
+      # skip patterns where no x variable is observed (no contribution)
+      if (!any(x_obs)) {
+        next
+      }
+      # positions of the observed x variables within the observed block
+      obs_full <- which(var_idx_full)
+      pos_in_obs <- match(x_idx[x_obs], obs_full)
+      if (yp[[p]]$freq > 1L) {
+        sy_x <- yp[[p]]$SY[pos_in_obs, pos_in_obs, drop = FALSE]
+      } else {
+        sy_x <- 0
+      }
+      xp[[p]] <- list(
+        SY = sy_x, MY = yp[[p]]$MY[pos_in_obs],
+        var.idx = x_obs, freq = yp[[p]]$freq
+      )
+    }
+    # drop the (skipped) empty patterns
+    xp <- xp[!vapply(xp, is.null, logical(1L))]
+
+    loglik_x <- lav_mvn_mi_loglik_samp(
+      yp = xp,
+      mu = mu[x_idx],
+      sigma_1 = sigma_1[x_idx, x_idx, drop = FALSE],
+      x_idx = integer(0L),
+      sinv_method = sinv_method,
+      log2pi = log2pi,
+      minus_two = minus_two
     )
 
     loglik <- loglik - loglik_x
