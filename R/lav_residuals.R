@@ -968,20 +968,21 @@ lav_residuals_summary <- function(object, type = c("rmr", "srmr", "crmr"),
         rms_th <- do_rms(stats, acov, pstar, ty)
 
         # TOTAL
+        # 'stats' and 'acov' must use the same ordering, otherwise the
+        # unbiased e_ve = t(stats) %*% acov %*% stats quadratic form is wrong.
+        # We use the canonical lavaan WLS ordering [thresholds, covariances]
+        # (matching lav_samp_wls_obs() and hence the ACOV); for pure
+        # categorical models this leaves the ACOV in its original order.
         stats <- c(
-          lav_mat_vech(rms_list_g[[cov_nm]], diagonal = FALSE),
-          rms_list_g[[th_nm]]
+          rms_list_g[[th_nm]],
+          lav_mat_vech(rms_list_g[[cov_nm]], diagonal = FALSE)
         )
         pstar <- if (ty == "crmr") length(stats) else length(stats) + nvar
         acov <- NULL
         if (se || unbiased) {
-          # match the [cor, thresholds] ordering of 'stats' in the mixed case;
-          # pure-categorical keeps the historical full-matrix ordering
-          acov <- if (mixed) {
-            rms_list_se_g[c(idx$cov, idx$th), c(idx$cov, idx$th), drop = FALSE]
-          } else {
-            rms_list_se_g
-          }
+          acov <- rms_list_se_g[c(idx$th, idx$cov), c(idx$th, idx$cov),
+            drop = FALSE
+          ]
         }
         rms_total <- do_rms(stats, acov, pstar, ty)
 
