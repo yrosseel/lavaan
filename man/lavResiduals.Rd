@@ -10,7 +10,7 @@ The \sQuote{residuals()} (and \sQuote{resid()}) methods are just shortcuts to
 this function with a limited set of arguments.
 }
 \usage{
-lavResiduals(object, type = "cor.bentler",
+lavResiduals(object, type = "cor.bentler", h1 = NULL,
     se = FALSE, zstat = TRUE, summary = TRUE, h1.acov = "unstructured",
     add.type = TRUE, add.labels = TRUE, add.class = TRUE,
     drop.list.single.group = TRUE,
@@ -28,6 +28,14 @@ implied covariance matrices are first transformed to a correlation matrix
 If \code{type = "cor.bentler"}, both the observed and model implied covariance
 matrices are rescaled by dividing the elements by the square roots of the
 corresponding variances of the observed covariance matrix.}
+\item{h1}{Optional. A user-provided saturated (unrestricted) model supplying
+the observed summary statistics against which the model-implied statistics are
+compared. It can be a fitted \code{\linkS4class{lavaan}} object (its \code{h1}
+slot is used), a \code{lavh1} list (a list with an \code{implied} element), or
+an implied-moments list (a list with a \code{cov} or \code{res.cov} element,
+per block). It must be compatible with \code{object} (same number of blocks
+and same dimensions). If \code{NULL} (the default), the saturated statistics of
+\code{object} itself are used.}
 \item{se}{Logical. If \code{TRUE}, show the estimated standard errors
 for the residuals.}
 \item{zstat}{Logical. If \code{TRUE}, show the standardized residuals, which

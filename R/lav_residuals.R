@@ -39,6 +39,10 @@
 #                  for the mixed (continuous + ordinal) case, as long as
 #                  conditional.x = FALSE; the standardized (cor.bentler/
 #                  cor.bollen) SEs for mixed data are still not ready
+# - change 0.7-1: new h1= argument (lavResiduals) to supply a user-provided
+#                  saturated model (a fitted lavaan object, a lavh1 list, or a
+#                  moments list); it is swapped into object@h1 and used as the
+#                  observed summary statistics (see lav_residuals_resolve_h1())
 
 setMethod(
   "residuals", "lavaan",
@@ -92,7 +96,7 @@ setMethod(
 
 
 # user-visible function
-lavResiduals <- function(object, type = "cor.bentler",                    # nolint start
+lavResiduals <- function(object, type = "cor.bentler", h1 = NULL,         # nolint start
                          se = FALSE, zstat = TRUE, summary = TRUE,
                          h1.acov = "unstructured",
                          add.type = TRUE, add.labels = TRUE, add.class = TRUE,
@@ -100,7 +104,7 @@ lavResiduals <- function(object, type = "cor.bentler",                    # noli
                          maximum.number = length(res_vech),
                          output = "list") {                                # nolint end
   out <- lav_residuals(
-    object = object, type = type, h1 = TRUE,
+    object = object, type = type, h1 = h1,
     se = se, zstat = zstat,
     summary = summary,
     summary_options = list(
@@ -184,6 +188,67 @@ lav_residuals_summary_options_off <- function() {
   )
 }
 
+# resolve a user-provided h1= argument to a 'lavh1' list (list with an
+# $implied element), so it can be swapped into object@h1 and used as the
+# observed (saturated) sample statistics. Accepts:
+#  - a fitted lavaan object       -> its @h1 slot
+#  - a lavh1 list (has $implied)  -> as-is
+#  - an implied-moments list      -> wrapped as list(implied = .)
+# Returns NULL when no user override is requested (h1 is NULL or logical).
+lav_residuals_resolve_h1 <- function(object, h1 = NULL) {
+  if (is.null(h1) || is.logical(h1)) {
+    return(NULL)
+  }
+
+  if (inherits(h1, "lavaan")) {
+    lavh1 <- h1@h1
+    if (length(lavh1) == 0L || is.null(lavh1$implied)) {
+      lav_msg_stop(gettext(
+        "the h1= lavaan object has no (non-empty) h1 slot; refit it with the
+         default option h1 = TRUE"))
+    }
+  } else if (is.list(h1)) {
+    if (!is.null(h1$implied)) {
+      lavh1 <- h1 # already a lavh1 list
+    } else if (!is.null(h1$cov) || !is.null(h1$res.cov)) {
+      lavh1 <- list(implied = h1) # an 'implied' moments list
+    } else {
+      lav_msg_stop(gettext(
+        "the h1= list must be a lavh1 list (with an 'implied' element) or an
+         implied-moments list (with a 'cov' or 'res.cov' element)"))
+    }
+  } else {
+    lav_msg_stop(gettext(
+      "h1= must be a fitted lavaan object, a lavh1 list, or a moments list"))
+  }
+
+  # check that the saturated moments are compatible with the fitted object
+  cov_nm <- if (object@Model@conditional.x) "res.cov" else "cov"
+  usr_cov <- lavh1$implied[[cov_nm]]
+  if (is.null(usr_cov) || !is.list(usr_cov)) {
+    lav_msg_stop(gettextf(
+      "the h1= implied moments must contain a (per-block) list element %s",
+      dQuote(cov_nm)))
+  }
+  ref_cov <- object@h1$implied[[cov_nm]]
+  if (!is.null(ref_cov)) {
+    if (length(usr_cov) != length(ref_cov)) {
+      lav_msg_stop(gettext(
+        "the h1= saturated model has a different number of blocks/groups than
+         the fitted object"))
+    }
+    for (b in seq_along(ref_cov)) {
+      if (!all(dim(as.matrix(usr_cov[[b]])) == dim(as.matrix(ref_cov[[b]])))) {
+        lav_msg_stop(gettextf(
+          "the h1= saturated model and the fitted object have incompatible
+           dimensions in block %d", b))
+      }
+    }
+  }
+
+  lavh1
+}
+
 # main function
 lav_residuals <- function(object, type = "raw", h1 = TRUE,
                           se = FALSE, zstat = FALSE, summary = FALSE,
@@ -200,6 +265,22 @@ lav_residuals <- function(object, type = "raw", h1 = TRUE,
                           drop_list_single_group = FALSE) {
   # check object
   object <- lav_object_check_version(object)
+
+  # user-provided saturated model (h1=)? if so, swap it into object@h1 so the
+  # observed (saturated) sample statistics -- and their ACOV -- are taken from
+  # it; the model-implied moments still come from 'object'
+  if (is.null(h1)) {
+    h1 <- TRUE
+  } else if (is.logical(h1)) {
+    # logical TRUE/FALSE: use object's own saturated model (keep as-is)
+  } else if (inherits(h1, "lavaan") || is.list(h1)) {
+    object@h1 <- lav_residuals_resolve_h1(object, h1)
+    h1 <- TRUE
+  } else {
+    lav_msg_stop(gettext(
+      "h1= must be NULL, logical, a fitted lavaan object, a lavh1 list, or a
+       moments list"))
+  }
 
   # working version summary options
   summary_options_1 <- summary_options
