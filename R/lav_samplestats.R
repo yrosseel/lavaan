@@ -1365,6 +1365,10 @@ lav_samp_from_moments <- function(sample_cov = NULL,
   # mimic <- lavoptions$mimic
   meanstructure <- lavoptions$meanstructure
   correlation <- lavoptions$correlation
+  correlation_ov <- lavoptions$.correlation.ov
+  if (is.null(correlation_ov)) {
+    correlation_ov <- character(0L)
+  }
   group_w_free <- lavoptions$group.w.free
   ridge <- lavoptions$ridge
   rescale <- lavoptions$sample.cov.rescale

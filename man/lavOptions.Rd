@@ -678,10 +678,12 @@ Miscellaneous:
       how starting values are computed, and may be used to alter the terminology
       used in the summary output, or the layout of path diagrams that are
       based on a fitted lavaan object.}
-    \item{\code{mimic}:}{If \code{"Mplus"}, an attempt is made to mimic the 
-      Mplus program. If \code{"EQS"}, an attempt is made to mimic the EQS 
+    \item{\code{mimic}:}{If \code{"Mplus"}, an attempt is made to mimic the
+      Mplus program. If \code{"EQS"}, an attempt is made to mimic the EQS
       program. If \code{"default"}, the value is (currently) set to
-      \code{"lavaan"}, which is very close to \code{"Mplus"}.}
+      \code{"lavaan"}, which is very close to \code{"Mplus"}. See
+      \code{\link{mimic}} for the list of options that are affected by each
+      setting.}
     \item{\code{representation}:}{If \code{"LISREL"} the classical LISREL 
       matrix representation is used to represent the model (using the all-y 
       variant). No other options are available (for now).}
@@ -707,7 +709,7 @@ Miscellaneous:
 }
 
 \seealso{
-\code{\link{lavaan}}, \code{\link{estimator_iv}}
+\code{\link{lavaan}}, \code{\link{mimic}}, \code{\link{estimator_iv}}
 }
 
 \examples{
