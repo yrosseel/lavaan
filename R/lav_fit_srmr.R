@@ -220,9 +220,13 @@ lav_fit_srmr_lavobject <- function(lavobject = NULL, fit_measures = "rmsea") {
     # RMR/SRMR/CRMR: we get it from lav_residuals_summary()
     out <- lav_residuals_summary(lavobject, se = FALSE, unbiased = FALSE)
 
+    # name of the covariance-residual column in the summary tables
     cov_cor <- "cov"
     if (categorical) {
       cov_cor <- "cor"
+    } else if (lavobject@Model@conditional.x) {
+      # continuous conditional.x summary uses res.cov / res.int / res.slopes
+      cov_cor <- "res.cov"
     }
 
     # only cov
