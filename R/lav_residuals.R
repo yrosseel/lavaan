@@ -21,8 +21,13 @@
 # conditional.x = TRUE is supported (both categorical and continuous): the
 # moment vector then includes a regression-slopes block. Slopes are not
 # rescaled in the cor metric (they are not rescaled in the residual point
-# estimate either). Only the twolevel case is not supported here; see
-# lav_fit_srmr.R, where we convert to the unconditional setting.
+# estimate either).
+#
+# Multilevel (twolevel): per-element raw/standardized/normalized residual SEs
+# are supported for a single group; the within-level means are fixed at zero
+# (degenerate moments) and get a zero SE. The cor.bentler/cor.bollen
+# standardization, the summary statistics, and multigroup + multilevel are
+# not ready yet.
 
 # - change 0.6-6: we enforce observed.information = "h1" to ensure 'Q' is a
 #                 projection matrix (see lav_residuals_acov)
@@ -42,8 +47,12 @@
 #                  regression-slopes block). The cor.bentler/cor.bollen
 #                  standardization uses a cov->cor jacobian built for the
 #                  categorical moment ordering (see
-#                  lav_residuals_cor_jacobian_cat()). conditional.x remains
-#                  unsupported.
+#                  lav_residuals_cor_jacobian_cat()).
+# - change 0.7-1: per-element raw/standardized/normalized residual SEs are now
+#                  available for (single-group) multilevel models; the within-
+#                  level means are degenerate (fixed at zero) and lav_model_h1
+#                  _acov() now drops such zero-information moments before
+#                  inverting (reinserting zeros) instead of returning NaN.
 # - change 0.7-1: new h1= argument (lavResiduals) to supply a user-provided
 #                  saturated model (a fitted lavaan object, a lavh1 list, or a
 #                  moments list); it is swapped into object@h1 and used as the
@@ -329,8 +338,14 @@ lav_residuals <- function(object, type = "raw", h1 = TRUE,
 
   # change options if multilevel (for now)
   if (lavdata@nlevels > 1L) {
-    zstat <- se <- FALSE
+    # per-element raw/standardized/normalized residual SEs are supported (for
+    # a single group); the cor.bentler/cor.bollen standardization and the
+    # summary statistics are not ready yet for the multilevel case
     summary <- FALSE
+    if (type %in% c("cor.bentler", "cor.bollen") || lavdata@ngroups > 1L) {
+      zstat <- se <- FALSE
+      summary_options_1 <- lav_residuals_summary_options_off()
+    }
   }
 
   # residual SEs/summaries are supported for the unconditional case (pure
@@ -881,8 +896,9 @@ lav_residuals_se <- function(object, type = "raw", z_type = "standardized",
   lavmodel <- object@Model
   lavpta <- object@pta
 
-  # return list per group
-  se_list <- vector("list", length = lavdata@ngroups)
+  # return list per block (= per group for single-level data; for multilevel
+  # data there is one block per level within each group)
+  se_list <- vector("list", length = lavmodel@nblocks)
 
   # get ACOV per group (reuse acov_obs if provided)
   acov_res <- lav_residuals_acov(
@@ -1069,7 +1085,32 @@ lav_residuals_se <- function(object, type = "raw", z_type = "standardized",
 
       # continuous -- multilevel
     } else if (lavdata@nlevels > 1L) {
-      lav_msg_stop(gettext("not ready yet"))
+      if (lavdata@ngroups > 1L) {
+        # multigroup + multilevel: not ready yet
+        lav_msg_stop(gettext("not ready yet"))
+      }
+      # the moment vector stacks the level-specific blocks, each ordered
+      # [mean, vech(cov)]; the within-level means are fixed at zero and thus
+      # have a zero standard error
+      offset <- 0L
+      for (b in seq_len(lavmodel@nblocks)) {
+        nvb <- object@pta$nvar[[b]]
+        pstar_b <- nvb * (nvb + 1) / 2
+        mean_se <- sqrt(diag_acov[offset + seq_len(nvb)])
+        cov_se <- lav_mat_vech_rev(
+          sqrt(diag_acov[offset + nvb + seq_len(pstar_b)])
+        )
+        offset <- offset + nvb + pstar_b
+        if (add_class) {
+          class(cov_se) <- c("lavaan.matrix.symmetric", "matrix")
+          class(mean_se) <- c("lavaan.vector", "numeric")
+        }
+        if (add_labels) {
+          rownames(cov_se) <- colnames(cov_se) <- ov_names[[b]]
+          names(mean_se) <- ov_names[[b]]
+        }
+        se_list[[b]] <- list(cov.se = cov_se, mean.se = mean_se)
+      }
     }
   } # g
 

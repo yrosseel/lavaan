@@ -995,10 +995,32 @@ lav_model_h1_acov <- function(lavobject = NULL,
     }
 
     # invert information
-    i1_g_inv <- try(lav_mat_sym_inverse(i1[[g]]), silent = TRUE)
-    if (inherits(i1_g_inv, "try-error")) {
-      lav_msg_stop(gettext(
-        "could not invert h1 information matrix in group"), g)
+    #
+    # some h1 sample statistics can be fixed/degenerate, with zero information
+    # (e.g. the within-level means in a multilevel model, which are fixed at
+    # zero). Those rows/columns make the full information matrix singular, so
+    # we drop them before inverting and reinsert zeros afterwards (a zero
+    # asymptotic variance for fixed statistics). For single-level models there
+    # are no such columns and this reduces to the plain inverse.
+    diag_i1 <- diag(i1[[g]])
+    keep <- which(abs(diag_i1) > sqrt(.Machine$double.eps) * max(abs(diag_i1)))
+    if (length(keep) < nrow(i1[[g]])) {
+      i1_g_inv <- matrix(0, nrow(i1[[g]]), ncol(i1[[g]]))
+      inv_keep <- try(
+        lav_mat_sym_inverse(i1[[g]][keep, keep, drop = FALSE]),
+        silent = TRUE
+      )
+      if (inherits(inv_keep, "try-error")) {
+        lav_msg_stop(gettext(
+          "could not invert h1 information matrix in group"), g)
+      }
+      i1_g_inv[keep, keep] <- inv_keep
+    } else {
+      i1_g_inv <- try(lav_mat_sym_inverse(i1[[g]]), silent = TRUE)
+      if (inherits(i1_g_inv, "try-error")) {
+        lav_msg_stop(gettext(
+          "could not invert h1 information matrix in group"), g)
+      }
     }
 
     # which type of se?
