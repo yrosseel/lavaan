@@ -23,11 +23,12 @@
 # rescaled in the cor metric (they are not rescaled in the residual point
 # estimate either).
 #
-# Multilevel (twolevel): per-element raw/standardized/normalized residual SEs
-# are supported for a single group; the within-level means are fixed at zero
-# (degenerate moments) and get a zero SE. The cor.bentler/cor.bollen
-# standardization, the summary statistics, and multigroup + multilevel are
-# not ready yet.
+# Multilevel (twolevel): residual SEs/z-statistics and the (u)rmr/(u)srmr/
+# (u)crmr summaries are supported for a single group (raw, cor.bentler and
+# cor.bollen). The moment vector stacks the level-specific blocks, each ordered
+# [mean, vech(cov)]; the within-level means are fixed at zero (degenerate
+# moments) and get a zero SE, and the cor standardization is a block-diagonal
+# jacobian over the levels. Only multigroup + multilevel is not ready yet.
 
 # - change 0.6-6: we enforce observed.information = "h1" to ensure 'Q' is a
 #                 projection matrix (see lav_residuals_acov)
@@ -48,11 +49,13 @@
 #                  standardization uses a cov->cor jacobian built for the
 #                  categorical moment ordering (see
 #                  lav_residuals_cor_jacobian_cat()).
-# - change 0.7-1: per-element raw/standardized/normalized residual SEs are now
-#                  available for (single-group) multilevel models; the within-
-#                  level means are degenerate (fixed at zero) and lav_model_h1
-#                  _acov() now drops such zero-information moments before
-#                  inverting (reinserting zeros) instead of returning NaN.
+# - change 0.7-1: residual SEs and the (u)rmr/(u)srmr/(u)crmr summaries are now
+#                  available for (single-group) multilevel models, with per-
+#                  block (within/between) summaries; the within-level means are
+#                  degenerate (fixed at zero) and lav_model_h1_acov() now drops
+#                  such zero-information moments before inverting (reinserting
+#                  zeros) instead of returning NaN; the cor standardization is a
+#                  block-diagonal jacobian (lav_residuals_cor_jacobian_ml()).
 # - change 0.7-1: new h1= argument (lavResiduals) to supply a user-provided
 #                  saturated model (a fitted lavaan object, a lavh1 list, or a
 #                  moments list); it is swapped into object@h1 and used as the
@@ -338,12 +341,11 @@ lav_residuals <- function(object, type = "raw", h1 = TRUE,
 
   # change options if multilevel (for now)
   if (lavdata@nlevels > 1L) {
-    # per-element raw/standardized/normalized residual SEs are supported (for
-    # a single group); the cor.bentler/cor.bollen standardization and the
-    # summary statistics are not ready yet for the multilevel case
-    summary <- FALSE
-    if (type %in% c("cor.bentler", "cor.bollen") || lavdata@ngroups > 1L) {
+    # per-element residual SEs are supported for a single group (all types);
+    # multigroup + multilevel is not ready yet
+    if (lavdata@ngroups > 1L) {
       zstat <- se <- FALSE
+      summary <- FALSE
       summary_options_1 <- lav_residuals_summary_options_off()
     }
   }
@@ -696,6 +698,10 @@ lav_residuals_acov <- function(object, type = "raw", z_type = "standardized",
           } else {
             # pure categorical: already in correlation metric, nothing to do
           }
+        } else if (lavdata@nlevels > 1L) {
+          # multilevel: block-diagonal jacobian over the level-specific blocks
+          jac <- lav_residuals_cor_jacobian_ml(object, sampstat, "cor.bentler")
+          acov_res[[g]] <- jac %*% acov_res[[g]] %*% t(jac)
         } else {
           # Ogasawara (2001), eq (13), or
           # Maydeu-Olivares (2017), eq (16)
@@ -746,6 +752,10 @@ lav_residuals_acov <- function(object, type = "raw", z_type = "standardized",
           } else {
             # pure categorical: already in correlation metric, nothing to do
           }
+        } else if (lavdata@nlevels > 1L) {
+          # multilevel: block-diagonal jacobian over the level-specific blocks
+          jac <- lav_residuals_cor_jacobian_ml(object, sampstat, "cor.bollen")
+          acov_res[[g]] <- jac %*% acov_res[[g]] %*% t(jac)
         } else {
           # here we use the Maydeu-Olivares (2017) approach, see eq 17
           cov_1 <- if (lavmodel@conditional.x) {
@@ -884,6 +894,29 @@ lav_residuals_condx_intsl_scale <- function(ss, nexo, meanstructure) {
     matrix(1, nvar, nexo)
   }
   as.vector(t(b))
+}
+
+# block-diagonal cov->cor standardization jacobian for a multilevel model.
+# The moment vector stacks the level-specific blocks, each ordered
+# [mean, vech(cov)] and independent of the others, so the jacobian is the
+# direct sum of the per-block continuous jacobians (means rescaled by 1/SD;
+# covariances by diagonal scaling for cor.bentler, by lav_deriv_cov2cor_b for
+# cor.bollen). 'sampstat' is the per-block lavTech(object, "sampstat").
+lav_residuals_cor_jacobian_ml <- function(object, sampstat, type) {
+  nblocks <- object@Model@nblocks
+  block_jac <- vector("list", nblocks)
+  for (b in seq_len(nblocks)) {
+    cov_b <- sampstat[[b]][["cov"]]
+    ss <- 1 / sqrt(diag(cov_b))
+    cov_jac <- if (type == "cor.bentler") {
+      diag(lav_mat_vech(tcrossprod(ss)), nrow = length(ss) * (length(ss) + 1) / 2)
+    } else {
+      lav_deriv_cov2cor_b(cov_b)
+    }
+    # block order: [mean, vech(cov)]
+    block_jac[[b]] <- lav_mat_bdiag(diag(ss, nrow = length(ss)), cov_jac)
+  }
+  do.call(lav_mat_bdiag, block_jac)
 }
 
 # return resList with 'se' values for each residual
@@ -1220,8 +1253,102 @@ lav_residuals_summary <- function(object, type = c("rmr", "srmr", "crmr"),
     )
   }
 
-  # return list per group
-  sum_stat <- vector("list", length = lavdata@ngroups)
+  # continuous cov/mean/total summary table for one type, given a (block's)
+  # residual list and ACOV, with mean/covariance positions into that ACOV
+  do_continuous_summary <- function(rms_list_g, rms_list_se_g, nvar_b,
+                                    mean_idx, cov_idx, cov_nm, mean_nm,
+                                    ty, has_mean) {
+    # COV
+    stats <- lav_mat_vech(rms_list_g[[cov_nm]])
+    pstar <- length(stats)
+    if (ty == "crmr") {
+      pstar <- pstar - nvar_b # CRMR excludes the (co)variance diagonal
+    }
+    acov <- if (se || unbiased) {
+      rms_list_se_g[cov_idx, cov_idx, drop = FALSE]
+    } else {
+      NULL
+    }
+    rms_cov <- do_rms(stats, acov, pstar, ty)
+
+    if (has_mean) {
+      # MEAN / INTERCEPT
+      stats <- rms_list_g[[mean_nm]]
+      pstar <- length(stats)
+      acov <- if (se || unbiased) {
+        rms_list_se_g[mean_idx, mean_idx, drop = FALSE]
+      } else {
+        NULL
+      }
+      rms_mean <- do_rms(stats, acov, pstar, ty)
+
+      # TOTAL (means/intercepts + covariances)
+      stats <- c(rms_list_g[[mean_nm]], lav_mat_vech(rms_list_g[[cov_nm]]))
+      pstar <- length(stats)
+      if (ty == "crmr") {
+        pstar <- pstar - nvar_b
+      }
+      acov <- if (se || unbiased) {
+        rms_list_se_g[c(mean_idx, cov_idx), c(mean_idx, cov_idx), drop = FALSE]
+      } else {
+        NULL
+      }
+      rms_total <- do_rms(stats, acov, pstar, ty)
+
+      table_1 <- as.data.frame(cbind(rms_cov, rms_mean, rms_total))
+      colnames(table_1) <- c("cov", "mean", "total")
+    } else {
+      table_1 <- as.data.frame(cbind(rms_cov))
+      colnames(table_1) <- "cov"
+    }
+    if (add_class) {
+      class(table_1) <- c("lavaan.data.frame", "data.frame")
+    }
+    table_1
+  }
+
+  # return list per block (= per group for single-level data)
+  sum_stat <- vector("list", length = lavmodel@nblocks)
+
+  # multilevel: one summary per level-specific block. The moment vector stacks
+  # the blocks, each ordered [mean, vech(cov)], so we slice the (single-group)
+  # ACOV per block and reuse the continuous summary.
+  if (lavdata@nlevels > 1L) {
+    if (lavdata@ngroups > 1L) {
+      lav_msg_stop(gettext("not ready yet")) # multigroup + multilevel
+    }
+    offset <- 0L
+    for (b in seq_len(lavmodel@nblocks)) {
+      nvb <- object@pta$nvar[[b]]
+      pstar_b <- nvb * (nvb + 1) / 2
+      blk <- offset + c(seq_len(nvb), nvb + seq_len(pstar_b)) # [mean, cov]
+      offset <- offset + nvb + pstar_b
+      out <- vector("list", length(type))
+      names(out) <- type
+      for (typ in seq_along(type)) {
+        ty <- type[typ]
+        est_b <- switch(ty,
+          rmr = rmr_list[[b]], srmr = srmr_list[[b]], crmr = crmr_list[[b]]
+        )
+        se_b <- NULL
+        if (se || unbiased) {
+          se_full <- switch(ty,
+            rmr = rmr_list_se[[1]], srmr = srmr_list_se[[1]],
+            crmr = crmr_list_se[[1]]
+          )
+          se_b <- se_full[blk, blk, drop = FALSE]
+        }
+        out[[typ]] <- do_continuous_summary(
+          est_b, se_b, nvb,
+          mean_idx = seq_len(nvb), cov_idx = nvb + seq_len(pstar_b),
+          cov_nm = "cov", mean_nm = "mean", ty = ty,
+          has_mean = lavmodel@meanstructure
+        )
+      }
+      sum_stat[[b]] <- out
+    }
+    return(sum_stat)
+  }
 
   for (g in seq_len(lavdata@ngroups)) {
     nvar <- object@pta$nvar[[g]] # block or group-based?
@@ -1349,69 +1476,13 @@ lav_residuals_summary <- function(object, type = c("rmr", "srmr", "crmr"),
       for (typ in seq_along(type)) {
         ty <- type[typ]
         sel <- get_rms_lists(ty, g)
-        rms_list_g <- sel$est
-        rms_list_se_g <- sel$se
-
-        # COV
-        stats <- lav_mat_vech(rms_list_g[[cov_nm]])
-        pstar <- length(stats)
-        if (ty == "crmr") {
-          # CRMR excludes the (co)variance diagonal
-          pstar <- pstar - nvar_endo
-        }
-        acov <- if (se || unbiased) {
-          rms_list_se_g[cov_acov_idx, cov_acov_idx, drop = FALSE]
-        } else {
-          NULL
-        }
-        rms_cov <- do_rms(stats, acov, pstar, ty)
-
-        if (lavmodel@meanstructure) {
-          # MEAN / INTERCEPT
-          stats <- rms_list_g[[mean_nm]]
-          pstar <- length(stats)
-          acov <- if (se || unbiased) {
-            rms_list_se_g[mean_acov_idx, mean_acov_idx, drop = FALSE]
-          } else {
-            NULL
-          }
-          rms_mean <- do_rms(stats, acov, pstar, ty)
-
-          # TOTAL (means/intercepts + covariances; slopes excluded)
-          stats <- c(
-            rms_list_g[[mean_nm]],
-            lav_mat_vech(rms_list_g[[cov_nm]])
-          )
-          pstar <- length(stats)
-          if (ty == "crmr") {
-            pstar <- pstar - nvar_endo
-          }
-          acov <- if (se || unbiased) {
-            rms_list_se_g[
-              c(mean_acov_idx, cov_acov_idx),
-              c(mean_acov_idx, cov_acov_idx),
-              drop = FALSE
-            ]
-          } else {
-            NULL
-          }
-          rms_total <- do_rms(stats, acov, pstar, ty)
-
-          table_1 <- as.data.frame(cbind(rms_cov, rms_mean, rms_total))
-          colnames(table_1) <- c("cov", "mean", "total")
-        } else {
-          table_1 <- as.data.frame(cbind(rms_cov))
-          colnames(table_1) <- "cov"
-        }
-        if (add_class) {
-          class(table_1) <- c("lavaan.data.frame", "data.frame")
-        }
-        out[[typ]] <- table_1
+        out[[typ]] <- do_continuous_summary(
+          sel$est, sel$se, nvar_endo,
+          mean_idx = mean_acov_idx, cov_idx = cov_acov_idx,
+          cov_nm = cov_nm, mean_nm = mean_nm, ty = ty,
+          has_mean = lavmodel@meanstructure
+        )
       } # type
-
-      # continuous -- multilevel
-    } else if (lavdata@nlevels > 1L) {
-      lav_msg_stop(gettext("not ready yet"))
     }
 
     sum_stat[[g]] <- out
