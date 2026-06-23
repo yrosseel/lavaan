@@ -53,7 +53,7 @@ lavaanNames <- function(object, type = "ov", ...) {
     eval(sc, parent.frame())
 }
 
-# standardize function names in lav_simulate_old.R / 9 December 2025
+# standardize function names in lav_data_simulate.R / 9 December 2025
 simulateData <- function(
                          model = NULL,
                          model.type = "sem",
@@ -74,22 +74,19 @@ simulateData <- function(
                          ...,
                          sample.nobs = 500L,
                          ov.var = NULL,
-                         group.label = paste("G", 1:ngroups, sep = ""),
+                         group.label = NULL,
                          skewness = NULL,
                          kurtosis = NULL,
+                         cluster.idx = NULL,
                          seed = NULL,
                          empirical = FALSE,
                          mass = FALSE,
+                         ordered.center = TRUE,
                          return.type = "data.frame",
                          return.fit = FALSE,
                          debug = FALSE,
                          standardized = FALSE) {
   lav_deprecated("lavSimulateData", times = 0L)   #--> for now no warning
-  if (is.list(model)) {
-    ngroups <- lav_pt_ngroups(model)
-  } else {
-    ngroups <- sample.nobs
-  }
   sc <- sys.call()
   # call new function
   sc[[1L]] <- quote(lavaan::lavSimulateData)
