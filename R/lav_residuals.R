@@ -19,8 +19,9 @@
 #   (this was "standardized" in lavaan < 0.6.3
 
 # WARNING: only partial support for conditional.x = TRUE!!
-# - in categorical case: we only compute summary statistics, using cor + th
-#   (no var, slopes, ...)
+# - categorical conditional.x IS supported (the moment vector then includes a
+#   regression-slopes block; slopes are not rescaled in the cor metric)
+# - continuous conditional.x: SEs/summaries are still disabled
 # - twolevel not supported here; see lav_fit_srmr.R, where we convert to
 #   the unconditional setting
 
@@ -36,10 +37,11 @@
 # - change 0.7-1: the (undocumented, never-functional) custom.rmr argument
 #                  has been removed
 # - change 0.7-1: residual SEs/z-statistics and the (u)rmr/(u)srmr/(u)crmr
-#                  summaries are now available for the mixed (continuous +
-#                  ordinal) case, as long as conditional.x = FALSE. The
-#                  cor.bentler/cor.bollen standardization uses a cov->cor
-#                  jacobian built for the categorical moment ordering (see
+#                  summaries are now available for the categorical case,
+#                  including mixed (continuous + ordinal) and conditional.x
+#                  (with a regression-slopes block). The cor.bentler/cor.bollen
+#                  standardization uses a cov->cor jacobian built for the
+#                  categorical moment ordering (see
 #                  lav_residuals_cor_jacobian_cat()). conditional.x remains
 #                  unsupported.
 # - change 0.7-1: new h1= argument (lavResiduals) to supply a user-provided
@@ -331,20 +333,13 @@ lav_residuals <- function(object, type = "raw", h1 = TRUE,
     summary <- FALSE
   }
 
-  # change options if categorical (for now)
-  if (lavmodel@categorical) {
-    # conditional.x adds regression slopes to the moment vector, which the SE
-    # machinery does not handle yet; disable SEs/summary in that case. The
-    # unconditional case -- pure categorical as well as mixed (continuous +
-    # ordinal) -- is supported for raw, cor.bentler and cor.bollen.
-    if (lavmodel@conditional.x) {
-      zstat <- se <- FALSE
-      summary <- FALSE
-      summary_options_1 <- lav_residuals_summary_options_off()
-    }
-  }
+  # categorical residual SEs/summaries are supported for the unconditional
+  # case (pure categorical and mixed continuous + ordinal) as well as the
+  # conditional.x case (the moment vector then includes a regression-slopes
+  # block); nothing to disable here.
 
-  # change options if conditional.x (for now)
+  # change options if conditional.x (for now): only the *continuous*
+  # conditional.x case is still unsupported
   if (!lavmodel@categorical && lavmodel@conditional.x) {
     zstat <- se <- FALSE
     summary <- FALSE
@@ -676,14 +671,19 @@ lav_residuals_acov <- function(object, type = "raw", z_type = "standardized",
       # correct ACOV.res for type = "cor.bentler" or type = "cor.bollen"
       if (type == "cor.bentler") {
         if (lavmodel@categorical) {
-          if (lavmodel@conditional.x) {
-            lav_msg_stop(gettext(
-              "SE for cor.bentler not available (yet) if categorical = TRUE
-               and conditional.x = TRUE"))
-          } else if (length(unlist(lavmodel@num.idx)) > 0L) {
-            # mixed continuous + ordinal: transform to correlation metric
+          mixed_or_condx <- lavmodel@conditional.x ||
+            length(unlist(lavmodel@num.idx)) > 0L
+          if (mixed_or_condx) {
+            # mixed continuous + ordinal and/or conditional.x: transform to
+            # correlation metric using the (residual) covariance matrix
+            cov_1 <- if (lavmodel@conditional.x) {
+              sampstat[[g]][["res.cov"]]
+            } else {
+              sampstat[[g]][["cov"]]
+            }
+            nexo <- if (lavmodel@conditional.x) lavmodel@nexo[g] else 0L
             jac <- lav_residuals_cor_jacobian_cat(
-              lavmodel, g, sampstat[[g]][["cov"]], "cor.bentler"
+              lavmodel, g, cov_1, "cor.bentler", nexo = nexo
             )
             acov_res[[g]] <- jac %*% acov_res[[g]] %*% t(jac)
           } else {
@@ -712,14 +712,19 @@ lav_residuals_acov <- function(object, type = "raw", z_type = "standardized",
         } # continuous
       } else if (type == "cor.bollen") {
         if (lavmodel@categorical) {
-          if (lavmodel@conditional.x) {
-            lav_msg_stop(gettext(
-              "SE for cor.bollen not available (yet) if categorical = TRUE
-               and conditional.x = TRUE"))
-          } else if (length(unlist(lavmodel@num.idx)) > 0L) {
-            # mixed continuous + ordinal: transform to correlation metric
+          mixed_or_condx <- lavmodel@conditional.x ||
+            length(unlist(lavmodel@num.idx)) > 0L
+          if (mixed_or_condx) {
+            # mixed continuous + ordinal and/or conditional.x: transform to
+            # correlation metric using the (residual) covariance matrix
+            cov_1 <- if (lavmodel@conditional.x) {
+              sampstat[[g]][["res.cov"]]
+            } else {
+              sampstat[[g]][["cov"]]
+            }
+            nexo <- if (lavmodel@conditional.x) lavmodel@nexo[g] else 0L
             jac <- lav_residuals_cor_jacobian_cat(
-              lavmodel, g, sampstat[[g]][["cov"]], "cor.bollen"
+              lavmodel, g, cov_1, "cor.bollen", nexo = nexo
             )
             acov_res[[g]] <- jac %*% acov_res[[g]] %*% t(jac)
           } else {
@@ -749,16 +754,18 @@ lav_residuals_acov <- function(object, type = "raw", z_type = "standardized",
 }
 
 # index map of the (categorical) h1 sample-statistics vector, in the order
-# produced by lav_samp_wls_obs() for the unconditional categorical case:
-#   [ th-block (thresholds + continuous means, interleaved by variable),
+# produced by lav_samp_wls_obs():
+#   [ th-block (thresholds + continuous means/intercepts, by variable),
+#     regression slopes (vec, only if conditional.x = TRUE; nvar * nexo),
 #     continuous variances (num.idx),
 #     covariances (vech, no diagonal) ]
 #
 # Returns, as positions into that vector: $th (thresholds), $mean (continuous
-# means), $var (continuous variances), $cov (off-diagonal (co)variances), plus
-# $num_idx (continuous variable indices) and $nvar. Only supported for the
-# unconditional (conditional.x = FALSE) case.
-lav_residuals_cat_idx <- function(lavmodel, g = 1L, nvar = NULL) {
+# means/intercepts), $slopes (regression slopes), $var (continuous variances),
+# $cov (off-diagonal (co)variances), plus $num_idx (continuous variable
+# indices), $nvar and $nexo. For conditional.x = FALSE, $slopes is empty and
+# nexo = 0.
+lav_residuals_cat_idx <- function(lavmodel, g = 1L, nvar = NULL, nexo = 0L) {
   th_idx <- lavmodel@th.idx[[g]]
   nth_block <- length(th_idx)
   num_idx <- lavmodel@num.idx[[g]]
@@ -766,43 +773,54 @@ lav_residuals_cat_idx <- function(lavmodel, g = 1L, nvar = NULL) {
   if (is.null(nvar)) {
     nvar <- length(unique(th_idx[th_idx != 0])) + n_num
   }
+  n_slopes <- nvar * nexo
   n_offdiag <- nvar * (nvar - 1) / 2
 
   list(
     th = which(th_idx != 0L), # threshold positions in the th-block
-    mean = which(th_idx == 0L), # continuous-mean positions in the th-block
-    var = nth_block + seq_len(n_num), # continuous variance positions
-    cov = nth_block + n_num + seq_len(n_offdiag), # off-diagonal cov positions
+    mean = which(th_idx == 0L), # continuous mean/intercept positions
+    slopes = if (n_slopes > 0L) nth_block + seq_len(n_slopes) else integer(0),
+    var = nth_block + n_slopes + seq_len(n_num), # continuous variances
+    cov = nth_block + n_slopes + n_num + seq_len(n_offdiag), # off-diag covs
     num_idx = num_idx,
-    nvar = nvar
+    nvar = nvar,
+    nexo = nexo
   )
 }
 
 # Build the cov->cor standardization jacobian for the *categorical* moment
-# vector ordering [th-block, continuous variances, vech(cov, no diagonal)],
-# used to transform the raw-residual ACOV into the correlation metric for
-# mixed (continuous + ordinal) models. 'cov_1' is the observed (h1) covariance
-# matrix (ordinal variables have a unit diagonal, so 1/sqrt(diag) is 1 for them
-# and 1/SD for the continuous ones). 'type' is either "cor.bentler" (observed
-# SDs treated as fixed -> diagonal scaling) or "cor.bollen" (full cov2cor
-# jacobian). Returns J such that ACOV.cor = J %*% ACOV.raw %*% t(J).
+# vector ordering [th-block, (slopes), continuous variances, vech(cov, no
+# diagonal)], used to transform the raw-residual ACOV into the correlation
+# metric for mixed (continuous + ordinal) models. 'cov_1' is the observed (h1)
+# (residual) covariance matrix (ordinal variables have a unit diagonal, so
+# 1/sqrt(diag) is 1 for them and 1/SD for the continuous ones). 'type' is
+# either "cor.bentler" (observed SDs treated as fixed -> diagonal scaling) or
+# "cor.bollen" (full cov2cor jacobian). 'nexo' > 0 for conditional.x (a slopes
+# block is present). Returns J such that ACOV.cor = J %*% ACOV.raw %*% t(J).
 #
-# For a pure-categorical model (no continuous variables) this reduces to the
+# Thresholds and regression slopes are left unchanged (slopes are not rescaled
+# in the residual point estimate either, cf. lav_residuals_rescale()). For a
+# pure-categorical model (no continuous variables) this reduces to the
 # identity; we therefore only use it in the mixed case.
-lav_residuals_cor_jacobian_cat <- function(lavmodel, g, cov_1, type) {
-  idx <- lav_residuals_cat_idx(lavmodel, g, nvar = nrow(cov_1))
+lav_residuals_cor_jacobian_cat <- function(lavmodel, g, cov_1, type,
+                                           nexo = 0L) {
+  idx <- lav_residuals_cat_idx(lavmodel, g, nvar = nrow(cov_1), nexo = nexo)
   nvar <- idx$nvar
   num_idx <- idx$num_idx
-  p <- length(idx$th) + length(idx$mean) + length(idx$var) + length(idx$cov)
+  p <- length(idx$th) + length(idx$mean) + length(idx$slopes) +
+    length(idx$var) + length(idx$cov)
 
   ss <- 1 / sqrt(diag(cov_1)) # 1 for ordinal (unit diagonal), 1/SD otherwise
 
   jac <- matrix(0, nrow = p, ncol = p)
-  # thresholds: unchanged (already in correlation metric)
+  # thresholds and regression slopes: unchanged
   if (length(idx$th) > 0L) {
     jac[cbind(idx$th, idx$th)] <- 1
   }
-  # continuous means: scaled by 1/SD (observed SD treated as fixed)
+  if (length(idx$slopes) > 0L) {
+    jac[cbind(idx$slopes, idx$slopes)] <- 1
+  }
+  # continuous means/intercepts: scaled by 1/SD (observed SD treated as fixed)
   if (length(idx$mean) > 0L) {
     jac[cbind(idx$mean, idx$mean)] <- ss[num_idx]
   }
@@ -868,47 +886,85 @@ lav_residuals_se <- function(object, type = "raw", z_type = "standardized",
 
     # categorical
     if (lavmodel@categorical) {
-      if (lavmodel@conditional.x) {
-        # the moment vector also contains regression slopes; not ready yet
-        lav_msg_stop(gettext("not ready yet!"))
+      conditional_x <- lavmodel@conditional.x
+      nexo <- if (conditional_x) lavmodel@nexo[g] else 0L
+      # endogenous variables only (res.cov is over the endogenous ov);
+      # for conditional.x the exogenous covariates are NOT in the moment vector
+      nvar_endo <- if (conditional_x) {
+        length(lavpta$vnames$ov.nox[[g]])
+      } else {
+        nvar
       }
 
       # index map of the categorical moment vector (handles the mixed
-      # continuous + ordinal case; reduces to [th, cov] when no num.idx)
-      idx <- lav_residuals_cat_idx(lavmodel, g, nvar = nvar)
+      # continuous + ordinal case, and the conditional.x slopes block)
+      idx <- lav_residuals_cat_idx(lavmodel, g, nvar = nvar_endo, nexo = nexo)
+      num_idx <- idx$num_idx
 
       # COV (off-diagonal); continuous variances go on the diagonal, the
       # ordinal-variable diagonal stays zero (variance is fixed at 1)
       cov_se <- lav_mat_vech_rev(sqrt(diag_acov[idx$cov]), diagonal = FALSE)
-      if (length(idx$num_idx) > 0L) {
-        diag(cov_se)[idx$num_idx] <- sqrt(diag_acov[idx$var])
+      if (length(num_idx) > 0L) {
+        diag(cov_se)[num_idx] <- sqrt(diag_acov[idx$var])
       }
 
-      # MEAN (continuous variables only; ordinal means are NA)
-      mean_se <- rep(as.numeric(NA), nvar)
+      # MEAN/INTERCEPT (continuous variables only; ordinal entries are NA)
+      mean_se <- rep(as.numeric(NA), nvar_endo)
       if (length(idx$mean) > 0L) {
-        mean_se[idx$num_idx] <- sqrt(diag_acov[idx$mean])
+        mean_se[num_idx] <- sqrt(diag_acov[idx$mean])
       }
 
-      # TH
+      # TH (thresholds only)
       th_se <- sqrt(diag_acov[idx$th])
 
-      if (add_class) {
-        class(cov_se) <- c("lavaan.matrix.symmetric", "matrix")
-        class(mean_se) <- c("lavaan.vector", "numeric")
-        class(th_se) <- c("lavaan.vector", "numeric")
+      if (conditional_x) {
+        # SLOPES (nvar_endo x nexo, vec ordering)
+        slopes_se <- matrix(sqrt(diag_acov[idx$slopes]),
+          nrow = nvar_endo, ncol = nexo
+        )
+        # exogenous moments are conditioned on (not in the vector): no SE
+        covx_se <- matrix(as.numeric(NA), nexo, nexo)
+        meanx_se <- rep(as.numeric(NA), nexo)
+        if (add_class) {
+          class(cov_se) <- c("lavaan.matrix.symmetric", "matrix")
+          class(covx_se) <- c("lavaan.matrix.symmetric", "matrix")
+          class(slopes_se) <- c("lavaan.matrix", "matrix")
+          class(mean_se) <- class(meanx_se) <- class(th_se) <-
+            c("lavaan.vector", "numeric")
+        }
+        if (add_labels) {
+          rownames(cov_se) <- colnames(cov_se) <- lavpta$vnames$ov.nox[[g]]
+          names(mean_se) <- lavpta$vnames$ov.nox[[g]]
+          names(th_se) <- lavpta$vnames$th[[g]]
+          rownames(slopes_se) <- lavpta$vnames$ov.nox[[g]]
+          colnames(slopes_se) <- lavpta$vnames$ov.x[[g]]
+          rownames(covx_se) <- colnames(covx_se) <- lavpta$vnames$ov.x[[g]]
+          names(meanx_se) <- lavpta$vnames$ov.x[[g]]
+        }
+        # order must match lav_inspect_sampstat(): res.cov, res.int, res.th,
+        # res.slopes, cov.x, mean.x
+        se_list[[g]] <- list(
+          res.cov.se = cov_se, res.int.se = mean_se, res.th.se = th_se,
+          res.slopes.se = slopes_se, cov.x.se = covx_se, mean.x.se = meanx_se
+        )
+      } else {
+        if (add_class) {
+          class(cov_se) <- c("lavaan.matrix.symmetric", "matrix")
+          class(mean_se) <- c("lavaan.vector", "numeric")
+          class(th_se) <- c("lavaan.vector", "numeric")
+        }
+        if (add_labels) {
+          rownames(cov_se) <- colnames(cov_se) <- ov_names[[g]]
+          names(mean_se) <- ov_names[[g]]
+          # thresholds only (no continuous means); equals th.mean for pure
+          # categorical models, excludes continuous means in mixed ones
+          names(th_se) <- lavpta$vnames$th[[g]]
+        }
+        se_list[[g]] <- list(
+          cov.se = cov_se, mean.se = mean_se,
+          th.se = th_se
+        )
       }
-      if (add_labels) {
-        rownames(cov_se) <- colnames(cov_se) <- ov_names[[g]]
-        names(mean_se) <- ov_names[[g]]
-        # thresholds only (no continuous means); equals th.mean for pure
-        # categorical models, but excludes the continuous means in mixed ones
-        names(th_se) <- lavpta$vnames$th[[g]]
-      }
-      se_list[[g]] <- list(
-        cov.se = cov_se, mean.se = mean_se,
-        th.se = th_se
-      )
 
       # continuous -- single level
     } else if (lavdata@nlevels == 1L) {
@@ -1064,20 +1120,26 @@ lav_residuals_summary <- function(object, type = c("rmr", "srmr", "crmr"),
     # categorical -- single level
     if (lavdata@nlevels == 1L && lavmodel@categorical) {
       # rmr/srmr/crmr SEs are supported for the unconditional case (pure
-      # categorical as well as mixed continuous + ordinal); conditional.x adds
-      # regression slopes to the moment vector and is not ready yet
-      if ((se || unbiased) && conditional_x) {
-        lav_msg_stop(gettext("not ready yet"))
+      # categorical as well as mixed continuous + ordinal) and for the
+      # conditional.x case (the moment vector then includes a slopes block,
+      # which does not enter the cor/threshold summaries)
+
+      # endogenous variables only; for conditional.x the exogenous covariates
+      # are not part of the moment vector
+      nexo <- if (conditional_x) lavmodel@nexo[g] else 0L
+      nvar_endo <- if (conditional_x) {
+        length(object@pta$vnames$ov.nox[[g]])
+      } else {
+        nvar
       }
 
       # moment-vector index map; for pure-categorical models idx$cov and idx$th
       # reproduce the simple [thresholds, correlations] split, but it also
-      # handles the continuous variances/means in the mixed case
-      nth <- length(lavmodel@th.idx[[g]])
+      # handles the continuous variances/means and the conditional.x slopes
       cov_nm <- if (conditional_x) "res.cov" else "cov"
       th_nm <- if (conditional_x) "res.th" else "th"
-      idx <- if ((se || unbiased) && !conditional_x) {
-        lav_residuals_cat_idx(lavmodel, g, nvar = nvar)
+      idx <- if (se || unbiased) {
+        lav_residuals_cat_idx(lavmodel, g, nvar = nvar_endo, nexo = nexo)
       } else {
         NULL
       }
@@ -1091,7 +1153,7 @@ lav_residuals_summary <- function(object, type = c("rmr", "srmr", "crmr"),
         # COR (off-diagonal (co)variances)
         # pstar is p*(p+1)/2 for SRMR but p*(p-1)/2 for CRMR
         stats <- lav_mat_vech(rms_list_g[[cov_nm]], diagonal = FALSE)
-        pstar <- if (ty == "crmr") length(stats) else length(stats) + nvar
+        pstar <- if (ty == "crmr") length(stats) else length(stats) + nvar_endo
         acov <- if (se || unbiased) {
           rms_list_se_g[idx$cov, idx$cov, drop = FALSE]
         } else {
@@ -1119,7 +1181,7 @@ lav_residuals_summary <- function(object, type = c("rmr", "srmr", "crmr"),
           rms_list_g[[th_nm]],
           lav_mat_vech(rms_list_g[[cov_nm]], diagonal = FALSE)
         )
-        pstar <- if (ty == "crmr") length(stats) else length(stats) + nvar
+        pstar <- if (ty == "crmr") length(stats) else length(stats) + nvar_endo
         acov <- NULL
         if (se || unbiased) {
           acov <- rms_list_se_g[c(idx$th, idx$cov), c(idx$th, idx$cov),
