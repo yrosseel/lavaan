@@ -420,6 +420,17 @@ lav_fit <- function(object, fit_measures = "all",
     )
   }
 
+  # gfi (the 'new' GFI of Maydeu-Olivares et al., 2024, with conf. interval)
+  fit_gfi <- c("gfi", "gfi.ci.lower", "gfi.ci.upper", "gfi.ci.level")
+  if (fm_args$robust && (scaled_flag || categorical_flag || fiml_flag)) {
+    fit_gfi <- c(
+      fit_gfi, "gfi.robust",
+      "gfi.ci.lower.robust", "gfi.ci.upper.robust"
+    )
+  }
+  # the 'old' (LISREL) GFI and friends
+  fit_gfi_lisrel <- c("gfi_lisrel", "agfi_lisrel", "pgfi")
+
   # srmr
   if (categorical_flag) {
     fit_srmr <- c("srmr")
@@ -455,7 +466,7 @@ lav_fit <- function(object, fit_measures = "all",
       fit_other <- c(fit_other, "ecvi")
     }
   } else {
-    fit_other <- c("cn_05", "cn_01", "gfi", "agfi", "pgfi", "mfi")
+    fit_other <- c("cn_05", "cn_01", fit_gfi_lisrel, "mfi")
     if (!categorical_flag) { # really needed?
       fit_other <- c(fit_other, "ecvi")
     } else {
@@ -473,7 +484,7 @@ lav_fit <- function(object, fit_measures = "all",
         fit_measures <- c(
           fit_always, fit_chisq, fit_baseline,
           fit_cfi_tli, fit_logl,
-          fit_rmsea, fit_srmr
+          fit_rmsea, fit_srmr, fit_gfi
         )
       } else if (estimator == "MML") {
         fit_measures <- c(fit_always, fit_logl)
@@ -481,7 +492,7 @@ lav_fit <- function(object, fit_measures = "all",
         fit_measures <- c(
           fit_always,
           fit_chisq, fit_baseline, fit_cfi_tli,
-          fit_rmsea, fit_srmr
+          fit_rmsea, fit_srmr, fit_gfi
         )
       }
     } else if (fit_measures == "all") {
@@ -489,13 +500,13 @@ lav_fit <- function(object, fit_measures = "all",
         fit_measures <- c(
           fit_always, fit_chisq,
           fit_baseline, fit_cfi_tli, fit_cfi_other,
-          fit_logl, fit_rmsea, fit_srmr2, fit_other
+          fit_logl, fit_rmsea, fit_srmr2, fit_gfi, fit_other
         )
       } else {
         fit_measures <- c(
           fit_always, fit_chisq,
           fit_baseline, fit_cfi_tli, fit_cfi_other,
-          fit_rmsea, fit_srmr2, fit_other
+          fit_rmsea, fit_srmr2, fit_gfi, fit_other
         )
       }
     }
@@ -623,13 +634,29 @@ lav_fit <- function(object, fit_measures = "all",
   }
 
   # GFI and friends
-  fit_gfi <- c("gfi", "agfi", "pgfi")
-  if (any(fit_gfi %in% fit_measures)) {
+  if (any(c(fit_gfi, fit_gfi_lisrel) %in% fit_measures)) {
+    # check gfi.ci.level option (default 0.90)
+    gfi_ci_level <- 0.90
+    if (!is.null(fm_args$gfi.ci.level) &&
+        is.finite(fm_args$gfi.ci.level)) {
+      gfi_ci_level <- fm_args$gfi.ci.level
+      if (gfi_ci_level < 0 || gfi_ci_level > 1.0) {
+        lav_msg_warn(gettextf(
+          "invalid gfi.ci.level value [%s] set to default 0.90.",
+          gfi_ci_level))
+        gfi_ci_level <- 0.90
+      }
+    }
     indices <- c(
       indices,
       lav_fit_gfi_lavobject(
         lavobject = object,
-        fit_measures = fit_measures
+        fit_measures = fit_measures,
+        standard_test = standard_test,
+        scaled_test = scaled_test,
+        ci_level = gfi_ci_level,
+        robust = fm_args$robust,
+        cat_check_pd = fm_args$cat.check.pd
       )
     )
   }
@@ -1374,8 +1401,111 @@ lav_fitmeasures_print <- function(x, ..., nd = 3L, add.h0 = TRUE) {  # nolint
     write.table(m, row.names = TRUE, col.names = FALSE, quote = FALSE)
   }
 
+  # GFI (the 'new' GFI of Maydeu-Olivares et al., 2024)
+  if ("gfi" %in% names_x) {
+    cat("\nGoodness of Fit Index:\n\n")
+
+    c1 <- c2 <- c3 <- character(0L)
+
+    c1 <- c(c1, "Goodness of Fit Index (GFI)")
+    c2 <- c(c2, sprintf(num_format, x["gfi"]))
+    c3 <- c(c3, "")
+
+    gfi_ci_level <- NULL
+    if ("gfi.ci.level" %in% names_x) {
+      gfi_ci_level <- x["gfi.ci.level"]
+    }
+    if ("gfi.ci.lower" %in% names_x) {
+      if (is.null(gfi_ci_level)) {
+        c1 <- c(c1, "Confidence interval - lower")
+      } else {
+        c1 <- c(c1, paste0(
+          sprintf("%2d", round(gfi_ci_level * 100)),
+          " Percent confidence interval - lower"
+        ))
+      }
+      c2 <- c(c2, sprintf(num_format, x["gfi.ci.lower"]))
+      c3 <- c(c3, "")
+      if (is.null(gfi_ci_level)) {
+        c1 <- c(c1, "Confidence interval - upper")
+      } else {
+        c1 <- c(c1, paste0(
+          sprintf("%2d", round(gfi_ci_level * 100)),
+          " Percent confidence interval - upper"
+        ))
+      }
+      c2 <- c(c2, sprintf(num_format, x["gfi.ci.upper"]))
+      c3 <- c(c3, "")
+    }
+
+    # robust
+    if ("gfi.robust" %in% names_x) {
+      c1 <- c(c1, "")
+      c2 <- c(c2, "")
+      c3 <- c(c3, "")
+      c1 <- c(c1, "Robust GFI")
+      if (scaled_flag) {
+        c2 <- c(c2, "")
+        c3 <- c(c3, sprintf(num_format, x["gfi.robust"]))
+      } else {
+        c2 <- c(c2, sprintf(num_format, x["gfi.robust"]))
+        c3 <- c(c3, "")
+      }
+    }
+    if ("gfi.ci.lower.robust" %in% names_x) {
+      if (is.null(gfi_ci_level)) {
+        c1 <- c(c1, "Confidence interval - lower")
+      } else {
+        c1 <- c(c1, paste0(
+          sprintf("%2d", round(gfi_ci_level * 100)),
+          " Percent confidence interval - lower"
+        ))
+      }
+      if (scaled_flag) {
+        c2 <- c(c2, "")
+        c3 <- c(c3, sprintf(num_format, x["gfi.ci.lower.robust"]))
+      } else {
+        c2 <- c(c2, sprintf(num_format, x["gfi.ci.lower.robust"]))
+        c3 <- c(c3, "")
+      }
+      if (is.null(gfi_ci_level)) {
+        c1 <- c(c1, "Confidence interval - upper")
+      } else {
+        c1 <- c(c1, paste0(
+          sprintf("%2d", round(gfi_ci_level * 100)),
+          " Percent confidence interval - upper"
+        ))
+      }
+      if (scaled_flag) {
+        c2 <- c(c2, "")
+        c3 <- c(c3, sprintf(num_format, x["gfi.ci.upper.robust"]))
+      } else {
+        c2 <- c(c2, sprintf(num_format, x["gfi.ci.upper.robust"]))
+        c3 <- c(c3, "")
+      }
+    }
+
+    # format c1/c2/c3
+    c1 <- format(c1, width = 43L)
+    c2 <- format(c2, width = 8L + max(0, (nd - 3L)) * 4L, justify = "right")
+    c3 <- format(c3, width = 8L + nd, justify = "right")
+
+    # create character matrix
+    if (scaled_flag) {
+      m <- cbind(c1, c2, c3, deparse.level = 0)
+    } else {
+      m <- cbind(c1, c2, deparse.level = 0)
+    }
+    colnames(m) <- rep("", ncol(m))
+    rownames(m) <- rep(" ", nrow(m))
+
+    # print
+    write.table(m, row.names = TRUE, col.names = FALSE, quote = FALSE)
+  }
+
   # Other
-  if (any(c("cn_05", "cn_01", "gfi", "agfi", "pgfi", "mfi") %in% names_x)) {
+  if (any(c("cn_05", "cn_01", "gfi_lisrel", "agfi_lisrel", "pgfi", "mfi")
+          %in% names_x)) {
     cat("\nOther Fit Indices:\n\n")
 
     c1 <- c2 <- c3 <- character(0L)
@@ -1399,18 +1529,18 @@ lav_fitmeasures_print <- function(x, ..., nd = 3L, add.h0 = TRUE) {  # nolint
       c2 <- c(c2, "")
       c3 <- c(c3, "")
     }
-    if ("gfi" %in% names_x) {
-      c1 <- c(c1, "Goodness of Fit Index (GFI)")
-      c2 <- c(c2, sprintf(num_format, x["gfi"]))
+    if ("gfi_lisrel" %in% names_x) {
+      c1 <- c(c1, "Goodness of Fit Index LISREL (GFI)")
+      c2 <- c(c2, sprintf(num_format, x["gfi_lisrel"]))
       c3 <- c(c3, ifelse(scaled_flag,
-                         sprintf(num_format, x["gfi"]), ""
+                         sprintf(num_format, x["gfi_lisrel"]), ""
       ))
     }
-    if ("agfi" %in% names_x) {
-      c1 <- c(c1, "Adjusted Goodness of Fit Index (AGFI)")
-      c2 <- c(c2, sprintf(num_format, x["agfi"]))
+    if ("agfi_lisrel" %in% names_x) {
+      c1 <- c(c1, "Adjusted Goodness of Fit Index LISREL (AGFI)")
+      c2 <- c(c2, sprintf(num_format, x["agfi_lisrel"]))
       c3 <- c(c3, ifelse(scaled_flag,
-                         sprintf(num_format, x["agfi"]), ""
+                         sprintf(num_format, x["agfi_lisrel"]), ""
       ))
     }
     if ("pgfi" %in% names_x) {
@@ -1418,7 +1548,7 @@ lav_fitmeasures_print <- function(x, ..., nd = 3L, add.h0 = TRUE) {  # nolint
       c2 <- c(c2, sprintf(num_format, x["pgfi"]))
       c3 <- c(c3, ifelse(scaled_flag, sprintf(num_format, x["pgfi"]), ""))
     }
-    if (any(c("gfi", "agfi", "pgfi") %in% names_x)) {
+    if (any(c("gfi_lisrel", "agfi_lisrel", "pgfi") %in% names_x)) {
       c1 <- c(c1, "")
       c2 <- c(c2, "")
       c3 <- c(c3, "")

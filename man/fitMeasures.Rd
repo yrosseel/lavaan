@@ -49,9 +49,12 @@ fitmeasures(object, fit_measures = "all",
   interval for the rmsea value. The \code{rmsea.close.h0} option, default 0.05,
   is the rmsea value that is used under the null hypothesis that \code{rmsea <= rmsea.close.h0}.
   The \code{rmsea.notclose.h0} option, default 0.08, is the rmsea value that is used under the
-  null hypothesis that \code{rmsea >= rmsea.notclose.h0}. The \code{robust} 
+  null hypothesis that \code{rmsea >= rmsea.notclose.h0}. The
+  \code{gfi.ci.level} option, default 0.9, determines the level of the
+  confidence interval for the (new) goodness of fit index \code{gfi}. The
+  \code{robust}
   option, default \code{TRUE}, can be set to \code{FALSE} to avoid computing the so-called robust
-  rmsea/cfi measures (for example if the computations take too long).
+  rmsea/cfi/gfi measures (for example if the computations take too long).
   The \code{cat.check.pd} option, default \code{TRUE}, is only used when data is categorical. If
   \code{TRUE}, robust values for RMSEA and CFI are only computed if the input
   correlation matrix is positive-definite (for all groups).}
