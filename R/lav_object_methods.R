@@ -661,34 +661,9 @@ lavParameterEstimates <- function(object,                      # nolint start
           ci[def_idx, ] <- t(mc_qq)
         }
       } else if (object@Options$se == "bootstrap") {
-        # local copy of 'norm.inter' from boot package (not exported!)
-        norm_inter <- function(t, alpha) {
-          t <- t[is.finite(t)]
-          tmp_r <- length(t)
-          rk <- (tmp_r + 1) * alpha
-          if (!all(rk > 1 & rk < tmp_r)) {
-            lav_msg_warn(gettext("extreme order statistics used as endpoints"))
-          }
-          k <- trunc(rk)
-          inds <- seq_along(k)
-          out <- inds
-          kvs <- k[k > 0 & k < tmp_r]
-          tstar <- sort(t, partial = sort(union(c(1, tmp_r), c(kvs, kvs + 1))))
-          ints <- (k == rk)
-          if (any(ints)) out[inds[ints]] <- tstar[k[inds[ints]]]
-          out[k == 0] <- tstar[1L]
-          out[k == tmp_r] <- tstar[tmp_r]
-          not <- function(v) xor(rep(TRUE, length(v)), v)
-          temp <- inds[not(ints) & k != 0 & k != tmp_r]
-          temp1 <- qnorm(alpha[temp])
-          temp2 <- qnorm(k[temp] / (tmp_r + 1))
-          temp3 <- qnorm((k[temp] + 1) / (tmp_r + 1))
-          tk <- tstar[k[temp]]
-          tk1 <- tstar[k[temp] + 1L]
-          out[temp] <- tk + (temp1 - temp2) / (temp3 - temp2) * (tk1 - tk)
-          cbind(round(rk, 2), out)
-        }
-
+        # bootstrap confidence interval; the order-statistic interpolation
+        # (boot package 'norm.inter') is shared with lavEffects() via
+        # lav_bootstrap_norm_inter() (see lav_bootstrap.R)
         stopifnot(!is.null(tmp_boot))
         stopifnot(boot.ci.type %in% c(
           "norm", "basic", "perc",
@@ -704,105 +679,35 @@ lavParameterEstimates <- function(object,                      # nolint start
             )
           bias_est <- (boot_est - tmp_list$est)
           ci <- (tmp_list$est - bias_est) + tmp_list$se %o% fac
-        } else if (boot.ci.type == "basic") {
+        } else if (boot.ci.type %in% c("basic", "perc", "bca.simple")) {
+          # the per-quantity bound computation is shared with lavEffects()
+          # via lav_bootstrap_ci() (see lav_bootstrap.R)
           ci <- cbind(tmp_list$est, tmp_list$est)
-          alpha <- (1 + c(level, -level)) / 2
 
-          # free_idx only
-          qq <- apply(tmp_boot, 2, norm_inter, alpha)
+          # free parameters
           free_idx <- which(object@ParTable$free &
             !duplicated(object@ParTable$free))
-          ci[free_idx, ] <- 2 * ci[free_idx, ] - t(qq[c(3, 4), ])
+          ci[free_idx, ] <- lav_bootstrap_ci(
+            boot_t = tmp_boot, t0 = tmp_list$est[free_idx],
+            boot.ci.type = boot.ci.type, level = level
+          )
 
-          # def_idx
+          # defined parameters
           def_idx <- which(object@ParTable$op == ":=")
           if (length(def_idx) > 0L) {
-            boot_def <- apply(tmp_boot, 1, object@Model@def.function)
+            boot_def <- apply(tmp_boot, 1L, object@Model@def.function)
             if (length(def_idx) == 1L) {
               boot_def <- as.matrix(boot_def)
             } else {
               boot_def <- t(boot_def)
             }
-            qq <- apply(boot_def, 2, norm_inter, alpha)
-            ci[def_idx, ] <- 2 * ci[def_idx, ] - t(qq[c(3, 4), ])
+            ci[def_idx, ] <- lav_bootstrap_ci(
+              boot_t = boot_def, t0 = tmp_list$est[def_idx],
+              boot.ci.type = boot.ci.type, level = level
+            )
           }
 
           # TODO: add cin/ceq?
-        } else if (boot.ci.type == "perc") {
-          ci <- cbind(tmp_list$est, tmp_list$est)
-          alpha <- (1 + c(-level, level)) / 2
-
-          # free_idx only
-          qq <- apply(tmp_boot, 2, norm_inter, alpha)
-          free_idx <- which(object@ParTable$free &
-            !duplicated(object@ParTable$free))
-          ci[free_idx, ] <- t(qq[c(3, 4), ])
-
-          # def_idx
-          def_idx <- which(object@ParTable$op == ":=")
-          if (length(def_idx) > 0L) {
-            boot_def <- apply(tmp_boot, 1, object@Model@def.function)
-            if (length(def_idx) == 1L) {
-              boot_def <- as.matrix(boot_def)
-            } else {
-              boot_def <- t(boot_def)
-            }
-            qq <- apply(boot_def, 2, norm_inter, alpha)
-            def_idx <- which(object@ParTable$op == ":=")
-            ci[def_idx, ] <- t(qq[c(3, 4), ])
-          }
-
-          # TODO:  add cin/ceq?
-        } else if (boot.ci.type == "bca.simple") {
-          # no adjustment for scale!! only bias!!
-          alpha <- (1 + c(-level, level)) / 2
-          zalpha <- qnorm(alpha)
-          ci <- cbind(tmp_list$est, tmp_list$est)
-
-          # free_idx only
-          free_idx <- which(object@ParTable$free &
-            !duplicated(object@ParTable$free))
-          x <- tmp_list$est[free_idx]
-          for (i in seq_along(free_idx)) {
-            t <- tmp_boot[, i]
-            t <- t[is.finite(t)]
-            t0 <- x[i]
-            # check if we have variance (perhaps constrained to 0?)
-            # new in 0.6-3
-            if (var(t) == 0) {
-              next
-            }
-            w <- qnorm(sum(t < t0) / length(t))
-            a <- 0.0 #### !!! ####
-            adj_alpha <- pnorm(w + (w + zalpha) / (1 - a * (w + zalpha)))
-            qq <- norm_inter(t, adj_alpha)
-            ci[free_idx[i], ] <- qq[, 2]
-          }
-
-          # def_idx
-          def_idx <- which(object@ParTable$op == ":=")
-          if (length(def_idx) > 0L) {
-            x_def <- object@Model@def.function(x)
-            boot_def <- apply(tmp_boot, 1, object@Model@def.function)
-            if (length(def_idx) == 1L) {
-              boot_def <- as.matrix(boot_def)
-            } else {
-              boot_def <- t(boot_def)
-            }
-            for (i in seq_along(def_idx)) {
-              t <- boot_def[, i]
-              t <- t[is.finite(t)]
-              t0 <- x_def[i]
-              w <- qnorm(sum(t < t0) / length(t))
-              a <- 0.0 #### !!! ####
-              adj_alpha <- pnorm(w + (w + zalpha) / (1 - a * (w + zalpha)))
-              qq <- norm_inter(t, adj_alpha)
-              ci[def_idx[i], ] <- qq[, 2]
-            }
-          }
-
-          # TODO:
-          # - add cin/ceq
         } else if (boot.ci.type == "bca") { # new in 0.6-12
           # we assume that the 'ordinary' (nonparametric) was used
 
@@ -879,7 +784,7 @@ lavParameterEstimates <- function(object,                      # nolint start
             w <- qnorm(sum(t < t0) / length(t))
             a <- tmp_aa[i]
             adj_alpha <- pnorm(w + (w + zalpha) / (1 - a * (w + zalpha)))
-            qq <- norm_inter(t, adj_alpha)
+            qq <- lav_bootstrap_norm_inter(t, adj_alpha)
             ci[free_idx[i], ] <- qq[, 2]
           }
 
@@ -913,7 +818,7 @@ lavParameterEstimates <- function(object,                      # nolint start
               w <- qnorm(sum(t < t0) / length(t))
               a <- tmp_aa[i]
               adj_alpha <- pnorm(w + (w + zalpha) / (1 - a * (w + zalpha)))
-              qq <- norm_inter(t, adj_alpha)
+              qq <- lav_bootstrap_norm_inter(t, adj_alpha)
               ci[def_idx[i], ] <- qq[, 2]
             }
           }

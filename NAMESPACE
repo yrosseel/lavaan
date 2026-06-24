@@ -62,6 +62,7 @@ export("lavaan", "cfa", "sem", "growth",
        "lavTech",
        "lavListInspect",     "lavListTech",
        "lavResiduals",
+       "lavEffects",
        # utilities
        "lav_getcov", "lav_char2num", "lav_cor2cov",
        "getCov", "char2num", "cor2cov",                 # old names
@@ -272,6 +273,7 @@ S3method(print, lavaan.matrix, lav_mat_print)
 S3method(print, lavaan.matrix.symmetric, lav_mat_sym_print)
 S3method(print, lavaan.vector, lav_vector_print)
 S3method(print, lavaan.parameterEstimates, lav_parameterestimates_print)
+S3method(print, lavaan.effects, lav_effects_print)
 S3method(print, lavaan.fitMeasures, lav_fitmeasures_print)
 S3method(print, lavaan.residuals.summary, lav_residuals_summary_print)
 S3method(print, lavaan.fsr, lav_fsr_print)

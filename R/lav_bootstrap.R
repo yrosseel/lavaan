@@ -799,3 +799,130 @@ lav_bootstrap_indices <- function(r = 0L,
 
   out
 }
+
+
+# -------------------------------------------------------------------------- #
+# Shared bootstrap confidence-interval helpers
+#
+# These helpers are used by both parameterEstimates() and lavEffects() so that
+# the bootstrap confidence interval machinery lives in a single place.
+# -------------------------------------------------------------------------- #
+
+# local copy of 'norm.inter' from the boot package (not exported there).
+# Given a vector 't' of (bootstrap) realizations and a vector 'alpha' of
+# probabilities, it returns, per requested alpha, cbind(round(rk, 2), q) where
+# 'q' is the interpolated order statistic (the boot-package interpolation on
+# the normal quantile scale). Used for the 'basic', 'perc' and 'bca' methods.
+lav_bootstrap_norm_inter <- function(t, alpha) {
+  t <- t[is.finite(t)]
+  tmp_r <- length(t)
+  rk <- (tmp_r + 1) * alpha
+  if (!all(rk > 1 & rk < tmp_r)) {
+    lav_msg_warn(gettext("Extreme order statistics used as endpoints."))
+  }
+  k <- trunc(rk)
+  inds <- seq_along(k)
+  out <- inds
+  kvs <- k[k > 0 & k < tmp_r]
+  tstar <- sort(t, partial = sort(union(c(1, tmp_r), c(kvs, kvs + 1))))
+  ints <- (k == rk)
+  if (any(ints)) out[inds[ints]] <- tstar[k[inds[ints]]]
+  out[k == 0] <- tstar[1L]
+  out[k == tmp_r] <- tstar[tmp_r]
+  not <- function(v) xor(rep(TRUE, length(v)), v)
+  temp <- inds[not(ints) & k != 0 & k != tmp_r]
+  temp1 <- qnorm(alpha[temp])
+  temp2 <- qnorm(k[temp] / (tmp_r + 1))
+  temp3 <- qnorm((k[temp] + 1) / (tmp_r + 1))
+  tk <- tstar[k[temp]]
+  tk1 <- tstar[k[temp] + 1L]
+  out[temp] <- tk + (temp1 - temp2) / (temp3 - temp2) * (tk1 - tk)
+  cbind(round(rk, 2), out)
+}
+
+# Compute bootstrap confidence interval bounds for a set of 'p' quantities.
+#
+# Arguments:
+#   boot_t : R x p matrix of bootstrap realizations of the quantities (may
+#            contain NA/Inf values; these are ignored). Not used for the
+#            "norm" method.
+#   t0     : length-p vector of point estimates.
+#   boot.ci.type : one of "norm", "basic", "perc", "bca.simple", "bca".
+#   level  : the confidence level.
+#   se     : length-p vector of standard errors (required for "norm").
+#   bias   : length-p vector of bias estimates (only for "norm"); if NULL, it
+#            is computed as colMeans(boot_t) - t0.
+#   acc    : length-p vector of acceleration constants (only for "bca"); for
+#            "bca.simple" the acceleration is taken to be zero.
+#
+# Returns a p x 2 matrix with the lower and upper confidence bounds. For
+# quantities with no bootstrap variability (or with se = 0), the bounds default
+# to the point estimate.
+lav_bootstrap_ci <- function(boot_t = NULL, t0, boot.ci.type = "perc",
+                             level = 0.95, se = NULL, bias = NULL,
+                             acc = NULL) {
+  boot.ci.type <- match.arg(boot.ci.type,
+    c("norm", "basic", "perc", "bca.simple", "bca"))
+  p <- length(t0)
+  ci <- cbind(t0, t0)
+  dimnames(ci) <- NULL
+
+  if (boot.ci.type == "norm") {
+    stopifnot(!is.null(se))
+    if (is.null(bias)) {
+      bias <- colMeans(boot_t, na.rm = TRUE) - t0
+    }
+    fac <- qnorm(c((1 - level) / 2, 1 - (1 - level) / 2))
+    ci <- (t0 - bias) + se %o% fac
+    return(ci)
+  }
+
+  stopifnot(!is.null(boot_t))
+  boot_t <- as.matrix(boot_t)
+
+  if (boot.ci.type == "basic") {
+    alpha <- (1 + c(level, -level)) / 2
+    qq <- apply(boot_t, 2L, lav_bootstrap_norm_inter, alpha)
+    ci <- 2 * ci - t(qq[c(3L, 4L), , drop = FALSE])
+  } else if (boot.ci.type == "perc") {
+    alpha <- (1 + c(-level, level)) / 2
+    qq <- apply(boot_t, 2L, lav_bootstrap_norm_inter, alpha)
+    ci <- t(qq[c(3L, 4L), , drop = FALSE])
+  } else if (boot.ci.type %in% c("bca.simple", "bca")) {
+    alpha <- (1 + c(-level, level)) / 2
+    zalpha <- qnorm(alpha)
+    if (is.null(acc)) {
+      acc <- numeric(p) # bca.simple: acceleration = 0
+    }
+    for (i in seq_len(p)) {
+      t <- boot_t[, i]
+      t <- t[is.finite(t)]
+      # no bootstrap variability? keep the point estimate
+      if (length(t) < 2L || var(t) == 0) {
+        next
+      }
+      w <- qnorm(sum(t < t0[i]) / length(t))
+      a <- acc[i]
+      adj_alpha <- pnorm(w + (w + zalpha) / (1 - a * (w + zalpha)))
+      qq <- lav_bootstrap_norm_inter(t, adj_alpha)
+      ci[i, ] <- qq[, 2L]
+    }
+  }
+
+  ci
+}
+
+# Compute the acceleration constants for the BCa method, using empirical
+# influence values obtained by regressing the bootstrap realizations 'boot_t'
+# (R x p) on the bootstrap frequency design matrix 'design' (R x k, including
+# the intercept column). Returns a length-p vector of acceleration constants.
+lav_bootstrap_acceleration <- function(boot_t, design) {
+  boot_t <- as.matrix(boot_t)
+  tmp_lm <- stats::lm.fit(x = design, y = boot_t)
+  tmp_beta <- unname(tmp_lm$coefficients)[-1L, , drop = FALSE]
+  tmp_ll <- rbind(0, tmp_beta)
+  apply(tmp_ll, 2L, function(x) {
+    tmp_l <- x - mean(x)
+    sum(tmp_l^3) / (6 * sum(tmp_l^2)^1.5)
+  })
+}
