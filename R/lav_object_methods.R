@@ -709,122 +709,41 @@ lavParameterEstimates <- function(object,                      # nolint start
 
           # TODO: add cin/ceq?
         } else if (boot.ci.type == "bca") { # new in 0.6-12
-          # we assume that the 'ordinary' (nonparametric) was used
+          # we assume that the 'ordinary' (nonparametric) bootstrap was used.
+          # The empirical-influence design matrix and the acceleration/CI
+          # computations are shared with lavEffects() (see lav_bootstrap.R).
+          design <- lav_bootstrap_bca_design(object, error_idx)
+          stopifnot(nrow(design) == nrow(tmp_boot))
 
-          lavoptions <- object@Options
-          nobs <- object@SampleStats@nobs
-          ntotal <- object@SampleStats@ntotal
-
-          # we need enough bootstrap runs
-          if (nrow(tmp_boot) < ntotal) {
-            lav_msg_stop(gettextf(
-            "BCa confidence intervals require more (successful) bootstrap runs
-            (%1$s) than the number of observations (%2$s).",
-            nrow(tmp_boot), ntotal))
-          }
-
-          # does not work with sampling weights (yet)
-          if (!is.null(object@Data@weights[[1]])) {
-            lav_msg_stop(
-              gettext("BCa confidence intervals not available in
-                      the presence of sampling weights."))
-          }
-
-          # check if we have a seed
-          if (is.null(bootstrap_seed)) {
-            lav_msg_stop(gettext("seed not available in tmp.boot object."))
-          }
-
-          # compute 'X' matrix with frequency indices (to compute
-          # the empirical influence values using regression)
-          tmp_freq <- lav_bootstrap_indices(
-            r = lavoptions$bootstrap,
-            nobs = nobs, parallel = lavoptions$parallel[1],
-            ncpus = lavoptions$ncpus, cl = lavoptions[["cl"]],
-            iseed = bootstrap_seed, return_freq = TRUE,
-            merge_groups = TRUE
-          )
-          if (length(error_idx) > 0L) {
-            tmp_freq <- tmp_freq[-error_idx, , drop = FALSE]
-          }
-          stopifnot(nrow(tmp_freq) == nrow(tmp_boot))
-
-          # compute empirical influence values (using regression)
-          # remove first column per group
-          first_idx <- sapply(object@Data@case.idx, "[[", 1L)
-          tmp_lm <- lm.fit(x = cbind(1, tmp_freq[, -first_idx]), y = tmp_boot)
-          tmp_beta <- unname(tmp_lm$coefficients)[-1, , drop = FALSE]
-          tmp_ll <- rbind(0, tmp_beta)
-
-          # compute 'a' for all parameters at once
-          tmp_aa <- apply(tmp_ll, 2L, function(x) {
-            tmp_l <- x - mean(x)
-            sum(tmp_l^3) / (6 * sum(tmp_l^2)^1.5)
-          })
-
-          # adjustment for both bias AND scale
-          alpha <- (1 + c(-level, level)) / 2
-          zalpha <- qnorm(alpha)
           ci <- cbind(tmp_list$est, tmp_list$est)
 
-          # free_idx only
+          # free parameters
           free_idx <- which(object@ParTable$free &
             !duplicated(object@ParTable$free))
           stopifnot(length(free_idx) == ncol(tmp_boot))
-          x <- tmp_list$est[free_idx]
-          for (i in seq_along(free_idx)) {
-            t <- tmp_boot[, i]
-            t <- t[is.finite(t)]
-            t0 <- x[i]
-            # check if we have variance (perhaps constrained to 0?)
-            # new in 0.6-3
-            if (var(t) == 0) {
-              next
-            }
-            w <- qnorm(sum(t < t0) / length(t))
-            a <- tmp_aa[i]
-            adj_alpha <- pnorm(w + (w + zalpha) / (1 - a * (w + zalpha)))
-            qq <- lav_bootstrap_norm_inter(t, adj_alpha)
-            ci[free_idx[i], ] <- qq[, 2]
-          }
+          acc <- lav_bootstrap_acceleration(tmp_boot, design)
+          ci[free_idx, ] <- lav_bootstrap_ci(
+            boot_t = tmp_boot, t0 = tmp_list$est[free_idx],
+            boot.ci.type = "bca", level = level, acc = acc
+          )
 
-          # def_idx
+          # defined parameters
           def_idx <- which(object@ParTable$op == ":=")
           if (length(def_idx) > 0L) {
-            x_def <- object@Model@def.function(x)
-            boot_def <- apply(tmp_boot, 1, object@Model@def.function)
+            boot_def <- apply(tmp_boot, 1L, object@Model@def.function)
             if (length(def_idx) == 1L) {
               boot_def <- as.matrix(boot_def)
             } else {
               boot_def <- t(boot_def)
             }
-
-            # recompute empirical influence values
-            tmp_lm <- lm.fit(x = cbind(1, tmp_freq[, -1]), y = boot_def)
-            tmp_beta <- unname(tmp_lm$coefficients)[-1, , drop = FALSE]
-            tmp_ll <- rbind(0, tmp_beta)
-
-            # compute 'a' values for all def_idx parameters
-            tmp_aa <- apply(tmp_ll, 2L, function(x) {
-              tmp_l <- x - mean(x)
-              sum(tmp_l^3) / (6 * sum(tmp_l^2)^1.5)
-            })
-
-            # compute bca ci
-            for (i in seq_along(def_idx)) {
-              t <- boot_def[, i]
-              t <- t[is.finite(t)]
-              t0 <- x_def[i]
-              w <- qnorm(sum(t < t0) / length(t))
-              a <- tmp_aa[i]
-              adj_alpha <- pnorm(w + (w + zalpha) / (1 - a * (w + zalpha)))
-              qq <- lav_bootstrap_norm_inter(t, adj_alpha)
-              ci[def_idx[i], ] <- qq[, 2]
-            }
+            acc <- lav_bootstrap_acceleration(boot_def, design)
+            ci[def_idx, ] <- lav_bootstrap_ci(
+              boot_t = boot_def, t0 = tmp_list$est[def_idx],
+              boot.ci.type = "bca", level = level, acc = acc
+            )
           }
 
-          # TODO:
-          # - add cin/ceq
+          # TODO: add cin/ceq?
         }
       }
 

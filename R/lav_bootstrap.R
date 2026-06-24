@@ -919,10 +919,72 @@ lav_bootstrap_ci <- function(boot_t = NULL, t0, boot.ci.type = "perc",
 lav_bootstrap_acceleration <- function(boot_t, design) {
   boot_t <- as.matrix(boot_t)
   tmp_lm <- stats::lm.fit(x = design, y = boot_t)
-  tmp_beta <- unname(tmp_lm$coefficients)[-1L, , drop = FALSE]
+  tmp_beta <- tmp_lm$coefficients
+  # lm.fit() returns 'coefficients' as a plain vector when y has a single
+  # column; coerce to a matrix so the indexing below always works
+  if (!is.matrix(tmp_beta)) {
+    tmp_beta <- matrix(tmp_beta, ncol = ncol(boot_t))
+  }
+  tmp_beta <- unname(tmp_beta)[-1L, , drop = FALSE]
   tmp_ll <- rbind(0, tmp_beta)
   apply(tmp_ll, 2L, function(x) {
     tmp_l <- x - mean(x)
     sum(tmp_l^3) / (6 * sum(tmp_l^2)^1.5)
   })
+}
+
+# Build the design matrix used to compute empirical influence values for the
+# BCa method: an intercept column followed by the bootstrap frequency matrix,
+# with one reference case per group removed (to avoid collinearity, since the
+# frequencies within a group sum to the group size). Returns an
+# R_successful x k matrix, where R_successful is the number of non-failed
+# bootstrap runs. Performs the BCa prerequisite checks and stops with an
+# informative message if they are not met. 'object' is a fitted lavaan object
+# that was fitted with se = "bootstrap"; 'error_idx' are the indices of the
+# failed bootstrap runs (as stored in the attribute of lav_inspect_boot()).
+lav_bootstrap_bca_design <- function(object, error_idx = integer(0L)) {
+  lavoptions <- object@Options
+  nobs   <- object@SampleStats@nobs
+  ntotal <- object@SampleStats@ntotal
+
+  # number of bootstrap runs requested (the 'bootstrap' option is a list)
+  r <- lavoptions$bootstrap
+  if (is.list(r)) {
+    r <- r$R
+  }
+
+  # we need enough (successful) bootstrap runs
+  n_ok <- r - length(error_idx)
+  if (n_ok < ntotal) {
+    lav_msg_stop(gettextf(
+      "BCa confidence intervals require more (successful) bootstrap runs
+       (%1$s) than the number of observations (%2$s).", n_ok, ntotal))
+  }
+
+  # does not work with sampling weights (yet)
+  if (!is.null(object@Data@weights[[1]])) {
+    lav_msg_stop(gettext(
+      "BCa confidence intervals not available in the presence of sampling
+       weights."))
+  }
+
+  # we need the seed that was used for the bootstrap
+  boot_seed <- attr(lav_inspect_boot(object), "seed")
+  if (is.null(boot_seed)) {
+    lav_msg_stop(gettext("Seed not available in the bootstrap object."))
+  }
+
+  # reconstruct the frequency matrix (one column per observation)
+  tmp_freq <- lav_bootstrap_indices(
+    r = r, nobs = nobs, parallel = lavoptions$parallel[1],
+    ncpus = lavoptions$ncpus, cl = lavoptions[["cl"]],
+    iseed = boot_seed, return_freq = TRUE, merge_groups = TRUE
+  )
+  if (length(error_idx) > 0L) {
+    tmp_freq <- tmp_freq[-error_idx, , drop = FALSE]
+  }
+
+  # remove the first case of each group, then add the intercept column
+  first_idx <- sapply(object@Data@case.idx, "[[", 1L)
+  cbind(1, tmp_freq[, -first_idx, drop = FALSE])
 }
