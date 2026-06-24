@@ -23,6 +23,9 @@ lav_sem_miiv_internal <- function(lavmodel = NULL, lavh1 = NULL,
   if (length(iv_mean_structure) == 0L) {
     iv_mean_structure <- "moments"
   }
+  # ML divisor (N) instead of the unbiased N-P divisor for the residual
+  # variances (see lav_options_est_iv())
+  iv_mimic_ml <- isTRUE(lavoptions$estimator.args$iv_mimic_ml)
   # just in case
   if (lavmodel@categorical) {
     iv_samplestats <- TRUE
@@ -114,7 +117,7 @@ lav_sem_miiv_internal <- function(lavmodel = NULL, lavh1 = NULL,
         lavdata = lavdata, lavsamplestats = lavsamplestats,
         lavh1 = lavh1, free_directed_idx = free_directed_idx,
         iv_vcov_stage1 = iv_vcov_stage1, iv_sargan = iv_sargan,
-        iv_vcov_stage2 = iv_vcov_stage2
+        iv_vcov_stage2 = iv_vcov_stage2, iv_mimic_ml = iv_mimic_ml
       )
     } else {
       theta1 <- lav_sem_miiv_2sls(
@@ -122,7 +125,7 @@ lav_sem_miiv_internal <- function(lavmodel = NULL, lavh1 = NULL,
         lavmodel = lavmodel, lavpartable = lavpartable,
         lavdata = lavdata, free_directed_idx = free_directed_idx,
         iv_vcov_stage1 = iv_vcov_stage1, iv_sargan = iv_sargan,
-        iv_vcov_stage2 = iv_vcov_stage2
+        iv_vcov_stage2 = iv_vcov_stage2, iv_mimic_ml = iv_mimic_ml
       )
     }
     # update equations
@@ -763,7 +766,7 @@ lav_sem_miiv_2sls <- function(eqs = NULL, lavmodel = NULL, lavpartable = NULL,
                               lavdata = NULL, free_directed_idx = NULL,
                               iv_vcov_stage1 = "lm.vcov.dfres",
                               iv_vcov_stage2 = "delta",
-                              iv_sargan = TRUE) {
+                              iv_sargan = TRUE, iv_mimic_ml = FALSE) {
   # this function is for continuous/raw-data only
   stopifnot(lavdata@data.type == "full")
   stopifnot(!lavmodel@categorical)
@@ -974,6 +977,11 @@ lav_sem_miiv_2sls <- function(eqs = NULL, lavmodel = NULL, lavpartable = NULL,
         }
         resvar_df_res <- sse / df_res # what we should do...
         resvar <- sse / length(res)
+        # iv_mimic_ml: use the ML divisor (N) for the residual variance
+        # used in the standard errors / Sargan test as well
+        if (iv_mimic_ml) {
+          resvar_df_res <- resvar
+        }
       }
 
       # 5. naive cov (for standard errors) (see summary.lm in base R)
@@ -1051,7 +1059,8 @@ lav_sem_miiv_2sls_samp <- function(x = NULL, samplestats = FALSE,
                                           iv_vcov_stage2 = "delta",
                                           iv_sargan = TRUE,
                                           free_directed_idx = NULL,
-                                          aug_vec = NULL, aug_pdim = NULL) {
+                                          aug_vec = NULL, aug_pdim = NULL,
+                                          iv_mimic_ml = FALSE) {
   # no conditional.x for now!
   stopifnot(!lavmodel@conditional.x)
   iv_vcov_stage1 <- tolower(iv_vcov_stage1)
@@ -1440,6 +1449,12 @@ lav_sem_miiv_2sls_samp <- function(x = NULL, samplestats = FALSE,
         }
         df_res <- nobs - (nx + 1L)
         resvar_df_res <- resvar * nobs / df_res
+        # iv_mimic_ml: use the ML divisor (N) instead of N-P, so the residual
+        # variance used in the standard errors / Sargan test stays on the same
+        # (ML) scale as the rescaled sample covariance (resvar = RSS / N)
+        if (iv_mimic_ml) {
+          resvar_df_res <- resvar
+        }
       }
 
       # 5. naive cov (for standard errors) (see summary.lm in base R)

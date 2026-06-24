@@ -141,6 +141,15 @@ The option names use snake_case. For backward compatibility, dot.case names
     Jacobians used in the standard-error computation are obtained numerically
     rather than from analytic expressions. The default is \code{FALSE}; these
     are mainly intended for checking the analytic derivatives.}
+  \item{\code{iv_mimic_ml}:}{Logical. If \code{FALSE} (the default), the IV
+    estimator uses unbiased divisors: the sample covariance matrix is divided
+    by \eqn{N-1} (\code{sample.cov.rescale = FALSE}) and the per-equation
+    residual variances (the RSS terms entering the standard errors and the
+    Sargan test) use the \eqn{N-P} divisor. If \code{TRUE}, the maximum
+    likelihood divisor \eqn{N} is used throughout: the sample covariance is
+    rescaled to the ML divisor \eqn{N} and the residual variances use the
+    \eqn{N} divisor as well. As a result, for just-identified models the IV
+    point estimates and standard errors match the ML solution exactly.}
 }
 }
 

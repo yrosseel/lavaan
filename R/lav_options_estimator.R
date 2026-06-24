@@ -729,7 +729,8 @@ lav_options_est_iv <- function(opt) {
                                iv_vcov_gamma_modelbased = TRUE,
                                iv_vcov_jack_numerical = FALSE,
                                iv_vcov_jaca_numerical = FALSE,
-                               iv_vcov_jacb_numerical = FALSE)
+                               iv_vcov_jacb_numerical = FALSE,
+                               iv_mimic_ml = FALSE)
   } else {
     if (is.null(opt$estimator.args$iv_method)) {
       opt$estimator.args$iv_method <- "2SLS"
@@ -828,6 +829,23 @@ lav_options_est_iv <- function(opt) {
     if (is.null(opt$estimator.args$iv_vcov_jacb_numerical)) {
       opt$estimator.args$iv_vcov_jacb_numerical <- FALSE
     }
+    if (is.null(opt$estimator.args$iv_mimic_ml)) {
+      opt$estimator.args$iv_mimic_ml <- FALSE
+    } else if (!is.logical(opt$estimator.args$iv_mimic_ml) ||
+               length(opt$estimator.args$iv_mimic_ml) != 1L) {
+      lav_msg_stop(gettext("iv_mimic_ml should be a single logical (TRUE/FALSE)."))
+    }
+  }
+
+  # iv_mimic_ml: use the (maximum-likelihood) divisor N everywhere instead of
+  # the default unbiased divisors. By default (FALSE) the IV estimator uses the
+  # unbiased sample covariance (divisor N-1, sample.cov.rescale = FALSE) and the
+  # N-P divisor for the per-equation residual variances (RSS terms). When TRUE,
+  # the sample covariance is rescaled to the ML divisor N and the residual
+  # variances use the N divisor as well, so that (for just-identified models)
+  # the IV point estimates and standard errors match the ML solution.
+  if (isTRUE(opt$estimator.args$iv_mimic_ml)) {
+    opt$sample.cov.rescale <- TRUE
   }
 
   # two-stage missing data needs the (EM) sample moments, and the standard
