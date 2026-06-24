@@ -169,6 +169,7 @@ standardizedSolution <-                                      # nolint start
                                    pvalue = TRUE,
                                    ci = TRUE,
                                    level = 0.95,
+                                   boot.ci.type = "perc",
                                    cov.std = TRUE,
                                    remove.eq = TRUE,
                                    remove.ineq = TRUE,
@@ -273,7 +274,69 @@ standardizedSolution <-                                      # nolint start
       )
     }
 
-    if (object@Options$se != "none" && se) {
+    # bootstrap? If the model was fitted with se = "bootstrap" (and bootstrap
+    # draws are available), we provide bootstrap standard errors and bootstrap
+    # confidence intervals for the standardized parameters (just like
+    # parameterEstimates() does for the unstandardized parameters). Every row
+    # of the standardized solution is a function of the free parameters, so we
+    # simply re-standardize each bootstrap draw.
+    boot_std <- NULL
+    boot_error_idx <- integer(0L)
+    tmp_boot_free <- NULL
+    tmp_fun_x <- NULL
+    if (object@Options$se == "bootstrap" && se &&
+        !is.null(object@boot$coef) && NROW(object@boot$coef) > 0L) {
+      stopifnot(boot.ci.type %in%
+        c("norm", "basic", "perc", "bca.simple", "bca"))
+      # standardization as a function of the free parameter vector
+      if (type == "std.lv") {
+        tmp_fun_x <- lav_standardize_lv_x
+      } else if (type == "std.all") {
+        tmp_fun_x <- lav_standardize_all_x
+      } else if (type == "std.nox") {
+        tmp_fun_x <- lav_standardize_all_nox_x
+      } else if (type == "std.user") {
+        tmp_fun_x <- function(x, lavobject) {
+          lav_standardize_all_x(x, lavobject = lavobject, ov_std = ov_std_user)
+        }
+      }
+      tmp_boot_free <- lav_inspect_boot(object)
+      boot_error_idx <- attr(tmp_boot_free, "error.idx")
+      if (length(boot_error_idx) > 0L) {
+        tmp_boot_free <- tmp_boot_free[-boot_error_idx, , drop = FALSE]
+      }
+      boot_std <- try(apply(tmp_boot_free, 1L, tmp_fun_x, lavobject = object),
+                      silent = TRUE)
+      if (inherits(boot_std, "try-error") || is.null(boot_std)) {
+        boot_std <- NULL
+      } else {
+        if (is.matrix(boot_std)) {
+          boot_std <- t(boot_std)
+        } else {
+          boot_std <- as.matrix(boot_std)
+        }
+        boot_std[!is.finite(boot_std)] <- as.numeric(NA)
+      }
+    }
+
+    if (object@Options$se != "none" && se && !is.null(boot_std)) {
+      # bootstrap standard errors (MLE-normalised covariance, as elsewhere)
+      nboot <- nrow(boot_std)
+      tmp <- apply(boot_std, 2L, sd, na.rm = TRUE) * sqrt((nboot - 1) / nboot)
+      # catch near-zero SEs
+      zero_idx <- which(tmp < .Machine$double.eps^(1 / 4))
+      if (length(zero_idx) > 0L) {
+        tmp[zero_idx] <- 0.0
+      }
+      tmp_list$se <- tmp
+      if (zstat) {
+        tmp_se <- ifelse(tmp_list$se == 0.0, NA, tmp_list$se)
+        tmp_list$z <- tmp_list$est.std / tmp_se
+      }
+      if (zstat && pvalue) {
+        tmp_list$pvalue <- 2 * (1 - pnorm(abs(tmp_list$z)))
+      }
+    } else if (object@Options$se != "none" && se) {
       # add 'se' for standardized parameters
       tmp_vcov <- try(lav_inspect_vcov(object,
         standardized = TRUE,
@@ -324,41 +387,63 @@ standardizedSolution <-                                      # nolint start
       a <- (1 - level) / 2
       a <- c(a, 1 - a)
       fac <- qnorm(a)
-      # if(object@Options$se != "bootstrap") {
       ci <- tmp_list$est.std + tmp_list$se %o% fac
-      # } else {
-      #    ci <- rep(as.numeric(NA), length(tmp_list$est.std)) +
-      #              tmp_list$se %o% fac
-      # }
 
-      # Monte Carlo: asymmetric percentile-based CI for standardized
-      # defined parameters (Preacher & Selig 2012)
-      mc_coef <- lav_inspect_mc(object)
-      def_idx <- which(tmp_list$op == ":=")
-      if (!is.null(mc_coef) && length(def_idx) > 0L) {
-        if (type == "std.lv") {
-          tmp_fun_mc <- lav_standardize_lv_x
-        } else if (type == "std.all") {
-          tmp_fun_mc <- lav_standardize_all_x
-        } else if (type == "std.nox") {
-          tmp_fun_mc <- lav_standardize_all_nox_x
-        } else if (type == "std.user") {
-          tmp_fun_mc <- function(x, lavobject) {
-            lav_standardize_all_x(x, lavobject = lavobject, ov_std = ov_std_user)
-          }
-        }
-        mc_std <- try(apply(mc_coef, 1L, tmp_fun_mc,
-                            lavobject = object), silent = TRUE)
-        if (!inherits(mc_std, "try-error")) {
-          if (is.matrix(mc_std)) {
-            mc_std <- t(mc_std)
+      if (!is.null(boot_std)) {
+        # bootstrap confidence intervals (shared with parameterEstimates() and
+        # lavEffects() via lav_bootstrap_ci(); see lav_bootstrap.R). Every row
+        # is a derived quantity, so the CI is computed uniformly for all rows.
+        t0 <- tmp_list$est.std
+        if (boot.ci.type == "bca") {
+          design <- lav_bootstrap_bca_design(object, boot_error_idx)
+          stopifnot(nrow(design) == nrow(boot_std))
+          acc <- lav_bootstrap_acceleration(boot_std, design)
+          ci <- lav_bootstrap_ci(boot_t = boot_std, t0 = t0,
+            boot.ci.type = "bca", level = level, acc = acc)
+        } else {
+          # For "norm", the bias is evaluated at the mean of the bootstrapped
+          # (free) parameters, exactly as in parameterEstimates().
+          bias <- if (boot.ci.type == "norm") {
+            as.numeric(tmp_fun_x(colMeans(tmp_boot_free, na.rm = TRUE),
+                                 lavobject = object)) - t0
           } else {
-            mc_std <- as.matrix(mc_std)
+            NULL
           }
-          alpha <- c((1 - level) / 2, 1 - (1 - level) / 2)
-          mc_qq <- apply(mc_std[, def_idx, drop = FALSE], 2L,
-                         quantile, probs = alpha, na.rm = TRUE, type = 7)
-          ci[def_idx, ] <- t(mc_qq)
+          ci <- lav_bootstrap_ci(boot_t = boot_std, t0 = t0,
+            boot.ci.type = boot.ci.type, level = level,
+            se = tmp_list$se, bias = bias)
+        }
+      } else {
+        # Monte Carlo: asymmetric percentile-based CI for standardized
+        # defined parameters (Preacher & Selig 2012)
+        mc_coef <- lav_inspect_mc(object)
+        def_idx <- which(tmp_list$op == ":=")
+        if (!is.null(mc_coef) && length(def_idx) > 0L) {
+          if (type == "std.lv") {
+            tmp_fun_mc <- lav_standardize_lv_x
+          } else if (type == "std.all") {
+            tmp_fun_mc <- lav_standardize_all_x
+          } else if (type == "std.nox") {
+            tmp_fun_mc <- lav_standardize_all_nox_x
+          } else if (type == "std.user") {
+            tmp_fun_mc <- function(x, lavobject) {
+              lav_standardize_all_x(x, lavobject = lavobject,
+                                    ov_std = ov_std_user)
+            }
+          }
+          mc_std <- try(apply(mc_coef, 1L, tmp_fun_mc,
+                              lavobject = object), silent = TRUE)
+          if (!inherits(mc_std, "try-error")) {
+            if (is.matrix(mc_std)) {
+              mc_std <- t(mc_std)
+            } else {
+              mc_std <- as.matrix(mc_std)
+            }
+            alpha <- c((1 - level) / 2, 1 - (1 - level) / 2)
+            mc_qq <- apply(mc_std[, def_idx, drop = FALSE], 2L,
+                           quantile, probs = alpha, na.rm = TRUE, type = 7)
+            ci[def_idx, ] <- t(mc_qq)
+          }
         }
       }
 

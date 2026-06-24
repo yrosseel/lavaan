@@ -5,8 +5,9 @@
 \description{
 Standardized solution of a latent variable model.}
 \usage{
-standardizedSolution(object, type = "std.all", se = TRUE, zstat = TRUE, 
-                     pvalue = TRUE, ci = TRUE, level = 0.95, cov.std = TRUE, 
+standardizedSolution(object, type = "std.all", se = TRUE, zstat = TRUE,
+                     pvalue = TRUE, ci = TRUE, level = 0.95,
+                     boot.ci.type = "perc", cov.std = TRUE,
                      remove.eq = TRUE, remove.ineq = TRUE, remove.def = FALSE,
                      remove.aux = TRUE,
                      partable = NULL, GLIST = NULL, est = NULL,
@@ -34,9 +35,16 @@ by its standard error.}
 \item{pvalue}{Logical. If \code{TRUE}, an extra column is added containing
 the pvalues corresponding to the z-statistic, evaluated under a standard
 normal distribution.}
-\item{ci}{If \code{TRUE}, simple symmetric confidence intervals are added to
+\item{ci}{If \code{TRUE}, confidence intervals are added to
 the output.}
 \item{level}{The confidence level required.}
+\item{boot.ci.type}{Character. Only used if the model was fitted with
+\code{se = "bootstrap"}. In that case, bootstrap standard errors and bootstrap
+confidence intervals are computed for the standardized parameters (by
+re-standardizing each bootstrap draw), and this argument selects the type of
+bootstrap confidence interval, exactly as in
+\code{\link{parameterEstimates}}: \code{"norm"}, \code{"basic"},
+\code{"perc"} (the default), \code{"bca.simple"} or \code{"bca"}.}
 \item{cov.std}{Logical. If TRUE, the (residual) observed
 covariances are scaled by the square root of the `Theta' diagonal elements, and
 the (residual) latent covariances are scaled by the square root of the `Psi'
