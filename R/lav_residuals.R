@@ -637,6 +637,8 @@ lav_residuals_largest_print_one <- function(df, show_se = FALSE,
       ))
     }
   }
+  # shift the whole table two spaces to the right (blank lines stay empty)
+  lines <- ifelse(nzchar(lines), paste0("  ", lines), lines)
   cat(lines, sep = "\n")
   cat("\n")
 }
