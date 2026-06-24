@@ -421,11 +421,25 @@ lav_fit <- function(object, fit_measures = "all",
   }
 
   # gfi (the 'new' GFI of Maydeu-Olivares et al., 2024, with conf. interval)
+  # note: the (printed) 'gfi' is the RLS-based version
   fit_gfi <- c("gfi", "gfi.ci.lower", "gfi.ci.upper", "gfi.ci.level")
   if (fm_args$robust && (scaled_flag || categorical_flag || fiml_flag)) {
     fit_gfi <- c(
       fit_gfi, "gfi.robust",
       "gfi.ci.lower.robust", "gfi.ci.upper.robust"
+    )
+  }
+  # explicit LR-based (gfi_lrt) and RLS-based (gfi_rls) versions; these are not
+  # part of the 'default' or 'all' sets, but can be requested by name
+  fit_gfi_extra <- c(
+    "gfi_lrt", "gfi_lrt.ci.lower", "gfi_lrt.ci.upper",
+    "gfi_rls", "gfi_rls.ci.lower", "gfi_rls.ci.upper"
+  )
+  if (fm_args$robust && (scaled_flag || categorical_flag || fiml_flag)) {
+    fit_gfi_extra <- c(
+      fit_gfi_extra,
+      "gfi_lrt.robust", "gfi_lrt.ci.lower.robust", "gfi_lrt.ci.upper.robust",
+      "gfi_rls.robust", "gfi_rls.ci.lower.robust", "gfi_rls.ci.upper.robust"
     )
   }
   # the 'old' (LISREL) GFI and friends
@@ -634,7 +648,7 @@ lav_fit <- function(object, fit_measures = "all",
   }
 
   # GFI and friends
-  if (any(c(fit_gfi, fit_gfi_lisrel) %in% fit_measures)) {
+  if (any(c(fit_gfi, fit_gfi_extra, fit_gfi_lisrel) %in% fit_measures)) {
     # check gfi.ci.level option (default 0.90)
     gfi_ci_level <- 0.90
     if (!is.null(fm_args$gfi.ci.level) &&

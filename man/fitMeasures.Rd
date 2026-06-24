@@ -52,6 +52,12 @@ fitmeasures(object, fit_measures = "all",
   null hypothesis that \code{rmsea >= rmsea.notclose.h0}. The
   \code{gfi.ci.level} option, default 0.9, determines the level of the
   confidence interval for the (new) goodness of fit index \code{gfi}. The
+  \code{gfi} index (Maydeu-Olivares et al., 2024) is computed from the
+  reweighted least squares (RLS) statistic; the version based on the
+  (standard) likelihood ratio statistic is also available, and the two can
+  be requested by name as \code{gfi_lrt} and \code{gfi_rls} (the latter being
+  identical to \code{gfi}), together with their \code{.ci.lower},
+  \code{.ci.upper} and \code{.robust} variants. The
   \code{robust}
   option, default \code{TRUE}, can be set to \code{FALSE} to avoid computing the so-called robust
   rmsea/cfi/gfi measures (for example if the computations take too long).

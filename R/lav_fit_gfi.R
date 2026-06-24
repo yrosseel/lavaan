@@ -126,15 +126,24 @@ lav_fit_pgfi <- function(gfi = NULL, nel = NULL, df = NULL) {
 # where T is the test statistic, p the number of observed variables, N the
 # (total) sample size, df the degrees of freedom and c_hat a scaling constant.
 #
+# Maydeu-Olivares et al. (2024) use the reweighted least squares (RLS)
+# statistic T_RLS (== 'browne.residual.nt.model' in lavaan), arguing it offers
+# a more reliable assessment of exact fit than the likelihood ratio (LR)
+# statistic. We compute the GFI from both the LR statistic (gfi_lrt) and the
+# RLS statistic (gfi_rls); the (printed) 'gfi' is the RLS version.
+#
 # Following the implementation of the (robust) RMSEA in lavaan, we use the
-# (unscaled) standard chi-square statistic X2 as 'c_hat*T' (since c_hat*T_M
-# equals the unadjusted RLS/LR statistic) and apply c_hat only to the degrees
-# of freedom:
+# (unscaled) statistic X2 as 'c_hat*T' (since c_hat*T_M equals the unadjusted
+# RLS/LR statistic) and apply c_hat only to the degrees of freedom:
 #
 #   GFI = min( N*p / (N*p + 2*X2 - 2*c_hat*df), 1 )
 #
 # - 'standard' (normal-theory, unbiased) version: c_hat = 1
 # - 'robust' (to nonnormality) version: c_hat = scaling factor
+#
+# Note: the scaling constant c (and the shift b for scaled.shifted) is the same
+# for T_LR and T_RLS (Maydeu-Olivares et al., 2024, Eq. 19), so the robust RLS
+# version reuses the scaling factor(s) obtained for the LR statistic.
 #
 # Note: this matches the relationship GFI = p / (p + 2*df*RMSEA^2) (their
 # Eq. 26), with the corresponding (standard or robust) RMSEA value.
@@ -254,6 +263,43 @@ lav_fit_gfi_ci <- function(x2 = NULL, df = NULL, n = NULL, p = NULL,
   )
 }
 
+# compute a single GFI 'family' (point estimate + confidence interval, and the
+# robust counterparts) for a given (unadjusted) test statistic. This is called
+# once for the LR statistic and once for the RLS statistic.
+lav_fit_gfi_family <- function(x2 = NULL, df = NULL, n = NULL, p = NULL,
+                               ci_level = 0.90, robust_flag = FALSE,
+                               xx3 = NULL, df3 = NULL, c_hat = NULL,
+                               c_hat3 = NULL, xx3_scaled = NULL) {
+  out <- list(
+    est = as.numeric(NA), ci.lower = as.numeric(NA), ci.upper = as.numeric(NA),
+    robust = as.numeric(NA), ci.lower.robust = as.numeric(NA),
+    ci.upper.robust = as.numeric(NA)
+  )
+
+  # point estimate (normal-theory, unbiased)
+  out$est <- lav_fit_gfi(x2 = x2, df = df, n = n, p = p)
+
+  # confidence interval
+  ci <- lav_fit_gfi_ci(x2 = x2, df = df, n = n, p = p, level = ci_level)
+  out$ci.lower <- ci$gfi.ci.lower
+  out$ci.upper <- ci$gfi.ci.upper
+
+  if (robust_flag) {
+    out$robust <- lav_fit_gfi(
+      x2 = xx3, df = df3, n = n, p = p, c_hat = c_hat3
+    )
+    # note: input is the scaled test statistic!
+    ci_robust <- lav_fit_gfi_ci(
+      x2 = xx3_scaled, df = df3, n = n, p = p,
+      c_hat = c_hat, level = ci_level
+    )
+    out$ci.lower.robust <- ci_robust$gfi.ci.lower
+    out$ci.upper.robust <- ci_robust$gfi.ci.upper
+  }
+
+  out
+}
+
 # ----------------------------------------------------------------------------
 # higher-level function
 # ----------------------------------------------------------------------------
@@ -333,7 +379,7 @@ lav_fit_gfi_lavobject <- function(lavobject = NULL, fit_measures = "gfi",
   # supported fit measures in this function
   # 1) the 'old' (LISREL) GFI and friends
   fit_gfi_lisrel <- c("gfi_lisrel", "agfi_lisrel", "pgfi")
-  # 2) the 'new' GFI (with confidence interval)
+  # 2) the 'new' GFI (with confidence interval); 'gfi' is the RLS version
   fit_gfi <- c("gfi", "gfi.ci.lower", "gfi.ci.upper", "gfi.ci.level")
   if (robust_flag) {
     fit_gfi <- c(
@@ -341,7 +387,19 @@ lav_fit_gfi_lavobject <- function(lavobject = NULL, fit_measures = "gfi",
       "gfi.ci.lower.robust", "gfi.ci.upper.robust"
     )
   }
-  fit_gfi_all <- c(fit_gfi_lisrel, fit_gfi)
+  # 3) the explicit LR-based (gfi_lrt) and RLS-based (gfi_rls) versions
+  fit_gfi_extra <- c(
+    "gfi_lrt", "gfi_lrt.ci.lower", "gfi_lrt.ci.upper",
+    "gfi_rls", "gfi_rls.ci.lower", "gfi_rls.ci.upper"
+  )
+  if (robust_flag) {
+    fit_gfi_extra <- c(
+      fit_gfi_extra,
+      "gfi_lrt.robust", "gfi_lrt.ci.lower.robust", "gfi_lrt.ci.upper.robust",
+      "gfi_rls.robust", "gfi_rls.ci.lower.robust", "gfi_rls.ci.upper.robust"
+    )
+  }
+  fit_gfi_all <- c(fit_gfi_lisrel, fit_gfi, fit_gfi_extra)
 
   # which one do we need?
   if (missing(fit_measures)) {
@@ -388,15 +446,35 @@ lav_fit_gfi_lavobject <- function(lavobject = NULL, fit_measures = "gfi",
   }
 
   # ---------- the 'new' GFI (with confidence interval) ----------
-  if (any(fit_gfi %in% fit_measures)) {
+  if (any(c(fit_gfi, fit_gfi_extra) %in% fit_measures)) {
     # basic ingredients
-    x2 <- test[[test_idx]]$stat
+    x2 <- test[[test_idx]]$stat # LR (standard) chi-square statistic
     df <- test[[test_idx]]$df
     n <- lav_inspect_ntotal(object = lavobject) # N vs N-1
     # number of observed variables (per group)
     p <- lavobject@Model@nvar[[1]]
 
+    # the RLS (reweighted least squares) statistic == 'browne.residual.nt.model'
+    # (Maydeu-Olivares et al., 2024, recommend this over the LR statistic). Only
+    # needed if an RLS-based measure (gfi, gfi_rls) is requested. There is no
+    # separate RLS statistic in the categorical/FIML case (we reuse the LR one).
+    rls_names <- c(fit_gfi, fit_gfi_extra[grepl("^gfi_rls", fit_gfi_extra)])
+    x2_rls <- x2 # fallback
+    if (any(rls_names %in% fit_measures) &&
+      !categorical_flag && !fiml_flag) {
+      rls <- try(lavTest(lavobject, test = "browne.residual.nt.model"),
+        silent = TRUE
+      )
+      if (!inherits(rls, "try-error") &&
+        !is.null(rls[["browne.residual.nt.model"]]) &&
+        is.finite(rls[["browne.residual.nt.model"]]$stat)) {
+        x2_rls <- rls[["browne.residual.nt.model"]]$stat
+      }
+    }
+
     # robust ingredients
+    xx3 <- xx3_scaled <- df3 <- c_hat <- c_hat3 <- as.numeric(NA)
+    xx3_rls <- xx3_scaled_rls <- as.numeric(NA)
     if (robust_flag) {
       if (categorical_flag) {
         out <- try(lav_fit_catml_dwls(lavobject, check_pd = cat_check_pd),
@@ -411,47 +489,78 @@ lav_fit_gfi_lavobject <- function(lavobject = NULL, fit_measures = "gfi",
           c_hat3 <- c_hat <- out$c.hat3
           xx3_scaled <- out$XX3.scaled
         }
+        # no separate RLS version for categorical data
+        xx3_rls <- xx3
+        xx3_scaled_rls <- xx3_scaled
       } else if (fiml_flag) {
         xx3 <- fiml$XX3
         df3 <- fiml$df3
         c_hat3 <- c_hat <- fiml$c.hat3
         xx3_scaled <- fiml$XX3.scaled
+        # no separate RLS version for FIML
+        xx3_rls <- xx3
+        xx3_scaled_rls <- xx3_scaled
       } else {
         xx3 <- x2
         df3 <- df
         c_hat <- test[[scaled_idx]]$scaling.factor
+        shift_par <- 0
         if (scaled_test == "scaled.shifted") {
           # compute c.hat from a and b
           a <- test[[scaled_idx]]$scaling.factor
           b <- test[[scaled_idx]]$shift.parameter
+          shift_par <- b
           c_hat3 <- a * (df - b) / df
         } else {
           c_hat3 <- c_hat
         }
         xx3_scaled <- test[[scaled_idx]]$stat
+        # RLS analogues: the scaling constant c (and the shift b) are identical
+        # for T_LR and T_RLS (Maydeu-Olivares et al., 2024, Eq. 19), so we only
+        # need the unadjusted RLS statistic and reuse the same scaling factor(s)
+        xx3_rls <- x2_rls
+        xx3_scaled_rls <- x2_rls / c_hat + shift_par
       }
     }
 
-    # 1. GFI point estimate (normal-theory, unbiased)
-    indices["gfi"] <- lav_fit_gfi(x2 = x2, df = df, n = n, p = p)
-    if (robust_flag) {
-      indices["gfi.robust"] <-
-        lav_fit_gfi(x2 = xx3, df = df3, n = n, p = p, c_hat = c_hat3)
-    }
+    # GFI based on the LR statistic
+    gfi_lrt <- lav_fit_gfi_family(
+      x2 = x2, df = df, n = n, p = p, ci_level = ci_level,
+      robust_flag = robust_flag, xx3 = xx3, df3 = df3,
+      c_hat = c_hat, c_hat3 = c_hat3, xx3_scaled = xx3_scaled
+    )
+    # GFI based on the RLS statistic (the recommended version)
+    gfi_rls <- lav_fit_gfi_family(
+      x2 = x2_rls, df = df, n = n, p = p, ci_level = ci_level,
+      robust_flag = robust_flag, xx3 = xx3_rls, df3 = df3,
+      c_hat = c_hat, c_hat3 = c_hat3, xx3_scaled = xx3_scaled_rls
+    )
 
-    # 2. GFI confidence interval
+    # the default (printed) 'gfi' is the RLS version
+    indices["gfi"] <- gfi_rls$est
     indices["gfi.ci.level"] <- ci_level
-    ci <- lav_fit_gfi_ci(x2 = x2, df = df, n = n, p = p, level = ci_level)
-    indices["gfi.ci.lower"] <- ci$gfi.ci.lower
-    indices["gfi.ci.upper"] <- ci$gfi.ci.upper
+    indices["gfi.ci.lower"] <- gfi_rls$ci.lower
+    indices["gfi.ci.upper"] <- gfi_rls$ci.upper
+
+    # explicit LR-based and RLS-based versions
+    indices["gfi_lrt"] <- gfi_lrt$est
+    indices["gfi_lrt.ci.lower"] <- gfi_lrt$ci.lower
+    indices["gfi_lrt.ci.upper"] <- gfi_lrt$ci.upper
+    indices["gfi_rls"] <- gfi_rls$est
+    indices["gfi_rls.ci.lower"] <- gfi_rls$ci.lower
+    indices["gfi_rls.ci.upper"] <- gfi_rls$ci.upper
+
     if (robust_flag) {
-      # note: input is the scaled test statistic!
-      ci_robust <- lav_fit_gfi_ci(
-        x2 = xx3_scaled, df = df3, n = n, p = p,
-        c_hat = c_hat, level = ci_level
-      )
-      indices["gfi.ci.lower.robust"] <- ci_robust$gfi.ci.lower
-      indices["gfi.ci.upper.robust"] <- ci_robust$gfi.ci.upper
+      indices["gfi.robust"] <- gfi_rls$robust
+      indices["gfi.ci.lower.robust"] <- gfi_rls$ci.lower.robust
+      indices["gfi.ci.upper.robust"] <- gfi_rls$ci.upper.robust
+
+      indices["gfi_lrt.robust"] <- gfi_lrt$robust
+      indices["gfi_lrt.ci.lower.robust"] <- gfi_lrt$ci.lower.robust
+      indices["gfi_lrt.ci.upper.robust"] <- gfi_lrt$ci.upper.robust
+      indices["gfi_rls.robust"] <- gfi_rls$robust
+      indices["gfi_rls.ci.lower.robust"] <- gfi_rls$ci.lower.robust
+      indices["gfi_rls.ci.upper.robust"] <- gfi_rls$ci.upper.robust
     }
   }
 
