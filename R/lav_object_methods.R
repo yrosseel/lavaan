@@ -95,14 +95,13 @@ setMethod(
     efa_flag <- object@Options$model.type == "efa"
 
     if (is.logical(fit_measures)) {
-      if (fit_measures) {
-        fit_measures <- "default"
-      } else {
-        fit_measures <- "none"
-      }
+      fit_measures <- if (fit_measures) "default" else "none"
     }
     if (!is.list(fit_measures))
         fit_measures <- list(fit.measures = fit_measures)
+    if (is.logical(fit_measures$fit.measures)) {
+      fit_measures$fit.measures <- if (fit_measures$fit.measures) "default" else "none"
+    }
     if (!missing(fm.args)) {
       lav_deprecated_args("fit.measures", "fm.args")
       fit_measures <- c(fit_measures, fm.args)
