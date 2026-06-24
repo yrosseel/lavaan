@@ -122,18 +122,120 @@ setMethod(
 )
 
 
+# turn one block's residual list (as returned by lav_residuals()) into a long
+# data.frame, with one row per residual element-cell: covariances/variances
+# (v1~~v2), intercepts/means (v1~1), thresholds (v1|t1) and -- for conditional.x
+# -- the regression slopes (endo~exo). The exogenous moments (cov.x, mean.x) are
+# conditioned on and therefore omitted. If the block list carries '.se'/'.z'
+# companion elements (se = TRUE / zstat = TRUE in lavResiduals), matching 'se'
+# and 'z' columns are added (issue #464).
+lav_residuals_table_block <- function(block_list, se = FALSE, zstat = FALSE,
+                                      cov_diagonal = TRUE) {
+  sym_names   <- c("cov", "res.cov")     # symmetric (co)variance matrices
+  int_names   <- c("mean", "res.int")    # means / intercepts
+  th_names    <- c("th", "res.th")       # thresholds
+  slope_names <- c("res.slopes")         # regression slopes (endo x exo)
+  skip_names  <- c("type", "summary", "cov.x", "mean.x")
+
+  base_names <- setdiff(names(block_list), skip_names)
+  base_names <- base_names[!grepl("\\.(se|z)$", base_names)]
+
+  parts <- list()
+  for (nm in base_names) {
+    res_el <- block_list[[nm]]
+    se_el  <- block_list[[paste0(nm, ".se")]]
+    z_el   <- block_list[[paste0(nm, ".z")]]
+    if (is.null(res_el)) next
+
+    if (nm %in% sym_names) {
+      p <- nrow(res_el)
+      vidx <- lav_mat_vech_idx(p, diagonal = cov_diagonal)
+      rc <- arrayInd(vidx, c(p, p))
+      rn <- rownames(res_el)
+      if (is.null(rn)) rn <- as.character(seq_len(p))
+      name <- paste0(rn[rc[, 1]], "~~", rn[rc[, 2]])
+      sel <- function(x) x[vidx]
+    } else if (nm %in% slope_names) {
+      rn <- rownames(res_el)
+      cn <- colnames(res_el)
+      if (is.null(rn)) rn <- as.character(seq_len(nrow(res_el)))
+      if (is.null(cn)) cn <- as.character(seq_len(ncol(res_el)))
+      grid <- expand.grid(r = seq_len(nrow(res_el)), c = seq_len(ncol(res_el)))
+      name <- paste0(rn[grid$r], "~", cn[grid$c])
+      sel <- function(x) as.vector(x)
+    } else if (nm %in% int_names) {
+      vn <- names(res_el)
+      if (is.null(vn)) vn <- as.character(seq_along(res_el))
+      name <- paste0(vn, "~1")
+      sel <- function(x) as.vector(x)
+    } else if (nm %in% th_names) {
+      vn <- names(res_el)
+      if (is.null(vn)) vn <- as.character(seq_along(res_el))
+      name <- vn
+      sel <- function(x) as.vector(x)
+    } else {
+      next # unknown element type: skip
+    }
+
+    n_el <- length(name)
+    parts[[nm]] <- data.frame(
+      name = name,
+      res = sel(res_el),
+      se = if (!is.null(se_el)) sel(se_el) else rep(NA_real_, n_el),
+      z = if (!is.null(z_el)) sel(z_el) else rep(NA_real_, n_el),
+      stringsAsFactors = FALSE
+    )
+  }
+
+  if (length(parts) == 0L) {
+    tab <- data.frame(
+      name = character(0), res = numeric(0),
+      se = numeric(0), z = numeric(0), stringsAsFactors = FALSE
+    )
+  } else {
+    tab <- do.call(rbind, parts)
+  }
+
+  # drop rows for structurally fixed moments (a saturated mean or just-
+  # identified threshold, the intercept of an ordinal variable, or an exactly
+  # reproduced variance): these are not estimable residuals. The reliable
+  # signal is a zero or unavailable standard error -- the point estimate itself
+  # is only numerically (not exactly) zero. When no standard errors are
+  # available (e.g. the gated multigroup + multilevel case), fall back to the
+  # residual magnitude.
+  if (any(is.finite(tab$se))) {
+    keep <- is.finite(tab$se) & abs(tab$se) > 1e-08
+  } else {
+    keep <- is.finite(tab$res) & abs(tab$res) > 1e-06
+  }
+  tab <- tab[keep, , drop = FALSE]
+  rownames(tab) <- NULL
+
+  # drop the se/z columns if not requested
+  if (!se) tab$se <- NULL
+  if (!zstat) tab$z <- NULL
+
+  tab
+}
+
+
 # user-visible function
 lavResiduals <- function(object, type = "cor.bentler", h1 = NULL,         # nolint start
                          se = FALSE, zstat = TRUE, summary = TRUE,
                          h1.acov = "unstructured",
                          add.type = TRUE, add.labels = TRUE, add.class = TRUE,
                          drop.list.single.group = TRUE,
-                         maximum.number = length(res_vech),
+                         maximum.number = 0L,
                          output = "list") {                                # nolint end
+  # for the table output we always need the standard errors internally: they
+  # tell apart estimable residuals (finite, non-zero se) from structurally
+  # fixed moments (zero/NA se), which are filtered out. The summary statistics
+  # are not used by the table, so they are skipped there.
+  table_output <- identical(output, "table")
   out <- lav_residuals(
     object = object, type = type, h1 = h1,
-    se = se, zstat = zstat,
-    summary = summary,
+    se = se || table_output, zstat = zstat,
+    summary = summary && !table_output,
     summary_options = list(
       se = TRUE, zstat = TRUE, pvalue = TRUE,
       unbiased = TRUE, unbiased_se = TRUE, unbiased_ci = TRUE,
@@ -145,49 +247,40 @@ lavResiduals <- function(object, type = "cor.bentler", h1 = NULL,         # noli
     drop_list_single_group = drop.list.single.group
   )
 
-  # no pretty printing yet...
   if (output == "table") {
-    # new in 0.6-18: handle multiple blocks
+    # variance (diagonal) residuals are informative for the raw-style metrics
+    # but structurally zero in the correlation metrics, so we only list them
+    # for the former
+    cov_diagonal <- tolower(type)[1] %in%
+      c("raw", "rmr", "normalized", "standardized", "standardized.mplus")
+
+    # one table per block (single block -> the list is not nested)
     nblocks <- lav_pt_nblocks(object@ParTable)
     out_list <- vector("list", length = nblocks)
     for (block in seq_len(nblocks)) {
-      if (nblocks == 1L) {
-        res <- out$cov
-      } else {
-        res <- out[[block]]$cov
-      }
-      # extract only below-diagonal elements
-      res_vech <- lav_mat_vech(res, diagonal = FALSE)
-
-      # get names
-      p <- nrow(res)
-      names_1 <- colnames(res)
-
-      nam <- expand.grid(
-        names_1,
-        names_1
-      )[lav_mat_vech_idx(p, diagonal = FALSE), ]
-      names_vech <- paste(nam[, 1], "~~", nam[, 2], sep = "")
-
-      # create table
-      tab <- data.frame(
-        name = names_vech, res = round(res_vech, 3),
-        stringsAsFactors = FALSE
+      block_list <- if (nblocks == 1L) out else out[[block]]
+      tab <- lav_residuals_table_block(block_list,
+        se = se, zstat = zstat, cov_diagonal = cov_diagonal
       )
 
-      # sort table
-      idx <- sort.int(abs(tab$res),
-        decreasing = TRUE,
-        index.return = TRUE
-      )$ix
-      out_sorted <- tab[idx, ]
+      # round the numeric columns
+      num_cols <- intersect(c("res", "se", "z"), names(tab))
+      tab[num_cols] <- lapply(tab[num_cols], round, digits = 3)
 
-      # show first rows only
+      # sort by absolute residual (largest first)
+      tab <- tab[order(abs(tab$res), decreasing = TRUE), , drop = FALSE]
+      rownames(tab) <- NULL
+
+      # show first rows only (maximum.number == 0 -> all)
       maximum_number <- maximum.number
-      if (maximum_number == 0L || maximum_number > length(res_vech)) {
-        maximum_number <- length(res_vech)
+      if (maximum_number > 0L && maximum_number < nrow(tab)) {
+        tab <- tab[seq_len(maximum_number), , drop = FALSE]
       }
-      out_list[[block]] <- out_sorted[seq_len(maximum_number), ]
+
+      if (add.class) {
+        class(tab) <- c("lavaan.data.frame", "data.frame")
+      }
+      out_list[[block]] <- tab
     }
     if (nblocks == 1L) {
       out <- out_list[[1]]

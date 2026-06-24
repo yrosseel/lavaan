@@ -14,7 +14,7 @@ lavResiduals(object, type = "cor.bentler", h1 = NULL,
     se = FALSE, zstat = TRUE, summary = TRUE, h1.acov = "unstructured",
     add.type = TRUE, add.labels = TRUE, add.class = TRUE,
     drop.list.single.group = TRUE,
-    maximum.number = length(res_vech), output = "list")
+    maximum.number = 0L, output = "list")
 }
 \arguments{
 \item{object}{An object of class \code{\linkS4class{lavaan}}.}
@@ -66,12 +66,21 @@ This only affects the way they are printed on the screen.}
 a list, where each element corresponds to a group (even if there is only
 a single group). If \code{TRUE}, the list will be unlisted if there is
 only a single group.}
-\item{maximum.number}{Integer. Only used if \code{output ="table"}. Show only
-the first maximum.number rows of the data.frame.}
+\item{maximum.number}{Integer. Only used if \code{output = "table"}. If larger
+than zero, show only the first maximum.number rows of the data.frame. The
+default (\code{0L}) shows all rows.}
 \item{output}{Character. By default, \code{output = "list"}, and the output
-is a list of elements. If \code{output = "table"}, only the residuals of
-the variance-covariance matrix are shown in a data.frame, sorted from high 
-(in absolute value) to low.}
+is a list of elements. If \code{output = "table"}, the residuals are shown in
+a single data.frame, one row per residual element, sorted from high (in
+absolute value) to low. All residual elements are included: the (co)variances
+(\code{lhs~~rhs}), the means/intercepts (\code{lhs~1}), the thresholds
+(\code{lhs|t1}) and, when \code{conditional.x = TRUE}, the regression slopes
+(\code{lhs~rhs}). Variances (the diagonal) are only shown for the raw-style
+metrics (\code{type = "raw"}, \code{"normalized"} or \code{"standardized"}),
+not for the correlation metrics where they are structurally zero. Structurally
+fixed moments (e.g. saturated means or just-identified thresholds) are omitted.
+If \code{se = TRUE}, a \code{se} column with the standard errors is added; if
+\code{zstat = TRUE}, a \code{z} column with the z-statistics is added.}
 }
 \value{
 If \code{drop.list.single.group = TRUE}, a list of (residualized) summary
