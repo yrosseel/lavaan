@@ -45,9 +45,25 @@ errors.}
 (possibly scaled) residuals. When \code{type = "raw"}, we compute the
 RMR. When \code{type = "cor.bentler"},
 we compute the SRMR. When \code{type = "cor.bollen"}, we compute the CRMR.
-An unbiased version of these summaries is also computed, as well as a
-standard error, a z-statistic and a p-value for the test of exact fit
-based on these summaries.}
+An unbiased version of these summaries (the URMR, USRMR and UCRMR) is also
+computed (Maydeu-Olivares, 2017).
+
+The two versions are reported with different inferential statistics, and this
+asymmetry is intentional. The sample RMR/SRMR/CRMR overestimate (are positively
+biased for) their population values. For these (biased) statistics, we report a
+standard error and a test of \emph{exact} fit (the null hypothesis that the
+population value equals zero). This test
+relies on the known sampling distribution of the (biased) sample statistic
+under exact fit (Maydeu-Olivares, 2017, Eqs. 28--30), where the bias is
+explicitly accounted for. For the (approximately) unbiased URMR/USRMR/UCRMR, we
+report a standard error, a confidence interval, and a test of \emph{close} fit
+(the null hypothesis that the population value equals a small nonzero cutoff,
+e.g. 0.05). The confidence interval and the close-fit test require an
+(approximately) unbiased and normally distributed estimator, which is precisely
+why the unbiased version is used here. Conversely, no test of exact fit is
+reported for the unbiased estimator: because it is truncated at zero, its
+sampling distribution is degenerate at the exact-fit boundary, so the test of
+exact fit is (correctly) only based on the biased statistic.}
 \item{h1.acov}{Character. If \code{"unstructured"}, the observed summary
 statistics are used as consistent estimates of the corresponding (unrestricted)
 population statistics. If \code{"structured"}, the model-implied summary
