@@ -130,7 +130,8 @@ the independence model) (if available).}
     \item{show}{\code{signature(object = "lavaan")}: Print a short summary
       of the model fit}
     \item{summary}{\code{signature(object = "lavaan", header = TRUE,
-     fit.measures = FALSE, estimates = TRUE, ci = FALSE, fmi = FALSE,
+     fit.measures = FALSE, residuals = FALSE,
+     estimates = TRUE, ci = FALSE, fmi = FALSE,
      standardized = FALSE, std = standardized, std.nox = FALSE,
      remove.system.eq = TRUE, remove.eq = TRUE, remove.ineq = TRUE,
      remove.def = FALSE, remove.nonfree = FALSE, remove.step1 = TRUE,
@@ -147,8 +148,18 @@ the independence model) (if available).}
       printed.
       If \code{fit.measures = TRUE}, additional fit measures are added to the
       header section. \code{fit.measures} can also be a list, which allows one to set options
-      related to the fit measures. See \code{\link{fitMeasures}} 
+      related to the fit measures. See \code{\link{fitMeasures}}
       for more details.
+      If \code{residuals = TRUE}, a residuals section is added (the largest
+      residuals and the residual summary, printed as by
+      \code{\link{lavResiduals}} with \code{output = "text"}); the underlying
+      \code{lavResiduals(object, output = "list")} result is stored as the
+      \code{residuals} element of the summary object. \code{residuals} can also
+      be a list of arguments passed on to \code{\link{lavResiduals}} (for
+      example \code{residuals = list(type = "raw", n.largest = 10)}).
+      If both \code{fit.measures = TRUE} and \code{residuals = TRUE} and the
+      residual summary is the SRMR (the default), the SRMR is removed from the
+      fit measures section to avoid printing it twice.
       If \code{estimates = TRUE}, print the parameter estimates section.
       If \code{ci = TRUE}, add confidence intervals to the parameter estimates
       section.

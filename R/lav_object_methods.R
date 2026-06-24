@@ -48,6 +48,7 @@ setMethod(
   "summary", "lavaan",
   function(object, header = TRUE,                                # nolint start
            fit.measures = FALSE,
+           residuals = FALSE,
            estimates = TRUE,
            ci = FALSE,
            fmi = FALSE,
@@ -108,7 +109,8 @@ setMethod(
     }
     res <- lav_object_summary(
       object = object, header = header,
-      fit_measures = fit_measures, estimates = estimates,
+      fit_measures = fit_measures, residuals = residuals,
+      estimates = estimates,
       baseline_model = baseline.model,
       h1_model = h1.model,
       ci = ci, fmi = fmi, std = std, standardized = standardized,

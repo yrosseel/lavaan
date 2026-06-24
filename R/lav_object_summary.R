@@ -62,6 +62,7 @@ lav_object_summary <- function(object, header = TRUE,
                                    rmsea.h0.closefit = 0.05,
                                    rmsea.h0.notclosefit = 0.08
                                  ),
+                               residuals = FALSE,
                                estimates = TRUE,
                                ci = FALSE,
                                fmi = FALSE,
@@ -322,6 +323,58 @@ lav_object_summary <- function(object, header = TRUE,
        baseline_model = baseline_model,
        h1_model = h1_model)
       res$fit <- fit
+    }
+  }
+
+  # only if requested, add the residuals (and their summary). 'residuals' may be
+  # TRUE/FALSE, or a (named) list of arguments passed on to lavResiduals().
+  if ((is.list(residuals) || isTRUE(residuals)) &&
+      object@optim$npar > 0L && !object@optim$converged) {
+    lav_msg_warn(gettext("residuals not available if model did not converge"))
+    residuals <- FALSE
+  }
+  if (is.list(residuals) || isTRUE(residuals)) {
+    res_args <- if (is.list(residuals)) residuals else list()
+    # defaults (overridable via the list form), matching lavResiduals()
+    res_defaults <- list(
+      type = "cor.bentler", se = FALSE, zstat = TRUE, n.largest = 5L,
+      combine = FALSE, usrmr.ci.level = 0.90, usrmr.close.h0 = 0.05
+    )
+    res_args <- modifyList(res_defaults, res_args)
+    # the summary needs both the element-wise residuals and the summary tables
+    res_args <- c(
+      res_args,
+      list(
+        object = object, summary = TRUE, elementwise = TRUE, output = "list"
+      )
+    )
+    res_list <- do.call(lavResiduals, res_args)
+    res$residuals <- res_list
+
+    # pre-build the text representation used by lav_summary_print()
+    res_text <- lav_residuals_list_to_text(
+      res_list, type = res_args$type,
+      nblocks = lav_pt_nblocks(object@ParTable), drop_single = TRUE,
+      n_largest = res_args$n.largest, show_se = isTRUE(res_args$se),
+      show_z = isTRUE(res_args$zstat), ci_level = res_args$usrmr.ci.level,
+      combine = isTRUE(res_args$combine), do_summary = TRUE, do_largest = TRUE
+    )
+    attr(res$residuals, "text") <- res_text
+
+    # if the fit measures are also shown AND the residual summary is the SRMR,
+    # drop the SRMR from the fit measures to avoid printing it twice
+    if (!is.null(res$fit) && !is.null(res_text$summary_tables)) {
+      r_metric <- rownames(res_text$summary_tables[[1]])[1]
+      drop_srmr <- c("srmr", "srmr_nomean", "srmr_within", "srmr_between")
+      if (identical(r_metric, "srmr") &&
+          any(names(res$fit) %in% drop_srmr)) {
+        fit_attr <- attributes(res$fit)
+        res$fit <- res$fit[setdiff(names(res$fit), drop_srmr)]
+        # restore the class (and any other attributes) lost by subsetting
+        for (a in setdiff(names(fit_attr), "names")) {
+          attr(res$fit, a) <- fit_attr[[a]]
+        }
+      }
     }
   }
 

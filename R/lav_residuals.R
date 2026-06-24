@@ -416,59 +416,12 @@ lavResiduals <- function(object, type = "cor.bentler", h1 = NULL,         # noli
       names(out) <- object@Data@block.label
     }
   } else if (output == "text") {
-    # collect (a) the largest residuals per block (unless elementwise = FALSE)
-    # and (b) the summary table(s) (unless summary = FALSE), and wrap them in an
-    # object that prints in the lavaan style; see lav_residuals_summary_print()
-    nblocks <- lav_pt_nblocks(object@ParTable)
-
-    # per-block residual lists
-    if (nblocks == 1L) {
-      blk <- if (drop.list.single.group) out else out[[1]]
-      block_lists <- list(blk)
-      block_labels <- ""
-    } else {
-      block_names <- setdiff(names(out), "summary")
-      block_lists <- out[block_names]
-      block_labels <- block_names
-    }
-
-    # summary table(s) (only if requested)
-    summary_tables <- NULL
-    if (summary) {
-      if (nblocks == 1L) {
-        summary_tables <- list(block_lists[[1]][["summary"]])
-        names(summary_tables) <- ""
-      } else if (!is.null(out[["summary"]])) {
-        summary_tables <- list(out[["summary"]]) # combine = TRUE: one summary
-        names(summary_tables) <- ""
-      } else {
-        summary_tables <- lapply(block_lists, function(b) b[["summary"]])
-        names(summary_tables) <- block_labels
-      }
-    }
-
-    # largest residuals per block (only if elementwise; the combine= option
-    # affects only the summary). Variances are listed only for raw-style metrics.
-    largest <- NULL
-    if (elementwise) {
-      cov_diagonal <- tolower(type)[1] %in%
-        c("raw", "rmr", "normalized", "standardized", "standardized.mplus")
-      largest <- lapply(block_lists, function(b) {
-        lav_residuals_largest_block(b, cov_diagonal = cov_diagonal,
-          n_largest = n.largest
-        )
-      })
-      names(largest) <- block_labels
-    }
-
-    out <- structure(
-      list(
-        type = type, largest = largest, summary_tables = summary_tables,
-        show_se = isTRUE(se), show_z = isTRUE(zstat),
-        ci_level = usrmr.ci.level,
-        combine = isTRUE(combine) && nblocks > 1L
-      ),
-      class = "lavaan.residuals.summary"
+    out <- lav_residuals_list_to_text(out,
+      type = type, nblocks = lav_pt_nblocks(object@ParTable),
+      drop_single = drop.list.single.group, n_largest = n.largest,
+      show_se = isTRUE(se), show_z = isTRUE(zstat), ci_level = usrmr.ci.level,
+      combine = isTRUE(combine), do_summary = isTRUE(summary),
+      do_largest = isTRUE(elementwise)
     )
   } else if (!elementwise) {
     # output = "list" but only the summary information is requested: return the
@@ -490,6 +443,64 @@ lavResiduals <- function(object, type = "cor.bentler", h1 = NULL,         # noli
   }
 
   out
+}
+
+# turn a lavResiduals(output = "list") result into the 'lavaan.residuals.summary'
+# object that is printed in the lavaan style (largest residuals + summary
+# tables). Factored out so both lavResiduals(output = "text") and the residuals
+# section of summary() (lav_object_summary / lav_summary_print) can use it.
+lav_residuals_list_to_text <- function(out, type, nblocks, drop_single = TRUE,
+                                       n_largest = 5L, show_se = FALSE,
+                                       show_z = TRUE, ci_level = 0.90,
+                                       combine = FALSE, do_summary = TRUE,
+                                       do_largest = TRUE) {
+  # per-block residual lists
+  if (nblocks == 1L) {
+    blk <- if (drop_single) out else out[[1]]
+    block_lists <- list(blk)
+    block_labels <- ""
+  } else {
+    block_names <- setdiff(names(out), "summary")
+    block_lists <- out[block_names]
+    block_labels <- block_names
+  }
+
+  # summary table(s)
+  summary_tables <- NULL
+  if (do_summary) {
+    if (nblocks == 1L) {
+      summary_tables <- list(block_lists[[1]][["summary"]])
+      names(summary_tables) <- ""
+    } else if (!is.null(out[["summary"]])) {
+      summary_tables <- list(out[["summary"]]) # combine = TRUE: one summary
+      names(summary_tables) <- ""
+    } else {
+      summary_tables <- lapply(block_lists, function(b) b[["summary"]])
+      names(summary_tables) <- block_labels
+    }
+  }
+
+  # largest residuals per block (variances only for raw-style metrics)
+  largest <- NULL
+  if (do_largest) {
+    cov_diagonal <- tolower(type)[1] %in%
+      c("raw", "rmr", "normalized", "standardized", "standardized.mplus")
+    largest <- lapply(block_lists, function(b) {
+      lav_residuals_largest_block(b, cov_diagonal = cov_diagonal,
+        n_largest = n_largest
+      )
+    })
+    names(largest) <- block_labels
+  }
+
+  structure(
+    list(
+      type = type, largest = largest, summary_tables = summary_tables,
+      show_se = isTRUE(show_se), show_z = isTRUE(show_z), ci_level = ci_level,
+      combine = isTRUE(combine) && nblocks > 1L
+    ),
+    class = "lavaan.residuals.summary"
+  )
 }
 
 # pretty-print a single residual summary table (one block), in the lavaan
@@ -555,8 +566,10 @@ lav_residuals_summary_print_one <- function(tab, metric, nd = 3L,
   labels <- vapply(rn, nice, character(1))
 
   # formatted value matrix (NA -> blank); the column width must also fit the
-  # widest (display) column name
-  val_w <- max(8L, nd + 5L, max(nchar(cn_disp))) + 1L
+  # widest (display) column name. The extra +2 (rather than +1) shifts the
+  # value column one space further right, so the digits line up with the
+  # fit-measure values when printed by summary().
+  val_w <- max(8L, nd + 5L, max(nchar(cn_disp))) + 2L
   vm <- matrix("", nrow(tab), length(cn))
   for (j in seq_along(cn)) {
     v <- tab[[cn[j]]]
@@ -584,8 +597,8 @@ lav_residuals_summary_print_one <- function(tab, metric, nd = 3L,
       )
     ))
   }
-  cat(lines, sep = "\n")
-  cat("\n")
+  # terminate each line; the next section adds its own single leading blank line
+  cat(paste0(lines, "\n"), sep = "")
 }
 
 # pretty-print a single block's largest-residuals table, in the style of
@@ -639,8 +652,8 @@ lav_residuals_largest_print_one <- function(df, show_se = FALSE,
   }
   # shift the whole table two spaces to the right (blank lines stay empty)
   lines <- ifelse(nzchar(lines), paste0("  ", lines), lines)
-  cat(lines, sep = "\n")
-  cat("\n")
+  # terminate each line; the next section adds its own single leading blank line
+  cat(paste0(lines, "\n"), sep = "")
 }
 
 # print method for the output = "text" result of lavResiduals(): first the

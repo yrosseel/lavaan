@@ -1515,6 +1515,15 @@ R2 regression factor scores (= squared correlations):\n\n")
     cat("\n")
   } # efa
 
+  # residuals (printed in the lavResiduals(output = "text") style), after the
+  # fit measures and just before the parameter table
+  if (!is.null(y$residuals)) {
+    res_text <- attr(y$residuals, "text")
+    if (!is.null(res_text)) {
+      lav_residuals_summary_print(res_text, nd = nd)
+    }
+  }
+
   # parameter table
   if (!is.null(y$pe) && is.null(y$efa)) {
     pe <- y$pe
