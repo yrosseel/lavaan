@@ -83,6 +83,10 @@
 #                  reflects the residual type) and (b) the residual summary
 #                  table(s) in the fit-measures style (see
 #                  lav_residuals_summary_print()).
+# - change 0.7-1: new usrmr.ci.level (default 0.90) and usrmr.close.h0 (default
+#                  0.05) arguments to set the confidence level of the reported
+#                  CI and the H0 value of the close-fit test for the unbiased
+#                  urmr/usrmr/ucrmr (cf. the rmsea.* arguments in fitMeasures).
 # - change 0.7-1: new elementwise= argument (default TRUE). If FALSE, the
 #                  element-wise residuals are omitted (for both output = "list"
 #                  and output = "text") and only the summary information is
@@ -328,6 +332,7 @@ lavResiduals <- function(object, type = "cor.bentler", h1 = NULL,         # noli
                          se = FALSE, zstat = TRUE,
                          summary = TRUE, elementwise = TRUE,
                          combine = FALSE,
+                         usrmr.ci.level = 0.90, usrmr.close.h0 = 0.05,
                          h1.acov = "unstructured",
                          add.type = TRUE, add.labels = TRUE, add.class = TRUE,
                          drop.list.single.group = TRUE,
@@ -360,8 +365,8 @@ lavResiduals <- function(object, type = "cor.bentler", h1 = NULL,         # noli
     summary_options = list(
       se = TRUE, zstat = TRUE, pvalue = TRUE,
       unbiased = TRUE, unbiased_se = TRUE, unbiased_ci = TRUE,
-      unbiased_ci_level = 0.90, unbiased_zstat = TRUE,
-      unbiased_test_val = 0.05, unbiased_pvalue = TRUE
+      unbiased_ci_level = usrmr.ci.level, unbiased_zstat = TRUE,
+      unbiased_test_val = usrmr.close.h0, unbiased_pvalue = TRUE
     ),
     h1_acov = h1.acov, add_type = add.type,
     add_labels = add.labels, add_class = add.class,
@@ -460,6 +465,7 @@ lavResiduals <- function(object, type = "cor.bentler", h1 = NULL,         # noli
       list(
         type = type, largest = largest, summary_tables = summary_tables,
         show_se = isTRUE(se), show_z = isTRUE(zstat),
+        ci_level = usrmr.ci.level,
         combine = isTRUE(combine) && nblocks > 1L
       ),
       class = "lavaan.residuals.summary"
@@ -492,11 +498,13 @@ lavResiduals <- function(object, type = "cor.bentler", h1 = NULL,         # noli
 # (biased) point estimate and its exact-fit test are separated from the
 # (unbiased) estimate, its confidence interval and its close-fit test by a
 # blank line, mirroring the RMSEA / Robust RMSEA layout.
-lav_residuals_summary_print_one <- function(tab, metric, nd = 3L) {
+lav_residuals_summary_print_one <- function(tab, metric, nd = 3L,
+                                            ci_level = 0.90) {
   num_format <- paste0("%", max(8L, nd + 5L), ".", nd, "f")
   big_m <- toupper(metric)
   rn <- rownames(tab)
   cn <- colnames(tab)
+  ci_pct <- format(round(ci_level * 100, 1))
 
   # capitalized column headers (text output only), following the style of
   # parameterEstimates(., output = "text")
@@ -515,8 +523,8 @@ lav_residuals_summary_print_one <- function(tab, metric, nd = 3L) {
     "Test statistic (exact fit, H0: value = 0)",
     "P-value (one-sided)",
     "Standard error",
-    "90 Percent confidence interval - lower",
-    "90 Percent confidence interval - upper",
+    paste0(ci_pct, " Percent confidence interval - lower"),
+    paste0(ci_pct, " Percent confidence interval - upper"),
     "H0 value (close fit)",
     "Test statistic (close fit)",
     "P-value (one-sided)"
@@ -674,7 +682,9 @@ lav_residuals_summary_print <- function(x, ..., nd = 3L) {
         cat("\n  [ ", lab, " ]\n", sep = "")
       }
       cat("\n")
-      lav_residuals_summary_print_one(tables[[b]], metric, nd = nd)
+      lav_residuals_summary_print_one(tables[[b]], metric, nd = nd,
+        ci_level = if (is.null(x$ci_level)) 0.90 else x$ci_level
+      )
     }
   }
 

@@ -12,7 +12,8 @@ this function with a limited set of arguments.
 \usage{
 lavResiduals(object, type = "cor.bentler", h1 = NULL,
     se = FALSE, zstat = TRUE, summary = TRUE, elementwise = TRUE,
-    combine = FALSE, h1.acov = "unstructured",
+    combine = FALSE, usrmr.ci.level = 0.90, usrmr.close.h0 = 0.05,
+    h1.acov = "unstructured",
     add.type = TRUE, add.labels = TRUE, add.class = TRUE,
     drop.list.single.group = TRUE,
     maximum.number = 0L, n.largest = 5L, output = "list")
@@ -81,6 +82,12 @@ table is returned as the \code{summary} element at the top level of the result.
 The pooling correctly accounts for the (block-diagonal) independence of separate
 groups and for the (joint) sampling covariance across the levels of a multilevel
 model.}
+\item{usrmr.ci.level}{Numeric. The confidence level of the confidence interval
+that is reported (in the summary) for the unbiased URMR/USRMR/UCRMR. The default
+is 0.90.}
+\item{usrmr.close.h0}{Numeric. The value of the population URMR/USRMR/UCRMR under
+the null hypothesis of the test of close fit that is reported (in the summary)
+for the unbiased estimator. The default is 0.05.}
 \item{h1.acov}{Character. If \code{"unstructured"}, the observed summary
 statistics are used as consistent estimates of the corresponding (unrestricted)
 population statistics. If \code{"structured"}, the model-implied summary
