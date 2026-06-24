@@ -139,21 +139,19 @@ lavEffects <- function(object,
       dQuote(lavmodel@representation)))
   }
 
-  # conditional.x = TRUE? warn that GAMMA effects are not (yet) included
-  if (isTRUE(lavmodel@conditional.x) &&
-      any("gamma" %in% names(lavmodel@GLIST))) {
-    lav_msg_warn(gettext(
-      "The model was fitted with conditional.x = TRUE; only effects among the
-       variables in the BETA matrix are reported. Effects of the exogenous
-       covariates (stored in the GAMMA matrix) are not yet supported."))
-  }
-
   nblocks <- lavmodel@nblocks
   nmat    <- lavmodel@nmat
   GLIST.names <- names(lavmodel@GLIST)
 
   # build the per-block 'specs' that describe, for each block, which effects
-  # are structurally non-zero and must be reported
+  # are structurally non-zero and must be reported.
+  #
+  # The structural model is  eta = B eta + Gamma x + zeta, so we work with an
+  # augmented effect matrix whose rows are the (endogenous) BETA variables
+  # 'eta' and whose columns are the predictors: the eta variables themselves
+  # plus, when conditional.x = TRUE, the exogenous covariates 'x' (stored in
+  # the GAMMA matrix). When conditional.x = FALSE there is no GAMMA matrix and
+  # the columns are simply the eta variables (square case).
   specs <- vector("list", nblocks)
   has.beta <- logical(nblocks)
   for (b in seq_len(nblocks)) {
@@ -169,31 +167,70 @@ lavEffects <- function(object,
 
     B0 <- lavmodel@GLIST[[beta.idx]]
     nr <- nrow(B0)
-    var.names <- lavmodel@dimNames[[beta.idx]][[1L]]
-    if (is.null(var.names)) {
-      var.names <- as.character(seq_len(nr))
+    row.names.b <- lavmodel@dimNames[[beta.idx]][[1L]]
+    if (is.null(row.names.b)) {
+      row.names.b <- as.character(seq_len(nr))
     }
+    beta.m.idx <- lavmodel@m.free.idx[[beta.idx]]
+    beta.x.idx <- lavmodel@x.free.idx[[beta.idx]]
 
-    # structural adjacency: A[i, j] = TRUE if there is a (possible) direct
-    # edge j -> i, i.e. the element is free, or fixed to a non-zero value
+    # structural adjacency among eta: A[i, j] = TRUE if there is a (possible)
+    # direct edge j -> i (the element is free, or fixed to a non-zero value)
     A <- (B0 != 0)
-    m.free.idx <- lavmodel@m.free.idx[[beta.idx]]
-    if (length(m.free.idx) > 0L) {
-      A[m.free.idx] <- TRUE
+    if (length(beta.m.idx) > 0L) {
+      A[beta.m.idx] <- TRUE
     }
     diag(A) <- FALSE
 
-    # reachability (transitive closure): T1[i, j] = TRUE if j influences i
-    # through one or more directed paths
+    # reachability among eta (transitive closure): T1[i, j] = TRUE if j
+    # influences i through one or more directed paths
     T1 <- lav_effects_reachable(A)
 
-    # indirect pattern: paths of length >= 2 from j to i
-    #   IND[i, j] = TRUE  <=>  exists m: A[i, m] & T1[m, j]
-    IND <- ((A %*% T1) > 0L)
-    diag(IND) <- FALSE
+    # GAMMA (exogenous covariates), if conditional.x = TRUE
+    gamma.idx <- mm.in.block[GLIST.names[mm.in.block] == "gamma"]
+    G0 <- NULL
+    gamma.m.idx <- gamma.x.idx <- integer(0L)
+    x.names.b <- character(0L)
+    nx <- 0L
+    if (length(gamma.idx) > 0L) {
+      gamma.idx <- gamma.idx[1L]
+      G0 <- lavmodel@GLIST[[gamma.idx]]
+      nx <- ncol(G0)
+      x.names.b <- lavmodel@dimNames[[gamma.idx]][[2L]]
+      if (is.null(x.names.b)) {
+        x.names.b <- as.character(seq_len(nx))
+      }
+      gamma.m.idx <- lavmodel@m.free.idx[[gamma.idx]]
+      gamma.x.idx <- lavmodel@x.free.idx[[gamma.idx]]
+    }
+
+    nr.col <- nr + nx
+    col.names.b <- c(row.names.b, x.names.b)
+
+    # augmented structural patterns (rows = eta, cols = eta then x)
+    #   direct  : [ A | Ax ]
+    #   total   : [ T1 | ((I|T1) %*% Ax) ]   (reflexive reach * Gamma)
+    #   indirect: [ (A %*% T1) | (T1 %*% Ax) ]
+    IND.ee <- ((A %*% T1) > 0L)
+    diag(IND.ee) <- FALSE
+    if (nx > 0L) {
+      Ax <- (G0 != 0)
+      if (length(gamma.m.idx) > 0L) {
+        Ax[gamma.m.idx] <- TRUE
+      }
+      refl <- T1
+      diag(refl) <- TRUE # reflexive reachability (I | T1)
+      TOT <- cbind(T1, (refl %*% Ax) > 0L)
+      DIR <- cbind(A,  Ax)
+      IND <- cbind(IND.ee, (T1 %*% Ax) > 0L)
+    } else {
+      TOT <- T1
+      DIR <- A
+      IND <- IND.ee
+    }
 
     # per effect type, the (i, j) cells (and linear indices) to report
-    pat <- list(total = T1, indirect = IND, direct = A)
+    pat <- list(total = TOT, indirect = IND, direct = DIR)
     cells <- list()
     for (e in effects) {
       P <- pat[[e]]
@@ -208,18 +245,22 @@ lavEffects <- function(object,
       cells[[e]] <- list(
         i   = ij[, 1L],
         j   = ij[, 2L],
-        lin = ij[, 1L] + (ij[, 2L] - 1L) * nr # linear index into nr x nr matrix
+        lin = ij[, 1L] + (ij[, 2L] - 1L) * nr # linear idx into nr x nr.col mat
       )
     }
 
     specs[[b]] <- list(
-      beta.idx   = beta.idx,
-      B0         = B0,
-      nr         = nr,
-      var.names  = var.names,
-      m.free.idx = m.free.idx,
-      x.free.idx = lavmodel@x.free.idx[[beta.idx]],
-      cells      = cells
+      nr          = nr,         # number of rows (eta / outcomes)
+      nr.col      = nr.col,     # number of columns (eta + x / predictors)
+      row.names   = row.names.b,
+      col.names   = col.names.b,
+      B0          = B0,
+      beta.m.idx  = beta.m.idx,
+      beta.x.idx  = beta.x.idx,
+      G0          = G0,
+      gamma.m.idx = gamma.m.idx,
+      gamma.x.idx = gamma.x.idx,
+      cells       = cells
     )
   }
 
@@ -479,34 +520,58 @@ lav_effects_add_standardized <- function(EFF.df, object, lavmodel, specs,
                                          row.block, row.lin, std.types,
                                          ov.std.user = NULL, cov.std = TRUE) {
   nblocks <- lavmodel@nblocks
+  nmat <- lavmodel@nmat
+  GLIST.names <- names(lavmodel@GLIST)
   partable <- object@ParTable
 
-  # model-implied (co)variances of the BETA variables, per block
+  # model-implied (co)variances of the BETA (eta) variables, per block
   veta <- lav_model_veta(lavmodel = lavmodel, glist = lavmodel@GLIST)
-  sd.all <- vector("list", nblocks)
+
+  # per block: 'all' SDs for the row (eta) and column (eta + exogenous x)
+  # variables, plus the variable classifications needed by each type
+  sd.row.all <- vector("list", nblocks)
+  sd.col.all <- vector("list", nblocks)
   lv.names <- vector("list", nblocks)
   ovx.names <- vector("list", nblocks)
   for (b in seq_len(nblocks)) {
-    if (is.null(specs[[b]])) {
+    sp <- specs[[b]]
+    if (is.null(sp)) {
       next
     }
     v2 <- diag(veta[[b]])
     v2[v2 < 0] <- as.numeric(NA)
-    sd.all[[b]] <- sqrt(v2)
+    sd.eta <- sqrt(v2)
+    sd.row.all[[b]] <- sd.eta
+    if (sp$nr.col > sp$nr) {
+      # exogenous covariate SDs (from cov.x), in the GAMMA column order
+      mm.in.block <- seq_len(nmat[b]) + cumsum(c(0L, nmat))[b]
+      covx.idx <- mm.in.block[GLIST.names[mm.in.block] == "cov.x"]
+      if (length(covx.idx) > 0L) {
+        sd.x <- sqrt(diag(lavmodel@GLIST[[covx.idx[1L]]]))
+      } else {
+        sd.x <- rep(1, sp$nr.col - sp$nr)
+      }
+      sd.col.all[[b]] <- c(sd.eta, sd.x)
+    } else {
+      sd.col.all[[b]] <- sd.eta
+    }
     lv.names[[b]] <- lav_pt_vnames(partable, "lv", block = b)
     ovx.names[[b]] <- lav_pt_vnames(partable, "ov.x", block = b)
   }
 
   nr.rows <- nrow(EFF.df)
   for (ty in std.types) {
-    # per-block SD vector for this standardization type
-    sdv.list <- vector("list", nblocks)
+    # per-block SD vectors (row and column) for this standardization type
+    sd.row <- vector("list", nblocks)
+    sd.col <- vector("list", nblocks)
     for (b in seq_len(nblocks)) {
       if (is.null(specs[[b]])) {
         next
       }
-      sdv.list[[b]] <- lav_effects_std_sd_vec(specs[[b]]$var.names,
-        sd.all[[b]], ty, lv.names[[b]], ovx.names[[b]], ov.std.user)
+      sd.row[[b]] <- lav_effects_std_sd_vec(specs[[b]]$row.names,
+        sd.row.all[[b]], ty, lv.names[[b]], ovx.names[[b]], ov.std.user)
+      sd.col[[b]] <- lav_effects_std_sd_vec(specs[[b]]$col.names,
+        sd.col.all[[b]], ty, lv.names[[b]], ovx.names[[b]], ov.std.user)
     }
     std.col <- rep(as.numeric(NA), nr.rows)
     for (r in seq_len(nr.rows)) {
@@ -515,8 +580,7 @@ lav_effects_add_standardized <- function(EFF.df, object, lavmodel, specs,
       lin <- row.lin[r]
       i <- ((lin - 1L) %% nr) + 1L
       j <- ((lin - 1L) %/% nr) + 1L
-      sdv <- sdv.list[[b]]
-      std.col[r] <- EFF.df$est[r] * sdv[j] / sdv[i]
+      std.col[r] <- EFF.df$est[r] * sd.col[[b]][j] / sd.row[[b]][i]
     }
     EFF.df[[ty]] <- std.col
   }
@@ -688,13 +752,33 @@ lav_effects_func <- function(specs, effects, nblocks) {
       if (is.complex(x)) {
         storage.mode(B) <- "complex"
       }
-      if (length(sp$m.free.idx) > 0L) {
-        B[sp$m.free.idx] <- x[sp$x.free.idx]
+      if (length(sp$beta.m.idx) > 0L) {
+        B[sp$beta.m.idx] <- x[sp$beta.x.idx]
       }
       diag(B) <- 0
       nr <- sp$nr
       I.B.inv <- solve(diag(nr) - B)
-      total <- I.B.inv - diag(nr)
+
+      # eta -> eta effects (square block)
+      total.ee <- I.B.inv - diag(nr)
+      if (is.null(sp$G0)) {
+        total  <- total.ee
+        direct <- B
+      } else {
+        # eta <- Gamma x effects: total = (I-B)^-1 Gamma, direct = Gamma,
+        # indirect = total - direct
+        G <- sp$G0
+        if (is.complex(x)) {
+          storage.mode(G) <- "complex"
+        }
+        if (length(sp$gamma.m.idx) > 0L) {
+          G[sp$gamma.m.idx] <- x[sp$gamma.x.idx]
+        }
+        total  <- cbind(total.ee, I.B.inv %*% G)
+        direct <- cbind(B, G)
+      }
+      indirect <- total - direct
+
       for (e in effects) {
         cell <- sp$cells[[e]]
         if (is.null(cell)) {
@@ -702,8 +786,8 @@ lav_effects_func <- function(specs, effects, nblocks) {
         }
         MAT <- switch(e,
           total    = total,
-          indirect = total - B,
-          direct   = B)
+          indirect = indirect,
+          direct   = direct)
         out <- c(out, MAT[cell$lin])
       }
     }
@@ -757,7 +841,6 @@ lav_effects_skeleton <- function(specs, effects, lavdata, lavmodel) {
     if (is.null(sp)) {
       next
     }
-    vn <- sp$var.names
     for (e in effects) {
       cell <- sp$cells[[e]]
       if (is.null(cell)) {
@@ -765,8 +848,8 @@ lav_effects_skeleton <- function(specs, effects, lavdata, lavmodel) {
       }
       n.e <- length(cell$lin)
       eff.col <- c(eff.col, rep(e, n.e))
-      lhs.col <- c(lhs.col, vn[cell$i])
-      rhs.col <- c(rhs.col, vn[cell$j])
+      lhs.col <- c(lhs.col, sp$row.names[cell$i]) # outcome (eta)
+      rhs.col <- c(rhs.col, sp$col.names[cell$j]) # predictor (eta or x)
       blk.col <- c(blk.col, rep(b, n.e))
       lin.col <- c(lin.col, cell$lin)
     }
@@ -842,16 +925,17 @@ lav_effects_as_list <- function(EFF.df, specs, effects, lavmodel,
     if (is.null(sp)) {
       next
     }
-    vn <- sp$var.names
     nr <- sp$nr
+    nr.col <- sp$nr.col
+    dn <- list(sp$row.names, sp$col.names)
     block.list <- list()
     for (e in effects) {
       rows <- which(row.block == b & row.eff == e)
       if (length(rows) == 0L) {
         next
       }
-      M.est <- matrix(0, nr, nr, dimnames = list(vn, vn))
-      M.se  <- matrix(as.numeric(NA), nr, nr, dimnames = list(vn, vn))
+      M.est <- matrix(0, nr, nr.col, dimnames = dn)
+      M.se  <- matrix(as.numeric(NA), nr, nr.col, dimnames = dn)
       M.est[row.lin[rows]] <- EFF.df$est[rows]
       if (!is.null(EFF.df$se)) {
         M.se[row.lin[rows]] <- EFF.df$se[rows]

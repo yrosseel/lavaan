@@ -126,10 +126,13 @@ in particular in smaller samples. When the model was fitted with
 standard errors and bootstrap percentile confidence intervals (this requires
 no additional model fitting).
 
-In the current version, models fitted with \code{conditional.x = TRUE} only
-report effects among the variables that appear in the \code{beta} matrix;
-effects that involve the exogenous covariates (which are stored in the
-\code{gamma} matrix) are not (yet) supported, and a warning is issued.
+Models fitted with \code{conditional.x = TRUE} are also supported: in that
+case the structural model is \eqn{eta = B eta + Gamma x + zeta}, where the
+exogenous covariates \eqn{x} are stored in the \code{gamma} matrix. The effects
+of these covariates on the endogenous variables are then computed as
+\eqn{(I - B)^{-1} Gamma} (total), \eqn{Gamma} (direct) and
+\eqn{((I - B)^{-1} - I) Gamma} (indirect), and reported alongside the effects
+among the \code{beta} variables.
 }
 \value{
 If \code{output = "data.frame"} (the default), a data.frame (of class
