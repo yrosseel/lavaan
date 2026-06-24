@@ -76,6 +76,18 @@
 #                  slopes, with optional se/z columns (see
 #                  lav_residuals_table_block()); structurally fixed moments
 #                  (zero/NA se) are filtered out.
+# - change 0.7-1: new output = "text" (alias "pretty"): prints (a) a table with
+#                  the n.largest largest residuals per element group/block (in
+#                  the parameterEstimates(output="text") style, with a Residual
+#                  column and optional Std.Err/Z-value columns; the header
+#                  reflects the residual type) and (b) the residual summary
+#                  table(s) in the fit-measures style (see
+#                  lav_residuals_summary_print()).
+# - change 0.7-1: new elementwise= argument (default TRUE). If FALSE, the
+#                  element-wise residuals are omitted (for both output = "list"
+#                  and output = "text") and only the summary information is
+#                  returned/shown. summary = FALSE now also suppresses the
+#                  summary in the text output (it is no longer force-enabled).
 # - change 0.7-1: new combine= argument. When TRUE (and there
 #                  are multiple groups or levels), the per-block summary tables
 #                  are replaced by a single overall table that pools the
@@ -140,11 +152,13 @@ setMethod(
 # data.frame, with one row per residual element-cell: covariances/variances
 # (v1~~v2), intercepts/means (v1~1), thresholds (v1|t1) and -- for conditional.x
 # -- the regression slopes (endo~exo). The exogenous moments (cov.x, mean.x) are
-# conditioned on and therefore omitted. If the block list carries '.se'/'.z'
-# companion elements (se = TRUE / zstat = TRUE in lavResiduals), matching 'se'
-# and 'z' columns are added (issue #464).
-lav_residuals_table_block <- function(block_list, se = FALSE, zstat = FALSE,
-                                      cov_diagonal = TRUE) {
+# conditioned on and therefore omitted. Each row also carries a 'group' label
+# (Covariances / Variances / Intercepts / Thresholds / Regressions) and its
+# lhs/op/rhs components, used by the output = "text" largest-residuals tables.
+# Structurally fixed moments (zero or unavailable se) are dropped. If the block
+# list carries '.se'/'.z' companions (se = TRUE / zstat = TRUE), the 'se'/'z'
+# columns are filled; otherwise they are NA.
+lav_residuals_table_rows <- function(block_list, cov_diagonal = TRUE) {
   sym_names   <- c("cov", "res.cov")     # symmetric (co)variance matrices
   int_names   <- c("mean", "res.int")    # means / intercepts
   th_names    <- c("th", "res.th")       # thresholds
@@ -167,7 +181,11 @@ lav_residuals_table_block <- function(block_list, se = FALSE, zstat = FALSE,
       rc <- arrayInd(vidx, c(p, p))
       rn <- rownames(res_el)
       if (is.null(rn)) rn <- as.character(seq_len(p))
-      name <- paste0(rn[rc[, 1]], "~~", rn[rc[, 2]])
+      lhs <- rn[rc[, 1]]
+      rhs <- rn[rc[, 2]]
+      op <- "~~"
+      grp <- ifelse(rc[, 1] == rc[, 2], "Variances", "Covariances")
+      name <- paste0(lhs, "~~", rhs)
       sel <- function(x) x[vidx]
     } else if (nm %in% slope_names) {
       rn <- rownames(res_el)
@@ -175,16 +193,28 @@ lav_residuals_table_block <- function(block_list, se = FALSE, zstat = FALSE,
       if (is.null(rn)) rn <- as.character(seq_len(nrow(res_el)))
       if (is.null(cn)) cn <- as.character(seq_len(ncol(res_el)))
       grid <- expand.grid(r = seq_len(nrow(res_el)), c = seq_len(ncol(res_el)))
-      name <- paste0(rn[grid$r], "~", cn[grid$c])
+      lhs <- rn[grid$r]
+      rhs <- cn[grid$c]
+      op <- "~"
+      grp <- "Regressions"
+      name <- paste0(lhs, "~", rhs)
       sel <- function(x) as.vector(x)
     } else if (nm %in% int_names) {
       vn <- names(res_el)
       if (is.null(vn)) vn <- as.character(seq_along(res_el))
+      lhs <- vn
+      rhs <- ""
+      op <- "~1"
+      grp <- "Intercepts"
       name <- paste0(vn, "~1")
       sel <- function(x) as.vector(x)
     } else if (nm %in% th_names) {
       vn <- names(res_el)
       if (is.null(vn)) vn <- as.character(seq_along(res_el))
+      lhs <- vn # already in "y1|t1" form
+      rhs <- ""
+      op <- ""
+      grp <- "Thresholds"
       name <- vn
       sel <- function(x) as.vector(x)
     } else {
@@ -193,7 +223,7 @@ lav_residuals_table_block <- function(block_list, se = FALSE, zstat = FALSE,
 
     n_el <- length(name)
     parts[[nm]] <- data.frame(
-      name = name,
+      group = grp, lhs = lhs, op = op, rhs = rhs, name = name,
       res = sel(res_el),
       se = if (!is.null(se_el)) sel(se_el) else rep(NA_real_, n_el),
       z = if (!is.null(z_el)) sel(z_el) else rep(NA_real_, n_el),
@@ -202,12 +232,13 @@ lav_residuals_table_block <- function(block_list, se = FALSE, zstat = FALSE,
   }
 
   if (length(parts) == 0L) {
-    tab <- data.frame(
-      name = character(0), res = numeric(0),
+    rows <- data.frame(
+      group = character(0), lhs = character(0), op = character(0),
+      rhs = character(0), name = character(0), res = numeric(0),
       se = numeric(0), z = numeric(0), stringsAsFactors = FALSE
     )
   } else {
-    tab <- do.call(rbind, parts)
+    rows <- do.call(rbind, parts)
   }
 
   # drop rows for structurally fixed moments (a saturated mean or just-
@@ -217,12 +248,22 @@ lav_residuals_table_block <- function(block_list, se = FALSE, zstat = FALSE,
   # is only numerically (not exactly) zero. When no standard errors are
   # available (e.g. the gated multigroup + multilevel case), fall back to the
   # residual magnitude.
-  if (any(is.finite(tab$se))) {
-    keep <- is.finite(tab$se) & abs(tab$se) > 1e-08
+  if (any(is.finite(rows$se))) {
+    keep <- is.finite(rows$se) & abs(rows$se) > 1e-08
   } else {
-    keep <- is.finite(tab$res) & abs(tab$res) > 1e-06
+    keep <- is.finite(rows$res) & abs(rows$res) > 1e-06
   }
-  tab <- tab[keep, , drop = FALSE]
+  rows <- rows[keep, , drop = FALSE]
+  rownames(rows) <- NULL
+
+  rows
+}
+
+# the flat (name / res / [se] / [z]) data.frame used by output = "table"
+lav_residuals_table_block <- function(block_list, se = FALSE, zstat = FALSE,
+                                      cov_diagonal = TRUE) {
+  rows <- lav_residuals_table_rows(block_list, cov_diagonal = cov_diagonal)
+  tab <- rows[, c("name", "res", "se", "z"), drop = FALSE]
   rownames(tab) <- NULL
 
   # drop the se/z columns if not requested
@@ -232,24 +273,89 @@ lav_residuals_table_block <- function(block_list, se = FALSE, zstat = FALSE,
   tab
 }
 
+# for one block: the 'n_largest' residuals (in absolute value) per element
+# group (Covariances, Variances, Intercepts, Thresholds, Regressions). Returns
+# a data.frame with the group order preserved (used by output = "text").
+lav_residuals_largest_block <- function(block_list, cov_diagonal = TRUE,
+                                        n_largest = 5L) {
+  rows <- lav_residuals_table_rows(block_list, cov_diagonal = cov_diagonal)
+  if (nrow(rows) == 0L) {
+    return(rows)
+  }
+  group_order <- c(
+    "Covariances", "Variances", "Intercepts", "Thresholds", "Regressions"
+  )
+  rows$group <- factor(rows$group, levels = group_order)
+  parts <- lapply(split(rows, rows$group, drop = TRUE), function(g) {
+    g <- g[order(abs(g$res), decreasing = TRUE), , drop = FALSE]
+    if (n_largest > 0L && n_largest < nrow(g)) {
+      g <- g[seq_len(n_largest), , drop = FALSE]
+    }
+    g
+  })
+  out <- do.call(rbind, parts)
+  out$group <- as.character(out$group)
+  rownames(out) <- NULL
+  out
+}
+
+# section title for the largest-residuals tables, reflecting the residual type
+lav_residuals_largest_title <- function(type) {
+  t <- tolower(type)[1]
+  if (t %in% c("raw", "rmr")) {
+    return("Largest Raw Residuals")
+  }
+  if (t == "normalized") {
+    return("Largest Normalized Residuals")
+  }
+  if (t == "standardized") {
+    return("Largest Standardized Residuals")
+  }
+  if (t == "standardized.mplus") {
+    return("Largest Standardized Residuals (Mplus)")
+  }
+  pretty <- switch(t,
+    cor = "Cor.Bollen", cor.bentler = "Cor.Bentler", cor.eqs = "Cor.Bentler",
+    cor.bollen = "Cor.Bollen", srmr = "Cor.Bentler", crmr = "Cor.Bollen",
+    t
+  )
+  paste0("Largest Standardized Residuals (", pretty, ")")
+}
+
 
 # user-visible function
 lavResiduals <- function(object, type = "cor.bentler", h1 = NULL,         # nolint start
-                         se = FALSE, zstat = TRUE, summary = TRUE,
+                         se = FALSE, zstat = TRUE,
+                         summary = TRUE, elementwise = TRUE,
                          combine = FALSE,
                          h1.acov = "unstructured",
                          add.type = TRUE, add.labels = TRUE, add.class = TRUE,
                          drop.list.single.group = TRUE,
-                         maximum.number = 0L,
+                         maximum.number = 0L, n.largest = 5L,
                          output = "list") {                                # nolint end
-  # for the table output we always need the standard errors internally: they
-  # tell apart estimable residuals (finite, non-zero se) from structurally
-  # fixed moments (zero/NA se), which are filtered out. The summary statistics
-  # are not used by the table, so they are skipped there.
-  table_output <- identical(output, "table")
+  # normalize output argument ("pretty" is an alias for "text")
+  output <- tolower(output)[1]
+  if (output == "pretty") {
+    output <- "text"
+  }
+  if (!output %in% c("list", "table", "text")) {
+    lav_msg_stop(gettextf(
+      "output= should be one of %s.",
+      lav_msg_view(c("list", "table", "text"), "or")
+    ))
+  }
+
+  # for the table and text outputs we always need the standard errors
+  # internally: they tell apart estimable residuals (finite, non-zero se) from
+  # structurally fixed moments (zero/NA se), which are filtered out. The summary
+  # statistics are not used by the table, so they are skipped there. The
+  # 'summary' and 'elementwise' arguments are honored for both list and text
+  # output (summary = FALSE -> no summary; elementwise = FALSE -> only summary).
+  table_output <- (output == "table")
+  text_output <- (output == "text")
   out <- lav_residuals(
     object = object, type = type, h1 = h1,
-    se = se || table_output, zstat = zstat,
+    se = se || table_output || (text_output && elementwise), zstat = zstat,
     summary = summary && !table_output,
     summary_options = list(
       se = TRUE, zstat = TRUE, pvalue = TRUE,
@@ -304,11 +410,275 @@ lavResiduals <- function(object, type = "cor.bentler", h1 = NULL,         # noli
       out <- out_list
       names(out) <- object@Data@block.label
     }
+  } else if (output == "text") {
+    # collect (a) the largest residuals per block (unless elementwise = FALSE)
+    # and (b) the summary table(s) (unless summary = FALSE), and wrap them in an
+    # object that prints in the lavaan style; see lav_residuals_summary_print()
+    nblocks <- lav_pt_nblocks(object@ParTable)
+
+    # per-block residual lists
+    if (nblocks == 1L) {
+      blk <- if (drop.list.single.group) out else out[[1]]
+      block_lists <- list(blk)
+      block_labels <- ""
+    } else {
+      block_names <- setdiff(names(out), "summary")
+      block_lists <- out[block_names]
+      block_labels <- block_names
+    }
+
+    # summary table(s) (only if requested)
+    summary_tables <- NULL
+    if (summary) {
+      if (nblocks == 1L) {
+        summary_tables <- list(block_lists[[1]][["summary"]])
+        names(summary_tables) <- ""
+      } else if (!is.null(out[["summary"]])) {
+        summary_tables <- list(out[["summary"]]) # combine = TRUE: one summary
+        names(summary_tables) <- ""
+      } else {
+        summary_tables <- lapply(block_lists, function(b) b[["summary"]])
+        names(summary_tables) <- block_labels
+      }
+    }
+
+    # largest residuals per block (only if elementwise; the combine= option
+    # affects only the summary). Variances are listed only for raw-style metrics.
+    largest <- NULL
+    if (elementwise) {
+      cov_diagonal <- tolower(type)[1] %in%
+        c("raw", "rmr", "normalized", "standardized", "standardized.mplus")
+      largest <- lapply(block_lists, function(b) {
+        lav_residuals_largest_block(b, cov_diagonal = cov_diagonal,
+          n_largest = n.largest
+        )
+      })
+      names(largest) <- block_labels
+    }
+
+    out <- structure(
+      list(
+        type = type, largest = largest, summary_tables = summary_tables,
+        show_se = isTRUE(se), show_z = isTRUE(zstat),
+        combine = isTRUE(combine) && nblocks > 1L
+      ),
+      class = "lavaan.residuals.summary"
+    )
+  } else if (!elementwise) {
+    # output = "list" but only the summary information is requested: return the
+    # summary table(s), dropping the (element-wise) residual matrices
+    nblocks <- lav_pt_nblocks(object@ParTable)
+    if (nblocks == 1L) {
+      blk <- if (drop.list.single.group) out else out[[1]]
+      out <- blk[["summary"]]
+    } else if (!is.null(out[["summary"]])) {
+      out <- out[["summary"]] # combine = TRUE: a single (pooled) summary
+    } else {
+      block_names <- setdiff(names(out), "summary")
+      sm <- lapply(out[block_names], function(b) b[["summary"]])
+      names(sm) <- block_names
+      out <- sm
+    }
   } else {
-    # list -> nothing to do
+    # output = "list", elementwise = TRUE -> nothing to do
   }
 
   out
+}
+
+# pretty-print a single residual summary table (one block), in the lavaan
+# fit-measures style: a left-justified label column followed by one right-
+# justified value column per moment block (e.g. cov / mean / total). The
+# (biased) point estimate and its exact-fit test are separated from the
+# (unbiased) estimate, its confidence interval and its close-fit test by a
+# blank line, mirroring the RMSEA / Robust RMSEA layout.
+lav_residuals_summary_print_one <- function(tab, metric, nd = 3L) {
+  num_format <- paste0("%", max(8L, nd + 5L), ".", nd, "f")
+  big_m <- toupper(metric)
+  rn <- rownames(tab)
+  cn <- colnames(tab)
+
+  # capitalized column headers (text output only), following the style of
+  # parameterEstimates(., output = "text")
+  col_disp_map <- c(
+    cov = "Cov", mean = "Mean", total = "Total", cor = "Cor",
+    thresholds = "Th", res.cov = "Res.cov", res.int = "Res.int",
+    res.th = "Res.th", res.slopes = "Res.slps"
+  )
+  cn_disp <- col_disp_map[cn]
+  cn_disp[is.na(cn_disp)] <- cn[is.na(cn_disp)]
+  cn_disp <- unname(cn_disp)
+
+  # nice row labels
+  label_map <- c(
+    "Standard error",
+    "Test statistic (exact fit, H0: value = 0)",
+    "P-value (one-sided)",
+    "Standard error",
+    "90 Percent confidence interval - lower",
+    "90 Percent confidence interval - upper",
+    "H0 value (close fit)",
+    "Test statistic (close fit)",
+    "P-value (one-sided)"
+  )
+  names(label_map) <- c(
+    paste0(metric, ".se"),
+    paste0(metric, ".exactfit.z"),
+    paste0(metric, ".exactfit.pvalue"),
+    paste0("u", metric, ".se"),
+    paste0("u", metric, ".ci.lower"),
+    paste0("u", metric, ".ci.upper"),
+    paste0("u", metric, ".closefit.h0.value"),
+    paste0("u", metric, ".closefit.z"),
+    paste0("u", metric, ".closefit.pvalue")
+  )
+  nice <- function(r) {
+    if (r == metric) {
+      return(big_m)
+    }
+    if (r == paste0("u", metric)) {
+      return(paste0("Unbiased ", big_m, " (U", big_m, ")"))
+    }
+    if (!is.na(label_map[r])) {
+      return(unname(label_map[r]))
+    }
+    r
+  }
+  labels <- vapply(rn, nice, character(1))
+
+  # formatted value matrix (NA -> blank); the column width must also fit the
+  # widest (display) column name
+  val_w <- max(8L, nd + 5L, max(nchar(cn_disp))) + 1L
+  vm <- matrix("", nrow(tab), length(cn))
+  for (j in seq_along(cn)) {
+    v <- tab[[cn[j]]]
+    vm[, j] <- ifelse(is.na(v), "", sprintf(num_format, v))
+  }
+
+  lab_w <- 44L
+  fmt_lab <- function(s) formatC(paste0("  ", s), width = lab_w, flag = "-")
+  fmt_val <- function(s) formatC(s, width = val_w)
+
+  # header (column names), then the rows, with a blank line before the unbiased
+  # block
+  ub_start <- match(paste0("u", metric), rn)
+  lines <- paste0(
+    fmt_lab(""), paste(vapply(cn_disp, fmt_val, character(1)), collapse = "")
+  )
+  for (i in seq_len(nrow(tab))) {
+    if (!is.na(ub_start) && i == ub_start) {
+      lines <- c(lines, "")
+    }
+    lines <- c(lines, paste0(
+      fmt_lab(labels[i]),
+      paste(vapply(seq_along(cn), function(j) fmt_val(vm[i, j]), character(1)),
+        collapse = ""
+      )
+    ))
+  }
+  cat(lines, sep = "\n")
+  cat("\n")
+}
+
+# pretty-print a single block's largest-residuals table, in the style of
+# parameterEstimates(., output = "text"): residual elements grouped into
+# sections (Covariances, Variances, Intercepts, Thresholds, Regressions), with
+# a left-justified "lhs op rhs" label and right-justified Residual / Std.Err /
+# Z-value columns.
+lav_residuals_largest_print_one <- function(df, show_se = FALSE,
+                                            show_z = TRUE, nd = 3L) {
+  if (nrow(df) == 0L) {
+    cat("\n  (no non-zero residuals)\n")
+    return(invisible())
+  }
+  num_format <- paste0("%", max(8L, nd + 5L), ".", nd, "f")
+  val_w <- max(8L, nd + 5L) + 1L
+  fmt_val <- function(s) formatC(s, width = val_w)
+  fmt_num <- function(v) ifelse(is.na(v), "", sprintf(num_format, v))
+
+  # "lhs op rhs" label (thresholds already carry their full "y1|t1" name)
+  lab <- ifelse(df$op == "", df$lhs,
+    ifelse(nzchar(df$rhs), paste(df$lhs, df$op, df$rhs), paste(df$lhs, df$op))
+  )
+  lab_w <- max(nchar(lab), 8L) + 4L
+  fmt_lab <- function(s) formatC(paste0("  ", s), width = lab_w, flag = "-")
+
+  col_hdr <- c("Residual", if (show_se) "Std.Err", if (show_z) "Z-value")
+  lines <- paste0(
+    fmt_lab(""), paste(vapply(col_hdr, fmt_val, character(1)), collapse = "")
+  )
+  group_order <- c(
+    "Covariances", "Variances", "Intercepts", "Thresholds", "Regressions"
+  )
+  groups <- intersect(group_order, unique(df$group))
+  for (g_idx in seq_along(groups)) {
+    grp <- groups[g_idx]
+    if (g_idx > 1L) {
+      lines <- c(lines, "") # blank line between sections
+    }
+    lines <- c(lines, paste0(grp, ":"))
+    for (i in which(df$group == grp)) {
+      vals <- c(
+        fmt_num(df$res[i]),
+        if (show_se) fmt_num(df$se[i]),
+        if (show_z) fmt_num(df$z[i])
+      )
+      lines <- c(lines, paste0(
+        fmt_lab(lab[i]),
+        paste(vapply(vals, fmt_val, character(1)), collapse = "")
+      ))
+    }
+  }
+  cat(lines, sep = "\n")
+  cat("\n")
+}
+
+# print method for the output = "text" result of lavResiduals(): first the
+# largest residuals per block, then the residual summary table(s)
+lav_residuals_summary_print <- function(x, ..., nd = 3L) {
+  # ---- largest residuals (per block) ----
+  if (!is.null(x$largest)) {
+    cat("\n", lav_residuals_largest_title(x$type), ":\n", sep = "")
+    multi <- length(x$largest) > 1L
+    for (b in seq_along(x$largest)) {
+      lab <- names(x$largest)[b]
+      if (multi && !is.null(lab) && nzchar(lab)) {
+        cat("\n  [ ", lab, " ]\n", sep = "")
+      }
+      cat("\n")
+      lav_residuals_largest_print_one(x$largest[[b]],
+        show_se = isTRUE(x$show_se), show_z = isTRUE(x$show_z), nd = nd
+      )
+    }
+  }
+
+  # ---- residual summary table(s) ----
+  tables <- x$summary_tables
+  if (!is.null(tables)) {
+    metric <- rownames(tables[[1]])[1] # "rmr" / "srmr" / "crmr"
+    full_name <- switch(metric,
+      rmr = "Root Mean Square Residual (RMR)",
+      srmr = "Standardized Root Mean Square Residual (SRMR)",
+      crmr = "Correlation Root Mean Square Residual (CRMR)",
+      "Residual-based summary"
+    )
+    header <- full_name
+    if (isTRUE(x$combine)) {
+      header <- paste0(full_name, " (pooled across blocks)")
+    }
+    cat("\n", header, ":\n", sep = "")
+
+    for (b in seq_along(tables)) {
+      lab <- names(tables)[b]
+      if (!is.null(lab) && nzchar(lab)) {
+        cat("\n  [ ", lab, " ]\n", sep = "")
+      }
+      cat("\n")
+      lav_residuals_summary_print_one(tables[[b]], metric, nd = nd)
+    }
+  }
+
+  invisible(x)
 }
 
 # summary_options with everything switched off; used for the settings where

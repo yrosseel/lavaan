@@ -11,11 +11,11 @@ this function with a limited set of arguments.
 }
 \usage{
 lavResiduals(object, type = "cor.bentler", h1 = NULL,
-    se = FALSE, zstat = TRUE, summary = TRUE,
+    se = FALSE, zstat = TRUE, summary = TRUE, elementwise = TRUE,
     combine = FALSE, h1.acov = "unstructured",
     add.type = TRUE, add.labels = TRUE, add.class = TRUE,
     drop.list.single.group = TRUE,
-    maximum.number = 0L, output = "list")
+    maximum.number = 0L, n.largest = 5L, output = "list")
 }
 \arguments{
 \item{object}{An object of class \code{\linkS4class{lavaan}}.}
@@ -65,6 +65,12 @@ why the unbiased version is used here. Conversely, no test of exact fit is
 reported for the unbiased estimator: because it is truncated at zero, its
 sampling distribution is degenerate at the exact-fit boundary, so the test of
 exact fit is (correctly) only based on the biased statistic.}
+\item{elementwise}{Logical. If \code{TRUE} (the default), the element-wise
+residuals are included: the (residualized) summary statistics when
+\code{output = "list"}, or the largest-residuals table(s) when
+\code{output = "text"}. If \code{FALSE}, these are omitted and only the summary
+information is returned/shown (provided \code{summary = TRUE}). Combined with
+\code{summary = FALSE}, this gives full control over which parts are produced.}
 \item{combine}{Logical. Only relevant when multiple blocks are
 involved (multiple groups, or multiple levels). If \code{FALSE} (the default),
 a separate summary table is shown for each block. If \code{TRUE}, the
@@ -96,6 +102,10 @@ only a single group.}
 \item{maximum.number}{Integer. Only used if \code{output = "table"}. If larger
 than zero, show only the first maximum.number rows of the data.frame. The
 default (\code{0L}) shows all rows.}
+\item{n.largest}{Integer. Only used if \code{output = "text"}. The number of
+largest (in absolute value) residuals that are shown, per element group
+(covariances, variances, intercepts, thresholds, regression slopes) and per
+block.}
 \item{output}{Character. By default, \code{output = "list"}, and the output
 is a list of elements. If \code{output = "table"}, the residuals are shown in
 a single data.frame, one row per residual element, sorted from high (in
@@ -107,7 +117,17 @@ metrics (\code{type = "raw"}, \code{"normalized"} or \code{"standardized"}),
 not for the correlation metrics where they are structurally zero. Structurally
 fixed moments (e.g. saturated means or just-identified thresholds) are omitted.
 If \code{se = TRUE}, a \code{se} column with the standard errors is added; if
-\code{zstat = TRUE}, a \code{z} column with the z-statistics is added.}
+\code{zstat = TRUE}, a \code{z} column with the z-statistics is added.
+If \code{output = "text"} (or, equivalently, \code{"pretty"}), the output is
+printed in the same style as the fit measures (e.g.\ the RMSEA). First, a table
+with the \code{n.largest} largest residuals (per element group, and per block)
+is shown, formatted like \code{parameterEstimates(., output = "text")} but with
+a \sQuote{Residual} column (and, if available, \sQuote{Std.Err} and
+\sQuote{Z-value} columns); its header reflects the residual \code{type} (e.g.\
+\dQuote{Largest Standardized Residuals (Cor.Bentler)} or \dQuote{Largest Raw
+Residuals}). Next, the residual summary table(s) are shown. When multiple blocks
+are involved and \code{combine = FALSE}, one summary is printed per block;
+otherwise a single (combined) summary is printed.}
 }
 \value{
 If \code{drop.list.single.group = TRUE}, a list of (residualized) summary
