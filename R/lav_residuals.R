@@ -70,6 +70,19 @@
 #                  thresholds / total). The 'total' (and hence the
 #                  srmr/rmr/crmr fitMeasures totals) now includes the slopes;
 #                  fitMeasures reads the res.cov column.
+# - change 0.7-1: output = "table" now lists *all* residual elements (not just
+#                  the off-diagonal covariances): (co)variances, means/inter-
+#                  cepts, thresholds and -- for conditional.x -- the regression
+#                  slopes, with optional se/z columns (see
+#                  lav_residuals_table_block()); structurally fixed moments
+#                  (zero/NA se) are filtered out.
+# - change 0.7-1: the $summary now reports the exact-fit test (H0: population
+#                  value = 0) for the unbiased estimators (urmr/usrmr/ucrmr)
+#                  too, not only the biased ones. The biased rmr/srmr/crmr keep
+#                  only the exact-fit test (no CI, no close-fit): being biased
+#                  upward, they have no valid CI coverage and no closed-form
+#                  null distribution at a nonzero (close-fit) value -- which is
+#                  precisely why the unbiased estimators exist.
 
 setMethod(
   "residuals", "lavaan",
@@ -1737,6 +1750,7 @@ lav_residuals_summary_rms <- function(stats = NULL, acov = NULL,
   # default is NULL
   rms_se <- rms_z <- rms_pvalue <- NULL
   urms <- urms_se <- urms_z <- urms_pvalue <- NULL
+  urms_exact_z <- urms_exact_pvalue <- NULL
   urms_ci_lower <- urms_ci_upper <- NULL
   if (!unbiased_zstat) {
     unbiased_test_val <- NULL
@@ -1784,9 +1798,17 @@ lav_residuals_summary_rms <- function(stats = NULL, acov = NULL,
         urms_ci_upper <- urms + urms_se * fac[2]
       }
       if (unbiased_zstat) {
+        # close fit: H0: population (u)rms = unbiased_test_val (e.g. 0.05)
         urms_z <- (urms - unbiased_test_val) / urms_se
+        # exact fit: H0: population (u)rms = 0. Because the unbiased estimator
+        # is (approximately) unbiased and normal, this is simply the close-fit
+        # statistic with an H0 value of 0; no bias correction is needed (unlike
+        # the biased rms, whose null expectation is e_rms). urms >= 0, so no
+        # truncation at zero is required.
+        urms_exact_z <- urms / urms_se
         if (unbiased_pvalue) {
           urms_pvalue <- 1 - pnorm(urms_z)
+          urms_exact_pvalue <- 1 - pnorm(urms_exact_z)
         }
       }
     }
@@ -1798,6 +1820,7 @@ lav_residuals_summary_rms <- function(stats = NULL, acov = NULL,
       rmr = rms, rmr.se = rms_se,
       rmr.exactfit.z = rms_z, rmr.exactfit.pvalue = rms_pvalue,
       urmr = urms, urmr.se = urms_se,
+      urmr.exactfit.z = urms_exact_z, urmr.exactfit.pvalue = urms_exact_pvalue,
       urmr.ci.lower = urms_ci_lower,
       urmr.ci.upper = urms_ci_upper,
       urmr.closefit.h0.value = unbiased_test_val,
@@ -1809,6 +1832,8 @@ lav_residuals_summary_rms <- function(stats = NULL, acov = NULL,
       srmr = rms, srmr.se = rms_se,
       srmr.exactfit.z = rms_z, srmr.exactfit.pvalue = rms_pvalue,
       usrmr = urms, usrmr.se = urms_se,
+      usrmr.exactfit.z = urms_exact_z,
+      usrmr.exactfit.pvalue = urms_exact_pvalue,
       usrmr.ci.lower = urms_ci_lower,
       usrmr.ci.upper = urms_ci_upper,
       usrmr.closefit.h0.value = unbiased_test_val,
@@ -1820,6 +1845,8 @@ lav_residuals_summary_rms <- function(stats = NULL, acov = NULL,
       crmr = rms, crmr.se = rms_se,
       crmr.exactfit.z = rms_z, crmr.exactfit.pvalue = rms_pvalue,
       ucrmr = urms, ucrmr.se = urms_se,
+      ucrmr.exactfit.z = urms_exact_z,
+      ucrmr.exactfit.pvalue = urms_exact_pvalue,
       ucrmr.ci.lower = urms_ci_lower,
       ucrmr.ci.upper = urms_ci_upper,
       ucrmr.closefit.h0.value = unbiased_test_val,
