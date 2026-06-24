@@ -12,7 +12,7 @@ this function with a limited set of arguments.
 \usage{
 lavResiduals(object, type = "cor.bentler", h1 = NULL,
     se = FALSE, zstat = TRUE, summary = TRUE,
-    summary.blocks.combined = FALSE, h1.acov = "unstructured",
+    combine = FALSE, h1.acov = "unstructured",
     add.type = TRUE, add.labels = TRUE, add.class = TRUE,
     drop.list.single.group = TRUE,
     maximum.number = 0L, output = "list")
@@ -65,7 +65,7 @@ why the unbiased version is used here. Conversely, no test of exact fit is
 reported for the unbiased estimator: because it is truncated at zero, its
 sampling distribution is degenerate at the exact-fit boundary, so the test of
 exact fit is (correctly) only based on the biased statistic.}
-\item{summary.blocks.combined}{Logical. Only relevant when multiple blocks are
+\item{combine}{Logical. Only relevant when multiple blocks are
 involved (multiple groups, or multiple levels). If \code{FALSE} (the default),
 a separate summary table is shown for each block. If \code{TRUE}, the
 block-specific summary tables are replaced by a single overall summary table in

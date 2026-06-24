@@ -76,7 +76,7 @@
 #                  slopes, with optional se/z columns (see
 #                  lav_residuals_table_block()); structurally fixed moments
 #                  (zero/NA se) are filtered out.
-# - change 0.7-1: new summary.blocks.combined= argument. When TRUE (and there
+# - change 0.7-1: new combine= argument. When TRUE (and there
 #                  are multiple groups or levels), the per-block summary tables
 #                  are replaced by a single overall table that pools the
 #                  residual elements across all blocks. The per-block and the
@@ -236,7 +236,7 @@ lav_residuals_table_block <- function(block_list, se = FALSE, zstat = FALSE,
 # user-visible function
 lavResiduals <- function(object, type = "cor.bentler", h1 = NULL,         # nolint start
                          se = FALSE, zstat = TRUE, summary = TRUE,
-                         summary.blocks.combined = FALSE,
+                         combine = FALSE,
                          h1.acov = "unstructured",
                          add.type = TRUE, add.labels = TRUE, add.class = TRUE,
                          drop.list.single.group = TRUE,
@@ -260,7 +260,7 @@ lavResiduals <- function(object, type = "cor.bentler", h1 = NULL,         # noli
     h1_acov = h1.acov, add_type = add.type,
     add_labels = add.labels, add_class = add.class,
     drop_list_single_group = drop.list.single.group,
-    summary_blocks_combined = summary.blocks.combined
+    summary_blocks_combined = combine
   )
 
   if (output == "table") {
@@ -707,7 +707,7 @@ lav_residuals <- function(object, type = "raw", h1 = TRUE,
     }
   }
 
-  # combined summary (summary.blocks.combined = TRUE): a single overall table,
+  # combined summary (combine = TRUE): a single overall table,
   # attached at the top level so it is reachable as out$summary (consistent with
   # the single-block case), rather than repeated/omitted per block
   if (summary && exists("combined_summary", inherits = FALSE)) {
