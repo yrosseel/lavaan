@@ -76,6 +76,14 @@
 #                  slopes, with optional se/z columns (see
 #                  lav_residuals_table_block()); structurally fixed moments
 #                  (zero/NA se) are filtered out.
+# - change 0.7-1: new summary.blocks.combined= argument. When TRUE (and there
+#                  are multiple groups or levels), the per-block summary tables
+#                  are replaced by a single overall table that pools the
+#                  residual elements across all blocks. The per-block and the
+#                  combined tables share one code path (column "specs"); the
+#                  combined ACOV is block-diagonal across independent groups but
+#                  the joint ACOV across the (correlated) levels of a multilevel
+#                  model.
 
 setMethod(
   "residuals", "lavaan",
@@ -228,6 +236,7 @@ lav_residuals_table_block <- function(block_list, se = FALSE, zstat = FALSE,
 # user-visible function
 lavResiduals <- function(object, type = "cor.bentler", h1 = NULL,         # nolint start
                          se = FALSE, zstat = TRUE, summary = TRUE,
+                         summary.blocks.combined = FALSE,
                          h1.acov = "unstructured",
                          add.type = TRUE, add.labels = TRUE, add.class = TRUE,
                          drop.list.single.group = TRUE,
@@ -250,7 +259,8 @@ lavResiduals <- function(object, type = "cor.bentler", h1 = NULL,         # noli
     ),
     h1_acov = h1.acov, add_type = add.type,
     add_labels = add.labels, add_class = add.class,
-    drop_list_single_group = drop.list.single.group
+    drop_list_single_group = drop.list.single.group,
+    summary_blocks_combined = summary.blocks.combined
   )
 
   if (output == "table") {
@@ -388,7 +398,8 @@ lav_residuals <- function(object, type = "raw", h1 = TRUE,
                           h1_acov = "unstructured", add_type = FALSE,
                           rename_cov_cor = FALSE,
                           add_labels = FALSE, add_class = FALSE,
-                          drop_list_single_group = FALSE) {
+                          drop_list_single_group = FALSE,
+                          summary_blocks_combined = FALSE) {
   # check object
   object <- lav_object_check_version(object)
 
@@ -642,16 +653,23 @@ lav_residuals <- function(object, type = "raw", h1 = TRUE,
       list(
         object = object, type = type, h1_acov = h1_acov,
         add_class = add_class,
+        summary_blocks_combined = summary_blocks_combined,
         acov_obs = summary_acov_obs
       ),
       summary_options_1
     )
     sum_stat <- do.call("lav_residuals_summary", args)
-    for (b in seq_len(nblocks)) {
-      names_1 <- names(res_list[[b]])
-      res_list[[b]] <- c(res_list[[b]], list(sum_stat[[b]][[1]])) # only 1
-      names_1 <- c(names_1, "summary")
-      names(res_list[[b]]) <- names_1
+    if (isTRUE(attr(sum_stat, "combined"))) {
+      # a single overall summary table (across all blocks); attached at the top
+      # level of the output (see below), not per block
+      combined_summary <- sum_stat[[1]][[1]]
+    } else {
+      for (b in seq_len(nblocks)) {
+        names_1 <- names(res_list[[b]])
+        res_list[[b]] <- c(res_list[[b]], list(sum_stat[[b]][[1]])) # only 1
+        names_1 <- c(names_1, "summary")
+        names(res_list[[b]]) <- names_1
+      }
     }
   }
 
@@ -687,6 +705,13 @@ lav_residuals <- function(object, type = "raw", h1 = TRUE,
       length(lavdata@group.label) == 0L) {
       names(out) <- lavdata@level.label
     }
+  }
+
+  # combined summary (summary.blocks.combined = TRUE): a single overall table,
+  # attached at the top level so it is reachable as out$summary (consistent with
+  # the single-block case), rather than repeated/omitted per block
+  if (summary && exists("combined_summary", inherits = FALSE)) {
+    out$summary <- combined_summary
   }
 
   out
@@ -1308,6 +1333,7 @@ lav_residuals_summary <- function(object, type = c("rmr", "srmr", "crmr"),
                                   unbiased_zstat = FALSE,
                                   unbiased_test_val = 0.05,
                                   unbiased_pvalue = FALSE,
+                                  summary_blocks_combined = FALSE,
                                   add_class = FALSE, acov_obs = NULL) {
   # imply flags
   if (pvalue) {
@@ -1396,64 +1422,52 @@ lav_residuals_summary <- function(object, type = c("rmr", "srmr", "crmr"),
     )
   }
 
-  # continuous cov/mean/total summary table for one type, given a (block's)
-  # residual list and ACOV, with mean/covariance positions into that ACOV
-  do_continuous_summary <- function(rms_list_g, rms_list_se_g, nvar_b,
-                                    mean_idx, cov_idx, cov_nm, mean_nm,
-                                    ty, has_mean) {
+  # The per-block summary is built from a list of "column specs". A column spec
+  # is list(stats = , lidx = , pstar = , offset = ): 'stats' are the residual
+  # elements entering that column, 'lidx' their (local) positions in the block's
+  # ACOV, 'pstar' the divisor of the RMS, and 'offset' the block's start row in
+  # the per-type global ACOV (only used for combining multilevel blocks, where
+  # the ACOV is one joint matrix). The same specs feed both the per-block tables
+  # (finalize_block_table) and the single combined table (combine_specs_table),
+  # so there is exactly one place that decides which residuals enter which
+  # column.
+
+  # continuous cov/mean/total column specs for one type
+  continuous_specs <- function(rms_list_g, nvar_b, mean_idx, cov_idx,
+                               cov_nm, mean_nm, ty, has_mean, offset = 0L) {
+    specs <- list()
     # COV
     stats <- lav_mat_vech(rms_list_g[[cov_nm]])
     pstar <- length(stats)
     if (ty == "crmr") {
       pstar <- pstar - nvar_b # CRMR excludes the (co)variance diagonal
     }
-    acov <- if (se || unbiased) {
-      rms_list_se_g[cov_idx, cov_idx, drop = FALSE]
-    } else {
-      NULL
-    }
-    rms_cov <- do_rms(stats, acov, pstar, ty)
-
+    specs[["cov"]] <- list(
+      stats = stats, lidx = cov_idx, pstar = pstar, offset = offset
+    )
     if (has_mean) {
       # MEAN / INTERCEPT
       stats <- rms_list_g[[mean_nm]]
-      pstar <- length(stats)
-      acov <- if (se || unbiased) {
-        rms_list_se_g[mean_idx, mean_idx, drop = FALSE]
-      } else {
-        NULL
-      }
-      rms_mean <- do_rms(stats, acov, pstar, ty)
-
+      specs[["mean"]] <- list(
+        stats = stats, lidx = mean_idx, pstar = length(stats), offset = offset
+      )
       # TOTAL (means/intercepts + covariances)
       stats <- c(rms_list_g[[mean_nm]], lav_mat_vech(rms_list_g[[cov_nm]]))
       pstar <- length(stats)
       if (ty == "crmr") {
         pstar <- pstar - nvar_b
       }
-      acov <- if (se || unbiased) {
-        rms_list_se_g[c(mean_idx, cov_idx), c(mean_idx, cov_idx), drop = FALSE]
-      } else {
-        NULL
-      }
-      rms_total <- do_rms(stats, acov, pstar, ty)
-
-      table_1 <- as.data.frame(cbind(rms_cov, rms_mean, rms_total))
-      colnames(table_1) <- c("cov", "mean", "total")
-    } else {
-      table_1 <- as.data.frame(cbind(rms_cov))
-      colnames(table_1) <- "cov"
+      specs[["total"]] <- list(
+        stats = stats, lidx = c(mean_idx, cov_idx), pstar = pstar,
+        offset = offset
+      )
     }
-    if (add_class) {
-      class(table_1) <- c("lavaan.data.frame", "data.frame")
-    }
-    table_1
+    specs
   }
 
-  # continuous conditional.x summary: res.cov / res.int / res.slopes / total.
-  # The moment vector is [vecr(cbind(res.int, res.slopes)), vech(res.cov)].
-  do_condx_summary <- function(rms_list_g, rms_list_se_g, nvar_b, nexo,
-                               has_mean, ty) {
+  # continuous conditional.x column specs: res.cov / res.int / res.slopes /
+  # total. The moment vector is [vecr(cbind(res.int, res.slopes)), vech(res.cov)]
+  condx_specs <- function(rms_list_g, nvar_b, nexo, has_mean, ty, offset = 0L) {
     ncol_b <- if (has_mean) 1L + nexo else nexo
     n_intsl <- nvar_b * ncol_b
     pstar_cov <- nvar_b * (nvar_b + 1) / 2
@@ -1464,40 +1478,27 @@ lav_residuals_summary <- function(object, type = c("rmr", "srmr", "crmr"),
     }
     slope_idx <- setdiff(seq_len(n_intsl), int_idx) # vecr (row-major) order
     cov_idx <- n_intsl + seq_len(pstar_cov)
-    use_acov <- se || unbiased
 
+    specs <- list()
     # res.cov
     stats <- lav_mat_vech(rms_list_g[["res.cov"]])
     pstar <- length(stats)
     if (ty == "crmr") pstar <- pstar - nvar_b
-    acov <- if (use_acov) {
-      rms_list_se_g[cov_idx, cov_idx, drop = FALSE]
-    } else {
-      NULL
-    }
-    rms_cov <- do_rms(stats, acov, pstar, ty)
-
-    # res.slopes
-    stats <- lav_mat_vecr(rms_list_g[["res.slopes"]])
-    acov <- if (use_acov) {
-      rms_list_se_g[slope_idx, slope_idx, drop = FALSE]
-    } else {
-      NULL
-    }
-    rms_slopes <- do_rms(stats, acov, length(stats), ty)
-
-    # res.int
-    rms_int <- NULL
+    specs[["res.cov"]] <- list(
+      stats = stats, lidx = cov_idx, pstar = pstar, offset = offset
+    )
+    # res.int (kept before res.slopes to match the column order)
     if (has_mean) {
       stats <- rms_list_g[["res.int"]]
-      acov <- if (use_acov) {
-        rms_list_se_g[int_idx, int_idx, drop = FALSE]
-      } else {
-        NULL
-      }
-      rms_int <- do_rms(stats, acov, length(stats), ty)
+      specs[["res.int"]] <- list(
+        stats = stats, lidx = int_idx, pstar = length(stats), offset = offset
+      )
     }
-
+    # res.slopes
+    stats <- lav_mat_vecr(rms_list_g[["res.slopes"]])
+    specs[["res.slopes"]] <- list(
+      stats = stats, lidx = slope_idx, pstar = length(stats), offset = offset
+    )
     # total (all moments, in moment-vector order)
     int_sl <- if (has_mean) {
       lav_mat_vecr(cbind(rms_list_g[["res.int"]], rms_list_g[["res.slopes"]]))
@@ -1507,187 +1508,214 @@ lav_residuals_summary <- function(object, type = c("rmr", "srmr", "crmr"),
     stats <- c(int_sl, lav_mat_vech(rms_list_g[["res.cov"]]))
     pstar <- length(stats)
     if (ty == "crmr") pstar <- pstar - nvar_b
-    acov <- if (use_acov) rms_list_se_g else NULL
-    rms_total <- do_rms(stats, acov, pstar, ty)
+    specs[["total"]] <- list(
+      stats = stats, lidx = seq_len(n_intsl + pstar_cov), pstar = pstar,
+      offset = offset
+    )
+    specs
+  }
 
-    if (has_mean) {
-      table_1 <- as.data.frame(cbind(rms_cov, rms_int, rms_slopes, rms_total))
-      colnames(table_1) <- c("res.cov", "res.int", "res.slopes", "total")
-    } else {
-      table_1 <- as.data.frame(cbind(rms_cov, rms_slopes, rms_total))
-      colnames(table_1) <- c("res.cov", "res.slopes", "total")
+  # categorical column specs: cor / thresholds / total (unconditional) or
+  # res.cov / res.th / res.slopes / total (conditional.x). 'idx' is the
+  # moment-vector index map (lav_residuals_cat_idx); it is NULL when no ACOV is
+  # needed. The canonical lavaan WLS ordering for the total is [thresholds,
+  # (slopes), covariances].
+  categorical_specs <- function(rms_list_g, idx, nvar_endo, conditional_x,
+                                cov_nm, th_nm, ty, offset = 0L) {
+    specs <- list()
+    # COR (off-diagonal (co)variances); pstar = p*(p+1)/2 for SRMR, p*(p-1)/2
+    # for CRMR
+    stats <- lav_mat_vech(rms_list_g[[cov_nm]], diagonal = FALSE)
+    pstar <- if (ty == "crmr") length(stats) else length(stats) + nvar_endo
+    specs[[if (conditional_x) "res.cov" else "cor"]] <- list(
+      stats = stats, lidx = idx$cov, pstar = pstar, offset = offset
+    )
+    # THRESHOLDS
+    stats <- rms_list_g[[th_nm]]
+    specs[[if (conditional_x) "res.th" else "thresholds"]] <- list(
+      stats = stats, lidx = idx$th, pstar = length(stats), offset = offset
+    )
+    # SLOPES (conditional.x only); vec / column-major order, matching idx$slopes
+    if (conditional_x) {
+      stats <- as.vector(rms_list_g[["res.slopes"]])
+      specs[["res.slopes"]] <- list(
+        stats = stats, lidx = idx$slopes, pstar = length(stats), offset = offset
+      )
     }
+    # TOTAL: [thresholds, (slopes), covariances]
+    stats <- c(
+      rms_list_g[[th_nm]],
+      if (conditional_x) as.vector(rms_list_g[["res.slopes"]]),
+      lav_mat_vech(rms_list_g[[cov_nm]], diagonal = FALSE)
+    )
+    pstar <- if (ty == "crmr") length(stats) else length(stats) + nvar_endo
+    specs[["total"]] <- list(
+      stats = stats, lidx = c(idx$th, idx$slopes, idx$cov), pstar = pstar,
+      offset = offset
+    )
+    specs
+  }
+
+  # build one summary table from a list of column specs, slicing the block's
+  # ACOV (block_acov) with the (local) indices stored in each spec
+  finalize_block_table <- function(specs, block_acov, ty) {
+    cols <- lapply(specs, function(sp) {
+      acov <- if (!is.null(block_acov)) {
+        block_acov[sp$lidx, sp$lidx, drop = FALSE]
+      } else {
+        NULL
+      }
+      do_rms(sp$stats, acov, sp$pstar, ty)
+    })
+    table_1 <- as.data.frame(do.call(cbind, cols))
+    colnames(table_1) <- names(specs)
     if (add_class) {
       class(table_1) <- c("lavaan.data.frame", "data.frame")
     }
     table_1
   }
 
-  # return list per block (= per group for single-level data)
-  sum_stat <- vector("list", length = lavmodel@nblocks)
+  # build the single combined table by pooling, per column, the residual
+  # elements across all blocks. The combined ACOV is block-diagonal across
+  # (independent) groups, but the one joint ACOV across (correlated) levels.
+  combine_specs_table <- function(block_specs_ty, block_acov_ty, full_acov,
+                                  multilevel, ty) {
+    col_names <- names(block_specs_ty[[1]])
+    cols <- lapply(col_names, function(cn) {
+      stats <- unlist(lapply(block_specs_ty, function(bs) bs[[cn]]$stats))
+      pstar <- sum(vapply(
+        block_specs_ty, function(bs) bs[[cn]]$pstar, numeric(1)
+      ))
+      acov <- NULL
+      if (se || unbiased) {
+        if (multilevel) {
+          # one joint ACOV: gather the (global) indices across the levels
+          gidx <- unlist(lapply(
+            block_specs_ty, function(bs) bs[[cn]]$offset + bs[[cn]]$lidx
+          ))
+          acov <- full_acov[gidx, gidx, drop = FALSE]
+        } else {
+          # independent groups: block-diagonal of the per-group column slices
+          blocks <- lapply(seq_along(block_specs_ty), function(b) {
+            li <- block_specs_ty[[b]][[cn]]$lidx
+            block_acov_ty[[b]][li, li, drop = FALSE]
+          })
+          acov <- if (length(blocks) == 1L) {
+            blocks[[1]]
+          } else {
+            do.call(lav_mat_bdiag, blocks)
+          }
+        }
+      }
+      do_rms(stats, acov, pstar, ty)
+    })
+    table_1 <- as.data.frame(do.call(cbind, cols))
+    colnames(table_1) <- col_names
+    if (add_class) {
+      class(table_1) <- c("lavaan.data.frame", "data.frame")
+    }
+    table_1
+  }
 
-  # multilevel: one summary per level-specific block. The moment vector stacks
-  # the blocks, each ordered [mean, vech(cov)], so we slice the (single-group)
-  # ACOV per block and reuse the continuous summary.
-  if (lavdata@nlevels > 1L) {
-    if (lavdata@ngroups > 1L) {
-      lav_msg_stop(gettext("not ready yet")) # multigroup + multilevel
+  # ACOV list for a given type (one element per group for single-level data;
+  # for multilevel data a single joint ACOV across the levels)
+  get_se_list <- function(ty) {
+    if (!(se || unbiased)) {
+      return(NULL)
+    }
+    switch(ty,
+      rmr = rmr_list_se, srmr = srmr_list_se, crmr = crmr_list_se
+    )
+  }
+
+  multilevel <- (lavdata@nlevels > 1L)
+  if (multilevel && lavdata@ngroups > 1L) {
+    lav_msg_stop(gettext("not ready yet")) # multigroup + multilevel
+  }
+
+  # Gather, per type and per block, the column specs and the block's ACOV.
+  # block_specs[[ty]][[b]] is a named list of column specs; block_acov[[ty]][[b]]
+  # is the block's ACOV (or NULL). For multilevel data, all blocks share one
+  # joint ACOV; each block's ACOV is the corresponding diagonal sub-block, and
+  # the spec 'offset' records where the block starts in the joint matrix.
+  block_specs <- vector("list", length(type))
+  block_acov <- vector("list", length(type))
+  names(block_specs) <- names(block_acov) <- type
+
+  if (multilevel) {
+    # multilevel: one block per level; the moment vector of each block is
+    # ordered [mean, vech(cov)]
+    for (ty in type) {
+      block_specs[[ty]] <- vector("list", lavmodel@nblocks)
+      block_acov[[ty]] <- vector("list", lavmodel@nblocks)
     }
     offset <- 0L
     for (b in seq_len(lavmodel@nblocks)) {
       nvb <- object@pta$nvar[[b]]
       pstar_b <- nvb * (nvb + 1) / 2
-      blk <- offset + c(seq_len(nvb), nvb + seq_len(pstar_b)) # [mean, cov]
-      offset <- offset + nvb + pstar_b
-      out <- vector("list", length(type))
-      names(out) <- type
-      for (typ in seq_along(type)) {
-        ty <- type[typ]
+      blk_size <- nvb + pstar_b
+      blk <- offset + seq_len(blk_size) # [mean, cov] block range
+      for (ty in type) {
         est_b <- switch(ty,
           rmr = rmr_list[[b]], srmr = srmr_list[[b]], crmr = crmr_list[[b]]
         )
-        se_b <- NULL
-        if (se || unbiased) {
-          se_full <- switch(ty,
-            rmr = rmr_list_se[[1]], srmr = srmr_list_se[[1]],
-            crmr = crmr_list_se[[1]]
-          )
-          se_b <- se_full[blk, blk, drop = FALSE]
-        }
-        out[[typ]] <- do_continuous_summary(
-          est_b, se_b, nvb,
+        block_specs[[ty]][[b]] <- continuous_specs(
+          est_b, nvb,
           mean_idx = seq_len(nvb), cov_idx = nvb + seq_len(pstar_b),
           cov_nm = "cov", mean_nm = "mean", ty = ty,
-          has_mean = lavmodel@meanstructure
+          has_mean = lavmodel@meanstructure, offset = offset
         )
+        se_list <- get_se_list(ty)
+        if (!is.null(se_list)) {
+          block_acov[[ty]][[b]] <- se_list[[1]][blk, blk, drop = FALSE]
+        }
       }
-      sum_stat[[b]] <- out
+      offset <- offset + blk_size
     }
-    return(sum_stat)
-  }
-
-  for (g in seq_len(lavdata@ngroups)) {
-    nvar <- object@pta$nvar[[g]] # block or group-based?
-
-    out <- vector("list", length(type))
-    names(out) <- type
-
-    # categorical -- single level
-    if (lavdata@nlevels == 1L && lavmodel@categorical) {
-      # rmr/srmr/crmr SEs are supported for the unconditional case (pure
-      # categorical as well as mixed continuous + ordinal) and for the
-      # conditional.x case (the moment vector then includes a regression-slopes
-      # block, reported in a separate res.slopes column and folded into the
-      # total, mirroring the continuous conditional.x summary)
-
-      # endogenous variables only; for conditional.x the exogenous covariates
-      # are not part of the moment vector
-      nexo <- if (conditional_x) lavmodel@nexo[g] else 0L
-      nvar_endo <- if (conditional_x) {
-        length(object@pta$vnames$ov.nox[[g]])
-      } else {
-        nvar
-      }
-
-      # moment-vector index map; for pure-categorical models idx$cov and idx$th
-      # reproduce the simple [thresholds, correlations] split, but it also
-      # handles the continuous variances/means and the conditional.x slopes
-      cov_nm <- if (conditional_x) "res.cov" else "cov"
-      th_nm <- if (conditional_x) "res.th" else "th"
-      idx <- if (se || unbiased) {
-        lav_residuals_cat_idx(lavmodel, g, nvar = nvar_endo, nexo = nexo)
-      } else {
-        NULL
-      }
-
-      for (typ in seq_along(type)) {
-        ty <- type[typ]
-        sel <- get_rms_lists(ty, g)
-        rms_list_g <- sel$est
-        rms_list_se_g <- sel$se
-
-        # COR (off-diagonal (co)variances)
-        # pstar is p*(p+1)/2 for SRMR but p*(p-1)/2 for CRMR
-        stats <- lav_mat_vech(rms_list_g[[cov_nm]], diagonal = FALSE)
-        pstar <- if (ty == "crmr") length(stats) else length(stats) + nvar_endo
-        acov <- if (se || unbiased) {
-          rms_list_se_g[idx$cov, idx$cov, drop = FALSE]
+  } else {
+    for (ty in type) {
+      block_specs[[ty]] <- vector("list", lavdata@ngroups)
+      block_acov[[ty]] <- vector("list", lavdata@ngroups)
+    }
+    for (g in seq_len(lavdata@ngroups)) {
+      nvar <- object@pta$nvar[[g]]
+      if (lavmodel@categorical) {
+        # categorical (incl. mixed continuous + ordinal and conditional.x);
+        # endogenous variables only
+        nexo <- if (conditional_x) lavmodel@nexo[g] else 0L
+        nvar_endo <- if (conditional_x) {
+          length(object@pta$vnames$ov.nox[[g]])
+        } else {
+          nvar
+        }
+        cov_nm <- if (conditional_x) "res.cov" else "cov"
+        th_nm <- if (conditional_x) "res.th" else "th"
+        idx <- if (se || unbiased) {
+          lav_residuals_cat_idx(lavmodel, g, nvar = nvar_endo, nexo = nexo)
         } else {
           NULL
         }
-        rms_cor <- do_rms(stats, acov, pstar, ty)
-
-        # THRESHOLDS
-        stats <- rms_list_g[[th_nm]]
-        pstar <- length(stats)
-        acov <- if (se || unbiased) {
-          rms_list_se_g[idx$th, idx$th, drop = FALSE]
-        } else {
-          NULL
+        for (ty in type) {
+          sel <- get_rms_lists(ty, g)
+          block_specs[[ty]][[g]] <- categorical_specs(
+            sel$est, idx, nvar_endo, conditional_x, cov_nm, th_nm, ty
+          )
+          block_acov[[ty]][g] <- list(sel$se) # single [ keeps NULL slots
         }
-        rms_th <- do_rms(stats, acov, pstar, ty)
-
-        # SLOPES (conditional.x only); the (standardized) regression slopes are
-        # in vec / column-major order, matching idx$slopes
-        rms_slopes <- NULL
-        if (conditional_x) {
-          stats <- as.vector(rms_list_g[["res.slopes"]])
-          acov <- if (se || unbiased) {
-            rms_list_se_g[idx$slopes, idx$slopes, drop = FALSE]
-          } else {
-            NULL
-          }
-          rms_slopes <- do_rms(stats, acov, length(stats), ty)
-        }
-
-        # TOTAL
-        # 'stats' and 'acov' must use the same ordering, otherwise the
-        # unbiased e_ve = t(stats) %*% acov %*% stats quadratic form is wrong.
-        # We use the canonical lavaan WLS ordering [thresholds, (slopes),
-        # covariances] (matching lav_samp_wls_obs() and hence the ACOV); for
-        # pure categorical models this leaves the ACOV in its original order.
-        stats <- c(
-          rms_list_g[[th_nm]],
-          if (conditional_x) as.vector(rms_list_g[["res.slopes"]]),
-          lav_mat_vech(rms_list_g[[cov_nm]], diagonal = FALSE)
-        )
-        pstar <- if (ty == "crmr") length(stats) else length(stats) + nvar_endo
-        acov <- NULL
-        if (se || unbiased) {
-          tot_idx <- c(idx$th, idx$slopes, idx$cov)
-          acov <- rms_list_se_g[tot_idx, tot_idx, drop = FALSE]
-        }
-        rms_total <- do_rms(stats, acov, pstar, ty)
-
-        if (conditional_x) {
-          table_1 <- as.data.frame(cbind(rms_cor, rms_th, rms_slopes, rms_total))
-          colnames(table_1) <- c("res.cov", "res.th", "res.slopes", "total")
-        } else {
-          table_1 <- as.data.frame(cbind(rms_cor, rms_th, rms_total))
-          colnames(table_1) <- c("cor", "thresholds", "total")
-        }
-        if (add_class) {
-          class(table_1) <- c("lavaan.data.frame", "data.frame")
-        }
-        out[[typ]] <- table_1
-      } # type
-
-      # continuous -- single level
-    } else if (lavdata@nlevels == 1L) {
-      if (conditional_x) {
-        # conditional.x: res.cov / res.int / res.slopes / total
+      } else if (conditional_x) {
+        # continuous conditional.x: res.cov / res.int / res.slopes / total
         nvar_endo <- length(object@pta$vnames$ov.nox[[g]])
         nexo <- lavmodel@nexo[g]
-        for (typ in seq_along(type)) {
-          ty <- type[typ]
+        for (ty in type) {
           sel <- get_rms_lists(ty, g)
-          out[[typ]] <- do_condx_summary(
-            sel$est, sel$se, nvar_endo, nexo,
+          block_specs[[ty]][[g]] <- condx_specs(
+            sel$est, nvar_endo, nexo,
             has_mean = lavmodel@meanstructure, ty = ty
           )
-        } # type
+          block_acov[[ty]][g] <- list(sel$se) # single [ keeps NULL slots
+        }
       } else {
-        # unconditional: cov / mean / total, moment order [mean, vech(cov)]
+        # continuous unconditional: cov / mean / total, order [mean, vech(cov)]
         nvar_endo <- nvar
         mean_acov_idx <- if (lavmodel@meanstructure) {
           seq_len(nvar_endo)
@@ -1696,21 +1724,51 @@ lav_residuals_summary <- function(object, type = c("rmr", "srmr", "crmr"),
         }
         cov_acov_idx <- length(mean_acov_idx) +
           seq_len(nvar_endo * (nvar_endo + 1) / 2)
-        for (typ in seq_along(type)) {
-          ty <- type[typ]
+        for (ty in type) {
           sel <- get_rms_lists(ty, g)
-          out[[typ]] <- do_continuous_summary(
-            sel$est, sel$se, nvar_endo,
+          block_specs[[ty]][[g]] <- continuous_specs(
+            sel$est, nvar_endo,
             mean_idx = mean_acov_idx, cov_idx = cov_acov_idx,
             cov_nm = "cov", mean_nm = "mean", ty = ty,
             has_mean = lavmodel@meanstructure
           )
-        } # type
+          block_acov[[ty]][g] <- list(sel$se) # single [ keeps NULL slots
+        }
       }
-    }
+    } # g
+  }
 
-    sum_stat[[g]] <- out
-  } # g
+  # combine the block-specific summaries into a single overall table?
+  if (summary_blocks_combined && lavmodel@nblocks > 1L) {
+    out <- vector("list", length(type))
+    names(out) <- type
+    for (ty in type) {
+      full_acov <- if (multilevel && (se || unbiased)) {
+        get_se_list(ty)[[1]]
+      } else {
+        NULL
+      }
+      out[[ty]] <- combine_specs_table(
+        block_specs[[ty]], block_acov[[ty]], full_acov, multilevel, ty
+      )
+    }
+    sum_stat <- list(out)
+    attr(sum_stat, "combined") <- TRUE
+    return(sum_stat)
+  }
+
+  # otherwise: one summary table per block
+  sum_stat <- vector("list", length = lavmodel@nblocks)
+  for (b in seq_len(lavmodel@nblocks)) {
+    out <- vector("list", length(type))
+    names(out) <- type
+    for (ty in type) {
+      out[[ty]] <- finalize_block_table(
+        block_specs[[ty]][[b]], block_acov[[ty]][[b]], ty
+      )
+    }
+    sum_stat[[b]] <- out
+  }
 
   sum_stat
 }

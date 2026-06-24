@@ -11,7 +11,8 @@ this function with a limited set of arguments.
 }
 \usage{
 lavResiduals(object, type = "cor.bentler", h1 = NULL,
-    se = FALSE, zstat = TRUE, summary = TRUE, h1.acov = "unstructured",
+    se = FALSE, zstat = TRUE, summary = TRUE,
+    summary.blocks.combined = FALSE, h1.acov = "unstructured",
     add.type = TRUE, add.labels = TRUE, add.class = TRUE,
     drop.list.single.group = TRUE,
     maximum.number = 0L, output = "list")
@@ -64,6 +65,16 @@ why the unbiased version is used here. Conversely, no test of exact fit is
 reported for the unbiased estimator: because it is truncated at zero, its
 sampling distribution is degenerate at the exact-fit boundary, so the test of
 exact fit is (correctly) only based on the biased statistic.}
+\item{summary.blocks.combined}{Logical. Only relevant when multiple blocks are
+involved (multiple groups, or multiple levels). If \code{FALSE} (the default),
+a separate summary table is shown for each block. If \code{TRUE}, the
+block-specific summary tables are replaced by a single overall summary table in
+which the residual elements are pooled across all blocks (so, e.g., the SRMR is
+computed from the residuals of all groups or all levels at once). The combined
+table is returned as the \code{summary} element at the top level of the result.
+The pooling correctly accounts for the (block-diagonal) independence of separate
+groups and for the (joint) sampling covariance across the levels of a multilevel
+model.}
 \item{h1.acov}{Character. If \code{"unstructured"}, the observed summary
 statistics are used as consistent estimates of the corresponding (unrestricted)
 population statistics. If \code{"structured"}, the model-implied summary
