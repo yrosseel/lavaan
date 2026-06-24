@@ -60,12 +60,16 @@
 #                  saturated model (a fitted lavaan object, a lavh1 list, or a
 #                  moments list); it is swapped into object@h1 and used as the
 #                  observed summary statistics (see lav_residuals_resolve_h1())
-# - change 0.7-1: continuous conditional.x: the regression slopes are now
-#                  standardized (b * s.x / s.y) in the cor.bentler/cor.bollen
-#                  metric, and the $summary table reports res.cov / res.int /
-#                  res.slopes / total (instead of cov / mean / total). The
-#                  'total' (and hence the srmr/rmr/crmr fitMeasures) now
-#                  includes the slopes; fitMeasures reads the res.cov column.
+# - change 0.7-1: conditional.x (both continuous and categorical): the
+#                  regression slopes are now standardized (b * s.x / s.y; for
+#                  categorical endogenous variables s.y = 1) in the
+#                  cor.bentler/cor.bollen metric. The continuous $summary table
+#                  reports res.cov / res.int / res.slopes / total (instead of
+#                  cov / mean / total); the categorical $summary table reports
+#                  res.cov / res.th / res.slopes / total (instead of cor /
+#                  thresholds / total). The 'total' (and hence the
+#                  srmr/rmr/crmr fitMeasures totals) now includes the slopes;
+#                  fitMeasures reads the res.cov column.
 
 setMethod(
   "residuals", "lavaan",
@@ -409,10 +413,12 @@ lav_residuals <- function(object, type = "raw", h1 = TRUE,
         )
       }
 
-      # standardize the regression slopes (continuous conditional.x):
-      # b -> b * s.x / s.y, using the observed SDs for both obs and est (like
-      # the intercepts), so the slope residual is in the standardized metric
-      if (!lavmodel@categorical && lavmodel@conditional.x) {
+      # standardize the regression slopes (conditional.x, both continuous and
+      # categorical): b -> b * s.x / s.y, using the observed SDs for both obs
+      # and est (like the intercepts), so the slope residual is in the
+      # standardized metric. For categorical endogenous variables s.y = 1
+      # (unit-variance latent response), so the factor reduces to s.x.
+      if (lavmodel@conditional.x) {
         s_x <- sqrt(diag(obs_list[[b]][["cov.x"]]))
         scale_sl <- outer(1 / sqrt(var_obs), s_x) # [j, k] = s.x[k] / s.y[j]
         obs_list[[b]][["res.slopes"]] <-
@@ -709,8 +715,13 @@ lav_residuals_acov <- function(object, type = "raw", z_type = "standardized",
               sampstat[[g]][["cov"]]
             }
             nexo <- if (lavmodel@conditional.x) lavmodel@nexo[g] else 0L
+            s_x <- if (lavmodel@conditional.x) {
+              sqrt(diag(sampstat[[g]][["cov.x"]]))
+            } else {
+              NULL
+            }
             jac <- lav_residuals_cor_jacobian_cat(
-              lavmodel, g, cov_1, "cor.bentler", nexo = nexo
+              lavmodel, g, cov_1, "cor.bentler", nexo = nexo, s_x = s_x
             )
             acov_res[[g]] <- jac %*% acov_res[[g]] %*% t(jac)
           } else {
@@ -764,8 +775,13 @@ lav_residuals_acov <- function(object, type = "raw", z_type = "standardized",
               sampstat[[g]][["cov"]]
             }
             nexo <- if (lavmodel@conditional.x) lavmodel@nexo[g] else 0L
+            s_x <- if (lavmodel@conditional.x) {
+              sqrt(diag(sampstat[[g]][["cov.x"]]))
+            } else {
+              NULL
+            }
             jac <- lav_residuals_cor_jacobian_cat(
-              lavmodel, g, cov_1, "cor.bollen", nexo = nexo
+              lavmodel, g, cov_1, "cor.bollen", nexo = nexo, s_x = s_x
             )
             acov_res[[g]] <- jac %*% acov_res[[g]] %*% t(jac)
           } else {
@@ -850,12 +866,15 @@ lav_residuals_cat_idx <- function(lavmodel, g = 1L, nvar = NULL, nexo = 0L) {
 # "cor.bollen" (full cov2cor jacobian). 'nexo' > 0 for conditional.x (a slopes
 # block is present). Returns J such that ACOV.cor = J %*% ACOV.raw %*% t(J).
 #
-# Thresholds and regression slopes are left unchanged (slopes are not rescaled
-# in the residual point estimate either, cf. lav_residuals_rescale()). For a
-# pure-categorical model (no continuous variables) this reduces to the
-# identity; we therefore only use it in the mixed case.
+# Thresholds are left unchanged. The regression slopes are standardized as
+# b -> b * s.x / s.y (matching the point estimate, cf. the prescaling loop in
+# lav_residuals_acov()); for ordinal endogenous variables s.y = 1, so the
+# factor reduces to s.x. 's_x' holds the SDs of the exogenous covariates (only
+# needed when a slopes block is present). For a pure-categorical model (no
+# continuous variables and no slopes) this reduces to the identity; we
+# therefore only use it in the mixed / conditional.x case.
 lav_residuals_cor_jacobian_cat <- function(lavmodel, g, cov_1, type,
-                                           nexo = 0L) {
+                                           nexo = 0L, s_x = NULL) {
   idx <- lav_residuals_cat_idx(lavmodel, g, nvar = nrow(cov_1), nexo = nexo)
   nvar <- idx$nvar
   num_idx <- idx$num_idx
@@ -865,12 +884,16 @@ lav_residuals_cor_jacobian_cat <- function(lavmodel, g, cov_1, type,
   ss <- 1 / sqrt(diag(cov_1)) # 1 for ordinal (unit diagonal), 1/SD otherwise
 
   jac <- matrix(0, nrow = p, ncol = p)
-  # thresholds and regression slopes: unchanged
+  # thresholds: unchanged
   if (length(idx$th) > 0L) {
     jac[cbind(idx$th, idx$th)] <- 1
   }
+  # regression slopes: scaled by s.x / s.y (vec / column-major order, matching
+  # idx$slopes); leaving residual and SE scaled by the same factor keeps the
+  # per-element z-statistic invariant
   if (length(idx$slopes) > 0L) {
-    jac[cbind(idx$slopes, idx$slopes)] <- 1
+    slope_scale <- if (!is.null(s_x)) as.vector(outer(ss, s_x)) else 1
+    jac[cbind(idx$slopes, idx$slopes)] <- slope_scale
   }
   # continuous means/intercepts: scaled by 1/SD (observed SD treated as fixed)
   if (length(idx$mean) > 0L) {
@@ -1454,8 +1477,9 @@ lav_residuals_summary <- function(object, type = c("rmr", "srmr", "crmr"),
     if (lavdata@nlevels == 1L && lavmodel@categorical) {
       # rmr/srmr/crmr SEs are supported for the unconditional case (pure
       # categorical as well as mixed continuous + ordinal) and for the
-      # conditional.x case (the moment vector then includes a slopes block,
-      # which does not enter the cor/threshold summaries)
+      # conditional.x case (the moment vector then includes a regression-slopes
+      # block, reported in a separate res.slopes column and folded into the
+      # total, mirroring the continuous conditional.x summary)
 
       # endogenous variables only; for conditional.x the exogenous covariates
       # are not part of the moment vector
@@ -1504,27 +1528,45 @@ lav_residuals_summary <- function(object, type = c("rmr", "srmr", "crmr"),
         }
         rms_th <- do_rms(stats, acov, pstar, ty)
 
+        # SLOPES (conditional.x only); the (standardized) regression slopes are
+        # in vec / column-major order, matching idx$slopes
+        rms_slopes <- NULL
+        if (conditional_x) {
+          stats <- as.vector(rms_list_g[["res.slopes"]])
+          acov <- if (se || unbiased) {
+            rms_list_se_g[idx$slopes, idx$slopes, drop = FALSE]
+          } else {
+            NULL
+          }
+          rms_slopes <- do_rms(stats, acov, length(stats), ty)
+        }
+
         # TOTAL
         # 'stats' and 'acov' must use the same ordering, otherwise the
         # unbiased e_ve = t(stats) %*% acov %*% stats quadratic form is wrong.
-        # We use the canonical lavaan WLS ordering [thresholds, covariances]
-        # (matching lav_samp_wls_obs() and hence the ACOV); for pure
-        # categorical models this leaves the ACOV in its original order.
+        # We use the canonical lavaan WLS ordering [thresholds, (slopes),
+        # covariances] (matching lav_samp_wls_obs() and hence the ACOV); for
+        # pure categorical models this leaves the ACOV in its original order.
         stats <- c(
           rms_list_g[[th_nm]],
+          if (conditional_x) as.vector(rms_list_g[["res.slopes"]]),
           lav_mat_vech(rms_list_g[[cov_nm]], diagonal = FALSE)
         )
         pstar <- if (ty == "crmr") length(stats) else length(stats) + nvar_endo
         acov <- NULL
         if (se || unbiased) {
-          acov <- rms_list_se_g[c(idx$th, idx$cov), c(idx$th, idx$cov),
-            drop = FALSE
-          ]
+          tot_idx <- c(idx$th, idx$slopes, idx$cov)
+          acov <- rms_list_se_g[tot_idx, tot_idx, drop = FALSE]
         }
         rms_total <- do_rms(stats, acov, pstar, ty)
 
-        table_1 <- as.data.frame(cbind(rms_cor, rms_th, rms_total))
-        colnames(table_1) <- c("cor", "thresholds", "total")
+        if (conditional_x) {
+          table_1 <- as.data.frame(cbind(rms_cor, rms_th, rms_slopes, rms_total))
+          colnames(table_1) <- c("res.cov", "res.th", "res.slopes", "total")
+        } else {
+          table_1 <- as.data.frame(cbind(rms_cor, rms_th, rms_total))
+          colnames(table_1) <- c("cor", "thresholds", "total")
+        }
         if (add_class) {
           class(table_1) <- c("lavaan.data.frame", "data.frame")
         }

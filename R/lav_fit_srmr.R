@@ -223,7 +223,8 @@ lav_fit_srmr_lavobject <- function(lavobject = NULL, fit_measures = "rmsea") {
     # name of the covariance-residual column in the summary tables
     cov_cor <- "cov"
     if (categorical) {
-      cov_cor <- "cor"
+      # conditional.x categorical summary uses res.cov / res.th / res.slopes
+      cov_cor <- if (lavobject@Model@conditional.x) "res.cov" else "cor"
     } else if (lavobject@Model@conditional.x) {
       # continuous conditional.x summary uses res.cov / res.int / res.slopes
       cov_cor <- "res.cov"
