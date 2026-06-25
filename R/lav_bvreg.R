@@ -293,8 +293,15 @@ lav_bvreg_lik_cache <- function(cache = NULL) {
       mu = c(0, 0), sigma_1 = sigma,
       casewise = TRUE
     ))
-    # catch very small values -- TODO: sqrt() too aggressive?
-    lik_toosmall_idx <- which(lik < sqrt(.Machine$double.eps))
+    # only catch likelihoods that have underflowed to (essentially) zero;
+    # we must NOT drop merely-small (but valid) likelihoods: 'lik' here is
+    # a bivariate normal *density* that can be legitimately tiny for
+    # outlying values of y1 and/or y2. The old threshold
+    # sqrt(.Machine$double.eps) (~1.5e-8) discarded such cases, and because
+    # *which* cases were dropped depended on rho, the objective became
+    # non-smooth and the resulting correlation was biased (see the
+    # analogous fix in lav_bvmix.R for the continuous/ordinal case).
+    lik_toosmall_idx <- which(!(lik > 0))
     lik[lik_toosmall_idx] <- as.numeric(NA)
 
     return(lik)

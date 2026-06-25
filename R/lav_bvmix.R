@@ -237,8 +237,16 @@ lav_bvmix_lik_cache <- function(cache = NULL) {
     # lik
     lik <- py1 * py2y1
 
-    # catch very small values -- TODO: sqrt() too aggressive?
-    lik_toosmall_idx <- which(lik < sqrt(.Machine$double.eps))
+    # only catch likelihoods that have underflowed to (essentially) zero;
+    # we must NOT drop merely-small (but valid) likelihoods: unlike the
+    # ordinal/ordinal case, p(y1) here is a *density* that can be
+    # legitimately tiny for outlying values of the continuous variable y1.
+    # The old threshold sqrt(.Machine$double.eps) (~1.5e-8) discarded such
+    # cases, and because *which* cases were dropped depended on rho, the
+    # objective became non-smooth and the polyserial correlation was biased
+    # (badly so for skewed y1), preventing convergence to the optimal
+    # solution. This restores the pre-0.6-6 (lav_polyserial.R) behavior.
+    lik_toosmall_idx <- which(!(lik > 0))
     lik[lik_toosmall_idx] <- as.numeric(NA)
 
     return(lik)
