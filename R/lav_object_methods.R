@@ -161,6 +161,85 @@ setMethod(
   }
 )
 
+# Warn when computing a *standardized* defined (:=) parameter is ambiguous.
+#
+# If a (user) label is attached to two or more model parameters -- ie they are
+# constrained to be equal -- and that same label is referenced inside a defined
+# parameter (:=), then the standardized value of the defined parameter is not
+# well-defined: equal *unstandardized* coefficients need not have equal
+# *standardized* coefficients (the latter also depend on the standard deviations
+# of the variables involved, which typically differ across groups/equations).
+# lavaan must still report a single number, and silently uses the value from the
+# first occurrence of the label. This check issues an informative warning, as
+# suggested by Keith Markus on the lavaan discussion list:
+#   https://groups.google.com/g/lavaan/c/AWGORQnmKBg
+#
+# 'est.std' (optional) is the vector of standardized estimates aligned with the
+# rows of 'partable'. When supplied, a label is only flagged if the standardized
+# values of its (equal) parameters actually differ -- so the warning never fires
+# when standardization happens to be invariant.
+lav_partable_check_std_def <- function(partable, est.std = NULL,
+                                       tol = 1e-08) {
+  # we need labels, and at least one := definition
+  if (is.null(partable$label)) {
+    return(invisible(NULL))
+  }
+  def_idx <- which(partable$op == ":=")
+  if (length(def_idx) == 0L) {
+    return(invisible(NULL))
+  }
+
+  # labels attached to 2+ *model* parameters (these are the equality
+  # constraints); exclude ==/</>/:= rows (the latter carries the def name)
+  model_idx <- which(!partable$op %in% c("==", "<", ">", ":=") &
+                       nzchar(partable$label))
+  if (length(model_idx) == 0L) {
+    return(invisible(NULL))
+  }
+  lab <- partable$label[model_idx]
+  shared <- unique(lab[duplicated(lab)])
+  if (length(shared) == 0L) {
+    return(invisible(NULL))
+  }
+
+  def_rhs <- partable$rhs[def_idx]
+  def_lhs <- partable$lhs[def_idx]
+  flagged_lab <- character(0L)
+  flagged_def <- character(0L)
+  for (lb in shared) {
+    # if standardized values are available, only flag when they truly differ
+    if (!is.null(est.std)) {
+      vals <- est.std[model_idx[lab == lb]]
+      vals <- vals[is.finite(vals)]
+      if (length(vals) < 2L ||
+          diff(range(vals)) <= tol * max(1, max(abs(vals)))) {
+        next
+      }
+    }
+    # is the label referenced (as a whole token) inside any := definition?
+    pat <- paste0("\\b", gsub("([][{}().|^$*+?\\\\])", "\\\\\\1", lb), "\\b")
+    hit <- grepl(pat, def_rhs)
+    if (any(hit)) {
+      flagged_lab <- c(flagged_lab, lb)
+      flagged_def <- unique(c(flagged_def, def_lhs[hit]))
+    }
+  }
+  if (length(flagged_lab) == 0L) {
+    return(invisible(NULL))
+  }
+
+  lav_msg_warn(gettextf(
+    "the standardized value of the defined parameter(s) %s is ambiguous: it
+     uses the label(s) %s, which are constrained equal across groups (or
+     equations). Equal unstandardized coefficients can have different
+     standardized coefficients, so lavaan reports the standardized defined
+     parameter based on the first occurrence only. Interpret with caution.",
+    paste(sQuote(flagged_def), collapse = ", "),
+    paste(sQuote(flagged_lab), collapse = ", ")))
+
+  invisible(list(def = flagged_def, label = flagged_lab))
+}
+
 standardizedSolution <-                                      # nolint start
   standardizedsolution <- function(object,
                                    type = "std.all",
@@ -273,6 +352,10 @@ standardizedSolution <-                                      # nolint start
         partable = partable, cov_std = cov.std, ov_std = ov_std_user
       )
     }
+
+    # warn if a defined (:=) parameter standardizes a label that is constrained
+    # equal across groups/equations (its standardized value is then ambiguous)
+    lav_partable_check_std_def(tmp_partable, est.std = tmp_list$est.std)
 
     # bootstrap? If the model was fitted with se = "bootstrap" (and bootstrap
     # draws are available), we provide bootstrap standard errors and bootstrap
@@ -910,6 +993,17 @@ lavParameterEstimates <- function(object,                      # nolint start
         est_std = tmp_list$est.std,
         cov_std = cov.std, ov_std = ov_std_user
       )
+    }
+
+    # warn if a defined (:=) parameter standardizes a label that is constrained
+    # equal across groups/equations (its standardized value is then ambiguous);
+    # base the numeric comparison on whichever standardized column is available
+    if (length(standardized) > 0L) {
+      tmp_std <- tmp_list$std.all
+      if (is.null(tmp_std)) tmp_std <- tmp_list$std.nox
+      if (is.null(tmp_std)) tmp_std <- tmp_list$std.user
+      if (is.null(tmp_std)) tmp_std <- tmp_list$std.lv
+      lav_partable_check_std_def(tmp_list, est.std = tmp_std)
     }
 
     # rsquare?
