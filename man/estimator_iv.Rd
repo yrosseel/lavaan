@@ -81,17 +81,29 @@ The option names use snake_case. For backward compatibility, dot.case names
     \code{"RLS"} (reweighted least squares). For categorical data, \code{"ULS"}
     is used. If \code{"NONE"}, the variance/covariance parameters are not
     estimated.}
-  \item{\code{iv_sargan}:}{Logical. If \code{TRUE} (the default), a Sargan
-    overidentification test is computed for each overidentified equation
-    (Sargan, 1958). The results can be retrieved with
-    \code{lavInspect(fit, "sargan")}.}
+  \item{\code{iv_sargan}:}{Logical. If \code{TRUE} (the default),
+    overidentification tests are computed for each overidentified equation. Two
+    tests are reported side by side: the classical Sargan test (Sargan, 1958),
+    which assumes normality (continuous data) and is not valid for polychoric
+    correlations; and a robust, residual-based test that is valid more
+    generally. The robust test is Browne's (1984) residual statistic applied to
+    the single equation, computed with the asymptotic covariance matrix (ACOV)
+    of the sample statistics: the distribution-free (ADF) ACOV of the sample
+    covariances for continuous data (so it is robust to non-normality, and is
+    then equivalent to Hansen's overidentification test), or the polychoric
+    ACOV for categorical data. Both tests share the same degrees of freedom
+    (number of instruments minus number of regressors). For continuous data
+    with missing values the robust test is not available. The results can be
+    retrieved with \code{lavInspect(fit, "sargan")} (or, equivalently,
+    \code{lavInspect(fit, "hansen")}).}
   \item{\code{iv_sargan_adjust}:}{Character. A multiple-comparison adjustment
-    applied to the per-equation Sargan p-values, using any method accepted by
-    \code{\link[stats]{p.adjust}} (\code{"holm"}, \code{"hochberg"},
+    applied to the per-equation overidentification p-values, using any method
+    accepted by \code{\link[stats]{p.adjust}} (\code{"holm"}, \code{"hochberg"},
     \code{"hommel"}, \code{"bonferroni"}, \code{"BH"}, \code{"BY"},
     \code{"fdr"}, or \code{"none"}). Default is \code{"none"}. When a method
-    other than \code{"none"} is requested, an extra \code{pvalue.adj} column is
-    added to the table returned by \code{lavInspect(fit, "sargan")}.}
+    other than \code{"none"} is requested, extra \code{sargan.pval.adj} and
+    \code{browne.pval.adj} columns are added to the table returned by
+    \code{lavInspect(fit, "sargan")}.}
   \item{\code{iv_weak}:}{Character. How to respond to weak instruments,
     diagnosed per equation by the first-stage F-statistic (Staiger & Stock,
     1997). One of:
@@ -252,10 +264,15 @@ Several \code{\link{lavInspect}} fields are specific to IV estimation:
     used (\code{lhs_new}, \code{rhs_new}), the equation type (\code{type}:
     \code{"miiv"}, \code{"ols"} or \code{"user"}), and the instruments
     (\code{iv}) for that equation.}
-  \item{\code{lavInspect(fit, "sargan")}:}{a per-equation table with the Sargan
-    overidentification test: the statistic (\code{sargan.stat}), its degrees of
-    freedom (\code{df}) and p-value (\code{pvalue}), plus an adjusted p-value
-    (\code{pvalue.adj}) when \code{iv_sargan_adjust} is set.}
+  \item{\code{lavInspect(fit, "sargan")}:}{a per-equation table with the
+    overidentification tests: the degrees of freedom (\code{df}), the classical
+    Sargan statistic (\code{sargan.stat}) and its p-value (\code{sargan.pval}),
+    and the robust Browne residual-based statistic (\code{browne.stat}) and its
+    p-value (\code{browne.pval}); see \code{iv_sargan} above. For categorical
+    data the classical Sargan p-value is \code{NA} (not valid), so use the
+    \code{browne.*} columns. Adjusted p-values (\code{sargan.pval.adj} and
+    \code{browne.pval.adj}) are added when \code{iv_sargan_adjust} is set.
+    \code{lavInspect(fit, "hansen")} is an alias.}
   \item{\code{lavInspect(fit, "eqs")}:}{the underlying per-equation
     information.}
 }
@@ -268,6 +285,10 @@ for latent variable equations. \emph{Psychometrika}, 61(1), 109-121.
 Bollen, K. A., & Maydeu-Olivares, A. (2007). A polychoric instrumental variable
 (PIV) estimator for structural equation models with categorical variables.
 \emph{Psychometrika}, 72(3), 309-326.
+
+Browne, M. W. (1984). Asymptotically distribution-free methods for the analysis
+of covariance structures. \emph{British Journal of Mathematical and Statistical
+Psychology}, 37(1), 62-83.
 
 Sargan, J. D. (1958). The estimation of economic relationships using
 instrumental variables. \emph{Econometrica}, 26(3), 393-415.

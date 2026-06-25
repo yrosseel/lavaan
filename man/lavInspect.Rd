@@ -492,10 +492,15 @@ Miscellaneous:
         for the (MI)IV-based estimation, including the instruments, the
         coefficients, and the Sargan test per equation. Only available when
         \code{estimator = "IV"}.}
-    \item{\code{"sargan"}:}{Data.frame. The Sargan test of overidentifying
-        restrictions, for each overidentified equation. Columns are
-        \code{lhs}, \code{rhs}, \code{instruments}, \code{sargan.stat},
-        \code{df}, and \code{pvalue}. Only available when
+    \item{\code{"sargan"}:}{Data.frame. The per-equation overidentification
+        tests, for each overidentified equation. Columns are
+        \code{lhs}, \code{rhs}, \code{df}, \code{sargan.stat},
+        \code{sargan.pval}, \code{browne.stat}, and \code{browne.pval}. The \code{sargan.*} columns are the classical
+        Sargan test (assumes normality; the p-value is \code{NA} for
+        categorical data, where it is not valid); the \code{browne.*} columns
+        are a robust residual-based test computed with the distribution-free
+        (ADF) ACOV for continuous data or the polychoric ACOV for categorical
+        data. \code{"hansen"} is an alias. Only available when
         \code{estimator = "IV"}. In the case of multiple groups: a list of
         data.frames.}
     \item{\code{"version"}:}{The lavaan version number that was used to

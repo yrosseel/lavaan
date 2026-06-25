@@ -699,3 +699,90 @@ lav_sem_miiv_utils_jack_eqs <- function(eqs = NULL, # one block only
 
   k_mat
 }
+
+# per-equation overidentification test based on Browne's residual-based
+# statistic, using the asymptotic covariance (ACOV/Gamma) of the sample
+# (co)variances or correlations. This replaces the standard Sargan test when
+# the latter is not valid, in particular when the moments are polychoric
+# correlations (categorical data), but also for non-normal continuous data.
+#
+# For an equation  y = beta' x + e  with instruments z (the moment conditions
+# being cov(z, e) = 0), the overidentifying restrictions are
+#   g = s_zy - S_zx %*% beta = 0   (a q-vector, q = #instruments)
+# The (reduced) residual-based statistic is
+#   T = N * g' [W - W D (D'W D)^{-1} D'W] g,   W = Gamma_g^{-1},  D = S_zx
+# where Gamma_g is the ACOV of g, obtained from the ACOV of the relevant
+# sample moments via the delta method (g is linear in those moments with
+# d g_k / d s_{z_k y} = 1 and d g_k / d s_{z_k x_j} = -beta_j). This is
+# algebraically equivalent to Browne's residual test applied to the single
+# equation viewed as a covariance/correlation structure that is saturated
+# except for the q - p overidentifying restrictions. Under the classical
+# homoskedastic-normal weight Gamma_g = resvar * S_zz, T reduces exactly to
+# the standard Sargan statistic (and D'W g = 0, so the projection drops out).
+#
+# Arguments:
+#   y_idx, x_idx, i_idx : column indices (into 'sample_cov') of the outcome,
+#                         the regressors x, and the instruments z
+#   beta                : the (estimated) directed slopes (length = #x)
+#   sample_cov          : the (saturated) covariance/correlation matrix over
+#                         all variables in this block
+#   nacov               : the ACOV of the sample statistics (Gamma); for
+#                         categorical data this is the polychoric ACOV over
+#                         [thresholds, correlations]
+#   nth                 : number of leading entries in 'nacov' that precede the
+#                         (co)variance/correlation block (e.g. thresholds);
+#                         0 for the continuous case
+#   moment_idx_mat      : symmetric integer matrix mapping a variable pair
+#                         (a, b) to its position within the moment block of
+#                         'nacov' (vech order, off-diagonal for correlations)
+#   nobs                : number of observations for this block
+lav_sem_miiv_browne_test <- function(y_idx = integer(0L), x_idx = integer(0L),
+                                     i_idx = integer(0L), beta = numeric(0L),
+                                     sample_cov = NULL, nacov = NULL,
+                                     nth = 0L, moment_idx_mat = NULL,
+                                     nobs = 0L) {
+  q <- length(i_idx)
+  p <- length(x_idx)
+  df <- q - p
+  out <- c(stat = as.numeric(NA), df = df, pvalue = as.numeric(NA))
+  if (df <= 0L) {
+    return(out)
+  }
+
+  s_zy <- sample_cov[i_idx, y_idx, drop = FALSE]
+  s_zx <- sample_cov[i_idx, x_idx, drop = FALSE]
+  g <- drop(s_zy - s_zx %*% beta)
+
+  # indices into 'nacov' of the moments that enter g: the q instrument-outcome
+  # moments, followed by the q * p instrument-regressor moments
+  p_y <- nth + moment_idx_mat[cbind(i_idx, rep.int(y_idx, q))]
+  p_x <- nth + as.vector(moment_idx_mat[cbind(rep(i_idx, times = p),
+                                              rep(x_idx, each = q))])
+  p_all <- c(p_y, p_x)
+  gam_p <- nacov[p_all, p_all, drop = FALSE]
+
+  # delta-method Jacobian of g w.r.t. those moments
+  jmat <- matrix(0, q, length(p_all))
+  jmat[seq_len(q), seq_len(q)] <- diag(q)
+  for (j in seq_len(p)) {
+    cols <- q + (j - 1L) * q + seq_len(q)
+    jmat[cbind(seq_len(q), cols)] <- -beta[j]
+  }
+  gamma_g <- jmat %*% gam_p %*% t(jmat)
+
+  # T = N g' [W - W D (D'W D)^{-1} D'W] g
+  w <- lav_mat_sym_inverse(gamma_g)
+  wg <- drop(w %*% g)
+  q1 <- sum(g * wg)
+  q2 <- 0
+  if (p > 0L) {
+    dtwg <- crossprod(s_zx, wg)
+    dtwd <- crossprod(s_zx, w %*% s_zx)
+    q2 <- drop(crossprod(dtwg, lav_mat_sym_solve_spd(dtwd, dtwg)))
+  }
+  stat <- as.numeric(nobs * (q1 - q2))
+
+  out["stat"] <- stat
+  out["pvalue"] <- pchisq(stat, df, lower.tail = FALSE)
+  out
+}

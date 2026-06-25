@@ -651,7 +651,7 @@ lav_lavaan_lavinspect <- function(object,                                # nolin
   } else if (what %in% c("eqs")) {
     lav_inspect_eqs(object,
       drop_list_single_group = drop.list.single.group)
-  } else if (what %in% c("sargan")) {
+  } else if (what %in% c("sargan", "hansen")) {
     lav_inspect_sargan(object,
       drop_list_single_group = drop.list.single.group)
 
@@ -3661,6 +3661,18 @@ lav_inspect_sargan <- function(object, drop_list_single_group = FALSE) {
   # grab equations
   iv_list <- object@internal$eqs
 
+  # categorical data: the classical Sargan test is not valid for polychoric
+  # correlations (its p-value is left NA), so the robust Browne residual-based
+  # (RLS) test computed with the polychoric ACOV should be used instead
+  # (columns browne.stat / pvalue.browne); see lav_sem_miiv_browne_test()
+  if (lavmodel@categorical) {
+    lav_msg_note(gettext(
+      "for categorical (polychoric) data, the classical Sargan test is not
+       valid (its p-value is reported as NA); use the robust Browne
+       residual-based (RLS) test instead (columns 'browne.stat' and
+       'pvalue.browne'), which is computed with the polychoric ACOV."))
+  }
+
   # nblocks
   nblocks <- object@pta$nblocks
 
@@ -3671,33 +3683,46 @@ lav_inspect_sargan <- function(object, drop_list_single_group = FALSE) {
     adjust <- "none"
   }
 
+  # helper to pull a named element from a per-equation test vector (the
+  # 'browne' slot may be absent in objects fitted by older versions)
+  pull <- function(eqs, slot, what) {
+    sapply(seq_along(eqs), function(x) {
+      v <- eqs[[x]][[slot]]
+      if (is.null(v)) as.numeric(NA) else v[what]
+    })
+  }
+
   table <- vector("list", length = nblocks)
   for (b in seq_len(nblocks)) {
     eqs <- iv_list[[b]]
     lhs <- sapply(eqs, "[[", "lhs")
     rhs <- sapply(lapply(eqs, "[[", "rhs"), paste, collapse = " + ")
-    miiv <- sapply(lapply(eqs, "[[", "miiv"), paste, collapse = ", ")
-    sargan_stat <- sapply(seq_along(eqs),
-      function(x) eqs[[x]][["sargan"]]["stat"])
-    sargan_df <- sapply(seq_along(eqs),
-      function(x) eqs[[x]][["sargan"]]["df"])
-    sargan_pvalue <- sapply(seq_along(eqs),
-      function(x) eqs[[x]][["sargan"]]["pvalue"])
+    sargan_stat <- pull(eqs, "sargan", "stat")
+    sargan_df <- pull(eqs, "sargan", "df")
+    sargan_pvalue <- pull(eqs, "sargan", "pvalue")
+    browne_stat <- pull(eqs, "browne", "stat")
+    browne_pvalue <- pull(eqs, "browne", "pvalue")
     table[[b]] <- data.frame(
-      lhs = lhs, rhs = rhs, instruments = miiv,
-      sargan.stat = sargan_stat, df = sargan_df, pvalue = sargan_pvalue
+      lhs = lhs, rhs = rhs,
+      df = sargan_df,
+      sargan.stat = sargan_stat, sargan.pval = sargan_pvalue,
+      browne.stat = browne_stat, browne.pval = browne_pvalue
     )
 
-    # remove rows for which the Sargan statistic is NA
-    na_idx <- which(is.na(sargan_stat))
+    # remove rows for which neither test was computed (just-identified
+    # equations, where both statistics are NA)
+    na_idx <- which(is.na(sargan_stat) & is.na(browne_stat))
     if (length(na_idx) > 0L) {
       table[[b]] <- table[[b]][-na_idx, , drop = FALSE]
     }
 
-    # adjusted p-values over the (overidentified) equations in this block
+    # adjusted p-values over the (overidentified) equations in this block,
+    # applied to both the classic (Sargan) and the robust (Browne) p-values
     if (adjust != "none" && nrow(table[[b]]) > 0L) {
-      table[[b]]$pvalue.adj <- stats::p.adjust(
-        table[[b]]$pvalue, method = adjust)
+      table[[b]]$sargan.pval.adj <- stats::p.adjust(
+        table[[b]]$sargan.pval, method = adjust)
+      table[[b]]$browne.pval.adj <- stats::p.adjust(
+        table[[b]]$browne.pval, method = adjust)
     }
 
     class(table[[b]]) <- c("lavaan.data.frame", "data.frame")

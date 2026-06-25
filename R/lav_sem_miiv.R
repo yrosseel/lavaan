@@ -811,6 +811,40 @@ lav_sem_miiv_2sls <- function(eqs = NULL, lavmodel = NULL, lavpartable = NULL,
       ov_names <- c(ov_names, aux_names_b)
     }
 
+    # ingredients for the robust (Browne residual-based) overidentification
+    # test: the distribution-free (ADF) ACOV of the sample (co)variances and
+    # the sample covariance matrix of all variables in this block. This test
+    # is valid under non-normality, where the classical Sargan test is not.
+    # The moment block of the ADF Gamma is vech(S) (with the diagonal), so the
+    # index map runs over the full vech (including variances).
+    gamma_block <- NULL
+    cov_block <- NULL
+    moment_idx_mat <- NULL
+    weights_b <- lavdata@weights[[b]]
+    if (iv_sargan && nrow(xy) > ncol(xy)) {
+      gamma_block <- try(lav_samp_gamma(
+        m_y = xy, meanstructure = FALSE, wt = weights_b
+      ), silent = TRUE)
+      if (inherits(gamma_block, "try-error")) {
+        gamma_block <- NULL
+      } else {
+        nvar_b <- ncol(xy)
+        # ML sample covariance (divisor N), matching the ADF Gamma scale
+        if (is.null(weights_b)) {
+          cov_block <- crossprod(scale(xy, center = TRUE, scale = FALSE)) /
+            nrow(xy)
+        } else {
+          cov_block <- stats::cov.wt(xy, wt = weights_b, method = "ML")$cov
+        }
+        # vech index map (column-major lower triangle, WITH the diagonal)
+        moment_idx_mat <- matrix(0L, nvar_b, nvar_b)
+        moment_idx_mat[lower.tri(moment_idx_mat, diag = TRUE)] <-
+          seq_len(nvar_b * (nvar_b + 1L) / 2L)
+        moment_idx_mat[upper.tri(moment_idx_mat)] <-
+          t(moment_idx_mat)[upper.tri(moment_idx_mat)]
+      }
+    }
+
     # estimation per equation
     for (j in seq_along(eqs[[b]])) {
       # this equation
@@ -849,9 +883,10 @@ lav_sem_miiv_2sls <- function(eqs = NULL, lavmodel = NULL, lavpartable = NULL,
       # weights
       weights <- lavdata@weights[[b]]
 
-      # sargan vector
+      # sargan vector (classic test) and browne vector (robust test)
       sargan <- rep(as.numeric(NA), 3L)
       names(sargan) <- c("stat", "df", "pvalue")
+      browne <- sargan
 
       # 0. check
       if (iv_flag && length(eq$iv) < length(eq$rhs)) {
@@ -864,6 +899,7 @@ lav_sem_miiv_2sls <- function(eqs = NULL, lavmodel = NULL, lavpartable = NULL,
         eqs[[b]][[j]]$XX <- crossprod(cbind(1, xmat))
         eqs[[b]][[j]]$vcov <- matrix(0, 0L, 0L)
         eqs[[b]][[j]]$sargan <- sargan
+        eqs[[b]][[j]]$browne <- browne
         next
       }
 
@@ -1017,6 +1053,24 @@ lav_sem_miiv_2sls <- function(eqs = NULL, lavmodel = NULL, lavpartable = NULL,
         }
       }
 
+      # 6b. robust residual-based (Browne) overidentification test, using the
+      # distribution-free (ADF) ACOV. The residual g = cov(z, y - x beta) is
+      # linear in the sample covariances; the helper extracts the relevant
+      # sub-block of the ADF Gamma and forms the test. Skipped when an
+      # instrument is redundant (NA slope) or the ADF Gamma is unavailable.
+      if (iv_flag && iv_sargan && !is.null(gamma_block) &&
+        length(i_idx) - length(x_idx) > 0L) {
+        beta_x <- fit_y_on_xhat$coefficients[-1]
+        if (!anyNA(beta_x)) {
+          browne <- lav_sem_miiv_browne_test(
+            y_idx = y_idx, x_idx = x_idx, i_idx = i_idx,
+            beta = beta_x, sample_cov = cov_block,
+            nacov = gamma_block, nth = 0L,
+            moment_idx_mat = moment_idx_mat, nobs = nrow(xy)
+          )
+        }
+      }
+
       # add info to eqs list
       eqs[[b]][[j]]$coef <- unname(fit_y_on_xhat$coefficients)
       eqs[[b]][[j]]$nobs <- nrow(xmat)
@@ -1026,6 +1080,7 @@ lav_sem_miiv_2sls <- function(eqs = NULL, lavmodel = NULL, lavpartable = NULL,
       # eqs[[b]][[j]]$XX <- crossprod(cbind(1, xmat)) # needed? or only vcov?
       eqs[[b]][[j]]$vcov <- vcov
       eqs[[b]][[j]]$sargan <- sargan
+      eqs[[b]][[j]]$browne <- browne
     } # eqs
   } # nblocks
 
@@ -1160,7 +1215,7 @@ lav_sem_miiv_2sls_samp <- function(x = NULL, samplestats = FALSE,
         # categorical: augmented polychoric correlation matrix (the instruments
         # must be ordinal); the slopes use the correlations only
         augc <- lav_sem_miiv_aug_cat_moments(
-          lavdata = lavdata, b = b, model_cor = sample_cov
+          lavdata = lavdata, b = b, model_cor = sample_cov, nobs = nobs
         )
         has_ext_iv <- !is.null(augc)
         if (has_ext_iv) {
@@ -1181,6 +1236,69 @@ lav_sem_miiv_2sls_samp <- function(x = NULL, samplestats = FALSE,
           sample_cov <- aug$cov
           sample_mean <- aug$mean
           ov_names <- aug$ov.names
+        }
+      }
+    }
+
+    # ingredients for the robust (Browne residual-based) overidentification
+    # test (see lav_sem_miiv_browne_test()). It needs the ACOV (Gamma) of the
+    # sample statistics plus a map from a variable pair to its position in the
+    # moment block of that ACOV.
+    #  - categorical: the moments are polychoric correlations and the classic
+    #    Sargan test is not valid; the ACOV is the polychoric ACOV over
+    #    [thresholds, correlations] (off-diagonal vech, eq_nth thresholds).
+    #  - continuous: the robust test uses the distribution-free (ADF) ACOV of
+    #    the sample covariances (vech WITH diagonal, eq_nth = 0), computed from
+    #    the (complete) raw data; this is valid under non-normality.
+    # 'eq_cov' is the sample covariance/correlation matrix on the SAME scale as
+    # the ACOV, used to form the residual moments. Not computed in the 'aug_vec'
+    # (numerical-differentiation) calls, where the results are discarded anyway.
+    eq_nacov <- NULL
+    eq_nth <- 0L
+    moment_idx_mat <- NULL
+    eq_cov <- sample_cov
+    if (!use_aug_vec && iv_sargan) {
+      nvar_b <- nrow(sample_cov)
+      if (lavmodel@categorical) {
+        moment_idx_mat <- matrix(0L, nvar_b, nvar_b)
+        moment_idx_mat[lower.tri(moment_idx_mat)] <-
+          seq_len(nvar_b * (nvar_b - 1L) / 2L)
+        moment_idx_mat <- moment_idx_mat + t(moment_idx_mat)
+        if (has_ext_iv) {
+          eq_nacov <- augc$nacov
+          eq_nth <- aug_nth
+        } else {
+          eq_nacov <- lavsamplestats@NACOV[[b]]
+          eq_nth <- nrow(eq_nacov) - nvar_b * (nvar_b - 1L) / 2L
+        }
+      } else {
+        # continuous: ADF Gamma from the (complete) raw data, ordered to match
+        # ov_names (model variables first, external instruments appended)
+        xy_b <- if (length(lavdata@X) >= b) lavdata@X[[b]] else NULL
+        if (has_ext_iv && !is.null(lavdata@aux[[b]])) {
+          xy_b <- cbind(xy_b, lavdata@aux[[b]])
+        }
+        if (!is.null(xy_b) && !anyNA(xy_b) && nrow(xy_b) > ncol(xy_b)) {
+          wt_b <- lavdata@weights[[b]]
+          g_try <- try(lav_samp_gamma(
+            m_y = xy_b, meanstructure = FALSE, wt = wt_b
+          ), silent = TRUE)
+          if (!inherits(g_try, "try-error")) {
+            eq_nacov <- g_try
+            eq_nth <- 0L
+            pvar <- ncol(xy_b)
+            moment_idx_mat <- matrix(0L, pvar, pvar)
+            moment_idx_mat[lower.tri(moment_idx_mat, diag = TRUE)] <-
+              seq_len(pvar * (pvar + 1L) / 2L)
+            moment_idx_mat[upper.tri(moment_idx_mat)] <-
+              t(moment_idx_mat)[upper.tri(moment_idx_mat)]
+            # ML sample covariance (divisor N), matching the ADF Gamma scale
+            eq_cov <- if (is.null(wt_b)) {
+              crossprod(scale(xy_b, center = TRUE, scale = FALSE)) / nrow(xy_b)
+            } else {
+              stats::cov.wt(xy_b, wt = wt_b, method = "ML")$cov
+            }
+          }
         }
       }
     }
@@ -1228,9 +1346,10 @@ lav_sem_miiv_2sls_samp <- function(x = NULL, samplestats = FALSE,
         s_zy <- sample_cov[i_idx, y_idx, drop = FALSE]
       }
 
-      # sargan vector
+      # sargan vector (classic test) and browne vector (robust test)
       sargan <- rep(as.numeric(NA), 3L)
       names(sargan) <- c("stat", "df", "pvalue")
+      browne <- sargan
 
       # 0. check
       if (iv_flag && length(eq$iv) < length(eq$rhs)) {
@@ -1243,6 +1362,7 @@ lav_sem_miiv_2sls_samp <- function(x = NULL, samplestats = FALSE,
         eqs[[b]][[j]]$XX <- matrix(0, 0L, 0L)
         eqs[[b]][[j]]$vcov <- matrix(0, 0L, 0L)
         eqs[[b]][[j]]$sargan <- sargan
+        eqs[[b]][[j]]$browne <- browne
         next
       }
 
@@ -1482,8 +1602,11 @@ lav_sem_miiv_2sls_samp <- function(x = NULL, samplestats = FALSE,
         }
       }
 
-      # 6. Sargan test (see summary.ivreg.R 363--371)
+      # 6. overidentification test(s)
       if (iv_flag && iv_sargan && iv_vcov_stage1 != "none") {
+        # classic Sargan test (see summary.ivreg.R 363--371); for categorical
+        # data the p-value is left NA because the classical Sargan test is not
+        # valid for polychoric correlations (use the Browne test below instead)
         sargan["df"] <- nz - nx
         if (sargan["df"] > 0L) {
           g <- s_zy - s_zx %*% beta_slopes
@@ -1494,6 +1617,19 @@ lav_sem_miiv_2sls_samp <- function(x = NULL, samplestats = FALSE,
               lower.tail = FALSE
             )
           }
+        }
+        # robust residual-based (Browne) test using the ACOV of the sample
+        # statistics (polychoric ACOV for categorical data, distribution-free
+        # ADF ACOV for continuous data); only when that ACOV is available (it is
+        # not in the 'aug_vec' numerical-differentiation calls, nor for missing
+        # data, where eq_nacov stays NULL)
+        if (!use_aug_vec && !is.null(eq_nacov)) {
+          browne <- lav_sem_miiv_browne_test(
+            y_idx = y_idx, x_idx = x_idx, i_idx = i_idx,
+            beta = beta_slopes, sample_cov = eq_cov,
+            nacov = eq_nacov, nth = eq_nth,
+            moment_idx_mat = moment_idx_mat, nobs = nobs
+          )
         }
       }
 
@@ -1517,6 +1653,7 @@ lav_sem_miiv_2sls_samp <- function(x = NULL, samplestats = FALSE,
       # eqs[[b]][[j]]$XX <- XX
       eqs[[b]][[j]]$vcov <- vcov
       eqs[[b]][[j]]$sargan <- sargan
+      eqs[[b]][[j]]$browne <- browne
       eqs[[b]][[j]]$k_mat_int <- k_mat_int
       eqs[[b]][[j]]$k_mat <- k_mat
       eqs[[b]][[j]]$k_mat_full <- k_mat_full
