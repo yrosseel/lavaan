@@ -45,6 +45,12 @@ lav_export_mplus <- function(object, data_file = "data.raw") {
 
   ov.ord <- lav_export_mplus_var(lav_pt_vnames(pt, type = "ov.ord"))
 
+  # Mplus is case-insensitive, so a latent variable name (eg factor 'C1') may
+  # collide with an observed variable name that differs only in case (eg
+  # indicator 'c1'). Mplus rejects such input; rename offending latent
+  # variables to a collision-free name (see lav_export_mplus_lv_rename).
+  lv.rename <- lav_export_mplus_lv_rename(pt)
+
   # ---- MODEL block(s) ----
   body <- character(0L)
   for (g in seq_len(ngroups)) {
@@ -58,12 +64,14 @@ lav_export_mplus <- function(object, data_file = "data.raw") {
         # in Mplus, means/intercepts exist only on the between level
         body <- c(body, lav_export_mplus_block(pt, rows, mlabel, ov.ord,
                                                indent = "    ",
-                                               drop.means = (l == 1L)))
+                                               drop.means = (l == 1L),
+                                               lv.rename = lv.rename))
       }
     } else {
       rows <- which(!is.con & pt$group == g)
       body <- c(body, lav_export_mplus_block(pt, rows, mlabel, ov.ord,
-                                            indent = "  "))
+                                            indent = "  ",
+                                            lv.rename = lv.rename))
     }
   }
 
@@ -102,7 +110,8 @@ lav_export_mplus <- function(object, data_file = "data.raw") {
 
 # emit Mplus MODEL statements for a set of parameter rows
 lav_export_mplus_block <- function(pt, rows, mlabel, ov.ord, indent = "  ",
-                                   drop.means = FALSE) {
+                                   drop.means = FALSE,
+                                   lv.rename = character(0L)) {
   if (length(rows) == 0L) {
     return(character(0L))
   }
@@ -111,6 +120,13 @@ lav_export_mplus_block <- function(pt, rows, mlabel, ov.ord, indent = "  ",
     op <- pt$op[i]
     lhs <- lav_export_mplus_var(pt$lhs[i])
     rhs <- lav_export_mplus_var(pt$rhs[i])
+
+    # rename latent variables that would clash (case-insensitively) with an
+    # observed variable name in (case-insensitive) Mplus
+    if (length(lv.rename)) {
+      if (lhs %in% names(lv.rename)) lhs <- unname(lv.rename[lhs])
+      if (rhs %in% names(lv.rename)) rhs <- unname(lv.rename[rhs])
+    }
 
     # skip parameters that Mplus handles implicitly
     if (op %in% c("~~", "~1") && pt$exo[i] == 1L) next            # fixed.x exo
@@ -154,6 +170,35 @@ lav_export_mplus_mod <- function(free, ustart) {
 # sanitize a variable name for Mplus (no dots)
 lav_export_mplus_var <- function(x) {
   gsub("\\.", "_", x)
+}
+
+# Mplus is not case-sensitive: a latent variable (lhs of =~) may never share a
+# name with an observed variable that differs only in case (eg factor 'C1' vs
+# indicator 'c1'). Build a named map (original -> new) renaming each offending
+# latent variable to a collision-free name by appending 'F'. Names are compared
+# after the usual dot->underscore sanitization, so the map keys/values match the
+# tokens emitted in the MODEL block.
+lav_export_mplus_lv_rename <- function(pt) {
+  lv.names <- lav_export_mplus_var(lav_pt_vnames(pt, type = "lv"))
+  ov.names <- lav_export_mplus_var(lav_pt_vnames(pt, type = "ov"))
+  rename <- character(0L)
+  if (length(lv.names) == 0L) {
+    return(rename)
+  }
+  ov.lower <- tolower(ov.names)
+  # names already in use (case-insensitive); grow it as we assign new names so
+  # that two renamed factors cannot end up clashing with each other
+  taken <- tolower(c(ov.names, lv.names))
+  for (lv in lv.names) {
+    if (!(tolower(lv) %in% ov.lower)) next        # no collision
+    new <- paste0(lv, "F")
+    while (tolower(new) %in% taken) {
+      new <- paste0(new, "F")
+    }
+    rename[lv] <- new
+    taken <- c(taken, tolower(new))
+  }
+  rename
 }
 
 # sanitize a parameter label for Mplus (alnum/underscore, must start w/ letter)
