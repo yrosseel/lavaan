@@ -3661,17 +3661,18 @@ lav_inspect_sargan <- function(object, drop_list_single_group = FALSE) {
   # grab equations
   iv_list <- object@internal$eqs
 
-  # categorical data: the classical Sargan test is not valid for polychoric
-  # correlations (its p-value is left NA), so the robust Browne residual-based
-  # (RLS) test computed with the polychoric ACOV should be used instead
-  # (columns browne.stat / pvalue.browne); see lav_sem_miiv_browne_test()
-  if (lavmodel@categorical) {
-    lav_msg_note(gettext(
-      "for categorical (polychoric) data, the classical Sargan test is not
-       valid (its p-value is reported as NA); use the robust Browne
-       residual-based (RLS) test instead (columns 'browne.stat' and
-       'pvalue.browne'), which is computed with the polychoric ACOV."))
-  }
+  # decide which overidentification test to report:
+  #  - categorical (polychoric) data: the classical Sargan test is not valid
+  #    for polychoric correlations, so report only the robust Browne
+  #    residual-based (RLS) test (computed with the polychoric ACOV)
+  #  - continuous data with the default test (browne.residual.nt): report only
+  #    the classical Sargan test
+  #  - continuous data where the user switched to test = browne.residual.adf:
+  #    report only the (distribution-free) Browne residual-based test
+  # see lav_sem_miiv_browne_test()
+  test <- object@Options$test
+  show_browne <- lavmodel@categorical ||
+    any(grepl("browne.residual.adf", test, fixed = TRUE))
 
   # nblocks
   nblocks <- object@pta$nblocks
@@ -3702,27 +3703,37 @@ lav_inspect_sargan <- function(object, drop_list_single_group = FALSE) {
     sargan_pvalue <- pull(eqs, "sargan", "pvalue")
     browne_stat <- pull(eqs, "browne", "stat")
     browne_pvalue <- pull(eqs, "browne", "pvalue")
-    table[[b]] <- data.frame(
-      lhs = lhs, rhs = rhs,
-      df = sargan_df,
-      sargan.stat = sargan_stat, sargan.pval = sargan_pvalue,
-      browne.stat = browne_stat, browne.pval = browne_pvalue
-    )
+    if (show_browne) {
+      table[[b]] <- data.frame(
+        lhs = lhs, rhs = rhs,
+        df = sargan_df,
+        browne.stat = browne_stat, browne.pval = browne_pvalue
+      )
+    } else {
+      table[[b]] <- data.frame(
+        lhs = lhs, rhs = rhs,
+        df = sargan_df,
+        sargan.stat = sargan_stat, sargan.pval = sargan_pvalue
+      )
+    }
 
-    # remove rows for which neither test was computed (just-identified
-    # equations, where both statistics are NA)
+    # remove rows for which the test was not computed (just-identified
+    # equations, where the statistic is NA)
     na_idx <- which(is.na(sargan_stat) & is.na(browne_stat))
     if (length(na_idx) > 0L) {
       table[[b]] <- table[[b]][-na_idx, , drop = FALSE]
     }
 
     # adjusted p-values over the (overidentified) equations in this block,
-    # applied to both the classic (Sargan) and the robust (Browne) p-values
+    # applied to the p-values of the reported test
     if (adjust != "none" && nrow(table[[b]]) > 0L) {
-      table[[b]]$sargan.pval.adj <- stats::p.adjust(
-        table[[b]]$sargan.pval, method = adjust)
-      table[[b]]$browne.pval.adj <- stats::p.adjust(
-        table[[b]]$browne.pval, method = adjust)
+      if (show_browne) {
+        table[[b]]$browne.pval.adj <- stats::p.adjust(
+          table[[b]]$browne.pval, method = adjust)
+      } else {
+        table[[b]]$sargan.pval.adj <- stats::p.adjust(
+          table[[b]]$sargan.pval, method = adjust)
+      }
     }
 
     class(table[[b]]) <- c("lavaan.data.frame", "data.frame")

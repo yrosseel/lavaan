@@ -219,6 +219,9 @@ lav_parameterestimates_print <- function(x, ..., nd = 3L) {
       c1 <- c(c1, "Standard errors")
       if (attr(x, "se") == "robust.huber.white") {
         tmp_txt <- "sandwich" # since 0.6-6
+      } else if (identical(attr(x, "estimator"), "IV") &&
+                 attr(x, "se") != "bootstrap") {
+        tmp_txt <- "two-stage" # estimator = "IV"
       } else {
         tmp_txt <- attr(x, "se")
       }
@@ -227,7 +230,19 @@ lav_parameterestimates_print <- function(x, ..., nd = 3L) {
         sep = ""
       ))
       # information
-      if (attr(x, "se") != "bootstrap") {
+      if (attr(x, "se") != "bootstrap" &&
+          identical(attr(x, "estimator"), "IV")) {
+        # estimator = "IV": report the two-stage vcov methods and the type of
+        # Gamma matrix instead of the information matrix
+        c1 <- c(c1, "Standard errors stage 1")
+        c2 <- c(c2, attr(x, "iv.vcov.stage1"))
+        c1 <- c(c1, "Standard errors stage 2")
+        c2 <- c(c2, attr(x, "iv.vcov.stage2"))
+        if (!is.null(attr(x, "iv.gamma"))) {
+          c1 <- c(c1, "Gamma matrix")
+          c2 <- c(c2, attr(x, "iv.gamma"))
+        }
+      } else if (attr(x, "se") != "bootstrap") {
         # type for information
         if (attr(x, "se") == "robust.huber.white") {
           c1 <- c(c1, "Information bread")

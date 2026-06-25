@@ -92,6 +92,20 @@ lav_model_nvcov_bootstrap <- function(lavmodel = NULL,
   nboot <- nrow(coef_1)
   nvar_cov <- lavsamplestats@ntotal * (cov(coef_1) * (nboot - 1) / nboot)
 
+  # ceq.simple.only models (e.g. estimator = "IV" with equality constraints):
+  # the bootstrap draws are in the compact (free) space (one column per
+  # non-collapsed free parameter), but the rest of the vcov machinery
+  # (lav_model_vcov_se) expects the 'unco' space (one row/col per parameter,
+  # with shared rows/cols for parameters constrained equal). Expand via
+  # ceq.simple.K so that, e.g., loadings constrained equal get identical
+  # standard errors. The BOOT.COEF stored below stays in the compact space
+  # (the bootstrap CI code in lavParameterEstimates() expects that).
+  if (lavmodel@ceq.simple.only && nrow(lavmodel@ceq.simple.K) > 0L &&
+      ncol(nvar_cov) == ncol(lavmodel@ceq.simple.K)) {
+    tmp_k <- lavmodel@ceq.simple.K
+    nvar_cov <- tmp_k %*% nvar_cov %*% t(tmp_k)
+  }
+
   # save COEF and TEST (if any)
   attr(nvar_cov, "BOOT.COEF") <- coef_orig # including attributes
   attr(nvar_cov, "BOOT.TEST") <- test

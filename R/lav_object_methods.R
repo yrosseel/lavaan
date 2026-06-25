@@ -912,6 +912,20 @@ lavParameterEstimates <- function(object,                      # nolint start
 
           # TODO: add cin/ceq?
         }
+
+        # ceq.simple.only (e.g. estimator = "IV" with equality constraints):
+        # parameters constrained equal share a single bootstrap column, so only
+        # the 'leader' row (first occurrence of each free index) received a CI
+        # above; copy it to the (duplicated) followers so they match instead of
+        # collapsing to the point estimate
+        if (object@Model@ceq.simple.only) {
+          free_pt <- object@ParTable$free
+          dup_idx <- which(free_pt > 0L & duplicated(free_pt))
+          if (length(dup_idx) > 0L) {
+            leader_idx <- match(free_pt[dup_idx], free_pt)
+            ci[dup_idx, ] <- ci[leader_idx, , drop = FALSE]
+          }
+        }
       }
 
       tmp_list$ci.lower <- ci[, 1]
@@ -1259,6 +1273,29 @@ lavParameterEstimates <- function(object,                      # nolint start
         attr(tmp_list, "h1.information.meat") <-
           object@Options$h1.information.meat
         attr(tmp_list, "header") <- header
+        # estimator = "IV": the standard errors are not based on an information
+        # matrix, but on a two-stage (sandwich) procedure; report the stage-1
+        # and stage-2 vcov methods and the type of moment ACOV (Gamma) instead
+        if (identical(object@Options$estimator, "IV")) {
+          attr(tmp_list, "estimator") <- "IV"
+          attr(tmp_list, "iv.vcov.stage1") <-
+            object@Options$estimator.args$iv_vcov_stage1
+          attr(tmp_list, "iv.vcov.stage2") <-
+            object@Options$estimator.args$iv_vcov_stage2
+          # type of Gamma (moment ACOV) used in the stage-2 standard errors;
+          # not applicable when no stage-2 covariance is computed
+          if (!identical(tolower(object@Options$estimator.args$iv_vcov_stage2),
+                         "none")) {
+            attr(tmp_list, "iv.gamma") <- if (object@Model@categorical) {
+              "ADF"
+            } else if (object@Options$missing %in%
+                       c("two.stage", "robust.two.stage")) {
+              "TS"
+            } else {
+              "NT"
+            }
+          }
+        }
         # FIXME: add more!!
       }
     } else {

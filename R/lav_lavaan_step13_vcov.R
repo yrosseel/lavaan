@@ -40,8 +40,10 @@ lav_step13_vcov_boot <- function(lavoptions = NULL,
     if (lav_verbose()) {
       cat("computing VCOV for      se =", lavoptions$se, "...")
     }
-    # special case: estimator = "IV"
-    if (lavoptions$estimator %in% "IV" && !is.null(attr(x, "eqs"))) {
+    # special case: estimator = "IV" (analytic two-stage standard errors);
+    # se = "bootstrap" falls through to the generic bootstrap machinery below
+    if (lavoptions$estimator %in% "IV" && lavoptions$se != "bootstrap" &&
+        !is.null(attr(x, "eqs"))) {
       vcov_1 <- lav_sem_miiv_vcov(
         lavmodel = lavmodel,
         lavsamplestats = lavsamplestats,

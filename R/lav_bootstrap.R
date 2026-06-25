@@ -197,6 +197,11 @@ lav_bootstrap_internal <- function(object = NULL,
     if (fun_orig == "coef") {
       lavoptions_1$test <- "none"
     }
+    # the (MI)IV estimator needs the (unrestricted) h1 moments to find the
+    # instruments and estimate each equation, so keep h1 for IV refits
+    if (identical(lavoptions_1$estimator, "IV")) {
+      lavoptions_1$h1 <- TRUE
+    }
   }
 
   # bollen.stine, yuan, or parametric: we need the Sigma.hat values
