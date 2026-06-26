@@ -465,7 +465,9 @@ lav_residuals_list_to_text <- function(out, type, nblocks, drop_single = TRUE,
     block_labels <- block_names
   }
 
-  # summary table(s)
+  # summary table(s) -- some estimators (e.g. IV) do not produce residual
+  # summary statistics, so the per-block 'summary' element may be missing;
+  # keep summary_tables NULL in that case so nothing is printed
   summary_tables <- NULL
   if (do_summary) {
     if (nblocks == 1L) {
@@ -478,6 +480,9 @@ lav_residuals_list_to_text <- function(out, type, nblocks, drop_single = TRUE,
       summary_tables <- lapply(block_lists, function(b) b[["summary"]])
       names(summary_tables) <- block_labels
     }
+    # drop blocks without a summary table; if none remain, store NULL
+    keep <- !vapply(summary_tables, is.null, logical(1))
+    summary_tables <- if (any(keep)) summary_tables[keep] else NULL
   }
 
   # largest residuals per block (variances only for raw-style metrics)
@@ -677,7 +682,7 @@ lav_residuals_summary_print <- function(x, ..., nd = 3L) {
 
   # ---- residual summary table(s) ----
   tables <- x$summary_tables
-  if (!is.null(tables)) {
+  if (length(tables) > 0L && !is.null(rownames(tables[[1]]))) {
     metric <- rownames(tables[[1]])[1] # "rmr" / "srmr" / "crmr"
     full_name <- switch(metric,
       rmr = "Root Mean Square Residual (RMR)",
@@ -870,10 +875,17 @@ lav_residuals <- function(object, type = "raw", h1 = TRUE,
   # conditional.x case (the moment vector then includes a regression-slopes
   # block, both for categorical and continuous models); nothing to disable.
 
-  # change options if estimator = "IV" (for now)
+  # change options if estimator = "IV"
+  # The IV (MIIV-2SLS) estimator does not minimize an ML/GLS discrepancy
+  # function, so the standardized residual ACOV (Ogasawara, 2001; Bentler &
+  # Dijkstra, 1985) -- which the per-element SEs/z-statistics and the SRMR
+  # exact-fit/close-fit tests rely on -- is not valid here (the projection
+  # matrix Q = I - Delta A0^-1 Delta' A1 assumes the estimator minimizes the
+  # corresponding discrepancy). The residual point estimates (raw residuals,
+  # RMR/SRMR/CRMR) are plain functions of the residuals and remain valid, so
+  # we keep the summary but report point estimates only (no SE/z/tests).
   if (lavmodel@estimator == "IV") {
     zstat <- se <- FALSE
-    summary <- FALSE
     summary_options_1 <- lav_residuals_summary_options_off()
   }
 

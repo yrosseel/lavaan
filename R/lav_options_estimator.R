@@ -638,9 +638,7 @@ lav_options_est_fabin <- function(opt) {
 lav_options_est_iv <- function(opt) {
   # (MI)IV-2SLS and friends                                          ####
 
-  # the IV estimator.args use snake_case names (iv_samplestats, iv_vcov_stage1,
-  # ...); normalize any user-supplied dot.case / CamelCase names so both styles
-  # are accepted during the transition to snake_case
+  # the IV estimator.args use snake_case names
   if (is.list(opt$estimator.args) && length(opt$estimator.args) > 0L) {
     opt$estimator.args <- lav_snake_case(opt$estimator.args)
   }
@@ -649,8 +647,7 @@ lav_options_est_iv <- function(opt) {
   opt$optim.method <- "noniter"
   opt$marker.int.zero <- TRUE
 
-  # treat simple equality constraints (eg equal loadings) as shared
-  # free parameters; this lets the equation-by-equation estimator honor
+  # ceq.simple lets the equation-by-equation estimator honor
   # them via a pooled (system) solve -- see lav_sem_miiv_pool_directed()
   opt$ceq.simple <- TRUE
 
@@ -687,17 +684,19 @@ lav_options_est_iv <- function(opt) {
   # version is not available, so use the model-based variant.
   if ((length(opt$test) == 1L && opt$test == "default") || two_stage) {
     if (opt$.categorical) {
-      opt$test <- if (two_stage) {
-        "browne.residual.adf.model"
-      } else {
-        "browne.residual.adf" # always sample-based
-      }
+      #opt$test <- if (two_stage) {
+      #  "browne.residual.adf.model"
+      #} else {
+      #  "browne.residual.adf" # always sample-based
+      #}
+      opt$test <- "browne.residual.adf.model" # must be (says AMO)
     } else {
-      opt$test <- if (two_stage) {
-        "browne.residual.nt.model"
-      } else {
-        "browne.residual.nt" # sample-based (especially for baseline)
-      }                       # model-based Sigma is here diagonal!
+      #opt$test <- if (two_stage) {
+      #  "browne.residual.nt.model"
+      #} else {
+      #  "browne.residual.nt" # sample-based (especially for baseline)
+      #}                       # model-based Sigma is here diagonal!
+      opt$test <- "browne.residual.nt.model" # must be (says AMO)
     }
   }
   opt$standard.test <- opt$test[1]
@@ -838,19 +837,11 @@ lav_options_est_iv <- function(opt) {
   }
 
   # iv_mimic_ml: use the (maximum-likelihood) divisor N everywhere instead of
-  # the default unbiased divisors. By default (FALSE) the IV estimator uses the
-  # unbiased sample covariance (divisor N-1, sample.cov.rescale = FALSE) and the
-  # N-P divisor for the per-equation residual variances (RSS terms). When TRUE,
-  # the sample covariance is rescaled to the ML divisor N and the residual
-  # variances use the N divisor as well, so that (for just-identified models)
-  # the IV point estimates and standard errors match the ML solution.
+  # the default unbiased divisors
   if (isTRUE(opt$estimator.args$iv_mimic_ml)) {
     opt$sample.cov.rescale <- TRUE
   }
 
-  # two-stage missing data needs the (EM) sample moments, and the standard
-  # errors must run through the gamma path so the moment covariance can be
-  # replaced by the two-stage one (see lav_sem_miiv_vcov())
   if (two_stage) {
     opt$estimator.args$iv_samplestats <- TRUE
     if (tolower(opt$se) != "none" &&
