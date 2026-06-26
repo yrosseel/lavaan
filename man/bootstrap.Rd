@@ -95,7 +95,19 @@ resampling scheme preserves the within-cluster dependence and is the
 appropriate bootstrap both for two-level models and for single-level models with
 cluster-robust standard errors. It is currently only available for a single
 cluster (level-2) variable, and the \code{"bca"} confidence interval type
-(in \code{\link{parameterEstimates}}) is not supported in this case.}
+(in \code{\link{parameterEstimates}}) is not supported in this case.
+
+When the fitted model contains rotated exploratory factors (EFA or ESEM; that
+is, the model syntax uses the \code{efa()} modifier together with a
+\code{rotation=} method other than \code{"none"}), bootstrap standard errors and
+confidence intervals (requested via \code{se = "bootstrap"} when fitting the
+model) are computed for the \emph{rotated} solution. Each bootstrap sample is
+refit and rotated, and its factors are then aligned (reordered and reflected) to
+the original (full-sample) rotated solution before their variability is used.
+This alignment resolves the rotational indeterminacy (the sign and order of the
+exploratory factors), which would otherwise inflate the standard errors. Note
+that the raw bootstrap coefficients returned by \code{lavBootstrap(object,
+fun = "coef")} are \emph{not} aligned to a reference solution in this way.}
 \references{
 Bollen, K. and Stine, r. (1992) Bootstrapping Goodness of Fit Measures in
         Structural Equation Models. Sociological Methods and Research, 21,
