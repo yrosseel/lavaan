@@ -489,7 +489,8 @@ lav_options_default <- function() {
   elm("parallel", "no", chr = c(
     "no", "multicore", "snow"
   ))
-  maxcpu <- max(1L, parallel::detectCores() - 1L)
+  #maxcpu <- max(1L, parallel::detectCores() - 1L) # crashes if NA is returned
+  maxcpu <- max(1L, parallel::detectCores() - 1L, na.rm = TRUE)
   elm("ncpus", maxcpu, nm = paste0("[1,", maxcpu, "]"))
   elm("cl", NULL, oklen = c(0L, 1L))
   elm("iseed", NULL, oklen = c(0L, 1L))
