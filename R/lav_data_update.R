@@ -7,10 +7,16 @@
 
 # update lavdata object with new dataset
 # - assuming everything else stays the same
-# - optionally, also provide boot.idx (per group) to adapt internal slots
+# - optionally, also provide boot_idx (per group) to adapt internal slots
+#   (eXo, sampling weights); the row order of new_x must match boot_idx
+# - optionally, also provide boot_clus (per group): a matrix of (relabeled)
+#   cluster ids for the new data. This is used by the cluster bootstrap so
+#   that a cluster that is resampled more than once is treated as several
+#   distinct clusters. If NULL, the original cluster ids are reused.
 lav_data_update <- function(lavdata = NULL,
                             new_x = NULL,
                             boot_idx = NULL,
+                            boot_clus = NULL,
                             lavoptions = NULL,
                             ...) {
   dotdotdot <- list(...)
@@ -24,6 +30,22 @@ lav_data_update <- function(lavdata = NULL,
     # replace raw data
     newdata@X[[g]] <- new_x[[g]]
 
+    # if boot_idx is provided, also adapt eXo and sampling weights, using
+    # the same (per-group) row ordering as new_x
+    if (!is.null(boot_idx)) {
+      boot_idx_g <- boot_idx[[g]]
+
+      # eXo
+      if (!is.null(lavdata@eXo[[g]])) {
+        newdata@eXo[[g]] <- lavdata@eXo[[g]][boot_idx_g, , drop = FALSE]
+      }
+
+      # sampling weights
+      if (!is.null(lavdata@weights[[g]])) {
+        newdata@weights[[g]] <- lavdata@weights[[g]][boot_idx_g]
+      }
+    }
+
     # Mp + nobs
     if (lavoptions$missing != "listwise") {
       newdata@Mp[[g]] <- lav_data_mi_patterns(new_x[[g]],
@@ -31,6 +53,10 @@ lav_data_update <- function(lavdata = NULL,
       )
       newdata@nobs[[g]] <-
         (nrow(newdata@X[[g]]) - length(newdata@Mp[[g]]$empty.idx))
+    } else {
+      # the number of rows may have changed (e.g., cluster bootstrap, where
+      # the total N varies from sample to sample); keep nobs in sync
+      newdata@nobs[[g]] <- nrow(newdata@X[[g]])
     }
 
     # Rp
@@ -40,40 +66,40 @@ lav_data_update <- function(lavdata = NULL,
       newdata@Rp[[g]] <- lav_data_resp_patterns(new_x[[g]])
     }
 
-    # Lp
-    if (lavdata@nlevels > 1L) {
-      # CHECKME!
-      # extract cluster variable(s), for this group
-      clus <- matrix(0, nrow(new_x[[g]]), lavdata@nlevels - 1L)
-      for (l in 2:lavdata@nlevels) {
-        clus[, (l - 1L)] <- lavdata@Lp[[g]]$cluster.idx[[l]]
+    # Lp (cluster structure): rebuild whenever there is a cluster variable.
+    # This covers both two-level models (nlevels > 1) and single-level models
+    # with cluster-robust standard errors (cluster = , nlevels == 1).
+    if (length(lavdata@cluster) > 0L) {
+      multilevel <- lavdata@nlevels > 1L
+      n_clus_vars <- length(lavdata@cluster)
+      # cluster id(s) for the new data
+      if (!is.null(boot_clus)) {
+        # cluster bootstrap: use the (relabeled) cluster ids, so that a
+        # cluster that was resampled more than once is treated as several
+        # distinct clusters
+        clus <- boot_clus[[g]]
+      } else {
+        # reuse the original cluster ids (cluster.idx is stored from level 2)
+        clus <- matrix(0L, nrow(new_x[[g]]), n_clus_vars)
+        for (cc in seq_len(n_clus_vars)) {
+          clus[, cc] <- lavdata@Lp[[g]]$cluster.idx[[cc + 1L]]
+        }
       }
+      # ALWAYS add ov.names.x at the end (as in lav_data_full())
+      ov_names_2 <- unique(c(lavdata@ov.names[[g]], lavdata@ov.names.x[[g]]))
       newdata@Lp[[g]] <- lav_data_cl_patterns(
         y = new_x[[g]],
         clus = clus,
         cluster = lavdata@cluster,
-        ov_names = lavdata@ov.names[[g]],
+        multilevel = multilevel,
+        ov_names = ov_names_2,
+        ov_names_x = lavdata@ov.names.x[[g]],
         ov_names_l = lavdata@ov.names.l[[g]]
       )
     }
-  }
-
-  # if boot_idx if provided, also adapt eXo and WT
-  if (!is.null(boot_idx)) {
-    boot_idx_1 <- boot_idx[[g]]
-
-    # eXo
-    if (!is.null(lavdata@eXo[[g]])) {
-      newdata@eXo[[g]] <- lavdata@eXo[[g]][boot_idx_1, , drop = FALSE]
-    }
-
-    # sampling weights
-    if (!is.null(lavdata@weights[[g]])) {
-      newdata@weights[[g]] <- lavdata@weights[[g]][boot_idx_1]
-    }
   } # g
 
-  # return update data object
+  # return updated data object
   newdata
 }
 

@@ -425,15 +425,15 @@ lav_options_set <- function(opt = NULL) {
     if (opt$se == "default") {
       # ok, will be set later
     } else if (any(opt$se == c(
-      "none", "standard", "robust.huber.white", "sandwich"
+      "none", "standard", "robust.huber.white", "sandwich", "bootstrap"
     ))) {
-      # nothing to do
+      # nothing to do (bootstrap uses the cluster bootstrap; see lavBootstrap)
     } else if (opt$se == "robust") {
       opt$se <- "robust.huber.white"
     } else {
       lav_msg_stop(gettextf(
         "`se' argument must be one of %s in the multilevel case",
-        lav_msg_view(c("none", "standard", "robust.huber.white"),
+        lav_msg_view(c("none", "standard", "robust.huber.white", "bootstrap"),
           log_sep = "or"
         )
       ))

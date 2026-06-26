@@ -28,7 +28,11 @@ space. Note that both \code{"bollen.stine"} and \code{"yuan"} require the data
 to be continuous. They will not work with ordinal data.  If
 \code{"parametric"}, the parametric bootstrap approach is used; currently, this
 is only valid for continuous data following a multivariate normal distribution.
-See references for more details.}
+See references for more details. If the fitted model uses clustered or
+multilevel data (that is, a \code{cluster=} argument was used, either for a
+two-level model or to obtain cluster-robust standard errors), only the
+\code{"ordinary"} (nonparametric) bootstrap is available, and whole clusters
+(rather than individual observations) are resampled; see Details.}
 \item{fun}{A function which when applied to the \code{\linkS4class{lavaan}} 
 object returns a vector containing the statistic(s) of interest.
 The default is \code{fun="coef"}, returning the estimated values of the
@@ -77,7 +81,21 @@ myFUN <- function(x) {
 }
 }
 If \code{parallel="snow"}, it is imperative that the \code{require(lavaan)}
-is included in the custom function.}
+is included in the custom function.
+
+When the fitted model was estimated with clustered or multilevel data (i.e., a
+\code{cluster=} argument was used), the bootstrap automatically switches to a
+\emph{cluster bootstrap}: instead of resampling individual observations, whole
+(level-2) clusters are resampled with replacement, keeping all level-1
+observations within a selected cluster together. The number of clusters is held
+fixed (equal to the number of clusters in the original data), while the total
+number of observations may vary from one bootstrap sample to the next. A cluster
+that is drawn more than once is treated as several distinct clusters. This
+resampling scheme preserves the within-cluster dependence and is the
+appropriate bootstrap both for two-level models and for single-level models with
+cluster-robust standard errors. It is currently only available for a single
+cluster (level-2) variable, and the \code{"bca"} confidence interval type
+(in \code{\link{parameterEstimates}}) is not supported in this case.}
 \references{
 Bollen, K. and Stine, r. (1992) Bootstrapping Goodness of Fit Measures in
         Structural Equation Models. Sociological Methods and Research, 21,
@@ -86,6 +104,9 @@ Bollen, K. and Stine, r. (1992) Bootstrapping Goodness of Fit Measures in
 Yuan, K.-H., Hayashi, K., & Yanagihara, H. (2007). A class of population
 covariance matrices in the bootstrap approach to covariance structure analysis.
 Multivariate Behavioral Research, 42, 261--281.
+
+Field, C. A., & Welsh, A. H. (2007). Bootstrapping clustered data. Journal of
+the Royal Statistical Society: Series B, 69, 369--390.
 }
 
 \examples{

@@ -204,6 +204,32 @@ lav_bootstrap_internal <- function(object = NULL,
     }
   }
 
+  # clustered/multilevel data?
+  # if so, we resample whole (level-2) clusters with replacement, keeping
+  # all the level-1 observations within a selected cluster together, instead
+  # of resampling individual observations (the 'cluster bootstrap'; see eg
+  # Field & Welsh, 2007). This applies both to single-level models with
+  # cluster-robust standard errors (cluster = ) and to two-level models.
+  clustered_flag <- length(lavdata_1@cluster) > 0L
+  if (clustered_flag) {
+    # only the (nonparametric) ordinary bootstrap makes sense here
+    if (type != "ordinary") {
+      lav_msg_stop(gettextf(
+        "the %s bootstrap is not available for clustered/multilevel data;
+         only the (nonparametric) ordinary bootstrap is supported.",
+        dQuote(type)))
+    }
+    # for now, a single cluster (level-2) variable only
+    if (length(lavdata_1@cluster) > 1L) {
+      lav_msg_stop(gettext(
+        "the cluster bootstrap is currently only available for a single
+         cluster (level-2) variable."))
+    }
+    lav_msg_note(gettext(
+      "clustered/multilevel data detected: the bootstrap resamples whole
+       clusters (not individual observations)."))
+  }
+
   # bollen.stine, yuan, or parametric: we need the Sigma.hat values
   if (type == "bollen.stine" || type == "parametric" || type == "yuan") {
     sigma_hat <- lav_model_sigma(lavmodel = lavmodel_1)
@@ -333,17 +359,42 @@ lav_bootstrap_internal <- function(object = NULL,
     if (type == "bollen.stine" || type == "ordinary" || type == "yuan") {
       # take a bootstrap sample for each group
       boot_idx_1 <- vector("list", length = lavdata_1@ngroups)
-      # Note: we generate the bootstrap indices separately for each
-      #       group, in order to ensure the group sizes do not change!
+      # for clustered data: (relabeled) cluster ids for the resampled data
+      boot_clus_1 <- if (clustered_flag) {
+        vector("list", length = lavdata_1@ngroups)
+      } else {
+        NULL
+      }
+      # Note: we generate the bootstrap indices separately for each group, to
+      #       ensure the group sizes (or, when clustered, the number of
+      #       clusters per group) do not change!
       for (g in 1:lavdata_1@ngroups) {
-        stopifnot(nrow(lavdata_1@X[[g]]) > 1L)
-        boot_idx <- sample.int(nrow(lavdata_1@X[[g]]), replace = TRUE)
+        if (clustered_flag) {
+          # cluster bootstrap: resample whole (level-2) clusters, keeping all
+          # observations within a selected cluster together. The number of
+          # clusters is held fixed; the total N may vary across samples.
+          cl_idx <- lavdata_1@Lp[[g]]$cluster.idx[[2L]]
+          cl_rows <- split(seq_along(cl_idx), cl_idx) # row indices / cluster
+          nclus <- length(cl_rows)
+          stopifnot(nclus > 1L)
+          cl_boot <- sample.int(nclus, replace = TRUE)
+          boot_idx <- unlist(cl_rows[cl_boot], use.names = FALSE)
+          # relabel: each resampled cluster instance gets a fresh id, so a
+          # cluster drawn more than once is treated as several distinct
+          # clusters
+          new_clus <- rep.int(seq_along(cl_boot), lengths(cl_rows[cl_boot]))
+          boot_clus_1[[g]] <- matrix(new_clus, ncol = 1L)
+        } else {
+          stopifnot(nrow(lavdata_1@X[[g]]) > 1L)
+          boot_idx <- sample.int(nrow(lavdata_1@X[[g]]), replace = TRUE)
+        }
         boot_idx_1[[g]] <- boot_idx
         data_x[[g]] <- data_x[[g]][boot_idx, , drop = FALSE]
       }
       new_data <- lav_data_update(
         lavdata = lavdata_1, new_x = data_x,
         boot_idx = boot_idx_1,
+        boot_clus = boot_clus_1,
         lavoptions = lavoptions_1
       )
     } else { # parametric! (using sign-invariant method for reproducibility)
@@ -951,6 +1002,15 @@ lav_bootstrap_bca_design <- function(object, error_idx = integer(0L)) {
   lavoptions <- object@Options
   nobs   <- object@SampleStats@nobs
   ntotal <- object@SampleStats@ntotal
+
+  # BCa is not available for the cluster bootstrap: the frequency-matrix
+  # reconstruction below assumes individual observations are resampled with
+  # a fixed total N, which is not the case when whole clusters are resampled.
+  if (length(object@Data@cluster) > 0L) {
+    lav_msg_stop(gettext(
+      "BCa confidence intervals are not available for clustered/multilevel
+       data (cluster bootstrap)."))
+  }
 
   # number of bootstrap runs requested (the 'bootstrap' option is a list)
   r <- lavoptions$bootstrap

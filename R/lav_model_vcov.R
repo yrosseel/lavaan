@@ -90,7 +90,25 @@ lav_model_nvcov_bootstrap <- function(lavmodel = NULL,
 
   # FIXME: cov rescale? Yes for now
   nboot <- nrow(coef_1)
-  nvar_cov <- lavsamplestats@ntotal * (cov(coef_1) * (nboot - 1) / nboot)
+  # The bootstrap directly estimates Cov(coef), which IS the target VCOV.
+  # lav_model_vcov() will afterwards divide this NVCOV by 'n' to obtain the
+  # VCOV, so we scale by the same 'n' here, making the two cancel. For
+  # multilevel models, lavaan divides by the (total) number of clusters --
+  # not by ntotal -- so we must use the same denominator here (otherwise the
+  # bootstrap standard errors would be off by a factor sqrt(ntotal/nclusters)).
+  # This mirrors the 'n' computation in lav_model_vcov().
+  likelihood <- lavoptions$likelihood
+  if (lavdata@nlevels > 1L &&
+      lavmodel@estimator %in% c("ML", "PML", "FML") &&
+      !is.null(likelihood) && likelihood == "normal") {
+    n <- 0
+    for (g in seq_len(lavsamplestats@ngroups)) {
+      n <- n + lavdata@Lp[[g]]$nclusters[[2]]
+    }
+  } else {
+    n <- lavsamplestats@ntotal
+  }
+  nvar_cov <- n * (cov(coef_1) * (nboot - 1) / nboot)
 
   # ceq.simple.only models (e.g. estimator = "IV" with equality constraints):
   # the bootstrap draws are in the compact (free) space (one column per
