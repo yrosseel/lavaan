@@ -385,8 +385,18 @@ lav_bootstrap_internal <- function(object = NULL,
           new_clus <- rep.int(seq_along(cl_boot), lengths(cl_rows[cl_boot]))
           boot_clus_1[[g]] <- matrix(new_clus, ncol = 1L)
         } else {
-          stopifnot(nrow(lavdata_1@X[[g]]) > 1L)
-          boot_idx <- sample.int(nrow(lavdata_1@X[[g]]), replace = TRUE)
+          # exclude empty cases (all-NA rows) from the resampling pool: they
+          # carry no information and are excluded from the analysis N, but are
+          # kept in @X for bookkeeping. Resampling them would make the
+          # effective N vary across bootstrap samples (see github issue #520).
+          empty_idx <- lavdata_1@Mp[[g]]$empty.idx
+          if (length(empty_idx) > 0L) {
+            pool <- seq_len(nrow(lavdata_1@X[[g]]))[-empty_idx]
+          } else {
+            pool <- seq_len(nrow(lavdata_1@X[[g]]))
+          }
+          stopifnot(length(pool) > 1L)
+          boot_idx <- pool[sample.int(length(pool), replace = TRUE)]
         }
         boot_idx_1[[g]] <- boot_idx
         data_x[[g]] <- data_x[[g]][boot_idx, , drop = FALSE]

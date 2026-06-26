@@ -4,7 +4,8 @@
 \description{Utility functions related to the Data slot}
 \usage{
 # update data slot with new data (of the same size)
-lav_data_update(lavdata = NULL, new_x = NULL, boot_idx = NULL, lavoptions = NULL, ...)
+lav_data_update(lavdata = NULL, new_x = NULL, boot_idx = NULL, boot_clus = NULL,
+                lavoptions = NULL, ...)
 }
 \arguments{
 \item{lavdata}{A lavdata object.}
@@ -12,6 +13,9 @@ lav_data_update(lavdata = NULL, new_x = NULL, boot_idx = NULL, lavoptions = NULL
 They replace the data stored in the internal data slot.}
 \item{boot_idx}{A list of integers. If bootstrapping was used to produce
 the data in newX, use these indices to adapt the remaining slots.}
+\item{boot_clus}{A list of integer matrices (per group), or NULL. For a
+cluster bootstrap of two-level data, the (relabeled) cluster ids of the
+resampled rows, used to adapt the multilevel (Lp) slots.}
 \item{lavoptions}{A named list. The Options slot from a lavaan object.}
 \item{...}{To accept old argument names with dots or capitals. No other arguments are accepted.}
 }
