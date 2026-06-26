@@ -640,6 +640,11 @@ lavaan <- function(
   lavpartable <- temp$lavpartable
   lavmodel <- temp$lavmodel
   lavvcov <- temp$lavvcov
+  # rotated bootstrap (se = "bootstrap" + rotation) is computed in step 16,
+  # after the rotated parameter table exists; keep step 13's lavboot otherwise
+  if (!is.null(temp$lavboot)) {
+    lavboot <- temp$lavboot
+  }
 
   timing <- lav_add_timing(timing, "rotation")
 

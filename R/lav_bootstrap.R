@@ -127,6 +127,7 @@ lav_bootstrap_internal <- function(object = NULL,
                                    keep_idx = FALSE,
                                    # return.boot     = FALSE,
                                    h0_rmsea = NULL,
+                                   efa_reference = NULL,
                                    ...) {
   # warning: avoid use of 'options', 'sample' (both are used as functions
   # below...
@@ -165,7 +166,14 @@ lav_bootstrap_internal <- function(object = NULL,
     lavoptions_1 <- lavoptions
     lavpartable_1 <- lavpartable
     if (fun == "coef") {
-      t_star <- matrix(as.numeric(NA), r, lavmodel_1@nx.free)
+      if (!is.null(efa_reference)) {
+        # rotated EFA/ESEM: the bootstrap draws live in the (larger) *rotated*
+        # parameter space, not the unrotated optimizer space (see #376)
+        t_star <- matrix(as.numeric(NA), r, efa_reference$npar)
+        colnames(t_star) <- efa_reference$names
+      } else {
+        t_star <- matrix(as.numeric(NA), r, lavmodel_1@nx.free)
+      }
       lavoptions_1$test <- "none"
     } else if (fun == "test") {
       t_star <- matrix(as.numeric(NA), r, 1L)
@@ -502,7 +510,27 @@ lav_bootstrap_internal <- function(object = NULL,
     # extract information we need
     if (is.null(object)) { # internal use only!
       if (fun == "coef") {
-        out <- fit_boot@optim$x
+        if (!is.null(efa_reference)) {
+          # rotated EFA/ESEM: extract the *rotated* parameters and align the
+          # factors (sign + order) to the original solution (see #376)
+          out <- try(lav_efa_bootstrap_align_coef(
+            lavmodel = fit_boot@Model, lavpartable = fit_boot@ParTable,
+            ref_lambda = efa_reference$ref_lambda
+          ), silent = TRUE)
+          if (inherits(out, "try-error")) {
+            if (show_progress) {
+              cat("     FAILED: aligning rotated bootstrap solution\n")
+            }
+            out <- as.numeric(NA)
+            attr(out, "nonadmissible.flag") <- TRUE
+            if (keep_idx) {
+              attr(out, "BOOT.idx") <- boot_idx_1
+            }
+            return(out)
+          }
+        } else {
+          out <- fit_boot@optim$x
+        }
       } else if (fun == "test") {
         out <- fit_boot@test[[1L]]$stat
       } else if (fun == "coeftest") {

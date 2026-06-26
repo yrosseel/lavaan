@@ -110,3 +110,54 @@ lav_efa_find_best_order <- function(lambda_ref = NULL, lambda_target = NULL,
   # return 'best' permutation
   perm[best_idx, ]
 }
+
+# find the signed permutation matrix T (m x m) such that 'lambda %*% T' best
+# matches the reference loading matrix 'lambda_ref' (in a least-squares sense).
+#
+# this resolves the rotational indeterminacy of an EFA solution relative to a
+# reference solution: factors may be re-ordered (column permutation) and/or
+# reflected (sign change). It is used to align the rotated loadings of each
+# bootstrap sample to the original (full-sample) rotated solution, so that the
+# bootstrap distribution of the rotated parameters is meaningful.
+#
+# T is an orthonormal signed permutation matrix (T^-1 == t(T)), with a single
+# non-zero (+1 or -1) entry per row/column. Applying it as an extra 'rotation'
+# transforms all factor-related model matrices consistently (see
+# lav_efa_bootstrap_align_coef()).
+lav_efa_align_signed_perm <- function(lambda = NULL, lambda_ref = NULL) {
+  m <- ncol(lambda)
+  stopifnot(ncol(lambda_ref) == m)
+
+  # single factor: only a possible sign flip
+  if (m < 2L) {
+    s <- if (sum(lambda * lambda_ref) < 0) -1 else 1
+    return(matrix(s, 1L, 1L))
+  }
+
+  # all possible column permutations
+  tmp <- unname(as.matrix(expand.grid(rep(list(seq_len(m)), m))))
+  perm <- tmp[apply(tmp, 1L, function(x) length(unique(x)) == m), ,
+    drop = FALSE]
+
+  best_val <- Inf
+  best_t <- diag(m)
+  for (p in seq_len(nrow(perm))) {
+    this_perm <- perm[p, ]
+    lambda_p <- lambda[, this_perm, drop = FALSE]
+    # optimal per-column sign: align each column with its reference column
+    s <- sign(colSums(lambda_p * lambda_ref))
+    s[s == 0] <- 1
+    lambda_ps <- sweep(lambda_p, 2L, s, "*")
+    val <- sum((lambda_ps - lambda_ref)^2)
+    if (val < best_val) {
+      best_val <- val
+      tt <- matrix(0, m, m)
+      for (j in seq_len(m)) {
+        tt[this_perm[j], j] <- s[j]
+      }
+      best_t <- tt
+    }
+  }
+
+  best_t
+}

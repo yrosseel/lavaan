@@ -26,6 +26,10 @@ lav_step16_rotation <- function(lavoptions = NULL,
   #
   # (*) code too complicated to summarize here
 
+  # bootstrap results for the rotated solution (filled in below if
+  # se = "bootstrap"); NULL means 'use whatever step 13 produced'
+  lavboot <- NULL
+
   if (lavmodel@nefa > 0L &&
     (lavoptions$rotation != "none")) {
     # store unrotated solution in partable
@@ -41,6 +45,9 @@ lav_step16_rotation <- function(lavoptions = NULL,
     }
     x_unrotated <- as.numeric(x)
     lavmodel_unrot <- lavmodel
+    # keep an unrotated copy of the parameter table: the bootstrap (if any)
+    # refits each sample from the unrotated model and rotates it (see #376)
+    lavpartable_unrotated <- lavpartable
     efa_out <- lav_model_efa_rotate(
       lavmodel = lavmodel,
       lavoptions = lavoptions
@@ -96,6 +103,66 @@ lav_step16_rotation <- function(lavoptions = NULL,
     )
     if (lav_verbose()) {
       cat(" done.\n")
+    }
+
+    # bootstrap standard errors for the rotated solution (see github #376).
+    # We cannot reuse the analytic machinery below: each bootstrap sample is
+    # refit from the unrotated model, rotated, and its factors aligned (sign +
+    # order) to the original rotated solution before its variability is used.
+    if (lavoptions$se == "bootstrap") {
+      if (lav_verbose()) {
+        cat("computing bootstrap VCOV for rotated solution ...")
+      }
+
+      # reference rotated loadings (per block, per set) for factor alignment,
+      # plus the rotated free-parameter layout
+      ref_lambda <- lav_efa_bootstrap_lambda_list(lavmodel = lavmodel)
+      free_idx <- which(lavpartable$free > 0L & !duplicated(lavpartable$free))
+      efa_ref <- list(
+        ref_lambda = ref_lambda,
+        npar = length(free_idx),
+        names = lav_pt_labels(lavpartable, type = "free")
+      )
+
+      # run the bootstrap on the unrotated model
+      coef_boot <- lav_efa_bootstrap_run(
+        lavmodel = lavmodel_unrot, lavpartable = lavpartable_unrotated,
+        lavsamplestats = lavsamplestats, lavoptions = lavoptions,
+        lavdata = lavdata, efa_ref = efa_ref
+      )
+
+      # always warn for failed / nonadmissible runs
+      nfailed <- length(attr(coef_boot, "error.idx"))
+      if (nfailed > 0L) {
+        lav_msg_warn(gettextf(
+          "%s bootstrap runs failed or did not converge.", nfailed))
+      }
+      notok <- length(attr(coef_boot, "nonadmissible"))
+      if (notok > 0L) {
+        lav_msg_warn(gettextf(
+          "%s bootstrap runs resulted in nonadmissible solutions.", notok))
+      }
+
+      # vcov + se for the rotated parameters
+      tmp_boot <- lav_efa_bootstrap_vcov(
+        coef_boot = coef_boot, lavmodel = lavmodel, lavpartable = lavpartable,
+        lavoptions = lavoptions
+      )
+      lavpartable$se <- tmp_boot$se
+      lavboot <- list(coef = tmp_boot$coef)
+
+      # store the rotated bootstrap vcov (strip attributes but 'dim')
+      vcov1 <- tmp_boot$vcov
+      attributes(vcov1) <- attributes(vcov1)["dim"]
+      lavvcov <- list(
+        se = lavoptions$se,
+        information = lavoptions$information[1],
+        vcov = vcov1
+      )
+
+      if (lav_verbose()) {
+        cat(" done.\n")
+      }
     }
 
     # VCOV rotated parameters
@@ -229,6 +296,7 @@ lav_step16_rotation <- function(lavoptions = NULL,
   list(
     lavpartable = lavpartable,
     lavmodel    = lavmodel,
-    lavvcov     = lavvcov
+    lavvcov     = lavvcov,
+    lavboot     = lavboot
   )
 }

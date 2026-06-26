@@ -11,6 +11,12 @@ lav_step13_vcov_boot <- function(lavoptions = NULL,
   # #  13. lavvcov + lavboot # #
   # # # # # # # # # # # # # # # #
 
+  # note: for models with (rotated) exploratory factors (EFA/ESEM) and
+  # se = "bootstrap", the bootstrap is deferred to step 16 (lav_step16_rotation)
+  # where the rotated parameter table exists, so that each bootstrap sample can
+  # be refit, rotated, and aligned to the original solution (see github #376).
+  # The condition below therefore skips the (analytic) VCOV here for that case.
+
   # set VCOV to NULL
   # if lavoptions$se not "none", "external", "twostep" and
   #   lavmodel@nx.free > 0L and x converged or optim.method == "none"
