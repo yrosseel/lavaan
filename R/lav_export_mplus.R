@@ -51,10 +51,14 @@ lav_export_mplus <- function(object, data_file = "data.raw") {
   # variables to a collision-free name (see lav_export_mplus_lv_rename).
   lv.rename <- lav_export_mplus_lv_rename(pt)
 
+  # Mplus group labels (used both in the GROUPING statement and the
+  # group-specific MODEL headers, so they must agree)
+  group_labels <- lav_export_mplus_group_labels(object, ngroups)
+
   # ---- MODEL block(s) ----
   body <- character(0L)
   for (g in seq_len(ngroups)) {
-    header <- if (g == 1L) "MODEL:" else paste0("MODEL g", g, ":")
+    header <- if (g == 1L) "MODEL:" else paste0("MODEL ", group_labels[g], ":")
     body <- c(body, header)
     if (nlevels > 1L) {
       for (l in seq_len(nlevels)) {
@@ -98,7 +102,8 @@ lav_export_mplus <- function(object, data_file = "data.raw") {
   # ---- header (TITLE / DATA / VARIABLE / ANALYSIS) ----
   head <- lav_export_mplus_header(object, pt, data_file = data_file,
                                   ngroups = ngroups, nlevels = nlevels,
-                                  ov.ord = ov.ord, opt = opt)
+                                  ov.ord = ov.ord, opt = opt,
+                                  group_labels = group_labels)
 
   out <- paste0(head,
                 paste(body, collapse = "\n"), "\n",
@@ -223,9 +228,41 @@ lav_export_mplus_expr <- function(expr) {
   expr
 }
 
+# Mplus group labels for a multigroup model. We use the actual lavaan group
+# labels (object@Data@group.label) when they can be represented as valid Mplus
+# names (letters/digits/underscore, beginning with a letter, max 8 chars, and
+# unique case-insensitively, since Mplus is case-insensitive). Labels starting
+# with a digit are prefixed with 'g' (e.g. "1" -> "g1"). If the labels cannot
+# be represented safely (empty, or collapse to duplicates after sanitizing),
+# we fall back to generic g1..gN.
+lav_export_mplus_group_labels <- function(object, ngroups) {
+  fallback <- paste0("g", seq_len(ngroups))
+  if (!inherits(object, "lavaan")) {
+    return(fallback)
+  }
+  labs <- object@Data@group.label
+  if (length(labs) != ngroups || ngroups < 1L) {
+    return(fallback)
+  }
+  safe <- vapply(as.character(labs), function(x) {
+    y <- gsub("[^A-Za-z0-9_]", "", x)
+    if (!nzchar(y) || !grepl("^[A-Za-z]", y)) {
+      y <- paste0("g", y)
+    }
+    substr(y, 1L, 8L)
+  }, character(1L), USE.NAMES = FALSE)
+  if (any(!nzchar(safe)) || anyDuplicated(tolower(safe))) {
+    return(fallback)
+  }
+  safe
+}
+
 # build the TITLE / DATA / VARIABLE / ANALYSIS header
 lav_export_mplus_header <- function(object, pt, data_file, ngroups, nlevels,
-                                    ov.ord, opt) {
+                                    ov.ord, opt, group_labels = NULL) {
+  if (is.null(group_labels)) {
+    group_labels <- lav_export_mplus_group_labels(object, ngroups)
+  }
   estimator <- if (inherits(object, "lavaan")) {
     lav_mplus_estimator(object)
   } else {
@@ -295,7 +332,7 @@ lav_export_mplus_header <- function(object, pt, data_file, ngroups, nlevels,
                     lav_export_mplus_wrap(ov.ord), ";\n")
   }
   if (ngroups > 1L && length(data_file) <= 1L) {
-    glab <- paste0(seq_len(ngroups), "=g", seq_len(ngroups))
+    glab <- paste0(seq_len(ngroups), "=", group_labels)
     c_var <- paste0(c_var, "  grouping is GRP (", paste(glab, collapse = " "),
                     ");\n")
   }
