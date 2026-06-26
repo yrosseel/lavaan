@@ -4,6 +4,61 @@
 # the lav_model_efa_rotate_x() function was based on a script originally
 # written by Florian Scharf (Muenster University, Germany)
 
+# apply a (block-level) rotation matrix 'hg' to all factor-related model
+# matrices of a single block: lambda, psi, beta and alpha. This is the common
+# transform used both when rotating the solution (lav_model_efa_rotate_x()) and
+# when aligning the rotated factors of a bootstrap sample to the reference
+# solution (lav_efa_bootstrap_align_coef()). nu and theta need no rotation.
+#
+# The general formulas below hold for any invertible 'hg'. For an orthonormal
+# signed-permutation 'hg' (as used by the bootstrap alignment) they reduce to
+# lambda %*% hg, t(hg) %*% beta %*% hg, etc., since solve(t(hg)) == hg.
+lav_model_efa_apply_hg <- function(mlist = NULL, hg = NULL) {
+  # 1. lambda
+  mlist$lambda <- t(solve(hg, t(mlist$lambda)))
+
+  # 2. psi (note: eq 22 Asp & Muthen, 2009: transpose reversed)
+  mlist$psi <- t(hg) %*% mlist$psi %*% hg
+
+  # 3. beta
+  if (!is.null(mlist$beta)) {
+    mlist$beta <- t(hg) %*% t(solve(hg, t(mlist$beta)))
+  }
+
+  # 4. alpha
+  if (!is.null(mlist$alpha)) {
+    mlist$alpha <- t(hg) %*% mlist$alpha
+  }
+
+  mlist
+}
+
+# reconstruct the full block-g LAMBDA from a block's model matrices, filling in
+# the dummy latent variables used for observed-variable predictors/outcomes (and
+# then removing them). Used by the rotation routines below.
+lav_model_efa_block_lambda <- function(lavmodel = NULL, mlist = NULL, g = 1L) {
+  lav_lisrel_lambda(
+    mlist = mlist,
+    ov_y_dummy_ov_idx = lavmodel@ov.y.dummy.ov.idx[[g]],
+    ov_x_dummy_ov_idx = lavmodel@ov.x.dummy.ov.idx[[g]],
+    ov_y_dummy_lv_idx = lavmodel@ov.y.dummy.lv.idx[[g]],
+    ov_x_dummy_lv_idx = lavmodel@ov.x.dummy.lv.idx[[g]],
+    remove_dummy_lv = TRUE
+  )
+}
+
+# reconstruct the full block-g THETA from a block's model matrices (filling in
+# the dummy observed variables). Used by the rotation routines below.
+lav_model_efa_block_theta <- function(lavmodel = NULL, mlist = NULL, g = 1L) {
+  lav_lisrel_theta(
+    mlist = mlist,
+    ov_y_dummy_ov_idx = lavmodel@ov.y.dummy.ov.idx[[g]],
+    ov_x_dummy_ov_idx = lavmodel@ov.x.dummy.ov.idx[[g]],
+    ov_y_dummy_lv_idx = lavmodel@ov.y.dummy.lv.idx[[g]],
+    ov_x_dummy_lv_idx = lavmodel@ov.x.dummy.lv.idx[[g]]
+  )
+}
+
 # rotate solution
 lav_model_efa_rotate <- function(lavmodel = NULL, lavoptions = NULL) {
 
@@ -87,23 +142,9 @@ lav_model_efa_rotate_x <- function(x, lavmodel = NULL, lavoptions = NULL,
       h[[g]] <- hg <- diag(ncol(mlist$lambda))
       lv_order <- seq_len(ncol(mlist$lambda))
 
-      # reconstruct full mm_lambda (in case of dummy ov's)
-      lambda_g <- lav_lisrel_lambda(
-        mlist = mlist,
-        ov_y_dummy_ov_idx = lavmodel@ov.y.dummy.ov.idx[[g]],
-        ov_x_dummy_ov_idx = lavmodel@ov.x.dummy.ov.idx[[g]],
-        ov_y_dummy_lv_idx = lavmodel@ov.y.dummy.lv.idx[[g]],
-        ov_x_dummy_lv_idx = lavmodel@ov.x.dummy.lv.idx[[g]],
-        remove_dummy_lv = TRUE
-      )
-      # reconstruct full THETA (in case of dummy ov's)
-      theta_g <- lav_lisrel_theta(
-        mlist = mlist,
-        ov_y_dummy_ov_idx = lavmodel@ov.y.dummy.ov.idx[[g]],
-        ov_x_dummy_ov_idx = lavmodel@ov.x.dummy.ov.idx[[g]],
-        ov_y_dummy_lv_idx = lavmodel@ov.y.dummy.lv.idx[[g]],
-        ov_x_dummy_lv_idx = lavmodel@ov.x.dummy.lv.idx[[g]]
-      )
+      # reconstruct full mm_lambda + THETA (in case of dummy ov's)
+      lambda_g <- lav_model_efa_block_lambda(lavmodel, mlist, g)
+      theta_g <- lav_model_efa_block_theta(lavmodel, mlist, g)
 
       # fill in optimal rotation for each set
       for (set in seq_len(lavmodel@nefa)) {
@@ -203,25 +244,8 @@ lav_model_efa_rotate_x <- function(x, lavmodel = NULL, lavoptions = NULL,
         lv_order[lv_idx] <- lv_idx[res$order.idx]
       } # set
 
-      # rotate all the SEM parameters
-
-      # 1. lambda
-      mlist$lambda <- t(solve(hg, t(mlist$lambda)))
-
-      # 2. psi (note: eq 22 Asp & Muthen, 2009: transpose reversed)
-      mlist$psi <- t(hg) %*% mlist$psi %*% hg
-
-      # 3. beta
-      if (!is.null(mlist$beta)) {
-        mlist$beta <- t(hg) %*% t(solve(hg, t(mlist$beta)))
-      }
-
-      # 4. alpha
-      if (!is.null(mlist$alpha)) {
-        mlist$alpha <- t(hg) %*% mlist$alpha
-      }
-
-      # no need for rotation: nu, theta
+      # rotate all the SEM parameters (lambda, psi, beta, alpha)
+      mlist <- lav_model_efa_apply_hg(mlist, hg)
 
       # store rotated matrices in GLIST
       glist[mm_in_group] <- mlist
@@ -243,14 +267,9 @@ lav_model_efa_rotate_x <- function(x, lavmodel = NULL, lavoptions = NULL,
         mm_in_group <- (seq_len(lavmodel@nmat[g]) +
                          cumsum(c(0, lavmodel@nmat))[g])
         mlist <- glist[mm_in_group]
+        # transform psi/beta/alpha; lambda is forced equal across groups
+        mlist <- lav_model_efa_apply_hg(mlist, hg)
         mlist$lambda <- mlist1$lambda
-        mlist$psi <- t(hg) %*% mlist$psi %*% hg
-        if (!is.null(mlist$beta)) {
-          mlist$beta <- t(hg) %*% t(solve(hg, t(mlist$beta)))
-        }
-        if (!is.null(mlist$alpha)) {
-          mlist$alpha <- t(hg) %*% mlist$alpha
-        }
         glist[mm_in_group] <- mlist
         h[[g]] <- hg
         order_1[[g]] <- lv_order
@@ -266,14 +285,7 @@ lav_model_efa_rotate_x <- function(x, lavmodel = NULL, lavoptions = NULL,
       mlist <- glist[mm_in_group]
 
       # reconstruct full mm_lambda (in case of dummy ov's)
-      lambda_g <- lav_lisrel_lambda(
-        mlist = mlist,
-        ov_y_dummy_ov_idx = lavmodel@ov.y.dummy.ov.idx[[g]],
-        ov_x_dummy_ov_idx = lavmodel@ov.x.dummy.ov.idx[[g]],
-        ov_y_dummy_lv_idx = lavmodel@ov.y.dummy.lv.idx[[g]],
-        ov_x_dummy_lv_idx = lavmodel@ov.x.dummy.lv.idx[[g]],
-        remove_dummy_lv = TRUE
-      )
+      lambda_g <- lav_model_efa_block_lambda(lavmodel, mlist, g)
 
       lambda_list[[g]] <- lambda_g
 
@@ -293,35 +305,13 @@ lav_model_efa_rotate_x <- function(x, lavmodel = NULL, lavoptions = NULL,
         next
       }
 
-      # just 1 factor?
-#       if (length(lv.idx) < 2L) {
-#         # new in 0.6-18: reflect if needed
-#         if (lavoptions$rotation.args$reflect) {
-#           tmp <- LAMBDA.g[ov.idx, lv.idx, drop = TRUE]
-#           if (sum(tmp) < 0) {
-#             MLIST$lambda[ov.idx, 1] <- -1 * MLIST$lambda[ov.idx, 1]
-#           }
-#         }
-#         next
-#       }
+      # note: single-factor sets and std.ov are not (yet) supported in the
+      # multigroup rotation + agreement path; this_ov_var is always NULL here
 
       # unrotated 'A' for this set
       alist_1 <- lapply(lambda_list,
         function(x) x[ov_idx, lv_idx, drop = FALSE])
-      # std.ov? we use diagonal of Sigma for this set of ov's only
-#      if (ropts$std_ov) {
-#        if (mg.group.equal.flag) {
-#          # compute mean THETA across groups
-#          theta.idx <- which(names(lavmodel@GLIST) == "theta")
-#          THETA <- Reduce("+", lavmodel@GLIST[theta.idx]) / lavmodel@ngroups
-#        } else {
-#          THETA <- THETA.g[ov.idx, ov.idx, drop = FALSE]
-#        }
-#        Sigma <- tcrossprod(A) + THETA
-#        this.ov.var <- diag(Sigma)
-#      } else {
-        this_ov_var <- NULL
-#      }
+      this_ov_var <- NULL
 
       # init.rot?
       if (!is.null(init_rot) && lavoptions$rotation.args$jac_init_rot) {
@@ -388,22 +378,8 @@ lav_model_efa_rotate_x <- function(x, lavmodel = NULL, lavoptions = NULL,
       mlist <- glist[mm_in_group]
       hg <- h[[g]]
 
-      # 1. lambda
-      mlist$lambda <- t(solve(hg, t(mlist$lambda)))
-
-      # 2. psi (note: eq 22 Asp & Muthen, 2009: transpose reversed)
-      mlist$psi <- t(hg) %*% mlist$psi %*% hg
-
-      # 3. beta
-      if (!is.null(mlist$beta)) {
-        mlist$beta <- t(hg) %*% t(solve(hg, t(mlist$beta)))
-      }
-
-      # 4. alpha
-      if (!is.null(mlist$alpha)) {
-        mlist$alpha <- t(hg) %*% mlist$alpha
-      }
-      # no need for rotation: nu, theta
+      # rotate all the SEM parameters (lambda, psi, beta, alpha)
+      mlist <- lav_model_efa_apply_hg(mlist, hg)
 
       glist[mm_in_group] <- mlist
     }
@@ -500,23 +476,9 @@ lav_model_efa_rotate_border_x <- function(x, lavmodel = NULL,
     mm_in_group <- seq_len(lavmodel@nmat[g]) + cumsum(c(0, lavmodel@nmat))[g]
     mlist <- glist[mm_in_group]
 
-    # reconstruct full mm_lambda (in case of dummy ov's)
-    lambda_g <- lav_lisrel_lambda(
-      mlist = mlist,
-      ov_y_dummy_ov_idx = lavmodel@ov.y.dummy.ov.idx[[g]],
-      ov_x_dummy_ov_idx = lavmodel@ov.x.dummy.ov.idx[[g]],
-      ov_y_dummy_lv_idx = lavmodel@ov.y.dummy.lv.idx[[g]],
-      ov_x_dummy_lv_idx = lavmodel@ov.x.dummy.lv.idx[[g]],
-      remove_dummy_lv = TRUE
-    )
-    # reconstruct full THETA (in case of dummy ov's)
-    theta_g <- lav_lisrel_theta(
-      mlist = mlist,
-      ov_y_dummy_ov_idx = lavmodel@ov.y.dummy.ov.idx[[g]],
-      ov_x_dummy_ov_idx = lavmodel@ov.x.dummy.ov.idx[[g]],
-      ov_y_dummy_lv_idx = lavmodel@ov.y.dummy.lv.idx[[g]],
-      ov_x_dummy_lv_idx = lavmodel@ov.x.dummy.lv.idx[[g]]
-    )
+    # reconstruct full mm_lambda + THETA (in case of dummy ov's)
+    lambda_g <- lav_model_efa_block_lambda(lavmodel, mlist, g)
+    theta_g <- lav_model_efa_block_theta(lavmodel, mlist, g)
 
     # setnames
     set_names <- lav_pt_efa_values(lavpartable)

@@ -88,70 +88,13 @@ lav_mat_rotate <- function(a = NULL, # original matrix
     }
   }
 
-  # determine method function name
-  if (method %in% c(
-    "cf-quartimax", "cf-varimax", "cf-equamax",
-    "cf-parsimax", "cf-facparsim"
-  )) {
-    method_fname <- "lav_mat_rotate_cf"
-    method_args$cf_gamma <- switch(method,
-      "cf-quartimax" = 0,
-      "cf-varimax"   = 1 / p,
-      "cf-equamax"   = m / (2 * p),
-      "cf-parsimax"  = (m - 1) / (p + m - 2),
-      "cf-facparsim" = 1
-    )
-  } else if (method %in% c("bi-quartimin", "biquartimin")) {
-    method_fname <- "lav_mat_rotate_biquartimin"
-  } else if (method %in% c("bi-geomin", "bigeomin")) {
-    method_fname <- "lav_mat_rotate_bigeomin"
-  } else if (method == "target.strict") {
-    method_fname <- "lav_mat_rotate_target"
-  } else {
-    method_fname <- paste("lav_mat_rotate_", method, sep = "")
-  }
-
-  # check if rotation method exists
-  check <- try(get(method_fname), silent = TRUE)
-  if (inherits(check, "try-error")) {
-    lav_msg_stop(gettext("unknown rotation method:"), method_fname)
-  }
-
-  # if target, check target matrix
-  if (method == "target.strict" || method == "pst") {
-    target <- method_args$target
-  if (is.list(target)) {
-    method_args$target <- target <- target[[group]]
-  }
-    # check dimension of target/A
-    if (nrow(target) != nrow(a)) {
-      lav_msg_stop(gettext("nrow(target) != nrow(A)"))
-    }
-    if (ncol(target) != ncol(a)) {
-      lav_msg_stop(gettext("ncol(target) != ncol(A)"))
-    }
-  }
-  if (method == "pst") {
-    target_mask <- method_args$target_mask
-  if (is.list(target_mask)) {
-    method_args$target_mask <- target_mask <- target_mask[[group]]
-  }
-    # check dimension of target_mask/A
-    if (nrow(target_mask) != nrow(a)) {
-      lav_msg_stop(gettext("nrow(target_mask) != nrow(A)"))
-    }
-    if (ncol(target_mask) != ncol(a)) {
-      lav_msg_stop(gettext("col(target_mask) != ncol(A)"))
-    }
-  }
-  # we keep this here, so lav_mat_rotate() can be used independently
-  if (method == "target.strict" && anyNA(target)) {
-    method <- "pst"
-    method_fname <- "lav_mat_rotate_pst"
-    target_mask <- matrix(1, nrow = nrow(target), ncol = ncol(target))
-    target_mask[is.na(target)] <- 0
-    method_args$target_mask <- target_mask
-  }
+  # determine method function name + validate target/target_mask
+  tmp_resolve <- lav_mat_rotate_resolve_method(
+    method = method, method_args = method_args, p = p, m = m, group = group
+  )
+  method <- tmp_resolve$method
+  method_fname <- tmp_resolve$method_fname
+  method_args <- tmp_resolve$method_args
 
   # set orthogonal option
   if (missing(orthogonal)) {
@@ -371,25 +314,7 @@ lav_mat_rotate <- function(a = NULL, # original matrix
   }
 
   # 4.b reorder the columns
-  if (order_lv_by == "sumofsquares") {
-    l2 <- mm_lambda * mm_lambda
-    order_idx <- base::order(colSums(l2), decreasing = TRUE)
-  } else if (order_lv_by == "index") {
-    # reorder using Asparouhov & Muthen 2009 criterion (see Appendix D)
-    max_loading <- apply(abs(mm_lambda), 2, max)
-    # 1: per factor, number of the loadings that are at least 0.8 of the
-    #    highest loading of the factor
-    # 2: mean of the index numbers
-    average_index <- sapply(seq_len(ncol(mm_lambda)), function(i) {
-      mean(which(abs(mm_lambda[, i]) >= 0.8 * max_loading[i]))
-    })
-    # order of the factors
-    order_idx <- base::order(average_index)
-  } else if (order_lv_by == "none") {
-    order_idx <- seq_len(ncol(mm_lambda))
-  } else {
-    lav_msg_stop(gettext("order must be index, sumofsquares or none"))
-  }
+  order_idx <- lav_efa_order_idx(mm_lambda, order_lv_by)
 
   # do the same in PHI
   mm_lambda <- mm_lambda[, order_idx, drop = FALSE]
@@ -647,13 +572,12 @@ lav_mat_rotate_pairwise <- function(a = NULL, # original matrix
   }
 
   # define objective function -- orthogonal
-  objf_orth <- function(theta = 0, A = NULL, col1 = 0L, col2 = 0L) {
+  # note: 'a' is the *current* loading matrix for this plane sweep (passed in by
+  # optimize() below), not the original unrotated matrix of the same name in the
+  # enclosing function.
+  objf_orth <- function(theta = 0, a = NULL, col1 = 0L, col2 = 0L) {
     # construct ROT
-    rot <- diag(m)
-    rot[col1, col1] <- base::cos(theta)
-    rot[col1, col2] <- base::sin(theta)
-    rot[col2, col1] <- -1 * base::sin(theta)
-    rot[col2, col2] <- base::cos(theta)
+    rot <- lav_mat_givens_orth(m, col1, col2, theta)
 
     # rotate
     mm_lambda <- a %*% rot
@@ -671,15 +595,7 @@ lav_mat_rotate_pairwise <- function(a = NULL, # original matrix
   objf_obliq <- function(delta = 0, a = NULL, col1 = 0L, col2 = 0L,
                          phi12 = 0) {
     # construct ROT
-    rot <- diag(m)
-
-    # gamma
-    gamma2 <- 1 + (2 * delta * phi12) + (delta * delta)
-
-    rot[col1, col1] <- sqrt(abs(gamma2))
-    rot[col1, col2] <- -1 * delta
-    rot[col2, col1] <- 0
-    rot[col2, col2] <- 1
+    rot <- lav_mat_givens_obliq(m, col1, col2, delta, phi12)
 
     # rotate
     mm_lambda <- a %*% rot
@@ -706,23 +622,19 @@ lav_mat_rotate_pairwise <- function(a = NULL, # original matrix
       if (orthogonal) {
         out <- optimize(
           f = objf_orth, interval = c(-pi / 4, +pi / 4),
-          A = mm_lambda, col1 = col1, col2 = col2,
+          a = mm_lambda, col1 = col1, col2 = col2,
           maximum = FALSE, tol = .Machine$double.eps^0.25
         )
         # best rotation - for this plane
         theta <- out$minimum
 
         # construct ROT
-        rot <- diag(m)
-        rot[col1, col1] <- base::cos(theta)
-        rot[col1, col2] <- base::sin(theta)
-        rot[col2, col1] <- -1 * base::sin(theta)
-        rot[col2, col2] <- base::cos(theta)
+        rot <- lav_mat_givens_orth(m, col1, col2, theta)
       } else {
         phi12 <- phi[col1, col2]
         out <- optimize(
           f = objf_obliq, interval = c(-1, +1),
-          A = mm_lambda, col1 = col1, col2 = col2,
+          a = mm_lambda, col1 = col1, col2 = col2,
           phi12 = phi12,
           maximum = FALSE, tol = .Machine$double.eps^0.25
         )
@@ -730,17 +642,9 @@ lav_mat_rotate_pairwise <- function(a = NULL, # original matrix
         # best rotation - for this plane
         delta <- out$minimum
 
-        # construct ROT
-        rot <- diag(m)
-
-        # gamma
-        gamma2 <- 1 + (2 * delta * phi12) + (delta * delta)
-        gamma <- sqrt(abs(gamma2))
-
-        rot[col1, col1] <- gamma
-        rot[col1, col2] <- -1 * delta
-        rot[col2, col1] <- 0
-        rot[col2, col2] <- 1
+        # construct ROT (rot[col1, col1] == gamma, the PHI scaling factor)
+        rot <- lav_mat_givens_obliq(m, col1, col2, delta, phi12)
+        gamma <- rot[col1, col1]
       }
 
       # rotate

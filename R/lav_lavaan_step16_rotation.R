@@ -180,7 +180,7 @@ lav_step16_rotation <- function(lavoptions = NULL,
         jac <- numDeriv::jacobian(
           func = lav_model_efa_rotate_x,
           x = x_unrotated, lavmodel = lavmodel_unrot,
-          init.rot = lavmodel@H, lavoptions = lavoptions,
+          init_rot = lavmodel@H, lavoptions = lavoptions,
           type = "user", extra = FALSE,
           method.args = list(eps = 0.0050),
           method = "simple"

@@ -76,16 +76,10 @@ lav_efa_bootstrap_align_coef <- function(lavmodel = NULL, lavpartable = NULL,
     }
 
     if (changed) {
-      # T is orthonormal (solve(t(hg)) == hg), so these mirror the rotation
-      # transforms in lav_model_efa_rotate_x()
-      mlist$lambda <- mlist$lambda %*% hg
-      mlist$psi <- t(hg) %*% mlist$psi %*% hg
-      if (!is.null(mlist$beta)) {
-        mlist$beta <- t(hg) %*% mlist$beta %*% hg
-      }
-      if (!is.null(mlist$alpha)) {
-        mlist$alpha <- t(hg) %*% mlist$alpha
-      }
+      # hg is an orthonormal signed permutation (solve(t(hg)) == hg), so the
+      # general rotation transform reduces to lambda %*% hg etc. Reuse the same
+      # helper as lav_model_efa_rotate_x() for a single, consistent transform.
+      mlist <- lav_model_efa_apply_hg(mlist, hg)
       glist[mm_in_group] <- mlist
     }
   } # block

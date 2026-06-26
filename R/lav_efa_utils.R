@@ -82,21 +82,75 @@ lav_efa_get_loadings <- function(object, ...) {
   out
 }
 
+# determine the column order for a (rotated or unrotated) loading matrix,
+# according to 'order_lv_by': "sumofsquares", "index" (Asparouhov & Muthen
+# 2009, Appendix D) or "none". Returns an integer permutation vector.
+lav_efa_order_idx <- function(mm_lambda = NULL, order_lv_by = "index") {
+  if (order_lv_by == "sumofsquares") {
+    l2 <- mm_lambda * mm_lambda
+    order_idx <- base::order(colSums(l2), decreasing = TRUE)
+  } else if (order_lv_by == "index") {
+    # reorder using Asparouhov & Muthen 2009 criterion (see Appendix D)
+    max_loading <- apply(abs(mm_lambda), 2, max)
+    # 1: per factor, number of the loadings that are at least 0.8 of the
+    #    highest loading of the factor
+    # 2: mean of the index numbers
+    average_index <- sapply(seq_len(ncol(mm_lambda)), function(i) {
+      mean(which(abs(mm_lambda[, i]) >= 0.8 * max_loading[i]))
+    })
+    # order of the factors
+    order_idx <- base::order(average_index)
+  } else if (order_lv_by == "none") {
+    order_idx <- seq_len(ncol(mm_lambda))
+  } else {
+    lav_msg_stop(gettext("order must be index, sumofsquares or none"))
+  }
+  order_idx
+}
+
+# reflect the columns of a loading matrix so that each column sum is
+# non-negative; returns the (possibly sign-flipped) matrix.
+lav_efa_reflect_cols <- function(mm_lambda = NULL) {
+  neg_idx <- which(colSums(mm_lambda) < 0)
+  if (length(neg_idx) > 0L) {
+    mm_lambda[, neg_idx] <- -1 * mm_lambda[, neg_idx, drop = FALSE]
+  }
+  mm_lambda
+}
+
+# optionally reflect, then reorder the columns of a loading matrix. This is the
+# common post-processing applied by the EFA extraction/PACE routines (the
+# rotation engine applies the same ordering, but also needs to permute ROT/PHI,
+# so it calls lav_efa_order_idx() directly).
+lav_efa_reflect_and_reorder <- function(mm_lambda = NULL, reflect = TRUE,
+                                        order_lv_by = "index") {
+  if (reflect) {
+    mm_lambda <- lav_efa_reflect_cols(mm_lambda)
+  }
+  order_idx <- lav_efa_order_idx(mm_lambda, order_lv_by)
+  mm_lambda[, order_idx, drop = FALSE]
+}
+
 # find the best ordering of the columns in lambda_target, to minimize
 # the difference with the reference lambda matrix (lambda_ref)
 #
+# enumerate all m! permutations of seq_len(m), one per row. The row order is the
+# one produced by expand.grid(); both callers below rely on it for tie-breaking
+# (they keep the first optimum), so do not change it.
+lav_efa_permutations <- function(m = 1L) {
+  tmp <- unname(as.matrix(expand.grid(rep(list(seq_len(m)), m))))
+  # keep only rows where all numbers appear (i.e. actual permutations)
+  tmp[apply(tmp, 1L, function(x) length(unique(x)) == m), , drop = FALSE]
+}
+
 # return the optimal order of the column for lambda_target
 lav_efa_find_best_order <- function(lambda_ref = NULL, lambda_target = NULL,
                                     crit = "rmse") {
   m <- ncol(lambda_ref)
   stopifnot(ncol(lambda_target) == m)
 
-  # all possible permutation
-  # FIXEM:we really need a more elegant way to find the permutations...
-  tmp <- unname(as.matrix(expand.grid(rep(list(seq_len(m)), m))))
-  # select only rows where all numbers appear
-  perm <- tmp[apply(tmp, 1L, function(x) {length(unique(x)) == m}), ,
-              drop = FALSE]
+  # all possible permutations
+  perm <- lav_efa_permutations(m)
 
   rmse_perm <- numeric(nrow(perm))
   for (p in seq_len(nrow(perm))) {
@@ -135,9 +189,7 @@ lav_efa_align_signed_perm <- function(lambda = NULL, lambda_ref = NULL) {
   }
 
   # all possible column permutations
-  tmp <- unname(as.matrix(expand.grid(rep(list(seq_len(m)), m))))
-  perm <- tmp[apply(tmp, 1L, function(x) length(unique(x)) == m), ,
-    drop = FALSE]
+  perm <- lav_efa_permutations(m)
 
   best_val <- Inf
   best_t <- diag(m)

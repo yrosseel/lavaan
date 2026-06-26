@@ -141,36 +141,8 @@ lav_efa_extraction <- function(s, nfactors = 1L,
     mm_lambda[, neg_idx] <- -1 * mm_lambda[, neg_idx, drop = FALSE]
   }
 
-  # reflect so that column sum is always positive
-  if (reflect) {
-    sum_1 <- colSums(mm_lambda)
-    neg_idx <- which(sum_1 < 0)
-    if (length(neg_idx) > 0L) {
-      mm_lambda[, neg_idx] <- -1 * mm_lambda[, neg_idx, drop = FALSE]
-    }
-  }
-
-  # reorder the columns
-  if (order_lv_by == "sumofsquares") {
-    l2 <- mm_lambda * mm_lambda
-    order_idx <- base::order(colSums(l2), decreasing = TRUE)
-  } else if (order_lv_by == "index") {
-    # reorder using Asparouhov & Muthen 2009 criterion (see Appendix D)
-    max_loading <- apply(abs(mm_lambda), 2, max)
-    # 1: per factor, number of the loadings that are at least 0.8 of the
-    #    highest loading of the factor
-    # 2: mean of the index numbers
-    average_index <- sapply(seq_len(ncol(mm_lambda)), function(i) {
-      mean(which(abs(mm_lambda[, i]) >= 0.8 * max_loading[i]))
-    })
-    # order of the factors
-    order_idx <- base::order(average_index)
-  } else if (order_lv_by == "none") {
-    order_idx <- seq_len(ncol(mm_lambda))
-  } else {
-    lav_msg_stop(gettext("order must be index, sumofsquares or none"))
-  }
-  mm_lambda <- mm_lambda[, order_idx, drop = FALSE]
+  # reflect (optional) + reorder the columns
+  mm_lambda <- lav_efa_reflect_and_reorder(mm_lambda, reflect, order_lv_by)
 
   list(LAMBDA = mm_lambda, THETA = mm_theta)
 }
@@ -373,36 +345,8 @@ lav_efa_extraction_uls_corner <- function(s, nfactors = 1L, reflect = TRUE,
   mm_lambda <- sqrt(s_var) * mm_lambda
   diag(mm_theta) <- s_var * diag(mm_theta)
 
-  # reflect so that column sum is always positive
-  if (reflect) {
-    sum_1 <- colSums(mm_lambda)
-    neg_idx <- which(sum_1 < 0)
-    if (length(neg_idx) > 0L) {
-      mm_lambda[, neg_idx] <- -1 * mm_lambda[, neg_idx, drop = FALSE]
-    }
-  }
-
-  # reorder the columns
-  if (order_lv_by == "sumofsquares") {
-    l2 <- mm_lambda * mm_lambda
-    order_idx <- base::order(colSums(l2), decreasing = TRUE)
-  } else if (order_lv_by == "index") {
-    # reorder using Asparouhov & Muthen 2009 criterion (see Appendix D)
-    max_loading <- apply(abs(mm_lambda), 2, max)
-    # 1: per factor, number of the loadings that are at least 0.8 of the
-    #    highest loading of the factor
-    # 2: mean of the index numbers
-    average_index <- sapply(seq_len(ncol(mm_lambda)), function(i) {
-      mean(which(abs(mm_lambda[, i]) >= 0.8 * max_loading[i]))
-    })
-    # order of the factors
-    order_idx <- base::order(average_index)
-  } else if (order_lv_by == "none") {
-    order_idx <- seq_len(ncol(mm_lambda))
-  } else {
-    lav_msg_stop(gettext("order must be index, sumofsquares or none"))
-  }
-  mm_lambda <- mm_lambda[, order_idx, drop = FALSE]
+  # reflect (optional) + reorder the columns
+  mm_lambda <- lav_efa_reflect_and_reorder(mm_lambda, reflect, order_lv_by)
 
   list(LAMBDA = mm_lambda, THETA = mm_theta)
 }
