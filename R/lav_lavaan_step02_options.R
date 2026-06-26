@@ -193,8 +193,13 @@ lav_step02_options <- function(slot_options = NULL,
     # clustered?
     if (length(cluster) > 0L) {
       opt$.clustered <- TRUE
-      if (opt$.categorical && toupper(estimator) != "PML") {
-        lav_msg_stop(gettext("categorical + clustered is not supported yet."))
+      # categorical + clustered (single-level): cluster-robust SEs/test via
+      # the cluster-aggregated Gamma in muthen1984() (issue #254). Multilevel
+      # (nlevels > 1) categorical is still unsupported.
+      multilevel <- length(ov_names_l) > 0L && length(ov_names_l[[1]]) > 1L
+      if (opt$.categorical && multilevel && toupper(estimator) != "PML") {
+        lav_msg_stop(gettext(
+          "multilevel + categorical is not supported yet."))
       }
     } else {
       opt$.clustered <- FALSE

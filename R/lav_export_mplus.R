@@ -243,11 +243,16 @@ lav_export_mplus_header <- function(object, pt, data_file, ngroups, nlevels,
   }
   weight.name <- lav_export_mplus_var(weight.name)
 
+  # single-level clustered data (cluster= but no level: structure) -> Mplus
+  # TYPE=COMPLEX with a CLUSTER variable (cluster-robust SEs/test, issue #254)
+  clustered <- nlevels == 1L && inherits(object, "lavaan") &&
+    length(object@Data@cluster) > 0L
+
   # all columns present in the data file (must match the written data)
   data.cols <- ov.names
   if (length(weight.name)) data.cols <- c(data.cols, weight.name)
   if (ngroups > 1L) data.cols <- c(data.cols, "GRP")
-  if (nlevels > 1L) data.cols <- c(data.cols, "CLUS")
+  if (nlevels > 1L || clustered) data.cols <- c(data.cols, "CLUS")
 
   data.type <- if (inherits(object, "lavaan")) {
     object@Data@data.type
@@ -294,8 +299,10 @@ lav_export_mplus_header <- function(object, pt, data_file, ngroups, nlevels,
     c_var <- paste0(c_var, "  grouping is GRP (", paste(glab, collapse = " "),
                     ");\n")
   }
-  if (nlevels > 1L) {
+  if (clustered || nlevels > 1L) {
     c_var <- paste0(c_var, "  cluster is CLUS;\n")
+  }
+  if (nlevels > 1L) {
     # declare variables that are modeled only at the within or between level
     if (inherits(object, "lavaan")) {
       ovl <- object@Data@ov.names.l[[1L]]
@@ -318,7 +325,7 @@ lav_export_mplus_header <- function(object, pt, data_file, ngroups, nlevels,
   }
 
   # ANALYSIS
-  atype <- if (nlevels > 1L) "twolevel" else "general"
+  atype <- if (nlevels > 1L) "twolevel" else if (clustered) "complex" else "general"
   c_ana <- paste0("ANALYSIS:\n  type = ", atype, ";\n")
   c_ana <- paste0(c_ana, "  estimator = ", toupper(estimator), ";\n")
   if (toupper(estimator) %in% c("ML", "MLR", "MLF") && nlevels == 1L) {

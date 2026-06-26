@@ -26,6 +26,7 @@ muthen1984 <- function(data_1 = NULL,
                        zero_cell_warn = FALSE,
                        zero_cell_tables = TRUE,
                        allow_empty_cell = TRUE,
+                       cluster_idx = NULL,
                        group = 1L) { # group only for error messages
 
   # just in case Data is a vector
@@ -490,6 +491,19 @@ muthen1984 <- function(data_1 = NULL,
     wls_w <- b_inv %*% inner %*% t(b_inv)
   }
 
+  # cluster-robust meat (issue #254): for cluster-robust Gamma/NACOV we keep
+  # the same 'bread' (b_inv), but aggregate the case-wise scores per cluster
+  # before forming the outer product -- exactly as in the continuous case
+  # (lav_samp_gamma: zc <- rowsum(zc, cluster_idx)). Only affects Gamma/NACOV
+  # (hence the robust SEs and scaled test); the WLS weight matrix (and thus the
+  # point estimates) is still built from the standard i.i.d. 'wls_w' above.
+  wls_w_cl <- NULL
+  if (!is.null(cluster_idx)) {
+    sc_cl <- rowsum.default(sc, group = cluster_idx, reorder = FALSE)
+    inner_cl <- lav_mat_crossprod(sc_cl)
+    wls_w_cl <- b_inv %*% inner_cl %*% t(b_inv)
+  }
+
   # COV matrix?
   if (any("numeric" %in% ov_types)) {
     cov_1 <- lav_cor2cov(r = cor_1, sds = sqrt(unlist(var_1)))
@@ -509,6 +523,9 @@ muthen1984 <- function(data_1 = NULL,
     cov_1 <- cor_1
     h <- diag(NCOL(wls_w))
   }
+  if (!is.null(wls_w_cl)) {
+    wls_w_cl <- h %*% wls_w_cl %*% t(h)
+  }
 
   # reverse sign numeric TH (because we provide -mu in WLS.obs)
   # (WOW, it took me a LOOONGGG time to realize this!)
@@ -521,6 +538,10 @@ muthen1984 <- function(data_1 = NULL,
     num_idx_1 <- which(unlist(th_idx_1) == 0L)
     wls_w[num_idx_1, ] <- -wls_w[num_idx_1, ]
     wls_w[, num_idx_1] <- -wls_w[, num_idx_1]
+    if (!is.null(wls_w_cl)) {
+      wls_w_cl[num_idx_1, ] <- -wls_w_cl[num_idx_1, ]
+      wls_w_cl[, num_idx_1] <- -wls_w_cl[, num_idx_1]
+    }
   }
 
 
@@ -528,7 +549,7 @@ muthen1984 <- function(data_1 = NULL,
     TH = th, SLOPES = slopes, VAR = var_1, COR = cor_1, COV = cov_1,
     SC = sc, TH.NOX = th_nox, TH.NAMES = th_names, TH.IDX = th_idx_1,
     INNER = inner, A11 = a11, A12 = a12, A21 = a21, A22 = a22,
-    WLS.W = wls_w, H = h,
+    WLS.W = wls_w, WLS.W.cluster = wls_w_cl, H = h,
     zero.cell.tables = empty_cell_tables
   )
   out

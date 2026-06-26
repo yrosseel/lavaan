@@ -349,7 +349,8 @@ lav_samp_from_data <- function(lavdata = NULL,        # nolint start
       if (estimator %in% c("ML", "REML", "PML", "FML", "MML", "none", "IV",
                            "ULS")) {
         wls_w <- FALSE
-        if (estimator == "ULS" && se %in% c("robust.sem", "robust.sem.nt")) {
+        if (estimator == "ULS" &&
+            se %in% c("robust.sem", "robust.sem.nt", "robust.cluster.sem")) {
           wls_w <- TRUE
         } else if (estimator == "IV" &&
                   lavoptions$estimator.args$iv_vcov_stage1 == "gamma") {
@@ -364,6 +365,14 @@ lav_samp_from_data <- function(lavdata = NULL,        # nolint start
     }
       if (lav_verbose()) {
         cat("Estimating sample thresholds and correlations ... ")
+      }
+
+      # cluster-robust SEs/test for categorical data (issue #254): pass the
+      # cluster index so muthen1984() can also return a cluster-robust WLS.W
+      if (length(lavdata@cluster) > 0L && nlevels == 1L) {
+        cluster_idx_cat <- lavdata@Lp[[g]]$cluster.idx[[2]]
+      } else {
+        cluster_idx_cat <- NULL
       }
 
       current_verbose <- lav_verbose()
@@ -385,7 +394,8 @@ lav_samp_from_data <- function(lavdata = NULL,        # nolint start
           zero_keep_margins = zero_keep_margins,
           zero_cell_warn = FALSE,
           zero_cell_tables = TRUE,
-          allow_empty_cell = allow_empty_cell
+          allow_empty_cell = allow_empty_cell,
+          cluster_idx = cluster_idx_cat
         )
       } else {
         cat_1 <- muthen1984(
@@ -403,7 +413,8 @@ lav_samp_from_data <- function(lavdata = NULL,        # nolint start
           zero_keep_margins = zero_keep_margins,
           zero_cell_warn = FALSE,
           zero_cell_tables = TRUE,
-          allow_empty_cell = allow_empty_cell
+          allow_empty_cell = allow_empty_cell,
+          cluster_idx = cluster_idx_cat
         )
       }
       lav_verbose(current_verbose)
@@ -1059,9 +1070,22 @@ lav_samp_from_data <- function(lavdata = NULL,        # nolint start
           }
         } else { # categorical case
           if (!is.null(cat_1$WLS.W)) {
-            nacov[[g]] <- cat_1$WLS.W * nobs[[g]]
-            if (lavoptions$gamma.n.minus.one) {
-              nacov[[g]] <- nacov[[g]] * (nobs[[g]] / (nobs[[g]] - 1L))
+            # issue #254: use the cluster-robust meat for Gamma/NACOV when
+            # available (cluster= set). The WLS weight matrix (wls_v below)
+            # still uses the standard cat_1$WLS.W, so point estimates are
+            # unchanged relative to the non-clustered fit.
+            if (!is.null(cat_1$WLS.W.cluster)) {
+              nacov[[g]] <- cat_1$WLS.W.cluster * nobs[[g]]
+              # finite-sample correction G/(G-1) on the cluster-aggregated
+              # Gamma, where G is the number of clusters (matches Mplus
+              # TYPE=COMPLEX + WLSMV/ULSMV).
+              nc <- lavdata@Lp[[g]]$nclusters[[2]]
+              nacov[[g]] <- nacov[[g]] * (nc / (nc - 1))
+            } else {
+              nacov[[g]] <- cat_1$WLS.W * nobs[[g]]
+              if (lavoptions$gamma.n.minus.one) {
+                nacov[[g]] <- nacov[[g]] * (nobs[[g]] / (nobs[[g]] - 1L))
+              }
             }
           }
           if (estimator == "catML") {

@@ -74,6 +74,9 @@ lav_export <- function(object, target = "lavaan", prefix = "sem",
 lav_export_data <- function(object) {
   ngroups <- object@Data@ngroups
   nlevels <- object@Data@nlevels
+  # single-level clustered data (cluster= but no level: structure): the cluster
+  # column is needed for Mplus TYPE=COMPLEX (see lav_export_mplus_header)
+  clustered <- nlevels == 1L && length(object@Data@cluster) > 0L
   ov.names <- lav_pt_vnames(object@ParTable, "ov")
   weight.name <- object@Data@sampling.weights
 
@@ -97,7 +100,7 @@ lav_export_data <- function(object) {
       df[[weight.name]] <- object@Data@weights[[g]]
     }
     if (ngroups > 1L) df[["GRP"]] <- g
-    if (nlevels > 1L) {
+    if (nlevels > 1L || clustered) {
       # cluster.idx restarts at 1 within each group; offset so that cluster ids
       # are unique across groups (Mplus requires this)
       cidx <- object@Data@Lp[[g]]$cluster.idx[[2L]]
