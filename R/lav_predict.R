@@ -164,11 +164,9 @@ lav_predict_internal <- function(lavmodel = NULL,
     if (type != "lv") {
       lav_msg_stop(gettext("standard errors only available if type = \"lv\""))
     }
-    if (lavmodel@categorical) {
-      se <- acov <- "none"
-      lav_msg_warn(gettext(
-        "standard errors not available (yet) for non-normal data"))
-    }
+    # NOTE: for categorical data, the standard errors are computed in
+    # lav_predict_eta_ebm_ml() from the curvature of the (EBM/ML) objective at
+    # the optimum, and so differ from one response pattern to the next.
     # if(lavdata@missing %in% c("ml", "ml.x")) {
     #    se <- acov <- "none"
     #    warning("lavaan WARNING: standard errors not
@@ -1238,10 +1236,22 @@ lav_predict_eta_ebm_ml <- function(lavobject = NULL, # for convenience
   if (acov != "none") {
     se <- acov # acov implies SE
   }
-  # if(se != "none") {
-  #    warning("lavaan WARNING: standard errors are
-  #               not available (yet) for the non-normal case")
-  # }
+  # For categorical data the factor scores are posterior-mode (EBM) or ML
+  # estimates obtained by numerical optimisation. Their standard errors are
+  # based on the curvature of the objective at the optimum: the (co)variance
+  # matrix is the inverse of the Hessian of the negative log-posterior (EBM) or
+  # negative log-likelihood (ML), i.e. a Laplace/observed-information
+  # approximation. Unlike the linear-Gaussian case, this curvature depends on
+  # the response pattern, so the standard errors differ from one (pattern of)
+  # observation(s) to the next.
+  se_flag <- (se != "none")
+  acov_flag <- (acov != "none")
+  if (se_flag) {
+    se_1 <- vector("list", length = lavdata@ngroups)
+    if (acov_flag) {
+      acov_1 <- vector("list", length = lavdata@ngroups)
+    }
+  }
 
   vetax <- lav_model_vetax(lavmodel = lavmodel)
   vetax_inv <- vetax
@@ -1385,7 +1395,10 @@ lav_predict_eta_ebm_ml <- function(lavobject = NULL, # for convenience
     rep_idx <- which(!duplicated(case_key)) # one representative case / pattern
     case_map <- rep_idx[match(case_key, case_key[rep_idx])] # case -> rep row
 
-    # optimise the latent scores for a single (representative) case 'i'
+    # optimise the latent scores for a single (representative) case 'i'.
+    # Returns a list with the score 'eta' (incl. any dummy ov.y values) and,
+    # when requested, the standard errors 'se' and sampling covariance 'acov'
+    # of the (regular) latent scores.
     solve_i <- function(i) {
       # eXo?
       if (!is.null(exo[[g]])) {
@@ -1407,6 +1420,8 @@ lav_predict_eta_ebm_ml <- function(lavobject = NULL, # for convenience
       }
 
       start_1 <- numeric(nfac) # initial values for eta
+      se_i <- rep(as.numeric(NA), nfac)
+      acov_i <- matrix(as.numeric(NA), nfac, nfac)
 
       if (!all(is.na(y_i))) {
         # find best values for eta.i
@@ -1427,20 +1442,40 @@ lav_predict_eta_ebm_ml <- function(lavobject = NULL, # for convenience
           )
         }
         if (out$convergence == 0L) {
-          eta_i <- out$par
+          eta_reg <- out$par
+
+          # standard errors from the curvature of the objective at the
+          # optimum: f_eta_i is the negative log-posterior (EBM) or negative
+          # log-likelihood (ML), so its Hessian at the mode is the inverse of
+          # the (Laplace) sampling covariance of the latent scores.
+          if (se_flag) {
+            hess <- try(stats::optimHess(eta_reg, f_eta_i,
+              y_i = y_i, x_i = x_i, mu_i = mu_i, dummy_y = dummy_y
+            ), silent = TRUE)
+            if (!inherits(hess, "try-error")) {
+              tmp_acov <- try(solve(hess), silent = TRUE)
+              if (!inherits(tmp_acov, "try-error")) {
+                acov_i <- tmp_acov
+                tmp_d <- diag(tmp_acov)
+                tmp_d[tmp_d < 0] <- as.numeric(NA) # catch non-pd Hessians
+                se_i <- sqrt(tmp_d)
+              }
+            }
+          }
         } else {
-          eta_i <- rep(as.numeric(NA), nfac)
+          eta_reg <- rep(as.numeric(NA), nfac)
         }
       } else {
-        eta_i <- rep(as.numeric(NA), nfac)
+        eta_reg <- rep(as.numeric(NA), nfac)
       }
 
       # add dummy ov.y lv values
+      eta_i <- eta_reg
       if (length(lavmodel@ov.y.dummy.lv.idx[[g]]) > 0L) {
         eta_i <- c(eta_i, dummy_y)
       }
 
-      eta_i
+      list(eta = eta_i, se = se_i, acov = acov_i)
     }
 
     # optimise once per unique case, serially or in parallel
@@ -1463,11 +1498,39 @@ lav_predict_eta_ebm_ml <- function(lavobject = NULL, # for convenience
       res_list <- lapply(rep_idx, solve_i)
     }
     for (u in seq_along(rep_idx)) {
-      fs[[g]][rep_idx[u], ] <- res_list[[u]]
+      fs[[g]][rep_idx[u], ] <- res_list[[u]]$eta
     }
 
     # copy each representative's factor scores to all cases in its pattern
     fs[[g]] <- fs[[g]][case_map, , drop = FALSE]
+
+    # expand the (per-pattern) standard errors / sampling covariances to all
+    # cases. The se/acov refer to the nfac regular factors; they are placed in
+    # the leading columns of an nfac2-wide structure (dummy ov.y columns left
+    # as NA) so that the dummy-lv handling in lav_predict_internal() applies
+    # identically to the scores and to their standard errors.
+    if (se_flag) {
+      u_of_case <- match(case_key, case_key[rep_idx]) # case -> unique index
+      se_rep <- do.call(rbind, lapply(res_list, "[[", "se")) # n_unique x nfac
+      se_g <- matrix(as.numeric(NA), n, nfac2)
+      se_g[, seq_len(nfac)] <- se_rep[u_of_case, , drop = FALSE]
+      se_1[[g]] <- se_g
+      if (acov_flag) {
+        acov_rep <- lapply(res_list, "[[", "acov") # list: nfac x nfac
+        acov_1[[g]] <- lapply(u_of_case, function(u) {
+          m <- matrix(as.numeric(NA), nfac2, nfac2)
+          m[seq_len(nfac), seq_len(nfac)] <- acov_rep[[u]]
+          m
+        })
+      }
+    }
+  }
+
+  if (se_flag) {
+    attr(fs, "se") <- se_1
+    if (acov_flag) {
+      attr(fs, "acov") <- acov_1
+    }
   }
 
   fs

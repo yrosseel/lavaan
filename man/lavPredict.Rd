@@ -42,13 +42,19 @@ individual factor scores will be used in a follow-up (regression) analysis.
 Note: the standard errors (if requested) are not transformed (yet). The resulting
 factor scores are often called correlation-preserving factor scores.}
 \item{se}{Character. If \code{"none"}, no standard errors are computed.
-If \code{"standard"}, naive standard errors are computed (assuming the
+If \code{"standard"}, standard errors are computed (assuming the
 parameters of the measurement model are known). The standard errors are
-returned as an attribute. Currently only available for complete continuous
-data.}
+returned as an attribute. For continuous data, the (naive) standard errors are
+the same for every observation. For categorical data, where the factor scores
+are obtained by numerical optimization (\code{method = "EBM"} or
+\code{method = "ML"}), the standard errors are based on the curvature of the
+objective at the optimum (the inverse of its Hessian, a Laplace/observed
+-information approximation) and therefore differ from one response pattern to
+the next; the result is an (nobs x nfactor) matrix per group.}
 \item{acov}{Similar to the \code{"se"} argument, but optionally returns the full
-sampling covariance matrix of factor scores as an attribute. Currently 
-only available for complete continuous data.}
+sampling covariance matrix of the factor scores as an attribute. For
+continuous data this is a single matrix per group; for categorical data it is
+a list with one (nfactor x nfactor) matrix per observation.}
 \item{label}{Logical. If TRUE, the columns in the output are labeled.}
 \item{fsm}{Logical. If TRUE, return the factor score matrix as an attribute.
            Only for numeric data.}
