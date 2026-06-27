@@ -35,7 +35,7 @@ lavBootstrap <- function(object,                                   # nolint
                             #                      # sample indices differently
                             keep_idx = FALSE,
                             parallel = c("no", "multicore", "snow"),
-                            ncpus = max(1L, parallel::detectCores() - 2L),
+                            ncpus = max(1L, parallel::detectCores() - 2L, na.rm = TRUE),
                             cl = NULL,
                             iseed = NULL,
                             h0_rmsea = NULL,

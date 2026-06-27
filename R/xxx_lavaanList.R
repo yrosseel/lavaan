@@ -16,7 +16,7 @@ lavaanList <- function(model = NULL, # model                    # nolint
                        show_progress = FALSE,
                        store_failed = FALSE,
                        parallel = c("no", "multicore", "snow"),
-                       ncpus = max(1L, parallel::detectCores() - 1L),
+                       ncpus = max(1L, parallel::detectCores() - 1L, na.rm = TRUE),
                        cl = NULL,
                        iseed = NULL) {
   dotdotdot <- list(...)
@@ -610,7 +610,7 @@ semList <- function(model = NULL,                            # nolint
                     show_progress = FALSE,
                     store_failed = FALSE,
                     parallel = c("no", "multicore", "snow"),
-                    ncpus = max(1L, parallel::detectCores() - 1L),
+                    ncpus = max(1L, parallel::detectCores() - 1L, na.rm = TRUE),
                     cl = NULL,
                     iseed = NULL) {
   mc <- match.call(expand.dots = TRUE)
@@ -630,7 +630,7 @@ cfaList <- function(model = NULL,                         # nolint
                     show_progress = FALSE,
                     store_failed = FALSE,
                     parallel = c("no", "multicore", "snow"),
-                    ncpus = max(1L, parallel::detectCores() - 1L),
+                    ncpus = max(1L, parallel::detectCores() - 1L, na.rm = TRUE),
                     cl = NULL,
                     iseed = NULL) {
   mc <- match.call(expand.dots = TRUE)

@@ -15,7 +15,7 @@ lavSimulate <- function(model = NULL, # user model
                         show_progress = FALSE,
                         store_failed = FALSE,
                         parallel = c("no", "multicore", "snow"),
-                        ncpus = max(1L, parallel::detectCores() - 1L),
+                        ncpus = max(1L, parallel::detectCores() - 1L, na.rm = TRUE),
                         cl = NULL,
                         iseed = NULL) {
   # dotdotdot
