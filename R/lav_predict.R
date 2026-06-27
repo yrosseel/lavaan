@@ -1215,6 +1215,14 @@ lav_predict_eta_ebm_ml <- function(lavobject = NULL, # for convenience
     }
   }
 
+  # The conditional density is evaluated with the group-1 model matrices
+  # (lav_predict_fy_eta_i is called with its default g = 1L). These matrices
+  # are loop-invariant, so we extract them once here instead of rebuilding
+  # them on every objective evaluation (the objective is called many times per
+  # case by the optimiser).
+  fy_mm_idx <- 1:lavmodel@nmat[1L] + cumsum(c(0, lavmodel@nmat))[1L]
+  fy_mlist <- lavmodel@GLIST[fy_mm_idx]
+
   # local objective function: x = lv values
   f_eta_i <- function(x, y_i, x_i, mu_i) {
     # add 'dummy' values (if any) for ov.y
@@ -1238,7 +1246,8 @@ lav_predict_eta_ebm_ml <- function(lavobject = NULL, # for convenience
       theta_sd = theta_sd,
       th = th,
       th_idx = th_idx,
-      log = TRUE
+      log = TRUE,
+      mlist = fy_mlist
     )
 
     if (ml) {
@@ -1297,9 +1306,32 @@ lav_predict_eta_ebm_ml <- function(lavobject = NULL, # for convenience
     th <- th_1[[g]]
     th_idx <- lavmodel@th.idx[[g]]
 
-    # casewise for now
+    # Casewise optimisation. Two cases that share the same inputs -- the data
+    # row y_i, the exogenous covariates x_i, and the conditional mean mu_i --
+    # define exactly the same objective function and starting value; since the
+    # optimiser is deterministic, they yield identical factor scores. We
+    # therefore optimise once per unique combination and copy the result to all
+    # matching cases. For categorical data many cases share the same response
+    # pattern, so this can reduce the number of optimisations by an order of
+    # magnitude.
     n <- nrow(data_obs[[g]])
-    for (i in 1:n) {
+
+    # key each case by everything the objective depends on, using the exact
+    # (round-tripping) hexadecimal representation so that only bitwise-identical
+    # rows are ever merged
+    key_cols <- list(data_obs[[g]], eetax[[g]])
+    if (!is.null(exo[[g]])) {
+      key_cols <- c(key_cols, list(exo[[g]]))
+    }
+    key_mat <- do.call(cbind, key_cols)
+    case_key <- do.call(paste, c(
+      lapply(seq_len(ncol(key_mat)), function(j) sprintf("%a", key_mat[, j])),
+      sep = "\r"
+    ))
+    rep_idx <- which(!duplicated(case_key)) # one representative case / pattern
+    case_map <- rep_idx[match(case_key, case_key[rep_idx])] # case -> rep row
+
+    for (i in rep_idx) {
       # eXo?
       if (!is.null(exo[[g]])) {
         x_i <- exo[[g]][i, , drop = FALSE]
@@ -1308,9 +1340,6 @@ lav_predict_eta_ebm_ml <- function(lavobject = NULL, # for convenience
       }
       mu_i <- eetax[[g]][i, , drop = FALSE]
       y_i <- data_obs[[g]][i, , drop = FALSE]
-
-      ### DEBUG ONLY:
-      # cat("i = ", i, "mu.i = ", mu.i, "\n")
 
       start_1 <- numeric(nfac) # initial values for eta
 
@@ -1351,6 +1380,9 @@ lav_predict_eta_ebm_ml <- function(lavobject = NULL, # for convenience
 
       fs[[g]][i, ] <- eta_i
     }
+
+    # copy each representative's factor scores to all cases in its pattern
+    fs[[g]] <- fs[[g]][case_map, , drop = FALSE]
   }
 
   fs
@@ -1638,9 +1670,14 @@ lav_predict_fy_eta_i <- function(lavmodel = NULL, lavdata = NULL,
                                  lavsamplestats = NULL,
                                  y_i = NULL, x_i = NULL,
                                  eta_i = NULL, theta_sd = NULL, g = 1L,
-                                 th = NULL, th_idx = NULL, log = TRUE) {
-  mm_in_group <- 1:lavmodel@nmat[g] + cumsum(c(0, lavmodel@nmat))[g]
-  mlist <- lavmodel@GLIST[mm_in_group]
+                                 th = NULL, th_idx = NULL, log = TRUE,
+                                 mlist = NULL) {
+  # model matrices for this group; loop-invariant, so callers in a tight loop
+  # may pass a precomputed 'mlist' to avoid rebuilding it on every call
+  if (is.null(mlist)) {
+    mm_in_group <- 1:lavmodel@nmat[g] + cumsum(c(0, lavmodel@nmat))[g]
+    mlist <- lavmodel@GLIST[mm_in_group]
+  }
 
   # linear predictor for all items
   yhat <-
