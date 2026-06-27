@@ -8,12 +8,12 @@ of statistics) you can extract from a fitted lavaan object.}
 lavBootstrap(object, r = 1000L, type = "ordinary", verbose = FALSE, 
                 fun = "coef", keep_idx = FALSE,
                 parallel = c("no", "multicore", "snow"),
-                ncpus =  max(1L, parallel::detectCores() - 2L), 
+                ncpus =  max(1L, parallel::detectCores() - 2L, na.rm = TRUE),
                 cl = NULL, iseed = NULL, h0_rmsea = NULL, ...)
 bootstrapLavaan(object, r = 1000L, type = "ordinary", verbose = FALSE, 
                 fun = "coef", keep_idx = FALSE,
                 parallel = c("no", "multicore", "snow"),
-                ncpus =  max(1L, parallel::detectCores() - 2L), 
+                ncpus =  max(1L, parallel::detectCores() - 2L, na.rm = TRUE),
                 cl = NULL, iseed = NULL, h0_rmsea = NULL, ...)
 }
 \arguments{

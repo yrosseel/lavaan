@@ -10,19 +10,22 @@ lavaanList(model = NULL, data_list = NULL, data_function = NULL,
     data_function_args = list(), ndat = length(data_list), cmd = "lavaan", 
     ..., store_slots = c("partable"), fun = NULL, show_progress = FALSE,
     store_failed = FALSE, parallel = c("no", "multicore", "snow"), 
-    ncpus = max(1L, parallel::detectCores() - 1L), cl = NULL, iseed = NULL)
+    ncpus = max(1L, parallel::detectCores() - 1L, na.rm = TRUE),
+    cl = NULL, iseed = NULL)
 
 semList(model = NULL, data_list = NULL, data_function = NULL,
     data_function_args = list(), ndat = length(data_list),
     ..., store_slots = c("partable"), fun = NULL, show_progress = FALSE,
     store_failed = FALSE, parallel = c("no", "multicore", "snow"), 
-    ncpus = max(1L, parallel::detectCores() - 1L), cl = NULL, iseed = NULL)
+    ncpus = max(1L, parallel::detectCores() - 1L, na.rm = TRUE),
+    cl = NULL, iseed = NULL)
 
 cfaList(model = NULL, data_list = NULL, data_function = NULL,
     data_function_args = list(), ndat = length(data_list),
     ..., store_slots = c("partable"), fun = NULL, show_progress = FALSE,
     store_failed = FALSE, parallel = c("no", "multicore", "snow"), 
-    ncpus = max(1L, parallel::detectCores() - 1L), cl = NULL, iseed = NULL)
+    ncpus = max(1L, parallel::detectCores() - 1L, na.rm = TRUE),
+    cl = NULL, iseed = NULL)
 }
 \arguments{
 \item{model}{A description of the user-specified model. Typically, the model
