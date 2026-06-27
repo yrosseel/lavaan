@@ -78,6 +78,44 @@ displayed as a standard (albeit lavaan-formatted) data.frame.
 If \code{"text"} (or alias \code{"pretty"}), the parameter table is
 prettified and displayed with subsections (as used by the summary function).}
 }
+\details{
+The standardized estimates are functions of the (unstandardized) free
+parameters and of (a subset of) the model-implied (co)variances used for
+scaling. The standard errors reported by \code{standardizedSolution} are
+therefore standard errors \emph{for the standardized parameters}, and they
+will in general differ from the standard errors of the unstandardized
+parameters reported by \code{\link{parameterEstimates}} (or in the
+\code{summary()} output). They are also not the same as the standard errors
+that would be obtained by simply rescaling the unstandardized standard errors.
+
+How the standard errors are computed depends on how the model was originally
+fitted (in particular on the \code{se=} argument of \code{\link{lavaan}},
+\code{\link{cfa}}, \code{\link{sem}}, \dots):
+\itemize{
+  \item By default (\code{se = "standard"}, \code{"robust.sem"},
+    \code{"robust.huber.white"}, \dots), the standard errors are obtained with
+    the \emph{delta method}: the Jacobian of the standardization function is
+    computed (numerically) and combined with the variance-covariance matrix of
+    the (unstandardized) parameter estimates. Any robustness present in that
+    variance-covariance matrix (for example robust or sandwich-type standard
+    errors) is automatically propagated to the standardized solution.
+  \item If the model was fitted with \code{se = "bootstrap"} (and the bootstrap
+    draws are available), bootstrap standard errors and bootstrap confidence
+    intervals are reported instead. These are obtained by re-standardizing each
+    bootstrap draw and computing the standard deviation (for the standard
+    error) and the requested interval type (see \code{boot.ci.type}) of the
+    resulting standardized values. Note that, as in
+    \code{\link{parameterEstimates}}, the p-value is still computed by
+    referring the z-statistic (standardized estimate divided by its bootstrap
+    standard error) to a standard normal distribution.
+}
+
+There is no separate argument to choose the \emph{type} of standard error
+within \code{standardizedSolution}: the type always follows the \code{se=}
+setting that was used when the model was fitted. To obtain, say, robust or
+bootstrap standard errors for the standardized solution, refit the model with
+the corresponding \code{se=} argument.
+}
 \note{
 The \code{est}, \code{GLIST}, and \code{partable} arguments are not meant for
 everyday users, but for authors of external R packages that depend on
