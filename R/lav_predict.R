@@ -1700,39 +1700,63 @@ lav_predict_fy_eta_i <- function(lavmodel = NULL, lavdata = NULL,
     # NORMAL case
     fy <- dnorm(y_i, mean = yhat, sd = theta_sd, log = log)
   } else {
-    fy <- numeric(lavmodel@nvar[g])
-    for (v in seq_len(lavmodel@nvar[g])) {
-      if (lavdata@ov$type[v] == "numeric") {
-        ### FIXME!!! we can do all numeric vars at once!!
-        fy[v] <- dnorm(y_i[v],
-          mean = yhat[v], sd = theta_sd[v],
-          log = log
-        )
-      } else if (lavdata@ov$type[v] == "ordered") {
-        # handle missing value
-        if (is.na(y_i[v])) {
-          fy[v] <- as.numeric(NA)
-        } else {
-          th_y <- th[th_idx == v]
-          th_y_1 <- c(-Inf, th_y, Inf)
-          k <- y_i[v]
-          p1 <- pnorm((th_y_1[k + 1] - yhat[v]) / theta_sd[v])
-          p2 <- pnorm((th_y_1[k] - yhat[v]) / theta_sd[v])
-          prob <- (p1 - p2)
-          if (prob < .Machine$double.eps) {
-            prob <- .Machine$double.eps
-          }
-          if (log) {
-            fy[v] <- log(prob)
-          } else {
-            fy[v] <- prob
-          }
-        }
-      } else {
-        lav_msg_stop(gettextf("unknown type: `%1$s' for variable: %2$s",
-          lavdata@ov$type[v], lavdata@ov$name[v])
-        )
+    nvar_g <- lavmodel@nvar[g]
+    var_type <- lavdata@ov$type[seq_len(nvar_g)]
+    fy <- numeric(nvar_g)
+
+    # numeric variables: vectorised normal density
+    num_idx <- which(var_type == "numeric")
+    if (length(num_idx) > 0L) {
+      fy[num_idx] <- dnorm(y_i[num_idx],
+        mean = yhat[num_idx], sd = theta_sd[num_idx], log = log
+      )
+    }
+
+    # ordered variables: P(y = k) = Phi((tau_k - yhat)/sd) -
+    # Phi((tau_{k-1} - yhat)/sd), with tau_0 = -Inf and tau_{ncat} = +Inf.
+    # Computed for all ordered items at once (two vectorised pnorm calls
+    # instead of a per-item loop with two scalar pnorm calls each).
+    ord_idx <- which(var_type == "ordered")
+    if (length(ord_idx) > 0L) {
+      # missing responses -> NA density
+      na_mask <- is.na(y_i[ord_idx])
+      if (any(na_mask)) {
+        fy[ord_idx[na_mask]] <- as.numeric(NA)
       }
+      obs <- ord_idx[!na_mask]
+      if (length(obs) > 0L) {
+        k <- y_i[obs] # observed category (1-based)
+        # number of categories per variable, and the 0-based offset of each
+        # variable's thresholds within 'th' (match() locates the first
+        # threshold, which is robust to placeholder entries for the
+        # numeric variables, i.e. th.idx == 0)
+        ncat <- tabulate(th_idx, nbins = nvar_g)[obs] + 1L
+        th_off <- match(obs, th_idx) - 1L
+
+        # upper threshold tau_k (Inf for the top category)
+        upper <- th[th_off + k]
+        upper[k == ncat] <- Inf
+        # lower threshold tau_{k-1} (-Inf for the first category)
+        lower <- rep(-Inf, length(obs))
+        nz <- k > 1L
+        lower[nz] <- th[th_off[nz] + k[nz] - 1L]
+
+        sd_obs <- theta_sd[obs]
+        yhat_obs <- yhat[obs]
+        prob <- pnorm((upper - yhat_obs) / sd_obs) -
+          pnorm((lower - yhat_obs) / sd_obs)
+        prob[prob < .Machine$double.eps] <- .Machine$double.eps
+        fy[obs] <- if (log) log(prob) else prob
+      }
+    }
+
+    # guard against unexpected variable types
+    bad_idx <- which(!var_type %in% c("numeric", "ordered"))
+    if (length(bad_idx) > 0L) {
+      v <- bad_idx[1L]
+      lav_msg_stop(gettextf("unknown type: `%1$s' for variable: %2$s",
+        lavdata@ov$type[v], lavdata@ov$name[v])
+      )
     }
   }
 
