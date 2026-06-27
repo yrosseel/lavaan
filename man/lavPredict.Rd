@@ -159,6 +159,29 @@ head(lavPredict(fit))
 head(lavPredict(fit, type = "ov"))
 
 
+## ---------------------------------------------
+## standard errors for the factor scores (se =)
+## ---------------------------------------------
+
+## the standard errors are returned as the "se" attribute (a list, one
+## (nobs x nfactor) matrix per group)
+
+## for continuous indicators, the (naive) standard errors are the same
+## for every observation
+fscores <- lavPredict(fit, se = "standard")
+attr(fscores, "se")[[1]]
+
+## for categorical indicators, the factor scores are obtained by numerical
+## optimization, and their standard errors differ from one response pattern
+## (observation) to the next
+HS.ord <- HolzingerSwineford1939
+HS.ord[ , paste0("x", 1:9)] <-
+    lapply(HS.ord[ , paste0("x", 1:9)], function(x) ordered(cut(x, 3)))
+fit.ord <- cfa(HS.model, data = HS.ord, ordered = paste0("x", 1:9))
+fscores <- lavPredict(fit.ord, se = "standard")
+head(attr(fscores, "se")[[1]])
+
+
 ## ------------------------------------------
 ## merge factor scores to original data.frame
 ## ------------------------------------------
