@@ -261,11 +261,7 @@ lav_predict_internal <- function(lavmodel = NULL,
     # remove dummy lv? (removes attr!)
     out <- lapply(seq_len(lavdata@ngroups), function(g) {
       # determine block
-      if (lavdata@nlevels == 1L) {
-        b <- g
-      } else {
-        b <- (g - 1) * lavdata@nlevels + level
-      }
+      b <- lav_predict_block_idx(lavdata, g, level)
       lv_idx <- c(
         lavmodel@ov.y.dummy.lv.idx[[b]],
         lavmodel@ov.x.dummy.lv.idx[[b]]
@@ -282,11 +278,7 @@ lav_predict_internal <- function(lavmodel = NULL,
     if (fsm) {
       fsm_1 <- lapply(seq_len(lavdata@ngroups), function(g) {
         # determine block
-        if (lavdata@nlevels == 1L) {
-          b <- g
-        } else {
-          b <- (g - 1) * lavdata@nlevels + level
-        }
+        b <- lav_predict_block_idx(lavdata, g, level)
         lv_idx <- c(
           lavmodel@ov.y.dummy.lv.idx[[b]],
           lavmodel@ov.x.dummy.lv.idx[[b]]
@@ -402,11 +394,7 @@ lav_predict_internal <- function(lavmodel = NULL,
     if (se != "none") {
       se_1 <- lapply(seq_len(lavdata@ngroups), function(g) {
         # determine block
-        if (lavdata@nlevels == 1L) {
-          b <- g
-        } else {
-          b <- (g - 1) * lavdata@nlevels + level
-        }
+        b <- lav_predict_block_idx(lavdata, g, level)
         lv_idx <- c(
           lavmodel@ov.y.dummy.lv.idx[[b]],
           lavmodel@ov.x.dummy.lv.idx[[b]]
@@ -420,11 +408,7 @@ lav_predict_internal <- function(lavmodel = NULL,
       if (acov != "none") {
         acov_1 <- lapply(seq_len(lavdata@ngroups), function(g) {
           # determine block
-          if (lavdata@nlevels == 1L) {
-            b <- g
-          } else {
-            b <- (g - 1) * lavdata@nlevels + level
-          }
+          b <- lav_predict_block_idx(lavdata, g, level)
           lv_idx <- c(
             lavmodel@ov.y.dummy.lv.idx[[b]],
             lavmodel@ov.x.dummy.lv.idx[[b]]
@@ -448,11 +432,7 @@ lav_predict_internal <- function(lavmodel = NULL,
     # label?
     if (label) {
       for (g in seq_len(lavdata@ngroups)) {
-        if (lavdata@nlevels > 1L) {
-          gg <- (g - 1) * lavdata@nlevels + level
-        } else {
-          gg <- g
-        }
+        gg <- lav_predict_block_idx(lavdata, g, level)
 
         if (append_data) {
           colnames(out[[g]]) <- c(
@@ -569,14 +549,14 @@ lav_predict_internal <- function(lavmodel = NULL,
         sigma <- lavimplied$cov[[g]]
         la <- mm_lambda[[g]]
         if (type == "resid") {
-          ila <- diag(ncol(sigma)) - la %*% fsm[[g]]
+          ila <- diag(ncol(sigma)) - la %*% fsm_1[[g]]
           omega_e <- ila %*% sigma %*% t(ila)
           eig <- eigen(omega_e, symmetric = TRUE)
           a <- eig$vectors[, seq_len(nrow(la) - ncol(la)),
             drop = FALSE
           ]
         } else if (type == "yhat") {
-          laa <- la %*% fsm[[g]]
+          laa <- la %*% fsm_1[[g]]
           omega_e <- laa %*% sigma %*% t(laa)
           eig <- eigen(omega_e, symmetric = TRUE)
           a <- eig$vectors[, seq_len(ncol(la)), drop = FALSE]
@@ -698,6 +678,18 @@ lav_predict_internal <- function(lavmodel = NULL,
   res
 }
 
+# map a group index 'g' (and a level) to the corresponding block index 'b'
+# in the per-block model matrices (GLIST, veta, eeta, ...). For single-level
+# models the block is just the group; for multilevel models the blocks are
+# interleaved per group as (g - 1) * nlevels + level.
+lav_predict_block_idx <- function(lavdata, g, level = 1L) {
+  if (lavdata@nlevels == 1L) {
+    g
+  } else {
+    (g - 1L) * lavdata@nlevels + level
+  }
+}
+
 # internal function
 lav_predict_eta <- function(lavobject = NULL, # for convenience
                             # sub objects
@@ -731,49 +723,30 @@ lav_predict_eta <- function(lavobject = NULL, # for convenience
     method <- "ml"
   }
 
-  # normal case?
+  # at this point, method is either "ebm" (= regression/EB) or "ml" (= Bartlett)
+  if (!method %in% c("ebm", "ml")) {
+    lav_msg_stop(gettextf("unknown method: %s.", method))
+  }
+
   if (all(lavdata@ov$type == "numeric")) {
-    if (method == "ebm") {
-      out <- lav_predict_eta_normal(
-        lavobject = lavobject,
-        lavmodel = lavmodel, lavdata = lavdata,
-        lavimplied = lavimplied, se = se, acov = acov,
-        level = level, lavsamplestats = lavsamplestats,
-        data_obs = data_obs, exo = exo, fsm = fsm, rel = rel,
-        transform = transform
-      )
-    } else if (method == "ml") {
-      out <- lav_predict_eta_bartlett(
-        lavobject = lavobject,
-        lavmodel = lavmodel, lavdata = lavdata,
-        lavimplied = lavimplied, se = se, acov = acov,
-        level = level, lavsamplestats = lavsamplestats,
-        data_obs = data_obs, exo = exo, fsm = fsm, rel = rel,
-        transform = transform
-      )
-    } else {
-      lav_msg_stop(gettextf("unknown method: %s.", method))
-    }
+    # normal case: closed-form regression (EBM) or Bartlett (ML) scores
+    out <- lav_predict_eta_normal(
+      lavobject = lavobject,
+      lavmodel = lavmodel, lavdata = lavdata,
+      lavimplied = lavimplied, se = se, acov = acov,
+      level = level, lavsamplestats = lavsamplestats,
+      data_obs = data_obs, exo = exo, fsm = fsm, rel = rel,
+      transform = transform, method = method
+    )
   } else {
-    if (method == "ebm") {
-      out <- lav_predict_eta_ebm_ml(
-        lavobject = lavobject,
-        lavmodel = lavmodel, lavdata = lavdata,
-        lavsamplestats = lavsamplestats, se = se, acov = acov,
-        level = level, data_obs = data_obs, exo = exo,
-        ml = FALSE, optim_method = optim_method
-      )
-    } else if (method == "ml") {
-      out <- lav_predict_eta_ebm_ml(
-        lavobject = lavobject,
-        lavmodel = lavmodel, lavdata = lavdata,
-        lavsamplestats = lavsamplestats, se = se, acov = acov,
-        level = level, data_obs = data_obs, exo = exo,
-        ml = TRUE, optim_method = optim_method
-      )
-    } else {
-      lav_msg_stop(gettextf("unknown method: %s.", method))
-    }
+    # non-normal case: numerical optimisation of the latent scores
+    out <- lav_predict_eta_ebm_ml(
+      lavobject = lavobject,
+      lavmodel = lavmodel, lavdata = lavdata,
+      lavsamplestats = lavsamplestats, se = se, acov = acov,
+      level = level, data_obs = data_obs, exo = exo,
+      ml = (method == "ml"), optim_method = optim_method
+    )
   }
 
   out
@@ -802,6 +775,27 @@ lav_predict_solve <- function(x) {
 # factor scores - normal case
 # NOTE: this is the classic 'regression' method; for the linear/continuous
 #       case, this is equivalent to both EB and EBM
+# factor scores - normal (continuous) case - closed-form
+#
+# Two methods are supported, differing only in the factor-score coefficient
+# matrix 'C' (mapping centered data to latent scores) and in the corresponding
+# conditional covariance used for standard errors:
+#
+#  - method = "regression" (aka EB/EBM/Thurstone): C = Psi Lambda' Sigma.inv
+#       For the linear/continuous case this is equivalent to both EB and EBM.
+#
+#  - method = "bartlett" (aka ML): C = (Lambda' Sigma.inv Lambda).inv Lambda'
+#                                      Sigma.inv
+#       The usual formula uses Theta.inv, but to deal with a singular THETA
+#       (zeroes on the diagonal) we use the 'GLS' version with Sigma.inv
+#       instead (Bentler & Yuan, 1997, 'Optimal Conditionally Unbiased
+#       Equivariant Factor Score Estimators', in Berkane (Ed) 'Latent variable
+#       modeling with applications to causality', Springer-Verlag).
+#
+# NOTE: instead of solve(), we use lav_predict_solve() (a pseudo-inverse
+#       fallback) for the special settings where -by construction-
+#       (Lambda' Sigma.inv Lambda) is singular. For Bartlett scores this
+#       destroys the conditionally-unbiased property.
 lav_predict_eta_normal <- function(lavobject = NULL, # for convenience
                                    # sub objects
                                    lavmodel = NULL, lavdata = NULL,
@@ -811,7 +805,8 @@ lav_predict_eta_normal <- function(lavobject = NULL, # for convenience
                                    data_obs = NULL, exo = NULL,
                                    se = "none", acov = "none", level = 1L,
                                    fsm = FALSE, rel = FALSE,
-                                   transform = FALSE) {
+                                   transform = FALSE,
+                                   method = "regression") {
   # full object?
   if (inherits(lavobject, "lavaan")) {
     lavmodel <- lavobject@Model
@@ -823,6 +818,33 @@ lav_predict_eta_normal <- function(lavobject = NULL, # for convenience
       !is.null(lavmodel), !is.null(lavdata),
       !is.null(lavsamplestats), !is.null(lavimplied)
     )
+  }
+
+  # Bartlett (ML) or regression (EB/EBM) scores?
+  bartlett <- tolower(method) %in% c("ml", "bartlett", "bartlet")
+
+  # method-specific factor-score coefficient matrix 'C' (maps centered data to
+  # latent scores), as a function of Lambda, Sigma.inv and Psi (= veta_g)
+  compute_fsc <- function(lambda, sigma_inv, veta_g) {
+    if (bartlett) {
+      lav_predict_solve(t(lambda) %*% sigma_inv %*% lambda) %*%
+        t(lambda) %*% sigma_inv
+    } else {
+      veta_g %*% t(lambda) %*% sigma_inv
+    }
+  }
+
+  # method-specific conditional (co)variance of the factor scores, used for the
+  # standard errors and the full sampling covariance matrix (acov)
+  compute_fscov <- function(lambda, sigma_inv, veta_g) {
+    if (bartlett) {
+      # traditional formula uses solve(Lambda' Theta.inv Lambda); we use the
+      # Sigma.inv version (minus Psi) to handle negative/zero variances, with
+      # a pseudo-inverse fallback (lav_predict_solve)
+      lav_predict_solve(t(lambda) %*% sigma_inv %*% lambda) - veta_g
+    } else {
+      veta_g - veta_g %*% t(lambda) %*% sigma_inv %*% lambda %*% veta_g
+    }
   }
 
   if (is.null(data_obs)) {
@@ -861,8 +883,14 @@ lav_predict_eta_normal <- function(lavobject = NULL, # for convenience
     rel_1 <- vector("list", length = lavdata@ngroups)
   }
   if (transform) {
-    tmat <- lav_predict_tmat_green(lavmodel = lavmodel,
-                                   lavimplied = lavimplied)
+    # correlation-preserving transformation: Green (regression) or
+    # Krijnen/McDonald (Bartlett) determinacy matrix
+    if (bartlett) {
+      tmat <- lav_predict_tmat_det(lavmodel = lavmodel, lavimplied = lavimplied)
+    } else {
+      tmat <- lav_predict_tmat_green(lavmodel = lavmodel,
+                                     lavimplied = lavimplied)
+    }
   }
 
   if (acov != "none") {
@@ -878,11 +906,7 @@ lav_predict_eta_normal <- function(lavobject = NULL, # for convenience
 
   for (g in 1:lavdata@ngroups) {
     # determine block
-    if (lavdata@nlevels == 1L) {
-      b <- g
-    } else {
-      b <- (g - 1) * lavdata@nlevels + level
-    }
+    b <- lav_predict_block_idx(lavdata, g, level)
 
     veta_g <- veta[[b]]
     eeta_g <- eeta[[b]]
@@ -955,7 +979,7 @@ lav_predict_eta_normal <- function(lavobject = NULL, # for convenience
     # estimates and the weighted mean (ey_g) used for centering above.
 
     # global factor score coefficient matrix 'C'
-    fsc <- veta_g %*% t(lambda_g) %*% sigma_inv_g
+    fsc <- compute_fsc(lambda_g, sigma_inv_g, veta_g)
 
     # transform?
     if (transform) {
@@ -967,19 +991,19 @@ lav_predict_eta_normal <- function(lavobject = NULL, # for convenience
       fsm_g <- fsc
     }
 
-  # reliability?
-  if (rel) {
-    var_f <- fsc %*% sigma_hat[[g]] %*% t(fsc)  # or S?
-    cov_f_eta <- fsc %*% lambda_g %*% veta_g
-    var_eta <- veta_g
-    # FS.determinacy <- diag( diag(1/sqrt(diag(Var.f))) %*%
-    #                         Cov.f.eta %*%
-    #                         diag(1/sqrt(diag(Var.eta)))
-    #                       )
-    fs_determinacy <- (diag(cov_f_eta) /
-                        (sqrt(diag(var_f)) * sqrt(diag(var_eta))))
-    rel_g <- fs_determinacy * fs_determinacy
-  }
+    # reliability?
+    if (rel) {
+      var_f <- fsc %*% sigma_hat[[g]] %*% t(fsc)  # or S?
+      cov_f_eta <- fsc %*% lambda_g %*% veta_g
+      var_eta <- veta_g
+      # FS.determinacy <- diag( diag(1/sqrt(diag(Var.f))) %*%
+      #                         Cov.f.eta %*%
+      #                         diag(1/sqrt(diag(Var.eta)))
+      #                       )
+      fs_determinacy <- (diag(cov_f_eta) /
+                          (sqrt(diag(var_f)) * sqrt(diag(var_eta))))
+      rel_g <- fs_determinacy * fs_determinacy
+    }
 
     # compute factor scores
     if (lavdata@missing %in% c("ml", "ml.x")) {
@@ -988,10 +1012,6 @@ lav_predict_eta_normal <- function(lavobject = NULL, # for convenience
 
       # factor scores container
       fs_g <- matrix(as.numeric(NA), nrow(yc), ncol = length(eeta_g))
-
-      # if(fsm) {
-      #    FSM.g <- vector("list", length = Mp$npatterns)
-      # }
 
       if (se == "standard") {
         se_g <- matrix(as.numeric(NA), nrow(yc), ncol = length(eeta_g))
@@ -1018,23 +1038,32 @@ lav_predict_eta_normal <- function(lavobject = NULL, # for convenience
         }
 
         lambda <- lambda_g[var_idx, , drop = FALSE]
-        fsc <- veta_g %*% t(lambda) %*% sigma_22_inv
+        fsc <- compute_fsc(lambda, sigma_22_inv, veta_g)
 
-        # FSM?
-        # if(fsm) {
-        #    tmp <- matrix(as.numeric(NA), nrow = ncol(lambda),
-        #                  ncol = ncol(Yc))
-        #    tmp[,var.idx] <- FSC
-        #    FSM.g[[p]] <- tmp
-        # }
+        # if FSC contains rows that are all-zero, replace by NA
+        #
+        # this happens eg if all the indicators of a single factor
+        # are missing; then this column in lambda only contains zeroes
+        # and therefore the corresponding row in FSC contains only
+        # zeroes, leading to factor score 0
+        #
+        # showing 'NA' is better than getting 0
+        #
+        # (Note that this is not needed for the 'regression' method,
+        #  only for Bartlett)
+        if (bartlett) {
+          zero_idx <- which(apply(fsc, 1L, function(x) all(x == 0)))
+          if (length(zero_idx) > 0L) {
+            fsc[zero_idx, ] <- NA
+          }
+        }
 
-        # factor score for this pattern
+        # factor scores for this pattern
         fs_g[mp$case.idx[[p]], ] <- t(fsc %*% t(oc) + eeta_g)
 
         # SE?
         if (se == "standard") {
-          tmp <- (veta_g - veta_g %*% t(lambda) %*%
-            sigma_22_inv %*% lambda %*% veta_g)
+          tmp <- compute_fscov(lambda, sigma_22_inv, veta_g)
           tmp_d <- diag(tmp)
           tmp_d[tmp_d < 1e-05] <- as.numeric(NA)
 
@@ -1072,10 +1101,10 @@ lav_predict_eta_normal <- function(lavobject = NULL, # for convenience
       fsm_1[[g]] <- fsm_g
     }
 
-  # REL
-  if (rel) {
-    rel_1[[g]] <- rel_g
-  }
+    # REL
+    if (rel) {
+      rel_1[[g]] <- rel_g
+    }
 
     # standard error
     if (se == "standard" && !transform) { # for now
@@ -1085,8 +1114,7 @@ lav_predict_eta_normal <- function(lavobject = NULL, # for convenience
           acov_1[[g]] <- acov_g
         }
       } else { # complete data
-        tmp <- (veta_g - veta_g %*% t(lambda_g) %*%
-          sigma_inv_g %*% lambda_g %*% veta_g)
+        tmp <- compute_fscov(lambda_g, sigma_inv_g, veta_g)
         tmp_d <- diag(tmp)
         tmp_d[tmp_d < 1e-05] <- as.numeric(NA)
         se_1[[g]] <- matrix(sqrt(tmp_d), nrow = 1L)
@@ -1097,370 +1125,6 @@ lav_predict_eta_normal <- function(lavobject = NULL, # for convenience
         }
       }
     } # se = "standard"
-  } # g
-
-  if (fsm) {
-    attr(fs, "fsm") <- fsm_1
-  }
-  if (rel) {
-    attr(fs, "rel") <- rel_1
-  }
-  if (se != "none") {
-    attr(fs, "se") <- se_1
-    # return full sampling covariance matrix?
-    if (acov == "standard") {
-      attr(fs, "acov") <- acov_1
-    }
-  }
-
-  fs
-}
-
-# factor scores - normal case - Bartlett method
-# NOTES: 1) this is the classic 'Bartlett' method; for the linear/continuous
-#           case, this is equivalent to 'ML'
-#        2) the usual formula is:
-#               FSC = solve(lambda' theta.inv lambda) (lambda' theta.inv)
-#           BUT to deal with singular THETA (with zeroes on the diagonal),
-#           we use the 'GLS' version instead:
-#               FSC = solve(lambda' sigma.inv lambda) (lambda' sigma.inv)
-#           Reference: Bentler & Yuan (1997) 'Optimal Conditionally Unbiased
-#                      Equivariant Factor Score Estimators'
-#                      in Berkane (Ed) 'Latent variable modeling with
-#                      applications to causality' (Springer-Verlag)
-#        3) instead of solve(), we use MASS::ginv, for special settings where
-#           -by construction- (lambda' sigma.inv lambda) is singular
-#           note: this will destroy the conditionally unbiased property
-#                 of Bartlett scores!!
-lav_predict_eta_bartlett <- function(lavobject = NULL, # for convenience
-                                     # sub objects
-                                     lavmodel = NULL, lavdata = NULL,
-                                     lavsamplestats = NULL,
-                                     lavimplied = NULL,
-                                     # optional new data
-                                     data_obs = NULL, exo = NULL,
-                                     se = "none", acov = "none", level = 1L,
-                                     fsm = FALSE, rel = FALSE,
-                                     transform = FALSE) {
-  # full object?
-  if (inherits(lavobject, "lavaan")) {
-    lavmodel <- lavobject@Model
-    lavdata <- lavobject@Data
-    lavsamplestats <- lavobject@SampleStats
-    lavimplied <- lavobject@implied
-  } else {
-    stopifnot(
-      !is.null(lavmodel), !is.null(lavdata),
-      !is.null(lavsamplestats), !is.null(lavimplied)
-    )
-  }
-
-  if (is.null(data_obs)) {
-    data_obs <- lavdata@X
-    newdata_flag <- FALSE
-  } else {
-    newdata_flag <- TRUE
-  }
-  # eXo not needed
-
-  # missings? and missing = "ml"?
-  if (lavdata@missing %in% c("ml", "ml.x")) {
-    if (newdata_flag) {
-      mp_1 <- vector("list", lavdata@ngroups)
-      for (g in seq_len(lavdata@ngroups)) {
-        mp_1[[g]] <- lav_data_mi_patterns(data_obs[[g]])
-      }
-    } else {
-      mp_1 <- lavdata@Mp
-    }
-  }
-
-  mm_lambda <- lav_model_lambda(lavmodel = lavmodel, remove_dummy_lv = FALSE,
-                                use_wmat = TRUE)
-  sigma_hat <- lavimplied$cov
-  sigma_inv <- lapply(lavimplied$cov, lav_predict_solve)
-  veta <- lav_model_veta(lavmodel = lavmodel) # for se only
-  eeta <- lav_model_eeta(lavmodel = lavmodel, lavsamplestats = lavsamplestats)
-  ey <- lav_model_ey(lavmodel = lavmodel, lavsamplestats = lavsamplestats)
-
-  fs <- vector("list", length = lavdata@ngroups)
-  if (fsm) {
-    fsm_1 <- vector("list", length = lavdata@ngroups)
-  }
-  if (rel) {
-    rel_1 <- vector("list", length = lavdata@ngroups)
-  }
-  if (transform) {
-    tmat <- lav_predict_tmat_det(lavmodel = lavmodel,
-                                 lavimplied = lavimplied)
-  }
-
-  if (acov != "none") se <- acov # acov implies SE
-  if (se != "none") {
-    se_1 <- vector("list", length = lavdata@ngroups)
-    # return full sampling covariance matrix?
-    if (acov != "none") {
-      acov_1 <- vector("list", length = lavdata@ngroups)
-    }
-  }
-
-  for (g in 1:lavdata@ngroups) {
-    # determine block
-    if (lavdata@nlevels == 1L) {
-      b <- g
-    } else {
-      b <- (g - 1) * lavdata@nlevels + level
-    }
-
-    veta_g <- veta[[b]]
-    eeta_g <- eeta[[b]]
-    lambda_g <- mm_lambda[[b]]
-    ey_g <- ey[[b]]
-    sigma_inv_g <- sigma_inv[[b]]
-
-    if (lavdata@nlevels > 1L) {
-      lp <- lavdata@Lp[[g]]
-      ylp <- lavsamplestats@YLp[[g]]
-
-      # implied for this group
-      group_idx <- (g - 1) * lavdata@nlevels + seq_len(lavdata@nlevels)
-      implied_group <- lapply(lavimplied, function(x) x[group_idx])
-
-      # random effects (=random intercepts or cluster means)
-      # NOTE: is the 'ML' way not simply using the observed cluster
-      #       means?
-      out <- lav_mvn_cl_implied22l(
-        lp = lp,
-        implied = implied_group
-      )
-      mb_j <- lav_mvn_cl_em_estep_ranef(
-        ylp = ylp, lp = lp,
-        sigma_w = out$sigma.w, sigma_b = out$sigma.b,
-        sigma_zz = out$sigma.zz, sigma_yz = out$sigma.yz,
-        mu_z = out$mu.z, mu_w = out$mu.w, mu_b = out$mu.b,
-        se = FALSE
-      )
-
-      ov_idx <- lp$ov.idx
-
-      if (level == 1L) {
-        data_w <- data_obs[[g]][, ov_idx[[1]]]
-        data_b <- mb_j[lp$cluster.idx[[2]], , drop = FALSE]
-
-        # center
-        data_obs_g <- data_w - data_b
-      } else if (level == 2L) {
-        data_b_1 <- matrix(0,
-          nrow = nrow(mb_j),
-          ncol = ncol(data_obs[[g]])
-        )
-        data_b_1[, ov_idx[[1]]] <- mb_j
-        between_idx <- lp$between.idx[[2 * g]]
-        if (length(between_idx) > 0L) {
-          data_b_1[, between_idx] <- data_obs[[g]][
-            !duplicated(lp$cluster.idx[[2]]),
-            between_idx
-          ]
-        }
-        data_obs_g <- data_b_1[, ov_idx[[2]]]
-      } else {
-        lav_msg_stop(gettext("only 2 levels are supported"))
-      }
-    } else {
-      data_obs_g <- data_obs[[b]]
-    }
-
-    nfac <- ncol(veta_g)
-    if (nfac == 0L) {
-      fs[[g]] <- matrix(0, lavdata@nobs[[g]], nfac)
-      next
-    }
-
-    # center data
-    yc <- t(t(data_obs_g) - ey_g)
-
-    # NOTE: do NOT scale yc by the sampling weights here. Factor scores are
-    # per-case predictions; a case's score must not depend on its own
-    # sampling weight. Weights already enter via the (weighted) parameter
-    # estimates and the weighted mean (ey_g) used for centering above.
-
-    # global factor score coefficient matrix 'C'
-    fsc <- (lav_predict_solve(t(lambda_g) %*% sigma_inv_g %*% lambda_g)
-    %*% t(lambda_g) %*% sigma_inv_g)
-
-    # transform?
-    if (transform) {
-      fsc <- tmat[[b]] %*% fsc
-    }
-
-    # store fsm?
-    if (fsm) {
-      # store fsm?
-      fsm_g <- fsc
-    }
-
-  # reliability?
-  if (rel) {
-      var_f <- fsc %*% sigma_hat[[g]] %*% t(fsc)  # or S?
-      cov_f_eta <- fsc %*% lambda_g %*% veta_g
-      var_eta <- veta_g
-      # FS.determinacy <- diag( diag(1/sqrt(diag(Var.f))) %*%
-      #                         Cov.f.eta %*%
-      #                         diag(1/sqrt(diag(Var.eta)))
-      #                       )
-      fs_determinacy <- (diag(cov_f_eta) /
-                          (sqrt(diag(var_f)) * sqrt(diag(var_eta))))
-      rel_g <- fs_determinacy * fs_determinacy
-  }
-
-    # compute factor scores
-    if (lavdata@missing %in% c("ml", "ml.x")) {
-      # missing patterns for this group
-      mp <- mp_1[[g]]
-
-      # factor scores container
-      fs_g <- matrix(as.numeric(NA), nrow(yc), ncol = length(eeta_g))
-
-      # if(fsm) {
-      #    FSM.g <- vector("list", length = Mp$npatterns)
-      # }
-
-      if (se == "standard") {
-        se_g <- matrix(as.numeric(NA), nrow(yc), ncol = length(eeta_g))
-      }
-
-      if (acov == "standard") {
-        acov_g <- vector("list", length = mp$npatterns)
-      }
-
-      # compute FSC per pattern
-      for (p in seq_len(mp$npatterns)) {
-        var_idx <- mp$pat[p, ] # observed
-        na_idx <- which(!var_idx) # missing
-
-        # extract observed data for these (centered) cases
-        oc <- yc[mp$case.idx[[p]], mp$pat[p, ], drop = FALSE]
-
-        # invert sigma (Sigma_22, observed part only) for this pattern
-        sigma_22_inv <- try(lav_mat_sym_inverse_update(
-          s_inv = sigma_inv_g, rm_idx = na_idx, logdet = FALSE
-        ), silent = TRUE)
-        if (inherits(sigma_22_inv, "try-error")) {
-          lav_msg_stop(gettext("Sigma_22.inv cannot be inverted"))
-        }
-
-        lambda <- lambda_g[var_idx, , drop = FALSE]
-        fsc <- (lav_predict_solve(t(lambda) %*% sigma_22_inv %*% lambda)
-        %*% t(lambda) %*% sigma_22_inv)
-
-        # if FSC contains rows that are all-zero, replace by NA
-        #
-        # this happens eg if all the indicators of a single factor
-        # are missing; then this column in lambda only contains zeroes
-        # and therefore the corresponding row in FSC contains only
-        # zeroes, leading to factor score 0
-        #
-        # showing 'NA' is better than getting 0
-        #
-        # (Note that this is not needed for the 'regression' method,
-        #  only for Bartlett)
-        #
-        zero_idx <- which(apply(fsc, 1L, function(x) all(x == 0)))
-        if (length(zero_idx) > 0L) {
-          fsc[zero_idx, ] <- NA
-        }
-
-        # FSM?
-        # if(fsm) {
-        #    tmp <- matrix(as.numeric(NA), nrow = ncol(lambda),
-        #                  ncol = ncol(Yc))
-        #    tmp[,var.idx] <- FSC
-        #    FSM.g[[p]] <- tmp
-        # }
-
-        # factor scores for this pattern
-        fs_g[mp$case.idx[[p]], ] <- t(fsc %*% t(oc) + eeta_g)
-
-        # SE?
-        if (se == "standard") {
-          tmp <- (lav_predict_solve(t(lambda) %*% sigma_22_inv %*% lambda)
-          - veta_g)
-          tmp_d <- diag(tmp)
-          tmp_d[tmp_d < 1e-05] <- as.numeric(NA)
-
-          # all cases in this pattern get the same SEs
-          se_g[mp$case.idx[[p]], ] <- matrix(sqrt(tmp_d),
-            nrow = length(mp$case.idx[[p]]),
-            ncol = ncol(se_g), byrow = TRUE
-          )
-        }
-
-        # acov?
-        if (acov == "standard") {
-          acov_g[[p]] <- tmp # for this pattern
-        }
-      }
-
-      # what about FSM? There is no single one, but as many as patterns
-      # if(fsm) {
-      #    # use 'global' version (just like in complete case)
-      #    FSM[[g]] <- ( MASS::ginv(t(LAMBDA.g) %*% Sigma.inv.g %*%
-      #                    LAMBDA.g) %*% t(LAMBDA.g) %*% Sigma.inv.g )
-      # }
-    } else {
-      # compute factor scores
-      fs_g <- t(fsc %*% t(yc) + eeta_g)
-    }
-
-    # replace values in dummy lv's by their observed counterpart
-    if (length(lavmodel@ov.y.dummy.lv.idx[[g]]) > 0L && level == 1L) {
-      fs_g[, lavmodel@ov.y.dummy.lv.idx[[g]]] <-
-        data_obs[[g]][, lavmodel@ov.y.dummy.ov.idx[[g]], drop = FALSE]
-    }
-    if (length(lavmodel@ov.x.dummy.lv.idx[[g]]) > 0L && level == 1L) {
-      fs_g[, lavmodel@ov.x.dummy.lv.idx[[g]]] <-
-        data_obs[[g]][, lavmodel@ov.x.dummy.ov.idx[[g]], drop = FALSE]
-    }
-
-    fs[[g]] <- fs_g
-
-    # FSM
-    if (fsm) {
-      fsm_1[[g]] <- fsm_g
-    }
-
-  # REL
-  if (rel) {
-    rel_1[[g]] <- rel_g
-  }
-
-    # standard error
-    if (se == "standard" && !transform) {
-      if (lavdata@missing %in% c("ml", "ml.x")) {
-        se_1[[g]] <- se_g
-        if (acov == "standard") {
-          acov_1[[g]] <- acov_g
-        }
-      } else { # complete data
-
-        # the traditional formula is:
-        #     solve(t(lambda) %*% solve(theta) %*% lambda)
-        # but we replace it by
-        #     solve( t(lambda) %*% solve(sigma) %*% lambda ) - psi
-        # to handle negative variances
-        # in addition, we use a pseudo-inverse fallback (lav_predict_solve)
-        tmp <- (lav_predict_solve(t(lambda_g) %*% sigma_inv_g %*% lambda_g)
-        - veta_g)
-        tmp_d <- diag(tmp)
-        tmp_d[tmp_d < 1e-05] <- as.numeric(NA)
-        se_1[[g]] <- matrix(sqrt(tmp_d), nrow = 1L)
-
-        # return full sampling covariance matrix?
-        if (acov == "standard") {
-          acov_1[[g]] <- tmp
-        }
-      }
-    } # se
   } # g
 
   if (fsm) {
@@ -2036,11 +1700,11 @@ lav_predict_fy_eta_i <- function(lavmodel = NULL, lavdata = NULL,
   fy
 }
 
-# compute `transformation' matrix to convert regression factor scores
-# to (Green's) correlation-preserving factor scores
-lav_predict_tmat_green <- function(lavobject = NULL,
-                                   lavmodel = NULL, lavimplied = NULL) {
-
+# gather the (unconditional) per-block ingredients shared by both
+# correlation-preserving transformations: model-implied Sigma, latent
+# covariance Psi (veta) and factor loadings Lambda
+lav_predict_tmat_blocks <- function(lavobject = NULL,
+                                    lavmodel = NULL, lavimplied = NULL) {
   if (!is.null(lavobject)) {
     lavmodel <- lavobject@Model
     lavimplied <- lavobject@implied
@@ -2052,69 +1716,51 @@ lav_predict_tmat_green <- function(lavobject = NULL,
   if (lavmodel@conditional.x) {
     lavimplied <- lav_model_implied_cond2uncond(lavimplied)
   }
-  sigma_1 <- lavimplied$cov
-  veta_1 <- lav_model_veta(lavmodel = lavmodel, remove_dummy_lv = FALSE)
-  mm_lambda <- lav_model_lambda(lavmodel, remove_dummy_lv = FALSE, use_wmat = TRUE)
 
-  nblocks <- lavmodel@nblocks
-  tmat <- vector("list", length = nblocks)
+  list(
+    sigma = lavimplied$cov,
+    veta = lav_model_veta(lavmodel = lavmodel, remove_dummy_lv = FALSE),
+    lambda = lav_model_lambda(lavmodel, remove_dummy_lv = FALSE,
+                              use_wmat = TRUE),
+    nblocks = lavmodel@nblocks
+  )
+}
 
-  # compute tmat per block
-  for (b in seq_len(nblocks)) {
-    sigma_b <- sigma_1[[b]]
-    sigma_b_inv <- solve(sigma_b)
-    veta <- veta_1[[b]]
-    veta_sqrt <- lav_mat_sym_sqrt(veta)
-    veta32 <- veta %*% veta_sqrt
-    lambda <- mm_lambda[[b]]
-    tmp <- veta32 %*% t(lambda) %*% sigma_b_inv %*% lambda %*% veta32
-    tmp_inv_sqrt <- lav_mat_sym_sqrt(solve(tmp))
-    tmat[[b]] <- veta_sqrt %*% tmp_inv_sqrt %*% veta_sqrt
-  }
+# compute `transformation' matrix to convert regression factor scores
+# to (Green's) correlation-preserving factor scores
+lav_predict_tmat_green <- function(lavobject = NULL,
+                                   lavmodel = NULL, lavimplied = NULL) {
+  mm <- lav_predict_tmat_blocks(lavobject, lavmodel, lavimplied)
 
-  tmat
+  lapply(seq_len(mm$nblocks), function(b) {
+    lav_predict_tmat_green_internal(mm$sigma[[b]], mm$veta[[b]], mm$lambda[[b]])
+  })
 }
 
 # compute `transformation' matrix to convert Bartlett factor scores
 # to (Krijnen/McDonald) correlation-preserving factor scores
 lav_predict_tmat_det <- function(lavobject = NULL,
                                  lavmodel = NULL, lavimplied = NULL) {
+  mm <- lav_predict_tmat_blocks(lavobject, lavmodel, lavimplied)
 
-  if (!is.null(lavobject)) {
-    lavmodel <- lavobject@Model
-    lavimplied <- lavobject@implied
-  }
-
-  if (is.null(lavimplied) || length(lavimplied) == 0L) {
-    lavimplied <- lav_model_implied(lavmodel)
-  }
-  if (lavmodel@conditional.x) {
-    lavimplied <- lav_model_implied_cond2uncond(lavimplied)
-  }
-  sigma_1 <- lavimplied$cov
-  veta_1 <- lav_model_veta(lavmodel = lavmodel, remove_dummy_lv = FALSE)
-  mm_lambda <- lav_model_lambda(lavmodel, remove_dummy_lv = FALSE, use_wmat = TRUE)
-
-  nblocks <- lavmodel@nblocks
-  tmat <- vector("list", length = nblocks)
-
-  # compute tmat per block
-  for (b in seq_len(nblocks)) {
-    sigma_b <- sigma_1[[b]]
-    sigma_b_inv <- solve(sigma_b)
-    veta <- veta_1[[b]]
-    veta_sqrt <- lav_mat_sym_sqrt(veta)
-    veta_inv_sqrt <- lav_mat_sym_sqrt(solve(veta))
-    lambda <- mm_lambda[[b]]
-    tmp <- veta_sqrt %*% t(lambda) %*% sigma_b_inv %*% lambda %*% veta_sqrt
-    tmp_sqrt <- lav_mat_sym_sqrt(tmp)
-    tmat[[b]] <- veta_sqrt %*% tmp_sqrt %*% veta_inv_sqrt
-  }
-
-  tmat
+  lapply(seq_len(mm$nblocks), function(b) {
+    lav_predict_tmat_det_internal(mm$sigma[[b]], mm$veta[[b]], mm$lambda[[b]])
+  })
 }
 
-# single block only, for internal use in lav_sam_step1_local()
+# single block only (Green/regression)
+lav_predict_tmat_green_internal <- function(sigma_1 = NULL, veta = NULL,
+                                            lambda = NULL) {
+  sigma_inv <- solve(sigma_1)
+  veta_sqrt <- lav_mat_sym_sqrt(veta)
+  veta32 <- veta %*% veta_sqrt
+  tmp <- veta32 %*% t(lambda) %*% sigma_inv %*% lambda %*% veta32
+  tmp_inv_sqrt <- lav_mat_sym_sqrt(solve(tmp))
+  veta_sqrt %*% tmp_inv_sqrt %*% veta_sqrt
+}
+
+# single block only (Bartlett/determinacy), for internal use in
+# lav_sam_step1_local()
 lav_predict_tmat_det_internal <- function(sigma_1 = NULL, veta = NULL,
                                           lambda = NULL) {
     sigma_inv <- solve(sigma_1)
