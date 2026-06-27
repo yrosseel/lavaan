@@ -382,8 +382,8 @@ lavTestLRT <- function(object, ..., method = "default", test = "default",   # no
           scaled_shifted = scaled.shifted,
           a_method = A.method
         )
-        stat_delta[m + 1] <- out$T.delta
-        df_delta[m + 1] <- out$df.delta
+        stat_delta[m + 1] <- out$t_delta
+        df_delta[m + 1] <- out$df_delta
         if (scaled.shifted) {
           a_delta[m + 1] <- out$a
           b_delta[m + 1] <- out$b

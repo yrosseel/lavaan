@@ -217,7 +217,7 @@ lav_test_diff_satorra2000 <- function(m1, m0, h1 = TRUE, a_method = "delta",
   }
 
   list(
-    T.delta = t_delta, scaling.factor = cd, df.delta = df_delta,
+    t_delta = t_delta, scaling.factor = cd, df_delta = df_delta,
     trace.ugamma = trace_ugamma, trace.ugamma2 = trace_ugamma2,
     a = a, b = b
   )
