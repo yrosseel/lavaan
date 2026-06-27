@@ -805,11 +805,11 @@ lav_lisrel_eyetax <- function(mlist = NULL,
       ov_x_dummy_lv_idx = ov_x_dummy_lv_idx
     )
     # BETA?
+    # (add mm_alpha to each row; faster than sweep(., 2L, ., "+"))
     if (!is.null(mm_beta)) {
-      eta2 <- sweep(tcrossprod(eta2, mm_beta), 2L, STATS = mm_alpha, FUN = "+")
-    } else {
-      eta2 <- sweep(eta2, 2L, STATS = mm_alpha, FUN = "+")
+      eta2 <- tcrossprod(eta2, mm_beta)
     }
+    eta2 <- eta2 + rep(mm_alpha, each = nrow(eta2))
 
     # put back eXo values
     if (length(ov_x_dummy_lv_idx) > 0L) {
@@ -834,12 +834,13 @@ lav_lisrel_eyetax <- function(mlist = NULL,
     ov_x_dummy_lv_idx = ov_x_dummy_lv_idx
   )
 
-  # EYetax
-  eyetax <- sweep(tcrossprod(eta2, mm_lambda), 2L, STATS = mm_nu, FUN = "+")
+  # EYetax (add mm_nu to each row; faster than sweep(., 2L, ., "+"))
+  eyetax <- tcrossprod(eta2, mm_lambda)
+  eyetax <- eyetax + rep(mm_nu, each = nrow(eyetax))
 
-  # if delta, scale
+  # if delta, scale each row by the delta diagonal
   if (delta && !is.null(mlist$delta)) {
-    eyetax <- sweep(eyetax, 2L, STATS = mlist$delta, FUN = "*")
+    eyetax <- eyetax * rep(mlist$delta, each = nrow(eyetax))
   }
 
   eyetax
