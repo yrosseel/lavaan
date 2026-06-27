@@ -112,6 +112,37 @@ can not be used to `predict' values of dependent variables, given the
 values of independent variables (in the regression sense). In other words,
 the structural component is completely ignored (for now).
 }
+\references{
+For an overview (and evaluation) of the various factor score methods, see:
+
+Grice, J. W. (2001). Computing and evaluating factor scores.
+\emph{Psychological Methods, 6}(4), 430-450. \doi{10.1037/1082-989X.6.4.430}
+
+For the (continuous) regression and Bartlett methods, see:
+
+Bartlett, M. S. (1937). The statistical conception of mental factors.
+\emph{British Journal of Psychology, 28}, 97-104.
+\doi{10.1111/j.2044-8295.1937.tb00863.x}
+
+Bentler, P. M., & Yuan, K.-H. (1997). Optimal conditionally unbiased
+equivariant factor score estimators. In M. Berkane (Ed.), \emph{Latent
+variable modeling and applications to causality} (pp. 259-281). New York:
+Springer-Verlag. \doi{10.1007/978-1-4612-1842-5_14}
+
+For the (categorical) Empirical Bayes Modal (EBM) and Maximum Likelihood (ML)
+methods, see:
+
+Skrondal, A., & Rabe-Hesketh, S. (2004). \emph{Generalized latent variable
+modeling: Multilevel, longitudinal, and structural equation models.} Boca
+Raton, FL: Chapman & Hall/CRC.
+
+For the correlation-preserving factor scores (\code{transform = TRUE}), see:
+
+ten Berge, J. M. F., Krijnen, W. P., Wansbeek, T., & Shapiro, A. (1999). Some
+new results on correlation-preserving factor scores prediction methods.
+\emph{Linear Algebra and its Applications, 289}(1-3), 311-318.
+\doi{10.1016/S0024-3795(97)10007-6}
+}
 \seealso{
 \code{\link{lavPredictY}} to predict y-variables given x-variables.
 }
