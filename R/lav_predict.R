@@ -54,9 +54,13 @@ lavPredict <- function(object, newdata = NULL, # keep order of predict(), 0.6-7 
                        mdist = FALSE, rel = FALSE,
                        append.data = FALSE, assemble = FALSE, # or TRUE?
                        level = 1L, optim.method = "bfgs", ETA = NULL,
+                       parallel = c("auto", "no", "multicore", "snow"),
+                       ncpus = NULL, cl = NULL,
                        drop.list.single.group = TRUE) {                         # nolint end
   # check object
   object <- lav_object_check_version(object)
+
+  parallel <- match.arg(parallel)
 
   # catch efaList objects
   if (inherits(object, "efaList")) {
@@ -94,6 +98,7 @@ lavPredict <- function(object, newdata = NULL, # keep order of predict(), 0.6-7 
     fsm = fsm, rel = rel,
     mdist = mdist, append_data = append.data, assemble = assemble,
     level = level, optim_method = optim.method, eta = ETA,
+    parallel = parallel, ncpus = ncpus, cl = cl,
     drop_list_single_group = drop.list.single.group
   )
 
@@ -115,6 +120,7 @@ lav_predict_internal <- function(lavmodel = NULL,
                                mdist = FALSE,
                                append_data = FALSE, assemble = FALSE, # or TRUE?
                                level = 1L, optim_method = "bfgs", eta = NULL,
+                               parallel = "no", ncpus = NULL, cl = NULL,
                                drop_list_single_group = TRUE) {
   # type
   type <- tolower(type)
@@ -237,7 +243,8 @@ lav_predict_internal <- function(lavmodel = NULL,
       lavdata = lavdata, lavsamplestats = lavsamplestats,
       lavimplied = lavimplied, se = se, acov = acov, level = level,
       data_obs = data_obs, exo = exo, method = method,
-      fsm = fsm, rel = rel, transform = transform, optim_method = optim_method
+      fsm = fsm, rel = rel, transform = transform, optim_method = optim_method,
+      parallel = parallel, ncpus = ncpus, cl = cl
     )
 
     # extract fsm here
@@ -705,7 +712,8 @@ lav_predict_eta <- function(lavobject = NULL, # for convenience
                             transform = FALSE,
                             se = "none", acov = "none",
                             level = 1L,
-                            optim_method = "bfgs") {
+                            optim_method = "bfgs",
+                            parallel = "no", ncpus = NULL, cl = NULL) {
   # full object?
   if (inherits(lavobject, "lavaan")) {
     lavdata <- lavobject@Data
@@ -745,7 +753,8 @@ lav_predict_eta <- function(lavobject = NULL, # for convenience
       lavmodel = lavmodel, lavdata = lavdata,
       lavsamplestats = lavsamplestats, se = se, acov = acov,
       level = level, data_obs = data_obs, exo = exo,
-      ml = (method == "ml"), optim_method = optim_method
+      ml = (method == "ml"), optim_method = optim_method,
+      parallel = parallel, ncpus = ncpus, cl = cl
     )
   }
 
@@ -1144,6 +1153,36 @@ lav_predict_eta_normal <- function(lavobject = NULL, # for convenience
   fs
 }
 
+# decide whether (and how) to parallelise the per-case factor-score
+# optimisation for a given number of independent tasks 'n_tasks'.
+#  - "no"        : always serial
+#  - "multicore" : fork-based (unix only), as requested by the user
+#  - "snow"      : PSOCK cluster, as requested by the user
+#  - "auto"      : fork-based, but only when it is clearly worthwhile, i.e.
+#                  enough independent optimisations to amortise the overhead
+#                  (the dedup step often leaves only a handful of unique cases)
+# returns one of "no", "multicore", "snow".
+lav_predict_parallel_mode <- function(parallel = "no", ncpus = NULL,
+                                      n_tasks = 1L) {
+  # number of unique optimisations above which "auto" switches on forking
+  auto_threshold <- 1000L
+
+  if (is.null(ncpus) || ncpus < 2L || n_tasks < 2L || parallel == "no") {
+    return("no")
+  }
+  unix <- .Platform$OS.type != "windows"
+  if (parallel == "multicore") {
+    if (unix) "multicore" else "no"
+  } else if (parallel == "snow") {
+    "snow"
+  } else if (parallel == "auto") {
+    # auto only uses fork, and only when there is enough work to gain from it
+    if (unix && n_tasks >= auto_threshold) "multicore" else "no"
+  } else {
+    "no"
+  }
+}
+
 # factor scores - EBM or ML
 lav_predict_eta_ebm_ml <- function(lavobject = NULL, # for convenience
                                    # sub objects
@@ -1153,10 +1192,23 @@ lav_predict_eta_ebm_ml <- function(lavobject = NULL, # for convenience
                                    data_obs = NULL, exo = NULL,
                                    se = "none", acov = "none", level = 1L,
                                    ml = FALSE,
-                                   optim_method = "bfgs") {
+                                   optim_method = "bfgs",
+                                   parallel = "no", ncpus = NULL, cl = NULL) {
   optim_method <- tolower(optim_method)
 
   stopifnot(optim_method %in% c("nlminb", "bfgs"))
+
+  # parallelisation: the per-case optimisation below is embarrassingly parallel
+  # and fully deterministic (no RNG handling needed). Resolve the number of
+  # cores now; the actual serial/parallel decision is made per group, once the
+  # number of unique cases to optimise is known (see lav_predict_parallel_mode).
+  parallel <- parallel[1L]
+  if (parallel != "no" && is.null(ncpus)) {
+    ncpus <- max(1L, parallel::detectCores() - 2L, na.rm = TRUE)
+  }
+  if (parallel != "no") {
+    loadNamespace("parallel")
+  }
 
   ### FIXME: if all indicators of a factor are normal, can we not
   ###        just use the `classic' regression method??
@@ -1224,14 +1276,14 @@ lav_predict_eta_ebm_ml <- function(lavobject = NULL, # for convenience
     lavmodel@GLIST[mm_idx]
   })
 
-  # local objective function: x = lv values
-  f_eta_i <- function(x, y_i, x_i, mu_i) {
+  # local objective function: x = lv values. The per-case dummy ov.y values are
+  # passed in (rather than read via a case index 'i') so the objective does not
+  # depend on the enclosing loop variable -- this lets us evaluate cases via
+  # lapply()/mclapply() instead of a for() loop.
+  f_eta_i <- function(x, y_i, x_i, mu_i, dummy_y) {
     # add 'dummy' values (if any) for ov.y
     if (length(lavmodel@ov.y.dummy.lv.idx[[g]]) > 0L) {
-      x2 <- c(x - mu_i, data_obs[[g]][i,
-        lavmodel@ov.y.dummy.ov.idx[[g]],
-        drop = FALSE
-      ])
+      x2 <- c(x - mu_i, dummy_y)
     } else {
       x2 <- x - mu_i
     }
@@ -1333,7 +1385,8 @@ lav_predict_eta_ebm_ml <- function(lavobject = NULL, # for convenience
     rep_idx <- which(!duplicated(case_key)) # one representative case / pattern
     case_map <- rep_idx[match(case_key, case_key[rep_idx])] # case -> rep row
 
-    for (i in rep_idx) {
+    # optimise the latent scores for a single (representative) case 'i'
+    solve_i <- function(i) {
       # eXo?
       if (!is.null(exo[[g]])) {
         x_i <- exo[[g]][i, , drop = FALSE]
@@ -1342,6 +1395,16 @@ lav_predict_eta_ebm_ml <- function(lavobject = NULL, # for convenience
       }
       mu_i <- eetax[[g]][i, , drop = FALSE]
       y_i <- data_obs[[g]][i, , drop = FALSE]
+
+      # dummy ov.y values for this case (passed to the objective and appended
+      # to the score below)
+      if (length(lavmodel@ov.y.dummy.lv.idx[[g]]) > 0L) {
+        dummy_y <- data_obs[[g]][i, lavmodel@ov.y.dummy.ov.idx[[g]],
+          drop = FALSE
+        ]
+      } else {
+        dummy_y <- NULL
+      }
 
       start_1 <- numeric(nfac) # initial values for eta
 
@@ -1352,7 +1415,7 @@ lav_predict_eta_ebm_ml <- function(lavobject = NULL, # for convenience
             start = start_1, objective = f_eta_i,
             gradient = NULL, # for now
             control = list(rel.tol = 1e-8),
-            y_i = y_i, x_i = x_i, mu_i = mu_i
+            y_i = y_i, x_i = x_i, mu_i = mu_i, dummy_y = dummy_y
           )
         } else if (optim_method == "bfgs") {
           out <- optim(
@@ -1360,7 +1423,7 @@ lav_predict_eta_ebm_ml <- function(lavobject = NULL, # for convenience
             gr = NULL,
             control = list(reltol = 1e-8, fnscale = 1.1),
             method = "BFGS",
-            y_i = y_i, x_i = x_i, mu_i = mu_i
+            y_i = y_i, x_i = x_i, mu_i = mu_i, dummy_y = dummy_y
           )
         }
         if (out$convergence == 0L) {
@@ -1374,13 +1437,33 @@ lav_predict_eta_ebm_ml <- function(lavobject = NULL, # for convenience
 
       # add dummy ov.y lv values
       if (length(lavmodel@ov.y.dummy.lv.idx[[g]]) > 0L) {
-        eta_i <- c(eta_i, data_obs[[g]][i,
-          lavmodel@ov.y.dummy.ov.idx[[g]],
-          drop = FALSE
-        ])
+        eta_i <- c(eta_i, dummy_y)
       }
 
-      fs[[g]][i, ] <- eta_i
+      eta_i
+    }
+
+    # optimise once per unique case, serially or in parallel
+    run_mode <- lav_predict_parallel_mode(parallel, ncpus, length(rep_idx))
+    if (run_mode == "multicore") {
+      res_list <- parallel::mclapply(rep_idx, solve_i,
+        mc.cores = min(ncpus, length(rep_idx))
+      )
+    } else if (run_mode == "snow") {
+      if (is.null(cl)) {
+        cl0 <- parallel::makePSOCKcluster(
+          rep("localhost", min(ncpus, length(rep_idx)))
+        )
+        on.exit(parallel::stopCluster(cl0), add = TRUE)
+        res_list <- parallel::parLapply(cl0, rep_idx, solve_i)
+      } else {
+        res_list <- parallel::parLapply(cl, rep_idx, solve_i)
+      }
+    } else {
+      res_list <- lapply(rep_idx, solve_i)
+    }
+    for (u in seq_along(rep_idx)) {
+      fs[[g]][rep_idx[u], ] <- res_list[[u]]
     }
 
     # copy each representative's factor scores to all cases in its pattern

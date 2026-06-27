@@ -14,6 +14,8 @@ lavPredict(object, newdata = NULL, type = "lv", method = "EBM",
            label = TRUE, fsm = FALSE, mdist = FALSE, rel = FALSE,
            append.data = FALSE, assemble = FALSE,
            level = 1L, optim.method = "bfgs", ETA = NULL,
+           parallel = c("auto", "no", "multicore", "snow"),
+           ncpus = NULL, cl = NULL,
            drop.list.single.group = TRUE)
 }
 \arguments{
@@ -75,7 +77,20 @@ for the optimization. If \code{"bfgs"} or \code{"BFGS"} (the default in 0.6),
 the \code{"optim()"} function is used with the BFGS method.}
 \item{ETA}{An optional matrix or list, containing latent variable values
   for each observation. Used for computations when \code{type = "ov"}.}
-\item{drop.list.single.group}{Logical. If \code{FALSE}, the results are 
+\item{parallel}{Character. Only used in the categorical case, where factor
+  scores are computed by a per-observation numerical optimization. The options
+  are \code{"no"} (serial), \code{"multicore"} (fork-based, not available on
+  Windows) and \code{"snow"} (a PSOCK cluster). The default, \code{"auto"},
+  uses \code{"multicore"} automatically (on non-Windows platforms) when a
+  large number of distinct optimizations is required, and runs serially
+  otherwise. Because the computation is deterministic, the results do not
+  depend on the value of this argument.}
+\item{ncpus}{Integer. The number of processes to use in parallel computation.
+  The default is to use all available cores, minus two.}
+\item{cl}{An optional \pkg{parallel} or \pkg{snow} cluster for use when
+  \code{parallel = "snow"}. If not supplied, a cluster on the local machine is
+  created for the duration of the call.}
+\item{drop.list.single.group}{Logical. If \code{FALSE}, the results are
     returned as
     a list, where each element corresponds to a group (even if there is only
     a single group). If \code{TRUE}, the list will be unlisted if there is
