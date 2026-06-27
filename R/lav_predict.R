@@ -1215,13 +1215,14 @@ lav_predict_eta_ebm_ml <- function(lavobject = NULL, # for convenience
     }
   }
 
-  # The conditional density is evaluated with the group-1 model matrices
-  # (lav_predict_fy_eta_i is called with its default g = 1L). These matrices
-  # are loop-invariant, so we extract them once here instead of rebuilding
-  # them on every objective evaluation (the objective is called many times per
-  # case by the optimiser).
-  fy_mm_idx <- 1:lavmodel@nmat[1L] + cumsum(c(0, lavmodel@nmat))[1L]
-  fy_mlist <- lavmodel@GLIST[fy_mm_idx]
+  # Model matrices per group, used by the conditional-density evaluation. They
+  # are loop-invariant within a group, so we extract them once here instead of
+  # rebuilding them on every objective evaluation (the objective is called many
+  # times per case by the optimiser).
+  fy_mlist_g <- lapply(seq_len(lavdata@ngroups), function(gg) {
+    mm_idx <- 1:lavmodel@nmat[gg] + cumsum(c(0, lavmodel@nmat))[gg]
+    lavmodel@GLIST[mm_idx]
+  })
 
   # local objective function: x = lv values
   f_eta_i <- function(x, y_i, x_i, mu_i) {
@@ -1246,8 +1247,9 @@ lav_predict_eta_ebm_ml <- function(lavobject = NULL, # for convenience
       theta_sd = theta_sd,
       th = th,
       th_idx = th_idx,
+      g = g,
       log = TRUE,
-      mlist = fy_mlist
+      mlist = fy_mlist_g[[g]]
     )
 
     if (ml) {
