@@ -123,6 +123,18 @@ everyday users, but for authors of external R packages that depend on
 }
 \value{
   A data.frame containing standardized model parameters.
+
+  If the model was fitted with \code{se = "bootstrap"} (and the bootstrap
+  draws are available), the standardized estimates in the bootstrap samples
+  are stored as the \code{"boot_std"} attribute of the returned data.frame (a
+  matrix with one row per bootstrap draw and one column per row of the
+  returned solution). These can be retrieved with
+  \code{attr(x, "boot_std")}, analogous to
+  \code{lavInspect(object, "coef.boot")} for the unstandardized solution.
+
+  In addition, if \code{boot.ci.type = "bca"}, the empirical-influence design
+  matrix used to compute the acceleration constant is stored as the
+  \code{"design"} attribute (retrieve with \code{attr(x, "design")}).
 }
 \examples{
 HS.model <- ' visual  =~ x1 + x2 + x3

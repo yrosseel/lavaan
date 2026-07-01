@@ -129,6 +129,13 @@ shown in the output.}
   the lower and upper values of the confidence intervals. If requested,
   extra columns are added with standardized versions of the parameter
   estimates.
+
+  If the model was fitted with \code{se = "bootstrap"} and
+  \code{boot.ci.type = "bca"}, the empirical-influence design matrix used to
+  compute the acceleration constant is stored as the \code{"design"}
+  attribute of the returned data.frame (retrieve with
+  \code{attr(x, "design")}). The parameter estimates in the bootstrap samples
+  themselves are available via \code{lavInspect(object, "coef.boot")}.
 }
 \references{
 Savalei, V. & Rhemtulla, M. (2012). On obtaining estimates of the fraction of

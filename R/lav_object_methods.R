@@ -365,6 +365,7 @@ standardizedSolution <-                                      # nolint start
     # simply re-standardize each bootstrap draw.
     boot_std <- NULL
     boot_error_idx <- integer(0L)
+    boot_bca_design <- NULL
     tmp_boot_free <- NULL
     tmp_fun_x <- NULL
     if (object@Options$se == "bootstrap" && se &&
@@ -399,6 +400,12 @@ standardizedSolution <-                                      # nolint start
           boot_std <- as.matrix(boot_std)
         }
         boot_std[!is.finite(boot_std)] <- as.numeric(NA)
+        # label the columns like lavInspect(object, "coef.boot"); one column
+        # per row of the (full) standardized solution, kept in sync with the
+        # returned rows below (see the remove.* blocks) so users can retrieve
+        # the standardized estimates in the bootstrap samples via
+        # attr(., "boot_std")
+        colnames(boot_std) <- lav_pt_labels(tmp_partable)
       }
     }
 
@@ -480,6 +487,9 @@ standardizedSolution <-                                      # nolint start
         if (boot.ci.type == "bca") {
           design <- lav_bootstrap_bca_design(object, boot_error_idx)
           stopifnot(nrow(design) == nrow(boot_std))
+          # keep the empirical-influence design matrix, so users can retrieve
+          # it via attr(., "design") (it is computed anyway for BCa)
+          boot_bca_design <- design
           acc <- lav_bootstrap_acceleration(boot_std, design)
           ci <- lav_bootstrap_ci(boot_t = boot_std, t0 = t0,
             boot.ci.type = "bca", level = level, acc = acc)
@@ -543,6 +553,9 @@ standardizedSolution <-                                      # nolint start
       eq_idx <- which(tmp_list$op == "==")
       if (length(eq_idx) > 0L) {
         tmp_list <- tmp_list[-eq_idx, ]
+        if (!is.null(boot_std)) {
+          boot_std <- boot_std[, -eq_idx, drop = FALSE]
+        }
       }
     }
     # remove <> rows?
@@ -550,6 +563,9 @@ standardizedSolution <-                                      # nolint start
       ineq_idx <- which(tmp_list$op %in% c("<", ">"))
       if (length(ineq_idx) > 0L) {
         tmp_list <- tmp_list[-ineq_idx, ]
+        if (!is.null(boot_std)) {
+          boot_std <- boot_std[, -ineq_idx, drop = FALSE]
+        }
       }
     }
     # remove := rows?
@@ -557,6 +573,9 @@ standardizedSolution <-                                      # nolint start
       def_idx <- which(tmp_list$op == ":=")
       if (length(def_idx) > 0L) {
         tmp_list <- tmp_list[-def_idx, ]
+        if (!is.null(boot_std)) {
+          boot_std <- boot_std[, -def_idx, drop = FALSE]
+        }
       }
     }
     # remove auxiliary (saturated-correlates) rows? (FIML aux= variables)
@@ -565,6 +584,9 @@ standardizedSolution <-                                      # nolint start
         tmp_list$rhs %in% object@Options$aux)
       if (length(aux_idx) > 0L) {
         tmp_list <- tmp_list[-aux_idx, ]
+        if (!is.null(boot_std)) {
+          boot_std <- boot_std[, -aux_idx, drop = FALSE]
+        }
       }
     }
 
@@ -584,6 +606,16 @@ standardizedSolution <-                                      # nolint start
       tmp_list$exo <- NULL
       tmp_list$block <- NULL
       class(tmp_list) <- c("lavaan.data.frame", "data.frame")
+    }
+
+    # store the standardized estimates in the bootstrap samples (issue #597)
+    # and, for BCa, the empirical-influence design matrix (issue #598), so
+    # users can retrieve both without recomputing them
+    if (!is.null(boot_std)) {
+      attr(tmp_list, "boot_std") <- boot_std
+    }
+    if (!is.null(boot_bca_design)) {
+      attr(tmp_list, "design") <- boot_bca_design
     }
 
     tmp_list
@@ -801,6 +833,7 @@ lavParameterEstimates <- function(object,                      # nolint start
     }
 
     bootstrap_successful <- NROW(tmp_boot) # should be zero if NULL
+    boot_bca_design <- NULL # BCa empirical-influence design matrix (issue #598)
 
     # confidence interval
     if (se && object@Options$se != "none" && ci) {
@@ -881,6 +914,9 @@ lavParameterEstimates <- function(object,                      # nolint start
           # computations are shared with lavEffects() (see lav_bootstrap.R).
           design <- lav_bootstrap_bca_design(object, error_idx)
           stopifnot(nrow(design) == nrow(tmp_boot))
+          # keep the design matrix, so users can retrieve it via
+          # attr(., "design") (it is computed anyway for BCa)
+          boot_bca_design <- design
 
           ci <- cbind(tmp_list$est, tmp_list$est)
 
@@ -1302,6 +1338,12 @@ lavParameterEstimates <- function(object,                      # nolint start
       tmp_list$exo <- NULL
       tmp_list$lower <- tmp_list$upper <- NULL
       class(tmp_list) <- c("lavaan.data.frame", "data.frame")
+    }
+
+    # store the BCa empirical-influence design matrix (issue #598), so users
+    # can retrieve it via attr(., "design") without recomputing it
+    if (!is.null(boot_bca_design)) {
+      attr(tmp_list, "design") <- boot_bca_design
     }
 
     tmp_list
