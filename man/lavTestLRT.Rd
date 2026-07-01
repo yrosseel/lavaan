@@ -32,8 +32,16 @@ anova(object, ...)
   be nested in the parameter sense, while if \code{A.method = "delta"}, they
   only need to be nested in the covariance matrix sense.}
 \item{scaled.shifted}{Logical. Only used when method = \code{"satorra.2000"}.
-  If \code{TRUE}, we use a scaled and shifted test statistic; if \code{FALSE},
-  we use a mean and variance adjusted (Satterthwaite style) test statistic.}
+  If \code{TRUE}, we use a scaled and shifted test statistic. If \code{FALSE},
+  the statistic depends on the test that was used to fit the models: when the
+  models were fitted with a mean-and-variance adjusted test
+  (\code{test = "mean.var.adjusted"} or \code{"scaled.shifted"}), a mean and
+  variance adjusted (Satterthwaite style) difference test is used; when they
+  were fitted with a (Satorra-)Bentler scaled test
+  (\code{test = "satorra.bentler"}, \code{"yuan.bentler"} or
+  \code{"yuan.bentler.mplus"}), a scaled (non-shifted) difference test is used.
+  The title printed above the anova table reflects the statistic that is
+  actually used.}
 \item{type}{Character. If \code{"Chisq"}, the test statistic for each
   model is the (scaled or unscaled) model fit test statistic. If \code{"Cf"}, 
   the test statistic for each model is computed by the 

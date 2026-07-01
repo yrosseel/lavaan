@@ -513,8 +513,26 @@ lavTestLRT <- function(object, ..., method = "default", test = "default",   # no
         "function of two standard (not robust) statistics.",
         sep = ""
       )
+      # describe the difference test that is actually computed, so the title
+      # is not misleading (see GitHub issue #523). For method="satorra.2000"
+      # the exact statistic depends on both scaled.shifted= and the test that
+      # was used to fit the models (test_1); see lav_test_diff_satorra2000().
+      if (method == "satorra.2000" && scaled.shifted) {
+        stat_label <- "Scaled and Shifted"
+      } else if (method == "satorra.2000" &&
+        !test_1 %in% c("satorra.bentler", "yuan.bentler",
+          "yuan.bentler.mplus")) {
+        # satterthwaite-style (mean and variance adjusted) difference test
+        stat_label <- "Mean and Variance Adjusted"
+      } else if (method == "mean.var.adjusted.PLRT") {
+        stat_label <- "Mean and Variance Adjusted"
+      } else {
+        # satorra.bentler.2001 / satorra.bentler.2010, or satorra.2000 with a
+        # satorra.bentler/yuan.bentler test: a (Satorra-Bentler) scaled test
+        stat_label <- "Scaled"
+      }
       attr(val, "heading") <-
-        paste("\nScaled Chi-Squared Difference Test (method = ",
+        paste("\n", stat_label, " Chi-Squared Difference Test (method = ",
           dQuote(method), ")\n\n",
           lav_msg(paste("lavaan NOTE:", txt), showheader = TRUE),
           "\n",
