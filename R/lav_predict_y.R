@@ -13,19 +13,12 @@
 
 # YR 31 Jan 2023: we always 'force' meanstructure = TRUE (for now)
 
-# main function
-lavPredictY <- function(object,                                    # nolint start
-                        newdata = NULL,
-                        ynames = lav_object_vnames(object, "ov.y"),
-                        xnames = lav_object_vnames(object, "ov.x"),
-                        method = "conditional.mean",
-                        label = TRUE,
-                        assemble = TRUE,
-                        force.zero.mean = FALSE,
-                        lambda = 0) {                              # nolint end
-  stopifnot(inherits(object, "lavaan"))
-  # check object
-  object <- lav_object_check_version(object)
+# internal function: prepare the data and the y/x indices that are needed
+# by both lavPredictY() and lavResidualsY()
+lav_predict_y_prepare <- function(object,
+                                  newdata = NULL,
+                                  ynames = lav_object_vnames(object, "ov.y"),
+                                  xnames = lav_object_vnames(object, "ov.x")) {
 
   lavmodel <- object@Model
   lavdata <- object@Data
@@ -35,6 +28,8 @@ lavPredictY <- function(object,                                    # nolint star
   if (!lavmodel@meanstructure) {
     lavimplied$mean <- lapply(object@SampleStats@mean, as.matrix)
   }
+
+  new_data <- NULL
 
   # need full data set
   if (is.null(newdata)) {
@@ -155,21 +150,20 @@ lavPredictY <- function(object,                                    # nolint star
     }
   }
 
-  # prediction method
-  method <- tolower(method)
-  if (method == "conditional.mean") {
-    out <- lav_predict_y_conditional_mean(
-      lavobject = NULL,
-      lavmodel = lavmodel, lavdata = lavdata,
-      lavimplied = lavimplied,
-      data_obs = data_obs, y_idx = y_idx, x_idx = x_idx,
-      force_zero_mean = force.zero.mean,
-      lambda = lambda
-    )
-  } else {
-    lav_msg_stop(gettext("method must be \"conditional.mean\" (for now)."))
-  }
+  list(
+    lavmodel = lavmodel, lavdata = lavdata, lavimplied = lavimplied,
+    new_data = new_data, data_obs = data_obs, ov_names = ov_names,
+    ynames = ynames, xnames = xnames, y_idx = y_idx, x_idx = x_idx
+  )
+}
 
+
+# internal function: label + (optionally) assemble the per-group output
+# matrices (predictions or residuals) into the user-facing result. This is
+# shared by lavPredictY() and lavResidualsY().
+lav_predict_y_assemble <- function(out, ynames, lavdata,
+                                   newdata = NULL, new_data = NULL,
+                                   label = TRUE, assemble = TRUE) {
   # label?
   if (label) {
     # column names
@@ -226,6 +220,103 @@ lavPredictY <- function(object,                                    # nolint star
   }
 
   res
+}
+
+
+# main function
+lavPredictY <- function(object,                                    # nolint start
+                        newdata = NULL,
+                        ynames = lav_object_vnames(object, "ov.y"),
+                        xnames = lav_object_vnames(object, "ov.x"),
+                        method = "conditional.mean",
+                        label = TRUE,
+                        assemble = TRUE,
+                        force.zero.mean = FALSE,
+                        lambda = 0) {                              # nolint end
+  stopifnot(inherits(object, "lavaan"))
+  # check object
+  object <- lav_object_check_version(object)
+
+  # prepare data + y/x indices
+  prep <- lav_predict_y_prepare(
+    object = object, newdata = newdata,
+    ynames = ynames, xnames = xnames
+  )
+
+  # prediction method
+  method <- tolower(method)
+  if (method == "conditional.mean") {
+    out <- lav_predict_y_conditional_mean(
+      lavobject = NULL,
+      lavmodel = prep$lavmodel, lavdata = prep$lavdata,
+      lavimplied = prep$lavimplied,
+      data_obs = prep$data_obs, y_idx = prep$y_idx, x_idx = prep$x_idx,
+      force_zero_mean = force.zero.mean,
+      lambda = lambda
+    )
+  } else {
+    lav_msg_stop(gettext("method must be \"conditional.mean\" (for now)."))
+  }
+
+  # label + assemble
+  lav_predict_y_assemble(
+    out = out, ynames = prep$ynames, lavdata = prep$lavdata,
+    newdata = newdata, new_data = prep$new_data,
+    label = label, assemble = assemble
+  )
+}
+
+
+# compute residuals (observed - predicted) for the y-variables, given the
+# x-variables. See lavPredictY() for the prediction part. First version:
+# YR 2 July 2026 (feature request in GitHub issue #269).
+lavResidualsY <- function(object,                                  # nolint start
+                          newdata = NULL,
+                          ynames = lav_object_vnames(object, "ov.y"),
+                          xnames = lav_object_vnames(object, "ov.x"),
+                          method = "conditional.mean",
+                          label = TRUE,
+                          assemble = TRUE,
+                          force.zero.mean = FALSE,
+                          lambda = 0) {                            # nolint end
+  stopifnot(inherits(object, "lavaan"))
+  # check object
+  object <- lav_object_check_version(object)
+
+  # prepare data + y/x indices (identical to lavPredictY)
+  prep <- lav_predict_y_prepare(
+    object = object, newdata = newdata,
+    ynames = ynames, xnames = xnames
+  )
+
+  # prediction method
+  method <- tolower(method)
+  if (method == "conditional.mean") {
+    ypred <- lav_predict_y_conditional_mean(
+      lavobject = NULL,
+      lavmodel = prep$lavmodel, lavdata = prep$lavdata,
+      lavimplied = prep$lavimplied,
+      data_obs = prep$data_obs, y_idx = prep$y_idx, x_idx = prep$x_idx,
+      force_zero_mean = force.zero.mean,
+      lambda = lambda
+    )
+  } else {
+    lav_msg_stop(gettext("method must be \"conditional.mean\" (for now)."))
+  }
+
+  # residuals = observed - predicted (per group)
+  out <- vector("list", length = prep$lavdata@ngroups)
+  for (g in seq_len(prep$lavdata@ngroups)) {
+    yobs_g <- prep$data_obs[[g]][, prep$y_idx[[g]], drop = FALSE]
+    out[[g]] <- yobs_g - ypred[[g]]
+  }
+
+  # label + assemble
+  lav_predict_y_assemble(
+    out = out, ynames = prep$ynames, lavdata = prep$lavdata,
+    newdata = newdata, new_data = prep$new_data,
+    label = label, assemble = assemble
+  )
 }
 
 

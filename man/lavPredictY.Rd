@@ -65,6 +65,9 @@ be determined using the \code{lavPredictY_cv} function.
 
 \code{\link{lavPredictY_cv}} to determine an optimal lambda to increase
 prediction accuracy.
+
+\code{\link{lavResidualsY}} to compute the residuals for the y-variables
+(observed minus predicted).
 }
 \references{
 de Rooij, M., Karch, J.D., Fokkema, M., Bakk, Z., Pratiwi, B.C, and 
