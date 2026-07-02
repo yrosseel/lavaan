@@ -17,9 +17,16 @@ anova(object, ...)
 \arguments{
 \item{object}{An object of class \code{\linkS4class{lavaan}}.}
 \item{...}{additional objects of class \code{\linkS4class{lavaan}}.}
-\item{method}{Character string. The possible options are 
+\item{method}{Character string. The possible options are
   \code{"satorra.bentler.2001"}, \code{"satorra.bentler.2010"},
-  \code{"satorra.2000"}, and \code{"standard"}. See details.}
+  \code{"satorra.2000"}, and \code{"standard"}. See details.
+  Note that the robust options (\code{"satorra.bentler.2001"},
+  \code{"satorra.bentler.2010"} and \code{"satorra.2000"}) require that the
+  models were fitted with a robust (scaled) test statistic (for example, using
+  \code{estimator = "MLM"} or \code{test = "satorra.bentler"}). If none of the
+  models were fitted with a robust test statistic, but a robust \code{method=}
+  is requested, a warning is issued, the \code{method=} argument is ignored,
+  and a standard (regular) chi-squared difference test is computed instead.}
 \item{test}{Character string specifying which scaled test statistics to use,
   in case multiple scaled \code{test=} options were requested when fitting the
   model(s). See details. FMG nested tests can be requested using names such as
@@ -83,6 +90,14 @@ anova(object, ...)
     Even when test statistics are scaled in \code{object} or \code{...},
     users may request the  \code{method="standard"} test statistic,
     without a robust adjustment.
+
+    Conversely, a robust \code{method=} (\code{"satorra.bentler.2001"},
+    \code{"satorra.bentler.2010"} or \code{"satorra.2000"}) can only be applied
+    when the models were fitted with a robust (scaled) test statistic. If none
+    of the models in \code{object} or \code{...} were fitted with a robust test
+    statistic, a robust \code{method=} cannot be honored: in that case a warning
+    is issued, the \code{method=} argument is ignored, and a standard (regular)
+    chi-squared difference test is returned.
 
     FMG nested tests are available when \code{type = "Chisq"} and
     \code{test} is an FMG test name. The supported nested FMG methods are

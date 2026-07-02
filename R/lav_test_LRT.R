@@ -199,6 +199,19 @@ lavTestLRT <- function(object, ..., method = "default", test = "default",   # no
 
   } else if (!any(mods_scaled)) { # thanks to R.M. Bee to fix this
     scaled <- FALSE
+    # if the user explicitly requested a robust difference test, but none of
+    # the models were fitted with a robust (scaled) test statistic, the
+    # method= argument cannot be honored: warn that it is ignored and a
+    # standard (regular) chi-squared difference test is computed instead
+    # (see GitHub issue #383)
+    if (method %in% c("satorra2000", "satorrabentler2001",
+                      "satorrabentler2010", "meanvaradjustedplrt")) {
+      lav_msg_warn(gettextf(
+        "method = %s requires robust test statistics, but none of the models
+        were fitted with a robust test; the method= argument is ignored, and a
+        standard (regular) chi-squared difference test is computed instead.",
+        dQuote(method.orig)))
+    }
     test_1 <- "standard"
     method <- "standard"
   } else {
@@ -261,20 +274,11 @@ lavTestLRT <- function(object, ..., method = "default", test = "default",   # no
     ## Or !scaled, so nothing to do.
   }
 
-  # check method if scaled = FALSE
-  if (type == "chisq" && !scaled &&
-    method %in% c(
-      "mean.var.adjusted.PLRT",
-      "satorra.bentler.2001",
-      "satorra.2000",
-      "satorra.bentler.2010"
-    )) {
-    lav_msg_warn(gettextf(
-      "method = %s but no robust test statistics were used; switching to the
-      standard chi-squared difference test", dQuote(method)))
-    method <- "standard"
-  }
-
+  # NOTE: when scaled = FALSE, method has already been reset to "standard"
+  # above (either because none of the models used a robust test statistic --
+  # in which case a warning was issued -- or because the user explicitly
+  # requested method = "standard" or a Browne residual type). So there is no
+  # need to check for a robust method here anymore.
 
   # which models have used a MEANSTRUCTURE?
   mods_meanstructure <- sapply(mods, function(x) {
