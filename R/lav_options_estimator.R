@@ -684,19 +684,17 @@ lav_options_est_iv <- function(opt) {
   # version is not available, so use the model-based variant.
   if ((length(opt$test) == 1L && opt$test == "default") || two_stage) {
     if (opt$.categorical) {
-      #opt$test <- if (two_stage) {
-      #  "browne.residual.adf.model"
-      #} else {
-      #  "browne.residual.adf" # always sample-based
-      #}
-      opt$test <- "browne.residual.adf.model" # must be (says AMO)
+      opt$test <- if (two_stage) {
+        "browne.residual.adf.model"
+      } else {
+        "browne.residual.adf" # always sample-based
+      }
     } else {
-      #opt$test <- if (two_stage) {
-      #  "browne.residual.nt.model"
-      #} else {
-      #  "browne.residual.nt" # sample-based (especially for baseline)
-      #}                       # model-based Sigma is here diagonal!
-      opt$test <- "browne.residual.nt.model" # must be (says AMO)
+      opt$test <- if (two_stage) {
+        "browne.residual.nt.model"
+      } else {
+        "browne.residual.nt" # sample-based (especially for baseline)
+      }                       # model-based Sigma is here diagonal!
     }
   }
   opt$standard.test <- opt$test[1]
