@@ -30,6 +30,8 @@ lav_predict_y_prepare <- function(object,
   }
 
   new_data <- NULL
+  newdata_bygroup <- FALSE
+  group_idx <- seq_len(lavdata@ngroups)
 
   # need full data set
   if (is.null(newdata)) {
@@ -45,8 +47,54 @@ lav_predict_y_prepare <- function(object,
       ov_names <- lavdata@ov.names
     }
     # eXo <- lavdata@eXo
+  } else if (is.list(newdata) && !is.data.frame(newdata)) {
+    # newdata is provided per group, as a list with one element per group.
+    # Elements may be NULL to skip a group. This is useful when the groups
+    # have a different set of variables, so that ynames= and xnames= can be
+    # specified per group (see GitHub issue #369). Each element is processed
+    # as a single-group dataset, using the ov.names of the corresponding
+    # group in the fitted model.
+    newdata_bygroup <- TRUE
+    if (length(newdata) != lavdata@ngroups) {
+      lav_msg_stop(gettextf(
+        "newdata is a list of length %1$d, but the model has %2$d group(s);
+        please provide one data.frame per group (use NULL to skip a group).",
+        length(newdata), lavdata@ngroups
+      ))
+    }
+    ov <- lavdata@ov
+    ordered_names <- ov$name[ov$type == "ordered"]
+    data_obs <- ov_names <- vector("list", lavdata@ngroups)
+    for (g in seq_len(lavdata@ngroups)) {
+      if (is.null(newdata[[g]])) {
+        next # skip this group; data_obs[[g]] stays NULL
+      }
+      new_data_g <- lav_lavdata(
+        data = newdata[[g]],
+        group = NULL, # treat as a single group
+        ov_names = lavdata@ov.names[[g]],
+        ov_names_x = lavdata@ov.names.x[[g]],
+        ordered = ordered_names,
+        lavoptions = list(
+          std.ov = lavdata@std.ov,
+          group.label = character(0L),
+          missing = "ml.x", # always!
+          warn = TRUE
+        ),
+        allow_single_case = TRUE
+      )
+      data_obs[[g]] <- new_data_g@X[[1L]]
+      ov_names[[g]] <- new_data_g@ov.names[[1L]]
+    }
+    group_idx <- which(!vapply(data_obs, is.null, logical(1)))
+    if (length(group_idx) == 0L) {
+      lav_msg_stop(gettext(
+        "newdata is a list, but all its elements are NULL; please provide the
+        data for at least one group."
+      ))
+    }
   } else {
-    # newdata is given!
+    # newdata is given (a single data.frame containing all groups)!
 
     # create lavData object
     ov <- lavdata@ov
@@ -120,9 +168,9 @@ lav_predict_y_prepare <- function(object,
     xnames <- rep(list(xnames), lavdata@ngroups)
   }
 
-  # create y.idx and x.idx
+  # create y.idx and x.idx (only for the groups we will predict for)
   y_idx <- x_idx <- vector("list", lavdata@ngroups)
-  for (g in seq_len(lavdata@ngroups)) {
+  for (g in group_idx) {
     # ynames in ov.names for this group?
     missing_idx <- which(!ynames[[g]] %in% ov_names[[g]])
     if (length(missing_idx) > 0L) {
@@ -153,7 +201,8 @@ lav_predict_y_prepare <- function(object,
   list(
     lavmodel = lavmodel, lavdata = lavdata, lavimplied = lavimplied,
     new_data = new_data, data_obs = data_obs, ov_names = ov_names,
-    ynames = ynames, xnames = xnames, y_idx = y_idx, x_idx = x_idx
+    ynames = ynames, xnames = xnames, y_idx = y_idx, x_idx = x_idx,
+    newdata_bygroup = newdata_bygroup, group_idx = group_idx
   )
 }
 
@@ -223,6 +272,31 @@ lav_predict_y_assemble <- function(out, ynames, lavdata,
 }
 
 
+# internal function: label the per-group output matrices when newdata was
+# provided as a per-group list (see lav_predict_y_prepare()). Only the
+# groups in group_idx are returned; there is no single-data.frame layout to
+# reassemble into, so a (labeled) list is returned -- or a single matrix if
+# only one group was requested.
+lav_predict_y_assemble_bygroup <- function(out, ynames, lavdata, group_idx,
+                                           label = TRUE) {
+  active <- out[group_idx]
+  if (label) {
+    for (i in seq_along(group_idx)) {
+      colnames(active[[i]]) <- ynames[[group_idx[i]]]
+    }
+    if (lavdata@ngroups > 1L) {
+      names(active) <- lavdata@group.label[group_idx]
+    }
+  }
+  active <- lapply(active, "class<-", c("lavaan.matrix", "matrix"))
+  if (length(active) == 1L) {
+    active[[1L]]
+  } else {
+    active
+  }
+}
+
+
 # main function
 lavPredictY <- function(object,                                    # nolint start
                         newdata = NULL,
@@ -259,11 +333,18 @@ lavPredictY <- function(object,                                    # nolint star
   }
 
   # label + assemble
-  lav_predict_y_assemble(
-    out = out, ynames = prep$ynames, lavdata = prep$lavdata,
-    newdata = newdata, new_data = prep$new_data,
-    label = label, assemble = assemble
-  )
+  if (prep$newdata_bygroup) {
+    lav_predict_y_assemble_bygroup(
+      out = out, ynames = prep$ynames, lavdata = prep$lavdata,
+      group_idx = prep$group_idx, label = label
+    )
+  } else {
+    lav_predict_y_assemble(
+      out = out, ynames = prep$ynames, lavdata = prep$lavdata,
+      newdata = newdata, new_data = prep$new_data,
+      label = label, assemble = assemble
+    )
+  }
 }
 
 
@@ -304,19 +385,26 @@ lavResidualsY <- function(object,                                  # nolint star
     lav_msg_stop(gettext("method must be \"conditional.mean\" (for now)."))
   }
 
-  # residuals = observed - predicted (per group)
+  # residuals = observed - predicted (only for the groups we predicted for)
   out <- vector("list", length = prep$lavdata@ngroups)
-  for (g in seq_len(prep$lavdata@ngroups)) {
+  for (g in prep$group_idx) {
     yobs_g <- prep$data_obs[[g]][, prep$y_idx[[g]], drop = FALSE]
     out[[g]] <- yobs_g - ypred[[g]]
   }
 
   # label + assemble
-  lav_predict_y_assemble(
-    out = out, ynames = prep$ynames, lavdata = prep$lavdata,
-    newdata = newdata, new_data = prep$new_data,
-    label = label, assemble = assemble
-  )
+  if (prep$newdata_bygroup) {
+    lav_predict_y_assemble_bygroup(
+      out = out, ynames = prep$ynames, lavdata = prep$lavdata,
+      group_idx = prep$group_idx, label = label
+    )
+  } else {
+    lav_predict_y_assemble(
+      out = out, ynames = prep$ynames, lavdata = prep$lavdata,
+      newdata = newdata, new_data = prep$new_data,
+      label = label, assemble = assemble
+    )
+  }
 }
 
 
@@ -386,6 +474,12 @@ lav_predict_y_conditional_mean <- function(
       lav_msg_stop(gettext("no support for multilevel data (yet)!"))
     } else {
       data_obs_g <- data_obs[[g]]
+
+      # no (new)data for this group? (e.g., per-group newdata list with a
+      # NULL entry); leave ypred[[g]] as NULL and move on
+      if (is.null(data_obs_g)) {
+        next
+      }
 
       # model-implied variance-covariance matrix for this group
       cov_g <- sigma_hat[[g]]

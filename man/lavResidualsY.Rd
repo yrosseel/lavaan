@@ -23,7 +23,14 @@ This data.frame should also include
 the y-variables (their observed values are used to compute the residuals).
 Note that if no meanstructure was used in the original fit, we will
 use the saturated sample means of the original fit as substitutes for the
-model-implied means. Alternatively, refit the model using \code{meanstructure = TRUE}.}
+model-implied means. Alternatively, refit the model using \code{meanstructure = TRUE}.
+For a multiple-group model, \code{newdata} can also be a \emph{list} with one
+data.frame per group (in the same order as the groups in \code{object}). An
+element may be \code{NULL} to skip that group. This is useful when the groups
+have a different set of variables, so that \code{ynames} and \code{xnames}
+can be specified per group (as a list). In that case, the result contains
+residuals only for the groups for which data were provided (a single matrix
+if only one group was requested, otherwise a named list).}
 \item{ynames}{The names of the observed variables that should be treated as the
 y-variables. It is for these variables that the function will compute
 the (model-based) residuals for each observation. Can also be a list to allow
