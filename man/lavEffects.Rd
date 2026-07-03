@@ -16,10 +16,10 @@ there are many of them.
 }
 \usage{
 lavEffects(object, effects = c("total", "indirect"),
-    se.def = NULL, level = 0.95, monte.carlo = NULL,
-    boot.ci.type = "perc", zstat = TRUE, pvalue = TRUE, ci = TRUE,
-    standardized = FALSE, cov.std = TRUE,
-    add.class = TRUE, output = "data.frame")
+    se_def = NULL, level = 0.95, monte_carlo = NULL,
+    boot_ci_type = "perc", zstat = TRUE, pvalue = TRUE, ci = TRUE,
+    standardized = FALSE, cov_std = TRUE,
+    add_class = TRUE, output = "data.frame", ...)
 }
 \arguments{
 \item{object}{An object of class \code{\linkS4class{lavaan}}.}
@@ -27,8 +27,8 @@ lavEffects(object, effects = c("total", "indirect"),
     \code{"indirect"} and \code{"direct"}. The default is
     \code{c("total", "indirect")}. The order of the elements does not matter;
     effects are always reported in the order total, indirect, direct.}
-\item{se.def}{Character (or \code{NULL}). The method used to compute standard
-    errors (and confidence intervals) for the effects. If \code{"monte.carlo"},
+\item{se_def}{Character (or \code{NULL}). The method used to compute standard
+    errors (and confidence intervals) for the effects. If \code{"monte_carlo"},
     the Monte Carlo method is used: parameters are drawn from a multivariate
     normal distribution with mean the parameter estimates and covariance matrix
     the estimated covariance matrix of the parameters, and the effects are
@@ -41,22 +41,22 @@ lavEffects(object, effects = c("total", "indirect"),
     bootstrap percentile confidence intervals. If \code{"none"}, no standard
     errors are computed.
 
-    If \code{se.def = NULL} (the default), the choice is inherited from the
+    If \code{se_def = NULL} (the default), the choice is inherited from the
     fitted object: if the model was fitted with \code{se = "bootstrap"} (and
     bootstrap draws are available), the bootstrap method is used; else if the
-    model was fitted with \code{se.def = "monte.carlo"}, the Monte Carlo method
+    model was fitted with \code{se_def = "monte.carlo"}, the Monte Carlo method
     is used; otherwise the Monte Carlo method is used as the default. An
     explicit value always overrides this inheritance.}
 \item{level}{Numeric. The confidence level for the confidence intervals.}
-\item{monte.carlo}{List (or \code{NULL}). Settings for the Monte Carlo method
-    (only used when \code{se.def = "monte.carlo"}), with elements \code{R} (the
+\item{monte_carlo}{List (or \code{NULL}). Settings for the Monte Carlo method
+    (only used when \code{se_def = "monte.carlo"}), with elements \code{R} (the
     number of Monte Carlo draws) and \code{seed} (the random seed). If
-    \code{NULL} (the default), the \code{monte.carlo} settings that were used
+    \code{NULL} (the default), the \code{monte_carlo} settings that were used
     when the model was fitted are inherited (which themselves default to
     \code{list(R = 20000L, seed = NULL)}). The state of the global random
     number generator is saved and restored, so the seed used here does not
     affect the user's random number stream.}
-\item{boot.ci.type}{Character. Only used when \code{se.def = "bootstrap"}. The
+\item{boot_ci_type}{Character. Only used when \code{se_def = "bootstrap"}. The
     type of bootstrap confidence interval, as in \code{\link{parameterEstimates}}:
     \code{"norm"} (normal-theory using the bootstrap bias and standard error),
     \code{"basic"} (basic bootstrap), \code{"perc"} (the default; percentile
@@ -86,9 +86,9 @@ lavEffects(object, effects = c("total", "indirect"),
     standardized effect of \eqn{j} on \eqn{i} equals the unstandardized effect
     times the ratio of the model-implied standard deviations
     \eqn{sd_j / sd_i}.}
-\item{cov.std}{Logical. See \code{\link{parameterEstimates}}. (Has no influence
+\item{cov_std}{Logical. See \code{\link{parameterEstimates}}. (Has no influence
     on the standardized regression-type effects reported here.)}
-\item{add.class}{Logical. If \code{TRUE}, the result (when
+\item{add_class}{Logical. If \code{TRUE}, the result (when
     \code{output = "data.frame"}) is given the class
     \code{c("lavaan.effects", "lavaan.data.frame", "data.frame")}, so that a
     dedicated print method is used.}
@@ -97,6 +97,7 @@ lavEffects(object, effects = c("total", "indirect"),
     is a list of matrices (one per effect type, and one per block in the
     multilevel/multigroup case), where element \eqn{[i,j]} contains the effect
     of variable \eqn{j} on variable \eqn{i}.}
+\item{...}{Only old names of arguments - with dots - are allowed here.}
 }
 \details{
 All effects are derived from the reduced-form matrix
@@ -170,8 +171,8 @@ fit <- sem(model, data = Data)
 lavEffects(fit)
 
 # all effects, using the delta method
-lavEffects(fit, effects = c("total", "indirect", "direct"), se.def = "delta")
+lavEffects(fit, effects = c("total", "indirect", "direct"), se_def = "delta")
 
 # add standardized (total and indirect) effects
-lavEffects(fit, se.def = "delta", standardized = TRUE)
+lavEffects(fit, se_def = "delta", standardized = TRUE)
 }

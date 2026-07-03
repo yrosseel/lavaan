@@ -941,7 +941,7 @@ lav_bootstrap_norm_inter <- function(t, alpha) {
 #            contain NA/Inf values; these are ignored). Not used for the
 #            "norm" method.
 #   t0     : length-p vector of point estimates.
-#   boot.ci.type : one of "norm", "basic", "perc", "bca.simple", "bca".
+#   boot_ci_type : one of "norm", "basic", "perc", "bca.simple", "bca".
 #   level  : the confidence level.
 #   se     : length-p vector of standard errors (required for "norm").
 #   bias   : length-p vector of bias estimates (only for "norm"); if NULL, it
@@ -952,16 +952,16 @@ lav_bootstrap_norm_inter <- function(t, alpha) {
 # Returns a p x 2 matrix with the lower and upper confidence bounds. For
 # quantities with no bootstrap variability (or with se = 0), the bounds default
 # to the point estimate.
-lav_bootstrap_ci <- function(boot_t = NULL, t0, boot.ci.type = "perc",
+lav_bootstrap_ci <- function(boot_t = NULL, t0, boot_ci_type = "perc",
                              level = 0.95, se = NULL, bias = NULL,
                              acc = NULL) {
-  boot.ci.type <- match.arg(boot.ci.type,
+  boot_ci_type <- match.arg(boot_ci_type,
     c("norm", "basic", "perc", "bca.simple", "bca"))
   p <- length(t0)
   ci <- cbind(t0, t0)
   dimnames(ci) <- NULL
 
-  if (boot.ci.type == "norm") {
+  if (boot_ci_type == "norm") {
     stopifnot(!is.null(se))
     if (is.null(bias)) {
       bias <- colMeans(boot_t, na.rm = TRUE) - t0
@@ -974,15 +974,15 @@ lav_bootstrap_ci <- function(boot_t = NULL, t0, boot.ci.type = "perc",
   stopifnot(!is.null(boot_t))
   boot_t <- as.matrix(boot_t)
 
-  if (boot.ci.type == "basic") {
+  if (boot_ci_type == "basic") {
     alpha <- (1 + c(level, -level)) / 2
     qq <- apply(boot_t, 2L, lav_bootstrap_norm_inter, alpha)
     ci <- 2 * ci - t(qq[c(3L, 4L), , drop = FALSE])
-  } else if (boot.ci.type == "perc") {
+  } else if (boot_ci_type == "perc") {
     alpha <- (1 + c(-level, level)) / 2
     qq <- apply(boot_t, 2L, lav_bootstrap_norm_inter, alpha)
     ci <- t(qq[c(3L, 4L), , drop = FALSE])
-  } else if (boot.ci.type %in% c("bca.simple", "bca")) {
+  } else if (boot_ci_type %in% c("bca.simple", "bca")) {
     alpha <- (1 + c(-level, level)) / 2
     zalpha <- qnorm(alpha)
     if (is.null(acc)) {
