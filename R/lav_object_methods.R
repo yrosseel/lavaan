@@ -492,7 +492,7 @@ standardizedSolution <-                                      # nolint start
           boot_bca_design <- design
           acc <- lav_bootstrap_acceleration(boot_std, design)
           ci <- lav_bootstrap_ci(boot_t = boot_std, t0 = t0,
-            boot.ci.type = "bca", level = level, acc = acc)
+            boot_ci_type = "bca", level = level, acc = acc)
         } else {
           # For "norm", the bias is evaluated at the mean of the bootstrapped
           # (free) parameters, exactly as in parameterEstimates().
@@ -503,7 +503,7 @@ standardizedSolution <-                                      # nolint start
             NULL
           }
           ci <- lav_bootstrap_ci(boot_t = boot_std, t0 = t0,
-            boot.ci.type = boot.ci.type, level = level,
+            boot_ci_type = boot.ci.type, level = level,
             se = tmp_list$se, bias = bias)
         }
       } else {
@@ -889,7 +889,7 @@ lavParameterEstimates <- function(object,                      # nolint start
             !duplicated(object@ParTable$free))
           ci[free_idx, ] <- lav_bootstrap_ci(
             boot_t = tmp_boot, t0 = tmp_list$est[free_idx],
-            boot.ci.type = boot.ci.type, level = level
+            boot_ci_type = boot.ci.type, level = level
           )
 
           # defined parameters
@@ -903,7 +903,7 @@ lavParameterEstimates <- function(object,                      # nolint start
             }
             ci[def_idx, ] <- lav_bootstrap_ci(
               boot_t = boot_def, t0 = tmp_list$est[def_idx],
-              boot.ci.type = boot.ci.type, level = level
+              boot_ci_type = boot.ci.type, level = level
             )
           }
 
@@ -927,7 +927,7 @@ lavParameterEstimates <- function(object,                      # nolint start
           acc <- lav_bootstrap_acceleration(tmp_boot, design)
           ci[free_idx, ] <- lav_bootstrap_ci(
             boot_t = tmp_boot, t0 = tmp_list$est[free_idx],
-            boot.ci.type = "bca", level = level, acc = acc
+            boot_ci_type = "bca", level = level, acc = acc
           )
 
           # defined parameters
@@ -942,7 +942,7 @@ lavParameterEstimates <- function(object,                      # nolint start
             acc <- lav_bootstrap_acceleration(boot_def, design)
             ci[def_idx, ] <- lav_bootstrap_ci(
               boot_t = boot_def, t0 = tmp_list$est[def_idx],
-              boot.ci.type = "bca", level = level, acc = acc
+              boot_ci_type = "bca", level = level, acc = acc
             )
           }
 

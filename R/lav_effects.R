@@ -12,8 +12,8 @@
 #   - total    effect of j on i:   ((I - BETA)^{-1} - I)[i, j]
 #   - indirect effect of j on i:   total[i, j] - direct[i, j]
 #
-# Standard errors are obtained either by the delta method (se.def = "delta")
-# or by the Monte Carlo method (se.def = "monte.carlo", the default), both of
+# Standard errors are obtained either by the delta method (se_def = "delta")
+# or by the Monte Carlo method (se_def = "monte.carlo", the default), both of
 # which only need the point estimates and the (co)variance matrix of the free
 # parameters.
 #
@@ -25,17 +25,20 @@
 
 lavEffects <- function(object,
                        effects = c("total", "indirect"),
-                       se.def = NULL,
+                       se_def = NULL,
                        level = 0.95,
-                       monte.carlo = NULL,
-                       boot.ci.type = "perc",
+                       monte_carlo = NULL,
+                       boot_ci_type = "perc",
                        zstat = TRUE,
                        pvalue = TRUE,
                        ci = TRUE,
                        standardized = FALSE,
-                       cov.std = TRUE,
-                       add.class = TRUE,
-                       output = "data.frame") {
+                       cov_std = TRUE,
+                       add_class = TRUE,
+                       output = "data.frame",
+                      ...) {
+  dotdotdot <- list(...)
+  lav_adapt_func(environment(), dotdotdot, NULL)
 
   # check object
   stopifnot(inherits(object, "lavaan"))
@@ -44,19 +47,19 @@ lavEffects <- function(object,
   boot.available <- !is.null(object@boot$coef) &&
     NROW(object@boot$coef) > 0L
 
-  # resolve the 'se.def' argument: if the user did not specify it, honor the
+  # resolve the 'se_def' argument: if the user did not specify it, honor the
   # choices that were made when the model was fitted
-  if (is.null(se.def)) {
+  if (is.null(se_def)) {
     if (identical(object@Options$se, "bootstrap") && boot.available) {
       # se = "bootstrap" -> use the available bootstrap draws
-      se.def <- "bootstrap"
+      se_def <- "bootstrap"
     } else if (identical(object@Options$se.def, "monte.carlo")) {
       # the user explicitly requested the Monte Carlo method for the
       # defined parameters of the original model
-      se.def <- "monte.carlo"
+      se_def <- "monte.carlo"
     } else {
       # lavEffects() default
-      se.def <- "monte.carlo"
+      se_def <- "monte.carlo"
     }
   }
 
@@ -77,47 +80,47 @@ lavEffects <- function(object,
   # keep canonical order, drop duplicates
   effects <- effects.choices[effects.choices %in% effects]
 
-  # check 'se.def' argument
-  se.def <- tolower(as.character(se.def)[1L])
+  # check 'se_def' argument
+  se_def <- tolower(as.character(se_def)[1L])
   # allow a few aliases
-  se.def <- switch(se.def,
-    "mc" = , "montecarlo" = , "monte-carlo" = "monte.carlo",
+  se_def <- switch(se_def,
+    "mc" = , "montecarlo" = , "monte_carlo" =, "monte-carlo" = "monte.carlo",
     "boot" = "bootstrap",
-    se.def)
-  if (!se.def %in% c("monte.carlo", "delta", "bootstrap", "none")) {
+    se_def)
+  if (!se_def %in% c("monte.carlo", "delta", "bootstrap", "none")) {
     lav_msg_stop(gettextf(
-      "Unknown \"se.def\" argument: %s; valid choices are \"monte.carlo\",
-       \"delta\", \"bootstrap\" or \"none\".", dQuote(se.def)))
+      "Unknown \"se_def\" argument: %s; valid choices are \"monte.carlo\",
+       \"delta\", \"bootstrap\" or \"none\".", dQuote(se_def)))
   }
-  if (identical(se.def, "bootstrap") && !boot.available) {
+  if (identical(se_def, "bootstrap") && !boot.available) {
     lav_msg_warn(gettext(
-      "se.def = \"bootstrap\" was requested, but no bootstrap draws are
+      "se_def = \"bootstrap\" was requested, but no bootstrap draws are
        available in the fitted object; standard errors are not available.
        Refit the model with se = \"bootstrap\" (or use bootstrapLavaan())."))
-    se.def <- "none"
+    se_def <- "none"
   }
 
-  # check 'boot.ci.type' argument (only relevant when se.def = "bootstrap")
-  boot.ci.type <- as.character(boot.ci.type)[1L]
-  if (!boot.ci.type %in% c("norm", "basic", "perc", "bca.simple", "bca")) {
+  # check 'boot_ci_type' argument (only relevant when se_def = "bootstrap")
+  boot_ci_type <- as.character(boot_ci_type)[1L]
+  if (!boot_ci_type %in% c("norm", "basic", "perc", "bca.simple", "bca")) {
     lav_msg_stop(gettextf(
-      "Unknown \"boot.ci.type\" argument: %s; valid choices are \"norm\",
-       \"basic\", \"perc\", \"bca.simple\" or \"bca\".", dQuote(boot.ci.type)))
+      "Unknown \"boot_ci_type\" argument: %s; valid choices are \"norm\",
+       \"basic\", \"perc\", \"bca.simple\" or \"bca\".", dQuote(boot_ci_type)))
   }
 
   # resolve the Monte Carlo settings (R, seed): if not specified, inherit the
   # 'monte.carlo' list that was used when the model was fitted
-  if (is.null(monte.carlo)) {
-    monte.carlo <- object@Options$monte.carlo
+  if (is.null(monte_carlo)) {
+    monte_carlo <- object@Options$monte.carlo
   }
-  mc.R <- 20000L
-  mc.seed <- NULL
-  if (!is.null(monte.carlo)) {
-    if (!is.null(monte.carlo$R)) {
-      mc.R <- as.integer(monte.carlo$R)
+  mc_r <- 20000L
+  mc_seed <- NULL
+  if (!is.null(monte_carlo)) {
+    if (!is.null(monte_carlo$R)) {
+      mc_r <- as.integer(monte_carlo$R)
     }
-    if (!is.null(monte.carlo$seed)) {
-      mc.seed <- monte.carlo$seed
+    if (!is.null(monte_carlo$seed)) {
+      mc_seed <- monte_carlo$seed
     }
   }
 
@@ -141,7 +144,7 @@ lavEffects <- function(object,
 
   nblocks <- lavmodel@nblocks
   nmat    <- lavmodel@nmat
-  GLIST.names <- names(lavmodel@GLIST)
+  glist_names <- names(lavmodel@GLIST)
 
   # build the per-block 'specs' that describe, for each block, which effects
   # are structurally non-zero and must be reported.
@@ -153,84 +156,84 @@ lavEffects <- function(object,
   # the GAMMA matrix). When conditional.x = FALSE there is no GAMMA matrix and
   # the columns are simply the eta variables (square case).
   specs <- vector("list", nblocks)
-  has.beta <- logical(nblocks)
+  has_beta <- logical(nblocks)
   for (b in seq_len(nblocks)) {
     # which GLIST matrices belong to block b?
-    mm.in.block <- seq_len(nmat[b]) + cumsum(c(0L, nmat))[b]
-    beta.idx <- mm.in.block[GLIST.names[mm.in.block] == "beta"]
-    if (length(beta.idx) == 0L) {
-      has.beta[b] <- FALSE
+    mm_in_block <- seq_len(nmat[b]) + cumsum(c(0L, nmat))[b]
+    beta_idx <- mm_in_block[glist_names[mm_in_block] == "beta"]
+    if (length(beta_idx) == 0L) {
+      has_beta[b] <- FALSE
       next
     }
-    has.beta[b] <- TRUE
-    beta.idx <- beta.idx[1L]
+    has_beta[b] <- TRUE
+    beta_idx <- beta_idx[1L]
 
-    B0 <- lavmodel@GLIST[[beta.idx]]
-    nr <- nrow(B0)
-    row.names.b <- lavmodel@dimNames[[beta.idx]][[1L]]
+    b0 <- lavmodel@GLIST[[beta_idx]]
+    nr <- nrow(b0)
+    row.names.b <- lavmodel@dimNames[[beta_idx]][[1L]]
     if (is.null(row.names.b)) {
       row.names.b <- as.character(seq_len(nr))
     }
-    beta.m.idx <- lavmodel@m.free.idx[[beta.idx]]
-    beta.x.idx <- lavmodel@x.free.idx[[beta.idx]]
+    beta_m_idx <- lavmodel@m.free.idx[[beta_idx]]
+    beta_x_idx <- lavmodel@x.free.idx[[beta_idx]]
 
-    # structural adjacency among eta: A[i, j] = TRUE if there is a (possible)
+    # structural adjacency among eta: a[i, j] = TRUE if there is a (possible)
     # direct edge j -> i (the element is free, or fixed to a non-zero value)
-    A <- (B0 != 0)
-    if (length(beta.m.idx) > 0L) {
-      A[beta.m.idx] <- TRUE
+    a <- (b0 != 0)
+    if (length(beta_m_idx) > 0L) {
+      a[beta_m_idx] <- TRUE
     }
-    diag(A) <- FALSE
+    diag(a) <- FALSE
 
-    # reachability among eta (transitive closure): T1[i, j] = TRUE if j
+    # reachability among eta (transitive closure): t1[i, j] = TRUE if j
     # influences i through one or more directed paths
-    T1 <- lav_effects_reachable(A)
+    t1 <- lav_effects_reachable(a)
 
     # GAMMA (exogenous covariates), if conditional.x = TRUE
-    gamma.idx <- mm.in.block[GLIST.names[mm.in.block] == "gamma"]
-    G0 <- NULL
-    gamma.m.idx <- gamma.x.idx <- integer(0L)
+    gamma.idx <- mm_in_block[glist_names[mm_in_block] == "gamma"]
+    g0 <- NULL
+    gamma_m_idx <- gamma_x_idx <- integer(0L)
     x.names.b <- character(0L)
     nx <- 0L
     if (length(gamma.idx) > 0L) {
       gamma.idx <- gamma.idx[1L]
-      G0 <- lavmodel@GLIST[[gamma.idx]]
-      nx <- ncol(G0)
+      g0 <- lavmodel@GLIST[[gamma.idx]]
+      nx <- ncol(g0)
       x.names.b <- lavmodel@dimNames[[gamma.idx]][[2L]]
       if (is.null(x.names.b)) {
         x.names.b <- as.character(seq_len(nx))
       }
-      gamma.m.idx <- lavmodel@m.free.idx[[gamma.idx]]
-      gamma.x.idx <- lavmodel@x.free.idx[[gamma.idx]]
+      gamma_m_idx <- lavmodel@m.free.idx[[gamma.idx]]
+      gamma_x_idx <- lavmodel@x.free.idx[[gamma.idx]]
     }
 
     nr.col <- nr + nx
     col.names.b <- c(row.names.b, x.names.b)
 
     # augmented structural patterns (rows = eta, cols = eta then x)
-    #   direct  : [ A | Ax ]
-    #   total   : [ T1 | ((I|T1) %*% Ax) ]   (reflexive reach * Gamma)
-    #   indirect: [ (A %*% T1) | (T1 %*% Ax) ]
-    IND.ee <- ((A %*% T1) > 0L)
-    diag(IND.ee) <- FALSE
+    #   direct  : [ a | ax ]
+    #   total   : [ t1 | ((I|t1) %*% ax) ]   (reflexive reach * Gamma)
+    #   indirect: [ (a %*% t1) | (t1 %*% ax) ]
+    ind_ee <- ((a %*% t1) > 0L)
+    diag(ind_ee) <- FALSE
     if (nx > 0L) {
-      Ax <- (G0 != 0)
-      if (length(gamma.m.idx) > 0L) {
-        Ax[gamma.m.idx] <- TRUE
+      ax <- (g0 != 0)
+      if (length(gamma_m_idx) > 0L) {
+        ax[gamma_m_idx] <- TRUE
       }
-      refl <- T1
-      diag(refl) <- TRUE # reflexive reachability (I | T1)
-      TOT <- cbind(T1, (refl %*% Ax) > 0L)
-      DIR <- cbind(A,  Ax)
-      IND <- cbind(IND.ee, (T1 %*% Ax) > 0L)
+      refl <- t1
+      diag(refl) <- TRUE # reflexive reachability (I | t1)
+      tot <- cbind(t1, (refl %*% ax) > 0L)
+      dir <- cbind(a,  ax)
+      ind <- cbind(ind_ee, (t1 %*% ax) > 0L)
     } else {
-      TOT <- T1
-      DIR <- A
-      IND <- IND.ee
+      tot <- t1
+      dir <- a
+      ind <- ind_ee
     }
 
     # per effect type, the (i, j) cells (and linear indices) to report
-    pat <- list(total = TOT, indirect = IND, direct = DIR)
+    pat <- list(total = tot, indirect = ind, direct = dir)
     cells <- list()
     for (e in effects) {
       P <- pat[[e]]
@@ -254,17 +257,17 @@ lavEffects <- function(object,
       nr.col      = nr.col,     # number of columns (eta + x / predictors)
       row.names   = row.names.b,
       col.names   = col.names.b,
-      B0          = B0,
-      beta.m.idx  = beta.m.idx,
-      beta.x.idx  = beta.x.idx,
-      G0          = G0,
-      gamma.m.idx = gamma.m.idx,
-      gamma.x.idx = gamma.x.idx,
+      b0          = b0,
+      beta_m_idx  = beta_m_idx,
+      beta_x_idx  = beta_x_idx,
+      g0          = g0,
+      gamma_m_idx = gamma_m_idx,
+      gamma_x_idx = gamma_x_idx,
       cells       = cells
     )
   }
 
-  if (!any(has.beta)) {
+  if (!any(has_beta)) {
     lav_msg_warn(gettext(
       "The model contains no regressions (empty BETA matrix); there are no
        indirect or total effects to compute."))
@@ -280,104 +283,104 @@ lavEffects <- function(object,
     empty <- lav_effects_empty_df(effects, zstat, pvalue)
     return(empty)
   }
-  EFF.df <- skeleton$df
-  row.block <- skeleton$block
-  row.eff   <- skeleton$effect
-  row.lin   <- skeleton$lin
+  eff_df <- skeleton$df
+  row_block <- skeleton$block
+  row_eff   <- skeleton$effect
+  row_lin   <- skeleton$lin
 
   # the master effect-evaluation function: free parameter vector -> vector of
-  # all reported effects (in the order of EFF.df). Written to also work with a
+  # all reported effects (in the order of eff_df). Written to also work with a
   # complex 'x' (needed for the complex-step jacobian).
-  eff.func <- lav_effects_func(specs, effects, nblocks)
+  eff_func <- lav_effects_func(specs, effects, nblocks)
 
   # point estimates
-  x.hat <- lav_model_get_parameters(lavmodel = lavmodel, type = "free")
-  est <- eff.func(x.hat)
-  EFF.df$est <- as.numeric(est)
+  x_hat <- lav_model_get_parameters(lavmodel = lavmodel, type = "free")
+  est <- eff_func(x_hat)
+  eff_df$est <- as.numeric(est)
 
   # standard errors / confidence intervals
   se <- rep(as.numeric(NA), length(est))
-  ci.lower <- ci.upper <- rep(as.numeric(NA), length(est))
+  ci_lower <- ci_upper <- rep(as.numeric(NA), length(est))
 
   a <- (1 - level) / 2
   nboot <- NULL # for the print header (bootstrap only)
 
-  if (se.def == "bootstrap") {
+  if (se_def == "bootstrap") {
     # bootstrap-based standard errors and percentile confidence intervals,
     # using the bootstrap draws stored in the fitted object
-    BOOT <- try(lav_inspect_boot(object, add_labels = FALSE,
+    boot <- try(lav_inspect_boot(object, add_labels = FALSE,
       add_class = FALSE), silent = TRUE)
-    error.idx <- attr(BOOT, "error.idx")
+    error.idx <- attr(boot, "error.idx")
     if (length(error.idx) > 0L) {
-      BOOT <- BOOT[-error.idx, , drop = FALSE] # drops attributes
+      boot <- boot[-error.idx, , drop = FALSE] # drops attributes
     }
-    if (inherits(BOOT, "try-error") || is.null(BOOT) || NROW(BOOT) == 0L) {
+    if (inherits(boot, "try-error") || is.null(boot) || NROW(boot) == 0L) {
       lav_msg_warn(gettext(
         "Could not extract the bootstrap draws from the fitted object;
          standard errors are not available."))
     } else {
-      nboot <- NROW(BOOT)
-      boot.eff <- apply(BOOT, 1L, eff.func)
+      nboot <- NROW(boot)
+      boot_eff <- apply(boot, 1L, eff_func)
       if (length(est) == 1L) {
-        boot.eff <- matrix(boot.eff, ncol = 1L)
+        boot_eff <- matrix(boot_eff, ncol = 1L)
       } else {
-        boot.eff <- t(boot.eff)
+        boot_eff <- t(boot_eff)
       }
-      boot.eff[!is.finite(boot.eff)] <- as.numeric(NA)
+      boot_eff[!is.finite(boot_eff)] <- as.numeric(NA)
       # bootstrap standard error, using the same MLE-normalised covariance
       # (cov * (nboot - 1)/nboot) that lavaan uses elsewhere for bootstrap SEs
-      se <- apply(boot.eff, 2L, sd, na.rm = TRUE) * sqrt((nboot - 1) / nboot)
+      se <- apply(boot_eff, 2L, sd, na.rm = TRUE) * sqrt((nboot - 1) / nboot)
       # bootstrap confidence interval; the per-quantity computation is shared
       # with parameterEstimates() via lav_bootstrap_ci() (see lav_bootstrap.R)
-      if (identical(boot.ci.type, "bca")) {
+      if (identical(boot_ci_type, "bca")) {
         # adjusted bootstrap percentile method: the acceleration constants are
         # obtained from the empirical influence values of the effects
         design <- lav_bootstrap_bca_design(object, error.idx)
-        stopifnot(nrow(design) == nrow(boot.eff))
-        acc <- lav_bootstrap_acceleration(boot.eff, design)
-        eff.ci <- lav_bootstrap_ci(boot_t = boot.eff, t0 = est,
-          boot.ci.type = "bca", level = level, acc = acc)
+        stopifnot(nrow(design) == nrow(boot_eff))
+        acc <- lav_bootstrap_acceleration(boot_eff, design)
+        eff_ci <- lav_bootstrap_ci(boot_t = boot_eff, t0 = est,
+          boot_ci_type = "bca", level = level, acc = acc)
       } else {
         # For the "norm" method, the bias is evaluated at the mean of the
         # bootstrapped (free) parameters, exactly as in parameterEstimates().
-        bias <- if (identical(boot.ci.type, "norm")) {
-          as.numeric(eff.func(colMeans(BOOT, na.rm = TRUE))) - est
+        bias <- if (identical(boot_ci_type, "norm")) {
+          as.numeric(eff_func(colMeans(boot, na.rm = TRUE))) - est
         } else {
           NULL
         }
-        eff.ci <- lav_bootstrap_ci(boot_t = boot.eff, t0 = est,
-          boot.ci.type = boot.ci.type, level = level, se = se, bias = bias)
+        eff_ci <- lav_bootstrap_ci(boot_t = boot_eff, t0 = est,
+          boot_ci_type = boot_ci_type, level = level, se = se, bias = bias)
       }
-      ci.lower <- eff.ci[, 1L]
-      ci.upper <- eff.ci[, 2L]
+      ci_lower <- eff_ci[, 1L]
+      ci_upper <- eff_ci[, 2L]
     }
-  } else if (se.def %in% c("delta", "monte.carlo")) {
+  } else if (se_def %in% c("delta", "monte.carlo")) {
     # (co)variance matrix of the free parameters
-    VCOV <- try(unclass(lavInspect(object, "vcov")), silent = TRUE)
-    if (inherits(VCOV, "try-error") || is.null(VCOV)) {
+    vcov <- try(unclass(lavInspect(object, "vcov")), silent = TRUE)
+    if (inherits(vcov, "try-error") || is.null(vcov)) {
       lav_msg_warn(gettext(
         "Could not extract the variance-covariance matrix of the parameters;
          standard errors are not available."))
     } else {
       # reduce to the 'free' (compact) space if needed (ceq.simple.only)
-      VCOV <- lav_model_vcov_unco_to_free(lavmodel, VCOV)
+      vcov <- lav_model_vcov_unco_to_free(lavmodel, vcov)
 
-      if (se.def == "delta") {
-        JAC <- try(lav_func_jacobian_complex(func = eff.func, x = x.hat),
+      if (se_def == "delta") {
+        jac <- try(lav_func_jacobian_complex(func = eff_func, x = x_hat),
           silent = TRUE)
-        if (inherits(JAC, "try-error")) {
-          JAC <- lav_func_jacobian_simple(func = eff.func, x = x.hat)
+        if (inherits(jac, "try-error")) {
+          jac <- lav_func_jacobian_simple(func = eff_func, x = x_hat)
         }
-        eff.cov <- JAC %*% VCOV %*% t(JAC)
+        eff.cov <- jac %*% vcov %*% t(jac)
         diag.cov <- diag(eff.cov)
         diag.cov[diag.cov < 0] <- as.numeric(NA)
         se <- sqrt(diag.cov)
         # symmetric normal-theory confidence interval
-        ci.lower <- est + qnorm(a) * se
-        ci.upper <- est + qnorm(1 - a) * se
+        ci_lower <- est + qnorm(a) * se
+        ci_upper <- est + qnorm(1 - a) * se
       } else { # monte.carlo
-        mc <- lav_effects_mc_draws(x.hat, VCOV, R = mc.R, seed = mc.seed)
-        mc.eff <- apply(mc, 1L, eff.func)
+        mc <- lav_effects_mc_draws(x_hat, vcov, R = mc_r, seed = mc_seed)
+        mc.eff <- apply(mc, 1L, eff_func)
         if (length(est) == 1L) {
           mc.eff <- matrix(mc.eff, ncol = 1L)
         } else {
@@ -388,57 +391,57 @@ lavEffects <- function(object,
         # percentile confidence interval
         mc.ci <- apply(mc.eff, 2L, quantile, probs = c(a, 1 - a),
           na.rm = TRUE, names = FALSE)
-        ci.lower <- mc.ci[1L, ]
-        ci.upper <- mc.ci[2L, ]
+        ci_lower <- mc.ci[1L, ]
+        ci_upper <- mc.ci[2L, ]
       }
     }
   }
-  EFF.df$se <- as.numeric(se)
+  eff_df$se <- as.numeric(se)
 
   if (zstat || pvalue) {
-    z <- EFF.df$est / EFF.df$se
+    z <- eff_df$est / eff_df$se
     if (zstat) {
-      EFF.df$z <- z
+      eff_df$z <- z
     }
     if (pvalue) {
-      EFF.df$pvalue <- 2 * (1 - pnorm(abs(z)))
+      eff_df$pvalue <- 2 * (1 - pnorm(abs(z)))
     }
   }
 
-  if (ci && se.def != "none") {
-    EFF.df$ci.lower <- as.numeric(ci.lower)
-    EFF.df$ci.upper <- as.numeric(ci.upper)
+  if (ci && se_def != "none") {
+    eff_df$ci_lower <- as.numeric(ci_lower)
+    eff_df$ci_upper <- as.numeric(ci_upper)
   }
 
   if (output == "list") {
-    return(lav_effects_as_list(EFF.df, specs, effects, lavmodel,
-      row.block = row.block, row.eff = row.eff, row.lin = row.lin))
+    return(lav_effects_as_list(eff_df, specs, effects, lavmodel,
+      row_block = row_block, row_eff = row_eff, row_lin = row_lin))
   }
 
   # standardized effects? Add std.lv/std.all/std.nox/std.user columns (point
   # estimates), just like the standardized= argument of parameterEstimates().
   std.types <- lav_effects_std_types(object, standardized)
   if (length(std.types$types) > 0L) {
-    EFF.df <- lav_effects_add_standardized(EFF.df, object, lavmodel, specs,
-      row.block = row.block, row.lin = row.lin,
+    eff_df <- lav_effects_add_standardized(eff_df, object, lavmodel, specs,
+      row_block = row_block, row_lin = row_lin,
       std.types = std.types$types, ov.std.user = std.types$ov.std.user,
-      cov.std = cov.std)
+      cov_std = cov_std)
   }
 
   # attributes for printing
-  attr(EFF.df, "se.def") <- se.def
-  attr(EFF.df, "level")  <- if (ci) level else NULL
-  attr(EFF.df, "R")      <- if (se.def == "monte.carlo") mc.R else NULL
-  attr(EFF.df, "nboot")  <- nboot
-  attr(EFF.df, "boot.ci.type") <- if (se.def == "bootstrap") boot.ci.type
+  attr(eff_df, "se_def") <- se_def
+  attr(eff_df, "level")  <- if (ci) level else NULL
+  attr(eff_df, "R")      <- if (se_def == "monte.carlo") mc_r else NULL
+  attr(eff_df, "nboot")  <- nboot
+  attr(eff_df, "boot_ci_type") <- if (se_def == "bootstrap") boot_ci_type
     else NULL
-  attr(EFF.df, "ngroups") <- lavdata@ngroups
+  attr(eff_df, "ngroups") <- lavdata@ngroups
 
-  if (add.class) {
-    class(EFF.df) <- c("lavaan.effects", "lavaan.data.frame", "data.frame")
+  if (add_class) {
+    class(eff_df) <- c("lavaan.effects", "lavaan.data.frame", "data.frame")
   }
 
-  EFF.df
+  eff_df
 }
 
 # resolve the 'standardized' argument (as in parameterEstimates()) into a
@@ -516,12 +519,12 @@ lav_effects_std_sd_vec <- function(var.names, sd.all, type, lv.names,
 # The standardized effect of j on i equals effect[i,j] * sd_j / sd_i, where the
 # SDs are the model-implied standard deviations of the BETA variables under the
 # requested standardization type.
-lav_effects_add_standardized <- function(EFF.df, object, lavmodel, specs,
-                                         row.block, row.lin, std.types,
-                                         ov.std.user = NULL, cov.std = TRUE) {
+lav_effects_add_standardized <- function(eff_df, object, lavmodel, specs,
+                                         row_block, row_lin, std.types,
+                                         ov.std.user = NULL, cov_std = TRUE) {
   nblocks <- lavmodel@nblocks
   nmat <- lavmodel@nmat
-  GLIST.names <- names(lavmodel@GLIST)
+  glist_names <- names(lavmodel@GLIST)
   partable <- object@ParTable
 
   # model-implied (co)variances of the BETA (eta) variables, per block
@@ -544,8 +547,8 @@ lav_effects_add_standardized <- function(EFF.df, object, lavmodel, specs,
     sd.row.all[[b]] <- sd.eta
     if (sp$nr.col > sp$nr) {
       # exogenous covariate SDs (from cov.x), in the GAMMA column order
-      mm.in.block <- seq_len(nmat[b]) + cumsum(c(0L, nmat))[b]
-      covx.idx <- mm.in.block[GLIST.names[mm.in.block] == "cov.x"]
+      mm_in_block <- seq_len(nmat[b]) + cumsum(c(0L, nmat))[b]
+      covx.idx <- mm_in_block[glist_names[mm_in_block] == "cov.x"]
       if (length(covx.idx) > 0L) {
         sd.x <- sqrt(diag(lavmodel@GLIST[[covx.idx[1L]]]))
       } else {
@@ -559,7 +562,7 @@ lav_effects_add_standardized <- function(EFF.df, object, lavmodel, specs,
     ovx.names[[b]] <- lav_pt_vnames(partable, "ov.x", block = b)
   }
 
-  nr.rows <- nrow(EFF.df)
+  nr.rows <- nrow(eff_df)
   for (ty in std.types) {
     # per-block SD vectors (row and column) for this standardization type
     sd.row <- vector("list", nblocks)
@@ -575,17 +578,17 @@ lav_effects_add_standardized <- function(EFF.df, object, lavmodel, specs,
     }
     std.col <- rep(as.numeric(NA), nr.rows)
     for (r in seq_len(nr.rows)) {
-      b <- row.block[r]
+      b <- row_block[r]
       nr <- specs[[b]]$nr
-      lin <- row.lin[r]
+      lin <- row_lin[r]
       i <- ((lin - 1L) %% nr) + 1L
       j <- ((lin - 1L) %/% nr) + 1L
-      std.col[r] <- EFF.df$est[r] * sd.col[[b]][j] / sd.row[[b]][i]
+      std.col[r] <- eff_df$est[r] * sd.col[[b]][j] / sd.row[[b]][i]
     }
-    EFF.df[[ty]] <- std.col
+    eff_df[[ty]] <- std.col
   }
 
-  EFF.df
+  eff_df
 }
 
 # print method for the object returned by lavEffects()
@@ -603,7 +606,7 @@ lav_effects_print <- function(x, ..., nd = 3L) {
   num.format  <- paste("%", max(8L, nd + 5L), ".", nd, "f", sep = "")
   char.format <- paste("%", max(8L, nd + 5L), "s", sep = "")
 
-  se.def  <- attr(x, "se.def")
+  se_def  <- attr(x, "se_def")
   level   <- attr(x, "level")
   ngroups <- attr(x, "ngroups")
   if (is.null(ngroups)) {
@@ -612,23 +615,23 @@ lav_effects_print <- function(x, ..., nd = 3L) {
 
   # header
   cat("\nEffects:\n\n")
-  if (!is.null(se.def)) {
+  if (!is.null(se_def)) {
     c1 <- c("Standard errors")
-    c2 <- c(switch(se.def, monte.carlo = "Monte Carlo", delta = "Delta",
-      bootstrap = "Bootstrap", none = "None", se.def))
-    if (identical(se.def, "monte.carlo") && !is.null(attr(x, "R"))) {
+    c2 <- c(switch(se_def, monte.carlo = "Monte Carlo", delta = "Delta",
+      bootstrap = "Bootstrap", none = "None", se_def))
+    if (identical(se_def, "monte.carlo") && !is.null(attr(x, "R"))) {
       c1 <- c(c1, "Monte Carlo draws")
       c2 <- c(c2, format(attr(x, "R")))
     }
-    if (identical(se.def, "bootstrap") && !is.null(attr(x, "nboot"))) {
+    if (identical(se_def, "bootstrap") && !is.null(attr(x, "nboot"))) {
       c1 <- c(c1, "Bootstrap draws")
       c2 <- c(c2, format(attr(x, "nboot")))
     }
-    if (identical(se.def, "bootstrap") && !is.null(attr(x, "boot.ci.type"))) {
+    if (identical(se_def, "bootstrap") && !is.null(attr(x, "boot_ci_type"))) {
       c1 <- c(c1, "Bootstrap CI type")
-      c2 <- c(c2, attr(x, "boot.ci.type"))
+      c2 <- c(c2, attr(x, "boot_ci_type"))
     }
-    if (!is.null(level) && !identical(se.def, "none")) {
+    if (!is.null(level) && !identical(se_def, "none")) {
       c1 <- c(c1, "Confidence level")
       c2 <- c(c2, format(level))
     }
@@ -677,11 +680,11 @@ lav_effects_print <- function(x, ..., nd = 3L) {
       if (!is.null(sub$pvalue)) {
         cols[["P(>|z|)"]] <- sprintf(num.format, sub$pvalue)
       }
-      if (!is.null(sub$ci.lower)) {
-        cols[["ci.lower"]] <- sprintf(num.format, sub$ci.lower)
+      if (!is.null(sub$ci_lower)) {
+        cols[["ci_lower"]] <- sprintf(num.format, sub$ci_lower)
       }
-      if (!is.null(sub$ci.upper)) {
-        cols[["ci.upper"]] <- sprintf(num.format, sub$ci.upper)
+      if (!is.null(sub$ci_upper)) {
+        cols[["ci_upper"]] <- sprintf(num.format, sub$ci_upper)
       }
       # standardized columns (if any)
       for (sc in c("std.lv", "std.all", "std.nox", "std.user")) {
@@ -696,7 +699,7 @@ lav_effects_print <- function(x, ..., nd = 3L) {
         na.se <- which(is.na(sub$se))
         if (length(na.se) > 0L) {
           for (cn in intersect(c("Std.Err", "z-value", "P(>|z|)",
-            "ci.lower", "ci.upper"), colnames(m))) {
+            "ci_lower", "ci_upper"), colnames(m))) {
             m[na.se, cn] <- sprintf(char.format, "")
           }
         }
@@ -720,12 +723,12 @@ lav_effects_print <- function(x, ..., nd = 3L) {
 }
 
 # transitive closure (reachability) of a boolean adjacency matrix, where
-# A[i, j] = TRUE means there is a direct edge j -> i. Returns T1 with
-# T1[i, j] = TRUE if j reaches i via one or more directed edges. The diagonal
+# a[i, j] = TRUE means there is a direct edge j -> i. Returns t1 with
+# t1[i, j] = TRUE if j reaches i via one or more directed edges. The diagonal
 # is forced to FALSE (we are not interested in self-loops).
-lav_effects_reachable <- function(A) {
-  n <- nrow(A)
-  R <- (A != 0)
+lav_effects_reachable <- function(a) {
+  n <- nrow(a)
+  R <- (a != 0)
   if (n > 1L) {
     # Warshall: R[i, j] |= R[i, k] & R[k, j]
     for (k in seq_len(n)) {
@@ -748,34 +751,34 @@ lav_effects_func <- function(specs, effects, nblocks) {
       if (is.null(sp)) {
         next
       }
-      B <- sp$B0
+      b <- sp$b0
       if (is.complex(x)) {
-        storage.mode(B) <- "complex"
+        storage.mode(b) <- "complex"
       }
-      if (length(sp$beta.m.idx) > 0L) {
-        B[sp$beta.m.idx] <- x[sp$beta.x.idx]
+      if (length(sp$beta_m_idx) > 0L) {
+        b[sp$beta_m_idx] <- x[sp$beta_x_idx]
       }
-      diag(B) <- 0
+      diag(b) <- 0
       nr <- sp$nr
-      I.B.inv <- solve(diag(nr) - B)
+      I.B.inv <- solve(diag(nr) - b)
 
       # eta -> eta effects (square block)
       total.ee <- I.B.inv - diag(nr)
-      if (is.null(sp$G0)) {
+      if (is.null(sp$g0)) {
         total  <- total.ee
-        direct <- B
+        direct <- b
       } else {
         # eta <- Gamma x effects: total = (I-B)^-1 Gamma, direct = Gamma,
         # indirect = total - direct
-        G <- sp$G0
+        g <- sp$g0
         if (is.complex(x)) {
-          storage.mode(G) <- "complex"
+          storage.mode(g) <- "complex"
         }
-        if (length(sp$gamma.m.idx) > 0L) {
-          G[sp$gamma.m.idx] <- x[sp$gamma.x.idx]
+        if (length(sp$gamma_m_idx) > 0L) {
+          g[sp$gamma_m_idx] <- x[sp$gamma_x_idx]
         }
-        total  <- cbind(total.ee, I.B.inv %*% G)
-        direct <- cbind(B, G)
+        total  <- cbind(total.ee, I.B.inv %*% g)
+        direct <- cbind(b, g)
       }
       indirect <- total - direct
 
@@ -795,8 +798,8 @@ lav_effects_func <- function(specs, effects, nblocks) {
   }
 }
 
-# draw R samples from MVN(x.hat, VCOV), saving/restoring the RNG state
-lav_effects_mc_draws <- function(x.hat, VCOV, R = 20000L, seed = NULL) {
+# draw R samples from MVN(x_hat, vcov), saving/restoring the RNG state
+lav_effects_mc_draws <- function(x_hat, vcov, R = 20000L, seed = NULL) {
   R <- as.integer(R)
   stopifnot(R > 0L)
 
@@ -814,8 +817,8 @@ lav_effects_mc_draws <- function(x.hat, VCOV, R = 20000L, seed = NULL) {
     set.seed(seed)
   }
 
-  vcov.sym <- 0.5 * (VCOV + t(VCOV))
-  mc <- lav_mvrnorm(n = R, mu = x.hat, sigma_1 = vcov.sym,
+  vcov.sym <- 0.5 * (vcov + t(vcov))
+  mc <- lav_mvrnorm(n = R, mu = x_hat, sigma_1 = vcov.sym,
     check_symmetry = FALSE)
   if (!is.matrix(mc)) {
     mc <- matrix(mc, nrow = R)
@@ -908,16 +911,16 @@ lav_effects_empty_df <- function(effects, zstat, pvalue) {
   if (pvalue) {
     df$pvalue <- numeric(0L)
   }
-  df$ci.lower <- numeric(0L)
-  df$ci.upper <- numeric(0L)
+  df$ci_lower <- numeric(0L)
+  df$ci_upper <- numeric(0L)
   class(df) <- c("lavaan.effects", "lavaan.data.frame", "data.frame")
   df
 }
 
 # convert the result to a list of matrices (one per block and per effect type),
 # using the per-row block/effect/linear-cell bookkeeping from the skeleton
-lav_effects_as_list <- function(EFF.df, specs, effects, lavmodel,
-                                row.block, row.eff, row.lin) {
+lav_effects_as_list <- function(eff_df, specs, effects, lavmodel,
+                                row_block, row_eff, row_lin) {
   nblocks <- lavmodel@nblocks
   out <- list()
   for (b in seq_len(nblocks)) {
@@ -930,15 +933,15 @@ lav_effects_as_list <- function(EFF.df, specs, effects, lavmodel,
     dn <- list(sp$row.names, sp$col.names)
     block.list <- list()
     for (e in effects) {
-      rows <- which(row.block == b & row.eff == e)
+      rows <- which(row_block == b & row_eff == e)
       if (length(rows) == 0L) {
         next
       }
       M.est <- matrix(0, nr, nr.col, dimnames = dn)
       M.se  <- matrix(as.numeric(NA), nr, nr.col, dimnames = dn)
-      M.est[row.lin[rows]] <- EFF.df$est[rows]
-      if (!is.null(EFF.df$se)) {
-        M.se[row.lin[rows]] <- EFF.df$se[rows]
+      M.est[row_lin[rows]] <- eff_df$est[rows]
+      if (!is.null(eff_df$se)) {
+        M.se[row_lin[rows]] <- eff_df$se[rows]
       }
       block.list[[e]] <- list(est = M.est, se = M.se)
     }
