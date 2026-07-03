@@ -23,6 +23,7 @@
 # YR 04 Jan 2020: adjust for sum(wt) != N
 # YR 22 Jul 2022: adding correlation= argument for information_expected
 #                 (only for catml; not used if correlation = TRUE!)
+# YR 03 Jul 2026: use shared kernels from lav_mvnorm_kernels.R
 
 # 1. log-likelihood h1
 
@@ -34,22 +35,13 @@ lav_mvn_h1_loglik_data <- function(
     wt = NULL,
     sinv_method = "eigen") {
 
-  if (!is.null(wt)) {
-    n <- sum(wt)
-  } else {
-    n <- NROW(y)
-  }
+  n <- lav_mvn_nobs(y = y, wt = wt)
   p <- NCOL(y)
 
   # sample statistics
-  if (!is.null(wt)) {
-    out <- stats::cov.wt(y, wt = wt, method = "ML")
-    sample_mean <- out$center
-    sample_cov <- out$cov
-  } else {
-    sample_mean <- base::.colMeans(y, m = n, n = p)
-    sample_cov <- lav_mat_cov(y)
-  }
+  samp <- lav_mvn_samp_stats(y = y, wt = wt)
+  sample_mean <- samp$mean
+  sample_cov <- samp$cov
 
   if (casewise) {
     log_2pi <- log(2 * pi)
@@ -186,11 +178,7 @@ lav_mvn_h1_logl_hessian_data <- function(
     sample_cov_inv = NULL,
     meanstructure = TRUE) {
 
-  if (!is.null(wt)) {
-    n <- sum(wt)
-  } else {
-    n <- NROW(y)
-  }
+  n <- lav_mvn_nobs(y = y, wt = wt)
 
   # observed information
   observed <- lav_mvn_h1_info_observed_data(
@@ -244,13 +232,7 @@ lav_mvn_h1_info_expected <- function(
 
   if (is.null(sample_cov_inv)) {
     if (is.null(sample_cov)) {
-      if (is.null(wt)) {
-        sample_mean <- base::.colMeans(y, m = NROW(y), n = NCOL(y))
-        sample_cov <- lav_mat_cov(y)
-      } else {
-        out <- stats::cov.wt(y, wt = wt, method = "ML")
-        sample_cov <- out$cov
-      }
+      sample_cov <- lav_mvn_samp_stats(y = y, wt = wt)$cov
     }
 
     # invert sample_cov
@@ -260,49 +242,27 @@ lav_mvn_h1_info_expected <- function(
     )
   }
 
-  i11 <- sample_cov_inv
-  if (correlation) {
-    # if (lav_use_lavaanC()) {
-    #   i22 <- lavaanC::m_kronecker_dup_cor_pre_post(sample.cov.inv,
-    #                                                multiplicator = 0.5)
-    # } else {
-      i22 <- 0.5 * lav_mat_dup_cor_pre_post(sample_cov_inv %x%
-                                                     sample_cov_inv)
-    # }
-  } else {
-    # if (lav_use_lavaanC()) {
-    #   i22 <- lavaanC::m_kronecker_dup_pre_post(sample.cov.inv,
-    #                                            multiplicator = 0.5)
-    # } else {
-      i22 <- 0.5 * lav_mat_dup_pre_post(sample_cov_inv %x%
-                                                   sample_cov_inv)
-    # }
-  }
-
-  # fixed.x?
-  if (length(x_idx) > 0L) {
-    pstar_x <- lav_mat_vech_which_idx(
-      n = NCOL(sample_cov_inv), idx = x_idx
-    )
-    i22[pstar_x, ] <- 0
-    i22[, pstar_x] <- 0
-  }
+  i22 <- lav_mvn_kron_dup_half(sample_cov_inv, correlation = correlation)
 
   if (meanstructure) {
-    # fixed.x?
-    if (length(x_idx) > 0L) {
-      i11[x_idx, ] <- 0
-      i11[, x_idx] <- 0
-    }
-    out <- lav_mat_bdiag(i11, i22)
+    out <- lav_mat_bdiag(sample_cov_inv, i22)
   } else {
     out <- i22
   }
+
+  # fixed.x?
+  out <- lav_mvn_zero_x_idx(out,
+    n = NCOL(sample_cov_inv), x_idx = x_idx,
+    meanstructure = meanstructure
+  )
 
   out
 }
 
 # 5b: unit observed information h1
+#     (identical to the expected information, as the data is complete
+#      and we evaluate at the MLEs Mu = ybar, Sigma = S;
+#      note: the correlation= argument is NOT forwarded here)
 lav_mvn_h1_info_observed_data <- function(
     y = NULL,
     wt = NULL,
@@ -328,43 +288,24 @@ lav_mvn_h1_info_observed_samp <- function(
     sample_cov_inv = NULL,
     meanstructure = TRUE) {
 
-  if (is.null(sample_cov_inv)) {
-    # invert sample_cov
-    sample_cov_inv <- lav_mat_sym_inverse(
-      s = sample_cov,
-      logdet = FALSE, sinv_method = sinv_method
-    )
-  }
+  sample_cov_inv <- lav_mvn_sigma_inv(
+    sigma_1 = sample_cov, sigma_inv = sample_cov_inv,
+    sinv_method = sinv_method
+  )
 
-  i11 <- sample_cov_inv
-  # fixed.x?
-  if (length(x_idx) > 0L) {
-    i11[x_idx, ] <- 0
-    i11[, x_idx] <- 0
-  }
-
-  # if (lav_use_lavaanC()) {
-  #   i22 <- lavaanC::m_kronecker_dup_pre_post(sample.cov.inv,
-  #                                            multiplicator = 0.5)
-  # } else {
-    i22 <- 0.5 * lav_mat_dup_pre_post(sample_cov_inv %x%
-    sample_cov_inv)
-  # }
-
-  # fixed.x?
-  if (length(x_idx) > 0L) {
-    pstar_x <- lav_mat_vech_which_idx(
-      n = NCOL(sample_cov_inv), idx = x_idx
-    )
-    i22[pstar_x, ] <- 0
-    i22[, pstar_x] <- 0
-  }
+  i22 <- lav_mvn_kron_dup_half(sample_cov_inv)
 
   if (meanstructure) {
-    out <- lav_mat_bdiag(i11, i22)
+    out <- lav_mat_bdiag(sample_cov_inv, i22)
   } else {
     out <- i22
   }
+
+  # fixed.x?
+  out <- lav_mvn_zero_x_idx(out,
+    n = NCOL(sample_cov_inv), x_idx = x_idx,
+    meanstructure = meanstructure
+  )
 
   out
 }
@@ -394,11 +335,10 @@ lav_mvn_h1_info_firstorder <- function(
     return(res)
   }
 
-   # sample.cov.inv
+  # sample.cov.inv
   if (is.null(sample_cov_inv)) {
     # invert sample_cov
     if (is.null(sample_cov)) {
-      sample_mean <- base::.colMeans(y, m = NROW(y), n = NCOL(y))
       sample_cov <- lav_mat_cov(y)
     }
     sample_cov_inv <- lav_mat_sym_inverse(
@@ -429,19 +369,6 @@ lav_mvn_h1_info_firstorder <- function(
     }
   }
 
-  # sample.cov.inv
-  if (is.null(sample_cov_inv)) {
-    # invert sample_cov
-    if (is.null(sample_cov)) {
-      sample_mean <- base::.colMeans(y, m = NROW(y), n = NCOL(y))
-      sample_cov <- lav_mat_cov(y)
-    }
-    sample_cov_inv <- lav_mat_sym_inverse(
-      s = sample_cov,
-      logdet = FALSE, sinv_method = sinv_method
-    )
-  }
-
   # A1
   a1 <- lav_mvn_h1_info_expected(
     y = y, sinv_method = sinv_method,
@@ -457,6 +384,7 @@ lav_mvn_h1_info_firstorder <- function(
 
 #    6a: (unit) inverted expected information (A1.inv = gamma_nt)
 #    6b: (unit) inverted observed information (A1.inv = gamma_nt)
+#        (one body, two names)
 
 lav_mvnorm_h1_inverted_information_expected <-              # nolint
 lav_mvn_h1_inv_info_observed <- function(
@@ -467,13 +395,7 @@ lav_mvn_h1_inv_info_observed <- function(
 
   # sample_cov
   if (is.null(sample_cov)) {
-    if (is.null(wt)) {
-      sample_mean <- base::.colMeans(y, m = NROW(y), n = NCOL(y))
-      sample_cov <- lav_mat_cov(y)
-    } else {
-      out <- stats::cov.wt(y, wt = wt, method = "ML")
-      sample_cov <- out$cov
-    }
+    sample_cov <- lav_mvn_samp_stats(y = y, wt = wt)$cov
   }
 
   if (length(x_idx) > 0L) {
@@ -485,12 +407,7 @@ lav_mvn_h1_inv_info_observed <- function(
     )
   } else {
     i11 <- sample_cov
-    # if (lav_use_lavaanC()) {
-    #   i22 <- lavaanC::m_kronecker_dup_ginv_pre_post(sample_cov,
-    #                                                 multiplicator = 2.0)
-    # } else {
-      i22 <- 2 * lav_mat_dup_ginv_pre_post(sample_cov %x% sample_cov)
-    # }
+    i22 <- lav_mvn_kron_dup_ginv2(sample_cov)
     gamma_nt <- lav_mat_bdiag(i11, i22)
   }
 
@@ -549,6 +466,7 @@ lav_mvn_h1_inv_info_firstorder <- function(
 
 #    7a: 1/N * gamma_nt
 #    7b: 1/N * gamma_nt
+#        (one body, two names)
 lav_mvn_h1_acov_expected <-
 lav_mvn_h1_acov_observed <- function(
     y = NULL,
@@ -556,11 +474,7 @@ lav_mvn_h1_acov_observed <- function(
     sample_cov = NULL,
     x_idx = integer(0L)) {
 
-  if (!is.null(wt)) {
-    n <- sum(wt)
-  } else {
-    n <- NROW(y)
-  }
+  n <- lav_mvn_nobs(y = y, wt = wt)
 
   gamma_nt <-
     lav_mvnorm_h1_inverted_information_expected(
@@ -583,11 +497,7 @@ lav_mvn_h1_acov_firstorder <- function(
     sample_cov_inv = NULL,
     gamma_1 = NULL) {
 
-  if (!is.null(wt)) {
-    n <- sum(wt)
-  } else {
-    n <- NROW(y)
-  }
+  n <- lav_mvn_nobs(y = y, wt = wt)
 
   j1_inv <- lav_mvn_h1_inv_info_firstorder(
     y = y, wt = wt,
@@ -612,11 +522,7 @@ lav_mvn_h1_acov_sandwich <- function(
     lav_msg_stop(gettext("function not supported if wt is not NULL"))
   }
 
-  # if(!is.null(wt)) {
-  #    N <- sum(wt)
-  # } else {
   n <- NROW(y)
-  # }
 
   # Gamma
   if (is.null(gamma_1)) {

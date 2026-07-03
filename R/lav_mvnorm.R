@@ -21,10 +21,11 @@
 # YR 07 Feb 2016: first version
 # YR 24 Mar 2016: added firstorder information, hessian logl
 # YR 19 Jan 2017: added lav_mvnorm_inverted_information_expected
-# YR 04 Okt 2018: adding wt= argument, and missing meanstructure=
 # YR 27 Jun 2018: adding cluster.idx= argument for information_firstorder
+# YR 04 Okt 2018: adding wt= argument, and missing meanstructure=
 # YR 24 Jul 2022: adding correlation= argument for information_expected
 #                 (only for catml; not for correlation = TRUE!)
+# YR 03 Jul 2026: use shared kernels from lav_mvnorm_kernels.R
 
 # 0. densities
 lav_mvn_dmvnorm <- function(y = NULL,
@@ -57,20 +58,11 @@ lav_mvn_dmvnorm <- function(y = NULL,
       dist_1 <- sum(y * y)
       out <- -(p * log_2pi + dist_1) / 2
     } else {
-      if (is.null(sigma_inv)) {
-        sigma_inv <- lav_mat_sym_inverse(
-          s = sigma_1,
-          logdet = TRUE, sinv_method = sinv_method
-        )
-        logdet <- attr(sigma_inv, "logdet")
-      } else {
-        logdet <- attr(sigma_inv, "logdet")
-        if (is.null(logdet)) {
-          # compute - ln|Sigma.inv|
-          ev <- eigen(sigma_inv, symmetric = TRUE, only.values = TRUE)
-          logdet <- -1 * sum(log(ev$values))
-        }
-      }
+      sigma_inv <- lav_mvn_sigma_inv(
+        sigma_1 = sigma_1, sigma_inv = sigma_inv,
+        sinv_method = sinv_method, logdet = TRUE
+      )
+      logdet <- attr(sigma_inv, "logdet")
 
       # mahalanobis distance
       yc <- y - mu
@@ -137,12 +129,7 @@ lav_mvn_loglik_data <- function(y = NULL,
   # Y must be a matrix (use lav_mvn_dmvnorm() for non-matrix input)
   stopifnot(is.matrix(y))
 
-  if (!is.null(wt)) {
-    n <- sum(wt)
-  } else {
-    n <- NROW(y)
-  }
-
+  n <- lav_mvn_nobs(y = y, wt = wt)
   p <- NCOL(y)
   mu <- as.numeric(mu)
 
@@ -179,17 +166,10 @@ lav_mvn_loglik_data <- function(y = NULL,
       s = sigma_1, logdet = TRUE,
       sinv_method = sinv_method
     )
-    if (!is.null(wt)) {
-      out <- stats::cov.wt(y, wt = wt, method = "ML")
-      sample_mean <- out$center
-      sample_cov <- out$cov
-    } else {
-      sample_mean <- base::.colMeans(y, m = n, n = p)
-      sample_cov <- lav_mat_cov(y)
-    }
+    samp <- lav_mvn_samp_stats(y = y, wt = wt)
     loglik <- lav_mvn_loglik_samp(
-      sample_mean = sample_mean,
-      sample_cov = sample_cov,
+      sample_mean = samp$mean,
+      sample_cov = samp$cov,
       sample_nobs = n,
       mu = mu,
       sigma_inv = sigma_inv
@@ -238,20 +218,11 @@ lav_mvn_loglik_samp <- function(sample_mean = NULL,
   sample_mean <- as.numeric(sample_mean)
   log_2pi <- log(2 * pi)
 
-  if (is.null(sigma_inv)) {
-    sigma_inv <- lav_mat_sym_inverse(
-      s = sigma_1, logdet = TRUE,
-      sinv_method = sinv_method
-    )
-    logdet <- attr(sigma_inv, "logdet")
-  } else {
-    logdet <- attr(sigma_inv, "logdet")
-    if (is.null(logdet)) {
-      # compute - ln|Sigma.inv|
-      ev <- eigen(sigma_inv, symmetric = TRUE, only.values = TRUE)
-      logdet <- -1 * sum(log(ev$values))
-    }
-  }
+  sigma_inv <- lav_mvn_sigma_inv(
+    sigma_1 = sigma_1, sigma_inv = sigma_inv,
+    sinv_method = sinv_method, logdet = TRUE
+  )
+  logdet <- attr(sigma_inv, "logdet")
 
   # tr(Sigma^{-1} %*% S)
   dist1 <- sum(sigma_inv * sample_cov)
@@ -293,12 +264,7 @@ lav_mvn_loglik_samp <- function(sample_mean = NULL,
 lav_mvn_loglik_data_z <- function(y = NULL,
                                      wt = NULL,
                                      casewise = FALSE) {
-  if (!is.null(wt)) {
-    n <- sum(wt)
-  } else {
-    n <- NROW(y)
-  }
-
+  n <- lav_mvn_nobs(y = y, wt = wt)
   p <- NCOL(y)
   log_2pi <- log(2 * pi)
 
@@ -309,17 +275,10 @@ lav_mvn_loglik_data_z <- function(y = NULL,
       loglik <- loglik * wt
     }
   } else {
-    if (!is.null(wt)) {
-      out <- stats::cov.wt(y, wt = wt, method = "ML")
-      sample_mean <- out$center
-      sample_cov <- out$cov
-    } else {
-      sample_mean <- base::.colMeans(y, m = n, n = p)
-      sample_cov <- lav_mat_cov(y)
-    }
+    samp <- lav_mvn_samp_stats(y = y, wt = wt)
 
-    dist1 <- sum(diag(sample_cov))
-    dist2 <- sum(sample_mean * sample_mean)
+    dist1 <- sum(diag(samp$cov))
+    dist2 <- sum(samp$mean * samp$mean)
 
     loglik <- -n / 2 * (p * log_2pi + dist1 + dist2)
   }
@@ -343,13 +302,10 @@ lav_mvn_dlogl_dmu <- function(y = NULL,
                                  sigma_inv = NULL) {
   mu <- as.numeric(mu)
 
-  if (is.null(sigma_inv)) {
-    # invert Sigma
-    sigma_inv <- lav_mat_sym_inverse(
-      s = sigma_1, logdet = FALSE,
-      sinv_method = sinv_method
-    )
-  }
+  sigma_inv <- lav_mvn_sigma_inv(
+    sigma_1 = sigma_1, sigma_inv = sigma_inv,
+    sinv_method = sinv_method
+  )
 
   # subtract 'Mu' from Y
   yc <- t(t(y) - mu)
@@ -378,34 +334,16 @@ lav_mvn_dlogl_dsigma <- function(y = NULL,
                                     x_idx = integer(0L),
                                     sinv_method = "eigen",
                                     sigma_inv = NULL) {
-  if (!is.null(wt)) {
-    n <- sum(wt)
-  } else {
-    n <- NROW(y)
-  }
-
+  n <- lav_mvn_nobs(y = y, wt = wt)
   mu <- as.numeric(mu)
 
-  if (is.null(sigma_inv)) {
-    # invert Sigma
-    sigma_inv <- lav_mat_sym_inverse(
-      s = sigma_1, logdet = FALSE,
-      sinv_method = sinv_method
-    )
-  }
+  sigma_inv <- lav_mvn_sigma_inv(
+    sigma_1 = sigma_1, sigma_inv = sigma_inv,
+    sinv_method = sinv_method
+  )
 
   # W.tilde
-  if (!is.null(wt)) {
-    out <- stats::cov.wt(y, wt = wt, method = "ML")
-    sy <- out$cov
-    my <- out$center
-    w_tilde <- sy + tcrossprod(my - mu)
-  } else {
-    # subtract 'Mu' from Y
-    # Yc <- t( t(Y) - Mu )
-    # W.tilde <- crossprod(Yc) / N
-    w_tilde <- lav_mat_cov(y, mu = mu)
-  }
+  w_tilde <- lav_mvn_w_tilde(y = y, wt = wt, mu = mu)
 
   # derivative
   d_sigma <- -(n / 2) * (sigma_inv - (sigma_inv %*% w_tilde %*% sigma_inv))
@@ -426,46 +364,13 @@ lav_mvn_dlogl_dvechsigma <- function(y = NULL,
                                         x_idx = integer(0L),
                                         sinv_method = "eigen",
                                         sigma_inv = NULL) {
-  if (!is.null(wt)) {
-    n <- sum(wt)
-  } else {
-    n <- NROW(y)
-  }
-
-  mu <- as.numeric(mu)
-
-  if (is.null(sigma_inv)) {
-    # invert Sigma
-    sigma_inv <- lav_mat_sym_inverse(
-      s = sigma_1, logdet = FALSE,
-      sinv_method = sinv_method
-    )
-  }
-
-  # W.tilde
-  if (!is.null(wt)) {
-    out <- stats::cov.wt(y, wt = wt, method = "ML")
-    sy <- out$cov
-    my <- out$center
-    w_tilde <- sy + tcrossprod(my - mu)
-  } else {
-    w_tilde <- lav_mat_cov(y, mu = mu)
-  }
-
-  # derivative (avoiding kronecker product)
-  d_sigma <- -(n / 2) * (sigma_inv - (sigma_inv %*% w_tilde %*% sigma_inv))
-
-  # fixed.x?
-  if (length(x_idx) > 0L) {
-    d_sigma[x_idx, x_idx] <- 0
-  }
+  d_sigma <- lav_mvn_dlogl_dsigma(
+    y = y, wt = wt, mu = mu, sigma_1 = sigma_1,
+    x_idx = x_idx, sinv_method = sinv_method, sigma_inv = sigma_inv
+  )
 
   # vech
-  dvech_sigma <- as.numeric(lav_mat_dup_pre(
-      as.matrix(lav_mat_vec(d_sigma))
-  ))
-
-  dvech_sigma
+  as.numeric(lav_mat_dup_pre(as.matrix(lav_mat_vec(d_sigma))))
 }
 
 # 2d: : derivative logl with respect to Mu and vech(Sigma)
@@ -476,34 +381,22 @@ lav_mvn_dlogl_dmu_dvechsigma <- function(m_y = NULL,
                                             x_idx = integer(0L),
                                             sinv_method = "eigen",
                                             sigma_inv = NULL) {
-  if (!is.null(wt)) {
-    n <- sum(wt)
-  } else {
-    n <- NROW(m_y)
-  }
-
+  n <- lav_mvn_nobs(y = m_y, wt = wt)
   m_mu <- as.numeric(m_mu)
 
-  if (is.null(sigma_inv)) {
-    # invert Sigma
-    sigma_inv <- lav_mat_sym_inverse(
-      s = m_sigma, logdet = FALSE,
-      sinv_method = sinv_method
-    )
-  }
+  sigma_inv <- lav_mvn_sigma_inv(
+    sigma_1 = m_sigma, sigma_inv = sigma_inv,
+    sinv_method = sinv_method
+  )
 
   # subtract Mu
   m_yc <- t(t(m_y) - m_mu)
 
   # m_w_tilde
+  m_w_tilde <- lav_mvn_w_tilde(y = m_y, wt = wt, mu = m_mu)
   if (!is.null(wt)) {
-    out <- stats::cov.wt(m_y, wt = wt, method = "ML")
-    m_sy <- out$cov
-    m_my <- out$center
-    m_w_tilde <- m_sy + tcrossprod(m_my - m_mu)
     dmu <- as.numeric(sigma_inv %*% colSums(m_yc * wt))
   } else {
-    m_w_tilde <- lav_mat_cov(m_y, mu = m_mu)
     dmu <- as.numeric(sigma_inv %*% colSums(m_yc))
   }
 
@@ -536,13 +429,10 @@ lav_mvn_sc_mu <- function(y = NULL,
                                  sigma_inv = NULL) {
   mu <- as.numeric(mu)
 
-  if (is.null(sigma_inv)) {
-    # invert Sigma
-    sigma_inv <- lav_mat_sym_inverse(
-      s = sigma_1, logdet = FALSE,
-      sinv_method = sinv_method
-    )
-  }
+  sigma_inv <- lav_mvn_sigma_inv(
+    sigma_1 = sigma_1, sigma_inv = sigma_inv,
+    sinv_method = sinv_method
+  )
 
   # subtract Mu
   yc <- t(t(y) - mu)
@@ -574,33 +464,16 @@ lav_mvn_sc_sigma <- function(y = NULL,
   p <- NCOL(y)
   mu <- as.numeric(mu)
 
-  if (is.null(sigma_inv)) {
-    # invert Sigma
-    sigma_inv <- lav_mat_sym_inverse(
-      s = sigma_1, logdet = FALSE,
-      sinv_method = sinv_method
-    )
-  }
-
-  # vech(Sigma.inv)
-  isigma <- lav_mat_vech(sigma_inv)
+  sigma_inv <- lav_mvn_sigma_inv(
+    sigma_1 = sigma_1, sigma_inv = sigma_inv,
+    sinv_method = sinv_method
+  )
 
   # subtract Mu
   yc <- t(t(y) - mu)
 
-  # postmultiply with Sigma.inv
-  yc <- yc %*% sigma_inv
-
-  # tcrossprod
-  idx1 <- lav_mat_vech_col_idx(p)
-  idx2 <- lav_mat_vech_row_idx(p)
-  z <- yc[, idx1] * yc[, idx2]
-
-  # subtract isigma from each row
-  sc <- t(t(z) - isigma)
-
-  # adjust for vech
-  sc[, lav_mat_diagh_idx(p)] <- sc[, lav_mat_diagh_idx(p)] / 2
+  # score kernel
+  sc <- lav_mvn_sc_kernel(yc = yc, sigma_inv = sigma_inv)$sigma
 
   # fixed.x?
   if (length(x_idx) > 0L) {
@@ -626,33 +499,18 @@ lav_mvn_sc_mu_sigma <- function(y = NULL,
   p <- NCOL(y)
   mu <- as.numeric(mu)
 
-  if (is.null(sigma_inv)) {
-    # invert Sigma
-    sigma_inv <- lav_mat_sym_inverse(
-      s = sigma_1, logdet = FALSE,
-      sinv_method = sinv_method
-    )
-  }
-
-  # vech(Sigma.inv)
-  isigma <- lav_mat_vech(sigma_inv)
+  sigma_inv <- lav_mvn_sigma_inv(
+    sigma_1 = sigma_1, sigma_inv = sigma_inv,
+    sinv_method = sinv_method
+  )
 
   # subtract Mu
   yc <- t(t(y) - mu)
 
-  # postmultiply with Sigma.inv
-  yc <- yc %*% sigma_inv
-
-  # tcrossprod
-  idx1 <- lav_mat_vech_col_idx(p)
-  idx2 <- lav_mat_vech_row_idx(p)
-  z <- yc[, idx1] * yc[, idx2]
-
-  # subtract isigma from each row
-  sc <- t(t(z) - isigma)
-
-  # adjust for lav_mat_dup_pre (not vech!)
-  sc[, lav_mat_diagh_idx(p)] <- sc[, lav_mat_diagh_idx(p)] / 2
+  # score kernel
+  sc2 <- lav_mvn_sc_kernel(yc = yc, sigma_inv = sigma_inv)
+  yc <- sc2$mu
+  sc <- sc2$sigma
 
   # fixed.x?
   if (length(x_idx) > 0L) {
@@ -682,11 +540,7 @@ lav_mvn_logl_hessian_data <- function(y = NULL,
                                          sinv_method = "eigen",
                                          sigma_inv = NULL,
                                          meanstructure = TRUE) {
-  if (!is.null(wt)) {
-    n <- sum(wt)
-  } else {
-    n <- NROW(y)
-  }
+  n <- lav_mvn_nobs(y = y, wt = wt)
 
   # observed information
   observed <- lav_mvn_info_observed_data(
@@ -735,49 +589,24 @@ lav_mvn_info_expected <- function(y = NULL, # unused!
                                             sigma_inv = NULL,
                                             meanstructure = TRUE,
                       correlation = FALSE) {
-  if (is.null(sigma_inv)) {
-    # invert Sigma
-    sigma_inv <- lav_mat_sym_inverse(
-      s = sigma_1, logdet = FALSE,
-      sinv_method = sinv_method
-    )
-  }
+  sigma_inv <- lav_mvn_sigma_inv(
+    sigma_1 = sigma_1, sigma_inv = sigma_inv,
+    sinv_method = sinv_method
+  )
 
-  # if (lav_use_lavaanC()) {
-  #   if (correlation) {
-  #     I22 <- lavaanC::m_kronecker_dup_cor_pre_post(Sigma.inv,
-  #                                                  multiplicator = 0.5)
-  #   } else {
-  #     I22 <- lavaanC::m_kronecker_dup_pre_post(Sigma.inv, multiplicator = 0.5)
-  #   }
-  # } else {
-    if (correlation) {
-      i22 <- 0.5 * lav_mat_dup_cor_pre_post(sigma_inv %x% sigma_inv)
-    } else {
-      i22 <- 0.5 * lav_mat_dup_pre_post(sigma_inv %x% sigma_inv)
-    }
-  # }
-
-  # fixed.x?
-  if (length(x_idx) > 0L) {
-    pstar_x <- lav_mat_vech_which_idx(
-      n = NCOL(sigma_inv), idx = x_idx
-    )
-    i22[pstar_x, ] <- 0
-    i22[, pstar_x] <- 0
-  }
+  i22 <- lav_mvn_kron_dup_half(sigma_inv, correlation = correlation)
 
   if (meanstructure) {
-    i11 <- sigma_inv
-    # fixed.x?
-    if (length(x_idx) > 0L) {
-      i11[x_idx, ] <- 0
-      i11[, x_idx] <- 0
-    }
-    out <- lav_mat_bdiag(i11, i22)
+    out <- lav_mat_bdiag(sigma_inv, i22)
   } else {
     out <- i22
   }
+
+  # fixed.x?
+  out <- lav_mvn_zero_x_idx(out,
+    n = NCOL(sigma_inv), x_idx = x_idx,
+    meanstructure = meanstructure
+  )
 
   out
 }
@@ -791,21 +620,12 @@ lav_mvn_info_observed_data <- function(y = NULL,
                                                  sinv_method = "eigen",
                                                  sigma_inv = NULL,
                                                  meanstructure = TRUE) {
-  if (!is.null(wt)) {
-  #  n <- sum(wt)
-    out <- stats::cov.wt(y, wt = wt, method = "ML")
-    sample_cov <- out$cov
-    sample_mean <- out$center
-  } else {
-    n <- NROW(y)
-    # sample statistics
-    sample_mean <- colMeans(y)
-    sample_cov <- lav_mat_cov(y)
-  }
+  # sample statistics
+  samp <- lav_mvn_samp_stats(y = y, wt = wt)
 
   lav_mvn_info_observed_samp(
-    sample_mean = sample_mean,
-    sample_cov = sample_cov, mu = mu, sigma_1 = sigma_1,
+    sample_mean = samp$mean,
+    sample_cov = samp$cov, mu = mu, sigma_1 = sigma_1,
     x_idx = x_idx, sinv_method = sinv_method, sigma_inv = sigma_inv,
     meanstructure = meanstructure
   )
@@ -825,48 +645,35 @@ lav_mvn_info_observed_samp <- function(
   sample_mean <- as.numeric(sample_mean)
   mu <- as.numeric(mu)
 
-  if (is.null(sigma_inv)) {
-    # invert Sigma
-    sigma_inv <- lav_mat_sym_inverse(
-      s = sigma_1, logdet = FALSE,
-      sinv_method = sinv_method
-    )
-  }
+  sigma_inv <- lav_mvn_sigma_inv(
+    sigma_1 = sigma_1, sigma_inv = sigma_inv,
+    sinv_method = sinv_method
+  )
 
-  w_tilde <- sample_cov + tcrossprod(sample_mean - mu)
+  w_tilde <- lav_mvn_w_tilde_samp(
+    sample_mean = sample_mean,
+    sample_cov = sample_cov, mu = mu
+  )
 
-  if (meanstructure) {
-    i11 <- sigma_inv
-    i21 <- lav_mat_dup_pre((sigma_inv %*%
-      (sample_mean - mu)) %x% sigma_inv)
-    i12 <- t(i21)
-  }
-
-  aaa <- sigma_inv %*% (2 * w_tilde - sigma_1) %*% sigma_inv
-  # if (lav_use_lavaanC()) {
-  #   I22 <- lavaanC::m_kronecker_dup_pre_post(Sigma.inv, AAA, 0.5)
-  # } else {
-    i22 <- (1 / 2) * lav_mat_dup_pre_post(sigma_inv %x% aaa)
-  # }
+  info <- lav_mvn_info_obs_kernel(
+    sigma_inv = sigma_inv, sigma_1 = sigma_1, w_tilde = w_tilde,
+    mean_diff = if (meanstructure) sample_mean - mu else NULL
+  )
 
   if (meanstructure) {
     out <- rbind(
-      cbind(i11, i12),
-      cbind(i21, i22)
+      cbind(info$i11, t(info$i21)),
+      cbind(info$i21, info$i22)
     )
   } else {
-    out <- i22
+    out <- info$i22
   }
 
   # fixed.x?
-  if (length(x_idx) > 0L) {
-    not_x <- lav_mat_vech_which_idx(
-      n = NCOL(sigma_inv), idx = x_idx,
-      add_idx_at_start = meanstructure
-    )
-    out[, not_x] <- 0
-    out[not_x, ] <- 0
-  }
+  out <- lav_mvn_zero_x_idx(out,
+    n = NCOL(sigma_inv), x_idx = x_idx,
+    meanstructure = meanstructure
+  )
 
   out
 }
@@ -881,11 +688,7 @@ lav_mvn_info_firstorder <- function(y = NULL,
                                               sinv_method = "eigen",
                                               sigma_inv = NULL,
                                               meanstructure = TRUE) {
-  if (!is.null(wt)) {
-    n <- sum(wt)
-  } else {
-    n <- NROW(y)
-  }
+  n <- lav_mvn_nobs(y = y, wt = wt)
 
   if (meanstructure) {
     sc <- lav_mvn_sc_mu_sigma(
@@ -949,13 +752,8 @@ lav_mvn_inv_info_expected <- function(y = NULL, # unused!
     # take difference
     r <- sigma_1 - ybar_x_aug
 
-    # if (lav_use_lavaanC()) {
-    #   SS <- lavaanC::m_kronecker_dup_ginv_pre_post(Sigma, multiplicator = 2.0)
-    #   RR <- lavaanC::m_kronecker_dup_ginv_pre_post(R, multiplicator = 2.0)
-    # } else {
-      ss <- 2 * lav_mat_dup_ginv_pre_post(sigma_1 %x% sigma_1)
-      rr <- 2 * lav_mat_dup_ginv_pre_post(r %x% r)
-    # }
+    ss <- lav_mvn_kron_dup_ginv2(sigma_1)
+    rr <- lav_mvn_kron_dup_ginv2(r)
     i22 <- ss - rr
 
     if (meanstructure) {
@@ -965,12 +763,7 @@ lav_mvn_inv_info_expected <- function(y = NULL, # unused!
       out <- i22
     }
   } else {
-    # if (lav_use_lavaanC()) {
-    #   I22 <-
-    #      lavaanC::m_kronecker_dup_ginv_pre_post(Sigma, multiplicator = 2.0)
-    # } else {
-      i22 <- 2 * lav_mat_dup_ginv_pre_post(sigma_1 %x% sigma_1)
-    # }
+    i22 <- lav_mvn_kron_dup_ginv2(sigma_1)
     if (meanstructure) {
       i11 <- sigma_1
       out <- lav_mat_bdiag(i11, i22)
