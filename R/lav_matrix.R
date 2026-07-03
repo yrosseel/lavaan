@@ -50,6 +50,16 @@ lav_mat_vech <- function(s, diagonal = TRUE) {
 }
 
 
+# vech of a symmetric gradient matrix, doubling the off-diagonal elements
+# (chain rule when differentiating with respect to vech(Sigma):
+#  off-diagonal elements appear twice in Sigma)
+lav_mat_vech_dd <- function(s) {
+  tmp <- s * 2
+  diag(tmp) <- diag(s)
+  lav_mat_vech(tmp)
+}
+
+
 # the vechr operator transforms a *symmetric* matrix
 # into a vector by stacking the *rows* of the matrix one after the
 # other, but eliminating all supradiagonal elements
