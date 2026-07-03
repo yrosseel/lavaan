@@ -1159,6 +1159,10 @@ lav_mvn_cl_em_estep_ranef <- function(ylp = NULL,
 }
 
 # per cluster
+# NOTE: this is the reference implementation of lav_mvn_cl_em_estepb()
+#       (which loops over the cluster SIZES and is the one actually used
+#        by lav_mvn_cl_em_sat/lav_mvn_cl_em_h0); it is kept for
+#       verification purposes, but no longer called anywhere
 lav_mvn_cl_em_estep <- function( # Y1           = NULL,
                                         ylp = NULL,
                                         lp = NULL,

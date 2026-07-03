@@ -14,6 +14,31 @@
 #                 lav_mvnorm_*
 # YR 18 Okt 2018: add 'information' functions, change arguments
 #                 (X -> eXo, Sigma -> res.cov, Beta -> res.int + res.slopes)
+# YR 03 Jul 2026: use shared kernels from lav_mvnorm_kernels.R
+
+# 0. small helpers
+
+# 0a. model-implied Beta (row 1 = intercepts, rows 2... = slopes)
+lav_mvreg_beta1 <- function(beta_1 = NULL,
+                            res_int = NULL,
+                            res_slopes = NULL) {
+  if (is.null(beta_1)) {
+    beta_1 <- rbind(matrix(res_int, nrow = 1), t(res_slopes))
+  }
+  beta_1
+}
+
+# 0b. sample.xx = 1/N*crossprod(X1) (including intercept)
+lav_mvreg_sample_xx <- function(sample_mean_x = NULL,
+                                sample_cov_x = NULL) {
+  rbind(
+    cbind(1, matrix(sample_mean_x, nrow = 1, )),
+    cbind(
+      matrix(sample_mean_x, ncol = 1),
+      sample_cov_x + tcrossprod(sample_mean_x)
+    )
+  )
+}
 
 # 1. loglikelihood
 
@@ -32,9 +57,7 @@ lav_mvreg_loglik_data <- function(y = NULL,
   x <- cbind(1, unname(exo))
 
   # construct model-implied Beta
-  if (is.null(beta_1)) {
-    beta_1 <- rbind(matrix(res_int, nrow = 1), t(res_slopes))
-  }
+  beta_1 <- lav_mvreg_beta1(beta_1, res_int, res_slopes)
 
   if (casewise) {
     log_2pi <- log(2 * pi)
@@ -95,37 +118,20 @@ lav_mvreg_loglik_samp <- function(sample_res_int = NULL,
   # log_2pi <- log(2 * pi)
 
   # construct model-implied Beta
-  if (is.null(beta_1)) {
-    beta_1 <- rbind(matrix(res_int, nrow = 1), t(res_slopes))
-  }
+  beta_1 <- lav_mvreg_beta1(beta_1, res_int, res_slopes)
 
   # construct 'saturated' (sample-based) B
   sample_b <- rbind(matrix(sample_res_int, nrow = 1), t(sample_res_slopes))
 
   # construct sample.xx = 1/N*crossprod(X1) (including intercept)
-  sample_xx <- rbind(
-    cbind(1, matrix(sample_mean_x, nrow = 1, )),
-    cbind(
-      matrix(sample_mean_x, ncol = 1),
-      sample_cov_x + tcrossprod(sample_mean_x)
-    )
-  )
+  sample_xx <- lav_mvreg_sample_xx(sample_mean_x, sample_cov_x)
 
   # res.cov.inv
-  if (is.null(res_cov_inv)) {
-    res_cov_inv <- lav_mat_sym_inverse(
-      s = res_cov, logdet = TRUE,
-      sinv_method = sinv_method
-    )
-    logdet <- attr(res_cov_inv, "logdet")
-  } else {
-    logdet <- attr(res_cov_inv, "logdet")
-    if (is.null(logdet)) {
-      # compute - ln|res.cov.inv|
-      ev <- eigen(res_cov_inv, symmetric = TRUE, only.values = TRUE)
-      logdet <- -1 * sum(log(ev$values))
-    }
-  }
+  res_cov_inv <- lav_mvn_sigma_inv(
+    sigma_1 = res_cov, sigma_inv = res_cov_inv,
+    sinv_method = sinv_method, logdet = TRUE
+  )
+  logdet <- attr(res_cov_inv, "logdet")
 
   # tr(res.cov^{-1} %*% S)
   dist1 <- sum(res_cov_inv * sample_res_cov)
@@ -157,18 +163,13 @@ lav_mvreg_dlogl_dbeta <- function(y = NULL,
   x <- cbind(1, unname(exo))
 
   # construct model-implied Beta
-  if (is.null(beta_1)) {
-    beta_1 <- rbind(matrix(res_int, nrow = 1), t(res_slopes))
-  }
+  beta_1 <- lav_mvreg_beta1(beta_1, res_int, res_slopes)
 
   # res.cov.inv
-  if (is.null(res_cov_inv)) {
-    # invert res.cov
-    res_cov_inv <- lav_mat_sym_inverse(
-      s = res_cov, logdet = FALSE,
-      sinv_method = sinv_method
-    )
-  }
+  res_cov_inv <- lav_mvn_sigma_inv(
+    sigma_1 = res_cov, sigma_inv = res_cov_inv,
+    sinv_method = sinv_method
+  )
 
   # subtract 'X %*% Beta' from Y
   res <- y - x %*% beta_1
@@ -193,18 +194,13 @@ lav_mvreg_dlogl_drescov <- function(y = NULL,
   x <- cbind(1, unname(exo))
 
   # construct model-implied Beta
-  if (is.null(beta_1)) {
-    beta_1 <- rbind(matrix(res_int, nrow = 1), t(res_slopes))
-  }
+  beta_1 <- lav_mvreg_beta1(beta_1, res_int, res_slopes)
 
-  # res.cov.in
-  if (is.null(res_cov_inv)) {
-    # invert res.cov
-    res_cov_inv <- lav_mat_sym_inverse(
-      s = res_cov, logdet = FALSE,
-      sinv_method = sinv_method
-    )
-  }
+  # res.cov.inv
+  res_cov_inv <- lav_mvn_sigma_inv(
+    sigma_1 = res_cov, sigma_inv = res_cov_inv,
+    sinv_method = sinv_method
+  )
 
   # subtract 'X %*% Beta' from Y
   res <- y - x %*% beta_1
@@ -228,38 +224,13 @@ lav_mvreg_dlogl_dvechrescov <- function(y = NULL,
                                         res_cov = NULL,
                                         sinv_method = "eigen",
                                         res_cov_inv = NULL) {
-  y <- unname(y)
-  n <- NROW(y)
-  x <- cbind(1, unname(exo))
+  dres_cov <- lav_mvreg_dlogl_drescov(
+    y = y, exo = exo, beta_1 = beta_1,
+    res_cov = res_cov, res_int = res_int, res_slopes = res_slopes,
+    sinv_method = sinv_method, res_cov_inv = res_cov_inv
+  )
 
-  # construct model-implied Beta
-  if (is.null(beta_1)) {
-    beta_1 <- rbind(matrix(res_int, nrow = 1), t(res_slopes))
-  }
-
-  # res.cov.inv
-  if (is.null(res_cov_inv)) {
-    # invert res.cov
-    res_cov_inv <- lav_mat_sym_inverse(
-      s = res_cov, logdet = FALSE,
-      sinv_method = sinv_method
-    )
-  }
-
-  # subtract 'X %*% Beta' from Y
-  res <- y - x %*% beta_1
-
-  # W.tilde
-  w_tilde <- crossprod(res) / n
-
-  # derivative
-  dres_cov <- -(n / 2) * (res_cov_inv -
-                         (res_cov_inv %*% w_tilde %*% res_cov_inv))
-  dvechres_cov <- as.numeric(lav_mat_dup_pre(
-    as.matrix(lav_mat_vec(dres_cov))
-  ))
-
-  dvechres_cov
+  as.numeric(lav_mat_dup_pre(as.matrix(lav_mat_vec(dres_cov))))
 }
 
 
@@ -281,18 +252,13 @@ lav_mvreg_sc_beta <- function(y = NULL,
   p <- NCOL(x)
 
   # construct model-implied Beta
-  if (is.null(beta_1)) {
-    beta_1 <- rbind(matrix(res_int, nrow = 1), t(res_slopes))
-  }
+  beta_1 <- lav_mvreg_beta1(beta_1, res_int, res_slopes)
 
   # res.cov.inv
-  if (is.null(res_cov_inv)) {
-    # invert res.cov
-    res_cov_inv <- lav_mat_sym_inverse(
-      s = res_cov, logdet = FALSE,
-      sinv_method = sinv_method
-    )
-  }
+  res_cov_inv <- lav_mvn_sigma_inv(
+    sigma_1 = res_cov, sigma_inv = res_cov_inv,
+    sinv_method = sinv_method
+  )
 
   # subtract Mu
   res <- y - x %*% beta_1
@@ -317,44 +283,22 @@ lav_mvreg_sc_sigma <- function(y = NULL,
                                         sinv_method = "eigen",
                                         res_cov_inv = NULL) {
   y <- unname(y)
-  q_1 <- NCOL(y)
   x <- cbind(1, unname(exo))
 
   # construct model-implied Beta
-  if (is.null(beta_1)) {
-    beta_1 <- rbind(matrix(res_int, nrow = 1), t(res_slopes))
-  }
+  beta_1 <- lav_mvreg_beta1(beta_1, res_int, res_slopes)
 
   # res.cov.inv
-  if (is.null(res_cov_inv)) {
-    # invert res.cov
-    res_cov_inv <- lav_mat_sym_inverse(
-      s = res_cov, logdet = FALSE,
-      sinv_method = sinv_method
-    )
-  }
-
-  # vech(res.cov.inv)
-  isigma <- lav_mat_vech(res_cov_inv)
+  res_cov_inv <- lav_mvn_sigma_inv(
+    sigma_1 = res_cov, sigma_inv = res_cov_inv,
+    sinv_method = sinv_method
+  )
 
   # subtract X %*% Beta
   res <- y - x %*% beta_1
 
-  # postmultiply with res.cov.inv
-  res <- res %*% res_cov_inv
-
-  # tcrossprod
-  idx1 <- lav_mat_vech_col_idx(q_1)
-  idx2 <- lav_mat_vech_row_idx(q_1)
-  z <- res[, idx1] * res[, idx2]
-
-  # subtract isigma from each row
-  sc <- t(t(z) - isigma)
-
-  # adjust for vech (and avoiding the 1/2 factor)
-  sc[, lav_mat_diagh_idx(q_1)] <- sc[, lav_mat_diagh_idx(q_1)] / 2
-
-  sc
+  # score kernel
+  lav_mvn_sc_kernel(yc = res, sigma_inv = res_cov_inv)$sigma
 }
 
 
@@ -373,43 +317,24 @@ lav_mvreg_sc_beta_sigma <- function(y = NULL,
   p <- NCOL(x)
 
   # construct model-implied Beta
-  if (is.null(beta_1)) {
-    beta_1 <- rbind(matrix(res_int, nrow = 1), t(res_slopes))
-  }
+  beta_1 <- lav_mvreg_beta1(beta_1, res_int, res_slopes)
 
   # res.cov.inv
-  if (is.null(res_cov_inv)) {
-    # invert res.cov
-    res_cov_inv <- lav_mat_sym_inverse(
-      s = res_cov, logdet = FALSE,
-      sinv_method = sinv_method
-    )
-  }
-
-  # vech(res.cov.inv)
-  isigma <- lav_mat_vech(res_cov_inv)
+  res_cov_inv <- lav_mvn_sigma_inv(
+    sigma_1 = res_cov, sigma_inv = res_cov_inv,
+    sinv_method = sinv_method
+  )
 
   # subtract X %*% Beta
   res <- y - x %*% beta_1
 
-  # postmultiply with res.cov.inv
-  res <- res %*% res_cov_inv
+  # score kernel (res %*% res.cov.inv + scores wrt vech(res.cov))
+  sc2 <- lav_mvn_sc_kernel(yc = res, sigma_inv = res_cov_inv)
 
   sc_beta <- x[, rep(1:p, times = q_1), drop = FALSE] *
-    res[, rep(1:q_1, each = p), drop = FALSE]
+    sc2$mu[, rep(1:q_1, each = p), drop = FALSE]
 
-  # tcrossprod
-  idx1 <- lav_mat_vech_col_idx(q_1)
-  idx2 <- lav_mat_vech_row_idx(q_1)
-  z <- res[, idx1] * res[, idx2]
-
-  # subtract isigma from each row
-  sc <- t(t(z) - isigma)
-
-  # adjust for vech (and avoiding the 1/2 factor)
-  sc[, lav_mat_diagh_idx(q_1)] <- sc[, lav_mat_diagh_idx(q_1)] / 2
-
-  cbind(sc_beta, sc)
+  cbind(sc_beta, sc2$sigma)
 }
 
 # 4. hessian of logl
@@ -486,19 +411,14 @@ lav_mvreg_info_expected <- function(y = NULL, # not used
   exo <- unname(exo)
 
   # res.cov.inv
-  if (is.null(res_cov_inv)) {
-    # invert res.cov
-    res_cov_inv <- lav_mat_sym_inverse(
-      s = res_cov, logdet = FALSE,
-      sinv_method = sinv_method
-    )
-  }
+  res_cov_inv <- lav_mvn_sigma_inv(
+    sigma_1 = res_cov, sigma_inv = res_cov_inv,
+    sinv_method = sinv_method
+  )
 
   # N
   if (is.null(sample_nobs)) {
     sample_nobs <- nrow(exo) # hopefully not NULL either
-  } else {
-    # n <- sample_nobs
   }
 
   # sample.mean.x + sample.cov.x
@@ -510,21 +430,11 @@ lav_mvreg_info_expected <- function(y = NULL, # not used
   }
 
   # construct sample.xx = 1/N*crossprod(X1) (including intercept)
-  sample_xx <- rbind(
-    cbind(1, matrix(sample_mean_x, nrow = 1, )),
-    cbind(
-      matrix(sample_mean_x, ncol = 1),
-      sample_cov_x + tcrossprod(sample_mean_x)
-    )
-  )
+  sample_xx <- lav_mvreg_sample_xx(sample_mean_x, sample_cov_x)
 
   # expected information
   i11 <- res_cov_inv %x% sample_xx
-  # if (lav_use_lavaanC()) {
-  #   I22 <- lavaanC::m_kronecker_dup_pre_post(res.cov.inv, multiplicator = 0.5)
-  # } else {
-    i22 <- 0.5 * lav_mat_dup_pre_post(res_cov_inv %x% res_cov_inv)
-  # }
+  i22 <- lav_mvn_kron_dup_half(res_cov_inv)
 
   lav_mat_bdiag(i11, i22)
 }
@@ -577,34 +487,23 @@ lav_mvreg_information_observed_samplestats <-               # nolint
            sinv_method = "eigen",
            res_cov_inv = NULL) {
     # construct model-implied Beta
-    if (is.null(beta_1)) {
-      beta_1 <- rbind(matrix(res_int, nrow = 1), t(res_slopes))
-    }
+    beta_1 <- lav_mvreg_beta1(beta_1, res_int, res_slopes)
 
     # construct 'saturated' (sample-based) B
     sample_b <- rbind(matrix(sample_res_int, nrow = 1), t(sample_res_slopes))
 
     # construct sample.xx = 1/N*crossprod(X1) (including intercept)
-    sample_xx <- rbind(
-      cbind(1, matrix(sample_mean_x, nrow = 1, )),
-      cbind(
-        matrix(sample_mean_x, ncol = 1),
-        sample_cov_x + tcrossprod(sample_mean_x)
-      )
-    )
+    sample_xx <- lav_mvreg_sample_xx(sample_mean_x, sample_cov_x)
 
     # W.tilde = S + t(B - Beta) %*% (1/N)*X'X %*% (B - Beta)
     w_tilde <- (sample_res_cov +
       t(sample_b - beta_1) %*% sample_xx %*% (sample_b - beta_1))
 
     # res.cov.inv
-    if (is.null(res_cov_inv)) {
-      # invert res.cov
-      res_cov_inv <- lav_mat_sym_inverse(
-        s = res_cov, logdet = FALSE,
-        sinv_method = sinv_method
-      )
-    }
+    res_cov_inv <- lav_mvn_sigma_inv(
+      sigma_1 = res_cov, sigma_inv = res_cov_inv,
+      sinv_method = sinv_method
+    )
 
     h11 <- res_cov_inv %x% sample_xx
     h21 <- lav_mat_dup_pre(res_cov_inv %x%
@@ -612,11 +511,7 @@ lav_mvreg_information_observed_samplestats <-               # nolint
     h12 <- t(h21)
 
     aaa <- res_cov_inv %*% (2 * w_tilde - res_cov) %*% res_cov_inv
-    # if (lav_use_lavaanC()) {
-    #   H22 <- lavaanC::m_kronecker_dup_pre_post(res.cov.inv, AAA, 0.5)
-    # } else {
-      h22 <- (1 / 2) * lav_mat_dup_pre_post(res_cov_inv %x% aaa)
-    # }
+    h22 <- lav_mvn_kron_dup_half(res_cov_inv, aaa)
 
     out <- rbind(
       cbind(h11, h12),
