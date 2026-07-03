@@ -166,3 +166,147 @@ lav_mvn_zero_x_idx <- function(out,
 
   out
 }
+
+
+# 8) missing-data (FIML) helpers
+
+# 8a) effective sample size: total weight/frequency of the non-empty cases
+lav_mvn_mi_nobs <- function(mp = NULL, wt = NULL) {
+  if (!is.null(wt)) {
+    if (length(mp$empty.idx) > 0L) {
+      sum(wt) - sum(wt[mp$empty.idx])
+    } else {
+      sum(wt)
+    }
+  } else {
+    sum(mp$freq) # removed empty cases!
+  }
+}
+
+# 8b) (weighted) frequency of missing pattern p
+lav_mvn_mi_pattern_freq <- function(mp = NULL, p = NULL, wt = NULL) {
+  if (!is.null(wt)) {
+    sum(wt[mp$case.idx[[p]]])
+  } else {
+    mp$freq[p]
+  }
+}
+
+# 8c) Sigma^{-1} for the observed part of a missing pattern, computed by
+#     downdating the complete-data inverse; complete patterns return
+#     sigma_inv as is (including its "logdet" attribute, if any)
+lav_mvn_mi_pattern_inv <- function(sigma_inv = NULL,
+                                   na_idx = integer(0L),
+                                   logdet = FALSE,
+                                   sigma_logdet = NULL) {
+  if (length(na_idx) > 0L) {
+    lav_mat_sym_inverse_update(
+      s_inv = sigma_inv, rm_idx = na_idx,
+      logdet = logdet, s_logdet = sigma_logdet
+    )
+  } else {
+    sigma_inv
+  }
+}
+
+# 8d) observed-information blocks (i11/i21/i22) for a single missing
+#     pattern, zero-padded to the full p_1 x p_1 layout
+#
+#     my/sy are the pattern's sample mean/cov (observed variables only),
+#     sigma_inv_1 the pattern's inverse (see lav_mvn_mi_pattern_inv)
+lav_mvn_mi_info_obs_pattern <- function(sigma_inv_1 = NULL,
+                                        var_idx = NULL,
+                                        p_1 = NULL,
+                                        my = NULL,
+                                        sy = NULL,
+                                        mu = NULL,
+                                        sigma_1 = NULL) {
+  s_inv <- matrix(0, p_1, p_1)
+  s_inv[var_idx, var_idx] <- sigma_inv_1
+
+  tmp21 <- matrix(0, p_1, 1)
+  tmp21[var_idx, 1] <- sigma_inv_1 %*% (my - mu[var_idx])
+
+  w_tilde <- sy + tcrossprod(my - mu[var_idx])
+  aaa <- (sigma_inv_1 %*%
+    (2 * w_tilde - sigma_1[var_idx, var_idx, drop = FALSE]) %*%
+    sigma_inv_1)
+  tmp22 <- matrix(0, p_1, p_1)
+  tmp22[var_idx, var_idx] <- aaa
+
+  list(
+    i11 = s_inv,
+    i21 = lav_mat_dup_pre(tmp21 %x% s_inv),
+    i22 = lav_mvn_kron_dup_half(s_inv, tmp22)
+  )
+}
+
+# 8e) casewise score engine for missing data
+#
+#     computes, pattern by pattern, the casewise scores with respect to
+#     mu ($dmu) and vech(Sigma) ($sc) in the full p_1-column layout;
+#     rows of empty cases remain NA; no weighting/fixed.x handling here
+lav_mvn_mi_sc_engine <- function(y = NULL,
+                                 mp = NULL,
+                                 mu = NULL,
+                                 sigma_inv = NULL) {
+  p_1 <- NCOL(y)
+  ny <- NROW(y)
+
+  # for the tcrossprod
+  idx1 <- lav_mat_vech_col_idx(p_1)
+  idx2 <- lav_mat_vech_row_idx(p_1)
+
+  # vech(Sigma.inv)
+  i_sigma <- lav_mat_vech(sigma_inv)
+
+  # subtract Mu
+  yc <- t(t(y) - mu)
+
+  # dmu / SC per case
+  dmu <- matrix(as.numeric(NA), ny, p_1)
+  sc <- matrix(as.numeric(NA), nrow = ny, ncol = length(i_sigma))
+
+  # for each pattern, compute Yc %*% sigma.inv
+  for (p in seq_len(mp$npatterns)) {
+    # observed values for this pattern
+    var_idx <- mp$pat[p, ]
+
+    # missing values for this pattern
+    na_idx <- which(!var_idx)
+
+    # cases with this pattern
+    case_idx <- mp$case.idx[[p]]
+
+    # invert Sigma for this pattern
+    if (length(na_idx) > 0L) {
+      sigma_inv_1 <- lav_mvn_mi_pattern_inv(
+        sigma_inv = sigma_inv, na_idx = na_idx
+      )
+      tmp <- matrix(0, p_1, p_1)
+      tmp[var_idx, var_idx] <- sigma_inv_1
+      isigma <- lav_mat_vech(tmp)
+    } else {
+      sigma_inv_1 <- sigma_inv
+      isigma <- i_sigma
+    }
+
+    # compute dMu for all observations of this pattern
+    dmu[case_idx, var_idx] <-
+      yc[case_idx, var_idx, drop = FALSE] %*% sigma_inv_1
+
+    # postmultiply these cases with sigma.inv
+    yc[case_idx, var_idx] <- dmu[case_idx, var_idx]
+
+    # tcrossprod
+    sc[case_idx, ] <- yc[case_idx, idx1] * yc[case_idx, idx2]
+
+    # subtract isigma from each row
+    sc[case_idx, ] <- t(t(sc[case_idx, , drop = FALSE]) - isigma)
+  }
+
+  # adjust for lav_mat_dup_pre (not vech!)
+  sc[, lav_mat_diagh_idx(p_1)] <- sc[, lav_mat_diagh_idx(p_1)] / 2
+
+  list(dmu = dmu, sc = sc)
+}

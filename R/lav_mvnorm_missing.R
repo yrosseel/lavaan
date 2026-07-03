@@ -28,8 +28,9 @@
 
 # YR 09 Feb 2016: first version
 # YR 19 Mar 2017: 10)
-# YR 03 Okt 2018: a few functions gain a wt= argument
 # YR 01 Jul 2018: first_order functions gain cluster.idx= argument
+# YR 03 Okt 2018: a few functions gain a wt= argument
+# YR 03 Jul 2026: use shared kernels from lav_mvnorm_kernels.R
 
 
 # 1) likelihood
@@ -109,16 +110,11 @@ lav_mvn_mi_loglik_samp <- function(yp = NULL,
     p_log_2pi[p] <- sum(var_idx) * log_2pi * yp[[p]]$freq
 
     # invert Sigma for this pattern
-    if (length(na_idx) > 0L) {
-      sigma_inv <- lav_mat_sym_inverse_update(
-        s_inv = sigma_inv_1,
-        rm_idx = na_idx, logdet = TRUE, s_logdet = sigma_logdet
-      )
-      logdet[p] <- attr(sigma_inv, "logdet") * yp[[p]]$freq
-    } else {
-      sigma_inv <- sigma_inv_1
-      logdet[p] <- sigma_logdet * yp[[p]]$freq
-    }
+    sigma_inv <- lav_mvn_mi_pattern_inv(
+      sigma_inv = sigma_inv_1, na_idx = na_idx,
+      logdet = TRUE, sigma_logdet = sigma_logdet
+    )
+    logdet[p] <- attr(sigma_inv, "logdet") * yp[[p]]$freq
 
     tt <- yp[[p]]$SY + tcrossprod(yp[[p]]$MY - mu[var_idx])
     dist_1[p] <- sum(sigma_inv * tt) * yp[[p]]$freq
@@ -200,11 +196,6 @@ lav_mvn_mi_llik_casewise <- function(y = NULL,
   p <- NCOL(y)
   log_2pi <- log(2 * pi)
   mu <- as.numeric(mu)
-  # if (!is.null(wt)) {
-  #   n <- sum(wt)
-  # } else {
-  #   n <- NROW(y)
-  # }
   ny <- NROW(y)
 
   # global inverse + logdet
@@ -302,11 +293,6 @@ lav_mvn_mi_llik_pattern <- function(y = NULL,
   p_1 <- NCOL(y)
   log_2pi <- log(2 * pi)
   mu <- as.numeric(mu)
-  if (!is.null(wt)) {
-    n <- sum(wt)
-  } else {
-    n <- NROW(y)
-  }
   ny <- NROW(y)
 
   # global inverse + logdet
@@ -343,16 +329,11 @@ lav_mvn_mi_llik_pattern <- function(y = NULL,
     p_log_2pi[case_idx] <- sum(var_idx) * log_2pi
 
     # invert Sigma for this pattern
-    if (length(na_idx) > 0L) {
-      sigma_inv <- lav_mat_sym_inverse_update(
-        s_inv = sigma_inv_1,
-        rm_idx = na_idx, logdet = TRUE, s_logdet = sigma_logdet
-      )
-      logdet[case_idx] <- attr(sigma_inv, "logdet")
-    } else {
-      sigma_inv <- sigma_inv_1
-      logdet[case_idx] <- sigma_logdet
-    }
+    sigma_inv <- lav_mvn_mi_pattern_inv(
+      sigma_inv = sigma_inv_1, na_idx = na_idx,
+      logdet = TRUE, sigma_logdet = sigma_logdet
+    )
+    logdet[case_idx] <- attr(sigma_inv, "logdet")
 
     if (mp$freq[p] == 1L) {
       dist_1[case_idx] <- sum(sigma_inv *
@@ -428,12 +409,10 @@ lav_mvn_mi_dlogl_dmu_samp <- function(yp = NULL,
   pat_n <- length(yp)
   p_1 <- length(yp[[1]]$var.idx)
 
-  if (is.null(sigma_inv)) {
-    sigma_inv <- lav_mat_sym_inverse(
-      s = sigma_1, logdet = FALSE,
-      sinv_method = sinv_method
-    )
-  }
+  sigma_inv <- lav_mvn_sigma_inv(
+    sigma_1 = sigma_1, sigma_inv = sigma_inv,
+    sinv_method = sinv_method
+  )
 
   # dmu
   dmu <- numeric(p_1)
@@ -443,18 +422,10 @@ lav_mvn_mi_dlogl_dmu_samp <- function(yp = NULL,
     # observed variables for this pattern
     var_idx <- yp[[p]]$var.idx
 
-    # missing values for this pattern
-    na_idx <- which(!var_idx)
-
     # invert Sigma for this pattern
-    if (length(na_idx) > 0L) {
-      sigma_inv_1 <- lav_mat_sym_inverse_update(
-        s_inv = sigma_inv,
-        rm_idx = na_idx, logdet = FALSE
-      )
-    } else {
-      sigma_inv_1 <- sigma_inv
-    }
+    sigma_inv_1 <- lav_mvn_mi_pattern_inv(
+      sigma_inv = sigma_inv, na_idx = which(!var_idx)
+    )
 
     # dmu for this pattern
     dmu_pattern <- as.numeric(sigma_inv_1 %*% (yp[[p]]$MY - mu[var_idx]))
@@ -482,91 +453,18 @@ lav_mvn_mi_dlogl_dsigma <- function(m_y = NULL,
                                             x_idx = integer(0L),
                                             sigma_inv = NULL,
                                             sinv_method = "eigen") {
-  p <- NCOL(m_y)
-  m_mu <- as.numeric(m_mu)
-  if (!is.null(wt)) {
-    n <- sum(wt)
-  } else {
-    n <- NROW(m_y)
-  }
-  ny <- NROW(m_y)
-
-  if (is.null(sigma_inv)) {
-    # invert Sigma
-    sigma_inv <- lav_mat_sym_inverse(
-      s = m_sigma, logdet = FALSE,
-      sinv_method = sinv_method
-    )
-  }
-
-  # subtract Mu
-  m_yc <- t(t(m_y) - m_mu)
-
-  # dvechSigma
-  dsigma <- matrix(0, p, p)
-
   # missing patterns
   if (is.null(l_mp)) {
     l_mp <- lav_data_mi_patterns(m_y)
   }
 
-  # for each pattern
-  for (p in seq_len(l_mp$npatterns)) {
-    # observed values for this pattern
-    var_idx <- l_mp$pat[p, ]
+  # per-pattern sample statistics
+  yp <- lav_samp_mi_patterns(y = m_y, mp = l_mp, wt = wt)
 
-    # missing values for this pattern
-    na_idx <- which(!var_idx)
-
-    # cases with this pattern
-    case_idx <- l_mp$case.idx[[p]]
-
-    # invert Sigma for this pattern
-    if (length(na_idx) > 0L) {
-      local_sigma_inv <- lav_mat_sym_inverse_update(
-        s_inv = sigma_inv,
-        rm_idx = na_idx, logdet = FALSE
-      )
-    } else {
-      local_sigma_inv <- sigma_inv
-    }
-
-    if (!is.null(wt)) {
-      freq <- sum(wt[case_idx])
-    } else {
-      freq <- l_mp$freq[p]
-    }
-
-    if (length(case_idx) > 1L) {
-      if (!is.null(wt)) {
-        out <- stats::cov.wt(m_y[case_idx, var_idx, drop = FALSE],
-          wt = wt[l_mp$case.idx[[p]]], method = "ML"
-        )
-        m_sy <- out$cov
-        m_my <- out$center
-        w_tilde <- m_sy + tcrossprod(m_my - m_mu[var_idx])
-      } else {
-        w_tilde <- crossprod(m_yc[case_idx, var_idx, drop = FALSE]) / freq
-      }
-    } else {
-      w_tilde <- tcrossprod(m_yc[case_idx, var_idx])
-    }
-
-    # dSigma for this pattern
-    dsigma_pattern <- matrix(0, p, p)
-    dsigma_pattern[var_idx, var_idx] <- -(1 / 2) * (local_sigma_inv -
-      (local_sigma_inv %*% w_tilde %*% local_sigma_inv))
-
-    # update dSigma
-    dsigma <- dsigma + (dsigma_pattern * freq)
-  }
-
-  # fixed.x?
-  if (length(x_idx) > 0L) {
-    dsigma[x_idx, x_idx] <- 0
-  }
-
-  dsigma
+  lav_mvn_mi_dlogl_dsigma_samp(
+    yp = yp, mu = as.numeric(m_mu), sigma_1 = m_sigma,
+    x_idx = x_idx, sigma_inv = sigma_inv, sinv_method = sinv_method
+  )
 }
 
 # 2bbis: using samplestats
@@ -579,13 +477,10 @@ lav_mvn_mi_dlogl_dsigma_samp <- function(yp = NULL,
   pat_n <- length(yp)
   p_1 <- length(yp[[1]]$var.idx)
 
-  if (is.null(sigma_inv)) {
-    # invert Sigma
-    sigma_inv <- lav_mat_sym_inverse(
-      s = sigma_1, logdet = FALSE,
-      sinv_method = sinv_method
-    )
-  }
+  sigma_inv <- lav_mvn_sigma_inv(
+    sigma_1 = sigma_1, sigma_inv = sigma_inv,
+    sinv_method = sinv_method
+  )
 
   # dvechSigma
   d_sigma <- matrix(0, p_1, p_1)
@@ -595,18 +490,10 @@ lav_mvn_mi_dlogl_dsigma_samp <- function(yp = NULL,
     # observed variables for this pattern
     var_idx <- yp[[p]]$var.idx
 
-    # missing values for this pattern
-    na_idx <- which(!var_idx)
-
     # invert Sigma for this pattern
-    if (length(na_idx) > 0L) {
-      sigma_inv_1 <- lav_mat_sym_inverse_update(
-        s_inv = sigma_inv,
-        rm_idx = na_idx, logdet = FALSE
-      )
-    } else {
-      sigma_inv_1 <- sigma_inv
-    }
+    sigma_inv_1 <- lav_mvn_mi_pattern_inv(
+      sigma_inv = sigma_inv, na_idx = which(!var_idx)
+    )
 
     w_tilde <- yp[[p]]$SY + tcrossprod(yp[[p]]$MY - mu[var_idx])
 
@@ -660,13 +547,10 @@ lav_mvnorm_missing_dlogl_dvechsigma_samplestats <- # nolint
     pat_n <- length(yp)
     p_1 <- length(yp[[1]]$var.idx)
 
-    if (is.null(sigma_inv)) {
-      # invert Sigma
-      sigma_inv <- lav_mat_sym_inverse(
-        s = sigma_1, logdet = FALSE,
-        sinv_method = sinv_method
-      )
-    }
+    sigma_inv <- lav_mvn_sigma_inv(
+      sigma_1 = sigma_1, sigma_inv = sigma_inv,
+      sinv_method = sinv_method
+    )
 
     # dvechSigma
     dvech_sigma <- numeric(p_1 * (p_1 + 1) / 2)
@@ -676,18 +560,10 @@ lav_mvnorm_missing_dlogl_dvechsigma_samplestats <- # nolint
       # observed variables for this pattern
       var_idx <- yp[[p]]$var.idx
 
-      # missing values for this pattern
-      na_idx <- which(!var_idx)
-
       # invert Sigma for this pattern
-      if (length(na_idx) > 0L) {
-        sigma_inv_1 <- lav_mat_sym_inverse_update(
-          s_inv = sigma_inv,
-          rm_idx = na_idx, logdet = FALSE
-        )
-      } else {
-        sigma_inv_1 <- sigma_inv
-      }
+      sigma_inv_1 <- lav_mvn_mi_pattern_inv(
+        sigma_inv = sigma_inv, na_idx = which(!var_idx)
+      )
 
       w_tilde <- yp[[p]]$SY + tcrossprod(yp[[p]]$MY - mu[var_idx])
 
@@ -729,20 +605,12 @@ lav_mvn_mi_sc_mu <- function(y = NULL,
                                          sinv_method = "eigen") {
   p_1 <- NCOL(y)
   mu <- as.numeric(mu)
-  if (!is.null(wt)) {
-    n <- sum(wt)
-  } else {
-    n <- NROW(y)
-  }
   ny <- NROW(y)
 
-  if (is.null(sigma_inv)) {
-    # invert Sigma
-    sigma_inv <- lav_mat_sym_inverse(
-      s = sigma_1, logdet = FALSE,
-      sinv_method = sinv_method
-    )
-  }
+  sigma_inv <- lav_mvn_sigma_inv(
+    sigma_1 = sigma_1, sigma_inv = sigma_inv,
+    sinv_method = sinv_method
+  )
 
   # missing patterns
   if (is.null(mp)) {
@@ -760,20 +628,12 @@ lav_mvn_mi_sc_mu <- function(y = NULL,
     # observed values for this pattern
     var_idx <- mp$pat[p, ]
 
-    # missing values for this pattern
-    na_idx <- which(!var_idx)
-
     case_idx <- mp$case.idx[[p]]
 
     # invert Sigma for this pattern
-    if (length(na_idx) > 0L) {
-      sigma_inv_1 <- lav_mat_sym_inverse_update(
-        s_inv = sigma_inv,
-        rm_idx = na_idx, logdet = FALSE
-      )
-    } else {
-      sigma_inv_1 <- sigma_inv
-    }
+    sigma_inv_1 <- lav_mvn_mi_pattern_inv(
+      sigma_inv = sigma_inv, na_idx = which(!var_idx)
+    )
 
     # compute dMu for all observations of this pattern
     dmu[case_idx, var_idx] <-
@@ -804,76 +664,22 @@ lav_mvn_mi_sc_sigma <- function(y = NULL,
                                                  sinv_method = "eigen") {
   p_1 <- NCOL(y)
   mu <- as.numeric(mu)
-  if (!is.null(wt)) {
-    n <- sum(wt)
-  } else {
-    n <- NROW(y)
-  }
-  ny <- NROW(y)
 
-  if (is.null(sigma_inv)) {
-    # invert Sigma
-    sigma_inv <- lav_mat_sym_inverse(
-      s = sigma_1, logdet = FALSE,
-      sinv_method = sinv_method
-    )
-  }
-
-  # for the tcrossprod
-  idx1 <- lav_mat_vech_col_idx(p_1)
-  idx2 <- lav_mat_vech_row_idx(p_1)
-
-  # vech(Sigma.inv)
-  i_sigma <- lav_mat_vech(sigma_inv)
+  sigma_inv <- lav_mvn_sigma_inv(
+    sigma_1 = sigma_1, sigma_inv = sigma_inv,
+    sinv_method = sinv_method
+  )
 
   # missing patterns
   if (is.null(mp)) {
     mp <- lav_data_mi_patterns(y)
   }
 
-  # subtract Mu
-  yc <- t(t(y) - mu)
-
-  # SC
-  sc <- matrix(as.numeric(NA), nrow = ny, ncol = length(i_sigma))
-
-  # for each pattern
-  for (p in seq_len(mp$npatterns)) {
-    # observed values for this pattern
-    var_idx <- mp$pat[p, ]
-
-    # missing values for this pattern
-    na_idx <- which(!var_idx)
-
-    # cases with this pattern
-    case_idx <- mp$case.idx[[p]]
-
-    # invert Sigma for this pattern
-    if (length(na_idx) > 0L) {
-      sigma_inv_1 <- lav_mat_sym_inverse_update(
-        s_inv = sigma_inv,
-        rm_idx = na_idx, logdet = FALSE
-      )
-      tmp <- matrix(0, p_1, p_1)
-      tmp[var_idx, var_idx] <- sigma_inv_1
-      isigma <- lav_mat_vech(tmp)
-    } else {
-      sigma_inv_1 <- sigma_inv
-      isigma <- i_sigma
-    }
-
-    # postmultiply these cases with sigma.inv
-    yc[case_idx, var_idx] <- yc[case_idx, var_idx] %*% sigma_inv_1
-
-    # tcrossprod
-    sc[case_idx, ] <- yc[case_idx, idx1] * yc[case_idx, idx2]
-
-    # subtract isigma from each row
-    sc[case_idx, ] <- t(t(sc[case_idx, , drop = FALSE]) - isigma)
-  }
-
-  # adjust for vech
-  sc[, lav_mat_diagh_idx(p_1)] <- sc[, lav_mat_diagh_idx(p_1)] / 2
+  # score engine
+  sc <- lav_mvn_mi_sc_engine(
+    y = y, mp = mp, mu = mu,
+    sigma_inv = sigma_inv
+  )$sc
 
   # weights
   if (!is.null(wt)) {
@@ -899,85 +705,24 @@ lav_mvn_mi_sc_mu_sigma <- function(y = NULL,
                                                     sinv_method = "eigen") {
   p_1 <- NCOL(y)
   mu <- as.numeric(mu)
-  if (!is.null(wt)) {
-    n <- sum(wt)
-  } else {
-    n <- NROW(y)
-  }
-  ny <- NROW(y)
 
-  if (is.null(sigma_inv)) {
-    # invert Sigma
-    sigma_inv <- lav_mat_sym_inverse(
-      s = sigma_1, logdet = FALSE,
-      sinv_method = sinv_method
-    )
-  }
-
-  # for the tcrossprod
-  idx1 <- lav_mat_vech_col_idx(p_1)
-  idx2 <- lav_mat_vech_row_idx(p_1)
-
-  # vech(Sigma.inv)
-  i_sigma <- lav_mat_vech(sigma_inv)
+  sigma_inv <- lav_mvn_sigma_inv(
+    sigma_1 = sigma_1, sigma_inv = sigma_inv,
+    sinv_method = sinv_method
+  )
 
   # missing patterns
   if (is.null(mp)) {
     mp <- lav_data_mi_patterns(y)
   }
 
-  # subtract Mu
-  yc <- t(t(y) - mu)
+  # score engine
+  eng <- lav_mvn_mi_sc_engine(
+    y = y, mp = mp, mu = mu,
+    sigma_inv = sigma_inv
+  )
 
-  # dmu per case
-  dmu <- matrix(as.numeric(NA), ny, p_1)
-
-  # SC
-  sc <- matrix(as.numeric(NA), nrow = ny, ncol = length(i_sigma))
-
-  # for each pattern, compute Yc %*% sigma.inv
-  for (p in seq_len(mp$npatterns)) {
-    # observed values for this pattern
-    var_idx <- mp$pat[p, ]
-
-    # missing values for this pattern
-    na_idx <- which(!var_idx)
-
-    # cases with this pattern
-    case_idx <- mp$case.idx[[p]]
-
-    # invert Sigma for this pattern
-    if (length(na_idx) > 0L) {
-      sigma_inv_1 <- lav_mat_sym_inverse_update(
-        s_inv = sigma_inv,
-        rm_idx = na_idx, logdet = FALSE
-      )
-      tmp <- matrix(0, p_1, p_1)
-      tmp[var_idx, var_idx] <- sigma_inv_1
-      isigma <- lav_mat_vech(tmp)
-    } else {
-      sigma_inv_1 <- sigma_inv
-      isigma <- i_sigma
-    }
-
-    # compute dMu for all observations of this pattern
-    dmu[case_idx, var_idx] <-
-      yc[case_idx, var_idx, drop = FALSE] %*% sigma_inv_1
-
-    # postmultiply these cases with sigma.inv
-    yc[case_idx, var_idx] <- yc[case_idx, var_idx] %*% sigma_inv_1
-
-    # tcrossprod
-    sc[case_idx, ] <- yc[case_idx, idx1] * yc[case_idx, idx2]
-
-    # subtract isigma from each row
-    sc[case_idx, ] <- t(t(sc[case_idx, , drop = FALSE]) - isigma)
-  }
-
-  # adjust for vech
-  sc[, lav_mat_diagh_idx(p_1)] <- sc[, lav_mat_diagh_idx(p_1)] / 2
-
-  out <- cbind(dmu, sc)
+  out <- cbind(eng$dmu, eng$sc)
 
   # weights
   if (!is.null(wt)) {
@@ -1026,12 +771,10 @@ lav_mvnorm_missing_logl_hessian_samplestats <- # nolint
     pat_n <- length(yp)
     p_1 <- length(yp[[1]]$var.idx)
 
-    if (is.null(sigma_inv)) {
-      sigma_inv <- lav_mat_sym_inverse(
-        s = sigma_1, logdet = FALSE,
-        sinv_method = sinv_method
-      )
-    }
+    sigma_inv <- lav_mvn_sigma_inv(
+      sigma_1 = sigma_1, sigma_inv = sigma_inv,
+      sinv_method = sinv_method
+    )
 
     h11 <- matrix(0, p_1, p_1)
     h21 <- matrix(0, p_1 * (p_1 + 1) / 2, p_1)
@@ -1043,42 +786,20 @@ lav_mvnorm_missing_logl_hessian_samplestats <- # nolint
       var_idx <- yp[[p]]$var.idx
       pat_freq <- yp[[p]]$freq
 
-      # missing values for this pattern
-      na_idx <- which(!var_idx)
-
       # invert Sigma for this pattern
-      if (length(na_idx) > 0L) {
-        sigma_inv_1 <- lav_mat_sym_inverse_update(
-          s_inv = sigma_inv,
-          rm_idx = na_idx, logdet = FALSE
-        )
-      } else {
-        sigma_inv_1 <- sigma_inv
-      }
+      sigma_inv_1 <- lav_mvn_mi_pattern_inv(
+        sigma_inv = sigma_inv, na_idx = which(!var_idx)
+      )
 
-      s_inv <- matrix(0, p_1, p_1)
-      s_inv[var_idx, var_idx] <- sigma_inv_1
+      # observed-information blocks for this pattern
+      info <- lav_mvn_mi_info_obs_pattern(
+        sigma_inv_1 = sigma_inv_1, var_idx = var_idx, p_1 = p_1,
+        my = yp[[p]]$MY, sy = yp[[p]]$SY, mu = mu, sigma_1 = sigma_1
+      )
 
-      tmp21 <- matrix(0, p_1, 1)
-      tmp21[var_idx, 1] <- sigma_inv_1 %*% (yp[[p]]$MY - mu[var_idx])
-
-      w_tilde <- yp[[p]]$SY + tcrossprod(yp[[p]]$MY - mu[var_idx])
-      aaa <- (sigma_inv_1 %*%
-        (2 * w_tilde - sigma_1[var_idx, var_idx, drop = FALSE]) %*%
-        sigma_inv_1)
-      tmp22 <- matrix(0, p_1, p_1)
-      tmp22[var_idx, var_idx] <- aaa
-
-      i11 <- s_inv
-      i21 <- lav_mat_dup_pre(tmp21 %x% s_inv)
-      # if (lav_use_lavaanC()) {
-      #   i22 <- lavaanC::m_kronecker_dup_pre_post(S.inv, tmp22, 0.5)
-      # } else {
-        i22 <- (1 / 2) * lav_mat_dup_pre_post(s_inv %x% tmp22)
-      # }
-      h11 <- h11 + pat_freq * i11
-      h21 <- h21 + pat_freq * i21
-      h22 <- h22 + pat_freq * i22
+      h11 <- h11 + pat_freq * info$i11
+      h21 <- h21 + pat_freq * info$i21
+      h22 <- h22 + pat_freq * info$i22
     }
 
     h12 <- t(h21)
@@ -1089,13 +810,10 @@ lav_mvnorm_missing_logl_hessian_samplestats <- # nolint
     )
 
     # fixed.x?
-    if (length(x_idx) > 0L) {
-      not_x <- lav_mat_vech_which_idx(n = p_1, idx = x_idx,
-                                         #diagonal = !correlation,
-                                         add_idx_at_start = TRUE)
-      out[, not_x] <- 0
-      out[not_x, ] <- 0
-    }
+    out <- lav_mvn_zero_x_idx(out,
+      n = p_1, x_idx = x_idx,
+      meanstructure = TRUE
+    )
 
     out
   }
@@ -1118,12 +836,10 @@ lav_mvn_mi_info_expected <- function(y = NULL,
                                                     sinv_method = "eigen") {
   p_1 <- NCOL(y)
 
-  if (is.null(sigma_inv)) {
-    sigma_inv <- lav_mat_sym_inverse(
-      s = sigma_1, logdet = FALSE,
-      sinv_method = sinv_method
-    )
-  }
+  sigma_inv <- lav_mvn_sigma_inv(
+    sigma_1 = sigma_1, sigma_inv = sigma_inv,
+    sinv_method = sinv_method
+  )
 
   # missing patterns
   if (is.null(mp)) {
@@ -1131,15 +847,7 @@ lav_mvn_mi_info_expected <- function(y = NULL,
   }
 
   # N
-  if (!is.null(wt)) {
-    if (length(mp$empty.idx) > 0L) {
-      n <- sum(wt) - sum(wt[mp$empty.idx])
-    } else {
-      n <- sum(wt)
-    }
-  } else {
-    n <- sum(mp$freq) # removed empty cases!
-  }
+  n <- lav_mvn_mi_nobs(mp = mp, wt = wt)
 
   i11 <- matrix(0, p_1, p_1)
   i22 <- matrix(0, p_1 * (p_1 + 1) / 2, p_1 * (p_1 + 1) / 2)
@@ -1149,33 +857,17 @@ lav_mvn_mi_info_expected <- function(y = NULL,
     # observed variables
     var_idx <- mp$pat[p, ]
 
-    # missing values for this pattern
-    na_idx <- which(!var_idx)
-
     # invert Sigma for this pattern
-    if (length(na_idx) > 0L) {
-      sigma_inv_1 <- lav_mat_sym_inverse_update(
-        s_inv = sigma_inv,
-        rm_idx = na_idx, logdet = FALSE
-      )
-    } else {
-      sigma_inv_1 <- sigma_inv
-    }
+    sigma_inv_1 <- lav_mvn_mi_pattern_inv(
+      sigma_inv = sigma_inv, na_idx = which(!var_idx)
+    )
 
     s_inv <- matrix(0, p_1, p_1)
     s_inv[var_idx, var_idx] <- sigma_inv_1
 
-    # if (lav_use_lavaanC()) {
-    #   S2.inv <- lavaanC::m_kronecker_dup_pre_post(S.inv, multiplicator = 0.5)
-    # } else {
-      s2_inv <- 0.5 * lav_mat_dup_pre_post(s_inv %x% s_inv)
-    # }
+    s2_inv <- lav_mvn_kron_dup_half(s_inv)
 
-    if (!is.null(wt)) {
-      freq <- sum(wt[mp$case.idx[[p]]])
-    } else {
-      freq <- mp$freq[p]
-    }
+    freq <- lav_mvn_mi_pattern_freq(mp = mp, p = p, wt = wt)
 
     i11 <- i11 + freq * s_inv
     i22 <- i22 + freq * s2_inv
@@ -1184,13 +876,10 @@ lav_mvn_mi_info_expected <- function(y = NULL,
   out <- lav_mat_bdiag(i11, i22) / n
 
   # fixed.x?
-  if (length(x_idx) > 0L) {
-    not_x <- lav_mat_vech_which_idx(n = p_1, idx = x_idx,
-                                       # diagonal = !correlation,
-                                       add_idx_at_start = TRUE)
-    out[not_x, ] <- 0
-    out[, not_x] <- 0
-  }
+  out <- lav_mvn_zero_x_idx(out,
+    n = p_1, x_idx = x_idx,
+    meanstructure = TRUE
+  )
 
   out
 }
@@ -1211,15 +900,7 @@ lav_mvn_mi_info_observed_data <- function(y = NULL,
   }
 
   # N
-  if (!is.null(wt)) {
-    if (length(mp$empty.idx) > 0L) {
-      n <- sum(wt) - sum(wt[mp$empty.idx])
-    } else {
-      n <- sum(wt)
-    }
-  } else {
-    n <- sum(mp$freq) # removed empty cases!
-  }
+  n <- lav_mvn_mi_nobs(mp = mp, wt = wt)
 
   # observed information
   observed <- lav_mvn_mi_logl_hessian_data(
@@ -1269,15 +950,7 @@ lav_mvn_mi_info_firstorder <- function(y = NULL,
   }
 
   # N
-  if (!is.null(wt)) {
-    if (length(mp$empty.idx) > 0L) {
-      n <- sum(wt) - sum(wt[mp$empty.idx])
-    } else {
-      n <- sum(wt)
-    }
-  } else {
-    n <- sum(mp$freq) # removed empty cases!
-  }
+  n <- lav_mvn_mi_nobs(mp = mp, wt = wt)
 
   sc <- lav_mvn_mi_sc_mu_sigma(
     y = y, mp = mp, wt = wt,
@@ -1300,7 +973,7 @@ lav_mvn_mi_info_firstorder <- function(y = NULL,
 }
 
 # 5d: both unit first-order information and expected/observed information
-#     from raw data, in one go for efficiency
+#     from raw data, in one go
 lav_mvn_mi_info_both <- function(y = NULL,
                                                 mp = NULL,
                                                 wt = NULL,
@@ -1314,147 +987,41 @@ lav_mvn_mi_info_both <- function(y = NULL,
   p_1 <- NCOL(y)
   mu <- as.numeric(mu)
 
-  if (is.null(sigma_inv)) {
-    # invert Sigma
-    sigma_inv <- lav_mat_sym_inverse(
-      s = sigma_1, logdet = FALSE,
-      sinv_method = sinv_method
-    )
-  }
-
-  # for the tcrossprod
-  idx1 <- lav_mat_vech_col_idx(p_1)
-  idx2 <- lav_mat_vech_row_idx(p_1)
-
-  # vech(Sigma.inv)
-  i_sigma <- lav_mat_vech(sigma_inv)
+  sigma_inv <- lav_mvn_sigma_inv(
+    sigma_1 = sigma_1, sigma_inv = sigma_inv,
+    sinv_method = sinv_method
+  )
 
   # missing patterns
   if (is.null(mp)) {
     mp <- lav_data_mi_patterns(y)
   }
 
-  if (information == "observed") {
-    yp <- lav_samp_mi_patterns(y = y, mp = mp, wt = wt)
-  }
-
   # N
-  if (!is.null(wt)) {
-    if (length(mp$empty.idx) > 0L) {
-      n <- sum(wt) - sum(wt[mp$empty.idx])
-    } else {
-      n <- sum(wt)
-    }
+  n <- lav_mvn_mi_nobs(mp = mp, wt = wt)
+
+  # Abeta: expected or observed unit information
+  if (information == "expected") {
+    abeta <- lav_mvn_mi_info_expected(
+      y = y, mp = mp, wt = wt,
+      sigma_1 = sigma_1, x_idx = x_idx, sigma_inv = sigma_inv,
+      sinv_method = sinv_method
+    )
   } else {
-    n <- sum(mp$freq) # removed empty cases!
+    yp <- lav_samp_mi_patterns(y = y, mp = mp, wt = wt)
+    abeta <- lav_mvnorm_missing_information_observed_samplestats(
+      yp = yp, mu = mu,
+      sigma_1 = sigma_1, x_idx = x_idx, sinv_method = sinv_method,
+      sigma_inv = sigma_inv
+    )
   }
 
-  # subtract Mu
-  yc <- t(t(y) - mu)
-
-  # dmu per case
-  dmu <- matrix(as.numeric(NA), nrow = NROW(y), ncol = p_1)
-
-  # SC
-  sc <- matrix(as.numeric(NA), nrow = NROW(y), ncol = length(i_sigma))
-
-  # expected/observed information
-  i11_1 <- matrix(0, p_1, p_1)
-  i22_1 <- matrix(0, p_1 * (p_1 + 1) / 2, p_1 * (p_1 + 1) / 2)
-  if (information == "observed") {
-    i21_1 <- matrix(0, p_1 * (p_1 + 1) / 2, p_1)
-  }
-
-  # for each pattern, compute Yc %*% sigma.inv
-  for (p in seq_len(mp$npatterns)) {
-    # observed values for this pattern
-    var_idx <- mp$pat[p, ]
-
-    # missing values for this pattern
-    na_idx <- which(!var_idx)
-
-    # cases with this pattern
-    case_idx <- mp$case.idx[[p]]
-
-    # invert Sigma for this pattern
-    if (length(na_idx) > 0L) {
-      sigma_inv_1 <- lav_mat_sym_inverse_update(
-        s_inv = sigma_inv,
-        rm_idx = na_idx, logdet = FALSE
-      )
-      tmp <- matrix(0, p_1, p_1)
-      tmp[var_idx, var_idx] <- sigma_inv_1
-      isigma <- lav_mat_vech(tmp)
-    } else {
-      sigma_inv_1 <- sigma_inv
-      isigma <- i_sigma
-    }
-
-    # information
-    s_inv <- matrix(0, p_1, p_1)
-    s_inv[var_idx, var_idx] <- sigma_inv_1
-
-    if (!is.null(wt)) {
-      freq <- sum(wt[case_idx])
-    } else {
-      freq <- mp$freq[p]
-    }
-
-    if (information == "expected") {
-      # if (lav_use_lavaanC()) {
-      #   S2.inv <-
-      #         lavaanC::m_kronecker_dup_pre_post(S.inv, multiplicator = 0.5)
-      # } else {
-        s2_inv <- 0.5 * lav_mat_dup_pre_post(s_inv %x% s_inv)
-      # }
-
-      i11_1 <- i11_1 + freq * s_inv
-      i22_1 <- i22_1 + freq * s2_inv
-    } else {
-      pat_freq <- yp[[p]]$freq
-
-      tmp21 <- matrix(0, p_1, 1)
-      tmp21[var_idx, 1] <- sigma_inv_1 %*% (yp[[p]]$MY - mu[var_idx])
-
-      w_tilde <- yp[[p]]$SY + tcrossprod(yp[[p]]$MY - mu[var_idx])
-      aaa <- (sigma_inv_1 %*%
-        (2 * w_tilde - sigma_1[var_idx, var_idx, drop = FALSE]) %*%
-        sigma_inv_1)
-      tmp22 <- matrix(0, p_1, p_1)
-      tmp22[var_idx, var_idx] <- aaa
-
-      i11 <- s_inv
-      i21 <- lav_mat_dup_pre(tmp21 %x% s_inv)
-      # if (lav_use_lavaanC()) {
-      #   i22 <- lavaanC::m_kronecker_dup_pre_post(S.inv, tmp22, 0.5)
-      # } else {
-        i22 <- (1 / 2) * lav_mat_dup_pre_post(s_inv %x% tmp22)
-      # }
-
-      i11_1 <- i11_1 + pat_freq * i11
-      i21_1 <- i21_1 + pat_freq * i21
-      i22_1 <- i22_1 + pat_freq * i22
-    }
-
-    # compute dMu for all observations of this pattern
-    dmu[case_idx, var_idx] <-
-      yc[case_idx, var_idx, drop = FALSE] %*% sigma_inv_1
-
-    # postmultiply these cases with sigma.inv
-    yc[case_idx, var_idx] <- yc[case_idx, var_idx] %*% sigma_inv_1
-
-    # tcrossprod
-    sc[case_idx, ] <- yc[case_idx, idx1] * yc[case_idx, idx2]
-
-    # subtract isigma from each row
-    sc[case_idx, ] <- t(t(sc[case_idx, , drop = FALSE]) - isigma)
-  }
-
-  # adjust for vech
-  sc[, lav_mat_diagh_idx(p_1)] <- sc[, lav_mat_diagh_idx(p_1)] / 2
-
-  # add dmu
-  sc <- cbind(dmu, sc)
+  # Bbeta: first-order unit information (from the casewise scores)
+  eng <- lav_mvn_mi_sc_engine(
+    y = y, mp = mp, mu = mu,
+    sigma_inv = sigma_inv
+  )
+  sc <- cbind(eng$dmu, eng$sc)
 
   # weights
   if (!is.null(wt)) {
@@ -1483,25 +1050,6 @@ lav_mvn_mi_info_both <- function(y = NULL,
   # first order information
   bbeta <- lav_mat_crossprod(sc) / n
 
-  # expected/observed information
-  if (information == "expected") {
-    abeta <- lav_mat_bdiag(i11_1, i22_1) / n
-  } else {
-    abeta <- rbind(
-      cbind(i11_1, t(i21_1)),
-      cbind(i21_1, i22_1)
-    ) / n
-  }
-
-  # fixed.x?
-  if (length(x_idx) > 0L) {
-    not_x <- lav_mat_vech_which_idx(n = p_1, idx = x_idx,
-                                       # diagonal = !correlation,
-                                       add_idx_at_start = TRUE)
-    abeta[not_x, ] <- 0
-    abeta[, not_x] <- 0
-  }
-
   list(Abeta = abeta, Bbeta = bbeta)
 }
 
@@ -1511,39 +1059,6 @@ lav_mvn_mi_info_both <- function(y = NULL,
 #    6a: (unit) inverted expected information
 #    NOT USED: is not equal to solve(expected)
 #    (although it does converge to the same solution eventually)
-# lav_mvnorm_missing_inverted_information_expected <- function(Y  = NULL,
-#                                                    Mp          = NULL,
-#                                                    Mu          = NULL,# unused
-#                                                    Sigma       = NULL) {
-#    P <- NCOL(Y)
-#
-#    # missing patterns
-#    if(is.null(Mp)) {
-#        Mp <- lav_data_mi_patterns(Y)
-#    }
-#
-#    # N
-#    N <- sum(Mp$freq) # removed empty cases!
-#
-#    I11 <- matrix(0, P, P)
-#    I22 <- matrix(0, P*(P+1)/2, P*(P+1)/2)
-#
-#    # for each pattern
-#    for(p in seq_len(Mp$npatterns)) {
-#
-#        # observed variables
-#        var.idx <- Mp$pat[p,]
-#
-#        sigma <- matrix(0, P, P)
-#        sigma[var.idx, var.idx] <- Sigma[var.idx, var.idx]
-#        sigma2 <- 2 * lav_mat_dup_ginv_pre_post(sigma %x% sigma)
-#
-#        I11 <- I11 + Mp$freq[p] * sigma
-#        I22 <- I22 + Mp$freq[p] * sigma2
-#    }
-#
-#    lav_mat_bdiag(I11, I22)/N
-# }
 
 #    6b: /
 
@@ -1582,13 +1097,10 @@ lav_mvn_mi_impute_pattern <- function(y = NULL,
     mp <- lav_data_mi_patterns(y)
   }
 
-  if (is.null(sigma_inv)) {
-    # invert Sigma
-    sigma_inv <- lav_mat_sym_inverse(
-      s = sigma_1, logdet = FALSE,
-      sinv_method = sinv_method
-    )
-  }
+  sigma_inv <- lav_mvn_sigma_inv(
+    sigma_1 = sigma_1, sigma_inv = sigma_inv,
+    sinv_method = sinv_method
+  )
 
   # subtract Mu
   yc <- t(t(y) - mu)
@@ -1649,13 +1161,10 @@ lav_mvn_mi_estep <- function(y = NULL,
     mp <- lav_data_mi_patterns(y)
   }
 
-  if (is.null(sigma_inv)) {
-    # invert Sigma
-    sigma_inv <- lav_mat_sym_inverse(
-      s = sigma_1, logdet = FALSE,
-      sinv_method = sinv_method
-    )
-  }
+  sigma_inv <- lav_mvn_sigma_inv(
+    sigma_1 = sigma_1, sigma_inv = sigma_inv,
+    sinv_method = sinv_method
+  )
 
   # T1, T2
   t1 <- numeric(p_1)
