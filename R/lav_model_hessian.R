@@ -25,6 +25,31 @@ lav_model_hessian <- function(lavmodel = NULL,
     return(hessian)
   }
 
+  # two-level + missing data: use Louis's (1982) method (one analytic
+  # pass) instead of numerically differentiating the gradient (which
+  # needs 4 x npar full-data gradient passes); new in 0.7-2
+  if (!is.null(lavdata) && lavdata@nlevels > 1L &&
+      lavdata@ngroups == 1L &&
+      lavsamplestats@missing.flag &&
+      lavmodel@estimator == "ML" &&
+      !lavmodel@conditional.x &&
+      is.null(lavdata@weights[[1]])) {
+    hessian <- try(
+      lav_mvn_cl_mi_h_louis(
+        lavmodel = lavmodel,
+        lavsamplestats = lavsamplestats,
+        lavdata = lavdata,
+        ceq_simple = ceq_simple
+      ),
+      silent = TRUE
+    )
+    if (!inherits(hessian, "try-error") && all(is.finite(hessian))) {
+      return(hessian)
+    }
+    # if the Louis computation fails, fall through to the numerical
+    # approximation below
+  }
+
   # computing the Richardson extrapolation
   if (!ceq_simple && lavmodel@ceq.simple.only) {
     npar <- lavmodel@nx.unco
