@@ -493,6 +493,15 @@ Optimization options:
       which uses an augmented Lagrangian minimization algorithm.}
     \item{\code{optim.force.converged}:}{Logical. If \code{TRUE}, pretend
       the model has converged, no matter what.}
+    \item{\code{optim.fix.saturated}:}{Logical. Only used for multilevel
+      models. If \code{TRUE} (the default), and one or more blocks (levels)
+      of the model are saturated (i.e., all variances/covariances and
+      means/intercepts of the observed variables of that block are free
+      and unconstrained), the free parameters of these blocks are
+      (temporarily) fixed to their h1 (unrestricted model) estimates during
+      optimization, as their estimated values are already known. This often
+      helps convergence. After the optimization, they are treated as free
+      parameters again (e.g., when standard errors are computed).}
     \item{\code{optim.dx.tol}}{Numeric. Tolerance used for checking if
       the elements of the (unscaled) gradient are all zero (in absolute 
       value). The default value is 0.001.}

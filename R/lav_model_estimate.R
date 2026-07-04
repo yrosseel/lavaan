@@ -89,6 +89,34 @@ lav_model_est <- function(lavmodel = NULL,
     }
   }
 
+  # new in 0.7-2: multilevel models where a whole block (level) is
+  # saturated: the h1 estimates for this block are already available;
+  # temporarily fix these parameters at their h1 values, so they do not
+  # enter the optimization again as free parameters (this often helps
+  # convergence); after optimization, they are free parameters again
+  h1_sat_idx <- integer(0L)
+  h1_sat_ok <- lavoptions$optim.fix.saturated
+  if (is.null(h1_sat_ok)) { # backwards compatibility
+    h1_sat_ok <- TRUE
+  }
+  if (h1_sat_ok && lavdata@nlevels > 1L && estimator == "ML" &&
+      # only if the optimizer honours box constraints (NLMINB family)
+      length(lavmodel@ceq.nonlinear.idx) == 0L &&
+      (lavmodel@cin.simple.only ||
+       (length(lavmodel@cin.linear.idx) == 0L &&
+        length(lavmodel@cin.nonlinear.idx) == 0L)) &&
+      (is.null(lavoptions$optim.method) ||
+       toupper(lavoptions$optim.method) %in%
+         c("NLMINB", "NLMINB0", "NLMINB1", "L.BFGS.B"))) {
+    tmp <- lav_model_est_h1_saturated(
+      lavmodel = lavmodel, lavpartable = lavpartable,
+      lavdata = lavdata, lavh1 = lavh1
+    )
+    if (length(tmp$x.idx) > 0L) {
+      h1_sat_idx <- tmp$x.idx
+      x_unpack[h1_sat_idx] <- tmp$value
+    }
+  }
 
   # 1. parameter scaling (to handle data scaling, not parameter scaling)
   parscale <- rep(1.0, length(x_unpack))
@@ -289,6 +317,14 @@ lav_model_est <- function(lavmodel = NULL,
     # upper[bad.idx] <- tmp
     lower[bad_idx] <- -Inf
     upper[bad_idx] <- +Inf
+  }
+
+  # new in 0.7-2: fix the parameters of saturated blocks at their h1
+  # values during optimization, by forcing lower == upper == start
+  if (length(h1_sat_idx) > 0L) {
+    lower <- rep(lower, length.out = length(start_x))
+    upper <- rep(upper, length.out = length(start_x))
+    lower[h1_sat_idx] <- upper[h1_sat_idx] <- start_x[h1_sat_idx]
   }
 
   # function to be minimized
@@ -533,7 +569,12 @@ lav_model_est <- function(lavmodel = NULL,
   fx <- objective_function(start_x, verbose = verbose, debug = debug)
   if (!is.finite(fx)) {
     # emergency change of start.x
-    start_x <- start_x / 10
+    if (length(h1_sat_idx) > 0L) {
+      # do not touch the (fixed) h1 values of saturated blocks
+      start_x[-h1_sat_idx] <- start_x[-h1_sat_idx] / 10
+    } else {
+      start_x <- start_x / 10
+    }
   }
 
 
@@ -1037,6 +1078,11 @@ lav_model_est <- function(lavmodel = NULL,
         if (!is.null(lavpartable$upper)) {
           bound_idx <- c(bound_idx, which(upper == x))
         }
+        # parameters fixed at their h1 values (saturated blocks) were
+        # not part of the search
+        if (length(h1_sat_idx) > 0L) {
+          bound_idx <- c(bound_idx, h1_sat_idx)
+        }
         if (length(bound_idx) > 0L) {
           non_zero <- non_zero[-which(non_zero %in% bound_idx)]
         }
@@ -1100,3 +1146,142 @@ lav_model_est <- function(lavmodel = NULL,
 
 # backwards compatibility
 # estimateModel <- lav_model_estimate
+
+# new in 0.7-2: identify free parameters that belong to a 'saturated'
+# block of a multilevel model
+#
+# a block is considered to be saturated if it only contains (free,
+# unconstrained) variances/covariances -- and means/intercepts -- of the
+# observed variables of that block; in that case, the 'estimated' values of
+# these parameters are already available in lavh1$implied, and they do not
+# need to enter the optimization again as free parameters: they are
+# (temporarily) fixed at their h1 values during optimization only; once
+# model estimation is over, they are treated as free parameters again
+# (eg to compute standard errors)
+#
+# returns a list with two elements:
+#   - x.idx: positions of these parameters in the (packed) parameter vector
+#   - value: the corresponding h1 estimates
+lav_model_est_h1_saturated <- function(lavmodel = NULL,
+                                       lavpartable = NULL,
+                                       lavdata = NULL,
+                                       lavh1 = NULL) {
+  empty <- list(x.idx = integer(0L), value = numeric(0L))
+
+  # multilevel only (for now), and we need the h1 estimates
+  if (lavdata@nlevels == 1L || length(lavh1) == 0L ||
+      is.null(lavh1$implied$cov)) {
+    return(empty)
+  }
+
+  # general linear equality constraints: the optimizer operates in a
+  # reduced (packed) parameter space; we cannot fix individual parameters
+  if (lavmodel@eq.constraints) {
+    return(empty)
+  }
+
+  nlevels <- lavdata@nlevels
+  ngroups <- lavdata@ngroups
+
+  # position of each free parameter in the (packed) parameter vector
+  free_id <- lavpartable$free[lavpartable$free > 0L]
+  uid <- unique(free_id) # ceq.simple: duplicated ids are packed out
+  dup_id <- unique(free_id[duplicated(free_id)])
+
+  # labels that show up in (in)equality constraints
+  con_idx <- which(lavpartable$op %in% c("==", "<", ">"))
+  con_ref <- unique(c(lavpartable$lhs[con_idx], lavpartable$rhs[con_idx]))
+
+  x_idx <- integer(0L)
+  value <- numeric(0L)
+
+  for (g in seq_len(ngroups)) {
+    for (l in seq_len(nlevels)) {
+      b <- (g - 1L) * nlevels + l
+      ovn <- lavdata@ov.names.l[[g]][[l]]
+      p <- length(ovn)
+      cov_h1 <- lavh1$implied$cov[[b]]
+      mean_h1 <- lavh1$implied$mean[[b]]
+      if (p == 0L || is.null(cov_h1) || nrow(cov_h1) != p ||
+          length(mean_h1) != p) {
+        next
+      }
+
+      row_idx <- which(lavpartable$block == b)
+      if (length(row_idx) == 0L) {
+        next
+      }
+      op <- lavpartable$op[row_idx]
+      lhs <- lavpartable$lhs[row_idx]
+      rhs <- lavpartable$rhs[row_idx]
+      free <- lavpartable$free[row_idx]
+
+      # only variances/covariances and intercepts of observed variables
+      # (no latent variables, no regressions)
+      if (any(!op %in% c("~~", "~1")) ||
+          any(!lhs %in% ovn) ||
+          any(op == "~~" & !rhs %in% ovn)) {
+        next
+      }
+
+      # all p*(p+1)/2 variances/covariances must be present and free
+      cov_flag <- op == "~~"
+      if (any(free[cov_flag] == 0L)) {
+        next
+      }
+      i1 <- match(lhs[cov_flag], ovn)
+      i2 <- match(rhs[cov_flag], ovn)
+      pair_id <- pmin(i1, i2) + p * pmax(i1, i2)
+      if (length(unique(pair_id)) != p * (p + 1L) / 2L) {
+        next
+      }
+
+      # intercepts/means: all present; either free, or fixed at their h1
+      # value (eg the zero within-level means of shared variables)
+      int_flag <- op == "~1"
+      if (lavmodel@meanstructure) {
+        if (sum(int_flag) != p || any(duplicated(lhs[int_flag]))) {
+          next
+        }
+        int_fixed <- which(int_flag & free == 0L)
+        if (length(int_fixed) > 0L) {
+          fixed_val <- lavpartable$start[row_idx[int_fixed]]
+          h1_val <- mean_h1[match(lhs[int_fixed], ovn)]
+          if (any(abs(fixed_val - h1_val) > 1e-10)) {
+            next
+          }
+        }
+      } else if (any(int_flag)) {
+        next
+      }
+
+      # none of the free parameters may be involved in equality or
+      # inequality constraints
+      block_id <- free[free > 0L]
+      if (any(block_id %in% dup_id)) {
+        next
+      }
+      lab <- c(lavpartable$label[row_idx], lavpartable$plabel[row_idx])
+      lab <- lab[nzchar(lab)]
+      if (length(con_ref) > 0L && any(lab %in% con_ref)) {
+        next
+      }
+
+      # this block is saturated: collect positions + h1 values
+      b_free <- which(free > 0L)
+      b_value <- numeric(length(b_free))
+      for (i in seq_along(b_free)) {
+        r <- b_free[i]
+        if (op[r] == "~~") {
+          b_value[i] <- cov_h1[match(lhs[r], ovn), match(rhs[r], ovn)]
+        } else {
+          b_value[i] <- mean_h1[match(lhs[r], ovn)]
+        }
+      }
+      x_idx <- c(x_idx, match(free[b_free], uid))
+      value <- c(value, b_value)
+    } # levels
+  } # groups
+
+  list(x.idx = x_idx, value = value)
+}

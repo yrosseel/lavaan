@@ -456,6 +456,9 @@ lav_options_default <- function() {
   )) # gn for DLS, nlminb rest
   elm("optim.attempts", 4L, nm = "[1, 4]")
   elm("optim.force.converged", FALSE, bl = TRUE)
+  # multilevel: fix parameters of saturated blocks at their h1 values
+  # during optimization (new in 0.7-2)
+  elm("optim.fix.saturated", TRUE, bl = TRUE)
   elm("optim.gradient", "analytic", chr = c(
     analytic = "analytic", analytical = "analytic",
     numeric = "numerical", numerical = "numerical"
