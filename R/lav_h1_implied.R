@@ -143,7 +143,7 @@ lav_h1_implied_logl <- function(lavdata = NULL,
         lavoptions2$model.type <- "unrestricted"
         lavoptions2$optim.attempts <- 4L
         lavoptions2$check.gradient <- FALSE
-        lavoptions2$optim.force.convergence <- TRUE # for now...
+        lavoptions2$optim.force.converged <- TRUE # for now...
         lavoptions2$control <- list(rel.tol = 1e-7)
         # FIT <- lavaan(lavpartable, slot_options = lavoptions2,
         #          slot_sample_stats = lavsamplestats,

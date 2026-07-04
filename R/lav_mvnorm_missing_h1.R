@@ -249,7 +249,7 @@ lav_mvn_mi_h1_est_moments_chol <- function(lavdata = NULL,
   lavoptions2$model.type <- "unrestricted"
   lavoptions2$optim.attempts <- 4L
   lavoptions2$check.gradient <- FALSE
-  lavoptions2$optim.force.convergence <- TRUE # for now...
+  lavoptions2$optim.force.converged <- TRUE # for now...
   lavoptions2$control <- list(rel.tol = 1e-7)
   lavoptions2$start <- "simple" # add this point, we have no lavh1 yet!
   fit <- lavaan(lavpartable,
