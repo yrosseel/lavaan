@@ -602,14 +602,18 @@ Optimization options:
       is used to estimate the model parameters when
       \code{optim.method = "em"} (currently only available for multilevel
       models). The default values are \code{em.args = list(iter_max =
-      10000, fx_tol = 1e-08, dx_tol = 1e-04, zerovar_offset = 1e-04)}.
+      10000, fx_tol = 1e-08, dx_tol = 1e-04, zerovar_offset = 1e-04,
+      acceleration = "squarem")}.
       The \code{iter_max} element sets the maximum number of EM
       iterations. The EM algorithm stops when either the change in the
       loglikelihood is smaller than \code{fx_tol}, or the largest absolute
       change in the parameter values is smaller than \code{dx_tol}.
       The \code{zerovar_offset} element is used as the starting value for
       variances that are fixed to zero, as the EM algorithm cannot handle
-      exact zero variances.}
+      exact zero variances. The \code{acceleration} element controls
+      whether the EM iterations are accelerated by the SQUAREM scheme
+      (see the \code{em.h1.args} option for details); set it to
+      \code{"none"} for the plain (unaccelerated) EM iterations.}
 }
 
 Parallelization options (currently only used for bootstrapping):

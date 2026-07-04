@@ -482,6 +482,8 @@ lav_options_default <- function() {
   elm(c("em.args", "fx_tol"), 1e-08, nm = "]0, 0.01]")
   elm(c("em.args", "dx_tol"), 1e-04, nm = "]0, 0.01]")
   elm(c("em.args", "zerovar_offset"), 0.0001, nm = "]0, 0.01]")
+  # accelerate the EM iterations?
+  elm(c("em.args", "acceleration"), "squarem", chr = c("squarem", "none"))
 
   # em-h1-args sublist (EM algorithm for the unrestricted (h1) model)
   # "default" values are resolved later: single-level (missing data) uses

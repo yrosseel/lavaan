@@ -905,7 +905,8 @@ lav_mvn_cl_em_h0 <- function(lavsamplestats = NULL,
                                      dx_tol = 1e-05,
                                      max_iter = 5000,
                                      mstep_iter_max = 10000L,
-                                     mstep_rel_tol = 1e-10) {
+                                     mstep_rel_tol = 1e-10,
+                                     acceleration = "none") {
   # single group only for now
   stopifnot(lavdata@ngroups == 1L)
 
@@ -969,51 +970,23 @@ lav_mvn_cl_em_h0 <- function(lavsamplestats = NULL,
     # Y1Y1 <- Y1Y1[-between.idx, -between.idx, drop=FALSE]
   }
 
-  # EM iterations
-  fx_old <- fx
-  # fx2_old <- 0
-  # rel <- numeric(max_iter)
-  for (i in 1:max_iter) {
-    # E-step
-    estep <- lav_mvn_cl_em_estepb(
-      ylp = ylp,
-      lp = lp,
-      sigma_w = sigma_w,
-      sigma_b = sigma_b,
-      mu_w = mu_w,
-      mu_b = mu_b,
-      sigma_yz = sigma_yz,
-      sigma_zz = sigma_zz,
-      mu_z = mu_z
-    )
+  # M-step model: a two-group version of the parameter table (template)
+  mstep_partable <- lavpartable
+  # if a group column exists, delete it (it will be overriden anyway)
+  mstep_partable$group <- NULL
+  level_idx <- which(names(mstep_partable) == "level")
+  names(mstep_partable)[level_idx] <- "group"
+  mstep_partable$est <- NULL
+  mstep_partable$se <- NULL
+  free_idx <- which(lavpartable$free > 0L)
+  mstep_fixed_x <- any(lavpartable$exo == 1L)
 
-    # back to model-implied dimensions
-    implied <- lav_mvn_cl_2l2implied(
-      lp = lp,
-      sigma_w = estep$sigma.w, sigma_b = estep$sigma.b,
-      sigma_zz = sigma_zz, sigma_yz = estep$sigma.yz,
-      mu_z = mu_z,
-      mu_y = NULL, mu_w = estep$mu.w, mu_b = estep$mu.b
-    )
-    rownames(implied$Sigma.W) <- ov_names_l[[1]]
-    rownames(implied$Sigma.B) <- ov_names_l[[2]]
-
-    # M-step
-
-    # fit two-group model
-    local_partable <- lavpartable
-    # if a group column exists, delete it (it will be overriden anyway)
-    local_partable$group <- NULL
-    level_idx <- which(names(local_partable) == "level")
-    names(local_partable)[level_idx] <- "group"
-    local_partable$est <- NULL
-    local_partable$se <- NULL
-
+  # M-step: fit the two-group model to the expected complete-data moments
+  em_mstep <- function(implied, x_start) {
+    local_partable <- mstep_partable
     # give current values as starting values
-    free_idx <- which(lavpartable$free > 0L)
-    local_partable$ustart[free_idx] <- x_current
-
-    local_fit <- lavaan(local_partable,
+    local_partable$ustart[free_idx] <- x_start
+    lavaan(local_partable,
       sample_cov = list(
         within = implied$Sigma.W,
         between = implied$Sigma.B
@@ -1028,7 +1001,7 @@ lav_mvn_cl_em_h0 <- function(lavsamplestats = NULL,
         iter.max = mstep_iter_max,
         rel.tol = mstep_rel_tol
       ),
-      fixed.x = any(lavpartable$exo == 1L),
+      fixed.x = mstep_fixed_x,
       estimator = "ML",
       warn = FALSE, # no warnings
       check.start = FALSE,
@@ -1040,100 +1013,219 @@ lav_mvn_cl_em_h0 <- function(lavsamplestats = NULL,
       se = "none",
       test = "none"
     )
+  }
 
-    # end of M-step
-
-    implied2 <- local_fit@implied
-    fx <- lav_mvn_cl_loglik_samp_2l(
+  # one EM step as a map in the model parameter space: x -> x'
+  # (E-step at the model-implied moments of x, then the M-step fit)
+  em_step <- function(x) {
+    lavmodel2 <- lav_model_set_parameters(lavmodel, x = x)
+    implied_x <- lav_model_implied(lavmodel2)
+    out2 <- lav_mvn_cl_implied22l(
+      lp = lp,
+      mu_w = implied_x$mean[[1]], sigma_w = implied_x$cov[[1]],
+      mu_b = implied_x$mean[[2]], sigma_b = implied_x$cov[[2]]
+    )
+    estep <- lav_mvn_cl_em_estepb(
       ylp = ylp,
-      lp = lp, mu_w = implied2$mean[[1]], sigma_w = implied2$cov[[1]],
-      mu_b = implied2$mean[[2]], sigma_b = implied2$cov[[2]],
+      lp = lp,
+      sigma_w = out2$sigma.w,
+      sigma_b = out2$sigma.b,
+      mu_w = out2$mu.w,
+      mu_b = out2$mu.b,
+      sigma_yz = out2$sigma.yz,
+      sigma_zz = out2$sigma.zz,
+      mu_z = out2$mu.z
+    )
+    implied <- lav_mvn_cl_2l2implied(
+      lp = lp,
+      sigma_w = estep$sigma.w, sigma_b = estep$sigma.b,
+      sigma_zz = out2$sigma.zz, sigma_yz = estep$sigma.yz,
+      mu_z = out2$mu.z,
+      mu_y = NULL, mu_w = estep$mu.w, mu_b = estep$mu.b
+    )
+    rownames(implied$Sigma.W) <- ov_names_l[[1]]
+    rownames(implied$Sigma.B) <- ov_names_l[[2]]
+    local_fit <- em_mstep(implied, x_start = x)
+    local_fit@optim$x
+  }
+
+  # loglikelihood at x
+  em_logl <- function(x) {
+    lavmodel2 <- lav_model_set_parameters(lavmodel, x = x)
+    implied_x <- lav_model_implied(lavmodel2)
+    lav_mvn_cl_loglik_samp_2l(
+      ylp = ylp,
+      lp = lp, mu_w = implied_x$mean[[1]], sigma_w = implied_x$cov[[1]],
+      mu_b = implied_x$mean[[2]], sigma_b = implied_x$cov[[2]],
       sinv_method = "eigen", log2pi = TRUE, minus_two = FALSE
     )
+  }
 
-    # fx.delta
-    fx_delta <- fx - fx_old
-
-    # derivatives
-    lavmodel <- lav_model_set_parameters(lavmodel, x = local_fit@optim$x)
-    dx <- lav_model_grad(lavmodel,
-      lavdata = lavdata,
-      lavsamplestats = lavsamplestats
-    )
-    max_dx <- max(abs(dx))
-
-    if (lav_verbose()) {
-      cat(
-        "EM iter:", sprintf("%3d", i),
-        " fx =", sprintf("%17.10f", fx),
-        " fx.delta =", sprintf("%9.8f", fx_delta),
-        " mstep.iter =", sprintf(
-          "%3d",
-          lavInspect(local_fit, "iterations")
-        ),
-        " max.dx = ", sprintf("%9.8f", max_dx),
-        "\n"
+  if (identical(acceleration, "squarem")) {
+    # same dual stopping rule as the plain EM iterations below: the
+    # (signed!) change in the loglikelihood is smaller than fx_tol
+    # (this also stops when the -- inexact -- M-step no longer makes
+    # progress), or the gradient is small
+    em_conv <- function(theta_old, theta, fx_old, fx) {
+      if ((fx - fx_old) < fx_tol) {
+        if (lav_verbose()) {
+          cat("EM stopping rule reached: fx.delta < ", fx_tol, "\n")
+        }
+        return(TRUE)
+      }
+      lavmodel2 <- lav_model_set_parameters(lavmodel, x = theta)
+      dx <- lav_model_grad(lavmodel2,
+        lavdata = lavdata,
+        lavsamplestats = lavsamplestats
       )
-    }
-
-    # stopping rule check
-    if (fx_delta < fx_tol) {
-      if (lav_verbose()) {
-        cat("EM stopping rule reached: fx.delta < ", fx_tol, "\n")
+      if (max(abs(dx)) < dx_tol) {
+        if (lav_verbose()) {
+          cat("EM stopping rule reached: max.dx < ", dx_tol, "\n")
+        }
+        return(TRUE)
       }
-      break
-    } else {
-      fx_old <- fx
-      x_current <- local_fit@optim$x
-      if (verbose_x) {
-        print(round(x_current, 3))
-      }
+      FALSE
     }
-
-    # second stopping rule check -- derivatives
-    if (max_dx < dx_tol) {
-      if (lav_verbose()) {
-        cat("EM stopping rule reached: max.dx < ", dx_tol, "\n")
-      }
-      break
-    }
-
-    # translate to internal matrices
-    out <- lav_mvn_cl_implied22l(
-      lp = lp,
-      mu_w = implied2$mean[[1]], sigma_w = implied2$cov[[1]],
-      mu_b = implied2$mean[[2]], sigma_b = implied2$cov[[2]]
+    out_em <- lav_em_squarem(
+      theta = x_current, step_fn = em_step, logl_fn = em_logl,
+      fx0 = fx, conv_fn = em_conv, max_iter = max_iter,
+      logl_dec = 0 # inexact M-step: only accept monotone extrapolations
     )
-    # mu_y <- out$mu.y
-    mu_z <- out$mu.z
-    mu_w <- out$mu.w
-    mu_b <- out$mu.b
-    sigma_w <- out$sigma.w
-    sigma_b <- out$sigma.b
-    sigma_zz <- out$sigma.zz
-    sigma_yz <- out$sigma.yz
-  } # EM iterations
+    x <- out_em$theta
+    fx <- out_em$fx
+    # a stall (the M-step no longer improves the loglikelihood) counts as
+    # convergence, just like the signed fx.delta check in the plain
+    # iterations below
+    em_converged <- out_em$converged || out_em$stalled
+    em_iterations <- out_em$fpeval
+  } else {
+    # EM iterations
+    fx_old <- fx
+    # fx2_old <- 0
+    # rel <- numeric(max_iter)
+    for (i in 1:max_iter) {
+      # E-step
+      estep <- lav_mvn_cl_em_estepb(
+        ylp = ylp,
+        lp = lp,
+        sigma_w = sigma_w,
+        sigma_b = sigma_b,
+        mu_w = mu_w,
+        mu_b = mu_b,
+        sigma_yz = sigma_yz,
+        sigma_zz = sigma_zz,
+        mu_z = mu_z
+      )
 
-  x <- local_fit@optim$x
+      # back to model-implied dimensions
+      implied <- lav_mvn_cl_2l2implied(
+        lp = lp,
+        sigma_w = estep$sigma.w, sigma_b = estep$sigma.b,
+        sigma_zz = sigma_zz, sigma_yz = estep$sigma.yz,
+        mu_z = mu_z,
+        mu_y = NULL, mu_w = estep$mu.w, mu_b = estep$mu.b
+      )
+      rownames(implied$Sigma.W) <- ov_names_l[[1]]
+      rownames(implied$Sigma.B) <- ov_names_l[[2]]
+
+      # M-step
+      local_fit <- em_mstep(implied, x_start = x_current)
+
+      implied2 <- local_fit@implied
+      fx <- lav_mvn_cl_loglik_samp_2l(
+        ylp = ylp,
+        lp = lp, mu_w = implied2$mean[[1]], sigma_w = implied2$cov[[1]],
+        mu_b = implied2$mean[[2]], sigma_b = implied2$cov[[2]],
+        sinv_method = "eigen", log2pi = TRUE, minus_two = FALSE
+      )
+
+      # fx.delta
+      fx_delta <- fx - fx_old
+
+      # derivatives
+      lavmodel <- lav_model_set_parameters(lavmodel, x = local_fit@optim$x)
+      dx <- lav_model_grad(lavmodel,
+        lavdata = lavdata,
+        lavsamplestats = lavsamplestats
+      )
+      max_dx <- max(abs(dx))
+
+      if (lav_verbose()) {
+        cat(
+          "EM iter:", sprintf("%3d", i),
+          " fx =", sprintf("%17.10f", fx),
+          " fx.delta =", sprintf("%9.8f", fx_delta),
+          " mstep.iter =", sprintf(
+            "%3d",
+            lavInspect(local_fit, "iterations")
+          ),
+          " max.dx = ", sprintf("%9.8f", max_dx),
+          "\n"
+        )
+      }
+
+      # stopping rule check
+      if (fx_delta < fx_tol) {
+        if (lav_verbose()) {
+          cat("EM stopping rule reached: fx.delta < ", fx_tol, "\n")
+        }
+        break
+      } else {
+        fx_old <- fx
+        x_current <- local_fit@optim$x
+        if (verbose_x) {
+          print(round(x_current, 3))
+        }
+      }
+
+      # second stopping rule check -- derivatives
+      if (max_dx < dx_tol) {
+        if (lav_verbose()) {
+          cat("EM stopping rule reached: max.dx < ", dx_tol, "\n")
+        }
+        break
+      }
+
+      # translate to internal matrices
+      out <- lav_mvn_cl_implied22l(
+        lp = lp,
+        mu_w = implied2$mean[[1]], sigma_w = implied2$cov[[1]],
+        mu_b = implied2$mean[[2]], sigma_b = implied2$cov[[2]]
+      )
+      # mu_y <- out$mu.y
+      mu_z <- out$mu.z
+      mu_w <- out$mu.w
+      mu_b <- out$mu.b
+      sigma_w <- out$sigma.w
+      sigma_b <- out$sigma.b
+      sigma_zz <- out$sigma.zz
+      sigma_yz <- out$sigma.yz
+    } # EM iterations
+
+    x <- local_fit@optim$x
+    em_converged <- i < max_iter
+    em_iterations <- i
+  }
 
   # add attributes
-  if (i < max_iter) {
+  if (em_converged) {
     attr(x, "converged") <- TRUE
     attr(x, "warn.txt") <- ""
   } else {
     attr(x, "converged") <- FALSE
-    attr(x, "warn.txt") <- paste("maxmimum number of iterations (",
+    attr(x, "warn.txt") <- paste("maximum number of iterations (",
       max_iter, ") ",
       "was reached without convergence.\n",
       sep = ""
     )
   }
-  attr(x, "iterations") <- i
+  attr(x, "iterations") <- em_iterations
   attr(x, "control") <- list(
     em.args = list(
       iter_max = max_iter,
       fx_tol = fx_tol,
-      dx_tol = dx_tol
+      dx_tol = dx_tol,
+      acceleration = acceleration
     )
   )
   attr(fx, "fx.group") <- fx # single group for now

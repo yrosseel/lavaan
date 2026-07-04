@@ -18,6 +18,10 @@
 #             < tol (as in the plain multilevel EM iterations); "param" =
 #             largest absolute change in the parameter values < tol (as in
 #             the plain single-level EM iterations)
+# conv_fn   = optional user-supplied convergence check, overriding conv;
+#             a function(theta_old, theta, fx_old, fx) returning TRUE
+#             (converged) or FALSE (continue); used by the h0 EM optimizer
+#             to combine the logl criterion with a gradient check
 # tol       = convergence tolerance
 # max_iter  = maximum number of EM map evaluations (not cycles), so that
 #             the em.h1.args$iter_max option keeps the same meaning as for
@@ -26,12 +30,16 @@
 # mstep_factor = growth/shrink factor for the step length bound
 # logl_dec  = maximum allowed *decrease* in the loglikelihood for an
 #             extrapolated point to be accepted (mild non-monotonicity
-#             speeds up convergence; see Varadhan & Roland)
+#             speeds up convergence; see Varadhan & Roland); if even the
+#             plain (fallback) EM step decreases the loglikelihood by more
+#             than logl_dec, the iterations stop at the previous point
+#             (returned with stalled = TRUE)
 lav_em_squarem <- function(theta = NULL,
                            step_fn = NULL,
                            logl_fn = NULL,
                            fx0 = NULL,
                            conv = "logl",
+                           conv_fn = NULL,
                            tol = 1e-04,
                            max_iter = 5000L,
                            step_max0 = 1,
@@ -44,6 +52,7 @@ lav_em_squarem <- function(theta = NULL,
   fpeval <- 0L
   cycle <- 0L
   converged <- FALSE
+  stalled <- FALSE
   step_max <- step_max0
 
   while (fpeval < max_iter) {
@@ -100,9 +109,18 @@ lav_em_squarem <- function(theta = NULL,
       fx <- logl_fn(theta)
       if (!is.finite(fx)) {
         lav_msg_stop(gettext(
-          "EM steps of the saturated (H1) model failed; some matrices may
-           be singular; please check your data for (near-)perfect
-           correlations."))
+          "The EM iterations failed; some matrices may be singular;
+           please check your data for (near-)perfect correlations."))
+      }
+      if (fx < fx_old - logl_dec) {
+        # even the plain (double) EM step decreased the loglikelihood
+        # substantially: the map is not behaving like a monotone EM map
+        # at this point (this can happen when the M-step is only solved
+        # approximately, as in the h0 EM optimizer); revert and stop
+        theta <- p0
+        fx <- fx_old
+        stalled <- TRUE
+        break
       }
       accepted <- TRUE
     }
@@ -123,18 +141,19 @@ lav_em_squarem <- function(theta = NULL,
     }
 
     # convergence check (per cycle)
-    if (conv == "param") {
-      crit <- max(abs(theta - p0))
+    if (!is.null(conv_fn)) {
+      converged <- isTRUE(conv_fn(p0, theta, fx_old, fx))
+    } else if (conv == "param") {
+      converged <- max(abs(theta - p0)) < tol
     } else {
-      crit <- abs(fx_delta)
+      converged <- abs(fx_delta) < tol
     }
-    if (crit < tol) {
-      converged <- TRUE
+    if (converged) {
       break
     }
     fx_old <- fx
   }
 
-  list(theta = theta, fx = fx, converged = converged,
+  list(theta = theta, fx = fx, converged = converged, stalled = stalled,
        fpeval = fpeval, cycles = cycle)
 }
