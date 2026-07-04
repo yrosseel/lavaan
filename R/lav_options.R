@@ -749,9 +749,20 @@ lav_options_set <- function(opt = NULL) {
   )
 
   # after code specific to estimator types                          ####
-  # optim.method - if still "default" at this point -> set to "nlminb"
+  # optim.method - if still "default" at this point -> set to "nlminb";
+  # new in 0.7-2: for two-level models with missing = "ml" (and an
+  # ML-family estimator), the EM algorithm is the default optimizer
+  # (more robust; this mimics Mplus); if the EM optimizer turns out not
+  # to support the model (e.g., multiple groups, conditional.x), we
+  # quietly fall back to "nlminb" later (see lav_lavaan_step11_optim)
   if (opt$optim.method == "default") {
-    opt$optim.method <- "nlminb"
+    if (opt$.multilevel && opt$missing == "ml" &&
+        lav_options_estimatorgroup(opt$estimator) == "ML") {
+      opt$optim.method <- "em"
+      opt$.optim.em.fallback <- TRUE
+    } else {
+      opt$optim.method <- "nlminb"
+    }
   }
 
   # special stuff for categorical

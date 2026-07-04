@@ -545,8 +545,11 @@ Optimization options:
       implementation of Gauss-Newton is also available
       (\code{optim.method = "GN"}). The latter is the default when
       \code{estimator = "DLS"}. For multilevel models, an EM algorithm
-      is also available (\code{optim.method = "em"}); see the
-      \code{em.args} option to control the EM algorithm.
+      is also available (\code{optim.method = "em"}); this is the
+      default for two-level models with \code{missing = "ml"} (as the
+      EM algorithm is more robust in that setting; this also mimics
+      Mplus); see the \code{em.args} option to control the EM
+      algorithm.
       For constrained
       optimization, the only available option is \code{"nlminb_constr"},
       which uses an augmented Lagrangian minimization algorithm.}

@@ -57,6 +57,27 @@ lav_step11_estoptim <- function(lavdata = NULL,
       cat("lavoptim           ... start:\n")
     }
 
+    # the EM optimizer only supports two-level models with a single
+    # group, an ML-family estimator, no conditional.x, and no
+    # (nonlinear or inequality) constraints; if optim.method = "em" was
+    # merely the default (missing = "ml"; see lav_options_set), quietly
+    # fall back to "nlminb"; if the user asked for it explicitly, warn
+    if (lavoptions$optim.method == "em" &&
+        (lavdata@nlevels == 1L ||
+         lavdata@ngroups > 1L ||
+         lavmodel@conditional.x ||
+         lavmodel@estimator != "ML" ||
+         length(lavmodel@ceq.nonlinear.idx) > 0L ||
+         length(lavmodel@cin.linear.idx) > 0L ||
+         length(lavmodel@cin.nonlinear.idx) > 0L)) {
+      if (!isTRUE(lavoptions$.optim.em.fallback)) {
+        lav_msg_warn(gettext(
+          "optim.method = \"em\" is not available for this model;
+           using optim.method = \"nlminb\" instead."))
+      }
+      lavoptions$optim.method <- "nlminb"
+    }
+
     # non-iterative methods (fabin, miiv, ...)
     if (lavoptions$optim.method == "noniter") {
       x <- try(

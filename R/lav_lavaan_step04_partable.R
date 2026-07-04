@@ -145,6 +145,19 @@ lav_step04_pt <- function(slot_par_table = NULL,
     rm(junk)
   }
 
+  # if optim.method = "em" was set by default (two-level + missing =
+  # "ml"; see lav_options_set), quietly fall back to "nlminb" when the
+  # EM optimizer does not support the data configuration (single-group
+  # two-level only, no conditional.x); this must happen *before* the
+  # zero-variance offset tweak below
+  if (lavoptions$optim.method == "em" &&
+      isTRUE(lavoptions$.optim.em.fallback) &&
+      (lavdata@nlevels == 1L ||
+       lavdata@ngroups > 1L ||
+       lavoptions$conditional.x)) {
+    lavoptions$optim.method <- "nlminb"
+  }
+
   # for EM only (for now), force fixed-to-zero (residual) variances
   # to be slightly larger than zero
   if (lavoptions$optim.method == "em") {
