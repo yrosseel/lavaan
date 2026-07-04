@@ -86,6 +86,10 @@ lav_h1_implied_logl <- function(lavdata = NULL,
     if (!is.numeric(em_h1_iter_max)) {
       em_h1_iter_max <- 5000L
     }
+    em_h1_min_variance <- lavoptions$em.h1.args$min_variance
+    if (!is.numeric(em_h1_min_variance)) {
+      em_h1_min_variance <- 1e-05
+    }
     non_pd_action <- lavoptions$em.h1.args$non_pd_action
     if (is.null(non_pd_action)) {
       non_pd_action <- "warn" # backwards compatibility
@@ -120,7 +124,7 @@ lav_h1_implied_logl <- function(lavdata = NULL,
           loglik_x = lavsamplestats@YLp[[g]][[2]]$loglik.x,
           tol = em_h1_tol,
           max_iter = em_h1_iter_max,
-          min_variance = 1e-05, # option?
+          min_variance = em_h1_min_variance,
           acceleration = em_h1_accel
         )
       } else if (lavsamplestats@missing.flag) {
@@ -211,7 +215,7 @@ lav_h1_implied_logl <- function(lavdata = NULL,
           ylp = lavsamplestats@YLp[[g]],
           lp = lavdata@Lp[[g]],
           tol = em_h1_tol,
-          min_variance = 1e-05, # option?
+          min_variance = em_h1_min_variance,
           max_iter = em_h1_iter_max,
           acceleration = em_h1_accel
         )

@@ -14,7 +14,11 @@
 # logl_fn   = loglikelihood at theta (to be maximized); used to safeguard
 #             the extrapolation and to monitor convergence
 # fx0       = loglikelihood at the initial theta (recomputed if NULL)
-# tol       = convergence: |change in logl| per cycle < tol
+# conv      = convergence criterion (per cycle): "logl" = |change in logl|
+#             < tol (as in the plain multilevel EM iterations); "param" =
+#             largest absolute change in the parameter values < tol (as in
+#             the plain single-level EM iterations)
+# tol       = convergence tolerance
 # max_iter  = maximum number of EM map evaluations (not cycles), so that
 #             the em.h1.args$iter_max option keeps the same meaning as for
 #             the non-accelerated EM iterations
@@ -27,6 +31,7 @@ lav_em_squarem <- function(theta = NULL,
                            step_fn = NULL,
                            logl_fn = NULL,
                            fx0 = NULL,
+                           conv = "logl",
                            tol = 1e-04,
                            max_iter = 5000L,
                            step_max0 = 1,
@@ -117,9 +122,13 @@ lav_em_squarem <- function(theta = NULL,
       )
     }
 
-    # convergence check (same |delta logl| criterion as the plain EM
-    # iterations, but per cycle)
-    if (abs(fx_delta) < tol) {
+    # convergence check (per cycle)
+    if (conv == "param") {
+      crit <- max(abs(theta - p0))
+    } else {
+      crit <- abs(fx_delta)
+    }
+    if (crit < tol) {
       converged <- TRUE
       break
     }

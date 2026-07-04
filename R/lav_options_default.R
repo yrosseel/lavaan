@@ -491,12 +491,14 @@ lav_options_default <- function() {
   elm(c("em.h1.args", "iter_max"), "default", chr = "default",
       nm = "[10, 1e7]", num2int = TRUE)
   elm(c("em.h1.args", "tol"), "default", chr = "default", nm = "]0, 0.01]")
+  # minimum value a variance can take (multilevel only)
+  elm(c("em.h1.args", "min_variance"), 1e-05, nm = "]0, 0.01]")
   elm(c("em.h1.args", "warn"), TRUE, bl = TRUE)
   # what to do if an EM estimated covariance matrix is (near) singular?
   elm(c("em.h1.args", "non_pd_action"), "stop",
       chr = c("stop", "warn", "none"))
   elm(c("em.h1.args", "non_pd_tol"), 1e-05, nm = "]0, 0.01]")
-  # accelerate the EM iterations? (multilevel only, for now)
+  # accelerate the EM iterations?
   elm(c("em.h1.args", "acceleration"), "squarem",
       chr = c("squarem", "none"))
   elm("optim.gn.iter.max", 200L, nm = "[100, 1e8]", num2int = TRUE)

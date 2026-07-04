@@ -57,6 +57,10 @@ lav_h1_logl <- function(lavdata = NULL,
         if (!is.numeric(em_h1_iter_max)) {
           em_h1_iter_max <- 5000L
         }
+        em_h1_min_variance <- lavoptions$em.h1.args$min_variance
+        if (!is.numeric(em_h1_min_variance)) {
+          em_h1_min_variance <- 1e-05
+        }
         em_h1_accel <- lavoptions$em.h1.args$acceleration
         if (is.null(em_h1_accel)) {
           em_h1_accel <- "none" # backwards compatibility
@@ -65,7 +69,7 @@ lav_h1_logl <- function(lavdata = NULL,
           ylp = lavsamplestats@YLp[[g]],
           lp = lavdata@Lp[[g]],
           tol = em_h1_tol,
-          min_variance = 1e-05, # option?
+          min_variance = em_h1_min_variance,
           max_iter = em_h1_iter_max,
           acceleration = em_h1_accel
         )

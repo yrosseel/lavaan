@@ -16,7 +16,8 @@ lav_mvn_mi_h1_est_moments <- function(y = NULL,
                                                    max_iter = 500L,
                                                    tol = 1e-05,
                                                    non_pd_action = "warn",
-                                                   non_pd_tol = 1e-05) {
+                                                   non_pd_tol = 1e-05,
+                                                   acceleration = "none") {
   # check input
   y <- as.matrix(y)
   p <- NCOL(y)
@@ -57,6 +58,9 @@ lav_mvn_mi_h1_est_moments <- function(y = NULL,
   }
   if (is.null(non_pd_tol)) {
     non_pd_tol <- 1e-05
+  }
+  if (is.null(acceleration)) {
+    acceleration <- "none" # backwards compatibility
   }
 
   # remove empty cases
@@ -123,8 +127,11 @@ lav_mvn_mi_h1_est_moments <- function(y = NULL,
     )
   }
 
-  # EM steps
-  for (i in 1:max_iter) {
+  # one EM step: theta -> theta'
+  em_step <- function(theta) {
+    mu <- theta[seq_len(p)]
+    sigma_1 <- lav_mat_vech_rev(theta[-seq_len(p)])
+
     # E-step
     estep <- lav_mvn_mi_estep(
       y = y, mp = mp, wt = wt,
@@ -151,35 +158,68 @@ lav_mvn_mi_h1_est_moments <- function(y = NULL,
       diag(sigma_1) <- diag(sigma_1) + max(diag(sigma_1)) * 1e-08
     }
 
-    # max absolute difference in parameter values
-    mm_delta <- max(abs(c(mu, lav_mat_vech(sigma_1)) -
-      c(mu0, lav_mat_vech(sigma0))))
+    c(mu, lav_mat_vech(sigma_1))
+  }
 
-    # report fx
-    if (lav_verbose()) {
-      # fx <- lav_model_objective_fiml(Sigma.hat=Sigma, Mu.hat=Mu, M=Yp)
-      fx <- lav_mvn_mi_loglik_samp(
-        yp = yp,
-        mu = mu, sigma_1 = sigma_1,
-        log2pi = FALSE,
-        minus_two = TRUE
-      ) / n
-      cat(
-        "  EM iteration:", sprintf("%4d", i),
-        " fx = ", sprintf("%15.10f", fx),
-        " delta par = ", sprintf("%9.8f", mm_delta),
-        "\n"
-      )
+  # loglikelihood at theta
+  em_logl <- function(theta) {
+    lav_mvn_mi_loglik_samp(
+      yp = yp,
+      mu = theta[seq_len(p)],
+      sigma_1 = lav_mat_vech_rev(theta[-seq_len(p)]),
+      log2pi = FALSE,
+      minus_two = FALSE
+    )
+  }
+
+  # EM steps
+  converged <- FALSE
+  if (identical(acceleration, "squarem")) {
+    out_em <- lav_em_squarem(
+      theta = c(mu, lav_mat_vech(sigma_1)),
+      step_fn = em_step, logl_fn = em_logl,
+      conv = "param", # same criterion as the plain EM steps below
+      tol = tol, max_iter = max_iter
+    )
+    mu <- out_em$theta[seq_len(p)]
+    sigma_1 <- lav_mat_vech_rev(out_em$theta[-seq_len(p)])
+    converged <- out_em$converged
+  } else {
+    theta_old <- c(mu, lav_mat_vech(sigma_1))
+    for (i in 1:max_iter) {
+      theta <- em_step(theta_old)
+      mu <- theta[seq_len(p)]
+      sigma_1 <- lav_mat_vech_rev(theta[-seq_len(p)])
+
+      # max absolute difference in parameter values
+      mm_delta <- max(abs(theta - theta_old))
+
+      # report fx
+      if (lav_verbose()) {
+        # fx <- lav_model_objective_fiml(Sigma.hat=Sigma, Mu.hat=Mu, M=Yp)
+        fx <- lav_mvn_mi_loglik_samp(
+          yp = yp,
+          mu = mu, sigma_1 = sigma_1,
+          log2pi = FALSE,
+          minus_two = TRUE
+        ) / n
+        cat(
+          "  EM iteration:", sprintf("%4d", i),
+          " fx = ", sprintf("%15.10f", fx),
+          " delta par = ", sprintf("%9.8f", mm_delta),
+          "\n"
+        )
+      }
+
+      # convergence check: using parameter values:
+      if (mm_delta < tol) {
+        converged <- TRUE
+        break
+      }
+
+      # again
+      theta_old <- theta
     }
-
-    # convergence check: using parameter values:
-    if (mm_delta < tol) {
-      break
-    }
-
-    # again
-    mu0 <- mu
-    sigma0 <- sigma_1
   } # EM iterations
 
   if (lav_verbose()) {
@@ -191,7 +231,7 @@ lav_mvn_mi_h1_est_moments <- function(y = NULL,
   }
 
   # compute fx if we haven't already
-  if (!lav_verbose()) {
+  if (identical(acceleration, "squarem") || !lav_verbose()) {
     # fx <- lav_model_objective_fiml(Sigma.hat = Sigma, Mu.hat = Mu, M = Yp)
     fx <- lav_mvn_mi_loglik_samp(
       yp = yp,
@@ -202,7 +242,7 @@ lav_mvn_mi_h1_est_moments <- function(y = NULL,
   }
 
   # warning?
-  if (i == max_iter) {
+  if (!converged) {
     lav_msg_warn(
       gettext("Maximum number of iterations reached when computing the sample
               moments using EM; increase the iter_max element of the

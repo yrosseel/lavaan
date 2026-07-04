@@ -392,8 +392,9 @@ Estimation options:
       and for single-level models with missing data (and
       \code{missing = "ml"} or \code{missing = "two.stage"}). The default
       values are \code{em.h1.args = list(iter_max = "default",
-      tol = "default", warn = TRUE, non_pd_action = "stop",
-      non_pd_tol = 1e-05, acceleration = "squarem")}. The \code{iter_max}
+      tol = "default", min_variance = 1e-05, warn = TRUE,
+      non_pd_action = "stop", non_pd_tol = 1e-05,
+      acceleration = "squarem")}. The \code{iter_max}
       element sets the
       maximum number of EM iterations; the \code{tol} element sets the
       tolerance used to determine convergence. If \code{"default"}, they
@@ -402,7 +403,11 @@ Estimation options:
       the parameter values is smaller than \code{tol}), and to 5000 and
       1e-04 respectively in the multilevel setting (where the EM algorithm
       stops when the change in the loglikelihood is smaller than
-      \code{tol}). If the \code{warn} element is \code{TRUE} (the default),
+      \code{tol}). The \code{min_variance} element sets the minimum value
+      a variance can take during the EM iterations (multilevel only):
+      whenever a within-level variance drops below this value, it is fixed
+      to this value (and the corresponding covariances are set to zero).
+      If the \code{warn} element is \code{TRUE} (the default),
       a warning is produced if the EM algorithm reaches \code{iter_max}
       iterations without converging. The \code{non_pd_action} element
       controls what happens if an EM estimated variance-covariance matrix
@@ -415,14 +420,14 @@ Estimation options:
       \code{"warn"}, a warning is produced, and estimation continues; if
       \code{"none"}, estimation continues silently. The
       \code{acceleration} element controls whether the EM iterations are
-      accelerated; this is currently only used in the multilevel setting.
-      If \code{"squarem"} (the default), the SQUAREM scheme (Varadhan &
-      Roland, 2008) is used: every cycle takes two EM steps, extrapolates,
-      and takes one stabilizing EM step from the extrapolated point, with
-      a loglikelihood safeguard; this typically reduces the number of EM
-      steps considerably (in particular when some variances approach
-      zero), and converges to the same solution. If \code{"none"}, the
-      plain (unaccelerated) EM iterations are used.}
+      accelerated. If \code{"squarem"} (the default), the SQUAREM scheme
+      (Varadhan & Roland, 2008) is used: every cycle takes two EM steps,
+      extrapolates, and takes one stabilizing EM step from the
+      extrapolated point, with a loglikelihood safeguard; this typically
+      reduces the number of EM steps considerably (in particular when
+      some variances approach zero), and converges to the same solution.
+      If \code{"none"}, the plain (unaccelerated) EM iterations are
+      used.}
    \item{\code{h1.information}:}{If \code{"structured"} (the default), the
       unrestricted (h1) information part of the (expected, first.order or 
       observed if h1 is used) information matrix is based on the structured, 
