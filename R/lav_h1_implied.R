@@ -102,6 +102,10 @@ lav_h1_implied_logl <- function(lavdata = NULL,
     if (is.null(em_h1_accel)) {
       em_h1_accel <- "none" # backwards compatibility
     }
+    em_h1_fused <- lavoptions$em.h1.args$fused
+    if (is.null(em_h1_fused)) {
+      em_h1_fused <- TRUE
+    }
     implied <- list(
       cov = vector("list", length = ngroups * nlevels),
       mean = vector("list", length = ngroups * nlevels)
@@ -125,7 +129,8 @@ lav_h1_implied_logl <- function(lavdata = NULL,
           tol = em_h1_tol,
           max_iter = em_h1_iter_max,
           min_variance = em_h1_min_variance,
-          acceleration = em_h1_accel
+          acceleration = em_h1_accel,
+          fused = em_h1_fused
         )
       } else if (lavsamplestats@missing.flag) {
         # missing data: h1.missing.method = "fiml"

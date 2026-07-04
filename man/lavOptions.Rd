@@ -394,7 +394,7 @@ Estimation options:
       values are \code{em.h1.args = list(iter_max = "default",
       tol = "default", min_variance = 1e-05, warn = TRUE,
       non_pd_action = "stop", non_pd_tol = 1e-05,
-      acceleration = "squarem")}. The \code{iter_max}
+      acceleration = "squarem", fused = TRUE)}. The \code{iter_max}
       element sets the
       maximum number of EM iterations; the \code{tol} element sets the
       tolerance used to determine convergence. If \code{"default"}, they
@@ -427,7 +427,12 @@ Estimation options:
       reduces the number of EM steps considerably (in particular when
       some variances approach zero), and converges to the same solution.
       If \code{"none"}, the plain (unaccelerated) EM iterations are
-      used.}
+      used. If the \code{fused} element is \code{TRUE} (the default), the
+      loglikelihood is computed as a cheap byproduct of the E-step
+      quantities (only used in the two-level setting with missing data,
+      for the plain EM iterations); if \code{FALSE}, a separate
+      (stand-alone) loglikelihood evaluation is used in every iteration;
+      both give identical results.}
    \item{\code{h1.information}:}{If \code{"structured"} (the default), the
       unrestricted (h1) information part of the (expected, first.order or 
       observed if h1 is used) information matrix is based on the structured, 
@@ -604,7 +609,7 @@ Optimization options:
       models, with complete or missing data). The default values are
       \code{em.args = list(iter_max =
       10000, fx_tol = 1e-08, dx_tol = 1e-04, zerovar_offset = 1e-04,
-      acceleration = "squarem")}.
+      acceleration = "squarem", fused = TRUE)}.
       The \code{iter_max} element sets the maximum number of EM
       iterations. The EM algorithm stops when either the change in the
       loglikelihood is smaller than \code{fx_tol}, or the largest absolute
@@ -612,9 +617,10 @@ Optimization options:
       The \code{zerovar_offset} element is used as the starting value for
       variances that are fixed to zero, as the EM algorithm cannot handle
       exact zero variances. The \code{acceleration} element controls
-      whether the EM iterations are accelerated by the SQUAREM scheme
-      (see the \code{em.h1.args} option for details); set it to
-      \code{"none"} for the plain (unaccelerated) EM iterations.}
+      whether the EM iterations are accelerated by the SQUAREM scheme,
+      and the \code{fused} element controls whether the loglikelihood is
+      computed as a byproduct of the E-step (see the \code{em.h1.args}
+      option for details on both).}
 }
 
 Parallelization options (currently only used for bootstrapping):

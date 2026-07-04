@@ -85,7 +85,8 @@ lav_step11_estoptim <- function(lavdata = NULL,
           fx_tol = lavoptions$em.args$fx_tol,
           dx_tol = lavoptions$em.args$dx_tol,
           max_iter = lavoptions$em.args$iter_max,
-          acceleration = lavoptions$em.args$acceleration
+          acceleration = lavoptions$em.args$acceleration,
+          fused = lavoptions$em.args$fused
         ),
         silent = TRUE
       )

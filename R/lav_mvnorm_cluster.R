@@ -906,7 +906,11 @@ lav_mvn_cl_em_h0 <- function(lavsamplestats = NULL,
                                      max_iter = 5000,
                                      mstep_iter_max = 10000L,
                                      mstep_rel_tol = 1e-10,
-                                     acceleration = "none") {
+                                     acceleration = "none",
+                                     fused = TRUE) { # = em.args$fused
+  if (is.null(fused)) {
+    fused <- TRUE
+  }
   # single group only for now
   stopifnot(lavdata@ngroups == 1L)
 
@@ -1044,8 +1048,11 @@ lav_mvn_cl_em_h0 <- function(lavsamplestats = NULL,
   }
 
   # one EM step as a map in the model parameter space: x -> x'
-  # (E-step at the model-implied moments of x, then the M-step fit)
-  em_step <- function(x) {
+  # (E-step at the model-implied moments of x, then the M-step fit);
+  # if logl = TRUE (missing data only), the observed-data loglikelihood
+  # at the *input* x is attached as the "logl" attribute (a byproduct
+  # of the E-step)
+  em_step <- function(x, logl = FALSE) {
     lavmodel2 <- lav_model_set_parameters(lavmodel, x = x)
     implied_x <- lav_model_implied(lavmodel2)
     out2 <- lav_mvn_cl_implied22l(
@@ -1059,7 +1066,8 @@ lav_mvn_cl_em_h0 <- function(lavsamplestats = NULL,
         out2$mu.w, out2$mu.b, out2$sigma.w, out2$sigma.b,
         out2$mu.z, out2$sigma.zz, out2$sigma.yz
       )
-      implied <- mi_engine$implied(mi_engine$step(theta))
+      theta_new <- mi_engine$step(theta, logl = logl)
+      implied <- mi_engine$implied(theta_new)
     } else {
       estep <- lav_mvn_cl_em_estepb(
         ylp = ylp,
@@ -1083,7 +1091,11 @@ lav_mvn_cl_em_h0 <- function(lavsamplestats = NULL,
     rownames(implied$Sigma.W) <- ov_names_l[[1]]
     rownames(implied$Sigma.B) <- ov_names_l[[2]]
     local_fit <- em_mstep(implied, x_start = x)
-    local_fit@optim$x
+    x_new <- local_fit@optim$x
+    if (logl && missing_flag) {
+      attr(x_new, "logl") <- attr(theta_new, "logl")
+    }
+    x_new
   }
 
   # loglikelihood at x
@@ -1145,12 +1157,25 @@ lav_mvn_cl_em_h0 <- function(lavsamplestats = NULL,
     em_converged <- out_em$converged || out_em$stalled
     em_iterations <- out_em$fpeval
   } else if (missing_flag) {
-    # plain EM iterations (missing data) -- driven by the em_step() map
+    # plain EM iterations (missing data) -- driven by the em_step() map;
+    # if fused = TRUE, the loglikelihood is obtained as a byproduct of
+    # the E-step (looking one EM step ahead), avoiding the separate
+    # em_logl() evaluations; same iterates, same stopping rule
     fx_old <- fx
     x <- x_current
+    if (fused) {
+      x_next <- em_step(x, logl = TRUE)
+    }
     for (i in 1:max_iter) {
-      x <- em_step(x)
-      fx <- em_logl(x)
+      if (fused) {
+        x <- x_next
+        attr(x, "logl") <- NULL
+        x_next <- em_step(x, logl = TRUE)
+        fx <- attr(x_next, "logl") # logl at the current x
+      } else {
+        x <- em_step(x)
+        fx <- em_logl(x)
+      }
 
       # fx.delta
       fx_delta <- fx - fx_old

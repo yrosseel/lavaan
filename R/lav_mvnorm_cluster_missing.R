@@ -362,6 +362,15 @@ lav_mvn_cl_mi_em_engine <- function(y1 = NULL,
     }
   }
 
+  # constants for the fused loglikelihood (a byproduct of the E-step;
+  # see em_step below)
+  p_1 <- mp$nel
+  if (nz > 0L) {
+    p_1 <- p_1 + zp$nel
+  }
+  has_x <- length(unlist(lp$ov.x.idx)) > 0L
+  log_2pi <- log(2 * pi)
+
   # pack/unpack the internal parameter vector (structural zeros stay zero
   # under linear extrapolation, so we simply pack the full matrices)
   em_pack <- function(mu_w, mu_b, sigma_w, sigma_b, mu_z, sigma_zz,
@@ -389,8 +398,12 @@ lav_mvn_cl_mi_em_engine <- function(y1 = NULL,
          mu_z = mu_z, sigma_zz = sigma_zz, sigma_yz = sigma_yz)
   }
 
-  # one EM step: theta -> theta'
-  em_step <- function(theta) {
+  # one EM step: theta -> theta'; if logl = TRUE, the observed-data
+  # loglikelihood at the *input* theta -- a cheap byproduct of the E-step
+  # quantities (cf. eq. 20 in Asparouhov & Muthen, 2003) -- is attached
+  # to the result as the "logl" attribute (it matches the value of
+  # lav_mvn_cl_mi_loglik_samp_2l() exactly)
+  em_step <- function(theta, logl = FALSE) {
     th <- em_unpack(theta)
     mu_w <- th$mu_w
     mu_b <- th$mu_b
@@ -415,6 +428,14 @@ lav_mvn_cl_mi_em_engine <- function(y1 = NULL,
          be singular; please check your data for (near-)perfect
          correlations."))
     }
+    sigma_w_logdet <- 0
+    if (logl) {
+      sigma_w_logdet <- c(determinant.matrix(sigma_w,
+                                             logarithm = TRUE)$modulus)
+      # accumulators for the fused loglikelihood
+      w_logdet <- zz_logdet <- ibza_logdet <- 0
+      q_yy_a <- q_zz_a <- q_corr <- 0
+    }
 
     # 1. per-pattern quantities + A.j and p.j per cluster
     winv_p <- breg_p <- ccond_p <- vector("list", mp$npatterns)
@@ -427,13 +448,20 @@ lav_mvn_cl_mi_em_engine <- function(y1 = NULL,
 
       if (length(na_idx) > 0L) {
         wp_inv <- lav_mat_sym_inverse_update(
-          s_inv = sigma_w_inv, rm_idx = na_idx
+          s_inv = sigma_w_inv, rm_idx = na_idx,
+          logdet = logl, s_logdet = sigma_w_logdet
         )
+        if (logl) {
+          w_logdet <- w_logdet + (attr(wp_inv, "logdet") * mp$freq[p])
+        }
         breg_p[[p]] <- sigma_w[na_idx, o_idx, drop = FALSE] %*% wp_inv
         ccond_p[[p]] <- sigma_w[na_idx, na_idx, drop = FALSE] -
           breg_p[[p]] %*% sigma_w[o_idx, na_idx, drop = FALSE]
       } else {
         wp_inv <- sigma_w_inv
+        if (logl) {
+          w_logdet <- w_logdet + (sigma_w_logdet * mp$freq[p])
+        }
       }
       winv_p[[p]] <- wp_inv
 
@@ -453,6 +481,9 @@ lav_mvn_cl_mi_em_engine <- function(y1 = NULL,
     pj <- rowsum.default(pij[, both_idx, drop = FALSE], cluster_idx,
       reorder = FALSE, na.rm = TRUE
     )
+    if (logl) {
+      q_yy_a <- sum(pij * y1w_c, na.rm = TRUE)
+    }
 
     # 2. prior of (beta, z.mis) given z.obs, per z-pattern
     if (nz > 0L) {
@@ -480,9 +511,19 @@ lav_mvn_cl_mi_em_engine <- function(y1 = NULL,
             syz[, zo_idx, drop = FALSE],
             sigma_zz[zm_idx, zo_idx, drop = FALSE]
           )
-          soo_inv <- solve.default(sigma_zz[zo_idx, zo_idx, drop = FALSE])
+          szz_o <- sigma_zz[zo_idx, zo_idx, drop = FALSE]
+          soo_inv <- solve.default(szz_o)
           m0coef_q[[q]] <- l_q %*% soo_inv
           c0_q[[q]] <- k_q - m0coef_q[[q]] %*% t(l_q)
+
+          if (logl) {
+            # fused loglikelihood: marginal of the observed z-values
+            zz_logdet <- zz_logdet +
+              (c(determinant.matrix(szz_o, logarithm = TRUE)$modulus) *
+               zp$freq[q])
+            zc_o <- zc[zp$case.idx[[q]], zo_idx, drop = FALSE]
+            q_zz_a <- q_zz_a + sum((zc_o %*% soo_inv) * zc_o)
+          }
         } else {
           m0coef_q[[q]] <- matrix(0, nb + length(zm_idx), 0L)
           c0_q[[q]] <- k_q
@@ -542,6 +583,17 @@ lav_mvn_cl_mi_em_engine <- function(y1 = NULL,
       vb <- c1[seq_len(nb), seq_len(nb), drop = FALSE]
       eb[j, ] <- ebeta
       vb_list[[j]] <- vb
+
+      if (logl) {
+        # fused loglikelihood: m_j is block lower-triangular, so
+        # det(m_j) = det(I + C0[beta, beta] %*% A.j); the second term is
+        # the correction from integrating out w = (beta, z.mis)
+        ldm <- determinant.matrix(m_j, logarithm = TRUE)
+        ibza_logdet <- ibza_logdet + (c(ldm$modulus) * ldm$sign)
+        m0_b <- m0[seq_len(nb)]
+        q_corr <- q_corr + sum(p_j * (m0_b + ebeta)) -
+          sum(m0_b * (a_j %*% ebeta))
+      }
 
       # E(u_j | data), uncentered ('both' part)
       ev_b <- mu_b[both_idx] + ebeta
@@ -647,7 +699,20 @@ lav_mvn_cl_mi_em_engine <- function(y1 = NULL,
       diag(sigma_w)[zero_var] <- min_variance
     }
 
-    em_pack(mu_w, mu_b, sigma_w, sigma_b, mu_z, sigma_zz, sigma_yz)
+    theta_new <- em_pack(mu_w, mu_b, sigma_w, sigma_b, mu_z, sigma_zz,
+                         sigma_yz)
+    if (logl) {
+      # assemble the loglikelihood at the input theta (note: all the
+      # accumulators were computed *before* the M-step overwrote the
+      # parameter matrices)
+      fx_in <- -(p_1 * log_2pi + (w_logdet + ibza_logdet + zz_logdet) +
+                 (q_yy_a + q_zz_a - q_corr)) / 2
+      if (has_x) {
+        fx_in <- fx_in - loglik_x
+      }
+      attr(theta_new, "logl") <- fx_in
+    }
+    theta_new
   } # em_step
 
   # loglikelihood at theta
@@ -681,6 +746,7 @@ lav_mvn_cl_mi_em_engine <- function(y1 = NULL,
                      sigma_yz),
     pack = em_pack,
     step = em_step,
+    step_logl = function(theta) em_step(theta, logl = TRUE),
     logl = em_logl,
     implied = em_implied
   )
@@ -694,25 +760,29 @@ lav_mvn_cl_mi_em_sat <- function(y1 = NULL,
                                  tol = 1e-04, # = em.h1.args$tol
                                  max_iter = 5000L, # = em.h1.args$iter_max
                                  min_variance = 1e-05,
-                                 acceleration = "none") {
+                                 acceleration = "none",
+                                 fused = TRUE) { # = em.h1.args$fused
+  if (is.null(fused)) {
+    fused <- TRUE
+  }
   engine <- lav_mvn_cl_mi_em_engine(
     y1 = y1, y2 = y2, lp = lp, mp = mp,
     loglik_x = loglik_x, min_variance = min_variance
   )
 
-  # report initial fx
   theta <- engine$theta0
-  fx <- engine$logl(theta)
-  if (lav_verbose()) {
-    cat(
-      "EM iter:", sprintf("%3d", 0),
-      " fx =", sprintf("%17.10f", fx),
-      "\n"
-    )
-  }
 
   # EM iterations
   if (identical(acceleration, "squarem")) {
+    # report initial fx
+    fx <- engine$logl(theta)
+    if (lav_verbose()) {
+      cat(
+        "EM iter:", sprintf("%3d", 0),
+        " fx =", sprintf("%17.10f", fx),
+        "\n"
+      )
+    }
     out_em <- lav_em_squarem(
       theta = theta, step_fn = engine$step, logl_fn = engine$logl,
       fx0 = fx, tol = tol, max_iter = max_iter
@@ -721,11 +791,37 @@ lav_mvn_cl_mi_em_sat <- function(y1 = NULL,
     fx <- out_em$fx
     converged <- out_em$converged
   } else {
+    # plain EM iterations; if fused = TRUE, the loglikelihood at theta is
+    # obtained as a cheap byproduct of engine$step_logl(theta) (returned
+    # as the "logl" attribute), so no separate loglikelihood evaluations
+    # are needed; we merely look one EM step ahead, and at the end
+    # (theta, fx) still form an exact pair; if fused = FALSE, the
+    # stand-alone loglikelihood function is used instead (same iterates,
+    # same stopping rule, same result)
+    if (fused) {
+      theta_next <- engine$step_logl(theta)
+      fx <- attr(theta_next, "logl") # logl at theta0
+    } else {
+      fx <- engine$logl(theta)
+    }
+    if (lav_verbose()) {
+      cat(
+        "EM iter:", sprintf("%3d", 0),
+        " fx =", sprintf("%17.10f", fx),
+        "\n"
+      )
+    }
     fx_old <- fx
     converged <- FALSE
     for (i in seq_len(max_iter)) {
-      theta <- engine$step(theta)
-      fx <- engine$logl(theta)
+      if (fused) {
+        theta <- theta_next
+        theta_next <- engine$step_logl(theta)
+        fx <- attr(theta_next, "logl") # logl at the current theta
+      } else {
+        theta <- engine$step(theta)
+        fx <- engine$logl(theta)
+      }
 
       # fx.delta
       fx_delta <- fx - fx_old
