@@ -623,7 +623,14 @@ Optimization options:
       whether the EM iterations are accelerated by the SQUAREM scheme,
       and the \code{fused} element controls whether the loglikelihood is
       computed as a byproduct of the E-step (see the \code{em.h1.args}
-      option for details on both).}
+      option for details on both). If the \code{nlminb_handoff} element
+      is \code{TRUE} (the default), and the EM iterations end with a
+      non-negligible gradient (larger than \code{dx_tol}; this typically
+      happens when the loglikelihood stalls before the gradient has
+      converged), the solution is refined by a quasi-Newton (nlminb)
+      run, warm-started at the EM values; the refined solution is only
+      accepted if nlminb converges to an (at least) equally good
+      solution; otherwise, the EM solution is retained.}
 }
 
 Parallelization options (currently only used for bootstrapping):

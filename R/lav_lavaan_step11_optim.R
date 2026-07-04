@@ -111,6 +111,77 @@ lav_step11_estoptim <- function(lavdata = NULL,
         ),
         silent = TRUE
       )
+
+      # EM-stall -> nlminb hand-off (new in 0.7-2): the EM iterations
+      # typically stop because the loglikelihood stalls (fx_tol) before
+      # the gradient becomes small (dx_tol); in that case, refine the
+      # solution with nlminb, warm-started at the EM values; if nlminb
+      # gets lost in parameter space (non-finite values, a worse
+      # solution) or does not converge, we keep the EM solution
+      if (!inherits(x, "try-error") &&
+          !isFALSE(lavoptions$em.args$nlminb_handoff)) {
+        em_dx_tol <- lavoptions$em.args$dx_tol
+        if (!is.numeric(em_dx_tol)) {
+          em_dx_tol <- 1e-04
+        }
+        lavmodel_em <- lav_model_set_parameters(lavmodel,
+          x = as.numeric(x))
+        dx_em <- try(lav_model_grad(
+          lavmodel = lavmodel_em,
+          lavsamplestats = lavsamplestats,
+          lavdata = lavdata
+        ), silent = TRUE)
+        if (!inherits(dx_em, "try-error") && all(is.finite(dx_em)) &&
+            max(abs(dx_em)) >= em_dx_tol) {
+          if (lav_verbose()) {
+            cat("EM stalled (max|grad| = ", max(abs(dx_em)),
+                "); handing off to nlminb\n")
+          }
+          # objective at the EM solution (for the accept/reject check)
+          fx_em <- try(lav_model_objective(
+            lavmodel = lavmodel_em,
+            lavsamplestats = lavsamplestats,
+            lavdata = lavdata,
+            lavcache = lavcache
+          ), silent = TRUE)
+          lavoptions2 <- lavoptions
+          lavoptions2$optim.method <- "nlminb"
+          # do NOT pin saturated blocks at their h1 values: the EM
+          # values are (at least as) good, and pinning would overwrite
+          # the warm start
+          lavoptions2$optim.fix.saturated <- FALSE
+          x2 <- try(
+            lav_model_est(
+              lavmodel = lavmodel_em, # warm start at the EM solution
+              lavpartable = lavpartable,
+              lavh1 = lavh1,
+              lavsamplestats = lavsamplestats,
+              lavdata = lavdata,
+              lavoptions = lavoptions2,
+              lavcache = lavcache
+            ),
+            silent = TRUE
+          )
+          accept <- (!inherits(x2, "try-error") &&
+            isTRUE(attr(x2, "converged")) &&
+            all(is.finite(x2)) &&
+            is.finite(attr(x2, "fx")[1]) &&
+            (inherits(fx_em, "try-error") || !is.finite(fx_em[1]) ||
+             attr(x2, "fx")[1] <= fx_em[1] + 1e-10))
+          if (accept) {
+            x <- x2
+          }
+          if (lav_verbose()) {
+            if (accept) {
+              cat("nlminb hand-off accepted (fx = ",
+                  attr(x2, "fx")[1], ")\n")
+            } else {
+              cat("nlminb hand-off rejected; keeping the EM solution\n")
+            }
+          }
+        }
+      }
+
       # Gauss-Newton
     } else if (lavoptions$optim.method == "gn") {
       # only tested for DLS (for now)

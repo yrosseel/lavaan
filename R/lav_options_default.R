@@ -487,6 +487,11 @@ lav_options_default <- function() {
   # compute the loglikelihood as a byproduct of the E-step?
   # (two-level + missing data, plain iterations only)
   elm(c("em.args", "fused"), TRUE, bl = TRUE)
+  # if the EM iterations end with a non-negligible gradient (a 'stall'),
+  # refine the solution with nlminb, warm-started at the EM values?
+  # (the EM solution is kept if nlminb fails to converge, or ends up
+  # at a worse solution)
+  elm(c("em.args", "nlminb_handoff"), TRUE, bl = TRUE)
 
   # em-h1-args sublist (EM algorithm for the unrestricted (h1) model)
   # "default" values are resolved later: single-level (missing data) uses
