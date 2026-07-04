@@ -57,12 +57,17 @@ lav_h1_logl <- function(lavdata = NULL,
         if (!is.numeric(em_h1_iter_max)) {
           em_h1_iter_max <- 5000L
         }
+        em_h1_accel <- lavoptions$em.h1.args$acceleration
+        if (is.null(em_h1_accel)) {
+          em_h1_accel <- "none" # backwards compatibility
+        }
         out_1 <- lav_mvn_cl_em_sat(
           ylp = lavsamplestats@YLp[[g]],
           lp = lavdata@Lp[[g]],
           tol = em_h1_tol,
           min_variance = 1e-05, # option?
-          max_iter = em_h1_iter_max
+          max_iter = em_h1_iter_max,
+          acceleration = em_h1_accel
         )
         lav_verbose(current_verbose)
         # store logl per group

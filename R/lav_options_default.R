@@ -496,6 +496,9 @@ lav_options_default <- function() {
   elm(c("em.h1.args", "non_pd_action"), "stop",
       chr = c("stop", "warn", "none"))
   elm(c("em.h1.args", "non_pd_tol"), 1e-05, nm = "]0, 0.01]")
+  # accelerate the EM iterations? (multilevel only, for now)
+  elm(c("em.h1.args", "acceleration"), "squarem",
+      chr = c("squarem", "none"))
   elm("optim.gn.iter.max", 200L, nm = "[100, 1e8]", num2int = TRUE)
   elm("optim.gn.stephalf.max", 10L, nm = "[1, 1e8]", num2int = TRUE)
   elm("optim.gn.tol.x", 1e-05, nm = "]0, 0.01]")

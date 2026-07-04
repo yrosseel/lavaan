@@ -94,6 +94,10 @@ lav_h1_implied_logl <- function(lavdata = NULL,
     if (!is.numeric(non_pd_tol)) {
       non_pd_tol <- 1e-05
     }
+    em_h1_accel <- lavoptions$em.h1.args$acceleration
+    if (is.null(em_h1_accel)) {
+      em_h1_accel <- "none" # backwards compatibility
+    }
     implied <- list(
       cov = vector("list", length = ngroups * nlevels),
       mean = vector("list", length = ngroups * nlevels)
@@ -116,7 +120,8 @@ lav_h1_implied_logl <- function(lavdata = NULL,
           loglik_x = lavsamplestats@YLp[[g]][[2]]$loglik.x,
           tol = em_h1_tol,
           max_iter = em_h1_iter_max,
-          min_variance = 1e-05 # option?
+          min_variance = 1e-05, # option?
+          acceleration = em_h1_accel
         )
       } else if (lavsamplestats@missing.flag) {
         # missing data: h1.missing.method = "fiml"
@@ -207,7 +212,8 @@ lav_h1_implied_logl <- function(lavdata = NULL,
           lp = lavdata@Lp[[g]],
           tol = em_h1_tol,
           min_variance = 1e-05, # option?
-          max_iter = em_h1_iter_max
+          max_iter = em_h1_iter_max,
+          acceleration = em_h1_accel
         )
       }
       if (lav_verbose()) {

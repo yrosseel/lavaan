@@ -290,7 +290,8 @@ lav_mvn_cl_mi_em_sat <- function(y1 = NULL,
                                  loglik_x = 0,
                                  tol = 1e-04, # = em.h1.args$tol
                                  max_iter = 5000L, # = em.h1.args$iter_max
-                                 min_variance = 1e-05) {
+                                 min_variance = 1e-05,
+                                 acceleration = "none") {
   if (is.null(loglik_x)) {
     loglik_x <- 0
   }
@@ -375,10 +376,44 @@ lav_mvn_cl_mi_em_sat <- function(y1 = NULL,
     }
   }
 
-  # EM iterations
-  fx_old <- fx
-  converged <- FALSE
-  for (i in seq_len(max_iter)) {
+  # pack/unpack the internal parameter vector (structural zeros stay zero
+  # under linear extrapolation, so we simply pack the full matrices)
+  em_pack <- function(mu_w, mu_b, sigma_w, sigma_b, mu_z, sigma_zz,
+                      sigma_yz) {
+    c(mu_w, mu_b, lav_mat_vech(sigma_w), lav_mat_vech(sigma_b), mu_z,
+      lav_mat_vech(sigma_zz), as.vector(sigma_yz))
+  }
+  em_unpack <- function(theta) {
+    i <- 0L
+    mu_w <- theta[i + seq_len(ny)]; i <- i + ny
+    mu_b <- theta[i + seq_len(ny)]; i <- i + ny
+    sigma_w <- lav_mat_vech_rev(theta[i + seq_len(ny * (ny + 1) / 2)])
+    i <- i + ny * (ny + 1) / 2
+    sigma_b <- lav_mat_vech_rev(theta[i + seq_len(ny * (ny + 1) / 2)])
+    i <- i + ny * (ny + 1) / 2
+    mu_z <- theta[i + seq_len(nz)]; i <- i + nz
+    sigma_zz <- if (nz > 0L) {
+      lav_mat_vech_rev(theta[i + seq_len(nz * (nz + 1) / 2)])
+    } else {
+      matrix(0, 0L, 0L)
+    }
+    i <- i + nz * (nz + 1) / 2
+    sigma_yz <- matrix(theta[i + seq_len(ny * nz)], ny, nz)
+    list(mu_w = mu_w, mu_b = mu_b, sigma_w = sigma_w, sigma_b = sigma_b,
+         mu_z = mu_z, sigma_zz = sigma_zz, sigma_yz = sigma_yz)
+  }
+
+  # one EM step: theta -> theta'
+  em_step <- function(theta) {
+    th <- em_unpack(theta)
+    mu_w <- th$mu_w
+    mu_b <- th$mu_b
+    sigma_w <- th$sigma_w
+    sigma_b <- th$sigma_b
+    mu_z <- th$mu_z
+    sigma_zz <- th$sigma_zz
+    sigma_yz <- th$sigma_yz
+
     # current 'both' blocks
     sb <- sigma_b[both_idx, both_idx, drop = FALSE]
     if (nz > 0L) {
@@ -626,59 +661,84 @@ lav_mvn_cl_mi_em_sat <- function(y1 = NULL,
       diag(sigma_w)[zero_var] <- min_variance
     }
 
-    # map to implied matrices + evaluate logl
+    em_pack(mu_w, mu_b, sigma_w, sigma_b, mu_z, sigma_zz, sigma_yz)
+  } # em_step
+
+  # loglikelihood at theta
+  em_logl <- function(theta) {
+    th <- em_unpack(theta)
     implied2 <- lav_mvn_cl_2l2implied(
-      lp = lp, sigma_w = sigma_w, sigma_b = sigma_b,
-      sigma_zz = sigma_zz, sigma_yz = sigma_yz, mu_z = mu_z,
-      mu_y = NULL, mu_w = mu_w, mu_b = mu_b
+      lp = lp, sigma_w = th$sigma_w, sigma_b = th$sigma_b,
+      sigma_zz = th$sigma_zz, sigma_yz = th$sigma_yz, mu_z = th$mu_z,
+      mu_y = NULL, mu_w = th$mu_w, mu_b = th$mu_b
     )
-    fx <- lav_mvn_cl_mi_loglik_samp_2l(
+    lav_mvn_cl_mi_loglik_samp_2l(
       y1 = y1, y2 = y2, lp = lp, mp = mp,
       mu_w = implied2$Mu.W, sigma_w = implied2$Sigma.W,
       mu_b = implied2$Mu.B, sigma_b = implied2$Sigma.B,
       loglik_x = loglik_x, log2pi = TRUE, minus_two = FALSE
     )
+  }
 
-    # fx.delta
-    fx_delta <- fx - fx_old
+  # EM iterations
+  theta <- em_pack(mu_w, mu_b, sigma_w, sigma_b, mu_z, sigma_zz, sigma_yz)
+  if (identical(acceleration, "squarem")) {
+    out_em <- lav_em_squarem(
+      theta = theta, step_fn = em_step, logl_fn = em_logl,
+      fx0 = fx, tol = tol, max_iter = max_iter
+    )
+    theta <- out_em$theta
+    fx <- out_em$fx
+    converged <- out_em$converged
+  } else {
+    fx_old <- fx
+    converged <- FALSE
+    for (i in seq_len(max_iter)) {
+      theta <- em_step(theta)
+      fx <- em_logl(theta)
 
-    # check if fx.delta is finite
-    if (!is.finite(fx_delta)) {
-      cat("\n")
-      cat("FATAL problem: dumping Sigma.W and Sigma.B matrices:\n\n")
-      cat("Sigma.W:\n")
-      print(implied2$Sigma.W)
-      cat("\n")
-      cat("Sigma.B:\n")
-      print(implied2$Sigma.B)
-      cat("\n")
-      lav_msg_stop(gettext(
-        "EM steps of the saturated (H1) model failed; some matrices may
-         be singular; please check your data for (near-)perfect
-         correlations."))
-    }
+      # fx.delta
+      fx_delta <- fx - fx_old
 
-    # what if fx.delta is negative?
-    if (fx_delta < -1e-06) {
-      lav_msg_warn(gettext(
-        "logl decreased during EM steps of the saturated (H1) model"))
-    }
+      # check if fx.delta is finite
+      if (!is.finite(fx_delta)) {
+        th <- em_unpack(theta)
+        cat("\n")
+        cat("FATAL problem: dumping Sigma.W and Sigma.B matrices:\n\n")
+        cat("Sigma.W:\n")
+        print(th$sigma_w)
+        cat("\n")
+        cat("Sigma.B:\n")
+        print(th$sigma_b)
+        cat("\n")
+        lav_msg_stop(gettext(
+          "EM steps of the saturated (H1) model failed; some matrices may
+           be singular; please check your data for (near-)perfect
+           correlations."))
+      }
 
-    if (lav_verbose()) {
-      cat(
-        "EM iter:", sprintf("%3d", i),
-        " fx =", sprintf("%17.10f", fx),
-        " fx.delta =", sprintf("%9.8f", fx_delta),
-        "\n"
-      )
-    }
+      # what if fx.delta is negative?
+      if (fx_delta < -1e-06) {
+        lav_msg_warn(gettext(
+          "logl decreased during EM steps of the saturated (H1) model"))
+      }
 
-    # convergence check
-    if (abs(fx_delta) < tol) {
-      converged <- TRUE
-      break
-    } else {
-      fx_old <- fx
+      if (lav_verbose()) {
+        cat(
+          "EM iter:", sprintf("%3d", i),
+          " fx =", sprintf("%17.10f", fx),
+          " fx.delta =", sprintf("%9.8f", fx_delta),
+          "\n"
+        )
+      }
+
+      # convergence check
+      if (abs(fx_delta) < tol) {
+        converged <- TRUE
+        break
+      } else {
+        fx_old <- fx
+      }
     }
   } # EM iterations
 
@@ -690,6 +750,14 @@ lav_mvn_cl_mi_em_sat <- function(y1 = NULL,
        element of the em.h1.args= argument to increase the number of
        iterations"))
   }
+
+  # final implied matrices
+  th <- em_unpack(theta)
+  implied2 <- lav_mvn_cl_2l2implied(
+    lp = lp, sigma_w = th$sigma_w, sigma_b = th$sigma_b,
+    sigma_zz = th$sigma_zz, sigma_yz = th$sigma_yz, mu_z = th$mu_z,
+    mu_y = NULL, mu_w = th$mu_w, mu_b = th$mu_b
+  )
 
   list(
     Sigma.W = implied2$Sigma.W, Sigma.B = implied2$Sigma.B,

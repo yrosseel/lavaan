@@ -393,7 +393,8 @@ Estimation options:
       \code{missing = "ml"} or \code{missing = "two.stage"}). The default
       values are \code{em.h1.args = list(iter_max = "default",
       tol = "default", warn = TRUE, non_pd_action = "stop",
-      non_pd_tol = 1e-05)}. The \code{iter_max} element sets the
+      non_pd_tol = 1e-05, acceleration = "squarem")}. The \code{iter_max}
+      element sets the
       maximum number of EM iterations; the \code{tol} element sets the
       tolerance used to determine convergence. If \code{"default"}, they
       are set to 500 and 1e-05 respectively in the single-level setting
@@ -412,7 +413,16 @@ Estimation options:
       full matrix may also be (near) singular. If \code{non_pd_action =
       "stop"} (the default), estimation stops with an error message; if
       \code{"warn"}, a warning is produced, and estimation continues; if
-      \code{"none"}, estimation continues silently.}
+      \code{"none"}, estimation continues silently. The
+      \code{acceleration} element controls whether the EM iterations are
+      accelerated; this is currently only used in the multilevel setting.
+      If \code{"squarem"} (the default), the SQUAREM scheme (Varadhan &
+      Roland, 2008) is used: every cycle takes two EM steps, extrapolates,
+      and takes one stabilizing EM step from the extrapolated point, with
+      a loglikelihood safeguard; this typically reduces the number of EM
+      steps considerably (in particular when some variances approach
+      zero), and converges to the same solution. If \code{"none"}, the
+      plain (unaccelerated) EM iterations are used.}
    \item{\code{h1.information}:}{If \code{"structured"} (the default), the
       unrestricted (h1) information part of the (expected, first.order or 
       observed if h1 is used) information matrix is based on the structured, 
