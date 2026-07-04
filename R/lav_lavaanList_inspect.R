@@ -13,62 +13,77 @@ lav_lavaanlist_inspect <- function(object, what = "free", ...) {
   lavListInspect(
     object = object,
     what = what,
-    add.labels = TRUE,
-    add.class = TRUE,
-    drop.list.single.group = TRUE
+    add_labels = TRUE,
+    add_class = TRUE,
+    drop_list_single_group = TRUE
   )
 }
 
 # the `tech' version: no labels, full matrices, ... for further processing
 lav_lavaanlist_lavtech <- function(object,
-                               what = "free",                            # nolint start
-                               add.labels = FALSE,
-                               add.class = FALSE,
-                               list.by.group = FALSE,
-                               drop.list.single.group = FALSE) {         # nolint end
+                               what = "free",
+                               add_labels = FALSE,
+                               add_class = FALSE,
+                               list_by_group = FALSE,
+                               drop_list_single_group = FALSE,
+                              ...) {
+  dotdotdot <- list(...)
+  lav_adapt_func(environment(), dotdotdot, NULL)
+
   lavListInspect(
     object = object, what = what,
-    add.labels = add.labels, add.class = add.class,
-    list.by.group = list.by.group,
-    drop.list.single.group = drop.list.single.group
+    add_labels = add_labels, add_class = add_class,
+    list_by_group = list_by_group,
+    drop_list_single_group = drop_list_single_group
   )
 }
 
-lavListTech <- function(object,                                          # nolint start
+lavListTech <- function(object,
                         what = "free",
-                        add.labels = FALSE,
-                        add.class = FALSE,
-                        list.by.group = FALSE,
-                        drop.list.single.group = FALSE) {                # nolint end
+                        add_labels = FALSE,
+                        add_class = FALSE,
+                        list_by_group = FALSE,
+                        drop_list_single_group = FALSE,
+                        ...) {
+  dotdotdot <- list(...)
+  lav_adapt_func(environment(), dotdotdot, NULL)
+
   lavListInspect(
     object = object, what = what,
-    add.labels = add.labels, add.class = add.class,
-    list.by.group = list.by.group,
-    drop.list.single.group = drop.list.single.group
+    add_labels = add_labels, add_class = add_class,
+    list_by_group = list_by_group,
+    drop_list_single_group = drop_list_single_group
   )
 }
 
 # just in case someone uses lavInspect on a lavaanList object
 lav_lavaanlist_lavinspect <- function(object,
                                   what = "free",
-                                  add.labels = TRUE,                     # nolint start
-                                  add.class = TRUE,
-                                  list.by.group = TRUE,
-                                  drop.list.single.group = TRUE) {       # nolint end
+                                  add_labels = TRUE,
+                                  add_class = TRUE,
+                                  list_by_group = TRUE,
+                                  drop_list_single_group = TRUE,
+                                  ...) {
+  dotdotdot <- list(...)
+  lav_adapt_func(environment(), dotdotdot, NULL)
+
   lavListInspect(
     object = object, what = what,
-    add.labels = add.labels, add.class = add.class,
-    list.by.group = list.by.group,
-    drop.list.single.group = drop.list.single.group
+    add_labels = add_labels, add_class = add_class,
+    list_by_group = list_by_group,
+    drop_list_single_group = drop_list_single_group
   )
 }
 
-lavListInspect <- function(object,                                       # nolint start
+lavListInspect <- function(object,
                            what = "free",
-                           add.labels = TRUE,
-                           add.class = TRUE,
-                           list.by.group = TRUE,
-                           drop.list.single.group = TRUE) {              # nolint end
+                           add_labels = TRUE,
+                           add_class = TRUE,
+                           list_by_group = TRUE,
+                           drop_list_single_group = TRUE,
+                           ...) {
+  dotdotdot <- list(...)
+  lav_adapt_func(environment(), dotdotdot, NULL)
   # object must inherit from class lavaanList
   stopifnot(inherits(object, "lavaanList"))
 
@@ -86,23 +101,23 @@ lavListInspect <- function(object,                                       # nolin
   if (what == "free") {
     lav_lavaanlist_inspect_mms(object,
       what = "free",
-      type = "free", add_labels = add.labels, add_class = add.class,
-      list_by_group = list.by.group,
-      drop_list_single_group = drop.list.single.group
+      type = "free", add_labels = add_labels, add_class = add_class,
+      list_by_group = list_by_group,
+      drop_list_single_group = drop_list_single_group
     )
   } else if (what == "partable" || what == "user") {
     lav_lavaanlist_inspect_mms(object,
       what = "free",
-      type = "partable", add_labels = add.labels, add_class = add.class,
-      list_by_group = list.by.group,
-      drop_list_single_group = drop.list.single.group
+      type = "partable", add_labels = add_labels, add_class = add_class,
+      list_by_group = list_by_group,
+      drop_list_single_group = drop_list_single_group
     )
   } else if (what == "start" || what == "starting.values") {
     lav_lavaanlist_inspect_mms(object,
       what = "start",
-      add_labels = add.labels, add_class = add.class,
-      list_by_group = list.by.group,
-      drop_list_single_group = drop.list.single.group
+      add_labels = add_labels, add_class = add_class,
+      list_by_group = list_by_group,
+      drop_list_single_group = drop_list_single_group
     )
 
 
@@ -123,49 +138,49 @@ lavListInspect <- function(object,                                       # nolin
     lav_inspect_cl_info(object,
       level = 2L,
       what = "nclusters",
-      drop_list_single_group = drop.list.single.group
+      drop_list_single_group = drop_list_single_group
     )
   } else if (what == "ncluster.size") {
     lav_inspect_cl_info(object,
       level = 2L,
       what = "ncluster.size",
-      drop_list_single_group = drop.list.single.group
+      drop_list_single_group = drop_list_single_group
     )
   } else if (what == "cluster.size") {
     lav_inspect_cl_info(object,
       level = 2L,
       what = "cluster.size",
-      drop_list_single_group = drop.list.single.group
+      drop_list_single_group = drop_list_single_group
     )
   } else if (what == "cluster.id") {
     lav_inspect_cl_info(object,
       level = 2L,
       what = "cluster.id",
-      drop_list_single_group = drop.list.single.group
+      drop_list_single_group = drop_list_single_group
     )
   } else if (what == "cluster.idx") {
     lav_inspect_cl_info(object,
       level = 2L,
       what = "cluster.idx",
-      drop_list_single_group = drop.list.single.group
+      drop_list_single_group = drop_list_single_group
     )
   } else if (what == "cluster.label") {
     lav_inspect_cl_info(object,
       level = 2L,
       what = "cluster.label",
-      drop_list_single_group = drop.list.single.group
+      drop_list_single_group = drop_list_single_group
     )
   } else if (what == "cluster.sizes") {
     lav_inspect_cl_info(object,
       level = 2L,
       what = "cluster.sizes",
-      drop_list_single_group = drop.list.single.group
+      drop_list_single_group = drop_list_single_group
     )
   } else if (what == "average.cluster.size") {
     lav_inspect_cl_info(object,
       level = 2L,
       what = "average.cluster.size",
-      drop_list_single_group = drop.list.single.group
+      drop_list_single_group = drop_list_single_group
     )
   } else if (what == "ordered") {
     object@Data@ordered
@@ -183,8 +198,8 @@ lavListInspect <- function(object,                                       # nolin
     #### from the model object (but stable) over datasets? ####
   } else if (what == "th.idx") {
     lav_lavaanlist_inspect_th_idx(object,
-      add_labels = add.labels, add_class = add.class,
-      drop_list_single_group = drop.list.single.group
+      add_labels = add_labels, add_class = add_class,
+      drop_list_single_group = drop_list_single_group
     )
 
 
@@ -317,7 +332,7 @@ lav_lavaanlist_inspect_mms <- function(
 
     # add this info at the top
     # GLIST <- c(constraints = list(CON), GLIST)
-    # no, not a good idea, it does not work with list.by.group
+    # no, not a good idea, it does not work with list_by_group
 
     # add it as a 'header' attribute?
     attr(con_1, "header") <- "Note: model contains equality constraints:"
@@ -373,7 +388,7 @@ lav_lavaanlist_inspect_th_idx <- function(
 
   # labels + class
   for (b in seq_len(nblocks)) {
-    # if(add.labels && length(OUT[[b]]) > 0L) {
+    # if(add_labels && length(OUT[[b]]) > 0L) {
     #    names(OUT[[b]]) <- object@SampleStats@th.names[[b]]
     # }
     if (add_class && !is.null(out[[b]])) {

@@ -8,33 +8,34 @@ inspect/extract information that is stored inside (or can be computed from) a
 lavaanList object.
 }
 \usage{
-lavListInspect(object, what = "free", add.labels = TRUE,
-               add.class = TRUE, list.by.group = TRUE,
-               drop.list.single.group = TRUE)
+lavListInspect(object, what = "free", add_labels = TRUE,
+               add_class = TRUE, list_by_group = TRUE,
+               drop_list_single_group = TRUE, ...)
 
-lavListTech(object, what = "free", add.labels = FALSE,
-            add.class = FALSE, list.by.group = FALSE,
-            drop.list.single.group = FALSE)
+lavListTech(object, what = "free", add_labels = FALSE,
+            add_class = FALSE, list_by_group = FALSE,
+            drop_list_single_group = FALSE, ...)
 }
 \arguments{
 \item{object}{An object of class \code{\linkS4class{lavaanList}}.}
 \item{what}{Character. What needs to be inspected/extracted? See Details for a
 full list. Note: the \code{what} argument is not case-sensitive
 (everything is converted to lower case.)}
-\item{add.labels}{If \code{TRUE}, variable names are added to the vectors
+\item{add_labels}{If \code{TRUE}, variable names are added to the vectors
 and/or matrices.}
-\item{add.class}{If \code{TRUE}, vectors are given the `lavaan.vector' class;
+\item{add_class}{If \code{TRUE}, vectors are given the `lavaan.vector' class;
 matrices are given the `lavaan.matrix' class, and symmetric matrices are
 given the `lavaan.matrix.symmetric' class. This only affects the way they
 are printed on the screen.}
-\item{list.by.group}{Logical. Only used when the output are model matrices.
+\item{list_by_group}{Logical. Only used when the output are model matrices.
 If \code{TRUE}, the model matrices are nested within groups. If \code{FALSE},
 a flattened list is returned containing all model matrices, with repeated
 names for multiple groups.}
-\item{drop.list.single.group}{If \code{FALSE}, the results are returned as
+\item{drop_list_single_group}{If \code{FALSE}, the results are returned as
     a list, where each element corresponds to a group (even if there is only
     a single group.) If \code{TRUE}, the list will be unlisted if there is
     only a single group.}
+\item{...}{To support old argument names.}
 }
 \details{
 The \code{lavListInspect()} and \code{lavListTech()} functions only differ in
@@ -122,7 +123,7 @@ generateData <- function() lavSimulateData(HS.model, sample_nobs = 100)
 
 set.seed(1234)
 fit <- semList(HS.model, dataFunction = generateData, ndat = 5,
-               store.slots = "partable")
+               store_slots = "partable")
 
 # extract information
 lavListInspect(fit, "free")

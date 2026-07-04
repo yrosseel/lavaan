@@ -10,13 +10,13 @@ fitted lavaan object. Note: the (older) \code{inspect()} function is
 now simply a shortcut for \code{lavInspect()} with default arguments.
 }
 \usage{
-lavInspect(object, what = "free", add.labels = TRUE, add.class = TRUE,
-           list.by.group = TRUE,
-           drop.list.single.group = TRUE)
+lavInspect(object, what = "free", add_labels = TRUE, add_class = TRUE,
+           list_by_group = TRUE,
+           drop_list_single_group = TRUE, ...)
 
-lavTech(object, what = "free", add.labels = FALSE, add.class = FALSE,
-        list.by.group = FALSE,
-        drop.list.single.group = FALSE)
+lavTech(object, what = "free", add_labels = FALSE, add_class = FALSE,
+        list_by_group = FALSE,
+        drop_list_single_group = FALSE, ...)
 
 inspect(object, what = "free", ...)
 }
@@ -25,21 +25,22 @@ inspect(object, what = "free", ...)
 \item{what}{Character. What needs to be inspected/extracted? See Details for a
 full list. Note: the \code{what} argument is not case-sensitive
 (everything is converted to lower case.)}
-\item{add.labels}{If \code{TRUE}, variable names are added to the vectors
+\item{add_labels}{If \code{TRUE}, variable names are added to the vectors
 and/or matrices.}
-\item{add.class}{If \code{TRUE}, vectors are given the `lavaan.vector' class;
+\item{add_class}{If \code{TRUE}, vectors are given the `lavaan.vector' class;
 matrices are given the `lavaan.matrix' class, and symmetric matrices are
 given the `lavaan.matrix.symmetric' class. This only affects the way they
 are printed on the screen.}
-\item{list.by.group}{Logical. Only used when the output are model matrices.
+\item{list_by_group}{Logical. Only used when the output are model matrices.
 If \code{TRUE}, the model matrices are nested within groups. If \code{FALSE},
 a flattened list is returned containing all model matrices, with repeated
 names for multiple groups.}
-\item{drop.list.single.group}{If \code{FALSE}, the results are returned as
+\item{drop_list_single_group}{If \code{FALSE}, the results are returned as
     a list, where each element corresponds to a group (even if there is only
     a single group). If \code{TRUE}, the list will be unlisted if there is
     only a single group.}
-\item{...}{Additional arguments. Not used by lavaan, but by other packages.}
+\item{...}{For \code{inspect()} additional arguments can be specified, not used by lavaan, but by other packages.
+For the functions \code{lavInspect()} and \code{lavTech()} this argument is used to support old names of arguments.}
 }
 \details{
 The \code{lavInspect()} and \code{lavTech()} functions only differ in the way
@@ -138,7 +139,7 @@ Information about the data:
         is the same as the \code{"nobs"} option; if there are multiple groups,
         this is the sum of the \code{"nobs"} numbers for each group. If sampling
         weights were provided, this is the sum of the weights.}
-    \item{\code{"case.idx"}:}{Integer vector. The case/observation numbers 
+    \item{\code{"case.idx"}:}{Integer vector. The case/observation numbers
         that were used in the analysis.
         In the case of multiple groups: a list of numbers.}
     \item{\code{"empty.idx"}:}{The case/observation numbers of those
@@ -184,15 +185,15 @@ Information about the data:
         integer vectors, indicating cluster indices within each group.}
     \item{\code{"cluster.label"}:}{Integer vector. The cluster ID for
         each observation. For multigroup multilevel models, a list of
-        integer vectors, indicating the cluster ID for each observation 
+        integer vectors, indicating the cluster ID for each observation
         within each group.}
     \item{\code{"cluster.sizes"}:}{Integer vector. The different cluster
-        sizes that were used in the analysis. For multigroup multilevel 
-        models, a list of integer vectors, indicating the different cluster 
+        sizes that were used in the analysis. For multigroup multilevel
+        models, a list of integer vectors, indicating the different cluster
         sizes within each group.}
     \item{\code{"average.cluster.size"}:}{Integer. The average cluster
-        size (using the formula 
-        \code{s = (N^2 - sum(cluster.size^2)) / (N*(nclusters - 1L))}). 
+        size (using the formula
+        \code{s = (N^2 - sum(cluster.size^2)) / (N*(nclusters - 1L))}).
         For multigroup multilevel
         models, a list containing the average cluster size per group.}
 }
@@ -284,7 +285,7 @@ Model-implied sample statistics:
 	   regression factor scores). They represent the (estimated) correlation
        between the factor scores and the latent variable scores.}
 	\item{\code{"fs.reliability"}:}{The factor reliabilities (based on
-       regression factor scores). They are the square of the factor 
+       regression factor scores). They are the square of the factor
        determinacies.}
     \item{\code{"fs.determinacy.Bartlett"}:}{The factor determinacies (based on
        Bartlett factor scores). They represent the (estimated) correlation
@@ -372,14 +373,14 @@ Gradient, Hessian, observed, expected and first.order information matrices:
     \item{\code{"inverted.information.first.order"}:}{Matrix containing the
         inverted first.order information matrix for the free model parameters.}
    \item{\code{"h1.information"}:}{Matrix containing either the observed,
-        expected or first.order information matrix (depending on the 
+        expected or first.order information matrix (depending on the
         information option of the fitted model) of the unrestricted h1
         model. This is unit-information, not total-information.}
     \item{\code{"h1.information.expected"}:}{Matrix containing the expected
         information matrix for the unrestricted h1 model.}
     \item{\code{"h1.information.observed"}:}{Matrix containing the observed
         information matrix for the unrestricted h1 model.}
-    \item{\code{"h1.information.first.order"}:}{Matrix containing the 
+    \item{\code{"h1.information.first.order"}:}{Matrix containing the
         first.order information matrix for the unrestricted h1 model.
         Alias: \code{"h1.first.order"}.}
 }
@@ -462,7 +463,7 @@ Miscellaneous:
     \item{\code{"mi"}:}{The modification indices. Alias: \code{"modindices"},
         \code{"modification.indices"}. The same output as given
         by \code{modindices()}.}
-    \item{\code{"loglik.casewise"}:}{Vector containing the casewise 
+    \item{\code{"loglik.casewise"}:}{Vector containing the casewise
         loglikelihood contributions. Only available if estimator = \code{"ML"}.}
     \item{\code{"options"}:}{List. The option list.}
     \item{\code{"call"}:}{List. The call as returned by match.call, coerced to
