@@ -919,6 +919,22 @@ lav_mvn_cl_em_h0 <- function(lavsamplestats = NULL,
   between_idx <- lp$between.idx[[2]]
   y2 <- ylp[[2]]$Y2
 
+  # missing data? use the missing-data E-step machinery (the same
+  # engine as the saturated h1 EM: in the E-step, we integrate over both
+  # the cluster random effects and the missing values); new in 0.7-2
+  missing_flag <- lavsamplestats@missing.flag
+  if (missing_flag) {
+    y1 <- lavdata@X[[1]] # first group only (for now)
+    mp <- lavdata@Mp[[1]]
+    loglik_x <- ylp[[2]]$loglik.x
+    if (is.null(loglik_x)) {
+      loglik_x <- 0
+    }
+    mi_engine <- lav_mvn_cl_mi_em_engine(
+      y1 = y1, y2 = y2, lp = lp, mp = mp, loglik_x = loglik_x
+    )
+  }
+
   # initial values
   x_current <- lav_model_get_parameters(lavmodel)
 
@@ -930,12 +946,21 @@ lav_mvn_cl_em_h0 <- function(lavsamplestats = NULL,
   # TODO: what if current 'starting' parameters imply a non-pd sigma.b?
 
   # report initial fx
-  fx <- lav_mvn_cl_loglik_samp_2l(
-    ylp = ylp, lp = lp,
-    mu_w = lavimplied$mean[[1]], sigma_w = lavimplied$cov[[1]],
-    mu_b = lavimplied$mean[[2]], sigma_b = lavimplied$cov[[2]],
-    sinv_method = "eigen", log2pi = TRUE, minus_two = FALSE
-  )
+  if (missing_flag) {
+    fx <- lav_mvn_cl_mi_loglik_samp_2l(
+      y1 = y1, y2 = y2, lp = lp, mp = mp,
+      mu_w = lavimplied$mean[[1]], sigma_w = lavimplied$cov[[1]],
+      mu_b = lavimplied$mean[[2]], sigma_b = lavimplied$cov[[2]],
+      loglik_x = loglik_x, log2pi = TRUE, minus_two = FALSE
+    )
+  } else {
+    fx <- lav_mvn_cl_loglik_samp_2l(
+      ylp = ylp, lp = lp,
+      mu_w = lavimplied$mean[[1]], sigma_w = lavimplied$cov[[1]],
+      mu_b = lavimplied$mean[[2]], sigma_b = lavimplied$cov[[2]],
+      sinv_method = "eigen", log2pi = TRUE, minus_two = FALSE
+    )
+  }
 
   # if verbose, report
   if (lav_verbose()) {
@@ -946,28 +971,31 @@ lav_mvn_cl_em_h0 <- function(lavsamplestats = NULL,
     )
   }
 
-  # translate to internal matrices
-  out <- lav_mvn_cl_implied22l(
-    lp = lp,
-    mu_w = lavimplied$mean[[1]], sigma_w = lavimplied$cov[[1]],
-    mu_b = lavimplied$mean[[2]], sigma_b = lavimplied$cov[[2]]
-  )
-  # mu_y <- out$mu.y
-  mu_z <- out$mu.z
-  mu_w <- out$mu.w
-  mu_b <- out$mu.b
-  sigma_w <- out$sigma.w
-  sigma_b <- out$sigma.b
-  sigma_zz <- out$sigma.zz
-  sigma_yz <- out$sigma.yz
+  # initial state for the (complete-data) plain EM iterations below
+  if (!missing_flag) {
+    # translate to internal matrices
+    out <- lav_mvn_cl_implied22l(
+      lp = lp,
+      mu_w = lavimplied$mean[[1]], sigma_w = lavimplied$cov[[1]],
+      mu_b = lavimplied$mean[[2]], sigma_b = lavimplied$cov[[2]]
+    )
+    # mu_y <- out$mu.y
+    mu_z <- out$mu.z
+    mu_w <- out$mu.w
+    mu_b <- out$mu.b
+    sigma_w <- out$sigma.w
+    sigma_b <- out$sigma.b
+    sigma_zz <- out$sigma.zz
+    sigma_yz <- out$sigma.yz
 
-  # mu.z and sigma.zz can be computed beforehand
-  if (length(between_idx) > 0L) {
-    z <- y2[, between_idx, drop = FALSE]
-    mu_z <- colMeans(y2)[between_idx]
-    sigma_zz <- cov(z) * (lp$nclusters[[2]] - 1L) / lp$nclusters[[2]]
-    # sigma.zz <- 1/Lp$nclusters[[2]] * crossprod(Z) - tcrossprod(mu.z)
-    # Y1Y1 <- Y1Y1[-between.idx, -between.idx, drop=FALSE]
+    # mu.z and sigma.zz can be computed beforehand
+    if (length(between_idx) > 0L) {
+      z <- y2[, between_idx, drop = FALSE]
+      mu_z <- colMeans(y2)[between_idx]
+      sigma_zz <- cov(z) * (lp$nclusters[[2]] - 1L) / lp$nclusters[[2]]
+      # sigma.zz <- 1/Lp$nclusters[[2]] * crossprod(Z) - tcrossprod(mu.z)
+      # Y1Y1 <- Y1Y1[-between.idx, -between.idx, drop=FALSE]
+    }
   }
 
   # M-step model: a two-group version of the parameter table (template)
@@ -1025,24 +1053,33 @@ lav_mvn_cl_em_h0 <- function(lavsamplestats = NULL,
       mu_w = implied_x$mean[[1]], sigma_w = implied_x$cov[[1]],
       mu_b = implied_x$mean[[2]], sigma_b = implied_x$cov[[2]]
     )
-    estep <- lav_mvn_cl_em_estepb(
-      ylp = ylp,
-      lp = lp,
-      sigma_w = out2$sigma.w,
-      sigma_b = out2$sigma.b,
-      mu_w = out2$mu.w,
-      mu_b = out2$mu.b,
-      sigma_yz = out2$sigma.yz,
-      sigma_zz = out2$sigma.zz,
-      mu_z = out2$mu.z
-    )
-    implied <- lav_mvn_cl_2l2implied(
-      lp = lp,
-      sigma_w = estep$sigma.w, sigma_b = estep$sigma.b,
-      sigma_zz = out2$sigma.zz, sigma_yz = estep$sigma.yz,
-      mu_z = out2$mu.z,
-      mu_y = NULL, mu_w = estep$mu.w, mu_b = estep$mu.b
-    )
+    if (missing_flag) {
+      # E-step + saturated update = the expected complete-data moments
+      theta <- mi_engine$pack(
+        out2$mu.w, out2$mu.b, out2$sigma.w, out2$sigma.b,
+        out2$mu.z, out2$sigma.zz, out2$sigma.yz
+      )
+      implied <- mi_engine$implied(mi_engine$step(theta))
+    } else {
+      estep <- lav_mvn_cl_em_estepb(
+        ylp = ylp,
+        lp = lp,
+        sigma_w = out2$sigma.w,
+        sigma_b = out2$sigma.b,
+        mu_w = out2$mu.w,
+        mu_b = out2$mu.b,
+        sigma_yz = out2$sigma.yz,
+        sigma_zz = out2$sigma.zz,
+        mu_z = out2$mu.z
+      )
+      implied <- lav_mvn_cl_2l2implied(
+        lp = lp,
+        sigma_w = estep$sigma.w, sigma_b = estep$sigma.b,
+        sigma_zz = out2$sigma.zz, sigma_yz = estep$sigma.yz,
+        mu_z = out2$mu.z,
+        mu_y = NULL, mu_w = estep$mu.w, mu_b = estep$mu.b
+      )
+    }
     rownames(implied$Sigma.W) <- ov_names_l[[1]]
     rownames(implied$Sigma.B) <- ov_names_l[[2]]
     local_fit <- em_mstep(implied, x_start = x)
@@ -1053,12 +1090,21 @@ lav_mvn_cl_em_h0 <- function(lavsamplestats = NULL,
   em_logl <- function(x) {
     lavmodel2 <- lav_model_set_parameters(lavmodel, x = x)
     implied_x <- lav_model_implied(lavmodel2)
-    lav_mvn_cl_loglik_samp_2l(
-      ylp = ylp,
-      lp = lp, mu_w = implied_x$mean[[1]], sigma_w = implied_x$cov[[1]],
-      mu_b = implied_x$mean[[2]], sigma_b = implied_x$cov[[2]],
-      sinv_method = "eigen", log2pi = TRUE, minus_two = FALSE
-    )
+    if (missing_flag) {
+      lav_mvn_cl_mi_loglik_samp_2l(
+        y1 = y1, y2 = y2, lp = lp, mp = mp,
+        mu_w = implied_x$mean[[1]], sigma_w = implied_x$cov[[1]],
+        mu_b = implied_x$mean[[2]], sigma_b = implied_x$cov[[2]],
+        loglik_x = loglik_x, log2pi = TRUE, minus_two = FALSE
+      )
+    } else {
+      lav_mvn_cl_loglik_samp_2l(
+        ylp = ylp,
+        lp = lp, mu_w = implied_x$mean[[1]], sigma_w = implied_x$cov[[1]],
+        mu_b = implied_x$mean[[2]], sigma_b = implied_x$cov[[2]],
+        sinv_method = "eigen", log2pi = TRUE, minus_two = FALSE
+      )
+    }
   }
 
   if (identical(acceleration, "squarem")) {
@@ -1098,6 +1144,59 @@ lav_mvn_cl_em_h0 <- function(lavsamplestats = NULL,
     # iterations below
     em_converged <- out_em$converged || out_em$stalled
     em_iterations <- out_em$fpeval
+  } else if (missing_flag) {
+    # plain EM iterations (missing data) -- driven by the em_step() map
+    fx_old <- fx
+    x <- x_current
+    for (i in 1:max_iter) {
+      x <- em_step(x)
+      fx <- em_logl(x)
+
+      # fx.delta
+      fx_delta <- fx - fx_old
+
+      # derivatives
+      lavmodel2 <- lav_model_set_parameters(lavmodel, x = x)
+      dx <- lav_model_grad(lavmodel2,
+        lavdata = lavdata,
+        lavsamplestats = lavsamplestats
+      )
+      max_dx <- max(abs(dx))
+
+      if (lav_verbose()) {
+        cat(
+          "EM iter:", sprintf("%3d", i),
+          " fx =", sprintf("%17.10f", fx),
+          " fx.delta =", sprintf("%9.8f", fx_delta),
+          " max.dx = ", sprintf("%9.8f", max_dx),
+          "\n"
+        )
+      }
+
+      # stopping rule check
+      if (fx_delta < fx_tol) {
+        if (lav_verbose()) {
+          cat("EM stopping rule reached: fx.delta < ", fx_tol, "\n")
+        }
+        break
+      } else {
+        fx_old <- fx
+        if (verbose_x) {
+          print(round(x, 3))
+        }
+      }
+
+      # second stopping rule check -- derivatives
+      if (max_dx < dx_tol) {
+        if (lav_verbose()) {
+          cat("EM stopping rule reached: max.dx < ", dx_tol, "\n")
+        }
+        break
+      }
+    } # EM iterations
+
+    em_converged <- i < max_iter
+    em_iterations <- i
   } else {
     # EM iterations
     fx_old <- fx

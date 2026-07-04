@@ -283,15 +283,21 @@ lav_mvn_cl_mi_loglik_samp_2l <- function(y1 = NULL,
 #
 # the M-step is the standard saturated update based on the expected
 # complete-data sufficient statistics
-lav_mvn_cl_mi_em_sat <- function(y1 = NULL,
-                                 y2 = NULL,
-                                 lp = NULL,
-                                 mp = NULL,
-                                 loglik_x = 0,
-                                 tol = 1e-04, # = em.h1.args$tol
-                                 max_iter = 5000L, # = em.h1.args$iter_max
-                                 min_variance = 1e-05,
-                                 acceleration = "none") {
+#
+# the E-step machinery is also used by the h0 EM optimizer
+# (lav_mvn_cl_em_h0, when missing = "ml"); it is therefore exposed as an
+# 'engine': a list of closures over the data and the missing patterns:
+# - theta0:  packed (available-case) starting values
+# - pack():  pack the internal '2l' matrices into a parameter vector
+# - step():  one EM step (E-step + saturated M-step update)
+# - logl():  observed-data loglikelihood at theta
+# - implied(): the implied-space matrices (Sigma.W, Sigma.B, Mu.W, Mu.B)
+lav_mvn_cl_mi_em_engine <- function(y1 = NULL,
+                                    y2 = NULL,
+                                    lp = NULL,
+                                    mp = NULL,
+                                    loglik_x = 0,
+                                    min_variance = 1e-05) {
   if (is.null(loglik_x)) {
     loglik_x <- 0
   }
@@ -342,26 +348,6 @@ lav_mvn_cl_mi_em_sat <- function(y1 = NULL,
     mu_z <- numeric(0L)
     sigma_zz <- matrix(0, 0L, 0L)
     sigma_yz <- matrix(0, ny, 0L)
-  }
-
-  # report initial fx
-  implied2 <- lav_mvn_cl_2l2implied(
-    lp = lp, sigma_w = sigma_w, sigma_b = sigma_b,
-    sigma_zz = sigma_zz, sigma_yz = sigma_yz, mu_z = mu_z,
-    mu_y = NULL, mu_w = mu_w, mu_b = mu_b
-  )
-  fx <- lav_mvn_cl_mi_loglik_samp_2l(
-    y1 = y1, y2 = y2, lp = lp, mp = mp,
-    mu_w = implied2$Mu.W, sigma_w = implied2$Sigma.W,
-    mu_b = implied2$Mu.B, sigma_b = implied2$Sigma.B,
-    loglik_x = loglik_x, log2pi = TRUE, minus_two = FALSE
-  )
-  if (lav_verbose()) {
-    cat(
-      "EM iter:", sprintf("%3d", 0),
-      " fx =", sprintf("%17.10f", fx),
-      "\n"
-    )
   }
 
   # z-values per cluster: use the between-level missing patterns (Zp)
@@ -680,11 +666,55 @@ lav_mvn_cl_mi_em_sat <- function(y1 = NULL,
     )
   }
 
+  # implied-space matrices at theta
+  em_implied <- function(theta) {
+    th <- em_unpack(theta)
+    lav_mvn_cl_2l2implied(
+      lp = lp, sigma_w = th$sigma_w, sigma_b = th$sigma_b,
+      sigma_zz = th$sigma_zz, sigma_yz = th$sigma_yz, mu_z = th$mu_z,
+      mu_y = NULL, mu_w = th$mu_w, mu_b = th$mu_b
+    )
+  }
+
+  list(
+    theta0 = em_pack(mu_w, mu_b, sigma_w, sigma_b, mu_z, sigma_zz,
+                     sigma_yz),
+    pack = em_pack,
+    step = em_step,
+    logl = em_logl,
+    implied = em_implied
+  )
+}
+
+lav_mvn_cl_mi_em_sat <- function(y1 = NULL,
+                                 y2 = NULL,
+                                 lp = NULL,
+                                 mp = NULL,
+                                 loglik_x = 0,
+                                 tol = 1e-04, # = em.h1.args$tol
+                                 max_iter = 5000L, # = em.h1.args$iter_max
+                                 min_variance = 1e-05,
+                                 acceleration = "none") {
+  engine <- lav_mvn_cl_mi_em_engine(
+    y1 = y1, y2 = y2, lp = lp, mp = mp,
+    loglik_x = loglik_x, min_variance = min_variance
+  )
+
+  # report initial fx
+  theta <- engine$theta0
+  fx <- engine$logl(theta)
+  if (lav_verbose()) {
+    cat(
+      "EM iter:", sprintf("%3d", 0),
+      " fx =", sprintf("%17.10f", fx),
+      "\n"
+    )
+  }
+
   # EM iterations
-  theta <- em_pack(mu_w, mu_b, sigma_w, sigma_b, mu_z, sigma_zz, sigma_yz)
   if (identical(acceleration, "squarem")) {
     out_em <- lav_em_squarem(
-      theta = theta, step_fn = em_step, logl_fn = em_logl,
+      theta = theta, step_fn = engine$step, logl_fn = engine$logl,
       fx0 = fx, tol = tol, max_iter = max_iter
     )
     theta <- out_em$theta
@@ -694,22 +724,22 @@ lav_mvn_cl_mi_em_sat <- function(y1 = NULL,
     fx_old <- fx
     converged <- FALSE
     for (i in seq_len(max_iter)) {
-      theta <- em_step(theta)
-      fx <- em_logl(theta)
+      theta <- engine$step(theta)
+      fx <- engine$logl(theta)
 
       # fx.delta
       fx_delta <- fx - fx_old
 
       # check if fx.delta is finite
       if (!is.finite(fx_delta)) {
-        th <- em_unpack(theta)
+        implied2 <- engine$implied(theta)
         cat("\n")
         cat("FATAL problem: dumping Sigma.W and Sigma.B matrices:\n\n")
         cat("Sigma.W:\n")
-        print(th$sigma_w)
+        print(implied2$Sigma.W)
         cat("\n")
         cat("Sigma.B:\n")
-        print(th$sigma_b)
+        print(implied2$Sigma.B)
         cat("\n")
         lav_msg_stop(gettext(
           "EM steps of the saturated (H1) model failed; some matrices may
@@ -752,12 +782,7 @@ lav_mvn_cl_mi_em_sat <- function(y1 = NULL,
   }
 
   # final implied matrices
-  th <- em_unpack(theta)
-  implied2 <- lav_mvn_cl_2l2implied(
-    lp = lp, sigma_w = th$sigma_w, sigma_b = th$sigma_b,
-    sigma_zz = th$sigma_zz, sigma_yz = th$sigma_yz, mu_z = th$mu_z,
-    mu_y = NULL, mu_w = th$mu_w, mu_b = th$mu_b
-  )
+  implied2 <- engine$implied(theta)
 
   list(
     Sigma.W = implied2$Sigma.W, Sigma.B = implied2$Sigma.B,

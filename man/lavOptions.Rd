@@ -601,7 +601,8 @@ Optimization options:
     \item{\code{em.args}:}{List. Options related to the EM algorithm that
       is used to estimate the model parameters when
       \code{optim.method = "em"} (currently only available for multilevel
-      models). The default values are \code{em.args = list(iter_max =
+      models, with complete or missing data). The default values are
+      \code{em.args = list(iter_max =
       10000, fx_tol = 1e-08, dx_tol = 1e-04, zerovar_offset = 1e-04,
       acceleration = "squarem")}.
       The \code{iter_max} element sets the maximum number of EM
