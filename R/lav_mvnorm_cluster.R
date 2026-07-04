@@ -653,8 +653,8 @@ lav_mvn_cl_info_observed <- function(lp = NULL,
 #
 lav_mvn_cl_em_sat <- function(ylp = NULL,
                                       lp = NULL,
-                                      tol = 1e-04,
-                                      max_iter = 5000,
+                                      tol = 1e-04, # = em.h1.args$tol
+                                      max_iter = 5000L, # = em.h1.args$iter_max
                                       min_variance = 1e-05) {
   # lavdata
   between_idx <- lp$between.idx[[2]]
@@ -726,6 +726,7 @@ lav_mvn_cl_em_sat <- function(ylp = NULL,
 
   # EM iterations
   fx_old <- fx
+  converged <- FALSE
   for (i in 1:max_iter) {
     # E-step
     estep <- lav_mvn_cl_em_estepb( # Y1 = Y1,
@@ -809,11 +810,21 @@ lav_mvn_cl_em_sat <- function(ylp = NULL,
 
     # convergence check
     if (fx_delta < tol) {
+      converged <- TRUE
       break
     } else {
       fx_old <- fx
     }
   } # EM iterations
+
+  # warning?
+  if (!converged) {
+    lav_msg_warn(gettext(
+      "Maximum number of iterations reached when computing the sample
+       moments of the saturated (H1) model using EM; increase the iter_max
+       element of the em.h1.args= argument to increase the number of
+       iterations"))
+  }
 
   list(
     Sigma.W = implied2$Sigma.W, Sigma.B = implied2$Sigma.B,
@@ -1059,9 +1070,11 @@ lav_mvn_cl_em_h0 <- function(lavsamplestats = NULL,
   }
   attr(x, "iterations") <- i
   attr(x, "control") <- list(
-    em.iter.max = max_iter,
-    em.fx.tol = fx_tol,
-    em.dx.tol = dx_tol
+    em.args = list(
+      iter_max = max_iter,
+      fx_tol = fx_tol,
+      dx_tol = dx_tol
+    )
   )
   attr(fx, "fx.group") <- fx # single group for now
   attr(x, "fx") <- fx

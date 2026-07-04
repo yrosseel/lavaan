@@ -47,13 +47,23 @@ lav_h1_logl <- function(lavdata = NULL,
         current_verbose <- lav_verbose()
         if (lav_verbose(FALSE))
             on.exit(lav_verbose(current_verbose), TRUE)
+        # EM control arguments (fall back to the multilevel defaults if
+        # lavoptions is incomplete)
+        em_h1_tol <- lavoptions$em.h1.args$tol
+        if (!is.numeric(em_h1_tol)) {
+          em_h1_tol <- 1e-04
+        }
+        em_h1_iter_max <- lavoptions$em.h1.args$iter_max
+        if (!is.numeric(em_h1_iter_max)) {
+          em_h1_iter_max <- 5000L
+        }
         out_1 <- lav_mvn_cl_em_sat(
           ylp = lavsamplestats@YLp[[g]],
           lp = lavdata@Lp[[g]],
-          tol = 1e-04, # option?
+          tol = em_h1_tol,
           min_variance = 1e-05, # option?
-          max_iter = 5000L
-        ) # option?
+          max_iter = em_h1_iter_max
+        )
         lav_verbose(current_verbose)
         # store logl per group
         logl_group[g] <- out_1$logl

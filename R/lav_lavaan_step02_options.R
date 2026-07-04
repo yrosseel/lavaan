@@ -109,6 +109,12 @@ lav_step02_options <- function(slot_options = NULL,
     if (is.list(dotdotdot$rotation.args)) {
       dotdotdot$rotation.args <- lav_snake_case(dotdotdot$rotation.args)
     }
+    if (is.list(dotdotdot$em.args)) {
+      dotdotdot$em.args <- lav_snake_case(dotdotdot$em.args)
+    }
+    if (is.list(dotdotdot$em.h1.args)) {
+      dotdotdot$em.h1.args <- lav_snake_case(dotdotdot$em.h1.args)
+    }
     opt <- modifyList(opt, dotdotdot)
 
     # extract estimator

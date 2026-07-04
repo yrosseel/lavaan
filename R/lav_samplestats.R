@@ -15,12 +15,15 @@
 # aux-improved moments), so that it stays consistent with the reported moments.
 lav_samp_mi_aux_moments <- function(y = NULL, aux = NULL, wt = NULL,
                                     mp = NULL, yp = NULL, nobs = NULL,
-                                    max_iter = 500L, tol = 1e-05) {
+                                    max_iter = 500L, tol = 1e-05,
+                                    non_pd_action = "warn",
+                                    non_pd_tol = 1e-05) {
   has_aux <- !is.null(aux) && NCOL(aux) > 0L
   if (has_aux) {
     out <- lav_mvn_mi_h1_est_moments(
       y = cbind(y, aux), wt = wt,
-      max_iter = max_iter, tol = tol
+      max_iter = max_iter, tol = tol,
+      non_pd_action = non_pd_action, non_pd_tol = non_pd_tol
     )
     p_ov <- seq_len(NCOL(y))
     sigma <- out$Sigma[p_ov, p_ov, drop = FALSE]
@@ -44,7 +47,8 @@ lav_samp_mi_aux_moments <- function(y = NULL, aux = NULL, wt = NULL,
   } else {
     out <- lav_mvn_mi_h1_est_moments(
       y = y, wt = wt, mp = mp, yp = yp,
-      max_iter = max_iter, tol = tol
+      max_iter = max_iter, tol = tol,
+      non_pd_action = non_pd_action, non_pd_tol = non_pd_tol
     )
     list(sigma = out$Sigma, mu = out$Mu, h1 = out$fx)
   }
@@ -677,7 +681,7 @@ lav_samp_from_data <- function(lavdata = NULL,        # nolint start
             wt = wt[[g]]
           )
         current_warn <- lav_warn()
-        if (lav_warn(lavoptions$em.h1.warn))
+        if (lav_warn(lavoptions$em.h1.args$warn))
           on.exit(lav_warn(current_warn), TRUE)
         # optionally augment the EM run with auxiliary variables to improve
         # the moments under MAR (see lav_samp_mi_aux_moments); for two-stage
@@ -687,8 +691,10 @@ lav_samp_from_data <- function(lavdata = NULL,        # nolint start
         missing_h1[[g]] <- lav_samp_mi_aux_moments(
           y = x[[g]], aux = aux_g, wt = wt[[g]],
           mp = mp[[g]], yp = missing_1[[g]], nobs = nobs[[g]],
-          max_iter = lavoptions$em.h1.iter.max,
-          tol = lavoptions$em.h1.tol
+          max_iter = lavoptions$em.h1.args$iter_max,
+          tol = lavoptions$em.h1.args$tol,
+          non_pd_action = lavoptions$em.h1.args$non_pd_action,
+          non_pd_tol = lavoptions$em.h1.args$non_pd_tol
         )
         lav_warn(current_warn)
 
@@ -711,7 +717,7 @@ lav_samp_from_data <- function(lavdata = NULL,        # nolint start
         if (nlevels == 1L) {
           # estimate moments unrestricted model
           current_warn <- lav_warn()
-          if (lav_warn(lavoptions$em.h1.warn))
+          if (lav_warn(lavoptions$em.h1.args$warn))
             on.exit(lav_warn(current_warn), TRUE)
           # zero coverage?
           if (any(lav_mat_vech(mp[[g]]$coverage, diagonal = FALSE) == 0)) {
@@ -727,8 +733,10 @@ lav_samp_from_data <- function(lavdata = NULL,        # nolint start
             missing_h1[[g]] <- lav_samp_mi_aux_moments(
               y = x[[g]], aux = aux_g, wt = wt[[g]],
               mp = mp[[g]], yp = missing_1[[g]], nobs = nobs[[g]],
-              max_iter = lavoptions$em.h1.iter.max,
-              tol = lavoptions$em.h1.tol
+              max_iter = lavoptions$em.h1.args$iter_max,
+              tol = lavoptions$em.h1.args$tol,
+              non_pd_action = lavoptions$em.h1.args$non_pd_action,
+              non_pd_tol = lavoptions$em.h1.args$non_pd_tol
             )
           }
           lav_warn(current_warn)

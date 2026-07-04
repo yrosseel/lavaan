@@ -453,8 +453,10 @@ lav_model_nvcov_two_stage <- function(lavmodel = NULL,
       sigma_g <- lavsamplestats@missing.h1[[g]]$sigma.aug
       if (is.null(mu_g) || is.null(sigma_g)) {
         em_aug <- lav_mvn_mi_h1_est_moments(y_g,
-          mp = mp_g, max_iter = lavoptions$em.h1.iter.max,
-          tol = lavoptions$em.h1.tol
+          mp = mp_g, max_iter = lavoptions$em.h1.args$iter_max,
+          tol = lavoptions$em.h1.args$tol,
+          non_pd_action = lavoptions$em.h1.args$non_pd_action,
+          non_pd_tol = lavoptions$em.h1.args$non_pd_tol
         )
         mu_g <- em_aug$Mu
         sigma_g <- em_aug$Sigma

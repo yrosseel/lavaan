@@ -14,7 +14,9 @@ lav_mvn_mi_h1_est_moments <- function(y = NULL,
                                                    wt = NULL,
                                                    sinv_method = "eigen",
                                                    max_iter = 500L,
-                                                   tol = 1e-05) {
+                                                   tol = 1e-05,
+                                                   non_pd_action = "warn",
+                                                   non_pd_tol = 1e-05) {
   # check input
   y <- as.matrix(y)
   p <- NCOL(y)
@@ -49,6 +51,12 @@ lav_mvn_mi_h1_est_moments <- function(y = NULL,
   }
   if (is.null(tol)) {
     tol <- 1e-05
+  }
+  if (is.null(non_pd_action)) {
+    non_pd_action <- "warn" # backwards compatibility
+  }
+  if (is.null(non_pd_tol)) {
+    non_pd_tol <- 1e-05
   }
 
   # remove empty cases
@@ -197,18 +205,41 @@ lav_mvn_mi_h1_est_moments <- function(y = NULL,
   if (i == max_iter) {
     lav_msg_warn(
       gettext("Maximum number of iterations reached when computing the sample
-              moments using EM; use the em.h1.iter.max= argument to increase
-              the number of iterations")
+              moments using EM; increase the iter_max element of the
+              em.h1.args= argument to increase the number of iterations")
     )
   }
 
-  ev <- eigen(sigma_1, symmetric = TRUE, only.values = TRUE)$values
-  if (any(ev < 1e-05)) { # make an option?
-    lav_msg_warn(
-      gettext("The smallest eigenvalue of the EM estimated variance-covariance
-              matrix (Sigma) is smaller than 1e-05; this may cause numerical
-              instabilities; interpret the results with caution.")
-    )
+  # check if the EM estimated variance-covariance matrix is (near) singular
+  if (non_pd_action != "none") {
+    ev <- eigen(sigma_1, symmetric = TRUE, only.values = TRUE)$values
+    if (any(ev < non_pd_tol)) {
+      near_zero_idx <- which(diag(sigma_1) <= non_pd_tol)
+      if (length(near_zero_idx) > 0L) {
+        var_names <- colnames(y)
+        if (is.null(var_names)) {
+          var_names <- paste0("V", seq_len(NCOL(y)))
+        }
+        msg <- gettextf(
+          "The EM estimated variance-covariance matrix (Sigma) is (near)
+           singular: the variances of some variables are (near) zero: %s.",
+          lav_msg_view(var_names[near_zero_idx]))
+      } else {
+        msg <- gettextf(
+          "The EM estimated variance-covariance matrix (Sigma) is (near)
+           singular: its smallest eigenvalue is smaller than %s.",
+          format(non_pd_tol))
+      }
+      if (non_pd_action == "stop") {
+        lav_msg_stop(paste(msg, gettext(
+          "Set the non_pd_action element of the em.h1.args= argument to
+           \"warn\" or \"none\" to continue anyway.")))
+      } else {
+        lav_msg_warn(paste(msg, gettext(
+          "This may cause numerical instabilities; interpret the results
+           with caution.")))
+      }
+    }
   }
 
   list(Sigma = sigma_1, Mu = mu, fx = fx)

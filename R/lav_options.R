@@ -187,6 +187,12 @@ lav_options_set <- function(opt = NULL) {
   if (is.list(opt$rotation.args)) {
     opt$rotation.args <- lav_snake_case(opt$rotation.args)
   }
+  if (is.list(opt$em.args)) {
+    opt$em.args <- lav_snake_case(opt$em.args)
+  }
+  if (is.list(opt$em.h1.args)) {
+    opt$em.h1.args <- lav_snake_case(opt$em.h1.args)
+  }
 
   # 'correlation' may be a character vector of (observed) variable names:
   # in that case, only those variables are standardized to unit variance
@@ -445,6 +451,26 @@ lav_options_set <- function(opt = NULL) {
     }
     if (length(opt$information) > 1L && opt$information[2] == "default") {
       opt$information[2] <- "observed"
+    }
+  }
+
+  # em.h1.args: resolve "default" values
+  # note: the single-level (missing data) EM converges when the change in
+  # the parameter values is smaller than tol (tol was 1e-06 < 0.6-9), while
+  # the multilevel EM converges when the change in the loglikelihood is
+  # smaller than tol
+  if (identical(opt$em.h1.args$iter_max, "default")) {
+    if (opt$.multilevel) {
+      opt$em.h1.args$iter_max <- 5000L
+    } else {
+      opt$em.h1.args$iter_max <- 500L
+    }
+  }
+  if (identical(opt$em.h1.args$tol, "default")) {
+    if (opt$.multilevel) {
+      opt$em.h1.args$tol <- 1e-04
+    } else {
+      opt$em.h1.args$tol <- 1e-05
     }
   }
 

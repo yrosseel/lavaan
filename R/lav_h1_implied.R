@@ -74,6 +74,26 @@ lav_h1_implied_logl <- function(lavdata = NULL,
     # estimate Mu.B, Mu.W, Sigma.B and Sigma.W for unrestricted model
     ngroups <- lavdata@ngroups
     nlevels <- lavdata@nlevels
+
+    # EM control arguments (fall back to the multilevel defaults if
+    # lavoptions is incomplete, e.g. when refitting objects created by
+    # older versions)
+    em_h1_tol <- lavoptions$em.h1.args$tol
+    if (!is.numeric(em_h1_tol)) {
+      em_h1_tol <- 1e-04
+    }
+    em_h1_iter_max <- lavoptions$em.h1.args$iter_max
+    if (!is.numeric(em_h1_iter_max)) {
+      em_h1_iter_max <- 5000L
+    }
+    non_pd_action <- lavoptions$em.h1.args$non_pd_action
+    if (is.null(non_pd_action)) {
+      non_pd_action <- "warn" # backwards compatibility
+    }
+    non_pd_tol <- lavoptions$em.h1.args$non_pd_tol
+    if (!is.numeric(non_pd_tol)) {
+      non_pd_tol <- 1e-05
+    }
     implied <- list(
       cov = vector("list", length = ngroups * nlevels),
       mean = vector("list", length = ngroups * nlevels)
@@ -94,8 +114,8 @@ lav_h1_implied_logl <- function(lavdata = NULL,
           lp = lavdata@Lp[[g]],
           mp = lavdata@Mp[[g]],
           loglik_x = lavsamplestats@YLp[[g]][[2]]$loglik.x,
-          tol = 1e-04, # option?
-          max_iter = 5000L, # option?
+          tol = em_h1_tol,
+          max_iter = em_h1_iter_max,
           min_variance = 1e-05 # option?
         )
       } else if (lavsamplestats@missing.flag) {
@@ -185,28 +205,62 @@ lav_h1_implied_logl <- function(lavdata = NULL,
         out_1 <- lav_mvn_cl_em_sat(
           ylp = lavsamplestats@YLp[[g]],
           lp = lavdata@Lp[[g]],
-          tol = 1e-04, # option?
+          tol = em_h1_tol,
           min_variance = 1e-05, # option?
-          max_iter = 5000L
-        ) # option?
+          max_iter = em_h1_iter_max
+        )
       }
       if (lav_verbose()) {
         cat("\n")
       }
 
-      # if any near-zero within variance(s), produce warning here
-      zero_var <- which(diag(out_1$Sigma.W) <= 1e-05)
-      if (length(zero_var)) {
+      # check for (near) singular within/between covariance matrices;
+      # this typically happens when a (within or between) variance
+      # approaches zero, but the full matrix may also be (near) singular
+      if (non_pd_action != "none") {
         gtxt <- if (ngroups > 1L) {
-          gettextf(" in group %s.", g)
+          gettextf(" in group %s", g)
         } else {
-          " "
+          ""
         }
-        lav_msg_warn(gettextf(
-          "H1 estimation resulted in a within covariance matrix %1$s with
-          (near) zero variances for some of the level-1 variables: %2$s",
-            gtxt, lav_msg_view(lavdata@ov.names.l[[g]][[1]][zero_var]))
-        )
+        for (l in 1:2) {
+          if (l == 1L) {
+            sigma_l <- out_1$Sigma.W
+            level_txt <- "within"
+          } else {
+            sigma_l <- out_1$Sigma.B
+            level_txt <- "between"
+          }
+          if (NROW(sigma_l) == 0L) {
+            next
+          }
+          msg <- NULL
+          near_zero_idx <- which(diag(sigma_l) <= non_pd_tol)
+          if (length(near_zero_idx) > 0L) {
+            msg <- gettextf(
+              "H1 estimation resulted in a %1$s covariance matrix%2$s with
+               (near) zero variances for some of the observed variables:
+               %3$s.", level_txt, gtxt,
+              lav_msg_view(lavdata@ov.names.l[[g]][[l]][near_zero_idx]))
+          } else {
+            ev <- eigen(sigma_l, symmetric = TRUE, only.values = TRUE)$values
+            if (any(ev < non_pd_tol)) {
+              msg <- gettextf(
+                "H1 estimation resulted in a (near) singular %1$s covariance
+                 matrix%2$s: its smallest eigenvalue is smaller than %3$s.",
+                level_txt, gtxt, format(non_pd_tol))
+            }
+          }
+          if (!is.null(msg)) {
+            if (non_pd_action == "stop") {
+              lav_msg_stop(paste(msg, gettext(
+                "Set the non_pd_action element of the em.h1.args= argument
+                 to \"warn\" or \"none\" to continue anyway.")))
+            } else {
+              lav_msg_warn(msg)
+            }
+          }
+        }
       }
 
       # new in 0.6-18: ensure Mu.W[both.idx] is zero (post-estimation!)

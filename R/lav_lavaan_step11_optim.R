@@ -82,9 +82,9 @@ lav_step11_estoptim <- function(lavdata = NULL,
           lavpartable = lavpartable,
           lavmodel = lavmodel,
           lavoptions = lavoptions,
-          fx_tol = lavoptions$em.fx.tol,
-          dx_tol = lavoptions$em.dx.tol,
-          max_iter = lavoptions$em.iter.max
+          fx_tol = lavoptions$em.args$fx_tol,
+          dx_tol = lavoptions$em.args$dx_tol,
+          max_iter = lavoptions$em.args$iter_max
         ),
         silent = TRUE
       )

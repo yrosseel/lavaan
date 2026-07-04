@@ -477,13 +477,25 @@ lav_options_default <- function() {
   elm("optim.partrace", FALSE, bl = TRUE)
   elm("optim.dx.tol", 1e-03, nm = "]0, 0.01]") # not too strict
   elm("optim.bounds", list(), oklen = c(0L, 100L))
-  elm("em.iter.max", 10000L, nm = "[100, 1e8]", num2int = TRUE)
-  elm("em.fx.tol", 1e-08, nm = "]0, 0.01]")
-  elm("em.dx.tol", 1e-04, nm = "]0, 0.01]")
-  elm("em.zerovar.offset", 0.0001, nm = "]0, 0.01]")
-  elm("em.h1.iter.max", 500L, nm = "[10, 1e7]", num2int = TRUE)
-  elm("em.h1.tol", 1e-05, nm = "]0, 0.01]") # was 1e-06 < 0.6-9
-  elm("em.h1.warn", TRUE, bl = TRUE)
+  # em-args sublist (EM algorithm for the h0 model; optim.method = "em")
+  elm(c("em.args", "iter_max"), 10000L, nm = "[100, 1e8]", num2int = TRUE)
+  elm(c("em.args", "fx_tol"), 1e-08, nm = "]0, 0.01]")
+  elm(c("em.args", "dx_tol"), 1e-04, nm = "]0, 0.01]")
+  elm(c("em.args", "zerovar_offset"), 0.0001, nm = "]0, 0.01]")
+
+  # em-h1-args sublist (EM algorithm for the unrestricted (h1) model)
+  # "default" values are resolved later: single-level (missing data) uses
+  # iter_max = 500L and tol = 1e-05 (tol checks the change in the parameter
+  # values), multilevel uses iter_max = 5000L and tol = 1e-04 (tol checks
+  # the change in the loglikelihood)
+  elm(c("em.h1.args", "iter_max"), "default", chr = "default",
+      nm = "[10, 1e7]", num2int = TRUE)
+  elm(c("em.h1.args", "tol"), "default", chr = "default", nm = "]0, 0.01]")
+  elm(c("em.h1.args", "warn"), TRUE, bl = TRUE)
+  # what to do if an EM estimated covariance matrix is (near) singular?
+  elm(c("em.h1.args", "non_pd_action"), "stop",
+      chr = c("stop", "warn", "none"))
+  elm(c("em.h1.args", "non_pd_tol"), 1e-05, nm = "]0, 0.01]")
   elm("optim.gn.iter.max", 200L, nm = "[100, 1e8]", num2int = TRUE)
   elm("optim.gn.stephalf.max", 10L, nm = "[1, 1e8]", num2int = TRUE)
   elm("optim.gn.tol.x", 1e-05, nm = "]0, 0.01]")

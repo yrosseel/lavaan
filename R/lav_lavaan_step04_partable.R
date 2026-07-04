@@ -33,7 +33,7 @@ lav_step04_pt <- function(slot_par_table = NULL,
   # if lavoptions$optim.method is "em" and there are variances specified in
   #   partable with free = 0L and
   #    starting value ustart 0, set ustart for these variances to
-  #    lavoptions$em.zerovar.offset
+  #    lavoptions$em.args$zerovar_offset
 
   if (!is.null(slot_par_table)) {
     lavpartable <- lav_pt_set_cache(slot_par_table)
@@ -153,7 +153,7 @@ lav_step04_pt <- function(slot_par_table = NULL,
       lavpartable$free == 0L &
       lavpartable$ustart == 0)
     if (length(zero_var_idx) > 0L) {
-      lavpartable$ustart[zero_var_idx] <- lavoptions$em.zerovar.offset
+      lavpartable$ustart[zero_var_idx] <- lavoptions$em.args$zerovar_offset
     }
     lavpartable <- lav_pt_set_cache(lavpartable, NULL, force = TRUE)
   }

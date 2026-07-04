@@ -288,8 +288,8 @@ lav_mvn_cl_mi_em_sat <- function(y1 = NULL,
                                  lp = NULL,
                                  mp = NULL,
                                  loglik_x = 0,
-                                 tol = 1e-04,
-                                 max_iter = 5000L,
+                                 tol = 1e-04, # = em.h1.args$tol
+                                 max_iter = 5000L, # = em.h1.args$iter_max
                                  min_variance = 1e-05) {
   if (is.null(loglik_x)) {
     loglik_x <- 0
@@ -377,6 +377,7 @@ lav_mvn_cl_mi_em_sat <- function(y1 = NULL,
 
   # EM iterations
   fx_old <- fx
+  converged <- FALSE
   for (i in seq_len(max_iter)) {
     # current 'both' blocks
     sb <- sigma_b[both_idx, both_idx, drop = FALSE]
@@ -674,11 +675,21 @@ lav_mvn_cl_mi_em_sat <- function(y1 = NULL,
 
     # convergence check
     if (abs(fx_delta) < tol) {
+      converged <- TRUE
       break
     } else {
       fx_old <- fx
     }
   } # EM iterations
+
+  # warning?
+  if (!converged) {
+    lav_msg_warn(gettext(
+      "Maximum number of iterations reached when computing the sample
+       moments of the saturated (H1) model using EM; increase the iter_max
+       element of the em.h1.args= argument to increase the number of
+       iterations"))
+  }
 
   list(
     Sigma.W = implied2$Sigma.W, Sigma.B = implied2$Sigma.B,

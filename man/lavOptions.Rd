@@ -384,7 +384,35 @@ Estimation options:
       values (this mimics Mplus). If \code{"fiml"}, the unrestricted model
       is estimated using quasi-Newton optimization (nlminb) with a cholesky
       parameterization of the covariance matrices (this was the default
-      in versions < 0.7-2).}
+      in versions < 0.7-2). See the \code{em.h1.args} option to control
+      the EM algorithm.}
+   \item{\code{em.h1.args}:}{List. Options related to the EM algorithm
+      that is used to estimate the means and (co)variances of the
+      unrestricted (h1) model. This is only relevant for multilevel models,
+      and for single-level models with missing data (and
+      \code{missing = "ml"} or \code{missing = "two.stage"}). The default
+      values are \code{em.h1.args = list(iter_max = "default",
+      tol = "default", warn = TRUE, non_pd_action = "stop",
+      non_pd_tol = 1e-05)}. The \code{iter_max} element sets the
+      maximum number of EM iterations; the \code{tol} element sets the
+      tolerance used to determine convergence. If \code{"default"}, they
+      are set to 500 and 1e-05 respectively in the single-level setting
+      (where the EM algorithm stops when the largest absolute change in
+      the parameter values is smaller than \code{tol}), and to 5000 and
+      1e-04 respectively in the multilevel setting (where the EM algorithm
+      stops when the change in the loglikelihood is smaller than
+      \code{tol}). If the \code{warn} element is \code{TRUE} (the default),
+      a warning is produced if the EM algorithm reaches \code{iter_max}
+      iterations without converging. The \code{non_pd_action} element
+      controls what happens if an EM estimated variance-covariance matrix
+      is (near) singular: if any variance is (near) zero, or if the
+      smallest eigenvalue of the matrix is smaller than the
+      \code{non_pd_tol} element. This typically happens when a (within or
+      between) variance of an observed variable approaches zero, but the
+      full matrix may also be (near) singular. If \code{non_pd_action =
+      "stop"} (the default), estimation stops with an error message; if
+      \code{"warn"}, a warning is produced, and estimation continues; if
+      \code{"none"}, estimation continues silently.}
    \item{\code{h1.information}:}{If \code{"structured"} (the default), the
       unrestricted (h1) information part of the (expected, first.order or 
       observed if h1 is used) information matrix is based on the structured, 
@@ -495,8 +523,10 @@ Optimization options:
       the available options are \code{"nlminb"} (the default), \code{"BFGS"},
       \code{"L-BFGS-B"}. These are all quasi-newton methods. A basic 
       implementation of Gauss-Newton is also available
-      (\code{optim.method = "GN"}). The latter is the default when 
-      \code{estimator = "DLS"}.
+      (\code{optim.method = "GN"}). The latter is the default when
+      \code{estimator = "DLS"}. For multilevel models, an EM algorithm
+      is also available (\code{optim.method = "em"}); see the
+      \code{em.args} option to control the EM algorithm.
       For constrained
       optimization, the only available option is \code{"nlminb_constr"},
       which uses an augmented Lagrangian minimization algorithm.}
@@ -553,6 +583,18 @@ Optimization options:
       (default is 0.1). Finally, the \code{min.var.lv.endo} element indicates
       the lower bound of the variance of any endogenous latent variable
       (default is 0.0).}
+    \item{\code{em.args}:}{List. Options related to the EM algorithm that
+      is used to estimate the model parameters when
+      \code{optim.method = "em"} (currently only available for multilevel
+      models). The default values are \code{em.args = list(iter_max =
+      10000, fx_tol = 1e-08, dx_tol = 1e-04, zerovar_offset = 1e-04)}.
+      The \code{iter_max} element sets the maximum number of EM
+      iterations. The EM algorithm stops when either the change in the
+      loglikelihood is smaller than \code{fx_tol}, or the largest absolute
+      change in the parameter values is smaller than \code{dx_tol}.
+      The \code{zerovar_offset} element is used as the starting value for
+      variances that are fixed to zero, as the EM algorithm cannot handle
+      exact zero variances.}
 }
 
 Parallelization options (currently only used for bootstrapping):
