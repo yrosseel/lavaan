@@ -445,6 +445,15 @@ lav_lavdata <- function(data = NULL, # data.frame
       ov_names_x <- rep(list(ov_names_x), ngroups)
     }
 
+    # handle ov.names.l: we need a model for each group
+    if (length(ov_names_l) == 1L && ngroups > 1L) {
+      lav_msg_stop(gettextf(
+        "this analysis assumes %s groups, but the multilevel model syntax is
+        specified for a single group only; combining multiple groups with
+        multiple levels requires explicit group: blocks in the model
+        syntax, one for each group (for now).", ngroups))
+    }
+
     ov <- list()
     ov$name <- unique(unlist(c(ov_names, ov_names_x)))
     nvar <- length(ov$name)
@@ -743,6 +752,20 @@ lav_data_full <- function(data = NULL, # data.frame
       tmp <- ov_names_x
       ov_names_x <- vector("list", length = ngroups)
       ov_names_x[1:ngroups] <- list(tmp)
+    }
+    # multilevel: we need a model (with level: blocks) for each group
+    if (length(ov_names_l) > 0L && length(ov_names_l) != ngroups) {
+      if (length(ov_names_l) == 1L) {
+        lav_msg_stop(gettextf(
+          "the data contains %s groups, but the multilevel model syntax is
+          specified for a single group only; combining multiple groups with
+          multiple levels requires explicit group: blocks in the model
+          syntax, one for each group (for now).", ngroups))
+      } else {
+        lav_msg_stop(gettextf(
+          "ov.names.l assumes %1$s groups; data contains %2$s groups",
+          length(ov_names_l), ngroups))
+      }
     }
   } else {
     if (is.list(ov_names)) {
