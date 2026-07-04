@@ -2,7 +2,7 @@
 # TDJ: add "..." to make the generic actually generic, for lavaan.mi objects
 
 # S3 generic for S3 dispatch
-fitMeasures <- function(object, fit_measures = "all",           # nolint start
+fitMeasures <- function(object, fit_measures = "all",           # nolint
                         baseline_model = NULL, h1_model = NULL,
                         fm_args = list(
                           standard.test = "default",
@@ -13,10 +13,10 @@ fitMeasures <- function(object, fit_measures = "all",           # nolint start
                           robust = TRUE,
                           cat.check.pd = TRUE
                         ),
-                        output = "vector", ...) {               # nolint end
+                        output = "vector", ...) {
   UseMethod("fitMeasures", object)
 }
-fitmeasures <- function(object, fit_measures = "all",           # nolint start
+fitmeasures <- function(object, fit_measures = "all",
                         baseline_model = NULL, h1_model = NULL,
                         fm_args = list(
                           standard.test = "default",
@@ -27,14 +27,14 @@ fitmeasures <- function(object, fit_measures = "all",           # nolint start
                           robust = TRUE,
                           cat.check.pd = TRUE
                         ),
-                        output = "vector", ...) {               # nolint end
+                        output = "vector", ...) {
   UseMethod("fitmeasures", object)
 }
 
 
 # S4 generic for S4 dispatch
 setGeneric(
-  "fitMeasures",                                              # nolint start
+  "fitMeasures",
   function(object, fit_measures = "all",
            baseline_model = NULL, h1_model = NULL,
            fm_args = list(
@@ -46,13 +46,13 @@ setGeneric(
              robust = TRUE,
              cat.check.pd = TRUE
            ),
-           output = "vector", ...) {                          # nolint end
+           output = "vector", ...) {
     standardGeneric("fitMeasures")
   }
 )
 setGeneric(
   "fitmeasures",
-  function(object, fit_measures = "all",                      # nolint start
+  function(object, fit_measures = "all",
            baseline_model = NULL, h1_model = NULL,
            fm_args = list(
              standard.test = "default",
@@ -63,18 +63,19 @@ setGeneric(
              robust = TRUE,
              cat.check.pd = TRUE
            ),
-           output = "vector", ...) {                     # nolint end
+           output = "vector", ...) {
     standardGeneric("fitmeasures")
   }
 )
 
 
 # S3 generics
-lavInspect <- function(object, what = "free",           # nolint start
-                       add.labels = TRUE,
-                       add.class = TRUE,
-                       list.by.group = TRUE,
-                       drop.list.single.group = TRUE) { # nolint end
+lavInspect <- function(object, what = "free",
+                       add_labels = TRUE,
+                       add_class = TRUE,
+                       list_by_group = TRUE,
+                       drop_list_single_group = TRUE,
+                       ...) {
   UseMethod("lavInspect", object)
 }
 
@@ -82,10 +83,11 @@ inspect <- function(object, what = "free", ...) {
     UseMethod("inspect", object)
 }
 
-lavTech <- function(object, what = "free",              # nolint start
-                    add.labels = FALSE,
-                    add.class = FALSE,
-                    list.by.group = FALSE,
-                    drop.list.single.group = FALSE) {   # nolint end
+lavTech <- function(object, what = "free",
+                    add_labels = FALSE,
+                    add_class = FALSE,
+                    list_by_group = FALSE,
+                    drop_list_single_group = FALSE,
+                    ...) {
   UseMethod("lavTech", object)
 }
