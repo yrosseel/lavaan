@@ -409,6 +409,9 @@ lav_options_default <- function() {
     oklen = c(1L, 2L))
   elm("h1.information", c("structured", "structured"), chr = c(
     "structured", "unstructured"), oklen =  c(1L, 2L))
+  # multilevel h1 estimation with missing data (new in 0.7-2):
+  # "em" (mimics Mplus) or "fiml" (cholesky + nlminb; old behavior)
+  elm("h1.missing.method", "em", chr = c("em", "fiml"))
   elm("observed.information", c("hessian", "default"), chr = c(
     "default", "hessian", "h1"), oklen =  c(1L, 2L))
 

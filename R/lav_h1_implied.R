@@ -84,8 +84,24 @@ lav_h1_implied_logl <- function(lavdata = NULL,
       if (lav_verbose()) {
         cat("\n\nfitting unrestricted (H1) model in group ", g, "\n")
       }
-      if (lavsamplestats@missing.flag) {
-        # missing data
+      if (lavsamplestats@missing.flag &&
+          (is.null(lavoptions$h1.missing.method) || # backwards compatibility
+           lavoptions$h1.missing.method == "em")) {
+        # missing data: EM algorithm (new in 0.7-2; this mimics Mplus)
+        out_1 <- lav_mvn_cl_mi_em_sat(
+          y1 = lavdata@X[[g]],
+          y2 = lavsamplestats@YLp[[g]][[2]]$Y2,
+          lp = lavdata@Lp[[g]],
+          mp = lavdata@Mp[[g]],
+          loglik_x = lavsamplestats@YLp[[g]][[2]]$loglik.x,
+          tol = 1e-04, # option?
+          max_iter = 5000L, # option?
+          min_variance = 1e-05 # option?
+        )
+      } else if (lavsamplestats@missing.flag) {
+        # missing data: h1.missing.method = "fiml"
+        # fit the unrestricted model using a cholesky parameterization
+        # and nlminb() (this was the default in 0.6-* and 0.7-1)
 
         # 1. first a few EM iteration faking complete data
         # Y1 <- lavdata@X[[g]]

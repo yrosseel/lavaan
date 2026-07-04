@@ -376,6 +376,15 @@ Estimation options:
       the argument is a vector with two elements, the first element
       is used for the computation of the standard errors, while the
       second element is used for the (robust) test statistic.}
+   \item{\code{h1.missing.method}:}{Character. Only used for multilevel
+      models with missing data (and \code{missing = "ml"}). If \code{"em"}
+      (the default since 0.7-2), the means and (co)variances of the
+      unrestricted (h1) model are estimated using the EM algorithm,
+      integrating over both the cluster random effects and the missing
+      values (this mimics Mplus). If \code{"fiml"}, the unrestricted model
+      is estimated using quasi-Newton optimization (nlminb) with a cholesky
+      parameterization of the covariance matrices (this was the default
+      in versions < 0.7-2).}
    \item{\code{h1.information}:}{If \code{"structured"} (the default), the
       unrestricted (h1) information part of the (expected, first.order or 
       observed if h1 is used) information matrix is based on the structured, 
