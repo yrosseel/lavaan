@@ -24,7 +24,8 @@ lav_step12_loglik <- function(lavoptions = NULL,
                                      lavsamplestats = NULL,
                                      lavh1 = NULL,
                                      lavimplied = NULL,
-                                     lavmodel = NULL) {
+                                     lavmodel = NULL,
+                                     lavcache = NULL) {
   # # # # # # # # # # # #
   # #  12. lavloglik  # #
   # # # # # # # # # # # #
@@ -48,7 +49,8 @@ lav_step12_loglik <- function(lavoptions = NULL,
       lavh1 = lavh1,
       lavimplied = lavimplied,
       lavmodel = lavmodel,
-      lavoptions = lavoptions
+      lavoptions = lavoptions,
+      lavcache = lavcache
     )
     if (lav_verbose()) {
       cat(" done.\n")

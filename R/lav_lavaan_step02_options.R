@@ -218,6 +218,9 @@ lav_step02_options <- function(slot_options = NULL,
       opt$.multilevel <- FALSE
     }
 
+    # random slopes (rv() modifier)?
+    opt$.rv <- !is.null(flat_model$rv) && any(nchar(flat_model$rv) > 0L)
+
     # sampling weights? (internal flag; used when resolving estimator
     # defaults, e.g. the se/test defaults for continuous ULS)
     opt$.sampling.weights <- !is.null(sampling_weights)

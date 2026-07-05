@@ -590,6 +590,22 @@ standardizedSolution <-                                      # nolint start
       }
     }
 
+    # remove random-slope phantom marker rows (eg s1 =~ s1, fixed to zero)
+    if (!is.null(object@ParTable$rv) &&
+        any(nchar(object@ParTable$rv) > 0L)) {
+      rv_names <- unique(object@ParTable$rv[
+        nchar(object@ParTable$rv) > 0L])
+      rv_idx <- which(tmp_list$op == "=~" &
+        tmp_list$lhs == tmp_list$rhs &
+        tmp_list$lhs %in% rv_names)
+      if (length(rv_idx) > 0L) {
+        tmp_list <- tmp_list[-rv_idx, ]
+        if (!is.null(boot_std)) {
+          boot_std <- boot_std[, -rv_idx, drop = FALSE]
+        }
+      }
+    }
+
     # remove attribute for data order
     attr(tmp_list, "ovda") <- NULL
 
@@ -1278,6 +1294,19 @@ lavParameterEstimates <- function(object,                      # nolint start
         tmp_list$rhs %in% object@Options$aux)
       if (length(aux_idx) > 0L) {
         tmp_list <- tmp_list[-aux_idx, ]
+      }
+    }
+
+    # remove random-slope phantom marker rows (eg s1 =~ s1, fixed to zero)
+    if (!is.null(object@ParTable$rv) &&
+        any(nchar(object@ParTable$rv) > 0L)) {
+      rv_names <- unique(object@ParTable$rv[
+        nchar(object@ParTable$rv) > 0L])
+      rv_idx <- which(tmp_list$op == "=~" &
+        tmp_list$lhs == tmp_list$rhs &
+        tmp_list$lhs %in% rv_names)
+      if (length(rv_idx) > 0L) {
+        tmp_list <- tmp_list[-rv_idx, ]
       }
     }
 

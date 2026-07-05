@@ -27,6 +27,27 @@ lav_model_grad <- function(lavmodel = NULL,
   # state or final?
   if (is.null(glist)) glist <- lavmodel@GLIST
 
+  # random slopes? (rv() modifier): no analytic gradient (yet);
+  # use a numerical approximation of the gradient of the objective
+  if (length(lavmodel@rv.ov) > 0L || length(lavmodel@rv.lv) > 0L) {
+    if (type != "free") {
+      lav_msg_fixme(
+        "gradient with type != \"free\" is not available for models
+         with random slopes")
+    }
+    obj_f <- function(x) {
+      lavmodel2 <- lav_model_set_parameters(lavmodel, x = x)
+      as.numeric(lav_model_objective(
+        lavmodel = lavmodel2,
+        lavsamplestats = lavsamplestats, lavdata = lavdata,
+        lavcache = lavcache
+      ))
+    }
+    x0 <- lav_model_get_parameters(lavmodel, glist = glist)
+    dx <- lav_func_grad_simple(func = obj_f, x = x0)
+    return(dx)
+  }
+
   if (estimator == "REML") lav_msg_warn(gettext(
     "analytical gradient not implemented; use numerical approximation"))
 

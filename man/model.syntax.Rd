@@ -443,6 +443,39 @@ also label that parameter, you can use something like:
 \preformatted{ f1 =~ x1 + x2 + 4*x3 + x3.loading*x3}
 }
 
+\section{Random slopes (two-level models)}{
+In a two-level model (with a \code{cluster=} argument), the \code{rv()}
+modifier can be used in the level-1 (within) part of the model to turn a
+regression coefficient into a \emph{random slope}: a latent variable at
+the second (between) level. The (quoted) argument of \code{rv()} is the
+name of this latent variable. At the between level, the random slope can
+then be given a (residual) variance, covariances, regressions on
+between-level covariates, and an intercept (which is the `fixed effect'
+of the slope). For example (cfr. ex9.8 in the Mplus User's Guide):
+\preformatted{model <- '
+  level: 1
+    fw =~ y1 + y2 + y3 + y4
+    fw ~ rv("s1")*x1 + rv("s2")*x2
+  level: 2
+    fb =~ y1 + y2 + y3 + y4
+    s1 + s2 + fb ~ w
+'
+}
+Here, the within-level regression coefficients of \code{fw} on the
+observed covariates \code{x1} and \code{x2} vary across clusters; the
+random slopes \code{s1} and \code{s2} are regressed on the between-level
+covariate \code{w}.
+
+The current implementation is limited to: two-level models, a single
+group, continuous data, complete data (\code{missing = "listwise"}),
+\code{estimator = "ML"} and \code{fixed.x = TRUE}; the covariates that
+carry a random slope must be observed within-only (level-1) variables.
+The (observed-data) loglikelihood is \emph{conditional} on the exogenous
+covariates. No chi-square test statistic (or fit indices) are available
+for models with random slopes; only loglikelihood-based measures (AIC,
+BIC) can be used.
+}
+
 \section{(In)equality constraints}{
 The \code{==} operator can be used either to fix a parameter to a specific value,
 or to set an estimated parameter equal to another parameter. Adapting the

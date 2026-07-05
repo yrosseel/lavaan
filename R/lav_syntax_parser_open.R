@@ -29,7 +29,7 @@ lav_parse_options <- function(
       side = c("l", "r", "r", "r",
         "r", "r", "r", "r"),
       expect = c("char", "num", "char", "num",
-        "num", "num", "num", "char"),
+        "num", "num", "char", "char"),
       pkg = "lavaan"
     )
     groups = data.frame(

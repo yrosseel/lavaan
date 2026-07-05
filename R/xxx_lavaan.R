@@ -555,6 +555,7 @@ lavaan <- function(
   timing <- lav_add_timing(timing, "implied")
 
   lavloglik <- lav_step12_loglik(
+    lavcache = lavcache,
     lavoptions     = lavoptions,
     lavdata        = lavdata,
     lavsamplestats = lavsamplestats,

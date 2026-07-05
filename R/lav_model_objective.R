@@ -167,6 +167,7 @@ lav_model_objective <- function(lavmodel = NULL,
           lp = lavdata@Lp[[g]],
           mp = lavdata@Mp[[g]],
           lavsamplestats = lavsamplestats,
+          lavcache_group = if (is.null(lavcache)) NULL else lavcache[[g]],
           group = g
         )
       } else {
@@ -189,6 +190,7 @@ lav_model_objective <- function(lavmodel = NULL,
           lp = lavdata@Lp[[g]],
           mp = NULL, # complete data
           lavsamplestats = lavsamplestats,
+          lavcache_group = if (is.null(lavcache)) NULL else lavcache[[g]],
           group = g
         )
       } else if (conditional_x) {

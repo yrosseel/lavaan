@@ -341,6 +341,29 @@ lav_step10_cache <- function(slot_cache = NULL,
     }
   }
 
+  # random slopes (rv() modifier): store the index map and the
+  # per-cluster crossproduct statistics (new in 0.7-1)
+  if (isTRUE(lavoptions$.rv) ||
+      length(lavmodel@rv.ov) > 0L || length(lavmodel@rv.lv) > 0L) {
+    if (lavdata@data.type != "full") {
+      lav_msg_stop(gettext(
+        "random slopes (rv() modifier) require full (raw) data."))
+    }
+    for (g in 1:lavdata@ngroups) {
+      if (is.null(lavcache[[g]]$rs)) {
+        rs_info <- lav_mvn_cl_rs_info(
+          lavmodel = lavmodel, lavpartable = lavpartable,
+          lavdata = lavdata
+        )
+        rs_stats <- lav_mvn_cl_rs_stats(
+          y1 = lavdata@X[[g]], lp = lavdata@Lp[[g]],
+          rs_info = rs_info
+        )
+        lavcache[[g]]$rs <- list(info = rs_info, stats = rs_stats)
+      }
+    }
+  }
+
   # If estimator = MML, store Gauss-Hermite nodes/weights
   if (lavoptions$estimator == "MML") {
     for (g in 1:lavdata@ngroups) {

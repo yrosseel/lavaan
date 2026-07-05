@@ -5,7 +5,8 @@ lav_model_loglik <- function(lavdata = NULL,
                              lavh1 = NULL,
                              lavimplied = NULL,
                              lavmodel = NULL,
-                             lavoptions = NULL) {
+                             lavoptions = NULL,
+                             lavcache = NULL) {
   ngroups <- lavdata@ngroups
 
   logl_group <- rep(as.numeric(NA), ngroups)
@@ -59,7 +60,28 @@ lav_model_loglik <- function(lavdata = NULL,
 
   if (logl_ok) {
     for (g in seq_len(ngroups)) {
-      if (lavdata@nlevels > 1L) {
+      if (lavdata@nlevels > 1L &&
+          (length(lavmodel@rv.ov) > 0L || length(lavmodel@rv.lv) > 0L)) {
+        # random slopes (rv() modifier): conditional (on the exogenous
+        # covariates) observed-data loglikelihood
+        rs <- lavcache[[g]]$rs
+        if (is.null(rs)) {
+          rs_info <- lav_mvn_cl_rs_info(
+            lavmodel = lavmodel, lavdata = lavdata
+          )
+          rs_stats <- lav_mvn_cl_rs_stats(
+            y1 = lavdata@X[[g]], lp = lavdata@Lp[[g]],
+            rs_info = rs_info
+          )
+          rs <- list(info = rs_info, stats = rs_stats)
+        }
+        imp <- lav_mvn_cl_rs_implied(lavmodel = lavmodel,
+                                     rs_info = rs$info)
+        logl_group[g] <- lav_mvn_cl_rs_loglik(
+          rs_stats = rs$stats, imp = imp, rs_info = rs$info,
+          log2pi = TRUE, minus_two = FALSE
+        )
+      } else if (lavdata@nlevels > 1L) {
         # here, we assume only 2 levels, at [[1]] and [[2]]
         if (lavmodel@conditional.x) {
           res_sigma_w <- lavimplied$res.cov[[(g - 1) * 2 + 1]]

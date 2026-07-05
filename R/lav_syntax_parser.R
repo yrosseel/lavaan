@@ -569,7 +569,7 @@ lav_parse_modifier <- function(formul1, lhs, opi, modelsrc, types,
         footer = tl[2L]
       )
     }
-    if (attr(modifier, "tiepe") == "label") {
+    if (attr(modifier, "tiepe") %in% c("label", "rv")) {
       if (!is.character(modifier)) {
         tl <- lav_parse_txtloc(modelsrc, formul1$elem_pos[opi + 1L])
         lav_msg_stop(gettext("invalid label modifier (should be character)"),

@@ -315,13 +315,16 @@ lav_model_pt  <- function(
           tmp$op <- "=~"
           tmp$rhs <- lv_names_rv[i]
           tmp$mod.idx <- max(flat$mod.idx) + i
-          tmp$fixed <- "0"
-          tmp$start <- ""
-          tmp$lower <- ""
-          tmp$upper <- ""
-          tmp$label <- ""
-          tmp$prior <- ""
-          tmp$efa <- ""
+          # the modifier columns below are only present in the FLAT
+          # matrix of the original parser; the newer parsers use the
+          # 'modifiers' attribute only (see tmp_mod below)
+          if (!is.null(flat_block$fixed)) tmp$fixed <- "0"
+          if (!is.null(flat_block$start)) tmp$start <- ""
+          if (!is.null(flat_block$lower)) tmp$lower <- ""
+          if (!is.null(flat_block$upper)) tmp$upper <- ""
+          if (!is.null(flat_block$label)) tmp$label <- ""
+          if (!is.null(flat_block$prior)) tmp$prior <- ""
+          if (!is.null(flat_block$efa)) tmp$efa <- ""
           tmp$rv <- lv_names_rv[i]
           flat_block <- rbind(flat_block, tmp, deparse.level = 0L)
           tmp_mod <- c(tmp_mod, list(list(fixed = 0)))

@@ -83,6 +83,13 @@ lavPredict <- function(object, newdata = NULL, # keep order of predict(), 0.6-7 
   lavimplied <- object@implied
   lavpartable <- object@ParTable
 
+  # random slopes? not supported (yet)
+  if (length(lavmodel@rv.ov) > 0L || length(lavmodel@rv.lv) > 0L) {
+    lav_msg_stop(gettext(
+      "lavPredict() is not supported (yet) for models with random slopes
+       (rv() modifier)."))
+  }
+
   # warn if the model does not contain any 'regular' latent variables
   if (length(lav_object_vnames(lavpartable, "lv.regular")) == 0L) {
     lav_msg_warn(gettextf("fitted model does not contain regular

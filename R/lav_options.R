@@ -454,6 +454,85 @@ lav_options_set <- function(opt = NULL) {
     }
   }
 
+  # random slopes (rv() modifier) ####
+  if (is.null(opt$.rv)) {
+    opt$.rv <- FALSE
+  }
+  if (opt$.rv) {
+    # random slopes are only available for two-level models with
+    # continuous data, complete data, estimator ML (for now)
+    if (!opt$.multilevel) {
+      lav_msg_stop(gettext(
+        "random slopes (rv() modifier) are only supported for two-level
+         models (with a cluster= argument)."))
+    }
+    if (opt$.categorical) {
+      lav_msg_stop(gettext(
+        "random slopes (rv() modifier) are not supported for categorical
+         data."))
+    }
+    if (!is.null(opt$.sampling.weights) && opt$.sampling.weights) {
+      lav_msg_stop(gettext(
+        "random slopes (rv() modifier) are not supported in combination
+         with sampling weights."))
+    }
+    if (!opt$estimator %in% c("ml", "default")) {
+      lav_msg_stop(gettextf(
+        "random slopes (rv() modifier) require estimator = %s.",
+        dQuote("ML")))
+    }
+    if (opt$missing %in% c("ml", "ml.x", "two.stage", "robust.two.stage")) {
+      lav_msg_stop(gettext(
+        "random slopes (rv() modifier) are not supported (yet) in
+         combination with missing data handling; use missing = \"listwise\"
+         for now."))
+    }
+    if (isTRUE(opt$conditional.x)) {
+      lav_msg_stop(gettext(
+        "random slopes (rv() modifier) are not supported in combination
+         with conditional.x = TRUE."))
+    }
+    if (isFALSE(opt$fixed.x)) {
+      lav_msg_stop(gettext(
+        "random slopes (rv() modifier) require fixed.x = TRUE: the
+         covariates with random slopes are treated as fixed exogenous
+         variables."))
+    }
+    # no saturated (h1) model exists for random-slope models: no
+    # chi-square test statistic, no baseline model, no (incremental)
+    # fit indices; only logl/AIC/BIC are available
+    # note: we do keep h1 = TRUE: the (standard, no-random-slope)
+    # saturated two-level moments provide good starting values; but the
+    # h1 loglikelihood is NOT comparable to the (conditional-on-x)
+    # loglikelihood of the random-slope model
+    opt$baseline <- FALSE
+    if (!all(opt$test %in% c("default", "none"))) {
+      lav_msg_warn(gettext(
+        "test statistics are not available (yet) for models with random
+         slopes; test set to \"none\"."))
+    }
+    opt$test <- "none"
+    if (!opt$se %in% c("default", "none", "standard")) {
+      lav_msg_stop(gettextf(
+        "`se' argument must be one of %s for models with random slopes.",
+        lav_msg_view(c("none", "standard"), log_sep = "or")))
+    }
+    # standard errors: numerical hessian of the observed-data loglikelihood
+    opt$observed.information[1] <- "hessian"
+    if (length(opt$observed.information) > 1L) {
+      opt$observed.information[2] <- "hessian"
+    }
+    # no analytic gradient (yet)
+    opt$optim.gradient <- "numerical"
+    # optimizer: nlminb only (for now; EM will be added later)
+    if (opt$optim.method %in% c("em", "gn")) {
+      lav_msg_warn(gettextf(
+        "optim.method = %s is not available (yet) for models with random
+         slopes; switching to nlminb.", dQuote(opt$optim.method)))
+      opt$optim.method <- "nlminb"
+    }
+  }
+
   # em.h1.args: resolve "default" values
   # note: the single-level (missing data) EM converges when the change in
   # the parameter values is smaller than tol (tol was 1e-06 < 0.6-9), while

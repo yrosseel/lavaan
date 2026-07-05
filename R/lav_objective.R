@@ -791,7 +791,27 @@ lav_model_objective_2l <- function(lavmodel = NULL,
                          lp = NULL,
                          mp = NULL,
                          lavsamplestats = NULL,
+                         lavcache_group = NULL, # only for random slopes
                          group = 1L) {
+  # random slopes? (rv() modifier) -> use the random-slope kernel
+  if (length(lavmodel@rv.ov) > 0L || length(lavmodel@rv.lv) > 0L) {
+    rs <- lavcache_group$rs
+    if (is.null(rs)) {
+      lav_msg_fixme(
+        "no rs element found in lavcache; this should not happen")
+    }
+    imp <- lav_mvn_cl_rs_implied(
+      lavmodel = lavmodel, glist = glist,
+      rs_info = rs$info
+    )
+    loglik <- lav_mvn_cl_rs_loglik(
+      rs_stats = rs$stats, imp = imp, rs_info = rs$info,
+      log2pi = FALSE, minus_two = TRUE
+    )
+    objective <- as.numeric(loglik) / (lavsamplestats@ntotal * 2)
+    return(objective)
+  }
+
   # compute model-implied statistics for all blocks
   implied <- lav_model_implied(lavmodel, glist = glist)
 
