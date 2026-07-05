@@ -267,9 +267,12 @@ lav_fit_cfi_lavobject <- function(lavobject = NULL, fit_measures = "cfi",
     robust_flag <- TRUE
   }
 
-  # FIML?
+  # FIML? (the FIML-corrected robust indices are only available for
+  # single-level models; for multilevel data, we fall back to the regular
+  # scaled/robust computation above, which handles missing data too)
   fiml_flag <- FALSE
-  if (robust && lavobject@Options$missing %in% c("ml", "ml.x")) {
+  if (robust && lavobject@Options$missing %in% c("ml", "ml.x") &&
+    lavobject@Data@nlevels == 1L) {
     fiml_flag <- robust_flag <- TRUE
     # check if we can compute corrected values
     if (scaled_flag) {
