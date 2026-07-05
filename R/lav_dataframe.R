@@ -52,7 +52,15 @@ lav_dataframe_vartable <- function(frame = NULL, ov_names = NULL,
     # handle the 'labelled' type from the haven package
     # - if the variable name is not in 'ordered', we assume
     #   it is numeric (for now) 11 March 2018
-    if (inherits(x, "labelled") && !(var_names[i] %in% ordered)) {
+    # - haven >= 2.0 renamed the class to 'haven_labelled' (and
+    #   'haven_labelled_spss' for SPSS user-defined missings); the old
+    #   'labelled' class only matched pre-2.0 haven, so labelled numeric
+    #   variables were left with type = "haven_labelled" (which, e.g.,
+    #   sent lavPredict() down the numerical EBM path). Detect a labelled
+    #   *numeric* variable directly instead (July 2026).
+    if (is.numeric(x) &&
+        inherits(x, c("labelled", "haven_labelled")) &&
+        !(var_names[i] %in% ordered)) {
       type_x <- "numeric"
     }
 
