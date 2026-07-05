@@ -11,7 +11,6 @@
 # model):
 #   d_ji = y_ji - nu_j ~ N(Mu.W, Sigma.W)   (one term per level-1 unit)
 #   u_j  = (nu_j[both], z_j) ~ N(Mu.B, Sigma.B) (one term per cluster)
-# (cf. Asparouhov & Muthen, 2003)
 #
 # the first term only requires the expected complete-data moments (one
 # E-step); the second term is computed in closed form below, using the

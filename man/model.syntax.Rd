@@ -479,10 +479,11 @@ with random slopes; only loglikelihood-based measures (AIC, BIC) can
 be used. Standard errors can be \code{"standard"} (observed
 information) or \code{"robust.huber.white"} (sandwich; this is also
 what \code{estimator = "MLR"} implies). Both \code{optim.method =
-"nlminb"} (the default) and \code{optim.method = "em"} are supported
-(but the EM algorithm requires complete data).
+"nlminb"} and \code{optim.method = "em"} are supported; with complete
+data, \code{"nlminb"} is the default, while with \code{missing =
+"ml"}, the EM algorithm is the default optimizer.
 \code{lavPredict()} provides empirical Bayes (posterior mean)
-predictions (complete data only): with \code{level = 2}, the
+predictions: with \code{level = 2}, the
 between-level latent variables including the random slopes (and, with
 \code{se = "standard"}, their posterior standard deviations); with
 \code{level = 1} (the default), the within-level factor scores.

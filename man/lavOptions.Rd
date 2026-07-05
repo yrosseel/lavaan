@@ -555,8 +555,8 @@ Optimization options:
       EM algorithm is more robust in that setting; this also mimics
       Mplus); see the \code{em.args} option to control the EM
       algorithm. For two-level models with random slopes (the
-      \code{rv()} modifier), \code{optim.method = "em"} uses the EM
-      algorithm of Asparouhov and Muthen (2003). Note that for any
+      \code{rv()} modifier), \code{optim.method = "em"} uses a
+      dedicated EM algorithm. Note that for any
       \code{optim.method = "em"} fit, variances that are fixed to zero
       are replaced by the (small) value \code{em.args$zerovar_offset}
       (as in Mplus, which uses the same 'minimum variance' device); as

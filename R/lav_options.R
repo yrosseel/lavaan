@@ -533,7 +533,7 @@ lav_options_set <- function(opt = NULL) {
     }
     # no analytic gradient (yet)
     opt$optim.gradient <- "numerical"
-    # optimizer: nlminb (default) or em (Asparouhov & Muthen, 2003)
+    # optimizer: nlminb (default) or em
     if (opt$optim.method == "gn") {
       lav_msg_warn(gettext(
         "optim.method = \"gn\" is not available for models with random

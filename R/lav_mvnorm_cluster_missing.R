@@ -400,9 +400,8 @@ lav_mvn_cl_mi_em_engine <- function(y1 = NULL,
 
   # one EM step: theta -> theta'; if logl = TRUE, the observed-data
   # loglikelihood at the *input* theta -- a cheap byproduct of the E-step
-  # quantities (cf. eq. 20 in Asparouhov & Muthen, 2003) -- is attached
-  # to the result as the "logl" attribute (it matches the value of
-  # lav_mvn_cl_mi_loglik_samp_2l() exactly)
+  # quantities -- is attached to the result as the "logl" attribute (it
+  # matches the value of lav_mvn_cl_mi_loglik_samp_2l() exactly)
   em_step <- function(theta, logl = FALSE) {
     th <- em_unpack(theta)
     mu_w <- th$mu_w

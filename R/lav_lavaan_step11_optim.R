@@ -125,7 +125,7 @@ lav_step11_estoptim <- function(lavdata = NULL,
       # values of lavmodel_start
       run_em <- function(lavmodel_start, fx_tol) {
         if (rv_flag) {
-          # random slopes: Asparouhov & Muthen (2003) EM
+          # random slopes: dedicated EM algorithm
           try(
             lav_mvn_cl_rs_em_h0(
               lavsamplestats = lavsamplestats,
