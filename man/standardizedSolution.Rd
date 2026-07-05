@@ -7,11 +7,11 @@ Standardized solution of a latent variable model.}
 \usage{
 standardizedSolution(object, type = "std.all", se = TRUE, zstat = TRUE,
                      pvalue = TRUE, ci = TRUE, level = 0.95,
-                     boot.ci.type = "perc", cov.std = TRUE,
-                     remove.eq = TRUE, remove.ineq = TRUE, remove.def = FALSE,
-                     remove.aux = TRUE,
-                     partable = NULL, GLIST = NULL, est = NULL,
-                     output = "data.frame")
+                     boot_ci_type = "perc", cov_std = TRUE,
+                     remove_eq = TRUE, remove_ineq = TRUE, remove_def = FALSE,
+                     remove_aux = TRUE,
+                     partable = NULL, glist = NULL, est = NULL,
+                     output = "data.frame", ...)
 }
 \arguments{
 \item{object}{An object of class \code{\linkS4class{lavaan}}.}
@@ -38,14 +38,14 @@ normal distribution.}
 \item{ci}{If \code{TRUE}, confidence intervals are added to
 the output.}
 \item{level}{The confidence level required.}
-\item{boot.ci.type}{Character. Only used if the model was fitted with
+\item{boot_ci_type}{Character. Only used if the model was fitted with
 \code{se = "bootstrap"}. In that case, bootstrap standard errors and bootstrap
 confidence intervals are computed for the standardized parameters (by
 re-standardizing each bootstrap draw), and this argument selects the type of
 bootstrap confidence interval, exactly as in
 \code{\link{parameterEstimates}}: \code{"norm"}, \code{"basic"},
 \code{"perc"} (the default), \code{"bca.simple"} or \code{"bca"}.}
-\item{cov.std}{Logical. If TRUE, the (residual) observed
+\item{cov_std}{Logical. If TRUE, the (residual) observed
 covariances are scaled by the square root of the `Theta' diagonal elements, and
 the (residual) latent covariances are scaled by the square root of the `Psi'
 diagonal elements. If FALSE, the (residual) observed covariances
@@ -53,30 +53,31 @@ are scaled by the square root of the diagonal elements of the observed
 model-implied covariance matrix (Sigma), and the (residual) latent covariances
 are scaled by the square root of diagonal elements of the model-implied
 covariance matrix of the latent variables.}
-\item{remove.eq}{Logical. If TRUE, filter the output by removing all rows 
+\item{remove_eq}{Logical. If TRUE, filter the output by removing all rows
 containing equality constraints, if any.}
-\item{remove.ineq}{Logical. If TRUE, filter the output by removing all
+\item{remove_ineq}{Logical. If TRUE, filter the output by removing all
 rows containing inequality constraints, if any.}
-\item{remove.def}{Logical. If TRUE, filter the output by removing all
+\item{remove_def}{Logical. If TRUE, filter the output by removing all
 rows containing parameter definitions, if any.}
-\item{remove.aux}{Logical. If TRUE (the default), filter the output by
+\item{remove_aux}{Logical. If TRUE (the default), filter the output by
 removing all rows corresponding to auxiliary (\code{aux=}) variables added to
 the model as saturated correlates (only relevant when \code{missing = "ml"}
 and the \code{aux=} argument was used).}
-\item{GLIST}{List of model matrices. If provided, they will be used
+\item{glist}{List of model matrices. If provided, they will be used
 instead of the GLIST inside the object@Model slot. Only works if the
 \code{est} argument is also provided. See Note.}
 \item{est}{Numeric. Parameter values (as in the `est' column of a
-parameter table). If provided, they will be used instead of 
-the parameters that can be extracted from object. Only works if the \code{GLIST} 
+parameter table). If provided, they will be used instead of
+the parameters that can be extracted from object. Only works if the \code{glist}
 argument is also provided. See Note.}
 \item{partable}{A custom \code{list} or \code{data.frame} in which to store
-the standardized parameter values. If provided, it will be used instead of 
+the standardized parameter values. If provided, it will be used instead of
 the parameter table inside the object@ParTable slot.}
 \item{output}{Character. If \code{"data.frame"}, the parameter table is
 displayed as a standard (albeit lavaan-formatted) data.frame.
 If \code{"text"} (or alias \code{"pretty"}), the parameter table is
 prettified and displayed with subsections (as used by the summary function).}
+\item{...}{to support old argument names}
 }
 \details{
 The standardized estimates are functions of the (unstandardized) free
@@ -103,7 +104,7 @@ fitted (in particular on the \code{se=} argument of \code{\link{lavaan}},
     draws are available), bootstrap standard errors and bootstrap confidence
     intervals are reported instead. These are obtained by re-standardizing each
     bootstrap draw and computing the standard deviation (for the standard
-    error) and the requested interval type (see \code{boot.ci.type}) of the
+    error) and the requested interval type (see \code{boot_ci_type}) of the
     resulting standardized values. Note that, as in
     \code{\link{parameterEstimates}}, the p-value is still computed by
     referring the z-statistic (standardized estimate divided by its bootstrap
@@ -117,7 +118,7 @@ bootstrap standard errors for the standardized solution, refit the model with
 the corresponding \code{se=} argument.
 }
 \note{
-The \code{est}, \code{GLIST}, and \code{partable} arguments are not meant for
+The \code{est}, \code{glist}, and \code{partable} arguments are not meant for
 everyday users, but for authors of external R packages that depend on
 \code{lavaan}. Only to be used with great caution.
 }
@@ -132,7 +133,7 @@ everyday users, but for authors of external R packages that depend on
   \code{attr(x, "boot_std")}, analogous to
   \code{lavInspect(object, "coef.boot")} for the unstandardized solution.
 
-  In addition, if \code{boot.ci.type = "bca"}, the empirical-influence design
+  In addition, if \code{boot_ci_type = "bca"}, the empirical-influence design
   matrix used to compute the acceleration constant is stored as the
   \code{"design"} attribute (retrieve with \code{attr(x, "design")}).
 }

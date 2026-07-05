@@ -52,11 +52,13 @@ lav_test_score_ceq_simple <- function(object) {
   list(R = r_mat, lhs = lhs, op = rep("==", length(lhs)), rhs = rhs)
 }
 
-lavTestScore <- function(object, add = NULL, release = NULL,       # nolint start
+lavTestScore <- function(object, add = NULL, release = NULL,       # nolint
                          univariate = TRUE, cumulative = FALSE,
-                         epc = FALSE, standardized = epc, cov.std = epc,
+                         epc = FALSE, standardized = epc, cov_std = epc,
                          verbose = FALSE, warn = TRUE,
-                         information = "expected") {               # nolint end
+                         information = "expected", ...) {
+  dotdotdot <- list(...)
+  lav_adapt_func(environment(), dotdotdot, NULL)
   # check object
   object <- lav_object_check_version(object)
 
@@ -372,7 +374,7 @@ lavTestScore <- function(object, add = NULL, release = NULL,       # nolint star
     if (standardized) {
       epc_1 <- list_1$epc
 
-      if (cov.std) {
+      if (cov_std) {
         # replace epc values for variances by est values
         var_idx <- which(list_1$op == "~~" & list_1$lhs == list_1$rhs &
           list_1$exo == 0L)
@@ -397,7 +399,7 @@ lavTestScore <- function(object, add = NULL, release = NULL,       # nolint star
       list_1$sepc.lv <- epc_sign * lav_standardize_lv(object,
         partable = list_1,
         est = abs(epc_1),
-        cov_std = cov.std
+        cov_std = cov_std
       )
       if (length(small_idx) > 0L) {
         list_1$sepc.lv[small_idx] <- 0
@@ -405,7 +407,7 @@ lavTestScore <- function(object, add = NULL, release = NULL,       # nolint star
       list_1$sepc.all <- epc_sign * lav_standardize_all(object,
         partable = list_1,
         est = abs(epc_1),
-        cov_std = cov.std
+        cov_std = cov_std
       )
       if (length(small_idx) > 0L) {
         list_1$sepc.all[small_idx] <- 0
@@ -413,7 +415,7 @@ lavTestScore <- function(object, add = NULL, release = NULL,       # nolint star
       list_1$sepc.nox <- epc_sign * lav_standardize_all_nox(object,
         partable = list_1,
         est = abs(epc_1),
-        cov_std = cov.std
+        cov_std = cov_std
       )
       if (length(small_idx) > 0L) {
         list_1$sepc.nox[small_idx] <- 0

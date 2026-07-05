@@ -69,8 +69,8 @@ lav_step17_lavaan <- function(lavmc = NULL,
       cat("computing standardized solution ... ")
     }
     std <- standardizedSolution(lavaan,
-      remove.eq = FALSE,
-      remove.ineq = FALSE, remove.def = FALSE
+      remove_eq = FALSE,
+      remove_ineq = FALSE, remove_def = FALSE
     )
     if (lav_verbose()) {
       cat(" done.\n")

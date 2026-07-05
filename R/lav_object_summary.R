@@ -10,7 +10,7 @@
 # YR 26 July 2022: add fm.args= argument to change the way (some) fit measures
 #                  are computed
 # YR 24 Sept 2022: add efa= argument
-# YR 19 Nov  2023: add remove.unused= argument
+# YR 19 Nov  2023: add remove_unused= argument
 # TDJ 28 March 2024: deprecate std.nox= argument ("std.nox" can be %in%
 #                                                          standardized=)
 
@@ -93,8 +93,10 @@ lav_object_summary <- function(object, header = TRUE,
                                    pvalue = FALSE
                                  ),
                                modindices = FALSE,
-                               srmr_close_h0 = NULL) {
-
+                               srmr_close_h0 = NULL,
+                              ...) {
+   dotdotdot <- list(...)
+   lav_adapt_func(environment(), dotdotdot, NULL)
   # check object
   object <- lav_object_check_version(object)
 
@@ -383,12 +385,12 @@ lav_object_summary <- function(object, header = TRUE,
     pe <- lavParameterEstimates(object,
       ci = ci, standardized = standardized,
       rsquare = rsquare, fmi = fmi,
-      cov.std = cov_std,
-      remove.eq = remove_eq, remove.system.eq = remove_system_eq,
-      remove.ineq = remove_ineq, remove.def = remove_def,
-      remove.nonfree = remove_nonfree,
-      remove.step1 = remove_step1,
-      remove.unused = remove_unused,
+      cov_std = cov_std,
+      remove_eq = remove_eq, remove_system_eq = remove_system_eq,
+      remove_ineq = remove_ineq, remove_def = remove_def,
+      remove_nonfree = remove_nonfree,
+      remove_step1 = remove_step1,
+      remove_unused = remove_unused,
       plabel = plabel,
       output = "text",
       header = TRUE
@@ -410,7 +412,7 @@ lav_object_summary <- function(object, header = TRUE,
 
   # modification indices?
   if (is.logical(modindices)) {
-    if (modindices) modindices <- list(standardized = TRUE, cov.std = cov_std)
+    if (modindices) modindices <- list(standardized = TRUE, cov_std = cov_std)
   }
   if (is.list(modindices)) {
     mi <- do.call("modificationIndices", c(list(object = object), modindices))

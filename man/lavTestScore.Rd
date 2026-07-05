@@ -11,8 +11,8 @@ fixed or constrained parameters in the model.}
 \usage{
 lavTestScore(object, add = NULL, release = NULL,
              univariate = TRUE, cumulative = FALSE,
-             epc = FALSE, standardized = epc, cov.std = epc,
-             verbose = FALSE, warn = TRUE, information = "expected")
+             epc = FALSE, standardized = epc, cov_std = epc,
+             verbose = FALSE, warn = TRUE, information = "expected", ...)
 }
 \arguments{
 \item{object}{An object of class \code{\linkS4class{lavaan}}.}
@@ -37,12 +37,13 @@ standardization is based on the variances of the (continuous) latent
 variables. In the second column (sepc.all), standardization is based
 on the variances of both (continuous) observed and latent variables.
 (Residual) covariances are standardized using (residual) variances.}
-\item{cov.std}{Logical. See \code{\link{standardizedSolution}}.}
+\item{cov_std}{Logical. See \code{\link{standardizedSolution}}.}
 \item{verbose}{Logical. Not used for now.}
 \item{warn}{Logical. If \code{TRUE}, print out warnings if they occur.}
 \item{information}{\code{character} indicating the type of information matrix
 to use (check \code{\link{lavInspect}} for available options). \code{"expected"}
 information is the default, which provides better control of Type I errors.}
+\item{...}{to allow use of old argumentname cov_std}
 }
 \details{
     This function can be used to compute both multivariate and univariate

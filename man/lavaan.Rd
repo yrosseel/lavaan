@@ -46,7 +46,7 @@ lavaan(model = NULL, data = NULL, ordered = NULL, aux = NULL,
     leaving the model degrees of freedom unchanged. The baseline model is
     adjusted accordingly (so CFI/TLI remain correct), and the auxiliary
     (nuisance) parameters are hidden from the default output (use
-    \code{remove.aux = FALSE} in \code{parameterEstimates()} to show them; they
+    \code{remove_aux = FALSE} in \code{parameterEstimates()} to show them; they
     are always part of \code{coef()}). With \code{missing = "two.stage"} or
     \code{"robust.two.stage"}, the auxiliary variables are instead included in
     the first-stage EM run that estimates the saturated summary statistics the
