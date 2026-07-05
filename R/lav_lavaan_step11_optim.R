@@ -95,35 +95,47 @@ lav_step11_estoptim <- function(lavdata = NULL,
     } else if (lavoptions$optim.method == "em") {
       # multilevel only for now
       stopifnot(lavdata@nlevels > 1L)
-      x <- try(
-        lav_mvn_cl_em_h0(
-          lavsamplestats = lavsamplestats,
-          lavdata = lavdata,
-          lavimplied = NULL,
-          lavpartable = lavpartable,
-          lavmodel = lavmodel,
-          lavoptions = lavoptions,
-          fx_tol = lavoptions$em.args$fx_tol,
-          dx_tol = lavoptions$em.args$dx_tol,
-          max_iter = lavoptions$em.args$iter_max,
-          acceleration = lavoptions$em.args$acceleration,
-          fused = lavoptions$em.args$fused
-        ),
-        silent = TRUE
-      )
+
+      handoff_flag <- !isFALSE(lavoptions$em.args$nlminb_handoff)
+      em_fx_tol <- lavoptions$em.args$fx_tol
+      if (!is.numeric(em_fx_tol)) {
+        em_fx_tol <- 1e-08
+      }
+      em_dx_tol <- lavoptions$em.args$dx_tol
+      if (!is.numeric(em_dx_tol)) {
+        em_dx_tol <- 1e-04
+      }
+
+      # run the EM iterations, starting from the current parameter
+      # values of lavmodel_start
+      run_em <- function(lavmodel_start, fx_tol) {
+        try(
+          lav_mvn_cl_em_h0(
+            lavsamplestats = lavsamplestats,
+            lavdata = lavdata,
+            lavimplied = NULL,
+            lavpartable = lavpartable,
+            lavmodel = lavmodel_start,
+            lavoptions = lavoptions,
+            fx_tol = fx_tol,
+            dx_tol = em_dx_tol,
+            max_iter = lavoptions$em.args$iter_max,
+            acceleration = lavoptions$em.args$acceleration,
+            fused = lavoptions$em.args$fused
+          ),
+          silent = TRUE
+        )
+      }
 
       # EM-stall -> nlminb hand-off (new in 0.7-2): the EM iterations
       # typically stop because the loglikelihood stalls (fx_tol) before
       # the gradient becomes small (dx_tol); in that case, refine the
       # solution with nlminb, warm-started at the EM values; if nlminb
       # gets lost in parameter space (non-finite values, a worse
-      # solution) or does not converge, we keep the EM solution
-      if (!inherits(x, "try-error") &&
-          !isFALSE(lavoptions$em.args$nlminb_handoff)) {
-        em_dx_tol <- lavoptions$em.args$dx_tol
-        if (!is.numeric(em_dx_tol)) {
-          em_dx_tol <- 1e-04
-        }
+      # solution) or does not converge, we keep the EM solution;
+      # returns list(x = , accepted = )
+      run_handoff <- function(x) {
+        accept <- FALSE
         lavmodel_em <- lav_model_set_parameters(lavmodel,
           x = as.numeric(x))
         dx_em <- try(lav_model_grad(
@@ -178,6 +190,41 @@ lav_step11_estoptim <- function(lavdata = NULL,
             } else {
               cat("nlminb hand-off rejected; keeping the EM solution\n")
             }
+          }
+        }
+        list(x = x, accepted = accept)
+      }
+
+      # early hand-off (new in 0.7-2): when the nlminb hand-off is
+      # active, the EM phase does not need to iterate until fx_tol --
+      # it only needs to get close enough for a reliable warm start;
+      # run the EM with a loosened tolerance, and let nlminb finish
+      # (a safety net below reverts to the strict tolerance if nlminb
+      # fails)
+      early_flag <- handoff_flag &&
+        !isFALSE(lavoptions$em.args$early_handoff) &&
+        em_fx_tol < 1e-03
+      x <- run_em(lavmodel, if (early_flag) 1e-03 else em_fx_tol)
+
+      if (handoff_flag && !inherits(x, "try-error")) {
+        out_h <- run_handoff(x)
+        x <- out_h$x
+        if (early_flag && !out_h$accepted) {
+          # safety net: nlminb could not improve on the loose EM
+          # solution; finish the EM iterations with the strict
+          # tolerance (warm start at the current values), and try the
+          # hand-off once more (this reproduces the non-early
+          # behavior)
+          if (lav_verbose()) {
+            cat("early hand-off failed; resuming EM with fx_tol = ",
+                em_fx_tol, "\n")
+          }
+          x_strict <- run_em(
+            lav_model_set_parameters(lavmodel, x = as.numeric(x)),
+            em_fx_tol
+          )
+          if (!inherits(x_strict, "try-error")) {
+            x <- run_handoff(x_strict)$x
           }
         }
       }

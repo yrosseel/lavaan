@@ -630,7 +630,15 @@ Optimization options:
       converged), the solution is refined by a quasi-Newton (nlminb)
       run, warm-started at the EM values; the refined solution is only
       accepted if nlminb converges to an (at least) equally good
-      solution; otherwise, the EM solution is retained.}
+      solution; otherwise, the EM solution is retained. If, in addition,
+      the \code{early_handoff} element is \code{TRUE} (the default), the
+      EM phase stops early (using a loosened tolerance,
+      \code{max(fx_tol, 0.001)}), as it only needs to provide a reliable
+      warm start for nlminb; this is usually considerably faster, and
+      gives the same solution; if nlminb fails from the early start, a
+      safety net resumes the EM iterations with the strict \code{fx_tol}
+      (and tries the hand-off once more), reproducing the non-early
+      behavior.}
 }
 
 Parallelization options (currently only used for bootstrapping):

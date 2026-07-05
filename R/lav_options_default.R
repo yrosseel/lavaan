@@ -492,6 +492,10 @@ lav_options_default <- function() {
   # (the EM solution is kept if nlminb fails to converge, or ends up
   # at a worse solution)
   elm(c("em.args", "nlminb_handoff"), TRUE, bl = TRUE)
+  # if the nlminb hand-off is active, stop the EM phase early (using a
+  # loosened fx_tol) and let nlminb finish? (a safety net reverts to
+  # the strict fx_tol if nlminb fails)
+  elm(c("em.args", "early_handoff"), TRUE, bl = TRUE)
 
   # em-h1-args sublist (EM algorithm for the unrestricted (h1) model)
   # "default" values are resolved later: single-level (missing data) uses
