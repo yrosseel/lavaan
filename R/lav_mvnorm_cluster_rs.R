@@ -221,6 +221,32 @@ lav_mvn_cl_rs_info <- function(lavmodel = NULL, lavpartable = NULL,
   eps_flag <- apply(nonzero_mat[yb_b_idx, , drop = FALSE], 1L, any)
   eps_names <- yb_names[eps_flag]
 
+  # structural fixed paths from the rv covariates? (a nonzero 'P'
+  # matrix); the EM version cannot handle these (the per-case mean
+  # P x_{ji} does not fit in the two-group complete-data model);
+  # nlminb handles the general case
+  mm_w <- 1:lavmodel@nmat[1]
+  glist_names_w <- names(lavmodel@GLIST)[mm_w]
+  beta_mm <- mm_w[which(glist_names_w == "beta")]
+  p_flag <- FALSE
+  if (length(beta_mm) > 0L) {
+    beta_w <- lavmodel@GLIST[[beta_mm]]
+    free_mat_w <- matrix(FALSE, nrow(beta_w), ncol(beta_w))
+    free_mat_w[lavmodel@m.free.idx[[beta_mm]]] <- TRUE
+    lv_names_w <- lavmodel@dimNames[[beta_mm]][[2]]
+    x_lv_idx_w <- match(x_names, lv_names_w)
+    x_lv_idx_w <- x_lv_idx_w[!is.na(x_lv_idx_w)]
+    if (length(x_lv_idx_w) > 0L) {
+      p_flag <- any(free_mat_w[, x_lv_idx_w]) ||
+        any(beta_w[, x_lv_idx_w] != 0)
+    }
+  }
+
+  # shared rv labels (the same slope attached to more than one path)?
+  # the EM version requires a one-to-one path <-> slope mapping
+  shared_flag <- (nrow(path_tab) != q) ||
+    !identical(path_tab$z.idx, seq_len(q))
+
   list(
     z.names = z_names, q = q,
     x.names = x_names, nx = length(x_names),
@@ -231,7 +257,8 @@ lav_mvn_cl_rs_info <- function(lavmodel = NULL, lavpartable = NULL,
     path.tab = path_tab,
     y.data.idx = y_data_idx,
     x.data.idx = x_data_idx,
-    exo.b.data.idx = exo_b_data_idx
+    exo.b.data.idx = exo_b_data_idx,
+    p.flag = p_flag, shared.flag = shared_flag
   )
 }
 
@@ -482,12 +509,13 @@ lav_mvn_cl_rs_implied <- function(lavmodel = NULL, glist = NULL,
 
   # constant part of the mean of the y-vector: within intercepts +
   # between (fixed) intercepts of the both-level variables
-  mu_y <- mu_w
-  mu_y[yb_y_idx] <- mu_y[yb_y_idx] + nu_b0[yb_idx, 1L]
+  mu_y_b <- numeric(rs_info$p1)
+  mu_y_b[yb_y_idx] <- nu_b0[yb_idx, 1L]
+  mu_y <- mu_w + mu_y_b
 
   list(
-    sigma.w = sigma_w, mu.y = mu_y, P = pmat, lmat = lmat,
-    q0 = q0, z.v.idx = z_v_idx, pv = pv,
+    sigma.w = sigma_w, mu.y = mu_y, mu.y.b = mu_y_b, P = pmat,
+    lmat = lmat, q0 = q0, z.v.idx = z_v_idx, pv = pv,
     sigma.v = sigma_v, mu.v = mu_v, cc = cc, mu.exo = mu_exo
   )
 }
@@ -691,4 +719,587 @@ lav_mvn_cl_rs_loglik <- function(rs_stats = NULL, imp = NULL,
   }
 
   out
+}
+
+
+# ---------------------------------------------------------------------
+# the EM algorithm (Asparouhov & Muthen, 2003), complete data
+# ---------------------------------------------------------------------
+#
+# complete data = observed data + the between random vector v_b (in
+# factor space, see above) + the 'within slope' variables
+# z_w[r] = v_b[z_r] * x_r (one per random-slope path; completed with an
+# arbitrary standard-normal marginal, cfr. A&M section 2).
+#
+# - E-step: the posterior of v_b given the cluster data is
+#       Sigma0_j = Sigma_v (I + A_j Sigma_v)^{-1},
+#       mu0_j    = d_j + Sigma0_j (p_j - A_j d_j)
+#   (the same A_j/p_j workhorses as the marginal loglikelihood); the
+#   expected complete-data moments then collapse onto the same
+#   per-cluster crossproducts (sy, sx, sxx, sxy, syy)
+# - M-step: a standard TWO-GROUP SEM, fitted to the expected moments:
+#   group 1 ('within', N obs) contains the y-vector plus the phantom
+#   z_w variables (unit variance, zero mean, fixed loading 1 on the
+#   lhs of their path); group 2 ('between', G obs) contains the
+#   both-level variables, the random slopes (now 'observed') and the
+#   between covariates
+#
+# limitations (fall back to nlminb): fixed paths from the rv
+# covariates (P != 0), shared rv labels; between-level variances that
+# are fixed to (near) zero are floored at 1e-4 in the M-step model
+# (cfr. the Mplus 'minimum variance'); the nlminb hand-off (enabled by
+# default) polishes the solution of the *exact* model afterwards
+
+# check if the EM version can handle this model; returns character(0)
+# if ok, otherwise the reason(s)
+lav_mvn_cl_rs_em_ok <- function(rs_info = NULL) {
+  reason <- character(0L)
+  if (rs_info$p.flag) {
+    reason <- c(reason, gettext(
+      "the model contains fixed regression paths from the random-slope
+       covariates"))
+  }
+  if (rs_info$shared.flag) {
+    reason <- c(reason, gettext(
+      "the same rv() label is attached to more than one regression
+       path"))
+  }
+  reason
+}
+
+# E-step: expected complete-data moments
+#
+# returns:
+#   r1 (p1 + q), t1 (p1 + q square): mean and covariance (about r1)
+#     of the within complete-data vector (y_w, z_w) -- N observations
+#   r2 (pb + q + nexo), t2 (square): mean and covariance of the
+#     between complete-data vector (y_b, z, w) -- G observations
+lav_mvn_cl_rs_estep <- function(rs_stats = NULL, imp = NULL,
+                                rs_info = NULL,
+                                sinv_method = "eigen") {
+  p1 <- rs_info$p1
+  nx <- rs_info$nx
+  q <- rs_info$q
+  pb <- rs_info$pb
+  nexo <- rs_info$nexo.b
+  pv <- imp$pv
+  path_tab <- rs_info$path.tab
+  npaths <- nrow(path_tab)
+
+  nclusters <- rs_stats$nclusters
+  nj_all <- rs_stats$cluster.size
+  ntotal <- rs_stats$ntotal
+
+  sigma_w_inv <- lav_mat_sym_inverse(imp$sigma.w,
+    logdet = TRUE, sinv_method = sinv_method
+  )
+  if (!is.finite(attr(sigma_w_inv, "logdet"))) {
+    lav_msg_stop(gettext(
+      "within covariance matrix is not positive definite in the
+       E-step."))
+  }
+  w_mat <- sigma_w_inv
+  sigma_v <- imp$sigma.v
+  mu_y <- imp$mu.y
+  nu_map <- imp$mu.y.b
+  q0 <- imp$q0
+  z_v_idx <- imp$z.v.idx
+  path_zcol <- z_v_idx[path_tab$z.idx]
+  path_x <- path_tab$x.idx
+
+  # constants
+  wq0 <- w_mat %*% q0
+  q0twq0 <- crossprod(q0, wq0)
+  wl <- w_mat %*% imp$lmat
+  q0twl <- crossprod(q0, wl)
+  ltwl <- crossprod(imp$lmat, wl)
+  dpv <- diag(pv)
+
+  # between mapping: (y_b, z) = c0 + G v
+  gmat <- rbind(
+    q0[rs_info$yb.y.idx, , drop = FALSE],
+    dpv[z_v_idx, , drop = FALSE]
+  )
+  c0 <- c(nu_map[rs_info$yb.y.idx], rep(0, q))
+
+  # accumulators
+  sum1_w <- numeric(p1 + q) # within first moments
+  sum2_w <- matrix(0, p1 + q, p1 + q) # within second moments
+  sum1_b <- numeric(pb + q + nexo)
+  sum2_b <- matrix(0, pb + q + nexo, pb + q + nexo)
+
+  y_idx1 <- seq_len(p1)
+  z_idx1 <- p1 + seq_len(q)
+  b_idx2 <- seq_len(pb + q)
+  w_idx2 <- pb + q + seq_len(nexo)
+
+  for (j in seq_len(nclusters)) {
+    nj <- nj_all[j]
+    sy_j <- rs_stats$sy[j, ]
+    sx_j <- rs_stats$sx[j, ]
+    sxx_j <- rs_stats$sxx[[j]]
+    sxy_j <- rs_stats$sxy[[j]]
+    syy_j <- rs_stats$syy[[j]]
+
+    # A_j and p_j (centered at mu.y; no P term: the EM requires P = 0)
+    se_j <- sy_j - nj * mu_y
+    a_j <- nj * q0twq0
+    p_j <- as.numeric(crossprod(wq0, se_j))
+    cz <- matrix(0, pv, pv)
+    for (i in seq_len(npaths)) {
+      zcol <- path_zcol[i]
+      cz[, zcol] <- cz[, zcol] + q0twl[, i] * sx_j[path_x[i]]
+    }
+    a_j <- a_j + cz + t(cz)
+    for (i in seq_len(npaths)) {
+      for (k in seq_len(npaths)) {
+        a_j[path_zcol[i], path_zcol[k]] <-
+          a_j[path_zcol[i], path_zcol[k]] +
+          ltwl[i, k] * sxx_j[path_x[i], path_x[k]]
+      }
+    }
+    sxe_j <- sxy_j - outer(sx_j, mu_y)
+    for (i in seq_len(npaths)) {
+      zi <- path_zcol[i]
+      p_j[zi] <- p_j[zi] + sum(wl[, i] * sxe_j[path_x[i], ])
+    }
+
+    # prior mean of v_b for this cluster
+    if (nexo > 0L) {
+      w_j <- rs_stats$exo.b[j, ]
+      d_j <- imp$mu.v + as.numeric(imp$cc %*% (w_j - imp$mu.exo))
+    } else {
+      w_j <- numeric(0L)
+      d_j <- imp$mu.v
+    }
+
+    # posterior of v_b
+    z_j <- dpv + a_j %*% sigma_v
+    sigma0_j <- sigma_v %*% solve(z_j)
+    sigma0_j <- (sigma0_j + t(sigma0_j)) / 2
+    p_tilde <- p_j - as.numeric(a_j %*% d_j)
+    mu0_j <- d_j + as.numeric(sigma0_j %*% p_tilde)
+    m0_j <- sigma0_j + tcrossprod(mu0_j) # E[v v']
+
+    # ---------- within complete-data moments: (y_w, z_w) ----------
+    # y_w = a - Q0 v, with a = y - nu_map (observed)
+    sa_j <- sy_j - nj * nu_map # sum_i a_i
+    saa_j <- syy_j - outer(sy_j, nu_map) - outer(nu_map, sy_j) +
+      nj * tcrossprod(nu_map) # sum_i a_i a_i'
+    q0mu <- as.numeric(q0 %*% mu0_j)
+    q0m0q0 <- q0 %*% m0_j %*% t(q0)
+
+    sum1_w[y_idx1] <- sum1_w[y_idx1] + sa_j - nj * q0mu
+    sum2_w[y_idx1, y_idx1] <- sum2_w[y_idx1, y_idx1] +
+      saa_j - outer(sa_j, q0mu) - outer(q0mu, sa_j) + nj * q0m0q0
+
+    # z_w[r] = v[z_r] * (the covariate of path r)
+    # (one-to-one path <-> slope mapping, so path r defines slope r;
+    #  but note that two slopes may share the same covariate)
+    sxa_j <- sxy_j - outer(sx_j, nu_map) # sum_i x_ai a_i'
+    for (r in seq_len(q)) {
+      zc_r <- z_v_idx[r]
+      xr <- path_x[r] # covariate (column in the x-block) of path r
+      sum1_w[z_idx1[r]] <- sum1_w[z_idx1[r]] + mu0_j[zc_r] * sx_j[xr]
+      for (s in seq_len(q)) {
+        zc_s <- z_v_idx[s]
+        xs <- path_x[s]
+        sum2_w[z_idx1[r], z_idx1[s]] <- sum2_w[z_idx1[r], z_idx1[s]] +
+          m0_j[zc_r, zc_s] * sxx_j[xr, xs]
+      }
+      # cross y_w x z_w[r]:
+      # sum_i x_(xr)i ( a_i mu0[z_r] - Q0 M0[, z_r] )
+      cross_r <- sxa_j[xr, ] * mu0_j[zc_r] -
+        sx_j[xr] * as.numeric(q0 %*% m0_j[, zc_r])
+      sum2_w[y_idx1, z_idx1[r]] <- sum2_w[y_idx1, z_idx1[r]] + cross_r
+      sum2_w[z_idx1[r], y_idx1] <- sum2_w[z_idx1[r], y_idx1] + cross_r
+    }
+
+    # ---------- between complete-data moments: (y_b, z, w) ----------
+    b_j <- c0 + as.numeric(gmat %*% mu0_j)
+    bb_j <- gmat %*% m0_j %*% t(gmat) +
+      outer(c0, b_j) + outer(b_j, c0) - tcrossprod(c0)
+
+    sum1_b[b_idx2] <- sum1_b[b_idx2] + b_j
+    sum2_b[b_idx2, b_idx2] <- sum2_b[b_idx2, b_idx2] + bb_j
+    if (nexo > 0L) {
+      sum1_b[w_idx2] <- sum1_b[w_idx2] + w_j
+      sum2_b[b_idx2, w_idx2] <- sum2_b[b_idx2, w_idx2] +
+        outer(b_j, w_j)
+      sum2_b[w_idx2, b_idx2] <- sum2_b[w_idx2, b_idx2] +
+        outer(w_j, b_j)
+      sum2_b[w_idx2, w_idx2] <- sum2_b[w_idx2, w_idx2] +
+        tcrossprod(w_j)
+    }
+  } # j
+
+  r1 <- sum1_w / ntotal
+  t1 <- sum2_w / ntotal - tcrossprod(r1)
+  r2 <- sum1_b / nclusters
+  t2 <- sum2_b / nclusters - tcrossprod(r2)
+
+  list(r1 = r1, t1 = t1, r2 = r2, t2 = t2)
+}
+
+# construct the two-group M-step parameter table (computed once)
+#
+# returns: list(pt = the two-group partable (data.frame),
+#               ov1/ov2 = the observed-variable order per group,
+#               perm1/perm2 = permutations from the canonical E-step
+#                             order to ov1/ov2,
+#               free.idx = which(pt$free > 0),
+#               fixed.x = any exo)
+lav_mvn_cl_rs_mstep_pt <- function(lavpartable = NULL, rs_info = NULL,
+                                   floor_value = 1e-4) {
+  pt <- as.data.frame(lavpartable, stringsAsFactors = FALSE)
+  # drop columns we do not need
+  pt$est <- NULL
+  pt$se <- NULL
+  pt$start <- NULL
+  pt$rv <- NULL
+  pt$mod.idx <- NULL
+  # two-group version: level -> group
+  pt$group <- NULL
+  names(pt)[names(pt) == "level"] <- "group"
+
+  # remove all level-1 rows involving the rv covariates (their moments,
+  # and the frozen random-slope paths)
+  x_names <- rs_info$x.names
+  rm_idx <- which(pt$group == 1L &
+    (pt$lhs %in% x_names | pt$rhs %in% x_names))
+  # remove the phantom marker rows (s =~ s) at the between level
+  rm_idx <- c(rm_idx, which(pt$op == "=~" & pt$lhs == pt$rhs &
+    pt$lhs %in% rs_info$z.names))
+  if (length(rm_idx) > 0L) {
+    pt <- pt[-rm_idx, , drop = FALSE]
+  }
+
+  # Mplus-style variance floor: between-level variances fixed to (near)
+  # zero would make the complete-data model singular; floor them in the
+  # M-step model only (the nlminb hand-off afterwards uses the exact
+  # model)
+  floor_idx <- which(pt$group == 2L & pt$op == "~~" &
+    pt$lhs == pt$rhs & pt$free == 0L &
+    !is.na(pt$ustart) & abs(pt$ustart) < floor_value)
+  floored <- length(floor_idx) > 0L
+  if (floored) {
+    pt$ustart[floor_idx] <- floor_value
+  }
+
+  # phantom z_w variables at the within level; make sure the names do
+  # not clash with existing variables
+  znames <- paste0(rs_info$z.names, ".zw")
+  taken <- unique(c(pt$lhs, pt$rhs))
+  while (any(znames %in% taken)) {
+    znames <- paste0(".", znames)
+  }
+
+  q <- rs_info$q
+  path_tab <- rs_info$path.tab
+  new_lhs <- character(0L)
+  new_op <- character(0L)
+  new_rhs <- character(0L)
+  # the fixed unit loading of the path lhs on its z_w variable
+  for (r in seq_len(q)) {
+    new_lhs <- c(new_lhs, path_tab$lhs[r])
+    new_op <- c(new_op, "~")
+    new_rhs <- c(new_rhs, znames[r])
+  }
+  # unit variances, zero covariances, zero means (the standard-normal
+  # completion of A&M)
+  for (r in seq_len(q)) {
+    for (s in r:q) {
+      new_lhs <- c(new_lhs, znames[r])
+      new_op <- c(new_op, "~~")
+      new_rhs <- c(new_rhs, znames[s])
+    }
+  }
+  new_lhs <- c(new_lhs, znames)
+  new_op <- c(new_op, rep("~1", q))
+  new_rhs <- c(new_rhs, rep("", q))
+  nnew <- length(new_lhs)
+  new_ustart <- numeric(nnew)
+  new_ustart[seq_len(q)] <- 1 # the fixed loadings
+  var_idx <- q + which(new_op[-seq_len(q)] == "~~" &
+    new_lhs[-seq_len(q)] == new_rhs[-seq_len(q)])
+  new_ustart[var_idx] <- 1 # the unit variances
+
+  new_rows <- pt[rep(1L, nnew), , drop = FALSE]
+  new_rows$id <- max(pt$id) + seq_len(nnew)
+  new_rows$lhs <- new_lhs
+  new_rows$op <- new_op
+  new_rows$rhs <- new_rhs
+  new_rows$user <- 2L
+  new_rows$block <- 1L
+  new_rows$group <- 1L
+  new_rows$free <- 0L
+  new_rows$ustart <- new_ustart
+  new_rows$exo <- 0L
+  if (!is.null(new_rows$label)) new_rows$label <- ""
+  if (!is.null(new_rows$plabel)) new_rows$plabel <- ""
+  if (!is.null(new_rows$efa)) new_rows$efa <- ""
+  if (!is.null(new_rows$lower)) new_rows$lower <- -Inf
+  if (!is.null(new_rows$upper)) new_rows$upper <- +Inf
+  pt <- rbind(pt, new_rows)
+  rownames(pt) <- NULL
+
+  # observed-variable order per group
+  ov1 <- lav_pt_vnames(pt, "ov", block = 1L)
+  ov2 <- lav_pt_vnames(pt, "ov", block = 2L)
+
+  # canonical E-step order: (y.names, znames) and (yb, z, exo)
+  can1 <- c(rs_info$y.names, znames)
+  can2 <- c(rs_info$yb.names, rs_info$z.names, rs_info$exo.b.names)
+  if (length(ov1) != length(can1) || !all(ov1 %in% can1)) {
+    lav_msg_fixme("within M-step variables do not match the E-step")
+  }
+  if (length(ov2) != length(can2) || !all(ov2 %in% can2)) {
+    lav_msg_fixme("between M-step variables do not match the E-step")
+  }
+
+  list(
+    pt = pt, ov1 = ov1, ov2 = ov2,
+    perm1 = match(ov1, can1), perm2 = match(ov2, can2),
+    free.idx = which(pt$free > 0L),
+    fixed.x = any(pt$exo == 1L),
+    znames = znames, floored = floored
+  )
+}
+
+# EM estimation of the h0 model with random slopes
+# (mirrors lav_mvn_cl_em_h0; single group, complete data)
+lav_mvn_cl_rs_em_h0 <- function(lavsamplestats = NULL, lavdata = NULL,
+                                lavpartable = NULL, lavmodel = NULL,
+                                lavoptions = NULL, lavcache = NULL,
+                                fx_tol = 1e-08, dx_tol = 1e-04,
+                                max_iter = 5000L,
+                                mstep_max_iter = 10000L,
+                                mstep_rel_tol = 1e-10,
+                                mstep_verbose = FALSE,
+                                acceleration = "none") {
+  stopifnot(lavdata@ngroups == 1L)
+
+  # the rs cache
+  rs <- lavcache[[1]]$rs
+  if (is.null(rs)) {
+    rs_info <- lav_mvn_cl_rs_info(lavmodel = lavmodel,
+                                  lavdata = lavdata)
+    rs_stats <- lav_mvn_cl_rs_stats(
+      y1 = lavdata@X[[1]], lp = lavdata@Lp[[1]], rs_info = rs_info
+    )
+    rs <- list(info = rs_info, stats = rs_stats)
+  }
+
+  # feasibility
+  reason <- lav_mvn_cl_rs_em_ok(rs$info)
+  if (length(reason) > 0L) {
+    lav_msg_stop(gettextf(
+      "the EM algorithm is not available for this random-slope model
+       (%s); use optim.method = \"nlminb\" instead.",
+      paste(reason, collapse = "; ")))
+  }
+
+  # the two-group M-step model (built once)
+  mstep <- lav_mvn_cl_rs_mstep_pt(
+    lavpartable = lavpartable, rs_info = rs$info
+  )
+  nobs_list <- list(rs$stats$ntotal, rs$stats$nclusters)
+
+  # M-step: fit the two-group model to the expected moments
+  em_mstep <- function(estep, x_start) {
+    local_pt <- mstep$pt
+    local_pt$ustart[mstep$free.idx] <- x_start
+    t1 <- estep$t1[mstep$perm1, mstep$perm1, drop = FALSE]
+    r1 <- estep$r1[mstep$perm1]
+    t2 <- estep$t2[mstep$perm2, mstep$perm2, drop = FALSE]
+    r2 <- estep$r2[mstep$perm2]
+    dimnames(t1) <- list(mstep$ov1, mstep$ov1)
+    dimnames(t2) <- list(mstep$ov2, mstep$ov2)
+    names(r1) <- mstep$ov1
+    names(r2) <- mstep$ov2
+    if (!mstep_verbose) {
+      current_verbose <- lav_verbose()
+      if (lav_verbose(FALSE)) {
+        on.exit(lav_verbose(current_verbose), TRUE)
+      }
+    }
+    lavaan(local_pt,
+      sample_cov = list(within = t1, between = t2),
+      sample_mean = list(within = r1, between = r2),
+      sample_nobs = nobs_list,
+      sample.cov.rescale = FALSE,
+      control = list(
+        iter.max = mstep_max_iter,
+        rel.tol = mstep_rel_tol
+      ),
+      fixed.x = mstep$fixed.x,
+      estimator = "ML",
+      warn = FALSE,
+      check.start = FALSE,
+      check.post = FALSE,
+      check.gradient = FALSE,
+      check.vcov = FALSE,
+      baseline = FALSE,
+      h1 = FALSE,
+      se = "none",
+      test = "none"
+    )
+  }
+
+  # one EM step as a map in the model parameter space: x -> x'
+  em_step <- function(x, logl = FALSE) {
+    lavmodel2 <- lav_model_set_parameters(lavmodel, x = x)
+    imp <- lav_mvn_cl_rs_implied(lavmodel2, rs_info = rs$info)
+    if (is.null(imp)) {
+      lav_msg_stop(gettext(
+        "model-implied matrices could not be computed in the E-step."))
+    }
+    estep <- lav_mvn_cl_rs_estep(
+      rs_stats = rs$stats, imp = imp, rs_info = rs$info
+    )
+    local_fit <- em_mstep(estep, x_start = x)
+    local_fit@optim$x
+  }
+
+  # observed-data loglikelihood at x
+  em_logl <- function(x) {
+    lavmodel2 <- lav_model_set_parameters(lavmodel, x = x)
+    imp <- lav_mvn_cl_rs_implied(lavmodel2, rs_info = rs$info)
+    out <- lav_mvn_cl_rs_loglik(
+      rs_stats = rs$stats, imp = imp, rs_info = rs$info,
+      log2pi = TRUE, minus_two = FALSE
+    )
+    as.numeric(out)
+  }
+
+  # initial values
+  x_current <- lav_model_get_parameters(lavmodel)
+  fx <- em_logl(x_current)
+
+  if (lav_verbose()) {
+    cat(
+      "EM iter:", sprintf("%3d", 0),
+      " fx =", sprintf("%17.10f", fx),
+      "\n"
+    )
+  }
+
+  if (acceleration %in% c("squarem", "qn")) {
+    em_conv <- function(theta_old, theta, fx_old, fx) {
+      if ((fx - fx_old) < fx_tol) {
+        if (lav_verbose()) {
+          cat("EM stopping rule reached: fx.delta < ", fx_tol, "\n")
+        }
+        return(TRUE)
+      }
+      # the gradient is numerical (2 x npar objective evaluations):
+      # only check it when the loglikelihood is no longer moving much
+      if ((fx - fx_old) > 0.01) {
+        return(FALSE)
+      }
+      lavmodel2 <- lav_model_set_parameters(lavmodel, x = theta)
+      dx <- lav_model_grad(lavmodel2,
+        lavdata = lavdata,
+        lavsamplestats = lavsamplestats,
+        lavcache = lavcache
+      )
+      if (max(abs(dx)) < dx_tol) {
+        if (lav_verbose()) {
+          cat("EM stopping rule reached: max.dx < ", dx_tol, "\n")
+        }
+        return(TRUE)
+      }
+      FALSE
+    }
+    accel_fn <- if (acceleration == "qn") lav_em_qn else lav_em_squarem
+    out_em <- accel_fn(
+      theta = x_current, step_fn = em_step, logl_fn = em_logl,
+      fx0 = fx, conv_fn = em_conv, max_iter = max_iter,
+      logl_dec = 0 # inexact M-step: only accept monotone extrapolations
+    )
+    x <- out_em$theta
+    fx <- out_em$fx
+    em_converged <- out_em$converged || out_em$stalled
+    em_iterations <- out_em$fpeval
+  } else {
+    # plain EM iterations
+    fx_old <- fx
+    x <- x_current
+    for (i in 1:max_iter) {
+      x <- em_step(x)
+      fx <- em_logl(x)
+      fx_delta <- fx - fx_old
+
+      # the gradient is numerical (2 x npar objective evaluations):
+      # only check it when the loglikelihood is no longer moving much
+      if (fx_delta < 0.01) {
+        lavmodel2 <- lav_model_set_parameters(lavmodel, x = x)
+        dx <- lav_model_grad(lavmodel2,
+          lavdata = lavdata,
+          lavsamplestats = lavsamplestats,
+          lavcache = lavcache
+        )
+        max_dx <- max(abs(dx))
+      } else {
+        max_dx <- as.numeric(NA)
+      }
+
+      if (lav_verbose()) {
+        cat(
+          "EM iter:", sprintf("%3d", i),
+          " fx =", sprintf("%17.10f", fx),
+          " fx.delta =", sprintf("%9.8f", fx_delta),
+          " max.dx = ", sprintf("%9.8f", max_dx),
+          "\n"
+        )
+      }
+
+      if (fx_delta < fx_tol) {
+        if (lav_verbose()) {
+          cat("EM stopping rule reached: fx.delta < ", fx_tol, "\n")
+        }
+        break
+      } else {
+        fx_old <- fx
+      }
+      if (is.finite(max_dx) && max_dx < dx_tol) {
+        if (lav_verbose()) {
+          cat("EM stopping rule reached: max.dx < ", dx_tol, "\n")
+        }
+        break
+      }
+    }
+    em_converged <- i < max_iter
+    em_iterations <- i
+  }
+
+  # add attributes
+  if (em_converged) {
+    attr(x, "converged") <- TRUE
+    attr(x, "warn.txt") <- ""
+  } else {
+    attr(x, "converged") <- FALSE
+    attr(x, "warn.txt") <- paste("maximum number of iterations (",
+      max_iter, ") ",
+      "was reached without convergence.\n",
+      sep = ""
+    )
+  }
+  attr(x, "iterations") <- em_iterations
+  attr(x, "control") <- list(
+    em.args = list(
+      max_iter = max_iter,
+      fx_tol = fx_tol,
+      dx_tol = dx_tol,
+      acceleration = acceleration
+    )
+  )
+  attr(fx, "fx.group") <- fx # single group for now
+  attr(x, "fx") <- fx
+  # if the M-step model used the variance floor, the EM fixed point is
+  # NOT the optimum of the exact model: the nlminb hand-off must always
+  # run (even if the gradient looks small)
+  attr(x, "rs.floored") <- mstep$floored
+
+  x
 }

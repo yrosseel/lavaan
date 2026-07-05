@@ -78,6 +78,19 @@ lav_step11_estoptim <- function(lavdata = NULL,
       lavoptions$optim.method <- "nlminb"
     }
 
+    # random slopes? check if the EM version can handle this model
+    rv_flag <- length(lavmodel@rv.ov) > 0L || length(lavmodel@rv.lv) > 0L
+    if (lavoptions$optim.method == "em" && rv_flag) {
+      em_reason <- lav_mvn_cl_rs_em_ok(lavcache[[1]]$rs$info)
+      if (length(em_reason) > 0L) {
+        lav_msg_warn(gettextf(
+          "optim.method = \"em\" is not available for this random-slope
+           model (%s); using optim.method = \"nlminb\" instead.",
+          paste(em_reason, collapse = "; ")))
+        lavoptions$optim.method <- "nlminb"
+      }
+    }
+
     # non-iterative methods (fabin, miiv, ...)
     if (lavoptions$optim.method == "noniter") {
       x <- try(
@@ -109,23 +122,43 @@ lav_step11_estoptim <- function(lavdata = NULL,
       # run the EM iterations, starting from the current parameter
       # values of lavmodel_start
       run_em <- function(lavmodel_start, fx_tol) {
-        try(
-          lav_mvn_cl_em_h0(
-            lavsamplestats = lavsamplestats,
-            lavdata = lavdata,
-            lavimplied = NULL,
-            lavpartable = lavpartable,
-            lavmodel = lavmodel_start,
-            lavoptions = lavoptions,
-            fx_tol = fx_tol,
-            dx_tol = em_dx_tol,
-            max_iter = lavoptions$em.args$max_iter,
-            mstep_verbose = isTRUE(lavoptions$em.args$verbose),
-            acceleration = lavoptions$em.args$acceleration,
-            fused = lavoptions$em.args$fused
-          ),
-          silent = TRUE
-        )
+        if (rv_flag) {
+          # random slopes: Asparouhov & Muthen (2003) EM
+          try(
+            lav_mvn_cl_rs_em_h0(
+              lavsamplestats = lavsamplestats,
+              lavdata = lavdata,
+              lavpartable = lavpartable,
+              lavmodel = lavmodel_start,
+              lavoptions = lavoptions,
+              lavcache = lavcache,
+              fx_tol = fx_tol,
+              dx_tol = em_dx_tol,
+              max_iter = lavoptions$em.args$max_iter,
+              mstep_verbose = isTRUE(lavoptions$em.args$verbose),
+              acceleration = lavoptions$em.args$acceleration
+            ),
+            silent = TRUE
+          )
+        } else {
+          try(
+            lav_mvn_cl_em_h0(
+              lavsamplestats = lavsamplestats,
+              lavdata = lavdata,
+              lavimplied = NULL,
+              lavpartable = lavpartable,
+              lavmodel = lavmodel_start,
+              lavoptions = lavoptions,
+              fx_tol = fx_tol,
+              dx_tol = em_dx_tol,
+              max_iter = lavoptions$em.args$max_iter,
+              mstep_verbose = isTRUE(lavoptions$em.args$verbose),
+              acceleration = lavoptions$em.args$acceleration,
+              fused = lavoptions$em.args$fused
+            ),
+            silent = TRUE
+          )
+        }
       }
 
       # EM-stall -> nlminb hand-off (new in 0.7-1): the EM iterations
@@ -142,10 +175,15 @@ lav_step11_estoptim <- function(lavdata = NULL,
         dx_em <- try(lav_model_grad(
           lavmodel = lavmodel_em,
           lavsamplestats = lavsamplestats,
-          lavdata = lavdata
+          lavdata = lavdata,
+          lavcache = lavcache
         ), silent = TRUE)
+        # random slopes: if the M-step model used the variance floor,
+        # the EM fixed point is not the optimum of the exact model:
+        # always run the hand-off
+        force_handoff <- isTRUE(attr(x, "rs.floored"))
         if (!inherits(dx_em, "try-error") && all(is.finite(dx_em)) &&
-            max(abs(dx_em)) >= em_dx_tol) {
+            (force_handoff || max(abs(dx_em)) >= em_dx_tol)) {
           if (lav_verbose()) {
             cat("EM stalled (max|grad| = ", max(abs(dx_em)),
                 "); handing off to nlminb\n")

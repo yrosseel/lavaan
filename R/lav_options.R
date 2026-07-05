@@ -524,11 +524,11 @@ lav_options_set <- function(opt = NULL) {
     }
     # no analytic gradient (yet)
     opt$optim.gradient <- "numerical"
-    # optimizer: nlminb only (for now; EM will be added later)
-    if (opt$optim.method %in% c("em", "gn")) {
-      lav_msg_warn(gettextf(
-        "optim.method = %s is not available (yet) for models with random
-         slopes; switching to nlminb.", dQuote(opt$optim.method)))
+    # optimizer: nlminb (default) or em (Asparouhov & Muthen, 2003)
+    if (opt$optim.method == "gn") {
+      lav_msg_warn(gettext(
+        "optim.method = \"gn\" is not available for models with random
+         slopes; switching to nlminb."))
       opt$optim.method <- "nlminb"
     }
   }
