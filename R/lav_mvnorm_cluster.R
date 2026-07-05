@@ -654,7 +654,7 @@ lav_mvn_cl_info_observed <- function(lp = NULL,
 lav_mvn_cl_em_sat <- function(ylp = NULL,
                                       lp = NULL,
                                       tol = 1e-04, # = em.h1.args$tol
-                                      max_iter = 5000L, # = em.h1.args$iter_max
+                                      max_iter = 5000L, # = em.h1.args$max_iter
                                       min_variance = 1e-05,
                                       acceleration = "none") {
   # lavdata
@@ -871,7 +871,7 @@ lav_mvn_cl_em_sat <- function(ylp = NULL,
   if (!converged) {
     lav_msg_warn(gettext(
       "Maximum number of iterations reached when computing the sample
-       moments of the saturated (H1) model using EM; increase the iter_max
+       moments of the saturated (H1) model using EM; increase the max_iter
        element of the em.h1.args= argument to increase the number of
        iterations"))
   }
@@ -904,7 +904,7 @@ lav_mvn_cl_em_h0 <- function(lavsamplestats = NULL,
                                      fx_tol = 1e-08,
                                      dx_tol = 1e-05,
                                      max_iter = 5000,
-                                     mstep_iter_max = 10000L,
+                                     mstep_max_iter = 10000L,
                                      mstep_rel_tol = 1e-10,
                                      acceleration = "none",
                                      fused = TRUE) { # = em.args$fused
@@ -1030,7 +1030,7 @@ lav_mvn_cl_em_h0 <- function(lavsamplestats = NULL,
       sample_nobs = lp$nclusters,
       sample.cov.rescale = FALSE,
       control = list(
-        iter.max = mstep_iter_max,
+        iter.max = mstep_max_iter,
         rel.tol = mstep_rel_tol
       ),
       fixed.x = mstep_fixed_x,
@@ -1346,7 +1346,7 @@ lav_mvn_cl_em_h0 <- function(lavsamplestats = NULL,
   attr(x, "iterations") <- em_iterations
   attr(x, "control") <- list(
     em.args = list(
-      iter_max = max_iter,
+      max_iter = max_iter,
       fx_tol = fx_tol,
       dx_tol = dx_tol,
       acceleration = acceleration

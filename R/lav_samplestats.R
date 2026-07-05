@@ -694,7 +694,7 @@ lav_samp_from_data <- function(lavdata = NULL,        # nolint start
         missing_h1[[g]] <- lav_samp_mi_aux_moments(
           y = x[[g]], aux = aux_g, wt = wt[[g]],
           mp = mp[[g]], yp = missing_1[[g]], nobs = nobs[[g]],
-          max_iter = lavoptions$em.h1.args$iter_max,
+          max_iter = lavoptions$em.h1.args$max_iter,
           tol = lavoptions$em.h1.args$tol,
           non_pd_action = lavoptions$em.h1.args$non_pd_action,
           non_pd_tol = lavoptions$em.h1.args$non_pd_tol,
@@ -737,7 +737,7 @@ lav_samp_from_data <- function(lavdata = NULL,        # nolint start
             missing_h1[[g]] <- lav_samp_mi_aux_moments(
               y = x[[g]], aux = aux_g, wt = wt[[g]],
               mp = mp[[g]], yp = missing_1[[g]], nobs = nobs[[g]],
-              max_iter = lavoptions$em.h1.args$iter_max,
+              max_iter = lavoptions$em.h1.args$max_iter,
               tol = lavoptions$em.h1.args$tol,
               non_pd_action = lavoptions$em.h1.args$non_pd_action,
               non_pd_tol = lavoptions$em.h1.args$non_pd_tol,

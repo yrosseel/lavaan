@@ -459,11 +459,11 @@ lav_options_set <- function(opt = NULL) {
   # the parameter values is smaller than tol (tol was 1e-06 < 0.6-9), while
   # the multilevel EM converges when the change in the loglikelihood is
   # smaller than tol
-  if (identical(opt$em.h1.args$iter_max, "default")) {
+  if (identical(opt$em.h1.args$max_iter, "default")) {
     if (opt$.multilevel) {
-      opt$em.h1.args$iter_max <- 5000L
+      opt$em.h1.args$max_iter <- 5000L
     } else {
-      opt$em.h1.args$iter_max <- 500L
+      opt$em.h1.args$max_iter <- 500L
     }
   }
   if (identical(opt$em.h1.args$tol, "default")) {

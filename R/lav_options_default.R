@@ -478,7 +478,7 @@ lav_options_default <- function() {
   elm("optim.dx.tol", 1e-03, nm = "]0, 0.01]") # not too strict
   elm("optim.bounds", list(), oklen = c(0L, 100L))
   # em-args sublist (EM algorithm for the h0 model; optim.method = "em")
-  elm(c("em.args", "iter_max"), 10000L, nm = "[100, 1e8]", num2int = TRUE)
+  elm(c("em.args", "max_iter"), 10000L, nm = "[100, 1e8]", num2int = TRUE)
   elm(c("em.args", "fx_tol"), 1e-08, nm = "]0, 0.01]")
   elm(c("em.args", "dx_tol"), 1e-04, nm = "]0, 0.01]")
   elm(c("em.args", "zerovar_offset"), 0.0001, nm = "]0, 0.01]")
@@ -499,10 +499,10 @@ lav_options_default <- function() {
 
   # em-h1-args sublist (EM algorithm for the unrestricted (h1) model)
   # "default" values are resolved later: single-level (missing data) uses
-  # iter_max = 500L and tol = 1e-05 (tol checks the change in the parameter
-  # values), multilevel uses iter_max = 5000L and tol = 1e-04 (tol checks
+  # max_iter = 500L and tol = 1e-05 (tol checks the change in the parameter
+  # values), multilevel uses max_iter = 5000L and tol = 1e-04 (tol checks
   # the change in the loglikelihood)
-  elm(c("em.h1.args", "iter_max"), "default", chr = "default",
+  elm(c("em.h1.args", "max_iter"), "default", chr = "default",
       nm = "[10, 1e7]", num2int = TRUE)
   elm(c("em.h1.args", "tol"), "default", chr = "default", nm = "]0, 0.01]")
   # minimum value a variance can take (multilevel only)
@@ -518,7 +518,7 @@ lav_options_default <- function() {
   # compute the loglikelihood as a byproduct of the E-step?
   # (two-level + missing data, plain iterations only)
   elm(c("em.h1.args", "fused"), TRUE, bl = TRUE)
-  elm("optim.gn.iter.max", 200L, nm = "[100, 1e8]", num2int = TRUE)
+  elm("optim.gn.max.iter", 200L, nm = "[100, 1e8]", num2int = TRUE)
   elm("optim.gn.stephalf.max", 10L, nm = "[1, 1e8]", num2int = TRUE)
   elm("optim.gn.tol.x", 1e-05, nm = "]0, 0.01]")
 

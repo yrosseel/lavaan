@@ -758,7 +758,7 @@ lav_mvn_cl_mi_em_sat <- function(y1 = NULL,
                                  mp = NULL,
                                  loglik_x = 0,
                                  tol = 1e-04, # = em.h1.args$tol
-                                 max_iter = 5000L, # = em.h1.args$iter_max
+                                 max_iter = 5000L, # = em.h1.args$max_iter
                                  min_variance = 1e-05,
                                  acceleration = "none",
                                  fused = TRUE) { # = em.h1.args$fused
@@ -872,7 +872,7 @@ lav_mvn_cl_mi_em_sat <- function(y1 = NULL,
   if (!converged) {
     lav_msg_warn(gettext(
       "Maximum number of iterations reached when computing the sample
-       moments of the saturated (H1) model using EM; increase the iter_max
+       moments of the saturated (H1) model using EM; increase the max_iter
        element of the em.h1.args= argument to increase the number of
        iterations"))
   }

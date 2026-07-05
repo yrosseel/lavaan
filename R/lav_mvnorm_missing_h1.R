@@ -245,7 +245,7 @@ lav_mvn_mi_h1_est_moments <- function(y = NULL,
   if (!converged) {
     lav_msg_warn(
       gettext("Maximum number of iterations reached when computing the sample
-              moments using EM; increase the iter_max element of the
+              moments using EM; increase the max_iter element of the
               em.h1.args= argument to increase the number of iterations")
     )
   }

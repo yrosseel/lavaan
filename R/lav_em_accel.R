@@ -24,7 +24,7 @@
 #             to combine the logl criterion with a gradient check
 # tol       = convergence tolerance
 # max_iter  = maximum number of EM map evaluations (not cycles), so that
-#             the em.h1.args$iter_max option keeps the same meaning as for
+#             the em.h1.args$max_iter option keeps the same meaning as for
 #             the non-accelerated EM iterations
 # step_max0 = initial upper bound for the extrapolation step length
 # mstep_factor = growth/shrink factor for the step length bound

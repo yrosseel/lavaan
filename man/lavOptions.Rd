@@ -391,10 +391,10 @@ Estimation options:
       unrestricted (h1) model. This is only relevant for multilevel models,
       and for single-level models with missing data (and
       \code{missing = "ml"} or \code{missing = "two.stage"}). The default
-      values are \code{em.h1.args = list(iter_max = "default",
+      values are \code{em.h1.args = list(max_iter = "default",
       tol = "default", min_variance = 1e-05, warn = TRUE,
       non_pd_action = "stop", non_pd_tol = 1e-05,
-      acceleration = "squarem", fused = TRUE)}. The \code{iter_max}
+      acceleration = "squarem", fused = TRUE)}. The \code{max_iter}
       element sets the
       maximum number of EM iterations; the \code{tol} element sets the
       tolerance used to determine convergence. If \code{"default"}, they
@@ -408,7 +408,7 @@ Estimation options:
       whenever a within-level variance drops below this value, it is fixed
       to this value (and the corresponding covariances are set to zero).
       If the \code{warn} element is \code{TRUE} (the default),
-      a warning is produced if the EM algorithm reaches \code{iter_max}
+      a warning is produced if the EM algorithm reaches \code{max_iter}
       iterations without converging. The \code{non_pd_action} element
       controls what happens if an EM estimated variance-covariance matrix
       is (near) singular: if any variance is (near) zero, or if the
@@ -572,7 +572,7 @@ Optimization options:
       the root mean square of the difference between the old and new
       parameter values is smaller than this tolerance value. Default is
       \code{1e-05} for DLS estimation and \code{1e-07} otherwise.}
-    \item{\code{optim.gn.iter.max}:}{Integer. Only used when 
+    \item{\code{optim.gn.max.iter}:}{Integer. Only used when
       \code{optim.method = "GN"}. The maximum number of GN iterations. 
       The default is 200.}
     \item{\code{bounds}:}{Only used if \code{optim.method = "nlminb"}.
@@ -610,10 +610,10 @@ Optimization options:
       is used to estimate the model parameters when
       \code{optim.method = "em"} (currently only available for multilevel
       models, with complete or missing data). The default values are
-      \code{em.args = list(iter_max =
+      \code{em.args = list(max_iter =
       10000, fx_tol = 1e-08, dx_tol = 1e-04, zerovar_offset = 1e-04,
       acceleration = "squarem", fused = TRUE)}.
-      The \code{iter_max} element sets the maximum number of EM
+      The \code{max_iter} element sets the maximum number of EM
       iterations. The EM algorithm stops when either the change in the
       loglikelihood is smaller than \code{fx_tol}, or the largest absolute
       change in the parameter values is smaller than \code{dx_tol}.

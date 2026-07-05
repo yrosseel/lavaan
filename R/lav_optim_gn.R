@@ -166,7 +166,7 @@ lav_optim_gn <- function(lavmodel = NULL, lavsamplestats = NULL,
   }
 
   # options
-  iter_max <- lavoptions$optim.gn.iter.max
+  max_iter <- lavoptions$optim.gn.max.iter
   tol_x <- lavoptions$optim.gn.tol.x
   stephalf_max <- as.integer(lavoptions$optim.gn.stephalf.max)
   if (stephalf_max < 0L) {
@@ -179,7 +179,7 @@ lav_optim_gn <- function(lavmodel = NULL, lavsamplestats = NULL,
   old_x <- x
 
   # start Gauss-Newton steps
-  for (iter in seq_len(iter_max)) {
+  for (iter in seq_len(max_iter)) {
     old_out <- lav_objective_gn(
       x = old_x, lavsamplestats = lavsamplestats,
       lavoptions = lavoptions, lavdata = lavdata,
@@ -290,20 +290,20 @@ lav_optim_gn <- function(lavmodel = NULL, lavsamplestats = NULL,
   )
 
   # add attributes
-  if (iter < iter_max) {
+  if (iter < max_iter) {
     attr(x, "converged") <- TRUE
     attr(x, "warn.txt") <- ""
   } else {
     attr(x, "converged") <- FALSE
     attr(x, "warn.txt") <- paste("maximum number of iterations (",
-      iter_max, ") ",
+      max_iter, ") ",
       "was reached without convergence.\n",
       sep = ""
     )
   }
   attr(x, "iterations") <- iter
   attr(x, "control") <- list(
-    iter.max = iter_max,
+    iter.max = max_iter,
     tol.x = tol_x
   )
   attr(x, "fx") <- fx

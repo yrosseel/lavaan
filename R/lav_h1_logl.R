@@ -53,9 +53,9 @@ lav_h1_logl <- function(lavdata = NULL,
         if (!is.numeric(em_h1_tol)) {
           em_h1_tol <- 1e-04
         }
-        em_h1_iter_max <- lavoptions$em.h1.args$iter_max
-        if (!is.numeric(em_h1_iter_max)) {
-          em_h1_iter_max <- 5000L
+        em_h1_max_iter <- lavoptions$em.h1.args$max_iter
+        if (!is.numeric(em_h1_max_iter)) {
+          em_h1_max_iter <- 5000L
         }
         em_h1_min_variance <- lavoptions$em.h1.args$min_variance
         if (!is.numeric(em_h1_min_variance)) {
@@ -70,7 +70,7 @@ lav_h1_logl <- function(lavdata = NULL,
           lp = lavdata@Lp[[g]],
           tol = em_h1_tol,
           min_variance = em_h1_min_variance,
-          max_iter = em_h1_iter_max,
+          max_iter = em_h1_max_iter,
           acceleration = em_h1_accel
         )
         lav_verbose(current_verbose)
