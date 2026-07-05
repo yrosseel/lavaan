@@ -481,11 +481,10 @@ lav_options_set <- function(opt = NULL) {
         "random slopes (rv() modifier) require estimator = %s or %s.",
         dQuote("ML"), dQuote("MLR")))
     }
-    if (opt$missing %in% c("ml", "ml.x", "two.stage", "robust.two.stage")) {
-      lav_msg_stop(gettext(
-        "random slopes (rv() modifier) are not supported (yet) in
-         combination with missing data handling; use missing = \"listwise\"
-         for now."))
+    if (opt$missing %in% c("ml.x", "two.stage", "robust.two.stage")) {
+      lav_msg_stop(gettextf(
+        "random slopes (rv() modifier) support missing = %s or
+         missing = %s only.", dQuote("listwise"), dQuote("ml")))
     }
     if (isTRUE(opt$conditional.x)) {
       lav_msg_stop(gettext(

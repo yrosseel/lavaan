@@ -467,19 +467,23 @@ random slopes \code{s1} and \code{s2} are regressed on the between-level
 covariate \code{w}.
 
 The current implementation is limited to: two-level models, a single
-group, continuous data, complete data (\code{missing = "listwise"}),
-\code{estimator = "ML"} and \code{fixed.x = TRUE}; the covariates that
-carry a random slope must be observed within-only (level-1) variables.
-The (observed-data) loglikelihood is \emph{conditional} on the exogenous
-covariates. No chi-square test statistic (or fit indices) are available
-for models with random slopes; only loglikelihood-based measures (AIC,
-BIC) can be used. Standard errors can be \code{"standard"} (observed
+group, continuous data, \code{estimator = "ML"} and \code{fixed.x =
+TRUE}; the covariates that carry a random slope must be observed
+within-only (level-1) variables. Missing data can be handled by
+full-information maximum likelihood (\code{missing = "ml"}); the
+exogenous covariates themselves must be complete (cases with missing
+values on exogenous variables are removed). The (observed-data)
+loglikelihood is \emph{conditional} on the exogenous covariates. No
+chi-square test statistic (or fit indices) are available for models
+with random slopes; only loglikelihood-based measures (AIC, BIC) can
+be used. Standard errors can be \code{"standard"} (observed
 information) or \code{"robust.huber.white"} (sandwich; this is also
 what \code{estimator = "MLR"} implies). Both \code{optim.method =
-"nlminb"} (the default) and \code{optim.method = "em"} are supported.
+"nlminb"} (the default) and \code{optim.method = "em"} are supported
+(but the EM algorithm requires complete data).
 \code{lavPredict()} provides empirical Bayes (posterior mean)
-predictions: with \code{level = 2}, the between-level latent
-variables including the random slopes (and, with
+predictions (complete data only): with \code{level = 2}, the
+between-level latent variables including the random slopes (and, with
 \code{se = "standard"}, their posterior standard deviations); with
 \code{level = 1} (the default), the within-level factor scores.
 }

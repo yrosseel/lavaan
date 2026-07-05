@@ -81,12 +81,14 @@ lav_step11_estoptim <- function(lavdata = NULL,
     # random slopes? check if the EM version can handle this model
     rv_flag <- length(lavmodel@rv.ov) > 0L || length(lavmodel@rv.lv) > 0L
     if (lavoptions$optim.method == "em" && rv_flag) {
-      em_reason <- lav_mvn_cl_rs_em_ok(lavcache[[1]]$rs$info)
+      em_reason <- lav_mvn_cl_rs_em_ok(lavcache[[1]]$rs)
       if (length(em_reason) > 0L) {
-        lav_msg_warn(gettextf(
-          "optim.method = \"em\" is not available for this random-slope
-           model (%s); using optim.method = \"nlminb\" instead.",
-          paste(em_reason, collapse = "; ")))
+        if (!isTRUE(lavoptions$.optim.em.fallback)) {
+          lav_msg_warn(gettextf(
+            "optim.method = \"em\" is not available for this random-slope
+             model (%s); using optim.method = \"nlminb\" instead.",
+            paste(em_reason, collapse = "; ")))
+        }
         lavoptions$optim.method <- "nlminb"
       }
     }

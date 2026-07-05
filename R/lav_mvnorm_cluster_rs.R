@@ -19,6 +19,11 @@
 # slopes (and on the between-level exogenous covariates): their joint
 # distribution with the outcomes is no longer normal.
 #
+# Missing data (missing = "ml") is handled by the marginal
+# loglikelihood only (for now): the per-case weight matrix becomes
+# pattern-specific (see lav_mvn_cl_rs_loglik_m); the EM algorithm and
+# lavPredict() still require complete data.
+#
 # The model for cluster j (complete data, single group):
 #
 #   v_b = (y_b, z) ~ N(mu_v(w_j), Sigma_v)     [between; z = random slopes]
@@ -263,6 +268,13 @@ lav_mvn_cl_rs_info <- function(lavmodel = NULL, lavpartable = NULL,
 }
 
 # per-cluster crossproduct statistics; computed once
+#
+# with missing data (missing = "ml"), the y-block may contain NAs; the
+# crossproducts are then computed per (cluster, missing-pattern) cell
+# and stored in the 'mp' component; the covariates (both the rv
+# covariates and the between-level exogenous covariates) must be
+# complete: cases with missing values on exogenous variables have
+# already been removed by lav_data (fixed.x = TRUE)
 lav_mvn_cl_rs_stats <- function(y1 = NULL, lp = NULL, rs_info = NULL) {
   cluster_idx <- lp$cluster.idx[[2]]
   nclusters <- lp$nclusters[[2]]
@@ -273,6 +285,105 @@ lav_mvn_cl_rs_stats <- function(y1 = NULL, lp = NULL, rs_info = NULL) {
 
   yy <- y1[, rs_info$y.data.idx, drop = FALSE]
   xx <- y1[, rs_info$x.data.idx, drop = FALSE]
+
+  if (anyNA(xx)) {
+    lav_msg_stop(gettext(
+      "unexpected missing values in the covariate(s) with a random
+       slope; such cases should have been removed (fixed.x = TRUE)."))
+  }
+
+  # between-level exogenous covariates: one row per cluster
+  if (rs_info$nexo.b > 0L) {
+    first_idx <- which(!duplicated(cluster_idx))
+    # order by cluster index (1..G)
+    first_idx <- first_idx[order(cluster_idx[first_idx])]
+    exo_b <- y1[first_idx, rs_info$exo.b.data.idx, drop = FALSE]
+    if (anyNA(exo_b)) {
+      lav_msg_stop(gettext(
+        "unexpected missing values in the between-level exogenous
+         covariate(s); such cases should have been removed
+         (fixed.x = TRUE)."))
+    }
+  } else {
+    exo_b <- matrix(0, nclusters, 0L)
+  }
+
+  # missing data in the y-block?
+  mp <- NULL
+  if (anyNA(yy)) {
+    obs <- !is.na(yy)
+    nobs_case <- rowSums(obs)
+
+    # cases with no observed outcome values carry no information (the
+    # likelihood is conditional on the covariates)
+    empty_idx <- which(nobs_case == 0L)
+    if (length(empty_idx) > 0L) {
+      lav_msg_warn(gettextf(
+        "%s case(s) have missing values on all within-level outcome
+         variables; they do not contribute to the loglikelihood.",
+        length(empty_idx)))
+      keep_idx <- seq_len(nrow(yy))[-empty_idx]
+    } else {
+      keep_idx <- seq_len(nrow(yy))
+    }
+
+    # NA -> 0: the padded crossproduct entries are annihilated by the
+    # (embedded) per-pattern weight matrices later on
+    yy0 <- yy
+    yy0[is.na(yy0)] <- 0
+
+    # missing patterns (over the y-block only)
+    case_id <- apply(1L * obs, 1L, paste, collapse = "")
+    pat_ids <- unique(case_id[keep_idx])
+    npatterns <- length(pat_ids)
+
+    pattern <- vector("list", npatterns)
+    for (p in seq_len(npatterns)) {
+      case_p <- keep_idx[case_id[keep_idx] == pat_ids[p]]
+      o <- which(obs[case_p[1L], ])
+      clus_p <- cluster_idx[case_p]
+
+      yp <- yy0[case_p, , drop = FALSE]
+      xp <- xx[case_p, , drop = FALSE]
+
+      # per-cluster sums for this pattern (rows ordered by cluster id)
+      sy_p <- rowsum.default(yp, clus_p, reorder = TRUE)
+      sx_p <- rowsum.default(xp, clus_p, reorder = TRUE)
+      n_p <- as.numeric(rowsum.default(
+        rep(1, length(case_p)), clus_p, reorder = TRUE))
+      j1 <- sort(unique.default(clus_p))
+
+      idx_split <- split.default(seq_along(case_p), clus_p)
+      nclus_p <- length(j1)
+      sxx_p <- vector("list", nclus_p)
+      sxy_p <- vector("list", nclus_p)
+      syy_p <- vector("list", nclus_p)
+      for (jj in seq_len(nclus_p)) {
+        ii <- idx_split[[jj]]
+        yjj <- yp[ii, , drop = FALSE]
+        xjj <- xp[ii, , drop = FALSE]
+        syy_p[[jj]] <- crossprod(yjj)
+        sxx_p[[jj]] <- crossprod(xjj)
+        sxy_p[[jj]] <- crossprod(xjj, yjj)
+      }
+
+      pattern[[p]] <- list(
+        o = o, j1 = j1, n = n_p, sy = sy_p, sx = sx_p,
+        sxx = sxx_p, sxy = sxy_p, syy = syy_p
+      )
+    }
+
+    mp <- list(
+      npatterns = npatterns, pattern = pattern,
+      nobs = sum(nobs_case), empty.idx = empty_idx
+    )
+
+    return(list(
+      nclusters = nclusters, cluster.size = cluster_size,
+      sy = NULL, sx = NULL, sxx = NULL, sxy = NULL, syy = NULL,
+      exo.b = exo_b, ntotal = sum(cluster_size), mp = mp
+    ))
+  }
 
   # per-cluster sums and crossproducts
   sy <- rowsum.default(yy, cluster_idx, reorder = TRUE) # G x p1
@@ -293,20 +404,10 @@ lav_mvn_cl_rs_stats <- function(y1 = NULL, lp = NULL, rs_info = NULL) {
     sxy[[j]] <- crossprod(xj, yj)
   }
 
-  # between-level exogenous covariates: one row per cluster
-  if (rs_info$nexo.b > 0L) {
-    first_idx <- which(!duplicated(cluster_idx))
-    # order by cluster index (1..G)
-    first_idx <- first_idx[order(cluster_idx[first_idx])]
-    exo_b <- y1[first_idx, rs_info$exo.b.data.idx, drop = FALSE]
-  } else {
-    exo_b <- matrix(0, nclusters, 0L)
-  }
-
   list(
     nclusters = nclusters, cluster.size = cluster_size,
     sy = sy, sx = sx, sxx = sxx, sxy = sxy, syy = syy,
-    exo.b = exo_b, ntotal = sum(cluster_size)
+    exo.b = exo_b, ntotal = sum(cluster_size), mp = NULL
   )
 }
 
@@ -529,6 +630,15 @@ lav_mvn_cl_rs_loglik <- function(rs_stats = NULL, imp = NULL,
                                  log2pi = TRUE,
                                  minus_two = TRUE,
                                  per_cluster = FALSE) {
+  # missing data? use the pattern-based version
+  if (!is.null(rs_stats$mp)) {
+    return(lav_mvn_cl_rs_loglik_m(
+      rs_stats = rs_stats, imp = imp, rs_info = rs_info,
+      sinv_method = sinv_method, log2pi = log2pi,
+      minus_two = minus_two, per_cluster = per_cluster
+    ))
+  }
+
   # non-PD or failed implied?
   if (is.null(imp)) {
     return(+Inf)
@@ -723,6 +833,211 @@ lav_mvn_cl_rs_loglik <- function(rs_stats = NULL, imp = NULL,
 }
 
 
+# -2 * (observed-data, conditional-on-x) loglikelihood with missing
+# data in the y-block (missing = "ml")
+#
+# the only change wrt the complete-data version: the per-case weight
+# matrix is now pattern-specific, W_p = Sigma_w[o,o]^{-1} embedded in
+# a p1 x p1 zero matrix; because the zero rows/columns of W_p
+# annihilate the zero-padded entries of the per-(cluster, pattern)
+# crossproducts, all accumulation formulas carry over unchanged --
+# they are simply applied per pattern, and summed per cluster before
+# the marginalization over v_b
+lav_mvn_cl_rs_loglik_m <- function(rs_stats = NULL, imp = NULL,
+                                   rs_info = NULL,
+                                   sinv_method = "eigen",
+                                   log2pi = TRUE,
+                                   minus_two = TRUE,
+                                   per_cluster = FALSE) {
+  # non-PD or failed implied?
+  if (is.null(imp)) {
+    return(+Inf)
+  }
+
+  p1 <- rs_info$p1
+  pv <- imp$pv
+  path_tab <- rs_info$path.tab
+  npaths <- nrow(path_tab)
+
+  nclusters <- rs_stats$nclusters
+  mp <- rs_stats$mp
+
+  sigma_v <- imp$sigma.v
+  if (anyNA(sigma_v)) {
+    return(+Inf)
+  }
+  # is sigma.v PSD? (fast path: no per-cluster eigenvalue checks needed)
+  ev_v <- eigen(sigma_v, symmetric = TRUE, only.values = TRUE)$values
+  v_psd <- ev_v[length(ev_v)] > -1e-12
+
+  lmat <- imp$lmat
+  pmat <- imp$P
+  mu_y <- imp$mu.y
+  q0 <- imp$q0
+  z_v_idx <- imp$z.v.idx
+
+  path_z <- path_tab$z.idx # 1..q
+  path_x <- path_tab$x.idx # 1..nx
+  path_zcol <- z_v_idx[path_z] # column in v_b, per path
+
+  pmat_t <- t(pmat)
+  dpv <- diag(pv)
+  mu_v <- imp$mu.v
+  cc_mat <- imp$cc
+  mu_exo <- imp$mu.exo
+  nexo <- rs_info$nexo.b
+  exo_b <- rs_stats$exo.b
+  log2pi_c <- if (log2pi) log(2 * pi) else 0
+
+  # per-cluster accumulators
+  ld_j <- numeric(nclusters) # sum_p n_jp (logdet_wp + p_o log(2 pi))
+  quad_j <- numeric(nclusters)
+  a_arr <- array(0, dim = c(pv, pv, nclusters))
+  p_all <- matrix(0, nclusters, pv)
+  loglik_j <- numeric(nclusters)
+
+  ok <- tryCatch({
+    # ---- accumulation: loop over patterns, then clusters within ----
+    for (p in seq_len(mp$npatterns)) {
+      cell <- mp$pattern[[p]]
+      o <- cell$o
+      po <- length(o)
+
+      w_o <- lav_mat_sym_inverse(imp$sigma.w[o, o, drop = FALSE],
+        logdet = TRUE, sinv_method = sinv_method
+      )
+      logdet_o <- attr(w_o, "logdet")
+      if (!is.finite(logdet_o)) {
+        stop("lav_npd")
+      }
+      # embed in the full p1 x p1 space
+      w_mat <- matrix(0, p1, p1)
+      w_mat[o, o] <- w_o
+
+      # per-pattern constants
+      wl <- w_mat %*% lmat # p1 x npaths
+      ltwl <- crossprod(lmat, wl) # npaths x npaths
+      wq0 <- w_mat %*% q0 # p1 x pv
+      q0twq0 <- crossprod(q0, wq0) # pv x pv
+      q0twl <- crossprod(q0, wl) # pv x npaths
+      wp <- w_mat %*% pmat # p1 x nx
+      ptwp <- crossprod(pmat, wp) # nx x nx
+      wp_t <- t(wp)
+      mu_y_w <- as.numeric(w_mat %*% mu_y) # p1
+      mu_y_w_p <- as.numeric(mu_y_w %*% pmat) # nx
+      mu_y_quad <- sum(mu_y_w * mu_y)
+      ld_p <- logdet_o + po * log2pi_c
+
+      j1 <- cell$j1
+      for (jj in seq_along(j1)) {
+        j <- j1[jj]
+        n_jp <- cell$n[jj]
+        sy_jp <- cell$sy[jj, ]
+        sx_jp <- cell$sx[jj, ]
+        sxx_jp <- cell$sxx[[jj]]
+        sxy_jp <- cell$sxy[[jj]]
+        syy_jp <- cell$syy[[jj]]
+
+        ld_j[j] <- ld_j[j] + n_jp * ld_p
+
+        # centered sums: e~_i = y_i - mu_y - P x_i
+        se_jp <- sy_jp - n_jp * mu_y - as.numeric(pmat %*% sx_jp)
+        sxe_jp <- sxy_jp - outer(sx_jp, mu_y) - sxx_jp %*% pmat_t
+
+        # sum_i e~_i' W_p e~_i
+        quad_j[j] <- quad_j[j] + sum(w_mat * syy_jp) -
+          2 * sum(mu_y_w * sy_jp) +
+          n_jp * mu_y_quad -
+          2 * sum(wp_t * sxy_jp) +
+          2 * sum(mu_y_w_p * sx_jp) +
+          sum(ptwp * sxx_jp)
+
+        # A contribution
+        a_jp <- n_jp * q0twq0
+        p_jp <- as.numeric(crossprod(wq0, se_jp))
+        cz <- matrix(0, pv, pv)
+        for (i in seq_len(npaths)) {
+          zcol <- path_zcol[i]
+          cz[, zcol] <- cz[, zcol] + q0twl[, i] * sx_jp[path_x[i]]
+        }
+        a_jp <- a_jp + cz + t(cz)
+        for (i in seq_len(npaths)) {
+          for (k in seq_len(npaths)) {
+            a_jp[path_zcol[i], path_zcol[k]] <-
+              a_jp[path_zcol[i], path_zcol[k]] +
+              ltwl[i, k] * sxx_jp[path_x[i], path_x[k]]
+          }
+        }
+        for (i in seq_len(npaths)) {
+          zi <- path_zcol[i]
+          p_jp[zi] <- p_jp[zi] + sum(wl[, i] * sxe_jp[path_x[i], ])
+        }
+
+        a_arr[, , j] <- a_arr[, , j] + a_jp
+        p_all[j, ] <- p_all[j, ] + p_jp
+      }
+    }
+
+    # ---- marginalization over v_b, per cluster ----
+    for (j in seq_len(nclusters)) {
+      a_j <- matrix(a_arr[, , j], pv, pv)
+      p_j <- p_all[j, ]
+
+      # mean of v_b for this cluster (given the between covariates)
+      if (nexo > 0L) {
+        d_j <- mu_v + as.numeric(cc_mat %*% (exo_b[j, ] - mu_exo))
+      } else {
+        d_j <- mu_v
+      }
+
+      # center v_b at its mean
+      p_tilde <- p_j - as.numeric(a_j %*% d_j)
+      quad_full <- quad_j[j] - 2 * sum(d_j * p_j) +
+        sum(d_j * (a_j %*% d_j))
+
+      # Z_j = I + A_j Sigma_v; logdet(Z_j) and Sigma_v Z_j^{-1} p~
+      z_j <- dpv + a_j %*% sigma_v
+      if (v_psd) {
+        dt <- determinant(z_j, logarithm = TRUE)
+        if (dt$sign <= 0 || !is.finite(dt$modulus)) {
+          stop("lav_npd")
+        }
+        logdet_z <- as.numeric(dt$modulus)
+      } else {
+        # sigma.v indefinite: check that all eigenvalues of Z_j are
+        # (real and) positive
+        lambda <- Re(eigen(z_j, only.values = TRUE)$values)
+        if (any(lambda < sqrt(.Machine$double.eps))) {
+          stop("lav_npd")
+        }
+        logdet_z <- sum(log(lambda))
+      }
+      zp_j <- solve(z_j, p_tilde)
+
+      # -2 loglik for this cluster (log 2 pi already in ld_j)
+      loglik_j[j] <- ld_j[j] + logdet_z +
+        quad_full - sum(p_tilde * (sigma_v %*% zp_j))
+    }
+    TRUE
+  }, error = function(e) FALSE) # tryCatch around both loops
+
+  if (!ok) {
+    return(+Inf)
+  }
+
+  out <- sum(loglik_j)
+  if (!minus_two) {
+    out <- out / (-2)
+    loglik_j <- loglik_j / (-2)
+  }
+  if (per_cluster) {
+    attr(out, "loglik.cluster") <- loglik_j
+  }
+
+  out
+}
+
+
 # ---------------------------------------------------------------------
 # the EM algorithm (Asparouhov & Muthen, 2003), complete data
 # ---------------------------------------------------------------------
@@ -753,17 +1068,21 @@ lav_mvn_cl_rs_loglik <- function(rs_stats = NULL, imp = NULL,
 
 # check if the EM version can handle this model; returns character(0)
 # if ok, otherwise the reason(s)
-lav_mvn_cl_rs_em_ok <- function(rs_info = NULL) {
+lav_mvn_cl_rs_em_ok <- function(rs = NULL) {
   reason <- character(0L)
-  if (rs_info$p.flag) {
+  if (rs$info$p.flag) {
     reason <- c(reason, gettext(
       "the model contains fixed regression paths from the random-slope
        covariates"))
   }
-  if (rs_info$shared.flag) {
+  if (rs$info$shared.flag) {
     reason <- c(reason, gettext(
       "the same rv() label is attached to more than one regression
        path"))
+  }
+  if (!is.null(rs$stats$mp)) {
+    reason <- c(reason, gettext(
+      "the data contain missing values"))
   }
   reason
 }
@@ -778,6 +1097,11 @@ lav_mvn_cl_rs_em_ok <- function(rs_info = NULL) {
 lav_mvn_cl_rs_estep <- function(rs_stats = NULL, imp = NULL,
                                 rs_info = NULL,
                                 sinv_method = "eigen") {
+  if (!is.null(rs_stats$mp)) {
+    lav_msg_stop(gettext(
+      "the E-step for random-slope models does not support missing
+       data (yet)."))
+  }
   p1 <- rs_info$p1
   nx <- rs_info$nx
   q <- rs_info$q
@@ -1092,7 +1416,7 @@ lav_mvn_cl_rs_em_h0 <- function(lavsamplestats = NULL, lavdata = NULL,
   }
 
   # feasibility
-  reason <- lav_mvn_cl_rs_em_ok(rs$info)
+  reason <- lav_mvn_cl_rs_em_ok(rs)
   if (length(reason) > 0L) {
     lav_msg_stop(gettextf(
       "the EM algorithm is not available for this random-slope model
@@ -1377,6 +1701,12 @@ lav_mvn_cl_rs_eb <- function(lavmodel = NULL, lavdata = NULL,
   rs_info <- rs$info
   rs_stats <- rs$stats
 
+  if (!is.null(rs_stats$mp)) {
+    lav_msg_stop(gettext(
+      "lavPredict() is not supported (yet) for random-slope models
+       with missing data."))
+  }
+
   imp <- lav_mvn_cl_rs_implied(lavmodel, rs_info = rs_info)
   if (is.null(imp)) {
     lav_msg_stop(gettext(
@@ -1413,6 +1743,8 @@ lav_mvn_cl_rs_eb <- function(lavmodel = NULL, lavdata = NULL,
   dpv <- diag(pv)
 
   # ---- per-cluster posterior of v_b: mu0_j (and posterior sd) ----
+  pmat <- imp$P
+  pmat_t <- t(pmat)
   mu0 <- matrix(0, nclusters, pv)
   sd0 <- if (se) matrix(0, nclusters, pv) else NULL
   for (j in seq_len(nclusters)) {
@@ -1422,7 +1754,9 @@ lav_mvn_cl_rs_eb <- function(lavmodel = NULL, lavdata = NULL,
     sxx_j <- rs_stats$sxx[[j]]
     sxy_j <- rs_stats$sxy[[j]]
 
-    se_j <- sy_j - nj * mu_y
+    # centered sums: e~_i = y_i - mu_y - P x_i (P = the reduced-form
+    # *fixed* slopes of y on the rv covariates)
+    se_j <- sy_j - nj * mu_y - as.numeric(pmat %*% sx_j)
     a_j <- nj * q0twq0
     p_j <- as.numeric(crossprod(wq0, se_j))
     cz <- matrix(0, pv, pv)
@@ -1438,7 +1772,7 @@ lav_mvn_cl_rs_eb <- function(lavmodel = NULL, lavdata = NULL,
           ltwl[i, k] * sxx_j[path_x[i], path_x[k]]
       }
     }
-    sxe_j <- sxy_j - outer(sx_j, mu_y)
+    sxe_j <- sxy_j - outer(sx_j, mu_y) - sxx_j %*% pmat_t
     for (i in seq_len(npaths)) {
       zi <- path_zcol[i]
       p_j[zi] <- p_j[zi] + sum(wl[, i] * sxe_j[path_x[i], ])
