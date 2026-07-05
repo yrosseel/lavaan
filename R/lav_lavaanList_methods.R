@@ -90,10 +90,10 @@ lav_lavaanlist_summary <- function(object,
   if (estimates && "partable" %in% object@meta$store.slots) {
     pe <- lavParameterEstimates(object,
       se = FALSE,
-      remove.system.eq = FALSE, remove.eq = FALSE,
-      remove.ineq = FALSE, remove.def = FALSE,
-      remove.nonfree = FALSE, remove.unused = FALSE,
-      remove.step1 = FALSE, # in case we used sam()
+      remove_system_eq = FALSE, remove_eq = FALSE,
+      remove_ineq = FALSE, remove_def = FALSE,
+      remove_nonfree = FALSE, remove_unused = FALSE,
+      remove_step1 = FALSE, # in case we used sam()
       # zstat = FALSE, pvalue = FALSE, ci = FALSE,
       standardized = FALSE,
       output = output

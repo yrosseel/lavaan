@@ -46,28 +46,28 @@ setMethod(
 
 setMethod(
   "summary", "lavaan",
-  function(object, header = TRUE,                                # nolint start
-           fit.measures = FALSE,
+  function(object, header = TRUE,
+           fit_measures = FALSE,
            residuals = FALSE,
            estimates = TRUE,
            ci = FALSE,
            fmi = FALSE,
            standardized = FALSE,
            std = standardized,
-           std.nox = FALSE, # TODO: remove deprecated argument in early 2025
-           remove.system.eq = TRUE,
-           remove.eq = TRUE,
-           remove.ineq = TRUE,
-           remove.def = FALSE,
-           remove.nonfree = FALSE,
-           remove.step1 = TRUE,
-           remove.unused = TRUE,
+           std_nox = FALSE, # TODO: remove deprecated argument in early 2025
+           remove_system_eq = TRUE,
+           remove_eq = TRUE,
+           remove_ineq = TRUE,
+           remove_def = FALSE,
+           remove_nonfree = FALSE,
+           remove_step1 = TRUE,
+           remove_unused = TRUE,
            plabel = FALSE,
-           cov.std = TRUE,
+           cov_std = TRUE,
            rsquare = FALSE,
-           baseline.model = NULL,
-           h1.model = NULL,
-           fm.args = list(
+           baseline_model = NULL,
+           h1_model = NULL,
+           fm_args = list(
              standard.test = "default",
              scaled.test = "default",
              rmsea.ci.level = 0.90,
@@ -77,19 +77,10 @@ setMethod(
              cat.check.pd = TRUE
            ),
            modindices = FALSE,
-           srmr.close.h0 = NULL,
-           nd = 3L, cutoff = 0.3, dot.cutoff = 0.1, ...) {      # nolint end
+           srmr_close_h0 = NULL,
+           nd = 3L, cutoff = 0.3, dot_cutoff = 0.1, ...) {
     dotdotdot <- list(...)
-    if (length(dotdotdot) > 0L) {
-      for (j in seq_along(dotdotdot)) {
-        lav_msg_warn(gettextf(
-          "Unknown argument %s for %s", sQuote(names(dotdotdot)[j]),
-          sQuote("summary"))
-        )
-      }
-    }
-    # rename modified argument(s)
-    fit_measures <- fit.measures
+    lav_adapt_func(environment(), dotdotdot, NULL)
 
     # efa?
     efa_flag <- object@Options$model.type == "efa"
@@ -102,25 +93,25 @@ setMethod(
     if (is.logical(fit_measures$fit.measures)) {
       fit_measures$fit.measures <- if (fit_measures$fit.measures) "default" else "none"
     }
-    if (!missing(fm.args)) {
-      lav_deprecated_args("fit.measures", "fm.args")
-      fit_measures <- c(fit_measures, fm.args)
+    if (!missing(fm_args)) {
+      lav_deprecated_args("fit.measures", "fm_args")
+      fit_measures <- c(fit_measures, fm_args)
     }
     res <- lav_object_summary(
       object = object, header = header,
       fit_measures = fit_measures, residuals = residuals,
       estimates = estimates,
-      baseline_model = baseline.model,
-      h1_model = h1.model,
+      baseline_model = baseline_model,
+      h1_model = h1_model,
       ci = ci, fmi = fmi, std = std, standardized = standardized,
-      remove_system_eq = remove.system.eq,
-      remove_eq = remove.eq, remove_ineq = remove.ineq,
-      remove_def = remove.def, remove_nonfree = remove.nonfree,
-      remove_step1 = remove.step1, remove_unused = remove.unused,
-      plabel = plabel, cov_std = cov.std,
+      remove_system_eq = remove_system_eq,
+      remove_eq = remove_eq, remove_ineq = remove_ineq,
+      remove_def = remove_def, remove_nonfree = remove_nonfree,
+      remove_step1 = remove_step1, remove_unused = remove_unused,
+      plabel = plabel, cov_std = cov_std,
       rsquare = rsquare, efa = efa_flag,
       modindices = modindices,
-      srmr_close_h0 = srmr.close.h0
+      srmr_close_h0 = srmr_close_h0
     )
     # res has class c("lavaan.summary", "list")
 
@@ -131,7 +122,7 @@ setMethod(
     if (efa_flag) {
       # class(res) <- c("lavaan.summary.efa", "list")
       attr(res, "cutoff") <- cutoff
-      attr(res, "dot.cutoff") <- dot.cutoff
+      attr(res, "dot.cutoff") <- dot_cutoff
     }
 
     res
@@ -240,7 +231,7 @@ lav_partable_check_std_def <- function(partable, est.std = NULL,
   invisible(list(def = flagged_def, label = flagged_lab))
 }
 
-standardizedSolution <-                                      # nolint start
+standardizedSolution <-                                      # nolint
   standardizedsolution <- function(object,
                                    type = "std.all",
                                    se = TRUE,
@@ -248,17 +239,19 @@ standardizedSolution <-                                      # nolint start
                                    pvalue = TRUE,
                                    ci = TRUE,
                                    level = 0.95,
-                                   boot.ci.type = "perc",
-                                   cov.std = TRUE,
-                                   remove.eq = TRUE,
-                                   remove.ineq = TRUE,
-                                   remove.def = FALSE,
-                                   remove.aux = TRUE,
+                                   boot_ci_type = "perc",
+                                   cov_std = TRUE,
+                                   remove_eq = TRUE,
+                                   remove_ineq = TRUE,
+                                   remove_def = FALSE,
+                                   remove_aux = TRUE,
                                    partable = NULL,
                                    GLIST = NULL,
                                    est = NULL,
-                                   output = "data.frame") { # nolint end
-
+                                   output = "data.frame",
+                                  ...) {
+    dotdotdot <- list(...)
+    lav_adapt_func(environment(), dotdotdot, NULL)
     # check object
     object <- lav_object_check_version(object)
 
@@ -334,22 +327,22 @@ standardizedSolution <-                                      # nolint start
     if (type == "std.lv") {
       tmp_list$est.std <- lav_standardize_lv(object,
         est = est, glist = GLIST,
-        partable = partable, cov_std = cov.std
+        partable = partable, cov_std = cov_std
       )
     } else if (type == "std.all") {
       tmp_list$est.std <- lav_standardize_all(object,
         est = est, glist = GLIST,
-        partable = partable, cov_std = cov.std
+        partable = partable, cov_std = cov_std
       )
     } else if (type == "std.nox") {
       tmp_list$est.std <- lav_standardize_all_nox(object,
         est = est, glist = GLIST,
-        partable = partable, cov_std = cov.std
+        partable = partable, cov_std = cov_std
       )
     } else if (type == "std.user") {
       tmp_list$est.std <- lav_standardize_all(object,
         est = est, glist = GLIST,
-        partable = partable, cov_std = cov.std, ov_std = ov_std_user
+        partable = partable, cov_std = cov_std, ov_std = ov_std_user
       )
     }
 
@@ -370,7 +363,7 @@ standardizedSolution <-                                      # nolint start
     tmp_fun_x <- NULL
     if (object@Options$se == "bootstrap" && se &&
         !is.null(object@boot$coef) && NROW(object@boot$coef) > 0L) {
-      stopifnot(boot.ci.type %in%
+      stopifnot(boot_ci_type %in%
         c("norm", "basic", "perc", "bca.simple", "bca"))
       # standardization as a function of the free parameter vector
       if (type == "std.lv") {
@@ -484,7 +477,7 @@ standardizedSolution <-                                      # nolint start
         # lavEffects() via lav_bootstrap_ci(); see lav_bootstrap.R). Every row
         # is a derived quantity, so the CI is computed uniformly for all rows.
         t0 <- tmp_list$est.std
-        if (boot.ci.type == "bca") {
+        if (boot_ci_type == "bca") {
           design <- lav_bootstrap_bca_design(object, boot_error_idx)
           stopifnot(nrow(design) == nrow(boot_std))
           # keep the empirical-influence design matrix, so users can retrieve
@@ -496,14 +489,14 @@ standardizedSolution <-                                      # nolint start
         } else {
           # For "norm", the bias is evaluated at the mean of the bootstrapped
           # (free) parameters, exactly as in parameterEstimates().
-          bias <- if (boot.ci.type == "norm") {
+          bias <- if (boot_ci_type == "norm") {
             as.numeric(tmp_fun_x(colMeans(tmp_boot_free, na.rm = TRUE),
                                  lavobject = object)) - t0
           } else {
             NULL
           }
           ci <- lav_bootstrap_ci(boot_t = boot_std, t0 = t0,
-            boot_ci_type = boot.ci.type, level = level,
+            boot_ci_type = boot_ci_type, level = level,
             se = tmp_list$se, bias = bias)
         }
       } else {
@@ -549,7 +542,7 @@ standardizedSolution <-                                      # nolint start
     if (object@Data@ngroups == 1L) tmp_list$group <- NULL
 
     # remove == rows?
-    if (remove.eq) {
+    if (remove_eq) {
       eq_idx <- which(tmp_list$op == "==")
       if (length(eq_idx) > 0L) {
         tmp_list <- tmp_list[-eq_idx, ]
@@ -559,7 +552,7 @@ standardizedSolution <-                                      # nolint start
       }
     }
     # remove <> rows?
-    if (remove.ineq) {
+    if (remove_ineq) {
       ineq_idx <- which(tmp_list$op %in% c("<", ">"))
       if (length(ineq_idx) > 0L) {
         tmp_list <- tmp_list[-ineq_idx, ]
@@ -569,7 +562,7 @@ standardizedSolution <-                                      # nolint start
       }
     }
     # remove := rows?
-    if (remove.def) {
+    if (remove_def) {
       def_idx <- which(tmp_list$op == ":=")
       if (length(def_idx) > 0L) {
         tmp_list <- tmp_list[-def_idx, ]
@@ -579,7 +572,7 @@ standardizedSolution <-                                      # nolint start
       }
     }
     # remove auxiliary (saturated-correlates) rows? (FIML aux= variables)
-    if (remove.aux && length(object@Options$aux) > 0L) {
+    if (remove_aux && length(object@Options$aux) > 0L) {
       aux_idx <- which(tmp_list$lhs %in% object@Options$aux |
         tmp_list$rhs %in% object@Options$aux)
       if (length(aux_idx) > 0L) {
@@ -621,7 +614,7 @@ standardizedSolution <-                                      # nolint start
     tmp_list
   }
 
-lavParameterEstimates <- function(object,                      # nolint start
+lavParameterEstimates <- function(object,                      # nolint
                                  # select columns
                                  se = TRUE,
                                  zstat = TRUE,
@@ -632,26 +625,30 @@ lavParameterEstimates <- function(object,                      # nolint start
                                  plabel = FALSE,
                                  # control
                                  level = 0.95,
-                                 boot.ci.type = "perc",
-                                 cov.std = TRUE,
-                                 fmi.options = list(),
+                                 boot_ci_type = "perc",
+                                 cov_std = TRUE,
+                                 fmi_options = list(),
                                  # add rows
                                  rsquare = FALSE,
                                  # remove rows
-                                 remove.system.eq = TRUE,
-                                 remove.eq = TRUE,
-                                 remove.ineq = TRUE,
-                                 remove.def = FALSE,
-                                 remove.nonfree = FALSE,
-                                 remove.step1 = TRUE,
-                                 remove.unused = FALSE,
-                                 remove.aux = TRUE,
+                                 remove_system_eq = TRUE,
+                                 remove_eq = TRUE,
+                                 remove_ineq = TRUE,
+                                 remove_def = FALSE,
+                                 remove_nonfree = FALSE,
+                                 remove_step1 = TRUE,
+                                 remove_unused = FALSE,
+                                 remove_aux = TRUE,
                                  # output
-                                 add.attributes = FALSE,
+                                 add_attributes = FALSE,
                                  output = "data.frame",
-                                 header = FALSE) {           # nolint end
+                                 header = FALSE,
+                                ...) {
 
-    # lavaan.fsr?
+   dotdotdot <- list(...)
+   lav_adapt_func(environment(), dotdotdot, NULL)
+
+  # lavaan.fsr?
     if (inherits(object, "lavaan.fsr")) {
       return(object$PE)
     }
@@ -659,8 +656,8 @@ lavParameterEstimates <- function(object,                      # nolint start
     # check object
     object <- lav_object_check_version(object)
 
-    # deprecated add.attributes (for psycho/blavaan)
-    if (add.attributes) {
+    # deprecated add_attributes (for psycho/blavaan)
+    if (add_attributes) {
       output <- "text"
     }
 
@@ -865,11 +862,11 @@ lavParameterEstimates <- function(object,                      # nolint start
         # (boot package 'norm.inter') is shared with lavEffects() via
         # lav_bootstrap_norm_inter() (see lav_bootstrap.R)
         stopifnot(!is.null(tmp_boot))
-        stopifnot(boot.ci.type %in% c(
+        stopifnot(boot_ci_type %in% c(
           "norm", "basic", "perc",
           "bca.simple", "bca"
         ))
-        if (boot.ci.type == "norm") {
+        if (boot_ci_type == "norm") {
           fac <- qnorm(a)
           boot_x <- colMeans(tmp_boot, na.rm = TRUE)
           boot_est <-
@@ -879,7 +876,7 @@ lavParameterEstimates <- function(object,                      # nolint start
             )
           bias_est <- (boot_est - tmp_list$est)
           ci <- (tmp_list$est - bias_est) + tmp_list$se %o% fac
-        } else if (boot.ci.type %in% c("basic", "perc", "bca.simple")) {
+        } else if (boot_ci_type %in% c("basic", "perc", "bca.simple")) {
           # the per-quantity bound computation is shared with lavEffects()
           # via lav_bootstrap_ci() (see lav_bootstrap.R)
           ci <- cbind(tmp_list$est, tmp_list$est)
@@ -889,7 +886,7 @@ lavParameterEstimates <- function(object,                      # nolint start
             !duplicated(object@ParTable$free))
           ci[free_idx, ] <- lav_bootstrap_ci(
             boot_t = tmp_boot, t0 = tmp_list$est[free_idx],
-            boot_ci_type = boot.ci.type, level = level
+            boot_ci_type = boot_ci_type, level = level
           )
 
           # defined parameters
@@ -903,12 +900,12 @@ lavParameterEstimates <- function(object,                      # nolint start
             }
             ci[def_idx, ] <- lav_bootstrap_ci(
               boot_t = boot_def, t0 = tmp_list$est[def_idx],
-              boot_ci_type = boot.ci.type, level = level
+              boot_ci_type = boot_ci_type, level = level
             )
           }
 
           # TODO: add cin/ceq?
-        } else if (boot.ci.type == "bca") { # new in 0.6-12
+        } else if (boot_ci_type == "bca") { # new in 0.6-12
           # we assume that the 'ordinary' (nonparametric) bootstrap was used.
           # The empirical-influence design matrix and the acceleration/CI
           # computations are shared with lavEffects() (see lav_bootstrap.R).
@@ -1024,24 +1021,24 @@ lavParameterEstimates <- function(object,                      # nolint start
     # Then add each requested type
     # (original source code, but now independently conditional)
     if ("std.lv" %in% standardized) {
-      tmp_list$std.lv <- lav_standardize_lv(object, cov_std = cov.std)
+      tmp_list$std.lv <- lav_standardize_lv(object, cov_std = cov_std)
     }
     if ("std.all" %in% standardized) {
       tmp_list$std.all <- lav_standardize_all(object,
         est_std = tmp_list$est.std,
-        cov_std = cov.std
+        cov_std = cov_std
       )
     }
     if ("std.nox" %in% standardized) {
       tmp_list$std.nox <- lav_standardize_all_nox(object,
         est_std = tmp_list$est.std,
-        cov_std = cov.std
+        cov_std = cov_std
       )
     }
     if ("std.user" %in% standardized) {
       tmp_list$std.user <- lav_standardize_all(object,
         est_std = tmp_list$est.std,
-        cov_std = cov.std, ov_std = ov_std_user
+        cov_std = cov_std, ov_std = ov_std_user
       )
     }
 
@@ -1132,9 +1129,9 @@ lavParameterEstimates <- function(object,                      # nolint start
       tmp_pt$start <- tmp_pt$est <- NULL
 
       this_options <- object@Options
-      if (!is.null(fmi.options) && is.list(fmi.options)) {
+      if (!is.null(fmi_options) && is.list(fmi_options)) {
         # modify original options
-        this_options <- modifyList(this_options, fmi.options)
+        this_options <- modifyList(this_options, fmi_options)
       }
       # override
       this_options$optim.method <- "none"
@@ -1154,10 +1151,10 @@ lavParameterEstimates <- function(object,                      # nolint start
 
       se_comp <- lavParameterEstimates(fit_complete,
         ci = FALSE, fmi = FALSE,
-        zstat = FALSE, pvalue = FALSE, remove.system.eq = FALSE,
-        remove.eq = FALSE, remove.ineq = FALSE,
-        remove.def = FALSE, remove.nonfree = FALSE, remove.unused = FALSE,
-        rsquare = rsquare, add.attributes = FALSE
+        zstat = FALSE, pvalue = FALSE, remove_system_eq = FALSE,
+        remove_eq = FALSE, remove_ineq = FALSE,
+        remove_def = FALSE, remove_nonfree = FALSE, remove_unused = FALSE,
+        rsquare = rsquare, add_attributes = FALSE
       )$se
 
       se_comp <- ifelse(se_comp == 0.0, as.numeric(NA), se_comp)
@@ -1196,7 +1193,7 @@ lavParameterEstimates <- function(object,                      # nolint start
     }
 
     # remove non-free parameters? (but keep ==, >, < and :=)
-    if (remove.nonfree) {
+    if (remove_nonfree) {
       nonfree_idx <- which(tmp_list$free == 0L &
         !tmp_list$op %in% c("==", ">", "<", ":="))
       if (length(nonfree_idx) > 0L) {
@@ -1210,7 +1207,7 @@ lavParameterEstimates <- function(object,                      # nolint start
     # (typically 1 or 0).
     # currently only intercepts and scaling-factors (for now)
     # should we also remove fixed-to-1 variances? (parameterization = theta)?
-    if (remove.unused) {
+    if (remove_unused) {
       # intercepts
       int_idx <- which(tmp_list$op == "~1" &
         tmp_list$user == 0L &
@@ -1235,27 +1232,27 @@ lavParameterEstimates <- function(object,                      # nolint start
     tmp_list$free <- NULL
 
     # remove == rows?
-    if (remove.eq) {
+    if (remove_eq) {
       eq_idx <- which(tmp_list$op == "==" & tmp_list$user == 1L)
       if (length(eq_idx) > 0L) {
         tmp_list <- tmp_list[-eq_idx, ]
       }
     }
-    if (remove.system.eq) {
+    if (remove_system_eq) {
       eq_idx <- which(tmp_list$op == "==" & tmp_list$user != 1L)
       if (length(eq_idx) > 0L) {
         tmp_list <- tmp_list[-eq_idx, ]
       }
     }
     # remove <> rows?
-    if (remove.ineq) {
+    if (remove_ineq) {
       ineq_idx <- which(tmp_list$op %in% c("<", ">"))
       if (length(ineq_idx) > 0L) {
         tmp_list <- tmp_list[-ineq_idx, ]
       }
     }
     # remove := rows?
-    if (remove.def) {
+    if (remove_def) {
       def_idx <- which(tmp_list$op == ":=")
       if (length(def_idx) > 0L) {
         tmp_list <- tmp_list[-def_idx, ]
@@ -1263,7 +1260,7 @@ lavParameterEstimates <- function(object,                      # nolint start
     }
 
     # remove step 1 rows?
-    if (remove.step1 && !is.null(tmp_list$step)) {
+    if (remove_step1 && !is.null(tmp_list$step)) {
       step1_idx <- which(tmp_list$step == 1L)
       if (length(step1_idx) > 0L) {
         tmp_list <- tmp_list[-step1_idx, ]
@@ -1273,7 +1270,7 @@ lavParameterEstimates <- function(object,                      # nolint start
     }
 
     # remove auxiliary (saturated-correlates) rows? (FIML aux= variables)
-    if (remove.aux && length(object@Options$aux) > 0L) {
+    if (remove_aux && length(object@Options$aux) > 0L) {
       aux_idx <- which(tmp_list$lhs %in% object@Options$aux |
         tmp_list$rhs %in% object@Options$aux)
       if (length(aux_idx) > 0L) {
@@ -1347,7 +1344,7 @@ lavParameterEstimates <- function(object,                      # nolint start
     }
 
     tmp_list
-  }
+}
 parameterEstimates <- lavParameterEstimates     # synonym   # nolint
 
 parameterTable <- parametertable <- parTable <- partable <- # nolint

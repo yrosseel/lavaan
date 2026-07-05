@@ -10,28 +10,28 @@ lavParameterEstimates(object,
                    se = TRUE, zstat = TRUE, pvalue = TRUE, ci = TRUE, 
                    standardized = FALSE, 
                    fmi = FALSE, plabel = FALSE,
-                   level = 0.95, boot.ci.type = "perc", 
-                   cov.std = TRUE, fmi.options = list(), 
+                   level = 0.95, boot_ci_type = "perc", 
+                   cov_std = TRUE, fmi_options = list(), 
                    rsquare = FALSE, 
-                   remove.system.eq = TRUE, remove.eq = TRUE, 
-                   remove.ineq = TRUE, remove.def = FALSE, 
-                   remove.nonfree = FALSE, remove.step1 = TRUE,
-                   remove.unused = FALSE,
-                   remove.aux = TRUE, add.attributes = FALSE, 
-                   output = "data.frame", header = FALSE)
+                   remove_system_eq = TRUE, remove_eq = TRUE, 
+                   remove_ineq = TRUE, remove_def = FALSE, 
+                   remove_nonfree = FALSE, remove_step1 = TRUE,
+                   remove_unused = FALSE,
+                   remove_aux = TRUE, add_attributes = FALSE, 
+                   output = "data.frame", header = FALSE, ...)
 parameterEstimates(object, 
                    se = TRUE, zstat = TRUE, pvalue = TRUE, ci = TRUE, 
                    standardized = FALSE, 
                    fmi = FALSE, plabel = FALSE,
-                   level = 0.95, boot.ci.type = "perc", 
-                   cov.std = TRUE, fmi.options = list(), 
+                   level = 0.95, boot_ci_type = "perc", 
+                   cov_std = TRUE, fmi_options = list(), 
                    rsquare = FALSE, 
-                   remove.system.eq = TRUE, remove.eq = TRUE, 
-                   remove.ineq = TRUE, remove.def = FALSE, 
-                   remove.nonfree = FALSE, remove.step1 = TRUE,
-                   remove.unused = FALSE,
-                   remove.aux = TRUE, add.attributes = FALSE, 
-                   output = "data.frame", header = FALSE)
+                   remove_system_eq = TRUE, remove_eq = TRUE, 
+                   remove_ineq = TRUE, remove_def = FALSE, 
+                   remove_nonfree = FALSE, remove_step1 = TRUE,
+                   remove_unused = FALSE,
+                   remove_aux = TRUE, add_attributes = FALSE, 
+                   output = "data.frame", header = FALSE, ...)
 }
 \arguments{
 \item{object}{An object of class \code{\linkS4class{lavaan}}.}
@@ -48,7 +48,7 @@ normal distribution.}
 \item{level}{The confidence level required.}
 \item{plabel}{Logical. If \code{TRUE}, show the plabel column of the
   parameter table in the output.}
-\item{boot.ci.type}{If bootstrapping was used, the type of interval required.
+\item{boot_ci_type}{If bootstrapping was used, the type of interval required.
   The value should be one of \code{"norm"}, \code{"basic"}, \code{"perc"},
   or \code{"bca.simple"}. For the first three options, see the help page of
   the \code{boot.ci} function in the boot package. The
@@ -68,7 +68,7 @@ involving these variables are standardized (the other observed variables are
 left unstandardized), and the result is added in a \code{std.user} column.
 This is a generalization of \code{"std.nox"}, where the (observed) exogenous
 \code{x} variables are the ones left unstandardized.}
-\item{cov.std}{Logical. If TRUE, the (residual) observed
+\item{cov_std}{Logical. If TRUE, the (residual) observed
 covariances are scaled by the square root of the `Theta' diagonal elements, and
 the (residual) latent covariances are scaled by the square root of the `Psi'
 diagonal elements. If FALSE, the (residual) observed covariances
@@ -81,29 +81,29 @@ fraction of missing information for each estimated parameter. Only
 available if
 \code{estimator="ML"}, \code{missing="(fi)ml"}, and \code{se="standard"}.
 See references for more information.}
-\item{fmi.options}{List. If non-empty, arguments can be provided to alter
+\item{fmi_options}{List. If non-empty, arguments can be provided to alter
 the default options when the model is fitted with the complete(d) data;
 otherwise, the same options are used as the original model.}
-\item{remove.eq}{Logical. If \code{TRUE}, filter the output by removing all
+\item{remove_eq}{Logical. If \code{TRUE}, filter the output by removing all
 rows containing user-specified equality constraints, if any.}
-\item{remove.system.eq}{Logical. If \code{TRUE}, filter the output by
+\item{remove_system_eq}{Logical. If \code{TRUE}, filter the output by
 removing all rows containing system-generated equality constraints, if any.}
-\item{remove.ineq}{Logical. If \code{TRUE}, filter the output by removing all
+\item{remove_ineq}{Logical. If \code{TRUE}, filter the output by removing all
 rows containing inequality constraints, if any.}
-\item{remove.def}{Logical. If \code{TRUE}, filter the output by removing all
+\item{remove_def}{Logical. If \code{TRUE}, filter the output by removing all
 rows containing parameter definitions, if any.}
-\item{remove.nonfree}{Logical. If \code{TRUE}, filter the output by removing 
+\item{remove_nonfree}{Logical. If \code{TRUE}, filter the output by removing 
 all rows containing fixed (non-free) parameters.}
-\item{remove.step1}{Logical. Only used by \code{sam()}. 
+\item{remove_step1}{Logical. Only used by \code{sam()}. 
 If \code{TRUE}, filter the 
 output by removing all rows corresponding to the measurement parameters
 that are part of the first step.}
-\item{remove.unused}{Logical. If \code{TRUE}, filter the output by removing
+\item{remove_unused}{Logical. If \code{TRUE}, filter the output by removing
 all rows containing automatically added parameters (user == 0) that are 
 nonfree, and with their final (est) values fixed to their default values 
 (typically 1 or 0); currently only used for intercepts and
 scaling-factors.}
-\item{remove.aux}{Logical. If \code{TRUE} (the default), filter the output by
+\item{remove_aux}{Logical. If \code{TRUE} (the default), filter the output by
 removing all rows corresponding to auxiliary (\code{aux=}) variables that were
 added to the model as saturated correlates (only relevant when
 \code{missing = "ml"} and the \code{aux=} argument was used).}
@@ -112,7 +112,7 @@ the rsquare values (in the \code{est} column) of all endogenous variables
 in the model. Both the \code{lhs} and \code{rhs} column contain the
 name of the endogenous variable, while the \code{op} column contains \code{r2},
 to indicate that the values in the \code{est} column are rsquare values.}
-\item{add.attributes}{Deprecated argument. Please use output= instead.}
+\item{add_attributes}{Deprecated argument. Please use output= instead.}
 \item{output}{Character. If \code{"data.frame"}, the parameter table is
 displayed as a standard (albeit lavaan-formatted) data.frame. 
 If \code{"text"} (or alias \code{"pretty"}), the parameter table is
@@ -122,6 +122,7 @@ formatted and displayed with subsections (as used by the summary function).}
 contains information about the information matrix, whether the saturated (h1)
 model is structured or unstructured, and which type of standard errors are
 shown in the output.}
+\item{...}{to support old argument names}
 }
 \value{
   A data.frame containing the estimated parameters,
@@ -131,7 +132,7 @@ shown in the output.}
   estimates.
 
   If the model was fitted with \code{se = "bootstrap"} and
-  \code{boot.ci.type = "bca"}, the empirical-influence design matrix used to
+  \code{boot_ci_type = "bca"}, the empirical-influence design matrix used to
   compute the acceleration constant is stored as the \code{"design"}
   attribute of the returned data.frame (retrieve with
   \code{attr(x, "design")}). The parameter estimates in the bootstrap samples

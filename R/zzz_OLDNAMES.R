@@ -124,13 +124,13 @@ inspectSampleCov <- function(model, data, ...) {
 #                                se = TRUE, zstat = TRUE, pvalue = TRUE,
 #                                ci = TRUE, standardized = FALSE,
 #                                fmi = FALSE, plabel = FALSE,
-#                                level = 0.95, boot.ci.type = "perc",
-#                                cov.std = TRUE, fmi.options = list(),
+#                                level = 0.95, boot_ci_type = "perc",
+#                                cov_std = TRUE, fmi_options = list(),
 #                                rsquare = FALSE,
-#                                remove.system.eq = TRUE, remove.eq = TRUE,
-#                                remove.ineq = TRUE, remove.def = FALSE,
-#                                remove.nonfree = FALSE, remove.step1 = TRUE,
-#                                remove.unused = FALSE, add.attributes = FALSE,
+#                                remove_system_eq = TRUE, remove_eq = TRUE,
+#                                remove_ineq = TRUE, remove_def = FALSE,
+#                                remove_nonfree = FALSE, remove_step1 = TRUE,
+#                                remove_unused = FALSE, add_attributes = FALSE,
 #                                output = "data.frame", header = FALSE) {
 #   lav_deprecated("lavParameterEstimates", times = 1L) #--> for now no warning
 #   sc <- sys.call()

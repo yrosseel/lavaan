@@ -73,28 +73,28 @@ the independence model) (if available).}
       vector will be zero.}
     \item{fitted}{\code{signature(object = "lavaan")}: an alias for
         \code{fitted.values}.}
-    \item{residuals}{\code{signature(object = "lavaan", type="raw")}: 
+    \item{residuals}{\code{signature(object = "lavaan", type="raw")}:
 	  If \code{type = "raw"}, this function returns the raw (= unscaled)
       difference between the observed and the expected (model-implied) summary
       statistics.
 	  If \code{type = "cor"}, or \code{type = "cor.bollen"}, the observed and
-      model implied covariance matrices are first transformed to a correlation 
-      matrix (using \code{cov2cor()}), before the residuals are computed. 
+      model implied covariance matrices are first transformed to a correlation
+      matrix (using \code{cov2cor()}), before the residuals are computed.
 	  If \code{type = "cor.bentler"}, both the observed and model implied
-      covariance matrices are rescaled by dividing the elements by the square 
-      roots of the corresponding variances of the observed covariance matrix. 
-      If \code{type="normalized"}, the residuals are divided by the square 
+      covariance matrices are rescaled by dividing the elements by the square
+      roots of the corresponding variances of the observed covariance matrix.
+      If \code{type="normalized"}, the residuals are divided by the square
       root of the asymptotic variance of the corresponding summary statistic
       (the variance estimate depends on the choice for the \code{se} argument).
       Unfortunately, these normalized residuals are not entirely
       correct, and this option is retained only for historical interest.
-      If \code{type="standardized"}, the residuals are divided by the square 
+      If \code{type="standardized"}, the residuals are divided by the square
       root of the asymptotic variance of these residuals. The resulting
       standardized residuals can be interpreted as z-scores.
-      If \code{type="standardized.mplus"}, the residuals are divided by the 
-      square root of the asymptotic variance of these residuals. However, a 
-      simplified formula is used (see the Mplus reference below) which often 
-      results in negative estimates for the variances, resulting in many 
+      If \code{type="standardized.mplus"}, the residuals are divided by the
+      square root of the asymptotic variance of these residuals. However, a
+      simplified formula is used (see the Mplus reference below) which often
+      results in negative estimates for the variances, resulting in many
       \code{NA} values for the standardized residuals.}
     \item{resid}{\code{signature(object = "lavaan")}: an alias
       for \code{residuals}}
@@ -130,19 +130,19 @@ the independence model) (if available).}
     \item{show}{\code{signature(object = "lavaan")}: Print a short summary
       of the model fit}
     \item{summary}{\code{signature(object = "lavaan", header = TRUE,
-     fit.measures = FALSE, residuals = FALSE,
+     fit_measures = FALSE, residuals = FALSE,
      estimates = TRUE, ci = FALSE, fmi = FALSE,
-     standardized = FALSE, std = standardized, std.nox = FALSE,
-     remove.system.eq = TRUE, remove.eq = TRUE, remove.ineq = TRUE,
-     remove.def = FALSE, remove.nonfree = FALSE, remove.step1 = TRUE,
-     remove.unused = TRUE, plabel = FALSE,
-     cov.std = TRUE, rsquare = FALSE,
-     baseline.model = NULL, h1.model = NULL,
-     fm.args = list(standard.test = "default", scaled.test = "default",
+     standardized = FALSE, std = standardized, std_nox = FALSE,
+     remove_system_eq = TRUE, remove_eq = TRUE, remove_ineq = TRUE,
+     remove_def = FALSE, remove_nonfree = FALSE, remove_step1 = TRUE,
+     remove_unused = TRUE, plabel = FALSE,
+     cov_std = TRUE, rsquare = FALSE,
+     baseline_model = NULL, h1_model = NULL,
+     fm_args = list(standard.test = "default", scaled.test = "default",
      rmsea.ci.level = 0.90, rmsea.h0.closefit = 0.05,
      rmsea.h0.notclosefit = 0.08, robust = TRUE, cat.check.pd = TRUE),
-     modindices = FALSE, srmr.close.h0 = NULL,
-     nd = 3L, cutoff = 0.3, dot.cutoff = 0.1)}:
+     modindices = FALSE, srmr_close_h0 = NULL,
+     nd = 3L, cutoff = 0.3, dot_cutoff = 0.1)}:
       Print a nice summary of the model estimates.
       If \code{header = TRUE}, the header section (including fit measures) is
       printed.
@@ -165,8 +165,8 @@ the independence model) (if available).}
       section.
       If \code{fmi = TRUE}, add the fmi (fraction of missing information)
       column, if it is available.
-      If \code{standardized = TRUE} or a character vector, the standardized 
-      solution is also printed (see \code{\link{lavParameterEstimates}}). 
+      If \code{standardized = TRUE} or a character vector, the standardized
+      solution is also printed (see \code{\link{lavParameterEstimates}}).
       Note that \emph{SE}s and
       tests are still based on unstandardized estimates. Use
       \code{\link{standardizedSolution}} to obtain \emph{SE}s and test
@@ -179,16 +179,16 @@ the independence model) (if available).}
       result is shown in a \code{Std.usr} column. This generalizes
       \code{"std.nox"}, where the exogenous \code{x} variables are the ones
       left unstandardized.
-      If \code{remove.system.eq = TRUE}, the system-generated equality 
+      If \code{remove_system_eq = TRUE}, the system-generated equality
       constraints (using plabels) are not shown.
-      If \code{remove.eq = TRUE} or \code{remove.ineq = TRUE}, 
+      If \code{remove_eq = TRUE} or \code{remove_ineq = TRUE},
       the user-specified (in)equality constraints are not shown.
-      If \code{remove.def = TRUE}, the user-specified parameter definitions are
+      If \code{remove_def = TRUE}, the user-specified parameter definitions are
       not shown.
-      If \code{remove.nonfree = TRUE}, the nonfree parameters are not shown.
-      If \code{remove.step1 = TRUE}, the parameters of the measurement part 
+      If \code{remove_nonfree = TRUE}, the nonfree parameters are not shown.
+      If \code{remove_step1 = TRUE}, the parameters of the measurement part
       are not shown (only used when using \code{sam()}.)
-      If \code{remove.unused = TRUE}, automatically added parameters that are
+      If \code{remove_unused = TRUE}, automatically added parameters that are
       fixed to their default (0 or 1) values are removed.
       If \code{rsquare = TRUE}, the R-Square values for the dependent variables
       in the model are printed.
@@ -203,7 +203,7 @@ the independence model) (if available).}
       numbers; loadings whose absolute value falls between \code{dot.cutoff}
       and \code{cutoff} are replaced by a dot; loadings whose absolute value is
       below \code{dot.cutoff} are left blank.
-      If \code{modindices = TRUE} or \code{modindices} is a list, 
+      If \code{modindices = TRUE} or \code{modindices} is a list,
       modification indices are printed for all fixed parameters.
       The argument \code{nd} determines the number of digits after the
       decimal point to be printed (currently only in the parameter estimates
@@ -214,7 +214,7 @@ the independence model) (if available).}
 }
 \references{
 Yves Rosseel (2012). lavaan: An R Package for Structural Equation
-Modeling. Journal of Statistical Software, 48(2), 1-36. 
+Modeling. Journal of Statistical Software, 48(2), 1-36.
 \doi{10.18637/jss.v048.i02}
 
 Standardized Residuals in Mplus. Document retrieved from URL

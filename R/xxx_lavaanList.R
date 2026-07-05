@@ -324,10 +324,10 @@ lavaanList <- function(model = NULL, # model                    # nolint
           pe_ci <- try(lavParameterEstimates(lavobject,
             se = TRUE, zstat = FALSE, pvalue = FALSE, ci = TRUE,
             level = 0.95, standardized = FALSE,
-            remove.system.eq = FALSE, remove.eq = FALSE,
-            remove.ineq = FALSE, remove.def = FALSE,
-            remove.nonfree = FALSE, remove.step1 = FALSE,
-            remove.unused = FALSE, output = "data.frame"),
+            remove_system_eq = FALSE, remove_eq = FALSE,
+            remove_ineq = FALSE, remove_def = FALSE,
+            remove_nonfree = FALSE, remove_step1 = FALSE,
+            remove_unused = FALSE, output = "data.frame"),
             silent = TRUE)
           if (!inherits(pe_ci, "try-error") && !is.null(pe_ci$ci.lower) &&
               length(pe_ci$ci.lower) == length(res$ParTable$lhs)) {

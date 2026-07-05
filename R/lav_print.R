@@ -980,9 +980,9 @@ lav_fsr_print <- function(x, ..., nd = 3L, mm = FALSE, struc = FALSE) {
   }
   pe <- lavParameterEstimates(y$STRUC.FIT,
     ci = FALSE,
-    remove.eq = FALSE, remove.system.eq = TRUE,
-    remove.ineq = FALSE, remove.def = FALSE,
-    remove.nonfree = FALSE, remove.unused = TRUE,
+    remove_eq = FALSE, remove_system_eq = TRUE,
+    remove_ineq = FALSE, remove_def = FALSE,
+    remove_nonfree = FALSE, remove_unused = TRUE,
     output = "text", header = TRUE
   )
   lav_parameterestimates_print(pe, ..., nd = nd)
