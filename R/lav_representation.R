@@ -1,17 +1,21 @@
 # user visible function to add 'matrix' entries in the parameter table
-lavMatrixRepresentation <- function(partable, representation = "LISREL", # nolint start
-                                    allow.composites = TRUE, # new in 0.6-20
-                                    add.attributes = FALSE,
-                                    as.data.frame. = TRUE) {             # nolint end
+lavMatrixRepresentation <- function(partable, representation = "LISREL", # nolint
+                                    allow_composites = TRUE, # new in 0.6-20
+                                    add_attributes = FALSE,
+                                    as_data_frame = TRUE,
+                                  ...) {
+  dotdotdot <- list(...)
+  lav_adapt_func(environment(), dotdotdot, NULL)
+
   # check parameter table
   partable <- lav_pt_complete(partable)
 
   # get model matrices
   if (representation == "LISREL") {
-    rep_1 <- lav_lisrel(partable, target = NULL, extra = add.attributes,
-                      allow_composites = allow.composites)
+    rep_1 <- lav_lisrel(partable, target = NULL, extra = add_attributes,
+                      allow_composites = allow_composites)
   } else if (representation == "RAM") {
-    rep_1 <- lav_ram(partable, target = NULL, extra = add.attributes)
+    rep_1 <- lav_ram(partable, target = NULL, extra = add_attributes)
   } else {
     lav_msg_stop(gettext("representation must be either \"LISREL\" or \"RAM\"."))
   }
@@ -20,12 +24,12 @@ lavMatrixRepresentation <- function(partable, representation = "LISREL", # nolin
   partable$row <- rep_1$row
   partable$col <- rep_1$col
 
-  if (as.data.frame.) {
+  if (as_data_frame) {
     partable <- as.data.frame(partable, stringsAsFactors = FALSE)
     class(partable) <- c("lavaan.data.frame", "data.frame")
   }
 
-  if (add.attributes) {
+  if (add_attributes) {
     if (representation == "LISREL") {
       attr(partable, "ov.dummy.names.nox") <- attr(rep_1, "ov.dummy.names.nox")
       attr(partable, "ov.dummy.names.x") <- attr(rep_1, "ov.dummy.names.x")
