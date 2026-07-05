@@ -189,15 +189,26 @@ lav_predict_internal <- function(lavmodel = NULL,
     exo <- lavdata@eXo
   } else {
     ov <- lavdata@ov
+    # for multilevel models, the cluster variable must be present in
+    # newdata, so that a fresh cluster structure (Lp) can be built
+    if (lavdata@nlevels > 1L &&
+        !all(lavdata@cluster %in% names(newdata))) {
+      lav_msg_stop(gettextf(
+        "newdata does not contain the cluster variable(s): %s",
+        lav_msg_view(lavdata@cluster, "none")))
+    }
     new_data <- lav_lavdata(
       data = newdata,
       group = lavdata@group,
+      cluster = lavdata@cluster,
       ov_names = lavdata@ov.names,
       ov_names_x = lavdata@ov.names.x,
+      ov_names_l = lavdata@ov.names.l,
       ordered = ov$name[ov$type == "ordered"],
       lavoptions = list(
         std.ov = lavdata@std.ov,
         group.label = lavdata@group.label,
+        level.label = lavdata@level.label,
         missing = lavdata@missing
       ), # was FALSE before?
       allow_single_case = TRUE
@@ -221,6 +232,15 @@ lav_predict_internal <- function(lavmodel = NULL,
     data_obs <- new_data@X
     exo <- new_data@eXo
     ov_names <- new_data@ov.names
+
+    # for multilevel models, replace lavdata by the freshly-built
+    # newdata object: the downstream code needs the newdata cluster
+    # structure (Lp), missing patterns (Mp) and dimensions (new in
+    # 0.7-2); lavsamplestats is kept as-is (only used for the
+    # model-implied quantities)
+    if (lavdata@nlevels > 1L) {
+      lavdata <- new_data
+    }
   }
 
   if (type == "lv") {
@@ -923,7 +943,14 @@ lav_predict_eta_normal <- function(lavobject = NULL, # for convenience
 
     if (lavdata@nlevels > 1L) {
       lp <- lavdata@Lp[[g]]
-      ylp <- lavsamplestats@YLp[[g]]
+
+      # cluster means (Y2); recompute from data_obs (rather than the
+      # sample statistics) so that the same code path handles newdata,
+      # where the cluster structure comes from lavdata (= the newdata
+      # object; see lav_predict_internal)
+      y2_g <- rowsum.default(data_obs[[g]],
+        group = lp$cluster.idx[[2]], reorder = FALSE, na.rm = FALSE
+      ) / lp$cluster.size[[2]]
 
       # implied for this group
       group_idx <- (g - 1) * lavdata@nlevels + seq_len(lavdata@nlevels)
@@ -936,20 +963,8 @@ lav_predict_eta_normal <- function(lavobject = NULL, # for convenience
         # missing values are replaced by their posterior means, so
         # that the (linear) factor score computation below yields the
         # exact posterior means E(eta | all observed data)
-        #
-        # note: the callers always pass data_obs, even when it is just
-        # the internal copy of the data; only *genuinely* new data is
-        # not supported (the missing patterns and cluster structure of
-        # the original data are used below)
-        if (newdata_flag &&
-            !identical(data_obs[[g]], lavdata@X[[g]]) &&
-            !isTRUE(all.equal(data_obs[[g]], lavdata@X[[g]]))) {
-          lav_msg_stop(gettext(
-            "lavPredict() with newdata is not supported (yet) for
-             two-level models with missing = \"ml\""))
-        }
         mb_j <- lav_mvn_cl_mi_estep_ranef(
-          y1 = data_obs[[g]], y2 = ylp[[2]]$Y2,
+          y1 = data_obs[[g]], y2 = y2_g,
           lp = lp, mp = lavdata@Mp[[g]],
           mu_w = implied_group$mean[[1]],
           sigma_w = implied_group$cov[[1]],
@@ -963,7 +978,7 @@ lav_predict_eta_normal <- function(lavobject = NULL, # for convenience
           implied = implied_group
         )
         mb_j <- lav_mvn_cl_em_estep_ranef(
-          ylp = ylp, lp = lp,
+          ylp = list(list(), list(Y2 = y2_g)), lp = lp,
           sigma_w = out$sigma.w, sigma_b = out$sigma.b,
           sigma_zz = out$sigma.zz, sigma_yz = out$sigma.yz,
           mu_z = out$mu.z, mu_w = out$mu.w, mu_b = out$mu.b,

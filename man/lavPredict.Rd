@@ -21,7 +21,11 @@ lavPredict(object, newdata = NULL, type = "lv", method = "EBM",
 \arguments{
 \item{object}{An object of class \code{\linkS4class{lavaan}}.}
 \item{newdata}{An optional data.frame, containing the same variables as
-the data.frame used when fitting the model in object.}
+the data.frame used when fitting the model in object. For multilevel
+models, the cluster variable(s) must be included; the cluster structure
+and (for \code{missing = "ml"}) the missing-data patterns are rebuilt
+from newdata, so the predictions are conditional on the newdata only
+(the cluster labels need not match those of the original data).}
 \item{type}{A character string. If \code{"lv"}, estimated values for the latent
 variables in the model are computed. If \code{"ov"}, model predicted values for
 the indicators of the latent variables in the model are computed. If
