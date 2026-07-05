@@ -773,7 +773,7 @@ lav_mvn_cl_mi_em_sat <- function(y1 = NULL,
   theta <- engine$theta0
 
   # EM iterations
-  if (identical(acceleration, "squarem")) {
+  if (acceleration %in% c("squarem", "qn")) {
     # report initial fx
     fx <- engine$logl(theta)
     if (lav_verbose()) {
@@ -783,7 +783,8 @@ lav_mvn_cl_mi_em_sat <- function(y1 = NULL,
         "\n"
       )
     }
-    out_em <- lav_em_squarem(
+    accel_fn <- if (acceleration == "qn") lav_em_qn else lav_em_squarem
+    out_em <- accel_fn(
       theta = theta, step_fn = engine$step, logl_fn = engine$logl,
       fx0 = fx, tol = tol, max_iter = max_iter
     )

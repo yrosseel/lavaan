@@ -426,8 +426,13 @@ Estimation options:
       extrapolated point, with a loglikelihood safeguard; this typically
       reduces the number of EM steps considerably (in particular when
       some variances approach zero), and converges to the same solution.
-      If \code{"none"}, the plain (unaccelerated) EM iterations are
-      used. If the \code{fused} element is \code{TRUE} (the default), the
+      If \code{"qn"}, a quasi-Newton scheme (Zhou, Alexander & Lange,
+      2011; the \code{"qn"} method of the \pkg{turboEM} package) is used
+      instead: a low-rank secant approximation of the EM map is used to
+      take a quasi-Newton step towards the fixed point, again with a
+      loglikelihood safeguard. If \code{"none"}, the plain (unaccelerated)
+      EM iterations are used. If the \code{fused} element is \code{TRUE}
+      (the default), the
       loglikelihood is computed as a cheap byproduct of the E-step
       quantities (only used in the two-level setting with missing data,
       for the plain EM iterations); if \code{FALSE}, a separate

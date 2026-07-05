@@ -805,8 +805,9 @@ lav_mvn_cl_em_sat <- function(ylp = NULL,
 
   # EM iterations
   theta <- em_pack(mu_w, mu_b, sigma_w, sigma_b, sigma_yz)
-  if (identical(acceleration, "squarem")) {
-    out_em <- lav_em_squarem(
+  if (acceleration %in% c("squarem", "qn")) {
+    accel_fn <- if (acceleration == "qn") lav_em_qn else lav_em_squarem
+    out_em <- accel_fn(
       theta = theta, step_fn = em_step, logl_fn = em_logl,
       fx0 = fx, tol = tol, max_iter = max_iter
     )
@@ -1129,7 +1130,7 @@ lav_mvn_cl_em_h0 <- function(lavsamplestats = NULL,
     }
   }
 
-  if (identical(acceleration, "squarem")) {
+  if (acceleration %in% c("squarem", "qn")) {
     # same dual stopping rule as the plain EM iterations below: the
     # (signed!) change in the loglikelihood is smaller than fx_tol
     # (this also stops when the -- inexact -- M-step no longer makes
@@ -1154,7 +1155,8 @@ lav_mvn_cl_em_h0 <- function(lavsamplestats = NULL,
       }
       FALSE
     }
-    out_em <- lav_em_squarem(
+    accel_fn <- if (acceleration == "qn") lav_em_qn else lav_em_squarem
+    out_em <- accel_fn(
       theta = x_current, step_fn = em_step, logl_fn = em_logl,
       fx0 = fx, conv_fn = em_conv, max_iter = max_iter,
       logl_dec = 0 # inexact M-step: only accept monotone extrapolations

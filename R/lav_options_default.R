@@ -483,7 +483,8 @@ lav_options_default <- function() {
   elm(c("em.args", "dx_tol"), 1e-04, nm = "]0, 0.01]")
   elm(c("em.args", "zerovar_offset"), 0.0001, nm = "]0, 0.01]")
   # accelerate the EM iterations?
-  elm(c("em.args", "acceleration"), "squarem", chr = c("squarem", "none"))
+  elm(c("em.args", "acceleration"), "squarem",
+      chr = c("squarem", "qn", "none"))
   # compute the loglikelihood as a byproduct of the E-step?
   # (two-level + missing data, plain iterations only)
   elm(c("em.args", "fused"), TRUE, bl = TRUE)
@@ -517,7 +518,7 @@ lav_options_default <- function() {
   elm(c("em.h1.args", "non_pd_tol"), 1e-05, nm = "]0, 0.01]")
   # accelerate the EM iterations?
   elm(c("em.h1.args", "acceleration"), "squarem",
-      chr = c("squarem", "none"))
+      chr = c("squarem", "qn", "none"))
   # compute the loglikelihood as a byproduct of the E-step?
   # (two-level + missing data, plain iterations only)
   elm(c("em.h1.args", "fused"), TRUE, bl = TRUE)

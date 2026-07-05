@@ -157,3 +157,178 @@ lav_em_squarem <- function(theta = NULL,
   list(theta = theta, fx = fx, converged = converged, stalled = stalled,
        fpeval = fpeval, cycles = cycle)
 }
+
+# QN: quasi-Newton acceleration of EM-type fixed-point iterations
+# (Zhou, Alexander & Lange, 2011, Stat. Comput. 21, 261-273; the 'qn'
+# method of the turboEM package). A rank-q secant approximation of the
+# Jacobian of the EM map F yields a quasi-Newton step towards the fixed
+# point x = F(x), without any analytic gradient or Hessian. Like SQUAREM,
+# a loglikelihood safeguard falls back to a plain (double) EM step whenever
+# the quasi-Newton step is infeasible or does not improve on it.
+#
+# the arguments have the same meaning as in lav_em_squarem() above;
+# qn_order = the number of secant pairs (the 'order' q of the scheme; the
+# turboEM default is 2). Note: each iteration takes two EM map evaluations
+# (versus up to three for a SQUAREM cycle), plus up to two loglikelihood
+# evaluations for the safeguard.
+lav_em_qn <- function(theta = NULL,
+                      step_fn = NULL,
+                      logl_fn = NULL,
+                      fx0 = NULL,
+                      conv = "logl",
+                      conv_fn = NULL,
+                      tol = 1e-04,
+                      max_iter = 5000L,
+                      qn_order = 2L,
+                      logl_dec = 1) {
+  npar <- length(theta)
+  qn_order <- max(1L, min(as.integer(qn_order), npar))
+
+  # safeguarded loglikelihood: -Inf if the point is infeasible (so an
+  # infeasible extrapolation is always rejected in favor of the plain step)
+  safe_logl <- function(x) {
+    if (!all(is.finite(x))) {
+      return(-Inf)
+    }
+    fx <- try(logl_fn(x), silent = TRUE)
+    if (inherits(fx, "try-error") || !is.finite(fx)) {
+      return(-Inf)
+    }
+    fx
+  }
+
+  fpeval <- 0L
+  iter <- 0L
+  converged <- FALSE
+  stalled <- FALSE
+
+  # helper: a single guarded EM map evaluation
+  emstep <- function(x) {
+    out <- try(step_fn(x), silent = TRUE)
+    fpeval <<- fpeval + 1L
+    if (inherits(out, "try-error") || !all(is.finite(out))) {
+      return(NULL)
+    }
+    out
+  }
+
+  # ---- initialize the secant window (U, V) ----
+  # U_i = F(x_i) - x_i ; V_i = F(F(x_i)) - F(x_i) (as in turboEM)
+  U <- NULL
+  ok <- TRUE
+  for (i in seq_len(qn_order)) {
+    pnew <- emstep(theta)
+    if (is.null(pnew)) {
+      ok <- FALSE
+      break
+    }
+    U <- cbind(U, pnew - theta)
+    theta <- pnew
+  }
+  if (ok) {
+    pnew <- emstep(theta)
+    if (is.null(pnew)) {
+      ok <- FALSE
+    }
+  }
+  if (ok) {
+    U <- cbind(U[, -1, drop = FALSE], pnew - theta)
+    pnew2 <- emstep(pnew)
+    if (is.null(pnew2)) {
+      ok <- FALSE
+    }
+  }
+  if (!ok) {
+    # could not build the secant window; hand back the best plain-EM
+    # point we reached, and let the caller treat it as a (non-)stall
+    fx <- safe_logl(theta)
+    return(list(theta = theta, fx = fx, converged = FALSE,
+                stalled = TRUE, fpeval = fpeval, cycles = 0L))
+  }
+  V <- cbind(U[, -1, drop = FALSE], pnew2 - pnew)
+  # 'theta' is the current base point; fx_old is its loglikelihood
+  fx_old <- safe_logl(theta)
+  if (!is.finite(fx_old)) {
+    fx_old <- if (!is.null(fx0)) fx0 else -Inf
+  }
+  fx <- fx_old
+
+  # ---- main loop ----
+  while (fpeval < max_iter) {
+    iter <- iter + 1L
+    theta_old <- theta
+
+    # quasi-Newton step: solve the (small) q x q system; on a singular
+    # system, fall back to the plain (double) EM step pnew2
+    tmp <- try(solve(crossprod(U, U - V)), silent = TRUE)
+    took_qn <- !inherits(tmp, "try-error")
+    if (took_qn) {
+      p_next <- as.numeric(pnew -
+        (V %*% tmp) %*% crossprod(U, theta - pnew))
+      # safeguard: keep the QN step only if feasible and at least as good
+      # as the plain (double) EM step
+      fx_next <- safe_logl(p_next)
+      fx_pnew2 <- safe_logl(pnew2)
+      if (is.finite(fx_next) && fx_next >= fx_pnew2) {
+        theta <- p_next
+        fx <- fx_next
+      } else {
+        theta <- pnew2
+        fx <- fx_pnew2
+      }
+    } else {
+      theta <- pnew2
+      fx <- safe_logl(pnew2)
+    }
+
+    # stall: even the plain (double) EM step no longer improves the
+    # loglikelihood (can happen with an inexact M-step, as in the h0 EM);
+    # revert to the previous point and stop
+    if (!is.finite(fx) || fx < fx_old - logl_dec) {
+      theta <- theta_old
+      fx <- fx_old
+      stalled <- TRUE
+      break
+    }
+
+    fx_delta <- fx - fx_old
+    if (lav_verbose()) {
+      cat(
+        "QN:", sprintf("%3d", iter),
+        " fx =", sprintf("%17.10f", fx),
+        " fx.delta =", sprintf("%9.8f", fx_delta),
+        "\n"
+      )
+    }
+
+    # convergence check (per iteration)
+    if (!is.null(conv_fn)) {
+      converged <- isTRUE(conv_fn(theta_old, theta, fx_old, fx))
+    } else if (conv == "param") {
+      converged <- max(abs(theta - theta_old)) < tol
+    } else {
+      converged <- abs(fx_delta) < tol
+    }
+    if (converged) {
+      break
+    }
+
+    # advance the secant window from the accepted point
+    pnew <- emstep(theta)
+    if (is.null(pnew)) {
+      stalled <- TRUE
+      break
+    }
+    U <- cbind(U[, -1, drop = FALSE], pnew - theta)
+    pnew2 <- emstep(pnew)
+    if (is.null(pnew2)) {
+      stalled <- TRUE
+      break
+    }
+    V <- cbind(V[, -1, drop = FALSE], pnew2 - pnew)
+    fx_old <- fx
+  }
+
+  list(theta = theta, fx = fx, converged = converged, stalled = stalled,
+       fpeval = fpeval, cycles = iter)
+}

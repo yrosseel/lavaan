@@ -174,8 +174,9 @@ lav_mvn_mi_h1_est_moments <- function(y = NULL,
 
   # EM steps
   converged <- FALSE
-  if (identical(acceleration, "squarem")) {
-    out_em <- lav_em_squarem(
+  if (acceleration %in% c("squarem", "qn")) {
+    accel_fn <- if (acceleration == "qn") lav_em_qn else lav_em_squarem
+    out_em <- accel_fn(
       theta = c(mu, lav_mat_vech(sigma_1)),
       step_fn = em_step, logl_fn = em_logl,
       conv = "param", # same criterion as the plain EM steps below
@@ -231,7 +232,7 @@ lav_mvn_mi_h1_est_moments <- function(y = NULL,
   }
 
   # compute fx if we haven't already
-  if (identical(acceleration, "squarem") || !lav_verbose()) {
+  if (acceleration %in% c("squarem", "qn") || !lav_verbose()) {
     # fx <- lav_model_objective_fiml(Sigma.hat = Sigma, Mu.hat = Mu, M = Yp)
     fx <- lav_mvn_mi_loglik_samp(
       yp = yp,
