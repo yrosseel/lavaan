@@ -246,7 +246,7 @@ standardizedSolution <-                                      # nolint
                                    remove_def = FALSE,
                                    remove_aux = TRUE,
                                    partable = NULL,
-                                   GLIST = NULL,
+                                   glist = NULL,
                                    est = NULL,
                                    output = "data.frame",
                                   ...) {
@@ -326,22 +326,22 @@ standardizedSolution <-                                      # nolint
     # add std and std.all columns
     if (type == "std.lv") {
       tmp_list$est.std <- lav_standardize_lv(object,
-        est = est, glist = GLIST,
+        est = est, glist = glist,
         partable = partable, cov_std = cov_std
       )
     } else if (type == "std.all") {
       tmp_list$est.std <- lav_standardize_all(object,
-        est = est, glist = GLIST,
+        est = est, glist = glist,
         partable = partable, cov_std = cov_std
       )
     } else if (type == "std.nox") {
       tmp_list$est.std <- lav_standardize_all_nox(object,
-        est = est, glist = GLIST,
+        est = est, glist = glist,
         partable = partable, cov_std = cov_std
       )
     } else if (type == "std.user") {
       tmp_list$est.std <- lav_standardize_all(object,
-        est = est, glist = GLIST,
+        est = est, glist = glist,
         partable = partable, cov_std = cov_std, ov_std = ov_std_user
       )
     }

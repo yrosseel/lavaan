@@ -10,7 +10,7 @@ standardizedSolution(object, type = "std.all", se = TRUE, zstat = TRUE,
                      boot_ci_type = "perc", cov_std = TRUE,
                      remove_eq = TRUE, remove_ineq = TRUE, remove_def = FALSE,
                      remove_aux = TRUE,
-                     partable = NULL, GLIST = NULL, est = NULL,
+                     partable = NULL, glist = NULL, est = NULL,
                      output = "data.frame", ...)
 }
 \arguments{
@@ -63,12 +63,12 @@ rows containing parameter definitions, if any.}
 removing all rows corresponding to auxiliary (\code{aux=}) variables added to
 the model as saturated correlates (only relevant when \code{missing = "ml"}
 and the \code{aux=} argument was used).}
-\item{GLIST}{List of model matrices. If provided, they will be used
+\item{glist}{List of model matrices. If provided, they will be used
 instead of the GLIST inside the object@Model slot. Only works if the
 \code{est} argument is also provided. See Note.}
 \item{est}{Numeric. Parameter values (as in the `est' column of a
 parameter table). If provided, they will be used instead of
-the parameters that can be extracted from object. Only works if the \code{GLIST}
+the parameters that can be extracted from object. Only works if the \code{glist}
 argument is also provided. See Note.}
 \item{partable}{A custom \code{list} or \code{data.frame} in which to store
 the standardized parameter values. If provided, it will be used instead of
@@ -118,7 +118,7 @@ bootstrap standard errors for the standardized solution, refit the model with
 the corresponding \code{se=} argument.
 }
 \note{
-The \code{est}, \code{GLIST}, and \code{partable} arguments are not meant for
+The \code{est}, \code{glist}, and \code{partable} arguments are not meant for
 everyday users, but for authors of external R packages that depend on
 \code{lavaan}. Only to be used with great caution.
 }
