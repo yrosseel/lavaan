@@ -83,11 +83,64 @@ lavPredict <- function(object, newdata = NULL, # keep order of predict(), 0.6-7 
   lavimplied <- object@implied
   lavpartable <- object@ParTable
 
-  # random slopes? not supported (yet)
+  # random slopes? use the dedicated empirical Bayes route:
+  # - level = 2: posterior means of the between latent variables
+  #   (including the random slopes); se = "standard" gives the
+  #   posterior standard deviations
+  # - level = 1: within factor scores, conditional on the posterior
+  #   means of the cluster-level random effects (exact posterior means)
   if (length(lavmodel@rv.ov) > 0L || length(lavmodel@rv.lv) > 0L) {
-    lav_msg_stop(gettext(
-      "lavPredict() is not supported (yet) for models with random slopes
-       (rv() modifier)."))
+    if (tolower(type) != "lv") {
+      lav_msg_stop(gettext(
+        "for models with random slopes, only type = \"lv\" is
+         supported (for now)."))
+    }
+    if (!tolower(method) %in% c("ebm", "regression")) {
+      lav_msg_stop(gettext(
+        "for models with random slopes, only method = \"EBM\" is
+         supported (the posterior means)."))
+    }
+    if (!is.null(newdata)) {
+      lav_msg_stop(gettext(
+        "newdata is not supported (yet) for models with random
+         slopes."))
+    }
+    if (fsm || mdist || rel || transform || append.data) {
+      lav_msg_stop(gettext(
+        "the fsm/mdist/rel/transform/append.data options are not
+         supported (yet) for models with random slopes."))
+    }
+    se_flag <- !is.null(se) && se != "none"
+    if (se_flag && level == 1L) {
+      lav_msg_stop(gettext(
+        "standard errors for the level-1 factor scores are not
+         available (yet) for models with random slopes."))
+    }
+    eb <- lav_mvn_cl_rs_eb(
+      lavmodel = lavmodel, lavdata = lavdata,
+      lavcache = object@Cache, se = se_flag
+    )
+    if (level == 2L) {
+      out1 <- eb$l2
+      se1 <- eb$se2
+    } else {
+      out1 <- eb$l1
+      se1 <- NULL
+    }
+    if (!label) {
+      colnames(out1) <- NULL
+    }
+    class(out1) <- c("lavaan.matrix", "matrix")
+    if (!drop.list.single.group) {
+      out1 <- list(out1)
+      if (!is.null(se1)) {
+        se1 <- list(se1)
+      }
+    }
+    if (se_flag) {
+      attr(out1, "se") <- se1
+    }
+    return(out1)
   }
 
   # warn if the model does not contain any 'regular' latent variables

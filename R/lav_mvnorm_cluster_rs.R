@@ -516,7 +516,8 @@ lav_mvn_cl_rs_implied <- function(lavmodel = NULL, glist = NULL,
   list(
     sigma.w = sigma_w, mu.y = mu_y, mu.y.b = mu_y_b, P = pmat,
     lmat = lmat, q0 = q0, z.v.idx = z_v_idx, pv = pv,
-    sigma.v = sigma_v, mu.v = mu_v, cc = cc, mu.exo = mu_exo
+    sigma.v = sigma_v, mu.v = mu_v, cc = cc, mu.exo = mu_exo,
+    eta.names = lv_names_b[eta_idx], meta = meta
   )
 }
 
@@ -1347,4 +1348,213 @@ lav_mvn_cl_rs_scores <- function(lavmodel = NULL, rs = NULL,
   }
 
   sc
+}
+
+
+# ---------------------------------------------------------------------
+# empirical Bayes (posterior mean) predictions
+# ---------------------------------------------------------------------
+#
+# - level 2: the posterior means mu0_j of the between latent variables
+#   (the between factors AND the random slopes) -- the same posterior
+#   as the EM E-step
+# - level 1: the within factor scores, conditional on the posterior
+#   means of the between random vector; because everything is linear
+#   and Gaussian, plugging in mu0_j gives the *exact* posterior mean
+#   E(eta_wij | all data of cluster j)
+lav_mvn_cl_rs_eb <- function(lavmodel = NULL, lavdata = NULL,
+                             lavcache = NULL, se = FALSE) {
+  # the rs cache
+  rs <- lavcache[[1]]$rs
+  if (is.null(rs)) {
+    rs_info <- lav_mvn_cl_rs_info(lavmodel = lavmodel,
+                                  lavdata = lavdata)
+    rs_stats <- lav_mvn_cl_rs_stats(
+      y1 = lavdata@X[[1]], lp = lavdata@Lp[[1]], rs_info = rs_info
+    )
+    rs <- list(info = rs_info, stats = rs_stats)
+  }
+  rs_info <- rs$info
+  rs_stats <- rs$stats
+
+  imp <- lav_mvn_cl_rs_implied(lavmodel, rs_info = rs_info)
+  if (is.null(imp)) {
+    lav_msg_stop(gettext(
+      "model-implied matrices could not be computed."))
+  }
+
+  p1 <- rs_info$p1
+  nx <- rs_info$nx
+  pv <- imp$pv
+  meta <- imp$meta
+  path_tab <- rs_info$path.tab
+  npaths <- nrow(path_tab)
+  z_v_idx <- imp$z.v.idx
+  path_zcol <- z_v_idx[path_tab$z.idx]
+  path_x <- path_tab$x.idx
+  nclusters <- rs_stats$nclusters
+  nj_all <- rs_stats$cluster.size
+
+  sigma_w_inv <- lav_mat_sym_inverse(imp$sigma.w, logdet = TRUE)
+  if (!is.finite(attr(sigma_w_inv, "logdet"))) {
+    lav_msg_stop(gettext(
+      "within covariance matrix is not positive definite."))
+  }
+  w_mat <- sigma_w_inv
+  sigma_v <- imp$sigma.v
+  mu_y <- imp$mu.y
+
+  # constants (as in the loglikelihood/E-step)
+  wl <- w_mat %*% imp$lmat
+  wq0 <- w_mat %*% imp$q0
+  q0twq0 <- crossprod(imp$q0, wq0)
+  q0twl <- crossprod(imp$q0, wl)
+  ltwl <- crossprod(imp$lmat, wl)
+  dpv <- diag(pv)
+
+  # ---- per-cluster posterior of v_b: mu0_j (and posterior sd) ----
+  mu0 <- matrix(0, nclusters, pv)
+  sd0 <- if (se) matrix(0, nclusters, pv) else NULL
+  for (j in seq_len(nclusters)) {
+    nj <- nj_all[j]
+    sy_j <- rs_stats$sy[j, ]
+    sx_j <- rs_stats$sx[j, ]
+    sxx_j <- rs_stats$sxx[[j]]
+    sxy_j <- rs_stats$sxy[[j]]
+
+    se_j <- sy_j - nj * mu_y
+    a_j <- nj * q0twq0
+    p_j <- as.numeric(crossprod(wq0, se_j))
+    cz <- matrix(0, pv, pv)
+    for (i in seq_len(npaths)) {
+      zcol <- path_zcol[i]
+      cz[, zcol] <- cz[, zcol] + q0twl[, i] * sx_j[path_x[i]]
+    }
+    a_j <- a_j + cz + t(cz)
+    for (i in seq_len(npaths)) {
+      for (k in seq_len(npaths)) {
+        a_j[path_zcol[i], path_zcol[k]] <-
+          a_j[path_zcol[i], path_zcol[k]] +
+          ltwl[i, k] * sxx_j[path_x[i], path_x[k]]
+      }
+    }
+    sxe_j <- sxy_j - outer(sx_j, mu_y)
+    for (i in seq_len(npaths)) {
+      zi <- path_zcol[i]
+      p_j[zi] <- p_j[zi] + sum(wl[, i] * sxe_j[path_x[i], ])
+    }
+
+    if (rs_info$nexo.b > 0L) {
+      d_j <- imp$mu.v +
+        as.numeric(imp$cc %*% (rs_stats$exo.b[j, ] - imp$mu.exo))
+    } else {
+      d_j <- imp$mu.v
+    }
+    z_j <- dpv + a_j %*% sigma_v
+    sigma0_j <- sigma_v %*% solve(z_j)
+    sigma0_j <- (sigma0_j + t(sigma0_j)) / 2
+    p_tilde <- p_j - as.numeric(a_j %*% d_j)
+    mu0[j, ] <- d_j + as.numeric(sigma0_j %*% p_tilde)
+    if (se) {
+      sd0[j, ] <- sqrt(pmax(diag(sigma0_j), 0))
+    }
+  }
+
+  # level-2 scores: the between latent variables (eta part of v_b)
+  l2 <- mu0[, seq_len(meta), drop = FALSE]
+  colnames(l2) <- imp$eta.names
+  if (se) {
+    se2 <- sd0[, seq_len(meta), drop = FALSE]
+    colnames(se2) <- imp$eta.names
+  }
+
+  # ---- level-1 scores: within factor scores given (mu0_j, x_ij) ----
+  # within model pieces (same construction as lav_mvn_cl_rs_implied)
+  nmat <- lavmodel@nmat
+  mm_w <- 1:nmat[1]
+  mlist_w <- lavmodel@GLIST[mm_w]
+  dimnames_w <- lavmodel@dimNames[mm_w]
+  names(dimnames_w) <- names(lavmodel@GLIST)[mm_w]
+  ov_names_w <- dimnames_w[["lambda"]][[1]]
+  lv_names_w <- dimnames_w[["lambda"]][[2]]
+  y_idx <- match(rs_info$y.names, ov_names_w)
+  x_lv_idx <- match(rs_info$x.names, lv_names_w)
+  lambda_w <- mlist_w$lambda
+  psi_w <- mlist_w$psi
+  beta_w <- mlist_w$beta
+  alpha_w <- mlist_w$alpha
+  nlv_w <- ncol(lambda_w)
+  if (is.null(beta_w)) {
+    ib_inv_w <- diag(nlv_w)
+  } else {
+    ib_inv_w <- solve(diag(nlv_w) - beta_w)
+  }
+  psi_w0 <- psi_w
+  alpha_w0 <- if (is.null(alpha_w)) {
+    matrix(0, nlv_w, 1L)
+  } else {
+    alpha_w
+  }
+  if (length(x_lv_idx) > 0L) {
+    psi_w0[x_lv_idx, ] <- 0
+    psi_w0[, x_lv_idx] <- 0
+    alpha_w0[x_lv_idx, 1L] <- 0
+  }
+
+  # 'real' latent variables: not an observed variable (dummy lv), and
+  # not an rv covariate
+  ov_names_data <- lavdata@ov.names[[1]]
+  real_idx <- which(!lv_names_w %in% ov_names_data)
+
+  y1 <- lavdata@X[[1]]
+  yy <- y1[, rs_info$y.data.idx, drop = FALSE]
+  xx <- y1[, rs_info$x.data.idx, drop = FALSE]
+  cluster_idx <- lavdata@Lp[[1]]$cluster.idx[[2]]
+  n1 <- nrow(y1)
+
+  if (length(real_idx) > 0L) {
+    # residuals: y_ij - E(y_ij | mu0_j, x_ij)
+    vhat <- mu0[cluster_idx, , drop = FALSE]
+    yhat <- matrix(mu_y, n1, p1, byrow = TRUE) +
+      xx %*% t(imp$P) + vhat %*% t(imp$q0)
+    # per-case slope inputs: z-hat * x
+    zx <- matrix(0, n1, npaths)
+    for (i in seq_len(npaths)) {
+      zx[, i] <- vhat[, path_zcol[i]] * xx[, path_x[i]]
+      yhat <- yhat + outer(zx[, i], imp$lmat[, i])
+    }
+    e_mat <- yy - yhat
+
+    # conditional mean of the (full) within lv vector:
+    # (I - B)^{-1} [ alpha0 + x (in the x-dummy slots)
+    #                       + zhat*x (in the lhs equations) ]
+    t_inp <- matrix(alpha_w0[, 1L], n1, nlv_w, byrow = TRUE)
+    if (length(x_lv_idx) > 0L) {
+      t_inp[, x_lv_idx] <- t_inp[, x_lv_idx, drop = FALSE] + xx
+    }
+    for (i in seq_len(npaths)) {
+      lhs_col <- match(path_tab$lhs[i], lv_names_w)
+      if (!is.na(lhs_col)) {
+        t_inp[, lhs_col] <- t_inp[, lhs_col] + zx[, i]
+      }
+    }
+    m_full <- t_inp %*% t(ib_inv_w)
+
+    # regression update: + Cov(eta, y) Sigma_w^{-1} e
+    veta0 <- ib_inv_w %*% psi_w0 %*% t(ib_inv_w)
+    ceta_y <- (veta0 %*% t(lambda_w[y_idx, , drop = FALSE]))[real_idx, ,
+      drop = FALSE
+    ]
+    l1 <- m_full[, real_idx, drop = FALSE] +
+      e_mat %*% (w_mat %*% t(ceta_y))
+    colnames(l1) <- lv_names_w[real_idx]
+  } else {
+    l1 <- matrix(0, n1, 0L)
+  }
+
+  out <- list(l1 = l1, l2 = l2, cluster.idx = cluster_idx)
+  if (se) {
+    out$se2 <- se2
+  }
+  out
 }

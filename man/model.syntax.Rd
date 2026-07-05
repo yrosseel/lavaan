@@ -477,6 +477,11 @@ BIC) can be used. Standard errors can be \code{"standard"} (observed
 information) or \code{"robust.huber.white"} (sandwich; this is also
 what \code{estimator = "MLR"} implies). Both \code{optim.method =
 "nlminb"} (the default) and \code{optim.method = "em"} are supported.
+\code{lavPredict()} provides empirical Bayes (posterior mean)
+predictions: with \code{level = 2}, the between-level latent
+variables including the random slopes (and, with
+\code{se = "standard"}, their posterior standard deviations); with
+\code{level = 1} (the default), the within-level factor scores.
 }
 
 \section{(In)equality constraints}{
