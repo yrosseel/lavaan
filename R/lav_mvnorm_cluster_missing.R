@@ -886,6 +886,282 @@ lav_mvn_cl_mi_em_sat <- function(y1 = NULL,
   )
 }
 
+# the posterior distribution of the cluster-level unknowns, given the
+# observed data and the model-implied statistics (Mu.W, Sigma.W, Mu.B,
+# Sigma.B): per cluster j, w_j = (beta_j, ztilde_j[mis]) has posterior
+# N(m1_j, C1_j) (see the E-step of lav_mvn_cl_mi_em_engine); also
+# returns the per-pattern sweep regressions (breg, ccond) needed to
+# impute the missing level-1 values, and various intermediate
+# quantities (used by lav_mvn_cl_mi_scov_louis and
+# lav_mvn_cl_mi_estep_ranef)
+lav_mvn_cl_mi_posterior <- function(y1 = NULL,
+                                    y2 = NULL,
+                                    lp = NULL,
+                                    mp = NULL,
+                                    mu_w = NULL, # implied Mu.W
+                                    sigma_w = NULL, # implied Sigma.W
+                                    mu_b = NULL, # implied Mu.B
+                                    sigma_b = NULL) { # implied Sigma.B
+  # map implied to 2l matrices
+  out <- lav_mvn_cl_implied22l(
+    lp = lp, mu_w = mu_w, mu_b = mu_b,
+    sigma_w = sigma_w, sigma_b = sigma_b
+  )
+  mu_y <- out$mu.y
+  mu_z <- out$mu.z
+  sw <- out$sigma.w
+  sb <- out$sigma.b[lp$both.idx[[2]], lp$both.idx[[2]], drop = FALSE]
+  sigma_zz <- out$sigma.zz
+  syz <- out$sigma.yz[lp$both.idx[[2]], , drop = FALSE]
+
+  # dimensions and indices
+  nclusters <- lp$nclusters[[2]]
+  cluster_idx <- lp$cluster.idx[[2]]
+  between_idx <- lp$between.idx[[2]]
+  both_idx <- lp$both.idx[[2]]
+  nz <- length(between_idx)
+  nb <- length(both_idx)
+  zp <- mp$Zp
+  if (nz > 0L) {
+    y1w <- y1[, -between_idx, drop = FALSE]
+    z <- y2[, between_idx, drop = FALSE]
+    zc <- t(t(z) - mu_z)
+  } else {
+    y1w <- y1
+    z <- NULL
+    zc <- NULL
+  }
+  ny <- ncol(y1w)
+  y1w_c <- t(t(y1w) - mu_y)
+
+  # per-pattern quantities + A.j and p.j per cluster
+  sigma_w_inv <- solve.default(sw)
+  winv_p <- breg_p <- ccond_p <- vector("list", mp$npatterns)
+  alist_1 <- rep(list(matrix(0, nb, nb)), nclusters)
+  pij <- matrix(0, nrow(y1w), ny)
+  for (p in seq_len(mp$npatterns)) {
+    o_idx <- which(mp$pat[p, ])
+    na_idx <- which(!mp$pat[p, ])
+    case_idx <- mp$case.idx[[p]]
+    if (length(na_idx) > 0L) {
+      wp_inv <- lav_mat_sym_inverse_update(
+        s_inv = sigma_w_inv, rm_idx = na_idx
+      )
+      breg_p[[p]] <- sw[na_idx, o_idx, drop = FALSE] %*% wp_inv
+      ccond_p[[p]] <- sw[na_idx, na_idx, drop = FALSE] -
+        breg_p[[p]] %*% sw[o_idx, na_idx, drop = FALSE]
+    } else {
+      wp_inv <- sigma_w_inv
+    }
+    winv_p[[p]] <- wp_inv
+    pij[case_idx, o_idx] <- y1w_c[case_idx, o_idx, drop = FALSE] %*% wp_inv
+    a_full <- matrix(0, ny, ny)
+    a_full[o_idx, o_idx] <- wp_inv
+    a_bb <- a_full[both_idx, both_idx, drop = FALSE]
+    j1_idx <- mp$j1.idx[[p]]
+    j_freq <- mp$j.freq[[p]]
+    for (k in seq_along(j1_idx)) {
+      alist_1[[j1_idx[k]]] <- alist_1[[j1_idx[k]]] + (a_bb * j_freq[k])
+    }
+  }
+  pj <- rowsum.default(pij[, both_idx, drop = FALSE], cluster_idx,
+    reorder = FALSE, na.rm = TRUE
+  )
+
+  # z-patterns: prior of (beta, z.mis) given z.obs
+  zmis_q <- zpat2j <- NULL
+  if (nz > 0L) {
+    zpat2j <- integer(nclusters)
+    for (q in seq_len(zp$npatterns)) {
+      zpat2j[zp$case.idx[[q]]] <- q
+    }
+    if (length(zp$empty.idx) > 0L) {
+      zpat2j[zp$empty.idx] <- zp$npatterns + 1L
+    }
+    nqz <- zp$npatterns + (length(zp$empty.idx) > 0L)
+    c0_q <- m0coef_q <- zmis_q <- vector("list", nqz)
+    for (q in seq_len(nqz)) {
+      if (q > zp$npatterns) {
+        zo_idx <- integer(0L)
+        zm_idx <- seq_len(nz)
+      } else {
+        zo_idx <- which(zp$pat[q, ])
+        zm_idx <- which(!zp$pat[q, ])
+      }
+      zmis_q[[q]] <- zm_idx
+      k_q <- rbind(
+        cbind(sb, syz[, zm_idx, drop = FALSE]),
+        cbind(
+          t(syz[, zm_idx, drop = FALSE]),
+          sigma_zz[zm_idx, zm_idx, drop = FALSE]
+        )
+      )
+      if (length(zo_idx) > 0L) {
+        l_q <- rbind(
+          syz[, zo_idx, drop = FALSE],
+          sigma_zz[zm_idx, zo_idx, drop = FALSE]
+        )
+        soo_inv <- solve.default(sigma_zz[zo_idx, zo_idx, drop = FALSE])
+        m0coef_q[[q]] <- l_q %*% soo_inv
+        c0_q[[q]] <- k_q - m0coef_q[[q]] %*% t(l_q)
+      } else {
+        m0coef_q[[q]] <- matrix(0, nb + length(zm_idx), 0L)
+        c0_q[[q]] <- k_q
+      }
+    }
+  }
+
+  # per-cluster posterior of w = (beta, z.mis): N(m1, C1)
+  m1_list <- c1_list <- vector("list", nclusters)
+  for (j in seq_len(nclusters)) {
+    a_j <- alist_1[[j]]
+    p_j <- pj[j, ]
+    if (nz > 0L) {
+      q <- zpat2j[j]
+      c0 <- c0_q[[q]]
+      zm_idx <- zmis_q[[q]]
+      nzm <- length(zm_idx)
+      if (q > zp$npatterns) {
+        m0 <- numeric(nb + nzm)
+      } else {
+        zo_idx <- which(zp$pat[q, ])
+        m0 <- drop(m0coef_q[[q]] %*% zc[j, zo_idx])
+      }
+    } else {
+      c0 <- sb
+      nzm <- 0L
+      m0 <- numeric(nb)
+    }
+    nw <- nb + nzm
+    m_j <- c0[, seq_len(nb), drop = FALSE] %*% a_j
+    m_j <- cbind(m_j, matrix(0, nw, nzm))
+    m_j[lav_mat_diag_idx(nw)] <- m_j[lav_mat_diag_idx(nw)] + 1
+    rhs <- cbind(m0 + drop(c0[, seq_len(nb), drop = FALSE] %*% p_j), c0)
+    sol <- solve.default(m_j, rhs)
+    m1_list[[j]] <- sol[, 1L]
+    c1 <- sol[, -1L, drop = FALSE]
+    c1_list[[j]] <- (c1 + t(c1)) / 2
+  }
+
+  list(
+    m1 = m1_list, c1 = c1_list,
+    breg = breg_p, ccond = ccond_p, winv = winv_p,
+    alist = alist_1, pj = pj,
+    y1w = y1w, y1w_c = y1w_c, z = z, zc = zc,
+    mu_y = mu_y, mu_z = mu_z,
+    sb = sb, syz = syz, sigma_zz = sigma_zz, sigma_w = sw,
+    mu_b_2l = out$mu.b, mu_w_2l = out$mu.w,
+    both_idx = both_idx, between_idx = between_idx,
+    zmis_q = zmis_q, zpat2j = zpat2j
+  )
+}
+
+# the E-step 'random effects': the posterior means of the cluster-level
+# components nu_j = (mu_b + beta_j), given ALL the observed data; this
+# is the missing-data counterpart of lav_mvn_cl_em_estep_ranef()
+#
+# returns a nclusters x ny matrix (ny = number of level-1 variables) in
+# the same convention as the complete-data version: for both-level
+# variables, the (uncentered, total-mean scale) posterior mean of nu_j;
+# zero for within-only variables
+#
+# if se = TRUE, the posterior standard deviations are returned in the
+# "se" attribute
+#
+# if impute = TRUE, two extra attributes are returned:
+# - "y1w.imputed": the level-1 data (level-1 variables only), with the
+#   missing values replaced by their posterior means
+#   E[y.mis | y.obs, E(beta)] (exact, as the conditional mean is linear
+#   in beta)
+# - "z.imputed": the cluster-level data (between-only variables, one
+#   row per cluster), with the missing values replaced by their
+#   posterior means
+lav_mvn_cl_mi_estep_ranef <- function(y1 = NULL,
+                                      y2 = NULL,
+                                      lp = NULL,
+                                      mp = NULL,
+                                      mu_w = NULL, # implied Mu.W
+                                      sigma_w = NULL, # implied Sigma.W
+                                      mu_b = NULL, # implied Mu.B
+                                      sigma_b = NULL, # implied Sigma.B
+                                      se = FALSE,
+                                      impute = FALSE) {
+  post <- lav_mvn_cl_mi_posterior(
+    y1 = y1, y2 = y2, lp = lp, mp = mp,
+    mu_w = mu_w, sigma_w = sigma_w, mu_b = mu_b, sigma_b = sigma_b
+  )
+  nclusters <- lp$nclusters[[2]]
+  both_idx <- post$both_idx
+  nb <- length(both_idx)
+  nz <- length(post$between_idx)
+  ny <- ncol(post$y1w)
+
+  # E(nu_j | all observed data), in the y1w space (cf. the complete-data
+  # version: mu_b_2l[both] is the total mean of the both-level variables)
+  eb <- matrix(0, nclusters, nb)
+  for (j in seq_len(nclusters)) {
+    eb[j, ] <- post$m1[[j]][seq_len(nb)]
+  }
+  mb_j <- matrix(0, nrow = nclusters, ncol = ny)
+  mb_j[, both_idx] <- rep(post$mu_b_2l[both_idx], each = nclusters) + eb
+
+  # posterior standard deviations
+  if (se) {
+    se_j <- matrix(0, nrow = nclusters, ncol = ny)
+    for (j in seq_len(nclusters)) {
+      c1_diag <- diag(post$c1[[j]])[seq_len(nb)]
+      c1_diag[c1_diag < 0] <- 0
+      se_j[j, both_idx] <- sqrt(c1_diag)
+    }
+    attr(mb_j, "se") <- se_j
+  }
+
+  # impute the missing values by their posterior means
+  if (impute) {
+    # level-1 variables: E[y.mis | y.obs, beta] is linear in beta, so
+    # plugging in E[beta] gives the exact posterior mean
+    y1w_i <- post$y1w
+    eb_full <- matrix(0, nclusters, ny)
+    eb_full[, both_idx] <- eb
+    for (p in seq_len(mp$npatterns)) {
+      na_idx <- which(!mp$pat[p, ])
+      if (length(na_idx) == 0L) {
+        next
+      }
+      o_idx <- which(mp$pat[p, ])
+      case_idx <- mp$case.idx[[p]]
+      j_idx <- mp$j.idx[[p]]
+      f_o <- post$y1w_c[case_idx, o_idx, drop = FALSE] -
+        eb_full[j_idx, o_idx, drop = FALSE]
+      y1w_i[case_idx, na_idx] <-
+        t(t(f_o %*% t(post$breg[[p]])) + post$mu_y[na_idx]) +
+        eb_full[j_idx, na_idx, drop = FALSE]
+    }
+    # empty units (all level-1 variables missing)
+    if (length(mp$empty.idx) > 0L) {
+      cl_empty <- lp$cluster.idx[[2]][mp$empty.idx]
+      y1w_i[mp$empty.idx, ] <-
+        t(t(eb_full[cl_empty, , drop = FALSE]) + post$mu_y)
+    }
+    attr(mb_j, "y1w.imputed") <- y1w_i
+
+    # between-only variables (one row per cluster)
+    if (nz > 0L) {
+      z_i <- post$z
+      for (j in seq_len(nclusters)) {
+        zm_idx <- post$zmis_q[[post$zpat2j[j]]]
+        if (length(zm_idx) > 0L) {
+          z_i[j, zm_idx] <- post$mu_z[zm_idx] +
+            post$m1[[j]][nb + seq_along(zm_idx)]
+        }
+      }
+      attr(mb_j, "z.imputed") <- z_i
+    }
+  }
+
+  mb_j
+}
+
 # Mu.W, Mu.B, Sigma.W, Sigma.B are the model-implied statistics
 lav_mvn_cl_mi_dlogl_2l_samp <- function(
     y1 = NULL,

@@ -100,113 +100,18 @@ lav_mvn_cl_mi_scov_louis <- function(y1 = NULL,
   kny <- lav_mat_com(ny, ny)
 
   # ---- posterior machinery (same as the E-step) --------------------
-  sigma_w_inv <- ow
-  winv_p <- breg_p <- ccond_p <- vector("list", mp$npatterns)
-  alist_1 <- rep(list(matrix(0, nb, nb)), nclusters)
-  pij <- matrix(0, nrow(y1w), ny)
-  for (p in seq_len(mp$npatterns)) {
-    o_idx <- which(mp$pat[p, ])
-    na_idx <- which(!mp$pat[p, ])
-    case_idx <- mp$case.idx[[p]]
-    if (length(na_idx) > 0L) {
-      wp_inv <- lav_mat_sym_inverse_update(
-        s_inv = sigma_w_inv, rm_idx = na_idx
-      )
-      breg_p[[p]] <- sw[na_idx, o_idx, drop = FALSE] %*% wp_inv
-      ccond_p[[p]] <- sw[na_idx, na_idx, drop = FALSE] -
-        breg_p[[p]] %*% sw[o_idx, na_idx, drop = FALSE]
-    } else {
-      wp_inv <- sigma_w_inv
-    }
-    winv_p[[p]] <- wp_inv
-    pij[case_idx, o_idx] <- y1w_c[case_idx, o_idx, drop = FALSE] %*% wp_inv
-    a_full <- matrix(0, ny, ny)
-    a_full[o_idx, o_idx] <- wp_inv
-    a_bb <- a_full[both_idx, both_idx, drop = FALSE]
-    j1_idx <- mp$j1.idx[[p]]
-    j_freq <- mp$j.freq[[p]]
-    for (k in seq_along(j1_idx)) {
-      alist_1[[j1_idx[k]]] <- alist_1[[j1_idx[k]]] + (a_bb * j_freq[k])
-    }
-  }
-  cluster_idx <- lp$cluster.idx[[2]]
-  pj <- rowsum.default(pij[, both_idx, drop = FALSE], cluster_idx,
-    reorder = FALSE, na.rm = TRUE
+  # (shared with lav_mvn_cl_mi_estep_ranef)
+  post <- lav_mvn_cl_mi_posterior(
+    y1 = y1, y2 = y2, lp = lp, mp = mp,
+    mu_w = mu_w, sigma_w = sigma_w, mu_b = mu_b, sigma_b = sigma_b
   )
-
-  # z-patterns: prior of (beta, z.mis) given z.obs
-  if (nz > 0L) {
-    zpat2j <- integer(nclusters)
-    for (q in seq_len(zp$npatterns)) {
-      zpat2j[zp$case.idx[[q]]] <- q
-    }
-    if (length(zp$empty.idx) > 0L) {
-      zpat2j[zp$empty.idx] <- zp$npatterns + 1L
-    }
-    nqz <- zp$npatterns + (length(zp$empty.idx) > 0L)
-    c0_q <- m0coef_q <- zmis_q <- vector("list", nqz)
-    for (q in seq_len(nqz)) {
-      if (q > zp$npatterns) {
-        zo_idx <- integer(0L)
-        zm_idx <- seq_len(nz)
-      } else {
-        zo_idx <- which(zp$pat[q, ])
-        zm_idx <- which(!zp$pat[q, ])
-      }
-      zmis_q[[q]] <- zm_idx
-      k_q <- rbind(
-        cbind(sb, syz[, zm_idx, drop = FALSE]),
-        cbind(
-          t(syz[, zm_idx, drop = FALSE]),
-          sigma_zz[zm_idx, zm_idx, drop = FALSE]
-        )
-      )
-      if (length(zo_idx) > 0L) {
-        l_q <- rbind(
-          syz[, zo_idx, drop = FALSE],
-          sigma_zz[zm_idx, zo_idx, drop = FALSE]
-        )
-        soo_inv <- solve.default(sigma_zz[zo_idx, zo_idx, drop = FALSE])
-        m0coef_q[[q]] <- l_q %*% soo_inv
-        c0_q[[q]] <- k_q - m0coef_q[[q]] %*% t(l_q)
-      } else {
-        m0coef_q[[q]] <- matrix(0, nb + length(zm_idx), 0L)
-        c0_q[[q]] <- k_q
-      }
-    }
-  }
-
-  # per-cluster posterior of w = (beta, z.mis): N(m1, C1)
-  m1_list <- c1_list <- vector("list", nclusters)
-  for (j in seq_len(nclusters)) {
-    a_j <- alist_1[[j]]
-    p_j <- pj[j, ]
-    if (nz > 0L) {
-      q <- zpat2j[j]
-      c0 <- c0_q[[q]]
-      zm_idx <- zmis_q[[q]]
-      nzm <- length(zm_idx)
-      if (q > zp$npatterns) {
-        m0 <- numeric(nb + nzm)
-      } else {
-        zo_idx <- which(zp$pat[q, ])
-        m0 <- drop(m0coef_q[[q]] %*% zc[j, zo_idx])
-      }
-    } else {
-      c0 <- sb
-      nzm <- 0L
-      m0 <- numeric(nb)
-    }
-    nw <- nb + nzm
-    m_j <- c0[, seq_len(nb), drop = FALSE] %*% a_j
-    m_j <- cbind(m_j, matrix(0, nw, nzm))
-    m_j[lav_mat_diag_idx(nw)] <- m_j[lav_mat_diag_idx(nw)] + 1
-    rhs <- cbind(m0 + drop(c0[, seq_len(nb), drop = FALSE] %*% p_j), c0)
-    sol <- solve.default(m_j, rhs)
-    m1_list[[j]] <- sol[, 1L]
-    c1 <- sol[, -1L, drop = FALSE]
-    c1_list[[j]] <- (c1 + t(c1)) / 2
-  }
+  breg_p <- post$breg
+  ccond_p <- post$ccond
+  m1_list <- post$m1
+  c1_list <- post$c1
+  zmis_q <- post$zmis_q
+  zpat2j <- post$zpat2j
+  cluster_idx <- lp$cluster.idx[[2]]
 
   # ---- per-pattern constants + data aggregates ---------------------
   # G_p, F_p, V_p; per (pattern, cluster): n_pj and sum of yc[obs]

@@ -930,22 +930,55 @@ lav_predict_eta_normal <- function(lavobject = NULL, # for convenience
       implied_group <- lapply(lavimplied, function(x) x[group_idx])
 
       # random effects (=random intercepts or cluster means)
-      out <- lav_mvn_cl_implied22l(
-        lp = lp,
-        implied = implied_group
-      )
-      mb_j <- lav_mvn_cl_em_estep_ranef(
-        ylp = ylp, lp = lp,
-        sigma_w = out$sigma.w, sigma_b = out$sigma.b,
-        sigma_zz = out$sigma.zz, sigma_yz = out$sigma.yz,
-        mu_z = out$mu.z, mu_w = out$mu.w, mu_b = out$mu.b,
-        se = FALSE
-      )
+      if (lavdata@missing %in% c("ml", "ml.x")) {
+        # missing data: use the posterior means from the E-step,
+        # conditioning on ALL the observed data (new in 0.7-2); the
+        # missing values are replaced by their posterior means, so
+        # that the (linear) factor score computation below yields the
+        # exact posterior means E(eta | all observed data)
+        #
+        # note: the callers always pass data_obs, even when it is just
+        # the internal copy of the data; only *genuinely* new data is
+        # not supported (the missing patterns and cluster structure of
+        # the original data are used below)
+        if (newdata_flag &&
+            !identical(data_obs[[g]], lavdata@X[[g]]) &&
+            !isTRUE(all.equal(data_obs[[g]], lavdata@X[[g]]))) {
+          lav_msg_stop(gettext(
+            "lavPredict() with newdata is not supported (yet) for
+             two-level models with missing = \"ml\""))
+        }
+        mb_j <- lav_mvn_cl_mi_estep_ranef(
+          y1 = data_obs[[g]], y2 = ylp[[2]]$Y2,
+          lp = lp, mp = lavdata@Mp[[g]],
+          mu_w = implied_group$mean[[1]],
+          sigma_w = implied_group$cov[[1]],
+          mu_b = implied_group$mean[[2]],
+          sigma_b = implied_group$cov[[2]],
+          se = FALSE, impute = TRUE
+        )
+      } else {
+        out <- lav_mvn_cl_implied22l(
+          lp = lp,
+          implied = implied_group
+        )
+        mb_j <- lav_mvn_cl_em_estep_ranef(
+          ylp = ylp, lp = lp,
+          sigma_w = out$sigma.w, sigma_b = out$sigma.b,
+          sigma_zz = out$sigma.zz, sigma_yz = out$sigma.yz,
+          mu_z = out$mu.z, mu_w = out$mu.w, mu_b = out$mu.b,
+          se = FALSE
+        )
+      }
 
       ov_idx <- lp$ov.idx
 
       if (level == 1L) {
         data_w <- data_obs[[g]][, ov_idx[[1]]]
+        # with missing = "ml": use the (posterior-mean) completed data
+        if (!is.null(attr(mb_j, "y1w.imputed"))) {
+          data_w <- attr(mb_j, "y1w.imputed")
+        }
         data_b <- mb_j[lp$cluster.idx[[2]], , drop = FALSE]
 
         # center
@@ -962,6 +995,11 @@ lav_predict_eta_normal <- function(lavobject = NULL, # for convenience
             !duplicated(lp$cluster.idx[[2]]),
             between_idx
           ]
+          # with missing = "ml": use the (posterior-mean) completed
+          # between-only variables
+          if (!is.null(attr(mb_j, "z.imputed"))) {
+            data_b_1[, between_idx] <- attr(mb_j, "z.imputed")
+          }
         }
         data_obs_g <- data_b_1[, ov_idx[[2]]]
       } else {
@@ -1013,7 +1051,10 @@ lav_predict_eta_normal <- function(lavobject = NULL, # for convenience
     }
 
     # compute factor scores
-    if (lavdata@missing %in% c("ml", "ml.x")) {
+    # (for two-level models with missing = "ml", the data have been
+    # completed by their posterior means above, so the complete-data
+    # expressions apply)
+    if (lavdata@missing %in% c("ml", "ml.x") && lavdata@nlevels == 1L) {
       # missing patterns for this group
       mp <- mp_1[[g]]
 
@@ -1115,7 +1156,7 @@ lav_predict_eta_normal <- function(lavobject = NULL, # for convenience
 
     # standard error
     if (se == "standard" && !transform) { # for now
-      if (lavdata@missing %in% c("ml", "ml.x")) {
+      if (lavdata@missing %in% c("ml", "ml.x") && lavdata@nlevels == 1L) {
         se_1[[g]] <- se_g
         if (acov == "standard") {
           acov_1[[g]] <- acov_g

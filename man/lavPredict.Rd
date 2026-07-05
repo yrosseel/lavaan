@@ -76,7 +76,11 @@ newdata) dataset.}
 If \code{level = 1}, only factor scores for latent variable
 defined at the first (within) level are computed; if \code{level = 2},
 only factor scores for latent variables defined at the second (between) level
-are computed.}
+are computed. For two-level models with \code{missing = "ml"}, the
+posterior means of the cluster-level components and of the missing
+values (given all the observed data; computed as in the E-step of the
+EM algorithm) are used, so that the factor scores are the exact
+posterior means given all the observed data (new in 0.7-2).}
 \item{optim.method}{Character string. Only used in the categorical case.
 If \code{"nlminb"} (the default in 0.5), the \code{"nlminb()"} function is used
 for the optimization. If \code{"bfgs"} or \code{"BFGS"} (the default in 0.6),

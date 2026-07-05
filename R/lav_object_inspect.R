@@ -3396,12 +3396,25 @@ lav_inspect_ranef <- function(object, add_labels = FALSE,
     implied_group <- lapply(lavimplied, function(x) x[group_idx])
 
     # random effects (=random intercepts or cluster means)
-    out <- lav_mvn_cl_implied22l(lp = tmp_lp, implied = implied_group)
-    mb_j <- lav_mvn_cl_em_estep_ranef(ylp = tmp_ylp, lp = tmp_lp,
-      sigma_w = out$sigma.w, sigma_b = out$sigma.b,
-      sigma_zz = out$sigma.zz, sigma_yz = out$sigma.yz,
-      mu_z = out$mu.z, mu_w = out$mu.w, mu_b = out$mu.b,
-      se = FALSE)
+    if (lavdata@missing %in% c("ml", "ml.x")) {
+      # missing data: posterior means from the E-step, conditioning on
+      # ALL the observed data (new in 0.7-2)
+      mb_j <- lav_mvn_cl_mi_estep_ranef(
+        y1 = lavdata@X[[g]], y2 = tmp_ylp[[2]]$Y2,
+        lp = tmp_lp, mp = lavdata@Mp[[g]],
+        mu_w = implied_group$mean[[1]],
+        sigma_w = implied_group$cov[[1]],
+        mu_b = implied_group$mean[[2]],
+        sigma_b = implied_group$cov[[2]],
+        se = FALSE)
+    } else {
+      out <- lav_mvn_cl_implied22l(lp = tmp_lp, implied = implied_group)
+      mb_j <- lav_mvn_cl_em_estep_ranef(ylp = tmp_ylp, lp = tmp_lp,
+        sigma_w = out$sigma.w, sigma_b = out$sigma.b,
+        sigma_zz = out$sigma.zz, sigma_yz = out$sigma.yz,
+        mu_z = out$mu.z, mu_w = out$mu.w, mu_b = out$mu.b,
+        se = FALSE)
+    }
     return_value[[g]] <- mb_j
 
     ov_names_l <- lavdata@ov.names.l[[g]]
