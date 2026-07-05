@@ -430,6 +430,44 @@ lav_model_info_firstorder <- function(lavmodel = NULL,
     augmented <- TRUE
   }
 
+  # random slopes (rv() modifier): the h1 route is not available;
+  # compute the first-order information directly from (numerically
+  # obtained) per-cluster scores in model-parameter space; the 'unit'
+  # convention for two-level models is per *cluster*: B0 =
+  # crossprod(scores) / nclusters (matching the hessian-based observed
+  # information, which is also expressed per cluster)
+  if (length(lavmodel@rv.ov) > 0L || length(lavmodel@rv.lv) > 0L) {
+    g <- 1L # single group only (enforced elsewhere)
+    rs <- lavcache[[g]]$rs
+    if (is.null(rs)) {
+      rs_info <- lav_mvn_cl_rs_info(lavmodel = lavmodel,
+                                    lavdata = lavdata)
+      rs_stats <- lav_mvn_cl_rs_stats(
+        y1 = lavdata@X[[g]], lp = lavdata@Lp[[g]], rs_info = rs_info
+      )
+      rs <- list(info = rs_info, stats = rs_stats)
+    }
+    sc <- lav_mvn_cl_rs_scores(lavmodel = lavmodel, rs = rs)
+    nclusters <- lavdata@Lp[[g]]$nclusters[[2]]
+    information <- crossprod(sc) / nclusters
+    b0_group <- list(information)
+
+    if (augmented) {
+      information <-
+        lav_model_info_augment_invert(
+          lavmodel = lavmodel,
+          information = information,
+          check_pd = check_pd,
+          inverted = inverted,
+          use_ginv = use_ginv
+        )
+    }
+    if (extra) {
+      attr(information, "B0.group") <- b0_group
+    }
+    return(information)
+  }
+
   b0_group <- vector("list", lavsamplestats@ngroups)
 
   # 1. Delta

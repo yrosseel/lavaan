@@ -473,7 +473,10 @@ carry a random slope must be observed within-only (level-1) variables.
 The (observed-data) loglikelihood is \emph{conditional} on the exogenous
 covariates. No chi-square test statistic (or fit indices) are available
 for models with random slopes; only loglikelihood-based measures (AIC,
-BIC) can be used.
+BIC) can be used. Standard errors can be \code{"standard"} (observed
+information) or \code{"robust.huber.white"} (sandwich; this is also
+what \code{estimator = "MLR"} implies). Both \code{optim.method =
+"nlminb"} (the default) and \code{optim.method = "em"} are supported.
 }
 
 \section{(In)equality constraints}{

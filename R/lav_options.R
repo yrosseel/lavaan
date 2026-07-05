@@ -476,10 +476,10 @@ lav_options_set <- function(opt = NULL) {
         "random slopes (rv() modifier) are not supported in combination
          with sampling weights."))
     }
-    if (!opt$estimator %in% c("ml", "default")) {
+    if (!opt$estimator %in% c("ml", "mlr", "default")) {
       lav_msg_stop(gettextf(
-        "random slopes (rv() modifier) require estimator = %s.",
-        dQuote("ML")))
+        "random slopes (rv() modifier) require estimator = %s or %s.",
+        dQuote("ML"), dQuote("MLR")))
     }
     if (opt$missing %in% c("ml", "ml.x", "two.stage", "robust.two.stage")) {
       lav_msg_stop(gettext(
@@ -506,16 +506,26 @@ lav_options_set <- function(opt = NULL) {
     # h1 loglikelihood is NOT comparable to the (conditional-on-x)
     # loglikelihood of the random-slope model
     opt$baseline <- FALSE
-    if (!all(opt$test %in% c("default", "none"))) {
+    # note: estimator = "MLR" implies test = "yuan.bentler.mplus" (set
+    # in lav_options_mimic); this is not an explicit user request, so
+    # we do not warn about it
+    if (!all(opt$test %in% c("default", "none")) &&
+        !(opt$estimator == "mlr" &&
+          all(opt$test %in% c("yuan.bentler", "yuan.bentler.mplus")))) {
       lav_msg_warn(gettext(
         "test statistics are not available (yet) for models with random
          slopes; test set to \"none\"."))
     }
     opt$test <- "none"
-    if (!opt$se %in% c("default", "none", "standard")) {
+    if (opt$se == "robust") {
+      opt$se <- "robust.huber.white"
+    }
+    if (!opt$se %in% c("default", "none", "standard",
+                       "robust.huber.white")) {
       lav_msg_stop(gettextf(
         "`se' argument must be one of %s for models with random slopes.",
-        lav_msg_view(c("none", "standard"), log_sep = "or")))
+        lav_msg_view(c("none", "standard", "robust.huber.white"),
+                     log_sep = "or")))
     }
     # standard errors: numerical hessian of the observed-data loglikelihood
     opt$observed.information[1] <- "hessian"

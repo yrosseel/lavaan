@@ -1303,3 +1303,48 @@ lav_mvn_cl_rs_em_h0 <- function(lavsamplestats = NULL, lavdata = NULL,
 
   x
 }
+
+
+# ---------------------------------------------------------------------
+# per-cluster scores and the first-order (`meat') information
+# ---------------------------------------------------------------------
+
+# per-cluster scores: d loglik_j / d theta (natural loglikelihood
+# scale), computed numerically (central differences) from the
+# per-cluster loglikelihood vector of lav_mvn_cl_rs_loglik()
+#
+# returns a (nclusters x npar) matrix
+lav_mvn_cl_rs_scores <- function(lavmodel = NULL, rs = NULL,
+                                 h = 1e-05) {
+  x0 <- lav_model_get_parameters(lavmodel)
+  npar <- length(x0)
+  nclusters <- rs$stats$nclusters
+
+  ll_cluster <- function(x) {
+    lavmodel2 <- lav_model_set_parameters(lavmodel, x = x)
+    imp <- lav_mvn_cl_rs_implied(lavmodel2, rs_info = rs$info)
+    out <- lav_mvn_cl_rs_loglik(
+      rs_stats = rs$stats, imp = imp, rs_info = rs$info,
+      log2pi = FALSE, minus_two = FALSE, per_cluster = TRUE
+    )
+    attr(out, "loglik.cluster")
+  }
+
+  sc <- matrix(0, nclusters, npar)
+  for (k in seq_len(npar)) {
+    h_k <- h * max(1, abs(x0[k]))
+    x_right <- x_left <- x0
+    x_right[k] <- x0[k] + h_k
+    x_left[k] <- x0[k] - h_k
+    ll_right <- ll_cluster(x_right)
+    ll_left <- ll_cluster(x_left)
+    if (is.null(ll_right) || is.null(ll_left)) {
+      lav_msg_stop(gettext(
+        "per-cluster scores could not be computed (non-finite
+         loglikelihood near the parameter estimates)."))
+    }
+    sc[, k] <- (ll_right - ll_left) / (2 * h_k)
+  }
+
+  sc
+}
