@@ -638,7 +638,9 @@ Optimization options:
       gives the same solution; if nlminb fails from the early start, a
       safety net resumes the EM iterations with the strict \code{fx_tol}
       (and tries the hand-off once more), reproducing the non-early
-      behavior.}
+      behavior. If \code{verbose = TRUE}, only the EM (or SQUAREM) cycles
+      are shown; set the \code{verbose} element to \code{TRUE} to also show
+      the optimizer output of each (inner) M-step.}
 }
 
 Parallelization options (currently only used for bootstrapping):

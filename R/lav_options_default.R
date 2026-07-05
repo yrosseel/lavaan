@@ -496,6 +496,9 @@ lav_options_default <- function() {
   # loosened fx_tol) and let nlminb finish? (a safety net reverts to
   # the strict fx_tol if nlminb fails)
   elm(c("em.args", "early_handoff"), TRUE, bl = TRUE)
+  # if verbose = TRUE, also show the optimizer output of each (inner)
+  # M-step? (off by default, so only the EM/SQUAREM cycles are shown)
+  elm(c("em.args", "verbose"), FALSE, bl = TRUE)
 
   # em-h1-args sublist (EM algorithm for the unrestricted (h1) model)
   # "default" values are resolved later: single-level (missing data) uses

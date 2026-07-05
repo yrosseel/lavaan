@@ -906,6 +906,7 @@ lav_mvn_cl_em_h0 <- function(lavsamplestats = NULL,
                                      max_iter = 5000,
                                      mstep_max_iter = 10000L,
                                      mstep_rel_tol = 1e-10,
+                                     mstep_verbose = FALSE, # = em.args$verbose
                                      acceleration = "none",
                                      fused = TRUE) { # = em.args$fused
   if (is.null(fused)) {
@@ -1018,6 +1019,15 @@ lav_mvn_cl_em_h0 <- function(lavsamplestats = NULL,
     local_partable <- mstep_partable
     # give current values as starting values
     local_partable$ustart[free_idx] <- x_start
+    # unless em.args$verbose = TRUE, suppress the (per M-step) optimizer
+    # output, even when the global verbose = TRUE (so that only the
+    # EM/SQUAREM cycles are shown)
+    if (!mstep_verbose) {
+      current_verbose <- lav_verbose()
+      if (lav_verbose(FALSE)) {
+        on.exit(lav_verbose(current_verbose), TRUE)
+      }
+    }
     lavaan(local_partable,
       sample_cov = list(
         within = implied$Sigma.W,

@@ -132,7 +132,7 @@ lav_em_squarem <- function(theta = NULL,
     fx_delta <- fx - fx_old
     if (lav_verbose()) {
       cat(
-        "EM cycle (squarem):", sprintf("%3d", cycle),
+        "SQUAREM:", sprintf("%3d", cycle),
         " fx =", sprintf("%17.10f", fx),
         " fx.delta =", sprintf("%9.8f", fx_delta),
         " alpha =", sprintf("%6.2f", alpha),
