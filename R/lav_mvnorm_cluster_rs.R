@@ -1932,16 +1932,437 @@ lav_mvn_cl_rs_em_h0 <- function(lavsamplestats = NULL, lavdata = NULL,
 
 
 # ---------------------------------------------------------------------
+# analytic gradient (and per-cluster scores)
+# ---------------------------------------------------------------------
+#
+# the gradient of the -2 loglikelihood is computed in two (chained)
+# layers:
+#
+# 1) an ADJOINT pass (lav_mvn_cl_rs_dfphi): analytic derivatives of
+#    F_j = sum_P n_jP ln|Sigma_w[o,o]| + ln|Z_j| + q~_j
+#          - p~_j' Sigma_v Z_j^{-1} p~_j
+#    with respect to the model-implied ingredients
+#    phi = (Sigma_w, mu_y, P, lmat, q0, Sigma_v, mu_v, cc, mu_exo).
+#    With u = Sigma_v Z^{-1} p~ (so mu0 = d + u, Sigma0 = Sigma_v
+#    Z^{-1}), the derivatives wrt the per-cluster workhorses are
+#    remarkably clean (Fisher's identity at work):
+#       dF/dA      = Sigma0 + mu0 mu0' = M0
+#       dF/dp      = -2 mu0
+#       dF/dq      = 1
+#       dF/dd      = -2 (p - A mu0)
+#       dF/dSigma_v = sym(Z^{-1} A) - sym( (p~ - A u) (Z^{-1} p~)' )
+#    (all inverse-free: valid for singular/indefinite Sigma_v);
+#    chaining through A_j, p_j, q_j collapses -- once again -- onto
+#    the per-(cluster, pattern) crossproducts: ONE pass over the data
+#    cells, cost comparable to a single loglikelihood evaluation
+#
+# 2) the (small) Jacobian d phi / d theta of the implied map,
+#    computed by central differences of lav_mvn_cl_rs_implied():
+#    2 x npar evaluations of a few small matrix products -- no
+#    cluster loops, negligible cost
+#
+# the same adjoint pass, kept per cluster, yields the per-cluster
+# scores (for the robust/sandwich standard errors) at no extra cost
+
+# flatten the theta-dependent implied ingredients into one vector
+# (the adjoint pass uses the same layout)
+lav_mvn_cl_rs_phi_vec <- function(imp) {
+  c(
+    as.numeric(imp$sigma.w), imp$mu.y, as.numeric(imp$P),
+    as.numeric(imp$lmat), as.numeric(imp$q0), as.numeric(imp$sigma.v),
+    imp$mu.v, as.numeric(imp$cc), imp$mu.exo
+  )
+}
+
+# adjoint pass: returns a (nclusters x nphi) matrix with the
+# per-cluster derivatives of F_j wrt phi (NULL if something fails)
+lav_mvn_cl_rs_dfphi <- function(rs_stats = NULL, imp = NULL,
+                                rs_info = NULL,
+                                sinv_method = "eigen") {
+  p1 <- rs_info$p1
+  nx <- rs_info$nx
+  pv <- imp$pv
+  path_tab <- rs_info$path.tab
+  npaths <- nrow(path_tab)
+  z_v_idx <- imp$z.v.idx
+  path_zcol <- z_v_idx[path_tab$z.idx]
+  path_x <- path_tab$x.idx
+  nclusters <- rs_stats$nclusters
+  nexo <- rs_info$nexo.b
+  exo_b <- rs_stats$exo.b
+
+  sigma_v <- imp$sigma.v
+  mu_v <- imp$mu.v
+  cc_mat <- imp$cc
+  mu_exo <- imp$mu.exo
+  mu_y <- imp$mu.y
+  pmat <- imp$P
+  pmat_t <- t(pmat)
+  lmat <- imp$lmat
+  q0 <- imp$q0
+  dpv <- diag(pv)
+  mu_y_op <- tcrossprod(mu_y)
+
+  # flattened phi layout (must match lav_mvn_cl_rs_phi_vec)
+  sizes <- c(p1 * p1, p1, p1 * nx, p1 * npaths, p1 * pv,
+             pv * pv, pv, pv * nexo, nexo)
+  off <- cumsum(c(0, sizes))
+  i_sw <- off[1] + seq_len(sizes[1])
+  i_muy <- off[2] + seq_len(sizes[2])
+  i_p <- off[3] + seq_len(sizes[3])
+  i_lm <- off[4] + seq_len(sizes[4])
+  i_q0 <- off[5] + seq_len(sizes[5])
+  i_sv <- off[6] + seq_len(sizes[6])
+  i_mv <- off[7] + seq_len(sizes[7])
+  i_cc <- off[8] + seq_len(sizes[8])
+  i_me <- off[9] + seq_len(sizes[9])
+  nphi <- off[10]
+
+  gphi <- matrix(0, nclusters, nphi)
+
+  # ---- posterior pieces + (Sigma_v, mu_v, cc, mu_exo) adjoints ----
+  # (returns the g_a/g_p adjoints needed for the cell collapse)
+  post_adj <- function(j, a_j, p_j) {
+    if (nexo > 0L) {
+      d_j <- mu_v + as.numeric(cc_mat %*% (exo_b[j, ] - mu_exo))
+    } else {
+      d_j <- mu_v
+    }
+    p_t <- p_j - as.numeric(a_j %*% d_j)
+    z_j <- dpv + a_j %*% sigma_v
+    z_inv <- solve(z_j)
+    zp <- as.numeric(z_inv %*% p_t)
+    u <- as.numeric(sigma_v %*% zp)
+    mu0 <- d_j + u
+
+    s0 <- sigma_v %*% z_inv
+    s0 <- (s0 + t(s0)) / 2
+    g_a <- s0 + tcrossprod(mu0)
+    g_p <- -2 * mu0
+    g_d <- -2 * (p_j - as.numeric(a_j %*% mu0))
+    za <- z_inv %*% a_j
+    m1 <- outer(p_t - as.numeric(a_j %*% u), zp)
+    g_sv <- (za + t(za)) / 2 - (m1 + t(m1)) / 2
+
+    gphi[j, i_sv] <<- gphi[j, i_sv] + as.numeric(g_sv)
+    gphi[j, i_mv] <<- gphi[j, i_mv] + g_d
+    if (nexo > 0L) {
+      gphi[j, i_cc] <<- gphi[j, i_cc] +
+        as.numeric(outer(g_d, exo_b[j, ] - mu_exo))
+      gphi[j, i_me] <<- gphi[j, i_me] -
+        as.numeric(crossprod(cc_mat, g_d))
+    }
+    list(g_a = g_a, g_p = g_p)
+  }
+
+  # ---- collapse of one (cluster, pattern) cell onto the
+  #      (Sigma_w, mu_y, P, lmat, q0) adjoints ----
+  add_cell <- function(j, w_mat, n_c, sx_c, sxx_c, sy_c, sxy_c, syy_c,
+                       se_c, sxe_c, g_a, g_p) {
+    # SQ = sum_i Q_i
+    sq <- n_c * q0
+    for (r in seq_len(npaths)) {
+      sq[, path_zcol[r]] <- sq[, path_zcol[r]] +
+        sx_c[path_x[r]] * lmat[, r]
+    }
+    q0ga <- q0 %*% g_a
+
+    # G_W (raw): <G_A, dA/dW> + <g_p, dp/dW> + dq/dW
+    gw <- n_c * (q0ga %*% t(q0))
+    for (r in seq_len(npaths)) {
+      arv <- as.numeric(q0 %*% g_a[, path_zcol[r]])
+      gw <- gw + sx_c[path_x[r]] *
+        (outer(lmat[, r], arv) + outer(arv, lmat[, r]))
+    }
+    for (r in seq_len(npaths)) {
+      for (s in seq_len(npaths)) {
+        gw <- gw + sxx_c[path_x[r], path_x[s]] *
+          g_a[path_zcol[r], path_zcol[s]] *
+          outer(lmat[, r], lmat[, s])
+      }
+    }
+    q0gp <- as.numeric(q0 %*% g_p)
+    gw <- gw + outer(q0gp, se_c)
+    for (r in seq_len(npaths)) {
+      gw <- gw + g_p[path_zcol[r]] * outer(lmat[, r], sxe_c[path_x[r], ])
+    }
+    # sum_i e~_i e~_i'
+    psx <- as.numeric(pmat %*% sx_c)
+    see <- syy_c - outer(sy_c, mu_y) - outer(mu_y, sy_c) +
+      n_c * mu_y_op -
+      t(sxy_c) %*% pmat_t - pmat %*% sxy_c +
+      outer(mu_y, psx) + outer(psx, mu_y) +
+      pmat %*% sxx_c %*% pmat_t
+    gw <- gw + see
+    gw <- (gw + t(gw)) / 2
+
+    # chain W = Sigma_w[o,o]^{-1} (embedded) -> Sigma_w,
+    # including the n_c ln|Sigma_w[o,o]| term
+    gsw <- n_c * w_mat - w_mat %*% gw %*% w_mat
+
+    # q0 adjoint: sum_i (2 W Q_i G_A + W e~_i g_p')
+    gq0 <- 2 * (w_mat %*% (sq %*% g_a)) +
+      outer(as.numeric(w_mat %*% se_c), g_p)
+
+    # lmat adjoint
+    glm <- matrix(0, p1, npaths)
+    for (r in seq_len(npaths)) {
+      xq <- sx_c[path_x[r]] * q0
+      for (s in seq_len(npaths)) {
+        xq[, path_zcol[s]] <- xq[, path_zcol[s]] +
+          sxx_c[path_x[r], path_x[s]] * lmat[, s]
+      }
+      glm[, r] <- 2 * as.numeric(w_mat %*% (xq %*% g_a[, path_zcol[r]])) +
+        g_p[path_zcol[r]] * as.numeric(w_mat %*% sxe_c[path_x[r], ])
+    }
+
+    # mu_y adjoint: -sum_i (W Q_i g_p + 2 W e~_i)
+    gmy <- -as.numeric(w_mat %*% (as.numeric(sq %*% g_p) + 2 * se_c))
+
+    # P adjoint: -[ W sum_i (Q_i g_p) x_i' + 2 W sum_i e~_i x_i' ]
+    mm <- outer(q0gp, sx_c)
+    for (r in seq_len(npaths)) {
+      mm <- mm + g_p[path_zcol[r]] * outer(lmat[, r], sxx_c[path_x[r], ])
+    }
+    gp_mat <- -(w_mat %*% (mm + 2 * t(sxe_c)))
+
+    gphi[j, i_sw] <<- gphi[j, i_sw] + as.numeric(gsw)
+    gphi[j, i_muy] <<- gphi[j, i_muy] + gmy
+    if (nx > 0L) {
+      gphi[j, i_p] <<- gphi[j, i_p] + as.numeric(gp_mat)
+    }
+    gphi[j, i_lm] <<- gphi[j, i_lm] + as.numeric(glm)
+    gphi[j, i_q0] <<- gphi[j, i_q0] + as.numeric(gq0)
+    invisible(NULL)
+  }
+
+  if (is.null(rs_stats$mp)) {
+    # -------------------- complete data --------------------
+    w_mat <- lav_mat_sym_inverse(imp$sigma.w,
+      logdet = TRUE, sinv_method = sinv_method
+    )
+    if (!is.finite(attr(w_mat, "logdet"))) {
+      return(NULL)
+    }
+    wl <- w_mat %*% lmat
+    ltwl <- crossprod(lmat, wl)
+    wq0 <- w_mat %*% q0
+    q0twq0 <- crossprod(q0, wq0)
+    q0twl <- crossprod(q0, wl)
+    nj_all <- rs_stats$cluster.size
+
+    for (j in seq_len(nclusters)) {
+      nj <- nj_all[j]
+      sy_j <- rs_stats$sy[j, ]
+      sx_j <- rs_stats$sx[j, ]
+      sxx_j <- rs_stats$sxx[[j]]
+      sxy_j <- rs_stats$sxy[[j]]
+      syy_j <- rs_stats$syy[[j]]
+
+      se_j <- sy_j - nj * mu_y - as.numeric(pmat %*% sx_j)
+      sxe_j <- sxy_j - outer(sx_j, mu_y) - sxx_j %*% pmat_t
+
+      a_j <- nj * q0twq0
+      p_j <- as.numeric(crossprod(wq0, se_j))
+      cz <- matrix(0, pv, pv)
+      for (i in seq_len(npaths)) {
+        zcol <- path_zcol[i]
+        cz[, zcol] <- cz[, zcol] + q0twl[, i] * sx_j[path_x[i]]
+      }
+      a_j <- a_j + cz + t(cz)
+      for (i in seq_len(npaths)) {
+        for (k in seq_len(npaths)) {
+          a_j[path_zcol[i], path_zcol[k]] <-
+            a_j[path_zcol[i], path_zcol[k]] +
+            ltwl[i, k] * sxx_j[path_x[i], path_x[k]]
+        }
+      }
+      for (i in seq_len(npaths)) {
+        zi <- path_zcol[i]
+        p_j[zi] <- p_j[zi] + sum(wl[, i] * sxe_j[path_x[i], ])
+      }
+
+      adj <- post_adj(j, a_j, p_j)
+      add_cell(
+        j, w_mat, nj, sx_j, sxx_j, sy_j, sxy_j, syy_j,
+        se_j, sxe_j, adj$g_a, adj$g_p
+      )
+    }
+  } else {
+    # -------------------- missing data --------------------
+    mp <- rs_stats$mp
+    npat <- mp$npatterns
+
+    # per-pattern (embedded) weight matrices and constants
+    w_list <- vector("list", npat)
+    for (p in seq_len(npat)) {
+      o <- mp$pattern[[p]]$o
+      w_o <- lav_mat_sym_inverse(imp$sigma.w[o, o, drop = FALSE],
+        logdet = TRUE, sinv_method = sinv_method
+      )
+      if (!is.finite(attr(w_o, "logdet"))) {
+        return(NULL)
+      }
+      w_p <- matrix(0, p1, p1)
+      w_p[o, o] <- w_o
+      w_list[[p]] <- w_p
+    }
+
+    # pass 1: per-cluster A_j and p_j
+    a_arr <- array(0, dim = c(pv, pv, nclusters))
+    p_all <- matrix(0, nclusters, pv)
+    for (p in seq_len(npat)) {
+      cell <- mp$pattern[[p]]
+      w_p <- w_list[[p]]
+      wl <- w_p %*% lmat
+      ltwl <- crossprod(lmat, wl)
+      wq0 <- w_p %*% q0
+      q0twq0 <- crossprod(q0, wq0)
+      q0twl <- crossprod(q0, wl)
+      for (jj in seq_along(cell$j1)) {
+        j <- cell$j1[jj]
+        n_jp <- cell$n[jj]
+        sy_jp <- cell$sy[jj, ]
+        sx_jp <- cell$sx[jj, ]
+        sxx_jp <- cell$sxx[[jj]]
+        sxy_jp <- cell$sxy[[jj]]
+
+        se_jp <- sy_jp - n_jp * mu_y - as.numeric(pmat %*% sx_jp)
+        sxe_jp <- sxy_jp - outer(sx_jp, mu_y) - sxx_jp %*% pmat_t
+
+        a_jp <- n_jp * q0twq0
+        p_jp <- as.numeric(crossprod(wq0, se_jp))
+        cz <- matrix(0, pv, pv)
+        for (i in seq_len(npaths)) {
+          zcol <- path_zcol[i]
+          cz[, zcol] <- cz[, zcol] + q0twl[, i] * sx_jp[path_x[i]]
+        }
+        a_jp <- a_jp + cz + t(cz)
+        for (i in seq_len(npaths)) {
+          for (k in seq_len(npaths)) {
+            a_jp[path_zcol[i], path_zcol[k]] <-
+              a_jp[path_zcol[i], path_zcol[k]] +
+              ltwl[i, k] * sxx_jp[path_x[i], path_x[k]]
+          }
+        }
+        for (i in seq_len(npaths)) {
+          zi <- path_zcol[i]
+          p_jp[zi] <- p_jp[zi] + sum(wl[, i] * sxe_jp[path_x[i], ])
+        }
+        a_arr[, , j] <- a_arr[, , j] + a_jp
+        p_all[j, ] <- p_all[j, ] + p_jp
+      }
+    }
+
+    # posterior adjoints per cluster
+    ga_list <- vector("list", nclusters)
+    gp_list <- vector("list", nclusters)
+    for (j in seq_len(nclusters)) {
+      adj <- post_adj(j, matrix(a_arr[, , j], pv, pv), p_all[j, ])
+      ga_list[[j]] <- adj$g_a
+      gp_list[[j]] <- adj$g_p
+    }
+
+    # pass 2: cell collapse
+    for (p in seq_len(npat)) {
+      cell <- mp$pattern[[p]]
+      w_p <- w_list[[p]]
+      for (jj in seq_along(cell$j1)) {
+        j <- cell$j1[jj]
+        n_jp <- cell$n[jj]
+        sy_jp <- cell$sy[jj, ]
+        sx_jp <- cell$sx[jj, ]
+        sxx_jp <- cell$sxx[[jj]]
+        sxy_jp <- cell$sxy[[jj]]
+        syy_jp <- cell$syy[[jj]]
+        se_jp <- sy_jp - n_jp * mu_y - as.numeric(pmat %*% sx_jp)
+        sxe_jp <- sxy_jp - outer(sx_jp, mu_y) - sxx_jp %*% pmat_t
+        add_cell(
+          j, w_p, n_jp, sx_jp, sxx_jp, sy_jp, sxy_jp, syy_jp,
+          se_jp, sxe_jp, ga_list[[j]], gp_list[[j]]
+        )
+      }
+    }
+  }
+
+  gphi
+}
+
+# gradient of the -2 loglikelihood wrt the free parameters
+# (per_cluster = TRUE: the per-cluster scores d loglik_j / d theta,
+#  on the natural loglikelihood scale)
+lav_mvn_cl_rs_grad <- function(lavmodel = NULL, rs = NULL,
+                               sinv_method = "eigen",
+                               per_cluster = FALSE,
+                               h = 1e-06) {
+  imp0 <- lav_mvn_cl_rs_implied(lavmodel, rs_info = rs$info)
+  if (is.null(imp0)) {
+    return(NULL)
+  }
+  gphi <- lav_mvn_cl_rs_dfphi(
+    rs_stats = rs$stats, imp = imp0, rs_info = rs$info,
+    sinv_method = sinv_method
+  )
+  if (is.null(gphi)) {
+    return(NULL)
+  }
+
+  # the (small) Jacobian of the implied map: central differences,
+  # no cluster loops
+  x0 <- lav_model_get_parameters(lavmodel)
+  npar <- length(x0)
+  phi0 <- lav_mvn_cl_rs_phi_vec(imp0)
+  jac <- matrix(0, length(phi0), npar)
+  for (k in seq_len(npar)) {
+    h_k <- h * max(1, abs(x0[k]))
+    x_right <- x_left <- x0
+    x_right[k] <- x0[k] + h_k
+    x_left[k] <- x0[k] - h_k
+    imp_r <- lav_mvn_cl_rs_implied(
+      lav_model_set_parameters(lavmodel, x = x_right),
+      rs_info = rs$info
+    )
+    imp_l <- lav_mvn_cl_rs_implied(
+      lav_model_set_parameters(lavmodel, x = x_left),
+      rs_info = rs$info
+    )
+    if (is.null(imp_r) || is.null(imp_l)) {
+      return(NULL)
+    }
+    jac[, k] <- (lav_mvn_cl_rs_phi_vec(imp_r) -
+      lav_mvn_cl_rs_phi_vec(imp_l)) / (2 * h_k)
+  }
+
+  if (per_cluster) {
+    -0.5 * (gphi %*% jac)
+  } else {
+    as.numeric(colSums(gphi) %*% jac)
+  }
+}
+
+
+# ---------------------------------------------------------------------
 # per-cluster scores and the first-order (`meat') information
 # ---------------------------------------------------------------------
 
 # per-cluster scores: d loglik_j / d theta (natural loglikelihood
-# scale), computed numerically (central differences) from the
-# per-cluster loglikelihood vector of lav_mvn_cl_rs_loglik()
+# scale); analytic (adjoint pass), with a numerical fallback
+# (central differences of the per-cluster loglikelihood vector)
 #
 # returns a (nclusters x npar) matrix
 lav_mvn_cl_rs_scores <- function(lavmodel = NULL, rs = NULL,
                                  h = 1e-05) {
+  # analytic scores
+  sc <- try(
+    lav_mvn_cl_rs_grad(lavmodel = lavmodel, rs = rs,
+                       per_cluster = TRUE),
+    silent = TRUE
+  )
+  if (!inherits(sc, "try-error") && !is.null(sc)) {
+    return(sc)
+  }
+
+  # numerical fallback
   x0 <- lav_model_get_parameters(lavmodel)
   npar <- length(x0)
   nclusters <- rs$stats$nclusters

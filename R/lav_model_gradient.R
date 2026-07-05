@@ -27,14 +27,48 @@ lav_model_grad <- function(lavmodel = NULL,
   # state or final?
   if (is.null(glist)) glist <- lavmodel@GLIST
 
-  # random slopes? (rv() modifier): no analytic gradient (yet);
-  # use a numerical approximation of the gradient of the objective
+  # random slopes? (rv() modifier): analytic gradient (adjoint pass +
+  # a small Jacobian of the implied map); falls back to a numerical
+  # approximation of the gradient of the objective if the analytic
+  # path is not available
   if (length(lavmodel@rv.ov) > 0L || length(lavmodel@rv.lv) > 0L) {
     if (type != "free") {
       lav_msg_fixme(
         "gradient with type != \"free\" is not available for models
          with random slopes")
     }
+    x0 <- lav_model_get_parameters(lavmodel, glist = glist)
+
+    # the rs cache
+    rs <- NULL
+    if (!is.null(lavcache)) {
+      rs <- lavcache[[1]]$rs
+    }
+    if (is.null(rs) && !is.null(lavdata)) {
+      rs_info <- try(lav_mvn_cl_rs_info(lavmodel = lavmodel,
+                                        lavdata = lavdata),
+                     silent = TRUE)
+      if (!inherits(rs_info, "try-error")) {
+        rs <- list(
+          info = rs_info,
+          stats = lav_mvn_cl_rs_stats(
+            y1 = lavdata@X[[1]], lp = lavdata@Lp[[1]],
+            rs_info = rs_info
+          )
+        )
+      }
+    }
+    if (!is.null(rs)) {
+      lavmodel2 <- lav_model_set_parameters(lavmodel, x = x0)
+      dx <- try(lav_mvn_cl_rs_grad(lavmodel = lavmodel2, rs = rs),
+                silent = TRUE)
+      if (!inherits(dx, "try-error") && !is.null(dx)) {
+        # match the objective scale (-2 loglik / (2 N))
+        return(dx / (2 * lavsamplestats@ntotal))
+      }
+    }
+
+    # numerical fallback
     obj_f <- function(x) {
       lavmodel2 <- lav_model_set_parameters(lavmodel, x = x)
       as.numeric(lav_model_objective(
@@ -43,7 +77,6 @@ lav_model_grad <- function(lavmodel = NULL,
         lavcache = lavcache
       ))
     }
-    x0 <- lav_model_get_parameters(lavmodel, glist = glist)
     dx <- lav_func_grad_simple(func = obj_f, x = x0)
     return(dx)
   }

@@ -33,6 +33,7 @@ lav_model_hessian <- function(lavmodel = NULL,
       lavsamplestats@missing.flag &&
       lavmodel@estimator == "ML" &&
       !lavmodel@conditional.x &&
+      length(lavmodel@rv.ov) == 0L && length(lavmodel@rv.lv) == 0L &&
       is.null(lavdata@weights[[1]])) {
     hessian <- try(
       lav_mvn_cl_mi_h_louis(

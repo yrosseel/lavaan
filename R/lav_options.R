@@ -531,8 +531,8 @@ lav_options_set <- function(opt = NULL) {
     if (length(opt$observed.information) > 1L) {
       opt$observed.information[2] <- "hessian"
     }
-    # no analytic gradient (yet)
-    opt$optim.gradient <- "numerical"
+    # the gradient is analytic (adjoint pass; numerical fallback);
+    # optim.gradient = "numerical" remains available as an escape hatch
     # optimizer: nlminb (default) or em
     if (opt$optim.method == "gn") {
       lav_msg_warn(gettext(
