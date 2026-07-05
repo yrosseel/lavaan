@@ -251,7 +251,7 @@ lav_mvn_cl_mi_loglik_samp_2l <- function(y1 = NULL,
 }
 
 # estimate ML estimates of Mu.W, Mu.B, Sigma.W, Sigma.B in the presence
-# of missing data, using the EM algorithm (new in 0.7-2)
+# of missing data, using the EM algorithm (new in 0.7-1)
 #
 # this extends lav_mvn_cl_em_sat() to the missing data setting: in the
 # E-step, we integrate over both the (latent) cluster random effects and

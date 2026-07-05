@@ -119,7 +119,7 @@ lav_h1_implied_logl <- function(lavdata = NULL,
       if (lavsamplestats@missing.flag &&
           (is.null(lavoptions$h1.missing.method) || # backwards compatibility
            lavoptions$h1.missing.method == "em")) {
-        # missing data: EM algorithm (new in 0.7-2; this mimics Mplus)
+        # missing data: EM algorithm (new in 0.7-1; this mimics Mplus)
         out_1 <- lav_mvn_cl_mi_em_sat(
           y1 = lavdata@X[[g]],
           y2 = lavsamplestats@YLp[[g]][[2]]$Y2,

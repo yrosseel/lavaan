@@ -89,7 +89,7 @@ lav_model_est <- function(lavmodel = NULL,
     }
   }
 
-  # new in 0.7-2: multilevel models where a whole block (level) is
+  # new in 0.7-1: multilevel models where a whole block (level) is
   # saturated: the h1 estimates for this block are already available;
   # temporarily fix these parameters at their h1 values, so they do not
   # enter the optimization again as free parameters (this often helps
@@ -319,7 +319,7 @@ lav_model_est <- function(lavmodel = NULL,
     upper[bad_idx] <- +Inf
   }
 
-  # new in 0.7-2: fix the parameters of saturated blocks at their h1
+  # new in 0.7-1: fix the parameters of saturated blocks at their h1
   # values during optimization, by forcing lower == upper == start
   if (length(h1_sat_idx) > 0L) {
     lower <- rep(lower, length.out = length(start_x))
@@ -1147,7 +1147,7 @@ lav_model_est <- function(lavmodel = NULL,
 # backwards compatibility
 # estimateModel <- lav_model_estimate
 
-# new in 0.7-2: identify free parameters that belong to a 'saturated'
+# new in 0.7-1: identify free parameters that belong to a 'saturated'
 # block of a multilevel model
 #
 # a block is considered to be saturated if it only contains (free,

@@ -3398,7 +3398,7 @@ lav_inspect_ranef <- function(object, add_labels = FALSE,
     # random effects (=random intercepts or cluster means)
     if (lavdata@missing %in% c("ml", "ml.x")) {
       # missing data: posterior means from the E-step, conditioning on
-      # ALL the observed data (new in 0.7-2)
+      # ALL the observed data (new in 0.7-1)
       mb_j <- lav_mvn_cl_mi_estep_ranef(
         y1 = lavdata@X[[g]], y2 = tmp_ylp[[2]]$Y2,
         lp = tmp_lp, mp = lavdata@Mp[[g]],

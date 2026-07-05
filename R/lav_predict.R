@@ -236,7 +236,7 @@ lav_predict_internal <- function(lavmodel = NULL,
     # for multilevel models, replace lavdata by the freshly-built
     # newdata object: the downstream code needs the newdata cluster
     # structure (Lp), missing patterns (Mp) and dimensions (new in
-    # 0.7-2); lavsamplestats is kept as-is (only used for the
+    # 0.7-1); lavsamplestats is kept as-is (only used for the
     # model-implied quantities)
     if (lavdata@nlevels > 1L) {
       lavdata <- new_data
@@ -959,7 +959,7 @@ lav_predict_eta_normal <- function(lavobject = NULL, # for convenience
       # random effects (=random intercepts or cluster means)
       if (lavdata@missing %in% c("ml", "ml.x")) {
         # missing data: use the posterior means from the E-step,
-        # conditioning on ALL the observed data (new in 0.7-2); the
+        # conditioning on ALL the observed data (new in 0.7-1); the
         # missing values are replaced by their posterior means, so
         # that the (linear) factor score computation below yields the
         # exact posterior means E(eta | all observed data)

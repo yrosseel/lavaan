@@ -925,7 +925,7 @@ lav_mvn_cl_em_h0 <- function(lavsamplestats = NULL,
 
   # missing data? use the missing-data E-step machinery (the same
   # engine as the saturated h1 EM: in the E-step, we integrate over both
-  # the cluster random effects and the missing values); new in 0.7-2
+  # the cluster random effects and the missing values); new in 0.7-1
   missing_flag <- lavsamplestats@missing.flag
   if (missing_flag) {
     y1 <- lavdata@X[[1]] # first group only (for now)

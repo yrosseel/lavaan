@@ -409,7 +409,7 @@ lav_options_default <- function() {
     oklen = c(1L, 2L))
   elm("h1.information", c("structured", "structured"), chr = c(
     "structured", "unstructured"), oklen =  c(1L, 2L))
-  # multilevel h1 estimation with missing data (new in 0.7-2):
+  # multilevel h1 estimation with missing data (new in 0.7-1):
   # "em" (mimics Mplus) or "fiml" (cholesky + nlminb; old behavior)
   elm("h1.missing.method", "em", chr = c("em", "fiml"))
   elm("observed.information", c("hessian", "default"), chr = c(
@@ -460,7 +460,7 @@ lav_options_default <- function() {
   elm("optim.attempts", 4L, nm = "[1, 4]")
   elm("optim.force.converged", FALSE, bl = TRUE)
   # multilevel: fix parameters of saturated blocks at their h1 values
-  # during optimization (new in 0.7-2)
+  # during optimization (new in 0.7-1)
   elm("optim.fix.saturated", TRUE, bl = TRUE)
   elm("optim.gradient", "analytic", chr = c(
     analytic = "analytic", analytical = "analytic",

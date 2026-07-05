@@ -378,13 +378,13 @@ Estimation options:
       second element is used for the (robust) test statistic.}
    \item{\code{h1.missing.method}:}{Character. Only used for multilevel
       models with missing data (and \code{missing = "ml"}). If \code{"em"}
-      (the default since 0.7-2), the means and (co)variances of the
+      (the default since 0.7-1), the means and (co)variances of the
       unrestricted (h1) model are estimated using the EM algorithm,
       integrating over both the cluster random effects and the missing
       values (this mimics Mplus). If \code{"fiml"}, the unrestricted model
       is estimated using quasi-Newton optimization (nlminb) with a cholesky
       parameterization of the covariance matrices (this was the default
-      in versions < 0.7-2). See the \code{em.h1.args} option to control
+      in versions < 0.7-1). See the \code{em.h1.args} option to control
       the EM algorithm.}
    \item{\code{em.h1.args}:}{List. Options related to the EM algorithm
       that is used to estimate the means and (co)variances of the

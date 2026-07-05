@@ -127,7 +127,7 @@ lav_step11_estoptim <- function(lavdata = NULL,
         )
       }
 
-      # EM-stall -> nlminb hand-off (new in 0.7-2): the EM iterations
+      # EM-stall -> nlminb hand-off (new in 0.7-1): the EM iterations
       # typically stop because the loglikelihood stalls (fx_tol) before
       # the gradient becomes small (dx_tol); in that case, refine the
       # solution with nlminb, warm-started at the EM values; if nlminb
@@ -195,7 +195,7 @@ lav_step11_estoptim <- function(lavdata = NULL,
         list(x = x, accepted = accept)
       }
 
-      # early hand-off (new in 0.7-2): when the nlminb hand-off is
+      # early hand-off (new in 0.7-1): when the nlminb hand-off is
       # active, the EM phase does not need to iterate until fx_tol --
       # it only needs to get close enough for a reliable warm start;
       # run the EM with a loosened tolerance, and let nlminb finish
