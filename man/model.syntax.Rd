@@ -487,6 +487,24 @@ while all other random effects are still integrated out analytically
 (Rockwood, 2020). The number of quadrature points (per dimension) can
 be set via the \code{integration.ngh} option (default: 21).
 
+The same route is taken when the covariate is a `split' both-level
+observed variable (an observed variable that appears in both the
+level-1 and the level-2 part of the model): the random slope then
+multiplies its \emph{latent} within-cluster component (latent
+centering), and the covariate is jointly modeled:
+\preformatted{model <- '
+  level: 1
+    y ~ rv("s1")*x
+  level: 2
+    y ~ x
+    y ~~ s1
+'
+}
+This is the latent-covariate contextual model of Rockwood (2020,
+section 4). Note the contrast with a within-only covariate (a
+variable that does \emph{not} appear in the level-2 part): there, the
+slope multiplies the observed values, which are conditioned upon.
+
 The current implementation is limited to: two-level models, a single
 group, continuous data, \code{estimator = "ML"} and \code{fixed.x =
 TRUE}; the observed covariates that carry a random slope must be
@@ -519,9 +537,8 @@ apply (for now): a random-slope label may not be attached to both an
 observed and a latent covariate; the between-level exogenous
 covariates may not be related to a latent-covariate random slope
 (e.g., no regression of such a slope on a between-level covariate);
-random slopes for the latent within-cluster component of a `split'
-both-level observed covariate are not supported (yet); the optimizer
-is always \code{"nlminb"}, and \code{lavPredict()} is not available.
+the optimizer is always \code{"nlminb"}, and \code{lavPredict()} is
+not available.
 }
 
 \section{(In)equality constraints}{

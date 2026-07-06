@@ -106,12 +106,13 @@ lav_mvn_cl_rs_info <- function(lavmodel = NULL, lavpartable = NULL,
 
     # covariate type per path: latent ("lv") or observed ("ov")
     # (this mirrors the rv.lv/rv.ov classification in lav_model();
-    #  'split' both-level observed covariates count as latent)
+    #  'split' both-level observed covariates count as latent: the
+    #  random slope multiplies their latent within-cluster component)
     lv_names_1 <- lav_pt_vnames(pt, "lv", block = 1L)
-    ov_x_1 <- lav_pt_vnames(pt, "ov.x", block = 1L)
-    ov_x_2 <- lav_pt_vnames(pt, "ov.x", block = 2L)
-    ov_x_12 <- ov_x_2[ov_x_2 %in% ov_x_1]
-    path_type <- ifelse(path_rhs %in% c(lv_names_1, ov_x_12),
+    ov_names_pt_1 <- lav_pt_vnames(pt, "ov", block = 1L)
+    ov_names_pt_2 <- lav_pt_vnames(pt, "ov", block = 2L)
+    ov_12 <- ov_names_pt_2[ov_names_pt_2 %in% ov_names_pt_1]
+    path_type <- ifelse(path_rhs %in% c(lv_names_1, ov_12),
                         "lv", "ov")
   } else {
     pt <- NULL
@@ -154,18 +155,17 @@ lav_mvn_cl_rs_info <- function(lavmodel = NULL, lavpartable = NULL,
 
   # validation (only if we have a parameter table)
   if (!is.null(pt)) {
-    # latent covariates: within-level latent variables only (for now);
-    # 'split' both-level observed covariates (latent decomposition of
-    # the within and between components) are not supported yet
-    lv_rhs <- unique(path_rhs[path_type == "lv"])
-    bad <- lv_rhs[lv_rhs %in% ov_x_12]
-    if (length(bad) > 0L) {
-      lav_msg_stop(gettextf(
-        "random slopes for 'split' both-level covariates (the latent
-         within-cluster component of an observed covariate that also
-         appears at level 2) are not supported yet: %s.",
-        paste(bad, collapse = " ")))
-    }
+    # note on 'split' both-level covariates (rhs in ov_12): the random
+    # slope multiplies the *latent* within-cluster component of the
+    # covariate (latent decomposition/centering, cfr. Rockwood's
+    # simulation model); the covariate is then jointly modeled: it is
+    # part of the y-vector, its within dummy lv is the beta_w
+    # injection target, and its between dummy lv is an ordinary linear
+    # random effect inside v_b -- no special handling needed below
+
+    # exogenous variables (fixed.x)
+    ov_x_1 <- lav_pt_vnames(pt, "ov.x", block = 1L)
+    ov_x_2 <- lav_pt_vnames(pt, "ov.x", block = 2L)
 
     # the observed rv covariates must be observed, within-only, and
     # exogenous

@@ -417,13 +417,16 @@ lav_model <- function(lavpartable = NULL,
   if (multilevel) {
     # store information about random slopes (if any)
     lv_names <- lav_pt_vnames(lavpartable, "lv")
-    # we should also add split-y names (x) to lv.names
+    # we should also add the 'split' both-level observed variables: a
+    # random slope on such a variable multiplies its *latent*
+    # within-cluster component (latent decomposition), regardless of
+    # its exogenous (fixed.x) status
     # FIXME: make this work for multiple work multilevel
     level_values <- lav_pt_level_values(lavpartable)
-    ovx1 <- lav_object_vnames(lavpartable, "ov.x", level = level_values[1])
-    ovx2 <- lav_object_vnames(lavpartable, "ov.x", level = level_values[2])
-    ovx12 <- ovx2[ovx2 %in% ovx1]
-    lv_names <- c(lv_names, ovx12)
+    ov1 <- lav_object_vnames(lavpartable, "ov", level = level_values[1])
+    ov2 <- lav_object_vnames(lavpartable, "ov", level = level_values[2])
+    ov12 <- ov2[ov2 %in% ov1]
+    lv_names <- c(lv_names, ov12)
 
     # RV LV
     rv_idx <- which(nchar(lavpartable$rv) > 0L &
