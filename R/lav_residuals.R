@@ -77,13 +77,13 @@
 #                  lav_residuals_table_block()); structurally fixed moments
 #                  (zero/NA se) are filtered out.
 # - change 0.7-1: new output = "text" (alias "pretty"): prints (a) a table with
-#                  the n.largest largest residuals per element group/block (in
+#                  the n_largest largest residuals per element group/block (in
 #                  the parameterEstimates(output="text") style, with a Residual
 #                  column and optional Std.Err/Z-value columns; the header
 #                  reflects the residual type) and (b) the residual summary
 #                  table(s) in the fit-measures style (see
 #                  lav_residuals_summary_print()).
-# - change 0.7-1: new usrmr.ci.level (default 0.90) and usrmr.close.h0 (default
+# - change 0.7-1: new usrmr_ci_level (default 0.90) and usrmr_close_h0 (default
 #                  0.05) arguments to set the confidence level of the reported
 #                  CI and the H0 value of the close-fit test for the unbiased
 #                  urmr/usrmr/ucrmr (cf. the rmsea.* arguments in fitMeasures).
@@ -328,16 +328,19 @@ lav_residuals_largest_title <- function(type) {
 
 
 # user-visible function
-lavResiduals <- function(object, type = "cor.bentler", h1 = NULL,         # nolint start
+lavResiduals <- function(object, type = "cor.bentler", h1 = NULL,         # nolint
                          se = FALSE, zstat = TRUE,
                          summary = TRUE, elementwise = TRUE,
                          combine = FALSE,
-                         usrmr.ci.level = 0.90, usrmr.close.h0 = 0.05,
-                         h1.acov = "unstructured",
-                         add.type = TRUE, add.labels = TRUE, add.class = TRUE,
-                         drop.list.single.group = TRUE,
-                         maximum.number = 0L, n.largest = 5L,
-                         output = "list") {                                # nolint end
+                         usrmr_ci_level = 0.90, usrmr_close_h0 = 0.05,
+                         h1_acov = "unstructured",
+                         add_type = TRUE, add_labels = TRUE, add_class = TRUE,
+                         drop_list_single_group = TRUE,
+                         maximum_number = 0L, n_largest = 5L,
+                         output = "list",
+                        ...) {
+  dotdotdot <- list(...)
+  lav_adapt_func(environment(), dotdotdot, NULL)
   # normalize output argument ("pretty" is an alias for "text")
   output <- tolower(output)[1]
   if (output == "pretty") {
@@ -365,12 +368,12 @@ lavResiduals <- function(object, type = "cor.bentler", h1 = NULL,         # noli
     summary_options = list(
       se = TRUE, zstat = TRUE, pvalue = TRUE,
       unbiased = TRUE, unbiased_se = TRUE, unbiased_ci = TRUE,
-      unbiased_ci_level = usrmr.ci.level, unbiased_zstat = TRUE,
-      unbiased_test_val = usrmr.close.h0, unbiased_pvalue = TRUE
+      unbiased_ci_level = usrmr_ci_level, unbiased_zstat = TRUE,
+      unbiased_test_val = usrmr_close_h0, unbiased_pvalue = TRUE
     ),
-    h1_acov = h1.acov, add_type = add.type,
-    add_labels = add.labels, add_class = add.class,
-    drop_list_single_group = drop.list.single.group,
+    h1_acov = h1_acov, add_type = add_type,
+    add_labels = add_labels, add_class = add_class,
+    drop_list_single_group = drop_list_single_group,
     summary_blocks_combined = combine
   )
 
@@ -398,13 +401,13 @@ lavResiduals <- function(object, type = "cor.bentler", h1 = NULL,         # noli
       tab <- tab[order(abs(tab$res), decreasing = TRUE), , drop = FALSE]
       rownames(tab) <- NULL
 
-      # show first rows only (maximum.number == 0 -> all)
-      maximum_number <- maximum.number
+      # show first rows only (maximum_number == 0 -> all)
+      maximum_number <- maximum_number
       if (maximum_number > 0L && maximum_number < nrow(tab)) {
         tab <- tab[seq_len(maximum_number), , drop = FALSE]
       }
 
-      if (add.class) {
+      if (add_class) {
         class(tab) <- c("lavaan.data.frame", "data.frame")
       }
       out_list[[block]] <- tab
@@ -418,8 +421,8 @@ lavResiduals <- function(object, type = "cor.bentler", h1 = NULL,         # noli
   } else if (output == "text") {
     out <- lav_residuals_list_to_text(out,
       type = type, nblocks = lav_pt_nblocks(object@ParTable),
-      drop_single = drop.list.single.group, n_largest = n.largest,
-      show_se = isTRUE(se), show_z = isTRUE(zstat), ci_level = usrmr.ci.level,
+      drop_single = drop_list_single_group, n_largest = n_largest,
+      show_se = isTRUE(se), show_z = isTRUE(zstat), ci_level = usrmr_ci_level,
       combine = isTRUE(combine), do_summary = isTRUE(summary),
       do_largest = isTRUE(elementwise)
     )
@@ -428,7 +431,7 @@ lavResiduals <- function(object, type = "cor.bentler", h1 = NULL,         # noli
     # summary table(s), dropping the (element-wise) residual matrices
     nblocks <- lav_pt_nblocks(object@ParTable)
     if (nblocks == 1L) {
-      blk <- if (drop.list.single.group) out else out[[1]]
+      blk <- if (drop_list_single_group) out else out[[1]]
       out <- blk[["summary"]]
     } else if (!is.null(out[["summary"]])) {
       out <- out[["summary"]] # combine = TRUE: a single (pooled) summary
@@ -954,7 +957,7 @@ lav_residuals <- function(object, type = "raw", h1 = TRUE,
         obs_list[[b]][[el]] - est_list[[b]][[el]]
       }
     )
-    # always name the elements, even if add.labels = FALSE
+    # always name the elements, even if add_labels = FALSE
     names_1 <- names(obs_list[[b]])
     names(res_list[[b]]) <- names_1
   }
