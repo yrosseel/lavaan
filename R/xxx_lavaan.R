@@ -413,7 +413,13 @@ lavaan <- function(
   # bad.marker.crit mechanism can never make convergence worse.
   lavpartable_orig <- lavpartable
   marker_switched  <- FALSE
-  if (isTRUE(lavoptions$auto.fix.first) &&
+  # composites use marker scaling (first weight fixed to 1) under BOTH
+  # auto.fix.first and std.lv (see lav_partable_flat()), so the check must
+  # also run when std.lv = TRUE and the model contains composites; the
+  # 'clean default' guards in lav_pt_marker_adapt() keep reflective factors
+  # (whose loadings are all free under std.lv) out of the check
+  if ((isTRUE(lavoptions$auto.fix.first) ||
+       (isTRUE(lavoptions$std.lv) && any(lavpartable$op == "<~"))) &&
       lavoptions$bad.marker.crit > 0) {
     adapt <- lav_pt_marker_adapt(
       lavpartable = lavpartable,
@@ -423,13 +429,26 @@ lavaan <- function(
       threshold   = lavoptions$bad.marker.crit
     )
     if (!is.null(adapt)) {
-      lav_msg_warn(gettextf(
-        "the first indicator of the following latent variable(s) is a poor
-         item; switching to another marker item (to set the metric) to avoid
-         convergence problems; use bad.marker.crit = 0 to switch off
-         this behavior: %s",
-        paste0(adapt$info$lv, " (", adapt$info$old, " -> ",
-               adapt$info$new, ")", collapse = ", ")))
+      info_fac <- adapt$info[adapt$info$type == "factor", , drop = FALSE]
+      if (nrow(info_fac) > 0L) {
+        lav_msg_warn(gettextf(
+          "the first indicator of the following latent variable(s) is a poor
+           item; switching to another marker item (to set the metric) to avoid
+           convergence problems; use bad.marker.crit = 0 to switch off
+           this behavior: %s",
+          paste0(info_fac$lv, " (", info_fac$old, " -> ",
+                 info_fac$new, ")", collapse = ", ")))
+      }
+      info_comp <- adapt$info[adapt$info$type == "composite", , drop = FALSE]
+      if (nrow(info_comp) > 0L) {
+        lav_msg_warn(gettextf(
+          "the first indicator of the following composite(s) has a (near)
+           zero implied weight; switching to another marker indicator (to set
+           the metric) to avoid convergence problems; use bad.marker.crit = 0
+           to switch off this behavior: %s",
+          paste0(info_comp$lv, " (", info_comp$old, " -> ",
+                 info_comp$new, ")", collapse = ", ")))
+      }
       # rebuild the parameter table using the new marker(s)
       temp <- lav_step04_pt(
         slot_par_table = slot_par_table,

@@ -553,11 +553,31 @@ lav_pt_flat <- function(flat = NULL,
   # the std.lv mechanism above. Therefore composites default to marker scaling
   # (first weight = 1) under BOTH auto.fix.first and std.lv. Users who want a
   # different marker can free the first weight explicitly (e.g. NA*x1 + 1*x2).
+  #
+  # if 'marker' is provided (a named vector lv -> indicator), fix the weight
+  # of that indicator instead of the first one; this is used by the
+  # bad.marker.crit mechanism to switch to another marker if the implied
+  # weight of the first indicator is (near) zero (see lav_pt_marker_adapt())
   if (composites && length(lv_names_c) > 0L && (auto_fix_first || std_lv)) {
     mm_idx <- which(op == "<~")
-    first_idx <- mm_idx[which(!duplicated(lhs[mm_idx]))]
-    ustart[first_idx] <- 1.0
-    free[first_idx] <- 0L
+    if (is.null(marker)) {
+      first_idx <- mm_idx[which(!duplicated(lhs[mm_idx]))]
+      ustart[first_idx] <- 1.0
+      free[first_idx] <- 0L
+    } else {
+      for (lv in unique(lhs[mm_idx])) {
+        lv_rows <- mm_idx[lhs[mm_idx] == lv]
+        marker_row <- lv_rows[1L] # default: first indicator
+        if (lv %in% names(marker) && !is.na(marker[[lv]])) {
+          tmp_row <- lv_rows[rhs[lv_rows] == marker[[lv]]]
+          if (length(tmp_row) > 0L) {
+            marker_row <- tmp_row[1L]
+          }
+        }
+        ustart[marker_row] <- 1.0
+        free[marker_row] <- 0L
+      }
+    }
   }
 
   # 2. fix residual variance of single indicators to zero

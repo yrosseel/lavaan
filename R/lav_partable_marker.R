@@ -19,15 +19,34 @@
 # unrestricted (h1) covariance matrix, so the behavior is consistent whether
 # or not we have missing data, categorical data, etc.
 #
+# Composites (op == "<~") get a similar treatment, but with a different
+# quality measure: the metric of a composite is set by fixing the WEIGHT of
+# the first indicator to 1.0. If the ML estimate of that weight is (near)
+# zero, the remaining (free) weights must diverge to infinity to reach the
+# optimum, and the model never converges. The implied (relative) weights can
+# be gauged before estimation: under the composite model, the covariances of
+# the indicators of one composite with ANY outside variable are proportional
+# to a single vector l = S_jj w (S_jj = the within-block covariance matrix).
+# We estimate l as the dominant (rank-1) left singular vector of the
+# cross-correlation block between the indicators and all other observed
+# variables, solve w = S_jj^{-1} l, and rescale so max |w| = 1. If the first
+# indicator's relative weight is below the threshold (and a clearly better
+# indicator exists), we switch the marker to the indicator with the largest
+# absolute weight.
+#
 # lav_pt_marker_adapt() returns NULL if no change is needed, or a list
 # with:
 #   - marker: a named character vector (lv -> new indicator) for the latent
 #             variables whose marker should be switched
-#   - info:   a data.frame (lv, old, new, r.old, r.new) for the warning
+#   - info:   a data.frame (lv, type, old, new, r.old, r.new) for the
+#             warning; type is "factor" or "composite"; for factors r.* are
+#             corrected item-total correlations, for composites relative
+#             weights
 #
 # 'threshold' is the value below which the first indicator is considered a
-# 'poor' item (in absolute value of its corrected item-total correlation);
-# it is set by the 'bad.marker.crit' option (default 0.1)
+# 'poor' marker (in absolute value of its corrected item-total correlation,
+# or of its relative weight for composites); it is set by the
+# 'bad.marker.crit' option (default 0.1)
 lav_pt_marker_adapt <- function(lavpartable = NULL,
                                 lavh1 = NULL,
                                 lavoptions = NULL,
@@ -61,14 +80,17 @@ lav_pt_marker_adapt <- function(lavpartable = NULL,
   # observed indicators (ordered indicators are fine: for those, the h1 'cov'
   # already holds the latent (polychoric) correlations)
   ov_names <- lav_pt_vnames(lavpartable, type = "ov")
-  # exclude efa and composite factors
+  # exclude efa factors (composites are handled separately below:
+  # lv.regular only contains =~ definitions)
   lv_regular <- lav_pt_vnames(lavpartable, type = "lv.regular")
   if (!is.null(lavpartable$efa)) {
     lv_efa <- unique(lavpartable$lhs[lavpartable$op == "=~" &
                                      nchar(lavpartable$efa) > 0L])
     lv_regular <- lv_regular[!lv_regular %in% lv_efa]
   }
-  if (length(lv_regular) == 0L) {
+  # composites
+  lv_comp <- unique(lavpartable$lhs[lavpartable$op == "<~"])
+  if (length(lv_regular) == 0L && length(lv_comp) == 0L) {
     return(NULL)
   }
 
@@ -142,8 +164,93 @@ lav_pt_marker_adapt <- function(lavpartable = NULL,
         ind[best] != cur && r[[best]] >= threshold) {
       new_marker[lv] <- ind[best]
       info[[length(info) + 1L]] <- data.frame(
-        lv = lv, old = cur, new = ind[best],
+        lv = lv, type = "factor", old = cur, new = ind[best],
         r.old = round(cit[[1L]], 3), r.new = round(cit[[best]], 3),
+        stringsAsFactors = FALSE
+      )
+    }
+  }
+
+  # composites: check the implied relative weight of the first indicator
+  for (lv in lv_comp) {
+    lv_rows <- which(lavpartable$op == "<~" & lavpartable$lhs == lv)
+    # only consider one block (the structure is identical across blocks)
+    b1 <- lavpartable$block[lv_rows]
+    lv_rows <- lv_rows[b1 == b1[1L]]
+    ind <- lavpartable$rhs[lv_rows]
+
+    # only observed indicators, and at least two of them
+    keep <- ind %in% ov_names
+    lv_rows <- lv_rows[keep]
+    ind <- ind[keep]
+    if (length(ind) < 2L) {
+      next
+    }
+
+    # only adapt the 'clean' default situation: exactly one indicator has a
+    # fixed weight (free == 0), it is the FIRST indicator, and its value is
+    # 1.0; otherwise the user set up the scaling and we leave it alone
+    fixed <- which(lavpartable$free[lv_rows] == 0L)
+    if (length(fixed) != 1L || fixed != 1L ||
+        !isTRUE(lavpartable$ustart[lv_rows][1L] == 1)) {
+      next
+    }
+    cur <- ind[1L]
+
+    # implied relative weights, collected across all blocks that contain
+    # all the indicators of this composite plus at least one other variable
+    w_blocks <- list()
+    for (b in seq_along(cov_list)) {
+      vn <- block_names[[b]]
+      if (is.null(vn) || !all(ind %in% vn)) {
+        next
+      }
+      in_idx <- match(ind, vn) # the h1 cov matrices may have no dimnames
+      out_idx <- setdiff(seq_along(vn), in_idx)
+      if (length(out_idx) == 0L) {
+        next
+      }
+      C <- cov_list[[b]]
+      d <- diag(C)
+      if (any(!is.finite(d)) || any(d <= 0)) {
+        next
+      }
+      # scale-free: work with correlations
+      isd <- 1 / sqrt(d)
+      r_jj <- C[in_idx, in_idx, drop = FALSE] *
+              tcrossprod(isd[in_idx])
+      r_jo <- C[in_idx, out_idx, drop = FALSE] *
+              tcrossprod(isd[in_idx], isd[out_idx])
+      # dominant direction of the cross-correlations (~ S_jj %*% w)
+      sv <- try(svd(r_jo, nu = 1L, nv = 0L), silent = TRUE)
+      if (inherits(sv, "try-error") || sv$d[1L] < .Machine$double.eps) {
+        next
+      }
+      w <- try(solve(r_jj, sv$u[, 1L]), silent = TRUE)
+      if (inherits(w, "try-error") || any(!is.finite(w))) {
+        next
+      }
+      w_blocks[[length(w_blocks) + 1L]] <- abs(w) / max(abs(w))
+    }
+    if (length(w_blocks) == 0L) {
+      next
+    }
+    r <- colMeans(do.call(rbind, w_blocks), na.rm = TRUE)
+    names(r) <- ind
+    if (all(is.na(r))) {
+      next
+    }
+
+    r_cur <- r[[1L]]
+    best <- which.max(r)
+    # switch only if the first indicator has a (near) zero implied weight
+    # AND a clearly better indicator exists
+    if (!is.na(r_cur) && r_cur < threshold &&
+        ind[best] != cur && r[[best]] >= threshold) {
+      new_marker[lv] <- ind[best]
+      info[[length(info) + 1L]] <- data.frame(
+        lv = lv, type = "composite", old = cur, new = ind[best],
+        r.old = round(r[[1L]], 3), r.new = round(r[[best]], 3),
         stringsAsFactors = FALSE
       )
     }
