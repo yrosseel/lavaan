@@ -1388,11 +1388,13 @@ parameterTable <- parametertable <- parTable <- partable <- # nolint
     out
   }
 
-varTable <- vartable <- function(object, ov.names = names(object),  # nolint start
-                                 ov.names.x = NULL,
+varTable <- vartable <- function(object, ov_names = names(object),  # nolint start
+                                 ov_names_x = NULL,
                                  ordered = NULL, factor = NULL,
-                                 as.data.frame. = TRUE) {           # nolint end
-
+                                 as_data_frame = TRUE,
+                                ...) {           # nolint end
+  dotdotdot <- list(...)
+  lav_adapt_func(environment(), dotdotdot, NULL)
   if (inherits(object, "lavaan")) {
     # check object
     object <- lav_object_check_version(object)
@@ -1401,8 +1403,8 @@ varTable <- vartable <- function(object, ov.names = names(object),  # nolint sta
     tmp_var <- object@ov
   } else if (inherits(object, "data.frame")) {
     tmp_var <- lav_dataframe_vartable(
-      frame = object, ov_names = ov.names,
-      ov_names_x = ov.names.x,
+      frame = object, ov_names = ov_names,
+      ov_names_x = ov_names_x,
       ordered = ordered, factor = factor,
       as_data_frame = FALSE
     )
@@ -1410,7 +1412,7 @@ varTable <- vartable <- function(object, ov.names = names(object),  # nolint sta
     lav_msg_stop(gettext("object must of class lavaan or a data.frame"))
   }
 
-  if (as.data.frame.) {
+  if (as_data_frame) {
     tmp_var <- as.data.frame(tmp_var,
       stringsAsFactors = FALSE,
       row.names = seq_along(tmp_var$name)
