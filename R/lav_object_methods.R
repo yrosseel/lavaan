@@ -1709,6 +1709,6 @@ setMethod(
     }
     tmp_names <- sapply(as.list(mcall)[c(FALSE, TRUE, modp)], deparse)
 
-    lavTestLRT(object = object, ..., model.names = tmp_names)
+    lavTestLRT(object = object, ..., model_names = tmp_names)
   }
 )

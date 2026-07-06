@@ -10,8 +10,8 @@
 LRT test for comparing (nested) lavaan models.}
 \usage{
 lavTestLRT(object, ..., method = "default", test = "default",
-           A.method = "delta", scaled.shifted = TRUE,
-           type = "Chisq", model.names = NULL)
+           a_method = "delta", scaled_shifted = TRUE,
+           type = "Chisq", model_names = NULL)
 anova(object, ...)
 }
 \arguments{
@@ -32,17 +32,17 @@ anova(object, ...)
   model(s). See details. FMG nested tests can be requested using names such as
   \code{"pall"}, \code{"all"}, \code{"peba4"}, or \code{"pols3"}; the
   convenience value \code{"fmg"} resolves to the recommended nested default.}
-\item{A.method}{Character string. The possible options are \code{"exact"}
+\item{a_method}{Character string. The possible options are \code{"exact"}
   and \code{"delta"}. This is only used when method = \code{"satorra.2000"}.
   It determines how the Jacobian of the constraint function (the matrix A)
-  will be computed. Note that if \code{A.method = "exact"}, the models must
-  be nested in the parameter sense, while if \code{A.method = "delta"}, they
+  will be computed. Note that if \code{a_method = "exact"}, the models must
+  be nested in the parameter sense, while if \code{a_method = "delta"}, they
   only need to be nested in the covariance matrix sense.}
-\item{scaled.shifted}{Logical. Only used when method = \code{"satorra.2000"}.
+\item{scaled_shifted}{Logical. Only used when method = \code{"satorra.2000"}.
   If \code{TRUE}, we use a scaled and shifted test statistic. If \code{FALSE},
   the statistic depends on the test that was used to fit the models: when the
   models were fitted with a mean-and-variance adjusted test
-  (\code{test = "mean.var.adjusted"} or \code{"scaled.shifted"}), a mean and
+  (\code{test = "mean.var.adjusted"} or \code{"scaled_shifted"}), a mean and
   variance adjusted (Satterthwaite style) difference test is used; when they
   were fitted with a (Satorra-)Bentler scaled test
   (\code{test = "satorra.bentler"}, \code{"yuan.bentler"} or
@@ -55,7 +55,7 @@ anova(object, ...)
   \code{\link{lavTablesFitCf}} function. If \code{"browne.residual.adf"} (alias
   \code{"browne"}) or \code{"browne.residual.nt"}, the standard chi-squared
   difference is calculated from each model's residual-based statistic.}
-\item{model.names}{Character vector. If provided, use these model names in
+\item{model_names}{Character vector. If provided, use these model names in
   the first column of the anova table.}
 }
 \value{
@@ -70,8 +70,8 @@ anova(object, ...)
  
     The only \code{test=} options that currently have actual consequences are 
     \code{"satorra.bentler"}, \code{"yuan.bentler"}, or \code{"yuan.bentler.mplus"}
-    because \code{"mean.var.adjusted"} and \code{"scaled.shifted"} are
-    currently distinguished by the \code{scaled.shifted} argument.
+    because \code{"mean.var.adjusted"} and \code{"scaled_shifted"} are
+    currently distinguished by the \code{scaled_shifted} argument.
     See \code{\link{lavOptions}} for details about the \code{test=} options
     implied by robust \code{estimator=} options. The \code{"default"} is to
     select the first available scaled statistic, if any. To check which test(s)
@@ -169,8 +169,8 @@ lavTestLRT(t6.1, t6.0, method = "satorra.2000")
 ## == lavTestLRT(update(t6.1, test = "scaled.shifted"), update(t6.0, test = "scaled.shifted"))
 
 ## The mean- and variance-adjusted (Satterthwaite) statistic implies
-## scaled.shifted = FALSE
-lavTestLRT(t6.1, t6.0, method = "satorra.2000", scaled.shifted = FALSE)
+## scaled_shifted = FALSE
+lavTestLRT(t6.1, t6.0, method = "satorra.2000", scaled_shifted = FALSE)
 
 ## Because "satorra.bentler" is not the first scaled test in the list,
 ## we MUST request it explicitly:
