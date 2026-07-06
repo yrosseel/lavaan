@@ -4,10 +4,12 @@
 #                   when the user provides a custom h1 model.  Called by
 #                   lav_object_summary and lav_fit(_check_baseline)
 
-lavTest <- function(lavobject, test = "standard",               # nolint start
-                    scaled.test = "standard",
-                    output = "list", drop.list.single = TRUE) { # nolint end
-
+lavTest <- function(lavobject, test = "standard",               # nolint
+                    scaled_test = "standard",
+                    output = "list", drop_list_single = TRUE,
+                  ...) {
+  dotdotdot <- list(...)
+  lav_adapt_func(environment(), dotdotdot, NULL)
   # check object
   lavobject <- lav_object_check_version(lavobject)
 
@@ -40,12 +42,11 @@ lavTest <- function(lavobject, test = "standard",               # nolint start
       test <- unique(c("standard", test))
     }
 
-    # check scaled.test
-    scaled_test <- scaled.test
-    if (!missing(scaled.test)) {
-      if (!is.character(scaled.test)) {
+    # check scaled_test
+    if (!missing(scaled_test)) {
+      if (!is.character(scaled_test)) {
         lav_msg_stop(
-          gettextf("%s should be a character string.", "scaled.test"))
+          gettextf("%s should be a character string.", "scaled_test"))
       } else {
         scaled_test <- lav_test_rename(scaled_test, check = TRUE)
       }
@@ -82,7 +83,7 @@ lavTest <- function(lavobject, test = "standard",               # nolint start
       # fill-in test in Options slot
       lavobject@Options$test <- test
 
-      # fill-in scaled.test in Options slot
+      # fill-in scaled_test in Options slot
       lavobject@Options$scaled.test <- scaled_test
 
       # get requested test statistics
@@ -99,7 +100,7 @@ lavTest <- function(lavobject, test = "standard",               # nolint start
     test_1 <- test_1[test_idx]
 
     # if only 1 test, drop outer list
-    if (length(test_1) == 1L && drop.list.single) {
+    if (length(test_1) == 1L && drop_list_single) {
       test_1 <- test_1[[1]]
     }
 

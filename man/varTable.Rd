@@ -5,21 +5,22 @@
 \alias{variabletable}
 \title{Variable Table}
 \description{
-Summary information about the variables included in either a data.frame, 
+Summary information about the variables included in either a data.frame,
 or a fitted lavaan object.}
 \usage{
-varTable(object, ov.names = names(object), ov.names.x = NULL, 
-    ordered = NULL, factor = NULL, as.data.frame. = TRUE)
+varTable(object, ov_names = names(object), ov_names_x = NULL,
+    ordered = NULL, factor = NULL, as_data_frame = TRUE, ...)
 }
 \arguments{
-\item{object}{Either a data.frame, or an object of class 
+\item{object}{Either a data.frame, or an object of class
 \code{\linkS4class{lavaan}}.}
-\item{ov.names}{Only used if object is a data.frame. A character vector containing the variables that need to be summarized.}
-\item{ov.names.x}{Only used if object is a data.frame. A character vector containing additional variables that need to be summarized.}
+\item{ov_names}{Only used if object is a data.frame. A character vector containing the variables that need to be summarized.}
+\item{ov_names_x}{Only used if object is a data.frame. A character vector containing additional variables that need to be summarized.}
 \item{ordered}{Character vector. Which variables should be treated as ordered
 factors?}
 \item{factor}{Character vector. Which variables should be treated as (unordered) factors?}
-\item{as.data.frame.}{If TRUE, return the list as a data.frame.}
+\item{as_data_frame}{If TRUE, return the list as a data.frame.}
+\item{...}{To support old argument names.}
 }
 \value{
   A \code{list} or \code{data.frame} containing summary information about
@@ -27,7 +28,7 @@ factors?}
   it displays the summary information about the observed variables that are
   included in the model. The summary information includes
   variable type (numeric, ordered, \ldots), the number of non-missing values,
-  the mean and variance for numeric variables, the number of levels of 
+  the mean and variance for numeric variables, the number of levels of
   ordered variables, and the labels for ordered variables.
 }
 \examples{

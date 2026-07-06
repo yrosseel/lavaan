@@ -271,8 +271,8 @@ lav_fit <- function(object, fit_measures = "all",
       lavtest_scaled_test <- scaled_test
     }
     test <- lavTest(object,
-                    test = this_test, scaled.test = lavtest_scaled_test,
-                    drop.list.single = FALSE
+                    test = this_test, scaled_test = lavtest_scaled_test,
+                    drop_list_single = FALSE
     )
     # replace in object, if we pass it to lav_fit_* functions
     object@test <- test

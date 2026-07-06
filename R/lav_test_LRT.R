@@ -23,8 +23,10 @@
 
 
 lavTestLRT <- function(object, ..., method = "default", test = "default",   # nolint start
-                       A.method = "delta", scaled.shifted = TRUE, # only when method="Satorra.2000"
-                       type = "Chisq", model.names = NULL) {                # nolint end
+                       a_method = "delta", scaled_shifted = TRUE, # only when method="Satorra.2000"
+                       type = "Chisq", model_names = NULL) {                # nolint end
+  dotdotdot <- list(...)
+  lav_adapt_func(environment(), dotdotdot, FALSE)
   type <- tolower(type[1])
   test <- tolower(test[1])
   method.orig <- method[1]
@@ -45,16 +47,15 @@ lavTestLRT <- function(object, ..., method = "default", test = "default",   # no
   # anova() function anymore, and match.call will be screwed up
 
   mcall <- match.call(expand.dots = TRUE)
-  dots <- list(...)
-  modp <- if (length(dots)) {
-    sapply(dots, inherits, "lavaan")
+  modp <- if (length(dotdotdot)) {
+    sapply(dotdotdot, inherits, "lavaan")
   } else {
     logical(0L)
   }
   # check object
   object <- lav_object_check_version(object)
-  # check models in dots
-  dots[modp] <- lapply(dots[modp], lav_object_check_version)
+  # check models in dotdotdot
+  dotdotdot[modp] <- lapply(dotdotdot[modp], lav_object_check_version)
 
   # some general properties (taken from the first model)
   estimator <- object@Options$estimator
@@ -84,9 +85,9 @@ lavTestLRT <- function(object, ..., method = "default", test = "default",   # no
   }
 
   # list of models
-  mods <- c(list(object), dots[modp])
-  if (!is.null(model.names)) {
-    names(mods) <- model.names
+  mods <- c(list(object), dotdotdot[modp])
+  if (!is.null(model_names)) {
+    names(mods) <- model_names
   } else {
     names(mods) <- sapply(
       as.list(mcall)[which(c(FALSE, TRUE, modp))],
@@ -270,7 +271,7 @@ lavTestLRT <- function(object, ..., method = "default", test = "default",   # no
       \"satorra.bentler\", \"yuan.bentler\", or \"yuan.bentler.mplus\".",
       dQuote(method)))
   } else {
-    ## method="satorra.2000" still available when test_1 != scaled.shifted
+    ## method="satorra.2000" still available when test_1 != scaled_shifted
     ## Or !scaled, so nothing to do.
   }
 
@@ -299,7 +300,7 @@ lavTestLRT <- function(object, ..., method = "default", test = "default",   # no
     testlist <- lapply(
       mods,
       function(x) lavTest(x, test = "browne.residual.nt",
-                          drop.list.single = FALSE)
+                          drop_list_single = FALSE)
     )
     df_1 <- sapply(testlist, function(x) x[[type]]$df)
     stat_1 <- sapply(testlist, function(x) x[[type]]$stat)
@@ -307,7 +308,7 @@ lavTestLRT <- function(object, ..., method = "default", test = "default",   # no
     testlist <- lapply(
       mods,
       function(x) lavTest(x, test = "browne.residual.adf",
-                          drop.list.single = FALSE)
+                          drop_list_single = FALSE)
     )
     df_1 <- sapply(testlist, function(x) x[[type]]$df)
     stat_1 <- sapply(testlist, function(x) x[[type]]$stat)
@@ -333,7 +334,7 @@ lavTestLRT <- function(object, ..., method = "default", test = "default",   # no
   }
 
   # prepare for scaling versions
-  if (method == "satorra.2000" && scaled.shifted) {
+  if (method == "satorra.2000" && scaled_shifted) {
     a_delta <- b_delta <- rep(as.numeric(NA), length(stat_1))
     c_delta <- NULL
   } else if (method %in% c("satorra.bentler.2001",
@@ -383,12 +384,12 @@ lavTestLRT <- function(object, ..., method = "default", test = "default",   # no
         out <- lav_test_diff_satorra2000(mods[[m]], mods[[m + 1]],
           h1 = TRUE,
           satterthwaite = satterthwaite,
-          scaled_shifted = scaled.shifted,
-          a_method = A.method
+          scaled_shifted = scaled_shifted,
+          a_method = a_method
         )
         stat_delta[m + 1] <- out$t_delta
         df_delta[m + 1] <- out$df_delta
-        if (scaled.shifted) {
+        if (scaled_shifted) {
           a_delta[m + 1] <- out$a
           b_delta[m + 1] <- out$b
         } else {
@@ -402,8 +403,8 @@ lavTestLRT <- function(object, ..., method = "default", test = "default",   # no
   if (scaled &&
      ((method %in% c("satorra.bentler.2001", "satorra.bentler.2010") &&
           is.na(out$scaling.factor)) ||
-         (method == "satorra.2000" && scaled.shifted && is.na(out$a)) ||
-         (method == "satorra.2000" && !scaled.shifted &&
+         (method == "satorra.2000" && scaled_shifted && is.na(out$a)) ||
+         (method == "satorra.2000" && !scaled_shifted &&
           is.na(out$scaling.factor)))
      ) {
     scaled <- FALSE
@@ -519,9 +520,9 @@ lavTestLRT <- function(object, ..., method = "default", test = "default",   # no
       )
       # describe the difference test that is actually computed, so the title
       # is not misleading (see GitHub issue #523). For method="satorra.2000"
-      # the exact statistic depends on both scaled.shifted= and the test that
+      # the exact statistic depends on both scaled_shifted= and the test that
       # was used to fit the models (test_1); see lav_test_diff_satorra2000().
-      if (method == "satorra.2000" && scaled.shifted) {
+      if (method == "satorra.2000" && scaled_shifted) {
         stat_label <- "Scaled and Shifted"
       } else if (method == "satorra.2000" &&
         !test_1 %in% c("satorra.bentler", "yuan.bentler",
@@ -542,7 +543,7 @@ lavTestLRT <- function(object, ..., method = "default", test = "default",   # no
           "\n",
           sep = ""
         )
-      if (method == "satorra.2000" && scaled.shifted) {
+      if (method == "satorra.2000" && scaled_shifted) {
         attr(val, "scale") <- a_delta
         attr(val, "shift") <- b_delta
       } else if (method %in% c("satorra.bentler.2001",

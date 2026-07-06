@@ -5,14 +5,14 @@
 #  - lav_data_simulate_sl()  : single-level worker (the historical engine);
 #                              continuous, single-level output is byte-identical
 #                              to the long-standing simulateData() behaviour, and
-#                              it also handles ov.var / skewness / kurtosis /
+#                              it also handles ov_var / skewness / kurtosis /
 #                              standardized / mass / categorical data
 #  - lav_data_simulate_ml()  : multilevel worker; calls lavaan() directly to
 #                              obtain the model-implied moments per block, and
 #                              supports two levels (optionally multigroup)
 #  - lav_data_simulate_old() : deprecated thin wrapper kept for backward
 #                              compatibility
-#  - helper functions (cluster.idx handling, Vale-Maurelli nonnormal data, ...)
+#  - helper functions (cluster_idx handling, Vale-Maurelli nonnormal data, ...)
 
 # ---------------------------------------------------------------------------
 # lav_data_simulate(): the single, unified data-simulation engine behind
@@ -22,88 +22,92 @@
 #  - multilevel requests  -> lav_data_simulate_ml() (model-implied moments per
 #    block, via a lavaan fit; supports two levels, optionally multigroup)
 #  - single-level requests -> lav_data_simulate_sl() (the historical engine;
-#    supports ov.var, skewness/kurtosis, standardized, mass, ...). The
+#    supports ov_var, skewness/kurtosis, standardized, mass, ...). The
 #    continuous, single-level output is byte-identical to the historical
 #    simulateData() output.
 #
 # The signature mirrors the historical simulateData() signature (so existing
-# code keeps working), plus 'cluster.idx' (multilevel) and 'ordered.center'.
+# code keeps working), plus 'cluster_idx' (multilevel) and 'ordered_center'.
 # ---------------------------------------------------------------------------
-lav_data_simulate <- function(model = NULL,                       # nolint start
-                              model.type = "sem",
+lav_data_simulate <- function(model = NULL,
+                              model_type = "sem",
                               # model modifiers
                               meanstructure = FALSE,
-                              int.ov.free = TRUE,
-                              int.lv.free = FALSE,
-                              marker.int.zero = FALSE,
-                              conditional.x = FALSE,
+                              int_ov_free = TRUE,
+                              int_lv_free = FALSE,
+                              marker_int_zero = FALSE,
+                              conditional_x = FALSE,
                               composites = TRUE,
-                              fixed.x = FALSE,
+                              fixed_x = FALSE,
                               orthogonal = FALSE,
-                              std.lv = TRUE,
-                              auto.fix.first = FALSE,
-                              auto.fix.single = FALSE,
-                              auto.var = TRUE,
-                              auto.cov.lv.x = TRUE,
-                              auto.cov.y = TRUE,
+                              std_lv = TRUE,
+                              auto_fix_first = FALSE,
+                              auto_fix_single = FALSE,
+                              auto_var = TRUE,
+                              auto_cov_lv_x = TRUE,
+                              auto_cov_y = TRUE,
                               ...,
                               # data properties
-                              sample.nobs = 500L,
-                              ov.var = NULL,
-                              group.label = NULL,
+                              sample_nobs = 500L,
+                              ov_var = NULL,
+                              group_label = NULL,
                               skewness = NULL,
                               kurtosis = NULL,
-                              cluster.idx = NULL,
+                              cluster_idx = NULL,
                               # control
                               seed = NULL,
                               empirical = FALSE,
                               mass = FALSE,
-                              ordered.center = TRUE,
-                              return.type = "data.frame",
-                              return.fit = FALSE,
+                              ordered_center = TRUE,
+                              return_type = "data.frame",
+                              return_fit = FALSE,
                               debug = FALSE,
-                              standardized = FALSE) {           # nolint end
-  multilevel <- !is.null(cluster.idx) || lav_simulate_is_multilevel(model)
+                              standardized = FALSE) {
+  dotdotdot <- list(...)
+  lav_adapt_func(environment(), dotdotdot, FALSE)
+
+  multilevel <- !is.null(cluster_idx) || lav_simulate_is_multilevel(model)
 
   if (multilevel) {
     # ------- multilevel worker -------
     # the multilevel worker does not (yet) support these (single-level) features
-    if (!is.null(ov.var) || !is.null(skewness) || !is.null(kurtosis) ||
+    if (!is.null(ov_var) || !is.null(skewness) || !is.null(kurtosis) ||
         isTRUE(standardized) || isTRUE(mass)) {
       lav_msg_warn(gettext(
-        "arguments 'ov.var', 'skewness', 'kurtosis', 'standardized' and 'mass'
+        "arguments 'ov_var', 'skewness', 'kurtosis', 'standardized' and 'mass'
         are not supported for multilevel data and will be ignored"))
     }
-    return(lav_data_simulate_ml(
-      model = model, cmd.pop = model.type,
+    return_value <- do.call(lav_data_simulate_ml, c(
+      list(model = model, cmd_pop = model_type,
       # forward the model modifiers to the population-model fit
-      int.ov.free = int.ov.free, int.lv.free = int.lv.free,
-      marker.int.zero = marker.int.zero, conditional.x = conditional.x,
-      composites = composites, fixed.x = fixed.x, orthogonal = orthogonal,
-      std.lv = std.lv, auto.fix.first = auto.fix.first,
-      auto.fix.single = auto.fix.single, auto.var = auto.var,
-      auto.cov.lv.x = auto.cov.lv.x, auto.cov.y = auto.cov.y,
-      ...,
-      sample.nobs = sample.nobs, cluster.idx = cluster.idx,
-      seed = seed, empirical = empirical, ordered.center = ordered.center,
-      return.fit = return.fit, output = return.type))
+      int_ov_free = int_ov_free, int_lv_free = int_lv_free,
+      marker_int_zero = marker_int_zero, conditional_x = conditional_x,
+      composites = composites, fixed_x = fixed_x, orthogonal = orthogonal,
+      std_lv = std_lv, auto_fix_first = auto_fix_first,
+      auto_fix_single = auto_fix_single, auto_var = auto_var,
+      auto_cov_lv_x = auto_cov_lv_x, auto_cov_y = auto_cov_y),
+      dotdotdot,
+      list(sample_nobs = sample_nobs, cluster_idx = cluster_idx,
+      seed = seed, empirical = empirical, ordered_center = ordered_center,
+      return_fit = return_fit, output = return_type)))
+    return(return_value)
   }
 
   # ------- single-level worker -------
-  lav_data_simulate_sl(
-    model = model, model.type = model.type,
-    meanstructure = meanstructure, int.ov.free = int.ov.free,
-    int.lv.free = int.lv.free, marker.int.zero = marker.int.zero,
-    conditional.x = conditional.x, composites = composites,
-    fixed.x = fixed.x, orthogonal = orthogonal, std.lv = std.lv,
-    auto.fix.first = auto.fix.first, auto.fix.single = auto.fix.single,
-    auto.var = auto.var, auto.cov.lv.x = auto.cov.lv.x,
-    auto.cov.y = auto.cov.y, ...,
-    sample.nobs = sample.nobs, ov.var = ov.var, group.label = group.label,
+  do.call(lav_data_simulate_sl, c(
+    list(model = model, model_type = model_type,
+    meanstructure = meanstructure, int_ov_free = int_ov_free,
+    int_lv_free = int_lv_free, marker_int_zero = marker_int_zero,
+    conditional_x = conditional_x, composites = composites,
+    fixed_x = fixed_x, orthogonal = orthogonal, std_lv = std_lv,
+    auto_fix_first = auto_fix_first, auto_fix_single = auto_fix_single,
+    auto_var = auto_var, auto_cov_lv_x = auto_cov_lv_x,
+    auto_cov_y = auto_cov_y), dotdotdot,
+    list(sample_nobs = sample_nobs, ov_var = ov_var, group_label = group_label,
     skewness = skewness, kurtosis = kurtosis, seed = seed,
-    empirical = empirical, mass = mass, return.type = return.type,
-    return.fit = return.fit, debug = debug, standardized = standardized,
-    ordered.center = ordered.center)
+    empirical = empirical, mass = mass, return_type = return_type,
+    return_fit = return_fit, debug = debug, standardized = standardized,
+    ordered_center = ordered_center)))
 }
 
 # exported synonym
@@ -129,18 +133,18 @@ lav_simulate_is_multilevel <- function(model = NULL) {
 
 # multilevel data-simulation worker behind lav_data_simulate()
 lav_data_simulate_ml <- function(model = NULL,
-                              cmd.pop = "sem",
+                              cmd_pop = "sem",
                               ...,
                               # data properties
-                              sample.nobs = 1000L,
-                              cluster.idx = NULL,
+                              sample_nobs = 1000L,
+                              cluster_idx = NULL,
                               # control
                               seed = NULL,
                               empirical = FALSE,
-                              ordered.center = TRUE,
+                              ordered_center = TRUE,
                               # output
-                              add.labels = TRUE,
-                              return.fit = FALSE,
+                              add_labels = TRUE,
+                              return_fit = FALSE,
                               output = "data.frame") {
   if (!is.null(seed)) set.seed(seed)
 
@@ -159,14 +163,14 @@ lav_data_simulate_ml <- function(model = NULL,
   dotdotdot$meanstructure <- TRUE
 
   # helper to 'fit' the (no-data) population model; for multigroup models that
-  # are only defined via c() modifiers, lavaan needs sample.nobs to know the
-  # number of groups, so we retry with sample.nobs if the first attempt fails
+  # are only defined via c() modifiers, lavaan needs sample_nobs to know the
+  # number of groups, so we retry with sample_nobs if the first attempt fails
   fit_pop_model <- function(dd) {
-    out <- tryCatch(do.call(cmd.pop, args = c(list(model = model), dd)),
+    out <- tryCatch(do.call(cmd_pop, args = c(list(model = model), dd)),
                     error = function(e) e)
     if (inherits(out, "error")) {
-      out <- do.call(cmd.pop, args = c(list(model = model,
-                                            sample.nobs = sample.nobs), dd))
+      out <- do.call(cmd_pop, args = c(list(model = model,
+                                            sample_nobs = sample_nobs), dd))
     }
     out
   }
@@ -196,13 +200,13 @@ lav_data_simulate_ml <- function(model = NULL,
   nblocks <- lav_pt_nblocks(lavpartable)
   nlevels <- lavdata@nlevels
 
-  # check/expand the sample.nobs and cluster.idx arguments
-  tmp <- lav_data_simulate_nobs(sample.nobs = sample.nobs,
-                                cluster.idx = cluster.idx,
+  # check/expand the sample_nobs and cluster_idx arguments
+  tmp <- lav_data_simulate_nobs(sample_nobs = sample_nobs,
+                                cluster_idx = cluster_idx,
                                 ngroups = ngroups, nblocks = nblocks,
                                 nlevels = nlevels)
-  sample.nobs <- tmp$sample.nobs
-  cluster.idx <- tmp$cluster.idx
+  sample_nobs <- tmp$sample_nobs
+  cluster_idx <- tmp$cluster_idx
 
   # check if ov.names are the same for each group
   if (ngroups > 1L) {
@@ -222,8 +226,8 @@ lav_data_simulate_ml <- function(model = NULL,
 
   # generate data per BLOCK
   for (b in seq_len(nblocks)) {
-    if (lavoptions$conditional.x) {
-      lav_msg_stop(gettext("conditional.x = TRUE is not supported (yet) by the
+    if (lavoptions$conditional_x) {
+      lav_msg_stop(gettext("conditional_x = TRUE is not supported (yet) by the
                             multilevel data simulation"))
     } else {
       COV <- lavimplied$cov[[b]]
@@ -233,22 +237,22 @@ lav_data_simulate_ml <- function(model = NULL,
     # if empirical = TRUE, rescale by N/(N-1), so that estimator = ML returns
     # exact results
     if (empirical) {
-      if (sample.nobs[b] < NCOL(COV)) {
+      if (sample_nobs[b] < NCOL(COV)) {
         lav_msg_stop(gettextf(
-          "empirical = TRUE requires sample.nobs (= %1$s) to be larger than the
+          "empirical = TRUE requires sample_nobs (= %1$s) to be larger than the
           number of variables (= %2$s) in block = %3$s",
-          sample.nobs[b], NCOL(COV), b))
+          sample_nobs[b], NCOL(COV), b))
       }
       if (nlevels > 1L && (b %% nlevels == 1L)) {
-        COV <- COV * sample.nobs[b] / (sample.nobs[b] - sample.nobs[b + 1])
+        COV <- COV * sample_nobs[b] / (sample_nobs[b] - sample_nobs[b + 1])
       } else {
-        COV <- COV * sample.nobs[b] / (sample.nobs[b] - 1)
+        COV <- COV * sample_nobs[b] / (sample_nobs[b] - 1)
       }
     }
 
     # generate normal data (using sign-invariant method for reproducibility)
     tmp <- try(lav_mvrnorm(
-      n = sample.nobs[b],
+      n = sample_nobs[b],
       mu = MU, sigma_1 = COV, empirical = empirical),
       silent = TRUE)
 
@@ -295,17 +299,17 @@ lav_data_simulate_ml <- function(model = NULL,
       tmp1[, Lp$ov.idx[[1]]] <- X.block[[bb]]
 
       # level 2 (expand cluster-level values to the level-1 units)
-      tmp2[, Lp$ov.idx[[2]]] <- X.block[[bb + 1L]][cluster.idx[[g]], ,
+      tmp2[, Lp$ov.idx[[2]]] <- X.block[[bb + 1L]][cluster_idx[[g]], ,
                                                    drop = FALSE]
       # final
       X[[g]] <- tmp1 + tmp2
 
       # cluster id
-      X[[g]][, p.tilde + 1L] <- cluster.idx[[g]]
+      X[[g]][, p.tilde + 1L] <- cluster_idx[[g]]
     }
 
     # add variable names?
-    if (add.labels) {
+    if (add_labels) {
       if (nlevels > 1L) {
         colnames(X[[g]]) <- c(lavdata@ov.names[[g]], "cluster")
       } else {
@@ -341,9 +345,9 @@ lav_data_simulate_ml <- function(model = NULL,
         th.idx <- which(o == TH.NAMES)
         th.val <- c(-Inf, sort(TH.VAL[th.idx]), +Inf)
         tmp <- X[[g]][, o.idx]
-        if (ordered.center) {
+        if (ordered_center) {
           # center first (so the cut also works when the model-implied 'mean'
-          # is nonzero); set ordered.center = FALSE for the 'old' behaviour
+          # is nonzero); set ordered_center = FALSE for the 'old' behaviour
           tmp <- tmp - mean(tmp, na.rm = TRUE)
         }
         X[[g]][, o.idx] <- cut(tmp, th.val, labels = FALSE)
@@ -376,70 +380,70 @@ lav_data_simulate_ml <- function(model = NULL,
     lav_msg_stop(gettextf("unknown option for argument output: %s", output))
   }
 
-  if (return.fit) {
+  if (return_fit) {
     attr(out, "fit") <- fit.pop
   }
 
   out
 }
 
-# check/expand the sample.nobs and cluster.idx arguments; for the multilevel
-# case, return a per-block sample.nobs vector and a per-group cluster.idx list
-lav_data_simulate_nobs <- function(sample.nobs = 1000L, cluster.idx = NULL,
+# check/expand the sample_nobs and cluster_idx arguments; for the multilevel
+# case, return a per-block sample_nobs vector and a per-group cluster_idx list
+lav_data_simulate_nobs <- function(sample_nobs = 1000L, cluster_idx = NULL,
                                    ngroups = 1L, nblocks = 1L, nlevels = 1L) {
   if (nlevels > 1L) {
-    if (is.null(cluster.idx)) {
-      # no cluster.idx given: build balanced clusters from sample.nobs
-      # sample.nobs is interpreted (per group) as:
+    if (is.null(cluster_idx)) {
+      # no cluster_idx given: build balanced clusters from sample_nobs
+      # sample_nobs is interpreted (per group) as:
       #  - a single number: total number of level-1 units (clusters default
       #    to 1/10 of that, with a minimum of 2)
       #  - a vector c(n.level1, n.level2): #level-1 units and #clusters
-      if (length(sample.nobs) == 1L) {
-        n1 <- as.integer(sample.nobs)
+      if (length(sample_nobs) == 1L) {
+        n1 <- as.integer(sample_nobs)
         n2 <- max(2L, as.integer(round(n1 / 10)))
         nobs.l <- c(n1, n2)
-      } else if (length(sample.nobs) == nlevels) {
-        nobs.l <- as.integer(sample.nobs)
+      } else if (length(sample_nobs) == nlevels) {
+        nobs.l <- as.integer(sample_nobs)
       } else {
-        lav_msg_stop(gettext("for the multilevel case, sample.nobs should be a
+        lav_msg_stop(gettext("for the multilevel case, sample_nobs should be a
                              single number, or a vector with one number per
                              level (eg c(1000, 100))"))
       }
-      cluster.idx <- vector("list", ngroups)
+      cluster_idx <- vector("list", ngroups)
       for (g in seq_len(ngroups)) {
-        cluster.idx[[g]] <- lav_data_simulate_clusidx(nobs.l[1L], nobs.l[2L])
+        cluster_idx[[g]] <- lav_data_simulate_clusidx(nobs.l[1L], nobs.l[2L])
       }
     } else {
-      # cluster.idx given
-      if (!is.list(cluster.idx)) {
-        cluster.idx <- rep(list(cluster.idx), ngroups)
+      # cluster_idx given
+      if (!is.list(cluster_idx)) {
+        cluster_idx <- rep(list(cluster_idx), ngroups)
       }
     }
-    # cluster.idx values within each group should be 1, 2, ... nclus
-    sample.nobs <- numeric(nblocks)
+    # cluster_idx values within each group should be 1, 2, ... nclus
+    sample_nobs <- numeric(nblocks)
     for (g in seq_len(ngroups)) {
-      cluster.idx[[g]] <- as.integer(as.factor(cluster.idx[[g]]))
+      cluster_idx[[g]] <- as.integer(as.factor(cluster_idx[[g]]))
       gg <- (g - 1L) * nlevels + 1L
-      sample.nobs[gg]     <- length(cluster.idx[[g]])
-      sample.nobs[gg + 1] <- length(unique(cluster.idx[[g]]))
+      sample_nobs[gg]     <- length(cluster_idx[[g]])
+      sample_nobs[gg + 1] <- length(unique(cluster_idx[[g]]))
     }
   } else {
     # single level
-    if (length(sample.nobs) == ngroups) {
+    if (length(sample_nobs) == ngroups) {
       # nothing to do
-    } else if (ngroups > 1L && length(sample.nobs) == 1L) {
-      sample.nobs <- rep.int(sample.nobs, ngroups)
+    } else if (ngroups > 1L && length(sample_nobs) == 1L) {
+      sample_nobs <- rep.int(sample_nobs, ngroups)
     } else {
       lav_msg_stop(gettextf(
-        "ngroups = %1$s but sample.nobs has length = %2$s",
-        ngroups, length(sample.nobs)))
+        "ngroups = %1$s but sample_nobs has length = %2$s",
+        ngroups, length(sample_nobs)))
     }
   }
 
-  list(sample.nobs = as.integer(sample.nobs), cluster.idx = cluster.idx)
+  list(sample_nobs = as.integer(sample_nobs), cluster_idx = cluster_idx)
 }
 
-# create a balanced cluster.idx vector with n1 level-1 units in n2 clusters
+# create a balanced cluster_idx vector with n1 level-1 units in n2 clusters
 lav_data_simulate_clusidx <- function(n1, n2) {
   if (n2 < 1L) n2 <- 1L
   if (n2 > n1) n2 <- n1
@@ -463,38 +467,38 @@ lav_data_simulate_clusidx <- function(n1, n2) {
 #
 lav_data_simulate_sl <- function( # user-specified model    # nolint start
                          model = NULL,
-                         model.type = "sem",
+                         model_type = "sem",
                          # model modifiers
                          meanstructure = FALSE,
-                         int.ov.free = TRUE,
-                         int.lv.free = FALSE,
-                         marker.int.zero = FALSE,
-                         conditional.x = FALSE,
+                         int_ov_free = TRUE,
+                         int_lv_free = FALSE,
+                         marker_int_zero = FALSE,
+                         conditional_x = FALSE,
                          composites = TRUE,
-                         fixed.x = FALSE,
+                         fixed_x = FALSE,
                          orthogonal = FALSE,
-                         std.lv = TRUE,
-                         auto.fix.first = FALSE,
-                         auto.fix.single = FALSE,
-                         auto.var = TRUE,
-                         auto.cov.lv.x = TRUE,
-                         auto.cov.y = TRUE,
+                         std_lv = TRUE,
+                         auto_fix_first = FALSE,
+                         auto_fix_single = FALSE,
+                         auto_var = TRUE,
+                         auto_cov_lv_x = TRUE,
+                         auto_cov_y = TRUE,
                          ...,
                          # data properties
-                         sample.nobs = 500L,
-                         ov.var = NULL,
-                         group.label = paste("G", 1:ngroups, sep = ""),
+                         sample_nobs = 500L,
+                         ov_var = NULL,
+                         group_label = paste("G", 1:ngroups, sep = ""),
                          skewness = NULL,
                          kurtosis = NULL,
                          # control
                          seed = NULL,
                          empirical = FALSE,
                          mass = FALSE,
-                         return.type = "data.frame",
-                         return.fit = FALSE,
+                         return_type = "data.frame",
+                         return_fit = FALSE,
                          debug = FALSE,
                          standardized = FALSE,
-                         ordered.center = FALSE) {         # nolint end
+                         ordered_center = FALSE) {         # nolint end
   if (!missing(debug)) {
     current_debug <- lav_debug()
     if (lav_debug(debug))
@@ -528,20 +532,20 @@ lav_data_simulate_sl <- function( # user-specified model    # nolint start
     lav <- lav_model_pt(
       model = model,
       meanstructure = meanstructure,
-      int_ov_free = int.ov.free,
-      int_lv_free = int.lv.free,
-      marker_int_zero = marker.int.zero,
+      int_ov_free = int_ov_free,
+      int_lv_free = int_lv_free,
+      marker_int_zero = marker_int_zero,
       composites = composites,
-      conditional_x = conditional.x,
-      fixed_x = fixed.x,
+      conditional_x = conditional_x,
+      fixed_x = fixed_x,
       orthogonal = orthogonal,
-      std_lv = std.lv,
-      auto_fix_first = auto.fix.first,
-      auto_fix_single = auto.fix.single,
-      auto_var = auto.var,
-      auto_cov_lv_x = auto.cov.lv.x,
-      auto_cov_y = auto.cov.y,
-      ngroups = length(sample.nobs)
+      std_lv = std_lv,
+      auto_fix_first = auto_fix_first,
+      auto_fix_single = auto_fix_single,
+      auto_var = auto_var,
+      auto_cov_lv_x = auto_cov_lv_x,
+      auto_cov_y = auto_cov_y,
+      ngroups = length(sample_nobs)
     )
   }
 
@@ -617,8 +621,8 @@ lav_data_simulate_sl <- function( # user-specified model    # nolint start
     # new in 0.6-20: - use lav_lisrel_residual_variances
     #                - use lav_lisrel_comp_set_intresvar
     dotdotdot <- list(...)
-    dotdotdot$sample.nobs <- sample.nobs
-    dotdotdot$fixed.x <- FALSE # for now
+    dotdotdot$sample_nobs <- sample_nobs
+    dotdotdot$fixed_x <- FALSE # for now
     dotdotdot$representation <- "LISREL"
     dotdotdot$composites <- composites
     dotdotdot$correlation <- TRUE # this is the trick
@@ -650,7 +654,7 @@ lav_data_simulate_sl <- function( # user-specified model    # nolint start
     }
 
     # this is what we did <0.6-20
-    # fit <- lavaan(model = lav, sample.nobs = sample.nobs, ...)
+    # fit <- lavaan(model = lav, sample_nobs = sample_nobs, ...)
     # Sigma.hat <- lav_model_sigma(lavmodel = fit@Model)
     # ETA <- lav_model_veta(lavmodel = fit@Model)
 
@@ -672,7 +676,7 @@ lav_data_simulate_sl <- function( # user-specified model    # nolint start
     #   }
     # }
     # # refit
-    # fit <- lavaan(model = lav, sample.nobs = sample.nobs, ...)
+    # fit <- lavaan(model = lav, sample_nobs = sample_nobs, ...)
     # Sigma.hat <- lav_model_sigma(lavmodel = fit@Model)
 
     # if (lav_debug()) {
@@ -698,11 +702,11 @@ lav_data_simulate_sl <- function( # user-specified model    # nolint start
 
 
   # unstandardize
-  if (!is.null(ov.var)) {
-    # FIXME: if ov.var is named, check the order of the elements
+  if (!is.null(ov_var)) {
+    # FIXME: if ov_var is named, check the order of the elements
 
     # 1. unstandardize observed variables
-    lav$ustart <- lav_unstandardize_ov(partable = lav, ov_var = ov.var)
+    lav$ustart <- lav_unstandardize_ov(partable = lav, ov_var = ov_var)
 
     # 2. unstandardized latent variables
 
@@ -713,7 +717,7 @@ lav_data_simulate_sl <- function( # user-specified model    # nolint start
   }
 
   # fit the model without data
-  fit <- lavaan(model = lav, sample.nobs = sample.nobs, ...)
+  fit <- lavaan(model = lav, sample_nobs = sample_nobs, ...)
 
   # the model-implied moments for the population
   sigma_hat <- lav_model_sigma(lavmodel = fit@Model)
@@ -730,7 +734,7 @@ lav_data_simulate_sl <- function( # user-specified model    # nolint start
   }
 
   # ngroups
-  ngroups <- length(sample.nobs)
+  ngroups <- length(sample_nobs)
 
   # prepare
   x <- vector("list", length = ngroups)
@@ -742,21 +746,21 @@ lav_data_simulate_sl <- function( # user-specified model    # nolint start
     # if empirical = TRUE, rescale by N/(N-1), so that estimator=ML
     # returns exact results
     if (empirical) {
-      cov_1 <- cov_1 * sample.nobs[g] / (sample.nobs[g] - 1)
+      cov_1 <- cov_1 * sample_nobs[g] / (sample_nobs[g] - 1)
     }
 
     # Using sign-invariant method for cross-machine reproducibility
     if (is.null(skewness) && is.null(kurtosis)) {
       if (mass) {
         x[[g]] <- MASS::mvrnorm(
-          n = sample.nobs[g],
+          n = sample_nobs[g],
           mu = mu_hat[[g]],
           Sigma = cov_1,
           empirical = empirical
         )
       } else {
         x[[g]] <- lav_mvrnorm(
-          n = sample.nobs[g],
+          n = sample_nobs[g],
           mu = mu_hat[[g]],
           sigma_1 = cov_1,
           empirical = empirical
@@ -765,7 +769,7 @@ lav_data_simulate_sl <- function( # user-specified model    # nolint start
     } else {
       # first generate Z
       z <- lav_data_valemaurelli1983(
-        n = sample.nobs[g],
+        n = sample_nobs[g],
         cor_1 = cov2cor(cov_1),
         skewness = skewness, # FIXME: per group?
         kurtosis = kurtosis, mass = mass
@@ -798,25 +802,25 @@ lav_data_simulate_sl <- function( # user-specified model    # nolint start
           lav$group == group_values[g])
         th_val <- c(-Inf, sort(lav$ustart[th_idx]), +Inf)
         tmp_o <- x[[g]][, o_idx]
-        if (ordered.center) {
+        if (ordered_center) {
           # center first (so the cut also works when the model-implied 'mean'
-          # is nonzero); ordered.center = FALSE reproduces the historical cut
+          # is nonzero); ordered_center = FALSE reproduces the historical cut
           tmp_o <- tmp_o - mean(tmp_o, na.rm = TRUE)
         }
         x[[g]][, o_idx] <- as.integer(cut(tmp_o, th_val))
       }
     }
 
-    if (return.type == "data.frame") x[[g]] <- as.data.frame(x[[g]])
+    if (return_type == "data.frame") x[[g]] <- as.data.frame(x[[g]])
   }
 
-  if (return.type == "matrix") {
+  if (return_type == "matrix") {
     if (ngroups == 1L) {
       x[[1L]]
     } else {
       x
     }
-  } else if (return.type == "data.frame") {
+  } else if (return_type == "data.frame") {
     data_1 <- x[[1L]]
 
     # if multiple groups, add group column
@@ -824,16 +828,16 @@ lav_data_simulate_sl <- function( # user-specified model    # nolint start
       for (g in 2:ngroups) {
         data_1 <- rbind(data_1, x[[g]])
       }
-      data_1$group <- rep(1:ngroups, times = sample.nobs)
+      data_1$group <- rep(1:ngroups, times = sample_nobs)
     }
     var_names <- lav_pt_vnames(fit@ParTable, type = "ov", group = 1L)
     if (ngroups > 1L) var_names <- c(var_names, "group")
     names(data_1) <- var_names
-    if (return.fit) {
+    if (return_fit) {
       attr(data_1, "fit") <- fit
     }
     data_1
-  } else if (return.type == "cov") {
+  } else if (return_type == "cov") {
     if (ngroups == 1L) {
       cov(x[[1L]])
     } else {
@@ -846,8 +850,10 @@ lav_data_simulate_sl <- function( # user-specified model    # nolint start
 # of lavSimulate()); routes through the unified engine lav_data_simulate(), which
 # dispatches to lav_data_simulate_sl() (single level) or lav_data_simulate_ml()
 # (multilevel). New code should call lavSimulateData() / lav_data_simulate().
-lav_data_simulate_old <- function(..., ordered.center = FALSE) {
-  lav_data_simulate(..., ordered.center = ordered.center)
+lav_data_simulate_old <- function(..., ordered_center = FALSE) {
+  dotdotdot <- list(...)
+  lav_adapt_func(environment(), dotdotdot, FALSE)
+  do.call(lav_data_simulate, c(dotdotdot, list(ordered_center = ordered_center)))
 }
 
 

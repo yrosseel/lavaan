@@ -6,8 +6,8 @@
 Compute a variety of test statistics evaluating the global fit of
 the model.}
 \usage{
-    lavTest(lavobject, test = "standard", scaled.test = "standard",
-            output = "list", drop.list.single = TRUE)
+    lavTest(lavobject, test = "standard", scaled_test = "standard",
+            output = "list", drop_list_single = TRUE, ...)
 }
 \arguments{
 \item{lavobject}{An object of class \code{\linkS4class{lavaan}}.}
@@ -18,16 +18,16 @@ the model.}
     If \code{"Browne.residual.nt"} is included, Browne's residual-based
     test statistic using normal theory is computed.
     If \code{"Satorra.Bentler"} is included, a Satorra-Bentler scaled test
-    statistic is computed. If \code{"Yuan.Bentler"} is included, 
-    a Yuan-Bentler scaled test statistic is computed. 
+    statistic is computed. If \code{"Yuan.Bentler"} is included,
+    a Yuan-Bentler scaled test statistic is computed.
     If \code{"Yuan.Bentler.Mplus"} is included, a
     test statistic is computed that is asymptotically equivalent to the
     Yuan-Bentler scaled test statistic. If \code{"mean.var.adjusted"} or
-    \code{"Satterthwaite"} is included, a mean and variance adjusted test 
-    statistic is computed. If \code{"scaled.shifted"} is included, 
-    an alternative mean and variance adjusted test statistic is 
+    \code{"Satterthwaite"} is included, a mean and variance adjusted test
+    statistic is computed. If \code{"scaled.shifted"} is included,
+    an alternative mean and variance adjusted test statistic is
     computed (as in Mplus version 6 or higher).
-    If \code{"boot"} or \code{"bootstrap"} or \code{"Bollen.Stine"} is 
+    If \code{"boot"} or \code{"bootstrap"} or \code{"Bollen.Stine"} is
     included, the
     Bollen-Stine bootstrap is used to compute the bootstrap probability value
     of the (regular) test statistic. FMG p-value tests can be requested using
@@ -35,29 +35,30 @@ the model.}
     \code{"all"}. The convenience value \code{"fmg"} resolves to
     \code{"peba4_rls"} for one-model tests. Suffixless FMG names use the
     standard ML chi-square statistic by default; set
-    \code{scaled.test = "Browne.residual.nt.model"} or
-    \code{scaled.test = "RLS"} to use the Browne residual normal-theory
+    \code{scaled_test = "Browne.residual.nt.model"} or
+    \code{scaled_test = "RLS"} to use the Browne residual normal-theory
     model-based statistic. Suffixes such as \code{"_ml"}, \code{"_rls"},
     and \code{"_ug"} can be used for explicit control, for example
     \code{"peba4_ug_rls"} or \code{"pols3_ml"}.}
-\item{scaled.test}{Character. Choose the test statistic 
-    that will be scaled (if a scaled test statistic is requested). 
+\item{scaled_test}{Character. Choose the test statistic
+    that will be scaled (if a scaled test statistic is requested).
     The default is \code{"standard"}, but it could also be (for example)
     \code{"Browne.residual.nt"}.}
 \item{output}{Character. If \code{"list"} (the default), return a list with
-    all test statistics. If \code{"text"}, display the output as text with 
+    all test statistics. If \code{"text"}, display the output as text with
     verbose descriptions (as in the summary output). If any scaled
     test statistics are included, they are printed first in a two-column
     format, followed by the remaining test statistics in a one-column format.}
-\item{drop.list.single}{Logical. Only used when \code{output = "list"}.
+\item{drop_list_single}{Logical. Only used when \code{output = "list"}.
     If \code{TRUE} and the list is of length one (i.e. only a single test
     statistic), drop the outer list. If \code{FALSE}, return a nested list
     with one element per test statistic.}
+\item{...}{To support old argument names.}
 }
 \value{
     If \code{output = "list"}: a nested list with test statistics, or if
-    only a single test statistic is requested (and 
-    \code{drop.list.single = TRUE}), a list with details for this test
+    only a single test statistic is requested (and
+    \code{drop_list_single = TRUE}), a list with details for this test
     statistic. If \code{output = "text"}: the text is printed, and a
     nested list of test statistics (including an info attribute) is
     returned.
@@ -71,5 +72,5 @@ HS.model <- '
 fit <- cfa(HS.model, data = HolzingerSwineford1939)
 lavTest(fit, test = "browne.residual.adf")
 lavTest(fit, test = "peba4", output = "text")
-lavTest(fit, test = "pols3", scaled.test = "RLS", output = "text")
+lavTest(fit, test = "pols3", scaled_test = "RLS", output = "text")
 }

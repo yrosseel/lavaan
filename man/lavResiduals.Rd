@@ -12,11 +12,11 @@ this function with a limited set of arguments.
 \usage{
 lavResiduals(object, type = "cor.bentler", h1 = NULL,
     se = FALSE, zstat = TRUE, summary = TRUE, elementwise = TRUE,
-    combine = FALSE, usrmr.ci.level = 0.90, usrmr.close.h0 = 0.05,
-    h1.acov = "unstructured",
-    add.type = TRUE, add.labels = TRUE, add.class = TRUE,
-    drop.list.single.group = TRUE,
-    maximum.number = 0L, n.largest = 5L, output = "list")
+    combine = FALSE, usrmr_ci_level = 0.90, usrmr_close_h0 = 0.05,
+    h1_acov = "unstructured",
+    add_type = TRUE, add_labels = TRUE, add_class = TRUE,
+    drop_list_single_group = TRUE,
+    maximum_number = 0L, n_largest = 5L, output = "list", ...)
 }
 \arguments{
 \item{object}{An object of class \code{\linkS4class{lavaan}}.}
@@ -82,34 +82,34 @@ table is returned as the \code{summary} element at the top level of the result.
 The pooling correctly accounts for the (block-diagonal) independence of separate
 groups and for the (joint) sampling covariance across the levels of a multilevel
 model.}
-\item{usrmr.ci.level}{Numeric. The confidence level of the confidence interval
+\item{usrmr_ci_level}{Numeric. The confidence level of the confidence interval
 that is reported (in the summary) for the unbiased URMR/USRMR/UCRMR. The default
 is 0.90.}
-\item{usrmr.close.h0}{Numeric. The value of the population URMR/USRMR/UCRMR under
+\item{usrmr_close_h0}{Numeric. The value of the population URMR/USRMR/UCRMR under
 the null hypothesis of the test of close fit that is reported (in the summary)
 for the unbiased estimator. The default is 0.05.}
-\item{h1.acov}{Character. If \code{"unstructured"}, the observed summary
+\item{h1_acov}{Character. If \code{"unstructured"}, the observed summary
 statistics are used as consistent estimates of the corresponding (unrestricted)
 population statistics. If \code{"structured"}, the model-implied summary
 statistics are used as consistent estimates of the corresponding (unrestricted)
 population statistics. This affects the way the asymptotic variance matrix
 of the summary statistics is computed.}
-\item{add.type}{Logical. If \code{TRUE}, show the type of residuals
+\item{add_type}{Logical. If \code{TRUE}, show the type of residuals
 in the output.}
-\item{add.labels}{If \code{TRUE}, variable names are added to the vectors
+\item{add_labels}{If \code{TRUE}, variable names are added to the vectors
 and/or matrices.}
-\item{add.class}{If \code{TRUE}, vectors are given the \sQuote{lavaan.vector}
+\item{add_class}{If \code{TRUE}, vectors are given the \sQuote{lavaan.vector}
 class; matrices are given the \sQuote{lavaan.matrix} class, and symmetric
 matrices are given the \sQuote{lavaan.matrix.symmetric} class.
 This only affects the way they are printed on the screen.}
-\item{drop.list.single.group}{If \code{FALSE}, the results are returned as
+\item{drop_list_single_group}{If \code{FALSE}, the results are returned as
 a list, where each element corresponds to a group (even if there is only
 a single group). If \code{TRUE}, the list will be unlisted if there is
 only a single group.}
-\item{maximum.number}{Integer. Only used if \code{output = "table"}. If larger
-than zero, show only the first maximum.number rows of the data.frame. The
+\item{maximum_number}{Integer. Only used if \code{output = "table"}. If larger
+than zero, show only the first maximum_number rows of the data.frame. The
 default (\code{0L}) shows all rows.}
-\item{n.largest}{Integer. Only used if \code{output = "text"}. The number of
+\item{n_largest}{Integer. Only used if \code{output = "text"}. The number of
 largest (in absolute value) residuals that are shown, per element group
 (covariances, variances, intercepts, thresholds, regression slopes) and per
 block.}
@@ -127,7 +127,7 @@ If \code{se = TRUE}, a \code{se} column with the standard errors is added; if
 \code{zstat = TRUE}, a \code{z} column with the z-statistics is added.
 If \code{output = "text"} (or, equivalently, \code{"pretty"}), the output is
 printed in the same style as the fit measures (e.g.\ the RMSEA). First, a table
-with the \code{n.largest} largest residuals (per element group, and per block)
+with the \code{n_largest} largest residuals (per element group, and per block)
 is shown, formatted like \code{parameterEstimates(., output = "text")} but with
 a \sQuote{Residual} column (and, if available, \sQuote{Std.Err} and
 \sQuote{Z-value} columns); its header reflects the residual \code{type} (e.g.\
@@ -135,11 +135,12 @@ a \sQuote{Residual} column (and, if available, \sQuote{Std.Err} and
 Residuals}). Next, the residual summary table(s) are shown. When multiple blocks
 are involved and \code{combine = FALSE}, one summary is printed per block;
 otherwise a single (combined) summary is printed.}
+\item{...}{To support old argument names.}
 }
 \value{
-If \code{drop.list.single.group = TRUE}, a list of (residualized) summary
+If \code{drop_list_single_group = TRUE}, a list of (residualized) summary
 statistics, including type, standardized residuals, and summaries. If
-\code{drop.list.single.group = FALSE}, the list of summary statistics is nested
+\code{drop_list_single_group = FALSE}, the list of summary statistics is nested
 within a list for each group.
 }
 \references{

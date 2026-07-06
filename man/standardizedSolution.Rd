@@ -77,7 +77,7 @@ the parameter table inside the object@ParTable slot.}
 displayed as a standard (albeit lavaan-formatted) data.frame.
 If \code{"text"} (or alias \code{"pretty"}), the parameter table is
 prettified and displayed with subsections (as used by the summary function).}
-\item{...}{to support old argument names}
+\item{...}{To support old argument names.}
 }
 \details{
 The standardized estimates are functions of the (unstandardized) free

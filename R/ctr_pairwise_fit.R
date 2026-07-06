@@ -38,7 +38,7 @@ lavTablesFitCp <- function(object, alpha = 0.05) {   # nolint
 
   tf <- lavTables(object,
     dimension = 2L, type = "table",
-    statistic = "G2", p.value = TRUE
+    statistic = "G2", p_value = TRUE
   )
 
   # Bonferroni adjusted p-value

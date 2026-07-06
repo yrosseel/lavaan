@@ -8,13 +8,14 @@ This function can be used to determine an optimal lambda value for the
 lavPredictY_cv(object, data = NULL,
               xnames = lav_object_vnames(object, "ov.x"),
               ynames = lav_object_vnames(object, "ov.y"),
-              n.folds = 10L,
-              lambda.seq = seq(0, 1, 0.1))
+              n_folds = 10L,
+              lambda_seq = seq(0, 1, 0.1),
+              ...)
 }
 \arguments{
 \item{object}{An object of class \code{\linkS4class{lavaan}}.}
 \item{data}{A data.frame, containing the same variables as the data.frame that
-was used when fitting the model in \code{object}.} 
+was used when fitting the model in \code{object}.}
 \item{xnames}{The names of the observed variables that should be treated as the
 x-variables. Can also be a list to allow for a separate set of variable names
 per group (or block).}
@@ -22,10 +23,11 @@ per group (or block).}
 y-variables. It is for these variables that the function will predict the
 (model-based) values for each observation. Can also be a list to allow for a
 separate set of variable names per group (or block).}
-\item{n.folds}{Integer. The number of folds to be used during
+\item{n_folds}{Integer. The number of folds to be used during
 cross-validation.}
-\item{lambda.seq}{An R \code{seq()} containing the range of lambda penalty
+\item{lambda_seq}{An R \code{seq()} containing the range of lambda penalty
 values to be tested during cross-validation.}
+\item{...}{To support old argument names.}
 }
 \details{
 This function determines an optimal lambda value for use with
@@ -36,7 +38,7 @@ This function determines an optimal lambda value for use with
 the values of (observed) x-variables in a structural equation model.
 }
 \references{
-de Rooij, M., Karch, J.D., Fokkema, M., Bakk, Z., Pratiwi, B.C, and 
+de Rooij, M., Karch, J.D., Fokkema, M., Bakk, Z., Pratiwi, B.C, and
 Kelderman, H. (2022) SEM-Based Out-of-Sample Predictions,
 Structural Equation Modeling: A Multidisciplinary Journal.
 \doi{10.1080/10705511.2022.2061494}
@@ -46,8 +48,8 @@ Consciousness: A Psychometric Validation and Analysis of a New Model of
 Mystical Experience. \doi{10.31219/osf.io/cgb6e}
 }
 \examples{
-colnames(PoliticalDemocracy) <- c("z1", "z2", "z3", "z4", 
-                                  "y1", "y2", "y3", "y4", 
+colnames(PoliticalDemocracy) <- c("z1", "z2", "z3", "z4",
+                                  "y1", "y2", "y3", "y4",
                                   "x1", "x2", "x3")
 
 model <- '
@@ -79,8 +81,8 @@ reg.results <- lavPredictY_cv(
     PoliticalDemocracy[-idx, ],
     xnames = xnames,
     ynames = ynames,
-    n.folds = 10L,
-    lambda.seq = seq(from = .6, to = 2.5, by = .1)
+    n_folds = 10L,
+    lambda_seq = seq(from = .6, to = 2.5, by = .1)
 )
 lam <- reg.results$lambda.min
 

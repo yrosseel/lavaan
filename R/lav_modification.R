@@ -1,24 +1,27 @@
 # univariate modification indices
 #
 
-modindices <- function(object,                         # nolint start
+modindices <- function(object,
                        standardized = TRUE,
-                       cov.std = TRUE,
+                       cov_std = TRUE,
                        information = "expected",
                        # power statistics?
                        power = FALSE,
                        delta = 0.1,
                        alpha = 0.05,
-                       high.power = 0.75,
+                       high_power = 0.75,
                        # customize output
-                       sort. = FALSE,
-                       minimum.value = 0.0,
-                       maximum.number = nrow(list_1),
-                       free.remove = TRUE,
-                       na.remove = TRUE,
-                       op = NULL) {                    # nolint end
+                       sort = FALSE,
+                       minimum_value = 0.0,
+                       maximum_number = nrow(list_1),
+                       free_remove = TRUE,
+                       na_remove = TRUE,
+                       op = NULL,
+                      ...) {
+  dotdotdot <- list(...)
+  lav_adapt_func(environment(), dotdotdot, NULL)
   # rename modified argument
-  high_power <- high.power
+  high_power <- high_power
 
   # check object
   object <- lav_object_check_version(object)
@@ -187,7 +190,7 @@ modindices <- function(object,                         # nolint start
   if (standardized) {
     epc <- list_1$epc
 
-    if (cov.std) {
+    if (cov_std) {
       # replace epc values for variances by est values
       var_idx <- which(list_1$op == "~~" & list_1$lhs == list_1$rhs &
         list_1$exo == 0L)
@@ -212,7 +215,7 @@ modindices <- function(object,                         # nolint start
     list_1$sepc.lv <- epc_sign * lav_standardize_lv(object,
       partable = list_1,
       est = abs(epc),
-      cov_std = cov.std
+      cov_std = cov_std
     )
     if (length(small_idx) > 0L) {
       list_1$sepc.lv[small_idx] <- 0
@@ -220,7 +223,7 @@ modindices <- function(object,                         # nolint start
     list_1$sepc.all <- epc_sign * lav_standardize_all(object,
       partable = list_1,
       est = abs(epc),
-      cov_std = cov.std
+      cov_std = cov_std
     )
     if (length(small_idx) > 0L) {
       list_1$sepc.all[small_idx] <- 0
@@ -228,7 +231,7 @@ modindices <- function(object,                         # nolint start
     list_1$sepc.nox <- epc_sign * lav_standardize_all_nox(object,
       partable = list_1,
       est = abs(epc),
-      cov_std = cov.std
+      cov_std = cov_std
     )
     if (length(small_idx) > 0L) {
       list_1$sepc.nox[small_idx] <- 0
@@ -291,7 +294,7 @@ modindices <- function(object,                         # nolint start
   class(list_1) <- c("lavaan.data.frame", "data.frame")
 
   # remove rows corresponding to 'old' free parameters
-  if (free.remove) {
+  if (free_remove) {
     old_idx <- which(list_1$user != 10L)
     if (length(old_idx) > 0L) {
       list_1 <- list_1[-old_idx, ]
@@ -315,16 +318,16 @@ modindices <- function(object,                         # nolint start
   }
 
   # sort?
-  if (sort.) {
+  if (sort) {
     list_1 <- list_1[order(list_1$mi, decreasing = TRUE), ]
   }
-  if (minimum.value > 0.0) {
-    list_1 <- list_1[!is.na(list_1$mi) & list_1$mi > minimum.value, ]
+  if (minimum_value > 0.0) {
+    list_1 <- list_1[!is.na(list_1$mi) & list_1$mi > minimum_value, ]
   }
-  if (maximum.number < nrow(list_1)) {
-    list_1 <- list_1[seq_len(maximum.number), ]
+  if (maximum_number < nrow(list_1)) {
+    list_1 <- list_1[seq_len(maximum_number), ]
   }
-  if (na.remove) {
+  if (na_remove) {
     idx <- which(is.na(list_1$mi))
     if (length(idx) > 0) {
       list_1 <- list_1[-idx, ]
