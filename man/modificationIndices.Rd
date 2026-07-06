@@ -8,17 +8,17 @@ Given a fitted lavaan object, compute the modification indices
 (= univariate score tests) for a selected set of fixed-to-zero parameters.
 }
 \usage{
-modificationIndices(object, standardized = TRUE, cov.std = TRUE,
+modificationIndices(object, standardized = TRUE, cov_std = TRUE,
                     information = "expected",
                     power = FALSE, delta = 0.1, alpha = 0.05,
-                    high.power = 0.75, sort. = FALSE, minimum.value = 0,
-                    maximum.number = nrow(list_1), free.remove = TRUE,
-                    na.remove = TRUE, op = NULL)
-modindices(object, standardized = TRUE, cov.std = TRUE, information = "expected",
-                    power = FALSE, delta = 0.1, alpha = 0.05, high.power = 0.75,
-                    sort. = FALSE, minimum.value = 0,
-                    maximum.number = nrow(list_1), free.remove = TRUE,
-                    na.remove = TRUE, op = NULL)
+                    high_power = 0.75, sort = FALSE, minimum_value = 0,
+                    maximum_number = nrow(list_1), free_remove = TRUE,
+                    na_remove = TRUE, op = NULL, ...)
+modindices(object, standardized = TRUE, cov_std = TRUE, information = "expected",
+                    power = FALSE, delta = 0.1, alpha = 0.05, high_power = 0.75,
+                    sort = FALSE, minimum_value = 0,
+                    maximum_number = nrow(list_1), free_remove = TRUE,
+                    na_remove = TRUE, op = NULL, ...)
 }
 \arguments{
 \item{object}{An object of class \code{\linkS4class{lavaan}}.}
@@ -28,7 +28,7 @@ standardization is based on the variances of the (continuous) latent
 variables. In the second column (sepc.all), standardization is based
 on the variances of both the (continuous) observed and latent variables.
 (Residual) covariances are standardized using (residual) variances.}
-\item{cov.std}{Logical. See \code{\link{standardizedSolution}}.}
+\item{cov_std}{Logical. See \code{\link{standardizedSolution}}.}
 \item{information}{\code{character} indicating the type of information matrix
 to use (check \code{\link{lavInspect}} for available options). \code{"expected"}
 information is the default, which provides better control of Type I errors.}
@@ -38,22 +38,23 @@ modification index, using the values of \code{delta} and \code{alpha}.}
 computation, currently using the unstandardized metric of the epc column.}
 \item{alpha}{The significance level used for deciding if the modification
 index is statistically significant or not.}
-\item{high.power}{If the computed power is higher than this cutoff value,
+\item{high_power}{If the computed power is higher than this cutoff value,
 the power is considered `high'. If not, the power is considered `low'.
 This affects the values in the 'decision' column in the output.}
-\item{sort.}{Logical. If TRUE, sort the output by the modification
+\item{sort}{Logical. If TRUE, sort the output by the modification
 index values. Higher values appear first.}
-\item{minimum.value}{Numeric. Filter output and only show rows with a
+\item{minimum_value}{Numeric. Filter output and only show rows with a
 modification index value equal to or higher than this minimum value.}
-\item{maximum.number}{Integer. Filter output and only show the first
-\code{maximum.number} rows. Most useful when combined with the \code{sort.}
+\item{maximum_number}{Integer. Filter output and only show the first
+\code{maximum_number} rows. Most useful when combined with the \code{sort}
 option.}
-\item{free.remove}{Logical. If TRUE, filter output by removing all rows
+\item{free_remove}{Logical. If TRUE, filter output by removing all rows
 corresponding to free (unconstrained) parameters in the original model.}
-\item{na.remove}{Logical. If TRUE, filter output by removing all rows with
+\item{na_remove}{Logical. If TRUE, filter output by removing all rows with
 NA values for the modification indices.}
 \item{op}{Character string. Filter the output by selecting only those rows with
 operator \code{op}.}
+\item{...}{To support old argument names.}
 }
 \value{
   A data.frame containing modification indices and EPCs.
@@ -79,5 +80,5 @@ HS.model <- ' visual  =~ x1 + x2 + x3
               speed   =~ x7 + x8 + x9 '
 
 fit <- cfa(HS.model, data=HolzingerSwineford1939)
-modindices(fit, minimum.value = 10, sort = TRUE)
+modindices(fit, minimum_value = 10, sort = TRUE)
 }
