@@ -512,7 +512,15 @@ within-only (level-1) variables. Missing data can be handled by
 full-information maximum likelihood (\code{missing = "ml"}); the
 exogenous covariates themselves must be complete (cases with missing
 values on exogenous variables are removed). The (observed-data)
-loglikelihood is \emph{conditional} on the exogenous covariates. No
+loglikelihood is \emph{conditional} on \emph{all} exogenous
+covariates: the covariates carrying random slopes, any other
+within-only exogenous covariates (as in Mplus
+\code{TYPE = TWOLEVEL RANDOM}), and the between-level exogenous
+covariates. Between-only \emph{endogenous} observed variables
+(level-2 outcomes, e.g., indicators of a between-level factor) are
+supported; they must be pure indicators (not involved in
+regressions), with a free (or fixed to a nonzero value) residual
+variance, and without missing values. No
 chi-square test statistic (or fit indices) are available for models
 with random slopes; \code{fitMeasures()} provides the
 loglikelihood-based measures only (\code{npar}, \code{ntotal},

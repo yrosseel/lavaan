@@ -150,8 +150,16 @@ lav_mvn_cl_rs_info <- function(lavmodel = NULL, lavpartable = NULL,
   within_only <- ov_names_1[!ov_names_1 %in% ov_names_2]
   between_only <- ov_names_2[!ov_names_2 %in% ov_names_1]
 
-  # the *observed* covariates carrying random slopes
-  x_names <- unique(path_rhs[path_type == "ov"])
+  # the observed covariates that are conditioned upon: the (observed)
+  # rv covariates PLUS all other within-only exogenous (fixed.x)
+  # covariates -- the loglikelihood is conditional on ALL of them
+  # (cfr. Mplus TYPE = TWOLEVEL RANDOM, which conditions on all
+  # observed x-covariates); the fixed regression paths of the
+  # non-rv covariates enter through the reduced-form P matrix
+  x_rv <- unique(path_rhs[path_type == "ov"])
+  x_extra <- within_only[within_only %in% lavdata@ov.names.x[[1]] &
+                         !within_only %in% x_rv]
+  x_names <- c(x_rv, x_extra)
 
   # validation (only if we have a parameter table)
   if (!is.null(pt)) {
@@ -169,14 +177,14 @@ lav_mvn_cl_rs_info <- function(lavmodel = NULL, lavpartable = NULL,
 
     # the observed rv covariates must be observed, within-only, and
     # exogenous
-    bad <- x_names[!x_names %in% within_only]
+    bad <- x_rv[!x_rv %in% within_only]
     if (length(bad) > 0L) {
       lav_msg_stop(gettextf(
         "covariate(s) with a random slope must be observed within-only
          variables (they should not appear in the level-2 part of the
          model): %s.", paste(bad, collapse = " ")))
     }
-    bad <- x_names[!x_names %in% ov_x_1]
+    bad <- x_rv[!x_rv %in% ov_x_1]
     if (length(bad) > 0L) {
       lav_msg_stop(gettextf(
         "covariate(s) with a random slope must be exogenous (fixed.x)
@@ -210,16 +218,6 @@ lav_mvn_cl_rs_info <- function(lavmodel = NULL, lavpartable = NULL,
         paste(unique(pt$lhs[bad_idx]), collapse = " ")))
     }
 
-    # between-only *endogenous* observed variables (level-2 'z' outcomes
-    # in Rockwood's notation) are not supported yet
-    bad <- between_only[!between_only %in% ov_x_2]
-    if (length(bad) > 0L) {
-      lav_msg_stop(gettextf(
-        "between-only endogenous (non-exogenous) observed variables are
-         not supported (yet) in combination with random slopes: %s.",
-        paste(bad, collapse = " ")))
-    }
-
   }
 
   # the within y-vector: all within variables, except the rv covariates
@@ -241,8 +239,40 @@ lav_mvn_cl_rs_info <- function(lavmodel = NULL, lavpartable = NULL,
   ov_names_data <- lavdata@ov.names[[1]]
   y_data_idx <- match(y_names, ov_names_data)
   x_data_idx <- match(x_names, ov_names_data)
-  exo_b_names <- between_only # all between-only vars are exogenous here
+
+  # between-only variables: exogenous covariates (w; conditioned
+  # upon) vs *endogenous* z-outcomes (Rockwood's z-variables: observed
+  # once per cluster, and modeled -- e.g., indicators of a
+  # between-level factor)
+  mm_b0 <- 1:lavmodel@nmat[2] + lavmodel@nmat[1]
+  glist_names_b0 <- names(lavmodel@GLIST)[mm_b0]
+  lambda_mm_b <- mm_b0[which(glist_names_b0 == "lambda")]
+  lv_names_b_all <- lavmodel@dimNames[[lambda_mm_b]][[2]]
+  if (!is.null(pt)) {
+    exo_b_names <- between_only[between_only %in% ov_x_2]
+  } else {
+    # without a parameter table: the exogenous covariates appear as
+    # dummy latent variables in the between block; the z-outcomes
+    # (pure indicators) do not
+    exo_b_names <- between_only[between_only %in% lv_names_b_all]
+  }
+  zb_names <- between_only[!between_only %in% exo_b_names]
+  kz <- length(zb_names)
   exo_b_data_idx <- match(exo_b_names, ov_names_data)
+  zb_data_idx <- match(zb_names, ov_names_data)
+
+  # z-outcomes must be pure indicators: a z-variable that is itself
+  # involved in a regression gets a dummy latent variable (and a
+  # zero residual variance), which does not fit the 'extra
+  # observation block' treatment below
+  bad <- zb_names[zb_names %in% lv_names_b_all]
+  if (length(bad) > 0L) {
+    lav_msg_stop(gettextf(
+      "between-only endogenous observed variables can only appear as
+       indicators of a between-level latent variable (for now); not
+       as outcome or predictor in a regression: %s.",
+      paste(bad, collapse = " ")))
+  }
 
   # the both-level variables
   yb_names <- both_names
@@ -269,6 +299,27 @@ lav_mvn_cl_rs_info <- function(lavmodel = NULL, lavpartable = NULL,
   yb_b_idx <- match(yb_names, ov_names_b_theta)
   eps_flag <- apply(nonzero_mat[yb_b_idx, , drop = FALSE], 1L, any)
   eps_names <- yb_names[eps_flag]
+
+  # z-outcomes: the residual block Sigma_z must be positive definite
+  # (all diagonal elements free or fixed to a nonzero value), and may
+  # not covary with the between residuals of the both-level variables
+  if (kz > 0L) {
+    zb_b_idx <- match(zb_names, ov_names_b_theta)
+    bad <- zb_names[!nonzero_mat[cbind(zb_b_idx, zb_b_idx)]]
+    if (length(bad) > 0L) {
+      lav_msg_stop(gettextf(
+        "between-only endogenous observed variables must have a free
+         (or fixed to a nonzero value) residual variance: %s.",
+        paste(bad, collapse = " ")))
+    }
+    if (pb > 0L &&
+        any(nonzero_mat[zb_b_idx, yb_b_idx, drop = FALSE])) {
+      lav_msg_stop(gettext(
+        "residual covariances between between-only endogenous
+         observed variables and the both-level variables are not
+         supported (yet)."))
+    }
+  }
 
   # structural fixed paths from the rv covariates? (a nonzero 'P'
   # matrix); the EM version cannot handle these (the per-case mean
@@ -326,6 +377,7 @@ lav_mvn_cl_rs_info <- function(lavmodel = NULL, lavpartable = NULL,
     yb.names = yb_names, pb = pb, yb.y.idx = yb_y_idx,
     eps.names = eps_names, neps = length(eps_names),
     exo.b.names = exo_b_names, nexo.b = length(exo_b_names),
+    zb.names = zb_names, kz = kz, zb.data.idx = zb_data_idx,
     path.tab = path_tab,
     y.data.idx = y_data_idx,
     x.data.idx = x_data_idx,
@@ -379,6 +431,20 @@ lav_mvn_cl_rs_stats <- function(y1 = NULL, lp = NULL, rs_info = NULL) {
     }
   } else {
     exo_b <- matrix(0, nclusters, 0L)
+  }
+
+  # between-only endogenous z-outcomes: one row per cluster
+  if (rs_info$kz > 0L) {
+    first_idx <- which(!duplicated(cluster_idx))
+    first_idx <- first_idx[order(cluster_idx[first_idx])]
+    zb <- y1[first_idx, rs_info$zb.data.idx, drop = FALSE]
+    if (anyNA(zb)) {
+      lav_msg_stop(gettext(
+        "missing values in between-only endogenous observed variables
+         are not supported (yet) in combination with random slopes."))
+    }
+  } else {
+    zb <- matrix(0, nclusters, 0L)
   }
 
   # missing data in the y-block?
@@ -454,7 +520,7 @@ lav_mvn_cl_rs_stats <- function(y1 = NULL, lp = NULL, rs_info = NULL) {
     return(list(
       nclusters = nclusters, cluster.size = cluster_size,
       sy = NULL, sx = NULL, sxx = NULL, sxy = NULL, syy = NULL,
-      exo.b = exo_b, ntotal = sum(cluster_size),
+      exo.b = exo_b, zb = zb, ntotal = sum(cluster_size),
       ntotal.used = sum(cluster_size) - length(empty_idx), mp = mp
     ))
   }
@@ -481,7 +547,7 @@ lav_mvn_cl_rs_stats <- function(y1 = NULL, lp = NULL, rs_info = NULL) {
   list(
     nclusters = nclusters, cluster.size = cluster_size,
     sy = sy, sx = sx, sxx = sxx, sxy = sxy, syy = syy,
-    exo.b = exo_b, ntotal = sum(cluster_size),
+    exo.b = exo_b, zb = zb, ntotal = sum(cluster_size),
     ntotal.used = sum(cluster_size), mp = NULL
   )
 }
@@ -689,11 +755,28 @@ lav_mvn_cl_rs_implied <- function(lavmodel = NULL, glist = NULL,
   mu_y_b[yb_y_idx] <- nu_b0[yb_idx, 1L]
   mu_y <- mu_w + mu_y_b
 
+  # between-only endogenous z-outcomes: conditional on v_b,
+  #   z_j ~ N(mu_z + G v_b, sigma_z)
+  # with G the between loadings of the z-block on the eta part of v_b
+  # (the z-outcomes are pure indicators: no loadings on the eps part,
+  # no dummy latent variables)
+  kz <- rs_info$kz
+  gmat <- matrix(0, kz, pv)
+  mu_z <- numeric(kz)
+  sigma_z <- matrix(0, kz, kz)
+  if (kz > 0L) {
+    zb_idx <- match(rs_info$zb.names, ov_names_b)
+    gmat[, seq_len(meta)] <- lambda_b[zb_idx, eta_idx, drop = FALSE]
+    mu_z <- as.numeric(nu_b0[zb_idx, 1L])
+    sigma_z <- theta_b[zb_idx, zb_idx, drop = FALSE]
+  }
+
   list(
     sigma.w = sigma_w, mu.y = mu_y, mu.y.b = mu_y_b, P = pmat,
     lmat = lmat, q0 = q0, z.v.idx = z_v_idx, pv = pv,
     sigma.v = sigma_v, mu.v = mu_v, cc = cc, mu.exo = mu_exo,
-    eta.names = lv_names_b[eta_idx], meta = meta
+    eta.names = lv_names_b[eta_idx], meta = meta,
+    mu.z = mu_z, gmat = gmat, sigma.z = sigma_z
   )
 }
 
@@ -773,6 +856,23 @@ lav_mvn_cl_rs_loglik <- function(rs_stats = NULL, imp = NULL,
   path_x <- path_tab$x.idx # 1..nx
   path_zcol <- z_v_idx[path_z] # column in v_b, per path
 
+  # between-only endogenous z-outcomes: one extra (per-cluster)
+  # Gaussian observation block, z_j | v_b ~ N(mu_z + G v_b, Sigma_z)
+  kz <- rs_info$kz
+  if (kz > 0L) {
+    wzb <- lav_mat_sym_inverse(imp$sigma.z,
+      logdet = TRUE, sinv_method = sinv_method
+    )
+    logdet_zb <- attr(wzb, "logdet")
+    if (!is.finite(logdet_zb)) {
+      return(+Inf)
+    }
+    wzg <- wzb %*% imp$gmat # kz x pv
+    a_zb <- crossprod(imp$gmat, wzg) # pv x pv
+    zb_all <- rs_stats$zb
+    mu_zb <- imp$mu.z
+  }
+
   # more constants (hoisted out of the cluster loop)
   pmat_t <- t(pmat)
   wp_t <- t(wp)
@@ -848,6 +948,14 @@ lav_mvn_cl_rs_loglik <- function(rs_stats = NULL, imp = NULL,
       p_j[zi] <- p_j[zi] + sum(wl[, i] * sxe_j[path_x[i], ])
     }
 
+    # z-outcome contributions (the extra observation block)
+    if (kz > 0L) {
+      e_zb <- zb_all[j, ] - mu_zb
+      a_j <- a_j + a_zb
+      p_j <- p_j + as.numeric(crossprod(wzg, e_zb))
+      quad0 <- quad0 + sum(e_zb * (wzb %*% e_zb))
+    }
+
     # mean of v_b for this cluster (given the between covariates)
     if (nexo > 0L) {
       d_j <- mu_v + as.numeric(cc_mat %*% (exo_b[j, ] - mu_exo))
@@ -884,8 +992,11 @@ lav_mvn_cl_rs_loglik <- function(rs_stats = NULL, imp = NULL,
     # -2 loglik for this cluster
     loglik_j[j] <- nj * logdet_w + logdet_z +
       quad_j - sum(p_tilde * (sigma_v_local %*% zp_j))
+    if (kz > 0L) {
+      loglik_j[j] <- loglik_j[j] + logdet_zb
+    }
     if (log2pi) {
-      loglik_j[j] <- loglik_j[j] + nj * p1 * log(2 * pi)
+      loglik_j[j] <- loglik_j[j] + (nj * p1 + kz) * log(2 * pi)
     }
   }
   ok
@@ -963,6 +1074,22 @@ lav_mvn_cl_rs_loglik_m <- function(rs_stats = NULL, imp = NULL,
   nexo <- rs_info$nexo.b
   exo_b <- rs_stats$exo.b
   log2pi_c <- if (log2pi) log(2 * pi) else 0
+
+  # between-only endogenous z-outcomes (always complete)
+  kz <- rs_info$kz
+  if (kz > 0L) {
+    wzb <- lav_mat_sym_inverse(imp$sigma.z,
+      logdet = TRUE, sinv_method = sinv_method
+    )
+    logdet_zb <- attr(wzb, "logdet")
+    if (!is.finite(logdet_zb)) {
+      return(+Inf)
+    }
+    wzg <- wzb %*% imp$gmat # kz x pv
+    a_zb <- crossprod(imp$gmat, wzg) # pv x pv
+    zb_all <- rs_stats$zb
+    mu_zb <- imp$mu.z
+  }
 
   # per-cluster accumulators
   ld_j <- numeric(nclusters) # sum_p n_jp (logdet_wp + p_o log(2 pi))
@@ -1057,6 +1184,15 @@ lav_mvn_cl_rs_loglik_m <- function(rs_stats = NULL, imp = NULL,
     for (j in seq_len(nclusters)) {
       a_j <- matrix(a_arr[, , j], pv, pv)
       p_j <- p_all[j, ]
+
+      # z-outcome contributions (the extra observation block)
+      if (kz > 0L) {
+        e_zb <- zb_all[j, ] - mu_zb
+        a_j <- a_j + a_zb
+        p_j <- p_j + as.numeric(crossprod(wzg, e_zb))
+        quad_j[j] <- quad_j[j] + sum(e_zb * (wzb %*% e_zb))
+        ld_j[j] <- ld_j[j] + logdet_zb + kz * log2pi_c
+      }
 
       # mean of v_b for this cluster (given the between covariates)
       if (nexo > 0L) {
@@ -1364,7 +1500,12 @@ lav_mvn_cl_rs_cond <- function(lavmodel = NULL, glist = NULL,
       sigma.v = sigma_v_c,
       mu.v = imp0$mu.v[lin_v] + as.numeric(r_mat %*% (b_i - mu_nl)),
       cc = cc_c,
-      mu.exo = imp0$mu.exo
+      mu.exo = imp0$mu.exo,
+      # z-outcomes: the slopes have no indicators, so the nl columns
+      # of G are structurally zero and simply drop out
+      mu.z = imp_i$mu.z,
+      gmat = imp_i$gmat[, lin_v, drop = FALSE],
+      sigma.z = imp_i$sigma.z
     )
   }
 
@@ -1609,6 +1750,10 @@ lav_mvn_cl_rs_em_ok <- function(rs = NULL) {
   if (isTRUE(rs$info$nl.flag)) {
     reason <- c(reason, gettext(
       "the model contains random slopes for latent covariates"))
+  }
+  if (isTRUE(rs$info$kz > 0L)) {
+    reason <- c(reason, gettext(
+      "the model contains between-only endogenous observed variables"))
   }
   if (rs$info$p.flag) {
     reason <- c(reason, gettext(
@@ -2510,7 +2655,8 @@ lav_mvn_cl_rs_phi_vec <- function(imp) {
   c(
     as.numeric(imp$sigma.w), imp$mu.y, as.numeric(imp$P),
     as.numeric(imp$lmat), as.numeric(imp$q0), as.numeric(imp$sigma.v),
-    imp$mu.v, as.numeric(imp$cc), imp$mu.exo
+    imp$mu.v, as.numeric(imp$cc), imp$mu.exo,
+    imp$mu.z, as.numeric(imp$gmat), as.numeric(imp$sigma.z)
   )
 }
 
@@ -2544,8 +2690,10 @@ lav_mvn_cl_rs_dfphi <- function(rs_stats = NULL, imp = NULL,
   mu_y_op <- tcrossprod(mu_y)
 
   # flattened phi layout (must match lav_mvn_cl_rs_phi_vec)
+  kz <- rs_info$kz
   sizes <- c(p1 * p1, p1, p1 * nx, p1 * npaths, p1 * pv,
-             pv * pv, pv, pv * nexo, nexo)
+             pv * pv, pv, pv * nexo, nexo,
+             kz, kz * pv, kz * kz)
   off <- cumsum(c(0, sizes))
   i_sw <- off[1] + seq_len(sizes[1])
   i_muy <- off[2] + seq_len(sizes[2])
@@ -2556,9 +2704,48 @@ lav_mvn_cl_rs_dfphi <- function(rs_stats = NULL, imp = NULL,
   i_mv <- off[7] + seq_len(sizes[7])
   i_cc <- off[8] + seq_len(sizes[8])
   i_me <- off[9] + seq_len(sizes[9])
-  nphi <- off[10]
+  i_mz <- off[10] + seq_len(sizes[10])
+  i_g <- off[11] + seq_len(sizes[11])
+  i_sz <- off[12] + seq_len(sizes[12])
+  nphi <- off[13]
 
   gphi <- matrix(0, nclusters, nphi)
+
+  # z-outcome constants (the extra observation block)
+  if (kz > 0L) {
+    gmat_z <- imp$gmat
+    mu_zb <- imp$mu.z
+    zb_all <- rs_stats$zb
+    wzb <- lav_mat_sym_inverse(imp$sigma.z,
+      logdet = TRUE, sinv_method = sinv_method
+    )
+    if (!is.finite(attr(wzb, "logdet"))) {
+      return(NULL)
+    }
+    wzg <- wzb %*% gmat_z # kz x pv
+    a_zb <- crossprod(gmat_z, wzg) # pv x pv
+  }
+
+  # ---- z-block adjoints (mu_z, G, Sigma_z); the z-block is one
+  #      extra 'cell' with constant loading G and weight Wz ----
+  add_zcell <- function(j, g_a, g_p) {
+    e_z <- zb_all[j, ] - mu_zb
+    wze <- as.numeric(wzb %*% e_z)
+    gga <- gmat_z %*% g_a # kz x pv
+    ggp <- as.numeric(gmat_z %*% g_p) # kz
+    # G adjoint (cfr. the q0 adjoint with n = 1, e~ = e_z)
+    gg <- 2 * (wzb %*% gga) + outer(wze, g_p)
+    # mu_z adjoint (cfr. the mu_y adjoint)
+    gmz <- -as.numeric(wzb %*% (ggp + 2 * e_z))
+    # Sigma_z adjoint (via Wz, plus the ln|Sigma_z| term)
+    gw_z <- gga %*% t(gmat_z) + outer(ggp, e_z) + tcrossprod(e_z)
+    gw_z <- (gw_z + t(gw_z)) / 2
+    gsz <- wzb - wzb %*% gw_z %*% wzb
+    gphi[j, i_mz] <<- gphi[j, i_mz] + gmz
+    gphi[j, i_g] <<- gphi[j, i_g] + as.numeric(gg)
+    gphi[j, i_sz] <<- gphi[j, i_sz] + as.numeric(gsz)
+    invisible(NULL)
+  }
 
   # ---- posterior pieces + (Sigma_v, mu_v, cc, mu_exo) adjoints ----
   # (returns the g_a/g_p adjoints needed for the cell collapse)
@@ -2722,7 +2909,15 @@ lav_mvn_cl_rs_dfphi <- function(rs_stats = NULL, imp = NULL,
         p_j[zi] <- p_j[zi] + sum(wl[, i] * sxe_j[path_x[i], ])
       }
 
+      if (kz > 0L) {
+        a_j <- a_j + a_zb
+        p_j <- p_j + as.numeric(crossprod(wzg, zb_all[j, ] - mu_zb))
+      }
+
       adj <- post_adj(j, a_j, p_j)
+      if (kz > 0L) {
+        add_zcell(j, adj$g_a, adj$g_p)
+      }
       add_cell(
         j, w_mat, nj, sx_j, sxx_j, sy_j, sxy_j, syy_j,
         se_j, sxe_j, adj$g_a, adj$g_p
@@ -2794,6 +2989,15 @@ lav_mvn_cl_rs_dfphi <- function(rs_stats = NULL, imp = NULL,
       }
     }
 
+    # z-outcome contributions (once per cluster)
+    if (kz > 0L) {
+      for (j in seq_len(nclusters)) {
+        a_arr[, , j] <- a_arr[, , j] + a_zb
+        p_all[j, ] <- p_all[j, ] +
+          as.numeric(crossprod(wzg, zb_all[j, ] - mu_zb))
+      }
+    }
+
     # posterior adjoints per cluster
     ga_list <- vector("list", nclusters)
     gp_list <- vector("list", nclusters)
@@ -2801,6 +3005,9 @@ lav_mvn_cl_rs_dfphi <- function(rs_stats = NULL, imp = NULL,
       adj <- post_adj(j, matrix(a_arr[, , j], pv, pv), p_all[j, ])
       ga_list[[j]] <- adj$g_a
       gp_list[[j]] <- adj$g_p
+      if (kz > 0L) {
+        add_zcell(j, adj$g_a, adj$g_p)
+      }
     }
 
     # pass 2: cell collapse
@@ -3087,6 +3294,16 @@ lav_mvn_cl_rs_eb_core <- function(lavmodel = NULL, glist = NULL,
   ltwl <- crossprod(imp$lmat, wl)
   dpv <- diag(pv)
 
+  # between-only endogenous z-outcomes
+  kz <- rs_info$kz
+  if (kz > 0L) {
+    wzb <- lav_mat_sym_inverse(imp$sigma.z)
+    wzg <- wzb %*% imp$gmat
+    a_zb <- crossprod(imp$gmat, wzg)
+    zb_all <- rs_stats$zb
+    mu_zb <- imp$mu.z
+  }
+
   # ---- per-cluster posterior of v_b: mu0_j (and posterior sd) ----
   pmat <- imp$P
   pmat_t <- t(pmat)
@@ -3149,6 +3366,11 @@ lav_mvn_cl_rs_eb_core <- function(lavmodel = NULL, glist = NULL,
     }
     for (j in seq_len(nclusters)) {
       a_j <- matrix(a_arr[, , j], pv, pv)
+      if (kz > 0L) {
+        a_j <- a_j + a_zb
+        p_all[j, ] <- p_all[j, ] +
+          as.numeric(crossprod(wzg, zb_all[j, ] - mu_zb))
+      }
       if (rs_info$nexo.b > 0L) {
         d_j <- imp$mu.v +
           as.numeric(imp$cc %*% (rs_stats$exo.b[j, ] - imp$mu.exo))
@@ -3194,6 +3416,11 @@ lav_mvn_cl_rs_eb_core <- function(lavmodel = NULL, glist = NULL,
     for (i in seq_len(npaths)) {
       zi <- path_zcol[i]
       p_j[zi] <- p_j[zi] + sum(wl[, i] * sxe_j[path_x[i], ])
+    }
+
+    if (kz > 0L) {
+      a_j <- a_j + a_zb
+      p_j <- p_j + as.numeric(crossprod(wzg, zb_all[j, ] - mu_zb))
     }
 
     if (rs_info$nexo.b > 0L) {
