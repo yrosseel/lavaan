@@ -201,6 +201,15 @@ lav_fit <- function(object, fit_measures = "all",
       "fit measures not available if model did not converge"))
   }
 
+  # random slopes (rv() modifier): no test statistics (and no
+  # comparable h1 loglikelihood) exist, but the loglikelihood-based
+  # measures -- and the H0 scaling correction factor -- are available
+  if (length(object@Model@rv.ov) > 0L ||
+      length(object@Model@rv.lv) > 0L) {
+    return(lav_fit_rv(object, fit_measures = fit_measures,
+                      output = output))
+  }
+
   # do we have a test statistic?
   test <- lavInspect(object, "test")
   test_names <- unname(sapply(test, "[[", "test"))
@@ -740,6 +749,86 @@ lav_fit <- function(object, fit_measures = "all",
   out
 }
 
+# fit measures for models with random slopes (rv() modifier)
+#
+# no chi-square test statistic (or fit indices) exist for these
+# models (the likelihood is conditional on the covariates carrying
+# random slopes: there is no comparable saturated model); we provide
+# the loglikelihood-based measures, and the H0 scaling correction
+# factor (cfr. the Mplus MLR output) -- the latter is included in
+# the default set only when se = "robust.huber.white", but can
+# always be requested explicitly
+lav_fit_rv <- function(object, fit_measures = "all",
+                       output = "vector") {
+  loglik <- object@loglik
+  robust_flag <- object@Options$se == "robust.huber.white"
+
+  indices <- list()
+  indices["npar"] <- loglik$npar
+  indices["ntotal"] <- loglik$ntotal
+  indices["logl"] <- loglik$loglik
+  indices["aic"] <- loglik$AIC
+  indices["bic"] <- loglik$BIC
+  indices["bic2"] <- loglik$BIC2
+
+  available <- c(names(indices), "scaling.factor.h0")
+
+  if (length(fit_measures) == 1L &&
+      fit_measures %in% c("all", "default")) {
+    fit_measures <- names(indices)
+    if (robust_flag) {
+      fit_measures <- c(fit_measures, "scaling.factor.h0")
+    }
+  } else {
+    fit_measures <- tolower(fit_measures)
+    bad <- fit_measures[!fit_measures %in% available]
+    if (length(bad) > 0L) {
+      lav_msg_stop(gettextf(
+        "fit measure(s) not available for models with random slopes:
+         %s.", paste(bad, collapse = " ")))
+    }
+  }
+
+  # H0 scaling correction factor: c = tr(H^{-1} J) / npar
+  if ("scaling.factor.h0" %in% fit_measures) {
+    rs <- object@Cache[[1]]$rs
+    if (is.null(rs)) {
+      rs_info <- lav_mvn_cl_rs_info(
+        lavmodel = object@Model, lavdata = object@Data
+      )
+      rs <- list(
+        info = rs_info,
+        stats = lav_mvn_cl_rs_stats(
+          y1 = object@Data@X[[1]], lp = object@Data@Lp[[1]],
+          rs_info = rs_info
+        )
+      )
+    }
+    indices["scaling.factor.h0"] <-
+      lav_mvn_cl_rs_scaling_h0(lavobject = object, rs = rs)
+  }
+
+  # keep only what we need (in the requested order)
+  out <- indices[fit_measures]
+
+  # select output type
+  if (output == "list") {
+    # nothing to do
+  } else if (output == "vector") {
+    out <- unlist(out)
+    class(out) <- c("lavaan.vector", "numeric")
+  } else if (output == "matrix") {
+    out <- as.matrix(unlist(out))
+    colnames(out) <- ""
+    class(out) <- c("lavaan.matrix", "matrix")
+  } else if (output == "text") {
+    out <- unlist(out)
+    class(out) <- c("lavaan.fitMeasures", "lavaan.vector", "numeric")
+  }
+
+  out
+}
+
 # print a nice summary of the fit measures
 lav_fitmeasures_print <- function(x, ..., nd = 3L, add.h0 = TRUE) {  # nolint
   names_x <- names(x)
@@ -1049,8 +1138,14 @@ lav_fitmeasures_print <- function(x, ..., nd = 3L, add.h0 = TRUE) {  # nolint
     c3 <- c(c3, ifelse(scaled_flag, sprintf(num_format, x["logl"]), ""))
     if (!is.na(x["scaling.factor.h0"])) {
       c1 <- c(c1, "Scaling correction factor")
-      c2 <- c(c2, sprintf("  %10s", ""))
-      c3 <- c(c3, sprintf(num_format, x["scaling.factor.h0"]))
+      if (scaled_flag) {
+        c2 <- c(c2, sprintf("  %10s", ""))
+        c3 <- c(c3, sprintf(num_format, x["scaling.factor.h0"]))
+      } else {
+        # no scaled test statistic (eg random slopes): single column
+        c2 <- c(c2, sprintf(num_format, x["scaling.factor.h0"]))
+        c3 <- c(c3, "")
+      }
       c1 <- c(c1, "    for the MLR correction")
       c2 <- c(c2, "")
       c3 <- c(c3, "")

@@ -313,7 +313,11 @@ lav_object_summary <- function(object, header = TRUE,
       lav_msg_warn(gettext(
         "fit measures not available if there is no data"))
     } else if (length(object@Options$test) == 1L &&
-      object@Options$test == "none") {
+      object@Options$test == "none" &&
+      length(object@Model@rv.ov) == 0L &&
+      length(object@Model@rv.lv) == 0L) {
+      # (random-slope models do provide the loglikelihood-based
+      #  measures, despite test = "none")
       lav_msg_warn(gettext(
         "fit measures not available if test = \"none\""))
     } else if (object@optim$npar > 0L && !object@optim$converged) {

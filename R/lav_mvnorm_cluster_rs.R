@@ -2340,6 +2340,49 @@ lav_mvn_cl_rs_grad <- function(lavmodel = NULL, rs = NULL,
   }
 }
 
+# H0 scaling correction factor (cfr. the Mplus MLR output):
+#
+#   c_H0 = tr( H^{-1} J ) / npar
+#
+# with H the total *observed* information (minus the second derivative
+# of the loglikelihood; via lav_model_hessian() with method =
+# "central": central differences of the analytic gradient, relative
+# step size) and J = crossprod of the per-cluster scores (the
+# first-order information); this is the ingredient for scaled
+# (loglikelihood) difference tests
+lav_mvn_cl_rs_scaling_h0 <- function(lavobject = NULL, rs = NULL,
+                                     h = 1e-04) {
+  lavmodel <- lavobject@Model
+  sc <- try(lav_mvn_cl_rs_scores(lavmodel = lavmodel, rs = rs),
+            silent = TRUE)
+  if (inherits(sc, "try-error")) {
+    return(as.numeric(NA))
+  }
+  j_mat <- crossprod(sc)
+
+  # hessian of the objective ( = -2 loglik / (2 N) ): the observed
+  # information is hessian * ntotal
+  h_obj <- lav_model_hessian(
+    lavmodel = lavmodel,
+    lavsamplestats = lavobject@SampleStats,
+    lavdata = lavobject@Data,
+    lavoptions = lavobject@Options,
+    lavcache = lavobject@Cache,
+    h = h, method = "central"
+  )
+  if (anyNA(h_obj)) {
+    return(as.numeric(NA))
+  }
+  h_mat <- h_obj * lavobject@SampleStats@ntotal
+
+  npar <- lavmodel@nx.free
+  out <- try(sum(diag(solve(h_mat, j_mat))) / npar, silent = TRUE)
+  if (inherits(out, "try-error") || !is.finite(out)) {
+    return(as.numeric(NA))
+  }
+  out
+}
+
 
 # ---------------------------------------------------------------------
 # per-cluster scores and the first-order (`meat') information

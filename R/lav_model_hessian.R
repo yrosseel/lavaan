@@ -1,5 +1,18 @@
 # numeric approximation of the Hessian
 # using an analytic gradient
+#
+# method = "richardson" (the default): 4-point Richardson
+#   extrapolation (4 x npar gradient evaluations), with a fixed
+#   (absolute) step size h
+# method = "central": plain central differences (2 x npar gradient
+#   evaluations), with a *relative* step size h * max(1, |x_j|);
+#   cheaper, and the appropriate choice when the gradient itself
+#   contains a numerical layer (eg random-slope models)
+#
+# `NA' semantics: if the gradient cannot be computed (or is not
+# finite) at one of the perturbed parameter values, an all-NA matrix
+# is returned (callers can check with anyNA()), rather than a hard
+# stop or a silently wrong Hessian
 lav_model_hessian <- function(lavmodel = NULL,
                               lavsamplestats = NULL,
                               lavdata = NULL,
@@ -7,7 +20,8 @@ lav_model_hessian <- function(lavmodel = NULL,
                               lavcache = NULL,
                               group_weight = TRUE,
                               ceq_simple = FALSE,
-                              h = 1e-06) {
+                              h = 1e-06,
+                              method = "richardson") {
   # estimator <- lavmodel@estimator
 
   # catch numerical gradient
@@ -21,7 +35,11 @@ lav_model_hessian <- function(lavmodel = NULL,
       )[1]
     }
     x <- lav_model_get_parameters(lavmodel = lavmodel)
-    hessian <- numDeriv::hessian(func = obj_f, x = x)
+    hessian <- try(numDeriv::hessian(func = obj_f, x = x),
+                   silent = TRUE)
+    if (inherits(hessian, "try-error")) {
+      hessian <- matrix(as.numeric(NA), length(x), length(x))
+    }
     return(hessian)
   }
 
@@ -51,7 +69,7 @@ lav_model_hessian <- function(lavmodel = NULL,
     # approximation below
   }
 
-  # computing the Richardson extrapolation
+  # computing the Richardson extrapolation (or central differences)
   if (!ceq_simple && lavmodel@ceq.simple.only) {
     npar <- lavmodel@nx.unco
     type_glist <- "unco"
@@ -65,79 +83,69 @@ lav_model_hessian <- function(lavmodel = NULL,
     # unpack
     x <- drop(x %*% t(lavmodel@ceq.simple.K))
   }
+
+  # the gradient at a perturbed x; NULL if it cannot be computed
+  grad_at <- function(x_p) {
+    out <- try(
+      lav_model_grad(
+        lavmodel = lavmodel,
+        glist = lav_model_x2glist(
+          lavmodel = lavmodel, type = type_glist, x = x_p
+        ),
+        lavsamplestats = lavsamplestats,
+        lavdata = lavdata,
+        lavcache = lavcache,
+        type = "free",
+        group_weight = group_weight,
+        ceq_simple = ceq_simple
+      ),
+      silent = TRUE
+    )
+    if (inherits(out, "try-error") || anyNA(out) ||
+        any(!is.finite(out))) {
+      return(NULL)
+    }
+    out
+  }
+  hessian_na <- matrix(as.numeric(NA), npar, npar)
+
   for (j in seq_len(npar)) {
-    # FIXME: the number below should vary as a function of 'x[j]'
-    h_j <- h
-    x_left <- x_left2 <- x_right <- x_right2 <- x
-    x_left[j] <- x[j] - h_j
-    x_left2[j] <- x[j] - 2 * h_j
-    x_right[j] <- x[j] + h_j
-    x_right2[j] <- x[j] + 2 * h_j
+    if (method == "central") {
+      # central differences, relative step size
+      h_j <- h * max(1, abs(x[j]))
+      x_left <- x_right <- x
+      x_left[j] <- x[j] - h_j
+      x_right[j] <- x[j] + h_j
 
-    g_left <-
-      lav_model_grad(
-        lavmodel = lavmodel,
-        glist = lav_model_x2glist(
-          lavmodel =
-            lavmodel, type = type_glist,
-          x_left
-        ),
-        lavsamplestats = lavsamplestats,
-        lavdata = lavdata,
-        lavcache = lavcache,
-        type = "free",
-        group_weight = group_weight,
-        ceq_simple = ceq_simple
-      )
-    g_left2 <-
-      lav_model_grad(
-        lavmodel = lavmodel,
-        glist = lav_model_x2glist(
-          lavmodel =
-            lavmodel, type = type_glist,
-          x_left2
-        ),
-        lavsamplestats = lavsamplestats,
-        lavdata = lavdata,
-        lavcache = lavcache,
-        type = "free",
-        group_weight = group_weight,
-        ceq_simple = ceq_simple
-      )
+      g_left <- grad_at(x_left)
+      g_right <- grad_at(x_right)
+      if (is.null(g_left) || is.null(g_right)) {
+        return(hessian_na)
+      }
 
-    g_right <-
-      lav_model_grad(
-        lavmodel = lavmodel,
-        glist = lav_model_x2glist(
-          lavmodel =
-            lavmodel, type = type_glist,
-          x_right
-        ),
-        lavsamplestats = lavsamplestats,
-        lavdata = lavdata,
-        lavcache = lavcache,
-        type = "free",
-        group_weight = group_weight,
-        ceq_simple = ceq_simple
-      )
+      hessian[, j] <- (g_right - g_left) / (2 * h_j)
+    } else {
+      # Richardson extrapolation
+      # FIXME: the number below should vary as a function of 'x[j]'
+      h_j <- h
+      x_left <- x_left2 <- x_right <- x_right2 <- x
+      x_left[j] <- x[j] - h_j
+      x_left2[j] <- x[j] - 2 * h_j
+      x_right[j] <- x[j] + h_j
+      x_right2[j] <- x[j] + 2 * h_j
 
-    g_right2 <-
-      lav_model_grad(
-        lavmodel = lavmodel,
-        glist = lav_model_x2glist(
-          lavmodel =
-            lavmodel, type = type_glist,
-          x_right2
-        ),
-        lavsamplestats = lavsamplestats,
-        lavdata = lavdata,
-        lavcache = lavcache,
-        type = "free",
-        group_weight = group_weight,
-        ceq_simple = ceq_simple
-      )
+      g_left <- grad_at(x_left)
+      g_left2 <- grad_at(x_left2)
+      g_right <- grad_at(x_right)
+      g_right2 <- grad_at(x_right2)
+      if (is.null(g_left) || is.null(g_left2) ||
+          is.null(g_right) || is.null(g_right2)) {
+        return(hessian_na)
+      }
 
-    hessian[, j] <- (g_left2 - 8 * g_left + 8 * g_right - g_right2) / (12 * h_j)
+      hessian[, j] <- (g_left2 - 8 * g_left + 8 * g_right - g_right2) /
+        (12 * h_j)
+    }
   }
 
   # check if Hessian is (almost) symmetric, as it should be

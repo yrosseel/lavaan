@@ -475,8 +475,13 @@ exogenous covariates themselves must be complete (cases with missing
 values on exogenous variables are removed). The (observed-data)
 loglikelihood is \emph{conditional} on the exogenous covariates. No
 chi-square test statistic (or fit indices) are available for models
-with random slopes; only loglikelihood-based measures (AIC, BIC) can
-be used. Standard errors can be \code{"standard"} (observed
+with random slopes; \code{fitMeasures()} provides the
+loglikelihood-based measures only (\code{npar}, \code{ntotal},
+\code{logl}, \code{aic}, \code{bic}, \code{bic2}), plus (with
+\code{estimator = "MLR"}) the H0 scaling correction factor
+(\code{scaling.factor.h0}), which can be used for scaled
+(loglikelihood) difference tests. Standard errors can be
+\code{"standard"} (observed
 information) or \code{"robust.huber.white"} (sandwich; this is also
 what \code{estimator = "MLR"} implies). Both \code{optim.method =
 "nlminb"} and \code{optim.method = "em"} are supported; with complete
