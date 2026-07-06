@@ -530,15 +530,16 @@ data, \code{"nlminb"} is the default, while with \code{missing =
 predictions: with \code{level = 2}, the
 between-level latent variables including the random slopes (and, with
 \code{se = "standard"}, their posterior standard deviations); with
-\code{level = 1} (the default), the within-level factor scores.
+\code{level = 1} (the default), the within-level factor scores. For
+latent-covariate models, these are EAP (expected a posteriori)
+estimates: the posterior is a mixture over the quadrature nodes.
 
 For random slopes with latent covariates, some additional restrictions
 apply (for now): a random-slope label may not be attached to both an
-observed and a latent covariate; the optimizer is always
-\code{"nlminb"}, and \code{lavPredict()} is not available. The
-latent-covariate slopes may be regressed on between-level covariates
-(e.g., \code{s1 ~ w} in the level-2 part), as in the PISA example of
-Rockwood (2020).
+observed and a latent covariate, and the optimizer is always
+\code{"nlminb"}. The latent-covariate slopes may be regressed on
+between-level covariates (e.g., \code{s1 ~ w} in the level-2 part),
+as in the PISA example of Rockwood (2020).
 }
 
 \section{(In)equality constraints}{

@@ -1369,7 +1369,11 @@ lav_mvn_cl_rs_cond <- function(lavmodel = NULL, glist = NULL,
   }
 
   list(rs_info_c = rs_info_c, imp = imp_list, logw = logw,
-       nnodes = nnodes, logr = logr)
+       nnodes = nnodes, logr = logr,
+       # extras for the EAP (lavPredict) machinery
+       bmat = bmat, lin.v = lin_v, nl.v = nl_v,
+       eta.names = imp0$eta.names, meta = imp0$meta, pv = imp0$pv,
+       z.v.idx = imp0$z.v.idx)
 }
 
 # -2 * loglikelihood by Gauss-Hermite quadrature over the nonlinear
@@ -3013,12 +3017,12 @@ lav_mvn_cl_rs_eb <- function(lavmodel = NULL, lavdata = NULL,
   rs_info <- rs$info
   rs_stats <- rs$stats
 
-  # latent covariates: the posterior is no longer Gaussian; the
-  # quadrature-based (EAP) version is not implemented yet
+  # latent covariates: EAP predictions (posterior-weighted mixture
+  # over the quadrature nodes)
   if (isTRUE(rs_info$nl.flag)) {
-    lav_msg_stop(gettext(
-      "lavPredict() is not available (yet) for models with random
-       slopes for latent covariates."))
+    return(lav_mvn_cl_rs_eb_nl(
+      lavmodel = lavmodel, lavdata = lavdata, rs = rs, se = se
+    ))
   }
 
   imp <- lav_mvn_cl_rs_implied(lavmodel, rs_info = rs_info)
@@ -3027,6 +3031,33 @@ lav_mvn_cl_rs_eb <- function(lavmodel = NULL, lavdata = NULL,
       "model-implied matrices could not be computed."))
   }
 
+  core <- lav_mvn_cl_rs_eb_core(
+    lavmodel = lavmodel, glist = lavmodel@GLIST, lavdata = lavdata,
+    rs_stats = rs_stats, rs_info = rs_info, imp = imp, se = se
+  )
+
+  # level-2 scores: the between latent variables (eta part of v_b)
+  meta <- imp$meta
+  l2 <- core$mu0[, seq_len(meta), drop = FALSE]
+  colnames(l2) <- imp$eta.names
+  out <- list(l1 = core$l1, l2 = l2, cluster.idx = core$cluster.idx)
+  if (se) {
+    se2 <- sqrt(pmax(core$var0[, seq_len(meta), drop = FALSE], 0))
+    colnames(se2) <- imp$eta.names
+    out$se2 <- se2
+  }
+  out
+}
+
+# the (linear-model) EB workhorse: per-cluster posterior of v_b
+# (mu0, and the posterior variances var0 = diag(Sigma0)) plus the
+# level-1 (within) factor scores, for the model described by
+# (glist, imp, rs_info) -- which may be the *conditional* model of
+# one quadrature node (latent covariates); the caller assembles
+lav_mvn_cl_rs_eb_core <- function(lavmodel = NULL, glist = NULL,
+                                  lavdata = NULL,
+                                  rs_stats = NULL, rs_info = NULL,
+                                  imp = NULL, se = FALSE) {
   p1 <- rs_info$p1
   nx <- rs_info$nx
   pv <- imp$pv
@@ -3060,7 +3091,7 @@ lav_mvn_cl_rs_eb <- function(lavmodel = NULL, lavdata = NULL,
   pmat <- imp$P
   pmat_t <- t(pmat)
   mu0 <- matrix(0, nclusters, pv)
-  sd0 <- if (se) matrix(0, nclusters, pv) else NULL
+  var0 <- if (se) matrix(0, nclusters, pv) else NULL
 
   if (!is.null(rs_stats$mp)) {
     # missing data: pattern-based accumulation of A_j and p_j
@@ -3130,7 +3161,7 @@ lav_mvn_cl_rs_eb <- function(lavmodel = NULL, lavdata = NULL,
       p_tilde <- p_all[j, ] - as.numeric(a_j %*% d_j)
       mu0[j, ] <- d_j + as.numeric(sigma0_j %*% p_tilde)
       if (se) {
-        sd0[j, ] <- sqrt(pmax(diag(sigma0_j), 0))
+        var0[j, ] <- diag(sigma0_j)
       }
     }
   } else {
@@ -3177,24 +3208,17 @@ lav_mvn_cl_rs_eb <- function(lavmodel = NULL, lavdata = NULL,
     p_tilde <- p_j - as.numeric(a_j %*% d_j)
     mu0[j, ] <- d_j + as.numeric(sigma0_j %*% p_tilde)
     if (se) {
-      sd0[j, ] <- sqrt(pmax(diag(sigma0_j), 0))
+      var0[j, ] <- diag(sigma0_j)
     }
   }
   } # complete data
 
-  # level-2 scores: the between latent variables (eta part of v_b)
-  l2 <- mu0[, seq_len(meta), drop = FALSE]
-  colnames(l2) <- imp$eta.names
-  if (se) {
-    se2 <- sd0[, seq_len(meta), drop = FALSE]
-    colnames(se2) <- imp$eta.names
-  }
-
   # ---- level-1 scores: within factor scores given (mu0_j, x_ij) ----
-  # within model pieces (same construction as lav_mvn_cl_rs_implied)
+  # within model pieces (same construction as lav_mvn_cl_rs_implied;
+  # note: from 'glist', which may hold node-injected beta_w cells)
   nmat <- lavmodel@nmat
   mm_w <- 1:nmat[1]
-  mlist_w <- lavmodel@GLIST[mm_w]
+  mlist_w <- glist[mm_w]
   dimnames_w <- lavmodel@dimNames[mm_w]
   names(dimnames_w) <- names(lavmodel@GLIST)[mm_w]
   ov_names_w <- dimnames_w[["lambda"]][[1]]
@@ -3293,7 +3317,135 @@ lav_mvn_cl_rs_eb <- function(lavmodel = NULL, lavdata = NULL,
     l1 <- matrix(0, n1, 0L)
   }
 
-  out <- list(l1 = l1, l2 = l2, cluster.idx = cluster_idx)
+  list(mu0 = mu0, var0 = var0, l1 = l1, cluster.idx = cluster_idx)
+}
+
+# EAP predictions for latent-covariate (quadrature) models: the
+# posterior of the cluster-level random effects is a *mixture* over
+# the quadrature nodes, with the posterior node weights
+# pi_jq = exp(h_jq - loglik_j) (the same weights that drive the
+# analytic gradient). Per node, the conditional model is
+# linear-Gaussian, so the ordinary EB workhorse applies; the mixture
+# is then assembled:
+#
+#   E[z_nl | y_j]   = sum_q pi_jq b_q
+#   E[v_lin | y_j]  = sum_q pi_jq mu0_jq
+#   Var[.. | y_j]   = sum_q pi_jq (Sigma0 + mu0 mu0') - mean mean'
+#
+# and analogously for the level-1 (within) factor scores, which are
+# linear in the cluster-level effects per node
+lav_mvn_cl_rs_eb_nl <- function(lavmodel = NULL, lavdata = NULL,
+                                rs = NULL, se = FALSE) {
+  rs_info <- rs$info
+  rs_stats <- rs$stats
+
+  cond <- lav_mvn_cl_rs_cond(
+    lavmodel = lavmodel, rs_info = rs_info, exo_b = rs_stats$exo.b
+  )
+  if (is.null(cond)) {
+    lav_msg_stop(gettext(
+      "model-implied matrices could not be computed."))
+  }
+  nnodes <- cond$nnodes
+  nclusters <- rs_stats$nclusters
+
+  # posterior node weights (cfr. lav_mvn_cl_rs_grad_nl)
+  hmat <- matrix(-Inf, nclusters, nnodes)
+  for (i in seq_len(nnodes)) {
+    if (is.null(cond$imp[[i]])) {
+      next
+    }
+    m2_i <- lav_mvn_cl_rs_loglik(
+      rs_stats = rs_stats, imp = cond$imp[[i]],
+      rs_info = cond$rs_info_c,
+      log2pi = FALSE, minus_two = TRUE, per_cluster = TRUE
+    )
+    if (!is.finite(m2_i)) {
+      next
+    }
+    hmat[, i] <- -0.5 * attr(m2_i, "loglik.cluster") + cond$logw[i]
+  }
+  if (!is.null(cond$logr)) {
+    hmat <- hmat + cond$logr
+  }
+  hmax <- apply(hmat, 1L, max)
+  if (any(!is.finite(hmax))) {
+    lav_msg_stop(gettext(
+      "the (quadrature) loglikelihood could not be computed for one
+       or more clusters."))
+  }
+  loglik_j <- hmax + log(rowSums(exp(hmat - hmax)))
+  pw <- exp(hmat - loglik_j) # nclusters x nnodes; rows sum to 1
+
+  # per-node conditional EB, mixed with the posterior node weights
+  beta_mm <- rs_info$nl.beta.mm
+  beta_cells <- cbind(rs_info$nl.beta.row, rs_info$nl.beta.col)
+  path_tab <- rs_info$path.tab
+  nl_path_rows <- which(path_tab$type == "lv")
+  path_nl_z <- match(path_tab$z.idx[nl_path_rows], rs_info$nl.z.idx)
+
+  pv_c <- length(cond$lin.v)
+  m_lin <- matrix(0, nclusters, pv_c) # E[v_lin | y]
+  v_lin <- if (se) matrix(0, nclusters, pv_c) else NULL # E[v^2] part
+  l1_mix <- NULL
+  glist_i <- lavmodel@GLIST
+  for (i in seq_len(nnodes)) {
+    if (is.null(cond$imp[[i]])) {
+      # a failed node: its posterior weights are (numerically) zero
+      next
+    }
+    b_i <- cond$bmat[, i]
+    glist_i[[beta_mm]][beta_cells] <- b_i[path_nl_z]
+    core <- lav_mvn_cl_rs_eb_core(
+      lavmodel = lavmodel, glist = glist_i, lavdata = lavdata,
+      rs_stats = rs_stats, rs_info = cond$rs_info_c,
+      imp = cond$imp[[i]], se = se
+    )
+    m_lin <- m_lin + pw[, i] * core$mu0
+    if (se) {
+      v_lin <- v_lin + pw[, i] * (core$var0 + core$mu0^2)
+    }
+    if (is.null(l1_mix)) {
+      l1_mix <- matrix(0, nrow(core$l1), ncol(core$l1))
+      colnames(l1_mix) <- colnames(core$l1)
+      cluster_idx <- core$cluster.idx
+    }
+    if (ncol(l1_mix) > 0L) {
+      l1_mix <- l1_mix + pw[cluster_idx, i] * core$l1
+    }
+  }
+  if (se) {
+    v_lin <- v_lin - m_lin^2
+  }
+
+  # EAP of the nonlinear slopes: moments of the discrete posterior
+  q_nl <- length(cond$nl.v)
+  bt <- t(cond$bmat) # nnodes x q_nl
+  m_nl <- pw %*% bt
+  v_nl <- if (se) pw %*% bt^2 - m_nl^2 else NULL
+
+  # assemble the level-2 output in the full eta ordering
+  meta <- cond$meta
+  l2 <- matrix(0, nclusters, meta)
+  colnames(l2) <- cond$eta.names
+  se2 <- if (se) l2 else NULL
+  for (m in seq_len(meta)) {
+    lin_pos <- match(m, cond$lin.v)
+    if (!is.na(lin_pos)) {
+      l2[, m] <- m_lin[, lin_pos]
+      if (se) {
+        se2[, m] <- sqrt(pmax(v_lin[, lin_pos], 0))
+      }
+    } else {
+      nl_pos <- match(m, cond$nl.v)
+      l2[, m] <- m_nl[, nl_pos]
+      if (se) {
+        se2[, m] <- sqrt(pmax(v_nl[, nl_pos], 0))
+      }
+    }
+  }
+
+  out <- list(l1 = l1_mix, l2 = l2, cluster.idx = cluster_idx)
   if (se) {
     out$se2 <- se2
   }
