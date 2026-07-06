@@ -137,12 +137,12 @@ lavSimulate <- function(model = NULL, # user model
   # generate simulations
   fit <- do.call("lavaanList", args = c(list(
     model = model,
-    dataFunction = data_function,
-    dataFunction.args = data_function_args,
+    data_function = data_function,
+    data_function_args = data_function_args,
     ndat = ndat, cmd = cmd,
-    store.slots = store_slots, FUN = fun,
-    show.progress = show_progress,
-    store.failed = store_failed,
+    store_slots = store_slots, fun = fun,
+    show_progress = show_progress,
+    store_failed = store_failed,
     parallel = parallel, ncpus = ncpus,
     cl = cl, iseed = iseed
   ), dotdotdot))
