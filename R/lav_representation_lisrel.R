@@ -2872,6 +2872,12 @@ lav_mlist_target_psi <- function(mm_beta = NULL, ib_inv = NULL, mm_psi = NULL,
     y_idx <- seq_len(nr)
   }
 
+  # nothing to solve for (e.g. a cyclic model where all composites are
+  # exogenous); bail out before we construct a 0x0 linear system
+  if (length(y_idx) == 0L) {
+    return(mm_psi)
+  }
+
   # The unknown (residual) variances diag(PSI)[y_idx] enter
   #   diag(IB.inv %*% PSI %*% t(IB.inv))[y_idx]
   # *linearly*: writing v_i = sum_{j in y} IB.inv[i,j]^2 * PSI[j,j] + known_i,
