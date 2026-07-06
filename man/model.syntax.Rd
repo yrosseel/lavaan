@@ -534,11 +534,11 @@ between-level latent variables including the random slopes (and, with
 
 For random slopes with latent covariates, some additional restrictions
 apply (for now): a random-slope label may not be attached to both an
-observed and a latent covariate; the between-level exogenous
-covariates may not be related to a latent-covariate random slope
-(e.g., no regression of such a slope on a between-level covariate);
-the optimizer is always \code{"nlminb"}, and \code{lavPredict()} is
-not available.
+observed and a latent covariate; the optimizer is always
+\code{"nlminb"}, and \code{lavPredict()} is not available. The
+latent-covariate slopes may be regressed on between-level covariates
+(e.g., \code{s1 ~ w} in the level-2 part), as in the PISA example of
+Rockwood (2020).
 }
 
 \section{(In)equality constraints}{

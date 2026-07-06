@@ -220,35 +220,6 @@ lav_mvn_cl_rs_info <- function(lavmodel = NULL, lavpartable = NULL,
         paste(bad, collapse = " ")))
     }
 
-    # between-level exogenous covariates that are related to a
-    # latent-covariate ('nonlinear') random slope are not supported
-    # yet: the prior means of the nonlinear slopes would become
-    # cluster-specific, and the quadrature grid could no longer be
-    # shared across the clusters (Rockwood's PISA example); we use a
-    # conservative (undirected) connectivity check on the level-2 part
-    # of the model
-    if (nl_flag && length(between_only) > 0L) {
-      lev2_idx <- which(pt$level > 1L & pt$op %in% c("~", "~~") &
-                        pt$lhs != pt$rhs)
-      edge_l <- pt$lhs[lev2_idx]
-      edge_r <- pt$rhs[lev2_idx]
-      reach <- z_names[nl_z_idx]
-      repeat {
-        hit <- edge_l %in% reach | edge_r %in% reach
-        new_reach <- unique(c(reach, edge_l[hit], edge_r[hit]))
-        if (length(new_reach) == length(reach)) {
-          break
-        }
-        reach <- new_reach
-      }
-      bad <- between_only[between_only %in% reach]
-      if (length(bad) > 0L) {
-        lav_msg_stop(gettextf(
-          "between-level covariate(s) that are related (directly or
-           indirectly) to a random slope for a latent covariate are not
-           supported yet: %s.", paste(bad, collapse = " ")))
-      }
-    }
   }
 
   # the within y-vector: all within variables, except the rv covariates
@@ -1169,12 +1140,30 @@ lav_mvn_cl_rs_loglik_m <- function(rs_stats = NULL, imp = NULL,
 #   loglik_j = logsumexp_q [ loglik_j(b_q) + log w_q ]
 #
 # with nodes b_q = mu_nl + chol(Sigma_nl)' t_q placed at the prior of
-# the nonlinear slopes (Rockwood, 2020, eq. 36-37). NOTE: this
-# requires the prior means of the nonlinear slopes to be identical
-# across clusters (no between-level covariates related to the
-# nonlinear slopes); this 'Case A' restriction is validated in
-# lav_mvn_cl_rs_info(). Per-node cost is one closed-form evaluation
-# (the crossproduct statistics are shared across the nodes).
+# the nonlinear slopes (Rockwood, 2020, eq. 36-37). Per-node cost is
+# one closed-form evaluation (the crossproduct statistics are shared
+# across the nodes).
+#
+# when between-level covariates are related to the nonlinear slopes
+# ('Case B', e.g. a regression s ~ w; Rockwood's PISA model), the
+# prior means mu_nl_j become cluster-specific. We then keep ONE
+# shared grid -- centered at the average prior mean, with the grid
+# covariance inflated by the between-cluster spread of the prior
+# means (so the grid covers every cluster's prior) -- and repair the
+# weights per cluster with the exact density ratio:
+#
+#   loglik_j = logsumexp_q [ loglik_j(b_q) + log w_q + log r_jq ],
+#   log r_jq = log phi(b_q; mu_nl_j, Sigma_nl)
+#              + log|A| - log phi(t_q; 0, I),
+#
+# with b_q = c + A' t_q the shared grid. This keeps the per-node cost
+# structure of Case A (the within matrices are rebuilt per node, not
+# per cluster x node); without between-level covariates (Case A) the
+# corrections are skipped entirely (bit-identical to the plain
+# scheme), and when covariates are present but unrelated to the
+# slopes they vanish up to roundoff. Note that Sigma_nl (the
+# conditional-on-w covariance) is always common across clusters:
+# conditioning on the between covariates shifts means only.
 
 # single entry point for the -2 loglikelihood: dispatches between the
 # closed-form kernel (observed covariates only) and the quadrature
@@ -1203,11 +1192,15 @@ lav_mvn_cl_rs_m2ll <- function(lavmodel = NULL, glist = NULL, rs = NULL,
 # build the conditional-model ingredients at all quadrature nodes:
 # the reduced index map (rs_info_c), and one 'imp' list per node with
 # the node values injected into beta_w and v_b conditioned on the
-# nonlinear slopes; returns NULL if the base implied matrices fail or
-# Sigma_nl is not positive definite (individual nodes may still fail:
-# those imp entries are NULL)
+# nonlinear slopes; when the prior means of the nonlinear slopes are
+# cluster-specific (Case B), exo_b (the per-cluster between-covariate
+# rows) is needed, and the returned 'logr' matrix (nclusters x
+# nnodes) holds the per-cluster log density-ratio corrections;
+# returns NULL if the base implied matrices fail or Sigma_nl is not
+# positive definite (individual nodes may still fail: those imp
+# entries are NULL)
 lav_mvn_cl_rs_cond <- function(lavmodel = NULL, glist = NULL,
-                               rs_info = NULL) {
+                               rs_info = NULL, exo_b = NULL) {
   if (is.null(glist)) {
     glist <- lavmodel@GLIST
   }
@@ -1238,22 +1231,43 @@ lav_mvn_cl_rs_cond <- function(lavmodel = NULL, glist = NULL,
   if (inherits(ch, "try-error")) {
     return(NULL)
   }
+  s_nl_inv <- chol2inv(ch)
 
-  # defensive: Case A only (validated in lav_mvn_cl_rs_info)
-  if (rs_info$nexo.b > 0L &&
-      any(abs(imp0$cc[nl_v, , drop = FALSE]) > 1e-10)) {
-    lav_msg_stop(gettext(
-      "the prior means of the latent-covariate random slopes depend on
-       the between-level covariates; this is not supported yet."))
+  # cluster-specific shifts of the nonlinear prior means (Case B):
+  # mu_nl_j = mu_nl + delta_j, delta_j = cc[nl, ] (w_j - mu_exo).
+  # NOTE: the branch is taken whenever between-level covariates are
+  # present (a *structural* decision), not only when the current
+  # cc[nl, ] values are nonzero: a free slope-on-covariate parameter
+  # that happens to be zero (e.g., at the starting values) still has
+  # a nonzero *derivative* of the correction terms, which the
+  # gradient must see. When cc[nl, ] = 0, the corrections vanish (up
+  # to roundoff) and the general path reduces to the plain scheme.
+  q_nl <- length(nl_v)
+  delta <- NULL
+  case_b <- rs_info$nexo.b > 0L
+  if (case_b) {
+    if (is.null(exo_b)) {
+      lav_msg_stop(gettext(
+        "internal error: exo_b is needed when the model contains both
+         between-level covariates and nonlinear random slopes."))
+    }
+    wc <- exo_b - rep(imp0$mu.exo, each = nrow(exo_b))
+    delta <- wc %*% t(imp0$cc[nl_v, , drop = FALSE]) # G x q_nl
   }
 
   # conditional distribution of the linear part given the slopes:
-  # v_lin | z_nl = b ~ N(mu_lin + R (b - mu_nl), sigma_v_c)
-  s_nl_inv <- chol2inv(ch)
+  # v_lin | z_nl = b ~ N(mu_lin + R (b - mu_nl) + cc_c (w_j - mu_exo),
+  #                      sigma_v_c)
+  # with cc_c the *conditional* regression on the between covariates
+  # (equal to cc[lin, ] when the slopes do not depend on them)
   r_mat <- imp0$sigma.v[lin_v, nl_v, drop = FALSE] %*% s_nl_inv
   sigma_v_c <- imp0$sigma.v[lin_v, lin_v, drop = FALSE] -
     r_mat %*% imp0$sigma.v[nl_v, lin_v, drop = FALSE]
   sigma_v_c <- (sigma_v_c + t(sigma_v_c)) / 2
+  cc_c <- imp0$cc[lin_v, , drop = FALSE]
+  if (case_b) {
+    cc_c <- cc_c - r_mat %*% imp0$cc[nl_v, , drop = FALSE]
+  }
 
   # conditional index map: only the observed-covariate paths remain
   ov_rows <- which(path_tab$type == "ov")
@@ -1275,7 +1289,6 @@ lav_mvn_cl_rs_cond <- function(lavmodel = NULL, glist = NULL,
     ngh <- 21L
   }
   gh <- lav_integration_gauss_hermite(n = ngh, dnorm = TRUE)
-  q_nl <- length(nl_v)
   if (q_nl == 1L) {
     tmat <- matrix(gh$x, nrow = 1L)
     logw <- log(gh$w)
@@ -1287,6 +1300,44 @@ lav_mvn_cl_rs_cond <- function(lavmodel = NULL, glist = NULL,
   }
   nnodes <- ncol(tmat)
 
+  # grid placement: b_q = c + A' t_q
+  # - Case A: c = mu_nl, A = chol(Sigma_nl) (no correction needed)
+  # - Case B: c = average prior mean; grid covariance = Sigma_nl +
+  #   between-cluster covariance of the prior means (so the grid
+  #   covers every cluster's prior); exact per-cluster density-ratio
+  #   corrections below
+  if (case_b) {
+    grid_c <- mu_nl + colMeans(delta)
+    dc <- delta - rep(colMeans(delta), each = nrow(delta))
+    s_grid <- s_nl + crossprod(dc) / nrow(delta)
+    a_up <- try(chol(s_grid), silent = TRUE)
+    if (inherits(a_up, "try-error")) {
+      return(NULL)
+    }
+  } else {
+    grid_c <- mu_nl
+    a_up <- ch
+  }
+  bmat <- grid_c + t(a_up) %*% tmat # q_nl x nnodes
+
+  # per-cluster log density-ratio corrections (Case B only):
+  # log r_jq = log phi(b_q; mu_nl + delta_j, Sigma_nl)
+  #            + log|A| - log phi(t_q; 0, I)
+  logr <- NULL
+  if (case_b) {
+    mu_mat <- rep(mu_nl, each = nrow(delta)) + delta # G x q_nl
+    mb <- s_nl_inv %*% bmat # q_nl x nnodes
+    bmb <- colSums(bmat * mb) # nnodes
+    mm <- rowSums((mu_mat %*% s_nl_inv) * mu_mat) # G
+    cross <- mu_mat %*% mb # G x nnodes
+    logdet_s <- 2 * sum(log(diag(ch)))
+    logdet_a <- sum(log(diag(a_up)))
+    tt <- colSums(tmat * tmat) # nnodes
+    logr <- -0.5 * (outer(mm, bmb, "+") - 2 * cross) -
+      0.5 * logdet_s + logdet_a +
+      rep(0.5 * tt, each = nrow(delta))
+  }
+
   # node-value injection map: nonlinear path -> beta_w cell
   nl_path_rows <- which(path_tab$type == "lv")
   path_nl_z <- match(path_tab$z.idx[nl_path_rows], nl_z)
@@ -1294,10 +1345,9 @@ lav_mvn_cl_rs_cond <- function(lavmodel = NULL, glist = NULL,
   beta_cells <- cbind(rs_info$nl.beta.row, rs_info$nl.beta.col)
 
   imp_list <- vector("list", nnodes)
-  ch_t <- t(ch)
   glist_i <- glist
   for (i in seq_len(nnodes)) {
-    b_i <- mu_nl + as.numeric(ch_t %*% tmat[, i])
+    b_i <- bmat[, i]
     glist_i[[beta_mm]][beta_cells] <- b_i[path_nl_z]
     imp_i <- lav_mvn_cl_rs_implied(
       lavmodel = lavmodel, glist = glist_i, rs_info = rs_info
@@ -1313,13 +1363,13 @@ lav_mvn_cl_rs_cond <- function(lavmodel = NULL, glist = NULL,
       z.v.idx = z_v_idx_c, pv = length(lin_v),
       sigma.v = sigma_v_c,
       mu.v = imp0$mu.v[lin_v] + as.numeric(r_mat %*% (b_i - mu_nl)),
-      cc = imp0$cc[lin_v, , drop = FALSE],
+      cc = cc_c,
       mu.exo = imp0$mu.exo
     )
   }
 
   list(rs_info_c = rs_info_c, imp = imp_list, logw = logw,
-       nnodes = nnodes)
+       nnodes = nnodes, logr = logr)
 }
 
 # -2 * loglikelihood by Gauss-Hermite quadrature over the nonlinear
@@ -1332,7 +1382,8 @@ lav_mvn_cl_rs_loglik_nl <- function(lavmodel = NULL, glist = NULL,
                                     minus_two = TRUE,
                                     per_cluster = FALSE) {
   cond <- lav_mvn_cl_rs_cond(
-    lavmodel = lavmodel, glist = glist, rs_info = rs_info
+    lavmodel = lavmodel, glist = glist, rs_info = rs_info,
+    exo_b = rs_stats$exo.b
   )
   if (is.null(cond)) {
     return(+Inf)
@@ -1356,6 +1407,11 @@ lav_mvn_cl_rs_loglik_nl <- function(lavmodel = NULL, glist = NULL,
       next
     }
     hmat[, i] <- -0.5 * attr(m2_i, "loglik.cluster") + cond$logw[i]
+  }
+
+  # cluster-specific prior means (Case B): density-ratio corrections
+  if (!is.null(cond$logr)) {
+    hmat <- hmat + cond$logr
   }
 
   # per-cluster log-sum-exp over the nodes
@@ -1397,12 +1453,14 @@ lav_mvn_cl_rs_grad_nl <- function(lavmodel = NULL, rs = NULL,
   rs_info <- rs$info
   rs_stats <- rs$stats
 
-  cond0 <- lav_mvn_cl_rs_cond(lavmodel = lavmodel, rs_info = rs_info)
+  cond0 <- lav_mvn_cl_rs_cond(lavmodel = lavmodel, rs_info = rs_info,
+                              exo_b = rs_stats$exo.b)
   if (is.null(cond0)) {
     return(NULL)
   }
   nnodes <- cond0$nnodes
   nclusters <- rs_stats$nclusters
+  case_b <- !is.null(cond0$logr)
 
   # per-node conditional logliks + adjoints at the current parameters
   hmat <- matrix(-Inf, nclusters, nnodes)
@@ -1429,6 +1487,9 @@ lav_mvn_cl_rs_grad_nl <- function(lavmodel = NULL, rs = NULL,
       return(NULL)
     }
   }
+  if (case_b) {
+    hmat <- hmat + cond0$logr
+  }
   hmax <- apply(hmat, 1L, max)
   if (any(!is.finite(hmax))) {
     return(NULL)
@@ -1437,36 +1498,50 @@ lav_mvn_cl_rs_grad_nl <- function(lavmodel = NULL, rs = NULL,
   pw <- exp(hmat - loglik_j) # posterior node weights (rows sum to 1)
 
   # numerical Jacobian of the per-node ingredient vectors phi_c
-  # (central differences; no cluster loops)
+  # (central differences; no cluster loops); in Case B, the log
+  # density-ratio corrections logr also depend on theta -- their
+  # derivatives ride along in the same loop
   x0 <- lav_model_get_parameters(lavmodel)
   npar <- length(x0)
-  phi_of <- function(x) {
+  cond_of <- function(x) {
     lavmodel2 <- lav_model_set_parameters(lavmodel, x = x)
-    cond <- lav_mvn_cl_rs_cond(lavmodel = lavmodel2, rs_info = rs_info)
+    cond <- lav_mvn_cl_rs_cond(lavmodel = lavmodel2, rs_info = rs_info,
+                               exo_b = rs_stats$exo.b)
     if (is.null(cond)) {
       return(NULL)
     }
-    lapply(cond$imp, function(m) {
-      if (is.null(m)) NULL else lav_mvn_cl_rs_phi_vec(m)
-    })
+    list(
+      phi = lapply(cond$imp, function(m) {
+        if (is.null(m)) NULL else lav_mvn_cl_rs_phi_vec(m)
+      }),
+      logr = cond$logr
+    )
   }
   nphi <- length(lav_mvn_cl_rs_phi_vec(cond0$imp[[1]]))
   jac <- lapply(seq_len(nnodes), function(i) matrix(0, nphi, npar))
+  dlr_sc <- if (case_b) matrix(0, nclusters, npar) else NULL
   for (k in seq_len(npar)) {
     h_k <- h * max(1, abs(x0[k]))
     x_right <- x_left <- x0
     x_right[k] <- x0[k] + h_k
     x_left[k] <- x0[k] - h_k
-    phi_r <- phi_of(x_right)
-    phi_l <- phi_of(x_left)
-    if (is.null(phi_r) || is.null(phi_l)) {
+    cond_r <- cond_of(x_right)
+    cond_l <- cond_of(x_left)
+    if (is.null(cond_r) || is.null(cond_l)) {
       return(NULL)
     }
     for (i in seq_len(nnodes)) {
-      if (is.null(phi_r[[i]]) || is.null(phi_l[[i]])) {
+      if (is.null(cond_r$phi[[i]]) || is.null(cond_l$phi[[i]])) {
         return(NULL)
       }
-      jac[[i]][, k] <- (phi_r[[i]] - phi_l[[i]]) / (2 * h_k)
+      jac[[i]][, k] <- (cond_r$phi[[i]] - cond_l$phi[[i]]) / (2 * h_k)
+    }
+    if (case_b) {
+      if (is.null(cond_r$logr) || is.null(cond_l$logr)) {
+        return(NULL)
+      }
+      dlr_k <- (cond_r$logr - cond_l$logr) / (2 * h_k)
+      dlr_sc[, k] <- rowSums(pw * dlr_k)
     }
   }
 
@@ -1476,6 +1551,9 @@ lav_mvn_cl_rs_grad_nl <- function(lavmodel = NULL, rs = NULL,
     for (i in seq_len(nnodes)) {
       sc <- sc + (pw[, i] * (-0.5) * gphi_list[[i]]) %*% jac[[i]]
     }
+    if (case_b) {
+      sc <- sc + dlr_sc
+    }
     sc
   } else {
     # d(-2 loglik)/d theta
@@ -1483,6 +1561,9 @@ lav_mvn_cl_rs_grad_nl <- function(lavmodel = NULL, rs = NULL,
     for (i in seq_len(nnodes)) {
       dx <- dx +
         as.numeric(colSums(pw[, i] * gphi_list[[i]]) %*% jac[[i]])
+    }
+    if (case_b) {
+      dx <- dx - 2 * colSums(dlr_sc)
     }
     dx
   }
