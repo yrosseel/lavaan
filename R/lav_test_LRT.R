@@ -300,7 +300,7 @@ lavTestLRT <- function(object, ..., method = "default", test = "default",   # no
     testlist <- lapply(
       mods,
       function(x) lavTest(x, test = "browne.residual.nt",
-                          drop.list.single = FALSE)
+                          drop_list_single = FALSE)
     )
     df_1 <- sapply(testlist, function(x) x[[type]]$df)
     stat_1 <- sapply(testlist, function(x) x[[type]]$stat)
@@ -308,7 +308,7 @@ lavTestLRT <- function(object, ..., method = "default", test = "default",   # no
     testlist <- lapply(
       mods,
       function(x) lavTest(x, test = "browne.residual.adf",
-                          drop.list.single = FALSE)
+                          drop_list_single = FALSE)
     )
     df_1 <- sapply(testlist, function(x) x[[type]]$df)
     stat_1 <- sapply(testlist, function(x) x[[type]]$stat)
