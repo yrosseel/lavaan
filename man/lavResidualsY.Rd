@@ -12,8 +12,9 @@ lavResidualsY(object, newdata = NULL,
               xnames = lav_object_vnames(object, "ov.x"),
               method = "conditional.mean",
               label = TRUE, assemble = TRUE,
-              force.zero.mean = FALSE,
-              lambda = 0)
+              force_zero_mean = FALSE,
+              lambda = 0,
+              ...)
 }
 \arguments{
 \item{object}{An object of class \code{\linkS4class{lavaan}}.}
@@ -46,11 +47,12 @@ the residuals for the separate groups in the output are
 reassembled into a single data.frame
 with a group column, having the same dimensions as the original
 (or newdata) dataset.}
-\item{force.zero.mean}{Logical. Only relevant if there is no mean structure.
+\item{force_zero_mean}{Logical. Only relevant if there is no mean structure.
 If \code{TRUE}, the (model-implied) mean vector is set to the zero vector.
 If \code{FALSE}, the (model-implied) mean vector is set to the (unrestricted)
 sample mean vector.}
 \item{lambda}{Numeric. A lambda regularization penalty term.}
+\item{...}{To support old argument names.}
 }
 \details{
 The residuals are computed as \code{observed - predicted}, where the

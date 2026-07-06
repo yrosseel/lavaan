@@ -10,13 +10,14 @@ function is NOT to predict future values of dependent variables as in the
 regression framework! (For models with only continuous observed variables, the function \code{lavPredictY()} supports this.)}
 \usage{
 lavPredict(object, newdata = NULL, type = "lv", method = "EBM",
-           transform = FALSE, se = "none", acov = "none", 
+           transform = FALSE, se = "none", acov = "none",
            label = TRUE, fsm = FALSE, mdist = FALSE, rel = FALSE,
-           append.data = FALSE, assemble = FALSE,
-           level = 1L, optim.method = "bfgs", ETA = NULL,
+           append_data = FALSE, assemble = FALSE,
+           level = 1L, optim_method = "bfgs", eta = NULL,
            parallel = c("auto", "no", "multicore", "snow"),
            ncpus = NULL, cl = NULL,
-           drop.list.single.group = TRUE)
+           drop_list_single_group = TRUE,
+           ...)
 }
 \arguments{
 \item{object}{An object of class \code{\linkS4class{lavaan}}.}
@@ -31,9 +32,9 @@ variables in the model are computed. If \code{"ov"}, model predicted values for
 the indicators of the latent variables in the model are computed. If
 \code{"yhat"}, the estimated values for the observed indicators are computed,
 given the user-specified values for the latent variables provided by the
-\code{ETA} argument.  If \code{"fy"}, densities (or probabilities) are computed
+\code{eta} argument.  If \code{"fy"}, densities (or probabilities) are computed
 for each observed indicator, given the user-specified values for the latent
-variables provided by the \code{ETA} argument.}
+variables provided by the \code{eta} argument.}
 \item{method}{A character string. In the linear case (when the indicators are
 continuous), the possible options are \code{"regression"} or \code{"Bartlett"}.
 In the categorical case, the two options are \code{"EBM"} for
@@ -64,15 +65,15 @@ a list with one (nfactor x nfactor) matrix per observation.}
            Only for numeric data.}
 \item{mdist}{Logical. If TRUE, the (squared)
 Mahalanobis distances of the factor scores (if \code{type = "lv"}) or
-the casewise residuals (if \code{type = "resid"}) are returned as an 
+the casewise residuals (if \code{type = "resid"}) are returned as an
 attribute.}
 \item{rel}{Logical. Only used if \code{type = "lv"}. If TRUE,
 the factor reliabilities are returned as an attribute. (The squared
 values are often called the factor determinacies.)}
-\item{append.data}{Logical. Only used when \code{type = "lv"}. If TRUE, 
+\item{append_data}{Logical. Only used when \code{type = "lv"}. If TRUE,
 the original data (or the data provided
 in the newdata argument) is appended to the factor scores.}
-\item{assemble}{Logical. If TRUE, 
+\item{assemble}{Logical. If TRUE,
 the separate groups are reassembled into a single data.frame
 with a group column, having the same dimensions as the original (or
 newdata) dataset.}
@@ -85,11 +86,11 @@ posterior means of the cluster-level components and of the missing
 values (given all the observed data; computed as in the E-step of the
 EM algorithm) are used, so that the factor scores are the exact
 posterior means given all the observed data (new in 0.7-1).}
-\item{optim.method}{Character string. Only used in the categorical case.
+\item{optim_method}{Character string. Only used in the categorical case.
 If \code{"nlminb"} (the default in 0.5), the \code{"nlminb()"} function is used
 for the optimization. If \code{"bfgs"} or \code{"BFGS"} (the default in 0.6),
 the \code{"optim()"} function is used with the BFGS method.}
-\item{ETA}{An optional matrix or list, containing latent variable values
+\item{eta}{An optional matrix or list, containing latent variable values
   for each observation. Used for computations when \code{type = "ov"}.}
 \item{parallel}{Character. Only used in the categorical case, where factor
   scores are computed by a per-observation numerical optimization. The options
@@ -104,11 +105,12 @@ the \code{"optim()"} function is used with the BFGS method.}
 \item{cl}{An optional \pkg{parallel} or \pkg{snow} cluster for use when
   \code{parallel = "snow"}. If not supplied, a cluster on the local machine is
   created for the duration of the call.}
-\item{drop.list.single.group}{Logical. If \code{FALSE}, the results are
+\item{drop_list_single_group}{Logical. If \code{FALSE}, the results are
     returned as
     a list, where each element corresponds to a group (even if there is only
     a single group). If \code{TRUE}, the list will be unlisted if there is
     only a single group.}
+\item{...}{To support old argument names.}
 }
 \details{
 The \code{predict()} function calls the \code{lavPredict()} function

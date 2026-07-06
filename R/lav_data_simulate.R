@@ -853,7 +853,7 @@ lav_data_simulate_sl <- function( # user-specified model    # nolint start
 lav_data_simulate_old <- function(..., ordered_center = FALSE) {
   dotdotdot <- list(...)
   lav_adapt_func(environment(), dotdotdot, FALSE)
-  lav_data_simulate(..., ordered_center = ordered_center)
+  do.call(lav_data_simulate, c(dotdotdot, list(ordered_center = ordered_center)))
 }
 
 

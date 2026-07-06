@@ -26,7 +26,7 @@ setMethod(
     }
     lavPredict(
       object = object, newdata = newdata, type = "lv", method = "EBM",
-      fsm = FALSE, rel = FALSE, optim.method = "bfgs"
+      fsm = FALSE, rel = FALSE, optim_method = "bfgs"
     )
   }
 )
@@ -48,15 +48,18 @@ lav_efalist_predict <- function(object, ...) {
 }
 
 # public function
-lavPredict <- function(object, newdata = NULL, # keep order of predict(), 0.6-7 # nolint start
+lavPredict <- function(object, newdata = NULL, # keep order of predict(), 0.6-7 # nolint
                        type = "lv", method = "EBM", transform = FALSE,
                        se = "none", acov = "none", label = TRUE, fsm = FALSE,
                        mdist = FALSE, rel = FALSE,
-                       append.data = FALSE, assemble = FALSE, # or TRUE?
-                       level = 1L, optim.method = "bfgs", ETA = NULL,
+                       append_data = FALSE, assemble = FALSE, # or TRUE?
+                       level = 1L, optim_method = "bfgs", eta = NULL,
                        parallel = c("auto", "no", "multicore", "snow"),
                        ncpus = NULL, cl = NULL,
-                       drop.list.single.group = TRUE) {                         # nolint end
+                       drop_list_single_group = TRUE,
+                      ...) {
+  dotdotdot <- list(...)
+  lav_adapt_func(environment(), dotdotdot, NULL)
   # check object
   object <- lav_object_check_version(object)
 
@@ -105,9 +108,9 @@ lavPredict <- function(object, newdata = NULL, # keep order of predict(), 0.6-7 
         "newdata is not supported (yet) for models with random
          slopes."))
     }
-    if (fsm || mdist || rel || transform || append.data) {
+    if (fsm || mdist || rel || transform || append_data) {
       lav_msg_stop(gettext(
-        "the fsm/mdist/rel/transform/append.data options are not
+        "the fsm/mdist/rel/transform/append_data options are not
          supported (yet) for models with random slopes."))
     }
     se_flag <- !is.null(se) && se != "none"
@@ -131,7 +134,7 @@ lavPredict <- function(object, newdata = NULL, # keep order of predict(), 0.6-7 
       colnames(out1) <- NULL
     }
     class(out1) <- c("lavaan.matrix", "matrix")
-    if (!drop.list.single.group) {
+    if (!drop_list_single_group) {
       out1 <- list(out1)
       if (!is.null(se1)) {
         se1 <- list(se1)
@@ -156,10 +159,10 @@ lavPredict <- function(object, newdata = NULL, # keep order of predict(), 0.6-7 
     lavpartable = lavpartable, newdata = newdata, type = type, method = method,
     transform = transform, se = se, acov = acov, label = label,
     fsm = fsm, rel = rel,
-    mdist = mdist, append_data = append.data, assemble = assemble,
-    level = level, optim_method = optim.method, eta = ETA,
+    mdist = mdist, append_data = append_data, assemble = assemble,
+    level = level, optim_method = optim_method, eta = eta,
     parallel = parallel, ncpus = ncpus, cl = cl,
-    drop_list_single_group = drop.list.single.group
+    drop_list_single_group = drop_list_single_group
   )
 
   res
@@ -199,9 +202,9 @@ lav_predict_internal <- function(lavmodel = NULL,
       "casewise residuals not available if data is categorical"))
   }
 
-  # append.data? check level
+  # append_data? check level
   if (append_data && level > 1L) {
-    lav_msg_warn(gettext("append.data not available if level > 1L"))
+    lav_msg_warn(gettext("append_data not available if level > 1L"))
     append_data <- FALSE
   }
 
@@ -306,7 +309,7 @@ lav_predict_internal <- function(lavmodel = NULL,
   if (type == "lv") {
     if (!is.null(eta)) {
       lav_msg_warn(gettext("lvs will be predicted here;
-                           supplying ETA has no effect"))
+                           supplying eta= has no effect"))
     }
 
     # post fit check (lv pd?)
@@ -1659,8 +1662,8 @@ lav_predict_eta_ebm_ml <- function(lavobject = NULL, # for convenience
 #
 #    where eta_i = latent variable value for i (either given or from predict)
 #
-# Two types: 1) nrow(ETA) = nrow(X) (factor scores)
-#            2) nrow(ETA) = 1L (given values)
+# Two types: 1) nrow(eta) = nrow(X) (factor scores)
+#            2) nrow(eta) = 1L (given values)
 #
 # in both cases, we return [nobs x nvar] matrix per group
 lav_predict_yhat <- function(lavobject = NULL, # for convience
@@ -1670,7 +1673,7 @@ lav_predict_yhat <- function(lavobject = NULL, # for convience
                              lavimplied = NULL,
                              # new data
                              data_obs = NULL, exo = NULL,
-                             # ETA values
+                             # eta values
                              eta = NULL,
                              # options
                              method = "EBM",
@@ -1699,7 +1702,7 @@ lav_predict_yhat <- function(lavobject = NULL, # for convience
     exo <- lavdata@eXo
   }
 
-  # do we get values for ETA? If not, use `predict' to get plausible values
+  # do we get values for eta? If not, use `predict' to get plausible values
   if (is.null(eta)) {
     eta <- lav_predict_eta(
       lavobject = NULL, lavmodel = lavmodel,
@@ -1717,7 +1720,7 @@ lav_predict_yhat <- function(lavobject = NULL, # for convience
           byrow = TRUE
         )
       } else if (nrow(eta) != lavsamplestats@ntotal) {
-        lav_msg_stop(gettext("nrow(ETA) != lavsamplestats@ntotal"))
+        lav_msg_stop(gettext("nrow(eta) != lavsamplestats@ntotal"))
       } else {
         tmp <- eta
       }
@@ -1775,7 +1778,7 @@ lav_predict_fy <- function(lavobject = NULL, # for convience
                            lavimplied = NULL,
                            # new data
                            data_obs = NULL, exo = NULL,
-                           # ETA values
+                           # eta values
                            eta = NULL,
                            # options
                            method = "EBM",

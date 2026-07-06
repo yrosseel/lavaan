@@ -298,15 +298,18 @@ lav_predict_y_assemble_bygroup <- function(out, ynames, lavdata, group_idx,
 
 
 # main function
-lavPredictY <- function(object,                                    # nolint start
+lavPredictY <- function(object,                                    # nolint
                         newdata = NULL,
                         ynames = lav_object_vnames(object, "ov.y"),
                         xnames = lav_object_vnames(object, "ov.x"),
                         method = "conditional.mean",
                         label = TRUE,
                         assemble = TRUE,
-                        force.zero.mean = FALSE,
-                        lambda = 0) {                              # nolint end
+                        force_zero_mean = FALSE,
+                        lambda = 0,
+                      ...) {
+  dotdotdot <- list(...)
+  lav_adapt_func(environment(), dotdotdot, NULL)
   stopifnot(inherits(object, "lavaan"))
   # check object
   object <- lav_object_check_version(object)
@@ -325,7 +328,7 @@ lavPredictY <- function(object,                                    # nolint star
       lavmodel = prep$lavmodel, lavdata = prep$lavdata,
       lavimplied = prep$lavimplied,
       data_obs = prep$data_obs, y_idx = prep$y_idx, x_idx = prep$x_idx,
-      force_zero_mean = force.zero.mean,
+      force_zero_mean = force_zero_mean,
       lambda = lambda
     )
   } else {
@@ -351,15 +354,18 @@ lavPredictY <- function(object,                                    # nolint star
 # compute residuals (observed - predicted) for the y-variables, given the
 # x-variables. See lavPredictY() for the prediction part. First version:
 # YR 2 July 2026 (feature request in GitHub issue #269).
-lavResidualsY <- function(object,                                  # nolint start
+lavResidualsY <- function(object,                                  # nolint
                           newdata = NULL,
                           ynames = lav_object_vnames(object, "ov.y"),
                           xnames = lav_object_vnames(object, "ov.x"),
                           method = "conditional.mean",
                           label = TRUE,
                           assemble = TRUE,
-                          force.zero.mean = FALSE,
-                          lambda = 0) {                            # nolint end
+                          force_zero_mean = FALSE,
+                          lambda = 0,
+                        ...) {
+  dotdotdot <- list(...)
+  lav_adapt_func(environment(), dotdotdot, NULL)
   stopifnot(inherits(object, "lavaan"))
   # check object
   object <- lav_object_check_version(object)
@@ -378,7 +384,7 @@ lavResidualsY <- function(object,                                  # nolint star
       lavmodel = prep$lavmodel, lavdata = prep$lavdata,
       lavimplied = prep$lavimplied,
       data_obs = prep$data_obs, y_idx = prep$y_idx, x_idx = prep$x_idx,
-      force_zero_mean = force.zero.mean,
+      force_zero_mean = force_zero_mean,
       lambda = lambda
     )
   } else {
@@ -524,14 +530,17 @@ lav_predict_y_conditional_mean <- function(
 
 # Takes a sequence of lambdas and performs k-fold cross-validation to determine
 # the best lambda
-lavPredictY_cv <- function(                    # nolint start
+lavPredictY_cv <- function(                    # nolint
     object,
     data = NULL,
     xnames = lav_object_vnames(object, "ov.x"),
     ynames = lav_object_vnames(object, "ov.y"),
-    n.folds = 10L,
-    lambda.seq = seq(0, 1, 0.1)) {             # nolint end
+    n_folds = 10L,
+    lambda_seq = seq(0, 1, 0.1),
+  ...) {
 
+  dotdotdot <- list(...)
+  lav_adapt_func(environment(), dotdotdot, NULL)
   # object should be (or inherit from) a lavaan object
   stopifnot(inherits(object, "lavaan"))
   # check object
@@ -539,19 +548,19 @@ lavPredictY_cv <- function(                    # nolint start
 
   # results container
   results <- matrix(as.numeric(NA),
-    nrow = length(lambda.seq) * n.folds,
+    nrow = length(lambda_seq) * n_folds,
     ncol = 2L
   )
   colnames(results) <- c("mse", "lambda")
 
   # shuffle folds
-  folds <- sample(rep(1:n.folds, length.out = nrow(data)))
+  folds <- sample(rep(1:n_folds, length.out = nrow(data)))
 
   # extract Y-data
   y <- as.matrix(data[, ynames, drop = FALSE])
 
   j <- 0L
-  for (i in 1:n.folds) {
+  for (i in 1:n_folds) {
     indis <- which(folds == i)
     fold_fit <- try(update(object,
       data = data[-indis, , drop = FALSE],
@@ -561,7 +570,7 @@ lavPredictY_cv <- function(                    # nolint start
       lav_msg_warn(gettextf("failed fit in fold %s", i))
       next
     }
-    for (l in lambda.seq) {
+    for (l in lambda_seq) {
       j <- j + 1L
       yhat <- lavPredictY(
         fold_fit,
