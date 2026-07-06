@@ -20,7 +20,7 @@
 # - 8 Nov 2013:   - skip empty cells for G2, instead of adding 0.5 to obs
 # - 7 Feb 2016:   - take care of conditional.x = TRUE
 
-lavTables <- function(object,                         # nolint start
+lavTables <- function(object,                         # nolint
                       # what type of table?
                       dimension = 2L,
                       type = "cells",
@@ -29,15 +29,18 @@ lavTables <- function(object,                         # nolint start
                       group = NULL,
                       # which statistics / fit indices?
                       statistic = "default",
-                      G2.min = 3.0, # needed for G2.{p/n}large
-                      X2.min = 3.0, # needed for X2.{p/n}large
+                      g2_min = 3.0, # needed for G2.{p/n}large
+                      x2_min = 3.0, # needed for X2.{p/n}large
                       # pvalues for statistics?
-                      p.value = FALSE,
+                      p_value = FALSE,
                       # Bonferroni
                       # alpha.adj    = FALSE,
                       # output format
                       output = "data.frame",
-                      patternAsString = TRUE) {      # nolint end
+                      pattern_as_string = TRUE,
+                      ...) {
+  dotdotdot <- list(...)
+  lav_adapt_func(environment(), dotdotdot, NULL)
   # check object
   object <- lav_object_check_version(object)
 
@@ -65,7 +68,7 @@ lavTables <- function(object,                         # nolint start
     out <- lav_tables_pattern(
       lavobject = lavobject, lavdata = lavdata,
       statistic = statistic,
-      pattern_as_string = patternAsString
+      pattern_as_string = pattern_as_string
     )
     # output format
     if (output == "data.frame") {
@@ -113,9 +116,9 @@ lavTables <- function(object,                         # nolint start
       lavobject = lavobject,
       lavdata = lavdata,
       statistic = statistic,
-      g2_min = G2.min,
-      x2_min = X2.min,
-      p_value = p.value
+      g2_min = g2_min,
+      x2_min = x2_min,
+      p_value = p_value
     )
     # output format
     if (output == "data.frame") {
@@ -150,15 +153,15 @@ lavTables <- function(object,                         # nolint start
 #                         G2.min       = 3.0,
 #                         X2.min       = 3.0,
 #                         # pvalues for statistics?
-#                         p.value      = FALSE,
+#                         p_value      = FALSE,
 #                         # output format
 #                         output       = "data.frame") {
 #
 #    lavTables(object = object, dimension = 2L, type = "table",
 #              categorical = categorical, group = group,
 #              statistic = statistic,
-#              G2.min = G2.min, X2.min = X2.min, p.value = p.value,
-#              output = output, patternAsString = FALSE)
+#              g2_min = g2_min, x2_min = x2_min, p_value = p_value,
+#              output = output, pattern_as_string = FALSE)
 # }
 
 # lavTables1D <- function(object,
@@ -172,8 +175,8 @@ lavTables <- function(object,                         # nolint start
 #
 #   lavTables(object = object, dimension = 1L,
 #              categorical = categorical, group = group,
-#              statistic = statistic, p.value = FALSE,
-#              output = output, patternAsString = FALSE)
+#              statistic = statistic, p_value = FALSE,
+#              output = output, pattern_as_string = FALSE)
 # }
 
 
