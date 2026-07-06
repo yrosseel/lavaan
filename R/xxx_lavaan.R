@@ -529,6 +529,7 @@ lavaan <- function(
          lavcache    = lavcache,
          lavoptim    = temp$lavoptim,
          x           = temp$x,
+         lavoptions  = temp$lavoptions,
          timing      = timing)
   }
 
@@ -559,6 +560,11 @@ lavaan <- function(
   lavoptim    <- temp$lavoptim
   x           <- temp$x
   timing      <- temp$timing
+  if (!is.null(temp$lavoptions)) {
+    # e.g., the (quiet) em -> nlminb fallback: record the optimizer
+    # that was actually used
+    lavoptions <- temp$lavoptions
+  }
 
   # store eqs if present in x
   laveqs <- list()

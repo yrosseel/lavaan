@@ -571,6 +571,10 @@ lav_step11_estoptim <- function(lavdata = NULL,
   lavpartable <- lav_pt_set_cache(lavpartable, force = TRUE)
   list(
     lavoptim = lavoptim, lavmodel = lavmodel, lavpartable = lavpartable,
-    x = x
+    x = x,
+    # lavoptions may have been updated (e.g., the em -> nlminb
+    # fallback): return it, so that the fitted object records the
+    # optimizer that was actually used
+    lavoptions = lavoptions
   )
 }
