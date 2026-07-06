@@ -7,10 +7,20 @@
 #   structural equation models with random slopes for latent covariates.
 #   Psychometrika, 85(2), 275-300.
 #
-# This file implements the observed-covariates-only setting: all random
-# slopes involve *observed* level-1 covariates, so all random effects are
-# 'linear' (Rockwood, 2020, section 3.2) and the marginal (observed-data)
-# loglikelihood is available in closed form (no numerical integration).
+# Two settings are implemented:
+#
+# 1) all random slopes involve *observed* level-1 covariates: all random
+#    effects are 'linear' (Rockwood, 2020, section 3.2) and the marginal
+#    (observed-data) loglikelihood is available in closed form (no
+#    numerical integration);
+#
+# 2) one or more random slopes involve a *latent* level-1 covariate:
+#    these slopes are 'nonlinear' random effects; conditional on their
+#    values, the model reduces to setting (1), so the loglikelihood is
+#    obtained by (Gauss-Hermite) quadrature over the nonlinear slopes
+#    only, while all linear random effects are still integrated out
+#    analytically (Rockwood, 2020, sections 3.3-3.6); see the
+#    'quadrature' section below (lav_mvn_cl_rs_loglik_nl).
 #
 # NOTE: the likelihood is *conditional* on the covariates that carry random
 # slopes (and on the between-level exogenous covariates): their joint
@@ -50,7 +60,7 @@
 # kernels; returns an index map ('rs_info') that is computed only once
 # (and cached in lavcache[[g]]$rs)
 lav_mvn_cl_rs_info <- function(lavmodel = NULL, lavpartable = NULL,
-                               lavdata = NULL) {
+                               lavdata = NULL, lavoptions = NULL) {
   # single group only (for now)
   if (lavdata@ngroups > 1L) {
     lav_msg_stop(gettext(
@@ -62,16 +72,14 @@ lav_mvn_cl_rs_info <- function(lavmodel = NULL, lavpartable = NULL,
       "random slopes (rv() modifier) require a two-level model."))
   }
 
-  # random slopes for latent covariates? not yet
-  # (this is where the Rockwood (2020) quadrature will plug in later)
-  if (length(lavmodel@rv.lv) > 0L) {
-    lav_msg_stop(gettext(
-      "random slopes for latent covariates are not supported yet; only
-       observed (within-level) covariates can have a random slope."))
+  # number of quadrature nodes per dimension (latent covariates only)
+  ngh <- 21L
+  if (!is.null(lavoptions) && !is.null(lavoptions$integration.ngh)) {
+    ngh <- as.integer(lavoptions$integration.ngh)
   }
 
   # path list: from the parameter table (with validation), or from
-  # lavmodel@rv.ov (no validation; used post-estimation)
+  # lavmodel@rv.ov/@rv.lv (no validation; used post-estimation)
   if (!is.null(lavpartable)) {
     pt <- lavpartable
     if (is.null(pt$level)) {
@@ -95,15 +103,44 @@ lav_mvn_cl_rs_info <- function(lavmodel = NULL, lavpartable = NULL,
     path_rv <- pt$rv[rs_idx]
     path_lhs <- pt$lhs[rs_idx]
     path_rhs <- pt$rhs[rs_idx]
+
+    # covariate type per path: latent ("lv") or observed ("ov")
+    # (this mirrors the rv.lv/rv.ov classification in lav_model();
+    #  'split' both-level observed covariates count as latent)
+    lv_names_1 <- lav_pt_vnames(pt, "lv", block = 1L)
+    ov_x_1 <- lav_pt_vnames(pt, "ov.x", block = 1L)
+    ov_x_2 <- lav_pt_vnames(pt, "ov.x", block = 2L)
+    ov_x_12 <- ov_x_2[ov_x_2 %in% ov_x_1]
+    path_type <- ifelse(path_rhs %in% c(lv_names_1, ov_x_12),
+                        "lv", "ov")
   } else {
     pt <- NULL
-    path_rv <- names(lavmodel@rv.ov)
-    path_lhs <- sapply(lavmodel@rv.ov, "[[", 1L)
-    path_rhs <- sapply(lavmodel@rv.ov, "[[", 2L)
+    rv_all <- c(lavmodel@rv.ov, lavmodel@rv.lv)
+    path_rv <- names(rv_all)
+    path_lhs <- sapply(rv_all, "[[", 1L)
+    path_rhs <- sapply(rv_all, "[[", 2L)
+    path_type <- rep(c("ov", "lv"),
+                     c(length(lavmodel@rv.ov), length(lavmodel@rv.lv)))
   }
 
   z_names <- unique(path_rv) # canonical order of the random slopes
   q <- length(z_names)
+
+  # slope type: a slope multiplying a latent covariate is a 'nonlinear'
+  # random effect (numerical integration); a single label may not mix
+  # covariate types
+  z_type <- character(q)
+  for (r in seq_len(q)) {
+    tps <- unique(path_type[path_rv == z_names[r]])
+    if (length(tps) > 1L) {
+      lav_msg_stop(gettextf(
+        "random-slope label %s is attached to both an observed and a
+         latent covariate; this is not supported (yet).", z_names[r]))
+    }
+    z_type[r] <- tps
+  }
+  nl_z_idx <- which(z_type == "lv")
+  nl_flag <- length(nl_z_idx) > 0L
 
   # variable names per level
   ov_names_1 <- lavdata@ov.names.l[[1]][[1]] # within
@@ -112,19 +149,26 @@ lav_mvn_cl_rs_info <- function(lavmodel = NULL, lavpartable = NULL,
   within_only <- ov_names_1[!ov_names_1 %in% ov_names_2]
   between_only <- ov_names_2[!ov_names_2 %in% ov_names_1]
 
-  # the covariates carrying random slopes
-  x_names <- unique(path_rhs)
+  # the *observed* covariates carrying random slopes
+  x_names <- unique(path_rhs[path_type == "ov"])
 
   # validation (only if we have a parameter table)
   if (!is.null(pt)) {
-    # exogenous variables (fixed.x)
-    ov_x_1 <- lav_pt_vnames(pt, "ov.x", block = 1L)
-    ov_x_2 <- lav_pt_vnames(pt, "ov.x", block = 2L)
+    # latent covariates: within-level latent variables only (for now);
+    # 'split' both-level observed covariates (latent decomposition of
+    # the within and between components) are not supported yet
+    lv_rhs <- unique(path_rhs[path_type == "lv"])
+    bad <- lv_rhs[lv_rhs %in% ov_x_12]
+    if (length(bad) > 0L) {
+      lav_msg_stop(gettextf(
+        "random slopes for 'split' both-level covariates (the latent
+         within-cluster component of an observed covariate that also
+         appears at level 2) are not supported yet: %s.",
+        paste(bad, collapse = " ")))
+    }
 
-    # latent variables at level 1
-    lv_names_1 <- lav_pt_vnames(pt, "lv", block = 1L)
-
-    # the rv covariates must be observed, within-only, and exogenous
+    # the observed rv covariates must be observed, within-only, and
+    # exogenous
     bad <- x_names[!x_names %in% within_only]
     if (length(bad) > 0L) {
       lav_msg_stop(gettextf(
@@ -175,6 +219,36 @@ lav_mvn_cl_rs_info <- function(lavmodel = NULL, lavpartable = NULL,
          not supported (yet) in combination with random slopes: %s.",
         paste(bad, collapse = " ")))
     }
+
+    # between-level exogenous covariates that are related to a
+    # latent-covariate ('nonlinear') random slope are not supported
+    # yet: the prior means of the nonlinear slopes would become
+    # cluster-specific, and the quadrature grid could no longer be
+    # shared across the clusters (Rockwood's PISA example); we use a
+    # conservative (undirected) connectivity check on the level-2 part
+    # of the model
+    if (nl_flag && length(between_only) > 0L) {
+      lev2_idx <- which(pt$level > 1L & pt$op %in% c("~", "~~") &
+                        pt$lhs != pt$rhs)
+      edge_l <- pt$lhs[lev2_idx]
+      edge_r <- pt$rhs[lev2_idx]
+      reach <- z_names[nl_z_idx]
+      repeat {
+        hit <- edge_l %in% reach | edge_r %in% reach
+        new_reach <- unique(c(reach, edge_l[hit], edge_r[hit]))
+        if (length(new_reach) == length(reach)) {
+          break
+        }
+        reach <- new_reach
+      }
+      bad <- between_only[between_only %in% reach]
+      if (length(bad) > 0L) {
+        lav_msg_stop(gettextf(
+          "between-level covariate(s) that are related (directly or
+           indirectly) to a random slope for a latent covariate are not
+           supported yet: %s.", paste(bad, collapse = " ")))
+      }
+    }
   }
 
   # the within y-vector: all within variables, except the rv covariates
@@ -186,8 +260,9 @@ lav_mvn_cl_rs_info <- function(lavmodel = NULL, lavpartable = NULL,
     rv = path_rv,
     lhs = path_lhs,
     rhs = path_rhs,
+    type = path_type,
     z.idx = match(path_rv, z_names),
-    x.idx = match(path_rhs, x_names),
+    x.idx = match(path_rhs, x_names), # NA for latent covariates
     stringsAsFactors = FALSE
   )
 
@@ -250,6 +325,29 @@ lav_mvn_cl_rs_info <- function(lavmodel = NULL, lavpartable = NULL,
   shared_flag <- (nrow(path_tab) != q) ||
     !identical(path_tab$z.idx, seq_len(q))
 
+  # latent covariates: GLIST cell positions of the (fixed-to-zero)
+  # within regression paths; the quadrature driver injects the node
+  # values for the nonlinear slopes there
+  nl_beta_row <- nl_beta_col <- integer(0L)
+  nl_beta_mm <- integer(0L)
+  if (nl_flag) {
+    if (length(beta_mm) == 0L) {
+      lav_msg_stop(gettext(
+        "no beta matrix found in the within part of the model
+         (random slopes for latent covariates)."))
+    }
+    lv_names_w_all <- lavmodel@dimNames[[beta_mm]][[2]]
+    nl_path_idx <- which(path_type == "lv")
+    nl_beta_row <- match(path_lhs[nl_path_idx], lv_names_w_all)
+    nl_beta_col <- match(path_rhs[nl_path_idx], lv_names_w_all)
+    if (anyNA(nl_beta_row) || anyNA(nl_beta_col)) {
+      lav_msg_stop(gettext(
+        "unable to locate the latent-covariate random-slope path(s) in
+         the within beta matrix."))
+    }
+    nl_beta_mm <- beta_mm
+  }
+
   list(
     z.names = z_names, q = q,
     x.names = x_names, nx = length(x_names),
@@ -261,7 +359,13 @@ lav_mvn_cl_rs_info <- function(lavmodel = NULL, lavpartable = NULL,
     y.data.idx = y_data_idx,
     x.data.idx = x_data_idx,
     exo.b.data.idx = exo_b_data_idx,
-    p.flag = p_flag, shared.flag = shared_flag
+    p.flag = p_flag, shared.flag = shared_flag,
+    # latent covariates (nonlinear random slopes; quadrature)
+    z.type = z_type, nl.flag = nl_flag,
+    nl.z.idx = nl_z_idx, q.nl = length(nl_z_idx),
+    nl.beta.mm = nl_beta_mm,
+    nl.beta.row = nl_beta_row, nl.beta.col = nl_beta_col,
+    ngh = ngh
   )
 }
 
@@ -1039,6 +1143,353 @@ lav_mvn_cl_rs_loglik_m <- function(rs_stats = NULL, imp = NULL,
 
 
 # ---------------------------------------------------------------------
+# latent covariates: quadrature over the nonlinear random slopes
+# ---------------------------------------------------------------------
+#
+# random slopes that multiply a *latent* level-1 covariate enter the
+# within model nonlinearly (a product of two random variables); the
+# marginal loglikelihood is no longer available in closed form.
+# Following Rockwood (2020), we split the between random vector v_b
+# into the nonlinear slopes z_nl and the remaining ('linear') part
+# v_lin. Conditional on z_nl = b:
+#
+#   - the within model is the *linear* random-slope model with the
+#     slope values b injected into the (fixed-to-zero) beta_w cells:
+#     the SAME lav_mvn_cl_rs_implied() gives sigma_w(b), lmat(b), P(b)
+#   - v_lin | z_nl = b is normal with moments given by standard
+#     Gaussian conditioning (a common covariance matrix, and a mean
+#     that is linear in b)
+#   - the conditional (on b) loglikelihood is computed by the SAME
+#     crossproduct-based lav_mvn_cl_rs_loglik() -- including the
+#     missing-data version
+#
+# the marginal loglikelihood is then obtained by Gauss-Hermite
+# quadrature over z_nl only (q.nl dimensions, typically 1):
+#
+#   loglik_j = logsumexp_q [ loglik_j(b_q) + log w_q ]
+#
+# with nodes b_q = mu_nl + chol(Sigma_nl)' t_q placed at the prior of
+# the nonlinear slopes (Rockwood, 2020, eq. 36-37). NOTE: this
+# requires the prior means of the nonlinear slopes to be identical
+# across clusters (no between-level covariates related to the
+# nonlinear slopes); this 'Case A' restriction is validated in
+# lav_mvn_cl_rs_info(). Per-node cost is one closed-form evaluation
+# (the crossproduct statistics are shared across the nodes).
+
+# single entry point for the -2 loglikelihood: dispatches between the
+# closed-form kernel (observed covariates only) and the quadrature
+# version (one or more latent covariates)
+lav_mvn_cl_rs_m2ll <- function(lavmodel = NULL, glist = NULL, rs = NULL,
+                               sinv_method = "eigen", log2pi = TRUE,
+                               minus_two = TRUE, per_cluster = FALSE) {
+  if (isTRUE(rs$info$nl.flag)) {
+    return(lav_mvn_cl_rs_loglik_nl(
+      lavmodel = lavmodel, glist = glist,
+      rs_stats = rs$stats, rs_info = rs$info,
+      sinv_method = sinv_method, log2pi = log2pi,
+      minus_two = minus_two, per_cluster = per_cluster
+    ))
+  }
+  imp <- lav_mvn_cl_rs_implied(
+    lavmodel = lavmodel, glist = glist, rs_info = rs$info
+  )
+  lav_mvn_cl_rs_loglik(
+    rs_stats = rs$stats, imp = imp, rs_info = rs$info,
+    sinv_method = sinv_method, log2pi = log2pi,
+    minus_two = minus_two, per_cluster = per_cluster
+  )
+}
+
+# build the conditional-model ingredients at all quadrature nodes:
+# the reduced index map (rs_info_c), and one 'imp' list per node with
+# the node values injected into beta_w and v_b conditioned on the
+# nonlinear slopes; returns NULL if the base implied matrices fail or
+# Sigma_nl is not positive definite (individual nodes may still fail:
+# those imp entries are NULL)
+lav_mvn_cl_rs_cond <- function(lavmodel = NULL, glist = NULL,
+                               rs_info = NULL) {
+  if (is.null(glist)) {
+    glist <- lavmodel@GLIST
+  }
+
+  # base implied ingredients; only the between pieces (sigma.v, mu.v,
+  # cc, z.v.idx) are used here -- they do not depend on the injected
+  # beta_w cells
+  imp0 <- lav_mvn_cl_rs_implied(
+    lavmodel = lavmodel, glist = glist, rs_info = rs_info
+  )
+  if (is.null(imp0)) {
+    return(NULL)
+  }
+
+  path_tab <- rs_info$path.tab
+  nl_z <- rs_info$nl.z.idx # indices in z.names
+  nl_v <- imp0$z.v.idx[nl_z] # positions in v_b
+  lin_v <- setdiff(seq_len(imp0$pv), nl_v)
+
+  # prior (between) moments of the nonlinear slopes; the quadrature
+  # requires a positive-definite Sigma_nl
+  s_nl <- imp0$sigma.v[nl_v, nl_v, drop = FALSE]
+  mu_nl <- imp0$mu.v[nl_v]
+  if (anyNA(s_nl)) {
+    return(NULL)
+  }
+  ch <- try(chol(s_nl), silent = TRUE) # s_nl = t(ch) %*% ch
+  if (inherits(ch, "try-error")) {
+    return(NULL)
+  }
+
+  # defensive: Case A only (validated in lav_mvn_cl_rs_info)
+  if (rs_info$nexo.b > 0L &&
+      any(abs(imp0$cc[nl_v, , drop = FALSE]) > 1e-10)) {
+    lav_msg_stop(gettext(
+      "the prior means of the latent-covariate random slopes depend on
+       the between-level covariates; this is not supported yet."))
+  }
+
+  # conditional distribution of the linear part given the slopes:
+  # v_lin | z_nl = b ~ N(mu_lin + R (b - mu_nl), sigma_v_c)
+  s_nl_inv <- chol2inv(ch)
+  r_mat <- imp0$sigma.v[lin_v, nl_v, drop = FALSE] %*% s_nl_inv
+  sigma_v_c <- imp0$sigma.v[lin_v, lin_v, drop = FALSE] -
+    r_mat %*% imp0$sigma.v[nl_v, lin_v, drop = FALSE]
+  sigma_v_c <- (sigma_v_c + t(sigma_v_c)) / 2
+
+  # conditional index map: only the observed-covariate paths remain
+  ov_rows <- which(path_tab$type == "ov")
+  z_keep <- which(rs_info$z.type == "ov")
+  path_tab_c <- path_tab[ov_rows, , drop = FALSE]
+  path_tab_c$z.idx <- match(path_tab$rv[ov_rows],
+                            rs_info$z.names[z_keep])
+  rs_info_c <- rs_info
+  rs_info_c$path.tab <- path_tab_c
+  rs_info_c$z.names <- rs_info$z.names[z_keep]
+  rs_info_c$q <- length(z_keep)
+  rs_info_c$nl.flag <- FALSE
+  # positions of the remaining (observed-type) slopes in reduced v_b
+  z_v_idx_c <- match(imp0$z.v.idx[z_keep], lin_v)
+
+  # Gauss-Hermite grid (dnorm kernel; tensor product over q.nl dims)
+  ngh <- rs_info$ngh
+  if (is.null(ngh)) {
+    ngh <- 21L
+  }
+  gh <- lav_integration_gauss_hermite(n = ngh, dnorm = TRUE)
+  q_nl <- length(nl_v)
+  if (q_nl == 1L) {
+    tmat <- matrix(gh$x, nrow = 1L)
+    logw <- log(gh$w)
+  } else {
+    tmat <- t(as.matrix(expand.grid(rep(list(gh$x), q_nl))))
+    logw <- rowSums(as.matrix(
+      expand.grid(rep(list(log(gh$w)), q_nl))
+    ))
+  }
+  nnodes <- ncol(tmat)
+
+  # node-value injection map: nonlinear path -> beta_w cell
+  nl_path_rows <- which(path_tab$type == "lv")
+  path_nl_z <- match(path_tab$z.idx[nl_path_rows], nl_z)
+  beta_mm <- rs_info$nl.beta.mm
+  beta_cells <- cbind(rs_info$nl.beta.row, rs_info$nl.beta.col)
+
+  imp_list <- vector("list", nnodes)
+  ch_t <- t(ch)
+  glist_i <- glist
+  for (i in seq_len(nnodes)) {
+    b_i <- mu_nl + as.numeric(ch_t %*% tmat[, i])
+    glist_i[[beta_mm]][beta_cells] <- b_i[path_nl_z]
+    imp_i <- lav_mvn_cl_rs_implied(
+      lavmodel = lavmodel, glist = glist_i, rs_info = rs_info
+    )
+    if (is.null(imp_i)) {
+      next
+    }
+    imp_list[[i]] <- list(
+      sigma.w = imp_i$sigma.w, mu.y = imp_i$mu.y,
+      mu.y.b = imp_i$mu.y.b, P = imp_i$P,
+      lmat = imp_i$lmat[, ov_rows, drop = FALSE],
+      q0 = imp_i$q0[, lin_v, drop = FALSE],
+      z.v.idx = z_v_idx_c, pv = length(lin_v),
+      sigma.v = sigma_v_c,
+      mu.v = imp0$mu.v[lin_v] + as.numeric(r_mat %*% (b_i - mu_nl)),
+      cc = imp0$cc[lin_v, , drop = FALSE],
+      mu.exo = imp0$mu.exo
+    )
+  }
+
+  list(rs_info_c = rs_info_c, imp = imp_list, logw = logw,
+       nnodes = nnodes)
+}
+
+# -2 * loglikelihood by Gauss-Hermite quadrature over the nonlinear
+# (latent-covariate) random slopes; all failure modes return +Inf
+# (mirroring lav_mvn_cl_rs_loglik)
+lav_mvn_cl_rs_loglik_nl <- function(lavmodel = NULL, glist = NULL,
+                                    rs_stats = NULL, rs_info = NULL,
+                                    sinv_method = "eigen",
+                                    log2pi = TRUE,
+                                    minus_two = TRUE,
+                                    per_cluster = FALSE) {
+  cond <- lav_mvn_cl_rs_cond(
+    lavmodel = lavmodel, glist = glist, rs_info = rs_info
+  )
+  if (is.null(cond)) {
+    return(+Inf)
+  }
+
+  nclusters <- rs_stats$nclusters
+  nnodes <- cond$nnodes
+  hmat <- matrix(-Inf, nclusters, nnodes)
+
+  for (i in seq_len(nnodes)) {
+    if (is.null(cond$imp[[i]])) {
+      next
+    }
+    m2_i <- lav_mvn_cl_rs_loglik(
+      rs_stats = rs_stats, imp = cond$imp[[i]],
+      rs_info = cond$rs_info_c,
+      sinv_method = sinv_method, log2pi = log2pi,
+      minus_two = TRUE, per_cluster = TRUE
+    )
+    if (!is.finite(m2_i)) {
+      next
+    }
+    hmat[, i] <- -0.5 * attr(m2_i, "loglik.cluster") + cond$logw[i]
+  }
+
+  # per-cluster log-sum-exp over the nodes
+  hmax <- apply(hmat, 1L, max)
+  if (any(!is.finite(hmax))) {
+    return(+Inf)
+  }
+  loglik_j <- hmax + log(rowSums(exp(hmat - hmax)))
+
+  out <- sum(loglik_j)
+  if (minus_two) {
+    out <- -2 * out
+    loglik_j <- -2 * loglik_j
+  }
+  if (per_cluster) {
+    attr(out, "loglik.cluster") <- loglik_j
+  }
+
+  out
+}
+
+# analytic (adjoint-based) gradient of the quadrature loglikelihood:
+#
+#   d loglik_j / d theta = sum_i pi_ji d loglik_j(b_i) / d theta
+#
+# with pi_ji the posterior node weights (the derivative of the
+# log-sum-exp); the conditional (per-node) derivatives reuse the
+# closed-form adjoint pass (lav_mvn_cl_rs_dfphi) on the conditional
+# model, chained through a small numerical Jacobian of the per-node
+# ingredient map theta -> phi_c(theta; node i) -- which includes the
+# dependence of the node values b_i(theta) = mu_nl + chol(Sigma_nl)'t_i
+# on theta (no cluster loops); returns d(-2 loglik)/d theta, or the
+# per-cluster score matrix (natural scale) when per_cluster = TRUE;
+# NULL on failure (callers fall back to numerical differentiation)
+lav_mvn_cl_rs_grad_nl <- function(lavmodel = NULL, rs = NULL,
+                                  sinv_method = "eigen",
+                                  per_cluster = FALSE,
+                                  h = 1e-06) {
+  rs_info <- rs$info
+  rs_stats <- rs$stats
+
+  cond0 <- lav_mvn_cl_rs_cond(lavmodel = lavmodel, rs_info = rs_info)
+  if (is.null(cond0)) {
+    return(NULL)
+  }
+  nnodes <- cond0$nnodes
+  nclusters <- rs_stats$nclusters
+
+  # per-node conditional logliks + adjoints at the current parameters
+  hmat <- matrix(-Inf, nclusters, nnodes)
+  gphi_list <- vector("list", nnodes)
+  for (i in seq_len(nnodes)) {
+    imp_i <- cond0$imp[[i]]
+    if (is.null(imp_i)) {
+      return(NULL)
+    }
+    m2_i <- lav_mvn_cl_rs_loglik(
+      rs_stats = rs_stats, imp = imp_i, rs_info = cond0$rs_info_c,
+      sinv_method = sinv_method, log2pi = FALSE,
+      minus_two = TRUE, per_cluster = TRUE
+    )
+    if (!is.finite(m2_i)) {
+      return(NULL)
+    }
+    hmat[, i] <- -0.5 * attr(m2_i, "loglik.cluster") + cond0$logw[i]
+    gphi_list[[i]] <- lav_mvn_cl_rs_dfphi(
+      rs_stats = rs_stats, imp = imp_i, rs_info = cond0$rs_info_c,
+      sinv_method = sinv_method
+    )
+    if (is.null(gphi_list[[i]])) {
+      return(NULL)
+    }
+  }
+  hmax <- apply(hmat, 1L, max)
+  if (any(!is.finite(hmax))) {
+    return(NULL)
+  }
+  loglik_j <- hmax + log(rowSums(exp(hmat - hmax)))
+  pw <- exp(hmat - loglik_j) # posterior node weights (rows sum to 1)
+
+  # numerical Jacobian of the per-node ingredient vectors phi_c
+  # (central differences; no cluster loops)
+  x0 <- lav_model_get_parameters(lavmodel)
+  npar <- length(x0)
+  phi_of <- function(x) {
+    lavmodel2 <- lav_model_set_parameters(lavmodel, x = x)
+    cond <- lav_mvn_cl_rs_cond(lavmodel = lavmodel2, rs_info = rs_info)
+    if (is.null(cond)) {
+      return(NULL)
+    }
+    lapply(cond$imp, function(m) {
+      if (is.null(m)) NULL else lav_mvn_cl_rs_phi_vec(m)
+    })
+  }
+  nphi <- length(lav_mvn_cl_rs_phi_vec(cond0$imp[[1]]))
+  jac <- lapply(seq_len(nnodes), function(i) matrix(0, nphi, npar))
+  for (k in seq_len(npar)) {
+    h_k <- h * max(1, abs(x0[k]))
+    x_right <- x_left <- x0
+    x_right[k] <- x0[k] + h_k
+    x_left[k] <- x0[k] - h_k
+    phi_r <- phi_of(x_right)
+    phi_l <- phi_of(x_left)
+    if (is.null(phi_r) || is.null(phi_l)) {
+      return(NULL)
+    }
+    for (i in seq_len(nnodes)) {
+      if (is.null(phi_r[[i]]) || is.null(phi_l[[i]])) {
+        return(NULL)
+      }
+      jac[[i]][, k] <- (phi_r[[i]] - phi_l[[i]]) / (2 * h_k)
+    }
+  }
+
+  if (per_cluster) {
+    # per-cluster scores, natural loglikelihood scale
+    sc <- matrix(0, nclusters, npar)
+    for (i in seq_len(nnodes)) {
+      sc <- sc + (pw[, i] * (-0.5) * gphi_list[[i]]) %*% jac[[i]]
+    }
+    sc
+  } else {
+    # d(-2 loglik)/d theta
+    dx <- numeric(npar)
+    for (i in seq_len(nnodes)) {
+      dx <- dx +
+        as.numeric(colSums(pw[, i] * gphi_list[[i]]) %*% jac[[i]])
+    }
+    dx
+  }
+}
+
+
+# ---------------------------------------------------------------------
 # the EM algorithm
 # ---------------------------------------------------------------------
 #
@@ -1070,6 +1521,10 @@ lav_mvn_cl_rs_loglik_m <- function(rs_stats = NULL, imp = NULL,
 # if ok, otherwise the reason(s)
 lav_mvn_cl_rs_em_ok <- function(rs = NULL) {
   reason <- character(0L)
+  if (isTRUE(rs$info$nl.flag)) {
+    reason <- c(reason, gettext(
+      "the model contains random slopes for latent covariates"))
+  }
   if (rs$info$p.flag) {
     reason <- c(reason, gettext(
       "the model contains fixed regression paths from the random-slope
@@ -2295,6 +2750,18 @@ lav_mvn_cl_rs_grad <- function(lavmodel = NULL, rs = NULL,
                                sinv_method = "eigen",
                                per_cluster = FALSE,
                                h = 1e-06) {
+  # latent covariates: posterior-weighted adjoint pass per quadrature
+  # node (numerical fallback on failure, via the callers)
+  if (isTRUE(rs$info$nl.flag)) {
+    out <- try(lav_mvn_cl_rs_grad_nl(
+      lavmodel = lavmodel, rs = rs, sinv_method = sinv_method,
+      per_cluster = per_cluster, h = h
+    ), silent = TRUE)
+    if (inherits(out, "try-error")) {
+      return(NULL)
+    }
+    return(out)
+  }
   imp0 <- lav_mvn_cl_rs_implied(lavmodel, rs_info = rs$info)
   if (is.null(imp0)) {
     return(NULL)
@@ -2412,9 +2879,8 @@ lav_mvn_cl_rs_scores <- function(lavmodel = NULL, rs = NULL,
 
   ll_cluster <- function(x) {
     lavmodel2 <- lav_model_set_parameters(lavmodel, x = x)
-    imp <- lav_mvn_cl_rs_implied(lavmodel2, rs_info = rs$info)
-    out <- lav_mvn_cl_rs_loglik(
-      rs_stats = rs$stats, imp = imp, rs_info = rs$info,
+    out <- lav_mvn_cl_rs_m2ll(
+      lavmodel = lavmodel2, rs = rs,
       log2pi = FALSE, minus_two = FALSE, per_cluster = TRUE
     )
     attr(out, "loglik.cluster")
@@ -2465,6 +2931,14 @@ lav_mvn_cl_rs_eb <- function(lavmodel = NULL, lavdata = NULL,
   }
   rs_info <- rs$info
   rs_stats <- rs$stats
+
+  # latent covariates: the posterior is no longer Gaussian; the
+  # quadrature-based (EAP) version is not implemented yet
+  if (isTRUE(rs_info$nl.flag)) {
+    lav_msg_stop(gettext(
+      "lavPredict() is not available (yet) for models with random
+       slopes for latent covariates."))
+  }
 
   imp <- lav_mvn_cl_rs_implied(lavmodel, rs_info = rs_info)
   if (is.null(imp)) {

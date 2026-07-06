@@ -75,10 +75,8 @@ lav_model_loglik <- function(lavdata = NULL,
           )
           rs <- list(info = rs_info, stats = rs_stats)
         }
-        imp <- lav_mvn_cl_rs_implied(lavmodel = lavmodel,
-                                     rs_info = rs$info)
-        logl_group[g] <- lav_mvn_cl_rs_loglik(
-          rs_stats = rs$stats, imp = imp, rs_info = rs$info,
+        logl_group[g] <- lav_mvn_cl_rs_m2ll(
+          lavmodel = lavmodel, rs = rs,
           log2pi = TRUE, minus_two = FALSE
         )
       } else if (lavdata@nlevels > 1L) {

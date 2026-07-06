@@ -466,9 +466,30 @@ observed covariates \code{x1} and \code{x2} vary across clusters; the
 random slopes \code{s1} and \code{s2} are regressed on the between-level
 covariate \code{w}.
 
+The covariate that carries a random slope may also be a \emph{latent}
+(within-level) variable, as in
+\preformatted{model <- '
+  level: 1
+    fxw =~ x1 + x2 + x3
+    fyw =~ y1 + y2 + y3
+    fyw ~ rv("s1")*fxw
+  level: 2
+    fxb =~ x1 + x2 + x3
+    fyb =~ y1 + y2 + y3
+    fyb ~ fxb
+    fyb ~~ s1
+'
+}
+Such a slope multiplies two random variables, and the marginal
+loglikelihood is no longer available in closed form: it is computed by
+(Gauss-Hermite) quadrature over the latent-covariate slopes only,
+while all other random effects are still integrated out analytically
+(Rockwood, 2020). The number of quadrature points (per dimension) can
+be set via the \code{integration.ngh} option (default: 21).
+
 The current implementation is limited to: two-level models, a single
 group, continuous data, \code{estimator = "ML"} and \code{fixed.x =
-TRUE}; the covariates that carry a random slope must be observed
+TRUE}; the observed covariates that carry a random slope must be
 within-only (level-1) variables. Missing data can be handled by
 full-information maximum likelihood (\code{missing = "ml"}); the
 exogenous covariates themselves must be complete (cases with missing
@@ -492,6 +513,15 @@ predictions: with \code{level = 2}, the
 between-level latent variables including the random slopes (and, with
 \code{se = "standard"}, their posterior standard deviations); with
 \code{level = 1} (the default), the within-level factor scores.
+
+For random slopes with latent covariates, some additional restrictions
+apply (for now): a random-slope label may not be attached to both an
+observed and a latent covariate; the between-level exogenous
+covariates may not be related to a latent-covariate random slope
+(e.g., no regression of such a slope on a between-level covariate);
+random slopes for the latent within-cluster component of a `split'
+both-level observed covariate are not supported (yet); the optimizer
+is always \code{"nlminb"}, and \code{lavPredict()} is not available.
 }
 
 \section{(In)equality constraints}{
@@ -574,6 +604,11 @@ model <- ' # direct effect
 }
 
 \references{
+Rockwood, N. J. (2020). Maximum likelihood estimation of multilevel
+structural equation models with random slopes for latent covariates.
+\emph{Psychometrika, 85}(2), 275--300.
+\doi{10.1007/s11336-020-09702-9}
+
 Rosseel, Y. (2012). \code{lavaan}: An R package for structural equation
 modeling. \emph{Journal of Statistical Software, 48}(2), 1--36.
 \doi{10.18637/jss.v048.i02}

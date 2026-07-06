@@ -491,12 +491,11 @@ lav_options_set <- function(opt = NULL) {
         "random slopes (rv() modifier) are not supported in combination
          with conditional.x = TRUE."))
     }
-    if (isFALSE(opt$fixed.x)) {
-      lav_msg_stop(gettext(
-        "random slopes (rv() modifier) require fixed.x = TRUE: the
-         covariates with random slopes are treated as fixed exogenous
-         variables."))
-    }
+    # note: fixed.x = FALSE may simply mean that the model contains no
+    # observed exogenous covariates at all (e.g., all random slopes
+    # involve latent covariates); if an *observed* covariate does carry
+    # a random slope while fixed.x = FALSE, lav_mvn_cl_rs_info() stops
+    # with a specific message (the covariate must be exogenous/fixed.x)
     # no saturated (h1) model exists for random-slope models: no
     # chi-square test statistic, no baseline model, no (incremental)
     # fit indices; only logl/AIC/BIC are available

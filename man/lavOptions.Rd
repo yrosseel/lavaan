@@ -536,7 +536,14 @@ Estimation options:
 Optimization options:
 
 \describe{
-    \item{\code{control}:}{A list containing control parameters passed to 
+    \item{\code{integration.ngh}:}{Integer. The number of Gauss-Hermite
+      quadrature points (per dimension) used for numerical integration.
+      The default is 21. Numerical integration is used when
+      \code{estimator = "MML"}, and for two-level models with random
+      slopes for \emph{latent} covariates (the \code{rv()} modifier;
+      only the latent-covariate slopes are integrated numerically, all
+      other random effects are handled in closed form).}
+    \item{\code{control}:}{A list containing control parameters passed to
       the external optimizer. By default, lavaan uses \code{"nlminb"}. 
       See the manpage of \code{\link{nlminb}} for an overview of the control 
       parameters. If another (external) optimizer is selected, see the

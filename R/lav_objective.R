@@ -800,12 +800,8 @@ lav_model_objective_2l <- function(lavmodel = NULL,
       lav_msg_fixme(
         "no rs element found in lavcache; this should not happen")
     }
-    imp <- lav_mvn_cl_rs_implied(
-      lavmodel = lavmodel, glist = glist,
-      rs_info = rs$info
-    )
-    loglik <- lav_mvn_cl_rs_loglik(
-      rs_stats = rs$stats, imp = imp, rs_info = rs$info,
+    loglik <- lav_mvn_cl_rs_m2ll(
+      lavmodel = lavmodel, glist = glist, rs = rs,
       log2pi = FALSE, minus_two = TRUE
     )
     objective <- as.numeric(loglik) / (lavsamplestats@ntotal * 2)

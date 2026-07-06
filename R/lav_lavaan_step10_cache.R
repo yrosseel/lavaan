@@ -353,7 +353,7 @@ lav_step10_cache <- function(slot_cache = NULL,
       if (is.null(lavcache[[g]]$rs)) {
         rs_info <- lav_mvn_cl_rs_info(
           lavmodel = lavmodel, lavpartable = lavpartable,
-          lavdata = lavdata
+          lavdata = lavdata, lavoptions = lavoptions
         )
         rs_stats <- lav_mvn_cl_rs_stats(
           y1 = lavdata@X[[g]], lp = lavdata@Lp[[g]],
