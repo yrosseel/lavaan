@@ -1,3 +1,14 @@
+# STEP 1 of the Muthen (1984) three-stage estimator: univariate models
+#
+# for each (endogenous) variable: means/thresholds/intercepts, slopes
+# (if conditional.x), variances (numeric variables only), and the
+# corresponding casewise scores
+#
+# YR/LDW 2026: refactored; empty-category compensation moved to
+#              lav_samp_step1_empty_cells(); unobserved *middle* categories
+#              now give a clear error message (they were never supported:
+#              the old code stopped with an obscure R error)
+
 lav_samp_step1 <- function(y,
                                   wt = NULL, # new in 0.6-6
                                   ov_names = NULL,
@@ -17,7 +28,7 @@ lav_samp_step1 <- function(y,
   nvar <- NCOL(y)
   n <- NROW(y)
   n_th <- ov_levels - 1L
-  n_th[n_th == -1L] <- 1L
+  n_th[n_th == -1L] <- 1L # numeric variables (nlev = 0): one 'mean' slot
   nth <- sum(n_th)
   th_end_idx <- cumsum(n_th)
   th_start_idx <- th_end_idx - (n_th - 1L)
@@ -31,6 +42,9 @@ lav_samp_step1 <- function(y,
   th_nox <- vector("list", length = nvar)
   th_names <- vector("list", length = nvar)
   th_idx_1 <- vector("list", length = nvar)
+  # which declared threshold slots come from the fit (FALSE = pseudo value
+  # for an empty category; see lav_samp_step1_empty_cells)
+  th_keep <- vector("list", length = nvar)
   slopes <- matrix(as.numeric(NA), nrow = nvar, ncol = nexo) # if conditional.x
   var_1 <- numeric(length = nvar) # continuous variables only
 
@@ -59,6 +73,7 @@ lav_samp_step1 <- function(y,
       var_1[i] <- fit$theta[fit$var_idx]
       th_names[[i]] <- ov_names[i]
       th_idx_1[[i]] <- 0L
+      th_keep[[i]] <- TRUE
       if (scores_flag) {
         scores <- lav_uvreg_sc(y = y[, i], x = exo, wt = wt)
         sc_th[, th_idx] <- scores[, 1L]
@@ -75,12 +90,6 @@ lav_samp_step1 <- function(y,
       # check if we have enough categories in this group
       # FIXME: should we be more tolerant here???
       y_freq <- tabulate(y[, i], nbins = ov_levels[i])
-      if (length(y_freq) != ov_levels[i] && !allow_empty_cell) {
-        lav_msg_stop(gettextf(
-          "variable %1$s has fewer categories (%2$s) than
-          expected (%3$s) in group %4$s", ov_names[i],
-          length(y_freq), ov_levels[i], group))
-      }
       if (any(y_freq == 0L) && !allow_empty_cell) {
         lav_msg_stop(gettextf(
           "some categories of variable `%1$s' are empty in group %2$s;
@@ -101,53 +110,27 @@ lav_samp_step1 <- function(y,
         scores <- lav_uvord_sc(y = y[, i], x = exo, wt = wt)
       }
 
+      th_keep[[i]] <- rep(TRUE, n_th[i])
       if (allow_empty_cell) {
         if (any(y_freq == 0L)) {
-          ## lav_uvord_fit drops thresholds if extreme categories
-          #                           are missing, but not otherwise
-          exidx <- rep(TRUE, (ov_levels[i] - 1))
-          misidx <- !exidx
-          zidx <- y_freq == 0L
-          dz <- diff(zidx) == 1L
-          if (y_freq[ov_levels[i]] == 0L) {
-            wdz <- which(dz)
-            nhi <- ov_levels[i] - wdz[length(wdz)]
-            exidx[(ov_levels[i] - nhi) : (ov_levels[i] - 1)] <- FALSE
-            misidx[(ov_levels[i] - nhi) : (ov_levels[i] - 1)] <- TRUE
-          }
-          if (any(dz[-length(dz)])) {
-            wdz <- which(dz[-length(dz)])
-            exidx[wdz + 1] <- FALSE
-            misidx[wdz + 1] <- TRUE
-          }
-          if (y_freq[1] == 0L) {
-            nlow <- which(diff(zidx) == -1)[1]
-            exidx[1:nlow] <- FALSE
-            misidx[1:nlow] <- TRUE
-          }
-          th[[i]] <- th_nox[[i]] <- rep(0, ov_levels[i] - 1)
-          th[[i]][exidx] <- fit$theta[fit$th_idx]
-          th_nox[[i]][exidx] <- fit_nox[exidx]
-          for (k in which(misidx)) {
-            if (k == 1) {
-              th[[i]][k] <- -4
-              th_nox[[i]][k] <- -4
-            } else if (k == (ov_levels[i] - 1)) {
-              th[[i]][k] <- 4
-              th_nox[[i]][k] <- 4
-            } else {
-              th[[i]][k] <- th[[i]][(k - 1)] + .01
-              th_nox[[i]][k] <- th_nox[[i]][(k - 1)] + .01
-            }
-          }
-          if (scores_flag) sc_th[, th_idx[!misidx]] <-
+          empty <- lav_samp_step1_empty_cells(
+            y_freq = y_freq, nlev = ov_levels[i], fit = fit,
+            fit_nox = fit_nox, ov_name = ov_names[i], group = group
+          )
+          th[[i]] <- empty$th
+          th_nox[[i]] <- empty$th_nox
+          th_keep[[i]] <- empty$keep_idx
+          if (scores_flag) sc_th[, th_idx[empty$keep_idx]] <-
                                                 scores[, fit$th_idx, drop = FALSE]
-        } else if (length(y_freq) != ov_levels[i]) {
-          nz <- ov_levels[i] - length(y_freq)
-          th[[i]] <- c(th[[i]], th[[i]][length(y_freq)] + (1:nz) * .01)
-          if (scores_flag) sc_th[, th_idx[seq_along(y_freq)]] <-
-                                                scores[, fit$th_idx, drop = FALSE]
+        } else {
+          # no empty cells for this variable: fill the scores as usual
+          # (up to 0.7-1, they were left at zero, giving a rank-deficient
+          #  A11 and a broken WLS.W whenever allow.empty.cell = TRUE)
+          if (scores_flag) sc_th[, th_idx] <- scores[, fit$th_idx,
+                                                     drop = FALSE]
         }
+        # note: local 'fit' only -- fit_1[[i]] (assigned above) keeps the
+        # fitted (possibly shorter) th_idx, which step 2 relies on
         fit$th_idx <- 1:n_th[i]
       } else {
         if (scores_flag) sc_th[, th_idx] <- scores[, fit$th_idx, drop = FALSE]
@@ -169,7 +152,73 @@ lav_samp_step1 <- function(y,
   list(
     FIT = fit_1, VAR = var_1, SLOPES = slopes,
     TH = th, TH.NOX = th_nox, TH.IDX = th_idx_1, TH.NAMES = th_names,
+    TH.KEEP = th_keep,
     SC.TH = sc_th, SC.VAR = sc_var, SC.SL = sc_sl,
     th.start.idx = th_start_idx, th.end.idx = th_end_idx
   )
+}
+
+# compensate for empty categories of an ordinal variable (allow_empty_cell)
+#
+# lav_uvord_fit() (implicitly) drops thresholds when *extreme* categories
+# are unobserved: leading empty categories disappear in the 1..ncat
+# recoding, and trailing empty categories shorten tabulate(y). The declared
+# number of thresholds is nlev - 1, so we place the fitted thresholds in
+# their declared slots (keep_idx) and fill the unidentified slots with
+# pseudo-values: -4 (first), +4 (last), previous + .01 (in between).
+#
+# Unobserved *middle* categories are NOT supported: the fit then keeps a
+# (degenerate) threshold for the empty category, and no consistent mapping
+# to the declared slots exists.
+lav_samp_step1_empty_cells <- function(y_freq = NULL, nlev = NULL,
+                                       fit = NULL, fit_nox = NULL,
+                                       ov_name = NULL, group = 1L) {
+  keep_idx <- rep(TRUE, (nlev - 1))
+  mis_idx <- !keep_idx
+  zidx <- y_freq == 0L
+  dz <- diff(zidx) == 1L
+  if (y_freq[nlev] == 0L) {
+    # trailing empty categories
+    wdz <- which(dz)
+    nhi <- nlev - wdz[length(wdz)]
+    keep_idx[(nlev - nhi) : (nlev - 1)] <- FALSE
+    mis_idx[(nlev - nhi) : (nlev - 1)] <- TRUE
+  }
+  if (any(dz[-length(dz)])) {
+    # middle empty categories
+    wdz <- which(dz[-length(dz)])
+    keep_idx[wdz + 1] <- FALSE
+    mis_idx[wdz + 1] <- TRUE
+  }
+  if (y_freq[1] == 0L) {
+    # leading empty categories
+    nlow <- which(diff(zidx) == -1)[1]
+    keep_idx[1:nlow] <- FALSE
+    mis_idx[1:nlow] <- TRUE
+  }
+
+  if (sum(keep_idx) != length(fit$th_idx)) {
+    lav_msg_stop(gettextf(
+      "cannot handle the empty categories of variable %1$s in group %2$s
+      (frequencies are [%3$s]): only unobserved categories at the extremes
+      are supported.", ov_name, group, lav_msg_view(y_freq, "none")))
+  }
+
+  th <- th_nox <- rep(0, nlev - 1)
+  th[keep_idx] <- fit$theta[fit$th_idx]
+  th_nox[keep_idx] <- fit_nox[keep_idx]
+  for (k in which(mis_idx)) {
+    if (k == 1) {
+      th[k] <- -4
+      th_nox[k] <- -4
+    } else if (k == (nlev - 1)) {
+      th[k] <- 4
+      th_nox[k] <- 4
+    } else {
+      th[k] <- th[(k - 1)] + .01
+      th_nox[k] <- th_nox[(k - 1)] + .01
+    }
+  }
+
+  list(th = th, th_nox = th_nox, keep_idx = keep_idx)
 }

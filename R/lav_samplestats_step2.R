@@ -1,3 +1,12 @@
+# STEP 2 of the Muthen (1984) three-stage estimator: correlations
+#
+# given the univariate fits of step 1, estimate the correlation of each
+# variable pair (pearson, polyserial or polychoric) with the univariate
+# parameters held fixed at their step-1 values ('twostep')
+#
+# YR/LDW 2026: refactored; fixed the swapped y1_name/y2_name in the
+#              polychoric branch (affected warning messages only)
+
 lav_samp_step2 <- function(uni = NULL,
                                   wt = NULL,
                                   ov_names = NULL, # error message only
@@ -18,8 +27,10 @@ lav_samp_step2 <- function(uni = NULL,
   # one-by-one (for now)
   for (j in seq_len(nvar - 1L)) {
     for (i in (j + 1L):nvar) {
-      if (is.null(uni[[i]]$th_idx) &&
-        is.null(uni[[j]]$th_idx)) {
+      ord_i <- !is.null(uni[[i]]$th_idx)
+      ord_j <- !is.null(uni[[j]]$th_idx)
+      if (!ord_i && !ord_j) {
+        # pearson correlation
         rho <- lav_bvreg_cor_twostep_fit(
           fit_y1 = uni[[i]], # linear
           fit_y2 = uni[[j]], # linear
@@ -27,9 +38,7 @@ lav_samp_step2 <- function(uni = NULL,
           y1_name = ov_names[i],
           y2_name = ov_names[j]
         )
-        cor_1[i, j] <- cor_1[j, i] <- rho
-      } else if (is.null(uni[[i]]$th_idx) &&
-        !is.null(uni[[j]]$th_idx)) {
+      } else if (!ord_i && ord_j) {
         # polyserial
         rho <- lav_bvmix_cor_twostep_fit(
           fit_y1 = uni[[i]], # linear
@@ -38,9 +47,7 @@ lav_samp_step2 <- function(uni = NULL,
           y1_name = ov_names[i],
           y2_name = ov_names[j]
         )
-        cor_1[i, j] <- cor_1[j, i] <- rho
-      } else if (is.null(uni[[j]]$th_idx) &&
-        !is.null(uni[[i]]$th_idx)) {
+      } else if (!ord_j && ord_i) {
         # polyserial
         rho <- lav_bvmix_cor_twostep_fit(
           fit_y1 = uni[[j]], # linear
@@ -49,9 +56,7 @@ lav_samp_step2 <- function(uni = NULL,
           y1_name = ov_names[j],
           y2_name = ov_names[i]
         )
-        cor_1[i, j] <- cor_1[j, i] <- rho
-      } else if (!is.null(uni[[i]]$th_idx) &&
-        !is.null(uni[[j]]$th_idx)) {
+      } else {
         # polychoric correlation
         rho <- lav_bvord_cor_twostep_fit(
           fit_y1 = uni[[j]], # ordinal
@@ -61,8 +66,8 @@ lav_samp_step2 <- function(uni = NULL,
           zero_keep_margins = zero_keep_margins,
           zero_cell_warn = zero_cell_warn,
           zero_cell_flag = zero_cell_tables,
-          y1_name = ov_names[i],
-          y2_name = ov_names[j]
+          y1_name = ov_names[j],
+          y2_name = ov_names[i]
         )
         if (zero_cell_tables) {
           if (attr(rho, "zero.cell.flag")) {
@@ -71,8 +76,9 @@ lav_samp_step2 <- function(uni = NULL,
           }
           attr(rho, "zero.cell.flag") <- NULL
         }
-        cor_1[i, j] <- cor_1[j, i] <- rho
       }
+      cor_1[i, j] <- cor_1[j, i] <- rho
+
       # check for near 1.0 correlations
       if (abs(cor_1[i, j]) > 0.99) {
         lav_msg_warn(gettextf(

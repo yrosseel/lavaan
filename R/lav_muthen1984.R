@@ -1,3 +1,7 @@
+# the Muthen (1984) three-stage estimator for mixed continuous/ordinal data:
+# univariate parameters (step 1), correlations (step 2), and the asymptotic
+# covariance matrix WLS.W of all estimates (step 3, Muthen & Satorra 1995)
+#
 # This function was written in January 2012 -- Yves Rosseel
 # First success: Friday 20 Jan 2012: the standard errors for
 #                thresholds and polychoric correlations (in an
@@ -9,9 +13,26 @@
 #
 # Friday 13 July 2012: merge exo + non-exo code
 # Monday 16 July 2012: fixed sign numeric in WLS.W; I think we got it right now
-
 # YR 26 Nov 2015: move step1 + step2 to external functions
+# YR/LDW 2026: refactored; step 3 decomposed into named helpers
+#              (lav_m84_*); no change in behavior
 #
+# Step 3 computes the sandwich
+#
+#     WLS.W = B^{-1} INNER B^{-T}
+#
+# where the 'bread' B is the (block-triangular) matrix of derivatives of the
+# stacked stage-wise estimating equations with respect to the parameters
+#
+#     B = | A11   0  |     A11: univariate (th/sl/var) information
+#         | A21  A22 |     A21: d(cor scores)/d(univariate parameters)
+#                          A22: diagonal correlation information
+#
+# and INNER is the crossproduct of the stacked casewise scores
+# (with variants for sampling weights and cluster-robust aggregation).
+# The H matrix afterwards converts the correlation metric to the
+# covariance metric (delta rule) when numeric variables are present.
+
 muthen1984 <- function(data_1 = NULL,
                        ov_names = NULL,
                        ov_types = NULL,
@@ -70,6 +91,7 @@ muthen1984 <- function(data_1 = NULL,
   th_nox <- step1$TH.NOX
   th_idx_1 <- step1$TH.IDX
   th_names <- step1$TH.NAMES
+  th_keep <- step1$TH.KEEP
   var_1 <- step1$VAR
   slopes <- step1$SLOPES
   sc_th <- step1$SC.TH
@@ -134,344 +156,64 @@ muthen1984 <- function(data_1 = NULL,
 
 
   # stage three -- WLS.W
-  sc_cor <- matrix(0, n, pstar)
-  pstar_1 <- matrix(0, nvar, nvar)
-  pstar_1[lav_mat_vech_idx(nvar, diagonal = FALSE)] <- 1:pstar
 
-  a11_size <- NCOL(sc_th) + NCOL(sc_sl) + NCOL(sc_var)
+  # index layout of the stacked parameter vector
+  # (th/means | slopes (if any) | variances (numeric only) | correlations)
+  layout <- lav_m84_layout(
+    nvar = nvar, num_idx = num_idx,
+    th_start_idx = th_start_idx, th_end_idx = th_end_idx,
+    nth = NCOL(sc_th), nsl = NCOL(sc_sl), nexo = nexo
+  )
+  a11_size <- layout$a11_size
 
+  # A21 (+ the H21/H22 blocks of the delta-rule matrix, and the
+  #      correlation scores)
+  tmp <- lav_m84_a21(
+    fit = fit, ov_types = ov_types, cor_1 = cor_1, var_1 = var_1,
+    wt = wt, n = n, layout = layout, th_keep = th_keep
+  )
+  sc_cor <- tmp$sc_cor
+  a21 <- tmp$a21
+  h21 <- tmp$h21
+  h22 <- tmp$h22
 
-
-
-
-
-
-
-  # A21
-  a21 <- matrix(0, pstar, a11_size)
-  h22 <- diag(pstar) # for the delta rule
-  h21 <- matrix(0, pstar, a11_size)
-  # for this one, we need new scores: for each F_ij (cor), the
-  # scores with respect to the TH, VAR, ...
-  for (j in seq_len(nvar - 1L)) {
-    for (i in (j + 1L):nvar) {
-      pstar_idx <- pstar_1[i, j]
-      th_idx_i <- th_start_idx[i]:th_end_idx[i]
-      th_idx_j <- th_start_idx[j]:th_end_idx[j]
-      if (nexo > 0L) {
-        sl_idx_i <- NCOL(sc_th) + seq(i, by = nvar, length.out = nexo)
-        sl_idx_j <- NCOL(sc_th) + seq(j, by = nvar, length.out = nexo)
-
-        var_idx_i <- NCOL(sc_th) + NCOL(sc_sl) + match(i, num_idx)
-        var_idx_j <- NCOL(sc_th) + NCOL(sc_sl) + match(j, num_idx)
-      } else {
-        var_idx_i <- NCOL(sc_th) + match(i, num_idx)
-        var_idx_j <- NCOL(sc_th) + match(j, num_idx)
-      }
-      if (ov_types[i] == "numeric" && ov_types[j] == "numeric") {
-        sc_cor_uni <- lav_bvreg_cor_sc(
-          rho = cor_1[i, j],
-          fit_y1 = fit[[i]],
-          fit_y2 = fit[[j]],
-          wt = wt
-        )
-
-        # RHO
-        if (is.null(wt)) {
-          sc_cor[, pstar_idx] <- sc_cor_uni$dx_rho
-        } else {
-          sc_cor[, pstar_idx] <- sc_cor_uni$dx_rho / wt # unweight
-        }
-
-        # TH
-        a21[pstar_idx, th_idx_i] <-
-          lav_mat_crossprod(
-            sc_cor[, pstar_idx],
-            sc_cor_uni$dx_mu_y1
-          )
-        a21[pstar_idx, th_idx_j] <-
-          lav_mat_crossprod(
-            sc_cor[, pstar_idx],
-            sc_cor_uni$dx_mu_y2
-          )
-        # SL
-        if (nexo > 0L) {
-          a21[pstar_idx, sl_idx_i] <-
-            lav_mat_crossprod(
-              sc_cor[, pstar_idx],
-              sc_cor_uni$dx_sl_y1
-            )
-          a21[pstar_idx, sl_idx_j] <-
-            lav_mat_crossprod(
-              sc_cor[, pstar_idx],
-              sc_cor_uni$dx_sl_y2
-            )
-        }
-        # VAR
-        a21[pstar_idx, var_idx_i] <-
-          lav_mat_crossprod(
-            sc_cor[, pstar_idx],
-            sc_cor_uni$dx_var_y1
-          )
-        a21[pstar_idx, var_idx_j] <-
-          lav_mat_crossprod(
-            sc_cor[, pstar_idx],
-            sc_cor_uni$dx_var_y2
-          )
-        # H21 only needed for VAR
-        h21[pstar_idx, var_idx_i] <-
-          (sqrt(var_1[j]) * cor_1[i, j]) / (2 * sqrt(var_1[i]))
-        h21[pstar_idx, var_idx_j] <-
-          (sqrt(var_1[i]) * cor_1[i, j]) / (2 * sqrt(var_1[j]))
-        h22[pstar_idx, pstar_idx] <- sqrt(var_1[i]) * sqrt(var_1[j])
-      } else if (ov_types[i] == "numeric" && ov_types[j] == "ordered") {
-        sc_cor_uni <- lav_bvmix_cor_sc(
-          rho = cor_1[i, j],
-          fit_y1 = fit[[i]],
-          fit_y2 = fit[[j]],
-          wt = wt
-        )
-        # RHO
-        if (is.null(wt)) {
-          sc_cor[, pstar_idx] <- sc_cor_uni$dx_rho
-        } else {
-          sc_cor[, pstar_idx] <- sc_cor_uni$dx_rho / wt # unweight
-        }
-
-        # TH
-        a21[pstar_idx, th_idx_i] <-
-          lav_mat_crossprod(
-            sc_cor[, pstar_idx],
-            sc_cor_uni$dx_mu_y1
-          )
-        a21[pstar_idx, th_idx_j] <-
-          lav_mat_crossprod(
-            sc_cor[, pstar_idx],
-            sc_cor_uni$dx_th_y2
-          )
-        # SL
-        if (nexo > 0L) {
-          a21[pstar_idx, sl_idx_i] <-
-            lav_mat_crossprod(
-              sc_cor[, pstar_idx],
-              sc_cor_uni$dx_sl_y1
-            )
-          a21[pstar_idx, sl_idx_j] <-
-            lav_mat_crossprod(
-              sc_cor[, pstar_idx],
-              sc_cor_uni$dx_sl_y2
-            )
-        }
-        # VAR
-        a21[pstar_idx, var_idx_i] <-
-          lav_mat_crossprod(
-            sc_cor[, pstar_idx],
-            sc_cor_uni$dx_var_y1
-          )
-        # H21 only need for VAR
-        h21[pstar_idx, var_idx_i] <- cor_1[i, j] / (2 * sqrt(var_1[i]))
-        h22[pstar_idx, pstar_idx] <- sqrt(var_1[i])
-      } else if (ov_types[j] == "numeric" && ov_types[i] == "ordered") {
-        sc_cor_uni <- lav_bvmix_cor_sc(
-          rho = cor_1[i, j],
-          fit_y1 = fit[[j]],
-          fit_y2 = fit[[i]],
-          wt = wt
-        )
-        # RHO
-        if (is.null(wt)) {
-          sc_cor[, pstar_idx] <- sc_cor_uni$dx_rho
-        } else {
-          sc_cor[, pstar_idx] <- sc_cor_uni$dx_rho / wt # unweight
-        }
-
-        # TH
-        a21[pstar_idx, th_idx_j] <-
-          lav_mat_crossprod(
-            sc_cor[, pstar_idx],
-            sc_cor_uni$dx_mu_y1
-          )
-        a21[pstar_idx, th_idx_i] <-
-          lav_mat_crossprod(
-            sc_cor[, pstar_idx],
-            sc_cor_uni$dx_th_y2
-          )
-        # SL
-        if (nexo > 0L) {
-          a21[pstar_idx, sl_idx_j] <-
-            lav_mat_crossprod(
-              sc_cor[, pstar_idx],
-              sc_cor_uni$dx_sl_y1
-            )
-          a21[pstar_idx, sl_idx_i] <-
-            lav_mat_crossprod(
-              sc_cor[, pstar_idx],
-              sc_cor_uni$dx_sl_y2
-            )
-        }
-        # VAR
-        a21[pstar_idx, var_idx_j] <-
-          lav_mat_crossprod(
-            sc_cor[, pstar_idx],
-            sc_cor_uni$dx_var_y1
-          )
-        # H21 only for VAR
-        h21[pstar_idx, var_idx_j] <- cor_1[i, j] / (2 * sqrt(var_1[j]))
-        h22[pstar_idx, pstar_idx] <- sqrt(var_1[j])
-      } else if (ov_types[i] == "ordered" && ov_types[j] == "ordered") {
-        # polychoric correlation
-        sc_cor_uni <- lav_bvord_cor_sc(
-          rho = cor_1[i, j],
-          fit_y1 = fit[[i]],
-          fit_y2 = fit[[j]],
-          wt = wt
-        )
-        # RHO
-        if (is.null(wt)) {
-          sc_cor[, pstar_idx] <- sc_cor_uni$dx_rho
-        } else {
-          sc_cor[, pstar_idx] <- sc_cor_uni$dx_rho / wt # unweight
-        }
-
-        # TH
-        a21[pstar_idx, th_idx_i] <-
-          lav_mat_crossprod(
-            sc_cor[, pstar_idx],
-            sc_cor_uni$dx_th_y1
-          )
-        a21[pstar_idx, th_idx_j] <-
-          lav_mat_crossprod(
-            sc_cor[, pstar_idx],
-            sc_cor_uni$dx_th_y2
-          )
-        # SL
-        if (nexo > 0L) {
-          a21[pstar_idx, sl_idx_i] <-
-            lav_mat_crossprod(
-              sc_cor[, pstar_idx],
-              sc_cor_uni$dx_sl_y1
-            )
-          a21[pstar_idx, sl_idx_j] <-
-            lav_mat_crossprod(
-              sc_cor[, pstar_idx],
-              sc_cor_uni$dx_sl_y2
-            )
-        }
-        # NO VAR
-      }
-    }
-  }
   if (!is.null(wt)) {
     sc_cor <- sc_cor * wt # reweight
   }
 
-
-
-
-
-  # stage three
-
+  # stacked scores + meat
   sc <- cbind(sc_th, sc_sl, sc_var, sc_cor)
   inner <- lav_mat_crossprod(sc)
 
   # A11
   # new approach (2 June 2012): A11 is just a 'sparse' version of
   # (the left upper block of) INNER
-  a11 <- matrix(0, a11_size, a11_size)
   if (!is.null(wt)) {
     inner2 <- lav_mat_crossprod(sc / wt, sc)
   } else {
     inner2 <- inner
   }
-  for (i in 1:nvar) {
-    th_idx <- th_start_idx[i]:th_end_idx[i]
-    sl_idx <- integer(0L)
-    var_idx <- integer(0L)
-    if (nexo > 0L) {
-      sl_idx <- NCOL(sc_th) + seq(i, by = nvar, length.out = nexo)
-      # sl.end.idx <- (i*nexo); sl.start.idx <- (i-1L)*nexo + 1L
-      # sl.idx <- NCOL(SC.TH) + (sl.start.idx:sl.end.idx)
-    }
-    if (ov_types[i] == "numeric") {
-      var_idx <- NCOL(sc_th) + NCOL(sc_sl) + match(i, num_idx)
-    }
-    a11_idx <- c(th_idx, sl_idx, var_idx)
-    a11[a11_idx, a11_idx] <- inner2[a11_idx, a11_idx]
-  }
-
-  ##### DEBUG ######
-  #### for numeric VAR only, use hessian to get better residual var value
-  ####
-  # for(i in 1:nvar) {
-  #     if(ov.types[i] == "numeric") {
-  #         tmp.npar <- FIT[[i]]$npar
-  #         e.var <- FIT[[i]]$theta[ tmp.npar ]
-  #         sq.e.var <- sqrt(e.var)
-  #         sq.e.var6 <- sq.e.var*sq.e.var*sq.e.var*sq.e.var*sq.e.var*sq.e.var
-  #         dx2.var <- N/(2*e.var*e.var) - 1/sq.e.var6 * (e.var * N)
-  #
-  #         var.idx <- NCOL(SC.TH) + NCOL(SC.SL) + match(i, num.idx)
-  #         A11[var.idx, var.idx] <- -1 * dx2.var
-  #     }
-  # }
-  ################
-  ################
+  a11 <- lav_m84_a11(inner2 = inner2, layout = layout)
 
   # A22 (diagonal)
-  a22 <- matrix(0, pstar, pstar)
-  for (i in seq_len(pstar)) {
-    if (is.null(wt)) {
-      a22[i, i] <- sum(sc_cor[, i] * sc_cor[, i], na.rm = TRUE)
-    } else {
-      a22[i, i] <- sum(sc_cor[, i] * sc_cor[, i] / wt, na.rm = TRUE)
-    }
-  }
+  a22 <- lav_m84_a22(sc_cor = sc_cor, wt = wt)
 
   # A12 (zero)
   a12 <- matrix(0, NROW(a11), NCOL(a22))
 
-
-  # B <- rbind( cbind(A11,A12),
-  #            cbind(A21,A22) )
-
-  # we invert B as a block-triangular matrix (0.5-23)
-  #
-  # B.inv = A11^{-1}                   0
-  #         -A22^{-1} A21 A11^{-1}     A22^{-1}
-  #
-
-  # invert A
-  a11_inv <- try(solve(a11), silent = TRUE)
-  if (inherits(a11_inv, "try-error")) {
-    # brute force
-    a11_inv <- MASS::ginv(a11)
+  # invert B as a block-triangular matrix (0.5-23)
+  tmp <- lav_m84_b_inv(a11 = a11, a21 = a21, a22 = a22)
+  b_inv <- tmp$b_inv
+  # (warnings are emitted here, not in the helper, so that the message
+  #  mentions muthen1984 as before)
+  if (tmp$ginv_a11) {
     lav_msg_warn(gettext("trouble constructing W matrix;
                          used generalized inverse for A11 submatrix"))
   }
-
-  # invert
-  da22 <- diag(a22)
-  if (any(da22 == 0)) {
+  if (tmp$ginv_a22) {
     lav_msg_warn(gettext("trouble constructing W matrix;
                          used generalized inverse for A22 submatrix"))
-    a22_inv <- MASS::ginv(a22)
-  } else {
-    a22_inv <- a22
-    diag(a22_inv) <- 1 / da22
   }
-
-  # lower-left block
-  a21_inv <- -a22_inv %*% a21 %*% a11_inv
-
-  # upper-left block remains zero
-  a12_inv <- a12
-
-  # construct B.inv
-  b_inv <- rbind(
-    cbind(a11_inv, a12_inv),
-    cbind(a21_inv, a22_inv)
-  )
-
 
   #  weight matrix (correlation metric)
   # The bread b_inv is built from sum(wt)-weighted quantities (a11/a22 use
@@ -553,4 +295,247 @@ muthen1984 <- function(data_1 = NULL,
     zero.cell.tables = empty_cell_tables
   )
   out
+}
+
+# index layout of the stacked (univariate | correlation) parameter vector:
+# for each variable, the positions of its thresholds/mean, slopes and
+# (numeric only) variance within the A11 block; and the pstar mapping of
+# the correlations
+lav_m84_layout <- function(nvar = NULL, num_idx = NULL,
+                           th_start_idx = NULL, th_end_idx = NULL,
+                           nth = NULL, nsl = NULL, nexo = NULL) {
+  pstar <- nvar * (nvar - 1) / 2
+  pstar_1 <- matrix(0, nvar, nvar)
+  pstar_1[lav_mat_vech_idx(nvar, diagonal = FALSE)] <- 1:pstar
+
+  th_idx <- vector("list", length = nvar)
+  sl_idx <- vector("list", length = nvar)
+  var_idx <- vector("list", length = nvar)
+  for (i in 1:nvar) {
+    th_idx[[i]] <- th_start_idx[i]:th_end_idx[i]
+    if (nexo > 0L) {
+      sl_idx[[i]] <- nth + seq(i, by = nvar, length.out = nexo)
+    } else {
+      sl_idx[[i]] <- integer(0L)
+    }
+    # variance slot (numeric variables only; NA for ordinal)
+    var_idx[[i]] <- nth + nsl + match(i, num_idx)
+  }
+
+  list(
+    nvar = nvar, pstar = pstar, pstar_1 = pstar_1, nexo = nexo,
+    th_idx = th_idx, sl_idx = sl_idx, var_idx = var_idx,
+    a11_size = nth + nsl + length(num_idx)
+  )
+}
+
+# the casewise scores of one correlation (pair i > j), together with the
+# cross-derivatives with respect to the univariate parameters of both
+# variables, mapped to a type-independent layout:
+#   dx_rho, dx_th_i/dx_th_j (thresholds or mean), dx_sl_i/dx_sl_j (slopes),
+#   dx_var_i/dx_var_j (residual variance; NULL for ordinal variables)
+lav_m84_pair_sc <- function(fit = NULL, ov_types = NULL,
+                            i = NULL, j = NULL, rho = NULL, wt = NULL) {
+  ord_i <- ov_types[i] == "ordered"
+  ord_j <- ov_types[j] == "ordered"
+  if (!ord_i && !ord_j) {
+    # pearson
+    sc <- lav_bvreg_cor_sc(
+      rho = rho, fit_y1 = fit[[i]], fit_y2 = fit[[j]], wt = wt
+    )
+    out <- list(
+      dx_rho = sc$dx_rho,
+      dx_th_i = sc$dx_mu_y1, dx_th_j = sc$dx_mu_y2,
+      dx_sl_i = sc$dx_sl_y1, dx_sl_j = sc$dx_sl_y2,
+      dx_var_i = sc$dx_var_y1, dx_var_j = sc$dx_var_y2
+    )
+  } else if (!ord_i && ord_j) {
+    # polyserial (i = linear, j = ordinal)
+    sc <- lav_bvmix_cor_sc(
+      rho = rho, fit_y1 = fit[[i]], fit_y2 = fit[[j]], wt = wt
+    )
+    out <- list(
+      dx_rho = sc$dx_rho,
+      dx_th_i = sc$dx_mu_y1, dx_th_j = sc$dx_th_y2,
+      dx_sl_i = sc$dx_sl_y1, dx_sl_j = sc$dx_sl_y2,
+      dx_var_i = sc$dx_var_y1, dx_var_j = NULL
+    )
+  } else if (ord_i && !ord_j) {
+    # polyserial (j = linear, i = ordinal)
+    sc <- lav_bvmix_cor_sc(
+      rho = rho, fit_y1 = fit[[j]], fit_y2 = fit[[i]], wt = wt
+    )
+    out <- list(
+      dx_rho = sc$dx_rho,
+      dx_th_i = sc$dx_th_y2, dx_th_j = sc$dx_mu_y1,
+      dx_sl_i = sc$dx_sl_y2, dx_sl_j = sc$dx_sl_y1,
+      dx_var_i = NULL, dx_var_j = sc$dx_var_y1
+    )
+  } else {
+    # polychoric
+    sc <- lav_bvord_cor_sc(
+      rho = rho, fit_y1 = fit[[i]], fit_y2 = fit[[j]], wt = wt
+    )
+    out <- list(
+      dx_rho = sc$dx_rho,
+      dx_th_i = sc$dx_th_y1, dx_th_j = sc$dx_th_y2,
+      dx_sl_i = sc$dx_sl_y1, dx_sl_j = sc$dx_sl_y2,
+      dx_var_i = NULL, dx_var_j = NULL
+    )
+  }
+  out
+}
+
+# the A21 block: for each correlation (row), the crossproduct of its scores
+# with the cross-derivatives w.r.t. the univariate parameters (columns);
+# also returns the correlation scores sc_cor (unweighted) and the H21/H22
+# blocks of the delta-rule matrix (rho -> cov metric, numeric variables)
+lav_m84_a21 <- function(fit = NULL, ov_types = NULL,
+                        cor_1 = NULL, var_1 = NULL,
+                        wt = NULL, n = NULL, layout = NULL,
+                        th_keep = NULL) {
+  nvar <- layout$nvar
+  pstar <- layout$pstar
+
+  sc_cor <- matrix(0, n, pstar)
+  a21 <- matrix(0, pstar, layout$a11_size)
+  h22 <- diag(pstar) # for the delta rule
+  h21 <- matrix(0, pstar, layout$a11_size)
+
+  # for this one, we need new scores: for each F_ij (cor), the
+  # scores with respect to the TH, VAR, ...
+  for (j in seq_len(nvar - 1L)) {
+    for (i in (j + 1L):nvar) {
+      pstar_idx <- layout$pstar_1[i, j]
+
+      pair <- lav_m84_pair_sc(
+        fit = fit, ov_types = ov_types, i = i, j = j,
+        rho = cor_1[i, j], wt = wt
+      )
+
+      # RHO
+      if (is.null(wt)) {
+        sc_cor[, pstar_idx] <- pair$dx_rho
+      } else {
+        sc_cor[, pstar_idx] <- pair$dx_rho / wt # unweight
+      }
+
+      # TH
+      # (th_keep: skip the pseudo-threshold slots of empty categories --
+      #  the fit has no scores for them; their a21 entries stay zero)
+      a21[pstar_idx, layout$th_idx[[i]][th_keep[[i]]]] <-
+        lav_mat_crossprod(sc_cor[, pstar_idx], pair$dx_th_i)
+      a21[pstar_idx, layout$th_idx[[j]][th_keep[[j]]]] <-
+        lav_mat_crossprod(sc_cor[, pstar_idx], pair$dx_th_j)
+
+      # SL
+      if (layout$nexo > 0L) {
+        a21[pstar_idx, layout$sl_idx[[i]]] <-
+          lav_mat_crossprod(sc_cor[, pstar_idx], pair$dx_sl_i)
+        a21[pstar_idx, layout$sl_idx[[j]]] <-
+          lav_mat_crossprod(sc_cor[, pstar_idx], pair$dx_sl_j)
+      }
+
+      # VAR (numeric variables only) + H21/H22 delta-rule entries
+      num_i <- !is.null(pair$dx_var_i)
+      num_j <- !is.null(pair$dx_var_j)
+      if (num_i) {
+        a21[pstar_idx, layout$var_idx[[i]]] <-
+          lav_mat_crossprod(sc_cor[, pstar_idx], pair$dx_var_i)
+      }
+      if (num_j) {
+        a21[pstar_idx, layout$var_idx[[j]]] <-
+          lav_mat_crossprod(sc_cor[, pstar_idx], pair$dx_var_j)
+      }
+      if (num_i && num_j) {
+        h21[pstar_idx, layout$var_idx[[i]]] <-
+          (sqrt(var_1[j]) * cor_1[i, j]) / (2 * sqrt(var_1[i]))
+        h21[pstar_idx, layout$var_idx[[j]]] <-
+          (sqrt(var_1[i]) * cor_1[i, j]) / (2 * sqrt(var_1[j]))
+        h22[pstar_idx, pstar_idx] <- sqrt(var_1[i]) * sqrt(var_1[j])
+      } else if (num_i) {
+        h21[pstar_idx, layout$var_idx[[i]]] <-
+          cor_1[i, j] / (2 * sqrt(var_1[i]))
+        h22[pstar_idx, pstar_idx] <- sqrt(var_1[i])
+      } else if (num_j) {
+        h21[pstar_idx, layout$var_idx[[j]]] <-
+          cor_1[i, j] / (2 * sqrt(var_1[j]))
+        h22[pstar_idx, pstar_idx] <- sqrt(var_1[j])
+      }
+    }
+  }
+
+  list(sc_cor = sc_cor, a21 = a21, h21 = h21, h22 = h22)
+}
+
+# the A11 block: 'sparse' (per-variable block-diagonal) version of the
+# left-upper block of INNER (crossprod of the univariate scores)
+lav_m84_a11 <- function(inner2 = NULL, layout = NULL) {
+  a11 <- matrix(0, layout$a11_size, layout$a11_size)
+  for (i in seq_len(layout$nvar)) {
+    a11_idx <- c(
+      layout$th_idx[[i]], layout$sl_idx[[i]],
+      layout$var_idx[[i]][!is.na(layout$var_idx[[i]])]
+    )
+    a11[a11_idx, a11_idx] <- inner2[a11_idx, a11_idx]
+  }
+  a11
+}
+
+# the A22 block: diagonal of the correlation-score crossproducts
+lav_m84_a22 <- function(sc_cor = NULL, wt = NULL) {
+  pstar <- NCOL(sc_cor)
+  a22 <- matrix(0, pstar, pstar)
+  for (i in seq_len(pstar)) {
+    if (is.null(wt)) {
+      a22[i, i] <- sum(sc_cor[, i] * sc_cor[, i], na.rm = TRUE)
+    } else {
+      a22[i, i] <- sum(sc_cor[, i] * sc_cor[, i] / wt, na.rm = TRUE)
+    }
+  }
+  a22
+}
+
+# invert the block-triangular bread matrix
+#
+# B <- rbind( cbind(A11,A12),
+#            cbind(A21,A22) )
+#
+# B.inv = A11^{-1}                   0
+#         -A22^{-1} A21 A11^{-1}     A22^{-1}
+#
+lav_m84_b_inv <- function(a11 = NULL, a21 = NULL, a22 = NULL) {
+  # invert A11
+  ginv_a11 <- FALSE
+  a11_inv <- try(solve(a11), silent = TRUE)
+  if (inherits(a11_inv, "try-error")) {
+    # brute force
+    a11_inv <- MASS::ginv(a11)
+    ginv_a11 <- TRUE
+  }
+
+  # invert A22 (diagonal)
+  ginv_a22 <- FALSE
+  da22 <- diag(a22)
+  if (any(da22 == 0)) {
+    ginv_a22 <- TRUE
+    a22_inv <- MASS::ginv(a22)
+  } else {
+    a22_inv <- a22
+    diag(a22_inv) <- 1 / da22
+  }
+
+  # lower-left block
+  a21_inv <- -a22_inv %*% a21 %*% a11_inv
+
+  # upper-right block remains zero
+  a12_inv <- matrix(0, NROW(a11), NCOL(a22))
+
+  # construct B.inv
+  b_inv <- rbind(
+    cbind(a11_inv, a12_inv),
+    cbind(a21_inv, a22_inv)
+  )
+
+  list(b_inv = b_inv, ginv_a11 = ginv_a11, ginv_a22 = ginv_a22)
 }
