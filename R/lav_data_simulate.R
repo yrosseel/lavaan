@@ -111,7 +111,7 @@ lav_data_simulate <- function(model = NULL,
 }
 
 # exported synonym
-lavSimulateData <- lav_data_simulate
+lavSimulateData <- lav_alias("lav_data_simulate")
 
 # detect whether a model (syntax string or parameter table) is multilevel
 lav_simulate_is_multilevel <- function(model = NULL) {

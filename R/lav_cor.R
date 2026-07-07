@@ -199,7 +199,7 @@ lav_object_cor <- function(object,
 
   out
 }
-lavCor <- lav_object_cor  # synonym #nolint
+lavCor <- lav_alias("lav_object_cor") # synonym #nolint
 
 lav_object_cor_output <- function(object, output = "cor") {
   # check output

@@ -11,16 +11,16 @@
 #    but for GLS and WLS, this is not the case!!
 #
 #  - YR 01 Feb 2026: allow for baseline.type = "nested"
-lav_object_independence <- lav_object_baseline <- function(object = NULL,
-                                                         # or
-                                                         lavsamplestats = NULL,
-                                                         lavdata = NULL,
-                                                         lavcache = NULL,
-                                                         lavoptions = NULL,
-                                                         lavpartable = NULL,
-                                                         lavh1 = NULL,
-                                                         # local options
-                                                         se = FALSE) {
+lav_object_baseline <- function(object = NULL,
+                                # or
+                                lavsamplestats = NULL,
+                                lavdata = NULL,
+                                lavcache = NULL,
+                                lavoptions = NULL,
+                                lavpartable = NULL,
+                                lavh1 = NULL,
+                                # local options
+                                se = FALSE) {
   # object or slots?
   if (!is.null(object)) {
     stopifnot(inherits(object, "lavaan"))
@@ -463,3 +463,6 @@ lav_object_catml <- function(lavobject = NULL) {
 
   fit
 }
+
+# synonym (thin forwarder; see lav_alias in 00alias.R)
+lav_object_independence <- lav_alias("lav_object_baseline")

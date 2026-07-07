@@ -140,7 +140,7 @@ lav_fit_tli <- function(x2 = NULL, df = NULL, x2_null = NULL, df_null = NULL,
 }
 
 # alias for nnfi
-lav_fit_nnfi <- lav_fit_tli
+lav_fit_nnfi <- lav_alias("lav_fit_tli")
 
 # RFI - relative fit index (Bollen, 1986; Joreskog & Sorbom 1993)
 lav_fit_rfi <- function(x2 = NULL, df = NULL, x2_null = NULL, df_null = NULL) {

@@ -112,7 +112,7 @@ lav_export_data <- function(object) {
 
   do.call(rbind, parts)
 }
-lavExport <- lav_export     # synonym #nolint
+lavExport <- lav_alias("lav_export") # synonym #nolint
 
 
 lav_export_check <- function(lav) {

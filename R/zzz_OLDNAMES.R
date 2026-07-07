@@ -137,7 +137,7 @@ inspectSampleCov <- function(model, data, ...) {
 #   sc[[1L]] <- quote(lavaan::lavParameterEstimates)
 #   eval(sc, parent.frame())
 # }
-parameterestimates <- parameterEstimates # alias
+parameterestimates <- lav_alias("lavParameterEstimates") # alias
 
 # for tidySEM in 0.6-21 only
 # vnames <- lav_partable_vnames

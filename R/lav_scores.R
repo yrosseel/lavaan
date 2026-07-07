@@ -20,9 +20,9 @@
 # YR 26 Apr 2025: add lav_scores_gls()
 
 lav_sc <- function(object, scaling = FALSE,
-                           ignore_constraints = FALSE,
-                           remove_duplicated = TRUE,
-                           remove_empty_cases = TRUE) {
+                   ignore_constraints = FALSE,
+                   remove_duplicated = TRUE,
+                   remove_empty_cases = TRUE) {
   stopifnot(inherits(object, "lavaan"))
 
   # check object
@@ -163,12 +163,12 @@ lav_sc <- function(object, scaling = FALSE,
   score_matrix
 }
 
-lavScores <- estfun.lavaan <- function(               # nolint
-                       object,
-                       scaling = FALSE,
-                       ignore_constraints = FALSE,
-                       remove_duplicated = TRUE,
-                       remove_empty_cases = TRUE,
+lavScores <- function(                                # nolint
+                      object,
+                      scaling = FALSE,
+                      ignore_constraints = FALSE,
+                      remove_duplicated = TRUE,
+                      remove_empty_cases = TRUE,
                       ...) {
   dotdotdot <- list(...)
   lav_adapt_func(environment(), dotdotdot, NULL)
@@ -187,14 +187,14 @@ lavScores <- estfun.lavaan <- function(               # nolint
 #                 '-scores_h1 %*% Delta' becomes 'sc %*% Delta'), and produces
 #                 vech(Sigma) with the diagonal already halved -- matching Delta.
 lav_sc_ml <- function(ntab = 0L,
-                          ntot = 0L,
-                          npar = 0L,
-                          moments = NULL,
-                          lavdata = NULL,
-                          lavsamplestats = NULL,
-                          lavmodel = NULL,
-                          lavoptions = NULL,
-                          scaling = FALSE) {
+                      ntot = 0L,
+                      npar = 0L,
+                      moments = NULL,
+                      lavdata = NULL,
+                      lavsamplestats = NULL,
+                      lavmodel = NULL,
+                      lavoptions = NULL,
+                      scaling = FALSE) {
   score_matrix <- matrix(NA, ntot, npar)
 
   # Delta matrix
@@ -274,12 +274,12 @@ lav_sc_ml <- function(ntab = 0L,
 # this function is based on code originally written by Franz Classe (Munich)
 # for categorical data only!
 lav_sc_wls <- function(ntab = 0L,
-                           ntot = 0L,
-                           npar = 0L,
-                           lavdata = NULL,
-                           lavsamplestats = NULL,
-                           lavmodel = NULL,
-                           lavoptions = NULL) {
+                       ntot = 0L,
+                       npar = 0L,
+                       lavdata = NULL,
+                       lavsamplestats = NULL,
+                       lavmodel = NULL,
+                       lavoptions = NULL) {
   # internal function
   do_dummy_single_var <- function(x_1, lv, ntot, num) {
     xd <- matrix(NA, nrow = ntot, ncol = lv[num] - 1)
@@ -349,12 +349,12 @@ lav_sc_wls <- function(ntab = 0L,
 
 # wls/gls/uls (continuous data only)
 lav_sc_ls <- function(ntab = 0L,
-                          ntot = 0L,
-                          npar = 0L,
-                          lavdata = NULL,
-                          lavsamplestats = NULL,
-                          lavmodel = NULL,
-                          lavoptions = NULL) {
+                      ntot = 0L,
+                      npar = 0L,
+                      lavdata = NULL,
+                      lavsamplestats = NULL,
+                      lavmodel = NULL,
+                      lavoptions = NULL) {
 
   # container for scores
   score_matrix <- matrix(NA, ntot, npar)
@@ -421,3 +421,7 @@ lav_sc_ls <- function(ntab = 0L,
 
   score_matrix
 }
+
+# estfun method for the sandwich package (thin forwarder; see lav_alias
+# in 00alias.R)
+estfun.lavaan <- lav_alias("lavScores")

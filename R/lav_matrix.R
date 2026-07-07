@@ -216,53 +216,54 @@ lav_mat_vechru_idx <- function(n = 1L, diagonal = TRUE) {
 #
 # given the output of vech(S) --or vechru(S) which is identical--
 # reconstruct S
-lav_mat_vech_rev <- lav_mat_vechru_rev <-
-  lav_mat_upper2full <-
-  function(x, diagonal = TRUE) {
-    # if (lav_use_lavaanC()) {
-    #   return(lavaanC::m_vech_reverse(x, diagonal))
-    # }
-    # guess dimensions
-    if (diagonal) {
-      p <- (sqrt(1 + 8 * length(x)) - 1) / 2
-    } else {
-      p <- (sqrt(1 + 8 * length(x)) + 1) / 2
-    }
-    stopifnot(p == round(p, 0))
-
-    s <- numeric(p * p)
-    s[lav_mat_vech_idx(p, diagonal = diagonal)] <- x
-    s[lav_mat_vechru_idx(p, diagonal = diagonal)] <- x
-
-    attr(s, "dim") <- c(p, p)
-    s
+lav_mat_vech_rev <- function(x, diagonal = TRUE) {
+  # if (lav_use_lavaanC()) {
+  #   return(lavaanC::m_vech_reverse(x, diagonal))
+  # }
+  # guess dimensions
+  if (diagonal) {
+    p <- (sqrt(1 + 8 * length(x)) - 1) / 2
+  } else {
+    p <- (sqrt(1 + 8 * length(x)) + 1) / 2
   }
+  stopifnot(p == round(p, 0))
+
+  s <- numeric(p * p)
+  s[lav_mat_vech_idx(p, diagonal = diagonal)] <- x
+  s[lav_mat_vechru_idx(p, diagonal = diagonal)] <- x
+
+  attr(s, "dim") <- c(p, p)
+  s
+}
+lav_mat_vechru_rev <- lav_alias("lav_mat_vech_rev")
+lav_mat_upper2full <- lav_alias("lav_mat_vech_rev")
 
 
 # vechr.reverse vechu.reverse (aka `lower2full')
 #
 # given the output of vechr(S) --or vechu(S) which is identical--
 # reconstruct S
-lav_mat_vechr_rev <- lav_mat_vechu_rev <-
-  lav_mat_lower2full <- function(x, diagonal = TRUE) {
-    # if (lav_use_lavaanC()) {
-    #   return(lavaanC::m_vechr_reverse(x, diagonal))
-    # }
-    # guess dimensions
-    if (diagonal) {
-      p <- (sqrt(1 + 8 * length(x)) - 1) / 2
-    } else {
-      p <- (sqrt(1 + 8 * length(x)) + 1) / 2
-    }
-    stopifnot(p == round(p, 0))
-
-    s <- numeric(p * p)
-    s[lav_mat_vechr_idx(p, diagonal = diagonal)] <- x
-    s[lav_mat_vechu_idx(p, diagonal = diagonal)] <- x
-
-    attr(s, "dim") <- c(p, p)
-    s
+lav_mat_vechr_rev <- function(x, diagonal = TRUE) {
+  # if (lav_use_lavaanC()) {
+  #   return(lavaanC::m_vechr_reverse(x, diagonal))
+  # }
+  # guess dimensions
+  if (diagonal) {
+    p <- (sqrt(1 + 8 * length(x)) - 1) / 2
+  } else {
+    p <- (sqrt(1 + 8 * length(x)) + 1) / 2
   }
+  stopifnot(p == round(p, 0))
+
+  s <- numeric(p * p)
+  s[lav_mat_vechr_idx(p, diagonal = diagonal)] <- x
+  s[lav_mat_vechu_idx(p, diagonal = diagonal)] <- x
+
+  attr(s, "dim") <- c(p, p)
+  s
+}
+lav_mat_vechu_rev <- lav_alias("lav_mat_vechr_rev")
+lav_mat_lower2full <- lav_alias("lav_mat_vechr_rev")
 
 
 # return the *vector* indices of the diagonal elements of a symmetric

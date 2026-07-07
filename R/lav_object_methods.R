@@ -231,25 +231,24 @@ lav_partable_check_std_def <- function(partable, est.std = NULL,
   invisible(list(def = flagged_def, label = flagged_lab))
 }
 
-standardizedSolution <-                                      # nolint
-  standardizedsolution <- function(object,
-                                   type = "std.all",
-                                   se = TRUE,
-                                   zstat = TRUE,
-                                   pvalue = TRUE,
-                                   ci = TRUE,
-                                   level = 0.95,
-                                   boot_ci_type = "perc",
-                                   cov_std = TRUE,
-                                   remove_eq = TRUE,
-                                   remove_ineq = TRUE,
-                                   remove_def = FALSE,
-                                   remove_aux = TRUE,
-                                   partable = NULL,
-                                   glist = NULL,
-                                   est = NULL,
-                                   output = "data.frame",
-                                  ...) {
+standardizedSolution <- function(object,                     # nolint
+                                 type = "std.all",
+                                 se = TRUE,
+                                 zstat = TRUE,
+                                 pvalue = TRUE,
+                                 ci = TRUE,
+                                 level = 0.95,
+                                 boot_ci_type = "perc",
+                                 cov_std = TRUE,
+                                 remove_eq = TRUE,
+                                 remove_ineq = TRUE,
+                                 remove_def = FALSE,
+                                 remove_aux = TRUE,
+                                 partable = NULL,
+                                 glist = NULL,
+                                 est = NULL,
+                                 output = "data.frame",
+                                 ...) {
     dotdotdot <- list(...)
     lav_adapt_func(environment(), dotdotdot, NULL)
     # check object
@@ -631,35 +630,35 @@ standardizedSolution <-                                      # nolint
   }
 
 lavParameterEstimates <- function(object,                      # nolint
-                                 # select columns
-                                 se = TRUE,
-                                 zstat = TRUE,
-                                 pvalue = TRUE,
-                                 ci = TRUE,
-                                 standardized = FALSE,
-                                 fmi = FALSE,
-                                 plabel = FALSE,
-                                 # control
-                                 level = 0.95,
-                                 boot_ci_type = "perc",
-                                 cov_std = TRUE,
-                                 fmi_options = list(),
-                                 # add rows
-                                 rsquare = FALSE,
-                                 # remove rows
-                                 remove_system_eq = TRUE,
-                                 remove_eq = TRUE,
-                                 remove_ineq = TRUE,
-                                 remove_def = FALSE,
-                                 remove_nonfree = FALSE,
-                                 remove_step1 = TRUE,
-                                 remove_unused = FALSE,
-                                 remove_aux = TRUE,
-                                 # output
-                                 add_attributes = FALSE,
-                                 output = "data.frame",
-                                 header = FALSE,
-                                ...) {
+                                  # select columns
+                                  se = TRUE,
+                                  zstat = TRUE,
+                                  pvalue = TRUE,
+                                  ci = TRUE,
+                                  standardized = FALSE,
+                                  fmi = FALSE,
+                                  plabel = FALSE,
+                                  # control
+                                  level = 0.95,
+                                  boot_ci_type = "perc",
+                                  cov_std = TRUE,
+                                  fmi_options = list(),
+                                  # add rows
+                                  rsquare = FALSE,
+                                  # remove rows
+                                  remove_system_eq = TRUE,
+                                  remove_eq = TRUE,
+                                  remove_ineq = TRUE,
+                                  remove_def = FALSE,
+                                  remove_nonfree = FALSE,
+                                  remove_step1 = TRUE,
+                                  remove_unused = FALSE,
+                                  remove_aux = TRUE,
+                                  # output
+                                  add_attributes = FALSE,
+                                  output = "data.frame",
+                                  header = FALSE,
+                                  ...) {
 
    dotdotdot <- list(...)
    lav_adapt_func(environment(), dotdotdot, NULL)
@@ -1374,25 +1373,27 @@ lavParameterEstimates <- function(object,                      # nolint
 
     tmp_list
 }
-parameterEstimates <- lavParameterEstimates     # synonym   # nolint
+parameterEstimates <- lav_alias("lavParameterEstimates") # synonym # nolint
 
-parameterTable <- parametertable <- parTable <- partable <- # nolint
-  function(object) {
-    # check object
-    object <- lav_object_check_version(object)
+parTable <- function(object) {
+  # check object
+  object <- lav_object_check_version(object)
 
-    # convert to data.frame
-    out <- as.data.frame(object@ParTable, stringsAsFactors = FALSE)
+  # convert to data.frame
+  out <- as.data.frame(object@ParTable, stringsAsFactors = FALSE)
 
-    class(out) <- c("lavaan.data.frame", "data.frame")
-    out
-  }
+  class(out) <- c("lavaan.data.frame", "data.frame")
+  out
+}
+parameterTable <- lav_alias("parTable") # synonym # nolint
+parametertable <- lav_alias("parTable") # synonym # nolint
+partable <- lav_alias("parTable") # synonym # nolint
 
-varTable <- vartable <- function(object, ov_names = names(object),  # nolint start
-                                 ov_names_x = NULL,
-                                 ordered = NULL, factor = NULL,
-                                 as_data_frame = TRUE,
-                                ...) {           # nolint end
+varTable <- function(object, ov_names = names(object),  # nolint start
+                     ov_names_x = NULL,
+                     ordered = NULL, factor = NULL,
+                     as_data_frame = TRUE,
+                     ...) {           # nolint end
   dotdotdot <- list(...)
   lav_adapt_func(environment(), dotdotdot, NULL)
   if (inherits(object, "lavaan")) {
@@ -1714,3 +1715,7 @@ setMethod(
     lavTestLRT(object = object, ..., model_names = tmp_names)
   }
 )
+
+# synonyms (thin forwarders; see lav_alias in 00alias.R)
+standardizedsolution <- lav_alias("standardizedSolution") # nolint
+vartable <- lav_alias("varTable") # nolint

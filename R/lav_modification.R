@@ -351,4 +351,5 @@ modindices <- function(object,
 }
 
 # aliases
-modificationIndices <- modificationindices <- modindices     # nolint
+modificationIndices <- lav_alias("modindices") # nolint
+modificationindices <- lav_alias("modindices") # nolint

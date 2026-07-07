@@ -38,23 +38,7 @@ lav_lavaanlist_lavtech <- function(object,
   )
 }
 
-lavListTech <- function(object,
-                        what = "free",
-                        add_labels = FALSE,
-                        add_class = FALSE,
-                        list_by_group = FALSE,
-                        drop_list_single_group = FALSE,
-                        ...) {
-  dotdotdot <- list(...)
-  lav_adapt_func(environment(), dotdotdot, NULL)
-
-  lavListInspect(
-    object = object, what = what,
-    add_labels = add_labels, add_class = add_class,
-    list_by_group = list_by_group,
-    drop_list_single_group = drop_list_single_group
-  )
-}
+lavListTech <- lav_alias("lav_lavaanlist_lavtech") # synonym # nolint
 
 # just in case someone uses lavInspect on a lavaanList object
 lav_lavaanlist_lavinspect <- function(object,

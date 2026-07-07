@@ -227,38 +227,10 @@ lavaanList <- function(model = NULL, # model                    # nolint
           silent = TRUE
         )
       } else if (cmd == "fsr") {
-        # extract fs.method and fsr.method from dotdotdot
-        if (!is.null(dotdotdot$fs.method)) {
-          fs_method <- dotdotdot$fs.method
-        } else {
-          fs_method <- formals(fsr)$fs_method # default
-        }
-
-        if (!is.null(dotdotdot$fsr.method)) {
-          fsr_method <- dotdotdot$fsr.method
-        } else {
-          fsr_method <- formals(fsr)$fsr_method # default
-        }
-
-        lavoptions$start <- fit # FIXME: needed?
-        lavobject <- try(
-          do.call("fsr",
-            args = c(
-              list(
-                slot_options = lavoptions,
-                slot_par_table = lavpartable,
-                slot_model = lavmodel,
-                # start        = FIT,
-                data = data_1,
-                cmd = "lavaan",
-                fs.method = fs_method,
-                fsr.method = fsr_method
-              ),
-              dotdotdot
-            )
-          ),
-          silent = TRUE
-        )
+        # the old (never exported) fsr() function has been removed;
+        # sam() is its successor
+        lav_msg_stop(gettext(
+          "cmd = \"fsr\" is no longer supported; use cmd = \"sam\" instead."))
       } else if (cmd == "sam") {
         lavobject <- try(
           do.call("sam",
