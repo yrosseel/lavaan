@@ -175,18 +175,18 @@ lav_data_update_subset <- function(lavdata = NULL, ov_names = NULL) {
       newdata@Rp[[g]] <- lav_data_resp_patterns(newdata@X[[g]])
     }
 
-    # Lp
+    # Lp: rebuild whenever there is a cluster variable; this covers both
+    # two-level models (nlevels > 1) and single-level models with
+    # cluster-robust standard errors (cluster = , nlevels == 1)
     if (length(newdata@cluster) > 0L) {
       # extract cluster variable(s), for this group
-      clus <- matrix(0, nrow(newdata@X[[g]]), lavdata@nlevels - 1L)
-      for (l in 2:lavdata@nlevels) {
-        clus[, (l - 1L)] <- lavdata@Lp[[g]]$cluster.idx[[l]]
+      # (cluster.idx is stored from level 2 onwards)
+      n_clus_vars <- length(newdata@cluster)
+      clus <- matrix(0L, nrow(newdata@X[[g]]), n_clus_vars)
+      for (cc in seq_len(n_clus_vars)) {
+        clus[, cc] <- lavdata@Lp[[g]]$cluster.idx[[cc + 1L]]
       }
-      if (newdata@nlevels > 1L) {
-        multilevel <- TRUE
-      } else {
-        multilevel <- FALSE
-      }
+      multilevel <- newdata@nlevels > 1L
       ov_names_1 <- unique(c(ov_names[[g]], newdata@ov.names.x[[g]]))
       newdata@Lp[[g]] <- lav_data_cl_patterns(
         y = newdata@X[[g]],
