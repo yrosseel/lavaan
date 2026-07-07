@@ -3,9 +3,26 @@
 # YR: first version around Sept 2021
 # YR 03 Jul 2026: shared per-unit sigma-gradient kernel + per-cluster-size
 #                 Sigma.j cache (refactoring; no change in behavior)
+# YR 07 Jul 2026: conversion sigma blocks now go through the shared
+#                 lav_cl_* scatter/gather core (refactoring; no change in
+#                 behavior)
 
 # take model-implied mean+variance matrices, and reorder/augment them
 # to facilitate computing of (log)likelihood in the two-level case
+#
+# NOTE: see the top of lav_mvnorm_cluster.R for the definition of the
+# 'implied' vs '2l' representations and the invariants of the two
+# conversion functions (tilde padding, ordering, the dual parameter-map/
+# gradient-adjoint role of 2l2implied); everything there applies here
+# too, with these conditional.x differences:
+# - the mean parts are (residual) intercepts + slopes: beta.w/beta.b/
+#   beta.z instead of mu.w/mu.b/mu.z, with the same folding convention
+#   (only beta.w + beta.b is identified for the 'both' variables; their
+#   sum is beta.wb)
+# - the y block contains only the 'y' variables (ov.y.idx): the
+#   exogenous x variables (within.x.idx, between.x.idx) are removed
+#   from the tilde universe together with the between-only y variables
+#   (between.y.idx, the 'z' block)
 
 # when conditional.x = TRUE:
 # - sigma.w and sigma.b: same dimensions, level-1 'Y' variables only
@@ -15,13 +32,13 @@
 # - beta.b: beta y between part
 # - beta.z: beta z (between-only)
 lav_mvreg_cl_implied22l <- function(lp = NULL,
-                                         implied = NULL,
-                                         res_int_w = NULL,
-                                         res_int_b = NULL,
-                                         res_pi_w = NULL,
-                                         res_pi_b = NULL,
-                                         res_sigma_w = NULL,
-                                         res_sigma_b = NULL) {
+                                    implied = NULL,
+                                    res_int_w = NULL,
+                                    res_int_b = NULL,
+                                    res_pi_w = NULL,
+                                    res_pi_b = NULL,
+                                    res_sigma_w = NULL,
+                                    res_sigma_b = NULL) {
   if (!is.null(implied)) {
     # FIXME: only for single-group analysis!
     res_sigma_w <- implied$res.cov[[1]]
@@ -51,10 +68,6 @@ lav_mvreg_cl_implied22l <- function(lp = NULL,
   ov_y_idx1 <- ov_y_idx[[1]]
   ov_y_idx2 <- ov_y_idx[[2]]
 
-  # Sigma.W.tilde
-  sigma_w_tilde <- matrix(0, p_tilde, p_tilde)
-  sigma_w_tilde[ov_y_idx1, ov_y_idx1] <- res_sigma_w
-
   # INT.W.tilde
   int_w_tilde <- matrix(0, p_tilde, 1L)
   int_w_tilde[ov_y_idx1, 1L] <- res_int_w
@@ -64,12 +77,6 @@ lav_mvreg_cl_implied22l <- function(lp = NULL,
   pi_w_tilde[ov_y_idx1, ] <- res_pi_w
 
   beta_w_tilde <- rbind(t(int_w_tilde), t(pi_w_tilde))
-
-
-
-  # Sigma.B.tilde
-  sigma_b_tilde <- matrix(0, p_tilde, p_tilde)
-  sigma_b_tilde[ov_y_idx2, ov_y_idx2] <- res_sigma_b
 
   # INT.B.tilde
   int_b_tilde <- matrix(0, p_tilde, 1L)
@@ -81,26 +88,32 @@ lav_mvreg_cl_implied22l <- function(lp = NULL,
 
   beta_b_tilde <- rbind(t(int_b_tilde), t(pi_b_tilde))
 
-  if (length(between_y_idx) > 0L) {
-    rm_idx <- c(within_x_idx, between_x_idx, between_y_idx) # between AND x
-    beta_z <- beta_b_tilde[, between_y_idx, drop = FALSE]
-    beta_b <- beta_b_tilde[, -rm_idx, drop = FALSE]
-    beta_w <- beta_w_tilde[, -rm_idx, drop = FALSE]
-    sigma_zz <- sigma_b_tilde[between_y_idx, between_y_idx, drop = FALSE]
-    sigma_yz <- sigma_b_tilde[-rm_idx, between_y_idx, drop = FALSE]
-    sigma_b <- sigma_b_tilde[-rm_idx, -rm_idx, drop = FALSE]
-    sigma_w <- sigma_w_tilde[-rm_idx, -rm_idx, drop = FALSE]
-  } else {
-    rm_idx <- c(within_x_idx, between_x_idx) # all 'x'
-    beta_z <- matrix(0, 0L, 0L)
-    sigma_zz <- matrix(0, 0L, 0L)
-    beta_b <- beta_b_tilde[, -rm_idx, drop = FALSE]
-    beta_w <- beta_w_tilde[, -rm_idx, drop = FALSE]
-    sigma_b <- sigma_b_tilde[-rm_idx, -rm_idx, drop = FALSE]
-    sigma_w <- sigma_w_tilde[-rm_idx, -rm_idx, drop = FALSE]
-    sigma_yz <- matrix(0, nrow(sigma_w), 0L)
-  }
+  # remove all 'x' (and the between-only y) columns from the tilde universe
+  rm_idx <- c(within_x_idx, between_x_idx, between_y_idx)
 
+  # sigma blocks: shared scatter/gather core (lav_mvnorm_cluster_kernels.R)
+  out_sigma <- lav_cl_sigma_22l(
+    sigma_w = res_sigma_w, sigma_b = res_sigma_b, p_tilde = p_tilde,
+    l1_idx = ov_y_idx1, l2_idx = ov_y_idx2,
+    z_idx = between_y_idx, rm_idx = rm_idx
+  )
+  sigma_w <- out_sigma$sigma.w
+  sigma_b <- out_sigma$sigma.b
+  sigma_zz <- out_sigma$sigma.zz
+  sigma_yz <- out_sigma$sigma.yz
+
+  # beta blocks
+  y_idx <- seq_len(p_tilde)
+  if (length(rm_idx) > 0L) {
+    y_idx <- y_idx[-rm_idx]
+  }
+  beta_w <- beta_w_tilde[, y_idx, drop = FALSE]
+  beta_b <- beta_b_tilde[, y_idx, drop = FALSE]
+  if (length(between_y_idx) > 0L) {
+    beta_z <- beta_b_tilde[, between_y_idx, drop = FALSE]
+  } else {
+    beta_z <- matrix(0, 0L, 0L)
+  }
 
   # beta.wb # FIXME: not correct if some 'x' are split (overlap)
   # but because we ALWAYS treat split-x as 'y', this is not a problem
@@ -117,13 +130,13 @@ lav_mvreg_cl_implied22l <- function(lp = NULL,
 
 # recreate implied matrices from 2L matrices
 lav_mvreg_cl_2l2implied <- function(lp,
-                                         sigma_w = NULL,
-                                         sigma_b = NULL,
-                                         sigma_zz = NULL,
-                                         sigma_yz = NULL,
-                                         beta_w = NULL,
-                                         beta_b = NULL,
-                                         beta_z = NULL) {
+                                    sigma_w = NULL,
+                                    sigma_b = NULL,
+                                    sigma_zz = NULL,
+                                    sigma_yz = NULL,
+                                    beta_w = NULL,
+                                    beta_b = NULL,
+                                    beta_z = NULL) {
   # within/between idx
   # within_x_idx <- lp$within.x.idx[[1]]
   between_y_idx <- lp$between.y.idx[[2]]
@@ -154,10 +167,6 @@ lav_mvreg_cl_2l2implied <- function(lp,
   pi_w_tilde <- matrix(0, p_tilde, nrow(beta_w) - 1L)
   pi_w_tilde[ov_y_idx1, ] <- t(beta_w[-1L, ])
 
-  # Sigma.B.tilde
-  sigma_b_tilde <- matrix(0, p_tilde, p_tilde)
-  sigma_b_tilde[ov_y_idx1, ov_y_idx1] <- sigma_b
-
   # INT.B.tilde
   int_b_tilde <- matrix(0, p_tilde, 1L)
   int_b_tilde[ov_y_idx1, 1L] <- beta_b[1L, ]
@@ -169,16 +178,19 @@ lav_mvreg_cl_2l2implied <- function(lp,
   if (length(between_y_idx) > 0L) {
     int_b_tilde[between_y_idx, 1L] <- beta_z[1L, ]
     pi_b_tilde[between_y_idx, ] <- t(beta_z[-1L, ])
-    sigma_b_tilde[between_y_idx, between_y_idx] <- sigma_zz
-    sigma_b_tilde[ov_y_idx1, between_y_idx] <- sigma_yz
-    sigma_b_tilde[between_y_idx, ov_y_idx1] <- t(sigma_yz)
   }
+
+  # Sigma.B: shared scatter/gather core (lav_mvnorm_cluster_kernels.R)
+  res_sigma_b <- lav_cl_sigma_2l2(
+    sigma_b = sigma_b, sigma_zz = sigma_zz, sigma_yz = sigma_yz,
+    p_tilde = p_tilde, y_idx = ov_y_idx1, z_idx = between_y_idx,
+    l2_idx = ov_y_idx2
+  )
 
   res_sigma_w <- sigma_w_tilde[ov_y_idx1, ov_y_idx1, drop = FALSE]
   res_int_w <- int_w_tilde[ov_y_idx1, , drop = FALSE]
   res_pi_w <- pi_w_tilde[ov_y_idx1, , drop = FALSE]
 
-  res_sigma_b <- sigma_b_tilde[ov_y_idx2, ov_y_idx2, drop = FALSE]
   res_int_b <- int_b_tilde[ov_y_idx2, , drop = FALSE]
   res_pi_b <- pi_b_tilde[ov_y_idx2, , drop = FALSE]
 
@@ -314,17 +326,17 @@ lav_mvreg_cl_grad_sigma_kernel <- function(nj = NULL,
 }
 
 lav_mvreg_cl_loglik_samp_2l <- function(ylp = NULL,
-                                                    lp = NULL,
-                                                    res_sigma_w = NULL,
-                                                    res_int_w = NULL,
-                                                    res_pi_w = NULL,
-                                                    res_sigma_b = NULL,
-                                                    res_int_b = NULL,
-                                                    res_pi_b = NULL,
-                                                    out = NULL, # 2l
-                                                    sinv_method = "eigen",
-                                                    log2pi = FALSE,
-                                                    minus_two = TRUE) {
+                                        lp = NULL,
+                                        res_sigma_w = NULL,
+                                        res_int_w = NULL,
+                                        res_pi_w = NULL,
+                                        res_sigma_b = NULL,
+                                        res_int_b = NULL,
+                                        res_pi_b = NULL,
+                                        out = NULL, # 2l
+                                        sinv_method = "eigen",
+                                        log2pi = FALSE,
+                                        minus_two = TRUE) {
   # map implied to 2l matrices
   if (is.null(out)) {
     out <- lav_mvreg_cl_implied22l(
@@ -340,14 +352,7 @@ lav_mvreg_cl_loglik_samp_2l <- function(ylp = NULL,
   sigma_zz <- out$sigma.zz
   sigma_yz <- out$sigma.yz
   beta_z <- out$beta.z
-  beta_wb <- out$beta.wb
-
-  # check for beta.wb
-  if (is.null(out$beta.wb)) {
-    beta_wb <- rbind(out$beta.w, out$beta.b[-1, , drop = FALSE])
-    beta_wb[1, ] <- beta_wb[1, , drop = FALSE] +
-      out$beta.b[1, , drop = FALSE]
-  }
+  beta_wb <- out$beta.wb # out= must be a complete implied22l output
 
   # log 2*pi
   log_2pi <- log(2 * pi)
@@ -452,16 +457,16 @@ lav_mvreg_cl_loglik_samp_2l <- function(ylp = NULL,
 
 # first derivative -2*logl wrt Beta.W, Beta.B, Sigma.W, Sigma.B
 lav_mvreg_cl_dlogl_2l_samp <- function(ylp = NULL,
-                                                   lp = NULL,
-                                                   res_sigma_w = NULL,
-                                                   res_int_w = NULL,
-                                                   res_pi_w = NULL,
-                                                   res_sigma_b = NULL,
-                                                   res_int_b = NULL,
-                                                   res_pi_b = NULL,
-                                                   out = NULL, # 2l
-                                                   return_list = FALSE,
-                                                   sinv_method = "eigen") {
+                                       lp = NULL,
+                                       res_sigma_w = NULL,
+                                       res_int_w = NULL,
+                                       res_pi_w = NULL,
+                                       res_sigma_b = NULL,
+                                       res_int_b = NULL,
+                                       res_pi_b = NULL,
+                                       out = NULL, # 2l
+                                       return_list = FALSE,
+                                       sinv_method = "eigen") {
   # map implied to 2l matrices
   if (is.null(out)) {
     out <- lav_mvreg_cl_implied22l(
@@ -479,13 +484,7 @@ lav_mvreg_cl_dlogl_2l_samp <- function(ylp = NULL,
   beta_w <- out$beta.w
   beta_b <- out$beta.b
   beta_z <- out$beta.z
-  beta_wb <- out$beta.wb
-
-  # check for beta.wb
-  if (is.null(out$beta.wb)) {
-    beta_wb <- rbind(beta_w, beta_b[-1, , drop = FALSE])
-    beta_wb[1, ] <- beta_wb[1, , drop = FALSE] + beta_b[1, , drop = FALSE]
-  }
+  beta_wb <- out$beta.wb # out= must be a complete implied22l output
 
   # Lp
   cluster_size <- lp$cluster.size[[2]]
@@ -690,16 +689,16 @@ lav_mvreg_cl_dlogl_2l_samp <- function(ylp = NULL,
 
 # cluster-wise scores -2*logl wrt Beta.W, Beta.B, Sigma.W, Sigma.B
 lav_mvreg_cl_sc_2l <- function(y1 = NULL,
-                                        ylp = NULL,
-                                        lp = NULL,
-                                        res_sigma_w = NULL,
-                                        res_int_w = NULL,
-                                        res_pi_w = NULL,
-                                        res_sigma_b = NULL,
-                                        res_int_b = NULL,
-                                        res_pi_b = NULL,
-                                        out = NULL, # 2l
-                                        sinv_method = "eigen") {
+                               ylp = NULL,
+                               lp = NULL,
+                               res_sigma_w = NULL,
+                               res_int_w = NULL,
+                               res_pi_w = NULL,
+                               res_sigma_b = NULL,
+                               res_int_b = NULL,
+                               res_pi_b = NULL,
+                               out = NULL, # 2l
+                               sinv_method = "eigen") {
   # map implied to 2l matrices
   if (is.null(out)) {
     out <- lav_mvreg_cl_implied22l(
@@ -717,13 +716,7 @@ lav_mvreg_cl_sc_2l <- function(y1 = NULL,
   beta_w <- out$beta.w
   beta_b <- out$beta.b
   beta_z <- out$beta.z
-  beta_wb <- out$beta.wb
-
-  # check for beta.wb
-  if (is.null(out$beta.wb)) {
-    beta_wb <- rbind(beta_w, beta_b[-1, , drop = FALSE])
-    beta_wb[1, ] <- beta_wb[1, , drop = FALSE] + beta_b[1, , drop = FALSE]
-  }
+  beta_wb <- out$beta.wb # out= must be a complete implied22l output
 
   # Lp
   nclusters <- lp$nclusters[[2]]
@@ -1014,16 +1007,16 @@ lav_mvreg_cl_sc_2l <- function(y1 = NULL,
 
 # first-order information: outer crossprod of scores per cluster
 lav_mvreg_cl_info_firstorder <- function(y1 = NULL,
-                                                     ylp = NULL,
-                                                     lp = NULL,
-                                                     res_sigma_w = NULL,
-                                                     res_int_w = NULL,
-                                                     res_pi_w = NULL,
-                                                     res_sigma_b = NULL,
-                                                     res_int_b = NULL,
-                                                     res_pi_b = NULL,
-                                                     divide_by_two = FALSE,
-                                                     sinv_method = "eigen") {
+                                         ylp = NULL,
+                                         lp = NULL,
+                                         res_sigma_w = NULL,
+                                         res_int_w = NULL,
+                                         res_pi_w = NULL,
+                                         res_sigma_b = NULL,
+                                         res_int_b = NULL,
+                                         res_pi_b = NULL,
+                                         divide_by_two = FALSE,
+                                         sinv_method = "eigen") {
   scores <- lav_mvreg_cl_sc_2l(
     y1 = y1,
     ylp = ylp,

@@ -4,25 +4,33 @@
 # - objective function: first version around March 2021 (see Psych paper)
 # - analytic gradient: first version around May 2021
 
+# NOTE: see the top of lav_mvnorm_cluster.R for the 'implied' vs '2l'
+# representations and the invariants of the conversion functions
 
-# Mu.W, Mu.B, Sigma.W, Sigma.B are the model-implied statistics
+
+# Mu.W, Mu.B, Sigma.W, Sigma.B are the model-implied statistics; a
+# pre-converted 2l list (as returned by lav_mvn_cl_implied22l) may be
+# passed as out= instead, to avoid re-converting
 lav_mvn_cl_mi_loglik_samp_2l <- function(y1 = NULL,
-                                                         y2 = NULL,
-                                                         lp = NULL,
-                                                         mp = NULL,
-                                                         mu_w = NULL,
-                                                         sigma_w = NULL,
-                                                         mu_b = NULL,
-                                                         sigma_b = NULL,
-                                                         sinv_method = "eigen",
-                                                         log2pi = FALSE,
-                                                         loglik_x = 0,
-                                                         minus_two = TRUE) {
-  # map implied to 2l matrices
-  out <- lav_mvn_cl_implied22l(
-    lp = lp, mu_w = mu_w, mu_b = mu_b,
-    sigma_w = sigma_w, sigma_b = sigma_b
-  )
+                                         y2 = NULL,
+                                         lp = NULL,
+                                         mp = NULL,
+                                         mu_w = NULL,
+                                         sigma_w = NULL,
+                                         mu_b = NULL,
+                                         sigma_b = NULL,
+                                         sinv_method = "eigen",
+                                         log2pi = FALSE,
+                                         loglik_x = 0,
+                                         minus_two = TRUE,
+                                         out = NULL) {
+  # map implied to 2l matrices (unless the caller already did)
+  if (is.null(out)) {
+    out <- lav_mvn_cl_implied22l(
+      lp = lp, mu_w = mu_w, mu_b = mu_b,
+      sigma_w = sigma_w, sigma_b = sigma_b
+    )
+  }
   mu_y <- out$mu.y
   mu_z <- out$mu.z
   sigma_w_1 <- out$sigma.w
@@ -147,7 +155,6 @@ lav_mvn_cl_mi_loglik_samp_2l <- function(y1 = NULL,
 
   # Y per missing pattern
   w_logdet <- 0
-  #MPi <- integer(nrow(Y1))
   for (p in seq_len(mp$npatterns)) {
     freq <- mp$freq[p]
     na_idx <- which(!mp$pat[p, ])
@@ -158,8 +165,6 @@ lav_mvn_cl_mi_loglik_samp_2l <- function(y1 = NULL,
 
     # compute sigma.w.inv for this pattern
     if (length(na_idx) > 0L) {
-      #MPi[Mp$case.idx[[p]]] <- p
-      # wp <- sigma_w_1[-na_idx, -na_idx, drop = FALSE]
       wp_inv <- lav_mat_sym_inverse_update(
         s_inv = sigma_w_inv, rm_idx = na_idx,
         logdet = TRUE, s_logdet = sigma_w_logdet
@@ -714,19 +719,22 @@ lav_mvn_cl_mi_em_engine <- function(y1 = NULL,
     theta_new
   } # em_step
 
-  # loglikelihood at theta
+  # loglikelihood at theta -- the state is already in 2l form, so we can
+  # skip the 2l -> implied -> 2l round trip (mu.y = mu.w + mu.b, with
+  # mu.b[within-only] structurally zero; see the invariants at the top of
+  # lav_mvnorm_cluster.R)
   em_logl <- function(theta) {
     th <- em_unpack(theta)
-    implied2 <- lav_mvn_cl_2l2implied(
-      lp = lp, sigma_w = th$sigma_w, sigma_b = th$sigma_b,
-      sigma_zz = th$sigma_zz, sigma_yz = th$sigma_yz, mu_z = th$mu_z,
-      mu_y = NULL, mu_w = th$mu_w, mu_b = th$mu_b
+    out <- list(
+      sigma.w = th$sigma_w, sigma.b = th$sigma_b,
+      sigma.zz = th$sigma_zz, sigma.yz = th$sigma_yz,
+      mu.z = th$mu_z, mu.y = th$mu_w + th$mu_b,
+      mu.w = th$mu_w, mu.b = th$mu_b
     )
     lav_mvn_cl_mi_loglik_samp_2l(
       y1 = y1, y2 = y2, lp = lp, mp = mp,
-      mu_w = implied2$Mu.W, sigma_w = implied2$Sigma.W,
-      mu_b = implied2$Mu.B, sigma_b = implied2$Sigma.B,
-      loglik_x = loglik_x, log2pi = TRUE, minus_two = FALSE
+      loglik_x = loglik_x, log2pi = TRUE, minus_two = FALSE,
+      out = out
     )
   }
 
@@ -901,12 +909,15 @@ lav_mvn_cl_mi_posterior <- function(y1 = NULL,
                                     mu_w = NULL, # implied Mu.W
                                     sigma_w = NULL, # implied Sigma.W
                                     mu_b = NULL, # implied Mu.B
-                                    sigma_b = NULL) { # implied Sigma.B
-  # map implied to 2l matrices
-  out <- lav_mvn_cl_implied22l(
-    lp = lp, mu_w = mu_w, mu_b = mu_b,
-    sigma_w = sigma_w, sigma_b = sigma_b
-  )
+                                    sigma_b = NULL, # implied Sigma.B
+                                    out = NULL) { # pre-converted 2l list
+  # map implied to 2l matrices (unless the caller already did)
+  if (is.null(out)) {
+    out <- lav_mvn_cl_implied22l(
+      lp = lp, mu_w = mu_w, mu_b = mu_b,
+      sigma_w = sigma_w, sigma_b = sigma_b
+    )
+  }
   mu_y <- out$mu.y
   mu_z <- out$mu.z
   sw <- out$sigma.w
@@ -1164,16 +1175,16 @@ lav_mvn_cl_mi_estep_ranef <- function(y1 = NULL,
 
 # Mu.W, Mu.B, Sigma.W, Sigma.B are the model-implied statistics
 lav_mvn_cl_mi_dlogl_2l_samp <- function(
-    y1 = NULL,
-    y2 = NULL,
-    lp = NULL,
-    mp = NULL,
-    mu_w = NULL,
-    sigma_w = NULL,
-    mu_b = NULL,
-    sigma_b = NULL,
-    sinv_method = "eigen",
-    return_list = FALSE) {
+                                        y1 = NULL,
+                                        y2 = NULL,
+                                        lp = NULL,
+                                        mp = NULL,
+                                        mu_w = NULL,
+                                        sigma_w = NULL,
+                                        mu_b = NULL,
+                                        sigma_b = NULL,
+                                        sinv_method = "eigen",
+                                        return_list = FALSE) {
   lav_mvn_cl_mi_grad_engine(
     y1 = y1, y2 = y2, lp = lp, mp = mp,
     mu_w = mu_w, sigma_w = sigma_w,
@@ -1185,15 +1196,15 @@ lav_mvn_cl_mi_dlogl_2l_samp <- function(
 
 # cluster-wise scores -2*logl wrt Mu.W, Mu.B, Sigma.W, Sigma.B
 lav_mvn_cl_mi_sc_2l <- function(
-    y1 = NULL,
-    y2 = NULL,
-    lp = NULL,
-    mp = NULL,
-    mu_w = NULL,
-    sigma_w = NULL,
-    mu_b = NULL,
-    sigma_b = NULL,
-    sinv_method = "eigen") {
+                                y1 = NULL,
+                                y2 = NULL,
+                                lp = NULL,
+                                mp = NULL,
+                                mu_w = NULL,
+                                sigma_w = NULL,
+                                mu_b = NULL,
+                                sigma_b = NULL,
+                                sinv_method = "eigen") {
   lav_mvn_cl_mi_grad_engine(
     y1 = y1, y2 = y2, lp = lp, mp = mp,
     mu_w = mu_w, sigma_w = sigma_w,
@@ -1205,17 +1216,17 @@ lav_mvn_cl_mi_sc_2l <- function(
 
 # first-order information: outer crossprod of scores per cluster
 lav_mvn_cl_mi_info_firstorder <- function(
-    y1 = NULL,
-    y2 = NULL,
-    lp = NULL,
-    mp = NULL,
-    mu_w = NULL,
-    sigma_w = NULL,
-    mu_b = NULL,
-    sigma_b = NULL,
-    x_idx = NULL,
-    divide_by_two = FALSE,
-    sinv_method = "eigen") {
+                                          y1 = NULL,
+                                          y2 = NULL,
+                                          lp = NULL,
+                                          mp = NULL,
+                                          mu_w = NULL,
+                                          sigma_w = NULL,
+                                          mu_b = NULL,
+                                          sigma_b = NULL,
+                                          x_idx = NULL,
+                                          divide_by_two = FALSE,
+                                          sinv_method = "eigen") {
 
   scores <- lav_mvn_cl_mi_sc_2l(
     y1 = y1,
@@ -1251,17 +1262,17 @@ lav_mvn_cl_mi_info_firstorder <- function(
 #
 # numerical approximation (for now)
 lav_mvn_cl_mi_info_observed <- function(
-    y1 = NULL,
-    y2 = NULL,
-    lp = NULL,
-    mp = NULL,
-    ylp = NULL,
-    mu_w = NULL,
-    sigma_w = NULL,
-    mu_b = NULL,
-    sigma_b = NULL,
-    x_idx = integer(0L),
-    sinv_method = "eigen") {
+                                        y1 = NULL,
+                                        y2 = NULL,
+                                        lp = NULL,
+                                        mp = NULL,
+                                        ylp = NULL,
+                                        mu_w = NULL,
+                                        sigma_w = NULL,
+                                        mu_b = NULL,
+                                        sigma_b = NULL,
+                                        x_idx = integer(0L),
+                                        sinv_method = "eigen") {
   lav_mvn_cl_info_obs_engine(
     lp = lp,
     mu_w = mu_w, sigma_w = sigma_w,

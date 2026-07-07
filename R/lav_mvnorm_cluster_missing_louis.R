@@ -48,12 +48,15 @@ lav_mvn_cl_mi_scov_louis <- function(y1 = NULL,
                                      sigma_w = NULL, # implied Sigma.W
                                      mu_b = NULL, # implied Mu.B
                                      sigma_b = NULL, # implied Sigma.B
-                                     extra = FALSE) {
-  # map implied to 2l matrices (for the posterior machinery)
-  out <- lav_mvn_cl_implied22l(
-    lp = lp, mu_w = mu_w, mu_b = mu_b,
-    sigma_w = sigma_w, sigma_b = sigma_b
-  )
+                                     extra = FALSE,
+                                     out = NULL) { # pre-converted 2l list
+  # map implied to 2l matrices (unless the caller already did)
+  if (is.null(out)) {
+    out <- lav_mvn_cl_implied22l(
+      lp = lp, mu_w = mu_w, mu_b = mu_b,
+      sigma_w = sigma_w, sigma_b = sigma_b
+    )
+  }
   mu_y <- out$mu.y
   mu_z <- out$mu.z
   sw <- out$sigma.w # == sigma_w (within/y1w space)
@@ -102,7 +105,8 @@ lav_mvn_cl_mi_scov_louis <- function(y1 = NULL,
   # (shared with lav_mvn_cl_mi_estep_ranef)
   post <- lav_mvn_cl_mi_posterior(
     y1 = y1, y2 = y2, lp = lp, mp = mp,
-    mu_w = mu_w, sigma_w = sigma_w, mu_b = mu_b, sigma_b = sigma_b
+    mu_w = mu_w, sigma_w = sigma_w, mu_b = mu_b, sigma_b = sigma_b,
+    out = out
   )
   breg_p <- post$breg
   ccond_p <- post$ccond
@@ -381,9 +385,11 @@ lav_mvn_cl_mi_h_louis <- function(lavmodel = NULL,
   estat_mu_b[seq_len(nb)] <- estat_mu_b[seq_len(nb)] - s0
 
   # 2. Cov[ S_complete | v.obs ] in moment space (-2 logl scale)
+  #    (out2 avoids re-converting the same implied moments)
   scov <- lav_mvn_cl_mi_scov_louis(
     y1 = y1, y2 = y2, lp = lp, mp = mp,
-    mu_w = mu_w, sigma_w = sigma_w, mu_b = mu_b, sigma_b = sigma_b
+    mu_w = mu_w, sigma_w = sigma_w, mu_b = mu_b, sigma_b = sigma_b,
+    out = out2
   )$scov
 
   # 3. term A: jacobian of the complete-data gradient (in theta space),

@@ -832,15 +832,6 @@ lav_model_objective_2l <- function(lavmodel = NULL,
       lav_msg_stop(gettext("multilevel + conditional.x is not ready yet for
                            fiml; rerun with conditional.x = FALSE"))
     }
-    # SIGMA.B <- Sigma.B[Lp$both.idx[[2]], Lp$both.idx[[2]], drop = FALSE]
-    # if(any(diag(SIGMA.B) < 0)) {
-    #    return(+Inf)
-    # }
-    # COR.B <- cov2cor(SIGMA.B)
-    # if(any(abs(lav_mat_vech(COR.B, diagonal = FALSE)) > 1)) {
-    #   return(+Inf)
-    # }
-
     y2 <- lavsamplestats@YLp[[group]][[2]]$Y2
     # yp <- lavsamplestats@missing[[group]]
     loglik <- lav_mvn_cl_mi_loglik_samp_2l(

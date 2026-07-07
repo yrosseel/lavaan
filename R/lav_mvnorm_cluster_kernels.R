@@ -10,6 +10,90 @@
 # YR/CC 03 July 2026: first version (refactoring; no change in behavior)
 
 
+# 0) shared scatter/gather core of the implied <-> 2l conversions
+#    (see the representation invariants at the top of lav_mvnorm_cluster.R)
+#
+#    the sigma blocks of lav_mvn_cl_implied22l/lav_mvreg_cl_implied22l and
+#    their inverses only differ in which index sets partition the tilde
+#    universe:
+#      mvnorm: l1_idx/l2_idx = ov.idx[[1]]/[[2]], z_idx = between.idx,
+#              rm_idx = between.idx
+#      mvreg : l1_idx/l2_idx = ov.y.idx[[1]]/[[2]], z_idx = between.y.idx,
+#              rm_idx = within.x.idx + between.x.idx (+ between.y.idx)
+
+# implied -> 2l: scatter the per-level covariance matrices into the tilde
+# universe and gather the y/z blocks
+lav_cl_sigma_22l <- function(sigma_w = NULL,
+                             sigma_b = NULL,
+                             p_tilde = NULL,
+                             l1_idx = NULL,
+                             l2_idx = NULL,
+                             z_idx = NULL,
+                             rm_idx = NULL) {
+  # scatter into the tilde universe
+  sigma_w_tilde <- matrix(0, p_tilde, p_tilde)
+  sigma_w_tilde[l1_idx, l1_idx] <- sigma_w
+  sigma_b_tilde <- matrix(0, p_tilde, p_tilde)
+  sigma_b_tilde[l2_idx, l2_idx] <- sigma_b
+
+  # gather the y/z blocks
+  y_idx <- seq_len(p_tilde)
+  if (length(rm_idx) > 0L) {
+    y_idx <- y_idx[-rm_idx]
+  }
+  if (length(z_idx) > 0L) {
+    sigma_zz <- sigma_b_tilde[z_idx, z_idx, drop = FALSE]
+    sigma_yz <- sigma_b_tilde[y_idx, z_idx, drop = FALSE]
+  } else {
+    sigma_zz <- matrix(0, 0L, 0L)
+    sigma_yz <- matrix(0, length(y_idx), 0L)
+  }
+
+  list(
+    sigma.w = sigma_w_tilde[y_idx, y_idx, drop = FALSE],
+    sigma.b = sigma_b_tilde[y_idx, y_idx, drop = FALSE],
+    sigma.zz = sigma_zz, sigma.yz = sigma_yz
+  )
+}
+
+# 2l -> implied: rebuild the level-2 covariance matrix from its y/z blocks
+# (the within matrix needs no reassembly: it is the y block itself)
+lav_cl_sigma_2l2 <- function(sigma_b = NULL,
+                             sigma_zz = NULL,
+                             sigma_yz = NULL,
+                             p_tilde = NULL,
+                             y_idx = NULL,
+                             z_idx = NULL,
+                             l2_idx = NULL) {
+  sigma_b_tilde <- matrix(0, p_tilde, p_tilde)
+  sigma_b_tilde[y_idx, y_idx] <- sigma_b
+  if (length(z_idx) > 0L) {
+    sigma_b_tilde[y_idx, z_idx] <- sigma_yz
+    sigma_b_tilde[z_idx, y_idx] <- t(sigma_yz)
+    sigma_b_tilde[z_idx, z_idx] <- sigma_zz
+  }
+  sigma_b_tilde[l2_idx, l2_idx, drop = FALSE]
+}
+
+# vech/vec positions (in the tilde vech space) of the per-level and y/z
+# blocks; shared by the scores/information rearrangement code below
+lav_cl_vech_blocks <- function(p_tilde = NULL,
+                               l1_idx = NULL,
+                               l2_idx = NULL,
+                               z_idx = integer(0L)) {
+  b_tilde <- lav_mat_vech_rev(seq_len(p_tilde * (p_tilde + 1) / 2))
+  out <- list(
+    l1 = lav_mat_vech(b_tilde[l1_idx, l1_idx, drop = FALSE]),
+    l2 = lav_mat_vech(b_tilde[l2_idx, l2_idx, drop = FALSE])
+  )
+  if (length(z_idx) > 0L) {
+    out$yz <- lav_mat_vec(b_tilde[l1_idx, z_idx, drop = FALSE])
+    out$zz <- lav_mat_vech(b_tilde[z_idx, z_idx, drop = FALSE])
+  }
+  out
+}
+
+
 # 1) per-cluster-size cache of Sigma.j = nj*Sigma.b.z + Sigma.w quantities
 #
 #    Sigma.j only depends on the cluster SIZE nj, so the scores engine
@@ -72,31 +156,18 @@ lav_mvn_cl_scores_2implied <- function(lp = NULL,
 
   # Sigma.B
   p_tilde_star <- p_tilde * (p_tilde + 1) / 2
-  b_tilde <- lav_mat_vech_rev(seq_len(p_tilde_star))
+  vidx <- lav_cl_vech_blocks(
+    p_tilde = p_tilde, l1_idx = ov_idx[[1]], l2_idx = ov_idx[[2]],
+    z_idx = between_idx
+  )
 
   sigma_b_tilde <- matrix(0, nclusters, p_tilde_star)
-
-  col_idx <- lav_mat_vech(b_tilde[ov_idx[[1]], ov_idx[[1]],
-    drop = FALSE
-  ])
-  sigma_b_tilde[, col_idx] <- g_sigma_b
-
+  sigma_b_tilde[, vidx$l1] <- g_sigma_b
   if (length(between_idx) > 0L) {
-    col_idx <- lav_mat_vec(b_tilde[ov_idx[[1]], between_idx,
-      drop = FALSE
-    ])
-    sigma_b_tilde[, col_idx] <- g_sigma_yz
-
-    col_idx <- lav_mat_vech(b_tilde[between_idx, between_idx,
-      drop = FALSE
-    ])
-    sigma_b_tilde[, col_idx] <- g_sigma_zz
+    sigma_b_tilde[, vidx$yz] <- g_sigma_yz
+    sigma_b_tilde[, vidx$zz] <- g_sigma_zz
   }
-
-  col_idx <- lav_mat_vech(b_tilde[ov_idx[[2]], ov_idx[[2]],
-    drop = FALSE
-  ])
-  sigma_b <- sigma_b_tilde[, col_idx, drop = FALSE]
+  sigma_b <- sigma_b_tilde[, vidx$l2, drop = FALSE]
 
   cbind(mu_w, sigma_w, mu_b, sigma_b)
 }
