@@ -345,7 +345,8 @@ lav_samp_from_data <- function(lavdata = NULL,        # nolint start
     cat_1 <- list()
     if ("ordered" %in% ov_types) {
       categorical <- TRUE
-      if (nlevels > 1L) {
+      if (nlevels > 1L &&
+        !lavoptions$estimator %in% c("WLS", "DWLS", "ULS")) {
         lav_msg_warn(gettext("multilevel + categorical not supported yet."))
       }
     }

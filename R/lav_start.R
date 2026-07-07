@@ -1008,16 +1008,24 @@ lav_start <- function(start_method = "default",
   # new in 0.6-21
   # if any thresholds, make sure they are in increasing order
   # (could be an issue if the first and second were fixed to 0 and 1)
-  for (g in 1:ngroups) {
-    th_idx <- which(lavpartable$group == group_values[g] &
-                    lavpartable$op == "|")
+  # note: per block! (for two-level models, the level-1 thresholds are
+  # all fixed to zero and must not trigger the repair for the (free)
+  # level-2 thresholds of the same item)
+  nblocks <- lav_pt_nblocks(lavpartable)
+  block_values <- if (is.null(lavpartable$block)) {
+    rep(1L, length(lavpartable$lhs))
+  } else {
+    lavpartable$block
+  }
+  for (b in seq_len(nblocks)) {
+    th_idx <- which(block_values == b & lavpartable$op == "|")
     if (length(th_idx) > 0L) {
       # for every ov.ord, check if t1 < t2 < t3 < ...
       ov_ord <- unique(lavpartable$lhs[th_idx])
       for (oo in ov_ord) {
-        this_idx <- which(lavpartable$group == group_values[g] &
+        this_idx <- which(block_values == b &
                           lavpartable$op == "|" & lavpartable$lhs == oo)
-        this_free_idx <- which(lavpartable$group == group_values[g] &
+        this_free_idx <- which(block_values == b &
                                lavpartable$op == "|" & lavpartable$lhs == oo &
                                lavpartable$free > 0)
         item_th <- start[this_idx]
@@ -1030,6 +1038,24 @@ lav_start <- function(start_method = "default",
     }
   }
 
+
+  # two-level categorical: give the (free) between-level residual
+  # variances of the ordinal variables a strictly positive starting value
+  if (!is.null(lavpartable$level)) {
+    level_values <- lav_pt_level_values(lavpartable)
+    if (length(level_values) > 1L && any(lavpartable$op == "|")) {
+      ord_names <- unique(lavpartable$lhs[lavpartable$op == "|"])
+      ord_bvar_idx <- which(lavpartable$op == "~~" &
+        lavpartable$lhs == lavpartable$rhs &
+        lavpartable$lhs %in% ord_names &
+        lavpartable$level %in% level_values[-1L] &
+        lavpartable$free > 0L)
+      if (length(ord_bvar_idx) > 0L) {
+        small_idx <- ord_bvar_idx[start[ord_bvar_idx] < 0.01]
+        start[small_idx] <- 0.05
+      }
+    }
+  }
 
   # final check: no NaN or other non-finite values
   bad_idx <- which(!is.finite(start))

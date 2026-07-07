@@ -976,6 +976,13 @@ lav_model_delta <- function(lavmodel = NULL, glist = NULL,
                             m_el_idx = NULL, x_el_idx = NULL,
                             ceq_simple = FALSE) {
 
+  # two-level + categorical: custom standardized Jacobian, stacked per
+  # group (see lav_model_wls_2l_cat.R); 'free' parameters only
+  if (lavmodel@multilevel && lavmodel@categorical &&
+    is.null(m_el_idx)) {
+    return(lav_m07_delta(lavmodel = lavmodel, glist = glist))
+  }
+
   representation <- lavmodel@representation
   if (representation == "RAM") {
     if (lavmodel@conditional.x || lavmodel@categorical ||

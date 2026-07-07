@@ -177,7 +177,9 @@ lav_pt_indep_or_unrestricted <- function(lavobject = NULL,
   if (nlevels > 1L) {
     # fixed.x       <- FALSE # for now
     conditional_x <- FALSE # for now
-    categorical <- FALSE # for now
+    if (!lavoptions$estimator %in% c("WLS", "DWLS", "ULS")) {
+      categorical <- FALSE # for now
+    }
   }
 
   lhs <- rhs <- op <- character(0)
@@ -342,11 +344,24 @@ lav_pt_indep_or_unrestricted <- function(lavobject = NULL,
 
         if (length(ord_names) > 0L) {
           # fix variances to 1.0
-          idx <- which(lhs %in% ord_names & op == "~~" & lhs == rhs)
-          ustart[idx] <- 1.0
-          free[idx] <- 0L
+          # (two-level, theta parameterization: at the WITHIN level only;
+          #  the between-level variances of the ordinal variables are free)
+          if (nlevels > 1L) {
+            if (l == 1L) {
+              idx <- which(lhs %in% ord_names & op == "~~" & lhs == rhs &
+                           block == b)
+              ustart[idx] <- 1.0
+              free[idx] <- 0L
+            }
+          } else {
+            idx <- which(lhs %in% ord_names & op == "~~" & lhs == rhs)
+            ustart[idx] <- 1.0
+            free[idx] <- 0L
+          }
 
           # add thresholds
+          # (two-level: at the between level only)
+          if (nlevels == 1L || l == nlevels) {
           lhs_th <- character(0)
           rhs_th <- character(0)
           for (o in ord_names) {
@@ -372,6 +387,7 @@ lav_pt_indep_or_unrestricted <- function(lavobject = NULL,
           } else {
             ustart <- c(ustart, rep(as.numeric(NA), nel))
           }
+          } # thresholds
 
           # fixed-to-zero intercepts (since 0.5.17)
           ov_int <- ord_names

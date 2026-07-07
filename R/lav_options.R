@@ -431,8 +431,24 @@ lav_options_set <- function(opt = NULL) {
           "sampling weights are not supported for two-level (D)WLS
           estimation (yet)."))
       }
-      # the sample 'statistics' are the h1 (saturated) estimates
-      opt$h1 <- TRUE
+      if (opt$.categorical) {
+        # categorical two-level (D)WLS:
+        # - the stage-wise estimation works in the theta parameterization
+        #   (the within-level latent response variances are fixed to 1)
+        if (opt$parameterization == "default") {
+          opt$parameterization <- "theta"
+        } else if (opt$parameterization != "theta") {
+          lav_msg_stop(gettext(
+            "two-level (D)WLS estimation with categorical data requires
+            parameterization = \"theta\"."))
+        }
+        # - no (continuous) h1 model; the unrestricted statistics come
+        #   from the stage-wise (univariate + bivariate) estimation
+        opt$h1 <- FALSE
+      } else {
+        # the sample 'statistics' are the h1 (saturated) estimates
+        opt$h1 <- TRUE
+      }
 
       # test
       if (length(opt$test) == 1L && opt$test == "default") {

@@ -410,12 +410,24 @@ lavaan <- function(
   # computed once the h1 model has been estimated
   if (lavdata@nlevels > 1L &&
     lavoptions$estimator %in% c("WLS", "DWLS", "ULS")) {
-    lavsamplestats <- lav_samp_wls_2l(
-      lavsamplestats = lavsamplestats,
-      lavh1          = lavh1,
-      lavdata        = lavdata,
-      lavoptions     = lavoptions
-    )
+    if (lavoptions$.categorical) {
+      # stage-wise (univariate + bivariate) estimation; this also
+      # provides the 'h1' (unrestricted) implied statistics
+      tmp <- lav_samp_wls_2l_cat(
+        lavsamplestats = lavsamplestats,
+        lavdata        = lavdata,
+        lavoptions     = lavoptions
+      )
+      lavsamplestats <- tmp$lavsamplestats
+      lavh1 <- tmp$lavh1
+    } else {
+      lavsamplestats <- lav_samp_wls_2l(
+        lavsamplestats = lavsamplestats,
+        lavh1          = lavh1,
+        lavdata        = lavdata,
+        lavoptions     = lavoptions
+      )
+    }
     timing <- lav_add_timing(timing, "wls2l")
   }
 

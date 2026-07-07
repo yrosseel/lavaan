@@ -5,6 +5,11 @@
 # Delta matrix (lav_model_delta)
 lav_model_wls_est <- function(lavmodel = NULL, glist = NULL,
                               lavimplied = NULL) {
+  # two-level + categorical: the standardized stage-wise layout
+  # (see lav_model_wls_2l_cat.R); already stacked per group
+  if (lavmodel@multilevel && lavmodel@categorical) {
+    return(lav_m07_wls_est(lavmodel = lavmodel, glist = glist))
+  }
   nblocks <- lavmodel@nblocks
   meanstructure <- lavmodel@meanstructure
   correlation <- lavmodel@correlation

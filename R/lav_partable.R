@@ -513,6 +513,21 @@ lav_model_pt  <- function(
       tmp_list$level %in% level_values[-1L])
     tmp_list$free[scale_idx] <- 0L
     tmp_list$ustart[scale_idx] <- 1
+
+    # theta parameterization: the residual variances of the ordinal
+    # variables are fixed to 1 at the WITHIN level only (setting the
+    # scale of the latent responses); at the between level they are free
+    if (parameterization == "theta") {
+      ord_bvar_idx <- which(tmp_list$op == "~~" &
+        tmp_list$lhs == tmp_list$rhs &
+        tmp_list$lhs %in% ov_ord &
+        tmp_list$level %in% level_values[-1L] &
+        tmp_list$user == 0L)
+      if (length(ord_bvar_idx) > 0L) {
+        tmp_list$free[ord_bvar_idx] <- 1L
+        tmp_list$ustart[ord_bvar_idx] <- as.numeric(NA)
+      }
+    }
   }
 
   # apply user-specified modifiers
