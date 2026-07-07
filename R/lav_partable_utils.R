@@ -195,17 +195,33 @@ lav_pt_ndat <- function(partable) {
       nvar_ord <- length(ov_ord)
       th <- lav_pt_vnames(partable, "th", block = b)
       nth <- length(th)
-      # no variances
-      ndat[b] <- ndat[b] - nvar_ord
-      # no means
-      ndat[b] <- ndat[b] - nvar_ord
-      # but additional thresholds
-      ndat[b] <- ndat[b] + nth
-      # add slopes
-      if (conditional_x) {
-        ov_names_x <- lav_pt_vnames(partable, "ov.x", block = b)
-        nexo <- length(ov_names_x)
-        ndat[b] <- ndat[b] + (nvar * nexo)
+      if (nlevels > 1L) {
+        # two-level categorical (theta parameterization):
+        if ((b %% nlevels) == 1L) {
+          # within level: no variances for the ordinal variables (fixed
+          # to 1); the means were never counted; the thresholds are
+          # between-level statistics
+          ndat[b] <- ndat[b] - nvar_ord
+        } else {
+          # between level: no means for the ordinal variables (fixed to
+          # 0), but additional thresholds; the between variances of the
+          # ordinal variables ARE statistics
+          ndat[b] <- ndat[b] - nvar_ord
+          ndat[b] <- ndat[b] + nth
+        }
+      } else {
+        # no variances
+        ndat[b] <- ndat[b] - nvar_ord
+        # no means
+        ndat[b] <- ndat[b] - nvar_ord
+        # but additional thresholds
+        ndat[b] <- ndat[b] + nth
+        # add slopes
+        if (conditional_x) {
+          ov_names_x <- lav_pt_vnames(partable, "ov.x", block = b)
+          nexo <- length(ov_names_x)
+          ndat[b] <- ndat[b] + (nvar * nexo)
+        }
       }
     }
 

@@ -107,7 +107,10 @@ lav_model_h1_info_expected <- function(lavobject = NULL,
   }
 
   # sanity check
-  if (length(lavh1) == 0L) {
+  # (not needed for the estimators that read the precomputed WLS.V/WLS.VD
+  #  slots -- and for two-level categorical WLS there is no h1 object)
+  if (length(lavh1) == 0L &&
+    !lavmodel@estimator %in% c("GLS", "WLS", "DLS", "DWLS", "ULS")) {
     lavh1 <- lav_h1_implied_logl(
       lavdata = lavdata,
       lavsamplestats = lavsamplestats,

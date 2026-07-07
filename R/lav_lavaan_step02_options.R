@@ -203,9 +203,13 @@ lav_step02_options <- function(slot_options = NULL,
       # the cluster-aggregated Gamma in muthen1984() (issue #254). Multilevel
       # (nlevels > 1) categorical is still unsupported.
       multilevel <- length(ov_names_l) > 0L && length(ov_names_l[[1]]) > 1L
-      if (opt$.categorical && multilevel && toupper(estimator) != "PML") {
+      if (opt$.categorical && multilevel &&
+        toupper(estimator) != "PML" &&
+        !lav_options_estimatorgroup(tolower(estimator)) %in%
+          c("WLS", "DWLS", "ULS")) {
         lav_msg_stop(gettext(
-          "multilevel + categorical is not supported yet."))
+          "multilevel + categorical data is only supported for the
+          (D)WLS/ULS estimators (e.g., WLSMV) (for now)."))
       }
     } else {
       opt$.clustered <- FALSE

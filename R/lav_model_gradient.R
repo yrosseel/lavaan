@@ -354,7 +354,10 @@ lav_model_grad <- function(lavmodel = NULL,
       delta <- lav_model_delta(lavmodel = lavmodel, glist = glist)
     }
 
-    for (g in 1:lavmodel@nblocks) {
+    # note: WLS.obs/WLS.est/Delta/WLS.V(D) and group_w are all per GROUP
+    # (for multilevel models, the within/between blocks are stacked per
+    #  group in all of them; nblocks == ngroups for single-level models)
+    for (g in 1:lavsamplestats@ngroups) {
       # diff <- as.matrix(lavsamplestats@WLS.obs[[g]]  - WLS.est[[g]])
       # group.dx <- -1 * ( t(Delta[[g]]) %*% lavsamplestats@WLS.V[[g]] %*% diff)
       # 0.5-17: use crossprod twice; treat DWLS/ULS special
@@ -972,6 +975,13 @@ lav_model_ddelta_dx <- function(lavmodel = NULL, glist = NULL,
 lav_model_delta <- function(lavmodel = NULL, glist = NULL,
                             m_el_idx = NULL, x_el_idx = NULL,
                             ceq_simple = FALSE) {
+
+  # two-level + categorical: custom standardized Jacobian, stacked per
+  # group (see lav_model_wls_2l_cat.R); 'free' parameters only
+  if (lavmodel@multilevel && lavmodel@categorical &&
+    is.null(m_el_idx)) {
+    return(lav_m07_delta(lavmodel = lavmodel, glist = glist))
+  }
 
   representation <- lavmodel@representation
   if (representation == "RAM") {

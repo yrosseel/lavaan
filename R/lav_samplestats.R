@@ -345,7 +345,8 @@ lav_samp_from_data <- function(lavdata = NULL,        # nolint start
     cat_1 <- list()
     if ("ordered" %in% ov_types) {
       categorical <- TRUE
-      if (nlevels > 1L) {
+      if (nlevels > 1L &&
+        !lavoptions$estimator %in% c("WLS", "DWLS", "ULS")) {
         lav_msg_warn(gettext("multilevel + categorical not supported yet."))
       }
     }
@@ -369,6 +370,12 @@ lav_samp_from_data <- function(lavdata = NULL,        # nolint start
     # check cat.wls.w option (new in 0.6-18)
     if (!is.null(lavoptions$cat.wls.w) && !lavoptions$cat.wls.w) {
       wls_w <- FALSE # perhaps do.fit = FALSE? (eg sam())
+    }
+    # two-level categorical: the (single-level, flat) statistics computed
+    # here only provide starting values; the real two-level statistics
+    # (and their Gamma) come from the stage-wise estimation later
+    if (nlevels > 1L) {
+      wls_w <- FALSE
     }
       if (lav_verbose()) {
         cat("Estimating sample thresholds and correlations ... ")

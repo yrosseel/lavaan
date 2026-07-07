@@ -404,6 +404,33 @@ lavaan <- function(
   )
   timing <- lav_add_timing(timing, "h1")
 
+  # ------------ two-level WLS statistics -----
+  # for two-level (D)WLS/ULS, the sample 'statistics' are the h1 estimates,
+  # and their acov (Gamma) is the cluster-based sandwich; both can only be
+  # computed once the h1 model has been estimated
+  if (lavdata@nlevels > 1L &&
+    lavoptions$estimator %in% c("WLS", "DWLS", "ULS")) {
+    if (lavoptions$.categorical) {
+      # stage-wise (univariate + bivariate) estimation; this also
+      # provides the 'h1' (unrestricted) implied statistics
+      tmp <- lav_samp_wls_2l_cat(
+        lavsamplestats = lavsamplestats,
+        lavdata        = lavdata,
+        lavoptions     = lavoptions
+      )
+      lavsamplestats <- tmp$lavsamplestats
+      lavh1 <- tmp$lavh1
+    } else {
+      lavsamplestats <- lav_samp_wls_2l(
+        lavsamplestats = lavsamplestats,
+        lavh1          = lavh1,
+        lavdata        = lavdata,
+        lavoptions     = lavoptions
+      )
+    }
+    timing <- lav_add_timing(timing, "wls2l")
+  }
+
   # ------------ adapt marker ------------------
   # if the first indicator (the default marker) of a latent variable turns
   # out to be a poor item, switch to a better marker (and warn); this avoids
