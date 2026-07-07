@@ -143,7 +143,7 @@ lav_standardize_ov_sd <- function(lavpartable, g, vy = NULL, ov_var = NULL,
 # standardized solution reports the slope at the means, i.e. the partial
 # derivative dy/dx = b1 + b3*z + 2*b4*x evaluated at E(x), E(z). Looping
 # over the product terms, each term adds beta_ab * E(other component) to
-# the main effect of each of its components. 
+# the main effect of each of its components.
 
 # (3) product moments (FV, 05/07/26): the psi/alpha rows of A:B describe the
 # uncentered product. Without centering them first, the standardized
