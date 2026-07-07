@@ -31,6 +31,11 @@
 #
 # (the standardized nodes x_q and weights w_q do not depend on vb).
 #
+# The conditional kernel only depends on the data through the response
+# CATEGORY, so all per-node quantities are computed per category and
+# aggregated per cluster via the (nclusters x ncat) count matrix -- the
+# cost is (nearly) independent of the number of observations.
+#
 # fit object (list) contract -- see lav_uvord_2l_fit():
 #   theta, nth, th_idx, bvar_idx, y, cluster_idx, ngh, logl, converged
 
@@ -120,16 +125,26 @@ lav_uvord_2l_init_cache <- function(y = NULL,
 
   nobs <- length(y)
   y_freq <- tabulate(y)
-  y_ncat <- length(y_freq)
-  nth <- y_ncat - 1L
+  ncat <- length(y_freq)
+  nth <- ncat - 1L
   y_prop <- y_freq / sum(y_freq)
 
-  nclusters <- length(unique(cluster_idx))
+  # cluster x category count matrix
+  cl_sorted <- sort(unique(cluster_idx))
+  cl_pos <- match(cluster_idx, cl_sorted)
+  nclusters <- length(cl_sorted)
+  cmat <- unclass(table(
+    factor(cl_pos, levels = seq_len(nclusters)),
+    factor(y, levels = seq_len(ncat))
+  ))
+  dimnames(cmat) <- NULL
+  storage.mode(cmat) <- "double"
 
-  # offsets and indicator matrices (cfr. lav_uvord_init_cache)
-  o12 <- lav_uvord_o12(y = y, nth = nth)
-  y1 <- matrix(1:nth, nobs, nth, byrow = TRUE) == y
-  y2 <- matrix(1:nth, nobs, nth, byrow = TRUE) == (y - 1L)
+  # category-level offsets and indicator matrices
+  ycat <- seq_len(ncat)
+  o12 <- lav_uvord_o12(y = ycat, nth = nth)
+  y1 <- matrix(seq_len(nth), ncat, nth, byrow = TRUE) == ycat
+  y2 <- matrix(seq_len(nth), ncat, nth, byrow = TRUE) == (ycat - 1L)
 
   # standardized GH nodes
   gh <- lav_2l_gh_xw(ngh = ngh)
@@ -142,7 +157,8 @@ lav_uvord_2l_init_cache <- function(y = NULL,
 
   list2env(
     list(
-      y = y, cluster_idx = cluster_idx,
+      y = y, cluster_idx = cluster_idx, cmat = cmat,
+      ycat = ycat, ncat = ncat,
       o1 = o12$o1, o2 = o12$o2, y1 = y1, y2 = y2,
       nobs = nobs, n = nobs, nth = nth, nclusters = nclusters,
       gh = gh, ngh = ngh,
@@ -176,14 +192,17 @@ lav_uvord_2l_loglik_cache <- function(cache = NULL) {
     vb <- theta[nth + 1L]
     s_b <- sqrt(vb)
 
-    # log-likelihood contributions per cluster x node
-    ll <- matrix(0, nclusters, ngh)
+    # category x node conditional log-probabilities
+    logp <- matrix(0, ncat, ngh)
     for (q in seq_len(ngh)) {
       b_q <- s_b * gh$x[q]
-      pq <- lav_uvord_2l_pi_q(y = y, th = th, o1 = o1, o2 = o2, b_q = b_q)
-      ll[, q] <- rowsum.default(log(pq$pi_i), group = cluster_idx,
-                                reorder = TRUE)
+      pq <- lav_uvord_2l_pi_q(y = ycat, th = th, o1 = o1, o2 = o2,
+                              b_q = b_q)
+      logp[, q] <- log(pq$pi_i)
     }
+
+    # cluster x node log-likelihood contributions
+    ll <- cmat %*% logp
 
     # log-sum-exp per cluster
     lwll <- sweep(ll, 2L, gh$logw, "+")
@@ -213,19 +232,17 @@ lav_uvord_2l_sc_cache <- function(cache = NULL) {
     sc <- matrix(0, nclusters, nth + 1L)
     for (q in seq_len(ngh)) {
       b_q <- s_b * gh$x[q]
-      pq <- lav_uvord_2l_pi_q(y = y, th = th, o1 = o1, o2 = o2, b_q = b_q)
+      pq <- lav_uvord_2l_pi_q(y = ycat, th = th, o1 = o1, o2 = o2,
+                              b_q = b_q)
       p1 <- dnorm(pq$z1)
       p2 <- dnorm(pq$z2)
       inv_pi <- 1 / pq$pi_i
 
-      # thresholds: per-cluster sums of (y1 p1 - y2 p2)/pi
-      sc_th_q <- rowsum.default(
-        (y1 * p1 - y2 * p2) * inv_pi,
-        group = cluster_idx, reorder = TRUE
-      )
-      # cluster intercept: per-cluster sums of (p2 - p1)/pi
-      g_b_q <- rowsum.default((p2 - p1) * inv_pi, group = cluster_idx,
-                              reorder = TRUE)
+      # category-level score pieces -> cluster level via the count matrix
+      # thresholds: (y1 p1 - y2 p2)/pi
+      sc_th_q <- cmat %*% ((y1 * p1 - y2 * p2) * inv_pi)
+      # cluster intercept: (p2 - p1)/pi
+      g_b_q <- cmat %*% ((p2 - p1) * inv_pi)
 
       sc[, 1:nth] <- sc[, 1:nth] + pw[, q] * sc_th_q
       sc[, nth + 1L] <- sc[, nth + 1L] +
