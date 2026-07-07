@@ -103,5 +103,13 @@ lav_uvbv_min_fns <- function(logl_fun = NULL,
     -1 * hessian_fun(cache = cache) / cache$n
   }
 
+  # a module may have no analytic gradient/hessian
+  if (is.null(grad_fun)) {
+    gradient <- NULL
+  }
+  if (is.null(hessian_fun)) {
+    hessian <- NULL
+  }
+
   list(objective = objective, gradient = gradient, hessian = hessian)
 }
